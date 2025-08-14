@@ -16,7 +16,7 @@ exception EXTRACTION_ERROR of term list * term
 val monitoring = ref 0;
 val max_trace_val = 5;
 val no_trace = max_trace_val + 1;
-val _ = register_trace ("TFL rewrite monitoring", monitoring, max_trace_val);
+val _ = register_trace ("Definition.TC extraction", monitoring, max_trace_val);
 
 fun lztrace(i,title,msgf) =
   if i <= !monitoring then
@@ -48,16 +48,14 @@ val dest_combn = let
   end
 
 fun GSPEC_ALL th =
-   (case dest_thy_const(rator (concl th))
-     of {Name = "!",Thy="bool",Ty} =>
-          GSPEC_ALL (SPEC (genvar (#1(dom_rng(#1(dom_rng Ty))))) th)
-     | _ => th)
-    handle HOL_ERR _ => th;
+  case total dest_forall (concl th)
+   of NONE => th
+    | SOME (v,_) => GSPEC_ALL $ SPEC (genvar (type_of v)) th
 
 (*---------------------------------------------------------------------------*)
-(* TC extraction is an application of conversions. The "simps" type supports *)
-(* a simplification set having a single conditional rewrite rule, namely     *)
-(* relationTheory.RESTRICT_LEMMA:                                            *)
+(* TC extraction is an application of conversions. The "simpls" type         *)
+(* supports a simplification set having a single conditional rewrite rule,   *)
+(* namely an instance of relationTheory.RESTRICT_LEMMA:                      *)
 (*                                                                           *)
 (*   |- R y z ⇒ RESTRICT f R z y = f y                                       *)
 (*                                                                           *)
@@ -74,9 +72,6 @@ val empty_simpls =
    RW{thms = [], congs = [],
       rw_net=Net.empty, cong_net=Net.empty}
 
-(* TODO: check that all congs added to cong rules DB are in right form:
-    ant1 /\ ... /\ antn ==> fn vbar = fn vbar'
- *)
 fun CONGR th =
    let val (ants,eq) = strip_imp_only (concl th)
        val pat = lhs eq
@@ -109,11 +104,11 @@ fun CONG_STEP (RW{cong_net,...}) tm = Lib.trye hd (Net.match tm cong_net) tm;
 
 fun insert_cut_lem (RW{thms,rw_net,congs, cong_net}) cut_lem =
   let val cut_lem' = GSPEC_ALL cut_lem
-      val pat = lhs(snd(strip_imp_only(concl cut_lem')))
+      val pat = lhs $ snd $ strip_imp_only $ concl cut_lem'
       val matcher = Term.match_term pat
       fun match_then_inst tm =
         let val (tm_theta, ty_theta) = matcher tm
-        in INST tm_theta (INST_TYPE ty_theta cut_lem') end
+        in INST tm_theta $ INST_TYPE ty_theta cut_lem' end
   in
    RW{thms   = [cut_lem],
       congs  = congs,
@@ -454,7 +449,8 @@ fun complex cnv cps (ant,rst) =
                      (fst(dest_combn r nargs),r)
                   else
                   let val fnbody =
-                         if is_pabs r then r else fst(dest_combn r (nargs - nbetas))
+                          if is_pabs r then r
+                          else fst(dest_combn r (nargs - nbetas))
                       val etas = List.take(vstructs, nbetas)
                       val rhsFn = list_mk_pabs(etas,fnbody)
                   in

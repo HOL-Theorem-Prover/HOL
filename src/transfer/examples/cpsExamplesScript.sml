@@ -1,8 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open cpsTheory cpsLib
-
-val _ = new_theory "cpsExamples";
+Theory cpsExamples
+Ancestors
+  cps
+Libs
+  cpsLib
 
 Theorem CPS_REVERSE =
 kREVERSE_def |> SPEC_ALL
@@ -31,4 +31,3 @@ End
 
 
 
-val _ = export_theory();

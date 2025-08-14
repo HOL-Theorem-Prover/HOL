@@ -1,12 +1,10 @@
-
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory listTheory pairTheory finite_mapTheory stringTheory;
-open source_valuesTheory source_syntaxTheory source_semanticsTheory codegenTheory
-     source_propertiesTheory mp_then parsingTheory x64asm_syntaxTheory
-     wordsTheory wordsLib;
-
-val _ = new_theory "automation_lemmas";
-
+Theory automation_lemmas
+Ancestors
+  arithmetic list pair finite_map string
+  source_values source_syntax source_semantics codegen
+  source_properties parsing x64asm_syntax words
+Libs
+  wordsLib
 
 (* theorems used in proof automation *)
 
@@ -731,5 +729,3 @@ Theorem inline_let: (* inline any let where the bound name doesn't fit 2**64 *)
 Proof
   rw [] \\ match_mp_tac (MP_CANON inline_let_thm) \\ fs []
 QED
-
-val _ = export_theory();

@@ -1,9 +1,8 @@
-open HolKernel boolLib bossLib
-
-open integerTheory intSyntax simpLib Arithconv numeralTheory
-     arithmeticTheory tautLib
-
-val _ = new_theory "intReduce";
+Theory intReduce
+Ancestors
+  integer numeral arithmetic
+Libs
+  intSyntax simpLib Arithconv tautLib
 
 Theorem INT_LE_CONV_tth =
   TAUT ‘(F /\ F <=> F) /\ (F /\ T <=> F) /\
@@ -123,4 +122,3 @@ Proof
   REWRITE_TAC[]
 QED
 
-val _ = export_theory ();

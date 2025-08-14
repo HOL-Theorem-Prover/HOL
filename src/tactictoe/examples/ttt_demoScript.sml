@@ -4,10 +4,12 @@
 (* AUTHOR        : (c) Thibault Gauthier, Czech Technical University          *)
 (* DATE          : 2019                                                       *)
 (* ========================================================================== *)
+Theory ttt_demo
+Ancestors
+  list pred_set sum_num
+Libs
+  tacticToe
 
-open HolKernel boolLib bossLib tacticToe;
-
-val _ = new_theory "ttt_demo";
 
 (* load "tacticToe"; open tacticToe; *)
 (* mlibUseful.trace_level := 0; mesonLib.chatting := 0; *)
@@ -26,8 +28,6 @@ val ex1 = store_thm("ex1",
    Example 2: lists
    ------------------------------------------------------------------------- *)
 
-open listTheory
-
 (* ttt ([],``(!n. f n = c) ==> (MAP f ls = REPLICATE (LENGTH ls) c)``); *)
 val ex2 = store_thm("ex2",
   ``(!n. f n = c) ==> (MAP f ls = REPLICATE (LENGTH ls) c)``,
@@ -38,8 +38,6 @@ val ex2 = store_thm("ex2",
 (* --------------------------------------------------------------------------
    Example 3: set theory, count x = {0,1,2,...,x}
    -------------------------------------------------------------------------- *)
-
-open pred_setTheory
 
 (* ttt ([],``count (n+m) DIFF count n = IMAGE ($+n) (count m)``); *)
 val ex4 = store_thm("ex4",
@@ -54,8 +52,6 @@ val ex4 = store_thm("ex4",
    -------------------------------------------------------------------------- *)
 
 (* load "sum_numTheory"; open sum_numTheory; set_timeout 60.0; *)
-open sum_numTheory
-
 (* ttt  ([],``!n. 2 * SUM (n+1) I = n * (n+1) ``); *)
 val ex5 = store_thm("ex5",
   ``!n. 2 * SUM (n+1) I = n * (n+1)``,
@@ -67,4 +63,3 @@ val ex5 = store_thm("ex5",
        srw_tac [ARITH_ss] [arithmeticTheory.MULT_CLAUSES]]
   );
 
-val _ = export_theory();

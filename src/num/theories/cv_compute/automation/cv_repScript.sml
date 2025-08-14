@@ -1,10 +1,9 @@
 (*
   Define cv_rep and prove a few lemmas used in proof automation
 *)
-open HolKernel Parse boolLib bossLib;
-open cvTheory cv_typeTheory;
-
-val _ = new_theory "cv_rep";
+Theory cv_rep
+Ancestors
+  cv cv_type
 
 Overload c2n[local] = “cv$c2n”
 Overload c2b[local] = “cv$c2b”
@@ -142,4 +141,3 @@ Proof
   fs [cv_if_def]
 QED
 
-val _ = export_theory();

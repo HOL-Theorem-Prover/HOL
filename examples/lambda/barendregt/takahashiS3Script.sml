@@ -32,6 +32,9 @@ End
 val _ = set_mapped_fixity {term_name = "peta", tok = "=η=>",
                            fixity = Infix(NONASSOC, 450)}
 
+val _ = TeX_notation { hol = "=η=>",
+        TeX = ("\\ensuremath{\\Rightarrow_{\\eta}}", 1) };
+
 Theorem peta_VAR[simp]:
   peta (VAR s) M ⇔ M = VAR s
 Proof
@@ -552,7 +555,7 @@ Theorem is_abs_eapp:
   is_abs (eapp M its) ⇔
   (∃p i t. its = p ++ [(i,t)] ∧ 0 < i) ∨ is_abs M ∧ its = []
 Proof
-  Cases_on ‘its’ using SNOC_CASES >> simp[] >>
+  Cases_on ‘its’ using SNOC_CASES >> simp[SNOC_APPEND] >>
   Cases_on ‘x’ >> simp[]
 QED
 
@@ -712,7 +715,7 @@ Proof
       gvs[LIST_REL_EL_EQN, MEM_EL] >> metis_tac[peta_FV]) >~
   [‘LAM u (LAMl vs _) = LAM w (M @@ VAR w)’]
   >- (gvs[LAM_eq_thm, app_eq_appstar_SNOC, FV_appstar, appstar_peta] >>
-      simp[DISJ_IMP_THM, FORALL_AND_THM]
+      simp[DISJ_IMP_THM, FORALL_AND_THM, SNOC_APPEND]
       >- metis_tac[] >>
       gvs[tpm_eqr, tpm_fresh, appstar_peta, FV_appstar] >> metis_tac[]) >~
   [‘u::vs = pvs ++ [w]’]

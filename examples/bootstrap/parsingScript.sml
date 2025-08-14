@@ -1,9 +1,7 @@
-
-open HolKernel Parse boolLib bossLib term_tactic;
-open arithmeticTheory listTheory pairTheory finite_mapTheory stringTheory;
-open source_valuesTheory source_syntaxTheory;
-
-val _ = new_theory "parsing";
+Theory parsing
+Ancestors
+  arithmetic list pair finite_map string
+  source_values source_syntax
 
 
 (* lexing *)
@@ -205,5 +203,3 @@ Definition parser_def:
   parser tokens =
     vs2prog (v2list (parse tokens (Num 0) []))
 End
-
-val _ = export_theory();

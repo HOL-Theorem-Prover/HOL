@@ -1,12 +1,12 @@
 (*===========================================================================*)
 (* Properties of power series.                                               *)
 (*===========================================================================*)
+Theory powser
+Ancestors
+  pair arithmetic num prim_rec real metric nets seq lim
+Libs
+  hol88Lib numLib reduceLib pairLib jrhUtils
 
-open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
-     pairTheory arithmeticTheory numTheory prim_recTheory
-     jrhUtils realTheory metricTheory netsTheory seqTheory limTheory;
-
-val _ = new_theory "powser";
 
 (*---------------------------------------------------------------------------*)
 (* More theorems about rearranging finite sums                               *)
@@ -584,4 +584,3 @@ val TERMDIFF = store_thm("TERMDIFF",
       ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN
       ASM_REWRITE_TAC[GSYM REAL_LT_SUB_LADD]]]);
 
-val _ = export_theory();

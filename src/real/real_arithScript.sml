@@ -1,8 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open Normalizer RealArith0 realaxTheory;
-
-val _ = new_theory "real_arith";
+Theory real_arith
+Ancestors
+  realax
+Libs
+  Normalizer RealArith0
 
 (* ------------------------------------------------------------------------- *)
 (* Bootstrapping REAL_ARITH: trivial abs-elim and only integer constants.    *)
@@ -89,4 +89,3 @@ Theorem ABSMAXMIN_ELIM_CONV1_pth[unlisted] = REAL_ARITH0 “
   (a + b + min x y > r <=> a + b + x > r /\ a + b + y > r) /\
   (a + b + min x y + c > r <=> a + b + x + c > r /\ a + b + y + c > r)”;
 
-val _ = export_theory();

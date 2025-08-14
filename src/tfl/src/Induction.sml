@@ -384,9 +384,14 @@ fun detuple newvar =
 (* theorem takes.                                                            *)
 (*---------------------------------------------------------------------------*)
 
-val monitoring = ref 0;
+val monitoring = ref false;
 
-val _ = Feedback.register_trace("tfl_ind",monitoring,1);
+val _ = Feedback.register_btrace("Definition.induction derivation",monitoring);
+
+fun report_induction_measurements thunk =
+  if !monitoring then
+     (Lib.say "Derivation of induction theorem:\n"; Count.apply thunk ())
+  else thunk()
 
 (*---------------------------------------------------------------------------*
  * Input : f, R, SV, and  [(pat1,TCs1),..., (patn,TCsn)]                     *
@@ -487,14 +492,8 @@ fun match_clauses pats case_thm =
 (* the antecedent of Rinduct.                                                *)
 (*---------------------------------------------------------------------------*)
 
-(*
-val {fconst, R, SV, pat_TCs_list} =
-  {fconst=f, R=R, SV=SV, pat_TCs_list=full_pats_TCs}
-val thy = facts
- *)
-
 fun mk_induction thy {fconst, R, SV, pat_TCs_list} =
-let fun f() =
+let fun thunk() =
 let val Sinduction = UNDISCH (ISPEC R relationTheory.WF_INDUCTION_THM)
     val (pats,TCsl) = unzip pat_TCs_list
     val case_thm = complete_cases thy pats
@@ -528,7 +527,7 @@ in
 end
 handle e => raise wrap_exn "Induction" "mk_induction" e
 in
-  if !monitoring > 0 then Count.apply f () else f()
+   report_induction_measurements thunk
 end;
 
 (*---------------------------------------------------------------------------*)

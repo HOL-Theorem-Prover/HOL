@@ -203,8 +203,7 @@ Proof
       rw[])
   >> RW_TAC fcp_ss[RoundKey_def,GENLIST,roundk_supp,REVERSE_DEF,roundk_R,roundk_L]
   >> Suff `HD ks = (c',c)`
-  >- (rw []\\
-      rw[Abbr `ks`])
+  >- rw[SNOC_APPEND, Abbr `ks`]
   >> rw[Abbr `ks`]
   >- (Q.PAT_X_ASSUM ‘HD (REVERSE (SNOC (c',c) (GENLIST (λi. (RK_L i k,RK_R i k)) n))) = _’ MP_TAC \\
       rw[HD_REVERSE])

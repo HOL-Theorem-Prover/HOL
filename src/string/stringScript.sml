@@ -6,19 +6,12 @@
 (* AUTHOR       : Konrad Slind, University of Cambridge, 2001           *)
 (* =====================================================================*)
 
-open HolKernel boolLib bossLib Parse;
-
-open numLib numSyntax listTheory rich_listTheory arithmeticTheory
-     pred_setTheory relationTheory;
-
-open ternaryComparisonsTheory;
-
-(* ---------------------------------------------------------------------*)
-(* Create the new theory                                                *)
-(* ---------------------------------------------------------------------*)
-
-val _ = new_theory "string";
-val _ = set_grammar_ancestry ["rich_list", "ternaryComparisons"]
+Theory string
+Ancestors
+  rich_list ternaryComparisons
+  list arithmetic pred_set relation
+Libs
+  numLib numSyntax
 
 (* ---------------------------------------------------------------------*)
 (* Characters are represented by the natural numbers <= 255.            *)
@@ -365,7 +358,7 @@ Proof
   \\ `?y ys. x::xs = SNOC y ys` by metis_tac[SNOC_CASES,list_distinct]
   \\ full_simp_tac std_ss [FRONT_SNOC,LAST_SNOC] \\ rpt BasicProvers.VAR_EQ_TAC
   \\ qmatch_goalsub_rename_tac`SPLITP P (SNOC y (w ++ z))`
-  \\ Cases_on`NULL z` \\ fs[NULL_EQ]
+  \\ Cases_on`NULL z` \\ fs[NULL_EQ, SNOC_APPEND]
   >- (
     simp[SPLITP_APPEND]
     \\ full_simp_tac std_ss [GSYM NOT_EXISTS]
@@ -639,8 +632,6 @@ QED
 (*---------------------------------------------------------------------------
     Exportation
  ---------------------------------------------------------------------------*)
-
-val _ = export_theory();
 
 val _ = let
   val ^^ = Path.concat

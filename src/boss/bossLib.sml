@@ -163,7 +163,18 @@ val CasePred          = TypeBase.CasePred
 val CasePreds         = TypeBase.CasePreds
 val AllCasePreds      = TypeBase.AllCasePreds
 
-val oneline           = DefnBase.one_line_ify NONE
+fun dischallbut hs th =
+    let fun foldthis (t, th) = if HOLset.member(hs, t) then th
+                               else DISCH t th
+    in
+      HOLset.foldl foldthis th (hypset th)
+    end
+
+fun oneline th =
+  let val hs = hypset th
+  in
+    LIST_CONJ $ map (dischallbut hs) $ DefnBase.one_line_ify_mutrec NONE th
+  end
 val lambdify          = DefnBase.LIST_HALF_MK_ABS
 
 val completeInduct_on = numLib.completeInduct_on
@@ -355,17 +366,9 @@ end
     useful for proving termination in fold and rose-tree settings
    ---------------------------------------------------------------------- *)
 
-(*
-val size_comb_tac =
-  full_simp_tac boolSimps.bool_ss [listTheory.MEM_SPLIT]
-  THEN CONV_TAC TotalDefn.size_eq_conv
-  THEN simp_tac boolSimps.bool_ss
-    [listTheory.list_size_append, listTheory.list_size_def]
-*)
-
 val _ = let
   val sref = TotalDefn.termination_solve_simps
-in sref := ([listTheory.MEM_SPLIT, listTheory.list_size_append] @ ! sref) end
+in sref := ([listTheory.MEM_SPLIT] @ ! sref) end
 
 (* ----------------------------------------------------------------------
     convenient simplification aliases

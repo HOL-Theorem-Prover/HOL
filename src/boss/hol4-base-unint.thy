@@ -129,6 +129,7 @@ numeral {
   import: arithmetic
   import: marker
   import: relation
+  import: pair
   article: "../num/theories/numeral.ot.art"
 }
 basic-size {
@@ -256,12 +257,14 @@ list {
   import: pred-set
   import: combin
   import: quotient
+  import: basic-size
   article: "../list/src/list.ot.art"
 }
 rich-list {
   import: bool
   import: marker
   import: combin
+  import: pair
   import: list
   import: arithmetic
   import: pred-set
@@ -273,11 +276,13 @@ indexed-lists {
   import: bool
   import: list
   import: relation
+  import: pair
   import: pred-set
   article: "../list/src/indexedLists.ot.art"
 }
 numposrep {
   import: bool
+  import: pair
   import: num
   import: arithmetic
   import: list

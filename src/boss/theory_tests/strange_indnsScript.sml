@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "strange_indns";
+Theory strange_indns
 
 fun die msg t =
   (TextIO.output(TextIO.stdOut, "Failed on " ^ term_to_string t ^
@@ -94,4 +92,3 @@ End
 val _ = check “fvs”
 val _ = check “fvsl”
 
-val _ = export_theory();

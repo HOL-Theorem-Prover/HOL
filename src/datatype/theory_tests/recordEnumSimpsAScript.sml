@@ -1,8 +1,7 @@
-open HolKernel Parse BasicProvers simpLib Datatype
-
-open recordEnumSimpsLib
-
-val _ = new_theory "recordEnumSimpsA"
+Theory recordEnumSimpsA[bare]
+Libs
+  HolKernel Parse BasicProvers simpLib Datatype
+  recordEnumSimpsLib
 
 val _ = Datatype‘Enum1 = C1 | C2 | C3’;
 val _ = Datatype‘Enum2 = D1 | D2 | D3 | D4 | D5 | D6 | D7 | D8 | D9 | D10
@@ -33,4 +32,3 @@ val normal_lemma = Q.store_thm("normal_lemma",
   ‘E1 n <> E3’,
   computeLib.EVAL_TAC);
 
-val _ = export_theory();

@@ -53,25 +53,20 @@ Definition numdB_def:
               dAPP (numdB (nfst (n DIV 3))) (numdB (nsnd (n DIV 3)))
             else dABS (numdB (n DIV 3))
 Termination
-  WF_REL_TAC `$<` THEN REPEAT STRIP_TAC THENL [
-    MATCH_MP_TAC arithmeticTheory.DIV_LESS THEN SRW_TAC [][] THEN
-    Q_TAC SUFF_TAC `n ≠ 0` THEN1 DECIDE_TAC THEN STRIP_TAC THEN
-    FULL_SIMP_TAC (srw_ss())[],
-
-    Q_TAC SUFF_TAC `n DIV 3 < n`
-      THEN1 (ASSUME_TAC (Q.INST [`n` |-> `n DIV 3`] nfst_le) THEN
-             DECIDE_TAC) THEN
-    MATCH_MP_TAC arithmeticTheory.DIV_LESS THEN SRW_TAC [][] THEN
-    Q_TAC SUFF_TAC `n ≠ 0` THEN1 DECIDE_TAC THEN STRIP_TAC THEN
-    FULL_SIMP_TAC (srw_ss())[],
-
-    Q_TAC SUFF_TAC `n DIV 3 < n`
-      THEN1 (ASSUME_TAC (Q.INST [`n` |-> `n DIV 3`] nsnd_le) THEN
-             DECIDE_TAC) THEN
-    MATCH_MP_TAC arithmeticTheory.DIV_LESS THEN SRW_TAC [][] THEN
-    Q_TAC SUFF_TAC `n ≠ 0` THEN1 DECIDE_TAC THEN STRIP_TAC THEN
-    FULL_SIMP_TAC (srw_ss())[]
-  ]
+  WF_REL_TAC `$<` >> rw[]
+  >- (Cases_on ‘n’ >> gvs[])
+  >- (Q_TAC SUFF_TAC `n DIV 3 < n`
+      >- (ASSUME_TAC (Q.INST [`n` |-> `n DIV 3`] nfst_le) THEN
+             DECIDE_TAC) >>
+      irule arithmeticTheory.DIV_LESS >> rw[] >>
+      Q_TAC SUFF_TAC `n ≠ 0` >- DECIDE_TAC >>
+      STRIP_TAC >> gvs[])
+  >- (Q_TAC SUFF_TAC `n DIV 3 < n`
+      >- (ASSUME_TAC (Q.INST [`n` |-> `n DIV 3`] nsnd_le) THEN
+             DECIDE_TAC) >>
+      irule arithmeticTheory.DIV_LESS >> rw[] >>
+      Q_TAC SUFF_TAC `n ≠ 0` >- DECIDE_TAC >>
+      STRIP_TAC >> gvs[])
 End
 
 val numdBnum = Store_thm(
@@ -117,12 +112,3 @@ val dBnum_onto = store_thm(
   METIS_TAC [dBnumdB]);
 
 val _ = export_theory();
-
-
-
-
-
-
-
-
-

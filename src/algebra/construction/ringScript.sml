@@ -32,25 +32,15 @@ src\rational\ratRingScript.sml
 *)
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "ring";
-
-(* ------------------------------------------------------------------------- *)
+Theory ring
+Ancestors
+  prim_rec arithmetic divides gcd gcdset pred_set list bag
+  container while sorting integer number combinatorics prime
+  monoid group
+Libs
+  jcLib dep_rewrite
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open prim_recTheory arithmeticTheory dividesTheory gcdTheory gcdsetTheory
-     pred_setTheory listTheory bagTheory containerTheory dep_rewrite
-     whileTheory sortingTheory integerTheory;
-
-open numberTheory combinatoricsTheory primeTheory;
-
-open monoidTheory groupTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -15419,8 +15409,3 @@ val ZP_finite_integral_domain = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
-(*===========================================================================*)

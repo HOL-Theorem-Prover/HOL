@@ -5,13 +5,12 @@
 (* ------------------------------------------------------------------------- *)
 (* Reals as a ring.                                                          *)
 (* ------------------------------------------------------------------------- *)
+Theory real_algebra
+Ancestors
+  pred_set real iterate real_sigma bag monoid group ring
+Libs
+  dep_rewrite
 
-open HolKernel boolLib bossLib Parse;
-
-open pred_setTheory realTheory iterateTheory real_sigmaTheory dep_rewrite bagTheory
-     monoidTheory groupTheory ringTheory;
-
-val _ = new_theory "real_algebra";
 
 Definition real_add_monoid_def:
   real_add_monoid : real monoid =
@@ -186,4 +185,3 @@ Proof
   \\ simp[Reals_def]
 QED
 
-val _ = export_theory();

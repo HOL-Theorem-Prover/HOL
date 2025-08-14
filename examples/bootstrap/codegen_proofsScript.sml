@@ -1,14 +1,15 @@
+Theory codegen_proofs
+Ancestors
+  arithmetic list pair finite_map string
+  source_values source_syntax x64asm_syntax
+  source_semantics source_properties alignment
+  combin option alist words
+  x64asm_syntax x64asm_semantics x64asm_properties
+  codegen relation lprefix_lub llist
+Libs
+  wordsLib mp_then BasicProvers
 
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory listTheory pairTheory finite_mapTheory stringTheory;
-open source_valuesTheory source_syntaxTheory x64asm_syntaxTheory mp_then
-     BasicProvers source_semanticsTheory source_propertiesTheory alignmentTheory
-     combinTheory optionTheory alistTheory wordsTheory wordsLib
-     x64asm_syntaxTheory x64asm_semanticsTheory x64asm_propertiesTheory
-     codegenTheory relationTheory lprefix_lubTheory llistTheory;
-
-val _ = new_theory "codegen_proofs";
-
+val _ = augment_srw_ss [rewrites [SNOC_APPEND]];
 
 (* definitions of invariants and relations *)
 
@@ -507,7 +508,7 @@ Proof
   op_init_tac \\ step_tac
   \\ fs [eval_op_def,AllCaseEqs(),fail_def,return_def] \\ rw []
   \\ fs [] \\ rw [] \\ fs []
-  \\ fs [has_stack_def,wordsTheory.w2w_def,v_inv_def]
+  \\ fs [has_stack_def,w2w_def,v_inv_def]
   \\ ho_match_mp_tac IMP_start \\ fs []
   \\ fs [write_reg_def,inc_def,state_rel_def,APPLY_UPDATE_THM]
 QED
@@ -519,7 +520,7 @@ Proof
   op_init_tac \\ step_tac
   \\ fs [eval_op_def,AllCaseEqs(),fail_def,return_def] \\ rw []
   \\ fs [] \\ rw [] \\ fs []
-  \\ fs [has_stack_def,wordsTheory.w2w_def,v_inv_def]
+  \\ fs [has_stack_def,w2w_def,v_inv_def]
   \\ ho_match_mp_tac IMP_start \\ fs []
   \\ fs [write_reg_def,inc_def,state_rel_def,APPLY_UPDATE_THM]
 QED
@@ -1885,5 +1886,3 @@ Proof
   \\ first_x_assum (qspec_then ‘kk’ mp_tac) \\ strip_tac
   \\ imp_res_tac NRC_step_determ \\ fs []
 QED
-
-val _ = export_theory();

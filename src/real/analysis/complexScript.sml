@@ -16,13 +16,13 @@
    DATE  : 2011.04.23
    REFERENCES  : John Harrison, realScript.sml, complex.ml and [1]
    ================================================================== *)
+Theory complex
+Ancestors
+  arithmetic pair real transc
+Libs
+  numLib realLib tautLib AC boolSimps complexPP[qualified]
 
-open HolKernel boolLib Parse bossLib
-open arithmeticTheory numLib pairTheory realTheory realLib transcTheory
-open tautLib AC
-open boolSimps
 
-val _ = new_theory "complex";
 val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------ *)
@@ -157,7 +157,6 @@ val _ = overload_on ("-",  Term`$complex_sub`);
 val _ = overload_on (GrammarSpecials.decimal_fraction_special, ``complex_div``)
 val _ = overload_on ("/",  Term`complex_div`);
 
-local open complexPP in end
 val _ = add_ML_dependency "complexPP"
 val _ =
     add_user_printer ("complex.decimalfractions",
@@ -1494,8 +1493,6 @@ val COMPLEX_EXP_NEG_MUL2 = store_thm("COMPLEX_EXP_NEG_MUL2",
  ``!z:complex. exp (-z) * exp z = 1``,
   ONCE_REWRITE_TAC[COMPLEX_MUL_COMM] THEN
   MATCH_ACCEPT_TAC COMPLEX_EXP_NEG_MUL);
-
-val _ = export_theory()
 
 (* References:
 

@@ -1,9 +1,7 @@
-
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory listTheory pairTheory finite_mapTheory stringTheory;
-open source_valuesTheory source_syntaxTheory mp_then;
-
-val _ = new_theory "printing";
+Theory printing
+Ancestors
+  arithmetic list pair finite_map string
+  source_values source_syntax
 
 
 (* pretty printing v *)
@@ -410,5 +408,3 @@ End
 Definition prog2str_def:
   prog2str p = vs2str (prog2vs p)
 End
-
-val _ = export_theory();

@@ -1279,7 +1279,7 @@ Proof
   rw[munge_def,rich_listTheory.REPLICATE_APPEND]
   >> pop_assum mp_tac
   >> map_every qid_spec_tac [‘n2’, ‘n1’, ‘xnlist2’, ‘xnlist1’]
-  >> ho_match_mp_tac SNOC_INDUCT >> rw[Excl"APPEND_ASSOC"]
+  >> ho_match_mp_tac SNOC_INDUCT >> rw[Excl"APPEND_ASSOC", SNOC_APPEND]
   >> Cases_on‘xnlist1’ >> fs[]
   >> rename [‘SOME (FST cn)’] >> Cases_on‘cn’ >>
   simp[rich_listTheory.REPLICATE_APPEND]

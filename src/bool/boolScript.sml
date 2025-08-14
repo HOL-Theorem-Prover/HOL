@@ -9,10 +9,12 @@
 (*                 mind.                                                 *)
 (* ===================================================================== *)
 
-open HolKernel Parse
-open Unicode TexTokenMap
+Theory bool[bare]
+Libs
+  HolKernel Parse TexTokenMap Portable GrammarSpecials[qualified]
+  boolpp[qualified]
 
-val _ = new_theory "bool";
+open Unicode
 
 (*---------------------------------------------------------------------------*
  *             BASIC DEFINITIONS                                             *
@@ -160,7 +162,6 @@ val TYPE_DEFINITION = def (#(FILE), #(LINE))
  *   Parsing directives for some of the basic operators.                     *
  *---------------------------------------------------------------------------*)
 
-open Portable;
 Overload "~" = “~”
 Overload "¬" = “~”
 val _ = add_rule {term_name   = "~",
@@ -4146,10 +4147,9 @@ val _ = new_constant(GrammarSpecials.case_split_special,
 val _ = new_constant(GrammarSpecials.case_arrow_special,
                      “:'a -> 'b -> 'a -> 'b”);
 
-val _ = let open GrammarSpecials
-        in app (fn s => remove_ovl_mapping s {Name=s,Thy="bool"})
-               [case_split_special, case_arrow_special]
-        end
+val _ = app (fn s => remove_ovl_mapping s {Name=s,Thy="bool"})
+            [GrammarSpecials.case_split_special,
+             GrammarSpecials.case_arrow_special]
 
 val _ = add_rule{pp_elements = [HardSpace 1, TOK "=>", BreakSpace(1,2)],
                  fixity = Infix(NONASSOC, 12),
@@ -4452,7 +4452,6 @@ val _ = TeX_notation {hol="<=/=>", TeX = ("\\HOLTokenNotEquiv{}",3)}
 val _ = TeX_notation {hol=UChar.not_iff,
                       TeX = ("\\HOLTokenNotEquiv{}",3)}
 
-local open boolpp in end
 val _ = add_ML_dependency "boolpp"
 val _ = add_user_printer ("bool.COND", “COND gd tr fl”)
 val _ = add_user_printer ("bool.LET", “LET f x”)
@@ -4481,5 +4480,3 @@ val CONTRAPOS_THM = thm (#(FILE), #(LINE)) ("CONTRAPOS_THM",
     MONO_NOT_EQ |> SYM
                 |> INST [“x:bool” |-> “t1:bool”, “y:bool” |-> “t2:bool”]
                 |> GENL [“t1:bool”, “t2:bool”]);
-
-val _ = export_theory();

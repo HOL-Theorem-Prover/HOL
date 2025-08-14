@@ -1,0 +1,74 @@
+## `FULL_SIMP_TAC`
+
+``` hol4
+bossLib.FULL_SIMP_TAC : simpset -> thm list -> tactic
+```
+
+------------------------------------------------------------------------
+
+Simplifies the goal (assumptions as well as conclusion) with the given
+simpset.
+
+`FULL_SIMP_TAC` is a powerful simplification tactic that simplifies all
+of a goal. It proceeds by applying simplification to each assumption of
+the goal in turn, accumulating simplified assumptions as it goes. These
+simplified assumptions are used to simplify further assumptions, and all
+of the simplified assumptions are used as additional rewrites when the
+conclusion of the goal is simplified.
+
+In addition, simplified assumptions are added back onto the goal using
+the equivalent of `STRIP_ASSUME_TAC` and this causes automatic
+skolemization of existential assumptions, case splits on disjunctions,
+and the separate assumption of conjunctions. If an assumption is
+simplified to `TRUTH`, then this is left on the assumption list. If an
+assumption is simplified to falsity, this proves the goal.
+
+### Failure
+
+`FULL_SIMP_TAC` never fails, but it may diverge.
+
+### Example
+
+Here `FULL_SIMP_TAC` is used to prove a goal:
+
+``` hol4
+   > FULL_SIMP_TAC arith_ss [] (map Term [`x = 3`, `x < 2`],
+                              Term `?y. x * y = 51`)
+   - val it = ([], fn) : tactic_result
+```
+
+Using `LESS_OR_EQ` `|- !m n. m <= n = m < n \/ (m = n)`, a useful case
+split can be induced in the next goal:
+
+``` hol4
+   > FULL_SIMP_TAC bool_ss [LESS_OR_EQ] (map Term [`x <= y`, `x < z`],
+                                         Term `x + y < z`);
+   - val it =
+       ([([`x < y`, `x < z`], `x + y < z`),
+         ([`x = y`, `x < z`], `y + y < z`)], fn)
+       : tactic_result
+```
+
+Note that the equality `x = y` is not used to simplify the subsequent
+assumptions, but is used to simplify the conclusion of the goal.
+
+### Comments
+
+The application of `STRIP_ASSUME_TAC` to simplified assumptions means
+that `FULL_SIMP_TAC` can cause unwanted case-splits and other
+undesirable transformations to occur in one's assumption list. If one
+wants to apply the simplifier to assumptions without this occurring, the
+best approach seems to be the use of `RULE_ASSUM_TAC` and `SIMP_RULE`.
+
+Each assumption is used to rewrite lower-numbered assumptions. To get
+the opposite effect, where each assumption is used to rewrite
+higher-numbered assumptions, use `REV_FULL_SIMP_TAC`.
+
+### See also
+
+[`bossLib.REV_FULL_SIMP_TAC`](#bossLib.REV_FULL_SIMP_TAC),
+[`bossLib.ASM_SIMP_TAC`](#bossLib.ASM_SIMP_TAC),
+[`bossLib.SIMP_CONV`](#bossLib.SIMP_CONV),
+[`bossLib.SIMP_RULE`](#bossLib.SIMP_RULE),
+[`bossLib.SIMP_TAC`](#bossLib.SIMP_TAC),
+[`BasicProvers.VAR_EQ_TAC`](#BasicProvers.VAR_EQ_TAC)

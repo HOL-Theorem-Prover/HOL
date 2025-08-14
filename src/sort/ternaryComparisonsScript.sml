@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "ternaryComparisons";
+Theory ternaryComparisons
 
 Datatype: ordering = LESS | EQUAL | GREATER
 End
@@ -105,4 +103,3 @@ Proof
   PROVE_TAC [ordering_distinct]
 QED
 
-val _ = export_theory();

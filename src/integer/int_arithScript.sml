@@ -1,11 +1,11 @@
-open HolKernel boolLib Parse
-
-open integerTheory intSyntax dividesTheory
-open simpLib boolSimps BasicProvers
+Theory int_arith
+Ancestors
+  integer divides arithmetic gcd
+Libs
+  intSyntax simpLib boolSimps BasicProvers
 
 val arith_ss = bool_ss ++ numSimps.old_ARITH_ss
 
-val _ = new_theory "int_arith";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -331,7 +331,6 @@ val add_to_greater = store_thm(
   ASM_REWRITE_TAC [GSYM INT_NEG_LMUL, GSYM int_sub]);
 
 
-open arithmeticTheory
 val INT_LT_ADD_NUMERAL = store_thm(
   "INT_LT_ADD_NUMERAL",
   Term`!x:int y. x < x + &(NUMERAL (BIT1 y)) /\
@@ -439,8 +438,6 @@ val elim_minus_ones = store_thm(
   "elim_minus_ones",
   Term`!x:int. (x + 1) - 1 = x`,
   REWRITE_TAC [int_sub, GSYM INT_ADD_ASSOC, INT_ADD_RINV, INT_ADD_RID]);
-
-open gcdTheory
 
 val INT_NUM_DIVIDES = store_thm(
   "INT_NUM_DIVIDES",
@@ -1130,4 +1127,3 @@ val eq_context_rwt2 = store_thm(
 
 val _ = hide "bmarker";
 
-val _ = export_theory();

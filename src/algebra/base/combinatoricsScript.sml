@@ -35,14 +35,11 @@ So, N = S UNION M, where M = multicoloured necklaces (i.e. more than one color).
 Since S and M are disjoint, CARD M = CARD N - CARD S = a^n - a.
 
 *)
+Theory combinatorics
+Ancestors
+  prim_rec arithmetic divides gcd gcdset logroot pred_set list
+  rich_list number listRange indexedLists relation
 
-open HolKernel boolLib Parse bossLib;
-
-open prim_recTheory arithmeticTheory dividesTheory gcdTheory gcdsetTheory
-     logrootTheory pred_setTheory listTheory rich_listTheory numberTheory
-     listRangeTheory  indexedListsTheory relationTheory;
-
-val _ = new_theory "combinatorics";
 
 val _ = temp_overload_on("SQ", ``\n. n * n``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
@@ -8305,33 +8302,45 @@ val leibniz_zigzag_tail = store_thm(
            = x ++ [tb; tc] ++ y
    Therefore p1 zigzag p2                           by leibniz_zigzag_def
 *)
-val leibniz_horizontal_zigzag = store_thm(
-  "leibniz_horizontal_zigzag",
-  ``!n k. k <= n ==> TAKE (k + 1) (leibniz_horizontal (n + 1)) ++ DROP k (leibniz_horizontal n) zigzag
-                    TAKE (k + 2) (leibniz_horizontal (n + 1)) ++ DROP (k + 1) (leibniz_horizontal n)``,
+Theorem leibniz_horizontal_zigzag :
+    !n k. k <= n ==>
+          TAKE (k + 1) (leibniz_horizontal (n + 1)) ++
+          DROP k (leibniz_horizontal n)
+        zigzag
+          TAKE (k + 2) (leibniz_horizontal (n + 1)) ++
+          DROP (k + 1) (leibniz_horizontal n)
+Proof
   rpt strip_tac >>
   qabbrev_tac `x = TAKE k (leibniz_horizontal (n + 1))` >>
   qabbrev_tac `y = DROP (k + 1) (leibniz_horizontal n)` >>
   `k <= n + 1` by decide_tac >>
-  `EL k (leibniz_horizontal n) = ta` by rw_tac std_ss[triplet_def, leibniz_horizontal_el] >>
-  `EL k (leibniz_horizontal (n + 1)) = tb` by rw_tac std_ss[triplet_def, leibniz_horizontal_el] >>
-  `EL (k + 1) (leibniz_horizontal (n + 1)) = tc` by rw_tac std_ss[triplet_def, leibniz_horizontal_el] >>
+  `EL k (leibniz_horizontal n) = ta`
+     by rw_tac std_ss[triplet_def, leibniz_horizontal_el] >>
+  `EL k (leibniz_horizontal (n + 1)) = tb`
+     by rw_tac std_ss[triplet_def, leibniz_horizontal_el] >>
+  `EL (k + 1) (leibniz_horizontal (n + 1)) = tc`
+     by rw_tac std_ss[triplet_def, leibniz_horizontal_el] >>
   `k < n + 1` by decide_tac >>
   `k < LENGTH (leibniz_horizontal (n + 1))` by rw[leibniz_horizontal_len] >>
-  `TAKE (k + 1) (leibniz_horizontal (n + 1)) = TAKE (SUC k) (leibniz_horizontal (n + 1))` by rw[ADD1] >>
+  `TAKE (k + 1) (leibniz_horizontal (n + 1)) =
+   TAKE (SUC k) (leibniz_horizontal (n + 1))` by rw[ADD1] >>
   `_ = SNOC tb x` by rw[TAKE_SUC_BY_TAKE, Abbr`x`] >>
-  `_ = x ++ [tb]` by rw[] >>
+  `_ = x ++ [tb]` by rw[SNOC_APPEND] >>
   `SUC k < n + 2` by decide_tac >>
   `SUC k < LENGTH (leibniz_horizontal (n + 1))` by rw[leibniz_horizontal_len] >>
-  `TAKE (k + 2) (leibniz_horizontal (n + 1)) = TAKE (SUC (SUC k)) (leibniz_horizontal (n + 1))` by rw[ADD1] >>
+  `TAKE (k + 2) (leibniz_horizontal (n + 1)) =
+   TAKE (SUC (SUC k)) (leibniz_horizontal (n + 1))` by rw[ADD1] >>
   `_ = SNOC tc (SNOC tb x)` by rw_tac std_ss[TAKE_SUC_BY_TAKE, ADD1, Abbr`x`] >>
-  `_ = x ++ [tb; tc]` by rw[] >>
-  `DROP k (leibniz_horizontal n) = [ta] ++ y` by rw[DROP_BY_DROP_SUC, ADD1, Abbr`y`] >>
-  qabbrev_tac `p1 = TAKE (k + 1) (leibniz_horizontal (n + 1)) ++ DROP k (leibniz_horizontal n)` >>
+  `_ = x ++ [tb; tc]` by rw[SNOC_APPEND] >>
+  `DROP k (leibniz_horizontal n) = [ta] ++ y`
+     by rw[DROP_BY_DROP_SUC, ADD1, Abbr`y`] >>
+  qabbrev_tac `p1 = TAKE (k + 1) (leibniz_horizontal (n + 1)) ++
+                    DROP k (leibniz_horizontal n)` >>
   qabbrev_tac `p2 = TAKE (k + 2) (leibniz_horizontal (n + 1)) ++ y` >>
   `p1 = x ++ [tb; ta] ++ y` by rw[Abbr`p1`, Abbr`x`, Abbr`y`] >>
   `p2 = x ++ [tb; tc] ++ y` by rw[Abbr`p2`, Abbr`x`] >>
-  metis_tac[leibniz_zigzag_def]);
+  metis_tac[leibniz_zigzag_def]
+QED
 
 (* Theorem: (leibniz_up 1) zigzag (leibniz_horizontal 1) *)
 (* Proof:
@@ -8808,13 +8817,13 @@ val leibniz_seg_arm_zigzag_step = store_thm(
   `k < LENGTH (leibniz_seg_arm a b (n + 1))` by rw[leibniz_seg_arm_len] >>
   `TAKE (k + 1) (leibniz_seg_arm (a + 1) b (n + 1)) = TAKE (SUC k) (leibniz_seg_arm (a + 1) b (n + 1))` by rw[ADD1] >>
   `_ = SNOC t.b x` by rw[TAKE_SUC_BY_TAKE, Abbr`x`] >>
-  `_ = x ++ [t.b]` by rw[] >>
+  `_ = x ++ [t.b]` by rw[SNOC_APPEND] >>
   `SUC k < n + 1` by decide_tac >>
   `SUC k < LENGTH (leibniz_seg_arm (a + 1) b (n + 1))` by rw[leibniz_seg_arm_len] >>
   `k < LENGTH (leibniz_seg_arm (a + 1) b (n + 1))` by decide_tac >>
   `TAKE (k + 2) (leibniz_seg_arm (a + 1) b (n + 1)) = TAKE (SUC (SUC k)) (leibniz_seg_arm (a + 1) b (n + 1))` by rw[ADD1] >>
   `_ = SNOC t.c (SNOC t.b x)` by metis_tac[TAKE_SUC_BY_TAKE, ADD1] >>
-  `_ = x ++ [t.b; t.c]` by rw[] >>
+  `_ = x ++ [t.b; t.c]` by rw[SNOC_APPEND] >>
   `DROP k (leibniz_seg_arm a b n) = [t.a] ++ y` by rw[DROP_BY_DROP_SUC, ADD1, Abbr`y`] >>
   qabbrev_tac `p1 = TAKE (k + 1) (leibniz_seg_arm (a + 1) b (n + 1)) ++ DROP k (leibniz_seg_arm a b n)` >>
   qabbrev_tac `p2 = TAKE (k + 2) (leibniz_seg_arm (a + 1) b (n + 1)) ++ y` >>
@@ -16254,4 +16263,3 @@ using Pascal argument
 
 *)
 
-val _ = export_theory ();

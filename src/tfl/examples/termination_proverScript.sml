@@ -1,40 +1,37 @@
 (*===========================================================================*)
 (* Exercise the automatic termination prover                                 *)
 (*===========================================================================*)
+Theory termination_prover
+Ancestors
+  words list arithmetic numpair[qualified] nlist[qualified]
+  bit[qualified] comparison[qualified]
+Libs
+  Defn TotalDefn stringLib[qualified] wordsLib[qualified]
 
-open HolKernel boolLib bossLib listTheory Defn TotalDefn;
 
-local open stringLib in end
-
-val _ = new_theory "termination_prover";
-
-(*---------------------------------------------------------------------------*)
-(*  Add DIV_LT_X to termination simps?                                       *)
-(*---------------------------------------------------------------------------*)
+(* get a view of what's happening
+val _ = set_trace "Definition.TC extraction" 3;
+val _ = set_trace "Definition.termination candidates" 2;
+*)
 
 Definition encode_num_def:
   encode_num (n:num) =
     if n = 0 then [T; T]
     else if EVEN n then F :: encode_num ((n - 2) DIV 2)
     else T :: F :: encode_num ((n - 1) DIV 2)
-Termination
-  WF_REL_TAC ‘$<’ >> simp[arithmeticTheory.DIV_LT_X]
 End
 
 Definition n2l_def:
   n2l b n = if n < b \/ b < 2 then [n MOD b] else n MOD b :: n2l b (n DIV b)
 End
 
-local open numpairTheory nlistTheory in end
-
 Definition nlistrec_def:
   nlistrec n f l = if l = 0 then n
                    else f (nfst (l - 1)) (nsnd (l - 1))
                           (nlistrec n f (nsnd (l - 1)))
 Termination
-  WF_REL_TAC `measure (SND o SND)` THEN
-  STRIP_TAC THEN ASSUME_TAC (Q.INST [`n` |-> `l - 1`] numpairTheory.nsnd_le) THEN
-  simp[]
+  WF_REL_TAC `measure (SND o SND)` >> strip_tac >>
+  ASSUME_TAC (Q.INST [`n` |-> `l - 1`] numpairTheory.nsnd_le) >> simp[]
 End
 
 (*---------------------------------------------------------------------------*)
@@ -47,18 +44,149 @@ Termination
   WF_REL_TAC ‘measure (SND o FST)’
 End
 
+Definition ramana_bug_def:
+  bug a b x y u v =
+  if a = 0 then x else let
+    q = b DIV a;
+    r = b MOD a;
+    m = x - (u * q);
+    n = y - (v * q);
+    b = a; a = r; x = u; y = v; u = m; v = n in
+      bug a b x y u v
+End
+
+(*---------------------------------------------------------------------------*)
+(* From src/finite_maps/patriciaScript.sml                                   *)
+(*---------------------------------------------------------------------------*)
+
+Datatype:
+  ptree = Empty | Leaf num 'a | Branch num num ptree ptree
+End
+
+Definition BRANCHING_BIT_def:
+  BRANCHING_BIT p0 p1 =
+    if (ODD p0 = EVEN p1) \/ (p0 = p1) then 0
+    else SUC (BRANCHING_BIT (DIV2 p0) (DIV2 p1))
+Termination
+ WF_REL_TAC `measure (\(x,y). x + y)` \\ rw[]
+   \\ Cases_on `ODD p0` \\ FULL_SIMP_TAC bool_ss []
+   \\ FULL_SIMP_TAC bool_ss [GSYM ODD_EVEN, GSYM EVEN_ODD]
+   \\ IMP_RES_TAC EVEN_ODD_EXISTS
+   \\ SRW_TAC [ARITH_ss] [ADD1,
+         ONCE_REWRITE_RULE [MULT_COMM] (CONJ ADD_DIV_ADD_DIV MULT_DIV)]
+End
+
+(*---------------------------------------------------------------------------*)
+(* Illustrates need for case splitting on if-then-else in termination prover *)
+(*---------------------------------------------------------------------------*)
+
+Definition PEEK_def:
+  PEEK Empty k = NONE /\
+  PEEK (Leaf j d) k = (if k = j then SOME d else NONE) /\
+  PEEK (Branch p m l r) k = PEEK (if BIT m k then l else r) k
+End
+
+Definition JOIN_def:
+  JOIN (p0,t0,p1,t1) =
+    let m = BRANCHING_BIT p0 p1 in
+      if BIT m p0 then
+        Branch (MOD_2EXP m p0) m t0 t1
+      else
+        Branch (MOD_2EXP m p0) m t1 t0
+End
+
+Definition ADD_def:
+  (ADD Empty (k,e) = Leaf k e) /\
+  (ADD (Leaf j d) (k,e) = (if j = k then Leaf k e
+                          else JOIN (k, Leaf k e, j, Leaf j d))) ∧
+  (ADD (Branch p m l r) (k,e) =
+         if MOD_2EXP_EQ m k p then
+           if BIT m k then
+                Branch p m (ADD l (k,e)) r
+              else
+                Branch p m l (ADD r (k,e))
+         else
+           JOIN (k, Leaf k e, p, Branch p m l r))
+End
+
+(*---------------------------------------------------------------------------*)
+(* Recursion in monads. From src/monad/more_monads/errorStateMonadScript.sml *)
+(*---------------------------------------------------------------------------*)
+
+Type M[local] = “:'state -> ('a # 'state) option”
+
+Definition UNIT_DEF:
+  UNIT (x:'b) : ('b,'a) M = \(s:'a). SOME (x, s)
+End
+
+Definition BIND_DEF:
+  BIND (g: ('b, 'a) M) (f: 'b -> ('c, 'a) M) (s0:'a) =
+    case g s0 of
+      NONE => NONE
+    | SOME (b,s) => f b s
+End
+
+Definition FOR_def:
+ (FOR : num # num # (num -> (unit, 'state) M) -> (unit, 'state) M)
+      (i, j, a) =
+    if i = j then
+        a i
+     else
+        BIND (a i) (\u. FOR (if i < j then i + 1 else i - 1, j, a))
+Termination
+  WF_REL_TAC `measure (\(i, j, a). if i < j then j - i else i - j)`
+End
+
 (*---------------------------------------------------------------------------*)
 (* Functions over datatypes with nesting under type operators                *)
 (*---------------------------------------------------------------------------*)
 
 Datatype:
   term = Var num
-       | Fnapp num (term list)
+       | App num (term list)
 End
 
 Definition vars_of_def:
   vars_of (Var n) = [n] ∧
-  vars_of (Fnapp c ts) = FLAT (MAP vars_of ts)
+  vars_of (App c ts) = FLAT (MAP vars_of ts)
+End
+
+Definition match_def:
+  match [] [] theta = SOME theta ∧
+  match [] __ _____ = NONE ∧
+  match __ [] _____ = NONE ∧
+  match (Var n::pats) (tm::obs) theta =
+        (let bindings = {t | (n,t) ∈ theta}
+         in if bindings = {} then
+               match pats obs ((n,tm) INSERT theta)
+            else
+            if bindings = {tm} then
+               match pats obs theta
+            else NONE) ∧
+  match (App _ _ :: ___) (Var _ :: ___) theta = NONE ∧
+  match (App c1 T1::pats) (App c2 T2::obs) theta =
+        if c1 ≠ c2 then
+           NONE
+        else
+           match (T1 ++ pats) (T2 ++ obs) theta
+End
+
+Definition subst_def:
+  subst theta (App c tms) = App c (MAP (subst theta) tms) ∧
+  subst theta (Var n) =
+        (let bindings = {t | (n,t) ∈ theta}
+         in if bindings = {} then
+               Var n
+            else
+               @t. t ∈ bindings)
+End
+
+Definition term_cmp_def:
+  term_cmp (Var x1) (Var x2) = num_cmp x1 x2 ∧
+  term_cmp (Var _) (App _ _) = Less ∧
+  term_cmp (App _ _) (Var _) = Greater ∧
+  term_cmp (App x1 ts1) (App x2 ts2) =
+     pair_cmp num_cmp (list_cmp term_cmp) (x1,ts1) (x2,ts2)
 End
 
 Datatype:
@@ -76,6 +204,10 @@ Definition exp_vars_def:
  exp_vars (BinopExp (e1,e2)) = exp_vars e1 UNION exp_vars e2 ∧
  exp_vars (FncallExp s elist) = FOLDR (λe s. exp_vars e UNION s) {} elist
 End
+
+(*---------------------------------------------------------------------------*)
+(* Mutual recursion                                                          *)
+(*---------------------------------------------------------------------------*)
 
 Datatype:
   expr = VarExpr string
@@ -115,9 +247,10 @@ End
 
   Modifications: IntV (int) --> IntV(num)
                : byte --> word8
-*)
 
-local open wordsLib in end
+  Use of higher order constructs means that the definition no longer has to be
+  mutually recursive
+*)
 
 Datatype:
   abi_type
@@ -166,9 +299,6 @@ Definition int_bits_bound_def:
   int_bits_bound i n ⇔ i < 2 ** PRE n
 End
 
-(* NB: the invocation of LIST_REL needs an eta-expanded has_type,
-   otherwise ugly failure. *)
-
 Definition has_type_def:
   has_type (Uint n)     (NumV v)    = (v < 2 ** n ∧ valid_int_bound n) ∧
   has_type (Int n)      (IntV i)    = (int_bits_bound i n ∧ valid_int_bound n) ∧
@@ -179,8 +309,24 @@ Definition has_type_def:
   has_type (Bytes b)    (BytesV bs) = (valid_bytes_bound b ∧ valid_length b bs) ∧
   has_type String       (BytesV bs) = T ∧
   has_type (Array b t)  (ListV vs)  = EVERY (has_type t) vs ∧
-  has_type (Tuple ts)   (ListV vs)  = LIST_REL (λty v. has_type ty v) ts vs ∧
+  has_type (Tuple ts)   (ListV vs)  = LIST_REL has_type ts vs ∧
   has_type  other         wise      = F
 End
 
-val _ = export_theory();
+(*---------------------------------------------------------------------------*)
+(* Example from Halogen Truong                                               *)
+(*---------------------------------------------------------------------------*)
+
+Datatype:
+  based = Based | NotBased | Trusted | NotTrusted
+End
+
+Datatype:
+  shaped_based = WordB based | StructB (shaped_based list)
+End
+
+Definition sh_based_set_def:
+  sh_based_set (WordB b) b' = WordB b' /\
+  sh_based_set (StructB sbs) b' =
+     StructB $ MAP2 sh_based_set sbs (REPLICATE (LENGTH sbs) b')
+End

@@ -3,22 +3,20 @@
 
 (* app load ["totoTheory", "intLib"]; *)
 
-open HolKernel boolLib Parse;
+Theory intto
+Ancestors
+  pred_set relation pair arithmetic numeral toto integer
+Libs
+  pred_setLib PairRules Defn intLib
+
 
 val _ = set_trace "Unicode" 0;
-open pred_setLib pred_setTheory relationTheory pairTheory;
-open bossLib PairRules arithmeticTheory numeralTheory Defn;
-open totoTheory intLib;
-
-val _ = new_theory "intto";
 val _ = ParseExtras.temp_loose_equality()
 
 (* My habitual abbreviations: *)
 
 val AR = ASM_REWRITE_TAC [];
 fun ulist x = [x];
-
-val _ = intLib.deprecate_int ();
 
 val _ = Defn.def_suffix := ""; (* replacing default "_def" *)
 
@@ -121,5 +119,3 @@ SRW_TAC [] [TO_of_LinearOrder, intOrd, BIT2_nz]);
 val ZERO_eq_neg_ZERO_thm = store_thm ("ZERO_eq_neg_ZERO_thm",
 ``intOrd (& ZERO) (numeric_negate (& ZERO)) = EQUAL``,
 SRW_TAC [] [TO_of_LinearOrder, intOrd, GSYM arithmeticTheory.ALT_ZERO]);
-
-val _ = export_theory ();

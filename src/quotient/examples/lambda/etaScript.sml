@@ -1,7 +1,11 @@
-open HolKernel Parse boolLib;
-
-val _ = new_theory "eta";
-
+Theory eta
+Ancestors
+  prim_rec pair list rich_list combin pred_set num arithmetic
+  relation more_list more_set variable term alpha lift reduction
+  beta
+Libs
+  listLib pred_setLib numLib Mutual ind_rel dep_rewrite quotient
+  barendregt tactics
 
 (* In interactive sessions, do:
 
@@ -16,33 +20,6 @@ app load ["pairTheory",
          ];
 
 *)
-
-open prim_recTheory pairTheory listTheory rich_listTheory;
-open combinTheory;
-open listLib;
-open pred_setTheory pred_setLib;
-open numTheory;
-open numLib;
-open arithmeticTheory;
-open bossLib;
-open relationTheory;
-open Mutual;
-open ind_rel;
-open dep_rewrite;
-open quotient;
-open more_listTheory;
-open more_setTheory;
-open variableTheory;
-open termTheory;
-open alphaTheory;
-open liftTheory;
-open barendregt;
-open reductionTheory;
-open betaTheory;
-
-
-open tactics;
-
 
 val term = ty_antiq ( ==`:'a term`== );
 val subs = ty_antiq ( ==`:(var # 'a term) list`== );
@@ -1348,8 +1325,6 @@ val BETA_ETA_R_NORMAL_FORM_UNIQUE = store_thm
 
 
 
-
-val _ = export_theory();
 
 val _ = print_theory_to_file "-" "eta.lst";
 

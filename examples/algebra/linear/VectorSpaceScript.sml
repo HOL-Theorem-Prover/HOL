@@ -751,7 +751,7 @@ val stick_snoc = store_thm(
   "stick_snoc",
   ``!r:'a field. !(l:'a list) n. l IN sticks r (SUC n) <=>
                                 (?h t. h IN R /\ t IN sticks r n /\ (l = SNOC h t))``,
-  rw[EQ_IMP_THM] >| [
+  rw[EQ_IMP_THM, SNOC_APPEND] >| [
     `n < SUC n /\ (SUC n - SUC n = 0)` by decide_tac >>
     `EL n l IN R /\ TAKE n l IN sticks r n /\ DROP (SUC n) l IN sticks r 0` by metis_tac[stick_components_stick] >>
     qabbrev_tac `h = EL n l` >>

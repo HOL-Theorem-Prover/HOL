@@ -500,9 +500,7 @@ fun cleanAll0 HOLDIR = let
   val {includes,extra_cleans,...} = hmakefile_data HOLDIR
   open Holmake_tools
 in
-  clean_dir default_ofns {extra_cleans = extra_cleans};
-  clean_depdir {depdirname = ".HOLMK"};
-  clean_depdir {depdirname = ".hollogs"};
+  clean_dir default_ofns {extra_cleans = extra_cleans @ [".hol/"]};
   includes
 end
 
@@ -512,8 +510,8 @@ fun cleanForReloc0 HOLDIR =
     open Holmake_tools
   in
     clean_forReloc {holheap = holheap};
-    clean_depdir {depdirname = ".HOLMK"};
-    clean_depdir {depdirname = ".hollogs"};
+    clean_depdir {depdirname = Systeml.DEPDIR};
+    clean_depdir {depdirname = Systeml.LOGDIR};
     includes
   end
 
@@ -785,9 +783,7 @@ in
   system_ps (fullPath [HOLDIR, "tools", "mllex", "mllex.exe"] ^ " Lexer.lex");
   system_ps (fullPath [HOLDIR, "tools", "mlyacc", "src", "mlyacc.exe"] ^ " Parser.grm");
   system_ps (POLYC ^ " poly-makebase.ML -o makebase.exe");
-  system_ps (POLYC ^ " poly-Doc2Html.ML -o Doc2Html.exe");
-  system_ps (POLYC ^ " poly-Doc2Txt.ML -o Doc2Txt.exe");
-  system_ps (POLYC ^ " poly-Doc2Tex.ML -o Doc2Tex.exe")
+  system_ps (POLYC ^ " poly-Doc2Html.ML -o gen_extra_docfiles")
 end
 
 val HOLMAKE = fullPath [HOLDIR, "bin/Holmake"]
@@ -795,7 +791,10 @@ val ML_SYSNAME = Systeml.ML_SYSNAME
 
 fun mosml_compilehelp () = ignore (SYSTEML [HOLMAKE, "all"])
 
-fun build_adoc_files () = let
+fun build_adoc_files () = true
+  (* for the moment, use markdown files as our "ASCII" documentation *)
+
+(* old code: let
   val docdirs = let
     val instr = TextIO.openIn(fullPath [HOLDIR, "tools",
                                         "documentation-directories"])
@@ -815,7 +814,7 @@ fun build_adoc_files () = let
   end
 in
   List.all make_adocs docdirs
-end
+end *)
 
 fun build_help graph =
  let val dir = OS.Path.concat(OS.Path.concat (HOLDIR,"help"),"src-sml")
@@ -826,7 +825,7 @@ fun build_help graph =
              else if ML_SYSNAME = "mosml" then mosml_compilehelp()
              else raise Fail "Bogus ML_SYSNAME"
 
-     val doc2html = fullPath [dir,"Doc2Html.exe"]
+     val doc2html = fullPath [dir,"gen_extra_docfiles"]
      val docpath  = fullPath [HOLDIR, "help", "Docfiles"]
      val htmlpath = fullPath [docpath, "HTML"]
      val _        = if (HOLFileSys.isDir htmlpath handle _ => false) then ()
@@ -834,14 +833,12 @@ fun build_help graph =
                           HOLFileSys.mkDir htmlpath)
      val cmd1     = [doc2html, docpath, htmlpath]
      val cmd2     = [fullPath [dir,"makebase.exe"]]
-     val _ = print "Generating ASCII versions of Docfiles...\n"
-     val _ = if build_adoc_files () then print "...ASCII Docfiles done\n"
-             else ()
  in
-   print "Generating HTML versions of Docfiles...\n"
- ;
-   if SYSTEML cmd1 then print "...HTML Docfiles done\n"
-   else die "Couldn't make html versions of Docfiles"
+   if ML_SYSNAME <> "mosml" then (
+     print "Generating HTML and plain text versions of Docfiles...\n" ;
+     if SYSTEML cmd1 then print "...docfile translation done\n"
+     else die "Couldn't translate Docfiles"
+   ) else ()
  ;
    if (print "Building Help DB\n"; SYSTEML cmd2) then ()
    else die "Couldn't make help database"

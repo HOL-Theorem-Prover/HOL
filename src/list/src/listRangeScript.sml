@@ -1,13 +1,13 @@
 (* ------------------------------------------------------------------------- *)
 (* List of Range of Numbers                                                  *)
 (* ------------------------------------------------------------------------- *)
+Theory listRange[bare]
+Ancestors
+  arithmetic list pred_set divides
+Libs
+  HolKernel Parse boolLib BasicProvers TotalDefn simpLib numSimps
+  numLib metisLib pred_setSimps listSimps
 
-open HolKernel Parse boolLib BasicProvers;
-
-open arithmeticTheory TotalDefn simpLib numSimps numLib listTheory metisLib
-     pred_setTheory pred_setSimps listSimps dividesTheory;
-
-val _ = new_theory "listRange";
 
 val decide_tac = DECIDE_TAC;
 val metis_tac = METIS_TAC;
@@ -456,9 +456,9 @@ val listRangeINC_EXISTS_EVERY = store_thm(
 val listRangeINC_SNOC = store_thm(
   "listRangeINC_SNOC",
   ``!m n. m <= n + 1 ==> ([m .. (n + 1)] = SNOC (n + 1) [m .. n])``,
-  rw[listRangeINC_def] >>
+  rw[listRangeINC_def, SNOC_APPEND] >>
   `(n + 2 - m = 1 + (n + 1 - m)) /\ (n + 1 - m + m = n + 1)` by decide_tac >>
-  rw_tac std_ss[GENLIST_APPEND, GENLIST_1]);
+  rw_tac std_ss [GENLIST_APPEND, GENLIST_1]);
 
 (* Theorem: m <= n + 1 ==> (FRONT [m .. (n + 1)] = [m .. n]) *)
 (* Proof:
@@ -1169,4 +1169,3 @@ Proof
  >> rw []
 QED
 
-val _ = export_theory();

@@ -1365,29 +1365,6 @@ proof, or a different proof. The functions that do this are
 \ml{rotate} and \ml{rotate\_proofs}, respectively. The abbreviations
 \ml{r} and \ml{R} are simpler to type in.
 
-\section{Specialised Syntax for Script Files}\label{sec:special-syntax}
-
-\HOL{} supports a number of syntactic sugar forms to make common idioms easier to read \emph{and} write.
-These are wrappers around existing \ML{} functions, and documented in \DESCRIPTION{} alongside those functions.
-Figure~\ref{fig:special-syntax} summarises the complete set of special forms.
-\begin{figure}[hbtp]
-\begin{center}
-\begin{tabular}{lp{0.3\textwidth}}
-Sugar & Underlying \ML{} (Sec.\ ref.)\\\hline
-\ml{Datatype} \ml{:} \dots \ml{End} & \ml{Datatype} (\ref{sec:datatype})\\
-\ml{Definition} \emph{ident} \emph{attrs}$^?$ \ml{:} \dots $($ \ml{Termination} \dots $)^?$ \ml{End} & Function definition\\
-\ml{Overload} \emph{ident} \emph{attrs}$^?$ \ml{=} ``\emph{term}'' & \ml{overload\_on} (\ref{sec:parsing:overloading})\\
-\ml{Quote} \emph{ident} \ml{:} \dots \ml{End} & Quotation~(\ref{sec:generalised-quotation-syntax})\\
-\ml{Quote} \emph{ident} \ml{=} \emph{ident} \ml{:} \dots \ml{End} & Quotation~(\ref{sec:generalised-quotation-syntax})\\
-\ml{Theorem} \emph{ident} \emph{attrs}$^?$ \ml{:} \dots \ml{Proof} \dots \ml{QED} & \ml{store\_thm}~(\ref{theoryprims})\\
-\ml{Theorem} \emph{ident} \emph{attrs}$^?$ \ml{=} \dots & \ml{save\_thm}~(\ref{theoryprims})\\
-\ml{Type} \emph{ident} \emph{attrs}$^?$  \ml{=} ``:\emph{type}'' & \ml{type_abbrev} (\ref{sec:parsing-types})\\
-\end{tabular}
-\end{center}
-\caption{Special syntactic forms available in script files.
-All capitalised keywords must occur in the first column of their respective lines in order to be recognised.}
-\label{fig:special-syntax}
-\end{figure}
 \section{High Level Proof---\texttt{bossLib}}
 % would use \ml{boss} above but it puts LaTeX into fits
 \label{sec:bossLib}
@@ -1409,8 +1386,8 @@ of booleans, pairs, sums, the option type, arithmetic, and lists.
 The following functions use information in the database to ease the
 application of \HOL's underlying functionality:
 
-\index{Induct_on@\ml{Induct\_on}}
-\index{Cases_on@\ml{Cases\_on}}
+\index{Induct_on (induction tactic)@\ml{Induct\_on} (induction tactic)}
+\index{Cases_on (cases tactic)@\ml{Cases\_on} (cases tactic)}
 \begin{verbatim}
    type_rws     : hol_type -> thm list
    Induct       : tactic
@@ -1469,6 +1446,8 @@ are moved from the assumptions to the conclusion of the goal, and all
 free variables of $M$ are universally quantified. \ml{Induct\_on} is
 more general than \ml{Induct}, but it does require an explicit term to
 be given.
+
+\ml{Induct\_on} can also be used to perform rule inductions, for which see Section~\ref{sec:proofs-with-inductive-relations}.
 
 Three supplementary entry-points have been provided for more exotic
 inductions:
@@ -1998,8 +1977,8 @@ The following example is taken from the \ml{cv\_computeLib} examples, available 
    End
 
 ##linelen_limit 75
->> time (cv_computeLib.cv_compute [fact_def]) ``fact (cv$Num 1234)``;
-##nolinelen_limit
+>> time (cv_computeLib.cv_compute [fact_def]) “fact (cv$Num 1234)”;
+##poplinelen_limit
 \end{alltt}
 \end{session}
 On a modern machine, the call to \holtxt{cv\_compute} finishes in less than two tenths of a second.
@@ -2097,7 +2076,7 @@ The following example mirrors those in Section \ref{ssec:cv-exprs}, but it uses 
 
 ##linelen_limit 75
 >> time cv_transLib.cv_eval ``FACT 1234``;
-##nolinelen_limit
+##poplinelen_limit
 \end{alltt}
 \end{session}
 

@@ -2,14 +2,13 @@
 (* FILE          : llistScript.sml                                       *)
 (* DESCRIPTION   : Possibly infinite sequences (llist)                   *)
 (* ===================================================================== *)
+Theory llist
+Ancestors
+  option combin option pair num arithmetic prim_rec list
+  rich_list while pair pred_set set_relation arithmetic
+Libs
+  BasicProvers boolSimps markerLib hurdUtils
 
-open HolKernel boolLib Parse bossLib
-
-open BasicProvers boolSimps markerLib optionTheory hurdUtils combinTheory
-     optionTheory pairTheory numTheory arithmeticTheory prim_recTheory
-     listTheory rich_listTheory whileTheory;
-
-val _ = new_theory "llist";
 
 val _ = temp_delsimps ["NORMEQ_CONV"]
 
@@ -1951,7 +1950,6 @@ QED
 (*                                                                           *)
 (*---------------------------------------------------------------------------*)
 
-open pairTheory
 val LZIP_THM = new_specification
  ("LZIP_THM", ["LZIP"],
   Q.prove
@@ -2243,8 +2241,6 @@ QED
 (* ------------------------------------------------------------------------ *)
 (* Turning a stream-like linear order into a lazy list                      *)
 (* ------------------------------------------------------------------------ *)
-
-open pred_setTheory set_relationTheory arithmeticTheory
 
 val linear_order_to_list_f_def = Define `
   linear_order_to_list_f lo =
@@ -2564,15 +2560,17 @@ Proof
   metis_tac[to_fromList,THE_DEF,toList,NOT_SOME_NONE]
 QED
 
-val LPREFIX_TRANS = Q.store_thm("LPREFIX_TRANS",
-  `LPREFIX l1 l2 /\ LPREFIX l2 l3 ==> LPREFIX l1 l3`,
+Theorem LPREFIX_TRANS:
+  LPREFIX l1 l2 /\ LPREFIX l2 l3 ==> LPREFIX l1 l3
+Proof
   rw[LPREFIX_def] >>
-  every_case_tac >> fs[] >>
+  every_case_tac >> gvs[] >>
   TRY(imp_res_tac IS_PREFIX_TRANS >> NO_TAC) >>
   imp_res_tac IS_PREFIX_LENGTH >>
   imp_res_tac LTAKE_TAKE_LESS >> simp[] >>
   fs[IS_PREFIX_APPEND] >>
-  simp[TAKE_APPEND1]);
+  simp[TAKE_APPEND1]
+QED
 
 val LPREFIX_fromList = Q.store_thm ("LPREFIX_fromList",
   `!l ll.
@@ -3391,11 +3389,10 @@ Proof
   \\ ho_match_mp_tac SNOC_INDUCT \\ rw []
   THEN1
    (qspec_then ‘ys’ mp_tac SNOC_CASES \\ rpt strip_tac
-    \\ asm_rewrite_tac [IS_SUFFIX] \\ fs [])
-  \\ rewrite_tac [GSYM SNOC_APPEND]
+    \\ asm_rewrite_tac [IS_SUFFIX] \\ fs [SNOC_APPEND])
   \\ qspec_then ‘ys’ mp_tac SNOC_CASES \\ rpt strip_tac
   \\ asm_rewrite_tac [IS_SUFFIX]
-  \\ fs [GSYM PULL_EXISTS]
+  \\ fs [GSYM PULL_EXISTS, SNOC_APPEND]
   \\ Cases_on ‘l = []’ \\ fs []
   \\ asm_rewrite_tac [IS_SUFFIX]
   \\ first_x_assum (qspec_then ‘l’ mp_tac)
@@ -4027,4 +4024,3 @@ Proof
   fs[LFINITE_fromList,LAPPEND11_FINITE1]>>metis_tac[]
 QED
 
-val _ = export_theory();

@@ -1,7 +1,8 @@
-open HolKernel Parse Drule Tactical Tactic Conv Rewrite boolTheory;
-
-val _ = new_theory "ConseqConv";
-
+Theory ConseqConv[bare]
+Ancestors
+  bool
+Libs
+  HolKernel Parse Drule Tactical Tactic Conv Rewrite
 
 val forall_eq_thm = store_thm ("forall_eq_thm",
    ``(!s:'a. (P s = Q s)) ==> ((!s. P s) = (!s. Q s))``,
@@ -148,4 +149,3 @@ REWRITE_TAC[ASM_MARKER_DEF] THEN
 BETA_TAC THEN REWRITE_TAC [])
 
 
-val _ = export_theory();

@@ -1,9 +1,8 @@
-
-open HolKernel Parse boolLib bossLib;
-open wordsTheory wordsLib arithmeticTheory listTheory stringTheory finite_mapTheory;
-
-val _ = new_theory "x64asm_syntax";
-
+Theory x64asm_syntax
+Ancestors
+  words arithmetic list string finite_map
+Libs
+  wordsLib
 
 (* syntax *)
 
@@ -134,5 +133,3 @@ Definition asm2str_def:
      "\tmovabs $heapE, %r15  /* r15 := heap end    */\n\n"]
     ++ insts 0 xs
 End
-
-val _ = export_theory();

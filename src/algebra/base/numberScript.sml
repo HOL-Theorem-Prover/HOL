@@ -3,14 +3,11 @@
 (*                                                                           *)
 (* Author: (Joseph) Hing-Lun Chan (Australian National University, 2019)     *)
 (* ------------------------------------------------------------------------- *)
+Theory number
+Ancestors
+  prim_rec arithmetic divides gcd gcdset logroot pred_set list
+  rich_list listRange indexedLists
 
-open HolKernel boolLib Parse bossLib;
-
-open prim_recTheory arithmeticTheory dividesTheory gcdTheory gcdsetTheory
-     logrootTheory pred_setTheory listTheory rich_listTheory listRangeTheory
-     indexedListsTheory;
-
-val _ = new_theory "number";
 
 (* Overload non-decreasing functions with different arity. *)
 val _ = overload_on("MONO", ``\f:num -> num. !x y. x <= y ==> f x <= f y``);
@@ -10106,8 +10103,3 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
-(*===========================================================================*)

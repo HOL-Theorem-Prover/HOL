@@ -2135,7 +2135,7 @@ Proof
     \\ ASM_SIMP_TAC std_ss [] \\ IMP_RES_TAC MEM_ZIP_IMP
     \\ FULL_SIMP_TAC std_ss [EVERY_MEM]
     \\ IMP_RES_TAC MEM_logic_term_size
-    \\ simp[logic_term_size_def])
+    \\ simp[])
 QED
 
 val MEM_ZIP_MAP_EQ = prove(

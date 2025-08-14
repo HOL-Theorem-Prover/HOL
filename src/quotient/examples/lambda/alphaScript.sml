@@ -1,31 +1,13 @@
-open HolKernel Parse boolLib;
+Theory alpha
+Ancestors
+  prim_rec pair list rich_list combin pred_set num arithmetic
+  more_list more_set variable term
+Libs
+  pairLib listLib pred_setLib numLib ind_rel dep_rewrite tactics
 
 (* --------------------------------------------------------------------- *)
 (* Building the definitions of alpha equivalence for object expressions. *)
 (* --------------------------------------------------------------------- *)
-
-
-val _ = new_theory "alpha";
-
-
-open prim_recTheory pairTheory pairLib listTheory rich_listTheory;
-open combinTheory;
-open listLib;
-open pred_setTheory pred_setLib;
-open numTheory;
-open numLib;
-open arithmeticTheory;
-open bossLib;
-open ind_rel;
-open dep_rewrite;
-open more_listTheory;
-open more_setTheory;
-open variableTheory;
-open termTheory;
-
-
-open tactics;
-
 
 
 val vars   =  ty_antiq( ==`:var list`== );
@@ -1595,8 +1577,6 @@ val ALPHA_Lam_subst = store_thm
    );
 
 
-
-val _ = export_theory();
 
 val _ = print_theory_to_file "-" "alpha.lst";
 

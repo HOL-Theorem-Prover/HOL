@@ -36,6 +36,7 @@ AXIOMATIC_EXAMPLES = $(patsubst %,axiomatic-developments/%,$(AXIOMATIC_THYDIRS))
 EXDIRS = algebra/aat \
          arm/arm6-verification arm/armv8-memory-model arm/experimental \
          $(AXIOMATIC_EXAMPLES) \
+	 bnf-datatypes \
          CCS Crypto/RSA Crypto/SHA-2 Crypto/MD5 \
          Crypto/pedersenCommitment Crypto/sigmaProtocol \
          Hoare-for-divergence MLsyntax \
@@ -46,6 +47,7 @@ EXDIRS = algebra/aat \
 	 formal-languages formal-languages/context-free \
          formal-languages/contig formal-languages/json \
          formal-languages/lambek formal-languages/regular/regular-play \
+         formal-languages/pi-calculus \
          fun-op-sem/coimp fun-op-sem/lprefix_lub fun-op-sem/for \
          hardware hfs \
          imperative ind_def \

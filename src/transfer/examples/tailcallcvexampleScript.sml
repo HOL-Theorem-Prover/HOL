@@ -1,9 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open whileTheory cvxferExamplesTheory
-
-val _ = new_theory "tailcallcvexample";
-
+Theory tailcallcvexample
+Ancestors
+  while cvxferExamples
 
 fun tuplify t =
   let val (f, xs) = strip_comb t
@@ -161,4 +158,3 @@ isprime_aux_C
   |> MATCH_MP (GEN_ALL BC_E)
 
 
-val _ = export_theory();

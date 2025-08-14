@@ -169,7 +169,7 @@ evaluations.")
 
 (defun hol-term-at-point ()
   (let ((s (thing-at-point 'hol-term t)))
-    (with-hol-locpragma hol-beg-pos s)))
+    (with-hol-interm-locpragma hol-beg-pos s)))
 
 (defun hol-buffer-ok (string)
   "Checks a string to see if it is the name of a good HOL buffer.
@@ -204,17 +204,50 @@ process in it."
       (concat (hol-locpragma-of-position pos) s)
       s))
 
-; for the moment we have no way of passing on the column information
+(defun with-hol-interm-locpragma (pos s)
+  (if hol-generate-locpragma-p
+      (concat (hol-interm-locpragma-of-position pos) s)
+    s))
+
+(defun hol-string-escape (s)
+  "Escape argument so that special chars are escaped with backslash characters.
+The special characters are backslashes, left and right parentheses, and space."
+  (let (acc)
+    (seq-doseq (c s)
+      (let ((s1 (cond
+                 ((= c ?\s) "\\ ")
+                 ((= c ?\() "\\(")
+                 ((= c ?\\) "\\\\")
+                 ((= c ?\)) "\\)")
+                 (t (string c)))))
+        (setq acc (cons s1 acc))))
+    (string-join (reverse acc))))
+
 (defun hol-locpragma-of-position (pos)
   "Convert Elisp position into HOL location pragma.  Not for interactive use."
-  (let ((initial-point (point)))
+  (let*
+      ((rcposn (hol-get-rowcol-posn pos))
+       (fname (buffer-file-name))
+       (filepart (if fname (format "#(FILE=%s)" (hol-string-escape fname)) "")))
+    ;; send position of the line before a newline so that text that
+    ;; needs to be in column 0 is still in column 0
+    (format "%s#(LINE=%d,%d)\n"
+            filepart
+            (- (car rcposn) 1)
+            (cdr rcposn))))
+
+(defun hol-interm-locpragma-of-position (pos)
+  (let ((rcposn (hol-get-rowcol-posn pos)))
+    (format "(*#loc %d %d*)" (car rcposn) (cdr rcposn))))
+
+(defun hol-get-rowcol-posn (pos)
+  (save-excursion
     (goto-char pos)
     (let* ((rowstart (point-at-bol))  ;; (line-beginning-position)
            (row      (+ (count-lines 1 pos)
-                      (if (= rowstart pos) 1 0)))
+                        (if (= rowstart pos) 1 0)))
            (col      (+ (current-column) 1)))
-      (goto-char initial-point)
-      (format "#(LINE=%d,%d)" row col))))
+      (cons row col))))
 
 (defun send-raw-string-to-hol (string echoit)
   "Sends a string in the raw to HOL.  Not for interactive use."
@@ -425,15 +458,22 @@ before and after the region is sent."
   (interactive "r\np")
   (let* ((buffer-string
             (with-hol-locpragma start (buffer-substring start end)))
+         (pnv (prefix-numeric-value arg))
          (send-string
-          (if (= arg 4)
-              (concat "(" buffer-string ") handle e => Raise e")
-            buffer-string))
-         (loud-opens (if (= arg 16) t loud-opens0))
+          (cond ((= pnv 4)
+                 (concat "(" buffer-string ") handle e => Raise e"))
+                ((= pnv 16)
+                 (concat buffer-string
+                         ";val _ = Globals.interactive := true;"))
+                (t buffer-string)))
+         (loud-opens (if (= pnv 16) t loud-opens0))
          (sender (if hol-emit-time-elapsed-p
                      'send-timed-string-to-hol
                    'send-string-to-hol)))
-    (if (= arg 16) (hol-toggle-quietdec))
+    (if (= pnv 16)
+        (progn
+          (hol-toggle-quietdec)
+          (send-string-to-hol "val _ = Globals.interactive := false;")))
     (unwind-protect
         (progn
           (funcall sender send-string hol-echo-commands-p loud-opens)
@@ -441,7 +481,9 @@ before and after the region is sent."
               (send-string-to-hol
                (concat "val _ = print \"\\n*** Emacs/HOL command completed "
                        "***\\n\\n\""))))
-      (if (= (prefix-numeric-value arg) 16) (hol-toggle-quietdec)))))
+      (if (= pnv 16) (hol-toggle-quietdec))
+      ;; necessary just in case exception was raised in send-string
+      (send-string-to-hol "val _ = Globals.interactive := true"))))
 
 
 
@@ -468,7 +510,7 @@ If prefix ARG is true, or if in transient mark mode, region is active and
 the region contains no term delimiters, then send region instead."
   (interactive "P")
   (let ((txt (condition-case nil
-                 (with-hol-locpragma (region-beginning)
+                 (with-hol-interm-locpragma (region-beginning)
                     (buffer-substring (region-beginning) (region-end)))
                (error nil))))
     (if (or (and (is-region-active)
@@ -481,7 +523,7 @@ the region contains no term delimiters, then send region instead."
   (send-raw-string-to-hol
    (concat "Defn.tgoal (Defn.Hol_defn \"HOLmode_defn\" `"
            str "`) handle e => Raise e")
-   nil))
+   t))
 
 (defun remove-sml-comments (end)
   (let (done (start (point)))
@@ -520,7 +562,8 @@ starts >%s%s<"
       (concat
        (mapconcat (lambda (s) (concat "^" s "\\>"))
                   '("Theorem" "Definition" "Inductive" "CoInductive"
-                    "Triviality" "Datatype" "Type" "Overload" "Quote")
+                    "Triviality" "Datatype" "Type" "Overload" "Quote"
+                    "Theory" "Ancestors" "Libs")
                   "\\|")
        "\\|;\\|"
        (regexp-opt
@@ -544,13 +587,15 @@ starts >%s%s<"
           ;; identifiers of form id.id.  When spotted such identifiers need
           ;; to have the first component of the name loaded.
           (let ((regexp
-                 (concat "`\\|“\\|‘\\|"
+                 (concat "`\\|“\\|‘\\|#(FILE=\\|"
                          hol-quoted-theorem-proof-re-begin "\\|"
                          hol-quoted-definition-re-begin "\\|"
                          hol-quoted-datatype-re-begin "\\|"
                          hol-quoted-Quote-re-begin "\\|"
                          "\\(" sml-struct-id-regexp "\\)\\.\\w+" "\\|"
-                         "\\_<open\\_>")))
+                         "\\_<open\\_>" "\\|"
+                         "^Libs\\_>" "\\|"
+                         "^Ancestors\\_>")))
             (while (re-search-forward regexp (point-max) t)
               (let ((pp (syntax-ppss))
                     (ms (match-string-no-properties 0)))
@@ -570,6 +615,17 @@ starts >%s%s<"
                      ((string= ms "‘")
                       (if (not (re-search-forward "’" nil t))
                           (error "Unbalanced ‘ in region")))
+                     ((string= ms "#(FILE=")
+                      (let (foundp abortedp)
+                        (while (and (not foundp)(not abortedp))
+                          (if (re-search-forward ")\\|\\\\" nil t)
+                              (let ((ms2 (match-string-no-properties 0)))
+                                (cond
+                                 ((string= ms2 ")") (setq foundp t))
+                                 (t (forward-char 1))))
+                            (setq abortedp t)))
+                        (if abortedp
+                            (error "Unterminated `#(FILE=..' directive in region"))))
                      ((and (or (string-prefix-p "Theorem" ms)
                                (string-prefix-p "Triviality" ms))
                            (char-equal (char-before) ?:))
@@ -587,13 +643,18 @@ starts >%s%s<"
                            (char-equal (char-before) ?:))
                       (if (not (re-search-forward "^End" nil t))
                           (error "Unbalanced [Co]Inductive/Quote in region")))
-                     ((string= ms "open")
-                      ;; point now after an open, now search forward
+                     ((or (string= ms "open")
+                          (string= ms "Libs")
+                          (string= ms "Ancestors"))
+                      ;; point now after an open/Libs, now search forward
                       ;; to end of buffer or a semi-colon, or an infix
                       ;; declaration or a val or a fun or another open
                       ;; or whatever, (as per the regexp defined just
                       ;; before this function definition)
-                      (let ((open-start (match-beginning 0))
+                      (if (or (string= ms "Libs") (string= ms "Ancestors"))
+                          (if (looking-at hol-module-qualification-regexp)
+                              (goto-char (match-end 0))))
+                      (let ((ancp (string= ms "Ancestors"))
                             (start (point))
                             (end
                              (save-excursion
@@ -614,11 +675,10 @@ starts >%s%s<"
                                      (setq abortedp t)))
                                  (if foundp
                                      (- (point) (length (match-string 0)))
-                                   (point-max)))))
-                            (endm (make-marker)))
+                                   (point-max))))))
                         ; (message "Handling an open")
                         (if hol-auto-load-p
-                            (hol-load-modules-in-region start end))))
+                            (hol-load-modules-in-region ancp start end))))
                      (t
                       ; (message "Saw \"%s\"; position = %d; loading: %s"
                       ;           ms (point) (match-string 6))
@@ -822,15 +882,26 @@ containing the HOL window, but keep the current frame uppermost."
                   "\\n\"; " "Meta.load \"" mys "\");\n")))
     (comint-send-string buf commandstring)))
 
-(defun hol-load-modules-in-region (start end)
-  "Attempts to load all of the words in the region as modules."
-  (interactive "rP")
+(defvar hol-module-qualification-regexp
+          "[[:space:]]*\\[[A-Za-z0-9=, \t\n]*\\]")
+
+(defun hol-load-modules-in-region (ancp start end)
+  "Attempts to load all of the words in the region as modules; with prefix arg
+appends \"Theory\" to the names. Skips over (ignores) module attributes given
+in square brackets after the names."
+  (interactive "P\nr")
   (save-excursion
     (goto-char start)
-    (while (re-search-forward (concat "\\b" sml-struct-id-regexp "\\b") end t)
+    (while (re-search-forward
+            (concat "\\b" sml-struct-id-regexp "\\b") end t)
       (let ((ppss (syntax-ppss)))
         (if (and (not (nth 4 ppss)) (not (nth 3 ppss)))
-            (hol-load-string (match-string 0)))))))
+            (progn
+              (hol-load-string (concat (match-string 0)
+                                       (if ancp "Theory" "")))
+              (if (looking-at hol-module-qualification-regexp)
+                  (goto-char (match-end 0)))))))))
+
 
 (defun hol-load-file (arg)
   "Gets HOL session to \"load\" the file at point.
@@ -847,7 +918,7 @@ region instead. With prefix ARG prompt for a file-name to load."
           ((and (is-region-active)
                 (string-match (concat "^\\(\\s-*" sml-struct-id-regexp
                                       "\\)+\\s-*$") txt))
-           (hol-load-modules-in-region (region-beginning) (region-end)))
+           (hol-load-modules-in-region nil (region-beginning) (region-end)))
           ((and wap (string-match "^\\w+$" wap)) (hol-load-string wap))
           (t (hol-load-string (read-string "Library to load: "))))))
 
@@ -899,13 +970,14 @@ region instead. With prefix ARG prompt for a file-name to load."
 
 (defun hol--find-alternate-executable (dir0 original-name0)
   (let ((dir (expand-file-name dir0))
-        (original-name (expand-file-name original-name0)))
+        (original-name (expand-file-name original-name0))
+        (lastmaker-path ".hol/make-deps/lastmaker"))
     ;; check for lastmaker file
     (if-let*
-        (((file-readable-p ".HOLMK/lastmaker"))
-         ((> 500 (file-attribute-size (file-attributes ".HOLMK/lastmaker"))))
+        (((file-readable-p lastmaker-path))
+         ((> 500 (file-attribute-size (file-attributes lastmaker-path))))
          (lines (with-temp-buffer
-                  (insert-file-contents-literally ".HOLMK/lastmaker")
+                  (insert-file-contents-literally lastmaker-path)
                   (split-string (buffer-string) "\n" t)))
          ((not (null lines)))
          (dir1 (file-name-directory (car lines)))
@@ -1099,9 +1171,10 @@ argument N, sets the trace to that value in particular."
         (send-raw-string-to-hol
          (format "local open Int in
                   val _ = let val nm = \"%s\"
-                      fun findfn r = #name r = nm
+                      fun findfn (Feedback.TraceElt r) = #name r = nm
+                      fun level (Feedback.TraceElt r) = #trace_level r
                       val old =
-                            #trace_level (valOf (List.find findfn (traces())))
+                            level (valOf (List.find findfn (traces())))
                   in
                       print (\"** \"^nm^\" trace now \");
                       if 0 < old then (set_trace nm 0; print \"off\\n\")
@@ -1208,8 +1281,7 @@ argument N, sets the trace to that value in particular."
    (concat
     "val _ = print (\"*** 'Quiet declaration' now \" ^"
     "Bool.toString (HOL_Interactive.toggle_quietdec()) ^ \" ***\\n\")")
-   nil)
-  (hol-toggle-var "Globals.interactive"))
+   nil))
 
 (defun hol-toggle-quiet-quietdec ()
   "Toggles quiet declarations in the interactive system."

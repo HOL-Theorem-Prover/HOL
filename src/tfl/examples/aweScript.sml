@@ -1,11 +1,12 @@
 (*===========================================================================*)
 (* Nice monad example from Ramana Kumar                                      *)
 (*===========================================================================*)
+Theory awe
+Ancestors
+  string pair rich_list alist arithmetic
+Libs
+  monadsyntax
 
-open HolKernel boolLib bossLib Parse stringTheory monadsyntax
-     pairTheory rich_listTheory alistTheory arithmeticTheory
-
-val _ = new_theory "awe";
 
 Datatype:
   call_target
@@ -231,7 +232,7 @@ Proof
   \\ goal_assum drule
 QED
 
-val _ = set_trace "TFL rewrite monitoring" 3;
+val _ = set_trace "Definition.TC extraction" 3;
 
 Definition evaluate_def:
   eval_stmt cx (AugAssign t e) = do
@@ -300,4 +301,3 @@ Termination
          raise_def, return_def]
 End
 
-val () = export_theory();

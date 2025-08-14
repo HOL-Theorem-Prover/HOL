@@ -68,13 +68,14 @@ Definition cval_def:
 Termination
   WF_REL_TAC `inv_image (measure I LEX measure com_size)
                             (λ(c,s,t). (t,c))`
-  \\ SRW_TAC [] [] \\ DECIDE_TAC
 End
 
-val clock_bound = prove(
-  ``!c s t s' t'. (cval c s t = SOME (s',t')) ==> t' <= t``,
+Theorem clock_bound[local]:
+ !c s t s' t'. (cval c s t = SOME (s',t')) ==> t' <= t
+Proof
   recInduct (theorem "cval_ind") \\ rpt strip_tac
-  \\ fs [cval_def] \\ ect \\ fs [] \\ decide_tac);
+  \\ fs [cval_def] \\ ect \\ gvs[cval_def]
+QED
 
 fun term_rewrite tms = let
   fun f tm = ASSUME (list_mk_forall(free_vars tm,tm))

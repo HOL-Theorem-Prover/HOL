@@ -1,12 +1,10 @@
-open HolKernel boolLib bossLib Parse
+Theory tfl_examples
 
 fun function s q = Count.apply (bossLib.xDefine s) q; (* tries termination *)
 
 val nested_function = LIST_CONJ o map #1 o #extracta o
                       Defn.wfrec_eqns (TypeBase.theTypeBase())
                       o Parse.Term;
-
-val _ = new_theory "tfl_examples"
 
 val _ = set_trace "Theory.allow_rebinds" 1
 
@@ -169,4 +167,3 @@ val _ = tDefine "foo"
 `foo x = if (\x. x) x then foo F else ()`
 (WF_REL_TAC `measure (\x. if x then 1 else 0)`);
 
-val _ = export_theory()

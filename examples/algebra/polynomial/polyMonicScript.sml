@@ -3145,11 +3145,10 @@ val weak_snoc_eq_add_shift = store_thm(
   ``!r:'a ring. Ring r ==> !p c. weak p /\ c IN R /\ c <> #0 ==> (SNOC c p = p + [c] >> (LENGTH p))``,
   rpt strip_tac >>
   `poly [c]` by rw[poly_nonzero_element_poly] >>
-  Induct_on `p` >-
-  rw[] >>
+  Induct_on `p` >- rw[] >>
+  `SNOC c p <> |0|` by rw[NOT_SNOC_NIL] >>
   rpt strip_tac >>
   `h IN R /\ weak p` by metis_tac[weak_cons] >>
-  `SNOC c p <> |0|` by rw[NOT_SNOC_NIL] >>
   `weak [h] /\ weak [c]` by rw[] >>
   `SNOC c p = p + [c] >> LENGTH p` by metis_tac[] >>
   `poly (SNOC c p)` by rw[poly_add_weak_poly] >>

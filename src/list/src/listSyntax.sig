@@ -116,6 +116,8 @@ sig
   val dest_zip          : term -> term * term
   val strip_append      : term -> term list
   val strip_cons        : term -> term list * term
+  val strip_snoc        : term -> term * term list
+  val strip_snoc_to_lists : term -> term list
 
   val is_all_distinct : term -> bool
   val is_append       : term -> bool

@@ -99,7 +99,7 @@ in
 end
 
 val gterm_ty = mk_thy_type {Thy = "generic_terms", Tyop = "gterm",
-                            Args = [beta,alpha]}
+                            Args = [alpha]}
 
 local
   val num_ty = numSyntax.num
@@ -108,11 +108,9 @@ local
 in
 val genind_t =
   mk_thy_const {Thy = "generic_terms", Name = "genind",
-                Ty = (num_ty --> alpha --> bool) -->
-                     (num_ty --> num_ty --> beta --> numlist_ty --> numlist_ty --> bool) -->
+                Ty = (num_ty --> num_ty --> alpha --> numlist_ty -->
+                      numlist_ty --> bool) -->
                      num_ty --> gterm_ty --> bool}
-val GVAR_t = mk_thy_const {Thy = "generic_terms", Name = "GVAR",
-                           Ty = string_ty --> alpha --> gterm_ty}
 end
 
 fun first2 l =
@@ -124,23 +122,21 @@ fun first2 l =
    argument takes a list of [genind_exists] theorems generated from previous calls to the
    current function, otherwise the proof of term_exists may not succeed.
  *)
-fun new_type_step1 tyname n witnesses {vp, lp} = let
+fun new_type_step1 tyname n witnesses {lp} = let
   val list_mk_icomb = uncurry (List.foldl (mk_icomb o swap))
   val termP =
-      list_mk_icomb (genind_t, [vp,lp,numSyntax.mk_numeral (Arbnum.fromInt n)])
+      list_mk_icomb (genind_t, [lp,numSyntax.mk_numeral (Arbnum.fromInt n)])
   fun termPf x = mk_comb(termP, x)
   val (gtty,_) = dom_rng (type_of termP)
   val x = mk_var("x",gtty) and y = mk_var("y", gtty)
-  val (glam_ty, gvar_ty) = first2 (#2 (dest_type gtty))
+  val glam_ty = #2 (dest_type gtty)
   val term_exists =
       prove(mk_exists(x, mk_comb(termP, x)),
-            ((* does type use GVAR constructor? *)
-             irule_at (Pos hd) (cj 1 genind_rules) THEN BETA_TAC THEN
-             REWRITE_TAC[] THEN NO_TAC) ORELSE
             ((* hope type uses GLAM in base-case way *)
-             irule_at (Pos hd) (cj 2 genind_rules) THEN
+             irule_at (Pos hd) genind_rules THEN
              simpLib.SIMP_TAC (list_ss ++ boolSimps.DNF_ss) [] THEN
-             simpLib.SIMP_TAC list_ss [sumTheory.EXISTS_SUM] THEN
+             simpLib.SIMP_TAC list_ss [sumTheory.EXISTS_SUM, EXISTS_OR_THM,
+                                       listTheory.LENGTH_EQ_NUM_compute] THEN
              simpLib.SIMP_TAC list_ss witnesses))
   val {absrep_id, newty, repabs_pseudo_id, termP, termP_exists, termP_term_REP,
        term_ABS_t, term_ABS_pseudo11,
@@ -243,17 +239,22 @@ in
   | SOME v' => RENAME_VARS_CONV [v']
 end t
 
-fun prove_alpha_fcbhyp {ppm, alphas, rwts} th = let
+fun gen_tactics rwts [] : tactic = ALL_TAC
+  | gen_tactics rwts (ppm::xs) =
+    match_mp_tac (GEN_ALL notinsupp_fnapp) \\
+    EXISTS_TAC ppm \\
+    srw_tac [] rwts \\
+    gen_tactics rwts xs;
+
+fun prove_alpha_fcbhyp {ppms, alphas, rwts} th = let
   open nomsetTheory
   val th = rpt_hyp_dest_conj (UNDISCH th)
+  val tac = gen_tactics rwts ppms
   fun foldthis (h,th) = let
     val h_th =
       TAC_PROOF(([], h),
                 rpt gen_tac >> strip_tac >>
-                FIRST (map (match_mp_tac o GSYM) alphas) >>
-                match_mp_tac (GEN_ALL notinsupp_fnapp) >>
-                EXISTS_TAC ppm >>
-                srw_tac [] rwts)
+                FIRST (map (match_mp_tac o GSYM) alphas) >> tac)
   in
     PROVE_HYP h_th th
   end
@@ -262,8 +263,6 @@ in
 end
 
 val pi_t = mk_var("pi", cpm_ty)
-val gterm_ty = mk_thy_type {Tyop = "gterm", Thy = "generic_terms",
-                            Args = [beta,alpha]}
 val pmact_t = prim_mk_const{Name = "pmact", Thy = "nomset"}
 val mk_pmact_t = prim_mk_const{Name = "mk_pmact", Thy = "nomset"}
 val raw_gtpm_t =

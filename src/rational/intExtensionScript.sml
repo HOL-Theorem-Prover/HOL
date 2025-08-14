@@ -6,12 +6,12 @@
  *  Jens Brandt
  *
  ***************************************************************************)
+Theory intExtension
+Ancestors
+  arithmetic pair integer
+Libs
+  intLib schneiderUtils
 
-open HolKernel boolLib Parse bossLib;
-
-open arithmeticTheory pairTheory integerTheory intLib schneiderUtils;
-
-val _ = new_theory "intExtension";
 
 (*--------------------------------------------------------------------------*
    operations
@@ -269,4 +269,3 @@ Proof
 QED
 
 
-val _ = export_theory();

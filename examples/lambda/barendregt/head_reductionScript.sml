@@ -39,6 +39,12 @@ val _ = overload_on ("-h->", ``hreduce1``)
 val _ = set_fixity "-h->*" (Infix(NONASSOC, 450))
 val _ = overload_on ("-h->*", ``hreduce1^*``)
 
+val _ = TeX_notation { hol = "-h->",
+        TeX = ("\\ensuremath{\\rightarrow_h}", 1) };
+
+val _ = TeX_notation { hol = "-h->*",
+        TeX = ("\\ensuremath{\\twoheadrightarrow_{h}}", 1) };
+
 Theorem hreduce1_beta_reduce[simp] :
      LAM h M @@ VAR h -h-> M
 Proof
@@ -2178,7 +2184,7 @@ Proof
  >> Know ‘fm ' M = VAR y @* MAP VAR Y’
  >- (simp [Abbr ‘M’, ssub_appstar] \\
      Know ‘fm ' z = VAR y’
-     >- (‘z = EL n Z'’ by simp [Abbr ‘Z'’, EL_APPEND2] >> POP_ORW \\
+     >- (‘z = EL n Z'’ by simp [Abbr ‘Z'’, SNOC_APPEND, EL_APPEND2] >> POP_ORW \\
          simp [Abbr ‘fm’, LAST_EL] \\
          qabbrev_tac ‘Y' = SNOC y Y’ \\
          Know ‘fromPairs Z' (MAP VAR Y') ' (EL n Z') = EL n (MAP VAR Y')’
@@ -2194,7 +2200,7 @@ Proof
     ‘MEM (EL i Z) Z'’ by rw [EL_MEM, Abbr ‘Z'’] \\
      rw [Abbr ‘fm’] \\
      Know ‘EL i Z = EL i Z'’
-     >- (simp [Abbr ‘Z'’, EL_APPEND1]) >> Rewr' \\
+     >- (simp [Abbr ‘Z'’, SNOC_APPEND, EL_APPEND1]) >> Rewr' \\
      qabbrev_tac ‘Y' = SNOC y Y’ \\
      Know ‘EL i Y = EL i Y'’
      >- (SIMP_TAC std_ss [Once EQ_SYM_EQ, Abbr ‘Y'’] \\
@@ -2351,7 +2357,7 @@ Proof
  >> ‘DISJOINT (set L') X’ by rw [Abbr ‘L'’, LIST_TO_SET_REVERSE]
  >> ‘DISJOINT (set L') (BIGUNION (IMAGE FV (set Ns)))’
       by ASM_SIMP_TAC std_ss [Abbr ‘L'’, LIST_TO_SET_REVERSE]
- >> ‘SNOC y xs = REVERSE l’ by rw [Abbr ‘l’, REVERSE_SNOC] >> POP_ORW
+ >> ‘SNOC y xs = REVERSE l’ by rw [Abbr ‘l’, REVERSE_SNOC, SNOC_APPEND] >> POP_ORW
  >> simp []
  >> CONJ_TAC (* ALL_DISTINCT l *)
  >- (MATCH_MP_TAC IS_PREFIX_ALL_DISTINCT \\

@@ -4,17 +4,15 @@
  * and wellfoundedness to start. A few other notions, like inverse image,    *
  * are also defined.                                                         *
  *---------------------------------------------------------------------------*)
-
-open HolKernel Parse boolLib BasicProvers;
-
-open QLib tautLib mesonLib metisLib simpLib boolSimps combinTheory;
-
-(* mention satTheory to work around dependency-analysis flaw in Holmake;
+Theory relation[bare]
+Ancestors
+  (* mention satTheory to work around dependency-analysis flaw in Holmake;
    satTheory is a dependency of BasicProvers, but without explicit mention
    here, Holmake will not rebuild relationTheory when satTheory changes. *)
-local open satTheory in end;
-
-val _ = new_theory "relation";
+  combin sat[qualified]
+Libs
+  HolKernel Parse boolLib BasicProvers QLib tautLib mesonLib
+  metisLib simpLib boolSimps
 
 (*---------------------------------------------------------------------------*)
 (* Basic properties of relations.                                            *)
@@ -2457,5 +2455,3 @@ Theorem RSUBSET_RINSERT :
 Proof
     SRW_TAC [] [RSUBSET, RINSERT]
 QED
-
-val _ = export_theory();

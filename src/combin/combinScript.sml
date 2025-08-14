@@ -9,10 +9,10 @@
 (* DATE          : September 15, 1991                                    *)
 (* AUGMENTED     : (kxs) added C and W combinators                       *)
 (* ===================================================================== *)
+Theory combin[bare]
+Libs
+  HolKernel Parse boolLib computeLib
 
-open HolKernel Parse boolLib computeLib;
-
-val _ = new_theory "combin";
 
 (*---------------------------------------------------------------------------*)
 (*  Some basic combinators: function composition, S, K, I, W, and C.         *)
@@ -562,5 +562,3 @@ Proof
  >> POP_ASSUM MP_TAC
  >> ASM_REWRITE_TAC []
 QED
-
-val _ = export_theory();

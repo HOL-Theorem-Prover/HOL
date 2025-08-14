@@ -1,9 +1,8 @@
-open HolKernel boolLib bossLib BasicProvers;
-open pred_setTheory arithmeticTheory listTheory rich_listTheory optionTheory
-     pairTheory relationTheory sortingTheory;
-open permLib;
-
-val _ = new_theory "mergesort";
+Theory mergesort
+Ancestors
+  pred_set arithmetic list rich_list option pair relation sorting
+Libs
+  BasicProvers permLib
 
 val _ = temp_tight_equality ();
 
@@ -82,30 +81,26 @@ Definition mergesortN_def:
       merge R
             (mergesortN R (DIV2 n) l)
             (mergesortN R (n - len1) (DROP len1 l)))
-Termination
-  WF_REL_TAC `measure (λ(R,n,l). n)` >>
-  srw_tac[][DIV2_def, X_LT_DIV]
-  >- (match_mp_tac DIV_LESS >>
-      decide_tac) >>
-  decide_tac
 End
 
-val mergesort_def = Define `
-mergesort R l = mergesortN R (LENGTH l) l`;
+Definition mergesort_def:
+  mergesort R l = mergesortN R (LENGTH l) l
+End
 
 (* A mergesort using tail recursive merging. This is what OCaml's standard
  * library does, but instead of parameterizing with negate, it just copies the
  * code for merge_rev sort. *)
 
-val sort2_tail_def = Define `
-sort2_tail (neg:bool) R x y =
-  if R x y <> neg then
-    [x;y]
-  else
-    [y;x]`;
+Definition sort2_tail_def:
+ sort2_tail (neg:bool) R x y =
+   if R x y <> neg then
+     [x;y]
+   else
+     [y;x]
+End
 
-val sort3_tail_def = Define `
-sort3_tail (neg:bool) R x y z =
+Definition sort3_tail_def:
+ sort3_tail (neg:bool) R x y z =
   if R x y <> neg then
     if R y z <> neg then
       [x;y;z]
@@ -119,7 +114,8 @@ sort3_tail (neg:bool) R x y z =
     else
       [y;z;x]
   else
-    [z;y;x]`;
+    [z;y;x]
+End
 
 Definition merge_tail_def:
   (merge_tail (negate:bool) R [] [] acc = acc) /\
@@ -149,16 +145,11 @@ Definition mergesortN_tail_def:
       merge_tail neg R (mergesortN_tail neg R (DIV2 n) l)
                        (mergesortN_tail neg R (n - len1) (DROP len1 l))
                        [])
-Termination
-  WF_REL_TAC `measure (λ(neg,R,n,l). n)` >>
-  srw_tac[][DIV2_def] >>
-  srw_tac[][DIV2_def, X_LT_DIV]
-  >- (match_mp_tac DIV_LESS >> decide_tac) >>
-  decide_tac
 End
 
-val mergesort_tail_def = Define `
-mergesort_tail R l = mergesortN_tail F R (LENGTH l) l`;
+Definition mergesort_tail_def:
+  mergesort_tail R l = mergesortN_tail F R (LENGTH l) l
+End
 
 
 (* ------------------------- proofs ----------------------- *)
@@ -577,4 +568,3 @@ time (fn x => (EVAL x; ())) ``QSORT $<= ^l'``;
 
 *)
 
-val _ = export_theory ();

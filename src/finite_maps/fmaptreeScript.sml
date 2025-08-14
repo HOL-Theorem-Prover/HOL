@@ -1,7 +1,8 @@
-open HolKernel bossLib boolLib Parse
-open BasicProvers
-
-open finite_mapTheory
+Theory fmaptree
+Ancestors
+  finite_map pred_set
+Libs
+  BasicProvers boolSimps
 
 (* an fmaptree is a type of tree, where branching is controlled by a
    finite-map.  The one constructor is
@@ -13,8 +14,6 @@ open finite_mapTheory
    There is an induction principle (ft_ind), where you are able to assume
    that your predicate P holds of every subtree.
 *)
-
-val _ = new_theory "fmaptree";
 
 val construct_def = Define`
   construct a kfm kl =
@@ -162,7 +161,6 @@ val ft_ind = store_thm(
         THEN1 (DISCH_THEN (SUBST1_TAC o SYM) THEN SRW_TAC [][]) THEN
   SRW_TAC [][fmap_EXT, o_f_FAPPLY] THEN METIS_TAC [fmap_bij_thm]);
 
-open pred_setTheory boolSimps
 val list_GSPEC_cases = prove(
   ``{ l | P l } = (if P [] then {[]} else {}) UNION
                   { h :: t | P (h :: t) }``,
@@ -245,5 +243,3 @@ val fmtree_Axiom = store_thm(
   ``!h. ?f. !i fm. f (FTNode i fm) = h i fm (f o_f fm)``,
   GEN_TAC THEN Q.EXISTS_TAC `fmtreerec (\i r f. h i f r)` THEN
   SRW_TAC [][fmtreerec_thm]);
-
-val _ = export_theory()

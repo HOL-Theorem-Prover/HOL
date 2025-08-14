@@ -612,10 +612,10 @@ End
 (*---------------------------------------------------------------------------*)
 
 Theorem matchFn_substWk_lem :
-!wklist (s:string) theta s2 theta'.
-   matchFn (wklist,s,theta) = SOME (s2, theta')
-   ==>
-   ?s1. substWk theta' wklist = SOME s1 /\ s1 ++ s2 = s
+ ∀wklist (s:string) theta s2 theta'.
+     matchFn (wklist,s,theta) = SOME (s2, theta')
+     ==>
+     ?s1. substWk theta' wklist = SOME s1 /\ s1 ++ s2 = s
 Proof
  simp_tac list_ss [substWk_def]
  >> recInduct matchFn_ind
@@ -709,7 +709,7 @@ Proof
                   >> rw[valFn_def,l2n_def])
          >> full_case_tac >> fs[] >> rw[] >> rfs[]
          >> rw [concatPartial_thm]
-         >> pop_assum mp_tac
+         >> qpat_x_assum ‘concatPartial _ = SOME _’ mp_tac
          >> rw [Once substFn_def,ListRecd_def,evalBexp_def,evalExp_def,ConsTag_def]
          >> rw [Once substFn_def,concatPartial_thm]))
  >- (simpCases_on ‘evalBexp theta b’

@@ -231,4 +231,12 @@ fun apply f x =
       report (read m); res
    end
 
+fun inferences f x =  (* omit timings *)
+   let
+      val m = mk_meter ()
+      val res = f x handle e => (report (read m); raise e)
+   in
+      report (read m); res
+   end
+
 end

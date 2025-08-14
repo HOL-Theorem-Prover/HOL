@@ -42,13 +42,12 @@ val OS :string      =
 
 
 val CC:string       = "cc";       (* C compiler                       *)
-val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
 
 (*---------------------------------------------------------------------------
           END user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val version_number = 1
+val version_number = 2
 val release_string = "Trindemossen"
 
 
@@ -176,7 +175,6 @@ in
    "val MOSMLDIR =" --> ("val MOSMLDIR = "^quote mosmldir^"\n"),
    "val OS ="       --> ("val OS = "^quote OS^"\n"),
    "val CC ="       --> ("val CC = "^quote CC^"\n"),
-   "val DEPDIR ="   --> ("val DEPDIR = "^quote DEPDIR^"\n"),
    "val GNUMAKE ="  --> ("val GNUMAKE = "^quote GNUMAKE^"\n"),
    "val DYNLIB ="   --> ("val DYNLIB = "^Bool.toString dynlib_available^"\n"),
    "val version ="  --> ("val version = "^Int.toString version_number^"\n"),
@@ -316,7 +314,12 @@ val _ =
     compile [] "HFS_NameMunge.sig";
     FileSys.chDir "mosml";
     compile ["-I", ".."] "HFS_NameMunge.sml";
+    compile ["-I", ".."] "LTSprimitives.sml";
     FileSys.chDir "..";
+    compile ["-I", "mosml"] "linkToSigobj.sml";
+    compile ["-I", "mosml"] "mosml_linkToSigobj.sml";
+    link {extras = ["-I", "mosml"], srcobj = "mosml_linkToSigobj.uo",
+          tgt = fullPath [holdir, "bin", "linkToSigobj"]};
     compile [] "HOLFileSys.sig";
     compile [] "HOLFileSys.sml";
     compile [] "Holdep_tokens.sig";

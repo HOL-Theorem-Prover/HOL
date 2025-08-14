@@ -1,16 +1,15 @@
-open HolKernel Parse boolLib;
+Theory quotient[bare]
+Ancestors
+  combin
+Libs
+  HolKernel Parse boolLib dep_rewrite simpLib boolSimps
+  Q[qualified] BasicProvers[qualified]
 
 (* --------------------------------------------------------------------- *)
 (* Fundamental definitions and theorems for the quotients package.       *)
 (* Version 2.2.                                                          *)
 (* Date: April 11, 2005                                                  *)
 (* --------------------------------------------------------------------- *)
-
-
-val _ = new_theory "quotient";
-
-open combinTheory dep_rewrite simpLib boolSimps
-local open Q BasicProvers in end
 
 
 val REWRITE_THM = fn th => REWRITE_TAC[th];
@@ -1719,8 +1718,6 @@ val RES_EXISTS_UNIQUE_REGULAR_SAME = store_thm
    );
 
 
-
-val _ = export_theory();
 
 val _ = print_theory_to_file "-" "quotient.lst";
 

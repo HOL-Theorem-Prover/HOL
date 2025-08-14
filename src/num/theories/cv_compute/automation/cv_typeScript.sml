@@ -1,12 +1,10 @@
 (*
   Definitions and theorems that support cv_typeLib
 *)
-open HolKernel Parse boolLib bossLib cvTheory;
-open integerTheory wordsTheory ratTheory;
-
-val _ = new_theory "cv_type";
-
-val _ = set_grammar_ancestry ["cv", "one", "option", "list", "sum", "pair", "words"];
+Theory cv_type
+Ancestors
+  cv one[qualified] option[qualified] list[qualified]
+  sum[qualified] pair[qualified] words integer rat
 
 Overload c2n[local] = “cv$c2n”
 Overload c2b[local] = “cv$c2b”
@@ -338,4 +336,3 @@ Proof
   Cases_on ‘x’ \\ gvs []
 QED
 
-val _ = export_theory();

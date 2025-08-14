@@ -553,13 +553,15 @@ val zero_thm = store_thm(
                           nlabel_app_no_nil] THEN
   Cases_on `n = m` THEN SRW_TAC [][]);
 
-val n_posns_zero = store_thm(
-  "n_posns_zero",
-  ``!M n. n_posns 0 (zero n M) = n_posns n M``,
+Theorem n_posns_zero:
+  !M n. n_posns 0 (zero n M) = n_posns n M
+Proof
   HO_MATCH_MP_TAC simple_lterm_induction THEN
   SRW_TAC [][n_posns_def, zero_thm] THEN
-  Cases_on `n = y` THEN SRW_TAC [][n_posns_def] THEN
-  SRW_TAC [][EXTENSION, EQ_IMP_THM]);
+  COND_CASES_TAC >>
+  simp[n_posns_def] THEN
+  SRW_TAC [][EXTENSION, EQ_IMP_THM]
+QED
 
 val zero_vsubst = store_thm(
   "zero_vsubst",

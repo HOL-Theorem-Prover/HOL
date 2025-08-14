@@ -1,15 +1,14 @@
 (*---------------------------------------------------------------------------*
  *                SPECIFICATION OF SORTING                                   *
  *---------------------------------------------------------------------------*)
+Theory sorting
+Ancestors
+  list perm
 
-open HolKernel Parse boolLib bossLib listTheory permTheory;
 
 val MEM_APPEND_DISJ = Q.prove
 (`!x l1 l2. MEM x (APPEND l1 l2) = MEM x l1 \/ MEM x l2`,
 Induct_on `l1` THEN RW_TAC list_ss [APPEND,MEM] THEN PROVE_TAC[]);
-
-
-val _ = new_theory "sorting";
 
 
 (*---------------------------------------------------------------------------*
@@ -62,4 +61,3 @@ Induct_on `L1`
  THEN PROVE_TAC []);
 
 
-val _ = export_theory();

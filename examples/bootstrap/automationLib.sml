@@ -97,7 +97,7 @@ local
   val comments = ref ([]:term list)
   val next_comment = ref “""”
   fun print_defun defun = let
-    val str = mk_comb(“v2str”,mk_comb(“dec2v”,defun))
+    val str = mk_comb(“printing$v2str”,mk_comb(“printing$dec2v”,defun))
               |> QCONV EVAL |> concl |> rand |> stringSyntax.fromHOLstring
     in print ("\n\n" ^ str ^ "\n\n\n") end
 in
@@ -310,7 +310,7 @@ fun hol2deep tm =
 
 fun ABBREV_CONV fname params name tm = let
   val v = mk_var(name,type_of tm)
-  val defun = list_mk_comb(“Defun”,[fname,params,tm])
+  val defun = list_mk_comb(“source_syntax$Defun”,[fname,params,tm])
   val _ = add_defun defun
   in GSYM (Define ‘^v = ^tm’) end
 
@@ -349,7 +349,7 @@ fun process_def def = let
   val c_name = c |> dest_const |> fst
   val fname = fix_name c_name |> stringSyntax.fromMLstring
   val th3 = th2 |> CONV_RULE (PATH_CONV "lrrrr"
-                     (ABBREV_CONV “name ^fname” params (c_name ^ "_code")))
+                     (ABBREV_CONV “source_values$name ^fname” params (c_name ^ "_code")))
                 |> UNDISCH
   val th4 = th3 |> CONV_RULE (PATH_CONV "rrlrr" (REWR_CONV (GSYM def)))
   val th5 = th4 |> CONV_RULE (PATH_CONV "lr"

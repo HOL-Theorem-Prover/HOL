@@ -1,16 +1,16 @@
-
-open HolKernel Parse boolLib bossLib term_tactic cv_transLib cv_stdTheory;
-open arithmeticTheory listTheory pairTheory finite_mapTheory stringTheory;
-open wordsTheory wordsLib printingTheory codegenTheory;
-
-val _ = new_theory "compiler_funs_cv";
+Theory compiler_funs_cv
+Ancestors
+  arithmetic list pair finite_map string
+  words printing codegen cv cv_std
+Libs
+  term_tactic cv_transLib wordsLib
 
 (* prepare for fast in-logic evaluation *)
 
 val res = cv_auto_trans codegenTheory.even_len_def;
 val res = cv_auto_trans codegenTheory.c_pops_def;
 
-val res = cv_auto_trans_pre_rec codegenTheory.c_exp_def
+val res = cv_auto_trans_pre_rec "c_exp_pre c_exps_pre" codegenTheory.c_exp_def
  (WF_REL_TAC ‘inv_image (measure I LEX measure I)
     (λx. case x of INL (t,l,vs,fs,x) => (cv_size x, cv$c2n t)
                  | INR (l,vs,fs,xs) => (cv_size xs, 0))’
@@ -26,14 +26,14 @@ Proof
   ho_match_mp_tac codegenTheory.c_exp_ind \\ rw [] \\ simp [Once res]
 QED
 
-val res = cv_auto_trans_pre printingTheory.is_comment_def;
+val res = cv_auto_trans_pre "is_comment_pre" printingTheory.is_comment_def;
 Theorem is_comment_pre[cv_pre]:
   ∀v. is_comment_pre v
 Proof
   ho_match_mp_tac printingTheory.is_comment_ind \\ rw [] \\ simp [Once res]
 QED
 
-val pre = cv_trans_pre_rec printingTheory.num2str_def
+val pre = cv_trans_pre_rec "num2str_pre" printingTheory.num2str_def
   (WF_REL_TAC ‘measure cv_size’ \\ Cases \\ gvs [] \\ rw [] \\ gvs []);
 
 Theorem num2str_pre[cv_pre]:
@@ -43,14 +43,14 @@ Proof
   \\ ‘n MOD 10 < 10’ by fs [] \\ decide_tac
 QED
 
-val pre = cv_trans_pre printingTheory.num2ascii_def
+val pre = cv_trans_pre "num2ascii_pre" printingTheory.num2ascii_def
 Theorem num2ascii_pre[cv_pre]:
   ∀n. num2ascii_pre n
 Proof
   ho_match_mp_tac printingTheory.num2ascii_ind \\ rw [] \\ simp [Once pre]
 QED
 
-val pre = cv_trans_pre printingTheory.ascii_name_def
+val pre = cv_trans_pre "ascii_name_pre" printingTheory.ascii_name_def
 Theorem ascii_name_pre[cv_pre]:
   ∀n. ascii_name_pre n
 Proof
@@ -58,7 +58,7 @@ Proof
   \\ gvs [AllCaseEqs()]
 QED
 
-val pre = cv_trans_pre x64asm_syntaxTheory.num_def;
+val pre = cv_trans_pre "num_pre" x64asm_syntaxTheory.num_def;
 Theorem num_pre[cv_pre]:
   ∀n s. num_pre n s
 Proof
@@ -81,7 +81,7 @@ val _ = cv_trans printingTheory.dest_list_def;
 
 Theorem cv_dest_list_size:
   ∀v x y.
-    cv_dest_list v = Pair x y ⇒
+    cv_dest_list v = cv$Pair x y ⇒
     cv_size x <= cv_size v ∧
     cv_size y <= cv_size v
 Proof
@@ -96,7 +96,7 @@ QED
 val v2pretty_eq =
   CONJ (printingTheory.v2pretty_def |> SRULE [GSYM vs2pretty_def]) vs2pretty_thm;
 
-val pre = cv_auto_trans_pre_rec v2pretty_eq
+val pre = cv_auto_trans_pre_rec "" v2pretty_eq
   (WF_REL_TAC ‘measure $ λx. case x of INL v => cv_size v
                                      | INR v => cv_size v’
    \\ rw [] \\ cv_termination_tac
@@ -146,7 +146,7 @@ Proof
 QED
 
 Triviality cv_EL_trivial:
-  ∀n m. cv_EL (Num n) (Num m) = Num 0
+  ∀n m. cv_EL (cv$Num n) (cv$Num m) = cv$Num 0
 Proof
   Induct >> rw[] >> simp[Once cv_EL_def]
 QED
@@ -188,17 +188,17 @@ QED
 
 Theorem cv_dest_case_tree_size[local]:
   ∀a b x y.
-    cv_dest_case_tree a b = Pair x y ⇒
+    cv_dest_case_tree a b = cv$Pair x y ⇒
     cv_size (cv_map_snd (cv_map_snd y)) < cv_size b
 Proof
   recInduct $ fetch "-" "cv_dest_case_tree_ind" >> rw[] >>
   pop_assum mp_tac >> simp[Once $ fetch "-" "cv_dest_case_tree_def"] >>
   reverse $ rw[] >> gvs[]
   >- (
-    simp[SCONV [Once cv_map_snd_def] ``cv_map_snd (Num _)``] >>
+    simp[SCONV [Once cv_map_snd_def] ``cv_map_snd (cv$Num _)``] >>
     Cases_on `cv_v` >> gvs[]
     ) >>
-  simp[SCONV [Once cv_map_snd_def] ``cv_map_snd (Pair _ _)``] >>
+  simp[SCONV [Once cv_map_snd_def] ``cv_map_snd (cv$Pair _ _)``] >>
   unabbrev_all_tac >> cv_termination_tac >>
   drule cv_dest_case_lets_size >> simp[] >>
   rename1 `cv_dest_case_lets _ (cv_fst x)` >> Cases_on `x` >> gvs[]
@@ -206,14 +206,14 @@ QED
 
 Theorem cv_dest_case_enum_size[local]:
   ∀a b x y.
-    cv_dest_case_enum a b = Pair x y
+    cv_dest_case_enum a b = cv$Pair x y
   ⇒ cv_size (cv_map_snd y) < cv_size b
 Proof
   recInduct $ fetch "-" "cv_dest_case_enum_ind" >> rw[] >>
   pop_assum mp_tac >> simp[Once $ fetch "-" "cv_dest_case_enum_def"] >>
   rw[] >> gvs[] >>
-  simp[SCONV [Once cv_map_snd_def] ``cv_map_snd (Num _)``] >>
-  simp[SCONV [Once cv_map_snd_def] ``cv_map_snd (Pair _ _)``]
+  simp[SCONV [Once cv_map_snd_def] ``cv_map_snd (cv$Num _)``] >>
+  simp[SCONV [Once cv_map_snd_def] ``cv_map_snd (cv$Pair _ _)``]
   >- (cv_termination_tac >> rename1 `cv_fst x` >> Cases_on `x` >> gvs[])
   >- (Cases_on `cv_v` >> gvs[])
   >- (cv_termination_tac >> rename1 `cv_fst x` >> Cases_on `x` >> gvs[])
@@ -222,14 +222,14 @@ Proof
 QED
 
 Triviality cv_dest_cons_chain_size:
-  ∀a x y. cv_dest_cons_chain a = Pair x y ⇒ cv_size y < cv_size a
+  ∀a x y. cv_dest_cons_chain a = cv$Pair x y ⇒ cv_size y < cv_size a
 Proof
   recInduct $ fetch "-" "cv_dest_cons_chain_ind" >> rw[] >>
   pop_assum mp_tac >> simp[Once $ fetch "-" "cv_dest_cons_chain_def"] >>
   rw[AllCaseEqs()] >> gvs[] >> cv_termination_tac
 QED
 
-val pre = cv_auto_trans_pre_rec exp2v_def
+val pre = cv_auto_trans_pre_rec "" exp2v_def
   (
     WF_REL_TAC ‘measure $ λx. case x of
                                | INL v => cv_size v + 3
@@ -309,5 +309,3 @@ val res = cv_auto_trans printingTheory.vs2str_def;
 val res = cv_auto_trans codegenTheory.codegen_def;
 val res = cv_auto_trans x64asm_syntaxTheory.asm2str_def;
 val res = cv_auto_trans printingTheory.prog2str_def;
-
-val _ = export_theory();

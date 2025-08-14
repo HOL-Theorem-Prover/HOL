@@ -15,15 +15,13 @@
 (* TRANSLATOR    : Konrad Slind, University of Calgary                   *)
 (* DATE          : September 15, 1991                                    *)
 (* ===================================================================== *)
-
-open HolKernel Parse boolLib BasicProvers;
-
-open Num_conv mesonLib arithmeticTheory
-     simpLib boolSimps pairTheory pred_setTheory pred_setLib
-     TotalDefn metisLib relationTheory combinTheory quotientLib
-
-local open pairTheory pred_setTheory Datatype OpenTheoryMap
-in end;
+Theory list[bare]
+Ancestors
+  arithmetic pair pred_set relation combin basicSize[qualified]
+Libs
+  HolKernel Parse boolLib BasicProvers Num_conv mesonLib simpLib
+  boolSimps pred_setLib TotalDefn metisLib quotientLib
+  Datatype[qualified] OpenTheoryMap[qualified]
 
 val ERR = mk_HOL_ERR "listScript"
 
@@ -46,8 +44,6 @@ val qx_gen_tac = Q.X_GEN_TAC;
 val qxch = Q.X_CHOOSE_THEN;
 fun qxchl [] ttac = ttac
   | qxchl (q::qs) ttac = qxch q (qxchl qs ttac);
-
-val _ = new_theory "list";
 
 val _ = Rewrite.add_implicit_rewrites pairLib.pair_rws;
 val zDefine = Lib.with_flag (computeLib.auto_import_definitions, false) Define
@@ -156,6 +152,7 @@ val _ = overload_on ("++", Term‘APPEND’);
 val _ = Unicode.unicode_version {u = UnicodeChars.doubleplus, tmnm = "++"}
 val _ = TeX_notation { hol = UnicodeChars.doubleplus,
                        TeX = ("\\HOLTokenDoublePlus", 1) }
+val _ = TeX_notation { hol = "++", TeX = ("\\HOLTokenDoublePlus", 1) };
 
 (* preserving old choice of quantification order *)
 Theorem APPEND[simp]:
@@ -1314,19 +1311,18 @@ REWRITE_TAC[relationTheory.WF_DEF] THEN BETA_TAC THEN GEN_TAC
     Lifts a relation point-wise to two lists
    ---------------------------------------------------------------------- *)
 
-val (LIST_REL_rules, LIST_REL_ind, LIST_REL_cases) = IndDefLib.Hol_reln‘
-  (LIST_REL R [] []) /\
-  (!h1 h2 t1 t2. R h1 h2 /\ LIST_REL R t1 t2 ==> LIST_REL R (h1::t1) (h2::t2))
-’;
+Inductive LIST_REL:
+[~nil_rule:]
+  LIST_REL R [] []
+[~cons_I:]
+  !h1 h2 t1 t2. R h1 h2 /\ LIST_REL R t1 t2 ==> LIST_REL R (h1::t1) (h2::t2)
+End
 
-val _ = overload_on ("listRel", “LIST_REL”)
-val _ = overload_on ("LIST_REL", “LIST_REL”)
-
-val LIST_REL_EL_EQN = store_thm(
-  "LIST_REL_EL_EQN",
-  “!R l1 l2. LIST_REL R l1 l2 <=>
-              (LENGTH l1 = LENGTH l2) /\
-              !n. n < LENGTH l1 ==> R (EL n l1) (EL n l2)”,
+Theorem LIST_REL_EL_EQN:
+  !R l1 l2. LIST_REL R l1 l2 <=>
+            (LENGTH l1 = LENGTH l2) /\
+            !n. n < LENGTH l1 ==> R (EL n l1) (EL n l2)
+Proof
   GEN_TAC THEN SIMP_TAC (srw_ss()) [EQ_IMP_THM, FORALL_AND_THM] THEN
   CONJ_TAC THENL [
     Induct_on ‘LIST_REL’ THEN SRW_TAC [] [] THEN
@@ -1335,16 +1331,16 @@ val LIST_REL_EL_EQN = store_thm(
     POP_ASSUM (fn th => Q.SPEC_THEN ‘0’ MP_TAC th THEN
                         Q.SPEC_THEN ‘SUC m’ (MP_TAC o Q.GEN ‘m’) th) THEN
     SRW_TAC [] [LIST_REL_rules]
-  ]);
+  ]
+QED
 
-val LIST_REL_def = store_thm(
-  "LIST_REL_def",
-  “(LIST_REL R [][] <=> T) /\
-    (LIST_REL R (a::as) [] <=> F) /\
-    (LIST_REL R [] (b::bs) <=> F) /\
-    (LIST_REL R (a::as) (b::bs) <=> R a b /\ LIST_REL R as bs)”,
-  REPEAT CONJ_TAC THEN SRW_TAC [] [Once LIST_REL_cases, SimpLHS]);
-val _ = export_rewrites ["LIST_REL_def"]
+Theorem LIST_REL_def[simp,compute]:
+  (LIST_REL R []      []      <=> T) /\
+  (LIST_REL R (a::as) []      <=> F) /\
+  (LIST_REL R []      (b::bs) <=> F) /\
+  (LIST_REL R (a::as) (b::bs) <=> R a b /\ LIST_REL R as bs)
+Proof REPEAT CONJ_TAC THEN SRW_TAC [] [Once LIST_REL_cases, SimpLHS]
+QED
 
 val LIST_REL_mono = store_thm(
   "LIST_REL_mono",
@@ -1627,6 +1623,17 @@ Proof
 QED
 
 val _ = DefnBase.register_indn(ZIP_ind, [{Thy = "list", Name = "ZIP"}])
+
+Theorem ZIP_ind_alt :
+ !P.
+    (!l. P ([],l)) /\ (!h t. P (h::t,[])) /\
+     (!x xs y ys. P (xs,ys) ==> P (x::xs,y::ys)) ==>
+     !v v1. P (v,v1)
+Proof
+  ntac 2 strip_tac
+  \\ Induct \\ ASM_REWRITE_TAC[]
+  \\ gen_tac \\ Cases \\ ASM_SIMP_TAC bool_ss []
+QED
 
 val ZIP = store_thm("ZIP",
   “(ZIP ([],[]) = []) /\
@@ -2097,7 +2104,7 @@ Theorem TAKE1:
 Proof Induct_on ‘l’ >> srw_tac[][]
 QED
 
-Theorem TAKE1_DROP:
+Theorem TAKE1_DROP[simp]:
   !n l. n < LENGTH l ==> (TAKE 1 (DROP n l) = [EL n l])
 Proof
   Induct_on ‘l’ >> rw[] >> Cases_on ‘n’ >> fs[EL_restricted]
@@ -2807,6 +2814,7 @@ val FRONT_SNOC = store_thm(
   RW_TAC bool_ss [SNOC]);
 val _ = export_rewrites ["FRONT_SNOC"]
 
+(* NOTE: Do NOT put [simp] here! *)
 val SNOC_APPEND = store_thm("SNOC_APPEND",
    “!x (l:('a) list). SNOC x l = APPEND l [x]”,
    GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [SNOC, APPEND]);
@@ -2835,11 +2843,13 @@ val EL_LENGTH_SNOC = store_thm("EL_LENGTH_SNOC",
     (“!l:'a list. !x. EL (LENGTH l) (SNOC x l) = x”),
     LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[EL, SNOC, HD, TL, LENGTH]);
 
-val APPEND_SNOC = store_thm("APPEND_SNOC",
-    (“!l1 (x:'a) l2. APPEND l1 (SNOC x l2) = SNOC x (APPEND l1 l2)”),
-    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[APPEND, SNOC]);
+Theorem APPEND_SNOC[simp] :
+    !l1 (x:'a) l2. APPEND l1 (SNOC x l2) = SNOC x (APPEND l1 l2)
+Proof
+    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[APPEND, SNOC]
+QED
 
-Theorem EVERY_SNOC:
+Theorem EVERY_SNOC[simp] :
   !P (x:'a) l. EVERY P (SNOC x l) <=> EVERY P l /\ P x
 Proof
     GEN_TAC THEN GEN_TAC THEN LIST_INDUCT_TAC
@@ -5362,4 +5372,65 @@ Proof
   simp[MAP_MAP_o, FUN_MAP, combinTheory.o_DEF, SF ETA_ss]
 QED
 
-val _ = export_theory();
+(*---------------------------------------------------------------------------*)
+(* relation of list_size to other list operations.                           *)
+(*---------------------------------------------------------------------------*)
+
+val ADD_AC = AC ADD_ASSOC ADD_SYM;
+
+Theorem list_size_reverse[simp]:
+  list_size f (REVERSE l) = list_size f l
+Proof
+  Induct_on ‘l’ >> rw [list_size_append,ADD_AC]
+QED
+
+Theorem list_size_map[simp]:
+  list_size f (MAP g l) = list_size (λx. f (g x)) l
+Proof
+  Induct_on ‘l’ >> rw []
+QED
+
+Theorem list_size_snoc[simp]:
+  list_size f (SNOC x l) = list_size f (x::l)
+Proof
+  Induct_on ‘l’ >> rw [ADD_AC]
+QED
+
+Theorem list_size_zip:
+  ∀l1 l2.
+    LENGTH l1 = LENGTH l2 ⇒
+    list_size (pair_size f1 f2) (ZIP (l1,l2)) =
+    list_size f1 l1 + list_size f2 l2
+Proof
+  Induction.recInduct ZIP_ind_alt >> rw[ADD_AC]
+QED
+
+Theorem list_size_filter[simp]:
+  list_size f (FILTER P l) <= list_size f l
+Proof
+  Induct_on ‘l’ >> rw [] >> numLib.DECIDE_TAC
+QED
+
+Theorem filter_size_less[simp]:
+  ∀h t. list_size f (FILTER P t) < list_size f (h::t)
+Proof
+ gen_tac >> Induct >> fs[] >> rw[] >> numLib.DECIDE_TAC
+QED
+
+Theorem list_size_take[simp]:
+  ∀l n. list_size f (TAKE n l) <= list_size f l
+Proof
+  Induct >> rw [] >> Cases_on ‘n’ >> rw[]
+QED
+
+Theorem list_size_drop[simp]:
+  ∀l n. list_size f (DROP n l) <= list_size f l
+Proof
+  Induct >> rw [] >> Cases_on ‘n’ >> rw[] >>
+  pop_assum (mp_tac o Q.SPEC ‘n'’) >> numLib.DECIDE_TAC
+QED
+
+val _ =
+ List.app TotalDefn.export_termsimp
+   ["list.list_size_append", "list.list_size_reverse",
+    "list.list_size_map", "list.list_size_snoc", "list.list_size_zip"];

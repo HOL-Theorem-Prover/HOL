@@ -885,7 +885,7 @@ End
 Triviality prefixes_snoc:
   prefixes (SNOC h t) = (SNOC h t) INSERT prefixes t
 Proof
-  rw[prefixes_def,EXTENSION,EQ_IMP_THM]
+  rw[prefixes_def,EXTENSION,EQ_IMP_THM, SNOC_APPEND]
   >- (strip_assume_tac (SNOC_CASES |> Q.SPEC ‘w2’) >>
       rw[] >> gvs[SNOC_APPEND])
   >- metis_tac[APPEND_NIL]

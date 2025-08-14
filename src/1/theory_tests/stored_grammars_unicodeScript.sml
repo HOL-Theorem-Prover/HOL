@@ -1,6 +1,6 @@
-open HolKernel Parse boolLib
-
-val _ = new_theory "stored_grammars_unicode";
+Theory stored_grammars_unicode[bare]
+Libs
+  HolKernel Parse boolLib
 
 val (typarse, tmparse) =
   parse_from_grammars $ valOf $ Parse.grammarDB{thyname="bool"}
@@ -11,4 +11,3 @@ val th = store_thm(
   t,
   REWRITE_TAC[]);
 
-val _ = export_theory();

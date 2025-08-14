@@ -4,12 +4,13 @@
 (* AUTHOR        : (c) Anthony Fox, University of Cambridge                  *)
 (* DATE          : 2000-2005                                                 *)
 (* ========================================================================= *)
+Theory bit[bare]
+Ancestors
+  arithmetic logroot
+Libs
+  HolKernel Parse boolLib BasicProvers metisLib simpLib numSimps
+  numLib
 
-open HolKernel Parse boolLib
-open BasicProvers metisLib simpLib numSimps numLib
-open arithmeticTheory logrootTheory
-
-val _ = new_theory "bit";
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1581,4 +1582,3 @@ Proof
   \\ simp[]
 QED
 
-val _ = export_theory()

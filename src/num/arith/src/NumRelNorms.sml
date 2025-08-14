@@ -172,9 +172,15 @@ structure NumLEQNorm = GenRelNorm (LEQ_NREL);
 structure NumLTNorm = GenRelNorm (LT_NREL);
 structure NumEQNorm = GenRelNorm (EQ_NREL);
 
-val sum_leq_norm = NumLEQNorm.gen_relnorm
-val sum_lt_norm = NumLTNorm.gen_relnorm
-val sum_eq_norm = NumEQNorm.gen_relnorm
+fun trySUC_ELIM c =
+    TRY_CONV
+      (PURE_REWRITE_CONV [arithmeticTheory.ADD1] THENC
+       BINOP_CONV ADDR_CANON_CONV THENC
+       CHANGED_CONV c)
+
+val sum_leq_norm = trySUC_ELIM NumLEQNorm.gen_relnorm
+val sum_lt_norm = trySUC_ELIM NumLTNorm.gen_relnorm
+val sum_eq_norm = trySUC_ELIM NumEQNorm.gen_relnorm
 
 
 end;

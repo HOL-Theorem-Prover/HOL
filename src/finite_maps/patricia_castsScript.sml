@@ -2,13 +2,13 @@
 (* FILE         : patricia_castsScript.sml                                   *)
 (* DESCRIPTION  : Support for maps 'a word |-> 'b and string |-> 'a          *)
 (* ========================================================================= *)
+Theory patricia_casts
+Ancestors
+  arithmetic list rich_list pred_set bit words patricia numposrep
+  ASCIInumbers
+Libs
+  Q wordsLib
 
-open HolKernel Parse boolLib bossLib
-open Q arithmeticTheory listTheory rich_listTheory pred_setTheory
-     bitTheory wordsTheory wordsLib patriciaTheory
-     numposrepTheory ASCIInumbersTheory
-
-val _ = new_theory "patricia_casts";
 
 val _ = wordsLib.deprecate_word();
 val _ = ParseExtras.temp_loose_equality()
@@ -326,4 +326,3 @@ val _ = computeLib.add_persistent_funs
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory();

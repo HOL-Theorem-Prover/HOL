@@ -335,4 +335,25 @@ val hoelim = require_msg
                term_to_string
                (concl o TypeBase.case_pred_disj_of) “:'b # 'c”
 
+val _ = let
+  val _ = new_constant ("five", ``:num``)
+  val _ = new_constant ("greater", ``:num -> num -> bool``)
+  val rec1_def = new_definition("rec1_def",“rec1 (x:num+num) = five:num”);
+  val rec2_def = new_definition("rec2_def",“rec2 (x:num) = five:num”);
+  val rec12_thm = prove(
+    “(!m. rec1 (INL m) = if m = five then five else rec2 m) /\
+     (!n. rec2 n = if greater n (SUC five) then rec1 (INL five) else five)”,
+    rewrite_tac [rec1_def,rec2_def,boolTheory.COND_ID])
+  val thms = DefnBase.one_line_ify_mutrec NONE rec12_thm
+  fun test_fail s = (sdie s; false)
+  val _ = length thms = 2
+          orelse test_fail "wrong length of output from DefnBase.one_line_ify_mutrec"
+  val th1 = thms |> el 1
+  val th2 = thms |> el 2
+  val _ = (length (hyp th1) = 1 andalso is_eq (concl th1))
+          orelse test_fail "wrong output from DefnBase.one_line_ify_mutrec"
+  val _ = (length (hyp th2) = 0 andalso is_eq (concl th2))
+          orelse test_fail "wrong output from DefnBase.one_line_ify_mutrec"
+  in () end;
+
 val _ = Process.exit Process.success

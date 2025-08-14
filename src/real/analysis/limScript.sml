@@ -1,16 +1,14 @@
 (*===========================================================================*)
 (* Theory of limits, continuity and differentiation of real->real functions  *)
 (*===========================================================================*)
+Theory lim
+Ancestors
+  pair arithmetic num prim_rec real metric nets combin pred_set
+  topology real_topology derivative seq
+Libs
+  numLib reduceLib pairLib jrhUtils realLib mesonLib hurdUtils
 
-open HolKernel Parse bossLib boolLib;
 
-open numLib reduceLib pairLib pairTheory arithmeticTheory numTheory jrhUtils
-     prim_recTheory realTheory realLib metricTheory netsTheory combinTheory
-     pred_setTheory mesonLib hurdUtils;
-
-open topologyTheory real_topologyTheory derivativeTheory seqTheory;
-
-val _ = new_theory "lim";
 val _ = ParseExtras.temp_loose_equality()
 
 val _ = Parse.reveal "B";
@@ -1732,4 +1730,263 @@ Proof
   ASM_SIMP_TAC std_ss [DIFF_NEG]
 QED
 
-val _ = export_theory();
+(*---------------------------------------------------------------------------*)
+(* Miscellaneous Results (for use in hyperbolic trigonemtry library)         *)
+(*---------------------------------------------------------------------------*)
+
+Theorem DIFF_CONG:
+    ∀f g l m x y. (∃a b. a < y ∧ y < b ∧ ∀z. a < z ∧ z < b ⇒ (f z = g z)) ∧
+        (l = m) ∧ (x = y) ⇒ ((f diffl l) x ⇔ (g diffl m) y)
+Proof
+    simp[] >>
+    ‘∀f g m y. (∃a b. a < y ∧ y < b ∧ ∀z. a < z ∧ z < b ⇒ (f z = g z)) ∧
+        (f diffl m) y ⇒ (g diffl m) y’ suffices_by metis_tac[] >>
+    rw[] >> pop_assum mp_tac >> simp[diffl,LIM] >> rw[] >>
+    first_x_assum $ drule_then assume_tac >> gs[] >>
+    qexists ‘min d (min (y - a) (b - y))’ >> simp[REAL_LT_MIN,REAL_SUB_LT] >> rw[] >>
+    first_x_assum $ drule_all_then mp_tac >>
+    ‘f (y + h) = g (y + h)’ suffices_by simp[] >> first_x_assum irule >>
+    gs[ABS_BOUNDS_LT,REAL_NEG_SUB,REAL_LT_SUB_LADD,REAL_LT_SUB_RADD] >>
+    simp[REAL_ADD_COMM]
+QED
+
+Theorem DIFF_POS_MONO_LT_INTERVAL:
+    ∀f s. is_interval s ∧ (∀z. z ∈ s ⇒ f contl z) ∧
+        (∀z. z ∈ interior s ⇒ ∃l. 0 < l ∧ (f diffl l) z) ⇒
+        ∀x y. x ∈ s ∧ y ∈ s ∧ x < y ⇒ f x < f y
+Proof
+    rw[] >>
+    ‘∀z. x < z ∧ z < y ⇒ z ∈ interior s’ by (
+        rw[interior] >> qexists ‘interval (x,y)’ >> simp[OPEN_INTERVAL] >>
+        gs[SUBSET_DEF,OPEN_interval,IS_INTERVAL] >> metis_tac[REAL_LE_LT]) >>
+    qspecl_then [‘f’,‘x’,‘y’] mp_tac MVT >> impl_tac
+    >- (gs[IS_INTERVAL] >> metis_tac[differentiable]) >>
+    rw[] >> pop_assum mp_tac >> simp[REAL_EQ_SUB_RADD] >> disch_then kall_tac >>
+    irule REAL_LT_MUL >> simp[REAL_SUB_LT] >>
+    ntac 2 $ first_x_assum $ dxrule_all_then assume_tac >> metis_tac[DIFF_UNIQ]
+QED
+
+Theorem DIFF_NEG_ANTIMONO_LT_INTERVAL:
+    ∀f s. is_interval s ∧ (∀z. z ∈ s ⇒ f contl z) ∧
+        (∀z. z ∈ interior s ⇒ ∃l. l < 0 ∧ (f diffl l) z) ⇒
+        ∀x y. x ∈ s ∧ y ∈ s ∧ x < y ⇒ f y < f x
+Proof
+    rw[] >> qspecl_then [‘λw. -f w’,‘s’] mp_tac DIFF_POS_MONO_LT_INTERVAL >>
+    simp[] >> disch_then irule >> simp[CONT_NEG] >> rw[] >>
+    first_x_assum $ dxrule_then assume_tac >> gs[] >>
+    qexists ‘-l’ >> simp[DIFF_NEG]
+QED
+
+Theorem DIFF_POS_MONO_LT_UU:
+    ∀f. (∀z. ∃l. 0 < l ∧ (f diffl l) z) ⇒
+        ∀x y. x < y ⇒ f x < f y
+Proof
+    rw[] >> irule DIFF_POS_MONO_LT_INTERVAL >> simp[] >>
+    qexists ‘𝕌(:real)’ >> simp[IS_INTERVAL_POSSIBILITIES] >>
+    metis_tac[DIFF_CONT]
+QED
+
+Theorem DIFF_POS_MONO_LT_OU:
+    ∀f a. (∀z. a < z ⇒ ∃l. 0 < l ∧ (f diffl l) z) ⇒
+        ∀x y. a < x ∧ x < y ⇒ f x < f y
+Proof
+    rw[] >> irule DIFF_POS_MONO_LT_INTERVAL >> simp[] >>
+    qexists ‘{x | a < x}’ >>
+    simp[INTERIOR_INTERVAL_CASES,IS_INTERVAL_POSSIBILITIES,REAL_LT_TRANS,SF SFY_ss] >>
+    metis_tac[DIFF_CONT]
+QED
+
+Theorem DIFF_POS_MONO_LT_UO:
+    ∀f b. (∀z. z < b ⇒ ∃l. 0 < l ∧ (f diffl l) z) ⇒
+        ∀x y. y < b ∧ x < y ⇒ f x < f y
+Proof
+    rw[] >> irule DIFF_POS_MONO_LT_INTERVAL >> simp[] >>
+    qexists ‘{x | x < b}’ >>
+    simp[INTERIOR_INTERVAL_CASES,IS_INTERVAL_POSSIBILITIES,REAL_LT_TRANS,SF SFY_ss] >>
+    metis_tac[DIFF_CONT]
+QED
+
+Theorem DIFF_POS_MONO_LT_CU:
+    ∀f a. f contl a ∧ (∀z. a < z ⇒ ∃l. 0 < l ∧ (f diffl l) z) ⇒
+        ∀x y. a ≤ x ∧ x < y ⇒ f x < f y
+Proof
+    rw[] >> irule DIFF_POS_MONO_LT_INTERVAL >> simp[] >>
+    qexists ‘{x | a ≤ x}’ >>
+    simp[INTERIOR_INTERVAL_CASES,IS_INTERVAL_POSSIBILITIES,REAL_LT_IMP_LE,REAL_LET_TRANS,SF SFY_ss] >>
+    metis_tac[DIFF_CONT,REAL_LE_LT]
+QED
+
+Theorem DIFF_POS_MONO_LT_UC:
+    ∀f b. f contl b ∧ (∀z. z < b ⇒ ∃l. 0 < l ∧ (f diffl l) z) ⇒
+        ∀x y. y ≤ b ∧ x < y ⇒ f x < f y
+Proof
+    rw[] >> irule DIFF_POS_MONO_LT_INTERVAL >> simp[] >>
+    qexists ‘{x | x ≤ b}’ >>
+    simp[INTERIOR_INTERVAL_CASES,IS_INTERVAL_POSSIBILITIES,REAL_LT_IMP_LE,REAL_LTE_TRANS,SF SFY_ss] >>
+    metis_tac[DIFF_CONT,REAL_LE_LT]
+QED
+
+Theorem DIFF_POS_MONO_LT_OO:
+    ∀f a b. (∀z. a < z ∧ z < b ⇒ ∃l. 0 < l ∧ (f diffl l) z) ⇒
+        ∀x y. a < x ∧ y < b ∧ x < y ⇒ f x < f y
+Proof
+    rw[] >> irule DIFF_POS_MONO_LT_INTERVAL >> simp[] >>
+    qexists ‘{x | a < x ∧ x < b}’ >>
+    simp[INTERIOR_INTERVAL_CASES,IS_INTERVAL_POSSIBILITIES,REAL_LT_TRANS,SF SFY_ss] >>
+    metis_tac[DIFF_CONT]
+QED
+
+Theorem DIFF_POS_MONO_LT_CO:
+    ∀f a b. f contl a ∧ (∀z. a < z ∧ z < b ⇒ ∃l. 0 < l ∧ (f diffl l) z) ⇒
+        ∀x y. a ≤ x ∧ y < b ∧ x < y ⇒ f x < f y
+Proof
+    rw[] >> irule DIFF_POS_MONO_LT_INTERVAL >> simp[] >>
+    qexists ‘{x | a ≤ x ∧ x < b}’ >>
+    simp[INTERIOR_INTERVAL_CASES,IS_INTERVAL_POSSIBILITIES,
+        REAL_LT_TRANS,REAL_LT_IMP_LE,REAL_LET_TRANS,SF SFY_ss] >>
+    metis_tac[DIFF_CONT,REAL_LE_LT]
+QED
+
+Theorem DIFF_POS_MONO_LT_OC:
+    ∀f a b. f contl b ∧ (∀z. a < z ∧ z < b ⇒ ∃l. 0 < l ∧ (f diffl l) z) ⇒
+        ∀x y. a < x ∧ y ≤ b ∧ x < y ⇒ f x < f y
+Proof
+    rw[] >> irule DIFF_POS_MONO_LT_INTERVAL >> simp[] >>
+    qexists ‘{x | a < x ∧ x ≤ b}’ >>
+    simp[INTERIOR_INTERVAL_CASES,IS_INTERVAL_POSSIBILITIES,
+        REAL_LT_TRANS,REAL_LT_IMP_LE,REAL_LTE_TRANS,SF SFY_ss] >>
+    metis_tac[DIFF_CONT,REAL_LE_LT]
+QED
+
+Theorem DIFF_POS_MONO_LT_CC:
+    ∀f a b. f contl a ∧ f contl b ∧
+        (∀z. a < z ∧ z < b ⇒ ∃l. 0 < l ∧ (f diffl l) z) ⇒
+        ∀x y. a ≤ x ∧ y ≤ b ∧ x < y ⇒ f x < f y
+Proof
+    rw[] >> irule DIFF_POS_MONO_LT_INTERVAL >> simp[] >>
+    qexists ‘{x | a ≤ x ∧ x ≤ b}’ >>
+    simp[INTERIOR_INTERVAL_CASES,IS_INTERVAL_POSSIBILITIES,
+        REAL_LT_IMP_LE,REAL_LET_TRANS,REAL_LTE_TRANS,SF SFY_ss] >>
+    metis_tac[DIFF_CONT,REAL_LE_LT]
+QED
+
+Theorem DIFF_NEG_ANTIMONO_LT_UU:
+    ∀f. (∀z. ∃l. l < 0 ∧ (f diffl l) z) ⇒
+        ∀x y. x < y ⇒ f y < f x
+Proof
+    rw[] >> irule DIFF_NEG_ANTIMONO_LT_INTERVAL >> simp[] >>
+    qexists ‘𝕌(:real)’ >> simp[IS_INTERVAL_POSSIBILITIES] >>
+    metis_tac[DIFF_CONT]
+QED
+
+Theorem DIFF_NEG_ANTIMONO_LT_OU:
+    ∀f a. (∀z. a < z ⇒ ∃l. l < 0 ∧ (f diffl l) z) ⇒
+        ∀x y. a < x ∧ x < y ⇒ f y < f x
+Proof
+    rw[] >> irule DIFF_NEG_ANTIMONO_LT_INTERVAL >> simp[] >>
+    qexists ‘{x | a < x}’ >>
+    simp[INTERIOR_INTERVAL_CASES,IS_INTERVAL_POSSIBILITIES,REAL_LT_TRANS,SF SFY_ss] >>
+    metis_tac[DIFF_CONT]
+QED
+
+Theorem DIFF_NEG_ANTIMONO_LT_UO:
+    ∀f b. (∀z. z < b ⇒ ∃l. l < 0 ∧ (f diffl l) z) ⇒
+        ∀x y. y < b ∧ x < y ⇒ f y < f x
+Proof
+    rw[] >> irule DIFF_NEG_ANTIMONO_LT_INTERVAL >> simp[] >>
+    qexists ‘{x | x < b}’ >>
+    simp[INTERIOR_INTERVAL_CASES,IS_INTERVAL_POSSIBILITIES,REAL_LT_TRANS,SF SFY_ss] >>
+    metis_tac[DIFF_CONT]
+QED
+
+Theorem DIFF_NEG_ANTIMONO_LT_CU:
+    ∀f a. f contl a ∧ (∀z. a < z ⇒ ∃l. l < 0 ∧ (f diffl l) z) ⇒
+        ∀x y. a ≤ x ∧ x < y ⇒ f y < f x
+Proof
+    rw[] >> irule DIFF_NEG_ANTIMONO_LT_INTERVAL >> simp[] >>
+    qexists ‘{x | a ≤ x}’ >>
+    simp[INTERIOR_INTERVAL_CASES,IS_INTERVAL_POSSIBILITIES,REAL_LT_IMP_LE,REAL_LET_TRANS,SF SFY_ss] >>
+    metis_tac[DIFF_CONT,REAL_LE_LT]
+QED
+
+Theorem DIFF_NEG_ANTIMONO_LT_UC:
+    ∀f b. f contl b ∧ (∀z. z < b ⇒ ∃l. l < 0 ∧ (f diffl l) z) ⇒
+        ∀x y. y ≤ b ∧ x < y ⇒ f y < f x
+Proof
+    rw[] >> irule DIFF_NEG_ANTIMONO_LT_INTERVAL >> simp[] >>
+    qexists ‘{x | x ≤ b}’ >>
+    simp[INTERIOR_INTERVAL_CASES,IS_INTERVAL_POSSIBILITIES,REAL_LT_IMP_LE,REAL_LTE_TRANS,SF SFY_ss] >>
+    metis_tac[DIFF_CONT,REAL_LE_LT]
+QED
+
+Theorem DIFF_NEG_ANTIMONO_LT_OO:
+    ∀f a b. (∀z. a < z ∧ z < b ⇒ ∃l. l < 0 ∧ (f diffl l) z) ⇒
+        ∀x y. a < x ∧ y < b ∧ x < y ⇒ f y < f x
+Proof
+    rw[] >> irule DIFF_NEG_ANTIMONO_LT_INTERVAL >> simp[] >>
+    qexists ‘{x | a < x ∧ x < b}’ >>
+    simp[INTERIOR_INTERVAL_CASES,IS_INTERVAL_POSSIBILITIES,REAL_LT_TRANS,SF SFY_ss] >>
+    metis_tac[DIFF_CONT]
+QED
+
+Theorem DIFF_NEG_ANTIMONO_LT_CO:
+    ∀f a b. f contl a ∧ (∀z. a < z ∧ z < b ⇒ ∃l. l < 0 ∧ (f diffl l) z) ⇒
+        ∀x y. a ≤ x ∧ y < b ∧ x < y ⇒ f y < f x
+Proof
+    rw[] >> irule DIFF_NEG_ANTIMONO_LT_INTERVAL >> simp[] >>
+    qexists ‘{x | a ≤ x ∧ x < b}’ >>
+    simp[INTERIOR_INTERVAL_CASES,IS_INTERVAL_POSSIBILITIES,
+        REAL_LT_TRANS,REAL_LT_IMP_LE,REAL_LET_TRANS,SF SFY_ss] >>
+    metis_tac[DIFF_CONT,REAL_LE_LT]
+QED
+
+Theorem DIFF_NEG_ANTIMONO_LT_OC:
+    ∀f a b. f contl b ∧ (∀z. a < z ∧ z < b ⇒ ∃l. l < 0 ∧ (f diffl l) z) ⇒
+        ∀x y. a < x ∧ y ≤ b ∧ x < y ⇒ f y < f x
+Proof
+    rw[] >> irule DIFF_NEG_ANTIMONO_LT_INTERVAL >> simp[] >>
+    qexists ‘{x | a < x ∧ x ≤ b}’ >>
+    simp[INTERIOR_INTERVAL_CASES,IS_INTERVAL_POSSIBILITIES,
+        REAL_LT_TRANS,REAL_LT_IMP_LE,REAL_LTE_TRANS,SF SFY_ss] >>
+    metis_tac[DIFF_CONT,REAL_LE_LT]
+QED
+
+Theorem DIFF_NEG_ANTIMONO_LT_CC:
+    ∀f a b. f contl a ∧ f contl b ∧
+        (∀z. a < z ∧ z < b ⇒ ∃l. l < 0 ∧ (f diffl l) z) ⇒
+        ∀x y. a ≤ x ∧ y ≤ b ∧ x < y ⇒ f y < f x
+Proof
+    rw[] >> irule DIFF_NEG_ANTIMONO_LT_INTERVAL >> simp[] >>
+    qexists ‘{x | a ≤ x ∧ x ≤ b}’ >>
+    simp[INTERIOR_INTERVAL_CASES,IS_INTERVAL_POSSIBILITIES,
+        REAL_LT_IMP_LE,REAL_LET_TRANS,REAL_LTE_TRANS,SF SFY_ss] >>
+    metis_tac[DIFF_CONT,REAL_LE_LT]
+QED
+
+Theorem DIFF_EQ_FUN_EQ:
+    ∀f g s. is_interval s ∧ (∀z. z ∈ s ⇒ f contl z) ∧ (∀z. z ∈ s ⇒ g contl z) ∧
+        (∀z. z ∈ interior s ⇒ ∃l. (f diffl l) z ∧ (g diffl l) z) ⇒
+        ∃c. ∀x. x ∈ s ⇒ (f x = g x + c)
+Proof
+    rw[] >> Cases_on ‘s = ∅’ >- simp[] >>
+    gs[GSYM MEMBER_NOT_EMPTY] >> rename [‘w ∈ s’] >>
+    qexists ‘f w - g w’ >> rw[] >>
+    ‘f x - g x = f w - g w’ suffices_by (
+        simp[REAL_EQ_SUB_RADD,real_sub,REAL_ADD_ASSOC] >>
+        disch_then kall_tac >> metis_tac[REAL_ADD_COMM,REAL_ADD_ASSOC]) >>
+    Cases_on ‘x = w’ >- simp[] >> wlog_tac ‘w < x’ [‘x’,‘w’]
+    >- (first_x_assum $ qspecl_then [‘w’,‘x’] mp_tac >> simp[] >>
+        ‘x < w’ suffices_by simp[] >> gs[REAL_NOT_LT,REAL_LE_LT]) >>
+    ‘∀z. z ∈ s ⇒ (λx. f x − g x) contl z’ by simp[CONT_SUB] >>
+    ‘∀z. z ∈ interior s ⇒ ((λx. f x − g x) diffl 0) z’ by (
+        rw[] >> qpat_x_assum ‘∀z. z ∈ interior s ⇒ _’ $ dxrule_then assume_tac >>
+        gs[] >> qspecl_then [‘f’,‘g’,‘l’,‘l’,‘z’] mp_tac DIFF_SUB >> simp[]) >>
+    ‘∀z. w < z ∧ z < x ⇒ z ∈ interior s’ by (rw[interior] >>
+        qexists ‘interval (w,x)’ >> simp[OPEN_INTERVAL,OPEN_interval,SUBSET_DEF] >>
+        metis_tac[REAL_LE_LT,IS_INTERVAL]) >>
+    qspecl_then [‘λx. f x - g x’,‘w’,‘x’] mp_tac MVT >> simp[] >> impl_tac
+    >- (conj_tac >- metis_tac[IS_INTERVAL] >> qx_gen_tac ‘y’ >> strip_tac >>
+        simp[differentiable] >> first_x_assum $ irule_at Any >> simp[]) >>
+    rw[] >> ntac 2 $ first_x_assum $ dxrule_all_then assume_tac >>
+    dxrule_all_then assume_tac DIFF_UNIQ >> rw[] >> gs[REAL_MUL_LZERO]
+QED

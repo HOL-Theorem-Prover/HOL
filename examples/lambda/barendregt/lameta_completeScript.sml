@@ -2,7 +2,7 @@
 (* FILE    : lameta_completeScript.sml (chap10_4Script.sml)                   *)
 (* TITLE   : Completeness of (Untyped) Lambda-Calculus [1, Chapter 10.4]      *)
 (*                                                                            *)
-(* AUTHORS : 2024-2025 The Australian National University (Chun Tian)         *)
+(* AUTHORS : 2024 - 2025 The Australian National University (Chun Tian)       *)
 (* ========================================================================== *)
 
 open HolKernel Parse boolLib bossLib;
@@ -31,8 +31,7 @@ val _ = new_theory "lameta_complete";
 val _ = temp_delsimps [
    "lift_disj_eq", "lift_imp_disj",
    "IN_UNION",     (* |- !s t x. x IN s UNION t <=> x IN s \/ x IN t *)
-   "APPEND_ASSOC", (* |- !l1 l2 l3. l1 ++ (l2 ++ l3) = l1 ++ l2 ++ l3 *)
-   "SNOC_APPEND"   (* |- !x l. SNOC x l = l ++ [x] *)
+   "APPEND_ASSOC"  (* |- !l1 l2 l3. l1 ++ (l2 ++ l3) = l1 ++ l2 ++ l3 *)
 ];
 
 val _ = hide "B";
@@ -5273,7 +5272,7 @@ Proof
 QED
 
 Theorem faithful_two' :
-    !X Ms pi r.
+    !X M N pi r.
        FINITE X /\ FV M UNION FV N SUBSET X UNION RANK r /\ 0 < r ==>
       (faithful' X [M; N] pi r <=>
          (solvable M <=> solvable (apply pi M)) /\
@@ -6683,7 +6682,11 @@ Proof
  >> simp []
 QED
 
-(* Theorem 10.4.2 (i) [1, p.256] *)
+(* Theorem 10.4.2 (i) [1, p.256]
+
+   NOTE: It is actually "eta-separability" because we have “lameta (apply pi M) P”
+   instead of “apply pi M == P”.
+ *)
 Theorem separability_thm :
     !X M N r.
        FINITE X /\ FV M UNION FV N SUBSET X UNION RANK r /\ 0 < r /\
@@ -6744,13 +6747,16 @@ Proof
       MATCH_MP_TAC Boehm_apply_lameta_cong >> art [] ]
 QED
 
-Theorem separability_thm_final :
+(* NOTE: We call it "final" if there's no “FINITE X /\ FV M SUBSET X UNION RANK r”
+   in antecedents.
+ *)
+Theorem separability_final :
     !M N. has_benf M /\ has_benf N /\ ~(lameta M N) ==>
           !P Q. ?pi. Boehm_transform pi /\
                      lameta (apply pi M) P /\ lameta (apply pi N) Q
 Proof
     rpt STRIP_TAC
- >> MP_TAC (Q.SPECL [‘FV M UNION FV N’, ‘M’, ‘N’, ‘1’] separability_thm) >> art []
+ >> MP_TAC (Q.SPECL [‘FV M UNION FV N’, ‘M’, ‘N’, ‘1’] separability_thm)
  >> simp []
  >> impl_tac >- SET_TAC []
  >> DISCH_THEN (STRIP_ASSUME_TAC o Q.SPECL [‘P’, ‘Q’])
@@ -6766,10 +6772,10 @@ Proof
     rpt STRIP_TAC
  >> ‘?pi. Boehm_transform pi /\
           lameta (apply pi M) P /\ lameta (apply pi N) Q’
-       by METIS_TAC [separability_thm_final]
- >> ‘?Ns. !M. closed M ==> apply pi M == M @* Ns’
+       by METIS_TAC [separability_final]
+ >> ‘?L. !M. closed M ==> apply pi M == M @* L’
        by METIS_TAC [Boehm_transform_lameq_appstar]
- >> Q.EXISTS_TAC ‘Ns’
+ >> Q.EXISTS_TAC ‘L’
  >> CONJ_TAC (* 2 subgoals *)
  >| [ (* goal 1 (of 2) *)
       MATCH_MP_TAC lameta_TRANS \\
@@ -6791,7 +6797,7 @@ Theorem distinct_benf_imp_inconsistent :
           inconsistent (conversion (RINSERT (beta RUNION eta) M N))
 Proof
     rw [inconsistent_def]
- >> MP_TAC (Q.SPECL [‘M’, ‘N’] separability_thm_final) >> rw []
+ >> MP_TAC (Q.SPECL [‘M’, ‘N’] separability_final) >> rw []
  >> POP_ASSUM (MP_TAC o Q.SPECL [‘M'’, ‘N'’])
  >> STRIP_TAC
  (* M' ~ apply pi M  ~ apply pi N ~ N' *)
@@ -6851,4 +6857,7 @@ val _ = html_theory "lameta_complete";
      Pubblicazioni dell'IAC 696, 1-19 (1968)
      English translation: "Some properties of beta-eta-normal forms in the
      lambda-K-calculus" (https://arxiv.org/abs/2502.05774)
+ [4] Coppo, M. et al.: (Semi-) separability of Finite Sets of Terms in Scott's
+     D-infinity-models of the Lambda-calculus. In: LNCS 62 - Automata, Languages
+     and Programming (ICALP 1978). Springer (1978).
  *)

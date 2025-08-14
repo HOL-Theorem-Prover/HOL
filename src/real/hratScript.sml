@@ -1,8 +1,13 @@
 (*===========================================================================*)
 (* Construct positive (nonzero) rationals from natural numbers               *)
 (*===========================================================================*)
+Theory hrat
+Ancestors
+  pair arithmetic num prim_rec
+Libs
+  hol88Lib numLib reduceLib pairLib PairedLambda jrhUtils
 
-open HolKernel boolLib;
+
 infix THEN THENL ORELSE;
 
 (*
@@ -15,11 +20,6 @@ app load ["hol88Lib",
           "jrhUtils"];
 *)
 
-open Parse boolLib hol88Lib numLib reduceLib
-     pairLib PairedLambda pairTheory
-     arithmeticTheory numTheory prim_recTheory jrhUtils;
-
-val _ = new_theory "hrat";
 val _ = ParseExtras.temp_loose_equality()
 
 (*---------------------------------------------------------------------------*)
@@ -356,4 +356,3 @@ val HRAT_SUCINT = store_thm("HRAT_SUCINT",
    (!n. hrat_sucint(SUC n) = (hrat_sucint n) hrat_add hrat_1)”,
   MATCH_ACCEPT_TAC HRAT_SUCINT);
 
-val _ = export_theory();

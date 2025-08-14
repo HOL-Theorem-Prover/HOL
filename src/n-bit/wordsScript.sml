@@ -4,15 +4,13 @@
 (*                 treatment of finite Cartesian products (TPHOLs 2005)      *)
 (* AUTHOR        : (c) Anthony Fox, University of Cambridge                  *)
 (* ========================================================================= *)
-
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory pred_setTheory
-open bitTheory sum_numTheory fcpTheory fcpLib
-open numposrepTheory ASCIInumbersTheory
-open dividesTheory dep_rewrite
-
-val () = new_theory "words"
-val _ = set_grammar_ancestry ["ASCIInumbers", "numeral_bit", "fcp", "sum_num"]
+Theory words
+Ancestors
+  ASCIInumbers numeral_bit fcp sum_num arithmetic pred_set
+  bit sum_num fcp numposrep ASCIInumbers divides
+Libs
+  dep_rewrite fcpLib wordspp[qualified] Lib[qualified]
+  boolSyntax[qualified] numSyntax[qualified] Drule[qualified]
 
 val ERR = mk_HOL_ERR "wordsScript"
 
@@ -51,7 +49,6 @@ val w2n_def = zDefine`
 val n2w_def = zDefine`
   (n2w:num->'a word) n = FCP i. BIT i n`
 
-local open wordspp in end
 val _ = add_ML_dependency "wordspp"
 val _ = Parse.add_user_printer ("wordspp.words_printer", ``words$n2w x : 'a word``)
 
@@ -2053,6 +2050,22 @@ val bit_field_insert = Q.store_thm("bit_field_insert",
          word_slice_def, word_and_def, word_or_def, word_1comp_def,
          WORD_NEG_1_T]
   \\ SRW_TAC [ARITH_ss] [])
+
+Theorem bit_field_insert_w2w:
+  h + 1 - l <= dimindex (:'a) /\ h + 1 - l <= dimindex (:'b) ==>
+  bit_field_insert h l (w2w a: 'b word) b = bit_field_insert h l (a: 'a word) b
+Proof
+  asm_simp_tac (boss_ss () ++ FCP_ss) [bit_field_insert_def, word_modify_def, w2w]
+QED
+
+Theorem bit_field_insert_transpose:
+  h1 < l2 \/ h2 < l1 ==> bit_field_insert h1 l1 a1 (bit_field_insert h2 l2 a2 b) = bit_field_insert h2 l2 a2 (bit_field_insert h1 l1 a1 b)
+Proof
+  asm_simp_tac (boss_ss () ++ FCP_ss) [bit_field_insert_def, word_modify_def]
+  >> rpt strip_tac
+  >> IF_CASES_TAC
+  >> simp []
+QED
 
 Theorem word_join_index:
   !i (a:'a word) (b:'b word).
@@ -4364,6 +4377,12 @@ val w2n_add = Q.store_thm("w2n_add",
   \\ FULL_SIMP_TAC (srw_ss()) [NOT_LESS_EQUAL]
   \\ METIS_TAC [lem, DECIDE ``0n < n ==> ((n - 1) + 1 = n)``, DIMINDEX_GT_0])
 
+Theorem w2n_add_2:
+  w2n (a: 'a word) + w2n b < dimword (:'a) ==> w2n (a + b) = w2n a + w2n b
+Proof
+  simp [word_add_def]
+QED
+
 (* ------------------------------------------------------------------------- *)
 
 val saturate_w2w_n2w = Q.store_thm("saturate_w2w_n2w",
@@ -5340,5 +5359,3 @@ val _ =
 (* ------------------------------------------------------------------------- *)
 
 val n2w_itself_def = Define `n2w_itself (n, (:'a)) = (n2w n): 'a word`
-
-val _ = export_theory()

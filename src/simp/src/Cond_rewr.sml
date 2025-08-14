@@ -315,9 +315,17 @@ fun IMP_EQ_CANON (thm,bnd) = let
                       (trace(1,IGNORE("rewrite with existential vars (adding \
                                       \EQT version(s))",thm));
                        EQT_INTRO undisch_thm)
+                fun simple_rhs t =
+                    (if is_eq t then
+                      let
+                        val (l,r) = dest_eq t
+                      in
+                        (is_var l andalso is_const r) orelse (is_const l andalso is_var r)
+                      end
+                    else true)
                 val flip_eqp = let val (l,r) = dest_eq (concl base)
                                in
-                                 is_eq l andalso not (is_eq r)
+                                 is_eq l andalso (simple_rhs r)
                                end
               in
                 if flip_eqp then

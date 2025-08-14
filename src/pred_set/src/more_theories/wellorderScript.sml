@@ -1,10 +1,8 @@
-open HolKernel Parse boolLib bossLib
-open boolSimps mesonLib numLib InductiveDefinition tautLib
-
-open relationTheory set_relationTheory pred_setTheory pairTheory
-     arithmeticTheory optionTheory;
-
-val _ = new_theory "wellorder"
+Theory wellorder
+Ancestors
+  relation set_relation pred_set pair arithmetic option
+Libs
+  boolSimps mesonLib numLib InductiveDefinition tautLib
 
 val _ = temp_delsimps ["NORMEQ_CONV"]
 
@@ -1460,5 +1458,3 @@ Proof
   ‘f(a:'a->bool) SUBSET a’ by METIS_TAC[IN_BIGINTER, SUBSET_DEF] THEN
    METIS_TAC[SUBSET_ANTISYM, IN_BIGINTER]
 QED
-
-val _ = export_theory()

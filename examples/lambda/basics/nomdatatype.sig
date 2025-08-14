@@ -4,7 +4,7 @@ sig
   include Abbrev
   type coninfo = {con_termP : thm, con_def : thm}
 
-  val new_type_step1 : string -> int -> thm list -> {vp:term,lp:term} ->
+  val new_type_step1 : string -> int -> thm list -> {lp:term} ->
                        {term_ABS_pseudo11 : thm,
                         term_REP_11 : thm,
                         term_REP_t : term,
@@ -43,10 +43,8 @@ sig
   val lift_exfunction : {repabs_pseudo_id : thm, term_REP_t : term,
                          cons_info : coninfo list} ->
                         thm -> thm
-  val prove_alpha_fcbhyp : {ppm:term, alphas: thm list, rwts: thm list} ->
+  val prove_alpha_fcbhyp : {ppms :term list, alphas: thm list, rwts: thm list} ->
                            thm -> thm
   val defined_const : thm -> term
 
 end
-
-

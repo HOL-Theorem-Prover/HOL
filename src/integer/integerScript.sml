@@ -13,17 +13,14 @@
 (* modulus.                                                                 *)
 (*                                                                          *)
 (*==========================================================================*)
+Theory integer
+Ancestors
+  arithmetic pred_set prim_rec num divides normalizer
+Libs
+  jrhUtils quotient liteLib simpLib numLib liteLib metisLib
+  BasicProvers hurdUtils boolSimps
 
 
-open HolKernel Parse boolLib bossLib;
-
-open jrhUtils quotient liteLib pred_setTheory arithmeticTheory prim_recTheory
-     numTheory simpLib numLib liteLib metisLib BasicProvers dividesTheory
-     hurdUtils normalizerTheory;
-
-val _ = set_grammar_ancestry ["arithmetic", "pred_set"];
-
-val _ = new_theory "integer";
 
 val _ = temp_delsimps ["NORMEQ_CONV"]
 
@@ -1672,8 +1669,6 @@ val NUM_NEGINT_EXISTS = store_thm(
   Term`!i. i <= 0 ==> ?n. i = ~&n`,
   PROVE_TAC [NUM_POSINT_EXISTS, INT_NEG_LE0, INT_NEG_EQ]);
 
-open boolSimps
-
 val INT_NUM_CASES = store_thm(
   "INT_NUM_CASES",
   Term`!p. (?n. (p = &n) /\ ~(n = 0)) \/ (?n. (p = ~&n) /\ ~(n = 0)) \/
@@ -2090,6 +2085,7 @@ val negcase = prove(
     `(tot = q' * n + r) /\ r < n` by METIS_TAC [DIVISION] THEN
     `q * n = q' * n + m` by ASM_SIMP_TAC int_ss [Abbr`tot`] THEN
     `(q * n) DIV n = (q' * n + m) DIV n` by SRW_TAC [][] THEN
+    rpt VAR_EQ_TAC THEN
     FULL_SIMP_TAC (srw_ss()) [ASSUME ``0n < n``, MULT_DIV,
                               ASSUME ``(m:num) < n``, DIV_MULT],
     Q_TAC SUFF_TAC `(q * n - m) DIV n = q - 1` THEN1
@@ -3807,4 +3803,3 @@ val _ = BasicProvers.export_rewrites
          "INT_SUB_RNEG", "INT_SUB_SUB",
          "INT_SUB_SUB2", "NUM_OF_INT"]
 
-val _ = export_theory()

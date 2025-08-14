@@ -2250,7 +2250,8 @@ Proof
       simp[]) >>~-
   ([‘BAG_UNION _ _ = _ ’],
    csimp[edge0_def, Once FUN_EQ_THM, BAG_UNION, BAG_INSERT, BAG_OF_SET] >>
-   rw[])
+   rw[]) >>
+  simp[SF CONJ_ss]
 QED
 
 Theorem edges_addEdges_allokdirgraph:

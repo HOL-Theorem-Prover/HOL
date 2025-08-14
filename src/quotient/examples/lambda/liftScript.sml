@@ -1,44 +1,19 @@
-open HolKernel Parse boolLib;
-
+Theory lift
+Ancestors
+  prim_rec pair list rich_list combin pred_set num arithmetic
+  more_list more_set variable term alpha
+Libs
+  pairLib listLib pred_setLib numLib Mutual ind_rel dep_rewrite
+  quotientLib tactics Rsyntax
 
 (* --------------------------------------------------------------------- *)
 (* Lifting the lambda calculus syntax to the abstract level.             *)
 (* --------------------------------------------------------------------- *)
 
 
-val _ = new_theory "lift";
-
 (* In interactive sessions, do:
 val _ = map load ["more_listTheory","more_setTheory","variableTheory","termTheory","alphaTheory"];
 *)
-
-open prim_recTheory;
-open pairTheory;
-open pairLib;
-open listTheory;
-open rich_listTheory;
-open combinTheory;
-open listLib;
-open pred_setTheory;
-open pred_setLib;
-open numTheory;
-open numLib;
-open arithmeticTheory;
-open bossLib;
-open Mutual;
-open ind_rel;
-open dep_rewrite;
-open more_listTheory;
-open more_setTheory;
-open variableTheory;
-open termTheory;
-open alphaTheory;
-
-open quotientLib;
-
-open tactics;
-open Rsyntax;
-
 
 val _ = associate_restriction ("?!!",  "RES_EXISTS_EQUIV");
 
@@ -1997,8 +1972,6 @@ val ALL_LAMBDA_OBJ_EQ = store_thm
 
 
 
-
-val _ = export_theory();
 
 val _ = print_theory_to_file "-" "lift.lst";
 

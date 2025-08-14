@@ -16,6 +16,8 @@ open extra_boolTheory extra_numTheory extra_listTheory extra_stringLib
 open hurdUtils sigma_algebraTheory real_measureTheory real_lebesgueTheory
      real_probabilityTheory;
 
+open dep_rewrite;
+
 val _ = new_theory "dining_cryptos";
 
 val _ = temp_set_fixity "CROSS" (Infixl 600)
@@ -245,28 +247,6 @@ val fun_eq_lem5 = METIS_PROVE []
         ``!x a b P Q. (x = a) \/ ~ (x = b) /\ P \/ Q <=> (a = b) /\ ((x = a) \/ P)
                         \/ ~(x = b) /\ ((x = a) \/ P) \/ Q``;
 
-val CARD_dc_set_cross = store_thm
-  ("CARD_dc_set_cross",
-   ``1 / & (CARD (IMAGE (\s. (FST s,SND s,dcprog (SUC (SUC (SUC 0))) s))
-                ((dc_high_states_set (SUC (SUC 0)) CROSS dc_low_states) CROSS
-                   dc_random_states (SUC (SUC 0))))) = 1 / 24``,
-   RW_TAC set_ss [dcprog_def, dc_low_states_def, dc_high_states_def, dc_high_states_set_def, dc_random_states_def,
-                  CROSS_EQNS, compute_result_alt, XOR_announces_def, set_announcements_def, xor_def]
-   >> CONV_TAC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV set_ss [fun_eq_lem])))
-   >> RW_TAC set_ss [CROSS_EQNS, STRCAT_toString_inj]
-   >> CONV_TAC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV set_ss [fun_eq_lem])))
-   >> REPEAT (SIMP_TAC std_ss [FINITE_EMPTY, FINITE_INSERT, Once CARD_DEF]
-              >> CONV_TAC (FIND_CONV ``x IN y`` (IN_CONV (SIMP_CONV std_ss [FUN_EQ_THM]
-                                        THENC SIMP_CONV bool_ss [EQ_IMP_THM]
-                                        THENC SIMP_CONV bool_ss [DISJ_IMP_THM]
-                                        THENC EVAL
-                                        THENC SIMP_CONV bool_ss [LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]
-                                        THENC EVAL
-                                        THENC SIMP_CONV bool_ss [fun_eq_lem5, GSYM LEFT_AND_OVER_OR]
-                                        THENC EVAL
-                                        THENC SIMP_CONV bool_ss [FORALL_AND_THM])))
-               >> SIMP_TAC std_ss []));
-
 val CARD_dc_high_states_set = store_thm
   ("CARD_dc_high_states_set",
    ``!n. CARD (dc_high_states_set n) = SUC n``,
@@ -318,6 +298,27 @@ val CARD_dc_low_states = store_thm
   ("CARD_dc_low_states",
    ``CARD dc_low_states = 1``,
    RW_TAC set_ss [dc_low_states_def]);
+
+val CARD_dc_set_cross = store_thm
+  ("CARD_dc_set_cross",
+   ``1 / & (CARD (IMAGE (\s. (FST s,SND s,dcprog (SUC (SUC (SUC 0))) s))
+                ((dc_high_states_set (SUC (SUC 0)) CROSS dc_low_states) CROSS
+                   dc_random_states (SUC (SUC 0))))) = 1 / 24``,
+   DEP_REWRITE_TAC[CARD_IMAGE] >>
+   CONJ_TAC >- (
+      PURE_REWRITE_TAC[GSYM PULL_EXISTS] >>
+      CONJ_TAC >- RW_TAC set_ss [dc_low_states_def, dc_high_states_def,
+                   dc_high_states_set_def, dc_random_states_def] >>
+      Q.EXISTS_TAC `UNIV` >>
+      RW_TAC set_ss [INJ_DEF] >>
+      rename1 `s' = s` >>
+      PairCases_on `s'` >>
+      PairCases_on `s` >>
+      full_simp_tac(set_ss)[]) >>
+   DEP_REWRITE_TAC[CARD_CROSS] >>
+   CONJ_TAC >- RW_TAC set_ss [dc_low_states_def, dc_high_states_def,
+    dc_high_states_set_def, dc_random_states_def] >>
+   SIMP_TAC set_ss [CARD_dc_high_states_set,CARD_dc_low_states,CARD_dc_random_states]);
 
 val dc_states3_cross_not_empty = store_thm
   ("dc_states3_cross_not_empty",

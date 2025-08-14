@@ -4,13 +4,12 @@
 (*                 finite Cartesian products (TPHOLs 2005)                   *)
 (* DATE          : 2005                                                      *)
 (* ========================================================================= *)
+Theory fcp
+Ancestors
+  arithmetic pred_set list iterate
+Libs
+  numLib hurdUtils mesonLib
 
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory numLib pred_setTheory listTheory iterateTheory hurdUtils
-     mesonLib;
-
-val _ = new_theory "fcp";
 
 (* ------------------------------------------------------------------------- *)
 (*  NOTES for HOL-Light users (or HOL4 porters of HOL-Light theories)        *)
@@ -31,7 +30,7 @@ val _ = new_theory "fcp";
 (*  to some FCP-related theorems.       -- Chun Tian (binghe), May 12, 2022  *)
 (* ------------------------------------------------------------------------- *)
 
-val qDefine = Feedback.trace ("Define.storage_message", 0) zDefine
+val qDefine = Feedback.trace ("Definition.storage_message", 0) zDefine
 
 (* ------------------------------------------------------------------------- *
  * An isomorphic image of any finite type, 1-element for infinite ones.      *
@@ -963,4 +962,3 @@ Proof
   MESON_TAC[HAS_SIZE_CART_UNIV, HAS_SIZE]
 QED
 
-val _ = export_theory ();

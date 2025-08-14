@@ -24,7 +24,7 @@ fun println s = print (s ^ "\n")
 
 structure RawTheorykey =
 struct
-  type key = raw_name * string (* time-stamped name + path *)
+  type key = raw_name * string (* name with hash + path *)
   val ord = pair_compare (raw_name_compare, String.compare)
   fun pp (rn, p) =
       HOLPP.add_string(
@@ -48,22 +48,26 @@ type derived_data = {
   path : string
 }
 
+fun getHash p = SHA1.sha1_file {filename=p}
 
 fun readThy p (g,links) =
     let
       open RawTheoryReader
       val dat as {parents, name, exports, ...} =
-          RawTheoryReader.load_raw_thydata{thyname="", path = p}
+          RawTheoryReader.load_raw_thydata{path = p}
           handle TheoryReader s => raise Fail ("Bad decode for " ^ p)
       val {dir, file} = OS.Path.splitDirFile p
       val {base, ext} = OS.Path.splitBaseExt file
-      val _ = ext = SOME "dat" andalso base = #thy name ^ "Theory" orelse
-              (warn ("Theory.dat at " ^ p ^ " has name " ^ #thy name); true)
-      val key = (name,dir)
+      val _ = ext = SOME "dat" andalso base = name ^ "Theory" orelse
+              (warn ("Theory.dat at " ^ p ^ " has name " ^ name); true)
+      val hash = HFS_NameMunge.toFSfn false getHash p
+      val key = ({thy=name, hash=hash},dir)
     in
-      SOME (g |> TheoryGraph.new_node(key, {exports = exports, parents = parents}),
+      SOME (g |> TheoryGraph.new_node(key, {exports=exports, parents=parents}),
             (key, parents)::links)
     end handle Fail s => (warn s; NONE)
+             | e => die ("readThy \"" ^ String.toString p ^ "\": " ^
+                         General.exnMessage e)
 
 
 (* depth-first, preorder *)
@@ -83,18 +87,20 @@ fun recurse_toDirs action A worklist =
 fun find_theory_action dir A =
     let
       open OS.FileSys
-      val objsdirname = dir ++ ".holobjs"
+      val objsdirname = dir ++ ".hol/objs"
     in
       if access (objsdirname, [A_READ, A_EXEC]) andalso isDir objsdirname then
-        let val thys = Portable.listDir objsdirname
-                                        |> List.filter (String.isSuffix "Theory.dat")
-                                        |> List.map (fn thy => dir ++ thy)
+        let val thys =
+                Portable.listDir objsdirname
+                                 |> List.filter (String.isSuffix "Theory.dat")
+                                 |> List.map (fn thy => dir ++ thy)
             fun foldthis (thydat,A) =
                 let val f = #file (OS.Path.splitDirFile thydat)
                     val b = #base (OS.Path.splitBaseExt f)
                 in
-                  if access(dir ++ (b ^ ".sig"), [A_READ]) then
-                    if access (dir ++ (String.substring(b, 0, size b - 6) ^ "Script.sml"),
+                  if access(objsdirname ++ (b ^ ".sig"), [A_READ]) then
+                    if access (dir ++ (String.substring(b, 0, size b - 6) ^
+                                       "Script.sml"),
                                [A_READ])
                     then
                       case readThy thydat A of SOME A' => A' | NONE => A
