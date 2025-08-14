@@ -172,15 +172,15 @@ fun okay_sig s =
 fun dirToBase (sigdir, docdirs, filename) =
     let
       val _ = print ("docdirs = " ^ String.concatWith ", " docdirs ^ "\n")
-       val doc_entryl = List.foldl (docdir_to_entries HOLpath) [] docdirs
-       val ok_sigs = List.filter okay_sig (Htmlsigs.listDir sigdir)
-       val res = List.foldl (Parsspec.processfile stoplist sigdir)
-                             doc_entryl ok_sigs
-       val _ = print ("\nProcessed " ^ Int.toString (length res)
-                      ^ " entries in total.\n");
-       val _ = print ("Building database...\n");
-       val db = mkbase res
-       val _ = print ("Writing database to file " ^ filename ^ "\n");
+      val doc_entryl = List.foldl (docdir_to_entries HOLpath) [] docdirs
+      val ok_sigs = List.filter okay_sig (Htmlsigs.listDir sigdir)
+      val res = List.foldl (Parsspec.processfile stoplist sigdir)
+                           doc_entryl ok_sigs
+      val _ = print ("\nProcessed " ^ Int.toString (length res)
+                     ^ " entries in total.\n");
+      val _ = print ("Building database...\n");
+      val db = mkbase res
+      val _ = print ("Writing database to file " ^ filename ^ "\n");
     in
        Database.writebase(filename, db)
     end
