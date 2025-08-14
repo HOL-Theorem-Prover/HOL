@@ -55,7 +55,7 @@ fun transHTML pdexe htmldir docdir docfile = let
       OS.Path.joinBaseExt{base = htmldir ++ docbase, ext = SOME "html"}
   val filter = HOLDIR ++ "help/src-sml/internal-to-external.lua"
   val res =
-      Systeml.systeml [pdexe, docpath, "-s", "-o", outfile,
+      Systeml.systeml [pdexe, docpath, "-s", "-c", "doc.css", "-o", outfile,
                        "--lua-filter="^filter]
 in
   if OS.Process.isSuccess res then ()
@@ -132,7 +132,7 @@ in
         val _ = loop docfiles
         val command1 =
           "parallel --halt now,fail=1 --eta --arg-file " ^ tmp ^
-          " pandoc {} -s -o " ^ htmldir ^ "/{/.}.html --lua-filter=" ^
+          " pandoc {} -s -c doc.css -o " ^ htmldir ^ "/{/.}.html --lua-filter=" ^
           (HOLDIR ++ "help/src-sml/internal-to-external.lua")
         val command2 =
           "parallel --halt now,fail=1 --eta --arg-file " ^ tmp ^
