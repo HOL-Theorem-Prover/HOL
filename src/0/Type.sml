@@ -148,6 +148,7 @@ fun op_arity {Thy,Tyop} =
     case KernelSig.peek(typesig,{Thy=Thy,Name=Tyop}) of
       KernelSig.Success (id, a) => SOME a
     | _ => NONE
+
 fun uptodate_kname knm = KernelSig.isSuccess (KernelSig.peek(typesig,knm))
 
 (*---------------------------------------------------------------------------
@@ -189,6 +190,32 @@ fun dest_vartype (Tyv s) = s
 fun is_vartype (Tyv _) = true | is_vartype _ = false;
 val is_type = not o is_vartype;
 
+(*---------------------------------------------------------------------------
+        An order on types
+ ---------------------------------------------------------------------------*)
+
+fun fast_ty_eq (ty1:hol_type) (ty2:hol_type) = Portable.pointer_eq (ty1,ty2);
+
+fun compare (ty1,ty2) =
+    if fast_ty_eq ty1 ty2 then
+       EQUAL
+    else
+    case (ty1,ty2)
+     of (Tyv s1, Tyv s2) => String.compare (s1,s2)
+      | (Tyv _, _) => LESS
+      | (Tyapp _, Tyv _) => GREATER
+      | (Tyapp((c1,_),A1), Tyapp((c2,_),A2)) =>
+          (case KernelSig.id_compare (c1, c2)
+           of EQUAL => Lib.list_compare compare (A1,A2)
+            | other => other);
+
+val empty_tyset = HOLset.empty compare
+val empty_ty_map = HOLdict.mkDict compare
+
+fun ty_map_of theta =
+  let fun itFn {redex,residue} fmap = HOLdict.insert(fmap,redex,residue)
+  in rev_itlist itFn theta empty_ty_map end
+
 (*---------------------------------------------------------------------------*
  * The variables in a type.                                                  *
  *---------------------------------------------------------------------------*)
@@ -221,18 +248,33 @@ fun type_var_in v =
                   else raise ERR "type_var_occurs" "not a type variable"
 
 (*---------------------------------------------------------------------------*
- * Substitute in a type, trying to preserve existing structure.              *
+ * Instantiate type variables, trying to preserve existing structure         *
  *---------------------------------------------------------------------------*)
 
+(*
 fun ty_sub [] _ = SAME
   | ty_sub theta (Tyapp(tyc,Args))
-      = (case delta_map (ty_sub theta) Args
+      = (case delta_list (ty_sub theta) Args
           of SAME => SAME
            | DIFF Args' => DIFF (Tyapp(tyc, Args')))
   | ty_sub theta v =
       case Lib.subst_assoc (equal v) theta
        of NONE    => SAME
         | SOME ty => DIFF ty
+*)
+
+fun ty_sub theta =
+  if null theta then
+     K SAME
+  else
+  let val tymap = ty_map_of theta
+      fun tysubst ty = DIFF(HOLdict.find(tymap,ty)) handle NotFound => SAME
+      fun subs (v as Tyv _) = tysubst v
+        | subs (Tyapp(tyc,tys)) =
+           delta_map (fn tys' => Tyapp(tyc, tys'))
+                     (delta_list subs tys)
+   in subs
+   end
 
 fun type_subst theta = delta_apply (ty_sub theta)
 
@@ -283,18 +325,6 @@ fun match_type_in_context pat ob S = fst (raw_match_type pat ob (S,[]))
 fun match_type pat ob = match_type_in_context pat ob []
 
 
-
-(*---------------------------------------------------------------------------
-        An order on types
- ---------------------------------------------------------------------------*)
-
-fun compare (Tyv s1, Tyv s2) = String.compare (s1,s2)
-  | compare (Tyv _, _) = LESS
-  | compare (Tyapp _, Tyv _) = GREATER
-  | compare (Tyapp((c1,_),A1), Tyapp((c2,_),A2)) =
-      case KernelSig.id_compare (c1, c2)
-       of EQUAL => Lib.list_compare compare (A1,A2)
-        |   x   => x;
 
 (*---------------------------------------------------------------------------
      Automatically generated type variables. The unusual names make

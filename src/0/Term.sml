@@ -17,11 +17,13 @@ open Feedback Lib Subst KernelTypes
 val kernelid = "stdknl"
 
 type 'a set = 'a HOLset.set;
+type ('a,'b) fmap = ('a,'b) HOLdict.dict;
 
 val ERR = mk_HOL_ERR "Term";
 val WARN = HOL_WARNING "Term";
 
-val --> = Type.-->;   infixr 3 -->;
+val --> = Type.-->;
+infixr 3 -->;
 
 infix |-> ##;
 
@@ -183,26 +185,31 @@ fun free_varsl tm_list = itlist (union o free_vars) tm_list []
 fun all_varsl tm_list  = itlist (union o all_vars) tm_list [];
 
 (*---------------------------------------------------------------------------
-     Support for efficient sets of variables
+     Support for efficient term variable sets and maps
  ---------------------------------------------------------------------------*)
 
-fun var_compare (Fv(s1,ty1), Fv(s2,ty2)) =
+fun fast_term_eq (t1:term) (t2:term) = Portable.pointer_eq (t1,t2)
+
+fun var_compare (v1 as Fv(s1,ty1), v2 as Fv(s2,ty2)) =
+    if fast_term_eq v1 v2 then
+       EQUAL
+    else
        (case String.compare (s1,s2)
          of EQUAL => Type.compare (ty1,ty2)
           | x => x)
   | var_compare _ = raise ERR "var_compare" "variables required";
 
-val empty_varset = HOLset.empty var_compare
-val empty_varmap = HOLdict.mkDict var_compare
+val empty_var_set = HOLset.empty var_compare
+val empty_var_map = HOLdict.mkDict var_compare
 
 fun var_map_of theta =
   let fun itFn {redex,residue} fmap =
-        if type_of redex <> type_of residue then
-	   raise ERR "var_map_of" "type mismatch in element of input subst"
+        if not (is_var redex andalso type_of redex = type_of residue) then
+	   raise ERR "var_map_of" ""
         else
-           HOLdict.insert(fmap,redex,residue) handle HOL_ERR _
-           => raise ERR "var_map_of" "redex fields must be variables"
-  in rev_itlist itFn theta empty_varmap
+           HOLdict.insert(fmap,redex,residue)
+  in
+      rev_itlist itFn theta empty_var_map
   end
 
 
@@ -210,8 +217,6 @@ fun var_map_of theta =
     A total ordering on terms that respects alpha equivalence.
     Fv < Bv < Const < Comb < Abs
    ---------------------------------------------------------------------- *)
-
-fun fast_term_eq (t1:term) (t2:term) = Portable.pointer_eq (t1,t2)
 
 fun compare (p as (t1,t2)) =
     if fast_term_eq t1 t2 then EQUAL else
@@ -244,13 +249,17 @@ fun compare (p as (t1,t2)) =
 
 fun term_eq t1 t2 = compare(t1,t2) = EQUAL
 
-val empty_tmset = HOLset.empty compare
+(*---------------------------------------------------------------------------
+     Support for efficient general term sets and maps
+ ---------------------------------------------------------------------------*)
+
+val empty_term_set = HOLset.empty compare
 val empty_term_map = HOLdict.mkDict compare
 
 fun term_map_of theta =
   let fun itFn {redex,residue} (fmap,vardom) =
         if type_of redex <> type_of residue then
-           raise ERR "term_map_of" "type mismatch in element of input subst"
+           raise ERR "term_map_of" "type mismatch in element of input"
         else
            (HOLdict.insert(fmap,redex,residue), is_var redex andalso vardom)
   in
@@ -278,7 +287,7 @@ fun all_atomsl tlist A =
             | Bv _ => all_atomsl ts A
         end
 
-fun all_atoms t = all_atomsl [t] empty_tmset
+fun all_atoms t = all_atomsl [t] empty_term_set
 
 (*---------------------------------------------------------------------------
         Free variables of a term. Tail recursive. Returns a set.
@@ -596,199 +605,22 @@ fun eta_conv (Abs(_,Body)) = eta_body Body
   | eta_conv _ = raise ERR "eta_conv" "not an eta-redex"
 end;
 
-
-(*---------------------------------------------------------------------------*
- *    Replace arbitrary subterms in a term. Non-renaming.                    *
- *---------------------------------------------------------------------------*)
-
-(*  Vanilla version, term is rebuilt even when no change *)
-fun subst [] = I
-  | subst theta =
-    let val (fmap,b) = term_map_of theta
-        fun vsubs (v as Fv _) =
-             (case HOLdict.peek(fmap,v) of NONE => v | SOME y => y)
-          | vsubs (Comb(Rator,Rand)) = Comb(vsubs Rator, vsubs Rand)
-          | vsubs (Abs(Bvar,Body)) = Abs(Bvar,vsubs Body)
-          | vsubs (c as Clos _) = vsubs (push_clos c)
-          | vsubs tm = tm
-        fun subs tm =
-          case HOLdict.peek(fmap,tm)
-           of SOME residue => residue
-            | NONE =>
-              (case tm
-                of Comb(Rator,Rand) => Comb(subs Rator, subs Rand)
-                 | Abs(Bvar,Body) => Abs(Bvar,subs Body)
-                 | Clos _        => subs(push_clos tm)
-                 |   _         => tm)
-    in
-      (if b then vsubs else subs)
-    end
-
-(* Space saving version via propagation of SAME/DIFF constructors *)
-local
- fun rebuild_abs _ SAME = SAME
-   | rebuild_abs v (DIFF M) = DIFF (Abs(v,M))
- fun rebuild_comb _ _ SAME SAME = SAME
-   | rebuild_comb M _ SAME (DIFF N') = DIFF (Comb(M,N'))
-   | rebuild_comb _ N (DIFF M') SAME = DIFF (Comb(M',N))
-   | rebuild_comb _ _ (DIFF M') (DIFF N') = DIFF (Comb(M',N'))
-in
-fun subst [] = I
-  | subst theta =
-    let val (fmap,var_only_dom) = term_map_of theta
-        fun vsubs (v as Fv _) =
-             (case HOLdict.peek(fmap,v)
-               of NONE => SAME
-                | SOME y => DIFF y)
-          | vsubs (Comb(M,N)) = rebuild_comb M N (vsubs M) (vsubs N)
-          | vsubs (Abs(v,M)) = rebuild_abs v (vsubs M)
-          | vsubs (c as Clos _) = vsubs (push_clos c)
-          | vsubs tm = SAME
-        fun subs tm =
-          case HOLdict.peek(fmap,tm)
-           of SOME residue => DIFF residue
-            | NONE =>
-              (case tm
-                of Comb(M,N) => rebuild_comb M N (subs M) (subs N)
-                 | Abs(v,M) => rebuild_abs v (subs M)
-                 | Clos _  => subs(push_clos tm)
-                 |   _    => SAME)
-    in
-      Lib.delta_apply (if var_only_dom then vsubs else subs)
-    end
-end
-
-(* Use exceptions to avoid rebuilding terms if possible *)
-
-exception UNCHANGED
-fun unchanged() = raise UNCHANGED
-fun totally f x = f x handle UNCHANGED => x
-
-(* Space saving version via propagation of UNCHANGED exception *)
-fun subst [] = I
-  | subst theta =
-    let val (fmap,var_only_dom) = term_map_of theta
-        fun vsubs (v as Fv _) =
-              (HOLdict.find(fmap,v) handle NotFound => unchanged())
-          | vsubs (Comb(M,N)) =
-              (let val M' = vsubs M
-                   val N' = totally vsubs N
-               in Comb(M',N')
-               end handle UNCHANGED => Comb (M,vsubs N))
-          | vsubs (Abs(v,M)) = Abs(v,vsubs M)
-          | vsubs (c as Clos _) = vsubs (push_clos c)
-          | vsubs tm = unchanged()
-        fun subs tm =
-            HOLdict.find (fmap,tm) handle NotFound
-            => (case tm
-                 of Comb(M,N) =>
-                    (let val M' = subs M
-                         val N' = totally subs N
-                     in Comb(M',N')
-                     end handle UNCHANGED => Comb (M,subs N))
-                  | Abs(v,M) => Abs(v,subs M)
-                  | Clos _  => subs(push_clos tm)
-                  |   _    => unchanged())
-    in
-      totally (if var_only_dom then vsubs else subs)
-    end
+(*---------------------------------------------------------------------------*)
+(* Instantiate tyvars in a term, then instantiate term vars.                 *)
+(*---------------------------------------------------------------------------*)
 
 fun tag_type ty = if Type.polymorphic ty then POLY ty else GRND ty;
 
-(*---------------------------------------------------------------------------*
- *     Instantiate type variables in a term                                  *
- *---------------------------------------------------------------------------*)
+val retag = delta_map tag_type;
 
-fun inst [] tm = tm
-  | inst theta tm =
-    let fun
-       inst1 (bv as Bv _) = bv
-     | inst1 (c as Const(_, GRND _)) = c
-     | inst1 (c as Const(r, POLY ty)) =
-       (case Type.ty_sub theta ty
-         of SAME => c
-          | DIFF ty' => Const(r,tag_type ty'))
-     | inst1 (v as Fv(Name,ty)) =
-         (case Type.ty_sub theta ty
-           of SAME => v
-            | DIFF ty' => Fv(Name, ty'))
-     | inst1 (Comb(Rator,Rand)) = Comb(inst1 Rator, inst1 Rand)
-     | inst1 (Abs(Bvar,Body)) = Abs(inst1 Bvar, inst1 Body)
-     | inst1 (t as Clos _)  = inst1(push_clos t)
-    in
-      inst1 tm
-    end;
-
-(* Space saving version via propagation of SAME/DIFF constructors *)
-
-fun delta_monop f SAME = SAME
-  | delta_monop f (DIFF x) = DIFF (f x)
-
-local
-  fun delta_binop f (_,SAME) (_,SAME) = SAME
-    | delta_binop f (M,SAME) (N,DIFF N') = DIFF (f(M,N'))
-    | delta_binop f (M,DIFF M') (N,SAME) = DIFF (f(M',N))
-    | delta_binop f (M,DIFF M') (N,DIFF N') = DIFF(f(M',N'))
-in
 val delta_fv    = delta_binop Fv
 val delta_const = delta_binop Const
 val delta_comb  = delta_binop Comb
-val delta_abs   = delta_binop Abs
-end
+val delta_abs   = delta_binop Abs;
 
-fun from_delta x SAME = x
-  | from_delta x (DIFF y) = y
-
-val retag = delta_monop tag_type;
-
-fun inst [] = I
-  | inst theta =
-    let val tysubst = Type.ty_sub theta
-        fun inst1 (Bv _) = SAME
-          | inst1 (Const(_, GRND _)) = SAME
-          | inst1 (Const(r, tag as POLY ty)) =
-              delta_const (r,SAME) (tag, retag (tysubst ty))
-          | inst1 (Fv(s,ty)) = delta_fv (s,SAME) (ty,tysubst ty)
-          | inst1 (Comb(M,N)) = delta_comb (M,inst1 M) (N,inst1 N)
-          | inst1 (Abs(v,M)) = delta_abs (v,inst1 v) (M,inst1 M)
-          | inst1 (t as Clos _) = inst1(push_clos t)
-   in
-      Lib.delta_apply inst1
-   end
-
-(* Space saving version via propagation of UNCHANGED exception *)
-fun inst [] = I
-  | inst theta  =
-    let val tysubst = Type.ty_sub theta
-        fun inst1 (Bv _) = unchanged()
-          | inst1 (Const(_, GRND _)) = unchanged()
-          | inst1 (Const(r, POLY ty)) =
-            (case tysubst ty
-              of SAME => unchanged()
-               | DIFF ty' => Const(r, tag_type ty'))
-          | inst1 (Fv(Name,ty)) =
-             (case tysubst ty
-               of SAME => unchanged()
-                | DIFF ty' => Fv(Name, ty'))
-          | inst1 (Comb(M,N)) =
-              (let val M' = inst1 M
-                   val N' = totally inst1 N
-                   in Comb(M',N')
-                   end handle UNCHANGED => Comb (M,inst1 N))
-          | inst1 (Abs(v,M)) =
-              (let val v' = inst1 v
-                   val M' = totally inst1 M
-                   in Abs(v',M')
-                   end handle UNCHANGED => Abs(v,inst1 M))
-          | inst1 (t as Clos _) = inst1(push_clos t)
-    in
-       totally inst1
-    end
-
-(* Instantiate tyvars in a term, then instantiate term vars. In other words
-
-     inst_ty_tm = subst theta o inst tytheta.
-*)
+(*---------------------------------------------------------------------------*)
+(* Rebuild term, except for re-use at atoms                                  *)
+(*---------------------------------------------------------------------------*)
 
 fun inst_ty_tm_1 theta tytheta =
   let val vmap = var_map_of theta
@@ -811,6 +643,10 @@ fun inst_ty_tm_1 theta tytheta =
   in
     isubst
   end;
+
+(*---------------------------------------------------------------------------*)
+(* Space saving version via delta type                                       *)
+(*---------------------------------------------------------------------------*)
 
 fun inst_ty_tm_2 theta tytheta =
   let val vmap = var_map_of theta
@@ -838,6 +674,14 @@ fun inst_ty_tm_2 theta tytheta =
   in
     delta_apply isubst
   end;
+
+(*---------------------------------------------------------------------------*)
+(* Space saving version via exceptions                                       *)
+(*---------------------------------------------------------------------------*)
+
+exception UNCHANGED
+fun unchanged() = raise UNCHANGED
+fun totally f x = f x handle UNCHANGED => x
 
 fun inst_ty_tm_3 theta tytheta =
   let val vmap = var_map_of theta
@@ -875,9 +719,37 @@ fun inst_ty_tm_3 theta tytheta =
     totally isubst
   end
 
-val iref = ref inst_ty_tm_2;
+(* Pick one of the above (for testing) *)
+val inst_ty_tm = inst_ty_tm_1;
 
-fun inst_ty_tm x y = !iref x y;
+(*---------------------------------------------------------------------------*)
+(* inst and subst are instantiations of inst_ty_tm                           *)
+(*---------------------------------------------------------------------------*)
+
+fun inst tytheta = inst_ty_tm [] tytheta;
+
+val var_pure = Lib.all (fn {redex,residue} => is_var redex)
+
+(*---------------------------------------------------------------------------*)
+(* subst allows replacement of arbitrary terms                               *)
+(*---------------------------------------------------------------------------*)
+
+fun subst theta =
+  if var_pure theta then
+     inst_ty_tm theta []
+  else
+  let val (tmap,_) = term_map_of theta
+      fun subs tm =
+          HOLdict.find(tmap,tm)
+          handle NotFound =>
+            (case tm
+              of Comb(M,N) => Comb(subs M, subs N)
+               | Abs(v,M)  => Abs(v,subs M)
+               | Clos _    => subs(push_clos tm)
+               | otherwise => tm)
+  in subs
+  end
+
 
 (*---------------------------------------------------------------------------
        Making abstractions. list_mk_binder is a relatively
@@ -1186,7 +1058,7 @@ fun norm_subst ((tmS,_),(tyS,_)) =
 fun match_terml tyfixed tmfixed pat ob =
  norm_subst (raw_match tyfixed tmfixed pat ob ([],[]))
 
-val match_term = match_terml [] empty_varset;
+val match_term = match_terml [] empty_var_set;
 
 (*---------------------------------------------------------------------------
        Must know that ty is the type of tm1 and tm2.
