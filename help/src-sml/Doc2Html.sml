@@ -66,7 +66,7 @@ fun transTXT pdexe docdir docfile = let
   val docbase = OS.Path.base docfile
   val docpath = docdir ++ docfile
   val outfile = OS.Path.joinBaseExt{base = docdir ++ docbase, ext = SOME "txt"}
-  val res = Systeml.systeml [pdexe, docpath, "-o", outfile]
+  val res = Systeml.systeml [pdexe, docpath, "-t", "plain", "-o", outfile]
 in
   if OS.Process.isSuccess res then ()
   else die "pandoc call failed"
