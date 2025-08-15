@@ -60,7 +60,7 @@ end  (* local *)
     Lib.tryfind
       (fn th =>
         let
-          val th = Drule.INST_TY_TERM (Term.match_term (Thm.concl th) t) th
+          val th = Thm.INST_TY_TERM (Term.match_term (Thm.concl th) t) th
           fun prove_hyp (hyp, th) =
             let
               val hyp_th = prove prove_hyp_thms hyp

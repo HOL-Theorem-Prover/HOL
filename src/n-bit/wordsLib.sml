@@ -1653,7 +1653,7 @@ local
   val ety = etm |> boolSyntax.rhs
                 |> wordsSyntax.dest_word_concat |> snd
                 |> wordsSyntax.dim_of
-  val mtch = Drule.INST_TY_TERM o Term.match_term (boolSyntax.lhs etm)
+  val mtch = Thm.INST_TY_TERM o Term.match_term (boolSyntax.lhs etm)
   val err = ERR "WORD_CONCAT_ASSOC_CONV" ""
   fun attempt f a = Lib.with_exn f a err
   val rule =

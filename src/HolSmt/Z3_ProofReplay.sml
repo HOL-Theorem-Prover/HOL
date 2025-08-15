@@ -96,7 +96,7 @@ local
 
   fun state_inst_cached_thm (s : state) (t : Term.term) : Thm.thm =
     Lib.tryfind  (* may fail *)
-      (fn thm => Drule.INST_TY_TERM (Term.match_term (Thm.concl thm) t) thm)
+      (fn thm => Thm.INST_TY_TERM (Term.match_term (Thm.concl thm) t) thm)
       (Net.match t (#thm_cache s))
 
   (***************************************************************************)
@@ -709,7 +709,7 @@ local
     (* Orient the hypothesis if necessary *)
     val thm = if is_oriented then thm else
       Conv.HYP_CONV_RULE (fn _ => true) Conv.SYM_CONV thm
-    val inst_thm = Drule.INST_TY_TERM substs thm
+    val inst_thm = Thm.INST_TY_TERM substs thm
     val asl = Thm.hyp inst_thm
   in
     (state_define state asl, inst_thm)

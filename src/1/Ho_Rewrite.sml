@@ -185,7 +185,7 @@ local fun find_match u =
        end
 in
 fun SUBST_MATCH eqth th =
- SUBS [Drule.INST_TY_TERM (find_match(lhs(concl eqth)) (concl th)) eqth] th
+ SUBS [INST_TY_TERM (find_match(lhs(concl eqth)) (concl th)) eqth] th
 end;
 
 
@@ -203,8 +203,7 @@ end;
  * ------------------------------------------------------------------------- *)
 
 
-val HIGHER_REWRITE_CONV =
-  let fun GINST th =
+val HIGHER_REWRITE_CONV =  let fun GINST th =
       let val fvs = HOLset.listItems
                        (HOLset.difference(FVL[concl th]empty_tmset,
                                           hyp_frees th))
@@ -234,10 +233,11 @@ val HIGHER_REWRITE_CONV =
               val gv = genvar(type_of stm)
               val abs = mk_abs(gv,subst[stm |-> gv] tm)
               val (tmin0,tyin0) = ho_match_term [] empty_tmset pred abs
+(* TODO: try INST_TY_TERM *)
           in CONV_RULE beta_fn (INST tmin (INST tmin0 (INST_TYPE tyin0 th)))
           end
       end
-      handle e => raise (wrap_exn "Ho_Rewrite" "HIGHER_REWRITE_CONV" e)
+      handle e => raise wrap_exn "Ho_Rewrite" "HIGHER_REWRITE_CONV" e
   end;
 
 fun strip t =

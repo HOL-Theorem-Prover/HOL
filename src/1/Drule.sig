@@ -76,8 +76,6 @@ sig
   val GEN_ALPHA_CONV   : term -> conv
   val IMP_CONJ         : thm -> thm -> thm
   val EXISTS_IMP       : term -> thm -> thm
-  val INST_TY_TERM     : (term,term)subst * (hol_type,hol_type)subst
-                          -> thm -> thm
   val INST_TT_HYPS     : (term,term)subst * (hol_type,hol_type)subst
                           -> thm -> thm * term list
   val GEN_TYVARIFY     : thm -> thm

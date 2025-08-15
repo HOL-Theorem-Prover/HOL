@@ -694,7 +694,7 @@ local
    val get_next = Term.rator o utilsLib.lhsc
    val r = REWRITE_RULE []
    fun make_match tm thm =
-      r (Drule.INST_TY_TERM (Term.match_term (get_next thm) tm) thm)
+      r (Thm.INST_TY_TERM (Term.match_term (get_next thm) tm) thm)
 in
    fun arm8_next tm = List.mapPartial
     (Lib.total (make_match tm)) (Net.match tm net)

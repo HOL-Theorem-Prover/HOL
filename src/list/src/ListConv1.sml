@@ -495,7 +495,7 @@ in
                  val ev = Term.mk_var ("e", ety)
                  val xv = Term.mk_var ("x", lty)
                  val lv = Term.mk_var ("l", Term.type_of l)
-                 val ithm = Drule.INST_TY_TERM
+                 val ithm = INST_TY_TERM
                                ([Term.mk_var ("f", Term.type_of f) |-> f],
                                 [Type.alpha |-> lty, Type.beta |-> ety]) ithm
                  fun iter tm =

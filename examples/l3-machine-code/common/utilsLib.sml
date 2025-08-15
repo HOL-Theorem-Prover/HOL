@@ -786,7 +786,7 @@ in
       let
          val mtch = Term.match_term (boolSyntax.lhs (Thm.concl thm))
       in
-         fn tm => PURE_ONCE_REWRITE_CONV [Drule.INST_TY_TERM (mtch tm) thm] tm
+         fn tm => PURE_ONCE_REWRITE_CONV [Thm.INST_TY_TERM (mtch tm) thm] tm
                   handle HOL_ERR _ => raise ERR "INST_REWRITE_CONV1" ""
       end
    fun INST_REWRITE_CONV l =
@@ -937,7 +937,7 @@ in
                      val ty = Term.type_of x
                      val vx = Term.mk_var ("x", ty)
                      val vy = Term.mk_var ("y", ty)
-                     fun s cb = Drule.INST_TY_TERM
+                     fun s cb = Thm.INST_TY_TERM
                                  ([vb |-> cb, vx |-> x, vy |-> y],
                                   [Type.alpha |-> ty])
                      val (split_yz, nb) =

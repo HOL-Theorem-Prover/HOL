@@ -33,7 +33,7 @@ fun match_term pat ob = (hol88subst_of ## hol88subst_of)
 fun SUBST s template th = Thm.SUBST (subst_of s) template th
 val INST                = Thm.INST o subst_of
 val INST_TYPE           = Thm.INST_TYPE o subst_of
-val INST_TY_TERM        = Drule.INST_TY_TERM o (subst_of ## subst_of)
+val INST_TY_TERM        = Thm.INST_TY_TERM o (subst_of ## subst_of)
 
 val match = match_term
 

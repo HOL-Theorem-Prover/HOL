@@ -1229,8 +1229,6 @@ fun EXISTS_IMP x th =
  * it makes two full traversals of the theorem.                              *
  *---------------------------------------------------------------------------*)
 
-(* fun INST_TY_TERM (Stm, Sty) th = INST Stm (INST_TYPE Sty th) *)
-
 val INST_TY_TERM = Thm.INST_TY_TERM;   (* now only one traversal *)
 
 (*---------------------------------------------------------------------------*

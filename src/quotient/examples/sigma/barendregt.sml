@@ -83,7 +83,7 @@ fun failwith function =
 
 fun mk_subst l = map (fn (residue:'a, redex:'b) =>
                          {redex=redex,residue=residue}) l;
-val INST_TY_TERM = (Drule.INST_TY_TERM) o (mk_subst##mk_subst);
+val INST_TY_TERM = (Thm.INST_TY_TERM) o (mk_subst##mk_subst);
 fun dest_subst l = map (fn {residue,redex} => (residue:'a, redex:'b)) l;
 
 

@@ -205,7 +205,7 @@ val empty_var_map = HOLdict.mkDict var_compare
 fun var_map_of theta =
   let fun itFn {redex,residue} fmap =
         if not (is_var redex andalso type_of redex = type_of residue) then
-	   raise ERR "var_map_of" ""
+           raise ERR "var_map_of" ""
         else
            HOLdict.insert(fmap,redex,residue)
   in
@@ -655,7 +655,7 @@ fun inst_ty_tm_2 theta tytheta =
        case tm
         of Bv _ => SAME
          | v as Fv(s,ty) =>
-	    let val vdelta = delta_fv (s,SAME) (ty,tysubst ty)
+            let val vdelta = delta_fv (s,SAME) (ty,tysubst ty)
                 val v' = from_delta v vdelta
             in
               DIFF(HOLdict.find(vmap,v')) handle NotFound => vdelta
@@ -667,7 +667,7 @@ fun inst_ty_tm_2 theta tytheta =
          | Abs(v,M) =>
              let val (s,ty) = dest_var v
                  val vdelta = delta_fv (s,SAME) (ty,tysubst ty)
-	     in
+             in
                delta_abs (v,vdelta) (M,isubst M)
              end
          | Clos _ => isubst(push_clos tm)
@@ -720,7 +720,7 @@ fun inst_ty_tm_3 theta tytheta =
   end
 
 (* Pick one of the above (for testing) *)
-val inst_ty_tm = inst_ty_tm_1;
+val inst_ty_tm = inst_ty_tm_2;
 
 (*---------------------------------------------------------------------------*)
 (* inst and subst are instantiations of inst_ty_tm                           *)
