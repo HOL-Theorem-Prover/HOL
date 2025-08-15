@@ -52,9 +52,12 @@ sig
    val deinitcommentss : substring -> substring
    val delete_trailing_wspace : string -> string
    val delta_apply : ('a -> 'a delta) -> 'a -> 'a
-   val delta_map : ('a -> 'a delta) -> 'a list -> 'a list delta
-   val delta_pair :
-      ('a -> 'a delta) -> ('b -> 'b delta) -> 'a * 'b -> ('a * 'b) delta
+   val delta_binop
+    :('a * 'b -> 'c) -> 'a * 'a delta -> 'b * 'b delta -> 'c delta
+   val delta_list  : ('a -> 'a delta) -> 'a list -> 'a list delta
+   val delta_map   : ('a -> 'b) -> 'a delta -> 'b delta
+   val delta_pair
+    :('a -> 'a delta) -> ('b -> 'b delta) -> 'a * 'b -> ('a * 'b) delta
    val dict_topsort : ('a, 'a list) dict -> 'a list
    val el : int -> 'a list -> 'a
    val end_itlist : ('a -> 'a -> 'a) -> 'a list -> 'a
@@ -75,6 +78,7 @@ sig
    val for_se : int -> int -> (int -> unit) -> unit
    val forall : ('a -> bool) -> 'a list -> bool
    val forall2 : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
+   val from_delta  : 'a -> 'a delta -> 'a
    val front_last : 'a list -> 'a list * 'a
    val fst : 'a * 'b -> 'a
    val funpow : int -> ('a -> 'a) -> 'a -> 'a

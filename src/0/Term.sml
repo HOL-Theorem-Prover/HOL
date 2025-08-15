@@ -199,7 +199,7 @@ fun var_compare (v1 as Fv(s1,ty1), v2 as Fv(s2,ty2)) =
           | x => x)
   | var_compare _ = raise ERR "var_compare" "variables required";
 
-val empty_var_set = HOLset.empty var_compare
+val empty_varset = HOLset.empty var_compare
 val empty_var_map = HOLdict.mkDict var_compare
 
 fun var_map_of theta =
@@ -253,7 +253,7 @@ fun term_eq t1 t2 = compare(t1,t2) = EQUAL
      Support for efficient general term sets and maps
  ---------------------------------------------------------------------------*)
 
-val empty_term_set = HOLset.empty compare
+val empty_tmset = HOLset.empty compare
 val empty_term_map = HOLdict.mkDict compare
 
 fun term_map_of theta =
@@ -287,7 +287,7 @@ fun all_atomsl tlist A =
             | Bv _ => all_atomsl ts A
         end
 
-fun all_atoms t = all_atomsl [t] empty_term_set
+fun all_atoms t = all_atomsl [t] empty_tmset
 
 (*---------------------------------------------------------------------------
         Free variables of a term. Tail recursive. Returns a set.
@@ -1058,7 +1058,7 @@ fun norm_subst ((tmS,_),(tyS,_)) =
 fun match_terml tyfixed tmfixed pat ob =
  norm_subst (raw_match tyfixed tmfixed pat ob ([],[]))
 
-val match_term = match_terml [] empty_var_set;
+val match_term = match_terml [] empty_varset;
 
 (*---------------------------------------------------------------------------
        Must know that ty is the type of tm1 and tm2.

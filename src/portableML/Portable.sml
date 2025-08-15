@@ -751,7 +751,10 @@ datatype 'a delta = SAME | DIFF of 'a
 
 fun delta_apply f x = case f x of SAME => x | DIFF y => y
 
-fun delta_map f =
+fun from_delta x SAME = x
+  | from_delta x (DIFF y) = y
+
+fun delta_list f =
   let fun itFn h (A,b) =
           case f h
            of SAME => (h::A, b)
@@ -767,6 +770,14 @@ fun delta_pair f g (x, y) =
    | (SAME, DIFF y') => DIFF (x, y')
    | (DIFF x', SAME) => DIFF (x', y)
    | (DIFF x', DIFF y') => DIFF (x', y')
+
+fun delta_map f SAME = SAME
+  | delta_map f (DIFF x) = DIFF (f x)
+
+fun delta_binop f (_,SAME) (_,SAME) = SAME
+  | delta_binop f (M,SAME) (N,DIFF N') = DIFF (f(M,N'))
+  | delta_binop f (M,DIFF M') (N,SAME) = DIFF (f(M',N))
+  | delta_binop f (M,DIFF M') (N,DIFF N') = DIFF(f(M',N'))
 
 (*---------------------------------------------------------------------------
     A function that strips leading (nested) comments and whitespace

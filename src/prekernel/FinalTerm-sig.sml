@@ -88,11 +88,8 @@ sig
   val term_eq       : term -> term -> bool
   val fast_term_eq  : term -> term -> bool
 
-  val empty_var_set : term set
-  val empty_var_map : (term,term) fmap
-
-  val empty_term_set : term set
-  val empty_term_map : (term,term) fmap
+  val empty_varset  : term set
+  val empty_tmset   : term set
 
   val var_map_of    : (term,term) Lib.subst -> (term,term) fmap
   val term_map_of   : (term,term) Lib.subst -> (term,term) fmap * bool

@@ -168,10 +168,14 @@ sig
   val reset : ('a, 'b) istream -> ('a, 'b) istream
 
   datatype 'a delta = SAME | DIFF of 'a
+  val from_delta  : 'a -> 'a delta -> 'a
   val delta_apply : ('a -> 'a delta) -> 'a -> 'a
-  val delta_map : ('a -> 'a delta) -> 'a list -> 'a list delta
-  val delta_pair :
-    ('a -> 'a delta) -> ('b -> 'b delta) -> 'a * 'b -> ('a * 'b) delta
+  val delta_map   : ('a -> 'b) -> 'a delta -> 'b delta
+  val delta_list  : ('a -> 'a delta) -> 'a list -> 'a list delta
+  val delta_pair
+    :('a -> 'a delta) -> ('b -> 'b delta) -> 'a * 'b -> ('a * 'b) delta
+  val delta_binop
+    :('a * 'b -> 'c) -> 'a * 'a delta -> 'b * 'b delta -> 'c delta
 
   val deinitcomment : string -> string
   val deinitcommentss : substring -> substring
