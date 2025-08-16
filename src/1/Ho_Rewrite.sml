@@ -233,8 +233,7 @@ val HIGHER_REWRITE_CONV =  let fun GINST th =
               val gv = genvar(type_of stm)
               val abs = mk_abs(gv,subst[stm |-> gv] tm)
               val (tmin0,tyin0) = ho_match_term [] empty_tmset pred abs
-(* TODO: try INST_TY_TERM *)
-          in CONV_RULE beta_fn (INST tmin (INST tmin0 (INST_TYPE tyin0 th)))
+          in CONV_RULE beta_fn (INST tmin (INST_TY_TERM (tmin0,tyin0) th))
           end
       end
       handle e => raise wrap_exn "Ho_Rewrite" "HIGHER_REWRITE_CONV" e

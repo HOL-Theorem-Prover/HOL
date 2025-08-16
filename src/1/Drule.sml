@@ -1225,13 +1225,6 @@ fun EXISTS_IMP x th =
        handle HOL_ERR _ => raise ERR "EXISTS_IMP" "variable free in assumptions"
 
 (*---------------------------------------------------------------------------*
- * Instantiate terms and types of a theorem. This is pretty slow, because    *
- * it makes two full traversals of the theorem.                              *
- *---------------------------------------------------------------------------*)
-
-val INST_TY_TERM = Thm.INST_TY_TERM;   (* now only one traversal *)
-
-(*---------------------------------------------------------------------------*
  * Instantiate terms and types of a theorem, also returning a list of        *
  * substituted hypotheses in the same order as in hyp th                     *
  * (required for predictability of order of new subgoals from (prim_)irule)  *
