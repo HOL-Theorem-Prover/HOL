@@ -138,7 +138,7 @@ in
 end handle ExitOK => OK();
 
 fun cleanup() = let
-  fun rm s = FileSys.remove ("scratchTheory." ^ s)
+  fun rm s = HOLFileSys.remove ("scratchTheory." ^ s)
       handle _ => ()
 in
   app rm ["sml", "sig", "dat"]

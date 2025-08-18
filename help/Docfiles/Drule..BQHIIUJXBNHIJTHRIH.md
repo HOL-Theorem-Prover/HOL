@@ -1,3 +1,7 @@
+---
+title: Drule.PART_MATCH’
+---
+
 ## `PART_MATCH'`
 
 ``` hol4

@@ -1260,27 +1260,44 @@ val impl_keep_tac =
   disch_then (provehyp_then (fn lth => fn rth => assume_tac lth >> mp_tac rth))
 
 
+(*
+Like EVERY_ASSUM but does not fail if a ttac fails
+fails if the ttac never succeeds
+*)
+local
+fun every_try [] = NO_TAC
+  | every_try (t::ts) =
+     (IF t (EVERY (map TRY ts)) (every_try ts))
+fun map_every_try tacf lst = every_try (map tacf lst)
+in
+val every_assum_try = ASSUM_LIST o map_every_try
+end
+
 open mp_then
 fun dGEN sel pos k = sel o mp_then pos k
 val drule                  = dGEN first_assum   (Pos hd) mp_tac
 val rev_drule              = dGEN last_assum    (Pos hd) mp_tac
 val dxrule                 = dGEN first_x_assum (Pos hd) mp_tac
 val rev_dxrule             = dGEN last_x_assum  (Pos hd) mp_tac
+val every_drule            = dGEN every_assum_try (Pos hd) mp_tac
 
 fun drule_then k           = dGEN first_assum   (Pos hd)    k
 fun dxrule_then k          = dGEN first_x_assum (Pos hd)    k
 fun rev_drule_then k       = dGEN last_assum    (Pos hd)    k
 fun rev_dxrule_then k      = dGEN last_x_assum  (Pos hd)    k
+fun every_drule_then k     = dGEN every_assum_try (Pos hd)  k
 
 fun drule_at p             = dGEN first_assum       p    mp_tac
 fun dxrule_at p            = dGEN first_x_assum     p    mp_tac
 fun rev_drule_at p         = dGEN last_assum        p    mp_tac
 fun rev_dxrule_at p        = dGEN last_x_assum      p    mp_tac
+fun every_drule_at p       = dGEN every_assum_try   p    mp_tac
 
 fun drule_at_then p k      = dGEN first_assum       p       k
 fun dxrule_at_then p k     = dGEN first_x_assum     p       k
 fun rev_drule_at_then p k  = dGEN last_assum        p       k
 fun rev_dxrule_at_then p k = dGEN last_x_assum      p       k
+fun every_drule_at_then p k = dGEN every_assum_try  p       k
 
 fun isfa_imp th = th |> concl |> strip_forall |> #2 |> is_imp_only
 fun dall_prim k fa ith0 g =

@@ -1,5 +1,9 @@
+hook global KakBegin .* %{
+
 hook global BufCreate .*Script\.sml %{
     set-option buffer filetype holscript
+}
+
 }
 
 hook global WinSetOption filetype=holscript %{
@@ -22,18 +26,23 @@ provide-module hol %{
 
 require-module sml
 
-declare-option str holfifo
+declare-option -hidden str holfifodir
+declare-option -hidden str holfifo
+
+hook global KakEnd .* hol-close
 
 define-command hol-start -docstring '
 hol-start: start HOL instance in new terminal window, from HOLDIR' %{
     hook global BufOpenFile .*Script\.sml hol-load-deps-current
+    hol-close
     evaluate-commands %sh{
-        holfifo=$(mktemp -d /tmp/kak-fifo.XXXXXXXX)/fifo
-        mkfifo $holfifo
-        printf "set-option current holfifo '%s'" "$holfifo"
+        holfifodir=$(mktemp -d /tmp/kak-fifo.XXXXXXXX)
+        mkfifo $holfifodir/fifo
+        printf "set-option current holfifodir '%s'" "$holfifodir"
     }
+    set-option current holfifo %sh{printf "%s/fifo" "$kak_opt_holfifodir"}
     terminal sh -i -c %sh{
-        printf "%s\n\n" "cat > $kak_opt_holfifo & (tee -i >($HOLDIR/bin/hol --zero)) < $kak_opt_holfifo"
+        printf "%s\n\n" "cat > $kak_opt_holfifo & echo \$! > $kak_opt_holfifodir/pid & (tee -i >($HOLDIR/bin/hol --zero)) < $kak_opt_holfifo"
     }
 
     hol-load-deps-all
@@ -99,6 +108,13 @@ hol-load-deps-for: load dependencies for all open HOL files' %{
 
 define-command hol-load-deps-current -docstring '
 hol-load-deps-current: load dependencies for current buffer HOL file' %{hol-load-deps-for %val{buffile}}
+
+define-command hol-close -docstring '
+hol-close: close current HOL session' %{
+    nop %sh{
+        cat $kak_opt_holfifodir/pid | xargs kill -9
+    }
+}
 
 
 set-face global cheat red,default,red+u

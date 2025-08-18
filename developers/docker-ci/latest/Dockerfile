@@ -108,9 +108,23 @@ fi
 ENV HOL4_SMV_EXECUTABLE=/ML/solvers/NuRV
 
 # more packages for buliding HOL manuals (+pandoc for Markdown), etc.
+RUN apt-get update
 RUN apt-get install -qy texlive-latex-recommended
-RUN apt-get install -qy pandoc latexmk texlive-latex-extra
+RUN apt-get install -qy latexmk texlive-latex-extra
 RUN apt-get install -qy texlive-fonts-extra texlive-science
 RUN apt-get clean
 
-RUN apt-get clean
+# finally, install a recent pandoc (>= 3.4, with c/line option --table-caption-position=below)
+ARG PANDOC_VERSION="3.7.0.2"
+
+RUN if [ "linux/amd64" = "$TARGETPLATFORM" ]; then \
+    wget -q https://github.com/jgm/pandoc/releases/download/${PANDOC_VERSION}/pandoc-${PANDOC_VERSION}-1-amd64.deb; \
+    dpkg -i pandoc-${PANDOC_VERSION}-1-amd64.deb; \
+    rm -f pandoc-${PANDOC_VERSION}-1-amd64.deb; \
+fi
+
+RUN if [ "linux/arm64" = "$TARGETPLATFORM" ]; then \
+    wget -q https://github.com/jgm/pandoc/releases/download/${PANDOC_VERSION}/pandoc-${PANDOC_VERSION}-1-arm64.deb; \
+    dpkg -i pandoc-${PANDOC_VERSION}-1-arm64.deb; \
+    rm -f pandoc-${PANDOC_VERSION}-1-arm64.deb; \
+fi

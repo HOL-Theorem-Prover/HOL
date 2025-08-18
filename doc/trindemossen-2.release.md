@@ -1,11 +1,11 @@
-% Release notes for HOL4, ??????
+% Release notes for HOL4, Trindemossen-2
 
 <!-- search and replace ?????? strings corresponding to release name -->
 <!-- indent code within bulleted lists to column 11 -->
 
-(Released: xxxxxx)
+(Released: 12 August 2025)
 
-We are pleased to announce the ????? release of HOL4.
+We are pleased to announce the Trindemossen-2 release of HOL4.
 
 Contents
 --------
@@ -17,8 +17,19 @@ Contents
 -   [New examples](#new-examples)
 -   [Incompatibilities](#incompatibilities)
 
-New features:
+New features
 -------------
+
+-   We now support (and recommend) a new header syntax for `Script.sml` files.
+    Instead of the existing boilerplate (`open HolKernel … val _ = new_theory…`), users write something like
+
+           Theory foo
+           Ancestors real_topology …
+           Libs realLib
+
+    to begin their files.
+    This syntax and its options are documented in a new chapter of the DESCRIPTION manual.
+    Thanks to Mario Carneiro and Daniel Nezamabadi for the work done implementing this, and then converting all the script files in `src` to use this syntax.
 
 -   The simplifier now supports `NoAsms` and `IgnAsm` special forms that allow all assumptions (or those matching the provided pattern, in the case of `IgnAsm`) to be excluded.
     See the DESCRIPTION and REFERENCE manuals for details.
@@ -52,13 +63,16 @@ New features:
 -   `oneline` from `bossLib` now supports one-line-ification of mutually recrusive functions.
     Each function becomes an equation of its own in the theorem returned by `oneline`.
 
-Bugs fixed:
+-   The Poly/ML implementation now offers a `-z` (or `--zero`) command-line option to make the NUL byte be the end-marker for strings being sent to the compiler.
+    Otherwise, the compiler makes a best effort guess about when it should interact based on the presence of semi-colons.
+
+Bugs fixed
 -----------
 
 - `EVERY_CASE_TAC` would loop if the "split-upon" subterm was already an assumption, but no longer.
 
 
-New theories:
+New theories
 -------------
 
 - `number`, `combinatorics` and `prime`: These theories combine material
@@ -71,7 +85,7 @@ New theories:
    A group is an algebraic structure: a monoid with all its elements invertible.
    A ring takes into account the interplay between its additive group and multiplicative monoid.
 
-New tools:
+New tools
 ----------
 
 - `Tactic.TRANS_TAC` (ported from HOL-Light) applies transitivity theorem to goal
@@ -84,12 +98,12 @@ New tools:
 - `last_assume_tac` has been added. It is the same as `assume_tac` except it adds
   the new assumption to the top of the list of assumptions instead of the bottom.
 
-New examples:
+New examples
 -------------
 
 - Dijkstra's algorithm for computing shortest paths: `examples/algorithms/dijkstraScript.sml`
 
-Incompatibilities:
+Incompatibilities
 ------------------
 
 -   `numLib.prefer_num` has been renamed to `numLib.temp_prefer_num`, which name better describes its semantics.
@@ -137,10 +151,12 @@ Incompatibilities:
 -   `ASSUME_NAMED_TAC` now puts the new named assumption at the top of the assumption list, but below the other named assumptions.
     Previously, named assumptions were added to the bottom of the assumption list (where they might get in the way).
 
+-   Selecting numbered options in the Moscow ML HOL help system now requires the number choice to be followed by semicolon-newline instead of just a newline character.
+
 * * * * *
 
 <div class="footer">
-*[HOL4, ?????](http://hol-theorem-prover.org)*
+*[HOL4, Trindemossen-2](http://hol-theorem-prover.org)*
 
 [Release notes for the previous version](trindemossen-1.release.html)
 
