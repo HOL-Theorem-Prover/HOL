@@ -225,9 +225,7 @@ fun ty_map_of theta =
 
 val add_ground_info =
   let fun mapFn (redex,residue) = (residue,not(polymorphic residue))
-  in
-    HOLdict.map mapFn
-  end
+  in HOLdict.map mapFn end
 
 (*---------------------------------------------------------------------------*
  * The variables in a type.                                                  *
