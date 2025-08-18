@@ -66,10 +66,18 @@ sig
   val subst         : (term,term) subst -> term -> term
   val inst          : (hol_type,hol_type) subst -> term -> term
 
+  val inst_ty_tm_0    : (term,term) subst -> (hol_type,hol_type) subst -> term -> term
   val inst_ty_tm_1    : (term,term) subst -> (hol_type,hol_type) subst -> term -> term
   val inst_ty_tm_2    : (term,term) subst -> (hol_type,hol_type) subst -> term -> term
   val inst_ty_tm_3    : (term,term) subst -> (hol_type,hol_type) subst -> term -> term
   val inst_ty_tm      : (term,term) subst -> (hol_type,hol_type) subst -> term -> term
+
+  val iref : ((term,term) subst -> (hol_type,hol_type) subst -> term -> term) ref
+
+  exception AGREE_ERR of
+    (term,term) subst *
+    (hol_type,hol_type) subst *
+    term * term * term * term * term
 
   val raw_match     : hol_type list -> term set
                       -> term -> term

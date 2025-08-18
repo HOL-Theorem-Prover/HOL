@@ -553,6 +553,18 @@ fun aconv t1 t2 = EQ(t1,t2) orelse
    | (M,N)       => (M=N)
 end;
 
+fun identical t1 t2 =
+  t1 = t2 orelse
+  case (t1,t2) of
+      (Clos _, _) => identical (push_clos t1) t2
+    | (_, Clos _) => identical t1 (push_clos t2)
+    | (Const p1, Const p2) => p1 = p2
+    | (Fv p1, Fv p2) => p1 = p2
+    | (Bv i1, Bv i2) => i1 = i2
+    | (Comb(t1,t2), Comb(ta,tb)) => identical t1 ta andalso identical t2 tb
+    | (Abs(v1,t1), Abs (v2, t2)) => v1 = v2 andalso identical t1 t2
+    | _ => false
+
 
 (*---------------------------------------------------------------------------*
  *        Beta-reduction. Non-renaming.                                      *
@@ -609,9 +621,9 @@ end;
 (* Instantiate tyvars in a term, then instantiate term vars.                 *)
 (*---------------------------------------------------------------------------*)
 
-fun tag_type ty = if Type.polymorphic ty then POLY ty else GRND ty;
+fun tag_type ty = if Type.polymorphic ty then POLY ty else GRND ty
 
-val retag = delta_map tag_type;
+val retag = delta_map tag_type
 
 val delta_fv    = delta_binop Fv
 val delta_const = delta_binop Const
@@ -619,26 +631,64 @@ val delta_comb  = delta_binop Comb
 val delta_abs   = delta_binop Abs;
 
 (*---------------------------------------------------------------------------*)
+(* Rebuild term, except for re-use at type substitution                      *)
+(*---------------------------------------------------------------------------*)
+
+fun inst_ty_tm_0 theta tytheta =
+  let val vmap = var_map_of theta
+      fun fv_subst v = HOLdict.find(vmap,v) handle NotFound => v
+      val tysubst = Type.type_subst tytheta
+      fun fv_inst (Fv(s,ty)) = Fv(s,tysubst ty)
+      val fvFn =
+          if null tytheta then
+             fv_subst
+          else if null theta then
+             fv_inst
+          else
+	     fv_subst o fv_inst
+      fun isubst tm =
+       case tm
+        of Bv _ => tm
+         | v as Fv _ => fvFn v
+         | Const(_, GRND _) => tm
+         | Const(r, POLY ty) => Const(r,tag_type(tysubst ty))
+         | Comb(M,N) => Comb(isubst M,isubst N)
+         | Abs(v,M) => Abs(fv_inst v, isubst M)
+         | Clos _ => isubst(push_clos tm)
+  in
+    isubst
+  end;
+
+(*---------------------------------------------------------------------------*)
 (* Rebuild term, except for re-use at atoms                                  *)
 (*---------------------------------------------------------------------------*)
 
 fun inst_ty_tm_1 theta tytheta =
   let val vmap = var_map_of theta
-      fun vsubst t = HOLdict.find(vmap,t) handle NotFound => t
+      fun fv_subst v = HOLdict.find(vmap,v) handle NotFound => v
       val tysubst = Type.ty_sub tytheta
+      fun fv_inst (v as Fv(s,ty)) =
+          (case tysubst ty
+            of SAME => v
+             | DIFF ty' => Fv(s,ty'))
+      fun fv_inst_then_subst (v as Fv(s,ty)) =
+          fv_subst (from_delta v (delta_fv (s,SAME) (ty, tysubst ty)))
+      val fvFn =
+          if null tytheta then
+             fv_subst
+          else if null theta then
+             fv_inst
+          else
+	     fv_inst_then_subst
       fun isubst tm =
        case tm
         of Bv _ => tm
-         | v as Fv(s,ty) =>
-            vsubst (from_delta v (delta_fv (s,SAME) (ty, tysubst ty)))
+         | v as Fv _ => fvFn v
          | Const(_, GRND _) => tm
          | Const(r, tag as POLY ty) =>
             from_delta tm (delta_const (r,SAME) (tag,retag (tysubst ty)))
          | Comb(M,N) => Comb(isubst M,isubst N)
-         | Abs(v,M) =>
-             let val (s,ty) = dest_var v
-                 val v' = from_delta v (delta_fv (s,SAME) (ty, tysubst ty))
-             in Abs(v', isubst M) end
+         | Abs(v,M) => Abs(fv_inst v, isubst M)
          | Clos _ => isubst(push_clos tm)
   in
     isubst
@@ -651,76 +701,106 @@ fun inst_ty_tm_1 theta tytheta =
 fun inst_ty_tm_2 theta tytheta =
   let val vmap = var_map_of theta
       val tysubst = Type.ty_sub tytheta
-      fun isubst tm =
+      fun fv_subst v = (DIFF(HOLdict.find(vmap,v)) handle NotFound => SAME)
+      fun fv_inst (Fv(s,ty)) = delta_map (curry Fv s) (tysubst ty)
+      fun fv_inst_then_subst v =
+          let val vdelta = fv_inst v
+          in DIFF(HOLdict.find(vmap,from_delta v vdelta))
+             handle NotFound => vdelta
+           end
+      val fvFn =
+          if null tytheta then
+             fv_subst
+          else if null theta then
+	     fv_inst
+          else
+             fv_inst_then_subst
+     fun isubst tm =
        case tm
         of Bv _ => SAME
-         | v as Fv(s,ty) =>
-            let val vdelta = delta_fv (s,SAME) (ty,tysubst ty)
-                val v' = from_delta v vdelta
-            in
-              DIFF(HOLdict.find(vmap,v')) handle NotFound => vdelta
-            end
+         | v as Fv _ => fvFn v
          | Const(_, GRND _) => SAME
          | Const(r, tag as POLY ty) =>
              delta_const (r,SAME) (tag, retag (tysubst ty))
          | Comb(M,N) => delta_comb (M,isubst M) (N,isubst N)
-         | Abs(v,M) =>
-             let val (s,ty) = dest_var v
-                 val vdelta = delta_fv (s,SAME) (ty,tysubst ty)
-             in
-               delta_abs (v,vdelta) (M,isubst M)
-             end
-         | Clos _ => isubst(push_clos tm)
+         | Abs(v,M)  => delta_abs (v,fv_inst v) (M,isubst M)
+         | Clos _  => isubst(push_clos tm)
   in
     delta_apply isubst
   end;
 
 (*---------------------------------------------------------------------------*)
-(* Space saving version via exceptions                                       *)
+(* Space saving via exceptions                                               *)
 (*---------------------------------------------------------------------------*)
 
-exception UNCHANGED
-fun unchanged() = raise UNCHANGED
-fun totally f x = f x handle UNCHANGED => x
+(*
+fun grnd_tag_type (ty,grnd) = if grnd then GRND ty else POLY ty
+val tysubst_grnd = Type.ty_sub_exn_grnd tytheta
+*)
 
 fun inst_ty_tm_3 theta tytheta =
   let val vmap = var_map_of theta
-      fun vsubst t = HOLdict.find(vmap,t) handle NotFound => unchanged()
-      fun vsubst_total t = HOLdict.find(vmap,t) handle NotFound => t
-      val tysubst = Type.ty_sub tytheta
+      fun fv_subst v = HOLdict.find(vmap,v) handle NotFound => nochange()
+      fun fv_subst_total v = HOLdict.find(vmap,v) handle NotFound => v
+      val tysubst = Type.ty_sub_exn tytheta
+      fun fv_inst (Fv(s,ty)) = Fv(s,tysubst ty)
+      fun fv_inst_then_subst v =
+          (fv_subst_total (fv_inst v) handle Portable.NOCHANGE => fv_subst v)
+      val fvFn =
+          if null tytheta then
+             fv_subst
+          else if null theta then
+             fv_inst
+          else
+             fv_inst_then_subst
       fun isubst tm =
        case tm
-        of Bv _ => unchanged()
-         | Fv(s,ty) =>
-             (case tysubst ty
-               of SAME => vsubst tm
-                | DIFF ty' => vsubst_total (Fv(s,ty')))
-         | Const(_, GRND _) => unchanged()
-         | Const(r, POLY ty) =>
-            (case tysubst ty
-              of SAME => unchanged()
-               | DIFF ty' => Const(r, tag_type ty'))
-         | Comb(M,N) =>
-           (let val M' = isubst M
-                val N' = totally isubst N
-            in Comb(M',N')
-            end handle UNCHANGED => Comb (M,isubst N))
-         | Abs(v,M) =>
-           (let val (s,ty) = dest_var v
-                val v' =
-                    (case tysubst ty
-                      of SAME => unchanged()
-                       | DIFF ty' => Fv(s,ty'))
-                val M' = totally isubst M
-            in Abs(v',M')
-            end handle UNCHANGED => Abs(v,isubst M))
+        of Bv _ => nochange()
+         | v as Fv _ => fvFn v
+         | Const(_, GRND _) => nochange()
+         | Const(r, POLY ty) => Const(r, tag_type (tysubst ty))
+         | Comb p => Comb(nochange_pair isubst isubst p)
+         | Abs p  => Abs(nochange_pair fv_inst isubst p)
          | Clos _ => isubst(push_clos tm)
   in
-    totally isubst
+    nochange_total isubst
+  end
+
+exception AGREE_ERR of
+    (term,term) subst *
+    (hol_type,hol_type) subst *
+    term * term * term * term * term
+
+fun inst_ty_tm_agree theta tytheta =
+  let val fn0 = inst_ty_tm_0 theta tytheta
+      val fn1 = inst_ty_tm_1 theta tytheta
+      val fn2 = inst_ty_tm_2 theta tytheta
+      val fn3 = inst_ty_tm_3 theta tytheta
+  in
+    fn tm =>
+      let val tm0 = fn0 tm
+          val tm1 = fn1 tm
+          val tm2 = fn2 tm
+	  val tm3 = fn3 tm
+      in
+         if identical tm0 tm1 andalso
+            identical tm1 tm2 andalso
+            identical tm2 tm3 then
+            tm1
+         else raise AGREE_ERR (theta,tytheta,tm,tm0,tm1,tm2,tm3)
+       end
   end
 
 (* Pick one of the above (for testing) *)
-val inst_ty_tm = inst_ty_tm_2;
+
+val iref = ref inst_ty_tm_agree;
+
+(*
+fun inst_ty_tm theta tytheta = !iref theta tytheta;
+*)
+
+val inst_ty_tm = inst_ty_tm_3;
+
 
 (*---------------------------------------------------------------------------*)
 (* inst and subst are instantiations of inst_ty_tm                           *)
@@ -731,7 +811,7 @@ fun inst tytheta = inst_ty_tm [] tytheta;
 val var_pure = Lib.all (fn {redex,residue} => is_var redex)
 
 (*---------------------------------------------------------------------------*)
-(* subst allows replacement of arbitrary terms                               *)
+(* subst further allows replacement of arbitrary terms                       *)
 (*---------------------------------------------------------------------------*)
 
 fun subst theta =
@@ -1313,17 +1393,5 @@ fun dest_term M =
     | Abs _ => LAMB (dest_abs M)
     | Clos _ => dest_term (push_clos M)
     | Bv _ => raise Fail "dest_term applied to bound variable"
-
-fun identical t1 t2 =
-  t1 = t2 orelse
-  case (t1,t2) of
-      (Clos _, _) => identical (push_clos t1) t2
-    | (_, Clos _) => identical t1 (push_clos t2)
-    | (Const p1, Const p2) => p1 = p2
-    | (Fv p1, Fv p2) => p1 = p2
-    | (Bv i1, Bv i2) => i1 = i2
-    | (Comb(t1,t2), Comb(ta,tb)) => identical t1 ta andalso identical t2 tb
-    | (Abs(v1,t1), Abs (v2, t2)) => v1 = v2 andalso identical t1 t2
-    | _ => false
 
 end (* Term *)

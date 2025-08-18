@@ -190,6 +190,13 @@ fun dest_vartype (Tyv s) = s
 fun is_vartype (Tyv _) = true | is_vartype _ = false;
 val is_type = not o is_vartype;
 
+(*---------------------------------------------------------------------------*
+ * Is a type polymorphic?                                                    *
+ *---------------------------------------------------------------------------*)
+
+fun polymorphic (Tyv _) = true
+  | polymorphic (Tyapp(_,Args)) = exists polymorphic Args
+
 (*---------------------------------------------------------------------------
         An order on types
  ---------------------------------------------------------------------------*)
@@ -215,6 +222,12 @@ val empty_ty_map = HOLdict.mkDict compare
 fun ty_map_of theta =
   let fun itFn {redex,residue} fmap = HOLdict.insert(fmap,redex,residue)
   in rev_itlist itFn theta empty_ty_map end
+
+val add_ground_info =
+  let fun mapFn (redex,residue) = (residue,not(polymorphic residue))
+  in
+    HOLdict.map mapFn
+  end
 
 (*---------------------------------------------------------------------------*
  * The variables in a type.                                                  *
@@ -251,18 +264,6 @@ fun type_var_in v =
  * Instantiate type variables, trying to preserve existing structure         *
  *---------------------------------------------------------------------------*)
 
-(*
-fun ty_sub [] _ = SAME
-  | ty_sub theta (Tyapp(tyc,Args))
-      = (case delta_list (ty_sub theta) Args
-          of SAME => SAME
-           | DIFF Args' => DIFF (Tyapp(tyc, Args')))
-  | ty_sub theta v =
-      case Lib.subst_assoc (equal v) theta
-       of NONE    => SAME
-        | SOME ty => DIFF ty
-*)
-
 fun ty_sub theta =
   if null theta then
      K SAME
@@ -271,21 +272,57 @@ fun ty_sub theta =
       fun tysubst ty = DIFF(HOLdict.find(tymap,ty)) handle NotFound => SAME
       fun subs (v as Tyv _) = tysubst v
         | subs (Tyapp(tyc,tys)) =
-           delta_map (fn tys' => Tyapp(tyc, tys'))
-                     (delta_list subs tys)
+           delta_map (curry Tyapp tyc) (delta_list subs tys)
    in subs
    end
 
 fun type_subst theta = delta_apply (ty_sub theta)
 
+fun ty_sub_exn theta =
+  if null theta then
+     (fn _ => nochange())
+  else
+  let val tymap = ty_map_of theta
+      fun subsFn ty = (HOLdict.find(tymap,ty) handle NotFound => nochange())
+      fun subs (v as Tyv _) = subsFn v
+        | subs (Tyapp(tyc,tys)) = Tyapp(tyc, nochange_list subs tys)
+   in subs
+   end
 
-(*---------------------------------------------------------------------------*
- * Is a type polymorphic?                                                    *
- *---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(* Instantiate the variables in a type, keeping track of whether the         *)
+(* result is ground. This will be true when every type variable is replaced  *)
+(* by a ground type.                                                         *)
+(*---------------------------------------------------------------------------*)
 
-fun polymorphic (Tyv _) = true
-  | polymorphic (Tyapp(_,Args)) = exists polymorphic Args
+local
+ val ground = ref true
+in
+fun ty_sub_exn_grnd theta =
+  if null theta then
+     (fn _ => nochange())
+  else
+  let val tymap = add_ground_info(ty_map_of theta)
+      fun subsFn ty =
+          (HOLdict.find(tymap,ty)
+           handle NotFound => (ground := false; nochange()))
+      fun subs (v as Tyv _) =
+            let val (ty',is_grnd) = subsFn v
+            in ground := (!ground andalso is_grnd);
+               ty' end
+        | subs (Tyapp(tyc,tys)) = Tyapp(tyc, nochange_list subs tys)
+   in
+     fn ty =>
+        let val _ = ground := true
+            val ty' = subs ty
+        in (ty', !ground)
+	end
+   end
+end
 
+(*
+fun type_subst theta ty = ty_sub_exn theta ty handle NOCHANGE => ty
+*)
 
 (*---------------------------------------------------------------------------
          This matching algorithm keeps track of identity bindings

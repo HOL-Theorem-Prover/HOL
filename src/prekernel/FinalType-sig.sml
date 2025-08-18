@@ -25,6 +25,7 @@ sig
  val polymorphic   : hol_type -> bool
  val compare       : hol_type * hol_type -> order
  val ty_map_of     : (hol_type,hol_type) Lib.subst -> (hol_type,hol_type) HOLdict.dict
+ val add_ground_info : (hol_type,hol_type) HOLdict.dict -> (hol_type,hol_type * bool) HOLdict.dict
 
  val -->           : hol_type * hol_type -> hol_type  (* infixr 3 --> *)
  val dom_rng       : hol_type -> hol_type * hol_type  (* inverts -->  *)
@@ -52,6 +53,9 @@ sig
  val ty_sub : (hol_type,hol_type) Lib.subst -> hol_type -> hol_type Lib.delta
  val type_subst : (hol_type,hol_type) Lib.subst -> hol_type -> hol_type
 
+ val ty_sub_exn : (hol_type,hol_type) Lib.subst -> hol_type -> hol_type
+ val ty_sub_exn_grnd : (hol_type,hol_type) Lib.subst -> hol_type -> hol_type * bool
+
  val type_size : hol_type -> int
 
 
@@ -62,6 +66,5 @@ sig
  val del_segment : string -> unit
  val uptodate_type : hol_type -> bool
  val uptodate_kname : KernelSig.kernelname -> bool
-
 
 end
