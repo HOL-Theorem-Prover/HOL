@@ -77,25 +77,6 @@ fun is_b2 t = (if is_const t
      of {Name="BIT2", Thy="arithmetic",...} => true | _ => false)
   else false)
 
-fun dest_b1 tm =
-  if is_comb tm
-  then
-    let val (rator,rand) = dest_comb tm
-    in
-      (if is_b1 rator then rand else raise ERR "dest_b1" "expected BIT1")
-    end
-  else
-    raise ERR "dest_b1" "expected BIT1"
-
-fun dest_b2 tm =
-  if is_comb tm
-  then
-    let val (rator,rand) = dest_comb tm
-    in
-      (if is_b2 rator then rand else raise ERR "dest_b2" "expected BIT2")
-    end
-  else
-   raise ERR "dest_b2" "expected BIT2"
 
 local open Arbnum
 in
