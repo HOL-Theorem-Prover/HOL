@@ -18,6 +18,7 @@
     |  Vis 'e ('a -> ('a,'e,'r) itree)  --  visible event 'e with answer 'a,
                                             then continue based on answer
 *)
+
 Theory itreeTau
 Ancestors
   arithmetic list llist alist option pred_set relation pair
@@ -450,68 +451,22 @@ QED
 
 (* proving equivalences *)
 
-Definition itree_el_def[nocompute]:
-  itree_el t [] =
-    itree_CASE t (\r. Return r) (\t. Silence) (\e g. Event e) /\
-  itree_el t (NONE::ns) =
-    itree_CASE t (\r. Silence) (\t. itree_el t ns) (\e g. Silence) /\
-  itree_el t (SOME a::ns) =
-    itree_CASE t (\r. Silence) (\t. Silence) (\e g. itree_el (g a) ns)
-End
-
 Theorem itree_el_thm[simp,compute]:
-  itree_el (Ret r) [] = Return r /\
-  itree_el (Tau t) [] = Silence /\
-  itree_el (Vis e g) [] = Event e /\
-  itree_el (Ret r) (NONE::ns) = Silence /\
-  itree_el (Tau t) (NONE::ns) = itree_el t ns /\
-  itree_el (Vis e g) (NONE::ns) = Silence /\
-  itree_el (Ret r) (SOME a::ns) = Silence /\
-  itree_el (Tau t) (SOME a::ns) = Silence /\
-  itree_el (Vis e g) (SOME a::ns) = itree_el (g a) ns
+  itree_rep (Ret r) [] = Return r /\
+  itree_rep (Tau t) [] = Silence /\
+  itree_rep (Vis e g) [] = Event e /\
+  itree_rep (Ret r) (NONE::ns) = Silence /\
+  itree_rep (Tau t) (NONE::ns) = itree_rep t ns /\
+  itree_rep (Vis e g) (NONE::ns) = Silence /\
+  itree_rep (Ret r) (SOME a::ns) = Silence /\
+  itree_rep (Tau t) (SOME a::ns) = Silence /\
+  itree_rep (Vis e g) (SOME a::ns) = itree_rep (g a) ns
 Proof
-  fs [itree_el_def,itree_CASE]
-QED
-
-Theorem itree_el_eqv:
-  !t1 t2. t1 = t2 <=> !path. itree_el t1 path = itree_el t2 path
-Proof
-  rw [] \\ eq_tac \\ rw []
-  \\ fs [GSYM itree_rep_11,FUN_EQ_THM] \\ rw []
-  \\ pop_assum mp_tac
-  \\ qid_spec_tac ‘t1’ \\ qid_spec_tac ‘t2’
-  \\ Induct_on ‘x’ \\ rw []
-  \\ ‘itree_rep_ok (itree_rep t1) /\ itree_rep_ok (itree_rep t2)’
-        by fs [itree_rep_ok_itree_rep]
-  \\ qspec_then ‘t1’ strip_assume_tac itree_cases
-  \\ qspec_then ‘t2’ strip_assume_tac itree_cases
-  \\ rpt BasicProvers.var_eq_tac
-  \\ TRY (first_x_assum (qspec_then ‘[]’ mp_tac)
-          \\ fs [] \\ NO_TAC)
-  \\ first_assum (qspec_then ‘[]’ mp_tac)
-  \\ rewrite_tac [itree_el_thm] \\ rw []
-  \\ fs [Tau_def,Vis_def]
-  \\ qmatch_abbrev_tac
-      ‘itree_rep (itree_abs t1) _ = itree_rep (itree_abs t2) _’
-  \\ ‘itree_rep_ok t1 /\ itree_rep_ok t2’ by
-   (rw [] \\ unabbrev_all_tac
-    \\ TRY (match_mp_tac itree_rep_ok_Tau) \\ fs []
-    \\ TRY (match_mp_tac itree_rep_ok_Vis) \\ fs [])
-  \\ fs [itree_repabs]
-  \\ TRY (unabbrev_all_tac \\ fs [Tau_rep_def,Vis_rep_def] \\ NO_TAC)
-  THEN1
-   (unabbrev_all_tac \\ fs [GSYM Tau_def]
-    \\ first_x_assum (qspecl_then [‘u’,‘u'’] mp_tac)
-    \\ impl_tac THEN1
-     (rw [] \\ first_x_assum (qspec_then ‘NONE::path’ mp_tac) \\ fs [])
-    \\ fs [Tau_rep_def])
-  \\ unabbrev_all_tac \\ fs [GSYM Vis_def]
-  \\ fs [Vis_rep_def]
-  \\ Cases_on ‘h’ \\ fs []
-  \\ first_x_assum (qspecl_then [‘g x'’,‘g' x'’] mp_tac)
-  \\ impl_tac THEN1
-   (rw [] \\ first_x_assum (qspec_then ‘SOME x'::path’ mp_tac) \\ fs [])
-  \\ fs [Vis_rep_def]
+  rw[Ret_def, Tau_def, Vis_def]
+  \\ qmatch_goalsub_abbrev_tac `itree_rep (itree_abs tt)`
+  \\ `itree_rep_ok tt` by rw[Abbr`tt`, itree_rep_ok_Ret, itree_rep_ok_Tau, itree_rep_ok_Vis]
+  \\ dxrule_then strip_assume_tac $ iffLR itree_repabs
+  \\ rw[Abbr`tt`, Ret_rep_def, Tau_rep_def, Vis_rep_def]
 QED
 
 Theorem itree_bisimulation:
@@ -524,13 +479,13 @@ Theorem itree_bisimulation:
 Proof
   rw [] \\ eq_tac \\ rw []
   THEN1 (qexists_tac ‘(=)’ \\ fs [itree_11])
-  \\ simp [itree_el_eqv] \\ strip_tac
+  \\ rw [GSYM itree_rep_11, FUN_EQ_THM] \\ rename[`itree_rep t1 path`]
   \\ last_x_assum mp_tac \\ qid_spec_tac ‘t1’ \\ qid_spec_tac ‘t2’
   \\ Induct_on ‘path’ \\ rw []
   \\ qspec_then ‘t1’ strip_assume_tac itree_cases
   \\ qspec_then ‘t2’ strip_assume_tac itree_cases
   \\ fs []
-  \\ res_tac \\ fs [itree_11,itree_distinct] \\ rw []
+  \\ res_tac \\ fs [itree_11,itree_distinct] \\ rw[]
   \\ Cases_on ‘h’ \\ fs []
 QED
 
@@ -1561,6 +1516,8 @@ Proof
       fs[Once itree_wbisim_cases,spin_strip_tau])>>
   irule itree_wbisim_refl
 QED
+
+Overload itree_el = ``itree_rep``;
 
 (* tidy up theory exports *)
 
