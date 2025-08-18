@@ -177,6 +177,12 @@ sig
   val delta_binop
     :('a * 'b -> 'c) -> 'a * 'a delta -> 'b * 'b delta -> 'c delta
 
+  exception NOCHANGE
+  val nochange : unit -> 'a
+  val nochange_total : ('a -> 'a) -> 'a -> 'a
+  val nochange_pair  : ('a -> 'a) -> ('b -> 'b) -> 'a * 'b -> 'a * 'b
+  val nochange_list  : ('a -> 'a) -> 'a list -> 'a list
+
   val deinitcomment : string -> string
   val deinitcommentss : substring -> substring
 

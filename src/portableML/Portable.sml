@@ -744,7 +744,7 @@ end
 
 (*---------------------------------------------------------------------------
     A type that can be used for sharing, and some functions for lifting
-    to various type operators (just lists and pairs currently).
+    to various type operators (lists and pairs currently).
  ---------------------------------------------------------------------------*)
 
 datatype 'a delta = SAME | DIFF of 'a
@@ -778,6 +778,31 @@ fun delta_binop f (_,SAME) (_,SAME) = SAME
   | delta_binop f (M,SAME) (N,DIFF N') = DIFF (f(M,N'))
   | delta_binop f (M,DIFF M') (N,SAME) = DIFF (f(M',N))
   | delta_binop f (M,DIFF M') (N,DIFF N') = DIFF(f(M',N'))
+
+(*---------------------------------------------------------------------------*)
+(* Sharing via exceptions                                                    *)
+(*---------------------------------------------------------------------------*)
+
+exception NOCHANGE;
+
+fun nochange() = raise NOCHANGE
+
+fun nochange_total f x = f x handle NOCHANGE => x;
+
+fun nochange_pair f g (x,y) =
+  let val x' = f x
+      val y' = nochange_total g y
+  in (x',y')
+  end
+  handle NOCHANGE => (x, g y)
+
+fun nochange_list f =
+  let fun itFn h (A,b) = (f h::A, false) handle NOCHANGE => (h::A,b)
+  in fn list =>
+     let val (A,b) = rev_itlist itFn list ([],true)
+     in if b then nochange() else List.rev A end
+  end
+
 
 (*---------------------------------------------------------------------------
     A function that strips leading (nested) comments and whitespace

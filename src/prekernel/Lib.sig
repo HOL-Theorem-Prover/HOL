@@ -111,6 +111,11 @@ sig
    val mk_set : ''a list -> ''a list
    val mlquote : string -> string
    val next : ('a, 'b) istream -> ('a, 'b) istream
+   exception NOCHANGE
+   val nochange : unit -> 'a
+   val nochange_list : ('a -> 'a) -> 'a list -> 'a list
+   val nochange_pair : ('a -> 'a) -> ('b -> 'b) -> 'a * 'b -> 'a * 'b
+   val nochange_total : ('a -> 'a) -> 'a -> 'a
    val null_intersection : ''a list -> ''a list -> bool
    val op_U : ('a -> 'a -> bool) -> 'a list list -> 'a list
    val op_allpairs : ('a -> 'a -> bool) -> ('b -> 'c -> 'a) -> 'b list -> 'c list -> 'a list
