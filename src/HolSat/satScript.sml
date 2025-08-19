@@ -1,9 +1,11 @@
 
 (* random theorems used here, there, everywhere by HolSatLib *)
+Theory sat[bare]
+Ancestors
+  bool
+Libs
+  Globals HolKernel Parse Drule Thm Tactical Tactic Rewrite
 
-open Globals HolKernel Parse Drule Thm boolTheory Tactical Tactic Rewrite
-
-val _ = new_theory "sat";
 
 (* gross truth table method for proving propositional tautologies *)
 (* used to bootstrap HolSatLib *)
@@ -65,4 +67,3 @@ val _ = List.map save_thm (
                 "pth_an2", "pth_nn"],
                [pth_ni1, pth_ni2, pth_no1, pth_no2, pth_an1, pth_an2, pth_nn]));
 
-val _ = export_theory();

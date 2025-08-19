@@ -1,11 +1,11 @@
 (*---------------------------------------------------------------------------
      CTL as a concrete datatype, and valuations. From Daryl Stewart.
  ---------------------------------------------------------------------------*)
+Theory ctl
+Ancestors
+  pred_set string
 
-open HolKernel Parse boolLib bossLib
-open pred_setTheory stringTheory
 
-val _ = new_theory "ctl"
 val _ = ParseExtras.temp_loose_equality()
 
 fun mkMySuffix s prec = add_rule
@@ -276,4 +276,3 @@ Termination
                              | INR (x,y) => path_formula_size (\v.0) y)`
 End
 
-val _ = export_theory()

@@ -1,6 +1,8 @@
-open HolKernel Parse boolLib bossLib
-
-open boolSimps BasicProvers llistTheory;
+Theory lbtree
+Ancestors
+  llist
+Libs
+  boolSimps BasicProvers numLib
 
 (* ----------------------------------------------------------------------
     a theory of "lazy" binary trees; that is potentially infinite binary
@@ -8,8 +10,6 @@ open boolSimps BasicProvers llistTheory;
        Lf : 'a lbtree
        Nd : 'a -> 'a lbtree -> 'a lbtree -> 'a lbtree
    ---------------------------------------------------------------------- *)
-
-val _ = new_theory "lbtree"
 
 (* set up the representative type and operations on it *)
 
@@ -609,7 +609,6 @@ val mindepth_def = Define`
   mindepth x t = if mem x t then SOME (LEAST n. depth x t n) else NONE
 `;
 
-open numLib
 (* following tactic is used twice in theorem below - yerk *)
 val lelim = REWRITE_RULE [GSYM AND_IMP_INTRO] whileTheory.LEAST_ELIM
 val min_tac =
@@ -1032,4 +1031,3 @@ val mem_bf_flatten = store_thm(
 val _ = app (fn s => remove_ovl_mapping s {Name = s, Thy = "lbtree"})
             ["optmin", "depth", "mindepth", "is_mmindex"]
 
-val _ = export_theory ()

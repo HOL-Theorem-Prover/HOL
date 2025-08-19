@@ -19,19 +19,15 @@
 (*                                                                           *)
 (* Note: The original work was inspired by Isabelle/HOL                      *)
 (* ------------------------------------------------------------------------- *)
+Theory lebesgue
+Ancestors
+  arithmetic prim_rec option pair combin pred_set res_quan list
+  real seq transc real_sigma cardinal iterate extreal_base
+  extreal sigma_algebra measure borel real_topology
+Libs
+  pred_setLib numLib res_quanTools realLib RealArith jrhUtils
+  hurdUtils
 
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory prim_recTheory optionTheory pairTheory combinTheory
-     pred_setTheory pred_setLib numLib res_quanTheory res_quanTools listTheory;
-
-open realTheory realLib seqTheory transcTheory real_sigmaTheory RealArith
-     jrhUtils cardinalTheory iterateTheory extreal_baseTheory;
-
-open hurdUtils extrealTheory sigma_algebraTheory measureTheory borelTheory
-     real_topologyTheory;
-
-val _ = new_theory "lebesgue";
 
 val ASM_ARITH_TAC = rpt (POP_ASSUM MP_TAC) >> ARITH_TAC; (* numLib *)
 val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] >> POP_ASSUM K_TAC;
@@ -9981,8 +9977,6 @@ Proof
       by METIS_TAC [Radon_Nikodym]
  >> Q.EXISTS_TAC ‘f’ >> rw []
 QED
-
-val _ = export_theory ();
 
 (* References:
 

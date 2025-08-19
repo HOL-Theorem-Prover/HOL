@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "bag248";
+Theory bag248
 
 val BAG_IN = new_definition (
   "BAG_IN",
@@ -14,4 +12,3 @@ val _ = Unicode.unicode_version {tmnm = "<:", u = UTF8.chr 0x22F2}
 val _ = TeX_notation {hol = "<:", TeX = ("\\HOLTokenIn{}:",2)}
 val _ = TeX_notation {hol = UTF8.chr 0x22F2, TeX = ("\\HOLTokenIn{}:",2)}
 
-val _ = export_theory();

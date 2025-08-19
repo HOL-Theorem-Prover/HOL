@@ -1,13 +1,12 @@
-open HolKernel Parse boolLib IndDefLib DefnBase
-
-open arithmeticTheory BasicProvers simpLib
-
-local open newtypeTools metisLib numeralTheory in end
+Theory cv[bare]
+Ancestors
+  arithmetic numeral[qualified]
+Libs
+  HolKernel Parse boolLib IndDefLib DefnBase BasicProvers simpLib
+  newtypeTools[qualified] metisLib[qualified]
 
 fun simp ths = ASM_SIMP_TAC (srw_ss()) ths
 fun SRULE ths = SIMP_RULE (srw_ss()) ths
-
-val _ = new_theory "cv";
 
 val N0_def = new_definition("N0_def",
   “N0 (m:num) n = if n = 0 then m+1 else 0”);
@@ -584,6 +583,12 @@ QED
 
 (* Properties that can help with manual termination proofs *)
 
+Theorem cv_ispair_cv_add[simp]:
+  cv_ispair (cv_add x y) = Num 0
+Proof
+  Cases_on`x` \\ Cases_on`y` \\ simp[]
+QED
+
 Theorem c2n_cv_add[simp]:
   c2n (cv_add v1 v2) = c2n v1 + c2n v2
 Proof
@@ -608,4 +613,3 @@ val _ = app Parse.permahide [“c2n”,“c2b”,“Num”,“Pair”];
 val _ = app delete_const ["P0", "N0", "iscv", "cvrel", "cvrelf",
                           "cv_ABS", "cv_REP", "cvnum_map2", "cvnumval"];
 
-val _ = export_theory();

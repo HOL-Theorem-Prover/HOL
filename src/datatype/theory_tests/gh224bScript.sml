@@ -1,8 +1,8 @@
-open HolKernel Parse boolLib
-
-open gh224aTheory
-
-val _ = new_theory "gh224b";
+Theory gh224b[bare]
+Ancestors
+  gh224a
+Libs
+  HolKernel Parse boolLib
 
 Theorem size_works:
   <| size := 3|>.size = 3
@@ -11,4 +11,3 @@ Proof
 QED
 
 
-val _ = export_theory();

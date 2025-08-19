@@ -1,5 +1,9 @@
-open HolKernel Parse boolLib;
-
+Theory lift
+Ancestors
+  prim_rec pair list combin pred_set num arithmetic more_list
+  more_set variable object alpha
+Libs
+  pairLib numLib Mutual dep_rewrite quotientLib tactics Rsyntax
 
 (* --------------------------------------------------------------------- *)
 (* Embedding the semantaics of objects as a foundational layer,          *)
@@ -7,26 +11,7 @@ open HolKernel Parse boolLib;
 (* --------------------------------------------------------------------- *)
 
 
-val _ = new_theory "lift";
 val _ = ParseExtras.temp_loose_equality()
-
-
-open prim_recTheory pairTheory pairLib listTheory;
-open combinTheory pred_setTheory;
-open numTheory numLib arithmeticTheory;
-open bossLib;
-open Mutual;
-open dep_rewrite;
-open more_listTheory more_setTheory;
-open variableTheory;
-open objectTheory;
-open alphaTheory;
-
-open quotientLib;
-
-open tactics;
-open Rsyntax;
-
 
 
 val vars  =  ty_antiq( ==`:var list`== );
@@ -2195,8 +2180,6 @@ val ALL_SIGMA_OBJ_EQ = store_thm
 (* ===================================================================== *)
 
 
-
-val _ = export_theory();
 
 val _ = print_theory_to_file "lift.lst";
 

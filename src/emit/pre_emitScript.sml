@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open wordsTheory
-
-val _ = new_theory "pre_emit";
+Theory pre_emit
+Ancestors
+  words
 
 val word_index_def = Define `word_index (w:'a word) n = w ' n`;
 val w2w_itself_def = Define `w2w_itself (:'a) w = (w2w w): 'a word`;
@@ -17,8 +15,3 @@ val word_concat_itself_def = Define`
 
 val fromNum_def = Define`
   fromNum (n, (:'a)) = n2w_itself (n MOD dimword (:'a),(:'a))`;
-
-
-
-
-val _ = export_theory();

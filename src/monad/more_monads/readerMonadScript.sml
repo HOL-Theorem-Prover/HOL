@@ -1,10 +1,9 @@
-open HolKernel Parse boolLib bossLib;
+Theory readerMonad
+Ancestors[qualified]
+  list
 
-local open listTheory in end
 (* the dependency on bossLib equates to an unnecessary dependency on
    listTheory *)
-
-val _ = new_theory "readerMonad";
 
 val BIND_def = Define‘
   BIND (M : 's -> 'a) (f: 'a -> 's -> 'b) s = f (M s) s
@@ -91,4 +90,3 @@ val _ =
 
 
 
-val _ = export_theory();

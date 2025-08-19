@@ -14,15 +14,15 @@
 (*              (c) Copyright, John Harrison 1998-2007                       *)
 (*              (c) Copyright, Lars Schewe 2007                              *)
 (* ========================================================================= *)
+Theory iterate[bare]
+Ancestors
+  prim_rec combin quotient arithmetic pair pred_set option
+  relation permutes
+Libs
+  HolKernel Parse boolLib BasicProvers numLib tautLib Arith
+  metisLib mesonLib pred_setLib simpLib pureSimps numSimps
+  hurdUtils TotalDefn computeLib TypeBase boolSimps unwindLib
 
-open HolKernel Parse boolLib BasicProvers;
-
-open numLib tautLib Arith prim_recTheory combinTheory quotientTheory metisLib
-     arithmeticTheory pairTheory mesonLib pred_setTheory pred_setLib simpLib
-     optionTheory relationTheory permutesTheory pureSimps numSimps hurdUtils
-     TotalDefn computeLib TypeBase boolSimps unwindLib;
-
-val _ = new_theory "iterate";
 
 val qexists_tac = Q.EXISTS_TAC;
 val qabbrev_tac = Q.ABBREV_TAC;
@@ -2483,4 +2483,3 @@ Proof
  >> PROVE_TAC [ADD_COMM]
 QED
 
-val _ = export_theory();

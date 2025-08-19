@@ -1,6 +1,9 @@
-open HolKernel boolLib Prim_rec Parse simpLib boolSimps
-     numTheory prim_recTheory arithmeticTheory InductiveDefinition
-     numpairTheory
+Theory ind_type[bare]
+Ancestors
+  num prim_rec arithmetic numpair
+Libs
+  HolKernel boolLib Prim_rec Parse simpLib boolSimps
+  InductiveDefinition mesonLib
 
 val hol_ss = bool_ss ++ numSimps.old_ARITH_ss ++ numSimps.REDUCE_ss
 
@@ -9,8 +12,6 @@ val AND_FORALL_THM = GSYM FORALL_AND_THM;
 val GEN_REWRITE_TAC = fn c => fn thl =>
    Rewrite.GEN_REWRITE_TAC c Rewrite.empty_rewrites thl
 
-
-val _ = new_theory "ind_type";
 
 (* ------------------------------------------------------------------------- *)
 (* Abstract left inverses for binary injections (we could construct them...) *)
@@ -354,7 +355,6 @@ val ISO_REFL = store_thm(
   Term`ISO (\x:'a. x) (\x. x)`,
   SIMP_TAC bool_ss [ISO]);
 
-open mesonLib
 val ISO_FUN = store_thm(
   "ISO_FUN",
   Term`ISO (f:'a->'c) f' /\ ISO (g:'b->'d) g' ==>
@@ -392,4 +392,3 @@ local open OpenTheoryMap in
   val _ = c "BOTTOM"
 end
 
-val _ = export_theory();

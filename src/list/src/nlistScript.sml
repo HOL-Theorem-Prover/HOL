@@ -1,9 +1,10 @@
-open HolKernel Parse boolLib simpLib BasicProvers numSimps TotalDefn metisLib
-
-open combinTheory pred_setTheory relationTheory arithmeticTheory
-     set_relationTheory numpairTheory listTheory rich_listTheory;
-
-val _ = new_theory "nlist";
+Theory nlist[bare]
+Ancestors
+  combin pred_set relation arithmetic set_relation numpair list
+  rich_list
+Libs
+  HolKernel Parse boolLib simpLib BasicProvers numSimps TotalDefn
+  metisLib
 
 val _ = Defn.SUC_TO_NUMERAL_DEFN_CONV_hook := numLib.SUC_TO_NUMERAL_DEFN_CONV
 
@@ -451,4 +452,3 @@ QED
 
 
 
-val _ = export_theory();

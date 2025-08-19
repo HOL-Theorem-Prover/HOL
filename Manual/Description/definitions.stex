@@ -1886,8 +1886,8 @@ for \holtxt{SIGMA}. Such a congruence theorem is the following:
 \end{verbatim}
 \end{hol}
 %
-Once \ml{Hol\_defn} has been told about this theorem, via \ml{DefnBase}'s \ml{add\_cong} or \ml{export\_cong} functions, or by using a `defncong` attribute on a theorem when it is saved,%
-\index{theorem attributes!defncong@\ml{defncong}}%
+Once \ml{Hol\_defn} has been told about this theorem, via \ml{DefnBase}'s \ml{add\_cong} or \ml{export\_cong} functions, or by using a \ml{cong} attribute on a theorem when it is saved,%
+\index{theorem attributes!cong@\ml{cong}}%
 the termination conditions extracted for the definition are now provable, since \holtxt{a} is a proper subterm of \holtxt{Node v tl}.
 %
 >>__ structure Defn = struct open Defn val Hol_defn = fn s => with_flag(Feedback.emit_WARNING, false) (Hol_defn s) end;
@@ -1955,6 +1955,7 @@ by finding a suitable wellfounded relation for \holtxt{R} and then
 proving the other constraints.
 
 \section{Inductive Relations}
+\label{sec:inductive-relations}
 \index{inductive relations|(}
 
 \index{Hol_reln, defining inductive relations@\ml{Hol\_reln}, defining inductive relations}
@@ -2093,8 +2094,9 @@ where hypotheses include mention of the new relation as arguments to
 the given operators.
 
 \index{export_mono (ML function)@\ml{export\_mono} (\ML{} function)}
+\index{theorem attributes!mono@\ml{mono}}
 Monotonicity results that the user derives may be stored in the global
-\ml{the\_monoset} variable by using the \ml{export\_mono} function.
+\ml{the\_monoset} variable by using the \ml{export\_mono} function, or the `mono` theorem attribute. 
 This function takes a string naming a theorem in the current theory
 segment, and adds that theorem to the monotonicity theorems
 immediately, and in such a way that this situation will also obtain when

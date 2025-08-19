@@ -1,15 +1,15 @@
 (* ========================================================================= *)
 (* Properties of real polynomials (not canonically represented).             *)
 (* ========================================================================= *)
+Theory poly
+Ancestors
+  pair num prim_rec arithmetic list real lim list pred_set
+Libs
+  hol88Lib reduceLib pairLib numLib mesonLib tautLib simpLib
+  boolSimps numSimps realSimps Ho_Rewrite jrhUtils Canon_Port AC
+  realLib
 
-open HolKernel Parse boolLib hol88Lib;
 
-open reduceLib pairLib numLib mesonLib tautLib simpLib boolSimps numSimps realSimps
-     pairTheory numTheory prim_recTheory arithmeticTheory listTheory
-     Ho_Rewrite jrhUtils Canon_Port AC realTheory limTheory listTheory
-     pred_setTheory realLib;
-
-val _ = new_theory "poly";
 val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
@@ -1387,4 +1387,3 @@ val POLY_NORMALIZE_CONV =
   POLY_NORMALIZE_CONV;
 *)
 
-val _ = export_theory ();

@@ -1,5 +1,9 @@
-open HolKernel Parse boolLib;
-
+Theory term
+Ancestors
+  combin list arithmetic num prim_rec pair pred_set more_list
+  more_set variable
+Libs
+  Psyntax listLib dep_rewrite pairLib numLib Mutual tactics
 
 (* --------------------------------------------------------------------- *)
 (* Lifting the lambda calculus syntax to the abstract level.             *)
@@ -12,9 +16,6 @@ open HolKernel Parse boolLib;
 (* --------------------------------------------------------------------- *)
 
 
-val _ = new_theory "term";
-
-
 (* In interactive sessions, do:
 
 app load ["listTheory", "pred_setTheory", "pairTheory",
@@ -25,22 +26,6 @@ app load ["listTheory", "pred_setTheory", "pairTheory",
           "tautLib", "bossLib"];
 
 *)
-
-open Psyntax combinTheory;
-open listTheory listLib;
-open arithmeticTheory numTheory prim_recTheory;
-open pairTheory;
-open pred_setTheory;
-open dep_rewrite more_listTheory more_setTheory variableTheory;
-open pairLib;
-open numLib;
-open bossLib;
-open Mutual;
-
-
-open tactics;
-
-
 
 (* --------------------------------------------------------------------- *)
 (* Create datatypes for lambda expressions.                              *)
@@ -768,8 +753,6 @@ val FV_vsubst1 = store_thm
       ]
    );
 
-
-val _ = export_theory();
 
 val _ = print_theory_to_file "-" "term.lst";
 

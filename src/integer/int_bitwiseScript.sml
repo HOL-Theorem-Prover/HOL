@@ -1,7 +1,9 @@
-open HolKernel Parse boolLib bossLib;
-open integerTheory arithmeticTheory bitTheory intLib listTheory;
+Theory int_bitwise
+Ancestors
+  integer arithmetic bit list
+Libs
+  intLib
 
-val _ = new_theory "int_bitwise";
 val _ = ParseExtras.temp_loose_equality()
 
 val int_not_def = Define `
@@ -275,5 +277,3 @@ val int_bit_shift_right = store_thm("int_bit_shift_right",
   \\ fs [LET_DEF,int_bit_int_of_bits]
   \\ srw_tac [] [rich_listTheory.EL_DROP]
   \\ fs [NOT_LESS] \\ `F` by decide_tac);
-
-val _ = export_theory();

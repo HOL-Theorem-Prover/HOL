@@ -1,13 +1,12 @@
 (* ------------------------------------------------------------------------
    Theory of IEEE-754 (base 2) floating-point (basic) arithmetic
    ------------------------------------------------------------------------ *)
+Theory binary_ieee
+Ancestors
+  words real intreal pred_set set_relation
+Libs
+  wordsLib realLib
 
-open HolKernel boolLib bossLib
-open realTheory intrealTheory wordsLib realLib
-
-open pred_setTheory set_relationTheory
-
-val () = new_theory "binary_ieee"
 val _ = diminish_srw_ss ["RMULCANON","RMULRELNORM","NORMEQ"]
 
 val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
@@ -4186,5 +4185,3 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------ *)
-
-val () = export_theory ()

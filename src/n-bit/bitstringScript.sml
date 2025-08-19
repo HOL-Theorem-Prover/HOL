@@ -3,13 +3,12 @@
 (* DESCRIPTION   : Boolean lists as Bitstrings                               *)
 (* AUTHOR        : (c) Anthony Fox, University of Cambridge                  *)
 (* ========================================================================= *)
+Theory bitstring
+Ancestors
+  bit words numposrep
+Libs
+  fcpLib wordsLib
 
-open HolKernel boolLib bossLib
-open bitTheory wordsTheory fcpLib
-open wordsLib
-open numposrepTheory
-
-val _ = new_theory "bitstring"
 
 val _ = diminish_srw_ss ["NORMEQ"]
 
@@ -1187,4 +1186,3 @@ time (List.map EVAL)
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory()

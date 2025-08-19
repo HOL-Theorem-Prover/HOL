@@ -12,14 +12,14 @@
 (* app load ["pred_setLib", "pred_setTheory", "relationTheory", "pairTheory",
 "optionTheory", "TotalDefn", "bossLib", "finite_mapTheory",
 "wotTheory"]; *) (* wotTheory only for definiton of type 'a reln *)
+Theory tc
+Ancestors
+  pred_set relation pair option combin list finite_map toto
+Libs
+  pred_setLib Defn TotalDefn PairRules PairRules pairLib
 
-open HolKernel boolLib Parse bossLib;
+
 val _ = set_trace "Unicode" 0;
-open pred_setLib pred_setTheory relationTheory pairTheory optionTheory;
-open Defn TotalDefn combinTheory PairRules;
-open PairRules pairLib listTheory finite_mapTheory totoTheory;
-
-val _ = new_theory "tc";
 val _ = ParseExtras.temp_loose_equality()
 
 (* My habitual abbreviations: *)
@@ -633,4 +633,3 @@ GEN_TAC THEN Induct THENL
    RES_TAC THEN ASM_REWRITE_TAC [TC_ITER]
 ]]]);
 
-val _ = export_theory ();

@@ -1,8 +1,8 @@
-open HolKernel Parse boolLib pairLib Prim_rec
-     pairTheory sumTheory optionTheory numeralTheory;
-
-
-val _ = new_theory "basicSize";
+Theory basicSize[bare]
+Ancestors
+  pair sum option numeral
+Libs
+  HolKernel Parse boolLib pairLib Prim_rec
 
 val bool_size_def = new_definition
   ("bool_size_def", ``bool_size (b:bool) = 0``);
@@ -40,4 +40,3 @@ val option_size_def =
     name="option_size_def",
     rec_axiom = optionTheory.option_Axiom};
 
-val _ = export_theory();

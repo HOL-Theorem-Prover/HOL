@@ -48,15 +48,15 @@ fun fullPath slist =
     normPath (List.foldl (fn (p1,p2) => Path.concat(p2,p1))
                          (hd slist) (tl slist))
 
-val HOLDIR =
-val MOSMLDIR =
-val OS =
-val DEPDIR =
-val GNUMAKE =
-val DYNLIB =
-val version =
-val release =
-val DOT_PATH =
+val HOLDIR = ""
+val MOSMLDIR = ""
+val OS = ""
+val DEPDIR = ""
+val GNUMAKE = ""
+val DYNLIB = false
+val version = 0
+val release = ""
+val DOT_PATH = NONE
 val POLY = ""
 val POLYC = ""
 val DEFAULT_STATE = fullPath [HOLDIR, "bin", "hol.state"]

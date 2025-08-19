@@ -5,17 +5,16 @@
  *  Jens Brandt, November 2005
  *
  ***************************************************************************)
+Theory rat
+Ancestors
+  arithmetic pred_set integer intExtension frac gcd divides
+  primeFactor
+Libs
+  BasicProvers intLib intExtensionLib fracLib ratUtils quotient
+  schneiderUtils ratPP[qualified]
 
-open HolKernel boolLib Parse BasicProvers bossLib;
-
-open arithmeticTheory pred_setTheory integerTheory intLib intExtensionTheory
-     intExtensionLib fracTheory fracLib ratUtils quotient schneiderUtils;
-
-open gcdTheory dividesTheory primeFactorTheory;
 
 val arith_ss = old_arith_ss
-
-val _ = new_theory "rat";
 
 val ERR = mk_HOL_ERR "ratScript"
 
@@ -266,7 +265,6 @@ val _ = overload_on ("~",  ``rat_ainv``);
 val _ = overload_on ("numeric_negate",  ``rat_ainv``);
 val _ = overload_on ("//",  ``rat_cons``);
 
-local open ratPP in end
 val _ = add_ML_dependency "ratPP"
 val _ = add_user_printer ("rat.decimalfractions",
                           ``&(NUMERAL x):rat / &(NUMERAL y):rat``)
@@ -3791,4 +3789,3 @@ QED
  * end of theory
  *==========================================================================*)
 
-val _ = export_theory();

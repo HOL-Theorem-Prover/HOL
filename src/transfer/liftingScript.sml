@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib bossLib
-
-open transferTheory
-
-val _ = new_theory "lifting"
+Theory lifting
+Ancestors
+  transfer
 
 Definition Qt_def:
   Qt R Abs Rep Tf <=>
@@ -153,4 +151,3 @@ Proof
   metis_tac[]
 QED
 
-val _ = export_theory()

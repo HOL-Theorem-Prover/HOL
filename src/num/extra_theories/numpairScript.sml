@@ -1,14 +1,14 @@
-open HolKernel boolLib Parse
-
-open arithmeticTheory BasicProvers TotalDefn
-     numSimps numLib simpLib metisLib
+Theory numpair[bare]
+Ancestors
+  arithmetic
+Libs
+  HolKernel boolLib Parse BasicProvers TotalDefn numSimps numLib
+  simpLib metisLib
 
 fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 fun fs ths = FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) ths
 fun simp ths = ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) ths
 val metis_tac = METIS_TAC
-
-val _ = new_theory "numpair"
 
 (* ----------------------------------------------------------------------
     Triangular numbers
@@ -300,4 +300,3 @@ Proof
  >> SRW_TAC [ARITH_ss] []
 QED
 
-val _ = export_theory()

@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "mdt";
+Theory mdt
 
 val _ = new_type ("char", 0)
 
@@ -28,4 +26,3 @@ val _ = Hol_datatype`
 
 val _ = Datatype`testrcd = <| fld1 : bool ; fld2 : 'a -> num |>`;
 
-val _ = export_theory();

@@ -1,12 +1,13 @@
 (* ========================================================================= *)
 (* Theory of 2's complement representation of integers                       *)
 (* ========================================================================= *)
+Theory integer_word
+Ancestors
+  arithmetic bit words integer
+Libs
+  wordsLib stringLib intLib
 
-open HolKernel boolLib Parse bossLib
-open wordsLib stringLib intLib arithmeticTheory
-open bitTheory wordsTheory integerTheory
 
-val _ = new_theory "integer_word"
 val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
@@ -1501,4 +1502,3 @@ val w2i_eq_w2n = store_thm("w2i_eq_w2n",
   \\ `n <= dimword (:'a)` by decide_tac
   \\ imp_res_tac (GSYM INT_SUB) \\ fs []);
 
-val _ = export_theory()

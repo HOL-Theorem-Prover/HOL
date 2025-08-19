@@ -1351,6 +1351,19 @@ Proof
   DEP_REWRITE_TAC[ADD_DIV_RWT] >> simp[]
 QED
 
+Theorem w2v_reverse_endianness0_16:
+  w2v (reverse_endianness0 (w : word16)) = BigEndianReverse (w2v w)
+Proof
+  rw[reverse_endianness0_def, BigEndianReverse_def] >>
+  simp[
+    sail2_operators_mwordsTheory.subrange_vec_dec_def,
+    sail2_operators_mwordsTheory.concat_vec_def
+    ] >>
+  qspec_then `w` assume_tac length_w2v >> gvs[SimpRHS] >>
+  gvs[LENGTH_EQ_NUM_compute] >> simp[ByteList_def] >>
+  pop_assum mp_tac >> EVAL_TAC >> blastLib.BBLAST_TAC
+QED
+
 Theorem w2v_reverse_endianness0_32:
   w2v (reverse_endianness0 (w : word32)) = BigEndianReverse (w2v w)
 Proof
@@ -1402,6 +1415,19 @@ Theorem extract_bits_reverse_endianness0_32:
     (15 >< 8)  (reverse_endianness0 v) = (23 >< 16) v ∧
     (23 >< 16) (reverse_endianness0 v) = (15 >< 8) v ∧
     (31 >< 24) (reverse_endianness0 v) = (7 >< 0) v
+Proof
+  rw[] >> simp[reverse_endianness0_def] >>
+  simp[
+    sail2_operators_mwordsTheory.subrange_vec_dec_def,
+    sail2_operators_mwordsTheory.concat_vec_def
+    ] >>
+  blastLib.BBLAST_TAC
+QED
+
+Theorem extract_bits_reverse_endianness0_16:
+  ∀v:word16.
+    (7  >< 0)  (reverse_endianness0 v) = (15 >< 8) v ∧
+    (15 >< 8)  (reverse_endianness0 v) = (7 >< 0) v
 Proof
   rw[] >> simp[reverse_endianness0_def] >>
   simp[

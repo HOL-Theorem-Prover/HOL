@@ -25,6 +25,9 @@ ARG Z3_VERSION
 ARG CVC_VERSION
 ARG YICES_VERSION
 
+# this overrides the PATH environment from upstream images
+ENV PATH=/ML/HOL/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
 # if --build-arg Z3_VERSION=anything, set HOL4_Z3_EXECUTABLE to system-installed z3
 ENV HOL4_Z3_EXECUTABLE=${Z3_VERSION:+/ML/z3-${Z3_VERSION}/bin/z3}
 RUN if [ "" != "${Z3_VERSION}" ]; then \
@@ -47,12 +50,17 @@ fi
 # remove potential local poly-includes.ML for docker builds
 RUN rm -f tools-poly/poly-includes.ML
 
-# Building HOL itself
-RUN ${SML} < tools/smart-configure.sml 
+# Building HOL itself (PolyML is now installed in non-system directories)
+RUN if [ "poly" = "$SML" ]; then \
+    /ML/polyml/bin/${SML} < tools/smart-configure.sml; \
+else \
+    ${SML} < tools/smart-configure.sml; \
+fi
+
 RUN bin/build ${BUILDOPTS}
 
 # Building HOL manuals when PolyML is used
-RUN if [ "poly" = "${SML}" ]; then \
+RUN if [ "poly" = "${SML}" ] && [ "linux/amd64" = "$TARGETPLATFORM" ]; then \
     if echo ${BUILDOPTS} | grep -q "otknl"; then \
        echo Skip manual building; \
     else \

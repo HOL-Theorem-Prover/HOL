@@ -1,12 +1,12 @@
 (*
   Prove theorems cv_transLib uses for its operation
 *)
-open HolKernel Parse boolLib bossLib dep_rewrite;
-open cv_typeTheory cvTheory cv_typeLib cv_repLib;
-open arithmeticTheory wordsTheory cv_repTheory integerTheory ratTheory
-     listTheory rich_listTheory bitstringTheory integer_wordTheory;
-
-val _ = new_theory "cv_prim";
+Theory cv_prim
+Ancestors
+  cv_type cv arithmetic words cv_rep integer rat list rich_list
+  bitstring integer_word
+Libs
+  dep_rewrite cv_typeLib cv_repLib
 
 Overload c2n[local] = “cv$c2n”
 Overload c2b[local] = “cv$c2b”
@@ -1411,4 +1411,3 @@ Proof
   \\ asm_rewrite_tac [cv_rep_word_xor, cv_rep_word_uint_max]
 QED
 
-val _ = export_theory();

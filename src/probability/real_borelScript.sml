@@ -17,22 +17,18 @@
 (*                                                                           *)
 (* Note: This theory is inspired by Isabelle/HOL                             *)
 (* ------------------------------------------------------------------------- *)
+Theory real_borel
+Ancestors
+  arithmetic pred_set num list combin pair real seq real_sigma
+  transc metric topology cardinal real_topology iterate
+  real_of_rat sigma_algebra
+Libs
+  metisLib pred_setLib numLib realLib jrhUtils hurdUtils
 
-open HolKernel Parse boolLib bossLib;
-
-open metisLib arithmeticTheory pred_setTheory pred_setLib numTheory numLib
-     listTheory combinTheory pairTheory realTheory realLib jrhUtils
-     seqTheory real_sigmaTheory transcTheory metricTheory topologyTheory;
-
-open cardinalTheory real_topologyTheory iterateTheory real_of_ratTheory;
-
-open hurdUtils sigma_algebraTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "borel" (renamed to "real_borel")               *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = new_theory "real_borel";
 
 val ASM_ARITH_TAC = rpt (POP_ASSUM MP_TAC) THEN ARITH_TAC;
 val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC;
@@ -3690,8 +3686,6 @@ Proof
       [ MATCH_MP_TAC hyperbola_lemma3 >> art [],
         MATCH_MP_TAC hyperbola_lemma4 >> art [] ] ]
 QED
-
-val _ = export_theory ();
 
 (* References:
 

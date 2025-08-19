@@ -1,12 +1,10 @@
-open HolKernel Parse boolLib
-
-open bossLib llistTheory BasicProvers metisLib
-
-local open pred_setLib fixedPointTheory rich_listTheory in end
+Theory path
+Ancestors
+  llist fixedPoint[qualified] rich_list[qualified]
+Libs
+  BasicProvers metisLib pred_setLib[qualified]
 
 val _ = augment_srw_ss [rewrites [LET_THM]]
-
-val _ = new_theory "path";
 
 val path_TY_DEF = new_type_definition (
  "path",
@@ -1874,5 +1872,3 @@ Proof
  >> ‘?n. length p = SOME (SUC n)’ by METIS_TAC [length_cases]
  >> rw []
 QED
-
-val _ = export_theory();

@@ -1,9 +1,8 @@
-open HolKernel Parse boolLib
-
-val _ = new_theory "vartypeAbbrev1";
+Theory vartypeAbbrev1[bare]
+Libs
+  HolKernel Parse boolLib
 
 val _ = type_abbrev("foo", ``:'aa -> bool``)
 val _ = save_thm("T", TRUTH)
 
 
-val _ = export_theory();

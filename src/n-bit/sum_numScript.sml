@@ -5,12 +5,13 @@
 (* AUTHOR        : (c) Anthony Fox, University of Cambridge                  *)
 (* DATE          : 2002                                                      *)
 (* ========================================================================= *)
+Theory sum_num
+Ancestors
+  rich_list[qualified] (* for COUNT_LIST *)
+  arithmetic
+Libs
+  Q
 
-open HolKernel Parse boolLib bossLib
-open Q arithmeticTheory;
-
-val _ = new_theory "sum_num";
-val _ = set_grammar_ancestry ["rich_list" (* for COUNT_LIST *) ]
 
 (* ------------------------------------------------------------------------- *)
 
@@ -155,5 +156,3 @@ val SUM_FOLDL = Q.store_thm("SUM_FOLDL",
           [SUM_def, rich_listTheory.COUNT_LIST_SNOC, listTheory.FOLDL_SNOC])
 
 (* ------------------------------------------------------------------------- *)
-
-val _ = export_theory();

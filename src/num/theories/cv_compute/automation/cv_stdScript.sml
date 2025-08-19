@@ -1,13 +1,15 @@
 (*
   Apply cv translator to standard theories list, pair, sptree, etc.
 *)
-open HolKernel Parse boolLib bossLib dep_rewrite;
-open cv_typeTheory cvTheory cv_typeLib cv_repLib;
-open arithmeticTheory wordsTheory cv_repTheory cv_primTheory cv_transLib;
-open pairTheory listTheory optionTheory sumTheory alistTheory indexedListsTheory;
-open rich_listTheory sptreeTheory finite_setTheory;
+Theory cv_std
+Ancestors
+  cv cv_type arithmetic words cv_rep cv_prim pair list option sum
+  alist indexedLists rich_list sptree finite_set
+Libs
+  dep_rewrite cv_typeLib cv_repLib cv_transLib
 
-val _ = new_theory "cv_std";
+Overload Num[local] = “cv$Num”
+Overload Pair[local] = “cv$Pair”
 
 (*----------------------------------------------------------*
    pair
@@ -58,7 +60,7 @@ QED
 val res = cv_trans ISL;
 val res = cv_trans ISR;
 
-val res = cv_trans_pre OUTL;
+val res = cv_trans_pre "OUTL_pre" OUTL;
 
 Theorem OUTL_pre[cv_pre]:
   OUTL_pre x <=> ISL x
@@ -66,7 +68,7 @@ Proof
   Cases_on ‘x’ \\ fs [res]
 QED
 
-val res = cv_trans_pre OUTR;
+val res = cv_trans_pre "OUTR_pre" OUTR;
 
 Theorem OUTR_pre[cv_pre]:
   OUTR_pre x <=> ISR x
@@ -103,7 +105,7 @@ val res = cv_trans TAKE_def;
 
 val res = cv_trans DROP_def;
 
-val res = cv_trans_pre EL_def;
+val res = cv_trans_pre "EL_pre" EL_def;
 
 Theorem EL_pre[cv_pre]:
   !n xs. EL_pre n xs <=> n < LENGTH xs
@@ -126,7 +128,7 @@ Proof
   Cases_on ‘xs’ \\ gvs [FRONT_DEF]
 QED
 
-val res = cv_trans_pre FRONT;
+val res = cv_trans_pre "FRONT_pre" FRONT;
 
 Theorem FRONT_pre[cv_pre]:
   !xs. FRONT_pre xs <=> xs <> []
@@ -142,7 +144,7 @@ Proof
   Cases_on ‘xs’ \\ gvs [LAST_DEF]
 QED
 
-val res = cv_trans_pre LAST;
+val res = cv_trans_pre "LAST_pre" LAST;
 
 Theorem LAST_pre[cv_pre]:
   !xs. LAST_pre xs <=> xs <> []
@@ -209,7 +211,7 @@ Proof
   \\ rename [‘_ = SOME y’] \\ PairCases_on ‘y’ \\ gvs []
 QED
 
-val res = cv_trans_pre index_of;
+val res = cv_trans_pre "INDEX_OF_pre" index_of;
 
 Theorem INDEX_OF_pre[cv_pre]:
   ∀x y. INDEX_OF_pre x y
@@ -384,7 +386,7 @@ val toAList_foldi_eq = sptreeTheory.foldi_def
                   |> LIST_CONJ |> REWRITE_RULE [GSYM toAList_foldi_def]
                   |> SIMP_RULE std_ss [];
 
-val res = cv_trans_pre toAList_foldi_eq;
+val res = cv_trans_pre "toAList_foldi_pre" toAList_foldi_eq;
 
 Theorem toAList_foldi_pre[cv_pre]:
   !a0 a1 a2. toAList_foldi_pre a0 a1 a2
@@ -450,6 +452,29 @@ Proof
   \\ dep_rewrite.DEP_REWRITE_TAC [sptreeTheory.spt_eq_thm,sptreeTheory.wf_insert]
   \\ gvs [wf_fromAList,lookup_insert,lookup_fromAList,finite_mapTheory.FLOOKUP_SIMP]
   \\ rw []
+QED
+
+val FUPDATE_LIST_pre_def = finite_mapTheory.FUPDATE_LIST_THM
+ |> SRULE [FORALL_PROD]
+ |> INST_TYPE [alpha |-> “:num”]
+ |> cv_auto_trans_pre "FUPDATE_LIST_pre";
+
+Theorem FUPDATE_LIST_pre[cv_pre]:
+  ∀f ls. FUPDATE_LIST_pre f ls
+Proof
+  Induct_on`ls`
+  \\ rw[Once FUPDATE_LIST_pre_def]
+QED
+
+Theorem cv_rep_DOMSUB[cv_rep]:
+  from_fmap f (m \\ k) = cv_delete (Num k) (from_fmap f m)
+Proof
+  rw[from_fmap_def, GSYM (theorem "cv_delete_thm")]
+  \\ AP_TERM_TAC
+  \\ DEP_REWRITE_TAC[sptreeTheory.spt_eq_thm]
+  \\ rw[sptreeTheory.wf_fromAList, sptreeTheory.wf_delete]
+  \\ rw[sptreeTheory.lookup_delete, sptreeTheory.lookup_fromAList]
+  \\ rw[finite_mapTheory.DOMSUB_FLOOKUP_THM]
 QED
 
 (*----------------------------------------------------------*
@@ -544,4 +569,44 @@ QED
 
 val _ = cv_trans v2n_custom_def;
 
-val _ = export_theory();
+(*----------------------------------------------------------*
+   Help for manual termination proofs
+ *----------------------------------------------------------*)
+
+val cv_size'_def = theorem "cv_size'_def";
+val cv_mk_BN_def = definition "cv_mk_BN_def";
+val cv_mk_BS_def = definition "cv_mk_BS_def";
+
+Theorem cv_size'_Num[simp]:
+  cv_size' (Num m) = Num 0
+Proof
+  rw[Once cv_size'_def]
+QED
+
+Theorem cv_size'_cv_mk_BN[simp]:
+  cv_size' (cv_mk_BN x y) =
+  cv_add (cv_size' x) (cv_size' y)
+Proof
+  rw[cv_mk_BN_def]
+  \\ TRY (
+    rw[Once cv_size'_def]
+    \\ rw[Once cv_size'_def]
+    \\ Cases_on`x` \\ gs[]
+    \\ rw[Once cv_size'_def, SimpRHS]
+    \\ NO_TAC)
+  \\ rw[Once cv_size'_def]
+  \\ rw[Once cv_size'_def]
+  \\ Cases_on`y` \\ gs[]
+  \\ rw[Once cv_size'_def]
+  \\ rw[Once cv_size'_def]
+QED
+
+Theorem cv_size'_cv_mk_BS[simp]:
+  cv_size' (cv_mk_BS x y z) =
+  cv_add (cv_add (cv_size' x) (cv_size' z)) (Num 1)
+Proof
+  rw[cv_mk_BS_def]
+  \\ rw[Q.SPEC`Pair x y`cv_size'_def]
+  \\ Cases_on`x` \\ Cases_on`z` \\ gvs[]
+  \\ gvs[Q.SPEC`Pair x y`cv_size'_def]
+QED

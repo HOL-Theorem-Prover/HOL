@@ -10,21 +10,21 @@ HOLHEAP = $(HOLDIR)/src/num/termination/numheap
 boss_deps = listTheory pred_setTheory arithmeticTheory numLib \
             pred_setLib pred_setSimps numSimps optionTheory \
             RecordType rich_listTheory
-DEPS = bossLib.uo $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(boss_deps))
+DEPS = holTheory.uo bossLib.uo $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(boss_deps))
 
 all: $(TARGET)
 
 $(TARGET): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) -o $(TARGET) -b $(HOLHEAP) $(boss_deps) bossLib
+	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) -o $(TARGET) -b $(HOLHEAP) $(boss_deps) bossLib holTheory
 
 endif
 
-UOFILES = bossLib.uo selftest.uo
+UOFILES = holTheory.uo selftest.uo
 
 all: selftest.exe $(UOFILES)
 .PHONY: all
 
-selftest.exe: selftest.uo bossLib.uo
+selftest.exe: selftest.uo holTheory.uo
 	$(HOLMOSMLC) -o $@ $<
 
 ifeq ($(KERNELID),otknl)

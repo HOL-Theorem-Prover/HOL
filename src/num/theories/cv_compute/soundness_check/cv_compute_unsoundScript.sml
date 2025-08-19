@@ -1,6 +1,8 @@
-open HolKernel boolLib cvTheory numTheory arithmeticTheory
-
-val _ = new_theory "cv_compute_unsound";
+Theory cv_compute_unsound[bare]
+Ancestors
+  cv num arithmetic
+Libs
+  HolKernel boolLib
 
 val bad_cv_fst_def = Prim_rec.new_recursive_definition {
   name = "bad_cv_fst_def",
@@ -21,5 +23,3 @@ Theorem bad_cv_fst1_lemma:
 Proof
   strip_tac >> asm_rewrite_tac[bad_cv_fst_def]
 QED
-
-val _ = export_theory();

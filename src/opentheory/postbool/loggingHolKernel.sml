@@ -18,6 +18,8 @@ struct
     val _ = set_const_name_handler ch
   in () end
 
+  val fake_nt = new_theory
+
   fun export_theory() = let
     open Lib Theory
     val directives = Logging.read_otdfile (current_theory() ^ ".otd")
@@ -35,4 +37,13 @@ struct
     val _ = List.app (ignore o export_thm) axs'
     val _ = stop_logging()
   in () end
+
+  val fake_et = export_theory
+
+  (* Shadow Theory.new_theory and Theory.export_theory *)
+  structure Theory = struct
+    open Theory
+    val new_theory = fake_nt
+    val export_theory = fake_et
+  end;
 end

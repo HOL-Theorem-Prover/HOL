@@ -8088,10 +8088,10 @@ val holfoot___varlist_update_NO_VAR_THM =
  **************************************)
 
 val _ = type_abbrev_pp("holfoot_program",
-Type `:((holfoot_var list # num list), (*procedure args*)
-        string (*locks*),
-        string, (*procedure names*)
-        holfoot_state (*states*)
+  Type `:((holfoot_var list # num list), (*procedure args*)
+          string (*locks*),
+          string, (*procedure names*)
+          holfoot_state (*states*)
    ) asl_program`);
 
 

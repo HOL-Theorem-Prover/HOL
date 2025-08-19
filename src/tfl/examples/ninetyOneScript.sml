@@ -1,17 +1,18 @@
 (*---------------------------------------------------------------------------
            McCarthy's 91 function.
  ---------------------------------------------------------------------------*)
+Theory ninetyOne
+Ancestors
+  prim_rec arithmetic
+Libs
+  Defn TotalDefn numLib
 
-open HolKernel Parse boolLib bossLib
-open Defn TotalDefn numLib prim_recTheory arithmeticTheory;
 
 (*---------------------------------------------------------------------------
        Define the 91 function. We call it "N". We use Hol_defn to
        make the definition, since we have to tackle the termination
        proof ourselves.
  ---------------------------------------------------------------------------*)
-
-val _ = new_theory "ninetyOne"
 
 val N_defn =
   Hol_defn "N"
@@ -166,4 +167,3 @@ Theorem TrN_recursive_characterisation =
 (* |- TrN n = if n <= 101 then 91 else n - 10 *)
 Theorem TrN_thm = NT_THM |> Q.SPECL [‘1’, ‘n’] |> SRULE[]
 
-val _ = export_theory()

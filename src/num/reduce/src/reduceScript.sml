@@ -1,7 +1,8 @@
-open HolKernel Parse boolLib;
-open arithmeticTheory computeLib;
-
-val _ = new_theory "reduce";
+Theory reduce[bare]
+Ancestors
+  arithmetic
+Libs
+  HolKernel Parse boolLib computeLib
 
 Theorem num_case_compute_lazy =
   lazyfy_thm arithmeticTheory.num_case_compute;
@@ -22,4 +23,3 @@ Proof
   ASM_REWRITE_TAC []
 QED
 
-val _ = export_theory ();

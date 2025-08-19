@@ -13,17 +13,15 @@
 (* ******************************************************************  *)
 
 (* app load ["wotTheory", "stringTheory"]; *)
+Theory toto
+Ancestors
+  pred_set relation pair arithmetic numeral string list
+  ternaryComparisons[qualified] set_relation[qualified]
+Libs
+  pred_setLib PairRules Defn
 
-open HolKernel boolLib Parse;
 
 val _ = set_trace "Unicode" 0;
-open pred_setLib pred_setTheory relationTheory pairTheory;
-open bossLib PairRules arithmeticTheory numeralTheory Defn;
-open stringTheory listTheory;
-local open ternaryComparisonsTheory set_relationTheory in end
-
-val _ = new_theory "toto";
-
 val _ = ParseExtras.temp_loose_equality()
 (* My habitual abbreviations: *)
 
@@ -1008,4 +1006,3 @@ val TO_of_LinearOrder_LEX = store_thm("TO_of_LinearOrder_LEX",
     ==> (TO_of_LinearOrder (R LEX V) = (TO_of_LinearOrder R) lexTO (TO_of_LinearOrder V))``,
   simp[lexTO,StrongLinearOrder_of_TO_TO_of_LinearOrder])
 
-val _ = export_theory ();

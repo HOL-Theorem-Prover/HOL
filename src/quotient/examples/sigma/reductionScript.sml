@@ -1,30 +1,13 @@
-open HolKernel Parse boolLib;
+Theory reduction
+Ancestors
+  list pred_set arithmetic more_set object alpha lift
+Libs
+  numLib Mutual ind_rel dep_rewrite barendregt tactics
 
 (* --------------------------------------------------------------------- *)
 (* Embedding the reduction semantaics of objects as a foundational       *)
 (* layer, according to Abadi and Cardelli, "A Theory of Objects."        *)
 (* --------------------------------------------------------------------- *)
-
-
-val _ = new_theory "reduction";
-
-
-open listTheory;
-open pred_setTheory;
-open numLib;
-open arithmeticTheory;
-open bossLib;
-open Mutual;
-open ind_rel;
-open dep_rewrite;
-open more_setTheory;
-open objectTheory;
-open alphaTheory;
-open liftTheory;
-open barendregt;
-
-open tactics;
-
 
 
 val vars   =  ty_antiq( ==`:var list`== );
@@ -2098,8 +2081,6 @@ val REQUAL_SUBSTITUTIVE = store_thm
    );
 
 
-
-val _ = export_theory();
 
 val _ = print_theory_to_file "reduction.lst";
 

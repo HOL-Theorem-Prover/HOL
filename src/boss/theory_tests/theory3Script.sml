@@ -1,11 +1,10 @@
 (* a TFL bug *)
+Theory theory3
+Ancestors
+  option
+Libs
+  monadsyntax
 
-open HolKernel Parse boolLib bossLib
-
-open optionTheory
-open monadsyntax
-
-val _ = new_theory "theory3";
 
 val _ = temp_add_monadsyntax()
 val _ = overload_on ("monad_bind", ``OPTION_BIND``)
@@ -56,4 +55,3 @@ val fails_ptree_Type_def = Pmatch.with_classic_heuristic Define `
 
 
 
-val _ = export_theory()

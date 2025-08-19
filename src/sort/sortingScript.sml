@@ -1,14 +1,12 @@
 (*---------------------------------------------------------------------------*
  *  General specification of sorting and correctness of quicksort            *
  *---------------------------------------------------------------------------*)
+Theory sorting
+Ancestors
+  rich_list combin pair relation list arithmetic pred_set
+Libs
+  markerLib metisLib BasicProvers
 
-open HolKernel Parse boolLib bossLib;
-open combinTheory pairTheory relationTheory listTheory
-     markerLib metisLib BasicProvers
-     arithmeticTheory pred_setTheory rich_listTheory
-
-val _ = new_theory "sorting";
-val _ = set_grammar_ancestry ["rich_list"]
 
 val _ = Defn.def_suffix := "_DEF";
 val _ = Defn.ind_suffix := "_IND";
@@ -1887,4 +1885,3 @@ Proof
   simp[]
 QED
 
-val _ = export_theory();

@@ -1,6 +1,6 @@
-open HolKernel Parse boolLib numLib quotient BasicProvers
-
-val _ = new_theory "quotient_test"
+Theory quotient_test
+Libs
+  numLib quotient BasicProvers
 
 val _ = print "Attempting quotient where reln has symbolic name\n"
 val _ = temp_remove_termtok {term_name = "<=>", tok = "<=>"}
@@ -12,7 +12,6 @@ val eq_equiv = prove(``!n m. <=> n m = (<=> n = <=> m)``,
 
 val _ = define_quotient_type "mod3" "abs_mod3" "rep_mod3" eq_equiv
 
-open bossLib
 val _ = Hol_datatype `foo = C1 | C2`
 
 fun mk_def t = let
@@ -38,4 +37,3 @@ val thms = define_equivalence_type {
              old_thms = [],
              welldefs = []}
 
-val _ = export_theory()

@@ -1,17 +1,16 @@
 (* file HS/PIN/enumeralScript.sml, created 4/15/13 F.L. Morris *)
 (* PIN-based finite set representation; name a homage to numeralTheory *)
 (* Revision of 5/12/13 - bringing back bt & bl to avoid finiteness hyps. *)
+Theory enumeral
+Ancestors
+  pred_set relation res_quan toto list
+Libs
+  pred_setLib res_quanLib
 
-open HolKernel boolLib Parse;
 
 (* app load ["totoTheory", "res_quanLib"]; *)
 
 val _ = set_trace "Unicode" 0;
-open pred_setLib pred_setTheory relationTheory res_quanTheory res_quanLib;
-open totoTheory bossLib listTheory;
-
-val _ = new_theory "enumeral";
-
 val cpn_nchotomy = TypeBase.nchotomy_of ``:ordering``
 Type cpn[local] = “:ordering”
 val _ = ParseExtras.temp_loose_equality()
@@ -1160,4 +1159,3 @@ val set_OWL_thm = store_thm ("set_OWL_thm",
 ``!cmp l:'a list. OWL cmp (set l) (incr_ssort cmp l)``,
 REWRITE_TAC [OWL, incr_ssort_set, incr_ssort_OL]);
 
-val _ = export_theory ();

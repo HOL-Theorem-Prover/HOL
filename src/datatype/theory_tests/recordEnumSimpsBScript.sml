@@ -1,8 +1,8 @@
-open HolKernel Parse BasicProvers simpLib Datatype
-
-val _ = new_theory "recordEnumSimpsB"
-
-local open recordEnumSimpsLib recordEnumSimpsATheory in end;
+Theory recordEnumSimpsB[bare]
+Ancestors
+  recordEnumSimpsA
+Libs
+  HolKernel Parse BasicProvers simpLib Datatype recordEnumSimpsLib
 
 val enum_lemma1 = Q.store_thm("enum_lemma1",
   ‘C2 <> C3’,
@@ -32,5 +32,3 @@ Theorem fields_of_test:
 Proof
   simp_tac (srw_ss()) []
 QED
-
-val _ = export_theory();

@@ -6,14 +6,14 @@
 app load
 ["bossLib", "rich_listTheory", "EncodeTheory", "normalForms", "metisLib"];
 *)
+Theory Decode
+Ancestors
+  pair arithmetic list rich_list Encode option combin
+Libs
+  pairTools metisLib normalForms
 
-open HolKernel boolLib Parse bossLib pairTheory pairTools
-     arithmeticTheory listTheory rich_listTheory EncodeTheory
-     metisLib optionTheory normalForms combinTheory;
 
 val arith_ss = old_arith_ss
-
-val () = new_theory "Decode";
 
 val Suff = Q_TAC SUFF_TAC;
 val Know = Q_TAC KNOW_TAC;
@@ -1169,4 +1169,3 @@ val _ = computeLib.add_persistent_funs
    decode_bnum, and decode_tree all have preconditions that need
    to be eliminated *)
 
-val _ = export_theory ();

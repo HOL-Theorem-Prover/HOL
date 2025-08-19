@@ -4,17 +4,18 @@
        function via a constant specification, but in this case,
        TFL technology makes an easy job of it.
  ---------------------------------------------------------------------------*)
+Theory container
+Ancestors
+  pred_set list bag sorting finite_map
+Libs
+  Defn TotalDefn BasicProvers listSimps
 
-open HolKernel Parse boolLib pred_setTheory listTheory bagTheory
-     Defn TotalDefn BasicProvers sortingTheory finite_mapTheory
-     listSimps bossLib;
 
 (* ---------------------------------------------------------------------*)
 (* Create the new theory.                                               *)
 (* ---------------------------------------------------------------------*)
 
-val _ = new_theory "container";
-  (* this theory may be for the chop; the set-related theorems are now all
+(* this theory may be for the chop; the set-related theorems are now all
      in listTheory.  The bag-related ones might end up there too if we
      decided to allow bag to move back in the build order.  Alternatively,
      the bag-related theorems could just go into bagTheory... *)
@@ -361,4 +362,3 @@ SIMP_TAC std_ss [BAG_OF_FMAP_THM, FINITE_EMPTY_BAG,
 
 
 
-val _ = export_theory ();

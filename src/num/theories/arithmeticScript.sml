@@ -10,13 +10,13 @@
 (* DATE          : September 15, 1991                                    *)
 (* ADDITIONS     : December 22, 1992                                     *)
 (* ===================================================================== *)
+Theory arithmetic[bare]
+Ancestors
+  num prim_rec combin relation
+Libs
+  HolKernel boolLib Parse BasicProvers simpLib boolSimps mesonLib
+  metisLib SatisfySimps[qualified] DefnBase[qualified]
 
-open HolKernel boolLib Parse BasicProvers;
-
-open simpLib boolSimps mesonLib metisLib numTheory prim_recTheory
-     combinTheory relationTheory;
-
-local open SatisfySimps DefnBase in end
 
 local
   open OpenTheoryMap
@@ -29,8 +29,6 @@ in
                        {const = {Thy = "arithmetic", Name = x},
                         name = (["Unwanted"], "id")}
 end
-
-val _ = new_theory "arithmetic";
 
 val _ = if !Globals.interactive then () else Feedback.emit_WARNING := false;
 
@@ -3604,6 +3602,26 @@ Proof
   PROVE_TAC [LESS_OR_EQ, NOT_LESS, LESS_TRANS]
 QED
 
+Theorem MIN_EQ_LE:
+  (a <= b ==> MIN a b = a) /\
+  (b <= a ==> MIN a b = b)
+Proof
+  simp [MIN_DEF]
+  >> rpt strip_tac
+  >- fs [LESS_OR_EQ]
+  >- (`~(a < b)` by simp [NOT_LT] >> simp [])
+QED
+
+Theorem MAX_EQ_GE:
+  (b <= a ==> MAX a b = a) /\
+  (a <= b ==> MAX a b = b)
+Proof
+  simp [MAX_DEF]
+  >> rpt strip_tac
+  >- (`~(a < b)` by simp [NOT_LT, LT_IMP_LE] >> simp [])
+  >- fs [LESS_OR_EQ]
+QED
+
 val MIN_0 = store_thm ("MIN_0",
   “!n. (MIN n 0 = 0) /\ (MIN 0 n = 0)”,
   REWRITE_TAC [MIN] THEN
@@ -5055,4 +5073,3 @@ Proof
   \\ rw[ONE, TWO, LESS_MONO, LESS_0]
 QED
 
-val _ = export_theory()

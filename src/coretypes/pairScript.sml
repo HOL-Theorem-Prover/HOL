@@ -17,12 +17,13 @@
  open Parse relationTheory mesonLib;
 *)
 
-open HolKernel Parse boolLib relationTheory mesonLib metisLib
-open quotientLib simpLib boolSimps BasicProvers
-
-local open computeLib in end
-
-val _ = new_theory "pair";
+Theory pair[bare]
+Ancestors
+  relation
+Libs
+  HolKernel Parse boolLib mesonLib metisLib
+  quotientLib simpLib boolSimps BasicProvers
+  computeLib[qualified] OpenTheoryMap[qualified]
 
 fun simp ths = simpLib.asm_simp_tac (srw_ss()) ths (* don't eta-reduce *)
 
@@ -54,11 +55,10 @@ val _ = add_infix_type
           Assoc = HOLgrammars.RIGHT};
 val _ = TeX_notation { hol = "#", TeX = ("\\HOLTokenProd{}", 1)}
 local
-  open OpenTheoryMap
   val ns = ["Data","Pair"]
 in
-  val _ = OpenTheory_tyop_name{tyop={Thy="pair",Tyop="prod"},name=(ns,"*")}
-  fun ot0 x y = OpenTheory_const_name{const={Thy="pair",Name=x},name=(ns,y)}
+  val _ = OpenTheoryMap.OpenTheory_tyop_name{tyop={Thy="pair",Tyop="prod"},name=(ns,"*")}
+  fun ot0 x y = OpenTheoryMap.OpenTheory_const_name{const={Thy="pair",Name=x},name=(ns,y)}
   fun ot x = ot0 x x
 end
 
@@ -1164,7 +1164,5 @@ val FST_EQ_EQUIV = Q.store_thm("FST_EQ_EQUIV",
 val SND_EQ_EQUIV = Q.store_thm("SND_EQ_EQUIV",
   ‘(SND p = y) <=> ?x. p = (x,y)’,
   Q.ISPEC_THEN `p` STRUCT_CASES_TAC pair_CASES >> simp_tac(srw_ss())[]);
-
-val _ = export_theory();
 
 val _ = export_theory_as_docfiles "pair-help/thms"

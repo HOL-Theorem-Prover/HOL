@@ -19,11 +19,12 @@
               "mesonLib", "metisLib", "whileTheory",
               "pairSyntax", "combinSyntax"];
 *)
+Theory numeral[bare]
+Ancestors
+  arithmetic
+Libs
+  HolKernel boolLib simpLib Parse Prim_rec metisLib BasicProvers
 
-open HolKernel boolLib arithmeticTheory simpLib Parse Prim_rec metisLib
-     BasicProvers;
-
-val _ = new_theory "numeral";
 
 val bool_ss = boolSimps.bool_ss;
 
@@ -981,4 +982,3 @@ val _ = app
           ["iZ", "iiSUC", "iDUB", "iSUB", "iSQR", "texp_help",
            "onecount", "exactlog"]
 
-val _ = export_theory();

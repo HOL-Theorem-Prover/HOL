@@ -19,13 +19,13 @@
 (* TRANSLATOR    : Konrad Slind, University of Calgary                   *)
 (* DATE          : September 15, 1991                                    *)
 (* ===================================================================== *)
+Theory one[bare]
+Ancestors[qualified]
+  sat
+Libs
+  Lib HolKernel Parse boolLib BasicProvers
 
 
-open Lib HolKernel Parse boolLib BasicProvers
-
-local open satTheory in end
-
-val _ = new_theory "one";
 
 local open OpenTheoryMap in
 val ns = ["Data","Unit"]
@@ -187,7 +187,3 @@ val _ = TypeBase.export (
     )
 
 val _ = computeLib.add_persistent_funs ["one_case_def"]
-
-
-
-val _ = export_theory();

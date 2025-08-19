@@ -1,5 +1,8 @@
-open HolKernel Parse boolLib bossLib IndDefLib
-     numTheory prim_recTheory arithmeticTheory
+Theory ordinalNotation
+Ancestors
+  num prim_rec arithmetic
+Libs
+  IndDefLib
 
 val _ = numLib.temp_prefer_num();
 
@@ -22,8 +25,6 @@ val meter = Count.mk_meter();
 (*---------------------------------------------------------------------------*)
 (* Start the theory                                                          *)
 (*---------------------------------------------------------------------------*)
-
-val _ = new_theory "ordinalNotation";
 
 (*---------------------------------------------------------------------------*)
 (* Raw syntax of ordinals                                                    *)
@@ -814,4 +815,3 @@ val pmult_def = tDefine "pmult" `
             Plus (padd (expt a) e2 m) c2 (pmult a k2 m)
 ` (WF_REL_TAC `measure (osyntax_size o FST o SND)`)
 
-val _ = export_theory();

@@ -1,11 +1,10 @@
 (*---------------------------------------------------------------------------
    Conditional expressions and their normalization (Boyer and Moore).
   ---------------------------------------------------------------------------*)
+Theory cond_exp
+Ancestors
+  arithmetic
 
-open HolKernel Parse boolLib bossLib arithmeticTheory;
-
-
-val _ = new_theory "cond_exp";
 
 (*---------------------------------------------------------------------------
    Datatype of conditional expressions.
@@ -83,4 +82,3 @@ Defn.tprove
   metis_tac [Weight_positive]
  );
 
-val _ = export_theory();

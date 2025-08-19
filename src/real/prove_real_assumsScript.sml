@@ -2,20 +2,19 @@
 (*  The bridge theory between OpenTheory real-1.61 and HOL4's realaxTheory   *)
 (* ========================================================================= *)
 
-open HolKernel boolLib bossLib BasicProvers;
-
-open OpenTheoryReader;
-
+Theory prove_real_assums
 (* NOTE: when proving real assumptions, we should not directly use theorems in
    realaxTheory, because we don't know which of them coincide with theorems
    provided by OT real-1.61. Instead, we retrieve all needed theorems from OT
    article, just like in prove_base_assumsScript.sml. -- Chun Tian, 7/7/2022
  *)
-local open realaxTheory in end
+Ancestors[qualified]
+  realax
+Libs
+  BasicProvers OpenTheoryReader
+
 
 val Thy = "prove_real_assums";
-val _ = new_theory Thy;
-
 (* NOTE: the purpose of the following two definitions is to replace HOL4's
    "invalid" definitions of “real_0” and “real_1” (in realaxTheory), from
 
@@ -469,5 +468,3 @@ val th21 = store_thm
 val _ = if List.length goals = 21 then ()
         else raise ERR "" ("unexpected number of assumptions: " ^
                            Int.toString(List.length goals) ^ "\n");
-
-val _ = export_theory();

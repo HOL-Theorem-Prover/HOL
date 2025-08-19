@@ -1,14 +1,12 @@
 (* -------------------------------------------------------------------------
    A bridging theory between integers and reals
    ------------------------------------------------------------------------- *)
+Theory intreal
+Ancestors
+  arithmetic integer real
+Libs
+  intLib RealArith hurdUtils realSimps[qualified]
 
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory integerTheory intLib realTheory RealArith hurdUtils;
-
-local open realSimps in end
-
-val _ = new_theory "intreal"
 
 (* -------------------------------------------------------------------------
    Define the inclusion homomorphism real_of_int :int->real.
@@ -707,8 +705,6 @@ Proof
 QED
 
 val _ = add_ML_dependency "intLib"
-
-val _ = export_theory ()
 
 (* References:
 

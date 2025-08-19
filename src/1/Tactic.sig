@@ -9,6 +9,8 @@ sig
   val CCONTR_TAC            : tactic
   val ASSUME_TAC            : thm_tactic
   val assume_tac            : thm_tactic
+  val LAST_ASSUME_TAC       : thm_tactic
+  val last_assume_tac       : thm_tactic
   val FREEZE_THEN           : thm_tactical
   val CONJ_TAC              : tactic
   val conj_tac              : tactic
@@ -118,21 +120,25 @@ sig
   val dxrule               : thm_tactic
   val rev_drule            : thm_tactic
   val rev_dxrule           : thm_tactic
+  val every_drule          : thm_tactic
 
   val drule_at             : match_position -> thm_tactic
   val dxrule_at            : match_position -> thm_tactic
   val rev_drule_at         : match_position -> thm_tactic
   val rev_dxrule_at        : match_position -> thm_tactic
+  val every_drule_at       : match_position -> thm_tactic
 
   val drule_then           : thm_tactic -> thm_tactic
   val dxrule_then          : thm_tactic -> thm_tactic
   val rev_drule_then       : thm_tactic -> thm_tactic
   val rev_dxrule_then      : thm_tactic -> thm_tactic
+  val every_drule_then     : thm_tactic -> thm_tactic
 
   val drule_at_then        : match_position -> thm_tactic -> thm_tactic
   val dxrule_at_then       : match_position -> thm_tactic -> thm_tactic
   val rev_drule_at_then    : match_position -> thm_tactic -> thm_tactic
   val rev_dxrule_at_then   : match_position -> thm_tactic -> thm_tactic
+  val every_drule_at_then  : match_position -> thm_tactic -> thm_tactic
 
 
   val drule_all            : thm_tactic

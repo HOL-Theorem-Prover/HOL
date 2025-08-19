@@ -1,9 +1,8 @@
-open HolKernel boolLib bossLib BasicProvers;
-open pred_setTheory arithmeticTheory listTheory rich_listTheory optionTheory
-     pairTheory relationTheory sortingTheory;
-open permLib;
-
-val _ = new_theory "mergesort";
+Theory mergesort
+Ancestors
+  pred_set arithmetic list rich_list option pair relation sorting
+Libs
+  BasicProvers permLib
 
 val _ = temp_tight_equality ();
 
@@ -569,4 +568,3 @@ time (fn x => (EVAL x; ())) ``QSORT $<= ^l'``;
 
 *)
 
-val _ = export_theory ();

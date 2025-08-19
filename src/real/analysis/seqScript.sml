@@ -1,17 +1,15 @@
 (*===========================================================================*)
 (* Theory of sequences and series of real numbers                            *)
 (*===========================================================================*)
+Theory seq
+Ancestors
+  pair arithmetic num prim_rec real metric nets combin pred_set
+  iterate real_sigma real_topology
+Libs
+  numLib reduceLib pairLib jrhUtils realSimps BasicProvers
+  res_quanTools realSimps realLib hurdUtils
 
-open HolKernel Parse boolLib bossLib;
 
-open numLib reduceLib pairLib pairTheory arithmeticTheory numTheory prim_recTheory
-     jrhUtils realTheory realSimps metricTheory netsTheory BasicProvers;
-
-open combinTheory pred_setTheory res_quanTools realSimps realLib;
-
-open hurdUtils iterateTheory real_sigmaTheory real_topologyTheory;
-
-val _ = new_theory "seq";
 val _ = ParseExtras.temp_loose_equality()
 
 val num_EQ_CONV = Arithconv.NEQ_CONV;
@@ -2141,4 +2139,3 @@ Proof
  >> rw [Abbr `f`, REAL_SUB_NEG2, REAL_LE_SUB_RADD, REAL_LE_ADDR]
 QED
 
-val _ = export_theory();

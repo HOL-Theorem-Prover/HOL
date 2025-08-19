@@ -6,19 +6,12 @@
 (* AUTHOR       : Konrad Slind, University of Cambridge, 2001           *)
 (* =====================================================================*)
 
-open HolKernel boolLib bossLib Parse;
-
-open numLib numSyntax listTheory rich_listTheory arithmeticTheory
-     pred_setTheory relationTheory;
-
-open ternaryComparisonsTheory;
-
-(* ---------------------------------------------------------------------*)
-(* Create the new theory                                                *)
-(* ---------------------------------------------------------------------*)
-
-val _ = new_theory "string";
-val _ = set_grammar_ancestry ["rich_list", "ternaryComparisons"]
+Theory string
+Ancestors
+  rich_list ternaryComparisons
+  list arithmetic pred_set relation
+Libs
+  numLib numSyntax
 
 (* ---------------------------------------------------------------------*)
 (* Characters are represented by the natural numbers <= 255.            *)
@@ -639,8 +632,6 @@ QED
 (*---------------------------------------------------------------------------
     Exportation
  ---------------------------------------------------------------------------*)
-
-val _ = export_theory();
 
 val _ = let
   val ^^ = Path.concat

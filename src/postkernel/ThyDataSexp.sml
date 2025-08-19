@@ -332,8 +332,7 @@ fun new {thydataty, load, other_tds, merge} =
                    hook0 td)
 
     fun export s =
-      (load {thyname = current_theory(), data = SOME s};
-       LTD.write_data_update {thydataty = thydataty, data = todata s})
+      LTD.write_data_update {thydataty = thydataty, data = todata s}
 
     fun set t =
         LTD.set_theory_data{thydataty = thydataty, data = todata t}

@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib
-
-val _ = new_theory "theory1"
+Theory theory1
 
 val _ = set_trace "Theory.allow_rebinds" 1
 
@@ -44,4 +42,3 @@ val g3_def = Define`g3 n = f3 (n + 1)`
 val f3_def = Define`f3 n = n + 5`;
 
 
-val _ = export_theory();

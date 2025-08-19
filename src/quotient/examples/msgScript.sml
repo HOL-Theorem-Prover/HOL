@@ -1,4 +1,8 @@
-open HolKernel Parse boolLib;
+Theory msg
+Ancestors
+  pred_set
+Libs
+  ind_rel quotientLib
 
 (* ------------------------------------------------------------------------ *)
 (* Representing cryptographic messages as a new datatype in the HOL logic.  *)
@@ -10,7 +14,6 @@ open HolKernel Parse boolLib;
 (* ------------------------------------------------------------------------ *)
 
 
-val _ = new_theory "msg";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -22,13 +25,6 @@ app load ["pred_setTheory",
           "quotientLib"];
 
 *)
-
-open pred_setTheory;
-open ind_rel;
-open bossLib;
-
-open quotientLib;
-
 
 val REWRITE_THM = fn th => REWRITE_TAC[th];
 
@@ -410,8 +406,6 @@ val FINITE_nonces = store_thm
 
 
 
-
-val _ = export_theory();
 
 val _ = print_theory_to_file "-" "msg.lst";
 
