@@ -805,6 +805,7 @@ fun pp_theories_as_tex_doc names =
   B [
     S "\\documentclass[", S texOptions, S "]{article}", NL,
     S "\\usepackage{holtex}", NL, NL,
+    S "\\usepackage{makeidx}", NL, NL,
     S "\\makeindex", NL, NL,
     S "\\begin{document}", NL, NL,
     B (PP.pr_list (fn x => (S ("\\input{" ^ (prefix_escape x) ^ "}")))
