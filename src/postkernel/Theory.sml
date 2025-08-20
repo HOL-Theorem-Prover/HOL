@@ -890,7 +890,9 @@ in
 fun export_theory_return_hash () = let
   val _ = call_hooks (TheoryDelta.ExportTheory (current_theory()))
   val {name=thyname,facts,thydata,mldeps,...} = scrubCT()
-  val all_thms = Symtab.fold(fn (s,(th,i)) => fn A => (s,th,i)::A) facts []
+  fun foldthis (nm, (thm, info)) A =
+      if is_temp_binding nm then A else (nm,thm,info)::A
+  val all_thms = Symtab.fold foldthis facts []
   val concat = String.concat
   val name = thyname^"Theory"
   val sigthry = {name = thyname,
