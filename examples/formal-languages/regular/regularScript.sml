@@ -4,30 +4,39 @@
 (* taken is set-oriented, rather than computational.                         *)
 (*===========================================================================*)
 
-open HolKernel Parse boolLib bossLib;
-open combinTheory pairTheory listTheory
-     mp_then nlistTheory numpairTheory
-     pred_setTheory relationTheory
-     rich_listTheory prim_recTheory
-     arithmeticTheory FormalLangTheory;
+Theory regular
+Ancestors
+ combin relation pred_set pair numpair
+ prim_rec arithmetic list rich_list nlist
+ FormalLang dirGraph dft
+Libs
+  mp_then
 
-open dirGraphTheory dftTheory;
 
-infix byA;
-val op byA = BasicProvers.byA;
+(*---------------------------------------------------------------------------*)
+(* Syntax support                                                            *)
+(*---------------------------------------------------------------------------*)
+
+Overload "\206\181"[local] = listSyntax.nil_tm  (* epsilon = UTF8.chr 0x03B5 *)
+Overload "\226\138\136"[local] = “λx y. ~(x ⊆ y)” (* not_subset = UTF8.chr 0x2288 *)
+
+Overload "RTC"[local] = “λs. KSTAR{[a] | a ∈ s}”
+Overload "RTC"[local] = “KSTAR”
+Overload "TC"[local]  = “KPLUS”
+
+val _ = set_fixity (UTF8.chr 0x2288) (Infix(NONASSOC, 450))
+
 
 val sym = SYM
 val subst_all_tac = SUBST_ALL_TAC
 val sym_subst_all_tac = subst_all_tac o sym
 val pop_subst_tac = pop_assum subst_all_tac;
 val pop_sym_subst_tac = pop_assum sym_subst_all_tac;
-val pop_keep_tac = pop_assum mp_tac
-val qpat_keep_tac = Lib.C qpat_x_assum mp_tac;
+val pop_stage_tac = pop_assum mp_tac
+val qpat_stage_tac = Lib.C qpat_x_assum mp_tac;
 val pop_forget_tac = pop_assum kall_tac
 val qpat_forget_tac = Lib.C qpat_x_assum kall_tac;
 val forget_tac = WEAKEN_TAC
-
-fun obtain_then q tac ttac = ttac (Q.prove(q,tac))
 
 val PUSH_EXISTS = LIST_CONJ
   [GSYM RIGHT_OR_EXISTS_THM,
@@ -38,15 +47,6 @@ val PUSH_EXISTS = LIST_CONJ
    LEFT_EXISTS_AND_THM,
    EXISTS_OR_THM];
 
-val epsilon = UTF8.chr 0x03B5;
-val not_subset = UTF8.chr 0x2288;
-
-val _ = temp_overload_on (epsilon,listSyntax.nil_tm);
-val - = temp_overload_on ("RTC", ``λs. KSTAR{[a] | a ∈ s}``);
-val _ = temp_overload_on ("RTC", ``KSTAR``);
-val _ = temp_overload_on ("TC",  ``KPLUS``);
-val _ = temp_overload_on (not_subset,“λx y. ~(x ⊆ y)”);
-val _ = set_fixity not_subset (Infix(NONASSOC, 450))
 
 fun dty_metis_tac list =
   let open TypeBasePure
@@ -55,8 +55,6 @@ fun dty_metis_tac list =
       val one_one  = List.mapPartial one_one_of dtys
    in metis_tac (list @ distinct @ one_one)
    end
-
-val _ = new_theory "regular";
 
 (* NOTE: duplicate theorems:
 
@@ -1308,7 +1306,7 @@ Theorem wf_nfa_plus:
   wf_nfa N ==> wf_nfa (nfa_plus N)
 Proof
   rw [wf_nfa_def, nfa_plus_def,SUBSET_DEF] >>
-  pop_keep_tac >> rw[] >> metis_tac []
+  pop_stage_tac >> rw[] >> metis_tac []
 QED
 
 Theorem is_dfa_compl:
@@ -1326,7 +1324,7 @@ Proof
  rw [is_dfa_def]
  >- metis_tac [wf_nfa_inter]
  >- (rw [nfa_inter_def,EXTENSION] >> metis_tac[])
- >- (ntac 2 pop_keep_tac >> rw [nfa_inter_def,EXTENSION,PULL_EXISTS] >>
+ >- (ntac 2 pop_stage_tac >> rw [nfa_inter_def,EXTENSION,PULL_EXISTS] >>
      ‘∃qa qb. {qa} = N1.delta q1 a ∧
               {qb} = N2.delta q2 a’ by metis_tac[] >>
      qexists_tac ‘qa ⊗ qb’ >> rw[EQ_IMP_THM]
@@ -1341,7 +1339,7 @@ Proof
  rw [is_dfa_def]
  >- metis_tac [wf_nfa_union]
  >- (rw [nfa_union_def,EXTENSION] >> metis_tac[])
- >- (ntac 2 pop_keep_tac >> rw [nfa_union_def,EXTENSION,PULL_EXISTS] >>
+ >- (ntac 2 pop_stage_tac >> rw [nfa_union_def,EXTENSION,PULL_EXISTS] >>
      ‘∃qa qb. {qa} = N1.delta q1 a ∧
               {qb} = N2.delta q2 a’ by metis_tac[] >>
      qexists_tac ‘qa ⊗ qb’ >> rw[EQ_IMP_THM]
@@ -1502,7 +1500,7 @@ Proof
   rw [wf_nfa_def,EXTENSION,in_nfa_lang]
 QED
 
-Theorem EPSILON_LANG_IN_REGULAR:
+Theorem EPSILONSET_IN_REGULAR:
   FINITE A ⇒ ({ε},A) ∈ REGULAR
 Proof
   rw [IN_REGULAR] >>
@@ -1779,8 +1777,8 @@ QED
 Theorem TRIVIAL_DOT_TRIVIAL_IN_REGULAR:
  L1 ⊆ {ε} ∧ L2 ⊆ {ε} ∧ FINITE A ⇒ (L1 dot L2,A) ∈ REGULAR
 Proof
-  rw [SUBSET_SING] >> simp [DOT_EMPTYSET, DOT_EPSILON] >>
-  metis_tac [EMPTYSET_IN_REGULAR,EPSILON_LANG_IN_REGULAR]
+  rw [SUBSET_SING] >> simp [DOT_EMPTYSET, DOT_EPSILONSET] >>
+  metis_tac [EMPTYSET_IN_REGULAR,EPSILONSET_IN_REGULAR]
 QED
 
 Triviality TRIVIAL_DOT_EPSILON_FREE_IN_REGULAR:
@@ -1791,7 +1789,7 @@ Triviality TRIVIAL_DOT_EPSILON_FREE_IN_REGULAR:
   (L = s1 ∪ (L DIFF {ε}) ⇒ ((L DIFF {ε}) dot s2,A) ∈ REGULAR)
 Proof
   rw [SUBSET_SING] >>
-  fs [DOT_EMPTYSET, DOT_EPSILON] >>
+  fs [DOT_EMPTYSET, DOT_EPSILONSET] >>
   metis_tac [EMPTYSET_IN_REGULAR, REGULAR_CLOSED_UNDER_EPSILON_DELETION,
              UNION_COMM,REGULAR_SIGMA_FINITE]
 QED
@@ -1872,7 +1870,7 @@ Theorem is_dfa_rename_states:
   wf_nfa N ⇒ (is_dfa (rename_states N base) ⇔ is_dfa N)
 Proof
   rw [is_dfa_def,EQ_IMP_THM,wf_nfa_rename_states]
-  >- (pop_forget_tac >> pop_keep_tac >> simp [rename_states_def] >>
+  >- (pop_forget_tac >> pop_stage_tac >> simp [rename_states_def] >>
       ‘BIJ (newFn base) N.initial (IMAGE (newFn base) N.initial)’ by
          (irule INJ_BIJ_SUBSET >> qexists_tac ‘𝕌(:num)’ >>
           rw [SUBSET_DEF] >> metis_tac [INJ_newFn]) >>
@@ -1901,7 +1899,7 @@ Proof
       rw[NULL_EQ,is_accepting_exec_def,in_nfa_lang]
       >- (drule is_exec_Sigma >> rw[])
       >- (qpat_forget_tac ‘_ ∈ nfa_lang _’ >>
-          qpat_keep_tac ‘HD qs ∈ _’ >> qpat_keep_tac ‘LAST qs ∈ _’ >>
+          qpat_stage_tac ‘HD qs ∈ _’ >> qpat_stage_tac ‘LAST qs ∈ _’ >>
           rw [rename_states_def] >> rename [‘qi ∈ N.initial’, ‘qf ∈ N.final’] >>
           qabbrev_tac ‘oldFn = LINV (newFn base) N.Q’ >>
           qexists_tac ‘MAP oldFn qs’ >> rw[]
@@ -1916,7 +1914,7 @@ Proof
               rw[Abbr ‘oldFn’,oldFn_newFn] >>
               qabbrev_tac ‘oldFn = LINV (newFn base) N.Q’ >>
               drule_all is_exec_delta >> rw [rename_states_def] >> rw[] >>
-              pop_keep_tac >> rw [Abbr‘oldFn’, oldFn_newFn] >>
+              pop_stage_tac >> rw [Abbr‘oldFn’, oldFn_newFn] >>
               ‘EL n w ∈ N.Sigma’ by (drule is_exec_Sigma >> rw [EVERY_EL]) >>
               metis_tac [wf_nfa_def, SUBSET_DEF,oldFn_newFn])))
   >- (drule_all in_nfa_lang_is_accepting_exec >>
@@ -1948,7 +1946,7 @@ Proof
  qexists_tac ‘rename_states N (MAX_SET (Q ∪ N.Q) + 1)’ >> rw[]
  >- (rw [rename_states_def,EXTENSION, Once (GSYM IMP_DISJ_THM),newFn_def] >>
      CCONTR_TAC >> pop_forget_tac >>
-     ‘FINITE N.Q’ by metis_tac [wf_nfa_def] >> qpat_keep_tac ‘_ ∈ _’ >>
+     ‘FINITE N.Q’ by metis_tac [wf_nfa_def] >> qpat_stage_tac ‘_ ∈ _’ >>
      rw [MAX_SET_UNION,MAX_DEF] >> irule MAX_SET_BOUNDED >> rw[])
  >- metis_tac [wf_nfa_rename_states]
  >- metis_tac [is_dfa_rename_states]
@@ -1988,7 +1986,7 @@ Proof
           rw[EL_APPEND1] >> rw [nfa_dot_def]
           >- metis_tac [is_exec_delta,is_dfa_def]
           >- metis_tac [is_exec_delta,is_dfa_def]
-          >- (qpat_keep_tac ‘EVERY _ qs1’ >> rw[EVERY_EL] >> metis_tac[]))
+          >- (qpat_stage_tac ‘EVERY _ qs1’ >> rw[EVERY_EL] >> metis_tac[]))
       >- (rw[] >> rfs[] >> rev_drule is_exec_length >>
           disch_then(assume_tac o SYM) >> ONCE_ASM_REWRITE_TAC[] >>
           rw[SRULE [NULL_EQ] EL_LENGTH_APPEND] >>
@@ -2473,7 +2471,7 @@ Definition cronch_def:
      else ([a], b::w, [q1], q2::qs)
 End
 
-Triviality cronch_splits_input:
+Theorem cronch_splits_input[local]:
  ∀M w qs wpref wsuff qpref qsuff.
    LENGTH qs = LENGTH w ∧
    cronch M w qs = (wpref,wsuff,qpref,qsuff)
@@ -2484,7 +2482,7 @@ Triviality cronch_splits_input:
    LENGTH wsuff = LENGTH qsuff
 Proof
   recInduct cronch_ind >>
-  rw [cronch_def,AllCaseEqs()] >> simp[]
+  rw[AllCaseEqs(),cronch_def] >> gvs[]
 QED
 
 Triviality cronch_consumes_lem:
@@ -2536,7 +2534,7 @@ Proof
   recInduct cronch_ind >> simp [] >>
   rpt conj_tac >> rpt (gen_tac ORELSE disch_tac)
   >~ [‘cronch M (a::b::w) (q1::q2::qs) = (wpref,wsuff,qpref,qsuff)’]
-  >- (pop_keep_tac >> simp [cronch_def,AllCaseEqs(),PULL_EXISTS] >>
+  >- (pop_stage_tac >> simp [cronch_def,AllCaseEqs(),PULL_EXISTS] >>
       rw[] >> gvs[]
       >- (‘LENGTH qs = LENGTH w’ by gvs[is_exec_def] >>
           imp_res_tac cronch_consumes >> rw[] >> gvs[] >>
@@ -2656,7 +2654,7 @@ Theorem cronch_all_thm:
   w = FLAT wslist ∧
   wslist ≠ []
 Proof
-  recInduct cronch_all_ind >> rw[] >> fs[] >> pop_keep_tac >>
+  recInduct cronch_all_ind >> rw[] >> fs[] >> pop_stage_tac >>
   rw [Once cronch_all_def,AllCaseEqs(),PULL_EXISTS] >> fs[] >>
   drule_all cronch_accepting_exec_alt >> rw[] >>
   ‘LENGTH qs = LENGTH (ARB::w)’ by
@@ -2727,10 +2725,11 @@ Proof
   strip_tac >>
   strip_assume_tac (isolate_trivial_cases |> Q.ISPEC ‘L:num list->bool’) >>
   rename1 ‘s ⊆ {ε}’ >> ONCE_ASM_REWRITE_TAC[] >>
-  rw [KSTAR_UNION,KSTAR_TRIVIAL,DOT_EPSILON] >>
+  rw [KSTAR_UNION] >>
+  gvs[GSYM KSTAR_TRIVIAL_IFF,DOT_EPSILONSET] >>
   rw [GSYM KPLUS_UNION_EPSILON_EQ_KSTAR] >>
   irule REGULAR_CLOSED_UNDER_UNION >> reverse conj_tac
-  >- metis_tac [EPSILON_LANG_IN_REGULAR,REGULAR_SIGMA_FINITE]
+  >- metis_tac [EPSILONSET_IN_REGULAR,REGULAR_SIGMA_FINITE]
   >- (irule REGULAR_CLOSED_UNDER_EPSILON_FREE_KPLUS >> rw[] >>
       metis_tac [REGULAR_CLOSED_UNDER_EPSILON_DELETION])
 QED
@@ -3130,7 +3129,7 @@ QED
 Theorem FINITE_STATE_EQ_REGULAR:
   FINITE_STATE = REGULAR
 Proof
-  simp[SET_EQ_SUBSET,
+  metis_tac[SET_EQ_SUBSET,
        REGULAR_SUBSET_FINITE_STATE,
        FINITE_STATE_SUBSET_REGULAR]
 QED
@@ -3363,7 +3362,7 @@ Proof
  ‘words_of_state M q =
   words_of_state M (state_of_class M (words_of_state M q))’ by
     metis_tac[words_of_state_in_partition] >>
-  pop_keep_tac >> simp[EXTENSION,in_words_of_state] >>
+  pop_stage_tac >> simp[EXTENSION,in_words_of_state] >>
   disch_then (mp_tac o Q.SPEC ‘x’) >> rw[]
 QED
 
@@ -3464,7 +3463,7 @@ Proof
   ‘E (x++z) (y++z)’ by metis_tac[] >>
   rw[EQ_IMP_THM] >> qexists_tac ‘s’ >> simp[] >>
   ‘s ∈ partition E (KSTAR {[a] | a ∈ A})’ by
-     metis_tac [SUBSET_DEF] >> pop_keep_tac >>
+     metis_tac [SUBSET_DEF] >> pop_stage_tac >>
   rw[in_partition]
      >- (‘EVERY (λa. a ∈ A) (x++z) ∧ E x' (x++z)’ by metis_tac[] >>
          simp[] >> qpat_x_assum ‘_ equiv_on _’ mp_tac >>
@@ -3686,7 +3685,7 @@ Proof
        >- (qexists_tac ‘x ++ l’ >> rw [Abbr ‘Lclass’] >>
            ‘(x ++ l) ∈ KSTAR {[a] | a ∈ A}’ by simp [] >>
            metis_tac [EVERY_APPEND,equiv_on_def])
-       >- (pop_keep_tac >> qunabbrev_tac ‘Lclass’ >>
+       >- (pop_stage_tac >> qunabbrev_tac ‘Lclass’ >>
            rw[EXTENSION] >> (ntac 2 cong_tac >> TRY REFL_TAC) >>
            irule lang_equiv_abs >>
            irule (iffLR right_invar_def) >> conj_tac
@@ -3703,7 +3702,7 @@ Proof
           gvs[SUBSET_DEF] >>
        qexists_tac ‘numOf (Lclass x)’ >> rw[] >>
        qunabbrev_tac ‘M’ >> rw[])
-   >- (ntac 2 pop_keep_tac >> rw[Abbr‘M’] >>
+   >- (ntac 2 pop_stage_tac >> rw[Abbr‘M’] >>
         rename1 ‘numOf (Lclass x) = numOf (Lclass y)’ >>
         ‘Lclass x ∈ Qparts ∧ Lclass y ∈ Qparts’ by
            (qunabbrev_tac ‘Qparts’ >> gvs [SUBSET_DEF] >>
@@ -3985,9 +3984,8 @@ QED
 *)
 
 (*---------------------------------------------------------------------------*)
-(* Accessibility is computed by an instance of depth-first traversal. Here   *)
-(* is a case where we drift away from our above-stated policy of avoiding    *)
-(* aspects of computing over, or with, automata.                             *)
+(* Accessibility is computed by an instance of depth-first traversal,        *)
+(* violating our policy of avoiding computational aspects.                   *)
 (*---------------------------------------------------------------------------*)
 
 Definition kidlist_def:
@@ -4004,7 +4002,7 @@ Proof
   qexists_tac ‘N.Q’ >>
   gvs [wf_nfa_def] >>
   rw[Parents_def, kidlist_def,SUBSET_DEF] >>
-  pop_keep_tac >> IF_CASES_TAC >> rw[]
+  pop_stage_tac >> IF_CASES_TAC >> rw[]
 QED
 
 (*---------------------------------------------------------------------------*)
@@ -4045,7 +4043,7 @@ Proof
   irule DFT_REACH_THM >> metis_tac[]
 QED
 
-Theorem goolr[local]:
+Theorem reachable_accessible[local]:
   is_dfa M ⇒
   ∀p q. (λx y. set (kidlist M x) y)꙳ p q ⇒ p ∈ M.initial ⇒ q ∈ accessible_states M
 Proof
@@ -4070,7 +4068,7 @@ Proof
      rw[EXTENSION,GSPECIFICATION] >> metis_tac[])
 QED
 
-Theorem goorl[local]:
+Theorem accessible_reachable[local]:
   ∀w p q.
     is_dfa M ∧
     M.initial = {p} ∧
@@ -4083,7 +4081,7 @@ Proof
    recInduct SNOC_INDUCT >> rw[]
    >- gvs [nfa_eval_eqns] >>
    gvs [EVERY_SNOC,SNOC_APPEND] >>
-   pop_keep_tac >>
+   pop_stage_tac >>
    ‘{p} ⊆ M.Q’ by
       metis_tac [is_dfa_def,wf_nfa_def] >>
    drule_all dfa_eval_final_state >>
@@ -4121,8 +4119,8 @@ Proof
   rw [EQ_IMP_THM]
   >- (‘∃p. M.initial = {p}’ by
         metis_tac [is_dfa_def] >> simp[] >>
-      simp[IN_DEF] >> irule_at Any goorl >> simp[])
-  >- (irule goolr >> simp [] >>
+      simp[IN_DEF] >> irule_at Any accessible_reachable >> simp[])
+  >- (irule reachable_accessible >> simp [] >>
       first_x_assum (irule_at Any) >> gvs[IN_DEF])
 QED
 
