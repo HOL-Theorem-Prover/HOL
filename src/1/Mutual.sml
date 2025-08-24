@@ -377,10 +377,13 @@ fun MUTUAL_INDUCT_THEN1 th =
       handle HOL_ERR _
        => raise ERR "MUTUAL_INDUCT_THEN" "tactic application error"
    end
+   handle HOL_ERR _ => raise ERR "MUTUAL_INDUCT_THEN" ""
+(* TODO fix:
    handle (e as HOL_ERR
                    {origin_structure = "Mutual",
                     origin_function = "MUTUAL_INDUCT_THEN",...}) => raise e
         | _ => raise ERR "MUTUAL_INDUCT_THEN" "ill-formed induction theorem"
+*)
 
 in
 

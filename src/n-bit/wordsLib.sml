@@ -1527,16 +1527,24 @@ fun WORD_LIT_CONV tm =
 
 val NEG1_WORD1 = Drule.EQT_ELIM (WORD_EVAL_CONV ``-1w = 1w : word1``)
 
+local
+fun CHANGED_CONV conv tm =
+   let
+      val th = conv tm
+      val (lhs, rhs) = dest_eq (concl th)
+   in
+      if aconv lhs rhs
+         then raise Conv.UNCHANGED
+      else th
+   end
+in
 fun WORD_SUB_CONV tm =
-   Conv.CHANGED_CONV
+   CHANGED_CONV
      (SIMP_CONV (bool_ss++WORD_MULT_ss++WORD_SUBTRACT_ss) []
       THENC DEPTH_CONV WORD_LIT_CONV
       THENC PURE_REWRITE_CONV [WORD_SUB_INTRO, WORD_NEG_SUB, WORD_SUB_RNEG,
               WORD_NEG_NEG, WORD_MULT_CLAUSES, NEG1_WORD1]) tm
-   handle HOL_ERR (err as {origin_function, ...}) =>
-      if origin_function = "CHANGED_CONV"
-         then raise Conv.UNCHANGED
-      else raise HOL_ERR err
+end
 
 val WORD_SUB_ss =
    simpLib.name_ss "WORD_SUB"
@@ -1829,8 +1837,12 @@ fun WORD_BIT_INDEX_CONV toindex =
          in
             Drule.ISPEC w (Drule.MATCH_MP thm lt)
          end
+         handle HOL_ERR _ =>
+            raise ERR "WORD_BIT_INDEX_CONV" "index too large"
+(*
          handle HOL_ERR {origin_function = "EQT_ELIM", ...} =>
             raise ERR "WORD_BIT_INDEX_CONV" "index too large"
+*)
    end
 
 (* ------------------------------------------------------------------------- *)

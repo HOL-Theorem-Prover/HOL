@@ -80,21 +80,21 @@ val REWR_CONV_A  = REWR_CONV0 (PART_MATCH_A,    "REWR_CONV_A")
  * Revised Michael Norrish 2000.03.27                                   *
  *    now passes on information about nested failure                    *
  *----------------------------------------------------------------------*)
-
+(*
 fun set_origin fnm
     {origin_function, origin_structure, source_location, message} =
   if Lib.mem origin_function ["RAND_CONV", "RATOR_CONV", "ABS_CONV"]
       andalso origin_structure = "Conv"
       then ERRloc fnm source_location message
   else ERRloc fnm source_location (origin_function ^ ": " ^ message)
-
+*)
 fun RAND_CONV conv tm =
    let
       val {Rator, Rand} =
          dest_comb tm handle HOL_ERR _ => raise ERR "RAND_CONV" "not a comb"
       val newrand =
          conv Rand
-         handle HOL_ERR e => raise set_origin "RAND_CONV" e
+         handle (e as HOL_ERR _) => raise wrap_exn "Conv" "RAND_CONV" e
    in
       AP_TERM Rator newrand
       handle HOL_ERR {message, ...} =>
@@ -117,7 +117,7 @@ fun RATOR_CONV conv tm =
          dest_comb tm handle HOL_ERR _ => raise ERR "RATOR_CONV" "not a comb"
       val newrator =
          conv Rator
-         handle HOL_ERR e => raise set_origin "RATOR_CONV" e
+         handle (e as HOL_ERR _) => raise wrap_exn "Conv" "RATOR_CONV" e
    in
       AP_THM newrator Rand
       handle HOL_ERR {message, ...} =>
@@ -158,7 +158,7 @@ fun ABS_CONV conv tm =
                  in
                     TRANS (TRANS th1 eq_thm') th2
                  end
-                 handle HOL_ERR e => raise set_origin "ABS_CONV" e
+                 handle (e as HOL_ERR _) => raise wrap_exn "Conv" "ABS_CONV" e
         end
     | _ => raise ERR "ABS_CONV" "Term not an abstraction"
 
@@ -927,9 +927,12 @@ in
               IMP_ANTISYM_RULE imp1 (DISCH otm thm2)
            end
       end
+      handle HOL_ERR _ => raise ERR "EXISTS_AND_CONV" ""
+(* TODO fix
       handle e as HOL_ERR {origin_structure = "Conv",
                            origin_function = "EXISTS_AND_CONV", ...} => raise e
            | HOL_ERR _ => raise ERR "EXISTS_AND_CONV" ""
+*)
 end
 
 (*----------------------------------------------------------------------*
@@ -959,9 +962,12 @@ in
                      (mk_exists {Bvar = x,
                                  Body = mk_conj {conj1 = P, conj2 = Q}}))
       end
+      handle HOL_ERR _ => raise ERR "AND_EXISTS_CONV" ""
+(* TODO fix
       handle e as HOL_ERR {origin_structure = "Conv",
                            origin_function = "AND_EXISTS_CONV", ...} => raise e
            | HOL_ERR _ => raise ERR "AND_EXISTS_CONV" ""
+*)
 end
 
 (*----------------------------------------------------------------------*
@@ -1099,9 +1105,12 @@ in
                IMP_ANTISYM_RULE imp1 (DISCH otm imp2)
             end
       end
+      handle HOL_ERR _ => raise ERR "FORALL_OR_CONV" ""
+(* TODO fix
       handle e as HOL_ERR {origin_structure = "Conv",
                            origin_function = "FORALL_OR_CONV", ...} => raise e
            | HOL_ERR _ => raise ERR "FORALL_OR_CONV" ""
+*)
 end
 
 (*----------------------------------------------------------------------*
@@ -1130,9 +1139,12 @@ in
       else SYM (FORALL_OR_CONV
                   (mk_forall {Bvar = x, Body = mk_disj {disj1 = P, disj2 = Q}}))
    end
+   handle HOL_ERR _ => raise ERR "OR_FORALL_CONV" ""
+(* TODO fix
    handle e as HOL_ERR {origin_structure = "Conv",
                         origin_function = "OR_FORALL_CONV", ...} => raise e
         | HOL_ERR _ => raise ERR "OR_FORALL_CONV" ""
+*)
 end
 
 (*----------------------------------------------------------------------*
@@ -1257,9 +1269,12 @@ in
                  IMP_ANTISYM_RULE imp1 imp2
               end
       end
+      handle HOL_ERR _ => raise ERR "FORALL_IMP_CONV" ""
+(* TODO FIX
       handle e as HOL_ERR {origin_structure = "Conv",
                            origin_function = "FORALL_IMP_CONV", ...} => raise e
            | HOL_ERR _ => raise ERR "FORALL_IMP_CONV" ""
+*)
 end
 
 (*----------------------------------------------------------------------*
@@ -1385,9 +1400,12 @@ in
               IMP_ANTISYM_RULE imp1 imp2
            end
     end
+    handle  HOL_ERR _ => raise ERR "EXISTS_IMP_CONV" ""
+(* TODO fix
     handle e as HOL_ERR {origin_structure = "Conv",
                          origin_function = "EXISTS_IMP_CONV", ...} => raise e
              | HOL_ERR _ => raise ERR "EXISTS_IMP_CONV" ""
+*)
 end
 
 (*----------------------------------------------------------------------*
@@ -1499,10 +1517,13 @@ in
                       IMP_ANTISYM_RULE imp1 imp2
                    end
            end
+           handle HOL_ERR _ => err ""
+   (*TODO fix
            handle e as HOL_ERR
                          {origin_structure = "Conv",
                           origin_function = "X_SKOLEM_CONV", ...} => raise e
                  | HOL_ERR _ => err ""
+   *)
    (* val X_SKOLEM_CONV = w "X_SKOLEM_CONV" X_SKOLEM_CONV *)
 end
 

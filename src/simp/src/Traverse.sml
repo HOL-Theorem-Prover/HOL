@@ -183,8 +183,8 @@ fun FIRSTCQC_CONV [] t = failwith "no conversion worked"
   | FIRSTCQC_CONV (c::cs) t = let
     in
       c t
-      handle e as HOL_ERR { origin_structure = "Opening",
-                            origin_function = "CONGPROC",
+      handle e as HOL_ERR { origin = [{origin_structure = "Opening",
+                            origin_function = "CONGPROC"}],
                             message = "Congruence gives no change", ...} => raise e
            | Interrupt => raise Interrupt
            | _ => FIRSTCQC_CONV cs t

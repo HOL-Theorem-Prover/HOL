@@ -52,9 +52,9 @@ local
    val mesg = Lib.with_flag (Feedback.MESG_to_string, Lib.I) Feedback.HOL_MESG
    fun provide_feedback f (t, tac: tactic) =
       f (t, tac)
-      handle (e as HOL_ERR {message = m, origin_function = f, ...}) =>
+      handle (e as HOL_ERR {message = m, origin = origin, ...}) =>
            (mesg ("Proof of \n\n" ^ Parse.term_to_string t ^ "\n\nfailed.\n")
-            ; (case (m, f, unsolved ()) of
+            ; (case (m, #origin_function (hd origin), unsolved ()) of
                   ("unsolved goals", "TAC_PROOF", (_, u)::_) =>
                       if Term.term_eq u t
                          then ()
@@ -873,8 +873,11 @@ local
    in
       (gl, (if is_neg w then NEG_DISCH ant else DISCH ant) o prf)
    end
+   handle (e as HOL_ERR _) => raise (wrap_exn "Tactical" "DISCH_THEN" e)
+(* TODO fix
    handle HOL_ERR {message,origin_function, ...} =>
           raise ERR "DISCH_THEN" (origin_function ^ ":" ^ message)
+*)
   val NOT_NOT_E = boolTheory.NOT_CLAUSES |> CONJUNCT1
   val NOT_NOT_I = NOT_NOT_E |> GSYM
   val NOT_IMP_F = IMP_ANTISYM_RULE (SPEC_ALL boolTheory.F_IMP)
