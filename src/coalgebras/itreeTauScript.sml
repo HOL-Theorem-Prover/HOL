@@ -1724,39 +1724,18 @@ Proof
   \\ gvs[]
 QED
 
-Theorem after_taus_itree_wbisim_strip_tau:
-  after_taus itree_wbisim t t' <=>
-  (?t'' t'''. strip_tau t t'' /\ strip_tau t' t''' /\ itree_wbisim t'' t''') \/
-  (t = spin /\ t' = spin)
+Theorem after_taus_itree_wbisim_itree_wbisim:
+  after_taus itree_wbisim t t' <=> itree_wbisim t t'
 Proof
   iff_tac
   >- (qid_spec_tac ‘t'’
       \\ qid_spec_tac ‘t’
       \\ ho_match_mp_tac after_taus_strongind
       \\ rw[spin, GSYM spin]
-      >- (reverse $ Cases_on ‘?x. strip_tau t x’ \\ gvs[]
-          >- (dxrule strip_tau_spin
-              \\ rw[]
-              \\ irule $ iffLR wbisim_spin_eq
-              \\ rw[itree_wbisim_sym]
-             )
-          \\ Cases_on ‘x’ \\ gvs[]
-          >- (qspecl_then [‘t’, ‘t'’, ‘x'’] assume_tac itree_wbisim_strip_tau_Ret
-              \\ metis_tac[itree_wbisim_refl]
-             )
-          \\ qspecl_then [‘t’, ‘t'’, ‘a’, ‘g’] assume_tac itree_wbisim_strip_tau_Vis
-          \\ metis_tac[itree_wbisim_vis]
-         )
-      \\ metis_tac[]
      )
-  \\ reverse $ rw[]
-  >- (irule after_taus_rel \\ rw[itree_wbisim_refl]
-     )
-  \\ imp_res_tac strip_tau_FUNPOW
-  \\ rw[]
-  \\ irule after_taus_FUNPOW_TauL
-  \\ irule after_taus_FUNPOW_TauR
-  \\ irule after_taus_rel \\ rw[]
+  \\ disch_tac
+  \\ irule $ cj 1 after_taus_rules
+  \\ simp[]
 QED
 
 (* strong bisimulation from an instance up to full tree of an abstraction *)
