@@ -19,7 +19,7 @@
 structure Conv :> Conv =
 struct
 
-open HolKernel Parse boolTheory Drule boolSyntax Rsyntax Abbrev
+open HolKernel Parse boolTheory Drule boolSyntax Abbrev
 
 exception UNCHANGED
 
@@ -90,7 +90,7 @@ fun set_origin fnm
 
 fun RAND_CONV conv tm =
    let
-      val {Rator, Rand} =
+      val (Rator, Rand) =
          dest_comb tm handle HOL_ERR _ => raise ERR "RAND_CONV" "not a comb"
       val newrand =
          conv Rand
@@ -113,7 +113,7 @@ fun RAND_CONV conv tm =
 
 fun RATOR_CONV conv tm =
    let
-      val {Rator, Rand} =
+      val (Rator, Rand) =
          dest_comb tm handle HOL_ERR _ => raise ERR "RATOR_CONV" "not a comb"
       val newrator =
          conv Rator
@@ -139,28 +139,27 @@ fun LAND_CONV c = RATOR_CONV (RAND_CONV c)
  *----------------------------------------------------------------------*)
 
 fun ABS_CONV conv tm =
-   case dest_term tm of
-      LAMB {Bvar, Body} =>
+   let
+      val (Bvar,Body) =
+         dest_abs tm handle HOL_ERR _ => raise ERR "ABS_CONV" "Term not an abstraction"
+      val newbody = conv Body
+   in
+      ABS Bvar newbody
+      handle HOL_ERR _ =>
         let
-           val newbody = conv Body
+           val v = genvar (type_of Bvar)
+           val th1 = ALPHA_CONV v tm
+           val r = rhs (concl th1)
+           val (_,Body') = dest_abs r
+           val eq_thm' = ABS v (conv Body')
+           val at = rhs (concl eq_thm')
+           val v' = variant (free_vars at) Bvar
+           val th2 = ALPHA_CONV v' at
         in
-          ABS Bvar newbody
-          handle HOL_ERR _ =>
-                 let
-                    val v = genvar (type_of Bvar)
-                    val th1 = ALPHA_CONV v tm
-                    val r = rhs (concl th1)
-                    val {Body = Body', ...} = dest_abs r
-                    val eq_thm' = ABS v (conv Body')
-                    val at = rhs (concl eq_thm')
-                    val v' = variant (free_vars at) Bvar
-                    val th2 = ALPHA_CONV v' at
-                 in
-                    TRANS (TRANS th1 eq_thm') th2
-                 end
-                 handle HOL_ERR e => raise set_origin "ABS_CONV" e
+           TRANS (TRANS th1 eq_thm') th2
         end
-    | _ => raise ERR "ABS_CONV" "Term not an abstraction"
+        handle HOL_ERR e => raise set_origin "ABS_CONV" e
+   end
 
 (*----------------------------------------------------------------------*
  * LHS_CONV conv "t1 = t2" applies conv to t1                           *
@@ -242,7 +241,7 @@ fun CHANGED_CONV conv tm =
       val th = conv tm
                handle UNCHANGED =>
                  raise ERR "CHANGED_CONV" "Input term unchanged"
-      val {lhs, rhs} = dest_eq (concl th)
+      val (lhs, rhs) = dest_eq (concl th)
    in
       if aconv lhs rhs
          then raise ERR "CHANGED_CONV" "Input term unchanged"
@@ -284,7 +283,7 @@ fun IFC (conv1:conv) conv2 conv3 tm =
 fun UNCHANGED_CONV (conv: conv) tm =
    let
       val th = Lib.with_exn conv tm UNCHANGED
-      val {lhs,rhs} = dest_eq (concl th)
+      val (lhs,rhs) = dest_eq (concl th)
    in
       if aconv lhs rhs then raise UNCHANGED else th
    end
@@ -309,7 +308,7 @@ fun TRY_CONV conv = conv ORELSEC ALL_CONV
 
 fun COMB2_CONV (c1,c2) tm =
    let
-      val {Rator, Rand} = dest_comb tm
+      val (Rator, Rand) = dest_comb tm
    in
       let
          val th = c1 Rator
@@ -325,7 +324,6 @@ fun SUB_CONV conv = TRY_CONV (COMB_CONV conv ORELSEC ABS_CONV conv)
 
 fun FORK_CONV (conv1, conv2) tm =
    let
-      open Term (* get rid of overlying Rsyntax *)
       val (fx, y) = with_exn dest_comb tm (ERR "FORK_CONV" "term not a comb")
       val (f, x)  = with_exn dest_comb fx (ERR "FORK_CONV" "term not f x y")
    in
@@ -501,21 +499,17 @@ fun HYP_CONV_RULE hypsel conv th =
 val BETA_RULE = CONV_RULE (DEPTH_CONV BETA_CONV)
 
 fun UNBETA_CONV arg_t t =
-   let
-      open Term (* counteract prevailing Rsyntax *)
-   in
-      if is_var arg_t
-         then SYM (BETA_CONV (mk_comb (mk_abs (arg_t, t), arg_t)))
-      else let
-              (* find all instances of arg_t in t, and convert t
-                 to (\v. t[v/arg_t]) arg_t
-                 v can be a genvar because we expect to get rid of it later. *)
-              val gv = genvar (type_of arg_t)
-              val newbody = Term.subst [arg_t |-> gv] t
-           in
-              SYM (BETA_CONV (Term.mk_comb (mk_abs (gv, newbody), arg_t)))
-           end
-   end
+   if is_var arg_t
+      then SYM (BETA_CONV (mk_comb (mk_abs (arg_t, t), arg_t)))
+   else let
+           (* find all instances of arg_t in t, and convert t
+              to (\v. t[v/arg_t]) arg_t
+              v can be a genvar because we expect to get rid of it later. *)
+           val gv = genvar (type_of arg_t)
+           val newbody = Term.subst [arg_t |-> gv] t
+        in
+           SYM (BETA_CONV (Term.mk_comb (mk_abs (gv, newbody), arg_t)))
+        end
 
 (* =====================================================================*
  * What follows is a complete set of conversions for moving ! and ? into*
@@ -545,7 +539,7 @@ fun UNBETA_CONV arg_t t =
  *----------------------------------------------------------------------*)
 
 fun NOT_FORALL_CONV tm =
-   let
+   let open Rsyntax
       val all = dest_neg tm
       val {Bvar, Body} = dest_forall all
       val exists = mk_exists {Bvar = Bvar, Body = mk_neg Body}
@@ -569,7 +563,7 @@ fun NOT_FORALL_CONV tm =
  *----------------------------------------------------------------------*)
 
 fun NOT_EXISTS_CONV tm =
-   let
+   let open Rsyntax
       val {Bvar, Body} = dest_exists (dest_neg tm)
       val all = mk_forall {Bvar = Bvar, Body = mk_neg Body}
       val rand_tm = rand tm
@@ -593,7 +587,7 @@ fun NOT_EXISTS_CONV tm =
  *----------------------------------------------------------------------*)
 
 fun EXISTS_NOT_CONV tm =
-   let
+   let open Rsyntax
       val {Bvar, Body} = dest_exists tm
    in
       SYM (NOT_FORALL_CONV
@@ -609,7 +603,7 @@ fun EXISTS_NOT_CONV tm =
  *----------------------------------------------------------------------*)
 
 fun FORALL_NOT_CONV tm =
-   let
+   let open Rsyntax
       val {Bvar, Body} = dest_forall tm
    in
       SYM (NOT_EXISTS_CONV
@@ -626,7 +620,7 @@ fun FORALL_NOT_CONV tm =
  *----------------------------------------------------------------------*)
 
 fun FORALL_AND_CONV tm =
-   let
+   let open Rsyntax
       val {Bvar, Body} = dest_forall tm
       val {...} = dest_conj Body
       val (Pth, Qth) = CONJ_PAIR (SPEC Bvar (ASSUME tm))
@@ -673,7 +667,7 @@ fun FORALL_AND_CONV tm =
 **    handle HOL_ERR _ => raise ERR "EXISTS_OR_CONV" ""
 *)
 
-local
+local open Rsyntax
    val alpha = Type.alpha
    val spotBeta = FORK_CONV (QUANT_CONV (BINOP_CONV BETA_CONV),
                              BINOP_CONV (QUANT_CONV BETA_CONV))
@@ -709,7 +703,7 @@ end
  *----------------------------------------------------------------------*)
 
 fun AND_FORALL_CONV tm =
-   let
+   let open Rsyntax
       val {conj1, conj2} = dest_conj tm
       val {Bvar = x, Body = P} = dest_forall conj1
       val {Bvar = y, Body = Q} = dest_forall conj2
@@ -739,7 +733,7 @@ fun AND_FORALL_CONV tm =
  *----------------------------------------------------------------------*)
 
 fun LEFT_AND_FORALL_CONV tm =
-   let
+   let open Rsyntax
       val {conj1, ...} = dest_conj tm
       val {Bvar, ...} = dest_forall conj1
       val x' = variant (free_vars tm) Bvar
@@ -765,7 +759,7 @@ fun LEFT_AND_FORALL_CONV tm =
  *----------------------------------------------------------------------*)
 
 fun RIGHT_AND_FORALL_CONV tm =
-   let
+   let open Rsyntax
       val {conj2, ...} = dest_conj tm
       val {Bvar, ...} = dest_forall conj2
       val x' = variant (free_vars tm) Bvar
@@ -789,7 +783,7 @@ fun RIGHT_AND_FORALL_CONV tm =
  *----------------------------------------------------------------------*)
 
 fun OR_EXISTS_CONV tm =
-   let
+   let open Rsyntax
       val {disj1, disj2} = dest_disj tm
       val {Bvar = x, Body = P} = dest_exists disj1
       val {Bvar = y, Body = Q} = dest_exists disj2
@@ -828,7 +822,7 @@ fun OR_EXISTS_CONV tm =
  *----------------------------------------------------------------------*)
 
 fun LEFT_OR_EXISTS_CONV tm =
-   let
+   let open Rsyntax
       val {disj1, disj2} = dest_disj tm
       val {Bvar, Body} = dest_exists disj1
       val x' = variant (free_vars tm) Bvar
@@ -861,7 +855,7 @@ fun LEFT_OR_EXISTS_CONV tm =
  *----------------------------------------------------------------------*)
 
 fun RIGHT_OR_EXISTS_CONV tm =
-   let
+   let open Rsyntax
       val {disj1, disj2} = dest_disj tm
       val {Bvar, Body} = dest_exists disj2
       val x' = variant (free_vars tm) Bvar
@@ -896,7 +890,7 @@ local
    fun err () = raise ERR "EXISTS_AND_CONV" "expecting `?x. P /\\ Q`"
 in
    fun EXISTS_AND_CONV tm =
-      let
+      let open Rsyntax
          val {Bvar, Body} = dest_exists tm handle HOL_ERR _ => err ()
          val {conj1, conj2} = dest_conj Body handle HOL_ERR _ => err ()
          val fP = free_in Bvar conj1
@@ -944,7 +938,7 @@ local
    val AE_ERR = ERR "AND_EXISTS_CONV" "expecting `(?x.P) /\\ (?x.Q)`"
 in
    fun AND_EXISTS_CONV tm =
-      let
+      let open Rsyntax
          val {conj1, conj2} = dest_conj tm handle HOL_ERR _ => raise AE_ERR
          val {Bvar = x, Body = P} = dest_exists conj1
                                     handle HOL_ERR _ => raise AE_ERR
@@ -975,7 +969,7 @@ end
  *----------------------------------------------------------------------*)
 
 fun LEFT_AND_EXISTS_CONV tm =
-   let
+   let open Rsyntax
       val {conj1, conj2} = dest_conj tm
       val {Bvar, Body} = dest_exists conj1
       val x' = variant (free_vars tm) Bvar
@@ -1003,7 +997,7 @@ fun LEFT_AND_EXISTS_CONV tm =
  *----------------------------------------------------------------------*)
 
 fun RIGHT_AND_EXISTS_CONV tm =
-   let
+   let open Rsyntax
       val {conj1, conj2} = dest_conj tm
       val {Bvar, Body} = dest_exists conj2
       val x' = variant (free_vars tm) Bvar
@@ -1034,7 +1028,7 @@ local
    val FO_ERR = ERR "FORALL_OR_CONV" "expecting `!x. P \\/ Q`"
 in
    fun FORALL_OR_CONV tm =
-      let
+      let open Rsyntax
          val {Bvar, Body} = dest_forall tm handle HOL_ERR _ => raise FO_ERR
          val {disj1, disj2} = dest_disj Body handle HOL_ERR _ => raise FO_ERR
          val fdisj1 = free_in Bvar disj1
@@ -1116,7 +1110,7 @@ local
    val OF_ERR = ERR "OR_FORALL_CONV" "expecting `(!x.P) \\/ (!x.Q)`"
 in
    fun OR_FORALL_CONV tm =
-   let
+   let open Rsyntax
       val {disj1, disj2} = dest_disj tm handle HOL_ERR _ => raise OF_ERR
       val {Bvar = x, Body = P} = dest_forall disj1
                                  handle HOL_ERR _ => raise OF_ERR
@@ -1146,7 +1140,7 @@ end
  *----------------------------------------------------------------------*)
 
 fun LEFT_OR_FORALL_CONV tm =
-   let
+   let open Rsyntax
       val {disj1, disj2} = dest_disj tm
       val {Bvar, Body} = dest_forall disj1
       val x' = variant (free_vars tm) Bvar
@@ -1177,7 +1171,7 @@ fun LEFT_OR_FORALL_CONV tm =
  *----------------------------------------------------------------------*)
 
 fun RIGHT_OR_FORALL_CONV tm =
-   let
+   let open Rsyntax
       val {disj1, disj2} = dest_disj tm
       val {Bvar, Body} = dest_forall disj2
       val x' = variant (free_vars tm) Bvar
@@ -1211,7 +1205,7 @@ local
    val FI_ERR = ERR "FORALL_IMP_CONV" "expecting `!x. P ==> Q`"
 in
    fun FORALL_IMP_CONV tm =
-      let
+      let open Rsyntax
          val {Bvar, Body} = dest_forall tm handle HOL_ERR _ => raise FI_ERR
          val {ant, conseq} = dest_imp Body handle HOL_ERR _ => raise FI_ERR
          val fant = free_in Bvar ant
@@ -1274,7 +1268,7 @@ end
  *----------------------------------------------------------------------*)
 
 fun LEFT_IMP_EXISTS_CONV tm =
-   let
+   let open Rsyntax
       val {ant, ...} = dest_imp tm
       val {Bvar, Body} = dest_exists ant
       val x' = variant (free_vars tm) Bvar
@@ -1296,7 +1290,7 @@ fun LEFT_IMP_EXISTS_CONV tm =
  *----------------------------------------------------------------------*)
 
 fun RIGHT_IMP_FORALL_CONV tm =
-   let
+   let open Rsyntax
       val {ant, conseq} = dest_imp tm
       val {Bvar, Body} = dest_forall conseq
       val x' = variant (free_vars tm) Bvar
@@ -1325,7 +1319,7 @@ local
    val EI_ERR = ERR "EXISTS_IMP_CONV" "expecting `?x. P ==> Q`"
 in
    fun EXISTS_IMP_CONV tm =
-   let
+   let open Rsyntax
       val {Bvar, Body} = dest_exists tm handle HOL_ERR _ => raise EI_ERR
       val {ant = P, conseq = Q} = dest_imp Body handle HOL_ERR _ => raise EI_ERR
       val fP = free_in Bvar P
@@ -1399,7 +1393,7 @@ end
  *----------------------------------------------------------------------*)
 
 fun LEFT_IMP_FORALL_CONV tm =
-   let
+   let open Rsyntax
       val {ant, conseq} = dest_imp tm
       val {Bvar, Body} = dest_forall ant
       val x' = variant (free_vars tm) Bvar
@@ -1433,7 +1427,7 @@ fun LEFT_IMP_FORALL_CONV tm =
  *----------------------------------------------------------------------*)
 
 fun RIGHT_IMP_EXISTS_CONV tm =
-   let
+   let open Rsyntax
       val {ant, conseq} = dest_imp tm
       val {Bvar, Body} = dest_exists conseq
       val x' = variant (free_vars tm) Bvar
@@ -1463,6 +1457,7 @@ fun RIGHT_IMP_EXISTS_CONV tm =
  *----------------------------------------------------------------------*)
 
 local
+   open Rsyntax
    fun err s = raise ERR "X_SKOLEM_CONV" s
 in
    fun X_SKOLEM_CONV v =
@@ -1522,9 +1517,9 @@ in
    fun SKOLEM_CONV tm =
       let
          val (xs, ex) = strip_forall tm
-         val {Bvar, ...} = dest_exists ex
-         val {Name, Ty} = dest_var Bvar
-         val fv = mk_var {Name = Name, Ty = List.foldr mkfty Ty xs}
+         val (Bvar, _) = dest_exists ex
+         val (Name, Ty) = dest_var Bvar
+         val fv = mk_var (Name, List.foldr mkfty Ty xs)
       in
          X_SKOLEM_CONV (variant (free_vars tm) fv) tm
       end
@@ -1540,7 +1535,7 @@ end
 
 fun SYM_CONV tm =
    let
-      val {lhs, rhs} = dest_eq tm
+      val (lhs, rhs) = dest_eq tm
       val th = INST_TYPE [Type.alpha |-> type_of lhs] EQ_SYM_EQ
    in
       SPECL [lhs, rhs] th
@@ -1577,7 +1572,7 @@ fun RIGHT_CONV_RULE conv th =
  *----------------------------------------------------------------------*)
 
 fun FUN_EQ_CONV tm =
-   let
+   let open Rsyntax
       val (ty1, _) = dom_rng (type_of (lhs tm))
       val vars = free_vars tm
       val varnm =
@@ -1602,6 +1597,7 @@ fun FUN_EQ_CONV tm =
  *-----------------------------------------------------------------------*)
 
 local
+   open Rsyntax
    fun err s = raise ERR "X_FUN_EQ_CONV" s
 in
    fun X_FUN_EQ_CONV x tm =
@@ -1649,6 +1645,7 @@ end
 *)
 
 local
+   open Rsyntax
    val f = mk_var {Name = "f", Ty = alpha --> bool}
    val th1 = AP_THM EXISTS_DEF f
    val th2 = CONV_RULE (RAND_CONV BETA_CONV) th1
@@ -1724,7 +1721,7 @@ end (* local *)
  *----------------------------------------------------------------------*)
 
 fun CONTRAPOS_CONV tm =
-   let
+   let open Rsyntax
       val {ant, conseq} = dest_imp tm
       val negc = mk_neg conseq
       and contra = mk_imp {ant = mk_neg conseq, conseq = mk_neg ant}
@@ -1769,7 +1766,7 @@ val AND_IMP_INTRO_CONV = REWR_CONV AND_IMP_INTRO
  *----------------------------------------------------------------------*)
 
 fun SWAP_EXISTS_CONV xyt =
-   let
+   let open Rsyntax
       val {Bvar = x, Body = yt} = dest_exists xyt
       val {Bvar = y, Body = t} = dest_exists yt
    in
@@ -1813,7 +1810,7 @@ fun SWAP_EXISTS_CONV xyt =
 
 fun EXISTS_SIMP_CONV xt =
    let
-      val {Bvar = x, Body = t} = dest_exists xt
+      val (x, t) = dest_exists xt
    in
       IMP_ANTISYM_RULE
          (DISCH xt (CHOOSE (x, ASSUME xt) (ASSUME t)))
@@ -1837,6 +1834,7 @@ fun EXISTS_SIMP_CONV xt =
  *----------------------------------------------------------------------*)
 
 local
+   open Rsyntax
    fun mk_list_exists_thm ys xs t =
       let
          val thm1 =
@@ -1871,7 +1869,7 @@ end
  *----------------------------------------------------------------------*)
 
 fun SWAP_FORALL_CONV xyt =
-   let
+   let open Rsyntax
       val {Bvar = x, Body = yt} = dest_forall xyt
       val {Bvar = y, Body = t} = dest_forall yt
       val xt  = mk_forall {Bvar = x, Body = t}
@@ -1917,10 +1915,10 @@ fun RESORT_FORALL_CONV rs xst =
 
 fun FORALL_SIMP_CONV xt =
    let
-      val {Bvar = x, Body = t} = dest_forall xt
+      val (Bvar, Body) = dest_forall xt
    in
-      IMP_ANTISYM_RULE (DISCH xt (SPEC x (ASSUME xt)))
-                       (DISCH t (GEN x (ASSUME t)))
+      IMP_ANTISYM_RULE (DISCH xt (SPEC Bvar (ASSUME xt)))
+                       (DISCH Body (GEN Bvar (ASSUME Body)))
    end
 
 (*----------------------------------------------------------------------*
@@ -2227,7 +2225,7 @@ local
 in
    fun bool_EQ_CONV tm =
       let
-         val {lhs, rhs} = dest_eq tm
+         val (lhs, rhs) = dest_eq tm
          val _ = if type_of rhs = Type.bool
                     then ()
                  else raise ERR "bool_EQ_CONV" "does not have boolean type"
@@ -2261,12 +2259,12 @@ local
    fun MK_BIN f (e1, e2) = MK_COMB ((AP_TERM f e1), e2)
    val rule = CONV_RULE o RAND_CONV o GEN_ALPHA_CONV
    fun MK_ALL x y tm = rule y (FORALL_EQ x tm)
-   fun handle_ant {conj1, conj2} = (BETA_CONV conj1, BETA_CONV conj2)
+   fun handle_ant (conj1, conj2) = (BETA_CONV conj1, BETA_CONV conj2)
    fun conv (nx, ny) t =
       case strip_forall t of
          ([ox, oy], imp) =>
            let
-              val {ant, conseq} = dest_imp imp
+              val (ant, conseq) = dest_imp imp
               val ant' = MK_BIN AND (handle_ant (dest_conj ant))
            in
               MK_ALL ox nx (MK_ALL oy ny (MK_BIN IMP (ant', REFL conseq)))
@@ -2276,15 +2274,15 @@ in
    fun EXISTS_UNIQUE_CONV tm =
       let
          val _ = check tm
-         val {Rator, Rand} = dest_comb tm
-         val (ab as {Bvar, Body}) = dest_abs Rand
+         val (Rator, Rand) = dest_comb tm
+         val (ab as (Bvar, Body)) = dest_abs Rand
          val def = INST_TYPE [alpha |-> type_of Bvar] EXISTS_UNIQUE_DEF
          val exp = RIGHT_BETA (AP_THM def Rand)
          and y = variant (all_vars Body) Bvar
       in
          SUBST [v |-> conv (Bvar, y) (rand (rand (concl exp)))]
-               (mk_eq {lhs = tm,
-                       rhs = mk_conj {conj1 = mk_exists ab, conj2 = v}}) exp
+               (mk_eq (tm,
+                       mk_conj (mk_exists ab, v))) exp
       end
       handle HOL_ERR _ => raise ERR "EXISTS_UNIQUE_CONV" ""
 end
@@ -2317,7 +2315,7 @@ local
 in
    fun COND_CONV tm =
       let
-         val {cond, larm, rarm} = dest_cond tm
+         val (cond, larm, rarm) = dest_cond tm
          val INST_TYPE' = INST_TYPE [alpha |-> type_of larm]
       in
          if aconv cond T then SPEC rarm (SPEC larm (INST_TYPE' CT))
@@ -2343,16 +2341,16 @@ end
 
 local
    val EXISTS_UNIQUE_DEF = boolTheory.EXISTS_UNIQUE_DEF
-   val P = mk_var {Name = "P", Ty = alpha-->bool}
+   val P = mk_var ("P", alpha-->bool)
    val th1 = SPEC P (CONV_RULE (X_FUN_EQ_CONV P) EXISTS_UNIQUE_DEF)
    val th2 = CONJUNCT1 (UNDISCH (fst (EQ_IMP_RULE (RIGHT_BETA th1))))
-   val ex1P = mk_comb {Rator = boolSyntax.exists1, Rand = P}
+   val ex1P = mk_comb (boolSyntax.exists1, P)
 in
    fun EXISTENCE th =
       let
          val _ = assert boolSyntax.is_exists1 (concl th)
-         val {Rator, Rand} = dest_comb (concl th)
-         val {Bvar, ...} = dest_abs Rand
+         val (Rator, Rand) = dest_comb (concl th)
+         val (Bvar, _) = dest_abs Rand
       in
          MP (SPEC Rand
                (INST_TYPE [alpha |-> type_of Bvar] (GEN P (DISCH ex1P th2))))
@@ -2373,7 +2371,7 @@ end
  *-----------------------------------------------------------------------*)
 
 fun AC_CONV (associative, commutative) =
-   let
+   let open Rsyntax
       val opr = (rator o rator o lhs o snd o strip_forall o concl) commutative
       val ty = (hd o #Args o dest_type o type_of) opr
       val x = mk_var {Name = "x", Ty = ty}
@@ -2463,7 +2461,7 @@ local
                then (I, I)
             else raise ERR "rename_vars" "Term not a binder"
          val (ty, _) = dom_rng (type_of (accessor t))
-         val newv = mk_var {Name = vname, Ty = ty}
+         val newv = mk_var (vname, ty)
       in
          C_ACC (ALPHA_CONV newv) t
       end
@@ -2549,7 +2547,7 @@ end
 fun dest_path path =
   let
     fun compose f g x = f (g x)
-    fun abs_body tm = #Body (dest_abs tm)
+    fun abs_body tm = snd (dest_abs tm)
     fun binder_body tm =
       if is_abs tm then abs_body tm else abs_body (rand tm)
     fun loop [] = I
@@ -2611,7 +2609,7 @@ fun memoize dst tree accept err (cnv: conv) =
 (* ------------------------------------------------------------------------- *)
 
 fun MP_CONV (cnv:conv) th = let
-  val {ant, conseq} = dest_imp (concl th);
+  val (ant, conseq) = dest_imp (concl th);
   val ath = cnv ant
 in
   MP th (EQT_ELIM ath)
