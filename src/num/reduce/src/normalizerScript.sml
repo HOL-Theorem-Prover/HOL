@@ -1,7 +1,8 @@
-open HolKernel Parse boolLib boolSimps;
-open arithmeticTheory simpLib tautLib mesonLib;
-
-val _ = new_theory "normalizer";
+Theory normalizer[bare]
+Ancestors
+  arithmetic
+Libs
+  HolKernel Parse boolLib boolSimps simpLib tautLib mesonLib
 
 (* from numLib.sml, not defined yet when compiling this file *)
 val INDUCT_TAC = INDUCT_THEN numTheory.INDUCTION ASSUME_TAC
@@ -196,4 +197,3 @@ Proof
   ASM_MESON_TAC [NUM_INTEGRAL_LEMMA, ADD_SYM, MULT_SYM]
 QED
 
-val _ = export_theory ();

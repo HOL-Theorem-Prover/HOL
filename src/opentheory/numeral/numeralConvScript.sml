@@ -1,6 +1,6 @@
-open HolKernel bossLib boolLib arithmeticTheory
-
-val _ = new_theory "numeralConv";
+Theory numeralConv
+Ancestors
+  arithmetic
 
 val BIT0_def = Define`
   (BIT0 0 = 0) /\
@@ -22,4 +22,3 @@ val BIT1_def = Q.store_thm("BIT1_def",
   \\ pop_assum(SUBST1_TAC o SYM)
   \\ REWRITE_TAC[BIT1,ADD,ADD_SUC]);
 
-val _ = export_theory();

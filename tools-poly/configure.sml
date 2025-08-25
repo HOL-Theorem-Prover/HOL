@@ -66,7 +66,7 @@ fun liftstatus f x =
           END user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val version_number = 1
+val version_number = 2
 val release_string = "Trindemossen"
 
 (*

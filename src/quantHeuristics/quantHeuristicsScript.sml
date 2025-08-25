@@ -1,8 +1,9 @@
-open HolKernel Parse boolLib Drule BasicProvers
-     pairTheory listTheory optionTheory metisLib simpLib
-     boolSimps pureSimps TotalDefn numLib ConseqConv
-
-val _ = new_theory "quantHeuristics";
+Theory quantHeuristics[bare]
+Ancestors
+  pair list option
+Libs
+  HolKernel Parse boolLib Drule BasicProvers metisLib simpLib
+  boolSimps pureSimps TotalDefn numLib ConseqConv
 
 (*
 quietdec := false;
@@ -1277,6 +1278,3 @@ Cases THEN SIMP_TAC std_ss [])
 val SND_PAIR_EQ_SYM = store_thm ("SND_PAIR_EQ_SYM",
 ``!p p1. (p = (p1, SND p)) <=> (FST p = p1)``,
 Cases THEN SIMP_TAC std_ss [])
-
-
-val _ = export_theory();

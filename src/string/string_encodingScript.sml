@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open stringTheory ASCIInumbersTheory
-
-val _ = new_theory "string_encoding";
+Theory string_encoding
+Ancestors
+  string ASCIInumbers
 
 (* theory of encoding functions for encoding/decoding arbitrary string values
    as "literals" in various forms.
@@ -192,4 +190,3 @@ QED
 
 
 
-val _ = export_theory();

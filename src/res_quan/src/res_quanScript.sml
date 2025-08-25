@@ -7,11 +7,12 @@ CHANGED BY: Joe Hurd, June 2001 (to remove the ARB from RES_ABSTRACT)
 CHANGED BY: Joe Hurd, October 2001 (moved definitions to boolTheory)
 
 ============================================================================*)
+Theory res_quan
+Ancestors
+  combin pred_set
+Libs
+  simpLib pred_setSimps boolSimps BasicProvers
 
-open HolKernel Parse boolLib combinTheory pred_setTheory simpLib pred_setSimps
-  boolSimps BasicProvers;
-
-val _ = new_theory "res_quan";
 
 (* --------------------------------------------------------------------- *)
 (* Support theorems and code (not exported)                              *)
@@ -387,8 +388,6 @@ val RES_ABSTRACT_UNIV = store_thm(
   gen_tac >>
   `!x. RES_ABSTRACT UNIV m x = m x` suffices_by simp [Once FUN_EQ_THM] >>
   simp [RES_ABSTRACT]);
-
-val _ = export_theory();
 
 val _ = let
   val ^^ = Path.concat

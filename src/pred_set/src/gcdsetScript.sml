@@ -1,9 +1,9 @@
-open HolKernel Parse boolLib BasicProvers;
-
-open arithmeticTheory dividesTheory pred_setTheory gcdTheory simpLib metisLib
-     pred_setSimps TotalDefn;
-
-local open numSimps; in end;
+Theory gcdset[bare]
+Ancestors
+  arithmetic divides pred_set gcd
+Libs
+  HolKernel Parse boolLib BasicProvers simpLib metisLib
+  pred_setSimps TotalDefn numSimps[qualified]
 
 val ARITH_ss = numSimps.ARITH_ss;
 val arith_ss = srw_ss() ++ ARITH_ss;
@@ -22,8 +22,6 @@ val metis_tac = METIS_TAC;
 val qabbrev_tac = Q.ABBREV_TAC;
 val qexists_tac = Q.EXISTS_TAC;
 val rw = SRW_TAC [ARITH_ss];
-
-val _ = new_theory "gcdset";
 
 val gcdset_def = new_definition(
   "gcdset_def",
@@ -854,5 +852,3 @@ val big_lcm_map_times = store_thm(
   `_ = k * lcm e (big_lcm s)` by rw[LCM_COMMON_FACTOR] >>
   `_ = k * big_lcm (e INSERT s)` by rw[big_lcm_insert] >>
   rw[]);
-
-val _ = export_theory()

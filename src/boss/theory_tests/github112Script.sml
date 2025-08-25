@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib
-
-val _ = new_theory "github112"
+Theory github112
 
 val f1_def = Define `(f1 x y = case (x, y) of (0, _) => SOME 1 | (_,_) => NONE)`
 val f2_def = Define `(f2 x y = case (x, y) of (0, _) => SOME 1 | _ => NONE)`
@@ -21,4 +19,3 @@ val test_def = Define`
   (test m _ = SUC m)
 `;
 
-val _ = export_theory()

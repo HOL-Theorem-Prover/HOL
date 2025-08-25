@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib
-
-val _ = new_theory "localthA";
+Theory localthA
 
 Definition foo[simp]: foo = 3
 End
@@ -20,4 +18,3 @@ Proof
   simp[]
 QED
 
-val _ = export_theory();

@@ -1,11 +1,12 @@
 (* ------------------------------------------------------------------------ *)
 (*  Bisimulations defined on general labeled transition ('a->'b->'a->bool)  *)
 (* ------------------------------------------------------------------------ *)
+Theory bisimulation[bare]
+Ancestors
+  relation
+Libs
+  HolKernel Parse boolLib simpLib metisLib BasicProvers
 
-open HolKernel Parse boolLib simpLib metisLib BasicProvers;
-open relationTheory;
-
-val _ = new_theory "bisimulation";
 
 (*---------------------------------------------------------------------------*)
 (*  (Strong) bisimulation                                                    *)
@@ -376,4 +377,3 @@ Proof
     REWRITE_TAC [GSYM RSUBSET, BISIM_REL_RSUBSET_WBISIM_REL]
 QED
 
-val _ = export_theory ();

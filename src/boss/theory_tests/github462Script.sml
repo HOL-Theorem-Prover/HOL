@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "github462";
+Theory github462
 
 val _ = Datatype ‘exp = Lit num | Log exp exp’;
 
@@ -27,4 +25,3 @@ fun test t =
 
 val _ = assert (List.all test o DefnBase.all_terms) eval_defn
 
-val _ = export_theory();

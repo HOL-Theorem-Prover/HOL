@@ -2,13 +2,11 @@
    Useful properties of floating point numbers.
    ========================================================================= *)
 
-open HolKernel boolLib bossLib
-open pairTheory pred_setTheory prim_recTheory numTheory arithmeticTheory
-     realTheory ieeeTheory
-
-open numLib realSimps RealArith Ho_Rewrite
-
-val () = new_theory "float"
+Theory float
+Ancestors
+  pair pred_set prim_rec num arithmetic real ieee
+Libs
+  numLib realSimps RealArith Ho_Rewrite
 
 val _ = ParseExtras.temp_loose_equality()
 val _ = diminish_srw_ss ["RMULCANON", "RMULRELNORM"]
@@ -1325,5 +1323,3 @@ val FLOAT_DIV_RELATIVE = Q.store_thm ("FLOAT_DIV_RELATIVE",
   lift_arith_tac)
 
 (*---------------------------------------------------------------------------*)
-
-val _ = export_theory()

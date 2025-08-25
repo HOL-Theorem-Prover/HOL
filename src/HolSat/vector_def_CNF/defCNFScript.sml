@@ -1,8 +1,8 @@
-open HolKernel Parse boolLib simpLib numLib rich_listTheory
-     arithmeticTheory
-
-open TotalDefn BasicProvers
-val _ = new_theory "defCNF";
+Theory defCNF[bare]
+Ancestors
+  rich_list arithmetic
+Libs
+  HolKernel Parse boolLib simpLib numLib TotalDefn BasicProvers
 
 val _ = ParseExtras.temp_loose_equality()
 
@@ -152,4 +152,3 @@ val _ = app
             (fn s => remove_ovl_mapping s {Thy = "defCNF", Name = s})
             ["OKDEF", "DEF", "UNIQUE", "OK"]
 
-val _ = export_theory ();

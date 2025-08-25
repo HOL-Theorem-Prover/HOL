@@ -4,11 +4,11 @@
   Used in inital attempt to speed up computations, used by evaluation of the
   first phase
 **)
-open HolKernel Parse BasicProvers listTheory arithmeticTheory;
-open realTheory;
-open boolLib bossLib;
-
-val _ = new_theory "bitArith";
+Theory bitArith
+Ancestors
+  list arithmetic real
+Libs
+  BasicProvers
 
 val _ = numLib.temp_prefer_num();
 
@@ -543,4 +543,3 @@ Proof
   >> gs[REAL_INV_MUL']
 QED
 
-val _ = export_theory();

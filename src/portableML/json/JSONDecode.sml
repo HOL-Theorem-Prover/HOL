@@ -17,6 +17,7 @@ datatype value = datatype JSON.value
 datatype 'a decoder = D of value -> 'a
 
 fun decode (D d) jv = d jv
+val ofRaw = D
 
 fun decodeString decoder s =
     (decode decoder (JSONParser.parse(JSONParser.openString s)))
@@ -94,29 +95,21 @@ fun field key valueDecoder =
                   | _ => notObject jv
      (* end case *)))
 
-fun reqField key valueDecoder k = seq (field key valueDecoder) k
+fun fieldO key (D valueDecoder) = D (fn jv =>
+  case U.findField jv key of
+    SOME NULL => NONE
+  | SOME jv' => SOME (valueDecoder jv')
+  | NONE => NONE)
 
-fun optField key (D valueDecoder) (D objDecoder) = let
-  fun objDecoder' optFld jv = (objDecoder jv) optFld
-  fun decoder jv = (case U.findField jv key
-                     of SOME NULL => objDecoder' NONE jv
-                      | SOME jv' => objDecoder' (SOME(valueDecoder jv')) jv
-                      | NONE => objDecoder' NONE jv
-                   (* end case *))
-in
-  D decoder
-end
+fun fieldD key (D valueDecoder) dfltVal = D (fn jv =>
+  case U.findField jv key of
+    SOME NULL => dfltVal
+  | SOME jv' => valueDecoder jv
+  | NONE => dfltVal)
 
-fun dfltField key (D valueDecoder) dfltVal (D objDecoder) = let
-  fun objDecoder' fld jv = (objDecoder jv) fld
-  fun decoder jv = (case U.findField jv key
-                     of SOME NULL => objDecoder' dfltVal jv
-                      | SOME jv' => objDecoder' (valueDecoder jv') jv
-                      | NONE => objDecoder' dfltVal jv
-                   (* end case *))
-in
-  D decoder
-end
+fun reqField key valueDecoder = seq (field key valueDecoder)
+fun optField key valueDecoder = seq (fieldO key valueDecoder)
+fun dfltField key valueDecoder dfltVal = seq (fieldD key valueDecoder dfltVal)
 
 fun sub i (D d) =
     D(fn jv => (case jv of
@@ -137,7 +130,7 @@ fun succeed x = D(fn _ => x)
 
 fun fail msg = D(fn jv => failure(msg, jv))
 
-fun andThen f (D d) = D(fn jv => decode (f (d jv)) jv)
+fun andThen (D d) f = D(fn jv => decode (f (d jv)) jv)
 
 fun orElse (D d1, D d2) =
     (* try the first decoder.  If it fails with a `JSONError` exception, then
@@ -161,6 +154,6 @@ fun tuple2 (d1, d2) = map2 (fn x => x) (d1, d2)
 fun tuple3 (d1, d2, d3) = map3 (fn x => x) (d1, d2, d3)
 fun tuple4 (d1, d2, d3, d4) = map4 (fn x => x) (d1, d2, d3, d4)
 
-fun delay dd = andThen dd (succeed ())
+fun delay dd = andThen (succeed ()) dd
 
 end

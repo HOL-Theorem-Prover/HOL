@@ -2,7 +2,7 @@ INCLUDES = ../Tools ../../examples/probability $(HOLDIR)/src/integer
 
 TEX_CORES = description title preface system conv drules tactics \
 	theories math definitions libraries misc HolSat PatternMatchesLib \
-        enumfset simplifier latex-munger
+        enumfset simplifier latex-munger modern-syntax-chapter
 
 TEX_SOURCES = ../LaTeX/ack.tex ../LaTeX/commands.tex $(patsubst %,%.tex,$(TEX_CORES))
 
@@ -13,8 +13,7 @@ PS_NOUMAP = $(PS_ROOT) < $< > $@
 
 .PHONY: all
 
-all: system.pdf system.html description.pdf
-
+all: system.pdf system.html drules.pdf drules.html description.pdf
 
 description.pdf: $(TEX_SOURCES)
 	latexmk -pdf description
@@ -27,6 +26,15 @@ conv.tex: conv.stex $(PS_STUFF)
 
 drules.tex: drules.stex $(PS_STUFF)
 	$(PS_COMMAND)
+
+drules.md: drules.smd $(PS_STUFF)
+	$(PS_NOUMAP)
+
+drules.pdf: drules.md
+	pandoc --top-level-division=chapter -o $@ $<
+
+drules.html: drules.md
+	pandoc -s -o $@ $<
 
 tactics.tex: tactics.stex $(PS_STUFF)
 	$(PS_COMMAND)
@@ -55,7 +63,6 @@ libraries.tex: libraries.stex $(PS_STUFF) $(dprot $(SIGOBJ)/integerTheory.uo)
 system.tex: system.stex $(PS_STUFF)
 	$(PS_COMMAND)
 
-
 system.md: system.smd $(PS_STUFF)
 	$(PS_NOUMAP)
 
@@ -68,16 +75,25 @@ system.html: system.md
 HolSat.tex: HolSat.stex $(PS_STUFF) zchaff.cnf
 	$(PS_COMMAND)
 
+modern-syntax.md: modern-syntax.smd $(PS_STUFF)
+	$(PS_NOUMAP)
+
+modern-syntax-chapter.tex: modern-syntax.md pdf-macros.lua
+	(printf '\\chapter{\\texorpdfstring{\\HOL{} Source File Syntax}{HOL Source File Syntax}}\\label{chap:modern-syntax}\n' ; pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $<) > $@
+
+foo:
+	(echo hello ; echo world) > $@
+
 # This builds figs/0.mps, figs/1.mps, ...
 figures:
 	mpost -mem=metafun -tex=latex figure.mp
 
 EXTRA_CLEANS = drules.tex tactics.tex theories.tex libraries.tex \
                PatternMatchesLib.tex HolSat.tex definitions.tex \
-               system.tex system.md conv.tex math.tex \
+               system.tex system.md drules.md conv.tex math.tex \
                description.pdf \
                $(patsubst %,%.aux,$(TEX_CORES)) \
 	       description.log description.out \
                description.toc description.fls description.idx description.ilg \
                description.ind description.blg description.bbl \
-	       description.fdb_latexmk
+	       description.fdb_latexmk modern-syntax.md modern-syntax-chapter.tex

@@ -10,6 +10,7 @@
 *.o
 .hol
 .holobjs
+.hollogs
 *.lex.sml
 *.grm.sig
 *.grm.sml

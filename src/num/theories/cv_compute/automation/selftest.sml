@@ -158,11 +158,11 @@ val cond_def_lemma = Q.prove (
 val cond_def = new_specification("cond_sub_def",["cond_sub"],cond_def_lemma);
 
 val res = cv_trans fac_def;
-val res = cv_trans_pre foo_def;
-val res = cv_trans_pre use_foo_def;
-val res = cv_trans_pre risky_def;
+val res = cv_trans_pre "" foo_def;
+val res = cv_trans_pre "" use_foo_def;
+val res = cv_trans_pre "" risky_def;
 val res = cv_trans inc_def;
-val res = cv_trans_pre cond_def;
+val res = cv_trans_pre "" cond_def;
 
 val _ = Datatype `
   a_type = A_cons | B_cons | C_cons num num | D_cons (a_type list)
@@ -191,7 +191,7 @@ val num_sum_def = Define `
 
 val res = cv_trans num_sum_def;
 val res = cv_trans listTheory.LENGTH;
-(* val res = cv_trans_pre lookup_def; *)
+(* val res = cv_trans_pre "" lookup_def; *)
 
 val f1_def = Define `
   f1 (n:num) = 1:num
@@ -232,7 +232,7 @@ val even_def = Define `
   odd (SUC n) = even n
 `
 
-val res = cv_trans_pre even_def
+val res = cv_trans_pre "even_pre odd_pre" even_def
 
 val _ = store_thm("even_pre[local,cv_pre]",
   ``(!a0. even_pre a0) /\ (!a1. odd_pre a1)``,
@@ -322,7 +322,7 @@ val exp_size_alt_def = tDefine "exp_size_alt" `
   exp_sizes_alt (x::xs) = exp_size_alt x + exp_sizes_alt xs`
  cheat
 
-val pre = cv_auto_trans_pre_rec exp_size_alt_def cheat;
+val pre = cv_auto_trans_pre_rec "" exp_size_alt_def cheat;
 
 val can_raise_def = Define ` can_raise x = T `
 

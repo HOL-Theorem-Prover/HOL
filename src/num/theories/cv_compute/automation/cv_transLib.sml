@@ -199,14 +199,41 @@ fun mk_assum_for def = let
     \\ full_simp_tac bool_ss [])
   in (def,(lhs_tm,lemma)) end;
 
+fun mk_funtype arg_tys ret_ty = foldr (op -->) ret_ty arg_tys;
+
 fun mk_pre_var one_def = let
   val (v,args) = one_def |> concl |> dest_eq |> fst |> strip_comb
   val name = fst (dest_const v)
   val thy = #Thy (dest_thy_const v)
-  fun mk_funtype arg_tys ret_ty = foldr (op -->) ret_ty arg_tys;
   val pre_ty = mk_funtype (map type_of args) bool
   val pre_v = mk_primed_var(add_prefix thy name ^ "_pre", pre_ty)
   in list_mk_comb(pre_v,args) end
+
+fun mk_pre_vars NONE defs = map mk_pre_var defs
+  | mk_pre_vars (SOME s) defs =
+      if s = "" orelse s = "-" then mk_pre_vars NONE defs else let
+        val seps = explode " ,"
+        val names = String.tokens (fn c => mem c seps) s
+        val _ = length defs = length names orelse
+                failwith (String.concat
+                   ["Number of definitions (",
+                    Int.toString (length defs),
+                    ") does not match the number of precondition names (",
+                    Int.toString (length names),"). ",
+                    "Use space-separated names for mutually recursive functions, e.g., ",
+                    "if the function is foo and foo_list, then give precondition names as ",
+                    "\"foo_pre foo_list_pre\"."])
+        val def_names = zip defs names
+        fun process_each (one_def,pre_name) = let
+          val (v,args) = one_def |> concl |> dest_eq |> fst |> strip_comb
+          val name = fst (dest_const v)
+          val thy = #Thy (dest_thy_const v)
+          val pre_ty = mk_funtype (map type_of args) bool
+          val pre_v = mk_var(pre_name, pre_ty)
+          in list_mk_comb(pre_v,args) end
+        in map process_each def_names end
+
+(*  *)
 
 fun match_some_pat [] tm = NONE
   | match_some_pat ((pat,pre)::pats) tm =
@@ -243,16 +270,6 @@ fun specl_res ex_cv_rep th = let
   val args = c |> rator |> rand |> rand |> strip_comb |> snd
   in SPECL args th end;
 
-fun oneline_ify_all def = let
-  val usu = UNDISCH_ALL o SPEC_ALL o UNDISCH_ALL
-  val defs = def |> usu |> CONJUNCTS |> map usu
-  fun term_nub [] = []
-    | term_nub (tm::tms) = tm :: term_nub (filter (not o aconv tm) tms)
-  fun get_const def = def |> concl |> dest_eq |> fst |> strip_comb |> fst
-  val cs = defs |> map get_const |> term_nub
-  val groups = map (fn c => filter (aconv c o get_const) defs) cs
-  in map (DefnBase.one_line_ify NONE o LIST_CONJ) groups end
-
 fun fix_missed_args th = let
   fun rhs_imp tm = if is_imp tm then snd (dest_imp tm) else tm
   val (l,r) = th |> concl |> rhs_imp |> dest_eq
@@ -270,8 +287,10 @@ fun lookup_ind_for_const hd_const =
       val _ = cv_print Silent "Stopping. Use cv_trans_pre instead (or one of its variants).\n"
     in failwith "Could not find appropriate induction" end;
 
+fun is_SOME (SOME _) = true | is_SOME _ = false;
+
 fun make_ind_thm allow_pre hd_const defs pre_def_tms =
-  if allow_pre then let
+  if is_SOME (allow_pre: string option) then let
     val pre_def_tm = list_mk_conj pre_def_tms
     val (pre_rules,pre_ind,pre_def) = Hol_reln [ANTIQUOTE pre_def_tm]
     val pre_defs = pre_def |> CONJUNCTS
@@ -387,7 +406,8 @@ fun preprocess_def def = let
   val mes = get_measures eqs
   val def = eqs |> map (CONV_RULE (RATOR_CONV (REWRITE_CONV [combinTheory.I_THM])))
                 |> LIST_CONJ
-  val defs = def |> oneline_ify_all |> map (SPEC_ALL o UNDISCH_ALL o SPEC_ALL)
+  val defs = def |> DefnBase.one_line_ify_mutrec NONE
+                 |> map (SPEC_ALL o UNDISCH_ALL o SPEC_ALL)
   (* val th = hd defs *)
   fun adjust_def th =
     let val (l,r) = th |> concl |> dest_eq
@@ -480,7 +500,7 @@ fun print_pre_goal name pre_def orig_names_list thy_name =
     val _ = cv_print Silent ("  ...\nQED\n\n")
   in
     pre_def
-  end
+  end;
 
 (*--------------------------------------------------------------------------*
    main workhorse
@@ -497,12 +517,12 @@ fun print_pre_goal name pre_def orig_names_list thy_name =
   val def = cond_def
   val def = num_sum_def
   val def = listTheory.HD
-  val def = UNZIP_eq
+  val def = listTheory.EL
   val def = listTheory.APPEND
   val term_opt = if true then NONE else SOME cheat;
   val term_opt = if false then NONE else SOME cheat;
-  val allow_pre = true
-  val allow_pre = false
+  val allow_pre = SOME "el_pre"
+  val allow_pre = (NONE :string option)
 *)
 
 fun cv_trans_any allow_pre term_opt def = let
@@ -576,7 +596,7 @@ fun cv_trans_any allow_pre term_opt def = let
     else let
       (* define pre *)
       val pats = expand_cv_reps |> map (rand o concl)
-      val pre_vars = map mk_pre_var defs
+      val pre_vars = mk_pre_vars allow_pre defs
       val all_pats = zip pats pre_vars
       val pre_def_tms = map (make_pre_imp all_pats) expand_cv_reps
       val hd_const = raw_cv_reps |> hd |> concl |> rand |> strip_comb |> fst
@@ -593,13 +613,13 @@ fun cv_trans_any allow_pre term_opt def = let
       val combined_result = LIST_CONJ result
       val _ = store_cv_result name orig_names combined_result
       in print_pre_goal name pre_def orig_names_list thy_name end
-  end
+  end;
 
 (*--------------------------------------------------------------------------*
    non-recursive version of cv_trans
  *--------------------------------------------------------------------------*)
 
-fun cv_trans_no_loop allow_pre term_opt def =
+fun cv_trans_no_loop (allow_pre:string option) term_opt def =
   cv_trans_any allow_pre term_opt def
   handle NeedsTranslation (stack, tm) => let
     val target_c = def |> SPEC_ALL |> CONJUNCTS |> hd |> SPEC_ALL |> concl
@@ -621,23 +641,23 @@ fun cv_trans_no_loop allow_pre term_opt def =
     in failwith ("Unable to translate " ^ term_to_string needs_c) end
 
 fun cv_trans def = let
-  val res = cv_trans_no_loop false NONE def
+  val res = cv_trans_no_loop NONE NONE def
   in if aconv (concl res) T then () else
        failwith ("Precondition generated! " ^
                  "Use `cv_trans_pre` instead of `cv_trans`.") end
 
-fun cv_trans_pre def = let
-  val res = cv_trans_no_loop true NONE def
+fun cv_trans_pre pre_name def = let
+  val res = cv_trans_no_loop (SOME pre_name) NONE def
   in if aconv (concl res) T then
        failwith ("No precondition generated! " ^
                  "Use `cv_trans` instead of `cv_trans_pre`.")
      else res end;
 
 fun cv_trans_rec def tac =
-  (cv_trans_no_loop false (SOME tac) def; ());
+  (cv_trans_no_loop NONE (SOME tac) def; ());
 
-fun cv_trans_pre_rec def tac =
-  cv_trans_no_loop true (SOME tac) def;
+fun cv_trans_pre_rec pre_name def tac =
+  cv_trans_no_loop (SOME pre_name) (SOME tac) def;
 
 (*--------------------------------------------------------------------------*
    recursive version of cv_auto_trans
@@ -671,7 +691,7 @@ datatype task = Def of thm | Abbr of thm;
 fun total_cv_trans allow_pre term_opt def is_last =
   (if is_last then (Res (cv_trans_any allow_pre term_opt def))
               else (Res (case cv_trans_simple_constant def of
-                      NONE => cv_trans_any false NONE def
+                      NONE => cv_trans_any NONE NONE def
                     | SOME res => res)))
   handle NeedsTranslation (_, tm) => Needs tm;
 
@@ -809,23 +829,23 @@ val (Def def::defs) = defs
 *)
 
 fun cv_auto_trans def = let
-  val res = cv_trans_loop false NONE [Def def]
+  val res = cv_trans_loop NONE NONE [Def def]
   in if aconv (concl res) T then () else
        failwith ("Precondition generated! " ^
                  "Use `cv_trans_pre` instead of `cv_trans`.") end
 
-fun cv_auto_trans_pre def = let
-  val res = cv_trans_loop true NONE [Def def]
+fun cv_auto_trans_pre pre_name def = let
+  val res = cv_trans_loop (SOME pre_name) NONE [Def def]
   in if aconv (concl res) T then
        failwith ("No precondition generated! " ^
                  "Use `cv_trans` instead of `cv_trans_pre`.")
      else res end;
 
 fun cv_auto_trans_rec def tac =
-  (cv_trans_loop false (SOME tac) [Def def]; ());
+  (cv_trans_loop NONE (SOME tac) [Def def]; ());
 
-fun cv_auto_trans_pre_rec def tac =
-  cv_trans_loop true (SOME tac) [Def def];
+fun cv_auto_trans_pre_rec pre_name def tac =
+  cv_trans_loop (SOME pre_name) (SOME tac) [Def def];
 
 (*--------------------------------------------------------------------------*
    translate deep embedding constants of the form:
@@ -936,6 +956,23 @@ fun cv_eval_pat pat tm = let
   val cv_eqs = cv_time cv_eqs_for cv_tm
   val _ = cv_print Verbose ("Found " ^ int_to_string (length cv_eqs) ^ " cv code equations to use.\n")
   val cv_conv = cv_computeLib.cv_compute cv_eqs
+  fun simple_raw () = let
+    val th1 = MATCH_MP cv_rep_eval th
+    val th2 = MATCH_MP th1 from_to_thm
+    val th3 = th2 |> UNDISCH_ALL
+    val _ = cv_print Verbose "Calling cv_compute.\n"
+    val th4 = cv_time (CONV_RULE (RAND_CONV (RAND_CONV cv_conv))) th3
+    val th5 = remove_T_IMP (DISCH_ALL th4)
+    in th5 end
+  in case pat of
+    Raw => simple_raw ()
+  | Eval eval_conv => let
+      val th = simple_raw ()
+      val _ = cv_print Verbose "Using EVAL to convert from cv to original types.\n"
+      val th = cv_time (CONV_RULE (RAND_CONV eval_conv)) (UNDISCH_ALL th)
+      val th = th |> DISCH_ALL |> remove_T_IMP
+      in th end
+  | _ => let
   val _ = cv_print Verbose "Calling cv_compute.\n"
   val th0 = th |> CONV_RULE ((RATOR_CONV o RATOR_CONV o RAND_CONV) cv_conv)
                |> CONV_RULE (REWR_CONV cv_rep_def) |> UNDISCH
@@ -974,7 +1011,9 @@ fun cv_eval_pat pat tm = let
   val th1 = make_abbrevs pat th0
   val th2 = CONV_RULE (REWR_CONV (GSYM cv_rep_def)) (DISCH T th1)
   val th3 = MATCH_MP cv_rep_eval th2
-  val th4 = MATCH_MP (MATCH_MP th3 from_to_thm) TRUTH
+  val t = th3 |> concl |> dest_imp |> fst |> rand
+  val new_t = from_to_thm |> concl |> rand
+  val th4 = MP (MP (th3 |> INST [t|->new_t]) from_to_thm) TRUTH (* very slow? *)
   fun use_abbrevs Raw th = th
     | use_abbrevs (Eval conv) th =
         CONV_RULE (RAND_CONV (QCONV conv)) th
@@ -993,7 +1032,7 @@ fun cv_eval_pat pat tm = let
         val th2 = CONJUNCT2 th0
         in MATCH_MP IMP_to_option (CONJ th1 th2) end
   val th5 = use_abbrevs pat th4
-  in DISCH_ALL th5 end;
+  in DISCH_ALL th5 end end;
 
 fun cv_eval_raw tm = cv_eval_pat Raw tm;
 

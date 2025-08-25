@@ -2,19 +2,20 @@
 (* FILE          : rich_listScript.sml                                   *)
 (* DESCRIPTION   : Enriched Theory of Lists                              *)
 (* ===================================================================== *)
+Theory rich_list[bare]
+Ancestors
+  combin arithmetic prim_rec pred_set list pair
+Libs
+  HolKernel Parse boolLib BasicProvers numLib metisLib simpLib
+  markerLib TotalDefn listSimps[qualified]
+  pred_setSimps[qualified] dep_rewrite[qualified]
 
-open HolKernel Parse boolLib BasicProvers;
-
-open numLib metisLib simpLib combinTheory arithmeticTheory prim_recTheory
-     pred_setTheory listTheory pairTheory markerLib TotalDefn;
-
-local open listSimps pred_setSimps dep_rewrite in end;
+(* conflict with boolTheory.EXISTS_DEF *)
+val EXISTS_DEF = listTheory.EXISTS_DEF
 
 val FILTER_APPEND = FILTER_APPEND_DISTRIB
 val REVERSE = REVERSE_SNOC_DEF
 val decide_tac = numLib.DECIDE_TAC;
-
-val () = new_theory "rich_list"
 
 (* ------------------------------------------------------------------------ *)
 
@@ -7873,5 +7874,3 @@ val conv = EVAL
    conv ``UNZIP_SND [(1n, 2n); (3, 4)]``;
 
 *)
-
-val () = export_theory ()

@@ -28,7 +28,37 @@
 
 \indexsetup{level=\chapter}
 \makeindex
+\input{ref-unicode}
 
+\usepackage{titlesec}
+\usepackage[english]{babel}
+\usepackage{underscore}
+
+
+\newcommand{\currentstruct}{}
+\newcommand{\mysec}[1]{%
+  \phantomsection%
+  \makebox[\linewidth]{%
+    \fbox{%
+      \makebox[\dimexpr\linewidth-2\fboxsep][l]{\strut\hspace{0.4em}#1\hfill(\texttt{\currentstruct})\hspace{0.2em}}%
+    }%
+  }}
+\titleformat{\section}{\normalfont\LARGE}{}{0pt}{\mysec}
+
+% pandoc generates \tightlist command for itemizes that don't have blank
+% lines between the items
+\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+% pandoc's generated .tex file uses \section, \subsection etc, so this turns
+% off numbering for them.
+\setcounter{secnumdepth}{0}
+
+% latex wants to use a "curly left single quote" when interpreting backtick `
+% in verbatim environments; upquote stops this.  (Of course, many such uses
+% should be replaced by the "modern" curly quotes that HOL also uses, but you
+% certainly don't want to be confusing one for the other given how both are
+% meaningful.
+\usepackage{upquote}
 \begin{document}
 
    \emergencystretch=14pt
@@ -46,7 +76,7 @@
    \include{title}                        % reference title page
    \include{preface}                      % preface to reference manual
    \input{../LaTeX/ack}                   % global acknowledgements
-   \tableofcontents                       % table of contents
+%   \tableofcontents                       % table of contents
 
    % ---------------------------------------------------------------------
    %

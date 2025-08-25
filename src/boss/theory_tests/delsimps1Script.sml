@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "delsimps1";
+Theory delsimps1
 
 val foo_def = Define‘foo x = x * 2 + 1’;
 val _ = export_rewrites ["foo_def"]
@@ -13,4 +11,3 @@ val _ =
       | Exn.Exn Conv.UNCHANGED => ()
       | Exn.Exn e => raise Fail ("Unexpected exception: "^General.exnMessage e)
 
-val _ = export_theory();

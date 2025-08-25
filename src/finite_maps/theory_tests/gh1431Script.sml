@@ -1,7 +1,8 @@
-open HolKernel boolLib bossLib Parse stringTheory alistTheory pairTheory
-     monadsyntax listTheory rich_listTheory
-
-val () = new_theory "gh1431";
+Theory gh1431
+Ancestors
+  string alist pair list rich_list
+Libs
+  monadsyntax
 
 Definition return_def:
   return x s = (INL x, s)
@@ -153,4 +154,3 @@ End
   Then the proof would measure the total size of all the dats in ns
 *)
 
-val _ = export_theory()

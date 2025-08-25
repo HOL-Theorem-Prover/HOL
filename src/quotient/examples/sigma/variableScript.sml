@@ -17,15 +17,14 @@
                         (* ================== *)
 
 
-(* --------------------------------------------------------------------- *)
-(* Boilerplate.                                                          *)
-(* --------------------------------------------------------------------- *)
-open HolKernel Parse boolLib;
+Theory variable
+Ancestors
+  string pred_set list rich_list prim_rec combin arithmetic
+  more_list more_set
+Libs
+  stringLib pred_setLib listLib numLib PairedLambda Psyntax
+  dep_rewrite tactics
 
-(* --------------------------------------------------------------------- *)
-(* Create the theory.                                                    *)
-(* --------------------------------------------------------------------- *)
-val _ = new_theory "variable";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -37,18 +36,6 @@ app load ["stringTheory", "stringLib", "pred_setTheory", "pred_setLib",
           "more_listTheory", "more_setTheory",
           "dep_rewrite", "bossLib" ];
 *)
-open stringTheory stringLib pred_setTheory pred_setLib;
-open listTheory rich_listTheory listLib;
-open numLib prim_recTheory combinTheory PairedLambda;
-open arithmeticTheory Psyntax;
-open more_listTheory more_setTheory;
-open dep_rewrite bossLib;
-
-
-open tactics;
-
-
-
 (*===========================================================*)
 (* The actual "names" of variables will be defined as a      *)
 (* composite type, containing not only a string but also a   *)
@@ -981,8 +968,6 @@ val DISJOINT_variants_UNION_RIGHT_3 =
    THEN ASM_REWRITE_TAC[]
   );
 
-
-val _ = export_theory();
 
 val _ = print_theory_to_file "-" "variable.lst";
 

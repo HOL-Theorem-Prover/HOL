@@ -1,0 +1,38 @@
+## `inst_word_lengths`
+
+``` hol4
+wordsLib.inst_word_lengths : term -> term
+```
+
+------------------------------------------------------------------------
+
+Guess and instantiate word index type variables in a term.
+
+The function `inst_word_lengths` tries to instantiate type variables
+that correspond with the return type of `word_concat` and
+`word_extract`.
+
+### Example
+
+``` hol4
+- load "wordsLib";
+...
+- wordsLib.inst_word_lengths “(7 >< 5) a @@ (4 >< 0) a”;
+<<HOL message: inventing new type variable names: 'a, 'b, 'c, 'd>>
+<<HOL message: assigning word length(s): 'a <- 3, 'b <- 5 and 'c <- 8>>
+> val it =
+    “(((7 :num) >< (5 :num)) (a :bool['d]) :bool[3]) @@
+      (((4 :num) >< (0 :num)) a :bool[5])” : term
+- type_of it;
+> val it = “:bool[8]” : hol_type
+```
+
+### Comments
+
+The function `guess_lengths` adds `inst_word_lengths` as a
+post-processing stage to the term parser.
+
+### See also
+
+[`wordsLib.guess_lengths`](#wordsLib.guess_lengths),
+[`wordsLib.notify_on_word_length_guess`](#wordsLib.notify_on_word_length_guess)

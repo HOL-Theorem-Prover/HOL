@@ -14,17 +14,15 @@
 (*    Note: This theory was ported from HOL Light                            *)
 (*                                                                           *)
 (* ========================================================================= *)
+Theory integration
+Ancestors
+  num prim_rec pair combin quotient arithmetic pred_set real list
+  real_sigma metric topology option cardinal nets iterate
+  real_topology derivative
+Libs
+  numLib unwindLib tautLib Arith realLib jrhUtils mesonLib
+  pred_setLib hurdUtils schneiderUtils
 
-open HolKernel Parse boolLib bossLib;
-
-open numTheory numLib unwindLib tautLib Arith prim_recTheory pairTheory
-     combinTheory quotientTheory arithmeticTheory pred_setTheory realTheory
-     realLib jrhUtils listTheory mesonLib real_sigmaTheory metricTheory
-     topologyTheory optionTheory pred_setLib cardinalTheory netsTheory;
-
-open hurdUtils schneiderUtils iterateTheory real_topologyTheory derivativeTheory;
-
-val _ = new_theory "integration";
 
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val real_ss = real_ss -* ["lift_disj_eq", "lift_imp_disj"]
@@ -20248,8 +20246,6 @@ val HAS_BOUNDED_VARIATION_ON_INDEFINITE_INTEGRAL_LEFT = store_thm ("HAS_BOUNDED_
    FACTOR_CONTINUOUS_THROUGH_VARIATION
    ...
  *)
-
-val _ = export_theory();
 
 (* References:
 

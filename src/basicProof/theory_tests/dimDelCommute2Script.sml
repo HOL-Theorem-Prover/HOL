@@ -1,7 +1,6 @@
-open HolKernel Parse boolLib simpLib BasicProvers
-open testutils
-
-val _ = new_theory "dimDelCommute2";
+Theory dimDelCommute2[bare]
+Libs
+  HolKernel Parse boolLib simpLib BasicProvers testutils
 
 (* checks that
 
@@ -17,5 +16,3 @@ val _ = shouldfail {checkexn = fn Conv.UNCHANGED => true | _ => false,
                     printresult = thm_to_string,
                     testfn = SIMP_CONV (srw_ss()) []}
                    “ARB = x ==> P x T”
-
-val _ = export_theory();

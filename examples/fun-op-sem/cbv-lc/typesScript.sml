@@ -28,7 +28,7 @@ val _ = type_abbrev ("type_env", ``:type list``);
 
 (* The standard inductive relation for typing STLC.
  * Get a rules, induction and case split theorem back *)
-Inductive type:
+Inductive type_:
 [~lit:]
   !G i. type G (Lit (Int i)) Int
 [~var:]

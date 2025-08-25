@@ -1,15 +1,15 @@
 (*---------------------------------------------------------------------------*)
 (* Construct positive reals from positive rationals                          *)
 (*---------------------------------------------------------------------------*)
+Theory hreal
+Ancestors
+  pair arithmetic num prim_rec hrat
+Libs
+  hol88Lib numLib reduceLib pairLib jrhUtils
 
-open HolKernel Parse boolLib
-     hol88Lib numLib reduceLib pairLib
-     pairTheory arithmeticTheory numTheory
-     prim_recTheory jrhUtils hratTheory;
 
 infix THEN THENL ORELSE ORELSEC;
 
-val _ = new_theory "hreal";
 val _ = ParseExtras.temp_loose_equality()
 
 val GEN_ALL   = hol88Lib.GEN_ALL;   (* it has old reverted variable order *)
@@ -1413,4 +1413,3 @@ val TREAL_INV_WELLDEF = store_thm("TREAL_INV_WELLDEF",
   THEN REPEAT(DISCH_THEN(SUBST1_TAC o MATCH_MP HREAL_SUB_ADD)) THEN
   FIRST_ASSUM SUBST1_TAC THEN REFL_TAC end);
 
-val _ = export_theory();

@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "github416";
+Theory github416
 
 val _ = Datatype `exp = Const num num | Downcast num exp`;
 
@@ -28,4 +26,3 @@ SIMP_TAC (srw_ss()) [Once test_def])) handle HOL_ERR _ => (
 
 val _ = print "Test-case OK\n";
 
-val _ = export_theory();

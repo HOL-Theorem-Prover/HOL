@@ -12,14 +12,13 @@
 (* Based on the work of Joe Hurd [1] (2001) and Aaron Coble [2] (2010)       *)
 (* Cambridge University.                                                     *)
 (* ------------------------------------------------------------------------- *)
+Theory sigma_algebra
+Ancestors
+  arithmetic option pair combin pred_set topology iterate
+  prim_rec
+Libs
+  pred_setLib numLib hurdUtils jrhUtils res_quanTools
 
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory optionTheory pairTheory combinTheory pred_setTheory
-     pred_setLib numLib topologyTheory hurdUtils jrhUtils res_quanTools
-     iterateTheory prim_recTheory;
-
-val _ = new_theory "sigma_algebra";
 
 val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] >> POP_ASSUM K_TAC;
 fun METIS ths tm = prove(tm, METIS_TAC ths);
@@ -5701,8 +5700,6 @@ Proof
     rw [algebra_def, subset_class_def]
  >> ASM_SET_TAC []
 QED
-
-val _ = export_theory ();
 
 (* References:
 

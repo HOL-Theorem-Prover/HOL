@@ -312,4 +312,94 @@ val browser = ref defaultBrowser
 fun help s = !browser s
 
 end
+
+local
+val toLower = String.implode o map Char.toLower o String.explode
+
+fun endsWith suff haystack = let
+  val m = String.size suff
+  val n = String.size haystack
+  in m <= n andalso String.extract (haystack, n - m, NONE) = suff end
+
+fun splitOn c s = let
+  fun loop i j out =
+    if i = 0 then String.substring (s, i, j - i) :: out
+    else case i - 1 of i' =>
+      if c = String.sub (s, i')
+      then loop i' i' (String.substring (s, i, j - i) :: out)
+      else loop i' j out
+  in case String.size s of sz => loop sz sz [] end
+
+datatype doc
+  = DocText of string
+  | DocMd of string
+
+fun docToMarkdown (DocText s) = "```plaintext\n"^s^"\n```\n"
+  | docToMarkdown (DocMd md) = md (* FIXME: filter pandoc md *)
+
+fun joinDirFile dir file =
+  if dir <> "" andalso String.sub(dir, String.size dir - 1) = #"/" then dir ^ file
+  else dir ^ "/" ^ file
+
+fun readToString file = let
+  val istr = TextIO.openIn file
+  in TextIO.inputAll istr before TextIO.closeIn istr end
+
+fun getDoc file = let
+  val mdfile = if endsWith ".txt" file then
+    SOME (String.substring (file, 0, String.size file - 4) ^ ".md")
+  else NONE
+  fun get dir = let
+    val doc = case mdfile of
+        NONE => NONE
+      | SOME file => (SOME $ DocMd $ readToString $ joinDirFile dir file handle _ => NONE)
+    val doc = case doc of
+        NONE => (SOME $ DocText $ readToString $ joinDirFile dir file handle _ => NONE)
+      | doc => doc
+    in doc end
+  fun loop [] = NONE
+    | loop (dir::ds) = case get dir handle _ => NONE of NONE => loop ds | doc => doc
+  in loop (!helpdirs) end
+
+fun init () = let
+  val helpDbs = ref []
+  val mutex = Mutex.mutex ()
+
+  fun rebuildHelp () = (
+    Mutex.lock mutex;
+    helpDbs := map (fn x => (x, Database.readbase x)) (!indexfiles);
+    Mutex.unlock mutex)
+
+  val _ = Thread.fork (rebuildHelp, [])
+
+  fun helpLookup (id, validate) = let
+    val sought = toLower id
+    fun build1 [] out = out
+      | build1 ({comp = Database.Term (fullName, SOME "HOL"), file, ...} :: es) out =
+        (case splitOn #"." fullName of
+          [] => build1 es out
+        | hd :: tl => let
+          val ok = case tl of [] => hd = id | _ => last tl = id andalso validate hd
+          val doc = if ok then getDoc file else NONE
+          val out = case doc of NONE => out | SOME doc => docToMarkdown doc :: out
+          in build1 es out end)
+      | build1 ((_:Database.entry) :: es) out = build1 es out
+    exception Rebuild
+    fun build [] [] out = out
+      | build ((x,db)::xs) (y::ys) out =
+        if x = y then build xs ys (build1 (Database.lookup (db, sought)) out) else raise Rebuild
+      | build _ _ _ = raise Rebuild
+    fun loop snd =
+      rev (build (!helpDbs) (!indexfiles) [])
+      handle Rebuild => (
+        if snd then rebuildHelp () else (Mutex.lock mutex; Mutex.unlock mutex);
+        loop true)
+    in loop false end
+
+  in LSPExtension.helpLookup := helpLookup end
+
+in
+val _ = LSPExtension.registerInit true "Help" init
+end
+
 end

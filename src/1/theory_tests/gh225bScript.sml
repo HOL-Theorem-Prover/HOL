@@ -1,9 +1,8 @@
-open HolKernel Parse boolLib
-
-open gh225aTheory
-
-val _ = new_theory "gh225b";
+Theory gh225b[bare]
+Ancestors
+  gh225a
+Libs
+  HolKernel Parse boolLib
 
 val _ = save_thm("TRUTH", TRUTH);
 
-val _ = export_theory();

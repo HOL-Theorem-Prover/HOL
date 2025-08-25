@@ -26,13 +26,12 @@
    See src/real/analysis/real_topologyTheory for Elementary Topology of
    (one-dimensional) Euclidean space.
  *)
+Theory topology
+Ancestors
+  pair combin pred_set arithmetic relation cardinal
+Libs
+  boolSimps simpLib mesonLib metisLib pairLib tautLib hurdUtils
 
-open HolKernel Parse bossLib boolLib;
-
-open boolSimps simpLib mesonLib metisLib pairTheory pairLib tautLib combinTheory
-     pred_setTheory arithmeticTheory relationTheory cardinalTheory hurdUtils;
-
-val _ = new_theory "topology";
 
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 
@@ -3974,8 +3973,6 @@ Proof
   MATCH_MP_TAC CLOSED_COMPACT_IN THEN EXISTS_TAC “topspace (top :'a topology)” THEN
   ASM_MESON_TAC[CLOSED_IN_SUBSET]
 QED
-
-val _ = export_theory();
 
 (* References:
 

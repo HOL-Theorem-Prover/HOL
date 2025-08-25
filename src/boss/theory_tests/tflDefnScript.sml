@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "tflDefn";
+Theory tflDefn
 
 val _ = Datatype`expr = C1 num expr | C2 num`
 
@@ -15,4 +13,3 @@ val evaluate_defn = Hol_defn "evaluate" `
            | _ => INR T)
      | res => res`
 
-val _ = export_theory();

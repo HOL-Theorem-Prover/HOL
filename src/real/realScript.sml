@@ -1,18 +1,15 @@
 (*---------------------------------------------------------------------------*)
 (* Develop the theory of reals                                               *)
 (*---------------------------------------------------------------------------*)
+Theory real
+Ancestors
+  arithmetic num prim_rec while pred_set realax
+  marker[qualified] (* for unint *)
+Libs
+  numLib reduceLib pairLib mesonLib tautLib simpLib Arithconv
+  jrhUtils Canon_Port BasicProvers TotalDefn metisLib hurdUtils
+  RealArith
 
-open HolKernel Parse boolLib bossLib;
-
-open numLib reduceLib pairLib arithmeticTheory numTheory prim_recTheory
-     whileTheory mesonLib tautLib simpLib Arithconv jrhUtils Canon_Port
-     BasicProvers TotalDefn metisLib hurdUtils pred_setTheory;
-
-open realaxTheory RealArith;
-
-local open markerTheory in end; (* for unint *)
-
-val _ = new_theory "real";
 
 val TAUT_CONV   = jrhUtils.TAUT_CONV; (* conflict with tautLib.TAUT_CONV *)
 val GEN_ALL     = hol88Lib.GEN_ALL;   (* it has old reverted variable order *)
@@ -5277,7 +5274,7 @@ Proof
 QED
 
 (*---------------------------------------------------------------------------*)
-(* Miscellaneous Results (generally for use in descendent theories)          *)
+(* Miscellaneous Results (generally for use in descendant theories)          *)
 (*---------------------------------------------------------------------------*)
 
 Theorem REAL_MUL_SIGN:
@@ -5291,6 +5288,73 @@ Proof
     fs[GSYM REAL_NEG_GT0,Excl "REAL_NEG_GT0"] >>
     dxrule_all_then assume_tac $ REAL_LT_MUL >>
     fs[REAL_MUL_LNEG,REAL_MUL_RNEG,REAL_MUL_COMM]
+QED
+
+Theorem POW_2_LT_1:
+    ∀x. -1 < x ∧ x < 1 ⇒ x² < 1
+Proof
+    rw[] >> wlog_tac ‘0 ≤ x’ [‘x’]
+    >- (first_x_assum $ qspec_then ‘-x’ mp_tac >> simp[] >>
+        disch_then irule >> irule_at Any $ iffLR REAL_LT_NEG >>
+        simp[REAL_NEG_NEG,Excl "REAL_LT_NEG"] >>
+        gs[REAL_NOT_LE,REAL_LE_LT]) >>
+    qspecl_then [‘x’,‘1’,‘x’,‘1’] mp_tac REAL_LT_MUL2 >> simp[REAL_POW_2]
+QED
+
+Theorem POW_2_1_LT:
+    ∀x. x < -1 ∨ 1 < x ⇒ 1 < x²
+Proof
+    strip_tac >> wlog_tac ‘0 ≤ x’ [‘x’]
+    >- (first_x_assum $ qspec_then ‘-x’ mp_tac >>
+        gs[REAL_NOT_LE,REAL_LE_LT] >> rw[] >> first_x_assum irule >> simp[] >>
+        disj2_tac >> irule_at Any $ iffLR REAL_LT_NEG >>
+        simp[REAL_NEG_NEG,Excl "REAL_LT_NEG"]) >>
+    rw[] >> qspecl_then [‘1’,‘x’,‘1’,‘x’] mp_tac REAL_LT_MUL2 >> simp[REAL_POW_2] >>
+    ‘F’ suffices_by simp[] >> dxrule_all REAL_LET_TRANS >> simp[]
+QED
+
+Theorem SQRT_POW_2_ABS:
+    ∀x. sqrt x² = abs x
+Proof
+    rw[] >> Cases_on ‘0 ≤ x’ >- simp[POW_2_SQRT] >> simp[abs] >>
+    ‘0 ≤ -x’ by gs[REAL_NOT_LE,REAL_LE_LT] >>
+    dxrule_then (SUBST1_TAC o SYM) POW_2_SQRT >> simp[]
+QED
+
+Theorem SQUARE_ROOTS:
+    ∀x y. x² = y ⇒ x = sqrt y ∨ x = -sqrt y
+Proof
+    rw[] >> Cases_on ‘0 ≤ x’ >- simp[POW_2_SQRT] >> disj2_tac >>
+    qspec_then ‘-x’ mp_tac $ GENL [“x:real”] POW_2_SQRT >>
+    ‘0 ≤ -x’ by gs[REAL_NOT_LE,REAL_LE_LT] >> simp[]
+QED
+
+Theorem REAL_EQ_RDIV_EQ':
+    ∀x y z. z ≠ 0 ⇒ (x = y / z ⇔ x * z = y)
+Proof
+    rw[real_div] >> eq_tac >> rw[] >>
+    simp[GSYM REAL_MUL_ASSOC,REAL_MUL_RINV,REAL_MUL_LINV]
+QED
+
+Theorem QUADRATIC_FORMULA:
+    ∀a b c x. a ≠ 0 ⇒ a * x² + b * x + c = 0 ⇒
+        x = (-b + sqrt(b² - 4 * a * c)) / (2 * a) ∨
+        x = (-b - sqrt(b² - 4 * a * c)) / (2 * a)
+Proof
+    rw[real_sub,REAL_EQ_RDIV_EQ'] >>
+    ‘∀x y. x = -b + y ⇔ x + b = y’ by
+        simp[Once REAL_ADD_COMM,GSYM real_sub,REAL_EQ_SUB_LADD] >>
+    simp[] >> pop_assum kall_tac >> simp[GSYM real_sub] >>
+    irule SQUARE_ROOTS >> simp[ADD_POW_2,POW_MUL,REAL_EQ_SUB_LADD] >>
+    (* I'm sure there is a better way to do this, I don't know it *)
+    pop_assum $ mp_tac o AP_TERM “λy. 4r * a * y + b²” >>
+    simp[REAL_ADD_LDISTRIB,REAL_POW_2] >>
+    qmatch_abbrev_tac ‘l1:real = r ⇒ l2 = r’ >> ‘l1 = l2’ suffices_by simp[] >>
+    UNABBREV_ALL_TAC >> ‘2r * 2 = 4’ by simp[] >> simp[REAL_MUL_ASSOC] >>
+    ‘2 * x * 2 * a * b = (2 * 2) * a * b * x’ by metis_tac[REAL_MUL_COMM,REAL_MUL_ASSOC] >>
+    ntac 2 $ pop_assum SUBST1_TAC >>
+    ‘x * x * 4 * a * a = 4 * a * a * x * x’ by metis_tac[REAL_MUL_COMM,REAL_MUL_ASSOC] >>
+    pop_assum SUBST1_TAC >> metis_tac[REAL_ADD_COMM,REAL_ADD_ASSOC]
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -5455,5 +5519,3 @@ Proof
  >> irule_at Any REAL_MUL_RINV
  >> ASM_REWRITE_TAC [REAL_SUB_0]
 QED
-
-val _ = export_theory();

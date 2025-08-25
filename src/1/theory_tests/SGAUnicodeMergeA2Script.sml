@@ -1,6 +1,6 @@
-open HolKernel Parse boolLib
-
-val _ = new_theory "SGAUnicodeMergeA2";
+Theory SGAUnicodeMergeA2[bare]
+Libs
+  HolKernel Parse boolLib
 
 val INTER_def = new_definition(
   "INTER_def",
@@ -16,4 +16,3 @@ val funion_symbol = UTF8.chr 0x228C
 val _ = set_fixity funion_symbol (Infixl 500)
 val _ = overload_on (funion_symbol, ``FUNION``)
 
-val _ = export_theory();

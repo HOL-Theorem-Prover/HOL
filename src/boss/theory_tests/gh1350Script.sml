@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "gh1350";
+Theory gh1350
 
 Theorem numcomp[local] = EVAL “2 + 3 * 7”
 
@@ -17,4 +15,3 @@ val _ = assert (List.exists
                        thy = "gh1350" andalso nm = "stored_version"))
                results
 
-val _ = export_theory();

@@ -7,16 +7,14 @@
 (*                (c) Copyright, Marco Maggesi 2014-2017                     *)
 (*             (c) Copyright, Andrea Gabrielli  2016-2017                    *)
 (* ========================================================================= *)
+Theory metric
+Ancestors
+  arithmetic num pair quotient pred_set real real_sigma cardinal
+  topology
+Libs
+  boolSimps simpLib mesonLib metisLib jrhUtils pairLib
+  pred_setLib RealArith tautLib realSimps hurdUtils
 
-open HolKernel Parse bossLib boolLib;
-
-open arithmeticTheory numTheory boolSimps simpLib mesonLib metisLib jrhUtils
-     pairTheory pairLib quotientTheory pred_setTheory pred_setLib RealArith
-     tautLib realSimps;
-
-open realTheory real_sigmaTheory cardinalTheory topologyTheory hurdUtils;
-
-val _ = new_theory "metric";
 
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC;
@@ -1943,8 +1941,6 @@ Proof
 QED
 
 val _ = remove_ovl_mapping "B" {Name = "B", Thy = "metric"};
-val _ = export_theory();
-
 (* References:
 
   [1] Klenke, A.: Probability Theory: A Comprehensive Course. Second Edition.

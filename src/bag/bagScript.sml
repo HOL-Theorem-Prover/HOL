@@ -1,13 +1,10 @@
-open HolKernel Parse boolLib boolSimps bossLib
-     numLib Prim_rec pred_setTheory BasicProvers
-     metisLib dividesTheory arithmeticTheory
-     combinTheory
+Theory bag
+Ancestors
+  list[qualified] divides pred_set arithmetic combin
+Libs
+  boolSimps numLib Prim_rec BasicProvers metisLib mesonLib
 
 fun ARITH q = EQT_ELIM (ARITH_CONV (Parse.Term q));
-
-val _ = new_theory "bag";
-
-val _ = set_grammar_ancestry ["list", "divides"]
 
 val _ = type_abbrev("bag", “:'a -> num”)
 val _ = type_abbrev("multiset", “:'a -> num”)
@@ -390,8 +387,6 @@ val BAG_IN_BAG_DELETE = store_thm(
 
 val ELIM_TAC = BasicProvers.VAR_EQ_TAC
 val ARWT = SRW_TAC [ARITH_ss][]
-open mesonLib
-
 val BAG_DELETE_INSERT = Q.store_thm(
   "BAG_DELETE_INSERT",
   `!x y b1 b2.
@@ -999,11 +994,17 @@ Proof
   rw[BAG_IN,BAG_INN,IN_DEF] >> fs[]
 QED
 
-val SET_OF_EMPTY = store_thm (
-  "SET_OF_EMPTY",
-  ``BAG_OF_SET (EMPTY:'a->bool) = EMPTY_BAG``,
-  SIMP_TAC (srw_ss()) [BAG_OF_SET, EMPTY_BAG, FUN_EQ_THM])
-val _ = export_rewrites ["SET_OF_EMPTY"];
+Theorem SET_OF_EMPTY[simp]:
+  BAG_OF_SET (EMPTY:'a->bool) = EMPTY_BAG
+Proof
+  SIMP_TAC (srw_ss()) [BAG_OF_SET, EMPTY_BAG, FUN_EQ_THM]
+QED
+
+Theorem BAG_OF_SET_EQ_EMPTY_BAG[simp]:
+  BAG_OF_SET s = {||} ⇔ s = ∅
+Proof
+  simp[EXTENSION] >> simp[FUN_EQ_THM, EMPTY_BAG, BAG_OF_SET, AllCaseEqs()]
+QED
 
 Theorem SET_OF_SINGLETON_BAG[simp]:
   !e. SET_OF_BAG {|e|} = {e}
@@ -1695,12 +1696,8 @@ Proof
     >- (`!c. FINITE_BAG c ==> !s. (c = BAG_OF_SET s) ==> FINITE s`
         suffices_by metis_tac[] >>
       HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT >>
-      rw[]
-        >- (Cases_on `s={}` >- rw[] >>
-            `?e. e IN s` by simp[MEMBER_NOT_EMPTY] >>
-            fs[BAG_OF_SET,EMPTY_BAG_alt,FUN_EQ_THM] >>
-            first_x_assum (qspec_then `e` mp_tac) >>
-            rw[])
+      rpt strip_tac
+        >- fs[]
         >- (`e IN s`
               by metis_tac[BAG_IN_BAG_OF_SET,
                            BAG_DECOMPOSE,BAG_IN_BAG_INSERT] >>
@@ -3397,4 +3394,3 @@ val _ = TypeBase.export [
           encode=NONE})
     ]
 
-val _ = export_theory();

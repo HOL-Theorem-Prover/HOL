@@ -1,11 +1,8 @@
-open HolKernel Parse boolLib bossLib
+Theory veblen
+Ancestors
+  ordinal pred_set cardinal
 
-open ordinalTheory
-
-open pred_setTheory cardinalTheory
 (* Material from Brian Huffman's AFP entry on Ordinal arithmetic *)
-
-val _ = new_theory "veblen"
 
 val better_induction = store_thm(
   "better_induction",
@@ -138,4 +135,3 @@ val club_INTER = store_thm(
   simp[sup_thm] >> dsimp[] >> qexists_tac `n` >>
   DEEP_INTRO_TAC oleast_intro >> simp[] >> fs[club_def, unbounded_def])
 
-val _ = export_theory()

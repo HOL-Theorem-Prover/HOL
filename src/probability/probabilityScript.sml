@@ -8,19 +8,14 @@
 (* Originally based on the work of Joe Hurd [7] and Aaron Coble [8]          *)
 (* Cambridge University.                                                     *)
 (* ========================================================================= *)
+Theory probability
+Ancestors
+  pair combin option prim_rec arithmetic pred_set topology real
+  iterate seq transc real_sigma real_topology metric extreal
+  sigma_algebra measure real_borel borel lebesgue martingale
+Libs
+  pred_setLib hurdUtils numLib realLib
 
-open HolKernel Parse boolLib bossLib;
-
-open pairTheory combinTheory optionTheory prim_recTheory arithmeticTheory
-     pred_setTheory pred_setLib topologyTheory hurdUtils numLib;
-
-open realTheory realLib iterateTheory seqTheory transcTheory real_sigmaTheory
-     real_topologyTheory metricTheory;
-
-open extrealTheory sigma_algebraTheory measureTheory real_borelTheory
-     borelTheory lebesgueTheory martingaleTheory;
-
-val _ = new_theory "probability";
 
 (* "... This task would have been a rather hopeless one before the
     introduction of Lebesgue's theories of measure and integration. ...
@@ -9751,8 +9746,6 @@ val _ = List.app Theory.delete_binding
    "convergence_mode_nchotomy",
    "datatype_convergence_mode",
    "converge_def"];
-
-val _ = export_theory ();
 
 (* References:
 

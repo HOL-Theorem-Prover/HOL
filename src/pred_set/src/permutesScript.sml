@@ -5,13 +5,13 @@
 (*              (c) Copyright, John Harrison 2010                            *)
 (*              (c) Copyright, Liming Li 2011                                *)
 (* ========================================================================= *)
+Theory permutes[bare]
+Ancestors
+  arithmetic combin pred_set pair num
+Libs
+  HolKernel Parse boolLib BasicProvers PairedLambda pred_setLib
+  tautLib numLib hurdUtils pureSimps metisLib simpLib
 
-open HolKernel Parse boolLib BasicProvers;
-
-open arithmeticTheory combinTheory pred_setTheory pairTheory PairedLambda
-     pred_setLib tautLib numLib numTheory hurdUtils pureSimps metisLib simpLib;
-
-val _ = new_theory "permutes";
 
 val qx_gen_tac = Q.X_GEN_TAC;
 val qx_genl_tac = map_every qx_gen_tac;
@@ -1015,4 +1015,3 @@ Proof
   REWRITE_TAC[permutes, IN_COUNT] THEN PROVE_TAC[]
 QED
 
-val _ = export_theory ();

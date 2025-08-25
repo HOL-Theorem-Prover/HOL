@@ -1194,74 +1194,43 @@ If $\mathit{op}$ is not an allowed name for a type, a warning will be issued.
 Executing `new_constant("`$c$`", `$\sigma$`)` makes
 $c_{\sigma'}$ a new constant of the current theory,
 for all $c_{\sigma'}$ where $\sigma'$ is an instance of $\sigma$.
-The type $\sigma$ is
-called the *generic type* of $c$.
+The type $\sigma$ is called the *generic type* of $c$.
 If $c$ is not an allowed name for a constant, a warning will be issued.
 
-##skip
-\begin{holboxed}
-\index{new_axiom@`new_axiom`|pin}
-\begin{verbatim}
-   new_axiom : (string * term) -> thm
-\end{verbatim}
-\end{holboxed}
+```
+>>__ printNameAndType 4 "Theory" "new_axiom";
+```
 
-
-\noindent
-\noindent Executing \ml{new_axiom("}$name$\ml{",}$t$\ml{)} declares the
-sequent
-\ml{(\lb\rb{},$t$)} to be an axiom\index{axioms!declaration of, in HOL logic@declaration of, in HOL logic} of the current theory with name $name$.
+Executing `new_axiom("`$\mathit{name}$`",`$t$`)` declares the sequent
+`([],`$t$`)` to be an axiom of the current theory with name $\mathit{name}$.
 Failure occurs if:
-\begin{myenumerate}
-\item the type of $t$ is not \verb+bool+;
-
-\item $t$ contains out-of-date constants or types, \ie, constants or
+- the type of $t$ is not `bool`; or
+- $t$ contains out-of-date constants or types, $i.e.$, constants or
   types that have been re-declared after $t$ was built.
-\end{myenumerate}
 
-\noindent
 Once a theorem has been proved, it can be saved with the function
 
-\begin{holboxed}
-\index{theorems, in HOL logic@theorems, in HOL logic!saving of|(}%
-\index{saving theorems|(}%
-\index{save_thm@`save_thm`|pin}
-\index{save_thm@`save_thm`|seealso{`Theorem` (special syntactic form)}}
-\begin{verbatim}
-   save_thm : (string * thm) -> thm
-\end{verbatim}
-\end{holboxed}
+```
+>>__ printNameAndType 4 "Theory" "save_thm"
+```
 
-{
-\newcommand{\mname}{\(\mathit{name}\)}
-\newcommand{\mth}{\(\mathit{th}\)}
-\newcommand{\mtac}{\(\mathit{tac}\)}
-
-\noindent
-Evaluating \ml{save_thm("}\mname\ml{",}\mth\ml{)} will save the theorem \mth{} with name \mname{} in the current theory segment.
-\index{attributes, for theorems|see{theorem attributes}}
-\index{theorem attributes|(}
+Evaluating `save_thm("`$\mathit{name}$`",`$\mathit{th}$`)` will save the theorem $\mathit{th}$ with name $\mathit{name}$ in the current theory segment.
 In addition, various tools can be primed to pay particular attention to saved theorems through the use of special attributes.
-Such attributes are indicated by appending the list of the attribute names to the \mname.
-Thus, to indicate the `simp` attribute (for which, see discussion of the stateful simpset in Section~\ref{sec:srw-ss}), one can write
-\begin{alltt}
-   save_thm("\mname[simp]", \mth)
-\end{alltt}
+Such attributes are indicated by appending the list of the attribute names to the $\mathit{name}$.
+Thus, to indicate the `simp` attribute (for which, see discussion of the stateful simpset in §[Stateful Simpset](#the-stateful-simpset-srw_ss), one can write
+```
+    save_thm("name[simp]", th)
+```
 Multiple attributes can be listed between the square brackets, separated by commas.
 
 There are also attributes controlling the way in which a theorem is saved, rather than affecting possible consumers of that theorem.
-\index{local@`local`!as theorem attribute}
-\index{theorem attributes!local@`local`}
 The first, `local`, is used to create theorems that will *not* be exported to disk, but which are important locally.
 Such local theorems can have other attributes attached to them, which will have their effect within the given session/script-file.
-\index{unlisted@`unlisted`!as theorem attribute}
-\index{theorem attributes!unlisted@`unlisted`}
 The second, `unlisted`, makes the theorem more difficult to access.
 This is appropriate when the theorem is being saved for the consumption of particular tools (which fact might be indicated by the use of other attributes), but the theorem is otherwise uninteresting, and unlikely to be something that a user is going to want to stumble across when searching or surveying theories.
-Concretely: unlisted theorems do not appear in theory signature files (so: cannot be accessed with the \ml{xTheory.thm_name} syntax); and unlisted theorems will not be returned as the results of searches made for theorems using the functions in the `DB` module.
-\index{theorem database (DB)@theorem database (`DB`)}
-\index{DB, database of theorem values@`DB`, database of theorem values}
+Concretely: unlisted theorems do not appear in theory signature files (so: cannot be accessed with the `xTheory.thm_name` syntax); and unlisted theorems will not be returned as the results of searches made for theorems using the functions in the `DB` module.
 
+##skip
 
 \index{Theorem (special syntactic form)@`Theorem` (special syntactic form)|(}
 \index{special syntactic forms for scripts!Theorem@`Theorem`}
@@ -1450,7 +1419,7 @@ In \LOGIC{} a constant definition
 \index{extension, of HOL logic@extension, of HOL logic!by constant definition}%
 \index{constant definition extension, of HOL logic@constant definition extension, of HOL logic!ML function for@ML function for}%
 %
-over a signature $\Sigma_{\Omega}$ is defined to be an equation, \ie,
+over a signature $\Sigma_{\Omega}$ is defined to be an equation, *i.e.*,
 a formula of the form $c_{\sigma}=t_{\sigma}$, such that:
 \begin{myenumerate}
 \item $c$ is not the name of any constant in $\Sigma_{\Omega}$;

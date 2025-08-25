@@ -2,10 +2,12 @@
 (* This takes the extensionality principle as the definition of equivalence.*)
 (* Composed and contributed by Michael Norrish.                             *)
 (* June 24, 2005.                                                           *)
+Theory ext_finite_set
+Ancestors
+  list
+Libs
+  BasicProvers quotientLib
 
-open HolKernel Parse boolLib bossLib BasicProvers listTheory quotientLib
-
-val _ = new_theory "ext_finite_set";
 
 fun Store_Thm(n,t,tac) = store_thm(n,t,tac) before
                          export_rewrites [n]
@@ -398,7 +400,5 @@ val _ = map save_thm
      ("finite_set_EXTENSION",finite_set_EXTENSION),
      ("finite_set_INDUCT",finite_set_INDUCT)
     ];
-
-val _ = export_theory();
 
 val _ = html_theory "ext_finite_set";

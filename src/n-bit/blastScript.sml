@@ -5,11 +5,12 @@
 (* AUTHOR        : Anthony Fox, University of Cambridge                      *)
 (* DATE          : 2010,2011                                                 *)
 (* ========================================================================= *)
+Theory blast
+Ancestors
+  arithmetic bit words
+Libs
+  fcpLib wordsLib
 
-open HolKernel Parse boolLib bossLib;
-open fcpLib arithmeticTheory bitTheory wordsTheory wordsLib
-
-val _ = new_theory "blast"
 
 (* -------------------------------------------------------------------------
    Ripple carry addition
@@ -640,4 +641,3 @@ val word_rol_bv_expand = Q.store_thm("word_rol_bv_expand",
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory()

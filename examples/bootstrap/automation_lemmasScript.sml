@@ -6,9 +6,6 @@ Ancestors
 Libs
   wordsLib
 
-val _ = new_theory "automation_lemmas";
-
-
 (* theorems used in proof automation *)
 
 Theorem trans_app:

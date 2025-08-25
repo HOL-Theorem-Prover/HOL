@@ -288,7 +288,7 @@ struct
     CharVector.tabulate (40, ithNibbleToHexDigitChar)
   end
 
-  fun sha1_file0 {filename} =
+  fun sha1_file {filename} =
       let
         val fstream = BinIO.openIn filename
         val fstream' = BinIO.getInstream fstream
@@ -296,13 +296,5 @@ struct
         sha1String BinIO.StreamIO.inputN fstream' before
         BinIO.closeIn fstream
       end
-
-  fun sha1_file {filename} =
-      if OS.FileSys.access("/usr/bin/shasum", [OS.FileSys.A_EXEC]) then
-          case Mosml.run "/usr/bin/shasum" [Systeml.protect filename] "" of
-              Mosml.Success s => hd (String.tokens Char.isSpace s)
-            | Mosml.Failure _ => sha1_file0 {filename=filename}
-      else
-        sha1_file0 {filename=filename}
 
 end

@@ -5,12 +5,13 @@
 (* AUTHOR        : (c) Anthony Fox, University of Cambridge                  *)
 (* DATE          : 2001-2005                                                 *)
 (* ========================================================================= *)
+Theory numeral_bit[bare]
+Ancestors
+  arithmetic numeral bit
+Libs
+  HolKernel Parse boolLib BasicProvers metisLib simpLib numSimps
+  numLib
 
-open HolKernel Parse boolLib
-open BasicProvers metisLib simpLib numSimps numLib
-open arithmeticTheory numeralTheory bitTheory
-
-val _ = new_theory "numeral_bit";
 
 (* ------------------------------------------------------------------------- *)
 
@@ -560,4 +561,3 @@ val () =
    List.app (fn s => remove_ovl_mapping s {Name = s, Thy = "numeral_bit"})
             ["iBITWISE", "iSUC", "iDIV2", "iLOG2", "iMOD_2EXP"]
 
-val _ = export_theory()

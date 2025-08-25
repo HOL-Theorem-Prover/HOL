@@ -1,7 +1,8 @@
-open HolKernel Parse boolLib;
-
-val _ = new_theory "more_list";
-
+Theory more_list
+Ancestors
+  combin num arithmetic list rich_list more_set
+Libs
+  listLib numLib Psyntax tactics
 
 (*
 app load [
@@ -9,15 +10,6 @@ app load [
           "more_setTheory",
           "arithLib", "Psyntax" ];
 *)
-
-open combinTheory numTheory arithmeticTheory
-     listTheory rich_listTheory listLib more_setTheory
-     numLib Psyntax ;
-
-
-open tactics;
-
-
 
 val MAP2_APPEND = store_thm
    ("MAP2_APPEND",
@@ -161,8 +153,6 @@ val DL =
                        (DL (CONS (y:'a) l) = (~(y IN SL l) /\ DL l))”};
 
 
-
-val _ = export_theory();
 
 val _ = print_theory_to_file "-" "more_list.lst";
 

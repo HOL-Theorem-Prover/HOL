@@ -1,7 +1,10 @@
-open HolKernel Parse boolLib;
-
-val _ = new_theory "beta";
-
+Theory beta
+Ancestors
+  prim_rec pair list rich_list combin more_list pred_set num
+  arithmetic relation more_set variable term alpha lift reduction
+Libs
+  pred_setLib numLib Mutual ind_rel dep_rewrite quotient
+  barendregt tactics
 
 (* In interactive sessions, do:
 
@@ -10,32 +13,7 @@ app load ["barendregt", "tactics"
 
 *)
 
-open prim_recTheory pairTheory listTheory rich_listTheory;
-open combinTheory;
 (* open listLib; *)
-open more_listTheory;
-open pred_setTheory pred_setLib;
-open numTheory;
-open numLib;
-open arithmeticTheory;
-open bossLib;
-open relationTheory;
-open Mutual;
-open ind_rel;
-open dep_rewrite;
-open quotient;
-open more_setTheory;
-open variableTheory;
-open termTheory;
-open alphaTheory;
-open liftTheory;
-open barendregt;
-open reductionTheory;
-
-
-open tactics;
-
-
 val term = ty_antiq ( ==`:'a term`== );
 val subs = ty_antiq ( ==`:(var # 'a term) list`== );
 val term_rel = ty_antiq ( ==`:'a term -> 'a term -> bool`== );
@@ -1857,8 +1835,6 @@ val BETA_R_NORMAL_FORM_UNIQUE = store_thm
     THEN REWRITE_TAC[BETA_R_CHURCH_ROSSER]
    );
 
-
-val _ = export_theory();
 
 val _ = print_theory_to_file "-" "beta.lst";
 

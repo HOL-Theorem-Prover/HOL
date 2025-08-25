@@ -6,14 +6,12 @@
 (* ------------------------------------------------------------------------- *)
 (* Updated and further enriched by Chun Tian (2018 - 2023)                   *)
 (* ------------------------------------------------------------------------- *)
+Theory extreal_base
+Ancestors
+  combin prim_rec arithmetic real iterate real_sigma
+Libs
+  tautLib numLib hurdUtils realLib
 
-open HolKernel Parse boolLib bossLib;
-
-open combinTheory tautLib prim_recTheory arithmeticTheory numLib hurdUtils;
-
-open realTheory realLib iterateTheory real_sigmaTheory;
-
-val _ = new_theory "extreal_base";
 
 Datatype : (* extreal_TY_DEF *)
     extreal = NegInf | PosInf | Normal real
@@ -3533,4 +3531,3 @@ Proof
  >> MATCH_MP_TAC lt_imp_le >> art []
 QED
 
-val _ = export_theory();
