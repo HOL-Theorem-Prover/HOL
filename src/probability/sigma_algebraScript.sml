@@ -2480,29 +2480,31 @@ Proof
          MATCH_MP_TAC disjointI \\
          NTAC 2 GEN_TAC >> SIMP_TAC std_ss [IN_IMAGE, IN_COUNT] \\
          rpt STRIP_TAC \\
-         Cases_on `i' = i''` >- (`a = b` by METIS_TAC []) \\
+         rename [‘a ≠ b’, ‘a = f i ∩ f' i1’, ‘b = f i ∩ f' i2’] \\
+         Cases_on `i1 = i2` >- (`a = b` by METIS_TAC []) \\
          ASM_REWRITE_TAC [DISJOINT_ALT] \\
          RW_TAC std_ss [IN_INTER] \\
          CCONTR_TAC >> fs [] \\
-        `x IN f' i' INTER f' i''` by PROVE_TAC [IN_INTER] \\
-        `~DISJOINT (f' i') (f' i'')` by ASM_SET_TAC [DISJOINT_DEF] \\
+        `x IN f' i1 INTER f' i2` by PROVE_TAC [IN_INTER] \\
+        `~DISJOINT (f' i1) (f' i2)` by ASM_SET_TAC [DISJOINT_DEF] \\
          Q.PAT_X_ASSUM `disjoint (IMAGE f' (count n'))` MP_TAC \\
          RW_TAC std_ss [disjoint_def, IN_IMAGE, IN_COUNT] \\
-         Q.EXISTS_TAC `f' i'` >> Q.EXISTS_TAC `f' i''` >> art [] \\
+         Q.EXISTS_TAC `f' i1` >> Q.EXISTS_TAC `f' i2` >> art [] \\
          METIS_TAC []) \\
      RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_COUNT] \\
   (* f i INTER f' i' IN S *)
+     rename [‘f i ∩ g j ∈ S’] >>
      Know `(IMAGE f (count n)) SUBSET sts`
      >- (Q.PAT_X_ASSUM `BIGUNION (IMAGE f (count n)) IN S` MP_TAC \\
          Q.UNABBREV_TAC `S` >> SIMP_TAC std_ss [GSPECIFICATION] >> METIS_TAC []) \\
      DISCH_TAC \\
-     Know `(IMAGE f' (count n')) SUBSET sts`
-     >- (Q.PAT_X_ASSUM `BIGUNION (IMAGE f' (count n')) IN S` MP_TAC \\
+     Know `(IMAGE g (count n')) SUBSET sts`
+     >- (Q.PAT_X_ASSUM `BIGUNION (IMAGE g (count n')) IN S` MP_TAC \\
          Q.UNABBREV_TAC `S` >> SIMP_TAC std_ss [GSPECIFICATION] >> METIS_TAC []) \\
      DISCH_TAC \\
-    `f i IN sts /\ f' i' IN sts` by PROVE_TAC [SUBSET_DEF, IN_IMAGE, IN_COUNT] \\
+    `f i IN sts /\ g j IN sts` by PROVE_TAC [SUBSET_DEF, IN_IMAGE, IN_COUNT] \\
      fs [semiring_def, space_def, subsets_def] \\
-    `f i INTER f' i' IN sts` by PROVE_TAC [] \\
+    `f i INTER g j IN sts` by PROVE_TAC [] \\
      METIS_TAC [SUBSET_DEF])
  >> DISCH_TAC
  (* S is stable under (more) finite intersection *)

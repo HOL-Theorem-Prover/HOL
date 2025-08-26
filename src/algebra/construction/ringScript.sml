@@ -6663,14 +6663,15 @@ val principal_ideal_has_principal_ideal = store_thm(
   `q IN R` by metis_tac[principal_ideal_element, ring_mult_element] >>
   `<q> << r` by rw[principal_ideal_ideal] >>
   rw[ideal_def] >| [
-    rw[Subgroup_def] >-
-    metis_tac[ideal_has_subgroup, Subgroup_def] >-
-    metis_tac[ideal_has_subgroup, Subgroup_def] >-
-   (`<q>.carrier SUBSET <p>.carrier` suffices_by metis_tac[ideal_carriers] >>
-    `?z. z IN R /\ (q = p * z)` by metis_tac[principal_ideal_element] >>
-    rw[principal_ideal_def, coset_def, SUBSET_DEF] >>
-    qexists_tac `z * z'` >>
-    rw[ring_mult_assoc]) >>
+    rw[Subgroup_def]
+    >- metis_tac[ideal_has_subgroup, Subgroup_def]
+    >- metis_tac[ideal_has_subgroup, Subgroup_def]
+    >- (`<q>.carrier SUBSET <p>.carrier` suffices_by metis_tac[ideal_carriers]>>
+        `?z. z IN R /\ (q = p * z)` by metis_tac[principal_ideal_element] >>
+        rw[principal_ideal_def, coset_def, SUBSET_DEF] >>
+        rename [‘p * a * b = p * _ ∧ _ ∈ R’] >>
+        qexists_tac `a * b` >>
+        rw[ring_mult_assoc]) >>
     metis_tac[ideal_ops],
     metis_tac[ideal_carriers],
     metis_tac[ideal_carriers],
