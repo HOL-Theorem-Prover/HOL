@@ -1740,16 +1740,16 @@ QED
 
 (* strong bisimulation from an instance up to full tree of an abstraction *)
 CoInductive strong_bisim_upfrom_abs:
-  (strong_bisim_upfrom_abs abs abs' (Ret x) (Ret x)) /\
-  ((!l. strong_bisim_upfrom_abs abs abs' (k l) (k' l) \/ ?r. (k l = (abs r) /\ k' l = (abs' r))) ==>
-   strong_bisim_upfrom_abs abs abs' (Vis e k) (Vis e k')) /\
-  ((?r. t = (abs r) /\ t' = (abs' r)) ==> strong_bisim_upfrom_abs abs abs' (Tau t) (Tau t')) /\
-  ((strong_bisim_upfrom_abs abs abs' t t') ==> (strong_bisim_upfrom_abs abs abs' (Tau t) (Tau t')))
+  (strong_bisim_upfrom_abs (abs, abs') (Ret x) (Ret x)) /\
+  ((!l. strong_bisim_upfrom_abs (abs, abs') (k l) (k' l) \/ ?r. (k l = (abs r) /\ k' l = (abs' r))) ==>
+   strong_bisim_upfrom_abs (abs, abs') (Vis e k) (Vis e k')) /\
+  ((?r. t = (abs r) /\ t' = (abs' r)) ==> strong_bisim_upfrom_abs (abs, abs') (Tau t) (Tau t')) /\
+  ((strong_bisim_upfrom_abs (abs, abs') t t') ==> (strong_bisim_upfrom_abs (abs, abs') (Tau t) (Tau t')))
 End
 
 Theorem strong_bisim_upfrom_abs_FUNPOW_Tau:
-  strong_bisim_upfrom_abs abs abs' t t' ==>
-  strong_bisim_upfrom_abs abs abs' (FUNPOW Tau n t) (FUNPOW Tau n t')
+  strong_bisim_upfrom_abs (abs, abs') t t' ==>
+  strong_bisim_upfrom_abs (abs, abs') (FUNPOW Tau n t) (FUNPOW Tau n t')
 Proof
   Induct_on ‘n’ \\ gvs[]
   \\ disch_tac
@@ -1759,7 +1759,7 @@ Proof
 QED
 
 Theorem strong_bisim_upfrom_abs_FUNPOW_Tau_SUC_abs:
-  strong_bisim_upfrom_abs abs abs' (FUNPOW Tau (SUC n) (abs r)) (FUNPOW Tau (SUC n) (abs' r))
+  strong_bisim_upfrom_abs (abs, abs') (FUNPOW Tau (SUC n) (abs r)) (FUNPOW Tau (SUC n) (abs' r))
 Proof
   gvs[FUNPOW]
   \\ irule strong_bisim_upfrom_abs_FUNPOW_Tau
@@ -1767,13 +1767,13 @@ Proof
 QED
 
 Theorem strong_bisim_upfrom_abs_strong:
-  !abs t t'. strong_bisim_upfrom_abs abs abs t t' <=> t = t'
+  !abs t t'. strong_bisim_upfrom_abs (abs, abs) t t' <=> t = t'
 Proof
   rpt strip_tac
   \\ iff_tac
   >- (strip_tac
       \\ irule $ iffRL itree_strong_bisimulation
-      \\ qexists ‘CURRY {(t, t') | t, t' | strong_bisim_upfrom_abs abs abs t t'}’ \\ rw[UNCURRY]
+      \\ qexists ‘CURRY {(t, t') | t, t' | strong_bisim_upfrom_abs (abs, abs) t t'}’ \\ rw[UNCURRY]
       \\ drule $ iffLR strong_bisim_upfrom_abs_cases
       \\ rw[]
       \\ strip_tac
@@ -1782,19 +1782,19 @@ Proof
      )
   \\ rw[]
   \\ irule strong_bisim_upfrom_abs_coind
-  \\ qexists ‘CURRY ({(t, t) | t | T })’
-  \\ rw[UNCURRY]
-  \\ Cases_on ‘a0’ \\ rw[]
+  \\ qexists ‘\ap t t'. ap = (abs, abs) /\ t = t'’
+  \\ rw[]
+  \\ Cases_on ‘a1’ \\ rw[]
 QED
 
 Theorem cyclic_strong_bisim_upfrom_abs:
-  (!r. strong_bisim_upfrom_abs abs abs' (abs r) (abs' r)) <=> abs = abs'
+  (!r. strong_bisim_upfrom_abs (abs, abs') (abs r) (abs' r)) <=> abs = abs'
 Proof
   iff_tac
   >- (rpt strip_tac
       \\ irule $ iffRL FUN_EQ_THM \\ rw[]
       \\ irule $ iffRL itree_strong_bisimulation
-      \\ qexists ‘CURRY {(t, t') | t, t' | strong_bisim_upfrom_abs abs abs' t t'}’ \\ rw[UNCURRY]
+      \\ qexists ‘CURRY {(t, t') | t, t' | strong_bisim_upfrom_abs (abs, abs') t t'}’ \\ rw[UNCURRY]
       \\ drule $ iffLR strong_bisim_upfrom_abs_cases \\ rw[]
       \\ metis_tac[]
      )
@@ -1802,13 +1802,14 @@ Proof
 QED
 
 Theorem strong_bisim_upfrom_abs_strong_bind:
-  (!r. strong_bisim_upfrom_abs abs abs' (k r) (k' r)) ==>
-  strong_bisim_upfrom_abs abs abs' (itree_bind t k) (itree_bind t k')
+  (!r. strong_bisim_upfrom_abs (abs, abs') (k r) (k' r)) ==>
+  strong_bisim_upfrom_abs (abs, abs') (itree_bind t k) (itree_bind t k')
 Proof
   rpt strip_tac
   \\ irule strong_bisim_upfrom_abs_coind
-  \\ qexists ‘CURRY ({(itree_bind t k, itree_bind t k') | t | T } ∪
-                     {(t, t') | t, t' | strong_bisim_upfrom_abs abs abs' t t' })’ \\ reverse $ rw[]
+  \\ qexists ‘\ap tk tk'. ap = (abs, abs') /\ ((?t. tk = itree_bind t k /\ tk' = itree_bind t k')
+                                                \/ strong_bisim_upfrom_abs (abs, abs') tk tk')’
+  \\ reverse $ rw[]
   >- (disj1_tac
       \\ qexists ‘t’ \\ rw[]
      )
@@ -1828,7 +1829,7 @@ Proof
       \\ first_x_assum $ qspec_then ‘x’ assume_tac \\ gvs[]
       \\ imp_res_tac strong_bisim_upfrom_abs_FUNPOW_Tau
       \\ pop_assum $ qspec_then ‘n’ assume_tac
-      \\ drule $ iffLR strong_bisim_upfrom_abs_cases
+      \\ drule $ iffLR strong_bisim_upfrom_abs_cases \\ rw[]
       \\ metis_tac[]
      )
   \\ imp_res_tac strip_tau_FUNPOW
@@ -1842,45 +1843,45 @@ Proof
 QED
 
 Theorem cyclic_strong_bisim_upfrom_abs_strong_upfrom:
-  (!r. strong_bisim_upfrom_abs abs abs' (abs r) (abs' r)) /\ strong_bisim_upfrom_abs abs abs' t t' ==> t = t'
+  (!r. strong_bisim_upfrom_abs (abs, abs') (abs r) (abs' r)) /\ strong_bisim_upfrom_abs (abs, abs') t t' ==> t = t'
 Proof
   rpt strip_tac
   \\ irule $ iffRL itree_bisimulation
-  \\ qexists ‘CURRY ({(t'', t''') | t'', t''' | (strong_bisim_upfrom_abs abs abs' t'' t''')})’ \\ rw[UNCURRY]
+  \\ qexists ‘CURRY ({(t'', t''') | t'', t''' | (strong_bisim_upfrom_abs (abs, abs') t'' t''')})’ \\ rw[UNCURRY]
   \\ drule $ iffLR strong_bisim_upfrom_abs_cases
   \\ rw[]
   \\ metis_tac[]
 QED
 
 Theorem itree_strong_bisim_upfrom_abs:
-  strong_bisim_upfrom_abs abs abs' t t
+  strong_bisim_upfrom_abs (abs, abs') t t
 Proof
   irule $ strong_bisim_upfrom_abs_coind
-  \\ qexists ‘CURRY {(t, t) | t | T }’ \\ rw[UNCURRY]
-  \\ Cases_on ‘a0’ \\ gvs[]
+  \\ qexists ‘\ap t t'. ap = (abs, abs') /\ t = t'’ \\ rw[]
+  \\ Cases_on ‘a1’ \\ gvs[]
 QED
 
 (* strong bisimulation from an instance up to full tree of an abstraction *)
 CoInductive weak_bisim_upfrom_abs:
-  (strip_tau t (Ret x) /\ strip_tau t' (Ret x) ==> weak_bisim_upfrom_abs abs abs' t t') /\
+  (strip_tau t (Ret x) /\ strip_tau t' (Ret x) ==> weak_bisim_upfrom_abs (abs, abs') t t') /\
   (strip_tau t (Vis e k) /\ strip_tau t' (Vis e k') /\
-   (!l. weak_bisim_upfrom_abs abs abs' (k l) (k' l) \/ k l = FUNPOW Tau n (abs r) /\ k' l = FUNPOW Tau n' (abs' r)) ==>
-   weak_bisim_upfrom_abs abs abs' t t') /\
-  weak_bisim_upfrom_abs abs abs' (FUNPOW Tau (SUC n) (abs r)) (FUNPOW Tau (SUC n') (abs' r)) /\
-  ((weak_bisim_upfrom_abs abs abs' t t') ==> (weak_bisim_upfrom_abs abs abs' (FUNPOW Tau (SUC n) t) (FUNPOW Tau (SUC n') t')))
+   (!l. weak_bisim_upfrom_abs (abs, abs') (k l) (k' l) \/ k l = FUNPOW Tau n (abs r) /\ k' l = FUNPOW Tau n' (abs' r)) ==>
+   weak_bisim_upfrom_abs (abs, abs') t t') /\
+  weak_bisim_upfrom_abs (abs, abs') (FUNPOW Tau (SUC n) (abs r)) (FUNPOW Tau (SUC n') (abs' r)) /\
+  ((weak_bisim_upfrom_abs (abs, abs') t t') ==> (weak_bisim_upfrom_abs (abs, abs') (FUNPOW Tau (SUC n) t) (FUNPOW Tau (SUC n') t')))
 End
 
 Theorem weak_bisim_upfrom_abs_spin:
-  weak_bisim_upfrom_abs abs abs' spin spin
+  weak_bisim_upfrom_abs (abs, abs') spin spin
 Proof
   irule weak_bisim_upfrom_abs_coind
-  \\ qexists ‘CURRY {(spin, spin)}’ \\ rw[UNCURRY]
+  \\ qexists ‘\ap t t'. ap = (abs, abs') /\ t = spin /\ t' = spin’ \\ rw[]
   \\ metis_tac[FUNPOW, spin]
 QED
 
 Theorem weak_bisim_upfrom_abs_tauL:
-  weak_bisim_upfrom_abs abs abs' t'' t''' ==>
-  weak_bisim_upfrom_abs abs abs' (Tau t'') t'''
+  weak_bisim_upfrom_abs (abs, abs') t'' t''' ==>
+  weak_bisim_upfrom_abs (abs, abs') (Tau t'') t'''
 Proof
   strip_tac
   \\ drule $ iffLR weak_bisim_upfrom_abs_cases
@@ -1895,8 +1896,8 @@ Proof
 QED
 
 Theorem weak_bisim_upfrom_abs_tauR:
-  weak_bisim_upfrom_abs abs abs' t'' t''' ==>
-  weak_bisim_upfrom_abs abs abs' t'' (Tau t''')
+  weak_bisim_upfrom_abs (abs, abs') t'' t''' ==>
+  weak_bisim_upfrom_abs (abs, abs') t'' (Tau t''')
 Proof
   strip_tac
   \\ drule $ iffLR weak_bisim_upfrom_abs_cases
@@ -1911,8 +1912,8 @@ Proof
 QED
 
 Theorem weak_bisim_upfrom_cyclic_abs_FUNPOW_Tau:
-  weak_bisim_upfrom_abs abs abs' t'' t''' ==>
-  weak_bisim_upfrom_abs abs abs' (FUNPOW Tau n t'') (FUNPOW Tau n' t''')
+  weak_bisim_upfrom_abs (abs, abs') t'' t''' ==>
+  weak_bisim_upfrom_abs (abs, abs') (FUNPOW Tau n t'') (FUNPOW Tau n' t''')
 Proof
   rpt strip_tac
   \\ drule $ iffLR weak_bisim_upfrom_abs_cases
@@ -1935,17 +1936,21 @@ Proof
 QED
 
 Theorem weak_bisim_upfrom_abs_wbisim_bind:
-  itree_wbisim t t' /\ (!r. weak_bisim_upfrom_abs abs abs' (k r) (k' r)) ==>
-  weak_bisim_upfrom_abs abs abs' (itree_bind t k) (itree_bind t' k')
+  itree_wbisim t t' /\ (!r. weak_bisim_upfrom_abs (abs, abs') (k r) (k' r)) ==>
+  weak_bisim_upfrom_abs (abs, abs') (itree_bind t k) (itree_bind t' k')
 Proof
   rpt strip_tac
   \\ irule weak_bisim_upfrom_abs_coind
-  \\ qexists ‘CURRY (pred_set$UNION {(itree_bind t k, itree_bind t' k') | t, t' | itree_wbisim t t'}
-                           {(t, t') | t, t' | weak_bisim_upfrom_abs abs abs' t t'})’ \\ reverse $ rw[]
+  \\ qexists ‘\ap t t'. ap = (abs, abs') /\
+                        ((?t'' t'''.t = itree_bind t'' k /\ t' = itree_bind t''' k'
+                                    /\ itree_wbisim t'' t''')
+                         \/ weak_bisim_upfrom_abs (abs, abs') t t')’
+  \\ reverse $ rw[]
   >- (disj1_tac
       \\ qexistsl [‘t’, ‘t'’] \\ rw[]
      )
   >- (drule $ iffLR weak_bisim_upfrom_abs_cases
+      \\ rw[]
       \\ metis_tac[]
   )
   \\ reverse $ Cases_on ‘?t. strip_tau t''' t’ \\ gvs[]
@@ -1966,6 +1971,7 @@ Proof
       \\ imp_res_tac weak_bisim_upfrom_cyclic_abs_FUNPOW_Tau
       \\ pop_assum $ qspecl_then [‘n'’, ‘n’] assume_tac
       \\ drule $ iffLR weak_bisim_upfrom_abs_cases
+      \\ rw[]
       \\ metis_tac[]
      )
   \\ drule itree_wbisim_sym
@@ -1981,39 +1987,39 @@ Proof
 QED
 
 Theorem itree_wbisim_weak_upfrom_abs:
-  itree_wbisim t' t'' ==> weak_bisim_upfrom_abs abs abs t' t''
+  itree_wbisim t' t'' ==> weak_bisim_upfrom_abs (abs, abs) t' t''
 Proof
   disch_tac
   \\ irule weak_bisim_upfrom_abs_coind
-  \\ qexists ‘CURRY ({(t', t'') | itree_wbisim t' t'' })’
-  \\ rw[UNCURRY]
-  \\ reverse $ Cases_on ‘?x. strip_tau a0 x’ \\ gvs[]
+  \\ qexists ‘\ap t t'. ap = (abs, abs) /\ itree_wbisim t t'’
+  \\ rw[]
+  \\ reverse $ Cases_on ‘?x. strip_tau a1 x’ \\ gvs[]
   >- (drule strip_tau_spin \\ rw[]
-      \\ ‘a1 = spin’ by metis_tac[wbisim_spin_eq, itree_wbisim_sym]
+      \\ ‘a2 = spin’ by metis_tac[wbisim_spin_eq, itree_wbisim_sym]
       \\ metis_tac[spin_FUNPOW_Tau]
      )
   \\ Cases_on ‘x’ \\ gvs[]
-  >- (subgoal ‘strip_tau a1 (Ret x')’
+  >- (subgoal ‘strip_tau a2 (Ret x')’
       >- (irule itree_wbisim_strip_tau_Ret
           \\ metis_tac[]
          )
       \\ imp_res_tac strip_tau_FUNPOW
       \\ metis_tac[]
      )
-  \\ qspecl_then [‘a0’, ‘a1’, ‘a’, ‘g’] assume_tac itree_wbisim_strip_tau_Vis
+  \\ qspecl_then [‘a1’, ‘a2’, ‘a’, ‘g’] assume_tac itree_wbisim_strip_tau_Vis
   \\ gvs[]
   \\ imp_res_tac strip_tau_FUNPOW
   \\ metis_tac[]
 QED
 
 Theorem weak_bisim_upfrom_weak_abs:
-  weak_bisim_upfrom_abs abs abs t' t'' <=> itree_wbisim t' t''
+  weak_bisim_upfrom_abs (abs, abs) t' t'' <=> itree_wbisim t' t''
 Proof
   reverse $ iff_tac
   >- fs[itree_wbisim_weak_upfrom_abs]
   \\ strip_tac
   \\ irule itree_wbisim_strong_coind
-  \\ qexists ‘CURRY {(t', t'') | t', t'' | weak_bisim_upfrom_abs abs abs t' t''}’ \\ reverse $ rw[UNCURRY]
+  \\ qexists ‘CURRY {(t', t'') | t', t'' | weak_bisim_upfrom_abs (abs, abs) t' t''}’ \\ reverse $ rw[UNCURRY]
   \\ drule $ iffLR weak_bisim_upfrom_abs_cases
   \\ rw[]
   \\ rpt strip_tac
@@ -2037,12 +2043,12 @@ Proof
 QED
 
 Theorem cyclic_weak_bisim_upfrom_abs:
-  (!r. weak_bisim_upfrom_abs abs abs' (abs r) (abs' r)) <=> (!r. itree_wbisim (abs r) (abs' r))
+  (!r. weak_bisim_upfrom_abs (abs, abs') (abs r) (abs' r)) <=> (!r. itree_wbisim (abs r) (abs' r))
 Proof
   iff_tac
   >- (rpt strip_tac
       \\ irule itree_wbisim_coind_upto
-      \\ qexists ‘CURRY ({(t'', t''') | t'', t''' | (weak_bisim_upfrom_abs abs abs' t'' t''')})’ \\ rw[UNCURRY]
+      \\ qexists ‘CURRY ({(t'', t''') | t'', t''' | (weak_bisim_upfrom_abs (abs, abs') t'' t''')})’ \\ rw[UNCURRY]
       \\ drule $ iffLR weak_bisim_upfrom_abs_cases
       \\ rw[]
       \\ rpt strip_tac
@@ -2059,18 +2065,18 @@ Proof
      )
   \\ rpt strip_tac
   \\ irule $ weak_bisim_upfrom_abs_coind
-  \\ qexists ‘CURRY {(t, t') | t, t' | itree_wbisim t t'}’ \\ rw[UNCURRY]
+  \\ qexists ‘\ap t t'. ap = (abs, abs') /\ itree_wbisim t t'’ \\ rw[]
   \\ drule $ iffLR itree_wbisim_strip_tau_cases
   \\ rw[]
   \\ metis_tac[FUNPOW_Tau_SUC_cyclic_spin, itree_wbisim_refl]
 QED
 
 Theorem cyclic_weak_bisim_upfrom_abs_weak_upfrom:
-  (!r. weak_bisim_upfrom_abs abs abs' (abs r) (abs' r)) /\ weak_bisim_upfrom_abs abs abs' t t' ==> itree_wbisim t t'
+  (!r. weak_bisim_upfrom_abs (abs, abs') (abs r) (abs' r)) /\ weak_bisim_upfrom_abs (abs, abs') t t' ==> itree_wbisim t t'
 Proof
   rpt strip_tac
   \\ irule itree_wbisim_coind_upto
-  \\ qexists ‘CURRY ({(t'', t''') | t'', t''' | (weak_bisim_upfrom_abs abs abs' t'' t''')})’ \\ rw[UNCURRY]
+  \\ qexists ‘CURRY ({(t'', t''') | t'', t''' | (weak_bisim_upfrom_abs (abs, abs') t'' t''')})’ \\ rw[UNCURRY]
   \\ drule $ iffLR weak_bisim_upfrom_abs_cases
   \\ rw[]
   \\ rpt strip_tac
@@ -2087,11 +2093,11 @@ Proof
 QED
 
 Theorem itree_wbisim_weak_bisim_upfrom_abs:
-  itree_wbisim t t' ==> weak_bisim_upfrom_abs abs abs' t t'
+  itree_wbisim t t' ==> weak_bisim_upfrom_abs (abs, abs') t t'
 Proof
   rpt strip_tac
   \\ irule $ weak_bisim_upfrom_abs_coind
-  \\ qexists ‘CURRY {(t, t') | t, t' | itree_wbisim t t'}’ \\ rw[UNCURRY]
+  \\ qexists ‘\ap t t'. ap = (abs, abs') /\ itree_wbisim t t'’ \\ rw[]
   \\ drule $ iffLR itree_wbisim_strip_tau_cases
   \\ rw[]
   \\ metis_tac[FUNPOW_Tau_SUC_cyclic_spin, itree_wbisim_refl]
