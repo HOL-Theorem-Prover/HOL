@@ -620,8 +620,8 @@ val byA = by0 ALL_TAC
 
 fun (q suffices_by tac) g =
   (Q_TAC SUFF_TAC q gTHEN1 (tac THEN NO_TAC)) g
-  handle e as HOL_ERR {origin_function,...} =>
-         if origin_function = "Q_TAC" then raise e
+  handle e as HOL_ERR {origin,...} =>
+         if #origin_function (hd origin) = "Q_TAC" then raise e
          else
            case qlinenum q of
                SOME l => raise ERR "suffices_by"

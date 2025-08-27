@@ -530,11 +530,13 @@ local
   fun flip_muls tm =
     if is_mult tm andalso not (is_var (rand tm)) then let
       val mcands = strip_mult tm
-      val (var, rest) = Lib.pluck is_var mcands
     in
-      EQT_ELIM (AC_CONV (INT_MUL_ASSOC, INT_MUL_SYM)
-                (mk_eq(tm, mk_mult(list_mk_mult rest, var))))
-    end handle HOL_ERR {origin_structure = "Lib", ...} => ALL_CONV tm
+      (case total (Lib.pluck is_var) mcands of
+          SOME (var, rest) =>
+                             EQT_ELIM (AC_CONV (INT_MUL_ASSOC, INT_MUL_SYM)
+                             (mk_eq(tm, mk_mult(list_mk_mult rest, var))))
+        | NONE => ALL_CONV tm)
+    end
     else if is_comb tm then
       (RATOR_CONV flip_muls THENC RAND_CONV flip_muls) tm
     else if is_abs tm then

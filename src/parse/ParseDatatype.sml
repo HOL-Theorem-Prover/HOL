@@ -271,8 +271,12 @@ fun parse_harg G qb =
         end
       else
         (parse_atom G qb
+         handle e as (HOL_ERR _) =>
+                raise wrap_exn "ParseDatatype" "parse_harg" e)
+(*
          handle HOL_ERR {origin_structure = "Parse", message, ...} =>
                 raise ERR "parse_harg" message)
+*)
     | (base_tokens.BT_AQ ty, _) => (qbuf.advance qb; dAQ ty)
     | (_, locn) => raise ERRloc "parse_harg" locn
                          "Unexpected token in constructor's argument"

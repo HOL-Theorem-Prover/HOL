@@ -11,8 +11,9 @@
 structure Feedback :> Feedback =
 struct
 
-type error_record = {origin_structure : string,
-                     origin_function  : string,
+type origin = {origin_structure : string,
+               origin_function  : string} list
+type error_record = {origin : origin,
                      source_location  : locn.locn,
                      message          : string}
 
@@ -23,31 +24,29 @@ exception HOL_ERR of error_record
  ---------------------------------------------------------------------------*)
 
 fun mk_HOL_ERR s1 s2 s3 =
-   HOL_ERR {origin_structure = s1,
-            origin_function = s2,
+   HOL_ERR {origin = [{origin_structure = s1,origin_function = s2}],
             source_location = locn.Loc_Unknown,
             message = s3}
 
 (* Errors with a known location. *)
 
 fun mk_HOL_ERRloc s1 s2 locn s3 =
-   HOL_ERR {origin_structure = s1,
-            origin_function = s2,
+   HOL_ERR {origin = [{origin_structure = s1,origin_function = s2}],
             source_location = locn,
             message = s3}
 
+(*
 fun set_origin_function fnm
     ({origin_structure, source_location, message, ...}:error_record) =
    {origin_structure = origin_structure,
     source_location = source_location,
     origin_function = fnm,
     message = message}
-
+*)
 fun set_message msg
-    ({origin_structure, source_location, origin_function, ...}:error_record) =
-   {origin_structure = origin_structure,
+    ({origin, source_location, ...}:error_record) =
+   {origin = origin,
     source_location = source_location,
-    origin_function = origin_function,
     message = msg}
 
 val ERR = mk_HOL_ERR "Feedback"  (* local to this file *)
@@ -89,9 +88,10 @@ fun quiet_messages f = Portable.with_flag (emit_MESG, false) f
  * Formatting and output for exceptions, messages, and warnings.             *
  *---------------------------------------------------------------------------*)
 
-fun format_err_rec {message, origin_function, origin_structure, source_location} =
+(*TODO fix this function*)
+fun format_err_rec {message, origin, source_location} =
    String.concat
-      ["at ", origin_structure, ".", origin_function, ":\n",
+      ["at ", "foo" , ".", "bar" , ":\n",
        case source_location of
            locn.Loc_Unknown => ""
          | _ => locn.toString source_location ^ ":\n",
@@ -138,7 +138,7 @@ end
  ---------------------------------------------------------------------------*)
 
 fun wrap_exn s f Portable.Interrupt = raise Portable.Interrupt
-  | wrap_exn s f (HOL_ERR err_rec) = mk_HOL_ERR s f (format_err_rec err_rec)
+  | wrap_exn s f (HOL_ERR err_rec) = HOL_ERR {origin = ({origin_structure = s ,origin_function = f}:: #origin err_rec),source_location = #source_location err_rec, message = #message err_rec}
   | wrap_exn s f exn = mk_HOL_ERR s f (General.exnMessage exn)
 
 fun wrap_exn_loc s f l Portable.Interrupt = raise Portable.Interrupt
