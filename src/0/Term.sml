@@ -75,6 +75,8 @@ fun mk_clos (s, Bv i) =
          | (v, NONE)   => Bv v)
   | mk_clos (s, t as Fv _)     = t
   | mk_clos (s, t as Const _)  = t
+  | mk_clos (s, t as GComb _)  = t
+  | mk_clos (s, t as GAbs _)   = t
   | mk_clos (s,Clos(Env,Body)) = Clos(Subst.comp mk_clos (s,Env), Body)
   | mk_clos (s,t)              = Clos(s, t)
 ;
@@ -101,8 +103,10 @@ local fun lookup 0 (ty::_)  = ty
         | ty_of (Const(_,POLY Ty)) _   = Ty
         | ty_of (Bv i) E               = lookup i E
         | ty_of (Comb(Rator, _)) E     = snd(Type.dom_rng(ty_of Rator E))
+        | ty_of (GComb(Rator, _)) E    = snd(Type.dom_rng(ty_of Rator E))
         | ty_of (t as Clos _) E        = ty_of (push_clos t) E
         | ty_of (Abs(Fv(_,Ty),Body)) E = Ty --> ty_of Body (Ty::E)
+        | ty_of (GAbs(Fv(_,Ty),Body)) E= Ty --> ty_of Body (Ty::E)
         | ty_of _ _ = raise ERR "type_of" "term construction"
 in
 fun type_of tm = ty_of tm []
@@ -116,8 +120,14 @@ end;
 fun is_bvar (Bv _)    = true | is_bvar _  = false;
 fun is_var  (Fv _)    = true | is_var _   = false;
 fun is_const(Const _) = true | is_const _ = false;
-fun is_comb(Comb _) = true | is_comb(Clos(_,Comb _)) = true | is_comb _ = false
-fun is_abs(Abs _) = true | is_abs(Clos(_,Abs _)) = true | is_abs _ = false;
+fun is_comb(Comb _) = true
+  | is_comb(GComb _) = true
+  | is_comb(Clos(_,Comb _)) = true
+  | is_comb _ = false
+fun is_abs(Abs _) = true
+  | is_abs(GAbs _) = true
+  | is_abs(Clos(_,Abs _)) = true
+  | is_abs _ = false;
 
 
 (*---------------------------------------------------------------------------*
@@ -130,7 +140,11 @@ local fun tyV (Fv(_,Ty)) k         = k (Type.type_vars Ty)
         | tyV (Const(_,POLY Ty)) k = k (Type.type_vars Ty)
         | tyV (Comb(Rator,Rand)) k = tyV Rand (fn q1 =>
                                      tyV Rator(fn q2 => k (union q2 q1)))
+        | tyV (GComb(Rator,Rand)) k= tyV Rand (fn q1 =>
+                                     tyV Rator(fn q2 => k (union q2 q1)))
         | tyV (Abs(Bvar,Body)) k   = tyV Body (fn q1 =>
+                                     tyV Bvar (fn q2 => k (union q2 q1)))
+        | tyV (GAbs(Bvar,Body)) k  = tyV Body (fn q1 =>
                                      tyV Bvar (fn q2 => k (union q2 q1)))
         | tyV (t as Clos _) k      = tyV (push_clos t) k
 in
@@ -145,7 +159,7 @@ local fun FV ((v as Fv _)::t) A = FV t (Lib.insert v A)
         | FV ((Comb(f,x))::t) A = FV (f::x::t) A
         | FV ((Abs(_,Body))::t) A = FV (Body::t) A
         | FV ((M as Clos _)::t) A = FV (push_clos M::t) A
-        | FV (_::t) A = FV t A
+        | FV (_::t) A = FV t A (* const, g{comb,abs}, bv *)
         | FV [] A = A
 in
 fun free_vars tm = FV [tm] []
@@ -155,17 +169,7 @@ end;
  * The free variables of a lambda term, in textual order.                    *
  *---------------------------------------------------------------------------*)
 
-fun free_vars_lr tm =
-  let fun FV ((v as Fv _)::t) A   = FV t (Lib.insert v A)
-        | FV (Bv _::t) A          = FV t A
-        | FV (Const _::t) A       = FV t A
-        | FV (Comb(M,N)::t) A     = FV (M::N::t) A
-        | FV (Abs(_,M)::t) A      = FV (M::t) A
-        | FV ((M as Clos _)::t) A = FV (push_clos M::t) A
-        | FV [] A = rev A
-  in
-     FV [tm] []
-  end;
+fun free_vars_lr tm = rev (free_vars tm)
 
 (*---------------------------------------------------------------------------*
  * The set of all variables in a term, represented as a list.                *
@@ -175,7 +179,7 @@ local fun vars (v as Fv _) A        = Lib.insert v A
         | vars (Comb(Rator,Rand)) A = vars Rand (vars Rator A)
         | vars (Abs(Bvar,Body)) A   = vars Body (vars Bvar A)
         | vars (t as Clos _) A      = vars (push_clos t) A
-        | vars _ A = A
+        | vars _ A = A  (* const, bv, gcomb, gabs *)
 in
 fun all_vars tm = vars tm []
 end;
@@ -223,13 +227,40 @@ fun compare (p as (t1,t2)) =
     | (Comb(M,N),Comb(P,Q))  => (case compare (M,P)
                                   of EQUAL => compare (N,Q)
                                    | x => x)
+    | (Comb(M,N),GComb(P,Q)) => (case compare (M,P)
+                                  of EQUAL => compare (N,Q)
+                                   | x => x)
+    | (GComb(M,N),Comb(P,Q)) => (case compare (M,P)
+                                  of EQUAL => compare (N,Q)
+                                   | x => x)
+    | (GComb(M,N),GComb(P,Q))=> (case compare (M,P)
+                                  of EQUAL => compare (N,Q)
+                                   | x => x)
+
     | (Comb _, Abs _)        => LESS
+    | (GComb _, Abs _)        => LESS
+    | (Comb _, GAbs _)        => LESS
+    | (GComb _, GAbs _)        => LESS
     | (Comb _, _)            => GREATER
+    | (GComb _, _)            => GREATER
     | (Abs(Fv(_, ty1),M),
        Abs(Fv(_, ty2),N))    => (case Type.compare(ty1,ty2)
                                   of EQUAL => compare (M,N)
                                    | x => x)
-    | (Abs _, _)             => GREATER;
+    | (Abs(Fv(_, ty1),M),
+       GAbs(Fv(_, ty2),N))   => (case Type.compare(ty1,ty2)
+                                  of EQUAL => compare (M,N)
+                                   | x => x)
+    | (GAbs(Fv(_, ty1),M),
+       Abs(Fv(_, ty2),N))    => (case Type.compare(ty1,ty2)
+                                  of EQUAL => compare (M,N)
+                                   | x => x)
+    | (GAbs(Fv(_, ty1),M),
+       GAbs(Fv(_, ty2),N))   => (case Type.compare(ty1,ty2)
+                                  of EQUAL => compare (M,N)
+                                   | x => x)
+    | (Abs _, _)             => GREATER
+    | (GAbs _, _)            => GREATER;
 
 val empty_tmset = HOLset.empty compare
 fun term_eq t1 t2 = compare(t1,t2) = EQUAL
@@ -250,7 +281,9 @@ fun all_atomsl tlist A =
               Fv _ => all_atomsl ts (HOLset.add(A,t))
             | Const _ => all_atomsl ts (HOLset.add(A,t))
             | Comb(Rator,Rand) => all_atomsl (Rator::Rand::ts) A
+            | GComb(Rator,Rand) => all_atomsl (Rator::Rand::ts) A
             | Abs(v,body) => all_atomsl (body::ts) (HOLset.add(A,v))
+            | GAbs(v,body) => all_atomsl (body::ts) (HOLset.add(A,v))
             | Clos _ => all_atomsl (push_clos t::ts) A
             | Bv _ => all_atomsl ts A
         end
@@ -275,7 +308,9 @@ fun FVL [] A = A
 
 fun free_in tm =
    let fun f1 (Comb(Rator,Rand)) = (f2 Rator) orelse (f2 Rand)
+         | f1 (GComb(Rator,Rand)) = (f2 Rator) orelse (f2 Rand)
          | f1 (Abs(_,Body)) = f2 Body
+         | f1 (GAbs(_,Body)) = f2 Body
          | f1 (t as Clos _) = f2 (push_clos t)
          | f1 _ = false
        and f2 t = term_eq t tm orelse f1 t
@@ -292,6 +327,8 @@ fun var_occurs M =
       fun occ (Fv u)             = (v=u)
         | occ (Bv _)             = false
         | occ (Const _)          = false
+        | occ (GComb _)          = false
+        | occ (GAbs _)           = false
         | occ (Comb(Rator,Rand)) = occ Rand orelse occ Rator
         | occ (Abs(_,Body))      = occ Body
         | occ (t as Clos _)      = occ (push_clos t)
@@ -465,13 +502,22 @@ fun same_const (Const(id1,_)) (Const(id2,_)) = id1 = id2
  *        Making applications                                                *
  *---------------------------------------------------------------------------*)
 
+fun is_ground (Const _) = true
+  | is_ground (GComb _) = true
+  | is_ground (GAbs _) = true
+  | is_ground _ = false
+
 local val INCOMPAT_TYPES  = Lib.C ERR "incompatible types"
+      fun Cb (p as (f,x)) =
+          if is_ground f andalso is_ground x then
+            GComb p
+          else Comb p
       fun lmk_comb err =
         let fun loop (A,_) [] = A
               | loop (A,typ) (tm::rst) =
                  let val (ty1,ty2) = with_exn Type.dom_rng typ err
                  in if type_of tm = ty1
-                    then loop(Comb(A,tm),ty2) rst
+                    then loop(Cb(A,tm),ty2) rst
                     else raise err
                  end
         in fn (f,L) => loop(f, type_of f) L
@@ -500,6 +546,7 @@ fun dest_var (Fv v) = v
 fun rename_bvar s t =
     case t of
       Abs(Fv(_, Ty), Body) => Abs(Fv(s,Ty), Body)
+    | GAbs(Fv(_, Ty), Body) => GAbs(Fv(s,Ty), Body)
     | Clos(_, Abs _) => rename_bvar s (push_clos t)
     | _ => raise ERR "rename_bvar" "not an abstraction";
 
@@ -509,13 +556,17 @@ local
   fun subsEQ(s1,s2) = s1 = s2
 in
 fun aconv t1 t2 = EQ(t1,t2) orelse
- case(t1,t2)
-  of (Comb(M,N),Comb(P,Q)) => aconv N Q andalso aconv M P
-   | (Abs(Fv(_,ty1),M),
-      Abs(Fv(_,ty2),N)) => ty1=ty2 andalso aconv M N
-   | (Clos(e1,b1),
-      Clos(e2,b2)) => (subsEQ(e1,e2) andalso EQ(b1,b2))
-                       orelse aconv (push_clos t1) (push_clos t2)
+ case(t1,t2) of
+     (Comb(M,N),Comb(P,Q)) => aconv N Q andalso aconv M P
+   | (Comb(M,N),GComb(P,Q)) => aconv N Q andalso aconv M P
+   | (GComb(M,N),Comb(P,Q)) => aconv N Q andalso aconv M P
+   | (GComb(M,N),GComb(P,Q)) => aconv N Q andalso aconv M P
+   | (Abs(Fv(_,ty1),M), Abs(Fv(_,ty2),N)) => ty1=ty2 andalso aconv M N
+   | (Abs(Fv(_,ty1),M), GAbs(Fv(_,ty2),N)) => ty1=ty2 andalso aconv M N
+   | (GAbs(Fv(_,ty1),M), Abs(Fv(_,ty2),N)) => ty1=ty2 andalso aconv M N
+   | (GAbs(Fv(_,ty1),M), GAbs(Fv(_,ty2),N)) => ty1=ty2 andalso aconv M N
+   | (Clos(e1,b1), Clos(e2,b2)) => (subsEQ(e1,e2) andalso EQ(b1,b2))
+                                   orelse aconv (push_clos t1) (push_clos t2)
    | (Clos _, _) => aconv (push_clos t1) t2
    | (_, Clos _) => aconv t1 (push_clos t2)
    | (M,N)       => (M=N)
@@ -537,6 +588,8 @@ fun beta_conv (Comb(Abs(_,Body), Bv 0)) = Body
        subs (Body,0)
      end
   | beta_conv (Comb(x as Clos _, Rand)) = beta_conv (Comb(push_clos x, Rand))
+  | beta_conv (Comb(GAbs(_, Body), Rand)) = Body
+  | beta_conv (GComb(GAbs(_, Body), Rand)) = Body
   | beta_conv (x as Clos _) = beta_conv (push_clos x)
   | beta_conv _ = raise ERR "beta_conv" "not a beta-redex";
 
@@ -551,6 +604,8 @@ fun lazy_beta_conv (Comb(Abs(_,Body),Rand)) =
   | lazy_beta_conv (Comb(Clos(Env, Abs(_,Body)),Rand)) =
       mk_clos(Subst.cons(Env,Rand), Body)
   | lazy_beta_conv (t as Clos _) = lazy_beta_conv (push_clos t)
+  | lazy_beta_conv (Comb(GAbs(_, Body), Rand)) = Body
+  | lazy_beta_conv (GComb(GAbs(_, Body), Rand)) = Body
   | lazy_beta_conv _ = raise ERR "lazy_beta_conv" "not a beta-redex";
 
 
@@ -587,6 +642,8 @@ local
               then (insert(A,redex,residue),
                     is_var redex andalso b)
               else raise ERR "subst" "redex has different type than residue")
+  fun Cb (p as (f,x)) = if is_ground f andalso is_ground x then GComb p else Comb p
+  fun Ab (p as (_, b)) = if is_ground b then GAbs p else Abs p
 in
 fun subst [] = I
   | subst theta =
@@ -600,9 +657,11 @@ fun subst [] = I
           case peek(fmap,tm)
            of SOME residue => residue
             | NONE =>
-              (case tm
-                of Comb(Rator,Rand) => Comb(subs Rator, subs Rand)
-                 | Abs(Bvar,Body) => Abs(Bvar,subs Body)
+              (case tm of
+                   Comb(Rator,Rand) => Cb(subs Rator, subs Rand)
+                 | GComb(Rator,Rand) => Cb(subs Rator, subs Rand)
+                 | Abs(Bvar,Body) => Ab(Bvar,subs Body)
+                 | GAbs(Bvar,Body) => Ab(Bvar,subs Body)
                  | Clos _        => subs(push_clos tm)
                  |   _         => tm)
     in
@@ -627,6 +686,8 @@ fun inst [] tm = tm
          (case Type.ty_sub theta Ty of SAME => v | DIFF ty => Fv(Name, ty))
      | inst1 (Comb(Rator,Rand)) = Comb(inst1 Rator, inst1 Rand)
      | inst1 (Abs(Bvar,Body))   = Abs(inst1 Bvar, inst1 Body)
+     | inst1 (GComb(Rator,Rand)) = GComb(inst1 Rator, inst1 Rand)
+     | inst1 (GAbs(Bvar,Body))   = GAbs(inst1 Bvar, inst1 Body)
      | inst1 (t as Clos _)      = inst1(push_clos t)
     in
       inst1 tm
@@ -634,6 +695,7 @@ fun inst [] tm = tm
 
 fun dest_comb (Comb r) = r
   | dest_comb (t as Clos _) = dest_comb (push_clos t)
+  | dest_comb (GComb p) = p
   | dest_comb _ = raise ERR "dest_comb" "not a comb"
 
 
@@ -645,6 +707,7 @@ fun dest_comb (Comb r) = r
        the body.
   ---------------------------------------------------------------------------*)
 local
+  fun Ab(p as (_,M)) = if is_ground M then GAbs p else Abs p
   fun binder_check binder = (* expect type to be (ty1 -> ty2) -> ty3 *)
      let val (fnty,rty) = Type.dom_rng(type_of binder)
          val _ = Type.dom_rng fnty
@@ -661,7 +724,7 @@ local
        let val (dty,rty) = binder_check binder
        in fn v => fn (M,Mty) =>
              let val theta = Type.match_type dty (type_of v --> Mty)
-             in (Comb (inst theta binder, Abs(v,M)),
+             in (Comb (inst theta binder, Ab(v,M)),
                  Type.type_subst theta rty)
              end
        end
@@ -705,8 +768,9 @@ fun mk_abs(Bvar as Fv _, Body) =
           | bind (Abs(Bvar,Body)) i   = Abs(Bvar, bind Body (i+1))
           | bind (t as Clos _) i      = bind (push_clos t) i
           | bind tm _ = tm (* constant *)
+        val Body' = bind Body 0
     in
-      Abs(Bvar, bind Body 0)
+      if is_ground Body' then GAbs(Bvar, Body') else Abs(Bvar,Body')
     end
   | mk_abs _ = raise ERR "mk_abs" "Bvar not a variable"
 
@@ -730,8 +794,9 @@ fun mk_abs(Bvar as Fv _, Body) =
 local fun peel f (t as Clos _) A = peel f (push_clos t) A
         | peel f tm A =
             case f tm of
-              SOME(Abs(v,M)) => peel f M (v::A)
-            | otherwise => (A,tm)
+                SOME(Abs(v,M)) => peel f M (v::A)
+              | SOME(GAbs(v,M)) => peel f M (v::A)
+              | otherwise => (A,tm)
       datatype occtype = PREFIX of int | BODY
       fun array_to_revlist A =
         let val top = Array.length A - 1
@@ -748,13 +813,14 @@ fun strip_binder opt =
  let val f =
          case opt of
            NONE => (fn (t as Abs _) => SOME t
+                     | (t as GAbs _) => SOME t
                      | (t as Clos(_, Abs _)) => SOME (push_clos t)
                      | other => NONE)
-               | SOME c => (fn t => let val (rator,rand) = dest_comb t
-                                    in if same_const rator c
-                                       then SOME (trypush_clos rand)
-                                       else NONE
-                                    end handle HOL_ERR _ => NONE)
+          | SOME c => (fn t => let val (rator,rand) = dest_comb t
+                               in if same_const rator c
+                                  then SOME (trypush_clos rand)
+                                  else NONE
+                               end handle HOL_ERR _ => NONE)
  in fn tm =>
    let
      open Uref
@@ -832,6 +898,7 @@ fun dest_abs(Abs(Bvar as Fv(Name,Ty), Body)) =
               dest_abs(Abs(variant (free_vars Body) Bvar, Body))
     end
   | dest_abs (t as Clos _) = dest_abs (push_clos t)
+  | dest_abs (GAbs p) = p
   | dest_abs _ = raise ERR "dest_abs" "not a lambda abstraction"
 end;
 
@@ -840,6 +907,7 @@ open KernelSig
 in
 fun break_abs(Abs(_,Body)) = Body
   | break_abs(t as Clos _) = break_abs (push_clos t)
+  | break_abs (GAbs(_, Body)) = Body
   | break_abs _ = raise ERR "break_abs" "not an abstraction";
 
 fun dest_thy_const (Const(id,ty)) =
@@ -861,10 +929,12 @@ end
 
 fun rator (Comb(Rator,_)) = Rator
   | rator (Clos(Env, Comb(Rator,_))) = mk_clos(Env,Rator)
+  | rator (GComb(Rator,_)) = Rator
   | rator _ = raise ERR "rator" "not a comb"
 
 fun rand (Comb(_,Rand)) = Rand
   | rand (Clos(Env, Comb(_,Rand))) = mk_clos(Env,Rand)
+  | rand (GComb(_,Rand)) = Rand
   | rand _ = raise ERR "rand" "not a comb"
 
 val bvar = fst o dest_abs;
@@ -920,7 +990,16 @@ fun RM [] theta = theta
            | (POLY pat,POLY obj) => (tmS, tymatch pat obj tyS))
   | RM ((Abs(Fv(_,ty1),M),Abs(Fv(_,ty2),N),_)::rst) (tmS,tyS)
       = RM ((M,N,true)::rst) (tmS, tymatch ty1 ty2 tyS)
+  | RM ((Abs(Fv(_,ty1),M),GAbs(Fv(_,ty2),N),_)::rst) (tmS,tyS)
+      = RM ((M,N,true)::rst) (tmS, tymatch ty1 ty2 tyS)
+  | RM ((GAbs(Fv(_,ty1),M),Abs(Fv(_,ty2),N),_)::rst) (tmS,tyS)
+      = RM ((M,N,true)::rst) (tmS, tymatch ty1 ty2 tyS)
+  | RM ((GAbs(Fv(_,ty1),M),GAbs(Fv(_,ty2),N),_)::rst) (tmS,tyS)
+      = RM ((M,N,true)::rst) (tmS, tymatch ty1 ty2 tyS)
   | RM ((Comb(M,N),Comb(P,Q),s)::rst) S = RM ((M,P,s)::(N,Q,s)::rst) S
+  | RM ((Comb(M,N),GComb(P,Q),s)::rst) S = RM ((M,P,s)::(N,Q,s)::rst) S
+  | RM ((GComb(M,N),Comb(P,Q),s)::rst) S = RM ((M,P,s)::(N,Q,s)::rst) S
+  | RM ((GComb(M,N),GComb(P,Q),s)::rst) S = RM ((M,P,s)::(N,Q,s)::rst) S
   | RM ((Bv i,Bv j,_)::rst) S  = if i=j then RM rst S
                                  else MERR "Bound var doesn't match"
   | RM (((pat as Clos _),ob,s)::t) S = RM ((push_clos pat,ob,s)::t) S
@@ -1020,6 +1099,7 @@ fun strip_comb t =
     let fun recurse t A =
             case t of
                 Comb(f,x) => recurse f (x::A)
+              | GComb(f,x) => recurse f (x::A)
               | _ => (t, A)
     in
       recurse t []
@@ -1034,6 +1114,8 @@ fun pp_raw_term index tm = let
       case tasklist of
           [] => String.concat (List.rev acc)
         | ppTM (Abs(Bvar, Body)) :: rest =>
+            pp acc (ppTM Bvar :: ppTM Body :: ppLAM :: rest)
+        | ppTM (GAbs(Bvar, Body)) :: rest =>
             pp acc (ppTM Bvar :: ppTM Body :: ppLAM :: rest)
         | ppTM (t as Comb(Rator, Rand)) :: rest =>
           let
@@ -1055,6 +1137,7 @@ fun pp_raw_term index tm = let
                   | _ => pp acc (ppTM Rator :: ppTM Rand :: mkAPP rest)
               end
           end
+        | ppTM (GComb p) :: rest => pp acc (ppTM(Comb p) :: rest)
         | ppTM (Bv i) :: rest =>
             pp (dollar ^ Int.toString i :: acc) rest
         | ppTM a :: rest =>
@@ -1113,7 +1196,8 @@ fun lexer ss1 =
         (let val (n,ss3) = take_numb ss2 in SOME(app n, ss3) end
          handle HOL_ERR _ => SOME (app 1, ss2))
       |   _   => raise ERR "raw lexer" "bad character";
-
+fun Cb(p as (f,x)) = if is_ground f andalso is_ground x then GComb p else Comb p
+fun Ab(p as (_,body)) = if is_ground body then GAbs p else Abs p
 in
 fun read_raw tmv = let
   fun index i = Vector.sub(tmv, i)
@@ -1122,13 +1206,13 @@ fun read_raw tmv = let
         (_, SOME (bvar n,  rst)) => parse (Bv n::stk,rst)
       | (_, SOME (ident n, rst)) => parse (index n::stk,rst)
       | (stk, SOME (app n, rst)) => doapps n stk rst
-      | (t::stk, SOME (I1 n, rst)) => parse (Comb(index n, t) :: stk, rst)
+      | (t::stk, SOME (I1 n, rst)) => parse (Cb(index n, t) :: stk, rst)
       | (t::stk, SOME (BV1 n, rst)) => parse (Comb(Bv n, t) :: stk, rst)
       | (t2::t1::stk, SOME (I2 n, rst)) =>
-          parse (Comb(Comb(index n, t1), t2) :: stk, rst)
+          parse (Cb(Cb(index n, t1), t2) :: stk, rst)
       | (t2::t1::stk, SOME (BV2 n, rst)) =>
           parse (Comb(Comb(Bv n, t1), t2) :: stk, rst)
-      | (bd::bv::stk, SOME(lam,rst)) => parse (Abs(bv,bd)::stk, rst)
+      | (bd::bv::stk, SOME(lam,rst)) => parse (Ab(bv,bd)::stk, rst)
       | (_, SOME(lam, _)) => raise ERR "read_raw" "lam: small stack"
       | ([tm], NONE) => tm
       | ([], NONE) => raise ERR "read_raw" "eof: empty stack"
@@ -1137,7 +1221,7 @@ fun read_raw tmv = let
       if n = 0 then parse (stk,rst)
       else
         case stk of
-            x::f::stk => doapps (n - 1) (Comb(f,x)::stk) rst
+            x::f::stk => doapps (n - 1) (Cb(f,x)::stk) rst
           | _ =>  raise ERR "read_raw" "app: small stack"
 
 in
@@ -1163,6 +1247,8 @@ fun uptodate_term t = let
                                recurse rest
           | Comb(f,x) => recurse (f::x::rest)
           | Abs(v,bod) => recurse (v::bod::rest)
+          | GComb(f,x) => recurse (f::x::rest)
+          | GAbs(v,bod) => recurse (v::bod::rest)
           | Bv _ => recurse rest
           | Clos _ => recurse (push_clos t :: rest)
         end
@@ -1181,7 +1267,9 @@ fun dest_term M =
       Const _ => CONST (dest_thy_const M)
     | Fv p => VAR p
     | Comb p => COMB p
+    | GComb p => COMB p
     | Abs _ => LAMB (dest_abs M)
+    | GAbs _ => LAMB (dest_abs M)
     | Clos _ => dest_term (push_clos M)
     | Bv _ => raise Fail "dest_term applied to bound variable"
 
@@ -1194,7 +1282,13 @@ fun identical t1 t2 =
     | (Fv p1, Fv p2) => p1 = p2
     | (Bv i1, Bv i2) => i1 = i2
     | (Comb(t1,t2), Comb(ta,tb)) => identical t1 ta andalso identical t2 tb
+    | (Comb(t1,t2), GComb(ta,tb)) => identical t1 ta andalso identical t2 tb
+    | (GComb(t1,t2), Comb(ta,tb)) => identical t1 ta andalso identical t2 tb
+    | (GComb(t1,t2), GComb(ta,tb)) => identical t1 ta andalso identical t2 tb
     | (Abs(v1,t1), Abs (v2, t2)) => v1 = v2 andalso identical t1 t2
+    | (Abs(v1,t1), GAbs (v2, t2)) => v1 = v2 andalso identical t1 t2
+    | (GAbs(v1,t1), Abs (v2, t2)) => v1 = v2 andalso identical t1 t2
+    | (GAbs(v1,t1), GAbs (v2, t2)) => v1 = v2 andalso identical t1 t2
     | _ => false
 
 end (* Term *)

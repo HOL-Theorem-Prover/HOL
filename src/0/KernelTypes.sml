@@ -40,8 +40,12 @@ datatype term = Fv of string * hol_type
               | Bv of int
               | Const of tmconst
               | Comb  of term * term
+              | GComb of term * term
               | Abs   of term * term
+              | GAbs  of term * term
               | Clos  of term Subst.subs * term;
+(* GAbs and GComb are "ground" versions that have no variables (free or
+   bound) underneath them *)
 
 (*---------------------------------------------------------------------------
       The representation of theorems. A "tag" is a pair of the oracles
