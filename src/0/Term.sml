@@ -1008,21 +1008,6 @@ fun size acc tlist =
 fun term_size t = size 0 [t]
 
 (*---------------------------------------------------------------------------*
- * Traverse a term, performing a given (side-effecting) operation at the     *
- * leaves. For our purposes, bound variables can be ignored.                 *
- *---------------------------------------------------------------------------*)
-
-fun trav f =
-  let fun trv (a as Fv _) = f a
-        | trv (a as Const _) = f a
-        | trv (Comb(Rator,Rand)) = (trv Rator; trv Rand)
-        | trv (Abs(Bvar,Body))   = (trv Bvar; trv Body)
-        | trv _ = ()
-  in
-    trv o norm_clos
-  end;
-
-(*---------------------------------------------------------------------------*
  *  Raw syntax prettyprinter for terms.                                      *
  *---------------------------------------------------------------------------*)
 
