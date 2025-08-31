@@ -390,10 +390,10 @@ fun STRIP_BINDER_CONV opt conv tm =
                       variant_list (v' :: acc) (v' :: avds) vs
                    end
                val th1 = rename gvs tm
-               val {rhs, ...} = Rsyntax.dest_eq (Thm.concl th1)
+               val rhs = boolSyntax.rhs (Thm.concl th1)
                val (_, M') = strip_binder opt rhs (* v = Bvar *)
                val eq_thm' = GEN_ABS opt gvs (conv M')
-               val at = #rhs (Rsyntax.dest_eq (concl eq_thm'))
+               val at = boolSyntax.rhs (concl eq_thm')
                val vs' = variant_list [] (free_vars at) vlist
                val th2 = rename vs' at
             in
@@ -414,7 +414,7 @@ fun STRIP_QUANT_CONV conv tm =
 
 fun LAST_EXISTS_CONV c tm =
    let
-      val (bv, body) = Psyntax.dest_exists tm
+      val (bv, body) = dest_exists tm
    in
       if is_exists body
          then BINDER_CONV (LAST_EXISTS_CONV c) tm
@@ -422,7 +422,7 @@ fun LAST_EXISTS_CONV c tm =
    end
 
 fun LAST_FORALL_CONV c tm =
-   if is_forall (#2 (Psyntax.dest_forall tm))
+   if is_forall (#2 (dest_forall tm))
       then BINDER_CONV (LAST_FORALL_CONV c) tm
    else c tm
 
@@ -539,10 +539,10 @@ fun UNBETA_CONV arg_t t =
  *----------------------------------------------------------------------*)
 
 fun NOT_FORALL_CONV tm =
-   let open Rsyntax
+   let
       val all = dest_neg tm
-      val {Bvar, Body} = dest_forall all
-      val exists = mk_exists {Bvar = Bvar, Body = mk_neg Body}
+      val (Bvar, Body) = dest_forall all
+      val exists = mk_exists (Bvar, mk_neg Body)
       val nott = ASSUME (mk_neg Body)
       val not_all = mk_neg all
       val th1 = DISCH all (MP nott (SPEC Bvar (ASSUME all)))
@@ -563,9 +563,9 @@ fun NOT_FORALL_CONV tm =
  *----------------------------------------------------------------------*)
 
 fun NOT_EXISTS_CONV tm =
-   let open Rsyntax
-      val {Bvar, Body} = dest_exists (dest_neg tm)
-      val all = mk_forall {Bvar = Bvar, Body = mk_neg Body}
+   let
+      val (Bvar, Body) = dest_exists (dest_neg tm)
+      val all = mk_forall (Bvar, mk_neg Body)
       val rand_tm = rand tm
       val asm1 = ASSUME Body
       val thm1 = MP (ASSUME tm) (EXISTS (rand_tm, Bvar) asm1)
@@ -587,11 +587,11 @@ fun NOT_EXISTS_CONV tm =
  *----------------------------------------------------------------------*)
 
 fun EXISTS_NOT_CONV tm =
-   let open Rsyntax
-      val {Bvar, Body} = dest_exists tm
+   let
+      val (Bvar, Body) = dest_exists tm
    in
       SYM (NOT_FORALL_CONV
-             (mk_neg (mk_forall {Bvar = Bvar, Body = dest_neg Body})))
+             (mk_neg (mk_forall (Bvar, dest_neg Body))))
    end
    handle HOL_ERR _ => raise ERR "EXISTS_NOT_CONV" ""
 
@@ -603,11 +603,11 @@ fun EXISTS_NOT_CONV tm =
  *----------------------------------------------------------------------*)
 
 fun FORALL_NOT_CONV tm =
-   let open Rsyntax
-      val {Bvar, Body} = dest_forall tm
+   let
+      val (Bvar, Body) = dest_forall tm
    in
       SYM (NOT_EXISTS_CONV
-             (mk_neg (mk_exists {Bvar = Bvar, Body = dest_neg Body})))
+             (mk_neg (mk_exists (Bvar, dest_neg Body))))
    end
    handle HOL_ERR _ => raise ERR "FORALL_NOT_CONV" ""
 
@@ -620,9 +620,9 @@ fun FORALL_NOT_CONV tm =
  *----------------------------------------------------------------------*)
 
 fun FORALL_AND_CONV tm =
-   let open Rsyntax
-      val {Bvar, Body} = dest_forall tm
-      val {...} = dest_conj Body
+   let
+      val (Bvar, Body) = dest_forall tm
+      val _ = dest_conj Body
       val (Pth, Qth) = CONJ_PAIR (SPEC Bvar (ASSUME tm))
       val imp1 = DISCH tm (CONJ (GEN Bvar Pth) (GEN Bvar Qth))
       val xtm = rand (concl imp1)
@@ -667,27 +667,27 @@ fun FORALL_AND_CONV tm =
 **    handle HOL_ERR _ => raise ERR "EXISTS_OR_CONV" ""
 *)
 
-local open Rsyntax
+local
    val alpha = Type.alpha
    val spotBeta = FORK_CONV (QUANT_CONV (BINOP_CONV BETA_CONV),
                              BINOP_CONV (QUANT_CONV BETA_CONV))
    open boolTheory
    val [P0, Q0] = fst (strip_forall (concl EXISTS_OR_THM))
    val thm0 = SPEC Q0 (SPEC P0 EXISTS_OR_THM)
-   val Pname = #Name (dest_var P0)
-   val Qname = #Name (dest_var Q0)
+   val (Pname,_) = (dest_var P0)
+   val (Qname,_) = (dest_var Q0)
 in
    fun EXISTS_OR_CONV tm =
       let
-         val {Bvar, Body} = dest_exists tm
+         val (Bvar, Body) = dest_exists tm
          val thm = CONV_RULE (RAND_CONV (BINOP_CONV (GEN_ALPHA_CONV Bvar)))
                              (INST_TYPE [alpha |-> type_of Bvar] thm0)
          val ty = type_of Bvar --> Type.bool
-         val P = mk_var {Name = Pname, Ty = ty}
-         val Q = mk_var {Name = Qname, Ty = ty}
-         val {disj1, disj2} = dest_disj Body
-         val lamP = mk_abs {Bvar = Bvar, Body = disj1}
-         val lamQ = mk_abs {Bvar = Bvar, Body = disj2}
+         val P = mk_var (Pname, ty)
+         val Q = mk_var (Qname, ty)
+         val (disj1, disj2) = dest_disj Body
+         val lamP = mk_abs (Bvar, disj1)
+         val lamQ = mk_abs (Bvar, disj2)
       in
          CONV_RULE spotBeta (INST [P |-> lamP, Q |-> lamQ] thm)
       end
@@ -703,10 +703,10 @@ end
  *----------------------------------------------------------------------*)
 
 fun AND_FORALL_CONV tm =
-   let open Rsyntax
-      val {conj1, conj2} = dest_conj tm
-      val {Bvar = x, Body = P} = dest_forall conj1
-      val {Bvar = y, Body = Q} = dest_forall conj2
+   let
+      val (conj1, conj2) = dest_conj tm
+      val (x, P) = dest_forall conj1
+      val (y, Q) = dest_forall conj2
    in
       if not (aconv x y)
          then raise ERR "AND_FORALL_CONV" "forall'ed variables not the same"
@@ -733,9 +733,9 @@ fun AND_FORALL_CONV tm =
  *----------------------------------------------------------------------*)
 
 fun LEFT_AND_FORALL_CONV tm =
-   let open Rsyntax
-      val {conj1, ...} = dest_conj tm
-      val {Bvar, ...} = dest_forall conj1
+   let
+      val (conj1, _) = dest_conj tm
+      val (Bvar, _) = dest_forall conj1
       val x' = variant (free_vars tm) Bvar
       val specx' = SPEC x'
       and genx' = GEN x'
@@ -759,9 +759,9 @@ fun LEFT_AND_FORALL_CONV tm =
  *----------------------------------------------------------------------*)
 
 fun RIGHT_AND_FORALL_CONV tm =
-   let open Rsyntax
-      val {conj2, ...} = dest_conj tm
-      val {Bvar, ...} = dest_forall conj2
+   let
+      val (_, conj2) = dest_conj tm
+      val (Bvar, _) = dest_forall conj2
       val x' = variant (free_vars tm) Bvar
       val specx' = SPEC x'
       val genx' = GEN x'
@@ -783,18 +783,18 @@ fun RIGHT_AND_FORALL_CONV tm =
  *----------------------------------------------------------------------*)
 
 fun OR_EXISTS_CONV tm =
-   let open Rsyntax
-      val {disj1, disj2} = dest_disj tm
-      val {Bvar = x, Body = P} = dest_exists disj1
-      val {Bvar = y, Body = Q} = dest_exists disj2
+   let
+      val (disj1, disj2) = dest_disj tm
+      val (x, P) = dest_exists disj1
+      val (y, Q) = dest_exists disj2
    in
       if not (aconv x y) then
         raise ERR "OR_EXISTS_CONV" "Variables not the same"
       else let
               val aP = ASSUME P
               and aQ = ASSUME Q
-              and P_or_Q = mk_disj {disj1 = P, disj2 = Q}
-              val otm = mk_exists {Bvar = x, Body = P_or_Q}
+              and P_or_Q = mk_disj (P, Q)
+              val otm = mk_exists (x, P_or_Q)
               val t1 = DISJ1 aP Q
               and t2 = DISJ2 P aQ
               val eotm = EXISTS (otm, x)
@@ -1929,7 +1929,7 @@ fun FORALL_SIMP_CONV xt =
 local
    fun FORALL_DEPTH_CONV c t =
       let
-         val (_, body) = Psyntax.dest_forall t
+         val (_, body) = dest_forall t
       in
          if is_forall body
             then (QUANT_CONV (FORALL_DEPTH_CONV c) THENC c) t
@@ -1977,7 +1977,7 @@ in
    fun LIST_FORALL_IMP_CONV exists_intro t =
       let
          val (vs, body) = strip_forall t
-         val (b1, b2) = Psyntax.dest_imp_only body
+         val (b1, b2) = dest_imp_only body
          val fvs_1 = FVL [b1] empty_tmset
          val fvs_2 = FVL [b2] empty_tmset
          val (vs_b1x, vs_rest) = partition (fn v => HOLset.member (fvs_1, v)) vs
@@ -2006,7 +2006,7 @@ in
    fun LIST_FORALL_OR_CONV t =
       let
          val (vs, body) = strip_forall t
-         val (b1, b2) = Psyntax.dest_disj body
+         val (b1, b2) = dest_disj body
          val fvs_1 = FVL [b1] empty_tmset
          val fvs_2 = FVL [b2] empty_tmset
          val (vs_b1x, vs_rest) = partition (fn v => HOLset.member (fvs_1, v)) vs
@@ -2059,7 +2059,7 @@ end
 local
    fun EXISTS_DEPTH_CONV c t =
       let
-         val (_, body) = Psyntax.dest_exists t
+         val (_, body) = dest_exists t
       in
          if is_exists body
             then (QUANT_CONV (EXISTS_DEPTH_CONV c) THENC c) t
@@ -2107,7 +2107,7 @@ in
    fun LIST_EXISTS_IMP_CONV forall_intro t =
       let
          val (vs, body) = strip_exists t
-         val (b1, b2) = Psyntax.dest_imp_only body
+         val (b1, b2) = dest_imp_only body
          val fvs_1 = FVL [b1] empty_tmset
          val fvs_2 = FVL [b2] empty_tmset
          val (vs_b1x, vs_rest) = partition (fn v => HOLset.member (fvs_1, v)) vs
@@ -2158,7 +2158,7 @@ in
    fun LIST_EXISTS_AND_CONV t =
       let
          val (vs, body) = strip_exists t
-         val (b1, b2) = Psyntax.dest_conj body
+         val (b1, b2) = dest_conj body
          val fvs_1 = FVL [b1] empty_tmset
          val fvs_2 = FVL [b2] empty_tmset
          val (vs_b1x, vs_rest) = partition (fn v => HOLset.member (fvs_1, v)) vs
@@ -2485,7 +2485,6 @@ end
 
 fun EXISTS_AND_REORDER_CONV t =
    let
-      open Psyntax
       val (var, body) = dest_exists t
                         handle HOL_ERR _ => raise ERR "EXISTS_AND_REORDER_CONV"
                                                       "Term not an existential"
