@@ -34,6 +34,8 @@ New examples:
 
 Incompatibilities:
 ------------------
+-   The return types of `parse_term.mk_prec_matrix`, `type_grammar.parse_map`, `type_grammar.privileged_abbrevs` 
+    have been changed to return maps of type HOLdict instead of Binarymap.
 
 * * * * *
 
