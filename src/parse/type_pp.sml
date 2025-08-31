@@ -187,7 +187,7 @@ fun pp_type0 (G:grammar) (backend: PPBackEnd.t) = let
                 let
                   val knm = {Thy = thy, Name = abop}
                 in
-                  case Binarymap.peek (abbs, knm) of
+                  case HOLdict.peek (abbs, knm) of
                       NONE => realtype ty (* probably shouldn't happen *)
                     | SOME st => doabbrev st
                 end
@@ -195,13 +195,13 @@ fun pp_type0 (G:grammar) (backend: PPBackEnd.t) = let
                 let
                   val privabbs = type_grammar.privileged_abbrevs G
                 in
-                  case Binarymap.peek (privabbs, abop) of
+                  case HOLdict.peek (privabbs, abop) of
                       NONE => realtype ty
                     | SOME thy =>
                       let
                         val knm = {Thy = thy, Name = abop}
                       in
-                        case Binarymap.peek (abbs, knm) of
+                        case HOLdict.peek (abbs, knm) of
                             NONE => raise Fail "Very confused tyabbrev"
                           | SOME st => doabbrev st
                       end
