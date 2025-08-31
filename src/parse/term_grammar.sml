@@ -2,7 +2,6 @@ structure term_grammar :> term_grammar =
 struct
 
 open HOLgrammars GrammarSpecials Lib Feedback term_grammar_dtype
-
 val ERROR = mk_HOL_ERR "term_grammar"
 
 type term = Term.term
@@ -102,7 +101,7 @@ type overload_info = Overload.overload_info
 
 type ('a,'b) printer_info =
   (term * string * ('a,'b) term_pp_types.userprinter) FCNet.t *
-  string Binaryset.set
+  string HOLset.set
 type special_info = {type_intro : string,
                      lambda : string list,
                      endbinding : string,
@@ -123,7 +122,7 @@ datatype grammar = GCONS of
    overload_info : overload_info,
    user_printers : (type_grammar.grammar * grammar, grammar) printer_info,
    absyn_postprocessors : (string * postprocessor) list,
-   preterm_processors : (string*int,ptmprocessor) Binarymap.dict,
+   preterm_processors : (string*int,ptmprocessor) HOLdict.dict,
    next_timestamp : int
    }
 and postprocessor = AbPP of grammar -> Absyn.absyn -> Absyn.absyn
@@ -154,7 +153,7 @@ fun absyn_postprocessors g = map (apsnd destAbPP) (absyn_postprocessors0 g)
 fun gnext_timestamp (GCONS g) = #next_timestamp g
 
 fun preterm_processor (GCONS g) k =
-  Option.map destPtmP (Binarymap.peek(#preterm_processors g, k))
+  Option.map destPtmP (HOLdict.peek(#preterm_processors g, k))
 
 
 (* fupdates *)
@@ -238,12 +237,12 @@ fun user_printers (GCONS g) = #1 (#user_printers g)
 fun remove_user_printer k (GCONS g) = let
   val (net, keyset) = #user_printers g
 in
-  if Binaryset.member(keyset,k) then let
+  if HOLset.member(keyset,k) then let
       fun foldthis (t,nm,f) (olddata,newnet) =
           if nm = k then (SOME (t,f), newnet)
           else (olddata, FCNet.insert(t,(t,nm,f)) newnet)
       val (data, newnet) = FCNet.itnet foldthis net (NONE, FCNet.empty)
-      val newkeys = Binaryset.delete(keyset, k)
+      val newkeys = HOLset.delete(keyset, k)
     in
       (GCONS (update_G g (U #user_printers (newnet,newkeys)) $$),
        data)
@@ -254,7 +253,7 @@ end
 fun add_user_printer (k,pat,v) g = let
   val (g', _) = remove_user_printer k g
   fun upd (net,keys) =
-    (FCNet.insert(pat, (pat,k,v)) net, Binaryset.add(keys, k))
+    (FCNet.insert(pat, (pat,k,v)) net, HOLset.add(keys, k))
 in
   fupdate_user_printers upd g'
 end
@@ -283,13 +282,13 @@ fun new_preterm_processor k f (GCONS g) = let
   val old = #preterm_processors g
 in
   GCONS (update_G g
-                  (U #preterm_processors (Binarymap.insert(old,k,PtmP f))) $$)
+                  (U #preterm_processors (HOLdict.insert(old,k,PtmP f))) $$)
 end
 
 fun remove_preterm_processor k (G as GCONS g) = let
   val old = #preterm_processors g
 in
-  case Lib.total Binarymap.remove (old,k) of
+  case Lib.total HOLdict.remove (old,k) of
       SOME(new, v) => (GCONS (update_G g (U #preterm_processors new) $$),
                        SOME (destPtmP v))
     | NONE => (G, NONE)
@@ -483,10 +482,10 @@ val stdhol : grammar =
    numeral_info = [],
    strlit_map = Symtab.empty,
    overload_info = Overload.null_oinfo,
-   user_printers = (FCNet.empty, Binaryset.empty String.compare),
+   user_printers = (FCNet.empty, HOLset.empty String.compare),
    absyn_postprocessors = [],
    preterm_processors =
-     Binarymap.mkDict (pair_compare(String.compare, Int.compare)),
+     HOLdict.mkDict (pair_compare(String.compare, Int.compare)),
    next_timestamp = 1
    }
 
@@ -1022,10 +1021,10 @@ structure userSyntaxFns = struct
   type 'a t = 'a getter * 'a setter
   fun mk_table () =
     let
-      val tab = ref (Binarymap.mkDict String.compare)
+      val tab = ref (HOLdict.mkDict String.compare)
     in
-      ((fn s => Binarymap.find(!tab, s)),
-       (fn {name,code} => tab := Binarymap.insert(!tab, name, code)))
+      ((fn s => HOLdict.find(!tab, s)),
+       (fn {name,code} => tab := HOLdict.insert(!tab, name, code)))
     end
   val (get_userPP, register_userPP) = mk_table() : userprinter t
   val (get_absynPostProcessor, register_absynPostProcessor) =
@@ -1062,7 +1061,7 @@ fun add_delta ud G =
       else
         let
           val code = userSyntaxFns.get_userPP s
-                     handle Binarymap.NotFound =>
+                     handle HOLdict.NotFound =>
                             raise ERROR "add_delta"
                                   ("No code named "^s^
                                    " registered for add user-printer")
@@ -1072,7 +1071,7 @@ fun add_delta ud G =
     | ADD_ABSYN_POSTP {codename} =>
       let
         val code = userSyntaxFns.get_absynPostProcessor codename
-          handle Binarymap.NotFound =>
+          handle HOLdict.NotFound =>
                  raise ERROR "add_delta"
                        ("No code named "^codename^
                         " registered for add absyn-postprocessor")
@@ -1115,20 +1114,20 @@ end
 fun merge_bmaps typestring keyprinter m1 m2 = let
   (* m1 takes precedence - arbitrarily *)
   fun foldfn (k,v,newmap) =
-    (if isSome (Binarymap.peek(newmap, k)) then
+    (if isSome (HOLdict.peek(newmap, k)) then
        Feedback.HOL_WARNING "term_grammar" "merge_grammars"
        ("Merging "^typestring^" has produced a clash on key "^keyprinter k)
      else
        ();
-     Binarymap.insert(newmap,k,v))
+     HOLdict.insert(newmap,k,v))
 in
-  Binarymap.foldl foldfn m2 m1
+  HOLdict.foldl foldfn m2 m1
 end
 
 fun merge_user_printers (n1,ks1) (n2,_) = let
   fun foldthis (tm,k,f) (n,ks) =
-      if Binaryset.member(ks,k) then (n,ks)
-      else (FCNet.insert(tm,(tm,k,f)) n, Binaryset.add(ks, k))
+      if HOLset.member(ks,k) then (n,ks)
+      else (FCNet.insert(tm,(tm,k,f)) n, HOLset.add(ks, k))
 in
    FCNet.itnet foldthis n2 (n1,ks1)
 end
@@ -1144,7 +1143,7 @@ in
 end
 
 fun bmap_merge m1 m2 =
-  Binarymap.foldl (fn (k,v,acc) => Binarymap.insert(acc,k,v)) m1 m2
+  HOLdict.foldl (fn (k,v,acc) => HOLdict.insert(acc,k,v)) m1 m2
 
 fun merge_grammars (G1 as GCONS g1, G2 as GCONS g2) :grammar = let
   val g0_rules =

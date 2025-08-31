@@ -19,9 +19,9 @@ datatype label = TV
      If the user does a lot of this, the data structure will slowly fill
      up with garbage.  If a type gets replaced with a new one of the same
      arity, the data for the old type will be returned as part of a
-     Binarymap.listItems when "match" is called, but the user will eliminate
+     HOLdict.listItems when "match" is called, but the user will eliminate
      the junk with the usual sort of call to match_type.  With "peek", the
-     old data won't be called because the lookup at the leaf's Binarymap
+     old data won't be called because the lookup at the leaf's HOLdict
      will just find whatever's supposed to be associated with the new type.
   *)
 
@@ -36,8 +36,8 @@ fun labcmp p =
          pair_compare(reccmp, Int.compare) (opdata1, opdata2)
     | (TOP _, TV) => GREATER
 
-datatype 'a N = LF of (hol_type,'a) Binarymap.dict
-              | ND of (label,'a N) Binarymap.dict
+datatype 'a N = LF of (hol_type,'a) HOLdict.dict
+              | ND of (label,'a N) HOLdict.dict
               | EMPTY
 (* redundant EMPTY constructor is used to get around value polymorphism problem
    when creating a single value for empty below *)
@@ -46,7 +46,7 @@ type 'a typenet = 'a N * int
 
 val empty = (EMPTY, 0)
 
-fun mkempty () = ND (Binarymap.mkDict labcmp)
+fun mkempty () = ND (HOLdict.mkDict labcmp)
 
 fun ndest_type ty =
     if is_vartype ty then (TV, [])
@@ -59,19 +59,19 @@ fun ndest_type ty =
 fun insert ((net,sz), ty, item) = let
   fun newnode labs =
       case labs of
-        [] => LF (Binarymap.mkDict Type.compare)
+        [] => LF (HOLdict.mkDict Type.compare)
       | _ => mkempty()
   fun trav (net, tys) =
       case (net, tys) of
-        (LF d, []) => LF (Binarymap.insert(d,ty,item))
+        (LF d, []) => LF (HOLdict.insert(d,ty,item))
       | (ND d, ty::tys0) => let
           val (lab, rest) = ndest_type ty
           val tys = rest @ tys0
           val n' =
-              case Binarymap.peek(d,lab) of
+              case HOLdict.peek(d,lab) of
                 NONE => trav(newnode tys, tys)
               | SOME n => trav(n, tys)
-          val d' = Binarymap.insert(d, lab, n')
+          val d' = HOLdict.insert(d, lab, n')
         in
           ND d'
         end
@@ -85,11 +85,11 @@ fun listItems (net, sz) = let
   fun cons'(k,v,acc) = (k,v)::acc
   fun trav (net, acc) =
       case net of
-        LF d => Binarymap.foldl cons' acc d
+        LF d => HOLdict.foldl cons' acc d
       | ND d => let
           fun foldthis (k,v,acc) = trav(v,acc)
         in
-          Binarymap.foldl foldthis acc d
+          HOLdict.foldl foldthis acc d
         end
       | EMPTY => []
 in
@@ -101,11 +101,11 @@ fun numItems (net, sz) = sz
 fun peek ((net,sz), ty) = let
   fun trav (net, tys) =
       case (net, tys) of
-        (LF d, []) => Binarymap.peek(d, ty)
+        (LF d, []) => HOLdict.peek(d, ty)
       | (ND d, ty::tys) => let
           val (lab, rest) = ndest_type ty
         in
-          case Binarymap.peek(d, lab) of
+          case HOLdict.peek(d, lab) of
             NONE => NONE
           | SOME n => trav(n, rest @ tys)
         end
@@ -116,15 +116,15 @@ in
 end
 
 fun find (n, ty) =
-    valOf (peek (n, ty)) handle Option => raise Binarymap.NotFound
+    valOf (peek (n, ty)) handle Option => raise HOLdict.NotFound
 
 fun match ((net,sz), ty) = let
   fun trav acc (net, tyl) =
       case (net, tyl) of
         (EMPTY, _) => []
-      | (LF d, []) => Binarymap.listItems d @ acc
+      | (LF d, []) => HOLdict.listItems d @ acc
       | (ND d, ty::tys) => let
-          val varresult = case Binarymap.peek(d, TV) of
+          val varresult = case HOLdict.peek(d, TV) of
                             NONE => acc
                           | SOME n => trav acc (n, tys)
           val (lab, rest) = ndest_type ty
@@ -133,7 +133,7 @@ fun match ((net,sz), ty) = let
             TV => varresult
           | TOP _ => let
             in
-              case Binarymap.peek (d, lab) of
+              case HOLdict.peek (d, lab) of
                 NONE => varresult
               | SOME n => trav varresult (n, rest @ tys)
             end
@@ -146,28 +146,28 @@ end
 fun delete ((net,sz), ty) = let
   fun trav (p as (net, tyl)) =
       case p of
-        (EMPTY, _) => raise Binarymap.NotFound
+        (EMPTY, _) => raise HOLdict.NotFound
       | (LF d, []) => let
-          val (d',removed) = Binarymap.remove(d, ty)
+          val (d',removed) = HOLdict.remove(d, ty)
         in
-          if Binarymap.numItems d' = 0 then (NONE, removed)
+          if HOLdict.numItems d' = 0 then (NONE, removed)
           else (SOME (LF d'), removed)
         end
       | (ND d, ty::tys) => let
           val (lab, rest) = ndest_type ty
         in
-          case Binarymap.peek(d, lab) of
-            NONE => raise Binarymap.NotFound
+          case HOLdict.peek(d, lab) of
+            NONE => raise HOLdict.NotFound
           | SOME n => let
             in
               case trav (n, rest @ tys) of
                 (NONE, removed) => let
-                  val (d',_) = Binarymap.remove(d, lab)
+                  val (d',_) = HOLdict.remove(d, lab)
                 in
-                  if Binarymap.numItems d' = 0 then (NONE, removed)
+                  if HOLdict.numItems d' = 0 then (NONE, removed)
                   else (SOME (ND d'), removed)
                 end
-              | (SOME n', removed) => (SOME (ND (Binarymap.insert(d,lab,n'))),
+              | (SOME n', removed) => (SOME (ND (HOLdict.insert(d,lab,n'))),
                                        removed)
             end
         end
@@ -181,8 +181,8 @@ end
 fun app f (net, sz) = let
   fun trav n =
       case n of
-        LF d => Binarymap.app f d
-      | ND d => Binarymap.app (fn (lab, n) => trav n) d
+        LF d => HOLdict.app f d
+      | ND d => HOLdict.app (fn (lab, n) => trav n) d
       | EMPTY => ()
 in
   trav net
@@ -191,8 +191,8 @@ end
 fun fold f acc (net, sz) = let
   fun trav acc n =
       case n of
-        LF d => Binarymap.foldl f acc d
-      | ND d => Binarymap.foldl (fn (lab,n',acc) => trav acc n') acc d
+        LF d => HOLdict.foldl f acc d
+      | ND d => HOLdict.foldl (fn (lab,n',acc) => trav acc n') acc d
       | EMPTY => acc
 in
   trav acc net
@@ -201,8 +201,8 @@ end
 fun map f (net, sz) = let
   fun trav n =
       case n of
-        LF d => LF (Binarymap.map f d)
-      | ND d => ND (Binarymap.transform trav d)
+        LF d => LF (HOLdict.map f d)
+      | ND d => ND (HOLdict.transform trav d)
       | EMPTY => EMPTY
 in
   (trav net, sz)
