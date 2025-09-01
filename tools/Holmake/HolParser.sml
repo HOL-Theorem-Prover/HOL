@@ -338,6 +338,7 @@ structure ToSML = struct
     full: string -> substring,
     line: (int * int) ref,
     isTheory: bool ref,
+    noSigDocs: bool ref,
     magicBind: string -> unit,
     parseError: int * int -> string -> unit,
     quietOpen: bool,
@@ -351,7 +352,7 @@ structure ToSML = struct
   fun mkDoDecl
       ({regular, aux, strstr, parseError, quietOpen,
        full, ss, cat, regular', strstr', filename, line, isTheory,
-       doQuote, doDecls, magicBind, doQuoteConj,
+       noSigDocs, doQuote, doDecls, magicBind, doQuoteConj,
        doThmAttrs, readAt, countlines}: doDecl_args) = let
     open Simple
     fun doDecl d = case d of
@@ -361,7 +362,8 @@ structure ToSML = struct
         val _ = app (fn (arg, args) =>
           case (ss arg, args) of
             ("bare", []) => bare := true
-          | _ => parseError (fromSS (p, arg)) "unknown theory attribute"
+           | ("no_sig_docs", []) => noSigDocs := true
+           | _ => parseError (fromSS (p, arg)) "unknown theory attribute"
           ) (destAttrs attrs)
         fun newlines start stop = let
           val n = #1 (!line)
@@ -592,6 +594,7 @@ structure ToSML = struct
     fun finishThmVal () = if !inThmVal then (aux ");"; inThmVal := false) else ()
     val line = ref (0, 0)
     val isTheory = ref false
+    val noSigDocs = ref false
     fun countlines (p, s) = let
       val lastline = Substring.dropr (fn c => c <> #"\n") s
       in
@@ -672,8 +675,9 @@ structure ToSML = struct
       { regular = regular, aux = aux, strstr = strstr, parseError = parseError,
         quietOpen = quietOpen, full = full, ss = ss, cat = cat, regular' = regular',
         strstr' = strstr', filename = filename, line = line, isTheory = isTheory,
-        doQuote = doQuote, doDecls = doDecls, magicBind = magicBind, doQuoteConj = doQuoteConj,
-        doThmAttrs = doThmAttrs, readAt = readAt, countlines = countlines } d
+        noSigDocs = noSigDocs, doQuote = doQuote, doDecls = doDecls, magicBind = magicBind,
+        doQuoteConj = doQuoteConj, doThmAttrs = doThmAttrs, readAt = readAt,
+        countlines = countlines } d
     and doDecl eager pos d = case d of
         OpenDecl       {head = p,      stop, ...} => (regular (pos, p); finishThmVal (); doDeclCore d; stop)
       | TheoryDecl     {head = (p, _), stop, ...} => (regular (pos, p); finishThmVal (); doDeclCore d; stop)
@@ -706,7 +710,12 @@ structure ToSML = struct
       | FilePragma      p        => (regular (pos, p); doDeclCore d; p + 7)
       | LinePragmaWith (p, text) => (regular (pos, p); doDeclCore d; p + size text)
       | FilePragmaWith (p, text) => (regular (pos, p); doDeclCore d; p + size text)
-    fun finish () = (finishThmVal (); if !isTheory then aux " val _ = export_theory();\n" else ())
+    fun finish () = (
+      finishThmVal ();
+      if not (!isTheory) then ()
+      else if !noSigDocs then aux " val _ = Feedback.set_trace \"TheoryPP.include_docs\" 0 before export_theory();\n"
+      else aux " val _ = export_theory();\n"
+    )
     in {
       feed = feed,
       regular = regular,
