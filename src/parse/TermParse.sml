@@ -297,7 +297,7 @@ local
     case tm of
       Var{Name, Ty, Locn} => let
       in
-        if not(Lib.op_mem Preterm.eq tm boundvars) then
+        if not(Lib.op_mem Preterm.veq tm boundvars) then
           case List.find (name_eq Name) ctxt of
             NONE => raise UNCHANGED
           | SOME ctxt_tm => Var{Locn = Locn, Name = Name,

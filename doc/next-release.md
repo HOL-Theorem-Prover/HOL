@@ -17,25 +17,28 @@ Contents
 -   [New Examples](#new-examples)
 -   [Incompatibilities](#incompatibilities)
 
-New features:
--------------
+New features
+------------
 
-Bugs fixed:
------------
-
-New theories:
--------------
-
-New tools:
+Bugs fixed
 ----------
 
-New examples:
--------------
+New theories
+------------
 
-Incompatibilities:
-------------------
+New tools
+---------
+
+New examples
+------------
+
+Incompatibilities
+-----------------
+
 -   The return types of `parse_term.mk_prec_matrix`, `type_grammar.parse_map`, `type_grammar.privileged_abbrevs` 
     have been changed to return maps of type HOLdict instead of Binarymap.
+
+-   `Preterm.eq` has been replaced with `Preterm.veq` which returns `true` if and only if the two arguments are variables with the same names and types.
 
 * * * * *
 
