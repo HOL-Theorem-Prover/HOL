@@ -247,12 +247,12 @@ fun get_sep_domain tm =
 
 fun conv2ssfrag name conv pattern = simpLib.SSFRAG
    { name = NONE, ac = [], congs = [],
-     convs = [{name = name, conv = K (K conv), key = SOME([], pattern),
+     convs = [{name = name, conv = K (K conv), key = SOME(empty_tmset, pattern),
               trace = 10}],
      dprocs = [], filter = NONE, rewrs = [] }
 
 fun eval_term_ss tm_name tm = simpLib.conv_ss
-   { name = tm_name, trace = 3, key = SOME ([],tm), conv = K (K EVAL) };
+   { name = tm_name, trace = 3, key = SOME (empty_tmset,tm), conv = K (K EVAL) };
 
 val sw2sw_ss = eval_term_ss "sw2sw" ``(sw2sw:'a word->'b word) (n2w n)``
 val w2w_ss = eval_term_ss "w2w" ``(w2w:'a word->'b word) (n2w n)``
@@ -1139,7 +1139,7 @@ val ALIGNED_TAC = let
     ONCE_REWRITE_CONV [ALIGNED_MOD_4] THENC
     SIMP_CONV std_ss [WORD_ADD_0,WORD_SUB_RZERO]
   val ALIGNED_convdata = {name = "ALIGNED_CONV",
-    trace = 2, key = SOME ([],``address$ALIGNED a``),
+    trace = 2, key = SOME (empty_tmset,``address$ALIGNED a``),
     conv = K (K ALIGNED_CONV)}:simpfrag.convdata
   val ALIGNED_ss = simpLib.conv_ss ALIGNED_convdata
   in FULL_SIMP_TAC std_ss [ALIGNED_ADD_EQ,ALIGNED_ADDR32,ALIGNED_n2w]

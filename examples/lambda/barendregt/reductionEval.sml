@@ -267,10 +267,11 @@ fun normstar_filter (th,c) =
 fun mngcnv cnv solver stack t = cnv (solver stack) t
 val NORMSTAR_ss = SSFRAG {
   ac = [], congs = [],
-  convs = [{conv = mngcnv nopath_CONV, key = SOME([], mk_comb(nopath_t, Mv_t)),
+  convs = [{conv = mngcnv nopath_CONV,
+            key = SOME(empty_tmset, mk_comb(nopath_t, Mv_t)),
             name = "nopath_CONV", trace = 2},
            {conv = mngcnv noreduct_CONV,
-            key = SOME([], mk_comb(noreduct_t, Mv_t)),
+            key = SOME(empty_tmset, mk_comb(noreduct_t, Mv_t)),
             name = "noreduct_CONV", trace = 2}],
   filter = SOME normstar_filter, dprocs = [], name = SOME "NORMSTAR",
   rewrs = [(SOME{Thy = "normal_order", Name = "normstar_nopath"},

@@ -15,7 +15,7 @@ local
   val ICLASS_CONV = (REWRITE_CONV [iclass_EQ_iclass,iclass2num_thm]
                        THENC numLib.REDUCE_CONV);
   fun conv_rec t = {name = "ICLASS_CONV",trace = 3,conv = K (K ICLASS_CONV),
-                    key = SOME([t],mk_eq(t,``x:iclass``))};
+                    key = SOME(HOLset.add(empty_tmset,t),mk_eq(t,``x:iclass``))};
 in
   val ICLASS_ss = simpLib.SSFRAG
     {convs = map conv_rec [``swp``,``mrs_msr``,``data_proc``,``reg_shift``,
