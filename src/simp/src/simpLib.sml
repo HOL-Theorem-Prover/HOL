@@ -35,7 +35,7 @@ fun f oo g = fn x => flatten (map f (g x));
 
 
 type convdata = {name  : string,
-                 key   : (term list * term) option,
+                 key   : (term set * term) option,
                  trace : int,
                  conv  : (term list -> term -> thm) -> term list -> conv};
 type tagged_convdata = {thypart : string option, cd : convdata}
@@ -65,7 +65,7 @@ fun mk_rewr_convdata (nmopt,(thm,tag)) : tagged_convdata option = let
 in
   SOME {thypart = thypart,
         cd = {name  = nm,
-              key   = SOME (free_varsl (hyp th), lhs(#2 (strip_imp(concl th)))),
+              key   = SOME (hyp_frees th, lhs(#2 (strip_imp(concl th)))),
               trace = 100, (* no need to provide extra tracing here;
                               COND_REWR_CONV provides enough tracing itself *)
               conv  = appconv (COND_REWR_CONV (nm,th), tag)}
@@ -211,7 +211,7 @@ fun std_conv_ss {name,conv,pats} =
     if null pats then
       cnv NONE
     else
-      merge_ss (map (fn p => cnv (SOME([],p))) pats)
+      merge_ss (map (fn p => cnv (SOME(empty_tmset,p))) pats)
   end
 
 fun ssfrag_name (SSFRAG_CON s) = #name s
@@ -343,7 +343,7 @@ fun remove_simps nms ss = ss -* nms
  val any = mk_var("x",Type.alpha);
 
  fun net_add_conv {thypart,cd = data as {name,key,trace,conv}:convdata} =
-     enter (option_cases #1 [] key,
+     enter (option_cases #1 empty_tmset key,
             option_cases #2 any key,
             {thypart = thypart, ci = {name = name, conval = USER_CONV data}})
 

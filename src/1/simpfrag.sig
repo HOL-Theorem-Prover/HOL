@@ -3,7 +3,7 @@ sig
 
   include Abbrev
   type convdata = { name: string,
-                    key: (term list * term) option,
+                    key: (term HOLset.set * term) option,
                     trace: int,
                     conv: (term list -> term -> thm) -> term list -> conv}
 
