@@ -9,10 +9,11 @@
 signature Ho_Net =
 sig
  type 'a net
+ type 'a set = 'a HOLset.set
  type term = Term.term
 
  val empty      : 'a net
- val enter      : term list * term * 'a -> 'a net -> 'a net
+ val enter      : term set * term * 'a -> 'a net -> 'a net
  val lookup     : term -> 'a net -> 'a list
  val merge_nets : 'a net * 'a net -> 'a net
  val fold'      : ('a -> 'b -> 'b) -> 'a net -> 'b -> 'b

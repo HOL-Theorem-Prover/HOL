@@ -59,16 +59,16 @@ fun label_cmp p =
     | (Lnet _, Cnet _) => GREATER
     | (Lnet n1, Lnet n2) => Int.compare(n1, n2)
 
-
+fun safe_delete(set,x) = HOLset.delete(set,x) handle HOLset.NotFound => set
 fun stored_label (fvars,tm) =
   let val (oper,args) = strip_comb tm
       val args' = map (fn x => (fvars,x)) args
   in case dest_term oper
       of CONST {Name,Thy,...} => (Cnet(Name,Thy,length args),args')
        | LAMB (Bvar,Body) => (Lnet(length args),
-                              (op_set_diff aconv fvars [Bvar],Body)::args')
+                              (safe_delete(fvars,Bvar),Body)::args')
        | VAR (Name,_) =>
-          if op_mem aconv oper fvars then
+          if HOLset.member (fvars,oper) then
             (FVnet(Name,length args),args')
           else (Vnet,[])
        | _ => fail()
@@ -110,7 +110,7 @@ fun new_edge(NODE(es, ts), label, n) = NODE(insert(es, label, n), ts)
   | new_edge(EMPTY ts, label, n) = NODE(insert(mkDict label_cmp, label, n), ts)
 
 
-fun net_update (elem, tms:(term list * term) list, net) =
+fun net_update (elem, tms:(term set * term) list, net) =
    case tms of
      [] => add_tip elem net
    | tm::rtms =>
