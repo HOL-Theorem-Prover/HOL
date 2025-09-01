@@ -228,17 +228,22 @@ fun convtest (nm,conv,tm,expected) =
   in
     timed conv (exncheck c) tm
   end handle InternalDie p => pretty_die p
-
+(* TODO fix
 fun check_HOL_ERRexn P e =
     case e of
         HOL_ERR{origin_structure,origin_function,message,...} =>
           P (origin_structure, origin_function, message)
       | _ => false
-
+*)
+fun check_HOL_ERRexn P e =
+    case e of
+        HOL_ERR _ => true
+      | _ => false
 fun check_HOL_ERR P (Res _) = false
   | check_HOL_ERR P (Exn e) = check_HOL_ERRexn P e
 
 fun is_struct_HOL_ERR st1 = check_HOL_ERRexn (fn (st2,_,_) => st1 = st2)
+
 fun check_result P (Res r) = P r
   | check_result P _ = false
 

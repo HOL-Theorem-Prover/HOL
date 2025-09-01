@@ -125,11 +125,13 @@ fun satCheck model t =
       DISCH mtm th4 (* |- l1 /\ ... /\ ln ==> t *)
    end
    handle Interrupt => raise Interrupt
-        | HOL_ERR {origin_function = "EQT_ELIM", ...} =>
-             if is_neg t
+        | (e as HOL_ERR {origin = origin, ...}) =>
+             if (#origin_function (hd origin) = "EQT_ELIM") then
+                (if is_neg t
                 then UNDISCH (EQF_ELIM (REWRITE_CONV [] t))
                      handle HOL_ERR _ => raise satCheckError
-             else raise satCheckError
+                else raise satCheckError)
+             else raise e
         |  _ => raise satCheckError;
 
 end
