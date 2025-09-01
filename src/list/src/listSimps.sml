@@ -312,7 +312,7 @@ in
       (simpLib.conv_ss
          {name  = "LIST_EQ_SIMP_CONV",
           trace = 2,
-          key   = SOME ([],Term `l1:'a list = l2:'a list`),
+          key   = SOME (empty_tmset,Term `l1:'a list = l2:'a list`),
           conv  = K (K (CHANGED_CONV LIST_EQ_SIMP_CONV))})
 end
 

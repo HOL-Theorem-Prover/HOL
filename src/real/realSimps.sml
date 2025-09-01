@@ -369,7 +369,7 @@ val ecf_patterns = [Term`&(NUMERAL n) / &(NUMERAL (BIT1 m))`,
                     Term`~&(NUMERAL n) / &(NUMERAL (BIT2 m))`]
 
 val simpset_convs = map (fn p => {conv = K (K elim_common_factor),
-                                  key = SOME ([], p),
+                                  key = SOME (empty_tmset, p),
                                   name = "realSimps.elim_common_factor",
                                   trace = 2}) ecf_patterns
 
@@ -893,7 +893,7 @@ val RMULCANON_ss = SSFRAG {
       rewrs = [],
       convs = [
         {conv = K (K REALMULCANON), trace = 2,
-         key = SOME ([], mk_mult(mk_var("x",real_ty), mk_var("y",real_ty))),
+         key = SOME (empty_tmset, mk_mult(mk_var("x",real_ty), mk_var("y",real_ty))),
          name = "REALMULCANON"}
       ]
 }
@@ -961,7 +961,7 @@ val RADDCANON_ss = SSFRAG {
       rewrs = [],
       convs = [
         {conv = K (K REALADDCANON), trace = 2,
-         key = SOME ([], mk_plus(mk_var("x",real_ty), mk_var("y",real_ty))),
+         key = SOME (empty_tmset, mk_plus(mk_var("x",real_ty), mk_var("y",real_ty))),
          name = "REALADDCANON"}
       ]
 }
@@ -1232,35 +1232,35 @@ val RMULRELNORM_ss = SSFRAG {
   ac = [], congs = [], dprocs = [], filter = NONE, name = SOME "RMULRELNORM",
   rewrs = [],
   convs = [
-    {key = SOME ([], mk_leq(x,y)),
+    {key = SOME (empty_tmset, mk_leq(x,y)),
      conv = mulrelnorm leq_tm [(REAL_LE_LMUL, rhs), (REAL_LE_LMUL_NEG, rhs)] ,
      name = "RMUL_LEQNORM", trace = 2
     },
-    {key = SOME ([], mk_eq(x,mk_mult(y,z))),
+    {key = SOME (empty_tmset, mk_eq(x,mk_mult(y,z))),
      conv = mulrelnorm equality [(REAL_EQ_LMUL, rand o rhs)],
      name = "RMUL_EQNORM1", trace = 2
     },
-    {key = SOME ([], mk_eq(mk_mult(x,y),z)),
+    {key = SOME (empty_tmset, mk_eq(mk_mult(x,y),z)),
      conv = mulrelnorm equality [(REAL_EQ_LMUL, rand o rhs)],
      name = "RMUL_EQNORM2", trace = 2
     },
-    {key = SOME ([], mk_eq(mk_div(x,y), z)),
+    {key = SOME (empty_tmset, mk_eq(mk_div(x,y), z)),
      conv = mulrelnorm equality [(REAL_EQ_LMUL, rand o rhs)],
      name = "RMUL_EQNORM3", trace = 2
     },
-    {key = SOME ([], mk_eq(z, mk_div(x,y))),
+    {key = SOME (empty_tmset, mk_eq(z, mk_div(x,y))),
      conv = mulrelnorm equality [(REAL_EQ_LMUL, rand o rhs)],
      name = "RMUL_EQNORM4", trace = 2
     },
-    {key = SOME ([], mk_eq(mk_pow(x,n), z)),
+    {key = SOME (empty_tmset, mk_eq(mk_pow(x,n), z)),
      conv = mulrelnorm equality [(REAL_EQ_LMUL, rand o rhs)],
      name = "RMUL_EQNORM5", trace = 2
     },
-    {key = SOME ([], mk_eq(z, mk_pow(x,n))),
+    {key = SOME (empty_tmset, mk_eq(z, mk_pow(x,n))),
      conv = mulrelnorm equality [(REAL_EQ_LMUL, rand o rhs)],
      name = "RMUL_EQNORM6", trace = 2
     },
-    {key = SOME ([], mk_less(x,y)),
+    {key = SOME (empty_tmset, mk_less(x,y)),
      conv = mulrelnorm less_tm [(REAL_LT_LMUL, rhs), (REAL_LT_LMUL_NEG, rhs)],
      name = "RMUL_LTNORM", trace = 2
     }

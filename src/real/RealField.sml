@@ -625,7 +625,7 @@ val REAL_FIELD = let
       REWR_CONV(GSYM REAL_POW_INV) o check (is_numeral o rand o rand);
   val norm_net = simpLib.SSFRAG
      {name = SOME "REAL_FIELD",
-      convs = [{name = "inv",  trace = 1, key = SOME([], “inv((x:real) pow n)”),
+      convs = [{name = "inv",  trace = 1, key = SOME(empty_tmset, “inv((x:real) pow n)”),
                 conv = K (K norm_conv)}],
       rewrs = [(SOME{Thy = "bool", Name = "FORALL_SIMP"}, FORALL_SIMP),
                (SOME{Thy = "bool", Name = "EXISTS_SIMP"}, EXISTS_SIMP),

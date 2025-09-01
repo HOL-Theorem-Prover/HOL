@@ -11,7 +11,7 @@ struct
     val x_t = mk_var ("x", alpha)
     val SET_SPEC_CONV =
       {conv = Lib.K (Lib.K (PGspec.SET_SPEC_CONV GSPECIFICATION)),
-       key = SOME ([], list_mk_comb (IN_t, [x_t, mk_comb (GSPEC_t, f_t)])),
+       key = SOME (empty_tmset, list_mk_comb (IN_t, [x_t, mk_comb (GSPEC_t, f_t)])),
        name = "SET_SPEC_CONV",
        trace = 2}
   in
@@ -68,7 +68,7 @@ struct
   in
     simpLib.SSFRAG {
       ac = [], name = SOME "GSPEC_SIMP", congs = [],
-      convs = [{key = SOME ([], mk_comb(gspec_tm, f)),
+      convs = [{key = SOME (empty_tmset, mk_comb(gspec_tm, f)),
                 conv = K (K GSPEC_SIMP_CONV), trace = 2,
                 name = "GSPEC_SIMP_CONV"}], rewrs = [],
       dprocs = [], filter = NONE

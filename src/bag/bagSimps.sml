@@ -70,7 +70,7 @@ val x = mk_var("x", bag_ty)
 val y = mk_var("y", bag_ty)
 fun mk_cancelconv (t, s) =
   {conv = K (K (CHANGED_CONV CANCEL_CONV)),
-   key = SOME ([], list_mk_comb(t, [x, y])),
+   key = SOME (empty_tmset, list_mk_comb(t, [x, y])),
    name = "CANCEL_CONV ("^s^")", trace = 2}
 
 val BAG_EQ_tm = mk_const("=", bag_ty --> bag_ty --> bool);

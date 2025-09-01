@@ -50,7 +50,7 @@ local
  fun mk_redconv0 pat =
    {name = "REDUCE_CONV (arithmetic reduction)",
     trace = 2,
-    key = SOME([], pat), conv = K (K reducer)}
+    key = SOME(empty_tmset, pat), conv = K (K reducer)}
  val x = mk_var("x", num_ty)
  val y = mk_var("y", num_ty)
  fun mk_unary_rconv op_t = mk_redconv0 (mk_comb(op_t, x))
@@ -498,7 +498,7 @@ fun ARITH_DP_FILTER_ss fil =
     simpLib.SSFRAG {
       name=SOME"ARITH_DP",
       convs = [{conv = K (K MUL_CANON_CONV),
-                key = SOME([], ``x * y``),
+                key = SOME(empty_tmset, ``x * y``),
                 name = "MUL_CANON_CONV", trace = 2}],
       rewrs = [], congs = [],
       filter = NONE, ac = [], dprocs = [ARITH_REDUCER fil]};
@@ -640,7 +640,7 @@ val _ = add_frags [MOD_ss]
 
 val ARITH_NORM_ss = let
   open simpLib NumRelNorms Arith Conv
-  fun conv (k, c, n) = {key = SOME ([], k), conv = K (K c),
+  fun conv (k, c, n) = {key = SOME (empty_tmset, k), conv = K (K c),
                         name = n, trace = 3}
   val DECIDE = EQT_ELIM o ARITH_CONV
 in

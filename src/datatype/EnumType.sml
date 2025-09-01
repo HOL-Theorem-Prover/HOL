@@ -342,7 +342,7 @@ fun enum_eq_CONV repth =
       end
   in
     {name = #1 (dest_type d_ty) ^ "_enum_neq_conv",
-     key = SOME ([], mk_eq(mk_var("x", d_ty), mk_var("y", d_ty))),
+     key = SOME (empty_tmset, mk_eq(mk_var("x", d_ty), mk_var("y", d_ty))),
      trace = 2,
      conv = finalconv} : simpfrag.convdata
   end

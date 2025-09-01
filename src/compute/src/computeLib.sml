@@ -344,7 +344,7 @@ local
       Thm.concl
    val translate_convs =
       List.mapPartial
-        (fn {key = SOME ([], t), conv, ...} : simpfrag.convdata =>
+        (fn {key = SOME (empty_tmset, t), conv, ...} : simpfrag.convdata =>
            (case Lib.total boolSyntax.strip_comb t of
                SOME (f, l) =>
                  SOME (f, List.length l, conv (Lib.K Conv.ALL_CONV) [])

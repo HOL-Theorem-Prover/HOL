@@ -280,7 +280,7 @@ val SIMPLIFY_SS =
   simpLib.SSFRAG
   {name=SOME"SIMPLIFY",
    convs = [{name = "extensionality simplification", trace = 2,
-             key = SOME([], Term`!x. (f:'a -> 'b) x = g x`),
+             key = SOME(empty_tmset, Term`!x. (f:'a -> 'b) x = g x`),
              conv = K (K (REWR_CONV FUN_EQ))}],
    rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
 
@@ -1562,7 +1562,7 @@ val cond_lift_SS =
   {name=SOME"cond_lift",
    convs =
    [{name = "conditional lifting at rand", trace = 2,
-     key = SOME([], Term`(f:'a -> 'b) (COND P Q R)`),
+     key = SOME(empty_tmset, Term`(f:'a -> 'b) (COND P Q R)`),
      conv = K (K cond_lift_rand_CONV)}],
    rewrs = [(SOME {Thy = "bool", Name = "COND_RATOR"}, boolTheory.COND_RATOR)],
    congs = [],
@@ -1623,7 +1623,7 @@ val condify_SS =
   {name=SOME"condify",
    convs =
    [{name = "COND_SIMP_CONV", trace = 2,
-     key = SOME ([], (``if a then (b:'a) else c``)),
+     key = SOME (empty_tmset, (``if a then (b:'a) else c``)),
      conv = K (K COND_SIMP_CONV)}],
    rewrs = map (fn th => (NONE, th))
    [COND_CLAUSES, COND_NOT, COND_AND, COND_OR, COND_IMP, COND_EQ, COND_COND,

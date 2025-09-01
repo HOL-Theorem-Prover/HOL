@@ -1338,7 +1338,7 @@ let
            group_thmL ((P_t', thm::thmL)::L') thmPL
         end
     val guess_net_complex =
-       foldr (fn ((P_t, thmL), n) => Ho_Net.enter ([],P_t, (P_t, thmL)) n) Ho_Net.empty
+       foldr (fn ((P_t, thmL), n) => Ho_Net.enter (empty_tmset,P_t, (P_t, thmL)) n) Ho_Net.empty
           (group_thmL [] cL)
 
 

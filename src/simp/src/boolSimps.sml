@@ -30,11 +30,11 @@ val SSFRAG = register_frag o SSFRAG
 val ETA_ss = SSFRAG {name = SOME "ETA",
   convs = [{name = "ETA_CONV (eta reduction)",
             trace = 2,
-            key = SOME ([],``(f:('a->'b)->'c) (\x:'a. (g:'a->'b) x)``),
+            key = SOME (empty_tmset,``(f:('a->'b)->'c) (\x:'a. (g:'a->'b) x)``),
             conv = K (K comb_ETA_CONV)},
            {name = "ETA_CONV (eta reduction)",
             trace = 2,
-            key = SOME ([], ``\x:'a. \y:'b. (f:'a->'b->'c) x y``),
+            key = SOME (empty_tmset, ``\x:'a. \y:'b. (f:'a->'b->'c) x y``),
             conv = K (K (ABS_CONV ETA_CONV))}],
   rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []}
 
@@ -89,7 +89,7 @@ val BOOL_ss = SSFRAG
   {name = SOME"BOOL",
    convs=[{name="BETA_CONV",
            trace=2,
-           key=SOME ([],``(\x:'a. y:'b) z``),
+           key=SOME (empty_tmset,``(\x:'a. y:'b) z``),
            conv=K (K BETA_CONV)}],
    rewrs= map (fn s => (SOME{Thy = "bool",Name = s}, DB.fetch "bool" s)) [
      "REFL_CLAUSE", "EQ_CLAUSES", "NOT_CLAUSES",  "AND_CLAUSES",
@@ -129,7 +129,7 @@ val ABBREV_ss = SSFRAG {
       congs = [markerTheory.Abbrev_CONG],
       convs = [{name="TIDY_ABBREV_CONV",
                 trace=1,
-                key=SOME ([],“Abbrev t”),
+                key=SOME (empty_tmset,“Abbrev t”),
                 conv=K (K markerLib.TIDY_ABBREV_CONV)}],
       rewrs = [], filter= NONE, ac = [], dprocs=[]
     }
@@ -166,11 +166,11 @@ val UNWIND_ss = SSFRAG
   {name=SOME "UNWIND",
    convs=[{name="UNWIND_EXISTS_CONV",
            trace=1,
-           key=SOME ([],``?x:'a. P``),
+           key=SOME (empty_tmset,``?x:'a. P``),
            conv=K (K Unwind.UNWIND_EXISTS_CONV)},
           {name="UNWIND_FORALL_CONV",
            trace=1,
-           key=SOME ([],``!x:'a. P``),
+           key=SOME (empty_tmset,``!x:'a. P``),
            conv=K (K Unwind.UNWIND_FORALL_CONV)}],
    rewrs=[],filter=NONE,ac=[],dprocs=[],congs=[]};
 
@@ -288,11 +288,11 @@ val COND_elim_ss =
     convs = [
       {conv = K (K celim_rand_CONV),
        name = "conditional lifting at rand",
-       key = SOME([], Term‘(f:'a -> 'b) (COND P Q R)’),
+       key = SOME(empty_tmset, Term‘(f:'a -> 'b) (COND P Q R)’),
        trace = 2},
       {conv = K (K COND_ABS_CONV),
        name = "conditional lifting under abstractions",
-       key = SOME([], “\x:'a. COND p (q x:'b) (r x)”),
+       key = SOME(empty_tmset, “\x:'a. COND p (q x:'b) (r x)”),
        trace = 2}
     ],
     dprocs = [], filter = NONE,
@@ -305,11 +305,11 @@ val LIFT_COND_ss = SSFRAG
    ac = [], congs = [],
    convs = [{conv = K (K celim_rand_CONV),
              name = "conditional lifting at rand",
-             key = SOME([], Term`(f:'a -> 'b) (COND P Q R)`),
+             key = SOME(empty_tmset, Term`(f:'a -> 'b) (COND P Q R)`),
              trace = 2},
             {conv = K (K COND_ABS_CONV),
              name = "conditional lifting under abstractions",
-             key = SOME([], Term`\x:'a. COND p (q x:'b) (r x)`),
+             key = SOME(empty_tmset, Term`\x:'a. COND p (q x:'b) (r x)`),
              trace = 2}],
    dprocs = [], filter = NONE,
    rewrs = [(SOME {Thy = "bool", Name = "COND_RATOR"}, boolTheory.COND_RATOR),
@@ -368,7 +368,7 @@ val NORMEQ_CONV = let
     end t
 in
   { name = "NORMEQ_CONV",
-    key = SOME ([] : term list, ``x:'a = y``),
+    key = SOME (empty_tmset, ``x:'a = y``),
     trace = 2,
     conv = c }
 end

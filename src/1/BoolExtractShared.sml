@@ -388,17 +388,17 @@ fun BOOL_EXTRACT_SHARED_CONV t =
 
 val BOOL_EQ_IMP_convdata = {name = "BOOL_EQ_IMP_CONV",
             trace = 2,
-            key = SOME ([],``(a:bool) = (b:bool)``),
+            key = SOME (empty_tmset,``(a:bool) = (b:bool)``),
             conv = K (K BOOL_EQ_IMP_CONV)}:simpfrag.convdata;
 
 val BOOL_EXTRACT_SHARED_convdata = {name = "BOOL_EXTRACT_SHARED_CONV",
             trace = 2,
-            key = SOME ([],``a:bool``),
+            key = SOME (empty_tmset,``a:bool``),
             conv = K (K BOOL_EXTRACT_SHARED_CONV)}:simpfrag.convdata;
 
 val BOOL_NEG_PAIR_convdata = {name = "BOOL_NEG_PAIR_CONV",
             trace = 2,
-            key = SOME ([],``a:bool``),
+            key = SOME (empty_tmset,``a:bool``),
             conv = K (K BOOL_NEG_PAIR_CONV)}:simpfrag.convdata;
 
 

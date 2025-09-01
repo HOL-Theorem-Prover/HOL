@@ -150,21 +150,21 @@ val pabs_elim_ss =
     simpLib.conv_ss
       {name  = "PABS_ELIM_CONV",
        trace = 2,
-       key   = SOME ([],``UNCURRY (f:'a -> 'b -> bool)``),
+       key   = SOME (empty_tmset,``UNCURRY (f:'a -> 'b -> bool)``),
        conv  = K (K pairTools.PABS_ELIM_CONV)}
 
 val elim_fst_snd_select_ss =
     simpLib.conv_ss
       {name  = "ELIM_FST_SND_SELECT_CONV",
        trace = 2,
-       key   = SOME ([],``$@ (f:'a -> bool)``),
+       key   = SOME (empty_tmset,``$@ (f:'a -> bool)``),
        conv  = K (K ELIM_FST_SND_SELECT_CONV)}
 
 val select_conj_ss =
     simpLib.conv_ss
       {name  = "SELECT_CONJ_SS_CONV",
        trace = 2,
-       key   = SOME ([],``$@ (f:'a -> bool)``),
+       key   = SOME (empty_tmset,``$@ (f:'a -> bool)``),
        conv  = K (K (SIMP_CONV (std_ss++boolSimps.CONJ_ss) []))};
 
 (* A basic simpset-fragment with a lot of useful stuff
@@ -1673,7 +1673,7 @@ val PMATCH_NORMALISE_ss =
     simpLib.conv_ss
       {name  = "PMATCH_NORMALISE_CONV",
        trace = 2,
-       key   = SOME ([],``PMATCH (p:'a) (rows : ('a -> 'b option) list)``),
+       key   = SOME (empty_tmset,``PMATCH (p:'a) (rows : ('a -> 'b option) list)``),
        conv  = K (K PMATCH_NORMALISE_CONV)}
 
 

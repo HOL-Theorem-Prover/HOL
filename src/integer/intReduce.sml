@@ -74,7 +74,7 @@ local
     end
   fun mk_conv pat =
      {name = "Integer calculation",
-      key = SOME([], pat), trace = 2,
+      key = SOME(empty_tmset, pat), trace = 2,
       conv = K (K reducer)}
   val rederr = ERR "RED_CONV" "Term not reducible"
 in

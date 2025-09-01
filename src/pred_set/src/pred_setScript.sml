@@ -193,7 +193,7 @@ val SET_SPEC_ss = SSFRAG
   {name=SOME"SET_SPEC",
    ac=[], congs=[], dprocs=[], filter=NONE, rewrs=[],
    convs = [{conv = K (K SET_SPEC_CONV),
-   key = SOME([], ``x IN GSPEC f``),
+   key = SOME(empty_tmset, ``x IN GSPEC f``),
    name = "SET_SPEC_CONV", trace = 2}]}
 
 val _ = augment_srw_ss [SET_SPEC_ss]
