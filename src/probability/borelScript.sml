@@ -7932,6 +7932,20 @@ Proof
       FIRST_X_ASSUM MATCH_MP_TAC >> rw [lt_imp_le] ]
 QED
 
+Theorem IN_MEASURABLE_BOREL_MONO_DECREASING :
+    !f sp. (!x y. x <= y ==> f y <= f x) /\ sp IN subsets Borel ==>
+           f IN measurable (restrict_algebra Borel sp) Borel
+Proof
+    rpt STRIP_TAC
+ >> Q.ABBREV_TAC ‘g = numeric_negate o f’
+ >> Know ‘f = numeric_negate o g’
+ >- (rw [Abbr ‘g’, FUN_EQ_THM]) >> Rewr'
+ >> MATCH_MP_TAC MEASURABLE_COMP
+ >> Q.EXISTS_TAC ‘Borel’ >> rw [IN_MEASURABLE_BOREL_BOREL_AINV]
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_MONO_INCREASING
+ >> rw [Abbr ‘g’, le_neg]
+QED
+
 Theorem IN_MEASURABLE_BOREL_BOREL_MONO_INCREASING :
     !f. (!x y. x <= y ==> f x <= f y) ==> f IN measurable Borel Borel
 Proof
@@ -8281,6 +8295,13 @@ Theorem IN_MEASURABLE_BOREL_NORMAL_REAL:
 Proof
     rw[] >> irule IN_MEASURABLE_BOREL_IMP_BOREL' >> art []
  >> irule_at Any in_borel_measurable_from_Borel >> art []
+QED
+
+Theorem IN_MEASURABLE_BOREL_NORMAL[simp] :
+    Normal IN measurable borel Borel
+Proof
+    rw [sigma_algebra_borel, IN_MEASURABLE_BOREL, space_borel, IN_FUNSET]
+ >> rw [borel_measurable_sets]
 QED
 
 (*** AE Theorems ***)

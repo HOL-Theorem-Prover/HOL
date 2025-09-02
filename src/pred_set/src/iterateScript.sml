@@ -195,6 +195,29 @@ val TRANSITIVE_STEPWISE_LE = store_thm ("TRANSITIVE_STEPWISE_LE",
    `(a /\ a' ==> (c <=> b)) ==> a /\ a' /\ b ==> c`) THEN
   MATCH_ACCEPT_TAC TRANSITIVE_STEPWISE_LE_EQ);
 
+Theorem TRANSITIVE_STEPWISE_LT_EQ :
+   !R. (!x y z. R x y /\ R y z ==> R x z)
+         ==> ((!m n. m < n ==> R m n) <=> (!n. R n (SUC n)))
+Proof
+  REPEAT STRIP_TAC THEN EQ_TAC THEN ASM_SIMP_TAC std_ss [LESS_THM] THEN
+  DISCH_TAC THEN SIMP_TAC std_ss [LT_EXISTS] THEN
+  KNOW_TAC ``(!m n. (?d. n = m + SUC d) ==> R m n) =
+              (!m d n. (n = m + SUC d) ==> R m (m + SUC d))`` THENL
+  [METIS_TAC [LEFT_EXISTS_IMP_THM, SWAP_FORALL_THM], ALL_TAC] THEN
+  DISC_RW_KILL THEN GEN_TAC THEN
+  SIMP_TAC std_ss [LEFT_FORALL_IMP_THM, EXISTS_REFL, ADD_CLAUSES] THEN
+  INDUCT_TAC THEN REWRITE_TAC[ADD_CLAUSES] THEN ASM_MESON_TAC[]
+QED
+
+Theorem TRANSITIVE_STEPWISE_LT :
+   !R. (!x y z. R x y /\ R y z ==> R x z) /\ (!n. R n (SUC n))
+       ==> !m n. m < n ==> R m n
+Proof
+  REPEAT GEN_TAC THEN MATCH_MP_TAC(TAUT
+   `(a ==> (c <=> b)) ==> a /\ b ==> c`) THEN
+  MATCH_ACCEPT_TAC TRANSITIVE_STEPWISE_LT_EQ
+QED
+
 val LAMBDA_PAIR = store_thm ("LAMBDA_PAIR",
  ``(\(x,y). P x y) = (\p. P (FST p) (SND p))``,
   SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD] THEN
