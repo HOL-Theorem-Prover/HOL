@@ -80,60 +80,84 @@ fun find_tree_def tree_def_list tree =
       )
   | _ => raise Domain
 
-fun mk_raw_flip itree_rator [prog1, prog2] =
-  let val itree1 = mk_monop itree_rator prog1;
-      val itree2 = mk_monop itree_rator prog2;
-  in
-    (flip_const, [itree1, itree2])
-  end
+fun mk_raw_flip itree_rator progs =
+  case progs of
+    [prog1, prog2] =>
+      let val itree1 = mk_monop itree_rator prog1;
+          val itree2 = mk_monop itree_rator prog2;
+      in
+        (flip_const, [itree1, itree2])
+      end
+  | _ => raise Domain
 
-fun mk_raw_call itree_rator [prog_num] =
-  let val env = itree_rator |> rand;
-      val callee_prog = concl (EVAL (mk_monop env prog_num)) |> rand;
-      val inner_tree = mk_monop itree_rator callee_prog;
-  in
-    (call_const, [inner_tree])
-  end
+fun mk_raw_call itree_rator progs =
+  case progs of
+    [prog_num] =>
+      let val env = itree_rator |> rand;
+          val callee_prog = concl (EVAL (mk_monop env prog_num)) |> rand;
+          val inner_tree = mk_monop itree_rator callee_prog;
+      in
+        (call_const, [inner_tree])
+      end
+  | _ => raise Domain
 
-fun mk_raw_while itree_rator [prog] =
-  let val inner_while = mk_monop while_const prog;
-      val inner_seq = mk_binop seq_const (prog, inner_while);
-      val inner_tree = mk_monop itree_rator inner_seq;
-  in
-    (while_const, [inner_tree])
-  end
+fun mk_raw_while itree_rator progs =
+  case progs of
+    [prog] =>
+      let val inner_while = mk_monop while_const prog;
+          val inner_seq = mk_binop seq_const (prog, inner_while);
+          val inner_tree = mk_monop itree_rator inner_seq;
+      in
+        (while_const, [inner_tree])
+      end
+  | _ => raise Domain
 
-fun mk_raw_seq itree_rator [prog1, prog2] =
-  let val itree1 = mk_monop itree_rator prog1;
-      val itree2 = mk_monop itree_rator prog2;
-  in
-    (seq_const, [itree1, itree2])
-  end
+fun mk_raw_seq itree_rator progs =
+  case progs of
+    [prog1, prog2] =>
+      let val itree1 = mk_monop itree_rator prog1;
+          val itree2 = mk_monop itree_rator prog2;
+      in
+        (seq_const, [itree1, itree2])
+      end
+  | _ => raise Domain
 
-fun mk_flip_from_tree [itree1, itree2] =
-  let val if_exp = mk_cond  (“x:bool”, itree1, itree2);
-      val lambda_exp = mk_abs (“x:bool”, if_exp);
-  in
-    mk_binop vis_const (“():unit”, lambda_exp)
-  end
+fun mk_flip_from_tree itrees =
+  case itrees of
+    [itree1, itree2] =>
+      let val if_exp = mk_cond  (“x:bool”, itree1, itree2);
+          val lambda_exp = mk_abs (“x:bool”, if_exp);
+      in
+        mk_binop vis_const (“():unit”, lambda_exp)
+      end
+  | _ => raise Domain
 
-fun mk_call_from_tree [inner_tree] =
-   mk_monop tau_const inner_tree
+fun mk_call_from_tree trees =
+  case trees of
+    [inner_tree] =>
+      mk_monop tau_const inner_tree
+  | _ => raise Domain
 
-fun mk_while_from_tree [inner_tree] =
-   mk_monop tau_const inner_tree
+fun mk_while_from_tree trees =
+  case trees of
+    [inner_tree] =>
+      mk_monop tau_const inner_tree
+  | _ => raise Domain
 
-fun mk_seq_from_tree [itree1, itree2] =
-  let val tau_tree2 = mk_monop tau_const itree2;
-      val abs_tree2 = mk_abs (“x:unit”, tau_tree2);
-      val ret_tree = mk_monop ret_const “():unit”;
-      val inner_tree = mk_binop bind_const (itree1, abs_tree2);
-  in
-    if term_eq ret_tree itree1 then
-      tau_tree2
-    else
-      inner_tree
-  end
+fun mk_seq_from_tree trees =
+  case trees of
+    [itree1, itree2] =>
+      let val tau_tree2 = mk_monop tau_const itree2;
+          val abs_tree2 = mk_abs (“x:unit”, tau_tree2);
+          val ret_tree = mk_monop ret_const “():unit”;
+          val inner_tree = mk_binop bind_const (itree1, abs_tree2);
+      in
+        if term_eq ret_tree itree1 then
+          tau_tree2
+        else
+          inner_tree
+      end
+  | _ => raise Domain
 
 (* -------------------------------------------------------------------------- *)
 (* Implementation of STAGE 1, 2, 3                                            *)
@@ -173,7 +197,11 @@ fun mutual_raw_gen itree_defs itree =
       end
    end
 
-fun decompile_raw itree = mutual_raw_gen [] itree;
+fun decompile_raw itree =
+  let val _ = print "Unfolding itree definitions.\n";
+  in
+    mutual_raw_gen [] itree
+  end
 
 (* -------------------------------------------------------------------------- *)
 (* Implementation of STAGE 4, 5                                               *)
@@ -230,6 +258,7 @@ fun list_decompile tree_defs used_tree trees =
 
 fun decompile itree =
   let val tree_defs = decompile_raw itree;
+      val _ = print "Distilling minimum list of itrees for the program.\n";
       val (itree_def, sub_trees) = construct_min_shallow tree_defs [] itree itree;
       val all_used_tree = union_term sub_trees [itree];
   in
@@ -318,12 +347,6 @@ val decompiler_tactic = PURE_REWRITE_TAC[itree_semantics] >> rpt decompiler_eqn
 (* Implementation of the proof-producing decompiler                           *)
 (* -------------------------------------------------------------------------- *)
 
-fun mk_itree_def name itree =
-  let val ((_, itree_def), _) = decompile itree;
-  in
-    Define $ single $ ANTIQUOTE $ mk_eq(mk_var(name, “:(bool, unit, unit) itree”), itree_def)
-  end
-
 fun itree_eqn_main_proof name itree itree_def =
   let val tree_name = concat [name, "_main"];
       val name_thm = Define $ single $ ANTIQUOTE $ mk_eq(mk_var(tree_name, “:(bool, unit, unit) itree”), itree)
@@ -358,7 +381,9 @@ fun itree_eqn_proof_list name type_name num trees =
 fun proof_dec name itree =
   let val ((_, itree_def), sub_trees) = decompile itree;
       val env_thm  =  Define $ single $ ANTIQUOTE $ mk_eq(mk_var(concat [name, "_env"], “:(num -> prog)”), itree |> rator |> rand);
+      val _ = print "Proving main tree theorem.\n";
       val (name_thm, tree_thm) = itree_eqn_main_proof name itree itree_def;
+      val _ = print "Proving subtree theorems.\n";
       val (name_thms, tree_thms) = itree_eqn_proof_list name "sub" 0 sub_trees;
   in
     (LIST_CONJ (map (PURE_REWRITE_RULE (map GSYM (name_thm::name_thms))) (tree_thm::tree_thms)),
