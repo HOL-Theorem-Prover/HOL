@@ -4291,7 +4291,6 @@ Proof
  >> RW_TAC std_ss [le_refl, mul_rzero, mul_rone]
 QED
 
-(* added ‘x IN m_space m’ *)
 Theorem pos_fn_integral_disjoint_sets_sum :
     !m f s a. FINITE s /\ measure_space m /\
              (!i. i IN s ==> a i IN measurable_sets m) /\
@@ -4301,39 +4300,40 @@ Theorem pos_fn_integral_disjoint_sets_sum :
              (pos_fn_integral m (\x. f x * indicator_fn (BIGUNION (IMAGE a s)) x) =
               SIGMA (\i. pos_fn_integral m (\x. f x * indicator_fn (a i) x)) s)
 Proof
-    Suff `!s:'b->bool.
-            FINITE s ==>
-              (\s:'b->bool. !m f a. measure_space m /\
-                           (!i. i IN s ==> a i IN measurable_sets m) /\
-                           (!x. x IN m_space m ==> 0 <= f x) /\
-                           (!i j. i IN s /\ j IN s /\ i <> j ==> DISJOINT (a i) (a j)) /\
-                            f IN measurable (m_space m,measurable_sets m) Borel
-                       ==> (pos_fn_integral m (\x. f x * indicator_fn (BIGUNION (IMAGE a s)) x) =
-                            SIGMA (\i. pos_fn_integral m (\x. f x * indicator_fn (a i) x)) s)) s`
+    Suff ‘!s. FINITE (s :'b set) ==>
+             (\s. !m f a. measure_space m /\
+                    (!i. i IN s ==> a i IN measurable_sets m) /\
+                    (!x. x IN m_space m ==> 0 <= f x) /\
+                    (!i j. i IN s /\ j IN s /\ i <> j ==> DISJOINT (a i) (a j)) /\
+                     f IN measurable (m_space m,measurable_sets m) Borel ==>
+               pos_fn_integral m (\x. f x * indicator_fn (BIGUNION (IMAGE a s)) x) =
+               SIGMA (\i. pos_fn_integral m (\x. f x * indicator_fn (a i) x)) s) s’
  >- RW_TAC std_ss []
  >> MATCH_MP_TAC FINITE_INDUCT
- >> RW_TAC std_ss [EXTREAL_SUM_IMAGE_EMPTY, IMAGE_EMPTY, BIGUNION_EMPTY, FINITE_INSERT,
-                   DELETE_NON_ELEMENT, IN_INSERT, BIGUNION_INSERT, IMAGE_INSERT]
- >- RW_TAC std_ss [indicator_fn_def, mul_rzero, mul_rone, NOT_IN_EMPTY, pos_fn_integral_zero]
- >> (MP_TAC o Q.SPEC `e` o UNDISCH o
-     Q.SPECL [`(\i. pos_fn_integral m (\x. f x * indicator_fn (a i) x))`, `s`] o
-     INST_TYPE [alpha |-> beta]) EXTREAL_SUM_IMAGE_PROPERTY
- >> `!x. (\i. pos_fn_integral m (\x. f x * indicator_fn (a i) x)) x <> NegInf`
-       by (RW_TAC std_ss []
-           >> Suff `0 <= pos_fn_integral m (\x'. f x' * indicator_fn (a x) x')`
-           >- METIS_TAC [lt_infty, extreal_not_infty, extreal_of_num_def, lte_trans]
-           >> MATCH_MP_TAC pos_fn_integral_pos
-           >> RW_TAC std_ss [indicator_fn_def, mul_rone, mul_rzero, le_refl])
+ >> RW_TAC std_ss [EXTREAL_SUM_IMAGE_EMPTY, IMAGE_EMPTY, BIGUNION_EMPTY,
+                   FINITE_INSERT, DELETE_NON_ELEMENT, IN_INSERT, BIGUNION_INSERT,
+                   IMAGE_INSERT]
+ >- RW_TAC std_ss [indicator_fn_def, mul_rzero, mul_rone, NOT_IN_EMPTY,
+                   pos_fn_integral_zero]
+ >> MP_TAC (Q.SPECL [‘\i. pos_fn_integral m (\x. f x * indicator_fn (a i) x)’, ‘s’]
+                    (INST_TYPE [alpha |-> beta] EXTREAL_SUM_IMAGE_PROPERTY))
+ >> simp []
+ >> DISCH_THEN (MP_TAC o Q.SPEC ‘e’)
+ >> Know ‘!i. pos_fn_integral m (\x. f x * indicator_fn (a i) x) <> NegInf’
+ >- (Q.X_GEN_TAC ‘i’ \\
+     MATCH_MP_TAC pos_not_neginf \\
+     MATCH_MP_TAC pos_fn_integral_pos >> rw [le_mul, INDICATOR_FN_POS])
  >> RW_TAC std_ss []
  >> `e NOTIN s` by METIS_TAC [DELETE_NON_ELEMENT]
  >> `DISJOINT (a e) (BIGUNION (IMAGE a s))`
        by (RW_TAC std_ss [DISJOINT_BIGUNION, IN_IMAGE] >> METIS_TAC [])
- >> `countable (IMAGE a s)` by METIS_TAC [image_countable, finite_countable]
  >> `(IMAGE a s) SUBSET measurable_sets m`
        by (RW_TAC std_ss [SUBSET_DEF, IMAGE_DEF, GSPECIFICATION] \\
            METIS_TAC [])
+ >> `countable (IMAGE a s)` by METIS_TAC [image_countable, finite_countable]
  >> `BIGUNION (IMAGE a s) IN measurable_sets m`
-       by METIS_TAC [sigma_algebra_def, measure_space_def, subsets_def, measurable_sets_def]
+       by METIS_TAC [sigma_algebra_def, measure_space_def, subsets_def,
+                     measurable_sets_def]
  >> METIS_TAC [pos_fn_integral_disjoint_sets]
 QED
 
@@ -6203,13 +6203,12 @@ Theorem integral_sum :
                    f i x <> PosInf /\ f i x <> NegInf) ==>
             (integral m (\x. SIGMA (\i. (f i) x) s) = SIGMA (\i. integral m (f i)) s)
 Proof
-    Suff `!s:'b->bool.
-            FINITE s ==>
-              (\s:'b->bool. !m f. measure_space m /\ (!i. i IN s ==> integrable m (f i)) /\
-                                 (!x i. i IN s /\ x IN m_space m ==>
-                                        f i x <> PosInf /\ f i x <> NegInf)
-                             ==> (integral m (\x. SIGMA (\i. (f i) x) s) =
-                                  SIGMA (\i. integral m (f i)) s)) s`
+    Suff `!s. FINITE (s :'b set) ==>
+             (\s. !m f. measure_space m /\ (!i. i IN s ==> integrable m (f i)) /\
+                       (!x i. i IN s /\ x IN m_space m ==>
+                              f i x <> PosInf /\ f i x <> NegInf) ==>
+                        integral m (\x. SIGMA (\i. (f i) x) s) =
+                        SIGMA (\i. integral m (f i)) s) s`
  >- METIS_TAC []
  >> MATCH_MP_TAC FINITE_INDUCT
  >> RW_TAC std_ss [EXTREAL_SUM_IMAGE_EMPTY, integral_zero]
@@ -6253,8 +6252,7 @@ Theorem finite_support_integral_reduce :
          (integral m f = finite_space_integral m f)
 Proof
     rpt STRIP_TAC
- >> ‘sigma_algebra (measurable_space m)’
-      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA]
+ >> ‘sigma_algebra (measurable_space m)’ by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA]
  >> `?c1 n. BIJ c1 (count n) (IMAGE f (m_space m))`
        by RW_TAC std_ss [GSYM FINITE_BIJ_COUNT_EQ]
  >> `?c. !i. (i IN count n ==> (c1 i = Normal (c i)))`
@@ -6521,8 +6519,8 @@ Proof
  >> Suff `measure m (PREIMAGE f {Normal (c x)} INTER m_space m) <> NegInf`
  >- METIS_TAC [mul_not_infty]
  >> MATCH_MP_TAC pos_not_neginf
- >> IMP_RES_TAC MEASURE_SPACE_POSITIVE
- >> METIS_TAC [positive_def]
+ >> Know ‘positive m’ >- simp [MEASURE_SPACE_POSITIVE]
+ >> rw [positive_def]
 QED
 
 (* special case of "finite_support_integral_reduce": (m_space m) is finite.
@@ -6547,7 +6545,8 @@ QED
    Added `measure m (m_space m) < PosInf` into antecedents
  *)
 Theorem finite_space_POW_integral_reduce :
-    !m f. measure_space m /\ (POW (m_space m) = measurable_sets m) /\ FINITE (m_space m) /\
+    !m f. measure_space m /\ (POW (m_space m) = measurable_sets m) /\
+          FINITE (m_space m) /\
          (!x. x IN m_space m ==> f x <> NegInf /\ f x <> PosInf) /\
           measure m (m_space m) < PosInf ==>
          (integral m f = SIGMA (\x. f x * (measure m {x})) (m_space m))
@@ -6975,7 +6974,7 @@ val suminf_measure = prove (
  >> FULL_SIMP_TAC std_ss [IN_FUNSET, disjoint_family_on]
  >> ASM_SET_TAC []);
 
-(* removed ‘image_measure_space’, reduced ‘N’ (measure_space) to ‘B’ (sigma_algebra) *)
+(* reduced ‘N’ (measure_space) to ‘B’ (sigma_algebra) *)
 Theorem measure_space_distr :
     !M B f. measure_space M /\ sigma_algebra B /\
             f IN measurable (m_space M,measurable_sets M) B ==>

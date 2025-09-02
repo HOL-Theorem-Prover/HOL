@@ -226,6 +226,13 @@ Definition neigh:
                              N SUBSET topspace top
 End
 
+Theorem neigh_def :
+    !top N x. neigh top (N,x) <=>
+              ?P. open_in top P /\ P SUBSET N /\ x IN P /\ N SUBSET topspace top
+Proof
+    REWRITE_TAC [neigh, IN_APP]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* Prove various properties / characterizations of open sets                 *)
 (*---------------------------------------------------------------------------*)
@@ -285,6 +292,12 @@ Proof
     first_assum $ drule_then strip_assume_tac THEN gs[neigh] THEN
     metis_tac[SUBSET_TRANS]
   ]
+QED
+
+Theorem OPEN_NEIGH' :
+    !A top. open_in(top) A <=> !x. x IN A ==> ?N. neigh(top)(N,x) /\ N SUBSET A
+Proof
+    REWRITE_TAC [OPEN_NEIGH, IN_APP]
 QED
 
 (*---------------------------------------------------------------------------*)

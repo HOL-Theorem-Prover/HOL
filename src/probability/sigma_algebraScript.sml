@@ -15,7 +15,7 @@
 Theory sigma_algebra
 Ancestors
   arithmetic option pair combin pred_set topology iterate
-  prim_rec
+  prim_rec metric real
 Libs
   pred_setLib numLib hurdUtils jrhUtils res_quanTools
 
@@ -5701,6 +5701,215 @@ Theorem trivial_algebra_of_two_points :
 Proof
     rw [algebra_def, subset_class_def]
  >> ASM_SET_TAC []
+QED
+
+(* ------------------------------------------------------------------------- *)
+(*  exhausting_sequence in family of sets                                    *)
+(* ------------------------------------------------------------------------- *)
+
+(* an "exhausting" sequence in a system of sets, moved from martingaleTheory *)
+Definition exhausting_sequence_def :
+    exhausting_sequence (a :'a algebra) (f :num -> 'a -> bool) =
+      (f IN (UNIV -> subsets a) /\ (!n. f n SUBSET f (SUC n)) /\
+       BIGUNION (IMAGE f UNIV) = space a)
+End
+
+Theorem exhausting_sequence_alt :
+   !a f. exhausting_sequence a f <=>
+         f IN (univ(:num) -> subsets a) /\ (!m n. m <= n ==> f m SUBSET f n) /\
+         BIGUNION (IMAGE f univ(:num)) = space a
+Proof
+    RW_TAC std_ss [exhausting_sequence_def]
+ >> reverse EQ_TAC >- RW_TAC std_ss []
+ >> STRIP_TAC >> art []
+ >> GEN_TAC >> Induct_on ‘n’ >- RW_TAC arith_ss [SUBSET_REFL]
+ >> DISCH_TAC
+ >> ‘(m = SUC n) \/ m <= n’ by RW_TAC arith_ss [] >- rw [SUBSET_REFL]
+ >> MATCH_MP_TAC SUBSET_TRANS
+ >> Q.EXISTS_TAC ‘f n’ >> art []
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
+QED
+
+Definition has_exhausting_sequence :
+    has_exhausting_sequence a = ?f. exhausting_sequence a f
+End
+
+(* This was part of sigma_finite_def, but no requirement on the measure of each
+   (f n). The definition is useful because ‘space a IN subsets a’ does not hold
+   in general for semiring.
+
+   |- !a. has_exhausting_sequence a <=>
+          ?f. f IN (univ(:num) -> subsets a) /\ (!n. f n SUBSET f (SUC n)) /\
+              BIGUNION (IMAGE f univ(:num)) = space a
+ *)
+Theorem has_exhausting_sequence_def =
+    REWRITE_RULE [exhausting_sequence_def] has_exhausting_sequence
+
+(* |- !a. has_exhausting_sequence a <=>
+          ?f. f IN (univ(:num) -> subsets a) /\
+              (!m n. m <= n ==> f m SUBSET f n) /\
+              BIGUNION (IMAGE f univ(:num)) = space a
+ *)
+Theorem has_exhausting_sequence_alt =
+    REWRITE_RULE [exhausting_sequence_alt] has_exhausting_sequence
+
+(* ------------------------------------------------------------------------- *)
+(*  Borel sigma-algebra generated from any topology                          *)
+(* ------------------------------------------------------------------------- *)
+
+Definition general_borel_def :
+    general_borel top = sigma (topspace top) (open_in top)
+End
+
+Theorem sigma_algebra_general_borel[simp] :
+    sigma_algebra (general_borel top)
+Proof
+    rw [general_borel_def]
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA
+ >> rw [subset_class_def, topspace, IN_APP]
+ >> rw [SUBSET_DEF]
+ >> rename1 ‘y IN s’
+ >> Q.EXISTS_TAC ‘s’ >> art []
+QED
+
+Theorem space_general_borel :
+    !top. space (general_borel top) = topspace top
+Proof
+    REWRITE_TAC [general_borel_def, SPACE_SIGMA]
+QED
+
+Theorem space_general_borel_mtop :
+    !E. space (general_borel (mtop E)) = mspace E
+Proof
+    REWRITE_TAC [space_general_borel, TOPSPACE_MTOPOLOGY]
+QED
+
+Theorem open_in_general_borel :
+    !top s. open_in top s ==> s IN subsets (general_borel top)
+Proof
+    rw [general_borel_def]
+ >> MATCH_MP_TAC IN_SIGMA
+ >> rw [IN_APP]
+QED
+
+Theorem closed_in_general_borel :
+    !top s. closed_in top s ==> s IN subsets (general_borel top)
+Proof
+    rw [closed_in]
+ >> qabbrev_tac ‘a = general_borel top’
+ >> ‘topspace top = space a’ by PROVE_TAC [space_general_borel] >> fs []
+ >> qabbrev_tac ‘t = space a DIFF s’
+ >> ‘s = space a DIFF t’ by ASM_SET_TAC [] >> POP_ORW
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_COMPL
+ >> rw [Abbr ‘a’]
+ >> MATCH_MP_TAC open_in_general_borel >> art []
+QED
+
+(* Borel space generated from metric spaces always has exhausting sequences *)
+Theorem exhausting_sequence_general_borel :
+    !E c. exhausting_sequence (general_borel (mtop E)) (\n. mcball E (c,&n))
+Proof
+    rw [exhausting_sequence_def, IN_FUNSET]
+ >| [ (* goal 1 (of 3) *)
+      qmatch_abbrev_tac ‘s IN subsets _’ \\
+      MATCH_MP_TAC closed_in_general_borel \\
+      rw [Abbr ‘s’, CLOSED_IN_MCBALL],
+      (* goal 2 (of 3) *)
+      MATCH_MP_TAC MCBALL_SUBSET_CONCENTRIC >> rw [],
+      (* goal 3 (of 3) *)
+      rw [Once EXTENSION, space_general_borel_mtop] \\
+      EQ_TAC >> rw [] >> fs [IN_MCBALL] \\
+      qabbrev_tac ‘d = dist E (x,c)’ \\
+      MP_TAC (Q.SPEC ‘1’ REAL_ARCH) >> simp [] \\
+      DISCH_THEN (STRIP_ASSUME_TAC o Q.SPEC ‘d’) \\
+      Q.EXISTS_TAC ‘mcball E (c,&n)’ \\
+      reverse (rw [IN_MCBALL, MSPACE, Abbr ‘d’])
+      >- (Q.EXISTS_TAC ‘n’ >> rw []) \\
+      rw [Once MDIST_SYM] \\
+      MATCH_MP_TAC REAL_LT_IMP_LE >> art [] ]
+QED
+
+(* NOTE: In HOL4's current setting, “mspace E = UNIV” and therefore the
+   antecedents ‘mspace E <> {}’ always holds.
+ *)
+Theorem has_exhausting_sequence_general_borel :
+    !E. has_exhausting_sequence (general_borel (mtop E))
+Proof
+    rw [has_exhausting_sequence, GSYM MEMBER_NOT_EMPTY]
+ >> Q.EXISTS_TAC ‘\n. mcball E (x,&n)’
+ >> rw [exhausting_sequence_general_borel]
+QED
+
+(* NOTE: This is a companion of SIGMA_ALGEBRA_COUNTABLE_UNION *)
+Theorem SIGMA_ALGEBRA_COUNTABLE_INTER :
+    !a c. sigma_algebra a /\ countable c /\ c <> {} /\ c SUBSET subsets a ==>
+          BIGINTER c IN subsets a
+Proof
+    rw [COUNTABLE_ENUM]
+ >> irule (cj 4 SIGMA_ALGEBRA_FN_BIGINTER)
+ >> fs [SUBSET_DEF, IN_FUNSET]
+ >> Q.X_GEN_TAC ‘n’
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> Q.EXISTS_TAC ‘n’ >> art []
+QED
+
+(* NOTE: The following overloads as variants of “countable” and “FINITE” are
+   perhaps what one usually thought they were, when actually mentioning them.
+ *)
+Overload countably_infinite[local] = “\s. countable s /\ INFINITE s”
+Overload finitely_many[local]      = “\s. FINITE s /\ s <> {}”
+
+Theorem SIGMA_ALGEBRA_COUNTABLE_INTERSECTION_OF :
+    !a P. sigma_algebra a /\ P SUBSET subsets a ==>
+          countably_infinite INTERSECTION_OF P SUBSET subsets a
+Proof
+    rw [SUBSET_DEF, INTERSECTION_OF, COUNTABLE_ENUM]
+ >- fs [FINITE_EMPTY]
+ >> irule (cj 4 SIGMA_ALGEBRA_FN_BIGINTER)
+ >> simp [IN_FUNSET]
+ >> Q.X_GEN_TAC ‘n’
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> rw [IN_APP]
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> Q.EXISTS_TAC ‘n’ >> art []
+QED
+
+Theorem SIGMA_ALGEBRA_COUNTABLE_UNION_OF :
+    !a P. sigma_algebra a /\ P SUBSET subsets a ==>
+          COUNTABLE UNION_OF P SUBSET subsets a
+Proof
+    rw [SUBSET_DEF, UNION_OF, COUNTABLE_ENUM]
+ >- simp [SIGMA_ALGEBRA_EMPTY]
+ >> fs [SIGMA_ALGEBRA_ALT, IN_FUNSET]
+ >> LAST_X_ASSUM MATCH_MP_TAC
+ >> Q.X_GEN_TAC ‘n’
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> rw [IN_APP]
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> Q.EXISTS_TAC ‘n’ >> art []
+QED
+
+Theorem SIGMA_ALGEBRA_FINITE_INTERSECTION_OF :
+    !a P. sigma_algebra a /\ P SUBSET subsets a ==>
+          finitely_many INTERSECTION_OF P SUBSET subsets a
+Proof
+    rw [SUBSET_DEF, INTERSECTION_OF]
+ >> rename1 ‘s <> {}’
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_FINITE_INTER'
+ >> rw [SUBSET_DEF]
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> rw [IN_APP]
+QED
+
+Theorem SIGMA_ALGEBRA_FINITE_UNION_OF :
+    !a P. sigma_algebra a /\ P SUBSET subsets a ==>
+          FINITE UNION_OF P SUBSET subsets a
+Proof
+    rw [SUBSET_DEF, UNION_OF]
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_FINITE_UNION
+ >> rw [SUBSET_DEF]
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> rw [IN_APP]
 QED
 
 (* References:

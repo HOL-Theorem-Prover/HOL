@@ -78,6 +78,14 @@ Definition borel :
     borel = sigma univ(:real) {s | open s}
 End
 
+Theorem borel_alt_general :
+    borel = general_borel euclidean
+Proof
+    rw [borel, euclidean_open_def, general_borel_def, TOPSPACE_EUCLIDEAN]
+ >> AP_TERM_TAC
+ >> rw [Once EXTENSION, IN_APP]
+QED
+
 (* was: borel_measurable [definition] *)
 Overload borel_measurable = “\a. measurable a borel”
 
@@ -1311,6 +1319,17 @@ Proof
  >> RW_TAC std_ss []
 QED
 
+Theorem in_borel_measurable_ainv :
+    !a f. sigma_algebra a /\ f IN measurable a borel ==>
+          (\x. -f x) IN measurable a borel
+Proof
+    rpt STRIP_TAC
+ >> ‘(\x. -f x) = (\x. -1 * f x)’ by rw [Once REAL_NEG_MINUS1, FUN_EQ_THM]
+ >> POP_ORW
+ >> MATCH_MP_TAC in_borel_measurable_cmul
+ >> qexistsl_tac [‘f’, ‘-1’] >> rw []
+QED
+
 (* cf. borel_measurable_sub_borel_measurable (real_measureTheory) *)
 Theorem in_borel_measurable_sub :
     !a f g h. sigma_algebra a /\ f IN measurable a borel /\ g IN measurable a borel /\
@@ -1625,6 +1644,37 @@ Theorem right_open_interval_interior :
     !a b. a < b ==> a IN (right_open_interval a b)
 Proof
     RW_TAC std_ss [right_open_interval, GSPECIFICATION, REAL_LE_REFL]
+QED
+
+Theorem right_open_interval_frontier :
+    !a b. a < b ==> frontier (right_open_interval a b) = {a; b}
+Proof
+    rw [right_open_interval, FRONTIER_CLOSURES]
+ >> Know ‘UNIV DIFF {x | a <= x /\ x < b} = {x | x < a} UNION {x | b <= x}’
+ >- rw [Once EXTENSION, REAL_NOT_LT, REAL_NOT_LE]
+ >> Rewr'
+ >> Know ‘{x | a <= x /\ x < b} = {a} UNION interval (a,b)’
+ >- (rw [Once EXTENSION, REAL_LE_LT, IN_INTERVAL] \\
+     METIS_TAC [])
+ >> Rewr'
+ >> ‘interval (a,b) <> {}’ by PROVE_TAC [INTERVAL_NE_EMPTY]
+ >> simp [CLOSURE_UNION, CLOSURE_INTERVAL, CLOSURE_SING,
+          CLOSURE_HALFSPACE_COMPONENT_LT]
+ >> ASSUME_TAC
+      (REWRITE_RULE [real_ge] (Q.SPEC ‘b’ CLOSED_HALFSPACE_COMPONENT_GE))
+ >> simp [CLOSURE_CLOSED]
+ >> rw [Once EXTENSION, IN_INTERVAL]
+ >> METIS_TAC [REAL_LE_ANTISYM, REAL_LE_REFL, REAL_LT_IMP_LE]
+QED
+
+Theorem borel_frontier :
+    !s. frontier s IN subsets borel
+Proof
+    rw [FRONTIER_CLOSURES]
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_INTER
+ >> rw [sigma_algebra_borel]
+ >> MATCH_MP_TAC borel_closed
+ >> REWRITE_TAC [CLOSED_CLOSURE]
 QED
 
 (* cf. `open_intervals_set` in extrealTheory *)

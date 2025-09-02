@@ -792,14 +792,28 @@ Proof
  >> MATCH_MP_TAC MEASURE_SPACE_SPACE >> art []
 QED
 
-val MEASURE_SPACE_BIGUNION = store_thm
-  ("MEASURE_SPACE_BIGUNION",
-  ``!m s. measure_space m /\ (!n:num. s n IN measurable_sets m) ==>
-          (BIGUNION (IMAGE s UNIV) IN measurable_sets m)``,
+Theorem MEASURE_SPACE_BIGUNION :
+    !m s. measure_space m /\ (!n:num. s n IN measurable_sets m) ==>
+         (BIGUNION (IMAGE s UNIV) IN measurable_sets m)
+Proof
     RW_TAC std_ss []
  >> (MP_TAC o REWRITE_RULE [subsets_def,space_def,IN_UNIV,IN_FUNSET] o
      (Q.SPEC `(m_space m,measurable_sets m)`)) SIGMA_ALGEBRA_FN
- >> METIS_TAC [measure_space_def]);
+ >> METIS_TAC [measure_space_def]
+QED
+
+Theorem MEASURE_SPACE_FINITE_UNION :
+    !m f n. measure_space m /\ (!i. i < n ==> f i IN measurable_sets m) ==>
+            BIGUNION (IMAGE f (count n)) IN measurable_sets m
+Proof
+    rpt STRIP_TAC
+ >> ‘sigma_algebra (measurable_space m)’ by PROVE_TAC [measure_space_def]
+ >> MP_TAC (Q.SPECL [‘measurable_space m’, ‘IMAGE f (count n)’]
+                    SIGMA_ALGEBRA_FINITE_UNION)
+ >> rw [SUBSET_DEF]
+ >> POP_ASSUM MATCH_MP_TAC >> rw []
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
+QED
 
 (* NOTE: changed order of universal quantifiers *)
 Theorem MEASURE_SPACE_SUBSET_MSPACE :
@@ -815,18 +829,33 @@ Proof
    METIS_TAC [MEASURE_SPACE_SUBSET_MSPACE, SUBSET_DEF]
 QED
 
-val MEASURE_SPACE_EMPTY_MEASURABLE = store_thm
-  ("MEASURE_SPACE_EMPTY_MEASURABLE",``!m. measure_space m ==> {} IN measurable_sets m``,
-   RW_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def,subsets_def, space_def]);
+Theorem MEASURE_SPACE_EMPTY_MEASURABLE :
+    !m. measure_space m ==> {} IN measurable_sets m
+Proof
+    RW_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def,
+                   subsets_def, space_def]
+QED
 
-val MEASURE_SPACE_BIGINTER = store_thm
-  ("MEASURE_SPACE_BIGINTER",
-  ``!m s. measure_space m /\ (!n:num. s n IN measurable_sets m) ==>
-         (BIGINTER (IMAGE s UNIV) IN measurable_sets m)``,
+Theorem MEASURE_SPACE_BIGINTER :
+    !m s. measure_space m /\ (!n:num. s n IN measurable_sets m) ==>
+         (BIGINTER (IMAGE s UNIV) IN measurable_sets m)
+Proof
   RW_TAC std_ss []
   >> (MP_TAC o REWRITE_RULE [subsets_def,space_def,IN_UNIV,IN_FUNSET] o
       (Q.SPEC `(m_space m,measurable_sets m)`)) SIGMA_ALGEBRA_FN_BIGINTER
-  >> METIS_TAC [measure_space_def]);
+  >> METIS_TAC [measure_space_def]
+QED
+
+Theorem MEASURE_SPACE_FINITE_INTER :
+    !m f n. measure_space m /\ (!i. i < n ==> f i IN measurable_sets m) /\ 0 < n ==>
+            BIGINTER (IMAGE f (count n)) IN measurable_sets m
+Proof
+    rpt STRIP_TAC
+ >> ‘sigma_algebra (measurable_space m)’ by PROVE_TAC [measure_space_def]
+ >> MP_TAC (Q.SPECL [‘measurable_space m’, ‘f’, ‘n’]
+                    SIGMA_ALGEBRA_FINITE_INTER)
+ >> rw [SUBSET_DEF]
+QED
 
 (* use MONOTONE_CONVERGENCE when `f 0 = {}` doesn't hold *)
 Theorem MEASURE_COUNTABLE_INCREASING :
@@ -1777,52 +1806,6 @@ val measure_split = store_thm
 (* ------------------------------------------------------------------------- *)
 (*  Uniqueness of Measure - Dynkin system [3]                                *)
 (* ------------------------------------------------------------------------- *)
-
-(* an "exhausting" sequence in a system of sets, moved from martingaleTheory *)
-Definition exhausting_sequence_def :
-    exhausting_sequence (a :'a algebra) (f :num -> 'a -> bool) =
-      (f IN (UNIV -> subsets a) /\ (!n. f n SUBSET f (SUC n)) /\
-       BIGUNION (IMAGE f UNIV) = space a)
-End
-
-Theorem exhausting_sequence_alt :
-   !a f. exhausting_sequence a f <=>
-         f IN (univ(:num) -> subsets a) /\ (!m n. m <= n ==> f m SUBSET f n) /\
-         BIGUNION (IMAGE f univ(:num)) = space a
-Proof
-    RW_TAC std_ss [exhausting_sequence_def]
- >> reverse EQ_TAC >- RW_TAC std_ss []
- >> STRIP_TAC >> art []
- >> GEN_TAC >> Induct_on ‘n’ >- RW_TAC arith_ss [SUBSET_REFL]
- >> DISCH_TAC
- >> ‘(m = SUC n) \/ m <= n’ by RW_TAC arith_ss [] >- rw [SUBSET_REFL]
- >> MATCH_MP_TAC SUBSET_TRANS
- >> Q.EXISTS_TAC ‘f n’ >> art []
- >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
-QED
-
-Definition has_exhausting_sequence :
-    has_exhausting_sequence a = ?f. exhausting_sequence a f
-End
-
-(* This was part of sigma_finite_def, but no requirement on the measure of each
-   (f n). The definition is useful because ‘space a IN subsets a’ does not hold
-   in general for semiring.
-
-   |- !a. has_exhausting_sequence a <=>
-          ?f. f IN (univ(:num) -> subsets a) /\ (!n. f n SUBSET f (SUC n)) /\
-              BIGUNION (IMAGE f univ(:num)) = space a
- *)
-Theorem has_exhausting_sequence_def =
-    REWRITE_RULE [exhausting_sequence_def] has_exhausting_sequence
-
-(* |- !a. has_exhausting_sequence a <=>
-          ?f. f IN (univ(:num) -> subsets a) /\
-              (!m n. m <= n ==> f m SUBSET f n) /\
-              BIGUNION (IMAGE f univ(:num)) = space a
- *)
-Theorem has_exhausting_sequence_alt =
-    REWRITE_RULE [exhausting_sequence_alt] has_exhausting_sequence
 
 (* `sigma-finite` is a property of measure space but sigma algebra.
 
@@ -6803,6 +6786,33 @@ Proof
   RW_TAC std_ss [FINITE_COUNT] THEN POP_ASSUM MP_TAC THEN
   ONCE_REWRITE_TAC [MONO_NOT_EQ] THEN RW_TAC std_ss [] THEN
   SIMP_TAC arith_ss [count_def, GSPECIFICATION]
+QED
+
+Definition finite_measure_space_def :
+    finite_measure_space m <=> measure_space m /\ measure m (m_space m) <> PosInf
+End
+
+Theorem finite_measure_space_thm :
+    !m. finite_measure_space m <=>
+        measure_space m /\
+        !s. s IN measurable_sets m ==>
+            measure m s <> NegInf /\ measure m s <> PosInf
+Proof
+    RW_TAC std_ss [finite_measure_space_def]
+ >> reverse EQ_TAC >> rw []
+ >- (POP_ASSUM (MATCH_MP_TAC o cj 2) \\
+     MATCH_MP_TAC MEASURE_SPACE_SPACE >> art [])
+ >- (MATCH_MP_TAC pos_not_neginf \\
+     Know ‘positive m’ >- rw [MEASURE_SPACE_POSITIVE] \\
+     rw [positive_def])
+ >> fs [lt_infty]
+ >> Q_TAC (TRANS_TAC let_trans) ‘measure m (m_space m)’ >> art []
+ >> Know ‘increasing m’ >- rw [MEASURE_SPACE_INCREASING]
+ >> rw [increasing_def]
+ >> POP_ASSUM MATCH_MP_TAC >> art []
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC MEASURE_SPACE_SPACE >> art [])
+ >> MATCH_MP_TAC MEASURABLE_SETS_SUBSET_SPACE >> art []
 QED
 
 (* References:

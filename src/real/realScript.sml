@@ -1501,6 +1501,12 @@ Proof
       Q.EXISTS_TAC ‘0’ >> ASM_REWRITE_TAC [] ]
 QED
 
+Theorem LE_ABS_BOUNDS :
+    !k x :real. k <= abs x <=> x <= -k \/ k <= x
+Proof
+    METIS_TAC [real_lt, ABS_BOUNDS_LT]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* Define integer powers                                                     *)
 (*---------------------------------------------------------------------------*)
