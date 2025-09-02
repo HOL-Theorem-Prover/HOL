@@ -4,12 +4,12 @@ Ancestors
 
 (* Extension of itreeTauTheory *)
 val _ = monadsyntax.enable_monadsyntax();
-val _ = declare_monad("itree", {unit = “Ret”, bind = “itree_bind”,
-            ignorebind = NONE,
-            choice = NONE,
-            fail = NONE,
-            guard = NONE});
-val _ = enable_monad "itree";
+val _ = monadsyntax.declare_monad("itree", {unit = “Ret”, bind = “itree_bind”,
+                                  ignorebind = NONE,
+                                  choice = NONE,
+                                  fail = NONE,
+                                  guard = NONE});
+val _ = monadsyntax.enable_monad "itree";
 
 (* Unicode operator overloads *)
 val _ = temp_set_fixity "≈" (Infixl 500);
@@ -29,7 +29,7 @@ Datatype:
        | Call num (* function call, no arguments *)
 End
 
-(* The following function defines an itree semantics of the language.
+(* The following functions define an itree semantics of the language.
    In this language, the program state is a immutatble function
    num -> prog.
 *)
@@ -55,3 +55,67 @@ Definition itree_semantics:
   itree_unfold (itree_step state) prog
 End
 
+(* Some useful properties of the language itree semantics *)
+Theorem seq_bind_funs:
+  itree_semantics env (Seq p q) = (itree_semantics env p) >>= (λx. Tau (itree_semantics env q))
+Proof
+  rw[Once itree_strong_bisimulation] >>
+  qexists ‘CURRY {(itree_semantics env (Seq p' q), (itree_semantics env p'') >>= (λx. Tau (itree_semantics env q))) | p' = p''}’ >>
+  rw[]
+  >- (qexists ‘(p, p)’ >>
+      rw[]
+     )
+  >- (Cases_on ‘x’ >> gvs[] >>
+      gvs[itree_semantics, Once itree_unfold, itree_step] >>
+      BasicProvers.FULL_CASE_TAC >> gvs[]
+     )
+  >- (Cases_on ‘x’ >> gvs[] >>
+      gvs[itree_semantics, Once itree_unfold, itree_step] >>
+      BasicProvers.FULL_CASE_TAC >> gvs[]
+      >- rw[itree_semantics, Once itree_unfold, itree_step] >>
+      rw[itree_semantics, Once itree_unfold, itree_step] >>
+      disj1_tac >>
+      qexists ‘(s, s)’ >>
+      rw[]
+     ) >>
+  Cases_on ‘x’ >> gvs[] >>
+  gvs[itree_semantics, Once itree_unfold, itree_step] >>
+  BasicProvers.FULL_CASE_TAC >> gvs[] >>
+  rw[itree_semantics, Once itree_unfold, itree_step] >>
+  disj1_tac >>
+  qexists ‘((f' s), (f' s))’ >>
+  rw[]
+QED
+
+Theorem seq_bind_unfold_funs:
+  itree_unfold (itree_step env) (Seq p q) =
+  itree_unfold (itree_step env) p >>=
+               (λx. Tau (itree_unfold (itree_step env) q))
+Proof
+  assume_tac seq_bind_funs >>
+  gvs[itree_semantics]
+QED
+
+Theorem ret_seq_tree:
+  Ret () >>= (λx. a) = a
+Proof
+  rw[]
+QED
+
+Theorem if_seq_tree:
+  (if x then a else b) >>= c = (if x then a >>= c else b >>= c)
+Proof
+  rw[]
+QED
+
+Theorem tau_seq_tree:
+  Tau p >>= q = Tau (p >>= q)
+Proof
+  rw[]
+QED
+
+Theorem vis_seq_tree:
+  Vis f (λx. p) >>= q = Vis f (λx. p >>= q)
+Proof
+  rw[]
+QED
