@@ -564,6 +564,18 @@ Proof
   simp[KPLUS_KSTAR]
 QED
 
+Theorem KPLUS_EMPTYSET[simp]:
+  KPLUS ∅ = ∅
+Proof
+  rw [Once KPLUS_EQN,EXTENSION,IN_dot]
+QED
+
+Theorem KPLUS_EPSILONSET[simp]:
+  KPLUS {ε} = {ε}
+Proof
+  rw [Once KPLUS_KSTAR,EXTENSION]
+QED
+
 Theorem KPLUS_EQ_KSTAR:
   ε ∈ A ⇔ (KPLUS A = KSTAR A)
 Proof

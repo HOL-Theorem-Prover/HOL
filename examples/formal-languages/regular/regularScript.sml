@@ -32,7 +32,7 @@ val subst_all_tac = SUBST_ALL_TAC
 val sym_subst_all_tac = subst_all_tac o sym
 val pop_subst_tac = pop_assum subst_all_tac;
 val pop_sym_subst_tac = pop_assum sym_subst_all_tac;
-val pop_stage_tac = pop_assum mp_tac
+val pop_keep_tac = pop_assum mp_tac
 val qpat_stage_tac = Lib.C qpat_x_assum mp_tac;
 val pop_forget_tac = pop_assum kall_tac
 val qpat_forget_tac = Lib.C qpat_x_assum kall_tac;
@@ -333,9 +333,10 @@ QED
 (*---------------------------------------------------------------------------*)
 
 Theorem KSTAR_FLAT:
-  KSTAR L = {FLAT ls | ∀w. MEM w ls ⇒ w ∈ L}
+  KSTAR L = {FLAT list | ∀w. MEM w list ⇒ w ∈ L ∧ w ≠ ε}
 Proof
- rw[EXTENSION,IN_KSTAR_LIST,EVERY_MEM] >> metis_tac[]
+  simp [EXTENSION,IN_KSTAR_LIST,EVERY_MEM] >>
+  metis_tac[]
 QED
 
 Theorem KSTAR_DEF_ALT:
@@ -1306,7 +1307,7 @@ Theorem wf_nfa_plus:
   wf_nfa N ==> wf_nfa (nfa_plus N)
 Proof
   rw [wf_nfa_def, nfa_plus_def,SUBSET_DEF] >>
-  pop_stage_tac >> rw[] >> metis_tac []
+  pop_keep_tac >> rw[] >> metis_tac []
 QED
 
 Theorem is_dfa_compl:
@@ -1324,7 +1325,7 @@ Proof
  rw [is_dfa_def]
  >- metis_tac [wf_nfa_inter]
  >- (rw [nfa_inter_def,EXTENSION] >> metis_tac[])
- >- (ntac 2 pop_stage_tac >> rw [nfa_inter_def,EXTENSION,PULL_EXISTS] >>
+ >- (ntac 2 pop_keep_tac >> rw [nfa_inter_def,EXTENSION,PULL_EXISTS] >>
      ‘∃qa qb. {qa} = N1.delta q1 a ∧
               {qb} = N2.delta q2 a’ by metis_tac[] >>
      qexists_tac ‘qa ⊗ qb’ >> rw[EQ_IMP_THM]
@@ -1339,7 +1340,7 @@ Proof
  rw [is_dfa_def]
  >- metis_tac [wf_nfa_union]
  >- (rw [nfa_union_def,EXTENSION] >> metis_tac[])
- >- (ntac 2 pop_stage_tac >> rw [nfa_union_def,EXTENSION,PULL_EXISTS] >>
+ >- (ntac 2 pop_keep_tac >> rw [nfa_union_def,EXTENSION,PULL_EXISTS] >>
      ‘∃qa qb. {qa} = N1.delta q1 a ∧
               {qb} = N2.delta q2 a’ by metis_tac[] >>
      qexists_tac ‘qa ⊗ qb’ >> rw[EQ_IMP_THM]
@@ -1870,7 +1871,7 @@ Theorem is_dfa_rename_states:
   wf_nfa N ⇒ (is_dfa (rename_states N base) ⇔ is_dfa N)
 Proof
   rw [is_dfa_def,EQ_IMP_THM,wf_nfa_rename_states]
-  >- (pop_forget_tac >> pop_stage_tac >> simp [rename_states_def] >>
+  >- (pop_forget_tac >> pop_keep_tac >> simp [rename_states_def] >>
       ‘BIJ (newFn base) N.initial (IMAGE (newFn base) N.initial)’ by
          (irule INJ_BIJ_SUBSET >> qexists_tac ‘𝕌(:num)’ >>
           rw [SUBSET_DEF] >> metis_tac [INJ_newFn]) >>
@@ -1914,7 +1915,7 @@ Proof
               rw[Abbr ‘oldFn’,oldFn_newFn] >>
               qabbrev_tac ‘oldFn = LINV (newFn base) N.Q’ >>
               drule_all is_exec_delta >> rw [rename_states_def] >> rw[] >>
-              pop_stage_tac >> rw [Abbr‘oldFn’, oldFn_newFn] >>
+              pop_keep_tac >> rw [Abbr‘oldFn’, oldFn_newFn] >>
               ‘EL n w ∈ N.Sigma’ by (drule is_exec_Sigma >> rw [EVERY_EL]) >>
               metis_tac [wf_nfa_def, SUBSET_DEF,oldFn_newFn])))
   >- (drule_all in_nfa_lang_is_accepting_exec >>
@@ -2408,7 +2409,7 @@ Theorem KPLUS_SUBSET_NFA_PLUS:
   KPLUS (nfa_lang M) ⊆ nfa_lang (nfa_plus M)
 Proof
   rw [SUBSET_DEF] >>
-  drule_all (iffLR IN_KPLUS_LIST_EPSILON_FREE) >> rw[] >>
+  drule_all (iffLR IN_KPLUS_LIST) >> rw[] >>
   ‘wf_nfa M ∧ wf_nfa (nfa_plus M)’ by
      metis_tac [is_dfa_def,wf_nfa_plus] >>
   ‘∃qslist. LIST_REL (is_accepting_exec M) qslist wlist’ by
@@ -2534,7 +2535,7 @@ Proof
   recInduct cronch_ind >> simp [] >>
   rpt conj_tac >> rpt (gen_tac ORELSE disch_tac)
   >~ [‘cronch M (a::b::w) (q1::q2::qs) = (wpref,wsuff,qpref,qsuff)’]
-  >- (pop_stage_tac >> simp [cronch_def,AllCaseEqs(),PULL_EXISTS] >>
+  >- (pop_keep_tac >> simp [cronch_def,AllCaseEqs(),PULL_EXISTS] >>
       rw[] >> gvs[]
       >- (‘LENGTH qs = LENGTH w’ by gvs[is_exec_def] >>
           imp_res_tac cronch_consumes >> rw[] >> gvs[] >>
@@ -2563,7 +2564,8 @@ Proof
           >- metis_tac [IN_INSERT,SUBSET_DEF,wf_nfa_def,is_dfa_def]
           >- (‘b ∈ M.Sigma’ by gvs [is_exec_def] >>
               drule_all nfa_plus_diff >> rw[nfa_plus_def] >>
-              irule (iffRL ELT_SUBSET) >> pop_sym_subst_tac >>
+              irule (iffRL ELT_SUBSET) >>
+              qpat_x_assum ‘BIGUNION _ = _’ sym_subst_all_tac >>
               simp[SUBSET_DEF])))
   >> gvs[cronch_def, is_exec_def]
 QED
@@ -2654,7 +2656,7 @@ Theorem cronch_all_thm:
   w = FLAT wslist ∧
   wslist ≠ []
 Proof
-  recInduct cronch_all_ind >> rw[] >> fs[] >> pop_stage_tac >>
+  recInduct cronch_all_ind >> rw[] >> fs[] >> pop_keep_tac >>
   rw [Once cronch_all_def,AllCaseEqs(),PULL_EXISTS] >> fs[] >>
   drule_all cronch_accepting_exec_alt >> rw[] >>
   ‘LENGTH qs = LENGTH (ARB::w)’ by
@@ -2726,8 +2728,9 @@ Proof
   strip_assume_tac (isolate_trivial_cases |> Q.ISPEC ‘L:num list->bool’) >>
   rename1 ‘s ⊆ {ε}’ >> ONCE_ASM_REWRITE_TAC[] >>
   rw [KSTAR_UNION] >>
-  gvs[GSYM KSTAR_TRIVIAL_IFF,DOT_EPSILONSET] >>
-  rw [GSYM KPLUS_UNION_EPSILON_EQ_KSTAR] >>
+  rw [GSYM KPLUS_UNION_EPSILONSET] >>
+  ‘KPLUS s ∪ {ε} = {ε}’ by
+     rw[KPLUS_UNION_EPSILONSET] >> rw[] >>
   irule REGULAR_CLOSED_UNDER_UNION >> reverse conj_tac
   >- metis_tac [EPSILONSET_IN_REGULAR,REGULAR_SIGMA_FINITE]
   >- (irule REGULAR_CLOSED_UNDER_EPSILON_FREE_KPLUS >> rw[] >>
@@ -3362,7 +3365,7 @@ Proof
  ‘words_of_state M q =
   words_of_state M (state_of_class M (words_of_state M q))’ by
     metis_tac[words_of_state_in_partition] >>
-  pop_stage_tac >> simp[EXTENSION,in_words_of_state] >>
+  pop_keep_tac >> simp[EXTENSION,in_words_of_state] >>
   disch_then (mp_tac o Q.SPEC ‘x’) >> rw[]
 QED
 
@@ -3463,7 +3466,7 @@ Proof
   ‘E (x++z) (y++z)’ by metis_tac[] >>
   rw[EQ_IMP_THM] >> qexists_tac ‘s’ >> simp[] >>
   ‘s ∈ partition E (KSTAR {[a] | a ∈ A})’ by
-     metis_tac [SUBSET_DEF] >> pop_stage_tac >>
+     metis_tac [SUBSET_DEF] >> pop_keep_tac >>
   rw[in_partition]
      >- (‘EVERY (λa. a ∈ A) (x++z) ∧ E x' (x++z)’ by metis_tac[] >>
          simp[] >> qpat_x_assum ‘_ equiv_on _’ mp_tac >>
@@ -3685,7 +3688,7 @@ Proof
        >- (qexists_tac ‘x ++ l’ >> rw [Abbr ‘Lclass’] >>
            ‘(x ++ l) ∈ KSTAR {[a] | a ∈ A}’ by simp [] >>
            metis_tac [EVERY_APPEND,equiv_on_def])
-       >- (pop_stage_tac >> qunabbrev_tac ‘Lclass’ >>
+       >- (pop_keep_tac >> qunabbrev_tac ‘Lclass’ >>
            rw[EXTENSION] >> (ntac 2 cong_tac >> TRY REFL_TAC) >>
            irule lang_equiv_abs >>
            irule (iffLR right_invar_def) >> conj_tac
@@ -3702,7 +3705,7 @@ Proof
           gvs[SUBSET_DEF] >>
        qexists_tac ‘numOf (Lclass x)’ >> rw[] >>
        qunabbrev_tac ‘M’ >> rw[])
-   >- (ntac 2 pop_stage_tac >> rw[Abbr‘M’] >>
+   >- (ntac 2 pop_keep_tac >> rw[Abbr‘M’] >>
         rename1 ‘numOf (Lclass x) = numOf (Lclass y)’ >>
         ‘Lclass x ∈ Qparts ∧ Lclass y ∈ Qparts’ by
            (qunabbrev_tac ‘Qparts’ >> gvs [SUBSET_DEF] >>
@@ -4002,7 +4005,7 @@ Proof
   qexists_tac ‘N.Q’ >>
   gvs [wf_nfa_def] >>
   rw[Parents_def, kidlist_def,SUBSET_DEF] >>
-  pop_stage_tac >> IF_CASES_TAC >> rw[]
+  pop_keep_tac >> IF_CASES_TAC >> rw[]
 QED
 
 (*---------------------------------------------------------------------------*)
@@ -4081,7 +4084,7 @@ Proof
    recInduct SNOC_INDUCT >> rw[]
    >- gvs [nfa_eval_eqns] >>
    gvs [EVERY_SNOC,SNOC_APPEND] >>
-   pop_stage_tac >>
+   pop_keep_tac >>
    ‘{p} ⊆ M.Q’ by
       metis_tac [is_dfa_def,wf_nfa_def] >>
    drule_all dfa_eval_final_state >>
