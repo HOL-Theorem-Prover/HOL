@@ -6,9 +6,9 @@
 
 Theory regular
 Ancestors
- combin relation pred_set pair numpair
- prim_rec arithmetic list rich_list nlist
- FormalLang dirGraph dft
+  combin relation pred_set pair numpair
+  prim_rec arithmetic list rich_list nlist
+  FormalLang dirGraph dft
 Libs
   mp_then
 
@@ -25,7 +25,6 @@ Overload "RTC"[local] = “KSTAR”
 Overload "TC"[local]  = “KPLUS”
 
 val _ = set_fixity (UTF8.chr 0x2288) (Infix(NONASSOC, 450))
-
 
 val sym = SYM
 val subst_all_tac = SUBST_ALL_TAC
@@ -4156,6 +4155,3 @@ Definition distinguishable_nfa_def:
   distinguishable_nfa M ⇔
     ∀q1 q2. {q1; q2} ⊆ M.Q ∧ q1 ≠ q2 ⇒ distinguishable_states M q1 q2
 End
-
-
-val _ = export_theory();

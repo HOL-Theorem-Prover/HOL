@@ -2,23 +2,24 @@
 (* Theory of regular expressions.                                            *)
 (*===========================================================================*)
 
-open HolKernel Parse boolLib bossLib BasicProvers TotalDefn;
-open arithmeticTheory listTheory optionTheory rich_listTheory
-     pairTheory relationTheory sortingTheory stringTheory
-     comparisonTheory bagTheory containerTheory pred_setTheory
-     mergesortTheory charsetTheory FormalLangTheory;
-
-local open numSyntax Regexp_Type wordsLib in end;
-
-(* local open numSyntax Regexp_Type ml_translatorTheory in end; *)
-
-val cpn_distinct = TypeBase.distinct_of ``:ordering``
-val cpn_case_def = TypeBase.case_def_of ``:ordering``
-
-val _ = new_theory "regexp";
+Theory regexp
+Ancestors
+  option pair relation
+  arithmetic list rich_list sorting string
+  comparison bag container pred_set
+  mergesort charset FormalLang
+Libs
+  BasicProvers TotalDefn
+  numSyntax[qualified]
+  wordsLib[qualified]
 
 Overload "\206\181"[local] =
   stringSyntax.emptystring_tm (* epsilon = UTF8.chr 0x03B5 *)
+Overload "RTC"[local] = “KSTAR”
+Overload "TC"[local]  = “KPLUS”
+
+val cpn_distinct = TypeBase.distinct_of ``:ordering``
+val cpn_case_def = TypeBase.case_def_of ``:ordering``
 
 (*---------------------------------------------------------------------------*)
 (* TODO: move this support stuff belonging in other theories                 *)
@@ -2091,5 +2092,3 @@ REPEAT CONJ_TAC
       >> rw [EQ_IMP_THM,LIST_UNION_def,
              DOT_EMPTYSET,DOT_UNION_RDISTRIB,IN_DEF])
 QED
-
-val _ = export_theory();
