@@ -27,9 +27,13 @@
 (* for example regexp_compare.                                               *)
 (*---------------------------------------------------------------------------*)
 
-open HolKernel Parse boolLib bossLib BasicProvers;
-open optionTheory listTheory pred_setTheory comparisonTheory
-     balanced_mapTheory osetTheory finite_mapTheory regexpTheory;
+Theory regexp_map
+Ancestors
+option list pred_set finite_map
+   comparison ternaryComparisons
+   balanced_map oset regexp
+Libs
+  BasicProvers
 
 fun pat_elim q = Q.PAT_X_ASSUM q (K ALL_TAC);
 
@@ -57,7 +61,6 @@ val list_ss = list_ss ++ rewrites [LENGTH_NIL, LENGTH_NIL_SYM];
 
 val set_ss = list_ss ++ pred_setLib.PRED_SET_ss ++ rewrites [SET_EQ_THM,IN_DEF]
 
-val _ = new_theory "regexp_map";
 
 Definition eq_cmp_def :
    eq_cmp cmp <=> good_cmp cmp /\ !x y. (cmp x y = Equal) <=> (x=y)
@@ -700,5 +703,3 @@ Proof
   >> rw_tac list_ss [eq_cmp_regexp_compare,member_insert]
   >> metis_tac[]
 QED
-
-val _ = export_theory();

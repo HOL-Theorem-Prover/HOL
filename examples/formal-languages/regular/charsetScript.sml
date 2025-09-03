@@ -1,12 +1,13 @@
-open HolKernel Parse boolLib bossLib wordsLib;
-open arithmeticTheory listTheory optionTheory rich_listTheory
-     pairTheory comparisonTheory stringTheory;
-
-local open numSyntax Regexp_Type in end;
+Theory charset
+Ancestors
+  pair option arithmetic list rich_list
+  comparison string words
+Libs
+  numSyntax[qualified]
+  Regexp_Type[qualified]
+  wordsLib
 
 val comparison_distinct = TypeBase.distinct_of ``:ordering``
-
-val _ = new_theory "charset";
 
 (*---------------------------------------------------------------------------*)
 (* Alphabet of regexps and DFAs (typically size 128 or 256). Set in          *)
@@ -52,15 +53,16 @@ QED
 (* Character sets are represented by 4-tuples of word64                      *)
 (*---------------------------------------------------------------------------*)
 
-val _ = Hol_datatype
-         `charset = Charset of word64 => word64 => word64 => word64`;
+Datatype:
+  charset = Charset word64 word64 word64 word64
+End
 
 Definition charset_empty_def :
   charset_empty = Charset 0w 0w 0w 0w
 End
 
 Definition charset_full_def :
-   charset_full = Charset (~0w) (~0w) (~0w) (~0w)
+  charset_full = Charset (~0w) (~0w) (~0w) (~0w)
 End
 
 
@@ -242,5 +244,3 @@ Definition charset_string_def :
             charset_empty
             s
 End
-
-val _ = export_theory();
