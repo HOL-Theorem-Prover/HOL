@@ -350,7 +350,7 @@ Proof
   rw [KSTAR_TRIVIAL,SUBSET_DEF] >> metis_tac[]
 QED
 
-Theorem KSTAR_DIFF_EPSILON:
+Theorem KSTAR_DIFF_EPSILONSET:
   KSTAR A = KSTAR (A DIFF {ε})
 Proof
   reverse $ rw [EXTENSION,IN_KSTAR,EQ_IMP_THM]
@@ -360,14 +360,14 @@ Proof
   >- (simp[DIFF_INSERT] >> metis_tac[])
 QED
 
-Theorem KSTAR_ADD_EPSILON:
+Theorem KSTAR_ADD_EPSILONSET:
   KSTAR A = KSTAR ({ε} ∪ A)
 Proof
   rw [EXTENSION,EQ_IMP_THM]
   >- metis_tac [IN_KSTAR,DOTn_UNION,UNION_COMM] >>
   pop_keep_tac >> Cases_on ‘ε ∈ A’
   >- simp[INSERT_UNION] >>
-  simp[SimpLHS, Once KSTAR_DIFF_EPSILON] >>
+  simp[SimpLHS, Once KSTAR_DIFF_EPSILONSET] >>
   dep_rewrite.DEP_PURE_REWRITE_TAC
       [SET_RULE “(s ∩ t = ∅) ⇒ (s ∪ t) DIFF s = t”] >>
   simp [EXTENSION]
@@ -378,7 +378,7 @@ Theorem KSTAR_CASES:
    ⇔
   w = ε ∨ ∃w1 w2. w = w1++w2 ∧ w1 ∈ (A DIFF {ε}) ∧ w2 ∈ KSTAR A
 Proof
-  pure_once_rewrite_tac [KSTAR_DIFF_EPSILON] >>
+  pure_once_rewrite_tac [KSTAR_DIFF_EPSILONSET] >>
   rw[SimpLHS,Once KSTAR_EQN] >>
   rw[EQ_IMP_THM] >> disj2_tac
   >- (gvs [IN_dot] >> metis_tac[])
@@ -388,7 +388,7 @@ QED
 Theorem KSTAR_IND:
   ∀P. P ε ∧ (∀w1 w2. w1 ∈ (A DIFF {ε}) ∧ P w2 ⇒ P (w1 ++ w2)) ⇒ ∀w. w ∈ KSTAR A ⇒ P w
 Proof
-  pure_once_rewrite_tac [KSTAR_DIFF_EPSILON] >>
+  pure_once_rewrite_tac [KSTAR_DIFF_EPSILONSET] >>
   rw [IN_KSTAR] >> pop_keep_tac >>
   qid_spec_tac ‘w’ >> Induct_on ‘n’ >>
   gvs[DOTn_def] >> rw [IN_dot] >>
@@ -594,7 +594,7 @@ Proof
   metis_tac [UNION_COMM]
 QED
 
-Theorem KPLUS_EQ_KSTAR_DIFF_EPSILON:
+Theorem KPLUS_EQ_KSTAR_DIFF_EPSILONSET:
   ε ∉ A ⇒ KPLUS A = (KSTAR A) DIFF {ε}
 Proof
   rw[Once $ GSYM KPLUS_UNION_EPSILONSET] >>
