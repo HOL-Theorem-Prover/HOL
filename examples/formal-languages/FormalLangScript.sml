@@ -407,6 +407,28 @@ Proof
       rw [Once KSTAR_EQN] >> metis_tac[STRCAT_IN_DOT])
 QED
 
+(*---------------------------------------------------------------------------*)
+(* Weaker version is easier to apply right-to-left                           *)
+(*---------------------------------------------------------------------------*)
+
+Triviality flat_filter_not_null[simp]:
+  FLAT (FILTER ($~ o NULL) lists) = FLAT lists
+Proof
+  Induct_on ‘lists’ >> rw[NULL_EQ]
+QED
+
+Theorem IN_KSTAR_LIST_ALT:
+  s ∈ KSTAR A <=> ∃wlist. EVERY (λw. w ∈ A) wlist ∧ s = FLAT wlist
+Proof
+  rw [IN_KSTAR_LIST,EQ_IMP_THM]
+  >- (irule_at Any EQ_REFL >>
+      pop_keep_tac >> qid_spec_tac ‘wlist’ >>
+      ho_match_mp_tac EVERY_MONOTONIC >> metis_tac[])
+  >- (irule_at Any $ GSYM flat_filter_not_null >>
+      simp[EVERY_FILTER,NULL_EQ] >> irule EVERY_MONOTONIC >>
+      first_x_assum $ irule_at Any >> metis_tac[])
+QED
+
 Theorem KSTAR_SUBSET_UNION:
   KSTAR A ⊆ KSTAR(A ∪ B)
 Proof
