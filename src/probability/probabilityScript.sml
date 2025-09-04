@@ -9322,10 +9322,12 @@ QED
 
 Theorem BAYES_RULE :
     !p A B. prob_space p /\ A IN events p /\ B IN events p /\
-            prob p A <> 0 /\ prob p B <> 0 ==>
+            prob p A <> 0 ==>
            (cond_prob p B A = (cond_prob p A B) * (prob p B) / (prob p A))
 Proof
     RW_TAC std_ss []
+ >> Cases_on ‘prob p B = 0’
+ >- gvs[zero_div, cond_prob_def, PROB_ZERO_INTER]
  >> `prob p A <> PosInf /\ prob p A <> NegInf` by METIS_TAC [PROB_FINITE]
  >> `prob p A < PosInf` by METIS_TAC [lt_infty]
  >> `0 < prob p A` by METIS_TAC [le_lt, PROB_POSITIVE]
