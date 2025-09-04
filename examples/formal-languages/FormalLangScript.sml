@@ -323,7 +323,7 @@ Proof
 QED
 
 (* TODO: move to pred_setLib simpset *)
-Theorem IN_COND[simp]:
+Theorem IN_COND[simp,local]:
   x ∈ (if A then B else C) ⇔ if A then x ∈ B else x ∈ C
 Proof
   rw[]
