@@ -3649,6 +3649,12 @@ Definition real_set_def :
     real_set s = {real x | x <> PosInf /\ x <> NegInf /\ x IN s}
 End
 
+Theorem real_set_empty[simp] :
+    real_set {} = {}
+Proof
+    simp [real_set_def]
+QED
+
 Theorem normal_real_set :
     !(s :extreal set). s INTER (IMAGE Normal UNIV) = IMAGE Normal (real_set s)
 Proof
