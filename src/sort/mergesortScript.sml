@@ -400,16 +400,30 @@ val merge_empty = Q.store_thm ("merge_empty",
  Cases_on `l` >>
  srw_tac[][merge_def]);
 
-val merge_last_lem1 = Q.prove (
-`!R l1 l2 x.
-  (!y. MEM y l2 ==> ~R x y)
-  ==>
-  merge R (l1 ++ [x]) l2 = merge R l1 l2 ++ [x]`,
+Theorem merge_last_lem1[local]:
+  !R l1 l2 x.
+    (!y. MEM y l2 ==> ~R x y)
+    ==>
+    merge R l1 l2 ++ [x] = merge R (l1 ++ [x]) l2
+Proof
  ho_match_mp_tac merge_ind >>
  srw_tac[][merge_def, merge_empty] >>
  Induct_on `v5` >>
  srw_tac[][merge_empty, merge_def] >>
- metis_tac []);
+ metis_tac []
+QED
+
+Theorem merge_last_lem1acc[local]:
+  !R l1 l2 x.
+    (!y. MEM y l2 ==> ~R x y)
+    ==>
+    merge R l1 l2 ++ (x::acc) = merge R (l1 ++ [x]) l2 ++ acc
+Proof
+  rw[] >>
+  ‘merge R l1 l2 ++ x::acc = merge R l1 l2 ++ [x] ++ acc’
+    by simp[] >> pop_assum SUBST1_TAC >>
+  REWRITE_TAC[APPEND_11] >> simp[merge_last_lem1]
+QED
 
 val merge_last_lem2 = Q.prove (
 `!R l1 l2 y.
@@ -422,32 +436,38 @@ val merge_last_lem2 = Q.prove (
  srw_tac[][merge_empty, merge_def] >>
  metis_tac []);
 
-val merge_tail_correct2 = Q.store_thm ("merge_tail_correct2",
-`!neg R l1 l2 acc.
-  (neg = T) /\
-  transitive R /\
-  SORTED R (REVERSE l1) /\
-  SORTED R (REVERSE l2)
-  ==>
-  merge_tail neg R l1 l2 acc = (merge R (REVERSE l1) (REVERSE l2)) ++ acc`,
- ho_match_mp_tac merge_tail_ind >>
- srw_tac[][merge_tail_def, merge_def, REV_REVERSE_LEM, merge_empty] >>
- fs [] >>
- `SORTED R (REVERSE l1) /\ SORTED R (REVERSE l2)`
-        by metis_tac [SORTED_APPEND_GEN] >>
- fs []
- >- (match_mp_tac (GSYM merge_last_lem1) >>
-     srw_tac[][] >>
-     srw_tac[][] >>
-     CCONTR_TAC >>
-     fs [] >>
-     `R y' y` by metis_tac [mem_sorted_append, MEM_REVERSE, MEM] >>
-     metis_tac [transitive_def])
- >- (match_mp_tac (GSYM merge_last_lem2) >>
-     srw_tac[][] >>
-     srw_tac[][] >>
-     `R x' x` by metis_tac [mem_sorted_append, MEM_REVERSE, MEM] >>
-     metis_tac [transitive_def]));
+Theorem merge_tail_correct2:
+  !neg R l1 l2 acc.
+    (neg = T) /\
+    transitive R /\
+    SORTED R (REVERSE l1) /\
+    SORTED R (REVERSE l2)
+    ==>
+    merge_tail neg R l1 l2 acc = (merge R (REVERSE l1) (REVERSE l2)) ++ acc
+Proof
+  ho_match_mp_tac merge_tail_ind >>
+  srw_tac[][merge_tail_def, merge_def, REV_REVERSE_LEM, merge_empty] >>
+  fs [] >>
+  ‘SORTED R (REVERSE l1) /\ SORTED R (REVERSE l2)’
+    by metis_tac [SORTED_APPEND_GEN] >>
+  fs []
+  >- (match_mp_tac merge_last_lem1acc >>
+      srw_tac[][] >>
+      srw_tac[][] >>
+      CCONTR_TAC >>
+      fs [] >>
+      `R y' y` by metis_tac [mem_sorted_append, MEM_REVERSE, MEM] >>
+      metis_tac [transitive_def])
+  >- (qmatch_abbrev_tac ‘LHS ++ _ :: acc = RHS ++ acc’ >>
+      ‘LHS ++ y::acc = LHS ++ [y] ++ acc’ by simp[] >>
+      pop_assum SUBST1_TAC >> REWRITE_TAC[APPEND_11] >>
+      simp[Abbr‘LHS’, Abbr‘RHS’] >>
+      match_mp_tac (GSYM merge_last_lem2) >>
+      srw_tac[][] >>
+      srw_tac[][] >>
+      `R x' x` by metis_tac [mem_sorted_append, MEM_REVERSE, MEM] >>
+      metis_tac [transitive_def])
+QED
 
 Theorem mergesortN_correct:
   !negate R n l.
