@@ -9769,7 +9769,7 @@ val _ = map (fn name => save_thm (name, DB.fetch "extreal_base" name))
        "real_def",
        "real_normal",
        "rdiv_eq",
-       "real_set_def",
+       "real_set_def", "real_set_empty",
        "rinv_uniq",
        "sqrt_0", "sqrt_1",
        "sqrt_le_n",
