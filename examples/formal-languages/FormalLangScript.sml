@@ -422,8 +422,8 @@ Theorem IN_KSTAR_LIST_ALT:
 Proof
   rw [IN_KSTAR_LIST,EQ_IMP_THM]
   >- (irule_at Any EQ_REFL >>
-      pop_keep_tac >> qid_spec_tac ‘wlist’ >>
-      ho_match_mp_tac EVERY_MONOTONIC >> metis_tac[])
+      pop_keep_tac >>
+      ho_match_mp_tac EVERY_MONOTONIC >> simp[])
   >- (irule_at Any $ GSYM flat_filter_not_null >>
       simp[EVERY_FILTER,NULL_EQ] >> irule EVERY_MONOTONIC >>
       first_x_assum $ irule_at Any >> metis_tac[])
