@@ -6907,6 +6907,122 @@ Proof
     REWRITE_TAC [IN_APP, bounded_continuous_def]
 QED
 
+Theorem continuous_map_normal :
+    continuous_map (euclidean,ext_euclidean) Normal
+Proof
+    rw [euclidean_def, ext_euclidean_def, METRIC_CONTINUOUS_MAP, MSPACE]
+ >> Cases_on ‘1 <= e’
+ >- (Q.EXISTS_TAC ‘1’ >> rw [] \\
+     Q_TAC (TRANS_TAC REAL_LTE_TRANS) ‘1’ >> art [] \\
+     simp [extreal_mr1_lt_1])
+ >> fs [REAL_NOT_LE]
+ >> simp [extreal_mr1_normal', GSYM dist_def, dist]
+ >> ‘!x. 1 - inv (1 + abs (a - x)) < e <=> 1 - e < inv (1 + abs (a - x))’
+      by REAL_ARITH_TAC >> POP_ORW
+ >> ‘1 - e <> 0’ by REAL_ASM_ARITH_TAC
+ >> ‘1 - e = inv (inv (1 - e))’ by simp [REAL_INVINV]
+ >> POP_ORW
+ >> Know ‘!x. inv (inv (1 - e)) < inv (1 + abs (a - x)) <=>
+              1 + abs (a - x) < inv (1 - e)’
+ >- (Q.X_GEN_TAC ‘x’ \\
+     MATCH_MP_TAC REAL_INV_LT_ANTIMONO \\
+     CONJ_TAC >- (MATCH_MP_TAC REAL_INV_POS >> simp [REAL_SUB_LT]) \\
+     Q_TAC (TRANS_TAC REAL_LTE_TRANS) ‘1’ >> simp [])
+ >> Rewr'
+ >> ‘!x. 1 + abs (a - x) < inv (1 - e) <=> abs (a - x) < inv (1 - e) - 1’
+      by REAL_ARITH_TAC >> POP_ORW
+ >> Q.EXISTS_TAC ‘inv (1 - e) - 1’ >> simp [REAL_SUB_LT]
+ >> REAL_ASM_ARITH_TAC
+QED
+
+Theorem continuous_map_real :
+    continuous_map (ext_euclidean,euclidean) real
+Proof
+    rw [euclidean_def, ext_euclidean_def, METRIC_CONTINUOUS_MAP, MSPACE,
+        GSYM dist_def, dist]
+ >> Cases_on ‘a = PosInf’
+ >- (POP_ASSUM (simp o wrap) \\
+     Q.EXISTS_TAC ‘1’ >> rw [] \\
+     Cases_on ‘x = PosInf’ >- simp [] \\
+     Cases_on ‘x = NegInf’ >- simp [] \\
+    ‘?r. x = Normal r’ by METIS_TAC [extreal_cases] >> fs [])
+ >> Cases_on ‘a = NegInf’
+ >- (POP_ASSUM (simp o wrap) \\
+     Q.EXISTS_TAC ‘1’ >> rw [] \\
+     Cases_on ‘x = PosInf’ >- simp [] \\
+     Cases_on ‘x = NegInf’ >- simp [] \\
+    ‘?r. x = Normal r’ by METIS_TAC [extreal_cases] >> fs [])
+ (* stage work *)
+ >> ‘?r. a = Normal r’ by METIS_TAC [extreal_cases]
+ >> POP_ASSUM (simp o wrap)
+ >> Suff ‘?d. 0 < d /\ d < 1 /\
+              !y. dist extreal_mr1 (Normal r,Normal y) < d ==> abs (r - y) < e’
+ >- (STRIP_TAC \\
+     Q.EXISTS_TAC ‘d’ >> rw [] \\
+    ‘dist extreal_mr1 (Normal r,x) < 1’ by PROVE_TAC [REAL_LT_TRANS] \\
+    ‘dist extreal_mr1 (Normal r,x) <> 1’ by PROVE_TAC [REAL_LT_IMP_NE] \\
+     Cases_on ‘x = PosInf’ >- fs [] \\
+     Cases_on ‘x = NegInf’ >- fs [] \\
+    ‘?z. x = Normal z’ by METIS_TAC [extreal_cases] \\
+     POP_ASSUM (fs o wrap))
+ >> simp [extreal_mr1_normal']
+ (* NOTE: Below we try to prove a serious of inequations to obtain the
+    expression of “d” by the existing value “e”.
+  *)
+ >> ‘!d y. 1 - inv (1 + abs (r - y)) < d <=> 1 - d < inv (1 + abs (r - y))’
+      by REAL_ARITH_TAC >> POP_ORW
+ >> Know ‘!(d :real). d < 1 ==> 1 - d = inv (inv (1 - d))’
+ >- (rpt STRIP_TAC \\
+     SYM_TAC >> MATCH_MP_TAC REAL_INVINV \\
+     REAL_ASM_ARITH_TAC)
+ >> DISCH_TAC
+ >> Know ‘!d y. d < 1 ==>
+               (inv (inv (1 - d)) < inv (1 + abs (r - y)) <=>
+                1 + abs (r - y) < inv (1 - d))’
+ >- (rpt STRIP_TAC \\
+     MATCH_MP_TAC REAL_INV_LT_ANTIMONO \\
+     CONJ_TAC >- (MATCH_MP_TAC REAL_INV_POS >> simp [REAL_SUB_LT]) \\
+     Q_TAC (TRANS_TAC REAL_LTE_TRANS) ‘1’ >> simp [])
+ >> DISCH_TAC
+ >> ‘!d y. 1 + abs (r - y) < inv (1 - d) <=> abs (r - y) < inv (1 - d) - 1’
+      by REAL_ARITH_TAC
+ >> Know ‘!d. inv (1 - d) - 1 = e <=> inv (1 - d) = e + 1’
+ >- REAL_ARITH_TAC
+ >> Know ‘e + 1 = inv (inv (e + 1))’
+ >- (SYM_TAC >> MATCH_MP_TAC REAL_INVINV \\
+     Q.PAT_X_ASSUM ‘0 < e’ MP_TAC >> REAL_ARITH_TAC)
+ >> Rewr'
+ >> simp [REAL_INV_INJ]
+ >> ‘!d. 1 - d = inv (e + 1) <=> d = 1 - inv (e + 1)’ by REAL_ARITH_TAC
+ >> POP_ORW
+ >> DISCH_TAC
+ (* stage work *)
+ >> qabbrev_tac ‘d = 1 - inv (e + 1)’
+ >> Q.EXISTS_TAC ‘d’
+ >> CONJ_TAC
+ >- (simp [Abbr ‘d’, REAL_SUB_LT] \\
+     MATCH_MP_TAC REAL_INV_GT1 >> simp [])
+ >> CONJ_ASM1_TAC
+ >- (qunabbrev_tac ‘d’ \\
+     Suff ‘0 < inv (e + 1)’ >- REAL_ARITH_TAC \\
+     MATCH_MP_TAC REAL_INV_POS \\
+     Q_TAC (TRANS_TAC REAL_LT_TRANS) ‘1’ >> simp [])
+ >> Q.X_GEN_TAC ‘y’
+ >> Q.PAT_X_ASSUM ‘!d. d < 1 ==> 1 - d = inv (inv (1 - d))’
+      (MP_TAC o Q.SPEC ‘d’)
+ >> impl_tac >- art []
+ >> Rewr'
+ >> Q.PAT_X_ASSUM ‘!d y. d < 1 ==> (inv (inv (1 - d)) < inv (1 + abs (r - y)) <=> _)’
+      (MP_TAC o Q.SPECL [‘d’, ‘y’])
+ >> impl_tac >- art []
+ >> Rewr'
+ >> Q.PAT_X_ASSUM ‘!d y. 1 + abs (r - y) < inv (1 - d) <=> _’
+      (MP_TAC o Q.SPECL [‘d’, ‘y’])
+ >> Rewr'
+ >> Q.PAT_X_ASSUM ‘!d. inv (1 - d) - 1 = e <=> _’ (MP_TAC o Q.SPEC ‘d’)
+ >> simp []
+QED
+
 (* ------------------------------------------------------------------------- *)
 (*  Preliminary for Radon-Nikodym Theorem                                    *)
 (* ------------------------------------------------------------------------- *)

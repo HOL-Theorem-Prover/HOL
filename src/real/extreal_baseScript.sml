@@ -51,6 +51,12 @@ Proof
     RW_TAC std_ss [real_def]
 QED
 
+Theorem real_infty[simp] :
+    real PosInf = 0 /\ real NegInf = 0
+Proof
+    SIMP_TAC std_ss [real_def]
+QED
+
 Theorem normal_real :
     !x. x <> NegInf /\ x <> PosInf ==> (Normal (real x) = x)
 Proof
