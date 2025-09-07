@@ -72,7 +72,11 @@ See also Table~\ref{tab:script-file-syntax}.
 
 The three keywords (`Theory`, `Ancestors` and `Libs`) must all appear in column 0 of the input file.
 The `Ancestors` and `Libs` components may be omitted.
+
+\index{Theory keyword@\ml{Theory} keyword}
+\index{special syntactic forms for scripts!Theory@\ml{Theory}}
 The name following the `Theory` keyword must match the name that precedes the `Script.sml` of the file-name, and must be a valid SML structure identifier.
+In some cases, such as when a theory is huge and the theorems not particularly interesting, it is possible to disable the generation of documentation in `<thyname>Theory.sig` by following the theory name with the `[no_sig_docs]` annotation.
 
 \index{Ancestors keyword@\ml{Ancestors} keyword}
 \index{special syntactic forms for scripts!Ancestors@\ml{Ancestors}}

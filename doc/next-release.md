@@ -19,6 +19,8 @@ Contents
 
 New features
 ------------
+- `Theory` syntax now supports disabling the generation of documentation in `<thyname>Theory.sig` by following the theory name with the `[no_sig_docs]` annotation.
+Files that use this feature do not need to mention `Feedback.set_trace "TheoryPP.include_docs" 0` anymore.
 
 Bugs fixed
 ----------
