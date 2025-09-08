@@ -5206,6 +5206,12 @@ Definition open_interval_def :
     open_interval (a :extreal) b = {x | a < x /\ x < b}
 End
 
+Theorem IN_open_interval :
+    !a b x. x IN open_interval a b <=> a < x /\ x < b
+Proof
+    rw [open_interval_def]
+QED
+
 (* renamed from `open_intervals_set`, needed in borelTheory (lambda0_premeasure) *)
 Definition open_intervals_def :
     open_intervals = {open_interval a b | T}
@@ -6390,11 +6396,32 @@ Proof
     rw [extreal_dist_def, bounded_metric_thm, mr1_def]
 QED
 
+Theorem extreal_dist_normal' :
+    !x y. extreal_dist (Normal x) (Normal y) = 1 - inv (1 + abs (x - y))
+Proof
+    rw [extreal_dist_def, bounded_metric_thm, bounded_metric_alt, mr1_def]
+QED
+
 (* Use this theorem to calculate the "distance" between two normal extreals *)
 Theorem extreal_mr1_normal :
     !x y. dist extreal_mr1 (Normal x,Normal y) = abs (x - y) / (1 + abs (x - y))
 Proof
     rw [extreal_mr1_thm, extreal_dist_normal]
+QED
+
+Theorem extreal_mr1_normal' :
+    !x y. dist extreal_mr1 (Normal x,Normal y) = 1 - inv (1 + abs (x - y))
+Proof
+    rw [extreal_mr1_thm, extreal_dist_normal']
+QED
+
+Theorem extreal_mr1_lt_1 :
+    !x y. dist extreal_mr1 (Normal x,Normal y) < 1
+Proof
+    rw [extreal_mr1_thm, extreal_dist_normal']
+ >> Suff ‘0 < inv (1 + abs (x - y))’ >- REAL_ARITH_TAC
+ >> MATCH_MP_TAC REAL_INV_POS
+ >> Q_TAC (TRANS_TAC REAL_LTE_TRANS) ‘1’ >> simp []
 QED
 
 Theorem extreal_mr1_le_1 :
@@ -6407,18 +6434,204 @@ Proof
  >> rw [bounded_metric_lt_1]
 QED
 
+Theorem extreal_mr1_eq_1[simp] :
+    dist extreal_mr1 (Normal r,PosInf) = 1 /\
+    dist extreal_mr1 (Normal r,NegInf) = 1 /\
+    dist extreal_mr1 (PosInf,Normal r) = 1 /\
+    dist extreal_mr1 (NegInf,Normal r) = 1 /\
+    dist extreal_mr1 (PosInf,NegInf) = 1 /\
+    dist extreal_mr1 (NegInf,PosInf) = 1
+Proof
+    simp [extreal_mr1_thm, extreal_dist_def]
+QED
+
+Theorem dist_triangle_add :
+    !x1 y1 x2 y2. dist extreal_mr1 (x1 + y1,x2 + y2) <=
+                  dist extreal_mr1 (x1,x2) + dist extreal_mr1 (y1,y2)
+Proof
+    rpt GEN_TAC
+ >> Cases_on ‘x1 = PosInf’
+ >- (Cases_on ‘y1 = PosInf’
+     >- (simp [extreal_add_def] \\
+         Cases_on ‘x2 = PosInf’
+         >- (simp [MDIST_REFL] \\
+             Cases_on ‘y2 = PosInf’ >- simp [MDIST_REFL, extreal_add_def] \\
+             Cases_on ‘y2 = NegInf’ >- simp [extreal_mr1_le_1] \\
+            ‘?r. y2 = Normal r’ by METIS_TAC [extreal_cases] \\
+             simp [extreal_add_def, MDIST_REFL, MDIST_POS_LE]) \\
+         Cases_on ‘x2 = NegInf’
+         >- (simp [] \\
+             Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘1’ \\
+             simp [REAL_LE_ADDR, MDIST_POS_LE, extreal_mr1_le_1]) \\
+        ‘?r. x2 = Normal r’ by METIS_TAC [extreal_cases] \\
+         simp [] \\
+         Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘1’ \\
+         simp [REAL_LE_ADDR, MDIST_POS_LE, extreal_mr1_le_1]) \\
+     Cases_on ‘y1 = NegInf’
+     >- (simp [] \\
+         Cases_on ‘x2 = PosInf’
+         >- (simp [MDIST_REFL] \\
+             Cases_on ‘y2 = PosInf’ >- simp [extreal_mr1_le_1] \\
+             Cases_on ‘y2 = NegInf’ >- simp [MDIST_REFL, extreal_add_def] \\
+            ‘?r. y2 = Normal r’ by METIS_TAC [extreal_cases] \\
+             simp [extreal_add_def, extreal_mr1_le_1]) \\
+         Cases_on ‘x2 = NegInf’
+         >- (simp [] \\
+             Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘1’ \\
+             simp [REAL_LE_ADDR, MDIST_POS_LE, extreal_mr1_le_1]) \\
+        ‘?r. x2 = Normal r’ by METIS_TAC [extreal_cases] \\
+         simp [] \\
+         Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘1’ \\
+         simp [REAL_LE_ADDR, MDIST_POS_LE, extreal_mr1_le_1]) \\
+    ‘?r. y1 = Normal r’ by METIS_TAC [extreal_cases] \\
+     simp [extreal_add_def] \\
+     Cases_on ‘y2 = PosInf’
+     >- (simp [] \\
+         Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘1’ \\
+         simp [REAL_LE_ADDL, MDIST_POS_LE, extreal_mr1_le_1]) \\
+     Cases_on ‘y2 = NegInf’
+     >- (simp [] \\
+         Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘1’ \\
+         simp [REAL_LE_ADDL, MDIST_POS_LE, extreal_mr1_le_1]) \\
+    ‘?z. y2 = Normal z’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+     Cases_on ‘x2 = NegInf’
+     >- (simp [] \\
+         Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘1’ \\
+         simp [REAL_LE_ADDR, MDIST_POS_LE, extreal_mr1_le_1]) \\
+     Cases_on ‘x2 = PosInf’ >- simp [extreal_add_def, MDIST_POS_LE] \\
+    ‘?a. x2 = Normal a’ by METIS_TAC [extreal_cases] \\
+     simp [] \\
+     Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘1’ \\
+     simp [REAL_LE_ADDR, MDIST_POS_LE, extreal_mr1_le_1])
+ >> Cases_on ‘x1 = NegInf’
+ >- (POP_ORW \\
+     Cases_on ‘x2 = PosInf’
+     >- (simp [] \\
+         Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘1’ \\
+         simp [REAL_LE_ADDR, MDIST_POS_LE, extreal_mr1_le_1]) \\
+     Cases_on ‘x2 = NegInf’
+     >- (simp [MDIST_REFL] \\
+         Cases_on ‘y1 = PosInf’
+         >- (POP_ORW \\
+             Cases_on ‘y2 = PosInf’ >- simp [MDIST_REFL] \\
+             Cases_on ‘y2 = NegInf’ >- simp [extreal_mr1_le_1] \\
+            ‘?r. y2 = Normal r’ by METIS_TAC [extreal_cases] \\
+             simp [extreal_mr1_le_1]) \\
+         Cases_on ‘y1 = NegInf’
+         >- (simp [extreal_add_def] \\
+             Cases_on ‘y2 = PosInf’ >- simp [extreal_mr1_le_1] \\
+             Cases_on ‘y2 = NegInf’ >- simp [extreal_add_def] \\
+            ‘?r. y2 = Normal r’ by METIS_TAC [extreal_cases] \\
+             simp [extreal_add_def, extreal_mr1_le_1]) \\
+        ‘?r. y1 = Normal r’ by METIS_TAC [extreal_cases] \\
+         simp [extreal_add_def] \\
+         Cases_on ‘y2 = PosInf’ >- simp [extreal_mr1_le_1] \\
+         Cases_on ‘y2 = NegInf’ >- simp [extreal_mr1_le_1] \\
+        ‘?z. y2 = Normal z’ by METIS_TAC [extreal_cases] \\
+         simp [extreal_add_def, MDIST_REFL, MDIST_POS_LE]) \\
+    ‘?r. x2 = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+     simp [] \\
+     Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘1’ \\
+     simp [REAL_LE_ADDR, MDIST_POS_LE, extreal_mr1_le_1])
+ >> ‘?a. x1 = Normal a’ by METIS_TAC [extreal_cases] >> POP_ORW
+ >> Cases_on ‘x2 = PosInf’
+ >- (simp [] \\
+     Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘1’ \\
+     simp [REAL_LE_ADDR, MDIST_POS_LE, extreal_mr1_le_1])
+ >> Cases_on ‘x2 = NegInf’
+ >- (simp [] \\
+     Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘1’ \\
+     simp [REAL_LE_ADDR, MDIST_POS_LE, extreal_mr1_le_1])
+ >> ‘?c. x2 = Normal c’ by METIS_TAC [extreal_cases] >> POP_ORW
+ >> Cases_on ‘y1 = PosInf’
+ >- (simp [extreal_add_def] \\
+     Cases_on ‘y2 = PosInf’ >- simp [extreal_add_def, MDIST_POS_LE] \\
+     Cases_on ‘y2 = NegInf’
+     >- (simp [] \\
+         Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘1’ \\
+         simp [REAL_LE_ADDL, MDIST_POS_LE, extreal_mr1_le_1]) \\
+    ‘?r. y2 = Normal r’ by METIS_TAC [extreal_cases] \\
+     simp [] \\
+     Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘1’ \\
+     simp [REAL_LE_ADDL, MDIST_POS_LE, extreal_mr1_le_1])
+ >> Cases_on ‘y1 = NegInf’
+ >- (simp [extreal_add_def] \\
+     Cases_on ‘y2 = PosInf’
+     >- (simp [] \\
+         Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘1’ \\
+         simp [REAL_LE_ADDL, MDIST_POS_LE, extreal_mr1_le_1]) \\
+     Cases_on ‘y2 = NegInf’ >- simp [extreal_add_def, MDIST_REFL, MDIST_POS_LE] \\
+    ‘?z. y2 = Normal z’ by METIS_TAC [extreal_cases] \\
+     simp [] \\
+     Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘1’ \\
+     simp [REAL_LE_ADDL, MDIST_POS_LE, extreal_mr1_le_1])
+ >> ‘?b. y1 = Normal b’ by METIS_TAC [extreal_cases] >> POP_ORW
+ >> Cases_on ‘y2 = PosInf’ >- simp [extreal_add_def, MDIST_POS_LE]
+ >> Cases_on ‘y2 = NegInf’ >- simp [extreal_add_def, MDIST_POS_LE]
+ >> ‘?d. y2 = Normal d’ by METIS_TAC [extreal_cases] >> POP_ORW
+ >> KILL_TAC
+ >> simp [extreal_add_def, extreal_mr1_thm, extreal_dist_normal']
+ >> qmatch_abbrev_tac ‘_ <= _ - x + (_ - y :real)’
+ >> simp [REAL_ARITH “1 - x + (1 - y) = 1 - (x + y - (1 :real))”]
+ >> REWRITE_TAC [REAL_LE_SUB_CANCEL1]
+ >> REWRITE_TAC [REAL_ADD2_SUB2]
+ >> qunabbrevl_tac [‘x’, ‘y’]
+ >> Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘inv (1 + abs (a - c) + abs (b - d))’
+ >> reverse CONJ_TAC
+ >- (MATCH_MP_TAC REAL_INV_LE_ANTIMONO_IMPR \\
+     CONJ_TAC
+     >- (REWRITE_TAC [GSYM REAL_ADD_ASSOC] \\
+         MATCH_MP_TAC REAL_LTE_ADD >> simp [REAL_LE_ADD, ABS_POS]) \\
+     CONJ_TAC
+     >- (MATCH_MP_TAC REAL_LTE_ADD >> simp [ABS_POS]) \\
+     REWRITE_TAC [GSYM REAL_ADD_ASSOC, REAL_LE_LADD] \\
+     REWRITE_TAC [ABS_TRIANGLE])
+ >> qmatch_abbrev_tac ‘_ <= inv (1 + x + (y :real))’
+ >> REWRITE_TAC [REAL_LE_SUB_RADD]
+ >> REWRITE_TAC [REAL_INV_1OVER]
+ >> Know ‘0 < 1 + x /\ 0 < 1 + y’
+ >- (CONJ_TAC \\ (* 2 subgoals, same tactics *)
+     MATCH_MP_TAC REAL_LTE_ADD >> simp [Abbr ‘x’, Abbr ‘y’, ABS_POS])
+ >> STRIP_TAC
+ >> ‘1 + x <> 0 /\ 1 + y <> 0’ by PROVE_TAC [REAL_LT_IMP_NE]
+ >> ASM_SIMP_TAC real_ss [RAT_LEMMA2]
+ >> ASM_SIMP_TAC real_ss [GSYM REAL_MUL_ASSOC, GSYM REAL_INV_MUL]
+ >> ‘1 / (1 + x + y) + 1 = 1 / (1 + x + y) + 1 / 1’ by simp [] >> POP_ORW
+ >> Know ‘0 < 1 + x + y’
+ >- (REWRITE_TAC [GSYM REAL_ADD_ASSOC] \\
+     MATCH_MP_TAC REAL_LTE_ADD \\
+     simp [Abbr ‘x’, Abbr ‘y’, REAL_LE_ADD, ABS_POS])
+ >> DISCH_TAC
+ >> ‘0 < (1 :real)’ by simp []
+ >> ASM_SIMP_TAC std_ss [RAT_LEMMA2]
+ >> ‘1 + x + y <> 0’ by PROVE_TAC [REAL_LT_IMP_NE]
+ >> simp [REAL_ADD_ASSOC]
+ >> ‘1 + y + 1 + x = 2 + x + (y :real)’ by REAL_ARITH_TAC >> POP_ORW
+ >> qabbrev_tac ‘z = 2 + x + y’
+ >> MATCH_MP_TAC REAL_LE_RMUL_IMP
+ >> ‘0 <= x /\ 0 <= y’ by simp [Abbr ‘x’, Abbr ‘y’, ABS_POS]
+ >> CONJ_TAC
+ >- (simp [Abbr ‘z’, GSYM REAL_ADD_ASSOC] \\
+     MATCH_MP_TAC REAL_LE_ADD >> simp [] \\
+     MATCH_MP_TAC REAL_LE_ADD >> simp [])
+ >> simp [REAL_LDISTRIB, REAL_RDISTRIB, GSYM REAL_ADD_ASSOC]
+ >> REWRITE_TAC [Once REAL_ADD_COMM]
+ >> simp []
+ >> MATCH_MP_TAC REAL_LE_MUL >> art []
+QED
+
 (* cf. real_topologyTheory.euclidean_def *)
 Definition ext_euclidean_def :
     ext_euclidean = mtop extreal_mr1
 End
 
-Theorem topspace_ext_euclidean[simp] :
+Theorem topspace_ext_euclidean :
     topspace ext_euclidean = UNIV
 Proof
     rw [TOPSPACE_MTOP, ext_euclidean_def]
 QED
 
-Theorem mspace_extreal_mr1[simp] :
+Theorem mspace_extreal_mr1 :
     mspace extreal_mr1 = UNIV
 Proof
     rw [mspace, GSYM ext_euclidean_def, topspace_ext_euclidean]
@@ -6441,14 +6654,14 @@ Proof
  >> EQ_TAC >> rpt STRIP_TAC
  >- (Q.PAT_X_ASSUM ‘!u. open_in (mtop extreal_mr1) u /\ l IN u ==> P’
        (MP_TAC o Q.SPEC ‘mball extreal_mr1 (l,e)’) \\
-     simp [OPEN_IN_MBALL, IN_MBALL] \\
+     simp [OPEN_IN_MBALL, IN_MBALL, mspace_extreal_mr1] \\
      rw [MDIST_REFL, Once METRIC_SYM])
- >> fs [OPEN_IN_MTOPOLOGY]
+ >> fs [OPEN_IN_MTOPOLOGY, mspace_extreal_mr1]
  >> Q.PAT_X_ASSUM ‘!x. x IN u ==> P’ (MP_TAC o Q.SPEC ‘l’) >> rw []
  >> Q.PAT_X_ASSUM ‘!e. 0 < e ==> P’  (MP_TAC o Q.SPEC ‘r’) >> rw []
  >> MATCH_MP_TAC EVENTUALLY_MONO
  >> Q.EXISTS_TAC ‘\x. dist extreal_mr1 (f x,l) < r’ >> rw []
- >> fs [SUBSET_DEF, IN_MBALL]
+ >> fs [SUBSET_DEF, IN_MBALL, mspace_extreal_mr1]
  >> FIRST_X_ASSUM MATCH_MP_TAC
  >> rw [Once METRIC_SYM]
 QED
@@ -6458,48 +6671,6 @@ Definition extreal_lim_def :
     extreal_lim net f = @l. ext_tendsto f l net
 End
 Overload lim = “extreal_lim”
-
-(* NOTE: The type of ‘f’ is “:'a -> extreal”, suitable for any use. *)
-Definition ext_continuous_def :
-    ext_continuous f net <=> ext_tendsto f (f (netlimit net)) net
-End
-
-(* NOTE: because of the type of ‘at x within s’, here the type of ‘f’ is
-  “:real -> extreal”. For a function ‘g :extreal -> extreal’, to say it's
-   continuous on a set ‘s’ of (normal) real numbers, one can write:
-
-     (g o Normal) continuous_on s
-
-   I think it's not very meaningful to say a function "continuous at PosInf",
-   thus no need to invent another net "at ... within" for extreals.
-   -- Chun Tian (binghe), 15 ago 2024
-*)
-Definition ext_continuous_on_def :
-    ext_continuous_on f s <=> !x. x IN s ==> ext_continuous f (at x within s)
-End
-
-(* Use ‘ext_bounded (IMAGE f UNIV)’ to say a function f is bounded (on UNIV) *)
-Definition ext_bounded_def :
-    ext_bounded s <=> ?a. a <> PosInf /\ !x. x IN s ==> abs x <= a
-End
-
-Theorem ext_bounded_alt :
-    !s. ext_bounded s <=> ?k. 0 <= k /\ !x. x IN s ==> abs x <= Normal k
-Proof
-    rw [ext_bounded_def]
- >> reverse EQ_TAC >> rw []
- >- (Q.EXISTS_TAC ‘Normal k’ >> rw [])
- >> Cases_on ‘s = {}’
- >- (rw [] >> Q.EXISTS_TAC ‘0’ >> rw [])
- >> Know ‘0 <= a’
- >- (fs [GSYM MEMBER_NOT_EMPTY] \\
-     Q_TAC (TRANS_TAC le_trans) ‘abs x’ >> rw [abs_pos])
- >> DISCH_TAC
- >> ‘a <> NegInf’ by rw [pos_not_neginf]
- >> ‘?k. a = Normal k /\ 0 <= k’
-       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_le_eq]
- >> Q.EXISTS_TAC ‘k’ >> rw []
-QED
 
 Theorem EXTREAL_LIM :
     !(f :'a -> extreal) l net.
@@ -6516,6 +6687,34 @@ Theorem EXTREAL_LIM_CONST :
 Proof
     rw [EXTREAL_LIM, trivial_limit, MDIST_REFL]
  >> METIS_TAC []
+QED
+
+(* NOTE: This proof is derived from real_topologyTheory.LIM_ADD *)
+Theorem EXTREAL_LIM_ADD :
+    !net:('a)net f g l (m :extreal).
+       (f --> l) net /\ (g --> m) net ==> ((\x. f(x) + g(x)) --> (l + m)) net
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC[EXTREAL_LIM] THEN
+  ASM_CASES_TAC ``trivial_limit (net:('a)net)`` THEN
+  ASM_SIMP_TAC std_ss [GSYM FORALL_AND_THM] THEN
+  DISCH_TAC THEN X_GEN_TAC ``e:real`` THEN DISCH_TAC THEN
+  FIRST_X_ASSUM(MP_TAC o SPEC ``e / &2:real``) THEN
+  ASM_REWRITE_TAC[REAL_LT_HALF1] THEN
+  qabbrev_tac ‘dist' = dist extreal_mr1’ \\
+  Know `!x y. (dist'(f x, l) < e / 2:real) =
+              (\x. (dist'(f x, l) < e / 2:real)) x` THENL
+  [FULL_SIMP_TAC std_ss [], ALL_TAC] THEN DISC_RW_KILL THEN
+  Know `!x y. (dist'(g x, m) < e / 2:real) =
+              (\x. (dist'(g x, m) < e / 2:real)) x` THENL
+  [FULL_SIMP_TAC std_ss [], ALL_TAC] THEN DISC_RW_KILL THEN
+  DISCH_THEN(MP_TAC o MATCH_MP NET_DILEMMA) THEN BETA_TAC THEN
+  STRIP_TAC THEN EXISTS_TAC ``c:'a`` THEN CONJ_TAC THENL [METIS_TAC [], ALL_TAC] THEN
+  GEN_TAC THEN POP_ASSUM (MP_TAC o Q.SPEC `x'`) THEN REPEAT STRIP_TAC THEN
+  FULL_SIMP_TAC std_ss [] THEN MATCH_MP_TAC REAL_LET_TRANS THEN
+  Q.EXISTS_TAC `dist' (f x', l) + dist' (g x', m)` THEN
+  reverse CONJ_TAC
+  >- METIS_TAC[REAL_LT_HALF1, REAL_LT_ADD2, GSYM REAL_HALF_DOUBLE] \\
+  simp [Abbr ‘dist'’, dist_triangle_add]
 QED
 
 (* Name convention: "EXTREAL_" + (theorem name as in real_topologyTheory)
@@ -6657,6 +6856,171 @@ Proof
  >> rw [real_normal]
  >> POP_ASSUM MATCH_MP_TAC
  >> Q.EXISTS_TAC ‘N’ >> rw []
+QED
+
+(* ------------------------------------------------------------------------- *)
+(*  Various definitions of bounded and continuous functions                  *)
+(* ------------------------------------------------------------------------- *)
+
+Definition ext_continuous_def :
+    ext_continuous (f :'a -> extreal) net <=> ext_tendsto f (f (netlimit net)) net
+End
+
+Definition ext_continuous_on_def :
+    ext_continuous_on f s <=> !x. x IN s ==> ext_continuous f (at x within s)
+End
+
+(* Use ‘ext_bounded (IMAGE f UNIV)’ to say a function f is bounded (on UNIV) *)
+Definition ext_bounded_def :
+    ext_bounded s <=> ?a. a <> PosInf /\ !x. x IN s ==> abs x <= a
+End
+
+Theorem ext_bounded_alt :
+    !s. ext_bounded s <=> ?k. 0 <= k /\ !x. x IN s ==> abs x <= Normal k
+Proof
+    rw [ext_bounded_def]
+ >> reverse EQ_TAC >> rw []
+ >- (Q.EXISTS_TAC ‘Normal k’ >> rw [])
+ >> Cases_on ‘s = {}’
+ >- (rw [] >> Q.EXISTS_TAC ‘0’ >> rw [])
+ >> Know ‘0 <= a’
+ >- (fs [GSYM MEMBER_NOT_EMPTY] \\
+     Q_TAC (TRANS_TAC le_trans) ‘abs x’ >> rw [abs_pos])
+ >> DISCH_TAC
+ >> ‘a <> NegInf’ by rw [pos_not_neginf]
+ >> ‘?k. a = Normal k /\ 0 <= k’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_le_eq]
+ >> Q.EXISTS_TAC ‘k’ >> rw []
+QED
+
+(* NOTE: This is the general definition actually used in converge_in_dist_def *)
+Definition bounded_continuous_def :
+    bounded_continuous top (f :'a -> real) <=>
+    continuous_map (top,euclidean) f /\ bounded (IMAGE f UNIV)
+End
+Overload C_b = “bounded_continuous”
+
+Theorem IN_bounded_continuous :
+    !top f. f IN C_b top <=>
+            continuous_map (top,euclidean) f /\ bounded (IMAGE f UNIV)
+Proof
+    REWRITE_TAC [IN_APP, bounded_continuous_def]
+QED
+
+Theorem continuous_map_normal :
+    continuous_map (euclidean,ext_euclidean) Normal
+Proof
+    rw [euclidean_def, ext_euclidean_def, METRIC_CONTINUOUS_MAP, MSPACE]
+ >> Cases_on ‘1 <= e’
+ >- (Q.EXISTS_TAC ‘1’ >> rw [] \\
+     Q_TAC (TRANS_TAC REAL_LTE_TRANS) ‘1’ >> art [] \\
+     simp [extreal_mr1_lt_1])
+ >> fs [REAL_NOT_LE]
+ >> simp [extreal_mr1_normal', GSYM dist_def, dist]
+ >> ‘!x. 1 - inv (1 + abs (a - x)) < e <=> 1 - e < inv (1 + abs (a - x))’
+      by REAL_ARITH_TAC >> POP_ORW
+ >> ‘1 - e <> 0’ by REAL_ASM_ARITH_TAC
+ >> ‘1 - e = inv (inv (1 - e))’ by simp [REAL_INVINV]
+ >> POP_ORW
+ >> Know ‘!x. inv (inv (1 - e)) < inv (1 + abs (a - x)) <=>
+              1 + abs (a - x) < inv (1 - e)’
+ >- (Q.X_GEN_TAC ‘x’ \\
+     MATCH_MP_TAC REAL_INV_LT_ANTIMONO \\
+     CONJ_TAC >- (MATCH_MP_TAC REAL_INV_POS >> simp [REAL_SUB_LT]) \\
+     Q_TAC (TRANS_TAC REAL_LTE_TRANS) ‘1’ >> simp [])
+ >> Rewr'
+ >> ‘!x. 1 + abs (a - x) < inv (1 - e) <=> abs (a - x) < inv (1 - e) - 1’
+      by REAL_ARITH_TAC >> POP_ORW
+ >> Q.EXISTS_TAC ‘inv (1 - e) - 1’ >> simp [REAL_SUB_LT]
+ >> REAL_ASM_ARITH_TAC
+QED
+
+Theorem continuous_map_real :
+    continuous_map (ext_euclidean,euclidean) real
+Proof
+    rw [euclidean_def, ext_euclidean_def, METRIC_CONTINUOUS_MAP, MSPACE,
+        GSYM dist_def, dist]
+ >> Cases_on ‘a = PosInf’
+ >- (POP_ASSUM (simp o wrap) \\
+     Q.EXISTS_TAC ‘1’ >> rw [] \\
+     Cases_on ‘x = PosInf’ >- simp [] \\
+     Cases_on ‘x = NegInf’ >- simp [] \\
+    ‘?r. x = Normal r’ by METIS_TAC [extreal_cases] >> fs [])
+ >> Cases_on ‘a = NegInf’
+ >- (POP_ASSUM (simp o wrap) \\
+     Q.EXISTS_TAC ‘1’ >> rw [] \\
+     Cases_on ‘x = PosInf’ >- simp [] \\
+     Cases_on ‘x = NegInf’ >- simp [] \\
+    ‘?r. x = Normal r’ by METIS_TAC [extreal_cases] >> fs [])
+ (* stage work *)
+ >> ‘?r. a = Normal r’ by METIS_TAC [extreal_cases]
+ >> POP_ASSUM (simp o wrap)
+ >> Suff ‘?d. 0 < d /\ d < 1 /\
+              !y. dist extreal_mr1 (Normal r,Normal y) < d ==> abs (r - y) < e’
+ >- (STRIP_TAC \\
+     Q.EXISTS_TAC ‘d’ >> rw [] \\
+    ‘dist extreal_mr1 (Normal r,x) < 1’ by PROVE_TAC [REAL_LT_TRANS] \\
+    ‘dist extreal_mr1 (Normal r,x) <> 1’ by PROVE_TAC [REAL_LT_IMP_NE] \\
+     Cases_on ‘x = PosInf’ >- fs [] \\
+     Cases_on ‘x = NegInf’ >- fs [] \\
+    ‘?z. x = Normal z’ by METIS_TAC [extreal_cases] \\
+     POP_ASSUM (fs o wrap))
+ >> simp [extreal_mr1_normal']
+ (* NOTE: Below we try to prove a serious of inequations to obtain the
+    expression of “d” by the existing value “e”.
+  *)
+ >> ‘!d y. 1 - inv (1 + abs (r - y)) < d <=> 1 - d < inv (1 + abs (r - y))’
+      by REAL_ARITH_TAC >> POP_ORW
+ >> Know ‘!(d :real). d < 1 ==> 1 - d = inv (inv (1 - d))’
+ >- (rpt STRIP_TAC \\
+     SYM_TAC >> MATCH_MP_TAC REAL_INVINV \\
+     REAL_ASM_ARITH_TAC)
+ >> DISCH_TAC
+ >> Know ‘!d y. d < 1 ==>
+               (inv (inv (1 - d)) < inv (1 + abs (r - y)) <=>
+                1 + abs (r - y) < inv (1 - d))’
+ >- (rpt STRIP_TAC \\
+     MATCH_MP_TAC REAL_INV_LT_ANTIMONO \\
+     CONJ_TAC >- (MATCH_MP_TAC REAL_INV_POS >> simp [REAL_SUB_LT]) \\
+     Q_TAC (TRANS_TAC REAL_LTE_TRANS) ‘1’ >> simp [])
+ >> DISCH_TAC
+ >> ‘!d y. 1 + abs (r - y) < inv (1 - d) <=> abs (r - y) < inv (1 - d) - 1’
+      by REAL_ARITH_TAC
+ >> Know ‘!d. inv (1 - d) - 1 = e <=> inv (1 - d) = e + 1’
+ >- REAL_ARITH_TAC
+ >> Know ‘e + 1 = inv (inv (e + 1))’
+ >- (SYM_TAC >> MATCH_MP_TAC REAL_INVINV \\
+     Q.PAT_X_ASSUM ‘0 < e’ MP_TAC >> REAL_ARITH_TAC)
+ >> Rewr'
+ >> simp [REAL_INV_INJ]
+ >> ‘!d. 1 - d = inv (e + 1) <=> d = 1 - inv (e + 1)’ by REAL_ARITH_TAC
+ >> POP_ORW
+ >> DISCH_TAC
+ (* stage work *)
+ >> qabbrev_tac ‘d = 1 - inv (e + 1)’
+ >> Q.EXISTS_TAC ‘d’
+ >> CONJ_TAC
+ >- (simp [Abbr ‘d’, REAL_SUB_LT] \\
+     MATCH_MP_TAC REAL_INV_GT1 >> simp [])
+ >> CONJ_ASM1_TAC
+ >- (qunabbrev_tac ‘d’ \\
+     Suff ‘0 < inv (e + 1)’ >- REAL_ARITH_TAC \\
+     MATCH_MP_TAC REAL_INV_POS \\
+     Q_TAC (TRANS_TAC REAL_LT_TRANS) ‘1’ >> simp [])
+ >> Q.X_GEN_TAC ‘y’
+ >> Q.PAT_X_ASSUM ‘!d. d < 1 ==> 1 - d = inv (inv (1 - d))’
+      (MP_TAC o Q.SPEC ‘d’)
+ >> impl_tac >- art []
+ >> Rewr'
+ >> Q.PAT_X_ASSUM ‘!d y. d < 1 ==> (inv (inv (1 - d)) < inv (1 + abs (r - y)) <=> _)’
+      (MP_TAC o Q.SPECL [‘d’, ‘y’])
+ >> impl_tac >- art []
+ >> Rewr'
+ >> Q.PAT_X_ASSUM ‘!d y. 1 + abs (r - y) < inv (1 - d) <=> _’
+      (MP_TAC o Q.SPECL [‘d’, ‘y’])
+ >> Rewr'
+ >> Q.PAT_X_ASSUM ‘!d. inv (1 - d) - 1 = e <=> _’ (MP_TAC o Q.SPEC ‘d’)
+ >> simp []
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -8591,42 +8955,11 @@ Proof
  >> MATCH_MP_TAC ext_limsup_thm >> art []
 QED
 
-Theorem lim_sequentially_add :
-    !f g l (m :extreal).
-       (!n. f n <> PosInf /\ f n <> NegInf) /\ l <> PosInf /\ l <> NegInf /\
-       (!n. g n <> PosInf /\ g n <> NegInf) /\ m <> PosInf /\ m <> NegInf /\
-       (f --> l) sequentially /\ (g --> m) sequentially ==>
-       ((\x. f(x) + g(x)) --> (l + m)) sequentially
-Proof
-    rpt STRIP_TAC
- >> qmatch_abbrev_tac ‘(h --> z) sequentially’
- >> Know ‘(h --> z) sequentially <=> (real o h --> real z) sequentially’
- >- (MATCH_MP_TAC extreal_lim_sequentially_eq \\
-     simp [Abbr ‘z’, add_real] \\
-    ‘?L. l = Normal L’ by METIS_TAC [extreal_cases] \\
-    ‘?M. m = Normal M’ by METIS_TAC [extreal_cases] \\
-     simp [extreal_add_def] \\
-     Q.EXISTS_TAC ‘0’ >> simp [] \\
-     Q.X_GEN_TAC ‘n’ \\
-     simp [Abbr ‘h’] \\
-    ‘?a. f n = Normal a’ by METIS_TAC [extreal_cases] \\
-    ‘?b. g n = Normal b’ by METIS_TAC [extreal_cases] \\
-     simp [extreal_add_def])
- >> Rewr'
- >> simp [Abbr ‘h’, Abbr ‘z’, add_real, o_DEF]
- >> HO_MATCH_MP_TAC real_topologyTheory.LIM_ADD
- >> ‘(\x. real (f x)) = real o f’ by rw [o_DEF, FUN_EQ_THM] >> POP_ORW
- >> ‘(\x. real (g x)) = real o g’ by rw [o_DEF, FUN_EQ_THM] >> POP_ORW
- >> Know ‘(real o f --> real l) sequentially <=> (f --> l) sequentially’
- >- (SYM_TAC \\
-     MATCH_MP_TAC extreal_lim_sequentially_eq >> simp [])
- >> Rewr'
- >> Know ‘(real o g --> real m) sequentially <=> (g --> m) sequentially’
- >- (SYM_TAC \\
-     MATCH_MP_TAC extreal_lim_sequentially_eq >> simp [])
- >> Rewr'
- >> simp []
-QED
+(* |- !f g l m.
+        (f --> l) sequentially /\ (g --> m) sequentially ==>
+        ((\x. f x + g x) --> (l + m)) sequentially
+ *)
+Theorem lim_sequentially_add = Q.ISPEC ‘sequentially’ EXTREAL_LIM_ADD
 
 Theorem lim_sequentially_sum :
     !f l s. FINITE s /\ (!i. i IN s ==> (f i --> l i) sequentially) /\
@@ -8657,15 +8990,6 @@ Proof
  >> ‘s DELETE e = s’ by rw [GSYM DELETE_NON_ELEMENT]
  >> simp []
  >> HO_MATCH_MP_TAC lim_sequentially_add >> simp []
- >> CONJ_TAC
- >- (Q.X_GEN_TAC ‘n’ \\
-     CONJ_TAC >| (* 2 subgoals *)
-     [ (* goal 1 (of 2) *)
-       MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF >> simp [],
-       (* goal 2 (of 2) *)
-       MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF >> simp [] ])
- >> CONJ_TAC >- (MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF >> simp [])
- >> CONJ_TAC >- (MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF >> simp [])
  >> ‘(\n. f e n) = f e’ by rw [FUN_EQ_THM] >> POP_ORW
  >> FIRST_X_ASSUM MATCH_MP_TAC >> simp []
 QED
@@ -8802,6 +9126,25 @@ Proof
  >> MATCH_MP_TAC REAL_LT_IMP_LE >> art []
 QED
 
+(* A function is "right-continuous" if it's right-continuous at every point.
+
+   NOTE: the requirement of mono-increasing is included since this version of
+  "right-continuous" definition only works on mono-increasing functions.
+
+   NOTE: The concept of "right-continuous" at points PosInf/NegInf is tricky,
+   and (may) not be true for all distribution functions, thus is excluded.
+ *)
+Definition right_continuous :
+    right_continuous (f :extreal -> extreal) <=>
+      (!x y. x <= y ==> f x <= f y) /\ !x. f right_continuous_at (Normal x)
+End
+
+(* |- !f. right_continuous f <=>
+         (!x y. x <= y ==> f x <= f y) /\ !x. inf {f x' | x < x'} = f (Normal x)
+ *)
+Theorem right_continuous_def =
+        right_continuous |> REWRITE_RULE [right_continuous_at]
+
 (* NOTE: This core lemma holds also for other shapes of intervals (not used) *)
 Theorem countable_disjoint_interval_lemma :
     !s. s = {interval (c,d) | c < d} /\ disjoint s ==> countable s
@@ -8842,12 +9185,6 @@ Proof
  >> NTAC 2 (Q.PAT_X_ASSUM ‘!a b. _’ K_TAC)
  >> simp [DISJOINT_ALT, OPEN_interval]
  >> Q.EXISTS_TAC ‘y’ >> art []
-QED
-
-Theorem IN_open_interval :
-    !a b x. x IN open_interval a b <=> a < x /\ x < b
-Proof
-    rw [open_interval_def]
 QED
 
 (* NOTE: It's surprising hard to prove such a simple and obvious statement *)
@@ -9548,7 +9885,7 @@ val _ = map (fn name => save_thm (name, DB.fetch "extreal_base" name))
        "real_def",
        "real_normal",
        "rdiv_eq",
-       "real_set_def",
+       "real_set_def", "real_set_empty",
        "rinv_uniq",
        "sqrt_0", "sqrt_1",
        "sqrt_le_n",

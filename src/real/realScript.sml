@@ -2654,6 +2654,17 @@ val REAL_INV_LT_ANTIMONO = store_thm
    THEN MATCH_MP_TAC REAL_LT_INV
    THEN RW_TAC boolSimps.bool_ss [REAL_INV_POS]);
 
+Theorem REAL_INV_GT1 :
+    !(x :real). 1 < x ==> inv x < 1
+Proof
+    rpt STRIP_TAC
+ >> ONCE_REWRITE_TAC [SYM REAL_INV1]
+ >> Suff ‘inv x < inv 1 <=> 1 < x’ >- RW_TAC std_ss []
+ >> MATCH_MP_TAC REAL_INV_LT_ANTIMONO
+ >> REWRITE_TAC [REAL_LT_01]
+ >> Q_TAC (TRANS_TAC REAL_LT_TRANS) ‘1’ >> art [REAL_LT_01]
+QED
+
 Theorem REAL_INV_INJ[simp]:   !x y : real. (inv x = inv y) <=> (x = y)
 Proof PROVE_TAC [REAL_INV_INV]
 QED
