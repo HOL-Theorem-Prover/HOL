@@ -116,9 +116,12 @@ fun CONJ_FORALL_ONCE_CONV t =
         in IMP_ANTISYM_RULE th1 th2
         end
    end
+   handle HOL_ERR _ => raise UNWIND_ERR "CONJ_FORALL_ONCE_CONV" ""
+(* TODO fix
    handle (e as HOL_ERR{origin_function = "CONJ_FORALL_ONCE_CONV",...})
           => raise e
         | HOL_ERR _ => raise UNWIND_ERR "CONJ_FORALL_ONCE_CONV" ""
+*)
 end;
 
 (*---------------------------------------------------------------------------*)

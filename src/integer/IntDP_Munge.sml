@@ -235,9 +235,12 @@ in
       LAND_CONV eliminate_nat_quants THENC
       RATOR_CONV (RATOR_CONV (RAND_CONV eliminate_nat_quants))
     else ALL_CONV
+end tm handle (e as HOL_ERR _) =>
+  raise ERR "eliminate_nat_quants" "Uneliminable natural number term remains"
+(* TODO fix
 end tm handle HOL_ERR {origin_function = "REWR_CONV", ...} =>
   raise ERR "IntDP_Munge" "Uneliminable natural number term remains"
-
+*)
 
 fun tacTHEN t1 t2 tm = let
   val (g1, v1) = t1 tm

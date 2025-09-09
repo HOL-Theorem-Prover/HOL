@@ -1,7 +1,8 @@
 signature Feedback =
 sig
-    type error_record = {origin_structure : string,
-                         origin_function  : string,
+    type origin = {origin_structure : string,
+                   origin_function  : string} list
+    type error_record = {origin : origin,
                          source_location  : locn.locn,
                          message          : string}
 
@@ -10,7 +11,6 @@ sig
     val mk_HOL_ERRloc     : string -> string -> locn.locn -> string -> exn
     val wrap_exn          : string -> string -> exn -> exn
     val wrap_exn_loc      : string -> string -> locn.locn -> exn -> exn
-    val set_origin_function : string -> error_record -> error_record
     val set_message       : string -> error_record -> error_record
 
     val emit_ERR          : bool ref
