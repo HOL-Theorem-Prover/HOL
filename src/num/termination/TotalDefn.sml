@@ -645,31 +645,40 @@ fun complain_about_rhsfvs srcfn V =
 
 local open Defn
   fun should_try_to_prove_termination defn rhs_frees =
-     let
-        val tcs = tcs_of defn
-     in
-        not(null tcs) andalso
-        null (op_intersect aconv (free_varsl tcs) rhs_frees)
-     end
+      let val tcs = tcs_of defn
+      in not(null tcs) andalso
+         null (op_intersect aconv (free_varsl tcs) rhs_frees)
+      end
   fun fvs_on_rhs V =
       if !allow_schema_definition then ()
       else complain_about_rhsfvs "defnDefine" V
-  val msg1 = "\nUnable to prove termination!\n\n\
-              \Try using \"TotalDefn.tDefine <name> <quotation> <tac>\".\n"
-  val msg2 = "\nThe termination goal has been set up using Defn.tgoal <defn>.\n\
-              \Solve the current proof goal (try e.g. p(), WF_REL_TAC).\n"
-  fun termination_proof_failed defn =
-     let
-        val s =
-           if !auto_tgoal
-              then (Defn.tgoal defn
-                    ; PP.prettyPrint
-                        (TextIO.print, !Globals.linewidth)
-                        (proofManagerLib.pp_proof (proofManagerLib.p()))
-                    ; if !Globals.interactive then msg2 else "")
-           else ""
+  fun msg1 defName locInfo = String.concat
+      ["\nUnable to automatically prove termination for\n\n  ",
+       defName, " at\n  ", locInfo, "\n"]
+  fun msg2 defName goalstring = String.concat
+    ["The termination goal for ", defName,"\n\n  ",
+     goalstring, "\n\n",
+     "has been created in the proof manager. Solve this goal\n",
+     "(try e.g. p(), WF_REL_TAC) and add the tactic to the\n",
+     "Termination block for the Definition, i.e.\n\n",
+     "  Definition ", defName, ":\n",
+     "    <eqns>\n",
+     "  Termination\n",
+     "    <tactic>\n",
+     "  End\n\n"]
+
+  fun termination_proof_failed loc defn =
+     let val defName = Defn.name_of defn
+         val locInfo = DB_dtype.thmsrcloc_toString loc
+         val _ = Defn.tgoal defn
+         val goalstring =
+               PP.pp_to_string (!Globals.linewidth)
+                     proofManagerLib.std_goal_pp (proofManagerLib.top_goal())
      in
-        raise ERR "defnDefine" (msg1 ^ s)
+       if not (!Globals.interactive) then
+          raise ERR "defnDefine" (msg1 defName locInfo^goalstring)
+       else
+          raise ERR "defnDefine" (msg1 defName locInfo ^ msg2 defName goalstring)
      end
   fun report_successful_candidate tm candidates =
       let val i = index_of (aconv tm) candidates
@@ -700,7 +709,7 @@ local open Defn
                  tprover defn
              ) handle HOL_ERR _ =>
                  (report_failure_of_candidates();
-                  termination_proof_failed defn))
+                  termination_proof_failed loc defn))
           else
             (defn,NONE)
     in
