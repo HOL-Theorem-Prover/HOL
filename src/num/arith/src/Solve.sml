@@ -18,10 +18,8 @@
 structure Solve :> Solve =
 struct
   open Arbint HolKernel boolLib;
-  open Arith_cons Term_coeffs RJBConv Theorems Thm_convs
+  open Arith_cons Term_coeffs Theorems Thm_convs
        Norm_arith Norm_ineqs Solve_ineqs;
-
-infix THENC;
 
 fun failwith function = raise (mk_HOL_ERR "Solve" function  "")
 
@@ -125,7 +123,7 @@ val neg_tm = boolSyntax.negation
 
 fun NEGATE_CONV conv tm =
  let val neg = is_neg tm
-     val th = RULE_OF_CONV conv (if neg then (dest_neg tm) else (mk_neg tm))
+     val th = QCONV conv (if neg then (dest_neg tm) else (mk_neg tm))
      val r = rhs (concl th)
      val truth_th =
         if is_T r then NOT_T_F else
@@ -167,7 +165,7 @@ fun DEPTH_FORALL_CONV conv tm =
 
 fun FORALL_ARITH_CONV tm =
  (reset_multiplication_theorems ();
-  RULE_OF_CONV
+  QCONV
   (DEPTH_FORALL_CONV
     (NEGATE_CONV
       ((fn tm => ARITH_FORM_NORM_CONV tm
