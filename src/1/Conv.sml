@@ -1607,7 +1607,7 @@ in
    fun X_FUN_EQ_CONV x tm =
       if not (is_var x)
          then err "first arg is not a variable"
-      else if op_mem aconv x (free_vars tm)
+      else if var_occurs x tm
          then err (#Name (dest_var x) ^ " is a free variable")
       else let
               val (ty, _) = with_exn dom_rng (type_of (lhs tm))
