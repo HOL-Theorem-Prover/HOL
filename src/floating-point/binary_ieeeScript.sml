@@ -4665,3 +4665,110 @@ Theorem float_is_zero_float_negate[simp]:
 Proof
   simp[float_is_zero_float_value_EQ0, float_negate]
 QED
+
+val _ = augment_srw_ss [realSimps.REAL_ARITH_ss]
+val _ = diminish_srw_ss [
+    "word arith", "word ground", "word logic", "word shift",
+    "word subtract", "words"
+  ]
+
+val _ = augment_srw_ss [
+    rewrites [w2n_n2w, WORD_AND_CLAUSES, n2w_11, WORD_ADD_0]
+  ]
+
+
+Theorem float_is_finite_next_hi:
+  2 ≤ precision(:β) ∧
+  float_is_finite (f:(α,β)float) ∧ abs (float_to_real f) < largest(:α#β) ⇒
+  float_is_finite (next_hi f)
+Proof
+  qspec_then ‘f.Significand’ (qx_choose_then ‘fS’ strip_assume_tac)
+             ranged_word_nchotomy >>
+  qspec_then ‘f.Exponent’ (qx_choose_then ‘fE’ strip_assume_tac)
+             ranged_word_nchotomy >>
+  simp[float_is_finite_def] >>
+  Cases_on ‘float_value f’ >> simp[] >>
+  ‘float_to_real f = r’ by fs[float_value_def, AllCaseEqs()] >>
+  simp[next_hi_def] >> Cases_on ‘n2w fS <₊ word_T’ >> simp[] >>
+  gs[float_value_def, AllCaseEqs(), word_T_def, dimword_def, UINT_MAX_def,
+     word_lo_n2w, WORD_LO_word_T, word_add_n2w, NOT_LESS] >> strip_tac >>
+  rw[] >>
+  rename [‘fE + 1 = 2 ** precision(:β) - 1’] >>
+  qpat_x_assum ‘abs (f2r f) < largest _’ mp_tac >>
+  simp[float_to_real_def, dimword_def] >> rw[] >> gvs[] >~
+  [‘1 = 2 ** _ - 1’]
+  >- gvs[DECIDE “1 ≤ x ⇒ (1n = x - 1 ⇔ x = 2)”] >>
+  simp[ABS_MUL, REAL_NOT_LT, largest_is_top, float_top_def,
+       float_to_real_def, GSYM n2w_sub, word_T_def, UINT_MAX_def,
+       dimword_def, ABS_INV, GSYM POW_ABS, ABS_REFL', REAL_LE_ADD] >>
+  ‘fE = 2 ** precision(:β) - 2’ by simp[] >> simp[] >>
+  ‘fS = 2 ** precision(:α) - 1’ by simp[] >> simp[]
+QED
+
+(*
+    1 ≤ 2 * 2 pow precision(:α) ⇒
+    (2 * 2 pow precision (:α) − 1 ≤
+        2 pow maxExp * (2 * 2 pow precision (:α) − 1) ⇔ ??????) *)
+
+
+Theorem abs_float_bounds:
+  2 ≤ precision(:β) ∧ float_is_finite f ⇒
+  f2r (float_abs (f:(α,β)float)) ≤ largest(:α#β)
+Proof
+  simp[float_abs_def, float_to_real_def, largest_def, UINT_MAX_def,
+       dimword_def] >> rw[] >>
+  qabbrev_tac ‘maxExp = 2n ** precision(:β) - 2’ >>
+  simp[REAL_SUB_LDISTRIB] >>
+  Cases_on ‘f.Significand’ >> gvs[dimword_def]
+  >- (irule REAL_LE_TRANS >> qexists ‘2 * 2 pow precision(:α) - 1’ >>
+      simp[] >>
+      ‘2 * (2 pow maxExp * 2 pow precision(:α)) - 2 pow maxExp =
+       2 pow maxExp * (2 * 2 pow precision(:α) - 1)’
+        by simp[REAL_SUB_LDISTRIB] >>
+      pop_assum SUBST1_TAC >>
+      conj_tac >- simp[REAL_OF_NUM_POW, GSYM realaxTheory.REAL_OF_NUM_SUB] >>
+      ‘1 ≤ 2 * 2 pow precision(:α)’ by simp[REAL_OF_NUM_POW] >>
+      ‘2 * 2 pow precision(:α) - 1 = 1 * (2 * 2 pow precision(:α) - 1)’
+        by simp[] >>
+      pop_assum (CONV_TAC o LAND_CONV o REWR_CONV) >>
+      irule REAL_LE_RMUL_IMP >> simp[POW_2_LE1]) >>
+  Cases_on ‘f.Exponent’ >> gvs[dimword_def] >>
+  rename [‘f.Significand = n2w fS’, ‘f.Exponent = n2w fE’] >>
+  simp[RealArith.REAL_ARITH “x * y - y * z:real = y * (x - z)”] >>
+  irule REAL_LE_TRANS >>
+  qexists ‘2 pow maxExp * (1 + &fS / 2 pow precision(:α))’ >>
+  simp[] >> conj_tac
+  >- (irule REAL_LE_RMUL_IMP >>
+      ‘fE ≤ maxExp’
+        by (simp[Abbr‘maxExp’] >>
+            gvs[float_is_finite_Exponent, word_T_def, UINT_MAX_def,
+                dimword_def]) >>
+      simp[REAL_POW_MONO, REAL_LE_ADD]) >>
+  simp[real_div] >>
+  simp[RealArith.REAL_ARITH “1 + x ≤ 2 - y ⇔ x + y ≤ 1r”,
+       RealArith.REAL_ARITH “x * y + y = (x+1) * y:real”] >>
+  simp[REAL_OF_NUM_POW]
+QED
+
+Theorem float_to_real_float_abs:
+  float_to_real (float_abs f) = abs (float_to_real f)
+Proof
+  simp[float_abs_def, float_to_real_def] >>
+  rw[ABS_MUL, ABS_INV, GSYM POW_ABS, REAL_LE_ADD]
+QED
+
+Theorem float_is_finite_float_value:
+  float_is_finite f ⇒ float_value f = Float (f2r f)
+Proof
+  simp[float_value_def, float_is_finite_Exponent]
+QED
+
+Theorem float_bounds:
+  2 <= precision (:β) ∧ float_value (a:(α,β)float) = Float r ⇒
+  -largest(:α # β) ≤ r ∧ r ≤ largest (:α # β)
+Proof
+  strip_tac >> ‘float_is_finite a’ by simp[float_is_finite_thm] >>
+  drule_all_then strip_assume_tac abs_float_bounds >>
+  gvs[float_to_real_float_abs] >>
+  drule_then assume_tac float_is_finite_float_value >> gvs[]
+QED
