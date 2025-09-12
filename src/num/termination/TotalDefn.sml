@@ -622,11 +622,12 @@ fun mk_term_tac() =
  ---------------------------------------------------------------------------*)
 
 fun reln_is_not_set defn =
- case Defn.reln_of defn
-  of NONE => false
-   | SOME R => is_var R;
+  case Defn.reln_of defn
+   of NONE => false
+    | SOME R => is_var R;
 
-fun proveTotal tac defn =  let val (WFR,rest) = get_WF (Defn.tcs_of defn)
+fun proveTotal tac defn =
+  let val (WFR,rest) = get_WF (Defn.tcs_of defn)
       val form = list_mk_conj(WFR::rest)
       val thm = Tactical.default_prover(form,tac)
   in
@@ -634,14 +635,11 @@ fun proveTotal tac defn =  let val (WFR,rest) = get_WF (Defn.tcs_of defn)
   end;
 
 fun complain_about_rhsfvs srcfn V =
-    let
-      val Vstr =
-          String.concat (Lib.commafy (map (Lib.quote o #1 o dest_var) V))
-    in
-      raise ERR srcfn
-            ("The following variables are free in the \nright hand side of\
-             \ the proposed definition: " ^ Vstr)
-    end
+  raise ERR srcfn
+      (String.concat
+       ["The following variables are free in the \n",
+        "right hand side of the proposed definition: ",
+        String.concatWith "," $ map (Lib.quote o #1 o dest_var) V])
 
 local open Defn
   fun should_try_to_prove_termination defn rhs_frees =
@@ -652,13 +650,26 @@ local open Defn
   fun fvs_on_rhs V =
       if !allow_schema_definition then ()
       else complain_about_rhsfvs "defnDefine" V
-  fun msg1 defName locInfo = String.concat
-      ["\nUnable to automatically prove termination for\n\n  ",
-       defName, " at\n  ", locInfo, "\n"]
+
+  fun msg1 defName thm_src_loc =
+    let open DB_dtype
+        val locstring =
+          case thm_src_loc of
+            Unknown => "unknown location"
+          | Located {scriptpath,linenum,exact} =>
+            String.concat
+              [String.toString scriptpath, ":",
+               Int.toString linenum,
+               if not exact then " (approx)" else ""]
+     in String.concat
+        ["\nUnable to automatically prove termination for\n\n  ",
+         defName, " at\n  ", locstring, "\n"]
+     end
+
   fun msg2 defName goalstring = String.concat
     ["\nThe termination goal for ", defName,"\n\n  ",
      goalstring, "\n\n",
-     "has been created in the proof manager. Solve this goal\n",
+     "has been created in the proof manager. Solve the goal\n",
      "(try e.g. p(), WF_REL_TAC) and add the tactic to the\n",
      "Termination block for the Definition, i.e.\n\n",
      "  Definition ", defName, ":\n",
@@ -669,7 +680,6 @@ local open Defn
 
   fun termination_proof_failed loc defn =
      let val defName = Defn.name_of defn
-         val locInfo = DB_dtype.thmsrcloc_toString loc
          val _ = Defn.tgoal defn
          val goalstring =  (* grab this in any case *)
              PP.pp_to_string (!Globals.linewidth)
@@ -679,9 +689,9 @@ local open Defn
                  else ()
      in
        if not (!Globals.interactive) then
-          raise ERR "defnDefine" (msg1 defName locInfo ^ goalstring)
+          raise ERR "defnDefine" (msg1 defName loc ^ goalstring)
        else
-          raise ERR "defnDefine" (msg1 defName locInfo ^ msg2 defName goalstring)
+          raise ERR "defnDefine" (msg1 defName loc ^ msg2 defName goalstring)
      end
   fun report_successful_candidate tm candidates =
       let val i = index_of (aconv tm) candidates
@@ -698,21 +708,22 @@ local open Defn
     let
        val V = params_of defn
        val _ = if not (null V) then fvs_on_rhs V else ()  (* can fail *)
-       val tprover = proveTotal (mk_term_tac())
-       fun try_proof defn Rcand = tprover (set_reln defn Rcand)
        val (defn',opt) =
-          if should_try_to_prove_termination defn V
-           then
-            ((if reln_is_not_set defn then  (* look for suitable term. reln *)
+          if should_try_to_prove_termination defn V then
+             let val tprover = proveTotal (mk_term_tac())
+                 fun try_proof Rcand = tprover (set_reln defn Rcand)
+             in
+              (if reln_is_not_set defn then  (* look for suitable term. reln *)
                  let val candidates = guessR defn
-                     val (cand,result) = trylist (try_proof defn) candidates
+                     val (cand,result) = trylist try_proof candidates
                      val () = report_successful_candidate cand candidates
                  in result end
-              else (* one is already installed, try to prove TCs *)
+               else (* one is already installed, try to prove TCs *)
                  tprover defn
-             ) handle HOL_ERR _ =>
-                 (report_failure_of_candidates();
-                  termination_proof_failed loc defn))
+              ) handle HOL_ERR _ =>
+                  (report_failure_of_candidates();
+                   termination_proof_failed loc defn)
+             end
           else
             (defn,NONE)
     in
