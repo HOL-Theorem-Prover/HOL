@@ -656,7 +656,7 @@ local open Defn
       ["\nUnable to automatically prove termination for\n\n  ",
        defName, " at\n  ", locInfo, "\n"]
   fun msg2 defName goalstring = String.concat
-    ["The termination goal for ", defName,"\n\n  ",
+    ["\nThe termination goal for ", defName,"\n\n  ",
      goalstring, "\n\n",
      "has been created in the proof manager. Solve this goal\n",
      "(try e.g. p(), WF_REL_TAC) and add the tactic to the\n",
@@ -671,12 +671,15 @@ local open Defn
      let val defName = Defn.name_of defn
          val locInfo = DB_dtype.thmsrcloc_toString loc
          val _ = Defn.tgoal defn
-         val goalstring =
-               PP.pp_to_string (!Globals.linewidth)
-                     proofManagerLib.std_goal_pp (proofManagerLib.top_goal())
+         val goalstring =  (* grab this in any case *)
+             PP.pp_to_string (!Globals.linewidth)
+                 proofManagerLib.std_goal_pp (proofManagerLib.top_goal())
+         val _ = if not (!auto_tgoal) then
+                    ignore $ proofManagerLib.drop ()
+                 else ()
      in
        if not (!Globals.interactive) then
-          raise ERR "defnDefine" (msg1 defName locInfo^goalstring)
+          raise ERR "defnDefine" (msg1 defName locInfo ^ goalstring)
        else
           raise ERR "defnDefine" (msg1 defName locInfo ^ msg2 defName goalstring)
      end
