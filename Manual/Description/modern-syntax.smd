@@ -76,7 +76,9 @@ The `Ancestors` and `Libs` components may be omitted.
 \index{Theory keyword@\ml{Theory} keyword}
 \index{special syntactic forms for scripts!Theory@\ml{Theory}}
 The name following the `Theory` keyword must match the name that precedes the `Script.sml` of the file-name, and must be a valid SML structure identifier.
-In some cases, such as when a theory is huge and the theorems not particularly interesting, it is possible to disable the generation of documentation in `<thyname>Theory.sig` by following the theory name with the `[no_sig_docs]` annotation.
+In some cases, such as when a theory is huge and the theorems not particularly interesting, it is possible to disable the generation of documentation in `<thyname>Theory.sig` by following the theory name with the `no_sig_docs` annotation.
+The other annotation possible in this position is `bare`, which is used to indicate that the theory is built with the minimal `hol.bare` executable (and won't be using the facilities in `bossLib`, for example).
+We expect this modifier should only be necessary for developers.
 
 \index{Ancestors keyword@\ml{Ancestors} keyword}
 \index{special syntactic forms for scripts!Ancestors@\ml{Ancestors}}
@@ -110,9 +112,11 @@ The `alias=`*ident* modifier does not make sense immediately after the `Ancestor
 it should only be used after individual theory or library names to establish aliases for just those names.
 
 --------------    -----  ---------------------
-⟨*theory*⟩         ::=   `Theory` ⟨*thyname*⟩
+⟨*theory*⟩         ::=   `Theory` ⟨*thyname*⟩⟨*build-mods*⟩^?^
                          (⟨*ancestors*⟩ | ⟨*libraries*⟩)^\*^
                          ⟨*thydecl*⟩^\*^
+⟨*build-mods*⟩     ::=   `[` ⟨*build-mod*⟩ (`,`⟨*build-mod*⟩)^\*^ `]`
+⟨*build-mod*⟩      ::=   `no_sig_docs`    |    `bare`
 ⟨*ancestors*⟩      ::=   `Ancestors` ⟨*thy-modifier*⟩^?^ ⟨*ancestor-spec*⟩^\*^
 ⟨*libraries*⟩      ::=   `Libs` ⟨*lib-modifier*⟩^?^ ⟨*lib-spec*⟩^\*^
 ⟨*ancestor-spec*⟩  ::=   ⟨*thyname*⟩ ⟨*thy-modifier*⟩^?^
@@ -213,10 +217,6 @@ The following describes the attributes listed above:
 
 :   Used with `Definition`.
     Specifies the name for a recursive function's induction theorem.
-
-    ```{=latex}
-    See Section~\ref{sec:inductive-relations} for more on how monotonicity results are used.
-    ```
 
 `inferior`
 
