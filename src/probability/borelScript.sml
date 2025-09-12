@@ -8752,6 +8752,108 @@ Proof
  >> rw [SUBSET_DEF] >> simp []
 QED
 
+(* NOTE: This proof is tedious but easy to work out, based on the existing
+   borel_measurable_real_set.
+ *)
+Theorem borel_measurable_image_real :
+    !s. s IN subsets Borel ==> IMAGE real s IN subsets borel
+Proof
+    rpt STRIP_TAC
+ >> Cases_on ‘PosInf IN s’ >> Cases_on ‘NegInf IN s’ (* 4 subgoals *)
+ >| [ (* goal 1 (of 4) *)
+      qabbrev_tac ‘t = s DIFF ({PosInf} UNION {NegInf})’ \\
+      Know ‘t IN subsets Borel’
+      >- (qunabbrev_tac ‘t’ \\
+          MATCH_MP_TAC SIGMA_ALGEBRA_DIFF >> rw [SIGMA_ALGEBRA_BOREL] \\
+          MATCH_MP_TAC SIGMA_ALGEBRA_UNION \\
+          simp [SIGMA_ALGEBRA_BOREL, BOREL_MEASURABLE_SETS]) >> DISCH_TAC \\
+     ‘PosInf NOTIN t /\ NegInf NOTIN t’ by ASM_SET_TAC [] \\
+     ‘s = t UNION {PosInf; NegInf}’ by ASM_SET_TAC [] >> POP_ORW \\
+      Know ‘IMAGE real (t UNION {PosInf; NegInf}) = real_set t UNION {0}’
+      >- (rw [Once EXTENSION, real_set_def] \\
+          EQ_TAC >> rw [] >> simp [] >| (* 3 subgoals left *)
+          [ (* goal 1.1 (of 3) *)
+            rename1 ‘y IN t’ \\
+           ‘y <> PosInf /\ y <> NegInf’ by METIS_TAC [] \\
+           ‘?r. y = Normal r’ by METIS_TAC [extreal_cases] \\
+            simp [] >> DISJ1_TAC \\
+            Q.EXISTS_TAC ‘y’ >> simp [],
+            (* goal 1.2 (of 3) *)
+            rename1 ‘y IN t’ \\
+           ‘?r. y = Normal r’ by METIS_TAC [extreal_cases] \\
+            simp [] \\
+            Q.EXISTS_TAC ‘y’ >> simp [],
+            (* goal 1.3 (of 3) *)
+            Q.EXISTS_TAC ‘PosInf’ >> simp [] ]) >> Rewr' \\
+      MATCH_MP_TAC SIGMA_ALGEBRA_UNION \\
+      simp [sigma_algebra_borel, borel_measurable_sets] \\
+      MATCH_MP_TAC borel_measurable_real_set >> art [],
+      (* goal 2 (of 4) *)
+      qabbrev_tac ‘t = s DIFF {PosInf}’ \\
+      Know ‘t IN subsets Borel’
+      >- (qunabbrev_tac ‘t’ \\
+          MATCH_MP_TAC SIGMA_ALGEBRA_DIFF >> rw [SIGMA_ALGEBRA_BOREL]) \\
+      DISCH_TAC \\
+     ‘PosInf NOTIN t /\ NegInf NOTIN t’ by ASM_SET_TAC [] \\
+     ‘s = t UNION {PosInf}’ by ASM_SET_TAC [] >> POP_ORW \\
+      Know ‘IMAGE real (t UNION {PosInf}) = real_set t UNION {0}’
+      >- (rw [Once EXTENSION, real_set_def] \\
+          EQ_TAC >> rw [] >> simp [] >| (* 3 subgoals left *)
+          [ (* goal 2.1 (of 3) *)
+            rename1 ‘y IN t’ \\
+           ‘y <> PosInf /\ y <> NegInf’ by METIS_TAC [] \\
+           ‘?r. y = Normal r’ by METIS_TAC [extreal_cases] \\
+            simp [] >> DISJ1_TAC \\
+            Q.EXISTS_TAC ‘y’ >> simp [],
+            (* goal 2.2 (of 3) *)
+            rename1 ‘y IN t’ \\
+           ‘?r. y = Normal r’ by METIS_TAC [extreal_cases] \\
+            simp [] >> Q.EXISTS_TAC ‘y’ >> simp [],
+            (* goal 2.3 (of 3) *)
+            Q.EXISTS_TAC ‘PosInf’ >> simp [] ]) >> Rewr' \\
+      MATCH_MP_TAC SIGMA_ALGEBRA_UNION \\
+      simp [sigma_algebra_borel, borel_measurable_sets] \\
+      MATCH_MP_TAC borel_measurable_real_set >> art [],
+      (* goal 3 (of 4) *)
+      qabbrev_tac ‘t = s DIFF {NegInf}’ \\
+      Know ‘t IN subsets Borel’
+      >- (qunabbrev_tac ‘t’ \\
+          MATCH_MP_TAC SIGMA_ALGEBRA_DIFF >> rw [SIGMA_ALGEBRA_BOREL]) \\
+      DISCH_TAC \\
+     ‘PosInf NOTIN t /\ NegInf NOTIN t’ by ASM_SET_TAC [] \\
+     ‘s = t UNION {NegInf}’ by ASM_SET_TAC [] >> POP_ORW \\
+      Know ‘IMAGE real (t UNION {NegInf}) = real_set t UNION {0}’
+      >- (rw [Once EXTENSION, real_set_def] \\
+          EQ_TAC >> rw [] >> simp [] >| (* 3 subgoals left *)
+          [ (* goal 3.1 (of 3) *)
+            rename1 ‘y IN t’ \\
+           ‘y <> PosInf /\ y <> NegInf’ by METIS_TAC [] \\
+           ‘?r. y = Normal r’ by METIS_TAC [extreal_cases] \\
+            simp [] >> DISJ1_TAC \\
+            Q.EXISTS_TAC ‘y’ >> simp [],
+            (* goal 3.2 (of 3) *)
+            rename1 ‘y IN t’ \\
+           ‘?r. y = Normal r’ by METIS_TAC [extreal_cases] \\
+            simp [] >> Q.EXISTS_TAC ‘y’ >> simp [],
+            (* goal 3.3 (of 3) *)
+            Q.EXISTS_TAC ‘NegInf’ >> simp [] ]) >> Rewr' \\
+      MATCH_MP_TAC SIGMA_ALGEBRA_UNION \\
+      simp [sigma_algebra_borel, borel_measurable_sets] \\
+      MATCH_MP_TAC borel_measurable_real_set >> art [],
+      (* goal 4 (of 4) *)
+      Know ‘IMAGE real s = real_set s’
+      >- (rw [Once EXTENSION, real_set_def] \\
+          EQ_TAC >> rw [] >> simp [] >| (* 2 subgoals left *)
+          [ (* goal 4.1 (of 2) *)
+            rename1 ‘y IN s’ \\
+           ‘y <> PosInf /\ y <> NegInf’ by METIS_TAC [] \\
+            Q.EXISTS_TAC ‘y’ >> simp [],
+            (* goal 4.2 (of 2) *)
+            rename1 ‘y IN t’ \\
+            Q.EXISTS_TAC ‘y’ >> simp [] ]) >> Rewr' \\
+      MATCH_MP_TAC borel_measurable_real_set >> art [] ]
+QED
+
 (* References:
 
   [1] Schilling, R.L.: Measures, Integrals and Martingales (Second Edition).

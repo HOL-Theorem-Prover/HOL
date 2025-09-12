@@ -7023,6 +7023,19 @@ Proof
  >> simp []
 QED
 
+(* NOTE: “|- Lipschitz_continuous_map (extreal_mr1,mr1) real” doesn't hold *)
+Theorem Lipschitz_continuous_map_normal :
+     Lipschitz_continuous_map (mr1,extreal_mr1) Normal
+Proof
+    rw [Lipschitz_continuous_map_def, GSYM dist_def, dist]
+ >> Q.EXISTS_TAC ‘1’ >> rw []
+ >> rw [extreal_mr1_normal]
+ >> MATCH_MP_TAC REAL_LE_LDIV
+ >> qabbrev_tac ‘z = abs (x - y)’
+ >> simp [REAL_LDISTRIB]
+ >> Q_TAC (TRANS_TAC REAL_LTE_TRANS) ‘1’ >> rw [Abbr ‘z’]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (*  Preliminary for Radon-Nikodym Theorem                                    *)
 (* ------------------------------------------------------------------------- *)

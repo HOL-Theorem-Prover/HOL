@@ -1683,6 +1683,13 @@ val SIGMA_ALGEBRA_ALT = store_thm
    >> Q.PAT_X_ASSUM `BIJ i j k` MP_TAC
    >> RW_TAC std_ss [BIJ_DEF, SURJ_DEF, IN_UNIV]);
 
+Theorem SIGMA_ALGEBRA_BIGUNION :
+    !a f. sigma_algebra a /\ (!n. f n IN subsets a) ==>
+          BIGUNION (IMAGE f univ(:num)) IN subsets a
+Proof
+    rw [SIGMA_ALGEBRA_ALT, IN_FUNSET]
+QED
+
 val SIGMA_ALGEBRA_ALT_MONO = store_thm
   ("SIGMA_ALGEBRA_ALT_MONO",
    ``!a.
@@ -2480,7 +2487,7 @@ Proof
          MATCH_MP_TAC disjointI \\
          NTAC 2 GEN_TAC >> SIMP_TAC std_ss [IN_IMAGE, IN_COUNT] \\
          rpt STRIP_TAC \\
-         rename [‘a ≠ b’, ‘a = f i ∩ f' i1’, ‘b = f i ∩ f' i2’] \\
+         rename [‘a <> b’, ‘a = f i INTER f' i1’, ‘b = f i INTER f' i2’] \\
          Cases_on `i1 = i2` >- (`a = b` by METIS_TAC []) \\
          ASM_REWRITE_TAC [DISJOINT_ALT] \\
          RW_TAC std_ss [IN_INTER] \\
@@ -2493,7 +2500,7 @@ Proof
          METIS_TAC []) \\
      RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_COUNT] \\
   (* f i INTER f' i' IN S *)
-     rename [‘f i ∩ g j ∈ S’] >>
+     rename [‘f i INTER g j IN S’] >>
      Know `(IMAGE f (count n)) SUBSET sts`
      >- (Q.PAT_X_ASSUM `BIGUNION (IMAGE f (count n)) IN S` MP_TAC \\
          Q.UNABBREV_TAC `S` >> SIMP_TAC std_ss [GSPECIFICATION] >> METIS_TAC []) \\
@@ -5851,6 +5858,15 @@ Proof
  >> Q.X_GEN_TAC ‘n’
  >> FIRST_X_ASSUM MATCH_MP_TAC
  >> Q.EXISTS_TAC ‘n’ >> art []
+QED
+
+Theorem SIGMA_ALGEBRA_BIGINTER :
+    !a f. sigma_algebra a /\ (!n. f n IN subsets a) ==>
+          BIGINTER (IMAGE f univ(:num)) IN subsets a
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_COUNTABLE_INTER
+ >> rw [image_countable, SUBSET_DEF] >> art []
 QED
 
 (* NOTE: The following overloads as variants of “countable” and “FINITE” are
