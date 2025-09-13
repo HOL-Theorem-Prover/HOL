@@ -40,7 +40,7 @@ fun COND_ABS_CONV tm =
       val th1 = INST_TYPE [alpha |-> type_of v, beta |-> type_of x] COND_ABS
       val th2 = SPECL [b,xf,yf] th1
   in  CONV_RULE (RATOR_CONV (RAND_CONV (ABS_CONV
-         (RATOR_CONV (RAND_CONV BETA_CONV) THENC RAND_CONV BETA_CONV) THENC
+         (BINOP_CONV BETA_CONV) THENC
          ALPHA_CONV v))) th2
   end
  ) handle (HOL_ERR _) => failwith "COND_ABS_CONV";
@@ -134,8 +134,8 @@ fun SUB_NORM_CONV' topp t =
       | (SOME("bool", "~"), 1) => RAND_CONV (SUB_NORM_CONV' (pneg topp))
       | (SOME("min", "==>"), 2) =>
         FORK_CONV (SUB_NORM_CONV' (pneg topp), SUB_NORM_CONV' topp)
-      | (SOME("bool", "!"), 1) => RAND_CONV (ABS_CONV (SUB_NORM_CONV' topp))
-      | (SOME("bool", "?"), 1) => RAND_CONV (ABS_CONV (SUB_NORM_CONV' topp))
+      | (SOME("bool", "!"), 1) => QUANT_CONV (SUB_NORM_CONV' topp)
+      | (SOME("bool", "?"), 1) => QUANT_CONV (SUB_NORM_CONV' topp)
       | (SOME("bool", "COND"), 3) =>
          BINOP_CONV (SUB_NORM_CONV' topp) THENC
          RATOR_CONV (RATOR_CONV (RAND_CONV (SUB_NORM_CONV' Both)))
@@ -167,9 +167,9 @@ end
 
 local
 val posc = REWR_CONV arithmeticTheory.SUB_ELIM_THM THENC
-           BINDER_CONV (BINOP_CONV (RAND_CONV BETA_CONV))
+           QUANT_CONV (BINOP_CONV (RAND_CONV BETA_CONV))
 val negc = REWR_CONV arithmeticTheory.SUB_ELIM_THM_EXISTS THENC
-           BINOP_CONV (BINDER_CONV (RAND_CONV BETA_CONV))
+           BINOP_CONV (QUANT_CONV (RAND_CONV BETA_CONV))
 val simplify = PURE_REWRITE_CONV [arithmeticTheory.ADD_CLAUSES,
                 arithmeticTheory.SUB_EQUAL_0,arithmeticTheory.SUB_0]
 in
@@ -181,9 +181,9 @@ fun find_elim sense p t m = let
     else NO_CONV
 in
   if is_exists t then
-    p (BINDER_CONV (find_elim false I (#2 (dest_exists t))))
+    p (QUANT_CONV (find_elim false I (#2 (dest_exists t))))
   else if is_forall t then
-    p (BINDER_CONV (find_elim true I (#2 (dest_forall t))))
+    p (QUANT_CONV (find_elim true I (#2 (dest_forall t))))
   else
     let
       val (f,x) = dest_comb t

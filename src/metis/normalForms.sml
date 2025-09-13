@@ -188,7 +188,7 @@ fun COMBIN_CONV ths =
       (case dest_term tm of
          CONST _ => ALL_CONV
        | VAR _ => ALL_CONV
-       | COMB _ => RATOR_CONV conv THENC RAND_CONV conv
+       | COMB _ => COMB_CONV conv
        | LAMB _ => ABS_CONV conv THENC mk_combin THENC conv) tm
   in
     conv
