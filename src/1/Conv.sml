@@ -900,10 +900,10 @@ in
          then raise ERR "EXISTS_AND_CONV"
                         ("`" ^ (#1 (dest_var Bvar)) ^
                          "` free in both conjuncts")
-      else let open Rsyntax
+      else let
               val (t1, t2) = CONJ_PAIR (ASSUME Body)
-              val econj1 = mk_exists {Bvar = Bvar, Body = conj1}
-              val econj2 = mk_exists {Bvar = Bvar, Body = conj2}
+              val econj1 = mk_exists (Bvar, conj1)
+              val econj2 = mk_exists (Bvar, conj2)
               val eP = if fQ then t1 else EXISTS (econj1, Bvar) t1
               and eQ = if fP then t2 else EXISTS (econj2, Bvar) t2
               val imp1 = DISCH tm (CHOOSE (Bvar, ASSUME tm) (CONJ eP eQ))
@@ -1039,7 +1039,7 @@ in
                            ("`" ^ (#1 (dest_var Bvar)) ^
                             "` free in both disjuncts")
          else
-            let open Rsyntax
+            let
                val disj1_thm = ASSUME disj1
                val disj2_thm = ASSUME disj2
                val thm1 = SPEC Bvar (ASSUME tm)
@@ -1054,7 +1054,7 @@ in
                                    disj2
                              val thm4 =
                                 DISJ2
-                                   (mk_forall {Bvar = Bvar, Body = disj1})
+                                   (mk_forall (Bvar, disj1))
                                    (ASSUME disj2)
                           in
                              DISCH tm
@@ -1070,7 +1070,7 @@ in
                                    (GEN Bvar (DISJ_CASES thm1 thm2 disj2_thm))
                              val thm4 =
                                 DISJ1 (ASSUME disj1)
-                                   (mk_forall {Bvar = Bvar, Body = disj2})
+                                   (mk_forall (Bvar, disj2))
                           in
                              DISCH tm
                                 (DISJ_CASES
@@ -1083,7 +1083,7 @@ in
                           DISCH tm (DISJ_CASES_UNION thm1 t1 t2)
                        end
                val otm = rand (concl imp1)
-               val {disj1, disj2} = dest_disj otm
+               val (disj1, disj2) = dest_disj otm
                val thm5 = (if fdisj1 orelse not fdisj2 then SPEC Bvar else I)
                           (ASSUME disj1)
                val thm6 = (if fdisj2 orelse not fdisj1 then SPEC Bvar else I)
@@ -1205,9 +1205,9 @@ local
    val FI_ERR = ERR "FORALL_IMP_CONV" "expecting `!x. P ==> Q`"
 in
    fun FORALL_IMP_CONV tm =
-      let open Rsyntax
-         val {Bvar, Body} = dest_forall tm handle HOL_ERR _ => raise FI_ERR
-         val {ant, conseq} = dest_imp Body handle HOL_ERR _ => raise FI_ERR
+      let
+         val (Bvar, Body) = dest_forall tm handle HOL_ERR _ => raise FI_ERR
+         val (ant, conseq) = dest_imp Body handle HOL_ERR _ => raise FI_ERR
          val fant = free_in Bvar ant
          and fconseq = free_in Bvar conseq
          val ant_thm = ASSUME ant
@@ -1215,11 +1215,11 @@ in
       in
          if fant andalso fconseq
             then raise ERR "FORALL_IMP_CONV"
-                           ("`" ^ (#Name (dest_var Bvar)) ^
+                           ("`" ^ (#1 (dest_var Bvar)) ^
                             "` free on both sides of `==>`")
          else if fant
             then let
-                    val asm = mk_exists {Bvar = Bvar, Body = ant}
+                    val asm = mk_exists (Bvar, ant)
                     val th1 =
                        CHOOSE (Bvar, ASSUME asm) (UNDISCH (SPEC Bvar tm_thm))
                     val imp1 = DISCH tm (DISCH asm th1)
@@ -1239,7 +1239,7 @@ in
                     IMP_ANTISYM_RULE (DISCH tm imp1) (DISCH cncl imp2)
                  end
          else let
-                 val asm = mk_exists {Bvar = Bvar, Body = ant}
+                 val asm = mk_exists (Bvar, ant)
                  val tmp = UNDISCH (SPEC Bvar tm_thm)
                  val th1 = GEN Bvar (CHOOSE (Bvar, ASSUME asm) tmp)
                  val imp1 = DISCH tm (DISCH asm th1)
@@ -1319,19 +1319,19 @@ local
    val EI_ERR = ERR "EXISTS_IMP_CONV" "expecting `?x. P ==> Q`"
 in
    fun EXISTS_IMP_CONV tm =
-   let open Rsyntax
-      val {Bvar, Body} = dest_exists tm handle HOL_ERR _ => raise EI_ERR
-      val {ant = P, conseq = Q} = dest_imp Body handle HOL_ERR _ => raise EI_ERR
+   let
+      val (Bvar, Body) = dest_exists tm handle HOL_ERR _ => raise EI_ERR
+      val (P, Q) = dest_imp Body handle HOL_ERR _ => raise EI_ERR
       val fP = free_in Bvar P
       and fQ = free_in Bvar Q
    in
       if fP andalso fQ
          then raise ERR "EXISTS_IMP_CONV"
-                        ("`" ^ (#Name (dest_var Bvar)) ^
+                        ("`" ^ (#1 (dest_var Bvar)) ^
                          "` free on both sides of `==>`")
       else if fP
          then let
-                 val allp = mk_forall {Bvar = Bvar, Body = P}
+                 val allp = mk_forall (Bvar, P)
                  val th1 = SPEC Bvar (ASSUME allp)
                  val thm1 = MP (ASSUME Body) th1
                  val imp1 =
@@ -1340,7 +1340,7 @@ in
                  val thm2 = EXISTS (tm, Bvar) (DISCH P (UNDISCH (ASSUME otm)))
                  val notP = mk_neg P
                  val notP_thm = ASSUME notP
-                 val nex = mk_exists {Bvar = Bvar, Body = notP}
+                 val nex = mk_exists (Bvar, notP)
                  val asm1 = EXISTS (nex, Bvar) notP_thm
                  val th2 = CCONTR P (MP (ASSUME (mk_neg nex)) asm1)
                  val th3 = CCONTR nex (MP (ASSUME (mk_neg allp)) (GEN Bvar th2))
@@ -1352,7 +1352,7 @@ in
               end
       else if fQ
          then let
-                 val thm1 = EXISTS (mk_exists {Bvar = Bvar, Body = Q}, Bvar)
+                 val thm1 = EXISTS (mk_exists (Bvar, Q), Bvar)
                                    (UNDISCH (ASSUME Body))
                  val imp1 = DISCH tm (CHOOSE (Bvar, ASSUME tm) (DISCH P thm1))
                  val thm2 = UNDISCH (ASSUME (rand (concl imp1)))
@@ -1366,8 +1366,8 @@ in
                  IMP_ANTISYM_RULE imp1 (DISCH (rand (concl imp1)) thm5)
               end
       else let
-              val eQ = mk_exists {Bvar = Bvar, Body = Q}
-              and aP = mk_forall {Bvar = Bvar, Body = P}
+              val eQ = mk_exists (Bvar, Q)
+              and aP = mk_forall (Bvar, P)
               val thm1 = EXISTS (eQ, Bvar) (UNDISCH (ASSUME Body))
               val thm2 = DISCH aP (PROVE_HYP (SPEC Bvar (ASSUME aP)) thm1)
               val imp1 = DISCH tm (CHOOSE (Bvar, ASSUME tm) thm2)
@@ -1457,7 +1457,6 @@ fun RIGHT_IMP_EXISTS_CONV tm =
  *----------------------------------------------------------------------*)
 
 local
-   open Rsyntax
    fun err s = raise ERR "X_SKOLEM_CONV" s
 in
    fun X_SKOLEM_CONV v =
@@ -1467,7 +1466,7 @@ in
          fn tm =>
            let
               val (xs, ex) = strip_forall tm
-              val ab as {Bvar, Body} =
+              val ab as (Bvar, Body) =
                  dest_exists ex
                  handle HOL_ERR _ => err "expecting `!x1...xn. ?y.tm`"
               val fx =
@@ -1475,12 +1474,12 @@ in
                  handle HOL_ERR _ => err "function variable has wrong type"
            in
               if free_in v tm
-                 then err ("`" ^ (#Name (dest_var v)) ^
+                 then err ("`" ^ (#1 (dest_var v)) ^
                            "` free in the input term")
               else let
                       val pat_bod =
                          list_mk_forall (xs, subst [Bvar |-> fx] Body)
-                      val pat = mk_exists {Bvar = v, Body = pat_bod}
+                      val pat = mk_exists (v, pat_bod)
                       val fnn = list_mk_abs (xs, mk_select ab)
                       val bth =
                          SYM (LIST_BETA_CONV (Term.list_mk_comb (fnn, xs)))
@@ -1832,17 +1831,16 @@ fun EXISTS_SIMP_CONV xt =
  *----------------------------------------------------------------------*)
 
 local
-   open Rsyntax
    fun mk_list_exists_thm ys xs t =
       let
          val thm1 =
             foldr (fn (v, thm) =>
-                     EXISTS (mk_exists {Bvar = v, Body = concl thm}, v) thm)
+                     EXISTS (mk_exists (v, concl thm), v) thm)
                   (ASSUME t) xs
          val (t', thm2) =
             foldr (fn (v, (t, thm)) =>
                      let
-                        val t' = mk_exists {Bvar = v, Body = t}
+                        val t' = mk_exists (v, t)
                      in
                         (t', CHOOSE (v, ASSUME t') thm)
                      end) (t, thm1) ys
@@ -2369,28 +2367,28 @@ end
  *-----------------------------------------------------------------------*)
 
 fun AC_CONV (associative, commutative) =
-   let open Rsyntax
+   let
       val opr = (rator o rator o lhs o snd o strip_forall o concl) commutative
-      val ty = (hd o #Args o dest_type o type_of) opr
-      val x = mk_var {Name = "x", Ty = ty}
-      and y = mk_var {Name = "y", Ty = ty}
-      and z = mk_var {Name = "z", Ty = ty}
-      val xy = mk_comb {Rator = mk_comb {Rator = opr, Rand = x}, Rand = y}
-      and yz = mk_comb {Rator = mk_comb {Rator = opr, Rand = y}, Rand = z}
-      and yx = mk_comb {Rator = mk_comb {Rator = opr, Rand = y}, Rand = x}
-      val comm = PART_MATCH I commutative (mk_eq {lhs = xy, rhs = yx})
+      val ty = (hd o #2 o dest_type o type_of) opr
+      val x = mk_var ("x", ty)
+      and y = mk_var ("y", ty)
+      and z = mk_var ("z", ty)
+      val xy = mk_comb (mk_comb (opr, x), y)
+      and yz = mk_comb (mk_comb (opr, y), z)
+      and yx = mk_comb (mk_comb (opr, y), x)
+      val comm = PART_MATCH I commutative (mk_eq (xy, yx))
       and ass =
          PART_MATCH I (SYM (SPEC_ALL associative))
-            (mk_eq {lhs = mk_comb {Rator = mk_comb {Rator = opr, Rand = xy},
-                                   Rand = z},
-                    rhs = mk_comb {Rator = mk_comb {Rator = opr, Rand = x},
-                                   Rand = yz}})
+            (mk_eq (mk_comb (mk_comb (opr, xy),
+                                   z),
+                    mk_comb (mk_comb (opr, x),
+                                   yz)))
       val asc = TRANS (SUBS [comm] (SYM ass)) (INST [y |-> x, x |-> y] ass)
 
       fun bubble head expr =
          let
-            val {Rator, Rand = r} = dest_comb expr
-            val {Rator = xopr, Rand = l} = dest_comb Rator
+            val (Rator, r) = dest_comb expr
+            val (xopr, l) = dest_comb Rator
          in
             if term_eq xopr opr
                then if term_eq l head
@@ -2400,22 +2398,22 @@ fun AC_CONV (associative, commutative) =
                     else let
                             val subb = bubble head r
                             val eqv =
-                               AP_TERM (mk_comb {Rator = xopr, Rand = l}) subb
-                            val {Rator, Rand = r'} =
-                               dest_comb (#rhs (dest_eq (concl subb)))
-                            val {Rator = yopr, Rand = l'} = dest_comb Rator
+                               AP_TERM (mk_comb (xopr, l)) subb
+                            val (Rator, r') =
+                               dest_comb (#2 (dest_eq (concl subb)))
+                            val (yopr, l') = dest_comb Rator
                          in
                             TRANS eqv (INST [x |-> l, y |-> l', z |-> r'] asc)
                          end
             else raise ERR "AC_CONV" "bubble"
          end
 
-      fun asce {lhs, rhs} =
+      fun asce (lhs, rhs) =
          if term_eq lhs rhs
             then REFL lhs
          else let
-                 val {Rator, Rand = r'} = dest_comb lhs
-                 val {Rator = zopr, Rand = l'} = dest_comb Rator
+                 val (Rator, r') = dest_comb lhs
+                 val (zopr, l') = dest_comb Rator
               in
                  if term_eq zopr opr
                     then let
@@ -2423,8 +2421,8 @@ fun AC_CONV (associative, commutative) =
                             val rt = boolSyntax.rhs (concl beq)
                          in
                             TRANS (AP_TERM
-                                      (mk_comb {Rator = opr, Rand = l'})
-                                      (asce {lhs = rand lhs, rhs = rand rt}))
+                                      (mk_comb (opr, l'))
+                                      (asce (rand lhs, rand rt)))
                                   (SYM beq)
                          end
                  else raise ERR "AC_CONV" "asce"
