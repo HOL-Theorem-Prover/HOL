@@ -676,7 +676,8 @@ Proof
         ‘?b. f x   = Normal b’ by METIS_TAC [extreal_cases] >> POP_ORW \\
          rw [extreal_sub_def, extreal_abs_def]) >> Rewr' \\
      RW_TAC std_ss [abs_abs, GSYM extreal_lt_eq] \\
-     Suff ‘Normal (real (abs (u i x - f x))) = abs (u i x - f x)’ >- RW_TAC std_ss [] \\
+     Suff ‘Normal (real (abs (u i x - f x))) = abs (u i x - f x)’
+     >- RW_TAC std_ss [] \\
      MATCH_MP_TAC normal_real \\
     ‘?a. u i x = Normal a’ by METIS_TAC [extreal_cases] >> POP_ORW \\
     ‘?b. f x   = Normal b’ by METIS_TAC [extreal_cases] >> POP_ORW \\
@@ -806,7 +807,8 @@ Theorem pos_fn_integral_distr :
               f IN measurable (m_space M, measurable_sets M) B /\
               u IN measurable B Borel /\
              (!x. x IN space B ==> 0 <= u x) ==>
-             (pos_fn_integral (space B,subsets B,distr M f) u = pos_fn_integral M (u o f))
+             (pos_fn_integral (space B,subsets B,distr M f) u =
+              pos_fn_integral M (u o f))
 Proof
     rpt STRIP_TAC
  >> ‘measure_space (space B,subsets B,distr M f)’ by PROVE_TAC [measure_space_distr]
@@ -840,18 +842,20 @@ Proof
           pos_fn_integral M (\x. sup (IMAGE (\n. fn_seq (space B,subsets B,distr M f)
                                                         u n (f x)) UNIV))’
  >- (MATCH_MP_TAC pos_fn_integral_cong >> ASM_SIMP_TAC std_ss [] \\
-     CONJ_TAC >- (rpt STRIP_TAC >> FIRST_X_ASSUM MATCH_MP_TAC \\
-                  Q.PAT_X_ASSUM ‘f IN measurable (m_space M,measurable_sets M) B’ MP_TAC \\
-                  rw [IN_MEASURABLE, IN_FUNSET]) \\
-     CONJ_TAC >- (rw [le_sup', IN_IMAGE, IN_UNIV] \\
-                  MATCH_MP_TAC le_trans \\
-                  Q.EXISTS_TAC ‘fn_seq (space B,subsets B,distr M f) u 0 (f x)’ \\
-                  reverse CONJ_TAC >- (POP_ASSUM MATCH_MP_TAC \\
-                                       Q.EXISTS_TAC ‘0’ >> REWRITE_TAC []) \\
-                  MATCH_MP_TAC lemma_fn_seq_positive \\
-                  FIRST_X_ASSUM MATCH_MP_TAC \\
-                  Q.PAT_X_ASSUM ‘f IN measurable (m_space M,measurable_sets M) B’ MP_TAC \\
-                  rw [IN_MEASURABLE, IN_FUNSET]) \\
+     CONJ_TAC
+     >- (rpt STRIP_TAC >> FIRST_X_ASSUM MATCH_MP_TAC \\
+         Q.PAT_X_ASSUM ‘f IN measurable (m_space M,measurable_sets M) B’ MP_TAC \\
+         rw [IN_MEASURABLE, IN_FUNSET]) \\
+     CONJ_TAC
+     >- (rw [le_sup', IN_IMAGE, IN_UNIV] \\
+         MATCH_MP_TAC le_trans \\
+         Q.EXISTS_TAC ‘fn_seq (space B,subsets B,distr M f) u 0 (f x)’ \\
+         reverse CONJ_TAC >- (POP_ASSUM MATCH_MP_TAC \\
+                              Q.EXISTS_TAC ‘0’ >> REWRITE_TAC []) \\
+         MATCH_MP_TAC lemma_fn_seq_positive \\
+         FIRST_X_ASSUM MATCH_MP_TAC \\
+         Q.PAT_X_ASSUM ‘f IN measurable (m_space M,measurable_sets M) B’ MP_TAC \\
+         rw [IN_MEASURABLE, IN_FUNSET]) \\
      rpt STRIP_TAC >> FIRST_X_ASSUM MATCH_MP_TAC \\
      Q.PAT_X_ASSUM ‘f IN measurable (m_space M,measurable_sets M) B’ MP_TAC \\
      rw [IN_MEASURABLE, IN_FUNSET]) >> Rewr'
@@ -1019,10 +1023,10 @@ Proof
  (* LHS simplification *)
  >> Know ‘pos_fn_integral (space B,subsets B,distr M f)
            (\x. SIGMA
-                  (\k. (\k x. &k / 2 pow N *
-                              indicator_fn
-                                {x | x IN space B /\ &k / 2 pow N <= u x /\
-                                     u x < (&k + 1) / 2 pow N} x) k x) (count (4 ** N))) =
+               (\k. (\k x. &k / 2 pow N *
+                           indicator_fn
+                          {x | x IN space B /\ &k / 2 pow N <= u x /\
+                               u x < (&k + 1) / 2 pow N} x) k x) (count (4 ** N))) =
           SIGMA (\k. pos_fn_integral (space B,subsets B,distr M f)
                       ((\k x. &k / 2 pow N *
                               indicator_fn
@@ -1187,10 +1191,10 @@ Proof
       MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_MINUS >> art [] ]
 QED
 
-Theorem pos_fn_integral_cong_measure :
+Theorem pos_fn_integral_cong_measure_old[local] :
     !sp sts u v f.
         measure_space (sp,sts,u) /\ measure_space (sp,sts,v) /\
-        (!s. s IN sts ==> (u s = v s)) /\ (!x. x IN sp ==> 0 <= f x) ==>
+        (!s. s IN sts ==> u s = v s) /\ (!x. x IN sp ==> 0 <= f x) ==>
         (pos_fn_integral (sp,sts,u) f = pos_fn_integral (sp,sts,v) f)
 Proof
     rw [pos_fn_integral_def]
@@ -1213,15 +1217,39 @@ Proof
       fs [positive_def] )
 QED
 
-Theorem pos_fn_integral_cong_measure' :
+Theorem pos_fn_integral_cong_measure :
+    !sp sts u v f.
+        measure_space (sp,sts,u) /\
+       (!s. s IN sts ==> u s = v s) /\ (!x. x IN sp ==> 0 <= f x) ==>
+        pos_fn_integral (sp,sts,u) f = pos_fn_integral (sp,sts,v) f
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC pos_fn_integral_cong_measure_old >> art []
+ >> MATCH_MP_TAC measure_space_eq
+ >> Q.EXISTS_TAC ‘(sp,sts,u)’ >> simp []
+QED
+
+Theorem pos_fn_integral_cong_measure_old'[local] :
     !m1 m2 f. measure_space m1 /\ measure_space m2 /\ measure_space_eq m1 m2 /\
              (!x. x IN m_space m1 ==> 0 <= f x) ==>
-             (pos_fn_integral m1 f = pos_fn_integral m2 f)
+              pos_fn_integral m1 f = pos_fn_integral m2 f
 Proof
     RW_TAC std_ss [measure_space_eq_def]
  >> MP_TAC (Q.SPECL [‘m_space m1’, ‘measurable_sets m1’, ‘measure m1’,
                      ‘measure m2’, ‘f’] pos_fn_integral_cong_measure)
  >> rw []
+QED
+
+Theorem pos_fn_integral_cong_measure' :
+    !m1 m2 f. measure_space m1 /\ measure_space_eq m1 m2 /\
+             (!x. x IN m_space m1 ==> 0 <= f x) ==>
+              pos_fn_integral m1 f = pos_fn_integral m2 f
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC pos_fn_integral_cong_measure_old' >> art []
+ >> MATCH_MP_TAC measure_space_eq
+ >> Q.EXISTS_TAC ‘m1’
+ >> fs [measure_space_eq_def]
 QED
 
 Theorem pos_fn_integral_distr_of :
@@ -1273,7 +1301,7 @@ Proof
  >> rw [FN_PLUS_POS, FN_MINUS_POS]
 QED
 
-Theorem integral_cong_measure :
+Theorem integral_cong_measure_old[local] :
     !sp sts u v f.
         measure_space (sp,sts,u) /\ measure_space (sp,sts,v) /\
        (!s. s IN sts ==> (u s = v s)) ==>
@@ -1282,17 +1310,38 @@ Proof
     PROVE_TAC [integral_cong_measure_base]
 QED
 
-Theorem integral_cong_measure' :
+Theorem integral_cong_measure :
+    !sp sts u v f.
+        measure_space (sp,sts,u) /\ (!s. s IN sts ==> u s = v s) ==>
+        integral (sp,sts,u) f = integral (sp,sts,v) f
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC integral_cong_measure_old >> art []
+ >> MATCH_MP_TAC measure_space_eq
+ >> Q.EXISTS_TAC ‘(sp,sts,u)’ >> simp []
+QED
+
+Theorem integral_cong_measure_old'[local] :
     !m1 m2 f. measure_space m1 /\ measure_space m2 /\ measure_space_eq m1 m2 ==>
              (integral m1 f = integral m2 f)
 Proof
     RW_TAC std_ss [measure_space_eq_def]
  >> MP_TAC (Q.SPECL [‘m_space m1’, ‘measurable_sets m1’, ‘measure m1’,
-                     ‘measure m2’, ‘f’] integral_cong_measure)
- >> rw []
+                     ‘measure m2’, ‘f’] integral_cong_measure) >> rw []
 QED
 
-Theorem integrable_cong_measure :
+Theorem integral_cong_measure' :
+    !m1 m2 f. measure_space m1 /\ measure_space_eq m1 m2 ==>
+              integral m1 f = integral m2 f
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC integral_cong_measure_old' >> art []
+ >> MATCH_MP_TAC measure_space_eq
+ >> Q.EXISTS_TAC ‘m1’
+ >> fs [measure_space_eq_def]
+QED
+
+Theorem integrable_cong_measure_old[local] :
     !sp sts u v f.
         measure_space (sp,sts,u) /\ measure_space (sp,sts,v) /\
        (!s. s IN sts ==> (u s = v s)) ==>
@@ -1301,15 +1350,35 @@ Proof
     PROVE_TAC [integral_cong_measure_base]
 QED
 
-(* NOTE: changed to use ‘measure_space_eq m1 m2’ *)
-Theorem integrable_cong_measure' :
+Theorem integrable_cong_measure :
+    !sp sts u v f.
+        measure_space (sp,sts,u) /\ (!s. s IN sts ==> (u s = v s)) ==>
+       (integrable (sp,sts,u) f <=> integrable (sp,sts,v) f)
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC integrable_cong_measure_old >> art []
+ >> MATCH_MP_TAC measure_space_eq
+ >> Q.EXISTS_TAC ‘(sp,sts,u)’ >> simp []
+QED
+
+Theorem integrable_cong_measure_old'[local] :
     !m1 m2 f. measure_space m1 /\ measure_space m2 /\ measure_space_eq m1 m2 ==>
              (integrable m1 f <=> integrable m2 f)
 Proof
     RW_TAC std_ss [measure_space_eq_def]
  >> MP_TAC (Q.SPECL [‘m_space m1’, ‘measurable_sets m1’, ‘measure m1’,
-                     ‘measure m2’, ‘f’] integrable_cong_measure)
- >> rw []
+                     ‘measure m2’, ‘f’] integrable_cong_measure) >> rw []
+QED
+
+Theorem integrable_cong_measure' :
+    !m1 m2 f. measure_space m1 /\ measure_space_eq m1 m2 ==>
+             (integrable m1 f <=> integrable m2 f)
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC integrable_cong_measure_old' >> art []
+ >> MATCH_MP_TAC measure_space_eq
+ >> Q.EXISTS_TAC ‘m1’
+ >> fs [measure_space_eq_def]
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -1710,7 +1779,7 @@ Theorem sigma_algebra_general_sigma :
 Proof
     RW_TAC std_ss [general_sigma_def]
  >> MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA
- >> RW_TAC std_ss [subset_class_def, IN_general_prod, GSPECIFICATION, IN_general_cross]
+ >> rw [subset_class_def, IN_general_prod, GSPECIFICATION, IN_general_cross]
  >> fs [subset_class_def]
  >> RW_TAC std_ss [SUBSET_DEF, IN_general_cross]
  >> qexistsl_tac [‘a'’, ‘b'’] >> art []

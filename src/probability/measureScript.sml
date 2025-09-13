@@ -116,9 +116,17 @@ val increasing_def = Define
      s IN measurable_sets m /\ t IN measurable_sets m /\ s SUBSET t ==>
      measure m s <= measure m t`;
 
-val measure_space_def = Define
-   `measure_space m <=>
-      sigma_algebra (m_space m, measurable_sets m) /\ positive m /\ countably_additive m`;
+Definition measure_space_def :
+    measure_space m <=>
+    sigma_algebra (m_space m, measurable_sets m) /\
+    positive m /\ countably_additive m
+End
+
+Theorem MEASURE_SPACE_COUNTABLY_ADDITIVE :
+    !m. measure_space m ==> countably_additive m
+Proof
+    PROVE_TAC [measure_space_def]
+QED
 
 (* ‘measurable_space m’ is the sigma_algebra of ‘measure_space m’ *)
 Overload measurable_space = “\m. (m_space m, measurable_sets m)”
