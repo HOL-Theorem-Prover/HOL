@@ -1246,28 +1246,28 @@ fun int_one_comp tm =
 fun mode1_immediate1 thumb m i =
   if thumb then
     (dp_opcode m,int_to_thumb2_mode1_immediate i)
-    handle HOL_ERR {message,origin_function,...} =>
+    handle HOL_ERR herr =>
       (dp_opcode (swap_opcode m),int_to_thumb2_mode1_immediate (int_one_comp i))
-         handle HOL_ERR _ => raise ERR origin_function message
+         handle HOL_ERR _ => raise ERR (function_of herr) (message_of herr)
   else
     (dp_opcode m,int_to_mode1_immediate i)
-    handle HOL_ERR {message,origin_function,...} =>
+    handle HOL_ERR herr =>
       (dp_opcode (swap_opcode m),int_to_mode1_immediate (int_one_comp i))
-         handle HOL_ERR _ => raise ERR origin_function message;
+         handle HOL_ERR _ => raise ERR (function_of herr) (message_of herr);
 
 fun mode1_immediate2 thumb m i =
   if thumb then
     (dp_opcode m,int_to_thumb2_mode1_immediate i)
-    handle HOL_ERR {message,origin_function,...} =>
+    handle HOL_ERR herr =>
       (dp_opcode (swap_opcode m),
        int_to_thumb2_mode1_immediate (intSyntax.mk_negated i))
-         handle HOL_ERR _ => raise ERR origin_function message
+         handle HOL_ERR _ => raise ERR (function_of herr) (message_of herr)
   else
     (dp_opcode m,int_to_mode1_immediate i)
-    handle HOL_ERR {message,origin_function,...} =>
+    handle HOL_ERR herr =>
       (dp_opcode (swap_opcode m),
        int_to_mode1_immediate (intSyntax.mk_negated i))
-         handle HOL_ERR _ => raise ERR origin_function message;
+         handle HOL_ERR _ => raise ERR (function_of herr) (message_of herr)
 
 fun mode1_register rm = mk_Mode1_register (mk_word5 0,mk_word2 0,rm);
 
@@ -1329,8 +1329,8 @@ val arm_parse_mode1_shift : term -> term M =
                  assertT (not shift32 orelse mem s [LSR_shift,ASR_shift])
                    ("arm_parse_mode1_shift", "cannot shift by 32")
                    (return (mk_Mode1_register (imm5,stype,rm)))
-               end handle HOL_ERR {message,...} =>
-                 other_errorT ("arm_parse_mode1_shift", message))
+               end handle HOL_ERR herr =>
+                 other_errorT ("arm_parse_mode1_shift", message_of herr))
             (fn _ =>
                arm_parse_register >>= (fn rs =>
                  return (mk_Mode1_register_shifted_register (rs,stype,rm))))
@@ -1373,14 +1373,14 @@ fun add_sub_literal m (rd,i) =
           assertT_thumb "add_sub_literal" q narrow_okay wide_okay
             (return (pick_enc true narrow_okay,
                mk_Add_Sub (mk_bool add,mk_word4 15,rd,imm12)))
-        end handle HOL_ERR {message,...} =>
-              other_errorT ("arm_parse_add_sub", message))
+        end handle HOL_ERR herr =>
+              other_errorT ("arm_parse_add_sub", message_of herr))
     else
       let val (opc,imm12) = mode1_immediate2 false m i in
         return (Encoding_ARM_tm,
           mk_Add_Sub (mk_bool (opc ~~ mk_word4 4),mk_word4 15,rd,imm12))
-      end handle HOL_ERR {message,...} =>
-            other_errorT ("arm_parse_add_sub", message));
+      end handle HOL_ERR herr =>
+            other_errorT ("arm_parse_add_sub", message_of herr));
 
 fun narrow_okay_imm m i (rd,rn) =
 let val v = sint_of_term i handle HOL_ERR _ => 1024 in
@@ -1445,8 +1445,8 @@ fun data_processing_immediate m (rd,rn,i) =
                 (return (enc,
                    mk_Data_Processing
                      (opc,sflag,rn,rd,mk_Mode1_immediate imm12)))
-            end handle HOL_ERR {message,...} =>
-              other_errorT ("data_processing_immediate", message)))
+            end handle HOL_ERR herr =>
+              other_errorT ("data_processing_immediate", message_of herr)))
         else
           assertT (m <> ORN)
             ("data_processing_immediate", "not a valid ARM instruction")
@@ -1477,8 +1477,8 @@ fun data_processing_register m (rd,rn,rm,mode1) =
           assertT_thumb "data_processing_register" q narrow_okay wide_okay
             (return (pick_enc true narrow_okay,
                mk_Data_Processing (dp_opcode m,sflag,rn,rd,mode1)))
-        end handle HOL_ERR {message,...} =>
-              other_errorT ("data_processing_register", message)))))
+        end handle HOL_ERR herr =>
+              other_errorT ("data_processing_register", message_of herr)))))
     else
       assertT (m <> ORN)
         ("data_processing_immediate", "not a valid ARM instruction")
@@ -1562,8 +1562,8 @@ fun move_test_immediate m (rdn,i) =
           assertT_thumb "move_test_immediate" q narrow_okay true
             (return (enc,
                mk_Data_Processing (opc,sflag,rn,rd,mk_Mode1_immediate imm12)))
-        end handle HOL_ERR {message,...} =>
-          other_errorT ("data_processing_immediate", message)))
+        end handle HOL_ERR herr =>
+          other_errorT ("data_processing_immediate", message_of herr)))
     else
       let val (opc,imm12) = mode1_immediate2 false m i
           val r0 = mk_word4 0
@@ -1596,8 +1596,8 @@ fun move_test_reg m (rdn,rm,mode1) =
           assertT_thumb "data_processing_register" q narrow_okay wide_okay
             (return (pick_enc true narrow_okay,
                mk_Data_Processing (dp_opcode m,sflag,rn,rd,mode1)))
-        end handle HOL_ERR {message,...} =>
-              other_errorT ("data_processing_register", message)))))
+        end handle HOL_ERR herr =>
+              other_errorT ("data_processing_register", message_of herr)))))
     else
       let val r0 = mk_word4 0
           val (rd,rn) = if mem m [MOV,MVN] then (rdn,r0) else (r0,rdn)
@@ -1640,7 +1640,7 @@ in
       (return (pick_enc thumb narrow_okay,
          mk_Data_Processing (dp_opcode MOV,sflag,rn,rd,
            mk_Mode1_register (imm5,shift_type m,rm)))))
-end handle HOL_ERR {message,...} => other_errorT ("shift_immediate", message);
+end handle HOL_ERR herr => other_errorT ("shift_immediate", message_of herr);
 
 fun shift_register m thumb q InITBlock sflag (rd,rn,rm) =
 let val narrow_okay = q <> Wide andalso rd ~~ rn andalso
@@ -1652,7 +1652,7 @@ in
    (return (pick_enc thumb narrow_okay,
       mk_Data_Processing (dp_opcode MOV,sflag,rn',rd,
         mk_Mode1_register_shifted_register (rm,shift_type m,rn))))
-end handle HOL_ERR {message,...} => other_errorT ("shift_register", message);
+end handle HOL_ERR herr => other_errorT ("shift_register", message_of herr);
 
 val arm_parse_mov_shift : instruction_mnemonic -> (term * term) M =
   fn m =>
@@ -1700,8 +1700,8 @@ val arm_parse_mov_halfword : term -> (term * term) M =
            arm_parse_constant >>= (fn i =>
            let val imm16 = uint_to_word ``:16`` i in
              return (enc,mk_Move_Halfword (high,rd,imm16))
-           end handle HOL_ERR {message,...} =>
-             other_errorT ("arm_parse_mov_halfword", message)))));
+           end handle HOL_ERR herr =>
+             other_errorT ("arm_parse_mov_halfword", message_of herr)))));
 
 val arm_parse_addw_subw : term -> (term * term) M =
   fn add =>
@@ -1720,8 +1720,8 @@ val arm_parse_addw_subw : term -> (term * term) M =
              val imm12 = uint_to_word ``:12`` i
          in
            return (Encoding_Thumb2_tm, mk_Add_Sub (add,rn,rd,imm12))
-         end handle HOL_ERR {message,...} =>
-           other_errorT ("arm_parse_addw_subw", message)))));
+         end handle HOL_ERR herr =>
+           other_errorT ("arm_parse_addw_subw", message_of herr)))));
 
 val arm_parse_adr : (term * term) M =
   arm_parse_register >>= (fn rd =>
@@ -1751,8 +1751,8 @@ val arm_parse_adr : (term * term) M =
             else
               other_errorT ("arm_parse_adr",
                  "bad register, unaligned or offset beyond permitted range")
-          end handle HOL_ERR {message,...} =>
-            other_errorT ("arm_parse_adr", message))
+          end handle HOL_ERR herr =>
+            other_errorT ("arm_parse_adr", message_of herr))
       else
         let open intSyntax
             val offset = eval (mk_minus(i, ``8i``))
@@ -1761,8 +1761,8 @@ val arm_parse_adr : (term * term) M =
           return (Encoding_ARM_tm,
             mk_Add_Sub (mk_bool (not (is_negated offset)),mk_word4 15,rd,
                         int_to_mode1_immediate absoffset))
-        end handle HOL_ERR {message, ...} =>
-          other_errorT ("arm_parse_adr", message))));
+        end handle HOL_ERR herr =>
+          other_errorT ("arm_parse_adr", message_of herr))));
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1793,8 +1793,8 @@ val arm_parse_branch_target : (term * term) M =
             (assertT_thumb "arm_parse_branch_target" q narrow_okay wide_okay
               (return (pick_enc true narrow_okay,
                  mk_Branch_Target (offset_to_imm24 (offset div 2)))))
-          end handle HOL_ERR {message,...} =>
-                other_errorT ("arm_parse_branch_target", message))
+          end handle HOL_ERR herr =>
+                other_errorT ("arm_parse_branch_target", message_of herr))
       else
         let val offset = sint_of_term i - 8 in
           assertT (offset mod 4 = 0)
@@ -1803,8 +1803,8 @@ val arm_parse_branch_target : (term * term) M =
                ("arm_parse_branch_target", "offset beyond permitted range")
                (return (Encoding_ARM_tm,
                   mk_Branch_Target (offset_to_imm24 (offset div 4)))))
-        end handle HOL_ERR {message,...} =>
-          other_errorT ("arm_parse_branch_target", message))));
+        end handle HOL_ERR herr =>
+          other_errorT ("arm_parse_branch_target", message_of herr))));
 
 val arm_parse_branch_link : (term * term) M =
   arm_parse_branch_offset >>= (fn i =>
@@ -1831,8 +1831,8 @@ val arm_parse_branch_link : (term * term) M =
                  (return (Encoding_Thumb2_tm,
                     mk_Branch_Link_Exchange_Immediate
                       (H,F,offset_to_imm24 (offset div 4)))))
-             end handle HOL_ERR {message,...} =>
-               other_errorT ("arm_parse_branch_link", message))))
+             end handle HOL_ERR herr =>
+               other_errorT ("arm_parse_branch_link", message_of herr))))
       else
         if is_var i then
           return (Encoding_ARM_tm,
@@ -1847,8 +1847,8 @@ val arm_parse_branch_link : (term * term) M =
               (return (Encoding_ARM_tm,
                 mk_Branch_Link_Exchange_Immediate
                   (F,T,offset_to_imm24 (offset div 4)))))
-          end handle HOL_ERR {message,...} =>
-            other_errorT ("arm_parse_branch_link", message)));
+          end handle HOL_ERR herr =>
+            other_errorT ("arm_parse_branch_link", message_of herr)));
 
 val arm_parse_branch_link_exchange : (term * term) M =
   need_v5 "arm_parse_branch_link_exchange"
@@ -1889,8 +1889,8 @@ val arm_parse_branch_link_exchange : (term * term) M =
                        (return (Encoding_Thumb2_tm,
                           mk_Branch_Link_Exchange_Immediate
                             (F,T,offset_to_imm24 (offset div 4)))))
-                   end handle HOL_ERR {message,...} =>
-                     other_errorT ("arm_parse_branch_link_exchange", message))))
+                   end handle HOL_ERR herr =>
+                     other_errorT ("arm_parse_branch_link_exchange", message_of herr))))
           else
             read_cond >>= (fn cond =>
               assertT (is_AL cond)
@@ -1913,9 +1913,9 @@ val arm_parse_branch_link_exchange : (term * term) M =
                         (return (Encoding_ARM_tm,
                            mk_Branch_Link_Exchange_Immediate
                              (H,F,offset_to_imm24 (offset div 4)))))
-                    end handle HOL_ERR {message,...} =>
+                    end handle HOL_ERR herr =>
                       other_errorT
-                        ("arm_parse_branch_link_exchange", message))))))));
+                        ("arm_parse_branch_link_exchange", message_of herr))))))));
 
 val arm_parse_bx : (term * term) M =
   thumb_or_arm_okay (fn enc =>
@@ -1958,8 +1958,8 @@ val arm_parse_cbz_cbnz : term -> (term * term) M =
                           mk_Compare_Branch (nonzero,
                             mk_word6 (Int.abs (offset div 2)),
                             mk_word3 (uint_of_word rn)))))
-                   end handle HOL_ERR {message,...} =>
-                     other_errorT ("arm_parse_cbz_cbnz", message)))))));
+                   end handle HOL_ERR herr =>
+                     other_errorT ("arm_parse_cbz_cbnz", message_of herr)))))));
 
 val arm_parse_clz : (term * term) M =
   need_v5 "arm_parse_clz"
@@ -2099,8 +2099,8 @@ val arm_parse_tbh : (term * term) M =
              (return (Encoding_Thumb2_tm,mk_Table_Branch_Byte (rn,T,rm))))
          else
            syntax_errorT ("#1","#" ^ term_to_string i)
-       end handle HOL_ERR {message,...} =>
-             other_errorT ("arm_parse_tbh", message)))));
+       end handle HOL_ERR herr =>
+             other_errorT ("arm_parse_tbh", message_of herr)))));
 
 val arm_parse_mul : (term * term) M =
   arm_parse_register >>= (fn rd =>
@@ -2321,8 +2321,8 @@ val arm_parse_pkh : term -> (term * term) M =
                                      uint_to_word ``:5`` i
                     in
                       return (enc,mk_Pack_Halfword (rn,rd,imm5,tbform,rm))
-                    end handle HOL_ERR {message,...} =>
-                      other_errorT ("arm_parse_pkh", message)))
+                    end handle HOL_ERR herr =>
+                      other_errorT ("arm_parse_pkh", message_of herr)))
                (fn _ =>
                  if is_T tbform then
                    return (enc,mk_Pack_Halfword (rm,rd,mk_word5 0,F,rn))
@@ -2351,8 +2351,8 @@ val arm_parse_mode2_shift : bool -> qualifier -> term -> term M =
                   assertT (0 <= v andalso v <= max)
                     ("arm_parse_mode2_shift", "shift out of range")
                     (return (mk_Mode2_register (imm5, stype, rm)))
-                end handle HOL_ERR {message,...} =>
-                  other_errorT ("arm_parse_mode2_shift", message)))))
+                end handle HOL_ERR herr =>
+                  other_errorT ("arm_parse_mode2_shift", message_of herr)))))
       (fn _ =>
         return (mk_Mode2_register (mk_word5 0, shift_to_word2 LSL_shift, rm)));
 
@@ -2423,8 +2423,8 @@ val arm_parse_mode2_offset :
                      (if ld then mk_Load else mk_Store)
                         (mk_bool indx,u,byte,w,unpriv,rn,rt,
                          mk_Mode2_immediate imm12)))
-             end handle HOL_ERR {message,...} =>
-               other_errorT ("arm_parse_mode2_offset", message)))
+             end handle HOL_ERR herr =>
+               other_errorT ("arm_parse_mode2_offset", message_of herr)))
         (fn _ =>
            arm_parse_plus_minus >>= (fn pos =>
            arm_parse_register >>= (fn rm =>
@@ -2504,8 +2504,8 @@ val arm_parse_mode2 : bool -> term -> (term * term) M =
                        (pick_enc thumb narrow_okay,
                         mk_Load (T,mk_bool (0 <= v andalso not (i ~~ ``-0i``)),
                                  byte,F,F,mk_word4 15,rt,mode2)))
-                end handle HOL_ERR {message,...} =>
-                  other_errorT ("arm_parse_mode2", message))
+                end handle HOL_ERR herr =>
+                  other_errorT ("arm_parse_mode2", message_of herr))
          end)))) >>= (fn result =>
     read_OutsideOrLastInITBlock >>= (fn OutsideOrLastInITBlock =>
       assertT (not (is_PC rt) orelse OutsideOrLastInITBlock)
@@ -2536,8 +2536,8 @@ val arm_parse_mode2_unpriv : bool -> term -> (term * term) M =
                          mk_Load (T,T,byte,F,T,rn,rt,mode2)
                        else
                          mk_Store (T,T,byte,F,T,rn,rt,mode2)))
-                end handle HOL_ERR {message,...} =>
-                  other_errorT ("arm_parse_mode2_unpriv", message))))
+                end handle HOL_ERR herr =>
+                  other_errorT ("arm_parse_mode2_unpriv", message_of herr))))
            (fn _ =>
               arm_parse_rsquare >>-
               tryT arm_parse_comma
@@ -2565,8 +2565,8 @@ val arm_parse_mode3_shift : bool -> qualifier -> term -> term M =
             arm_parse_constant >>= (fn i =>
               let val imm2 = uint_to_word ``:2`` i in
                 return (mk_Mode3_register (imm2, rm))
-              end handle HOL_ERR {message,...} =>
-                other_errorT ("arm_parse_mode3_shift", message))))
+              end handle HOL_ERR herr =>
+                other_errorT ("arm_parse_mode3_shift", message_of herr))))
       (fn _ => return (mode3_register rm));
 
 val arm_parse_mode3_offset :
@@ -2618,8 +2618,8 @@ val arm_parse_mode3_offset :
                       | NONE =>
                           mk_Store_Halfword (mk_bool indx,u,w,unpriv,rn,rt,
                             mk_Mode3_immediate imm12)))
-             end handle HOL_ERR {message,...} =>
-               other_errorT ("arm_parse_mode3_offset", message)))
+             end handle HOL_ERR herr =>
+               other_errorT ("arm_parse_mode3_offset", message_of herr)))
         (fn _ =>
            arm_parse_plus_minus >>= (fn pos =>
            arm_parse_register >>= (fn rm =>
@@ -2714,8 +2714,8 @@ val arm_parse_mode3 : (term * term) option -> (term * term) M =
                        mk_Load_Halfword (T,
                          mk_bool (0 <= v andalso not (i ~~ ``-0i``)),F,
                          signed,half,F,mk_word4 15,rt,mode3)))
-               end handle HOL_ERR {message,...} =>
-                 other_errorT ("arm_parse_mode3", message)
+               end handle HOL_ERR herr =>
+                 other_errorT ("arm_parse_mode3", message_of herr)
            end))))));
 
 val arm_parse_mode3_unpriv : (term * term) option -> (term * term) M =
@@ -2743,8 +2743,8 @@ val arm_parse_mode3_unpriv : (term * term) option -> (term * term) M =
                             mk_Load_Halfword (T,T,F,signed,half,T,rn,rt,mode3)
                         | NONE =>
                             mk_Store_Halfword (T,T,F,T,rn,rt,mode3)))
-                end handle HOL_ERR {message,...} =>
-                  other_errorT ("arm_parse_mode3_unpriv", message))))
+                end handle HOL_ERR herr =>
+                  other_errorT ("arm_parse_mode3_unpriv", message_of herr))))
            (fn _ =>
             arm_parse_rsquare >>-
             tryT arm_parse_comma
@@ -2765,8 +2765,8 @@ val arm_parse_mode3_unpriv : (term * term) option -> (term * term) M =
                              (return
                                (mk_bool (0 <= v andalso not (i ~~ ``-0i``)),
                                 mk_Mode3_immediate (mk_word12 (Int.abs v))))
-                         end handle HOL_ERR {message,...} =>
-                           other_errorT ("arm_parse_mode3_unpriv", message)))))
+                         end handle HOL_ERR herr =>
+                           other_errorT ("arm_parse_mode3_unpriv", message_of herr)))))
               (fn _ => return (T,mk_Mode3_immediate (mk_word12 0))) >>=
             (fn (add,tm) =>
                let val thumb = enc ~~ Encoding_Thumb2_tm
@@ -2803,8 +2803,8 @@ val arm_parse_mode3_dual_offset : bool -> (term * term) M =
                 "offset beyond permitted range (-255 to +255)")
                (return (mk_bool (0 <= offset andalso not (i ~~ ``-0i``)),
                   mk_Mode3_immediate (mk_word12 (Int.abs offset))))
-         end handle HOL_ERR {message,...} =>
-            other_errorT ("arm_parse_mode3_dual_offset", message))
+         end handle HOL_ERR herr =>
+            other_errorT ("arm_parse_mode3_dual_offset", message_of herr))
       (fn _ =>
         assertT (not thumb)
          ("arm_parse_mode3_dual_offset", "expecting a constant")
@@ -2880,8 +2880,8 @@ val arm_parse_mode3_dual : bool -> (term * term) M =
                               mk_Load_Dual
                                 (T,mk_bool (0 <= v andalso not (i ~~ ``-0i``)),
                                  F,mk_word4 15,rt,rt2,mode3)))
-                       end handle HOL_ERR {message,...} =>
-                         other_errorT ("arm_parse_mode3_dual", message)))))
+                       end handle HOL_ERR herr =>
+                         other_errorT ("arm_parse_mode3_dual", message_of herr)))))
          end))));
 
 (* ------------------------------------------------------------------------- *)
@@ -2906,8 +2906,8 @@ val arm_parse_ldrex : (term * term) M =
                    ("arm_parse_ldrex", "offset unaligned or out of range")
                    (return (enc,
                       mk_Load_Exclusive (rn,rt,mk_word8 (Int.abs (v div 4)))))
-               end handle HOL_ERR {message,...} =>
-                 other_errorT ("arm_parse_ldrex", message)))
+               end handle HOL_ERR herr =>
+                 other_errorT ("arm_parse_ldrex", message_of herr)))
           (fn _ =>
             arm_parse_rsquare >>-
              return (enc, mk_Load_Exclusive (rn,rt,mk_word8 0)))))));
@@ -2935,8 +2935,8 @@ val arm_parse_strex : (term * term) M =
                    (return (enc,
                       mk_Store_Exclusive
                         (rn,rd,rt,mk_word8 (Int.abs (v div 4)))))
-               end handle HOL_ERR {message,...} =>
-                 other_errorT ("arm_parse_strex", message)))
+               end handle HOL_ERR herr =>
+                 other_errorT ("arm_parse_strex", message_of herr)))
           (fn _ =>
             arm_parse_rsquare >>-
              return (enc, mk_Store_Exclusive (rn,rd,rt,mk_word8 0))))))));
@@ -3266,8 +3266,8 @@ val arm_parse_pld_pli : bool option -> (term * term) M =
                                         (mk_bool (0 <= v andalso
                                                   not (i ~~ ``-0i``)),
                                          rn,mode2)))
-                           end handle HOL_ERR {message,...} =>
-                             other_errorT ("arm_parse_pld_pli", message))
+                           end handle HOL_ERR herr =>
+                             other_errorT ("arm_parse_pld_pli", message_of herr))
                     (fn _ =>
                        let val thumb = enc ~~ Encoding_Thumb2_tm in
                          arm_parse_plus_minus >>= (fn pos =>
@@ -3327,8 +3327,8 @@ val arm_parse_pld_pli : bool option -> (term * term) M =
                                 (up,mk_bool wide,mk_word4 15,mode2)
                           | NONE =>
                               mk_Preload_Instruction (up,mk_word4 15,mode2)))
-                  end handle HOL_ERR {message,...} =>
-                    other_errorT ("arm_parse_mode3", message))))));
+                  end handle HOL_ERR herr =>
+                    other_errorT ("arm_parse_mode3", message_of herr))))));
 
 (* ------------------------------------------------------------------------- *)
 
@@ -3367,13 +3367,13 @@ val arm_parse_ssat_usat : bool -> (term * term) M =
                                  (return (enc,
                                     mk_Saturate (mk_bool unsigned,
                                       mk_word5 sat_imm,rd,imm5,sh,rn)))
-                             end handle HOL_ERR {message,...} =>
-                               other_errorT ("arm_parse_ssat_usat",message)))))
+                             end handle HOL_ERR herr =>
+                               other_errorT ("arm_parse_ssat_usat",message_of herr)))))
                    (fn _ =>
                      return (enc, mk_Saturate
                       (mk_bool unsigned,mk_word5 sat_imm,rd,mk_word5 0,F,rn)))))
-            end handle HOL_ERR {message,...} =>
-              other_errorT ("arm_parse_ssat_usat", message)))));
+            end handle HOL_ERR herr =>
+              other_errorT ("arm_parse_ssat_usat", message_of herr)))));
 
 val arm_parse_ssat16_usat16 : bool -> (term * term) M =
   fn unsigned =>
@@ -3392,8 +3392,8 @@ val arm_parse_ssat16_usat16 : bool -> (term * term) M =
                    return
                      (enc,mk_Saturate_16
                         (mk_bool unsigned,mk_word4 sat_imm,rd,rn))))
-            end handle HOL_ERR {message,...} =>
-              other_errorT ("arm_parse_ssat16_usat16", message)))));
+            end handle HOL_ERR herr =>
+              other_errorT ("arm_parse_ssat16_usat16", message_of herr)))));
 
 val arm_parse_ror248 : term M =
   arm_parse_string "ror" >>-
@@ -3405,8 +3405,8 @@ val arm_parse_ror248 : term M =
     | 24 => return (mk_word2 3)
     | _ => other_errorT ("arm_parse_ror248",
                          "shift must be 0, 8, 16 or 24"))
-   handle HOL_ERR {message,...} =>
-     other_errorT ("arm_parse_ror248", message));
+   handle HOL_ERR herr =>
+     other_errorT ("arm_parse_ror248", message_of herr));
 
 val arm_parse_sxtb_etc : instruction_mnemonic -> (term * term) M =
   fn m =>
@@ -3548,8 +3548,8 @@ val arm_parse_sbfx_etc : instruction_mnemonic -> (term * term) M =
                     | BFI  => mk_Bit_Field_Clear_Insert
                                 (mk_word5 (l + v),rd,lsb,rn)
                     | _ => raise ERR "arm_parse_sbfx_etc" "invalid mnemonic"))
-            end handle HOL_ERR {message,...} =>
-              other_errorT ("arm_parse_sbfx_etc", message)))))));
+            end handle HOL_ERR herr =>
+              other_errorT ("arm_parse_sbfx_etc", message_of herr)))))));
 
 local
   fun barrier_option s =
@@ -3654,8 +3654,8 @@ val arm_parse_msr : (term * term) M =
                 (arm_parse_constant >>= (fn i =>
                   let val imm12 = int_to_mode1_immediate i in
                     return (enc, mk_Immediate_to_Status (spsr,mask,imm12))
-                  end handle HOL_ERR {message,...} =>
-                 other_errorT ("arm_parse_msr", message)))))));
+                  end handle HOL_ERR herr =>
+                 other_errorT ("arm_parse_msr", message_of herr)))))));
 
 val arm_parse_cps : (term * term) M =
   need_v6 "arm_parse_cps"
@@ -3664,8 +3664,8 @@ val arm_parse_cps : (term * term) M =
        arm_parse_constant >>= (fn i =>
          let val imm5 = optionSyntax.mk_some (uint_to_word ``:5`` i) in
            return (enc,mk_Change_Processor_State (mk_word2 0,F,F,F,imm5))
-         end handle HOL_ERR {message,...} =>
-           other_errorT ("arm_parse_cps", message))));
+         end handle HOL_ERR herr =>
+           other_errorT ("arm_parse_cps", message_of herr))));
 
 fun cps_iflags s =
 let fun recurse [] x = x
@@ -3696,8 +3696,8 @@ val arm_parse_cpsie_cpsid : term -> (term * term) M =
               arm_parse_constant >>= (fn i =>
                 let val imm5 = optionSyntax.mk_some (uint_to_word ``:5`` i) in
                   return (false,imm5)
-                end handle HOL_ERR {message,...} =>
-                  other_errorT ("arm_parse_cpsie_cpsid", message)))
+                end handle HOL_ERR herr =>
+                  other_errorT ("arm_parse_cpsie_cpsid", message_of herr)))
            (fn _ => return (true,optionSyntax.mk_none ``:word5``)) >>=
          (fn (narrow_okay,mode) =>
             read_thumb >>= (fn thumb =>
@@ -3734,8 +3734,8 @@ val arm_parse_srs : term -> term -> (term * term) M =
                   arm_parse_constant >>= (fn i =>
                     let val imm5 = uint_to_word ``:5`` i in
                       return (enc, mk_Store_Return_State (p,inc,w,imm5))
-                    end handle HOL_ERR {message,...} =>
-                      other_errorT ("arm_parse_srs", message))))))));
+                    end handle HOL_ERR herr =>
+                      other_errorT ("arm_parse_srs", message_of herr))))))));
 
 val arm_parse_rfe : term -> term -> (term * term) M =
   fn p => fn inc =>
@@ -3761,13 +3761,13 @@ val arm_parse_svc : (term * term) M =
             ("arm_parse_svc", "narrow only with contant 0-255")
             (return (Encoding_Thumb_tm,
                mk_Supervisor_Call (uint_to_word ``:24`` i)))
-        end handle HOL_ERR {message,...} =>
-          other_errorT ("arm_parse_svc", message))
+        end handle HOL_ERR herr =>
+          other_errorT ("arm_parse_svc", message_of herr))
     else
       let val imm24 = uint_to_word ``:24`` i in
         return (Encoding_ARM_tm, mk_Supervisor_Call imm24)
-      end handle HOL_ERR {message,...} =>
-        other_errorT ("arm_parse_svc", message)));
+      end handle HOL_ERR herr =>
+        other_errorT ("arm_parse_svc", message_of herr)));
 
 val arm_parse_smc : (term * term) M =
   thumb2_or_arm_okay "arm_parse_smc"
@@ -3778,8 +3778,8 @@ val arm_parse_smc : (term * term) M =
            assertT OutsideOrLastInITBlock
              ("arm_parse_smc", "must be outside or last in IT block")
              (return (enc, mk_Secure_Monitor_Call imm4))
-         end handle HOL_ERR {message,...} =>
-           other_errorT ("arm_parse_smc", message))));
+         end handle HOL_ERR herr =>
+           other_errorT ("arm_parse_smc", message_of herr))));
 
 val arm_parse_bkpt : (term * term) M =
   need_v5 "arm_parse_bkpt"
@@ -3792,13 +3792,13 @@ val arm_parse_bkpt : (term * term) M =
                ("arm_parse_bkpt", "narrow only with contant 0-255")
                (return (Encoding_Thumb_tm,
                   mk_Breakpoint (uint_to_word ``:16`` i)))
-           end handle HOL_ERR {message,...} =>
-             other_errorT ("arm_parse_bkpt", message))
+           end handle HOL_ERR herr =>
+             other_errorT ("arm_parse_bkpt", message_of herr))
        else
          let val imm16 = uint_to_word ``:16`` i in
            return (Encoding_ARM_tm, mk_Breakpoint imm16)
-         end handle HOL_ERR {message,...} =>
-           other_errorT ("arm_parse_bkpt", message))));
+         end handle HOL_ERR herr =>
+           other_errorT ("arm_parse_bkpt", message_of herr))));
 
 val arm_parse_nop : (term * term) M =
   read_thumb >>= (fn thumb =>
@@ -3877,8 +3877,8 @@ val arm_parse_handler_branch_link : term -> (term * term) M =
         (arm_parse_constant >>= (fn i =>
           let val h = uint_to_word ``:8`` i in
             return (Encoding_ThumbEE_tm, mk_Handler_Branch_Link (link,h))
-          end handle HOL_ERR {message,...} =>
-            other_errorT ("arm_parse_handler_branch_link", message)))));
+          end handle HOL_ERR herr =>
+            other_errorT ("arm_parse_handler_branch_link", message_of herr)))));
 
 val arm_parse_handler_branch_parameter : (term * term) M =
   read_thumbee >>= (fn thumbee =>
@@ -3893,8 +3893,8 @@ val arm_parse_handler_branch_parameter : (term * term) M =
             val h = uint_to_word ``:5`` j
         in
           return (Encoding_ThumbEE_tm, mk_Handler_Branch_Parameter (imm3,h))
-        end handle HOL_ERR {message,...} =>
-          other_errorT ("arm_parse_handler_branch_parameter", message))))));
+        end handle HOL_ERR herr =>
+          other_errorT ("arm_parse_handler_branch_parameter", message_of herr))))));
 
 val arm_parse_handler_branch_link_parameter : (term * term) M =
   read_thumbee >>= (fn thumbee =>
@@ -3911,9 +3911,9 @@ val arm_parse_handler_branch_link_parameter : (term * term) M =
           return
             (Encoding_ThumbEE_tm,
              mk_Handler_Branch_Link_Parameter (imm5,h))
-        end handle HOL_ERR {message,...} =>
+        end handle HOL_ERR herr =>
           other_errorT
-            ("arm_parse_handler_branch_link_parameter", message))))));
+            ("arm_parse_handler_branch_link_parameter", message_of herr))))));
 
 (* ------------------------------------------------------------------------- *)
 
@@ -3942,16 +3942,16 @@ val arm_parse_ldc_stc : instruction_mnemonic -> (term * term) M =
                           (return
                              (F,mk_bool (0 <= v andalso not (i ~~ ``-0i``)),T,
                               mk_word8 (Int.abs (v div 4))))
-                      end handle HOL_ERR {message,...} =>
-                        other_errorT ("arm_parse_ldc_stc", message))
+                      end handle HOL_ERR herr =>
+                        other_errorT ("arm_parse_ldc_stc", message_of herr))
                    (fn _ =>
                       arm_parse_lbrace >>-
                       arm_parse_number >>= (fn i =>
                       arm_parse_rbrace >>-
                         let val imm8 = int_to_word ``:8`` i in
                           return (F,T,F,imm8)
-                        end handle HOL_ERR {message,...} =>
-                          other_errorT ("arm_parse_ldc_stc", message))))
+                        end handle HOL_ERR herr =>
+                          other_errorT ("arm_parse_ldc_stc", message_of herr))))
               (fn _ => return (T,T,F,mk_word8 0)))
          (fn _ =>
             arm_parse_comma >>-
@@ -3965,8 +3965,8 @@ val arm_parse_ldc_stc : instruction_mnemonic -> (term * term) M =
                    "offset not aligned or beyond permitted range (+/-1020)")
                   (return (T,mk_bool (0 <= v andalso not (i ~~ ``-0i``)),w,
                            mk_word8 (Int.abs (v div 4))))
-              end handle HOL_ERR {message,...} =>
-                other_errorT ("arm_parse_ldc_stc", message)))) >>=
+              end handle HOL_ERR herr =>
+                other_errorT ("arm_parse_ldc_stc", message_of herr)))) >>=
         (fn (p,u,w,imm8) =>
            return (enc,
             case m
@@ -3996,14 +3996,14 @@ val arm_parse_cdp : (term * term) M =
        (fn i =>
           let val imm3 = int_to_word ``:3`` i in
             return imm3
-          end handle HOL_ERR {message,...} =>
-            other_errorT ("arm_parse_cdp", message))
+          end handle HOL_ERR herr =>
+            other_errorT ("arm_parse_cdp", message_of herr))
        (fn _ => return (mk_word3 0)) >>= (fn opc2 =>
        let val imm4 = int_to_word ``:4`` opc1 in
          return (enc,
            mk_Coprocessor_Data_Processing (imm4,crn,crd,coproc,opc2,crm))
-       end handle HOL_ERR {message,...} =>
-         other_errorT ("arm_parse_cdp", message))))))));
+       end handle HOL_ERR herr =>
+         other_errorT ("arm_parse_cdp", message_of herr))))))));
 
 val arm_parse_mrc_mcr : instruction_mnemonic -> (term * term) M =
   fn m =>
@@ -4022,15 +4022,15 @@ val arm_parse_mrc_mcr : instruction_mnemonic -> (term * term) M =
          (fn i =>
             let val imm3 = int_to_word ``:3`` i in
               return imm3
-            end handle HOL_ERR {message,...} =>
-              other_errorT ("arm_parse_mrc_mcr", message))
+            end handle HOL_ERR herr =>
+              other_errorT ("arm_parse_mrc_mcr", message_of herr))
          (fn _ => return (mk_word3 0)) >>= (fn opc2 =>
          let val imm3 = int_to_word ``:3`` opc1
              val b = mk_bool (m = MRC orelse m = MRC2)
          in
            return (enc, mk_Coprocessor_Transfer (imm3,b,crn,rt,coproc,opc2,crm))
-         end handle HOL_ERR {message,...} =>
-           other_errorT ("arm_parse_mrc_mcr", message))))))));
+         end handle HOL_ERR herr =>
+           other_errorT ("arm_parse_mrc_mcr", message_of herr))))))));
 
 val arm_parse_mrrc_mcrr : instruction_mnemonic -> (term * term) M =
   fn m =>
@@ -4049,8 +4049,8 @@ val arm_parse_mrrc_mcrr : instruction_mnemonic -> (term * term) M =
              val b = mk_bool (m = MRRC orelse m = MRRC2)
          in
            return (enc, mk_Coprocessor_Transfer_Two (b,rt2,rt,coproc,imm4,crm))
-         end handle HOL_ERR {message,...} =>
-           other_errorT ("arm_parse_mrrc_mcrr", message)))))));
+         end handle HOL_ERR herr =>
+           other_errorT ("arm_parse_mrrc_mcrr", message_of herr)))))));
 
 (* ------------------------------------------------------------------------- *)
 

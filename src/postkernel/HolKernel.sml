@@ -183,7 +183,7 @@ fun list_mk_lbinop _ [] = raise ERR "list_mk_lbinop" "empty list"
 
 fun mk_binder c f (p as (Bvar, _)) =
    mk_comb (inst [alpha |-> type_of Bvar] c, mk_abs p)
-   handle HOL_ERR {message, ...} => raise ERR f message
+   handle HOL_ERR e => raise ERR f (message_of e)
 
 fun list_mk_fun (dtys, rty) = List.foldr op--> rty dtys
 
@@ -227,7 +227,7 @@ in
       in
          Term.list_mk_comb (Term.inst (Type.match_type tyl tyr) tm, xs)
       end
-      handle HOL_ERR {message, ...} => raise ERR "list_mk_icomb" message
+      handle HOL_ERR e => raise ERR "list_mk_icomb" (message_of e)
 
    fun syntax_fns
       {n: int, make: term -> 'a -> term, dest: term -> exn -> term -> 'b}

@@ -291,6 +291,8 @@ and GALPHA tm =
 (* --------------------------------------------------------------------- *)
 local val bool = genvar (Type.bool)
 
+val ILL_FORMED = ERR "MUTUAL_INDUCT_THEN" "ill-formed induction theorem"
+
 fun MUTUAL_INDUCT_THEN1 th =
    let val th' = REPAIR th
 (*
@@ -377,10 +379,12 @@ fun MUTUAL_INDUCT_THEN1 th =
       handle HOL_ERR _
        => raise ERR "MUTUAL_INDUCT_THEN" "tactic application error"
    end
-   handle (e as HOL_ERR
-                   {origin_structure = "Mutual",
-                    origin_function = "MUTUAL_INDUCT_THEN",...}) => raise e
-        | _ => raise ERR "MUTUAL_INDUCT_THEN" "ill-formed induction theorem"
+   handle (e as HOL_ERR herr) =>
+            if structure_of herr = "Mutual" andalso
+               function_of herr = "MUTUAL_INDUCT_THEN" then
+              raise e
+            else raise ILL_FORMED
+        | otherwise => raise ILL_FORMED
 
 in
 

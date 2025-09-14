@@ -43,10 +43,11 @@ val tydef_th = prove(
 val _ = tprint "new_type_definition error message"
 val _ =
     ignore (new_type_definition("mytydef", tydef_th))
-    handle HOL_ERR {origin_function, message, origin_structure, ...} =>
-           if origin_function <> "new_type_definition" orelse
-              origin_structure <> "Theory.Definition" orelse
-              message <> "at Thm.prim_type_definition:\nexpected a theorem of the form \"?x. P x\""
+    handle HOL_ERR herr =>
+           if function_of herr <> "new_type_definition" orelse
+              structure_of herr <> "Theory.Definition" orelse
+              message_of herr <>
+              "at Thm.prim_type_definition:\nexpected a theorem of the form \"?x. P x\""
            then
              die "FAILED"
            else OK()

@@ -1,11 +1,9 @@
-
 structure satTools = struct
 
 local
 
 open Lib boolLib Globals Parse Term Type Thm Drule Psyntax Conv Feedback
 open SatSolvers satCommonTools satTheory
-
 
 in
 
@@ -125,12 +123,12 @@ fun satCheck model t =
       DISCH mtm th4 (* |- l1 /\ ... /\ ln ==> t *)
    end
    handle Interrupt => raise Interrupt
-        | HOL_ERR {origin_function = "EQT_ELIM", ...} =>
-             if is_neg t
-                then UNDISCH (EQF_ELIM (REWRITE_CONV [] t))
-                     handle HOL_ERR _ => raise satCheckError
-             else raise satCheckError
-        |  _ => raise satCheckError;
+        | HOL_ERR herr =>
+            if function_of herr = "EQT_ELIM" andalso is_neg t then
+                 (UNDISCH (EQF_ELIM (REWRITE_CONV [] t))
+                  handle HOL_ERR _ => raise satCheckError)
+            else raise satCheckError
+        | otherwise => raise satCheckError;
 
 end
 end

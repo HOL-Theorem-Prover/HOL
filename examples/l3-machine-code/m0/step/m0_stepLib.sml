@@ -909,8 +909,10 @@ in
    val split_thumb2_pat = mk_thumb2_pair o dest_bool_list
    fun hex_to_bits s =
       hex_to_bits_16 s
-      handle HOL_ERR {message = "bad Bool list", ...} =>
-      hex_to_bits_16x2 s
+      handle HOL_ERR herr =>
+        if message_of herr = "bad Bool list" then
+           hex_to_bits_16x2 s
+        else raise HOL_ERR herr
    fun mk_opcode v =
       case Lib.total pairSyntax.dest_pair v of
          SOME (l, r) =>
@@ -1059,12 +1061,14 @@ in
          fn v =>
             let
                val l = dest_bool_list v
-                       handle e as HOL_ERR {message = "bad Bool list", ...} =>
-                        let
-                           val (l1, l2) = Lib.with_exn pairSyntax.dest_pair v e
-                        in
-                           dest_bool_list l1 @ dest_bool_list l2
-                        end
+                       handle (e as HOL_ERR herr) =>
+                        if message_of herr = "bad Bool list" then
+                           let
+                              val (l1, l2) = Lib.with_exn pairSyntax.dest_pair v e
+                           in
+                              dest_bool_list l1 @ dest_bool_list l2
+                           end
+                        else raise e
             in
                if List.length l <= 16
                   then check (v, "is a Thumb-2 prefix")
@@ -1189,10 +1193,12 @@ in
          val (thm, s) =
              (DecodeThumb,
               state_with_pcinc ``2w:word32`` :: fst (Term.match_term v1 pat))
-             handle HOL_ERR {message = "different constructors",
-                             origin_function = "raw_match_term", ...} =>
-             (DecodeThumb2,
-              state_with_pcinc ``4w:word32`` :: fst (Term.match_term v2 pat))
+             handle (e as HOL_ERR herr) =>
+                 if message_of herr = "different constructors" andalso
+                    function_of herr = "raw_match_term" then
+                     (DecodeThumb2,
+                     state_with_pcinc ``4w:word32`` :: fst (Term.match_term v2 pat))
+                 else raise e
       in
          rule (Thm.INST s thm)
       end
@@ -1443,8 +1449,10 @@ local
    val DecodeThumb2_tm = mk_arm_const "DecodeThumb2"
    fun mk_decode_thumb t =
       Term.list_mk_comb (DecodeThumb_tm, [t, pcinc2])
-      handle HOL_ERR {message = "incompatible types", ...} =>
-      Term.list_mk_comb (DecodeThumb2_tm, [t, pcinc4])
+      handle (e as HOL_ERR herr) =>
+        if message_of herr = "incompatible types" then
+           Term.list_mk_comb (DecodeThumb2_tm, [t, pcinc4])
+        else raise e
    val rewrites =
       [v2w_13_15_rwts,
        bitstringLib.v2n_CONV ``v2n [F;F;F;F;F]``,
@@ -1909,11 +1917,13 @@ in
               | l => (Parse.print_term tm
                       ; print "\n"
                       ; raise ERR "eval" "more than one valid step theorem"))
-            handle HOL_ERR {message = "not found",
-                            origin_function = "find_rw", ...} =>
-               raise (Parse.print_term tm
-                      ; print "\n"
-                      ; ERR "eval" "instruction instance not supported")
+            handle (e as HOL_ERR herr) =>
+               if message_of herr = "not found" andalso
+                  function_of herr = "find_rw" then
+                 raise (Parse.print_term tm
+                        ; print "\n"
+                        ; ERR "eval" "instruction instance not supported")
+              else raise e
       end
 end
 
@@ -1959,10 +1969,12 @@ in
                      (utilsLib.ALL_HYP_CONV_RULE (REWRITE_CONV ineq_hyps) thm2,
                       REWRITE_RULE ineq_hyps thm4)
                val r = get_state thm4
-                       handle HOL_ERR {origin_function = "dest_pair", ...} =>
-                         (Parse.print_thm thm4
-                          ; print "\n"
-                          ; raise ERR "eval_thumb" "failed to fully evaluate")
+                       handle (e as HOL_ERR herr) =>
+                         if function_of herr = "dest_pair" then
+                            (Parse.print_thm thm4
+                             ; print "\n"
+                             ; raise ERR "eval_thumb" "failed to fully evaluate")
+                         else raise e
                val thm5 = STATE_CONV (mk_proj_exception r)
                val thm = Drule.LIST_CONJ [thm1, thm2, thm3, thm4, thm5]
             in

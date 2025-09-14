@@ -92,8 +92,8 @@ fun test_counter (c:conv) tm = let
                          NONE
                        else
                          SOME "bad counterexample"
-                   | HOL_ERR {origin_function,...} =>
-                         SOME ("unexpected exception from " ^ origin_function)
+                   | HOL_ERR herr =>
+                         SOME ("unexpected exception from " ^ function_of herr)
 in
   tprint ("Counterexample: " ^ trunc 49 tm);
   case res of

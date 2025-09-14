@@ -1131,8 +1131,12 @@ fun pairf (stem, eqs0) =
        (tuple_args [(f, (stem', argtys))] eqs0, stem'name, untuple_args)
      end
  end
- handle e as HOL_ERR {message = "incompatible types", ...} =>
-   case move_arg eqs0 of SOME tm => pairf (stem, tm) | NONE => raise e
+ handle e as HOL_ERR herr =>
+   if message_of herr = "incompatible types" then
+      (case move_arg eqs0
+        of SOME tm => pairf (stem, tm)
+         | NONE => raise e)
+   else raise e
 
 (*---------------------------------------------------------------------------*)
 (* Abbreviation or prim. rec. definitions.                                   *)
@@ -1233,9 +1237,12 @@ fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
     in TotalDefn.
  ---------------------------------------------------------------------------*)
 
-fun holexnMessage (HOL_ERR {origin_structure,origin_function,source_location,message}) =
-      origin_structure ^ "." ^ origin_function ^
-      ":" ^ locn.toShortString source_location ^ ": " ^ message
+fun holexnMessage (HOL_ERR (HOL_ERROR recd)) =
+    let val {origin_structure,origin_function,source_location,message} = recd
+    in String.concat
+        [origin_structure, ".", origin_function, ":",
+         locn.toShortString source_location, ": ", message]
+    end
   | holexnMessage e = General.exnMessage e
 
 fun is_simple_arg t =

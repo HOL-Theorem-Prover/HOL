@@ -95,22 +95,22 @@ val _ = shouldfail {testfn = quietly (xHol_reln "tr"),
 
 val _ = tprint "Vacuous clause failure"
 val _ = if (Hol_reln `(!x. rel x Z) /\ (!x y. rel x y)` ; false)
-               handle HOL_ERR {message,...} =>
+               handle HOL_ERR herr =>
                       String.isSuffix
                           "Vacuous clause trivialises whole definition"
-                          message
+                          (message_of herr)
         then OK()
         else die "FAILED"
 
 val _ = shouldfail { testfn = quietly (xHol_reln "tr"),
                      printresult = (fn (th,_,_) => thm_to_string th),
                      printarg = K "Double implication should fail",
-                     checkexn = (fn(HOL_ERR{message,...}) =>
+                     checkexn = (fn(HOL_ERR herr) =>
                                    String.isSubstring "double implication"
-                                                      message
+                                                      (message_of herr)
                                 | _ => false) }
-                   ‘fib Z ONE /\ fib ONE ONE /\ !m r s. fib m r ==> fib (SUC m) s ==> fib (SUC (SUC m)) (r + s)’ 
-                 
+                   ‘fib Z ONE /\ fib ONE ONE /\ !m r s. fib m r ==> fib (SUC m) s ==> fib (SUC (SUC m)) (r + s)’
+
 (* isolate_to_front test cases *)
 val failcount = ref 0
 val _ = diemode := Remember failcount

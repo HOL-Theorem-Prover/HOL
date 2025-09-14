@@ -392,10 +392,12 @@ local
          val c = boolSyntax.mk_conj (f0, e1)
       in
          mlibUseful.INL (ties_to_even (boolSyntax.mk_imp (c, rx)))
-         handle HOL_ERR {origin_function = "EQT_ELIM", ...} =>
-           mlibUseful.INR
-              (conj_assoc_rule
-                 (ties_to_even (boolSyntax.mk_conj (c, boolSyntax.mk_neg rx))))
+         handle (e as HOL_ERR herr) =>
+           if function_of herr = "EQT_ELIM" then
+              mlibUseful.INR
+                (conj_assoc_rule
+                   (ties_to_even (boolSyntax.mk_conj (c, boolSyntax.mk_neg rx))))
+           else raise e
       end
    val lt_thm =
       Drule.MATCH_MP (REAL_ARITH ``(a <= b <=> F) ==> b < a: real``)

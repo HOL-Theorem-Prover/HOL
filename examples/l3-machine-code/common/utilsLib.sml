@@ -1211,9 +1211,11 @@ local
                            val l = buildAst thy (dom t)
                         in
                            List.map (fn x => Term.mk_comb (t, x)
-                           handle HOL_ERR {origin_function = "mk_comb", ...} =>
-                             (Parse.print_term t; print "\n";
-                              Parse.print_term x; raise ERR "buildAst" "")) l
+                           handle (e as HOL_ERR herr) =>
+                             if function_of herr = "mk_comb" then
+                                (Parse.print_term t; print "\n";
+                                 Parse.print_term x; raise ERR "buildAst" "")
+                             else raise e) l
                         end) n
       in
          t0 @ t1 @ List.concat n
