@@ -20,6 +20,8 @@ datatype hol_error =
       source_location  : locn.locn,
       message          : string}
 
+exception HOL_ERR of hol_error;
+
 (*---------------------------------------------------------------------------
     Projections
  ---------------------------------------------------------------------------*)
@@ -28,26 +30,6 @@ fun structure_of (HOL_ERROR {origin_structure,...}) = origin_structure
 fun function_of (HOL_ERROR {origin_function,...}) = origin_function
 fun location_of (HOL_ERROR {source_location,...}) = source_location
 fun message_of (HOL_ERROR {message,...}) = message
-
-exception HOL_ERR of hol_error
-
-fun format_err_recd {message, origin_function, origin_structure, source_location} =
-   String.concat
-      ["at ", origin_structure, ".", origin_function, ":\n",
-       case source_location of
-           locn.Loc_Unknown => ""
-         | _ => locn.toString source_location ^ ":\n",
-       message]
-
-fun format_hol_error(HOL_ERROR recd) = format_err_recd recd
-
-fun pp_hol_error (HOL_ERROR recd) =
-  let open HOLPP
-      val {origin_structure, origin_function, source_location, message} = recd
-  in block CONSISTENT 0
-      [add_string (origin_structure^"."^origin_function),add_string ":",NL,NL,
-       add_string message, NL,NL, add_string (locn.toString source_location)]
-  end
 
 (*---------------------------------------------------------------------------
      Curried version of HOL_ERR; can be more comfortable to use.
@@ -88,6 +70,31 @@ fun set_message msg (HOL_ERROR recd) =
        origin_function = origin_function,
        message = msg}
   end
+
+fun pp_hol_error (HOL_ERROR recd) =
+  let open HOLPP
+      val {origin_structure, origin_function, source_location, message} = recd
+  in block CONSISTENT 0
+      [add_string (origin_structure^"."^origin_function),add_string ":",
+       NL,NL, add_string message, NL,NL,
+       add_string (locn.toString source_location)]
+  end
+
+val _ =
+  let fun pp i _ e = pp_hol_error e
+  in PolyML.addPrettyPrinter pp
+  end
+
+fun format_err_recd
+    {message, origin_function, origin_structure, source_location} =
+   String.concat
+      ["at ", origin_structure, ".", origin_function, ":\n",
+       case source_location of
+           locn.Loc_Unknown => ""
+         | _ => locn.toString source_location ^ ":\n",
+       message]
+
+fun format_hol_error(HOL_ERROR recd) = format_err_recd recd
 
 val ERR = mk_HOL_ERR "Feedback"  (* local to this file *)
 
