@@ -1348,7 +1348,11 @@ local
         (case Redblackmap.peek (Lib.fst proof, id) of
           SOME (THEOREM thm) =>
             continuation ((state, proof), thm)
-        | SOME pt =>
+        | SOME pt => (
+            if !Library.trace > 2 then
+              Feedback.HOL_MESG ("HolSmtLib: replaying proof at ID " ^ Int.toString id)
+            else
+              ();
             thm_of_proofterm ((state, proof), pt) (continuation o
               (* update the proof, replacing the original proofterm with
                  the theorem just derived *)
@@ -1360,6 +1364,7 @@ local
                   else ();
                   ((state, (Redblackmap.insert (steps, id, THEOREM thm), vars)), thm)
                 )))
+        )
         | NONE =>
             raise ERR "thm_of_proofterm"
               ("proof has no proofterm for ID " ^ Int.toString id))

@@ -1945,11 +1945,13 @@ QED
 Theorem perfect_matching_as_1factor:
   ∀G A B M. gen_bipartite G A B ∧ perfect_matching G M ⇒ ∃G'. factor 1 G' G
 Proof
-  rw [perfect_matching_alt] >> drule_all_then strip_assume_tac matching_as_subgraph
-  >> qexists_tac ‘G'’ >> rw [factor_def, regular_def, degree_def]
-  >> first_x_assum $ drule_then strip_assume_tac >> gvs [matching_def]
-  >> irule SING_CARD_1 >> rw [SING_DEF] >> qexists_tac ‘e’
-  >> ASM_SET_TAC []
+  rw [perfect_matching_alt] >>
+  drule_all_then strip_assume_tac matching_as_subgraph >>
+  rename [‘G1 ⊆ G’] >>
+  qexists_tac ‘G1’ >> rw [factor_def, regular_def, degree_def] >>
+  first_x_assum $ drule_then strip_assume_tac >> gvs [matching_def] >>
+  irule SING_CARD_1 >> rw [SING_DEF] >>
+  ASM_SET_TAC []
 QED
 
 Theorem perfect_matching_between_nodes:

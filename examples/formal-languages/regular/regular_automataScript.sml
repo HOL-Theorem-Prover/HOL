@@ -1,14 +1,3 @@
-open HolKernel Parse boolLib bossLib;
-open combinTheory
-     listTheory
-     mp_then
-     nlistTheory
-     numpairTheory
-     pred_setTheory
-     relationTheory
-     rich_listTheory
-     arithmeticTheory;
-
 (* This material was first developed as part of a HOL reading group in a
    separate repository by
 
@@ -22,7 +11,12 @@ open combinTheory
    the Theory of Computation".                           [22 January 2024]
 *)
 
-val _ = new_theory "regular_automata";
+Theory regular_automata
+Ancestors
+ combin pair relation pred_set arithmetic
+ list rich_list numpair nlist
+Libs
+  mp_then
 
 (* a finite automaton is a 5-tuple of
      Q : set of states
@@ -2446,6 +2440,3 @@ Proof
   ‘EL (LENGTH s) ss = LAST ss’ suffices_by simp[] >>
   simp[LAST_EL, GSYM ADD1]
 QED
-
-
-val _ = export_theory();

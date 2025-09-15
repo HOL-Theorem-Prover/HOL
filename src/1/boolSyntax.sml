@@ -170,10 +170,10 @@ end (* local *)
 val is_eq           = can dest_eq
 val is_imp          = can dest_imp
 val is_imp_only     = can dest_imp_only
-val is_select       = can dest_select
-val is_forall       = can dest_forall
-val is_exists       = can dest_exists
-val is_exists1      = can dest_exists1
+val is_select       = is_binder select
+val is_forall       = is_binder universal
+val is_exists       = is_binder existential
+val is_exists1      = is_binder exists1
 val is_conj         = can dest_conj
 val is_disj         = can dest_disj
 val is_neg          = can dest_neg

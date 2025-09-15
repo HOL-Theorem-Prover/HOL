@@ -66,6 +66,13 @@ in
       end
 end
 
+fun is_binder c M =
+    let val (c1,abs) = dest_comb M
+    in
+       same_const c c1 andalso is_abs abs
+    end
+    handle HOL_ERR _ => false
+
 local
    fun dest M =
       let val (Rator, Rand) = dest_comb M in (dest_thy_const Rator, Rand) end

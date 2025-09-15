@@ -141,13 +141,14 @@ end;
  * The free variables of a lambda term. Tail recursive (from Ken Larsen).    *
  *---------------------------------------------------------------------------*)
 
-local fun FV (v as Fv _) A k   = k (Lib.insert v A)
-        | FV (Comb(f,x)) A k   = FV f A (fn q => FV x q k)
-        | FV (Abs(_,Body)) A k = FV Body A k
-        | FV (t as Clos _) A k = FV (push_clos t) A k
-        | FV _ A k = k A
+local fun FV ((v as Fv _)::t) A = FV t (Lib.insert v A)
+        | FV ((Comb(f,x))::t) A = FV (f::x::t) A
+        | FV ((Abs(_,Body))::t) A = FV (Body::t) A
+        | FV ((M as Clos _)::t) A = FV (push_clos M::t) A
+        | FV (_::t) A = FV t A
+        | FV [] A = A
 in
-fun free_vars tm = FV tm [] Lib.I
+fun free_vars tm = FV [tm] []
 end;
 
 (*---------------------------------------------------------------------------*
@@ -1005,21 +1006,6 @@ fun size acc tlist =
         | _ => size (1 + acc) ts
       end
 fun term_size t = size 0 [t]
-
-(*---------------------------------------------------------------------------*
- * Traverse a term, performing a given (side-effecting) operation at the     *
- * leaves. For our purposes, bound variables can be ignored.                 *
- *---------------------------------------------------------------------------*)
-
-fun trav f =
-  let fun trv (a as Fv _) = f a
-        | trv (a as Const _) = f a
-        | trv (Comb(Rator,Rand)) = (trv Rator; trv Rand)
-        | trv (Abs(Bvar,Body))   = (trv Bvar; trv Body)
-        | trv _ = ()
-  in
-    trv o norm_clos
-  end;
 
 (*---------------------------------------------------------------------------*
  *  Raw syntax prettyprinter for terms.                                      *

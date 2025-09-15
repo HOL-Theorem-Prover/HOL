@@ -3,9 +3,9 @@
    ------------------------------------------------------------------------ *)
 Theory binary_ieee
 Ancestors
-  words real intreal pred_set set_relation
+  words real intreal pred_set set_relation arithmetic
 Libs
-  wordsLib realLib
+  wordsLib realLib RealArith
 
 val _ = diminish_srw_ss ["RMULCANON","RMULRELNORM","NORMEQ"]
 
@@ -116,6 +116,12 @@ val float_is_finite_def = Define`
       case float_value x of
          Float _ => T
        | _ => F`
+
+Theorem float_is_finite_thm:
+  float_is_finite f ⇔ ∃r. float_value f = Float r
+Proof
+  simp[float_is_finite_def] >> Cases_on ‘float_value f’ >> simp[]
+QED
 
 val is_integral_def = Define `is_integral r = ?n. abs r = &(n:num)`
 
@@ -4185,3 +4191,584 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------ *)
+
+(* ----------------------------------------------------------------------
+    operations working over ulps
+   ---------------------------------------------------------------------- *)
+
+val _ = augment_srw_ss [realSimps.RMULRELNORM_ss, realSimps.RMULCANON_ss]
+
+Theorem abs_ULP[simp]:
+  abs (ULP(x,y)) = ULP(x,y)
+Proof
+  Cases_on ‘y’ >>
+  rw[ULP_def, ABS_REFL, real_div, REAL_POW_ADD, REAL_INV_MUL, REAL_LE_MUL,
+     POW_POS]
+QED
+
+Theorem abs_ulp[simp]:
+  abs (ulp (:α # β)) = ulp (:α # β)
+Proof
+  simp[ulp_def, ULP_def]
+QED
+
+Definition float_ulp_def:
+  float_ulp (f : (α,β)float) = ULP(f.Exponent, (:α))
+End
+
+Overload "ulpᶠ" = “float_ulp”
+
+Theorem float_ulp_negate[simp]:
+  ulpᶠ (float_negate f) = ulpᶠ f
+Proof
+  simp[float_ulp_def, float_components]
+QED
+
+Theorem float_ulp_updating_Significand[simp]:
+  ulpᶠ (f with Significand := (s:α word)) = ulpᶠ (f:(α,β)float)
+Proof
+  simp[float_ulp_def]
+QED
+
+Theorem float_ulp_updating_Sign[simp]:
+  ulpᶠ (f with Sign := s) = ulpᶠ f
+Proof
+  simp[float_ulp_def]
+QED
+
+Theorem ABS_REFL'[local]:
+  0 ≤ x ⇒ abs x = x
+Proof
+  metis_tac[ABS_REFL]
+QED
+
+fun NODP f ths = f (Excl "REAL_ARITH_DP"::ths)
+
+val ndps = NODP simp
+val ndpf = NODP fs
+val ndpr = NODP rw
+val ndpg = NODP gs
+Overload f2r[local] = “float_to_real”
+Overload sign[local] = “λa. -1 pow w2n a.Sign”
+
+
+val _ = augment_srw_ss [realSimps.REAL_ARITH_ss];
+Theorem zero_le_two_pow_inv[simp]:
+  0 ≤ inv (2 pow n)
+Proof
+  simp[REAL_LE_LT]
+QED
+
+
+Theorem abs_f2r_le_float_ulp_mono:
+  abs (f2r (x:(α,β)float)) ≤ abs (f2r (y:(α,β)float)) ⇒
+  ulpᶠ x ≤ ulpᶠ y
+Proof
+  simp[float_ulp_def, AllCaseEqs(), ULP_def] >> rw[] >>
+  simp[REAL_LE_RDIV_CANCEL] >> simp[REAL_OF_NUM_POW]
+  >- (Cases_on ‘y.Exponent’ >> gvs[dimword_def]) >>
+  gvs[ABS_MUL, ABS_INV, ABS_REFL', REAL_LE_ADD, REAL_LE_MUL,
+      float_to_real_def, real_div]
+  >- (Cases_on ‘x.Exponent’ >> gvs[dimword_def] >>
+      rename [‘x.Exponent = n2w xE’] >>
+      CCONTR_TAC >> gvs[NOT_LE] >> qpat_x_assum ‘_:real ≤ _’ mp_tac >>
+      simp[REAL_NOT_LE] >>
+      irule REAL_LTE_TRANS >> qexists‘2 pow xE * 2 pow precision(:α)’ >>
+      simp[REAL_LE_MUL] >>
+      Cases_on ‘y.Significand’ >> gvs[dimword_def, REAL_OF_NUM_POW] >>
+      irule LESS_TRANS >> qexists ‘2 * 2 ** precision(:α)’>> simp[]) >>
+  map_every Cases_on [‘x.Exponent’, ‘y.Exponent’] >> gvs[dimword_def] >>
+  CCONTR_TAC >> gvs[REAL_NOT_LE, NOT_LE] >> rename [‘yE :num < xE’] >>
+  qpat_x_assum ‘_ : real ≤ _’ mp_tac >> simp[REAL_NOT_LE] >>
+  irule REAL_LTE_TRANS >> qexists ‘2 pow xE’ >> simp[REAL_LE_MUL] >>
+  dxrule (iffLR LT_EXISTS) >> rw[REAL_POW_ADD, pow] >>
+  Cases_on ‘y.Significand’ >> gvs[dimword_def] >>
+  rename [‘y.Significand = n2w yS’] >>
+  ‘2 pow yE + &yS * 2 pow yE * inv (2 pow precision(:α)) =
+   2 pow yE * (1 + &yS * inv (2 pow precision(:α)))’ by simp[] >>
+  pop_assum SUBST1_TAC >> simp[REAL_POW_ADD] >>
+  irule REAL_LTE_TRANS >> qexists ‘2’ >>
+  simp[REAL_OF_NUM_POW, REAL_ARITH “1 + x < 2r ⇔ x < 1”]
+QED
+
+Definition next_hi_def:
+  next_hi (x:(τ, χ) float) =
+    if x.Significand <₊ UINT_MAXw
+    then x with Significand := (x.Significand + 1w)
+    else <| Sign        := x.Sign
+          ; Exponent    := x.Exponent + 1w
+          ; Significand := 0w
+          |>
+End
+
+Definition next_lo_def:
+  next_lo (x:(τ, χ) float) =
+    if 0w <₊ x.Significand
+    then x with Significand := (x.Significand - 1w)
+    else if 0w <₊ x.Exponent
+    then <| Sign        := x.Sign
+          ; Exponent    := x.Exponent - 1w
+          ; Significand := UINT_MAXw
+          |>
+    else x
+End
+
+Theorem next_lo_Sign[simp]:
+  (next_lo f).Sign = f.Sign
+Proof
+  rw[next_lo_def]
+QED
+
+Theorem next_hi_11[simp]:
+  next_hi f = next_hi g ⇔ f = g
+Proof
+  simp[next_hi_def, EQ_IMP_THM, word_T_def, AllCaseEqs(), UINT_MAX_def,
+       dimword_def] >>
+  map_every Cases_on [‘f.Significand’, ‘g.Significand’, ‘f.Exponent’,
+                      ‘g.Exponent’, ‘f.Sign’, ‘g.Sign’] >>
+  gvs[dimword_def, word_lo_n2w, dimindex_1] >>
+  simp[float_component_equality, dimword_def, dimindex_1] >>
+  rw[] >> gvs[word_add_n2w, dimword_def]
+QED
+
+Theorem next_lo0[simp]:
+  next_lo POS0 = POS0 ∧ next_lo NEG0 = NEG0
+Proof
+  simp[next_lo_def]
+QED
+
+Theorem zero_le_next_hi[simp]:
+  float_is_finite f ⇒
+  (0 ≤ f2r (next_hi f) ⇔ 0 ≤ f2r (f:(α,β)float) ∧ f ≠ NEG0)
+Proof
+  Cases_on ‘f.Significand’ >> Cases_on ‘f.Exponent’ >>
+  gvs[dimword_def, float_to_real_def, next_hi_def, word_T_def, UINT_MAX_def,
+      word_lo_n2w, float_minus_zero, word_add_n2w, float_is_finite_def,
+      float_value_def] >> rw[] >>
+  gvs[dimword_def, REAL_MUL_SIGN, GSYM REAL_LE_RNEG, REAL_OF_NUM_POW,
+      REAL_LE_ADD, REAL_LE_MUL] >>
+  Cases_on ‘EVEN (w2n f.Sign)’ >> gvs[] >>
+  Cases_on ‘f.Sign’ >>
+  gvs[dimword_def, dimindex_1, DECIDE “n < 2n ⇔ n = 0 ∨ n = 1”] >>~-
+  ([‘f ≠ <| Sign := _; Exponent := _; Significand := _ |> (* g *)’],
+   strip_tac >> gvs[]) >>
+  Cases_on ‘n = 0’ >> gvs[] >>
+  simp[float_component_equality]
+QED
+
+
+Theorem abs_sign_sub[local]:
+  abs (sign f * x1 * x2 - sign f * y1 * y2) =
+  abs (x1 * x2 - y1 * y2)
+Proof
+  qspec_then ‘f.Sign’ strip_assume_tac ranged_word_nchotomy >> simp[] >>
+  ‘x1 * x2 * -1 pow n - y1 * y2 * -1 pow n =
+   -1 pow n * (x1 * x2 - y1 * y2)’ by simp[] >> pop_assum SUBST1_TAC >>
+  simp[POW_M1, REAL_ABS_MUL]
+QED
+
+Theorem REAL_SUB'[local]:
+  n ≤ m ⇒ &(m - n) : real = &m - &n
+Proof
+  simp[REAL_SUB] >> rw[]
+QED
+
+Theorem abs_2pow[local,simp]:
+  abs (2 pow n) = 2 pow n
+Proof
+  simp[ABS_REFL]
+QED
+
+Theorem next_lo_difference:
+  ¬float_is_zero (f:(α,β)float) ∧ float_is_finite f ⇒
+  abs(float_to_real f - float_to_real (next_lo f)) = ulpᶠ (next_lo f)
+Proof
+  rw[next_lo_def, float_to_real_def] >> fs[] >>
+  rfs[abs_sign_sub, word_lo_n2w] >>
+  simp[REAL_ABS_MUL, GSYM REAL_SUB_LDISTRIB, real_div,
+       GSYM REAL_SUB_RDISTRIB, GSYM POW_ABS, ABS_INV, POW_NZ]
+  >- (simp[float_ulp_def, ULP_def] >>
+      qspec_then ‘f.Significand’ strip_assume_tac ranged_word_nchotomy >>
+      fs[word_lo_n2w, GSYM n2w_sub] >> simp[REAL_SUB] >>
+      simp[real_div, REAL_POW_ADD, REAL_INV_MUL, POW_INV, WORD_LITERAL_ADD])
+  >- gvs[float_is_zero, WORD_LO_word_0]
+  >- (qspec_then ‘f.Significand’ strip_assume_tac ranged_word_nchotomy >>
+      qspec_then ‘f.Exponent’ strip_assume_tac ranged_word_nchotomy >>
+      rename [‘f.Significand = n2w s’, ‘f.Exponent = n2w e’] >>
+      fs[word_lo_n2w, GSYM n2w_sub, WORD_LITERAL_ADD] >>
+      ‘e = 1’ by simp[] >> rw[float_ulp_def] >>
+      qmatch_abbrev_tac ‘abs (2 * (SF * B) - 2 * (Y1 * SF * B * Y2)) = _’ >>
+      ‘2 * (SF * B) - 2 * (Y1 * SF * B * Y2) = 2 * (SF * B) * (1 - Y1 * Y2)’
+        by simp[] >> pop_assum SUBST1_TAC >>
+      simp[REAL_ABS_MUL] >>
+      simp[Abbr‘B’, Abbr‘SF’, REAL_ABS_MUL, ABS_INV, POW_NZ, GSYM POW_ABS] >>
+      simp[ULP_def, real_div, REAL_POW_ADD, REAL_INV_MUL] >>
+      map_every Q.UNABBREV_TAC [‘Y1’, ‘Y2’] >>
+      simp[word_T_def, dimword_def, UINT_MAX_def, GSYM REAL_OF_NUM_POW,
+           REAL_SUB', REAL_SUB_LDISTRIB, REAL_SUB_SUB2, w2n_minus1])
+  >- (‘∀a b c:real. (a + b) - (a + c) = b - c’ by simp[] >> simp[] >>
+      simp[REAL_ABS_MUL, GSYM REAL_SUB_LDISTRIB, real_div,
+           GSYM REAL_SUB_RDISTRIB, ABS_INV, POW_NZ] >>
+      simp[float_ulp_def, ULP_def] >>
+      qspec_then ‘f.Significand’ strip_assume_tac ranged_word_nchotomy >>
+      fs[word_lo_n2w, GSYM n2w_sub] >> simp[REAL_SUB] >>
+      simp[real_div, REAL_POW_ADD, REAL_INV_MUL, WORD_LITERAL_ADD])
+  >- (qspec_then ‘f.Significand’ strip_assume_tac ranged_word_nchotomy >>
+      qspec_then ‘f.Exponent’ strip_assume_tac ranged_word_nchotomy >>
+      rename [‘f.Significand = n2w s’, ‘f.Exponent = n2w e’] >>
+      fs[word_lo_n2w, GSYM n2w_sub, WORD_LITERAL_ADD] >> ‘1 < e’ by simp[] >>
+      rw[w2n_minus1, float_ulp_def] >>
+      fs[word_lo_n2w, GSYM n2w_sub] >> simp[REAL_SUB] >>
+      simp[GSYM pow_inv_mul_invlt] >>
+      qmatch_abbrev_tac ‘
+       abs (SF * PF * BF - 1 / 2 * (SF * PF * BF * GROSS)) =
+       ULP (n2w (e-1), (:α))
+      ’ >>
+      ‘SF * PF * BF - 1 / 2 * SF * PF * BF * GROSS =
+       SF * PF * BF * (1 - 1 / 2 * GROSS)’ by simp[] >>
+      pop_assum SUBST1_TAC >> simp[REAL_ABS_MUL] >>
+      simp[Abbr‘BF’, Abbr‘SF’, Abbr‘PF’, ABS_INV, POW_NZ, GSYM POW_ABS] >>
+      simp[Abbr‘GROSS’, word_T_def, UINT_MAX_def, ULP_def, dimword_def,
+           REAL_SUB', GSYM REAL_OF_NUM_POW, REAL_SUB_LDISTRIB,
+           REAL_LDISTRIB, REAL_POW_ADD] >>
+      ‘∀x y. 1/2 * y + (1/2 * y - x) = y - x’
+        by simp[REAL_INV_1OVER, REAL_DOUBLE,
+                REAL_ARITH “(x:real) + (y - z) = x + y - z”] >>
+      simp[REAL_SUB_SUB2, REAL_ABS_MUL, ABS_INV, GSYM POW_ABS] >>
+      fs[dimword_def] >>
+      simp[GSYM pow_inv_mul_invlt] >> REWRITE_TAC [real_div] >>
+      simp[REAL_INV_MUL, POW_INV, w2n_minus1])
+  >- gvs[WORD_LO_word_0, float_is_zero]
+QED
+
+Theorem next_hilo:
+  ¬float_is_zero f ∧ float_is_finite f ⇒ next_hi (next_lo f) = f
+Proof
+  qspec_then ‘f.Significand’ (qx_choose_then ‘fS’ strip_assume_tac)
+             ranged_word_nchotomy >>
+  qspec_then ‘f.Exponent’ (qx_choose_then ‘fE’ strip_assume_tac)
+             ranged_word_nchotomy >>
+  rw[next_hi_def, next_lo_def, float_to_real_def] >> fs[] >>
+  gs[abs_sign_sub, word_lo_n2w, dimword_def, GSYM n2w_sub, word_T_def,
+     UINT_MAX_def]
+  >- (fs[word_lo_n2w, GSYM n2w_sub, word_add_n2w] >>
+      simp[float_component_equality])
+  >- gs[float_is_zero]
+  >- (fs[word_lo_n2w, GSYM n2w_sub, word_add_n2w] >>
+      simp[float_component_equality]) >>
+  Cases_on ‘0 < fS’ >> gvs[dimword_def] >>
+  Cases_on ‘0 < fE’ >> gvs[dimword_def]
+QED
+
+Theorem float_is_finite_Exponent:
+  float_is_finite f ⇔ f.Exponent ≠ UINT_MAXw
+Proof
+  simp[float_is_finite_def, float_value_def] >> rw[]
+QED
+
+
+
+(* note strange behaviour of next_hi on float_top, and correspondingly,
+   strange behaviour of next_lo on the NAN with a significand of all ones
+ *)
+Theorem next_lohi:
+  float_is_finite (f:(τ,χ)float) ⇒ next_lo (next_hi f) = f
+Proof
+  qspec_then ‘f.Significand’ (qx_choose_then ‘fS’ strip_assume_tac)
+             ranged_word_nchotomy >>
+  qspec_then ‘f.Exponent’ (qx_choose_then ‘fE’ strip_assume_tac)
+             ranged_word_nchotomy >>
+  rw[next_hi_def, next_lo_def, float_to_real_def] >>
+  gs[abs_sign_sub, word_lo_n2w, WORD_NOT_LOWER, word_T_def, dimword_def,
+     word_add_n2w, GSYM n2w_sub, UINT_MAX_def, word_ls_n2w]
+  >- simp[float_component_equality] >>~-
+  ([‘(fS + 1) MOD 2 ** precision(:τ) = 0’, ‘n2w fS <₊ -1w’],
+   gvs[MOD_EQ_0_DIVISOR] >> rename [‘fS + 1 = d * _’] >>
+   ‘d = 1’ suffices_by (rw[] >> gvs[] >>
+                        ‘n2w fS ≠ -1w : τ word’ by (strip_tac >> gvs[]) >>
+                        drule w2n_lt_pow_sub1 >> simp[dimword_def]) >>
+   ‘d ≠ 0 ∧ ¬(2 ≤ d)’ suffices_by simp[] >> rpt strip_tac >> gvs[] >>
+   ‘fS + 1 ≤ 2 ** precision(:τ)’ by DECIDE_TAC >>
+   gvs[]) >>
+  simp[float_component_equality] >>
+  gvs[float_is_finite_Exponent] >>
+  gvs[MOD_EQ_0_DIVISOR] >> rename [‘fS + 1 = d * _’] >>
+  ‘d = 1’ suffices_by (strip_tac >> gvs[] >>
+                       drule w2n_lt_pow_sub1 >> simp[dimword_def]) >>
+  ‘d ≠ 0 ∧ ¬(2 ≤ d)’ suffices_by simp[] >> rpt strip_tac >> gvs[] >>
+  ‘fS + 1 ≤ 2 ** precision(:χ)’ by DECIDE_TAC >>
+  gvs[]
+QED
+
+Theorem next_hi_Sign[simp]:
+  (next_hi f).Sign = f.Sign
+Proof
+  simp[next_hi_def] >> rw[]
+QED
+
+Theorem Exponent_monotone:
+  abs (f2r (f1:(α,β)float)) < abs (f2r (f2:(α,β)float)) ⇒
+  f1.Exponent ≤₊ f2.Exponent
+Proof
+  rw[float_to_real_def] >>
+  gvs[ABS_MUL, ABS_REFL', REAL_LE_ADD, REAL_LE_MUL]
+  >- (simp[REAL_NOT_LT] >>
+      map_every Cases_on [‘f1.Exponent’, ‘f1.Significand’, ‘f2.Significand’] >>
+      gvs[dimword_def] >> irule REAL_LE_TRANS  >>
+      rename [‘f1.Exponent = n2w E1’, ‘f1.Significand = n2w S1’,
+              ‘f2.Significand = n2w S2’] >>
+      qexists ‘2 pow E1 * 2 pow precision(:α)’ >> simp[] >>
+      simp[REAL_OF_NUM_POW] >>
+      irule LE_TRANS >> qexists ‘2 * 2 ** precision(:α)’ >> simp[]) >>
+  map_every Cases_on [‘f1.Exponent’, ‘f2.Exponent’,
+                      ‘f1.Significand’, ‘f2.Significand’] >>
+  rename [‘n2w E1 ≤₊ n2w E2’,
+          ‘f1.Exponent = n2w E1’, ‘f1.Significand = n2w S1’,
+          ‘f2.Exponent = n2w E2’, ‘f2.Significand = n2w S2’] >>
+  gvs[dimword_def, word_ls_n2w] >> CCONTR_TAC >> gvs[NOT_LE] >>
+  qpat_x_assum ‘2 pow _ * _ < _’ mp_tac >> simp[REAL_NOT_LT] >>
+  qabbrev_tac‘δ = E1 - E2’ >> ‘0 < δ ∧ E1 = E2 + δ’ by simp[Abbr‘δ’] >>
+  rw[REAL_POW_ADD] >> irule REAL_LE_TRANS >>
+  qexists ‘2 * (1 + &S1 / 2 pow precision(:α))’ >>
+  irule_at Any REAL_LE_RMUL_IMP >>
+  simp[REAL_OF_NUM_POW, REAL_LE_ADD] >> irule REAL_LE_TRANS >>
+  qexists ‘2’ >> simp[] >>
+  simp[REAL_ARITH “1 + x ≤ 2 ⇔ x ≤ 1”]
+QED
+
+Theorem next_hi_discrete:
+  abs (f2r (f0:(α,β)float)) < abs (f2r (f:(α,β)float)) ∧ float_is_finite f ⇒
+  abs (f2r (next_hi f0)) ≤ abs (f2r f)
+Proof
+  rw[next_hi_def]
+  >- ((* significand gets one larger *)
+      ‘f0.Exponent ≤₊ f.Exponent’ by metis_tac[Exponent_monotone] >>
+      Cases_on ‘f.Exponent = f0.Exponent’
+      >- (‘f0.Significand <₊ f.Significand’
+            by (qpat_x_assum ‘abs (f2r f0) < _’ mp_tac >>
+                simp[float_to_real_def] >> rw[] >>
+                gvs[ABS_MUL] >>
+                map_every Cases_on [‘f0.Significand’, ‘f.Significand’] >>
+                gvs[dimword_def, word_lo_n2w, ABS_REFL', REAL_LE_ADD]) >>
+          simp[float_to_real_def] >> rw[] >>
+          simp[ABS_MUL] >>
+          map_every Cases_on [‘f0.Significand’, ‘f.Significand’] >>
+          gvs[dimword_def, word_lo_n2w, ABS_REFL', REAL_LE_ADD, word_add_n2w]) >>
+      fs[WORD_NOT_LOWER, WORD_LOWER_OR_EQ] >>
+      ‘¬(f.Exponent ≤₊ (f0 with Significand := f0.Significand + 1w).Exponent)’
+        by simp[WORD_NOT_LOWER_EQUAL] >>
+      drule_at Concl Exponent_monotone >> simp[])
+  >- (‘f0.Exponent ≤₊ f.Exponent’ by metis_tac[Exponent_monotone] >>
+      Cases_on ‘f.Exponent = f0.Exponent’
+      >- (‘f0.Significand <₊ f.Significand’
+            by (qpat_x_assum ‘abs (f2r f0) < _’ mp_tac >>
+                simp[float_to_real_def] >> rw[] >>
+                gvs[ABS_MUL] >>
+                map_every Cases_on [‘f0.Significand’, ‘f.Significand’] >>
+                gvs[dimword_def, word_lo_n2w, ABS_REFL', REAL_LE_ADD,
+                    w2n_minus1]) >>
+          metis_tac[WORD_NOT_LOWER, WORD_LOWER_EQ_LOWER_TRANS, WORD_LO_word_T])>>
+      map_every Cases_on [‘f0.Exponent’, ‘f.Exponent’] >>
+      gs[word_add_n2w, word_lo_n2w, word_ls_n2w, dimword_def, word_T_def,
+         UINT_MAX_def, NOT_LESS] >>
+      rename [‘f.Exponent = n2w e’, ‘e0:num ≤ e’, ‘n2w (e0 + 1)’] >>
+      ‘e0 + 1 ≤ e’ by simp[] >>
+      Cases_on ‘e = e0 + 1’
+      >- (qmatch_abbrev_tac ‘abs (float_to_real bump) ≤ abs _’ >>
+          ‘bump.Exponent = f.Exponent’ by simp[Abbr‘bump’] >>
+          simp[float_to_real_def, ABS_MUL, dimword_def, ABS_REFL',
+               REAL_LE_ADD] >>
+          simp[Abbr‘bump’]) >>
+      qmatch_abbrev_tac ‘abs (f2r bump) ≤ _’ >>
+      ‘¬(f.Exponent ≤₊ bump.Exponent)’
+        by simp[Abbr‘bump’, word_ls_n2w, dimword_def] >>
+      drule_at Concl Exponent_monotone >> simp[])
+QED
+
+Theorem next_lo_smaller:
+  ¬float_is_zero f ⇒ abs (f2r (next_lo f)) < abs (f2r f)
+Proof
+  simp[next_lo_def, float_is_zero, float_to_real_def] >> rw[] >>
+  gvs[WORD_LO_word_0, ABS_MUL, ABS_REFL', REAL_LE_ADD]
+  >- (Cases_on ‘f.Significand’ >> gvs[dimword_def] >>
+      REWRITE_TAC[GSYM word_sub_def] >>
+      simp[GSYM n2w_sub, dimword_def] )
+  >- (simp[w2n_minus1, dimword_def, REAL_OF_NUM_POW] >>
+      gvs[WORD_SUM_ZERO])
+  >- (Cases_on ‘f.Significand’ >> gvs[dimword_def] >>
+      REWRITE_TAC[GSYM word_sub_def] >>
+      simp[GSYM n2w_sub, dimword_def]) >>
+  simp[w2n_minus1, dimword_def] >> gvs[WORD_SUM_ZERO] >>
+  Cases_on ‘f.Exponent’ >> gvs[dimword_def] >>
+  REWRITE_TAC[GSYM word_sub_def] >>
+  simp[GSYM n2w_sub, dimword_def] >>
+  irule REAL_LTE_TRANS>> qexists ‘2 pow (n - 1) * 2’ >>
+  simp[REAL_ARITH “1r + x < 2 ⇔ x < 1”] >>
+  simp[REAL_OF_NUM_POW] >>
+  simp[GSYM EXP]
+QED
+
+Theorem float_is_zero_next_hi[simp]:
+  float_is_finite a ⇒ ¬float_is_zero (next_hi a)
+Proof
+  rw[next_hi_def, float_is_zero] >> simp[WORD_ADD_EQ_SUB]
+  >- (‘a.Significand ≠ -1w’ by (strip_tac >> gvs[]) >> simp[]) >>
+  gvs[float_is_finite_Exponent]
+QED
+
+Theorem next_hi_larger:
+  float_is_finite f ⇒ abs (f2r f) < abs (f2r (next_hi f))
+Proof
+  qspec_then ‘next_hi f’ mp_tac (GEN_ALL next_lo_smaller) >> rw[] >>
+  gvs[next_lohi] >> first_x_assum irule >> simp[]
+QED
+
+Theorem next_hi_float_negate:
+  next_hi (float_negate f) = float_negate (next_hi f)
+Proof
+  simp[float_negate_def, next_hi_def, float_is_finite_def, float_value_def,
+       AllCaseEqs()] >> rw[] >> fs[]
+QED
+
+Theorem float_negate :
+  float_value (float_negate a) = Float r ⇔
+  float_value (a:(α,β)float) = Float (-r)
+Proof
+  rw[float_negate_def, float_value_def, float_to_real_def] >>
+  Cases_on ‘a.Sign’ >> gvs[dimword_def, DECIDE “n < 2n ⇔ n = 0 ∨ n = 1”]
+QED
+
+Theorem float_is_finite_float_negate[simp]:
+  float_is_finite (float_negate f) ⇔ float_is_finite f
+Proof
+  metis_tac[float_is_finite_thm, float_negate, float_negate_negate]
+QED
+
+Theorem float_is_zero_float_value_EQ0:
+  float_is_zero f ⇔ (float_value f = Float 0)
+Proof
+  simp[float_is_zero_to_real, float_value_def, CaseEq "bool"] >>
+  ‘float_to_real f = 0 ⇒ f.Exponent ≠ -1w’ suffices_by csimp[GSYM WORD_NEG_1] >>
+  rpt strip_tac >>
+  fs[float_to_real_def,word_T_def, UINT_MAX_def, CaseEq "bool",
+     dimword_def, add_ratr, REAL_OF_NUM_POW]
+QED
+
+Theorem float_is_zero_float_is_finite:
+  float_is_zero f ⇒ float_is_finite f
+Proof
+  simp[float_is_zero_float_value_EQ0, float_is_finite_thm]
+QED
+
+Theorem float_is_zero_float_negate[simp]:
+  float_is_zero (float_negate f) ⇔ float_is_zero f
+Proof
+  simp[float_is_zero_float_value_EQ0, float_negate]
+QED
+
+val _ = augment_srw_ss [realSimps.REAL_ARITH_ss]
+val _ = diminish_srw_ss [
+    "word arith", "word ground", "word logic", "word shift",
+    "word subtract", "words"
+  ]
+
+val _ = augment_srw_ss [
+    rewrites [w2n_n2w, WORD_AND_CLAUSES, n2w_11, WORD_ADD_0]
+  ]
+
+
+Theorem float_is_finite_next_hi:
+  2 ≤ precision(:β) ∧
+  float_is_finite (f:(α,β)float) ∧ abs (float_to_real f) < largest(:α#β) ⇒
+  float_is_finite (next_hi f)
+Proof
+  qspec_then ‘f.Significand’ (qx_choose_then ‘fS’ strip_assume_tac)
+             ranged_word_nchotomy >>
+  qspec_then ‘f.Exponent’ (qx_choose_then ‘fE’ strip_assume_tac)
+             ranged_word_nchotomy >>
+  simp[float_is_finite_def] >>
+  Cases_on ‘float_value f’ >> simp[] >>
+  ‘float_to_real f = r’ by fs[float_value_def, AllCaseEqs()] >>
+  simp[next_hi_def] >> Cases_on ‘n2w fS <₊ word_T’ >> simp[] >>
+  gs[float_value_def, AllCaseEqs(), word_T_def, dimword_def, UINT_MAX_def,
+     word_lo_n2w, WORD_LO_word_T, word_add_n2w, NOT_LESS] >> strip_tac >>
+  rw[] >>
+  rename [‘fE + 1 = 2 ** precision(:β) - 1’] >>
+  qpat_x_assum ‘abs (f2r f) < largest _’ mp_tac >>
+  simp[float_to_real_def, dimword_def] >> rw[] >> gvs[] >~
+  [‘1 = 2 ** _ - 1’]
+  >- gvs[DECIDE “1 ≤ x ⇒ (1n = x - 1 ⇔ x = 2)”] >>
+  simp[ABS_MUL, REAL_NOT_LT, largest_is_top, float_top_def,
+       float_to_real_def, GSYM n2w_sub, word_T_def, UINT_MAX_def,
+       dimword_def, ABS_INV, GSYM POW_ABS, ABS_REFL', REAL_LE_ADD] >>
+  ‘fE = 2 ** precision(:β) - 2’ by simp[] >> simp[] >>
+  ‘fS = 2 ** precision(:α) - 1’ by simp[] >> simp[]
+QED
+
+(*
+    1 ≤ 2 * 2 pow precision(:α) ⇒
+    (2 * 2 pow precision (:α) − 1 ≤
+        2 pow maxExp * (2 * 2 pow precision (:α) − 1) ⇔ ??????) *)
+
+
+Theorem abs_float_bounds:
+  2 ≤ precision(:β) ∧ float_is_finite f ⇒
+  f2r (float_abs (f:(α,β)float)) ≤ largest(:α#β)
+Proof
+  simp[float_abs_def, float_to_real_def, largest_def, UINT_MAX_def,
+       dimword_def] >> rw[] >>
+  qabbrev_tac ‘maxExp = 2n ** precision(:β) - 2’ >>
+  simp[REAL_SUB_LDISTRIB] >>
+  Cases_on ‘f.Significand’ >> gvs[dimword_def]
+  >- (irule REAL_LE_TRANS >> qexists ‘2 * 2 pow precision(:α) - 1’ >>
+      simp[] >>
+      ‘2 * (2 pow maxExp * 2 pow precision(:α)) - 2 pow maxExp =
+       2 pow maxExp * (2 * 2 pow precision(:α) - 1)’
+        by simp[REAL_SUB_LDISTRIB] >>
+      pop_assum SUBST1_TAC >>
+      conj_tac >- simp[REAL_OF_NUM_POW, GSYM realaxTheory.REAL_OF_NUM_SUB] >>
+      ‘1 ≤ 2 * 2 pow precision(:α)’ by simp[REAL_OF_NUM_POW] >>
+      ‘2 * 2 pow precision(:α) - 1 = 1 * (2 * 2 pow precision(:α) - 1)’
+        by simp[] >>
+      pop_assum (CONV_TAC o LAND_CONV o REWR_CONV) >>
+      irule REAL_LE_RMUL_IMP >> simp[POW_2_LE1]) >>
+  Cases_on ‘f.Exponent’ >> gvs[dimword_def] >>
+  rename [‘f.Significand = n2w fS’, ‘f.Exponent = n2w fE’] >>
+  simp[RealArith.REAL_ARITH “x * y - y * z:real = y * (x - z)”] >>
+  irule REAL_LE_TRANS >>
+  qexists ‘2 pow maxExp * (1 + &fS / 2 pow precision(:α))’ >>
+  simp[] >> conj_tac
+  >- (irule REAL_LE_RMUL_IMP >>
+      ‘fE ≤ maxExp’
+        by (simp[Abbr‘maxExp’] >>
+            gvs[float_is_finite_Exponent, word_T_def, UINT_MAX_def,
+                dimword_def]) >>
+      simp[REAL_POW_MONO, REAL_LE_ADD]) >>
+  simp[real_div] >>
+  simp[RealArith.REAL_ARITH “1 + x ≤ 2 - y ⇔ x + y ≤ 1r”,
+       RealArith.REAL_ARITH “x * y + y = (x+1) * y:real”] >>
+  simp[REAL_OF_NUM_POW]
+QED
+
+Theorem float_to_real_float_abs:
+  float_to_real (float_abs f) = abs (float_to_real f)
+Proof
+  simp[float_abs_def, float_to_real_def] >>
+  rw[ABS_MUL, ABS_INV, GSYM POW_ABS, REAL_LE_ADD]
+QED
+
+Theorem float_is_finite_float_value:
+  float_is_finite f ⇒ float_value f = Float (f2r f)
+Proof
+  simp[float_value_def, float_is_finite_Exponent]
+QED
+
+Theorem float_bounds:
+  2 <= precision (:β) ∧ float_value (a:(α,β)float) = Float r ⇒
+  -largest(:α # β) ≤ r ∧ r ≤ largest (:α # β)
+Proof
+  strip_tac >> ‘float_is_finite a’ by simp[float_is_finite_thm] >>
+  drule_all_then strip_assume_tac abs_float_bounds >>
+  gvs[float_to_real_float_abs] >>
+  drule_then assume_tac float_is_finite_float_value >> gvs[]
+QED

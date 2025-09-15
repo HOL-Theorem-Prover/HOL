@@ -1,4 +1,4 @@
-% Release notes for HOL4, Trindemossen-2
+# Release notes for HOL4, Trindemossen-2
 
 <!-- search and replace ?????? strings corresponding to release name -->
 <!-- indent code within bulleted lists to column 11 -->
@@ -7,8 +7,7 @@
 
 We are pleased to announce the Trindemossen-2 release of HOL4.
 
-Contents
---------
+## Contents
 
 -   [New features](#new-features)
 -   [Bugs fixed](#bugs-fixed)
@@ -17,8 +16,7 @@ Contents
 -   [New examples](#new-examples)
 -   [Incompatibilities](#incompatibilities)
 
-New features
--------------
+## New features
 
 -   We now support (and recommend) a new header syntax for `Script.sml` files.
     Instead of the existing boilerplate (`open HolKernel … val _ = new_theory…`), users write something like
@@ -66,14 +64,12 @@ New features
 -   The Poly/ML implementation now offers a `-z` (or `--zero`) command-line option to make the NUL byte be the end-marker for strings being sent to the compiler.
     Otherwise, the compiler makes a best effort guess about when it should interact based on the presence of semi-colons.
 
-Bugs fixed
------------
+## Bugs fixed
 
 - `EVERY_CASE_TAC` would loop if the "split-upon" subterm was already an assumption, but no longer.
 
 
-New theories
--------------
+## New theories
 
 - `number`, `combinatorics` and `prime`: These theories combine material
    from `examples/algebra/lib`, etc.
@@ -85,8 +81,7 @@ New theories
    A group is an algebraic structure: a monoid with all its elements invertible.
    A ring takes into account the interplay between its additive group and multiplicative monoid.
 
-New tools
-----------
+## New tools
 
 - `Tactic.TRANS_TAC` (ported from HOL-Light) applies transitivity theorem to goal
   with chosen intermediate term. See its DOC for more details.
@@ -98,13 +93,11 @@ New tools
 - `last_assume_tac` has been added. It is the same as `assume_tac` except it adds
   the new assumption to the top of the list of assumptions instead of the bottom.
 
-New examples
--------------
+## New examples
 
 - Dijkstra's algorithm for computing shortest paths: `examples/algorithms/dijkstraScript.sml`
 
-Incompatibilities
-------------------
+## Incompatibilities
 
 -   `numLib.prefer_num` has been renamed to `numLib.temp_prefer_num`, which name better describes its semantics.
     The `prefer_num` entry-point is now used to make a change “permanent” (again following the naming convention used by many parsing-related entry-points), which is to say that the overloads made by this function will be exported to child theories.
@@ -155,9 +148,7 @@ Incompatibilities
 
 * * * * *
 
-<div class="footer">
-*[HOL4, Trindemossen-2](http://hol-theorem-prover.org)*
+[*HOL4, Trindemossen-2*](http://hol-theorem-prover.org)
 
 [Release notes for the previous version](trindemossen-1.release.html)
 
-</div>

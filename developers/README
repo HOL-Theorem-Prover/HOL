@@ -10,7 +10,8 @@ Follow up with
 
 to get into a Poly/ML session with that early prefix of stuff built.
 
-To handle something like pred_setScript and to do it one fell swoop, the following should work:
+To handle something like pred_setScript and to do it one fell swoop,
+the following should work:
 
    (../bin/unquote < ../src/pred_set/src/pred_setScript.sml |
        ./genUseScript --hol /dev/stdin ;

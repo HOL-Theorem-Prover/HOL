@@ -86,7 +86,7 @@ Definition w2v_def:
     GENLIST (\i. w ' (dimindex(:'a) - 1 - i)) (dimindex(:'a))
 End
 
-Definition v2w_def:
+Definition v2w_def[nocompute]:
   v2w v : 'a word = FCP i. testbit i v
 End
 

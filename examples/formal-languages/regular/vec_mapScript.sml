@@ -1,9 +1,9 @@
-open HolKernel boolLib bossLib BasicProvers;
-open pred_setTheory arithmeticTheory listTheory rich_listTheory optionTheory
-     pairTheory relationTheory sortingTheory;
-open alistTheory;
-
-val _ = new_theory "vec_map";
+Theory vec_map
+Ancestors
+  combin option pair relation pred_set
+  arithmetic list rich_list sorting alist
+Libs
+  BasicProvers
 
 val _ = temp_tight_equality ();
 
@@ -27,14 +27,14 @@ End
 val alist_to_vec_ind = fetch "-" "alist_to_vec_ind";
 
 Theorem alist_to_vec_correct[local] :
- !l default cur max v.
-  SORTED $<= (MAP FST l) /\
-  cur <= max /\
-  alist_to_vec l default cur max = v
+ ∀l default cur max v.
+   SORTED $<= (MAP FST l) /\
+   cur <= max /\
+   alist_to_vec l default cur max = v
   ==>
-  LENGTH v = cur /\
-  (!n x. n < cur /\ ALOOKUP l (max - cur + n) = SOME x ==> EL n v = x) /\
-  (!n. n < cur /\ ALOOKUP l (max - cur + n) = NONE ==>  EL n v = default)
+   LENGTH v = cur /\
+   (∀n x. n < cur /\ ALOOKUP l (max - cur + n) = SOME x ==> EL n v = x) /\
+   (∀n. n < cur /\ ALOOKUP l (max - cur + n) = NONE ==>  EL n v = default)
 Proof
  ho_match_mp_tac alist_to_vec_ind
  >> rw [alist_to_vec_def]
@@ -66,13 +66,13 @@ Proof
 QED
 
 Theorem alist_to_vec_thm :
- !l default max v.
-  SORTED $<= (MAP FST l) /\
-  alist_to_vec l default max max = v
+ ∀l default max v.
+   SORTED $<= (MAP FST l) /\
+   alist_to_vec l default max max = v
   ==>
-  LENGTH v = max /\
-  (!n x. n < max /\ ALOOKUP l n = SOME x ==> EL n v = x) /\
-  (!n. n < max /\ ALOOKUP l n = NONE ==>  EL n v = default)
+   LENGTH v = max /\
+   (∀n x. n < max /\ ALOOKUP l n = SOME x ==> EL n v = x) /\
+   (∀n. n < max /\ ALOOKUP l n = NONE ==>  EL n v = default)
 Proof
  rw [] >>
  imp_res_tac alist_to_vec_correct >>
@@ -80,11 +80,11 @@ Proof
 QED
 
 Theorem dense_alist_to_vec_correct[local] :
- !y l n.
-  MAP FST l = MAP (\x. x + y) (COUNT_LIST (LENGTH l)) /\
-  n < LENGTH l
+ ∀y l n.
+   MAP FST l = MAP (\x. x + y) (COUNT_LIST (LENGTH l)) /\
+   n < LENGTH l
   ==>
-  ALOOKUP l (n + y) = SOME (EL n (MAP SND l))
+   ALOOKUP l (n + y) = SOME (EL n (MAP SND l))
 Proof
  Induct_on `n` >>
  rw [] >>
@@ -102,11 +102,9 @@ Proof
 QED
 
 Theorem dense_alist_to_vec_thm :
- !l n. MAP FST l = COUNT_LIST (LENGTH l) /\ n < LENGTH l
+ ∀l n. MAP FST l = COUNT_LIST (LENGTH l) /\ n < LENGTH l
         ==>
        ALOOKUP l n = SOME (EL n (MAP SND l))
 Proof
  metis_tac [SIMP_RULE (srw_ss()) [] (Q.SPEC `0` dense_alist_to_vec_correct)]
 QED
-
-val _ = export_theory ();

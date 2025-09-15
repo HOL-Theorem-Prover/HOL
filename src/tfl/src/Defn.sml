@@ -1714,12 +1714,12 @@ fun ptdefn_freevars pt = let
                              "Couldn't see preterm as equality"
   val (f0, args) = strip_pcomb l
   val f = head_var f0
-  val lfs = op_U eq (map ptfvs args)
+  val lfs = op_U veq (map ptfvs args)
   val rfs = ptfvs r
   infix \\
-  fun s1 \\ s2 = op_set_diff eq s1 s2
+  fun s1 \\ s2 = op_set_diff veq s1 s2
 in
-  op_union eq (rfs \\ lfs \\ uvars) [f]
+  op_union veq (rfs \\ lfs \\ uvars) [f]
 end
 
 fun defn_absyn_to_term a = let
@@ -1756,7 +1756,7 @@ fun defn_absyn_to_term a = let
     ptsM >-
     (fn pts =>
       let
-        val all_frees = op_U Preterm.eq (map ptdefn_freevars pts)
+        val all_frees = op_U Preterm.veq (map ptdefn_freevars pts)
       in
         foldlM foldthis (Binarymap.mkDict String.compare) all_frees >>
         construct_final_term pts

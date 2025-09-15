@@ -1,16 +1,16 @@
-open HolKernel Parse boolLib bossLib BasicProvers
-     pred_setLib stringLib ASCIInumbersLib;
+Theory contig
+Ancestors
+   combin option pair arithmetic list rich_list pred_set
+   string numposrep FormalLang contig_support
+   finite_map bag container
+Libs
+  BasicProvers pred_setLib stringLib ASCIInumbersLib
 
-open pairTheory arithmeticTheory listTheory rich_listTheory pred_setTheory
-     stringTheory combinTheory optionTheory numposrepTheory FormalLangTheory
-     contig_supportTheory;
 
 (*---------------------------------------------------------------------------*)
-(* For termination of the matchers, multiset ordering (mlt_list from         *)
+(* NB. For termination of the matchers, multiset ordering (mlt_list from     *)
 (* containerTheory) is useful                                                *)
 (*---------------------------------------------------------------------------*)
-
-open finite_mapTheory bagTheory containerTheory;
 
 (*---------------------------------------------------------------------------*)
 (* Setup basic proof support                                                 *)
@@ -18,9 +18,6 @@ open finite_mapTheory bagTheory containerTheory;
 
 val _ = numLib.temp_prefer_num();
 val _ = overload_on ("++", ``list$APPEND``);
-
-infix byA;
-val op byA = BasicProvers.byA;
 
 val decide = bossLib.DECIDE;
 val qdecide = decide o Parse.Term;
@@ -40,8 +37,6 @@ fun simpCases_on q = Cases_on q >> fs [] >> rw[];
 (*---------------------------------------------------------------------------*)
 (* Let's get started                                                         *)
 (*---------------------------------------------------------------------------*)
-
-val _ = new_theory "contig";
 
 (*---------------------------------------------------------------------------*)
 (* The types of interest: lvals, arithmetic expressions over lvals, boolean  *)
@@ -87,7 +82,6 @@ Datatype:
 End
 
 val contig_size_def = fetch "-" "contig_size_def";
-
 
 (*---------------------------------------------------------------------------*)
 (* Expression evaluation. Looking up lvals is partial, which infects evalExp *)
@@ -290,7 +284,7 @@ Termination
 End
 
 Theorem IN_Contig_Lang :
-  !s.
+  ∀s.
      (s IN Contig_Lang theta (Basic a) <=> LENGTH s = atomWidth a) /\
      (s IN Contig_Lang theta Void <=> F) /\
      (s IN Contig_Lang theta (Assert b) <=> (s = "" /\ evalBexp theta b = SOME T)) /\
@@ -311,8 +305,8 @@ Theorem IN_Contig_Lang :
               if b then s IN Contig_Lang theta c1
                    else s IN Contig_Lang theta c2)
 Proof
- rw [Contig_Lang_def,EXTENSION] >>
- every_case_tac >> rw [IN_dot,IN_KSTAR_LIST] >> metis_tac[]
+ rw [Contig_Lang_def,EXTENSION] >> every_case_tac >>
+ rw [IN_dot,IN_KSTAR_LIST_ALT] >> metis_tac[]
 QED
 
 (*---------------------------------------------------------------------------*)
@@ -343,7 +337,6 @@ End
 Definition fieldFn_def :
   fieldFn lval (fName,c) = (RecdProj lval fName,c)
 End
-
 
 Definition ListRecd_def :
   ListRecd lval c =
@@ -970,15 +963,11 @@ Proof
 QED
 
 Theorem matchFn_sound :
- !contig s theta lval.
    matchFn ([(lval,contig)],s,FEMPTY) = SOME ("", theta)
     ==>
-   s IN Contig_Lang theta contig
+    s ∈ Contig_Lang theta contig
 Proof
  rw[]
-  \\ drule (matchFn_wklist_sound |> SIMP_RULE std_ss [])
+  \\ drule $ SRULE [] matchFn_wklist_sound
   \\ rw [arb_labels_def,Singleton_Recd]
 QED
-
-
-val _ = export_theory();

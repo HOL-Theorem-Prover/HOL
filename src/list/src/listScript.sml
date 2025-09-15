@@ -630,12 +630,12 @@ Proof
   EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC []
 QED
 
-val MONO_EVERY = store_thm(
-  "MONO_EVERY",
-  “(!x. P x ==> Q x) ==> (EVERY P l ==> EVERY Q l)”,
+Theorem MONO_EVERY[mono]:
+  (!x. P x ==> Q x) ==> (EVERY P l ==> EVERY Q l)
+Proof
   Q.ID_SPEC_TAC ‘l’ THEN LIST_INDUCT_TAC THEN
-  ASM_SIMP_TAC (srw_ss()) []);
-val _ = IndDefLib.export_mono "MONO_EVERY"
+  ASM_SIMP_TAC (srw_ss()) []
+QED
 
 val EXISTS_MEM = store_thm(
   "EXISTS_MEM",
@@ -1574,12 +1574,7 @@ Induct THEN REWRITE_TAC [EVERY_DEF, MEM]
            THEN ASM_REWRITE_TAC [MEM]]
 QED
 
-val EVERY_MONOTONIC = store_thm(
-  "EVERY_MONOTONIC",
-  “!(P:'a -> bool) Q.
-       (!x. P x ==> Q x) ==> !l. EVERY P l ==> EVERY Q l”,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN LIST_INDUCT_TAC THEN
-  REWRITE_TAC [EVERY_DEF] THEN REPEAT STRIP_TAC THEN RES_TAC);
+Theorem EVERY_MONOTONIC = MONO_EVERY
 
 (* ----------------------------------------------------------------------
    ZIP and UNZIP functions (taken from rich_listTheory)

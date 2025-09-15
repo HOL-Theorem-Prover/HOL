@@ -150,21 +150,9 @@ fun infoeq {base_type=bt1,actual_ops=ops1,tyavoids=tya1}
    bt1 = bt2 andalso tya1 = tya2 andalso
    ListPair.allEq (fn (t1,t2) => Term.aconv t1 t2) (ops1, ops2)
 
-fun eq (Var{Name=Name,Ty=Ty,...}) (Var{Name=Name',Ty=Ty',...}) =
-     Name=Name' andalso Ty=Ty'
-  | eq (Const{Name=Name,Thy=Thy,Ty=Ty,...})
-       (Const{Name=Name',Thy=Thy',Ty=Ty',...}) =
-     Name=Name' andalso Thy=Thy' andalso Ty=Ty'
-  | eq (Overloaded{Name=Name,Ty=Ty,Info=Info,...})
-       (Overloaded{Name=Name',Ty=Ty',Info=Info',...}) =
-     Name=Name' andalso Ty=Ty' andalso infoeq Info Info'
-  | eq (Comb{Rator=Rator,Rand=Rand,...})           (Comb{Rator=Rator',Rand=Rand',...})            = eq Rator Rator' andalso eq Rand Rand'
-  | eq (Abs{Bvar=Bvar,Body=Body,...})              (Abs{Bvar=Bvar',Body=Body',...})               = eq Bvar Bvar' andalso eq Body Body'
-  | eq (Constrained{Ptm=Ptm,Ty=Ty,...})            (Constrained{Ptm=Ptm',Ty=Ty',...})             = eq Ptm Ptm' andalso Ty=Ty'
-  | eq (Antiq{Tm=Tm,...})                          (Antiq{Tm=Tm',...})                            = Term.aconv Tm Tm'
-  | eq (Pattern{Ptm,...})                           (Pattern{Ptm=Ptm',...})
-                  = eq Ptm Ptm'
-  | eq  _                                           _                                             = false
+fun veq (Var{Name=n1,Ty=ty1,...}) (Var{Name=n2,Ty=ty2,...}) =
+    n1=n2 andalso ty1 = ty2
+  | veq _ _ = false
 
 fun isolate_var ptv =
   case ptv of
@@ -181,12 +169,12 @@ fun ptfvs pt =
           case Rator of
               Comb{Rator=Const{Name,...}, Rand = l, ...} =>
               if Name = GrammarSpecials.case_arrow_special then
-                op_set_diff eq (ptfvs r) (ptfvs l)
+                op_set_diff veq (ptfvs r) (ptfvs l)
               else
-                op_union eq (ptfvs Rator) (ptfvs r)
-            | _ => op_union eq (ptfvs Rator) (ptfvs r)
+                op_union veq (ptfvs Rator) (ptfvs r)
+            | _ => op_union veq (ptfvs Rator) (ptfvs r)
         end
-      | Abs{Bvar,Body,...} => op_set_diff eq (ptfvs Body) [isolate_var Bvar]
+      | Abs{Bvar,Body,...} => op_set_diff veq (ptfvs Body) [isolate_var Bvar]
       | Constrained{Ptm,...} => ptfvs Ptm
       | _ => []
 

@@ -2098,6 +2098,11 @@ Proof
  >> rw [IN_APP]
 QED
 
+(* |- !x e. 0 < e ==> neigh euclidean (ball (x,e),x) *)
+Theorem ball_neigh =
+        BALL_NEIGH |> Q.ISPEC ‘mr1’
+                   |> REWRITE_RULE [GSYM euclidean_def, GSYM ball_def]
+
 Definition cball_def :
     cball = mcball mr1
 End
@@ -2105,7 +2110,7 @@ End
 Theorem cball :
     !x e. cball(x,e) = {y | dist(x,y) <= e}
 Proof
-    rw [cball_def, dist_def, mcball, mspace]
+    rw [cball_def, dist_def, mcball, MSPACE]
 QED
 
 val sphere = new_definition ("sphere",
@@ -5095,25 +5100,6 @@ val LIM_WITHIN_OPEN = store_thm ("LIM_WITHIN_OPEN",
 (* More limit point characterizations.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-val TRANSITIVE_STEPWISE_LT_EQ = store_thm ("TRANSITIVE_STEPWISE_LT_EQ",
- ``!R. (!x y z. R x y /\ R y z ==> R x z)
-         ==> ((!m n. m < n ==> R m n) <=> (!n. R n (SUC n)))``,
-  REPEAT STRIP_TAC THEN EQ_TAC THEN ASM_SIMP_TAC std_ss [LESS_THM] THEN
-  DISCH_TAC THEN SIMP_TAC std_ss [LT_EXISTS] THEN
-  KNOW_TAC ``(!m n. (?d. n = m + SUC d) ==> R m n) =
-              (!m d n. (n = m + SUC d) ==> R m (m + SUC d))`` THENL
-  [METIS_TAC [LEFT_EXISTS_IMP_THM, SWAP_FORALL_THM], ALL_TAC] THEN
-  DISC_RW_KILL THEN GEN_TAC THEN
-  SIMP_TAC std_ss [LEFT_FORALL_IMP_THM, EXISTS_REFL, ADD_CLAUSES] THEN
-  INDUCT_TAC THEN REWRITE_TAC[ADD_CLAUSES] THEN ASM_MESON_TAC[]);
-
-val TRANSITIVE_STEPWISE_LT = store_thm ("TRANSITIVE_STEPWISE_LT",
- ``!R. (!x y z. R x y /\ R y z ==> R x z) /\ (!n. R n (SUC n))
-       ==> !m n. m < n ==> R m n``,
-  REPEAT GEN_TAC THEN MATCH_MP_TAC(TAUT
-   `(a ==> (c <=> b)) ==> a /\ b ==> c`) THEN
-  MATCH_ACCEPT_TAC TRANSITIVE_STEPWISE_LT_EQ);
-
 val LIMPT_SEQUENTIAL_INJ = store_thm ("LIMPT_SEQUENTIAL_INJ",
  ``!x:real s.
       x limit_point_of s <=>
@@ -5393,11 +5379,12 @@ val LIM_SUB = store_thm ("LIM_SUB",
     (f --> l) net /\ (g --> m) net ==> ((\x. f(x) - g(x)) --> (l - m)) net``,
   REWRITE_TAC[real_sub] THEN ASM_SIMP_TAC std_ss [LIM_ADD, LIM_NEG]);
 
-val LIM_MAX = store_thm ("LIM_MAX",
- ``!net:('a)net f g l:real m:real.
+(* NOTE: “max f g = 1 / 2 * abs (f - g) + (f + g)” *)
+Theorem LIM_MAX :
+   !net:('a)net f g (l :real) (m :real).
     (f --> l) net /\ (g --> m) net
-    ==> ((\x. max (f(x)) (g(x)))
-         --> (max (l) (m)):real) net``,
+    ==> ((\x. max (f(x)) (g(x))) --> (max (l) (m)):real) net
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   FIRST_ASSUM(MP_TAC o MATCH_MP LIM_ADD) THEN
   FIRST_ASSUM(MP_TAC o MATCH_MP LIM_SUB) THEN
@@ -5409,19 +5396,28 @@ val LIM_MAX = store_thm ("LIM_MAX",
   SIMP_TAC std_ss [FUN_EQ_THM, max_def, abs] THEN
   ONCE_REWRITE_TAC [REAL_MUL_SYM] THEN ONCE_REWRITE_TAC [GSYM real_div] THEN
   SIMP_TAC arith_ss [REAL_EQ_LDIV_EQ, REAL_ARITH ``0 < 2:real``] THEN
-  ONCE_REWRITE_TAC [REAL_MUL_COMM] THEN (RW_TAC arith_ss [REAL_SUB_LE] THENL
-  [REPEAT (POP_ASSUM MP_TAC) THEN RW_TAC std_ss [AND_IMP_INTRO, REAL_LE_ANTISYM, REAL_SUB_REFL,
-    REAL_ADD_LID] THEN  REWRITE_TAC [GSYM REAL_DOUBLE],
-   REWRITE_TAC [REAL_ARITH ``a - b + (a + b) = a + a - b + b:real``, REAL_SUB_ADD, REAL_DOUBLE],
+  ONCE_REWRITE_TAC [REAL_MUL_COMM] THEN
+ (* 2 subgoals here, same tactics (each with 4 subgoals) *)
+ (RW_TAC arith_ss [REAL_SUB_LE] THENL
+  [(* goal 1 (of 4) *)
+   REPEAT (POP_ASSUM MP_TAC) THEN
+   RW_TAC std_ss [AND_IMP_INTRO, REAL_LE_ANTISYM, REAL_SUB_REFL,
+                  REAL_ADD_LID] THEN  REWRITE_TAC [GSYM REAL_DOUBLE],
+   (* goal 2 (of 4) *)
+   REWRITE_TAC [REAL_ARITH ``a - b + (a + b) = a + a - b + b:real``,
+                REAL_SUB_ADD, REAL_DOUBLE],
+   (* goal 3 (of 4) *)
    REWRITE_TAC [REAL_ARITH ``-(a - b) + (a + b) = b + b - a + a:real``,
-    REAL_SUB_ADD, REAL_DOUBLE],
-   FULL_SIMP_TAC real_ss [REAL_NOT_LE] THEN METIS_TAC [REAL_LT_ANTISYM]]));
+                REAL_SUB_ADD, REAL_DOUBLE],
+   (* goal 4 (of 4) *)
+   FULL_SIMP_TAC real_ss [REAL_NOT_LE] THEN METIS_TAC [REAL_LT_ANTISYM]])
+QED
 
-val LIM_MIN = store_thm ("LIM_MIN",
- ``!net:('a)net f g l:real m:real.
+Theorem LIM_MIN :
+   !net:('a)net f g l:real m:real.
     (f --> l) net /\ (g --> m) net
-    ==> ((\x. min (f(x)) (g(x)))
-         --> (min (l) (m)):real) net``,
+    ==> ((\x. min (f(x)) (g(x))) --> (min (l) (m)):real) net
+Proof
   REPEAT GEN_TAC THEN
   DISCH_THEN(CONJUNCTS_THEN(MP_TAC o MATCH_MP LIM_NEG)) THEN
   REWRITE_TAC[AND_IMP_INTRO] THEN
@@ -5429,7 +5425,8 @@ val LIM_MIN = store_thm ("LIM_MIN",
   MATCH_MP_TAC EQ_IMPLIES THEN AP_THM_TAC THEN
   reverse BINOP_TAC >- PROVE_TAC [GSYM REAL_MIN_MAX, REAL_MIN_ACI] THEN
   SIMP_TAC std_ss [FUN_EQ_THM] THEN
-  GEN_TAC >> PROVE_TAC [GSYM REAL_MIN_MAX, REAL_MIN_ACI]);
+  GEN_TAC >> PROVE_TAC [GSYM REAL_MIN_MAX, REAL_MIN_ACI]
+QED
 
 val LIM_NULL = store_thm ("LIM_NULL",
  ``!net f l. (f --> l) net <=> ((\x. f(x) - l) --> 0) net``,
@@ -8910,6 +8907,28 @@ Proof
  >> rw [CONTINUOUS_MAP, TOPSPACE_EUCLIDEAN]
  >> MATCH_MP_TAC CONTINUOUS_OPEN_IN_PREIMAGE_GEN
  >> Q.EXISTS_TAC ‘UNIV’ >> rw []
+QED
+
+Theorem continuous_on_univ_alt_continuous_map :
+   !(f :real -> real).
+     f continuous_on UNIV <=> continuous_map (euclidean,euclidean) f
+Proof
+    Q.X_GEN_TAC ‘f’
+ >> EQ_TAC
+ >- (rw [CONTINUOUS_MAP, TOPSPACE_EUCLIDEAN] \\
+     MP_TAC (Q.SPECL [‘f’, ‘UNIV’, ‘UNIV’, ‘u’] CONTINUOUS_OPEN_IN_PREIMAGE_GEN) \\
+     rw [SUBTOPOLOGY_UNIV])
+ >> rw [CONTINUOUS_MAP, TOPSPACE_EUCLIDEAN, continuous_on, GSYM euclidean_open_def]
+ >> Q.PAT_X_ASSUM ‘!u. open u ==> _’ (MP_TAC o Q.SPEC ‘ball (f (x :real),e)’)
+ >> simp [OPEN_BALL, IN_BALL]
+ >> rw [open_def]
+ >> POP_ASSUM (MP_TAC o Q.SPEC ‘x’) >> simp [DIST_REFL]
+ >> DISCH_THEN (Q.X_CHOOSE_THEN ‘r’ STRIP_ASSUME_TAC)
+ >> Q.EXISTS_TAC ‘r’ >> art []
+ >> Q.X_GEN_TAC ‘y’
+ >> DISCH_TAC
+ >> ONCE_REWRITE_TAC [DIST_SYM]
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
 QED
 
 (* ------------------------------------------------------------------------- *)
