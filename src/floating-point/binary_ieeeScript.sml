@@ -23,26 +23,28 @@ in
 end
 
 val Define = bossLib.zDefine
-
 Overload tc[local] = “transitive_closure”
 
 (* ------------------------------------------------------------------------
    Binary floating point representation
    ------------------------------------------------------------------------ *)
 
-val () = Datatype`
-   float = <| Sign : word1; Exponent : 'w word; Significand : 't word |>`
+Datatype:
+   float = <| Sign : word1; Exponent : 'w word; Significand : 't word |>
+End
+Overload sign = “λa. -1 pow w2n a.Sign”
 
 (* ------------------------------------------------------------------------
    Maps to other representations
    ------------------------------------------------------------------------ *)
 
-val () = Datatype `float_value = Float real | Infinity | NaN`
+Datatype: float_value = Float real | Infinity | NaN
+End
 
 val () = List.app Parse.temp_overload_on
             [("precision", ``fcp$dimindex``), ("bias", ``words$INT_MAX``)]
 
-val float_to_real_def = Define`
+Definition float_to_real_def[nocompute]:
    float_to_real (x: ('t, 'w) float) =
       if x.Exponent = 0w
          then -1r pow (w2n x.Sign) *
@@ -50,13 +52,15 @@ val float_to_real_def = Define`
               (&(w2n x.Significand) / 2r pow (precision (:'t)))
       else -1r pow (w2n x.Sign) *
            (2r pow (w2n x.Exponent) / 2r pow (bias (:'w))) *
-           (1r + &(w2n x.Significand) / 2r pow (precision (:'t)))`
+           (1r + &(w2n x.Significand) / 2r pow (precision (:'t)))
+End
 
-val float_value_def = Define`
+Definition float_value_def[nocompute]:
    float_value (x: ('t, 'w) float) =
       if x.Exponent = UINT_MAXw
          then if x.Significand = 0w then Infinity else NaN
-      else Float (float_to_real x)`
+      else Float (float_to_real x)
+End
 
 Theorem FINITE_floatsets[simp]:
   !s : ('a,'b) float set. FINITE s
@@ -159,11 +163,13 @@ val float_plus_zero_def = Define`
          Exponent := 0w: 'w word;
          Significand := 0w: 't word |>`
 
-val float_top_def = Define`
+Definition float_top_def[nocompute]:
    float_top (:'t # 'w) =
       <| Sign := 0w;
          Exponent := UINT_MAXw - 1w: 'w word;
-         Significand := UINT_MAXw: 't word |>`
+         Significand := UINT_MAXw: 't word |>
+End
+Overload FLT_MAX = “float_top(:'a # 'b)”
 
 val float_plus_min_def = Define`
    float_plus_min (:'t # 'w) =
@@ -191,23 +197,25 @@ Overload NEG0 = “float_minus_zero(:'a#'b)”
    Rounding reals to floating-point values
    ------------------------------------------------------------------------ *)
 
-val () = Datatype`
+Datatype:
    flags = <| DivideByZero : bool
             ; InvalidOp : bool
             ; Overflow : bool
             ; Precision : bool
             ; Underflow_BeforeRounding : bool
             ; Underflow_AfterRounding : bool
-            |>`
+            |>
+End
 
-val clear_flags_def = Define`
+Definition clear_flags_def[nocompute]:
   clear_flags = <| DivideByZero := F
                  ; InvalidOp := F
                  ; Overflow := F
                  ; Precision := F
                  ; Underflow_BeforeRounding := F
                  ; Underflow_AfterRounding := F
-                 |>`
+                 |>
+End
 
 val invalidop_flags_def = Define`
   invalidop_flags = clear_flags with InvalidOp := T`
@@ -215,11 +223,12 @@ val invalidop_flags_def = Define`
 val dividezero_flags_def = Define`
   dividezero_flags = clear_flags with DivideByZero := T`
 
-val () = Datatype`
+Datatype:
    rounding = roundTiesToEven
             | roundTowardPositive
             | roundTowardNegative
-            | roundTowardZero`
+            | roundTowardZero
+End
 
 Definition is_closest_def:
    is_closest s x a <=>
@@ -4249,7 +4258,6 @@ val ndpf = NODP fs
 val ndpr = NODP rw
 val ndpg = NODP gs
 Overload f2r[local] = “float_to_real”
-Overload sign[local] = “λa. -1 pow w2n a.Sign”
 
 
 val _ = augment_srw_ss [realSimps.REAL_ARITH_ss];
@@ -4305,12 +4313,10 @@ Definition next_lo_def:
   next_lo (x:(τ, χ) float) =
     if 0w <₊ x.Significand
     then x with Significand := (x.Significand - 1w)
-    else if 0w <₊ x.Exponent
-    then <| Sign        := x.Sign
+    else <| Sign        := x.Sign
           ; Exponent    := x.Exponent - 1w
           ; Significand := UINT_MAXw
           |>
-    else x
 End
 
 Theorem next_lo_Sign[simp]:
@@ -4329,12 +4335,6 @@ Proof
   gvs[dimword_def, word_lo_n2w, dimindex_1] >>
   simp[float_component_equality, dimword_def, dimindex_1] >>
   rw[] >> gvs[word_add_n2w, dimword_def]
-QED
-
-Theorem next_lo0[simp]:
-  next_lo POS0 = POS0 ∧ next_lo NEG0 = NEG0
-Proof
-  simp[next_lo_def]
 QED
 
 Theorem zero_le_next_hi[simp]:
@@ -4392,10 +4392,10 @@ Proof
       fs[word_lo_n2w, GSYM n2w_sub] >> simp[REAL_SUB] >>
       simp[real_div, REAL_POW_ADD, REAL_INV_MUL, POW_INV, WORD_LITERAL_ADD])
   >- gvs[float_is_zero, WORD_LO_word_0]
-  >- (qspec_then ‘f.Significand’ strip_assume_tac ranged_word_nchotomy >>
-      qspec_then ‘f.Exponent’ strip_assume_tac ranged_word_nchotomy >>
+  >- (Cases_on ‘f.Significand’ >>
+      Cases_on ‘f.Exponent’ >>
       rename [‘f.Significand = n2w s’, ‘f.Exponent = n2w e’] >>
-      fs[word_lo_n2w, GSYM n2w_sub, WORD_LITERAL_ADD] >>
+      gvs[word_lo_n2w, GSYM n2w_sub, WORD_LITERAL_ADD] >>
       ‘e = 1’ by simp[] >> rw[float_ulp_def] >>
       qmatch_abbrev_tac ‘abs (2 * (SF * B) - 2 * (Y1 * SF * B * Y2)) = _’ >>
       ‘2 * (SF * B) - 2 * (Y1 * SF * B * Y2) = 2 * (SF * B) * (1 - Y1 * Y2)’
@@ -4404,7 +4404,7 @@ Proof
       simp[Abbr‘B’, Abbr‘SF’, REAL_ABS_MUL, ABS_INV, POW_NZ, GSYM POW_ABS] >>
       simp[ULP_def, real_div, REAL_POW_ADD, REAL_INV_MUL] >>
       map_every Q.UNABBREV_TAC [‘Y1’, ‘Y2’] >>
-      simp[word_T_def, dimword_def, UINT_MAX_def, GSYM REAL_OF_NUM_POW,
+      simp[dimword_def, UINT_MAX_def, GSYM REAL_OF_NUM_POW,
            REAL_SUB', REAL_SUB_LDISTRIB, REAL_SUB_SUB2, w2n_minus1])
   >- (‘∀a b c:real. (a + b) - (a + c) = b - c’ by simp[] >> simp[] >>
       simp[REAL_ABS_MUL, GSYM REAL_SUB_LDISTRIB, real_div,
@@ -4413,10 +4413,11 @@ Proof
       qspec_then ‘f.Significand’ strip_assume_tac ranged_word_nchotomy >>
       fs[word_lo_n2w, GSYM n2w_sub] >> simp[REAL_SUB] >>
       simp[real_div, REAL_POW_ADD, REAL_INV_MUL, WORD_LITERAL_ADD])
-  >- (qspec_then ‘f.Significand’ strip_assume_tac ranged_word_nchotomy >>
-      qspec_then ‘f.Exponent’ strip_assume_tac ranged_word_nchotomy >>
+  >- (Cases_on ‘f.Significand’ >>
+      Cases_on ‘f.Exponent’ >>
       rename [‘f.Significand = n2w s’, ‘f.Exponent = n2w e’] >>
-      fs[word_lo_n2w, GSYM n2w_sub, WORD_LITERAL_ADD] >> ‘1 < e’ by simp[] >>
+      gvs[word_lo_n2w, GSYM n2w_sub, WORD_LITERAL_ADD, dimword_def] >>
+      ‘1 < e’ by simp[] >>
       rw[w2n_minus1, float_ulp_def] >>
       fs[word_lo_n2w, GSYM n2w_sub] >> simp[REAL_SUB] >>
       simp[GSYM pow_inv_mul_invlt] >>
@@ -4435,29 +4436,19 @@ Proof
         by simp[REAL_INV_1OVER, REAL_DOUBLE,
                 REAL_ARITH “(x:real) + (y - z) = x + y - z”] >>
       simp[REAL_SUB_SUB2, REAL_ABS_MUL, ABS_INV, GSYM POW_ABS] >>
-      fs[dimword_def] >>
-      simp[GSYM pow_inv_mul_invlt] >> REWRITE_TAC [real_div] >>
-      simp[REAL_INV_MUL, POW_INV, w2n_minus1])
-  >- gvs[WORD_LO_word_0, float_is_zero]
+      simp[GSYM pow_inv_mul_invlt] >> REWRITE_TAC [real_div])
 QED
 
-Theorem next_hilo:
-  ¬float_is_zero f ∧ float_is_finite f ⇒ next_hi (next_lo f) = f
+Theorem next_hilo[simp]:
+  next_hi (next_lo f) = f
 Proof
-  qspec_then ‘f.Significand’ (qx_choose_then ‘fS’ strip_assume_tac)
-             ranged_word_nchotomy >>
-  qspec_then ‘f.Exponent’ (qx_choose_then ‘fE’ strip_assume_tac)
-             ranged_word_nchotomy >>
-  rw[next_hi_def, next_lo_def, float_to_real_def] >> fs[] >>
-  gs[abs_sign_sub, word_lo_n2w, dimword_def, GSYM n2w_sub, word_T_def,
-     UINT_MAX_def]
-  >- (fs[word_lo_n2w, GSYM n2w_sub, word_add_n2w] >>
-      simp[float_component_equality])
-  >- gs[float_is_zero]
-  >- (fs[word_lo_n2w, GSYM n2w_sub, word_add_n2w] >>
-      simp[float_component_equality]) >>
-  Cases_on ‘0 < fS’ >> gvs[dimword_def] >>
-  Cases_on ‘0 < fE’ >> gvs[dimword_def]
+  Cases_on ‘f.Significand’ >>
+  Cases_on ‘f.Exponent’ >>
+  simp[next_hi_def, next_lo_def, float_to_real_def] >>
+  gvs[dimword_def, word_lo_n2w] >>
+  rename [‘f.Significand = n2w fS’] >>
+  Cases_on ‘0 < fS’ >> simp[WORD_ADD_LEFT_LO2, dimword_def, WORD_LO_word_T] >>
+  simp[float_component_equality, dimword_def]
 QED
 
 Theorem float_is_finite_Exponent:
@@ -4466,38 +4457,16 @@ Proof
   simp[float_is_finite_def, float_value_def] >> rw[]
 QED
 
-
-
-(* note strange behaviour of next_hi on float_top, and correspondingly,
-   strange behaviour of next_lo on the NAN with a significand of all ones
- *)
-Theorem next_lohi:
-  float_is_finite (f:(τ,χ)float) ⇒ next_lo (next_hi f) = f
+Theorem next_lohi[simp]:
+  next_lo (next_hi f) = f
 Proof
-  qspec_then ‘f.Significand’ (qx_choose_then ‘fS’ strip_assume_tac)
-             ranged_word_nchotomy >>
-  qspec_then ‘f.Exponent’ (qx_choose_then ‘fE’ strip_assume_tac)
-             ranged_word_nchotomy >>
-  rw[next_hi_def, next_lo_def, float_to_real_def] >>
-  gs[abs_sign_sub, word_lo_n2w, WORD_NOT_LOWER, word_T_def, dimword_def,
-     word_add_n2w, GSYM n2w_sub, UINT_MAX_def, word_ls_n2w]
-  >- simp[float_component_equality] >>~-
-  ([‘(fS + 1) MOD 2 ** precision(:τ) = 0’, ‘n2w fS <₊ -1w’],
-   gvs[MOD_EQ_0_DIVISOR] >> rename [‘fS + 1 = d * _’] >>
-   ‘d = 1’ suffices_by (rw[] >> gvs[] >>
-                        ‘n2w fS ≠ -1w : τ word’ by (strip_tac >> gvs[]) >>
-                        drule w2n_lt_pow_sub1 >> simp[dimword_def]) >>
-   ‘d ≠ 0 ∧ ¬(2 ≤ d)’ suffices_by simp[] >> rpt strip_tac >> gvs[] >>
-   ‘fS + 1 ≤ 2 ** precision(:τ)’ by DECIDE_TAC >>
-   gvs[]) >>
-  simp[float_component_equality] >>
-  gvs[float_is_finite_Exponent] >>
-  gvs[MOD_EQ_0_DIVISOR] >> rename [‘fS + 1 = d * _’] >>
-  ‘d = 1’ suffices_by (strip_tac >> gvs[] >>
-                       drule w2n_lt_pow_sub1 >> simp[dimword_def]) >>
-  ‘d ≠ 0 ∧ ¬(2 ≤ d)’ suffices_by simp[] >> rpt strip_tac >> gvs[] >>
-  ‘fS + 1 ≤ 2 ** precision(:χ)’ by DECIDE_TAC >>
-  gvs[]
+  metis_tac[next_hilo, next_hi_11]
+QED
+
+Theorem next_lo_11[simp]:
+  next_lo f = next_lo g ⇔ f = g
+Proof
+  metis_tac[next_lohi, next_hilo]
 QED
 
 Theorem next_hi_Sign[simp]:
@@ -4750,7 +4719,7 @@ Proof
   simp[REAL_OF_NUM_POW]
 QED
 
-Theorem float_to_real_float_abs:
+Theorem float_to_real_float_abs[simp]:
   float_to_real (float_abs f) = abs (float_to_real f)
 Proof
   simp[float_abs_def, float_to_real_def] >>
@@ -4771,4 +4740,132 @@ Proof
   drule_all_then strip_assume_tac abs_float_bounds >>
   gvs[float_to_real_float_abs] >>
   drule_then assume_tac float_is_finite_float_value >> gvs[]
+QED
+
+Theorem next_hi_diff_lemma[local] =
+  Q.INST [‘f’ |-> ‘next_hi f’] next_lo_difference |> SRULE [next_lohi]
+
+Theorem next_hi_difference:
+  float_is_finite (f:(α,β)float) ⇒
+  abs(float_to_real (next_hi f) - float_to_real f) = ulpᶠ f
+Proof
+  strip_tac >> Cases_on ‘float_is_finite (next_hi f)’
+  >- metis_tac[next_hi_diff_lemma, float_is_zero_next_hi] >>
+  gvs[next_hi_def, float_is_finite_Exponent, word_T_def, UINT_MAX_def,
+      dimword_def] >>
+  map_every Cases_on [‘f.Significand’, ‘f.Exponent’] >>
+  gvs[dimword_def, word_lo_n2w] >> rw[] >> gvs[dimword_def, word_add_n2w] >>
+  rename [‘f.Significand = n2w fS’, ‘f.Exponent = n2w fE’] >>
+  ‘fE = 2 ** precision(:β) - 2’ by simp[] >> gvs[] >>
+  simp[float_to_real_def, dimword_def] >>
+  rw[] >~
+  [‘precision(:β) ≤ 1’]
+  >- (‘precision (:β) ≠ 0’ by simp[] >>
+      ‘precision(:β) = 1’ by simp[] >> gvs[] >>
+      simp[GSYM REAL_SUB_LDISTRIB, ABS_MUL] >>
+      simp[float_ulp_def, ULP_def, REAL_POW_ADD] >>
+      qabbrev_tac ‘B = 2 pow bias(:β)’ >>
+      qabbrev_tac ‘AP = 2 pow precision(:α)’ >>
+      qabbrev_tac ‘BP = 2n ** precision (:β)’ >>
+      ‘B = abs B’ by simp[Abbr‘B’] >> pop_assum SUBST1_TAC >>
+      REWRITE_TAC[GSYM ABS_MUL] >> simp[REAL_SUB_RDISTRIB] >>
+      simp[Abbr‘B’] >>
+      simp[REAL_ARITH “s - a * b * s = s * (1 - a * b)”] >>
+      simp[ABS_MUL] >>
+      ‘0 ≤ 1 - AP⁻¹ * &fS’
+        by (simp[REAL_ARITH “(0r ≤ x - y ⇔ y ≤ x)”] >>
+            ‘0 < AP’ by simp[Abbr‘AP’] >> simp[] >>
+            simp[Abbr‘AP’, REAL_OF_NUM_POW]) >>
+      simp[ABS_REFL'] >> simp[REAL_SUB_LDISTRIB, REAL_LDISTRIB] >>
+      simp[Abbr‘AP’, REAL_OF_NUM_POW, REAL_SUB]) >>
+  simp[float_ulp_def, ULP_def, dimword_def, REAL_POW_ADD] >>
+  qabbrev_tac ‘B = 2 pow bias(:β)’ >>
+  qabbrev_tac ‘AP = 2 pow precision(:α)’ >>
+  qabbrev_tac ‘BP = 2n ** precision (:β)’ >>
+  ‘B = abs B’ by simp[Abbr‘B’] >> pop_assum SUBST1_TAC >>
+  REWRITE_TAC[GSYM ABS_MUL] >> simp[REAL_SUB_RDISTRIB] >>
+  simp[Abbr‘B’] >>
+  simp[REAL_ARITH “s * x - s * a * b = s * (x - a * b)”] >>
+  simp[ABS_MUL] >>
+  ‘2 pow (BP - 1) = 2 * 2 pow (BP - 2)’
+    by (qpat_x_assum ‘BP - 2 + 1 = _’ (SUBST1_TAC o SYM)>>
+        simp[REAL_POW_ADD]) >>
+  pop_assum SUBST1_TAC >>
+  simp[REAL_ARITH “x * b - b * y = b * (x - y):real”] >>
+  simp[ABS_MUL] >> ‘0 < AP’ by simp[Abbr‘AP’] >>
+  ‘0 ≤ 2 - (1 + &fS / AP)’
+    by (simp[REAL_ARITH “(1 + x ≤ 2r ⇔ x ≤ 1) ∧ (0r ≤ x - y ⇔ y ≤ x)”] >>
+        simp[Abbr‘AP’, REAL_OF_NUM_POW]) >>
+  simp[ABS_REFL'] >> simp[REAL_SUB_LDISTRIB, REAL_LDISTRIB] >>
+  ‘2 * AP - (AP + &fS) = AP - &fS’ by simp[] >> simp[] >>
+  simp[Abbr‘AP’, REAL_OF_NUM_POW, REAL_SUB]
+QED
+
+Theorem next_hi_idem[simp]:
+  next_hi f ≠ f
+Proof
+  rw[next_hi_def, float_component_equality, WORD_ADD_RID_UNIQ]
+QED
+
+Theorem next_lo_idem[simp]:
+  next_lo f ≠ f
+Proof
+  metis_tac[next_hilo, next_hi_idem]
+QED
+
+Theorem sign_float_abs[simp]:
+  sign (float_abs f) = 1
+Proof
+  simp[float_abs_def]
+QED
+
+Theorem float_abs_Exponent[simp]:
+  (float_abs f).Exponent = f.Exponent
+Proof
+  simp[float_abs_def]
+QED
+
+Theorem float_abs_Significand[simp]:
+  (float_abs f).Significand = f.Significand
+Proof
+  simp[float_abs_def]
+QED
+
+Theorem word_1comp_11[simp]:
+  word_1comp w1 = word_1comp w2 <=> w1 = w2
+Proof
+  simp[WORD_NOT, WORD_LCANCEL_SUB, WORD_EQ_NEG]
+QED
+
+Theorem float_negate_11[simp]:
+  float_negate f1 = float_negate f2 <=> f1 = f2
+Proof
+  simp[float_negate_def, float_component_equality]
+QED
+
+Theorem float_is_finite_next_lo:
+  float_is_finite f ∧ ¬float_is_zero f ⇒ float_is_finite (next_lo f)
+Proof
+  map_every Cases_on [‘f.Exponent’, ‘f.Significand’] >>
+  gvs[next_lo_def, float_is_finite_Exponent, float_is_zero, word_T_def,
+      dimword_def, UINT_MAX_def, word_lo_n2w, GSYM n2w_sub] >> rw[] >>
+  simp[dimword_def]
+QED
+
+Theorem float_ulp_abs[simp]:
+  ulpᶠ (float_abs a) = ulpᶠ a
+Proof
+  simp[float_ulp_def, float_abs_def]
+QED
+
+Theorem float_is_finite_float_abs[simp]:
+  float_is_finite (float_abs f) ⇔ float_is_finite f
+Proof
+  simp[float_abs_def, float_is_finite_Exponent]
+QED
+
+Theorem next_hi_float_abs:
+  next_hi (float_abs f) = float_abs (next_hi f)
+Proof
+  rw[next_hi_def, float_abs_def, AllCaseEqs(), float_component_equality]
 QED
