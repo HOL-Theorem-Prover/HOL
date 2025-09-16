@@ -3840,27 +3840,27 @@ Proof
 QED
 
 val taylor_diffn_tactic1 =
-STRONG_CONJ_TAC
-(* real_random_variable (λx. Normal (diffn 2 f (real (Z x)))) p *)
->- (fs [real_random_variable, p_space_def, events_def] \\
-    rw [GSYM o_DEF] \\
-    MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
-    simp [MEASURE_SPACE_SIGMA_ALGEBRA] \\
-    MATCH_MP_TAC MEASURABLE_COMP \\
-    qexists ‘borel’ \\
-    reverse CONJ_TAC >- (MATCH_MP_TAC in_borel_measurable_diffn \\
-                         qexists ‘3’ >> fs []) \\
-    METIS_TAC [in_borel_measurable_from_Borel, MEASURE_SPACE_SIGMA_ALGEBRA]) \\
-DISCH_TAC \\
-(* real_random_variable (λx. (X x)²) p *)
-STRONG_CONJ_TAC
->- (fs [real_random_variable, p_space_def, events_def] \\
-    rw [pow_not_infty] \\
-    MATCH_MP_TAC IN_BOREL_MEASURABLE_POW \\
-    qexistsl [‘2’, ‘X’] \\
-    ASM_SIMP_TAC std_ss [MEASURE_SPACE_SIGMA_ALGEBRA] \\
-    ‘space (measurable_space p) = m_space p’ by fs [] >> gs []) \\
-DISCH_TAC ;
+    STRONG_CONJ_TAC
+    (* real_random_variable (λx. Normal (diffn 2 f (real (Z x)))) p *)
+    >- (fs [real_random_variable, p_space_def, events_def] \\
+        rw [GSYM o_DEF] \\
+        MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+        simp [MEASURE_SPACE_SIGMA_ALGEBRA] \\
+        MATCH_MP_TAC MEASURABLE_COMP \\
+        qexists ‘borel’ \\
+        reverse CONJ_TAC >- (MATCH_MP_TAC in_borel_measurable_diffn \\
+                             qexists ‘3’ >> fs []) \\
+        METIS_TAC [in_borel_measurable_from_Borel, MEASURE_SPACE_SIGMA_ALGEBRA]) \\
+    DISCH_TAC \\
+    (* real_random_variable (λx. (X x)²) p *)
+    STRONG_CONJ_TAC
+    >- (fs [real_random_variable, p_space_def, events_def] \\
+        rw [pow_not_infty] \\
+        MATCH_MP_TAC IN_BOREL_MEASURABLE_POW \\
+        qexistsl [‘2’, ‘X’] \\
+        ASM_SIMP_TAC std_ss [MEASURE_SPACE_SIGMA_ALGEBRA] \\
+        ‘space (measurable_space p) = m_space p’ by fs [] >> gs []) \\
+    DISCH_TAC ;
 
 Theorem real_random_variable_pow :
     ∀p X (n: num).
