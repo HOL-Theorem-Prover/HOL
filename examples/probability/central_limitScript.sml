@@ -2960,248 +2960,248 @@ QED
 
 (* eq 15 *)
 Theorem clt_Lindeberg_replacement_trick_bounded[local] :
-    ∀p X Y f s n.
-      prob_space p ∧ f ∈ CnR 3 ∧
-      (∀i. i < n ⇒ real_random_variable (X i) p ∧
-                   real_random_variable (Y i) p ∧
-                   integrable p (X i) ∧
-                   integrable p (Y i)) ∧
-      0 < s n ∧ s n ≠ +∞ ∧ s n ≠ −∞ ⇒
-      (∀j. j < n ⇒
-           (∀Z. Z = (λj x. if x IN p_space p then
-                             (∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j))
-                           else 0) ⇒
-                expectation p (Normal ∘ f ∘ real ∘ (λx. ∑ (λi. X i x) (count n) / s n)) −
-                            expectation p (Normal ∘ f ∘ real ∘ (λx. ∑ (λi. Y i x) (count n) / s n)) =
-                ∑ (λj. expectation p (Normal ∘ f ∘ real ∘ (λx. (X j x + Z j x) / s n)) −
-                                   expectation p (Normal ∘ f ∘ real ∘ (λx. (Y j x + Z j x) / s n))) (count n)))
+  ∀p X Y f s n.
+    prob_space p ∧ f ∈ CnR 3 ∧
+    (∀i. i < n ⇒ real_random_variable (X i) p ∧
+                 real_random_variable (Y i) p ∧
+                 integrable p (X i) ∧
+                 integrable p (Y i)) ∧
+    0 < s n ∧ s n ≠ +∞ ∧ s n ≠ −∞ ⇒
+    (∀j. j < n ⇒
+         (∀Z. Z = (λj x. if x IN p_space p then
+                           (∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j))
+                         else 0) ⇒
+              expectation p (Normal ∘ f ∘ real ∘ (λx. ∑ (λi. X i x) (count n) / s n)) −
+                          expectation p (Normal ∘ f ∘ real ∘ (λx. ∑ (λi. Y i x) (count n) / s n)) =
+              ∑ (λj. expectation p (Normal ∘ f ∘ real ∘ (λx. (X j x + Z j x) / s n)) −
+                                 expectation p (Normal ∘ f ∘ real ∘ (λx. (Y j x + Z j x) / s n))) (count n)))
 Proof
-    rw [] >> rename1 ‘k < n’
- >> Q.ABBREV_TAC ‘Z = (λj x. if x IN p_space p then
-                               (∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j))
-                             else 0)’
- >> gs []
- >> Know ‘integrable p (λx. ∑ (λi. Y i x) (count n))’
- >- (irule integrable_sum' >> fs [prob_space_def])
- >> DISCH_TAC
- >> Know ‘integrable p (λx. ∑ (λi. Y i x) (count n) / s n)’
- >- (‘∃c. s n = Normal c’ by METIS_TAC [extreal_cases] \\
-     fs [] \\
-     Q.ABBREV_TAC ‘h = λx. ∑ (λi. Y i x) (count n)’ \\
-     fs [] >> irule integrable_cdiv >> METIS_TAC [REAL_LT_LE, prob_space_def])
- >> DISCH_TAC
- >> Know ‘real_random_variable (λx. ∑ (λi. Y i x) (count n)) p’
- >- (irule real_random_variable_sum >> fs [])
- >> DISCH_TAC
- >> Know ‘real_random_variable (λx. ∑ (λi. Y i x) (count n) / s n) p’
- >- (‘∃c. s n = Normal c’ by METIS_TAC [extreal_cases] \\
-     fs [] \\
-     Q.ABBREV_TAC ‘h = λx. ∑ (λi. Y i x) (count n)’ \\
-     fs [] >> irule real_random_variable_cdiv >> METIS_TAC [REAL_LT_LE])
- >> DISCH_TAC
- >> Know ‘integrable p
-          (Normal ∘ f ∘ real ∘ (λx. ∑ (λi. Y i x) (count n) / s n))’
- >- (Q.ABBREV_TAC ‘h = λx. ∑ (λi. Y i x) (count n) / s n’ \\
-     irule integrable_bounded_continuous \\
-     MP_TAC (C3_subset_C_b) >> rw [SUBSET_DEF])
- >> DISCH_TAC
- >> Q.ABBREV_TAC ‘S_X = (λx. ∑ (λi. X i x) (count n) / s n)’
- >> Q.ABBREV_TAC ‘S_Y = (λx. ∑ (λi. Y i x) (count n) / s n)’
- >> Q.ABBREV_TAC ‘f_X = Normal ∘ f ∘ real ∘ S_X’
- >> Q.ABBREV_TAC ‘f_Y = Normal ∘ f ∘ real ∘ S_Y’
- >> Q.ABBREV_TAC ‘G = (λj x.
-                         if x ∈ p_space p then
-                           ∑ (λi. Y i x) (count j) +
-                           ∑ (λi. X i x) (count n DIFF count j)
-                         else 0)’
- >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘Y’, ‘G’, ‘f’, ‘n’] clt_partial_sum_lemma)
- >> rw []
- >> Q.ABBREV_TAC ‘g = λj. Normal ∘ f ∘ real ∘ (λx. G j x / s n)’
- >> Know ‘expectation p f_X = expectation p (g 0)’
- >- (MATCH_MP_TAC expectation_cong \\
-     rw [Abbr ‘f_X’, Abbr ‘g’, Abbr ‘S_X’, Abbr ‘G’])
- >> Rewr
- >> Know ‘expectation p f_Y = expectation p (g n)’
- >- (MATCH_MP_TAC expectation_cong \\
-     rw [Abbr ‘f_Y’, Abbr ‘g’, Abbr ‘S_Y’, Abbr ‘G’])
- >> Rewr
- >> MP_TAC (Q.SPECL [‘λj. expectation p (g j)’, ‘n’] SUM_SUB_GEN_WEAKEN)
- >> impl_tac
- >- (Q.X_GEN_TAC ‘j’ >> STRIP_TAC \\
-     Q.PAT_X_ASSUM ‘∀j. j ≤ n ⇒
-                        real_random_variable (λx. G j x) p ∧  _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) \\
-     gs [Abbr ‘g’] \\
-     MATCH_MP_TAC clt_expectation_not_infty \\
-     ‘∃a. s n = Normal a’ by METIS_TAC [extreal_cases] >> gs [] \\
-     METIS_TAC [real_random_variable_cdiv, integrable_cdiv, GSYM prob_space_def, GSYM ETA_AX, REAL_LT_IMP_NE])
- >> BETA_TAC
- >> DISCH_THEN (fs o wrap o SYM)
- >> irule EXTREAL_SUM_IMAGE_EQ'
- >> simp []
- >> Q.X_GEN_TAC ‘j’ >> rw []
- >> Q.PAT_X_ASSUM ‘∀j. j ≤ n ⇒ _’ K_TAC
- >> fs [Abbr ‘g’]
- >> Know ‘expectation p (Normal ∘ f ∘ real ∘ (λx. G j x / s n)) =
-          expectation p (Normal ∘ f ∘ real ∘ (λx. (X j x + Z j x) / s n))’
- >- (irule expectation_cong >> simp [] \\
-     Know ‘∀x. x ∈ p_space p ⇒ G j x = (X j x + Z j x)’
-     >- (simp [Abbr ‘G’, Abbr ‘Z’] \\
-         Know ‘∀x. x IN p_space p ⇒ X j x ≠ PosInf ∧ X j x ≠ NegInf’
-         >- (Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
-              (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [real_random_variable_def]) \\
-         DISCH_TAC \\
-         Know ‘∀x. x IN p_space p ⇒ ∑ (λi. Y i x) (count j) ≠ PosInf ∧ ∑ (λi. Y i x) (count j) ≠ NegInf’
-         >- (GEN_TAC >> STRIP_TAC >> CONJ_TAC
-             >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> simp [] \\
-                 Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
-                 ‘i < j’ by METIS_TAC [LESS_TRANS] \\
-                 Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
-                  (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
-             irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> simp [] \\
-             Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
-             ‘i < j’ by METIS_TAC [LESS_TRANS] \\
-             Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
-              (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
-         DISCH_TAC \\
-         Know ‘∀x. x IN p_space p ⇒ ∑ (λi. X i x) (count n DIFF count j) ≠ PosInf ∧
-                                    ∑ (λi. X i x) (count n DIFF count j) ≠ NegInf’
-         >- (GEN_TAC >> STRIP_TAC >> CONJ_TAC
-             >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> simp [] \\
-                 Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
-                 Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
-                  (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
-             irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> simp [] \\
-             Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
-             Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
-              (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
-         DISCH_TAC \\
-         Know ‘∀x. x IN p_space p ⇒ ∑ (λi. X i x) (count n DIFF count1 j) ≠ PosInf ∧
-                                    ∑ (λi. X i x) (count n DIFF count1 j) ≠ NegInf’
-         >- (GEN_TAC >> STRIP_TAC >> CONJ_TAC
-             >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> simp [] \\
-                 Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
-                 Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
-                  (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
-             irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> simp [] \\
-             Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
-             Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
-              (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
-         DISCH_TAC \\
-         ‘∀x. x ∈ p_space p ⇒
-              X j x + (∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j)) =
-              X j x + ∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j)’
-           by  METIS_TAC [add_assoc] \\
-         POP_ASSUM (fs o wrap) \\
-         ‘∀x. x ∈ p_space p ⇒ X j x + ∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j) =
-                              ∑ (λi. Y i x) (count j) + X j x + ∑ (λi. X i x) (count n DIFF count1 j)’
-           by METIS_TAC [add_comm] \\
-         POP_ASSUM (fs o wrap) \\
-         ‘∀x. x ∈ p_space p ⇒ ∑ (λi. Y i x) (count j) + X j x + ∑ (λi. X i x) (count n DIFF count1 j) =
-                              ∑ (λi. Y i x) (count j) + (X j x + ∑ (λi. X i x) (count n DIFF count1 j))’
-           by METIS_TAC [GSYM add_assoc] \\
-         POP_ASSUM (fs o wrap) \\
-         Know ‘∀x. x ∈ p_space p ⇒ ∑ (λi. X i x) (count n DIFF count j) =
-                                   (X j x + ∑ (λi. X i x) (count n DIFF count1 j))’
-         >- (GEN_TAC >> STRIP_TAC \\
-             Q.PAT_X_ASSUM ‘∀x. x ∈ p_space p ⇒
-                                ∑ (λi. X i x) (count n DIFF count1 j) ≠ +∞ ∧ _’
-              (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs [] \\
-             ‘X j x = ∑ (λi. X i x) {j}’ by rw [EXTREAL_SUM_IMAGE_SING] \\
-             POP_ORW \\
-             ‘count n DIFF count j = {j} UNION (count n DIFF count1 j)’ by rw [Once EXTENSION] \\
-             POP_ORW \\
-             irule EXTREAL_SUM_IMAGE_DISJOINT_UNION \\
-             Know ‘∀x'. x' ∈ {j} ∪ (count n DIFF count1 j) ⇒ (λi. X i x) x' ≠ +∞’
-             >- (‘count n DIFF count j = {j} UNION (count n DIFF count1 j)’ by rw [Once EXTENSION] \\
-                 GEN_TAC >> STRIP_TAC \\
-                 BETA_TAC >> fs [] \\
-                 Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
-                  (STRIP_ASSUME_TAC o Q.SPEC ‘x'’) >> gs [real_random_variable_def]) \\
-             DISCH_TAC >> fs [] >> DISJ2_TAC >> METIS_TAC []) \\
-         DISCH_TAC \\
-         POP_ASSUM (fs o wrap)) \\
-     DISCH_THEN (fs o wrap))
- >> Rewr
- >> Know ‘expectation p (Normal ∘ f ∘ real ∘ (λx. G (j + 1) x / s n)) =
-          expectation p (Normal ∘ f ∘ real ∘ (λx. (Y j x + Z j x) / s n))’
- >- (irule expectation_cong >> simp [] \\
-     Know ‘∀x. x ∈ p_space p ⇒ G (j + 1) x = Y j x + Z j x’
-     >- (simp [Abbr ‘G’, Abbr ‘Z’] \\
-         Know ‘∀x. x IN p_space p ⇒ Y j x ≠ PosInf ∧ Y j x ≠ NegInf’
-         >- (Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
-              (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [real_random_variable_def]) \\
-         DISCH_TAC \\
-         Know ‘∀x. x IN p_space p ⇒ ∑ (λi. Y i x) (count j) ≠ PosInf ∧ ∑ (λi. Y i x) (count j) ≠ NegInf’
-         >- (GEN_TAC >> STRIP_TAC >> CONJ_TAC
-             >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> simp [] \\
-                 Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
-                 ‘i < j’ by METIS_TAC [LESS_TRANS] \\
-                 Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
-                  (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
-             irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> simp [] \\
-             Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
-             ‘i < j’ by METIS_TAC [LESS_TRANS] \\
-             Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
-              (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
-         DISCH_TAC \\
-         Know ‘∀x. x IN p_space p ⇒ ∑ (λi. Y i x) (count (j + 1)) ≠ PosInf ∧
-                                    ∑ (λi. Y i x) (count (j + 1)) ≠ NegInf’
-         >- (GEN_TAC >> STRIP_TAC \\
-             ‘count (j + 1) = count j ∪ {j}’ by rw [Once EXTENSION] \\
-             POP_ORW \\
-             Know ‘∑ (λi. Y i x) (count j ∪ {j}) = ∑ (λi. Y i x) (count j) + ∑ (λi. Y i x) {j}’
-             >- (irule EXTREAL_SUM_IMAGE_DISJOINT_UNION \\
-                 simp [] >> DISJ2_TAC >> rw []
-                 >- (Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
-                      (STRIP_ASSUME_TAC o Q.SPEC ‘x'’) \\
-                     ‘x' < n’ by METIS_TAC [LESS_TRANS] \\
-                     gs [real_random_variable_def]) \\
-                 Q.PAT_X_ASSUM ‘∀x. x ∈ p_space p ⇒ Y j x ≠ +∞ ∧ Y j x ≠ −∞’
-                  (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> fs []) \\
-             Rewr \\
-             NTAC 2 (Q.PAT_X_ASSUM ‘∀x. x ∈ p_space p ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’)) \\
-             gs [add_not_infty]) \\
-         DISCH_TAC \\
-         Know ‘∀x. x ∈ p_space p ⇒
-                   ∑ (λi. X i x) (count n DIFF count1 j) ≠ +∞ ∧
-                   ∑ (λi. X i x) (count n DIFF count1 j) ≠ −∞’
-         >- (GEN_TAC >> STRIP_TAC >> CONJ_TAC
-             >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> simp [] \\
-                 Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
-                 Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
-                  (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
-             irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> simp [] \\
-             Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
-             Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
-              (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
-         DISCH_TAC \\
-         ‘∀x. x ∈ p_space p ⇒
-              Y j x + (∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j)) =
-              Y j x + ∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j)’
-           by  METIS_TAC [add_assoc] \\
-         POP_ASSUM (fs o wrap) \\
-         Know ‘∀x. x ∈ p_space p ⇒ ∑ (λi. Y i x) (count (j + 1)) = Y j x + ∑ (λi. Y i x) (count j)’
-         >- (GEN_TAC >> STRIP_TAC \\
-             Q.PAT_X_ASSUM ‘∀x. x ∈ p_space p ⇒
-                                ∑ (λi. Y i x) (count (j + 1)) ≠ +∞ ∧ _’
-              (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs [] \\
-             ‘Y j x = ∑ (λi. Y i x) {j}’ by rw [EXTREAL_SUM_IMAGE_SING] \\
-             POP_ORW \\
-             ‘count (j + 1) = {j} UNION (count j)’ by rw [Once EXTENSION] \\
-             POP_ORW \\
-             irule EXTREAL_SUM_IMAGE_DISJOINT_UNION \\
-             simp [] >> DISJ2_TAC >> rw []
-             >- (Q.PAT_X_ASSUM ‘∀x. x ∈ p_space p ⇒ Y j x ≠ +∞ ∧ Y j x ≠ −∞’
-                  (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs []) \\
-             Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
-              (STRIP_ASSUME_TAC o Q.SPEC ‘x'’) \\
-             ‘x' < n’ by METIS_TAC [LESS_TRANS] \\
-             gs [real_random_variable_def]) \\
-         DISCH_THEN (fs o wrap) \\
-         ‘count (j + 1) = count1 j’ by rw [Once EXTENSION] \\
-         POP_ORW >> gs []) \\
-     DISCH_THEN (fs o wrap))
- >> Rewr
+  rw [] >> rename1 ‘k < n’
+  >> Q.ABBREV_TAC ‘Z = (λj x. if x IN p_space p then
+                                (∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j))
+                              else 0)’
+  >> gs []
+  >> Know ‘integrable p (λx. ∑ (λi. Y i x) (count n))’
+  >- (irule integrable_sum' >> fs [prob_space_def])
+  >> DISCH_TAC
+  >> Know ‘integrable p (λx. ∑ (λi. Y i x) (count n) / s n)’
+  >- (‘∃c. s n = Normal c’ by METIS_TAC [extreal_cases] \\
+      fs [] \\
+      Q.ABBREV_TAC ‘h = λx. ∑ (λi. Y i x) (count n)’ \\
+      fs [] >> irule integrable_cdiv >> METIS_TAC [REAL_LT_LE, prob_space_def])
+  >> DISCH_TAC
+  >> Know ‘real_random_variable (λx. ∑ (λi. Y i x) (count n)) p’
+  >- (irule real_random_variable_sum >> fs [])
+  >> DISCH_TAC
+  >> Know ‘real_random_variable (λx. ∑ (λi. Y i x) (count n) / s n) p’
+  >- (‘∃c. s n = Normal c’ by METIS_TAC [extreal_cases] \\
+      fs [] \\
+      Q.ABBREV_TAC ‘h = λx. ∑ (λi. Y i x) (count n)’ \\
+      fs [] >> irule real_random_variable_cdiv >> METIS_TAC [REAL_LT_LE])
+  >> DISCH_TAC
+  >> Know ‘integrable p
+           (Normal ∘ f ∘ real ∘ (λx. ∑ (λi. Y i x) (count n) / s n))’
+  >- (Q.ABBREV_TAC ‘h = λx. ∑ (λi. Y i x) (count n) / s n’ \\
+      irule integrable_bounded_continuous \\
+      MP_TAC (C3_subset_C_b) >> rw [SUBSET_DEF])
+  >> DISCH_TAC
+  >> Q.ABBREV_TAC ‘S_X = (λx. ∑ (λi. X i x) (count n) / s n)’
+  >> Q.ABBREV_TAC ‘S_Y = (λx. ∑ (λi. Y i x) (count n) / s n)’
+  >> Q.ABBREV_TAC ‘f_X = Normal ∘ f ∘ real ∘ S_X’
+  >> Q.ABBREV_TAC ‘f_Y = Normal ∘ f ∘ real ∘ S_Y’
+  >> Q.ABBREV_TAC ‘G = (λj x.
+                          if x ∈ p_space p then
+                            ∑ (λi. Y i x) (count j) +
+                            ∑ (λi. X i x) (count n DIFF count j)
+                          else 0)’
+  >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘Y’, ‘G’, ‘f’, ‘n’] clt_partial_sum_lemma)
+  >> rw []
+  >> Q.ABBREV_TAC ‘g = λj. Normal ∘ f ∘ real ∘ (λx. G j x / s n)’
+  >> Know ‘expectation p f_X = expectation p (g 0)’
+  >- (MATCH_MP_TAC expectation_cong \\
+      rw [Abbr ‘f_X’, Abbr ‘g’, Abbr ‘S_X’, Abbr ‘G’])
+  >> Rewr
+  >> Know ‘expectation p f_Y = expectation p (g n)’
+  >- (MATCH_MP_TAC expectation_cong \\
+      rw [Abbr ‘f_Y’, Abbr ‘g’, Abbr ‘S_Y’, Abbr ‘G’])
+  >> Rewr
+  >> MP_TAC (Q.SPECL [‘λj. expectation p (g j)’, ‘n’] SUM_SUB_GEN_WEAKEN)
+  >> impl_tac
+  >- (Q.X_GEN_TAC ‘j’ >> STRIP_TAC \\
+      Q.PAT_X_ASSUM ‘∀j. j ≤ n ⇒
+                         real_random_variable (λx. G j x) p ∧  _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) \\
+      gs [Abbr ‘g’] \\
+      MATCH_MP_TAC clt_expectation_not_infty \\
+      ‘∃a. s n = Normal a’ by METIS_TAC [extreal_cases] >> gs [] \\
+      METIS_TAC [real_random_variable_cdiv, integrable_cdiv, GSYM prob_space_def, GSYM ETA_AX, REAL_LT_IMP_NE])
+  >> BETA_TAC
+  >> DISCH_THEN (fs o wrap o SYM)
+  >> irule EXTREAL_SUM_IMAGE_EQ'
+  >> simp []
+  >> Q.X_GEN_TAC ‘j’ >> rw []
+  >> Q.PAT_X_ASSUM ‘∀j. j ≤ n ⇒ _’ K_TAC
+  >> fs [Abbr ‘g’]
+  >> Know ‘expectation p (Normal ∘ f ∘ real ∘ (λx. G j x / s n)) =
+           expectation p (Normal ∘ f ∘ real ∘ (λx. (X j x + Z j x) / s n))’
+  >- (irule expectation_cong >> simp [] \\
+      Know ‘∀x. x ∈ p_space p ⇒ G j x = (X j x + Z j x)’
+      >- (simp [Abbr ‘G’, Abbr ‘Z’] \\
+          Know ‘∀x. x IN p_space p ⇒ X j x ≠ PosInf ∧ X j x ≠ NegInf’
+          >- (Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+               (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [real_random_variable_def]) \\
+          DISCH_TAC \\
+          Know ‘∀x. x IN p_space p ⇒ ∑ (λi. Y i x) (count j) ≠ PosInf ∧ ∑ (λi. Y i x) (count j) ≠ NegInf’
+          >- (GEN_TAC >> STRIP_TAC >> CONJ_TAC
+              >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> simp [] \\
+                  Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
+                  ‘i < j’ by METIS_TAC [LESS_TRANS] \\
+                  Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+                   (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
+              irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> simp [] \\
+              Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
+              ‘i < j’ by METIS_TAC [LESS_TRANS] \\
+              Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+               (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
+          DISCH_TAC \\
+          Know ‘∀x. x IN p_space p ⇒ ∑ (λi. X i x) (count n DIFF count j) ≠ PosInf ∧
+                                     ∑ (λi. X i x) (count n DIFF count j) ≠ NegInf’
+          >- (GEN_TAC >> STRIP_TAC >> CONJ_TAC
+              >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> simp [] \\
+                  Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
+                  Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+                   (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
+              irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> simp [] \\
+              Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
+              Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+               (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
+          DISCH_TAC \\
+          Know ‘∀x. x IN p_space p ⇒ ∑ (λi. X i x) (count n DIFF count1 j) ≠ PosInf ∧
+                                     ∑ (λi. X i x) (count n DIFF count1 j) ≠ NegInf’
+          >- (GEN_TAC >> STRIP_TAC >> CONJ_TAC
+              >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> simp [] \\
+                  Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
+                  Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+                   (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
+              irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> simp [] \\
+              Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
+              Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+               (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
+          DISCH_TAC \\
+          ‘∀x. x ∈ p_space p ⇒
+               X j x + (∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j)) =
+               X j x + ∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j)’
+            by  METIS_TAC [add_assoc] \\
+          POP_ASSUM (fs o wrap) \\
+          ‘∀x. x ∈ p_space p ⇒ X j x + ∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j) =
+                               ∑ (λi. Y i x) (count j) + X j x + ∑ (λi. X i x) (count n DIFF count1 j)’
+            by METIS_TAC [add_comm] \\
+          POP_ASSUM (fs o wrap) \\
+          ‘∀x. x ∈ p_space p ⇒ ∑ (λi. Y i x) (count j) + X j x + ∑ (λi. X i x) (count n DIFF count1 j) =
+                               ∑ (λi. Y i x) (count j) + (X j x + ∑ (λi. X i x) (count n DIFF count1 j))’
+            by METIS_TAC [GSYM add_assoc] \\
+          POP_ASSUM (fs o wrap) \\
+          Know ‘∀x. x ∈ p_space p ⇒ ∑ (λi. X i x) (count n DIFF count j) =
+                                    (X j x + ∑ (λi. X i x) (count n DIFF count1 j))’
+          >- (GEN_TAC >> STRIP_TAC \\
+              Q.PAT_X_ASSUM ‘∀x. x ∈ p_space p ⇒
+                                 ∑ (λi. X i x) (count n DIFF count1 j) ≠ +∞ ∧ _’
+               (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs [] \\
+              ‘X j x = ∑ (λi. X i x) {j}’ by rw [EXTREAL_SUM_IMAGE_SING] \\
+              POP_ORW \\
+              ‘count n DIFF count j = {j} UNION (count n DIFF count1 j)’ by rw [Once EXTENSION] \\
+              POP_ORW \\
+              irule EXTREAL_SUM_IMAGE_DISJOINT_UNION \\
+              Know ‘∀x'. x' ∈ {j} ∪ (count n DIFF count1 j) ⇒ (λi. X i x) x' ≠ +∞’
+              >- (‘count n DIFF count j = {j} UNION (count n DIFF count1 j)’ by rw [Once EXTENSION] \\
+                  GEN_TAC >> STRIP_TAC \\
+                  BETA_TAC >> fs [] \\
+                  Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+                   (STRIP_ASSUME_TAC o Q.SPEC ‘x'’) >> gs [real_random_variable_def]) \\
+              DISCH_TAC >> fs [] >> DISJ2_TAC >> METIS_TAC []) \\
+          DISCH_TAC \\
+          POP_ASSUM (fs o wrap)) \\
+      DISCH_THEN (fs o wrap))
+  >> Rewr
+  >> Know ‘expectation p (Normal ∘ f ∘ real ∘ (λx. G (j + 1) x / s n)) =
+           expectation p (Normal ∘ f ∘ real ∘ (λx. (Y j x + Z j x) / s n))’
+  >- (irule expectation_cong >> simp [] \\
+      Know ‘∀x. x ∈ p_space p ⇒ G (j + 1) x = Y j x + Z j x’
+      >- (simp [Abbr ‘G’, Abbr ‘Z’] \\
+          Know ‘∀x. x IN p_space p ⇒ Y j x ≠ PosInf ∧ Y j x ≠ NegInf’
+          >- (Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+               (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [real_random_variable_def]) \\
+          DISCH_TAC \\
+          Know ‘∀x. x IN p_space p ⇒ ∑ (λi. Y i x) (count j) ≠ PosInf ∧ ∑ (λi. Y i x) (count j) ≠ NegInf’
+          >- (GEN_TAC >> STRIP_TAC >> CONJ_TAC
+              >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> simp [] \\
+                  Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
+                  ‘i < j’ by METIS_TAC [LESS_TRANS] \\
+                  Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+                   (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
+              irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> simp [] \\
+              Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
+              ‘i < j’ by METIS_TAC [LESS_TRANS] \\
+              Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+               (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
+          DISCH_TAC \\
+          Know ‘∀x. x IN p_space p ⇒ ∑ (λi. Y i x) (count (j + 1)) ≠ PosInf ∧
+                                     ∑ (λi. Y i x) (count (j + 1)) ≠ NegInf’
+          >- (GEN_TAC >> STRIP_TAC \\
+              ‘count (j + 1) = count j ∪ {j}’ by rw [Once EXTENSION] \\
+              POP_ORW \\
+              Know ‘∑ (λi. Y i x) (count j ∪ {j}) = ∑ (λi. Y i x) (count j) + ∑ (λi. Y i x) {j}’
+              >- (irule EXTREAL_SUM_IMAGE_DISJOINT_UNION \\
+                  simp [] >> DISJ2_TAC >> rw []
+                  >- (Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+                       (STRIP_ASSUME_TAC o Q.SPEC ‘x'’) \\
+                      ‘x' < n’ by METIS_TAC [LESS_TRANS] \\
+                      gs [real_random_variable_def]) \\
+                  Q.PAT_X_ASSUM ‘∀x. x ∈ p_space p ⇒ Y j x ≠ +∞ ∧ Y j x ≠ −∞’
+                   (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> fs []) \\
+              Rewr \\
+              NTAC 2 (Q.PAT_X_ASSUM ‘∀x. x ∈ p_space p ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’)) \\
+              gs [add_not_infty]) \\
+          DISCH_TAC \\
+          Know ‘∀x. x ∈ p_space p ⇒
+                    ∑ (λi. X i x) (count n DIFF count1 j) ≠ +∞ ∧
+                    ∑ (λi. X i x) (count n DIFF count1 j) ≠ −∞’
+          >- (GEN_TAC >> STRIP_TAC >> CONJ_TAC
+              >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> simp [] \\
+                  Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
+                  Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+                   (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
+              irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> simp [] \\
+              Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
+              Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+               (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
+          DISCH_TAC \\
+          ‘∀x. x ∈ p_space p ⇒
+               Y j x + (∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j)) =
+               Y j x + ∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j)’
+            by  METIS_TAC [add_assoc] \\
+          POP_ASSUM (fs o wrap) \\
+          Know ‘∀x. x ∈ p_space p ⇒ ∑ (λi. Y i x) (count (j + 1)) = Y j x + ∑ (λi. Y i x) (count j)’
+          >- (GEN_TAC >> STRIP_TAC \\
+              Q.PAT_X_ASSUM ‘∀x. x ∈ p_space p ⇒
+                                 ∑ (λi. Y i x) (count (j + 1)) ≠ +∞ ∧ _’
+               (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs [] \\
+              ‘Y j x = ∑ (λi. Y i x) {j}’ by rw [EXTREAL_SUM_IMAGE_SING] \\
+              POP_ORW \\
+              ‘count (j + 1) = {j} UNION (count j)’ by rw [Once EXTENSION] \\
+              POP_ORW \\
+              irule EXTREAL_SUM_IMAGE_DISJOINT_UNION \\
+              simp [] >> DISJ2_TAC >> rw []
+              >- (Q.PAT_X_ASSUM ‘∀x. x ∈ p_space p ⇒ Y j x ≠ +∞ ∧ Y j x ≠ −∞’
+                   (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs []) \\
+              Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+               (STRIP_ASSUME_TAC o Q.SPEC ‘x'’) \\
+              ‘x' < n’ by METIS_TAC [LESS_TRANS] \\
+              gs [real_random_variable_def]) \\
+          DISCH_THEN (fs o wrap) \\
+          ‘count (j + 1) = count1 j’ by rw [Once EXTENSION] \\
+          POP_ORW >> gs []) \\
+      DISCH_THEN (fs o wrap))
+  >> Rewr
 QED
 
 Theorem IN_MEASURABLE_BOREL_CDIV :
@@ -3647,52 +3647,80 @@ Proof
  >> METIS_TAC [higher_differentiable_sub_linear]
 QED
 
-Theorem diff_chain_local :
-    ∀n f a t.
-             higher_differentiable n f (a − t) ⇒
-             diff n (λx. f(a − x)) t = (-1) pow n * diff n f (a − t)
+Theorem REAL_ADDL_LE[simp]:
+  !x y. (x :real) + y <= y <=> x <= 0
 Proof
-  cheat
+  REAL_ARITH_TAC
 QED
 
-Theorem higher_differentiable_chain_local :
-    ∀n f g x.
-       higher_differentiable n f (g x) ∧ higher_differentiable n g x ⇒
-      higher_differentiable n (λx. f (g x)) x
+Theorem TAYLOR_THEOREM_NEG :
+    ∀f a x n.
+      x < a ∧ 0 < n ∧
+      (∀m t. m < n ∧ x ≤ t ∧ t ≤ a ⇒ higher_differentiable (SUC m) f t) ⇒
+      ∃t. x < t ∧ t < a ∧
+          f x =
+          sum (0,n) (λm. diffn m f a / &FACT m * (x − a) pow m) +
+          diffn n f t / &FACT n * (x − a) pow n
 Proof
-  cheat
+    rpt STRIP_TAC
+ >> Q.ABBREV_TAC ‘g = λx. f (x + a)’
+ >> ‘!x. g x = f (x + a)’ by rw [Abbr ‘g’]
+ >> POP_ASSUM (MP_TAC o Q.SPEC ‘x - a’)
+ >> ‘f (x − a + a) = f x’ by REAL_ARITH_TAC >> POP_ORW
+ >> DISCH_TAC
+ >> Q.ABBREV_TAC ‘diff' = \n x. diffn n f (x + a)’
+ >> MP_TAC (Q.SPECL [‘g’, ‘diff'’, ‘x - a’, ‘n’] MCLAURIN_NEG)
+ >> impl_tac
+ >- (fs [REAL_LT_SUB_RADD, Abbr ‘diff'’, ETA_AX] \\
+     qx_genl_tac [‘m’, ‘t’] >> STRIP_TAC \\
+     ‘t + a ≤ a’ by rw [REAL_ADDL_LE] \\
+     ‘x <= t + a’ by METIS_TAC [REAL_LE_SUB_RADD] \\
+     Q.PAT_X_ASSUM ‘∀m t. m < n ∧ x ≤ t ∧ t ≤ a ⇒ _’
+      (MP_TAC o Q.SPECL [‘m’, ‘t + a’]) >> DISCH_TAC >> gs [] \\
+     MP_TAC (Q.SPECL [‘diffn (m:num) f’, ‘λx. (x + a)’,
+                      ‘diffn (SUC m) f (t + a:real)’, ‘1’, ‘t’]
+              DIFF_CHAIN) \\
+     impl_tac
+     >- (CONJ_TAC >- (BETA_TAC \\
+                      MP_TAC (Q.SPEC ‘f’ higher_differentiable_thm) >> rw []) \\
+         Know ‘((λx. x + a) diffl (1 + 0)) t’
+         >- (MP_TAC (Q.SPECL [‘λx. x’, ‘λx. a’, ‘1’, ‘0’, ‘t’] DIFF_ADD) \\
+             impl_tac >- METIS_TAC [DIFF_X, DIFF_CONST] >> simp []) \\
+         simp [REAL_ADD_RID]) \\
+     simp [])
+ >> simp []
+ >> DISCH_THEN (Q.X_CHOOSE_TAC ‘t’)
+ >> Q.EXISTS_TAC ‘t + a’ >> fs [FORALL_AND_THM]
+ >> rw [GSYM REAL_LT_SUB_RADD, REAL_LT_ADD_SUB]
+ >> Know ‘!m. diff' m 0 = diffn m f a’ >- simp [Abbr ‘diff'’]
+ >> simp []
 QED
 
-Theorem higher_differentiable_neg_sub_local :
-    ∀n f a t.
-             higher_differentiable n f (a - t) ⇒
-             higher_differentiable n (λx. f (a − x)) t
+Theorem TAYLOR_THEOREM_NEG' :
+  ∀f a x n.
+    x < a ∧ 0 < n ∧
+    (∀m t. m < n ∧ x ≤ t ∧ t ≤ a ⇒ higher_differentiable (SUC m) f t) ⇒
+    ∃t. x < t ∧ t < a ∧
+        f x = SIGMA (λm. diffn m f a / &FACT m * (x - a) pow m) (count n) +
+              diffn n f t / &FACT n * (x - a) pow n
 Proof
-  cheat
-  (*Induct_on ‘n’ >- (gs [higher_differentiable_def])
-  >> rw [FORALL_AND_THM, higher_differentiable_def]
-  >> Q.ABBREV_TAC ‘g = λx. a - x’ >> gs []
-  >> qexists ‘-1 pow n * diff n f (a − t)’
-  >> MATCH_MP_TAC diff_imp_diffl
-
-
-  >> MATCH_MP_TAC higher_differentiable_chain
-  >> reverse CONJ_TAC
-  >- (METIS_TAC [higher_differentiable_sub_linear])
-  >> fs [higher_differentiable_def]*)
+  RW_TAC std_ss [REAL_SUM_IMAGE_COUNT]
+  >> MATCH_MP_TAC TAYLOR_THEOREM_NEG >> rw []
 QED
 
-
-val TAYLOR_THEOREM_GENERAL_TACTIC =
+val TAYLOR_THEOREM_ALL_LT_TACTIC =
     Cases_on ‘x < a’
->- (cheat)
->> ‘a < x’ by METIS_TAC [GSYM REAL_LT_LE, REAL_NOT_LT]
->> fs [REAL_MIN_REDUCE, REAL_MAX_REDUCE, REAL_LT_IMP_LE]
->> MP_TAC (Q.SPECL [‘f’, ‘a’, ‘x’, ‘n’] TAYLOR_THEOREM) >> rw []
->> qexists ‘t’ >> simp []
->> METIS_TAC [REAL_SUM_IMAGE_COUNT];
+    >- (fs [REAL_MIN_REDUCE, REAL_MAX_REDUCE, REAL_LT_IMP_LE] \\
+        MP_TAC (Q.SPECL [‘f’, ‘a’, ‘x’, ‘n’] TAYLOR_THEOREM_NEG) >> rw [] \\
+        qexists ‘t’ >> simp [] \\
+        METIS_TAC [REAL_SUM_IMAGE_COUNT]) \\
+    ‘a < x’ by METIS_TAC [GSYM REAL_LT_LE, REAL_NOT_LT] \\
+    fs [REAL_MIN_REDUCE, REAL_MAX_REDUCE, REAL_LT_IMP_LE] \\
+    MP_TAC (Q.SPECL [‘f’, ‘a’, ‘x’, ‘n’] TAYLOR_THEOREM) >> rw [] \\
+    qexists ‘t’ >> simp [] \\
+    METIS_TAC [REAL_SUM_IMAGE_COUNT];
 
-Theorem TAYLOR_THEOREM_GENERAL :
+Theorem TAYLOR_THEOREM_ALL_LT :
     ∀f a x n.
        0 < n ∧ (∀m t. m < n ∧ min a x ≤ t ∧ t ≤ max a x ⇒ higher_differentiable (SUC m) f t) ⇒
       (f x = f a) ∨
@@ -3701,109 +3729,13 @@ Theorem TAYLOR_THEOREM_GENERAL :
           SIGMA (λm. diffn m f a / &FACT m * (x − a) pow m) (count n) +
           diffn n f t / &FACT n * (x − a) pow n)
 Proof
-  cheat
-QED
-
-  (*rpt STRIP_TAC
+    rpt STRIP_TAC
  >> Cases_on ‘x = a’ >- (DISJ1_TAC >> fs [])
  >> DISJ2_TAC
- >> Cases_on ‘x < a’
-    >- (fs [REAL_MIN_REDUCE, REAL_MAX_REDUCE, REAL_LT_IMP_LE] \\
-        Q.ABBREV_TAC ‘g = λx. f (a - x)’ \\
-        Q.ABBREV_TAC ‘h = a - x’ \\
-        MP_TAC (Q.SPECL [‘x’, ‘a’] REAL_MEAN) >> rw [] \\
-        MP_TAC (Q.SPECL [‘g’, ‘a - z’, ‘n’] MCLAURIN_ALT) \\
-        impl_tac
-        >- (rw [Abbr ‘g’]
-            >- (METIS_TAC [GSYM REAL_SUB_LT]) \\
-            MATCH_MP_TAC higher_differentiable_neg_subst \\
-            cheat) \\
-            (*irule higher_differentiable_chain_local \\
-            qexistsl [‘0’, ‘a - x’] >> rw []
-            >- (FIRST_X_ASSUM MATCH_MP_TAC \\
-                ‘x ≤ a − x' ∧ a − x' ≤ a’ by fs [REAL_LE_SUB_LADD, REAL_ADD_COMM, REAL_LE_SUB_RADD] \\
-                gs []) \\
-            METIS_TAC [higher_differentiable_sub_linear]) \\*)
-        rw [] \\
-        qexists ‘a - t’ \\
-        fs [Abbr ‘h’, GSYM REAL_LT_ADD_SUB, REAL_ADD_COMM] \\
-        fs [REAL_LT_SUB_RADD, Abbr ‘g’] \\
-        ‘a − (a − x) = x’ by REAL_ARITH_TAC >> POP_ASSUM (fs o wrap) \\
-        qmatch_abbrev_tac ‘(H :real) + SIGMA g (count n) = G + SIGMA h (count n)’ \\
-        Suff ‘H = G’
-        >- (Rewr >> rw [] \\
-            MATCH_MP_TAC REAL_SUM_IMAGE_EQ >> rw [Abbr ‘g’, Abbr ‘h’] \\
-            rename1 ‘FACT z = 0’ \\
-            DISJ2_TAC \\
-            Q.ABBREV_TAC ‘h = a - x’ >> gs [] \\
-            ‘x - a = -h’ by (fs [Abbr ‘h’] >> REAL_ARITH_TAC) \\
-            rw [REAL_POW_NEG2]
-            >- (DISJ2_TAC \\
-                MP_TAC (Q.SPECL [‘z’, ‘f’, ‘a’] diff_neg_subst) \\
-                impl_tac
-                >- (rw [] \\
-                    FIRST_X_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘z’, ‘x'’]) \\
-                    gs [REAL_LT_IMP_LE] \\
-                    MATCH_MP_TAC higher_differentiable_mono \\
-                    qexists ‘SUC z’ >> gs []) \\
-                Rewr >> rw [REAL_POW_NEG2]) \\
-            DISJ2_TAC \\
-            fs [GSYM ODD_EVEN] \\
-            MP_TAC (Q.SPECL [‘z’, ‘0’, ‘f’, ‘a’] diff_neg_subst') \\
-            impl_tac
-            >- (simp [] \\
-                FIRST_X_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘z’, ‘a’]) \\
-                gs [REAL_LT_IMP_LE] \\
-                MATCH_MP_TAC higher_differentiable_mono \\
-                qexists ‘SUC z’ >> gs []) \\
-            Rewr >> simp [REAL_POW_NEG2] \\
-            DISJ2_TAC >> fs [ODD_EVEN]) \\
-        simp [REAL_EQ_LMUL, Abbr ‘H’, Abbr ‘G’] \\
-        DISJ2_TAC \\
-        Q.ABBREV_TAC ‘b = a - x’ >> gs [] \\
-        ‘x - a = -b’ by (fs [Abbr ‘b’] >> REAL_ARITH_TAC) \\
-        rw [REAL_POW_NEG2]
-        >- (DISJ2_TAC \\
-            MP_TAC (Q.SPECL [‘n’, ‘0’, ‘f’, ‘a’] diff_neg_subst') \\
-            impl_tac
-            >- (simp [] \\
-                FIRST_X_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘n - 1’, ‘a’]) \\
-                gs [REAL_LT_IMP_LE, SUB_LESS, LE_REFL] \\
-                ‘SUC (n - 1) = n’ by rw [ADD1, GSYM ADD_ASSOC] \\
-                POP_ASSUM (fs o wrap)) \\
-            Rewr >> rw [REAL_POW_NEG2] \\
-            MP_TAC (Q.SPECL [‘n’, ‘t’, ‘f’, ‘a’] diff_neg_subst') \\
-            impl_tac
-            >- (simp [] \\
-                FIRST_X_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘n - 1’, ‘a - t’]) \\
-                gs [REAL_LT_IMP_LE, SUB_LESS, LE_REFL] \\
-                ‘SUC (n - 1) = n’ by rw [ADD1, GSYM ADD_ASSOC] \\
-                POP_ASSUM (fs o wrap) \\
-                fs [REAL_LE_SUB_LADD, REAL_ADD_COMM, REAL_LE_SUB_RADD, REAL_LT_IMP_LE]) \\
-            Rewr >> rw [REAL_POW_NEG2]) \\
-        DISJ2_TAC \\
-        fs [GSYM ODD_EVEN] \\
-        MP_TAC (Q.SPECL [‘n’, ‘t’, ‘f’, ‘a’] diff_neg_subst') \\
-        impl_tac
-        >- (simp [] \\
-            FIRST_X_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘n - 1’, ‘a - t’]) \\
-            gs [REAL_LT_IMP_LE, SUB_LESS, LE_REFL] \\
-            ‘SUC (n - 1) = n’ by rw [ADD1, GSYM ADD_ASSOC] \\
-            POP_ASSUM (fs o wrap) \\
-            fs [REAL_LE_SUB_LADD, REAL_ADD_COMM, REAL_LE_SUB_RADD, REAL_LT_IMP_LE]) \\
-        Rewr >> simp [REAL_POW_NEG2] \\
-        DISJ2_TAC >> fs [ODD_EVEN] \\
+ >> TAYLOR_THEOREM_ALL_LT_TACTIC
+QED
 
-
-  cheat)
- >> ‘a < x’ by METIS_TAC [GSYM REAL_LT_LE, REAL_NOT_LT]
- >> fs [REAL_MIN_REDUCE, REAL_MAX_REDUCE, REAL_LT_IMP_LE]
- >> MP_TAC (Q.SPECL [‘f’, ‘a’, ‘x’, ‘n’] TAYLOR_THEOREM) >> rw []
- >> qexists ‘t’ >> simp []
- >> METIS_TAC [REAL_SUM_IMAGE_COUNT]
-QED*)
-
-Theorem TAYLOR_THEOREM_GENERAL' :
+Theorem TAYLOR_THEOREM_ALL_LT' :
     ∀f a x n.
        0 < n ∧ a ≠ x ∧ (∀m t. m < n ∧ min a x ≤ t ∧ t ≤ max a x ⇒ higher_differentiable (SUC m) f t) ⇒
       (∃t. min a x < t ∧ t < max a x ∧
@@ -3812,7 +3744,7 @@ Theorem TAYLOR_THEOREM_GENERAL' :
           diffn n f t / &FACT n * (x − a) pow n)
 Proof
     rpt STRIP_TAC
- >> TAYLOR_THEOREM_GENERAL_TACTIC
+ >> TAYLOR_THEOREM_ALL_LT_TACTIC
 QED
 
 Theorem TAYLOR_THIRD_ORDER_BOUND :
@@ -3833,7 +3765,7 @@ Proof
   >- (CCONTR_TAC >> fs [] \\
       METIS_TAC [REAL_ADD_RID, REAL_EQ_ADD_LCANCEL])
   >> DISCH_TAC
-  >> MP_TAC (Q.SPECL [‘f’, ‘a’, ‘a + h’, ‘3’] TAYLOR_THEOREM_GENERAL')
+  >> MP_TAC (Q.SPECL [‘f’, ‘a’, ‘a + h’, ‘3’] TAYLOR_THEOREM_ALL_LT')
   >> impl_tac
   >- (fs [CnR_def] >> rw [] \\
       irule higher_differentiable_mono \\
@@ -7269,6 +7201,7 @@ Proof
              METIS_TAC [real_normal, ETA_AX]) \\
          METIS_TAC [variance_of_normal_rv']) \\
      DISCH_TAC \\
+
      STRONG_CONJ_TAC
      >- (simp [indep_rv_def, indep_def] \\
         ‘measurable_space (p × p') = measurable_space p × measurable_space p'’
@@ -7290,6 +7223,7 @@ Proof
          (*TODO*)
          cheat) \\
      cheat)
+
  >> DISCH_TAC >> gs []
  >> Q.PAT_X_ASSUM ‘∀j. j < n ⇒ expectation r (_) − expectation r (_) = ∑ (λj'. _) (count n)’
      (STRIP_ASSUME_TAC o Q.SPEC ‘n - 1’)
