@@ -3704,8 +3704,8 @@ Theorem TAYLOR_THEOREM_NEG' :
         f x = SIGMA (λm. diffn m f a / &FACT m * (x - a) pow m) (count n) +
               diffn n f t / &FACT n * (x - a) pow n
 Proof
-  RW_TAC std_ss [REAL_SUM_IMAGE_COUNT]
-  >> MATCH_MP_TAC TAYLOR_THEOREM_NEG >> rw []
+    RW_TAC std_ss [REAL_SUM_IMAGE_COUNT]
+ >> MATCH_MP_TAC TAYLOR_THEOREM_NEG >> rw []
 QED
 
 val TAYLOR_THEOREM_ALL_LT_TACTIC =
@@ -3720,7 +3720,7 @@ val TAYLOR_THEOREM_ALL_LT_TACTIC =
     qexists ‘t’ >> simp [] \\
     METIS_TAC [REAL_SUM_IMAGE_COUNT];
 
-Theorem TAYLOR_THEOREM_ALL_LT :
+Theorem TAYLOR_THEOREM_ALL_LT' :
     ∀f a x n.
        0 < n ∧ (∀m t. m < n ∧ min a x ≤ t ∧ t ≤ max a x ⇒ higher_differentiable (SUC m) f t) ⇒
       (f x = f a) ∨
@@ -3735,7 +3735,7 @@ Proof
  >> TAYLOR_THEOREM_ALL_LT_TACTIC
 QED
 
-Theorem TAYLOR_THEOREM_ALL_LT' :
+Theorem TAYLOR_THEOREM_ALL_LT :
     ∀f a x n.
        0 < n ∧ a ≠ x ∧ (∀m t. m < n ∧ min a x ≤ t ∧ t ≤ max a x ⇒ higher_differentiable (SUC m) f t) ⇒
       (∃t. min a x < t ∧ t < max a x ∧
@@ -3765,7 +3765,7 @@ Proof
   >- (CCONTR_TAC >> fs [] \\
       METIS_TAC [REAL_ADD_RID, REAL_EQ_ADD_LCANCEL])
   >> DISCH_TAC
-  >> MP_TAC (Q.SPECL [‘f’, ‘a’, ‘a + h’, ‘3’] TAYLOR_THEOREM_ALL_LT')
+  >> MP_TAC (Q.SPECL [‘f’, ‘a’, ‘a + h’, ‘3’] TAYLOR_THEOREM_ALL_LT)
   >> impl_tac
   >- (fs [CnR_def] >> rw [] \\
       irule higher_differentiable_mono \\
