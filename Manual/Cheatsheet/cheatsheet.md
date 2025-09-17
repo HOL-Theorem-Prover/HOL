@@ -573,6 +573,13 @@ Instead, we can rename variables appropriately, and abbreviate large terms.
   For example, `rename1 ‘n + _ <= foo’` renames `a + b <= c + d` into `n + b <= foo`.
   Note that we have lost information here on the RHS.
 
+<code>rename [‘<i>pattern₁</i>’, ‘<i>pattern₂</i>’, …]</code>
+: Matches all of the patterns against the goal and assumptions. By using multiple patterns, more precise renaming can be achieved, because the final instantiation must respect names that occur in multiple patterns.
+
+  In general, <code>rename1 ‘<i>pattern</i>’</code> is **not** the same as <code>rename[‘<i>pattern</i>’]</code>. This is because `rename1` allows its parsing of the pattern to be driven by variables already occuring in the goal, but `rename` ignores them: if your pattern wants `n` to now be of type `:num`, it won’t be messed up by a variable `n` in the goal that a different type.
+
+  There are other features allowing user-control of where patterns match in the goal; see the REFERENCE page for details.
+
 <code>qmatch_goalsub_abbrev_tac ‘<i>pattern</i>’</code>
 : Matches the pattern to a subterm in the goal, abbreviating the matching subterm to fit the pattern.
   Unlike renaming, abbreviating preserves information - assumptions are introduced which keep track of the abbreviations.
