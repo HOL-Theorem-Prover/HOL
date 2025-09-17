@@ -2677,3 +2677,64 @@ Proof
  >> qexists ‘n'’ >> rw [Abbr ‘g’]
  >> MATCH_MP_TAC higher_differentiable_imp_n1 >> simp []
 QED
+
+Theorem higher_differentiable_0 :
+    ∀n x. higher_differentiable n (λx. 0) x
+Proof
+    Induct_on ‘n’ >- (gs [higher_differentiable_def])
+ >> rw [higher_differentiable_def, FORALL_AND_THM]
+ >> qexists ‘0’ >> rw []
+ >> Induct_on ‘n’ >- (gs [higher_differentiable_def, DIFF_CONST])
+ >> rw [GSYM diffn_SUC, diffn_const]
+ >> ‘∀x. higher_differentiable n (λx. 0) x’
+   by (rw [] >> MATCH_MP_TAC higher_differentiable_mono >> qexists ‘SUC n’ >> gs [])
+ >> gs [higher_differentiable_def]
+QED
+
+Theorem diffn_const_0 :
+    ∀n x. (diffn n (λx. 0) diffl 0) x
+Proof
+    Induct_on ‘n’ >> rw [DIFF_CONST]
+ >> MATCH_MP_TAC diffn_imp_diffl
+ >> MP_TAC (Q.SPECL [‘SUC (SUC n)’] higher_differentiable_0) >> rw []
+ >> MP_TAC (Q.SPECL [‘SUC n’] higher_differentiable_0) >> rw []
+ >> MP_TAC (Q.SPECL [‘n’, ‘λx. 0’] diffl_imp_diffn) >> rw []
+ >> rw [diffn_def] >> SELECT_ELIM_TAC
+ >> CONJ_TAC >- (fs [higher_differentiable_def])
+ >> ‘diffn (SUC n) (λx. 0) = λx. 0’ by METIS_TAC [FUN_EQ_THM, ETA_AX]
+ >> POP_ORW >> rw []
+ >> MP_TAC (Q.SPECL [‘0’, ‘x’] DIFF_CONST) >> rw []
+ >> METIS_TAC [DIFF_UNIQ]
+QED
+
+Theorem higher_differentiable_const :
+    ∀n k x. higher_differentiable n (λx. k) x
+Proof
+    Induct_on ‘n’ >- (gs [higher_differentiable_def])
+ >> rw [higher_differentiable_def, FORALL_AND_THM]
+ >> qexists ‘0’ >> rw []
+ >> Induct_on ‘n’ >- (gs [higher_differentiable_def, DIFF_CONST])
+ >> rw [GSYM diffn_SUC, diffn_const]
+ >> METIS_TAC [diffn_const_0]
+QED
+
+Theorem higher_differentiable_neg_sub :
+    ∀n f a.
+      (∀x. higher_differentiable n f x) ⇒
+      ∀x. higher_differentiable n (λx. f (a − x)) x
+Proof
+    Induct_on ‘n’ >- (gs [higher_differentiable_def])
+ >> rw [FORALL_AND_THM]
+ >> MATCH_MP_TAC higher_differentiable_chain
+ >> rw [higher_differentiable_def]
+ >- (Cases_on ‘n = 0’ >> gs []
+     >- (qexists ‘-1’ >> rw [diffl] \\
+         ‘∀h. a − (x + h) − (a − x) = -h’ by REAL_ARITH_TAC >> POP_ORW \\
+         MP_TAC (Q.SPECL [‘λh. -h / h’, ‘λx. -1’, ‘-1’, ‘0’] LIM_EQUAL) \\
+         rw [] >> METIS_TAC [LIM_CONST]) \\
+     MP_TAC (Q.SPECL [‘a’, ‘SUC n’] higher_differentiable_sub_linear) >> rw [] \\
+     fs [higher_differentiable_def, FORALL_AND_THM] \\
+     Q.PAT_X_ASSUM ‘∀x. ∃y. (diffn n (λx. a − x) diffl y) x’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
+     qexists ‘y’ >> METIS_TAC [])
+ >> METIS_TAC [higher_differentiable_sub_linear]
+QED

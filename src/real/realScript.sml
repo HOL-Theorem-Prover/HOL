@@ -914,6 +914,12 @@ val REAL_ADD_SUB2 = store_thm("REAL_ADD_SUB2",
   “!x y. x - (x + y) = ~y”,
   REAL_ARITH_TAC);
 
+Theorem REAL_ADDL_LE[simp]:
+    !x y. (x :real) + y <= y <=> x <= 0
+Proof
+    REAL_ARITH_TAC
+QED
+
 val REAL_MEAN = store_thm("REAL_MEAN",
   “!x y. x < y ==> ?z. x < z /\ z < y”,
   REPEAT GEN_TAC THEN
