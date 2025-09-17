@@ -41,8 +41,8 @@ Overload sign = “λa. -1 pow w2n a.Sign”
 Datatype: float_value = Float real | Infinity | NaN
 End
 
-val () = List.app Parse.temp_overload_on
-            [("precision", ``fcp$dimindex``), ("bias", ``words$INT_MAX``)]
+Overload precision[local] = “fcp$dimindex”
+Overload bias[local] = “words$INT_MAX”
 
 Definition float_to_real_def[nocompute]:
    float_to_real (x: ('t, 'w) float) =
@@ -4868,4 +4868,22 @@ Theorem next_hi_float_abs:
   next_hi (float_abs f) = float_abs (next_hi f)
 Proof
   rw[next_hi_def, float_abs_def, AllCaseEqs(), float_component_equality]
+QED
+
+Theorem float_ulp_EQ0[simp]:
+  ulpᶠ f ≠ 0
+Proof
+  simp[float_ulp_def]
+QED
+
+Theorem float_ulp_GT0[simp]:
+  0 < ulpᶠ f
+Proof
+  simp[float_ulp_def]
+QED
+
+Theorem abs_float_ulp[simp]:
+  abs (ulpᶠ f) = ulpᶠ f
+Proof
+  simp[REAL_LE_LT]
 QED
