@@ -2437,7 +2437,7 @@ Proof
 QED
 
 (* By Kai Phan. This proof is based on the above MCLAURIN *)
-Theorem TAYLOR_THEOREM :
+Theorem TAYLOR_lemma[local] :
     !f a x n. a < x /\ 0 < n /\
              (!m t. m < n /\ a <= t /\ t <= x ==>
                     higher_differentiable (SUC m) f t) ==>
@@ -2487,7 +2487,7 @@ Proof
 QED
 
 (* A modern version based on SIGMA (REAL_SUM_IMAGE) *)
-Theorem TAYLOR_THEOREM' :
+Theorem TAYLOR :
     !f a x n. a < x /\ 0 < n /\
              (!t. a <= t /\ t <= x ==> higher_differentiable n f t) ==>
               ?t. a < t /\ t < x /\
@@ -2495,7 +2495,7 @@ Theorem TAYLOR_THEOREM' :
                         diffn n f t / &FACT n * (x - a) pow n
 Proof
     RW_TAC std_ss [REAL_SUM_IMAGE_COUNT]
- >> MATCH_MP_TAC TAYLOR_THEOREM >> rw []
+ >> MATCH_MP_TAC TAYLOR_lemma >> rw []
  >> MATCH_MP_TAC higher_differentiable_mono
  >> Q.EXISTS_TAC ‘n’ >> rw []
 QED
@@ -2545,29 +2545,29 @@ Proof
   REWRITE_TAC[REAL_MUL_ASSOC]
 QED
 
-Theorem TAYLOR_THEOREM_NEG :
-    ∀f a x n.
-      x < a ∧ 0 < n ∧
-      (∀m t. m < n ∧ x ≤ t ∧ t ≤ a ⇒ higher_differentiable (SUC m) f t) ⇒
-      ∃t. x < t ∧ t < a ∧
+Theorem TAYLOR_NEG_lemma[local] :
+    !f a x n.
+      x < a /\ 0 < n /\
+      (!m t. m < n /\ x <= t /\ t <= a ==> higher_differentiable (SUC m) f t) ==>
+      ?t. x < t /\ t < a /\
           f x =
-          sum (0,n) (λm. diffn m f a / &FACT m * (x − a) pow m) +
-          diffn n f t / &FACT n * (x − a) pow n
+          sum (0,n) (λm. diffn m f a / &FACT m * (x - a) pow m) +
+          diffn n f t / &FACT n * (x - a) pow n
 Proof
     rpt STRIP_TAC
  >> Q.ABBREV_TAC ‘g = λx. f (x + a)’
  >> ‘!x. g x = f (x + a)’ by rw [Abbr ‘g’]
  >> POP_ASSUM (MP_TAC o Q.SPEC ‘x - a’)
- >> ‘f (x − a + a) = f x’ by REAL_ARITH_TAC >> POP_ORW
+ >> ‘f (x - a + a) = f x’ by REAL_ARITH_TAC >> POP_ORW
  >> DISCH_TAC
  >> Q.ABBREV_TAC ‘diff' = \n x. diffn n f (x + a)’
  >> MP_TAC (Q.SPECL [‘g’, ‘diff'’, ‘x - a’, ‘n’] MCLAURIN_NEG)
  >> impl_tac
  >- (fs [REAL_LT_SUB_RADD, Abbr ‘diff'’, ETA_AX] \\
      qx_genl_tac [‘m’, ‘t’] >> STRIP_TAC \\
-     ‘t + a ≤ a’ by rw [REAL_ADDL_LE] \\
+     ‘t + a <= a’ by rw [REAL_ADDL_LE] \\
      ‘x <= t + a’ by METIS_TAC [REAL_LE_SUB_RADD] \\
-     Q.PAT_X_ASSUM ‘∀m t. m < n ∧ x ≤ t ∧ t ≤ a ⇒ _’
+     Q.PAT_X_ASSUM ‘!m t. m < n /\ x <= t /\ t <= a ==> _’
       (MP_TAC o Q.SPECL [‘m’, ‘t + a’]) >> DISCH_TAC >> gs [] \\
      MP_TAC (Q.SPECL [‘diffn (m:num) f’, ‘λx. (x + a)’,
                       ‘diffn (SUC m) f (t + a:real)’, ‘1’, ‘t’]
@@ -2588,35 +2588,37 @@ Proof
  >> simp []
 QED
 
-Theorem TAYLOR_THEOREM_NEG' :
-    ∀f a x n.
-      x < a ∧ 0 < n ∧
-      (∀m t. m < n ∧ x ≤ t ∧ t ≤ a ⇒ higher_differentiable (SUC m) f t) ⇒
-      ∃t. x < t ∧ t < a ∧
+Theorem TAYLOR_NEG :
+    !f a x n.
+      x < a /\ 0 < n /\
+      (!t. x <= t /\ t <= a ==> higher_differentiable n f t) ==>
+      ?t. x < t /\ t < a /\
           f x = SIGMA (λm. diffn m f a / &FACT m * (x - a) pow m) (count n) +
                 diffn n f t / &FACT n * (x - a) pow n
 Proof
     RW_TAC std_ss [REAL_SUM_IMAGE_COUNT]
- >> MATCH_MP_TAC TAYLOR_THEOREM_NEG >> rw []
+ >> MATCH_MP_TAC TAYLOR_NEG_lemma >> rw []
+ >> MATCH_MP_TAC higher_differentiable_mono
+ >> Q.EXISTS_TAC ‘n’ >> rw []
 QED
 
-Theorem TAYLOR_THEOREM_ALL_LT :
-    ∀f a x n.
-       0 < n ∧ a ≠ x ∧ (∀m t. m < n ∧ min a x ≤ t ∧ t ≤ max a x ⇒ higher_differentiable (SUC m) f t) ⇒
-      (∃t. min a x < t ∧ t < max a x ∧
+Theorem TAYLOR_ALL_LT :
+    !f a x n.
+       0 < n /\ a <> x /\ (!t. min a x <= t /\ t <= max a x ==> higher_differentiable n f t) ==>
+      (?t. min a x < t /\ t < max a x /\
           f x =
-          SIGMA (λm. diffn m f a / &FACT m * (x − a) pow m) (count n) +
-          diffn n f t / &FACT n * (x − a) pow n)
+          SIGMA (λm. diffn m f a / &FACT m * (x - a) pow m) (count n) +
+          diffn n f t / &FACT n * (x - a) pow n)
 Proof
     rpt STRIP_TAC
  >> Cases_on ‘x < a’
  >- (fs [REAL_MIN_REDUCE, REAL_MAX_REDUCE, REAL_LT_IMP_LE] \\
-     MP_TAC (Q.SPECL [‘f’, ‘a’, ‘x’, ‘n’] TAYLOR_THEOREM_NEG) >> rw [] \\
+     MP_TAC (Q.SPECL [‘f’, ‘a’, ‘x’, ‘n’] TAYLOR_NEG) >> rw [] \\
      qexists ‘t’ >> simp [] \\
      METIS_TAC [REAL_SUM_IMAGE_COUNT])
  >> ‘a < x’ by METIS_TAC [GSYM REAL_LT_LE, REAL_NOT_LT]
  >> fs [REAL_MIN_REDUCE, REAL_MAX_REDUCE, REAL_LT_IMP_LE]
- >> MP_TAC (Q.SPECL [‘f’, ‘a’, ‘x’, ‘n’] TAYLOR_THEOREM) >> rw []
+ >> MP_TAC (Q.SPECL [‘f’, ‘a’, ‘x’, ‘n’] TAYLOR) >> rw []
  >> qexists ‘t’ >> simp []
  >> METIS_TAC [REAL_SUM_IMAGE_COUNT]
 QED
@@ -4003,7 +4005,7 @@ QED
 (*---------------------------------------------------------------------------*)
 
 Theorem SELECT_UNIQUE_ALT[local]:
-    ∀P x. P x ∧ (∀y. P y ⇒ y = x) ⇒ $@ P = x
+    !P x. P x /\ (!y. P y ==> y = x) ==> $@ P = x
 Proof
     metis_tac[SELECT_UNIQUE]
 QED
@@ -4055,13 +4057,13 @@ Definition coth_def:
 End
 
 Theorem tanh_alt:
-    ∀x. tanh x = (exp x - exp (-x)) / (exp x + exp (-x))
+    !x. tanh x = (exp x - exp (-x)) / (exp x + exp (-x))
 Proof
     rw[tanh_def,sinh_def,cosh_def]
 QED
 
 Theorem tanh_alt2:
-    ∀x. tanh x = (exp (2 * x) - 1) / (exp (2 * x) + 1)
+    !x. tanh x = (exp (2 * x) - 1) / (exp (2 * x) + 1)
 Proof
     rw[tanh_alt] >>
     ‘0 < exp x + exp (-x)’ by simp[REAL_LT_ADD,EXP_POS_LT] >>
@@ -4072,7 +4074,7 @@ Proof
 QED
 
 Theorem coth_alt:
-    ∀x. coth x = cosh x / sinh x
+    !x. coth x = cosh x / sinh x
 Proof
     rw[coth_def,tanh_def]
 QED
@@ -4080,31 +4082,31 @@ QED
 (*** Hyperbolic Trig Zero Lemmas ***)
 
 Theorem SINH_POS_LT:
-    ∀x. 0 < x ⇒ 0 < sinh x
+    !x. 0 < x ==> 0 < sinh x
 Proof
     simp[sinh_def,REAL_SUB_LT,EXP_MONO_LT]
 QED
 
 Theorem SINH_POS_LE:
-    ∀x. 0 ≤ x ⇒ 0 ≤ sinh x
+    !x. 0 <= x ==> 0 <= sinh x
 Proof
     simp[sinh_def,REAL_SUB_LE,EXP_MONO_LE]
 QED
 
 Theorem SINH_NEG_LT:
-    ∀x. x < 0 ⇒ sinh x < 0
+    !x. x < 0 ==> sinh x < 0
 Proof
     simp[sinh_def,REAL_LT_SUB_RADD,EXP_MONO_LT]
 QED
 
 Theorem SINH_NEG_LE:
-    ∀x. x ≤ 0 ⇒ sinh x ≤ 0
+    !x. x <= 0 ==> sinh x <= 0
 Proof
     simp[sinh_def,REAL_LE_SUB_RADD,EXP_MONO_LE]
 QED
 
 Theorem SINH_NZ:
-    ∀x. sinh x ≠ 0 ⇔ x ≠ 0
+    !x. sinh x <> 0 <=> x <> 0
 Proof
     strip_tac >> simp[EQ_IMP_THM,sinh_def] >>
     CONV_TAC CONTRAPOS_CONV >> rw[] >>
@@ -4121,13 +4123,13 @@ Proof
 QED
 
 Theorem COSH_NZ:
-    ∀x. cosh x ≠ 0
+    !x. cosh x <> 0
 Proof
     simp[cosh_def,REAL_POS_NZ,REAL_LT_ADD,EXP_POS_LT]
 QED
 
 Theorem COSH_POS_LT:
-    ∀x. 0 < cosh x
+    !x. 0 < cosh x
 Proof
     simp[cosh_def,REAL_LT_ADD,EXP_POS_LT]
 QED
@@ -4139,31 +4141,31 @@ Proof
 QED
 
 Theorem TANH_NZ:
-    ∀x. tanh x ≠ 0 ⇔ x ≠ 0
+    !x. tanh x <> 0 <=> x <> 0
 Proof
     simp[tanh_def,COSH_NZ] >> metis_tac[SINH_NZ]
 QED
 
 Theorem TANH_POS_LT:
-    ∀x. 0 < x ⇒ 0 < tanh x
+    !x. 0 < x ==> 0 < tanh x
 Proof
     simp[tanh_def,COSH_POS_LT,COSH_NZ,SINH_POS_LT]
 QED
 
 Theorem TANH_POS_LE:
-    ∀x. 0 ≤ x ⇒ 0 ≤ tanh x
+    !x. 0 <= x ==> 0 <= tanh x
 Proof
     simp[tanh_def,COSH_POS_LT,COSH_NZ,SINH_POS_LE]
 QED
 
 Theorem TANH_NEG_LT:
-    ∀x. x < 0 ⇒ tanh x < 0
+    !x. x < 0 ==> tanh x < 0
 Proof
     simp[tanh_def,COSH_POS_LT,COSH_NZ,SINH_NEG_LT]
 QED
 
 Theorem TANH_NEG_LE:
-    ∀x. x ≤ 0 ⇒ tanh x ≤ 0
+    !x. x <= 0 ==> tanh x <= 0
 Proof
     simp[tanh_def,COSH_POS_LT,COSH_NZ,SINH_NEG_LE]
 QED
@@ -4175,13 +4177,13 @@ Proof
 QED
 
 Theorem SECH_NZ:
-    ∀x. sech x ≠ 0
+    !x. sech x <> 0
 Proof
     simp[sech_def,COSH_NZ]
 QED
 
 Theorem SECH_POS_LT:
-    ∀x. 0 < sech x
+    !x. 0 < sech x
 Proof
     simp[sech_def,COSH_POS_LT,COSH_NZ]
 QED
@@ -4193,7 +4195,7 @@ Proof
 QED
 
 Theorem CSCH_NZ:
-    ∀x. x ≠ 0 ⇒ csch x ≠ 0
+    !x. x <> 0 ==> csch x <> 0
 Proof
     simp[csch_def,SINH_NZ]
 QED
@@ -4205,31 +4207,31 @@ Proof
 QED
 
 Theorem CSCH_POS_LT:
-    ∀x. 0 < x ⇒ 0 < csch x
+    !x. 0 < x ==> 0 < csch x
 Proof
     simp[csch_def,SINH_POS_LT,SINH_NZ]
 QED
 
 Theorem CSCH_NEG_LT:
-    ∀x. x < 0 ⇒ csch x < 0
+    !x. x < 0 ==> csch x < 0
 Proof
     simp[csch_def,SINH_NEG_LT,SINH_NZ]
 QED
 
 Theorem COTH_NZ:
-    ∀x. x ≠ 0 ⇒ coth x ≠ 0
+    !x. x <> 0 ==> coth x <> 0
 Proof
     simp[coth_def,TANH_NZ]
 QED
 
 Theorem COTH_POS_LT:
-    ∀x. 0 < x ⇒ 0 < coth x
+    !x. 0 < x ==> 0 < coth x
 Proof
     simp[coth_def,TANH_POS_LT,TANH_NZ]
 QED
 
 Theorem COTH_NEG_LT:
-    ∀x. x < 0 ⇒ coth x < 0
+    !x. x < 0 ==> coth x < 0
 Proof
     simp[coth_def,TANH_NEG_LT,TANH_NZ]
 QED
@@ -4237,37 +4239,37 @@ QED
 (*** Hyperbolic Trig Negative Inputs ***)
 
 Theorem SINH_NEG:
-    ∀x. sinh (-x) = -sinh x
+    !x. sinh (-x) = -sinh x
 Proof
     simp[sinh_def]
 QED
 
 Theorem COSH_NEG:
-    ∀x. cosh (-x) = cosh x
+    !x. cosh (-x) = cosh x
 Proof
     simp[cosh_def]
 QED
 
 Theorem TANH_NEG:
-    ∀x. tanh (-x) = -tanh x
+    !x. tanh (-x) = -tanh x
 Proof
     simp[tanh_def,SINH_NEG,COSH_NEG]
 QED
 
 Theorem SECH_NEG:
-    ∀x. sech (-x) = sech x
+    !x. sech (-x) = sech x
 Proof
     simp[sech_def,COSH_NEG]
 QED
 
 Theorem CSCH_NEG:
-    ∀x. csch (-x) = -csch x
+    !x. csch (-x) = -csch x
 Proof
     simp[csch_def,SINH_NEG,neg_rat]
 QED
 
 Theorem COTH_NEG:
-    ∀x. coth (-x) = -coth x
+    !x. coth (-x) = -coth x
 Proof
     simp[coth_def,TANH_NEG,neg_rat]
 QED
@@ -4275,32 +4277,32 @@ QED
 (*** Hyperbolic Trig Derivatives ***)
 
 Theorem DIFF_SINH:
-    ∀x. (sinh diffl cosh x) x
+    !x. (sinh diffl cosh x) x
 Proof
     rw[] >> mp_tac $ DIFF_CONV “λx. (exp x - exp (-x)) / 2r” >>
     simp[GSYM sinh_def,cosh_def,ETA_THM] >>
     disch_then $ qspec_then ‘x’ mp_tac >>
-    qmatch_abbrev_tac ‘(_ diffl l1) _ ⇒ (_ diffl l2) _’ >>
+    qmatch_abbrev_tac ‘(_ diffl l1) _ ==> (_ diffl l2) _’ >>
     ‘l1 = l2’ suffices_by simp[] >> UNABBREV_ALL_TAC >> simp[]
 QED
 
 Theorem DIFF_COSH:
-    ∀x. (cosh diffl sinh x) x
+    !x. (cosh diffl sinh x) x
 Proof
     rw[] >> mp_tac $ DIFF_CONV “λx. (exp x + exp (-x)) / 2r” >>
     simp[GSYM cosh_def,sinh_def,ETA_THM] >>
     disch_then $ qspec_then ‘x’ mp_tac >>
-    qmatch_abbrev_tac ‘(_ diffl l1) _ ⇒ (_ diffl l2) _’ >>
+    qmatch_abbrev_tac ‘(_ diffl l1) _ ==> (_ diffl l2) _’ >>
     ‘l1 = l2’ suffices_by simp[] >> UNABBREV_ALL_TAC >> simp[]
 QED
 
 Theorem DIFF_TANH:
-    ∀x. (tanh diffl (1 - (tanh x)²)) x
+    !x. (tanh diffl (1 - (tanh x)²)) x
 Proof
     rw[] >> mp_tac $ DIFF_CONV “λx. (exp x - exp (-x)) / (exp x + exp (-x))” >>
     simp[GSYM tanh_alt,ETA_THM] >> disch_then $ qspec_then ‘x’ mp_tac >>
     ‘0 < (exp x + exp (-x))’ by (irule REAL_LT_ADD >> simp[EXP_POS_LT]) >>
-    simp[REAL_POS_NZ] >> qmatch_abbrev_tac ‘(_ diffl l1) _ ⇒ (_ diffl l2) _’ >>
+    simp[REAL_POS_NZ] >> qmatch_abbrev_tac ‘(_ diffl l1) _ ==> (_ diffl l2) _’ >>
     ‘l1 = l2’ suffices_by simp[] >> UNABBREV_ALL_TAC >> simp[tanh_alt] >>
     ‘(exp x + exp (-x))² / (exp x + exp (-x))² = 1’ by (
         irule REAL_DIV_REFL >> simp[]) >>
@@ -4308,38 +4310,38 @@ Proof
 QED
 
 Theorem DIFF_SECH:
-    ∀x. (sech diffl -(tanh x * sech x)) x
+    !x. (sech diffl -(tanh x * sech x)) x
 Proof
     rw[] >> mp_tac $ DIFF_CONV “λx. 1 / cosh x” >>
     simp[GSYM sech_def,ETA_THM] >>
     disch_then $ qspecl_then [‘sinh x’,‘x’] mp_tac >>
     simp[DIFF_COSH] >> impl_tac
     >- simp[cosh_def,REAL_POS_NZ,REAL_LT_ADD,EXP_POS_LT] >>
-    qmatch_abbrev_tac ‘(_ diffl l1) _ ⇒ (_ diffl l2) _’ >>
+    qmatch_abbrev_tac ‘(_ diffl l1) _ ==> (_ diffl l2) _’ >>
     ‘l1 = l2’ suffices_by simp[] >> UNABBREV_ALL_TAC >>
     simp[sech_def,tanh_def]
 QED
 
 Theorem DIFF_CSCH:
-    ∀x. x ≠ 0 ⇒ (csch diffl -(coth x * csch x)) x
+    !x. x <> 0 ==> (csch diffl -(coth x * csch x)) x
 Proof
     rw[] >> mp_tac $ DIFF_CONV “λx. 1 / sinh x” >>
     simp[GSYM csch_def,ETA_THM] >>
     disch_then $ qspecl_then [‘cosh x’,‘x’] mp_tac >>
-    simp[DIFF_SINH] >> ‘sinh x ≠ 0’ by simp[SINH_NZ] >>
-    simp[] >> qmatch_abbrev_tac ‘(_ diffl l1) _ ⇒ (_ diffl l2) _’ >>
+    simp[DIFF_SINH] >> ‘sinh x <> 0’ by simp[SINH_NZ] >>
+    simp[] >> qmatch_abbrev_tac ‘(_ diffl l1) _ ==> (_ diffl l2) _’ >>
     ‘l1 = l2’ suffices_by simp[] >> UNABBREV_ALL_TAC >>
     simp[csch_def,coth_def,tanh_def]
 QED
 
 Theorem DIFF_COTH:
-    ∀x. x ≠ 0 ⇒ (coth diffl (1 - (coth x)²)) x
+    !x. x <> 0 ==> (coth diffl (1 - (coth x)²)) x
 Proof
     rw[] >> mp_tac $ DIFF_CONV “λx. 1 / tanh x” >>
     simp[GSYM coth_def,ETA_THM] >>
     disch_then $ qspecl_then [‘1 - (tanh x)²’,‘x’] mp_tac >>
-    simp[DIFF_TANH] >> ‘tanh x ≠ 0’ by simp[TANH_NZ] >>
-    simp[] >> qmatch_abbrev_tac ‘(_ diffl l1) _ ⇒ (_ diffl l2) _’ >>
+    simp[DIFF_TANH] >> ‘tanh x <> 0’ by simp[TANH_NZ] >>
+    simp[] >> qmatch_abbrev_tac ‘(_ diffl l1) _ ==> (_ diffl l2) _’ >>
     ‘l1 = l2’ suffices_by simp[] >> UNABBREV_ALL_TAC >>
     simp[coth_def,REAL_SUB_LDISTRIB]
 QED
@@ -4347,7 +4349,7 @@ QED
 (*** Hyperbolic Trig Bounds ***)
 
 Theorem COSH_BOUNDS:
-    ∀x. 1 ≤ cosh x
+    !x. 1 <= cosh x
 Proof
     rw[] >> Cases_on ‘x = 0’ >- simp[COSH_0] >> wlog_tac ‘0 < x’ [‘x’]
     >- (first_x_assum $ qspec_then ‘-x’ mp_tac >> simp[COSH_NEG]) >>
@@ -4360,9 +4362,9 @@ Proof
 QED
 
 Theorem TANH_BOUNDS:
-    ∀x. -1 < tanh x ∧ tanh x < 1
+    !x. -1 < tanh x /\ tanh x < 1
 Proof
-    strip_tac >> wlog_tac ‘0 ≤ x’ [‘x’]
+    strip_tac >> wlog_tac ‘0 <= x’ [‘x’]
     >- (first_x_assum $ qspec_then ‘-x’ mp_tac >> simp[TANH_NEG]) >>
     irule_at (Pos hd) REAL_LTE_TRANS >> qexists ‘0’ >>
     simp[tanh_def,COSH_POS_LT,COSH_NZ,SINH_POS_LE] >>
@@ -4371,22 +4373,22 @@ Proof
 QED
 
 Theorem SECH_BOUNDS:
-    ∀x. 0 < sech x ∧ sech x ≤ 1
+    !x. 0 < sech x /\ sech x <= 1
 Proof
     simp[sech_def,COSH_POS_LT,COSH_NZ,COSH_BOUNDS]
 QED
 
 Theorem CSCH_BOUNDS:
-    ∀x. x ≠ 0 ⇒ csch x ≠ 0
+    !x. x <> 0 ==> csch x <> 0
 Proof
     simp[csch_def,SINH_NZ]
 QED
 
 Theorem COTH_BOUNDS:
-    ∀x. x ≠ 0 ⇒ coth x < -1 ∨ 1 < coth x
+    !x. x <> 0 ==> coth x < -1 \/ 1 < coth x
 Proof
     rw[coth_def] >> qspec_then ‘x’ assume_tac TANH_BOUNDS >>
-    ‘tanh x = 0 ∨ tanh x < 0 ∨ 0 < tanh x’ by simp[]
+    ‘tanh x = 0 \/ tanh x < 0 \/ 0 < tanh x’ by simp[]
     >- metis_tac[TANH_NZ] >>
     gs[]
 QED
@@ -4394,20 +4396,20 @@ QED
 (*** Hyperbolic Trig Monotonicity ***)
 
 Theorem SINH_MONO_LT:
-    ∀x y. x < y ⇒ sinh x < sinh y
+    !x y. x < y ==> sinh x < sinh y
 Proof
     rw[] >> irule DIFF_POS_MONO_LT_UU >> simp[] >>
     rw[] >> qexists ‘cosh z’ >> simp[COSH_POS_LT,DIFF_SINH]
 QED
 
 Theorem SINH_MONO_LE:
-    ∀x y. x ≤ y ⇒ sinh x ≤ sinh y
+    !x y. x <= y ==> sinh x <= sinh y
 Proof
     rw[] >> Cases_on ‘x = y’ >> gs[REAL_LE_LT,SINH_MONO_LT]
 QED
 
 Theorem COSH_MONO_LT:
-    ∀x y. 0 ≤ x ∧ x < y ⇒ cosh x < cosh y
+    !x y. 0 <= x /\ x < y ==> cosh x < cosh y
 Proof
     rw[] >> irule DIFF_POS_MONO_LT_CU >> simp[] >>
     qexists ‘0’ >> simp[] >> reverse conj_tac
@@ -4416,13 +4418,13 @@ Proof
 QED
 
 Theorem COSH_MONO_LE:
-    ∀x y. 0 ≤ x ∧ x ≤ y ⇒ cosh x ≤ cosh y
+    !x y. 0 <= x /\ x <= y ==> cosh x <= cosh y
 Proof
     rw[] >> Cases_on ‘x = y’ >> gs[REAL_LE_LT,COSH_MONO_LT]
 QED
 
 Theorem COSH_ANTIMONO_LT:
-    ∀x y. x < y ∧ y ≤ 0 ⇒ cosh y < cosh x
+    !x y. x < y /\ y <= 0 ==> cosh y < cosh x
 Proof
     rw[] >> irule DIFF_NEG_ANTIMONO_LT_UC >> simp[] >>
     qexists ‘0’ >> simp[] >> reverse conj_tac
@@ -4431,30 +4433,30 @@ Proof
 QED
 
 Theorem COSH_ANTIMONO_LE:
-    ∀x y. x ≤ y ∧ y ≤ 0 ⇒ cosh y ≤ cosh x
+    !x y. x <= y /\ y <= 0 ==> cosh y <= cosh x
 Proof
     rw[] >> Cases_on ‘x = y’ >> gs[REAL_LE_LT,COSH_ANTIMONO_LT]
 QED
 
 Theorem TANH_MONO_LT:
-    ∀x y. x < y ⇒ tanh x < tanh y
+    !x y. x < y ==> tanh x < tanh y
 Proof
     rw[] >> irule DIFF_POS_MONO_LT_UU >> simp[] >>
     rw[] >> qexists ‘1 - (tanh z)²’ >> simp[DIFF_TANH,REAL_SUB_LT] >>
-    wlog_tac ‘0 ≤ z’ [‘z’]
+    wlog_tac ‘0 <= z’ [‘z’]
     >- (first_x_assum $ qspec_then ‘-z’ mp_tac >> simp[TANH_NEG]) >>
     qspecl_then [‘1’,‘tanh z’,‘1’] mp_tac POW_LT >>
     simp[] >> disch_then irule >> simp[TANH_BOUNDS,TANH_POS_LE]
 QED
 
 Theorem TANH_MONO_LE:
-    ∀x y. x ≤ y ⇒ tanh x ≤ tanh y
+    !x y. x <= y ==> tanh x <= tanh y
 Proof
     rw[] >> Cases_on ‘x = y’ >> gs[REAL_LE_LT,TANH_MONO_LT]
 QED
 
 Theorem SECH_ANTIMONO_LT:
-    ∀x y. 0 ≤ x ∧ x < y ⇒ sech y < sech x
+    !x y. 0 <= x /\ x < y ==> sech y < sech x
 Proof
     rw[] >> irule DIFF_NEG_ANTIMONO_LT_CU >> simp[] >>
     qexists ‘0’ >> simp[] >> reverse conj_tac
@@ -4464,30 +4466,30 @@ Proof
 QED
 
 Theorem SECH_ANTIMONO_LE:
-    ∀x y. 0 ≤ x ∧ x ≤ y ⇒ sech y ≤ sech x
+    !x y. 0 <= x /\ x <= y ==> sech y <= sech x
 Proof
     rw[] >> Cases_on ‘x = y’ >> gs[REAL_LE_LT,SECH_ANTIMONO_LT]
 QED
 
 Theorem SECH_MONO_LT:
-    ∀x y. x < y ∧ y ≤ 0 ⇒ sech x < sech y
+    !x y. x < y /\ y <= 0 ==> sech x < sech y
 Proof
     rw[] >> irule DIFF_POS_MONO_LT_UC >> simp[] >>
     qexists ‘0’ >> simp[] >> reverse conj_tac
     >- (metis_tac[DIFF_SECH,DIFF_CONT]) >>
     rw[] >> qexists ‘-(tanh z * sech z)’ >> simp[DIFF_SECH] >>
-    ‘0 < sech z ∧ tanh z < 0’ by simp[SECH_POS_LT,TANH_NEG_LT] >>
+    ‘0 < sech z /\ tanh z < 0’ by simp[SECH_POS_LT,TANH_NEG_LT] >>
     dxrule_all_then mp_tac REAL_LT_RMUL_IMP >> simp[]
 QED
 
 Theorem SECH_MONO_LE:
-    ∀x y. x < y ∧ y ≤ 0 ⇒ sech x < sech y
+    !x y. x < y /\ y <= 0 ==> sech x < sech y
 Proof
     rw[] >> Cases_on ‘x = y’ >> gs[REAL_LE_LT,SECH_MONO_LT]
 QED
 
 Theorem CSCH_ANTIMONO_LT:
-    ∀x y. (y < 0 ∨ 0 < x) ∧ x < y ⇒ csch y < csch x
+    !x y. (y < 0 \/ 0 < x) /\ x < y ==> csch y < csch x
 Proof
     ntac 2 strip_tac >> wlog_tac ‘0 < x’ [‘x’,‘y’]
     >- (simp[] >> rw[] >>
@@ -4498,19 +4500,19 @@ Proof
 QED
 
 Theorem CSCH_ANTIMONO_LE:
-    ∀x y. (y < 0 ∨ 0 < x) ∧ x ≤ y ⇒ csch y ≤ csch x
+    !x y. (y < 0 \/ 0 < x) /\ x <= y ==> csch y <= csch x
 Proof
     rw[] >> Cases_on ‘x = y’ >> gs[REAL_LE_LT,CSCH_ANTIMONO_LT]
 QED
 
 Theorem COTH_ANTIMONO_LT:
-    ∀x y. (y < 0 ∨ 0 < x) ∧ x < y ⇒ coth y < coth x
+    !x y. (y < 0 \/ 0 < x) /\ x < y ==> coth y < coth x
 Proof
     ntac 2 strip_tac >> wlog_tac ‘0 < x’ [‘x’,‘y’]
     >- (simp[] >> rw[] >>
         first_x_assum $ qspecl_then [‘-y’,‘-x’] mp_tac >> simp[COTH_NEG]) >>
     simp[] >> rw[] >> irule DIFF_NEG_ANTIMONO_LT_OU >> simp[] >>
-    qexists ‘0’ >> simp[] >> rw[] >> qexists ‘1 − (coth z)²’ >>
+    qexists ‘0’ >> simp[] >> rw[] >> qexists ‘1 - (coth z)²’ >>
     simp[DIFF_COTH,REAL_LT_SUB_RADD] >>
     qspecl_then [‘1’,‘1’,‘coth z’] mp_tac POW_LT >>
     simp[] >> disch_then irule >> qspec_then ‘z’ mp_tac COTH_BOUNDS >> rw[] >>
@@ -4518,7 +4520,7 @@ Proof
 QED
 
 Theorem COTH_ANTIMONO_LE:
-    ∀x y. (y < 0 ∨ 0 < x) ∧ x ≤ y ⇒ coth y ≤ coth x
+    !x y. (y < 0 \/ 0 < x) /\ x <= y ==> coth y <= coth x
 Proof
     rw[] >> Cases_on ‘x = y’ >> gs[REAL_LE_LT,COTH_ANTIMONO_LT]
 QED
@@ -4526,21 +4528,21 @@ QED
 (*** Hyperbolic Trig Pythagorean-likes ***)
 
 Theorem COSH_SQ_SINH_SQ:
-    ∀x. (cosh x)² - (sinh x)² = 1
+    !x. (cosh x)² - (sinh x)² = 1
 Proof
     rw[cosh_def,sinh_def,REAL_DIV_SUB] >>
     simp[ADD_POW_2,SUB_POW_2,EXP_NEG_MUL,real_sub,REAL_NEG_ADD]
 QED
 
 Theorem SECH_SQ_TANH_SQ:
-    ∀x. (sech x)² + (tanh x)² = 1
+    !x. (sech x)² + (tanh x)² = 1
 Proof
     simp[sech_def,tanh_def,REAL_DIV_ADD,POW_NZ,COSH_NZ] >>
     simp[SRULE [REAL_EQ_SUB_RADD] COSH_SQ_SINH_SQ]
 QED
 
 Theorem COTH_SQ_CSCH_SQ:
-    ∀x. x ≠ 0 ⇒ (coth x)² - (csch x)² = 1
+    !x. x <> 0 ==> (coth x)² - (csch x)² = 1
 Proof
     simp[coth_alt,csch_def,REAL_DIV_SUB,POW_NZ,SINH_NZ] >>
     simp[SRULE [REAL_EQ_SUB_RADD] COSH_SQ_SINH_SQ]
@@ -4553,7 +4555,7 @@ Definition asinh_def:
 End
 
 Definition acosh_def:
-    acosh y = @x. 0 ≤ x ∧ cosh x = y
+    acosh y = @x. 0 <= x /\ cosh x = y
 End
 
 Definition atanh_def:
@@ -4561,21 +4563,21 @@ Definition atanh_def:
 End
 
 Definition asech_def:
-    asech y = @x. 0 ≤ x ∧ sech x = y
+    asech y = @x. 0 <= x /\ sech x = y
 End
 
 Definition acsch_def:
-    acsch y = @x. x ≠ 0 ∧ csch x = y
+    acsch y = @x. x <> 0 /\ csch x = y
 End
 
 Definition acoth_def:
-    acoth y = @x. x ≠ 0 ∧ coth x = y
+    acoth y = @x. x <> 0 /\ coth x = y
 End
 
 (*** Inverse Hyperbolic Trig Witnesses, Inversions, and Zero Lemmas ***)
 
 Theorem ASINH_WITNESS[local]:
-    ∀y. sinh (ln (y + sqrt (y² + 1))) = y
+    !y. sinh (ln (y + sqrt (y² + 1))) = y
 Proof
     rw[] >> simp[sinh_def] >> qabbrev_tac ‘z = (y + sqrt (y² + 1))’ >>
     ‘0 < z’ by (simp[Abbr ‘z’] >> irule ABS_BOUND >>
@@ -4585,11 +4587,11 @@ Proof
     irule REAL_EQ_LMUL_IMP >> qexists ‘z’ >>
     simp[REAL_SUB_LDISTRIB,Excl "REAL_EQ_LMUL",Excl "RMUL_EQNORM1",Excl "RMUL_EQNORM2"] >>
     qunabbrev_tac ‘z’ >> simp[ADD_POW_2,REAL_ADD_LDISTRIB] >>
-    ‘0 ≤ y² + 1’ by simp[REAL_LE_ADD] >> simp[SQRT_POW_2]
+    ‘0 <= y² + 1’ by simp[REAL_LE_ADD] >> simp[SQRT_POW_2]
 QED
 
 Theorem ASINH_UNIQUE[local]:
-    ∀x y z. sinh x = y ∧ sinh z = y ⇒ x = z
+    !x y z. sinh x = y /\ sinh z = y ==> x = z
 Proof
     simp[] >> rpt gen_tac >> CONV_TAC CONTRAPOS_CONV >>
     rw[] >> wlog_tac ‘x < z’ [‘x’,‘z’]
@@ -4598,48 +4600,48 @@ Proof
 QED
 
 Theorem ASINH_SINH:
-    ∀x. asinh (sinh x) = x
+    !x. asinh (sinh x) = x
 Proof
     rw[asinh_def] >> irule SELECT_UNIQUE_ALT >> simp[ASINH_UNIQUE]
 QED
 
 Theorem SINH_ASINH:
-    ∀x. sinh (asinh x) = x
+    !x. sinh (asinh x) = x
 Proof
     rw[asinh_def] >> SELECT_ELIM_TAC >>
     simp[ASINH_UNIQUE] >> metis_tac[ASINH_WITNESS]
 QED
 
 Theorem ASINH_POS_LE:
-    ∀x. 0 ≤ x ⇒ 0 ≤ asinh x
+    !x. 0 <= x ==> 0 <= asinh x
 Proof
     strip_tac >> CONV_TAC CONTRAPOS_CONV >> simp[REAL_NOT_LE] >>
     qspec_then ‘asinh x’ mp_tac SINH_NEG_LT >> simp[SINH_ASINH]
 QED
 
 Theorem ASINH_POS_LT:
-    ∀x. 0 < x ⇒ 0 < asinh x
+    !x. 0 < x ==> 0 < asinh x
 Proof
     strip_tac >> CONV_TAC CONTRAPOS_CONV >> simp[REAL_NOT_LT] >>
     qspec_then ‘asinh x’ mp_tac SINH_NEG_LE >> simp[SINH_ASINH]
 QED
 
 Theorem ASINH_NEG_LE:
-    ∀x. x ≤ 0 ⇒ asinh x ≤ 0
+    !x. x <= 0 ==> asinh x <= 0
 Proof
     strip_tac >> CONV_TAC CONTRAPOS_CONV >> simp[REAL_NOT_LE] >>
     qspec_then ‘asinh x’ mp_tac SINH_POS_LT >> simp[SINH_ASINH]
 QED
 
 Theorem ASINH_NEG_LT:
-    ∀x. x < 0 ⇒ asinh x < 0
+    !x. x < 0 ==> asinh x < 0
 Proof
     strip_tac >> CONV_TAC CONTRAPOS_CONV >> simp[REAL_NOT_LT] >>
     qspec_then ‘asinh x’ mp_tac SINH_POS_LE >> simp[SINH_ASINH]
 QED
 
 Theorem ASINH_NZ:
-    ∀x. asinh x ≠ 0 ⇔ x ≠ 0
+    !x. asinh x <> 0 <=> x <> 0
 Proof
     rw[] >> qspec_then ‘asinh x’ mp_tac SINH_NZ >> simp[SINH_ASINH]
 QED
@@ -4651,7 +4653,7 @@ Proof
 QED
 
 Theorem ACOSH_WITNESS[local]:
-    ∀y. 1 ≤ y ⇒ 0 ≤ ln (y + sqrt (y² - 1)) ∧ cosh (ln (y + sqrt (y² - 1))) = y
+    !y. 1 <= y ==> 0 <= ln (y + sqrt (y² - 1)) /\ cosh (ln (y + sqrt (y² - 1))) = y
 Proof
     gen_tac >> strip_tac >> irule_at Any LN_POS >> conj_asm1_tac
     >- (irule REAL_LE_TRANS >> first_assum $ irule_at Any >> simp[] >>
@@ -4661,11 +4663,11 @@ Proof
     irule REAL_EQ_LMUL_IMP >> qexists ‘z’ >>
     simp[REAL_ADD_LDISTRIB,Excl "REAL_EQ_LMUL",Excl "RMUL_EQNORM1",Excl "RMUL_EQNORM2"] >>
     qunabbrev_tac ‘z’ >> simp[ADD_POW_2,REAL_ADD_LDISTRIB] >>
-    ‘0 ≤ y² - 1’ by simp[REAL_SUB_LE,REAL_LE1_POW2] >> simp[SQRT_POW_2]
+    ‘0 <= y² - 1’ by simp[REAL_SUB_LE,REAL_LE1_POW2] >> simp[SQRT_POW_2]
 QED
 
 Theorem ACOSH_UNIQUE[local]:
-    ∀x y z. 0 ≤ x ∧ cosh x = y ∧ 0 ≤ z ∧ cosh z = y ⇒ x = z
+    !x y z. 0 <= x /\ cosh x = y /\ 0 <= z /\ cosh z = y ==> x = z
 Proof
     rw[] >> qpat_x_assum ‘_ = _’ mp_tac >>
     CONV_TAC CONTRAPOS_CONV >>
@@ -4675,20 +4677,20 @@ Proof
 QED
 
 Theorem ACOSH_COSH:
-    ∀x. 0 ≤ x ⇒ acosh (cosh x) = x
+    !x. 0 <= x ==> acosh (cosh x) = x
 Proof
     rw[acosh_def] >> irule SELECT_UNIQUE_ALT >> simp[ACOSH_UNIQUE]
 QED
 
 Theorem ACOSH_COSH_NEG:
-    ∀x. x ≤ 0 ⇒ acosh (cosh x) = -x
+    !x. x <= 0 ==> acosh (cosh x) = -x
 Proof
     rw[] >> qspec_then ‘-x’ mp_tac ACOSH_COSH >>
     simp[COSH_NEG]
 QED
 
 Theorem COSH_ACOSH:
-    ∀x. 1 ≤ x ⇒ cosh (acosh x) = x
+    !x. 1 <= x ==> cosh (acosh x) = x
 Proof
     rw[acosh_def] >> SELECT_ELIM_TAC >>
     simp[ACOSH_UNIQUE] >> metis_tac[ACOSH_WITNESS]
@@ -4701,7 +4703,7 @@ Proof
 QED
 
 Theorem ACOSH_NZ:
-    ∀x. 1 < x ⇒ acosh x ≠ 0
+    !x. 1 < x ==> acosh x <> 0
 Proof
     rw[] >> simp[acosh_def] >> SELECT_ELIM_TAC >>
     conj_asm1_tac >- metis_tac[ACOSH_WITNESS,REAL_LE_LT] >>
@@ -4709,29 +4711,29 @@ Proof
 QED
 
 Theorem ACOSH_POS_LE:
-    ∀x. 1 ≤ x ⇒ 0 ≤ acosh x
+    !x. 1 <= x ==> 0 <= acosh x
 Proof
     rw[acosh_def] >> SELECT_ELIM_TAC >>
     simp[ACOSH_UNIQUE] >> metis_tac[ACOSH_WITNESS]
 QED
 
 Theorem ACOSH_POS_LT:
-    ∀x. 1 < x ⇒ 0 < acosh x
+    !x. 1 < x ==> 0 < acosh x
 Proof
-    rw[] >> ‘acosh x ≠ 0’ suffices_by metis_tac[SRULE [REAL_LE_LT] ACOSH_POS_LE] >>
+    rw[] >> ‘acosh x <> 0’ suffices_by metis_tac[SRULE [REAL_LE_LT] ACOSH_POS_LE] >>
     simp[ACOSH_NZ]
 QED
 
 Theorem ATANH_WITNESS[local]:
-    ∀y. -1 < y ∧ y < 1 ⇒ tanh (ln ((1 + y) / (1 - y)) / 2) = y
+    !y. -1 < y /\ y < 1 ==> tanh (ln ((1 + y) / (1 - y)) / 2) = y
 Proof
-    rw[tanh_alt2] >> qabbrev_tac ‘z = ((1 + y) / (1 − y))’ >>
+    rw[tanh_alt2] >> qabbrev_tac ‘z = ((1 + y) / (1 - y))’ >>
     ‘0 < z’ by simp[Abbr ‘z’] >> simp[iffRL EXP_LN] >>
     simp[Abbr ‘z’] >> simp[real_sub,add_ratl]
 QED
 
 Theorem ATANH_UNIQUE[local]:
-    ∀x y z. tanh x = y ∧ tanh z = y ⇒ x = z
+    !x y z. tanh x = y /\ tanh z = y ==> x = z
 Proof
     simp[] >> rpt gen_tac >> CONV_TAC CONTRAPOS_CONV >>
     rw[] >> wlog_tac ‘x < z’ [‘x’,‘z’]
@@ -4740,20 +4742,20 @@ Proof
 QED
 
 Theorem ATANH_TANH:
-    ∀x. atanh (tanh x) = x
+    !x. atanh (tanh x) = x
 Proof
     rw[atanh_def] >> irule SELECT_UNIQUE_ALT >> simp[ATANH_UNIQUE]
 QED
 
 Theorem TANH_ATANH:
-    ∀x. -1 < x ∧ x < 1 ⇒ tanh (atanh x) = x
+    !x. -1 < x /\ x < 1 ==> tanh (atanh x) = x
 Proof
     rw[atanh_def] >> SELECT_ELIM_TAC >>
     simp[ATANH_UNIQUE] >> metis_tac[ATANH_WITNESS]
 QED
 
 Theorem ATANH_NZ:
-    ∀x. -1 < x ∧ x ≠ 0 ∧ x < 1 ⇒ atanh x ≠ 0
+    !x. -1 < x /\ x <> 0 /\ x < 1 ==> atanh x <> 0
 Proof
     rw[] >> qspec_then ‘atanh x’ mp_tac TANH_NZ >> simp[TANH_ATANH]
 QED
@@ -4766,15 +4768,15 @@ Proof
 QED
 
 Theorem ATANH_POS_LE:
-    ∀x. 0 ≤ x ∧ x < 1 ⇒ 0 ≤ atanh x
+    !x. 0 <= x /\ x < 1 ==> 0 <= atanh x
 Proof
     rw[] >> ‘-1 < x’ by (irule REAL_LTE_TRANS >> qexists ‘0’ >> simp[]) >>
-    qpat_x_assum ‘0 ≤ _’ mp_tac >> CONV_TAC CONTRAPOS_CONV >> simp[REAL_NOT_LE] >>
+    qpat_x_assum ‘0 <= _’ mp_tac >> CONV_TAC CONTRAPOS_CONV >> simp[REAL_NOT_LE] >>
     qspec_then ‘atanh x’ mp_tac TANH_NEG_LT >> simp[TANH_ATANH]
 QED
 
 Theorem ATANH_POS_LT:
-    ∀x. 0 < x ∧ x < 1 ⇒ 0 < atanh x
+    !x. 0 < x /\ x < 1 ==> 0 < atanh x
 Proof
     rw[] >> ‘-1 < x’ by (irule REAL_LTE_TRANS >> qexists ‘0’ >> simp[]) >>
     qpat_x_assum ‘0 < _’ mp_tac >> CONV_TAC CONTRAPOS_CONV >> simp[REAL_NOT_LT] >>
@@ -4782,15 +4784,15 @@ Proof
 QED
 
 Theorem ATANH_NEG_LE:
-    ∀x. -1 < x ∧ x ≤ 0 ⇒ atanh x ≤ 0
+    !x. -1 < x /\ x <= 0 ==> atanh x <= 0
 Proof
     rw[] >> ‘x < 1’ by (irule REAL_LET_TRANS >> qexists ‘0’ >> simp[]) >>
-    qpat_x_assum ‘_ ≤ 0’ mp_tac >> CONV_TAC CONTRAPOS_CONV >> simp[REAL_NOT_LE] >>
+    qpat_x_assum ‘_ <= 0’ mp_tac >> CONV_TAC CONTRAPOS_CONV >> simp[REAL_NOT_LE] >>
     qspec_then ‘atanh x’ mp_tac TANH_POS_LT >> simp[TANH_ATANH]
 QED
 
 Theorem ATANH_NEG_LT:
-    ∀x. -1 < x ∧ x < 0 ⇒ atanh x < 0
+    !x. -1 < x /\ x < 0 ==> atanh x < 0
 Proof
     rw[] >> ‘x < 1’ by (irule REAL_LET_TRANS >> qexists ‘0’ >> simp[]) >>
     qpat_x_assum ‘_ < 0’ mp_tac >> CONV_TAC CONTRAPOS_CONV >> simp[REAL_NOT_LT] >>
@@ -4798,13 +4800,13 @@ Proof
 QED
 
 Theorem ASECH_WITNESS[local]:
-    ∀y. 0 < y ∧ y ≤ 1 ⇒ 0 ≤ (acosh y⁻¹) ∧ sech (acosh y⁻¹) = y
+    !y. 0 < y /\ y <= 1 ==> 0 <= (acosh y⁻¹) /\ sech (acosh y⁻¹) = y
 Proof
     gen_tac >> strip_tac >> simp[sech_def,ACOSH_POS_LE,COSH_ACOSH]
 QED
 
 Theorem ASECH_UNIQUE[local]:
-    ∀x y z. 0 ≤ x ∧ sech x = y ∧ 0 ≤ z ∧ sech z = y ⇒ x = z
+    !x y z. 0 <= x /\ sech x = y /\ 0 <= z /\ sech z = y ==> x = z
 Proof
     rw[] >> qpat_x_assum ‘_ = _’ mp_tac >>
     CONV_TAC CONTRAPOS_CONV >>
@@ -4814,20 +4816,20 @@ Proof
 QED
 
 Theorem ASECH_SECH:
-    ∀x. 0 ≤ x ⇒ asech (sech x) = x
+    !x. 0 <= x ==> asech (sech x) = x
 Proof
     rw[asech_def] >> irule SELECT_UNIQUE_ALT >> simp[ASECH_UNIQUE]
 QED
 
 Theorem ASECH_SECH_NEG:
-    ∀x. x ≤ 0 ⇒ asech (sech x) = -x
+    !x. x <= 0 ==> asech (sech x) = -x
 Proof
     rw[] >> qspec_then ‘-x’ mp_tac ASECH_SECH >>
     simp[SECH_NEG]
 QED
 
 Theorem SECH_ASECH:
-    ∀x. 0 < x ∧ x ≤ 1 ⇒ sech (asech x) = x
+    !x. 0 < x /\ x <= 1 ==> sech (asech x) = x
 Proof
     rw[asech_def] >> SELECT_ELIM_TAC >>
     simp[ASECH_UNIQUE] >> metis_tac[ASECH_WITNESS]
@@ -4840,14 +4842,14 @@ Proof
 QED
 
 Theorem ASECH_POS_LE:
-    ∀x. 0 < x ∧ x ≤ 1 ⇒ 0 ≤ asech x
+    !x. 0 < x /\ x <= 1 ==> 0 <= asech x
 Proof
     rw[asech_def] >> SELECT_ELIM_TAC >>
     simp[ASECH_UNIQUE] >> metis_tac[ASECH_WITNESS]
 QED
 
 Theorem ASECH_NZ:
-    ∀x. 0 < x ∧ x < 1 ⇒ asech x ≠ 0
+    !x. 0 < x /\ x < 1 ==> asech x <> 0
 Proof
     rw[] >> simp[asech_def] >> SELECT_ELIM_TAC >>
     conj_asm1_tac >- metis_tac[ASECH_WITNESS,REAL_LE_LT] >>
@@ -4855,115 +4857,115 @@ Proof
 QED
 
 Theorem ASECH_POS_LT:
-    ∀x. 0 < x ∧ x < 1 ⇒ 0 < asech x
+    !x. 0 < x /\ x < 1 ==> 0 < asech x
 Proof
     metis_tac[REAL_LE_LT,ASECH_POS_LE,ASECH_NZ]
 QED
 
 Theorem ACSCH_WITNESS[local]:
-    ∀y. y ≠ 0 ⇒ asinh y⁻¹ ≠ 0 ∧ csch (asinh y⁻¹) = y
+    !y. y <> 0 ==> asinh y⁻¹ <> 0 /\ csch (asinh y⁻¹) = y
 Proof
     gen_tac >> strip_tac >> simp[csch_def,SINH_ASINH,ASINH_NZ]
 QED
 
 Theorem ACSCH_UNIQUE[local]:
-    ∀x y z. x ≠ 0 ∧ csch x = y ∧ z ≠ 0 ∧ csch z = y ⇒ x = z
+    !x y z. x <> 0 /\ csch x = y /\ z <> 0 /\ csch z = y ==> x = z
 Proof
     rw[] >> qpat_x_assum ‘_ = _’ mp_tac >>
     CONV_TAC CONTRAPOS_CONV >>
     rw[] >> wlog_tac ‘x < z’ [‘x’,‘z’]
     >- (first_x_assum $ irule o GSYM >> simp[]) >>
-    Cases_on ‘z < 0 ∨ 0 < x’
+    Cases_on ‘z < 0 \/ 0 < x’
     >- (dxrule_all_then mp_tac CSCH_ANTIMONO_LT >> simp[]) >>
     gs[] >> ‘csch x < csch z’ suffices_by simp[] >>
     irule REAL_LT_TRANS >> qexists ‘0’ >> simp[CSCH_NEG_LT,CSCH_POS_LT]
 QED
 
 Theorem ACSCH_CSCH:
-    ∀x. x ≠ 0 ⇒ acsch (csch x) = x
+    !x. x <> 0 ==> acsch (csch x) = x
 Proof
     rw[acsch_def] >> irule SELECT_UNIQUE_ALT >> simp[ACSCH_UNIQUE]
 QED
 
 Theorem CSCH_ACSCH:
-    ∀x. x ≠ 0 ⇒ csch (acsch x) = x
+    !x. x <> 0 ==> csch (acsch x) = x
 Proof
     rw[acsch_def] >> SELECT_ELIM_TAC >>
     simp[ACSCH_UNIQUE] >> metis_tac[ACSCH_WITNESS]
 QED
 
 Theorem ACSCH_NZ:
-    ∀x. x ≠ 0 ⇒ acsch x ≠ 0
+    !x. x <> 0 ==> acsch x <> 0
 Proof
     rw[acsch_def] >> SELECT_ELIM_TAC >>
     simp[ACSCH_UNIQUE] >> metis_tac[ACSCH_WITNESS]
 QED
 
 Theorem ACSCH_POS_LT:
-    ∀x. 0 < x ⇒ 0 < acsch x
+    !x. 0 < x ==> 0 < acsch x
 Proof
-    rw[] >> ‘x ≠ 0’ by simp[REAL_LT_IMP_NE] >>
+    rw[] >> ‘x <> 0’ by simp[REAL_LT_IMP_NE] >>
     last_x_assum mp_tac >> CONV_TAC CONTRAPOS_CONV >>
     simp[REAL_NOT_LT,REAL_LE_LT,ACSCH_NZ] >>
     qspec_then ‘acsch x’ mp_tac CSCH_NEG_LT >> simp[CSCH_ACSCH]
 QED
 
 Theorem ACSCH_NEG_LT:
-    ∀x. x < 0 ⇒ acsch x < 0
+    !x. x < 0 ==> acsch x < 0
 Proof
-    rw[] >> ‘x ≠ 0’ by simp[REAL_LT_IMP_NE] >>
+    rw[] >> ‘x <> 0’ by simp[REAL_LT_IMP_NE] >>
     last_x_assum mp_tac >> CONV_TAC CONTRAPOS_CONV >>
     simp[REAL_NOT_LT,REAL_LE_LT,ACSCH_NZ] >>
     qspec_then ‘acsch x’ mp_tac CSCH_POS_LT >> simp[CSCH_ACSCH]
 QED
 
 Theorem ACOTH_WITNESS[local]:
-    ∀y. y < -1 ∨ 1 < y ⇒ atanh y⁻¹ ≠ 0 ∧ coth (atanh y⁻¹) = y
+    !y. y < -1 \/ 1 < y ==> atanh y⁻¹ <> 0 /\ coth (atanh y⁻¹) = y
 Proof
     gen_tac >> strip_tac >> simp[coth_def,TANH_ATANH,ATANH_NZ]
 QED
 
 Theorem ACOTH_UNIQUE[local]:
-    ∀x y z. x ≠ 0 ∧ coth x = y ∧ z ≠ 0 ∧ coth z = y ⇒ x = z
+    !x y z. x <> 0 /\ coth x = y /\ z <> 0 /\ coth z = y ==> x = z
 Proof
     rw[] >> qpat_x_assum ‘_ = _’ mp_tac >>
     CONV_TAC CONTRAPOS_CONV >> rw[] >> wlog_tac ‘x < z’ [‘x’,‘z’]
     >- (first_x_assum $ irule o GSYM >> simp[]) >>
-    Cases_on ‘z < 0 ∨ 0 < x’
+    Cases_on ‘z < 0 \/ 0 < x’
     >- (dxrule_all_then mp_tac COTH_ANTIMONO_LT >> simp[]) >>
     gs[] >> ‘coth x < coth z’ suffices_by simp[] >>
     irule REAL_LT_TRANS >> qexists ‘0’ >> simp[COTH_NEG_LT,COTH_POS_LT]
 QED
 
 Theorem ACOTH_COTH:
-    ∀x. x ≠ 0 ⇒ acoth (coth x) = x
+    !x. x <> 0 ==> acoth (coth x) = x
 Proof
     rw[acoth_def] >> irule SELECT_UNIQUE_ALT >> simp[ACOTH_UNIQUE]
 QED
 
 Theorem COTH_ACOTH:
-    ∀x. x < -1 ∨ 1 < x ⇒ coth (acoth x) = x
+    !x. x < -1 \/ 1 < x ==> coth (acoth x) = x
 Proof
     rw[acoth_def] >> SELECT_ELIM_TAC >>
     simp[ACOTH_UNIQUE] >> metis_tac[ACOTH_WITNESS]
 QED
 
 Theorem ACOTH_NZ:
-    ∀x. x < -1 ∨ 1 < x ⇒ acoth x ≠ 0
+    !x. x < -1 \/ 1 < x ==> acoth x <> 0
 Proof
     rw[acoth_def] >> SELECT_ELIM_TAC >>
     simp[ACOTH_UNIQUE] >> metis_tac[ACOTH_WITNESS]
 QED
 
 Theorem ACOTH_POS_LT:
-    ∀x. 1 < x ⇒ 0 < acoth x
+    !x. 1 < x ==> 0 < acoth x
 Proof
     rw[] >> qspec_then ‘acoth x’ mp_tac COTH_NEG_LT >> simp[COTH_ACOTH] >>
     simp[REAL_NOT_LT,REAL_LE_LT,ACOTH_NZ]
 QED
 
 Theorem ACOTH_NEG_LT:
-    ∀x. x < -1 ⇒ acoth x < 0
+    !x. x < -1 ==> acoth x < 0
 Proof
     rw[] >> qspec_then ‘acoth x’ mp_tac COTH_POS_LT >> simp[COTH_ACOTH] >>
     simp[REAL_NOT_LT,REAL_LE_LT,ACOTH_NZ]
@@ -4972,21 +4974,21 @@ QED
 (*** Inverse Hyperbolic Trig as Arguement Inverses ***)
 
 Theorem ASECH_EQ_ACOSH:
-    ∀x. 0 < x ∧ x ≤ 1 ⇒ asech x = acosh x⁻¹
+    !x. 0 < x /\ x <= 1 ==> asech x = acosh x⁻¹
 Proof
     qx_gen_tac ‘y’ >> rw[asech_def] >> irule SELECT_UNIQUE_ALT >>
     simp[ASECH_WITNESS,ASECH_UNIQUE]
 QED
 
 Theorem ACSCH_EQ_ASINH:
-    ∀x. x ≠ 0 ⇒ acsch x = asinh x⁻¹
+    !x. x <> 0 ==> acsch x = asinh x⁻¹
 Proof
     qx_gen_tac ‘y’ >> rw[acsch_def] >> irule SELECT_UNIQUE_ALT >>
     simp[ACSCH_WITNESS,ACSCH_UNIQUE]
 QED
 
 Theorem ACOTH_EQ_ATANH:
-    ∀x. x < -1 ∨ 1 < x ⇒ acoth x = atanh x⁻¹
+    !x. x < -1 \/ 1 < x ==> acoth x = atanh x⁻¹
 Proof
     qx_gen_tac ‘y’ >> rw[acoth_def] >> irule SELECT_UNIQUE_ALT >>
     simp[ACOTH_WITNESS,ACOTH_UNIQUE]
@@ -4995,40 +4997,40 @@ QED
 (*** Inverse Hyperbolic Trig as Natural Log ***)
 
 Theorem ASINH_EQ_LN:
-    ∀x. asinh x = ln (x + sqrt (x² + 1))
+    !x. asinh x = ln (x + sqrt (x² + 1))
 Proof
     qx_gen_tac ‘y’ >> simp[asinh_def] >> irule SELECT_UNIQUE_ALT >>
     simp[ASINH_WITNESS,ASINH_UNIQUE]
 QED
 
 Theorem ACOSH_EQ_LN:
-    ∀x. 1 ≤ x ⇒ acosh x = ln (x + sqrt (x² - 1))
+    !x. 1 <= x ==> acosh x = ln (x + sqrt (x² - 1))
 Proof
     qx_gen_tac ‘y’ >> rw[acosh_def] >> irule SELECT_UNIQUE_ALT >>
     simp[ACOSH_WITNESS,ACOSH_UNIQUE]
 QED
 
 Theorem ATANH_EQ_LN:
-    ∀x. -1 < x ∧ x < 1 ⇒ atanh x = ln ((1 + x) / (1 - x)) / 2
+    !x. -1 < x /\ x < 1 ==> atanh x = ln ((1 + x) / (1 - x)) / 2
 Proof
     qx_gen_tac ‘y’ >> rw[atanh_def,Excl "RMUL_EQNORM4"] >>
     irule SELECT_UNIQUE_ALT >> simp[ATANH_WITNESS,ATANH_UNIQUE,Excl "RMUL_EQNORM4"]
 QED
 
 Theorem ASECH_EQ_LN:
-    ∀x. 0 < x ∧ x ≤ 1 ⇒ asech x = ln (x⁻¹ + sqrt (x⁻¹ ² - 1))
+    !x. 0 < x /\ x <= 1 ==> asech x = ln (x⁻¹ + sqrt (x⁻¹ ² - 1))
 Proof
     simp[ASECH_EQ_ACOSH,ACOSH_EQ_LN]
 QED
 
 Theorem ACSCH_EQ_LN:
-    ∀x. x ≠ 0 ⇒ acsch x = ln (x⁻¹ + sqrt (x⁻¹ ² + 1))
+    !x. x <> 0 ==> acsch x = ln (x⁻¹ + sqrt (x⁻¹ ² + 1))
 Proof
     simp[ACSCH_EQ_ASINH,ASINH_EQ_LN]
 QED
 
 Theorem ACOTH_EQ_LN:
-    ∀x. (x < -1 ∨ 1 < x) ⇒ acoth x = ln ((x + 1) / (x - 1)) / 2
+    !x. (x < -1 \/ 1 < x) ==> acoth x = ln ((x + 1) / (x - 1)) / 2
 Proof
     rw[] >> simp[ACOTH_EQ_ATANH,ATANH_EQ_LN] >> AP_TERM_TAC >>
     simp[REAL_INV_1OVER,REAL_SUB_LDISTRIB,REAL_ADD_LDISTRIB]
@@ -5037,10 +5039,10 @@ QED
 (* natural log as atanh *)
 
 Theorem LN_EQ_ATANH:
-    ∀x. 0 < x ⇒ ln x = 2 * atanh ((x - 1) / (x + 1))
+    !x. 0 < x ==> ln x = 2 * atanh ((x - 1) / (x + 1))
 Proof
-    rw[] >> qabbrev_tac ‘y = (x − 1) / (x + 1)’ >>
-    ‘-1 < y ∧ y < 1’ by simp[Abbr ‘y’] >> simp[ATANH_EQ_LN] >>
+    rw[] >> qabbrev_tac ‘y = (x - 1) / (x + 1)’ >>
+    ‘-1 < y /\ y < 1’ by simp[Abbr ‘y’] >> simp[ATANH_EQ_LN] >>
     AP_TERM_TAC >> simp[Abbr ‘y’,real_sub,neg_rat,add_ratr]
 QED
 
@@ -5052,32 +5054,32 @@ CSCH, COTH
 *)
 
 Theorem ASINH_NEG:
-    ∀x. asinh (-x) = -asinh x
+    !x. asinh (-x) = -asinh x
 Proof
     rw[] >> qspec_then ‘x’ mp_tac ASINH_WITNESS >> rename [‘sinh x’] >>
     disch_then $ SUBST1_TAC o SYM >> simp[ASINH_SINH,GSYM SINH_NEG]
 QED
 
 Theorem ATANH_NEG:
-    ∀x. -1 < x ∧ x < 1 ⇒ atanh (-x) = -atanh x
+    !x. -1 < x /\ x < 1 ==> atanh (-x) = -atanh x
 Proof
     rw[] >> qspec_then ‘x’ mp_tac ATANH_WITNESS >> simp[] >> rename [‘tanh x’] >>
     disch_then $ SUBST1_TAC o SYM >> simp[ATANH_TANH,GSYM TANH_NEG]
 QED
 
 Theorem ACSCH_NEG:
-    ∀x. x ≠ 0 ⇒ acsch (-x) = -acsch x
+    !x. x <> 0 ==> acsch (-x) = -acsch x
 Proof
     rw[] >> qspec_then ‘x’ mp_tac ACSCH_WITNESS >>
-    ‘asinh x⁻¹ ≠ 0’ by simp[ASINH_NZ,REAL_INV_NZ] >> simp[] >> rename [‘csch x’] >>
+    ‘asinh x⁻¹ <> 0’ by simp[ASINH_NZ,REAL_INV_NZ] >> simp[] >> rename [‘csch x’] >>
     disch_then $ SUBST1_TAC o SYM >> simp[ACSCH_CSCH,GSYM CSCH_NEG]
 QED
 
 Theorem ACOTH_NEG:
-    ∀x. x < -1 ∨ 1 < x ⇒ acoth (-x) = -acoth x
+    !x. x < -1 \/ 1 < x ==> acoth (-x) = -acoth x
 Proof
     rw[] >> qspec_then ‘x’ mp_tac ACOTH_WITNESS >>
-    ‘atanh x⁻¹ ≠ 0’ by (irule ATANH_NZ >> simp[]) >>
+    ‘atanh x⁻¹ <> 0’ by (irule ATANH_NZ >> simp[]) >>
     simp[] >> rename [‘coth x’] >>
     disch_then $ SUBST1_TAC o SYM >> simp[ACOTH_COTH,GSYM COTH_NEG]
 QED
@@ -5089,18 +5091,18 @@ https://en.wikipedia.org/wiki/Inverse_hyperbolic_functions#Composition_of_hyperb
 *)
 
 Theorem SINH_ACOSH:
-    ∀x. 1 < x ⇒ sinh (acosh x) = sqrt (x² - 1)
+    !x. 1 < x ==> sinh (acosh x) = sqrt (x² - 1)
 Proof
-    ‘∀x. 0 ≤ x ⇒ sinh x = sqrt ((cosh x)² - 1)’ suffices_by (rw[] >>
+    ‘!x. 0 <= x ==> sinh x = sqrt ((cosh x)² - 1)’ suffices_by (rw[] >>
         first_x_assum $ qspec_then ‘acosh x’ mp_tac >> simp[COSH_ACOSH,ACOSH_POS_LE]) >>
     rw[] >> irule EQ_SYM >> irule SQRT_POS_UNIQ >>  (*HERE*)
     simp[SRULE [REAL_EQ_SUB_RADD] COSH_SQ_SINH_SQ,REAL_SUB_LE,SINH_POS_LE]
 QED
 
 Theorem COSH_ASINH:
-    ∀x. cosh (asinh x) = sqrt (x² + 1)
+    !x. cosh (asinh x) = sqrt (x² + 1)
 Proof
-    ‘∀x. cosh x = sqrt ((sinh x)² + 1)’ suffices_by simp[SINH_ASINH] >>
+    ‘!x. cosh x = sqrt ((sinh x)² + 1)’ suffices_by simp[SINH_ASINH] >>
     rw[] >> irule EQ_SYM >> irule SQRT_POS_UNIQ >>
     simp[SRULE [REAL_EQ_SUB_RADD] COSH_SQ_SINH_SQ,REAL_LE_ADD,REAL_LE_LT,COSH_POS_LT]
 QED
@@ -5108,7 +5110,7 @@ QED
 (*** Inverse Hyperbolic Trig Derivatives ***)
 
 Theorem DIFF_ASINH:
-    ∀x. (asinh diffl (sqrt (x² + 1))⁻¹) x
+    !x. (asinh diffl (sqrt (x² + 1))⁻¹) x
 Proof
     rw[] >>
     qspecl_then [‘sinh’,‘asinh’,‘sqrt (x² + 1)’,‘asinh x - 1’,‘asinh x’,‘asinh x + 1’]
@@ -5120,7 +5122,7 @@ Proof
 QED
 
 Theorem DIFF_ACOSH:
-    ∀x. 1 < x ⇒ (acosh diffl (sqrt (x² - 1))⁻¹) x
+    !x. 1 < x ==> (acosh diffl (sqrt (x² - 1))⁻¹) x
 Proof
     rw[] >>
     qspecl_then [‘cosh’,‘acosh’,‘sqrt (x² - 1)’,‘0’,‘acosh x’,‘acosh x + 1’]
@@ -5134,20 +5136,20 @@ Proof
 QED
 
 Theorem DIFF_ATANH:
-    ∀x. -1 < x ∧ x < 1 ⇒ (atanh diffl (1 − x²)⁻¹) x
+    !x. -1 < x /\ x < 1 ==> (atanh diffl (1 - x²)⁻¹) x
 Proof
     rw[] >>
     qspecl_then [‘tanh’,‘atanh’,‘1 - x²’,‘atanh x - 1’,‘atanh x’,‘atanh x + 1’]
         mp_tac DIFF_INVERSE_OPEN >>
     simp[TANH_ATANH,ATANH_TANH] >> disch_then irule >> rw[]
     >- metis_tac[DIFF_TANH,DIFF_CONT]
-    >- (wlog_tac ‘0 ≤ x’ [‘x’] >- (first_x_assum $ qspec_then ‘-x’ mp_tac >> simp[]) >>
+    >- (wlog_tac ‘0 <= x’ [‘x’] >- (first_x_assum $ qspec_then ‘-x’ mp_tac >> simp[]) >>
         qspecl_then [‘x’,‘1’,‘x’,‘1’] mp_tac REAL_LT_MUL2 >> simp[])
     >- (qspecl_then [‘atanh x’] mp_tac DIFF_TANH >> simp[TANH_ATANH])
 QED
 
 Theorem DIFF_ASECH:
-    ∀x. 0 < x ∧ x < 1 ⇒ (asech diffl -(x * sqrt (1 - x²))⁻¹) x
+    !x. 0 < x /\ x < 1 ==> (asech diffl -(x * sqrt (1 - x²))⁻¹) x
 Proof
     rw[] >>
     qspecl_then [‘acosh’,‘λx. x⁻¹’] mp_tac DIFF_CHAIN >> simp[] >>
@@ -5155,14 +5157,14 @@ Proof
         (resolve_then Any (qspec_then ‘x’ mp_tac) DIFF_ACOSH) $ DIFF_CONV “λx:real. x⁻¹”) >>
     simp[] >> strip_tac >> irule $ iffLR DIFF_CONG >> pop_assum $ irule_at Any >>
     qexistsl [‘1’,‘0’] >> simp[ASECH_EQ_ACOSH,iffRL REAL_LE_LT,REAL_INV_MUL'] >>
-    ‘0 < sqrt (x⁻¹ ² − 1) ∧ 0 < sqrt (1 − x²) ∧ 0 < x⁻¹ ² − 1’ by (
+    ‘0 < sqrt (x⁻¹ ² - 1) /\ 0 < sqrt (1 - x²) /\ 0 < x⁻¹ ² - 1’ by (
         ntac 2 $ irule_at Any SQRT_POS_LT >> simp[REAL_SUB_LT,POW_2_LT_1]) >>
     simp[] >> irule EQ_SYM >> irule SQRT_EQ >>
     simp[REAL_LE_MUL,POW_MUL,SQRT_POW_2,REAL_SUB_LDISTRIB]
 QED
 
 Theorem DIFF_ACSCH:
-    ∀x. x ≠ 0 ⇒ (acsch diffl -(abs x * sqrt (1 + x²))⁻¹) x
+    !x. x <> 0 ==> (acsch diffl -(abs x * sqrt (1 + x²))⁻¹) x
 Proof
     rw[] >>
     qspecl_then [‘asinh’,‘λx. x⁻¹’] mp_tac DIFF_CHAIN >> simp[] >>
@@ -5171,7 +5173,7 @@ Proof
     simp[] >> strip_tac >>
     ‘-x⁻¹ ² * (sqrt (x⁻¹ ² + 1))⁻¹ = -(abs x * sqrt (1 + x²))⁻¹’ by (
         pop_assum kall_tac >> simp[REAL_INV_MUL'] >>
-        ‘0 < sqrt (x⁻¹ ² + 1) ∧ 0 < sqrt (1 + x²) ∧ 0 < x⁻¹ ² + 1 ∧ 0 < 1 + x²’ by (
+        ‘0 < sqrt (x⁻¹ ² + 1) /\ 0 < sqrt (1 + x²) /\ 0 < x⁻¹ ² + 1 /\ 0 < 1 + x²’ by (
             ntac 2 $ irule_at Any SQRT_POS_LT >> simp[REAL_LT_ADD]) >>
         simp[] >>
         qspecl_then [‘abs x * sqrt (1 + x²)’,‘x² * sqrt (x⁻¹ ² + 1)’]
@@ -5179,12 +5181,12 @@ Proof
         simp[REAL_ABS_MUL,iffRL ABS_REFL] >> disch_then kall_tac >>
         simp[POW_MUL,SQRT_POW_2,REAL_ADD_LDISTRIB]) >>
     pop_assum SUBST_ALL_TAC >> irule $ iffLR DIFF_CONG >> pop_assum $ irule_at Any >>
-    simp[] >> ‘x < 0 ∨ 0 < x’ by simp[]
+    simp[] >> ‘x < 0 \/ 0 < x’ by simp[]
     >| [qexistsl [‘0’,‘x - 1’],qexistsl [‘x + 1’,‘0’]] >> simp[ACSCH_EQ_ASINH]
 QED
 
 Theorem DIFF_ACOTH:
-    ∀x. x < -1 ∨ 1 < x ⇒ (acoth diffl (1 − x²)⁻¹) x
+    !x. x < -1 \/ 1 < x ==> (acoth diffl (1 - x²)⁻¹) x
 Proof
     rw[] >>
     qspecl_then [‘atanh’,‘λx. x⁻¹’] mp_tac DIFF_CHAIN >> simp[] >>
@@ -5193,7 +5195,7 @@ Proof
     simp[] >> strip_tac >> irule $ iffLR DIFF_CONG >> pop_assum $ irule_at Any
     >| [qexistsl [‘-1’,‘x - 1’],qexistsl [‘x + 1’,‘1’]] >>
     simp[ACOTH_EQ_ATANH] >>
-    ‘1 − x⁻¹ ² ≠ 0 ∧ 1 − x² ≠ 0’ by (
+    ‘1 - x⁻¹ ² <> 0 /\ 1 - x² <> 0’ by (
         ‘1 < x²’ suffices_by simp[] >> simp[POW_2_1_LT]) >>
     simp[REAL_SUB_LDISTRIB]
 QED
@@ -5201,20 +5203,20 @@ QED
 (*** Inverse Hyperbolic Trig Monotonicity ***)
 
 Theorem ASINH_MONO_LT:
-    ∀x y. x < y ⇒ asinh x < asinh y
+    !x y. x < y ==> asinh x < asinh y
 Proof
     rw[] >> irule DIFF_POS_MONO_LT_UU >> simp[] >>
     rw[] >> irule_at Any DIFF_ASINH >> simp[SQRT_POS_LT,REAL_LET_ADD]
 QED
 
 Theorem ASINH_MONO_LE:
-    ∀x y. x ≤ y ⇒ asinh x ≤ asinh y
+    !x y. x <= y ==> asinh x <= asinh y
 Proof
     rw[] >> Cases_on ‘x = y’ >> gs[REAL_LE_LT,ASINH_MONO_LT]
 QED
 
 Theorem ACOSH_MONO_LT:
-    ∀x y. 1 ≤ x ∧ x < y ⇒ acosh x < acosh y
+    !x y. 1 <= x /\ x < y ==> acosh x < acosh y
 Proof
     reverse $ rw[REAL_LE_LT] >- simp[ACOSH_1,ACOSH_POS_LT] >>
     irule DIFF_POS_MONO_LT_OU >> simp[] >>
@@ -5224,13 +5226,13 @@ Proof
 QED
 
 Theorem ACOSH_MONO_LE:
-    ∀x y. 1 ≤ x ∧ x ≤ y ⇒ acosh x ≤ acosh y
+    !x y. 1 <= x /\ x <= y ==> acosh x <= acosh y
 Proof
     rw[] >> Cases_on ‘x = y’ >> gs[REAL_LE_LT,ACOSH_MONO_LT]
 QED
 
 Theorem ATANH_MONO_LT:
-    ∀x y. -1 < x ∧ y < 1 ∧ x < y ⇒ atanh x < atanh y
+    !x y. -1 < x /\ y < 1 /\ x < y ==> atanh x < atanh y
 Proof
     rw[] >> irule DIFF_POS_MONO_LT_OO >> simp[] >>
     qexistsl [‘-1’,‘1’] >> simp[] >> rw[] >>
@@ -5238,13 +5240,13 @@ Proof
 QED
 
 Theorem ATANH_MONO_LE:
-    ∀x y. -1 < x ∧ y < 1 ∧ x ≤ y ⇒ atanh x ≤ atanh y
+    !x y. -1 < x /\ y < 1 /\ x <= y ==> atanh x <= atanh y
 Proof
     rw[] >> Cases_on ‘x = y’ >> gs[REAL_LE_LT,ATANH_MONO_LT]
 QED
 
 Theorem ASECH_ANTIMONO_LT:
-    ∀x y. 0 < x ∧ y ≤ 1 ∧ x < y ⇒ asech y < asech x
+    !x y. 0 < x /\ y <= 1 /\ x < y ==> asech y < asech x
 Proof
     reverse $ rw[REAL_LE_LT] >- simp[ASECH_1,ASECH_POS_LT] >>
     irule DIFF_NEG_ANTIMONO_LT_OO >> simp[] >>
@@ -5254,16 +5256,16 @@ Proof
 QED
 
 Theorem ASECH_ANTIMONO_LE:
-    ∀x y. 0 < x ∧ y ≤ 1 ∧ x ≤ y ⇒ asech y ≤ asech x
+    !x y. 0 < x /\ y <= 1 /\ x <= y ==> asech y <= asech x
 Proof
     rw[] >> Cases_on ‘x = y’ >> gs[REAL_LE_LT,ASECH_ANTIMONO_LT]
 QED
 
 Theorem ACSCH_ANTIMONO_LT:
-    ∀x y. (y < 0 ∨ 0 < x) ∧ x < y ⇒ acsch y < acsch x
+    !x y. (y < 0 \/ 0 < x) /\ x < y ==> acsch y < acsch x
 Proof
     ntac 2 strip_tac >> wlog_tac ‘0 < x’ [‘x’,‘y’]
-    >- (simp[] >> rw[] >> ‘y ≠ 0 ∧ x ≠ 0’ by (CCONTR_TAC >> gs[]) >>
+    >- (simp[] >> rw[] >> ‘y <> 0 /\ x <> 0’ by (CCONTR_TAC >> gs[]) >>
         last_x_assum $ qspecl_then [‘-y’,‘-x’] mp_tac >> simp[ACSCH_NEG]) >>
     rw[] >> irule DIFF_NEG_ANTIMONO_LT_OU >> simp[] >>
     qexists ‘0’ >> rw[] >> irule_at Any DIFF_ACSCH >>
@@ -5272,13 +5274,13 @@ Proof
 QED
 
 Theorem ACSCH_ANTIMONO_LE:
-    ∀x y. (y < 0 ∨ 0 < x) ∧ x ≤ y ⇒ acsch y ≤ acsch x
+    !x y. (y < 0 \/ 0 < x) /\ x <= y ==> acsch y <= acsch x
 Proof
     rw[] >> Cases_on ‘x = y’ >> gs[REAL_LE_LT,ACSCH_ANTIMONO_LT]
 QED
 
 Theorem ACOTH_ANTIMONO_LT:
-    ∀x y. (y < -1 ∨ 1 < x) ∧ x < y ⇒ acoth y < acoth x
+    !x y. (y < -1 \/ 1 < x) /\ x < y ==> acoth y < acoth x
 Proof
     ntac 2 strip_tac >> wlog_tac ‘1 < x’ [‘x’,‘y’]
     >- (simp[] >> rw[] >> ‘x < -1’ by (simp[REAL_LT_TRANS]) >>
@@ -5289,7 +5291,7 @@ Proof
 QED
 
 Theorem ACOTH_ANTIMONO_LE:
-    ∀x y. (y < -1 ∨ 1 < x) ∧ x ≤ y ⇒ acoth y ≤ acoth x
+    !x y. (y < -1 \/ 1 < x) /\ x <= y ==> acoth y <= acoth x
 Proof
     rw[] >> Cases_on ‘x = y’ >> gs[REAL_LE_LT,ACOTH_ANTIMONO_LT]
 QED

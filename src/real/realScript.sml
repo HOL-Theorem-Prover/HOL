@@ -5314,9 +5314,9 @@ Proof
 QED
 
 Theorem POW_2_LT_1:
-    ∀x. -1 < x ∧ x < 1 ⇒ x² < 1
+    !x. -1 < x /\ x < 1 ==> x² < 1
 Proof
-    rw[] >> wlog_tac ‘0 ≤ x’ [‘x’]
+    rw[] >> wlog_tac ‘0 <= x’ [‘x’]
     >- (first_x_assum $ qspec_then ‘-x’ mp_tac >> simp[] >>
         disch_then irule >> irule_at Any $ iffLR REAL_LT_NEG >>
         simp[REAL_NEG_NEG,Excl "REAL_LT_NEG"] >>
@@ -5325,9 +5325,9 @@ Proof
 QED
 
 Theorem POW_2_1_LT:
-    ∀x. x < -1 ∨ 1 < x ⇒ 1 < x²
+    !x. x < -1 \/ 1 < x ==> 1 < x²
 Proof
-    strip_tac >> wlog_tac ‘0 ≤ x’ [‘x’]
+    strip_tac >> wlog_tac ‘0 <= x’ [‘x’]
     >- (first_x_assum $ qspec_then ‘-x’ mp_tac >>
         gs[REAL_NOT_LE,REAL_LE_LT] >> rw[] >> first_x_assum irule >> simp[] >>
         disj2_tac >> irule_at Any $ iffLR REAL_LT_NEG >>
@@ -5337,42 +5337,42 @@ Proof
 QED
 
 Theorem SQRT_POW_2_ABS:
-    ∀x. sqrt x² = abs x
+    !x. sqrt x² = abs x
 Proof
-    rw[] >> Cases_on ‘0 ≤ x’ >- simp[POW_2_SQRT] >> simp[abs] >>
-    ‘0 ≤ -x’ by gs[REAL_NOT_LE,REAL_LE_LT] >>
+    rw[] >> Cases_on ‘0 <= x’ >- simp[POW_2_SQRT] >> simp[abs] >>
+    ‘0 <= -x’ by gs[REAL_NOT_LE,REAL_LE_LT] >>
     dxrule_then (SUBST1_TAC o SYM) POW_2_SQRT >> simp[]
 QED
 
 Theorem SQUARE_ROOTS:
-    ∀x y. x² = y ⇒ x = sqrt y ∨ x = -sqrt y
+    !x y. x² = y ==> x = sqrt y \/ x = -sqrt y
 Proof
-    rw[] >> Cases_on ‘0 ≤ x’ >- simp[POW_2_SQRT] >> disj2_tac >>
+    rw[] >> Cases_on ‘0 <= x’ >- simp[POW_2_SQRT] >> disj2_tac >>
     qspec_then ‘-x’ mp_tac $ GENL [“x:real”] POW_2_SQRT >>
-    ‘0 ≤ -x’ by gs[REAL_NOT_LE,REAL_LE_LT] >> simp[]
+    ‘0 <= -x’ by gs[REAL_NOT_LE,REAL_LE_LT] >> simp[]
 QED
 
 Theorem REAL_EQ_RDIV_EQ':
-    ∀x y z. z ≠ 0 ⇒ (x = y / z ⇔ x * z = y)
+    !x y z. z <> 0 ==> (x = y / z <=> x * z = y)
 Proof
     rw[real_div] >> eq_tac >> rw[] >>
     simp[GSYM REAL_MUL_ASSOC,REAL_MUL_RINV,REAL_MUL_LINV]
 QED
 
 Theorem QUADRATIC_FORMULA:
-    ∀a b c x. a ≠ 0 ⇒ a * x² + b * x + c = 0 ⇒
-        x = (-b + sqrt(b² - 4 * a * c)) / (2 * a) ∨
+    !a b c x. a <> 0 ==> a * x² + b * x + c = 0 ==>
+        x = (-b + sqrt(b² - 4 * a * c)) / (2 * a) \/
         x = (-b - sqrt(b² - 4 * a * c)) / (2 * a)
 Proof
     rw[real_sub,REAL_EQ_RDIV_EQ'] >>
-    ‘∀x y. x = -b + y ⇔ x + b = y’ by
+    ‘!x y. x = -b + y <=> x + b = y’ by
         simp[Once REAL_ADD_COMM,GSYM real_sub,REAL_EQ_SUB_LADD] >>
     simp[] >> pop_assum kall_tac >> simp[GSYM real_sub] >>
     irule SQUARE_ROOTS >> simp[ADD_POW_2,POW_MUL,REAL_EQ_SUB_LADD] >>
     (* I'm sure there is a better way to do this, I don't know it *)
     pop_assum $ mp_tac o AP_TERM “λy. 4r * a * y + b²” >>
     simp[REAL_ADD_LDISTRIB,REAL_POW_2] >>
-    qmatch_abbrev_tac ‘l1:real = r ⇒ l2 = r’ >> ‘l1 = l2’ suffices_by simp[] >>
+    qmatch_abbrev_tac ‘l1:real = r ==> l2 = r’ >> ‘l1 = l2’ suffices_by simp[] >>
     UNABBREV_ALL_TAC >> ‘2r * 2 = 4’ by simp[] >> simp[REAL_MUL_ASSOC] >>
     ‘2 * x * 2 * a * b = (2 * 2) * a * b * x’ by metis_tac[REAL_MUL_COMM,REAL_MUL_ASSOC] >>
     ntac 2 $ pop_assum SUBST1_TAC >>
