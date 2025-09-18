@@ -32,7 +32,8 @@ Overload tc[local] = “transitive_closure”
 Datatype:
    float = <| Sign : word1; Exponent : 'w word; Significand : 't word |>
 End
-Overload sign = “λa. -1 pow w2n a.Sign”
+Overload fsign = “λa. -1 pow w2n a.Sign”
+Overload sign[local] = “fsign”
 
 (* ------------------------------------------------------------------------
    Maps to other representations
