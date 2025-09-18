@@ -9,7 +9,7 @@ val SATISFY_REDUCER =
   in REDUCER
     {name=SOME"SATISFY",
      initial = FACTDB ([],[]),
-     apply=SATISFY_CONV o get_db o #context,
+     apply= BBConv.c2bbc o SATISFY_CONV o get_db o #context,
      addcontext=(fn (ctxt,thms) => FACTDB (add_facts (get_db ctxt) thms))}
   end;
 

@@ -19,9 +19,10 @@
 structure Traverse :> Traverse =
 struct
 
-open HolKernel Drule Conv Psyntax Abbrev liteLib Trace Travrules Opening;
+open HolKernel boolLib Drule BBConv Conv Psyntax Abbrev liteLib
+     Trace Travrules Opening;
 
-infix THENQC THENCQC ORELSEC IFCQC
+infix THENQC THENCQC ORELSEBBC IFCQC
 
 val ERR   = mk_HOL_ERR "Traverse" ;
 
@@ -33,16 +34,18 @@ val equality = boolSyntax.equality;
 
 type context = exn   (* well known SML hack to allow any kind of data *)
 
-datatype reducer =
-  REDUCER of {name : string option,
-              initial: context,
-              addcontext : context * Thm.thm list -> context,
-              apply: {solver:term list -> term -> thm,
-                      conv: term list -> term -> thm,
-                      context: context,
-                      stack: term list, relation : term * (term -> thm)} -> conv
-              };
-fun dest_reducer (REDUCER x) = x
+type reducer_info = {
+  name : string option,
+  initial: context,
+  addcontext : context * thm list -> context,
+  apply: {solver:term list -> conv,
+          conv: term list -> bbconv,
+          context: context,
+          stack:term list,
+          relation : (term * (term -> thm))} -> bbconv
+}
+datatype reducer = REDUCER of reducer_info
+fun dest_reducer (REDUCER ri) = ri
 
 fun addctxt ths (REDUCER {name,initial,addcontext,apply}) =
     REDUCER{name = name, initial = addcontext(initial,ths), apply = apply,
@@ -127,43 +130,42 @@ in
            relation_info=find_relation rel relations, relation = rel}
 end
 
-(* ---------------------------------------------------------------------
- * Quick, General conversion routines.  These work for any preorder,
- * not just equality.
- * ---------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    Quick, General conversion routines.  These work for any preorder, not
+    just equality.  "Conversions" are assumed to embody their transitivity
+    reasoning; they are passed a theorem of form |- t0 ≈ t, work on the
+    term t and return a "new" theorem of form |- t0 ≈ t'
+   ---------------------------------------------------------------------- *)
 
-fun GEN_THENQC (PREORDER(_,TRANS,_)) (conv1,conv2) tm =
-  let val th1 = conv1 tm
-  in TRANS th1 (conv2 (rand (concl th1)))
-     handle HOL_ERR _ => th1
+fun GEN_THENQC (conv1,conv2) th =
+  (* th says |- t0 ≈ t *)
+  let
+    val th1 = conv1 th (* |- t0 ≈ t1 *)
+  in
+    conv2 th1 (* |-> t0 ≈ t2 *)
+    handle HOL_ERR _ => th1
   end
-  handle HOL_ERR _ => conv2 tm
+  handle HOL_ERR _ => conv2 th (* either another exn, or |- t0 ≈ t2' *)
 
-fun GEN_THENCQC  (PREORDER(_,TRANS,_)) (conv1,conv2) tm =
-  let val th1 = conv1 tm
-  in let val th2 = conv2(rand(concl th1))
-     in TRANS th1 th2
-     end
-     handle HOL_ERR _ => th1
-  end;;
-
-(* perform continuation with argumnt indicating whether a change occurred *)
-fun GEN_IFCQC  (PREORDER(_,TRANS,_)) (conv1,conv2) tm =
-  let val th1 = conv1 tm
-  in let val th2 = conv2 true (rand(concl th1))
-     in TRANS th1 th2
-     end
-     handle HOL_ERR _ => th1
+fun GEN_THENCQC (conv1,conv2) th0 (* |- t ≈ t0 *) =
+  let
+    val th1 = conv1 th0 (* |- t ≈ t1 *)
+  in
+    conv2 th1 (* |- t ≈ t2 *)
+    handle HOL_ERR _ => th1
   end
-  handle HOL_ERR _ => conv2 false tm;;
+
+(* perform continuation with argument indicating whether a change occurred *)
+fun GEN_IFCQC (conv1,conv2) th (* |- t0 ≈ t *) =
+  let
+    val th1 = conv1 th (* |- t0 ≈ t1 *)
+  in
+    conv2 true th1 handle HOL_ERR _ => th1
+  end
+  handle HOL_ERR _ => conv2 false th
 
 
-fun GEN_REPEATQC rel =
-   let val op THENCQC = GEN_THENCQC rel
-       fun REPEATQC conv tm =
-           (conv THENCQC (REPEATQC conv)) tm
-   in REPEATQC
-   end;
+fun GEN_REPEATQC conv th = GEN_THENCQC (conv, GEN_REPEATQC conv) th
 
 (* This code is used just once, to do the right thing with the
    application of congruence rules: if a congruence succeeds by not
@@ -179,15 +181,15 @@ fun GEN_REPEATQC rel =
    Opening.CONGPROC, so there's a tight link between there and here.
    Don't change one without changing the other! *)
 
-fun FIRSTCQC_CONV [] t = failwith "no conversion worked"
-  | FIRSTCQC_CONV (c::cs) t = let
+fun FIRSTCQC_CONV [] th = failwith "no conversion worked"
+  | FIRSTCQC_CONV (c::cs) th = let
     in
-      c t
+      c th
       handle e as HOL_ERR { origin_structure = "Opening",
                             origin_function = "CONGPROC",
                             message = "Congruence gives no change", ...} => raise e
            | Interrupt => raise Interrupt
-           | _ => FIRSTCQC_CONV cs t
+           | _ => FIRSTCQC_CONV cs th
     end
 
 (* And another thing.  The current simplifer doesn't allow users to
@@ -214,8 +216,7 @@ fun mapfilter2 f (h1::t1) (h2::t2) =
  *   - The depther should only fail with UNCHANGED.
  * ---------------------------------------------------------------------*)
 
-
-fun TRAVERSE_IN_CONTEXT limit rewriters dprocs travrules stack ctxt tm = let
+fun TRAVERSE_IN_CONTEXT limit rewriters dprocs travrules stack ctxt (tm:term) = let
   open Uref
   val TRAVRULES {relations,congprocs,weakenprocs,...} = travrules
   val add_context' = add_context rewriters dprocs
@@ -236,13 +237,16 @@ fun TRAVERSE_IN_CONTEXT limit rewriters dprocs travrules stack ctxt tm = let
     fun ctxt_solver stack tm = let
       val old = !lim_r
     in
-      EQT_ELIM (trav stack (change_relation' (context,equality)) tm)
-      handle e as HOL_ERR _ => (lim_r := old ; raise e)
+      EQT_ELIM (
+        trav stack
+             (change_relation' (context,equality))
+             (REFL tm)
+      ) handle e as HOL_ERR _ => (lim_r := old ; raise e)
     end
-    fun ctxt_conv stack tm = let
+    fun ctxt_conv stack th = let
       val old = !lim_r
     in
-      trav stack (change_relation' (context,equality)) tm
+      trav stack (change_relation' (context,equality)) th
       handle e as HOL_ERR _ => (lim_r := old ; raise e)
     end
     fun mkrefl t = let
@@ -250,19 +254,19 @@ fun TRAVERSE_IN_CONTEXT limit rewriters dprocs travrules stack ctxt tm = let
     in
       irefl {Rinst = relname, arg = t}
     end
-    fun apply_reducer (REDUCER rdata) context tm =
+    fun apply_reducer (REDUCER rdata) context th =
         (#apply rdata) {solver=ctxt_solver,
                         conv=ctxt_conv,
                         context=context,
                         stack=stack, relation=(relname, mkrefl)}
-                       tm before
+                       th before
         dec lim_r
-    fun high_priority tm =
+    fun high_priority th =
         (check lim_r;
-         FIRST_CONV (mapfilter2 apply_reducer rewriters contexts1) tm)
-    fun low_priority tm =
+         FIRST_BBCONV (mapfilter2 apply_reducer rewriters contexts1) th)
+    fun low_priority th =
         (check lim_r ;
-         FIRST_CONV (mapfilter2 apply_reducer dprocs contexts2) tm)
+         FIRST_BBCONV (mapfilter2 apply_reducer dprocs contexts2) th)
     fun depther (thms,relation) =
         trav stack (change_relation' (add_context' (context,thms), relation))
     val congproc_args =
@@ -272,29 +276,30 @@ fun TRAVERSE_IN_CONTEXT limit rewriters dprocs travrules stack ctxt tm = let
          freevars=freevars}
     fun apply_congproc congproc = congproc congproc_args
     val descend = FIRSTCQC_CONV (mapfilter apply_congproc congprocs)
-    val weaken = FIRST_CONV (mapfilter apply_congproc weakenprocs)
-    val op IFCQC = GEN_IFCQC relation
-    val op THENCQC = GEN_THENCQC relation
-    val op THENQC = GEN_THENQC relation
-    val REPEATQC = GEN_REPEATQC relation
+    val weaken = FIRST_BBCONV (mapfilter apply_congproc weakenprocs)
+    val op IFCQC = GEN_IFCQC
+    val op THENCQC = GEN_THENCQC
+    val op THENQC = GEN_THENQC
+    val REPEATQC = GEN_REPEATQC
+    fun rcon th = rator (concl th)
 
-    fun loop tm = let
+    fun loop thm = let
       val conv =
           REPEATQC high_priority THENQC
           (descend IFCQC
               (fn change =>
-                ((if change then high_priority else NO_CONV) ORELSEC
-                 low_priority ORELSEC weaken) THENCQC loop))
+                ((if change then high_priority else NO_BBCONV) ORELSEBBC
+                 low_priority ORELSEBBC weaken) THENCQC loop))
              (* THENCQC above causes the loop to happen only if
                 the stuff before it hasn't raised an exception *)
     in
-      (trace(4,REDUCE ("Reducing",tm)); conv tm)
+      (trace(4,REDUCE ("Reducing",rcon thm)); conv thm)
     end;
   in
     loop
   end
 in
-  trav stack ctxt tm
+  trav stack ctxt (REFL tm)
 end
 
 (* ---------------------------------------------------------------------

@@ -21,12 +21,12 @@ sig
     * specifies a preorder as a term, e.g. (--`$=`--).
     * ---------------------------------------------------------------------*)
 
-  datatype preorder = PREORDER of term
-                                   * (thm -> thm -> thm)
-                                   * ({Rinst:term,arg:term} -> thm)
+  datatype preorder =
+           PREORDER of term *
+                       (thm -> thm -> thm) *
+                       ({Rinst:term,arg:term} -> thm)
   val samerel : term -> term -> bool
 
-  val mk_preorder : (thm * thm) -> preorder;
   val find_relation : term -> preorder list -> preorder;
 
    (* ---------------------------------------------------------------------

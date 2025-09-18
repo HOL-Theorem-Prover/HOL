@@ -4556,13 +4556,13 @@ val MODEQ_TRANS = store_thm ("MODEQ_TRANS",
   Q.ID_SPEC_TAC `n` THEN SIMP_TAC (srw_ss() ++ DNF_ss) [MODEQ_THM, LESS_REFL]);
 
 val MODEQ_NUMERAL = store_thm ("MODEQ_NUMERAL",
-  “(NUMERAL n <= NUMERAL m ==>
+  “(NUMERAL n < NUMERAL m ==>
      MODEQ (NUMERAL (BIT1 n)) (NUMERAL (BIT1 m))
            (NUMERAL (BIT1 m) MOD NUMERAL (BIT1 n))) /\
     (NUMERAL n <= NUMERAL m ==>
      MODEQ (NUMERAL (BIT1 n)) (NUMERAL (BIT2 m))
            (NUMERAL (BIT2 m) MOD NUMERAL (BIT1 n))) /\
-    (NUMERAL n <= NUMERAL m ==>
+    (NUMERAL n < NUMERAL m ==>
      MODEQ (NUMERAL (BIT2 n)) (NUMERAL (BIT2 m))
            (NUMERAL (BIT2 m) MOD NUMERAL (BIT2 n))) /\
     (NUMERAL n < NUMERAL m ==>
@@ -4583,7 +4583,7 @@ val MODEQ_0 = store_thm ("MODEQ_0",
 val modss = simpLib.add_relsimp {refl = MODEQ_REFL, trans = MODEQ_TRANS,
                                  weakenings = [MODEQ_INTRO_CONG],
                                  subsets = [],
-                                 rewrs = [MODEQ_NUMERAL, MODEQ_MOD, MODEQ_0]}
+                                 rewrs = [MODEQ_NUMERAL, MODEQ_0]}
                                 (srw_ss()) ++
             SSFRAG {dprocs = [], ac = [], rewrs = [],
                     congs = [MODEQ_PLUS_CONG, MODEQ_MULT_CONG, MODEQ_SUC_CONG],

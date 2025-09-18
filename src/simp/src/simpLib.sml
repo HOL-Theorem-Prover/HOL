@@ -14,6 +14,7 @@ struct
 infix oo;
 
 open HolKernel boolLib liteLib Trace Cond_rewr Travrules Traverse Ho_Net
+     BBConv
 
 structure Set = Binaryset
 
@@ -34,11 +35,23 @@ fun f oo g = fn x => flatten (map f (g x));
 (*---------------------------------------------------------------------------*)
 
 
-type convdata = {name  : string,
-                 key   : (term list * term) option,
-                 trace : int,
-                 conv  : (term list -> term -> thm) -> term list -> conv};
-type tagged_convdata = {thypart : string option, cd : convdata}
+type 'a convdata0 = {
+  name  : string,
+  key   : (term list * term) option,
+  trace : int,
+  conv  : (term list -> term -> thm) -> term list -> 'a -> thm};
+type 'a tagged_convdata0 = {thypart : string option, cd : 'a convdata0}
+
+type convdata = term convdata0
+type tagged_convdata = term tagged_convdata0
+
+fun tmtcd_to_thtcd (tmtcd : term tagged_convdata0) : thm tagged_convdata0 =
+    let val {thypart,cd = {name,key,trace,conv}} = tmtcd
+        fun c' solver ctxt = c2bbc (conv solver ctxt)
+    in
+      {thypart=thypart, cd = {name=name,key=key,trace=trace,conv=c'}}
+    end
+
 fun opttheory NONE s = s | opttheory (SOME thy) s = thy ^ "." ^ s
 
 type stdconvdata = { name: string,
@@ -50,13 +63,13 @@ type stdconvdata = { name: string,
 (*---------------------------------------------------------------------------*)
 
 (* boolean argument to c is whether or not the rewrite is bounded *)
-fun appconv (c,UNBOUNDED) solver stk tm = c false solver stk tm
-  | appconv (c,BOUNDED r) solver stk tm = if !r = 0 then failwith "exceeded rewrite bound"
-                                          else c true solver stk tm before
+fun appconv (c,UNBOUNDED) solver stk th = c2bbc (c false solver stk) th
+  | appconv (c,BOUNDED r) solver stk th = if !r = 0 then failwith "exceeded rewrite bound"
+                                          else c2bbc (c true solver stk) th before
                                             Portable.dec r
 
 fun split_name {Thy,Name} = (SOME Thy, Name)
-fun mk_rewr_convdata (nmopt,(thm,tag)) : tagged_convdata option = let
+fun mk_rewr_convdata (nmopt,(thm,tag)) : thm tagged_convdata0 option = let
   val th = SPEC_ALL thm
   val (thypart,nm) =
       case Option.map split_name nmopt of
@@ -231,7 +244,7 @@ fun partition_ssfrags names ssdata =
 (* --------------------------------------------------------------------------*)
 
 type conv_info = {name : string,
-                  conval : (term list -> term -> thm) -> term list -> conv}
+                  conval : (term list -> term -> thm) -> term list -> bbconv}
 type net_conv_info = {thypart : string option, ci : conv_info}
 type net = net_conv_info Ho_Net.net
 
@@ -326,11 +339,13 @@ fun remove_simps nms ss = ss -* nms
       val trace_string2 = name^" ineffectual"
       val trace_string3 = name^" left term unchanged"
       val trace_string4 = name^" raised an unusual exception (ignored)"
-  in fn solver => fn stack => fn tm =>
-      let val _ = trace(trace_level+2,REDUCE(trace_string1,tm))
-          val thm = conv solver stack tm
+  in fn solver => fn stack => fn th0 =>
+      let
+        val tm0 = rhs (concl th0)
+        val _ = trace(trace_level+2,REDUCE(trace_string1,tm0))
+        val thm = conv solver stack th0
       in
-        trace(trace_level,PRODUCE(tm,name,thm));
+        trace(trace_level,PRODUCE(tm0,name,thm));
         thm
       end
       handle e as HOL_ERR _ =>
@@ -342,7 +357,7 @@ fun remove_simps nms ss = ss -* nms
 
  val any = mk_var("x",Type.alpha);
 
- fun net_add_conv {thypart,cd = data as {name,key,trace,conv}:convdata} =
+ fun net_add_conv {thypart,cd = data as {name,key,trace,conv}:thm convdata0} =
      enter (option_cases #1 [] key,
             option_cases #2 any key,
             {thypart = thypart, ci = {name = name, conval = USER_CONV data}})
@@ -386,13 +401,10 @@ fun getlimit (SS ss) = #limit ss
  fun wk_mk_travrules (rels, congs) = let
    fun cong2proc th = let
      open Opening Travrules
-     fun mk_refl (x as {Rinst=rel,arg= t}) = let
-       val PREORDER(_,_,refl) = find_relation rel rels
-     in
-       refl x
-     end
+     val rel = rel_of_congrule th
+     val PREORDER(_,trans,refl) = find_relation rel rels
    in
-     CONGPROC mk_refl th
+     CONGPROC refl trans th
    end
  in
    TRAVRULES {relations = rels,
@@ -494,7 +506,9 @@ fun getlimit (SS ss) = #limit ss
 
  fun po_rel (Travrules.PREORDER(r,_,_)) = r
 
- fun mk_reducer rel_t subsets initial_rewrites = let
+ (* creates a reducer for a non-equality relation; the equality reducer is
+    created below in rewriter_for_ss *)
+ fun mk_reducer rel_t TRANS' subsets initial_rewrites = let
    exception redExn of (control * thm) Net.net
    fun munge_subset_th th = let
      val (_, impn) = strip_forall (concl th)
@@ -548,18 +562,23 @@ fun getlimit (SS ss) = #limit ss
      mk_comb(Term.inst theta f, x)
    end
 
-   fun apply {solver,conv,context,stack,relation = (relation,_)} t = let
+   fun apply {solver,conv,context,stack,relation = (relation,_)} th = let
      val _ = can (match_term rel_t) relation orelse
              raise ERR ("mk_reducer.apply", "Wrong relation")
      val n = case context of redExn n => n
                            | _ => raise ERR ("apply", "Wrong sort of ctxt")
-     val lookup_t = mk_icomb(relation,t)
+     val lookup_t = mk_icomb(relation,rand (concl th))
      val _ = trace(7, LZ_TEXT(fn () => "Looking up "^term_to_string lookup_t))
      val matches = Net.match lookup_t n
      val _ = trace(7, LZ_TEXT(fn () => "Found "^Int.toString (length matches)^
                                        " matches"))
+     fun TRANS'' th1 th2 = (
+       trace (7, LZ_TEXT(fn () => "calling TRANS' on " ^ thm_to_string th1 ^ " and " ^
+                                  thm_to_string th2));
+       TRANS' th1 th2
+     )
    in
-     tryfind (applythm (solver stack) lookup_t) matches
+     tryfind (TRANS'' th o applythm (solver stack) lookup_t) matches
    end
  in
    Traverse.REDUCER {name = SOME ("reducer for "^term_to_string rel_t),
@@ -577,20 +596,32 @@ fun getlimit (SS ss) = #limit ss
 
  fun rsd_rel {refl,trans,weakenings,subsets,rewrs} =
      #1 (dest_binop (#2 (strip_forall (concl refl))))
- fun rsd_po {refl,trans,weakenings,subsets,rewrs} =
-     Travrules.mk_preorder(trans,refl)
+
+ fun reflfn_from_thm REFL_THM {Rinst,arg} =
+     PART_MATCH rator REFL_THM (mk_comb(Rinst,arg))
+ fun transfn_from_thm trans_th th1 th2 =
+     MATCH_MP trans_th (CONJ th1 th2)
+
+ fun rsd_po (rsd as {refl,trans,weakenings,subsets,rewrs}) =
+     Travrules.PREORDER(rsd_rel rsd,transfn_from_thm trans,reflfn_from_thm refl)
+
+ fun rsd_trans{refl,trans,weakenings,subsets,rewrs} = trans
 
  fun rsd_travrules (rsd as {refl,trans,weakenings,subsets,rewrs}) =
      wk_mk_travrules([rsd_po rsd, equality_po], weakenings)
 
  fun rsd_reducer rsd =
-     mk_reducer (rsd_rel rsd) (#subsets rsd) (#rewrs rsd)
+     mk_reducer
+       (rsd_rel rsd)
+       (transfn_from_thm (rsd_trans rsd))
+       (#subsets rsd)
+       (#rewrs rsd)
 
 
  fun add_relsimp (rsd as {refl,trans,weakenings,subsets,rewrs}) ss = let
    val rel_t = rsd_rel rsd
    val rel_po = rsd_po rsd
-   val reducer = mk_reducer rel_t subsets rewrs
+   val reducer = mk_reducer rel_t (transfn_from_thm trans) subsets rewrs
  in
    add_weakener ([rel_po, equality_po], weakenings, reducer) ss
  end
@@ -617,7 +648,7 @@ fun getlimit (SS ss) = #limit ss
    val crewrs = map (fn (nmopt,th) => (nmopt, dest_tagged_rewrite th)) rewrs
    val rewrs' : (thname option * controlled_thm) list =
        flatten (map (mk_named_rewrs mk_rewrs') (ac_rewrites ac @ crewrs))
-   val newconvdata = convs @ List.mapPartial mk_rewr_convdata rewrs'
+   val newconvdata = map tmtcd_to_thtcd convs @ List.mapPartial mk_rewr_convdata rewrs'
    val net = net_add_convs initial_net newconvdata
    fun travrel (TRAVRULES{relations,...}) = relations
    val sset_rels = travrel travrules
@@ -689,11 +720,12 @@ fun remove_ssfrags names (ss as SS{history,limit,...}) =
      CONVNET
        (net_add_convs net (List.mapPartial mk_rewr_convdata new_rwts))
    end
-   fun apply {solver,conv,context,stack,relation} tm = let
+   fun apply {solver,conv,context,stack,relation} th = let
      val net = (raise context) handle CONVNET net => net
+     val tm0 = rhs (concl th)
    in
-     tryfind (fn {ci = {conval,...},...} => conval solver stack tm)
-             (lookup tm net)
+     tryfind (fn {ci = {conval,...},...} => conval solver stack th)
+             (lookup tm0 net)
    end
    in REDUCER {name=SOME"rewriter_for_ss",
                addcontext=addcontext, apply=apply,

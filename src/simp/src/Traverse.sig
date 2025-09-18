@@ -64,27 +64,20 @@ sig
     * initial:  The inital context.
     * ---------------------------------------------------------------------*)
 
-  datatype reducer = REDUCER of {
-         name : string option,
-         initial: context,
-         addcontext : context * thm list -> context,
-         apply: {solver:term list -> term -> thm,
-                 conv: term list -> term -> thm,
-                 context: context,
-                 stack:term list,
-                 relation : (term * (term -> thm))} -> conv
-       }
+  type bbconv = thm -> thm
+  type reducer_info = {
+    name : string option,
+    initial: context,
+    addcontext : context * thm list -> context,
+    apply: {solver:term list -> conv,
+            conv: term list -> bbconv,
+            context: context,
+            stack:term list,
+            relation : (term * (term -> thm))} -> bbconv
+  }
+  datatype reducer = REDUCER of reducer_info
 
-  val dest_reducer : reducer ->
-        {name : string option,
-         initial: context,
-         addcontext : context * thm list -> context,
-         apply: {solver:term list -> term -> thm,
-                 conv: term list -> term -> thm,
-                 context: context,
-                 stack:term list,
-                 relation : (term * (term -> thm))} -> conv}
-
+  val dest_reducer : reducer -> reducer_info
   val addctxt : thm list -> reducer -> reducer
 
  (* ----------------------------------------------------------------------

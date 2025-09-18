@@ -1,15 +1,15 @@
 structure Opening :>  Opening =
 struct
 
-open HolKernel boolLib liteLib Trace;
+open HolKernel boolLib liteLib Trace BBConv;
 
 
 fun samerel t1 t2 = can (match_term t1) t2
 
 type congproc  = {relation:term,
-                  solver : term -> thm,
+                  solver : conv,
                   freevars: term list,
-                  depther : thm list * term -> conv} -> conv
+                  depther : thm list * term -> bbconv} -> bbconv
 
 
 fun WRAP_ERR x = STRUCT_WRAP "Opening" x;
@@ -55,6 +55,8 @@ in
   (f,x,y)
 end
 
+fun relOfTm t = rator (rator t)
+
 fun is_congruence tm =
     is_eq tm orelse let
       val (rel,left,right) = dest_binop tm
@@ -65,7 +67,7 @@ fun is_congruence tm =
    handle HOL_ERR _ => false
 
 fun rel_of_congrule thm = let
-  fun aux tm = if is_congruence tm then #1 (dest_binop tm)
+  fun aux tm = if is_congruence tm then relOfTm tm
                else aux (snd (dest_imp tm))
 in
   aux (snd(strip_forall (concl thm)))
@@ -123,7 +125,7 @@ fun strip_imp_until_rel genvars tm =
 
 val equality = boolSyntax.equality
 
-fun CONGPROC refl congrule =
+fun CONGPROC refl trans congrule =
 let
 
    (* this discharges each antecedent of the congruence rule.  Each
@@ -154,14 +156,22 @@ let
            conditions
 
 in fn {relation,solver,depther,freevars} =>
-  if not (samerel rel relation) andalso not (same_const rel relation) then
+  if not (samerel rel relation) andalso not (same_const rel relation) then (
+    trace(
+      5,
+      Trace.LZ_TEXT(fn () =>
+         "rejecting CONGPROC theorem " ^ thm_to_string congrule ^
+         " as existing relation = " ^ term_to_string relation)
+    );
     failwith "not applicable"
-  else fn tm =>
+  ) else fn th0 =>
   let
-    val theta = match_type (#1 (dom_rng (type_of relation))) (type_of tm)
+    val depther : thm list * term -> bbconv = depther
+    val tm0 = rand (concl th0)
+    val theta = match_type (#1 (dom_rng (type_of relation))) (type_of tm0)
     val relation' = Term.inst theta relation
-    val match_thm = matcher (mk_comb(relation',tm))
-    val _ = trace(3,OPENING(tm,match_thm))
+    val match_thm = matcher (mk_comb(relation',tm0))
+    val _ = trace(3,OPENING(tm0,match_thm))
     val (_,conc) = strip_n_imp nconds (concl match_thm)
     val genvars = filter is_genvar (free_vars (rand conc))
 
@@ -190,59 +200,71 @@ in fn {relation,solver,depther,freevars} =>
         in
           if length args = 2 andalso
              op_mem aconv (#1 (strip_comb (el 2 args))) genvars
-          then let
-                val (orig,res) = case args of [x,y] => (x,y) | _ => raise Bind
-                val genv = #1 (strip_comb res)
-                val assum_thms = map ASSUME assums
-                fun reprocess thm flag =
-                  if flag then CONV_RULE (depther ([],equality)) thm
+          then
+            let
+              val (orig,res) = case args of [x,y] => (x,y) | _ => raise Bind
+              val origth : thm = refl {Rinst = oper, arg = orig}
+              val genv = #1 (strip_comb res)
+              val assum_thms = map ASSUME assums
+              fun reprocess thm flag =
+                  if flag then
+                    BBCONV_RULE (depther ([],equality)) thm
                     handle HOL_ERR _ =>
-                    (trace(5,PRODUCE(concl thm,"UNCHANGED",thm));thm)
+                           (trace(5,PRODUCE(concl thm,"UNCHANGED",thm));thm)
                   else thm
-                val reprocessed_assum_thms = map2 reprocess assum_thms flags
-                val (rewr_thm,changed) =
-                  (depther (reprocessed_assum_thms,oper) orig,true)
-                  handle HOL_ERR _ =>
-                  let val thm = refl {Rinst = oper, arg = orig}
-                  in (trace(5,PRODUCE(orig,"UNCHANGED",thm));(thm,false))
-                  end
-                val absify = CONV_RULE (RAND_CONV (MK_ABSL_CONV ho_vars))
-                val abs_rewr_thm =
-                    if null ho_vars then rewr_thm
-                    else
-                      let val r = rand (concl rewr_thm)
-                      in
-                        case strip_ncomb (length ho_vars) [] r of
-                            NONE => absify rewr_thm
-                          | SOME (fxs, sfx) =>
-                            if list_eq aconv sfx ho_vars then
-                              let val fvs = free_vars fxs
-                              in
-                                if List.all (fn hv => not (op_mem aconv hv fvs))
-                                            ho_vars
-                                then rewr_thm
-                                else absify rewr_thm
-                              end
-                            else absify rewr_thm
-                      end
-                val disch_abs_rewr_thm = itlist DISCH assums abs_rewr_thm
-                val gen_abs_rewr_thm = GENL ho_vars disch_abs_rewr_thm
-                val gen_abs_res =
-                    funpow (length ho_vars) rator (rand (concl abs_rewr_thm))
-                val spec_match_thm = SPEC gen_abs_res (GEN genv match_thm)
-                val new_match_thm = MP spec_match_thm gen_abs_rewr_thm
-            in process_subgoals (n-1,new_match_thm,more_flags,
-                                 allunch andalso not changed)
+              val reprocessed_assum_thms = map2 reprocess assum_thms flags
+              val (rewr_thm,changed) = (
+                trace (7,
+                  LZ_TEXT (fn () =>
+                    "oper: " ^ term_to_string oper ^
+                    " rpa_thms: [" ^
+                    String.concatWith ", "
+                                      (map thm_to_string reprocessed_assum_thms) ^
+                    "] origth: " ^ thm_to_string origth));
+                (depther (reprocessed_assum_thms,oper) origth,true)
+              ) handle e as HOL_ERR _ => (
+                    trace(5,PRODUCE(orig,"UNCHANGED",origth));
+                    trace(7, LZ_TEXT(fn () => "exn: " ^ General.exnMessage e));
+                    (origth,false)
+                  )
+              val absify = CONV_RULE (RAND_CONV (MK_ABSL_CONV ho_vars))
+              val abs_rewr_thm =
+                  if null ho_vars then rewr_thm
+                  else
+                    let val r = rand (concl rewr_thm)
+                    in
+                      case strip_ncomb (length ho_vars) [] r of
+                          NONE => absify rewr_thm
+                        | SOME (fxs, sfx) =>
+                          if list_eq aconv sfx ho_vars then
+                            let val fvs = free_vars fxs
+                            in
+                              if List.all (fn hv => not (op_mem aconv hv fvs))
+                                          ho_vars
+                              then rewr_thm
+                              else absify rewr_thm
+                            end
+                          else absify rewr_thm
+                    end
+              val disch_abs_rewr_thm = itlist DISCH assums abs_rewr_thm
+              val gen_abs_rewr_thm = GENL ho_vars disch_abs_rewr_thm
+              val gen_abs_res =
+                  funpow (length ho_vars) rator (rand (concl abs_rewr_thm))
+              val spec_match_thm = SPEC gen_abs_res (GEN genv match_thm)
+              val new_match_thm = MP spec_match_thm gen_abs_rewr_thm
+            in
+              process_subgoals (n-1,new_match_thm,more_flags,
+                                allunch andalso not changed)
             end
           else let
-              fun output() =
-                  "Instantiated congruence condition is a side condition: "^
-                  term_to_string condition
-              val _ = trace (6, LZ_TEXT output)
-              val side_condition_thm = solver condition
-              val new_match_thm = MP match_thm side_condition_thm
-            in process_subgoals (n-1,new_match_thm,more_flags,allunch)
-            end
+            fun output() =
+                "Instantiated congruence condition is a side condition: "^
+                term_to_string condition
+            val _ = trace (6, LZ_TEXT output)
+            val side_condition_thm = solver condition
+            val new_match_thm = MP match_thm side_condition_thm
+          in process_subgoals (n-1,new_match_thm,more_flags,allunch)
+          end
         end
 
     val (final_thm,allunch) =
@@ -253,7 +275,8 @@ in fn {relation,solver,depther,freevars} =>
       (* note critical link between this exception and traversal code in
          Traverse.FIRSTCQC_CONV *)
       raise mk_HOL_ERR "Opening" "CONGPROC" "Congruence gives no change"
-    else (trace(3,PRODUCE(tm,"congruence rule",final_thm)); final_thm)
+    else (trace(3,PRODUCE(tm0,"congruence rule",final_thm));
+          trans th0 final_thm)
   end
 end;
 
@@ -264,35 +287,52 @@ end;
  *  Opening through HOL terms under HOL equality.
  * ---------------------------------------------------------------------*)
 
-fun EQ_CONGPROC {relation,depther,solver,freevars} tm =
- if not (same_const relation boolSyntax.equality) then failwith "not applicable"
- else
- case dest_term tm
-  of COMB(Rator,Rand) =>
-      (let val th = depther ([],equality) Rator
-      in  MK_COMB (th, depther ([],equality)  Rand)
-        handle HOL_ERR _ => AP_THM th Rand
-      end
-       handle HOL_ERR _ => AP_TERM Rator (depther ([],equality)  Rand))
-   | LAMB(Bvar,Body) =>
-     if op_mem aconv Bvar freevars then
-     let val v = variant (freevars@free_vars Body) Bvar
-         val th1 = ALPHA_CONV v tm handle e as HOL_ERR _
-         => (trace(0,REDUCE("SIMPLIFIER ERROR: bug when alpha converting",tm));
-             trace(0,REDUCE("trying to alpha convert to",v));
-             Raise e)
-         val rhs' = rhs(concl th1)
-         val Body' = body rhs' (* v = Bvar *)
-         val body_thm = depther ([],equality) Body'
-         val eq_thm' = ABS v body_thm
-     in
-        TRANS th1 eq_thm'
-     end
-     else let val _ = trace(4,TEXT "no alpha conversion")
-              val Bth = depther ([],equality) Body
-          in ABS Bvar Bth
+fun EQ_CONGPROC {relation,depther,solver,freevars} th =
+    let
+      val c = concl th
+      val tm0 = rhs (concl th)
+      val _ = same_const (relOfTm c) boolSyntax.equality orelse
+              (trace(
+                  5,
+                  Trace.LZ_TEXT(fn () =>
+                    "failing to EQ_CONGPROC-open theorem " ^ thm_to_string th ^
+                    " with relation = " ^ term_to_string relation)
+                );
+               failwith "not applicable")
+    in
+      case dest_term tm0 of
+          COMB _ =>
+          let val (fth0, xth0, mk_comb_fn) = Mk_comb th
+          in
+            let val fth = depther ([],equality) fth0
+                val xth = depther ([],equality) xth0 handle HOL_ERR _ => xth0
+            in
+              mk_comb_fn fth xth
+            end
+            handle (* should only get an exn if fth failed to change *)
+            HOL_ERR _ => mk_comb_fn fth0 (depther ([],equality) xth0)
           end
-   | _ => failwith "unchanged";
+        | LAMB(Bvar,Body) =>
+          if op_mem aconv Bvar freevars then
+            let val v = variant (freevars@free_vars Body) Bvar
+                val th1 = ALPHA_CONV v tm0
+                          handle e as HOL_ERR _
+                                 => (trace(0,REDUCE("SIMPLIFIER ERROR: bug when alpha converting",tm0));
+                                     trace(0,REDUCE("trying to alpha convert to",v));
+                                     Raise e)
+                val (bv, bodyth0, mk_abs_fn) = Mk_abs (TRANS th th1)
+                val bodyth = depther ([],equality) bodyth0
+            in
+              mk_abs_fn bodyth
+            end
+          else
+            let val _ = trace(4,TEXT "no alpha conversion")
+                val (bv,bodyth0,mk_abs_fn) = Mk_abs th
+            in
+              mk_abs_fn (depther ([],equality) bodyth0)
+            end
+        | _ => failwith "unchanged"
+    end
 
 
 end (* struct *)

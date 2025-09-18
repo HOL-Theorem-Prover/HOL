@@ -27,27 +27,20 @@ fun ERR x = STRUCT_ERR "Travrules" x;
 
   val equality = boolSyntax.equality;
 
-  datatype preorder = PREORDER of term
-                                  * (thm -> thm -> thm)
-                                  * ({Rinst:term,arg:term} -> thm);
+  datatype preorder =
+           PREORDER of term *
+                       (thm -> thm -> thm) *
+                       ({Rinst:term,arg:term} -> thm)
 
    fun find_relation rel  = let
      fun f ((h as PREORDER (cid,_,_))::t) = if Opening.samerel cid rel then h
-                                            else f t
+                                          else f t
        | f [] = ERR("find_relation","relation not found")
    in
      f
    end;
 
    fun ARB_TRANS thm c1 c2 = MATCH_MP thm (CONJ c1 c2);
-
-   fun mk_preorder (TRANS_THM,REFL_THM) = let
-     fun refl {Rinst,arg} = PART_MATCH rator REFL_THM (mk_comb(Rinst,arg))
-   in
-     PREORDER (rator(rator(snd(boolSyntax.strip_forall(concl REFL_THM)))),
-               ARB_TRANS TRANS_THM,
-               refl)
-   end
 
    (* ---------------------------------------------------------------------
     * travrules objects and basic operations on them
@@ -67,7 +60,7 @@ fun ERR x = STRUCT_ERR "Travrules" x;
    fun dest(TRAVRULES x)  = x;
    val gen_mk_travrules = TRAVRULES
 
-   fun rel_of_preorder (PREORDER(r,_,_)) = r
+   fun rel_of_preorder (PREORDER (r,_,_)) = r
 
    fun merge_travrules tl = let
      val ts = map dest tl
@@ -96,9 +89,9 @@ fun ERR x = STRUCT_ERR "Travrules" x;
 
 val EQ_preorder = let
   fun eqrefl {Rinst,arg} = REFL arg
-in
-  PREORDER(boolSyntax.equality,TRANS,eqrefl)
+in PREORDER (boolSyntax.equality,TRANS,eqrefl)
 end
+
 val EQ_tr = gen_mk_travrules
   {relations=[EQ_preorder],
    congprocs=[Opening.EQ_CONGPROC],
@@ -107,9 +100,9 @@ val EQ_tr = gen_mk_travrules
 fun cong2proc rels th = let
   open Opening
   val r = rel_of_congrule th
-  val PREORDER(_,_,refl) = find_relation r rels
+  val PREORDER(_,trans,refl) = find_relation r rels
 in
-  CONGPROC refl th
+  CONGPROC refl trans th
 end
 
 fun mk_travrules relns congs =

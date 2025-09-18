@@ -70,12 +70,14 @@ signature Opening = sig
     * ---------------------------------------------------------------------*)
 
    include Abbrev
+   type bbconv = thm -> thm
    type congproc = {relation: term,
-                    solver : term -> thm,
+                    solver : conv,
                     freevars: term list,
-                    depther : (thm list * term) -> conv} -> conv
+                    depther : (thm list * term) -> bbconv} -> bbconv
    val samerel            : term -> term -> bool
-   val CONGPROC           : ({Rinst:term,arg:term} -> thm) -> thm -> congproc
+   val CONGPROC           : ({Rinst:term,arg:term} -> thm) ->
+                            (thm -> thm -> thm) -> thm -> congproc
    val rel_of_congrule    : thm -> term
    val nconds_of_congrule : thm -> int
 
