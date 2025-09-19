@@ -31,13 +31,13 @@ val WARN   = HOL_WARNING "TotalDefn";
 
 fun render_exn srcfn e =
     if !Globals.interactive then
-      (Feedback.output_ERR (Feedback.exn_to_string e);
-       raise ERR srcfn "Exception raised")
+       raise e
     else
-      raise e
+      (Feedback.output_ERR (Feedback.exn_to_string e);
+       raise BATCH_ERR srcfn)
 
 (*---------------------------------------------------------------------------*)
-(* Set up trace stuff                                                        *)
+(* Set up traces                                                             *)
 (*---------------------------------------------------------------------------*)
 
 local
@@ -689,7 +689,7 @@ local open Defn
                  else ()
      in
        if not (!Globals.interactive) then
-          raise ERR "defnDefine" (msg1 defName loc ^ goalstring)
+          raise ERR "defnDefine" (msg1 defName loc ^ "\n" ^ goalstring ^ "\n")
        else
           raise ERR "defnDefine" (msg1 defName loc ^ msg2 defName goalstring)
      end
@@ -709,23 +709,23 @@ local open Defn
        val V = params_of defn
        val _ = if not (null V) then fvs_on_rhs V else ()  (* can fail *)
        val (defn',opt) =
-          if should_try_to_prove_termination defn V then
-             let val tprover = proveTotal (mk_term_tac())
-                 fun try_proof Rcand = tprover (set_reln defn Rcand)
-             in
-              (if reln_is_not_set defn then  (* look for suitable term. reln *)
+           if not (should_try_to_prove_termination defn V) then
+             (defn,NONE)
+           else
+           let val tprover = proveTotal (mk_term_tac())
+               fun try_proof Rcand = tprover (set_reln defn Rcand)
+           in
+             (if reln_is_not_set defn then  (* look for suitable term. reln *)
                  let val candidates = guessR defn
                      val (cand,result) = trylist try_proof candidates
                      val () = report_successful_candidate cand candidates
                  in result end
-               else (* one is already installed, try to prove TCs *)
+              else (* one is already installed, try to prove TCs *)
                  tprover defn
-              ) handle HOL_ERR _ =>
+             ) handle HOL_ERR _ =>
                   (report_failure_of_candidates();
                    termination_proof_failed loc defn)
-             end
-          else
-            (defn,NONE)
+           end
     in
        save_defn_at loc defn'
        ; (LIST_CONJ (map GEN_ALL (eqns_of defn')), ind_of defn', opt)

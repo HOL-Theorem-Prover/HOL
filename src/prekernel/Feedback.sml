@@ -20,38 +20,67 @@ datatype hol_error =
       source_location  : locn.locn,
       message          : string}
 
-exception HOL_ERR of hol_error;
+fun mk_hol_error s1 s2 loc mesg =
+  HOL_ERROR
+     {origin_structure = s1,
+      origin_function  = s2,
+      source_location  = loc,
+      message          = mesg}
 
-(*---------------------------------------------------------------------------
-    Projections
- ---------------------------------------------------------------------------*)
+val trivial_hol_error = mk_hol_error "" "" locn.Loc_None ""
+
+fun dest_hol_error (HOL_ERROR recd) =
+  let val {origin_structure, origin_function, source_location, message} = recd
+  in (origin_structure, origin_function, source_location, message)
+  end
 
 fun structure_of (HOL_ERROR {origin_structure,...}) = origin_structure
 fun function_of (HOL_ERROR {origin_function,...}) = origin_function
 fun location_of (HOL_ERROR {source_location,...}) = source_location
 fun message_of (HOL_ERROR {message,...}) = message
 
+fun pp_hol_error (err as HOL_ERROR recd) =
+  let open HOLPP
+      val {origin_structure, origin_function, source_location, message} = recd
+  in if err = trivial_hol_error then
+        add_string "<error>"
+     else
+     block INCONSISTENT 0 (List.concat [
+       [add_string "at ",
+        add_string (origin_structure^"."^origin_function),add_string ":",
+        add_break(1,0)],
+       (case source_location
+         of locn.Loc_Unknown => []
+          | _ => [add_string (locn.toString source_location ^":"),add_break(1,0)]),
+        [add_string message]
+     ])
+  end
+
+fun format_err_recd recd =
+  HOLPP.pp_to_string (!Globals.linewidth) pp_hol_error (HOL_ERROR recd)
+
+val _ =
+  let fun pp i _ e = pp_hol_error e
+  in PolyML.addPrettyPrinter pp
+  end
+
+(*---------------------------------------------------------------------------*)
+(* Exception used in HOL code.                                               *)
+(*---------------------------------------------------------------------------*)
+
+exception HOL_ERR of hol_error;
+
+exception BATCH_ERR of string;
+
 (*---------------------------------------------------------------------------
      Curried version of HOL_ERR; can be more comfortable to use.
  ---------------------------------------------------------------------------*)
 
-fun mk_HOL_ERR s1 s2 s3 =
-   HOL_ERR
-    (HOL_ERROR
-       {origin_structure = s1,
-        origin_function = s2,
-        source_location = locn.Loc_Unknown,
-        message = s3})
+fun mk_HOL_ERRloc s1 s2 locn s3 = HOL_ERR (mk_hol_error s1 s2 locn s3)
+
+fun mk_HOL_ERR s1 s2 s3 = HOL_ERR (mk_hol_error s1 s2 locn.Loc_Unknown s3)
 
 (* Errors with a known location. *)
-
-fun mk_HOL_ERRloc s1 s2 locn s3 =
-   HOL_ERR
-    (HOL_ERROR
-      {origin_structure = s1,
-       origin_function = s2,
-       source_location = locn,
-       message = s3})
 
 fun set_origin_function fnm (HOL_ERROR recd) =
   let val {origin_structure, source_location, message, ...} = recd
@@ -70,29 +99,6 @@ fun set_message msg (HOL_ERROR recd) =
        origin_function = origin_function,
        message = msg}
   end
-
-fun pp_hol_error (HOL_ERROR recd) =
-  let open HOLPP
-      val {origin_structure, origin_function, source_location, message} = recd
-  in block CONSISTENT 0
-      [add_string (origin_structure^"."^origin_function),add_string ":",
-       NL,NL, add_string message, NL,NL,
-       add_string (locn.toString source_location)]
-  end
-
-val _ =
-  let fun pp i _ e = pp_hol_error e
-  in PolyML.addPrettyPrinter pp
-  end
-
-fun format_err_recd
-    {message, origin_function, origin_structure, source_location} =
-   String.concat
-      ["at ", origin_structure, ".", origin_function, ":\n",
-       case source_location of
-           locn.Loc_Unknown => ""
-         | _ => locn.toString source_location ^ ":\n",
-       message]
 
 fun format_hol_error(HOL_ERROR recd) = format_err_recd recd
 
