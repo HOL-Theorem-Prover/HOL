@@ -704,6 +704,24 @@ Proof
     rw [frac_def, is_int_def, REAL_SUB_0]
 QED
 
+
+(* ----------------------------------------------------------------------
+    More automatic simplifications
+   ---------------------------------------------------------------------- *)
+
+Theorem real_of_int_EQN[simp]:
+  (real_of_int i = &n ⇔ i = &n) ∧
+  (&n = real_of_int i ⇔ i = &n) ∧
+  (real_of_int i = -&n ⇔ i = -&n) ∧
+  (-&n = real_of_int i ⇔ i = -&n)
+Proof
+  Cases_on ‘i’ >> simp[]
+QED
+
+
+
+
+
 val _ = add_ML_dependency "intLib"
 
 (* References:

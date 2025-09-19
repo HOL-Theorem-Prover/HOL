@@ -18,7 +18,7 @@
 
 structure Sub_and_cond :> Sub_and_cond =
 struct
-  open Arbint HolKernel Parse boolLib RJBConv Thm_convs
+  open Arbint HolKernel Parse boolLib Thm_convs
 
 val COND_ABS       = boolTheory.COND_ABS;
 val TOP_DEPTH_CONV = Conv.TOP_DEPTH_CONV;
@@ -34,7 +34,7 @@ fun COND_ABS_CONV tm =
  (let val (v,bdy) = dest_abs tm
       val (cond,x,y) = dest_cond bdy
       val _ = assert (not o equal Type.bool o type_of) x
-      val b = assert (not o Lib.op_mem aconv v o free_vars) cond
+      val b = assert (not o var_occurs v) cond
       val xf = mk_abs(v,x)
       and yf = mk_abs(v,y)
       val th1 = INST_TYPE [alpha |-> type_of v, beta |-> type_of x] COND_ABS
