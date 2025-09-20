@@ -4,36 +4,20 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "countPoly";
-
 (* ------------------------------------------------------------------------- *)
+Theory countPoly
+Ancestors
+  pred_set list arithmetic divides gcd rich_list listRange
+  logroot number combinatorics pair option prime ring countMonad
+  countMacro countModulo bitsize complexity loopIncrease
+  loopDecrease loopDivide loopList
+  computeRing  (* for ZN_poly_cmult_alt *)
+  computePoly  (* for unity_mod_monomial *)
+  polynomial polyWeak
+Libs
+  jcLib monadsyntax
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory listTheory arithmeticTheory dividesTheory gcdTheory
-     rich_listTheory listRangeTheory logrootTheory numberTheory
-     combinatoricsTheory pairTheory optionTheory primeTheory;
-
-open ringTheory;
-
-open countMonadTheory countMacroTheory;
-open countModuloTheory;
-
-open bitsizeTheory complexityTheory;
-open loopIncreaseTheory loopDecreaseTheory;
-open loopDivideTheory loopListTheory;
-
-open monadsyntax;
-
-open computeRingTheory; (* for ZN_poly_cmult_alt *)
-open computePolyTheory; (* for unity_mod_monomial *)
-
-open polynomialTheory polyWeakTheory;
 
 val _ = monadsyntax.enable_monadsyntax();
 val _ = monadsyntax.enable_monad "Count";
@@ -4215,8 +4199,4 @@ End
 *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

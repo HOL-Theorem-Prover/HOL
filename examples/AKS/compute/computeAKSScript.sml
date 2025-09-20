@@ -4,33 +4,18 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "computeAKS";
+Theory computeAKS
+Ancestors
+  pred_set list arithmetic number combinatorics divides gcd prime
+  ring computeParam computeOrder computeBasic computeRing
+  computePoly polyWeak polyRing polyMonic polyDivision
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory primeTheory;
-
-open ringTheory;
-
-(* Get dependent theories local *)
-open computeParamTheory computeOrderTheory;
-open computeBasicTheory;
-
 (* val _ = load "computeRingTheory"; *)
-open computeRingTheory computePolyTheory;
-
-open polyWeakTheory polyRingTheory;
-open polyMonicTheory polyDivisionTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* AKS Computations Documentation                                            *)
 (* ------------------------------------------------------------------------- *)
@@ -455,8 +440,4 @@ val aks0_alt = store_thm(
 *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

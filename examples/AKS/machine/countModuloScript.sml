@@ -4,29 +4,17 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "countModulo";
-
 (* ------------------------------------------------------------------------- *)
+Theory countModulo
+Ancestors
+  pred_set list arithmetic divides gcd logroot number
+  combinatorics pair option listRange countMonad countMacro
+  bitsize complexity loopIncrease loopDecrease loopDivide
+  loopMultiply
+Libs
+  jcLib monadsyntax
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory listTheory arithmeticTheory dividesTheory gcdTheory
-     logrootTheory numberTheory combinatoricsTheory pairTheory optionTheory
-     listRangeTheory;
-
-open countMonadTheory countMacroTheory;
-
-open bitsizeTheory complexityTheory;
-open loopIncreaseTheory loopDecreaseTheory;
-open loopDivideTheory loopMultiplyTheory;
-
-open monadsyntax;
-
 val _ = monadsyntax.enable_monadsyntax();
 val _ = monadsyntax.enable_monad "Count";
 
@@ -889,8 +877,4 @@ val mexpM_thm = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)
