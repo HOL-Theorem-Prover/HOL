@@ -16,23 +16,14 @@ open
 quietdec := false;                                   (* Restore output       *)
 *)
 
-(*****************************************************************************)
-(* Boilerplate needed for compilation                                        *)
-(*****************************************************************************)
-
-open HolKernel Parse boolLib bossLib pred_setTheory LTLTheory sexpTheory
-
-(*****************************************************************************)
-(* END BOILERPLATE                                                           *)
-(*****************************************************************************)
+Theory ACL2Bisim
+Ancestors
+  pred_set LTL sexp
 
 
 (******************************************************************************
 * Start a new theory called ACL2Bisim
 ******************************************************************************)
-
-val _ = new_theory "ACL2Bisim";
-
 
 (*
 Instantiate general Kripke structure to have states as sexp and
@@ -65,6 +56,3 @@ val VARS_def =
    (VARS (UNTIL f1 f2) = VARS f1 UNION VARS f2)
    /\
    (VARS (WEAK_UNTIL f1 f2) = VARS f1 UNION VARS f2)`;
-
-
-val _ = export_theory();
