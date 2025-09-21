@@ -1,4 +1,9 @@
-open HolKernel Parse boolLib bossLib;
+Theory separationLogic
+Ancestors
+  generalHelpers finite_map relation bag pred_set sorting list
+  string rich_list arithmetic combin option lattice container marker
+Libs
+  congLib boolSimps ConseqConv quantHeuristicsLib
 
 (*
 quietdec := true;
@@ -13,17 +18,11 @@ map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
 show_assums := true;
 *)
 
-open generalHelpersTheory finite_mapTheory relationTheory bagTheory pred_setTheory congLib sortingTheory
-   listTheory rich_listTheory arithmeticTheory combinTheory optionTheory latticeTheory
-   containerTheory boolSimps ConseqConv markerTheory
-open quantHeuristicsLib
-
 (*
 open Sanity
 quietdec := false;
 *)
 
-val _ = new_theory "separationLogic"
 val _ = ParseExtras.temp_loose_equality()
 
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
@@ -12615,6 +12614,3 @@ val asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___ASL_REWRITES =
     asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_kleene_star,
     asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_while,
     asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___comments]))
-
-
-val _ = export_theory();
