@@ -4,32 +4,17 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polyMultiplicity";
+Theory polyMultiplicity
+Ancestors
+  prim_rec pred_set list arithmetic number combinatorics divides
+  gcd gcdset polynomial polyWeak polyRing polyField polyBinomial
+  polyDivision polyEval polyMonic polyRoot polyDivides
+  polyProduct polyIrreducible polyDerivative polyGCD monoid group
+  ring field
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
-
-open jcLib;
-
-(* open dependent theories *)
-open prim_recTheory pred_setTheory listTheory arithmeticTheory numberTheory
-     combinatoricsTheory dividesTheory gcdTheory gcdsetTheory;
-
-(* Get dependent theories local *)
-open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
-open polyBinomialTheory polyDivisionTheory polyEvalTheory;
-open polyMonicTheory;
-open polyRootTheory;
-open polyDividesTheory;
-open polyProductTheory;
-open polyIrreducibleTheory;
-open polyDerivativeTheory;
-open polyGCDTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
 
 val _ = intLib.deprecate_int ();
 
@@ -1514,8 +1499,4 @@ val poly_separable_factor_roots_disjoint = store_thm(
   decide_tac);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

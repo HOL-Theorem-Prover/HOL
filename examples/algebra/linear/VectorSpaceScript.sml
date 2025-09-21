@@ -31,22 +31,15 @@ Overall Idea:
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "VectorSpace";
+Theory VectorSpace
+Ancestors
+  pred_set list arithmetic number combinatorics group field
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory;
-
-open groupTheory fieldTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* Vector Space Documentation                                                *)
 (* ------------------------------------------------------------------------- *)
@@ -1047,8 +1040,4 @@ val stick_eq_property = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

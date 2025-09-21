@@ -4,46 +4,20 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "ffMinimal";
+Theory ffMinimal
+Ancestors
+  arithmetic pred_set list number combinatorics divides gcd
+  gcdset ffBasic ffAdvanced ffPoly ffUnity VectorSpace SpanSpace
+  LinearIndep FiniteVSpace monoid group ring field fieldOrder
+  fieldInstances polynomial polyWeak polyRing polyDivision
+  polyBinomial polyMonic polyEval polyDivides polyRoot fieldMap
+  polyField polyFieldDivision polyFieldModulo polyIrreducible
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open arithmeticTheory pred_setTheory listTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory gcdsetTheory;
-
-(* Get dependent theories local *)
-open ffBasicTheory;
-open ffAdvancedTheory;
-open ffPolyTheory;
-open ffUnityTheory;
-
-open VectorSpaceTheory;
-open SpanSpaceTheory;
-open LinearIndepTheory;
-open FiniteVSpaceTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-open fieldOrderTheory;
-open fieldInstancesTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory polyBinomialTheory;
-open polyMonicTheory polyEvalTheory;
-open polyDividesTheory;
-open polyRootTheory;
-
-open fieldMapTheory;
-open polyFieldTheory;
-open polyFieldDivisionTheory;
-open polyFieldModuloTheory;
-open polyIrreducibleTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* Finite Field Minimal Polynomial Documentation                             *)
 (* ------------------------------------------------------------------------- *)
@@ -1578,8 +1552,4 @@ g `!r:'a ring. Ring r ==> !z. z IN R ==>
 *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

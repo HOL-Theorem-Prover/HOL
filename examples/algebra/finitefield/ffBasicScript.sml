@@ -4,26 +4,18 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "ffBasic";
+Theory ffBasic
+Ancestors
+  pred_set arithmetic divides gcd number combinatorics
+  polyFieldModulo monoid group ring field fieldMap
+  fieldInstances  (* for GF_property, in prime field homomorphism *)
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
 
-open pred_setTheory arithmeticTheory dividesTheory gcdTheory numberTheory
-     combinatoricsTheory;
-
-open polyFieldModuloTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
-open fieldMapTheory;
-open fieldInstancesTheory; (* for GF_property, in prime field homomorphism *)
 
 (* Note:
 
@@ -924,8 +916,4 @@ val scalar_ring_char = store_thm(
   metis_tac[ring_iso_char_eq, ZN_char]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

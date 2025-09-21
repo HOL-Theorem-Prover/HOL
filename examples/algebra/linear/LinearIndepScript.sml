@@ -4,23 +4,16 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "LinearIndep";
+Theory LinearIndep
+Ancestors
+  pred_set arithmetic list number combinatorics VectorSpace
+  SpanSpace monoid group field
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory arithmeticTheory listTheory numberTheory combinatoricsTheory;
-
-open VectorSpaceTheory SpanSpaceTheory;
-open monoidTheory groupTheory fieldTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* Linear Independence Documentation                                         *)
 (* ------------------------------------------------------------------------- *)
@@ -473,8 +466,4 @@ val vspace_basis_dep_one_more = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

@@ -4,51 +4,23 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "ffMaster";
+Theory ffMaster
+Ancestors
+  arithmetic pred_set list divides gcd gcdset number
+  combinatorics prime ffBasic ffAdvanced ffPoly monoid group ring
+  field fieldInstances polynomial polyWeak polyRing polyDivision
+  polyBinomial polyField polyFieldDivision polyFieldModulo
+  polyModuloRing polyMonic polyProduct polyDivides polyGCD
+  polyIrreducible fieldMap polyMap polyDerivative polyEval
+  polyRoot
+  fieldBinomial  (* for finite_field_freshman_all *)
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
 
-(* open dependent theories *)
-open arithmeticTheory pred_setTheory listTheory dividesTheory gcdTheory
-     gcdsetTheory numberTheory combinatoricsTheory primeTheory;
-
-open ffBasicTheory;
-open ffAdvancedTheory;
-open ffPolyTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
-open fieldInstancesTheory;
-
-(* Get polynomial theory of Ring *)
-open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory polyBinomialTheory;
-
-open polyFieldTheory;
-open polyFieldDivisionTheory;
-open polyFieldModuloTheory;
-open polyModuloRingTheory;
-
-open polyMonicTheory;
-open polyProductTheory;
-open polyDividesTheory;
-open polyGCDTheory;
-open polyIrreducibleTheory;
-
-open fieldMapTheory;
-open polyMapTheory;
-
-open polyDerivativeTheory;
-open polyEvalTheory;
-open polyRootTheory;
-
-open fieldBinomialTheory; (* for finite_field_freshman_all *)
 
 val _ = intLib.deprecate_int ();
 
@@ -3328,8 +3300,4 @@ val finite_field_subfield_exists_condition = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

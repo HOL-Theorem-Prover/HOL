@@ -15,22 +15,16 @@ http://www.gilith.com/research/papers/elliptic.pdf
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "field";
+Theory field
+Ancestors
+  pred_set arithmetic divides gcd gcdset number combinatorics
+  monoid group ring
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory arithmeticTheory dividesTheory gcdTheory gcdsetTheory
-     numberTheory combinatoricsTheory;
-
-open monoidTheory groupTheory ringTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -3415,8 +3409,4 @@ val field_subgroup_card = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

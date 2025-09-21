@@ -4,55 +4,22 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "ffSplit";
+Theory ffSplit
+Ancestors
+  prim_rec pred_set list arithmetic number combinatorics divides
+  gcd gcdset prime ffBasic ffAdvanced ffPoly ffCyclo ffConjugate
+  ffMaster ffMinimal ffUnity ffExist ffExtend bag monoid group
+  ring field fieldInstances fieldMap fieldOrder polynomial
+  polyWeak polyRing polyField polyDivision polyBinomial
+  polyDivides polyMonic polyRoot polyFieldDivision
+  polyFieldModulo polyRingModulo polyModuloRing polyIrreducible
+  polyGCD polyMultiplicity polyMap
+  polyProduct  (* for PPROD *)
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
-open jcLib;
-
-(* open dependent theories *)
-open prim_recTheory pred_setTheory listTheory arithmeticTheory numberTheory
-     combinatoricsTheory dividesTheory gcdTheory gcdsetTheory primeTheory;
-
-(* Get dependent theories local *)
-open ffBasicTheory;
-open ffAdvancedTheory;
-open ffPolyTheory;
-open ffCycloTheory;
-open ffConjugateTheory;
-open ffMasterTheory;
-open ffMinimalTheory;
-open ffUnityTheory;
-open ffExistTheory;
-open ffExtendTheory;
-
-open bagTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-open fieldInstancesTheory fieldMapTheory;
-
-open fieldOrderTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
-open polyDivisionTheory polyBinomialTheory;
-open polyDividesTheory;
-open polyMonicTheory;
-open polyRootTheory;
-open polyFieldDivisionTheory;
-open polyFieldModuloTheory;
-open polyRingModuloTheory;
-open polyModuloRingTheory;
-
-open polyIrreducibleTheory;
-open polyGCDTheory;
-open polyMultiplicityTheory;
-open polyMapTheory;
-
-open polyProductTheory; (* for PPROD *)
 
 val _ = intLib.deprecate_int ();
 
@@ -2888,8 +2855,4 @@ poly_unity_eq_poly_cyclo_product;
 *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

@@ -4,33 +4,18 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polyCyclic";
+Theory polyCyclic
+Ancestors
+  pred_set list arithmetic number combinatorics divides gcd
+  monoid group ring field polynomial polyWeak polyRing
+  polyDivision polyMonic polyEval polyRoot polyDivides
+  polyIrreducible
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory;
-
-(* Get dependet theories local *)
-open monoidTheory groupTheory ringTheory fieldTheory;
-
-(* Get polynomial theory of Ring *)
-open polynomialTheory polyWeakTheory polyRingTheory;
-open polyDivisionTheory;
-open polyMonicTheory;
-open polyEvalTheory;
-open polyRootTheory;
-open polyDividesTheory;
-open polyIrreducibleTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -851,8 +836,4 @@ val poly_unity_irreducible_factor_exists = store_thm(
   metis_tac[poly_cyclic_has_no_factor_unity_1]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

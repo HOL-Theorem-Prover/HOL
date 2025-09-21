@@ -4,32 +4,17 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polyBinomial";
+Theory polyBinomial
+Ancestors
+  pred_set arithmetic list rich_list number combinatorics divides
+  gcd monoid group ring field fieldInstances polynomial polyWeak
+  polyRing polyDivision polyMonic polyField polyRoot polyEval
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory arithmeticTheory listTheory rich_listTheory numberTheory
-     combinatoricsTheory dividesTheory gcdTheory;
-
-open monoidTheory groupTheory ringTheory;
-
-open fieldTheory fieldInstancesTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory;
-
-open polyMonicTheory;
-open polyFieldTheory;
-open polyRootTheory;
-open polyEvalTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -3394,8 +3379,4 @@ val poly_dilate_const = store_thm(
   rw[DILATE_SING]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

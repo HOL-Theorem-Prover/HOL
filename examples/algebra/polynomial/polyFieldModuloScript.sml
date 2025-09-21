@@ -5,39 +5,19 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polyFieldModulo";
+Theory polyFieldModulo
+Ancestors
+  pred_set list arithmetic number combinatorics divides gcd
+  polynomial polyWeak polyRing polyField polyDivision
+  polyFieldDivision polyModuloRing polyRingModulo polyDivides
+  polyEval polyBinomial polyIrreducible polyRoot polyMonic
+  polyProduct monoid group ring field fieldMap fieldIdeal
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
-open polyDivisionTheory polyFieldDivisionTheory;
-open polyModuloRingTheory polyRingModuloTheory;
-open polyDividesTheory;
-open polyEvalTheory;
-open polyBinomialTheory;
-
-open polyIrreducibleTheory;
-open polyRootTheory;
-open polyMonicTheory;
-
-open polyProductTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
-open fieldMapTheory;
-open fieldIdealTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -5761,8 +5741,4 @@ val poly_mod_const_iso_field_alt = store_thm(
   rw_tac std_ss[poly_mod_const_iso_field, poly_irreducible_pmonic]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)
