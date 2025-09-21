@@ -1,15 +1,13 @@
-open HolKernel Parse boolLib bossLib; val _ = new_theory "lisp_correctness";
-
-open lisp_sexpTheory lisp_invTheory lisp_opsTheory lisp_bigopsTheory;
-open lisp_codegenTheory lisp_initTheory lisp_symbolsTheory;
-open lisp_sexpTheory lisp_invTheory lisp_parseTheory;
-open lisp_semanticsTheory lisp_compilerTheory lisp_compiler_opTheory progTheory;
-open compilerLib decompilerLib codegenLib prog_x64Lib lisp_bytecode_stepTheory;
-open lisp_compiler_opTheory;
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory helperLib sumTheory;
-open set_sepTheory bitTheory fcpTheory stringTheory optionTheory relationTheory;
+Theory lisp_correctness
+Ancestors
+  lisp_sexp lisp_inv lisp_ops lisp_bigops lisp_codegen lisp_init
+  lisp_symbols lisp_sexp lisp_inv lisp_parse lisp_semantics
+  lisp_compiler lisp_compiler_op prog lisp_bytecode_step
+  lisp_compiler_op words arithmetic list pred_set pair combin
+  finite_map address sum set_sep bit fcp string option relation
+Libs
+  compilerLib decompilerLib codegenLib prog_x64Lib wordsLib
+  helperLib
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -475,4 +473,3 @@ val _ = print "done.\n"
 in val _ = export_codeLib.write_code_to_file filename th end
 
 
-val _ = export_theory();

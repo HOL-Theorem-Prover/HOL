@@ -1,11 +1,8 @@
 
-open HolKernel Parse boolLib bossLib; val _ = new_theory "milawa_proofp";
-
-open lisp_sexpTheory lisp_semanticsTheory lisp_extractTheory;
-open milawa_defsTheory milawa_logicTheory milawa_execTheory;
-
-open arithmeticTheory listTheory pred_setTheory finite_mapTheory combinTheory;
-open pairTheory;
+Theory milawa_proofp
+Ancestors
+  lisp_sexp lisp_semantics lisp_extract milawa_defs milawa_logic
+  milawa_exec arithmetic list pred_set finite_map combin pair
 
 val _ = temp_delsimps ["NORMEQ_CONV"]
 val _ = diminish_srw_ss ["ABBREV"]
@@ -5478,4 +5475,3 @@ val milawa_main_soundness = store_thm("milawa_main_soundness",
   \\ SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND]);
 
 
-val _ = export_theory();

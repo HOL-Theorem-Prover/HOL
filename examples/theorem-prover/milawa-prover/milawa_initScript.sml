@@ -1,14 +1,13 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "milawa_init";
+Theory milawa_init
+Ancestors
+  lisp_extract string finite_map pred_set list sum option
+  arithmetic relation lisp_sexp lisp_semantics lisp_parse
+  milawa_core
+Libs
+  lisp_extractLib
+
 val _ = ParseExtras.temp_loose_equality()
 
-open lisp_extractLib lisp_extractTheory;
-
-open stringTheory finite_mapTheory pred_setTheory listTheory sumTheory;
-open optionTheory arithmeticTheory relationTheory;
-
-open lisp_sexpTheory lisp_semanticsTheory lisp_parseTheory;
-
-open milawa_coreTheory;
 val _ = max_print_depth := 20;
 
 val RW = REWRITE_RULE;
@@ -374,4 +373,3 @@ val core_assum_thm = store_thm("core_assum_thm",
   \\ SIMP_TAC std_ss [fns_assum_def,EVERY_DEF]);
 
 
-val _ = export_theory();

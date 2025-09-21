@@ -1,8 +1,9 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "stop_and_copy";
-val _ = ParseExtras.temp_loose_equality()
+Theory stop_and_copy
+Ancestors
+  pred_set arithmetic pair list combin finite_map sum relation
+  lisp_sexp
 
-open pred_setTheory arithmeticTheory pairTheory listTheory combinTheory;
-open finite_mapTheory sumTheory relationTheory;
+val _ = ParseExtras.temp_loose_equality()
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -1520,8 +1521,6 @@ val split_gc_thm = store_thm("split_gc_thm",
 
 (* representation of s-expressions in abstract heap, given symbol-table sym *)
 
-open lisp_sexpTheory;
-
 val LIST_FIND_def = Define `
   (LIST_FIND n x [] = NONE) /\
   (LIST_FIND n x (y::ys) = if x = y then SOME n else LIST_FIND (n+1) x ys)`;
@@ -1649,4 +1648,3 @@ val lisp_x_gc_thm = store_thm("lisp_x_gc_thm",
     \\ FULL_SIMP_TAC std_ss [ADDR_MAP_THM,FUN_EQ_THM,IN_DEF]));
 
 
-val _ = export_theory();

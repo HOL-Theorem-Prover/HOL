@@ -1,12 +1,11 @@
-open HolKernel Parse boolLib bossLib; val _ = new_theory "lisp_inv";
+Theory lisp_inv
+Ancestors
+  words arithmetic list pred_set pair combin finite_map address
+  set_sep bit fcp lisp_sexp lisp_cons stop_and_copy lisp_bytecode
+Libs
+  wordsLib helperLib
+
 val _ = ParseExtras.temp_loose_equality()
-
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory helperLib;
-open set_sepTheory bitTheory fcpTheory;
-
-open lisp_sexpTheory lisp_consTheory stop_and_copyTheory lisp_bytecodeTheory;
 
 
 val RW = REWRITE_RULE;
@@ -2350,4 +2349,3 @@ val code_heap_add_symbol = store_thm("code_heap_add_symbol",
   \\ IMP_RES_TAC bc_symbols_ok_IMP \\ ASM_SIMP_TAC std_ss []);
 
 
-val _ = export_theory();

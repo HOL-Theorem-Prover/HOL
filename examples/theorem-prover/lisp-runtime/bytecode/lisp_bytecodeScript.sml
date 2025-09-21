@@ -1,6 +1,6 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_bytecode";
-
-open stringTheory arithmeticTheory lisp_sexpTheory;
+Theory lisp_bytecode
+Ancestors
+  string arithmetic lisp_sexp
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -31,6 +31,4 @@ val _ = Hol_datatype `
   | iCOMPILE
   | iPRINT`;
 
-
-val _ = export_theory();
 
