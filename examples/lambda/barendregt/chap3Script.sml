@@ -5,16 +5,13 @@
 (* AUTHORS : 2005-2011 Michael Norrish                                        *)
 (*         : 2023-2025 Michael Norrish and Chun Tian                          *)
 (* ========================================================================== *)
+Theory chap3
+Ancestors
+  basic_swap relation list pred_set nomset term chap2 appFOLDL
+  horeduction
+Libs
+  boolSimps metisLib hurdUtils pred_setLib BasicProvers binderLib
 
-open HolKernel Parse boolLib bossLib;
-
-open boolSimps metisLib basic_swapTheory relationTheory listTheory hurdUtils
-     pred_setTheory pred_setLib BasicProvers;
-
-open binderLib nomsetTheory termTheory chap2Theory appFOLDLTheory
-     horeductionTheory;
-
-val _ = new_theory "chap3";
 
 (* definition from p30 *)
 val beta_def = Define`beta M N = ?x body arg. (M = LAM x body @@ arg) /\
@@ -1685,7 +1682,6 @@ Proof
  >> Q.EXISTS_TAC ‘N’ >> art []
 QED
 
-val _ = export_theory();
 val _ = html_theory "chap3";
 
 (* References:

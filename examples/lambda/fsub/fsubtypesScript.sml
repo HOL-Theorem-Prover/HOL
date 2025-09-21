@@ -18,14 +18,12 @@
    and the type of "contexts", which are of type (string * type) list
 
 *)
+Theory fsubtypes
+Libs
+  binderLib metisLib BasicProvers boolSimps
 
-open HolKernel boolLib Parse
-
-open binderLib bossLib metisLib BasicProvers boolSimps
 
 val SUBSET_DEF = pred_setTheory.SUBSET_DEF
-
-val _ = new_theory "fsubtypes"
 
 (* establish the inductive characterisation of the encoding above *)
 val (fsubrep_rules, fsubrep_ind, fsubrep_cases) = Hol_reln`
@@ -411,6 +409,4 @@ val fsize_thm = store_thm(
           [fsize_def,Fun_def,Top_def,ForallTy_def,TyVar_def,
            rep_abs_lemma, fsubrep_rules, ncTheory.size_thm]);
 
-
-val _ = export_theory();
 

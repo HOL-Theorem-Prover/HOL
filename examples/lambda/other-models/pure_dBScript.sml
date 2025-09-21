@@ -4,15 +4,13 @@
    "pure" in contrast with Andy Gordon's de Bruijn terms, which have
    indices for bound variables and strings for free variables.)
  *---------------------------------------------------------------------------*)
+Theory pure_dB
+Ancestors
+  arithmetic pred_set string_num list term appFOLDL chap2
+  horeduction chap3
+Libs
+  BasicProvers boolSimps hurdUtils
 
-open HolKernel boolLib Parse bossLib BasicProvers;
-
-open boolSimps arithmeticTheory pred_setTheory string_numTheory listTheory
-     hurdUtils;
-
-open termTheory appFOLDLTheory chap2Theory horeductionTheory chap3Theory;
-
-val _ = new_theory "pure_dB"
 
 val _ = temp_set_fixity "=" (Infix(NONASSOC, 100))
 
@@ -1610,7 +1608,6 @@ QED
 Theorem dLAMl_to_dABSi_applied =
     GEN_ALL (SIMP_RULE std_ss [LET_DEF] dLAMl_to_dABSi)
 
-val _ = export_theory();
 val _ = html_theory "pure_dB";
 
 (* References:

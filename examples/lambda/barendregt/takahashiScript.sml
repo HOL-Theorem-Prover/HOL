@@ -1,9 +1,8 @@
-open HolKernel Parse boolLib bossLib
-open binderLib
-
-open termTheory chap3Theory
-
-val _ = new_theory "takahashi"
+Theory takahashi
+Ancestors
+  term chap3
+Libs
+  binderLib
 
 val redAPP_exists =
     parameter_tm_recursion
@@ -121,4 +120,3 @@ val grandbeta_diamond = store_thm(
   ``diamond_property $=b=>``,
   metis_tac [takahashi_5, diamond_property_def]);
 
-val _ = export_theory()

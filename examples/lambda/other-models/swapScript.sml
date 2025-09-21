@@ -1,12 +1,10 @@
-open HolKernel Parse boolLib
-
-open simpLib boolSimps bossLib BasicProvers metisLib
-
-val _ = new_theory "swap"
+Theory swap
+Ancestors
+  basic_swap nc pred_set
+Libs
+  simpLib boolSimps BasicProvers metisLib NEWLib markerLib
 
 val _ = augment_srw_ss [rewrites [LET_THM]]
-
-open basic_swapTheory ncTheory NEWLib pred_setTheory markerLib;
 
 (* ----------------------------------------------------------------------
     Swapping over sets of strings
@@ -689,4 +687,3 @@ val lswap_NIL = store_thm(
   SRW_TAC [][lswap_def]);
 val _ = export_rewrites ["lswap_NIL"]
 
-val _ = export_theory();

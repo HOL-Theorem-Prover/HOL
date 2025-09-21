@@ -1,9 +1,9 @@
-open HolKernel Parse boolLib bossLib BasicProvers metisLib
-
-local open stringTheory in end
-
-open pred_setTheory binderLib boolSimps relationTheory
-open horeductionTheory chap3Theory
+Theory raw_syntax
+Ancestors
+  pred_set relation horeduction chap3 term diags
+  string[qualified]
+Libs
+  BasicProvers metisLib binderLib boolSimps
 
 (* ----------------------------------------------------------------------
 
@@ -46,8 +46,6 @@ open horeductionTheory chap3Theory
     to the same quotiented term.
 
    ---------------------------------------------------------------------- *)
-
-val _ = new_theory "raw_syntax"
 
 val _ = Hol_datatype `raw_term = var of string
                                | app of raw_term => raw_term
@@ -148,8 +146,6 @@ val collapse_def = Define`
   (collapse (var s) = VAR s) /\
   (collapse (app t u) = collapse t @@ collapse u) /\
   (collapse (lam v t) = LAM v (collapse t))`;
-
-open termTheory
 
 val FV_collapse = store_thm(
   "FV_collapse",
@@ -597,8 +593,6 @@ val ccbeta_beta_EQ = store_thm(
     machinery from diagsTheory
    ---------------------------------------------------------------------- *)
 
-open diagsTheory
-
 val onto_collapse = store_thm(
   "onto_collapse",
   ``onto collapse``,
@@ -675,4 +669,3 @@ val raw_diamond = store_thm(
   SRW_TAC [][diamond_eval] THEN
   METIS_TAC [chap3Theory.beta_CR, chap3Theory.CR_def]);
 
-val _ = export_theory();

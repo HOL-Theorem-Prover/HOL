@@ -10,13 +10,11 @@
 (* Interactive use:
    app load ["bossLib", "Q", "pred_setTheory", "stringTheory"];
 *)
-
-open HolKernel Parse boolLib
-     bossLib numLib IndDefLib
-     pred_setTheory arithmeticTheory
-     basic_swapTheory
-
-val _ = new_theory"dB";
+Theory dB
+Ancestors
+  pred_set arithmetic basic_swap
+Libs
+  numLib IndDefLib
 
 
 (*---------------------------------------------------------------------------
@@ -664,4 +662,3 @@ Q.EXISTS_TAC
  THEN MATCH_MP_TAC new_exists THEN MATCH_MP_TAC lemma2 THEN
  ASM_REWRITE_TAC []);
 
-val _ = export_theory();

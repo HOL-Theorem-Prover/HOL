@@ -9,16 +9,14 @@
    whole new cofinite relation and to then show that this is
    equivalent to the original.
 *)
+Theory lnameless
+Ancestors
+  nomset pred_set
+Libs
+  binderLib
 
-open HolKernel boolLib bossLib Parse
-
-open binderLib
-
-open nomsetTheory pred_setTheory
 
 fun Store_thm (p as (n,t,tac)) = store_thm p before export_rewrites [n]
-
-val _ = new_theory "lnameless"
 
 val _ = Datatype`lnt = var string | bnd num | app lnt lnt | abs lnt`;
 
@@ -455,4 +453,3 @@ val typing_cotyping = store_thm(
   HO_MATCH_MP_TAC typing_cofin_ind THEN SRW_TAC [][cotyping_rules] THEN
   METIS_TAC [cotyping_rules]);
 
-val _ = export_theory();

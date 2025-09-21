@@ -1,8 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open boolSimps relationTheory pred_setTheory chap3Theory;
-
-val _ = new_theory "diags"
+Theory diags
+Ancestors
+  relation pred_set chap3
+Libs
+  boolSimps
 
 (* Diagram evaluation *)
 val _ = Hol_datatype `reltype = Atomic | TC`
@@ -419,4 +419,3 @@ val Pres_structure_RTC = store_thm(
   HO_MATCH_MP_TAC RTC_INDUCT THEN SRW_TAC [][RTC_RULES, RUNION] THEN
   METIS_TAC [RTC_RULES]);
 
-val _ = export_theory()
