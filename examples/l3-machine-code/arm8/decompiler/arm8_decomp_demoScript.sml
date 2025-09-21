@@ -1,7 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-open arm8_decompLib
-
-val () = new_theory "arm8_decomp_demo";
+Theory arm8_decomp_demo
+Libs
+  arm8_decompLib
 
 val (test1_cert, test1_def) = arm8_decompile_no_status "test1"
    `54000048
@@ -19,4 +18,3 @@ val (test3_cert, test3_def) = arm8_decompLib.arm8_decompile_code "test3"
          subs x0, x0, #1
          b.ne  loop`
 
-val () = export_theory()

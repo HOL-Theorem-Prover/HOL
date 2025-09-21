@@ -1,14 +1,13 @@
 (* ------------------------------------------------------------------------
    Definitions and theorems used by RISC-V step evaluator (riscv_stepLib)
    ------------------------------------------------------------------------ *)
+Theory riscv_step
+Ancestors
+  alignment riscv
+Libs
+  utilsLib wordsLib blastLib
 
-open HolKernel boolLib bossLib
 
-open utilsLib
-open wordsLib blastLib alignmentTheory
-open riscvTheory
-
-val () = Theory.new_theory "riscv_step"
 val _ = ParseExtras.temp_loose_equality()
 
 val ERR = mk_HOL_ERR "riscv_stepTheory";
@@ -892,6 +891,5 @@ val SB  = store [] "SB"
 
 (* ------------------------------------------------------------------------ *)
 
-val () = ( Theory.delete_const "select"
-         ; export_theory ()
-         )
+val () = Theory.delete_const "select";
+

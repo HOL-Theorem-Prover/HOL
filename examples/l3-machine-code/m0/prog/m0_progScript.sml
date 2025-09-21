@@ -1,7 +1,8 @@
-open HolKernel boolLib bossLib
-open blastLib stateLib set_sepTheory progTheory m0_stepTheory
-
-val () = new_theory "m0_prog"
+Theory m0_prog
+Ancestors
+  set_sep prog m0_step temporal_state
+Libs
+  blastLib stateLib
 
 (* ------------------------------------------------------------------------ *)
 
@@ -280,5 +281,3 @@ val disjoint_m0_instr_thms = Theory.save_thm("disjoint_m0_instr_thms",
    )
 
 (* ------------------------------------------------------------------------ *)
-
-val () = export_theory()

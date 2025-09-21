@@ -1,14 +1,11 @@
-open HolKernel boolLib bossLib Parse BasicProvers dep_rewrite
-open armv86aTheory armv86a_terminationTheory armv86a_typesTheory
-open arm8Theory arm8Lib arm8_stepTheory arm8_stepLib
-open wordsTheory bitstringTheory listTheory rich_listTheory
-open integerTheory int_arithTheory arithmeticTheory
-open wordsLib bitstringLib intLib
-open l3_equivalence_miscTheory
-
-
-val _ = new_theory "l3_equivalence_lemmas";
-val _ = set_grammar_ancestry ["arm8_step", "arm8", "armv86a_termination"];
+Theory l3_equivalence_lemmas
+Ancestors
+  arm8_step arm8 armv86a_termination armv86a armv86a_types words
+  bitstring list rich_list integer int_arith arithmetic
+  l3_equivalence_misc
+Libs
+  BasicProvers dep_rewrite arm8Lib arm8_stepLib wordsLib
+  bitstringLib intLib
 
 val _ = wordsLib.output_words_as_bin();
 val _ = wordsLib.guess_lengths();
@@ -1449,4 +1446,3 @@ QED
 
 (****************************************)
 
-val _ = export_theory ();

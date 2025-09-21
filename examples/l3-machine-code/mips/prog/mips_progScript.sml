@@ -1,7 +1,8 @@
-open HolKernel boolLib bossLib
-open stateLib set_sepTheory progTheory mips_stepTheory
-
-val () = new_theory "mips_prog"
+Theory mips_prog
+Ancestors
+  set_sep prog mips_step temporal_state
+Libs
+  stateLib
 
 (* ------------------------------------------------------------------------ *)
 
@@ -64,5 +65,3 @@ val MIPS_PC_INTRO = Q.store_thm("MIPS_PC_INTRO",
    )
 
 (* ------------------------------------------------------------------------ *)
-
-val () = export_theory()

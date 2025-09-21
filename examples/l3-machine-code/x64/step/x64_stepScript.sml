@@ -1,14 +1,12 @@
 (* ------------------------------------------------------------------------
    Support for x86 step evaluator
    ------------------------------------------------------------------------ *)
+Theory x64_step
+Ancestors
+  x64
+Libs
+  bitstringLib wordsLib blastLib utilsLib
 
-open HolKernel boolLib bossLib
-
-open bitstringLib wordsLib blastLib
-open x64Theory
-open utilsLib
-
-val _ = new_theory "x64_step"
 
 (* ------------------------------------------------------------------------ *)
 
@@ -827,4 +825,3 @@ val rbp = Q.store_thm("rbp",
 
 (* ------------------------------------------------------------------------ *)
 
-val () = export_theory ()
