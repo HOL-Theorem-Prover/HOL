@@ -6,11 +6,12 @@
 
    First, we try some examples on natural numbers
  ---------------------------------------------------------------------------*)
+Theory ringExamples
+Ancestors
+  arithmetic EVAL_numRing integerRing
+Libs
+  EVAL_numRingLib integerRingLib
 
-open HolKernel Parse boolLib bossLib
-open EVAL_numRingLib;
-
-val _ = new_theory "ringExamples"
 
 val num_norm_conv = NUM_NORM_CONV o Parse.Term
 val num_ring_conv = NUM_RING_CONV o Parse.Term;
@@ -28,8 +29,6 @@ val _ = if rhs (concl res6) !~ boolSyntax.T then raise Fail "res6 test failed"
 (*---------------------------------------------------------------------------
       An example: sum of squares
  ---------------------------------------------------------------------------*)
-
-open arithmeticTheory;
 
 val sum_def =
  Define `(sum f 0 = 0n) /\ (sum f (SUC n) = sum f n + f (SUC n))`;
@@ -51,8 +50,6 @@ val sum_squares = Q.prove
 (*---------------------------------------------------------------------------
        Now the integers
  ---------------------------------------------------------------------------*)
-
-open integerRingLib;
 
 val int_norm_conv = INT_NORM_CONV o Parse.Term
 val int_ring_conv = INT_RING_CONV o Parse.Term;
@@ -105,5 +102,3 @@ val _ = Q.store_thm(
     (p1*w2-q1*v2+r1*u2+s1*t2-t1*s2-u1*r2+v1*q2+w1*p2)
     : int`,
   CONV_TAC (Count.apply INT_RING_CONV))
-
-val _ = export_theory()

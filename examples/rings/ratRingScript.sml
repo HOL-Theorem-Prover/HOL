@@ -5,12 +5,12 @@
  *  Jens Brandt, November 2005
  *
  ***************************************************************************)
+Theory ratRing
+Ancestors
+  integer rat EVAL_ring
+Libs
+  EVAL_ringLib schneiderUtils
 
-open HolKernel boolLib Parse bossLib;
-
-open integerTheory ratTheory EVAL_ringLib schneiderUtils;
-
-val _ = new_theory "ratRing";
 
 (*--------------------------------------------------------------------------
  *  RAT_IS_RING: thm
@@ -36,5 +36,3 @@ val rat_ring_thms =
 (*==========================================================================
  * end of theory
  *==========================================================================*)
-
-val _ = export_theory();
