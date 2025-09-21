@@ -4,26 +4,17 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
+Theory permutation
+Ancestors
+  pred_set arithmetic gcdset number list listRange rich_list
+  combinatorics mapCount monoid group symmetry
+Libs
+  jcLib  (* for stripDup *)
 
-(* declare new theory at start *)
-val _ = new_theory "permutation";
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib; (* for stripDup *)
-
-open pred_setTheory arithmeticTheory gcdsetTheory numberTheory listTheory
-     listRangeTheory rich_listTheory combinatoricsTheory;
-
-open mapCountTheory;
-
-(* Get dependent theories local *)
-open monoidTheory groupTheory;
-
-open symmetryTheory;
 
 val _ = temp_overload_on("over", ``\f s t. !x. x IN s ==> f x IN t``);
 
@@ -1476,8 +1467,4 @@ QED
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

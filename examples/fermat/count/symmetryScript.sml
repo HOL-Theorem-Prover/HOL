@@ -4,25 +4,19 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
+Theory symmetry
+Ancestors
+  pred_set arithmetic gcdset number combinatorics
+  mapCount  (* for on_def *)
+  monoid group ring field fieldMap
+Libs
+  jcLib  (* for stripDup *)
 
-(* declare new theory at start *)
-val _ = new_theory "symmetry";
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib; (* for stripDup *)
 
-open pred_setTheory arithmeticTheory gcdsetTheory numberTheory
-     combinatoricsTheory;
-
-open mapCountTheory; (* for on_def *)
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
-open fieldMapTheory;
 
 val _ = temp_overload_on("over", ``\f s t. !x. x IN s ==> f x IN t``);
 
@@ -1527,8 +1521,4 @@ QED
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)
