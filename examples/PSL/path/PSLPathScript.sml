@@ -15,24 +15,14 @@
 quietdec := true;
 map load ["intLib","FinitePSLPathTheory"];
 open intLib rich_listTheory FinitePSLPathTheory;
-val _ = intLib.deprecate_int();
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories
-******************************************************************************)
-open intLib rich_listTheory FinitePSLPathTheory;
-
-(******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
-val _ = intLib.deprecate_int();
+Theory PSLPath
+Ancestors
+  rich_list FinitePSLPath
+Libs
+  intLib
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -43,10 +33,6 @@ val _ = intLib.deprecate_int();
 ******************************************************************************)
 val simp_arith_ss = simpLib.++ (arith_ss, numSimps.SUC_FILTER_ss);
 
-(******************************************************************************
-* Start a new theory called PSLPath
-******************************************************************************)
-val _ = new_theory "PSLPath";
 val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************
@@ -927,5 +913,3 @@ val SEL_RESTN =
   ("SEL_RESTN",
    ``!p. SEL (RESTN p r) (n,m) = SEL p (r + n, r + m)``,
    RW_TAC arith_ss [SEL_def,SEL_REC_RESTN]);
-
-val _ = export_theory();

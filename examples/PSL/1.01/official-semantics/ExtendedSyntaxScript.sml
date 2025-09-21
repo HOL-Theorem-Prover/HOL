@@ -6,29 +6,15 @@
 (* START BOILERPLATE                                                         *)
 (*****************************************************************************)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories
-******************************************************************************)
-open intLib stringLib stringTheory SyntaxTheory SyntacticSugarTheory;
-
-(******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
-val _ = intLib.deprecate_int();
+Theory ExtendedSyntax
+Ancestors
+  string Syntax SyntacticSugar
+Libs
+  intLib stringLib
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
-
-(******************************************************************************
-* Start a new theory called ExtendedSyntaxTheory
-******************************************************************************)
-val _ = new_theory "ExtendedSyntax";
 
 (******************************************************************************
 * Extended boolean expressions
@@ -405,5 +391,3 @@ val F_DESUGAR_def =
    /\
    (F_DESUGAR(EF_WEAK_WHILENOT_INC(b,r)) =
      F_WEAK_WHILENOT_INC(B_DESUGAR b, S_DESUGAR r))`;
-
-val _ = export_theory();

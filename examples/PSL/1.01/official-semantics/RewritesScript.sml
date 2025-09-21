@@ -17,25 +17,15 @@ map load
 open SyntaxTheory SyntacticSugarTheory FinitePSLPathTheory PSLPathTheory
      UnclockedSemanticsTheory
      listTheory rich_listTheory intLib res_quanTools;
-val _ = intLib.deprecate_int();
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories
-******************************************************************************)
-open SyntaxTheory FinitePSLPathTheory PSLPathTheory UnclockedSemanticsTheory
-     SyntacticSugarTheory listTheory rich_listTheory intLib res_quanTools;
-
-(******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
-val _ = intLib.deprecate_int();
+Theory Rewrites
+Ancestors
+  Syntax FinitePSLPath PSLPath UnclockedSemantics SyntacticSugar
+  list rich_list
+Libs
+  intLib res_quanTools
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -49,11 +39,6 @@ val resq_SS =
   [res_quanTools.resq_SS,
    rewrites
     [num_to_def,xnum_to_def,IN_DEF,num_to_def,xnum_to_def,LENGTH_def]];
-
-(******************************************************************************
-* Start a new theory called UnclockedSugarSemantics
-******************************************************************************)
-val _ = new_theory "Rewrites";
 
 (******************************************************************************
 * SEM_1 rules for compiling clocked SEREs to unclocked SEREs
@@ -177,6 +162,3 @@ val F_CLOCK_COMP_def =
    /\
    (F_CLOCK_COMP c (F_STRONG_CLOCK(f,c1)) =
      F_U_CLOCK c1 (F_CLOCK_COMP c1 f))`;
-
-val _ = export_theory();
-

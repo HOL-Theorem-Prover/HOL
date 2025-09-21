@@ -9,15 +9,13 @@ app load
 ["bossLib", "rich_listTheory", "metisLib", "pred_setTheory", "stringTheory",
  "regexpTheory"];
 *)
+Theory matcher
+Ancestors
+  pair combin list rich_list string arithmetic regexp pred_set
+Libs
+  metisLib
 
-open HolKernel Parse boolLib;
-open bossLib metisLib
-open pairTheory combinTheory listTheory rich_listTheory
-     stringTheory arithmeticTheory;
-open regexpTheory;
-open pred_setTheory;
 
-val () = new_theory "matcher";
 val _ = ParseExtras.temp_loose_equality()
 
 (*---------------------------------------------------------------------------*)
@@ -1550,4 +1548,3 @@ val acheck = store_thm
       [LENGTH, FIRSTN, BUTFIRSTN, da_step_regexp2na, areport_def, eval_accepts,
        accept_regexp2na_def, eval_transitions_def, initial_regexp2na_def]);
 
-val () = export_theory ();

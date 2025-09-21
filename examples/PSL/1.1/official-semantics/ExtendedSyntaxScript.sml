@@ -15,33 +15,18 @@ quietdec := true;
 map load
  ["intLib","stringLib","SyntaxTheory","SyntacticSugarTheory"];
 open intLib stringLib stringTheory SyntaxTheory SyntacticSugarTheory;
-val _ = intLib.deprecate_int();
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories
-******************************************************************************)
-open intLib stringLib stringTheory SyntaxTheory SyntacticSugarTheory;
-
-(******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
-val _ = intLib.deprecate_int();
+Theory ExtendedSyntax
+Ancestors
+  string Syntax SyntacticSugar
+Libs
+  intLib stringLib
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
-
-(******************************************************************************
-* Start a new theory called ExtendedSyntaxTheory
-******************************************************************************)
-val _ = new_theory "ExtendedSyntax";
 
 (******************************************************************************
 * Extended boolean expressions
@@ -371,6 +356,3 @@ val F_DESUGAR_def =
    /\
    (F_DESUGAR(EF_SKIP_SUFFIX_IMP(r,f)) =
      F_SKIP_SUFFIX_IMP(S_DESUGAR r, F_DESUGAR f))`;
-
-
-val _ = export_theory();
