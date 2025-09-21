@@ -1,9 +1,9 @@
-open HolKernel boolLib bossLib BasicProvers Parse;
-open optionTheory pairTheory stringTheory;
-open arithmeticTheory pred_setTheory listTheory finite_mapTheory alistTheory sortingTheory;
-open balanced_mapTheory comparisonTheory;
-
-val _ = new_theory "oset";
+Theory oset
+Ancestors
+  option pair string arithmetic pred_set list finite_map alist
+  sorting balanced_map comparison
+Libs
+  BasicProvers
 
 val _ = temp_tight_equality ();
 
@@ -353,4 +353,3 @@ val oexists_ounion = Q.store_thm ("oexists_ounion",
  fs [oresp_equiv_def, resp_equiv_def] >>
  metis_tac []);
 
-val _ = export_theory ();
