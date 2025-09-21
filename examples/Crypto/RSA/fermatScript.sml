@@ -3,19 +3,19 @@ app load ["bossLib","gcdTheory","powerTheory","summationTheory",
           "binomialTheory","congruentTheory"];
 quietdec := true;
 *)
+Theory fermat
+Ancestors
+  arithmetic prim_rec gcd divides binomial congruent summation
+  power
+Libs
+  numLib
 
-open HolKernel Parse boolLib
-open bossLib numLib arithmeticTheory prim_recTheory
-     gcdTheory dividesTheory
-     binomialTheory congruentTheory summationTheory powerTheory ;
 
 (*
 quietdec := false;
 *)
 
 val ARW = RW_TAC arith_ss;
-
-val _ = new_theory "fermat";
 
 val FACT_def = ONCE_REWRITE_RULE [MULT_COMM] FACT;
 
@@ -135,4 +135,3 @@ val FERMAT = store_thm("FERMAT",
                         THEN ARW[SUB_ADD]
                         );
 
-val _ = export_theory();

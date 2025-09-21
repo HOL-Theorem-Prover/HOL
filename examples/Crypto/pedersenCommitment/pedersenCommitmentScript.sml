@@ -2,13 +2,13 @@
 (* ------------------------------------------------------------------------- *)
 (* Theory: Pedersen Commitment Scheme                                        *)
 (* ------------------------------------------------------------------------- *)
+Theory pedersenCommitment
+Ancestors
+  num monoid field fieldInstances group arithmetic divides
+  numeral ring
+Libs
+  jcLib
 
-open HolKernel boolLib bossLib Parse;
-open numTheory jcLib monoidTheory fieldTheory fieldInstancesTheory;
-open groupTheory arithmeticTheory dividesTheory numeralTheory ringTheory;
-
-(* Declare new theory at start *)
-val _ = new_theory "pedersenCommitment";
 
 (* Overload operations to avoid ambiguity *)
 Overload "_0_" = “(GF q).sum.id”;
@@ -218,5 +218,3 @@ val ZN_pedersen_hiding = store_thm(
   simp[]);
 
 Theorem GF_pedersen_hiding_prime = GF_pedersen_hiding |> SIMP_RULE (srw_ss()) [verify_def];
-
-val _ = export_theory();

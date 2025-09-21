@@ -16,15 +16,12 @@ key schedule. For more information, please refer to
   open arithmeticTheory wordsTheory pairTheory bitTheory wordsLib;
   quietdec := false;
 *)
+Theory twofish
+Ancestors
+  arithmetic words pair bit
+Libs
+  wordsLib
 
-open HolKernel Parse boolLib bossLib
-     arithmeticTheory wordsTheory pairTheory bitTheory wordsLib;
-
-(*---------------------------------------------------------------------------*)
-(* Create the theory.                                                        *)
-(*---------------------------------------------------------------------------*)
-
-val _ = new_theory "twofish";
 
 (*---------------------------------------------------------------------------*)
 (* Type Definitions                                                          *)
@@ -541,5 +538,3 @@ val TWOFISH_CORRECT = Q.store_thm("TWOFISH_CORRECT",
        ==>
        (decrypt (encrypt plaintext) = plaintext)`,
          RW_TAC std_ss [TWOFISH_def,LET_THM,TWOFISH_LEMMA]);
-
-val _ = export_theory();

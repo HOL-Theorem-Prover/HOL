@@ -1,8 +1,9 @@
-open HolKernel Parse boolLib bossLib listTheory rich_listTheory bitTheory
-     markerTheory pairTheory arithmeticTheory
-     wordsTheory Serpent_Reference_UtilityTheory wordsLib;
-
-val _ = new_theory "Serpent_Reference_Permutation";
+Theory Serpent_Reference_Permutation
+Ancestors
+  list rich_list bit marker pair arithmetic words
+  Serpent_Reference_Utility
+Libs
+  wordsLib
 
 (*initial/inverse final permutation table*)
 val IPTable_def = Define
@@ -184,4 +185,3 @@ val invIP_IP_cancel = Q.store_thm(
     invIP (IP block)= block`,
  SIMP_TAC std_ss [invIP_def,IP_def,FP_def,permu_comp_reverse_w128,IP_FP_fact]);
 
-val _ = export_theory();

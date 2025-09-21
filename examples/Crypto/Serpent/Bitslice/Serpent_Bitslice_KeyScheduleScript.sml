@@ -1,8 +1,9 @@
-open HolKernel Parse boolLib bossLib listTheory rich_listTheory bitTheory
-     markerTheory pairTheory arithmeticTheory wordsTheory wordsLib
-     Serpent_Bitslice_UtilityTheory Serpent_Bitslice_SBoxTheory;
-
-val _ = new_theory "Serpent_Bitslice_KeySchedule";
+Theory Serpent_Bitslice_KeySchedule
+Ancestors
+  list rich_list bit marker pair arithmetic words
+  Serpent_Bitslice_Utility Serpent_Bitslice_SBox
+Libs
+  wordsLib
 
 (*number of rounds*)
 val R_def = Define `R = 32`;
@@ -125,4 +126,3 @@ val makeKeyLength = Q.store_thm(
     LENGTH (makeKey userKey kl) = 33`,
   RW_TAC list_ss [makeKey_def,revPreKey2SubKey_def,LET_THM]);
 
-val _ = export_theory();

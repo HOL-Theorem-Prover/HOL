@@ -6,11 +6,11 @@
 (* Interactive:
    open combinTheory
 *)
-open HolKernel Parse boolLib bossLib combinTheory;
+Theory modes
+Ancestors
+  combin
 
 val _ = Defn.def_suffix := "_DEF";
-
-val _ = new_theory "modes"
 
 val MAP_MAP_COMPOSE = Q.prove
 (`!l (f:'a->'b) (g:'b->'c). MAP g (MAP f l) = MAP (g o f) l`,
@@ -93,8 +93,5 @@ val DATA_CBC_CORRECT = Q.store_thm
       (decode o unblock o CBC_DEC f (decrypt key) v) o
       (CBC_ENC f (encrypt key) v o block o encode) = I`,
  RW_TAC list_ss [CBC_CORRECT,o_DEF,FUN_EQ_THM]);
-
-
-val _ = export_theory();
 
 

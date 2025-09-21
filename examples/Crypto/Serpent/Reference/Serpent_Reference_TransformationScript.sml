@@ -1,9 +1,10 @@
 
-open HolKernel Parse boolLib bossLib listTheory rich_listTheory bitTheory
-     markerTheory pairTheory arithmeticTheory numSyntax wordsTheory
-     Serpent_Reference_UtilityTheory wordsLib;
-
-val _ = new_theory "Serpent_Reference_Transformation";
+Theory Serpent_Reference_Transformation
+Ancestors
+  list rich_list bit marker pair arithmetic words
+  Serpent_Reference_Utility
+Libs
+  numSyntax wordsLib
 
 (*---------------------------------------------------------------------------*)
 (* linear transformation table used in encryption                            *)
@@ -1042,4 +1043,3 @@ val invLT_LT_cancel = Q.store_thm(
  `ALL_EL (\x. x < 128) [i]` by RW_TAC list_ss [ALL_EL] THEN
  RW_TAC arith_ss [LTFun_invLTFun_fact,selParity_eq2]);
 
-val _ = export_theory();

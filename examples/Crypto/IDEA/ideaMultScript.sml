@@ -7,12 +7,12 @@ open gcdTheory dividesTheory arithmeticTheory
      ExtendedEuclidTheory;
 quietdec := false;
 *)
+Theory ideaMult
+Ancestors
+  ExtendedEuclid gcd divides arithmetic pair words integer
+Libs
+  wordsLib intLib
 
-open HolKernel Parse boolLib bossLib ExtendedEuclidTheory
-   gcdTheory dividesTheory arithmeticTheory
-   pairTheory wordsTheory wordsLib intLib integerTheory;
-
-val _ = new_theory "ideaMult";
 
 val ARW = RW_TAC arith_ss;
 val ASP = FULL_SIMP_TAC arith_ss;
@@ -492,4 +492,3 @@ val wmul_Mul1 = Q.store_thm
  `w2n w < 65536n` by WORD_DECIDE_TAC THEN
  SRW_TAC [] [decode_Lemma3]);
 
-val () = export_theory();

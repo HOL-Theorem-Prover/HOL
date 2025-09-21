@@ -1,12 +1,12 @@
 (*********************************************************)
 (*                         SBox                          *)
 (*********************************************************)
-
-open HolKernel Parse boolLib bossLib wordsTheory wordsLib
-     Serpent_Reference_UtilityTheory listTheory rich_listTheory bitTheory
-     markerTheory pairTheory arithmeticTheory;
-
-val _ = new_theory "Serpent_Reference_SBox";
+Theory Serpent_Reference_SBox
+Ancestors
+  words Serpent_Reference_Utility list rich_list bit marker pair
+  arithmetic
+Libs
+  wordsLib
 
 
 (*sbox table used in encrytion
@@ -188,4 +188,3 @@ RW_TAC std_ss [word128tow4l_conversion,MAP_MAP_o,w4l_fact,
                Serpent_Reference_UtilityTheory.MAP_ID,word4ltow128_conversion]);
 
 
-val _ = export_theory();
