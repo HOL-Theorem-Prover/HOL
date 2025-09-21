@@ -1,18 +1,13 @@
-open HolKernel Parse boolLib bossLib;
+Theory prob
+Ancestors
+  arithmetic pred_set res_quan list rich_list pair combin real
+  seq state_transformer extra_list extra_real extra_bool
+  extra_num sigma_algebra real_measure real_probability subtype
+  extra_pred_set prob_algebra prob_canon sequence
+Libs
+  simpLib realLib numSyntax hurdUtils ho_proverTools
+  extra_pred_setTools prob_canonTools sequenceTools
 
-open arithmeticTheory pred_setTheory simpLib res_quanTheory
-     listTheory rich_listTheory pairTheory combinTheory
-     realTheory realLib seqTheory state_transformerTheory numSyntax;
-
-open extra_listTheory hurdUtils extra_realTheory extra_boolTheory
-     ho_proverTools extra_numTheory;
-
-open sigma_algebraTheory real_measureTheory real_probabilityTheory;
-open subtypeTheory extra_pred_setTheory extra_pred_setTools;
-open prob_algebraTheory prob_canonTools prob_canonTheory;
-open sequenceTheory sequenceTools;
-
-val _ = new_theory "prob";
 val _ = ParseExtras.temp_loose_equality()
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
@@ -5190,4 +5185,3 @@ val PROB_TERMINATES_MORGAN = store_thm
    >> Q.EXISTS_TAC `SUC (f a')`
    >> RW_TAC arith_ss []);
 
-val _ = export_theory ();

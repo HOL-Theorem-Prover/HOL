@@ -1,8 +1,10 @@
-open HolKernel Parse boolLib;
-val _ = new_theory "sequence";
-val _ = ParseExtras.temp_loose_equality()
+Theory sequence
+Ancestors
+  arithmetic extra_num combin
+Libs
+  hurdUtils
 
-open bossLib arithmeticTheory extra_numTheory combinTheory hurdUtils;
+val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                              *)
@@ -190,4 +192,3 @@ val STL_SITER = store_thm
    >> CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [siter_def]))
    >> RW_TAC std_ss [STL_SCONS]);
 
-val _ = export_theory ();

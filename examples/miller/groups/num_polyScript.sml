@@ -1,7 +1,14 @@
 (* non-interactive mode
 *)
-open HolKernel Parse boolLib;
-val _ = new_theory "num_poly";
+Theory num_poly
+Ancestors
+  list res_quan pred_set extra_pred_set relation extra_list order
+  subtype arithmetic extra_num gcd divides extra_arith
+  finite_group rich_list
+Libs
+  hurdUtils subtypeTools res_quanTools arithContext
+  ho_proverTools listContext pred_setContext
+
 val _ = ParseExtras.temp_loose_equality()
 
 (* interactive mode
@@ -17,13 +24,6 @@ app load
 "gcdTheory", "dividesTheory", "primeTheory", "extra_arithTheory",
 "finite_groupTheory", "finite_groupContext"];
 *)
-
-open bossLib listTheory hurdUtils subtypeTools res_quanTools
-     res_quanTheory pred_setTheory extra_pred_setTheory arithContext
-     relationTheory ho_proverTools extra_listTheory orderTheory
-     subtypeTheory listContext arithmeticTheory extra_numTheory
-     gcdTheory dividesTheory extra_arithTheory
-     finite_groupTheory pred_setContext rich_listTheory;
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
 val REVERSE = Tactical.REVERSE;
@@ -354,4 +354,3 @@ val MOD_POLY_NTH_ROOTS = store_thm
 
 (* non-interactive mode
 *)
-val _ = export_theory ();

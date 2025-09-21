@@ -1,10 +1,10 @@
-open HolKernel Parse boolLib bossLib;
+Theory extra_arith
+Ancestors
+  arithmetic divides gcd res_quan pred_set subtype extra_num
+Libs
+  res_quanTools subtypeTools ho_proverTools numContext hurdUtils
+  ho_basicTools
 
-open arithmeticTheory dividesTheory gcdTheory res_quanTheory pred_setTheory
-     subtypeTheory res_quanTools subtypeTools ho_proverTools numContext
-     hurdUtils extra_numTheory ho_basicTools;
-
-val _ = new_theory "extra_arith";
 val _ = ParseExtras.temp_loose_equality()
 
 val assert = simple_assert;
@@ -1391,4 +1391,3 @@ val NOT_PRIME_EVEN = store_thm
    >> Simplify [PRIME_DIVIDES_PRIME]
    >> PROVE_TAC []);
 
-val _ = export_theory ();

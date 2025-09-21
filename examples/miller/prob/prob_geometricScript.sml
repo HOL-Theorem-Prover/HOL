@@ -1,20 +1,15 @@
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory pred_setTheory
-     listTheory sequenceTheory state_transformerTheory
-     hurdUtils extra_numTheory combinTheory
-     pairTheory realTheory realLib extra_boolTheory
-     extra_pred_setTheory extra_realTheory extra_pred_setTools numTheory
-     simpLib seqTheory sequenceTools subtypeTheory res_quanTheory;
-
-open sigma_algebraTheory real_measureTheory real_probabilityTheory;
-open prob_algebraTheory probTheory;
+Theory prob_geometric
+Ancestors
+  arithmetic pred_set list sequence state_transformer extra_num
+  combin pair real extra_bool extra_pred_set extra_real num seq
+  subtype res_quan sigma_algebra real_measure real_probability
+  prob_algebra prob
+Libs
+  hurdUtils realLib extra_pred_setTools simpLib sequenceTools
 
 (* interactive mode
 quietdec := false;
 *)
-
-val _ = new_theory "prob_geometric";
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
 val std_ss' = std_ss ++ boolSimps.ETA_ss;
@@ -314,4 +309,3 @@ val PROB_BERN_GEOMETRIC = store_thm
     RW_TAC std_ss [GSPECIFICATION]
     >> DECIDE_TAC]);
 
-val _ = export_theory ();

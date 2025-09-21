@@ -1,15 +1,10 @@
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory combinTheory
-     pred_setTheory hurdUtils listTheory rich_listTheory
-     res_quanTools res_quanTheory
-     extra_listTheory extra_numTheory
-     pairTheory
-     state_transformerTheory simpLib
-
-open ho_proverTools subtypeTheory subtypeTools boolContext listContext;
-
-val _ = new_theory "extra_pred_set";
+Theory extra_pred_set
+Ancestors
+  arithmetic combin pred_set list rich_list res_quan extra_list
+  extra_num pair state_transformer subtype
+Libs
+  hurdUtils res_quanTools simpLib ho_proverTools subtypeTools
+  boolContext listContext
 
 val assert = simple_assert;
 
@@ -1106,4 +1101,3 @@ val CROSS_LIST_TO_SET = store_thm
         LIST_TO_SET (LIST_COMBS l l')``,
    RW_TAC std_ss [EXTENSION, IN_CROSS, LIST_TO_SET, MEM_LIST_COMBS]);
 
-val _ = export_theory ();

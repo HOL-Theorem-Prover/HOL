@@ -1,9 +1,9 @@
-open HolKernel Parse boolLib bossLib;
+Theory prob_canon
+Ancestors
+  pred_set list rich_list pair extra_list
+Libs
+  realLib hurdUtils
 
-open pred_setTheory listTheory rich_listTheory pairTheory realLib
-     hurdUtils extra_listTheory;
-
-val _ = new_theory "prob_canon";
 val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
@@ -1038,4 +1038,3 @@ val PROB_CANONICAL_PREFIXFREE = store_thm
     >> RES_TAC,
     PROVE_TAC [PROB_CANONICAL_TL]]);
 
-val _ = export_theory ();

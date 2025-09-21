@@ -1,19 +1,15 @@
-open HolKernel Parse boolLib bossLib;
+Theory miller_rabin
+Ancestors
+  list res_quan pred_set extra_pred_set extra_list subtype
+  arithmetic group extra_num gcd divides extra_arith finite_group
+  abelian_group num_poly extra_binomial binomial summation
+  mult_group extra_real real seq state_transformer combin
+  real_probability prob prob_uniform
+Libs
+  subtypeTools res_quanTools arithContext ho_proverTools
+  listContext hurdUtils groupContext finite_groupContext
+  pred_setContext realLib
 
-open listTheory subtypeTools
-     res_quanTools res_quanTheory pred_setTheory extra_pred_setTheory
-     arithContext ho_proverTools extra_listTheory subtypeTheory
-     listContext arithmeticTheory groupTheory hurdUtils
-     groupContext extra_numTheory gcdTheory dividesTheory
-     extra_arithTheory finite_groupTheory finite_groupContext
-     abelian_groupTheory num_polyTheory extra_binomialTheory
-     binomialTheory summationTheory pred_setContext mult_groupTheory
-     extra_realTheory realTheory realLib seqTheory
-     state_transformerTheory combinTheory;
-
-open real_probabilityTheory probTheory prob_uniformTheory;
-
-val _ = new_theory "miller_rabin";
 val _ = ParseExtras.temp_loose_equality()
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
@@ -931,4 +927,3 @@ val MILLER_RABIN_DEDUCE_COMPOSITE = store_thm
    >> Suff `~FST (miller_rabin n t s) = T` >- PROVE_TAC [MILLER_RABIN_PRIME]
    >> RW_TAC std_ss []);
 
-val _ = export_theory ();

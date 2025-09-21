@@ -1,12 +1,10 @@
-open HolKernel Parse boolLib bossLib;
-
-open realTheory realLib res_quanTools
-     hurdUtils subtypeTheory extra_numTheory transcTheory
-     pred_setTheory arithmeticTheory seqTheory combinTheory pairTheory
-     extra_pred_setTheory extra_boolTheory real_sigmaTheory
-     sumTheory limTheory listTheory rich_listTheory;
-
-val _ = new_theory "extra_real";
+Theory extra_real
+Ancestors
+  real subtype extra_num transc pred_set arithmetic seq combin
+  pair extra_pred_set extra_bool real_sigma sum lim list
+  rich_list
+Libs
+  realLib res_quanTools hurdUtils
 
 (* ------------------------------------------------------------------------- *)
 (* Tools.                                                                    *)
@@ -902,4 +900,3 @@ val REAL_LE_MUL_EPSILON = store_thm
     >> Suff `1/2 * ~x <= 1 * ~x` >- RW_TAC real_ss []
     >> METIS_TAC [REAL_NEG_GT0, REAL_LT_TOTAL, REAL_LE_REFL, REAL_HALF_BETWEEN, REAL_LE_RMUL]);
 
-val _ = export_theory ();
