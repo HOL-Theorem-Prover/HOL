@@ -1,11 +1,9 @@
-open HolKernel Parse boolLib bossLib;
-open optionTheory pairTheory pred_setTheory finite_mapTheory stringTheory;
-open integerTheory listTheory optionTheory rich_listTheory;
-open BasicProvers;
-open for_ndTheory for_nd_semTheory oracleSemTheory simple_traceTheory;
-open relationTheory;
-
-val _ = new_theory "for_osmall";
+Theory for_osmall
+Ancestors
+  option pair pred_set finite_map string integer list option
+  rich_list for_nd for_nd_sem oracleSem simple_trace relation
+Libs
+  BasicProvers
 
 val ect = BasicProvers.EVERY_CASE_TAC;
 val fct = BasicProvers.FULL_CASE_TAC;
@@ -1749,4 +1747,3 @@ End
 Theorem step_e_rules_oracle_upd =
         step_e_rules|>REWRITE_RULE[GSYM oracle_upd_def]
 
-val _ = export_theory ();

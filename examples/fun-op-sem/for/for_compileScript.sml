@@ -1,6 +1,8 @@
-open HolKernel Parse boolLib bossLib BasicProvers;
-
-val _ = new_theory "for_compile";
+Theory for_compile
+Ancestors
+  option pair pred_set finite_map string for list arithmetic
+Libs
+  BasicProvers
 
 (*
 
@@ -15,9 +17,6 @@ The compiler consists of three phasees:
  - the third phase maps the FOR language into assmembly code
 
 *)
-
-open optionTheory pairTheory pred_setTheory finite_mapTheory stringTheory;
-open forTheory listTheory arithmeticTheory;
 
 val _ = temp_tight_equality ();
 
@@ -1081,4 +1080,3 @@ val phase1_abbrev = store_thm("phase1_abbrev",
     (phase1 (Dec x t) = Seq (Exp (Assign x (Num 0))) (phase1 t))``,
   fs [phase1_def]);
 
-val _ = export_theory ();

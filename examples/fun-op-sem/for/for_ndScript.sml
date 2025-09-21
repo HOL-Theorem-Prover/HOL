@@ -1,6 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "for_nd";
+Theory for_nd
+Ancestors
+  pred_set option string llist integer
 
 (*
 
@@ -16,8 +16,6 @@ we add basic I/O and non-deterministic evaluation order.
 A simpler version of this language can be found in forScript.sml.
 
 *)
-
-open pred_setTheory optionTheory stringTheory llistTheory integerTheory;
 
 val _ = temp_tight_equality ();
 val ect = BasicProvers.EVERY_CASE_TAC;
@@ -110,4 +108,3 @@ val type_weakening_t = Q.store_thm ("type_weakening_t",
  rw [EXTENSION] >>
  metis_tac [SUBSET_DEF, NOT_SOME_NONE, SOME_11, type_weakening_e, INSERT_SUBSET]);
 
-val _ = export_theory ();

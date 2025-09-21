@@ -10,14 +10,13 @@
   around the program like other values, nor can multiple identifiers be bound to
   the same instance of a coroutine, let alone obtain a copy.
 *)
+Theory coimp
+Ancestors
+  integer finite_map alist arithmetic num imp listImp combin
+  option pred_set list
+Libs
+  stringLib
 
-open HolKernel Parse boolLib bossLib;
-open stringLib integerTheory finite_mapTheory
-open alistTheory arithmeticTheory numTheory;
-open impTheory listImpTheory combinTheory;
-open optionTheory pred_setTheory listTheory;
-
-val _ = new_theory "coimp";
 
 (* *********TYPES********* *)
 
@@ -1171,4 +1170,3 @@ Proof
   Cases_on `k` >> gvs[evaluate_def, update_var_preserves]
 QED
 
-val _ = export_theory();

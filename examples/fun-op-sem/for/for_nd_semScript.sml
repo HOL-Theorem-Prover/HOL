@@ -1,6 +1,7 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "for_nd_sem";
+Theory for_nd_sem
+Ancestors
+  option pair pred_set finite_map string llist integer
+  lprefix_lub for_nd
 
 (*
 
@@ -11,11 +12,6 @@ non-deterministic evaluation order.
 A simpler version of this language can be found in forScript.sml.
 
 *)
-
-open optionTheory pairTheory pred_setTheory finite_mapTheory stringTheory;
-open llistTheory integerTheory;
-open lprefix_lubTheory;
-open for_ndTheory;
 
 val ect = BasicProvers.EVERY_CASE_TAC;
 
@@ -501,4 +497,3 @@ Proof
  fs [] >> rw[]
 QED
 
-val _ = export_theory ();

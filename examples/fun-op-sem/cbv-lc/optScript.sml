@@ -1,13 +1,10 @@
 (* Use the logical relation to verify an optimisation that does beta-value
  * reduction on all beta-value reducable sub-terms. *)
+Theory opt
+Ancestors
+  integer string alist list pred_set pair option finite_map
+  arithmetic rich_list cbv logrel
 
-open HolKernel boolLib bossLib Parse;
-open integerTheory stringTheory alistTheory listTheory pred_setTheory;
-open pairTheory optionTheory finite_mapTheory arithmeticTheory;
-open rich_listTheory;
-open cbvTheory logrelTheory;
-
-val _ = new_theory "opt";
 
 val funpow_comm = Q.prove (
 `!f n x. f (FUNPOW f n x) = FUNPOW f n (f x)`,
@@ -438,4 +435,3 @@ val beta_reduce_correct = Q.store_thm ("beta_reduce_correct",
  >- metis_tac [compat_app]
  >- metis_tac [compat_tick]);
 
-val _ = export_theory ();

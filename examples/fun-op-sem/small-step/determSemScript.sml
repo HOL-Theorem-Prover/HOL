@@ -1,15 +1,15 @@
 (* A general theory of functional-big-step equivalence with small-step for
  * deterministic languages *)
+Theory determSem
+Ancestors
+  integer string alist list pred_set relation pair option
+  finite_map arithmetic simple_trace
+Libs
+  BasicProvers
 
-open HolKernel boolLib bossLib Parse BasicProvers;
-open integerTheory stringTheory alistTheory listTheory pred_setTheory relationTheory;
-open pairTheory optionTheory finite_mapTheory arithmeticTheory;
-open simple_traceTheory;
 
 val _ = set_trace "Goalstack.print_goal_at_top" 0;
 val _ = ParseExtras.temp_tight_equality();
-
-val _ = new_theory "determSem";
 
 (* ----------- Generic small-step --------- *)
 
@@ -211,4 +211,3 @@ val small_fbs_equiv2 = Q.store_thm ("small_fbs_equiv2",
    Cases_on `SND (eval_with_clock sem_f c p)` >>
    fs [same_result_def, check_result_def]));
 
-val _ = export_theory ();

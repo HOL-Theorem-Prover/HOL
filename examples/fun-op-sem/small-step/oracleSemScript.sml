@@ -1,10 +1,8 @@
-open HolKernel boolLib bossLib Parse;
-open integerTheory stringTheory alistTheory listTheory rich_listTheory llistTheory pred_setTheory relationTheory;
-open pairTheory optionTheory finite_mapTheory arithmeticTheory pathTheory;
-open path_auxTheory simple_traceTheory lprefix_lubTheory;
-open for_ndTheory;
-
-val _ = new_theory "oracleSem";
+Theory oracleSem
+Ancestors
+  integer string alist list rich_list llist pred_set relation
+  pair option finite_map arithmetic path path_aux simple_trace
+  lprefix_lub for_nd
 
 Theorem lfilter_map_thm:
   (lfilter_map f [||] = [||]) ∧
@@ -381,4 +379,3 @@ val osmall_fbs_equiv2 = Q.store_thm ("osmall_fbs_equiv2",
    fs [same_result_def] >>
    metis_tac []));
 
-val _ = export_theory ();

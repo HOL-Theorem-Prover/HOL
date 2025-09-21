@@ -1,6 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "for";
+Theory for
+Ancestors
+  option pair pred_set finite_map string integer
 
 (*
 
@@ -17,9 +17,6 @@ This file defines:
  - a clocked relational big-step semantics (and equivalence proof) and
  - a conventional (unclocked) relational big-step semantics (inductive and co-inductive)
 *)
-
-open optionTheory pairTheory pred_setTheory finite_mapTheory stringTheory;
-open integerTheory;
 
 val _ = temp_tight_equality ();
 
@@ -1497,4 +1494,3 @@ val sample_cases_thm = save_thm("sample_cases_thm",
   |> ONCE_REWRITE_RULE [lemma]
   |> REWRITE_RULE [lemma2])
 
-val _ = export_theory ();
