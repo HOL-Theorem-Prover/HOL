@@ -1,10 +1,11 @@
 (*
   Demonstrates use of cv_eval_pat
 *)
-open HolKernel Parse boolLib bossLib;
-open cv_transLib cv_stdTheory
-
-val _ = new_theory "cv_eval_example";
+Theory cv_eval_example
+Ancestors
+  cv_std
+Libs
+  cv_transLib
 
 Definition test_def:
   test n = if n = 0 then NONE else SOME (n+1, n+2, REPLICATE n T)
@@ -35,4 +36,3 @@ val res = cv_eval “LENGTH big_replicate”;
 *)
 
 val _ = (max_print_depth := 10);
-val _ = export_theory();
