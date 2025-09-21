@@ -5,8 +5,8 @@
 (* Copyright 1998, Mark Staples                                              *)
 (* Modifications (April,June 1998) Konrad Slind.                             *)
 (*===========================================================================*)
+Theory autopilot
 
-open HolKernel boolLib Parse bossLib
 
 (*---------------------------------------------------------------------------*
  * We'll track information on inferences.                                    *
@@ -18,9 +18,6 @@ val meter = Count.mk_meter();
 (*---------------------------------------------------------------------------*
  * Start the theory.                                                         *
  *---------------------------------------------------------------------------*)
-
-val _ = new_theory "autopilot";
-
 
 val _ = Hol_datatype `events = press_att_cws
                      | press_cas_eng
@@ -364,4 +361,3 @@ val reachable_induct = prove
 
 val _ = Count.report (Count.read meter);
 
-val _ = export_theory()

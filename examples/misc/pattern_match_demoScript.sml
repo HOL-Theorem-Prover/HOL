@@ -1,13 +1,11 @@
-open HolKernel boolLib Parse bossLib
+Theory pattern_match_demo
+Libs
+  Pmatch PmatchHeuristics
 
 (* This is demo / test file for new features of the pattern matcher.
    It's just a collection of tests and demos, nothing substantial.
    It is not even decently documented and not intended to make it
    back into the main branch. *)
-
-val _ = new_theory "pattern_match_demo";
-
-open Pmatch PmatchHeuristics
 
 fun Define_heu heu = with_heuristic heu Define
 
@@ -195,4 +193,3 @@ val _ = run_it inputp_6 ``test_pair_org``;  (*  4.6 s *)
 val _ = run_it inputp_6 ``test_pair_qba``;  (*  4.3 s *)
 
 
-val _ = export_theory();

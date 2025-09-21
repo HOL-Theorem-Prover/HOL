@@ -3,15 +3,14 @@
 (*                                                                           *)
 (* Some lemmas are ported from HOL-Light's "Examples/gcdrecurrence.ml".      *)
 (* ------------------------------------------------------------------------- *)
+Theory fibonacci
+Ancestors
+  arithmetic real iterate
+Libs
+  hurdUtils numLib realLib
 
-open HolKernel Parse boolLib bossLib;
 
-open arithmeticTheory hurdUtils numLib realTheory realLib iterateTheory;
-
-val _ = intLib.deprecate_int ();
 val _ = numLib.prefer_num ();
-
-val _ = new_theory "fibonacci";
 
 val num_INDUCTION = numTheory.INDUCTION;
 val ARITH_RULE    = numLib.DECIDE;
@@ -162,8 +161,6 @@ lo, exponential speedup
  time EVAL “fib 25”      (* 5.9s *)
  time EVAL “fastfib 25”  (* 0.00204s *)
 *)
-
-val _ = export_theory ();
 
 (* References:
 
