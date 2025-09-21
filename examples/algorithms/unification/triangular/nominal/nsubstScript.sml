@@ -1,6 +1,8 @@
-open HolKernel boolLib bossLib Parse finite_mapTheory arithmeticTheory prim_recTheory pred_setTheory relationTheory ntermTheory ramanaLib
-
-val _ = new_theory "nsubst"
+Theory nsubst
+Ancestors
+  finite_map arithmetic prim_rec pred_set relation nterm
+Libs
+  ramanaLib
 
 val _ = type_abbrev_pp ("nsubst", ``:(num |-> 'a nterm)``);
 
@@ -56,4 +58,3 @@ Q_TAC SUFF_TAC `!y x.nvR s y x ==> nvR sx y x`
 SRW_TAC [][nvR_def,FLOOKUP_DEF] THEN
 METIS_TAC []);
 
-val _ = export_theory ()

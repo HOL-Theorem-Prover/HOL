@@ -1,10 +1,10 @@
-open HolKernel boolLib bossLib ramanaLib Parse
+Theory unifDef
+Ancestors
+  string arithmetic finite_map pred_set bag relation prim_rec
+  pair term subst walk walkstar
+Libs
+  ramanaLib
 
-open stringTheory arithmeticTheory finite_mapTheory pred_setTheory bagTheory
-     relationTheory prim_recTheory pairTheory termTheory substTheory walkTheory
-     walkstarTheory
-
-val _ = new_theory "unifDef";
 val _ = delsimps ["NORMEQ_CONV"]
 val _ = monadsyntax.temp_add_monadsyntax()
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 };
@@ -650,4 +650,3 @@ val unify_uP = Q.store_thm(
    uP sx s t1 t2`,
 METIS_TAC [unify_eq_tunify,aux_eq_tunify,aux_uP])
 
-val _ = export_theory ()

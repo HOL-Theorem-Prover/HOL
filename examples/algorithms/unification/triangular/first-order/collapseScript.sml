@@ -1,7 +1,8 @@
-open HolKernel boolLib bossLib Parse finite_mapTheory termTheory ramanaLib
-     pred_setTheory substTheory walkTheory walkstarTheory;
-
-val _ = new_theory "collapse";
+Theory collapse
+Ancestors
+  finite_map term pred_set subst walk walkstar
+Libs
+  ramanaLib
 
 (* NB: collapsing a substitution means it's not triangular any more. The
  * intended method for applying triangular substitutions is to use walk*. The
@@ -103,4 +104,3 @@ val wfs_collapse = store_thm("wfs_collapse",
   ``wfs s ==> wfs (collapse s)``,
   metis_tac[collapse_idempotent,collapse_noids,wfs_idempotent])
 
-val _ = export_theory ();

@@ -1,14 +1,9 @@
-open HolKernel Parse boolLib bossLib;
-
-open pairTheory
-open walkTheory walkstarTheory unifDefTheory
-open whileTheory
-open substTheory rmfmapTheory
-open cpsTheory cpsLib
-
-open relationTheory sptreeTheory pred_setTheory finite_mapTheory optionTheory
-
-val _ = new_theory "tcallUnif";
+Theory tcallUnif
+Ancestors
+  pair walk walkstar unifDef while subst rmfmap cps relation
+  sptree pred_set finite_map option
+Libs
+  cpsLib
 
 Definition ispair_def[simp]:
   ispair (Pair t1 t2) = T ∧
@@ -863,4 +858,3 @@ QED
 
 
 
-val _ = export_theory();

@@ -1,9 +1,10 @@
-open HolKernel boolLib bossLib Parse
+Theory walk
+Ancestors
+  finite_map relation term subst alist arithmetic pred_set
+  rich_list list
+Libs
+  ramanaLib
 
-open finite_mapTheory relationTheory termTheory substTheory alistTheory
-     arithmeticTheory pred_setTheory rich_listTheory listTheory ramanaLib
-
-val _ = new_theory "walk"
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 1 }
 
 val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
@@ -311,4 +312,3 @@ val vwalk_rhs_eq_vwalk_al = Q.store_thm(
 `wfs (alist_to_fmap al) ∧ submaps al ⇒ (vwalk_rhs al al v = vwalk_al al v)`
 *)
 
-val _ = export_theory ();

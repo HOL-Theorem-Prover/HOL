@@ -1,9 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open transferTheory fmspTheory unifDefTheory
-open pred_setTheory finite_mapTheory transferLib
-
-val _ = new_theory "rmfmap";
+Theory rmfmap
+Ancestors
+  transfer fmsp unifDef pred_set finite_map
+Libs
+  transferLib
 
 Theorem FUNREL_flipR:
   (AB |==> CD |==> EF) f (flip g) ⇔ (CD |==> AB |==> EF) (flip f) g
@@ -142,6 +141,4 @@ QED
 Theorem sunify_thm =
         unifDefTheory.unify_def |> SRULE[ext_s_check_def]
                                 |> xfer
-
-val _ = export_theory();
 

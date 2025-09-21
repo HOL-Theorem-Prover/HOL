@@ -1,9 +1,9 @@
-open HolKernel boolLib bossLib Parse pred_setTheory finite_mapTheory
-prim_recTheory relationTheory pairTheory bagTheory apply_piTheory
-ntermTheory nsubstTheory nwalkTheory nomsetTheory listTheory
-ramanaLib ntermLib
-
-val _ = new_theory "nwalkstar"
+Theory nwalkstar
+Ancestors
+  pred_set finite_map prim_rec relation pair bag apply_pi nterm
+  nsubst nwalk nomset list
+Libs
+  ramanaLib ntermLib
 
 val (noc_rules, noc_ind, noc_cases) = Hol_reln`
   (v IN nvars t /\ v NOTIN FDOM s ==> noc s t v) /\
@@ -493,4 +493,3 @@ SRW_TAC [][] THEN
 SRW_TAC [][] THEN Cases_on `nvwalk s [] n` THEN
 FULL_SIMP_TAC (psrw_ss()) [pmact_decompose]);
 
-val _ = export_theory ()

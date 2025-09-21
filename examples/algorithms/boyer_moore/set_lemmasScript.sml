@@ -1,15 +1,6 @@
-open HolKernel boolLib bossLib Parse;
-
-open listTheory;
-open rich_listTheory;
-open prim_recTheory;
-open arithmeticTheory;
-open pred_setTheory;
-open pairTheory;
-open boolTheory;
-
-
-val _ = new_theory"set_lemmas";
+Theory set_lemmas
+Ancestors
+  list rich_list prim_rec arithmetic pred_set pair bool
 
 (* Upper bound on members of set puts upper bound on MIN_SET *)
 val MIN_SET_UPPER_BOUND = store_thm(
@@ -54,4 +45,3 @@ val LOWER_BOUND_IS_MIN_SET = store_thm(
     >> fs[]
     );
 
-val _ = export_theory();
