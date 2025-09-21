@@ -1,28 +1,22 @@
 (* ========================================================================= *)
 (* Create "leakageTheory" setting up the theory of information leakage       *)
 (* ========================================================================= *)
+Theory leakage
+Ancestors
+  arithmetic pred_set list state_transformer combin pair num
+  subtype string rich_list real transc lim seq real_sigma
+  extra_bool extra_num extra_pred_set extra_real extra_list
+  extra_string sigma_algebra real_measure real_lebesgue
+  real_probability information
+Libs
+  metisLib jrhUtils simpLib stringSimps listSimps hurdUtils
+  realLib realSimps extra_stringLib
 
-open HolKernel Parse boolLib bossLib;
-
-open metisLib arithmeticTheory pred_setTheory listTheory state_transformerTheory
-     combinTheory pairTheory jrhUtils numTheory simpLib subtypeTheory
-     stringTheory rich_listTheory stringSimps listSimps hurdUtils;
-
-open realTheory realLib realSimps transcTheory limTheory seqTheory real_sigmaTheory;
-
-open extra_boolTheory extra_numTheory extra_pred_setTheory extra_realTheory
-     extra_listTheory extra_stringTheory extra_stringLib;
-
-open sigma_algebraTheory real_measureTheory real_lebesgueTheory
-     real_probabilityTheory;
-
-open informationTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "information"                                   *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = new_theory "leakage";
 val _ = temp_set_fixity "CROSS" (Infixl 600)
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"];
 val real_ss = real_ss -* ["lift_disj_eq", "lift_imp_disj"];
@@ -1918,4 +1912,3 @@ Proof
 QED
 
 
-val _ = export_theory ();

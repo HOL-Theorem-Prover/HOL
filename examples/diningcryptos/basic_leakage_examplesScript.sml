@@ -1,22 +1,15 @@
-open HolKernel Parse boolLib bossLib;
+Theory basic_leakage_examples
+Ancestors
+  arithmetic pred_set list state_transformer extra_num combin
+  pair real num seq subtype transc lim string rich_list
+  information leakage words extra_bool extra_pred_set extra_real
+  extra_list extra_string real_sigma sigma_algebra real_measure
+  real_lebesgue real_probability
+Libs
+  metisLib pred_setLib stringLib realLib jrhUtils realSimps
+  simpLib stringSimps listSimps leakageLib wordsLib
+  extra_stringLib hurdUtils
 
-open metisLib arithmeticTheory pred_setTheory
-     pred_setLib stringLib listTheory state_transformerTheory
-     extra_numTheory combinTheory
-     pairTheory realTheory realLib jrhUtils
-     realSimps numTheory simpLib seqTheory subtypeTheory
-     transcTheory limTheory stringTheory rich_listTheory stringSimps listSimps
-     informationTheory leakageTheory leakageLib wordsTheory wordsLib;
-
-open extra_boolTheory extra_pred_setTheory extra_realTheory extra_listTheory
-     extra_stringTheory extra_stringLib;
-
-open real_sigmaTheory;
-
-open hurdUtils sigma_algebraTheory real_measureTheory real_lebesgueTheory
-     real_probabilityTheory;
-
-val _ = new_theory "basic_leakage_examples";
 val _ = temp_set_fixity "CROSS" (Infixl 600)
 
 val safe_set_ss = (simpLib.++ (bool_ss, PRED_SET_ss));
@@ -625,4 +618,3 @@ val visible_flip_example = store_thm
                       THENC SIMP_CONV arith_ss [flip_example_lem]))
 >> SIMP_TAC real_ss [lg_1, lg_inv, GSYM REAL_INV_1OVER, lg_2, REAL_MUL_LINV]
 >> ONCE_REWRITE_TAC [REAL_MUL_COMM] >> RW_TAC real_ss [GSYM real_div, REAL_INV_1OVER]);
-val _ = export_theory ();
