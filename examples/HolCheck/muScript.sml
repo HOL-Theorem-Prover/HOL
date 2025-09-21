@@ -5,31 +5,14 @@ app load ["bossLib","stringTheory","stringLib","HolBddLib","pairTheory","pred_se
           "optionSimps", "numSimps", "listSimps","pairTools","pairLib","pairSyntax","pred_setTheory","sumTheory","ksTheory","numLib",
           "setLemmasTheory"];
 *)
+Theory mu
+Ancestors
+  pair pred_set list string sum ks setLemmas reach muSyntax env
+Libs
+  pairLib pairTools pairSyntax pred_setLib simpLib stringLib
+  numLib metisLib
 
 
-open HolKernel Parse boolLib bossLib
-
-val _ = new_theory("mu")
-
-
-open pairTheory
-open pairLib
-open pairTools
-open pairSyntax
-open pred_setTheory
-open pred_setLib
-open listTheory
-open stringTheory
-open sumTheory
-open simpLib
-open stringLib
-open numLib
-open metisLib
-open ksTheory
-open setLemmasTheory
-open reachTheory
-open muSyntaxTheory
-open envTheory
 
 infix &&; infix 8 by;
 
@@ -1432,12 +1415,4 @@ THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
   POP_ASSUM (fn t => NTAC 3 (POP_ASSUM (K ALL_TAC)) THEN ASSUME_TAC t) THEN
   FULL_SIMP_TAC std_ss []
 ])
-
-val _ = export_theory()
-
-
-
-
-
-
 
