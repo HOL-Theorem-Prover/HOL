@@ -7,11 +7,12 @@
 (* Interactive use:
   app load ["stringLib", "finite_mapTheory"];
 *)
+Theory opsem
+Ancestors
+  finite_map string
+Libs
+  stringLib IndDefLib IndDefRules
 
-open HolKernel Parse boolLib bossLib
-     stringLib IndDefLib IndDefRules finite_mapTheory;
-
-val _ = new_theory "opsem";
 
 (*---------------------------------------------------------------------------*)
 (* Syntax of the programming language.                                       *)
@@ -276,5 +277,3 @@ val DISJ_TRIPLE = store_thm
  ``!P1 P2 c Q1 Q2. SPEC P1 c Q1 /\ SPEC P2 c Q2
                    ==> SPEC (\s. P1 s \/ P2 s) c (\s. Q1 s \/ Q2 s)``,
  RW_TAC std_ss [SPEC_def] THEN METIS_TAC[]);
-
-val _ = export_theory();
