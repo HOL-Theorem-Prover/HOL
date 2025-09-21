@@ -1,10 +1,10 @@
 (*---------------------------------------------------------------------------*)
 (* A theory of paths through deterministic finite automata                   *)
 (*---------------------------------------------------------------------------*)
+Theory dfa
+Libs
+  BasicProvers
 
-open HolKernel boolLib bossLib BasicProvers;
-
-val _ = new_theory "dfa";
 
 val dfa_path_def =
   Define
@@ -73,4 +73,3 @@ val dfa_path_determ = Q.store_thm
   >> rw []
   >> metis_tac []);
 
-val _ = export_theory ();

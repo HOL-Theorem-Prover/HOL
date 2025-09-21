@@ -2,12 +2,12 @@
 (* The runtime driver for the lexer. Given a DFA, the driver converts a      *)
 (* string to its corresponding token list.                                   *)
 (*---------------------------------------------------------------------------*)
+Theory lexer_runtime
+Ancestors
+  string pair list regexp regexp_compiler lexer_spec dfa
+Libs
+  BasicProvers
 
-open HolKernel Parse boolLib bossLib BasicProvers;
-open stringTheory pairTheory listTheory;
-open regexpTheory regexp_compilerTheory lexer_specTheory dfaTheory;
-
-val _ = new_theory "lexer_runtime";
 
 val strcat_lem = Q.prove
 (`!s1 s2 s3 s4.
@@ -770,4 +770,3 @@ recInduct (fetch "-" "lexer_eval_ind")
   >> fs []
 );
 
-val _ = export_theory ();

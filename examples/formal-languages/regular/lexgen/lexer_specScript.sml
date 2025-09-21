@@ -2,11 +2,10 @@
 (* Specification of a lexer in terms of regular expressions paired with      *)
 (* action functions.                                                         *)
 (*---------------------------------------------------------------------------*)
+Theory lexer_spec
+Ancestors
+  string list rich_list regexp
 
-open HolKernel Parse boolLib bossLib;
-open stringTheory listTheory rich_listTheory regexpTheory;
-
-val _ = new_theory "lexer_spec";
 
 (*---------------------------------------------------------------------------*)
 (* A lexer is specified by a list of regexps, each paired with an action     *)
@@ -197,4 +196,3 @@ Induct_on `toks`
      >> metis_tac [strcat_lem])
 );
 
-val _ = export_theory ();

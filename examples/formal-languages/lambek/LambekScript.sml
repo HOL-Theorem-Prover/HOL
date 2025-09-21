@@ -21,11 +21,10 @@
 (* License along with this program; if not, write to the Free         *)
 (* Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA *)
 (* 02110-1301 USA                                                     *)
+Theory Lambek
+Ancestors
+  pred_set pair list arithmetic integer relation
 
-open HolKernel Parse boolLib bossLib;
-
-open pred_setTheory pairTheory listTheory arithmeticTheory integerTheory;
-open relationTheory;
 
 local
     val PAT_X_ASSUM = PAT_ASSUM;
@@ -41,8 +40,6 @@ in
     fun set  ts = MAP_EVERY Q.ABBREV_TAC ts;    (* from HOL mizar mode *)
     fun take ts = MAP_EVERY Q.EXISTS_TAC ts;    (* from HOL mizar mode *)
 end;
-
-val _ = new_theory "Lambek";
 
 (******************************************************************************)
 (*                                                                            *)
@@ -2266,7 +2263,6 @@ end;
 
 val _ = enable_grammar ();
 
-val _ = export_theory ();
 val _ = html_theory "Lambek";
 
 (* last updated: April 10, 2017 *)
