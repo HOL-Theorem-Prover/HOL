@@ -1,8 +1,7 @@
 
-open HolKernel boolLib bossLib Parse;
-open pred_setTheory arithmeticTheory whileTheory sumTheory;
-
-val _ = new_theory "tailrec";
+Theory tailrec
+Ancestors
+  pred_set arithmetic while sum
 
 (* ---- definitions ----- *)
 
@@ -126,4 +125,3 @@ val SHORT_TAILREC_SIM = store_thm("SHORT_TAILREC_SIM",
   \\ Cases_on `q` \\ fs [SHORT_TAILREC_def,SHORT_TAILREC_PRE_def]
   \\ once_rewrite_tac [TAILREC_PRE_THM] \\ fs []);
 
-val _ = export_theory();

@@ -1,14 +1,12 @@
 
-open HolKernel Parse boolLib bossLib BasicProvers;
+Theory GraphLang
+Ancestors
+  words pair list relation pred_set arithmetic combin arm_decomp
+  set_sep prog address m0_decomp riscv_prog
+Libs
+  BasicProvers wordsLib arm_decompLib m0_decompLib
 
-val _ = new_theory "GraphLang";
 val _ = ParseExtras.temp_loose_equality()
-
-open wordsTheory wordsLib pairTheory listTheory relationTheory;
-open pred_setTheory arithmeticTheory combinTheory;
-open arm_decompTheory set_sepTheory progTheory addressTheory;
-open m0_decompTheory riscv_progTheory;
-open arm_decompLib m0_decompLib;
 
 val op by = BasicProvers.byA
 
@@ -2365,4 +2363,3 @@ val v2w_sing = store_thm("v2w_sing",
   ``v2w [x] = if x then 1w else 0w``,
   Cases_on `x` \\ EVAL_TAC);
 
-val _ = export_theory();

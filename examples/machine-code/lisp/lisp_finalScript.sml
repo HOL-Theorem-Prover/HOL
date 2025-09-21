@@ -1,11 +1,9 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_final";
-
-open lisp_evalTheory lisp_parseTheory lisp_printTheory lisp_proofTheory;
-open lisp_invTheory;
-open pairSyntax helperLib;
-open listTheory pred_setTheory;
-open progTheory addressTheory set_sepTheory;
-open finite_mapTheory;
+Theory lisp_final
+Ancestors
+  lisp_eval lisp_parse lisp_print lisp_proof lisp_inv list
+  pred_set prog address set_sep finite_map set_sep words
+Libs
+  pairSyntax helperLib export_codeLib
 
 val aLISP_def = lisp_opsTheory.aLISP_def;
 val pLISP_def = lisp_opsTheory.pLISP_def;
@@ -135,9 +133,6 @@ fun LISP_SPEC_COMPOSE_RULE [] = fail()
 (* SEP_EXISTS tools *)
 
 (* val tm = ``(SEP_EXISTS f z. cond (z = f + 5)) s`` *)
-
-open set_sepTheory
-open wordsTheory
 
 fun SEP_EXISTS_CONV tm = let
   val m = ``$SEP_EXISTS (P :'a -> ('b -> bool) -> bool) (x :'b -> bool)``
@@ -575,10 +570,7 @@ val _ = save_thm("arm_eval_th",arm_eval_th);
 val _ = save_thm("ppc_eval_th",ppc_eval_th);
 val _ = save_thm("x86_eval_th",x86_eval_th);
 
-open export_codeLib;
-
 val _ = write_code_to_file "arm_eval.s" arm_eval_th
 val _ = write_code_to_file "ppc_eval.s" ppc_eval_th
 val _ = write_code_to_file "x86_eval.s" x86_eval_th
 
-val _ = export_theory();

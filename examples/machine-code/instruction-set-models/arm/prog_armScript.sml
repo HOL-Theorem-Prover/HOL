@@ -1,17 +1,15 @@
 
-open HolKernel boolLib bossLib Parse;
-open pred_setTheory res_quanTheory wordsTheory wordsLib bitTheory arithmeticTheory;
-open listTheory pairTheory combinTheory addressTheory;
-open finite_mapTheory;
-
-open set_sepTheory progTheory;
-open armTheory arm_coretypesTheory arm_stepTheory armLib;
-
-val _ = new_theory "prog_arm";
+Theory prog_arm
+Ancestors
+  pred_set res_quan words bit arithmetic list pair combin address
+  bit_list[qualified] finite_map set_sep prog arm arm_coretypes arm_step
+Libs
+  wordsLib numLib armLib
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 
+val _ = prefer_num();
 
 (* ----------------------------------------------------------------------------- *)
 (* The ARM set                                                                   *)
@@ -754,6 +752,3 @@ val WRITE32_THM = store_thm("WRITE32_THM",
   \\ SRW_TAC [] [] \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [WORD_EQ_ADD_LCANCEL,
        RW [WORD_ADD_0] (Q.SPECL [`w`,`0w`] WORD_EQ_ADD_LCANCEL),
        RW [WORD_ADD_0] (Q.SPECL [`w`,`v`,`0w`] WORD_EQ_ADD_LCANCEL),n2w_11]);
-
-
-val _ = export_theory();

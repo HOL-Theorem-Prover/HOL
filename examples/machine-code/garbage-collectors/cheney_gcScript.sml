@@ -1,9 +1,8 @@
 
-open HolKernel boolLib bossLib Parse;
-open pred_setTheory arithmeticTheory pairTheory listTheory combinTheory finite_mapTheory;
+Theory cheney_gc
+Ancestors
+  pred_set arithmetic pair list combin finite_map
 
-
-val _ = new_theory "cheney_gc";
 val _ = ParseExtras.temp_loose_equality()
 
 val RW = REWRITE_RULE;
@@ -1243,4 +1242,3 @@ val cheney_collector_spec = store_thm("cheney_collector_spec",
   \\ SIMP_TAC std_ss [LENGTH,DECIDE ``~(0 = SUC n)``,MAP,ADD,EQ_ADD_RCANCEL,ZIP,MEM,CONS_11]
   \\ METIS_TAC [PAIR_EQ]);
 
-val _ = export_theory();

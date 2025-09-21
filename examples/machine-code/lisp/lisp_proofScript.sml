@@ -1,7 +1,7 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_proof";
-
-open stringTheory finite_mapTheory pred_setTheory listTheory sumTheory;
-open lisp_typeTheory lisp_semanticsTheory lisp_evalTheory;
+Theory lisp_proof
+Ancestors
+  string finite_map pred_set list sum lisp_type lisp_semantics
+  lisp_eval
 
 val _ = numLib.temp_prefer_num();
 
@@ -940,4 +940,3 @@ val LISP_EVAL_LIMIT_CORRECT = store_thm("LISP_EVAL_LIMIT_CORRECT",
   THEN REWRITE_TAC [EVAL ``TASK_CONT = TASK_EVAL``]
   THEN REWRITE_TAC [TASK_EVAL_def,isDot_def]);
 
-val _ = export_theory();

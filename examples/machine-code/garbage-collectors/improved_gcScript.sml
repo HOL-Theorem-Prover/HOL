@@ -1,8 +1,8 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "improved_gc";
-val _ = ParseExtras.temp_loose_equality()
-open pred_setTheory arithmeticTheory pairTheory listTheory combinTheory;
-open finite_mapTheory sumTheory relationTheory;
+Theory improved_gc
+Ancestors
+  pred_set arithmetic pair list combin finite_map sum relation
 
+val _ = ParseExtras.temp_loose_equality()
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 fun SUBGOAL q = REVERSE (sg q)
@@ -1126,4 +1126,3 @@ val gc_thm = store_thm("gc_thm",
   \\ `R0 m4 a` by FULL_SIMP_TAC std_ss [R0,IN_DEF,heap_element_11]
   \\ METIS_TAC [full_heap_R0]);
 
-val _ = export_theory();

@@ -1,10 +1,11 @@
-open HolKernel Parse boolLib bossLib;
-open multiwordTheory helperLib;
-open wordsTheory wordsLib addressTheory arithmeticTheory listTheory pairSyntax;
-open addressTheory pairTheory set_sepTheory rich_listTheory integerTheory;
-local open mc_tailrecLib blastLib intLib in end
+Theory mc_multiword
+Ancestors
+  multiword words address arithmetic list address pair set_sep
+  rich_list integer
+Libs
+  helperLib wordsLib pairSyntax mc_tailrecLib[qualified]
+  blastLib[qualified] intLib[qualified]
 
-val _ = new_theory "mc_multiword";
 val _ = ParseExtras.temp_loose_equality()
 val _ = temp_delsimps ["NORMEQ_CONV", "TAKE1_DROP"];
 
@@ -4215,4 +4216,3 @@ val (mc_use_fac_def, _,
          (INR (l,r0),cond))
      :num # α word -> (num # α word + num # α word) # bool``
 
-val _ = export_theory();

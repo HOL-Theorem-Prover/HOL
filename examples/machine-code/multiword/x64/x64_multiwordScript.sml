@@ -1,16 +1,13 @@
 
-open HolKernel Parse boolLib bossLib;
-val _ = new_theory "x64_multiword";
+Theory x64_multiword
+Ancestors
+  multiword prog words address arithmetic list address pair
+  set_sep rich_list integer prog_x64_extra
+Libs
+  decompilerLib x64_codegenLib prog_x64Lib x64_compilerLib
+  wordsLib pairSyntax x64_encodeLib
 
 infix \\ val op \\ = op THEN;
-open multiwordTheory;
-
-open progTheory;
-open decompilerLib x64_codegenLib prog_x64Lib x64_compilerLib;
-open wordsTheory wordsLib addressTheory arithmeticTheory listTheory pairSyntax;
-open addressTheory pairTheory set_sepTheory rich_listTheory integerTheory;
-open prog_x64_extraTheory x64_encodeLib
-
 val REV = Tactical.REVERSE;
 
 fun x64_decompile name asm =
@@ -3434,4 +3431,3 @@ val x64_iop_thm = store_thm("x64_iop_thm",
   \\ FULL_SIMP_TAC std_ss []
   \\ EVAL_TAC);
 
-val _ = export_theory();

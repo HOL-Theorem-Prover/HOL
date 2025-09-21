@@ -1,17 +1,12 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_print";
-val _ = ParseExtras.temp_loose_equality()
+Theory lisp_print
+Ancestors
+  words arithmetic list pred_set pair combin finite_map address
+  string lisp_gc lisp_type lisp_inv set_sep divide lisp_parse
+Libs
+  wordsLib compilerLib helperLib decompilerLib prog_armLib
+  prog_ppcLib prog_x86Lib
 
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open compilerLib;
-
-open combinTheory finite_mapTheory addressTheory stringTheory helperLib;;
-open lisp_gcTheory;
-open lisp_typeTheory lisp_invTheory;
-open set_sepTheory;
-open divideTheory;
-open lisp_parseTheory;
-
-open decompilerLib prog_armLib prog_ppcLib prog_x86Lib;
+val _ = ParseExtras.temp_loose_equality();
 
 val decompile_arm = decompile prog_armLib.arm_tools;
 val decompile_ppc = decompile prog_ppcLib.ppc_tools;
@@ -1801,6 +1796,3 @@ fun save_all prefix postfix =
 val _ = save_all "" "_sexp2string_thm"
   ([("arm",arm_sexp2string_th),("ppc",ppc_sexp2string_th)] @
    filter (fn (n,th) => n = "x86") arm_print_sexp_thms);
-
-
-val _ = export_theory();

@@ -1,12 +1,10 @@
 
-open HolKernel boolLib bossLib Parse;
-open pred_setTheory arithmeticTheory pairTheory listTheory wordsTheory;
-open addressTheory set_sepTheory progTheory prog_x86Theory;
-open wordsLib x86_encodeLib helperLib;
-
-open jit_inputTheory;
-
-val _ = new_theory "jit_ops";
+Theory jit_ops
+Ancestors
+  pred_set arithmetic pair list words address set_sep prog
+  prog_x86 jit_input
+Libs
+  wordsLib x86_encodeLib helperLib
 
 val _ = prog_x86Lib.set_x86_code_write_perm_flag true;
 
@@ -498,4 +496,3 @@ val execute_code_and_return = let
 
 val _ = save_thm("execute_code_and_return",execute_code_and_return);
 
-val _ = export_theory();

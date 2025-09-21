@@ -1,10 +1,8 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory bit_listTheory;
+Theory x86_opsem
+Ancestors
+  words bit_list x86_coretypes x86_ast x86_seq_monad
 
-open x86_coretypesTheory x86_astTheory x86_seq_monadTheory;
-
-val _ = new_theory "x86_opsem";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -443,4 +441,3 @@ val x86_execute_def = Define `
   (x86_execute ii (Xprefix Xlock g2 i) len    = lockT (x86_exec ii i len))`;
 
 
-val _ = export_theory ();
