@@ -2,15 +2,13 @@
  * Copyright 1991-1995  University of Cambridge (Author: Monica Nesi)
  * Copyright 2016-2017  University of Bologna   (Author: Chun Tian)
  *)
+Theory ObsCongr
+Ancestors
+  pred_set relation CCS StrongEQ StrongLaws WeakEQ WeakLaws
+Libs
+  CCSLib WeakEQLib
 
-open HolKernel Parse boolLib bossLib;
 
-open pred_setTheory relationTheory;
-
-open CCSLib CCSTheory StrongEQTheory StrongLawsTheory
-     WeakEQTheory WeakEQLib WeakLawsTheory;
-
-val _ = new_theory "ObsCongr";
 val _ = temp_loose_equality ();
 
 (******************************************************************************)
@@ -650,7 +648,6 @@ val OBS_CONGR_BY_WEAK_BISIM = store_thm (
       Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC [] \\
       Q.EXISTS_TAC `Wbsm` >> ASM_REWRITE_TAC [] ]);
 
-val _ = export_theory ();
 val _ = html_theory "ObsCongr";
 
 (* last updated: Jun 20, 2017 *)

@@ -7,17 +7,15 @@
 (*                 2018-2019 Fondazione Bruno Kessler, Italy (Chun Tian)      *)
 (*                 2023-2024 The Australian National University (Chun Tian)   *)
 (******************************************************************************)
+Theory CCS
+Ancestors
+  pred_set relation option list rich_list finite_map
+  generic_terms nomset
+  term[qualified]  (* for SUB's syntax only *)
+Libs
+  pred_setLib CCSLib binderLib nomdatatype
 
-open HolKernel Parse boolLib bossLib;
 
-open pred_setTheory pred_setLib relationTheory optionTheory listTheory CCSLib
-     rich_listTheory finite_mapTheory;
-
-open generic_termsTheory binderLib nomsetTheory nomdatatype;
-
-local open termTheory; in end; (* for SUB's syntax only *)
-
-val _ = new_theory "CCS";
 
 val set_ss = std_ss ++ PRED_SET_ss;
 
@@ -2900,7 +2898,6 @@ val nti = binderLib.NTI {
   }
 val _ = binderLib.export_nomtype(“:'a CCS”, nti)
 
-val _ = export_theory ();
 val _ = html_theory "CCS";
 
 (* Bibliography:

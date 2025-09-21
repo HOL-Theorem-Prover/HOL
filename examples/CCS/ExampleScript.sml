@@ -6,23 +6,16 @@
 (*                 2016-2017 University of Bologna, Italy (Chun Tian)         *)
 (*                 2018-2019 Fondazione Bruno Kessler, Italy (Chun Tian)      *)
 (******************************************************************************)
+Theory Example
+Ancestors
+  combin pred_set relation pair sum list arithmetic string CCS
+  StrongEQ StrongLaws WeakEQ WeakLaws ObsCongr ObsCongrLaws
+  Congruence CoarsestCongr Trace Expansion Contraction
+  BisimulationUpto UniqueSolutions Multivariate
+Libs
+  EmitTeX CCSLib CCSSyntax CCSConv StrongEQLib WeakEQLib
+  ObsCongrLib
 
-open HolKernel Parse boolLib bossLib;
-
-open combinTheory pred_setTheory relationTheory pairTheory sumTheory listTheory
-     arithmeticTheory stringTheory EmitTeX;
-
-(* local theories *)
-open CCSLib CCSTheory CCSSyntax CCSConv;
-open StrongEQTheory StrongEQLib StrongLawsTheory;
-open WeakEQTheory WeakEQLib WeakLawsTheory;
-open ObsCongrTheory ObsCongrLib ObsCongrLawsTheory;
-open CongruenceTheory CoarsestCongrTheory;
-open TraceTheory ExpansionTheory ContractionTheory;
-open BisimulationUptoTheory UniqueSolutionsTheory;
-open MultivariateTheory;
-
-val _ = new_theory "Example";
 
 (* For paper generating purposes, some type abbreviations are disabled *)
 val _ = disable_tyabbrev_printing "transition";
@@ -131,7 +124,6 @@ Proof
  >> REWRITE_TAC [WG2]
 QED
 
-val _ = export_theory ();
 val _ = html_theory "Example";
 
 (* Emit theory books in TeX *)
