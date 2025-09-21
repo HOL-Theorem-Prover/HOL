@@ -7,10 +7,10 @@
   app load ["tablesTheory"];
   open word8Theory pairTheory;
 *)
+Theory Mult
+Ancestors
+  word8 tables
 
-open HolKernel Parse boolLib bossLib word8Theory tablesTheory;
-
-val _ = new_theory "Mult";
 
 val [a,c] = CONJUNCTS XOR8_AC;
 
@@ -169,4 +169,3 @@ val PolyExp_def =
    `PolyExp x n = if n=0 then ONE else x ** PolyExp x (n-1)`;
 
 
-val _ = export_theory();

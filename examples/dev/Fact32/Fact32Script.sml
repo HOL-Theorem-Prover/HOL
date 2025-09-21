@@ -4,11 +4,11 @@
 (* proves a data refinement result.                                          *)
 (*****************************************************************************)
 
-(******************************************************************************
- * Open theories
- ******************************************************************************)
-open HolKernel Parse boolLib bossLib wordsLib
-     wordsTheory arithmeticTheory pairLib pairTheory PairRules combinTheory;
+Theory Fact32
+Ancestors
+  words arithmetic pair combin
+Libs
+  wordsLib pairLib PairRules
 
 (******************************************************************************
  * Set default parsing to natural numbers rather than integers
@@ -19,12 +19,6 @@ val _ = numLib.temp_prefer_num();
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
-
-(*****************************************************************************)
-(* Start new theory "Fact32"                                                 *)
-(*****************************************************************************)
-
-val _ = new_theory "Fact32";
 
 (*---------------------------------------------------------------------------*)
 (* Iterative multiplication on nums                                          *)
@@ -366,4 +360,3 @@ val FactAbs =
   |- FACT 12 < dimword(:32) = T : thm
   |- FACT 13 < dimword(:32) = F : thm
 *)
-val _ = export_theory();

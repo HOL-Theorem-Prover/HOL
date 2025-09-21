@@ -9,9 +9,12 @@ open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLi
 
 quietdec := false;
 *)
+Theory bigInst
+Ancestors
+  arithmetic words pair while list pred_set finite_map preARM CFL
+Libs
+  numLib wordsLib pred_setSimps simplifier
 
-open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLib pairTheory whileTheory
-       listTheory pred_setSimps pred_setTheory finite_mapTheory preARMTheory CFLTheory simplifier;
 
 (*---------------------------------------------------------------------------------*)
 (*   This theory is about stack-involved big instructions including:               *)
@@ -31,8 +34,6 @@ open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLi
 (*     passing), heap variables are not taken into account since they shouldn't be *)
 (*     transferred through the stack                                               *)
 (*---------------------------------------------------------------------------------*)
-
-val _ = new_theory "bigInst";
 
 (*---------------------------------------------------------------------------------*)
 (*         Expressions                                                             *)
@@ -1042,4 +1043,3 @@ val sr_list_def = Define `
 
 (*---------------------------------------------------------------------------------*)
 
-val _ = export_theory();
