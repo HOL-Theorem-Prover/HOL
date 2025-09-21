@@ -1,20 +1,10 @@
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory;
-open combinTheory;
-open whileTheory;
-open indexedListsTheory;
-open numeralTheory;
-open primrecfnsTheory;
-open listTheory;
-open mp_then;
-open boolTheory;
-open numpairTheory;
-open pred_setTheory;
-open rmModelTheory;
-open rmToolsTheory;
-open rmToPairTheory;
+Theory rmRecursiveFuncs
+Ancestors
+  arithmetic combin while indexedLists numeral primrecfns list
+  bool numpair pred_set rmModel rmTools rmToPair
+Libs
+  mp_then
 
-val _ = new_theory "rmRecursiveFuncs";
 (*
    ----------------------------------
    ------      Projection      ------
@@ -456,4 +446,3 @@ Proof
   metis_tac[]
 QED
 
-val _ = export_theory ()

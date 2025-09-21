@@ -1,17 +1,7 @@
-open HolKernel Parse boolLib bossLib finite_mapTheory;
-open recursivefnsTheory;
-open prnlistTheory;
-open primrecfnsTheory;
-open listTheory;
-open arithmeticTheory;
-open numpairTheory;
-open nlistTheory;
-open pred_setTheory;
-open turing_machineTheory;
-open whileTheory
-open logrootTheory;
-
-val _ = new_theory "turing_machine_primeq";
+Theory turing_machine_primeq
+Ancestors
+  finite_map recursivefns prnlist primrecfns list arithmetic
+  numpair nlist pred_set turing_machine while logroot
 
 Triviality DISJ_IMP_EQ[simp]:
   ((x = y) ∨ P ⇔ (x ≠ y ⇒ P)) ∧
@@ -1789,4 +1779,3 @@ QED
 
 (* as final step, should show that we can extract number under head *)
 
-val _ = export_theory();

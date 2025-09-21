@@ -1,14 +1,9 @@
-open HolKernel Parse boolLib bossLib
-open numsAsCompStatesTheory
-open boolListsTheory
-open extNatTheory pred_setTheory recfunsTheory prtermTheory recursivefnsTheory
-     primrecfnsTheory arithmeticTheory
-
-open reductionEval;
-
-
-val _ = new_theory "kolmogorov_complexity";
-
+Theory kolmogorov_complexity
+Ancestors
+  numsAsCompStates boolLists extNat pred_set recfuns prterm
+  recursivefns primrecfns arithmetic
+Libs
+  reductionEval
 
 Theorem TWO_TIMES_DIV[simp]:
   (2 * n DIV 2 = n) ∧ (2 * n + 1) DIV 2 = n ∧ (2 * n + 2) DIV 2 = n + 1
@@ -161,4 +156,3 @@ Proof
   metis_tac[churchnumTheory.bnf_church,normal_orderTheory.bnf_bnf_of]
 QED
 
-val _ = export_theory();

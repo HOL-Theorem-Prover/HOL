@@ -1,19 +1,9 @@
-open HolKernel Parse boolLib bossLib
-
-open arithmeticTheory whileTheory logrootTheory pred_setTheory listTheory;
-open recursivefnsTheory;
-open prnlistTheory;
-open primrecfnsTheory;
-open prtermTheory;
-open nlistTheory;
-
-open recfunsTheory;
-open recsetsTheory;
-
-open reductionEval;
-open churchDBTheory;
-
-val _ = new_theory "recdegrees";
+Theory recdegrees
+Ancestors
+  arithmetic while logroot pred_set list recursivefns prnlist
+  primrecfns prterm nlist recfuns recsets churchDB
+Libs
+  reductionEval
 
 val _ = Datatype`form = BASE num num | EXISTS num form | ALL num form`
 
@@ -475,4 +465,3 @@ QED
 
 
 *)
-val _ = export_theory()

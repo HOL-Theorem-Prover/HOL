@@ -1,15 +1,7 @@
-open HolKernel Parse boolLib bossLib finite_mapTheory
-
-open recursivefnsTheory
-open prnlistTheory
-open primrecfnsTheory
-open listTheory
-open arithmeticTheory
-open numpairTheory
-open pred_setTheory
-
-val _ = new_theory "register_machine";
-
+Theory register_machine
+Ancestors
+  finite_map recursivefns prnlist primrecfns list arithmetic
+  numpair pred_set
 
 val _ = Datatype `instruction = Inc num | Dec num | JZ num num bool`;
 
@@ -161,4 +153,3 @@ Then we need to show Turing Machine can simulate the original 3 instruction set
 
 *)
 
-val _ = export_theory();

@@ -1,24 +1,9 @@
 
-open HolKernel Parse boolLib bossLib finite_mapTheory;
-open recursivefnsTheory;
-open prnlistTheory;
-open primrecfnsTheory;
-open listTheory;
-open arithmeticTheory;
-open numpairTheory;
-open pred_setTheory;
-open recfunsTheory;
-open extNatTheory;
-open prtermTheory;
-open pred_setTheory;
-open realTheory;
-open real_sigmaTheory;
-open transcTheory;
-open boolListsTheory;
-local open numposrepTheory in end
-val _ = new_theory "kraft_ineq";
-
-val _ = intLib.deprecate_int()
+Theory kraft_ineq
+Ancestors
+  finite_map recursivefns prnlist primrecfns list arithmetic
+  numpair pred_set recfuns extNat prterm pred_set real real_sigma
+  transc boolLists numposrep[qualified]
 
 val _ = hide "lg" (* transc$lg is now log base 2 *)
 
@@ -2030,5 +2015,3 @@ QED
 
 Theorem kraft_finite_converse =
   kraft_finite_ineq2 |> SIMP_RULE (srw_ss()) [REAL_SUM_FOLDR, GSYM powr_negexp]
-
-val _ = export_theory();

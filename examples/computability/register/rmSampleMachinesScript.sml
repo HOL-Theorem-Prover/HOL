@@ -1,19 +1,9 @@
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory;
-open combinTheory;
-open whileTheory;
-open indexedListsTheory;
-open numeralTheory;
-open primrecfnsTheory;
-open listTheory;
-open mp_then;
-open boolTheory;
-open numpairTheory;
-open pred_setTheory;
-open rmModelTheory;
-open rmToolsTheory;
-
-val _ = new_theory "rmSampleMachines";
+Theory rmSampleMachines
+Ancestors
+  arithmetic combin while indexedLists numeral primrecfns list
+  bool numpair pred_set rmModel rmTools
+Libs
+  mp_then
 
 fun generate_machine_rwts thm =
   let val (mname,tm)= dest_eq (concl thm)
@@ -904,4 +894,3 @@ Proof
     >> rw[ADD1]
 QED
 
-val _ = export_theory ()

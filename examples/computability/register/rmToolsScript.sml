@@ -1,18 +1,9 @@
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory;
-open combinTheory;
-open whileTheory;
-open indexedListsTheory;
-open numeralTheory;
-open primrecfnsTheory;
-open listTheory;
-open mp_then;
-open boolTheory;
-open numpairTheory;
-open pred_setTheory;
-open rmModelTheory;
-
-val _ = new_theory "rmTools";
+Theory rmTools
+Ancestors
+  arithmetic combin while indexedLists numeral primrecfns list
+  bool numpair pred_set rmModel
+Libs
+  mp_then
 
 val identity_def = Define `
   identity = <|
@@ -1126,4 +1117,3 @@ Proof
  simp[rm_component_equality]
 QED
 
-val _ = export_theory ()

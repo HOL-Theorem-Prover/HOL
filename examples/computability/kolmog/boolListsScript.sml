@@ -1,11 +1,9 @@
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory listTheory pred_setTheory
-open primrecfnsTheory unary_recfnsTheory recursivefnsTheory
-     prtermTheory recfunsTheory
-open reductionEval
-val _ = new_theory "boolLists";
-
-val _ = intLib.deprecate_int()
+Theory boolLists
+Ancestors
+  arithmetic list pred_set primrecfns unary_recfns recursivefns
+  prterm recfuns
+Libs
+  reductionEval
 
 val _ = ParseExtras.tight_equality()
 
@@ -1263,5 +1261,3 @@ QED
 Theorem checkpair_i_def[simp,allow_rebind] = new_specification(
   "checkpair_i_def", ["checkpair_i"],
   MATCH_MP unary_rec_fns_phi recfn_checkpair)
-
-val _ = export_theory();

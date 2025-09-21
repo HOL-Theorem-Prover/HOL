@@ -1,16 +1,10 @@
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory whileTheory logrootTheory pred_setTheory listTheory
-open reductionEval;
-open churchoptionTheory churchlistTheory recfunsTheory
-     kolmogorov_complexityTheory invarianceResultsTheory boolListsTheory
-open churchDBTheory
-open recursivefnsTheory primrecfnsTheory prtermTheory
-open unary_recfnsTheory
-
-val _ = new_theory "pfreefns";
-
-val _ = intLib.deprecate_int()
+Theory pfreefns
+Ancestors
+  arithmetic while logroot pred_set list churchoption churchlist
+  recfuns kolmogorov_complexity invarianceResults boolLists
+  churchDB recursivefns primrecfns prterm unary_recfns
+Libs
+  reductionEval
 
 Theorem bnf_of_SOME_lameq:
   bnf_of M = SOME N ⇔ M == N ∧ bnf N
@@ -930,5 +924,3 @@ Proof
   strip_tac >> csimp[Upfi_correct1] >> irule Upf_SOME_pfree_exists >>
   fs[Phi_SOME_lameq, Upfi_def] >> metis_tac[]
 QED
-
-val _ = export_theory();

@@ -1,12 +1,9 @@
-open HolKernel boolLib bossLib Parse binderLib
-
-open churchnumTheory churchboolTheory
-open reductionEval pred_setTheory termTheory chap3Theory
-open normal_orderTheory
-open head_reductionTheory
-open unary_recfnsTheory
-
-val _ = new_theory "churchlist"
+Theory churchlist
+Ancestors
+  churchnum churchbool pred_set term chap3 normal_order
+  head_reduction unary_recfns
+Libs
+  binderLib reductionEval
 
 val lSYM = MATCH_MP chap2Theory.lameq_SYM
 
@@ -638,4 +635,3 @@ Proof
   asm_simp_tac (bsrw_ss()) [cnfst_behaviour, Cong cvcons_cong]
 QED
 
-val _ = export_theory()
