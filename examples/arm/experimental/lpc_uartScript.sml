@@ -1,11 +1,9 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory wordsLib listTheory;
-
-open armTheory arm_coretypesTheory;
-
-val _ = new_theory "lpc_uart";
-
+Theory lpc_uart
+Ancestors
+  words list arm arm_coretypes
+Libs
+  wordsLib
 
 (* We define the state of a UART interface *)
 
@@ -295,4 +293,3 @@ val UART0_WRITE = store_thm("UART0_WRITE",
 
 *)
 
-val _ = export_theory();

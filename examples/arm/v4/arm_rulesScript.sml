@@ -9,12 +9,13 @@
 (* interactive use:
   app load ["systemTheory", "wordsLib", "armLib", "arm_evalTheory"];
 *)
+Theory arm_rules
+Ancestors
+  arithmetic bit words update arm system arm_eval
+Libs
+  Q wordsLib
 
-open HolKernel boolLib Parse bossLib;
-open Q arithmeticTheory bitTheory wordsTheory wordsLib;
-open updateTheory armTheory systemTheory arm_evalTheory;
 
-val _ = new_theory "arm_rules";
 val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
@@ -821,4 +822,3 @@ val _ = save_thm("ARM_MCR", ARM_MCR);
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory();

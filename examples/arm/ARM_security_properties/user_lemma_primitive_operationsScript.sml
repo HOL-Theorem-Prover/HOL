@@ -1,15 +1,15 @@
 (*  This theory covers the semi-automatic proofs on primitive operations *)
 (*     and simplification concepts needed to show the user lemma         *)
 (*  Author: Oliver Schwarz                                               *)
+Theory user_lemma_primitive_operations
+Ancestors
+  arm_coretypes arm_seq_monad arm_opsem arm_step MMU MMU_Setup
+  inference_rules switching_lemma_helper switching_lemma
+  user_lemma_basics words
+Libs
+  proofManagerLib tacticsLib ARM_proverLib ARM_prover_toolsLib
+  wordsLib
 
-open HolKernel boolLib bossLib Parse proofManagerLib;
-open arm_coretypesTheory arm_seq_monadTheory arm_opsemTheory arm_stepTheory;
-open MMUTheory MMU_SetupTheory inference_rulesTheory switching_lemma_helperTheory switching_lemmaTheory;
-open tacticsLib ARM_proverLib ARM_prover_toolsLib;
-open user_lemma_basicsTheory;
-open wordsTheory wordsLib;
-
-val _ =  new_theory("user_lemma_primitive_operations");
 
 val _ = goalStack.chatting := !Globals.interactive
 val _ = temp_overload_on ("return", ``constT``);
@@ -2077,4 +2077,3 @@ val simplist_export_thm = save_thm(
 
 
 
-val _ = export_theory();

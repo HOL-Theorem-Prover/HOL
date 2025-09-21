@@ -10,12 +10,13 @@
   app load ["pred_setSimps", "io_onestepTheory", "armLib", "wordsLib",
             "armTheory", "coreTheory", "lemmasTheory"];
 *)
+Theory interrupts
+Ancestors
+  arithmetic io_onestep words arm core lemmas
+Libs
+  Q wordsLib
 
-open HolKernel boolLib bossLib;
-open Q arithmeticTheory wordsLib;
-open io_onestepTheory wordsTheory armTheory coreTheory lemmasTheory;
 
-val _ = new_theory "interrupts";
 val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------- *)
 
@@ -439,4 +440,3 @@ val SIMP_interrupt2exception5 = save_thm("SIMP_interrupt2exception5",
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory();

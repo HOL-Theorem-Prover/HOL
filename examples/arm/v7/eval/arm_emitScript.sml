@@ -8,15 +8,13 @@
   app load ["arm_evalTheory", "wordsLib", "pred_setSyntax", "emitLib",
             "EmitTeX", "extended_emitTheory"];
 *)
+Theory arm_emit
+Ancestors
+  arm_coretypes arm_ast arm_seq_monad arm_decoder arm_opsem arm
+  arm_eval extended_emit
+Libs
+  wordsLib EmitML
 
-open HolKernel boolLib bossLib Parse wordsLib;
-
-open arm_coretypesTheory arm_astTheory arm_seq_monadTheory
-     arm_decoderTheory arm_opsemTheory armTheory arm_evalTheory;
-
-open EmitML extended_emitTheory;
-
-val _ = new_theory "arm_emit";
 
 (* ------------------------------------------------------------------------ *)
 
@@ -307,4 +305,3 @@ val _ = emitML (!Globals.emitMLDir) ("arm",
 
 (* ------------------------------------------------------------------------ *)
 
-val _ = export_theory ();

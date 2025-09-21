@@ -7,13 +7,11 @@
 (* interactive use:
   app load ["armTheory", "wordsLib"];
 *)
+Theory arm_step
+Ancestors
+  arithmetic bit words combin arm_coretypes arm_seq_monad
+  arm_opsem arm
 
-open HolKernel boolLib bossLib;
-
-open arithmeticTheory bitTheory wordsTheory combinTheory;
-open arm_coretypesTheory arm_seq_monadTheory arm_opsemTheory armTheory;
-
-val _ = new_theory "arm_step";
 
 (* ------------------------------------------------------------------------- *)
 
@@ -329,4 +327,3 @@ val STATE_OPTION_def = Define`
 val ARM_NEXT_def = Define`
   ARM_NEXT inp = STATE_OPTION (arm_next <| proc := 0 |> inp)`;
 
-val _ = export_theory ();

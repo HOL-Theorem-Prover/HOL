@@ -6,13 +6,11 @@
   app load ["arm_decoderTheory", "armTheory", "wordsLib",
             "patriciaTheory", "parmonadsyntax"];
 *)
+Theory arm_eval
+Ancestors
+  patricia arm_coretypes arm_ast arm_seq_monad arm_decoder
+  arm_opsem arm
 
-open HolKernel boolLib bossLib Parse;
-
-open patriciaTheory arm_coretypesTheory arm_astTheory arm_seq_monadTheory
-     arm_decoderTheory arm_opsemTheory armTheory;
-
-val _ = new_theory "arm_eval";
 
 (* ------------------------------------------------------------------------ *)
 
@@ -195,4 +193,3 @@ val _ = computeLib.add_persistent_funs
 
 (* ------------------------------------------------------------------------ *)
 
-val _ = export_theory ()

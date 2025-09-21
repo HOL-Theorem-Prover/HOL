@@ -9,13 +9,13 @@
     ["arm_seq_monadTheory", "wordsLib", "intLib", "integer_wordTheory",
      "stringSimps", "parmonadsyntax"];
 *)
+Theory arm_opsem
+Ancestors
+  words integer_word arm_coretypes arm_seq_monad
+Libs
+  wordsLib
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory wordsLib integer_wordTheory;
 
-open arm_coretypesTheory arm_seq_monadTheory;
-
-val _ = new_theory "arm_opsem";
 val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------ *)
 
@@ -3933,4 +3933,3 @@ val _ = List.app
 
 (* ------------------------------------------------------------------------ *)
 
-val _ = export_theory ();
