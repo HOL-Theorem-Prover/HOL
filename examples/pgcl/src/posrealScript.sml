@@ -12,10 +12,12 @@ val () = app load
  ["bossLib", "metisLib", "arithmeticTheory", "realLib", "posetTheory"];
 val () = quietdec := true;
 *)
+Theory posreal
+Ancestors
+  combin option arithmetic real poset
+Libs
+  metisLib realLib
 
-open HolKernel Parse boolLib bossLib metisLib;
-open combinTheory optionTheory arithmeticTheory realTheory realLib;
-open posetTheory;
 
 (*
 val () = quietdec := false;
@@ -24,8 +26,6 @@ val () = quietdec := false;
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "posreal"                                       *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = new_theory "posreal";
 
 (* ------------------------------------------------------------------------- *)
 (* Helpful proof tools                                                       *)
@@ -2176,4 +2176,3 @@ val bound1_rat = store_thm
    RW_TAC std_ss [bound1_min, min_ratl]
    >> FULL_SIMP_TAC arith_ss []);
 
-val _ = export_theory();
