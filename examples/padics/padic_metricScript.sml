@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open nu_ratTheory ratTheory metricTheory real_of_ratTheory realTheory;
-
-val _ = new_theory "padic_metric";
+Theory padic_metric
+Ancestors
+  nu_rat rat metric real_of_rat real
 
 val _ = augment_srw_ss [
     rewrites[REAL_OF_RAT_NUM_CLAUSES,REAL_OF_RAT_ADD,REAL_OF_RAT_MUL]
@@ -553,4 +551,3 @@ Proof
   >> metis_tac[REAL_DIV_RMUL,REAL_LT_IMP_NE,REAL_LT_MUL2,PADIC_ABS_POS,dividesTheory.PRIME_POS]
 QED
 
-val _ = export_theory();
