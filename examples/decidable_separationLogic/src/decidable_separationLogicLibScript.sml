@@ -1,4 +1,9 @@
-open HolKernel Parse boolLib bossLib;
+Theory decidable_separationLogicLib
+Ancestors
+  finite_map relation pred_set sorting list rich_list
+  decidable_separationLogic string
+Libs
+  congLib listLib
 
 (*
 quietdec := true;
@@ -11,15 +16,10 @@ map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
 show_assums := true;
 *)
 
-open finite_mapTheory relationTheory pred_setTheory congLib sortingTheory
-   listTheory rich_listTheory decidable_separationLogicTheory listLib stringTheory;
-
-
 (*
 quietdec := false;
 *)
 
-val _ = new_theory "decidable_separationLogicLib";
 val _ = ParseExtras.temp_loose_equality()
 
 val nchotomy_thm = prove (``!x.
@@ -2830,4 +2830,3 @@ DB.find "SF_POINTS_TO_LIST_def"
 
 *)
 
-val _ = export_theory();
