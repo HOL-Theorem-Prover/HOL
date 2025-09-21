@@ -28,12 +28,10 @@
    Isabelle/HOL), the type definition mechanism can create the type
    directly so the Ackermann bijection is not required.
 *)
+Theory hfs
+Ancestors
+  pred_set finite_set
 
-open HolKernel Parse boolLib bossLib;
-
-open pred_setTheory finite_setTheory
-
-val _ = new_theory "hfs";
 
 Overload mk[local] = “fSUM_IMAGE ((EXP) 2)”
 
@@ -380,4 +378,3 @@ Proof
   simp[hIN_reduces]
 QED
 
-val _ = export_theory();
