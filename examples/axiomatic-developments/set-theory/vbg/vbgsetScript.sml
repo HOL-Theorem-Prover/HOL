@@ -1,9 +1,9 @@
 (* Playing around with what is really Morse-Kelley set theory *)
+Theory vbgset
+Libs
+  boolSimps
 
-open HolKernel boolLib bossLib Parse
-open boolSimps
 
-val _ = new_theory "vbgset"
 val _ = ParseExtras.temp_loose_equality()
 
 (* hide constants from the existing (typed) set theory *)
@@ -661,4 +661,3 @@ val FOUNDATION3 = store_thm(
 
 val _ = delete_const "bad"
 
-val _ = export_theory()

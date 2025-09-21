@@ -1,8 +1,8 @@
-open HolKernel Parse boolLib bossLib
-open vbgsetTheory
-open boolSimps
-
-val _ = new_theory "vbgnats"
+Theory vbgnats
+Ancestors
+  vbgset
+Libs
+  boolSimps
 
 val vSUC_def = Define`vSUC x = x ∪ {x}`
 
@@ -355,4 +355,3 @@ val Nats_least_element = save_thm(
 
 
 
-val _ = export_theory()

@@ -1,9 +1,8 @@
-open HolKernel boolLib Parse bossLib
-
-open vbgsetTheory vbgnatsTheory
-open boolSimps
-
-val _ = new_theory "ordinal"
+Theory ordinal
+Ancestors
+  vbgset vbgnats
+Libs
+  boolSimps
 
 val poc_def = Define`
   poc A R ⇔
@@ -261,10 +260,6 @@ val orderiso_ordinals = store_thm(
   `iseg α ordle e = e` by metis_tac [ords_segs2] >>
   metis_tac [])
 
-
-
-
-val _ = export_theory()
 
 
 
