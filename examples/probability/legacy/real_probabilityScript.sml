@@ -13,19 +13,16 @@
 (*                       Concordia University                                *)
 (*                                                                           *)
 (* ========================================================================= *)
+Theory real_probability
+Ancestors
+  arithmetic prim_rec seq res_quan list rich_list pair combin
+  real option transc real_sigma pred_set iterate topology
+  sigma_algebra real_measure real_lebesgue
+Libs
+  res_quanTools realLib pred_setLib mesonLib hurdUtils
 
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory prim_recTheory seqTheory res_quanTheory res_quanTools
-     listTheory rich_listTheory pairTheory combinTheory realTheory realLib
-     optionTheory transcTheory real_sigmaTheory pred_setTheory pred_setLib
-     mesonLib hurdUtils iterateTheory topologyTheory;
-
-open sigma_algebraTheory real_measureTheory real_lebesgueTheory;
 
 val set_ss = std_ss ++ PRED_SET_ss;
-
-val _ = new_theory "real_probability";
 
 val _ = intLib.deprecate_int ();
 val _ = ratLib.deprecate_rat ();
@@ -1777,4 +1774,3 @@ val COND_PROB_INTER_SPLIT = store_thm
         by METIS_TAC [REAL_MUL_ASSOC, REAL_MUL_COMM]
  >> RW_TAC std_ss [cond_prob_def, real_div, INTER_ASSOC, REAL_MUL_LINV, REAL_MUL_RID]);
 
-val _ = export_theory ();

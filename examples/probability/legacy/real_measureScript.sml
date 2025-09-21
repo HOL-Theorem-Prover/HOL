@@ -5,15 +5,14 @@
 (* ------------------------------------------------------------------------- *)
 (* Based on the work of Aaron Coble (and Joe Hurd), Cambridge University     *)
 (* ------------------------------------------------------------------------- *)
+Theory real_measure
+Ancestors
+  arithmetic real seq pred_set res_quan list transc rich_list
+  pair combin option real_sigma iterate real_of_rat sigma_algebra
+  real_borel
+Libs
+  res_quanTools realLib hurdUtils
 
-open HolKernel Parse boolLib bossLib arithmeticTheory realTheory
-     seqTheory pred_setTheory res_quanTheory res_quanTools listTheory transcTheory
-     rich_listTheory pairTheory combinTheory realLib optionTheory
-     real_sigmaTheory iterateTheory real_of_ratTheory;
-
-open hurdUtils sigma_algebraTheory real_borelTheory;
-
-val _ = new_theory "real_measure";
 
 val _ = intLib.deprecate_int ();
 val _ = ratLib.deprecate_rat ();
@@ -2519,4 +2518,3 @@ val borel_measurable_SIGMA_borel_measurable = store_thm
    >- FULL_SIMP_TAC std_ss [measure_space_def, borel_measurable_const]
    >> METIS_TAC [borel_measurable_plus_borel_measurable]);
 
-val _ = export_theory ();
