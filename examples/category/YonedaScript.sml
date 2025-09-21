@@ -1,6 +1,8 @@
-open HolKernel Parse boolLib bossLib SatisfySimps pred_setTheory categoryTheory functorTheory nat_transTheory hom_functorTheory ens_catTheory;
-
-val _ = new_theory "Yoneda";
+Theory Yoneda
+Ancestors
+  pred_set category functor_ nat_trans hom_functor ens_cat
+Libs
+  SatisfySimps
 
 val YfunctorNT_def = Define`
   YfunctorNT c f = mk_nt <|
@@ -530,5 +532,3 @@ srw_tac [][hom_def,id_maps_to] >>
 fsrw_tac [][maps_to_in_def] >>
 imp_res_tac id_maps_to >>
 fsrw_tac [][maps_to_in_def]);
-
-val _ = export_theory ();

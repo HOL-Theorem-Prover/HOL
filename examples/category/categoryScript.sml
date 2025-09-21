@@ -1,6 +1,8 @@
-open HolKernel Parse boolLib bossLib pairTheory pred_setTheory SatisfySimps boolSimps;
-
-val _ = new_theory "category";
+Theory category
+Ancestors
+  pair pred_set
+Libs
+  SatisfySimps boolSimps
 
 Definition extensional_def:
   extensional f x <=> ∀e. e ∉ x ⇒ (f e = ARB)
@@ -1359,4 +1361,3 @@ srw_tac [][] >>
 match_mp_tac composable_maps_to >>
 fsrw_tac [][maps_to_in_def,composable_in_def]);
 
-val _ = export_theory ();

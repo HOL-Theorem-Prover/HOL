@@ -1,6 +1,9 @@
-open HolKernel Parse boolLib boolSimps bossLib SatisfySimps categoryTheory functorTheory pred_setTheory limitTheory;
+Theory ens_cat
+Ancestors
+  category functor_ pred_set limit
+Libs
+  boolSimps SatisfySimps
 
-val _ = new_theory "ens_cat";
 val _ = ParseExtras.temp_loose_equality()
 
 val HasFunType_def = Define`
@@ -288,5 +291,3 @@ fsrw_tac [][SUBSET_DEF] >- (
   srw_tac [][] >> fsrw_tac [][IsTypedFun_def] ) >>
 srw_tac [][]);
 val _ = export_rewrites["is_functor_inclusion_functor"];
-
-val _ = export_theory();
