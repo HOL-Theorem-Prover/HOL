@@ -1,7 +1,6 @@
-open HolKernel Parse boolLib bossLib stringTheory;
-
-val _ = new_theory "SlaneyRL";
-
+Theory SlaneyRL
+Ancestors
+  string
 
 Datatype: s_prop = s_VAR string
           | s_IMP s_prop s_prop
@@ -252,4 +251,3 @@ Proof
      )
 QED
 
-val _ = export_theory();

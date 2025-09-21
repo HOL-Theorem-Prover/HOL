@@ -3,22 +3,15 @@
 (*    Translation from Property Specification Language (PSL) to Reset LTL     *)
 (*                                                                            *)
 (******************************************************************************)
+Theory psl_to_rltl
+Ancestors
+  FinitePSLPath PSLPath UnclockedSemantics SyntacticSugar Lemmas
+  Rewrites Model rltl_to_ltl RewritesProperties Projection
+  SyntacticSugar arithmetic psl_lemmata list rich_list pred_set
+  prop_logic infinite_path temporal_deep_mixed rltl full_ltl
+Libs
+  numLib intLib tuerk_tacticsLib res_quanTools Sanity
 
-open HolKernel Parse boolLib bossLib;
-
-open FinitePSLPathTheory PSLPathTheory UnclockedSemanticsTheory SyntacticSugarTheory
-     LemmasTheory RewritesTheory ModelTheory rltl_to_ltlTheory
-     RewritesPropertiesTheory ProjectionTheory SyntacticSugarTheory
-     arithmeticTheory psl_lemmataTheory
-     listTheory numLib intLib rich_listTheory pred_setTheory prop_logicTheory
-     infinite_pathTheory temporal_deep_mixedTheory
-     rltlTheory full_ltlTheory tuerk_tacticsLib res_quanTools;
-
-open Sanity;
-
-val _ = intLib.deprecate_int();
-
-val _ = new_theory "psl_to_rltl";
 
 val TRANSLATE_TOP_BOTTOM_def = Define
   `(TRANSLATE_TOP_BOTTOM (t:'prop) (b:'prop) TOP   = (\x.x = t)) /\
@@ -1104,8 +1097,6 @@ val IS_LTL_PSL_THM =
 
       INDUCT_THEN ltl_induct STRIP_ASSUME_TAC THEN
       FULL_SIMP_TAC std_ss[IS_PSL_THM, IS_LTL_THM, IS_FUTURE_LTL_def, FUTURE_LTL_TO_PSL_def, LTL_OR_def]);
-
-val _ = export_theory();
 
 (* References:
 

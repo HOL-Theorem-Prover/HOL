@@ -3,21 +3,19 @@
 (*     LTL to symbolic Omega automata (automaton formula) Translation         *)
 (*                                                                            *)
 (******************************************************************************)
+Theory ltl_to_automaton_formula
+Ancestors
+  full_ltl arithmetic automaton_formula xprop_logic prop_logic
+  infinite_path pair symbolic_semi_automaton list pred_set
+  pred_set rich_list set_lemmata temporal_deep_mixed
+  symbolic_kripke_structure
+Libs
+  tuerk_tacticsLib numLib Sanity
 
-open HolKernel Parse boolLib bossLib;
-
-open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory
-     prop_logicTheory infinite_pathTheory tuerk_tacticsLib pairTheory numLib
-     symbolic_semi_automatonTheory listTheory pred_setTheory
-     pred_setTheory rich_listTheory set_lemmataTheory temporal_deep_mixedTheory
-     symbolic_kripke_structureTheory;
-
-open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
 
-val _ = new_theory "ltl_to_automaton_formula";
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val _ = ParseExtras.temp_loose_equality()
 
@@ -3848,4 +3846,3 @@ Proof
  >> METIS_TAC [LTL_TO_GEN_BUECHI_DS___BINDING_RUN_EQUIV]
 QED
 
-val _ = export_theory();

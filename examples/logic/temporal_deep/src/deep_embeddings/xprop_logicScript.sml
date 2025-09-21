@@ -1,14 +1,13 @@
-open HolKernel Parse boolLib bossLib;
-
-open pred_setTheory listTheory pairTheory prop_logicTheory containerTheory
-     tuerk_tacticsLib set_lemmataTheory temporal_deep_mixedTheory;
-
-open Sanity;
+Theory xprop_logic
+Ancestors
+  pred_set list pair prop_logic container set_lemmata
+  temporal_deep_mixed
+Libs
+  tuerk_tacticsLib Sanity
 
 val _ = hide "S";
 val _ = hide "I";
 
-val _ = new_theory "xprop_logic";
 val _ = ParseExtras.temp_loose_equality()
 
 Datatype :
@@ -1176,4 +1175,3 @@ val XP_CURRENT_NEXT___FORALL =
 
 
 
-val _ = export_theory();

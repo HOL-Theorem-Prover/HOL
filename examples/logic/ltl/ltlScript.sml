@@ -1,8 +1,7 @@
-open HolKernel Parse boolLib bossLib pred_setTheory relationTheory set_relationTheory prim_recTheory
+Theory ltl
+Ancestors
+  pred_set relation set_relation prim_rec generalHelpers word
 
-open generalHelpersTheory wordTheory
-
-val _ = new_theory "ltl"
 val _ = ParseExtras.temp_loose_equality()
 
 val _ = Datatype`
@@ -476,4 +475,3 @@ Definition LTL_EX6_def:
                                 0)))
 End
 
-val _ = export_theory();

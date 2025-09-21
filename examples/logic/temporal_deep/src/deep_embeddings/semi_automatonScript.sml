@@ -1,4 +1,9 @@
-open HolKernel Parse boolLib bossLib;
+Theory semi_automaton
+Ancestors
+  infinite_path pred_set list pair xprop_logic container
+  prop_logic set_lemmata prim_rec temporal_deep_mixed
+Libs
+  tuerk_tacticsLib Sanity
 
 (*
 quietdec := true;
@@ -12,11 +17,6 @@ map load
    "containerTheory", "prim_recTheory", "tuerk_tacticsLib", "temporal_deep_mixedTheory"];
 *)
 
-open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory
-     containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
-     tuerk_tacticsLib temporal_deep_mixedTheory;
-open Sanity;
-
 val _ = hide "S";
 val _ = hide "I";
 
@@ -29,7 +29,6 @@ quietdec := false;
 *)
 
 
-val _ = new_theory "semi_automaton";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -208,4 +207,3 @@ METIS_TAC[FST, SND]);
 
 
 
-val _ = export_theory();

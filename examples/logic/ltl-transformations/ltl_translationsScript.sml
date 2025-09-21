@@ -1,10 +1,6 @@
-open HolKernel boolLib Parse bossLib
-
-
-open ltlTheory full_ltlTheory prop_logicTheory
-open Temporal_LogicTheory Past_Temporal_LogicTheory
-
-val _ = new_theory "ltl_translations"
+Theory ltl_translations
+Ancestors
+  ltl full_ltl prop_logic Temporal_Logic Past_Temporal_Logic
 
 (************************************************************)
 (* Translation examples/logic/ltl -> examples/temporal_deep *)
@@ -230,4 +226,3 @@ val LOGIC_TO_TEMPORAL_ALT_DEF = store_thm ("LOGIC_TO_TEMPORAL_ALT_DEF",
 SIMP_TAC std_ss [LOGIC_TO_TEMPORAL_def, LOGIC_TO_TEMPORAL_DEEP_def,
   TEMPORAL_DEEP_TO_TEMPORAL_def, FUN_EQ_THM, P_SEM_def]);
 
-val _ = export_theory ();

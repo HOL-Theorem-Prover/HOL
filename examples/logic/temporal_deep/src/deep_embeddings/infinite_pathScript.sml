@@ -1,4 +1,8 @@
-open HolKernel Parse boolLib bossLib;
+Theory infinite_path
+Ancestors
+  pred_set pair arithmetic container list prop_logic
+Libs
+  tuerk_tacticsLib Sanity
 
 (*
 quietdec := true;
@@ -13,10 +17,6 @@ map load
 *)
 
 
-open pred_setTheory pairTheory arithmeticTheory tuerk_tacticsLib
-     containerTheory listTheory prop_logicTheory;
-open Sanity;
-
 val _ = hide "S";
 val _ = hide "I";
 
@@ -30,7 +30,6 @@ quietdec := false;
 
 
 
-val _ = new_theory "infinite_path";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -832,4 +831,3 @@ val PATH_SUBSET_RESTRICT = store_thm ("PATH_SUBSET_RESTRICT",
 SIMP_TAC std_ss [PATH_RESTRICT_def, PATH_MAP_def, INTER_SUBSET, PATH_SUBSET_def])
 
 
-val _ = export_theory();

@@ -1,15 +1,13 @@
-open HolKernel Parse boolLib bossLib;
-
-open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
-     infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory
-     listTheory pred_setTheory temporal_deep_mixedTheory
-     pred_setTheory rich_listTheory set_lemmataTheory pairTheory
-     ltl_to_automaton_formulaTheory numLib listLib rltlTheory
-     rltl_to_ltlTheory psl_to_rltlTheory PSLPathTheory UnclockedSemanticsTheory
-     ProjectionTheory symbolic_kripke_structureTheory
-     temporal_deep_simplificationsLibTheory;
-
-open Sanity;
+Theory translationsLib
+Ancestors
+  full_ltl arithmetic automaton_formula xprop_logic prop_logic
+  infinite_path symbolic_semi_automaton list pred_set
+  temporal_deep_mixed pred_set rich_list set_lemmata pair
+  ltl_to_automaton_formula rltl rltl_to_ltl psl_to_rltl PSLPath
+  UnclockedSemantics Projection symbolic_kripke_structure
+  temporal_deep_simplificationsLib
+Libs
+  tuerk_tacticsLib numLib listLib Sanity
 
 val _ = hide "S";
 val _ = hide "I";
@@ -24,7 +22,6 @@ val _ = hide "I";
   Ideally they would be proved in translationsLib. However, then
   the proofs would be redone every time, the library is used. *)
 
-val _ = new_theory "translationsLib";
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"]
 
@@ -814,4 +811,3 @@ Proof
     METIS_TAC[]
 QED
 
-val _ = export_theory();

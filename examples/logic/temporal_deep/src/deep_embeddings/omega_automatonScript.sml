@@ -1,4 +1,10 @@
-open HolKernel Parse boolLib bossLib;
+Theory omega_automaton
+Ancestors
+  infinite_path pred_set list pair xprop_logic container
+  prop_logic set_lemmata prim_rec temporal_deep_mixed
+  semi_automaton relation
+Libs
+  tuerk_tacticsLib numLib Sanity
 
 (*
 quietdec := true;
@@ -13,12 +19,6 @@ map load
   "relationTheory", "symbolic_kripke_structureTheory"];
 *)
 
-open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory
-     containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
-     tuerk_tacticsLib temporal_deep_mixedTheory
-     semi_automatonTheory numLib relationTheory;
-open Sanity;
-
 val _ = hide "S";
 val _ = hide "I";
 
@@ -29,9 +29,6 @@ show_types := true;
 show_types := false;
 quietdec := false;
 *)
-
-
-val _ = new_theory "omega_automaton";
 
 
 val explicit_acceptance_condition =
@@ -325,6 +322,4 @@ val OMEGA_AUTOMATON___STATE_VAR_RENAMING =
     ]);
 
 
-
-val _ = export_theory();
 

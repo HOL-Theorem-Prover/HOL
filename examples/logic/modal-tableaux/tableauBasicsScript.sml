@@ -1,9 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open pairTheory pred_setTheory
-open modalBasicsTheory
-
-val _ = new_theory "tableauBasics";
+Theory tableauBasics
+Ancestors
+  pair pred_set modalBasics
 
 Overload gsize = “λl. SUM (MAP nnfform_size l)”
 Overload form_size = “nnfform_size”
@@ -253,4 +250,3 @@ QED
 
 
 
-val _ = export_theory();

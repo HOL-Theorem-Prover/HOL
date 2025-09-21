@@ -1,8 +1,8 @@
-open HolKernel Parse bossLib boolLib pairTheory pred_setTheory arithmeticTheory relationTheory set_relationTheory whileTheory
+Theory buechiA
+Ancestors
+  pair pred_set arithmetic relation set_relation while word
+  generalHelpers
 
-open wordTheory generalHelpersTheory
-
-val _ = new_theory "buechiA"
 val _ = ParseExtras.temp_loose_equality()
 
 val _ = Datatype
@@ -654,4 +654,3 @@ val REACHABLE_GBA_LEMM = store_thm
   >> fs[stepGBA_def,isValidGBA_def] >> metis_tac[]
   );
 
-val _ = export_theory();
