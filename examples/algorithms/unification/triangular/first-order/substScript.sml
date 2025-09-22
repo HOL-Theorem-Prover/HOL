@@ -1,8 +1,9 @@
-open HolKernel boolLib bossLib Parse pred_setTheory relationTheory
-finite_mapTheory termTheory ramanaLib whileTheory
-prim_recTheory arithmeticTheory bagTheory listTheory;
-
-val _ = new_theory "subst";
+Theory subst
+Ancestors
+  pred_set relation finite_map term while prim_rec arithmetic bag
+  list
+Libs
+  ramanaLib
 
 val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
@@ -1306,4 +1307,3 @@ Induct >> FULL_SIMP_TAC (srw_ss()) [inv_image_def] >- (
 
 *)
 
-val _ = export_theory ();

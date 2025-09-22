@@ -1,7 +1,8 @@
-open HolKernel boolLib bossLib Parse ntermTheory nomsetTheory listTheory
-     ramanaLib ntermLib
-
-val _ = new_theory "apply_pi"
+Theory apply_pi
+Ancestors
+  nterm nomset list
+Libs
+  ramanaLib ntermLib
 
 val raw_apply_pi_q = `
   (raw_apply_pi pi (Nom a) = Nom (lswapstr pi a)) ∧
@@ -64,4 +65,3 @@ val nvars_apply_pi = RWstore_thm(
 `∀t. nvars (apply_pi pi t) = nvars t`,
 Induct THEN SRW_TAC [][])
 
-val _ = export_theory ()

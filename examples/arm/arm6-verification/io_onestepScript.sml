@@ -9,12 +9,13 @@
 (* interactive use:
   app load ["rich_listTheory", "onestepTheory"];
 *)
+Theory io_onestep
+Ancestors
+  combin pair arithmetic prim_rec pred_set rich_list onestep
+Libs
+  Q simpLib numLib
 
-open HolKernel boolLib bossLib Q;
-open simpLib numLib combinTheory pairTheory arithmeticTheory;
-open prim_recTheory pred_setTheory rich_listTheory onestepTheory;
 
-val _ = new_theory "io_onestep";
 val _ = ParseExtras.temp_loose_equality();
 
 (* vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv *)
@@ -1526,4 +1527,3 @@ val SELF_CORRECT = prove(
 
 (* ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *)
 
-val _ = export_theory();

@@ -1,8 +1,8 @@
-open HolKernel Parse boolLib bossLib pred_setTheory arithmeticTheory relationTheory set_relationTheory pairTheory
+Theory alterA
+Ancestors
+  pred_set arithmetic relation set_relation pair generalHelpers
+  word
 
-open generalHelpersTheory wordTheory
-
-val _ = new_theory "alterA"
 val _ = ParseExtras.temp_loose_equality()
 
 val _ = Datatype
@@ -829,4 +829,3 @@ val AUT_EX_2 = store_thm
          suffices_by metis_tac[partial_order_def, antisym_def] >> simp[]
   );
 
-val _ = export_theory();

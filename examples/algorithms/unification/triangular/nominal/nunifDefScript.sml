@@ -1,10 +1,11 @@
-open HolKernel boolLib bossLib Parse stringTheory arithmeticTheory
-     finite_mapTheory pred_setTheory bagTheory pairTheory relationTheory
-     prim_recTheory apply_piTheory ntermTheory nsubstTheory nwalkTheory
-     nwalkstarTheory nomsetTheory listTheory dis_setTheory ramanaLib
-     ntermLib
+Theory nunifDef
+Ancestors
+  string arithmetic finite_map pred_set bag pair relation
+  prim_rec apply_pi nterm nsubst nwalk nwalkstar nomset list
+  dis_set
+Libs
+  ramanaLib ntermLib
 
-val _ = new_theory "nunifDef"
 val _ = monadsyntax.temp_add_monadsyntax()
 val _ = monadsyntax.enable_monad "option";
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 }
@@ -936,4 +937,3 @@ val nomunify_def = Define`
      SOME (sx,fex)
   od`;
 
-val _ = export_theory ();

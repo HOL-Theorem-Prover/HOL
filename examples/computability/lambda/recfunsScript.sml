@@ -1,18 +1,15 @@
-open HolKernel Parse boolLib bossLib
+Theory recfuns
+Ancestors
+  churchDB churchnum pred_set chap3 normal_order
+Libs
+  monadsyntax reductionEval
 
-open churchDBTheory
-open churchnumTheory
-open pred_setTheory
-open chap3Theory
-open normal_orderTheory
-open reductionEval
+val _ = enable_monadsyntax();
+val _ = enable_monad "option";
 
 fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
 val _ = set_trace "Unicode" 1
-
-val _ = new_theory "recfuns"
-
 
 (* Phi lifts all possible lambda-terms into the space of num->num option,
    indexing into the lambda-terms with the enumeration.  The NONE result
@@ -156,10 +153,6 @@ val bnf_of_UM = store_thm(
     computable functions compose
    ---------------------------------------------------------------------- *)
 
-local open parmonadsyntax in
-val _ = overload_on ("monad_bind", ``OPTION_BIND``)
-end
-
 val OPTION_MAP_COMPOSE = optionTheory.OPTION_MAP_COMPOSE
 
 val composition_computable = store_thm(
@@ -282,6 +275,3 @@ val recursion_thm = store_thm(
   `Phi (h e) = Phi (THE (Phi e e))` by SRW_TAC [][] THEN
   ASM_SIMP_TAC (srw_ss()) [] THEN
   ASM_SIMP_TAC (srw_ss()) [Abbr`h`, Abbr`hi`, s11f_def]);
-
-
-val _ = export_theory()

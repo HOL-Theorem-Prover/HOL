@@ -1,7 +1,8 @@
-open HolKernel Parse boolLib bossLib listTheory rich_listTheory bitTheory
-     markerTheory pairTheory arithmeticTheory wordsTheory wordsLib;
-
-val _ = new_theory "Serpent_Bitslice_Utility";
+Theory Serpent_Bitslice_Utility
+Ancestors
+  list rich_list bit marker pair arithmetic words
+Libs
+  wordsLib
 
 (*conversion between different words,
 EL 0 is the MS in all split result,
@@ -109,4 +110,3 @@ val listInstEq33 = Q.store_thm(
   REWRITE_TAC [LENGTH_CONS, LENGTH_NIL, REDEPTH_CONV numLib.num_CONV ``33``]
     THEN METIS_TAC []);
 
-val _ = export_theory();

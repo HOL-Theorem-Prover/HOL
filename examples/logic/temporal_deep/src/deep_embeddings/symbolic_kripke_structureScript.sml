@@ -3,20 +3,17 @@
 (*   Symbolic Kripke Structure (with external fair conditions)                *)
 (*                                                                            *)
 (******************************************************************************)
+Theory symbolic_kripke_structure
+Ancestors
+  infinite_path pred_set list pair xprop_logic container
+  prop_logic set_lemmata prim_rec temporal_deep_mixed arithmetic
+Libs
+  tuerk_tacticsLib Sanity
 
-open HolKernel Parse boolLib bossLib;
-
-open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory
-     containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
-     tuerk_tacticsLib temporal_deep_mixedTheory arithmeticTheory;
-
-open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
 val _ = hide "K";
-
-val _ = new_theory "symbolic_kripke_structure";
 
 (* NOTE: `symbolic_semi_automaton` has concepts of input vars, used as the translation
    results of LTL, etc., while `symbolic_kripke_structure` has only state variables,
@@ -223,4 +220,3 @@ Proof
       ]
 QED
 
-val _ = export_theory();

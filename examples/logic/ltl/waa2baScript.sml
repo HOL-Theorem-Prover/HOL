@@ -1,8 +1,8 @@
-open HolKernel Parse bossLib boolLib pairTheory relationTheory set_relationTheory pred_setTheory arithmeticTheory
+Theory waa2ba
+Ancestors
+  pair relation set_relation pred_set arithmetic word buechiA
+  alterA generalHelpers
 
-open wordTheory buechiATheory alterATheory generalHelpersTheory
-
-val _ = new_theory "waa2ba"
 val _ = ParseExtras.temp_loose_equality()
 
 val d_gen_def = Define`
@@ -882,4 +882,3 @@ val GBA_CORRECT = store_thm
    metis_tac[WAA_IN_GBA, GBA_IN_WAA,SET_EQ_SUBSET]
   );
 
-val _ = export_theory()

@@ -1,10 +1,9 @@
 
-open HolKernel boolLib bossLib Parse;
-open pred_setTheory arithmeticTheory pairTheory listTheory wordsTheory;
-open wordsLib;
-
-
-val _ = new_theory "jit_input";
+Theory jit_input
+Ancestors
+  pred_set arithmetic pair list words
+Libs
+  wordsLib
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -94,4 +93,3 @@ val iENOCDE_def = Define `
 
 *)
 
-val _ = export_theory();

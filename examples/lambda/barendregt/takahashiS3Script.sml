@@ -1,12 +1,10 @@
-open HolKernel Parse boolLib bossLib;
-
-open boolSimps metisLib basic_swapTheory relationTheory listTheory
-open pred_setTheory
-
-local open pred_setLib in end;
-
-open binderLib BasicProvers nomsetTheory termTheory chap2Theory appFOLDLTheory;
-open horeductionTheory chap3Theory
+Theory takahashiS3
+Ancestors
+  basic_swap relation list pred_set nomset term chap2 appFOLDL
+  horeduction chap3
+Libs
+  boolSimps metisLib binderLib BasicProvers
+  pred_setLib[qualified]
 
 (* ----------------------------------------------------------------------
     A mechanisation of §3 of
@@ -15,8 +13,6 @@ open horeductionTheory chap3Theory
 
     leading to ⊢ has_benf M ⇔ has_bnf M
    ---------------------------------------------------------------------- *)
-
-val _ = new_theory "takahashiS3";
 
 Inductive peta:
 [~refl[simp]:]
@@ -788,5 +784,4 @@ Proof
   simp[benf_def] >> metis_tac[RTC_CASES_RTC_TWICE, takahashi_3_7star]
 QED
 
-val _ = export_theory();
 val _ = html_theory "takahashiS3";

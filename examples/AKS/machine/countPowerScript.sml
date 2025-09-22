@@ -4,30 +4,17 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "countPower";
-
 (* ------------------------------------------------------------------------- *)
+Theory countPower
+Ancestors
+  pred_set list arithmetic divides gcd number combinatorics
+  logroot pair option listRange prime countMonad countMacro
+  countBasic bitsize complexity loopIncrease loopDecrease
+  loopDivide
+Libs
+  jcLib monadsyntax
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory listTheory arithmeticTheory dividesTheory gcdTheory
-     numberTheory combinatoricsTheory logrootTheory pairTheory optionTheory
-     listRangeTheory primeTheory;
-
-open countMonadTheory countMacroTheory;
-open countBasicTheory;
-
-open bitsizeTheory complexityTheory;
-open loopIncreaseTheory loopDecreaseTheory;
-open loopDivideTheory;
-
-open monadsyntax;
-
 val _ = monadsyntax.enable_monadsyntax();
 val _ = monadsyntax.enable_monad "Count";
 
@@ -2303,8 +2290,4 @@ Joachim von zur Gathen and Jürgen Gerhard. Modern Computer Algebra (1999)
 *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

@@ -1,13 +1,11 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "path_aux";
+Theory path_aux
+Ancestors
+  option pair pred_set finite_map string list llist path
+Libs
+  intLib
 
 (* Stuff about paths in an LTS that should end up in HOL's path library *)
 
-
-open optionTheory pairTheory pred_setTheory finite_mapTheory stringTheory;
-open listTheory llistTheory pathTheory;
-open intLib;
 
 val ect = BasicProvers.EVERY_CASE_TAC;
 
@@ -631,4 +629,3 @@ val _ = augment_srw_ss [rewrites
    LFINITE_MAP, LAPPEND_NIL_2ND]];
 
    *)
-val _ = export_theory ();

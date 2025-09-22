@@ -9,12 +9,12 @@
 (* interactive use:
  app load ["armTheory", "coreTheory", "lemmasTheory"];
 *)
+Theory iclass_comp
+Ancestors
+  pair arm core lemmas
+Libs
+  Q
 
-open HolKernel boolLib bossLib;
-open Q pairTheory;
-open armTheory coreTheory lemmasTheory;
-
-val _ = new_theory "iclass_comp";
 
 (* ------------------------------------------------------------------------- *)
 
@@ -80,4 +80,3 @@ val alu_thms = save_thm("alu_comp_thms",LIST_CONJ constant_fold_alu);
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory();

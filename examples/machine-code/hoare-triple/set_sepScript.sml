@@ -1,6 +1,7 @@
-open HolKernel boolLib bossLib Parse pred_setTheory pairTheory wordsTheory;
+Theory set_sep
+Ancestors
+  pred_set pair words
 
-val _ = new_theory "set_sep";
 val _ = ParseExtras.temp_loose_equality()
 
 (* ---- definitions ---- *)
@@ -286,4 +287,3 @@ val IMP_IMP = store_thm("IMP_IMP",
   ``!b c d.b /\ (c ==> d) ==> ((b ==> c) ==> d)``,
   METIS_TAC []);
 
-val _ = export_theory();

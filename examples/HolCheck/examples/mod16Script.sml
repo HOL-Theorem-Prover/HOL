@@ -1,9 +1,8 @@
-open HolKernel Parse boolLib bossLib
-
-val _ = new_theory "mod16"; (* FIXME: functorize this *)
-
-open pairTheory
-open metisLib
+Theory mod16
+Ancestors
+  pair
+Libs
+  metisLib
 
 val xor_def = Define `xor x y = (x \/ y) /\ ~(x=y)`
 
@@ -122,5 +121,3 @@ val MOD16_N2B_1 = save_thm("MOD16_N2B_1",prove(``!b3 b2 b0 b1. MOD16_N2B 1 (b3,b
 SIMP_TAC arith_ss [MOD16_N2B_def,MOD16_N2B'_def,MOD16_PROJ_def]));
 val MOD16_N2B_0 = save_thm("MOD16_N2B_0",prove(``!b3 b2 b0 b1. MOD16_N2B 0 (b3,b2,b1,b0) = ~b3 /\ ~b2 /\ ~b1 /\ ~b0``,
 SIMP_TAC arith_ss [MOD16_N2B_def,MOD16_N2B'_def,MOD16_PROJ_def]));
-
-val _ = export_theory();

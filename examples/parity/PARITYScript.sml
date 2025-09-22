@@ -6,11 +6,8 @@
        PARITYTheory.{sig,sml,uo,ui}
 
  ---------------------------------------------------------------------------*)
+Theory PARITY
 
-open HolKernel boolLib Parse bossLib
-
-
-val _ = new_theory "PARITY"
 
 val PARITY_def =
  Define
@@ -76,4 +73,3 @@ val PARITY_CORRECT = store_thm(
       THEN MATCH_MP_TAC UNIQUENESS_LEMMA
       THEN PROVE_TAC [PARITY_LEMMA]);
 
-val _ = export_theory()

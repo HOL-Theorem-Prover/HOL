@@ -4,56 +4,22 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "ffExist";
+Theory ffExist
+Ancestors
+  arithmetic pred_set list number divides combinatorics gcd
+  gcdset prime cardinal ffBasic ffAdvanced ffPoly ffUnity ffCyclo
+  ffMinimal ffMaster ffConjugate monoid group ring field
+  fieldOrder fieldInstances polynomial polyWeak polyRing
+  polyDivision polyBinomial polyMonic polyEval polyDivides
+  polyMonic polyRoot polyField polyFieldDivision polyFieldModulo
+  polyRingModulo polyModuloRing polyMap fieldMap polyGCD
+  polyIrreducible polyProduct fieldBinomial
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open arithmeticTheory pred_setTheory listTheory numberTheory dividesTheory
-     combinatoricsTheory gcdTheory gcdsetTheory primeTheory cardinalTheory;
-
-open ffBasicTheory;
-open ffAdvancedTheory;
-open ffPolyTheory;
-open ffUnityTheory;
-open ffCycloTheory;
-open ffMinimalTheory;
-open ffMasterTheory;
-open ffConjugateTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-open fieldOrderTheory;
-open fieldInstancesTheory;
-
-(* Get polynomial theory of Ring *)
-open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory polyBinomialTheory;
-open polyMonicTheory polyEvalTheory;
-open polyDividesTheory;
-open polyMonicTheory;
-open polyRootTheory;
-
-open polyFieldTheory;
-open polyFieldDivisionTheory;
-open polyFieldModuloTheory;
-open polyRingModuloTheory;
-open polyModuloRingTheory;
-
-open polyMapTheory;
-open fieldMapTheory;
-
-open polyGCDTheory;
-open polyIrreducibleTheory;
-open polyProductTheory;
-
-open fieldBinomialTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -3245,8 +3211,4 @@ val poly_unity_special_factor_exists_alt = store_thm(
 *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

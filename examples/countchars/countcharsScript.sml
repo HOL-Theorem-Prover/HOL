@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open finite_mapTheory sortingTheory
-
-val _ = new_theory "countchars";
+Theory countchars
+Ancestors
+  finite_map sorting
 
 val _ = ParseExtras.tight_equality()
 
@@ -68,4 +66,3 @@ Proof
   simp[pred_setTheory.EXTENSION] >> metis_tac[]
 QED
 
-val _ = export_theory();

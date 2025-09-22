@@ -21,11 +21,10 @@
 (* License along with this program; if not, write to the Free         *)
 (* Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA *)
 (* 02110-1301 USA                                                     *)
+Theory CutFree
+Ancestors
+  relation prim_rec arithmetic list Lambek
 
-open HolKernel Parse boolLib bossLib;
-
-open relationTheory prim_recTheory arithmeticTheory listTheory;
-open LambekTheory;
 
 local
     val PAT_X_ASSUM = PAT_ASSUM;
@@ -41,8 +40,6 @@ in
     fun set  ts = MAP_EVERY Q.ABBREV_TAC ts;    (* from HOL mizar mode *)
     fun take ts = MAP_EVERY Q.EXISTS_TAC ts;    (* from HOL mizar mode *)
 end;
-
-val _ = new_theory "CutFree";
 
 val _ = hide "S";
 
@@ -1121,7 +1118,6 @@ val subFormulaProperty' = store_thm (
  >> ONCE_ASM_REWRITE_TAC []
  >> METIS_TAC [subFormulaProperty]);
 
-val _ = export_theory ();
 val _ = html_theory "CutFree";
 
 (* last updated: April 25, 2017 *)

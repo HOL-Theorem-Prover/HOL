@@ -1,8 +1,8 @@
-open HolKernel Parse boolLib bossLib bitTheory
-     markerTheory pairTheory arithmeticTheory wordsTheory wordsLib
-     Serpent_Bitslice_UtilityTheory;
-
-val _ = new_theory "Serpent_Bitslice_SBox";
+Theory Serpent_Bitslice_SBox
+Ancestors
+  bit marker pair arithmetic words Serpent_Bitslice_Utility
+Libs
+  wordsLib
 
 (* RNDxxx is the SBox in xxx round, invRNDxxx is the invSBox in xxx round *)
 
@@ -460,4 +460,3 @@ val RND29_THM = Q.store_thm ("RND29_THM", `!v. InvRND29 (RND29 v) = v`, tac);
 val RND30_THM = Q.store_thm ("RND30_THM", `!v. InvRND30 (RND30 v) = v`, tac);
 val RND31_THM = Q.store_thm ("RND31_THM", `!v. InvRND31 (RND31 v) = v`, tac);
 
-val _ = export_theory();

@@ -1,11 +1,10 @@
-open HolKernel boolLib bossLib Parse
-
-open normal_orderTheory
-open reductionEval
+Theory steps
+Ancestors
+  normal_order
+Libs
+  reductionEval
 
 fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
-
-val _ = new_theory "steps"
 
 val steps_def = Define`
   (steps 0 t = t) ∧
@@ -88,4 +87,3 @@ val bnf_steps_fixpoint = store_thm(
   ``bnf M ⇒ (steps n M = M)``,
   METIS_TAC [bnf_steps_upwards_closed, DECIDE ``0 < n ∨ (n = 0)``, steps_def]);
 
-val _ = export_theory ()

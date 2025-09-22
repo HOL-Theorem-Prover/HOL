@@ -4,15 +4,12 @@
 (*                                                                            *)
 (* AUTHORS : 2005-2011 Michael Norrish                                        *)
 (* ========================================================================== *)
+Theory nomset
+Ancestors
+  pair pred_set list rich_list finite_map string basic_swap
+Libs
+  BasicProvers boolSimps hurdUtils NEWLib
 
-open HolKernel Parse boolLib bossLib;
-
-open BasicProvers boolSimps pairTheory pred_setTheory listTheory rich_listTheory
-     finite_mapTheory hurdUtils stringTheory;
-
-open basic_swapTheory NEWLib;
-
-val _ = new_theory "nomset";
 
 (* permutations are represented as lists of pairs of strings.  These
    can be lifted to bijections on strings that only move finitely many
@@ -1598,5 +1595,4 @@ Proof
  >> CCONTR_TAC >> gs [EL_MEM]
 QED
 
-val _ = export_theory();
 val _ = html_theory "nomset";

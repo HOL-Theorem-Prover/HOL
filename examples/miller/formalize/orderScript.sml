@@ -1,7 +1,11 @@
 (* non-interactive mode
 *)
-open HolKernel Parse boolLib;
-val _ = new_theory "order";
+Theory order
+Ancestors
+  list res_quan pred_set extra_pred_set relation subtype
+Libs
+  subtypeTools res_quanTools listContext ho_proverTools hurdUtils
+
 val _ = ParseExtras.temp_loose_equality()
 
 (* interactive mode
@@ -20,10 +24,6 @@ val () = app load
    "millerTools"];
 val () = show_assums := true;
 *)
-
-open bossLib listTheory subtypeTools res_quanTools res_quanTheory
-     pred_setTheory extra_pred_setTheory listContext relationTheory
-     ho_proverTools subtypeTheory hurdUtils;
 
 (* ------------------------------------------------------------------------- *)
 (* Tools.                                                                    *)
@@ -103,4 +103,3 @@ val INSERT_SORTED = store_thm
 
 (* non-interactive mode
 *)
-val _ = export_theory ();

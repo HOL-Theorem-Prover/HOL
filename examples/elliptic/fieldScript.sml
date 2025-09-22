@@ -17,12 +17,12 @@ val () = app load
    "primalityTools"];
 val () = quietdec := true;
 *)
+Theory field
+Ancestors
+  option list arithmetic divides gcd pred_set group
+Libs
+  metisLib res_quanTools primalityTools groupTools
 
-open HolKernel Parse boolLib bossLib metisLib res_quanTools;
-open optionTheory listTheory arithmeticTheory dividesTheory gcdTheory;
-open pred_setTheory;
-open primalityTools;
-open groupTheory groupTools;
 
 (*
 val () = quietdec := false;
@@ -32,7 +32,6 @@ val () = quietdec := false;
 (* Start a new theory called "field".                                        *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = new_theory "field";
 val _ = ParseExtras.temp_loose_equality()
 
 val ERR = mk_HOL_ERR "field";
@@ -2701,4 +2700,3 @@ val GF_2_def = Define
 
 val _ = html_theory "field";
 
-val () = export_theory ();

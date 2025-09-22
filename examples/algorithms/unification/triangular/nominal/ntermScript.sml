@@ -1,6 +1,9 @@
-open HolKernel boolLib bossLib Parse stringTheory nomsetTheory listTheory ramanaLib relationTheory quotientLib pairTheory bagTheory commonUnifTheory;
+Theory nterm
+Ancestors
+  string nomset list relation pair bag commonUnif
+Libs
+  ramanaLib quotientLib
 
-val _ = new_theory "nterm";
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 };
 
 val permeq_exists = RWstore_thm(
@@ -336,4 +339,3 @@ Theorem IN_nvarb_nvars[simp]:
 Proof Induct THEN SRW_TAC [][]
 QED
 
-val _ = export_theory ();

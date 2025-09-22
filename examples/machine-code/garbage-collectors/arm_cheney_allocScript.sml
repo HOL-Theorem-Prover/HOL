@@ -1,13 +1,12 @@
 
-open HolKernel boolLib bossLib Parse; val _ = new_theory "arm_cheney_alloc";
+Theory arm_cheney_alloc
+Ancestors
+  words arithmetic list pred_set pair combin finite_map address
+  tailrec cheney_gc cheney_alloc arm_cheney_gc prog prog_arm set_sep
+Libs
+  wordsLib mc_tailrecLib helperLib
+
 val _ = ParseExtras.temp_loose_equality()
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory;
-
-open addressTheory mc_tailrecLib tailrecTheory;
-open cheney_gcTheory cheney_allocTheory arm_cheney_gcTheory;
-
 
 val _ = map Parse.hide ["r0","r1","r2","r3","r4","r5","r6","r7","r8","r9","r10","r11","r12","r13"];
 val RW = REWRITE_RULE;
@@ -395,8 +394,6 @@ val aHEAP_def = Define `
       aR 3w r3 * aR 4w r4 * aR 5w r5 * aR 6w r6 * aR 7w r7 * aR 8w r8 * aR 9w a * aMEMORY x xs *
       cond (ch_rel ([v1;v2;v3;v4;v5;v6],h,l) (r3,r4,r5,r6,r7,r8,a,x,xs))`;
 
-open progTheory set_sepTheory helperLib;
-
 val SPEC_ARM_ALLOC = save_thm("SPEC_ARM_ALLOC",let
   val th = arm_alloc_thm
   val th = SIMP_RULE std_ss [LET_DEF] th
@@ -444,6 +441,3 @@ val SPEC_ARM_ALLOC = save_thm("SPEC_ARM_ALLOC",let
     \\ FULL_SIMP_TAC (bool_ss++star_ss) [] \\ METIS_TAC [])
   val th = MP th lemma
   in th end);
-
-
-val _ = export_theory();

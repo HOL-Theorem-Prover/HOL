@@ -4,21 +4,15 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "iterateCompute";
+Theory iterateCompute
+Ancestors
+  arithmetic pred_set divides number list rich_list listRange
+  combinatorics while iteration
+  helperTwosq  (* for WHILE_RULE_PRE_POST *)
 
 (* ------------------------------------------------------------------------- *)
 
-open arithmeticTheory pred_setTheory dividesTheory numberTheory listTheory
-     rich_listTheory listRangeTheory combinatoricsTheory whileTheory;
-
-open iterationTheory;
-
 (* val _ = load "helperTwosqTheory"; *)
-open helperTwosqTheory; (* for WHILE_RULE_PRE_POST *)
 
 (* ------------------------------------------------------------------------- *)
 (* Iteration Period Computation Documentation                                *)
@@ -887,8 +881,4 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

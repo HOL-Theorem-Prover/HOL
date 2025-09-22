@@ -1,13 +1,12 @@
-open HolKernel Parse boolLib bossLib;
+Theory temporal_deep_simplificationsLib
+Ancestors
+  full_ltl arithmetic automaton_formula xprop_logic prop_logic
+  infinite_path symbolic_semi_automaton list pred_set rich_list
+  pair rltl relation congToolsLib
+Libs
+  numLib listLib computeLib tuerk_tacticsLib congLib Travrules
+  Sanity
 
-open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
-     infinite_pathTheory symbolic_semi_automatonTheory listTheory pred_setTheory
-     rich_listTheory pairTheory numLib listLib rltlTheory computeLib relationTheory
-     tuerk_tacticsLib congLib Travrules congToolsLibTheory
-
-open Sanity;
-
-val _ = new_theory "temporal_deep_simplificationsLib";
 val _ = ParseExtras.temp_loose_equality()
 
 val PROP_LOGIC_EQUIVALENT_LIST_AS_SET_def = Define
@@ -1148,4 +1147,3 @@ val LTL_EQUIVALENT_homogeneous_conj_disj_rewrites =
     LTL_EQUIVALENT_before_homogeneous_conj_disj_rewrites]);
 
 
-val _ = export_theory();

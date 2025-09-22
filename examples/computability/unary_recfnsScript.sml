@@ -1,9 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open numpairTheory primrecfnsTheory nlistTheory arithmeticTheory listTheory
-     recursivefnsTheory
-
-val _ = new_theory "unary_recfns";
+Theory unary_recfns
+Ancestors
+  numpair primrecfns nlist arithmetic list recursivefns
 
 val _ = monadsyntax.enable_monadsyntax()
 val _ = monadsyntax.enable_monad "option"
@@ -453,4 +450,3 @@ Proof
   metis_tac[unfold_fold, recfn_recfn1]
 QED
 
-val _ = export_theory();

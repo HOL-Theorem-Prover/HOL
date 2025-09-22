@@ -1,6 +1,11 @@
-open HolKernel boolLib bossLib Parse stringTheory arithmeticTheory finite_mapTheory pred_setTheory bagTheory pairTheory relationTheory prim_recTheory quotientLib nomsetTheory listTheory ramanaLib ntermTheory nsubstTheory apply_piTheory nwalkTheory nwalkstarTheory nunifDefTheory dis_setTheory monadsyntax ntermLib
+Theory nunifProps
+Ancestors
+  string arithmetic finite_map pred_set bag pair relation
+  prim_rec nomset list nterm nsubst apply_pi nwalk nwalkstar
+  nunifDef dis_set
+Libs
+  quotientLib ramanaLib monadsyntax ntermLib
 
-val _ = new_theory "nunifProps"
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 }
 
 val _ = export_permweakening "dis_set.dis_set_eq_perms"
@@ -3218,4 +3223,3 @@ SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
 IMP_RES_TAC term_fcs_SUBMAP THEN
 FULL_SIMP_TAC (srw_ss()) [])
 
-val _ = export_theory ();

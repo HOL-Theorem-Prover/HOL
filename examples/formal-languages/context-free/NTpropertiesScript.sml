@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib bossLib
-
-open listTheory
-open grammarTheory
-open pred_setTheory
+Theory NTproperties
+Ancestors
+  list grammar pred_set
 
 val rveq = rpt BasicProvers.VAR_EQ_TAC
 fun asm_match q = Q.MATCH_ASSUM_RENAME_TAC q
@@ -10,8 +8,6 @@ fun asm_match q = Q.MATCH_ASSUM_RENAME_TAC q
 val MAP_EQ_CONS = prove(
   ``(MAP f l = h::t) ⇔ ∃e es. l = e::es ∧ f e = h ∧ MAP f es = t``,
   Cases_on `l` >> simp[])
-
-val _ = new_theory "NTproperties"
 
 fun dsimp thl = asm_simp_tac (srw_ss() ++ boolSimps.DNF_ss) thl
 fun asimp thl = asm_simp_tac (srw_ss() ++ ARITH_ss) thl
@@ -1149,4 +1145,3 @@ val _ =
 
 *)
 
-val _ = export_theory()

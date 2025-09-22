@@ -1,16 +1,11 @@
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory pred_setTheory
-     listTheory sequenceTheory state_transformerTheory
-     hurdUtils extra_numTheory combinTheory
-     pairTheory realTheory realLib extra_boolTheory
-     extra_pred_setTheory extra_realTheory extra_pred_setTools numTheory
-     simpLib seqTheory sequenceTools subtypeTheory res_quanTheory
-     binomialTheory sumTheory;
-
-open real_measureTheory real_probabilityTheory prob_algebraTheory probTheory;
-
-val _ = new_theory "prob_binomial";
+Theory prob_binomial
+Ancestors
+  arithmetic pred_set list sequence state_transformer extra_num
+  combin pair real extra_bool extra_pred_set extra_real num seq
+  subtype res_quan binomial sum real_measure real_probability
+  prob_algebra prob
+Libs
+  hurdUtils realLib extra_pred_setTools simpLib sequenceTools
 
 infixr 0 ++ << || ORELSEC ## --> THENC;
 infix 1 >> |->;
@@ -141,4 +136,3 @@ val PROB_BERN_BINOMIAL = store_thm
    ++ DISCH_THEN MATCH_MP_TAC
    ++ PROVE_TAC [REAL_MUL_ASSOC, REAL_MUL_SYM]);
 
-val _ = export_theory ();

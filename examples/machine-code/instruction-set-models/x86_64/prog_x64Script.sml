@@ -1,13 +1,12 @@
 
-open HolKernel boolLib bossLib Parse;
-open pred_setTheory res_quanTheory wordsTheory wordsLib bitTheory arithmeticTheory;
-open listTheory pairTheory combinTheory addressTheory fcpTheory;
+Theory prog_x64
+Ancestors
+  pred_set res_quan words bit arithmetic list pair combin address
+  fcp set_sep prog x64_ x64_seq_monad x64_icache x64_ast
+  x64_coretypes temporal
+Libs
+  wordsLib x64_Lib x64_encodeLib
 
-open set_sepTheory progTheory x64_Theory x64_seq_monadTheory x64_icacheTheory;
-open x64_astTheory x64_coretypesTheory x64_Lib x64_encodeLib;
-open temporalTheory;
-
-val _ = new_theory "prog_x64";
 val _ = ParseExtras.temp_loose_equality()
 
 val RW = REWRITE_RULE;
@@ -1646,4 +1645,3 @@ in
     |> RW1 [STAR_COMM]);
 end;
 
-val _ = export_theory();

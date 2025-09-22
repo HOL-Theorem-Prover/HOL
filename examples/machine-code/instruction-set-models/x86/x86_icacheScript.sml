@@ -1,10 +1,8 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory pred_setTheory pairTheory;
+Theory x86_icache
+Ancestors
+  words pred_set pair x86_coretypes x86_ast x86_seq_monad
 
-open x86_coretypesTheory x86_astTheory x86_seq_monadTheory;
-
-val _ = new_theory "x86_icache";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -90,4 +88,3 @@ val XREAD_CLAUSES = store_thm("XREAD_CLAUSES",
   THEN Cases_on `c = a` THEN ASM_SIMP_TAC std_ss []);
 
 
-val _ = export_theory ();

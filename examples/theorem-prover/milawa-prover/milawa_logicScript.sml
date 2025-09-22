@@ -1,7 +1,8 @@
 
-open HolKernel Parse boolLib bossLib; val _ = new_theory "milawa_logic";
-open listTheory arithmeticTheory lisp_sexpTheory milawa_ordinalTheory;
-open pred_setTheory combinTheory finite_mapTheory stringTheory;
+Theory milawa_logic
+Ancestors
+  list arithmetic lisp_sexp milawa_ordinal pred_set combin
+  finite_map string
 
 (* ========================================================================== *)
 (*                                                                            *)
@@ -2234,4 +2235,3 @@ val definition_ok_BODY_FUN = store_thm("definition_ok_BODY_FUN",
     |> SPEC_ALL |> Q.INST [`body`|->`BODY_FUN l`]
     |> SIMP_RULE (srw_ss()) []) \\ FULL_SIMP_TAC std_ss []);
 
-val _ = export_theory();

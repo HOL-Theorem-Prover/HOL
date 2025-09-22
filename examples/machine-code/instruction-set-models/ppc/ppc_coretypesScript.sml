@@ -1,9 +1,7 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory;
-
-val _ = new_theory "ppc_coretypes";
-
+Theory ppc_coretypes
+Ancestors
+  words
 
 (* ---------------------------------------------------------------------------------- *>
 
@@ -33,4 +31,3 @@ val _ = Hol_datatype `
 val _ = Hol_datatype   `iiid = <| proc : num ; program_order_index : num |>`;
 
 
-val _ = export_theory ();

@@ -1,12 +1,9 @@
-open HolKernel Parse boolLib bossLib
-
-open boolSimps pred_setTheory pathTheory;
-
-open chap3Theory standardisationTheory term_posnsTheory termTheory binderLib
-     finite_developmentsTheory appFOLDLTheory nomsetTheory head_reductionTheory
-     horeductionTheory;
-
-val _ = new_theory "normal_order";
+Theory normal_order
+Ancestors
+  pred_set path chap3 standardisation term_posns term
+  finite_developments appFOLDL nomset head_reduction horeduction
+Libs
+  boolSimps binderLib
 
 val _ = set_trace "Unicode" 1;
 
@@ -1043,5 +1040,4 @@ val normstar_to_vheadbinary_wstar = save_thm(
     |> SIMP_RULE (srw_ss() ++ DNF_ss)
                  [leneq2, DECIDE ``x < 2 ⇔ (x = 0) ∨ (x = 1)``]);
 
-val _ = export_theory()
 val _ = html_theory "normal_order";

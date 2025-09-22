@@ -1,12 +1,10 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_ops";
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory;
-
-open decompilerLib progTheory set_sepTheory helperLib;
-open lisp_typeTheory lisp_invTheory lisp_gcTheory lisp_equalTheory;
-open ppc_encodeLib x86_encodeLib;
-open prog_armLib prog_ppcLib prog_x86Lib;
+Theory lisp_ops
+Ancestors
+  words arithmetic list pred_set pair combin finite_map address
+  prog set_sep lisp_type lisp_inv lisp_gc lisp_equal divide
+Libs
+  wordsLib decompilerLib helperLib ppc_encodeLib x86_encodeLib
+  prog_armLib prog_ppcLib prog_x86Lib
 
 val decompile_arm = decompile prog_armLib.arm_tools;
 val decompile_ppc = decompile prog_ppcLib.ppc_tools;
@@ -1063,8 +1061,6 @@ val PPC_LISP_LESS = let
 
 (* mult, div and mod *)
 
-open divideTheory;
-
 val ARM_LISP_MULT = let
   val th = SIMP_RULE std_ss [lisp_word_mul_def,LET_DEF,SEP_CLAUSES] lisp_word_mul_arm_thm
   val th = RW [Q.SPEC `f y` SEP_HIDE_def] th
@@ -1435,4 +1431,3 @@ val _ = map X86_LISP_EQ_ZERO [1,2,3,4,5,6];
 val _ = map PPC_LISP_EQ_ZERO [1,2,3,4,5,6];
 
 
-val _ = export_theory();

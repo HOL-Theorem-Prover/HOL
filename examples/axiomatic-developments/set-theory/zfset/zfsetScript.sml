@@ -18,26 +18,17 @@ open zfsetTheory pred_setLib pred_setTheory pairLib pairTheory combinTheory;
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-open zfset_axiomsTheory pred_setLib pred_setTheory pairLib
-     pairTheory combinTheory;
-
-(******************************************************************************
-* Open theories
-******************************************************************************)
+Theory zfset
+Ancestors
+  zfset_axioms pred_set pair combin
+Libs
+  pred_setLib pairLib
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
 
 
-(*****************************************************************************)
-(* Create zfset_extras_theory.                                               *)
-(*****************************************************************************)
-val _ = new_theory "zfset";
 val _ = ParseExtras.temp_loose_equality()
 
 (*---------------------------------------------------------------------------*)
@@ -1539,5 +1530,3 @@ val ApChoose =
            ==>
            ((@x. x In X /\ (f ' x = True)) = Choose X ' f)``,
    RW_TAC std_ss [Choose_def,GraphFnAp,bool2Bool_def,Bool_CLAUSES]);
-
-val _ = export_theory();

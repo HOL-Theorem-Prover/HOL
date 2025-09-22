@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib bossLib listTheory pred_setTheory;
-
-open sptreeTheory arithmeticTheory;
-
-val _ = new_theory "gfg";
+Theory gfg
+Ancestors
+  list pred_set sptree arithmetic
 
 val _ = ParseExtras.tight_equality()
 val _ = monadsyntax.temp_add_monadsyntax();
@@ -308,4 +306,3 @@ Proof
   rw[addNodeN_def, pred_setTheory.ABSORPTION_RWT]
 QED
 
-val _ = export_theory();

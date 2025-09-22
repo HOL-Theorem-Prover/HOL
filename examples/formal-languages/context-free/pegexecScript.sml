@@ -1,12 +1,8 @@
-open HolKernel Parse boolLib bossLib
-
-open boolSimps
-
-open pegTheory locationTheory
-
-open rich_listTheory;
-
-val _ = new_theory "pegexec"
+Theory pegexec
+Ancestors
+  peg location rich_list
+Libs
+  boolSimps
 
 Datatype:
   kont =
@@ -431,4 +427,3 @@ QED
 Theorem coreloop_total =
   peg_exec_total |> SIMP_RULE (srw_ss()) [peg_exec_def, AllCaseEqs()]
 
-val _ = export_theory()

@@ -1,10 +1,10 @@
-open HolKernel boolLib bossLib ramanaLib Parse
+Theory unifProps
+Ancestors
+  string arithmetic finite_map pred_set bag pair term relation
+  prim_rec unifDef subst walk walkstar
+Libs
+  ramanaLib
 
-open stringTheory arithmeticTheory finite_mapTheory pred_setTheory bagTheory
-     pairTheory termTheory relationTheory prim_recTheory unifDefTheory
-     substTheory walkTheory walkstarTheory
-
-val _ = new_theory "unifProps"
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 }
 
 val vwalk_irrelevant_FUPDATE = Q.store_thm(
@@ -382,4 +382,3 @@ SRW_TAC [][COMPAT_def,EQ_IMP_THM] THEN1 (
 FIRST_X_ASSUM (Q.SPECL_THEN [`walk* s0 t`,`t`] MP_TAC) THEN
 SRW_TAC [][walkstar_idempotent]);
 
-val _ = export_theory ();

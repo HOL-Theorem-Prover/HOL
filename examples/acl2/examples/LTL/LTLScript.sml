@@ -20,21 +20,10 @@ open
 quietdec := false;                                   (* Restore output       *)
 *)
 
-(*****************************************************************************)
-(* Boilerplate needed for compilation                                        *)
-(*****************************************************************************)
+Theory LTL
+Ancestors
+  pred_set
 
-open HolKernel Parse boolLib bossLib pred_setTheory;
-
-(*****************************************************************************)
-(* END BOILERPLATE                                                           *)
-(*****************************************************************************)
-
-(******************************************************************************
-* Start a new theory called LTL
-******************************************************************************)
-
-val _ = new_theory "LTL";
 
 (******************************************************************************
 * Syntax
@@ -804,7 +793,3 @@ files that create theories are of the exact form
 but one has to live with it, so we may need to switch to LTLScript-*.sml.
 
 *)
-
-
-
-val _ = export_theory();

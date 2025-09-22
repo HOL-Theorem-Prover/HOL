@@ -1,10 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open monadsyntax ltlTheory errorStateMonadTheory
-
-local open stringTheory in end
-
-val _ = new_theory "formParse";
+Theory formParse
+Ancestors
+  ltl errorStateMonad string[qualified]
+Libs
+  monadsyntax
 
 (* grammar parsed looks like
 
@@ -674,4 +672,3 @@ val Parse_thm = save_thm(
 
 val eg1 = time EVAL “Parse "pp & Gq -> pp U X(x|!y|z)"”;
 
-val _ = export_theory();

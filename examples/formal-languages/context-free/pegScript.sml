@@ -1,10 +1,8 @@
-open HolKernel Parse boolLib bossLib
-open boolSimps
-open grammarTheory finite_mapTheory
-open locationTheory
-open listTheory rich_listTheory
-
-val _ = new_theory "peg"
+Theory peg
+Ancestors
+  grammar finite_map location list rich_list
+Libs
+  boolSimps
 
 (* Based on
      Koprowski and Binzstok, "TRX: A Formally Verified Parser Interpreter".
@@ -687,4 +685,3 @@ Proof
   simp[pegf_def]
 QED
 
-val _ = export_theory()

@@ -1,12 +1,11 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_parse";
+Theory lisp_parse
+Ancestors
+  words arithmetic list pred_set pair combin finite_map address
+  string lisp_gc lisp_type lisp_inv set_sep lisp_ops
+Libs
+  wordsLib helperLib compilerLib
+
 val _ = ParseExtras.temp_loose_equality()
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory stringTheory helperLib;
-
-open compilerLib;
-open lisp_gcTheory lisp_typeTheory lisp_invTheory;
-
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -843,8 +842,6 @@ val symbol_table_dom_IMPLIES = prove(
     \\ ONCE_REWRITE_TAC [symbol_table_dom_def]
     \\ REPEAT STRIP_TAC \\ RES_TAC
     \\ ASM_SIMP_TAC std_ss []]);
-
-open set_sepTheory;
 
 val arm_token_def = Define `
   arm_token w str b x =
@@ -3090,8 +3087,6 @@ val arm_string2sexp_lemma = store_thm("arm_string2sexp_lemma",
 
 (* formulating the final theorem *)
 
-open lisp_opsTheory;
-
 val aSTRING_def = Define `
   aSTRING a str = SEP_EXISTS df f. aBYTE_MEMORY df f *
                     cond (string_mem (STRCAT str null_string) (a,f,df))`;
@@ -3192,4 +3187,3 @@ val th = store_string2sexp_thm "x86" `emp`
     xSTRING r3 (sexp2string s) * xPC p * ~xS``
 
 
-val _ = export_theory();

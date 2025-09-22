@@ -1,15 +1,7 @@
-open HolKernel Parse boolLib bossLib;
-open chap1Theory;
-open numpairTheory;
-open pred_setTheory;
-open relationTheory;
-open arithmeticTheory;
-open set_relationTheory;
-open pairTheory;
-open prim_recTheory;
-
-
-val _ = new_theory "ultrafilter";
+Theory ultrafilter
+Ancestors
+  chap1 numpair pred_set relation arithmetic set_relation pair
+  prim_rec
 
 (* ultrafilters *)
 
@@ -788,4 +780,3 @@ QED
 
 
 
-val _ = export_theory();

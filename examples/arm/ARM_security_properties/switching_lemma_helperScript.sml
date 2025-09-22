@@ -1,8 +1,9 @@
-open HolKernel boolLib bossLib Parse proofManagerLib;
-open arm_opsemTheory arm_seq_monadTheory arm_coretypesTheory arm_stepTheory;
-open inference_rulesTheory tacticsLib ARM_prover_extLib;
+Theory switching_lemma_helper
+Ancestors
+  arm_opsem arm_seq_monad arm_coretypes arm_step inference_rules
+Libs
+  proofManagerLib tacticsLib ARM_prover_extLib
 
-val _ =  new_theory("switching_lemma_helper");
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -1379,4 +1380,3 @@ val IT_advance_untouch_security_ex_thm =
 );
 
 
-val _ = export_theory();

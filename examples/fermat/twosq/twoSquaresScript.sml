@@ -4,35 +4,17 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "twoSquares";
+Theory twoSquares
+Ancestors
+  helperTwosq arithmetic pred_set divides number gcdset pair list
+  rich_list listRange combinatorics prime windmill
+  involute  (* for involute_bij *)
+  involuteFix iteration iterateCompose iterateCompute
+  involuteAction group
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "windmillTheory"; *)
-open helperTwosqTheory;
-
-open arithmeticTheory pred_setTheory dividesTheory numberTheory gcdsetTheory
-     pairTheory listTheory rich_listTheory listRangeTheory combinatoricsTheory
-     primeTheory;
-
-open windmillTheory;
-
-open involuteTheory; (* for involute_bij *)
-open involuteFixTheory;
-
-open iterationTheory;
-open iterateComposeTheory;
-
-open iterateComputeTheory;
-
-open involuteActionTheory;
-open groupTheory;
-
-val _ = intLib.deprecate_int ();
 
 val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
@@ -1202,8 +1184,4 @@ https://medium.com/cantors-paradise/the-one-sentence-proof-in-multiple-sentences
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

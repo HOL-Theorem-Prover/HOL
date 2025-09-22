@@ -2,10 +2,6 @@
 (* Cone Of Influence Reduction (COIR)                                        *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* Create "COIRTheory"                                                       *)
-(*****************************************************************************)
-
 (*
 quietdec := true;                                    (* Switch off output    *)
 map load
@@ -15,22 +11,10 @@ open
 quietdec := false;                                   (* Restore output       *)
 *)
 
-(*****************************************************************************)
-(* Boilerplate needed for compilation                                        *)
-(*****************************************************************************)
+Theory COIR
+Ancestors
+  pred_set string finite_map pred_set LTL
 
-open HolKernel Parse boolLib bossLib pred_setTheory stringTheory
-     finite_mapTheory pred_setTheory LTLTheory;
-
-(*****************************************************************************)
-(* END BOILERPLATE                                                           *)
-(*****************************************************************************)
-
-(******************************************************************************
-* Start a new theory called COIR
-******************************************************************************)
-
-val _ = new_theory "COIR";
 
 (******************************************************************************
 * Annoyance fix: stop ``I`` and ``S`` parsing to the identity and S-combinators
@@ -179,6 +163,3 @@ EVAL ``BIGUNION(IMAGE EXP_VARS (BIGUNION(FRANGE ^sys)))``;
 EVAL ``FDOM ^sys UNION BIGUNION(IMAGE EXP_VARS (BIGUNION(FRANGE ^sys)))``;
 
 *)
-
-
-val _ = export_theory();

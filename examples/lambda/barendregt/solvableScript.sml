@@ -4,19 +4,14 @@
 (*                                                                            *)
 (* AUTHORS : 2023-2024 The Australian National University (Chun Tian)         *)
 (* ========================================================================== *)
+Theory solvable
+Ancestors
+  arithmetic pred_set list rich_list sorting finite_map path
+  relation pair basic_swap nomset term appFOLDL chap2 chap3
+  head_reduction standardisation horeduction normal_order
+Libs
+  hurdUtils listLib binderLib reductionEval
 
-open HolKernel Parse boolLib bossLib;
-
-(* core theories *)
-open arithmeticTheory pred_setTheory listTheory rich_listTheory sortingTheory
-     finite_mapTheory pathTheory relationTheory hurdUtils listLib pairTheory;
-
-(* lambda theories *)
-open binderLib basic_swapTheory nomsetTheory termTheory appFOLDLTheory
-     chap2Theory chap3Theory head_reductionTheory standardisationTheory
-     reductionEval horeductionTheory normal_orderTheory;
-
-val _ = new_theory "solvable";
 
 (* |- !M. FV M = {} ==> (solvable M <=> ?Ns. M @* Ns == I) *)
 Theorem solvable_alt_closed'[local] =
@@ -1873,7 +1868,6 @@ QED
 Theorem principal_hnf_tpm' =
         principal_hnf_tpm |> REWRITE_RULE [GSYM solvable_iff_has_hnf]
 
-val _ = export_theory ();
 val _ = html_theory "solvable";
 
 (* References:

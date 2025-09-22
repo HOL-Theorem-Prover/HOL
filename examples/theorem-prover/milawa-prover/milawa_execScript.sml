@@ -1,10 +1,7 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "milawa_exec";
-
-open stringTheory finite_mapTheory pred_setTheory listTheory sumTheory;
-open optionTheory arithmeticTheory relationTheory combinTheory;
-
-open lisp_sexpTheory lisp_semanticsTheory;
-open milawa_logicTheory milawa_defsTheory;
+Theory milawa_exec
+Ancestors
+  string finite_map pred_set list sum option arithmetic relation
+  combin lisp_sexp lisp_semantics milawa_logic milawa_defs
 
 (* We define an intermediate language MR_ev -- a language which is
    very much like the runtime's specification R_ev. The difference is
@@ -2426,4 +2423,3 @@ val MR_ap_thm = save_thm("MR_ap_thm",M_ev_IMP_R_ev_lemma
   |> CONJUNCTS |> el 2 |> Q.SPECL [`(f,args,ctxt)`,`result`]
   |> SIMP_RULE std_ss [PULL_IMP,AND_IMP_INTRO] |> GEN_ALL);
 
-val _ = export_theory();

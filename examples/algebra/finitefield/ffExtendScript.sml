@@ -4,49 +4,21 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "ffExtend";
+Theory ffExtend
+Ancestors
+  pred_set list arithmetic divides gcd gcdset number
+  combinatorics cardinal ffBasic ffAdvanced ffPoly ffMinimal
+  ffConjugate ffExist monoid group ring field fieldMap
+  fieldInstances polynomial polyWeak polyRing polyDivision
+  polyBinomial polyMonic polyDivides polyProduct polyRoot
+  polyIrreducible polyField polyFieldDivision polyFieldModulo
+  polyRingModulo polyModuloRing polyMap
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory dividesTheory gcdTheory
-     gcdsetTheory numberTheory combinatoricsTheory cardinalTheory;
-
-(* Get dependent theories local *)
-open ffBasicTheory;
-open ffAdvancedTheory;
-open ffPolyTheory;
-open ffMinimalTheory;
-open ffConjugateTheory;
-open ffExistTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-open fieldMapTheory;
-
-open fieldInstancesTheory;
-
-(* Get polynomial theory of Ring *)
-open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory polyBinomialTheory;
-open polyMonicTheory;
-open polyDividesTheory;
-open polyProductTheory;
-open polyRootTheory;
-open polyIrreducibleTheory;
-
-open polyFieldTheory;
-open polyFieldDivisionTheory;
-open polyFieldModuloTheory;
-open polyRingModuloTheory;
-open polyModuloRingTheory;
-open polyMapTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* Field Extension Documentation                                             *)
 (* ------------------------------------------------------------------------- *)
@@ -1452,8 +1424,4 @@ val finite_field_eq_card_field_iso = store_thm(
 (* Another proof of the milestone: uniqueness of finite fields up to isomorphism. *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

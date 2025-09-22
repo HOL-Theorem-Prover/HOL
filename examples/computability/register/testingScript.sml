@@ -1,18 +1,7 @@
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory;
-open combinTheory;
-open whileTheory;
-open indexedListsTheory;
-open numeralTheory;
-open rmModelTheory;
-open rmToPairTheory;
-open rmRecursiveFuncsTheory;
-open rmToolsTheory;
-open rmSampleMachinesTheory;
-
-val _ = new_theory "testing";
-
-
+Theory testing
+Ancestors
+  arithmetic combin while indexedLists numeral rmModel rmToPair
+  rmRecursiveFuncs rmTools rmSampleMachines
 
 (*
 val _ = computeLib.set_skip computeLib.the_compset ``COND`` (SOME 1);
@@ -222,4 +211,3 @@ Theorem Pair0_1 = EVAL ``RUN (Pair identity add1) [0]``;
 Theorem npair0_5 = EVAL ``npair 0 2``;
 Theorem Pair0_5 = EVAL ``RUN (Pair identity (link (msInst 0 add1) (msInst 1 add1))) [0]``;
 
-val _ = export_theory()

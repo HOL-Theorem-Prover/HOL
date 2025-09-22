@@ -1,11 +1,10 @@
 (*===========================================================================*)
 (* Simple theory of bytes.                                                   *)
 (*===========================================================================*)
+Theory word8
+Ancestors
+  pair
 
-open HolKernel Parse boolLib bossLib
-     pairTheory;
-
-val _ = new_theory "word8";
 
 (*---------------------------------------------------------------------------*)
 (* 8 bits per byte, represented as an 8-tuple of truth values.               *)
@@ -271,6 +270,4 @@ val XOR8_AC = Q.store_thm
  SIMP_TAC std_ss [FORALL_BYTE_VARS,XOR_def,XOR8_def]
  THEN REPEAT STRIP_TAC
  THEN DECIDE_TAC);
-
-val _ = export_theory();
 

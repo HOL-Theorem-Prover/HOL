@@ -2,10 +2,11 @@
  * semantics, and a definition of contextual approximation for it. We
  * use closures rather than substitution in the semantics, and use
  * De Bruijn indices for variables. *)
+Theory cbv
+Ancestors
+  integer string alist list pred_set pair option finite_map
+  arithmetic
 
-open HolKernel boolLib bossLib Parse;
-open integerTheory stringTheory alistTheory listTheory pred_setTheory;
-open pairTheory optionTheory finite_mapTheory arithmeticTheory;
 
 val _ = set_trace "Goalstack.print_goal_at_top" 0;
 val _ = ParseExtras.temp_tight_equality();
@@ -13,8 +14,6 @@ val _ = ParseExtras.temp_tight_equality();
 fun term_rewrite tms = let
   fun f tm = ASSUME (list_mk_forall(free_vars tm,tm))
   in rand o concl o QCONV (REWRITE_CONV (map f tms)) end
-
-val _ = new_theory "cbv";
 
 (* Syntax *)
 
@@ -453,4 +452,3 @@ ctxt_approx e1 e2 ⇔
     ⇒
     res_approx r1 r2`;
 
-val _ = export_theory ();

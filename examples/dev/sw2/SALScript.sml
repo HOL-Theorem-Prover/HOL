@@ -1,10 +1,8 @@
 (*---------------------------------------------------------------------------*)
 (* SAL - Structured Assembly Language                                        *)
 (*---------------------------------------------------------------------------*)
+Theory SAL
 
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "SAL";
 
 (*---------------------------------------------------------------------------*)
 (* Labels                                                                    *)
@@ -231,8 +229,6 @@ val FUN_CALL_RULE = Q.store_thm (
    IMP_RES_TAC seq_rule THEN
    FULL_SIMP_TAC std_ss [LET_THM]
   );
-
-val _ = export_theory();
 
 (*---------------------------------------------------------------------------*)
 (* Examples                                                                  *)

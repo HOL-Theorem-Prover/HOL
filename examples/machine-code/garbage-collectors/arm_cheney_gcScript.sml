@@ -1,13 +1,13 @@
 
-open HolKernel boolLib bossLib Parse; val _ = new_theory "arm_cheney_gc";
+Theory arm_cheney_gc
+Ancestors
+  words arithmetic list pred_set pair combin finite_map address
+  tailrec
+  cheney_gc  (* an abstract implementation is imported *)
+Libs
+  decompilerLib prog_armLib wordsLib mc_tailrecLib
+
 val _ = ParseExtras.temp_loose_equality()
-
-open decompilerLib prog_armLib;
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory;
-open mc_tailrecLib tailrecTheory;
-open cheney_gcTheory; (* an abstract implementation is imported *)
 
 val decompile_arm = decompile arm_tools;
 val basic_decompile_arm = basic_decompile arm_tools;
@@ -758,6 +758,3 @@ val arm_collect_lemma = store_thm("arm_collect_lemma",
     FULL_SIMP_TAC bool_ss [ref_cheney_def,CUT_def]
     \\ FULL_SIMP_TAC bool_ss [ref_cheney_def,GSYM CUT_def]
     \\ METIS_TAC [ref_mem_def]]);
-
-
-val _ = export_theory();

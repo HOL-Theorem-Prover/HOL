@@ -9,16 +9,18 @@ app load ["pred_setSimps", "pred_setTheory",
 
 quietdec := false;
 *)
+Theory IL
+Ancestors
+  pred_set arithmetic words pair list while finite_map preARM
+  ARMComposition relation
+Libs
+  numLib pred_setSimps wordsLib
 
 
-open HolKernel Parse boolLib bossLib numLib pred_setSimps pred_setTheory
-     arithmeticTheory wordsTheory wordsLib pairTheory listTheory whileTheory finite_mapTheory preARMTheory ARMCompositionTheory relationTheory;
 
 val _ = hide "B";
 (*---------------------------------------------------------------------------------*)
 (*---------------------------------------------------------------------------------*)
-
-val _ = new_theory "IL";
 
 val set_ss = std_ss ++ SET_SPEC_ss ++ PRED_SET_ss;
 
@@ -699,4 +701,3 @@ val SEMANTICS_OF_IR = Q.store_thm (
    RW_TAC std_ss [IR_SEMANTICS_BLK, IR_SEMANTICS_CJ, IR_SEMANTICS_SC, IR_SEMANTICS_TR]
   );
 
-val _ = export_theory();

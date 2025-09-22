@@ -11,10 +11,13 @@ open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLi
 
 quietdec := false;
 *)
+Theory funCall
+Ancestors
+  arithmetic words pair while list pred_set finite_map preARM CFL
+  bigInst HSL
+Libs
+  numLib wordsLib pred_setSimps simplifier
 
-open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLib pairTheory whileTheory
-       listTheory pred_setSimps pred_setTheory finite_mapTheory preARMTheory CFLTheory bigInstTheory
-       simplifier HSLTheory;
 
 (*---------------------------------------------------------------------------------*)
 (*   This theory is about an implementation of function calls                      *)
@@ -31,8 +34,6 @@ open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLi
 (*         on function entry and then poped from memory before result passing on   *)
 (*         function exit.                                                          *)
 (*---------------------------------------------------------------------------------*)
-
-val _ = new_theory "funCall";
 
 (*---------------------------------------------------------------------------------*)
 (*         Convert expressions                                                     *)
@@ -2060,6 +2061,4 @@ val FC_IMPLEMENTATION_LEM = Q.store_thm (
   );
 
 (*---------------------------------------------------------------------------------*)
-
-val _ = export_theory();
 

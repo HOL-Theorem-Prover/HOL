@@ -1,12 +1,10 @@
 
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "straightline";
-
-open wordsTheory wordsLib pairTheory listTheory relationTheory;
-open pred_setTheory arithmeticTheory combinTheory;
-open arm_decompTheory set_sepTheory progTheory addressTheory;
-open tripleTheory GraphLangTheory;
+Theory straightline
+Ancestors
+  words pair list relation pred_set arithmetic combin arm_decomp
+  set_sep prog address triple GraphLang
+Libs
+  wordsLib
 
 val arm_assert_def = Define `
   arm_assert (p,r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,r13,r14,n,z,c,v,
@@ -70,4 +68,3 @@ val COMBINE4 = store_thm("COMBINE4",
 
 val DO_NOTHING_def = Define `DO_NOTHING x = x`;
 
-val _ = export_theory();

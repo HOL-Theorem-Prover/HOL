@@ -1,10 +1,9 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_inv";
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory stringTheory addressTheory;
-
-open lisp_gcTheory cheney_gcTheory cheney_allocTheory;
-open lisp_typeTheory divideTheory;
+Theory lisp_inv
+Ancestors
+  words arithmetic list pred_set pair combin finite_map string
+  address lisp_gc cheney_gc cheney_alloc lisp_type divide
+Libs
+  wordsLib
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -952,4 +951,3 @@ val lisp_inv_LDEPTH = store_thm("lisp_inv_LDEPTH",
   \\ IMP_RES_TAC lisp_inv_LDEPTH_LEMMA \\ ASM_SIMP_TAC std_ss []);
 
 
-val _ = export_theory();

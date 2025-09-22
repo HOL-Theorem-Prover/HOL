@@ -1,14 +1,13 @@
 (* ------------------------------------------------------------------------
    Definitions and theorems used by ARM step evaluator (arm_stepLib)
    ------------------------------------------------------------------------ *)
+Theory arm8_step
+Ancestors
+  state_transformer update alignment arm8
+Libs
+  utilsLib wordsLib blastLib
 
-open HolKernel boolLib bossLib
 
-open utilsLib
-open wordsLib blastLib
-open state_transformerTheory updateTheory alignmentTheory arm8Theory
-
-val _ = new_theory "arm8_step"
 val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------ *)
 
@@ -514,4 +513,3 @@ val write'mem8 = mem_ev "8" ``write'Mem (d:word64, address, 8, acctype)``
 
 (* ------------------------------------------------------------------------ *)
 
-val () = export_theory ()

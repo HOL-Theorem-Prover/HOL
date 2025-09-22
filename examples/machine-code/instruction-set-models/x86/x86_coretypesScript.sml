@@ -1,9 +1,7 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory bit_listTheory listTheory;
-
-val _ = new_theory "x86_coretypes";
-
+Theory x86_coretypes
+Ancestors
+  words bit_list list
 
 (* ---------------------------------------------------------------------------------- *>
 
@@ -34,4 +32,3 @@ val _ = Hol_datatype   `iiid = <| proc : num ;
 
 
 
-val _ = export_theory ();

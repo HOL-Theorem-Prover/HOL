@@ -1,6 +1,10 @@
-open HolKernel Parse boolLib boolSimps bossLib pred_setTheory zfset_axiomsTheory zfsetTheory pairTheory categoryTheory limitTheory ens_catTheory functorTheory nat_transTheory hom_functorTheory YonedaTheory;
+Theory zfset_cat
+Ancestors
+  pred_set zfset_axioms zfset pair category limit ens_cat functor_
+  nat_trans hom_functor Yoneda
+Libs
+  boolSimps
 
-val _ = new_theory "zfset_cat";
 val _ = ParseExtras.temp_loose_equality()
 
 val _ = srw_ss()
@@ -1254,5 +1258,3 @@ qmatch_assum_rename_tac `!x. x :- a → b -:c = x :- z → z -:c` >>
 `id z -: c :- z → z -:c` by metis_tac [id_maps_to] >>
 `id z -: c :- a → b -:c` by metis_tac [] >>
 fsrw_tac [][maps_to_in_def]);
-
-val _ = export_theory ();

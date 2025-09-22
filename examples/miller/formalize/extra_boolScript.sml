@@ -1,8 +1,6 @@
-open HolKernel Parse bossLib boolLib;
-
-open combinTheory;
-
-val _ = new_theory "extra_bool";
+Theory extra_bool
+Ancestors
+  combin
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)
@@ -76,4 +74,3 @@ val inv_xor = store_thm
    ``!x. ~x xor x``,
    RW_TAC bool_ss [xor_def] THEN DECIDE_TAC);
 
-val _ = export_theory ();

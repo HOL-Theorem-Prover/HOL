@@ -1,17 +1,9 @@
-(* standard prelude *)
-open HolKernel boolLib Parse
-
-
-(* extra theorem-proving oomph from libraries *)
-open bossLib metisLib ncLib BasicProvers boolSimps
-
-
-
-(* ancestor theories *)
-open fsubtypesTheory pred_setTheory
-
-val _ = new_theory "kernel_subtyping"
-
+Theory kernel_subtyping
+Ancestors
+  fsubtypes pred_set
+Libs
+  (* extra theorem-proving oomph from libraries *)
+  metisLib ncLib BasicProvers boolSimps
 
 
 (* set up syntax for subtyping judgements *)
@@ -351,5 +343,3 @@ val alg_soundcomplete (* theorem 28.3.3 *) = store_thm(
     METIS_TAC [fsubtyping_rules, wfctxt_MEM, SUBSET_DEF,
                fsubtyping_wfctxt]
   ]);
-
-val _ = export_theory ();

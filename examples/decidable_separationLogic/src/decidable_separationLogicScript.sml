@@ -1,4 +1,8 @@
-open HolKernel Parse boolLib bossLib;
+Theory decidable_separationLogic
+Ancestors
+  finite_map relation pred_set sorting list rich_list
+Libs
+  congLib
 
 (*
 quietdec := true;
@@ -11,9 +15,6 @@ map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
 show_assums := true;
 *)
 
-open finite_mapTheory relationTheory pred_setTheory congLib sortingTheory
-   listTheory rich_listTheory;
-
 (*
 load "decidable_separationLogicTheory";
 open decidable_separationLogicTheory;
@@ -21,7 +22,6 @@ open decidable_separationLogicTheory;
 quietdec := false;
 *)
 
-val _ = new_theory "decidable_separationLogic";
 val _ = ParseExtras.temp_loose_equality()
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"]
@@ -10304,4 +10304,3 @@ BINOP_TAC THENL [
    METIS_TAC[]
 ])
 
-val _ = export_theory();

@@ -1,10 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open prtermTheory
-open arithmeticTheory
-
-
-val _ = new_theory "numsAsCompStates";
+Theory numsAsCompStates
+Ancestors
+  prterm arithmetic
 
 val _ = Datatype ‘compstate = CS num’;
 
@@ -281,4 +277,3 @@ QED
 
 
 
-val _ = export_theory();

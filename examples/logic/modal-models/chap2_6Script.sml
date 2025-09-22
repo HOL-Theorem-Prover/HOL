@@ -1,30 +1,10 @@
-open HolKernel Parse boolLib bossLib;
-open chap1Theory;
-open pred_setTheory;
-open relationTheory;
-open arithmeticTheory;
-open set_relationTheory;
+Theory chap2_6
+Ancestors
+  chap1 pred_set relation arithmetic set_relation chap2_1 chap2_2
+  chap2_4 chap2_5 equiv_on_partition prim_rec list rich_list
+  finite_map combin folModels folLang folCanon ultrafilter
+  ultraproduct lemma2_73 pair
 
-open chap2_1Theory;
-open chap2_2Theory;
-open chap2_4Theory;
-open chap2_5Theory;
-open equiv_on_partitionTheory;
-open prim_recTheory;
-open listTheory;
-open rich_listTheory;
-open finite_mapTheory;
-open combinTheory;
-open folModelsTheory;
-open folLangTheory;
-open folCanonTheory;
-open ultrafilterTheory;
-open ultraproductTheory;
-open lemma2_73Theory;
-open pairTheory;
-
-
-val _ = new_theory "chap2_6";
 val _ = temp_delsimps ["satis_def"]
 
 Definition L1tau_def:
@@ -1785,4 +1765,3 @@ Proof
   rw[] >> drule thm_2_68_half1 >>  rw[feq_def] >> metis_tac[]
 QED
 
-val _ = export_theory();

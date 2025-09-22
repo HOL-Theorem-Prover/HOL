@@ -9,11 +9,13 @@
 (* interactive use:
   app load ["armTheory"];
 *)
+Theory core
+Ancestors
+  io_onestep arm
+Libs
+  Q
 
-open HolKernel boolLib Parse bossLib;
-open Q io_onestepTheory armTheory;
 
-val _ = new_theory "core";
 val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
@@ -1176,4 +1178,3 @@ val DUR_X = save_thm("DUR_X",
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory();

@@ -1,10 +1,8 @@
 
-open HolKernel Parse boolLib bossLib; val _ = new_theory "m1_factorial_proof";
-
-open m1_progTheory m1_factorialTheory;
-open combinTheory addressTheory sexpTheory imported_acl2Theory;
-open complex_rationalTheory hol_defaxiomsTheory;
-open arithmeticTheory;
+Theory m1_factorial_proof
+Ancestors
+  m1_prog m1_factorial combin address sexp imported_acl2
+  complex_rational hol_defaxioms arithmetic
 
 infix \\
 val op \\ = op THEN;
@@ -56,6 +54,4 @@ val m1_factorial_thm = acl2_fact_certificate
 val _ = save_thm("m1_factorial_thm",m1_factorial_thm);
 
 *)
-
-val _ = export_theory();
 

@@ -1,12 +1,9 @@
-open HolKernel boolLib bossLib Parse binderLib
-
-open churchnumTheory churchboolTheory pure_dBTheory
-open reductionEval pred_setTheory termTheory chap3Theory
-open normal_orderTheory
-open head_reductionTheory
-
-val _ = new_theory "churchoption"
-
+Theory churchoption
+Ancestors
+  churchnum churchbool pure_dB pred_set term chap3 normal_order
+  head_reduction
+Libs
+  binderLib reductionEval
 
 val cnone_def = Define`cnone = K`;
 Theorem FV_cnone[simp]: FV cnone = ∅
@@ -90,4 +87,3 @@ Proof
 QED
 
 
-val _ = export_theory()

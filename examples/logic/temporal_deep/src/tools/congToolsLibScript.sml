@@ -1,9 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-open Sanity;
-
-
-val _ = new_theory "congToolsLib";
-
+Theory congToolsLib
+Libs
+  Sanity
 
 val LIST_AS_SET_CONGRUENCE_RELATION_def =
   Define `LIST_AS_SET_CONGRUENCE_RELATION R l1 l2 =
@@ -52,4 +49,3 @@ val LIST_AS_SET_CONGRUENCE_RELATION_REWRITES =
       METIS_TAC[]);
 
 
-val _ = export_theory();

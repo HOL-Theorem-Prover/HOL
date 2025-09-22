@@ -23,34 +23,19 @@ map load
 open SyntaxTheory SyntacticSugarTheory
      PSLPathTheory KripkeTheory listTheory rich_listTheory intLib;
 
-val _ = intLib.deprecate_int();
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories of sequences and lists
-******************************************************************************)
-open SyntaxTheory SyntacticSugarTheory PSLPathTheory KripkeTheory
-     listTheory rich_listTheory intLib;
-
-(******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
-val _ = intLib.deprecate_int();
+Theory UnclockedSemantics
+Ancestors
+  Syntax SyntacticSugar PSLPath Kripke list rich_list
+Libs
+  intLib
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
 
-(******************************************************************************
-* Start a new theory called UnclockedSugarSemantics
-******************************************************************************)
-val _ = new_theory "UnclockedSemantics";
 val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************
@@ -239,5 +224,3 @@ val O_SEM_def =
    /\
    (O_SEM M (O_EG f) s =
      ?p. PATH M p s /\ !j :: (0 to LENGTH p). O_SEM M f (ELEM p j))`;
-
-val _ = export_theory();

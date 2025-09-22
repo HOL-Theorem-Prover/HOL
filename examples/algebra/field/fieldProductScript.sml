@@ -4,23 +4,16 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "fieldProduct";
+Theory fieldProduct
+Ancestors
+  pred_set list arithmetic divides number combinatorics monoid
+  group ring field
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory dividesTheory numberTheory
-     combinatoricsTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* Product of a set of Field elements Documentation                          *)
 (* ------------------------------------------------------------------------- *)
@@ -146,8 +139,4 @@ val field_prod_set_sing = store_thm(
   rw[field_prod_set_insert, field_prod_set_empty, field_nonzero_element]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

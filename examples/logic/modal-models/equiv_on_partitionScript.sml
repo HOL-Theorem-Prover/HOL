@@ -1,15 +1,7 @@
-open HolKernel Parse boolLib bossLib;
-open numpairTheory;
-open pred_setTheory;
-open relationTheory;
-open listTheory;
-open arithmeticTheory;
-open set_relationTheory;
-open pairTheory;
-
-open nlistTheory;
-
-val _ = new_theory "equiv_on_partition";
+Theory equiv_on_partition
+Ancestors
+  numpair pred_set relation list arithmetic set_relation pair
+  nlist
 
 val partition_eq_EMPTY = store_thm(
   "partition_eq_EMPTY[simp]",
@@ -149,4 +141,3 @@ Proof
   qpat_x_assum ‘CHOICE y ∈ y’ mp_tac >> simp[]
 QED
 
-val _ = export_theory();

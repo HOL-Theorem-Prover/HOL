@@ -31,40 +31,24 @@ open FinitePSLPathTheory PSLPathTheory SyntaxTheory SyntacticSugarTheory
      res_quanLib res_quanTheory
      arithmeticTheory listTheory whileTheory rich_listTheory res_quanLib res_quanTheory
      ClockedSemanticsTheory LemmasTheory RewritesPropertiesTheory;
-val _ = intLib.deprecate_int();
 quietdec := false;
 *)
 
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories
-******************************************************************************)
-open FinitePSLPathTheory PSLPathTheory SyntaxTheory SyntacticSugarTheory
-     UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
-     arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
-     whileTheory ClockedSemanticsTheory LemmasTheory RewritesPropertiesTheory
-     arithmeticTheory listTheory whileTheory rich_listTheory res_quanLib
-     res_quanTheory ClockedSemanticsTheory LemmasTheory
-     RewritesPropertiesTheory;
-
-(******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
-val _ = intLib.deprecate_int();
+Theory Projection
+Ancestors
+  FinitePSLPath PSLPath Syntax SyntacticSugar UnclockedSemantics
+  ClockedSemantics Rewrites arithmetic list rich_list res_quan
+  while ClockedSemantics Lemmas RewritesProperties arithmetic
+  list while rich_list res_quan ClockedSemantics Lemmas
+  RewritesProperties FinitePSLPath PSLPath
+Libs
+  res_quanLib res_quanLib
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
 
-(******************************************************************************
-* Start a new theory called Project
-******************************************************************************)
-val _ = new_theory "Projection";
 val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************
@@ -81,8 +65,6 @@ val resq_SS =
 ******************************************************************************)
 
 val CLOCK_def = Define `CLOCK c s = B_SEM s c`;
-
-open FinitePSLPathTheory;
 
 val LIST_PROJ_def =
  Define `LIST_PROJ l c = FILTER (CLOCK c) l`;
@@ -1699,11 +1681,6 @@ val S_PROJ_COR =
 (*****************************************************************************)
 (* Start developing projection view for formulas                             *)
 (*****************************************************************************)
-
-(*****************************************************************************)
-(* Switch default to general (i.e. finite or infinite) paths                 *)
-(*****************************************************************************)
-open PSLPathTheory;
 
 (******************************************************************************
 * FUN_FILTER_COUNT P f m n = P is true for the mth time in f at position n
@@ -3362,5 +3339,3 @@ val F_PROJ_FINITE =
       RW_TAC std_ss [F_PROJ_F_STRONG_SERE_FINITE],
 
 *)
-
-val _ = export_theory();

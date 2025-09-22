@@ -3,10 +3,6 @@
 (*                                                                           *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* Load theories                                                             *)
-(*****************************************************************************)
-
 (*
 load "finite_mapTheory";
 load "sortingTheory";
@@ -14,23 +10,12 @@ load "translateTheory";
 open finite_mapTheory sortingTheory pred_setTheory listTheory pred_setLib;
 *)
 
-(*****************************************************************************)
-(* Boilerplate needed for compilation: open HOL4 systems modules.            *)
-(*****************************************************************************)
+Theory fmap_encode
+Ancestors
+  finite_map pred_set list sorting
+Libs
+  pred_setLib
 
-open HolKernel Parse boolLib bossLib;
-
-(*****************************************************************************)
-(* Theories for compilation                                                  *)
-(*****************************************************************************)
-
-open finite_mapTheory pred_setTheory listTheory pred_setLib sortingTheory;
-
-(*****************************************************************************)
-(* Start new theory "fmap_encode"                                            *)
-(*****************************************************************************)
-
-val _ = new_theory "fmap_encode";
 
 val PULL_CONV = REPEATC (DEPTH_CONV (RIGHT_IMP_FORALL_CONV ORELSEC AND_IMP_INTRO_CONV));
 val PULL_RULE = CONV_RULE PULL_CONV;
@@ -1498,5 +1483,3 @@ val fempty_rewrite = store_thm("fempty_rewrite",
     RW_TAC std_ss [encode_fmap_def,M2L_def] THEN
     ONCE_REWRITE_TAC [fold_def] THEN
     RW_TAC std_ss [sortingTheory.QSORT3_DEF]);
-
-val _ = export_theory();

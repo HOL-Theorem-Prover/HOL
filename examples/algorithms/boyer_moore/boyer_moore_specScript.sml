@@ -1,15 +1,7 @@
-open HolKernel boolLib bossLib Parse;
-
-open listTheory;
-open rich_listTheory;
-open prim_recTheory;
-open arithmeticTheory;
-open pred_setTheory;
-open pairTheory;
-open boolTheory;
-open set_lemmasTheory;
-
-val _ = new_theory"boyer_moore_spec";
+Theory boyer_moore_spec
+Ancestors
+  list rich_list prim_rec arithmetic pred_set pair bool
+  set_lemmas
 
 (*
     SOLUTION DEFINITION AND BEHAVIOUR
@@ -310,4 +302,3 @@ val SUF_SKIP_NOT_SOL = store_thm(
         )
     );
 
-val _ = export_theory();

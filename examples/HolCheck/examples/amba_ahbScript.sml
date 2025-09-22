@@ -1,17 +1,13 @@
 
 (* Definitions for AMBA AHB bus. See AMBA Specification v2.0 from ARM for details  *)
+Theory amba_ahb
+Ancestors
+  bool mod16
+Libs
+  pairSyntax listSyntax commonTools ksTools amba_common
 
-open HolKernel Parse boolLib bossLib
+
 (* app load ["pairSyntax","mod16Theory","commonTools","ksTools","listSyntax"] *)
-
-val _ = new_theory("amba_ahb")
-
-open HolKernel Parse boolLib bossLib
-
-open pairSyntax boolTheory listSyntax
-open mod16Theory commonTools ksTools amba_common
-
-
 
 (* -------------------- abbreviations for readibility of main defs -------------------- *)
 
@@ -474,4 +470,3 @@ val R1rh = save_thm("amba_ahb_R1rh", EVERY_CONJ_CONV (STRIP_QUANT_CONV
                 (unroll_ahb_CONV [TRANS_AHB_M_def,TRANS_X_def,(*TRANS_D_def,*)TRANS_CNT_def,TRANS_AHB_S_def,I1rh]
                                  TRANS_A_def abbrev_defs))))) Rc)
 
-val _ = export_theory()

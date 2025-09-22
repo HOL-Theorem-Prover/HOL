@@ -1,6 +1,7 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "for_nd_compile";
+Theory for_nd_compile
+Ancestors
+  option pair pred_set finite_map string for_nd for_nd_sem list
+  arithmetic
 
 (*
 
@@ -15,9 +16,6 @@ The compiler consists of three phasees:
  - the third phase maps the FOR language into assmembly code
 
 *)
-
-open optionTheory pairTheory pred_setTheory finite_mapTheory stringTheory;
-open for_ndTheory for_nd_semTheory listTheory arithmeticTheory;
 
 val _ = temp_tight_equality ();
 
@@ -1084,4 +1082,3 @@ Proof
   \\ metis_tac[]
 QED
 
-val _ = export_theory ();

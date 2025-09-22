@@ -1,16 +1,13 @@
 (* Church style encoding of de Bruijn terms, giving us
     "The Power of Reflection"
 *)
+Theory churchDB
+Ancestors
+  churchnum churchbool pure_dB pred_set term chap3 normal_order
+  head_reduction churchpair dnoreduct enumerations
+Libs
+  binderLib reductionEval brackabs
 
-open HolKernel boolLib bossLib Parse binderLib
-
-open churchnumTheory churchboolTheory pure_dBTheory
-open reductionEval pred_setTheory termTheory chap3Theory
-open normal_orderTheory
-open head_reductionTheory
-open brackabs
-
-val _ = new_theory "churchDB"
 
 Theorem DISJ_IMP_EQ:
   ((x = y) ∨ P ⇔ (x ≠ y ⇒ P)) ∧
@@ -526,8 +523,6 @@ val wh_cdABS = store_thm(
 
 
 
-open churchpairTheory
-
 val wh_termrec_comb = store_thm(
   "wh_termrec_comb",
   ``termrec_comb @@ t @@ r1 @@ r2 @@ f -w->*
@@ -724,7 +719,6 @@ val FV_cnoreduct = store_thm(
 
 val cnoreduct_equiv = brackabs_equiv [] cnoreduct_def
 
-open dnoreductTheory
 val cnoreduct_correct = store_thm(
   "cnoreduct_correct",
   ``∀d. cnoreduct @@ cDB d -n->* if dbnf d then cDB d
@@ -1095,11 +1089,6 @@ val ccDB_behaviour = store_thm(
     enumerations are computable
    ---------------------------------------------------------------------- *)
 
-open enumerationsTheory
-
-
-
-
 val cdBnum_def = Define`
   cdBnum =
   LAM "t"
@@ -1389,4 +1378,3 @@ val bnf_of_cbnf = store_thm(
     FULL_SIMP_TAC (bsrw_ss()) [bnf_bnf_of]
   ]);
 
-val _ = export_theory()

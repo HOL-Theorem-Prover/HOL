@@ -1,6 +1,9 @@
-open HolKernel Parse bossLib boolLib boolSimps categoryTheory functorTheory nat_transTheory pairTheory SatisfySimps;
+Theory limit
+Ancestors
+  category functor_ nat_trans pair
+Libs
+  boolSimps SatisfySimps
 
-val _ = new_theory "limit";
 val _ = ParseExtras.temp_loose_equality()
 
 val is_terminal_def = Define`
@@ -791,5 +794,3 @@ conj_tac >- metis_tac [maps_to_composable] >>
 srw_tac [][DECIDE ``(1 = n) = (n = 1)``] >>
 first_x_assum match_mp_tac >>
 fsrw_tac [][maps_to_in_def]);
-
-val _ = export_theory ();

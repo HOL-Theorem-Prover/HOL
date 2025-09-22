@@ -1,8 +1,9 @@
-open HolKernel Parse bossLib boolLib gfgTheory listTheory optionTheory pred_setTheory relationTheory pairTheory prim_recTheory set_relationTheory arithmeticTheory rich_listTheory
-
-open sptreeTheory ltlTheory generalHelpersTheory concrGBArepTheory concrRepTheory waa2baTheory buechiATheory gbaSimplTheory alterATheory ltl2waaTheory waaSimplTheory concrltl2waaTheory
-
-val _ = new_theory "concrwaa2gba"
+Theory concrwaa2gba
+Ancestors
+  gfg list option pred_set relation pair prim_rec set_relation
+  arithmetic rich_list sptree ltl generalHelpers concrGBArep
+  concrRep waa2ba buechiA gbaSimpl alterA ltl2waa waaSimpl
+  concrltl2waa
 
 val _ = set_trace "BasicProvers.var_eq_old" 1
 val _ = temp_delsimps ["all_distinct_nub", "nub_NIL"]
@@ -5149,4 +5150,3 @@ val EXPGBA_CORRECT = store_thm
   >> Cases_on `expandGBA_init concr_AA` >> fs[]
   );
 
-val _ = export_theory()

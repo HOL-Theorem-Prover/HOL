@@ -4,24 +4,16 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "complexity";
+Theory complexity
+Ancestors
+  prim_rec pred_set arithmetic divides gcd list rich_list logroot
+  number combinatorics prime bitsize
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open prim_recTheory pred_setTheory arithmeticTheory dividesTheory gcdTheory
-     listTheory rich_listTheory logrootTheory numberTheory combinatoricsTheory
-     primeTheory;
-
-open bitsizeTheory;
-
 val _ = temp_overload_on("SQ", ``\n. n * n``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
 val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
@@ -1387,8 +1379,4 @@ val big_O_size_eq_big_O_ulog = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

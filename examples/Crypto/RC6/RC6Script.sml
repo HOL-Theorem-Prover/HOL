@@ -9,9 +9,12 @@
 (* in which algorithm specification, Security and performance evaluation,    *)
 (* etc. can be found.                                                        *)
 (*---------------------------------------------------------------------------*)
+Theory RC6
+Ancestors
+  arithmetic pair list words
+Libs
+  wordsLib
 
-open HolKernel Parse boolLib bossLib
-     arithmeticTheory pairTheory listTheory wordsLib;
 
 (*---------------------------------------------------------------------------*)
 (* Make bindings to pre-existing stuff                                       *)
@@ -22,8 +25,6 @@ val RESTR_EVAL_TAC = computeLib.RESTR_EVAL_TAC;
 (*---------------------------------------------------------------------------*)
 (* Create the theory.                                                        *)
 (*---------------------------------------------------------------------------*)
-
-val _ = new_theory "RC6";
 
 (*---------------------------------------------------------------------------*)
 (* Type Definitions                                                          *)
@@ -322,5 +323,3 @@ val RC6_CORRECT = Q.store_thm
        ==>
        (decrypt (encrypt plaintext) = plaintext)`,
          RW_TAC std_ss [RC6_def,LET_THM,RC6_LEMMA]);
-
-val _ = export_theory();

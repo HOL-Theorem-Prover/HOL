@@ -1,11 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open relationTheory pairTheory combinTheory pred_setTheory
-open cardinalTheory
-
-open ordinalTheory
-
-val _ = new_theory "bnfAlgebra";
+Theory bnfAlgebra
+Ancestors
+  relation pair combin pred_set cardinal ordinal
 
 fun SRULE ths = SIMP_RULE (srw_ss()) ths
 
@@ -1022,4 +1017,3 @@ Proof
   irule map_CONG >> simp[] >> metis_tac[]
 QED
 
-val _ = export_theory();

@@ -1,11 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-open kolmogorov_complexityTheory pred_setTheory
-
-val _ = new_theory "invarianceResults";
-
-
-
-
+Theory invarianceResults
+Ancestors
+  kolmogorov_complexity pred_set
 
 (* Invariance theorem *)
 
@@ -60,4 +55,3 @@ Proof
      invariance_theorem) >> metis_tac[invariance_theorem]
 QED
 
-val _ = export_theory();

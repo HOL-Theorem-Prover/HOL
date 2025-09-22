@@ -1,7 +1,7 @@
-open HolKernel Parse boolLib bossLib;
-open forTheory state_transformerTheory
+Theory for_monadic
+Ancestors
+  for state_transformer
 
-val _ = new_theory "for_monadic";
 val _ = temp_tight_equality ();
 
 (*
@@ -159,4 +159,3 @@ val mon_sem_t_for = Q.prove(
 val monadic_sem_t = save_thm("monadic_sem_t",
   LIST_CONJ[mon_sem_t_exp,mon_sem_t_dec,mon_sem_t_seq,mon_sem_t_seq,mon_sem_t_if,mon_sem_t_for]);
 
-val _ = export_theory ();

@@ -1,25 +1,20 @@
 (* ========================================================================= *)
 (* Create "informationTheory" setting up the theory of information           *)
 (* ========================================================================= *)
+Theory information
+Ancestors
+  arithmetic pred_set list state_transformer combin pair real
+  iterate num seq subtype real_sigma transc lim string rich_list
+  extra_bool extra_num extra_pred_set extra_real sigma_algebra
+  real_measure real_borel real_lebesgue real_probability
+Libs
+  metisLib realLib jrhUtils realSimps simpLib stringSimps
+  listSimps hurdUtils
 
-open HolKernel Parse boolLib bossLib;
-
-open metisLib arithmeticTheory pred_setTheory
-     listTheory state_transformerTheory combinTheory
-     pairTheory realTheory realLib jrhUtils iterateTheory
-     realSimps numTheory simpLib seqTheory subtypeTheory real_sigmaTheory
-     transcTheory limTheory stringTheory rich_listTheory stringSimps listSimps;
-
-open extra_boolTheory extra_numTheory extra_pred_setTheory extra_realTheory;
-
-open hurdUtils sigma_algebraTheory real_measureTheory real_borelTheory
-     real_lebesgueTheory real_probabilityTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "information"                                   *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = new_theory "information";
 
 Overload indicator_fn[local] = “indicator”
 Theorem indicator_fn_def[local] = indicator
@@ -1718,4 +1713,3 @@ Proof
    >> RW_TAC real_ss [REAL_INVINV, REAL_LT_IMP_NE, REAL_MUL_ASSOC, REAL_MUL_RINV]
 QED
 
-val _ = export_theory ();

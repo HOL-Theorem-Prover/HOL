@@ -1,10 +1,11 @@
-open HolKernel boolLib bossLib
-open set_sepTheory progTheory pred_setTheory stateLib x64_stepTheory
-
-val () = new_theory "x64_prog"
+Theory x64_prog
+Ancestors
+  set_sep prog pred_set temporal_state x64_step
+Libs
+  numLib stateLib
 
 val _ = ParseExtras.temp_loose_equality()
-
+val _ = numLib.temp_prefer_num ();
 (* ------------------------------------------------------------------------ *)
 
 val _ = stateLib.sep_definitions "x64" [] [] x64_stepTheory.NextStateX64_def
@@ -176,5 +177,3 @@ val x64_mem32_TEMPORAL_WRITE_EXTEND = Q.store_thm
    tac)
 
 (* ------------------------------------------------------------------------ *)
-
-val () = export_theory()

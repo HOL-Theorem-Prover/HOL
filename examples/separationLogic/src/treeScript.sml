@@ -1,4 +1,8 @@
-open HolKernel Parse boolLib bossLib;
+Theory tree
+Ancestors
+  relation pred_set combin arithmetic list
+Libs
+  boolSimps ConseqConv
 
 (*
 quietdec := true;
@@ -10,14 +14,10 @@ map load ["relationTheory", "pred_setTheory", "operatorTheory"];
 show_assums := true;
 *)
 
-open relationTheory pred_setTheory combinTheory boolSimps arithmeticTheory;
-open listTheory ConseqConv
-
 (*
 quietdec := false;
 *)
 
-val _ = new_theory "tree";
 val _ = ParseExtras.temp_loose_equality()
 
 val tree = Hol_datatype `tree =
@@ -645,4 +645,3 @@ val TREE_PATHS_NOT_EMPTY = store_thm ("TREE_PATHS_NOT_EMPTY",
 );
 
 
-val _ = export_theory();

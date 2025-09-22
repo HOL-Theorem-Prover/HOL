@@ -1,12 +1,10 @@
 (* ------------------------------------------------------------------------- *)
 (* The field of reals.                                                       *)
 (* ------------------------------------------------------------------------- *)
+Theory fieldReal
+Ancestors
+  group field real_algebra
 
-open HolKernel boolLib bossLib Parse;
-
-open groupTheory fieldTheory real_algebraTheory;
-
-val _ = new_theory "fieldReal";
 
 Theorem FieldReals[simp]:
   Field Reals
@@ -23,4 +21,3 @@ Proof
   metis_tac[field_is_integral_domain, FieldReals]
 QED
 
-val _ = export_theory();

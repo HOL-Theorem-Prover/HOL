@@ -4,41 +4,17 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "AKSsets";
-
 (* ------------------------------------------------------------------------- *)
-
-open jcLib;
-
-(* open dependent theories *)
-open prim_recTheory pred_setTheory listTheory arithmeticTheory dividesTheory
-     gcdTheory gcdsetTheory logrootTheory numberTheory combinatoricsTheory
-     primeTheory;
-
-(* Get dependent theories local *)
-open AKSintroTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory
-     polyBinomialTheory;
-
-open polyMonicTheory;
-
-open polyFieldTheory;
-open polyFieldDivisionTheory;
-open polyFieldModuloTheory;
-open polyRingModuloTheory;
-open polyModuloRingTheory;
-open polyIrreducibleTheory;
-open polyRootTheory;
-open polyProductTheory;
-
-open fieldInstancesTheory;
+Theory AKSsets
+Ancestors
+  prim_rec pred_set list arithmetic divides gcd gcdset logroot
+  number combinatorics prime AKSintro monoid group ring field
+  polynomial polyWeak polyRing polyDivision polyBinomial
+  polyMonic polyField polyFieldDivision polyFieldModulo
+  polyRingModulo polyModuloRing polyIrreducible polyRoot
+  polyProduct fieldInstances
+Libs
+  jcLib
 
 val _ = intLib.deprecate_int ();
 
@@ -1656,8 +1632,4 @@ val reduceP_poly_card = store_thm(
   rw[CARD_PPOW, CARD_INJ_IMAGE]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

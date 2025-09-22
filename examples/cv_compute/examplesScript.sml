@@ -38,11 +38,12 @@
  * cv_computeLib.sml for a list of axioms that the different symbols must
  * satisfy.
  * ------------------------------------------------------------------------- *)
+Theory examples
+Ancestors
+  arithmetic list prim_rec cv
+Libs
+  cv_computeLib
 
-open HolKernel boolLib bossLib cv_computeLib;
-open arithmeticTheory listTheory prim_recTheory cvTheory;
-
-val _ = new_theory "examples";
 
 Overload Num = ``cv$Num``
 Overload Pair = ``cv$Pair``
@@ -295,4 +296,3 @@ Triviality primes_test1 =
 
 Triviality primes_test2 = time EVAL “REVERSE (primes_upto 123)”
 
-val _ = export_theory ();

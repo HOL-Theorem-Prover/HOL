@@ -30,22 +30,16 @@ load "ListPair";
 load "stringLib";
 *)
 
-(* Needed for compilation *)
-open HolKernel Parse boolLib;
+Theory MiniTLHexSolitaire
+Ancestors
+  pair
+Libs
+  HolBddLib bdd stringLib pairSyntax pairTools
+
 infixr 3 -->;
 infix 9 by;
 infix ++;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-
-open bossLib;
-open HolBddLib;
-open bdd;
-open stringLib;
-open pairSyntax;
-open pairTools;
-open pairTheory;
-
-val _ = new_theory "MiniTLHexSolitaire";
 
 (*****************************************************************************)
 (* List of board positions                                                   *)
@@ -405,5 +399,3 @@ val aEvalTb2 =
  ``(aSOMETIME ^finalwff)``;
 
 val aModelCheckTh2 = BddThmOracle aEvalTb2;
-
-val _ = export_theory();

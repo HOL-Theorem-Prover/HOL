@@ -4,22 +4,13 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "computeParam";
-
 (* ------------------------------------------------------------------------- *)
-
-open jcLib;
-
-open prim_recTheory pred_setTheory listTheory arithmeticTheory logrootTheory
-     dividesTheory gcdTheory numberTheory combinatoricsTheory primeTheory;
-
-(* Get dependent theories local *)
-open computeOrderTheory;
-open monoidTheory ringTheory;
+Theory computeParam
+Ancestors
+  prim_rec pred_set list arithmetic logroot divides gcd number
+  combinatorics prime computeOrder monoid ring
+Libs
+  jcLib
 
 val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
@@ -2620,8 +2611,4 @@ val param_good_range =
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

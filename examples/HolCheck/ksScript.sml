@@ -1,6 +1,8 @@
-open HolKernel Parse boolLib bossLib stringLib pred_setLib pred_setTheory PairRules
-
-val _ = new_theory "ks";
+Theory ks
+Ancestors
+  pred_set
+Libs
+  stringLib pred_setLib PairRules
 
 (* make the first argument to the KS type operator be the state one by
    using 'State and 'prop as the type arguments: the standard ASCII ordering
@@ -56,4 +58,3 @@ val BISIM_def = Define `BISIM M1 M2 BS =
                      (!s1'. BS(s1,s2) /\ (M1.T a)(s1,s1') ==> (?s2'. (M2.T a)(s2,s2') /\ BS(s1',s2')))  /\
                      (!s2'. BS(s1,s2) /\ (M2.T a)(s2,s2') ==> (?s1'. (M1.T a)(s1,s1') /\ BS(s1',s2')))) `
 
-val _ = export_theory();

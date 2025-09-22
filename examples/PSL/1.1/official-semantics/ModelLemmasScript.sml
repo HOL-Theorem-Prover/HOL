@@ -27,39 +27,25 @@ open SyntaxTheory SyntacticSugarTheory
      arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
      ClockedSemanticsTheory pairLib pred_setTheory ModelTheory metisLib
      FinitePSLPathTheory PSLPathTheory pairTheory;    (* Open after list theory for CONS_def *)
-val _ = intLib.deprecate_int();
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
+Theory ModelLemmas
+Ancestors
+  Syntax SyntacticSugar UnclockedSemantics ClockedSemantics
+  Rewrites pred_set arithmetic list rich_list res_quan Model
+  ClockedSemantics RewritesProperties Projection Model
+  FinitePSLPath pair
+  PSLPath  (* Open after list theory for CONS_def *)
+Libs
+  pred_setLib res_quanLib pairLib res_quanTools metisLib
 
-(******************************************************************************
-* Open theories
-******************************************************************************)
-open SyntaxTheory SyntacticSugarTheory
-     UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
-     pred_setLib pred_setTheory arithmeticTheory listTheory rich_listTheory
-     res_quanLib pairLib res_quanTheory ModelTheory ClockedSemanticsTheory
-     res_quanTools RewritesPropertiesTheory ProjectionTheory ModelTheory
-     metisLib FinitePSLPathTheory pairTheory
-     PSLPathTheory; (* Open after list theory for CONS_def *)
 
-(******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
-val _ = intLib.deprecate_int();
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
 
-(******************************************************************************
-* Start a new theory called Lemmas
-******************************************************************************)
-val _ = new_theory "ModelLemmas";
 val _ = ParseExtras.temp_loose_equality()
 
 val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"]
@@ -2186,5 +2172,3 @@ val MODEL_INTRO =
      ==>
      (UF_VALID M f = O_VALID (M || A) (O_AG(O_BOOL b)))``,
    PROVE_TAC[MODEL_INTRO_IMP1,MODEL_INTRO_IMP2]);
-
-val _ = export_theory();

@@ -1,16 +1,12 @@
 (*---------------------------------------------------------------------------*
  * fsgraphTheory: Theory of Finite Simple Graphs                             *
  *---------------------------------------------------------------------------*)
+Theory fsgraph
+Ancestors
+  arithmetic pair list pred_set sorting relation genericGraph
+Libs
+  hurdUtils
 
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory pairTheory listTheory pred_setTheory sortingTheory
-     relationTheory
-     hurdUtils
-
-open genericGraphTheory;
-
-val _ = new_theory "fsgraph";
 
 Type fsgraph[pp] = “:(unit,finiteG,noSL) udulgraph”
 Definition fsgedges_def:
@@ -1555,7 +1551,6 @@ Proof
       metis_tac[])
 QED
 
-val _ = export_theory();
 val _ = html_theory "fsgraph";
 
 (* References:

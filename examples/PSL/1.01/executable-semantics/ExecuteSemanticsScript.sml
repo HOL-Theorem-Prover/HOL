@@ -20,33 +20,13 @@ app load ["bossLib","metisLib","intLib","res_quanTools","pred_setLib",
           "rich_listTheory", "regexpLib", "PropertiesTheory"];
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib;
-
-(******************************************************************************
-* Open theories (comment out quietdec's for compilation)
-******************************************************************************)
-
-(*
-quietdec := true;
-*)
-
-open bossLib metisLib listTheory rich_listTheory pred_setLib intLib
-     arithmeticTheory whileTheory;
-open regexpTheory matcherTheory;
-open FinitePSLPathTheory PSLPathTheory SyntaxTheory SyntacticSugarTheory
-     UnclockedSemanticsTheory ClockedSemanticsTheory PropertiesTheory;
-
-(*
-quietdec := false;
-*)
-
-(******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
-val _ = intLib.deprecate_int();
+Theory ExecuteSemantics
+Ancestors
+  list rich_list arithmetic while regexp matcher FinitePSLPath
+  PSLPath Syntax SyntacticSugar UnclockedSemantics
+  ClockedSemantics Properties
+Libs
+  metisLib pred_setLib intLib
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -79,10 +59,6 @@ val REVERSE = Tactical.REVERSE;
 
 val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
 
-(******************************************************************************
-* Start a new theory called "ExecuteSemantics"
-******************************************************************************)
-val _ = new_theory "ExecuteSemantics";
 val _ = ParseExtras.temp_loose_equality()
 
 (*
@@ -2139,6 +2115,3 @@ val UF_ABORT_REC =
 (******************************************************************************
 * End of useless stuff.
 ******************************************************************************)
-
-
-val _ = export_theory();

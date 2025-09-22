@@ -1,18 +1,11 @@
 
-open HolKernel boolLib bossLib Parse;
-open pred_setTheory arithmeticTheory pairTheory listTheory wordsTheory;
-open addressTheory set_sepTheory progTheory prog_x86Theory;
-open wordsLib x86_encodeLib helperLib;
-open combinTheory;
+Theory jit_incremental
+Ancestors
+  pred_set arithmetic pair list words address set_sep prog
+  prog_x86 combin jit_input jit_ops jit_codegen
+Libs
+  wordsLib x86_encodeLib helperLib compilerLib export_codeLib
 
-open jit_inputTheory;
-open jit_opsTheory;
-open jit_codegenTheory;
-
-open compilerLib;
-open export_codeLib;
-
-val _ = new_theory "jit_incremental";
 val _ = ParseExtras.temp_loose_equality()
 val bool_ss = bool_ss -* ["lift_disj_eq", "list_imp_disj"]
 val std_ss = std_ss -* ["lift_disj_eq", "list_imp_disj"]
@@ -2539,4 +2532,3 @@ val x86_incremental_jit = let
 
 val _ = write_code_to_file "incremental-jit.s" x86_incremental_jit;
 
-val _ = export_theory();

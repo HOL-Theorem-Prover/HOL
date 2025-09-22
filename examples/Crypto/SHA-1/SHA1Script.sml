@@ -8,11 +8,12 @@
 (* interactive use
 app load ["wordsLib", "stringLib", "numLib"];
 *)
+Theory SHA1
+Ancestors
+  string list arithmetic words
+Libs
+  wordsLib
 
-open HolKernel Parse boolLib bossLib
-     stringTheory listTheory arithmeticTheory wordsLib wordsTheory;
-
-val _ = new_theory "SHA1";
 
 val _ = numLib.temp_prefer_num();
 
@@ -343,4 +344,3 @@ val _ =
   end;
 *)
 
-val _ = export_theory();

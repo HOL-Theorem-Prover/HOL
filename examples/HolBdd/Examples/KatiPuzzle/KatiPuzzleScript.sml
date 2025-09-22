@@ -47,22 +47,17 @@ load "PrimitiveBddRules";
 load "ListPair";
 *)
 
-(* Needed for compilation *)
-open HolKernel Parse boolLib;
+Theory KatiPuzzle
+Ancestors
+  pair
+Libs
+  HolBddLib bdd pairSyntax pairTools
+
 infixr 3 -->;
 infix 9 by;
 infix ++;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 (**)
-
-open bossLib;
-open HolBddLib;
-open bdd;
-open pairSyntax;
-open pairTools;
-open pairTheory;
-
-val _ = new_theory "KatiPuzzle";
 
 (*****************************************************************************)
 (* Varmap (i.e. variable ordering) for later use                             *)
@@ -275,6 +270,3 @@ The number shows the position toggled to get to the following state
       F --- F --- F
 
 *)
-
-
-val _ = export_theory();

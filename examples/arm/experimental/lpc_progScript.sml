@@ -1,12 +1,10 @@
 
-open HolKernel boolLib bossLib Parse;
-open pred_setTheory wordsTheory wordsLib arithmeticTheory;
-open set_sepTheory progTheory lpc_devicesTheory;
-open listTheory pairTheory combinTheory addressTheory;
-
-val _ = new_theory "lpc_prog";
-
-
+Theory lpc_prog
+Ancestors
+  pred_set words arithmetic set_sep prog lpc_devices list pair
+  combin address
+Libs
+  wordsLib
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -383,4 +381,3 @@ Proof
 QED
 
 
-val _ = export_theory();

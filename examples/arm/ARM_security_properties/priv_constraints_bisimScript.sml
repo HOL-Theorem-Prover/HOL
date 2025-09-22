@@ -1,15 +1,15 @@
-open HolKernel boolLib bossLib Parse proofManagerLib;
-open arm_coretypesTheory arm_seq_monadTheory arm_opsemTheory arm_stepTheory;
-open MMUTheory MMU_SetupTheory inference_rulesTheory switching_lemma_helperTheory;
-open priv_constraints_lrTheory priv_constraints_spsrTheory;
-open tacticsLib ARM_prover_extLib;
+Theory priv_constraints_bisim
+Ancestors
+  arm_coretypes arm_seq_monad arm_opsem arm_step MMU MMU_Setup
+  inference_rules switching_lemma_helper priv_constraints_lr
+  priv_constraints_spsr
+Libs
+  proofManagerLib tacticsLib ARM_prover_extLib
 
 (*********************************************************************************)
 (*         checking bisimulation for take exceptions in privileged mode          *)
 (*                    Narges                                                     *)
 (*********************************************************************************)
-
-val _ =  new_theory("priv_constraints_bisim");
 
 val let_ss = simpLib.mk_simpset [boolSimps.LET_ss] ;
 val _ = diminish_srw_ss ["one"]
@@ -925,4 +925,3 @@ val take_svc_exception_priv_mode_similar_thm =
                     THEN METIS_TAC [LR_SPSR_equality_implies_priv_bisimilarity_thm] );
 
 
-val _ = export_theory();

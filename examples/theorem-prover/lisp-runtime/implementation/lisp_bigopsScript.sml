@@ -1,13 +1,10 @@
-open HolKernel Parse boolLib bossLib;
-
-open lisp_codegenTheory lisp_initTheory lisp_symbolsTheory lisp_sexpTheory
-open lisp_invTheory lisp_parseTheory lisp_opsTheory;
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory helperLib;
-open set_sepTheory bitTheory fcpTheory stringTheory;
-
-open compilerLib decompilerLib codegenLib;
+Theory lisp_bigops
+Ancestors
+  lisp_codegen lisp_init lisp_symbols lisp_sexp lisp_inv
+  lisp_parse lisp_ops words arithmetic list pred_set pair combin
+  finite_map address set_sep bit fcp string
+Libs
+  wordsLib helperLib compilerLib decompilerLib codegenLib
 
 val _ = let
   val thms = DB.match [] ``SPEC X64_MODEL``
@@ -21,7 +18,6 @@ val _ = let
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 
-val _ = new_theory "lisp_bigops";
 val _ = ParseExtras.temp_loose_equality()
 val _ = augment_srw_ss [rewrites [SNOC_APPEND]];
 
@@ -839,4 +835,3 @@ val X64_LISP_PRINT_SEXP = save_thm("X64_LISP_PRINT_SEXP",let
   in th end);
 
 
-val _ = export_theory();

@@ -10,12 +10,14 @@
   app load ["pred_setSimps", "rich_listTheory", "wordsLib", "armLib",
             "updateTheory", "instructionTheory", "systemTheory"];
 *)
+Theory arm_eval
+Ancestors
+  rich_list arithmetic words bit combin update arm system
+  instruction
+Libs
+  Q wordsLib
 
-open HolKernel boolLib Parse bossLib;
-open Q rich_listTheory arithmeticTheory wordsLib wordsTheory bitTheory;
-open combinTheory updateTheory armTheory systemTheory instructionTheory;
 
-val _ = new_theory "arm_eval";
 val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
@@ -1354,4 +1356,3 @@ val decode_enc_data_proc3 = save_thm("decode_enc_data_proc3",
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory();

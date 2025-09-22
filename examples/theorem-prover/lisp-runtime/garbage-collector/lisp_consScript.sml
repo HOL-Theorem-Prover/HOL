@@ -1,13 +1,12 @@
 
-open HolKernel Parse boolLib bossLib; val _ = new_theory "lisp_cons";
+Theory lisp_cons
+Ancestors
+  words arithmetic list pred_set pair combin finite_map address
+  set_sep bit fcp stop_and_copy prog_x64
+Libs
+  wordsLib helperLib codegenLib decompilerLib prog_x64Lib
+
 val _ = ParseExtras.temp_loose_equality()
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory helperLib;
-open set_sepTheory bitTheory fcpTheory;
-
-open stop_and_copyTheory;
-open codegenLib decompilerLib prog_x64Lib prog_x64Theory;
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -724,4 +723,3 @@ val ok_split_heap = store_thm("ok_split_heap",
     \\ FULL_SIMP_TAC std_ss [IN_D1,ADDR_SET_def,GSPECIFICATION]
     \\ METIS_TAC []));
 
-val _ = export_theory();

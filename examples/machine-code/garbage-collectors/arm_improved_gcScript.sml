@@ -1,13 +1,12 @@
 
-open HolKernel boolLib bossLib Parse; val _ = new_theory "arm_improved_gc";
+Theory arm_improved_gc
+Ancestors
+  words arithmetic list pred_set pair combin finite_map address
+  set_sep bit prog_arm improved_gc
+Libs
+  wordsLib helperLib compilerLib
+
 val _ = ParseExtras.temp_loose_equality()
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory helperLib;
-open set_sepTheory bitTheory;
-
-open improved_gcTheory;
-open compilerLib;
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -879,5 +878,3 @@ val arm_gc_lemma = store_thm("arm_gc_lemma",
   \\ IMP_RES_TAC EQ_RANGE_ref_mem \\ ASM_SIMP_TAC std_ss []
   \\ SIMP_TAC std_ss [GSYM STAR_ASSOC] \\ MATCH_MP_TAC ref_mem_IMP_H_EMP
   \\ Q.EXISTS_TAC `m4` \\ FULL_SIMP_TAC (std_ss++star_ss) []);
-
-val _ = export_theory();

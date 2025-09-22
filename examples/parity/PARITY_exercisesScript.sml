@@ -1,8 +1,7 @@
-open HolKernel Parse boolLib bossLib
+Theory PARITY_exercises
+Ancestors
+  PARITY
 
-open PARITYTheory
-
-val _ = new_theory "PARITY_exercises"
 val _ = ParseExtras.temp_loose_equality()
 
 (* Exercise 1 *)
@@ -86,4 +85,3 @@ val RESET_PARITY_CORRECTNESS = store_thm(
   ]);
 
 
-val _ = export_theory()

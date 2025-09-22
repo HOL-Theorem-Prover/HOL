@@ -1,7 +1,9 @@
-open HolKernel boolLib bossLib Parse;
-open wordsTheory wordsLib alignmentTheory bitTheory arithmeticTheory fcpTheory pred_setTheory progTheory;
+Theory address
+Ancestors
+  words alignment bit arithmetic fcp pred_set prog
+Libs
+  wordsLib
 
-val _ = new_theory "address";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -730,4 +732,3 @@ val LESS_SUB_MOD = store_thm("LESS_SUB_MOD",
   ``!n m k. n < k ==> ((n - m) MOD k = n - m)``,
   REPEAT STRIP_TAC THEN `n - m < k` by DECIDE_TAC THEN ASM_SIMP_TAC std_ss []);
 
-val _ = export_theory();

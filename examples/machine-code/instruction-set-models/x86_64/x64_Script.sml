@@ -1,11 +1,8 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory bit_listTheory;
-
-open x64_coretypesTheory x64_astTheory x64_opsemTheory;
-open x64_seq_monadTheory x64_decoderTheory x64_icacheTheory;
-
-val _ = new_theory "x64_";
+Theory x64_
+Ancestors
+  words bit_list x64_coretypes x64_ast x64_opsem x64_seq_monad
+  x64_decoder x64_icache
 
 (* ---------------------------------------------------------------------------------- *>
 
@@ -49,4 +46,3 @@ val X64_NEXT_THM = store_thm("X64_NEXT_THM",
     x64_execute_some_def,option_apply_def]);
 
 
-val _ = export_theory ();

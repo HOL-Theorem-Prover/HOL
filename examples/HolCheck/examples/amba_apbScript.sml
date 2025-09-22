@@ -1,12 +1,11 @@
 
 (* Definitions for AMBA APB bus. See AMBA Specification v2.0 from ARM for details  *)
+Theory amba_apb
+Ancestors
+  mod16
+Libs
+  pairSyntax commonTools amba_common
 
-open HolKernel Parse boolLib bossLib
-
-val _ = new_theory("amba_apb")
-
-open HolKernel Parse boolLib bossLib pairSyntax
-open mod16Theory commonTools amba_common
 
 val I1p = Define `INIT_APB (paddr:bool,pwrite:bool,psel:bool,psel_3:bool,psel_2:bool,psel_1:bool,psel_0:bool,penable:bool,pdata:bool,mdata:bool,maddr:bool,sdata_0:bool,saddr_0:bool,sdata_1:bool,saddr_1:bool) = ~psel /\ ~penable`;
 val INIT_APB_def = I1p;
@@ -55,4 +54,3 @@ val R1p = Define `TRANS_APB (^Rp_state,^Rp_state') =
 `;
 val TRANS_APB_def = R1p;
 
-val _ = export_theory()

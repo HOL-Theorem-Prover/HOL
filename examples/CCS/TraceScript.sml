@@ -7,13 +7,13 @@
 (* AUTHOR        : (c) Chun Tian, University of Bologna                       *)
 (* DATE          : 2017                                                       *)
 (* ========================================================================== *)
+Theory Trace
+Ancestors
+  pred_set relation arithmetic list CCS StrongEQ WeakEQ
+Libs
+  CCSLib
 
-open HolKernel Parse boolLib bossLib;
 
-open pred_setTheory relationTheory arithmeticTheory listTheory;
-open CCSLib CCSTheory StrongEQTheory WeakEQTheory;
-
-val _ = new_theory "Trace";
 val _ = temp_loose_equality ();
 
 (******************************************************************************)
@@ -684,7 +684,6 @@ val WEAK_TRANS_AND_TRACE' = store_thm (
         (* goal 2.2 (of 2) *)
         Q.EXISTS_TAC `L2` >> ASM_REWRITE_TAC [] ] ]);
 
-val _ = export_theory ();
 val _ = html_theory "Trace";
 
 (* last updated: Oct 7, 2017 *)

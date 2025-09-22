@@ -1,9 +1,8 @@
-open HolKernel Parse boolLib bossLib
-open pure_dBTheory numpairTheory
+Theory enumerations
+Ancestors
+  pure_dB numpair
 
 val _ = set_trace "Unicode" 1
-val _ = new_theory "enumerations"
-
 (* ----------------------------------------------------------------------
     A computable bijection between the natural numbers and all dB terms
    ---------------------------------------------------------------------- *)
@@ -111,4 +110,3 @@ val dBnum_onto = store_thm(
   ``∀n. ∃t. dBnum t = n``,
   METIS_TAC [dBnumdB]);
 
-val _ = export_theory();

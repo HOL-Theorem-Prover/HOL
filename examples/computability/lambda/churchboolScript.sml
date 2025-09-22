@@ -1,14 +1,8 @@
-open HolKernel boolLib bossLib Parse binderLib
-
-open chap3Theory
-open pred_setTheory
-open termTheory
-open boolSimps
-open normal_orderTheory
-open reductionEval
-open head_reductionTheory
-
-val _ = new_theory "churchbool"
+Theory churchbool
+Ancestors
+  chap3 pred_set term normal_order head_reduction
+Libs
+  binderLib boolSimps reductionEval
 
 val _ = set_trace "Unicode" 1
 
@@ -208,4 +202,3 @@ val wh_B = store_thm(
   unvarify_tac whstar_substitutive THEN
   SIMP_TAC (whfy(srw_ss())) [chap2Theory.B_def, wh_S, wh_K]);
 
-val _ = export_theory()

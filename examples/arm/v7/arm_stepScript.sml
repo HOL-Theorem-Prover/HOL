@@ -7,13 +7,12 @@
 (* interactive use:
   app load ["armTheory", "wordsLib"];
 *)
+Theory arm_step
+Ancestors
+  arithmetic bit words combin arm_coretypes arm_seq_monad
+  arm_opsem arm
 
-open HolKernel boolLib bossLib;
 
-open arithmeticTheory bitTheory wordsTheory combinTheory;
-open arm_coretypesTheory arm_seq_monadTheory arm_opsemTheory armTheory;
-
-val _ = new_theory "arm_step";
 val _ = ParseExtras.temp_loose_equality()
 val _ = BasicProvers.temp_delsimps ["UPDATE_EQ", "UPDATE_APPLY_ID_RWT"]
 
@@ -4127,4 +4126,3 @@ val arm_next_thm2 = Q.store_thm("arm_next_thm2",
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory ();

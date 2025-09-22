@@ -1,10 +1,9 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_extract";
+Theory lisp_extract
+Ancestors
+  string finite_map pred_set list sum option arithmetic relation
+  lisp_sexp lisp_semantics lisp_parse
+
 val _ = ParseExtras.temp_loose_equality()
-
-open stringTheory finite_mapTheory pred_setTheory listTheory sumTheory;
-open optionTheory arithmeticTheory relationTheory;
-
-open lisp_sexpTheory lisp_semanticsTheory lisp_parseTheory;
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -556,4 +555,3 @@ val SND_SND_SND_funcall_IMP = store_thm("SND_SND_SND_funcall_IMP",
   \\ `?result:SExp # (string |-> string list # term) # string # bool. ~SND (SND (SND result))` by (Q.EXISTS_TAC `(ARB,ARB,ARB,F)` \\ EVAL_TAC)
   \\ METIS_TAC []);
 
-val _ = export_theory();

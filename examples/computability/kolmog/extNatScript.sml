@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "extNat";
+Theory extNat
 
 val _ = type_abbrev("extnat",``:num option``)
 
@@ -22,6 +20,4 @@ val _ = export_rewrites["extNat.extnat_le_def","extNat.extnat_plus_def"]
 
 val extnat_plus_inf = Q.store_thm("extnat_plus_inf[simp]",
 `(NONE + c = NONE) ∧ (c + NONE = NONE)`,Cases_on`c` >> simp[])
-
-val _ = export_theory();
 

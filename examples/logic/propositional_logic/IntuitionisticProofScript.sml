@@ -5,12 +5,9 @@
 (* Written by Alexander Cox, ANU, u6060697@anu.edu.au                         *)
 (* Supervised by Michael Norrish, ANU; Data61                                 *)
 (* ========================================================================== *)
-
-open HolKernel boolLib Parse bossLib
-open bagTheory
-open pred_setTheory
-
-val _ = new_theory "IntuitionisticProof";
+Theory IntuitionisticProof
+Ancestors
+  bag pred_set
 
 
 val _ = set_fixity "Imp" (Infixr 460);
@@ -631,4 +628,3 @@ Proof
   metis_tac[G_unibag]
 QED
 
-val _ = export_theory()

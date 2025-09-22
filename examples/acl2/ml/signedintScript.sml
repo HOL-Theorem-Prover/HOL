@@ -9,11 +9,13 @@
 load "wordsTheory";
 load "intLib";
 *)
+Theory signedint
+Ancestors
+   bool words arithmetic integer bit
+Libs
+  Thm Term Type Tactic Tactical Drule Rewrite Conv boolSyntax
+  intLib
 
-open Theory Thm Term Type Tactic Tactical bossLib Drule
-open Rewrite Conv HolKernel boolSyntax
-open boolTheory
-open wordsTheory arithmeticTheory integerTheory bitTheory intLib;
 
 (* Profiling -
 val list = ref [];
@@ -27,8 +29,6 @@ in
 end;
 fun store_thm (a,b,c) = save_thm(a,prove (b,c));
 *)
-
-val _ = new_theory "signedint";
 
 val int_sub_calc1 = prove(
     ``& a - & b = if b <= a then & (a - b) else ~ &(b - a):int``,
@@ -1521,4 +1521,3 @@ val WORD_SLICE_THM = store_thm("WORD_SLICE_THM",
             word_asr_def, BIT_RANGE,TOP_BIT_THM,word_slice_def] THEN
     EQ_TAC THEN RW_TAC int_ss []);
 
-val _ = export_theory();

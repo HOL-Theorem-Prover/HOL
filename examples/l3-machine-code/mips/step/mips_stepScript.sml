@@ -1,14 +1,12 @@
 (* ------------------------------------------------------------------------
    Definitions and theorems used by MIPS step evaluator (mips_stepLib)
    ------------------------------------------------------------------------ *)
+Theory mips_step
+Ancestors
+  alignment mips
+Libs
+  utilsLib wordsLib blastLib
 
-open HolKernel boolLib bossLib
-
-open utilsLib
-open wordsLib blastLib
-open alignmentTheory mipsTheory
-
-val _ = new_theory "mips_step"
 
 (* ------------------------------------------------------------------------ *)
 
@@ -689,4 +687,3 @@ val cond_word3 = Q.store_thm("cond_word3",
     else h)`,
   wordsLib.Cases_on_word_value `w` \\ simp [])
 
-val () = export_theory ()

@@ -4,57 +4,20 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "AKSrevised";
+Theory AKSrevised
+Ancestors
+  prim_rec pred_set list arithmetic number combinatorics divides
+  gcd prime AKStheorem AKSmaps AKSsets AKSintro AKSshift
+  computeParam polynomial polyWeak polyRing polyField
+  polyDivision polyBinomial polyEval polyMonic polyFieldDivision
+  polyFieldModulo polyIrreducible polyMap polyRoot polyDivides
+  monoid group ring field fieldMap fieldInstances fieldBinomial
+  fieldIdeal fieldOrder fieldProduct ffBasic ffAdvanced ffPoly
+  ffUnity ffCyclo ffExist ffConjugate ffMaster ffMinimal
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
-
-open jcLib;
-
-(* open dependent theories *)
-open prim_recTheory pred_setTheory listTheory arithmeticTheory numberTheory
-     combinatoricsTheory dividesTheory gcdTheory primeTheory;
-
-(* Get dependent theories local *)
-open AKStheoremTheory;
-open AKSmapsTheory;
-open AKSsetsTheory;
-open AKSintroTheory;
-open AKSshiftTheory;
-open computeParamTheory;
-
-(* Get polynomial theory of Ring *)
-open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
-open polyDivisionTheory polyBinomialTheory polyEvalTheory;
-open polyMonicTheory;
-open polyFieldDivisionTheory;
-open polyFieldModuloTheory;
-open polyIrreducibleTheory;
-open polyMapTheory;
-open polyRootTheory;
-open polyDividesTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-open fieldMapTheory;
-open fieldInstancesTheory;
-open fieldBinomialTheory;
-open fieldIdealTheory;
-open fieldOrderTheory;
-open fieldProductTheory;
-
-open ffBasicTheory;
-open ffAdvancedTheory;
-open ffPolyTheory;
-open ffUnityTheory;
-open ffCycloTheory;
-
-open ffExistTheory;
-open ffConjugateTheory;
-open ffMasterTheory;
-open ffMinimalTheory;
 
 val _ = intLib.deprecate_int ();
 
@@ -642,8 +605,4 @@ val aks_main_ulog_8a = store_thm(
   metis_tac[AKS_main_ulog_8a]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

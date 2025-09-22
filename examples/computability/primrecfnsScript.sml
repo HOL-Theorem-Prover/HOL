@@ -1,12 +1,9 @@
-open HolKernel Parse boolLib bossLib
-
-open numpairTheory
-open arithmeticTheory
+Theory primrecfns
+Ancestors
+  numpair arithmetic rich_list
 
 fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 fun Save_thm (tup as (n,th)) = save_thm tup before export_rewrites [n]
-
-val _ = new_theory "primrecfns"
 
 val nB_def = Define`(nB T = 1) ∧ (nB F = 0)`
 val _ = export_rewrites ["nB_def"]
@@ -138,8 +135,6 @@ val primrec_arg_too_long = store_thm(
                           listTheory.LENGTH, ADD_CLAUSES] THEN
     SRW_TAC [][]
   ]);
-
-open rich_listTheory
 
 val GENLIST1 = prove(``GENLIST f 1 = [f 0]``,
                      SIMP_TAC bool_ss [ONE, GENLIST, SNOC]);
@@ -817,4 +812,3 @@ val Ackermann_not_primrec = store_thm(
          METIS_TAC []) THEN
   POP_ASSUM (Q.SPEC_THEN `J` MP_TAC) THEN SRW_TAC [][]);
 
-val _ = export_theory()

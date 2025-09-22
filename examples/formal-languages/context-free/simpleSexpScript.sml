@@ -1,11 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-local open stringLib in end
-
-open grammarLib
-open monadsyntax pegTheory
-
-val _ = new_theory "simpleSexp";
+Theory simpleSexp
+Ancestors
+  string peg
+Libs
+  grammarLib monadsyntax stringLib[qualified]
 
 val _ = enable_monadsyntax()
 val _ = enable_monad "option"
@@ -373,6 +370,3 @@ val ptree_sexp_def = Define`
            return (SX_CONS x r)
          od
      | _ => NONE)`;
-
-
-val _ = export_theory()

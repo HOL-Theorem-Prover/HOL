@@ -1,4 +1,9 @@
-open HolKernel Parse boolLib bossLib;
+Theory kripke_structure
+Ancestors
+  infinite_path pred_set list pair xprop_logic container
+  prop_logic set_lemmata prim_rec temporal_deep_mixed arithmetic
+Libs
+  tuerk_tacticsLib Sanity
 
 (*
 quietdec := true;
@@ -11,10 +16,6 @@ map load
  ["xprop_logicTheory", "prop_logicTheory", "infinite_pathTheory", "pred_setTheory", "listTheory", "pairTheory", "set_lemmataTheory",
    "containerTheory", "prim_recTheory", "tuerk_tacticsLib", "temporal_deep_mixedTheory", "arithmeticTheory"];
 *)
-
-open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
-     tuerk_tacticsLib temporal_deep_mixedTheory arithmeticTheory;
-open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
@@ -29,7 +30,6 @@ quietdec := false;
 *)
 
 
-val _ = new_theory "kripke_structure";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -1102,4 +1102,3 @@ val UNIVERSAL_KRIPKE_STRUCTURE___IS_MOST_GENERAL =
     METIS_TAC[FST, SND]);
 
 
-val _ = export_theory();

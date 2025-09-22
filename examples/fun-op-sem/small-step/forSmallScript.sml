@@ -1,14 +1,12 @@
 (* Define a small-step semantics for the deterministic FOR language, prove it
  * equivalent to the functional big-step *)
+Theory forSmall
+Ancestors
+  option pair pred_set finite_map string integer list option
+  rich_list for determSem simple_trace relation
+Libs
+  BasicProvers
 
-open HolKernel Parse boolLib bossLib;
-open optionTheory pairTheory pred_setTheory finite_mapTheory stringTheory;
-open integerTheory listTheory optionTheory rich_listTheory;
-open BasicProvers;
-open forTheory determSemTheory simple_traceTheory;
-open relationTheory
-
-val _ = new_theory "forSmall";
 
 val _ = temp_tight_equality ();
 
@@ -1124,4 +1122,3 @@ val hideseq_def = Define`
 
 Theorem step_t_rules_hideseq = step_t_rules |> REWRITE_RULE[GSYM hideseq_def]
 
-val _ = export_theory ();

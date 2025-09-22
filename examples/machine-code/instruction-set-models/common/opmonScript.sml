@@ -1,9 +1,7 @@
 
-open HolKernel boolLib bossLib Parse;
-open optionTheory wordsTheory listTheory;
-
-val _ = new_theory "opmon";
-
+Theory opmon
+Ancestors
+  option words list
 
 (* operations over options *)
 
@@ -78,4 +76,3 @@ val if_some_lemma = store_thm("if_some_lemma",
   Cases THEN SIMP_TAC std_ss []);
 
 
-val _ = export_theory ();

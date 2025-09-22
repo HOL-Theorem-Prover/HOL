@@ -1,4 +1,11 @@
-open HolKernel Parse boolLib bossLib;
+Theory alternating_omega_automata_to_automaton_formula
+Ancestors
+  infinite_path pred_set list pair xprop_logic container
+  prop_logic set_lemmata prim_rec temporal_deep_mixed arithmetic
+  automaton_formula alternating_omega_automata
+  symbolic_semi_automaton
+Libs
+  tuerk_tacticsLib numLib Sanity
 
 (*
 quietdec := true;
@@ -13,13 +20,6 @@ map load
    "alternating_omega_automataTheory", "symbolic_semi_automatonTheory", "automaton_formulaTheory"];
 *)
 
-open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory
-   containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
-   tuerk_tacticsLib temporal_deep_mixedTheory arithmeticTheory numLib
-   automaton_formulaTheory alternating_omega_automataTheory
-   symbolic_semi_automatonTheory;
-open Sanity;
-
 val _ = hide "S";
 val _ = hide "I";
 
@@ -32,7 +32,6 @@ quietdec := false;
 *)
 
 
-val _ = new_theory "alternating_omega_automata_to_automaton_formula";
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 
 (*This file contains some definitions and lemmata about a translation of
@@ -790,4 +789,3 @@ val NDET_G___A_UNIVERSALLY_TOTAL_WEAK_CO_BUECHI___IMPL =
 
 
 
-val _ = export_theory();

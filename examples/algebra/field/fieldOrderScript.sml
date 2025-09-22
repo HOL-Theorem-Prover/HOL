@@ -4,23 +4,16 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "fieldOrder";
+Theory fieldOrder
+Ancestors
+  pred_set list arithmetic divides gcd gcdset number
+  combinatorics prime monoid group ring field
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory dividesTheory gcdTheory
-     gcdsetTheory numberTheory combinatoricsTheory primeTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -1004,8 +997,5 @@ val field_order_equal_over_divisors_sigma_card = store_thm(
    Every nonzero element in FiniteField r must have some order that divides (CARD R+) *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
 
 (*===========================================================================*)

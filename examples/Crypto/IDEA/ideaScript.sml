@@ -4,16 +4,16 @@ quietdec := true;
 open wordsLib wordsTheory pairTheory intLib integerTheory ideaMultTheory;
 quietdec := false;
 *)
+Theory idea
+Ancestors
+  words pair integer ideaMult
+Libs
+  wordsLib intLib
 
-open HolKernel Parse boolLib bossLib
-     wordsLib wordsTheory pairTheory
-     intLib integerTheory ideaMultTheory;
 
 val RESTR_EVAL_TAC = computeLib.RESTR_EVAL_TAC;
 
 (*- security stuff start here -*)
-val _ = new_theory "idea";
-
 val ARW = RW_TAC arith_ss;
 val ASP = FULL_SIMP_TAC arith_ss;
 
@@ -240,4 +240,3 @@ val IDEA_CORRECT = Q.store_thm
        (decrypt (encrypt plaintext) = plaintext)`,
  RW_TAC std_ss [IDEA_def,LET_THM,IDEA_LEMMA]);
 
-val () = export_theory();

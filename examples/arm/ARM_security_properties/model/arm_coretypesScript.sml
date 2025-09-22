@@ -3,11 +3,12 @@
 (*     ==========================                                           *)
 (*     Basic types and operations for the ARM model                         *)
 (* ------------------------------------------------------------------------ *)
+Theory arm_coretypes
+Ancestors
+  arithmetic bit words integer_word
+Libs
+  wordsLib
 
-open HolKernel boolLib bossLib Parse;
-open arithmeticTheory bitTheory wordsTheory wordsLib integer_wordTheory;
-
-val _ = new_theory "arm_coretypes";
 
 val _ = numLib.temp_prefer_num();
 val _ = wordsLib.prefer_word();
@@ -515,4 +516,3 @@ val _ = computeLib.add_persistent_funs
 
 (* ------------------------------------------------------------------------ *)
 
-val _ = export_theory ();

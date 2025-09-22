@@ -1,12 +1,8 @@
-open HolKernel boolLib Parse bossLib BasicProvers
-
-open pred_setTheory
-
-open binderLib
-
-open nomsetTheory labelledTermsTheory termTheory horeductionTheory chap3Theory
-
-val _ = new_theory "chap11_1";
+Theory chap11_1
+Ancestors
+  pred_set nomset labelledTerms term horeduction chap3
+Libs
+  BasicProvers binderLib boolSimps
 
 (* ----------------------------------------------------------------------
     phi function for reducing all labelled redexes
@@ -287,7 +283,6 @@ val lcc_beta_bvc_ind = store_thm(
     SRW_TAC [][GSYM pmact_decompose]
   ]);
 
-open boolSimps
 val beta_matched = store_thm(
   "beta_matched",
   ``!M' N. beta (strip_label M') N ==>
@@ -550,7 +545,6 @@ Proof
   PROVE_TAC [reduction_rules, strip_lemma]
 QED
 
-val _ = export_theory();
 val _ = html_theory "chap11_1";
 
 (* References:

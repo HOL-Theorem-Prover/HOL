@@ -4,45 +4,20 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "ffCyclo";
+Theory ffCyclo
+Ancestors
+  arithmetic pred_set list divides gcd number combinatorics
+  ffBasic ffAdvanced ffPoly monoid group ring field fieldOrder
+  polynomial polyWeak polyRing polyDivision polyBinomial
+  polyField polyFieldDivision polyFieldModulo polyEval polyRoot
+  polyDivides polyMonic polyProduct polyGCD
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open arithmeticTheory pred_setTheory listTheory dividesTheory gcdTheory
-     numberTheory combinatoricsTheory;
-
-open ffBasicTheory;
-open ffAdvancedTheory;
-open ffPolyTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-open fieldOrderTheory;
-
-(* Get polynomial theory of Ring *)
-open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory
-     polyBinomialTheory;
-
 (* (* val _ = load "polyFieldModuloTheory"; *) *)
-open polyFieldTheory;
-open polyFieldDivisionTheory;
-open polyFieldModuloTheory;
-
-open polyEvalTheory;
-open polyRootTheory;
-
-open polyDividesTheory;
-open polyMonicTheory;
-open polyProductTheory;
-open polyGCDTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -430,8 +405,4 @@ val poly_cyclo_image_coprime_set = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

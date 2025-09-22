@@ -11,13 +11,13 @@
             "my_listTheory", "io_onestepTheory", "iclass_compLib",
             "armTheory", "coreTheory", "lemmasTheory"];
 *)
+Theory coprocessor
+Ancestors
+  arithmetic rich_list words my_list io_onestep arm core lemmas
+Libs
+  Q iclass_compLib armLib
 
-open HolKernel boolLib bossLib;
-open Q arithmeticTheory rich_listTheory wordsTheory;
-open my_listTheory io_onestepTheory iclass_compLib armLib;
-open armTheory coreTheory lemmasTheory;
 
-val _ = new_theory "coprocessor";
 val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------- *)
 
@@ -504,4 +504,3 @@ val LDC_STC_THM2 = save_thm("LDC_STC_THM2",
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory();

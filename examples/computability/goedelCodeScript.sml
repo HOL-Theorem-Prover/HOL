@@ -9,11 +9,10 @@ app load ["primeFactorTheory", "bagTheory"];
 open arithmeticTheory dividesTheory primeFactorTheory bagTheory;
 quietdec := false;
 *)
+Theory goedelCode
+Ancestors
+  arithmetic divides primeFactor bag
 
-open HolKernel Parse boolLib bossLib
-     arithmeticTheory dividesTheory primeFactorTheory bagTheory;
-
-val _ = new_theory "goedelCode";
 
 val P_EUCLIDES = gcdTheory.P_EUCLIDES;
 
@@ -265,4 +264,3 @@ val gFOLDR_ENCODE = Q.store_thm
  `gFOLDR f a (ENCODE nl) = FOLDR f a nl`,
  RW_TAC arith_ss [gFOLDR_def, DECODE_ENCODE]);
 
-val _ = export_theory();

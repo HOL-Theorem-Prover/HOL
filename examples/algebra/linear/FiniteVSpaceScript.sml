@@ -4,23 +4,16 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "FiniteVSpace";
+Theory FiniteVSpace
+Ancestors
+  pred_set arithmetic list number combinatorics VectorSpace
+  SpanSpace LinearIndep monoid field
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory arithmeticTheory listTheory numberTheory combinatoricsTheory;
-
-open VectorSpaceTheory SpanSpaceTheory LinearIndepTheory;
-open monoidTheory fieldTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* Finite Vector Space Documentation                                         *)
 (* ------------------------------------------------------------------------- *)
@@ -516,8 +509,4 @@ val finite_vspace_basis_dep = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

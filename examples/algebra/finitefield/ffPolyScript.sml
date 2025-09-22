@@ -4,46 +4,20 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "ffPoly";
+Theory ffPoly
+Ancestors
+  arithmetic pred_set list number divides gcd combinatorics
+  ffAdvanced ffBasic monoid group ring field fieldOrder
+  polynomial polyWeak polyRing polyDivision polyBinomial
+  polyMonic polyEval polyField polyFieldDivision polyFieldModulo
+  polyRingModulo polyRoot polyDivides polyGCD polyIrreducible
+  polyProduct polyMultiplicity polyMap fieldMap
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open arithmeticTheory pred_setTheory listTheory numberTheory dividesTheory
-     gcdTheory combinatoricsTheory;
-
-open ffAdvancedTheory ffBasicTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
-open fieldOrderTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory polyBinomialTheory;
-
-open polyMonicTheory polyEvalTheory;
-
-open polyFieldTheory;
-open polyFieldDivisionTheory;
-open polyFieldModuloTheory;
-open polyRingModuloTheory;
-
-open polyRootTheory;
-open polyDividesTheory;
-
-open polyGCDTheory;
-open polyIrreducibleTheory;
-open polyProductTheory;
-open polyMultiplicityTheory;
-open polyMapTheory;
-open fieldMapTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* Finite Field Polynomials of Subfield Documentation                        *)
 (* ------------------------------------------------------------------------- *)
@@ -2855,8 +2829,4 @@ val subfield_poly_peval_freshman_all = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

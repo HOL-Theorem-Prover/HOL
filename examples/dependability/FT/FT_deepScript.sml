@@ -9,17 +9,14 @@
 (*          School of Electrical Engineering and Computer Sciences (SEECS)   *)
 (*          National University of Sciences and Technology (NUST), PAKISTAN  *)
 (* ========================================================================= *)
+Theory FT_deep
+Ancestors
+  lim arithmetic real prim_rec real_probability seq pred_set
+  res_quan sorting list transc rich_list pair combin option
+  extreal real_measure real_lebesgue real_sigma sat num RBD
+Libs
+  res_quanTools realLib dep_rewrite extra_pred_setTools
 
-open HolKernel Parse boolLib bossLib;
-
-open limTheory arithmeticTheory realTheory prim_recTheory
-     real_probabilityTheory seqTheory pred_setTheory res_quanTheory
-     sortingTheory res_quanTools listTheory transcTheory
-     rich_listTheory pairTheory combinTheory realLib  optionTheory dep_rewrite
-     extrealTheory real_measureTheory real_lebesgueTheory
-     real_sigmaTheory satTheory numTheory RBDTheory extra_pred_setTools;
-
-val _ = new_theory "FT_deep";
 
 val op by = BasicProvers.byA;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
@@ -2328,4 +2325,3 @@ Proof
 RW_TAC std_ss[GSYM BIGUNION_EQ_UNION_LIST, PROB_INCLUSION_EXCLUSION_list]
 QED
 
-val _ = export_theory();

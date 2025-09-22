@@ -4,16 +4,12 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "mapCount";
+Theory mapCount
+Ancestors
+  arithmetic pred_set gcdset number list rich_list listRange
+  combinatorics
 
 (* ------------------------------------------------------------------------- *)
-
-open arithmeticTheory pred_setTheory gcdsetTheory numberTheory listTheory
-     rich_listTheory listRangeTheory combinatoricsTheory;
 
 val _ = temp_overload_on("over", ``\f s t. !x. x IN s ==> f x IN t``);
 
@@ -1733,8 +1729,4 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

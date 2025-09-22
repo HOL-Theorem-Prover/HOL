@@ -1,9 +1,7 @@
 
-open HolKernel boolLib bossLib Parse;
-
-open ppc_coretypesTheory ppc_astTheory ppc_opsemTheory ppc_seq_monadTheory ppc_decoderTheory ;
-
-val _ = new_theory "ppc_";
+Theory ppc_
+Ancestors
+  ppc_coretypes ppc_ast ppc_opsem ppc_seq_monad ppc_decoder
 
 (* ---------------------------------------------------------------------------------- *>
 
@@ -41,4 +39,3 @@ val PPC_NEXT_THM = store_thm("PPC_NEXT_THM",
   SIMP_TAC std_ss [PPC_NEXT_def,LET_DEF,listTheory.MEM]);
 
 
-val _ = export_theory ();

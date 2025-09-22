@@ -1,4 +1,10 @@
-open HolKernel Parse boolLib bossLib;
+Theory vars_as_resource
+Ancestors
+  realax generalHelpers finite_map pred_set list rich_list
+  arithmetic separationLogic bag container relation combin
+  option quantHeuristics
+Libs
+  bagSimps ConseqConv boolSimps quantHeuristicsLib Sanity
 
 (*
 quietdec := true;
@@ -11,18 +17,11 @@ map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
 show_assums := true;
 *)
 
-open generalHelpersTheory finite_mapTheory pred_setTheory
-   listTheory rich_listTheory arithmeticTheory separationLogicTheory
-   bagTheory bagSimps containerTheory relationTheory combinTheory optionTheory;
-open ConseqConv boolSimps quantHeuristicsLib Sanity
-open quantHeuristicsTheory
-
 (*
 quietdec := false;
 open Sanity
 *)
 
-val _ = new_theory "vars_as_resource";
 val _ = ParseExtras.temp_loose_equality()
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"]
@@ -13850,6 +13849,3 @@ val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___VAR_RES_REWRITES =
      IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_binop,
      IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_binop_const,
      IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_add_sub]));
-
-
-val _ = export_theory();

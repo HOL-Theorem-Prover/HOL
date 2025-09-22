@@ -1,6 +1,7 @@
 
-open HolKernel boolLib bossLib Parse ppc_Lib; val _ = new_theory "ppc_tests";
-
+Theory ppc_tests
+Libs
+  ppc_Lib
 
 (* add 1,2,3 *)
 val _ = ppc_test "7C221A14"
@@ -35,4 +36,3 @@ val _ = ppc_test "827A00EA"
    ("4000F0","11"),("4000F1","22"),("4000F2","33"),("4000F3","44")]
 
 
-val _ = export_theory ();

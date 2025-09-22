@@ -1,10 +1,10 @@
 (*  Oliver *)
+Theory MMU_Setup
+Ancestors
+  MMU
+Libs
+  Cond_rewrite blastLib
 
-open HolKernel boolLib bossLib Parse;
-open MMUTheory;
-open Cond_rewrite blastLib;
-
-val _ = new_theory "MMU_Setup";
 
 (* === MMU requirements  === *)
 val guest1_min_adr_def = Define `guest1_min_adr = 0x100000w:word32`;
@@ -447,4 +447,3 @@ val aligned_word_readable_def = Define `aligned_word_readable s is_thumb add1 =
                                                               s.coprocessors.state.cp15.C3 F s.memory)))`;
 
 
-val _ = export_theory();

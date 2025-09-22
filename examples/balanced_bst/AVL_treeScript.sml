@@ -12,19 +12,15 @@
    book *Basic Concepts in Data Structures* by Shmuel Tomi Klein, specifically
    Chapter 5 "AVL Trees" (doi: 10.1017/CBO9781316676226.006).
 ----------------------------------------------------------------------------- *)
+Theory AVL_tree
+Ancestors
+  integer option pair string arithmetic pred_set list finite_map alist
+  sorting comparison pred_set number fibonacci
+Libs
+  BasicProvers hurdUtils
 
-open HolKernel boolLib bossLib BasicProvers;
 
-open optionTheory pairTheory stringTheory arithmeticTheory pred_setTheory
-     listTheory finite_mapTheory alistTheory sortingTheory comparisonTheory
-     pred_setTheory hurdUtils numberTheory;
-
-open fibonacciTheory;
-
-val _ = intLib.deprecate_int ();
 val _ = numLib.prefer_num ();
-
-val _ = new_theory "AVL_tree";
 
 Datatype:
   avl_tree = Tip | Bin int num 'a avl_tree avl_tree
@@ -813,5 +809,4 @@ Theorem lookup4[local] = EVAL ``^lookup4_t``
 val lookup5_t = ``lookup_avl 10 ^((rhs o concl) t9)``
 Theorem lookup5[local] = EVAL ``^lookup5_t``
 
-val _ = export_theory ();
 val _ = html_theory "AVL_tree";

@@ -4,47 +4,24 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "countAKS";
-
 (* ------------------------------------------------------------------------- *)
+Theory countAKS
+Ancestors
+  pred_set list arithmetic divides gcd rich_list listRange number
+  combinatorics logroot pair option prime ring countMonad
+  countMacro countModulo countOrder countParam countPower
+  countPoly bitsize complexity loopIncrease loopDecrease
+  loopDivide loopList computeParam computeAKS
+  computeBasic  (* for power_free_check_eqn *)
+  computePoly  (* for unity_mod_monomial *)
+  (* Try: import computeRing rather than computePoly *)
+  polynomial polyWeak
+Libs
+  jcLib monadsyntax
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory listTheory arithmeticTheory dividesTheory gcdTheory
-     rich_listTheory listRangeTheory numberTheory combinatoricsTheory
-     logrootTheory pairTheory optionTheory primeTheory;
-
-open ringTheory;
-
-(* Get dependent theories local *)
-open countMonadTheory countMacroTheory;
-open countModuloTheory countOrderTheory;
-open countParamTheory;
-
 (* val _ = load "countPowerTheory"; *)
-open countPowerTheory;
-
 (* val _ = load "countPolyTheory"; *)
-open countPolyTheory;
-
-open bitsizeTheory complexityTheory;
-open loopIncreaseTheory loopDecreaseTheory;
-open loopDivideTheory loopListTheory;
-
-open monadsyntax;
-
-open computeParamTheory computeAKSTheory;
-open computeBasicTheory; (* for power_free_check_eqn *)
-
-open computePolyTheory; (* for unity_mod_monomial *)
-(* Try: import computeRing rather than computePoly *)
-
-open polynomialTheory polyWeakTheory;
 
 val _ = monadsyntax.enable_monadsyntax();
 val _ = monadsyntax.enable_monad "Count";
@@ -1370,8 +1347,4 @@ val aksM_thm = store_thm(
 (* Note: aks0 n = aks n  is proved in AKSclean: aks0_eq_aks *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

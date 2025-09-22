@@ -1,11 +1,10 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory stringTheory stringLib listTheory stringSimps listLib simpLib;
-open decoderTheory bit_listTheory opmonTheory;
+Theory x86_decoder
+Ancestors
+  words string list decoder bit_list opmon x86_ast
+Libs
+  stringLib stringSimps listLib simpLib
 
-open x86_astTheory;
-
-val _ = new_theory "x86_decoder";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -582,4 +581,3 @@ val _ = elapsed_time < 5.0 orelse failwith("Decoding failed to use compset prope
 (* The time difference should really be under a second, but 5 seconds
    gives a bit of a margin. *)
 
-val _ = export_theory ();

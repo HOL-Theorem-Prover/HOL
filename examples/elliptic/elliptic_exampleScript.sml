@@ -12,13 +12,12 @@ val () = app load ["bossLib", "metisLib", "wordsLib",
                    "primalityTools", "ellipticTools"];
 val () = quietdec := true;
 *)
+Theory elliptic_example
+Ancestors
+  arithmetic pred_set words group field elliptic
+Libs
+  metisLib primalityTools groupTools fieldTools ellipticTools
 
-open HolKernel Parse boolLib bossLib metisLib
-     arithmeticTheory pred_setTheory wordsTheory
-     primalityTools
-     groupTheory groupTools
-     fieldTheory fieldTools
-     ellipticTheory ellipticTools;
 
 (*
 val () = quietdec := false;
@@ -27,8 +26,6 @@ val () = quietdec := false;
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory.                                                       *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = new_theory "elliptic_example";
 
 (* ------------------------------------------------------------------------- *)
 (* Sort out the parser.                                                      *)
@@ -502,4 +499,3 @@ val ex2_field_neg_def = Define
 
 val _ = html_theory "elliptic_example";
 
-val () = export_theory ();

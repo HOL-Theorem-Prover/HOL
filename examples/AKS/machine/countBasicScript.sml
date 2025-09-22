@@ -4,31 +4,20 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "countBasic";
-
 (* ------------------------------------------------------------------------- *)
+Theory countBasic
+Ancestors
+  pred_set list arithmetic number combinatorics divides gcd
+  logroot pair option listRange prime countMonad countMacro
+  bitsize complexity loopIncrease loopDecrease loopDivide
+  loopMultiply  (* for loop2_mul_rise_steps_le *)
+Libs
+  jcLib monadsyntax
 
 (* val _ = load "jcLib"; *)
-open jcLib;
 
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory logrootTheory pairTheory optionTheory
-     listRangeTheory primeTheory;
-
-open countMonadTheory countMacroTheory;
-
-open bitsizeTheory complexityTheory;
-open loopIncreaseTheory loopDecreaseTheory;
-open loopDivideTheory;
-open loopMultiplyTheory; (* for loop2_mul_rise_steps_le *)
 
 (* val _ = load "monadsyntax"; *)
-open monadsyntax;
-
 val _ = monadsyntax.enable_monadsyntax();
 val _ = monadsyntax.enable_monad "Count";
 
@@ -988,8 +977,4 @@ val ulogM_thm = store_thm(
   metis_tac[ulogM_value, ulogM_steps_big_O]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

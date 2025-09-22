@@ -5,17 +5,15 @@
  please refer to
  http://www.cl.cam.ac.uk/~rja14/serpent.html
 *)
+Theory Serpent_Reference
+Ancestors
+  list arithmetic words Serpent_Reference_Utility
+  Serpent_Reference_Permutation Serpent_Reference_Transformation
+  Serpent_Reference_SBox Serpent_Reference_KeySchedule
+Libs
+  wordsLib
 
 
-open HolKernel Parse boolLib bossLib listTheory arithmeticTheory
-     wordsTheory wordsLib
-     Serpent_Reference_UtilityTheory
-     Serpent_Reference_PermutationTheory
-     Serpent_Reference_TransformationTheory
-     Serpent_Reference_SBoxTheory
-     Serpent_Reference_KeyScheduleTheory;
-
-val _ = new_theory "Serpent_Reference";
 
 (****************************ENCRYPTION*******************************)
 (*each normal encryption round*)
@@ -200,4 +198,3 @@ val serpentBlockDecrypt_serpentBlockEncrypt_cancel_whole=Q.store_thm(
               invIP_IP_cancel,invSBlock_sBlock_cancel,invLT_LT_cancel,
               LET_THM,R_def]);
 
-val _ = export_theory();

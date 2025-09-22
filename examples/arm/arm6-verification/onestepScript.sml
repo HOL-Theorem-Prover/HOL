@@ -5,12 +5,12 @@
 (* AUTHOR        : (c) Anthony Fox, University of Cambridge                  *)
 (* DATE          : 2000 - 2004                                               *)
 (* ========================================================================= *)
+Theory onestep
+Ancestors
+  combin arithmetic prim_rec pred_set
+Libs
+  Q simpLib numLib
 
-open HolKernel boolLib bossLib Q;
-open simpLib numLib;
-open combinTheory arithmeticTheory prim_recTheory pred_setTheory;
-
-val _ = new_theory "onestep";
 
 (* ------------------------------------------------------------------------- *)
 
@@ -534,4 +534,3 @@ val IMAP_NEXT = store_thm("IMAP_NEXT",
 
 (* ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *)
 
-val _ = export_theory();

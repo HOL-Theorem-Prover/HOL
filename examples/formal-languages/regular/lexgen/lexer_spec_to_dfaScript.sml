@@ -1,12 +1,12 @@
 (*---------------------------------------------------------------------------*)
 (* Mapping lexer specs to lexers. Treats an entire lex_spec as a "state"     *)
 (*---------------------------------------------------------------------------*)
+Theory lexer_spec_to_dfa
+Ancestors
+  pair list dfa charset regexp lexer_runtime
+Libs
+  BasicProvers
 
-open HolKernel Parse boolLib bossLib BasicProvers;
-open pairTheory listTheory;
-open dfaTheory charsetTheory regexpTheory lexer_runtimeTheory;
-
-val _ = new_theory "lexer_spec_to_dfa"
 
 val is_error_state_def =
  Define
@@ -210,4 +210,3 @@ rw [dfa_correct_def,EQ_IMP_THM]
 );
 
 
-val _ = export_theory ();

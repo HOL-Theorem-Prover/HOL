@@ -2,13 +2,12 @@
  * Copyright 1991-1995  University of Cambridge (Author: Monica Nesi)
  * Copyright 2016-2017  University of Bologna   (Author: Chun Tian)
  *)
+Theory ObsCongrLaws
+Ancestors
+  CCS StrongEQ StrongLaws WeakEQ WeakLaws ObsCongr
+Libs
+  CCSLib StrongEQLib WeakEQLib ObsCongrLib
 
-open HolKernel Parse boolLib bossLib;
-
-open CCSLib CCSTheory StrongEQTheory StrongEQLib StrongLawsTheory
-     WeakEQTheory WeakEQLib WeakLawsTheory ObsCongrTheory ObsCongrLib;
-
-val _ = new_theory "ObsCongrLaws";
 
 (******************************************************************************)
 (*                                                                            *)
@@ -394,7 +393,6 @@ val TAU3 = store_thm ("TAU3",
 val WEAK_TAU3 = save_thm ("WEAK_TAU3",
     OBS_CONGR_IMP_WEAK_EQUIV_RULE TAU3);
 
-val _ = export_theory ();
 val _ = html_theory "ObsCongrLaws";
 
 (* last updated: Jun 20, 2017 *)

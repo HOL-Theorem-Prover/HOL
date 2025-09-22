@@ -1,9 +1,7 @@
 
-open HolKernel boolLib bossLib Parse;
-open opmonTheory listTheory stringTheory bit_listTheory;
-
-val _ = new_theory "decoder";
-
+Theory decoder
+Ancestors
+  opmon list string bit_list
 
 (* -- define tokenise - a function which splits a string at white space and comma -- *)
 
@@ -152,4 +150,3 @@ val DTF_THM = store_thm("DTF_THM",
   THEN SIMP_TAC std_ss [DTF_def,DF_def,DT_def,option_then_def,option_orelse_def,LET_DEF]
   THEN METIS_TAC []);
 
-val _ = export_theory ();

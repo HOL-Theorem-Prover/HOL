@@ -10,13 +10,14 @@
   app load ["pred_setSimps", "wordsLib", "armLib", "iclass_compLib",
             "armTheory", "coreTheory", "lemmasTheory", "interruptsTheory"];
 *)
+Theory mult
+Ancestors
+  arithmetic while bit words io_onestep arm core lemmas
+  interrupts
+Libs
+  Q wordsLib iclass_compLib
 
-open HolKernel boolLib bossLib;
-open Q arithmeticTheory whileTheory bitTheory wordsTheory wordsLib;
-open iclass_compLib io_onestepTheory;
-open armTheory coreTheory lemmasTheory interruptsTheory;
 
-val _ = new_theory "mult";
 val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------- *)
 
@@ -820,4 +821,3 @@ val MLA_MUL_TN = save_thm("MLA_MUL_TN",
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory();

@@ -1,6 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open listTheory
+Theory zipper
+Ancestors
+  list
 
 (* a simple theory of zippers: lists coupled with a privileged index *)
 
@@ -8,8 +8,6 @@ open listTheory
    that they form an applicative functor; given that lists already do this
    the "trick" is figuring out what the index of the result zipper should
    be when you apply a zipper of functions to a zipper of arguments.  *)
-
-val _ = new_theory "zipper";
 
 Datatype: zipper = Z ('a list) 'a  ('a list)
 End
@@ -265,4 +263,3 @@ val apply_pure_o = store_thm(
   simp[GSYM LIST_APPLY_o, SINGL_APPLY_MAP, MAP_toList,
        arithmeticTheory.MAX_ASSOC]);
 
-val _ = export_theory();

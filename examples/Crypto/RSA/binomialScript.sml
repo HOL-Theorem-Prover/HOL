@@ -2,17 +2,16 @@
 app load ["bossLib","summationTheory","powerTheory"];
 quietdec := true;
 *)
+Theory binomial
+Ancestors
+  arithmetic power summation
 
-open HolKernel Parse boolLib
-open bossLib arithmeticTheory powerTheory summationTheory ;
 
 (*
 quietdec := false;
 *)
 
 val ARW = RW_TAC arith_ss;
-
-val _ = new_theory "binomial";
 
 val FACT_def = ONCE_REWRITE_RULE [MULT_COMM] FACT;
 
@@ -142,4 +141,3 @@ Induct_on `n`
    ]
  );
 
-val _ = export_theory();

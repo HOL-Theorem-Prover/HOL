@@ -26,22 +26,16 @@ open KripkeTheory FinitePSLPathTheory PSLPathTheory SyntaxTheory SyntacticSugarT
      UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
      arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
      ClockedSemanticsTheory;
-val _ = intLib.deprecate_int();
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories
-******************************************************************************)
-open KripkeTheory FinitePSLPathTheory PSLPathTheory SyntaxTheory SyntacticSugarTheory
-     UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
-     arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
-     ClockedSemanticsTheory;
+Theory Properties
+Ancestors
+  Kripke FinitePSLPath PSLPath Syntax SyntacticSugar
+  UnclockedSemantics ClockedSemantics Rewrites arithmetic list
+  rich_list res_quan ClockedSemantics
+Libs
+  res_quanLib
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -54,11 +48,6 @@ val simp_arith_ss = simpLib.++ (arith_ss, numSimps.SUC_FILTER_ss);
 val simp_list_ss  = simpLib.++ (list_ss,  numSimps.SUC_FILTER_ss);
 
 (******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
-val _ = intLib.deprecate_int();
-
-(******************************************************************************
 * A simpset fragment to rewrite away quantifiers restricted with :: (a to b)
 ******************************************************************************)
 val resq_SS =
@@ -67,10 +56,6 @@ val resq_SS =
    rewrites
     [num_to_def,xnum_to_def,IN_DEF,num_to_def,xnum_to_def,LENGTH_def]];
 
-(******************************************************************************
-* Start a new theory called Properties
-******************************************************************************)
-val _ = new_theory "Properties";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -1542,5 +1527,3 @@ Proof
           THEN RW_TAC simp_list_ss [CONCAT_def],
          PROVE_TAC[]]]
 QED
-
-val _ = export_theory();

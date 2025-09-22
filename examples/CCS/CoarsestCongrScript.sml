@@ -5,17 +5,15 @@
 (* COPYRIGHTS    : 1991-1995 University of Cambridge (Monica Nesi)            *)
 (*                 2016-2017 University of Bologna, Italy (Chun Tian)         *)
 (******************************************************************************)
+Theory CoarsestCongr
+Ancestors
+  pred_set relation pair sum list prim_rec arithmetic combin CCS
+  StrongEQ StrongLaws WeakEQ WeakLaws ObsCongr ObsCongrLaws Trace
+  Congruence
+Libs
+  CCSLib StrongEQLib WeakEQLib ObsCongrLib ObsCongrConv
 
-open HolKernel Parse boolLib bossLib;
 
-open pred_setTheory relationTheory pairTheory sumTheory listTheory;
-open prim_recTheory arithmeticTheory combinTheory;
-
-open CCSLib CCSTheory StrongEQTheory StrongEQLib
-     StrongLawsTheory WeakEQTheory WeakEQLib WeakLawsTheory ObsCongrTheory
-     ObsCongrLib ObsCongrLawsTheory ObsCongrConv TraceTheory CongruenceTheory;
-
-val _ = new_theory "CoarsestCongr";
 val _ = temp_loose_equality ();
 
 (******************************************************************************)
@@ -881,7 +879,6 @@ val KLOP_INF_def = Define `
     occasion of his 60th birthday, LNCS 3838, 26-39. Springer-Verlag, 2005.
  *)
 
-val _ = export_theory ();
 val _ = html_theory "CoarsestCongr";
 
 (* last updated: Oct 14, 2017 *)

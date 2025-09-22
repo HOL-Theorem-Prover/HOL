@@ -4,35 +4,19 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polyGCD";
+Theory polyGCD
+Ancestors
+  pred_set list arithmetic number combinatorics divides gcd
+  gcdset monoid group ring field polynomial polyWeak polyRing
+  polyDivision polyDivides polyRoot polyMonic polyField
+  polyFieldDivision polyFieldModulo polyIrreducible polyEval
+  polyProduct polyDerivative
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory gcdsetTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory;
-open polyDivisionTheory polyDividesTheory;
-open polyRootTheory;
-open polyMonicTheory;
-open polyFieldTheory;
-open polyFieldDivisionTheory;
-open polyFieldModuloTheory;
-open polyIrreducibleTheory;
-open polyEvalTheory;
-open polyProductTheory;
-open polyDerivativeTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -3410,8 +3394,4 @@ val poly_coprime_diff_unit_eq_prod_set = store_thm(
   metis_tac[poly_coprime_diff_simple_divisor, DECIDE``1 < 2``]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

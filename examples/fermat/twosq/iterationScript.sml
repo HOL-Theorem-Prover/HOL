@@ -4,16 +4,11 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "iteration";
+Theory iteration
+Ancestors
+  arithmetic pred_set divides gcd number combinatorics
 
 (* ------------------------------------------------------------------------- *)
-
-open arithmeticTheory pred_setTheory dividesTheory gcdTheory numberTheory
-     combinatoricsTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Iteration Period Documentation                                            *)
@@ -646,8 +641,4 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

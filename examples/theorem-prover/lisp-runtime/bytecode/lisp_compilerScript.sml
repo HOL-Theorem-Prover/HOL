@@ -1,11 +1,9 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_compiler";
+Theory lisp_compiler
+Ancestors
+  string finite_map pred_set list sum option arithmetic relation
+  pair lisp_bytecode lisp_sexp lisp_semantics lisp_alt_semantics
+
 val _ = ParseExtras.temp_loose_equality()
-
-open stringTheory finite_mapTheory pred_setTheory listTheory sumTheory;
-open optionTheory arithmeticTheory relationTheory pairTheory;
-
-open lisp_bytecodeTheory;
-open lisp_sexpTheory lisp_semanticsTheory lisp_alt_semanticsTheory
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -3165,4 +3163,3 @@ val iSTEP_DETERMINISTIC = store_thm("iSTEP_DETERMINISTIC",
 
 *)
 
-val _ = export_theory();
