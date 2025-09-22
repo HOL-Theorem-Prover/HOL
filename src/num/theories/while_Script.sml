@@ -2,7 +2,7 @@
 (* Define WHILE loops, give Hoare rules, and define LEAST operator as a      *)
 (* binder.                                                                   *)
 (*===========================================================================*)
-Theory while[bare]
+Theory while_[bare]
 Ancestors
   combin option sum prim_rec arithmetic relation
 Libs
@@ -13,7 +13,7 @@ Libs
 local open OpenTheoryMap
   val ns = ["While"]
 in
-  fun ot0 x y = OpenTheory_const_name{const={Thy="while",Name=x},name=(ns,y)}
+  fun ot0 x y = OpenTheory_const_name{const={Thy="while_",Name=x},name=(ns,y)}
   fun ot x = ot0 x x
 end
 
@@ -522,4 +522,3 @@ val _ =
    ["WHILE"
    ,"LEAST_DEF"
    ,"TAILREC"];
-

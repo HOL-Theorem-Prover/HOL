@@ -393,7 +393,7 @@ val _ = test_tac_Case "list ind" (K true)
 val _ = test_tac_Case "OLEAST deep intro" (K true)
   `THE (OLEAST n. n > SUC 3) < 8`
   (DEEP_INTRO_TAC
-      (name_ind_cases [] whileTheory.OLEAST_INTRO)
+      (name_ind_cases [] while_Theory.OLEAST_INTRO)
     \\ rpt strip_tac)
 
 val (is_rev_rules, is_rev_ind, is_rev_cases) = Hol_reln`

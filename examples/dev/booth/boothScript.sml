@@ -1,7 +1,7 @@
 (* app load ["bitsLib","bitsTheory","word32Theory"]; *)
 Theory booth
 Ancestors
-  arithmetic while bits word32
+  arithmetic while_ bits word32
 Libs
   bitsLib simpLib Q
 

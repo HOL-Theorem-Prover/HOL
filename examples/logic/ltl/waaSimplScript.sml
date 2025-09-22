@@ -1,6 +1,6 @@
 Theory waaSimpl
 Ancestors
-  pair relation set_relation pred_set arithmetic while alterA ltl
+  pair relation set_relation pred_set arithmetic while_ alterA ltl
   ltl2waa
 
 val _ = ParseExtras.temp_loose_equality()

@@ -3717,7 +3717,7 @@ val splitAtPki_EQN = store_thm(
     (ASM_SIMP_TAC (srw_ss()) [] THEN
      ‘(OLEAST i. i < SUC (LENGTH l) /\ P i (EL i (h::l))) = SOME 0’
         suffices_by SRW_TAC [] [] THEN
-     ASM_SIMP_TAC (srw_ss()) [whileTheory.OLEAST_EQ_SOME]) THEN
+     ASM_SIMP_TAC (srw_ss()) [while_Theory.OLEAST_EQ_SOME]) THEN
   SRW_TAC [] [] THEN
   Cases_on ‘OLEAST i. i < LENGTH l /\ P (SUC i) (EL i l)’ >> fs[]
   >- (‘(OLEAST i. i < SUC (LENGTH l) /\ P i (EL i (h::l))) = NONE’
@@ -3727,20 +3727,20 @@ val splitAtPki_EQN = store_thm(
   Q.RENAME_TAC [‘h::TAKE i t’] >>
   ‘(OLEAST i. i < SUC (LENGTH t) /\ P i (EL i (h::t))) = SOME (SUC i)’
       suffices_by SRW_TAC [] [] THEN
-  fs[whileTheory.OLEAST_EQ_SOME] >> Cases >> SRW_TAC[][]);
+  fs[while_Theory.OLEAST_EQ_SOME] >> Cases >> SRW_TAC[][]);
 
 val TAKE_splitAtPki = store_thm(
   "TAKE_splitAtPki",
   “TAKE n l = splitAtPki (K o (=) n) K l”,
   SRW_TAC [] [splitAtPki_EQN] THEN
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO THEN
+  DEEP_INTRO_TAC while_Theory.OLEAST_INTRO THEN
   SRW_TAC[numSimps.ARITH_ss] [TAKE_LENGTH_TOO_LONG])
 
 val DROP_splitAtPki = store_thm(
   "DROP_splitAtPki",
   “DROP n l = splitAtPki (K o (=) n) (K I) l”,
   SRW_TAC [] [splitAtPki_EQN] THEN
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO THEN
+  DEEP_INTRO_TAC while_Theory.OLEAST_INTRO THEN
   SRW_TAC[numSimps.ARITH_ss] [DROP_LENGTH_TOO_LONG]);
 
 Theorem splitAtPki_RAND:

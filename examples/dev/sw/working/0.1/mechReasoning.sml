@@ -7,12 +7,12 @@ loadPath :=
             (concat Globals.HOLDIR "/examples/sep") ::
             !loadPath;
 
-app load ["relationTheory", "pred_setSimps","pred_setTheory","whileTheory","finite_mapTheory","rich_listTheory", "listSyntax",
+app load ["relationTheory", "pred_setSimps","pred_setTheory","while_Theory","finite_mapTheory","rich_listTheory", "listSyntax",
           "ILTheory", "rulesTheory", "preARMSyntax", "annotatedIR", "funCall", "preARMTheory", "wordsLib"];
 
 quietdec := true;
 open HolKernel Parse boolLib bossLib numLib pairLib relationTheory pairTheory arithmeticTheory listSyntax preARMTheory
-     preARMSyntax Assem pred_setSimps pred_setTheory listTheory rich_listTheory whileTheory finite_mapTheory
+     preARMSyntax Assem pred_setSimps pred_setTheory listTheory rich_listTheory while_Theory finite_mapTheory
      annotatedIR ILTheory rulesTheory wordsLib wordsTheory
      preARMTheory;
 quietdec := false;
@@ -21,7 +21,7 @@ quietdec := false;
 structure mechReasoning = struct
   local
   open HolKernel Parse boolLib bossLib numLib pairLib relationTheory pairTheory arithmeticTheory listSyntax preARMTheory
-     preARMSyntax Assem pred_setSimps pred_setTheory listTheory rich_listTheory whileTheory finite_mapTheory declFuncs
+     preARMSyntax Assem pred_setSimps pred_setTheory listTheory rich_listTheory while_Theory finite_mapTheory declFuncs
      annotatedIR ILTheory rulesTheory wordsLib wordsTheory IRSyntax
   in
 

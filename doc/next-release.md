@@ -42,6 +42,7 @@ Incompatibilities
 
 -   `Preterm.eq` has been replaced with `Preterm.veq` which returns `true` if and only if the two arguments are variables with the same names and types.
 
+-   `whileTheory` has been renamed to `while_Theory`
 * * * * *
 
 <div class="footer">

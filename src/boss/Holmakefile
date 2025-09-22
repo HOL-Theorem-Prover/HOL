@@ -44,7 +44,7 @@ ARTS = bool_defs.ot.art \
   ../num/theories/arithmetic.ot.art \
   ../num/theories/numeral.ot.art \
   ../num/theories/basicSize.ot.art \
-  ../num/theories/while.ot.art \
+  ../num/theories/while_.ot.art \
   ../num/extra_theories/numpair.ot.art \
   ../num/extra_theories/divides.ot.art \
   ../num/extra_theories/logroot.ot.art \

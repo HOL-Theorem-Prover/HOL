@@ -3,7 +3,7 @@
 (*---------------------------------------------------------------------------*)
 Theory real
 Ancestors
-  arithmetic num prim_rec while pred_set realax
+  arithmetic num prim_rec while_ pred_set realax
   marker[qualified] (* for unint *)
 Libs
   numLib reduceLib pairLib mesonLib tautLib simpLib Arithconv

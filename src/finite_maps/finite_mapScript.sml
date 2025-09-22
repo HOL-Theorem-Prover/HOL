@@ -3164,7 +3164,7 @@ Theorem LEAST_NOTIN_FDOM:
   (LEAST ptr. ptr NOTIN FDOM (refs:num|->'a)) NOTIN FDOM refs
 Proof
   ASSUME_TAC
-    (EXISTS_NOT_IN_FDOM_LEMMA |> SIMP_RULE std_ss [whileTheory.LEAST_EXISTS])>>
+    (EXISTS_NOT_IN_FDOM_LEMMA |> SIMP_RULE std_ss [while_Theory.LEAST_EXISTS])>>
    fs[]
 QED
 

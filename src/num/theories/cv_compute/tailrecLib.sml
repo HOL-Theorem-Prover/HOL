@@ -29,7 +29,7 @@ fun auto_prove goal_tm (tac:tactic) = TAC_PROOF (([],goal_tm), tac)
     functions exist. The input function can only take one argument.
  *----------------------------------------------------------------------*)
 
-val TAILREC_def = whileTheory.TAILREC
+val TAILREC_def = while_Theory.TAILREC
                   |> CONV_RULE (DEPTH_CONV ETA_CONV)
                   |> REWRITE_RULE [GSYM combinTheory.I_EQ_IDABS];
 
@@ -83,7 +83,7 @@ fun prove_simple_tailrec_exists tm = let
   val sum_tm = mk_sum_term f_tm input_ty r
   val _ = not (exists (aconv f_tm) (free_vars sum_tm)) orelse fail()
   val abs_sum_tm = pairSyntax.mk_pabs(arg_tm,sum_tm)
-  val witness = ISPEC abs_sum_tm whileTheory.TAILREC |> SPEC_ALL
+  val witness = ISPEC abs_sum_tm while_Theory.TAILREC |> SPEC_ALL
                 |> concl |> dest_eq |> fst |> rator
   fun sum_case_exp tm = tm |> rator |> rator |> rand
   val sum_case_exp_conv = RATOR_CONV o RATOR_CONV o RAND_CONV

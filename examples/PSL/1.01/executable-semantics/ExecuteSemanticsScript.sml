@@ -22,7 +22,7 @@ app load ["bossLib","metisLib","intLib","res_quanTools","pred_setLib",
 
 Theory ExecuteSemantics
 Ancestors
-  list rich_list arithmetic while regexp matcher FinitePSLPath
+  list rich_list arithmetic while_ regexp matcher FinitePSLPath
   PSLPath Syntax SyntacticSugar UnclockedSemantics
   ClockedSemantics Properties
 Libs

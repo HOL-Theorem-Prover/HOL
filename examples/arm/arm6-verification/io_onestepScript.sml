@@ -111,7 +111,7 @@ val OSMPL_def = Define`
 val LEAST_THM = store_thm("LEAST_THM",
   `!n. (!m. m < n ==> ~P m) /\ P n ==> ($LEAST P = n)`,
   REPEAT STRIP_TAC
-    \\ IMP_RES_TAC whileTheory.FULL_LEAST_INTRO
+    \\ IMP_RES_TAC while_Theory.FULL_LEAST_INTRO
     \\ Cases_on `$LEAST P = n` >- ASM_REWRITE_TAC []
     \\ `$LEAST P < n` by DECIDE_TAC
     \\ PROVE_TAC []);
@@ -191,7 +191,7 @@ val lem2 = prove(
          (SPECL_THEN [`x`,`x + 1`] (ASSUME_TAC o SIMP_RULE arith_ss []))
     \\ IMP_RES_TAC LESS_EQ_LESS_TRANS
     \\ METIS_TAC [(SIMP_RULE std_ss [] o SPECL
-         [`\t. x < imm (t + 1)`,`\t. x < imm (t + 1)`]) whileTheory.LEAST_ELIM]
+         [`\t. x < imm (t + 1)`,`\t. x < imm (t + 1)`]) while_Theory.LEAST_ELIM]
 );
 
 val lem3 = prove(

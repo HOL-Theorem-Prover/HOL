@@ -515,7 +515,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 val LEAST_BIT_INTRO =
-   (SIMP_RULE (srw_ss()) [] o Q.SPEC `\i. BIT i n`)  whileTheory.LEAST_INTRO
+   (SIMP_RULE (srw_ss()) [] o Q.SPEC `\i. BIT i n`)  while_Theory.LEAST_INTRO
 
 Theorem LOWEST_SET_BIT:
    !n. n <> 0 ==>
@@ -528,7 +528,7 @@ Proof
       Cases_on `(LEAST i. BIT i (n DIV 2)) = 0`
       >- FULL_SIMP_TAC (srw_ss()) [DECIDE ``m < 1 ==> (m = 0)``, BIT0_ODD]
       \\ IMP_RES_TAC (DECIDE ``~(a = 0) /\ m < a + 1 ==> (m - 1 < a)``)
-      \\ IMP_RES_TAC whileTheory.LESS_LEAST
+      \\ IMP_RES_TAC while_Theory.LESS_LEAST
       \\ FULL_SIMP_TAC (srw_ss()) [BIT_DIV2]
       \\ Cases_on `m = 0`
       \\ FULL_SIMP_TAC (srw_ss())

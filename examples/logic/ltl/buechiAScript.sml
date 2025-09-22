@@ -1,6 +1,6 @@
 Theory buechiA
 Ancestors
-  pair pred_set arithmetic relation set_relation while word
+  pair pred_set arithmetic relation set_relation while_ word
   generalHelpers
 
 val _ = ParseExtras.temp_loose_equality()

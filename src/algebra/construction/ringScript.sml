@@ -35,7 +35,7 @@ src\rational\ratRingScript.sml
 Theory ring
 Ancestors
   prim_rec arithmetic divides gcd gcdset pred_set list bag
-  container while sorting integer number combinatorics prime
+  container while_ sorting integer number combinatorics prime
   monoid group
 Libs
   jcLib dep_rewrite
@@ -11771,7 +11771,7 @@ Proof
   `FiniteRing (trivial_ring z)` by rw_tac std_ss[trivial_ring] >>
   rw[char_def] >>
   rw_tac std_ss[order_def, period_def, trivial_ring_def, monoid_exp_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
+  DEEP_INTRO_TAC while_Theory.OLEAST_INTRO >>
   rw_tac std_ss[] >>
   spose_not_then strip_assume_tac >>
   `1 < n /\ 0 < 1` by decide_tac >>
@@ -11922,7 +11922,7 @@ Theorem ZN_char:
   !n. 0 < n ==> char (ZN n) = n
 Proof
   rw_tac std_ss[char_def, order_def, period_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
+  DEEP_INTRO_TAC while_Theory.OLEAST_INTRO >>
   simp[Excl "lift_disj_eq", ZN_def, add_mod_def, times_mod_def,
        monoid_exp_def] >>
   rw[Excl "lift_disj_eq"] >| [ (* avoid srw_tac simplication *)
@@ -12318,7 +12318,7 @@ val ZN_order_mod_1 = store_thm(
   ``!n. ordz 1 n = 1``,
   rw[order_def, period_def, ZN_property] >>
   rw[ZN_1_exp] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
+  DEEP_INTRO_TAC while_Theory.OLEAST_INTRO >>
   rw[] >>
   spose_not_then strip_assume_tac >>
   `1 < n /\ 1 <> 0` by decide_tac >>
@@ -13316,7 +13316,7 @@ Proof
   simp[char_def, order_def, period_def, symdiff_set_inter_def,
        monoid_exp_def, symdiff_set_def, set_inter_def] >>
   `FUNPOW (symdiff univ(:'a)) 2 {} = {}` by rw[FUNPOW_2, symdiff_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
+  DEEP_INTRO_TAC while_Theory.OLEAST_INTRO >>
   rw[] >>
   `~(n < 2) /\ ~(2 < n)` suffices_by decide_tac >>
   spose_not_then strip_assume_tac >>
@@ -13455,7 +13455,7 @@ val WHILE_RULE_PRE_POST = Q.store_thm(
    (!x. Invariant x /\ ~Guard x ==> Postcond x) /\
    HOARE_SPEC (\x. Invariant x /\ Guard x) Cmd Invariant ==>
    HOARE_SPEC Precond (WHILE Guard Cmd) Postcond`,
-  simp[whileTheory.HOARE_SPEC_DEF] >>
+  simp[while_Theory.HOARE_SPEC_DEF] >>
   rpt strip_tac >>
   `!s. Invariant s ==> Postcond (WHILE Guard Cmd s)`
      suffices_by metis_tac[] >>
@@ -14955,7 +14955,7 @@ Theorem integral_domain_order_zero:
   !r:'a ring. IntegralDomain r ==> (order f* #0 = 0)
 Proof
   rw_tac std_ss[order_def, period_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
+  DEEP_INTRO_TAC while_Theory.OLEAST_INTRO >>
   rw[] >>
   rfs[integral_domain_nonzero_mult_property] >>
   spose_not_then strip_assume_tac >>
@@ -14972,7 +14972,7 @@ val integral_domain_order_nonzero = store_thm(
   "integral_domain_order_nonzero",
   ``!r:'a ring. FiniteIntegralDomain r ==> !x. x IN R+ ==> (order f* x <> 0)``,
   rw_tac std_ss[order_def, period_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
+  DEEP_INTRO_TAC while_Theory.OLEAST_INTRO >>
   rw[] >>
   `IntegralDomain r` by fs[FiniteIntegralDomain_def] >>
   metis_tac[finite_integral_domain_period_exists, integral_domain_nonzero_mult_property, NOT_ZERO_LT_ZERO]);

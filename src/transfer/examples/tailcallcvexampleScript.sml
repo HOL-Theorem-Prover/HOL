@@ -1,6 +1,6 @@
 Theory tailcallcvexample
 Ancestors
-  while cvxferExamples
+  while_ cvxferExamples
 
 fun tuplify t =
   let val (f, xs) = strip_comb t

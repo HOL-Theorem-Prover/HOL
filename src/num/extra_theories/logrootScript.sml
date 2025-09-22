@@ -238,7 +238,7 @@ val log_exists = Q.prove(
    REPEAT STRIP_TAC
    THEN Q.EXISTS_TAC `LEAST x. n < a ** SUC x`
    THEN CONV_TAC (UNBETA_CONV ``LEAST x. n < a ** SUC x``)
-   THEN MATCH_MP_TAC whileTheory.LEAST_ELIM
+   THEN MATCH_MP_TAC while_Theory.LEAST_ELIM
    THEN CONJ_TAC
    THENL [
       SRW_TAC [][EXP]

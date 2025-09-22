@@ -2,11 +2,11 @@
 (*
 quietdec := true;
 
-app load ["arithmeticTheory", "wordsTheory", "wordsLib", "pairTheory", "listTheory", "whileTheory", "finite_mapTheory",
+app load ["arithmeticTheory", "wordsTheory", "wordsLib", "pairTheory", "listTheory", "while_Theory", "finite_mapTheory",
           "pred_setSimps", "pred_setTheory", "preARMTheory", "ARMCompositionTheory", "bigInstTheory", "funCallTheory",
           "CFLTheory", "HSLTheory", "simplifier"];
 
-open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLib pairTheory listTheory whileTheory
+open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLib pairTheory listTheory while_Theory
        pred_setSimps pred_setTheory finite_mapTheory preARMTheory bigInstTheory funCallTheory
        CFLTheory HSLTheory simplifier;
 
@@ -14,7 +14,7 @@ quietdec := false;
 *)
 Theory HSL2CFL
 Ancestors
-  arithmetic words pair list while pred_set finite_map preARM
+  arithmetic words pair list while_ pred_set finite_map preARM
   bigInst funCall CFL HSL
 Libs
   numLib wordsLib pred_setSimps simplifier

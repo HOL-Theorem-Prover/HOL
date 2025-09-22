@@ -610,7 +610,7 @@ val mindepth_def = Define`
 `;
 
 (* following tactic is used twice in theorem below - yerk *)
-val lelim = REWRITE_RULE [GSYM AND_IMP_INTRO] whileTheory.LEAST_ELIM
+val lelim = REWRITE_RULE [GSYM AND_IMP_INTRO] while_Theory.LEAST_ELIM
 val min_tac =
     SRW_TAC [ETA_ss][] THEN
     IMP_RES_THEN (fn th => th |> MATCH_MP lelim |> DEEP_INTRO_TAC) mem_depth >>

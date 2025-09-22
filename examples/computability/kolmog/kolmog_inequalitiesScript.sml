@@ -1,6 +1,6 @@
 Theory kolmog_inequalities
 Ancestors
-  arithmetic while logroot pred_set list churchoption churchlist
+  arithmetic while_ logroot pred_set list churchoption churchlist
   recfuns numsAsCompStates kolmogorov_complexity
   invarianceResults boolLists churchDB recursivefns primrecfns
   prterm unary_recfns numsAsCompStates pfreefns

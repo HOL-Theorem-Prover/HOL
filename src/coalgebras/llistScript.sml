@@ -5,7 +5,7 @@
 Theory llist
 Ancestors
   option combin option pair num arithmetic prim_rec list
-  rich_list while pair pred_set set_relation arithmetic
+  rich_list while_ pair pred_set set_relation arithmetic
 Libs
   BasicProvers boolSimps markerLib hurdUtils
 
@@ -4023,4 +4023,3 @@ Proof
   fs[Once LAPPEND_ASSOC]>>
   fs[LFINITE_fromList,LAPPEND11_FINITE1]>>metis_tac[]
 QED
-

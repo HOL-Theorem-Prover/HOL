@@ -1,6 +1,6 @@
 Theory triple
 Ancestors
-  arithmetic while pair pred_set prog
+  arithmetic while_ pair pred_set prog
 
 val _ = ParseExtras.temp_loose_equality()
 (* we define a total-correctness machine-code Hoare triple *)

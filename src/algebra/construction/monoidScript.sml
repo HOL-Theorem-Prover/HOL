@@ -1025,7 +1025,7 @@ val order_property = store_thm(
   ``!g:'a monoid. !x:'a. (x ** (ord x) = #e)``,
   ntac 2 strip_tac >>
   simp_tac std_ss[order_def, period_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
+  DEEP_INTRO_TAC while_Theory.OLEAST_INTRO >>
   rw[]);
 
 (* Theorem: 0 < (ord x) ==> period g x (ord x) *)
@@ -1042,7 +1042,7 @@ Theorem order_minimal:
 Proof
   ntac 3 strip_tac >>
   simp_tac std_ss[order_def, period_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
+  DEEP_INTRO_TAC while_Theory.OLEAST_INTRO >>
   rw_tac std_ss[] >>
   metis_tac[DECIDE “~(0 < 0)”]
 QED
@@ -1060,7 +1060,7 @@ Theorem order_eq_0:
 Proof
   ntac 2 strip_tac >>
   simp_tac std_ss[order_def, period_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
+  DEEP_INTRO_TAC while_Theory.OLEAST_INTRO >>
   rw_tac std_ss[] >>
   metis_tac[DECIDE “~(0 < 0)”]
 QED
@@ -1088,7 +1088,7 @@ val order_thm = store_thm(
   rw[order_property] >-
   rw[order_minimal] >>
   simp_tac std_ss[order_def, period_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
+  DEEP_INTRO_TAC while_Theory.OLEAST_INTRO >>
   rw_tac std_ss[] >-
   metis_tac[] >>
   `~(n' < n)` by metis_tac[] >>

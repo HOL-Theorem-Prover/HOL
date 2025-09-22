@@ -89,7 +89,7 @@ Proof
   qx_gen_tac `n` >>
   qspec_then `λm. n < 2 ** m`
     (match_mp_tac o SIMP_RULE (srw_ss()) [arithmeticTheory.NOT_LESS])
-     whileTheory.LEAST_EXISTS_IMP >>
+     while_Theory.LEAST_EXISTS_IMP >>
   metis_tac[TWO_EXP_BOUNDS]
 QED
 

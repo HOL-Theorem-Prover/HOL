@@ -8,11 +8,11 @@ set_trace "Unicode" 0;
 set_trace "pp_annotations" 0;
 
 app load ["acl2encodeLib", "stringLib", "finite_mapTheory", "intLib",
-          "pred_setTheory","whileTheory","optionTheory","unwindLib", "finite_mapTheory"];
+          "pred_setTheory","while_Theory","optionTheory","unwindLib", "finite_mapTheory"];
 open HolKernel Parse boolLib bossLib
      stringLib IndDefLib IndDefRules finite_mapTheory relationTheory
      arithmeticTheory prim_recTheory
-     pred_setTheory whileTheory combinTheory optionTheory unwindLib;
+     pred_setTheory while_Theory combinTheory optionTheory unwindLib;
 intLib.deprecate_int();
 clear_overloads_on "TC"; (* Stop TC R printing as TC^+ *)
 
@@ -3158,7 +3158,7 @@ val SOME_ITER_NONE =
                 [BETA_RULE
                   (ISPEC
                     ``\n:num. IS_SOME(SOME_FUNPOW g n x) /\ P(THE(SOME_FUNPOW g n x))``
-                       whileTheory.LEAST_EXISTS_IMP),option_CLAUSES],
+                       while_Theory.LEAST_EXISTS_IMP),option_CLAUSES],
          RW_TAC (srw_ss()) []
           THEN METIS_TAC [option_CLAUSES]],
       METIS_TAC[option_CLAUSES]]);
@@ -3180,7 +3180,7 @@ val SOME_ITER_SOME1 =
           [BETA_RULE
             (ISPEC
               ``\n:num. IS_SOME(SOME_FUNPOW g n x) /\ P(THE(SOME_FUNPOW g n x))``
-                 whileTheory.LEAST_EXISTS_IMP),option_CLAUSES]);
+                 while_Theory.LEAST_EXISTS_IMP),option_CLAUSES]);
 
 val SOME_ITER_SOME2 =
  prove

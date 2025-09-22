@@ -1,17 +1,17 @@
 (*
 quietdec := true;
 
-app load ["arithmeticTheory", "wordsTheory", "wordsLib", "pairTheory", "whileTheory", "finite_mapTheory",
+app load ["arithmeticTheory", "wordsTheory", "wordsLib", "pairTheory", "while_Theory", "finite_mapTheory",
           "listTheory", "pred_setSimps", "pred_setTheory", "preARMTheory", "CFLTheory", "simplifier"];
 
-open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLib pairTheory whileTheory
+open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLib pairTheory while_Theory
        listTheory pred_setSimps pred_setTheory finite_mapTheory preARMTheory CFLTheory simplifier;
 
 quietdec := false;
 *)
 Theory bigInst
 Ancestors
-  arithmetic words pair while list pred_set finite_map preARM CFL
+  arithmetic words pair while_ list pred_set finite_map preARM CFL
 Libs
   numLib wordsLib pred_setSimps simplifier
 

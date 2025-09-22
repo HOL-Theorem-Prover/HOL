@@ -4,14 +4,14 @@ quietdec := true;
 loadPath := (concat Globals.HOLDIR "/examples/dev/sw") :: !loadPath;
 
 app load ["numLib", "relationTheory", "arithmeticTheory", "preARMTheory", "pairTheory",
-     "pred_setSimps", "pred_setTheory", "listTheory", "rich_listTheory", "whileTheory", "ARMCompositionTheory",
+     "pred_setSimps", "pred_setTheory", "listTheory", "rich_listTheory", "while_Theory", "ARMCompositionTheory",
       "CFLTheory"];
 
 quietdec := false;
 *)
 Theory CFL_Rules
 Ancestors
-  relation arithmetic preARM pair pred_set list rich_list while
+  relation arithmetic preARM pair pred_set list rich_list while_
   ARMComposition CFL
 Libs
   numLib pred_setSimps

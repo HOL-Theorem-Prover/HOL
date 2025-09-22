@@ -11,7 +11,7 @@
 (* =====================================================================*)
 Theory pred_set[bare]
 Ancestors
-  numpair pair num prim_rec arithmetic while divides combin
+  numpair pair num prim_rec arithmetic while_ divides combin
   relation option
 Libs
   HolKernel Parse boolLib BasicProvers Prim_rec pairLib numLib
@@ -6610,7 +6610,7 @@ val MIN_SET_LEM = Q.store_thm
 ("MIN_SET_LEM",
  `!s. ~(s={}) ==> (MIN_SET s IN s) /\ !x. x IN s ==> MIN_SET s <= x`,
   METIS_TAC [GSYM MEMBER_NOT_EMPTY,MIN_SET_DEF,
-             IN_DEF,whileTheory.FULL_LEAST_INTRO]);
+             IN_DEF,while_Theory.FULL_LEAST_INTRO]);
 
 val SUBSET_MIN_SET = Q.store_thm
 ("SUBSET_MIN_SET",

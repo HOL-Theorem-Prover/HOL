@@ -3,7 +3,7 @@
 (* ========================================================================= *)
 Theory real_lebesgue
 Ancestors
-  num arithmetic pred_set list combin pair while real seq
+  num arithmetic pred_set list combin pair while_ real seq
   real_sigma transc lim iterate sigma_algebra real_measure
   real_borel
 Libs

@@ -22,14 +22,14 @@ loadPath
  "../official-semantics" :: "../../regexp" :: "../../path" :: !loadPath;
 map load
  ["UnclockedSemanticsTheory",
-  "SyntacticSugarTheory", "ClockedSemanticsTheory", "RewritesTheory", "whileTheory",
+  "SyntacticSugarTheory", "ClockedSemanticsTheory", "RewritesTheory", "while_Theory",
   "rich_listTheory", "intLib", "res_quanLib", "res_quanTheory",
   "LemmasTheory","RewritesPropertiesTheory"];
 open FinitePSLPathTheory PSLPathTheory SyntaxTheory SyntacticSugarTheory
      UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
-     arithmeticTheory whileTheory listTheory rich_listTheory
+     arithmeticTheory while_Theory listTheory rich_listTheory
      res_quanLib res_quanTheory
-     arithmeticTheory listTheory whileTheory rich_listTheory res_quanLib res_quanTheory
+     arithmeticTheory listTheory while_Theory rich_listTheory res_quanLib res_quanTheory
      ClockedSemanticsTheory LemmasTheory RewritesPropertiesTheory;
 quietdec := false;
 *)
@@ -39,8 +39,8 @@ Theory Projection
 Ancestors
   FinitePSLPath PSLPath Syntax SyntacticSugar UnclockedSemantics
   ClockedSemantics Rewrites arithmetic list rich_list res_quan
-  while ClockedSemantics Lemmas RewritesProperties arithmetic
-  list while rich_list res_quan ClockedSemantics Lemmas
+  while_ ClockedSemantics Lemmas RewritesProperties arithmetic
+  list while_ rich_list res_quan ClockedSemantics Lemmas
   RewritesProperties FinitePSLPath PSLPath
 Libs
   res_quanLib res_quanLib

@@ -7,14 +7,14 @@
 Theory computeBasic
 Ancestors
   pred_set list arithmetic logroot divides gcd gcdset number
-  combinatorics prime while
+  combinatorics prime while_
 Libs
   jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-(* val _ = load "whileTheory"; *)
+(* val _ = load "while_Theory"; *)
 val _ = temp_overload_on("SQ", ``\n. n * n``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
 val _ = temp_overload_on("TWICE", ``\n. 2 * n``);

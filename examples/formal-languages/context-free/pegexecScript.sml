@@ -161,13 +161,13 @@ End
 Theorem coreloop_result[simp]:
   coreloop G (Result x) = SOME (Result x)
 Proof
-  simp[coreloop_def, Once whileTheory.OWHILE_THM]
+  simp[coreloop_def, Once while_Theory.OWHILE_THM]
 QED
 
 Theorem coreloop_Looped[simp]:
   coreloop G Looped = NONE
 Proof
-  simp[coreloop_def, whileTheory.OWHILE_EQ_NONE] >> Induct >>
+  simp[coreloop_def, while_Theory.OWHILE_EQ_NONE] >> Induct >>
   simp[arithmeticTheory.FUNPOW]
 QED
 
@@ -192,7 +192,7 @@ Proof
 QED
 
 fun inst_thm def (qs,ths) =
-    def |> SIMP_RULE (srw_ss()) [Once whileTheory.OWHILE_THM, coreloop_def]
+    def |> SIMP_RULE (srw_ss()) [Once while_Theory.OWHILE_THM, coreloop_def]
         |> SPEC_ALL
         |> Q.INST qs
         |> SIMP_RULE (srw_ss()) []

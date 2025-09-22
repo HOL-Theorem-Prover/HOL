@@ -1,7 +1,7 @@
 Theory matching
 Ancestors
   fsgraph pred_set arithmetic list genericGraph set_relation
-  rich_list integer combin topology while pair real prim_rec
+  rich_list integer combin topology while_ pair real prim_rec
 Libs
   pred_setLib hurdUtils tautLib
 

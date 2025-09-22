@@ -7,7 +7,7 @@
 Theory iterateCompute
 Ancestors
   arithmetic pred_set divides number list rich_list listRange
-  combinatorics while iteration
+  combinatorics while_ iteration
   helperTwosq  (* for WHILE_RULE_PRE_POST *)
 
 (* ------------------------------------------------------------------------- *)
@@ -660,7 +660,7 @@ Proof
     qabbrev_tac `p = iterate_period b a` >>
     qabbrev_tac `y = iterate a b c` >>
     `findi y ls = c` by metis_tac[iterate_trace_element_idx, DECIDE``c <= (c :num)``] >>
-    simp[whileTheory.HOARE_SPEC_DEF] >>
+    simp[while_Theory.HOARE_SPEC_DEF] >>
     rpt strip_tac >| [
       `x <> y` by metis_tac[NOT_LESS] >>
       metis_tac[iterate_trace_member],
@@ -687,7 +687,7 @@ QED
     ==> {iterate a b n} ((WHILE g b) a)  by HOARE_SPEC_DEF
      or WHILE g b a IN {iterate a b n}   by set as function
    Thus WHILE g b a = iterate a b n      by IN_SING
-> whileTheory.HOARE_SPEC_DEF;
+> while_Theory.HOARE_SPEC_DEF;
 val it = |- !P C Q. HOARE_SPEC P C Q <=> !s. P s ==> Q (C s): thm
 Put C = (WHILE g b)
 *)
@@ -699,7 +699,7 @@ Theorem iterate_while_thm_1:
 Proof
   rpt strip_tac >>
   `HOARE_SPEC {a} (WHILE g b) {iterate a b n}` by metis_tac[iterate_while_hoare] >>
-  fs[whileTheory.HOARE_SPEC_DEF]
+  fs[while_Theory.HOARE_SPEC_DEF]
 QED
 
 (* This is another milestone. Now depreciated, see iterate_while_thm below. *)
@@ -722,7 +722,7 @@ Proof
   qexists_tac `\x. x = a` >>
   qexists_tac `\x. 1` >>
   rw[] >>
-  rw[whileTheory.HOARE_SPEC_DEF]
+  rw[while_Theory.HOARE_SPEC_DEF]
 QED
 
 (* Theorem: ~g a ==> WHILE g b a = a *)
@@ -735,14 +735,14 @@ Theorem iterate_while_thm_0:
 Proof
   rpt strip_tac >>
   `HOARE_SPEC {a} (WHILE g b) {a}` by rw[iterate_while_hoare_0] >>
-  fs[whileTheory.HOARE_SPEC_DEF]
+  fs[while_Theory.HOARE_SPEC_DEF]
 QED
 
 (* ------------------------------------------------------------------------- *)
 (* Direct from WHILE definition.                                             *)
 (* ------------------------------------------------------------------------- *)
 
-(* from whileTheory:
+(* from while_Theory:
 
 WHILE
 |- !P g x. WHILE P g x = if P x then WHILE P g (g x) else x

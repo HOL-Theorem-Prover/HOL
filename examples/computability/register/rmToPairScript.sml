@@ -1,6 +1,6 @@
 Theory rmToPair
 Ancestors
-  arithmetic combin while indexedLists numeral primrecfns list
+  arithmetic combin while_ indexedLists numeral primrecfns list
   bool numpair pred_set rmModel rmTools rmSampleMachines
 Libs
   mp_then

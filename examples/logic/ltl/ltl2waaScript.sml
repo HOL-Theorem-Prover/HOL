@@ -1,6 +1,6 @@
 Theory ltl2waa
 Ancestors
-  pred_set relation arithmetic prim_rec pair set_relation while
+  pred_set relation arithmetic prim_rec pair set_relation while_
   generalHelpers ltl word alterA
 
 (*

@@ -274,7 +274,7 @@ fun BOUNDED_EXISTS_CONV cnv M =
     Picks an arbitrary LEAST-subterm if there are multiple such.
    ---------------------------------------------------------------------- *)
 
-val LEAST_ELIM_TAC = DEEP_INTRO_TAC whileTheory.LEAST_ELIM
+val LEAST_ELIM_TAC = DEEP_INTRO_TAC while_Theory.LEAST_ELIM
 
 (*---------------------------------------------------------------------------
     Simplification set for numbers (and booleans).

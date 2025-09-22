@@ -19,7 +19,7 @@ struct
 
 
 open HolKernel boolLib bossLib Parse;
-open Portable Assem wordsTheory ANF pairTheory pairLib listTheory arithmeticTheory whileTheory  wordsLib PairedLambda mechReasoning IRSyntax;
+open Portable Assem wordsTheory ANF pairTheory pairLib listTheory arithmeticTheory while_Theory  wordsLib PairedLambda mechReasoning IRSyntax;
 open swsepTheory arm_progTheory progTheory pred_setTheory set_sepLib set_sepTheory arm_instTheory listTheory
    wordsTheory pairTheory wordsLib markerTheory
 

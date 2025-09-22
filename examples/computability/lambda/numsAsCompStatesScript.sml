@@ -46,7 +46,7 @@ Theorem correctness_on_termination:
   (Phi i n = SOME (cs_to_num (steps m cs0)))
 Proof
   simp[mk_initial_state_def, terminated_def, comp_count_def, steps_pr_steps] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >> simp[] >>
+  DEEP_INTRO_TAC while_Theory.OLEAST_INTRO >> simp[] >>
   Cases_on ‘steps m cs0’ >> simp[cs_to_num_def, terminated_def] >>
   rw[] >> fs[steps_pr_steps] >>
   REWRITE_TAC [GSYM recPhi_correct, recPhi_def] >>
@@ -97,7 +97,7 @@ Proof
                                            |> SIMP_RULE bool_ss[]) >>
       simp[]) >>
   fs[comp_count_def, mk_initial_state_def, pr_steps_correct] >>
-  pop_assum mp_tac >> DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
+  pop_assum mp_tac >> DEEP_INTRO_TAC while_Theory.OLEAST_INTRO >>
   simp[terminated_def] >> fs[recfunsTheory.Phi_def] >>
   simp[cs_to_num_def] >> rw[] >>
   qabbrev_tac ‘M = toTerm (numdB i) @@ church n’ >>
@@ -147,7 +147,7 @@ Theorem terminated_imp:
 Proof
   rw[] >> fs[Phi_steps] >> ‘comp_count (mk_initial_state M x) = SOME t’
     suffices_by fs[] >>
-  fs[comp_count_def] >> fs[whileTheory.OLEAST_EQ_SOME] >> rw[] >> strip_tac >>
+  fs[comp_count_def] >> fs[while_Theory.OLEAST_EQ_SOME] >> rw[] >> strip_tac >>
   rename [‘n < t’] >>
   ‘∃c.0<c ∧ n+c = t’ by (qexists_tac‘t-n’ >> fs[]) >> rw[] >>
   ‘steps (n + c) (mk_initial_state M x) =
@@ -227,7 +227,7 @@ Proof
   rw[] >> `Phi m y = SOME (cs_to_num (steps x (mk_initial_state m y)))` by fs[terminated_imp]>>
   fs[Phi_steps] >> Cases_on`comp_count (mk_initial_state m y)` >> fs[] >>
   `(∀a. a<=x-1 ==> (¬terminated (steps a (mk_initial_state m y))))` by
-    metis_tac[non_terminated_down] >>  fs[comp_count_def,whileTheory.OLEAST_def] >> rw[]>>
+    metis_tac[non_terminated_down] >>  fs[comp_count_def,while_Theory.OLEAST_def] >> rw[]>>
   numLib.LEAST_ELIM_TAC >> rw[] >- metis_tac[] >>
   `(∀a. a<x ==> (¬terminated (steps a (mk_initial_state m y))))` by fs[] >>
   metis_tac[DECIDE``x:num < y ∨ x=y ∨ y<x ``]
@@ -255,7 +255,7 @@ Proof
   rw[] >> Cases_on`t=0`
   >- ( fs[Phi_steps] >> `comp_count (mk_initial_state M x) = SOME t`
       suffices_by fs[] >>
-      fs[comp_count_def] >> fs[whileTheory.OLEAST_EQ_SOME] >> rw[] >> strip_tac  ) >>
+      fs[comp_count_def] >> fs[while_Theory.OLEAST_EQ_SOME] >> rw[] >> strip_tac  ) >>
   `¬terminated (steps (t − 1) (mk_initial_state M x))` by
     (strip_tac >> fs[] >> `t<=t-1` by fs[] >> fs[PRE_SUB1])  >>
   fs[terminated_imp]
@@ -269,7 +269,7 @@ Proof
   rw[] >> Cases_on`t=0`
   >- (`Phi m y = SOME (cs_to_num (steps t (mk_initial_state m y)))` by fs[terminated_imp2]>>
       `comp_count (mk_initial_state m y) = SOME t` suffices_by fs[] >>
-      fs[comp_count_def] >> fs[whileTheory.OLEAST_EQ_SOME] >> rw[] >> strip_tac  ) >>
+      fs[comp_count_def] >> fs[while_Theory.OLEAST_EQ_SOME] >> rw[] >> strip_tac  ) >>
   `¬terminated (steps (t − 1) (mk_initial_state m y))` by
     (strip_tac >> fs[] >> `t<=t-1` by fs[] >> fs[])  >> fs[comp_count_terminated]
 QED

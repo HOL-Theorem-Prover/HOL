@@ -8,7 +8,7 @@
 Theory computePoly
 Ancestors
   pred_set list rich_list arithmetic number combinatorics divides
-  gcd logroot while ring polynomial polyWeak polyRing polyField
+  gcd logroot while_ ring polynomial polyWeak polyRing polyField
   polyMonic polyEval polyDivision polyFieldDivision
   polyFieldModulo polyBinomial computeBasic computeOrder
 Libs

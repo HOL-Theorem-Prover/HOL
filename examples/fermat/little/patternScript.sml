@@ -575,7 +575,7 @@ Theorem cycle_order_period:
   !ls. ls <> [] ==> period ls (order ls)
 Proof
   rw[order_def] >>
-  metis_tac[cycle_period_exists, whileTheory.LEAST_INTRO]
+  metis_tac[cycle_period_exists, while_Theory.LEAST_INTRO]
 QED
 
 (* Idea: if k < list order, k is not a period. *)
@@ -592,7 +592,7 @@ Theorem cycle_order_minimal:
   !k ls. ls <> [] /\ k < order ls ==> ~(period ls k)
 Proof
   rw[order_def] >>
-  metis_tac[cycle_period_exists, whileTheory.LESS_LEAST]
+  metis_tac[cycle_period_exists, while_Theory.LESS_LEAST]
 QED
 
 (* Idea: the list order is positive and a period. *)

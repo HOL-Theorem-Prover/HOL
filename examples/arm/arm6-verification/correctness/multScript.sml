@@ -12,7 +12,7 @@
 *)
 Theory mult
 Ancestors
-  arithmetic while bit words io_onestep arm core lemmas
+  arithmetic while_ bit words io_onestep arm core lemmas
   interrupts
 Libs
   Q wordsLib iclass_compLib
