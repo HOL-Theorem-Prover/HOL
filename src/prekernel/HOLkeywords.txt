@@ -13,6 +13,7 @@ Theorem
 Theory
 Triviality
 Type
+abstype
 andalso
 case
 datatype
