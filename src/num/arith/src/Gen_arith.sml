@@ -120,9 +120,10 @@ val is_presburger = (all is_num_var) o non_presburger_subterms;
     non-numeral multiplicands always appear in the same order, and
     grouped together, possibly with an isolated numeral coefficient.
    ---------------------------------------------------------------------- *)
-
+local open arithmeticTheory numSyntax Psyntax
+val conv1 = PURE_REWRITE_CONV [LEFT_ADD_DISTRIB, RIGHT_ADD_DISTRIB]
+in
 fun EXPAND_NORM_MULTS_CONV tm = let
-  open arithmeticTheory numSyntax Psyntax
   fun norm_mult t = let
     val ms = strip_mult t
     val _ = Int.>(length ms, 1) orelse failwith "not a mult"
@@ -139,9 +140,10 @@ fun EXPAND_NORM_MULTS_CONV tm = let
       LAND_CONV reduceLib.REDUCE_CONV
   end t
 in
-  PURE_REWRITE_CONV [LEFT_ADD_DISTRIB, RIGHT_ADD_DISTRIB] THENC
+  conv1 THENC
   ONCE_DEPTH_CONV norm_mult
 end tm
+end
 
 
 (*---------------------------------------------------------------------------*)
