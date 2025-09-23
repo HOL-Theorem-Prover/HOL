@@ -2,7 +2,7 @@ structure numSyntax :> numSyntax =
 struct
   open HolKernel Abbrev;
 
-  local open arithmeticTheory whileTheory numeralTheory in end;
+  local open arithmeticTheory WhileTheory numeralTheory in end;
 
   val ERR = mk_HOL_ERR "numSyntax";
 
@@ -39,8 +39,8 @@ struct
   val numeral_tm   = prim_mk_const {Name="NUMERAL", Thy="arithmetic"}
   val odd_tm       = prim_mk_const {Name="ODD",     Thy="arithmetic"}
   val plus_tm      = prim_mk_const {Name="+",       Thy="arithmetic"}
-  val least_tm     = prim_mk_const {Name="LEAST",   Thy="while"};
-  val while_tm     = prim_mk_const {Name="WHILE",   Thy="while"}
+  val least_tm     = prim_mk_const {Name="LEAST",   Thy="While"};
+  val while_tm     = prim_mk_const {Name="WHILE",   Thy="While"}
 
 
 (*---------------------------------------------------------------------------

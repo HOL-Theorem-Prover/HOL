@@ -1,7 +1,7 @@
 Theory generalHelpers
 Ancestors
   pred_set relation set_relation arithmetic pair list option
-  prim_rec while rich_list sorting
+  prim_rec While rich_list sorting
 
 (* open relationTheoryHelperTheory *)
 

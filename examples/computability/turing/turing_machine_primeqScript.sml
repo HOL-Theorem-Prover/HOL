@@ -1,7 +1,7 @@
 Theory turing_machine_primeq
 Ancestors
   finite_map recursivefns prnlist primrecfns list arithmetic
-  numpair nlist pred_set turing_machine while logroot
+  numpair nlist pred_set turing_machine While logroot
 
 Triviality DISJ_IMP_EQ[simp]:
   ((x = y) ∨ P ⇔ (x ≠ y ⇒ P)) ∧

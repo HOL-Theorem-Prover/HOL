@@ -384,15 +384,15 @@ val word_index = Q.prove(
 val BIT_EXISTS = METIS_PROVE [BIT_LOG2] ``!n. ~(n = 0) ==> ?b. BIT b n``;
 
 val LEAST_BIT_INTRO =
- (SIMP_RULE (srw_ss()) [] o Q.SPEC `\i. BIT i n`)  whileTheory.LEAST_INTRO;
+ (SIMP_RULE (srw_ss()) [] o Q.SPEC `\i. BIT i n`)  WhileTheory.LEAST_INTRO;
 
 val LOWEST_SET_BIT_ELIM =
   (SIMP_RULE (srw_ss()) [AND_IMP_INTRO] o
    SIMP_RULE (srw_ss()) [BIT_EXISTS] o Q.DISCH `~(n = 0)` o
-   Q.SPECL [`\x. x < dimindex (:'a)`,`\i. BIT i n`]) whileTheory.LEAST_ELIM;
+   Q.SPECL [`\x. x < dimindex (:'a)`,`\i. BIT i n`]) WhileTheory.LEAST_ELIM;
 
 val LOWEST_SET_BIT_LESS_LEAST =
-  (SIMP_RULE (srw_ss()) [] o Q.SPEC `\i. BIT i n`) whileTheory.LESS_LEAST;
+  (SIMP_RULE (srw_ss()) [] o Q.SPEC `\i. BIT i n`) WhileTheory.LESS_LEAST;
 
 val LOWEST_SET_BIT_LT_DIMINDEX = Q.prove(
   `!n. ~(n = 0) /\ n < dimword(:'a) ==> (LEAST i. BIT i n) < dimindex(:'a)`,

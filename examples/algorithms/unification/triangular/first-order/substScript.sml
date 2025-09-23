@@ -1,6 +1,6 @@
 Theory subst
 Ancestors
-  pred_set relation finite_map term while prim_rec arithmetic bag
+  pred_set relation finite_map term While prim_rec arithmetic bag
   list
 Libs
   ramanaLib

@@ -55,7 +55,7 @@ val BUSY_WAIT_LEM = prove(
                       (cpsri \/ PROJ_NIRQ (i (t - 2))))`,
   NTAC 2 STRIP_TAC
     \\ REWRITE_TAC [BUSY_WAIT_def,BUSY_WAIT_DONE_def,CP_INTERRUPT_def]
-    \\ STRIP_TAC \\ IMP_RES_TAC whileTheory.LESS_LEAST \\ POP_ASSUM MP_TAC
+    \\ STRIP_TAC \\ IMP_RES_TAC WhileTheory.LESS_LEAST \\ POP_ASSUM MP_TAC
     \\ PAT_X_ASSUM `~IS_RESET i t` MP_TAC
     \\ SIMP_TAC std_ss [IS_RESET_def,IS_BUSY_def,IS_ABSENT_def,IS_ABORT_def,
          IS_IRQ_def,IS_FIQ_def]
@@ -145,7 +145,7 @@ val EXISTS_BUSY_WAIT = prove(
     \\ METIS_TAC []);
 
 val LEAST_BETA = prove(`!n P. (LEAST n. P n) = $LEAST P`,
-  METIS_TAC [whileTheory.LEAST_DEF]);
+  METIS_TAC [WhileTheory.LEAST_DEF]);
 
 val EXISTS_BUSY_WAIT_IMP_BUSY_WAIT_DONE = save_thm
   ("EXISTS_BUSY_WAIT_IMP_BUSY_WAIT_DONE",
@@ -153,7 +153,7 @@ val EXISTS_BUSY_WAIT_IMP_BUSY_WAIT_DONE = save_thm
       (GSYM o SPECL [`n`,`BUSY_WAIT_DONE x i`]) LEAST_BETA] o
     DISCH `i IN STRM_ARM6` o DISCH `Abbrev (t = $LEAST (BUSY_WAIT_DONE x i))` o
     SIMP_RULE std_ss [DECIDE ``a /\ b ==> b``] o
-    SPECL [`BUSY_WAIT_DONE x i`,`BUSY_WAIT_DONE x i`]) whileTheory.LEAST_ELIM);
+    SPECL [`BUSY_WAIT_DONE x i`,`BUSY_WAIT_DONE x i`]) WhileTheory.LEAST_ELIM);
 
 val BUSY_WAIT_COR = prove(
   `!i t. i IN STRM_ARM6 /\
@@ -312,7 +312,7 @@ val BUSY_EXISTS_COR =
      DISCH `inp IN STRM_ARM6 /\
        Abbrev (b = BUSY_WAIT (onfq,ooonfq,oniq,oooniq,f,i,pipebabt) inp) /\
        ~IS_BUSY inp b` o
-     SPEC `\n. IS_BUSY (ADVANCE b inp) n`) whileTheory.LEAST_EXISTS
+     SPEC `\n. IS_BUSY (ADVANCE b inp) n`) WhileTheory.LEAST_EXISTS
   in
     (GEN_ALL o SIMP_RULE std_ss [IS_BUSY_def,ADVANCE_def])
       (MATCH_MP (METIS_PROVE [] ``(a ==> b) /\ (a ==> (b = c)) ==> (a ==> c)``)

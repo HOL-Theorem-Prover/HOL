@@ -37,10 +37,10 @@ quietdec := false;
 
 Theory Projection
 Ancestors
-  FinitePSLPath PSLPath Syntax SyntacticSugar UnclockedSemantics
-  ClockedSemantics Rewrites arithmetic list rich_list res_quan
-  while ClockedSemantics Lemmas RewritesProperties arithmetic
-  list while rich_list res_quan ClockedSemantics Lemmas
+  Syntax SyntacticSugar UnclockedSemantics
+  Rewrites arithmetic res_quan
+  While ClockedSemantics Lemmas RewritesProperties arithmetic
+  list While rich_list res_quan ClockedSemantics Lemmas
   RewritesProperties FinitePSLPath PSLPath
 Libs
   res_quanLib res_quanLib

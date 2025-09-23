@@ -1,6 +1,6 @@
 Theory testing
 Ancestors
-  arithmetic combin while indexedLists numeral rmModel rmToPair
+  arithmetic combin While indexedLists numeral rmModel rmToPair
   rmRecursiveFuncs rmTools rmSampleMachines
 
 (*

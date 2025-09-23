@@ -1,6 +1,6 @@
 Theory keccak
 Ancestors
-  option pair arithmetic combin list rich_list while bit divides
+  option pair arithmetic combin list rich_list While bit divides
   words indexedLists numposrep numeral_bit bitstring logroot byte
   sptree cv cv_std
 Libs
@@ -3950,7 +3950,7 @@ Triviality while1_thm:
     while1 a tt ww x y w z a'
 Proof
   ho_match_mp_tac while1_ind \\ rw []
-  \\ simp [Once whileTheory.WHILE]
+  \\ simp [Once WHILE]
   \\ simp [Once while1_def]
   \\ IF_CASES_TAC \\ gvs []
 QED
@@ -3979,7 +3979,7 @@ Theorem while2_thm:
     while2 a w ww x y t a'
 Proof
   ho_match_mp_tac while2_ind \\ rw []
-  \\ simp [Once whileTheory.WHILE]
+  \\ simp [Once WHILE]
   \\ simp [Once while2_def]
   \\ IF_CASES_TAC \\ gvs []
 QED

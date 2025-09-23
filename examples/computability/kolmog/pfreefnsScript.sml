@@ -1,6 +1,6 @@
 Theory pfreefns
 Ancestors
-  arithmetic while logroot pred_set list churchoption churchlist
+  arithmetic While logroot pred_set list churchoption churchlist
   recfuns kolmogorov_complexity invarianceResults boolLists
   churchDB recursivefns primrecfns prterm unary_recfns
 Libs

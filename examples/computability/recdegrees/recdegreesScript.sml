@@ -1,6 +1,6 @@
 Theory recdegrees
 Ancestors
-  arithmetic while logroot pred_set list recursivefns prnlist
+  arithmetic While logroot pred_set list recursivefns prnlist
   primrecfns prterm nlist recfuns recsets churchDB
 Libs
   reductionEval

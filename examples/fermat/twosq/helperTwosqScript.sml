@@ -6,7 +6,7 @@
 
 Theory helperTwosq
 Ancestors
-  arithmetic pred_set divides gcd number while combinatorics
+  arithmetic pred_set divides gcd number While combinatorics
   prime
 
 (* ------------------------------------------------------------------------- *)

@@ -13,7 +13,7 @@
 *)
 Theory block
 Ancestors
-  arithmetic while rich_list bit sum_num words io_onestep my_list
+  arithmetic While rich_list bit sum_num words io_onestep my_list
   arm core lemmas interrupts
 Libs
   Q wordsLib armLib iclass_compLib

@@ -1,7 +1,7 @@
 
 Theory tailrec
 Ancestors
-  pred_set arithmetic while sum
+  pred_set arithmetic While sum
 
 (* ---- definitions ----- *)
 

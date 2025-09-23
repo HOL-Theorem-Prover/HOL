@@ -2,7 +2,7 @@
 Theory prog_x64_extra
 Ancestors
   prog_x64 prog set_sep address temporal words list arithmetic
-  while pair relation combin option
+  While pair relation combin option
 Libs
   prog_x64Lib x64_encodeLib helperLib wordsLib
 

@@ -950,7 +950,7 @@ Theorem two_sq_while_thm:
 Proof
   rw_tac bool_ss[] >>
   drule_then strip_assume_tac two_sq_while_hoare >>
-  rfs[whileTheory.HOARE_SPEC_DEF] >>
+  rfs[WhileTheory.HOARE_SPEC_DEF] >>
   qabbrev_tac `u = (1,1,p DIV 4)` >>
   `fixes zagier (mills p) = {u}` by rw[zagier_fixes_prime, Abbr`u`] >>
   last_x_assum (qspecl_then [`u`] strip_assume_tac) >>

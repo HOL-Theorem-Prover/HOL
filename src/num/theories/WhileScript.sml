@@ -2,7 +2,7 @@
 (* Define WHILE loops, give Hoare rules, and define LEAST operator as a      *)
 (* binder.                                                                   *)
 (*===========================================================================*)
-Theory while[bare]
+Theory While[bare]
 Ancestors
   combin option sum prim_rec arithmetic relation
 Libs

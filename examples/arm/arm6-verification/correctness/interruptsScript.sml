@@ -56,7 +56,7 @@ val LEAST_NOT_RESET = save_thm("LEAST_NOT_RESET",
   GEN_ALL (MATCH_MP (PROVE [] ``((a ==> b) /\ (b ==> c)) ==> (a ==> c)``)
     (CONJ (SPEC_ALL EXISTS_LEAST_NOT_RESET) ((SIMP_RULE std_ss [] o
        SPEC `\t. IS_RESET i t /\ ~IS_RESET i (t + 1) /\ ~IS_RESET i (t + 2)`)
-         whileTheory.LEAST_EXISTS_IMP))));
+         WhileTheory.LEAST_EXISTS_IMP))));
 
 val IS_RESET_LEM = prove(
   `!i t. ~IS_RESET i t ==> FST (i t)`,

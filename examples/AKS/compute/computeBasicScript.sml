@@ -7,7 +7,7 @@
 Theory computeBasic
 Ancestors
   pred_set list arithmetic logroot divides gcd gcdset number
-  combinatorics prime while
+  combinatorics prime While
 Libs
   jcLib
 

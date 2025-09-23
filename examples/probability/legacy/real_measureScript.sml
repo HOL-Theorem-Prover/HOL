@@ -889,7 +889,7 @@ val INF_MEASURE_LE = store_thm
     >> Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`)
     >> RW_TAC std_ss []
     >> Know `?n. x IN f n` >- PROVE_TAC []
-    >> DISCH_THEN (MP_TAC o Ho_Rewrite.REWRITE_RULE [whileTheory.LEAST_EXISTS])
+    >> DISCH_THEN (MP_TAC o Ho_Rewrite.REWRITE_RULE [WhileTheory.LEAST_EXISTS])
     >> RW_TAC std_ss []
     >> Q.EXISTS_TAC
        `f (LEAST n. x IN f n) DIFF

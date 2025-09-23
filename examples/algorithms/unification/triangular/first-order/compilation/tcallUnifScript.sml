@@ -1,6 +1,6 @@
 Theory tcallUnif
 Ancestors
-  pair walk walkstar unifDef while subst rmfmap cps relation
+  pair walk walkstar unifDef While subst rmfmap cps relation
   sptree pred_set finite_map option
 Libs
   cpsLib
