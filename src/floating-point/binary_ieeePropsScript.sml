@@ -260,3 +260,90 @@ Proof
   gvs[] >>
   ‘abs r = -r’ by simp[] >> gvs[]
 QED
+
+Theorem largest_props[simp]:
+  ¬(largest (:α # β) < 0) ∧ largest (:α # β) ≠ 0 ∧ 0 < largest(:α # β) ∧
+  0 ≤ largest (:α # β) ∧ ¬(largest(:α # β) ≤ 0)
+Proof
+  ‘0 < largest(:α # β)’ suffices_by simp[] >>
+  simp[largest_def, UINT_MAX_def, dimword_def] >>
+  irule REAL_LT_MUL >> simp[REAL_ARITH “0r < x - y ⇔ y < x”] >>
+  simp[REAL_OF_NUM_POW, DECIDE “1n < 2 * c ⇔ 1 ≤ c”]
+QED
+
+Theorem threshold_props[simp]:
+  ¬(threshold (:α # β) < 0) ∧ threshold (:α # β) ≠ 0 ∧ 0 < threshold(:α # β) ∧
+  0 ≤ threshold (:α # β) ∧ ¬(threshold(:α # β) ≤ 0)
+Proof
+  ‘0 < threshold(:α # β)’ suffices_by REAL_ARITH_TAC >>
+  irule REAL_LT_TRANS >> qexists ‘largest(:α#β)’ >>
+  simp[largest_lt_threshold]
+QED
+
+Theorem is_closest_0_float_to_real:
+  is_closest float_is_finite 0 (b:(α,β)float) ⇔ float_to_real b = 0
+Proof
+  simp[is_closest_def, float_is_finite_def, IN_DEF] >>
+  Cases_on ‘float_value b’ >> fs[float_value_def, CaseEq "bool"]
+  >- (reverse eq_tac >> rw[] >>
+      first_x_assum (qspec_then ‘float_plus_zero(:α#β)’ mp_tac) >>
+      simp[float_plus_zero_def, word_T_def, UINT_MAX_def, dimword_def] >>
+      assume_tac (DIMINDEX_GT_0 |> INST_TYPE [alpha |-> beta]) >> simp[]) >>
+  simp[float_to_real_def, word_T_def, UINT_MAX_def, NOT_LESS_EQUAL,
+       dimword_def, AllCaseEqs(), real_div] >>
+  irule (REAL_ARITH “0 ≤ y ⇒ 1 + y ≠ 0”) >> simp[REAL_LE_MUL]
+QED
+
+Theorem round_representable:
+  2 ≤ precision(:β) ∧ float_is_finite (f:(α,β)float) ⇒
+  ∃f':(α,β)float. float_is_finite f' ∧ round m (f2r f) = f' ∧ f2r f' = f2r f
+Proof
+  strip_tac >>
+  Cases_on ‘f2r f = 0’
+  >- (simp [] >> simp[round_def, real_gt, real_ge] >>
+      Cases_on ‘m’ >>
+      simp[closest_def, closest_such_def] >>
+      SELECT_ELIM_TAC >> simp[] >>
+      conj_tac >>~-
+      ([‘$? _’], qexists ‘POS0’ >> simp[is_closest_def, word_lsb_n2w, IN_DEF]) >>
+      simp[is_closest_def, IN_DEF]) >>
+  qexists ‘f’ >> simp[] >>
+  simp[round_def] >>
+  ‘float_value f = Float (f2r f)’ by simp[float_value_eq_float_to_real] >>
+  assume_tac (INST_TYPE [“:χ” |-> “:β”, “:τ” |-> “:α”] largest_lt_threshold) >>
+  drule_all_then strip_assume_tac float_bounds >> simp[] >>
+  Cases_on ‘m’ >> simp[closest_such_def, closest_def] >>
+  SELECT_ELIM_TAC >> simp[is_closestP_finite_float_exists] >> rpt conj_tac >>~-
+  ([‘$? _’], qexists ‘f’ >> simp[is_closest_def]) >> rpt strip_tac >>
+  qpat_x_assum ‘is_closest _ _ _ (* a *)’ mp_tac >>
+  simp[is_closest_def, IN_DEF] >> rpt strip_tac >>
+  first_x_assum $ qspec_then ‘f’ mp_tac >> simp[REAL_ABS_LE0] >>
+  simp[float_to_real_eq, float_is_zero_to_real]
+QED
+
+Theorem round_representable_nonzero:
+  2 ≤ precision(:β) ∧ float_is_finite (f:(α,β)float) ∧ f2r f ≠ 0 ⇒
+  round m (f2r f) = f
+Proof
+  rpt strip_tac >>
+  drule_all_then (qspec_then ‘m’ strip_assume_tac) round_representable >>
+  simp[] >> gvs[float_to_real_eq, float_is_zero_to_real]
+QED
+
+Theorem float_to_real_EQ0_cases:
+  f2r f = 0 ⇔ f = POS0 ∨ f = NEG0
+Proof
+  simp[EQ_IMP_THM, DISJ_IMP_THM] >>
+  simp[GSYM float_is_zero_to_real, float_is_zero] >>
+  simp[float_plus_zero_def, float_minus_zero_def, float_component_equality] >>
+  Cases_on ‘f.Sign’ >> gvs[dimword_1]
+QED
+
+Theorem round_representable_zero:
+  2 ≤ precision(:β) ⇒ round m 0 = (POS0:(α,β)float) ∨ round m 0 = (NEG0:(α,β)float)
+Proof
+  strip_tac >>
+  drule_then (qspecl_then [‘m’, ‘POS0’] strip_assume_tac) round_representable >>
+  gvs[] >>
+  metis_tac[float_to_real_round0, float_to_real_EQ0_cases]
+QED
