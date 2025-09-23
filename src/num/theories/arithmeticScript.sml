@@ -3221,6 +3221,17 @@ Proof
   INDUCT_TAC THEN ASM_REWRITE_TAC [MULT_EQ_1, EXP]
 QED
 
+Theorem EXP_LE_1[simp]:
+   x ** y <= 1n ⇔ x <= 1 ∨ y = 0
+Proof
+  REWRITE_TAC[LE_LT, EXP_LT_1] >>
+  Cases_on ‘y = 0’ >> simp[] >>
+  Cases_on ‘x = 0’ >> simp[]
+  >- simp[GSYM NOT_ZERO] >>
+  Cases_on ‘y’ >> gvs[EXP, MULT_EQ_1] >>
+  simp[EQ_IMP_THM, EXP_1]
+QED
+
 (* Theorem: n ** 2 = n * n *)
 (* Proof:
    n ** 2 = n * (n ** 1) = n * (n * (n ** 0)) = n * (n * 1) = n * n
