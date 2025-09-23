@@ -29,13 +29,6 @@ val ERR    = mk_HOL_ERR "TotalDefn";
 val ERRloc = mk_HOL_ERRloc "TotalDefn";
 val WARN   = HOL_WARNING "TotalDefn";
 
-fun render_exn srcfn e =
-    if !Globals.interactive then
-       raise e
-    else
-      (Feedback.output_ERR (Feedback.exn_to_string e);
-       raise BATCH_ERR srcfn)
-
 (*---------------------------------------------------------------------------*)
 (* Set up traces                                                             *)
 (*---------------------------------------------------------------------------*)

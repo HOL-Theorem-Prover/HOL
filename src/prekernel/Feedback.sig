@@ -20,6 +20,7 @@ sig
     exception HOL_ERR of hol_error
     exception BATCH_ERR of string
 
+    val render_exn        : string -> exn -> 'a
     val mk_HOL_ERR        : string -> string -> string -> exn
     val mk_HOL_ERRloc     : string -> string -> locn.locn -> string -> exn
     val wrap_exn          : string -> string -> exn -> exn

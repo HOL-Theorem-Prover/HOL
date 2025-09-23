@@ -43,7 +43,7 @@ fun pp_hol_error (err as HOL_ERROR recd) =
   let open HOLPP
       val {origin_structure, origin_function, source_location, message} = recd
   in if err = trivial_hol_error then
-        add_string "<error>"
+        add_string "<trivial-hol-error>"
      else
      block INCONSISTENT 0 (List.concat [
        [add_string "at ",
@@ -65,7 +65,7 @@ val _ =
   end
 
 (*---------------------------------------------------------------------------*)
-(* Exception used in HOL code.                                               *)
+(* Exceptions used in HOL code.                                              *)
 (*---------------------------------------------------------------------------*)
 
 exception HOL_ERR of hol_error;
@@ -164,6 +164,19 @@ fun output_ERR s = if !emit_ERR then !ERR_outstream s else ()
 fun exn_to_string (HOL_ERR herr) = !ERR_to_string herr
   | exn_to_string Portable.Interrupt = raise Portable.Interrupt
   | exn_to_string e = General.exnMessage e
+
+(*---------------------------------------------------------------------------*)
+(* Either raise the exception, presumably a HOL_ERR, in the REPL (it gets    *)
+(* printed by the installed prettyprinter) or print the error and raise      *)
+(* BATCH_ERR with a message.                                                 *)
+(*---------------------------------------------------------------------------*)
+
+fun render_exn srcfn e =
+    if !Globals.interactive then
+       raise e
+    else
+      (output_ERR (exn_to_string e);
+       raise BATCH_ERR srcfn)
 
 fun Raise e = (output_ERR (exn_to_string e); raise e)
 
