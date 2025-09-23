@@ -1,6 +1,6 @@
 Theory Yoneda
 Ancestors
-  pred_set category functor_ nat_trans hom_functor ens_cat
+  pred_set category category_functor nat_trans hom_functor ens_cat
 Libs
   SatisfySimps
 

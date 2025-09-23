@@ -1,7 +1,7 @@
 Theory zfset_cat
 Ancestors
-  pred_set zfset_axioms zfset pair category limit ens_cat functor_
-  nat_trans hom_functor Yoneda
+  pred_set zfset_axioms zfset pair category limit ens_cat
+  category_functor nat_trans hom_functor Yoneda
 Libs
   boolSimps
 

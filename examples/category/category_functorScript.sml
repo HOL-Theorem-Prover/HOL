@@ -1,4 +1,4 @@
-Theory functor_
+Theory category_functor
 Ancestors
   pred_set category
 

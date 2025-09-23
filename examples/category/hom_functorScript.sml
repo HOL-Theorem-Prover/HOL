@@ -1,6 +1,6 @@
 Theory hom_functor
 Ancestors
-  pred_set category functor_ ens_cat
+  pred_set category category_functor ens_cat
 Libs
   boolSimps
 
