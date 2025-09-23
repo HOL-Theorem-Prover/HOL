@@ -14,8 +14,6 @@ val goal_toString =
     pairp (listp term_to_string, term_to_string)
 val goals_toString = listp goal_toString
 
-
-
 fun test_CONV (c,nm) (t, expected) = let
   val _ = tprint (nm^" on `"^term_to_string t^"`")
   val th = Conv.QCONV c t
@@ -47,7 +45,7 @@ val _ =
            if function_of herr <> "new_type_definition" orelse
               structure_of herr <> "Theory.Definition" orelse
               message_of herr <>
-              "at Thm.prim_type_definition:\nexpected a theorem of the form \"?x. P x\""
+              "at Thm.prim_type_definition: expected a theorem of the form \"?x. P x\""
            then
              die "FAILED"
            else OK()

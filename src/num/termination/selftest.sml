@@ -73,23 +73,28 @@ fun tdefoutput_pp(th,thopt) =
     "(" ^ thm_to_string th ^ ", " ^
     (case thopt of NONE => "NONE"
                  | SOME th' => "SOME " ^ thm_to_string th') ^ ")"
+
 fun quietDefn f x =
     Lib.with_flag (Globals.interactive, false) f x
-val _  = shouldfail { checkexn = is_struct_HOL_ERR "TotalDefn",
-                      printarg = K "tDefine: no schematic defs when \
-                                   \termination tac is supplied",
-                      printresult = tdefoutput_pp,
-                      testfn = (fn q => quietDefn (TotalDefn.tDefine "foo" q)
-                                           (WF_REL_TAC ‘$<’))}
-       ‘foo x = if x = 0 then y else foo(x - 1)*2’;
 
-val _  = shouldfail { checkexn = is_struct_HOL_ERR "TotalDefn",
-                      printarg = K "qDefine: no schematic defs when \
-                                   \termination tac is supplied",
-                      printresult = thm_to_string,
-                      testfn = (fn q => quietDefn (TotalDefn.qDefine "foo" q)
-                                           (SOME (WF_REL_TAC ‘$<’)))}
-       ‘foo x = if x = 0 then y else foo(x - 1)*2’;
+fun repl_mode f x =
+    Lib.with_flag (Globals.interactive, true) f x
+
+val _  =
+  shouldfail
+    { checkexn = is_struct_HOL_ERR "TotalDefn",
+      printarg = K "tDefine: no schematic defs when termination tac is supplied",
+      printresult = tdefoutput_pp,
+      testfn = (fn q => repl_mode (TotalDefn.tDefine "foo" q) (WF_REL_TAC ‘$<’))}
+   ‘foo x = if x = 0 then y else foo(x - 1)*2’;
+
+val _  =
+  shouldfail
+    { checkexn = is_struct_HOL_ERR "TotalDefn",
+      printarg = K "qDefine: no schematic defs when termination tac is supplied",
+      printresult = thm_to_string,
+      testfn = (fn q => repl_mode(TotalDefn.qDefine "foo" q) (SOME (WF_REL_TAC ‘$<’)))}
+   ‘foo x = if x = 0 then y else foo(x - 1)*2’;
 
 fun lhs_has_two_args th =
     th |> concl |> strip_forall |> #2 |> lhs |> strip_comb |> #2 |> length

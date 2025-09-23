@@ -150,8 +150,9 @@ val _ = let
       trace ("Definition.auto Defn.tgoal", 0) $
       trace ("Theory.allow_rebinds", 1) $
       quietly $
-          TotalDefn.qDefine "wfact"
-             ‘wfact w = if w = 0w then 1 else w2n w * wfact (w - 1w)’
+      Lib.with_flag(Globals.interactive, true)
+        (TotalDefn.qDefine "wfact"
+             ‘wfact w = if w = 0w then 1 else w2n w * wfact (w - 1w)’)
 in
   require_msg (check_result (K true)) thm_to_string fact_defn NONE;
   TotalDefn.temp_exclude_termsimp "words.WORD_PRED_THM";
