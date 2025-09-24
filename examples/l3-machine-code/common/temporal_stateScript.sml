@@ -1,7 +1,6 @@
-open HolKernel boolLib bossLib
-open set_sepTheory progTheory temporalTheory stateTheory
-
-val _ = new_theory "temporal_state"
+Theory temporal_state
+Ancestors
+  set_sep prog temporal state
 
 (* ------------------------------------------------------------------------ *)
 
@@ -170,4 +169,3 @@ val SEP_ARRAY_TEMPORAL_FRAME = Q.store_thm("SEP_ARRAY_TEMPORAL_FRAME",
 
 (* ------------------------------------------------------------------------ *)
 
-val () = export_theory ()

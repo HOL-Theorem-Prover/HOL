@@ -1,18 +1,15 @@
-open HolKernel Parse boolLib bossLib; val _ = new_theory "lisp_init";
-val _ = ParseExtras.temp_loose_equality()
-open lisp_sexpTheory lisp_consTheory lisp_invTheory lisp_codegenTheory;
+Theory lisp_init
+Ancestors
+  lisp_sexp lisp_cons lisp_inv lisp_codegen words arithmetic list
+  pred_set pair combin finite_map address set_sep bit fcp string
+  stop_and_copy prog_x64 prog lisp_parse
+Libs
+  wordsLib helperLib codegenLib decompilerLib prog_x64Lib
 
+val _ = ParseExtras.temp_loose_equality()
 (* --- *)
 
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory helperLib;
-open set_sepTheory bitTheory fcpTheory stringTheory;
-
 val wstd_ss = std_ss ++ SIZES_ss ++ rewrites [DECIDE ``n<256 ==> (n:num)<18446744073709551616``,ORD_BOUND];
-
-open stop_and_copyTheory;
-open codegenLib decompilerLib prog_x64Lib prog_x64Theory progTheory;
-open lisp_parseTheory;
 
 infix \\
 val op \\ = op THEN;
@@ -410,4 +407,3 @@ val mc_full_init_pre_thm = store_thm("mc_full_init_pre_thm",
 val _ = save_thm("mc_full_init_thm",mc_full_init_thm);
 
 
-val _ = export_theory();

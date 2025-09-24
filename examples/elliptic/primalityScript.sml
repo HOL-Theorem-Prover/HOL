@@ -13,9 +13,12 @@ val () = app load
    "arithmeticTheory", "dividesTheory", "gcdTheory"];
 val () = quietdec := true;
 *)
+Theory primality
+Ancestors
+  arithmetic divides gcd
+Libs
+  metisLib TotalDefn
 
-open HolKernel Parse boolLib bossLib metisLib;
-open arithmeticTheory dividesTheory gcdTheory TotalDefn;
 
 (*
 val () = quietdec := false;
@@ -24,8 +27,6 @@ val () = quietdec := false;
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "primality".                                    *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = new_theory "primality";
 
 val _ = ParseExtras.temp_loose_equality()
 
@@ -196,4 +197,3 @@ val prime_checker = store_thm
 
 val _ = html_theory "primality";
 
-val () = export_theory ();

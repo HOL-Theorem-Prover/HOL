@@ -3,14 +3,12 @@
 (*        Translation from Reset Linear Temporal Logic (RLTL) to LTL          *)
 (*                                                                            *)
 (******************************************************************************)
+Theory rltl_to_ltl
+Ancestors
+  rltl full_ltl prop_logic pred_set
+Libs
+  Sanity
 
-open HolKernel Parse boolLib bossLib;
-
-open rltlTheory full_ltlTheory prop_logicTheory pred_setTheory;
-
-open Sanity;
-
-val _ = new_theory "rltl_to_ltl";
 
 val RLTL_TO_LTL_def = Define (* see [1, p.35] *)
   `(RLTL_TO_LTL a r (RLTL_PROP b) = LTL_PROP(P_OR(a, P_AND(b, P_NOT r)))) /\
@@ -133,8 +131,6 @@ Proof
  >> FULL_SIMP_TAC std_ss [IS_RLTL_THM, IS_LTL_THM, IS_FUTURE_LTL_def,
                           FUTURE_LTL_TO_RLTL_def, LTL_OR_def]
 QED
-
-val _ = export_theory();
 
 (* References:
 

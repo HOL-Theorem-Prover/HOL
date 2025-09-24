@@ -1,10 +1,11 @@
 
-open HolKernel Parse boolLib bossLib;
-open stringLib integerTheory;
-open listTheory arithmeticTheory;
-val ect = BasicProvers.EVERY_CASE_TAC;
+Theory imp
+Ancestors
+  integer list arithmetic string
+Libs
+  stringLib
 
-val _ = new_theory "imp";
+val ect = BasicProvers.EVERY_CASE_TAC;
 
 (*
 
@@ -236,5 +237,3 @@ Proof
   qexists `(q, t')` >>
   simp[]
 QED
-
-val _ = export_theory();

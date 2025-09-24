@@ -3,11 +3,10 @@
 (*     ==========================                                           *)
 (*     Abstract syntax tree (AST) for ARM instructions                      *)
 (* ------------------------------------------------------------------------ *)
+Theory arm_ast
+Ancestors
+  arm_coretypes
 
-open HolKernel boolLib bossLib Parse;
-open arm_coretypesTheory;
-
-val _ = new_theory "arm_ast";
 
 (* ------------------------------------------------------------------------ *)
 
@@ -185,4 +184,3 @@ val is_mode2_immediate_def = Define`
 val is_mode3_immediate_def = Define`
   is_mode3_immediate x = case x of Mode3_immediate imm8 => T | _ => F`;
 
-val _ = export_theory ();

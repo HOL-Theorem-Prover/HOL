@@ -1,17 +1,17 @@
-open HolKernel boolLib bossLib Parse proofManagerLib;
-open arm_coretypesTheory arm_seq_monadTheory arm_opsemTheory arm_stepTheory;
-open MMUTheory MMU_SetupTheory inference_rulesTheory switching_lemma_helperTheory;
-open priv_constraints_cpsr_pcTheory priv_constraints_lrTheory priv_constraints_bisimTheory tacticsLib;
-open user_lemma_basicsTheory;
-(* user_lemma_primitive_operationsTheory;*)
-open ARM_proverLib;
+Theory switching_lemma
+Ancestors
+  arm_coretypes arm_seq_monad arm_opsem arm_step MMU MMU_Setup
+  inference_rules switching_lemma_helper priv_constraints_cpsr_pc
+  priv_constraints_lr priv_constraints_bisim user_lemma_basics
+Libs
+  proofManagerLib tacticsLib ARM_proverLib
 
+(* user_lemma_primitive_operationsTheory;*)
 (****************************************************************)
 (*                    SWITCHING LEMMA                           *)
 (*                        Narges                                *)
 (****************************************************************)
 
-val _ =  new_theory("switching_lemma");
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -2354,4 +2354,3 @@ val take_svc_exception_thm =
                              THEN FULL_SIMP_TAC (srw_ss()) [take_svc_exception_part2_def]
               );
 
-val _ = export_theory();

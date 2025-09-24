@@ -1,8 +1,9 @@
-open HolKernel boolLib bossLib Parse proofManagerLib;
-open arm_coretypesTheory arm_seq_monadTheory arm_opsemTheory arm_stepTheory;
-open MMUTheory MMU_SetupTheory inference_rulesTheory switching_lemma_helperTheory tacticsLib ARM_prover_extLib;
-
-val _ =  new_theory("priv_constraints_spsr");
+Theory priv_constraints_spsr
+Ancestors
+  arm_coretypes arm_seq_monad arm_opsem arm_step MMU MMU_Setup
+  inference_rules switching_lemma_helper
+Libs
+  proofManagerLib tacticsLib ARM_prover_extLib
 
 val _ = diminish_srw_ss ["one"]
 val _ = augment_srw_ss [rewrites [oneTheory.FORALL_ONE]]
@@ -597,4 +598,3 @@ val take_undef_instr_exception_spsr_flags_thm =
     end);
 *)
 
-val _ = export_theory();

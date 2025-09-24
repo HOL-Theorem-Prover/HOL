@@ -1,14 +1,12 @@
 
-open HolKernel Parse boolLib bossLib;
+Theory prog_x64_extra
+Ancestors
+  prog_x64 prog set_sep address temporal words list arithmetic
+  While pair relation combin option
+Libs
+  prog_x64Lib x64_encodeLib helperLib wordsLib
 
-val _ = new_theory "prog_x64_extra";
 val _ = ParseExtras.temp_loose_equality()
-
-open prog_x64Theory prog_x64Lib x64_encodeLib;
-open helperLib progTheory set_sepTheory addressTheory temporalTheory;
-
-open wordsTheory wordsLib listTheory arithmeticTheory;
-open whileTheory pairTheory relationTheory combinTheory optionTheory;
 
 (* generic code gen infrastructure *)
 
@@ -1024,4 +1022,3 @@ val _ = save_thm("x64_getchar_r1_thm",
 val _ = save_thm("x64_putchar_r1_thm",
   SPEC_COMPOSE_RULE [fetch "-" "x64_call_r1",x64_putchar_thm] |> RW [STAR_ASSOC]);
 
-val _ = export_theory();

@@ -1,7 +1,6 @@
-open HolKernel boolLib bossLib
-open set_sepTheory progTheory
-
-val _ = new_theory "state"
+Theory state
+Ancestors
+  set_sep prog
 
 val _ = ParseExtras.temp_loose_equality()
 
@@ -551,4 +550,3 @@ val SEP_ARRAY_FRAME = Q.store_thm("SEP_ARRAY_FRAME",
 
 (* ------------------------------------------------------------------------ *)
 
-val () = export_theory ()

@@ -1,4 +1,9 @@
-open HolKernel Parse boolLib bossLib;
+Theory rltl
+Ancestors
+  pred_set arithmetic infinite_path prop_logic set_lemmata
+  symbolic_kripke_structure
+Libs
+  tuerk_tacticsLib numLib Sanity
 
 (*
 quietdec := true;
@@ -10,9 +15,6 @@ loadPath := (home_dir ^ "src/deep_embeddings") ::
 map load
  ["infinite_pathTheory", "prop_logicTheory", "pred_setTheory", "arithmeticTheory", "tuerk_tacticsLib", "numLib", "symbolic_kripke_structureTheory", "set_lemmataTheory"];
 *)
-
-open pred_setTheory arithmeticTheory infinite_pathTheory prop_logicTheory tuerk_tacticsLib numLib set_lemmataTheory symbolic_kripke_structureTheory
-open Sanity;
 
 (*
 show_assums := false;
@@ -26,7 +28,6 @@ val _ = hide "S";
 val _ = hide "I";
 
 
-val _ = new_theory "rltl";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -1299,4 +1300,3 @@ val RLTL_SEM___VAR_RENAMING___PATH_RESTRICT =
 
 
 
-val _ = export_theory();

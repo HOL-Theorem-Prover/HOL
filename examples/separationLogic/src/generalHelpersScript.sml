@@ -1,5 +1,10 @@
 
-open HolKernel Parse boolLib bossLib;
+Theory generalHelpers
+Ancestors
+  finite_map relation pred_set list rich_list arithmetic combin
+  container bag sorting
+Libs
+  stringLib boolSimps ConseqConv quantHeuristicsLib
 
 (*
 quietdec := true;
@@ -12,15 +17,10 @@ map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
 show_assums := true;
 *)
 
-open finite_mapTheory relationTheory pred_setTheory listTheory rich_listTheory arithmeticTheory
-     combinTheory containerTheory bagTheory stringLib
-     boolSimps ConseqConv sortingTheory quantHeuristicsLib;
-
 (*
 quietdec := false;
 *)
 
-val _ = new_theory "generalHelpers";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -1444,4 +1444,3 @@ PROVE_TAC[]);
 
 
 
-val _ = export_theory();

@@ -7,13 +7,12 @@
 (* interactive use:
   app load ["arm_astTheory", "wordsLib"];
 *)
+Theory arm_seq_monad
+Ancestors
+  arm_ast
+Libs
+  wordsLib
 
-open HolKernel boolLib bossLib Parse;
-open wordsLib;
-
-open arm_astTheory;
-
-val _ = new_theory "arm_seq_monad";
 
 (* ------------------------------------------------------------------------ *)
 
@@ -859,4 +858,3 @@ val _ = computeLib.add_persistent_funs
    "have_thumbEE",
    "have_jazelle"];
 
-val _ = export_theory ();

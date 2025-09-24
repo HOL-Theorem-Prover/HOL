@@ -4,12 +4,13 @@
  For detailed information about MARS, please refer to
  http://www.cl.cam.ac.uk/~rja14/serpent.html
 *)
+Theory Serpent_Bitslice
+Ancestors
+  list rich_list bit words pair arithmetic
+  Serpent_Bitslice_Utility Serpent_Bitslice_SBox
+Libs
+  wordsLib
 
-open HolKernel Parse boolLib bossLib listTheory rich_listTheory bitTheory
-     wordsTheory wordsLib pairTheory arithmeticTheory
-     Serpent_Bitslice_UtilityTheory Serpent_Bitslice_SBoxTheory;
-
-val _ = new_theory "Serpent_Bitslice";
 
 (*****************TRANSFORMATION*******************************)
 
@@ -277,4 +278,3 @@ val serpent_THM = Q.store_thm(
     RND28_THM,RND29_THM,RND30_THM,RND31_THM,
     keying_THM,transform_THM]);
 
-val _ = export_theory();

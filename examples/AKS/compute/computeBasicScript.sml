@@ -4,23 +4,17 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "computeBasic";
+Theory computeBasic
+Ancestors
+  pred_set list arithmetic logroot divides gcd gcdset number
+  combinatorics prime While
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory listTheory arithmeticTheory logrootTheory dividesTheory
-     gcdTheory gcdsetTheory numberTheory combinatoricsTheory primeTheory;
-
 (* val _ = load "whileTheory"; *)
-open whileTheory;
-
 val _ = temp_overload_on("SQ", ``\n. n * n``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
 val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
@@ -2080,8 +2074,4 @@ val phi_compute_eqn = store_thm(
             count_coprime_eqn, coprimes_subset, SUBSET_INTER_ABSORPTION, LESS_EQ_REFL]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

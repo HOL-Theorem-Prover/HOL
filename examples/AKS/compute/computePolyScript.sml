@@ -4,29 +4,17 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "computePoly";
-
 (* ------------------------------------------------------------------------- *)
+Theory computePoly
+Ancestors
+  pred_set list rich_list arithmetic number combinatorics divides
+  gcd logroot While ring polynomial polyWeak polyRing polyField
+  polyMonic polyEval polyDivision polyFieldDivision
+  polyFieldModulo polyBinomial computeBasic computeOrder
+Libs
+  jcLib
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory listTheory rich_listTheory arithmeticTheory numberTheory
-     combinatoricsTheory dividesTheory gcdTheory logrootTheory whileTheory;
-
-open ringTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
-open polyMonicTheory polyEvalTheory;
-open polyDivisionTheory polyFieldDivisionTheory polyFieldModuloTheory;
-open polyBinomialTheory;
-
-open computeBasicTheory computeOrderTheory;
-
 val _ = intLib.deprecate_int ();
 
 val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
@@ -2528,8 +2516,4 @@ val old_unity_mod_length = store_thm(
   rw[PAD_RIGHT_LENGTH, MAX_DEF]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

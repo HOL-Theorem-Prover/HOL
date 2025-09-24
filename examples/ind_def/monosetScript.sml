@@ -11,14 +11,16 @@
 (*
   app load ["IndDefLib", "Datatype", "clTheory"] ;
 *)
+Theory monoset
+Ancestors
+  list
+Libs
+  listLib IndDefLib
 
-open HolKernel Parse boolLib listLib listTheory IndDefLib bossLib
 
 (* --------------------------------------------------------------------- *)
 (* Open a new theory.                                                    *)
 (* --------------------------------------------------------------------- *)
-
-val _ = new_theory"monoset";
 
 (* ---------------------------------------------------------------------
 
@@ -91,4 +93,3 @@ val strong_allbigger_ind = save_thm(
 (* End of example.                                                       *)
 (* --------------------------------------------------------------------- *)
 
-val _ = export_theory();

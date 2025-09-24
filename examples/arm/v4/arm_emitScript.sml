@@ -6,12 +6,12 @@
 (* interactive use:
   app load ["wordsLib", "wordsSyntax", "systemTheory", "basis_emitTheory"];
 *)
+Theory arm_emit
+Ancestors
+  update arm system basis_emit
+Libs
+  Q EmitML
 
-open HolKernel boolLib bossLib Parse;
-open Q updateTheory armTheory systemTheory;
-open EmitML basis_emitTheory;
-
-val _ = new_theory "arm_emit";
 
 val _ = numLib.temp_prefer_num();
 val _ = wordsLib.prefer_word();
@@ -227,4 +227,3 @@ val _ = eSML "arm"
 
 (* -------------------------------------------------------------------------- *)
 
-val _ = export_theory();

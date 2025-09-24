@@ -11,12 +11,12 @@ open numLib pred_setSimps pred_setTheory arithmeticTheory wordsTheory
 
 quietdec := false;
 *)
+Theory preARM
+Ancestors
+  pred_set arithmetic words pair list while finite_map
+Libs
+  numLib pred_setSimps wordsLib
 
-open HolKernel Parse boolLib bossLib numLib pred_setSimps pred_setTheory
-     arithmeticTheory wordsTheory pairTheory listTheory whileTheory finite_mapTheory
-          wordsLib;
-
-val _ = new_theory "preARM";
 
 (*----------------------------------------------------------------------------*)
 (* Registers                                                                   *)
@@ -1413,4 +1413,3 @@ val MEM_ADDR_ADD_CONST_MULT = store_thm ("MEM_ADDR_ADD_CONST_MULT",
         ASM_REWRITE_TAC[MEM_ADDR_CONST_EVAL] THEN
         SIMP_TAC arith_ss [MOD_EQ_0, MULT_DIV, WORD_ADD_0]);
 
-val _ = export_theory();

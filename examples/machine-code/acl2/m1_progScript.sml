@@ -1,11 +1,8 @@
 
-open HolKernel boolLib bossLib Parse;
-open pred_setTheory set_sepTheory progTheory listTheory pairTheory
-open combinTheory addressTheory sexpTheory imported_acl2Theory;
-open complex_rationalTheory hol_defaxiomsTheory arithmeticTheory;
-
-val _ = new_theory "m1_prog";
-
+Theory m1_prog
+Ancestors
+  pred_set set_sep prog list pair combin address sexp
+  imported_acl2 complex_rational hol_defaxioms arithmetic
 
 infix \\
 val op \\ = op THEN;
@@ -649,4 +646,3 @@ val M1_ISTORE = store_thm("M1_ISTORE",
   M1_TAC IMP_SPEC_M1_MODEL_3);
 
 
-val _ = export_theory();

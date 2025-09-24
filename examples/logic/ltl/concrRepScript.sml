@@ -1,8 +1,7 @@
-open HolKernel Parse bossLib boolLib gfgTheory listTheory optionTheory pred_setTheory rich_listTheory sortingTheory relationTheory
-
-open alterATheory sptreeTheory ltlTheory generalHelpersTheory
-
-val _ = new_theory "concrRep";
+Theory concrRep
+Ancestors
+  gfg list option pred_set rich_list sorting relation alterA
+  sptree ltl generalHelpers
 
 val _ = monadsyntax.temp_add_monadsyntax();
 val _ = overload_on("monad_bind",``OPTION_BIND``);
@@ -3310,4 +3309,3 @@ val ADDEDGE_FOLDR_LEMM = store_thm
    >- metis_tac[]
   );
 
-val _ = export_theory ();

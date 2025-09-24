@@ -2,17 +2,6 @@
 (* Define complex rationals                                                  *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* Ignore everything up to "END BOILERPLATE"                                 *)
-(*****************************************************************************)
-
-(*****************************************************************************)
-(* START BOILERPLATE NEEDED FOR COMPILATION                                  *)
-(*****************************************************************************)
-
-(******************************************************************************
-* Load theories
-******************************************************************************)
 (* The commented out stuff below should be loaded in interactive sessions
 quietdec := true;
 map
@@ -22,24 +11,11 @@ open intLib gcdTheory fracLib ratLib ratTheory;
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation: open HOL4 systems modules
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories (including ratTheory from Jens Brandt)
-******************************************************************************)
-open gcdTheory fracLib ratLib ratTheory;
-
-(*****************************************************************************)
-(* END BOILERPLATE                                                           *)
-(*****************************************************************************)
-
-(*****************************************************************************)
-(* Start new theory "complex_rational"                                       *)
-(*****************************************************************************)
-val _ = new_theory "complex_rational";
+Theory complex_rational
+Ancestors
+  gcd rat
+Libs
+  fracLib ratLib
 
 (*****************************************************************************)
 (* A complex rational x+yi is a pair of rational numbers.                    *)
@@ -250,5 +226,3 @@ val COMPLEX_MULT_RID =
           [com_1_def,COMPLEX_MULT_def,GSYM rat_0,rat_0_def,
            GSYM rat_1,rat_1_def,RAT_MUL_RID,RAT_MUL_RZERO,
            RAT_ADD_RID,RAT_SUB_RID]);
-
-val _ = export_theory();

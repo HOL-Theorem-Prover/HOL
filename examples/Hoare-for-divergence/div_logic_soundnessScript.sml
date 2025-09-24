@@ -1,7 +1,9 @@
-open preamble while_langTheory while_lang_lemmasTheory div_logicTheory
-     std_logicTheory std_logic_soundnessTheory;
-
-val _ = new_theory "div_logic_soundness";
+Theory div_logic_soundness
+Ancestors
+  while_lang while_lang_lemmas div_logic std_logic
+  std_logic_soundness
+Libs
+  preamble
 
 Theorem lprefix_chain_IMAGE_GENLIST:
   lprefix_chain (IMAGE (fromList ∘ FLAT ∘ GENLIST f) univ(:nat))
@@ -261,4 +263,3 @@ Proof
   \\ metis_tac []
 QED
 
-val _ = export_theory();

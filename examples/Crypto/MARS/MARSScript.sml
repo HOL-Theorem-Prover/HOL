@@ -18,10 +18,13 @@
        MARS_SboxTheory MARS_keyExpansionTheory MARS_DataTheory;
   quietdec := false;
 *)
+Theory MARS
+Ancestors
+  arithmetic words pair list MARS_Sbox MARS_keyExpansion
+  MARS_Data
+Libs
+  wordsLib
 
- open HolKernel Parse boolLib bossLib
-      arithmeticTheory wordsTheory wordsLib pairTheory listTheory
-      MARS_SboxTheory MARS_keyExpansionTheory MARS_DataTheory;
 
 (*---------------------------------------------------------------------------*)
 (* Make bindings to pre-existing stuff                                       *)
@@ -33,8 +36,6 @@ val ARW_TAC = RW_TAC arith_ss;
 (*---------------------------------------------------------------------------*)
 (* Create the theory.                                                        *)
 (*---------------------------------------------------------------------------*)
-
-val _ = new_theory "MARS";
 
 (*---------------------------------------------------------------------------*)
 (*-------------Forward round used by the encrypting function-----------------*)
@@ -312,4 +313,3 @@ val MARS_CORRECT = Q.store_thm
        (decrypt (encrypt plaintext) = plaintext)`,
          RW_TAC std_ss [MARS_def,LET_THM,MARS_LEMMA]);
 
-val _ = export_theory();

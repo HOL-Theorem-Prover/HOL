@@ -11,10 +11,12 @@ val () = app load
   ["bossLib", "realLib", "metisLib", "res_quanTools", "posrealLib"]
 val () = quietdec := true;
 *)
+Theory measure
+Ancestors
+  combin pred_set posreal
+Libs
+  metisLib res_quanTools posrealLib
 
-open HolKernel Parse boolLib bossLib metisLib res_quanTools
-     combinTheory pred_setTheory;
-open posrealTheory posrealLib;
 
 (*
 val () = quietdec := false;
@@ -23,8 +25,6 @@ val () = quietdec := false;
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "measure"                                       *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = new_theory "measure";
 
 (* ------------------------------------------------------------------------- *)
 (* Helpful proof tools                                                       *)
@@ -2346,4 +2346,3 @@ val integrate_def = Define
          range_simple g SUBSET s /\
          !x :: s. evaluate_simple g x <= f x }`;
 
-val _ = export_theory ();

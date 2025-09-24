@@ -5,7 +5,7 @@
 Theory llist
 Ancestors
   option combin option pair num arithmetic prim_rec list
-  rich_list while pair pred_set set_relation arithmetic
+  rich_list While pair pred_set set_relation arithmetic
 Libs
   BasicProvers boolSimps markerLib hurdUtils
 

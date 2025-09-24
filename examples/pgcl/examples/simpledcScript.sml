@@ -20,13 +20,13 @@ app load
    "stringLib", "looprulesTheory", "pgclLib"];
 quietdec := true;
 *)
+Theory simpledc
+Ancestors
+  combin list rich_list string arithmetic integer real poset
+  posreal expectation syntax wp value looprules
+Libs
+  intLib realLib metisLib stringLib posrealLib pgclLib
 
-open HolKernel Parse boolLib bossLib intLib realLib metisLib stringLib;
-open combinTheory listTheory rich_listTheory stringTheory arithmeticTheory
-     integerTheory realTheory posetTheory;
-
-open posrealTheory posrealLib expectationTheory syntaxTheory wpTheory
-     valueTheory looprulesTheory pgclLib;
 
 (*
 quietdec := false;
@@ -35,8 +35,6 @@ quietdec := false;
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "simpledc"                                      *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = new_theory "simpledc";
 
 (* ------------------------------------------------------------------------- *)
 (* Helpful proof tools                                                       *)
@@ -3702,4 +3700,3 @@ val wlp_dc_prog_result = store_thm
    >> PROVE_TAC [wlp_mono, leq_trans]
    ++ METIS_TAC [wlp_initialize_result]);
 
-val _ = export_theory();

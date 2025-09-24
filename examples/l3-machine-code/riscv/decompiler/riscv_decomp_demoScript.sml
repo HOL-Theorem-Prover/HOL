@@ -1,7 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-open riscv_decompLib
-
-val () = new_theory "riscv_decomp_demo";
+Theory riscv_decomp_demo
+Ancestors
+  riscv_prog
+Libs
+  riscv_decompLib
 
 val () =
   utilsLib.add_to_the_compset ([], Import.gen_inventory {thyname="riscv"})
@@ -38,5 +39,3 @@ val run1 = Theory.save_thm ("run1",
 val run2 = Theory.save_thm ("run2",
   EVAL ``test2 11w``
   )
-
-val () = export_theory()

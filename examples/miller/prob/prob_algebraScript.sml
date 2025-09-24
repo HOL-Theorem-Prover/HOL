@@ -1,20 +1,16 @@
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory pred_setTheory listTheory rich_listTheory pairTheory
-     combinTheory numSyntax extra_pred_setTools
-     extra_listTheory hurdUtils realTheory extra_realTheory realLib
-     extra_numTheory seqTheory simpLib;
-
-open sigma_algebraTheory real_measureTheory real_probabilityTheory;
-open subtypeTheory extra_pred_setTheory;
-open sequenceTheory sequenceTools;
-open prob_canonTheory prob_canonTools;
+Theory prob_algebra
+Ancestors
+  arithmetic pred_set list rich_list pair combin extra_list real
+  extra_real extra_num seq sigma_algebra real_measure
+  real_probability subtype extra_pred_set sequence prob_canon
+Libs
+  numSyntax extra_pred_setTools hurdUtils realLib simpLib
+  sequenceTools prob_canonTools
 
 (* interactive mode
 quietdec := false;
 *)
 
-val _ = new_theory "prob_algebra";
 val _ = ParseExtras.temp_loose_equality()
 
 val std_ss' = std_ss ++ boolSimps.ETA_ss;
@@ -2029,4 +2025,3 @@ val IMAGE_MIRROR = store_thm
    >> PSET_TAC []
    >> PROVE_TAC [MIRROR_MIRROR]);
 
-val _ = export_theory ();

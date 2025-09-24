@@ -1,13 +1,11 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_equal";
+Theory lisp_equal
+Ancestors
+  words arithmetic list pred_set pair combin finite_map address
+  tailrec cheney_gc cheney_alloc lisp_gc lisp_type lisp_inv
+Libs
+  wordsLib decompilerLib compilerLib mc_tailrecLib
+
 val _ = ParseExtras.temp_loose_equality()
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory;
-
-open decompilerLib compilerLib;
-open mc_tailrecLib tailrecTheory cheney_gcTheory cheney_allocTheory;
-open lisp_gcTheory lisp_typeTheory lisp_invTheory;
-
 
 val _ = map Parse.hide ["r0","r1","r2","r3","r4","r5","r6","r7","r8","r9","r10","r11","r12","r13"];
 val RW = REWRITE_RULE;
@@ -777,4 +775,3 @@ val lisp_inv_equal = store_thm("lisp_inv_equal",
   \\ REPEAT STRIP_TAC \\ METIS_TAC [WORD_ADD_SUB]);
 
 
-val _ = export_theory();

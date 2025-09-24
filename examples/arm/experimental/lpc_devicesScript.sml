@@ -1,11 +1,7 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory pred_setTheory;
-
-open armTheory arm_stepTheory lpc_uartTheory;
-
-val _ = new_theory "lpc_devices";
-
+Theory lpc_devices
+Ancestors
+  words pred_set arm arm_step lpc_uart
 
 (* We define the type of a generic device *)
 
@@ -178,4 +174,3 @@ val PERIPHERALS_NEXT_EXISTS = store_thm("PERIPHERALS_NEXT_EXISTS",
     pairTheory.EXISTS_PROD] THEN METIS_TAC [UART0_NEXT_EXISTS]);
 
 
-val _ = export_theory();

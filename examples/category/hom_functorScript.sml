@@ -1,6 +1,8 @@
-open HolKernel Parse boolLib boolSimps bossLib pred_setTheory categoryTheory functorTheory ens_catTheory;
-
-val _ = new_theory "hom_functor";
+Theory hom_functor
+Ancestors
+  pred_set category functor_ ens_cat
+Libs
+  boolSimps
 
 val dom_homs_def = Define`
   dom_homs c x = IMAGE (λy. c|x→y|) c.obj`;
@@ -408,5 +410,3 @@ srw_tac [][] >> fsrw_tac [DNF_ss][] >- (
   fsrw_tac [][hom_def,maps_to_in_def] ) >>
 metis_tac [op_mor_idem]);
 val _ = export_rewrites["contra_hom_functor_objf","contra_hom_functor_morf"];
-
-val _ = export_theory();

@@ -1,12 +1,11 @@
-open HolKernel Parse boolLib bossLib
-
-val _ = new_theory("decomp");
+Theory decomp
+Ancestors
+  env mu muSyntax setLemmas pred_set ks
+Libs
+  pairSyntax metisLib commonTools
 
 (* app load ["envTheory","muTheory","muSyntaxTheory","setLemmasTheory","pred_setTheory","ksTheory",
              "pairSyntax","metisLib","commonTools"] *)
-
-open pairSyntax metisLib
-open envTheory muTheory muSyntaxTheory setLemmasTheory pred_setTheory ksTheory commonTools
 
 infix &&; infix 8 by;
 
@@ -378,4 +377,3 @@ val DECOMP3 = save_thm("PAR_SYNC_DECOMP", prove(``!s e ks1 ks2 f.
          s IN STATES f ks1 e ==>
          s IN STATES f ks2 e``, METIS_TAC [IMF_MU_EXT,DECOMP2]))
 
-val _ = export_theory();

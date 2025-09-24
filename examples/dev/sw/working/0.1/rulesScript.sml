@@ -8,13 +8,14 @@ app load ["numLib", "relationTheory", "arithmeticTheory", "preARMTheory", "pairT
 
 quietdec := false;
 *)
+Theory rules
+Ancestors
+  relation arithmetic preARM pair pred_set list rich_list while
+  ARMComposition IL words
+Libs
+  numLib pred_setSimps
 
 
-open HolKernel Parse boolLib bossLib numLib relationTheory arithmeticTheory preARMTheory pairTheory
-     pred_setSimps pred_setTheory listTheory rich_listTheory whileTheory ARMCompositionTheory ILTheory wordsTheory;
-
-
-val _ = new_theory "rules";
 
 (*---------------------------------------------------------------------------------*)
 (*      Simplifier on finite maps                                                  *)
@@ -657,4 +658,3 @@ val UNCHANGED_TR_RULE = store_thm ("UNCHANGED_TR_RULE",
   ]);
 
 
-val _ = export_theory();

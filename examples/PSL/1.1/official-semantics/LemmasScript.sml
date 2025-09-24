@@ -27,36 +27,21 @@ open FinitePSLPathTheory PSLPathTheory SyntaxTheory SyntacticSugarTheory
      UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
      arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
      ClockedSemanticsTheory;
-val _ = intLib.deprecate_int();
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories
-******************************************************************************)
-open FinitePSLPathTheory PSLPathTheory SyntaxTheory SyntacticSugarTheory
-     UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
-     arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
-     ClockedSemanticsTheory;
-
-(******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
-val _ = intLib.deprecate_int();
+Theory Lemmas
+Ancestors
+  FinitePSLPath PSLPath Syntax SyntacticSugar UnclockedSemantics
+  ClockedSemantics Rewrites arithmetic list rich_list res_quan
+  ClockedSemantics FinitePSLPath
+Libs
+  res_quanLib
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
 
-(******************************************************************************
-* Start a new theory called Lemmas
-******************************************************************************)
-val _ = new_theory "Lemmas";
 val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************
@@ -67,11 +52,6 @@ val resq_SS =
   [res_quanTools.resq_SS,
    rewrites
     [IN_DEF,LESS_def,LENGTH_def]];
-
-(******************************************************************************
-* Set default path theory to FinitePSLPathTheory
-******************************************************************************)
-open FinitePSLPathTheory;
 
 (******************************************************************************
 * Make SEL executable. (Why doesn't this happen automatically?)
@@ -857,5 +837,3 @@ Proof
 QED
 
 val Lemmas1_7 =  [Lemma1,Lemma2,Lemma3,Lemma4,Lemma5,Lemma6,Lemma7];
-
-val _ = export_theory();

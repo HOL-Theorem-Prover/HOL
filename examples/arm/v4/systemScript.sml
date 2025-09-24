@@ -10,11 +10,12 @@
 (* interactive use:
   app load ["wordsLib", "wordsSyntax", "armTheory"];
 *)
+Theory system
+Ancestors
+  words rich_list update arm arithmetic numeral bit
+Libs
+  Q
 
-open HolKernel boolLib bossLib Parse;
-open Q wordsTheory rich_listTheory updateTheory armTheory;
-
-val _ = new_theory "system";
 
 (* -------------------------------------------------------------------------- *)
 (* In what follows, the term "cp" stands for "coprocessor".                   *)
@@ -415,8 +416,6 @@ val empty_psrs_def      = Define`empty_psrs = (\x. SET_IFMODE F F usr 0w):psrs`;
 
 (* ------------------------------------------------------------------------- *)
 
-open arithmeticTheory numeralTheory bitTheory;
-
 val std_ss = std_ss ++ boolSimps.LET_ss;
 val arith_ss = arith_ss ++ boolSimps.LET_ss;
 
@@ -715,4 +714,3 @@ val DECODE_ARM_THM = store_thm("DECODE_ARM_THM",
 
 (* -------------------------------------------------------------------------- *)
 
-val _ = export_theory();

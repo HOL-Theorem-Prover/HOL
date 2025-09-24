@@ -26,16 +26,17 @@ quietdec := false;
 (*****************************************************************************)
 (* Load base theories                                                        *)
 (*****************************************************************************)
+Theory translate
+Ancestors
+  sexp arithmetic frac rat integer complex_rational intExtension
+  combin hol_defaxioms rich_list list
+Libs
+  sexp intLib translateLib
 
-open sexp sexpTheory arithmeticTheory fracTheory ratTheory integerTheory intLib
-     complex_rationalTheory intExtensionTheory combinTheory
-     hol_defaxiomsTheory rich_listTheory listTheory translateLib;
 
 (*****************************************************************************)
 (* Start new theory "translate"                                              *)
 (*****************************************************************************)
-
-val _ = new_theory "translate";
 
 (*****************************************************************************)
 (* General theorems for translation schemes (see add_translation_scheme) :   *)
@@ -1386,4 +1387,3 @@ val JUDGEMENT_THMS = save_thm("JUDGEMENT_THMS",
              ACL2_NUMBERP_UNARY_MINUS]);
 
 
-val _ = export_theory();

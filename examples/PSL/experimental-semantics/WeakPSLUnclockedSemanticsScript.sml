@@ -29,17 +29,12 @@ intLib.deprecate_int();                   (* Set num as default numbers type *)
 quietdec := false;                        (* Restore output                  *)
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories
-******************************************************************************)
-open FinitePathTheory PathTheory SyntaxTheory SyntacticSugarTheory
-     UnclockedSemanticsTheory LemmasTheory ProjectionTheory
-     arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory;
+Theory WeakPSLUnclockedSemantics
+Ancestors
+  FinitePath Path Syntax SyntacticSugar UnclockedSemantics Lemmas
+  Projection arithmetic list rich_list res_quan
+Libs
+  res_quanLib
 
 (******************************************************************************
 * Set default parsing to natural numbers rather than integers
@@ -49,12 +44,6 @@ val _ = intLib.deprecate_int();
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
-
-(*****************************************************************************)
-(* Start a new theory called WeakPSLUnclockedSemanticsTheory                 *)
-(*****************************************************************************)
-
-val _ = new_theory "WeakPSLUnclockedSemantics";
 
 (*****************************************************************************)
 (* N^f = { w | w is a finite list of states/letters } (the set of neutral    *)
@@ -1125,6 +1114,3 @@ val TightNeutralEquiv =
       (* S_CLOCK (r,c) *)
       RW_TAC std_ss [S_CLOCK_FREE_def]]);
 end;
-
-val _ = export_theory();
-

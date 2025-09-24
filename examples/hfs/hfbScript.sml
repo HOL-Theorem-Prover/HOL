@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "hfb";
+Theory hfb
 
 val _ = Datatype`hfb0 = HF_E | HF_I hfb0 hfb0`
 
@@ -29,4 +27,3 @@ val hfb0_trans = save_thm(
 
 
 
-val _ = export_theory();

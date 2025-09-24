@@ -4,20 +4,15 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "loop";
+Theory loop
+Ancestors
+  arithmetic list rich_list listRange number combinatorics
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open arithmeticTheory listTheory rich_listTheory listRangeTheory numberTheory
-     combinatoricsTheory;
-
 val _ = temp_overload_on ("RISING", ``\f. !x:num. x <= f x``);
 val _ = temp_overload_on ("FALLING", ``\f. !x:num. f x <= x``);
 
@@ -3893,8 +3888,4 @@ val loop2_rise_rise_count_le = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

@@ -9,11 +9,13 @@
 (* interactive use:
   app load ["wordsLib", "wordsSyntax", "rich_listTheory", "updateTheory"];
 *)
+Theory arm
+Ancestors
+  words rich_list update
+Libs
+  Q
 
-open HolKernel boolLib bossLib Parse;
-open Q wordsTheory rich_listTheory updateTheory;
 
-val _ = new_theory "arm";
 val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------- *)
 (*  The ARM State Space                                                      *)
@@ -927,4 +929,3 @@ val _ = computeLib.add_persistent_funs
    "iclass2num_thm", "num2condition_thm", "condition2num_thm",
    "exceptions_EQ_exceptions", "num2exceptions_thm", "exceptions2num_thm"])
 
-val _ = export_theory();

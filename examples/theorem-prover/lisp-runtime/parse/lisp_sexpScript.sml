@@ -1,10 +1,10 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_sexp";
+Theory lisp_sexp
+Ancestors
+  words arithmetic list pred_set pair combin finite_map string
+Libs
+  wordsLib
 
 val _ = ParseExtras.temp_loose_equality()
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory stringTheory;
-
 
 infix \\
 val op \\ = op THEN;
@@ -123,4 +123,3 @@ val isQuote_thm = store_thm("isQuote_thm",
   \\ METIS_TAC [SExp_distinct]);
 
 
-val _ = export_theory();

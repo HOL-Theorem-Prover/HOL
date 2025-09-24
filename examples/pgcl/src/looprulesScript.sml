@@ -8,13 +8,13 @@ app load
    "metisLib","posrealLib","expectationTheory","intLib", "wpTheory", "valueTheory", "arithmeticTheory"];
 quietdec := true;
 *)
+Theory looprules
+Ancestors
+  combin list rich_list string arithmetic integer real poset
+  posreal expectation syntax wp value
+Libs
+  intLib realLib metisLib posrealLib
 
-open HolKernel Parse boolLib bossLib intLib realLib metisLib;
-open combinTheory listTheory rich_listTheory stringTheory arithmeticTheory
-     integerTheory realTheory posetTheory
-
-open posrealTheory posrealLib expectationTheory syntaxTheory wpTheory
-     valueTheory;
 
 (*
 quietdec := false;
@@ -23,8 +23,6 @@ quietdec := false;
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "looprules"                                     *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = new_theory "looprules";
 
 (* ------------------------------------------------------------------------- *)
 (* Helpful proof tools                                                       *)
@@ -3666,4 +3664,3 @@ val For_0_to_n_reverse_unwind_lemma = store_thm
    ++ `0 = &0` by RW_TAC int_ss []
    ++ METIS_TAC [For_reverse_unwind_lemma]);
 
-val _ = export_theory();

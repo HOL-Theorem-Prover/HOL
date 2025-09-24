@@ -1,8 +1,9 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_type";
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory stringTheory;
-
+Theory lisp_type
+Ancestors
+  words arithmetic list pred_set pair combin finite_map address
+  string
+Libs
+  wordsLib
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -101,4 +102,3 @@ val isQuote_thm = store_thm("isQuote_thm",
   \\ METIS_TAC [SExp_distinct]);
 
 
-val _ = export_theory();

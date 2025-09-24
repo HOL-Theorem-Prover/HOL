@@ -22,23 +22,18 @@ quietdec := false;
 (******************************************************************************
 * Boilerplate needed for compilation
 ******************************************************************************)
-open HolKernel Parse boolLib bossLib;
+Theory compile
+Ancestors
+  arithmetic pair combin compose dff tempabs dev
+Libs
+  metisLib pairLib PairRules
 
-(******************************************************************************
-* Open theories
-******************************************************************************)
-open metisLib arithmeticTheory pairLib pairTheory PairRules combinTheory
-     composeTheory dffTheory tempabsTheory devTheory;
 val op by = BasicProvers.byA
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* Start new theory "compile"                                                *)
-(*****************************************************************************)
-val _ = new_theory "compile";
 val _ = ParseExtras.temp_loose_equality()
 
 (*****************************************************************************)
@@ -1149,5 +1144,3 @@ val Let =
   ("Let",
    ``Let f1 f2 = Seq (Par (\x.x) f1) f2``,
    RW_TAC std_ss [Let_def,Seq_def,Par_def,LET_DEF]);
-
-val _ = export_theory();

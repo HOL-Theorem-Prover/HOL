@@ -1,9 +1,11 @@
 
-open HolKernel Parse boolLib bossLib pairLib pairSyntax pairTheory PairRules;
+Theory ACF
+Ancestors
+  pair
+Libs
+  pairLib pairSyntax PairRules
 
 (*---------------------------------------------------------------------------------*)
-
-val _ = new_theory "ACF";
 
 (*---------------------------------------------------------------------------*)
 (* Convert HOL programs to combinator-based pseudo-ASTs                      *)
@@ -69,4 +71,3 @@ val rec_INTRO = store_thm
 
 (*---------------------------------------------------------------------------------*)
 
-val _ = export_theory();

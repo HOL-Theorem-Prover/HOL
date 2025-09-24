@@ -1,7 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-open mips_decompLib
-
-val () = new_theory "mips_decomp_demo";
+Theory mips_decomp_demo
+Ancestors
+  mips_prog
+Libs
+  mips_decompLib
 
 fun mips_decompile_code s =
   mips_decompLib.mips_decompile s o utilsLib.strings_to_quote o
@@ -58,5 +59,3 @@ val run3 = Theory.save_thm("run3",
 val run4 = Theory.save_thm("run4",
   EVAL ``test4 (0w, 2w, 4w)``
   )
-
-val () = export_theory()

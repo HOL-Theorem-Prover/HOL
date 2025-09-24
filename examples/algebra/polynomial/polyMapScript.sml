@@ -4,43 +4,25 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polyMap";
+Theory polyMap
+Ancestors
+  arithmetic pred_set list number combinatorics divides gcd
+  polynomial polyWeak polyRing polyDivision polyMonic polyEval
+  polyRoot polyDivides polyField polyFieldDivision
+  polyFieldModulo polyRingModulo polyModuloRing polyIrreducible
+  polyProduct polyMultiplicity
+  polyBinomial  (* for coefficients *)
+  monoid group ring
+  field fieldMap fieldOrder
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open arithmeticTheory pred_setTheory listTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory;
-
 (* (* val _ = load "polyEvalTheory"; *) *)
-open polyMonicTheory polyEvalTheory;
-
 (* (* val _ = load "polyRootTheory"; *) *)
-open polyRootTheory;
-open polyDividesTheory;
 
-open polyFieldTheory;
-open polyFieldDivisionTheory;
-open polyFieldModuloTheory;
-open polyRingModuloTheory;
-open polyModuloRingTheory;
-
-open polyIrreducibleTheory;
-open polyProductTheory;
-open polyMultiplicityTheory;
-open polyBinomialTheory; (* for coefficients *)
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
-open fieldMapTheory fieldOrderTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Maps Documentation                                             *)
@@ -3913,8 +3895,4 @@ val field_iso_poly_mod_field_isomorphism = store_thm(
 (* Another milestone theorem: This is almost F[X] iso F[Y]. *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

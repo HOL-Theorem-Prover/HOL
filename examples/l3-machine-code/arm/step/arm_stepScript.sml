@@ -1,14 +1,13 @@
 (* ------------------------------------------------------------------------
    Definitions and theorems used by ARM step evaluator (arm_stepLib)
    ------------------------------------------------------------------------ *)
+Theory arm_step
+Ancestors
+  state_transformer update alignment arm
+Libs
+  utilsLib wordsLib blastLib
 
-open HolKernel boolLib bossLib
 
-open utilsLib
-open wordsLib blastLib
-open state_transformerTheory updateTheory alignmentTheory armTheory
-
-val _ = new_theory "arm_step"
 val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------ *)
 
@@ -1393,4 +1392,3 @@ val STM_UPTO_SUC =
 
 (* ------------------------------------------------------------------------ *)
 
-val () = export_theory ()

@@ -1,10 +1,12 @@
-open HolKernel boolLib bossLib Parse wordsLib;
+Theory tables
+Ancestors
+  words
+Libs
+  wordsLib
 
 (*
   wordsLib.output_words_as_hex();
 *)
-
-val _ = new_theory "tables";
 
 val _ = computeLib.auto_import_definitions := false;
 
@@ -1645,5 +1647,3 @@ val GF256_by_14 = Count.apply word8Define
    (GF256_by_14 0xFFw = 0x8Dw)`;
 
 *)
-
-val _ = export_theory();

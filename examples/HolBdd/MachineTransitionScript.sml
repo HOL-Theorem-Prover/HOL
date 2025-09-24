@@ -10,21 +10,13 @@
 (*   Wed Nov  7 11:29:35 GMT 2001 -- created file                            *)
 (*                                                                           *)
 (*****************************************************************************)
+Theory MachineTransition
+Ancestors
+  arithmetic list pair
+Libs
+  tautLib simpLib numLib pairLib Ho_Rewrite Num_conv
 
-open HolKernel Parse boolLib;
 
-open tautLib;
-open bossLib;
-open simpLib;
-open numLib;
-open pairLib;
-open arithmeticTheory;
-open listTheory;
-open pairTheory;
-open Ho_Rewrite;
-open Num_conv;
-
-val _ = new_theory "MachineTransition";
 val _ = ParseExtras.temp_loose_equality()
 
 (* These two don't seem to be used ...
@@ -1098,4 +1090,3 @@ val MooreReachableCor1 =
       (!s. Reachable (\((i,s),(i',s')). s' = nextfn(i,s)) B s ==> P s)``,
    RW_TAC std_ss [GSYM MooreReachable,GSYM Moore_def,GSYM MooreTransEq]);
 
-val _ = export_theory();

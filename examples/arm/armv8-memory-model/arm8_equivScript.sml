@@ -1,9 +1,9 @@
-open HolKernel boolLib bossLib
-open relationSyntax relation_extraLib
-open relation_extraTheory mmTheory mm_lemmasTheory
-open arm8_commonTheory arm8_evTheory arm8_ecTheory arm8_egcTheory
-
-val () = new_theory "arm8_equiv"
+Theory arm8_equiv
+Libs
+  relationSyntax relation_extraLib
+Ancestors
+  relation_extra mm mm_lemmas arm8_common arm8_ev arm8_ec
+  arm8_egc
 
 (* -------------------------------------------------------------------------
    Helper tactics
@@ -2762,5 +2762,3 @@ QED
 (* -------------------------------------------------------------------------
    End
    ------------------------------------------------------------------------- *)
-
-val () = export_theory()

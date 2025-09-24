@@ -1,7 +1,8 @@
-open HolKernel boolLib bossLib Parse
-open termTheory binderLib
-
-val _ = new_theory "hoas"
+Theory hoas
+Ancestors
+  term
+Libs
+  binderLib
 
 val notexotic_def = Define`
   notexotic f = ?v t. f = \u. [u/v] t
@@ -129,4 +130,3 @@ val beta_lemma = prove(
   METIS_TAC []);
 *)
 
-val _ = export_theory();

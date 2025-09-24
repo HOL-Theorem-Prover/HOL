@@ -1,15 +1,10 @@
-open HolKernel Parse boolLib bossLib;
-
-open relationTheory pairTheory combinTheory pred_setTheory
-open cardinalTheory
-
-open ordinalTheory
-
-val _ = new_theory "concreteBNF";
+Theory concreteBNF
+Ancestors
+  relation pair combin pred_set cardinal ordinal
+  finite_map[qualified]
 
 fun SRULE ths = SIMP_RULE (srw_ss()) ths
 
-local open finite_mapTheory in end
 Type F[pp] = “:(num |-> β) + num # (α # β) list”
 
 (* view this as
@@ -1265,4 +1260,3 @@ Theorem better_ind =
                       sumsetB_def, FORALL_PROD, pairsetB_def,
                       GSYM C1_def, GSYM C2_def]
 
-val _ = export_theory();

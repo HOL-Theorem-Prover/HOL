@@ -1,8 +1,9 @@
-open HolKernel boolLib bossLib Parse;
-open MMU_SetupTheory MMUTheory arm_opsemTheory arm_seq_monadTheory arm_coretypesTheory arm_stepTheory;
-open tacticsLib;
+Theory inference_rules
+Ancestors
+  MMU_Setup MMU arm_opsem arm_seq_monad arm_coretypes arm_step
+Libs
+  tacticsLib
 
-val _ =  new_theory("inference_rules");
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -1150,4 +1151,3 @@ val errorT_comb_thm =
 
 
 
-val _ = export_theory();

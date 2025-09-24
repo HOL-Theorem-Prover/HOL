@@ -1,9 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory hurdUtils res_quanTools
-     pred_setTheory subtypeTheory extra_boolTheory combinTheory;
-
-val _ = new_theory "extra_num";
+Theory extra_num
+Ancestors
+  arithmetic pred_set subtype extra_bool combin
+Libs
+  hurdUtils res_quanTools
 
 (* ------------------------------------------------------------------------- *)
 (* Tools.                                                                    *)
@@ -656,4 +655,3 @@ val LOG2_UPPER_SUC = store_thm
    >> REVERSE (Cases_on `n = 0`) >- RW_TAC arith_ss []
    >> RW_TAC arith_ss [log2_def, EXP]);
 
-val _ = export_theory ();

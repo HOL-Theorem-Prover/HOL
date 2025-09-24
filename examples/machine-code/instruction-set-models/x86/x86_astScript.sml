@@ -1,10 +1,7 @@
 
-open HolKernel boolLib bossLib Parse;
-
-open x86_coretypesTheory;
-
-val _ = new_theory "x86_ast";
-
+Theory x86_ast
+Ancestors
+  x86_coretypes
 
 (* ---------------------------------------------------------------------------------- *>
 
@@ -80,4 +77,3 @@ val _ = Hol_datatype `Xpre_g2 = Xbranch_taken | Xbranch_not_taken | Xg2_none `;
 val _ = Hol_datatype `Xinst = Xprefix of Xpre_g1 => Xpre_g2 => Xinstruction`;
 
 
-val _ = export_theory ();

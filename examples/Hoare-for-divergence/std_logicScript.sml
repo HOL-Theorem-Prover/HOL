@@ -1,6 +1,8 @@
-open preamble while_langTheory;
-
-val _ = new_theory "std_logic";
+Theory std_logic
+Ancestors
+  while_lang
+Libs
+  preamble
 
 (* -- inference rules for a standard total-correctness Hoare logic -- *)
 
@@ -39,4 +41,3 @@ Definition HoareSem_def:
     ∀s. P s ⇒ ∃t. terminates s p t ∧ Q t
 End
 
-val _ = export_theory();

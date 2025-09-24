@@ -33,16 +33,12 @@ quietdec := false;
 (*-----------------------------------------------------------------------------
   Boilerplate needed for compilation
 -----------------------------------------------------------------------------*)
-open HolKernel Parse boolLib bossLib metisLib;
-
-
-(* ---------------------------------------------------------------
-   Open theories
---------------------------------------------------------------- *)
-open word32Theory boothTheory compile metisLib intLib
-     vsynth arithmeticTheory inlineCompile
-     fpgaCodeGenerator;
-
+Theory boothDev
+Ancestors
+  word32 booth arithmetic
+Libs
+  metisLib compile metisLib intLib vsynth inlineCompile
+  fpgaCodeGenerator
 
 (*-----------------------------------------------------------------------------
   Set default parsing to natural numbers rather than integers
@@ -53,10 +49,6 @@ val _ = intLib.deprecate_int();
 (* END BOILERPLATE                                                           *)
 (*---------------------------------------------------------------------------*)
 
-(*---------------------------------------------------------------------------*)
-(* Start new theory "boothDev"                                               *)
-(*---------------------------------------------------------------------------*)
-val _ = new_theory "boothDev";
 infixr 3 THENR;
 val _ = type_abbrev("word",``:word32``);
 
@@ -589,5 +581,3 @@ printToFile "MULTd_SIM.vl" (MAKE_SIMULATION name thm period stimulus dump_all);
 (* Temporary hack to work around a system prettyprinter bug                  *)
 (*****************************************************************************)
 val _ = temp_overload_on(" * ", numSyntax.mult_tm);
-
-val _ = export_theory();

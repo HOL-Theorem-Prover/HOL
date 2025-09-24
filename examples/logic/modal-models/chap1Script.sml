@@ -1,9 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-open nlistTheory listTheory;
-open pred_setTheory;
-open modalBasicsTheory;
-
-val _ = new_theory "chap1";
+Theory chap1
+Ancestors
+  nlist list pred_set modalBasics
 
 (* Def 1.9 *)
 (* definition of formula; define the box as the dual of diamond *)
@@ -579,4 +576,3 @@ Proof
 Induct_on `x` >> rw[subst_def]
 QED
 
-val _ = export_theory();

@@ -1,30 +1,10 @@
-open HolKernel Parse boolLib bossLib;
-open chap1Theory;
-open pred_setTheory;
-open relationTheory;
-open arithmeticTheory;
-open set_relationTheory;
+Theory chap2_7
+Ancestors
+  chap1 pred_set relation arithmetic set_relation chap2_1 chap2_2
+  chap2_4 chap2_5 chap2_6 prop2_29 ultraproduct lemma2_73
+  equiv_on_partition prim_rec list finite_map combin ultrafilter
+  folLang folModels folCanon
 
-open chap2_1Theory;
-open chap2_2Theory;
-open chap2_4Theory;
-open chap2_5Theory;
-open chap2_6Theory;
-open prop2_29Theory;
-open ultraproductTheory;
-open lemma2_73Theory;
-open equiv_on_partitionTheory;
-open prim_recTheory;
-open listTheory;
-open finite_mapTheory;
-open combinTheory;
-open ultrafilterTheory;
-
-open folLangTheory;
-open folModelsTheory;
-open folCanonTheory;
-
-val _ = new_theory "chap2_7";
 val _ = temp_delsimps ["satis_def"]
 
 val sim_def = Define`
@@ -388,4 +368,3 @@ rw[EQ_IMP_THM] (* 2 *)
 QED
 
 
-val _ = export_theory();

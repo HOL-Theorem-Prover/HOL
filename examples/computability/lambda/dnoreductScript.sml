@@ -1,10 +1,8 @@
-open HolKernel boolLib bossLib Parse
-
-open pure_dBTheory normal_orderTheory
+Theory dnoreduct
+Ancestors
+  pure_dB normal_order
 
 fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
-
-val _ = new_theory "dnoreduct"
 
 val dest_dabs_def = Define`
   (dest_dabs (dABS t) = t)
@@ -130,4 +128,3 @@ val dnoreduct_thm = Store_thm(
   SRW_TAC [][dnoreduct_correct, optionTheory.OPTION_MAP_COMPOSE,
              combinTheory.o_DEF, omap_lemma]);
 
-val _ = export_theory()

@@ -1,6 +1,7 @@
-open HolKernel Parse boolLib bossLib categoryTheory functorTheory;
+Theory nat_trans
+Ancestors
+  category functor_
 
-val _ = new_theory "nat_trans";
 val _ = ParseExtras.temp_loose_equality()
 
 val _ = type_abbrev_pp("nat_trans",
@@ -1278,5 +1279,3 @@ gen_tac >> strip_tac >> EQ_TAC >> strip_tac >- (
   fsrw_tac [][functor_cat_iso_pair] >>
   metis_tac [] ) >>
 *)
-
-val _ = export_theory ();

@@ -3,21 +3,18 @@
 (*       Symbolic representation of non-deterministic semi-automata           *)
 (*                                                                            *)
 (******************************************************************************)
+Theory symbolic_semi_automaton
+Ancestors
+  infinite_path pred_set list pair xprop_logic container
+  prop_logic set_lemmata prim_rec temporal_deep_mixed
+Libs
+  term_grammar tuerk_tacticsLib Sanity
 
-open HolKernel Parse boolLib bossLib;
-
-open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory
-     containerTheory prop_logicTheory set_lemmataTheory prim_recTheory;
-
-open term_grammar tuerk_tacticsLib temporal_deep_mixedTheory;
-
-open Sanity;
 
 val _ = hide "S";
 val _ = hide "K";
 val _ = hide "I";
 
-val _ = new_theory "symbolic_semi_automaton";
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val _ = ParseExtras.temp_loose_equality()
 
@@ -1014,4 +1011,3 @@ Proof
                TRANSITION_NEXT_STATE_CLEANING]
 QED
 
-val _ = export_theory ();

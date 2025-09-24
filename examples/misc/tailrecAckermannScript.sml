@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib bossLib
-
-local open containerTheory in end
-
-val _ = new_theory "tailrecAckermann"
+Theory tailrecAckermann
+Ancestors[qualified]
+  container
 
 val _ = Hol_datatype `work = DO of num => num | PENDING of num`;
 
@@ -59,4 +57,3 @@ A(4,0) is also fine.  A(4,1) certainly isn't.
 (* I haven't given any thought to proving this formulation equivalent to
    the traditional definition *)
 
-val _ = export_theory()

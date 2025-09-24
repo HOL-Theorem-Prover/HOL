@@ -1,6 +1,6 @@
-open HolKernel Parse bossLib boolLib pred_setTheory
-
-val _ = new_theory "word"
+Theory word
+Ancestors
+  pred_set
 
 val _ = Datatype` word = WORD (num -> 'a set)`;
 
@@ -39,4 +39,3 @@ val AT_WORD_RANGE = store_thm
   rw[word_range_def] >> metis_tac[word_range_def]
   );
 
-val _ = export_theory();

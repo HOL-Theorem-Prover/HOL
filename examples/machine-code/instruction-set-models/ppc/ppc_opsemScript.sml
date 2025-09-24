@@ -1,13 +1,7 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory bit_listTheory;
-
-open ppc_coretypesTheory ppc_astTheory;
-
-open ppc_seq_monadTheory;
-
-val _ = new_theory "ppc_opsem";
-
+Theory ppc_opsem
+Ancestors
+  words bit_list ppc_coretypes ppc_ast ppc_seq_monad
 
 (* ---------------------------------------------------------------------------------- *>
 
@@ -398,4 +392,3 @@ val ppc_assertT_lemma = store_thm("ppc_assertT_lemma",
   ``!b f. b ==> (assertT b (f:'a ppc_M) = f)``,
   SIMP_TAC std_ss [assertT_def,seqT_def,constT_def,seq_monad_thm,FUN_EQ_THM]);
 
-val _ = export_theory ();

@@ -1,8 +1,10 @@
-open HolKernel Parse bossLib boolLib pred_setTheory relationTheory set_relationTheory arithmeticTheory pairTheory listTheory optionTheory prim_recTheory whileTheory rich_listTheory sortingTheory
+Theory generalHelpers
+Ancestors
+  pred_set relation set_relation arithmetic pair list option
+  prim_rec While rich_list sorting
 
 (* open relationTheoryHelperTheory *)
 
-val _ = new_theory "generalHelpers"
 val _ = ParseExtras.temp_loose_equality()
 
 val NONEMPTY_LEMM = store_thm
@@ -1578,4 +1580,3 @@ val INCREASING_MOD_CYCLES = store_thm
 
 
 
-val _ = export_theory();

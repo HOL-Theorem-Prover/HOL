@@ -1,10 +1,8 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory bit_listTheory;
+Theory x64_opsem
+Ancestors
+  words bit_list x64_coretypes x64_ast x64_seq_monad
 
-open x64_coretypesTheory x64_astTheory x64_seq_monadTheory;
-
-val _ = new_theory "x64_opsem";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -430,4 +428,3 @@ val x64_execute_def = Define `
     if MEM Zlock prefixes then lockT (x64_exec ii i len) else x64_exec ii i len`;
 
 
-val _ = export_theory ();

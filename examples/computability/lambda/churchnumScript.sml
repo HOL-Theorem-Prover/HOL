@@ -1,18 +1,11 @@
-open HolKernel boolLib bossLib Parse binderLib
-
-open chap3Theory
-open arithmeticTheory pred_setTheory
-open termTheory appFOLDLTheory;
-open boolSimps
-open normal_orderTheory
-open churchboolTheory
-open churchpairTheory
-open reductionEval
-open stepsTheory
+Theory churchnum
+Ancestors
+  chap3 arithmetic pred_set term appFOLDL normal_order churchbool
+  churchpair steps numpair
+Libs
+  binderLib boolSimps reductionEval
 
 fun Store_thm(n,t,tac) = store_thm(n,t,tac) before export_rewrites [n]
-
-val _ = new_theory "churchnum"
 
 val church_def = Define`
   church n = LAM "z" (LAM "s" (FUNPOW (APP (VAR "s")) n (VAR "z")))
@@ -558,8 +551,6 @@ val csnd_cnvpr = bstore_thm(
     Numeric pairing
    ---------------------------------------------------------------------- *)
 
-open numpairTheory
-
 (* triangular numbers and the tri⁻¹ function *)
 val ctri_def = Define`
   ctri = LAM "n" (natrec @@ church 0
@@ -934,5 +925,4 @@ Proof
   simp_tac (bsrw_ss()) [ceven_eqn, arithmeticTheory.EVEN_MOD2] >> metis_tac[]
 QED
 
-val _ = export_theory()
 val _ = html_theory "churchnum";

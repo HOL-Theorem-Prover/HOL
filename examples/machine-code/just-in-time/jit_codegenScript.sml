@@ -1,20 +1,13 @@
 
-open HolKernel boolLib bossLib Parse;
-open decompilerLib prog_x86Lib;
+Theory jit_codegen
+Ancestors
+  pred_set arithmetic pair list words address set_sep prog
+  prog_x86 prog_ppc prog_arm jit_input jit_ops
+Libs
+  decompilerLib prog_x86Lib wordsLib x86_encodeLib helperLib
+  compilerLib export_codeLib
 
 val decompile_x86 = decompile x86_tools
-
-open pred_setTheory arithmeticTheory pairTheory listTheory wordsTheory;
-open addressTheory set_sepTheory progTheory prog_x86Theory;
-open wordsLib x86_encodeLib helperLib;
-
-open jit_inputTheory jit_opsTheory;
-
-open compilerLib;
-open export_codeLib;
-
-val _ = new_theory "jit_codegen";
-
 
 (* compiler setup code *)
 
@@ -614,6 +607,3 @@ val x86_codegen_better = save_thm("x86_codegen_better",let
   val th = DISCH_ALL (MP th (UNDISCH lemma))
   val th = RW [GSYM SPEC_MOVE_COND] th
   in th end);
-
-
-val _ = export_theory();

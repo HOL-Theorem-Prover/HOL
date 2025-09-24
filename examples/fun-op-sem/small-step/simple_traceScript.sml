@@ -1,8 +1,7 @@
-open HolKernel boolLib bossLib Parse;
-open integerTheory stringTheory alistTheory listTheory llistTheory pred_setTheory relationTheory;
-open pairTheory optionTheory finite_mapTheory arithmeticTheory;
-
-val _ = new_theory "simple_trace";
+Theory simple_trace
+Ancestors
+  integer string alist list llist pred_set relation pair option
+  finite_map arithmetic
 
 val hd_drop_last_take = Q.store_thm ("hd_drop_last_take",
 `!n l . 0 < n ∧ n ≤ LENGTH l ⇒ HD (DROP (n - 1) l) = LAST (TAKE n l)`,
@@ -195,4 +194,3 @@ val check_trace_twice_suff = Q.store_thm ("check_trace_twice_suff",
  `0 < LENGTH tr ∧ LENGTH tr ≤ LENGTH tr'` by (rw [] >> Cases_on `tr` >> fs [] >> decide_tac) >>
  metis_tac [hd_drop_last_take]);
 
-val _ = export_theory ();

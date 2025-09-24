@@ -1,11 +1,12 @@
 
-open HolKernel boolLib bossLib Parse;
-open pred_setTheory res_quanTheory wordsTheory wordsLib bitTheory arithmeticTheory;
-open listTheory pairTheory combinTheory addressTheory;
+Theory prog_x86
+Ancestors
+  pred_set res_quan words bit arithmetic list pair combin address
+  set_sep prog x86_ x86_seq_monad x86_icache x86_ast
+  x86_coretypes
+Libs
+  wordsLib x86_Lib x86_encodeLib
 
-open set_sepTheory progTheory x86_Theory x86_seq_monadTheory x86_icacheTheory;
-
-val _ = new_theory "prog_x86";
 val _ = ParseExtras.temp_loose_equality()
 
 val RW = REWRITE_RULE;
@@ -830,10 +831,6 @@ val IMP_X86_SPEC2 = save_thm("IMP_X86_SPEC2",
           ``CODE_POOL X86_INSTR c * q``]) IMP_X86_SPEC_LEMMA3);
 
 
-open x86_astTheory;
-open x86_coretypesTheory;
-open x86_Lib x86_encodeLib;
-
 val jmp_esi = let
   val th = x86_step (x86_encode "jmp esi")
   val th = Q.INST [`s`|->`X86_ICACHE_UPDATE x (r,e,t,m,i)`] th
@@ -1039,4 +1036,3 @@ val xSTACK_INTRO_EBX = store_thm("xSTACK_INTRO_EBX",
     LENGTH,LENGTH_APPEND,SPEC_MOVE_COND] \\ ONCE_REWRITE_TAC [STAR6]
   \\ METIS_TAC [SPEC_FRAME]);
 
-val _ = export_theory();

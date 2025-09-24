@@ -4,44 +4,22 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "AKSclean";
-
 (* ------------------------------------------------------------------------- *)
-
-open jcLib;
-
-(* open dependent theories *)
-open prim_recTheory pred_setTheory listTheory arithmeticTheory logrootTheory
-     numberTheory combinatoricsTheory dividesTheory gcdTheory primeTheory;
-
-(* Get dependent theories local *)
-open AKSimprovedTheory;
-open AKSrevisedTheory;
-open AKStheoremTheory;
-open AKSmapsTheory;
-open AKSsetsTheory;
-open AKSintroTheory;
-open AKSshiftTheory;
-
-open countAKSTheory; (* for aks0_eq_aks *)
-
-open fieldInstancesTheory;
-open monoidTheory groupTheory ringTheory;
-
-open polyRingModuloTheory; (* for poly_mod_ring_has_monomials *)
-open polyFieldModuloTheory; (* for poly_mod_prod_group *)
-open polyIrreducibleTheory; (* for poly_irreducible_poly *)
-
-open computeBasicTheory;
-open computeOrderTheory;
-open computePolyTheory;
-open computeRingTheory;
-open computeParamTheory;
-open computeAKSTheory;
+Theory AKSclean
+Ancestors
+  prim_rec pred_set list arithmetic logroot number combinatorics
+  divides gcd prime AKSimproved AKSrevised AKStheorem AKSmaps
+  AKSsets AKSintro AKSshift
+  countAKS  (* for aks0_eq_aks *)
+  fieldInstances monoid group
+  ring
+  polyRingModulo  (* for poly_mod_ring_has_monomials *)
+  polyFieldModulo  (* for poly_mod_prod_group *)
+  polyIrreducible  (* for poly_irreducible_poly *)
+  computeBasic computeOrder computePoly computeRing computeParam
+  computeAKS
+Libs
+  jcLib
 
 val _ = intLib.deprecate_int ();
 
@@ -2702,8 +2680,4 @@ val intro_exp_mod_group_subgroup = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

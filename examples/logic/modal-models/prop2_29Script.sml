@@ -1,16 +1,7 @@
-open HolKernel Parse boolLib bossLib;
-open chap1Theory;
-open chap2_1Theory;
-open numpairTheory;
-open pred_setTheory;
-open relationTheory;
-open listTheory;
-open arithmeticTheory;
-open set_relationTheory;
-open pairTheory;
-open equiv_on_partitionTheory
-
-val _ = new_theory "prop2_29";
+Theory prop2_29
+Ancestors
+  chap1 chap2_1 numpair pred_set relation list arithmetic
+  set_relation pair equiv_on_partition
 
 val _ = temp_delsimps ["satis_def"]
 
@@ -814,4 +805,3 @@ qexists_tac `AND e ff` >>
 rw[AND_def,satis_AND,DEG_def,prop_letters_def] >> metis_tac[]
 QED
 *)
-val _ = export_theory();

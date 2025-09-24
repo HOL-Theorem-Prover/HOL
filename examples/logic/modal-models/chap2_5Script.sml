@@ -1,17 +1,7 @@
-open HolKernel Parse boolLib bossLib;
-open chap1Theory;
-open pred_setTheory;
-open relationTheory;
-open arithmeticTheory;
-open set_relationTheory;
-open pairTheory;
-
-open chap2_1Theory;
-open chap2_2Theory;
-
-open ultrafilterTheory;
-
-val _ = new_theory "chap2_5";
+Theory chap2_5
+Ancestors
+  chap1 pred_set relation arithmetic set_relation pair chap2_1
+  chap2_2 ultrafilter
 
 val _ = temp_delsimps ["satis_def"]
 
@@ -628,4 +618,3 @@ rw[can_see_def,EXTENSION,EQ_IMP_THM] (* 6 *)
 >> metis_tac[]
 QED
 
-val _ = export_theory();

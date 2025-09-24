@@ -9,12 +9,12 @@
 (* interactive use:
   app load ["wordsLib", "armTheory", "coreTheory", "armLib"];
 *)
+Theory lemmas
+Ancestors
+  combin arithmetic bit words arm core
+Libs
+  Q numLib wordsLib
 
-open HolKernel boolLib bossLib;
-open Q numLib combinTheory arithmeticTheory;
-open bitTheory wordsLib wordsTheory armTheory coreTheory;
-
-val _ = new_theory "lemmas";
 
 (* ------------------------------------------------------------------------- *)
 
@@ -527,4 +527,3 @@ val SPSR_READ_WRITE = store_thm("SPSR_READ_WRITE",
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory();

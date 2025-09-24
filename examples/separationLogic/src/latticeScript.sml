@@ -1,4 +1,6 @@
-open HolKernel Parse boolLib bossLib;
+Theory lattice
+Ancestors
+  relation pred_set combin option
 
 (*
 quietdec := true;
@@ -10,13 +12,10 @@ map load ["relationTheory", "pred_setTheory", "operatorTheory"];
 show_assums := true;
 *)
 
-open relationTheory pred_setTheory combinTheory optionTheory;
-
 (*
 quietdec := false;
 *)
 
-val _ = new_theory "lattice";
 val _ = ParseExtras.temp_loose_equality()
 
 val OPTION_SELECT_def = Define
@@ -766,4 +765,3 @@ REPEAT STRIP_TAC THEN
 MP_TAC (Q.SPECL [`s`, `D`, `M`, `inv f`] BIGINF_UNIV_IMP) THEN
 ASM_SIMP_TAC std_ss [rest_WeakOrder_THM, INF_SUP_inv_THM, inv_LATTICE, transitive_inv, inv_DEF]);
 
-val _ = export_theory();

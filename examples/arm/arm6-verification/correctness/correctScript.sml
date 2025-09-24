@@ -11,14 +11,14 @@
             "lemmasTheory", "coprocessorTheory", "multTheory", "blockTheory",
             "wordsLib", "iclass_compLib", "armLib", "pred_setSimps"];
 *)
+Theory correct
+Ancestors
+  arithmetic rich_list my_list words onestep io_onestep arm core
+  lemmas coprocessor mult block interrupts
+Libs
+  Q wordsLib iclass_compLib armLib
 
-open HolKernel boolLib bossLib;
-open Q arithmeticTheory rich_listTheory my_listTheory wordsLib wordsTheory;
-open onestepTheory io_onestepTheory iclass_compLib armLib;
-open armTheory coreTheory lemmasTheory coprocessorTheory;
-open multTheory blockTheory interruptsTheory;
 
-val _ = new_theory "correct";
 val _ = ParseExtras.temp_loose_equality()
 val _ = diminish_srw_ss ["ABBREV"]
 val _ = set_trace "BasicProvers.var_eq_old" 1
@@ -2265,4 +2265,3 @@ val CORRECT_ARM6 = store_thm("CORRECT_ARM6",
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory();

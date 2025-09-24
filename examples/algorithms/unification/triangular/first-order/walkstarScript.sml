@@ -1,7 +1,8 @@
-open HolKernel Parse boolLib bossLib ramanaLib relationTheory pairTheory
-     bagTheory prim_recTheory finite_mapTheory substTheory termTheory walkTheory
-
-val _ = new_theory "walkstar"
+Theory walkstar
+Ancestors
+  relation pair bag prim_rec finite_map subst term walk pred_set
+Libs
+  ramanaLib
 
 val (pre_walkstar_def, _) = TotalDefn.xDefineSchema "pre_walkstar"
  `walkstar t =
@@ -239,8 +240,6 @@ ASM_SIMP_TAC (srw_ss()) [] >>
 Cases_on `vwalk s v` >> SRW_TAC [][] >>
 METIS_TAC [vwalk_to_var])
 
-open pred_setTheory;
-
 (* direct version of walkstar that does the walk itself *)
 
 val apply_ts_thm = Q.store_thm(
@@ -449,4 +448,3 @@ val oc_eq_vars_walkstar = Q.store_thm(
   SRW_TAC [][FUN_EQ_THM] >>
   METIS_TAC [vars_walkstar_if_oc,oc_if_vars_walkstar,IN_DEF]);
 
-val _ = export_theory ();

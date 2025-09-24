@@ -5,17 +5,14 @@
 (* COPYRIGHTS    : 2019-2020 Fondazione Bruno Kessler, Italy (Chun Tian)      *)
 (*                 2023-2024 The Australian National University (Chun Tian)   *)
 (* ========================================================================== *)
+Theory Multivariate
+Ancestors
+  combin relation pred_set finite_map arithmetic list CCS
+  StrongEQ StrongLaws WeakEQ Trace ObsCongr Contraction
+  Congruence BisimulationUpto UniqueSolutions
+Libs
+  pred_setLib CCSLib
 
-open HolKernel Parse boolLib bossLib;
-
-open combinTheory relationTheory pred_setTheory pred_setLib finite_mapTheory
-     arithmeticTheory listTheory;
-
-open CCSLib CCSTheory StrongEQTheory StrongLawsTheory WeakEQTheory TraceTheory
-     ObsCongrTheory ContractionTheory CongruenceTheory BisimulationUptoTheory
-     UniqueSolutionsTheory;
-
-val _ = new_theory "Multivariate";
 
 (* ========================================================================== *)
 (*                             TABLE OF CONTENTS                              *)
@@ -2652,7 +2649,6 @@ Proof
  >> fs [CCS_equation_def, CCS_solution_def, EVERY_MEM, LIST_REL_EL_EQN]
 QED
 
-val _ = export_theory ();
 val _ = html_theory "Multivariate";
 
 (* Bibliography:

@@ -1,8 +1,7 @@
-open HolKernel Parse bossLib boolLib pairTheory pred_setTheory relationTheory set_relationTheory arithmeticTheory
+Theory gbaSimpl
+Ancestors
+  pair pred_set relation set_relation arithmetic buechiA
 
-open buechiATheory
-
-val _ = new_theory "gbaSimpl"
 val _ = ParseExtras.temp_loose_equality()
 
 (*
@@ -408,8 +407,6 @@ val mergeState_def = Define`
               (replaceAccTrans x y aT)
               alph
       else (GBA s i t aT alph)`;
-
-val _ = export_theory();
 
 (* (* val un_merged_run_def = Define` *) *)
 (* (*   (un_merged_run word aT x_old x_new init trans f switch 0 = *) *)

@@ -1,4 +1,10 @@
-open HolKernel Parse boolLib bossLib;
+Theory holfoot
+Ancestors
+  generalHelpers finite_map relation pred_set sorting list
+  rich_list arithmetic combin option separationLogic
+  vars_as_resource pair string tree bag container
+Libs
+  ConseqConv boolSimps quantHeuristicsLib
 
 (*
 quietdec := true;
@@ -14,18 +20,10 @@ map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
 show_assums := true;
 *)
 
-open generalHelpersTheory finite_mapTheory relationTheory pred_setTheory
-     sortingTheory listTheory rich_listTheory arithmeticTheory
-     combinTheory optionTheory separationLogicTheory
-     vars_as_resourceTheory pairTheory;
-open stringTheory ConseqConv boolSimps treeTheory
-     quantHeuristicsLib bagTheory containerTheory
-
 (*
 quietdec := false;
 *)
 
-val _ = new_theory "holfoot";
 val _ = ParseExtras.temp_loose_equality()
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"]
@@ -10007,4 +10005,3 @@ val asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___HOLFOOT_REWRITES =
     asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___HOLFOOT_SIMPLE_REWRITES])
 
 
-val _ = export_theory();

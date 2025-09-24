@@ -1,14 +1,11 @@
-open HolKernel Parse boolLib bossLib;
-
-open mp_then
-
-open pred_setTheory set_relationTheory listTheory
-open folSkolemTheory folPrenexTheory folModelsTheory folLangTheory
-     folPropTheory
+Theory folCanon
+Ancestors
+  pred_set set_relation list folSkolem folPrenex folModels
+  folLang folProp
+Libs
+  mp_then
 
 fun f $ x = f x
-
-val _ = new_theory "folCanon";
 
 (* ========================================================================= *)
 (* Canonical models in FOL and their use to derive classic metatheorems.     *)
@@ -766,4 +763,3 @@ Proof
   fs[SUBSET_DEF] >> rw[] >> first_x_assum drule >> simp[]
 QED
 
-val _ = export_theory()

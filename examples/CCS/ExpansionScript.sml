@@ -7,15 +7,14 @@
 (* AUTHOR        : (c) Chun Tian, University of Bologna                       *)
 (* DATE          : 2017                                                       *)
 (* ========================================================================== *)
+Theory Expansion
+Ancestors
+  relation list CCS StrongEQ StrongLaws WeakEQ WeakLaws
+  Congruence Trace
+Libs
+  CCSLib
 
-open HolKernel Parse boolLib bossLib;
 
-open relationTheory listTheory;
-
-open CCSLib CCSTheory StrongEQTheory StrongLawsTheory;
-open WeakEQTheory WeakLawsTheory CongruenceTheory TraceTheory;
-
-val _ = new_theory "Expansion";
 val _ = temp_loose_equality ();
 
 (******************************************************************************)
@@ -970,7 +969,6 @@ val BISIM_UPTO_expands_and_C = new_definition (
  * [3] Sangiorgi, D., Milner, R.: The problem of “Weak Bisimulation up to.” CONCUR'92. (1992).
  *)
 
-val _ = export_theory ();
 val _ = html_theory "Expansion";
 
 (* last updated: Sep 28, 2017 *)

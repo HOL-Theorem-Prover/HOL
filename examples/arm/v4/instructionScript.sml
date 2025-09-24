@@ -9,11 +9,12 @@
 (* interactive use:
   app load ["wordsTheory", "armTheory"];
 *)
+Theory instruction
+Ancestors
+  words arm
+Libs
+  Q
 
-open HolKernel boolLib Parse bossLib;
-open Q wordsTheory armTheory;
-
-val _ = new_theory "instruction";
 
 (* ------------------------------------------------------------------------- *)
 
@@ -247,4 +248,3 @@ val _ = overload_on("enc", ``instruction_encode``);
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory();

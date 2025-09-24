@@ -1,8 +1,7 @@
-open HolKernel Parse bossLib boolLib pred_setTheory relationTheory arithmeticTheory prim_recTheory pairTheory set_relationTheory whileTheory
-
-open generalHelpersTheory ltlTheory wordTheory alterATheory
-
-val _ = new_theory "ltl2waa"
+Theory ltl2waa
+Ancestors
+  pred_set relation arithmetic prim_rec pair set_relation While
+  generalHelpers ltl word alterA
 
 (*
   Defining the translation from LTL to WAA
@@ -3057,4 +3056,3 @@ val LTL2WAA_ISCORRECT = store_thm
         )
   );
 
-val _ = export_theory();

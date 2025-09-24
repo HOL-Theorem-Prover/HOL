@@ -1,9 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory numTheory sequenceTheory
-     sequenceTools hurdUtils combinTheory;
-
-val _ = new_theory "prob_pseudo";
+Theory prob_pseudo
+Ancestors
+  arithmetic num sequence combin
+Libs
+  sequenceTools hurdUtils
 
 (* ------------------------------------------------------------------------- *)
 (* The definition of the pseudo-random number generator.                     *)
@@ -28,4 +27,3 @@ val STL_PROB_PSEUDO = store_thm
        prob_pseudo a b n ((a * x + b) MOD (2 * n + 1))``,
    RW_TAC std_ss [prob_pseudo_def, STL_SITER]);
 
-val _ = export_theory ();

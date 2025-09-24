@@ -1,11 +1,11 @@
-open HolKernel Parse bossLib boolLib gfgTheory listTheory optionTheory relationTheory pred_setTheory prim_recTheory pairTheory bagTheory set_relationTheory rich_listTheory
-
-open alterATheory sptreeTheory ltlTheory generalHelpersTheory concrRepTheory ltl2waaTheory waaSimplTheory optionTheory
+Theory concrltl2waa
+Ancestors
+  gfg list option relation pred_set prim_rec pair bag
+  set_relation rich_list alterA sptree ltl generalHelpers
+  concrRep ltl2waa waaSimpl option
 
 val _ = monadsyntax.temp_add_monadsyntax();
 val _ = overload_on("monad_bind",``OPTION_BIND``);
-
-val _ = new_theory "concrltl2waa"
 
 val tempDNF_concr_def = Define`
     (tempDNF_concr (VAR a) = [[VAR a]])
@@ -2598,4 +2598,3 @@ val EXP_WAA_AP = store_thm
   );
 
 
-val _ = export_theory();

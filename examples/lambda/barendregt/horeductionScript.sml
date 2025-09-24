@@ -1,9 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory relationTheory listTheory rich_listTheory hurdUtils;
-open binderLib nomsetTheory termTheory chap2Theory appFOLDLTheory;
-
-val _ = new_theory "horeduction";
+Theory horeduction
+Ancestors
+  arithmetic relation list rich_list nomset term chap2 appFOLDL
+Libs
+  hurdUtils binderLib
 
 Inductive compat_closure:
 [~R:]
@@ -347,5 +346,4 @@ Proof
  >> fs [EL_CONS, PRE_SUB1]
 QED
 
-val _ = export_theory();
 val _ = html_theory "horeduction";

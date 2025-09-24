@@ -3,21 +3,15 @@
 (*                                                                           *)
 (* Author: Chun Tian (binghe) <binghe.lisp@gmail.com> (2020 - 2023)          *)
 (* ========================================================================= *)
+Theory large_number
+Ancestors
+  combin arithmetic pred_set logroot topology list real seq
+  transc real_sigma iterate real_topology metric sigma_algebra
+  extreal measure borel lebesgue martingale probability
+  stochastic_process
+Libs
+  pred_setLib numLib hurdUtils realLib
 
-open HolKernel Parse boolLib bossLib;
-
-open combinTheory arithmeticTheory pred_setTheory pred_setLib logrootTheory
-     numLib hurdUtils topologyTheory listTheory;
-
-open realTheory realLib seqTheory transcTheory real_sigmaTheory iterateTheory
-     real_topologyTheory metricTheory;
-
-open sigma_algebraTheory extrealTheory measureTheory borelTheory lebesgueTheory
-     martingaleTheory probabilityTheory;
-
-open stochastic_processTheory;
-
-val _ = new_theory "large_number";
 
 (* An unintended overload/abbreviation from pred_setTheory *)
 val _ = temp_clear_overloads_on "equiv_class";
@@ -6349,7 +6343,6 @@ Proof
  >> rw [Abbr ‘j’, LE_NUM_CEILING]
 QED
 
-val _ = export_theory ();
 val _ = html_theory "large_number";
 
 (* References:

@@ -1,8 +1,9 @@
-open HolKernel boolLib bossLib
-open blastLib stateLib
-open set_sepTheory progTheory temporal_stateTheory arm8_stepTheory
+Theory arm8_prog
+Ancestors
+  set_sep prog temporal_state arm8_step
+Libs
+  blastLib stateLib
 
-val () = new_theory "arm8_prog"
 val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------ *)
 
@@ -401,4 +402,3 @@ val disjoint_arm_instr_thms = Theory.save_thm("disjoint_arm_instr_thms",
 
 (* ------------------------------------------------------------------------ *)
 
-val () = export_theory()

@@ -7,12 +7,13 @@
 (*
 app load ["bossLib", "rich_listTheory", "metisLib"];
 *)
+Theory regexp
+Ancestors
+  pair combin list rich_list arithmetic
+Libs
+  metisLib
 
-open HolKernel Parse boolLib;
-open bossLib metisLib pairTheory combinTheory listTheory rich_listTheory
-     arithmeticTheory;
 
-val () = new_theory "regexp";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -420,4 +421,3 @@ val sem_match = store_thm
       PROVE_TAC [MEM_TL,SPLITS_NON_EMPTY,SPLITS_APPEND,IN_DEF]]],
     RW_TAC std_ss [sem_def, match_def]]);
 
-val () = export_theory ();

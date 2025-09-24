@@ -4,18 +4,16 @@
 (*                                                                            *)
 (* AUTHORS : 2005-2011 Michael Norrish                                        *)
 (* ========================================================================== *)
+Theory finite_developments
+Ancestors
+  pred_set path relation chap3 chap2 labelledTerms term
+  term_posns horeduction chap11_1 nomset
+Libs
+  BasicProvers metisLib boolSimps binderLib nomdatatype
+  pred_setLib[qualified]
 
-open HolKernel Parse bossLib boolLib;
 
-open BasicProvers metisLib boolSimps pred_setTheory pathTheory relationTheory;
-
-open chap3Theory chap2Theory labelledTermsTheory termTheory binderLib
-     term_posnsTheory horeductionTheory chap11_1Theory nomsetTheory;
-
-local open pred_setLib in end
 val _ = augment_srw_ss [boolSimps.LET_ss]
-
-val _ = new_theory "finite_developments";
 
 fun Store_Thm(n, t, tac) = store_thm(n, t, tac) before export_rewrites [n]
 
@@ -711,7 +709,6 @@ val ltpm_if = prove(
     if P then ltpm [(x,y)] M else ltpm [(x,y)] N``,
   SRW_TAC [][]);
 
-open nomdatatype
 val ordering = prove(
   ``(?f : term -> num # posn set -> lterm. P f) <=>
     (?f. P (\t (n,ps). f n t ps))``,
@@ -4096,7 +4093,6 @@ val corollary11_2_29 = store_thm(
   SRW_TAC [][CR_def, lemma11_2_28i, lemma11_2_28ii,
              relationTheory.diamond_TC_diamond]);
 
-val _ = export_theory();
 val _ = html_theory "finite_developments";
 
 (* References:

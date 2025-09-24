@@ -4,11 +4,12 @@ quietdec := true;
 open pairTheory intLib integerTheory;
 quietdec := false;
 *)
+Theory ExtendedEuclid
+Ancestors
+  pair integer
+Libs
+  intLib
 
-open HolKernel Parse boolLib bossLib
-     pairTheory intLib integerTheory;
-
-val _ = new_theory "ExtendedEuclid";
 
 val dec_def =
  Define
@@ -197,4 +198,3 @@ val i16_Lemma10 = Q.store_thm
  GEN_TAC THEN `& x * iu1 x = iu1 x * & x` by RW_TAC arith_ss [INT_MUL_COMM] THEN
  `& x * iu2 x = iu2 x * & x` by RW_TAC arith_ss [INT_MUL_COMM] THEN METIS_TAC [i16_Lemma9]);
 
-val () = export_theory();

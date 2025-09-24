@@ -3,27 +3,16 @@
 (*                                                                           *)
 (* Created Wed Mar 19 19:01:20 GMT 2003                                      *)
 (*****************************************************************************)
+Theory ExecuteSemantics
+Ancestors
+  list rich_list arithmetic regexp matcher FinitePSLPath PSLPath
+  Syntax SyntacticSugar UnclockedSemantics ClockedSemantics
+Libs
+  metisLib pred_setLib intLib
 
 
-open HolKernel Parse boolLib;
-open bossLib metisLib listTheory rich_listTheory pred_setLib intLib
-     arithmeticTheory;
-open regexpTheory matcherTheory;
-open FinitePSLPathTheory PSLPathTheory SyntaxTheory SyntacticSugarTheory
-     UnclockedSemanticsTheory ClockedSemanticsTheory
-     (* PropertiesTheory*);
-
-(******************************************************************************
-* Start a new theory called "ExecuteSemantics"
-******************************************************************************)
-val _ = new_theory "ExecuteSemantics";
 
 val _ = ParseExtras.temp_loose_equality()
-
-(******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
-val _ = intLib.deprecate_int();
 
 (*---------------------------------------------------------------------------*)
 (* Symbolic tacticals.                                                       *)
@@ -2291,5 +2280,3 @@ val UF_ABORT_REC =
 * End of useless stuff.
 ******************************************************************************)
 *)
-
-val _ = export_theory();

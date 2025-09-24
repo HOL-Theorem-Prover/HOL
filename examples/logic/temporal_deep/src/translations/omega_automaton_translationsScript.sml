@@ -3,23 +3,21 @@
 (*    Translations between explicit-state and symbolic (semi-)automata.       *)
 (*                                                                            *)
 (******************************************************************************)
+Theory omega_automaton_translations
+Ancestors
+  full_ltl arithmetic automaton_formula xprop_logic prop_logic
+  infinite_path symbolic_semi_automaton list pred_set pred_set
+  rich_list set_lemmata temporal_deep_mixed pair
+  symbolic_kripke_structure semi_automaton omega_automaton
+  kripke_structure container relation
+Libs
+  tuerk_tacticsLib numLib Sanity
 
-open HolKernel Parse boolLib bossLib;
-
-open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
-     infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory
-     pred_setTheory rich_listTheory set_lemmataTheory temporal_deep_mixedTheory pairTheory
-     symbolic_kripke_structureTheory
-     numLib semi_automatonTheory omega_automatonTheory kripke_structureTheory
-     containerTheory relationTheory;
-
-open Sanity;
 
 val _ = hide "K";
 val _ = hide "S";
 val _ = hide "I";
 
-val _ = new_theory "omega_automaton_translations";
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val _ = ParseExtras.temp_loose_equality()
 
@@ -3478,4 +3476,3 @@ EQ_TAC THENL [
   METIS_TAC[]
 ]);
 
-val _ = export_theory ();

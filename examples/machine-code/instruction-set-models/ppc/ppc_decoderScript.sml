@@ -1,12 +1,9 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory stringTheory stringLib listTheory stringSimps listLib simpLib;
-open decoderTheory bit_listTheory opmonTheory;
-
-open ppc_astTheory;
-
-val _ = new_theory "ppc_decoder";
-
+Theory ppc_decoder
+Ancestors
+  words string list decoder bit_list opmon ppc_ast
+Libs
+  stringLib stringSimps listLib simpLib
 
 (* ---------------------------------------------------------------------------------- *>
 
@@ -185,6 +182,4 @@ val ppc_decode_thm = let
 
 val _ = save_thm("ppc_decode_thm",ppc_decode_thm);
 val _ = computeLib.add_persistent_funs ["ppc_decode_thm"];
-
-val _ = export_theory ();
 

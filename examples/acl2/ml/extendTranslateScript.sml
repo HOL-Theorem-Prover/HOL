@@ -9,11 +9,14 @@ quietdec := true;
 use "extendTranslateScript.sml" handle _ => quietdec := false;
 quietdec := false;
 *)
+Theory extendTranslate
+Ancestors
+   sexp arithmetic integer bool translate divides gcd frac rat
+  intExtension complex_rational list fcp signedint
+Libs
+  Term Type Thm Tactic Tactical Drule Rewrite boolSyntax Lib Conv
+  intLib translateLib
 
-open Term Type Thm Theory Tactic Tactical Drule Rewrite boolSyntax;
-open Lib bossLib Conv Parse
-open sexpTheory arithmeticTheory integerTheory intLib boolTheory
-     (*hol_defaxiomsTheory*) translateLib translateTheory;
 
 val fix_def=hol_defaxiomsTheory.fix_def;
 val zip_def = hol_defaxiomsTheory.zip_def;
@@ -24,12 +27,6 @@ val endp_def = hol_defaxiomsTheory.endp_def;
 val atom_def = hol_defaxiomsTheory.atom_def;
 val zp_def = hol_defaxiomsTheory.zp_def;
 val eql_def = hol_defaxiomsTheory.eql_def;
-
-(*****************************************************************************)
-(* Start new theory "extendTranslate"                                        *)
-(*****************************************************************************)
-
-val _ = new_theory "extendTranslate";
 
 (*****************************************************************************)
 (* CHOOSEP_TAC : performs the following for ints & nums:                     *)
@@ -202,8 +199,6 @@ val rat_mul_lem = prove(``0 < c * b /\ 0 < c ==>
     RW_TAC int_ss [ratTheory.RAT_EQ_CALCULATE,fracTheory.NMR,
            fracTheory.DNM] THEN
     ARITH_TAC);
-
-open dividesTheory gcdTheory;
 
 val both_divides = prove(``(a * b = c) ==> divides a c /\ divides b c``,
     METIS_TAC [divides_def,MULT_COMM]);
@@ -625,8 +620,6 @@ val NAT_MOD = store_thm("NAT_MOD",
 (* longer required here.                                                     *)
 (*****************************************************************************)
 
-open fracTheory ratTheory intExtensionTheory complex_rationalTheory;
-
 val rat_of_int_def = Define
     `rat_of_int x =
     if 0 <= x then & (Num (ABS x))
@@ -966,8 +959,6 @@ val INT_ABS = store_thm("INT_ABS",
 (*                 nth, last, strip_cars, strip_cdrs, pairlis$               *)
 (*                                                                           *)
 (*****************************************************************************)
-
-open listTheory;
 
 val CAR_NIL = store_thm("CAR_NIL",``car nil = nil``,
     RW_TAC int_ss [car_def,nil_def]);
@@ -1432,8 +1423,6 @@ val STRINGP_STRCAT = prove(``!s1 s2. |= stringp (acl2_strcat s1 s2)``,
 (* FCPs                                                                      *)
 (*****************************************************************************)
 
-open fcpTheory;
-
 val fcp_encode_def =
     Define `fcp_encode f (:'b) (x:'a ** 'b) = list f (V2L x)`;
 val fcp_decode_def =
@@ -1680,8 +1669,6 @@ val FCP_VALUE = store_thm("FCP_VALUE",
 (*****************************************************************************)
 (* FCP words                                                                 *)
 (*****************************************************************************)
-
-open signedintTheory;
 
 (*****************************************************************************)
 (* Coding function definitions                                               *)
@@ -2054,5 +2041,3 @@ val NAT_BIT = store_thm("NAT_BIT",
            NAT_IFIX,GSYM NAT_ODD,BOOL_CONG] THEN
     RW_TAC int_ss [BIT_def,BITS_THM,ADD1,ODD_MOD2_LEM])
 end
-
-val _ = export_theory();

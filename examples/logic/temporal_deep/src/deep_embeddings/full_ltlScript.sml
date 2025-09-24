@@ -3,19 +3,16 @@
 (*       Linear Temporal Logic (with both past and future operators           *)
 (*                                                                            *)
 (******************************************************************************)
+Theory full_ltl
+Ancestors
+  pred_set prop_logic xprop_logic infinite_path arithmetic
+  symbolic_kripke_structure set_lemmata
+Libs
+  tuerk_tacticsLib numLib Sanity
 
-open HolKernel Parse boolLib bossLib;
-
-open pred_setTheory prop_logicTheory xprop_logicTheory infinite_pathTheory
-     tuerk_tacticsLib numLib arithmeticTheory symbolic_kripke_structureTheory
-     set_lemmataTheory;
-
-open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
-
-val _ = new_theory "full_ltl";
 
 (*****************************************************************************)
 (* Syntax                                                                    *)
@@ -1061,4 +1058,3 @@ Proof
  >> METIS_TAC []
 QED
 
-val _ = export_theory();

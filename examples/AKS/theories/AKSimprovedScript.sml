@@ -4,73 +4,23 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "AKSimproved";
-
 (* ------------------------------------------------------------------------- *)
-
-open jcLib;
-
-(* open dependent theories *)
-open prim_recTheory pred_setTheory listTheory arithmeticTheory logrootTheory
-     numberTheory combinatoricsTheory dividesTheory gcdTheory primeTheory;
-
-(* Get dependent theories local *)
-open AKSrevisedTheory;
-open AKStheoremTheory;
-open AKSmapsTheory;
-open AKSsetsTheory;
-open AKSintroTheory;
-open AKSshiftTheory;
-
-(* Get polynomial theory of Ring *)
-open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
-open polyDivisionTheory polyBinomialTheory polyEvalTheory;
-
-open polyMonicTheory;
-
-open polyFieldDivisionTheory;
-open polyFieldModuloTheory;
-open polyRingModuloTheory;
-open polyIrreducibleTheory;
-open polyMapTheory;
-
-open polyRootTheory;
-open polyDividesTheory;
-open polyProductTheory;
-open polyGCDTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
-open fieldMapTheory;
-open fieldInstancesTheory;
-open fieldBinomialTheory;
-open fieldIdealTheory;
-open fieldOrderTheory;
-open fieldProductTheory;
-
-open computeBasicTheory;
-open computeOrderTheory;
-open computePolyTheory;
-open computeRingTheory;
-open computeParamTheory;
-open computeAKSTheory;
+Theory AKSimproved
+Ancestors
+  prim_rec pred_set list arithmetic logroot number combinatorics
+  divides gcd prime AKSrevised AKStheorem AKSmaps AKSsets
+  AKSintro AKSshift polynomial polyWeak polyRing polyField
+  polyDivision polyBinomial polyEval polyMonic polyFieldDivision
+  polyFieldModulo polyRingModulo polyIrreducible polyMap polyRoot
+  polyDivides polyProduct polyGCD monoid group ring field
+  fieldMap fieldInstances fieldBinomial fieldIdeal fieldOrder
+  fieldProduct computeBasic computeOrder computePoly computeRing
+  computeParam computeAKS ffBasic ffAdvanced ffPoly ffUnity
+  ffCyclo ffExist ffConjugate ffMaster ffMinimal
+Libs
+  jcLib
 
 (* (* val _ = load "ffUnityTheory"; *) *)
-open ffBasicTheory;
-open ffAdvancedTheory;
-open ffPolyTheory;
-open ffUnityTheory;
-open ffCycloTheory;
-
-open ffExistTheory;
-open ffConjugateTheory;
-open ffMasterTheory;
-open ffMinimalTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -1589,8 +1539,4 @@ val aks_main_ulog_8b = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

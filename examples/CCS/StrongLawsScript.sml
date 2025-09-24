@@ -7,14 +7,12 @@
 (*                 2018-2019 Fondazione Bruno Kessler, Italy (Chun Tian)      *)
 (*                 2023-2024 The Australian National University (Chun Tian)   *)
 (******************************************************************************)
+Theory StrongLaws
+Ancestors
+  pred_set prim_rec arithmetic relation CCS StrongEQ
+Libs
+  CCSLib StrongEQLib
 
-open HolKernel Parse boolLib bossLib;
-
-open pred_setTheory prim_recTheory arithmeticTheory relationTheory;
-
-open CCSLib CCSTheory StrongEQTheory StrongEQLib;
-
-val _ = new_theory "StrongLaws";
 
 (******************************************************************************)
 (*                                                                            *)
@@ -1947,7 +1945,6 @@ val STRONG_EXPANSION_LAW = store_thm (
                 (ASSUME ``PREF_ACT ((f2: num -> 'a CCS) k') = label (COMPL l)``)) \\
             ASM_REWRITE_TAC [PREF_PROC_def, PREFIX] ] ] ] ]);
 
-val _ = export_theory ();
 val _ = html_theory "StrongLaws";
 
 (* Bibliography:

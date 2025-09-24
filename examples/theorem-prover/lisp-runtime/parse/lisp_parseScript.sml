@@ -1,10 +1,11 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_parse";
+Theory lisp_parse
+Ancestors
+  words arithmetic list pred_set pair combin finite_map string
+  relation lisp_sexp
+Libs
+  wordsLib
+
 val _ = ParseExtras.temp_loose_equality()
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory stringTheory relationTheory;
-
-open lisp_sexpTheory;
 
 (* file structure:
      1. we first define how to print s-expressions, then
@@ -1370,4 +1371,3 @@ val sexp_parse_stream_thm = store_thm("sexp_parse_stream_thm",
 
 *)
 
-val _ = export_theory();

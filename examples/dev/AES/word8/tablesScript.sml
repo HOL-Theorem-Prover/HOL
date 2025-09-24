@@ -1,10 +1,10 @@
-open HolKernel boolLib bossLib Parse wordsLib;
+Theory tables
+Libs
+  wordsLib
 
 (*
   wordsLib.output_words_as_hex();
 *)
-
-val _ = new_theory "tables";
 
 val Sbox = Count.apply
  Define
@@ -2088,4 +2088,3 @@ val GF256_by_14 = Count.apply word8Define
 
 *)
 
-val _ = export_theory();

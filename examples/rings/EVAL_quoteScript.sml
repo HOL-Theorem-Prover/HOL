@@ -1,10 +1,8 @@
-open HolKernel Parse boolLib
-     TotalDefn Datatype BasicProvers;
-
-val _ = new_theory "EVAL_quote";
-
-open ternaryComparisonsTheory;
-
+Theory EVAL_quote
+Ancestors
+  ternaryComparisons
+Libs
+  TotalDefn Datatype BasicProvers
 
 val _ = Hol_datatype
  ` index = Left_idx of index
@@ -53,4 +51,3 @@ val varmap_find_def = Define `
 /\ (varmap_find i v = @x.T) `;
 
 
-val _ = export_theory();

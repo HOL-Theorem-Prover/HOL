@@ -28,19 +28,16 @@ load "HolBddLib";
 load "PrimitiveBddRules";
 load "ListPair";
 *)
+Theory Solitaire
+Libs
+  HolBddLib pairSyntax
 
-open HolKernel Parse boolLib;
+
 infixr 3 -->;
 infix 9 by;
 infix ++;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 
-
-open HolBddLib;
-open pairSyntax;
-open bossLib;
-
-val _ = new_theory "Solitaire";
 
 val var_list as
     [v01,v02,v03,v04,v05,v06,v07,v08,v09,v10,
@@ -247,9 +244,6 @@ val _ =
  List.map
   PrintState
   (List.map (fst o dest_pair o rand o concl) transthl @ [rand(concl finalth)]);
-
-val _ = export_theory();
-
 
 (* Reachable state with/without disjunctive partitioning
 

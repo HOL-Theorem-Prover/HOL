@@ -1,10 +1,8 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory bit_listTheory listTheory opmonTheory combinTheory;
+Theory x86_seq_monad
+Ancestors
+  words bit_list list opmon combin x86_coretypes
 
-open x86_coretypesTheory;
-
-val _ = new_theory "x86_seq_monad";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -363,4 +361,3 @@ val x86_address_lemma = store_thm("x86_address_lemma",
     ~(1w = 2w:word32) /\ ~(1w = 3w:word32) /\ ~(2w = 3w:word32)``,
   EVAL_TAC);
 
-val _ = export_theory ();

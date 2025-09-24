@@ -1,10 +1,10 @@
 (*===========================================================================*)
 (* Applying CPS to semantics-based ASTs for a simple WHILE language          *)
 (*===========================================================================*)
+Theory cps
+Ancestors
+  relation
 
-open HolKernel Parse boolLib bossLib relationTheory;
-
-val _ = new_theory "cps";
 
 (*---------------------------------------------------------------------------*)
 (* Combinator-based pseudo-ASTs for simple programs                          *)
@@ -329,4 +329,3 @@ val UNLET =
    METIS_PROVE [] ``!f M. (let f2 = f in f2 M) = f M``);
 
 
-val _ = export_theory();

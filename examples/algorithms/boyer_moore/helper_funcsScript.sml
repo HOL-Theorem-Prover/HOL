@@ -1,15 +1,6 @@
-open HolKernel boolLib bossLib Parse;
-
-open listTheory;
-open rich_listTheory;
-open prim_recTheory;
-open arithmeticTheory;
-open pred_setTheory;
-open pairTheory;
-open boolTheory;
-
-
-val _ = new_theory"helper_funcs";
+Theory helper_funcs
+Ancestors
+  list rich_list prim_rec arithmetic pred_set pair bool
 
 (* -- EXTRACT FUNCTION -- *)
 (* General Purpose Sublist extract function *)
@@ -462,4 +453,3 @@ val CHECK_PREFIX_RL_BND = store_thm(
     >> fs[]
     );
 
-val _ = export_theory();

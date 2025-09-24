@@ -1,17 +1,12 @@
-open HolKernel boolLib bossLib Parse
-
-open prnlistTheory numpairTheory pure_dBTheory
-open enumerationsTheory primrecfnsTheory
-open rich_listTheory arithmeticTheory
-open pred_setTheory
-
-open reductionEval churchnumTheory churchboolTheory normal_orderTheory
-     dnoreductTheory stepsTheory recursivefnsTheory recfunsTheory
-     churchlistTheory churchDBTheory nlistTheory
+Theory prterm
+Ancestors
+  prnlist numpair pure_dB enumerations primrecfns rich_list
+  arithmetic pred_set churchnum churchbool normal_order dnoreduct
+  steps recursivefns recfuns churchlist churchDB nlist
+Libs
+  reductionEval
 
 fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
-
-val _ = new_theory "prterm"
 
 val _ = augment_srw_ss [rewrites [DISJ_IMP_EQ]]
 
@@ -2126,4 +2121,3 @@ val UMi_def = new_specification(
 Theorem UMi_works =
   UMi_def |> Q.SPEC `[m;n]` |> SIMP_RULE (srw_ss()) []
 
-val _ = export_theory()

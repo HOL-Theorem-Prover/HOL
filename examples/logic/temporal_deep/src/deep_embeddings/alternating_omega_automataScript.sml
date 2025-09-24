@@ -1,4 +1,9 @@
-open HolKernel Parse boolLib bossLib;
+Theory alternating_omega_automata
+Ancestors
+  infinite_path pred_set list pair xprop_logic container
+  prop_logic set_lemmata prim_rec temporal_deep_mixed arithmetic
+Libs
+  tuerk_tacticsLib numLib Sanity
 
 (*
 quietdec := true;
@@ -12,11 +17,6 @@ map load
    "containerTheory", "prim_recTheory", "tuerk_tacticsLib", "temporal_deep_mixedTheory", "arithmeticTheory", "numLib"];
 *)
 
-open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory
-     containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
-     tuerk_tacticsLib temporal_deep_mixedTheory arithmeticTheory numLib;
-open Sanity;
-
 val _ = hide "S";
 val _ = hide "I";
 
@@ -27,9 +27,6 @@ show_types := true;
 show_types := false;
 quietdec := false;
 *)
-
-
-val _ = new_theory "alternating_omega_automata";
 
 
 (*****************************************************************************)
@@ -1535,4 +1532,3 @@ val NDET_TRUE___NDET_WEAK_CO_BUECHI =
 
 
 
-val _ = export_theory();

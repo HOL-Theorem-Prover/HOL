@@ -5,14 +5,11 @@
    for inspiration
 
 *)
+Theory tableauS4
+Ancestors
+  pair pred_set list relation modalBasics tableauBasics
+  arithmetic
 
-open HolKernel Parse boolLib bossLib;
-
-open pairTheory pred_setTheory listTheory relationTheory;
-open modalBasicsTheory tableauBasicsTheory
-open arithmeticTheory;
-
-val _ = new_theory "tableauS4";
 
 Datatype:
   premodel = Nd α (premodel list)
@@ -1799,4 +1796,3 @@ Proof
   >> simp[s4_tree_model]
 QED
 
-val _ = export_theory();

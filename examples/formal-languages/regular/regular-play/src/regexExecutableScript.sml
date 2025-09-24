@@ -1,11 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-open listTheory rich_listTheory combinTheory;
-open pred_setTheory;
-
-val _ = new_theory "regexExecutable";
-
-open regexSemanticsTheory;
-
+Theory regexExecutable
+Ancestors
+  list rich_list combin pred_set regexSemantics
 
 (* 3.2 executable semantics *)
 (* -------------------------------------------------------------------------------------------------- *)
@@ -243,4 +238,3 @@ val accept_correctness_thm = store_thm("accept_correctness_thm", ``!r w. accept 
 
 
 
-val _ = export_theory();

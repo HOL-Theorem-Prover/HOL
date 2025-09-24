@@ -6,12 +6,12 @@
 (* revealed that the completeness proof is due originally to Kalmar,         *)
 (* according to an attribution in Mendelson's book.                          *)
 (*===========================================================================*)
+Theory PropLogic
+Ancestors
+  pred_set string_num[qualified]
+Libs
+  stringLib[qualified]
 
-open HolKernel boolLib Parse bossLib pred_setTheory;
-
-local open stringLib string_numTheory in end;
-
-val _ = new_theory "PropLogic"
 
 (*---------------------------------------------------------------------------*)
 (* Simplification set for arithmetic and sets                                *)
@@ -777,4 +777,3 @@ Proof
   metis_tac[is_thm_FINITE_hyps, completeness_again, soundness_again]
 QED
 
-val _ = export_theory()

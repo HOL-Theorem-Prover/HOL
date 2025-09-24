@@ -4,23 +4,16 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "loopDivide";
+Theory loopDivide
+Ancestors
+  arithmetic divides number combinatorics list rich_list
+  listRange logroot loop bitsize
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open arithmeticTheory dividesTheory numberTheory combinatoricsTheory listTheory
-     rich_listTheory listRangeTheory logrootTheory;
-
-open loopTheory bitsizeTheory;
-
 val _ = temp_overload_on("SQ", ``\n. n * n``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
 val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
@@ -2199,8 +2192,4 @@ val loop2_div_count_upper = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

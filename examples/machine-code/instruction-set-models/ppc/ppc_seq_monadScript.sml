@@ -1,11 +1,7 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory bit_listTheory listTheory opmonTheory;
-
-open ppc_coretypesTheory;
-
-val _ = new_theory "ppc_seq_monad";
-
+Theory ppc_seq_monad
+Ancestors
+  words bit_list list opmon ppc_coretypes
 
 (* state *)
 
@@ -172,4 +168,3 @@ val ppc_else_none_status_lemma = store_thm("ppc_else_none_status_lemma",
             (option_apply ((m:ppc_state->bool option) a) (f:bool->'a option) = f (THE (m a)))``,
   SIMP_TAC std_ss [option_apply_def]);
 
-val _ = export_theory ();

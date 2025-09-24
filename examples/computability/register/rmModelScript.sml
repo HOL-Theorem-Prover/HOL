@@ -1,18 +1,9 @@
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory;
-open combinTheory;
-open whileTheory;
-open indexedListsTheory;
-open numeralTheory;
-open primrecfnsTheory;
-open listTheory;
-open mp_then;
-open boolTheory;
-open numpairTheory;
-open pred_setTheory;
-
-val _ = new_theory "rmModel";
-
+Theory rmModel
+Ancestors
+  arithmetic combin While indexedLists numeral primrecfns list
+  bool numpair pred_set
+Libs
+  mp_then
 
 Type reg = “:num”;
 Type state = “:num”;
@@ -140,4 +131,3 @@ val wfrm_def = Define `
 
 val rm_component_equality = theorem "rm_component_equality"
 
-val _ = export_theory ()

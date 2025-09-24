@@ -1,9 +1,7 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_alt_semantics";
-
-open stringTheory finite_mapTheory pred_setTheory listTheory sumTheory;
-open optionTheory arithmeticTheory relationTheory;
-
-open lisp_sexpTheory lisp_parseTheory lisp_semanticsTheory;
+Theory lisp_alt_semantics
+Ancestors
+  string finite_map pred_set list sum option arithmetic relation
+  lisp_sexp lisp_parse lisp_semantics
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -228,4 +226,3 @@ val R_ev_IMP_RR_ev = prove(goal,
 
 val _ = save_thm("R_ev_IMP_RR_ev",R_ev_IMP_RR_ev);
 
-val _ = export_theory();

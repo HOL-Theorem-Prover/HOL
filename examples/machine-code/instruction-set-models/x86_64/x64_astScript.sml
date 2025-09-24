@@ -1,10 +1,7 @@
 
-open HolKernel boolLib bossLib Parse;
-
-open x64_coretypesTheory;
-
-val _ = new_theory "x64_ast";
-
+Theory x64_ast
+Ancestors
+  x64_coretypes
 
 (* ---------------------------------------------------------------------------------- *>
 
@@ -82,4 +79,3 @@ val Zprefix_group_def = Define `
 val _ = Hol_datatype `Zinst = Zfull_inst of Zprefix list => Zinstruction`;
 
 
-val _ = export_theory ();

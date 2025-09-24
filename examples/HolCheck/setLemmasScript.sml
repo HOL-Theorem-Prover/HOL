@@ -1,8 +1,8 @@
-open HolKernel Parse boolLib bossLib
-
-val _ = new_theory("setLemmas");
-
-open pred_setLib pred_setTheory numLib metisLib pairTheory stringTheory stringLib
+Theory setLemmas
+Ancestors
+  pred_set pair string
+Libs
+  pred_setLib numLib metisLib stringLib
 
 infix &&; infix 8 by;
 
@@ -200,4 +200,3 @@ val NOT_IN_FIN_STRING_SET = save_thm("NOT_IN_FIN_STRING_SET",prove(``!s. FINITE 
 (* used by commonTools.PUSH_IMP_CONV *)
 val PUSH_IMP_THM = save_thm("PUSH_IMP_THM",prove(``!a b c. a ==> b ==> c = b ==> a ==> c``,PROVE_TAC []))
 
-val _ = export_theory();

@@ -1,9 +1,6 @@
-open HolKernel bossLib boolLib Parse
-
-open nomsetTheory
-open sortingTheory
-
-val _ = new_theory "contextlists"
+Theory contextlists
+Ancestors
+  nomset sorting
 
 Type ctxt = “:(string # 'a) list”
 
@@ -156,4 +153,3 @@ val domfilter_delete = store_thm(
   “¬(v ∈ ctxtFV G) ==> (G ∩ (s DELETE v) = G ∩ s)”,
   Induct_on ‘G’ THEN ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD]);
 
-val _ = export_theory()

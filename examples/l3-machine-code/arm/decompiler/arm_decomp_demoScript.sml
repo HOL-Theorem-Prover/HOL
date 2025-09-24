@@ -1,9 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open core_decompilerLib
-open arm_core_decompLib
-
-val () = new_theory "arm_decomp_demo";
+Theory arm_decomp_demo
+Ancestors
+  words arm_core_decomp
+Libs
+  core_decompilerLib arm_core_decompLib wordsLib
 
 (* the first PID exmaple *)
 
@@ -51,8 +50,6 @@ val _ = save_thm("PID_ADA_cert",PID_ADA_cert);
 
 (* an attempt at proving them equivalent *)
 
-open wordsTheory;
-open wordsLib;
 val _ = (guessing_word_lengths := true);
 
 val word_read_def = Define `
@@ -284,5 +281,3 @@ val (PID_C2_cert, PID_C2_def) = core_decompilerLib.core_decompile "PID_C2" `
     e8bd0010             (* pop        {r4}                     *)`;
 
 val _ = save_thm("PID_C2_cert",PID_C2_cert);
-
-val () = export_theory()

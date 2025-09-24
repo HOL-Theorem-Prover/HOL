@@ -2,19 +2,18 @@
 app load ["bossLib","gcdTheory","powerTheory","summationTheory"];
 quietdec := true;
 *)
+Theory congruent
+Ancestors
+  arithmetic prim_rec gcd power summation divides
+Libs
+  numLib
 
-open HolKernel Parse boolLib bossLib
-     numLib arithmeticTheory prim_recTheory
-     gcdTheory powerTheory summationTheory dividesTheory;
 
 (*
 quietdec := false;
 *)
 
 val ARW = RW_TAC arith_ss;
-
-val _ = new_theory "congruent";
-
 
 val CONGRUENT = Define `congruent a b n = ?c d. a+c*n = b+d*n`;
 
@@ -130,4 +129,3 @@ val CONGRUENT_DIVIDES = store_thm("CONGRUENT_DIVIDES",
                          THEN PROVE_TAC[DIVIDES_MULT,ADD_SUB,
                                         DIVIDES_REFL,MULT_SYM]);
 
-val _ = export_theory();

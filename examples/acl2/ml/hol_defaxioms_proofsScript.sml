@@ -9,17 +9,6 @@
 (*                                                                           *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* Ignore everything up to "END BOILERPLATE"                                 *)
-(*****************************************************************************)
-
-(*****************************************************************************)
-(* START BOILERPLATE NEEDED FOR COMPILATION                                  *)
-(*****************************************************************************)
-
-(******************************************************************************
-* Load theories
-******************************************************************************)
 (* The commented out stuff below should be loaded in interactive sessions
 quietdec := true;
 map
@@ -35,23 +24,12 @@ set_trace "Goalstack.howmany_printed_subgoals" 100;
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation: open HOL4 systems modules.
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories (including ratTheory from Jens Brandt).
-******************************************************************************)
-open stringLib complex_rationalTheory gcdTheory sexp sexpTheory
-     acl2_packageTheory hol_defaxiomsTheory
-     translateTheory extendTranslateTheory;
-
-(*****************************************************************************)
-(* END BOILERPLATE                                                           *)
-(*****************************************************************************)
-
-val _ = new_theory "hol_defaxioms_proofs";
+Theory hol_defaxioms_proofs
+Ancestors
+  complex_rational gcd sexp acl2_package hol_defaxioms translate
+  extendTranslate
+Libs
+  stringLib sexp
 
 (*****************************************************************************)
 (* Only save theorem in theory if save_thm_flag is true                      *)
@@ -4190,5 +4168,3 @@ val bad_atom_less_equal_total_defaxiom =
        SEXP_SYM_LESS_EQ_def,SEXP_SYM_LESS_def]
      THEN METIS_TAC [STRING_LESS_TRICHOTOMY,STRING_LESS_ANTISYM,
            EVAL ``"COMMON-LISP" = ""``]);
-
-val _ = export_theory();

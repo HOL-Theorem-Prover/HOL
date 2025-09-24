@@ -6,18 +6,15 @@
 app load ["wordsLib","llistTheory","teaTheory"];
 quietdec := true;
 *)
-open HolKernel Parse boolLib bossLib wordsLib
-     wordsTheory pairTheory arithmeticTheory
-     llistTheory optionTheory teaTheory;
+Theory lazy_tea
+Ancestors
+  words pair arithmetic llist option tea
+Libs
+  wordsLib
+
 (*
 quietdec := false;
 *)
-
-(*---------------------------------------------------------------------------*)
-(* Create the theory.                                                        *)
-(*---------------------------------------------------------------------------*)
-
-val _ = new_theory "lazy_tea";
 
 (*---------------------------------------------------------------------------*)
 (* Support for defining a stream of Round computations.                      *)
@@ -106,5 +103,3 @@ val lazy_tea_correct = Q.store_thm
      LNTH_FWD_UNROLL,LNTH_BWD_UNROLL,
      GSYM teaEncrypt_lemma,GSYM teaDecrypt_lemma] THEN
   METIS_TAC [tea_correct]);
-
-val _ = export_theory();

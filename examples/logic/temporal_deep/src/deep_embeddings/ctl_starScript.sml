@@ -1,4 +1,10 @@
-open HolKernel Parse boolLib bossLib;
+Theory ctl_star
+Ancestors
+  prop_logic infinite_path symbolic_kripke_structure full_ltl
+  pred_set symbolic_semi_automaton automaton_formula
+  temporal_deep_mixed pair set_lemmata
+Libs
+  tuerk_tacticsLib res_quanTools numLib Sanity
 
 (*
 quietdec := true;
@@ -15,12 +21,6 @@ map load
   "temporal_deep_mixedTheory", "pairTheory", "set_lemmataTheory"];
 *)
 
-open tuerk_tacticsLib res_quanTools prop_logicTheory infinite_pathTheory
-     symbolic_kripke_structureTheory numLib full_ltlTheory pred_setTheory
-     symbolic_semi_automatonTheory automaton_formulaTheory
-     temporal_deep_mixedTheory pairTheory set_lemmataTheory;
-open Sanity;
-
 val _ = hide "S";
 val _ = hide "I";
 
@@ -32,7 +32,6 @@ show_types := false;
 quietdec := false;
 *)
 
-val _ = new_theory "ctl_star";
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val _ = ParseExtras.temp_loose_equality()
 
@@ -974,4 +973,3 @@ val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___TO___CTL_KS_FAIR_SEM =
 
 
 
-val _ = export_theory();

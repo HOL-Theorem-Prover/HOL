@@ -1,13 +1,11 @@
-open HolKernel Parse boolLib bossLib;
+Theory finite_group
+Ancestors
+  list res_quan pred_set extra_pred_set relation extra_list
+  arithmetic group subtype extra_num gcd divides extra_arith
+Libs
+  hurdUtils subtypeTools res_quanTools arithContext
+  ho_proverTools listContext pred_setContext groupContext
 
-open listTheory hurdUtils subtypeTools res_quanTools
-     res_quanTheory pred_setTheory extra_pred_setTheory arithContext
-     relationTheory ho_proverTools extra_listTheory listContext
-     arithmeticTheory groupTheory pred_setContext groupContext
-     subtypeTheory extra_numTheory gcdTheory dividesTheory
-     extra_arithTheory;
-
-val _ = new_theory "finite_group";
 val _ = ParseExtras.temp_loose_equality()
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
@@ -899,4 +897,3 @@ val FINITE_SET_SUBGROUP = store_thm
 
 (* non-interactive mode
 *)
-val _ = export_theory ();

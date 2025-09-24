@@ -1,10 +1,11 @@
-open HolKernel boolLib bossLib Parse BasicProvers;
-open listTheory rich_listTheory llistTheory pred_setTheory optionTheory;
+Theory lprefix_lub
+Ancestors
+  list rich_list llist pred_set option
+Libs
+  BasicProvers
 
 val _ = set_trace "Goalstack.print_goal_at_top" 0;
 val _ = ParseExtras.temp_tight_equality();
-
-val _ = new_theory "lprefix_lub";
 
 val IS_PREFIX_FILTER = Q.store_thm("IS_PREFIX_FILTER",
   `∀l1 l2. IS_PREFIX l1 l2 ⇒ IS_PREFIX (FILTER P l1) (FILTER P l2)`,
@@ -624,4 +625,3 @@ Proof
   first_x_assum $ qspec_then ‘Y’ assume_tac>>gvs[Abbr‘Y’]
 QED
 
-val _ = export_theory ();

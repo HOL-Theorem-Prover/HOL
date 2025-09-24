@@ -1,10 +1,9 @@
 
-open HolKernel Parse boolLib bossLib;
-open stringLib integerTheory;
-open listTheory arithmeticTheory optionTheory;
-open impTheory;
-
-val _ = new_theory "listImp";
+Theory listImp
+Ancestors
+  integer list arithmetic option imp
+Libs
+  stringLib
 
 Type vname[local] = ``:string``;
 
@@ -229,4 +228,3 @@ Proof
   simp[]
 QED
 
-val _ = export_theory();

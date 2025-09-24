@@ -3,14 +3,13 @@
  * Copyright 2016-2017  University of Bologna, Italy (Author: Chun Tian)
  * Copyright 2018-2019  Fondazione Bruno Kessler, Italy (Author: Chun Tian)
  *)
+Theory WeakEQ
+Ancestors
+  pred_set relation bisimulation list CCS StrongEQ
+Libs
+  IndDefRules CCSLib
 
-open HolKernel Parse boolLib bossLib;
 
-open pred_setTheory relationTheory bisimulationTheory listTheory IndDefRules;
-
-open CCSLib CCSTheory StrongEQTheory;
-
-val _ = new_theory "WeakEQ";
 val _ = temp_loose_equality ();
 
 (******************************************************************************)
@@ -1815,5 +1814,4 @@ val STRONG_EQUIV_WEAK_TRANS' = store_thm ((* NEW *)
  >> Q.EXISTS_TAC `E2'` >> ASM_REWRITE_TAC []
  >> IMP_RES_TAC STRONG_EQUIV_SYM);
 
-val _ = export_theory ();
 val _ = html_theory "WeakEQ";

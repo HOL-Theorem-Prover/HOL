@@ -1,7 +1,6 @@
-open HolKernel Parse boolLib bossLib
-open arithmeticTheory whileTheory pairTheory pred_setTheory progTheory;
-
-val _ = new_theory "triple";
+Theory triple
+Ancestors
+  arithmetic While pair pred_set prog
 
 val _ = ParseExtras.temp_loose_equality()
 (* we define a total-correctness machine-code Hoare triple *)
@@ -173,4 +172,3 @@ val INTRO_TRIPLE = Q.store_thm("INTRO_TRIPLE",
    Cases \\ SIMP_TAC std_ss [TRIPLE_def]
    )
 
-val _ = export_theory()

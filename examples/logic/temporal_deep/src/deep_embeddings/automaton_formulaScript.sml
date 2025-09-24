@@ -3,20 +3,18 @@
 (*     Automaton formula (symbolic semi-automaton + acceptance_condition)     *)
 (*                                                                            *)
 (******************************************************************************)
+Theory automaton_formula
+Ancestors
+  symbolic_semi_automaton prop_logic xprop_logic set_lemmata
+  pred_set list pair container infinite_path
+  symbolic_kripke_structure temporal_deep_mixed
+Libs
+  tuerk_tacticsLib Sanity
 
-open HolKernel Parse boolLib bossLib;
-
-open symbolic_semi_automatonTheory prop_logicTheory xprop_logicTheory
-     set_lemmataTheory pred_setTheory listTheory pairTheory
-     containerTheory infinite_pathTheory symbolic_kripke_structureTheory
-     tuerk_tacticsLib temporal_deep_mixedTheory;
-
-open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
 
-val _ = new_theory "automaton_formula";
 val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************)
@@ -1520,8 +1518,6 @@ Proof
  >- ASM_SIMP_TAC std_ss [ACCEPT_COND_USED_VARS_def]
  >> ASM_SIMP_TAC std_ss [ACCEPT_VAR_RENAMING_def]
 QED
-
-val _ = export_theory();
 
 (* References:
 

@@ -20,21 +20,12 @@ open
 quietdec := false;                                   (* Restore output       *)
 *)
 
-(*****************************************************************************)
-(* Boilerplate needed for compilation                                        *)
-(*****************************************************************************)
+Theory LTL
+Ancestors
+  pred_set
+Libs
+  pred_setLib
 
-open HolKernel Parse boolLib bossLib pred_setTheory pred_setLib;
-
-(*****************************************************************************)
-(* END BOILERPLATE                                                           *)
-(*****************************************************************************)
-
-(******************************************************************************
-* Start a new theory called LTL
-******************************************************************************)
-
-val _ = new_theory "LTL";
 
 (******************************************************************************
 * Syntax
@@ -526,5 +517,3 @@ val Theorem1 =
        THEN RES_TAC
        THEN `SEM M' p' f` by METIS_TAC[PATH_def]
        THEN METIS_TAC[Lemma2,IN_DEF]]);
-
-val _ = export_theory();

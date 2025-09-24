@@ -1,9 +1,10 @@
-open HolKernel Parse boolLib bossLib listTheory rich_listTheory bitTheory
-     markerTheory pairTheory arithmeticTheory wordsTheory wordsLib
-     Serpent_Reference_UtilityTheory Serpent_Reference_SBoxTheory
-     Serpent_Reference_PermutationTheory;
-
-val _ = new_theory "Serpent_Reference_KeySchedule";
+Theory Serpent_Reference_KeySchedule
+Ancestors
+  list rich_list bit marker pair arithmetic words
+  Serpent_Reference_Utility Serpent_Reference_SBox
+  Serpent_Reference_Permutation
+Libs
+  wordsLib
 
 (*32 rounds*)
 
@@ -185,4 +186,3 @@ val makeKeyHatLength = Q.store_thm(
   `132 = 4*(32+1)` by EVAL_TAC THEN
   FULL_SIMP_TAC arith_ss [makeSubKeyLength]);
 
-val _ = export_theory();

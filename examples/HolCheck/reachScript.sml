@@ -1,10 +1,8 @@
-open HolKernel Parse boolLib bossLib
-
-val _ = new_theory("reach");
-
-open pred_setTheory;
-open pred_setLib;
-open setLemmasTheory;
+Theory reach
+Ancestors
+  pred_set setLemmas
+Libs
+  pred_setLib
 
 infix &&; infix 8 by;
 
@@ -113,4 +111,3 @@ THEN SPEC_TAC (``ReachableRec R s``,``P:num -> 'a -> bool``)
 THEN REWRITE_TAC [GSYM BIGUNION_SPLIT]
 THEN ASSUM_LIST PROVE_TAC));
 
-val _ = export_theory();

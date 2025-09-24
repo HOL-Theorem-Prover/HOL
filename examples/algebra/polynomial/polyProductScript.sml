@@ -4,31 +4,18 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polyProduct";
+Theory polyProduct
+Ancestors
+  pred_set list arithmetic number combinatorics divides gcd
+  gcdset monoid group ring field polyDivides polyDivision
+  polynomial polyWeak polyRing polyMonic polyField
+  polyFieldDivision polyEval polyRoot
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory gcdsetTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
-open polyDividesTheory polyDivisionTheory;
-open polynomialTheory polyWeakTheory polyRingTheory;
-
-open polyMonicTheory;
-open polyFieldTheory;
-open polyFieldDivisionTheory;
-open polyEvalTheory;
-open polyRootTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -1981,8 +1968,4 @@ val ring_prod_set_mult_fun_by_partition = store_thm(
   rw[ring_disjoint_bigunion_mult_fun]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)
