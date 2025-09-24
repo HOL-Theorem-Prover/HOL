@@ -693,17 +693,29 @@ fun PURE_FULL_CASE_TAC (g as (asl,w)) =
  in Cases_on `^t` end g;
 
 local
-  fun tot f x = f x handle HOL_ERR _ => NONE
-in
+
+fun tot f x = f x handle HOL_ERR _ => NONE
+
 fun case_rws tyi =
     List.mapPartial I
        [Lib.total TypeBasePure.case_def_of tyi,
         tot TypeBasePure.distinct_of tyi,
         tot TypeBasePure.one_one_of tyi]
+    |> map BODY_CONJUNCTS
+    |> List.concat
 
-fun case_rwlist () =
- itlist (fn tyi => fn rws => case_rws tyi @ rws)
-        (TypeBase.elts()) [];
+val cache = ref (List.concat (map case_rws (TypeBase.elts ())))
+
+fun update_cache tyinfo =
+   let val thms = (case_rws tyinfo)
+   in
+     cache := List.revAppend (thms,!cache)
+   end
+in
+
+val _ = TypeBase.register_update_fn (fn tyinfo => (update_cache tyinfo;tyinfo))
+
+fun case_rwlist () = !cache
 
 (* Add the rewrites into a simpset to avoid re-processing them when
  * (PURE_CASE_SIMP_CONV rws) is called multiple times by EVERY_CASE_TAC.  This
