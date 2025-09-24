@@ -1,6 +1,6 @@
 Theory nat_trans
 Ancestors
-  category functor_
+  category category_functor
 
 val _ = ParseExtras.temp_loose_equality()
 

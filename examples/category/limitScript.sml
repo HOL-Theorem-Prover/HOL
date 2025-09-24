@@ -1,6 +1,6 @@
 Theory limit
 Ancestors
-  category functor_ nat_trans pair
+  category category_functor nat_trans pair
 Libs
   boolSimps SatisfySimps
 

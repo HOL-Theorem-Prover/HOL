@@ -1,6 +1,6 @@
 Theory ens_cat
 Ancestors
-  category functor_ pred_set limit
+  category category_functor pred_set limit
 Libs
   boolSimps SatisfySimps
 
