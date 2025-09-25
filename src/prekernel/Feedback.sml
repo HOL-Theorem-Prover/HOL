@@ -27,7 +27,7 @@ fun mk_hol_error s1 s2 loc mesg =
       source_location  = loc,
       message          = mesg}
 
-val trivial_hol_error = mk_hol_error "" "" locn.Loc_None ""
+val empty_hol_error = mk_hol_error "" "" locn.Loc_None ""
 
 fun dest_hol_error (HOL_ERROR recd) =
   let val {origin_structure, origin_function, source_location, message} = recd
@@ -42,8 +42,8 @@ fun message_of (HOL_ERROR {message,...}) = message
 fun pp_hol_error (err as HOL_ERROR recd) =
   let open HOLPP
       val {origin_structure, origin_function, source_location, message} = recd
-  in if err = trivial_hol_error then
-        add_string "<trivial-hol-error>"
+  in if err = empty_hol_error then
+        add_string "<empty-hol-error>"
      else
      block INCONSISTENT 0 (List.concat [
        [add_string "at ",

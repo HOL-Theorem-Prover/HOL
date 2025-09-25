@@ -6,16 +6,16 @@ sig
        source_location  : locn.locn,
        message          : string}
 
+    val mk_hol_error    : string -> string -> locn.locn -> string -> hol_error
+    val dest_hol_error  : hol_error -> string * string * locn.locn * string
+    val empty_hol_error : hol_error
     val structure_of    : hol_error -> string
     val function_of     : hol_error -> string
     val location_of     : hol_error -> locn.locn
     val message_of      : hol_error -> string
-    val dest_hol_error  : hol_error -> string * string * locn.locn * string
-    val mk_hol_error    : string -> string -> locn.locn -> string -> hol_error
     val set_message     : string -> hol_error -> hol_error
     val set_origin_function : string -> hol_error -> hol_error
     val pp_hol_error    : hol_error -> HOLPP.pretty
-    val trivial_hol_error : hol_error
 
     exception HOL_ERR of hol_error
     exception BATCH_ERR of string

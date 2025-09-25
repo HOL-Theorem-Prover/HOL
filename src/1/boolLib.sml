@@ -6,7 +6,7 @@
 structure boolLib =
 struct
 
-open boolTheory boolSyntax Hol_pp ParseExtras Feedback
+open boolTheory boolSyntax Hol_pp ParseExtras
      Drule Tactical Tactic Thm_cont Conv Rewrite Prim_rec Abbrev DB
      BoundedRewrites TexTokenMap term_tactic
 
@@ -14,7 +14,7 @@ local open TypeBase Ho_Rewrite Psyntax Rsyntax in end
 
 val parse_from_grammars = Parse.parse_from_grammars;
 
-val ERR = mk_HOL_ERR "boolLib"
+val ERR = Feedback.mk_HOL_ERR "boolLib"
 
 (*---------------------------------------------------------------------------
       Stock the rewriter in Ho_Rewrite with some rules not yet
@@ -153,6 +153,7 @@ in
 end
 
 local
+  open Feedback
   fun tac_failure s1 s2 =
       String.concat ["Failed to prove theorem ", s1, ".\n", s2]
 in
