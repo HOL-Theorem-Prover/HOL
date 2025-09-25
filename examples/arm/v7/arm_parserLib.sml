@@ -1248,12 +1248,12 @@ fun mode1_immediate1 thumb m i =
     (dp_opcode m,int_to_thumb2_mode1_immediate i)
     handle HOL_ERR herr =>
       (dp_opcode (swap_opcode m),int_to_thumb2_mode1_immediate (int_one_comp i))
-         handle HOL_ERR _ => raise ERR (function_of herr) (message_of herr)
+         handle HOL_ERR _ => raise ERR (top_function_of herr) (message_of herr)
   else
     (dp_opcode m,int_to_mode1_immediate i)
     handle HOL_ERR herr =>
       (dp_opcode (swap_opcode m),int_to_mode1_immediate (int_one_comp i))
-         handle HOL_ERR _ => raise ERR (function_of herr) (message_of herr);
+         handle HOL_ERR _ => raise ERR (top_function_of herr) (message_of herr);
 
 fun mode1_immediate2 thumb m i =
   if thumb then
@@ -1261,13 +1261,13 @@ fun mode1_immediate2 thumb m i =
     handle HOL_ERR herr =>
       (dp_opcode (swap_opcode m),
        int_to_thumb2_mode1_immediate (intSyntax.mk_negated i))
-         handle HOL_ERR _ => raise ERR (function_of herr) (message_of herr)
+         handle HOL_ERR _ => raise ERR (top_function_of herr) (message_of herr)
   else
     (dp_opcode m,int_to_mode1_immediate i)
     handle HOL_ERR herr =>
       (dp_opcode (swap_opcode m),
        int_to_mode1_immediate (intSyntax.mk_negated i))
-         handle HOL_ERR _ => raise ERR (function_of herr) (message_of herr)
+         handle HOL_ERR _ => raise ERR (top_function_of herr) (message_of herr)
 
 fun mode1_register rm = mk_Mode1_register (mk_word5 0,mk_word2 0,rm);
 

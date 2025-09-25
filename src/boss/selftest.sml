@@ -42,10 +42,10 @@ val _ = tprint "new_type_definition error message"
 val _ =
     ignore (new_type_definition("mytydef", tydef_th))
     handle HOL_ERR herr =>
-           if function_of herr <> "new_type_definition" orelse
-              structure_of herr <> "Theory.Definition" orelse
+           if top_function_of herr <> "new_type_definition" orelse
+              top_structure_of herr <> "Theory.Definition" orelse
               message_of herr <>
-              "at Thm.prim_type_definition: expected a theorem of the form \"?x. P x\""
+              "expected a theorem of the form \"?x. P x\""
            then
              die "FAILED"
            else OK()

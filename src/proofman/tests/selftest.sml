@@ -199,7 +199,10 @@ val _ = List.app testf [
 
 val _ = Parse.current_backend := PPBackEnd.raw_terminal
 
-val _ = app (fn (w,s) => Portable.with_flag(testutils.linewidth,w) tpp s)
+val _ =
+ let fun testr (w,s) =
+       Portable.with_flag(testutils.linewidth,w) tpp s
+ in app testr
             [(20, "f\n  (longterm =\n   longterm)"),
              (20, "f\n  (term001 = term002)"),
              (30, "let\n\
@@ -218,6 +221,7 @@ val _ = app (fn (w,s) => Portable.with_flag(testutils.linewidth,w) tpp s)
                   \     x /\\ y /\\ z)"),
              (80, ">")
             ]
+ end
 
 val _ = List.app tpp ["$var$(*\\))", "$var$((*\\z)"]
 

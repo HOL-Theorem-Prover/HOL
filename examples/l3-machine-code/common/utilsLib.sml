@@ -1212,7 +1212,7 @@ local
                         in
                            List.map (fn x => Term.mk_comb (t, x)
                            handle (e as HOL_ERR herr) =>
-                             if function_of herr = "mk_comb" then
+                             if top_function_of herr = "mk_comb" then
                                 (Parse.print_term t; print "\n";
                                  Parse.print_term x; raise ERR "buildAst" "")
                              else raise e) l

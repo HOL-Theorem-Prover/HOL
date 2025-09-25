@@ -1195,7 +1195,7 @@ in
               state_with_pcinc ``2w:word32`` :: fst (Term.match_term v1 pat))
              handle (e as HOL_ERR herr) =>
                  if message_of herr = "different constructors" andalso
-                    function_of herr = "raw_match_term" then
+                    top_function_of herr = "raw_match_term" then
                      (DecodeThumb2,
                      state_with_pcinc ``4w:word32`` :: fst (Term.match_term v2 pat))
                  else raise e
@@ -1919,7 +1919,7 @@ in
                       ; raise ERR "eval" "more than one valid step theorem"))
             handle (e as HOL_ERR herr) =>
                if message_of herr = "not found" andalso
-                  function_of herr = "find_rw" then
+                  top_function_of herr = "find_rw" then
                  raise (Parse.print_term tm
                         ; print "\n"
                         ; ERR "eval" "instruction instance not supported")
@@ -1970,7 +1970,7 @@ in
                       REWRITE_RULE ineq_hyps thm4)
                val r = get_state thm4
                        handle (e as HOL_ERR herr) =>
-                         if function_of herr = "dest_pair" then
+                         if top_function_of herr = "dest_pair" then
                             (Parse.print_thm thm4
                              ; print "\n"
                              ; raise ERR "eval_thumb" "failed to fully evaluate")

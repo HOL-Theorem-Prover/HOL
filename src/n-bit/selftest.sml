@@ -93,7 +93,7 @@ fun test_counter (c:conv) tm = let
                        else
                          SOME "bad counterexample"
                    | HOL_ERR herr =>
-                         SOME ("unexpected exception from " ^ function_of herr)
+                         SOME ("unexpected exception from " ^ top_function_of herr)
 in
   tprint ("Counterexample: " ^ trunc 49 tm);
   case res of

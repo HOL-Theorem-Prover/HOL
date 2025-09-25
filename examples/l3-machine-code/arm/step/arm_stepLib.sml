@@ -2584,7 +2584,7 @@ in
             handle (e as HOL_ERR herr) =>
               if message_of herr = "not found" then
                  raise Conv.UNCHANGED else
-              if function_of herr = "singleton_of_list" then
+              if top_function_of herr = "singleton_of_list" then
                  raise ERR "arm_decode" "more than one matching decode pattern"
               else raise e
          val FALL_CONV =
@@ -4180,7 +4180,7 @@ in
                       ; raise ERR "eval" "more than one valid step theorem"))
             handle (e as HOL_ERR herr) =>
                if message_of herr = "not found" andalso
-                  function_of herr  = "find_rw" then
+                  top_function_of herr  = "find_rw" then
                  raise (Parse.print_term tm
                         ; print "\n"
                         ; ERR "eval" "instruction instance not supported")

@@ -278,7 +278,9 @@ in
       | [x] => x
       | l => List.last (mlibUseful.sort_map neg_count Int.compare l))
     handle (e as HOL_ERR herr) =>
-      if message_of herr = "not found" andalso function_of herr = "find_rw" then
+      if message_of herr = "not found" andalso
+         top_function_of herr = "find_rw"
+      then
          err tm "instruction instance not supported"
       else raise e
 end

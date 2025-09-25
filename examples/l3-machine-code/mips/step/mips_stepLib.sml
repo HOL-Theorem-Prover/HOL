@@ -1094,7 +1094,7 @@ in
                         ; err "more than one valid step theorem"))
               handle (e as HOL_ERR herr) =>
                 if message_of herr = "not found" andalso
-                   function_of herr = "find_rw"
+                   top_function_of herr = "find_rw"
                   then err "instruction instance not supported"
                 else raise e
             end

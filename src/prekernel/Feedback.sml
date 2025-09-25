@@ -28,15 +28,18 @@ datatype hol_error =
      {origins : origin list,
       message : string}
 
+fun origins_of (HOL_ERROR {origins,...}) = origins
+fun message_of (HOL_ERROR {message,...}) = message
+
 fun mk_hol_error s1 s2 loc mesg =
   HOL_ERROR
     {origins = [mk_origin s1 s2 loc],
      message = mesg}
 
 fun wrap_hol_error s f l (HOL_ERROR {origins,message}) =
-    HOL_ERROR
-       {origins = mk_origin s f l::origins,
-        message = message}
+  HOL_ERROR
+     {origins = mk_origin s f l::origins,
+      message = message}
 
 val empty_hol_error =
   HOL_ERROR
@@ -54,9 +57,6 @@ fun empty_origins_error sfn =
 exception HOL_ERR of hol_error;
 
 exception BATCH_ERR of string;
-
-fun origins_of (HOL_ERROR {origins,...}) = origins
-fun message_of (HOL_ERROR {message,...}) = message
 
 fun top_structure_of herr =
   case origins_of herr
@@ -205,7 +205,7 @@ end
 
 (*---------------------------------------------------------------------------
     Support for backtracing exceptions, treating HOL_ERR specially.
-    Subtlety: if we see that the exception is an Interrupt, we raise it.
+    If we see that the exception is an Interrupt, we raise it.
  ---------------------------------------------------------------------------*)
 
 fun wrap_exn_loc s f l e =
@@ -220,14 +220,13 @@ fun HOL_MESG s =
   if !emit_MESG then !MESG_outstream (!MESG_to_string s) else ()
 
 fun HOL_PROGRESS_MESG (start, finish) f x =
-   if !emit_MESG then
-     let
-     in
+  if !emit_MESG then
+    let in
        !MESG_outstream ("<<HOL message: " ^ start);
        f x before
        !MESG_outstream (finish ^ ">>\n")
      end
-   else f x
+  else f x
 
 fun HOL_WARNING s1 s2 s3 =
     if !WARNINGs_as_ERRs then raise mk_HOL_ERR s1 s2 s3

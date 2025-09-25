@@ -9,7 +9,7 @@ fun okparse_exnstruct s = s = "Parse" orelse s = "Preterm"
 val _ =
     shouldfail {
       checkexn = fn HOL_ERR herr =>
-                      okparse_exnstruct (structure_of herr)
+                      okparse_exnstruct (top_structure_of herr)
                   | _ => false,
       printarg = (fn s => "Parse should fail: “" ^ s ^ "”"),
       printresult = term_to_string,
@@ -19,7 +19,7 @@ val _ =
 val _ =
     shouldfail {
       checkexn = fn HOL_ERR herr =>
-                      okparse_exnstruct (structure_of herr)
+                      okparse_exnstruct (top_structure_of herr)
                   | _ => false,
       printarg = (fn s => "Parse should be ambiguous: “" ^ s ^ "”"),
       printresult = term_to_string,

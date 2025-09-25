@@ -232,7 +232,7 @@ in
                       |> boolSyntax.rhs |> pred_setSyntax.strip_set |> List.hd
          val tm_thm = (REWRITE_CONV thms THENC Conv.CHANGED_CONV EVAL) tm
                       handle (e as HOL_ERR herr) =>
-                        if function_of herr = "CHANGED_CONV" then
+                        if top_function_of herr = "CHANGED_CONV" then
                            combinTheory.I_THM
                         else raise e
       in
@@ -840,7 +840,7 @@ in
                     | NONE => default (f_upd, l, p, q))
               | (s, l) => default (s, l, p, q) : (term list * term list))
             handle (e as HOL_ERR herr) =>
-              if function_of herr = "dest_thy_const" then
+              if top_function_of herr = "dest_thy_const" then
                   (p, q)
               else raise e
       in
@@ -1454,7 +1454,7 @@ fun chunks_intro_pre_process m_def =
                     PURE_REWRITE_RULE rwts thm
                  end
                  handle (e as HOL_ERR herr) =>
-                   if function_of herr = "EQT_ELIM" then thm else raise e
+                   if top_function_of herr = "EQT_ELIM" then thm else raise e
          end
    end
 
@@ -1474,7 +1474,7 @@ fun chunks_intro be m_def =
             else helperLib.PRE_POST_RULE cnv (Thm.INST (List.concat s) thm)
          end
          handle (e as HOL_ERR herr) =>
-           if function_of herr = "group_into_n" andalso
+           if top_function_of herr = "group_into_n" andalso
               message_of herr = "too few"
             then thm
            else raise e
@@ -1578,7 +1578,7 @@ in
                     end
             end
             handle (e as HOL_ERR herr) =>
-              if function_of herr = "group_into_n" andalso
+              if top_function_of herr = "group_into_n" andalso
                  message_of herr = "too few"
               then thm
               else raise e
