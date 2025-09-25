@@ -618,14 +618,21 @@ fun NOT_EQ_SYM th =
  *                                                                           *
  * [TFM 90.05.08]                                                            *
  * --------------------------------------------------------------------------*)
-
 local
-   val Fth = ASSUME F
+   val eqF_thm =
+      let
+         val (Bvar, _) = dest_forall (concl boolTheory.EQ_CLAUSES)
+         val thm = el 4 $ CONJUNCTS (SPEC Bvar boolTheory.EQ_CLAUSES)
+      in
+         GEN Bvar (SYM thm)
+      end
 in
    fun EQF_INTRO th =
-      IMP_ANTISYM_RULE (NOT_ELIM th)
-                       (DISCH F (CONTR (dest_neg (concl th)) Fth))
-      handle HOL_ERR _ => raise ERR "EQF_INTRO" ""
+     let val t' = dest_neg (concl th)
+     in
+     EQ_MP (SPEC t' eqF_thm) th
+     end
+     handle HOL_ERR _ => raise ERR "EQF_INTRO" ""
 end
 
 (* --------------------------------------------------------------------------*
