@@ -334,6 +334,13 @@ Proof
   ASM_SIMP_TAC bool_ss [UNCURRY_DEF, PAIR_EQ]
 QED
 
+Theorem UNCURRY_PRED:
+  UNCURRY f x <=> ?a b. x = (a,b) /\ f a b
+Proof
+  Q.SPEC_THEN ‘x’ STRIP_ASSUME_TAC pair_CASES >>
+  ASM_SIMP_TAC bool_ss [UNCURRY_DEF, PAIR_EQ]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* pair_Axiom = |- !f. ?fn. !x y. fn (x,y) = f x y                           *)
 (* ------------------------------------------------------------------------- *)

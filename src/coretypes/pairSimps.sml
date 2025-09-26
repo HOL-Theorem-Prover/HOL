@@ -5,7 +5,8 @@ open Lib Parse simpLib pairTheory PairedLambda;
 
 
 val PAIR_ss = BasicProvers.thy_ssfrag "pair"
-
+val _ = TypeBase.add_CaseEqs [UNCURRY_EQ]
+val _ = TypeBase.add_CasePreds [UNCURRY_PRED]
 val fvar = ``f:'a -> 'b -> bool``;
 val paired_forall_ss =
     conv_ss
