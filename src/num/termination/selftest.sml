@@ -77,15 +77,12 @@ fun tdefoutput_pp(th,thopt) =
 fun quietDefn f x =
     Lib.with_flag (Globals.interactive, false) f x
 
-fun repl_mode f x =
-    Lib.with_flag (Globals.interactive, true) f x
-
 val _  =
   shouldfail
     { checkexn = is_struct_HOL_ERR "TotalDefn",
       printarg = K "tDefine: no schematic defs when termination tac is supplied",
       printresult = tdefoutput_pp,
-      testfn = (fn q => repl_mode (TotalDefn.tDefine "foo" q) (WF_REL_TAC ‘$<’))}
+      testfn = (fn q => in_repl_mode (TotalDefn.tDefine "foo" q) (WF_REL_TAC ‘$<’))}
    ‘foo x = if x = 0 then y else foo(x - 1)*2’;
 
 val _  =
@@ -93,7 +90,7 @@ val _  =
     { checkexn = is_struct_HOL_ERR "TotalDefn",
       printarg = K "qDefine: no schematic defs when termination tac is supplied",
       printresult = thm_to_string,
-      testfn = (fn q => repl_mode(TotalDefn.qDefine "foo" q) (SOME (WF_REL_TAC ‘$<’)))}
+      testfn = (fn q => in_repl_mode(TotalDefn.qDefine "foo" q) (SOME (WF_REL_TAC ‘$<’)))}
    ‘foo x = if x = 0 then y else foo(x - 1)*2’;
 
 fun lhs_has_two_args th =

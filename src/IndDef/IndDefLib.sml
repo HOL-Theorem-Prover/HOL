@@ -496,7 +496,7 @@ val parse =
 fun xHol_reln name q =
     Hol_mono_reln name (!the_monoset) (parse q)
     handle e =>
-    render_exn "xHol_reln" (wrap_exn "IndDefLib" "Hol_reln" e)
+    render_exn "xHol_reln" (wrap_exn "IndDefLib" "xHol_reln" e)
 
 fun name_from_def t = let
   open boolSyntax

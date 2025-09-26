@@ -155,18 +155,22 @@ end
 local
   open Feedback
   fun tac_failure s1 s2 =
-      String.concat ["Failed to prove theorem ", s1, ".\n", s2]
+      String.concat ["Failed to prove theorem ", Lib.quote s1, ":\n", s2]
 in
 fun store_thm_at loc (n0,t,tac) =
   let val attrblock = ThmAttribute.extract_attributes n0
-      val th = Tactical.prove(t,tac) handle HOL_ERR herr =>
-          let val err_mesg = tac_failure (#thmname attrblock) (message_of herr)
-              val err = HOL_ERR (set_message err_mesg herr)
-          in raise wrap_exn "boolLib" "store_thm_at" err end
+      val name = #thmname attrblock
+      val th = Tactical.prove(t,tac)
+               handle HOL_ERR herr =>
+               let val err_mesg = tac_failure name (message_of herr)
+                   val err = HOL_ERR (set_message err_mesg herr)
+               in render_exn "store_thm_at"
+                    (wrap_exn "boolLib" "store_thm_at" err) end
   in
     save_thm_attrs loc (attrblock,th)
+    handle e => render_exn "store_thm_at"
+                    (wrap_exn "boolLib" "store_thm_at" e)
   end
-  handle e => render_exn "store_thm_at" e
 end
 
 val store_thm = store_thm_at DB.Unknown

@@ -229,6 +229,12 @@ fun convtest (nm,conv,tm,expected) =
     timed conv (exncheck c) tm
   end handle InternalDie p => pretty_die p
 
+fun in_batch_mode f x =
+    Lib.with_flag (Globals.interactive, false) f x
+
+fun in_repl_mode f x =
+    Lib.with_flag (Globals.interactive, true) f x
+
 fun check_HOL_ERRexn P e =
     case e of
         HOL_ERR(HOL_ERROR{origin_structure,origin_function,message,...}) =>
