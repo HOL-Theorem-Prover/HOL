@@ -1,2 +1,2 @@
-INCLUDES = $(HOLDIR)/examples/fun-op-sem/imp\
-           $(HOLDIR)/examples/fun-op-sem/listImp
+INCLUDES = $(HOLDIR)/examples/pl-semantics/imp\
+           $(HOLDIR)/examples/pl-semantics/listImp

@@ -1,2 +1,2 @@
 CLINE_OPTIONS = -r
-INCLUDES = imp for small-step ml cbv-lc lprefix_lub
+INCLUDES = imp for small-step ml cbv-lc lprefix_lub listImp coimp itree_decomp
