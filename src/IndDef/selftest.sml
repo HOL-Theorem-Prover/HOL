@@ -85,8 +85,7 @@ val _ = tprint "Can still look at rule_induction data"
 val _ = if can ThmSetData.current_data{settype = "rule_induction"} then OK()
         else die ""
 
-
-val _ = shouldfail {testfn = quietly (xHol_reln "tr"),
+val _ = shouldfail {testfn = quietly (in_repl_mode (xHol_reln "tr")),
                     printresult = (fn (th,_,_) => thm_to_string th),
                     printarg = K "With Unicode should fail",
                     checkexn = is_struct_HOL_ERR "IndDefLib"}
@@ -94,7 +93,7 @@ val _ = shouldfail {testfn = quietly (xHol_reln "tr"),
                     (!x y. ▷ (SUC x) (SUC y) ==> ▷ x y)’
 
 val _ = tprint "Vacuous clause failure"
-val _ = if (Hol_reln `(!x. rel x Z) /\ (!x y. rel x y)` ; false)
+val _ = if (in_repl_mode Hol_reln `(!x. rel x Z) /\ (!x y. rel x y)` ; false)
                handle HOL_ERR herr =>
                       String.isSuffix
                           "Vacuous clause trivialises whole definition"
@@ -102,7 +101,7 @@ val _ = if (Hol_reln `(!x. rel x Z) /\ (!x y. rel x y)` ; false)
         then OK()
         else die "FAILED"
 
-val _ = shouldfail { testfn = quietly (xHol_reln "tr"),
+val _ = shouldfail { testfn = quietly (in_repl_mode (xHol_reln "tr")),
                      printresult = (fn (th,_,_) => thm_to_string th),
                      printarg = K "Double implication should fail",
                      checkexn = (fn(HOL_ERR herr) =>
