@@ -11,14 +11,14 @@
             "iclass_compLib", "io_onestepTheory", "my_listTheory", "armTheory",
             "coreTheory", "lemmasTheory", "interruptsTheory"];
 *)
+Theory block
+Ancestors
+  arithmetic While rich_list bit sum_num words io_onestep my_list
+  arm core lemmas interrupts
+Libs
+  Q wordsLib armLib iclass_compLib
 
-open HolKernel boolLib bossLib;
-open Q arithmeticTheory whileTheory rich_listTheory;
-open bitTheory sum_numTheory wordsLib wordsTheory;
-open armLib iclass_compLib io_onestepTheory my_listTheory;
-open armTheory coreTheory lemmasTheory interruptsTheory;
 
-val _ = new_theory "block";
 val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------- *)
 
@@ -1134,4 +1134,3 @@ val NEXT_CORE_STM_TN_W1 = save_thm("NEXT_CORE_STM_TN_W1",
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory();

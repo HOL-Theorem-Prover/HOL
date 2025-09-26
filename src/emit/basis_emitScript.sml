@@ -1,6 +1,6 @@
 Theory basis_emit
 Ancestors
-  combin pair numeral while arithmetic pred_set option basicSize
+  combin pair numeral While arithmetic pred_set option basicSize
   list rich_list string sum finite_map sorting bit numeral_bit
   fcp words integer integer_word numposrep ASCIInumbers pre_emit
 Libs

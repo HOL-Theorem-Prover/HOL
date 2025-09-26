@@ -15,11 +15,11 @@
 (* Open a new theory and load the inductive definitions library and      *)
 (* other libraries.                                                      *)
 (* --------------------------------------------------------------------- *)
-
-open HolKernel Parse boolLib bossLib
-     listTheory IndDefRules IndDefLib stringLib;
-
-val _ = new_theory "algebra";
+Theory algebra
+Ancestors
+  list string
+Libs
+  IndDefRules IndDefLib stringLib
 
 
 (* ===================================================================== *)
@@ -296,5 +296,3 @@ val BEQUIV_def =
 (* --------------------------------------------------------------------- *)
 (* End of example.                                                       *)
 (* --------------------------------------------------------------------- *)
-
-val _ = export_theory();

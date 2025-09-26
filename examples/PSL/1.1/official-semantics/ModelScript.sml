@@ -35,21 +35,15 @@ open ped_setTheory PSLPathTheory;
 quietdec := false;                        (* Restore output                  *)
 *)
 
-(*****************************************************************************)
-(* Boilerplate needed for compilation                                        *)
-(*****************************************************************************)
+Theory Model
+Ancestors
+  pred_set PSLPath
 
-open HolKernel Parse boolLib bossLib pred_setTheory PSLPathTheory;
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* Start a new theory called ModelTheory                                     *)
-(*****************************************************************************)
-
-val _ = new_theory "Model";
 val _ = ParseExtras.temp_loose_equality()
 
 (*****************************************************************************)
@@ -104,5 +98,3 @@ val PATH_def =
 val COMPUTATION_def =
  Define
   `COMPUTATION M w = ?s. s IN M.S0 /\ PATH M s w`;
-
-val _ = export_theory();

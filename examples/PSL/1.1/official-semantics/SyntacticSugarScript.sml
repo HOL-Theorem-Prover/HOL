@@ -9,33 +9,18 @@
 (*
 quietdec := true;
 map load ["intLib","ClockedSemanticsTheory"];
-val _ = intLib.deprecate_int();
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories
-******************************************************************************)
-open intLib SyntaxTheory;
-
-(******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
-val _ = intLib.deprecate_int();
+Theory SyntacticSugar
+Ancestors
+  Syntax
+Libs
+  intLib
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
-
-(******************************************************************************
-* Start a new theory called SyntacticSugarTheory
-******************************************************************************)
-val _ = new_theory "SyntacticSugar";
 
 (******************************************************************************
 * Ensure term_of_int has correct type
@@ -540,5 +525,3 @@ val F_NUM_WEAK_NEXT_EVENT_E_def =
 val F_SKIP_SUFFIX_IMP_def =
  Define
   `F_SKIP_SUFFIX_IMP(r,f) = F_SUFFIX_IMP(S_CAT(r,S_TRUE), f)`;
-
-val _ = export_theory();

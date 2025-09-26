@@ -41,9 +41,10 @@ A call `new_theory thy` fails if the name `thy` is unsuitable for use as
 a filename. In particular, it should be an alphanumeric identifier.
 
 Failure also occurs if `thy` is the name of a currently loaded theory
-segment. In general, all theory names, whether loaded or not, should be
-distinct. Moreover, the names should be distinct even when case
-distinctions are ignored.
+segment or if is in a set of reserved words that includes all SML and
+HOL keywords (*e.g.,* `if`, `while`, `Definition`). In general, all
+theory names, whether loaded or not, should be distinct. Moreover, the
+names should be distinct even when case distinctions are ignored.
 
 ### Example
 

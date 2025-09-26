@@ -1,8 +1,8 @@
-open HolKernel Parse bossLib boolLib pairTheory relationTheory set_relationTheory pred_setTheory arithmeticTheory whileTheory
+Theory waaSimpl
+Ancestors
+  pair relation set_relation pred_set arithmetic While alterA ltl
+  ltl2waa
 
-open alterATheory ltlTheory ltl2waaTheory
-
-val _ = new_theory "waaSimpl"
 val _ = ParseExtras.temp_loose_equality()
 
 (*
@@ -1828,4 +1828,3 @@ val replace_run_def = Define`
 (* ) *)
 
 
-val _ = export_theory();

@@ -14,24 +14,13 @@ map load
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories
-******************************************************************************)
-open SyntacticSugarTheory ClockedSemanticsTheory;
+Theory Rewrites
+Ancestors
+  SyntacticSugar ClockedSemantics
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
-
-(******************************************************************************
-* Start a new theory called UnclockedSugarSemantics
-******************************************************************************)
-val _ = new_theory "Rewrites";
 
 (******************************************************************************
 * Version 1.1 rules for compiling clocked SEREs to unclocked SEREs
@@ -120,7 +109,3 @@ val F_CLOCK_COMP_def =
    /\
    (F_CLOCK_COMP c (F_WEAK_SERE r) =
      F_WEAK_SERE(S_CLOCK_COMP c r))`;
-
-
-val _ = export_theory();
-

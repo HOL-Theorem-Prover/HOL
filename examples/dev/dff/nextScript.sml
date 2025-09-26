@@ -16,8 +16,13 @@
 (*
 load "bossLib";
 *)
+Theory next
+Ancestors
+  arithmetic prim_rec
+Libs
+  Globals proofManagerLib hol88Lib
 
-open Globals HolKernel Parse boolLib proofManagerLib;
+
 infixr 3 -->;
 infix 8 by;
 infix &&;
@@ -25,14 +30,6 @@ infix ++;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 
 
-open bossLib;
-open arithmeticTheory;
-open prim_recTheory;
-open hol88Lib;
-
-
-(* Create the new theory "next.th"                                      *)
-val _ = new_theory "next";;
 
 (* Definition of Next.  Time t2 is the first (i.e. next) time after t1  *)
 (* when the signal sig is true.                                         *)
@@ -86,4 +83,3 @@ val Next_Unique =
       [RES_TAC, IMP_RES_TAC LESS_CASES_IMP THEN RES_TAC]);
 
 (* Close the theory ``next.th``.                                        *)
-val _ = export_theory();

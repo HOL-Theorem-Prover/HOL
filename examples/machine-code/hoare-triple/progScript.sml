@@ -1,8 +1,8 @@
 
-open HolKernel boolLib bossLib Parse;
-open pred_setTheory arithmeticTheory set_sepTheory tailrecTheory;
+Theory prog
+Ancestors
+  pred_set arithmetic set_sep tailrec
 
-val _ = new_theory "prog";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -321,4 +321,3 @@ val SPEC_SHORT_TAILREC_NEW = store_thm("SPEC_SHORT_TAILREC_NEW",
   \\ MATCH_MP_TAC SPEC_TAILREC_NEW \\ ASM_SIMP_TAC std_ss []);
 
 
-val _ = export_theory();

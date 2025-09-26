@@ -11,33 +11,18 @@ quietdec := true;
 loadPath := "../official-semantics" :: !loadPath;
 map load ["intLib","stringLib","stringTheory","SyntaxTheory"];
 open intLib stringLib stringTheory SyntaxTheory;
-val _ = intLib.deprecate_int();
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories
-******************************************************************************)
-open intLib stringLib stringTheory SyntaxTheory;
-
-(******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
-val _ = intLib.deprecate_int();
+Theory SyntacticSugar
+Ancestors
+  string Syntax
+Libs
+  intLib stringLib
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
-
-(******************************************************************************
-* Start a new theory called SyntacticSugarTheory
-******************************************************************************)
-val _ = new_theory "SyntacticSugar";
 
 (******************************************************************************
 * Ensure term_of_int has correct type
@@ -602,5 +587,3 @@ val F_WEAK_WHILENOT_INC_def =
 val F_WEAK_CLOCK_def =
  Define
   `F_WEAK_CLOCK(f,clk) = F_NOT(F_STRONG_CLOCK(F_NOT f, clk))`;
-
-val _ = export_theory();

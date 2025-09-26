@@ -24,26 +24,16 @@ app load
 open SyntaxTheory PSLPathTheory KripkeTheory
      UnclockedSemanticsTheory        (* Needed for S_SEM w c (S_CLOCK(r,c1)) *)
      listTheory rich_listTheory;
-val _ = intLib.deprecate_int();
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories of paths and lists
-******************************************************************************)
-open SyntaxTheory PSLPathTheory KripkeTheory
-     UnclockedSemanticsTheory        (* Needed for S_SEM w c (S_CLOCK(r,c1)) *)
-     listTheory rich_listTheory res_quanLib;
-
-(******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
-val _ = intLib.deprecate_int();
+Theory ClockedSemantics
+Ancestors
+  Syntax PSLPath Kripke
+  UnclockedSemantics (* Needed for S_SEM w c (S_CLOCK(r,c1)) *)
+  list rich_list
+Libs
+  res_quanLib
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -58,10 +48,6 @@ val resq_SS =
    rewrites
     [num_to_def,xnum_to_def,IN_DEF,num_to_def,xnum_to_def,LENGTH_def]];
 
-(******************************************************************************
-* Start a new theory called ClockedSemantics
-******************************************************************************)
-val _ = new_theory "ClockedSemantics";
 val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************
@@ -395,5 +381,3 @@ val F_SEM =
           THEN Q.EXISTS_TAC `i`
           THEN RW_TAC arith_ss [FinitePSLPathTheory.LENGTH_RESTN]
           THEN PROVE_TAC[]]);
-
-val _ = export_theory();

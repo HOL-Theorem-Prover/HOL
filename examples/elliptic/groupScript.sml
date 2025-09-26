@@ -17,11 +17,12 @@ val () = app load
    "primalityTools"];
 val () = quietdec := true;
 *)
+Theory group
+Ancestors
+  option list arithmetic divides gcd pred_set
+Libs
+  metisLib res_quanTools primalityTools
 
-open HolKernel Parse boolLib bossLib metisLib res_quanTools;
-open optionTheory listTheory arithmeticTheory dividesTheory gcdTheory;
-open pred_setTheory;
-open primalityTools;
 
 (*
 val () = quietdec := false;
@@ -31,7 +32,6 @@ val () = quietdec := false;
 (* Start a new theory called "group".                                        *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = new_theory "group";
 val _ = ParseExtras.temp_loose_equality()
 
 val ERR = mk_HOL_ERR "group";
@@ -1549,4 +1549,3 @@ val elgamal_correctness = store_thm
 
 val _ = html_theory "group";
 
-val () = export_theory ();

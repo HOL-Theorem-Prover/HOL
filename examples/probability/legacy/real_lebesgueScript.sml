@@ -1,22 +1,18 @@
 (* ========================================================================= *)
 (* Create "lebesgueTheory" setting up the theory of Lebesgue Integration     *)
 (* ========================================================================= *)
+Theory real_lebesgue
+Ancestors
+  num arithmetic pred_set list combin pair While real seq
+  real_sigma transc lim iterate sigma_algebra real_measure
+  real_borel
+Libs
+  metisLib jrhUtils hurdUtils simpLib realLib realSimps
 
-open HolKernel Parse boolLib bossLib
-
-open metisLib numTheory arithmeticTheory pred_setTheory listTheory combinTheory
-     pairTheory jrhUtils hurdUtils simpLib whileTheory;
-
-open realTheory realLib realSimps seqTheory real_sigmaTheory transcTheory
-     limTheory iterateTheory;
-
-open sigma_algebraTheory real_measureTheory real_borelTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "lebesgue"                                      *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = new_theory "real_lebesgue";
 
 val _ = intLib.deprecate_int ();
 val _ = ratLib.deprecate_rat ();
@@ -3840,4 +3836,3 @@ Proof
  >> METIS_TAC [REAL_LE_ANTISYM]
 QED
 
-val _ = export_theory ();

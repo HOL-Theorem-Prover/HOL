@@ -4,23 +4,16 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "loopDecrease";
+Theory loopDecrease
+Ancestors
+  arithmetic divides number combinatorics list rich_list
+  listRange loop
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open arithmeticTheory dividesTheory numberTheory combinatoricsTheory listTheory
-     rich_listTheory listRangeTheory;
-
-open loopTheory;
-
 val _ = temp_overload_on ("RISING", ``\f. !x:num. x <= f x``);
 val _ = temp_overload_on ("FALLING", ``\f. !x:num. f x <= x``);
 
@@ -2117,8 +2110,4 @@ val loop2_dec_count_upper = store_thm(
   metis_tac[LESS_EQ_REFL]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

@@ -1,7 +1,6 @@
-open HolKernel Parse boolLib bossLib
-open tripleTheory m0_decompTheory
-
-val () = new_theory "m0_core_decomp"
+Theory m0_core_decomp
+Ancestors
+  triple m0_decomp
 
 val _ = Parse.hide "mem"
 
@@ -28,4 +27,3 @@ val M0_ASSERT_def = Define`
 
 val L3_M0_def = Define `L3_M0 = (M0_ASSERT, M0_MODEL)`
 
-val () = export_theory()

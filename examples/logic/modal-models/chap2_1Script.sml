@@ -1,16 +1,7 @@
-open HolKernel Parse boolLib bossLib;
-open chap1Theory;
-open numpairTheory;
-open pred_setTheory;
-open relationTheory;
-open listTheory;
-open arithmeticTheory;
-open set_relationTheory;
-open pairTheory;
-open quantHeuristicsTheory;
-open rich_listTheory;
-
-val _ = new_theory "chap2_1";
+Theory chap2_1
+Ancestors
+  chap1 numpair pred_set relation list arithmetic set_relation
+  pair quantHeuristics rich_list
 
 val irule = fn th => irule th >> rpt conj_tac
 
@@ -775,4 +766,3 @@ val prop_2_15_corollary = store_thm(
   fs[bounded_mor_image_def] >>
   `s IN MODEL.frame.world` by metis_tac[tree_def] >> metis_tac[prop_2_14]);
 
-val _ = export_theory();

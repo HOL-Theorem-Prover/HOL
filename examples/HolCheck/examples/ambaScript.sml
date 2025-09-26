@@ -1,15 +1,15 @@
 
 (* Definitions for AMBA SoC bus protocol. See AMBA Specification v2.0 from ARM for details  *)
 (* This file mainly demos composing of model checked APB and AHB theorems using HOL *)
+Theory amba
+Ancestors
+  amba_ahb amba_apb mod16 ks muSyntax setLemmas env
+Libs
+  boolSyntax Ho_Rewrite Tactical Tactic PairRules pairSyntax
+  Drule amba_common bddTools commonTools decompTools
 
-open HolKernel Parse boolLib bossLib
-
-val _ = new_theory "amba"
 
 (* app load ["bddTools","amba_apb_def","mod16Theory","amba_ahb_def","decompTools","envTheory"]; *)
-
-open boolSyntax bossLib Ho_Rewrite Tactical Tactic PairRules pairSyntax Drule
-open amba_ahbTheory amba_apbTheory amba_common bddTools mod16Theory commonTools decompTools ksTheory muSyntaxTheory setLemmasTheory envTheory
 
 val ahb_nm = 8;  (* 1..16 *)
 val ahb_ns = 16; (* 1..16 *)
@@ -156,4 +156,3 @@ mk_par_sync_comp_thm (amba_gpscth,amba_ks1_def,
 for some APB property f
 *)
 
-val _ = export_theory()

@@ -1,17 +1,15 @@
 
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_compiler_op";
+Theory lisp_compiler_op
+Ancestors
+  lisp_sexp lisp_inv lisp_ops lisp_bigops lisp_codegen lisp_init
+  lisp_symbols lisp_sexp lisp_inv lisp_parse lisp_semantics
+  lisp_alt_semantics lisp_compiler prog words arithmetic list
+  pred_set pair combin finite_map address sum set_sep bit fcp
+  string option relation lisp_compiler lisp_semantics
+Libs
+  compilerLib decompilerLib codegenLib wordsLib helperLib
+
 val _ = ParseExtras.temp_loose_equality()
-
-open compilerLib decompilerLib codegenLib;
-
-open lisp_sexpTheory lisp_invTheory lisp_opsTheory lisp_bigopsTheory;
-open lisp_codegenTheory lisp_initTheory lisp_symbolsTheory
-open lisp_sexpTheory lisp_invTheory lisp_parseTheory;
-open lisp_semanticsTheory lisp_alt_semanticsTheory lisp_compilerTheory progTheory;
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory helperLib sumTheory;
-open set_sepTheory bitTheory fcpTheory stringTheory optionTheory relationTheory;
 
 val _ = let
   val thms = DB.match [] ``SPEC X64_MODEL``
@@ -26,8 +24,6 @@ val _ = let
   max_print_depth := 40;
 
 *)
-
-open lisp_compilerTheory lisp_semanticsTheory;
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -4769,4 +4765,3 @@ val X64_BYTECODE_JUMP_SYM = save_thm("X64_BYTECODE_JUMP_SYM",
   |> (fn th => SPEC_COMPOSE_RULE [th,X64_LISP_JUMP_TO_CODE_NO_RET])
   |> SIMP_RULE std_ss [isVal_def,getVal_def,SEP_CLAUSES]);
 
-val _ = export_theory();

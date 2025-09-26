@@ -10,12 +10,11 @@
 (* Interactive use:
    app load ["bossLib", "Q", "pred_setTheory", "stringTheory", "dBTheory"];
 *)
-
-open HolKernel Parse boolLib
-     bossLib arithmeticTheory pred_setTheory dBTheory
-     BasicProvers basic_swapTheory
-
-val _ = new_theory "nc";
+Theory nc
+Ancestors
+  arithmetic pred_set dB basic_swap
+Libs
+  BasicProvers
 
 
 (*---------------------------------------------------------------------------
@@ -1120,4 +1119,3 @@ val size_nonzero = store_thm(
   ``!t. 0 < size t``,
   HO_MATCH_MP_TAC nc_INDUCTION THEN SRW_TAC [numSimps.ARITH_ss][size_thm]);
 
-val _ = export_theory();

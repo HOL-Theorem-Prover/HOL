@@ -1,9 +1,9 @@
-open HolKernel Parse boolLib bossLib;
+Theory subtype
+Ancestors
+  combin pred_set res_quan pair
+Libs
+  hurdUtils ho_proverTools
 
-open combinTheory pred_setTheory hurdUtils res_quanTheory ho_proverTools
-     pairTheory;
-
-val _ = new_theory "subtype";
 val _ = ParseExtras.temp_loose_equality()
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ##;
@@ -215,4 +215,3 @@ val PAIRED_BETA_THM = store_thm
 
 (* non-interactive mode
 *)
-val _ = export_theory ();

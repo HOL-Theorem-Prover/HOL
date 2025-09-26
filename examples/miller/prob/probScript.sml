@@ -1,18 +1,13 @@
-open HolKernel Parse boolLib bossLib;
+Theory prob
+Ancestors
+  arithmetic pred_set res_quan list rich_list pair combin real
+  seq state_transformer extra_list extra_real extra_bool
+  extra_num sigma_algebra real_measure real_probability subtype
+  extra_pred_set prob_algebra prob_canon sequence
+Libs
+  simpLib realLib numSyntax hurdUtils ho_proverTools
+  extra_pred_setTools prob_canonTools sequenceTools
 
-open arithmeticTheory pred_setTheory simpLib res_quanTheory
-     listTheory rich_listTheory pairTheory combinTheory
-     realTheory realLib seqTheory state_transformerTheory numSyntax;
-
-open extra_listTheory hurdUtils extra_realTheory extra_boolTheory
-     ho_proverTools extra_numTheory;
-
-open sigma_algebraTheory real_measureTheory real_probabilityTheory;
-open subtypeTheory extra_pred_setTheory extra_pred_setTools;
-open prob_algebraTheory prob_canonTools prob_canonTheory;
-open sequenceTheory sequenceTools;
-
-val _ = new_theory "prob";
 val _ = ParseExtras.temp_loose_equality()
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
@@ -2733,7 +2728,7 @@ Theorem PROB_WHILE_WITNESS_BIND:
     if c a then BIND (b a) (prob_while_witness c b) else UNIT a
 Proof
   simp[FUN_EQ_THM, prob_while_witness_def, UNIT_DEF, BIND_DEF] >>
-  simp[Once whileTheory.OWHILE_THM] >> rw[] >>
+  simp[Once WhileTheory.OWHILE_THM] >> rw[] >>
   rename [‘_ = _ _ (b a s)’] >>
   Cases_on ‘b a s’ >> simp[prob_while_witness_def]
 QED
@@ -2812,7 +2807,7 @@ Proof
            UNIT_DEF, PULL_EXISTS]
    >> qx_gen_tac ‘y’ >> Cases_on ‘OWHILE (c o FST) (UNCURRY b) (a,y)’
    >> simp[]
-   >> gvs[whileTheory.OWHILE_def, AllCaseEqs()]
+   >> gvs[WhileTheory.OWHILE_def, AllCaseEqs()]
    >> PROVE_TAC []
 QED
 
@@ -2848,8 +2843,8 @@ Proof
           (* 2 sub-goals here *)
        >> rename [‘OWHILE _ _ (a,x)’]
        >> Cases_on ‘OWHILE (c o FST) (UNCURRY b) (a,x)’
-       >> gs[whileTheory.OWHILE_EQ_NONE, PULL_EXISTS]
-       >> gvs[whileTheory.OWHILE_def, AllCaseEqs()]
+       >> gs[WhileTheory.OWHILE_EQ_NONE, PULL_EXISTS]
+       >> gvs[WhileTheory.OWHILE_def, AllCaseEqs()]
        >> numLib.LEAST_ELIM_TAC
        >> simp[SF SFY_ss]
        >> metis_tac[])
@@ -2950,8 +2945,8 @@ Proof
                          (* 2 sub-goals here *)
        >> rename [‘OWHILE _ _ (a,x)’]
        >> Cases_on ‘OWHILE (c o FST) (UNCURRY b) (a,x)’
-       >> gs[whileTheory.OWHILE_EQ_NONE, PULL_EXISTS]
-       >> gvs[whileTheory.OWHILE_def, AllCaseEqs()]
+       >> gs[WhileTheory.OWHILE_EQ_NONE, PULL_EXISTS]
+       >> gvs[WhileTheory.OWHILE_def, AllCaseEqs()]
        >> numLib.LEAST_ELIM_TAC
        >> simp[SF SFY_ss]
        >> metis_tac[])
@@ -3846,7 +3841,7 @@ Proof
        >> RW_TAC std_ss [IN_INSERT, DISJ_IMP_THM, FORALL_AND_THM]
        >> Know `?n'. c' n = c n'` >- PROVE_TAC []
        >> DISCH_THEN (MP_TAC o
-                      Ho_Rewrite.ONCE_REWRITE_RULE [whileTheory.LEAST_EXISTS])
+                      Ho_Rewrite.ONCE_REWRITE_RULE [WhileTheory.LEAST_EXISTS])
        >> Q.SPEC_TAC (`LEAST n'. c' n = c n'`, `k`)
        >> Q.PAT_X_ASSUM `X = Y` K_TAC
        >> RW_TAC std_ss []
@@ -3916,7 +3911,7 @@ Proof
    >- (STRIP_TAC
        >> Suff `?h. c h = j m`
        >- (DISCH_THEN (MP_TAC o
-                       Ho_Rewrite.REWRITE_RULE [whileTheory.LEAST_EXISTS])
+                       Ho_Rewrite.REWRITE_RULE [WhileTheory.LEAST_EXISTS])
            >> PROVE_TAC [])
        >> Suff `j m IN range (FST o f)`
        >- PROVE_TAC []
@@ -5190,4 +5185,3 @@ val PROB_TERMINATES_MORGAN = store_thm
    >> Q.EXISTS_TAC `SUC (f a')`
    >> RW_TAC arith_ss []);
 
-val _ = export_theory ();

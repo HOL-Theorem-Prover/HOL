@@ -1,16 +1,15 @@
-open HolKernel Parse boolLib bossLib; val _ = new_theory "lisp_bytecode_step";
+Theory lisp_bytecode_step
+Ancestors
+  lisp_sexp lisp_inv lisp_ops lisp_bigops lisp_codegen lisp_init
+  lisp_symbols lisp_sexp lisp_inv lisp_parse lisp_semantics
+  lisp_compiler lisp_compiler_op prog prog_x64 words arithmetic
+  list pred_set pair combin finite_map address sum set_sep bit
+  fcp string option relation stop_and_copy lisp_cons
+Libs
+  compilerLib decompilerLib codegenLib prog_x64Lib wordsLib
+  helperLib
+
 val _ = ParseExtras.temp_loose_equality()
-
-open lisp_sexpTheory lisp_invTheory lisp_opsTheory lisp_bigopsTheory;
-open lisp_codegenTheory lisp_initTheory lisp_symbolsTheory;
-open lisp_sexpTheory lisp_invTheory lisp_parseTheory;
-open lisp_semanticsTheory lisp_compilerTheory lisp_compiler_opTheory progTheory;
-open compilerLib decompilerLib codegenLib prog_x64Lib prog_x64Theory;
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory helperLib sumTheory;
-open set_sepTheory bitTheory fcpTheory stringTheory optionTheory relationTheory;
-open stop_and_copyTheory lisp_consTheory;
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -1453,4 +1452,3 @@ val (READ_EVAL_PRINT_LOOP_BASE,READ_EVAL_PRINT_LOOP_STEP) = let
 val _ = save_thm("READ_EVAL_PRINT_LOOP_BASE",READ_EVAL_PRINT_LOOP_BASE);
 val _ = save_thm("READ_EVAL_PRINT_LOOP_STEP",READ_EVAL_PRINT_LOOP_STEP);
 
-val _ = export_theory();

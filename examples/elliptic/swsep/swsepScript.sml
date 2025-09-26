@@ -19,9 +19,13 @@ map load
 
 
 *)
-open HolKernel boolLib bossLib;
-open Parse ILTheory listLib preARMTheory finite_mapTheory arm_evalLib arm_rulesTheory armLib wordsLib wordsTheory arithmeticTheory pairTheory listTheory pred_setTheory containerTheory rich_listTheory
-open arm_progTheory progTheory pred_setTheory set_sepLib set_sepTheory arm_instTheory ILTheory sortingTheory;
+Theory swsep
+Ancestors
+  IL preARM finite_map arm_rules words arithmetic pair list
+  pred_set container rich_list arm_prog prog pred_set set_sep
+  arm_inst IL sorting
+Libs
+  listLib arm_evalLib armLib wordsLib set_sepLib
 
 (*
 show_assums := false;
@@ -38,10 +42,6 @@ val _ = hide "regs";
 val _ = hide "mem";
 val _ = hide "M";
 val _ = hide "cond";
-
-
-
-val _ = new_theory "swsep";
 
 
 
@@ -2991,4 +2991,3 @@ REPEAT STRIP_TAC THENL [
 
 
 
-val _ = export_theory();

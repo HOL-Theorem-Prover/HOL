@@ -50,12 +50,12 @@ loadPath := "/NOBACKUP/workspaces/nargeskh/hol4.k.7/examples/ARM/v7/eval" :: !lo
 load "armLib";
 open armLib;
 *)
+Theory MMU
+Ancestors
+  arm_coretypes arm_seq_monad arm_opsem arm
+Libs
+  parmonadsyntax
 
-open HolKernel boolLib bossLib Parse;
-open arm_coretypesTheory arm_seq_monadTheory arm_opsemTheory armTheory;
-open parmonadsyntax;
-
-val _ =  new_theory("MMU");
 
 val _ = overload_on("UNKNOWN", ``ARB:bool``);
 val _ = overload_on("UNKNOWN", ``ARB:word32``);
@@ -443,8 +443,5 @@ val mmu_arm_next_def = Define `mmu_arm_next irpt state  =
         else (* irpt = HW_Irq *)
           take_irq_exception <|proc:=0|>) >>=
       (\u:unit. clear_wait_for_interrupt <|proc:=0|>)) (state with accesses := []))`;
-
-
-val _ = export_theory();
 
 

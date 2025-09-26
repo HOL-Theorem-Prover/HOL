@@ -1,8 +1,9 @@
-open HolKernel boolLib bossLib Parse relationTheory finite_mapTheory
-     listTheory pred_setTheory apply_piTheory ntermTheory nsubstTheory
-     nomsetTheory listTheory ramanaLib ntermLib
-
-val _ = new_theory "nwalk"
+Theory nwalk
+Ancestors
+  relation finite_map list pred_set apply_pi nterm nsubst nomset
+  list
+Libs
+  ramanaLib ntermLib
 
 val (pre_nvwalk_def, pre_nvwalk_indopt) = TotalDefn.xDefineSchema "pre_nvwalk"
  `nvwalk pi v =
@@ -334,4 +335,3 @@ Cases_on `t` THEN
 FULL_SIMP_TAC (srw_ss()) [nvwalk_SUBMAP] THEN
 METIS_TAC [nvwalk_SUBMAP_var])
 
-val _ = export_theory ();

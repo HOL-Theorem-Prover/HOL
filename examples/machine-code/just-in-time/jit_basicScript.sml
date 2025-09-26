@@ -1,18 +1,13 @@
 
-open HolKernel boolLib bossLib Parse;
-open pred_setTheory arithmeticTheory pairTheory listTheory wordsTheory;
-open addressTheory set_sepTheory progTheory prog_x86Theory;
-open wordsLib x86_encodeLib helperLib;
-
-open jit_inputTheory jit_opsTheory jit_codegenTheory;
-
-open export_codeLib;
+Theory jit_basic
+Ancestors
+  pred_set arithmetic pair list words address set_sep prog
+  prog_x86 jit_input jit_ops jit_codegen
+Libs
+  wordsLib x86_encodeLib helperLib export_codeLib
 
 infix \\
 val op \\ = op THEN;
-
-
-val _ = new_theory "jit_basic";
 
 
 val xSTACK2_def = Define `
@@ -109,4 +104,3 @@ val x86_basic_jit = let
 val _ = write_code_to_file "basic-jit.s" x86_basic_jit;
 
 
-val _ = export_theory();

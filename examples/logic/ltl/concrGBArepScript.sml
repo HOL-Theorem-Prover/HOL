@@ -1,8 +1,7 @@
-open HolKernel Parse bossLib boolLib gfgTheory listTheory optionTheory pred_setTheory rich_listTheory arithmeticTheory sortingTheory relationTheory
-
-open sptreeTheory ltlTheory generalHelpersTheory concrRepTheory concrltl2waaTheory buechiATheory
-
-val _ = new_theory "concrGBArep"
+Theory concrGBArep
+Ancestors
+  gfg list option pred_set rich_list arithmetic sorting relation
+  sptree ltl generalHelpers concrRep concrltl2waa buechiA
 
 val _ = set_trace "BasicProvers.var_eq_old" 1
 val _ = diminish_srw_ss ["ABBREV"]
@@ -1863,4 +1862,3 @@ val concr2AbstrGBA_def = Define `
          (concr2AbstrGBA_final (set all_acc_frmls) graph (set aP))
          (POW (set aP))`;
 
-val _ = export_theory();

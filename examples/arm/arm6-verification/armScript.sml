@@ -9,11 +9,12 @@
 (* interactive use:
   app load ["wordsLib", "wordsSyntax", "rich_listTheory", "io_onestepTheory"];
 *)
+Theory arm
+Ancestors
+  rich_list io_onestep words
+Libs
+  Q wordsLib wordsSyntax
 
-open HolKernel boolLib Parse bossLib;
-open Q wordsLib wordsSyntax rich_listTheory io_onestepTheory;
-
-val _ = new_theory "arm";
 
 (* ------------------------------------------------------------------------- *)
 (*  The ARM State Space                                                      *)
@@ -852,5 +853,3 @@ val UPDATE_LT_COMMUTES = store_thm("UPDATE_LT_COMMUTES",
     \\ ASM_SIMP_TAC std_ss [combinTheory.UPDATE_COMMUTES]);
 
 (* ------------------------------------------------------------------------- *)
-
-val _ = export_theory();

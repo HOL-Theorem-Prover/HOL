@@ -13,12 +13,13 @@ app load
    "metisLib","posrealLib","expectationTheory","intLib"];
 quietdec := true;
 *)
+Theory rel
+Ancestors
+  combin list rich_list string integer real poset posreal measure
+  expectation syntax
+Libs
+  intLib realLib metisLib posrealLib
 
-open HolKernel Parse boolLib bossLib intLib realLib metisLib;
-open combinTheory listTheory rich_listTheory stringTheory integerTheory
-     realTheory posetTheory;
-open posrealTheory posrealLib measureTheory;
-open expectationTheory syntaxTheory;
 
 (*
 quietdec := false;
@@ -27,8 +28,6 @@ quietdec := false;
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "rel"                                           *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = new_theory "rel";
 
 (* ------------------------------------------------------------------------- *)
 (* Helpful proof tools                                                       *)
@@ -129,4 +128,3 @@ val rel_def = Define
    (rel (While c b) = \r. expect_lfp (\e. Cond c (wp b e) r))`;
 *)
 
-val _ = export_theory();

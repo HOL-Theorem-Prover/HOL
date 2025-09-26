@@ -13,23 +13,16 @@ GF(p) -- Galois Field of order prime p.
 *)
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-open pred_setTheory arithmeticTheory dividesTheory gcdTheory numberTheory
-     combinatoricsTheory;
-
-(* declare new theory at start *)
-val _ = new_theory "fieldInstances";
+Theory fieldInstances
+Ancestors
+  pred_set arithmetic divides gcd number combinatorics monoid
+  group ring field fieldMap
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-open fieldMapTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -827,8 +820,4 @@ val _ = computeLib.add_persistent_funs["GF_prod_nonzero_inv"];
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

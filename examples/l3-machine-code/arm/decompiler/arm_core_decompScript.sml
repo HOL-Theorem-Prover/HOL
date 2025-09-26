@@ -1,7 +1,6 @@
-open HolKernel Parse boolLib bossLib
-open tripleTheory arm_decompTheory
-
-val () = new_theory "arm_core_decomp"
+Theory arm_core_decomp
+Ancestors
+  triple arm_decomp
 
 (* definition of ARM_ASSERT and L3_ARM *)
 
@@ -75,4 +74,3 @@ val ARM_ASSERT_def = Define`
 
 val L3_ARM_def = Define `L3_ARM = (ARM_ASSERT, ARM_MODEL)`
 
-val () = export_theory()

@@ -8,17 +8,12 @@
    val _ = load "stringLib";
    val _ = load "mesonLib";
  *)
+Theory STE
+Ancestors
+  arithmetic list pair string
+Libs
+  stringLib mesonLib
 
-local
-open boolLib Parse bossLib HolKernel;
-open arithmeticTheory stringLib;
-open listTheory mesonLib pairTheory;
-
-in
-
-(* Creating a new theory that will be called STE *)
-
-val _ = new_theory "STE";
 val _ = ParseExtras.temp_loose_equality()
 infix THEN THENL;
 
@@ -1651,7 +1646,3 @@ val BRIDGETHEOREM2 = store_thm ("BRIDGETHEOREM2",
                                                      [(SYM o SPEC_ALL)
                                                       STE_Impl_def])
                                                     BridgeTheorem));
-
-
-val _ = export_theory();
-end;

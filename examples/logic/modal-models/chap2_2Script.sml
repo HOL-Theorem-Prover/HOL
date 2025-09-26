@@ -1,16 +1,7 @@
-open HolKernel Parse boolLib bossLib;
-open chap1Theory;
-open chap2_1Theory;
-open numpairTheory;
-open pred_setTheory;
-open relationTheory;
-open arithmeticTheory;
-open set_relationTheory;
-open pairTheory;
-
-
-val _ = new_theory "chap2_2";
-
+Theory chap2_2
+Ancestors
+  chap1 chap2_1 numpair pred_set relation arithmetic set_relation
+  pair
 
 (* bisimulation *)
 
@@ -391,4 +382,3 @@ rpt strip_tac >> eq_tac
 >- (strip_tac >> metis_tac[thm_2_20])
 QED
 
-val _ = export_theory();

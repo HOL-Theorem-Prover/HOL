@@ -1492,7 +1492,7 @@ val EXISTS_BIT_LT = save_thm("EXISTS_BIT_LT",
 val LEAST_THM = Q.store_thm("LEAST_THM",
    `!n P. (!m. m < n ==> ~P m) /\ P n ==> ($LEAST P = n)`,
    REPEAT STRIP_TAC
-   \\ IMP_RES_TAC whileTheory.FULL_LEAST_INTRO
+   \\ IMP_RES_TAC WhileTheory.FULL_LEAST_INTRO
    \\ Cases_on `$LEAST P = n`
    >- ASM_REWRITE_TAC []
    \\ `$LEAST P < n` by DECIDE_TAC

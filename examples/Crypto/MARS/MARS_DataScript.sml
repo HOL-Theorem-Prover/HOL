@@ -4,10 +4,10 @@
   open pairTheory wordsTheory listTheory;
   quietdec := false;
 *)
+Theory MARS_Data
+Ancestors
+  pair words
 
-open HolKernel Parse boolLib bossLib pairTheory wordsTheory;
-
-val _ = new_theory "MARS_Data";
 
 (*---------------------------------------------------------------------------*)
 (* Type Definitions                                                          *)
@@ -105,4 +105,3 @@ val DUMMY_KEYS_def = Define`
        0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,
        0w,0w,0w,0w,0w,0w,0w,0w,0w,0w) : keysched`;
 
-val _ = export_theory();

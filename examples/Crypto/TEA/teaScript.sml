@@ -14,15 +14,11 @@
 (*
 app load ["EmitML","wordsLib"];
 *)
-open HolKernel Parse boolLib bossLib;
-open wordsTheory wordsLib pairTheory pairLib basis_emitTheory;
-
-
-(*---------------------------------------------------------------------------*)
-(* Inititialize new theory for TEA                                           *)
-(*---------------------------------------------------------------------------*)
-
-val _ = new_theory "tea";
+Theory tea
+Ancestors
+  words pair basis_emit
+Libs
+  wordsLib pairLib
 
 (*---------------------------------------------------------------------------*)
 (* General stuff                                                             *)
@@ -250,5 +246,3 @@ val _ =
  end
  handle _ => ();
 *)
-
-val _ = export_theory();

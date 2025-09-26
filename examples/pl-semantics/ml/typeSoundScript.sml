@@ -1,6 +1,9 @@
-open HolKernel boolLib bossLib Parse BasicProvers
-     integerTheory stringTheory alistTheory listTheory pred_setTheory
-     pairTheory optionTheory finite_mapTheory arithmeticTheory
+Theory typeSound
+Ancestors
+  integer string alist list pred_set pair option finite_map
+  arithmetic
+Libs
+  BasicProvers
 
 fun term_rewrite tms = let
   fun f tm = ASSUME (list_mk_forall(free_vars tm,tm))
@@ -41,8 +44,6 @@ fun match_exists_tac tm (g as (_,w)) =
     CONV_TAC(RENAME_VARS_CONV vs) >> k
   end g
 (* -- *)
-
-val _ = new_theory"typeSound"
 
 (* TODO: move to HOL standard lib *)
 val LUPDATE_ID = store_thm("LUPDATE_ID",
@@ -2250,4 +2251,3 @@ val eval_type_soundness = Q.store_thm("eval_type_soundness",
   first_assum(match_exists_tac o concl) >> simp[] >>
   BasicProvers.CASE_TAC >> fs[] >> simp[])
 
-val _ = export_theory()

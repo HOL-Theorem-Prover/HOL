@@ -5,33 +5,14 @@ app load
  "ksTheory", "numLib", "setLemmasTheory", "muSyntaxTheory", "muTheory", "res_quanLib",
  "envTheory", "ctlTheory", "metisLib", "res_quanLib"];
 *)
+Theory ctl2mu
+Ancestors
+  pair pred_set list rich_list string sum ks setLemmas muSyntax
+  mu env ctl
+Libs
+  pairLib pairTools pairSyntax pred_setLib stringLib simpLib
+  numLib res_quanLib metisLib res_quanLib
 
-open HolKernel Parse boolLib bossLib
-
-val _ = new_theory "ctl2mu";
-
-open pairTheory;
-open pairLib;
-open pairTools;
-open pairSyntax;
-open pred_setTheory;
-open pred_setLib;
-open stringLib;
-open listTheory;
-open rich_listTheory;
-open simpLib;
-open stringTheory;
-open sumTheory;
-open ksTheory;
-open numLib;
-open setLemmasTheory;
-open muSyntaxTheory
-open muTheory;
-open res_quanLib
-open envTheory
-open ctlTheory
-open metisLib
-open res_quanLib
 
 val _ = numLib.temp_prefer_num();
 
@@ -940,4 +921,3 @@ THEN REWRITE_TAC [combinTheory.K_THM,KS_accfupds]
 THEN METIS_TAC [CTL2MU]))
 
 
-val _ = export_theory();

@@ -1,13 +1,14 @@
 
-open HolKernel boolLib bossLib Parse; val _ = new_theory "multiword";
+Theory multiword
+Ancestors
+  pred_set res_quan arithmetic words bit pair list rich_list
+  relation pair integer fcp ASCIInumbers
+Libs
+  wordsLib
+
 val _ = ParseExtras.temp_loose_equality()
 
 val _ = set_trace "Unicode" 0;
-
-open pred_setTheory res_quanTheory arithmeticTheory wordsLib wordsTheory bitTheory;
-open pairTheory listTheory rich_listTheory relationTheory pairTheory integerTheory;
-open fcpTheory;
-open ASCIInumbersTheory
 
 val _ = numLib.temp_prefer_num();
 
@@ -3578,4 +3579,3 @@ Proof
   \\ qexists_tac `k` \\ fs []
 QED
 
-val _ = export_theory();

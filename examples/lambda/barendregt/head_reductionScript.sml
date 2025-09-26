@@ -5,18 +5,14 @@
 (* AUTHORS : 2005-2011 Michael Norrish                                        *)
 (*         : 2023-2024 Michael Norrish and Chun Tian                          *)
 (* ========================================================================== *)
+Theory head_reduction
+Ancestors
+  relation pred_set list finite_map arithmetic llist path option
+  rich_list pair term appFOLDL chap2 chap3 nomset horeduction
+  term_posns finite_developments basic_swap
+Libs
+  BasicProvers boolSimps hurdUtils binderLib NEWLib
 
-open HolKernel Parse boolLib bossLib BasicProvers;
-
-open boolSimps relationTheory pred_setTheory listTheory finite_mapTheory
-     arithmeticTheory llistTheory pathTheory optionTheory rich_listTheory
-     hurdUtils pairTheory;
-
-open termTheory appFOLDLTheory chap2Theory chap3Theory nomsetTheory binderLib
-     horeductionTheory term_posnsTheory finite_developmentsTheory NEWLib
-     basic_swapTheory;
-
-val _ = new_theory "head_reduction"
 
 val _ = hide "Y";
 
@@ -2660,7 +2656,6 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC >> simp [EL_MEM]
 QED
 
-val _ = export_theory()
 val _ = html_theory "head_reduction";
 
 (* References:

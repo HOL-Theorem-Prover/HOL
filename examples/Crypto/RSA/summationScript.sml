@@ -1,14 +1,14 @@
-open HolKernel Parse boolLib
+Theory summation
+Ancestors
+  arithmetic
+Libs
+  numLib
 
 (* interactive mode
 app load ["bossLib", "arithmeticTheory", "numLib"];
 *)
 
-open bossLib arithmeticTheory numLib;
-
 val ARW = RW_TAC arith_ss;
-
-val _ = new_theory "summation";
 
 val SUMMATION =
  Define
@@ -90,4 +90,3 @@ Term `!i j f. summation (SUC j) i f = summation j i (\n. f (n + 1))`,
   Induct_on `i` THEN ARW[SUMMATION,ADD1]);
 
 
-val _ = export_theory();

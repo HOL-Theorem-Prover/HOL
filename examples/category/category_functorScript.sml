@@ -1,6 +1,7 @@
-open HolKernel Parse boolLib bossLib pred_setTheory categoryTheory;
+Theory category_functor
+Ancestors
+  pred_set category
 
-val _ = new_theory "functor";
 val _ = ParseExtras.temp_loose_equality()
 
 val _ = remove_termtok { term_name = combinpp.toplevel_updname, tok = "(|" }
@@ -1213,5 +1214,3 @@ val bifunctor_functors = Q.store_thm(
   (∀b c. b ∈ B.obj ∧ c ∈ C.obj ⇒ (M b)@@c = (L c)@@b) ⇒
   (∃S. is_functor S ∧ S :- B × C → D ∧
 *)
-
-val _ = export_theory ();

@@ -1,10 +1,9 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory stringTheory stringLib listTheory stringSimps listLib fcpTheory arithmeticTheory;
-open rich_listTheory;
-
-val _ = new_theory "bit_list";
-
+Theory bit_list
+Ancestors
+  words string list fcp arithmetic rich_list
+Libs
+  stringLib stringSimps listLib
 
 (* conversions between ``:bool list`` and ``:num`` *)
 
@@ -218,4 +217,3 @@ val COLLECT_BYTES_n2w_bits2num = store_thm("COLLECT_BYTES_n2w_bits2num",
   THEN FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [w2bits_def,w2n_n2w,bits2num_n2bits]);
 
 
-val _ = export_theory ();

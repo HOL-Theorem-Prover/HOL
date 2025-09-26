@@ -1,14 +1,13 @@
 (*===========================================================================*)
 (*  The RC5 in HOL                                *)
 (*===========================================================================*)
+Theory rc5
+Ancestors
+  arithmetic pair fcp words list sorting pred_set combin
+Libs
+  numLib fcpLib wordsLib listLib hurdUtils
 
-open HolKernel Parse boolLib bossLib;
 
-open arithmeticTheory numLib pairTheory fcpTheory fcpLib wordsTheory wordsLib
-     listTheory listLib sortingTheory pred_setTheory combinTheory hurdUtils;
-
-
-val _ = new_theory "rc5";
 val _ = guessing_word_lengths := true;
 val fcp_ss = std_ss ++ fcpLib.FCP_ss;
 Type    block[pp] = “:word32 # word32”
@@ -609,5 +608,4 @@ Proof
     EVAL_TAC
 QED
 
-val _ = export_theory();
 val _ = html_theory "rc5";

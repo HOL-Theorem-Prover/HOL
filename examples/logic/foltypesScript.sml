@@ -1,9 +1,8 @@
-open HolKernel boolLib Parse bossLib
-
-open binderLib nomdatatype nomsetTheory boolSimps
-     pred_setTheory listTheory quotientLib
-
-val _ = new_theory "foltypes"
+Theory foltypes
+Ancestors
+  nomset pred_set list
+Libs
+  binderLib nomdatatype boolSimps quotientLib
 
 Datatype:
   foterm = V string
@@ -449,4 +448,3 @@ val lifted_results = define_equivalence_type
                faeq_ALL_respects, faeq_rawfv]
   };
 
-val _ = export_theory();

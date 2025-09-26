@@ -1,10 +1,9 @@
-open HolKernel Parse bossLib boolLib
-
-open primrecfnsTheory numpairTheory nlistTheory arithmeticTheory
+(* "primitive recursive number lists" *)
+Theory prnlist
+Ancestors
+  primrecfns numpair nlist arithmetic rich_list
 
 fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
-
-val _ = new_theory "prnlist" (* "primitive recursive number lists" *)
 
 val primrec_ncons = Store_thm(
   "primrec_ncons",
@@ -49,8 +48,6 @@ val primrec_nel = Store_thm(
 
 val primrec_cn = List.nth(CONJUNCTS primrec_rules, 3)
 
-
-open rich_listTheory
 
 val primrec_napp = Store_thm(
   "primrec_napp",
@@ -207,5 +204,3 @@ val WFM_correct = Q.store_thm(
   simp_tac (srw_ss()) [FUN_EQ_THM] >> gen_tac >> COND_CASES_TAC >>
   first_assum (fn th => simp_tac (srw_ss() ++ ARITH_ss) [th]) >>
   simp[WFM_def, nel_correct]);
-
-val _ = export_theory ()

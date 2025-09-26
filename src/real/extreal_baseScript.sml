@@ -4,18 +4,22 @@
 (* Original Authors: Tarek Mhamdi, Osman Hasan, Sofiene Tahar (2013, 2015)   *)
 (* HVG Group, Concordia University, Montreal                                 *)
 (* ------------------------------------------------------------------------- *)
-(* Updated and further enriched by Chun Tian (2018 - 2023)                   *)
+(* Updated and further enriched by Chun Tian (2018 - 2025)                   *)
 (* ------------------------------------------------------------------------- *)
 Theory extreal_base
 Ancestors
-  combin prim_rec arithmetic real iterate real_sigma
+  combin prim_rec arithmetic real iterate real_sigma real_of_rat pred_set
 Libs
   tautLib numLib hurdUtils realLib
 
+val _ = intLib.deprecate_int ();
+val _ = ratLib.deprecate_rat ();
 
 Datatype : (* extreal_TY_DEF *)
     extreal = NegInf | PosInf | Normal real
 End
+
+val extreal_11 = DB.fetch "-" "extreal_11";
 
 (* INFINITY, the vertical position of UTF8.chr 0x2212 is better than "-" *)
 val _ = Unicode.unicode_version {u = "+" ^ UTF8.chr 0x221E,
@@ -45,6 +49,12 @@ Theorem real_normal[simp] :
     !x. real (Normal x) = x
 Proof
     RW_TAC std_ss [real_def]
+QED
+
+Theorem real_infty[simp] :
+    real PosInf = 0 /\ real NegInf = 0
+Proof
+    SIMP_TAC std_ss [real_def]
 QED
 
 Theorem normal_real :
@@ -85,6 +95,18 @@ QED
 
 Theorem real_0[simp] :
     real 0 = 0
+Proof
+    rw [extreal_of_num_def]
+QED
+
+Theorem normal_0:
+    Normal 0 = 0
+Proof
+    rw [extreal_of_num_def]
+QED
+
+Theorem normal_1:
+    Normal 1 = 1
 Proof
     rw [extreal_of_num_def]
 QED
@@ -1184,6 +1206,12 @@ Theorem neg_minus1 :
 Proof
     Cases
  >> RW_TAC real_ss [extreal_ainv_def, extreal_of_num_def, extreal_mul_def]
+QED
+
+Theorem neg_minus1' :
+    !x. -x = Normal (-1) * x
+Proof
+    rw [Once neg_minus1, extreal_of_num_def, extreal_ainv_def]
 QED
 
 (* NOTE: the original unconditional statement is recovered *)
@@ -3531,3 +3559,478 @@ Proof
  >> MATCH_MP_TAC lt_imp_le >> art []
 QED
 
+Theorem real_11 :
+    !x y. x <> PosInf /\ x <> NegInf /\ y <> PosInf /\ y <> NegInf ==>
+         (real x = real y <=> x = y)
+Proof
+    rpt STRIP_TAC
+ >> reverse EQ_TAC >- rw []
+ >> Cases_on ‘x’ >> fs [real_normal]
+ >> Cases_on ‘y’ >> fs [real_normal]
+QED
+
+Theorem pow_real :
+    !x n. x <> PosInf /\ x <> NegInf ==> real x pow n = real (x pow n)
+Proof
+    rw []
+ >> ASM_SIMP_TAC std_ss [GSYM extreal_11, normal_real, pow_not_infty]
+ >> ‘?r. x = Normal r’ by METIS_TAC [extreal_cases]
+ >> gs [real_normal, extreal_pow_def]
+QED
+
+Theorem add_real :
+    !x y. x <> PosInf /\ x <> NegInf /\
+          y <> PosInf /\ y <> NegInf ==> real (x + y) = real x + real y
+Proof
+    rw []
+ >> ASM_SIMP_TAC std_ss [GSYM extreal_11, normal_real, add_not_infty,
+                         GSYM extreal_add_eq]
+QED
+
+Theorem sub_real :
+    !x y. x <> PosInf /\ x <> NegInf /\
+          y <> PosInf /\ y <> NegInf ==> real (x - y) = real x - real y
+Proof
+    rw []
+ >> ASM_SIMP_TAC std_ss [GSYM extreal_11, normal_real, sub_not_infty,
+                         GSYM extreal_sub_eq]
+QED
+
+Theorem mul_real :
+    !x y. x <> PosInf /\ x <> NegInf /\
+          y <> PosInf /\ y <> NegInf ==> real (x * y) = real x * real y
+Proof
+    rpt STRIP_TAC
+ >> ‘?a. x = Normal a’ by METIS_TAC [extreal_cases]
+ >> ‘?b. y = Normal b’ by METIS_TAC [extreal_cases]
+ >> simp [real_normal, extreal_mul_eq]
+QED
+
+(*****************)
+(*    Ceiling    *)
+(*****************)
+
+Definition ceiling_def :
+    ceiling (Normal x) = LEAST (n:num). x <= &n
+End
+
+Theorem CEILING_LBOUND :
+    !x. Normal x <= &(ceiling (Normal x))
+Proof
+    RW_TAC std_ss [ceiling_def]
+ >> LEAST_ELIM_TAC
+ >> REWRITE_TAC [SIMP_REAL_ARCH]
+ >> METIS_TAC [extreal_of_num_def, extreal_le_def]
+QED
+
+Theorem CEILING_UBOUND :
+    !x. (0 <= x) ==> &(ceiling (Normal x)) < (Normal x) + 1
+Proof
+    RW_TAC std_ss [ceiling_def, extreal_of_num_def, extreal_add_def, extreal_lt_eq]
+ >> LEAST_ELIM_TAC
+ >> REWRITE_TAC [SIMP_REAL_ARCH]
+ >> RW_TAC real_ss []
+ >> FULL_SIMP_TAC real_ss [GSYM real_lt]
+ >> PAT_X_ASSUM ``!m. P`` (MP_TAC o Q.SPEC `n-1`)
+ >> RW_TAC real_ss []
+ >> Cases_on `n = 0` >- METIS_TAC [REAL_LET_ADD2, REAL_LT_01, REAL_ADD_RID]
+ >> `0 < n` by RW_TAC real_ss []
+ >> `&(n - 1) < x:real` by RW_TAC real_ss []
+ >> `0 <= n-1` by RW_TAC real_ss []
+ >> `0:real <= (&(n-1))` by RW_TAC real_ss []
+ >> `0 < x` by METIS_TAC [REAL_LET_TRANS]
+ >> Cases_on `n = 1`
+ >- METIS_TAC [REAL_LE_REFL, REAL_ADD_RID, REAL_LTE_ADD2, REAL_ADD_COMM]
+ >> `0 <> n-1` by RW_TAC real_ss []
+ >> `&n - 1 < x` by RW_TAC real_ss [REAL_SUB]
+ >> FULL_SIMP_TAC real_ss [REAL_LT_SUB_RADD]
+QED
+
+(* ========================================================================= *)
+(*   Subsets of extended real numbers                                        *)
+(* ========================================================================= *)
+
+(* convert an extreal set to a real set, used in borelTheory *)
+Definition real_set_def :
+    real_set s = {real x | x <> PosInf /\ x <> NegInf /\ x IN s}
+End
+
+Theorem real_set_empty[simp] :
+    real_set {} = {}
+Proof
+    simp [real_set_def]
+QED
+
+Theorem real_set_infty[simp] :
+    real_set {PosInf} = {} /\ real_set {NegInf} = {}
+Proof
+    simp [real_set_def]
+ >> rw [Once EXTENSION, NOT_IN_EMPTY]
+QED
+
+Theorem normal_real_set :
+    !(s :extreal set). s INTER (IMAGE Normal UNIV) = IMAGE Normal (real_set s)
+Proof
+    rw [Once EXTENSION, real_set_def]
+ >> EQ_TAC >> rw []
+ >- (rename1 ‘Normal y IN s’ \\
+     Q.EXISTS_TAC ‘Normal y’ >> rw [real_normal, extreal_not_infty])
+ >> rename1 ‘Normal (real y) IN s’
+ >> Suff ‘Normal (real y) = y’ >- rw []
+ >> MATCH_MP_TAC normal_real >> art []
+QED
+
+Theorem real_set_UNION :
+    !s t. real_set (s UNION t) = real_set s UNION real_set t
+Proof
+    rw [Once EXTENSION, real_set_def]
+ >> EQ_TAC >> rw [] >> rename1 ‘y <> PosInf’ (* 4 subgoals *)
+ >| [ (* goal 1 (of 4) *)
+      DISJ1_TAC >> Q.EXISTS_TAC ‘y’ >> art [],
+      (* goal 2 (of 4) *)
+      DISJ2_TAC >> Q.EXISTS_TAC ‘y’ >> art [],
+      (* goal 3 (of 4) *)
+      Q.EXISTS_TAC ‘y’ >> simp [],
+      (* goal 4 (of 4) *)
+      Q.EXISTS_TAC ‘y’ >> simp [] ]
+QED
+
+Theorem real_set_INTER :
+    !s t. real_set (s INTER t) = real_set s INTER real_set t
+Proof
+    rw [Once EXTENSION, real_set_def]
+ >> EQ_TAC >> rw [] >> rename1 ‘y <> PosInf’ (* 3 subgoals *)
+ >| [ (* goal 1 (of 3) *)
+      Q.EXISTS_TAC ‘y’ >> art [],
+      (* goal 2 (of 3) *)
+      Q.EXISTS_TAC ‘y’ >> art [],
+      (* goal 3 (of 3) *)
+      rename1 ‘real y = real x’ \\
+     ‘y = x’ by METIS_TAC [real_11] \\
+      Q.EXISTS_TAC ‘y’ >> simp [] ]
+QED
+
+(* new definition based on real_rat_set (q_set), now in real_of_ratTheory *)
+Definition Q_set :
+    Q_set = IMAGE Normal q_set
+End
+
+(* DOUBLE-STRUCK CAPITAL Q, plus a "star" of superscript *)
+val _ = Unicode.unicode_version {u = UTF8.chr 0x211A ^ UTF8.chr 0xA673,
+                                 tmnm = "Q_set"};
+val _ = TeX_notation {hol = "Q_set",
+                      TeX = ("\\ensuremath{\\mathbb{Q}\\HOLTokenSupStar{}}", 1)};
+
+(* old definition as equivalent theorem (not used anywhere) *)
+Theorem Q_set_def :
+    Q_set = {x | ?a b. (x =  (&a / &b)) /\ ((0 :extreal) < &b)} UNION
+            {x | ?a b. (x = -(&a / &b)) /\ ((0 :extreal) < &b)}
+Proof
+    rw [Q_set, real_rat_set_def, extreal_of_num_def, extreal_lt_eq, Once EXTENSION]
+ >> EQ_TAC >> rw []
+ >| [ (* goal 1 (of 4) *)
+      DISJ1_TAC >> qexistsl_tac [‘a’, ‘b’] >> art [] \\
+     ‘&b <> (0 :real)’ by rw [] \\
+     ‘&b <> (0 :extreal)’ by METIS_TAC [extreal_11, extreal_of_num_def] \\
+      rw [extreal_div_eq],
+      (* goal 2 (of 4) *)
+      DISJ2_TAC >> qexistsl_tac [‘a’, ‘b’] >> art [GSYM extreal_ainv_def] \\
+      Suff ‘Normal (&a / &b) = Normal (&a) / Normal (&b)’ >- Rewr \\
+     ‘&b <> (0 :real)’ by rw [] \\
+     ‘&b <> (0 :extreal)’ by METIS_TAC [extreal_11, extreal_of_num_def] \\
+      rw [extreal_div_eq],
+      (* goal 3 (of 4) *)
+      DISJ1_TAC >> Q.EXISTS_TAC ‘&a / &b’ \\
+     ‘&b <> (0 :real)’ by rw [] \\
+     ‘&b <> (0 :extreal)’ by METIS_TAC [extreal_11, extreal_of_num_def] \\
+      rw [extreal_div_eq] \\
+      qexistsl_tac [‘a’, ‘b’] >> art [] >> simp[],
+      (* goal 4 (of 4) *)
+      DISJ2_TAC >> Q.EXISTS_TAC ‘-(&a / &b)’ \\
+     ‘&b <> (0 :real)’ by rw [] \\
+     ‘&b <> (0 :extreal)’ by METIS_TAC [extreal_11, extreal_of_num_def] \\
+      rw [extreal_div_eq, GSYM extreal_ainv_def] \\
+      qexistsl_tac [‘a’, ‘b’] >> art [] >> simp[] ]
+QED
+
+Theorem Q_not_infty :
+    !x. x IN Q_set ==> ?y. x = Normal y
+Proof
+    rw [Q_set]
+QED
+
+Theorem Q_COUNTABLE :
+    countable Q_set
+Proof
+    REWRITE_TAC [Q_set]
+ >> MATCH_MP_TAC image_countable
+ >> REWRITE_TAC [QSET_COUNTABLE]
+QED
+
+Theorem NUM_IN_Q :
+    !n:num. (&n IN Q_set) /\ (-&n IN Q_set)
+Proof
+    rw [Q_set]
+ >| [ (* goal 1 (of 2) *)
+      Q.EXISTS_TAC ‘&n’ \\
+      rw [extreal_of_num_def, NUM_IN_QSET],
+      (* goal 2 (of 2) *)
+      Q.EXISTS_TAC ‘-&n’ \\
+      rw [extreal_of_num_def, NUM_IN_QSET, GSYM extreal_ainv_def] ]
+QED
+
+Theorem Q_INFINITE :
+    INFINITE Q_set
+Proof
+  `{x | ?n:num. x = (&n)} SUBSET Q_set`
+     by (RW_TAC std_ss [SUBSET_DEF,EXTENSION,GSPECIFICATION]
+         >> METIS_TAC [NUM_IN_Q])
+  >> Suff `~(FINITE {x | ?n:num. x = (&n)})`
+  >- METIS_TAC [INFINITE_SUBSET]
+  >> RW_TAC std_ss []
+  >> MATCH_MP_TAC (INST_TYPE [alpha |-> ``:num``] INFINITE_INJ)
+  >> Q.EXISTS_TAC `(\n. &n)`
+  >> Q.EXISTS_TAC `UNIV`
+  >> RW_TAC real_ss [INFINITE_NUM_UNIV, INJ_DEF,GSPECIFICATION]
+  >- METIS_TAC []
+  >> FULL_SIMP_TAC real_ss [extreal_11,extreal_of_num_def]
+QED
+
+Theorem OPP_IN_Q :
+    !x. x IN Q_set ==> -x IN Q_set
+Proof
+    rw [Q_set] >> rename1 ‘x IN q_set’
+ >> Q.EXISTS_TAC ‘-x’
+ >> rw [extreal_ainv_def, OPP_IN_QSET]
+QED
+
+Theorem INV_IN_Q :
+    !x. (x IN Q_set) /\ (x <> 0) ==> 1 / x IN Q_set
+Proof
+    rw [Q_set, extreal_of_num_def, extreal_11] >> rename1 ‘x IN q_set’
+ >> Q.EXISTS_TAC ‘1 / x’
+ >> rw [extreal_div_eq, INV_IN_QSET]
+QED
+
+Theorem ADD_IN_Q :
+    !x y. (x IN Q_set) /\ (y IN Q_set) ==> (x + y IN Q_set)
+Proof
+    rw [Q_set]
+ >> Q.EXISTS_TAC ‘x' + x''’
+ >> rw [extreal_add_def, ADD_IN_QSET]
+QED
+
+Theorem SUB_IN_Q :
+    !x y. (x IN Q_set) /\ (y IN Q_set) ==> (x - y IN Q_set)
+Proof
+    rw [Q_set]
+ >> Q.EXISTS_TAC ‘x' - x''’
+ >> rw [extreal_sub_def, SUB_IN_QSET]
+QED
+
+Theorem MUL_IN_Q :
+    !x y. (x IN Q_set) /\ (y IN Q_set) ==> (x * y IN Q_set)
+Proof
+    rw [Q_set]
+ >> Q.EXISTS_TAC ‘x' * x''’
+ >> rw [extreal_mul_def, MUL_IN_QSET]
+QED
+
+Theorem DIV_IN_Q :
+    !x y. (x IN Q_set) /\ (y IN Q_set) /\ (y <> 0) ==> (x / y IN Q_set)
+Proof
+    rw [Q_set, extreal_of_num_def, extreal_11]
+ >> Q.EXISTS_TAC ‘x' / x''’
+ >> rw [extreal_div_eq, DIV_IN_QSET]
+QED
+
+Theorem CMUL_IN_Q :
+    !z:num x. x IN Q_set ==> (&z * x IN Q_set) /\ (-&z * x IN Q_set)
+Proof
+    rpt STRIP_TAC
+ >| [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC MUL_IN_Q >> art [NUM_IN_Q],
+      (* goal 2 (of 2) *)
+      MATCH_MP_TAC MUL_IN_Q >> art [NUM_IN_Q] ]
+QED
+
+Theorem rat_not_infty :
+    !r. r IN Q_set ==> r <> NegInf /\ r <> PosInf
+Proof
+    rw [Q_set]
+QED
+
+Theorem Q_DENSE_IN_R_LEMMA :
+    !x y. 0 <= x /\ x < y ==> ?r. r IN Q_set /\ x < r /\ r < y
+Proof
+    rw [Q_set]
+ >> Cases_on ‘x = PosInf’ >- fs [lt_infty]
+ >> Know ‘x <> NegInf’ >- (MATCH_MP_TAC pos_not_neginf >> art [])
+ >> DISCH_TAC
+ >> ‘0 <= real x’
+      by (rw [GSYM extreal_le_eq, normal_real, GSYM extreal_of_num_def])
+ >> Cases_on ‘y = PosInf’
+ >- (rw [GSYM lt_infty] \\
+     MP_TAC (Q.SPECL [‘real x’, ‘real x + 1’] Q_DENSE_IN_REAL_LEMMA) \\
+    ‘real x < real x + 1’ by rw [REAL_LT_ADDR] \\
+     RW_TAC std_ss [] \\
+     Q.EXISTS_TAC ‘Normal r’ >> rw [extreal_not_infty] \\
+    ‘x = Normal (real x)’ by METIS_TAC [normal_real] >> POP_ORW \\
+     rw [extreal_lt_eq])
+ >> Know ‘y <> NegInf’
+ >- (MATCH_MP_TAC pos_not_neginf \\
+     MATCH_MP_TAC lt_imp_le \\
+     MATCH_MP_TAC let_trans \\
+     Q.EXISTS_TAC ‘x’ >> art [])
+ >> DISCH_TAC
+ >> MP_TAC (Q.SPECL [‘real x’, ‘real y’] Q_DENSE_IN_REAL_LEMMA)
+ >> ‘real x < real y’ by METIS_TAC [GSYM extreal_lt_eq, normal_real]
+ >> RW_TAC std_ss []
+ >> Q.EXISTS_TAC ‘Normal r’ >> rw []
+ >| [ (* goal 1 (of 2) *)
+     ‘x = Normal (real x)’ by METIS_TAC [normal_real] >> POP_ORW \\
+      rw [extreal_lt_eq],
+      (* goal 2 (of 2) *)
+     ‘y = Normal (real y)’ by METIS_TAC [normal_real] >> POP_ORW \\
+      rw [extreal_lt_eq] ]
+QED
+
+Theorem Q_DENSE_IN_R :
+    !x y. (x < y) ==> ?r. (r IN Q_set) /\ (x < r) /\ (r < y)
+Proof
+    RW_TAC std_ss []
+ >> Cases_on `0<=x` >- RW_TAC std_ss [Q_DENSE_IN_R_LEMMA]
+ >> FULL_SIMP_TAC std_ss [GSYM extreal_lt_def]
+ >> `y <> NegInf` by METIS_TAC [lt_infty]
+ >> (Cases_on `y` >> RW_TAC std_ss [])
+ >- (Q.EXISTS_TAC `0` \\
+      METIS_TAC [NUM_IN_Q,extreal_of_num_def,extreal_not_infty,lt_infty])
+ >> `x <> PosInf`
+      by METIS_TAC [lt_infty,lt_trans,extreal_not_infty,extreal_of_num_def]
+ >> Cases_on `x = NegInf`
+ >- (Cases_on `0<=r`
+     >- (Q.EXISTS_TAC ‘&ceiling (Normal r) - 1’ \\
+         RW_TAC std_ss [extreal_of_num_def, extreal_sub_def, extreal_not_infty,
+                        lt_infty, extreal_lt_eq]
+         >- METIS_TAC [SUB_IN_Q,NUM_IN_Q,extreal_sub_def,extreal_of_num_def]
+         >> METIS_TAC [CEILING_UBOUND,REAL_LT_SUB_RADD,extreal_of_num_def,
+                       extreal_lt_eq,extreal_add_def])
+     >> Q.EXISTS_TAC `- &ceiling (Normal (-r)) - 1`
+     >> RW_TAC std_ss [extreal_of_num_def,extreal_sub_def,extreal_not_infty,
+                       lt_infty,extreal_lt_eq,extreal_ainv_def]
+     >- METIS_TAC [SUB_IN_Q,NUM_IN_Q,extreal_sub_def,extreal_of_num_def,OPP_IN_Q,
+                   extreal_ainv_def]
+     >> (MP_TAC o Q.SPEC `-r`) CEILING_LBOUND
+     >> RW_TAC std_ss [extreal_of_num_def,extreal_le_def]
+     >> POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM REAL_LE_NEG])
+     >> RW_TAC std_ss [REAL_NEG_NEG]
+     >> METIS_TAC [REAL_LT_SUB_RADD,REAL_LET_TRANS,REAL_LT_ADDR,REAL_LT_01])
+ >> `?r. x = Normal r` by METIS_TAC [extreal_cases]
+ >> FULL_SIMP_TAC std_ss [extreal_of_num_def,extreal_lt_eq]
+ >> `Normal (-r') <= &(ceiling (Normal (-r')))` by RW_TAC real_ss [CEILING_LBOUND]
+ >> `-Normal (r') <= &ceiling (Normal (-r'))` by METIS_TAC [extreal_ainv_def]
+ >> `0 <= Normal (r') + &(ceiling (Normal (-r')))`
+        by METIS_TAC [le_lneg,extreal_of_num_def,extreal_add_def,extreal_not_infty]
+ >> `&(ceiling (Normal (-r'))) <> NegInf /\ &(ceiling (Normal (-r'))) <> PosInf`
+     by METIS_TAC [extreal_of_num_def,extreal_not_infty]
+ >> `Normal (r') + &(ceiling (Normal (-r'))) < Normal (r) + &(ceiling (Normal (-r')))`
+    by METIS_TAC [extreal_lt_eq,lt_radd]
+ >> Suff `?r2. (r2 IN Q_set) /\ (Normal r' + &ceiling (Normal (-r')) < r2) /\
+               (r2 < Normal r + &ceiling (Normal (-r')))`
+ >- (RW_TAC std_ss []
+     >> Q.EXISTS_TAC `r2 - &ceiling (Normal (-r'))`
+     >> CONJ_TAC >- METIS_TAC [SUB_IN_Q,NUM_IN_Q,extreal_of_num_def]
+     >> `?y. r2 = Normal y` by METIS_TAC [Q_not_infty]
+     >> FULL_SIMP_TAC std_ss [extreal_of_num_def,extreal_lt_eq,extreal_le_def,
+                              extreal_sub_def,extreal_add_def]
+     >> RW_TAC std_ss [GSYM REAL_LT_ADD_SUB,REAL_LT_SUB_RADD])
+ >> RW_TAC std_ss [Q_DENSE_IN_R_LEMMA]
+QED
+
+(* NOTE: This version asserts a real number instead of extreal number. *)
+Theorem Q_DENSE_IN_R' :
+    !x y. x < y ==> ?r. r IN q_set /\ x < Normal r /\ Normal r < y
+Proof
+    rpt STRIP_TAC
+ >> drule Q_DENSE_IN_R >> rw [Q_set]
+ >> rename1 ‘r IN q_set’
+ >> Q.EXISTS_TAC ‘r’ >> art []
+QED
+
+Theorem COUNTABLE_ENUM_Q :
+    !c. countable c <=> (c = {}) \/ (?f:extreal->'a. c = IMAGE f Q_set)
+Proof
+  RW_TAC std_ss []
+  >> reverse EQ_TAC
+  >- (NTAC 2 (RW_TAC std_ss [countable_EMPTY])
+      >> RW_TAC std_ss [image_countable, Q_COUNTABLE])
+  >> reverse (RW_TAC std_ss [COUNTABLE_ALT_BIJ])
+  >- (DISJ2_TAC
+      >> `countable Q_set` by RW_TAC std_ss [Q_COUNTABLE]
+      >> `~(FINITE Q_set)` by RW_TAC std_ss [Q_INFINITE]
+      >> (MP_TAC o Q.SPEC `Q_set`)
+           (INST_TYPE [alpha |-> ``:extreal``] COUNTABLE_ALT_BIJ)
+      >> RW_TAC std_ss []
+      >> (MP_TAC o Q.SPECL [`enumerate Q_set`,`UNIV`,`Q_set`])
+                (INST_TYPE [alpha |-> ``:num``, ``:'b`` |-> ``:extreal``] BIJ_INV)
+      >> (MP_TAC o Q.SPECL [`enumerate c`,`UNIV`,`c`])
+                (INST_TYPE [alpha |-> ``:num``, ``:'b`` |-> ``:'a``] BIJ_INV)
+      >> RW_TAC std_ss []
+      >> Q.EXISTS_TAC `(enumerate c) o g'`
+      >> RW_TAC std_ss [IMAGE_DEF,EXTENSION,GSPECIFICATION]
+      >> EQ_TAC
+      >- (RW_TAC std_ss []
+          >> Q.EXISTS_TAC `enumerate Q_set (g x)`
+          >- METIS_TAC [BIJ_DEF,INJ_DEF]
+          >> METIS_TAC [BIJ_DEF,INJ_DEF])
+      >> RW_TAC std_ss []
+      >> METIS_TAC [BIJ_DEF,INJ_DEF])
+  >> POP_ASSUM MP_TAC
+  >> Q.SPEC_TAC (`c`, `c`)
+  >> HO_MATCH_MP_TAC FINITE_INDUCT
+  >> RW_TAC std_ss []
+  >- (DISJ2_TAC
+      >> Q.EXISTS_TAC `K e`
+      >> RW_TAC std_ss [EXTENSION, IN_SING, IN_IMAGE, IN_UNIV, K_THM]
+      >> EQ_TAC
+      >- (RW_TAC std_ss [] >> Q.EXISTS_TAC `0` >> METIS_TAC [NUM_IN_Q])
+      >> RW_TAC std_ss [])
+  >> DISJ2_TAC
+  >> ASSUME_TAC (Q.SPECL [`f:extreal->'a`,`Q_set`,`IMAGE f Q_set`]
+                         (INST_TYPE [alpha |-> ``:extreal``, ``:'b`` |-> ``:'a``]
+                                    INFINITE_INJ))
+  >> `~(INJ f Q_set (IMAGE f Q_set))` by METIS_TAC [MONO_NOT,Q_INFINITE]
+  >> FULL_SIMP_TAC std_ss [INJ_DEF] >- METIS_TAC [IN_IMAGE]
+  >> Q.EXISTS_TAC `(\u. if u=x then e else f u)`
+  >> `Q_set = (Q_set DIFF {x}) UNION {x}`
+        by (RW_TAC std_ss [DIFF_DEF,UNION_DEF,EXTENSION,GSPECIFICATION,IN_SING] \\
+            METIS_TAC [])
+  >> `(IMAGE (\u. if u = x then e else f u) Q_set) =
+        (IMAGE (\u. if u = x then e else f u) (Q_set DIFF {x})) UNION
+        (IMAGE (\u. if u = x then e else f u) {x})`
+        by METIS_TAC [IMAGE_UNION]
+  >> `IMAGE (\u. if u = x then e else f u) {x} = {e}`
+        by RW_TAC std_ss [IMAGE_DEF,EXTENSION,GSPECIFICATION,IN_SING]
+  >> `IMAGE (\u. if u = x then e else f u) (Q_set DIFF {x}) = IMAGE f Q_set`
+        by ( RW_TAC std_ss [IMAGE_DEF,EXTENSION,GSPECIFICATION,DIFF_DEF,
+                            IN_UNION,IN_SING] \\
+             METIS_TAC[] )
+  >> `IMAGE f Q_set = (IMAGE f (Q_set DIFF {x})) UNION (IMAGE f {x})`
+        by METIS_TAC [IMAGE_UNION]
+  >> `IMAGE f {x} = {f y}`
+        by RW_TAC std_ss [IMAGE_DEF,EXTENSION,GSPECIFICATION,IN_SING]
+  >> `IMAGE f Q_set = (IMAGE f (Q_set DIFF {x})) UNION {f y}` by METIS_TAC []
+  >> `{f y} SUBSET IMAGE f (Q_set DIFF {x})`
+        by ( RW_TAC std_ss [SUBSET_DEF,IN_IMAGE,IN_SING] >> Q.EXISTS_TAC `y` \\
+             RW_TAC std_ss [IN_DIFF,IN_SING] )
+  >> `IMAGE f Q_set = IMAGE f (Q_set DIFF {x})`
+        by METIS_TAC [SUBSET_UNION_ABSORPTION,UNION_COMM]
+  >> `IMAGE (\u. if u = x then e else f u) (Q_set DIFF {x}) =
+      IMAGE f (Q_set DIFF {x})`
+     by (RW_TAC std_ss [IMAGE_DEF,EXTENSION,GSPECIFICATION,DIFF_DEF,IN_SING] \\
+              ( EQ_TAC >- ( RW_TAC std_ss [] >> Q.EXISTS_TAC `u` >> RW_TAC std_ss [] )
+                >> RW_TAC std_ss []
+                >> Q.EXISTS_TAC `x''`
+                >> RW_TAC std_ss [] ))
+  >> METIS_TAC [INSERT_SING_UNION,UNION_COMM]
+QED

@@ -21,24 +21,15 @@
 quietdec := true;
 app load ["bossLib", "rich_listTheory", "intLib", "arithmeticTheory"];
 open listTheory rich_listTheory arithmeticTheory intLib;
-val _ = intLib.deprecate_int();
 quietdec := false;
 *)
 
-(******************************************************************************
- * Boilerplate needed for compilation
- ******************************************************************************)
-open HolKernel Parse boolLib bossLib;
+Theory FinitePSLPath
+Ancestors
+  list rich_list arithmetic
+Libs
+  intLib
 
-(******************************************************************************
- * Open theories
- ******************************************************************************)
-open listTheory rich_listTheory arithmeticTheory intLib;
-
-(******************************************************************************
- * Set default parsing to natural numbers rather than integers
- ******************************************************************************)
-val _ = intLib.deprecate_int();
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -55,15 +46,6 @@ val simp_list_ss  = simpLib.++ (list_ss,  numSimps.SUC_FILTER_ss);
  ******************************************************************************)
 val simp_arith_ss = simpLib.++ (arith_ss, numSimps.SUC_FILTER_ss);
 
-(******************************************************************************
- * Set default parsing to natural numbers rather than integers
- ******************************************************************************)
-val _ = intLib.deprecate_int();
-
-(******************************************************************************
- * Start a new theory called FinitePath
- ******************************************************************************)
-val _ = new_theory "FinitePSLPath";
 val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************
@@ -766,5 +748,3 @@ val RESTN_LENGTH =
    ``!w. RESTN w (LENGTH w) = []``,
    Induct
     THEN RW_TAC list_ss [RESTN_def,REST_def]);
-
-val _ = export_theory();

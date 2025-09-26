@@ -1,11 +1,12 @@
 (* this is an -*- sml -*- file *)
 (* script file establishing a type of lambda-terms on top of the
    GM base.  Does this by defining the predicate "const-free" *)
+Theory gmterm
+Ancestors
+  nc swap pred_set
+Libs
+  BasicProvers boolSimps NEWLib binderLib
 
-open HolKernel Parse boolLib bossLib BasicProvers boolSimps NEWLib
-open ncTheory swapTheory binderLib
-
-val _ = new_theory "gmterm";
 
 val (constfree_rules, constfree_ind, constfree_cases) = Hol_reln`
   (!s. constfree (nc$VAR s)) /\
@@ -338,8 +339,6 @@ val lemma14b = store_thm(
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `v INSERT FV N` THEN
   SRW_TAC [][SUB_THM, SUB_VAR]);
 
-open pred_setTheory
-
 val lemma14c = store_thm(
   "lemma14c",
   ``!t x u. x IN FV u ==> (FV ([t/x]u) = FV t UNION (FV u DELETE x))``,
@@ -653,4 +652,3 @@ val swap_RECURSION_nosideset = save_thm(
   SIMP_RULE (srw_ss()) [] (Q.INST [`X` |-> `{}`] swap_RECURSION_improved))
 
 
-val _ = export_theory();

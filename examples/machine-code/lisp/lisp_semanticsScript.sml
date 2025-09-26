@@ -1,6 +1,6 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_semantics";
-
-open stringTheory finite_mapTheory pred_setTheory listTheory sumTheory;
+Theory lisp_semantics
+Ancestors
+  string finite_map pred_set list sum
 
 (*****************************************************************************)
 (* Relational semantics for Pure LISP as formalised by Mike Gordon           *)
@@ -262,4 +262,3 @@ val (R_ap_rules,R_ap_ind,R_ap_cases) =
     R_ev (e,a) s /\ R_evl (el,a) sl
     ==> R_evl (e::el,a) (s::sl))`;
 
-val _ = export_theory();

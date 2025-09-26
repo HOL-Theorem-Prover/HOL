@@ -28,15 +28,12 @@ I did try this approach, but it became rather gruesome.  The eventual,
 successful approach instead is very much in the style of Andy Pitts'
 original after all.
 *)
+Theory type_schemas
+Ancestors
+  nomset pred_set
+Libs
+  binderLib boolSimps BasicProvers
 
-open HolKernel boolLib Parse bossLib
-
-open binderLib boolSimps BasicProvers
-
-open nomsetTheory
-open pred_setTheory
-
-val _ = new_theory "type_schemas"
 
 val _ = Hol_datatype`
   type = tyvar of string
@@ -693,4 +690,3 @@ val tys_fresh = store_thm(
     ]
   ]);
 
-val _ = export_theory ();

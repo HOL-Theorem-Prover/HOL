@@ -13,11 +13,13 @@ app load
    "metisLib","posrealLib","expectationTheory","intLib"];
 quietdec := true;
 *)
+Theory wp
+Ancestors
+  combin list rich_list string integer real poset posreal
+  expectation syntax
+Libs
+  intLib realLib metisLib posrealLib
 
-open HolKernel Parse boolLib bossLib intLib realLib metisLib;
-open combinTheory listTheory rich_listTheory stringTheory integerTheory
-     realTheory posetTheory;
-open posrealTheory posrealLib expectationTheory syntaxTheory;
 
 (*
 quietdec := false;
@@ -26,8 +28,6 @@ quietdec := false;
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "wp"                                            *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = new_theory "wp";
 
 (* ------------------------------------------------------------------------- *)
 (* Helpful proof tools                                                       *)
@@ -1256,4 +1256,3 @@ val wp_eq_wlp_plus_termination_counterexample = store_thm
        ++ markerLib.UNABBREV_ALL_TAC
        ++ RW_TAC posreal_reduce_ss []]);
 
-val _ = export_theory();

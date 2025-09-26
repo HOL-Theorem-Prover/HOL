@@ -4,22 +4,16 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "fieldMap";
+Theory fieldMap
+Ancestors
+  pred_set arithmetic divides gcd gcdset number combinatorics
+  monoid group ring field fieldOrder
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory arithmeticTheory dividesTheory gcdTheory gcdsetTheory
-     numberTheory combinatoricsTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory fieldOrderTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* Field Maps Documentation                                                  *)
 (* ------------------------------------------------------------------------- *)
@@ -2264,8 +2258,4 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

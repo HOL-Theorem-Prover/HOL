@@ -1,6 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open optionTheory listTheory
+Theory precparser
+Ancestors
+  option list
 
 (* simple (infixes + function application via juxtaposition) precedence
    parser
@@ -10,8 +10,6 @@ open optionTheory listTheory
    been done, and there are only binary infixes to worry about.
 
 *)
-
-val _ = new_theory "precparser";
 
 val _ = ParseExtras.tight_equality()
 
@@ -169,4 +167,3 @@ EVAL ``precparse ^m ([],"x*2")``;
 EVAL ``precparse ^m ([],"3++7")`` (* fails *);
 *)
 
-val _ = export_theory();

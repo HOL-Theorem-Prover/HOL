@@ -21,12 +21,11 @@ quietdec := false;
 (******************************************************************************
 * Boilerplate needed for compilation
 ******************************************************************************)
-
-open HolKernel Parse boolLib bossLib metisLib arithmeticTheory;
-
-(******************************************************************************
-* Open theories
-******************************************************************************)
+Theory compose
+Ancestors
+  arithmetic
+Libs
+  metisLib
 
 
 (*****************************************************************************)
@@ -41,11 +40,6 @@ val kill = (fn theorem => K ALL_TAC theorem);
 val PROVE_TAC = METIS_TAC;
 val op by = BasicProvers.byA
 
-(*****************************************************************************)
-(* Start new theory "compose"                                                *)
-(*****************************************************************************)
-
-val _ = new_theory "compose";
 val _ = ParseExtras.temp_loose_equality()
 
 (*****************************************************************************)
@@ -2141,5 +2135,3 @@ val SAFE_REC = Q.store_thm ("SAFE_REC",
      THEN `done_f (t+1) /\ done_g (t+1)` by PROVE_TAC []
      THEN FULL_SIMP_TAC std_ss [FINISH_def, DEL_def, AND_def]
      ]);
-
-val _ = export_theory();

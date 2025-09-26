@@ -1,22 +1,16 @@
-(*---------------------------------------------------------------------------*)
-(* Set up context                                                            *)
-(*---------------------------------------------------------------------------*)
-
-open HolKernel Parse boolLib bossLib numLib;
-open optionTheory pairTheory relationTheory arithmeticTheory
-     pred_setTheory bagTheory containerTheory
-     listTheory rich_listTheory stringTheory sortingTheory mergesortTheory
-     comparisonTheory balanced_mapTheory regexp_mapTheory osetTheory
-     finite_mapTheory vec_mapTheory charsetTheory regexpTheory
-;
-
+Theory regexp_compiler
+Ancestors
+  option pair relation arithmetic
+  pred_set bag container
+  list rich_list string sorting mergesort
+  comparison balanced_map regexp_map oset
+  finite_map vec_map charset regexp
+Libs
+  boolLib numLib pred_setLib
 
 val _ = numLib.temp_prefer_num();
 
 fun pat_elim q = Q.PAT_X_ASSUM q (K ALL_TAC);
-
-val byA = BasicProvers.byA;
-infix byA;
 
 val subst_all_tac = SUBST_ALL_TAC;
 val simp_rule = SIMP_RULE;
@@ -98,8 +92,6 @@ QED
 (*---------------------------------------------------------------------------*)
 (* Let's get started                                                         *)
 (*---------------------------------------------------------------------------*)
-
-val _ = new_theory "regexp_compiler";
 
 (*---------------------------------------------------------------------------*)
 (* Output of the compiler is in terms of vectors.                            *)
@@ -2160,5 +2152,3 @@ Proof
 QED
 
 (* val _ = EmitTeX.tex_theory"-"; *)
-
-val _ = export_theory();

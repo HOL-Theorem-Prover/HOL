@@ -1,11 +1,10 @@
-open HolKernel Parse boolLib bossLib binderLib
-open nomsetTheory horeductionTheory
-
-local open stringTheory in end
+Theory MPlambda
+Ancestors
+  nomset horeduction chap3 string[qualified]
+Libs
+  binderLib
 
 fun Store_thm (n,t,tac) = store_thm(n,t,tac) before export_rewrites [n]
-
-val _ = new_theory "MPlambda"
 
 val _ = Hol_datatype `MPterm = Var of string
                              | Parameter of string
@@ -525,7 +524,6 @@ val (mpbeta_rules, mpbeta_ind, mpbeta_cases) = Hol_reln`
            mpbeta (App (Abs x M) N) (vsub N x M))
 `;
 
-open chap3Theory
 val (convert_rules, convert_ind, convert_cases) = Hol_reln`
   (!p. convert (Parameter p) (VAR p)) /\
   (!t1 t2 M N. convert t1 M /\ convert t2 N ==>
@@ -940,4 +938,3 @@ val ccbeta_beta = store_thm(
   ]);
 
 
-val _ = export_theory()

@@ -4,14 +4,13 @@
 (*                                                                            *)
 (* AUTHORS : 2025  The Australian National University (Chun Tian)             *)
 (* ========================================================================== *)
+Theory semi_sensible
+Ancestors
+  list pred_set relation topology pair term chap2 chap3 chap4
+  horeduction boehm lameta_complete
+Libs
+  numLib hurdUtils pred_setLib
 
-open HolKernel Parse boolLib bossLib;
-
-open listTheory numLib hurdUtils pred_setTheory pred_setLib relationTheory
-     topologyTheory pairTheory;
-
-open termTheory chap2Theory chap3Theory chap4Theory horeductionTheory
-     boehmTheory lameta_completeTheory;
 
 (* These theorems usually give unexpected results, should be applied manually *)
 val _ = temp_delsimps [
@@ -27,8 +26,6 @@ val _ = hide "Y";
 
 Overload FV  = “supp term_pmact”
 Overload VAR = “term$VAR”
-
-val _ = new_theory "semi_sensible";
 
 (* Definition 10.4.4 [1, p.256], but is generalized with a theory parameter.
 
@@ -212,7 +209,6 @@ Proof
  >> rw [lameq_imp_lameta]
 QED
 
-val _ = export_theory ();
 val _ = html_theory "semi_sensible";
 
 (* References:

@@ -30,13 +30,14 @@ UOK    to the domains represented by T.
 UOK
 UOK  We prove their result as a corollary.
 *)
+Theory finite_test_set
+Ancestors
+  combin list rich_list pred_set divides
+Libs
+  boolSimps mp_then
 
-open HolKernel boolLib boolSimps bossLib Parse mp_then
-     combinTheory listTheory rich_listTheory pred_setTheory
 
 val _ = temp_tight_equality();
-
-val _ = new_theory "finite_test_set";
 
 (*
   Since we only care about prenex normal formulae, we design our datatypes to
@@ -89,8 +90,6 @@ val val_form_def = Define`
   val_form (qs,p) = val_form_aux (qs,p) []`;
 
 (* A test of expressiveness: Goldbach's conjecture can be represented *)
-open dividesTheory
-
 val Goldbach_statement_def = Define`
   Goldbach_statement ⇔
     ∀n. 2 < n ∧ EVEN n ⇒ ∃p1 p2. prime p1 ∧ prime p2 ∧ n = p1 + p2`;
@@ -267,4 +266,3 @@ val all_finitely_solvable = Q.store_thm("all_finitely_solvable",
   \\ goal_assum(first_assum o mp_then Any mp_tac)
   \\ simp[FINITE_domains_to_set,EVERY_MEM,MEM_MAP,PULL_EXISTS]);
 
-val _ = export_theory ();

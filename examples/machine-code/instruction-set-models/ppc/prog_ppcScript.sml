@@ -1,11 +1,11 @@
 
-open HolKernel boolLib bossLib Parse;
-open pred_setTheory res_quanTheory wordsTheory wordsLib bitTheory arithmeticTheory;
-open listTheory pairTheory combinTheory addressTheory;
+Theory prog_ppc
+Ancestors
+  pred_set res_quan words bit arithmetic list pair combin address
+  set_sep prog ppc_ ppc_seq_monad
+Libs
+  wordsLib
 
-open set_sepTheory progTheory ppc_Theory ppc_seq_monadTheory;
-
-val _ = new_theory "prog_ppc";
 val _ = ParseExtras.temp_loose_equality()
 
 val RW = REWRITE_RULE;
@@ -394,4 +394,3 @@ val pBYTE_MEMORY_INTRO = store_thm("pBYTE_MEMORY_INTRO",
   \\ METIS_TAC [SPEC_FRAME]);
 
 
-val _ = export_theory();

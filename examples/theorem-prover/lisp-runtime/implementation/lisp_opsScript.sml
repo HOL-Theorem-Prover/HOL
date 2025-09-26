@@ -1,17 +1,15 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_ops";
+Theory lisp_ops
+Ancestors
+  lisp_symbols lisp_sexp lisp_cons lisp_inv lisp_equal
+  lisp_codegen lisp_init lisp_symbols words arithmetic list
+  pred_set pair combin finite_map address bit prog set_sep
+  prog_x64 stop_and_copy
+Libs
+  compilerLib codegenLib decompilerLib wordsLib helperLib
+  prog_x64Lib x64_encodeLib
+
 val _ = ParseExtras.temp_loose_equality()
-open lisp_symbolsTheory lisp_sexpTheory lisp_consTheory lisp_invTheory;
-open lisp_equalTheory lisp_codegenTheory lisp_initTheory lisp_symbolsTheory;
-
 (* --- *)
-
-open compilerLib codegenLib decompilerLib;
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory bitTheory;
-
-open progTheory set_sepTheory helperLib;
-open prog_x64Theory prog_x64Lib x64_encodeLib;
-open stop_and_copyTheory;
 
 fun allowing_rebinds f x = Feedback.trace ("Theory.allow_rebinds", 1) f x
 val RW = REWRITE_RULE;
@@ -3164,4 +3162,3 @@ fun get_code th = let
 
 
 val _ = print_compiler_grammar()
-val _ = export_theory();

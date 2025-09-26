@@ -2381,7 +2381,7 @@ val WORD_NEG_mod = LET_RULE (Q.prove(
   LET_TAC \\ STRIP_TAC
     \\ `1 + n MOD ^top <= ^top`
     by SIMP_TAC std_ss [DECIDE ``a < b ==> 1 + a <= b``,MOD_2EXP_LT]
-    \\ ASM_SIMP_TAC arith_ss [SUB_RIGHT_SUB,SUB_RIGHT_ADD]
+    \\ ASM_SIMP_TAC arith_ss [SUB_RIGHT_SUB,SUB_RIGHT_ADD,Excl "EXP_LE_1"]
     \\ Tactical.REVERSE (Cases_on `1 + n MOD ^top = ^top`)
     >- FULL_SIMP_TAC arith_ss []
     \\ RULE_ASSUM_TAC

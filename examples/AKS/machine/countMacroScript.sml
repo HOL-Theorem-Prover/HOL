@@ -4,30 +4,18 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "countMacro";
+Theory countMacro
+Ancestors
+  pred_set list rich_list arithmetic divides gcd number
+  combinatorics pair option listRange prime bitsize complexity
+  loopIncrease loopDecrease loopDivide loopMultiply loopList
+  countMonad
+Libs
+  jcLib monadsyntax
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory listTheory rich_listTheory arithmeticTheory dividesTheory
-     gcdTheory numberTheory combinatoricsTheory pairTheory optionTheory
-     listRangeTheory primeTheory;
-
-open bitsizeTheory complexityTheory;
-
-open loopIncreaseTheory loopDecreaseTheory;
-open loopDivideTheory loopMultiplyTheory loopListTheory;
-
-open countMonadTheory;
-
-open monadsyntax;
-
 val _ = monadsyntax.enable_monadsyntax();
 val _ = monadsyntax.enable_monad "Count";
 
@@ -1577,8 +1565,4 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

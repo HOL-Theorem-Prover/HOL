@@ -1,24 +1,7 @@
-open HolKernel boolLib bossLib Parse;
-
-open boolTheory;
-open pred_setTheory;
-open pairTheory;
-
-open arithmeticTheory;
-open numTheory;
-
-open prim_recTheory;
-
-open listTheory;
-open rich_listTheory;
-
-open stringTheory;
-
-open set_lemmasTheory;
-open helper_funcsTheory;
-open boyer_moore_specTheory;
-
-val _ = new_theory"boyer_moore";
+Theory boyer_moore
+Ancestors
+  bool pred_set pair arithmetic num prim_rec list rich_list
+  string set_lemmas helper_funcs boyer_moore_spec
 
 (* -- IMPLICIT CHARACTER MISMATCH TABLE CONSTRUCTION -- *)
 (* Assess potential shift based on character mismatch rule *)
@@ -833,4 +816,3 @@ val BMSEARCH_STRING_THM = store_thm(
     >- rw[MTAB_DIM]
     );
 
-val _ = export_theory();

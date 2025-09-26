@@ -1,9 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open numpairTheory primrecfnsTheory nlistTheory arithmeticTheory listTheory
-     recursivefnsTheory
-
-val _ = new_theory "unary_recfns";
+Theory unary_recfns
+Ancestors
+  numpair primrecfns nlist arithmetic list recursivefns
 
 val _ = monadsyntax.enable_monadsyntax()
 val _ = monadsyntax.enable_monad "option"
@@ -325,7 +322,7 @@ Proof
       simp[] >> irule primrec_recfn >> simp[primrec_rules]) >>
   simp[minimise_def, recMin1_def, recCn_def, rec1_def] >> qx_gen_tac ‘N’ >>
   rw[]
-  >- (simp[whileTheory.OLEAST_EQ_SOME] >> SELECT_ELIM_TAC >> conj_tac
+  >- (simp[WhileTheory.OLEAST_EQ_SOME] >> SELECT_ELIM_TAC >> conj_tac
       >- metis_tac[] >>
       simp[] >> rw[] >- metis_tac[] >>
       first_x_assum drule >> simp[PULL_EXISTS]) >>
@@ -434,7 +431,7 @@ Proof
       qexists_tac ‘recMin1 f1’ >> simp[recfn1_rules] >>
       simp[recMin1_def, minimise_def, GSYM ADD1] >> qx_gen_tac ‘N’ >>
       rw[] >> fs[]
-      >- (simp[whileTheory.OLEAST_EQ_SOME] >> SELECT_ELIM_TAC >>
+      >- (simp[WhileTheory.OLEAST_EQ_SOME] >> SELECT_ELIM_TAC >>
           conj_tac >- metis_tac[] >>
           rw[] >- metis_tac[] >>
           first_x_assum (drule_then strip_assume_tac) >> fs[]) >>
@@ -453,4 +450,3 @@ Proof
   metis_tac[unfold_fold, recfn_recfn1]
 QED
 
-val _ = export_theory();

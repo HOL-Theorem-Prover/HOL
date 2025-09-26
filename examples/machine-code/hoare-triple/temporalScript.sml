@@ -1,7 +1,7 @@
-open HolKernel Parse boolLib bossLib
-open progTheory pairTheory set_sepTheory arithmeticTheory;
+Theory temporal
+Ancestors
+  prog pair set_sep arithmetic
 
-val _ = new_theory "temporal"
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -178,4 +178,3 @@ val SPEC_1_PRE_EXISTS = store_thm("SPEC_1_PRE_EXISTS",
   \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
   \\ FIRST_X_ASSUM MATCH_MP_TAC \\ METIS_TAC [])
 
-val _ = export_theory()

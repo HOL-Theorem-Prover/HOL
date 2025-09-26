@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open pred_setTheory listTheory nlistTheory
-
-val _ = new_theory "folLang";
+Theory folLang
+Ancestors
+  pred_set list nlist
 
 Definition LIST_UNION_def[simp]:
   (LIST_UNION [] = ∅) ∧
@@ -489,4 +487,3 @@ Proof
   simp[form_of_num_def]
 QED
 
-val _ = export_theory();

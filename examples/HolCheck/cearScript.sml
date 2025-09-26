@@ -1,14 +1,6 @@
-open HolKernel Parse boolLib bossLib
-
-val _ = new_theory("cear");
-
-open envTheory
-open pred_setTheory
-open setLemmasTheory
-open muSyntaxTheory
-open muTheory
-open ksTheory
-open reachTheory
+Theory cear
+Ancestors
+  env pred_set setLemmas muSyntax mu ks reach
 
 infix &&; infix 8 by;
 val _ = intLib.deprecate_int();
@@ -708,4 +700,3 @@ val BIGOR_OVER_AND = store_thm(
 val abst_lem1 = save_thm("abst_lem1",prove(``!f sh k i j. ((!i. i<=k /\ f i sh ==> !j. j<=k /\ f j sh ==> (i=j)) ==> i<=k /\ j<=k /\ f i sh /\ f j sh ==> (i=j))``,
 REPEAT STRIP_TAC THEN RES_TAC));
 
-val _ = export_theory();

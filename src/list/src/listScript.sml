@@ -630,12 +630,12 @@ Proof
   EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC []
 QED
 
-val MONO_EVERY = store_thm(
-  "MONO_EVERY",
-  “(!x. P x ==> Q x) ==> (EVERY P l ==> EVERY Q l)”,
+Theorem MONO_EVERY[mono]:
+  (!x. P x ==> Q x) ==> (EVERY P l ==> EVERY Q l)
+Proof
   Q.ID_SPEC_TAC ‘l’ THEN LIST_INDUCT_TAC THEN
-  ASM_SIMP_TAC (srw_ss()) []);
-val _ = IndDefLib.export_mono "MONO_EVERY"
+  ASM_SIMP_TAC (srw_ss()) []
+QED
 
 val EXISTS_MEM = store_thm(
   "EXISTS_MEM",
@@ -1574,12 +1574,7 @@ Induct THEN REWRITE_TAC [EVERY_DEF, MEM]
            THEN ASM_REWRITE_TAC [MEM]]
 QED
 
-val EVERY_MONOTONIC = store_thm(
-  "EVERY_MONOTONIC",
-  “!(P:'a -> bool) Q.
-       (!x. P x ==> Q x) ==> !l. EVERY P l ==> EVERY Q l”,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN LIST_INDUCT_TAC THEN
-  REWRITE_TAC [EVERY_DEF] THEN REPEAT STRIP_TAC THEN RES_TAC);
+Theorem EVERY_MONOTONIC = MONO_EVERY
 
 (* ----------------------------------------------------------------------
    ZIP and UNZIP functions (taken from rich_listTheory)
@@ -3722,7 +3717,7 @@ val splitAtPki_EQN = store_thm(
     (ASM_SIMP_TAC (srw_ss()) [] THEN
      ‘(OLEAST i. i < SUC (LENGTH l) /\ P i (EL i (h::l))) = SOME 0’
         suffices_by SRW_TAC [] [] THEN
-     ASM_SIMP_TAC (srw_ss()) [whileTheory.OLEAST_EQ_SOME]) THEN
+     ASM_SIMP_TAC (srw_ss()) [WhileTheory.OLEAST_EQ_SOME]) THEN
   SRW_TAC [] [] THEN
   Cases_on ‘OLEAST i. i < LENGTH l /\ P (SUC i) (EL i l)’ >> fs[]
   >- (‘(OLEAST i. i < SUC (LENGTH l) /\ P i (EL i (h::l))) = NONE’
@@ -3732,20 +3727,20 @@ val splitAtPki_EQN = store_thm(
   Q.RENAME_TAC [‘h::TAKE i t’] >>
   ‘(OLEAST i. i < SUC (LENGTH t) /\ P i (EL i (h::t))) = SOME (SUC i)’
       suffices_by SRW_TAC [] [] THEN
-  fs[whileTheory.OLEAST_EQ_SOME] >> Cases >> SRW_TAC[][]);
+  fs[WhileTheory.OLEAST_EQ_SOME] >> Cases >> SRW_TAC[][]);
 
 val TAKE_splitAtPki = store_thm(
   "TAKE_splitAtPki",
   “TAKE n l = splitAtPki (K o (=) n) K l”,
   SRW_TAC [] [splitAtPki_EQN] THEN
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO THEN
+  DEEP_INTRO_TAC WhileTheory.OLEAST_INTRO THEN
   SRW_TAC[numSimps.ARITH_ss] [TAKE_LENGTH_TOO_LONG])
 
 val DROP_splitAtPki = store_thm(
   "DROP_splitAtPki",
   “DROP n l = splitAtPki (K o (=) n) (K I) l”,
   SRW_TAC [] [splitAtPki_EQN] THEN
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO THEN
+  DEEP_INTRO_TAC WhileTheory.OLEAST_INTRO THEN
   SRW_TAC[numSimps.ARITH_ss] [DROP_LENGTH_TOO_LONG]);
 
 Theorem splitAtPki_RAND:

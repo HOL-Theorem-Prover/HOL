@@ -1,9 +1,8 @@
 
-open HolKernel boolLib bossLib Parse;
-open pred_setTheory arithmeticTheory pairTheory listTheory combinTheory finite_mapTheory;
-open cheney_gcTheory;
+Theory cheney_alloc
+Ancestors
+  pred_set arithmetic pair list combin finite_map cheney_gc
 
-val _ = new_theory "cheney_alloc";
 val _ = ParseExtras.temp_loose_equality()
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -1074,4 +1073,3 @@ val reachables_fresh = store_thm("reachables_fresh",
       \\ FULL_SIMP_TAC bool_ss [ch_set_def,fresh_NOT_IN_FDOM,fix_MEM]
       \\ METIS_TAC [MEM,LEMMA3]]]);
 
-val _ = export_theory();

@@ -1,10 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open listTheory numTheory arithmeticTheory hurdUtils
-     pred_setTheory subtypeTheory extra_numTheory rich_listTheory
-     pairTheory;
-
-val _ = new_theory "extra_list";
+Theory extra_list
+Ancestors
+  list num arithmetic pred_set subtype extra_num rich_list pair
+Libs
+  hurdUtils
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                              *)
@@ -298,4 +296,3 @@ Proof
  >> Cases_on `q = h` >> RW_TAC std_ss []
 QED
 
-val _ = export_theory ();

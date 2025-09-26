@@ -4,29 +4,19 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "computeRing";
+Theory computeRing
+Ancestors
+  pred_set list rich_list arithmetic number combinatorics divides
+  gcd logroot ring polynomial polyWeak polyRing polyField
+  polyMonic polyEval polyDivision polyFieldDivision
+  polyFieldModulo polyBinomial computeBasic computeOrder
+  computePoly
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory listTheory rich_listTheory arithmeticTheory numberTheory
-     combinatoricsTheory dividesTheory gcdTheory logrootTheory;
-
-open ringTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
-open polyMonicTheory polyEvalTheory;
-open polyDivisionTheory polyFieldDivisionTheory polyFieldModuloTheory;
-open polyBinomialTheory;
-
-open computeBasicTheory computeOrderTheory computePolyTheory;
-
 val _ = intLib.deprecate_int ();
 
 val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
@@ -743,8 +733,4 @@ val ZN_unity_mod_X_exp_n_add_c = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

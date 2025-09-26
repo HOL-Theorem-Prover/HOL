@@ -1,7 +1,8 @@
-open bossLib Theory Datatype Drule Tactical Tactic translateTheory
-open Thm Term Lib listTheory ratTheory testTypesTheory Conv sexpTheory;
-
-val _ = new_theory "testFunctions";
+Theory testFunctions
+Ancestors
+   translate list rat testTypes sexp
+Libs
+  Datatype Drule Tactical Tactic Thm Term Lib Conv
 
 (*****************************************************************************)
 (* Definitions:                                                              *)
@@ -118,6 +119,4 @@ val GENL_def = Define `
 
 val ADDN_def = Define `
     (ADDN n = ADDLIST (GENL n))`;
-
-val _ = export_theory();
 

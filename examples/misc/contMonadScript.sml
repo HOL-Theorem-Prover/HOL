@@ -1,6 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open monadsyntax
+Theory contMonad
+Libs
+  monadsyntax
 
 (*
 
@@ -14,8 +14,6 @@ open monadsyntax
    the last parameter.
 
 *)
-
-val _ = new_theory "contMonad";
 
 val _ = temp_add_monadsyntax()
 
@@ -116,4 +114,3 @@ val doubleCC = save_thm(
 
 
 
-val _ = export_theory();

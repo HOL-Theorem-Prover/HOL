@@ -1,13 +1,13 @@
 (*  This theory covers the main part of the manual proofs needed to show the user lemma *)
 (*  Author: Oliver Schwarz *)
+Theory user_lemma_basics
+Ancestors
+  arm_coretypes arm_seq_monad arm_opsem arm_step MMU MMU_Setup
+  inference_rules switching_lemma_helper words
+Libs
+  proofManagerLib tacticsLib wordsLib
 
-open HolKernel boolLib bossLib Parse proofManagerLib;
-open arm_coretypesTheory arm_seq_monadTheory arm_opsemTheory arm_stepTheory;
-open MMUTheory MMU_SetupTheory inference_rulesTheory switching_lemma_helperTheory;
-open tacticsLib;
-open wordsTheory wordsLib;
 
-val _ =  new_theory("user_lemma_basics");
 val _ = ParseExtras.temp_loose_equality()
 
 val _ = temp_overload_on ("return", ``constT``);
@@ -933,4 +933,3 @@ val little_mode_mix_comb_16_thm = store_thm(
 
 
 
-val _ = export_theory();

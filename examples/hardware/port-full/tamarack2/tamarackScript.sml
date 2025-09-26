@@ -9,12 +9,10 @@
 (*                                                                       *)
 (* Specify register-transfer level implementation and functional         *)
 (* behaviour of a very simple microprocessor.                            *)
+Theory tamarack
+Ancestors
+  arithmetic string
 
-open HolKernel boolLib bossLib Parse
-
-open arithmeticTheory stringTheory
-
-val _ = new_theory "tamarack";
 
 val _ = loose_equality()
 
@@ -940,4 +938,3 @@ Proof
 QED
 
 
-val _ = export_theory ();

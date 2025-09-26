@@ -1,4 +1,11 @@
-open HolKernel Parse boolLib bossLib;
+Theory psl_lemmata
+Ancestors
+  FinitePSLPath PSLPath UnclockedSemantics ClockedSemantics
+  Lemmas Rewrites RewritesProperties Projection SyntacticSugar
+  arithmetic Model rich_list pred_set combin temporal_deep_mixed
+  set_lemmata list
+Libs
+  res_quanTools numLib tuerk_tacticsLib Sanity
 
 (*
 quietdec := true;
@@ -16,11 +23,6 @@ map load
   "set_lemmataTheory"];
 *)
 
-open FinitePSLPathTheory PSLPathTheory UnclockedSemanticsTheory ClockedSemanticsTheory LemmasTheory RewritesTheory RewritesPropertiesTheory
-   ProjectionTheory SyntacticSugarTheory arithmeticTheory ModelTheory rich_listTheory pred_setTheory combinTheory
-   res_quanTools numLib tuerk_tacticsLib temporal_deep_mixedTheory set_lemmataTheory listTheory;
-open Sanity;
-
 val _ = hide "S";
 val _ = hide "I";
 
@@ -35,7 +37,6 @@ quietdec := false;
 
 
 
-val _ = new_theory "psl_lemmata";
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj", "LT1_EQ0"]
 val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj", "LT1_EQ0"]
 val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj", "LT1_EQ0"]
@@ -5230,4 +5231,3 @@ val UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___CLOCK_BOOL_BIGCAT 
 
 
 
-val _ = export_theory();

@@ -22,24 +22,14 @@ map load
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories of sequences and lists
-******************************************************************************)
-open SyntaxTheory PSLPathTheory ModelTheory;
+Theory UnclockedSemantics
+Ancestors
+  Syntax PSLPath Model
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
 
-(******************************************************************************
-* Start a new theory called UnclockedSemantics
-******************************************************************************)
-val _ = new_theory "UnclockedSemantics";
 val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************
@@ -374,5 +364,3 @@ val O_SEM_def =
 val O_VALID_def =
  Define
   `O_VALID M f = !s::(M.S0). O_SEM M f s`;
-
-val _ = export_theory();

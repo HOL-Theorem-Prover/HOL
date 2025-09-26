@@ -4,25 +4,16 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polyDerivative";
+Theory polyDerivative
+Ancestors
+  pred_set list arithmetic number combinatorics polynomial
+  polyWeak polyRing polyMonic polyRoot monoid group ring field
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory;
-open polyMonicTheory polyRootTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* Formal Derivative of Polynomials Documentation                            *)
 (* ------------------------------------------------------------------------- *)
@@ -798,8 +789,4 @@ val poly_diff_master_char_exp_roots = store_thm(
   rw[poly_roots_const]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

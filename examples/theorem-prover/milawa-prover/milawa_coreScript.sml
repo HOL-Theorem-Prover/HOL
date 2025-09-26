@@ -1,9 +1,7 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "milawa_core";
-
-open stringTheory finite_mapTheory pred_setTheory listTheory sumTheory;
-open optionTheory arithmeticTheory relationTheory;
-
-open lisp_sexpTheory lisp_parseTheory;
+Theory milawa_core
+Ancestors
+  string finite_map pred_set list sum option arithmetic relation
+  lisp_sexp lisp_parse
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -480,4 +478,3 @@ val MILAWA_CORE_TEXT_THM = save_thm("MILAWA_CORE_TEXT_THM",
   |> CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV) (REWR_CONV (GSYM lemma))));
 
 val _ = max_print_depth := 0;
-val _ = export_theory();

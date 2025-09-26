@@ -11,10 +11,12 @@ val () = app load
   ["bossLib", "realLib", "metisLib", "posetTheory", "posrealLib"]
 val () = quietdec := true;
 *)
+Theory expectation
+Ancestors
+  combin arithmetic real seq poset posreal
+Libs
+  metisLib realLib posrealLib
 
-open HolKernel Parse boolLib bossLib metisLib realLib;
-open combinTheory arithmeticTheory realTheory seqTheory;
-open posetTheory posrealTheory posrealLib;
 
 (*
 val () = quietdec := false;
@@ -23,8 +25,6 @@ val () = quietdec := false;
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "expectation"                                   *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = new_theory "expectation";
 
 (* ------------------------------------------------------------------------- *)
 (* Helpful proof tools                                                       *)
@@ -922,4 +922,3 @@ val bool_exp_def = Define
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory();

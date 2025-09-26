@@ -1,15 +1,9 @@
-open HolKernel Parse boolLib bossLib;
-open listTheory rich_listTheory combinTheory;
-open pred_setTheory;
+Theory regexCachedMarked
+Ancestors
+  list rich_list combin pred_set regexSemantics regexExecutable
+  regexMarked
 
-val _ = new_theory "regexCachedMarked";
 val _ = ParseExtras.temp_loose_equality()
-
-open regexSemanticsTheory;
-open regexExecutableTheory;
-open regexMarkedTheory;
-
-
 
 (* definitions *)
 (* ----------------------------------------------------------------------------- *)
@@ -354,4 +348,3 @@ val acceptM_correctness_thm = store_thm("acceptM_correctness_thm", ``!r w. accep
 
 
 
-val _ = export_theory();

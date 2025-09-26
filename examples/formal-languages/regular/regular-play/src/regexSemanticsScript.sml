@@ -1,8 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "regexSemantics";
-
-
+Theory regexSemantics
 
 (* 3.1 basic regular expression semantics *)
 (* -------------------------------------------------------------------------------------------------- *)
@@ -94,4 +90,3 @@ val language_of_Rep_APPEND_rec = store_thm ("language_of_Rep_APPEND_rec", ``
 
 
 
-val _ = export_theory();

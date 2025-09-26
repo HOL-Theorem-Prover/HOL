@@ -5,23 +5,16 @@
 (* AUTHORS : 2005-2011 Michael Norrish                                        *)
 (*         : 2023-2024 Michael Norrish and Chun Tian                          *)
 (* ========================================================================== *)
+Theory standardisation
+Ancestors
+  relation list llist path pred_set finite_map nomset basic_swap
+  finite_developments labelledTerms term chap2 horeduction chap3
+  appFOLDL term_posns chap11_1 head_reduction
+  container[qualified]
+Libs
+  BasicProvers metisLib boolSimps hurdUtils binderLib
 
-open HolKernel Parse boolLib bossLib BasicProvers;
 
-open metisLib boolSimps relationTheory listTheory llistTheory pathTheory
-     pred_setTheory finite_mapTheory hurdUtils;
-
-open nomsetTheory binderLib basic_swapTheory;
-open finite_developmentsTheory
-open labelledTermsTheory
-open termTheory chap2Theory horeductionTheory chap3Theory appFOLDLTheory
-open term_posnsTheory
-open chap11_1Theory
-open head_reductionTheory
-
-local open containerTheory in end
-
-val _ = new_theory "standardisation"
 val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
 structure NewQ = Q
@@ -2172,7 +2165,6 @@ Proof
       rw [EL_TAKE, Abbr ‘l0’, EL_MAP] ]
 QED
 
-val _ = export_theory()
 val _ = html_theory "standardisation";
 
 (* References:

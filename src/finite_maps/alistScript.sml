@@ -307,7 +307,7 @@ pop_assum (assume_tac o SYM) >>
 qho_match_abbrev_tac `EL ($LEAST P) (MAP SND al) = v` >>
 `P n` by (
   unabbrev_all_tac >> rw[EL_MAP] ) >>
-qspecl_then [`P`,`n`] mp_tac whileTheory.LESS_LEAST >> rw[] >>
+qspecl_then [`P`,`n`] mp_tac WhileTheory.LESS_LEAST >> rw[] >>
 numLib.LEAST_ELIM_TAC >>
 conj_tac >- (
   qexists_tac `n` >> rw[] ) >>

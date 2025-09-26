@@ -1,9 +1,7 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_semantics";
-
-open stringTheory finite_mapTheory pred_setTheory listTheory sumTheory;
-open optionTheory arithmeticTheory relationTheory;
-
-open lisp_sexpTheory lisp_parseTheory;
+Theory lisp_semantics
+Ancestors
+  string finite_map pred_set list sum option arithmetic relation
+  lisp_sexp lisp_parse
 
 infix \\
 val op \\ = op THEN;
@@ -397,4 +395,3 @@ Proof REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
 QED
 
 
-val _ = export_theory();

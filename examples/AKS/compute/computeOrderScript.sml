@@ -4,24 +4,16 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "computeOrder";
+Theory computeOrder
+Ancestors
+  pred_set list arithmetic number combinatorics divides gcd
+  logroot prime group ring fieldInstances computeBasic
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory logrootTheory primeTheory;
-
-open groupTheory ringTheory fieldInstancesTheory;
-
-open computeBasicTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -1457,8 +1449,4 @@ val ordz_fast_eqn = store_thm(
   ]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

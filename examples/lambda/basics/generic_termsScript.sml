@@ -4,15 +4,12 @@
 (*                                                                            *)
 (* AUTHORS : 2005-2011 Michael Norrish                                        *)
 (* ========================================================================== *)
+Theory generic_terms
+Ancestors
+  pred_set list relation basic_swap nomset
+Libs
+  BasicProvers boolSimps quotientLib binderLib
 
-open HolKernel Parse boolLib bossLib;
-
-open BasicProvers boolSimps pred_setTheory listTheory quotientLib;
-open relationTheory;
-
-open binderLib basic_swapTheory nomsetTheory;
-
-val _ = new_theory "generic_terms";
 
 val _ = computeLib.auto_import_definitions := false;
 
@@ -1403,5 +1400,4 @@ Proof
   metis_tac [genind_GLAM_subterm]
 QED
 
-val _ = export_theory()
 val _ = html_theory "generic_terms";

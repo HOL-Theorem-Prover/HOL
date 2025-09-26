@@ -1,11 +1,10 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory stringTheory stringLib listTheory stringSimps listLib simpLib;
-open decoderTheory bit_listTheory opmonTheory;
+Theory x64_decoder
+Ancestors
+  words string list decoder bit_list opmon x64_ast x64_coretypes
+Libs
+  stringLib stringSimps listLib simpLib
 
-open x64_astTheory x64_coretypesTheory;
-
-val _ = new_theory "x64_decoder";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -664,4 +663,3 @@ val _ = permanently_add_to_compset "x64_decode_aux_thm" x64_decode_aux_thm;
 *)
 
 
-val _ = export_theory ();

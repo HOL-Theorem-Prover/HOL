@@ -1,11 +1,8 @@
 
-open HolKernel boolLib bossLib Parse; val _ = new_theory "x86_";
-
-open wordsTheory bit_listTheory;
-
-open x86_coretypesTheory x86_astTheory x86_opsemTheory;
-open x86_seq_monadTheory x86_decoderTheory x86_icacheTheory;
-
+Theory x86_
+Ancestors
+  words bit_list x86_coretypes x86_ast x86_opsem x86_seq_monad
+  x86_decoder x86_icache
 
 (* ---------------------------------------------------------------------------------- *>
 
@@ -57,4 +54,3 @@ val t2 = Time.now();
 val elapsed_time = Time.toReal t2 - Time.toReal t1
 val _ = elapsed_time < 5.0 orelse failwith("Decoding failed to use compset properly.")
 
-val _ = export_theory ();

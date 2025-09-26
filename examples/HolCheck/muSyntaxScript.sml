@@ -1,25 +1,9 @@
-open HolKernel Parse boolLib bossLib
-
-val _ = new_theory("muSyntax")
-
-
-open bossLib
-open pairTheory
-open pairLib
-open pairTools
-open pairSyntax
-open pred_setTheory
-open pred_setLib
-open listTheory
-open stringTheory
-open sumTheory
-open simpLib
-open stringLib
-open numLib
-open metisLib
-open ksTheory
-open setLemmasTheory
-open reachTheory
+Theory muSyntax
+Ancestors
+  pair pred_set list string sum ks setLemmas reach
+Libs
+  pairLib pairTools pairSyntax pred_setLib simpLib stringLib
+  numLib metisLib
 
 infix && infix 8 by
 
@@ -650,4 +634,3 @@ THEN CONJ_TAC THENL [
  THEN METIS_TAC [ALLV_SUBF,ALLV_NNF]
 ]))
 
-val _ = export_theory()

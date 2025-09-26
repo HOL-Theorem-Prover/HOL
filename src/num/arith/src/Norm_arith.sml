@@ -18,7 +18,7 @@
 structure Norm_arith :> Norm_arith =
 struct
   open Arbint HolKernel boolLib Rsyntax
-       Arith_cons Term_coeffs RJBConv Theorems Thm_convs reduceLib;
+       Arith_cons Term_coeffs Theorems Thm_convs reduceLib;
 
 
   val op << = String.<
@@ -64,10 +64,10 @@ fun COLLECT_NUM_CONSTS_CONV tm =
 fun NUM_RELN_NORM_CONV arith_conv leq_conv tm =
  (if (is_neg tm)
   then (let val tm' = rand tm
-        in  ((RAND_CONV (ARGS_CONV arith_conv)) THENC
+        in  ((RAND_CONV (BINOP_CONV arith_conv)) THENC
              (if (is_eq tm') then
                  (NOT_NUM_EQ_NORM_CONV THENC
-                  (ARGS_CONV
+                  (BINOP_CONV
                     ((RATOR_CONV
                        (RAND_CONV
                          (TRY_CONV COLLECT_NUM_CONSTS_CONV))) THENC
@@ -88,8 +88,8 @@ fun NUM_RELN_NORM_CONV arith_conv leq_conv tm =
                   leq_conv)
               else failwith "fail")) tm
         end)
-  else ((ARGS_CONV arith_conv) THENC
-        (if is_eq tm then (NUM_EQ_NORM_CONV THENC (ARGS_CONV leq_conv)) else
+  else ((BINOP_CONV arith_conv) THENC
+        (if is_eq tm then (NUM_EQ_NORM_CONV THENC (BINOP_CONV leq_conv)) else
          if is_leq tm then leq_conv else
          if is_less tm then
             (LESS_NORM_CONV THENC
@@ -279,7 +279,7 @@ fun SUM_OF_PRODUCTS_MULT_CONV tm =
                     (RATOR_CONV (RAND_CONV FAST_MULT_CONV))) tm
                 else if (is_plus tm2) then
                    (LEFT_ADD_DISTRIB_CONV THENC
-                    (ARGS_CONV SUM_OF_PRODUCTS_MULT_CONV)) tm
+                    (BINOP_CONV SUM_OF_PRODUCTS_MULT_CONV)) tm
                 else failwith "fail")
             else failwith "fail"
         end)
@@ -303,7 +303,7 @@ fun SUM_OF_PRODUCTS_CONV tm =
   else if (is_suc tm) then
      ((RAND_CONV SUM_OF_PRODUCTS_CONV) THENC SUM_OF_PRODUCTS_SUC_CONV) tm
   else if (is_plus tm) then
-     ((ARGS_CONV SUM_OF_PRODUCTS_CONV) THENC
+     ((BINOP_CONV SUM_OF_PRODUCTS_CONV) THENC
       (fn tm' =>
           let val (tm1,tm2) = dest_plus tm'
           in  if (is_zero tm1) then (SPEC tm2 ZERO_PLUS)
@@ -313,7 +313,7 @@ fun SUM_OF_PRODUCTS_CONV tm =
               else ALL_CONV tm'
           end)) tm
   else if (is_mult tm) then
-     ((ARGS_CONV SUM_OF_PRODUCTS_CONV) THENC SUM_OF_PRODUCTS_MULT_CONV) tm
+     ((BINOP_CONV SUM_OF_PRODUCTS_CONV) THENC SUM_OF_PRODUCTS_MULT_CONV) tm
   else failwith "fail"
  ) handle (Feedback.HOL_ERR _) => failwith "SUM_OF_PRODUCTS_CONV";
 
@@ -330,7 +330,7 @@ val LINEAR_SUM_CONV =
         (TRY_CONV (SYM_ADD_ASSOC_CONV THENC (RAND_CONV FILTER_IN_CONV))) tm
      fun LINEAR_SUM_CONV' tm =
         (if (is_plus tm)
-         then ((ARGS_CONV LINEAR_SUM_CONV') THENC FILTER_IN_CONV) tm
+         then ((BINOP_CONV LINEAR_SUM_CONV') THENC FILTER_IN_CONV) tm
          else ALL_CONV tm
         ) handle (Feedback.HOL_ERR _) => failwith "LINEAR_SUM_CONV"
  in  LINEAR_SUM_CONV'

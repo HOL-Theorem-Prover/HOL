@@ -1,26 +1,11 @@
 (* app load ["envTheory","setLemmasTheory","res_quanLib","stringLib","pred_setLib","ksTheory"] *)
+Theory ctl
+Ancestors
+  pair pred_set list string sum ks setLemmas env
+Libs
+  pairLib pairTools pairSyntax PairRules pred_setLib stringLib
+  simpLib numLib res_quanLib
 
-open HolKernel Parse boolLib bossLib
-
-val _ = new_theory "ctl";
-
-open pairTheory;
-open pairLib;
-open pairTools;
-open pairSyntax;
-open PairRules;
-open pred_setTheory;
-open pred_setLib;
-open stringLib;
-open listTheory;
-open simpLib;
-open stringTheory;
-open sumTheory;
-open ksTheory;
-open numLib;
-open setLemmasTheory;
-open res_quanLib
-open envTheory
 
 val _ = numLib.temp_prefer_num();
 
@@ -498,4 +483,3 @@ val REST_FINITE =
    ``!l. REST (FINITE l) = FINITE(TL l)``,
    RW_TAC list_ss [REST_def]);
 
-val _ = export_theory()

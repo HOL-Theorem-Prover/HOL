@@ -4,31 +4,18 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polyRoot";
+Theory polyRoot
+Ancestors
+  pred_set list arithmetic number combinatorics divides gcd
+  gcdset monoid group ring field polynomial polyWeak polyRing
+  polyDivision polyField fieldOrder polyMonic
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
 (* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory gcdsetTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory;
-
-open polyFieldTheory;
-
-open fieldOrderTheory;
-
-open polyMonicTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -1724,8 +1711,4 @@ val poly_master_roots_by_unity_roots_alt = store_thm(
   metis_tac[poly_master_roots_by_unity_roots, DECIDE``0 < n + 1 /\ (n + 1 - 1 = n)``]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

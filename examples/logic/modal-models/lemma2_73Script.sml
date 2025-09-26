@@ -1,23 +1,9 @@
-open HolKernel Parse boolLib bossLib;
-open chap1Theory;
-open pred_setTheory;
-open relationTheory;
-open arithmeticTheory;
-open set_relationTheory;
-open pairTheory;
-open listTheory;
-open rich_listTheory;
-open combinTheory;
-open folLangTheory;
-open folModelsTheory;
-open chap2_4Theory;
-open prim_recTheory;
+Theory lemma2_73
+Ancestors
+  chap1 pred_set relation arithmetic set_relation pair list
+  rich_list combin folLang folModels chap2_4 prim_rec
+  equiv_on_partition ultraproduct ultrafilter
 
-open equiv_on_partitionTheory;
-open ultraproductTheory;
-open ultrafilterTheory;
-
-val _ = new_theory "lemma2_73";
 val _ = temp_delsimps ["satis_def"]
 
 Theorem countable_INFINITE_form_set:
@@ -1112,4 +1098,3 @@ fs[fsatis_def] (* 3 *)
 >- fs[IMAGE_DEF,SUBSET_DEF,expand_def,mm2folm_def,ultraproduct_model_def]
 QED
 
-val _ = export_theory();

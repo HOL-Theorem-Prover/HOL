@@ -4,11 +4,10 @@
  open listTheory wordsTheory MARS_SboxTheory MARS_DataTheory;
  quietdec := false;
 *)
+Theory MARS_keyExpansion
+Ancestors
+  list words MARS_Sbox MARS_Data
 
-open HolKernel Parse boolLib bossLib
-     listTheory wordsTheory MARS_SboxTheory MARS_DataTheory;
-
-val _ = new_theory "MARS_keyExpansion";
 
 (****************************************************************************)
 (****************************************************************************)
@@ -176,4 +175,3 @@ val KEY_EXPANSION_LENGTH = Q.store_thm
 );
 
 
-val _ = export_theory();

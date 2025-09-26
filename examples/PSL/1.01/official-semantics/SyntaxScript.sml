@@ -6,10 +6,7 @@
 (* START BOILERPLATE                                                         *)
 (*****************************************************************************)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
+Theory Syntax
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -19,11 +16,6 @@ open HolKernel Parse boolLib bossLib;
 * Version of Define that doesn't add to the EVAL compset
 ******************************************************************************)
 val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
-
-(******************************************************************************
-* Start a new theory called SyntaxTheory
-******************************************************************************)
-val _ = new_theory "Syntax";
 
 (******************************************************************************
 * Boolean expressions
@@ -74,12 +66,3 @@ val obe_def =
        | O_EX          of obe                    (* EX f                     *)
        | O_EU          of obe # obe              (* E[f1 U f2]               *)
        | O_EG          of obe`;                  (* EG f                     *)
-
-val _ = export_theory();
-
-
-
-
-
-
-

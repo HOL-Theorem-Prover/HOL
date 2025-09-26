@@ -4,44 +4,21 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory listRangeTheory dividesTheory
-     gcdTheory numberTheory combinatoricsTheory;
-
-(* declare new theory at start *)
-val _ = new_theory "AKSintro";
-
 (* ------------------------------------------------------------------------- *)
+Theory AKSintro
+Ancestors
+  pred_set list arithmetic listRange divides gcd number
+  combinatorics ffBasic ffAdvanced ffPoly ffUnity ffConjugate
+  ffExist polynomial polyWeak polyRing polyDivision polyBinomial
+  polyEval polyDivides polyMonic polyField polyFieldModulo
+  polyRingModulo polyMap polyIrreducible monoid group ring field
+  fieldMap
+  computeRing  (* for overloads on x^, x+^, x^+, x^- *)
+Libs
+  jcLib
 
 (* val _ = load "jcLib"; *)
-open jcLib;
 
-(* Get dependent theories *)
-open ffBasicTheory;
-open ffAdvancedTheory;
-open ffPolyTheory;
-open ffUnityTheory;
-open ffConjugateTheory;
-open ffExistTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory;
-open polyBinomialTheory polyEvalTheory;
-
-open polyDividesTheory;
-open polyMonicTheory;
-open polyFieldTheory;
-open polyFieldModuloTheory;
-open polyRingModuloTheory;
-open polyMapTheory;
-open polyIrreducibleTheory;
-
-open monoidTheory groupTheory ringTheory;
-open fieldTheory fieldMapTheory;
-
-open computeRingTheory; (* for overloads on x^, x+^, x^+, x^- *)
 
 val _ = intLib.deprecate_int ();
 
@@ -2191,8 +2168,4 @@ val introspective_unity_X_add_c_char_cofactor = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

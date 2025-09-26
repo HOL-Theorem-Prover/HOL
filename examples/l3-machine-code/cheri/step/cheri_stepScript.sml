@@ -1,14 +1,13 @@
 (* ------------------------------------------------------------------------
    Definitions and theorems used by CHERI/MIPS step evaluator (cheri_stepLib)
    ------------------------------------------------------------------------ *)
+Theory cheri_step
+Ancestors
+  alignment update cheri
+Libs
+  utilsLib wordsLib blastLib
 
-open HolKernel boolLib bossLib
 
-open utilsLib
-open wordsLib blastLib alignmentTheory
-open updateTheory cheriTheory
-
-val _ = new_theory "cheri_step"
 val _ = ParseExtras.temp_loose_equality()
 val _ = List.app (fn f => f ())
    [numLib.temp_prefer_num, wordsLib.prefer_word, wordsLib.guess_lengths]
@@ -717,4 +716,3 @@ val Fetch_default = Theory.save_thm("Fetch_default",
 
 (* ------------------------------------------------------------------------ *)
 
-val () = export_theory ()

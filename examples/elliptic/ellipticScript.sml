@@ -17,12 +17,12 @@ val () = app load
   "primalityTools", "fieldTools"];
 val () = quietdec := true;
 *)
+Theory elliptic
+Ancestors
+  option list arithmetic divides gcd pred_set group field
+Libs
+  metisLib res_quanTools primalityTools groupTools fieldTools
 
-open HolKernel Parse boolLib bossLib metisLib res_quanTools;
-open optionTheory listTheory arithmeticTheory dividesTheory gcdTheory;
-open pred_setTheory;
-open primalityTools;
-open groupTheory groupTools fieldTheory fieldTools;
 
 (*
 val () = quietdec := false;
@@ -32,7 +32,6 @@ val () = quietdec := false;
 (* Start a new theory called "elliptic".                                     *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = new_theory "elliptic";
 val _ = ParseExtras.temp_loose_equality()
 
 val ERR = mk_HOL_ERR "elliptic";
@@ -1538,4 +1537,3 @@ val curve_add_example_compilable =
 
 val _ = html_theory "elliptic";
 
-val () = export_theory ();

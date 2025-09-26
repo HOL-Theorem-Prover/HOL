@@ -2,18 +2,11 @@
  * Prove that simply typed call-by-value lambda calculus programs always
  * terminate. *)
 
-(* Standard things to open at the top of a script file *)
-open HolKernel boolLib bossLib Parse;
-
-(* Generally useful theories *)
-open integerTheory stringTheory alistTheory listTheory pred_setTheory;
-open pairTheory optionTheory finite_mapTheory arithmeticTheory rich_listTheory;
-
-(* The call-by-value LC that we're building on *)
-open cbvTheory;
-
-(* Name the theory types *)
-val _ = new_theory "types";
+Theory types
+Ancestors
+  integer string alist list pred_set pair option finite_map
+  arithmetic rich_list
+  cbv  (* The call-by-value LC that we're building on *)
 
 (* The datatype of types *)
 Datatype: type = Int | Arrow type type
@@ -130,5 +123,3 @@ Proof
   >> first_x_assum (qspec_then ‘<|clock := c; store := []|>’ assume_tac)
   >> fs [] >> metis_tac []
 QED
-
-val _ = export_theory ();

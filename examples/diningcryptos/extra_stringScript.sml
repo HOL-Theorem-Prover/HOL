@@ -1,16 +1,13 @@
 (* ========================================================================= *)
 (* Create "extra_stringTheory" for toString automation and definitions       *)
 (* ========================================================================= *)
+Theory extra_string
+Ancestors
+  arithmetic list extra_num combin pair extra_bool num string
+  rich_list
+Libs
+  metisLib hurdUtils jrhUtils simpLib stringSimps listSimps
 
-open HolKernel Parse boolLib bossLib;
-
-open metisLib arithmeticTheory
-     listTheory hurdUtils extra_numTheory combinTheory pairTheory
-     extra_boolTheory jrhUtils numTheory simpLib
-     stringTheory rich_listTheory stringSimps
-     listSimps;
-
-val _ = new_theory "extra_string";
 
 (* ------------------------------------------------------------------------- *)
 (* Helpful proof tools                                                       *)
@@ -281,4 +278,3 @@ val toString_toNum_cancel = store_thm
 (* ------------------------------------------------------------------------- *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory ();

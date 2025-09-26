@@ -6,15 +6,17 @@
 (*
   app load ["RoundOpTheory", "metisLib"];
 *)
-open HolKernel Parse boolLib bossLib RoundOpTheory pairTheory metisLib;
+Theory aes
+Ancestors
+  RoundOp pair
+Libs
+  metisLib
 
 (*---------------------------------------------------------------------------*)
 (* Make bindings to pre-existing stuff                                       *)
 (*---------------------------------------------------------------------------*)
 
 val RESTR_EVAL_TAC = computeLib.RESTR_EVAL_TAC;
-
-val _ = new_theory "aes";
 
 (*---------------------------------------------------------------------------*)
 (* The keyschedule can be represented as a circular buffer of fixed size.    *)
@@ -214,4 +216,3 @@ val AES_CORRECT = Q.store_thm
  RW_TAC std_ss [AES_def,LET_THM,AES_LEMMA]);
 
 
-val _ = export_theory();

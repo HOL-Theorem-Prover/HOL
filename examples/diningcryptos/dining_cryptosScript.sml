@@ -1,24 +1,18 @@
 (* ----------------------------------------------------------------------
     Case Study: The Dining Cryptographers
    ---------------------------------------------------------------------- *)
+Theory dining_cryptos
+Ancestors
+  arithmetic pred_set state_transformer combin pair real
+  extra_pred_set num seq subtype transc lim string real_sigma
+  information leakage list rich_list extra_bool extra_num
+  extra_list extra_string extra_real sigma_algebra real_measure
+  real_lebesgue real_probability
+Libs
+  metisLib pred_setLib realLib jrhUtils realSimps simpLib
+  stringSimps listSimps extra_stringLib leakageLib hurdUtils
+  dep_rewrite
 
-open HolKernel Parse boolLib bossLib;
-
-open metisLib arithmeticTheory pred_setTheory pred_setLib
-     state_transformerTheory combinTheory pairTheory realTheory realLib jrhUtils
-     extra_pred_setTheory realSimps numTheory simpLib seqTheory subtypeTheory
-     transcTheory limTheory stringTheory stringSimps real_sigmaTheory
-     informationTheory leakageTheory listTheory rich_listTheory listSimps;
-
-open extra_boolTheory extra_numTheory extra_listTheory extra_stringLib
-     extra_stringTheory extra_realTheory leakageLib;
-
-open hurdUtils sigma_algebraTheory real_measureTheory real_lebesgueTheory
-     real_probabilityTheory;
-
-open dep_rewrite;
-
-val _ = new_theory "dining_cryptos";
 
 val _ = temp_set_fixity "CROSS" (Infixl 600)
 
@@ -5382,4 +5376,3 @@ val biased_dc3_leakage_result2 = store_thm
                       REAL_ARITH ``!(x:real) y z a. x + (y - z) - a = y + (x - (z + a))``, GSYM real_sub]
    >> Q.UNABBREV_TAC `v` >> RW_TAC std_ss []);
 
-val _ = export_theory ();

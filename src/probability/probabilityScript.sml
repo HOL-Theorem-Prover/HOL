@@ -5616,30 +5616,18 @@ Definition converge_def[nocompute] :
     (!n. X n IN lp_space r p) /\ Y IN lp_space r p /\
     ((\n. expectation p (\x. (abs (X n x - Y x)) powr r)) --> 0) sequentially) /\
 
-   (* X(n) converges to Y in distribution (see [4, p.425] or [2, p.96])
-
-      NOTE: the bounded and continuous function is limited to ‘:real -> real’ and
-      this implies only ‘real_random_variable’ can be supported, for now.
-    *)
+   (* X(n) converges to Y in distribution (see [4, p.425] or [2, p.96]) *)
    (converge (X :num -> 'a -> extreal) (Y :'a -> extreal) (in_distribution p) =
-    !(f :real -> real).
-         bounded (IMAGE f UNIV) /\ f continuous_on UNIV ==>
-        ((\n. expectation p (Normal o f o real o (X n))) -->
-         expectation p (Normal o f o real o Y)) sequentially)
+    !(f :extreal -> real).
+        f IN C_b ext_euclidean ==>
+       ((\n. expectation p (Normal o f o (X n))) --> expectation p (Normal o f o Y))
+        sequentially)
 End
 
 (* "-->" was defined in util_probTheory for IN_DFUNSET *)
 Overload "-->" = “converge”
 
-(* |- !X Y p.
-        (X --> Y) (in_distribution p) <=>
-        !f. bounded (IMAGE f univ(:real)) /\ f continuous_on univ(:real) ==>
-            ((\n. expectation p (Normal o f o real o X n)) -->
-             expectation p (Normal o f o real o Y)) sequentially
-
-   NOTE: This definition will be used in examples/probability/distributionScript.sml.
-   It's here because the above [converge_def] is not exported.
- *)
+(* NOTE: see distributionTheory for supporting theorems *)
 Theorem converge_in_dist_def = cj 4 converge_def
 
 (* |- !X Y p.
@@ -9322,10 +9310,12 @@ QED
 
 Theorem BAYES_RULE :
     !p A B. prob_space p /\ A IN events p /\ B IN events p /\
-            prob p A <> 0 /\ prob p B <> 0 ==>
+            prob p A <> 0 ==>
            (cond_prob p B A = (cond_prob p A B) * (prob p B) / (prob p A))
 Proof
     RW_TAC std_ss []
+ >> Cases_on ‘prob p B = 0’
+ >- gvs[zero_div, cond_prob_def, PROB_ZERO_INTER]
  >> `prob p A <> PosInf /\ prob p A <> NegInf` by METIS_TAC [PROB_FINITE]
  >> `prob p A < PosInf` by METIS_TAC [lt_infty]
  >> `0 < prob p A` by METIS_TAC [le_lt, PROB_POSITIVE]

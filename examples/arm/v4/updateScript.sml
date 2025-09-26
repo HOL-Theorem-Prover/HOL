@@ -9,12 +9,12 @@
 (* interactive use:
   app load ["wordsLib", "rich_listTheory", "my_listTheory"];
 *)
+Theory update
+Ancestors
+  combin arithmetic words list rich_list my_list
+Libs
+  Q
 
-open HolKernel boolLib bossLib;
-open Parse Q combinTheory arithmeticTheory wordsTheory;
-open listTheory rich_listTheory my_listTheory;
-
-val _ = new_theory "update";
 
 (* ------------------------------------------------------------------------- *)
 
@@ -241,4 +241,3 @@ val LIST_UPDATE_SORT_RULE2 = save_thm("LIST_UPDATE_SORT_RULE2",
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory();

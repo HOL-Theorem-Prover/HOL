@@ -9,17 +9,6 @@
 (*                                                                           *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* Ignore everything up to "END BOILERPLATE"                                 *)
-(*****************************************************************************)
-
-(*****************************************************************************)
-(* START BOILERPLATE NEEDED FOR COMPILATION                                  *)
-(*****************************************************************************)
-
-(******************************************************************************
-* Load theories
-******************************************************************************)
 (* The commented out stuff below should be loaded in interactive sessions
 quietdec := true;
 app
@@ -30,31 +19,13 @@ Globals.checking_const_names := false;
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation: open HOL4 systems modules.
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories (including ratTheory from Jens Brandt).
-******************************************************************************)
-
-open stringLib fracTheory ratTheory sexp complex_rationalTheory sexpTheory
-     hol_defaxiomsTheory acl2_packageTheory sexp;
-
-open problem_set_1_answers m1_story;
-
-(*****************************************************************************)
-(* END BOILERPLATE                                                           *)
-(*****************************************************************************)
-
-(*****************************************************************************)
-(* Start new theory "imported_acl2"                                          *)
-(*****************************************************************************)
+Theory imported_acl2
+Ancestors
+  frac rat complex_rational sexp hol_defaxioms acl2_package
+Libs
+  stringLib sexp sexp problem_set_1_answers m1_story
 
 (* Previously: use "imported_acl2_books.ml"; *)
-
-val _ = new_theory "imported_acl2";
 
 val current_package = ref "UnspecifiedPackage";
 
@@ -71,9 +42,3 @@ val install_fn = (I ## acl2_simp) o install o mk_acl2def;
 
 val _ = map install_fn (discard_duplicate_events problem_set_1_answers);
 val _ = map install_fn (discard_duplicate_events m1_story);
-
-val _ = export_theory();
-
-
-
-

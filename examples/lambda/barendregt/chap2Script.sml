@@ -1,21 +1,19 @@
 (*---------------------------------------------------------------------------*
  * Beta-equivalence and combinators (Chapter 2 of Barendregt [1] & Hankin [2])
  *---------------------------------------------------------------------------*)
+Theory chap2
+Ancestors
+  pred_set list rich_list finite_map arithmetic string_num pair
+  basic_swap term nomset appFOLDL
+Libs
+  BasicProvers pred_setLib hurdUtils listLib binderLib
 
-open HolKernel Parse boolLib bossLib BasicProvers;
-
-open pred_setTheory pred_setLib listTheory rich_listTheory finite_mapTheory
-     arithmeticTheory string_numTheory hurdUtils pairTheory listLib;
-
-open basic_swapTheory termTheory nomsetTheory binderLib appFOLDLTheory;
 
 val _ = augment_srw_ss [rewrites [LET_THM]]
 val std_ss = std_ss ++ rewrites [LET_THM]
 
 structure NewQ = Q
 structure Q = struct open Q open OldAbbrevTactics end;
-
-val _ = new_theory "chap2";
 
 (* Definition 2.1.18 [1, p.29] *)
 Inductive ctxt :
@@ -1854,7 +1852,6 @@ QED
 (* 8.3.1 (iii) [1, p.171] *)
 Overload unsolvable = “\M. ~solvable M”
 
-val _ = export_theory()
 val _ = html_theory "chap2";
 
 (* References:

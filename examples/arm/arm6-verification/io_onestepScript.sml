@@ -9,12 +9,13 @@
 (* interactive use:
   app load ["rich_listTheory", "onestepTheory"];
 *)
+Theory io_onestep
+Ancestors
+  combin pair arithmetic prim_rec pred_set rich_list onestep
+Libs
+  Q simpLib numLib
 
-open HolKernel boolLib bossLib Q;
-open simpLib numLib combinTheory pairTheory arithmeticTheory;
-open prim_recTheory pred_setTheory rich_listTheory onestepTheory;
 
-val _ = new_theory "io_onestep";
 val _ = ParseExtras.temp_loose_equality();
 
 (* vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv *)
@@ -110,7 +111,7 @@ val OSMPL_def = Define`
 val LEAST_THM = store_thm("LEAST_THM",
   `!n. (!m. m < n ==> ~P m) /\ P n ==> ($LEAST P = n)`,
   REPEAT STRIP_TAC
-    \\ IMP_RES_TAC whileTheory.FULL_LEAST_INTRO
+    \\ IMP_RES_TAC WhileTheory.FULL_LEAST_INTRO
     \\ Cases_on `$LEAST P = n` >- ASM_REWRITE_TAC []
     \\ `$LEAST P < n` by DECIDE_TAC
     \\ PROVE_TAC []);
@@ -190,7 +191,7 @@ val lem2 = prove(
          (SPECL_THEN [`x`,`x + 1`] (ASSUME_TAC o SIMP_RULE arith_ss []))
     \\ IMP_RES_TAC LESS_EQ_LESS_TRANS
     \\ METIS_TAC [(SIMP_RULE std_ss [] o SPECL
-         [`\t. x < imm (t + 1)`,`\t. x < imm (t + 1)`]) whileTheory.LEAST_ELIM]
+         [`\t. x < imm (t + 1)`,`\t. x < imm (t + 1)`]) WhileTheory.LEAST_ELIM]
 );
 
 val lem3 = prove(
@@ -1526,4 +1527,3 @@ val SELF_CORRECT = prove(
 
 (* ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *)
 
-val _ = export_theory();

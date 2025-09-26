@@ -20,24 +20,14 @@ open SyntaxTheory PSLPathTheory ModelTheory UnclockedSemanticsTheory;
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories of sequences and lists
-******************************************************************************)
-open SyntaxTheory PSLPathTheory ModelTheory UnclockedSemanticsTheory;
+Theory ClockedSemantics
+Ancestors
+  Syntax PSLPath Model UnclockedSemantics
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
 
-(******************************************************************************
-* Start a new theory called ClockedSemantics
-******************************************************************************)
-val _ = new_theory "ClockedSemantics";
 val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************
@@ -295,5 +285,3 @@ val F_SEM =
        !j :: LESS(LENGTH v).
          S_SEM (SEL (COMPLEMENT v) (0,j)) c r ==> F_SEM (RESTN v j) c f)``,
    RW_TAC std_ss [F_SEM_def]);
-
-val _ = export_theory();

@@ -1,14 +1,14 @@
 
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_gc";
+Theory lisp_gc
+Ancestors
+  words arithmetic list pred_set pair combin finite_map address
+  tailrec
+  cheney_gc cheney_alloc  (* an abstract implementation is imported *)
+  prog_x86 prog_ppc prog_arm
+Libs
+  decompilerLib compilerLib prog_armLib wordsLib mc_tailrecLib
+
 val _ = ParseExtras.temp_loose_equality()
-
-open decompilerLib compilerLib prog_armLib;
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory;
-
-open mc_tailrecLib tailrecTheory;
-open cheney_gcTheory cheney_allocTheory; (* an abstract implementation is imported *)
 
 
 val _ = map Parse.hide ["r0","r1","r2","r3","r4","r5","r6","r7","r8","r9","r10","r11","r12","r13"];
@@ -2542,6 +2542,3 @@ val lB = prove_eq "ppc_alloc" "arm_alloc" [l1,l2,l3,l4,l5,l6,l7,l8,l9,lA]
   ``(ppc_alloc = arm_alloc) /\ (ppc_alloc_pre = arm_alloc_pre)``;
 
 val ppc_alloc_EQ = save_thm("ppc_alloc_EQ",lB)
-
-
-val _ = export_theory();

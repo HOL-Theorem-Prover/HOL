@@ -344,7 +344,7 @@ each pair of terms $t_1$ and $t_2$, and is therefore equivalent to an
 infinite family of theorems. No single theorem can be expressed in the
 HOL logic that is equivalent to `BETA_CONV`.See [Chapter](avra-conv)
 for further discussion of this point.  Note that `UNDISCH` is not a
-rule of this sort, as it can, in fact, be expressed as a theorem.
+rule of this sort, as it can, in fact, be expresed as a theorem.
 
 For each derivation given below, there is an ML function definition
 in the HOL system that implements the derived rule as a procedure in
@@ -369,113 +369,74 @@ which
 3.  follows from preceding steps by a rule of inference (either primitive
 or previously derived).
 
-Note that the abbreviation `conv` (standing for "conversion") is used for the ML type
+The abbreviation `conv` ("conversion") is used for the ML type
 `term -> thm`.
 
 ### Adding an assumption
 
-##skip
-\begin{holboxed}
-\index{ADD_ASSUM@\ml{ADD\_ASSUM}|pin}
-\begin{verbatim}
+```
    ADD_ASSUM : term -> thm -> thm
-\end{verbatim}\end{holboxed}
 
+   Γ |- t
+  ---------------
+   Γ ∪ {t'} |- t
 
-\vspace{12pt plus2pt minus1pt}
+```
 
-$$\Gamma\turn t\over \Gamma,\ t'\turn t$$
+1. $t'\vdash t'$   [`ASSUME`]
+2. $\Gamma\vdash t$ [`Hypothesis`]
+3. $\Gamma\vdash t' \Rightarrow t$ [`DISCH` 2]
+4. $\Gamma,\ t'\vdash t$   [`MP` 3,1]
 
-\vspace{12pt plus2pt minus1pt}
-
-\begin{proof}
-\item $t'\turn t'$ \hfill [\rul{ASSUME}]
-\item $\Gamma\turn t$ \hfill [Hypothesis]
-\item $\Gamma\turn t'\imp t$ \hfill [\rul{DISCH} 2]
-\item $\Gamma,\ t'\turn t$ \hfill [\rul{MP} 3,1]
-\end{proof}
-
-
-
-%\subsection{Undischarging [\rul{UNDISCH}]}
 ### Undischarging
 
-
-\begin{holboxed}
-\index{implication, in HOL logic@implication, in \HOL logic!inference rules for}
-\index{UNDISCH@\ml{UNDISCH}|pin}
-\begin{verbatim}
+```
    UNDISCH : thm -> thm
-\end{verbatim}\end{holboxed}
+
+   Γ |- t1 ==> t2
+  ---------------
+   Γ ∪ {t1} |- t2
+
+```
+1. $t_1\vdash t_1$    [`ASSUME`]
+2. $\Gamma\vdash t_1\Rightarrow t_2$ [`Hypothesis`]
+3. $\Gamma,\ t_1\vdash t_2$ [`MP` 2,1]
 
 
-\vspace{12pt plus2pt minus1pt}
-
-$$\Gamma\turn t_1\imp t_2 \over\Gamma,\ t_1\turn t_2$$
-
-\vspace{12pt plus2pt minus1pt}
-
-\begin{proof}
-\item $t_1\turn t_1$ \hfill [\rul{ASSUME}]
-\item $\Gamma\turn t_1\imp t_2$ \hfill [Hypothesis]
-\item $\Gamma,\ t_1\turn t_2$ \hfill [\rul{MP} 2,1]
-\end{proof}
+### Symmetry of equality
 
 
-
-
-\subsection{Symmetry of equality}
-
-
-\begin{holboxed}
-\index{SYM@\ml{SYM}|pin}
-\index{symmetry of equality rule, in HOL logic@symmetry of equality rule, in \HOL logic}
-\index{equality, in HOL logic@equality, in \HOL logic!symmetry rule for}
-\begin{verbatim}
+```
    SYM : thm -> thm
-\end{verbatim}\end{holboxed}
 
+   Γ |- t1 = t2
+  ---------------
+   Γ |- t2 = t1
 
+```
 
-\vspace{12pt plus2pt minus1pt}
-
-$$\Gamma\turn t_1 = t_2\over \Gamma\turn t_2 = t_1$$
-
-\vspace{12pt plus2pt minus1pt}
-
-\begin{proof}
-\item $\Gamma\turn t_1=t_2$\hfill [Hypothesis]
-\item $\turn t_1=t_1$ \hfill [\rul{REFL}]
-\item $\Gamma\turn t_2=t_1$\hfill [\rul{SUBST} 1,2]
-\end{proof}
-
+1. $\Gamma\vdash t_1=t_2$ [`Hypothesis`]
+2. $\vdash t_1=t_1$ [`REFL`]
+3. $\Gamma\vdash t_2=t_1$ [`SUBST` 1,2]
 
 
 ### Transitivity of equality
 
 
-\begin{holboxed}
-\index{transitivity of equality rule, in HOL logic@transitivity of equality rule, in \HOL logic}
-\index{equality, in HOL logic@equality, in \HOL logic!transitivity rule for}
-\index{TRANS@\ml{TRANS}|pin}
-\begin{verbatim}
+```
    TRANS : thm -> thm -> thm
-\end{verbatim}\end{holboxed}
 
-\vspace{12pt plus2pt minus1pt}
+   Γ₁ |- t₁ = t₂ ,   Γ₂ |- t₂ = t3
+  ---------------------------------
+     Γ₁ ∪ Γ₂ |- t₁ = t3
 
-$$\Gamma_1\turn t_1=t_2\qquad\qquad\qquad \Gamma_2\turn t_2=t_3 \over
-\Gamma_1\cup\Gamma_2\turn t_1=t_3$$
+```
 
-\vspace{12pt plus2pt minus1pt}
+1. $\Gamma_2\vdash t_2=t_3$  [`Hypothesis`]
+2. $\Gamma_1\vdash t_1=t_2$  [`Hypothesis`]
+3. $\Gamma_1\cup\Gamma_2\vdash t_1=t_3$ [`SUBST` 1,2]
 
-\begin{proof}
-\item $\Gamma_2\turn t_2=t_3$\hfill [Hypothesis]
-\item $\Gamma_1\turn t_1=t_2$\hfill [Hypothesis]
-\item $\Gamma_1\cup\Gamma_2\turn t_1=t_3$\hfill [\rul{SUBST} 1,2]
-\end{proof}
-
-
+##skip
 
 ### Application of a term to a theorem
 \index{function application, in HOL logic@function application, in \HOL logic!inference rules for}
@@ -488,14 +449,14 @@ $$\Gamma_1\turn t_1=t_2\qquad\qquad\qquad \Gamma_2\turn t_2=t_3 \over
 
 \vspace{12pt plus2pt minus1pt}
 
-$$\Gamma\turn t_1=t_2\over\Gamma\turn t\ t_1 = t\ t_2$$
+$$\Gamma\vdash t_1=t_2\over\Gamma\vdash t\ t_1 = t\ t_2$$
 
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item $\Gamma\turn t_1=t_2$\hfill [Hypothesis]
-\item $\turn t\ t_1 = t\ t_1$ \hfill [\rul{REFL}]
-\item $\Gamma\turn t\ t_1 = t\ t_2$ \hfill [\rul{SUBST} 1,2]
+\item $\Gamma\vdash t_1=t_2$\hfill [Hypothesis]
+\item $\vdash t\ t_1 = t\ t_1$ \hfill [\rul{REFL}]
+\item $\Gamma\vdash t\ t_1 = t\ t_2$ \hfill [\rul{SUBST} 1,2]
 \end{proof}
 
 
@@ -510,14 +471,14 @@ $$\Gamma\turn t_1=t_2\over\Gamma\turn t\ t_1 = t\ t_2$$
 
 \vspace{12pt plus2pt minus1pt}
 
-$$\Gamma\turn t_1=t_2\over \Gamma\turn t_1\ t = t_2\ t$$
+$$\Gamma\vdash t_1=t_2\over \Gamma\vdash t_1\ t = t_2\ t$$
 
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item $\Gamma\turn t_1=t_2$\hfill [Hypothesis]
-\item$\turn t_1\ t = t_1\ t$\hfill [\rul{REFL}]
-\item $\Gamma\turn t_1\ t = t_2\ t$\hfill [\rul{SUBST} 1,2]
+\item $\Gamma\vdash t_1=t_2$\hfill [Hypothesis]
+\item$\vdash t_1\ t = t_1\ t$\hfill [\rul{REFL}]
+\item $\Gamma\vdash t_1\ t = t_2\ t$\hfill [\rul{SUBST} 1,2]
 \end{proof}
 
 
@@ -534,15 +495,15 @@ $$\Gamma\turn t_1=t_2\over \Gamma\turn t_1\ t = t_2\ t$$
 
 \vspace{12pt plus2pt minus1pt}
 
-$$\Gamma_1\turn t_1=t_2\qquad\qquad\qquad \Gamma_2\turn t_1\over
-\Gamma_1\cup\Gamma_2\turn t_2$$
+$$\Gamma_1\vdash t_1=t_2\qquad\qquad\qquad \Gamma_2\vdash t_1\over
+\Gamma_1\cup\Gamma_2\vdash t_2$$
 
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item $\Gamma_1\turn t_1=t_2$ \hfill [Hypothesis]
-\item $\Gamma_2\turn t_1$ \hfill [Hypothesis]
-\item $\Gamma_1\cup\Gamma_2\turn t_2$ \hfill [\rul{SUBST} 1,2]
+\item $\Gamma_1\vdash t_1=t_2$ \hfill [Hypothesis]
+\item $\Gamma_2\vdash t_1$ \hfill [Hypothesis]
+\item $\Gamma_1\cup\Gamma_2\vdash t_2$ \hfill [\rul{SUBST} 1,2]
 \end{proof}
 
 
@@ -559,21 +520,21 @@ $$\Gamma_1\turn t_1=t_2\qquad\qquad\qquad \Gamma_2\turn t_1\over
 
 \vspace{12pt plus2pt minus1pt}
 
-$$\Gamma\turn t_1=t_2\over
-\Gamma\turn t_1\imp t_2 \qquad\qquad\qquad \Gamma\turn t_2\imp t_1$$
+$$\Gamma\vdash t_1=t_2\over
+\Gamma\vdash t_1\Rightarrow t_2 \qquad\qquad\qquad \Gamma\vdash t_2\Rightarrow t_1$$
 
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item $\Gamma\turn t_1=t_2$ \hfill [Hypothesis]
-\item $t_1\turn t_1$ \hfill [\rul{ASSUME}]
-\item $\Gamma,\ t_1\turn t_2$ \hfill [\rul{EQ\_MP} 1,2]
-\item $\Gamma\turn t_1\imp t_2$ \hfill [\rul{DISCH} 3]
-\item $\Gamma\turn t_2=t_1$ \hfill [\rul{SYM} 1]
-\item $t_2\turn t_2$ \hfill [\rul{ASSUME}]
-\item $\Gamma,\ t_2\turn t_1$ \hfill [\rul{EQ\_MP} 5,6]
-\item $\Gamma\turn t_2\imp t_1$ \hfill [\rul{DISCH} 7]
-\item $\Gamma\turn t_1\imp t_2$ and $\Gamma\turn t_2\imp t_1$\hfill [4,8]
+\item $\Gamma\vdash t_1=t_2$ \hfill [Hypothesis]
+\item $t_1\vdash t_1$ \hfill [\rul{ASSUME}]
+\item $\Gamma,\ t_1\vdash t_2$ \hfill [\rul{EQ\_MP} 1,2]
+\item $\Gamma\vdash t_1\Rightarrow t_2$ \hfill [\rul{DISCH} 3]
+\item $\Gamma\vdash t_2=t_1$ \hfill [\rul{SYM} 1]
+\item $t_2\vdash t_2$ \hfill [\rul{ASSUME}]
+\item $\Gamma,\ t_2\vdash t_1$ \hfill [\rul{EQ\_MP} 5,6]
+\item $\Gamma\vdash t_2\Rightarrow t_1$ \hfill [\rul{DISCH} 7]
+\item $\Gamma\vdash t_1\Rightarrow t_2$ and $\Gamma\vdash t_2\Rightarrow t_1$\hfill [4,8]
 \end{proof}
 
 
@@ -590,15 +551,15 @@ $$\Gamma\turn t_1=t_2\over
 
 \vspace{12pt plus2pt minus1pt}
 
-$$\turn\T$$
+$$\vdash\T$$
 
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item $\turn \T = ((\lquant{x}x)=(\lquant{x}x))$\hfill [Definition of \T]
-\item $\turn ((\lquant{x}x)=(\lquant{x}x)) = \T$\hfill [\rul{SYM} 1]
-\item $\turn (\lquant{x}x)=(\lquant{x}x)$\hfill [\rul{REFL}]
-\item $\turn\T$ \hfill [\rul{EQ\_MP} 2,3]
+\item $\vdash \T = ((\lquant{x}x)=(\lquant{x}x))$\hfill [Definition of \T]
+\item $\vdash ((\lquant{x}x)=(\lquant{x}x)) = \T$\hfill [\rul{SYM} 1]
+\item $\vdash (\lquant{x}x)=(\lquant{x}x)$\hfill [\rul{REFL}]
+\item $\vdash\T$ \hfill [\rul{EQ\_MP} 2,3]
 \end{proof}
 
 
@@ -615,15 +576,15 @@ $$\turn\T$$
 
 \vspace{12pt plus2pt minus1pt}
 
-$$\Gamma\turn t = \T\over \Gamma\turn t$$
+$$\Gamma\vdash t = \T\over \Gamma\vdash t$$
 
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item $\Gamma\turn t = \T$\hfill [Hypothesis]
-\item $\Gamma\turn \T = t$\hfill [\rul{SYM} 1]
-\item $\turn \T$\hfill [\rul{TRUTH}]
-\item $\Gamma\turn t$\hfill [\rul{EQ\_MP} 2,3]
+\item $\Gamma\vdash t = \T$\hfill [Hypothesis]
+\item $\Gamma\vdash \T = t$\hfill [\rul{SYM} 1]
+\item $\vdash \T$\hfill [\rul{TRUTH}]
+\item $\Gamma\vdash t$\hfill [\rul{EQ\_MP} 2,3]
 \end{proof}
 
 
@@ -641,7 +602,7 @@ $$\Gamma\turn t = \T\over \Gamma\turn t$$
 
 \vspace{12pt plus2pt minus1pt}
 
-$$\Gamma\turn \uquant{x}t\over \Gamma\turn t[t'/x]$$
+$$\Gamma\vdash \uquant{x}t\over \Gamma\vdash t[t'/x]$$
 \begin{itemize}
 \item $t[t'/x]$ denotes the result of substituting $t'$ for free\index{free variables, in HOL logic@free variables, in \HOL logic}
 occurrences of $x$ in $t$, with the restriction that no free variables in $t'$
@@ -651,22 +612,22 @@ become bound after substitution.
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item $\turn \forall = (\lquant{P}P = (\lquant{x}\T))$ \hfill
+\item $\vdash \forall = (\lquant{P}P = (\lquant{x}\T))$ \hfill
 [\rul{INST\_TYPE} applied to the definition of $\forall$]
-\item $\Gamma\turn \forall(\lquant{x}t)$\hfill [Hypothesis]
-\item $\Gamma\turn (\lquant{P}P=(\lquant{x}\T))(\lquant{x}t)$\hfill
+\item $\Gamma\vdash \forall(\lquant{x}t)$\hfill [Hypothesis]
+\item $\Gamma\vdash (\lquant{P}P=(\lquant{x}\T))(\lquant{x}t)$\hfill
 [\rul{SUBST} 1,2]
-\item $\turn  (\lquant{P}P=(\lquant{x}\T))(\lquant{x}t) =
+\item $\vdash  (\lquant{P}P=(\lquant{x}\T))(\lquant{x}t) =
 ((\lquant{x}t)=(\lquant{x}\T))$\hfill [\rul{BETA\_CONV}]
-\item $\Gamma\turn (\lquant{x}t)=(\lquant{x}\T)$\hfill [\rul{EQ\_MP} 4,3]
-\item $\Gamma\turn (\lquant{x}t)\ t' = (\lquant{x}\T)\ t'$ \hfill
+\item $\Gamma\vdash (\lquant{x}t)=(\lquant{x}\T)$\hfill [\rul{EQ\_MP} 4,3]
+\item $\Gamma\vdash (\lquant{x}t)\ t' = (\lquant{x}\T)\ t'$ \hfill
 [\rul{AP\_THM} 5]
-\item $\turn (\lquant{x}t)\ t' = t[t'/x]$ \hfill [\rul{BETA\_CONV}]
-\item $\Gamma\turn t[t'/x] = (\lquant{x}t)\ t'$ \hfill [\rul{SYM} 7]
-\item $\Gamma\turn t[t'/x] = (\lquant{x}\T)\ t'$ \hfill [\rul{TRANS} 8,6]
-\item $\turn (\lquant{x}\T)\ t' = \T$ \hfill [\rul{BETA\_CONV}]
-\item $\Gamma\turn t[t'/x] = \T$ \hfill [\rul{TRANS} 9,10]
-\item $\Gamma\turn t[t'/x]$ \hfill [\rul{EQT\_ELIM} 11]
+\item $\vdash (\lquant{x}t)\ t' = t[t'/x]$ \hfill [\rul{BETA\_CONV}]
+\item $\Gamma\vdash t[t'/x] = (\lquant{x}t)\ t'$ \hfill [\rul{SYM} 7]
+\item $\Gamma\vdash t[t'/x] = (\lquant{x}\T)\ t'$ \hfill [\rul{TRANS} 8,6]
+\item $\vdash (\lquant{x}\T)\ t' = \T$ \hfill [\rul{BETA\_CONV}]
+\item $\Gamma\vdash t[t'/x] = \T$ \hfill [\rul{TRANS} 9,10]
+\item $\Gamma\vdash t[t'/x]$ \hfill [\rul{EQT\_ELIM} 11]
 \end{proof}
 
 
@@ -683,22 +644,22 @@ become bound after substitution.
 
 \vspace{12pt plus2pt minus1pt}
 
-$$\Gamma\turn t\over\Gamma\turn t=\T$$
+$$\Gamma\vdash t\over\Gamma\vdash t=\T$$
 
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item $\turn\uquant{b_1\ b_2}(b_1\imp b_2)\imp(b_2\imp b_1)\imp(b_1=b_2)$
+\item $\vdash\uquant{b_1\ b_2}(b_1\Rightarrow b_2)\Rightarrow(b_2\Rightarrow b_1)\Rightarrow(b_1=b_2)$
 \hfill [Axiom]
-\item $\turn\uquant{b_2}(t\imp b_2)\imp(b_2\imp t)\imp(t=b_2)$
+\item $\vdash\uquant{b_2}(t\Rightarrow b_2)\Rightarrow(b_2\Rightarrow t)\Rightarrow(t=b_2)$
 \hfill [\rul{SPEC} 1]
-\item $\turn(t\imp\T)\imp(\T\imp t)\imp(t=\T)$\hfill [\rul{SPEC} 2]
-\item $\turn\T$\hfill [\rul{TRUTH}]
-\item $\turn t\imp\T$\hfill [\rul{DISCH} 4]
-\item $\turn(\T\imp t)\imp(t=\T)$\hfill [\rul{MP} 3,5]
-\item $\Gamma \turn t$\hfill [Hypothesis]
-\item $\Gamma\turn\T\imp t$\hfill [\rul{DISCH} 7]
-\item $\Gamma\turn t=\T$\hfill [\rul{MP} 6,8]
+\item $\vdash(t\Rightarrow\T)\Rightarrow(\T\Rightarrow t)\Rightarrow(t=\T)$\hfill [\rul{SPEC} 2]
+\item $\vdash\T$\hfill [\rul{TRUTH}]
+\item $\vdash t\Rightarrow\T$\hfill [\rul{DISCH} 4]
+\item $\vdash(\T\Rightarrow t)\Rightarrow(t=\T)$\hfill [\rul{MP} 3,5]
+\item $\Gamma \vdash t$\hfill [Hypothesis]
+\item $\Gamma\vdash\T\Rightarrow t$\hfill [\rul{DISCH} 7]
+\item $\Gamma\vdash t=\T$\hfill [\rul{MP} 6,8]
 \end{proof}
 \index{equality, in HOL logic@equality, in \HOL logic!other rules for|)}
 \index{T@\holtxt{T}!rules of inference for|)}
@@ -720,7 +681,7 @@ $$\Gamma\turn t\over\Gamma\turn t=\T$$
 
 \vspace{12pt plus2pt minus1pt}
 
-$$\Gamma\turn t\over\Gamma\turn\uquant{x} t$$
+$$\Gamma\vdash t\over\Gamma\vdash\uquant{x} t$$
 \begin{itemize}
 \item Where $x$ is not free in $\Gamma$.
 \end{itemize}
@@ -728,21 +689,21 @@ $$\Gamma\turn t\over\Gamma\turn\uquant{x} t$$
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item $\Gamma\turn t$\hfill [Hypothesis]
-\item $\Gamma\turn t = \T$\hfill [\rul{EQT\_INTRO} 1]
-\item $\Gamma\turn(\lquant{x}t)=(\lquant{x}\T)$\hfill [\rul{ABS} 2]
-\item $\turn \forall(\lquant{x}t) = \forall(\lquant{x}t)$\hfill [\rul{REFL}]
-\item $\turn \forall = (\lquant{P} P =(\lquant{x}\T))$\hfill
+\item $\Gamma\vdash t$\hfill [Hypothesis]
+\item $\Gamma\vdash t = \T$\hfill [\rul{EQT\_INTRO} 1]
+\item $\Gamma\vdash(\lquant{x}t)=(\lquant{x}\T)$\hfill [\rul{ABS} 2]
+\item $\vdash \forall(\lquant{x}t) = \forall(\lquant{x}t)$\hfill [\rul{REFL}]
+\item $\vdash \forall = (\lquant{P} P =(\lquant{x}\T))$\hfill
 [\rul{INST\_TYPE} applied to the definition of $\forall$]
-\item $\turn\forall(\lquant{x}t)=(\lquant{P} P=(\lquant{x}\T))(\lquant{x}t)$
+\item $\vdash\forall(\lquant{x}t)=(\lquant{P} P=(\lquant{x}\T))(\lquant{x}t)$
 \hfill [\rul{SUBST} 5,4]
-\item $\turn(\lquant{P} P=(\lquant{x}\T))(\lquant{x}t)=((\lquant{x}t)
+\item $\vdash(\lquant{P} P=(\lquant{x}\T))(\lquant{x}t)=((\lquant{x}t)
 =(\lquant{x}\T))$\hfill [\rul{BETA\_CONV}]
-\item $\turn\forall(\lquant{x}t) = ((\lquant{x}t)=(\lquant{x}\T))$
+\item $\vdash\forall(\lquant{x}t) = ((\lquant{x}t)=(\lquant{x}\T))$
 \hfill [\rul{TRANS} 6,7]
-\item $\turn((\lquant{x}t)=(\lquant{x}\T)) = \forall(\lquant{x}\T)$
+\item $\vdash((\lquant{x}t)=(\lquant{x}\T)) = \forall(\lquant{x}\T)$
 \hfill [\rul{SYM} 8]
-\item $\Gamma\turn\forall(\lquant{x}t)$\hfill [\rul{EQ\_MP} 9,3]
+\item $\Gamma\vdash\forall(\lquant{x}t)$\hfill [\rul{EQ\_MP} 9,3]
 \end{proof}
 
 
@@ -757,7 +718,7 @@ $$\Gamma\turn t\over\Gamma\turn\uquant{x} t$$
 
 \vspace{12pt plus2pt minus1pt}
 
-$$\turn(\lquant{x_1}t\ x_1) = (\lquant{x_2}t\ x_2)$$
+$$\vdash(\lquant{x_1}t\ x_1) = (\lquant{x_2}t\ x_2)$$
 \begin{itemize}
 \item Where neither $x_1$ nor $x_2$ occurs free in $t$.\footnote{\ml{SIMPLE\_ALPHA} is
 included here because it is
@@ -768,24 +729,24 @@ HOL system, as it is subsumed by other functions.}
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item$\turn(\lquant{x_1}t\ x_1)\ x = t\ x$\hfill [\rul{BETA\_CONV}]
-\item$\turn(\lquant{x_2}t\ x_2)\ x = t\ x$\hfill [\rul{BETA\_CONV}]
-\item $\turn t\ x = (\lquant{x_2}t\ x_2)\ x$\hfill [\rul{SYM} 2]
-\item $\turn (\lquant{x_1}t\ x_1)\ x = (\lquant{x_2}t\ x_2)\ x$
+\item$\vdash(\lquant{x_1}t\ x_1)\ x = t\ x$\hfill [\rul{BETA\_CONV}]
+\item$\vdash(\lquant{x_2}t\ x_2)\ x = t\ x$\hfill [\rul{BETA\_CONV}]
+\item $\vdash t\ x = (\lquant{x_2}t\ x_2)\ x$\hfill [\rul{SYM} 2]
+\item $\vdash (\lquant{x_1}t\ x_1)\ x = (\lquant{x_2}t\ x_2)\ x$
 \hfill [\rul{TRANS} 1,3]
-\item $\turn(\lquant{x}(\lquant{x_1}t\ x_1)\ x) =
+\item $\vdash(\lquant{x}(\lquant{x_1}t\ x_1)\ x) =
 (\lquant{x}(\lquant{x_2}t\ x_2)\ x)$\hfill [\rul{ABS} 4]
-\item $\turn\uquant{f}(\lquant{x}f\ x) = f$\hfill
+\item $\vdash\uquant{f}(\lquant{x}f\ x) = f$\hfill
 [Appropriately type-instantiated axiom]
-\item $\turn(\lquant{x}(\lquant{x_1}t\ x_1)x) = \lquant{x_1}t\ x_1$
+\item $\vdash(\lquant{x}(\lquant{x_1}t\ x_1)x) = \lquant{x_1}t\ x_1$
 \hfill [\rul{SPEC} 6]
-\item $\turn(\lquant{x}(\lquant{x_2}t\ x_2)x) = \lquant{x_2}t\ x_2$
+\item $\vdash(\lquant{x}(\lquant{x_2}t\ x_2)x) = \lquant{x_2}t\ x_2$
 \hfill [\rul{SPEC} 6]
-\item $\turn (\lquant{x_1}t\ x_1) = (\lquant{x}(\lquant{x_1}t\ x_1)x)$
+\item $\vdash (\lquant{x_1}t\ x_1) = (\lquant{x}(\lquant{x_1}t\ x_1)x)$
 \hfill [\rul{SYM} 7]
-\item $\turn (\lquant{x_1}t\ x_1) = (\lquant{x}(\lquant{x_2}t\ x_2)x)$
+\item $\vdash (\lquant{x_1}t\ x_1) = (\lquant{x}(\lquant{x_2}t\ x_2)x)$
 \hfill [\rul{TRANS} 9,5]
-\item $\turn(\lquant{x_1}t\ x_1)=(\lquant{x_2}t\ x_2)$\hfill
+\item $\vdash(\lquant{x_1}t\ x_1)=(\lquant{x_2}t\ x_2)$\hfill
 [\rul{TRANS} 10,8]
 \end{proof}
 
@@ -802,7 +763,7 @@ HOL system, as it is subsumed by other functions.}
 \end{holboxed}
 \vspace{12pt plus2pt minus1pt}
 
-$$\turn(\lquant{x'}t\ x') = t$$
+$$\vdash(\lquant{x'}t\ x') = t$$
 \begin{itemize}
 \item Where $x'$ does not occur free\index{free variables, in HOL logic@free variables, in \HOL logic} in $t$ (we use $x'$ rather than just $x$
 to motivate the use of \rul{SIMPLE\_ALPHA} in the derivation below).
@@ -811,11 +772,11 @@ to motivate the use of \rul{SIMPLE\_ALPHA} in the derivation below).
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item $\turn\uquant{f}(\lquant{x}f\ x) = f$\hfill
+\item $\vdash\uquant{f}(\lquant{x}f\ x) = f$\hfill
 [Appropriately type-instantiated axiom]
-\item  $\turn(\lquant{x}t\ x) = t$\hfill [\rul{SPEC} 1]
-\item $\turn(\lquant{x'}t\ x')=(\lquant{x}t\ x)$\hfill [\rul{SIMPLE\_ALPHA}]
-\item $\turn(\lquant{x'}t\ x')=t$\hfill [\rul{TRANS} 3,2]
+\item  $\vdash(\lquant{x}t\ x) = t$\hfill [\rul{SPEC} 1]
+\item $\vdash(\lquant{x'}t\ x')=(\lquant{x}t\ x)$\hfill [\rul{SIMPLE\_ALPHA}]
+\item $\vdash(\lquant{x'}t\ x')=t$\hfill [\rul{TRANS} 3,2]
 \end{proof}
 
 
@@ -833,7 +794,7 @@ to motivate the use of \rul{SIMPLE\_ALPHA} in the derivation below).
 
 \vspace{12pt plus2pt minus1pt}
 
-$$\Gamma\turn\uquant{x} t_1\ x = t_2\ x\over\Gamma\turn t_1=t_2$$
+$$\Gamma\vdash\uquant{x} t_1\ x = t_2\ x\over\Gamma\vdash t_1=t_2$$
 \begin{itemize}
 \item Where $x$ is not free\index{free variables, in HOL logic@free variables, in \HOL logic} in $t_1$ or $t_2$.
 \end{itemize}
@@ -841,15 +802,15 @@ $$\Gamma\turn\uquant{x} t_1\ x = t_2\ x\over\Gamma\turn t_1=t_2$$
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item $\Gamma\turn\uquant{x}t_1\ x=t_2\ x$\hfill [Hypothesis]
-\item $\Gamma\turn t_1\ x'=t_2\ x'$\hfill [\rul{SPEC} 1 ($x'$ is a fresh)]
-\item $\Gamma\turn(\lquant{x'}t_1\ x') = (\lquant{x'}t_2\ x')$\hfill
+\item $\Gamma\vdash\uquant{x}t_1\ x=t_2\ x$\hfill [Hypothesis]
+\item $\Gamma\vdash t_1\ x'=t_2\ x'$\hfill [\rul{SPEC} 1 ($x'$ is a fresh)]
+\item $\Gamma\vdash(\lquant{x'}t_1\ x') = (\lquant{x'}t_2\ x')$\hfill
         [\rul{ABS} 2]
-\item $\turn(\lquant{x'}t_1\ x') = t_1$\hfill [\rul{ETA\_CONV}]
-\item $\turn t_1 = (\lquant{x'}t_1\ x')$\hfill [\rul{SYM} 4]
-\item $\Gamma\turn t_1 = (\lquant{x'}t_2\ x')$\hfill [\rul{TRANS} 5,3]
-\item $\turn(\lquant{x'}t_2\ x') = t_2$\hfill [\rul{ETA\_CONV}]
-\item $\Gamma\turn t_1=t_2$\hfill [\rul{TRANS} 6,7]
+\item $\vdash(\lquant{x'}t_1\ x') = t_1$\hfill [\rul{ETA\_CONV}]
+\item $\vdash t_1 = (\lquant{x'}t_1\ x')$\hfill [\rul{SYM} 4]
+\item $\Gamma\vdash t_1 = (\lquant{x'}t_2\ x')$\hfill [\rul{TRANS} 5,3]
+\item $\vdash(\lquant{x'}t_2\ x') = t_2$\hfill [\rul{ETA\_CONV}]
+\item $\Gamma\vdash t_1=t_2$\hfill [\rul{TRANS} 6,7]
 \end{proof}
 
 
@@ -866,16 +827,16 @@ $$\Gamma\turn\uquant{x} t_1\ x = t_2\ x\over\Gamma\turn t_1=t_2$$
 
 \vspace{12pt plus2pt minus1pt}
 
-$$\Gamma\turn t_1\ t_2\over\Gamma\turn t_1(\hilbert\ t_1)$$
+$$\Gamma\vdash t_1\ t_2\over\Gamma\vdash t_1(\hilbert\ t_1)$$
 
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item $\turn\uquant{P\ x}P\ x\imp P(\hilbert\ P)$\hfill [Suitably
+\item $\vdash\uquant{P\ x}P\ x\Rightarrow P(\hilbert\ P)$\hfill [Suitably
 type-instantiated axiom]
-\item $\turn t_1\ t_2 \imp t_1(\hilbert\ t_1)$\hfill [\rul{SPEC} 1 (twice)]
-\item $\Gamma\turn t_1\ t_2$\hfill [Hypothesis]
-\item $\Gamma\turn t_1(\hilbert\ t_1)$\hfill [\rul{MP} 2,3]
+\item $\vdash t_1\ t_2 \Rightarrow t_1(\hilbert\ t_1)$\hfill [\rul{SPEC} 1 (twice)]
+\item $\Gamma\vdash t_1\ t_2$\hfill [Hypothesis]
+\item $\Gamma\vdash t_1(\hilbert\ t_1)$\hfill [\rul{MP} 2,3]
 \end{proof}
 
 
@@ -892,8 +853,8 @@ type-instantiated axiom]
 
 \vspace{12pt plus2pt minus1pt}
 
-$$\Gamma_1\turn t_1(\hilbert\ t_1)\qquad\qquad\qquad\Gamma_2,\ t_1\ v\turn t
-\over \Gamma_1\cup\Gamma_2\turn t$$
+$$\Gamma_1\vdash t_1(\hilbert\ t_1)\qquad\qquad\qquad\Gamma_2,\ t_1\ v\vdash t
+\over \Gamma_1\cup\Gamma_2\vdash t$$
 \begin{itemize}
 \item Where $v$ occurs nowhere except in the assumption $t_1\ v$ of the second
 hypothesis.
@@ -902,12 +863,12 @@ hypothesis.
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item $\Gamma_2,\ t_1\ v\turn t$ \hfill [Hypothesis]
-\item $\Gamma_2\turn t_1\ v\imp t$\hfill [\rul{DISCH} 1]
-\item $\Gamma_2\turn\uquant{v}t_1\ v\imp t$\hfill [\rul{GEN} 2]
-\item $\Gamma_2\turn t_1(\hilbert\ t_1)\imp t$\hfill [\rul{SPEC} 3]
-\item $\Gamma_1\turn t_1(\hilbert\ t_1)$\hfill [Hypothesis]
-\item $\Gamma_1\cup\Gamma_2\turn t$\hfill [\rul{MP} 4,5]
+\item $\Gamma_2,\ t_1\ v\vdash t$ \hfill [Hypothesis]
+\item $\Gamma_2\vdash t_1\ v\Rightarrow t$\hfill [\rul{DISCH} 1]
+\item $\Gamma_2\vdash\uquant{v}t_1\ v\Rightarrow t$\hfill [\rul{GEN} 2]
+\item $\Gamma_2\vdash t_1(\hilbert\ t_1)\Rightarrow t$\hfill [\rul{SPEC} 3]
+\item $\Gamma_1\vdash t_1(\hilbert\ t_1)$\hfill [Hypothesis]
+\item $\Gamma_1\cup\Gamma_2\vdash t$\hfill [\rul{MP} 4,5]
 \end{proof}
 
 
@@ -925,7 +886,7 @@ hypothesis.
 
 \vspace{12pt plus2pt minus1pt}
 
-$$\Gamma\turn t_1[t_2]\over \Gamma\turn \equant{x}t_1[x]$$
+$$\Gamma\vdash t_1[t_2]\over \Gamma\vdash \equant{x}t_1[x]$$
 \begin{itemize}
 \item Where $t_1[t_2]$ denotes a term $t_1$ with some free\index{free variables, in HOL logic@free variables, in \HOL logic}
 occurrences of $t_2$
@@ -937,23 +898,23 @@ doesn't become bound after substitution.
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item $\turn(\lquant{x}t_1[x])t_2= t_1[t_2]$\hfill [\rul{BETA\_CONV}]
-\item $\turn t_1[t_2] = (\lquant{x}t_1[x])t_2$\hfill [\rul{SYM} 1]
-\item $\Gamma\turn t_1[t_2]$\hfill [Hypothesis]
-\item $\Gamma\turn(\lquant{x}t_1[x])t_2$\hfill [\rul{EQ\_MP} 2,3]
-\item $\Gamma\turn(\lquant{x}t_1[x])(\hilbert(\lquant{x}t_1[x]))$\hfill
+\item $\vdash(\lquant{x}t_1[x])t_2= t_1[t_2]$\hfill [\rul{BETA\_CONV}]
+\item $\vdash t_1[t_2] = (\lquant{x}t_1[x])t_2$\hfill [\rul{SYM} 1]
+\item $\Gamma\vdash t_1[t_2]$\hfill [Hypothesis]
+\item $\Gamma\vdash(\lquant{x}t_1[x])t_2$\hfill [\rul{EQ\_MP} 2,3]
+\item $\Gamma\vdash(\lquant{x}t_1[x])(\hilbert(\lquant{x}t_1[x]))$\hfill
 [\rul{SELECT\_INTRO} 4]
-\item $\turn \exists = \lquant{P} P(\hilbert\ P)$\hfill
+\item $\vdash \exists = \lquant{P} P(\hilbert\ P)$\hfill
 [\rul{INST\_TYPE} applied to the definition of $\exists$]
-\item $\turn\exists(\lquant{x}t_1[x]) =
+\item $\vdash\exists(\lquant{x}t_1[x]) =
 (\lquant{P}P(\hilbert\ P))(\lquant{x}t_1[x])$\hfill [\rul{AP\_THM} 6]
-\item $\turn(\lquant{P}P(\hilbert\ P))(\lquant{x}t_1[x]) =
+\item $\vdash(\lquant{P}P(\hilbert\ P))(\lquant{x}t_1[x]) =
 (\lquant{x}t_1[x])(\hilbert(\lquant{x}t_1[x]))$\hfill [\rul{BETA\_CONV}]
-\item $\turn\exists(\lquant{x}t_1[x]) =
+\item $\vdash\exists(\lquant{x}t_1[x]) =
 (\lquant{x}t_1[x])(\hilbert(\lquant{x}t_1[x]))$\hfill [\rul{TRANS} 7,8]
-\item $\turn(\lquant{x}t_1[x])(\hilbert(\lquant{x}t_1[x])) =
+\item $\vdash(\lquant{x}t_1[x])(\hilbert(\lquant{x}t_1[x])) =
 \exists(\lquant{x}t_1[x])$\hfill [\rul{SYM} 9]
-\item $\Gamma\turn\exists(\lquant{x}t_1[x])$\hfill [\rul{EQ\_MP} 10,5]
+\item $\Gamma\vdash\exists(\lquant{x}t_1[x])$\hfill [\rul{EQ\_MP} 10,5]
 \end{proof}
 
 
@@ -968,8 +929,8 @@ doesn't become bound after substitution.
 
 \vspace{12pt plus2pt minus1pt}
 
-$$\Gamma_1\turn\equant{x}t[x]\qquad\qquad\qquad \Gamma_2,\ t[v]\turn t'
-\over \Gamma_1\cup\Gamma_2\turn t'$$
+$$\Gamma_1\vdash\equant{x}t[x]\qquad\qquad\qquad \Gamma_2,\ t[v]\vdash t'
+\over \Gamma_1\cup\Gamma_2\vdash t'$$
 \begin{itemize}
 \item Where $t[v]$ denotes a term $t$ with some free\index{free variables, in HOL logic@free variables, in \HOL logic}
 occurrences of the variable $v$
@@ -981,24 +942,24 @@ bound after substitution.
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item $\turn \exists = \lquant{P} P(\hilbert\ P)$\hfill
+\item $\vdash \exists = \lquant{P} P(\hilbert\ P)$\hfill
 [\rul{INST\_TYPE} applied to the definition of $\exists$]
-\item $\turn\exists(\lquant{x}t[x]) =
+\item $\vdash\exists(\lquant{x}t[x]) =
 (\lquant{P}P(\hilbert\ P))(\lquant{x}t[x])$\hfill [\rul{AP\_THM} 1]
-\item $\Gamma_1\turn\exists(\lquant{x}t[x])$\hfill [Hypothesis]
-\item $\Gamma_1\turn (\lquant{P}P(\hilbert\ P))(\lquant{x}t[x])$
+\item $\Gamma_1\vdash\exists(\lquant{x}t[x])$\hfill [Hypothesis]
+\item $\Gamma_1\vdash (\lquant{P}P(\hilbert\ P))(\lquant{x}t[x])$
 \hfill [\rul{EQ\_MP} 2,3]
-\item $\turn(\lquant{P}P(\hilbert\ P))(\lquant{x}t[x]) =
+\item $\vdash(\lquant{P}P(\hilbert\ P))(\lquant{x}t[x]) =
 (\lquant{x}t[x])(\hilbert(\lquant{x}t[x]))$\hfill [\rul{BETA\_CONV}]
-\item $\Gamma_1\turn(\lquant{x}t[x])(\hilbert(\lquant{x}t[x])$\hfill
+\item $\Gamma_1\vdash(\lquant{x}t[x])(\hilbert(\lquant{x}t[x])$\hfill
 [\rul{EQ\_MP} 5,4]
-\item $\turn(\lquant{x}t[x])v = t[v]$\hfill [\rul{BETA\_CONV}]
-\item $\turn t[v] =(\lquant{x}t[x])v$\hfill [\rul{SYM} 7]
-\item $\Gamma_2,\ t[v]\turn t'$\hfill [Hypothesis]
-\item $\Gamma_2\turn t[v]\imp t'$\hfill [\rul{DISCH} 9]
-\item $\Gamma_2\turn(\lquant{x}t[x])v\imp t'$\hfill [\rul{SUBST} 8,10]
-\item $\Gamma_2,\ (\lquant{x}t[x])v\turn t'$\hfill [\rul{UNDISCH} 11]
-\item $\Gamma_1\cup\Gamma_2\turn t'$\hfill [\rul{SELECT\_ELIM} 6,12]
+\item $\vdash(\lquant{x}t[x])v = t[v]$\hfill [\rul{BETA\_CONV}]
+\item $\vdash t[v] =(\lquant{x}t[x])v$\hfill [\rul{SYM} 7]
+\item $\Gamma_2,\ t[v]\vdash t'$\hfill [Hypothesis]
+\item $\Gamma_2\vdash t[v]\Rightarrow t'$\hfill [\rul{DISCH} 9]
+\item $\Gamma_2\vdash(\lquant{x}t[x])v\Rightarrow t'$\hfill [\rul{SUBST} 8,10]
+\item $\Gamma_2,\ (\lquant{x}t[x])v\vdash t'$\hfill [\rul{UNDISCH} 11]
+\item $\Gamma_1\cup\Gamma_2\vdash t'$\hfill [\rul{SELECT\_ELIM} 6,12]
 \end{proof}
 \index{existential quantifier, in HOL logic@existential quantifier, in \HOL logic!inference rules for|)}
 
@@ -1014,8 +975,8 @@ Given an equation where the right-hand side is a lambda-abstraction, one can der
 
 \vspace{12pt plus2pt minus1pt}
 
-$$\Gamma\turn t = \lquant{x}t'[x]
-\over \Gamma\turn t\ t = t'[t]$$
+$$\Gamma\vdash t = \lquant{x}t'[x]
+\over \Gamma\vdash t\ t = t'[t]$$
 \begin{itemize}
 \item Where  $t$ does not contain $x$.
 \end{itemize}
@@ -1023,14 +984,14 @@ $$\Gamma\turn t = \lquant{x}t'[x]
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item $\Gamma\turn t = \lquant{x} t'[x]$\hfill
+\item $\Gamma\vdash t = \lquant{x} t'[x]$\hfill
 [Suitably type-instantiated hypothesis]
-\item $\Gamma\turn t\ t =
+\item $\Gamma\vdash t\ t =
 (\lquant{x}t'[x])\ t$\hfill
 [\rul{AP\_THM} 1]
-\item $\turn(\lquant{x}t'[x])\ t =
+\item $\vdash(\lquant{x}t'[x])\ t =
 t'[t]$\hfill [\rul{BETA\_CONV}]
-\item $\Gamma\turn t\ t = t'[t]$\hfill
+\item $\Gamma\vdash t\ t = t'[t]$\hfill
 [\rul{TRANS} 2,3]
 \end{proof}
 
@@ -1045,8 +1006,8 @@ t'[t]$\hfill [\rul{BETA\_CONV}]
 
 \vspace{12pt plus2pt minus1pt}
 
-$$\Gamma\turn t = \lquant{x_1\cdots x_n}t'[x_1,\ldots,x_n]
-\over \Gamma\turn t\ t_1\cdots t_n = t'[t_1,\ldots,t_n]$$
+$$\Gamma\vdash t = \lquant{x_1\cdots x_n}t'[x_1,\ldots,x_n]
+\over \Gamma\vdash t\ t_1\cdots t_n = t'[t_1,\ldots,t_n]$$
 \begin{itemize}
 \item Where none of the $t_i$ contain any of the $x_i$.
 \end{itemize}
@@ -1054,14 +1015,14 @@ $$\Gamma\turn t = \lquant{x_1\cdots x_n}t'[x_1,\ldots,x_n]
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item $\Gamma\turn t = \lquant{x_1\cdots x_n} t'[x_1,\ldots,x_n]$\hfill
+\item $\Gamma\vdash t = \lquant{x_1\cdots x_n} t'[x_1,\ldots,x_n]$\hfill
 [Suitably type-instantiated hypothesis]
-\item $\Gamma\turn t\ t_1\cdots t_n =
+\item $\Gamma\vdash t\ t_1\cdots t_n =
 (\lquant{x_1\cdots x_n}t'[x_1,\ldots,x_n])\ t_1\cdots t_n$\hfill
 [\rul{AP\_THM} 1 ($n$ times)]
-\item $\turn(\lquant{x_1\cdots x_n}t'[x_1,\ldots,x_n])\ t_1\cdots t_n =
+\item $\vdash(\lquant{x_1\cdots x_n}t'[x_1,\ldots,x_n])\ t_1\cdots t_n =
 t'[t_1,\ldots,t_n]$\hfill [\rul{BETA\_CONV} ($n$ times)]
-\item $\Gamma\turn t\ t_1\cdots t_n = t'[t_1,\ldots,t_n]$\hfill
+\item $\Gamma\vdash t\ t_1\cdots t_n = t'[t_1,\ldots,t_n]$\hfill
 [\rul{TRANS} 2,3]
 \end{proof}
 
@@ -1082,26 +1043,26 @@ t'[t_1,\ldots,t_n]$\hfill [\rul{BETA\_CONV} ($n$ times)]
 
 \vspace{12pt plus2pt minus1pt}
 
-$$\Gamma_1\turn t_1\qquad\qquad\qquad\Gamma_2\turn t_2\over
-\Gamma_1\cup\Gamma_2 \turn t_1\conj t_2$$
+$$\Gamma_1\vdash t_1\qquad\qquad\qquad\Gamma_2\vdash t_2\over
+\Gamma_1\cup\Gamma_2 \vdash t_1\conj t_2$$
 
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item $\turn \conj = \lquant{b_1\ b_2}\uquant{b}(b_1\imp(b_2\imp b))\imp b$
+\item $\vdash \conj = \lquant{b_1\ b_2}\uquant{b}(b_1\Rightarrow(b_2\Rightarrow b))\Rightarrow b$
 \hfill [Definition of $\conj$]
-\item $\turn t_1\conj t_2 = \uquant{b}(t_1\imp(t_2\imp b))\imp b$\hfill
+\item $\vdash t_1\conj t_2 = \uquant{b}(t_1\Rightarrow(t_2\Rightarrow b))\Rightarrow b$\hfill
 [\rul{RIGHT\_LIST\_BETA} 1]
-\item $t_1\imp(t_2\imp b)\turn t_1\imp(t_2\imp b)$\hfill [\rul{ASSUME}]
-\item $\Gamma_1\turn t_1$\hfill [Hypothesis]
-\item $\Gamma_1,\ t_1\imp(t_2\imp b)\turn t_2\imp b$\hfill [\rul{MP} 3,4]
-\item $\Gamma_2\turn t_2$\hfill [Hypothesis]
-\item $\Gamma_1\cup\Gamma_2,\ t_1\imp(t_2\imp b)\turn b$\hfill [\rul{MP} 5,6]
-\item $\Gamma_1\cup \Gamma_2\turn(t_1\imp(t_2\imp b))\imp b$\hfill
+\item $t_1\Rightarrow(t_2\Rightarrow b)\vdash t_1\Rightarrow(t_2\Rightarrow b)$\hfill [\rul{ASSUME}]
+\item $\Gamma_1\vdash t_1$\hfill [Hypothesis]
+\item $\Gamma_1,\ t_1\Rightarrow(t_2\Rightarrow b)\vdash t_2\Rightarrow b$\hfill [\rul{MP} 3,4]
+\item $\Gamma_2\vdash t_2$\hfill [Hypothesis]
+\item $\Gamma_1\cup\Gamma_2,\ t_1\Rightarrow(t_2\Rightarrow b)\vdash b$\hfill [\rul{MP} 5,6]
+\item $\Gamma_1\cup \Gamma_2\vdash(t_1\Rightarrow(t_2\Rightarrow b))\Rightarrow b$\hfill
 [\rul{DISCH} 7]
-\item $\Gamma_1\cup \Gamma_2\turn \uquant{b}(t_1\imp(t_2\imp b))\imp b$\hfill
+\item $\Gamma_1\cup \Gamma_2\vdash \uquant{b}(t_1\Rightarrow(t_2\Rightarrow b))\Rightarrow b$\hfill
 [\rul{GEN} 8]
-\item $\Gamma_1\cup \Gamma_2\turn t_1\conj t_2$\hfill
+\item $\Gamma_1\cup \Gamma_2\vdash t_1\conj t_2$\hfill
 [\rul{EQ\_MP} (\rul{SYM} 2),9]
 \end{proof}
 
@@ -1120,30 +1081,30 @@ $$\Gamma_1\turn t_1\qquad\qquad\qquad\Gamma_2\turn t_2\over
 
 \vspace{12pt plus2pt minus1pt}
 
-$$\Gamma\turn t_1\conj t_2\over
-\Gamma\turn t_1\qquad\qquad\qquad \Gamma\turn t_2$$
+$$\Gamma\vdash t_1\conj t_2\over
+\Gamma\vdash t_1\qquad\qquad\qquad \Gamma\vdash t_2$$
 
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item $\turn \conj = \lquant{b_1\ b_2}\uquant{b}(b_1\imp(b_2\imp b))\imp b$
+\item $\vdash \conj = \lquant{b_1\ b_2}\uquant{b}(b_1\Rightarrow(b_2\Rightarrow b))\Rightarrow b$
 \hfill [Definition of $\conj$]
-\item $\turn t_1\conj t_2 = \uquant{b}(t_1\imp(t_2\imp b))\imp b$\hfill
+\item $\vdash t_1\conj t_2 = \uquant{b}(t_1\Rightarrow(t_2\Rightarrow b))\Rightarrow b$\hfill
 [\rul{RIGHT\_LIST\_BETA} 1]
-\item $\Gamma\turn t_1\conj t_2$\hfill [Hypothesis]
-\item $\Gamma\turn \uquant{b}(t_1\imp(t_2\imp b))\imp b$\hfill
+\item $\Gamma\vdash t_1\conj t_2$\hfill [Hypothesis]
+\item $\Gamma\vdash \uquant{b}(t_1\Rightarrow(t_2\Rightarrow b))\Rightarrow b$\hfill
 [\rul{EQ\_MP} 2,3]
-\item $\Gamma\turn (t_1\imp(t_2\imp t_1))\imp t_1$\hfill [\rul{SPEC} 4]
-\item $t_1\turn t_1$\hfill [\rul{ASSUME}]
-\item $t_1 \turn t_2\imp t_1$\hfill [\rul{DISCH} 6]
-\item $\turn t_1\imp(t_2\imp t_1)$\hfill [\rul{DISCH} 7]
-\item $\Gamma\turn t_1$\hfill [\rul{MP} 5,8]
-\item $\Gamma\turn (t_1\imp(t_2\imp t_2))\imp t_2$\hfill [\rul{SPEC} 4]
-\item $t_2\turn t_2$\hfill [\rul{ASSUME}]
-\item $\turn t_2\imp t_2$\hfill [\rul{DISCH} 11]
-\item $\turn t_1\imp(t_2\imp t_2)$\hfill [\rul{DISCH} 12]
-\item $\Gamma\turn t_2$\hfill [\rul{MP} 10,13]
-\item $\Gamma\turn t_1$ and $\Gamma\turn t_2$\hfill [9,14]
+\item $\Gamma\vdash (t_1\Rightarrow(t_2\Rightarrow t_1))\Rightarrow t_1$\hfill [\rul{SPEC} 4]
+\item $t_1\vdash t_1$\hfill [\rul{ASSUME}]
+\item $t_1 \vdash t_2\Rightarrow t_1$\hfill [\rul{DISCH} 6]
+\item $\vdash t_1\Rightarrow(t_2\Rightarrow t_1)$\hfill [\rul{DISCH} 7]
+\item $\Gamma\vdash t_1$\hfill [\rul{MP} 5,8]
+\item $\Gamma\vdash (t_1\Rightarrow(t_2\Rightarrow t_2))\Rightarrow t_2$\hfill [\rul{SPEC} 4]
+\item $t_2\vdash t_2$\hfill [\rul{ASSUME}]
+\item $\vdash t_2\Rightarrow t_2$\hfill [\rul{DISCH} 11]
+\item $\vdash t_1\Rightarrow(t_2\Rightarrow t_2)$\hfill [\rul{DISCH} 12]
+\item $\Gamma\vdash t_2$\hfill [\rul{MP} 10,13]
+\item $\Gamma\vdash t_1$ and $\Gamma\vdash t_2$\hfill [9,14]
 \end{proof}
 
 
@@ -1159,24 +1120,24 @@ $$\Gamma\turn t_1\conj t_2\over
 
 \vspace{12pt plus2pt minus1pt}
 
-$$\Gamma\turn t_1\over \Gamma\turn t_1\disj t_2$$
+$$\Gamma\vdash t_1\over \Gamma\vdash t_1\disj t_2$$
 
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item $\turn \disj =
-\lquant{b_1\ b_2}\uquant{b}(b_1\imp b)\imp(b_2\imp b)\imp b$
+\item $\vdash \disj =
+\lquant{b_1\ b_2}\uquant{b}(b_1\Rightarrow b)\Rightarrow(b_2\Rightarrow b)\Rightarrow b$
 \hfill [Definition of $\disj$]
-\item $\turn t_1\disj t_2 = \uquant{b}(t_1\imp b)\imp(t_2\imp b)\imp b$
+\item $\vdash t_1\disj t_2 = \uquant{b}(t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$
 \hfill [\rul{RIGHT\_LIST\_BETA} 1]
-\item $\Gamma\turn t_1$\hfill [Hypothesis]
-\item $t_1\imp b\turn t_1\imp b$\hfill [\rul{ASSUME}]
-\item $\Gamma,\ t_1\imp b\turn b$\hfill [\rul{MP} 4,3]
-\item $\Gamma,\ t_1\imp b\turn(t_2\imp b)\imp b$\hfill [\rul{DISCH} 5]
-\item $\Gamma\turn (t_1\imp b)\imp(t_2\imp b)\imp b$\hfill [\rul{DISCH} 6]
-\item $\Gamma\turn \uquant{b}(t_1\imp b)
-\imp(t_2\imp b)\imp b$\hfill [\rul{GEN} 7]
-\item $\Gamma\turn t_1\disj t_2$\hfill [\rul{EQ\_MP} (\rul{SYM} 2),8]
+\item $\Gamma\vdash t_1$\hfill [Hypothesis]
+\item $t_1\Rightarrow b\vdash t_1\Rightarrow b$\hfill [\rul{ASSUME}]
+\item $\Gamma,\ t_1\Rightarrow b\vdash b$\hfill [\rul{MP} 4,3]
+\item $\Gamma,\ t_1\Rightarrow b\vdash(t_2\Rightarrow b)\Rightarrow b$\hfill [\rul{DISCH} 5]
+\item $\Gamma\vdash (t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$\hfill [\rul{DISCH} 6]
+\item $\Gamma\vdash \uquant{b}(t_1\Rightarrow b)
+\Rightarrow(t_2\Rightarrow b)\Rightarrow b$\hfill [\rul{GEN} 7]
+\item $\Gamma\vdash t_1\disj t_2$\hfill [\rul{EQ\_MP} (\rul{SYM} 2),8]
 \end{proof}
 
 
@@ -1194,24 +1155,24 @@ $$\Gamma\turn t_1\over \Gamma\turn t_1\disj t_2$$
 
 \vspace{12pt plus2pt minus1pt}
 
-$$\Gamma\turn t_2\over \Gamma\turn t_1\disj t_2$$
+$$\Gamma\vdash t_2\over \Gamma\vdash t_1\disj t_2$$
 
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item $\turn \disj =
-\lquant{b_1\ b_2}\uquant{b}(b_1\imp b)\imp(b_2\imp b)\imp b$
+\item $\vdash \disj =
+\lquant{b_1\ b_2}\uquant{b}(b_1\Rightarrow b)\Rightarrow(b_2\Rightarrow b)\Rightarrow b$
 \hfill [Definition of $\disj$]
-\item $\turn t_1\disj t_2 = \uquant{b}(t_1\imp b)\imp(t_2\imp b)\imp b$
+\item $\vdash t_1\disj t_2 = \uquant{b}(t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$
 \hfill [\rul{RIGHT\_LIST\_BETA} 1]
-\item $\Gamma\turn t_2$\hfill [Hypothesis]
-\item $t_2\imp b\turn t_2\imp b$\hfill [\rul{ASSUME}]
-\item $\Gamma,\ t_2\imp b\turn b$\hfill [\rul{MP} 4,3]
-\item $\Gamma\turn(t_2\imp b)\imp b$\hfill [\rul{DISCH} 5]
-\item $\Gamma\turn (t_1\imp b)\imp(t_2\imp b)\imp b$\hfill [\rul{DISCH} 6]
-\item $\Gamma\turn \uquant{b}(t_1\imp b)
-\imp(t_2\imp b)\imp b$\hfill [\rul{GEN} 7]
-\item $\Gamma\turn t_1\disj t_2$\hfill [\rul{EQ\_MP} (\rul{SYM} 2),8]
+\item $\Gamma\vdash t_2$\hfill [Hypothesis]
+\item $t_2\Rightarrow b\vdash t_2\Rightarrow b$\hfill [\rul{ASSUME}]
+\item $\Gamma,\ t_2\Rightarrow b\vdash b$\hfill [\rul{MP} 4,3]
+\item $\Gamma\vdash(t_2\Rightarrow b)\Rightarrow b$\hfill [\rul{DISCH} 5]
+\item $\Gamma\vdash (t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$\hfill [\rul{DISCH} 6]
+\item $\Gamma\vdash \uquant{b}(t_1\Rightarrow b)
+\Rightarrow(t_2\Rightarrow b)\Rightarrow b$\hfill [\rul{GEN} 7]
+\item $\Gamma\vdash t_1\disj t_2$\hfill [\rul{EQ\_MP} (\rul{SYM} 2),8]
 \end{proof}
 
 
@@ -1225,28 +1186,28 @@ $$\Gamma\turn t_2\over \Gamma\turn t_1\disj t_2$$
 
 \vspace{12pt plus2pt minus1pt}
 
-$$\Gamma\turn t_1\disj t_2\qquad\qquad\qquad\Gamma_1,\ t_1\turn t
-\qquad\qquad\qquad \Gamma_2,\ t_2\turn t\over
-\Gamma\cup\Gamma_1\cup\Gamma_2\turn t$$
+$$\Gamma\vdash t_1\disj t_2\qquad\qquad\qquad\Gamma_1,\ t_1\vdash t
+\qquad\qquad\qquad \Gamma_2,\ t_2\vdash t\over
+\Gamma\cup\Gamma_1\cup\Gamma_2\vdash t$$
 
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item $\turn \disj =
-\lquant{b_1\ b_2}\uquant{b}(b_1\imp b)\imp(b_2\imp b)\imp b$
+\item $\vdash \disj =
+\lquant{b_1\ b_2}\uquant{b}(b_1\Rightarrow b)\Rightarrow(b_2\Rightarrow b)\Rightarrow b$
 \hfill [Definition of $\disj$]
-\item $\turn t_1\disj t_2 = \uquant{b}(t_1\imp b)\imp(t_2\imp b)\imp b$
+\item $\vdash t_1\disj t_2 = \uquant{b}(t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$
 \hfill [\rul{RIGHT\_LIST\_BETA} 1]
-\item $\Gamma\turn t_1\disj t_2$\hfill [Hypothesis]
-\item $\Gamma\turn\uquant{b}(t_1\imp b)\imp(t_2\imp b)\imp b$\hfill
+\item $\Gamma\vdash t_1\disj t_2$\hfill [Hypothesis]
+\item $\Gamma\vdash\uquant{b}(t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$\hfill
 [\rul{EQ\_MP} 2,3]
-\item $\Gamma\turn(t_1\imp t)\imp(t_2\imp t)\imp t$\hfill [\rul{SPEC} 4]
-\item $\Gamma_1,\ t_1\turn t$\hfill [Hypothesis]
-\item $\Gamma_1\turn t_1\imp t$\hfill [\rul{DISCH} 6]
-\item $\Gamma\cup \Gamma_1\turn (t_2\imp t)\imp t$\hfill [\rul{MP} 5,7]
-\item $\Gamma_2,\ t_2\turn t$\hfill [Hypothesis]
-\item $\Gamma_2\turn t_2\imp t$\hfill [\rul{DISCH} 9]
-\item $\Gamma\cup \Gamma_1\cup \Gamma_2\turn t$\hfill [\rul{MP} 8,10]
+\item $\Gamma\vdash(t_1\Rightarrow t)\Rightarrow(t_2\Rightarrow t)\Rightarrow t$\hfill [\rul{SPEC} 4]
+\item $\Gamma_1,\ t_1\vdash t$\hfill [Hypothesis]
+\item $\Gamma_1\vdash t_1\Rightarrow t$\hfill [\rul{DISCH} 6]
+\item $\Gamma\cup \Gamma_1\vdash (t_2\Rightarrow t)\Rightarrow t$\hfill [\rul{MP} 5,7]
+\item $\Gamma_2,\ t_2\vdash t$\hfill [Hypothesis]
+\item $\Gamma_2\vdash t_2\Rightarrow t$\hfill [\rul{DISCH} 9]
+\item $\Gamma\cup \Gamma_1\cup \Gamma_2\vdash t$\hfill [\rul{MP} 8,10]
 \end{proof}
 \index{disjunction, in HOL logic@disjunction, in \HOL logic!inference rule for|)}
 
@@ -1265,29 +1226,29 @@ $$\Gamma\turn t_1\disj t_2\qquad\qquad\qquad\Gamma_1,\ t_1\turn t
 
 \vspace{12pt plus2pt minus1pt}
 
-$$\Gamma,\ \neg t\turn \F\over \Gamma\turn t$$
+$$\Gamma,\ \neg t\vdash \F\over \Gamma\vdash t$$
 
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item $\turn \neg = \lquant{b}b\imp\F$\hfill [Definition of $\neg$]
-\item $\turn \neg t = t\imp\F$\hfill [\rul{RIGHT\_LIST\_BETA} 1]
-\item $\Gamma,\ \neg t\turn\F$\hfill [Hypothesis]
-\item $\Gamma\turn \neg t\imp\F$\hfill  [\rul{DISCH} 3]
-\item $\Gamma\turn (t\imp\F)\imp\F$\hfill [\rul{SUBST} 2,4]
-\item $t = \F\turn t = \F$\hfill [\rul{ASSUME}]
-\item $\Gamma,\ t=\F\turn (\F\imp\F)\imp\F$\hfill [\rul{SUBST} 6,5]
-\item $\F\turn\F$\hfill [\rul{ASSUME}]
-\item $\turn \F\imp\F$\hfill [\rul{DISCH} 8]
-\item $\Gamma,\ t=\F\turn\F$\hfill [\rul{MP} 7,9]
-\item $\turn \F = \uquant{b}b$\hfill [Definition of $\F$]
-\item $\Gamma,\ t=\F\turn \uquant{b}b$\hfill [\rul{SUBST} 11,10]
-\item $\Gamma,\ t=\F\turn t$\hfill [\rul{SPEC} 12]
-\item $\turn \uquant{b} (b = \T)\disj(b = \F)$\hfill [Axiom]
-\item $\turn (t = \T)\disj(t = \F)$\hfill [\rul{SPEC} 14]
-\item $t=\T\turn t=\T$\hfill [\rul{ASSUME}]
-\item $t=\T\turn t$\hfill [\rul{EQT\_ELIM} 16]
-\item $\Gamma\turn t$\hfill [\rul{DISJ\_CASES} 15,17,13]
+\item $\vdash \neg = \lquant{b}b\Rightarrow\F$\hfill [Definition of $\neg$]
+\item $\vdash \neg t = t\Rightarrow\F$\hfill [\rul{RIGHT\_LIST\_BETA} 1]
+\item $\Gamma,\ \neg t\vdash\F$\hfill [Hypothesis]
+\item $\Gamma\vdash \neg t\Rightarrow\F$\hfill  [\rul{DISCH} 3]
+\item $\Gamma\vdash (t\Rightarrow\F)\Rightarrow\F$\hfill [\rul{SUBST} 2,4]
+\item $t = \F\vdash t = \F$\hfill [\rul{ASSUME}]
+\item $\Gamma,\ t=\F\vdash (\F\Rightarrow\F)\Rightarrow\F$\hfill [\rul{SUBST} 6,5]
+\item $\F\vdash\F$\hfill [\rul{ASSUME}]
+\item $\vdash \F\Rightarrow\F$\hfill [\rul{DISCH} 8]
+\item $\Gamma,\ t=\F\vdash\F$\hfill [\rul{MP} 7,9]
+\item $\vdash \F = \uquant{b}b$\hfill [Definition of $\F$]
+\item $\Gamma,\ t=\F\vdash \uquant{b}b$\hfill [\rul{SUBST} 11,10]
+\item $\Gamma,\ t=\F\vdash t$\hfill [\rul{SPEC} 12]
+\item $\vdash \uquant{b} (b = \T)\disj(b = \F)$\hfill [Axiom]
+\item $\vdash (t = \T)\disj(t = \F)$\hfill [\rul{SPEC} 14]
+\item $t=\T\vdash t=\T$\hfill [\rul{ASSUME}]
+\item $t=\T\vdash t$\hfill [\rul{EQT\_ELIM} 16]
+\item $\Gamma\vdash t$\hfill [\rul{DISJ\_CASES} 15,17,13]
 \end{proof}
 \index{derived rules, in HOL logic@derived rules, in \HOL logic!list and derivations of some|)}
 \index{inference rules, of HOL logic@inference rules, of HOL logic!derived|)}

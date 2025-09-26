@@ -7,13 +7,11 @@
 (* interactive use:
   app load ["arm_astTheory", "wordsLib"];
 *)
+Theory arm_decoder
+Ancestors
+  arithmetic bit arm_ast
 
-open HolKernel boolLib bossLib Parse;
 
-open arithmeticTheory bitTheory;
-open arm_astTheory;
-
-val _ = new_theory "arm_decoder";
 val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------ *)
@@ -1573,4 +1571,3 @@ val _ = computeLib.add_persistent_funs
 
 (* ------------------------------------------------------------------------ *)
 
-val _ = export_theory();

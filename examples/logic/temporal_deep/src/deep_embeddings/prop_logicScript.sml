@@ -1,14 +1,13 @@
-open HolKernel Parse boolLib bossLib;
-
-open pred_setTheory pairTheory arithmeticTheory tuerk_tacticsLib
-     containerTheory listTheory temporal_deep_mixedTheory set_lemmataTheory;
-
-open Sanity;
+Theory prop_logic
+Ancestors
+  pred_set pair arithmetic container list temporal_deep_mixed
+  set_lemmata
+Libs
+  tuerk_tacticsLib Sanity
 
 val _ = hide "S";
 val _ = hide "I";
 
-val _ = new_theory "prop_logic";
 val _ = ParseExtras.temp_loose_equality();
 
 val _ = Datatype `
@@ -1218,4 +1217,3 @@ Proof
   ]
 QED
 
-val _ = export_theory();

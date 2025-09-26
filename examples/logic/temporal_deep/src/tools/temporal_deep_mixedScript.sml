@@ -1,4 +1,9 @@
-open HolKernel Parse boolLib bossLib;
+Theory temporal_deep_mixed
+Ancestors
+  pred_set pair arithmetic container list rich_list set_lemmata
+  bit
+Libs
+  tuerk_tacticsLib Sanity
 
 (*
 quietdec := true;
@@ -8,11 +13,6 @@ map load
   "containerTheory", "listTheory", "rich_listTheory", "set_lemmataTheory", "bitTheory"];
 *)
 
-
-open pred_setTheory pairTheory arithmeticTheory tuerk_tacticsLib
-    containerTheory listTheory rich_listTheory set_lemmataTheory
-    bitTheory;
-open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
@@ -27,7 +27,6 @@ quietdec := false;
 
 
 
-val _ = new_theory "temporal_deep_mixed";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -780,4 +779,3 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
   PROVE_TAC[]
 ]);
 
-val _ = export_theory();

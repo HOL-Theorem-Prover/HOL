@@ -13,11 +13,13 @@ app load
    "metisLib","posrealLib","expectationTheory","intLib", "wpTheory"];
 quietdec := true;
 *)
+Theory value
+Ancestors
+  combin list rich_list string integer real poset posreal
+  expectation wp
+Libs
+  intLib realLib metisLib posrealLib
 
-open HolKernel Parse boolLib bossLib intLib realLib metisLib;
-open combinTheory listTheory rich_listTheory stringTheory integerTheory
-     realTheory;
-open posetTheory posrealTheory posrealLib expectationTheory wpTheory;
 
 (*
 quietdec := false;
@@ -26,8 +28,6 @@ quietdec := false;
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "value"                                         *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = new_theory "value";
 
 (* ------------------------------------------------------------------------- *)
 (* Helpful proof tools                                                       *)
@@ -206,4 +206,3 @@ val sublinear_necessary_value = store_thm
    ++ Q.EXISTS_TAC `Int 0`
    ++ RW_TAC std_ss []);
 
-val _ = export_theory();

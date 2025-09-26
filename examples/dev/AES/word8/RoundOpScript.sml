@@ -15,9 +15,12 @@
   app load ["MultTheory", "tablesTheory", "wordsLib"];
   quietdec := false;
 *)
+Theory RoundOp
+Ancestors
+  pair words Mult
+Libs
+  wordsLib
 
-open HolKernel Parse boolLib bossLib;
-open pairTheory wordsTheory MultTheory wordsLib;
 
 (*---------------------------------------------------------------------------*)
 (* Make bindings to pre-existing stuff                                       *)
@@ -26,12 +29,6 @@ open pairTheory wordsTheory MultTheory wordsLib;
 val RESTR_EVAL_TAC = computeLib.RESTR_EVAL_TAC;
 
 val Sbox_Inversion = tablesTheory.Sbox_Inversion;
-
-(*---------------------------------------------------------------------------*)
-(* Create the theory.                                                        *)
-(*---------------------------------------------------------------------------*)
-
-val _ = new_theory "RoundOp";
 
 (*---------------------------------------------------------------------------*)
 (* A block is 16 bytes. A state also has that type, although states have     *)
@@ -428,6 +425,3 @@ val InvMixColumns_Distrib = Q.store_thm
  SIMP_TAC std_ss [FORALL_BLOCK] THEN
  SRW_TAC [] [XOR_BLOCK_def, AddRoundKey_def, InvMixColumns_def, LET_THM,
              genMixColumns_def, InvMultCol_def, ConstMultDistrib]);
-
-
-val _ = export_theory();

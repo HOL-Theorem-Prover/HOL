@@ -12,14 +12,14 @@ open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLi
 
 quietdec := false;
 *)
-
-open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLib pairTheory listTheory whileTheory
-       finite_mapTheory CFLTheory ACFTheory;
+Theory HSL
+Ancestors
+  arithmetic words pair list while finite_map CFL ACF
+Libs
+  numLib wordsLib
 
 
 (*---------------------------------------------------------------------------------*)
-
-val _ = new_theory "HSL";
 
 (*---------------------------------------------------------------------------------*)
 (*      Logical registers and their mappings to physical registers                 *)
@@ -547,4 +547,3 @@ val Fc_RULE = Q.store_thm (
 
 (*---------------------------------------------------------------------------------*)
 
-val _ = export_theory();

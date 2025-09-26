@@ -5,13 +5,13 @@
 (* AUTHORS : 2005-2011 Michael Norrish                                        *)
 (*         : 2023-2024 Michael Norrish and Chun Tian                          *)
 (* ========================================================================== *)
+Theory basic_swap
+Ancestors
+  arithmetic string pred_set list rich_list pair numpair
+  string_num
+Libs
+  boolSimps numLib hurdUtils
 
-open HolKernel Parse boolLib bossLib;
-
-open boolSimps arithmeticTheory stringTheory pred_setTheory numLib hurdUtils
-     listTheory rich_listTheory pairTheory numpairTheory string_numTheory;
-
-val _ = new_theory "basic_swap";
 
 (* ----------------------------------------------------------------------
     swapping over strings
@@ -423,5 +423,4 @@ Proof
  >> qexistsl_tac [‘r1’, ‘j’] >> rw []
 QED
 
-val _ = export_theory ();
 val _ = html_theory "basic_swap";

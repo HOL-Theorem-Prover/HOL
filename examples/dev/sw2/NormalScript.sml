@@ -4,9 +4,12 @@
   open wordsLib arithmeticTheory;
   quietdec := false;
 *)
+Theory Normal  (* This name is misleading *)
+Ancestors
+  arithmetic
+Libs
+  wordsLib
 
-open HolKernel Parse boolLib bossLib wordsLib
-     arithmeticTheory;
 
 (*---------------------------------------------------------------------------------*)
 (* Theorems used for pre-processing, normalization, normal format optimization,    *)
@@ -14,7 +17,6 @@ open HolKernel Parse boolLib bossLib wordsLib
 (* To do: break them into several theories.                                        *)
 (*---------------------------------------------------------------------------------*)
 
-val _ = new_theory "Normal";            (* This name is misleading *)
 
 (*---------------------------------------------------------------------------------*)
 (* Preprocessing                                                                   *)
@@ -386,5 +388,3 @@ val LET_LOC = store_thm (
   );
 
 (* --------------------------------------------------------------------*)
-
-val _ = export_theory();

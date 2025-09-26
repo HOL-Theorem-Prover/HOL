@@ -1,9 +1,9 @@
-open HolKernel boolLib bossLib Parse wordsLib
-     arithmeticTheory numposrepTheory listTheory rich_listTheory
-     bitTheory wordsTheory byteTheory logrootTheory dividesTheory
-     cv_stdTheory cv_transLib
-
-val () = new_theory "messageDigestPadding";
+Theory messageDigestPadding
+Ancestors
+  arithmetic numposrep list rich_list bit words byte logroot
+  divides cv_std
+Libs
+  wordsLib cv_transLib
 
 val () = cv_auto_trans n2l_n2lA;
 
@@ -66,4 +66,3 @@ End
 
 val () = cv_auto_trans parse_message_def;
 
-val () = export_theory();

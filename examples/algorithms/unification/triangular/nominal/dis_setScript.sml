@@ -1,6 +1,9 @@
-open HolKernel boolLib bossLib Parse stringTheory pred_setTheory nomsetTheory listTheory ramanaLib pairTheory
+Theory dis_set
+Ancestors
+  string pred_set nomset list pair
+Libs
+  ramanaLib
 
-val _ = new_theory "dis_set"
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 }
 
 val dis_set_def = Define`
@@ -89,4 +92,3 @@ val dis_set_comm = Q.store_thm(
 `dis_set p1 p2 = dis_set p2 p1`,
 SRW_TAC [][dis_set_def,EXTENSION,EQ_IMP_THM])
 
-val _ = export_theory ();

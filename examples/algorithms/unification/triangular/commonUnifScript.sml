@@ -1,6 +1,6 @@
-open HolKernel boolLib bossLib stringTheory arithmeticTheory pred_setTheory
-     finite_mapTheory prim_recTheory
-val _ = new_theory "commonUnif";
+Theory commonUnif
+Ancestors
+  string arithmetic pred_set finite_map prim_rec
 
 val _ = Hol_datatype `
   const = Null
@@ -51,4 +51,3 @@ Q.EXISTS_TAC `n` THEN
 THEN DECIDE_TAC
 QED
 
-val _ = export_theory ();

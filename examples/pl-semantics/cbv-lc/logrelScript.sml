@@ -1,14 +1,12 @@
 (* Define a logical relation for the untyped call-by-value lambda calculus,
  * prove that it is reflexive, transitive, and sound wrt contextual
  * approximation *)
+Theory logrel
+Ancestors
+  integer string alist list pred_set pair option finite_map
+  arithmetic cbv
 
 
-open HolKernel boolLib bossLib Parse;
-open integerTheory stringTheory alistTheory listTheory pred_setTheory;
-open pairTheory optionTheory finite_mapTheory arithmeticTheory;
-open cbvTheory
-
-val _ = new_theory "logrel";
 
 (* The logical relation *)
 
@@ -710,4 +708,3 @@ Proof
   fs [res_rel_rw]
 QED
 
-val _ = export_theory();

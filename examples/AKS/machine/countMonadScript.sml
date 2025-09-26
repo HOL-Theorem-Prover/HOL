@@ -4,25 +4,14 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "countMonad";
-
 (* ------------------------------------------------------------------------- *)
+Theory countMonad
+Ancestors
+  pair option arithmetic pred_set list errorStateMonad
+Libs
+  jcLib monadsyntax
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory listTheory arithmeticTheory pairTheory optionTheory;
-
-open errorStateMonadTheory;
-
-open monadsyntax;
-
-val _ = set_grammar_ancestry ["pair", "option", "arithmetic"];
-
 val _ = monadsyntax.enable_monadsyntax();
 val _ = monadsyntax.enable_monad "errorState";
 
@@ -323,8 +312,4 @@ val _ = computeLib.set_skip computeLib.the_compset ``ifM`` (SOME 1);
 (* This EVAL IFm is not stored in the theory file! *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

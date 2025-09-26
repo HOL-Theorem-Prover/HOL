@@ -1,7 +1,9 @@
-open HolKernel boolLib bossLib
-open stateLib set_sepTheory progTheory riscv_stepTheory
+Theory riscv_prog
+Ancestors
+  set_sep prog riscv_step temporal_state
+Libs
+  stateLib
 
-val () = new_theory "riscv_prog"
 val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------ *)
 
@@ -146,5 +148,3 @@ val riscv_opcode_bytes = Theory.save_thm("riscv_opcode_bytes",
       (b = (15 ><  8) r : word8) /\
       (c = (23 >< 16) r : word8) /\
       (d = (31 >< 24) r : word8)``)
-
-val () = export_theory()

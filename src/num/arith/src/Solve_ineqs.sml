@@ -18,7 +18,7 @@
 structure Solve_ineqs :> Solve_ineqs =
 struct
   open Arbint HolKernel boolLib
-       Int_extra Arith_cons Term_coeffs RJBConv Theorems Thm_convs
+       Int_extra Arith_cons Term_coeffs Theorems Thm_convs
        Norm_arith Norm_ineqs reduceLib;
 
 val op << = String.<
@@ -97,7 +97,7 @@ fun MULT_LEQ_BY_CONST_CONV constant tm =
                (RAND_CONV (RATOR_CONV (RAND_CONV (fn _ => th)))))
               (rhs (concl th1))
        in  ((fn _ => TRANS th1 th2) THENC
-            (ARGS_CONV CONST_TIMES_ARITH_CONV)) tm
+            (BINOP_CONV CONST_TIMES_ARITH_CONV)) tm
        end
   end
  ) handle (HOL_ERR _) => failwith "MULT_LEQ_BY_CONST_CONV";
@@ -165,7 +165,7 @@ fun WEIGHTED_SUM name (coeffs1,coeffs2) =
       val new_coeffs = merge_coeffs (negate_coeffs coeffs1'') coeffs2''
       fun thf () =
          let val th1 =
-                RULE_OF_CONV
+                QCONV
                 ((if (mult1 = one)
                   then ALL_CONV
                   else MULT_LEQ_BY_CONST_CONV (term_of_int mult1)) THENC
@@ -176,7 +176,7 @@ fun WEIGHTED_SUM name (coeffs1,coeffs2) =
                                     NORM_ZERO_AND_ONE_CONV))))
                 (build_leq coeffs1)
              and th2 =
-                RULE_OF_CONV
+                QCONV
                 ((if (mult2 = one)
                   then ALL_CONV
                   else MULT_LEQ_BY_CONST_CONV (term_of_int mult2)) THENC
@@ -294,22 +294,22 @@ fun VAR_ELIM coeffsl =
         else from::(upto (from + one) to)
      fun left_ineqs var icoeffsl =
         let fun left_ineq icoeffs =
-               not (null (filter
+                         (List.exists
                           (fn (name,coeff) => (name = var) andalso (coeff < zero))
-                          (snd (snd icoeffs))))
+                          (snd (snd icoeffs)))
         in  filter left_ineq icoeffsl
         end
      fun right_ineqs var icoeffsl =
         let fun right_ineq icoeffs =
-               not (null (filter
+                         (List.exists
                           (fn (name,coeff) => (name = var) andalso (coeff > zero))
-                          (snd (snd icoeffs))))
+                          (snd (snd icoeffs)))
         in  filter right_ineq icoeffsl
         end
      fun no_var_ineqs var icoeffsl =
         let fun no_var_ineq icoeffs =
-               null
-                (filter
+               not
+                (List.exists
                  (fn (name,coeff) => (name = var) andalso (not (coeff = zero)))
                  (snd (snd icoeffs)))
         in  filter no_var_ineq icoeffsl

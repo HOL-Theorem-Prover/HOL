@@ -1,10 +1,8 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory bit_listTheory listTheory opmonTheory combinTheory;
+Theory x64_seq_monad
+Ancestors
+  words bit_list list opmon combin x64_coretypes
 
-open x64_coretypesTheory;
-
-val _ = new_theory "x64_seq_monad";
 val _ = ParseExtras.temp_loose_equality()
 
 val _ = type_abbrev("Zimm",``:word64``);
@@ -456,4 +454,3 @@ val x64_address_lemma = save_thm("x64_address_lemma",
   SIMP_RULE std_ss [listTheory.ALL_DISTINCT,MEM,GSYM CONJ_ASSOC]
     (EVAL ``ALL_DISTINCT [0w;1w;2w;3w;4w;5w;6w;7w:word64]``));
 
-val _ = export_theory ();

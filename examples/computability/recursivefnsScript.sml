@@ -1,9 +1,6 @@
-open HolKernel Parse boolLib bossLib
-
-open listTheory rich_listTheory
-open primrecfnsTheory
-
-val _ = new_theory "recursivefns"
+Theory recursivefns
+Ancestors
+  list rich_list primrecfns
 
 val minimise_def = Define`
   minimise f l =
@@ -177,4 +174,3 @@ Proof
   rename [‘recfn f (LENGTH gs)’] >> Cases_on ‘gs’ >> fs[]
 QED
 
-val _ = export_theory()

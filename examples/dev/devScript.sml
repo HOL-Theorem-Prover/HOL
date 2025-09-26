@@ -1,5 +1,8 @@
-open HolKernel Parse boolLib bossLib metisLib;
-
+Theory dev
+Ancestors
+  compose
+Libs
+  metisLib metisLib
 
 (*****************************************************************************)
 (* A handshaking device DEV is a SAFE_DEV which satisfies liveness.          *)
@@ -24,12 +27,6 @@ quietdec := false;
 (******************************************************************************
 * Boilerplate needed for compilation
 ******************************************************************************)
-open HolKernel Parse boolLib bossLib metisLib;
-
-(******************************************************************************
-* Open theories
-******************************************************************************)
-open composeTheory;
 val op by = BasicProvers.byA
 
 (*****************************************************************************)
@@ -41,7 +38,6 @@ val op by = BasicProvers.byA
 (*****************************************************************************)
 val kill = (fn theorem => K ALL_TAC theorem);
 
-val _ = new_theory "dev";
 val _ = ParseExtras.temp_loose_equality()
 
 (*****************************************************************************)
@@ -1505,7 +1501,3 @@ val REC = Q.store_thm("REC",
     ] (* Cases_on `done_e t` *)
     ] (* RW_TAC arith_ss [DEV_def,REC_def,LIV_def] *)
 );
-
-
-
-val _ = export_theory();

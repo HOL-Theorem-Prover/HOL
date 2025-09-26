@@ -266,6 +266,8 @@ local
 
    val APPEND_LEFT_ASSOC_CONV =
       PURE_REWRITE_CONV [GSYM listTheory.APPEND_ASSOC]
+   val SNOC_APPEND_CONV =
+      PURE_REWRITE_CONV [SNOC_APPEND]
 
    fun LIST_EQ_SIMP_CONV___internal t =
        let
@@ -290,7 +292,7 @@ in
             val (l1', _) = dest_eq t
             val _ = if is_list_type (type_of l1') then () else raise UNCHANGED
          in
-             let val th = PURE_REWRITE_CONV [SNOC_APPEND] t
+             let val th = SNOC_APPEND_CONV t
                  val (t1, t2) = dest_eq (concl th)
              in
                  (* If the list equation after eliminating SNOC actually cannot be

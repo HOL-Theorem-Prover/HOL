@@ -9,11 +9,12 @@
   open wordsTheory bitTheory wordsLib arithmeticTheory;
   quietdec := false;
 *)
+Theory Mult
+Ancestors
+  words bit arithmetic
+Libs
+  wordsLib
 
-open HolKernel Parse boolLib bossLib
-     wordsTheory bitTheory wordsLib arithmeticTheory;
-
-val _ = new_theory "Mult";
 
 (*---------------------------------------------------------------------------
     Multiply a byte (representing a polynomial) by x.
@@ -148,4 +149,3 @@ val PolyExp_def =
    `PolyExp x n = if n=0 then 1w else x ** PolyExp x (n-1)`;
 
 
-val _ = export_theory();

@@ -1,9 +1,6 @@
-open HolKernel Parse boolLib bossLib pred_setTheory;
-open relationTheory;
-open GoldblattRLTheory RLRulesTheory;
-
-
-val _ = new_theory "CoverSemantics";
+Theory CoverSemantics
+Ancestors
+  pred_set relation GoldblattRL RLRules
 
 Datatype:
   COVER_SYSTEM = <| W: α set; REF: α -> α -> bool; COVER: α set -> α -> bool |>
@@ -1293,4 +1290,3 @@ Proof
   rw[] >> irule Model_System_Characterisation_3_1 >> gs[]
 QED
 
-val _ = export_theory();

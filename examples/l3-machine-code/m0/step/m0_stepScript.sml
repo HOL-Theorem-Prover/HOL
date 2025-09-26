@@ -1,14 +1,13 @@
 (* ------------------------------------------------------------------------
    Definitions and theorems used by ARMv6-M step evaluator (m0_stepLib)
    ------------------------------------------------------------------------ *)
+Theory m0_step
+Ancestors
+  update state_transformer alignment m0
+Libs
+  utilsLib wordsLib blastLib
 
-open HolKernel boolLib bossLib
 
-open utilsLib
-open wordsLib blastLib updateTheory
-open state_transformerTheory alignmentTheory m0Theory
-
-val _ = new_theory "m0_step"
 val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------ *)
 
@@ -1005,4 +1004,3 @@ val word_bit_9_expand = Q.store_thm("word_bit_9_expand",
 
 (* ------------------------------------------------------------------------ *)
 
-val () = export_theory ()

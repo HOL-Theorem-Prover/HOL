@@ -9683,7 +9683,7 @@ val fn_cyclic_group_alt = store_thm(
   (* (!i. (fn_cyclic_group e f).inv (FUNPOW f i e) = FUNPOW f ((n - i MOD n) MOD n) e) /\ *)
      (!i j. (fn_cyclic_group e f).op (FUNPOW f i e) (FUNPOW f j e) = FUNPOW f ((i + j) MOD n) e)``,
   rpt gen_tac >>
-  simp_tac std_ss [whileTheory.LEAST_EXISTS] >>
+  simp_tac std_ss [WhileTheory.LEAST_EXISTS] >>
   Q.SPEC_TAC (`LEAST k. k <> 0 /\ (FUNPOW f k e = e)`,`h`) >>
   gen_tac >>
   strip_tac >>
@@ -9765,7 +9765,7 @@ val fn_cyclic_group_group = store_thm(
   conj_tac >-
   rw[] >>
   pop_assum mp_tac >>
-  simp_tac std_ss [whileTheory.LEAST_EXISTS] >>
+  simp_tac std_ss [WhileTheory.LEAST_EXISTS] >>
   qspec_tac (`LEAST n. n <> 0 /\ (FUNPOW f n e = e)`,`h`) >>
   gen_tac >>
   rpt strip_tac >>
@@ -9807,7 +9807,7 @@ val fn_cyclic_group_finite_abelian_group = store_thm(
   conj_tac >| [
     rw[],
     pop_assum mp_tac >>
-    simp_tac std_ss [whileTheory.LEAST_EXISTS] >>
+    simp_tac std_ss [WhileTheory.LEAST_EXISTS] >>
     Q.SPEC_TAC (`LEAST n. n <> 0 /\ (FUNPOW f n e = e)`,`h`) >>
     gen_tac >>
     strip_tac >>
