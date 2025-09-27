@@ -6,7 +6,7 @@ The Interaction Tree (Xia et al., 2020) is a data structure for representing pos
 ## Language
 We define `lambdaStateLang` as a simple imperative language with its interaction tree semantics. The language has simple loops `While` so it is possible to have infinite programs, sequencing operator `Seq` as in a practical imperative language, a `FlipCoin` call for random choosing between the two program bodies, and a `Skip` that does nothing. `lambdaStateLang` has immutable states, which serves only for the purpose of returning a program for each function `Call`.
 
-The interaction tree semantics of the language is defined as a step function that unfolds the next behaviour of the program. Manually deriving the interaction tree representation requires self-exploring the programs and figuring out which trees that describes the program. Proving the correctness of the representation also requires carefulness in rewriting the terms since the semantics of infinite programs can be infinitely traversed.
+The interaction tree semantics of the language is defined as a step function that unfolds the next behaviour of the program. Manually deriving the interaction tree representation requires self-exploring the programs and figuring out which trees that describes the program. Proving the correctness of the representation also requires care in rewriting the terms since the semantics of infinite programs can be infinitely traversed.
 
 ## Decompilation
 The decompiler takes input as a program and outputs a triple of theorems
