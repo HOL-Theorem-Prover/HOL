@@ -1,2 +1,0 @@
-CLINE_OPTIONS = -r
-INCLUDES = imp for small-step ml cbv-lc lprefix_lub
