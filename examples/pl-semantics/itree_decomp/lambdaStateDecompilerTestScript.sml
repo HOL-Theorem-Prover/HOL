@@ -6,7 +6,6 @@ Libs
 
 
 (* Unicode operator overloads *)
-val _ = temp_set_fixity "≈" (Infixl 500);
 Overload "≈" = “itree_wbisim”;
 val _ = temp_set_fixity ">>=" (Infixl 500);
 Overload ">>=" = “itree_bind”;
