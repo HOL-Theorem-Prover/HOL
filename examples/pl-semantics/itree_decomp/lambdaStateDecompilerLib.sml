@@ -3,6 +3,13 @@ struct
 
 open HolKernel boolLib bossLib;
 
+fun reduce_guesses f x = (Feedback.trace ("notify type variable guesses", 0)
+                         o Feedback.trace ("guess overloads", 0)) f x
+val new_definition =
+    reduce_guesses Definition.new_definition
+val save_thm = reduce_guesses save_thm
+val qstore_thm = reduce_guesses Q.store_thm
+
 local open itreeTauTheory lambdaStateTheory in
 
 (* -------------------------------------------------------------------------- *)
@@ -203,6 +210,8 @@ fun decompile_raw itree =
     mutual_raw_gen [] itree
   end
 
+val decompile_raw = reduce_guesses decompile_raw
+
 (* -------------------------------------------------------------------------- *)
 (* Implementation of STAGE 4, 5                                               *)
 (* -------------------------------------------------------------------------- *)
@@ -352,7 +361,7 @@ fun itree_eqn_main_proof name itree itree_def =
       val name_thm = Define $ single $ ANTIQUOTE $ mk_eq(mk_var(tree_name, “:(bool, unit, unit) itree”), itree)
       val goal = mk_binop equal_const (name_thm |> concl |> rator |> rand, itree_def);
       val goal_quote = [QUOTE (term_to_string goal)];
-      val tree_thm = Q.store_thm(concat [tree_name, "_thm"], goal_quote, PURE_REWRITE_TAC [name_thm] \\ decompiler_tactic)
+      val tree_thm = qstore_thm(concat [tree_name, "_thm"], goal_quote, PURE_REWRITE_TAC [name_thm] \\ decompiler_tactic)
   in
     (name_thm, tree_thm)
   end
@@ -362,7 +371,7 @@ fun itree_eqn_proof name type_name num itree itree_def =
       val name_thm = Define $ single $ ANTIQUOTE $ mk_eq(mk_var(tree_name, “:(bool, unit, unit) itree”), itree)
       val goal = mk_binop equal_const (name_thm |> concl |> rator |> rand, itree_def);
       val goal_quote = [QUOTE (term_to_string goal)];
-      val tree_thm = Q.store_thm(concat [tree_name, "_thm"], goal_quote, PURE_REWRITE_TAC [name_thm] \\ decompiler_tactic)
+      val tree_thm = qstore_thm(concat [tree_name, "_thm"], goal_quote, PURE_REWRITE_TAC [name_thm] \\ decompiler_tactic)
   in
     (name_thm, tree_thm)
   end
@@ -376,7 +385,6 @@ fun itree_eqn_proof_list name type_name num trees =
         (name_thm::name_thms, tree_thm::tree_thms)
       end
   | _ => ([], [])
-
 
 fun proof_dec name itree =
   let val ((_, itree_def), sub_trees) = decompile itree;
