@@ -1533,10 +1533,10 @@ fun WORD_SUB_CONV tm =
       THENC DEPTH_CONV WORD_LIT_CONV
       THENC PURE_REWRITE_CONV [WORD_SUB_INTRO, WORD_NEG_SUB, WORD_SUB_RNEG,
               WORD_NEG_NEG, WORD_MULT_CLAUSES, NEG1_WORD1]) tm
-   handle HOL_ERR (err as {origin_function, ...}) =>
-      if origin_function = "CHANGED_CONV"
+   handle (e as HOL_ERR herr) =>
+      if function_of herr = "CHANGED_CONV"
          then raise Conv.UNCHANGED
-      else raise HOL_ERR err
+      else raise e
 
 val WORD_SUB_ss =
    simpLib.name_ss "WORD_SUB"
@@ -1829,8 +1829,10 @@ fun WORD_BIT_INDEX_CONV toindex =
          in
             Drule.ISPEC w (Drule.MATCH_MP thm lt)
          end
-         handle HOL_ERR {origin_function = "EQT_ELIM", ...} =>
-            raise ERR "WORD_BIT_INDEX_CONV" "index too large"
+         handle e as HOL_ERR herr =>
+           if function_of herr = "EQT_ELIM" then
+              raise ERR "WORD_BIT_INDEX_CONV" "index too large"
+           else raise e
    end
 
 (* ------------------------------------------------------------------------- *)

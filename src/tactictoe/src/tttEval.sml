@@ -14,15 +14,22 @@ open HolKernel Abbrev boolLib aiLib
   tttSetup tttSearch tttRecord tacticToe tttToken tttTrain
 
 val ERR = mk_HOL_ERR "tttEval"
+
 fun catch_err msg f x =
-  f x handle HOL_ERR {origin_structure,origin_function,source_location,message} =>
-  (print_endline
-    (msg ^ ":" ^ origin_structure ^ ":" ^ origin_function ^ ":" ^ locn.toShortString source_location ^ ":" ^ message);
-  raise ERR "tttEval" "error caught (see log)")
+  f x handle HOL_ERR (HOL_ERROR recd) =>
+  let val {origin_structure,origin_function,source_location,message} = recd
+  in print_endline (String.concat
+      [msg, ":", origin_structure, ":", origin_function, ":",
+       locn.toShortString source_location, ":", message]);
+     raise ERR "tttEval" "error caught (see log)"
+  end
 fun catch_err_ignore msg f x =
-  f x handle HOL_ERR {origin_structure,origin_function,source_location,message} =>
-  (print_endline
-    (msg ^ ":" ^ origin_structure ^ ":" ^ origin_function ^ ":" ^ locn.toShortString source_location ^ ":" ^ message))
+  f x handle HOL_ERR (HOL_ERROR recd) =>
+  let val {origin_structure,origin_function,source_location,message} = recd
+  in print_endline (String.concat
+      [msg, ":", origin_structure, ":", origin_function, ":",
+       locn.toShortString source_location, ":", message])
+  end
 
 
 (* -------------------------------------------------------------------------

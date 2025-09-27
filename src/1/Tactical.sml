@@ -52,16 +52,22 @@ local
    val mesg = Lib.with_flag (Feedback.MESG_to_string, Lib.I) Feedback.HOL_MESG
    fun provide_feedback f (t, tac: tactic) =
       f (t, tac)
-      handle (e as HOL_ERR {message = m, origin_function = f, ...}) =>
-           (mesg ("Proof of \n\n" ^ Parse.term_to_string t ^ "\n\nfailed.\n")
-            ; (case (m, f, unsolved ()) of
-                  ("unsolved goals", "TAC_PROOF", (_, u)::_) =>
-                      if Term.term_eq u t
-                         then ()
-                      else mesg ("First unsolved sub-goal is\n\n" ^
-                                 Parse.term_to_string u ^ "\n\n")
-                | _ => ())
-            ; raise e)
+      handle e as HOL_ERR herr =>
+        let val m = message_of herr
+            val f = function_of herr
+        in
+           mesg ("Proof of \n\n" ^ Parse.term_to_string t ^ "\n\nfailed.\n")
+           ;
+           (case (m, f, unsolved ())
+             of ("unsolved goals", "TAC_PROOF", (_, u)::_) =>
+                 if Term.term_eq u t then
+                    ()
+                 else mesg ("First unsolved sub-goal is\n\n" ^
+                            Parse.term_to_string u ^ "\n\n")
+              | otherwise => ())
+           ;
+           raise e
+        end
    val internal_prover =
       ref (provide_feedback default_prover: Term.term * tactic -> Thm.thm)
 in
@@ -222,13 +228,16 @@ fun op THEN1 (tac1: tactic, tac2: tactic) : tactic =
       end
 
 val op >- = op THEN1
+
 fun op>>-(tac1, n) tac2 g =
   op>- (tac1, tac2) g
-  handle e as HOL_ERR (er as {message,...}) =>
-         if is_substring "THEN1" message then raise e
+  handle e as HOL_ERR er =>
+         if is_substring "THEN1" (message_of er) then raise e
          else
-           raise HOL_ERR (set_message
-             (message ^ " (THEN1 on line "^Int.toString n^")") er)
+           raise HOL_ERR
+             (set_message
+                (message_of er ^ " (THEN1 on line "^Int.toString n^")") er)
+
 fun (f ?? x) = f x
 
 
@@ -556,6 +565,7 @@ fun CONJ_VALIDATE tac (g as (asl,_)) =
     end
 
 end (* local *)
+
 (* could avoid duplication of code in the above by the following
 fun GEN_VALIDATE flag tac =
   ALL_TAC THEN_LT GEN_VALIDATE_LT flag (TACS_TO_LT [tac]) ;
@@ -873,8 +883,8 @@ local
    in
       (gl, (if is_neg w then NEG_DISCH ant else DISCH ant) o prf)
    end
-   handle HOL_ERR {message,origin_function, ...} =>
-          raise ERR "DISCH_THEN" (origin_function ^ ":" ^ message)
+   handle HOL_ERR e =>
+          raise ERR "DISCH_THEN" (function_of e ^ ":" ^ message_of e)
   val NOT_NOT_E = boolTheory.NOT_CLAUSES |> CONJUNCT1
   val NOT_NOT_I = NOT_NOT_E |> GSYM
   val NOT_IMP_F = IMP_ANTISYM_RULE (SPEC_ALL boolTheory.F_IMP)

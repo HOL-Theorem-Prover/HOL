@@ -11,44 +11,96 @@
 structure Feedback :> Feedback =
 struct
 
-type error_record = {origin_structure : string,
-                     origin_function  : string,
-                     source_location  : locn.locn,
-                     message          : string}
+local open HOLPP in end
 
-exception HOL_ERR of error_record
+datatype hol_error =
+  HOL_ERROR of
+     {origin_structure : string,
+      origin_function  : string,
+      source_location  : locn.locn,
+      message          : string}
+
+fun mk_hol_error s1 s2 loc mesg =
+  HOL_ERROR
+     {origin_structure = s1,
+      origin_function  = s2,
+      source_location  = loc,
+      message          = mesg}
+
+val empty_hol_error = mk_hol_error "" "" locn.Loc_None ""
+
+fun dest_hol_error (HOL_ERROR recd) =
+  let val {origin_structure, origin_function, source_location, message} = recd
+  in (origin_structure, origin_function, source_location, message)
+  end
+
+fun structure_of (HOL_ERROR {origin_structure,...}) = origin_structure
+fun function_of (HOL_ERROR {origin_function,...}) = origin_function
+fun location_of (HOL_ERROR {source_location,...}) = source_location
+fun message_of (HOL_ERROR {message,...}) = message
+
+fun pp_hol_error (err as HOL_ERROR recd) =
+  let open HOLPP
+      val {origin_structure, origin_function, source_location, message} = recd
+  in if err = empty_hol_error then
+        add_string "<empty-hol-error>"
+     else
+     block INCONSISTENT 0 (List.concat [
+       [add_string "at ",
+        add_string (origin_structure^"."^origin_function),add_string ":",
+        add_break(1,0)],
+       (case source_location
+         of locn.Loc_Unknown => []
+          | _ => [add_string (locn.toString source_location ^":"),add_break(1,0)]),
+        [add_string message]
+     ])
+  end
+
+fun format_err_recd recd =
+  HOLPP.pp_to_string (!Globals.linewidth) pp_hol_error (HOL_ERROR recd)
+
+val _ =
+  let fun pp i _ e = pp_hol_error e
+  in PolyML.addPrettyPrinter pp
+  end
+
+(*---------------------------------------------------------------------------*)
+(* Exceptions used in HOL code.                                              *)
+(*---------------------------------------------------------------------------*)
+
+exception HOL_ERR of hol_error;
+
+exception BATCH_ERR of string;
 
 (*---------------------------------------------------------------------------
      Curried version of HOL_ERR; can be more comfortable to use.
  ---------------------------------------------------------------------------*)
 
-fun mk_HOL_ERR s1 s2 s3 =
-   HOL_ERR {origin_structure = s1,
-            origin_function = s2,
-            source_location = locn.Loc_Unknown,
-            message = s3}
+fun mk_HOL_ERRloc s1 s2 locn s3 = HOL_ERR (mk_hol_error s1 s2 locn s3)
+
+fun mk_HOL_ERR s1 s2 s3 = HOL_ERR (mk_hol_error s1 s2 locn.Loc_Unknown s3)
 
 (* Errors with a known location. *)
 
-fun mk_HOL_ERRloc s1 s2 locn s3 =
-   HOL_ERR {origin_structure = s1,
-            origin_function = s2,
-            source_location = locn,
-            message = s3}
+fun set_origin_function fnm (HOL_ERROR recd) =
+  let val {origin_structure, source_location, message, ...} = recd
+  in HOL_ERROR
+      {origin_structure = origin_structure,
+       source_location = source_location,
+       origin_function = fnm,
+       message = message}
+  end
 
-fun set_origin_function fnm
-    ({origin_structure, source_location, message, ...}:error_record) =
-   {origin_structure = origin_structure,
-    source_location = source_location,
-    origin_function = fnm,
-    message = message}
+fun set_message msg (HOL_ERROR recd) =
+  let val{origin_structure, source_location, origin_function, ...} = recd
+  in HOL_ERROR
+      {origin_structure = origin_structure,
+       source_location = source_location,
+       origin_function = origin_function,
+       message = msg}
+  end
 
-fun set_message msg
-    ({origin_structure, source_location, origin_function, ...}:error_record) =
-   {origin_structure = origin_structure,
-    source_location = source_location,
-    origin_function = origin_function,
-    message = msg}
+fun format_hol_error(HOL_ERROR recd) = format_err_recd recd
 
 val ERR = mk_HOL_ERR "Feedback"  (* local to this file *)
 
@@ -89,16 +141,8 @@ fun quiet_messages f = Portable.with_flag (emit_MESG, false) f
  * Formatting and output for exceptions, messages, and warnings.             *
  *---------------------------------------------------------------------------*)
 
-fun format_err_rec {message, origin_function, origin_structure, source_location} =
-   String.concat
-      ["at ", origin_structure, ".", origin_function, ":\n",
-       case source_location of
-           locn.Loc_Unknown => ""
-         | _ => locn.toString source_location ^ ":\n",
-       message]
-
-fun format_ERR err_rec =
-   String.concat ["\nException raised ", format_err_rec err_rec, "\n"]
+fun format_ERR (HOL_ERROR recd) =
+   String.concat ["\nException raised ", format_err_recd recd, "\n"]
 
 fun format_MESG s = String.concat ["<<HOL message: ", s, ">>\n"]
 
@@ -117,9 +161,22 @@ fun output_ERR s = if !emit_ERR then !ERR_outstream s else ()
     that the exception is an Interrupt, we raise it.
  ---------------------------------------------------------------------------*)
 
-fun exn_to_string (HOL_ERR sss) = !ERR_to_string sss
+fun exn_to_string (HOL_ERR herr) = !ERR_to_string herr
   | exn_to_string Portable.Interrupt = raise Portable.Interrupt
   | exn_to_string e = General.exnMessage e
+
+(*---------------------------------------------------------------------------*)
+(* Either raise the exception, presumably a HOL_ERR, in the REPL (it gets    *)
+(* printed by the installed prettyprinter) or print the error and raise      *)
+(* BATCH_ERR with a message.                                                 *)
+(*---------------------------------------------------------------------------*)
+
+fun render_exn srcfn e =
+    if !Globals.interactive then
+       raise e
+    else
+      (output_ERR (exn_to_string e);
+       raise BATCH_ERR srcfn)
 
 fun Raise e = (output_ERR (exn_to_string e); raise e)
 
@@ -138,12 +195,13 @@ end
  ---------------------------------------------------------------------------*)
 
 fun wrap_exn s f Portable.Interrupt = raise Portable.Interrupt
-  | wrap_exn s f (HOL_ERR err_rec) = mk_HOL_ERR s f (format_err_rec err_rec)
+  | wrap_exn s f (HOL_ERR (HOL_ERROR recd)) =
+      mk_HOL_ERR s f (format_err_recd recd)
   | wrap_exn s f exn = mk_HOL_ERR s f (General.exnMessage exn)
 
 fun wrap_exn_loc s f l Portable.Interrupt = raise Portable.Interrupt
-  | wrap_exn_loc s f l (HOL_ERR err_rec) =
-      mk_HOL_ERRloc s f l (format_err_rec err_rec)
+  | wrap_exn_loc s f l (HOL_ERR (HOL_ERROR recd)) =
+      mk_HOL_ERRloc s f l (format_err_recd recd)
   | wrap_exn_loc s f l exn = mk_HOL_ERRloc s f l (General.exnMessage exn)
 
 fun HOL_MESG s =
@@ -171,8 +229,6 @@ fun HOL_WARNINGloc s1 s2 locn s3 =
 (*---------------------------------------------------------------------------*
  * Traces, numeric flags; the higher setting, the more verbose the output.   *
  *---------------------------------------------------------------------------*)
-
-local open HOLPP in end
 
 datatype tracefns = TRFP of {get: unit -> int, set: int -> unit}
 fun trfp_set (TRFP {set, ...}) = set
@@ -223,7 +279,7 @@ fun register_trace0 fnm (nm, r, max) =
       then raise ERR fnm "Can't have trace values less than zero."
    else
      let
-       val trfns as TRFP rcd = ref2trfp r
+       val trfns as TRFP recd = ref2trfp r
      in
        case Binarymap.peek (!trace_map, nm) of
            NONE => ()
@@ -232,7 +288,7 @@ fun register_trace0 fnm (nm, r, max) =
        trace_map := Binarymap.insert
                       (!trace_map, nm, TR {value = trfns, default = !r,
                                            aliases = [], maximum = max});
-       rcd
+       recd
      end
 val register_trace = ignore o register_trace0 "register_trace"
 
@@ -254,9 +310,9 @@ fun register_alias_trace {original, alias} =
           val aliases' =
               if List.exists (fn s => s = alias) aliases then aliases
               else alias::aliases
-          val rcd = {aliases = aliases', maximum = maximum, default = default,
+          val recd = {aliases = aliases', maximum = maximum, default = default,
                      value = value}
-          val record_alias = Binarymap.insert(!trace_map, original, TR rcd)
+          val record_alias = Binarymap.insert(!trace_map, original, TR recd)
           val mk_alias = Binarymap.insert(record_alias, alias, ALIAS original)
         in
           case Binarymap.peek (record_alias, alias) of
