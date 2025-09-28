@@ -5,7 +5,7 @@
   the complete 128-bit result (as two 64-bit words).
 
   Main definition: longmul64_def
-  Main theorem:    longmul64_thm (but see also longmul64_lower)
+  Main theorem:    longmul64_thm (but see also longmul64_parts)
 *)
 Theory longmul
 Ancestors
@@ -148,13 +148,17 @@ Proof
   simp [GSYM longmul64_lemma]
 QED
 
-Theorem longmul64_lower:
+Theorem longmul64_parts:
   longmul64 a b = (lower, upper)
   ⇒
-  lower = a * b
+  lower = a * b ∧
+  upper = n2w ((w2n a * w2n b) DIV 2 ** 64)
 Proof
   rw [] \\ imp_res_tac longmul64_thm
   \\ Cases_on ‘a’ \\ Cases_on ‘b’ \\ gvs [word_mul_n2w]
   \\ gvs [GSYM word_add_n2w, GSYM word_mul_n2w]
-  \\ BBLAST_TAC
+  >- BBLAST_TAC
+  \\ DEP_REWRITE_TAC [LESS_DIV_EQ_ZERO] \\ simp []
+  \\ irule LESS_LESS_EQ_TRANS
+  \\ irule_at Any w2n_lt \\ simp []
 QED
