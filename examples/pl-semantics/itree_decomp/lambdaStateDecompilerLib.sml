@@ -47,7 +47,7 @@ val call_const = “Call”;
 val while_const = “While”;
 val seq_const = “Seq”;
 
-val itree_unfold_const = “itree_unfold”;
+val itree_unfold_const = “itree_unfold:(prog -> (bool, unit, unit, prog) itree_next) -> prog -> (bool, unit, unit) itree”;
 val bind_const = “($>>=):((bool, unit, unit) itree -> (unit -> (bool, unit, unit) itree) -> (bool, unit, unit) itree)”;
 
 val ret_const = “Ret:unit -> (bool, unit, unit) itree”
@@ -387,7 +387,8 @@ fun itree_eqn_proof_list name type_name num trees =
   | _ => ([], [])
 
 fun proof_dec name itree =
-  let val ((_, itree_def), sub_trees) = decompile itree;
+  let val _ = print "\n";
+      val ((_, itree_def), sub_trees) = decompile itree;
       val env_thm  =  Define $ single $ ANTIQUOTE $ mk_eq(mk_var(concat [name, "_env"], “:(num -> prog)”), itree |> rator |> rand);
       val _ = print "Proving main tree theorem.\n";
       val (name_thm, tree_thm) = itree_eqn_main_proof name itree itree_def;
