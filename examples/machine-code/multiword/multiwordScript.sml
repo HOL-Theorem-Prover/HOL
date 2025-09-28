@@ -127,7 +127,7 @@ val k2mw_mod = prove(
   \\ ONCE_REWRITE_TAC [GSYM n2w_mod]
   \\ ASM_SIMP_TAC bool_ss [MOD_MULT_MOD,ZERO_LT_dimword,ZERO_LT_dimwords]);
 
-val mw2n_APPEND = prove(
+val mw2n_APPEND = store_thm("mw2n_APPEND",
   ``!xs ys. mw2n (xs ++ ys) = mw2n xs + dimwords (LENGTH xs) (:'a) * mw2n (ys:'a word list)``,
   Induct \\ ASM_SIMP_TAC std_ss [dimwords_thm,LENGTH,APPEND,mw2n_def] \\ DECIDE_TAC);
 
@@ -845,7 +845,7 @@ val ADD_LESS_MULT = prove(
   \\ Cases_on `1<n` \\ RES_TAC THEN1 DECIDE_TAC
   \\ `n = 1` by DECIDE_TAC \\ ASM_SIMP_TAC std_ss []);
 
-val single_mul_add_thm = prove(
+val single_mul_add_thm = store_thm("single_mul_add_thm",
   ``!(p:'a word) q k1 k2 x1 x2.
       (single_mul_add p q k1 k2 = (x1,x2)) ==>
       (w2n x1 + dimword (:'a) * w2n x2 = w2n p * w2n q + w2n k1 + w2n k2)``,
@@ -3578,4 +3578,3 @@ Proof
   \\ rename1 `k < 2 ** dimindex (:'a)`
   \\ qexists_tac `k` \\ fs []
 QED
-
