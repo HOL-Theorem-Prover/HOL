@@ -7,6 +7,7 @@ val _ = augment_srw_ss[REAL_ARITH_ss]
 Overload precision[local] = “fcp$dimindex”
 Overload f2r[local] = “float_to_real”
 Overload bias[local] = “words$INT_MAX”
+Overload sign[local] = “fsign”
 
 Theorem Sign_cases:
   ∀f. f.Sign = 0w ∨ f.Sign = 1w
