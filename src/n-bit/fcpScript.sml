@@ -30,8 +30,6 @@ Libs
 (*  to some FCP-related theorems.       -- Chun Tian (binghe), May 12, 2022  *)
 (* ------------------------------------------------------------------------- *)
 
-val qDefine = Feedback.trace ("Definition.storage_message", 0) zDefine
-
 (* ------------------------------------------------------------------------- *
  * An isomorphic image of any finite type, 1-element for infinite ones.      *
  * ------------------------------------------------------------------------- *)
@@ -341,10 +339,10 @@ val finite_sum = Q.store_thm("finite_sum",
 
 val () = Hol_datatype `bit0 = BIT0A of 'a | BIT0B of 'a`
 
-val IS_BIT0A_def = qDefine`
+val IS_BIT0A_def = zDefine`
    (IS_BIT0A (BIT0A x) = T) /\ (IS_BIT0A (BIT0B x) = F)`
 
-val IS_BIT0B_def = qDefine`
+val IS_BIT0B_def = zDefine`
    (IS_BIT0B (BIT0A x) = F) /\ (IS_BIT0B (BIT0B x) = T)`
 
 val IS_BIT0A_OR_IS_BIT0B = Q.prove(
@@ -452,15 +450,15 @@ val finite_bit0 = Q.store_thm("finite_bit0",
 
 val () = Hol_datatype `bit1 = BIT1A of 'a | BIT1B of 'a | BIT1C`
 
-val IS_BIT1A_def = qDefine`
+val IS_BIT1A_def = zDefine`
    (IS_BIT1A (BIT1A x) = T) /\ (IS_BIT1A (BIT1B x) = F) /\
    (IS_BIT1A (BIT1C) = F)`
 
-val IS_BIT1B_def = qDefine`
+val IS_BIT1B_def = zDefine`
    (IS_BIT1B (BIT1A x) = F) /\ (IS_BIT1B (BIT1B x) = T) /\
    (IS_BIT1B (BIT1C) = F)`
 
-val IS_BIT1C_def = qDefine`
+val IS_BIT1C_def = zDefine`
    (IS_BIT1C (BIT1A x) = F) /\ (IS_BIT1C (BIT1B x) = F) /\
    (IS_BIT1C (BIT1C) = T)`
 
@@ -961,4 +959,3 @@ Theorem FINITE_CART_UNIV :
 Proof
   MESON_TAC[HAS_SIZE_CART_UNIV, HAS_SIZE]
 QED
-
