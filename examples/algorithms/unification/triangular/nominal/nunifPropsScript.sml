@@ -16,10 +16,9 @@ val fresh_q = `
   (fresh fe a (Tie b t) <=> (a = b) ∨ a ≠ b ∧ fresh fe a t) ∧
   (fresh fe a (nPair t1 t2) <=> fresh fe a t1 ∧ fresh fe a t2) ∧
   (fresh fe a (nConst c) <=> T)`;
-val def_suffix = !Defn.def_suffix;
-val _ = Defn.def_suffix := "_def_with_choice";
-val fresh_def_with_choice = Define fresh_q;
-val _ = Defn.def_suffix := def_suffix;
+
+val fresh_def_with_choice = Define ‘^fresh_q’;
+
 val fresh_def = Q.store_thm("fresh_def",fresh_q,SIMP_TAC (psrw_ss()) [fresh_def_with_choice]);
 
 val fresh_apply_pi = Q.store_thm(
@@ -3222,4 +3221,3 @@ Cases_on `fcs2 ⊆ fe2` THEN SRW_TAC [][] THEN
 SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
 IMP_RES_TAC term_fcs_SUBMAP THEN
 FULL_SIMP_TAC (srw_ss()) [])
-

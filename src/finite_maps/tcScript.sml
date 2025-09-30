@@ -28,8 +28,6 @@ val AR = ASM_REWRITE_TAC [];
 fun ulist x = [x];
 fun rrs th = REWRITE_RULE [SPECIFICATION] th;
 
-val _ = Defn.def_suffix := ""; (* replacing default "_def" *)
-
 (* *************************************************************** *)
 
 val _ = set_fixity "^|" (Infixl 650);
@@ -632,4 +630,3 @@ GEN_TAC THEN Induct THENL
    ASM_REWRITE_TAC [FDOM_o_f] THEN
    RES_TAC THEN ASM_REWRITE_TAC [TC_ITER]
 ]]]);
-

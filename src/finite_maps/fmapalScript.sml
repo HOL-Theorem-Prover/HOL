@@ -32,8 +32,6 @@ fun rrs th = REWRITE_RULE [SPECIFICATION] th;
 
 val _ = set_fixity "FUNION" (Infixl 500);
 
-val _ = Defn.def_suffix := ""; (* replacing default "_def" *)
-
 (* ***************************************************************** *)
 (* Following switch, BigSig, allows "maybe_thm" to act either as     *)
 (* store_thm or as prove, thus maximizing or minimizing the output   *)
@@ -2544,4 +2542,3 @@ Theorem NOT_node_nt_EQN[unlisted]:
 Proof
   REWRITE_TAC [GSYM bt_distinct]
 QED
-

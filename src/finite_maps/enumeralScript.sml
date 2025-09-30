@@ -22,8 +22,6 @@ val _ = ParseExtras.temp_loose_equality()
 val AR = ASM_REWRITE_TAC [];
 fun ulist x = [x];
 
-val _ = Defn.def_suffix := ""; (* replacing default "_def" *)
-
 (* ***************************************************************** *)
 (* Following switch, BigSig, allows "maybe_thm" to act either as     *)
 (* store_thm or as prove, thus maximizing or minimizing the output   *)
@@ -1158,4 +1156,3 @@ METIS_TAC [OL_bt_thm, bt_to_list_thm, bt_to_ol_thm]);
 val set_OWL_thm = store_thm ("set_OWL_thm",
 ``!cmp l:'a list. OWL cmp (set l) (incr_ssort cmp l)``,
 REWRITE_TAC [OWL, incr_ssort_set, incr_ssort_OL]);
-

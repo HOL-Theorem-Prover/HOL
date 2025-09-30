@@ -30,8 +30,6 @@ Type reln = “:'a -> 'a -> bool”
 val AR = ASM_REWRITE_TAC [];
 fun ulist x = [x];
 
-val _ = Defn.def_suffix := ""; (* replacing default "_def" *)
-
 (* ***************************************************************** *)
 (* Following switch, BigSig, allows "maybe_thm" to act either as     *)
 (* store_thm or as prove, thus maximizing or minimizing the output   *)
@@ -1005,4 +1003,3 @@ val TO_of_LinearOrder_LEX = store_thm("TO_of_LinearOrder_LEX",
   ``!R V. irreflexive R /\ irreflexive V
     ==> (TO_of_LinearOrder (R LEX V) = (TO_of_LinearOrder R) lexTO (TO_of_LinearOrder V))``,
   simp[lexTO,StrongLinearOrder_of_TO_TO_of_LinearOrder])
-

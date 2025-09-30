@@ -8,9 +8,6 @@ Libs
   markerLib metisLib BasicProvers
 
 
-val _ = Defn.def_suffix := "_DEF";
-val _ = Defn.ind_suffix := "_IND";
-
 (*---------------------------------------------------------------------------*
  * What's a permutation? This definition uses universal quantification to    *
  * define it. There are other ways, which could be compared to this, e.g.    *
@@ -1884,4 +1881,3 @@ Proof
   first_x_assum(qspec_then`b::rss` mp_tac)>>
   simp[]
 QED
-

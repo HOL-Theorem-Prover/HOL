@@ -18,8 +18,6 @@ val _ = ParseExtras.temp_loose_equality()
 val AR = ASM_REWRITE_TAC [];
 fun ulist x = [x];
 
-val _ = Defn.def_suffix := ""; (* replacing default "_def" *)
-
 (* ***************************************************************** *)
 (* Following switch, BigSig, allows "maybe_thm" to act either as     *)
 (* store_thm or as prove, thus maximizing or minimizing the output   *)

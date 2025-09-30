@@ -1922,7 +1922,7 @@ val PROD_IMAGE_eq_PROD_MAP_SET_TO_LIST = store_thm(
   rw[FUN_EQ_THM]);
 
 (* Define PROD using accumulator *)
-val PROD_ACC_DEF = Lib.with_flag (Defn.def_suffix, "_DEF") Define
+val PROD_ACC_DEF = Define
   `(PROD_ACC [] acc = acc) /\
    (PROD_ACC (h::t) acc = PROD_ACC t (h * acc))`;
 
