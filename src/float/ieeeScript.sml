@@ -223,7 +223,7 @@ val closest = new_definition (
 (* Rounding to floating point formats.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-Definition round:   (round(X:num#num) (To_nearest) (x:real) =
+Definition round_def:   (round(X:num#num) (To_nearest) (x:real) =
   (if (x <= ~(threshold(X))) then (minus_infinity(X))
    else if (x >= threshold(X)) then (plus_infinity(X))
    else (closest (valof(X)) (\a. EVEN(fraction(a)))
@@ -255,7 +255,7 @@ End
 val is_integral = new_definition ("is_integral",
   “is_integral(X:num#num) (a:(num#num#num)) = is_finite(X) a /\ ?n. abs(valof(X) a) = &n”);
 
-Definition intround:   (intround(X:num#num) (To_nearest) (x:real) =
+Definition intround_def:   (intround(X:num#num) (To_nearest) (x:real) =
   (if (x <= ~(threshold(X))) then (minus_infinity(X))
    else if (x >= threshold(X)) then (plus_infinity(X))
    else (closest (valof(X)) (\a. (?n. (EVEN n) /\ (abs(valof(X) a) = &n)))
@@ -589,4 +589,3 @@ val float_abs = new_definition (
 (*---------------------------------------------------------------------------*
  * Write the theory to disk.                                                 *
  *---------------------------------------------------------------------------*)
-

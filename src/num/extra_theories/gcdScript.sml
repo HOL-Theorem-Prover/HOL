@@ -78,7 +78,7 @@ val IS_GCD_MINUS_R = store_thm("IS_GCD_MINUS_R",
                             PROVE_TAC[IS_GCD_MINUS_L,IS_GCD_SYM]
                      );
 
-Definition GCD:
+Definition gcd_def:
       (gcd 0 y = y)
  /\   (gcd (SUC x) 0 = SUC x)
  /\   (gcd (SUC x) (SUC y) = if y <= x then gcd (x-y) (SUC y)
@@ -92,7 +92,7 @@ Overload coprime = “\x y. gcd x y = 1” (* from examples/algebra *)
 val GCD_IS_GCD =
   store_thm("GCD_IS_GCD",
      ``!a b. is_gcd a b (gcd a b)``,
-   recInduct gcd_ind THEN ARW [GCD] THEN
+   recInduct gcd_ind THEN ARW [gcd_def] THEN
    PROVE_TAC [IS_GCD_0L,IS_GCD_0R,IS_GCD_MINUS_L,
               IS_GCD_MINUS_R, DECIDE(Term`~(y<=x) ==> SUC x <= SUC y`),
               LESS_EQ_MONO,SUB_MONO_EQ]);
@@ -156,7 +156,7 @@ val _ = export_rewrites ["GCD_ADD_L_THM"]
 
 Theorem GCD_EQ_0[simp]:
   !n m. (gcd n m = 0) <=> (n = 0) /\ (m = 0)
-Proof HO_MATCH_MP_TAC gcd_ind THEN SRW_TAC [][GCD]
+Proof HO_MATCH_MP_TAC gcd_ind THEN SRW_TAC [][gcd_def]
 QED
 
 val GCD_1 = store_thm(
@@ -164,7 +164,7 @@ val GCD_1 = store_thm(
   ``(gcd 1 x = 1) /\ (gcd x 1 = 1)``,
   Q_TAC SUFF_TAC `!m n. (m = 1) ==> (gcd m n = 1)`
         THEN1 PROVE_TAC [GCD_SYM] THEN
-  HO_MATCH_MP_TAC gcd_ind THEN SRW_TAC [][GCD]);
+  HO_MATCH_MP_TAC gcd_ind THEN SRW_TAC [][gcd_def]);
 val _ = export_rewrites ["GCD_1"]
 
 val PRIME_GCD = store_thm("PRIME_GCD",
@@ -175,7 +175,7 @@ val EUCLIDES_AUX = prove(Term
 `!a b c d. divides c (d*a) /\ divides c (d*b)
                ==>
              divides c (d*gcd a b)`,
-recInduct gcd_ind THEN SRW_TAC [][GCD]
+recInduct gcd_ind THEN SRW_TAC [][gcd_def]
   THEN FIRST_X_ASSUM MATCH_MP_TAC
   THENL [`?z. x = y+z` by (Q.EXISTS_TAC `x-y` THEN DECIDE_TAC),
          `?z. y = x+z` by (Q.EXISTS_TAC `y-x` THEN DECIDE_TAC)]
@@ -299,7 +299,7 @@ val gcd_lemma0 = prove(
                     else gcd a (b - a)``,
   Cases THEN SIMP_TAC arith_ss [] THEN
   Cases THEN SIMP_TAC arith_ss [] THEN
-  REWRITE_TAC [GCD]);
+  REWRITE_TAC [gcd_def]);
 
 val gcd_lemma = prove(
   ``!n a b. n * b <= a ==> (gcd a b = gcd (a - n * b) b)``,
@@ -424,7 +424,7 @@ val GCD_COMMON_FACTOR = store_thm("GCD_COMMON_FACTOR",
   ``!m n k. gcd (k * m) (k * n) = k * gcd m n``,
   HO_MATCH_MP_TAC GCD_SUCfree_ind
   THEN REPEAT STRIP_TAC
-  THEN1 REWRITE_TAC [GCD,MULT_CLAUSES]
+  THEN1 REWRITE_TAC [gcd_def,MULT_CLAUSES]
   THEN1 METIS_TAC [GCD_SYM]
   THEN1 REWRITE_TAC [GCD_REF]
   THEN ASM_REWRITE_TAC [LEFT_ADD_DISTRIB,GCD_ADD_R]);
@@ -481,7 +481,7 @@ val BINARY_GCD = store_thm("BINARY_GCD",
 Theorem gcd_LESS_EQ:
   !m n. n <> 0 ==> gcd m n <= n
 Proof
-  recInduct gcd_ind >> srw_tac[][] >> rewrite_tac[GCD] >>
+  recInduct gcd_ind >> srw_tac[][] >> rewrite_tac[gcd_def] >>
   IF_CASES_TAC >> FULL_SIMP_TAC (srw_ss()) [] >>
   irule LESS_EQ_TRANS >> goal_assum drule >>
   rewrite_tac[SUB_RIGHT_LESS_EQ] >>
@@ -1778,4 +1778,3 @@ Proof
   `(SUC n) MOD p <> 0` by fs[] >>
   metis_tac[EUCLID_LEMMA]
 QED
-
