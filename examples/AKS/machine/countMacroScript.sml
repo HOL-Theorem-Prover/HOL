@@ -282,19 +282,19 @@ val cmetis = metis_tac[pair_CASES, count_CASES];
 (* ------------------------------------------------------------------------- *)
 
 (* Make a zero *)
-val make_0M_def = Define`
+Definition make_0M_def:
     make_0M = do tick 1; return 0; od
-`;
+End
 
 (* Make a False *)
-val make_FM_def = Define`
+Definition make_FM_def:
     make_FM = do tick 1; return F; od
-`;
+End
 
 (* Make an empty list *)
-val make_nilM_def = Define`
+Definition make_nilM_def:
     make_nilM = do tick 1; return []; od
-`;
+End
 
 (* Values of constructors *)
 val make_0M_value = store_thm("make_0M_value[simp]", ``valueOf (make_0M) = 0``, rw[make_0M_def]);
@@ -311,9 +311,9 @@ val make_nilM_steps = store_thm("make_nilM_steps[simp]", ``stepsOf (make_nilM) =
 (* ------------------------------------------------------------------------- *)
 
 (* ID monad *)
-val idM_def = Define`
+Definition idM_def:
     idM x = do tick 0; return x; od
-`;
+End
 val _ = overload_on ("id_", ``app1 idM``);
 
 val idM_value = store_thm("idM_value[simp]", ``!x. valueOf (idM x) = x``, rw[idM_def]);
@@ -324,9 +324,9 @@ val idM_steps = store_thm("idM_steps[simp]", ``!x. stepsOf (idM x) = 0``, rw[idM
 (* ------------------------------------------------------------------------- *)
 
 (* ADD monad *)
-val addM_def = Define`
+Definition addM_def:
     addM x y = do tick (MAX (size x) (size y)); return (x + y); od
-`;
+End
 val _ = overload_on ("add_", ``app2 addM``);
 
 (*
@@ -335,9 +335,9 @@ val _ = overload_on ("add_", ``app2 addM``);
 *)
 
 (* SUB monad *)
-val subM_def = Define`
+Definition subM_def:
     subM x y = do tick (MAX (size x) (size y)); return (x - y); od
-`;
+End
 val _ = overload_on ("sub_", ``app2 subM``);
 
 (*
@@ -345,9 +345,9 @@ val _ = overload_on ("sub_", ``app2 subM``);
 *)
 
 (* MUL monad *)
-val mulM_def = Define`
+Definition mulM_def:
     mulM x y = do tick (size x * size y); return (x * y); od
-`;
+End
 val _ = overload_on ("mul_", ``app2 mulM``);
 
 (*
@@ -355,15 +355,15 @@ val _ = overload_on ("mul_", ``app2 mulM``);
 *)
 
 (* DIV monad *)
-val divM_def = Define`
+Definition divM_def:
   divM x y = do tick (size x * size y); return (x DIV y); od
-`;
+End
 val _ = overload_on ("div_", ``app2 divM``);
 
 (* MOD monad *)
-val modM_def = Define`
+Definition modM_def:
   modM x y = do tick (size x * size y);  return (x MOD y); od
-`;
+End
 val _ = overload_on ("mod_", ``app2 modM``);
 
 (*
@@ -390,27 +390,27 @@ val modM_steps = store_thm("modM_steps[simp]", ``!x y. stepsOf (modM x y) = (siz
 (* ------------------------------------------------------------------------- *)
 
 (* Null monad *)
-val nullM_def = Define`
+Definition nullM_def:
     nullM ls = do tick 1; return (ls = []) od
-`;
+End
 val _ = overload_on ("null_", ``app1 nullM``);
 
 (* Head monad *)
-val headM_def = Define`
+Definition headM_def:
     headM ls = do tick 1; return (HD ls) od
-`;
+End
 val _ = overload_on ("head_", ``app1 headM``);
 
 (* Tail monad *)
-val tailM_def = Define`
+Definition tailM_def:
     tailM ls = do tick 1; return (TL ls) od
-`;
+End
 val _ = overload_on ("tail_", ``app1 tailM``);
 
 (* Cons monad *)
-val consM_def = Define`
+Definition consM_def:
     consM x ls = do tick 1; return (x::ls) od
-`;
+End
 val _ = overload_on ("cons_", ``app2 consM``);
 
 (* Values of basic list *)
@@ -431,9 +431,9 @@ val consM_steps = store_thm("consM_steps[simp]", ``!x ls. stepsOf (consM x ls) =
 
 
 (* EQ monad *)
-val eqM_def = Define`
+Definition eqM_def:
     eqM x y = do tick (MAX (size x) (size y)); return (x = y); od
-`;
+End
 val _ = overload_on ("eq_", ``app2 eqM``);
 
 (*
@@ -443,15 +443,15 @@ val _ = overload_on ("eq_", ``app2 eqM``);
 
 
 (* Not monad *)
-val notM_def = Define`
+Definition notM_def:
     notM b = do tick 1; return (~ b) od
-`;
+End
 val _ = overload_on ("not_", ``app1 notM``);
 
 (* Bool monad *)
-val boolM_def = Define`
+Definition boolM_def:
     boolM b = do tick 1; return (if b then 1 else 0) od
-`;
+End
 val _ = overload_on ("bool_", ``app1 boolM``);
 
 (* Values of basic boolean *)
@@ -469,7 +469,8 @@ val boolM_steps = store_thm("boolM_steps[simp]", ``!b. stepsOf (boolM b) = 1``, 
 (* ------------------------------------------------------------------------- *)
 
 (* Zero test monad *)
-val zeroM_def = Define `zeroM n = eqM n 0`;
+Definition zeroM_def:   zeroM n = eqM n 0
+End
 
 (* Theorem: valueOf (zeroM n) <=> (n = 0) *)
 (* Proof: by zeroM_def, eqM_value *)
@@ -547,9 +548,9 @@ val zeroM_thm = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define equal-to-one macro *)
-val oneM_def = Define`
+Definition oneM_def:
     oneM n = eqM 1 n
-`;
+End
 
 (* Theorem: valueOf (oneM n) = (n = 1) *)
 (* Proof: by oneM_def *)
@@ -619,9 +620,9 @@ val oneM_thm = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Twice monad *)
-val twiceM_def = Define`
+Definition twiceM_def:
     twiceM n = mulM n 2
-`;
+End
 val _ = overload_on ("twice_", ``app1 twiceM``);
 
 (*
@@ -717,7 +718,8 @@ val twiceM_thm = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* HALF monad *)
-val halfM_def = Define `halfM n = divM n 2`;
+Definition halfM_def:   halfM n = divM n 2
+End
 val _ = overload_on ("half_", ``app1 halfM``);
 
 (*
@@ -794,7 +796,8 @@ val halfM_thm = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Parity monad *)
-val parityM_def = Define `parityM n = modM n 2`;
+Definition parityM_def:   parityM n = modM n 2
+End
 
 (* Theorem: valueOf (parityM n) = n MOD 2 *)
 (* Proof: by parityM_def, modM_value *)
@@ -903,12 +906,12 @@ val evenM_def = Define`
               od
 `;
 *)
-val evenM_def = Define`
+Definition evenM_def:
     evenM n = do
                  z <- parityM n;
                  zeroM z;
               od
-`;
+End
 val _ = overload_on ("even_", ``app1 evenM``);
 
 (*
@@ -1033,7 +1036,8 @@ val evenM_thm = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* SQ monad *)
-val sqM_def = Define `sqM n = mulM n n`;
+Definition sqM_def:   sqM n = mulM n n
+End
 val _ = overload_on ("sq_", ``app1 sqM``);
 
 (*
@@ -1128,9 +1132,9 @@ val sqM_thm = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Increment monad *)
-val incM_def = Define`
+Definition incM_def:
     incM n = addM n 1
-`;
+End
 val _ = overload_on ("inc_", ``app1 incM``);
 
 (*
@@ -1209,9 +1213,9 @@ val incM_thm = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Decrement monad *)
-val decM_def = Define`
+Definition decM_def:
     decM n = subM n 1
-`;
+End
 val _ = overload_on ("dec_", ``app1 decM``);
 
 (*
@@ -1290,12 +1294,12 @@ val decM_thm = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Less-or-equal monad *)
-val leqM_def = Define`
+Definition leqM_def:
     leqM n m = do
                  z <- subM n m;
                  zeroM z
                od
-`;
+End
 val _ = overload_on ("leq_", ``app2 leqM``);
 
 (*
@@ -1366,13 +1370,13 @@ val leqM_poly_cc = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Less-than monad *)
-val ltM_def = Define`
+Definition ltM_def:
     ltM n m = do
                  b <- eqM n m;
                  if b then unit F
                  else leqM n m
               od
-`;
+End
 val _ = overload_on ("lt_", ``app2 ltM``);
 
 (*
@@ -1420,9 +1424,9 @@ val ltM_poly_cc = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Greater than 1 monad *)
-val gt1M_def = Define`
+Definition gt1M_def:
     gt1M n = ltM 1 n
-`;
+End
 val _ = overload_on ("gt1_", ``app1 gt1M``);
 
 (*
@@ -1467,12 +1471,12 @@ val gt1M_steps = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define less-equal-1 macro *)
-val le1M_def = Define`
+Definition le1M_def:
     le1M n = do
                gd <- gt1M n;
                notM gd;
              od
-`;
+End
 val _ = overload_on ("le1_", ``app1 le1M``);
 
 (*

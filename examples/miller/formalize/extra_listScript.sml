@@ -8,11 +8,14 @@ Libs
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val prod_def = Define `(prod [] = (1:num)) /\ (prod (n :: ns) = n * prod ns)`;
+Definition prod_def:   (prod [] = (1:num)) /\ (prod (n :: ns) = n * prod ns)
+End
 
-val list_def = Define `list = (EVERY : ('a -> bool) -> 'a list -> bool)`;
+Definition list_def:   list = (EVERY : ('a -> bool) -> 'a list -> bool)
+End
 
-val gtlist_def = Define `gtlist n l <=> n < LENGTH l`;
+Definition gtlist_def:   gtlist n l <=> n < LENGTH l
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)
@@ -224,9 +227,10 @@ val GTLIST1_SUBSET_GTLIST0 = store_thm
    RW_TAC std_ss [SUBSET_DEF, IN_GTLIST]
    >> DECIDE_TAC);
 
-val LIST_COMBS = Define
-  `(LIST_COMBS [] _ = []) /\
-   (LIST_COMBS (x::xs) l = (MAP (\y. (x, y)) l) ++ (LIST_COMBS xs l))`;
+Definition LIST_COMBS:
+   (LIST_COMBS [] _ = []) /\
+   (LIST_COMBS (x::xs) l = (MAP (\y. (x, y)) l) ++ (LIST_COMBS xs l))
+End
 
 Theorem MEM_LIST_COMBS :
     !l l' x. MEM x (LIST_COMBS l l') <=> (MEM (FST x) l /\ MEM (SND x) l')

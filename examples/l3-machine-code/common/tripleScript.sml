@@ -5,10 +5,11 @@ Ancestors
 val _ = ParseExtras.temp_loose_equality()
 (* we define a total-correctness machine-code Hoare triple *)
 
-val TRIPLE_def = Define`
+Definition TRIPLE_def:
    TRIPLE (assert,model) pre code post =
      FST post ==> FST pre /\
-     SPEC model (assert (SND pre)) code (assert (SND post))`
+     SPEC model (assert (SND pre)) code (assert (SND post))
+End
 
 Definition TERM_TAILREC_def[nocompute]:
    TERM_TAILREC f g (d:'a -> bool # 'b) x =
@@ -16,12 +17,14 @@ Definition TERM_TAILREC_def[nocompute]:
       (cond /\ (?n. ~g (FUNPOW f n x)),y)
 End
 
-val SHORT_TERM_TAILREC_def = Define`
+Definition SHORT_TERM_TAILREC_def:
    SHORT_TERM_TAILREC (f:'a -> 'a + (bool # 'b)) =
-    TERM_TAILREC (OUTL o f) (ISL o f) (OUTR o f)`
+    TERM_TAILREC (OUTL o f) (ISL o f) (OUTR o f)
+End
 
-val case_sum_def = Define`
-   case_sum f1 f2 x = case x of INL y => f1 y | INR y => f2 y`
+Definition case_sum_def:
+   case_sum f1 f2 x = case x of INL y => f1 y | INR y => f2 y
+End
 
 (* theorems about this Hoare triple *)
 

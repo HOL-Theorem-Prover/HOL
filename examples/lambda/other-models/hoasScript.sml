@@ -4,9 +4,9 @@ Ancestors
 Libs
   binderLib
 
-val notexotic_def = Define`
+Definition notexotic_def:
   notexotic f = ?v t. f = \u. [u/v] t
-`;
+End
 
 
 

@@ -29,15 +29,18 @@ val Cond =
 (* The definition of the geometric(1/2) random number generator.             *)
 (* ------------------------------------------------------------------------- *)
 
-val prob_geometric_iter_def = Define
-  `prob_geometric_iter s = BIND sdest (\b. UNIT (b, SUC (SND s)))`;
+Definition prob_geometric_iter_def:
+   prob_geometric_iter s = BIND sdest (\b. UNIT (b, SUC (SND s)))
+End
 
-val prob_geometric_loop_def = Define
-  `prob_geometric_loop = prob_while FST prob_geometric_iter`;
+Definition prob_geometric_loop_def:
+   prob_geometric_loop = prob_while FST prob_geometric_iter
+End
 
-val prob_geometric_def = Define
-  `prob_geometric =
-   BIND (BIND (UNIT (T, 0)) prob_geometric_loop) (\s. UNIT (SND s - 1))`;
+Definition prob_geometric_def:
+   prob_geometric =
+   BIND (BIND (UNIT (T, 0)) prob_geometric_loop) (\s. UNIT (SND s - 1))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems leading to:                                                      *)

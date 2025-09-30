@@ -68,7 +68,7 @@ Definition step_rel_def:
   step_rel sem = (\s1 s2. sem.step s1 = SOME s2)^*
 End
 
-val osmall_sem_def = Define `
+Definition osmall_sem_def:
   (osmall_sem sem p (Terminate io_list) ⇔
     ?oracle s.
       step_rel sem (sem.load oracle p) s ∧ sem.step s = NONE ∧ sem.is_result s ∧
@@ -79,7 +79,8 @@ val osmall_sem_def = Define `
       lprefix_lub {fromList (sem.unload s) | s | step_rel sem (sem.load oracle p) s} io_trace) ∧
   (osmall_sem sem p Crash ⇔
     ?oracle s.
-      step_rel sem (sem.load oracle p) s ∧ sem.step s = NONE ∧ ¬sem.is_result s)`;
+      step_rel sem (sem.load oracle p) s ∧ sem.step s = NONE ∧ ¬sem.is_result s)
+End
 
 val is_prefix_pres = Q.prove (
 `!sem_s.
@@ -96,13 +97,15 @@ val is_prefix_pres = Q.prove (
  res_tac >>
  metis_tac [IS_PREFIX_TRANS]);
 
-val small_chain_def = Define `
+Definition small_chain_def:
   small_chain sem_s oracle p =
-    {fromList (sem_s.unload s) | s | step_rel sem_s (sem_s.load oracle p) s}`;
+    {fromList (sem_s.unload s) | s | step_rel sem_s (sem_s.load oracle p) s}
+End
 
-val fbs_chain_def = Define `
+Definition fbs_chain_def:
   fbs_chain sem_f oracle p =
-    {fromList (sem_f.get_oracle_events (FST (eval_with_clock sem_f k (sem_f.init_st oracle) p))) | k | T}`;
+    {fromList (sem_f.get_oracle_events (FST (eval_with_clock sem_f k (sem_f.init_st oracle) p))) | k | T}
+End
 
 val small_chain_thm = Q.prove (
 `!sem_s oracle p.
@@ -328,7 +331,7 @@ val osmall_fbs_equiv = Q.store_thm ("osmall_fbs_equiv",
      `LENGTH tr < LENGTH tr'` by decide_tac >>
      metis_tac [trace_extends])));
 
-val same_result_def = Define `
+Definition same_result_def:
  (same_result sem_f sem_s (st, Val a) s ⇔
   sem_f.get_oracle_events st = sem_s.unload s ∧
   sem_s.is_result s ∧
@@ -338,7 +341,8 @@ val same_result_def = Define `
   sem_s.step s = NONE) ∧
  (same_result sem_f sem_s (st, Timeout) s ⇔
   sem_f.get_oracle_events st = sem_s.unload s ∧
-  ?s'. sem_s.step s = SOME s')`;
+  ?s'. sem_s.step s = SOME s')
+End
 
 val osmall_fbs_equiv2 = Q.store_thm ("osmall_fbs_equiv2",
 `!sem_f sem_s.

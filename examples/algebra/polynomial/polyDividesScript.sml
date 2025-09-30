@@ -493,10 +493,10 @@ val poly_monic_mult_lcancel = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Divides relation between polynomials *)
-val poly_divides_def = Define `
+Definition poly_divides_def:
   poly_divides (r:'a field) (q:'a poly) (p:'a poly) =
     ?s:'a poly. poly s /\ (p = s * q)
-`;
+End
 
 (* Overload polynomial divides *)
 val _ = overload_on ("pdivides", ``poly_divides r``);

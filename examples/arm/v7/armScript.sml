@@ -31,7 +31,7 @@ val _ = temp_overload_on ("PAD0", ``list$PAD_LEFT #"0"``);
 (* Get the actual instruction set.  An alternative version could raise an error
    if iset is Thumb, Jazelle or ThumbEE when these aren't avaialble. *)
 
-val actual_instr_set_def = Define`
+Definition actual_instr_set_def:
   actual_instr_set ii : InstrSet M =
     read_arch ii >>=
     (\arch.
@@ -49,18 +49,20 @@ val actual_instr_set_def = Define`
             (\HaveThumbEE.
               constT (if HaveThumbEE then iset else InstrSet_Thumb))
           else
-            constT iset))`;
+            constT iset))
+End
 
-val fetch_arm_def = Define`
+Definition fetch_arm_def:
   fetch_arm ii read_word : (string # Encoding # word4 # ARMinstruction) M =
     (read_pc ii ||| arch_version ii) >>=
     (\(pc,v).
        read_word pc >>=
        (\ireg.
           constT (PAD0 8 (word_to_hex_string ireg),
-                  Encoding_ARM, arm_decode (v < 5) ireg)))`;
+                  Encoding_ARM, arm_decode (v < 5) ireg)))
+End
 
-val fetch_thumb_def = Define`
+Definition fetch_thumb_def:
   fetch_thumb ii ee read_halfword
     : (string # Encoding # word4 # ARMinstruction) M =
     (read_pc ii ||| read_cpsr ii ||| read_arch ii) >>=
@@ -77,9 +79,10 @@ val fetch_thumb_def = Define`
              if ee then
                thumbee_decode arch cpsr.IT ireg1
              else
-               (Encoding_Thumb, thumb_decode arch cpsr.IT ireg1))))`;
+               (Encoding_Thumb, thumb_decode arch cpsr.IT ireg1))))
+End
 
-val fetch_instruction_def = Define`
+Definition fetch_instruction_def:
   fetch_instruction ii
     read_word read_halfword : (string # Encoding # word4 # ARMinstruction) M =
     actual_instr_set ii >>=
@@ -89,9 +92,10 @@ val fetch_instruction_def = Define`
         | InstrSet_Thumb   => fetch_thumb ii F read_halfword
         | InstrSet_ThumbEE => fetch_thumb ii T read_halfword
         | InstrSet_Jazelle =>
-            errorT ("fetch_instruction: Jazelle not supported"))`;
+            errorT ("fetch_instruction: Jazelle not supported"))
+End
 
-val arm_next_def = Define`
+Definition arm_next_def:
   arm_next ii irpt : unit M =
     if irpt = NoInterrupt then
       waiting_for_interrupt ii >>=
@@ -108,9 +112,10 @@ val arm_next_def = Define`
           take_fiq_exception ii
         else (* irpt = HW_Irq *)
           take_irq_exception ii) >>=
-      (\u:unit. clear_wait_for_interrupt ii)`;
+      (\u:unit. clear_wait_for_interrupt ii)
+End
 
-val arm_run_def = Define`
+Definition arm_run_def:
   arm_run t ii inp =
     (forT 0 t
       (\t.
@@ -125,7 +130,8 @@ val arm_run_def = Define`
                   condT ((irpt = HW_Fiq) /\ ~cpsr.F \/
                          (irpt = HW_Irq) /\ ~cpsr.I)
                         (arm_next ii irpt))))) >>=
-    (\unit_list:unit list. constT ())`;
+    (\unit_list:unit list. constT ())
+End
 
 (* ------------------------------------------------------------------------ *)
 

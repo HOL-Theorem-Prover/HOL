@@ -189,23 +189,27 @@ val _ = Datatype `
 
 (* execution *)
 
-val get_assert_def = Define `
+Definition get_assert_def:
   (get_assert NONE = \x.T) /\
-  (get_assert (SOME a) = a)`;
+  (get_assert (SOME a) = a)
+End
 
-val apply_update_def = Define `
+Definition apply_update_def:
   (apply_update [] s = s) /\
-  (apply_update ((x,y)::xs) s = (x =+ y s) (apply_update xs s))`;
+  (apply_update ((x,y)::xs) s = (x =+ y s) (apply_update xs s))
+End
 
-val check_jump_def = Define `
+Definition check_jump_def:
   (check_jump (Jump p) s w = (w = p)) /\
-  (check_jump Return s w = (var_word "ret" s = w))`;
+  (check_jump Return s w = (var_word "ret" s = w))
+End
 
-val check_ret_def = Define `
+Definition check_ret_def:
   (check_ret (Jump p) s t = (var_word "ret" t = p)) /\
-  (check_ret Return s t = (var_word "ret" t = var_word "ret" s))`;
+  (check_ret Return s t = (var_word "ret" t = var_word "ret" s))
+End
 
-val exec_next_def = Define `
+Definition exec_next_def:
   (exec_next locs (IF guard n1 n2) s t w call =
      if guard s then exec_next locs n1 s t w call
                 else exec_next locs n2 s t w call) /\
@@ -218,18 +222,20 @@ val exec_next_def = Define `
      (apply_update update s = t) /\
      locs name <> NONE /\
      check_jump (Jump (THE (locs name))) t w /\
-     check_ret jmp s t /\ (call = SOME name))`
+     check_ret jmp s t /\ (call = SOME name))
+End
 
 (* representation in ARM SPEC *)
 
-val arm_STATE_CPSR_def = Define `
+Definition arm_STATE_CPSR_def:
   arm_STATE_CPSR s =
     arm_CPSR_N (var_bool "n" s) *
     arm_CPSR_Z (var_bool "z" s) *
     arm_CPSR_C (var_bool "c" s) *
-    arm_CPSR_V (var_bool "v" s)`;
+    arm_CPSR_V (var_bool "v" s)
+End
 
-val arm_STATE_REGS_def = Define `
+Definition arm_STATE_REGS_def:
   arm_STATE_REGS s =
     arm_REG (R_mode (w2w (var_word8 "mode" s)) 0w) (var_word "r0" s) *
     arm_REG (R_mode (w2w (var_word8 "mode" s)) 1w) (var_word "r1" s) *
@@ -245,17 +251,20 @@ val arm_STATE_REGS_def = Define `
     arm_REG (R_mode (w2w (var_word8 "mode" s)) 11w) (var_word "r11" s) *
     arm_REG (R_mode (w2w (var_word8 "mode" s)) 12w) (var_word "r12" s) *
     arm_REG (R_mode (w2w (var_word8 "mode" s)) 13w) (var_word "r13" s) *
-    arm_REG (R_mode (w2w (var_word8 "mode" s)) 14w) (var_word "r14" s)`;
+    arm_REG (R_mode (w2w (var_word8 "mode" s)) 14w) (var_word "r14" s)
+End
 
-val arm_STACK_MEMORY_def = Define `
-  arm_STACK_MEMORY = arm_MEMORY`;
+Definition arm_STACK_MEMORY_def:
+  arm_STACK_MEMORY = arm_MEMORY
+End
 
-val arm_STATE_def = Define `
+Definition arm_STATE_def:
   arm_STATE s =
     arm_STATE_REGS s * arm_STATE_CPSR s *
     arm_OK (w2w (var_word8 "mode" s)) *
     arm_MEMORY (var_dom "dom" s) (var_mem "mem" s) *
-    arm_STACK_MEMORY (var_dom "dom_stack" s) (var_mem "stack" s)`;
+    arm_STACK_MEMORY (var_dom "dom_stack" s) (var_mem "stack" s)
+End
 
 val arm_STATE_thm = save_thm("arm_STATE_thm",
   arm_STATE_def
@@ -264,14 +273,15 @@ val arm_STATE_thm = save_thm("arm_STATE_thm",
 
 (* representation in M0 SPEC *)
 
-val m0_STATE_PSR_def = Define `
+Definition m0_STATE_PSR_def:
   m0_STATE_PSR s =
     m0_PSR_N (var_bool "n" s) *
     m0_PSR_Z (var_bool "z" s) *
     m0_PSR_C (var_bool "c" s) *
-    m0_PSR_V (var_bool "v" s)`;
+    m0_PSR_V (var_bool "v" s)
+End
 
-val m0_STATE_REGS_def = Define `
+Definition m0_STATE_REGS_def:
   m0_STATE_REGS s =
     m0_REG RName_0 (var_word "r0" s) *
     m0_REG RName_1 (var_word "r1" s) *
@@ -287,18 +297,21 @@ val m0_STATE_REGS_def = Define `
     m0_REG RName_11 (var_word "r11" s) *
     m0_REG RName_12 (var_word "r12" s) *
     m0_REG RName_SP_main (var_word "r13" s) *
-    m0_REG RName_LR (var_word "r14" s)`;
+    m0_REG RName_LR (var_word "r14" s)
+End
 
-val m0_STACK_MEMORY_def = Define `
-  m0_STACK_MEMORY = m0_MEMORY`;
+Definition m0_STACK_MEMORY_def:
+  m0_STACK_MEMORY = m0_MEMORY
+End
 
-val m0_STATE_def = Define `
+Definition m0_STATE_def:
   m0_STATE s =
     m0_STATE_REGS s * m0_STATE_PSR s *
     m0_CurrentMode Mode_Thread *
     m0_MEMORY (var_dom "dom" s) (var_mem "mem" s) *
     m0_STACK_MEMORY (var_dom "dom_stack" s) (var_mem "stack" s) *
-    m0_COUNT (var_nat "clock" s)`;
+    m0_COUNT (var_nat "clock" s)
+End
 
 val m0_STATE_thm = save_thm("m0_STATE_thm",
   m0_STATE_def
@@ -307,7 +320,7 @@ val m0_STATE_thm = save_thm("m0_STATE_thm",
 
 (* representation in RISCV-V SPEC *)
 
-val riscv_STATE_REGS_def = Define `
+Definition riscv_STATE_REGS_def:
   riscv_STATE_REGS s =
     riscv_REG 0w (var_word "r0" s) *
     riscv_REG 1w (var_word "r1" s) *
@@ -340,16 +353,19 @@ val riscv_STATE_REGS_def = Define `
     riscv_REG 28w (var_word "r28" s) *
     riscv_REG 29w (var_word "r29" s) *
     riscv_REG 30w (var_word "r30" s) *
-    riscv_REG 31w (var_word "r31" s)`;
+    riscv_REG 31w (var_word "r31" s)
+End
 
-val riscv_STACK_MEMORY_def = Define `
-  riscv_STACK_MEMORY = riscv_MEMORY`;
+Definition riscv_STACK_MEMORY_def:
+  riscv_STACK_MEMORY = riscv_MEMORY
+End
 
-val riscv_STATE_def = Define `
+Definition riscv_STATE_def:
   riscv_STATE s =
     riscv_STATE_REGS s * ~riscv_RV64I *
     riscv_MEMORY (var_dom "dom" s) (var_mem "mem" s) *
-    riscv_STACK_MEMORY (var_dom "dom_stack" s) (var_mem "stack" s)`;
+    riscv_STACK_MEMORY (var_dom "dom_stack" s) (var_mem "stack" s)
+End
 
 val riscv_STATE_thm = save_thm("riscv_STATE_thm",
   riscv_STATE_def
@@ -380,55 +396,67 @@ val var_update_thm = store_thm("var_update_thm",
   SRW_TAC [] [var_dom_def,var_mem_def,var_bool_def,var_nat_def,
      var_word8_def,var_word_def,var_acc_def,APPLY_UPDATE_THM]);
 
-val all_names_def = Define `
+Definition all_names_def:
   all_names =
     ["r0"; "r1"; "r2"; "r3"; "r4"; "r5"; "r6"; "r7"; "r8"; "r9";
      "r10"; "r11"; "r12"; "r13"; "r14"; "r15"; "r16"; "r17"; "r18"; "r19";
      "r20"; "r21"; "r22"; "r23"; "r24"; "r25"; "r26"; "r27"; "r28"; "r29";
      "r30"; "r31"; "mode"; "n"; "z"; "c"; "v";
-     "mem"; "dom"; "stack"; "dom_stack"; "clock"]`;
+     "mem"; "dom"; "stack"; "dom_stack"; "clock"]
+End
 
-val ret_and_all_names_def = Define `
-  ret_and_all_names = "ret"::all_names ++ ["ret_addr_input"]`;
+Definition ret_and_all_names_def:
+  ret_and_all_names = "ret"::all_names ++ ["ret_addr_input"]
+End
 
-val all_names_ignore_def = Define `
-  all_names_ignore = all_names ++ ["ret_addr_input_ignore"]`;
+Definition all_names_ignore_def:
+  all_names_ignore = all_names ++ ["ret_addr_input_ignore"]
+End
 
-val all_names_with_input_def = Define `
-  all_names_with_input = all_names ++ ["ret_addr_input"]`;
+Definition all_names_with_input_def:
+  all_names_with_input = all_names ++ ["ret_addr_input"]
+End
 
-val LIST_SUBSET_def = Define `
-  LIST_SUBSET xs ys = EVERY (\x. MEM x ys) xs`;
+Definition LIST_SUBSET_def:
+  LIST_SUBSET xs ys = EVERY (\x. MEM x ys) xs
+End
 
-val upd_ok_def = Define `
+Definition upd_ok_def:
   upd_ok u = ALL_DISTINCT (MAP FST u) /\
-             LIST_SUBSET (MAP FST u) all_names`;
+             LIST_SUBSET (MAP FST u) all_names
+End
 
-val jump_ok_def = Define `
+Definition jump_ok_def:
   (jump_ok (Jump p) = EVEN (w2n p)) /\
-  (jump_ok Return = T)`;
+  (jump_ok Return = T)
+End
 
-val next_ok_def = Define `
+Definition next_ok_def:
   (next_ok (ASM s u l) = upd_ok u /\ jump_ok l) /\
   (next_ok (IF b n1 n2) = next_ok n1 /\ next_ok n2) /\
   (next_ok (CALL a u n j) =
      (MAP FST u = ret_and_all_names) /\ jump_ok j /\
-     !st. check_ret j st (apply_update u st))`
+     !st. check_ret j st (apply_update u st))
+End
 
-val IMPL_INST_def = Define `
+Definition IMPL_INST_def:
   IMPL_INST code locs (Inst (n:'a word) assert next) =
     next_ok next /\ EVEN (w2n n) /\
     !s t call w.
       assert s /\ exec_next locs next s t w call ==>
-      let (c,m,x,p) = code in SPEC m (x s * p n) c (x t * p w)`;
+      let (c,m,x,p) = code in SPEC m (x s * p n) c (x t * p w)
+End
 
 val a_tools = ``(ARM_MODEL,arm_STATE,arm_PC)``
 val m_tools = ``(M0_MODEL,m0_STATE,m0_PC)``
 val r_tools = ``(RISCV_MODEL,riscv_STATE,riscv_PC)``
 
-val ARM_def = Define `ARM (c:((word32 # word32) set)) = (c,^a_tools)`;
-val M0_def = Define `M0 (c:(word32 # (word16 + word32)) set) = (c,^m_tools)`;
-val RISCV_def = Define `RISCV (c:(word64 # (word8 list)) set) = (c,^r_tools)`;
+Definition ARM_def:   ARM (c:((word32 # word32) set)) = (c,^a_tools)
+End
+Definition M0_def:   M0 (c:(word32 # (word16 + word32)) set) = (c,^m_tools)
+End
+Definition RISCV_def:   RISCV (c:(word64 # (word8 list)) set) = (c,^r_tools)
+End
 
 val _ = ``IMPL_INST (ARM _)``;
 val _ = ``IMPL_INST (M0 _)``;
@@ -585,11 +613,12 @@ val riscv_STATE_all_names = store_thm("riscv_STATE_all_names",
 
 (* translation from my graph lang to Tom's *)
 
-val get_jump_def = Define `
+Definition get_jump_def:
   (get_jump (Jump j) = NextNode (w2n j)) /\
-  (get_jump Return = Ret)`;
+  (get_jump Return = Ret)
+End
 
-val next_trans_def = Define `
+Definition next_trans_def:
   (next_trans n t (ASM NONE upd jump) =
     (t,
      [(n,Basic (get_jump jump) upd)])) /\
@@ -604,16 +633,19 @@ val next_trans_def = Define `
   (next_trans n t (CALL a upd name r) =
     (t+2,
      [(n,Cond (NextNode t) Err (get_assert a));
-      (t,Call (get_jump r) name (MAP SND upd) all_names_ignore)]))`
+      (t,Call (get_jump r) name (MAP SND upd) all_names_ignore)]))
+End
 
-val inst_trans_def = Define `
-  inst_trans t (Inst l _ next) = next_trans (w2n l) t next`;
+Definition inst_trans_def:
+  inst_trans t (Inst l _ next) = next_trans (w2n l) t next
+End
 
-val list_inst_trans_def = Define `
+Definition list_inst_trans_def:
   (list_inst_trans t [] = []) /\
   (list_inst_trans t (x::xs) =
      let (t1,ys) = inst_trans t x in
-       ys ++ list_inst_trans t1 xs)`;
+       ys ++ list_inst_trans t1 xs)
+End
 
 Definition graph_def[nocompute]:
   (graph [] = K NONE) /\
@@ -632,36 +664,42 @@ End
 
 (* condition decompiler has to prove *)
 
-val inst_loc_def = Define `
-  inst_loc (Inst loc _ _) = w2n loc`;
+Definition inst_loc_def:
+  inst_loc (Inst loc _ _) = w2n loc
+End
 
-val fs_locs_def = Define `
+Definition fs_locs_def:
   (fs_locs [] = K NONE) /\
-  (fs_locs ((Func name entry l)::xs) = (name =+ SOME entry) (fs_locs xs))`;
+  (fs_locs ((Func name entry l)::xs) = (name =+ SOME entry) (fs_locs xs))
+End
 
-val func_ok_def = Define `
+Definition func_ok_def:
   func_ok code names (Func name entry l) =
     ALL_DISTINCT (MAP inst_loc l) /\ EVEN (w2n entry) /\
     !i assert next.
       MEM (Inst i assert next) l ==>
-      IMPL_INST code names (Inst i assert next) /\ (assert = K T)`;
+      IMPL_INST code names (Inst i assert next) /\ (assert = K T)
+End
 
-val funcs_ok_def = Define `
-  funcs_ok code fs = EVERY (func_ok code (fs_locs fs)) fs`;
+Definition funcs_ok_def:
+  funcs_ok code fs = EVERY (func_ok code (fs_locs fs)) fs
+End
 
 (* proving a simulation result *)
 
-val find_inst_def = Define `
+Definition find_inst_def:
   (find_inst n [] = NONE) /\
   (find_inst n ((Inst l asrt next)::xs) =
-     if l = n then SOME (Inst l asrt next) else find_inst n xs)`;
+     if l = n then SOME (Inst l asrt next) else find_inst n xs)
+End
 
-val find_func_def = Define `
+Definition find_func_def:
   (find_func n [] = NONE) /\
   (find_func n ((Func name entry insts)::xs) =
-     if n = name then SOME (Func name entry insts) else find_func n xs)`;
+     if n = name then SOME (Func name entry insts) else find_func n xs)
+End
 
-val good_stack_tail_def = Define `
+Definition good_stack_tail_def:
   (good_stack_tail fs ([]:'a stack) = T) /\
   (good_stack_tail fs [x] = T) /\
   (good_stack_tail fs ((l1,s1,n1)::(l2,s2,n2)::xs) =
@@ -673,15 +711,17 @@ val good_stack_tail_def = Define `
        (case ret of
         | NextNode i => (var_word "ret" s1 = n2w i) /\ EVEN i
         | Ret => (var_word "ret" s1 = var_word "ret" s2)
-        | Err => F))`
+        | Err => F))
+End
 
-val good_stack_def = Define `
+Definition good_stack_def:
   good_stack fs stack =
     good_stack_tail fs stack /\
     (case FST (HD stack) of
      | Err => F
      | NextNode n => EVEN n
-     | Ret => T)`;
+     | Ret => T)
+End
 
 val NRC_Err = prove(
   ``!n s st name s2.
@@ -710,9 +750,10 @@ val list_func_trans_EQ_SOME_IMP = prove(
   \\ STRIP_TAC \\ Cases_on `s = name` \\ FULL_SIMP_TAC (srw_ss()) []
   \\ SRW_TAC [] [] \\ FULL_SIMP_TAC std_ss [RW1[MULT_COMM]MULT_DIV,n2w_w2n]);
 
-val odd_nums_def = Define `
+Definition odd_nums_def:
   (odd_nums k 0 = []) /\
-  (odd_nums k (SUC n) = (k:num) :: odd_nums (k+2) n)`;
+  (odd_nums k (SUC n) = (k:num) :: odd_nums (k+2) n)
+End
 
 val odd_nums_ADD = prove(
   ``!m n k. odd_nums k (m + n) = odd_nums k m ++ odd_nums (k + 2 * m) n``,
@@ -1151,17 +1192,19 @@ val MEM_Call_list_inst_trans = prove(
   \\ Cases_on `h` \\ FULL_SIMP_TAC std_ss [inst_trans_def]
   \\ IMP_RES_TAC MEM_CAll_next_trans);
 
-val arm_assert_for_def = Define `
+Definition arm_assert_for_def:
   (arm_assert_for ([]:32 stack) = SEP_F) /\
   (arm_assert_for ((loc,state,name)::rest) =
      arm_STATE state * arm_PC (case loc of NextNode n => n2w n
-                                         | _ => var_word "ret" state))`;
+                                         | _ => var_word "ret" state))
+End
 
-val m0_assert_for_def = Define `
+Definition m0_assert_for_def:
   (m0_assert_for ([]:32 stack) = SEP_F) /\
   (m0_assert_for ((loc,state,name)::rest) =
      m0_STATE state * m0_PC (case loc of NextNode n => n2w n
-                                       | _ => var_word "ret" state))`;
+                                       | _ => var_word "ret" state))
+End
 
 fun exec_graph_step_IMP_exec_next arch = let
   val (assert_for_def,code,tm) =
@@ -1553,11 +1596,12 @@ val _ = save_thm("m0_exec_func_step_IMP", exec_func_step_IMP "m0");
 
 (* misc lemmas *)
 
-val LIST_IMPL_INST_def = Define `
+Definition LIST_IMPL_INST_def:
   (LIST_IMPL_INST code names [] = T) /\
   (LIST_IMPL_INST code names ((Inst i assert next)::xs) =
      IMPL_INST code names (Inst i assert next) /\ (assert = K T) /\
-     LIST_IMPL_INST code names xs)`;
+     LIST_IMPL_INST code names xs)
+End
 
 val IMP_LIST_IMPL_INST = store_thm("IMP_LIST_IMPL_INST",
   ``IMPL_INST code names (Inst i (K T) next) /\
@@ -1583,14 +1627,16 @@ val IMP_EVERY_func_ok = store_thm("IMP_EVERY_func_ok",
 
 val _ = wordsLib.guess_lengths ()
 
-val word32_def = Define `
+Definition word32_def:
   (word32 (b1:word8) (b2:word8) (b3:word8) (b4:word8)) :word32 =
-    b1 @@ b2 @@ b3 @@ b4`;
+    b1 @@ b2 @@ b3 @@ b4
+End
 
-val word64_def = Define `
+Definition word64_def:
   (word64 (b1:word8) (b2:word8) (b3:word8) (b4:word8)
           (b5:word8) (b6:word8) (b7:word8) (b8:word8)) :word64 =
-    b1 @@ b2 @@ b3 @@ b4 @@ b5 @@ b6 @@ b7 @@ b8`;
+    b1 @@ b2 @@ b3 @@ b4 @@ b5 @@ b6 @@ b7 @@ b8
+End
 
 Definition READ32_def[nocompute]:
   READ32 a mem = word32 (mem (a + 3w)) (mem (a + 2w)) (mem (a + 1w)) (mem a)
@@ -1638,8 +1684,9 @@ val READ32_expand64 = store_thm("READ32_expand64",
     (w2w (READ8 (a+3w) m) << 24)``,
   fs [READ32_def,READ8_def,word32_def] \\ blastLib.BBLAST_TAC);
 
-val func_name_def = Define `
-  func_name (Func name entry l) = name`;
+Definition func_name_def:
+  func_name (Func name entry l) = name
+End
 
 Definition func_body_trans_def[nocompute]:
   func_body_trans f = SND (func_trans f)
@@ -1745,8 +1792,9 @@ val decomp_simp3 = store_thm("decomp_simp3",
     (REV xs [] = REVERSE xs)``,
   SIMP_TAC std_ss [FUN_EQ_THM,ALIGNED_def] \\ EVAL_TAC);
 
-val CALL_TAG_def = Define `
-  CALL_TAG (s:string) (is_tail_call:bool) = T`;
+Definition CALL_TAG_def:
+  CALL_TAG (s:string) (is_tail_call:bool) = T
+End
 
 Definition unspecified_pre_def[nocompute]:   unspecified_pre = F
 End
@@ -1855,32 +1903,41 @@ End
 
 (* graph format helpers *)
 
-val MemAcc8_def = Define `
-  MemAcc8 m a = READ8 a m`;
+Definition MemAcc8_def:
+  MemAcc8 m a = READ8 a m
+End
 
-val MemAcc32_def = Define `
-  MemAcc32 m a = READ32 a (m:word32->word8)`;
+Definition MemAcc32_def:
+  MemAcc32 m a = READ32 a (m:word32->word8)
+End
 
-val MemAcc64_def = Define `
-  MemAcc64 m a = READ64 a (m:word64->word8)`;
+Definition MemAcc64_def:
+  MemAcc64 m a = READ64 a (m:word64->word8)
+End
 
-val MemUpdate8_def = Define `
-  MemUpdate8 m a w = WRITE8 a w m`;
+Definition MemUpdate8_def:
+  MemUpdate8 m a w = WRITE8 a w m
+End
 
-val MemUpdate32_def = Define `
-  MemUpdate32 m a w = WRITE32 a w (m:word32->word8)`;
+Definition MemUpdate32_def:
+  MemUpdate32 m a w = WRITE32 a w (m:word32->word8)
+End
 
-val MemUpdate64_def = Define `
-  MemUpdate64 m a w = WRITE64 a w (m:word64->word8)`;
+Definition MemUpdate64_def:
+  MemUpdate64 m a w = WRITE64 a w (m:word64->word8)
+End
 
-val ShiftLeft_def = Define `
-  ShiftLeft (w:'a word) (y:'a word) = word_lsl w (w2n y)`;
+Definition ShiftLeft_def:
+  ShiftLeft (w:'a word) (y:'a word) = word_lsl w (w2n y)
+End
 
-val ShiftRight_def = Define `
-  ShiftRight (w:'a word) (y:'a word) = word_lsr w (w2n y)`;
+Definition ShiftRight_def:
+  ShiftRight (w:'a word) (y:'a word) = word_lsr w (w2n y)
+End
 
-val SignedShiftRight_def = Define `
-  SignedShiftRight (w:'a word) (y:'a word) = word_asr w (w2n y)`;
+Definition SignedShiftRight_def:
+  SignedShiftRight (w:'a word) (y:'a word) = word_asr w (w2n y)
+End
 
 val w2w_carry_alt = prove(
   ``((w2w:word32 -> 33 word) (w1:word32) << w2n ((w2w (w2:word32)):word8)) ' 32 <=>

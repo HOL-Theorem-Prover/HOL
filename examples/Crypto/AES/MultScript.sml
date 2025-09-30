@@ -20,9 +20,10 @@ Libs
     Multiply a byte (representing a polynomial) by x.
  ---------------------------------------------------------------------------*)
 
-val xtime_def = Define
-  `xtime (w : word8) =
-     w << 1 ?? (if word_msb w then 0x1Bw else 0w)`;
+Definition xtime_def:
+   xtime (w : word8) =
+     w << 1 ?? (if word_msb w then 0x1Bw else 0w)
+End
 
 val MSB_lem = Q.prove (
   `!a b. word_msb (a ?? b) = ~(word_msb a = word_msb b)`,
@@ -59,12 +60,12 @@ val ConstMultDistrib = Q.store_thm
 (* Iterative version                                                         *)
 (*---------------------------------------------------------------------------*)
 
-val IterConstMult_def =
- Define
-   `IterConstMult (b1,b2,acc) =
+Definition IterConstMult_def:
+    IterConstMult (b1,b2,acc) =
        if b1 = 0w:word8 then (b1,b2,acc)
        else IterConstMult (b1 >>> 1, xtime b2,
-                           if word_lsb b1 then (b2 ?? acc) else acc)`;
+                           if word_lsb b1 then (b2 ?? acc) else acc)
+End
 
 val _ = computeLib.add_persistent_funs ["IterConstMult_def"];
 
@@ -144,8 +145,8 @@ val _ = save_thm ("mult_ifs", mult_ifs)
 (* Exponentiation                                                            *)
 (*---------------------------------------------------------------------------*)
 
-val PolyExp_def =
- Define
-   `PolyExp x n = if n=0 then 1w else x ** PolyExp x (n-1)`;
+Definition PolyExp_def:
+    PolyExp x n = if n=0 then 1w else x ** PolyExp x (n-1)
+End
 
 

@@ -45,20 +45,23 @@ in
   val bern_def = new_specification ("bern_def", ["bern"], thm);
 end;
 
-val prob_while_cut_def = Define
-  `(prob_while_cut c b 0 a = UNIT a) /\
+Definition prob_while_cut_def:
+   (prob_while_cut c b 0 a = UNIT a) /\
    (prob_while_cut c b (SUC n) a =
-    if c a then BIND (b a) (prob_while_cut c b n) else UNIT a)`;
+    if c a then BIND (b a) (prob_while_cut c b n) else UNIT a)
+End
 
-val many_def = Define `many f n = prob_while_cut I (K f) n T`;
+Definition many_def:   many f n = prob_while_cut I (K f) n T
+End
 
-val prefix_cover_def = Define
-  `prefix_cover c =
+Definition prefix_cover_def:
+   prefix_cover c =
    (!l1 l2. l1 IN c /\ l2 IN c /\ ~(l1 = l2) ==> ~IS_PREFIX l1 l2) /\
-   (prob bern (BIGUNION (IMAGE prefix_set c)) = 1)`;
+   (prob bern (BIGUNION (IMAGE prefix_set c)) = 1)
+End
 
-val indep_fn_def = Define
-  `indep_fn =
+Definition indep_fn_def:
+   indep_fn =
    {f |
     countable (range (FST o f)) /\
     (FST o f) IN measurable (p_space bern, events bern) (UNIV, UNIV) /\
@@ -67,7 +70,8 @@ val indep_fn_def = Define
       prefix_cover c /\
       !l s.
         l IN c /\ s IN prefix_set l ==>
-        (f s = (FST (f (prefix_seq l)), sdrop (LENGTH l) s))}`;
+        (f s = (FST (f (prefix_seq l)), sdrop (LENGTH l) s))}
+End
 
 val probably_bern_def = new_binder_definition
   ("probably_bern_def",
@@ -77,22 +81,26 @@ val possibly_bern_def = new_binder_definition
   ("possibly_bern_def",
    ``!e. $?* e = possibly bern {s | e s}``);
 
-val append_sets_fn_def = Define
-  `append_sets_fn a b = {l | ?x y. x IN a /\ y IN b x /\ (l = APPEND x y)}`;
+Definition append_sets_fn_def:
+   append_sets_fn a b = {l | ?x y. x IN a /\ y IN b x /\ (l = APPEND x y)}
+End
 
-val prefix_cover_level_def = Define
-  `(prefix_cover_level c b ca a 0 = if c a then {} else {[]}) /\
+Definition prefix_cover_level_def:
+   (prefix_cover_level c b ca a 0 = if c a then {} else {[]}) /\
    (prefix_cover_level c b ca a (SUC n) =
     if c a then append_sets_fn (ca a) (\l. prefix_cover_level c b ca (b a l) n)
-    else {})`;
+    else {})
+End
 
-val prefix_cover_star_def = Define
-  `prefix_cover_star c b ca a =
-   BIGUNION (IMAGE (prefix_cover_level c b ca a) UNIV)`;
+Definition prefix_cover_star_def:
+   prefix_cover_star c b ca a =
+   BIGUNION (IMAGE (prefix_cover_level c b ca a) UNIV)
+End
 
-val prob_while_terminates_def = Define
-  `prob_while_terminates c b =
-   !a. !* s. ?n. ~c (FST (FUNPOW (UNCURRY b) n (a, s)))`;
+Definition prob_while_terminates_def:
+   prob_while_terminates c b =
+   !a. !* s. ?n. ~c (FST (FUNPOW (UNCURRY b) n (a, s)))
+End
 
 Definition prob_while_witness_def:
   prob_while_witness c b a s = case OWHILE (c o FST) (UNCURRY b) (a,s) of
@@ -100,19 +108,23 @@ Definition prob_while_witness_def:
                                | SOME x => x
 End
 
-val nonevent_def = Define
-   `nonevent = IMAGE (\x. @y. eventually (x :num->'a) (y :num->'a)) UNIV`;
+Definition nonevent_def:
+    nonevent = IMAGE (\x. @y. eventually (x :num->'a) (y :num->'a)) UNIV
+End
 
-val nonevent_seq_def = Define
-  `(nonevent_seq 0 = nonevent) /\
+Definition nonevent_seq_def:
+   (nonevent_seq 0 = nonevent) /\
    (nonevent_seq (SUC n) =
-    IMAGE stl (nonevent_seq n UNION (nonevent_seq n o mirror)))`;
+    IMAGE stl (nonevent_seq n UNION (nonevent_seq n o mirror)))
+End
 
-val coin_flip_def = Define
-  `coin_flip a b = BIND sdest (\x. if x then a else b)`;
+Definition coin_flip_def:
+   coin_flip a b = BIND sdest (\x. if x then a else b)
+End
 
-val prob_cost_def = Define
-  `prob_cost f b (a, n) = BIND (b a) (\a'. UNIT (a', f n : num))`;
+Definition prob_cost_def:
+   prob_cost f b (a, n) = BIND (b a) (\a'. UNIT (a', f n : num))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems leading to:                                                      *)
@@ -3074,14 +3086,17 @@ in
       new_specification ("prob_while_def", ["prob_while"], thm);
 end;
 
-val prob_until_def = Define
-  `prob_until b c = BIND b (prob_while ($~ o c) (K b))`;
+Definition prob_until_def:
+   prob_until b c = BIND b (prob_while ($~ o c) (K b))
+End
 
-val prob_repeat_def = Define
-  `prob_repeat a = MMAP THE (prob_until a IS_SOME)`;
+Definition prob_repeat_def:
+   prob_repeat a = MMAP THE (prob_until a IS_SOME)
+End
 
-val prob_while_cost_def = Define
-  `prob_while_cost c b = prob_while (c o FST) (prob_cost SUC b)`;
+Definition prob_while_cost_def:
+   prob_while_cost c b = prob_while (c o FST) (prob_cost SUC b)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems leading to:                                                      *)

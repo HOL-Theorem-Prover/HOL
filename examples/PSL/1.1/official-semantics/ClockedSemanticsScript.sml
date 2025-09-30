@@ -33,12 +33,12 @@ val _ = ParseExtras.temp_loose_equality()
 (******************************************************************************
 * CLOCK_TICK v c formalises "v is a clock tick of c"
 ******************************************************************************)
-val CLOCK_TICK_def =
- Define
-  `CLOCK_TICK v c =
+Definition CLOCK_TICK_def:
+   CLOCK_TICK v c =
     LENGTH v > 0                    /\
     B_SEM (ELEM v (LENGTH v - 1)) c /\
-    !i :: LESS(LENGTH v - 1). B_SEM (ELEM v i) (B_NOT c)`;
+    !i :: LESS(LENGTH v - 1). B_SEM (ELEM v i) (B_NOT c)
+End
 
 (******************************************************************************
 * Clocked semantics of SEREs.
@@ -143,9 +143,8 @@ val S_SEM =
 * F_SEM_def is unfolded version for easy definition.
 * Theorem F_SEM gives version corresponding to LRM v1.1
 ******************************************************************************)
-val F_SEM_def =
- Define
-   `(F_SEM v c (F_NOT f) =
+Definition F_SEM_def:
+    (F_SEM v c (F_NOT f) =
       ~(F_SEM (COMPLEMENT v) c f))
     /\
     (F_SEM v c (F_AND(f1,f2)) =
@@ -206,7 +205,8 @@ val F_SEM_def =
     /\
     (F_SEM v c (F_SUFFIX_IMP(r,f)) =
       !j :: LESS(LENGTH v).
-        S_SEM (SEL (COMPLEMENT v) (0,j)) c r ==> F_SEM (RESTN v j) c f)`;
+        S_SEM (SEL (COMPLEMENT v) (0,j)) c r ==> F_SEM (RESTN v j) c f)
+End
 
 (******************************************************************************
 * F_SEM v c f means "v |=c f"  in the clocked semantics

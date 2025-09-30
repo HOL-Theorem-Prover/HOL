@@ -99,8 +99,9 @@ QED
 
 
 
-val fFORALL_def = Define`
-  fFORALL n ff = fNOT (fEXISTS n (fNOT ff))`;
+Definition fFORALL_def:
+  fFORALL n ff = fNOT (fEXISTS n (fNOT ff))
+End
 
 
 Theorem prop_2_47_ii:

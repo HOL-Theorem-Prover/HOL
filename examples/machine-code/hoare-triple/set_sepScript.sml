@@ -6,35 +6,50 @@ val _ = ParseExtras.temp_loose_equality()
 
 (* ---- definitions ---- *)
 
-val one_def    = Define `one x = \s. (s = {x})`;
-val emp_def    = Define `emp = \s. (s = {})`;
-val cond_def   = Define `cond c = \s. (s = {}) /\ c`;
-val SEP_F_def  = Define `SEP_F s = F`;
-val SEP_T_def  = Define `SEP_T s = T`;
-val SPLIT_def  = Define `SPLIT (s:'a set) (u,v) ⇔ (u ∪ v = s) ∧ DISJOINT u v`;
-val STAR_def   = Define `STAR p q = (\s. ?u v. SPLIT s (u,v) /\ p u /\ q v)`;
-val SEP_EQ_def = Define `SEP_EQ x = \s. s = x`;
+Definition one_def:      one x = \s. (s = {x})
+End
+Definition emp_def:      emp = \s. (s = {})
+End
+Definition cond_def:     cond c = \s. (s = {}) /\ c
+End
+Definition SEP_F_def:    SEP_F s = F
+End
+Definition SEP_T_def:    SEP_T s = T
+End
+Definition SPLIT_def:    SPLIT (s:'a set) (u,v) ⇔ (u ∪ v = s) ∧ DISJOINT u v
+End
+Definition STAR_def:     STAR p q = (\s. ?u v. SPLIT s (u,v) /\ p u /\ q v)
+End
+Definition SEP_EQ_def:   SEP_EQ x = \s. s = x
+End
 
 val SEP_EXISTS = new_binder_definition("SEP_EXISTS",
   ``($SEP_EXISTS) = \f s:'a set. $? (\y. f y s)``);
 
-val SEP_HIDE_def = Define `SEP_HIDE p = SEP_EXISTS x. p x`;
-val SEP_DISJ_def = Define `SEP_DISJ p q = (\s. p s \/ q s)`;
+Definition SEP_HIDE_def:   SEP_HIDE p = SEP_EXISTS x. p x
+End
+Definition SEP_DISJ_def:   SEP_DISJ p q = (\s. p s \/ q s)
+End
 
 val _ = overload_on ("*",Term`STAR`);
 val _ = overload_on ("~",Term`SEP_HIDE`);
 val _ = overload_on ("\\/",Term`SEP_DISJ`);
 
-val sidecond_def = Define `sidecond = cond`;
-val precond_def  = Define `precond = cond`;
+Definition sidecond_def:   sidecond = cond
+End
+Definition precond_def:    precond = cond
+End
 
-val SEP_IMP_def  = Define `SEP_IMP p q = !s. p s ==> q s`;
+Definition SEP_IMP_def:    SEP_IMP p q = !s. p s ==> q s
+End
 
-val fun2set_def = Define `fun2set (f:'b->'a,d) =  { (a,f a) | a IN d }`;
+Definition fun2set_def:   fun2set (f:'b->'a,d) =  { (a,f a) | a IN d }
+End
 
-val SEP_ARRAY_def = Define `
+Definition SEP_ARRAY_def:
   (SEP_ARRAY p i a [] = emp) /\
-  (SEP_ARRAY p i a (x::xs) = p a x * SEP_ARRAY p i (a + i:'a word) xs)`;
+  (SEP_ARRAY p i a (x::xs) = p a x * SEP_ARRAY p i (a + i:'a word) xs)
+End
 
 
 (* ---- theorems ---- *)

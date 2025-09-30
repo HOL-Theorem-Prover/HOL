@@ -19,7 +19,8 @@ val _ = add_rule {term_name = "ENV_UPDATE", fixity = Suffix 2503,
 (* initially had BOTTOMSET instead of {} but that causes problems when evaluating concrete environments where I would like all empty
 environments to evaluate to the same thing, rather than not evaluate at all. Using {} is not as satisfactory theoretically but more
 practical *)
-val EMPTY_ENV = Define `EMPTY_ENV = \(s:string). {}`
+Definition EMPTY_ENV:   EMPTY_ENV = \(s:string). {}
+End
 
 
 (* thms about environments *)

@@ -39,25 +39,29 @@ val (R_exec_rules,R_exec_ind,R_exec_cases) = Hol_reln `
     R_exec (input,fns,io,ok) (io3,ok3))`;
 *)
 
-val zERROR_MESSAGE_def = Define `
+Definition zERROR_MESSAGE_def:
   zERROR_MESSAGE ex =
     SEP_EXISTS a1 a2 sl sl1 e cs rbp ddd cu.
-      zLISP_FAIL (a1,a2,sl,sl1,e,ex,cs,rbp,ddd,cu)`;
+      zLISP_FAIL (a1,a2,sl,sl1,e,ex,cs,rbp,ddd,cu)
+End
 
-val zLISP_OUTPUT_def = Define `
+Definition zLISP_OUTPUT_def:
   zLISP_OUTPUT (io,ok) =
     SEP_EXISTS a1 a2 sl sl1 e ex cs rbp ddd cu x0 x1 x2 x3 x4 x5 xs xs1 xbp qs code amnt.
-      zLISP (a1,a2,sl,sl1,e,ex,cs,rbp,ddd,cu) (x0,x1,x2,x3,x4,x5,xs,xs1,io,xbp,qs,code,amnt,ok)`;
+      zLISP (a1,a2,sl,sl1,e,ex,cs,rbp,ddd,cu) (x0,x1,x2,x3,x4,x5,xs,xs1,io,xbp,qs,code,amnt,ok)
+End
 
-val R_exec_TERMINATES_def = Define `
-  R_exec_TERMINATES input = ?y. R_exec (input,FEMPTY,"") y`;
+Definition R_exec_TERMINATES_def:
+  R_exec_TERMINATES input = ?y. R_exec (input,FEMPTY,"") y
+End
 
 (*  *)
 
 val c = READ_EVAL_PRINT_LOOP_BASE |> concl |> rator |> rand
 val pc = READ_EVAL_PRINT_LOOP_BASE |> concl |> rand |> find_term (can (match_term ``p + n2w n``))
 
-val getOUTPUT_def = Define `getOUTPUT (IO_STREAMS xs ys) = ys`;
+Definition getOUTPUT_def:   getOUTPUT (IO_STREAMS xs ys) = ys
+End
 
 val PULL_FORALL_IMP = METIS_PROVE [] ``(Q ==> !x. P x) = !x. Q ==> P x``
 val IMP_IMP = METIS_PROVE [] ``b /\ (c ==> d) ==> ((b ==> c) ==> d)``
@@ -86,7 +90,8 @@ val is_eof_T_IMP = prove(
   \\ MATCH_MP_TAC LESS_EQ_LESS_TRANS \\ Q.EXISTS_TAC `STRLEN t`
   \\ ASM_SIMP_TAC std_ss [LENGTH_SND_read_while] \\ SIMP_TAC std_ss [LENGTH]);
 
-val hide_code_def = Define `hide_code p cs = ^c`;
+Definition hide_code_def:   hide_code p cs = ^c
+End
 
 val STAR_LEMMA = prove(
   ``(STAR p1 p2) * p3 = p3 * p2 * p1``,

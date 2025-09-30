@@ -4,19 +4,19 @@ Ancestors
 
 fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
-val dest_dabs_def = Define`
+Definition dest_dabs_def:
   (dest_dabs (dABS t) = t)
-`;
+End
 val _ = export_rewrites ["dest_dabs_def"]
 
-val dnoreduct_def = Define`
+Definition dnoreduct_def:
   (dnoreduct (dV i) = NONE) ∧
   (dnoreduct (dAPP t u) =
      if is_dABS t then SOME (nsub u 0 (dest_dabs t))
      else if dbnf t then OPTION_MAP (dAPP t) (dnoreduct u)
      else  SOME (dAPP (THE (dnoreduct t)) u)) ∧
   (dnoreduct (dABS t) = OPTION_MAP dABS (dnoreduct t))
-`;
+End
 val _ = export_rewrites ["dnoreduct_def"]
 
 val notbnf_noreduct = prove(

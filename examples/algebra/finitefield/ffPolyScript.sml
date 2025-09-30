@@ -1304,9 +1304,9 @@ val common_poly_def = Define`
 `;
 *)
 (* This definition uses EVERY, which is a List property. *)
-val common_poly_def = Define`
+Definition common_poly_def:
    common_poly (r:'a ring) (s:'a ring) (p:'a poly) <=> poly p /\ EVERY (\e. e IN B) p
-`;
+End
 (* overload on common poly *)
 val _ = overload_on("cpoly", ``\r s. common_poly r s``);
 (*
@@ -1845,9 +1845,9 @@ val pf_common_poly_def = Define`
 `;
 *)
 (* This definition uses EVERY, with is a List property. *)
-val pf_common_poly_def = Define`
+Definition pf_common_poly_def:
    pf_common_poly (r:'a ring) (p:'a poly) <=> poly p /\ EVERY (\e. e IN Fp) p
-`;
+End
 (* overload on common poly *)
 val _ = overload_on("pfcpoly", ``pf_common_poly r``);
 (*

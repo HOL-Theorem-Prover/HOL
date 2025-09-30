@@ -164,7 +164,7 @@ End
 (* Note: ~(1 < q) = q <= 1, ensure 1 < q before n MOD q. *)
 
 (* Primality test by seeking factor up to (1 + SQRT n) *)
-val prime_testM_def = Define`
+Definition prime_testM_def:
     prime_testM n =
       do
          n0 <- zeroM n;
@@ -177,7 +177,7 @@ val prime_testM_def = Define`
                 eqM p n;
               od
       od
-`;
+End
 
 (*
 EVAL ``MAP prime_testM [1 .. 15]``; =

@@ -36,27 +36,27 @@ val FORALL_KEYSCHED = Q.store_thm
  THEN ASM_REWRITE_TAC[]);
 
 
-val ROTKEYS_def =
- Define
-   `ROTKEYS (k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10) =
-            (k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k0) : keysched`;
+Definition ROTKEYS_def:
+    ROTKEYS (k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10) =
+            (k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k0) : keysched
+End
 
-val REVKEYS_def =
- Define
-   `REVKEYS (k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10) =
-            (k10,k9,k8,k7,k6,k5,k4,k3,k2,k1,k0) : keysched`;
+Definition REVKEYS_def:
+    REVKEYS (k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10) =
+            (k10,k9,k8,k7,k6,k5,k4,k3,k2,k1,k0) : keysched
+End
 
-val LIST_TO_KEYS_def =
- Define
-  `(LIST_TO_KEYS [] acc = acc) /\
+Definition LIST_TO_KEYS_def:
+   (LIST_TO_KEYS [] acc = acc) /\
    (LIST_TO_KEYS (h::t) (k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11) =
-         LIST_TO_KEYS t (h,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10))`;
+         LIST_TO_KEYS t (h,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10))
+End
 
-val DUMMY_KEYS_def =
- Define
-  `DUMMY_KEYS = (ZERO_BLOCK,ZERO_BLOCK,ZERO_BLOCK,ZERO_BLOCK,
+Definition DUMMY_KEYS_def:
+   DUMMY_KEYS = (ZERO_BLOCK,ZERO_BLOCK,ZERO_BLOCK,ZERO_BLOCK,
                  ZERO_BLOCK,ZERO_BLOCK,ZERO_BLOCK,ZERO_BLOCK,
-                 ZERO_BLOCK,ZERO_BLOCK,ZERO_BLOCK)`;
+                 ZERO_BLOCK,ZERO_BLOCK,ZERO_BLOCK)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Orchestrate the round computations.                                       *)
@@ -94,24 +94,26 @@ val _ = save_thm ("RoundTuple_ind", RoundTuple_ind);
 val _ = save_thm ("InvRoundTuple_def", InvRoundTuple_def);
 val _ = save_thm ("InvRoundTuple_ind", InvRoundTuple_ind);
 
-val Round_def = Define `Round n k s = SND(SND(RoundTuple(n,k,s)))`;
-val InvRound_def = Define `InvRound n k s = SND(SND(InvRoundTuple(n,k,s)))`;
+Definition Round_def:   Round n k s = SND(SND(RoundTuple(n,k,s)))
+End
+Definition InvRound_def:   InvRound n k s = SND(SND(InvRoundTuple(n,k,s)))
+End
 
 (*---------------------------------------------------------------------------*)
 (* Encrypt and Decrypt                                                       *)
 (*---------------------------------------------------------------------------*)
 
-val AES_FWD_def =
- Define
-  `AES_FWD keys =
+Definition AES_FWD_def:
+   AES_FWD keys =
     from_state o Round 9 (ROTKEYS keys)
-               o AddRoundKey (FST keys) o to_state`;
+               o AddRoundKey (FST keys) o to_state
+End
 
-val AES_BWD_def =
- Define
-  `AES_BWD keys =
+Definition AES_BWD_def:
+   AES_BWD keys =
     from_state o InvRound 9 (ROTKEYS keys)
-               o AddRoundKey (FST keys) o to_state`;
+               o AddRoundKey (FST keys) o to_state
+End
 
 (*---------------------------------------------------------------------------*)
 (* Main lemma                                                                *)
@@ -141,23 +143,27 @@ val AES_LEMMA = Q.store_thm
 
 val _ = set_fixity "XOR8x4"  (Infixl 500);
 
-val XOR8x4_def =
- Define
-   `(a,b,c,d) XOR8x4 (a1,b1,c1,d1) = (a ?? a1, b ?? b1, c ?? c1, d ?? d1)`;
+Definition XOR8x4_def:
+    (a,b,c,d) XOR8x4 (a1,b1,c1,d1) = (a ?? a1, b ?? b1, c ?? c1, d ?? d1)
+End
 
-val SubWord_def = Define
-   `SubWord(b0,b1,b2,b3) = (Sbox b0, Sbox b1, Sbox b2, Sbox b3)`;
+Definition SubWord_def:
+    SubWord(b0,b1,b2,b3) = (Sbox b0, Sbox b1, Sbox b2, Sbox b3)
+End
 
-val RotWord_def = Define
-   `RotWord(b0,b1,b2,b3) = (b1,b2,b3,b0)`;
+Definition RotWord_def:
+    RotWord(b0,b1,b2,b3) = (b1,b2,b3,b0)
+End
 
-val Rcon_def = Define
-   `Rcon i = (PolyExp 2w (i-1), 0w,0w,0w)`;
+Definition Rcon_def:
+    Rcon i = (PolyExp 2w (i-1), 0w,0w,0w)
+End
 
-val unpack_def = Define
-  `(unpack [] A = A) /\
+Definition unpack_def:
+   (unpack [] A = A) /\
    (unpack ((a,b,c,d)::(e,f,g,h)::(i,j,k,l)::(m,n,o1,p)::rst) A
-        = unpack rst ((m,i,e,a,n,j,f,b,o1,k,g,c,p,l,h,d)::A))`;
+        = unpack rst ((m,i,e,a,n,j,f,b,o1,k,g,c,p,l,h,d)::A))
+End
 
 (*---------------------------------------------------------------------------*)
 (* Build the keyschedule from a key. This definition is too specific, but    *)
@@ -181,11 +187,12 @@ val _ = save_thm ("expand_def", expand_def);
 val _ = save_thm ("expand_ind", expand_ind);
 val _ = computeLib.add_persistent_funs ["expand_def"];
 
-val mk_keysched_def = Define
- `mk_keysched ((b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15):key)
+Definition mk_keysched_def:
+  mk_keysched ((b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15):key)
       =
   expand 4 [(b12,b13,b14,b15) ; (b8,b9,b10,b11) ;
-            (b4,b5,b6,b7)     ; (b0,b1,b2,b3)]`;
+            (b4,b5,b6,b7)     ; (b0,b1,b2,b3)]
+End
 
 
 (*---------------------------------------------------------------------------*)
@@ -223,10 +230,11 @@ RW_TAC list_ss [unpack_def]
 (* single package.                                                           *)
 (*---------------------------------------------------------------------------*)
 
-val AES_def = Define
- `AES key =
+Definition AES_def:
+  AES key =
    let keys = LIST_TO_KEYS (mk_keysched key) DUMMY_KEYS
-   in (AES_FWD keys, AES_BWD (REVKEYS keys))`;
+   in (AES_FWD keys, AES_BWD (REVKEYS keys))
+End
 
 (*---------------------------------------------------------------------------*)
 (* Basic theorem about encryption/decryption                                 *)

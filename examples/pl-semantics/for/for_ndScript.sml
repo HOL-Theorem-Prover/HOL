@@ -62,33 +62,36 @@ val _ = Datatype `
 val _ = Datatype `
   observation = Terminate ((io_tag + bool) list) | Diverge ((io_tag + bool) llist) | Crash`;
 
-val getchar_def = Define `
+Definition getchar_def:
 getchar stream =
   case LTL stream of
      | NONE => (-1, stream)
      | SOME rest =>
          let v = &(ORD (THE (LHD stream))) in
-           (v, rest)`;
+           (v, rest)
+End
 
 
 (* === A simple type system === *)
 
 (* This type system checks for Break statements and variable accesses. *)
-val type_e_def = Define `
+Definition type_e_def:
 (type_e s (Var x) ⇔ x ∈ s) ∧
 (type_e s (Num num) ⇔ T) ∧
 (type_e s (Add e1 e2) ⇔ type_e s e1 ∧ type_e s e2) ∧
 (type_e s (Assign x e) ⇔ x ∈ s ∧ type_e s e) ∧
 (type_e s Getchar ⇔ T) ∧
-(type_e s (Putchar e) ⇔ type_e s e)`;
+(type_e s (Putchar e) ⇔ type_e s e)
+End
 
-val type_t_def = Define `
+Definition type_t_def:
 (type_t in_for s (Exp e) ⇔ type_e s e) ∧
 (type_t in_for s (Dec x t) ⇔ type_t in_for (x INSERT s) t) ∧
 (type_t in_for s Break ⇔ in_for) ∧
 (type_t in_for s (Seq t1 t2) ⇔ type_t in_for s t1 ∧ type_t in_for s t2) ∧
 (type_t in_for s (If e t1 t2) ⇔ type_e s e ∧ type_t in_for s t1 ∧ type_t in_for s t2) ∧
-(type_t in_for s (For e1 e2 t) ⇔ type_e s e1 ∧ type_e s e2 ∧ type_t T s t)`;
+(type_t in_for s (For e1 e2 t) ⇔ type_e s e1 ∧ type_e s e2 ∧ type_t T s t)
+End
 
 val type_weakening_e = Q.store_thm ("type_weakening_e",
 `!s e s' s1. type_e s e ∧ s ⊆ s1 ⇒ type_e s1 e`,

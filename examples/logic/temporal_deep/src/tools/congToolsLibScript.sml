@@ -2,10 +2,11 @@ Theory congToolsLib
 Libs
   Sanity
 
-val LIST_AS_SET_CONGRUENCE_RELATION_def =
-  Define `LIST_AS_SET_CONGRUENCE_RELATION R l1 l2 =
+Definition LIST_AS_SET_CONGRUENCE_RELATION_def:
+   LIST_AS_SET_CONGRUENCE_RELATION R l1 l2 =
           ((!x1. MEM x1 l1 ==> (?x2. MEM x2 l2 /\ R x1 x2)) /\
-           (!x2. MEM x2 l2 ==> (?x1. MEM x1 l1 /\ R x1 x2)))`
+           (!x2. MEM x2 l2 ==> (?x1. MEM x1 l1 /\ R x1 x2)))
+End
 
 
 val LIST_AS_SET_CONGRUENCE_RELATION_REFL =

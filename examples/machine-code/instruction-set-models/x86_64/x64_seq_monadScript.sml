@@ -20,45 +20,58 @@ val _ = type_abbrev("x64_state",   (*  state = tuple consisting of:       *)
 
 (* functions for reading/writing state *)
 
-val ZREAD_REG_def   = Define `ZREAD_REG     x ((r,p,s,m,i):x64_state) = r x `;
-val ZREAD_RIP_def   = Define `ZREAD_RIP       ((r,p,s,m,i):x64_state) = p `;
-val ZREAD_EFLAG_def = Define `ZREAD_EFLAG   x ((r,p,s,m,i):x64_state) = s x `;
+Definition ZREAD_REG_def:     ZREAD_REG     x ((r,p,s,m,i):x64_state) = r x
+End
+Definition ZREAD_RIP_def:     ZREAD_RIP       ((r,p,s,m,i):x64_state) = p
+End
+Definition ZREAD_EFLAG_def:   ZREAD_EFLAG   x ((r,p,s,m,i):x64_state) = s x
+End
 
-val ZREAD_MEM_def = Define `
+Definition ZREAD_MEM_def:
   ZREAD_MEM x ((r,p,s,m,i):x64_state) =
     case m x of
        NONE => NONE
-     | SOME (w,perms) => if Zread IN perms then SOME w else NONE`;
+     | SOME (w,perms) => if Zread IN perms then SOME w else NONE
+End
 
-val ZREAD_INSTR_def = Define `
+Definition ZREAD_INSTR_def:
   ZREAD_INSTR x ((r,p,s,m,i):x64_state) =
     case (i x, m x) of
        (NONE, NONE) => NONE
      | (NONE, SOME (w,perms)) => if {Zread;Zexecute} SUBSET perms then SOME w else NONE
-     | (SOME (w,perms), _) => if {Zread;Zexecute} SUBSET perms then SOME w else NONE`;
+     | (SOME (w,perms), _) => if {Zread;Zexecute} SUBSET perms then SOME w else NONE
+End
 
-val X64_ICACHE_EMPTY_def = Define `X64_ICACHE_EMPTY = (\addr. NONE):x64_memory`;
+Definition X64_ICACHE_EMPTY_def:   X64_ICACHE_EMPTY = (\addr. NONE):x64_memory
+End
 
-val ZCLEAR_ICACHE_def = Define `
-  ZCLEAR_ICACHE ((r,p,s,m,i):x64_state) = (r,p,s,m,X64_ICACHE_EMPTY):x64_state`;
+Definition ZCLEAR_ICACHE_def:
+  ZCLEAR_ICACHE ((r,p,s,m,i):x64_state) = (r,p,s,m,X64_ICACHE_EMPTY):x64_state
+End
 
-val ZWRITE_REG_def   = Define `ZWRITE_REG   x y ((r,p,s,m,i):x64_state) = ((x =+ y) r,p,s,m,i):x64_state `;
-val ZWRITE_RIP_def   = Define `ZWRITE_RIP     y ((r,p,s,m,i):x64_state) = (r,y,s,m,i):x64_state `;
-val ZWRITE_EFLAG_def = Define `ZWRITE_EFLAG x y ((r,p,s,m,i):x64_state) = (r,p,(x =+ y) s,m,i):x64_state `;
+Definition ZWRITE_REG_def:     ZWRITE_REG   x y ((r,p,s,m,i):x64_state) = ((x =+ y) r,p,s,m,i):x64_state
+End
+Definition ZWRITE_RIP_def:     ZWRITE_RIP     y ((r,p,s,m,i):x64_state) = (r,y,s,m,i):x64_state
+End
+Definition ZWRITE_EFLAG_def:   ZWRITE_EFLAG x y ((r,p,s,m,i):x64_state) = (r,p,(x =+ y) s,m,i):x64_state
+End
 
-val ZWRITE_MEM_def   = Define `
+Definition ZWRITE_MEM_def:
   ZWRITE_MEM x y ((r,p,s,m,i):x64_state) =
     case m x of
        NONE => NONE
-     | SOME (w,perms) => if Zwrite IN perms then SOME ((r,p,s,(x =+ SOME (y,perms)) m,i):x64_state) else NONE`;
+     | SOME (w,perms) => if Zwrite IN perms then SOME ((r,p,s,(x =+ SOME (y,perms)) m,i):x64_state) else NONE
+End
 
-val ZREAD_MEM_BYTES_def = Define `
+Definition ZREAD_MEM_BYTES_def:
   ZREAD_MEM_BYTES n a s =
-    if n = 0 then [] else ZREAD_MEM a s :: ZREAD_MEM_BYTES (n-1) (a+1w) s`;
+    if n = 0 then [] else ZREAD_MEM a s :: ZREAD_MEM_BYTES (n-1) (a+1w) s
+End
 
-val ZREAD_INSTR_BYTES_def = Define `
+Definition ZREAD_INSTR_BYTES_def:
   ZREAD_INSTR_BYTES n a s =
-    if n = 0 then [] else ZREAD_INSTR a s :: ZREAD_INSTR_BYTES (n-1) (a+1w) s`;
+    if n = 0 then [] else ZREAD_INSTR a s :: ZREAD_INSTR_BYTES (n-1) (a+1w) s
+End
 
 val w2bits_EL = store_thm("w2bits_EL",
   ``(w2bits (w:word8) ++ ys = x1::x2::x3::x4::x5::x6::x7::x8::xs) =
@@ -118,84 +131,102 @@ val _ = type_abbrev("x64_M",``:x64_state -> ('a # x64_state) option``);
 
 (* sequential monads for an option state *)
 
-val constT_seq_def = Define `
-  (constT_seq: 'a -> 'a x64_M) x = \y. SOME (x,y)`;
+Definition constT_seq_def:
+  (constT_seq: 'a -> 'a x64_M) x = \y. SOME (x,y)
+End
 
-val addT_seq_def = Define `
+Definition addT_seq_def:
   (addT_seq: 'a -> 'b x64_M -> ('a # 'b) x64_M) x s =
-    \y. case s y of NONE => NONE  | SOME (z,t) => SOME ((x,z),t)`;
+    \y. case s y of NONE => NONE  | SOME (z,t) => SOME ((x,z),t)
+End
 
-val lockT_seq_def = Define `
-  (lockT_seq: 'a x64_M -> 'a x64_M) s = s`;
+Definition lockT_seq_def:
+  (lockT_seq: 'a x64_M -> 'a x64_M) s = s
+End
 
-val failureT_seq_def = Define `
-  (failureT_seq: 'a x64_M) = \y. NONE`;
+Definition failureT_seq_def:
+  (failureT_seq: 'a x64_M) = \y. NONE
+End
 
-val seqT_seq_def = Define `
+Definition seqT_seq_def:
   (seqT_seq: 'a x64_M -> ('a -> 'b x64_M) -> 'b x64_M) s f =
-    \y. case s y of NONE => NONE  | SOME (z,t) => f z t`;
+    \y. case s y of NONE => NONE  | SOME (z,t) => f z t
+End
 
-val parT_seq_def = Define `
+Definition parT_seq_def:
   (parT_seq: 'a x64_M -> 'b x64_M -> ('a # 'b) x64_M) s t =
     \y. case s y of NONE => NONE  | SOME (a,z) =>
-        case t z of NONE => NONE  | SOME (b,x) => SOME ((a,b),x)`;
+        case t z of NONE => NONE  | SOME (b,x) => SOME ((a,b),x)
+End
 
-val parT_unit_seq_def = Define `
+Definition parT_unit_seq_def:
   (parT_unit_seq: unit x64_M -> unit x64_M -> unit x64_M) s t =
     \y. case s y of NONE => NONE  | SOME (a,z) =>
-        case t z of NONE => NONE  | SOME (b,x) => SOME ((),x)`;
+        case t z of NONE => NONE  | SOME (b,x) => SOME ((),x)
+End
 
 (* register reads/writes always succeed. *)
 
-val write_reg_seq_def = Define `(write_reg_seq ii r x):unit x64_M =
-  \s. SOME ((),ZWRITE_REG r x s)`;
+Definition write_reg_seq_def:   (write_reg_seq ii r x):unit x64_M =
+  \s. SOME ((),ZWRITE_REG r x s)
+End
 
-val read_reg_seq_def = Define `(read_reg_seq ii r):word64 x64_M =
-  \s. SOME (ZREAD_REG r s,s)`;
+Definition read_reg_seq_def:   (read_reg_seq ii r):word64 x64_M =
+  \s. SOME (ZREAD_REG r s,s)
+End
 
 (* eflags can always be written, but reading a NONE eflag causes a failure *)
 
-val write_eflag_seq_def = Define `(write_eflag_seq ii f x):unit x64_M =
-  (\s. SOME ((),ZWRITE_EFLAG f x s))`;
+Definition write_eflag_seq_def:   (write_eflag_seq ii f x):unit x64_M =
+  (\s. SOME ((),ZWRITE_EFLAG f x s))
+End
 
-val read_eflag_seq_def  = Define `(read_eflag_seq ii f):bool x64_M =
-  (\s. case ZREAD_EFLAG f s of NONE => NONE  | SOME b => SOME (b,s))`;
+Definition read_eflag_seq_def:    (read_eflag_seq ii f):bool x64_M =
+  (\s. case ZREAD_EFLAG f s of NONE => NONE  | SOME b => SOME (b,s))
+End
 
 (* rip reads/writes always succeed. *)
 
-val write_rip_seq_def = Define `(write_rip_seq ii x):unit x64_M =
-  \s. SOME ((),ZWRITE_RIP x s)`;
+Definition write_rip_seq_def:   (write_rip_seq ii x):unit x64_M =
+  \s. SOME ((),ZWRITE_RIP x s)
+End
 
-val read_rip_seq_def = Define `(read_rip_seq ii):Zimm x64_M =
-  \s. SOME (ZREAD_RIP s,s)`;
+Definition read_rip_seq_def:   (read_rip_seq ii):Zimm x64_M =
+  \s. SOME (ZREAD_RIP s,s)
+End
 
 (* memory writes are only allowed to modelled memory, i.e. locations containing SOME ... *)
 
-val write_mem_seq_def   = Define `(write_mem_seq ii a x):unit x64_M =
-  (\s. case ZWRITE_MEM a x s of NONE => NONE  | SOME s2 => SOME ((),s2))`;
+Definition write_mem_seq_def:     (write_mem_seq ii a x):unit x64_M =
+  (\s. case ZWRITE_MEM a x s of NONE => NONE  | SOME s2 => SOME ((),s2))
+End
 
 (* a memory read to an unmodelled memory location causes a failure *)
 
-val read_mem_seq_def  = Define `(read_mem_seq ii a):word8 x64_M =
-  (\s. case ZREAD_MEM a s of NONE => NONE  | SOME x => SOME (x,s))`;
+Definition read_mem_seq_def:    (read_mem_seq ii a):word8 x64_M =
+  (\s. case ZREAD_MEM a s of NONE => NONE  | SOME x => SOME (x,s))
+End
 
 (* reading and writing from/to memory *)
 
-val read_m8_seq_def = Define `(read_m8_seq ii a):word8 x64_M =
-  read_mem_seq ii a`;
+Definition read_m8_seq_def:   (read_m8_seq ii a):word8 x64_M =
+  read_mem_seq ii a
+End
 
-val read_m16_seq_def = Define `(read_m16_seq ii a):word16 x64_M =
+Definition read_m16_seq_def:   (read_m16_seq ii a):word16 x64_M =
   seqT_seq (parT_seq (read_mem_seq ii (a+0w)) (read_mem_seq ii (a+1w)))
-       (\(x0,x1). constT_seq (bytes2word [x0;x1]))`;
+       (\(x0,x1). constT_seq (bytes2word [x0;x1]))
+End
 
-val read_m32_seq_def = Define `(read_m32_seq ii a):word32 x64_M =
+Definition read_m32_seq_def:   (read_m32_seq ii a):word32 x64_M =
   seqT_seq (parT_seq (read_mem_seq ii (a+0w))
            (parT_seq (read_mem_seq ii (a+1w))
            (parT_seq (read_mem_seq ii (a+2w))
                      (read_mem_seq ii (a+3w)))))
-       (\(x0,x1,x2,x3). constT_seq (bytes2word [x0;x1;x2;x3]))`;
+       (\(x0,x1,x2,x3). constT_seq (bytes2word [x0;x1;x2;x3]))
+End
 
-val read_m64_seq_def = Define `(read_m64_seq ii a):word64 x64_M =
+Definition read_m64_seq_def:   (read_m64_seq ii a):word64 x64_M =
   seqT_seq (parT_seq (read_mem_seq ii (a+0w))
            (parT_seq (read_mem_seq ii (a+1w))
            (parT_seq (read_mem_seq ii (a+2w))
@@ -204,25 +235,29 @@ val read_m64_seq_def = Define `(read_m64_seq ii a):word64 x64_M =
            (parT_seq (read_mem_seq ii (a+5w))
            (parT_seq (read_mem_seq ii (a+6w))
                      (read_mem_seq ii (a+7w)))))))))
-       (\(x0,x1,x2,x3,x4,x5,x6,x7). constT_seq (bytes2word [x0;x1;x2;x3;x4;x5;x6;x7]))`;
+       (\(x0,x1,x2,x3,x4,x5,x6,x7). constT_seq (bytes2word [x0;x1;x2;x3;x4;x5;x6;x7]))
+End
 
 
-val write_m8_seq_def = Define `(write_m8_seq ii a w):unit x64_M =
-    write_mem_seq ii a (w:word8)`;
+Definition write_m8_seq_def:   (write_m8_seq ii a w):unit x64_M =
+    write_mem_seq ii a (w:word8)
+End
 
-val write_m16_seq_def = Define `(write_m16_seq ii a w):unit x64_M =
+Definition write_m16_seq_def:   (write_m16_seq ii a w):unit x64_M =
     (let bs = word2bytes 2 (w:word16) in
        parT_unit_seq (write_mem_seq ii (a+0w) (EL 0 bs))
-                     (write_mem_seq ii (a+1w) (EL 1 bs)))`;
+                     (write_mem_seq ii (a+1w) (EL 1 bs)))
+End
 
-val write_m32_seq_def = Define `(write_m32_seq ii a w):unit x64_M =
+Definition write_m32_seq_def:   (write_m32_seq ii a w):unit x64_M =
     (let bs = word2bytes 4 (w:word32) in
        parT_unit_seq (write_mem_seq ii (a+0w) (EL 0 bs))
       (parT_unit_seq (write_mem_seq ii (a+1w) (EL 1 bs))
       (parT_unit_seq (write_mem_seq ii (a+2w) (EL 2 bs))
-                     (write_mem_seq ii (a+3w) (EL 3 bs)))))`;
+                     (write_mem_seq ii (a+3w) (EL 3 bs)))))
+End
 
-val write_m64_seq_def = Define `(write_m64_seq ii a w):unit x64_M =
+Definition write_m64_seq_def:   (write_m64_seq ii a w):unit x64_M =
     (let bs = word2bytes 8 (w:word64) in
        parT_unit_seq (write_mem_seq ii (a+0w) (EL 0 bs))
       (parT_unit_seq (write_mem_seq ii (a+1w) (EL 1 bs))
@@ -231,12 +266,14 @@ val write_m64_seq_def = Define `(write_m64_seq ii a w):unit x64_M =
       (parT_unit_seq (write_mem_seq ii (a+4w) (EL 4 bs))
       (parT_unit_seq (write_mem_seq ii (a+5w) (EL 5 bs))
       (parT_unit_seq (write_mem_seq ii (a+6w) (EL 6 bs))
-                     (write_mem_seq ii (a+7w) (EL 7 bs)))))))))`;
+                     (write_mem_seq ii (a+7w) (EL 7 bs)))))))))
+End
 
 (* clear the icache *)
 
-val clear_icache_seq_def = Define `(clear_icache_seq ii):unit x64_M =
-  \s. SOME ((),ZCLEAR_ICACHE s)`;
+Definition clear_icache_seq_def:   (clear_icache_seq ii):unit x64_M =
+  \s. SOME ((),ZCLEAR_ICACHE s)
+End
 
 
 (* export *)
@@ -268,47 +305,55 @@ val _ = Define `(clear_icache: iiid -> unit x64_M)                           = c
 
 (* some rewriter-friendly theorems *)
 
-val option_apply_def = Define `
-  option_apply x f = if x = NONE then NONE else f (THE x)`;
+Definition option_apply_def:
+  option_apply x f = if x = NONE then NONE else f (THE x)
+End
 
 val option_apply_SOME = prove(
   ``!x f. option_apply (SOME x) f = f x``,SRW_TAC [] [option_apply_def]);
 
-val ZWRITE_MEM2_def = Define `
-  ZWRITE_MEM2 a w ((r,e,s,m,i):x64_state) = (r,e,s,(a =+ SOME (w, SND (THE (m a)))) m,i)`;
+Definition ZWRITE_MEM2_def:
+  ZWRITE_MEM2 a w ((r,e,s,m,i):x64_state) = (r,e,s,(a =+ SOME (w, SND (THE (m a)))) m,i)
+End
 
-val ZREAD_MEM2_def = Define `
-  ZREAD_MEM2 a ((r,e,s,m,i):x64_state) = FST (THE (m a))`;
+Definition ZREAD_MEM2_def:
+  ZREAD_MEM2 a ((r,e,s,m,i):x64_state) = FST (THE (m a))
+End
 
-val ZREAD_MEM2_WORD16_def = Define `
+Definition ZREAD_MEM2_WORD16_def:
   ZREAD_MEM2_WORD16 a (s:x64_state) = (bytes2word
-    [ZREAD_MEM2 (a + 0x0w) s; ZREAD_MEM2 (a + 0x1w) s]) :word16`;
+    [ZREAD_MEM2 (a + 0x0w) s; ZREAD_MEM2 (a + 0x1w) s]) :word16
+End
 
-val ZREAD_MEM2_WORD32_def = Define `
+Definition ZREAD_MEM2_WORD32_def:
   ZREAD_MEM2_WORD32 a (s:x64_state) = (bytes2word
     [ZREAD_MEM2 (a + 0x0w) s; ZREAD_MEM2 (a + 0x1w) s;
-     ZREAD_MEM2 (a + 0x2w) s; ZREAD_MEM2 (a + 0x3w) s]) :word32`;
+     ZREAD_MEM2 (a + 0x2w) s; ZREAD_MEM2 (a + 0x3w) s]) :word32
+End
 
-val ZREAD_MEM2_WORD64_def = Define `
+Definition ZREAD_MEM2_WORD64_def:
   ZREAD_MEM2_WORD64 a (s:x64_state) = (bytes2word
     [ZREAD_MEM2 (a + 0x0w) s; ZREAD_MEM2 (a + 0x1w) s;
      ZREAD_MEM2 (a + 0x2w) s; ZREAD_MEM2 (a + 0x3w) s;
      ZREAD_MEM2 (a + 0x4w) s; ZREAD_MEM2 (a + 0x5w) s;
-     ZREAD_MEM2 (a + 0x6w) s; ZREAD_MEM2 (a + 0x7w) s]) :word64`;
+     ZREAD_MEM2 (a + 0x6w) s; ZREAD_MEM2 (a + 0x7w) s]) :word64
+End
 
-val ZWRITE_MEM2_WORD16_def = Define `
+Definition ZWRITE_MEM2_WORD16_def:
   ZWRITE_MEM2_WORD16 a (w:word16) (s:x64_state) =
     ZWRITE_MEM2 (a + 1w) (EL 1 (word2bytes 2 w))
-   (ZWRITE_MEM2 (a + 0w) (EL 0 (word2bytes 2 w)) s)`;
+   (ZWRITE_MEM2 (a + 0w) (EL 0 (word2bytes 2 w)) s)
+End
 
-val ZWRITE_MEM2_WORD32_def = Define `
+Definition ZWRITE_MEM2_WORD32_def:
   ZWRITE_MEM2_WORD32 a (w:word32) (s:x64_state) =
     ZWRITE_MEM2 (a + 3w) (EL 3 (word2bytes 4 w))
    (ZWRITE_MEM2 (a + 2w) (EL 2 (word2bytes 4 w))
    (ZWRITE_MEM2 (a + 1w) (EL 1 (word2bytes 4 w))
-   (ZWRITE_MEM2 (a + 0w) (EL 0 (word2bytes 4 w)) s)))`;
+   (ZWRITE_MEM2 (a + 0w) (EL 0 (word2bytes 4 w)) s)))
+End
 
-val ZWRITE_MEM2_WORD64_def = Define `
+Definition ZWRITE_MEM2_WORD64_def:
   ZWRITE_MEM2_WORD64 a (w:word64) (s:x64_state) =
     ZWRITE_MEM2 (a + 7w) (EL 7 (word2bytes 8 w))
    (ZWRITE_MEM2 (a + 6w) (EL 6 (word2bytes 8 w))
@@ -317,7 +362,8 @@ val ZWRITE_MEM2_WORD64_def = Define `
    (ZWRITE_MEM2 (a + 3w) (EL 3 (word2bytes 8 w))
    (ZWRITE_MEM2 (a + 2w) (EL 2 (word2bytes 8 w))
    (ZWRITE_MEM2 (a + 1w) (EL 1 (word2bytes 8 w))
-   (ZWRITE_MEM2 (a + 0w) (EL 0 (word2bytes 8 w)) s)))))))`;
+   (ZWRITE_MEM2 (a + 0w) (EL 0 (word2bytes 8 w)) s)))))))
+End
 
 val ZREAD_MEM2_WORD64_THM = store_thm("ZREAD_MEM2_WORD64_THM",
   ``ZREAD_MEM2_WORD64 a (s:x64_state) =
@@ -339,11 +385,13 @@ val ZWRITE_MEM2_WORD64_THM = store_thm("ZWRITE_MEM2_WORD64_THM",
   THEN SIMP_TAC (std_ss++wordsLib.WORD_SHIFT_ss) []
   THEN SIMP_TAC (std_ss++wordsLib.WORD_EXTRACT_ss++wordsLib.SIZES_ss) [WORD_OR_CLAUSES]);
 
-val CAN_ZWRITE_MEM_def = Define `
-  CAN_ZWRITE_MEM a s = !w. ~(ZWRITE_MEM a w s = NONE)`;
+Definition CAN_ZWRITE_MEM_def:
+  CAN_ZWRITE_MEM a s = !w. ~(ZWRITE_MEM a w s = NONE)
+End
 
-val CAN_ZREAD_MEM_def = Define `
-  CAN_ZREAD_MEM a s = ~(ZREAD_MEM a s = NONE)`;
+Definition CAN_ZREAD_MEM_def:
+  CAN_ZREAD_MEM a s = ~(ZREAD_MEM a s = NONE)
+End
 
 val mem_seq_lemma = prove(
   ``(read_mem_seq ii a s = option_apply (ZREAD_MEM a s) (\x. SOME (x,s))) /\

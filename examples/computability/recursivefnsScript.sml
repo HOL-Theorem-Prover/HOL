@@ -2,24 +2,24 @@ Theory recursivefns
 Ancestors
   list rich_list primrecfns
 
-val minimise_def = Define`
+Definition minimise_def:
   minimise f l =
     if (∃n. (f (n::l) = SOME 0) ∧ ∀i. i < n ⇒ ∃m. 0 < m ∧ (f (i::l) = SOME m))
     then
       SOME (@n. (f (n :: l) = SOME 0) ∧
                 ∀i. i < n ⇒ ∃m. 0 < m ∧ (f (i::l) = SOME m))
     else NONE
-`;
+End
 
-val recCn_def = Define`
+Definition recCn_def:
   recCn (f:num list -> num option) gs l =
          let results = MAP (λg : num list -> num option. g l) gs
          in
            if EVERY (λr. r ≠ NONE) results then f (MAP THE results)
            else NONE
-`;
+End
 
-val recPr_def = Define`
+Definition recPr_def:
   recPr zf sf l =
     case l of
       [] => zf []
@@ -27,7 +27,7 @@ val recPr_def = Define`
     | SUC n::t => case recPr zf sf (n :: t) of
                     NONE => NONE
                   | SOME r => sf (n::r::t)
-`;
+End
 
 val (recfn_rules, recfn_ind, recfn_cases) = Hol_reln`
   recfn (SOME o K 0) 1 ∧
@@ -74,9 +74,9 @@ val minimise_thm = Q.store_thm(
   metis_tac[arithmeticTheory.LESS_LESS_CASES, prim_recTheory.LESS_REFL,
             optionTheory.SOME_11]);
 
-val totalrec_def = Define`
+Definition totalrec_def:
   totalrec f n ⇔ recfn f n ∧ ∀l. (LENGTH l = n) ⇒ ∃m. f l = SOME m
-`;
+End
 
 Definition rec1_def[simp]:
   (rec1 f [] = f 0 : num option) ∧

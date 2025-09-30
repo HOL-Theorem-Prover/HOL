@@ -11,7 +11,8 @@ val RW1 = ONCE_REWRITE_RULE;
    better suited for compiler verification. At the bottom of this
    script we prove that the two fomrmulations are equivalent. *)
 
-val isFun_def = Define `(isFun (Fun x) = T) /\ (isFun _ = F)`;
+Definition isFun_def:   (isFun (Fun x) = T) /\ (isFun _ = F)
+End
 
 val (RR_ev_rules,RR_ev_ind,RR_ev_cases) = Hol_reln `
  (!s a fns.

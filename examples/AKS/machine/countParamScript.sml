@@ -242,7 +242,7 @@ val it = |- !n. param n =
 *)
 
 (* To compute the AKS parameter k *)
-val paramM_def = Define`
+Definition paramM_def:
     paramM n =
       do
         m0 <- ulogM n;
@@ -257,7 +257,7 @@ val paramM_def = Define`
                 param_seekM m c n 2;
              od
       od
-`;
+End
 
 (*
 > EVAL ``paramM 31``;

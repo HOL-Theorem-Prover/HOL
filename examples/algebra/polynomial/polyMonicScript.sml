@@ -289,9 +289,9 @@ val _ = intLib.deprecate_int ();
 (* ------------------------------------------------------------------------- *)
 
 (* A monic polynomial a leading coefficient equal to #1. *)
-val poly_monic_def = Define`
+Definition poly_monic_def:
   poly_monic (r:'a ring) (p:'a poly) <=> poly p /\ (lead p = #1)
-`;
+End
 val _ = overload_on ("monic", ``poly_monic r``);
 
 (* Overloads for any type *)

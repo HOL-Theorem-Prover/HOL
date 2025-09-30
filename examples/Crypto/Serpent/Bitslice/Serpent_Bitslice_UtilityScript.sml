@@ -13,15 +13,18 @@ val _ = wordsLib.guess_lengths();
 val _ = wordsLib.mk_word_size 128;
 val _ = wordsLib.mk_word_size 256;
 
-val word128to32l_def = Define`
+Definition word128to32l_def:
  word128to32l (w:word128) =
- [(127 >< 96) w; (95 >< 64) w; (63 >< 32) w; (31 >< 0) w]`;
+ [(127 >< 96) w; (95 >< 64) w; (63 >< 32) w; (31 >< 0) w]
+End
 
-val word256to128l = Define
-`word256to128l (w:word256) = [(255 >< 128) w; (127 >< 0) w]`;
+Definition word256to128l:
+ word256to128l (w:word256) = [(255 >< 128) w; (127 >< 0) w]
+End
 
-val word256to32l_def = Define
-`word256to32l (w256:word256) = FLAT (MAP word128to32l (word256to128l w256))`;
+Definition word256to32l_def:
+ word256to32l (w256:word256) = FLAT (MAP word128to32l (word256to128l w256))
+End
 
 val word256to32lLength = Q.store_thm (
 "word256to32lLength",
@@ -41,13 +44,14 @@ val (myFIRSTN_def,myFIRSTN_termi) = Defn.tstore_defn(
     FULL_SIMP_TAC list_ss [],
     RW_TAC list_ss []]);
 
-val myBUTLASTN_def = Define
-`myBUTLASTN n l
+Definition myBUTLASTN_def:
+ myBUTLASTN n l
  = let len = LENGTH l
    in
    if len>= n
       then myFIRSTN (LENGTH l-n) l
-      else []`;
+      else []
+End
 
 val LENGTH_myFIRSTN = Q.store_thm(
 "LENGTH_myFIRSTN",

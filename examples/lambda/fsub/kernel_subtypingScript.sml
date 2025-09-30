@@ -126,9 +126,9 @@ val _ = add_rule {block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2)),
                                  TM, HardSpace 1, TOK "<:", BreakSpace(1,0)],
                   term_name = "alg_subtyping"}
 
-val alg_subtyping_def = Define`
+Definition alg_subtyping_def:
   Gamma |-> s <: t = ?n. algn_subtyping n Gamma s t
-`;
+End
 
 val alg_subtyping_fswap1_eq = store_thm(
   "alg_subtyping_fswap1_eq",

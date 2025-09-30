@@ -36,119 +36,120 @@ val _ = ParseExtras.temp_loose_equality()
 (******************************************************************************
 * Elementary functions and predicates on temporal_paths
 ******************************************************************************)
-val EMPTY_PATH_def =
- Define
-   `EMPTY_PATH = (\n:num. EMPTY)`;
+Definition EMPTY_PATH_def:
+    EMPTY_PATH = (\n:num. EMPTY)
+End
 
 
-val PATH_TAIL_def =
- Define
-   `PATH_TAIL t v = (\n:num. v (n+t))`;
+Definition PATH_TAIL_def:
+    PATH_TAIL t v = (\n:num. v (n+t))
+End
 
 
-val PATH_MAP_def =
- Define
-   `(PATH_MAP (f: num -> 'a -> 'b) v) = (\n:num. (f n (v n)))`;
+Definition PATH_MAP_def:
+    (PATH_MAP (f: num -> 'a -> 'b) v) = (\n:num. (f n (v n)))
+End
 
 
-val PATH_RESTRICT_def =
- Define
-   `PATH_RESTRICT v r = PATH_MAP (\n s. (s INTER r)) v`;
+Definition PATH_RESTRICT_def:
+    PATH_RESTRICT v r = PATH_MAP (\n s. (s INTER r)) v
+End
 
 
-val PATH_RESTN_def =
- Define
-   `(PATH_RESTN v (n:num)) = (\t:num. v (t+n))`;
+Definition PATH_RESTN_def:
+    (PATH_RESTN v (n:num)) = (\t:num. v (t+n))
+End
 
 
-val PATH_REST_def =
- Define
-   `(PATH_REST v) = (PATH_RESTN v 1)`;
+Definition PATH_REST_def:
+    (PATH_REST v) = (PATH_RESTN v 1)
+End
 
 
-val PATH_UNION_def =
- Define
-   `PATH_UNION v w = (\n:num. ((v n) UNION (w n)))`;
+Definition PATH_UNION_def:
+    PATH_UNION v w = (\n:num. ((v n) UNION (w n)))
+End
 
 
-val PATH_DIFF_def =
- Define
-   `PATH_DIFF v w = (\n:num. ((v n) DIFF w))`;
+Definition PATH_DIFF_def:
+    PATH_DIFF v w = (\n:num. ((v n) DIFF w))
+End
 
 
-val PATH_SUBSET_def =
- Define
-   `(PATH_SUBSET v (w:'a set)) = (!n:num. ((v n) SUBSET w))`;
+Definition PATH_SUBSET_def:
+    (PATH_SUBSET v (w:'a set)) = (!n:num. ((v n) SUBSET w))
+End
 
 
-val PATH_VAR_RENAMING_def =
- Define
-   `(PATH_VAR_RENAMING (f:'a->'b) v) =
-       (PATH_MAP (\n:num. \s. IMAGE f s) v)`;
+Definition PATH_VAR_RENAMING_def:
+    (PATH_VAR_RENAMING (f:'a->'b) v) =
+       (PATH_MAP (\n:num. \s. IMAGE f s) v)
+End
 
 
-val PATH_USED_VARS_def =
- Define
-   `(PATH_USED_VARS w = BIGUNION {w n | n >= 0})`;
+Definition PATH_USED_VARS_def:
+    (PATH_USED_VARS w = BIGUNION {w n | n >= 0})
+End
 
 
-val IMP_ON_PATH_RESTN_def =
- Define
-   `IMP_ON_PATH_RESTN (k:num) v a b = !t:num. (t >= k) ==> ((P_SEM (v t) a) ==> (P_SEM (v t) b))`;
+Definition IMP_ON_PATH_RESTN_def:
+    IMP_ON_PATH_RESTN (k:num) v a b = !t:num. (t >= k) ==> ((P_SEM (v t) a) ==> (P_SEM (v t) b))
+End
 
 
-val EQUIV_ON_PATH_RESTN_def =
- Define
-   `EQUIV_ON_PATH_RESTN (k:num) v a b = !t:num. (t >= k) ==> ((P_SEM (v t) a) = (P_SEM (v t) b))`;
+Definition EQUIV_ON_PATH_RESTN_def:
+    EQUIV_ON_PATH_RESTN (k:num) v a b = !t:num. (t >= k) ==> ((P_SEM (v t) a) = (P_SEM (v t) b))
+End
 
 
-val NAND_ON_PATH_RESTN_def =
- Define
-   `NAND_ON_PATH_RESTN (k:num) v a b = !t:num. (t >= k) ==> (~(P_SEM (v t) a) \/ ~(P_SEM (v t) b))`;
+Definition NAND_ON_PATH_RESTN_def:
+    NAND_ON_PATH_RESTN (k:num) v a b = !t:num. (t >= k) ==> (~(P_SEM (v t) a) \/ ~(P_SEM (v t) b))
+End
 
 
-val BEFORE_ON_PATH_RESTN_def =
- Define
-   `BEFORE_ON_PATH_RESTN (t:num) v a b = !t':num. (t <= t' /\ (P_SEM (v t') b)) ==> (?u:num. t <= u /\ u <= t' /\ P_SEM (v u) a)`;
+Definition BEFORE_ON_PATH_RESTN_def:
+    BEFORE_ON_PATH_RESTN (t:num) v a b = !t':num. (t <= t' /\ (P_SEM (v t') b)) ==> (?u:num. t <= u /\ u <= t' /\ P_SEM (v u) a)
+End
 
 
-val BEFORE_ON_PATH_RESTN_STRONG_def =
- Define
-   `BEFORE_ON_PATH_RESTN_STRONG (t:num) v a b = !t':num. (t <= t' /\ (P_SEM (v t') b)) ==> (?u:num. t <= u /\ u < t' /\ P_SEM (v u) a)`;
+Definition BEFORE_ON_PATH_RESTN_STRONG_def:
+    BEFORE_ON_PATH_RESTN_STRONG (t:num) v a b = !t':num. (t <= t' /\ (P_SEM (v t') b)) ==> (?u:num. t <= u /\ u < t' /\ P_SEM (v u) a)
+End
 
 
-val NOT_ON_PATH_RESTN_def =
- Define
-   `NOT_ON_PATH_RESTN (t:num) v a = !t':num. (t <= t') ==> ~P_SEM (v t') a`;
+Definition NOT_ON_PATH_RESTN_def:
+    NOT_ON_PATH_RESTN (t:num) v a = !t':num. (t <= t') ==> ~P_SEM (v t') a
+End
 
 
-val IS_ON_PATH_RESTN_def =
- Define
-   `IS_ON_PATH_RESTN (t:num) v a = ~(NOT_ON_PATH_RESTN t v a)`;
+Definition IS_ON_PATH_RESTN_def:
+    IS_ON_PATH_RESTN (t:num) v a = ~(NOT_ON_PATH_RESTN t v a)
+End
 
 
-val EQUIV_PATH_RESTN_def =
-  Define `EQUIV_PATH_RESTN (t:num) v1 v2 =
-      ((!l:num. t <= l ==> ((v1 l) = (v2 l))))`;
+Definition EQUIV_PATH_RESTN_def:
+   EQUIV_PATH_RESTN (t:num) v1 v2 =
+      ((!l:num. t <= l ==> ((v1 l) = (v2 l))))
+End
 
 
-val PATH_EXTENSION_def =
- Define
-   `(PATH_EXTENSION w (q:'a) (P:num->bool)) =
-      (\n:num. (if (P n) then (q INSERT w n) else (w n)))`;
+Definition PATH_EXTENSION_def:
+    (PATH_EXTENSION w (q:'a) (P:num->bool)) =
+      (\n:num. (if (P n) then (q INSERT w n) else (w n)))
+End
 
-val CHOOSEN_PATH_def =
-Define
-    `(CHOOSEN_PATH S0 S 0 = @x. x IN S0) /\
-      (CHOOSEN_PATH S0 S (SUC n) = @x. x IN (S (CHOOSEN_PATH S0 S n) (SUC n)))`;
+Definition CHOOSEN_PATH_def:
+     (CHOOSEN_PATH S0 S 0 = @x. x IN S0) /\
+      (CHOOSEN_PATH S0 S (SUC n) = @x. x IN (S (CHOOSEN_PATH S0 S n) (SUC n)))
+End
 
-val INF_ELEMENTS_OF_PATH_def =
-Define
-`INF_ELEMENTS_OF_PATH w = {s | !n. ?m. m > n /\ (w m = s)}`;
+Definition INF_ELEMENTS_OF_PATH_def:
+ INF_ELEMENTS_OF_PATH w = {s | !n. ?m. m > n /\ (w m = s)}
+End
 
-val ELEMENTS_OF_PATH_def =
-Define
-`ELEMENTS_OF_PATH w = {s | ?m:num. (w m = s)}`;
+Definition ELEMENTS_OF_PATH_def:
+ ELEMENTS_OF_PATH w = {s | ?m:num. (w m = s)}
+End
 
 
 (******************************************************************************
@@ -718,16 +719,16 @@ val PATH_VAR_RENAMING___ORIG_PATH_EXISTS =
    ]);
 
 
-val IS_ULTIMATIVELY_PERIODIC_PATH___CONCRETE_def =
- Define
-  `IS_ULTIMATIVELY_PERIODIC_PATH___CONCRETE p n0 n =
-     !m. (m >= n0) ==> ((p m) = (p (m+n)))`;
+Definition IS_ULTIMATIVELY_PERIODIC_PATH___CONCRETE_def:
+   IS_ULTIMATIVELY_PERIODIC_PATH___CONCRETE p n0 n =
+     !m. (m >= n0) ==> ((p m) = (p (m+n)))
+End
 
 
-val IS_ULTIMATIVELY_PERIODIC_PATH_def =
- Define
-  `IS_ULTIMATIVELY_PERIODIC_PATH p  =
-     ?n0 n. 0 < n /\ IS_ULTIMATIVELY_PERIODIC_PATH___CONCRETE p n0 n`;
+Definition IS_ULTIMATIVELY_PERIODIC_PATH_def:
+   IS_ULTIMATIVELY_PERIODIC_PATH p  =
+     ?n0 n. 0 < n /\ IS_ULTIMATIVELY_PERIODIC_PATH___CONCRETE p n0 n
+End
 
 
 val IS_ULTIMATIVELY_PERIODIC_PATH___CONCRETE___ALTERNATIVE_DEF =
@@ -767,10 +768,10 @@ val IS_ULTIMATIVELY_PERIODIC_PATH___CONCRETE___ALTERNATIVE_DEF =
     ]);
 
 
-val CUT_PATH_PERIODICALLY_def =
- Define
-  `CUT_PATH_PERIODICALLY p n0 n =
-     \x. if (x < n0) then (p x) else (p (n0 + (x - n0) MOD n))`;
+Definition CUT_PATH_PERIODICALLY_def:
+   CUT_PATH_PERIODICALLY p n0 n =
+     \x. if (x < n0) then (p x) else (p (n0 + (x - n0) MOD n))
+End
 
 
 val CUT_PATH_PERIODICALLY___BEGINNING =

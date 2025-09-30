@@ -57,8 +57,9 @@ state = <| store : string |-> int; clock : num |>`;
 
 val state_component_equality = fetch "-" "state_component_equality";
 
-val store_var_def = Define `
-  store_var v x s = s with store := s.store |+ (v,x)`;
+Definition store_var_def:
+  store_var v x s = s with store := s.store |+ (v,x)
+End
 
 val _ = augment_srw_ss[rewrites[store_var_def]];
 
@@ -69,7 +70,7 @@ val state_rw = Q.prove (
 
 (* Expression evaluation *)
 
-val sem_e_def = Define `
+Definition sem_e_def:
 (sem_e s (Var x) =
   case FLOOKUP s.store x of
      | NONE => (Rfail, s)
@@ -88,7 +89,8 @@ val sem_e_def = Define `
   case sem_e s e of
      | (Rval n1, s1) =>
          (Rval n1, store_var x n1 s1)
-     | r => r)`;
+     | r => r)
+End
 
 (* HOL4's definition requires a little help with the definition. In
    particular, we need to help it see that the clock does not
@@ -111,12 +113,14 @@ val sem_e_res = Q.prove (
  Induct_on `e` >> rw [sem_e_def] >> ect >>
  fs [] >> rw [] >> metis_tac []);
 
-val check_clock_def = Define `
+Definition check_clock_def:
 check_clock s' s =
-  s' with clock := (if s'.clock ≤ s.clock then s'.clock else s.clock)`;
+  s' with clock := (if s'.clock ≤ s.clock then s'.clock else s.clock)
+End
 
-val dec_clock_def = Define `
-dec_clock s = s with clock := s.clock - 1`;
+Definition dec_clock_def:
+dec_clock s = s with clock := s.clock - 1
+End
 
 val dec_clock_store = Q.store_thm ("dec_clock_store[simp]",
 `!s. (dec_clock s).store = s.store`,
@@ -185,8 +189,9 @@ val check_clock_id = Q.prove (
 `!s s'. s.clock ≤ s'.clock ⇒ check_clock s s' = s`,
  rw [check_clock_def, state_component_equality]);
 
-val STOP_def = Define `
-  STOP x = x`;
+Definition STOP_def:
+  STOP x = x
+End
 
 (* Statement evaluation -- without any redundant checks *)
 
@@ -277,35 +282,39 @@ val sem_t_store = Q.prove (
 val _ = Datatype `
   observation = Terminate | Diverge | Crash`;
 
-val s_with_clock_def = Define `
-  s_with_clock c = <| store := FEMPTY; clock := c |>`;
+Definition s_with_clock_def:
+  s_with_clock c = <| store := FEMPTY; clock := c |>
+End
 
-val semantics_def = Define `
+Definition semantics_def:
   semantics t =
       if (?c v s. sem_t (s_with_clock c) t = (Rval v,s)) then
         Terminate
       else if (!c. ?s. sem_t (s_with_clock c) t = (Rtimeout,s)) then
         Diverge
-      else Crash`
+      else Crash
+End
 
 val semantics_thm = save_thm("semantics_thm",semantics_def);
 
 
 (* === A simple type checker === *)
 
-val type_e_def = Define `
+Definition type_e_def:
 (type_e s (Var x) ⇔ x ∈ s) ∧
 (type_e s (Num num) ⇔ T) ∧
 (type_e s (Add e1 e2) ⇔ type_e s e1 ∧ type_e s e2) ∧
-(type_e s (Assign x e) ⇔ x ∈ s ∧ type_e s e)`;
+(type_e s (Assign x e) ⇔ x ∈ s ∧ type_e s e)
+End
 
-val type_t_def = Define `
+Definition type_t_def:
 (type_t in_for s (Exp e) ⇔ type_e s e) ∧
 (type_t in_for s (Dec x t) ⇔ type_t in_for (x INSERT s) t) ∧
 (type_t in_for s Break ⇔ in_for) ∧
 (type_t in_for s (Seq t1 t2) ⇔ type_t in_for s t1 ∧ type_t in_for s t2) ∧
 (type_t in_for s (If e t1 t2) ⇔ type_e s e ∧ type_t in_for s t1 ∧ type_t in_for s t2) ∧
-(type_t in_for s (For e1 e2 t) ⇔ type_e s e1 ∧ type_e s e2 ∧ type_t T s t)`;
+(type_t in_for s (For e1 e2 t) ⇔ type_e s e1 ∧ type_e s e2 ∧ type_t T s t)
+End
 
 val type_weakening_e = Q.prove (
 `!s e s' s1. type_e s e ∧ s ⊆ s1 ⇒ type_e s1 e`,
@@ -461,9 +470,10 @@ val type_soundness = Q.store_thm("type_soundness",
 
 (* === A relational (optionally clocked) big-step semantics === *)
 
-val is_rval_def = Define `
+Definition is_rval_def:
 (is_rval (Rval _) = T) ∧
-(is_rval _ = F)`;
+(is_rval _ = F)
+End
 
 val (sem_e_reln_rules, sem_e_reln_ind, sem_e_reln_cases) = Hol_reln `
 (!s x n.
@@ -829,17 +839,19 @@ val (simple_sem_t_div_rules,simple_sem_t_div_coind,simple_sem_t_div_cases) = Hol
   ⇒
   simple_sem_t_div s (For e1 e2 t))`
 
-val init_store_def = Define`
-  init_store = <|store:=FEMPTY;clock:=0|>`
+Definition init_store_def:
+  init_store = <|store:=FEMPTY;clock:=0|>
+End
 
 (* Top observable semantics for the unclocked relational semantics *)
-val rel_semantics_def = Define `
+Definition rel_semantics_def:
   rel_semantics t =
   if (?v s. simple_sem_t_reln init_store t (Rval v,s)) then
     Terminate
   else if simple_sem_t_div init_store t then
     Diverge
-  else Crash`
+  else Crash
+End
 
 (* Proofs relating clocked functional big step to unclocked relational semantics *)
 val simple_sem_t_reln_strongind = fetch "-" "simple_sem_t_reln_strongind"
@@ -1063,9 +1075,10 @@ val sem_t_clock_dec = Q.prove(
   qpat_x_assum`s.clock=A` (SUBST_ALL_TAC o SYM)>>fs[clock_rm]);
 
 (* Functional big step divergence *)
-val sem_t_div_def = Define`
+Definition sem_t_div_def:
   sem_t_div s t ⇔
-  (∀c. FST (sem_t (s with clock:=c) t) = Rtimeout)`;
+  (∀c. FST (sem_t (s with clock:=c) t) = Rtimeout)
+End
 
 val clock_rm_simp_tac =
     fs[GSYM big_sem_correct_lem3]>>
@@ -1202,9 +1215,10 @@ pbt =
   | Trm t
   | Forn num pbr e e t`;
 
-val abort_def = Define`
+Definition abort_def:
   (abort flag Div ⇔ T) ∧
-  (abort flag (Ter (r,s)) ⇔ ¬ is_rval r ∧ (flag ⇒ r ≠ Rbreak))`
+  (abort flag (Ter (r,s)) ⇔ ¬ is_rval r ∧ (flag ⇒ r ≠ Rbreak))
+End
 
 val (pb_sem_t_reln_rules,pb_sem_t_reln_ind,pb_sem_t_reln_cases) = Hol_reln`
 (!s e r.
@@ -1435,7 +1449,8 @@ val pb_sem_t_size_reln_equiv = store_thm("pb_sem_t_size_reln_equiv",
   metis_tac [pb_sem_t_size_reln_equiv_lemma2,pb_sem_t_size_reln_equiv_lemma1]);
 
 (* Pretty printing for paper *)
-val OMIT_def = Define `OMIT x = x`;
+Definition OMIT_def:   OMIT x = x
+End
 
 val OMIT_INTRO = prove(
   ``(P1 ==> P2 ==> Q) ==> (P1 /\ OMIT P2 ==> Q)``,
@@ -1444,8 +1459,10 @@ val OMIT_INTRO = prove(
 val _ = Parse.add_infix("DOWNARROWe",450,Parse.NONASSOC)
 val _ = Parse.add_infix("DOWNARROWt",450,Parse.NONASSOC)
 
-val DOWNARROWe_def = Define `$DOWNARROWe (y,x) z = sem_e_reln x y z`;
-val DOWNARROWt_def = Define `$DOWNARROWt (y,x) z = simple_sem_t_reln x y z`;
+Definition DOWNARROWe_def:   $DOWNARROWe (y,x) z = sem_e_reln x y z
+End
+Definition DOWNARROWt_def:   $DOWNARROWt (y,x) z = simple_sem_t_reln x y z
+End
 
 Theorem simple_sem_t_reln_rules[allow_rebind] =
   simple_sem_t_reln_rules

@@ -7,10 +7,11 @@ Libs
 
 val _ = temp_delsimps ["NORMEQ_CONV"]
 
-val option_sequence_def = Define`
+Definition option_sequence_def:
   option_sequence [] = SOME [] ∧
   option_sequence (h::t) =
-    OPTION_MAP2 CONS h (option_sequence t)`;
+    OPTION_MAP2 CONS h (option_sequence t)
+End
 val _ = export_rewrites["option_sequence_def"];
 
 val option_sequence_SOME = Q.store_thm("option_sequence_SOME",

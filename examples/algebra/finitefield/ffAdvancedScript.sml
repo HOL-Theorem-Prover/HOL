@@ -1401,9 +1401,9 @@ val finite_field_eq_order_partition = store_thm(
 val _ = overload_on("FPrimitives", `` \(r:'a field). {z | z IN R+ /\ (forder z = CARD R+)}``);
 
 (* Define primitive generator of a FiniteField *)
-val field_primitive_def = Define`
+Definition field_primitive_def:
   field_primitive (r:'a field) = CHOICE (FPrimitives r)
-`;
+End
 val _ = overload_on ("primitive", ``field_primitive``);
 (*
 - field_primitive_def;
@@ -1860,9 +1860,9 @@ val poly_mod_const_subfield_dim = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define extension of a field to a different type *)
-val field_extend_def = Define `
+Definition field_extend_def:
   field_extend (r:'a field) (s:'b field) <=> ?(f:'a -> 'b). subfield (ring_homo_image f r s) s
-`;
+End
 (* use overloading *)
 val _ = overload_on (">=", ``field_extend``);
 (*

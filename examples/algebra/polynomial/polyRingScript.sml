@@ -1828,7 +1828,8 @@ val poly_add_rcancel = lift_group_thm_with_goal "rcancel" "add_rcancel"
 (* ------------------------------------------------------------------------- *)
 
 (* Subtraction of polynomials *)
-val poly_sub_def = Define `poly_sub (r:'a ring) (p:'a poly) (q:'a poly) = p + (- q)`;
+Definition poly_sub_def:   poly_sub (r:'a ring) (p:'a poly) (q:'a poly) = p + (- q)
+End
 val _ = overload_on ("-", ``poly_sub r``);
 (* export an identity *)
 val _ = export_rewrites ["poly_sub_def"];

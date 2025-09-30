@@ -85,14 +85,14 @@ val PATH_CASES =
 (* transition relation R:'state#'state->bool, then:                          *)
 (* SIMPLE_MODEL B R : :('a, 'a -> bool) model                                *)
 (*****************************************************************************)
-val SIMPLE_MODEL_def =
- Define
-  `SIMPLE_MODEL (B:'state -> bool) (R:'state#'state->bool) =
+Definition SIMPLE_MODEL_def:
+   SIMPLE_MODEL (B:'state -> bool) (R:'state#'state->bool) =
     <| S  := {s | T};
        S0 := B;
        R  := R;
        P  := {p | T};
-       L  := (\(s:'state). {p:'state -> bool | s IN p}) |>`;
+       L  := (\(s:'state). {p:'state -> bool | s IN p}) |>
+End
 
 val MODEL_SIMPLE_MODEL =
  store_thm
@@ -114,15 +114,15 @@ val MODEL_SIMPLE_MODEL =
 (*       {p in (P1 U P2) | if (p in P1) then (p in L1 s1) else (p in L2 s2)} *)
 (*    )                                                                      *)
 (*****************************************************************************)
-val MODEL_PROD_def =
- Define
-  `MODEL_PROD (M1:('state1, 'prop1) model) (M2:('state2, 'prop2) model) =
+Definition MODEL_PROD_def:
+   MODEL_PROD (M1:('state1, 'prop1) model) (M2:('state2, 'prop2) model) =
     <| S  := {(s1,s2) | s1 IN M1.S  /\ s2 IN M2.S};
        S0 := {(s1,s2) | s1 IN M1.S0 /\ s2 IN M2.S0};
        R  := {((s1,s2),(s1',s2')) | (s1,s1') IN M1.R /\ (s2,s2') IN M2.R};
        P  := {p | if ISL p then OUTL p IN M1.P else OUTR p IN M2.P};
        L  := \(s1,s2).
-              {p | if ISL p then OUTL p IN M1.L s1 else OUTR p IN M2.L s2} |>`;
+              {p | if ISL p then OUTL p IN M1.L s1 else OUTR p IN M2.L s2} |>
+End
 
 val _ = set_fixity "||" (Infixl 650);
 val _ = overload_on ("||", ``MODEL_PROD``);
@@ -143,37 +143,37 @@ val MODEL_MODEL_PROD =
 (*****************************************************************************)
 (* ``L_SEM l p`` means proposition p is true with respect to letter l        *)
 (*****************************************************************************)
-val L_SEM_def =
- Define
-  `(L_SEM TOP (p:'prop) = T)
+Definition L_SEM_def:
+   (L_SEM TOP (p:'prop) = T)
    /\
    (L_SEM BOTTOM p = F)
    /\
-   (L_SEM(STATE s) p = p IN s)`;
+   (L_SEM(STATE s) p = p IN s)
+End
 
 (*****************************************************************************)
 (* LETTER_IN p v iff p occurs in an element of finite or infinite path v     *)
 (*****************************************************************************)
-val LETTER_IN_def =
- Define
-  `LETTER_IN p v =
-    ?i. i < LENGTH v /\ ?s. (ELEM v i = STATE s) /\ p IN s` ;
+Definition LETTER_IN_def:
+   LETTER_IN p v =
+    ?i. i < LENGTH v /\ ?s. (ELEM v i = STATE s) /\ p IN s
+End
 
 (*****************************************************************************)
 (* FINITE_LETTER_IN p l iff p occurs in an element of l                      *)
 (*****************************************************************************)
-val FINITE_LETTER_IN_def =
- Define
-  `FINITE_LETTER_IN p l =
-    ?i. i < LENGTH l /\ ?s. (EL i l = STATE s) /\ p IN s` ;
+Definition FINITE_LETTER_IN_def:
+   FINITE_LETTER_IN p l =
+    ?i. i < LENGTH l /\ ?s. (EL i l = STATE s) /\ p IN s
+End
 
 (*****************************************************************************)
 (* INFINITE_LETTER_IN p f iff p occurs in an element of f                    *)
 (*****************************************************************************)
-val INFINITE_LETTER_IN_def =
- Define
-  `INFINITE_LETTER_IN p f =
-    ?i s. (f i = STATE s) /\ p IN s` ;
+Definition INFINITE_LETTER_IN_def:
+   INFINITE_LETTER_IN p f =
+    ?i s. (f i = STATE s) /\ p IN s
+End
 
 val LETTER_IN_CASES =
  store_thm
@@ -188,14 +188,14 @@ val LETTER_IN_CASES =
 (*****************************************************************************)
 (* Conversion of a path to a model (Kripke structure)                        *)
 (*****************************************************************************)
-val PATH_TO_MODEL_def =
- Define
-  `(PATH_TO_MODEL v =
+Definition PATH_TO_MODEL_def:
+   (PATH_TO_MODEL v =
     <| S  := {n | n < LENGTH v};
        S0 := {0};
        R  := {(n,n') | n < LENGTH v /\ n' < LENGTH v /\ (n' = n+1)};
        P  := {p:'prop | LETTER_IN p v};
-       L  := \n. {p | n < LENGTH v /\ LETTER_IN p v /\ L_SEM (ELEM v n) p} |>)`;
+       L  := \n. {p | n < LENGTH v /\ LETTER_IN p v /\ L_SEM (ELEM v n) p} |>)
+End
 
 val PATH_TO_MODEL_CASES =
  store_thm
@@ -274,17 +274,18 @@ val OLD_OPEN_MODEL_def =
 (******************************************************************************
 * Formalise Eisner/Fisman {s | s SUBSET P} UNION {sink}
 ******************************************************************************)
-val SINK_def =
- Define `SINK P = {@p. ~(p IN P)}`;
+Definition SINK_def:
+  SINK P = {@p. ~(p IN P)}
+End
 
-val OPEN_MODEL_def =
- Define
-  `OPEN_MODEL(P:'prop -> bool) =
+Definition OPEN_MODEL_def:
+   OPEN_MODEL(P:'prop -> bool) =
     <| S  := {s | s SUBSET P} UNION {SINK P};
        S0 := {s | s SUBSET P};
        R  := {(s,t) | s SUBSET P /\ (t SUBSET P \/ (t = SINK P))};
        P  := P;
-       L  := \s. if s = SINK P then {} else {p | p IN s} |>`;
+       L  := \s. if s = SINK P then {} else {p | p IN s} |>
+End
 
 val MODEL_OPEN_MODEL =
  store_thm
@@ -294,35 +295,35 @@ val MODEL_OPEN_MODEL =
     THEN FULL_SIMP_TAC (srw_ss()) []
     THEN PROVE_TAC[EMPTY_SUBSET]);
 
-val AUTOMATON_def =
- Define
-  `AUTOMATON A =
+Definition AUTOMATON_def:
+   AUTOMATON A =
     A.Q0 SUBSET A.Q /\
     (!s a s'. (s,a,s') IN A.Delta ==> s IN A.Q /\ a IN A.Sigma /\ s' IN A.Q) /\
-    A.F SUBSET A.Q`;
+    A.F SUBSET A.Q
+End
 
 (*****************************************************************************)
 (* Use of totality suggested by Cindy Eisner                                 *)
 (*****************************************************************************)
-val TOTAL_AUTOMATON_def =
- Define
-  `TOTAL_AUTOMATON A =
-    AUTOMATON A /\ !s a. ?s'. s' IN A.Q /\ (s,a,s') IN A.Delta`;
+Definition TOTAL_AUTOMATON_def:
+   TOTAL_AUTOMATON A =
+    AUTOMATON A /\ !s a. ?s'. s' IN A.Q /\ (s,a,s') IN A.Delta
+End
 
 (*****************************************************************************)
 (* Convert a model to an automaton                                           *)
 (* (Clarke/Grumberg/Peled "Model Checking" 9.2)                              *)
 (*****************************************************************************)
-val MODEL_TO_AUTOMATON_def =
- Define
-  `MODEL_TO_AUTOMATON (M:('prop,'state)model) =
+Definition MODEL_TO_AUTOMATON_def:
+   MODEL_TO_AUTOMATON (M:('prop,'state)model) =
     <| Sigma := {a | a SUBSET M.P};
        Q     := {SOME s : ('state)option | s IN M.S} UNION {NONE};
        Delta := {(SOME s, a, SOME s') | (s,s') IN M.R /\ (a = M.L s')}
                 UNION
                 {(NONE, a, SOME s) | s IN M.S0 /\ (a = M.L s)};
        Q0    := {NONE :  ('state)option};
-       F     := {SOME s : ('state)option | s IN M.S} UNION {NONE} |>`;
+       F     := {SOME s : ('state)option | s IN M.S} UNION {NONE} |>
+End
 
 val AUTOMATON_MODEL_TO_AUTOMATON =
  store_thm
@@ -344,16 +345,16 @@ val AUTOMATON_MODEL_TO_AUTOMATON =
 (*  where a is the labeling of s. P are the propositions of M and            *)
 (*  L(s,t) = L(s).                                                           *)
 (*****************************************************************************)
-val MODEL_AUTOMATON_PROD_def =
- Define
-  `MODEL_AUTOMATON_PROD
+Definition MODEL_AUTOMATON_PROD_def:
+   MODEL_AUTOMATON_PROD
     (M:('prop,'state2) model) (A:('prop -> bool, 'state1) automaton)  =
     <| S  := {(s,t) | s IN M.S  /\ t IN A.Q};
        S0 := {(s,t) | s IN M.S0 /\ t IN A.Q0};
        R  := {((s,t),(s',t')) |
               ?a. (a = M.L s) /\ (s,s') IN M.R /\ (t,a,t') IN A.Delta};
        P  := M.P;
-       L  := \(s,t). M.L s |>`;
+       L  := \(s,t). M.L s |>
+End
 
 val _ = overload_on ("||", ``MODEL_AUTOMATON_PROD``);
 
@@ -370,16 +371,16 @@ val MODEL_MODEL_AUTOMATON_PROD =
 (*****************************************************************************)
 (* Product of automata                                                       *)
 (*****************************************************************************)
-val AUTOMATON_PROD_def =
- Define
-  `AUTOMATON_PROD
+Definition AUTOMATON_PROD_def:
+   AUTOMATON_PROD
    (A1:('label1,'state1)automaton) (A2:('label2,'state2)automaton) =
     <| Sigma := {(a1,a2) | a1 IN A1.Sigma  /\ a2 IN A2.Sigma };
        Q     := {(q1,q2) | q1 IN A1.Q  /\ q2 IN A2.Q};
        Delta := {((q1,q2),(a1,a2),(q1',q2')) |
                  (q1,a1,q1') IN A1.Delta /\ (q2,a2,q2') IN A2.Delta};
        Q0    := {(q1,q2) | q1 IN A1.Q0  /\ q2 IN A2.Q0};
-       F     := {(q1,q2) | q1 IN A1.F  /\ q2 IN A2.F} |>`;
+       F     := {(q1,q2) | q1 IN A1.F  /\ q2 IN A2.F} |>
+End
 
 val _ = overload_on ("||", ``AUTOMATON_PROD``);
 
@@ -581,14 +582,14 @@ val UF_VALID_OPEN_MODEL_AUTOMATON =
 (*****************************************************************************)
 (* Conversion of a computation to a model (Kripke structure)                 *)
 (*****************************************************************************)
-val COMPUTATION_TO_MODEL_def =
- Define
-  `COMPUTATION_TO_MODEL w =
+Definition COMPUTATION_TO_MODEL_def:
+   COMPUTATION_TO_MODEL w =
     <| S  := {n | n < LENGTH w};
        S0 := {0};
        R  := {(n,n') | n < LENGTH w /\ n' < LENGTH w /\ (n' = n+1)};
        P  := {p:'prop | ?i. i < LENGTH w /\ p IN ELEM w i};
-       L  := \n. {p | n < LENGTH w /\ p IN (ELEM w n)} |>`;
+       L  := \n. {p | n < LENGTH w /\ p IN (ELEM w n)} |>
+End
 
 val COMPUTATION_TO_MODEL_CASES =
  store_thm
@@ -910,39 +911,40 @@ val COMPUTATION_COMPUTATION_MODEL_AUTOMATON_COR3 =
               by PROVE_TAC[]
          THEN PROVE_TAC[]]);
 
-val LANGUAGE_def =
- Define
-  `(LANGUAGE A (FINITE l) =
+Definition LANGUAGE_def:
+   (LANGUAGE A (FINITE l) =
     (LENGTH l > 0)                                                         /\
     EL 0 l IN A.Q0                                                         /\
     (!n :: (LESS(LENGTH l - 1)). ?a. (EL n l, a, EL (SUC n) l) IN A.Delta) /\
     !a s. ~((EL (LENGTH l - 1) l, a, s) IN A.Delta))
    /\
    (LANGUAGE A (INFINITE f) =
-     f 0 IN A.Q0 /\ !n. ?a. (f n, a, f(SUC n)) IN A.Delta)`;
+     f 0 IN A.Q0 /\ !n. ?a. (f n, a, f(SUC n)) IN A.Delta)
+End
 
 (*****************************************************************************)
 (* MODEL_TO_AUTOMATON adds a value -- "iota" in Clarke/Grumberg/Peled -- to  *)
 (* the states of M.  STRIP_IOTA removes iotas.                               *)
 (* Not sure if this is needed.                                               *)
 (*****************************************************************************)
-val STRIP_IOTA_def =
- Define `STRIP_IOTA(SOME x) = x`;
+Definition STRIP_IOTA_def:
+  STRIP_IOTA(SOME x) = x
+End
 
-val PATH_STRIP_IOTA_def =
- Define
-  `(PATH_STRIP_IOTA(FINITE l) = FINITE(MAP STRIP_IOTA l))
+Definition PATH_STRIP_IOTA_def:
+   (PATH_STRIP_IOTA(FINITE l) = FINITE(MAP STRIP_IOTA l))
    /\
-   (PATH_STRIP_IOTA(INFINITE f) = INFINITE(STRIP_IOTA o f))`;
+   (PATH_STRIP_IOTA(INFINITE f) = INFINITE(STRIP_IOTA o f))
+End
 
 (*****************************************************************************)
 (* Add iotas to a path                                                       *)
 (*****************************************************************************)
-val PATH_ADD_IOTA_def =
- Define
-  `(PATH_ADD_IOTA(FINITE l) = FINITE(MAP SOME l))
+Definition PATH_ADD_IOTA_def:
+   (PATH_ADD_IOTA(FINITE l) = FINITE(MAP SOME l))
    /\
-   (PATH_ADD_IOTA(INFINITE f) = INFINITE(SOME o f))`;
+   (PATH_ADD_IOTA(INFINITE f) = INFINITE(SOME o f))
+End
 
 (*****************************************************************************)
 (* Should have proved FINITE_PATH_LANGUAGE directly, but now too lazy to     *)
@@ -1219,8 +1221,9 @@ val UF_SEM_TOP_FREE_F_ALWAYS =
     THEN `j < LENGTH l` by DECIDE_TAC
     THEN RES_TAC);
 
-val O_TRUE_def =
- Define `O_TRUE = O_BOOL B_TRUE`;
+Definition O_TRUE_def:
+  O_TRUE = O_BOOL B_TRUE
+End
 
 val O_SEM_O_TRUE =
  store_thm
@@ -1228,8 +1231,9 @@ val O_SEM_O_TRUE =
    ``O_SEM M O_TRUE s``,
    RW_TAC std_ss [O_TRUE_def,O_SEM_def,B_SEM_def]);
 
-val O_EF_def =
- Define `O_EF f = O_EU(O_TRUE, f)`;
+Definition O_EF_def:
+  O_EF f = O_EU(O_TRUE, f)
+End
 
 val PATH_ELEM_0 =
  store_thm
@@ -1247,8 +1251,9 @@ val O_SEM_O_EF =
     THEN EQ_TAC
     THEN ZAP_TAC std_ss [PATH_ELEM_0]);
 
-val O_AG_def =
- Define `O_AG f = O_NOT(O_EF(O_NOT f))`;
+Definition O_AG_def:
+  O_AG f = O_NOT(O_EF(O_NOT f))
+End
 
 val O_SEM_O_AG =
  store_thm
@@ -1350,9 +1355,9 @@ val SHARED_ALWAYS_WEAK_BOOL =
      THEN `LENGTH(MAP_PATH (\s. STATE (M.L s)) p) = LENGTH(FINITE l)` by PROVE_TAC[]
      THEN FULL_SIMP_TAC list_ss [LENGTH_def,LENGTH_MAP_PATH,LS]);
 
-val O_OR_def =
- Define
-  `O_OR(f1,f2) = O_NOT(O_AND(O_NOT f1, O_NOT f2))`;
+Definition O_OR_def:
+   O_OR(f1,f2) = O_NOT(O_AND(O_NOT f1, O_NOT f2))
+End
 
 val O_SEM_O_OR =
  store_thm
@@ -1360,9 +1365,9 @@ val O_SEM_O_OR =
    ``O_SEM M (O_OR (f1,f2)) s = O_SEM M f1 s \/ O_SEM M f2 s``,
    RW_TAC list_ss [O_SEM_def,O_OR_def]);
 
-val O_IMP_def =
- Define
-  `O_IMP(f1,f2) = O_OR(O_NOT f1, f2)`;
+Definition O_IMP_def:
+   O_IMP(f1,f2) = O_OR(O_NOT f1, f2)
+End
 
 val O_SEM_O_IMP =
  store_thm
@@ -1371,9 +1376,9 @@ val O_SEM_O_IMP =
    RW_TAC list_ss [O_SEM_def,O_SEM_O_OR,O_IMP_def]
     THEN PROVE_TAC[]);
 
-val O_IFF_def =
- Define
-  `O_IFF(f1,f2) = O_AND(O_IMP(f1, f2), O_IMP(f2, f1))`;
+Definition O_IFF_def:
+   O_IFF(f1,f2) = O_AND(O_IMP(f1, f2), O_IMP(f2, f1))
+End
 
 val O_SEM_O_IFF =
  store_thm
@@ -1405,19 +1410,19 @@ try to prove
  M0 || A |= f ==> !pi. pi in COMPUTATION M0 ==> pi || A |= f
 *)
 
-val UF_INFINITE_VALID_def =
- Define
-  `UF_INFINITE_VALID M f =
+Definition UF_INFINITE_VALID_def:
+   UF_INFINITE_VALID M f =
    !pi. COMPUTATION M (INFINITE pi)
         ==>
-        UF_SEM (MAP_PATH (\s. STATE (M.L s)) (INFINITE pi)) f`;
+        UF_SEM (MAP_PATH (\s. STATE (M.L s)) (INFINITE pi)) f
+End
 
-val UF_FINITE_VALID_def =
- Define
-  `UF_FINITE_VALID M f =
+Definition UF_FINITE_VALID_def:
+   UF_FINITE_VALID M f =
    !pi. COMPUTATION M (FINITE pi)
         ==>
-        UF_SEM (MAP_PATH (\s. STATE (M.L s)) (FINITE pi)) f`;
+        UF_SEM (MAP_PATH (\s. STATE (M.L s)) (FINITE pi)) f
+End
 
 
 (*****************************************************************************)
@@ -1588,19 +1593,19 @@ val MAP_PATH_MAP_PATH =
    Cases_on `p`
     THEN RW_TAC list_ss [MAP_PATH_def,MAP_MAP_o,combinTheory.o_DEF]);
 
-val MK_FINITE_PROD_PATH_def =
- Define
-  `(MK_FINITE_PROD_PATH [] n = []) /\
-   (MK_FINITE_PROD_PATH (x::l) n = (n,SND x)::MK_FINITE_PROD_PATH l (n+1))`;
+Definition MK_FINITE_PROD_PATH_def:
+   (MK_FINITE_PROD_PATH [] n = []) /\
+   (MK_FINITE_PROD_PATH (x::l) n = (n,SND x)::MK_FINITE_PROD_PATH l (n+1))
+End
 
-val MK_INFINITE_PROD_PATH_def =
- Define
-  `MK_INFINITE_PROD_PATH f = \n. (n,SND(f n))`;
+Definition MK_INFINITE_PROD_PATH_def:
+   MK_INFINITE_PROD_PATH f = \n. (n,SND(f n))
+End
 
-val MK_PROD_PATH_def =
- Define
-  `(MK_PROD_PATH(FINITE l) = FINITE(MK_FINITE_PROD_PATH l 0)) /\
-   (MK_PROD_PATH(INFINITE f) = INFINITE(MK_INFINITE_PROD_PATH f))`;
+Definition MK_PROD_PATH_def:
+   (MK_PROD_PATH(FINITE l) = FINITE(MK_FINITE_PROD_PATH l 0)) /\
+   (MK_PROD_PATH(INFINITE f) = INFINITE(MK_INFINITE_PROD_PATH f))
+End
 
 val LENGTH_MK_FINITE_PROD_PATH =
  store_thm

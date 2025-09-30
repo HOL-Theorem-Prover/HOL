@@ -6,10 +6,12 @@ Libs
 
 val _ = type_abbrev_pp ("nsubst", ``:(num |-> 'a nterm)``);
 
-val nvR_def = Define`
-  nvR s y x = case FLOOKUP s x of SOME t => y IN nvars t | _ => F`;
+Definition nvR_def:
+  nvR s y x = case FLOOKUP s x of SOME t => y IN nvars t | _ => F
+End
 
-val nwfs_def = Define`nwfs s = WF (nvR s)`;
+Definition nwfs_def:  nwfs s = WF (nvR s)
+End
 
 val nwfs_FEMPTY = RWstore_thm(
 "nwfs_FEMPTY",

@@ -232,10 +232,10 @@ val noposn_least = store_thm(
     SRW_TAC [][]
   ]);
 
-val normorder_reduction_def = Define`
+Definition normorder_reduction_def:
   normorder_reduction p =
     okpath (λM r N. (noposn M = SOME r) ∧ labelled_redn beta M r N) p
-`
+End
 val normorder_is_standard = store_thm(
   "normorder_is_standard",
   ``∀p. normorder_reduction p ⇒ standard_reduction p``,
@@ -410,9 +410,9 @@ val normstar_APPr_I = store_thm(
     Calculating normal order reducts
    ---------------------------------------------------------------------- *)
 
-val noreduct_def = Define`
+Definition noreduct_def:
   noreduct t = if bnf t then NONE else SOME (@t'. t -n-> t')
-`;
+End
 
 val noreduct_thm = store_thm(
   "noreduct_thm",
@@ -727,9 +727,9 @@ val last_of_finite_nopath = store_thm(
     loop.
    ---------------------------------------------------------------------- *)
 
-val bnf_of_def = Define`
+Definition bnf_of_def:
   bnf_of M = OWHILE ((~) o bnf) (THE o noreduct) M
-`;
+End
 
 val lemma1 = prove(
   ``∀p. okpath (λM u N. M -n-> N) p ∧ finite p ⇒

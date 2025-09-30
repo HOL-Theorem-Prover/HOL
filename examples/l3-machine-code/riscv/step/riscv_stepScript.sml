@@ -25,17 +25,20 @@ fun uprove a b = utilsLib.STRIP_UNDISCH (Q.prove (a, b))
    Simplified Fetch and Next functions
    ------------------------------------------------------------------------ *)
 
-val Fetch_def = Define`
+Definition Fetch_def:
   Fetch s =
   let (w, s) = translateAddr (PC s, Instruction, Read) s in
-    (rawReadInst (THE w) s)`
+    (rawReadInst (THE w) s)
+End
 
-val update_pc_def = Define `update_pc v s = SOME (write'PC v s)`
+Definition update_pc_def:   update_pc v s = SOME (write'PC v s)
+End
 
-val DecodeAny_def = Define `
-  DecodeAny f = case f of Half h => DecodeRVC h | Word w => Decode w`
+Definition DecodeAny_def:
+  DecodeAny f = case f of Half h => DecodeRVC h | Word w => Decode w
+End
 
-val NextRISCV_def = Define`
+Definition NextRISCV_def:
   NextRISCV s =
   let (f, s) = Fetch s in
   let s = Run (DecodeAny f) s in
@@ -46,7 +49,8 @@ val NextRISCV_def = Define`
     case NextFetch s of
        NONE => update_pc (pc + Skip s) s
      | SOME (BranchTo a) => update_pc a (write'NextFetch NONE s)
-     | _ => NONE`
+     | _ => NONE
+End
 
 (* ------------------------------------------------------------------------
    Evaluation theorem

@@ -30,32 +30,36 @@ val tree_distinct = DB.fetch "-" "tree_distinct";
 val tree_size_def = DB.fetch "-" "tree_size_def";
 
 
-val IS_LEAF_def = Define `(IS_LEAF leaf = T) /\
-                          (IS_LEAF (node _ _) = F)`
+Definition IS_LEAF_def:   (IS_LEAF leaf = T) /\
+                          (IS_LEAF (node _ _) = F)
+End
 
 val IS_LEAF_REWRITE = store_thm ("IS_LEAF_REWRITE",
 ``IS_LEAF t = (t = leaf)``,
 Cases_on `t` THEN SIMP_TAC std_ss [IS_LEAF_def, tree_distinct]);
 
 
-val IS_NODE_def = Define `(IS_NODE leaf = F) /\
-                          (IS_NODE (node _ _) = T)`
+Definition IS_NODE_def:   (IS_NODE leaf = F) /\
+                          (IS_NODE (node _ _) = T)
+End
 
 val IS_NODE_REWRITE = store_thm ("IS_NODE_REWRITE",
 ``IS_NODE t = ?d tL. (t = node d tL)``,
 Cases_on `t` THEN SIMP_TAC std_ss [IS_NODE_def, tree_distinct, tree_11]);
 
-val IS_PROPER_NODE_def = Define `(IS_PROPER_NODE leaf = F) /\
-                                 (IS_PROPER_NODE (node v tL) = ~(NULL tL))`
+Definition IS_PROPER_NODE_def:   (IS_PROPER_NODE leaf = F) /\
+                                 (IS_PROPER_NODE (node v tL) = ~(NULL tL))
+End
 
 val IS_PROPER_NODE_REWRITE = store_thm ("IS_PROPER_NODE_REWRITE",
 ``IS_PROPER_NODE t = ?d tL. (t = node d tL) /\ ~(NULL tL)``,
 Cases_on `t` THEN SIMP_TAC std_ss [IS_PROPER_NODE_def, tree_distinct,
    tree_11]);
 
-val DIRECT_SUBTREES_def = Define `
+Definition DIRECT_SUBTREES_def:
 (DIRECT_SUBTREES leaf = EMPTY) /\
-(DIRECT_SUBTREES (node v tL) = set tL)`;
+(DIRECT_SUBTREES (node v tL) = set tL)
+End
 
 val DIRECT_SUBTREES_REWRITE = store_thm ("DIRECT_SUBTREES_REWRITE",
 ``(!t:'a tree. ~(DIRECT_SUBTREES leaf t)) /\
@@ -74,8 +78,10 @@ val DIRECT_SUBTREES_EXISTS2 = save_thm ("DIRECT_SUBTREES_EXISTS2",
 SIMP_RULE std_ss [IN_DEF, SimpLHS] DIRECT_SUBTREES_EXISTS);
 
 
-val PSUBTREES_def = Define `PSUBTREES = TC DIRECT_SUBTREES`;
-val SUBTREES_def = Define `SUBTREES = RTC DIRECT_SUBTREES`;
+Definition PSUBTREES_def:   PSUBTREES = TC DIRECT_SUBTREES
+End
+Definition SUBTREES_def:   SUBTREES = RTC DIRECT_SUBTREES
+End
 
 
 val PSUBTREES_THM = store_thm ("PSUBTREES_THM",
@@ -138,7 +144,8 @@ PROVE_TAC[]);
 
 
 
-val tree_size0_def = Define `tree_size0 = tree_size (K 0)`
+Definition tree_size0_def:   tree_size0 = tree_size (K 0)
+End
 
 val DIRECT_SUBTREES_size = store_thm ("DIRECT_SUBTREES_size",
 ``!t1 t2. t1 IN DIRECT_SUBTREES t2 ==> (tree_size0 t1 < tree_size0 t2)``,
@@ -210,11 +217,12 @@ Q.PAT_ASSUM `!n tL. EVERY P tL ==> X` MATCH_MP_TAC THEN
 FULL_SIMP_TAC list_ss [PSUBTREES_THM, IN_UNION, EVERY_MEM]);
 
 
-val DEPTH_def = Define
-`(DEPTH leaf 0 = T) /\
+Definition DEPTH_def:
+ (DEPTH leaf 0 = T) /\
  (DEPTH leaf (SUC n) = F) /\
  (DEPTH (node _ x) 0 = (x = [])) /\
- (DEPTH (node _ x) (SUC n) = EXISTS (\t. DEPTH t n) x)`;
+ (DEPTH (node _ x) (SUC n) = EXISTS (\t. DEPTH t n) x)
+End
 
 
 val DEPTH_THM = store_thm ("DEPTH_THM",
@@ -261,9 +269,11 @@ SIMP_TAC std_ss [IMAGE_EQ_EMPTY, BIGUNION_INSERT,
                  EMPTY_UNION]);
 
 
-val MIN_LIST_def = Define `(MIN_LIST [] = 0) /\
-                           (MIN_LIST (t::l) = FOLDR MIN t l)`
-val MAX_LIST_def = Define `MAX_LIST l = FOLDR MAX 0 l`
+Definition MIN_LIST_def:   (MIN_LIST [] = 0) /\
+                           (MIN_LIST (t::l) = FOLDR MIN t l)
+End
+Definition MAX_LIST_def:   MAX_LIST l = FOLDR MAX 0 l
+End
 
 val MIN_MAX_LIST_THM = store_thm ("MIN_MAX_LIST_THM",
 ``(MIN_LIST [] = 0) /\ (MAX_LIST [] = 0) /\
@@ -303,8 +313,10 @@ CONJ_TAC THEN (
    SIMP_TAC (srw_ss()) [MAX_SET_THM, MIN_SET_THM, IMAGE_FINITE] THEN
    Cases THEN SIMP_TAC (srw_ss()) [MIN_MAX_SUC, MIN_SET_THM]))
 
-val MAX_DEPTH_def = Define `MAX_DEPTH t = MAX_SET (DEPTH t)`;
-val MIN_DEPTH_def = Define `MIN_DEPTH t = MIN_SET (DEPTH t)`;
+Definition MAX_DEPTH_def:   MAX_DEPTH t = MAX_SET (DEPTH t)
+End
+Definition MIN_DEPTH_def:   MIN_DEPTH t = MIN_SET (DEPTH t)
+End
 
 val MIN_MAX_DEPTH_THM = store_thm ("MIN_MAX_DEPTH_THM",
 ``(MAX_DEPTH (leaf:'a tree) = 0) /\ (MIN_DEPTH (leaf:'a tree) = 0) /\
@@ -390,8 +402,9 @@ Termination
 End
 
 
-val WIDTH_def = Define `WIDTH t n = TREE_FOLD (F,
-   \v tL. (LENGTH tL = n) \/ EXISTS I tL) t`;
+Definition WIDTH_def:   WIDTH t n = TREE_FOLD (F,
+   \v tL. (LENGTH tL = n) \/ EXISTS I tL) t
+End
 
 
 val WIDTH_THM = store_thm ("WIDTH_THM",
@@ -419,11 +432,13 @@ Cases_on `t` THEN
 SIMP_TAC std_ss [WIDTH_THM, IS_LEAF_def, NOT_EMPTY_INSERT]);
 
 
-val BALANCED_def = Define
-`BALANCED t n = (DEPTH t = {n})`
+Definition BALANCED_def:
+ BALANCED t n = (DEPTH t = {n})
+End
 
-val NARY_def = Define
-`NARY t n = (WIDTH t SUBSET {n})`;
+Definition NARY_def:
+ NARY t n = (WIDTH t SUBSET {n})
+End
 
 val BALANCED_11 = store_thm ("BALANCED_11",
 ``!t n1 n2. BALANCED t n1 /\ BALANCED t n2 ==> (n1 = n2)``,
@@ -515,8 +530,9 @@ PROVE_TAC[SUBSET_TRANS]);
 
 
 
-val TREE_MAP_def = Define `
-   TREE_MAP f = TREE_FOLD (leaf, \v tL. node (f v) tL)`
+Definition TREE_MAP_def:
+   TREE_MAP f = TREE_FOLD (leaf, \v tL. node (f v) tL)
+End
 
 val TREE_MAP_THM = store_thm ("TREE_MAP_THM",
  ``(TREE_MAP f leaf = leaf) /\
@@ -526,9 +542,11 @@ SIMP_TAC std_ss [TREE_MAP_def, TREE_FOLD_def, tree_11] THEN
 METIS_TAC[]);
 
 
-val TREE_EVERY_def = Define
-   `TREE_EVERY P = TREE_FOLD (T, \v tL. (P v) /\ EVERY I tL)`;
-val TREE_EXISTS_def = Define `TREE_EXISTS = \P t. ~(TREE_EVERY (\t'. ~ P t') t)`
+Definition TREE_EVERY_def:
+    TREE_EVERY P = TREE_FOLD (T, \v tL. (P v) /\ EVERY I tL)
+End
+Definition TREE_EXISTS_def:   TREE_EXISTS = \P t. ~(TREE_EVERY (\t'. ~ P t') t)
+End
 
 
 val TREE_EVERY_EXISTS_REWRITE = store_thm ("TREE_EVERY_EXISTS_REWRITE",
@@ -540,9 +558,10 @@ SIMP_TAC (std_ss++boolSimps.ETA_ss) [TREE_EXISTS_def, TREE_EVERY_def, TREE_FOLD_
    EVERY_MAP, EVERY_NOT_EXISTS, EXISTS_MAP]);
 
 
-val LIST_TO_TREE_def = Define `
+Definition LIST_TO_TREE_def:
     (LIST_TO_TREE [] = leaf) /\
-    (LIST_TO_TREE (v::vs) = node v [LIST_TO_TREE vs])`
+    (LIST_TO_TREE (v::vs) = node v [LIST_TO_TREE vs])
+End
 
 
 val LIST_TO_TREE_DEPTH = store_thm ("LIST_TO_TREE_DEPTH",
@@ -569,8 +588,9 @@ Cases_on `l` THENL [
 ]);
 
 
-val TREE_TO_LIST_def = Define `
-   TREE_TO_LIST = TREE_FOLD ([], \v tL. v::(FLAT tL))`
+Definition TREE_TO_LIST_def:
+   TREE_TO_LIST = TREE_FOLD ([], \v tL. v::(FLAT tL))
+End
 
 val TREE_TO_LIST_THM = store_thm ("TREE_TO_LIST_THM",
 ``(TREE_TO_LIST leaf = []) /\
@@ -600,9 +620,10 @@ FULL_SIMP_TAC list_ss []);
 
 
 
-val TREE_PATHS_def = Define `
+Definition TREE_PATHS_def:
    TREE_PATHS = TREE_FOLD ({[]},
-      (\v ps. IMAGE (\l. v::l) (FOLDR $UNION EMPTY ps)))`
+      (\v ps. IMAGE (\l. v::l) (FOLDR $UNION EMPTY ps)))
+End
 
 val TREE_PATHS_THM = store_thm ("TREE_PATHS_THM",
  ``(TREE_PATHS leaf = {[]}) /\

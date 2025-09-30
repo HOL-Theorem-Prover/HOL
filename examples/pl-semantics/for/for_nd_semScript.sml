@@ -32,8 +32,9 @@ val r_11 = fetch "-" "r_11";
 
 val _ = type_abbrev ("oracle", ``:(num -> 'a)``);
 
-val oracle_get_def = Define `
-oracle_get (f:'a oracle) = (f 0, f o ((+) 1))`;
+Definition oracle_get_def:
+oracle_get (f:'a oracle) = (f 0, f o ((+) 1))
+End
 
 (* The state of the semantics. Here io_trace records all I/O that has
    been done, input is the input stream, and non_det_o is an oracle
@@ -51,17 +52,19 @@ val state_rw = Q.prove (
  (!s. <| store := s.store; clock := s.clock; io_trace := s.io_trace; input := s.input; non_det_o := s.non_det_o |> = s)`,
  rw [state_component_equality]);
 
-val permute_pair_def = Define `
+Definition permute_pair_def:
 permute_pair oracle (x,y) =
   let (switch, oracle') = oracle_get oracle in
-    ((if switch then (y,x) else (x,y)), oracle', switch)`;
+    ((if switch then (y,x) else (x,y)), oracle', switch)
+End
 
-val unpermute_pair_def = Define `
+Definition unpermute_pair_def:
 unpermute_pair (x,y) switch =
   if switch then
     (y,x)
   else
-    (x,y)`;
+    (x,y)
+End
 
 (* Expression evaluation *)
 
@@ -131,12 +134,14 @@ val sem_e_res = Q.store_thm ("sem_e_res",
  rw [] >> ect >> fs [] >>
  ect >> fs [] >> rw [] >> metis_tac []);
 
-val check_clock_def = Define `
+Definition check_clock_def:
 check_clock s' s =
-  s' with clock := (if s'.clock ≤ s.clock then s'.clock else s.clock)`;
+  s' with clock := (if s'.clock ≤ s.clock then s'.clock else s.clock)
+End
 
-val dec_clock_def = Define `
-dec_clock s = s with clock := s.clock - 1`;
+Definition dec_clock_def:
+dec_clock s = s with clock := s.clock - 1
+End
 
 val dec_clock_store = Q.store_thm ("dec_clock_store[simp]",
 `!s. (dec_clock s).store = s.store`,
@@ -204,8 +209,9 @@ val check_clock_id = Q.store_thm ("check_clock_id",
 `!s s'. s.clock ≤ s'.clock ⇒ check_clock s s' = s`,
  rw [check_clock_def, state_component_equality]);
 
-val STOP_def = Define `
-  STOP x = x`;
+Definition STOP_def:
+  STOP x = x
+End
 
 (* Statement evaluation -- without redundant check_clock *)
 
@@ -249,14 +255,15 @@ QED
 
 (* The top-level semantics defines what is externally observable. *)
 
-val init_st_def = Define `
+Definition init_st_def:
 init_st c nd i =
-  <| store := FEMPTY; clock := c; input := i; io_trace := []; non_det_o := nd |>`;
+  <| store := FEMPTY; clock := c; input := i; io_trace := []; non_det_o := nd |>
+End
 
 (* There can be many observable behaviours because the semantics is
    non-deterministic. *)
 
-val semantics_with_nd_def = Define `
+Definition semantics_with_nd_def:
 (semantics_with_nd t input (Terminate io_trace) =
   (* Terminate when there is a clock and some non-determinism oracle
      that gives a value result *)
@@ -272,9 +279,10 @@ val semantics_with_nd_def = Define `
 (semantics_with_nd t input (Diverge io_trace) =
   ?nd.
     (!c. ?s. sem_t (init_st c nd input) t = (Rtimeout, s)) ∧
-    lprefix_lub {fromList (SND (sem_t (init_st c nd input) t)).io_trace | c | T} io_trace)`;
+    lprefix_lub {fromList (SND (sem_t (init_st c nd input) t)).io_trace | c | T} io_trace)
+End
 
-val semantics_def = Define `
+Definition semantics_def:
 (semantics t input (Terminate io_trace) =
   (* Terminate when there is a clock and some non-determinism oracle
      that gives a value result *)
@@ -290,7 +298,8 @@ val semantics_def = Define `
 (semantics t input (Diverge io_trace) =
   ?nd.
     (!c. ?s. sem_t (init_st c nd input) t = (Rtimeout, s)) ∧
-    lprefix_lub {fromList (FILTER ISL (SND (sem_t (init_st c nd input) t)).io_trace) | c | T} io_trace)`;
+    lprefix_lub {fromList (FILTER ISL (SND (sem_t (init_st c nd input) t)).io_trace) | c | T} io_trace)
+End
 
 
 (* === Misc lemmas === *)

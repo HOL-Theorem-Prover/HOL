@@ -34,58 +34,78 @@ val SUBSET0_TRANS = store_thm("SUBSET0_TRANS",
 val _ = Hol_datatype `
   heap_type = EMP | REF of num | DATA of num # num # 'a`;
 
-val isREF_def = Define `isREF x = ?i. x = REF i`;
-val getREF_def = Define `getREF (REF x) = x`;
-val getDATA_def = Define `getDATA (DATA y) = y`;
+Definition isREF_def:   isREF x = ?i. x = REF i
+End
+Definition getREF_def:   getREF (REF x) = x
+End
+Definition getDATA_def:   getDATA (DATA y) = y
+End
 
 val heap_type_distinct = fetch "-" "heap_type_distinct"
 val heap_type_11 = fetch "-" "heap_type_11"
 
-val RANGE_def = Define `RANGE(i:num,j) k = i <= k /\ k < j`;
-val IRANGE_def = Define `IRANGE(i:num,j) k = ~(i <= k /\ k < j)`;
+Definition RANGE_def:   RANGE(i:num,j) k = i <= k /\ k < j
+End
+Definition IRANGE_def:   IRANGE(i:num,j) k = ~(i <= k /\ k < j)
+End
 
-val CUT_def = Define `CUT (i,j) m = \k. if RANGE (i,j) k then m k else EMP`;
-val ICUT_def = Define `ICUT (i,j) m = \k. if IRANGE (i,j) k then m k else EMP`;
+Definition CUT_def:   CUT (i,j) m = \k. if RANGE (i,j) k then m k else EMP
+End
+Definition ICUT_def:   ICUT (i,j) m = \k. if IRANGE (i,j) k then m k else EMP
+End
 
-val D0 = Define `D0 m k = ?x y z. m (k:num) = DATA(x,y,z)`;
-val D1 = Define `D1 m x = ?k y z. (m (k:num) = DATA(x,y,z)) \/ (m k = DATA(y,x,z))`;
-val R0 = Define `R0 m k = ?a. m (k:num) = REF a`;
-val R1 = Define `R1 m a = ?k. m (k:num) = REF a`;
-val DR0 = Define `DR0 m k = D0 m k \/ R0 m k`
-val DR1 = Define `DR1 m k = D1 m k \/ R1 m k`
+Definition D0:   D0 m k = ?x y z. m (k:num) = DATA(x,y,z)
+End
+Definition D1:   D1 m x = ?k y z. (m (k:num) = DATA(x,y,z)) \/ (m k = DATA(y,x,z))
+End
+Definition R0:   R0 m k = ?a. m (k:num) = REF a
+End
+Definition R1:   R1 m a = ?k. m (k:num) = REF a
+End
+Definition DR0:   DR0 m k = D0 m k \/ R0 m k
+End
+Definition DR1:   DR1 m k = D1 m k \/ R1 m k
+End
 
-val ADDR_def = Define `
+Definition ADDR_def:
   (ADDR k n EMP = (n = k)) /\
   (ADDR k n (REF i) = (n = i)) /\
-  (ADDR k n (DATA x) = (n = k))`;
+  (ADDR k n (DATA x) = (n = k))
+End
 
-val abs_def = Define `
+Definition abs_def:
   abs m (a,n,n',d) =
-    ?k k'. (m a = DATA(k,k',d)) /\ ADDR k n (m k) /\ ADDR k' n' (m k')`;
+    ?k k'. (m a = DATA(k,k',d)) /\ ADDR k n (m k) /\ ADDR k' n' (m k')
+End
 
-val basic_abs = Define `
-  basic_abs m (a,n,n',d) = (m a = DATA(n,n',d))`;
+Definition basic_abs:
+  basic_abs m (a,n,n',d) = (m a = DATA(n,n',d))
+End
 
-val apply_def = Define `apply h s (a,n,n',d) = (h a,h n,h n',d) IN s`;
+Definition apply_def:   apply h s (a,n,n',d) = (h a,h n,h n',d) IN s
+End
 
-val PATH_def = Define `
+Definition PATH_def:
   (PATH (x,[]) s = T) /\
-  (PATH (x,y::ys) s = PATH (y,ys) s /\ ?z d. (x,y,z,d) IN s \/ (x,z,y,d) IN s)`;
+  (PATH (x,y::ys) s = PATH (y,ys) s /\ ?z d. (x,y,z,d) IN s \/ (x,z,y,d) IN s)
+End
 
-val reachable_def = Define `
-  reachable r s i = (r = i) \/ ?p. PATH (r,p++[i]) s`;
+Definition reachable_def:
+  reachable r s i = (r = i) \/ ?p. PATH (r,p++[i]) s
+End
 
 val UPDATE_thm = prove(
   ``!a b. a =+ b = (\f k. (if k = a then b else f k))``,
   SIMP_TAC std_ss [UPDATE_def,FUN_EQ_THM] \\ METIS_TAC []);
 
-val roots_inv_def = Define `
+Definition roots_inv_def:
   roots_inv (b,j,m,xx) =
     ?v. (v o v = I) /\ (xx = apply v (abs m)) /\
         (!k. ~isREF(m k) /\ ~RANGE(b,j)k ==> (v k = k)) /\
-        (!k i. (m k = REF i) ==> (v k = i))`;
+        (!k i. (m k = REF i) ==> (v k = i))
+End
 
-val cheney_inv_def = Define `
+Definition cheney_inv_def:
   cheney_inv(b,b',i,j,j',e,f,m,x,xx,r) =
     (0 < b /\ b <= b' /\ b' <= j /\ b <= i /\ i <= j /\ j <= e /\ e <= f) /\
     (!k. j <= k /\ k < e \/ f < k ==> (m k = EMP)) /\    (* all EMP between j and e *)
@@ -102,32 +122,36 @@ val cheney_inv_def = Define `
     RANGE(b,i) SUBSET                                    (* all of b-i is reachable from r *)
     (\x. ?t. t IN r /\ x IN reachable t (basic_abs(CUT(b,i)m))) /\
     (!k i. (x k = REF i) ==> (m k = REF i)) /\           (* refernces are reserved *)
-    roots_inv (b,j,m,abs xx)                             (* memory is permuted *)`;
+    roots_inv (b,j,m,abs xx)                             (* memory is permuted *)
+End
 
-val ok_state_def = Define `
+Definition ok_state_def:
   ok_state (i,e,r,l,u,m) =
     let a = (if u then 1 + l else 1) in
     let s = RANGE(a,i) in
         a <= i /\ i <= e /\ (e = a + l) /\
         (!k. MEM k r /\ ~(k = 0) ==> k IN s) /\
         (!k. ~(k IN s) ==> (m k = EMP)) /\
-        (!k. k IN s ==> ?x y d. (m k = DATA(x,y,d)) /\ {x;y} SUBSET0 s)`;
+        (!k. k IN s ==> ?x y d. (m k = DATA(x,y,d)) /\ {x;y} SUBSET0 s)
+End
 
-val move_def = Define `
+Definition move_def:
   move(x,j,m) =
     if x = 0 then (x,j,m) else
     if isREF (m x) then (getREF (m x),j,m) else
       let m = (j =+ m x) m in
       let m = (x =+ REF j) m in
-        (j,j+1,m)`;
+        (j,j+1,m)
+End
 
-val cheney_step_def = Define `
+Definition cheney_step_def:
   cheney_step (i,j,e,m) =
     let (x,y,d) = getDATA (m i) in
     let (x,j,m) = move (x,j,m) in
     let (y,j,m) = move (y,j,m) in
     let m = (i =+ DATA (x,y,d)) m in
-      (i+1,j,e,m)`;
+      (i+1,j,e,m)
+End
 
 val cheney_def = tDefine "cheney" `
   cheney(i,j,e,m) =
@@ -183,8 +207,9 @@ val D1_SUBSET0 = prove(
   \\ SIMP_TAC std_ss [IN_DEF,D1,CUT_def,RANGE_def,DECIDE ``k<n+1=k<=n``]
   \\ METIS_TAC [DECIDE ``n <= k \/ k < n:num``,fetch "-" "heap_type_distinct"]);
 
-val swap_def = Define `
-  swap i j = \k. if k = i then j else if k = j then i else k`;
+Definition swap_def:
+  swap i j = \k. if k = i then j else if k = j then i else k
+End
 
 val swap_swap = store_thm("swap_swap",
   ``!i:'a j. swap i j o swap i j = I``,
@@ -795,21 +820,23 @@ val cheney_inv_maintained = (SIMP_RULE std_ss [] o prove)(
   THEN1 (FULL_SIMP_TAC bool_ss [cheney_inv_def] \\ `F` by DECIDE_TAC)
   \\ FULL_SIMP_TAC std_ss [] \\ IMP_RES_TAC cheney_inv_step \\ METIS_TAC [LESS_EQ_TRANS]);
 
-val move_roots_def = Define `
+Definition move_roots_def:
   (move_roots ([],j,m) = ([],j,m)) /\
   (move_roots (r::rs,j,m) =
     let (r,j,m) = move(r,j,m) in
     let (rs,j,m) = move_roots(rs,j,m) in
-      (r::rs,j,m))`;
+      (r::rs,j,m))
+End
 
-val cheney_collect_def = Define `
+Definition cheney_collect_def:
   cheney_collector(i:num,e:num,root,l,u,m) =
     let u = ~u:bool in
     let i = (if u then 1+l else 1) in
     let (root,j,m) = move_roots(root,i,m) in
     let (j,m) = cheney(i,j,i+l,m) in
     let m = CUT (i,i+l) m in
-      (j,i+l,root,l,u,m)`;
+      (j,i+l,root,l,u,m)
+End
 
 val CUT_EMPTY = prove(
   ``!b m. (CUT (b,b) m = \x.EMP) /\ (ICUT (b,b) m = m) /\
@@ -897,8 +924,9 @@ val ok_state_IMP_cheney_inv = store_thm("ok_state_IMP_cheney_inv",
     \\ REWRITE_TAC [SUBSET0_DEF,SUBSET_DEF,IN_INSERT,NOT_IN_EMPTY]
     \\ RES_TAC \\ RES_TAC \\ FULL_SIMP_TAC std_ss [IN_DEF,DR0,D0,heap_type_11] \\ METIS_TAC []));
 
-val reachables_def = Define `
-  reachables rs h (a,x,y,d) = (a,x,y,d) IN h /\ ?r. MEM r rs /\ a IN reachable r h`;
+Definition reachables_def:
+  reachables rs h (a,x,y,d) = (a,x,y,d) IN h /\ ?r. MEM r rs /\ a IN reachable r h
+End
 
 val basic_abs_EQ_abs = prove(
   ``!m. (!k i. ~(m k = REF i)) ==> (basic_abs m = abs m)``,
@@ -1070,12 +1098,14 @@ val cheney_inv_setup = store_thm("cheney_inv_setup",
   THEN1 (REWRITE_TAC [SUBSET_DEF,IN_UNION] \\ SIMP_TAC bool_ss [IN_DEF])
   THEN1 METIS_TAC [] \\ REWRITE_TAC [RANGE_lemmas,EMPTY_SUBSET]);
 
-val list_RANGE_aux_def = Define `
+Definition list_RANGE_aux_def:
   (list_RANGE_aux 0 n = []) /\
-  (list_RANGE_aux (SUC m) n = n::list_RANGE_aux m (n+1))`;
+  (list_RANGE_aux (SUC m) n = n::list_RANGE_aux m (n+1))
+End
 
-val list_RANGE_def = Define `
-  list_RANGE(i,j) = list_RANGE_aux (j-i) i`;
+Definition list_RANGE_def:
+  list_RANGE(i,j) = list_RANGE_aux (j-i) i
+End
 
 val list_RANGE_aux_thm = prove(
   ``!j i k. MEM k (list_RANGE_aux j i) = RANGE(i,i+j) k``,

@@ -14,7 +14,7 @@ infix &&; infix 8 by;
 
 (*take f:('state1->bool) mu and return f:('state2->bool) mu*)
 (*lesson: we _can_ muck around with types within the object logic, using choice and extensionality*)
-val AP_EXT_def = Define `
+Definition AP_EXT_def:
 (AP_EXT (T:('state1->bool) mu) = (T:(('state1#'state2)->bool) mu)) /\
 (AP_EXT F = F) /\
 (AP_EXT (~f) = ~(AP_EXT f)) /\
@@ -25,7 +25,8 @@ val AP_EXT_def = Define `
 (AP_EXT (<<a>> f) = <<a>> (AP_EXT f)) /\
 (AP_EXT ([[a]] f) = [[a]] (AP_EXT f)) /\
 (AP_EXT (mu Q.. f) = (mu Q.. (AP_EXT f)))  /\
-(AP_EXT (nu Q.. f) =  (nu Q.. (AP_EXT f)))`;
+(AP_EXT (nu Q.. f) =  (nu Q.. (AP_EXT f)))
+End
 
 
 val APEXT_RV = prove(``!f Q. (RV Q = AP_EXT f) = (f = RV Q)``,

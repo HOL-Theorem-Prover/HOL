@@ -223,14 +223,16 @@ QED
 (* 2 BITS: match of bits of h1 and h2 *)
 (* ********************************** *)
 
-val h1 = Define
-   ‘(h1 0 = {(\s:string. if s = "h1" then 0 else 0)}) /\
-    (h1 (SUC n) = (\s:string. if s = "h1" then SUC n else 0)INSERT(h1 n))’;
+Definition h1:
+    (h1 0 = {(\s:string. if s = "h1" then 0 else 0)}) /\
+    (h1 (SUC n) = (\s:string. if s = "h1" then SUC n else 0)INSERT(h1 n))
+End
 
-val h2 = Define
-   ‘(h2 l 0 = IMAGE (\s: num state. (\s':string. if s' = "h2" then 0 else s s')) l) /\
+Definition h2:
+    (h2 l 0 = IMAGE (\s: num state. (\s':string. if s' = "h2" then 0 else s s')) l) /\
     (h2 l (SUC n) = (IMAGE (\s: num state. (\s':string. if s' = "h2" then (SUC n) else s s')) l) UNION
-                    (h2 l n))’;
+                    (h2 l n))
+End
 
 Definition high[allow_rebind]: high n = h2 (h1 n) n
 End
@@ -241,9 +243,10 @@ End
 Definition random[allow_rebind]: random = {(\s:string. (0:num))}
 End
 
-val M3 = Define
-   ‘M3 = (\s: ((num,num,num) prog_state). (\s':string. if (s' = "out")
-                then w2n (((n2w (H s "h1")):word2) ?? (n2w (H s "h2"))) else 0))’;
+Definition M3:
+    M3 = (\s: ((num,num,num) prog_state). (\s':string. if (s' = "out")
+                then w2n (((n2w (H s "h1")):word2) ?? (n2w (H s "h2"))) else 0))
+End
 
 val example3_output_conv = SIMP_CONV string_ss [lem1, lem2, lem3, lem4, lem5, lem6, w2n_11]
                            THENC (TRY_CONV (FIND_CONV “(x:string)=(y:string)” string_EQ_CONV))
@@ -284,9 +287,10 @@ CONV_TAC (RATOR_CONV (RAND_CONV (LEAKAGE_COMPUTE_CONV (“high (SUC (SUC (SUC 0)
 (* PARTIAL LEAKAGE             *)
 (* *************************** *)
 
-val M4 = Define
-   ‘M4 = (\s: ((num,num,num) prog_state). (\s':string. if (s' = "out")
-   then (H s "h1") + (H s "h2") else 0))’;
+Definition M4:
+    M4 = (\s: ((num,num,num) prog_state). (\s':string. if (s' = "out")
+   then (H s "h1") + (H s "h2") else 0))
+End
 
 val example4_output_conv = SIMP_CONV string_ss [lem1, lem2, lem3, lem4, lem5, lem6]
                            THENC (TRY_CONV (FIND_CONV “(x:string)=(y:string)” string_EQ_CONV));
@@ -335,8 +339,9 @@ Definition assign2[allow_rebind]:
                             then (L s "low") else 0))
 End
 
-val M5 = Define
-   ‘M5 = (\s: ((num,num,num) prog_state). assign2 ((H s, assign1 s), R s))’;
+Definition M5:
+    M5 = (\s: ((num,num,num) prog_state). assign2 ((H s, assign1 s), R s))
+End
 
 Definition high[allow_rebind]:
    (high 0 = {(\s:string. if s = "high" then 0 else 0)}) /\
@@ -397,8 +402,9 @@ Definition assign2[allow_rebind]:
                state_append "out" (L s "low") (L s))
 End
 
-val M5' = Define
-   ‘M5' = (\s: ((num list,num list,num list) prog_state). assign2 ((H s, assign1 s), R s))’;
+Definition M5':
+    M5' = (\s: ((num list,num list,num list) prog_state). assign2 ((H s, assign1 s), R s))
+End
 
 Definition high[allow_rebind]:
   (high 0 = {(\s:string. if s = "high" then [0] else [])}) /\
@@ -458,9 +464,10 @@ End
 Definition low[allow_rebind]: low = {(\s:string. (0:num))}
 End
 
-val M8 = Define
-   ‘M8 = (\s: ((num,num,num) prog_state). (\s':string. if (s' = "out")
-        then w2n (((n2w (H s "high")):word2) ?? (n2w (R s "random"))) else 0))’;
+Definition M8:
+    M8 = (\s: ((num,num,num) prog_state). (\s':string. if (s' = "out")
+        then w2n (((n2w (H s "high")):word2) ?? (n2w (R s "random"))) else 0))
+End
 
 val example8_conv = SIMP_CONV arith_ss [high, low, random, lem1, lem2, lem3, w2n_11];
 
@@ -550,9 +557,10 @@ val leakage_example8' = store_thm
 val flip_example_lem = prove
   (“!(s:string). ~((\s'. s' = s) = (\s'. F))”,METIS_TAC []);
 
-val M = Define
-   ‘M = (\s: ((bool,bool,bool) prog_state). (\s':string. if (s' = "out")
-   then (if (R s "r") then (L s "l") else (H s "h")) else F))’;
+Definition M:
+    M = (\s: ((bool,bool,bool) prog_state). (\s':string. if (s' = "out")
+   then (if (R s "r") then (L s "l") else (H s "h")) else F))
+End
 
 val hidden_flip_example = store_thm
   ("hidden_flip_example",

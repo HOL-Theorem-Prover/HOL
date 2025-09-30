@@ -65,11 +65,13 @@ val BRANCH_NORM = Q.store_thm (
 (* Normalization: turn program into normal forms.                                  *)
 (*---------------------------------------------------------------------------------*)
 
-val C_def = Define `
-    C e = \k. k e`;
+Definition C_def:
+    C e = \k. k e
+End
 
-val atom_def = Define `
-    atom = \x.x`;
+Definition atom_def:
+    atom = \x.x
+End
 
 val C_ATOM_INTRO = Q.store_thm (
   "C_ATOM_INTRO",
@@ -166,7 +168,8 @@ val C_WORDS_BINOP = Q.store_thm (
       wordsTheory.WORD_HIGHER, wordsTheory.WORD_HIGHER_EQ]
   );
 
-val rsb_def = Define `rsb x y = y - x`;
+Definition rsb_def:   rsb x y = y - x
+End
 
 val C_WORDS_BINOP_SYM = Q.store_thm (
   "C_WORDS_BINOP_SYM",
@@ -290,8 +293,9 @@ val FLATTEN_LET = Q.store_thm (
 (* Definitions used in inline.sml                                            *)
 (*---------------------------------------------------------------------------*)
 
-val fun_def = Define `
-  fun = \x.x`;
+Definition fun_def:
+  fun = \x.x
+End
 
 val fun_ID = store_thm (
   "fun_ID",
@@ -369,8 +373,9 @@ val TOP_LEVEL_COND_2 = store_thm (
 (* Administrative terms: save and loc                                  *)
 (* --------------------------------------------------------------------*)
 
-val save_def = Define `
-  save = \x.x`;
+Definition save_def:
+  save = \x.x
+End
 
 val LET_SAVE = store_thm (
   "LET_SAVE",
@@ -378,8 +383,9 @@ val LET_SAVE = store_thm (
    SIMP_TAC std_ss [LET_THM, save_def]
   );
 
-val loc_def = Define `
-  loc = \x.x`;
+Definition loc_def:
+  loc = \x.x
+End
 
 val LET_LOC = store_thm (
   "LET_LOC",

@@ -72,13 +72,13 @@ val A_def =
 val A_11       = assoc "A_11"       (DB.theorems "-")
 and A_distinct = assoc "A_distinct" (DB.theorems "-");
 
-val A_ELEM_def =
- Define
-  `(A_ELEM (N l) n = EL n l)
+Definition A_ELEM_def:
+   (A_ELEM (N l) n = EL n l)
    /\
    (A_ELEM (W l) n = EL n l)
    /\
-   (A_ELEM (S l) n = EL n l)`;
+   (A_ELEM (S l) n = EL n l)
+End
 
 (*****************************************************************************)
 (* We define concatenation ( * ) on A: if v,w \in N then v*w is just the     *)
@@ -98,9 +98,8 @@ val _ = overload_on("++", ``APPEND``);
 (*****************************************************************************)
 val _ = set_fixity "CONC" (Infixl 500);
 
-val CONC_def =
- Define
-  `(N v CONC N w = N(v++w))
+Definition CONC_def:
+   (N v CONC N w = N(v++w))
    /\
    (N v CONC W w = W(v++w))
    /\
@@ -108,7 +107,8 @@ val CONC_def =
    /\
    (W v CONC a   = W v)
    /\
-   (S v CONC a   = S v)`;
+   (S v CONC a   = S v)
+End
 
 (*****************************************************************************)
 (* Overload "*" on to "CONC" for readability.                                *)
@@ -144,13 +144,13 @@ val ASSOC_CONC =
 (* Represent |w| by LEN w. HOL's built-in length function on lists           *)
 (* is LENGTH.                                                                *)
 (*****************************************************************************)
-val LEN_def =
- Define
-  `(LEN(N w) = LENGTH w)
+Definition LEN_def:
+   (LEN(N w) = LENGTH w)
    /\
    (LEN(W w) = LENGTH w)
    /\
-   (LEN(S w) = LENGTH w)`;
+   (LEN(S w) = LENGTH w)
+End
 
 (*****************************************************************************)
 (* we want to show that if w \in N then                                      *)
@@ -169,9 +169,11 @@ val LEN =
 (*****************************************************************************)
 (* We define (on A) w<=v (prefix) if there is u \in A such that w*u=v        *)
 (*****************************************************************************)
-val PREFIX_def = Define `PREFIX w v = ?u. w*u = v`;
+Definition PREFIX_def:   PREFIX w v = ?u. w*u = v
+End
 
-val STRICT_PREFIX_def = Define `STRICT_PREFIX w v = PREFIX w v /\ ~(w = v)`;
+Definition STRICT_PREFIX_def:   STRICT_PREFIX w v = PREFIX w v /\ ~(w = v)
+End
 
 (*****************************************************************************)
 (* u<w   is u is prefix of w and u/=w                                        *)
@@ -194,13 +196,13 @@ and IS_STRONG_def =
  Define
   `(IS_STRONG(W w) = F)  /\ (IS_STRONG(N w) = F)  /\ (IS_STRONG(S w) = T)`;
 
-val IS_LETTER_def =
- Define
-  `(IS_LETTER(N w) = ?l. w = [l])
+Definition IS_LETTER_def:
+   (IS_LETTER(N w) = ?l. w = [l])
    /\
    (IS_LETTER(W w) = ?l. w = [l])
    /\
-   (IS_LETTER(S w) = ?l. w = [l])`;
+   (IS_LETTER(S w) = ?l. w = [l])
+End
 
 (*****************************************************************************)
 (* WeakPSL Semantics of SEREs                                                *)
@@ -226,9 +228,8 @@ val IS_LETTER_def =
 #                     s.t. w=w_1w_2...w_j and for 1<=i<=j w_i|==wns r
 ######################################################################*)
 
-val WUS_SEM_def =
- Define
-  `(WUS_SEM v (S_BOOL b) =
+Definition WUS_SEM_def:
+   (WUS_SEM v (S_BOOL b) =
      (v = W[]) \/ (~(IS_STRONG v) /\ (LEN v = 1) /\ B_SEM (A_ELEM v 0) b))
    /\
    (WUS_SEM v (S_CAT(r1,r2)) =
@@ -248,7 +249,8 @@ val WUS_SEM_def =
    (WUS_SEM v S_EMPTY = (v = N[]) \/ (v = W[]))
    /\
    (WUS_SEM v (S_REPEAT r) =
-     ?vlist. (v = FOLDL $* (N[]) vlist) /\ EVERY (\v. WUS_SEM v r) vlist)`;
+     ?vlist. (v = FOLDL $* (N[]) vlist) /\ EVERY (\v. WUS_SEM v r) vlist)
+End
 
 (*****************************************************************************)
 (* We can now prove with fusion in the language                              *)
@@ -296,8 +298,9 @@ end;
 (*****************************************************************************)
 (* Weaken a word                                                             *)
 (*****************************************************************************)
-val WEAKEN_def =
- Define `(WEAKEN(N l) = W l) /\ (WEAKEN(W l) = W l) /\ (WEAKEN(S l) = S l)`;
+Definition WEAKEN_def:
+  (WEAKEN(N l) = W l) /\ (WEAKEN(W l) = W l) /\ (WEAKEN(S l) = S l)
+End
 
 val LEN_WEAKEN =
  prove
@@ -484,9 +487,9 @@ val FOLDL_N_NIL =
 (* Probably could get away with just the latter, but I'm too lazy to redo    *)
 (* the proofs!                                                               *)
 (*****************************************************************************)
-val WS_CATN_def =
- Define
-  `(WS_CATN 0 r = r) /\ (WS_CATN (SUC n) r = S_CAT(r, WS_CATN n r))`;
+Definition WS_CATN_def:
+   (WS_CATN 0 r = r) /\ (WS_CATN (SUC n) r = S_CAT(r, WS_CATN n r))
+End
 
 (*****************************************************************************)
 (* Theorem to connect WS_CATN and S_CATN in the LRM 1.1 semantics            *)
@@ -548,10 +551,10 @@ val WUS_SEM_CAT_REPEAT_CATN =
           THEN RW_TAC list_ss [CONC_IDENTITY]
           THEN PROVE_TAC[FOLDL_CONCAT_N]]]);
 
-val FOLDLN_def =
- Define
-  `(FOLDLN 0 f e l = e) /\
-   (FOLDLN (SUC n) f e l = FOLDLN n f (f e (HD l)) (TL l))`;
+Definition FOLDLN_def:
+   (FOLDLN 0 f e l = e) /\
+   (FOLDLN (SUC n) f e l = FOLDLN n f (f e (HD l)) (TL l))
+End
 
 val FOLDLN_LENGTH =
  prove

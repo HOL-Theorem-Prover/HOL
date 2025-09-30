@@ -4,17 +4,17 @@ Ancestors
 
 val _ = Datatype ‘compstate = CS num’;
 
-val terminated_def = Define‘
+Definition terminated_def:
   terminated (CS cs) ⇔ (pr_bnf [cs] = 1)
-’
+End
 
-val step1_def = Define‘
+Definition step1_def:
   step1 (CS cs) = CS (pr_noreduct [cs])
-’;
+End
 
-val steps_def = Define‘
+Definition steps_def:
   steps n cs = FUNPOW step1 n cs
-’;
+End
 
 Theorem steps_pr_steps[simp]:
   ∀cs. steps n (CS cs) = CS (pr_steps [n; cs])
@@ -26,17 +26,17 @@ Proof
   simp[pr_noreduct_correct]
 QED
 
-val cs_to_num_def = Define‘
+Definition cs_to_num_def:
   cs_to_num (CS cs) = pr_forcenum [cs]
-’;
+End
 
-val mk_initial_state_def = Define‘
+Definition mk_initial_state_def:
   mk_initial_state i n = CS (pr_dAPP [i; pr_church [n]])
-’;
+End
 
-val comp_count_def = Define‘
+Definition comp_count_def:
   comp_count cs = OLEAST n. terminated (steps n cs)
-’;
+End
 
 Theorem correctness_on_termination:
   (cs0 = mk_initial_state i n) ∧

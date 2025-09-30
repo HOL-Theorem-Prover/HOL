@@ -16,9 +16,10 @@ val _ = List.app (fn f => f ())
 
 (* ------------------------------------------------------------------------ *)
 
-val NextStateMIPS_def = Define`
+Definition NextStateMIPS_def:
    NextStateMIPS s0 =
-   let s1 = Next s0 in if s1.exception = NoException then SOME s1 else NONE`
+   let s1 = Next s0 in if s1.exception = NoException then SOME s1 else NONE
+End
 
 val exceptionSignalled_id = Q.prove(
    `!s. ~s.exceptionSignalled ==> (s with exceptionSignalled := F = s)`,

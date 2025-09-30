@@ -13,68 +13,76 @@ val RW1 = ONCE_REWRITE_RULE;
 
 (* s-expression assertion *)
 
-val lisp_x_def = Define `
+Definition lisp_x_def:
   (lisp_x (Val k) (a,dm,m) sym <=> (a = n2w (k * 4 + 2)) /\ k < 2 ** 30) /\
   (lisp_x (Sym s) (a,dm,m) sym <=>
     ((a - 3w) && 3w = 0w) /\ (a - 3w,s) IN sym) /\
   (lisp_x (Dot x y) (a,dm,m) sym <=> a IN dm /\ ALIGNED a /\
-    lisp_x x (m a,dm,m) sym /\ lisp_x y (m (a+4w),dm,m) sym)`;
+    lisp_x x (m a,dm,m) sym /\ lisp_x y (m (a+4w),dm,m) sym)
+End
 
 (* symbol table inv *)
 
-val string_mem_def = Define `
+Definition string_mem_def:
   (string_mem "" (a,m:word32->word8,df) = T) /\
   (string_mem (STRING c s) (a,m,df) <=> a IN df /\
-      (m a = n2w (ORD c)) /\ string_mem s (a+1w,m,df))`;
+      (m a = n2w (ORD c)) /\ string_mem s (a+1w,m,df))
+End
 
-val string_mem_dom_def = Define `
+Definition string_mem_dom_def:
   (string_mem_dom "" (a:word32) = {}) /\
-  (string_mem_dom (STRING c s) a = a INSERT string_mem_dom s (a+1w))`;
+  (string_mem_dom (STRING c s) a = a INSERT string_mem_dom s (a+1w))
+End
 
-val symbol_table_def = Define `
+Definition symbol_table_def:
   (symbol_table [] x (a,dm,m,dg,g) <=> (m a = 0w) /\ a IN dm /\ (x = {})) /\
   (symbol_table (s::xs) x (a,dm,m,dg,g) <=>
     s <> "" /\ string_mem s (a+8w,g,dg) /\
     (m a = n2w (LENGTH s)) /\ {a; a+4w} SUBSET dm /\ ((a,s) IN x) /\
       let a' = a + n2w (8 + (LENGTH s + 3) DIV 4 * 4) in
         a <+ a' /\ (m (a+4w) = a') /\
-        symbol_table xs (x DELETE (a,s)) (a',dm,m,dg,g))`;
+        symbol_table xs (x DELETE (a,s)) (a',dm,m,dg,g))
+End
 
-val symbol_table_dom_def = Define `
+Definition symbol_table_dom_def:
   (symbol_table_dom [] (a,dm,dg) <=> ALIGNED a /\ a IN dm) /\
   (symbol_table_dom (s::xs) (a,dm,dg) <=> ~(s = "") /\
     string_mem_dom s (a+8w) SUBSET dg /\ {a; a+4w} SUBSET dm /\
     w2n a + 8 + LENGTH s + 3 < 2**32 /\
     a <+ a + n2w (8 + (LENGTH s + 3) DIV 4 * 4) /\
-      symbol_table_dom xs (a + n2w (8 + (LENGTH s + 3) DIV 4 * 4),dm,dg))`;
+      symbol_table_dom xs (a + n2w (8 + (LENGTH s + 3) DIV 4 * 4),dm,dg))
+End
 
-val builtin_symbols_def = Define `
+Definition builtin_symbols_def:
   builtin_symbols =
     ["nil"; "t"; "quote"; "+"; "-"; "*"; "div"; "mod"; "<"; "car"; "cdr";
-     "cons"; "equal"; "cond"; "atomp"; "consp"; "numberp"; "symbolp"; "lambda"]`;
+     "cons"; "equal"; "cond"; "atomp"; "consp"; "numberp"; "symbolp"; "lambda"]
+End
 
-val builtin_symbols_set_def = Define `
+Definition builtin_symbols_set_def:
   builtin_symbols_set (w:word32) =
      {(w,"nil"); (w + 12w,"t"); (w + 24w,"quote"); (w + 40w,"+");
       (w + 52w,"-"); (w + 64w,"*"); (w + 76w,"div"); (w + 88w,"mod");
       (w + 100w,"<"); (w + 112w,"car"); (w + 124w,"cdr");
       (w + 136w,"cons"); (w + 148w,"equal"); (w + 164w,"cond");
       (w + 176w,"atomp"); (w + 192w,"consp"); (w + 208w,"numberp");
-      (w + 224w,"symbolp"); (w + 240w,"lambda")}`;
+      (w + 224w,"symbolp"); (w + 240w,"lambda")}
+End
 
 Definition set_add_def:
   set_add a x (b,s) <=> (b - (a:'a word), s) IN x
 End
 
-val lisp_symbol_table_def = Define `
+Definition lisp_symbol_table_def:
   lisp_symbol_table x (a,dm,m,dg,g) =
     ?symbols.
       symbol_table (builtin_symbols ++ symbols) (set_add a x) (a,dm,m,dg,g) /\
-      ALL_DISTINCT (builtin_symbols ++ symbols)`;
+      ALL_DISTINCT (builtin_symbols ++ symbols)
+End
 
 (* main heap inv *)
 
-val lisp_inv_def = Define `
+Definition lisp_inv_def:
   lisp_inv (t1,t2,t3,t4,t5,t6,l) (w1,w2,w3,w4,w5,w6,a,dm,m,sym,rest) =
     ?i u.
       let v = if u then 1 + l else 1 in
@@ -88,7 +96,8 @@ val lisp_inv_def = Define `
         lisp_x t1 (w1,d,m) sym /\ lisp_x t2 (w2,d,m) sym /\
         lisp_x t3 (w3,d,m) sym /\ lisp_x t4 (w4,d,m) sym /\
         lisp_x t5 (w5,d,m) sym /\ lisp_x t6 (w6,d,m) sym /\
-        !w. w IN d ==> ok_data (m w) d /\ ok_data (m (w + 4w)) d`;
+        !w. w IN d ==> ok_data (m w) d /\ ok_data (m (w + 4w)) d
+End
 
 
 (* --- theorems --- *)

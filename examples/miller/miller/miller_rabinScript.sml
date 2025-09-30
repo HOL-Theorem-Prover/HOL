@@ -61,25 +61,29 @@ val (modexp_def, modexp_ind) = Defn.tprove
 val _ = save_thm ("modexp_def", modexp_def);
 val _ = save_thm ("modexp_ind", modexp_ind);
 
-val witness_tail_def = Define `(witness_tail n a 0 = ~(a = 1))
+Definition witness_tail_def:   (witness_tail n a 0 = ~(a = 1))
   /\ (witness_tail n a (SUC r)
       = let a2 = (a * a) MOD n
         in if a2 = 1 then ~(a = 1) /\ ~(a = n - 1)
-           else witness_tail n a2 r)`;
+           else witness_tail n a2 r)
+End
 
-val witness_def = Define `witness n a
+Definition witness_def:   witness n a
   = let (r, s) = factor_twos (n - 1)
-    in witness_tail n (modexp n a s) r`;
+    in witness_tail n (modexp n a s) r
+End
 
-val miller_rabin_1_def = Define
-  `miller_rabin_1 n s =
+Definition miller_rabin_1_def:
+   miller_rabin_1 n s =
      if n = 2 then (T, s)
      else if (n = 1) \/ EVEN n then (F, s)
      else
        let (a, s') = prob_uniform_cut (2 * log2 (n - 1)) (n - 2) s
-       in (~witness n (a + 2), s')`;
+       in (~witness n (a + 2), s')
+End
 
-val miller_rabin_def = Define `miller_rabin n t = many (miller_rabin_1 n) t`;
+Definition miller_rabin_def:   miller_rabin n t = many (miller_rabin_1 n) t
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)

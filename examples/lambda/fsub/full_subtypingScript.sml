@@ -448,9 +448,9 @@ val _ = add_rule {block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2)),
                                  TM, HardSpace 1, TOK "<:", BreakSpace(1,0)],
                   term_name = "alg_subtyping"}
 
-val alg_subtyping_def = Define`
+Definition alg_subtyping_def:
   G |-> ty1 <: ty2 = ?n. algn_subtyping n G ty1 ty2
-`;
+End
 
 fun derive_rule th0 = let
   val (vs, base) = strip_forall (concl th0)

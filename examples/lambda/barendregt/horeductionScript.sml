@@ -278,7 +278,8 @@ val lemma3_8 = store_thm(
   Q.EXISTS_TAC `x INSERT FV N UNION FV N'` THEN
   SRW_TAC [][SUB_THM, SUB_VAR] THEN PROVE_TAC [reduction_rules]);
 
-val redex_def = Define`redex (R:'a -> 'a -> bool) t = ?u. R t u`;
+Definition redex_def:  redex (R:'a -> 'a -> bool) t = ?u. R t u
+End
 
 val (can_reduce_rules, can_reduce_ind, can_reduce_cases) =
   Hol_reln`(!t. redex R t ==> can_reduce R t) /\
@@ -292,7 +293,8 @@ val can_reduce_reduces = store_thm(
   GEN_TAC THEN HO_MATCH_MP_TAC can_reduce_ind THEN SRW_TAC [][redex_def] THEN
   PROVE_TAC [compat_closure_rules]);
 
-val normal_form_def = Define`normal_form R t = ~can_reduce R t`;
+Definition normal_form_def:  normal_form R t = ~can_reduce R t
+End
 
 (*---------------------------------------------------------------------------*
  *  compat_closure and LAMl/appstar

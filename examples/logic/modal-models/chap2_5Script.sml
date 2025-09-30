@@ -25,24 +25,28 @@ val BIGCONJ_EXISTS_DIST_TYPE = store_thm(
 
 (* ultrafilter extensions *)
 
-val HM_class_def = Define`
+Definition HM_class_def:
 HM_class K = (!M M' w w'. (M IN K /\ M' IN K /\ w IN M.frame.world /\ w' IN M'.frame.world) ==>
-(modal_eq M M' w w' ==> bisim_world M M' w w'))`;
+(modal_eq M M' w w' ==> bisim_world M M' w w'))
+End
 
-val satisfiable_in_def = Define`
+Definition satisfiable_in_def:
 satisfiable_in Σ X M <=> X SUBSET M.frame.world /\
-                         (?x. x IN X /\ (!form. form IN Σ ==> satis M x form))`;
+                         (?x. x IN X /\ (!form. form IN Σ ==> satis M x form))
+End
 
-val fin_satisfiable_in_def = Define`
-fin_satisfiable_in Σ X M <=> (!S. S SUBSET Σ /\ FINITE S ==> satisfiable_in S X M)`;
+Definition fin_satisfiable_in_def:
+fin_satisfiable_in Σ X M <=> (!S. S SUBSET Σ /\ FINITE S ==> satisfiable_in S X M)
+End
 
-val M_sat_def = Define`
+Definition M_sat_def:
 M_sat M ⇔
             ∀w Σ.
                 (w ∈ M.frame.world /\
                 fin_satisfiable_in Σ
                   {v | v ∈ M.frame.world ∧ M.frame.rel w v} M) ⇒
-                satisfiable_in Σ {v | v ∈ M.frame.world ∧ M.frame.rel w v} M`;
+                satisfiable_in Σ {v | v ∈ M.frame.world ∧ M.frame.rel w v} M
+End
 
 
 
@@ -189,11 +193,13 @@ QED
 
 
 
-val can_see_def = Define`
-can_see M X = {w | w IN M.frame.world /\ ?x. x IN X /\ M.frame.rel w x}`;
+Definition can_see_def:
+can_see M X = {w | w IN M.frame.world /\ ?x. x IN X /\ M.frame.rel w x}
+End
 
-val only_see_def = Define`
-only_see M X = {w | w IN M.frame.world /\ (!x. x IN M.frame.world /\ M.frame.rel w x ==> x IN X)}`;
+Definition only_see_def:
+only_see M X = {w | w IN M.frame.world /\ (!x. x IN M.frame.world /\ M.frame.rel w x ==> x IN X)}
+End
 
 val valt_can_see = store_thm(
 "valt_can_see",
@@ -221,10 +227,11 @@ simp[only_see_def,can_see_def,DIFF_DEF,EXTENSION] >> rw[] >> eq_tac >> rw[]
 
 (* exercise 2.5.5 *)
 
-val UE_rel_def = Define`
+Definition UE_rel_def:
 UE_rel M u v <=> ultrafilter u M.frame.world /\
                  ultrafilter v M.frame.world /\
-                 (!X. X IN v ==> (can_see M X) IN u)`;
+                 (!X. X IN v ==> (can_see M X) IN u)
+End
 
 
 val ultrafilter_DIFF = store_thm(
@@ -267,10 +274,11 @@ metis_tac[])
 `M.frame.world DIFF (only_see M (M.frame.world DIFF X)) IN u` by metis_tac[] >>
 metis_tac[can_only_dual]));
 
-val UE_def = Define`
+Definition UE_def:
   UE M = <| frame := <| world := {u | ultrafilter u M.frame.world};
                         rel := UE_rel M |>;
-            valt := \p v. (ultrafilter v M.frame.world /\ ((M.valt p) ∩ M.frame.world) IN v) |>`;
+            valt := \p v. (ultrafilter v M.frame.world /\ ((M.valt p) ∩ M.frame.world) IN v) |>
+End
 
 
 val only_see_INTER = store_thm(

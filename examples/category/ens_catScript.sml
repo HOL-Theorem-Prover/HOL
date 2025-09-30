@@ -6,11 +6,13 @@ Libs
 
 val _ = ParseExtras.temp_loose_equality()
 
-val HasFunType_def = Define`
-  HasFunType f X Y = extensional f X ∧ ∀x. x ∈ X ⇒ f x ∈ Y`;
+Definition HasFunType_def:
+  HasFunType f X Y = extensional f X ∧ ∀x. x ∈ X ⇒ f x ∈ Y
+End
 
-val IsTypedFun_def = Define`
-  IsTypedFun f = HasFunType f.map f.dom f.cod`;
+Definition IsTypedFun_def:
+  IsTypedFun f = HasFunType f.map f.dom f.cod
+End
 
 val TypedFun_ext = Q.store_thm(
 "TypedFun_ext",
@@ -22,9 +24,10 @@ srw_tac [][FUN_EQ_THM] >>
 Cases_on `x ∈ f.dom` >> srw_tac [][] >>
 pop_assum mp_tac >> srw_tac [][]);
 
-val TypedGraphFun_def = Define`
+Definition TypedGraphFun_def:
   TypedGraphFun (X,Y) f = <|
-    dom := X; cod := Y; map := restrict f X |>`;
+    dom := X; cod := Y; map := restrict f X |>
+End
 
 val TypedGraphFun_components = Q.store_thm(
 "TypedGraphFun_components",
@@ -45,11 +48,13 @@ val TypedGraphFun_Ext = Q.store_thm(
 `∀X Y f X' Y' f'. (TypedGraphFun (X,Y) f = TypedGraphFun (X',Y') f') ⇔ ((X = X') ∧ (Y = Y') ∧ ∀x. x ∈ X ⇒ (f x = f' x))`,
 srw_tac [][TypedGraphFun_def,restrict_def,EQ_IMP_THM] >> metis_tac []);
 
-val ComposeFun_def = Define`
-  ComposeFun (X,Y) g f = restrict ((restrict g Y) o f) X`;
+Definition ComposeFun_def:
+  ComposeFun (X,Y) g f = restrict ((restrict g Y) o f) X
+End
 
-val ComposeTypedFun_def = Define`
-  ComposeTypedFun = compose (λf g. ComposeFun (f.dom,g.dom) g.map f.map)`;
+Definition ComposeTypedFun_def:
+  ComposeTypedFun = compose (λf g. ComposeFun (f.dom,g.dom) g.map f.map)
+End
 
 val _ = overload_on("o",``λg f. ComposeTypedFun f g``);
 val _ = overload_on("o",``λg f. (combin$o) g f``);
@@ -63,8 +68,9 @@ val ComposeTypedFun_components = Q.store_thm(
 srw_tac [][ComposeTypedFun_def]);
 val _ = export_rewrites["ComposeTypedFun_components"];
 
-val IdFun_def = Define`
-  IdFun s = restrict I s`;
+Definition IdFun_def:
+  IdFun s = restrict I s
+End
 
 val IdFunAp = Q.store_thm(
 "IdFunAp",
@@ -107,12 +113,13 @@ val _ = export_rewrites["ComposeFunType"];
 
 val _ = overload_on("IsTypedFunIn",``λU f. f.dom ∈ U ∧ f.cod ∈ U ∧ IsTypedFun f``);
 
-val ens_cat_def = Define`
+Definition ens_cat_def:
   ens_cat U = mk_cat <|
     obj := U ;
     mor := {f | IsTypedFunIn U f} ;
     id_map := IdFun ;
-    comp := λf g. (g o f).map |>`;
+    comp := λf g. (g o f).map |>
+End
 
 val is_category_ens_cat = Q.store_thm(
 "is_category_ens_cat",
@@ -248,11 +255,12 @@ srw_tac [][]
 type_of it
 *)
 
-val pre_inclusion_functor_def = Define`
+Definition pre_inclusion_functor_def:
   pre_inclusion_functor u1 u2 = <|
     dom := ens_cat u1;
     cod := ens_cat u2;
-    map := I|>`;
+    map := I|>
+End
 
 val pre_inclusion_functor_components = Q.store_thm(
 "pre_inclusion_functor_components",
@@ -268,8 +276,9 @@ pop_assum mp_tac >>
 fsrw_tac [][morphism_component_equality]);
 val _ = export_rewrites["pre_inclusion_functor_components"];
 
-val inclusion_functor_def = Define`
-  inclusion_functor u1 u2 = mk_functor (pre_inclusion_functor u1 u2)`;
+Definition inclusion_functor_def:
+  inclusion_functor u1 u2 = mk_functor (pre_inclusion_functor u1 u2)
+End
 
 val inclusion_functor_components = Q.store_thm(
 "inclusion_functor_components",

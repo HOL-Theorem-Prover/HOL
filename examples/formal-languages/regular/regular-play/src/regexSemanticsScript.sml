@@ -4,13 +4,13 @@ Theory regexSemantics
 (* -------------------------------------------------------------------------------------------------- *)
 val _ = Datatype regexDatatypes.Reg_datatype_quot;
 
-val language_of_def = Define `
+Definition language_of_def:
          (language_of (Eps)        = {[]}                                                       ) /\
          (language_of (Sym (c:'a)) = {[c]}                                                      ) /\
          (language_of (Alt r1 r2)  = { w      | w IN (language_of r1) \/ w IN (language_of r2) }) /\
          (language_of (Seq r1 r2)  = { u ++ v | u IN (language_of r1) /\ v IN (language_of r2) }) /\
          (language_of (Rep r)      = { FLAT l | EVERY (\w. w IN (language_of r)) l }            )
-`;
+End
 
 
 

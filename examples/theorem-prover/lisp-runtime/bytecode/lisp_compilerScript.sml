@@ -32,57 +32,69 @@ val _ = Hol_datatype `
                 io_out : string ;
                 ok : bool |>`;
 
-val iLENGTH_def = Define `
+Definition iLENGTH_def:
   (iLENGTH il [] = 0) /\
-  (iLENGTH il (x::xs) = il (x:bc_inst_type) + iLENGTH il xs)`;
+  (iLENGTH il (x::xs) = il (x:bc_inst_type) + iLENGTH il xs)
+End
 
 val iLENGTH_APPEND = prove(
   ``!xs ys il. iLENGTH il (xs ++ ys) = iLENGTH il xs + iLENGTH il ys``,
   Induct \\ SRW_TAC [] [iLENGTH_def,ADD_ASSOC]);
 
-val var_lookup_def = Define `
+Definition var_lookup_def:
   (var_lookup n v [] = NONE) /\
-  (var_lookup n v (x::xs) = if x = ssVAR v then SOME n else var_lookup (n+1:num) v xs)`;
+  (var_lookup n v (x::xs) = if x = ssVAR v then SOME n else var_lookup (n+1:num) v xs)
+End
 
-val gen_pops_def = Define `
-  gen_pops n = if n = 0 then [] else [iPOPS n]`;
+Definition gen_pops_def:
+  gen_pops n = if n = 0 then [] else [iPOPS n]
+End
 
-val gen_popn_def = Define `
-  gen_popn n = if n = 0 then [] else gen_pops (n-1) ++ [iPOP]`;
+Definition gen_popn_def:
+  gen_popn n = if n = 0 then [] else gen_pops (n-1) ++ [iPOP]
+End
 
-val n_times_def = Define `
+Definition n_times_def:
   (n_times 0 x = []) /\
-  (n_times (SUC n) x = x::n_times n x)`;
+  (n_times (SUC n) x = x::n_times n x)
+End
 
-val BC_return_code_def = Define `
+Definition BC_return_code_def:
   (BC_return_code F a = []) /\
-  (BC_return_code T a = gen_pops (LENGTH a - 1) ++ [iRETURN])`;
+  (BC_return_code T a = gen_pops (LENGTH a - 1) ++ [iRETURN])
+End
 
-val BC_return_def = Define `
+Definition BC_return_def:
   BC_return ret (code,a:stack_slot list,q,bc) =
     (code ++ BC_return_code ret a,a,
-     q + iLENGTH bc.instr_length (code ++ BC_return_code ret a),bc)`;
+     q + iLENGTH bc.instr_length (code ++ BC_return_code ret a),bc)
+End
 
-val BC_call_aux_def = Define `
+Definition BC_call_aux_def:
   (BC_call_aux F (fc,n,SOME pos) = [iCALL pos]) /\
   (BC_call_aux T (fc,n,SOME pos) = [iJUMP pos]) /\
   (BC_call_aux F (fc,n,NONE) = [iCONST_NUM n; iCONST_SYM fc; iCALL_SYM]) /\
-  (BC_call_aux T (fc,n,NONE) = [iCONST_NUM n; iCONST_SYM fc; iJUMP_SYM])`;
+  (BC_call_aux T (fc,n,NONE) = [iCONST_NUM n; iCONST_SYM fc; iJUMP_SYM])
+End
 
-val BC_call_def = Define `
+Definition BC_call_def:
   (BC_call b (fc,n,NONE) = BC_call_aux b (fc,n,NONE)) /\
   (BC_call b (fc,n,SOME (pos,m)) = if m = n then BC_call_aux b (fc,n,SOME pos)
-                                            else BC_call_aux b (fc,n,NONE))`;
+                                            else BC_call_aux b (fc,n,NONE))
+End
 
-val BC_ADD_CONST_def = Define `
-  BC_ADD_CONST bc x = bc with consts := (bc.consts ++ [x])`;
+Definition BC_ADD_CONST_def:
+  BC_ADD_CONST bc x = bc with consts := (bc.consts ++ [x])
+End
 
-val BC_FAIL_def = Define `
-  BC_FAIL bc = bc with ok := F`;
+Definition BC_FAIL_def:
+  BC_FAIL bc = bc with ok := F
+End
 
-val FUN_LOOKUP_def = Define `
+Definition FUN_LOOKUP_def:
   (FUN_LOOKUP [] name = NONE) /\
-  (FUN_LOOKUP ((x,y)::xs) name = if x = name then SOME y else FUN_LOOKUP xs name)`;
+  (FUN_LOOKUP ((x,y)::xs) name = if x = name then SOME y else FUN_LOOKUP xs name)
+End
 
 val (BC_ev_rules,BC_ev_ind,BC_ev_cases) = Hol_reln `
   (* constant *)
@@ -265,17 +277,19 @@ val (BC_ev_rules,BC_ev_ind,BC_ev_cases) = Hol_reln `
 val PULL_EXISTS_IMP = METIS_PROVE [] ``((?x. P x) ==> Q) = (!x. P x ==> Q)``;
 val PULL_FORALL_IMP = METIS_PROVE [] ``(Q ==> !x. P x) = (!x. Q ==> P x)``;
 
-val BC_JUMPS_OK_def = Define `
+Definition BC_JUMPS_OK_def:
   BC_JUMPS_OK bc =
     (!a. bc.instr_length (iJUMP a) = bc.instr_length (iJUMP 0)) /\
-    (!a. bc.instr_length (iJNIL a) = bc.instr_length (iJNIL 0))`;
+    (!a. bc.instr_length (iJNIL a) = bc.instr_length (iJNIL 0))
+End
 
-val BC_CODE_OK_def = Define `
+Definition BC_CODE_OK_def:
   BC_CODE_OK bc =
     (!h. 0 < bc.instr_length h) /\
     (!a. bc.instr_length (iJUMP a) = bc.instr_length (iJUMP 0)) /\
     (!a. bc.instr_length (iJNIL a) = bc.instr_length (iJNIL 0)) /\
-    !i. bc.code_end <= i ==> (bc.code i = NONE)`;
+    !i. bc.code_end <= i ==> (bc.code i = NONE)
+End
 
 val NOT_isFun = prove(
   ``!fc. ~isFun fc = !f. ~(fc = Fun f)``,
@@ -347,9 +361,10 @@ in
 end;
 
 
-val SUM_def = Define `
+Definition SUM_def:
   (SUM [] = 0) /\
-  (SUM (x::xs) = x + SUM xs)`;
+  (SUM (x::xs) = x + SUM xs)
+End
 
 Definition term_depth_def:
 (term_depth (Const _) = 1) /\
@@ -530,15 +545,17 @@ val BC_ev_TOTAL = store_thm("BC_ev_TOTAL",
   ``!ret t a q bc. BC_JUMPS_OK bc ==> ?y. BC_ev ret (t,a,q,bc) y``,
   FULL_SIMP_TAC std_ss [EXISTS_PROD] \\ METIS_TAC [BC_ev_TOTAL_LEMMA]);
 
-val WRITE_BYTECODE_def = Define `
+Definition WRITE_BYTECODE_def:
    (WRITE_BYTECODE bc p [] = bc) /\
    (WRITE_BYTECODE bc p ((c:bc_inst_type)::cs) =
-      (WRITE_BYTECODE (bc with code := ((p =+ SOME c) bc.code)) ((p:num) + bc.instr_length c) cs))`;
+      (WRITE_BYTECODE (bc with code := ((p =+ SOME c) bc.code)) ((p:num) + bc.instr_length c) cs))
+End
 
-val BC_ev_fun_def = Define `
+Definition BC_ev_fun_def:
   BC_ev_fun (params,body,bc) =
     @result. if BC_JUMPS_OK bc then BC_ev T (body,MAP ssVAR (REVERSE params),bc.code_end,bc) result
-                               else (result = ([],[],bc.code_end,bc))`;
+                               else (result = ([],[],bc.code_end,bc))
+End
 
 val BC_ev_fun_IMP = prove(
   ``(((BC_ev_fun (params,body,bc) = result)) /\ BC_JUMPS_OK bc ==>
@@ -552,45 +569,52 @@ val BC_ev_fun_thm = prove(
   SIMP_TAC std_ss [BC_ev_fun_def]
   \\ METIS_TAC [BC_ev_DETERMINISTIC,BC_ev_TOTAL,BC_JUMPS_OK_def,BC_CODE_OK_def]);
 
-val BC_PRINT_def = Define `
-  BC_PRINT bc x = bc with io_out := (bc.io_out ++ x)`;
+Definition BC_PRINT_def:
+  BC_PRINT bc x = bc with io_out := (bc.io_out ++ x)
+End
 
-val BC_STORE_COMPILED_def = Define `
-  BC_STORE_COMPILED bc fc x = bc with compiled := (fc,x)::bc.compiled`;
+Definition BC_STORE_COMPILED_def:
+  BC_STORE_COMPILED bc fc x = bc with compiled := (fc,x)::bc.compiled
+End
 
-val BC_ONLY_COMPILE_def = Define `
+Definition BC_ONLY_COMPILE_def:
   BC_ONLY_COMPILE (params,body,bc) =
     let (new_code,a2,q2,bc) = BC_ev_fun (params,body,bc) in
     let bc = WRITE_BYTECODE bc bc.code_end new_code in
     let bc = bc with code_end := bc.code_end + iLENGTH bc.instr_length new_code in
-      bc`;
+      bc
+End
 
-val BC_COMPILE_def = Define `
+Definition BC_COMPILE_def:
   BC_COMPILE (fname,params,body,bc) =
     let bc = BC_STORE_COMPILED bc fname (bc.code_end,LENGTH params) in
-      BC_ONLY_COMPILE (params,body,bc)`
+      BC_ONLY_COMPILE (params,body,bc)
+End
 
 val BC_COMPILE_thm = RW [BC_ONLY_COMPILE_def] BC_COMPILE_def;
 
 
 (* semantics *)
 
-val CONTAINS_BYTECODE_def = Define `
+Definition CONTAINS_BYTECODE_def:
   (CONTAINS_BYTECODE bc p [] = T) /\
   (CONTAINS_BYTECODE bc p (c::cs) =
      (bc.code p = SOME c) /\
-     CONTAINS_BYTECODE bc (p + bc.instr_length (c:bc_inst_type)) cs)`;
+     CONTAINS_BYTECODE bc (p + bc.instr_length (c:bc_inst_type)) cs)
+End
 
-val BC_STEP_def = Define `
-  BC_STEP bc p = p + bc.instr_length (THE (bc.code p))`;
+Definition BC_STEP_def:
+  BC_STEP bc p = p + bc.instr_length (THE (bc.code p))
+End
 
-val BC_SUBSTATE_def = Define `
+Definition BC_SUBSTATE_def:
   BC_SUBSTATE bc1 bc2 =
     (!i. BC_CODE_OK bc1 /\ ~(bc1.code i = NONE) ==> (bc2.code i = bc1.code i)) /\
     (!i. ~(FUN_LOOKUP bc1.compiled i = NONE) ==> (FUN_LOOKUP bc2.compiled i = FUN_LOOKUP bc1.compiled i)) /\
     (bc2.instr_length = bc1.instr_length) /\
     (BC_CODE_OK bc1 ==> BC_CODE_OK bc2) /\
-    ?qs. bc2.consts = bc1.consts ++ qs`;
+    ?qs. bc2.consts = bc1.consts ++ qs
+End
 
 val (iSTEP_rules,iSTEP_ind,iSTEP_cases) =
  Hol_reln
@@ -842,17 +866,19 @@ val iSTEP_BC_SUBSTATE = prove(
 
 (* prove that translation is semantics preserving *)
 
-val VARS_IN_STACK_def = Define `
+Definition VARS_IN_STACK_def:
   VARS_IN_STACK env stack alist_placement =
     !v. v IN FDOM env ==>
         ?n. (var_lookup 0 v alist_placement = SOME n) /\
             (env ' v = EL n stack) /\
-            n < LENGTH stack`;
+            n < LENGTH stack
+End
 
-val STACK_INV_def = Define `
+Definition STACK_INV_def:
   STACK_INV env stack alist_placement =
     VARS_IN_STACK env stack alist_placement /\
-    LENGTH alist_placement <= LENGTH stack`;
+    LENGTH alist_placement <= LENGTH stack
+End
 
 val var_lookup_aux_thm = prove(
   ``!a v n k.
@@ -994,7 +1020,7 @@ val STACK_INV_VarBind = prove(
   SIMP_TAC std_ss [STACK_INV_def,STACK_INV_lemma,APPEND,VARS_IN_STACK_VarBind,
     isVal_def,LENGTH,LENGTH_APPEND,LENGTH_REVERSE,LENGTH_MAP]);
 
-val BC_FNS_ASSUM_def = Define `
+Definition BC_FNS_ASSUM_def:
   BC_FNS_ASSUM fns bc =
     !fc params exp.
        fc IN FDOM fns /\ (fns ' fc = (params,exp)) ==>
@@ -1003,17 +1029,20 @@ val BC_FNS_ASSUM_def = Define `
          (FUN_LOOKUP bc.compiled fc = SOME (p,LENGTH params)) /\
          BC_ev T (exp,MAP ssVAR (REVERSE params),p,bc4)
                  (pcode,a5,p + iLENGTH bc.instr_length pcode,bc5) /\
-         BC_SUBSTATE bc5 bc`;
+         BC_SUBSTATE bc5 bc
+End
 
-val BC_REFINES_def = Define `
+Definition BC_REFINES_def:
   BC_REFINES (fns,io) bc =
     BC_FNS_ASSUM fns bc /\ (bc.io_out = io) /\ BC_CODE_OK bc /\
     ({ j |j| ~(FUN_LOOKUP bc.compiled j = NONE)} = FDOM fns) /\
-    !j. bc.code_end <= j ==> (bc.code j = NONE)`;
+    !j. bc.code_end <= j ==> (bc.code j = NONE)
+End
 
-val iSTEP_ret_state_def = Define `
+Definition iSTEP_ret_state_def:
   iSTEP_ret_state a2 (result,stack,r,rs,bc) =
-    (result::DROP (LENGTH a2) stack,r,rs,bc)`;
+    (result::DROP (LENGTH a2) stack,r,rs,bc)
+End
 
 val gen_pops_thm = prove(
   ``CONTAINS_BYTECODE bc p (gen_pops (LENGTH xs)) ==>
@@ -2794,7 +2823,7 @@ val _ = save_thm("BC_ev_thm",BC_ev_thm);
 
 (* translation: term2sexp *)
 
-val prim2sym_def = Define `
+Definition prim2sym_def:
   (prim2sym opCONS = "CONS") /\
   (prim2sym opEQUAL = "EQUAL") /\
   (prim2sym opLESS = "<") /\
@@ -2805,27 +2834,31 @@ val prim2sym_def = Define `
   (prim2sym opNATP = "NATP") /\
   (prim2sym opSYMBOLP = "SYMBOLP") /\
   (prim2sym opCAR = "CAR") /\
-  (prim2sym opCDR = "CDR")`;
+  (prim2sym opCDR = "CDR")
+End
 
-val macro_names_def = Define `
+Definition macro_names_def:
   macro_names =
     ["LET";"LET*";"COND";"AND";"FIRST";"SECOND";
-     "THIRD";"FOURTH";"FIFTH";"LIST";"DEFUN"]`;
+     "THIRD";"FOURTH";"FIFTH";"LIST";"DEFUN"]
+End
 
-val reserved_names_def = Define `
+Definition reserved_names_def:
   reserved_names =
     ["QUOTE";"IF";"OR";"DEFINE";"PRINT";"ERROR";"FUNCALL";
      "CAR";"CDR";"SYMBOLP";"NATP";"CONSP";"+";"-";
-     "SYMBOL-<";"<";"EQUAL";"CONS"] ++ macro_names`;
+     "SYMBOL-<";"<";"EQUAL";"CONS"] ++ macro_names
+End
 
-val func2sexp_def = Define `
+Definition func2sexp_def:
   (func2sexp (PrimitiveFun p) = [Sym (prim2sym p)]) /\
   (func2sexp (Define) = [Sym "DEFINE"]) /\
   (func2sexp (Print) = [Sym "PRINT"]) /\
   (func2sexp (Error) = [Sym "ERROR"]) /\
   (func2sexp (Funcall) = [Sym "FUNCALL"]) /\
   (func2sexp (Fun f) =
-     if MEM f reserved_names then [Val 0; Sym f] else [Sym f])`;
+     if MEM f reserved_names then [Val 0; Sym f] else [Sym f])
+End
 
 Definition term2sexp_def:
   (term2sexp (Const s) = list2sexp [Sym "QUOTE"; s]) /\
@@ -2847,9 +2880,10 @@ Definition term2sexp_def:
   (term2sexp (Defun fname ps s) = list2sexp [Sym "DEFUN"; Sym fname; list2sexp (MAP Sym ps); s])
 End
 
-val fun_name_ok_def = Define `
+Definition fun_name_ok_def:
   (fun_name_ok (Fun f) = ~MEM f reserved_names) /\
-  (fun_name_ok _ = T)`;
+  (fun_name_ok _ = T)
+End
 
 Definition no_bad_names_def:
   (no_bad_names (Const s) = T) /\
@@ -2910,18 +2944,20 @@ val sexp2term_term2sexp = store_thm("sexp2term_term2sexp",
         getSym_def,sym2prim_def,sexp2list_list2sexp,MAP_MAP_o,combinTheory.o_DEF]
     \\ MATCH_MP_TAC MAP_EQ_IMP \\ FULL_SIMP_TAC std_ss [EVERY_MEM]));
 
-val verified_string_def = Define `
+Definition verified_string_def:
   verified_string xs =
     if ~ALL_DISTINCT (MAP FST xs) then NONE else
     if ~EVERY (\(name,params,body). no_bad_names body) xs then NONE else
       SOME (FLAT (MAP ( \ (name,params,body). sexp2string
         (list2sexp [Sym "DEFUN"; Sym name;
-           list2sexp (MAP Sym params); term2sexp body]) ++ "\n") xs))`
+           list2sexp (MAP Sym params); term2sexp body]) ++ "\n") xs))
+End
 
 
 (* translation sexp2sexp *)
 
-val sfix_def = Define `sfix x = Sym (getSym x)`;
+Definition sfix_def:   sfix x = Sym (getSym x)
+End
 
 val IMP_isDot = prove(
   ``!x. ~(isVal x) /\ ~(isSym x) ==> isDot x``,

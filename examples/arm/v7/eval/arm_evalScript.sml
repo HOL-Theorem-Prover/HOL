@@ -27,7 +27,7 @@ val _ = temp_overload_on ("return", ``constT``);
 
 (* ------------------------------------------------------------------------ *)
 
-val ptree_read_word_def = Define`
+Definition ptree_read_word_def:
   ptree_read_word (prog:word8 ptree) (a:word32) : word32 M =
   let pc = w2n a in
    (case prog ' pc
@@ -41,9 +41,10 @@ val ptree_read_word_def = Define`
                  | NONE => errorT "couldn't fetch an instruction")
              | NONE => errorT "couldn't fetch an instruction")
          | NONE => errorT "couldn't fetch an instruction")
-     | NONE => errorT "couldn't fetch an instruction")`;
+     | NONE => errorT "couldn't fetch an instruction")
+End
 
-val ptree_read_halfword_def = Define`
+Definition ptree_read_halfword_def:
   ptree_read_halfword (prog:word8 ptree) (a:word32) : word16 M =
   let pc = w2n a in
     case prog ' pc
@@ -51,7 +52,8 @@ val ptree_read_halfword_def = Define`
        (case prog ' (pc + 1)
         of SOME b2 => constT (word16 [b1; b2])
          | NONE => errorT "couldn't fetch an instruction")
-     | NONE => errorT "couldn't fetch an instruction"`;
+     | NONE => errorT "couldn't fetch an instruction"
+End
 
 Definition ptree_arm_next_def[nocompute]:
    ptree_arm_next ii (x:string # Encoding # word4 # ARMinstruction)
@@ -59,14 +61,15 @@ Definition ptree_arm_next_def[nocompute]:
    arm_instr ii (SND x)
 End
 
-val attempt_def = Define`
+Definition attempt_def:
   attempt c f g =
   \s:arm_state.
       case f s
       of Error e => ValueState (c, e) s
-       | ValueState v s' => g v s'`;
+       | ValueState v s' => g v s'
+End
 
-val ptree_arm_loop_def = Define`
+Definition ptree_arm_loop_def:
   ptree_arm_loop ii cycle prog t : (num # string) M =
     if t = 0 then
       constT (cycle, "finished")
@@ -78,21 +81,23 @@ val ptree_arm_loop_def = Define`
           (\pc:word32.
               ptree_arm_next ii x pc cycle >>=
               (\u:unit.
-                 ptree_arm_loop ii (cycle + 1) prog (t - 1))))`;
+                 ptree_arm_loop ii (cycle + 1) prog (t - 1))))
+End
 
-val ptree_arm_run_def = Define`
+Definition ptree_arm_run_def:
   ptree_arm_run prog state t =
     case ptree_arm_loop <| proc := 0 |> 0 prog t state
     of Error e => (e, NONE)
      | ValueState (c,v) s =>
-          ("at cycle " ++ num_to_dec_string c ++ ": " ++ v, SOME s)`;
+          ("at cycle " ++ num_to_dec_string c ++ ": " ++ v, SOME s)
+End
 
 (* ------------------------------------------------------------------------ *)
 
 Definition proc_def[nocompute]:   proc (n:num) f = \(i,x). if i = n then f x else ARB
 End
 
-val mk_arm_state_def = Define`
+Definition mk_arm_state_def:
   mk_arm_state arch regs psrs md mem =
     <| registers := proc 0 regs;
        psrs := proc 0 psrs;
@@ -112,11 +117,12 @@ val mk_arm_state_def = Define`
                                      IE := T; TE := F; NMFI := T;
                                      EE := T; VE := F |>)) o
              cp14_fupd (CP14reg_TEEHBR_fupd (K 0xF0000000w))));
-       monitors := <| ClearExclusiveByAddress := (K (constE ())) |> |>`;
+       monitors := <| ClearExclusiveByAddress := (K (constE ())) |> |>
+End
 
 (* ------------------------------------------------------------------------ *)
 
-val registers_def = Define`
+Definition registers_def:
    registers r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13
              r14 r15 r16 r17 r18 r19 r20 r21 r22 r23 r24 r25
              r26 r27 r28 r29 r30 r31 (r32:word32) =
@@ -124,11 +130,13 @@ val registers_def = Define`
       RName_CASE
          name r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13
               r14 r15 r16 r17 r18 r19 r20 r21 r22 r23 r24 r25
-              r26 r27 r28 r29 r30 r31 r32`
+              r26 r27 r28 r29 r30 r31 r32
+End
 
-val psrs_def = Define`
+Definition psrs_def:
    psrs r0 r1 r2 r3 r4 r5 (r6:ARMpsr) =
-   \name. PSRName_CASE name r0 r1 r2 r3 r4 r5 r6`
+   \name. PSRName_CASE name r0 r1 r2 r3 r4 r5 r6
+End
 
 (* ------------------------------------------------------------------------ *)
 

@@ -10,18 +10,21 @@ val RW1 = ONCE_REWRITE_RULE;
 
 (* -- definitions -- *)
 
-val cheney_alloc_gc_def = Define `
+Definition cheney_alloc_gc_def:
   cheney_alloc_gc (i,e,root,l,u,m) =
-    if i < e then (i,e,root,l,u,m) else cheney_collector(i,e,root,l,u,m)`;
+    if i < e then (i,e,root,l,u,m) else cheney_collector(i,e,root,l,u,m)
+End
 
-val cheney_alloc_aux_def = Define `
+Definition cheney_alloc_aux_def:
   cheney_alloc_aux (i,e,root,l,u,m) d =
     if i = e then (i,e,0::TL root,l,u,m) else
       let m = (i =+ DATA(HD root,HD (TL root),d)) m in
-        (i+1,e,i::TL root,l,u,m)`;
+        (i+1,e,i::TL root,l,u,m)
+End
 
-val cheney_alloc_def = Define `
-  cheney_alloc(i,e,root,l,u,m) d = cheney_alloc_aux (cheney_alloc_gc (i,e,root,l,u,m)) d`;
+Definition cheney_alloc_def:
+  cheney_alloc(i,e,root,l,u,m) d = cheney_alloc_aux (cheney_alloc_gc (i,e,root,l,u,m)) d
+End
 
 (* -- helper -- *)
 
@@ -37,7 +40,8 @@ fun FORCE_PBETA_CONV tm = let
 
 (* -- theorems -- *)
 
-val bijection_def = Define `bijection g = ONTO g /\ ONE_ONE g`;
+Definition bijection_def:   bijection g = ONTO g /\ ONE_ONE g
+End
 
 val bijection_swap = prove(
   ``!i j. bijection (swap i j)``,
@@ -60,21 +64,25 @@ val bijection_bijection = prove(
 
 val basic_abs = basic_abs_def
 
-val ok_abs_def = Define `
+Definition ok_abs_def:
   ok_abs (r,h:(num|->(num#num#'a)),l:num) =
     ~(0 IN FDOM h) /\ FEVERY (\(x,y,z,d). {y;z} SUBSET0 FDOM h) h /\
-    (!k. MEM k r /\ ~(k = 0) ==> k IN FDOM h)`;
+    (!k. MEM k r /\ ~(k = 0) ==> k IN FDOM h)
+End
 
-val ch_set_def = Define `ch_set h (x,y,z,d) = (h ' x = (y,z,d)) /\ x IN FDOM h`;
+Definition ch_set_def:   ch_set h (x,y,z,d) = (h ' x = (y,z,d)) /\ x IN FDOM h
+End
 
-val abstract_def = Define `
-  abstract(b,m) = { (b(x), b(y), b(z), d) |(x,y,z,d)| m(x) = DATA(y,z,d) }`;
+Definition abstract_def:
+  abstract(b,m) = { (b(x), b(y), b(z), d) |(x,y,z,d)| m(x) = DATA(y,z,d) }
+End
 
-val ch_inv_def = Define `
+Definition ch_inv_def:
   ch_inv (r,h,l) (i,e,c,l',u,m) =
     ok_state (i,e,c,l,u,m) /\ ok_abs (r,h,l) /\ (l = l') /\
     ?b. bijection b /\ (b 0 = 0) /\ (MAP b c = r) /\
-        reachables r (ch_set(h)) SUBSET abstract(b,m) /\ abstract(b,m) SUBSET ch_set(h)`;
+        reachables r (ch_set(h)) SUBSET abstract(b,m) /\ abstract(b,m) SUBSET ch_set(h)
+End
 
 val apply_abstract = prove(
   ``!b m. bijection b ==> (apply b (abstract(b,m)) = basic_abs m)``,
@@ -108,7 +116,8 @@ val INFINITE_num = prove(
   REWRITE_TAC [INFINITE_UNIV] \\ Q.EXISTS_TAC `SUC`
   \\ SIMP_TAC std_ss []  \\ Q.EXISTS_TAC `0` \\ DECIDE_TAC);
 
-val fresh_def = Define `fresh (h:num|->(num#num#'a)) = @x:num. ~(x IN 0 INSERT FDOM h)`;
+Definition fresh_def:   fresh (h:num|->(num#num#'a)) = @x:num. ~(x IN 0 INSERT FDOM h)
+End
 
 val fresh_NOT_IN_FDOM = (SIMP_RULE std_ss [IN_INSERT] o prove)(
   ``!h. ~(fresh h IN 0 INSERT FDOM h)``,
@@ -215,9 +224,10 @@ val apply_switch = prove(
   ``!f f' x x'. (f o f' = I) /\ (x' = apply f x) ==> (x = apply f' x')``,
   SIMP_TAC bool_ss [apply_apply,apply_I]);
 
-val ok_state_part_def = Define `
+Definition ok_state_part_def:
   ok_state_part (i,j,m) =
-    !k. if ~RANGE(i,j) k then m k = EMP else ?y z d. m k = DATA (y,z,d)`;
+    !k. if ~RANGE(i,j) k then m k = EMP else ?y z d. m k = DATA (y,z,d)
+End
 
 val WFS_part_IMP_CUT = prove(
   ``ok_state_part(i,j,m) ==> (m = CUT (i,j)m)``,
@@ -740,14 +750,17 @@ val MAP_TAKE = prove(
 
 (* /add *)
 
-val LIST_DELETE_def = Define `
-  LIST_DELETE n xs = TAKE n xs ++ DROP (SUC n) xs`;
+Definition LIST_DELETE_def:
+  LIST_DELETE n xs = TAKE n xs ++ DROP (SUC n) xs
+End
 
-val LIST_INSERT_def = Define `
-  LIST_INSERT y n xs = TAKE n xs ++ [y] ++ DROP n xs`;
+Definition LIST_INSERT_def:
+  LIST_INSERT y n xs = TAKE n xs ++ [y] ++ DROP n xs
+End
 
-val LIST_UPDATE_def = Define `
-  LIST_UPDATE n y xs = LIST_DELETE n (LIST_INSERT y (SUC n) xs)`;
+Definition LIST_UPDATE_def:
+  LIST_UPDATE n y xs = LIST_DELETE n (LIST_INSERT y (SUC n) xs)
+End
 
 val MEM_LIST_DELETE = prove(
   ``!xs n x. MEM x (LIST_DELETE n xs) ==> MEM x xs``,

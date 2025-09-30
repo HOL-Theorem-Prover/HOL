@@ -121,8 +121,9 @@ val IS_LABEL_def = save_thm (
 val _ = export_rewrites ["LABEL_def", "IS_LABEL_def"];
 
 (* Define the complement of a label, COMPL: Label -> Label. *)
-val COMPL_LAB_def = Define `(COMPL_LAB (name (s :'a)) = (coname s)) /\
-                            (COMPL_LAB (coname s) = (name s))`;
+Definition COMPL_LAB_def:   (COMPL_LAB (name (s :'a)) = (coname s)) /\
+                            (COMPL_LAB (coname s) = (name s))
+End
 
 val _ = overload_on ("COMPL", ``COMPL_LAB``);
 val _ = export_rewrites ["COMPL_LAB_def"];
@@ -136,9 +137,10 @@ val COMPL_COMPL_LAB = store_thm (
     Induct >> REWRITE_TAC [COMPL_LAB_def]);
 
 (* Extend the complement to actions, COMPL_ACT: Action -> Action. *)
-val COMPL_ACT_def = Define `
+Definition COMPL_ACT_def:
    (COMPL_ACT (label (l: 'a Label)) = label (COMPL l)) /\
-   (COMPL_ACT tau = tau)`;
+   (COMPL_ACT tau = tau)
+End
 
 val _ = overload_on ("COMPL", ``COMPL_ACT``);
 val _ = export_rewrites ["COMPL_ACT_def"];
@@ -168,8 +170,9 @@ Proof
 QED
 
 (* Relabeling function is subtype of `:'a Label -> 'a Label *)
-val Is_Relabeling_def = Define `
-    Is_Relabeling (f: 'a Label -> 'a Label) = (!s. f (coname s) = COMPL (f (name s)))`;
+Definition Is_Relabeling_def:
+    Is_Relabeling (f: 'a Label -> 'a Label) = (!s. f (coname s) = COMPL (f (name s)))
+End
 
 val EXISTS_Relabeling = store_thm ("EXISTS_Relabeling",
   ``?(f: 'a Label -> 'a Label). Is_Relabeling f``,
@@ -220,9 +223,10 @@ Proof
 QED
 
 (* Relabeling labels is extended to actions by renaming tau as tau. *)
-val relabel_def = Define `
+Definition relabel_def:
    (relabel (rf :'a Relabeling) tau = tau) /\
-   (relabel rf (label l) = label (REP_Relabeling rf l))`;
+   (relabel rf (label l) = label (REP_Relabeling rf l))
+End
 
 (* If the renaming of an action is a label, that action is a label. *)
 Theorem Relab_label :
@@ -247,12 +251,13 @@ QED
 (* Apply_Relab: ((Label # Label) list) -> Label -> Label
    (SND of any pair is a name, FST can be either name or coname)
  *)
-val Apply_Relab_def = Define `
+Definition Apply_Relab_def:
    (Apply_Relab ([]: ('a Label # 'a Label) list) l = l) /\
    (Apply_Relab ((newold: 'a Label # 'a Label) :: ls) l =
           if (SND newold = l)         then (FST newold)
      else if (COMPL (SND newold) = l) then (COMPL (FST newold))
-     else (Apply_Relab ls l))`;
+     else (Apply_Relab ls l))
+End
 
 Theorem Apply_Relab_COMPL_THM :
     !labl (s: 'a). Apply_Relab labl (coname s) =
@@ -287,8 +292,9 @@ QED
 (* Defining a relabelling function through substitution-like notation.
    RELAB: (Label # Label) list -> Relabeling
  *)
-val RELAB_def = Define `
-    RELAB (labl :('a Label # 'a Label) list) = ABS_Relabeling (Apply_Relab labl)`;
+Definition RELAB_def:
+    RELAB (labl :('a Label # 'a Label) list) = ABS_Relabeling (Apply_Relab labl)
+End
 
 (* !labl labl'.
      (RELAB labl = RELAB labl') <=> (Apply_Relab labl = Apply_Relab labl')

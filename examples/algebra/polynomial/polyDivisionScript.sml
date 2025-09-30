@@ -1078,9 +1078,9 @@ val poly_mod_eq_zero = store_thm(
 To apply function equivalence, define the equivalence function f
 for the function identity with notation: (x == y) f <=> f x = f y.
 *)
-val pmod_def = Define`
+Definition pmod_def:
   pmod (r:'a ring) (z:'a poly) (p:'a poly) = p % z
-`;
+End
 
 val _ = overload_on ("pm", ``pmod (r:'a ring)``);
 (* This allows ``(p == q) (pm z)`` *)

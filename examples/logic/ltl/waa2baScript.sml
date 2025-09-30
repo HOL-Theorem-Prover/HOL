@@ -5,16 +5,18 @@ Ancestors
 
 val _ = ParseExtras.temp_loose_equality()
 
-val d_gen_def = Define`
+Definition d_gen_def:
   d_gen (waa : (α,β) ALTER_A) qs
-  = (d_conj_set { (q, waa.trans q) | q ∈ qs } (waa.alphabet))`;
+  = (d_conj_set { (q, waa.trans q) | q ∈ qs } (waa.alphabet))
+End
 
-val tr_less_general_def = Define`
+Definition tr_less_general_def:
   tr_less_general AccSet qs =
    { ((a1,e1),(a2,e2)) |
              (a2 ⊆ a1) ∧ (e1 ⊆ e2)
            ∧ (!T'. (T' ∈ AccSet)
-                   ==> (((qs,a2,e2) ∈ T') ==> (qs,a1,e1) ∈ T'))}`;
+                   ==> (((qs,a2,e2) ∈ T') ==> (qs,a1,e1) ∈ T'))}
+End
 
 val TLG_PO = store_thm
   ("TLG_PO",
@@ -30,7 +32,7 @@ val TLG_PO = store_thm
     >- (fs[antisym_def] >> rpt strip_tac >> rw[] >> metis_tac[SUBSET_ANTISYM])
   );
 
-val acc_cond_def = Define`
+Definition acc_cond_def:
 acc_cond waa f =
   { (e,a,e')
   | e ∈ (POW waa.states)
@@ -38,27 +40,31 @@ acc_cond waa f =
       ∧ a ∈ (POW waa.alphabet)
       ∧ (~(f ∈ e') \/
          (?b e''. ((b, e'') ∈ waa.trans f) ∧ a ⊆ b
-           ∧ ~(f ∈ e'') ∧ e'' ⊆ e')) }`;
+           ∧ ~(f ∈ e'') ∧ e'' ⊆ e')) }
+End
 
-val all_acc_cond_def = Define`
+Definition all_acc_cond_def:
   all_acc_cond (waa : (β, α) ALTER_A)  =
-  { acc_cond waa f | f | f ∈ waa.final}`;
+  { acc_cond waa f | f | f ∈ waa.final}
+End
 
-val gba_trans_def = Define`
+Definition gba_trans_def:
 gba_trans (waa : (α,β) ALTER_A) qs =
   { (a,e')
   | (a,e') ∈
            minimal_elements
            (d_gen waa qs)
-           (rrestrict (tr_less_general (all_acc_cond waa) qs) (d_gen waa qs))}`;
+           (rrestrict (tr_less_general (all_acc_cond waa) qs) (d_gen waa qs))}
+End
 
-val gba_accTrans_def = Define`
+Definition gba_accTrans_def:
 gba_accTrans (waa : (β, α) ALTER_A)  =
   let realTransitions =
        { (e,a,e') | (a,e') ∈ (gba_trans waa e) ∧ e ∈ POW waa.states }
-  in { acc_cond waa f ∩ realTransitions | f | f ∈ waa.final}`;
+  in { acc_cond waa f ∩ realTransitions | f | f ∈ waa.final}
+End
 
-val vwaa2gba_def = Define`
+Definition vwaa2gba_def:
 vwaa2gba waa =
      if isVeryWeakAlterA waa
      then GBA
@@ -67,7 +73,8 @@ vwaa2gba waa =
               (gba_trans waa)
               (gba_accTrans waa)
               waa.alphabet
-     else ARB`;
+     else ARB
+End
 
 val ITSET_IND_SPEC = store_thm
   ("ITSET_IND_SPEC",
@@ -350,9 +357,10 @@ val WAA2GBA_ISVALID = store_thm
      >- (fs[gba_accTrans_def] >> fs[])
   );
 
-val vwaa2gba_gba_V_def = Define`
+Definition vwaa2gba_gba_V_def:
 (vwaa2gba_gba_V waa_run v' 0 = waa_run.V 0)
-∧ (vwaa2gba_gba_V waa_run v' (SUC i) = v' i (vwaa2gba_gba_V waa_run v' i))`;
+∧ (vwaa2gba_gba_V waa_run v' (SUC i) = v' i (vwaa2gba_gba_V waa_run v' i))
+End
 
 val WAA_IN_GBA = store_thm
   ("WAA_IN_GBA",
@@ -651,18 +659,20 @@ val WAA_IN_GBA = store_thm
        )
   );
 
-val waa_run_branch_cond_def = Define`
+Definition waa_run_branch_cond_def:
   waa_run_branch_cond f aut q i x a =
           (f i, a, f (i+1)) ∈ acc_cond aut q
            ∧ q ∈ aut.final
            ∧ (a, f (i + 1)) ∈ (vwaa2gba aut).trans (f i)
-           ∧ at x i ∈ a`;
+           ∧ at x i ∈ a
+End
 
-val waa_run_E_def = Define`
+Definition waa_run_E_def:
   waa_run_E x waa f e_x e_x' (i,q) =
           if (?a. waa_run_branch_cond f waa q i x a)
           then e_x' i ($@ (waa_run_branch_cond f waa q i x)) q
-          else e_x i q`;
+          else e_x i q
+End
 
 val GBA_IN_WAA = store_thm
   ("GBA_IN_WAA",

@@ -5,32 +5,30 @@ Ancestors
 (* Def 1.9 *)
 (* definition of formula; define the box as the dual of diamond *)
 
-val BOX_def =
-  Define
-    `BOX form = NOT (DIAM (NOT form))`;
+Definition BOX_def:
+     BOX form = NOT (DIAM (NOT form))
+End
 
-val IMP_def = Define`
+Definition IMP_def:
   IMP f1 f2 = DISJ (NOT f1) f2
-  `;
+End
 
 
 val _ = set_mapped_fixity{fixity = Infixr 200, term_name = "IMP", tok = "->"}
 
 
 
-val AND_def =
-  Define
-    `AND f1 f2 = NOT (DISJ (NOT f1) (NOT f2))
-   `;
+Definition AND_def:
+     AND f1 f2 = NOT (DISJ (NOT f1) (NOT f2))
+End
 
-val DOUBLE_IMP_def =
-  Define
-    `DOUBLE_IMP f1 f2 = AND (IMP f1 f2) (IMP f2 f1)
-   `;
+Definition DOUBLE_IMP_def:
+     DOUBLE_IMP f1 f2 = AND (IMP f1 f2) (IMP f2 f1)
+End
 
-val TRUE_def =
-  Define
-    `TRUE = NOT FALSE`;
+Definition TRUE_def:
+     TRUE = NOT FALSE
+End
 
 
 val _ = overload_on ("□", ``BOX``);
@@ -42,13 +40,13 @@ Overload "¬" = ``NOT``
 
 (* Def 1.18 *)
 (* define the substitution function induced by a function from a set of propositional letters to a set of forms*)
-val subst_def =
-  Define
-    `subst f FALSE = FALSE /\
+Definition subst_def:
+     subst f FALSE = FALSE /\
      subst f (VAR p) = f p /\
      subst f (DISJ form1 form2) = DISJ (subst f form1) (subst f form2) /\
      subst f (NOT form) = NOT (subst f form) /\
-     subst f (DIAM form) = DIAM (subst f form)`;
+     subst f (DIAM form) = DIAM (subst f form)
+End
 
 val _ = export_rewrites ["subst_def"]
 
@@ -72,69 +70,80 @@ rpt strip_tac >> eq_tac >- (rpt strip_tac >> fs[satis_def,AND_def] >> metis_tac[
 
 
 
-val satis_set_def =
-  Define
-  `satis_set M w (Σ:form set) = !a. a IN Σ ==> satis M w a`;
+Definition satis_set_def:
+   satis_set M w (Σ:form set) = !a. a IN Σ ==> satis M w a
+End
 
 
 
 (* Def 1.21 *)
 (* definition of universally true/ satisfiable/ falsiable *)
-val universal_true_def = Define`
-    universal_true M form <=> (!w. w IN M.frame.world ==> satis M w form)`;
+Definition universal_true_def:
+    universal_true M form <=> (!w. w IN M.frame.world ==> satis M w form)
+End
 
-val satisfiable_def = Define`
-    stfable M form = (?w. satis M w form)`;
+Definition satisfiable_def:
+    stfable M form = (?w. satis M w form)
+End
 
-val refutable_def = Define`
-    refutable M form = (?w. satis M w (NOT form))`;
+Definition refutable_def:
+    refutable M form = (?w. satis M w (NOT form))
+End
 
 
 (* Def 1.28 *)
 (* definitions involves validness *)
 
 
-val valid_frame_state_def = Define`
-    valid_frame_state f w form = !M. M.frame = f ==> satis M w form`;
+Definition valid_frame_state_def:
+    valid_frame_state f w form = !M. M.frame = f ==> satis M w form
+End
 
-val valid_frame_def =Define`
-    valid_frame f form = !w. valid_frame_state f w form`;
+Definition valid_frame_def:
+    valid_frame f form = !w. valid_frame_state f w form
+End
 
-val valid_class_frame_def = Define`
-    valid_class C form = !f. f IN C ==> valid_frame f form`;
+Definition valid_class_frame_def:
+    valid_class C form = !f. f IN C ==> valid_frame f form
+End
 
-val valid_def = Define`
+Definition valid_def:
     valid (form:form)  =
-      !f:num frame. valid_frame f form`;
+      !f:num frame. valid_frame f form
+End
 
-val logic_def = Define`
-    LOGIC C = {form | valid_class C form}`
+Definition logic_def:
+    LOGIC C = {form | valid_class C form}
+End
 
 
 
 (* Def 1.35 *)
-val local_semantic_conseq = Define`
+Definition local_semantic_conseq:
     LSC Σ S form <=>
     !(M:'b model) w.
        M IN S /\ satis_set M w Σ ==>
-       satis M w form`;
+       satis M w form
+End
 
 
 
 (* Def 1.39 *)
-val demodalize_def = Define`
+Definition demodalize_def:
 demodalize FALSE = FALSE /\
 demodalize (VAR p) = VAR p /\
 demodalize (DISJ form1 form2) = DISJ (demodalize form1) (demodalize form2) /\
 demodalize (NOT form) = NOT (demodalize form) /\
-demodalize (DIAM form) = demodalize form`;
+demodalize (DIAM form) = demodalize form
+End
 
-val propform_def = Define`
+Definition propform_def:
     propform (VAR p) = T /\
     (propform (DISJ form1 form2) <=> propform form1 /\ propform form2) /\
     (propform (NOT f) <=> propform f) /\
     propform FALSE = T /\
-    propform (DIAM f) = F`;
+    propform (DIAM f) = F
+End
 
 val _ = export_rewrites["propform_def"]
 
@@ -144,17 +153,19 @@ val propform_IMP = store_thm(
     simp[IMP_def]);
 
 
-val peval_def = Define`
+Definition peval_def:
     peval σ (VAR p) = σ p /\
     (peval σ (DISJ f1 f2) <=> peval σ f1 \/ peval σ f2) /\
     peval σ FALSE = F /\
     peval σ (NOT f) = ¬peval σ f /\
-    peval σ (DIAM f) = F`;
+    peval σ (DIAM f) = F
+End
 
 val _ = export_rewrites["peval_def"]
 
-val ptaut_def = Define`
-    ptaut f <=> propform f /\ !σ. peval σ f = T`;
+Definition ptaut_def:
+    ptaut f <=> propform f /\ !σ. peval σ f = T
+End
 
 
 
@@ -174,15 +185,16 @@ val (Kproof_rules, Kproof_ind, Kproof_cases) = Hol_reln`
   (!p f. Kproof p /\ ptaut f ==> Kproof (p ++ [f]))
 `;
 
-val K_provable_def = Define`
-K_provable form <=> ?p. Kproof p /\ Kproof (p ++ [form])`;
+Definition K_provable_def:
+K_provable form <=> ?p. Kproof p /\ Kproof (p ++ [form])
+End
 
 
 
 
 
 (* Def 1.42 *)
-val normal_modal_logic = Define`
+Definition normal_modal_logic:
 NML (S: form set) <=> !A B p q f form.
                   (ptaut form ==> form IN S) /\
                   (IMP (BOX (IMP p q)) (IMP (BOX p) (BOX q))) IN S /\
@@ -190,7 +202,8 @@ NML (S: form set) <=> !A B p q f form.
                   (IMP (NOT (BOX (NOT p))) (DIAM p)) IN S /\
                   (A IN S ==> (subst f A) IN S) /\
                   (A IN S ==> (BOX A) IN S) /\
-                  ((IMP A B) IN S /\ A IN S ==> B IN S)`;
+                  ((IMP A B) IN S /\ A IN S ==> B IN S)
+End
 
 
 
@@ -437,13 +450,15 @@ val (KGproof_rules, KGproof_ind, KGproof_cases) = Hol_reln`
 
 
 
-val KG_provable_def = Define`
-KG_provable Γ form <=> ?p. KGproof Γ p /\ KGproof Γ (p ++ [form])`;
+Definition KG_provable_def:
+KG_provable Γ form <=> ?p. KGproof Γ p /\ KGproof Γ (p ++ [form])
+End
 
 
 
-val NMLG_def = Define`
-NMLG (Γ:form set) = BIGINTER {A | (NML A) /\ (Γ SUBSET A)}`;
+Definition NMLG_def:
+NMLG (Γ:form set) = BIGINTER {A | (NML A) /\ (Γ SUBSET A)}
+End
 
 
 val NMLG_ind = save_thm(
@@ -551,12 +566,13 @@ val KG_provable_G = store_thm(
 
 (*prop symbols*)
 
-val prop_letters_def = Define`
+Definition prop_letters_def:
   (prop_letters (VAR p) = {p}) /\
   (prop_letters FALSE = {}) /\
   (prop_letters (DISJ f1 f2) = (prop_letters f1) ∪ (prop_letters f2)) /\
   (prop_letters (NOT f) = prop_letters f) /\
-  (prop_letters (DIAM f) = prop_letters f)`
+  (prop_letters (DIAM f) = prop_letters f)
+End
 
 
 Theorem exercise_1_3_1:

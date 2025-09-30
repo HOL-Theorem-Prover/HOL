@@ -81,11 +81,12 @@ val nat_sqrt_def = tDefine
 
 val nat_sqrt_ind = fetch "-" "nat_sqrt_ind";
 
-val prime_checker_def = Define
-  `prime_checker n i =
+Definition prime_checker_def:
+   prime_checker n i =
    if i <= 1 then T
    else if n MOD i = 0 then F
-   else prime_checker n (i - 1)`;
+   else prime_checker n (i - 1)
+End
 
 val prime_checker_ind = fetch "-" "prime_checker_ind";
 

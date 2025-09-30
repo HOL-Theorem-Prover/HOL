@@ -27,12 +27,14 @@ val Cond =
 (* The definition of a simple random walk.                                   *)
 (* ------------------------------------------------------------------------- *)
 
-val random_lurch_def = Define
-  `random_lurch (n:num) = BIND sdest (\b. UNIT (if b then n + 1 else n - 1))`;
+Definition random_lurch_def:
+   random_lurch (n:num) = BIND sdest (\b. UNIT (if b then n + 1 else n - 1))
+End
 
-val random_walk_def = Define
-  `random_walk n k =
-   BIND (prob_while_cost ($< 0) random_lurch (n, k)) (\x. UNIT (SND x))`;
+Definition random_walk_def:
+   random_walk n k =
+   BIND (prob_while_cost ($< 0) random_lurch (n, k)) (\x. UNIT (SND x))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems leading to:                                                      *)

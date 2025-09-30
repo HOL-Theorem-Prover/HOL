@@ -78,10 +78,14 @@ and COMMON_LISP_def         = Define `COMMON_LISP         = "COMMON-LISP"`
 and KEYWORD_def             = Define `KEYWORD             = "KEYWORD"`
 and ACL2_OUTPUT_CHANNEL_def = Define `ACL2_OUTPUT_CHANNEL = "ACL2-OUTPUT-CHANNEL"`;
 
-val asym_def = Define `asym = sym ACL2`;
-val csym_def = Define `csym = sym COMMON_LISP`;
-val ksym_def = Define `ksym = sym KEYWORD`;
-val osym_def = Define `osym = sym ACL2_OUTPUT_CHANNEL`;
+Definition asym_def:   asym = sym ACL2
+End
+Definition csym_def:   csym = sym COMMON_LISP
+End
+Definition ksym_def:   ksym = sym KEYWORD
+End
+Definition osym_def:   osym = sym ACL2_OUTPUT_CHANNEL
+End
 
 val _ =
  add_string_abbrevs
@@ -146,23 +150,27 @@ val characterp_def =
 (*****************************************************************************)
 (* Construct a fraction then a rational from numerator and denominator       *)
 (*****************************************************************************)
-val rat_def = Define `rat n d = abs_rat(abs_frac(n,d))`;
+Definition rat_def:   rat n d = abs_rat(abs_frac(n,d))
+End
 
 (*****************************************************************************)
 (* Construct a complex from four integers: an/ad + (bn/bd)i.                 *)
 (*****************************************************************************)
-val cpx_def =
- Define `cpx an ad bn bd = num(com (rat an ad) (rat bn bd))`;
+Definition cpx_def:
+  cpx an ad bn bd = num(com (rat an ad) (rat bn bd))
+End
 
 (*****************************************************************************)
 (*  Construct a complex from an integer: n |--> n/1  + (0/1)i.               *)
 (*****************************************************************************)
-val int_def = Define `int n = cpx n 1 0 1`;
+Definition int_def:   int n = cpx n 1 0 1
+End
 
 (*****************************************************************************)
 (*  Construct a complex from a natural number: n |--> int n.                 *)
 (*****************************************************************************)
-val nat_def = Define `nat n = int(& n)`;
+Definition nat_def:   nat n = int(& n)
+End
 
 (*****************************************************************************)
 (* acl2-numberp                                                              *)
@@ -599,10 +607,10 @@ val ite_def =
 (* |- list_to_sexp num [1; 2; 3] =                                           *)
 (*     cons (num 1) (cons (num 2) (cons (num 3) (sym "COMMON-LISP" "NIL")))  *)
 (*****************************************************************************)
-val list_to_sexp_def =
- Define
-  `(list_to_sexp f [] = nil) /\
-   (list_to_sexp f (x::l) = cons (f x) (list_to_sexp f l))`;
+Definition list_to_sexp_def:
+   (list_to_sexp f [] = nil) /\
+   (list_to_sexp f (x::l) = cons (f x) (list_to_sexp f l))
+End
 
 (*****************************************************************************)
 (* coerce                                                                    *)
@@ -679,9 +687,9 @@ val make_character_list_def =
 (*                                                                           *)
 (* EXPLODE explodes a HOL string into a HOL list of characters.              *)
 (*****************************************************************************)
-val coerce_string_to_list_def =
- Define
-  `coerce_string_to_list s = list_to_sexp chr (EXPLODE s)`;
+Definition coerce_string_to_list_def:
+   coerce_string_to_list s = list_to_sexp chr (EXPLODE s)
+End
 
 (*****************************************************************************)
 (* (cons (chr #"a") (cons (chr #"b") (cons (chr #"c") nil))) |--> "abc"      *)
@@ -751,10 +759,10 @@ val coerce_def =
 (*                                                                           *)
 (*   BASIC_INTERN symbol_name pkg_name = (sym pkg_name symbol_name)          *)
 (*****************************************************************************)
-val BASIC_INTERN_def =
- Define
-  `BASIC_INTERN sym_name pkg_name =
-    sym (LOOKUP pkg_name ACL2_PACKAGE_ALIST sym_name) sym_name`;
+Definition BASIC_INTERN_def:
+   BASIC_INTERN sym_name pkg_name =
+    sym (LOOKUP pkg_name ACL2_PACKAGE_ALIST sym_name) sym_name
+End
 
 (*****************************************************************************)
 (* symbolp                                                                   *)
@@ -889,16 +897,16 @@ val LOOKUP_PKG_WITNESS =
 (*****************************************************************************)
 (* Use the lexicographic order to lift an order from elements to lists       *)
 (*****************************************************************************)
-val LIST_LEX_ORDER_def =
- Define
-  `(LIST_LEX_ORDER R [] [] = F)
+Definition LIST_LEX_ORDER_def:
+   (LIST_LEX_ORDER R [] [] = F)
    /\
    (LIST_LEX_ORDER R (a::al) [] = F)
    /\
    (LIST_LEX_ORDER R [] (b::bl) = T)
    /\
    (LIST_LEX_ORDER R (a::al) (b::bl) =
-     R a b \/ ((a = b) /\ LIST_LEX_ORDER R al bl))`;
+     R a b \/ ((a = b) /\ LIST_LEX_ORDER R al bl))
+End
 
 val LIST_LEX_ORDER_IRREFLEXIVE =
  store_thm
@@ -970,17 +978,17 @@ val LIST_LEX_ORDER_TRICHOTOMY =
 (*****************************************************************************)
 (* Define an order on strings                                                *)
 (*****************************************************************************)
-val STRING_LESS_def =
- Define
-  `STRING_LESS s1 s2 =
+Definition STRING_LESS_def:
+   STRING_LESS s1 s2 =
     LIST_LEX_ORDER
      ($< : num->num->bool)
      (MAP ORD (EXPLODE s1))
-     (MAP ORD (EXPLODE s2))`;
+     (MAP ORD (EXPLODE s2))
+End
 
-val STRING_LESS_EQ_def =
- Define
-  `STRING_LESS_EQ s1 s2 = STRING_LESS s1 s2 \/ (s1 = s2)`;
+Definition STRING_LESS_EQ_def:
+   STRING_LESS_EQ s1 s2 = STRING_LESS s1 s2 \/ (s1 = s2)
+End
 
 val STRING_LESS_IRREFLEXIVE =
  store_thm
@@ -1088,14 +1096,14 @@ val STRING_LESS_EQ_TRANS_NOT =
    ``~STRING_LESS_EQ s1 s2 /\ ~STRING_LESS_EQ s2 s3 ==> ~STRING_LESS_EQ s1 s3``,
    METIS_TAC[STRING_LESS_EQ_TRANS,STRING_LESS_EQ_ANTISYM]);
 
-val SEXP_SYM_LESS_def =
- Define
-  `SEXP_SYM_LESS (sym p1 n1) (sym p2 n2) =
-    STRING_LESS p1 p2 \/ ((p1 = p2) /\ STRING_LESS n1 n2)`;
+Definition SEXP_SYM_LESS_def:
+   SEXP_SYM_LESS (sym p1 n1) (sym p2 n2) =
+    STRING_LESS p1 p2 \/ ((p1 = p2) /\ STRING_LESS n1 n2)
+End
 
-val SEXP_SYM_LESS_EQ_def =
- Define
-  `SEXP_SYM_LESS_EQ sym1 sym2 = SEXP_SYM_LESS sym1 sym2 \/ (sym1 = sym2)`;
+Definition SEXP_SYM_LESS_EQ_def:
+   SEXP_SYM_LESS_EQ sym1 sym2 = SEXP_SYM_LESS sym1 sym2 \/ (sym1 = sym2)
+End
 
 (*****************************************************************************)
 (* In ACL2, bad-atom<= is a non-strict order:                                *)
@@ -1238,8 +1246,9 @@ val ACL2_TRUE =
 (*****************************************************************************)
 (* Same as translateTheory.bool_def                                          *)
 (*****************************************************************************)
-val bool_to_sexp_def =
- Define `(bool_to_sexp T = t) /\ (bool_to_sexp F = nil)`;
+Definition bool_to_sexp_def:
+  (bool_to_sexp T = t) /\ (bool_to_sexp F = nil)
+End
 
 (*****************************************************************************)
 (* Add quantifiers to ACL2 logic: go to HOL, quantify, then back to ACL2     *)
@@ -1253,131 +1262,131 @@ val exists_def =
  new_binder_definition
   ("exists_def", ``$exists = \P. bool_to_sexp ?v. |= P v``);
 
-val caar_def =
- Define
-  `caar x = car(car x)`;
+Definition caar_def:
+   caar x = car(car x)
+End
 
-val cadr_def =
- Define
-  `cadr x = car(cdr x)`;
+Definition cadr_def:
+   cadr x = car(cdr x)
+End
 
-val cdar_def =
- Define
-  `cdar x = cdr(car x)`;
+Definition cdar_def:
+   cdar x = cdr(car x)
+End
 
-val cddr_def =
- Define
-  `cddr x = cdr(cdr x)`;
+Definition cddr_def:
+   cddr x = cdr(cdr x)
+End
 
-val caaar_def =
- Define
-  `caaar x = car(car(car x))`;
+Definition caaar_def:
+   caaar x = car(car(car x))
+End
 
-val cdaar_def =
- Define
-  `cdaar x = cdr(car(car x))`;
+Definition cdaar_def:
+   cdaar x = cdr(car(car x))
+End
 
-val cadar_def =
- Define
-  `cadar x = car(cdr(car x))`;
+Definition cadar_def:
+   cadar x = car(cdr(car x))
+End
 
-val cddar_def =
- Define
-  `cddar x = cdr(cdr(car x))`;
+Definition cddar_def:
+   cddar x = cdr(cdr(car x))
+End
 
-val caadr_def =
- Define
-  `caadr x = car(car(cdr x))`;
+Definition caadr_def:
+   caadr x = car(car(cdr x))
+End
 
-val cdadr_def =
- Define
-  `cdadr x = cdr(car(cdr x))`;
+Definition cdadr_def:
+   cdadr x = cdr(car(cdr x))
+End
 
-val caddr_def =
- Define
-  `caddr x = car(cdr(cdr x))`;
+Definition caddr_def:
+   caddr x = car(cdr(cdr x))
+End
 
-val cdddr_def =
- Define
-  `cdddr x = cdr(cdr(cdr x))`;
+Definition cdddr_def:
+   cdddr x = cdr(cdr(cdr x))
+End
 
-val caaaar_def =
- Define
-  `caaaar x = car(car(car(car x)))`;
+Definition caaaar_def:
+   caaaar x = car(car(car(car x)))
+End
 
-val cadaar_def =
- Define
-  `cadaar x = car(cdr(car(car x)))`;
+Definition cadaar_def:
+   cadaar x = car(cdr(car(car x)))
+End
 
-val caadar_def =
- Define
-  `caadar x = car(car(cdr(car x)))`;
+Definition caadar_def:
+   caadar x = car(car(cdr(car x)))
+End
 
-val caddar_def =
- Define
-  `caddar x = car(cdr(cdr(car x)))`;
+Definition caddar_def:
+   caddar x = car(cdr(cdr(car x)))
+End
 
-val caaadr_def =
- Define
-  `caaadr x = car(car(car(cdr x)))`;
+Definition caaadr_def:
+   caaadr x = car(car(car(cdr x)))
+End
 
-val cadadr_def =
- Define
-  `cadadr x = car(cdr(car(cdr x)))`;
+Definition cadadr_def:
+   cadadr x = car(cdr(car(cdr x)))
+End
 
-val caaddr_def =
- Define
-  `caaddr x = car(car(cdr(cdr x)))`;
+Definition caaddr_def:
+   caaddr x = car(car(cdr(cdr x)))
+End
 
-val cadddr_def =
- Define
-  `cadddr x = car(cdr(cdr(cdr x)))`;
+Definition cadddr_def:
+   cadddr x = car(cdr(cdr(cdr x)))
+End
 
-val cdaaar_def =
- Define
-  `cdaaar x = cdr(car(car(car x)))`;
+Definition cdaaar_def:
+   cdaaar x = cdr(car(car(car x)))
+End
 
-val cddaar_def =
- Define
-  `cddaar x = cdr(cdr(car(car x)))`;
+Definition cddaar_def:
+   cddaar x = cdr(cdr(car(car x)))
+End
 
-val cdadar_def =
- Define
-  `cdadar x = cdr(car(cdr(car x)))`;
+Definition cdadar_def:
+   cdadar x = cdr(car(cdr(car x)))
+End
 
-val cdddar_def =
- Define
-  `cdddar x = cdr(cdr(cdr(car x)))`;
+Definition cdddar_def:
+   cdddar x = cdr(cdr(cdr(car x)))
+End
 
-val cdaadr_def =
- Define
-  `cdaadr x = cdr(car(car(cdr x)))`;
+Definition cdaadr_def:
+   cdaadr x = cdr(car(car(cdr x)))
+End
 
-val cddadr_def =
- Define
-  `cddadr x = cdr(cdr(car(cdr x)))`;
+Definition cddadr_def:
+   cddadr x = cdr(cdr(car(cdr x)))
+End
 
-val cdaddr_def =
- Define
-  `cdaddr x = cdr(car(cdr(cdr x)))`;
+Definition cdaddr_def:
+   cdaddr x = cdr(car(cdr(cdr x)))
+End
 
-val cddddr_def =
- Define
-  `cddddr x = cdr(cdr(cdr(cdr x)))`;
+Definition cddddr_def:
+   cddddr x = cdr(cdr(cdr(cdr x)))
+End
 
-val List_def =
- Define
-  `(List[] = nil)
+Definition List_def:
+   (List[] = nil)
     /\
-   (List(s::sl) = cons s (List sl))`;
+   (List(s::sl) = cons s (List sl))
+End
 
-val andl_def =
- Define
-  `(andl[] = t)
+Definition andl_def:
+   (andl[] = t)
    /\
    (andl[s] = s)
    /\
-   (andl(x::y::l) = ite x (andl(y::l)) nil)`;
+   (andl(x::y::l) = ite x (andl(y::l)) nil)
+End
 
 val andl_append =
  store_thm
@@ -1410,11 +1419,11 @@ val andl_fold =
        THEN RW_TAC std_ss [andl_def,ite_def,List_def],
       RW_TAC list_ss [andl_append]]);
 
-val itel_def =
- Define
-  `(itel [] val'               = val')
+Definition itel_def:
+   (itel [] val'               = val')
    /\
-   (itel ((test,val)::sl) val' = ite test val (itel sl val'))`;
+   (itel ((test,val)::sl) val' = ite test val (itel sl val'))
+End
 
 val itel_fold =
  store_thm
@@ -1674,15 +1683,15 @@ val equal_imp =
 (*                (imported-symbol-names pkg-name (cdr triples))))           *)
 (*         (t (imported-symbol-names pkg-name (cdr triples)))))              *)
 (*****************************************************************************)
-val imported_symbol_names_def =
- Define
-  `(imported_symbol_names pkg_name [] = [])
+Definition imported_symbol_names_def:
+   (imported_symbol_names pkg_name [] = [])
    /\
    (imported_symbol_names pkg_name
      ((sym_name,known_name,actual_name)::triples) =
      if (known_name = pkg_name)
       then sym_name :: (imported_symbol_names pkg_name triples)
-      else imported_symbol_names pkg_name triples)`;
+      else imported_symbol_names pkg_name triples)
+End
 
 val _ =
  add_acl2_simps

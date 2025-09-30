@@ -5,7 +5,8 @@ Ancestors
 fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 fun Save_thm (tup as (n,th)) = save_thm tup before export_rewrites [n]
 
-val nB_def = Define`(nB T = 1) ∧ (nB F = 0)`
+Definition nB_def:  (nB T = 1) ∧ (nB F = 0)
+End
 val _ = export_rewrites ["nB_def"]
 
 val nB_11 = Store_thm(
@@ -33,9 +34,9 @@ val nB_sub1 = Store_thm(
   ``1 - nB p = nB (¬p)``,
   Cases_on `p` THEN SRW_TAC [][]);
 
-val proj_def = Define`
+Definition proj_def:
   proj n l = if LENGTH l <= n then 0 else EL n l
-`;
+End
 
 val proj_thm = Store_thm(
   "proj_thm",
@@ -44,13 +45,14 @@ val proj_thm = Store_thm(
   SRW_TAC [ARITH_ss][proj_def] THEN
   Cases_on `n` THEN FULL_SIMP_TAC (srw_ss()) []);
 
-val succ_def = Define`(succ [] = 1) ∧ (succ (h::t) = SUC h)`
+Definition succ_def:  (succ [] = 1) ∧ (succ (h::t) = SUC h)
+End
 val _ = export_rewrites ["succ_def"]
 
-val Cn_def = Define`
+Definition Cn_def:
   Cn (f:num list -> num) (gs:(num list -> num) list) (l:num list) =
   f (MAP (λg. g l) gs)
-`
+End
 
 val Cn0123 = Store_thm(
   "Cn0123",
@@ -59,11 +61,12 @@ val Cn0123 = Store_thm(
     (Cn f [g1; g2; g3] l = f [g1 l; g2 l; g3 l])``,
   SRW_TAC [][Cn_def]);
 
-val Pr_def = Define `
+Definition Pr_def:
   Pr b r l = case l of
                [] => b []
              | (0::t) => b t
-             | (SUC n :: t) => r (n :: Pr b r (n :: t) :: t)`
+             | (SUC n :: t) => r (n :: Pr b r (n :: t) :: t)
+End
 
 val Pr_thm = Store_thm(
   "Pr_thm",
@@ -210,10 +213,10 @@ val primrec_K = Store_thm(
     SRW_TAC [][FUN_EQ_THM]
   ]);
 
-val Pr1_def = Define`
+Definition Pr1_def:
   Pr1 n f = Cn (Pr (K n) (Cn f [proj 0; proj 1]))
                [proj 0; K 0]
-`;
+End
 
 val Pr1_correct = Store_thm(
   "Pr1_correct",
@@ -226,10 +229,10 @@ val primrec_Pr1 = Store_thm(
   ``primrec f 2 ⇒ primrec (Pr1 n f) 1``,
   SRW_TAC [][Pr1_def, primrec_rules, alt_Pr_rule]);
 
-val pr1_def = Define`
+Definition pr1_def:
   (pr1 f [] = f 0: num) ∧
   (pr1 f (x::t) = f x)
-`;
+End
 val _ = export_rewrites ["pr1_def"]
 
 val unary_primrec_eq = store_thm(
@@ -248,11 +251,11 @@ val primrec_pr1 = store_thm(
   ``(∃g. primrec g 1 ∧ (∀n. g [n] = f n)) ⇒ primrec (pr1 f) 1``,
   METIS_TAC [unary_primrec_eq]);
 
-val pr2_def = Define`
+Definition pr2_def:
   (pr2 f [] = f 0 0 : num) ∧
   (pr2 f [x] = f x 0) ∧
   (pr2 f (x::y::t) = f x y)
-`;
+End
 val _ = export_rewrites ["pr2_def"]
 
 val GENLIST2 = prove(
@@ -319,9 +322,9 @@ val primrec_pr_iszero = Store_thm(
   SRW_TAC [][primrec_rules] THEN
   Cases_on `n` THEN SRW_TAC [][]);
 
-val cflip_def = Define`
+Definition cflip_def:
   cflip f = Cn f [proj 1; proj 0]
-`;
+End
 
 val cflip_thm = Store_thm(
   "cflip_thm",
@@ -352,9 +355,9 @@ val primrec_pr_le = Store_thm(
   Q.EXISTS_TAC `Cn pr_iszero [pr2 $-]` THEN
   SRW_TAC [][primrec_rules]);
 
-val pr_eq_def = Define`
+Definition pr_eq_def:
   pr_eq = Cn (pr2 $*) [pr_le; cflip pr_le]
-`;
+End
 
 val pr_eq_thm = Store_thm(
   "pr_eq_thm",
@@ -369,14 +372,14 @@ val primrec_pr_eq = Store_thm(
 val _ = temp_set_fixity "=." (Infix(NONASSOC, 450))
 val _ = temp_overload_on ("=.", ``λn m. Cn pr_eq [n; m]``)
 
-val pr_cond_def = Define`
+Definition pr_cond_def:
   pr_cond P f g =
     Cn (proj 0 *. proj 1 +. (K 1 -. proj 0) *. proj 2) [P;f;g]
-`;
+End
 
-val pr_predicate_def = Define`
+Definition pr_predicate_def:
   pr_predicate P = ∀n. (P n = 0) ∨ (P n = 1)
-`;
+End
 
 val Cn_pr_eq_predicate = Store_thm(
   "Cn_pr_eq_predicate",
@@ -413,13 +416,13 @@ val primrec_pr_cond = Store_thm(
   In recursive case, h is called with (n, r, m)
 
 *)
-val pr_div_def = Define`
+Definition pr_div_def:
   pr_div =
   Pr (K 0)
      (pr_cond (proj 0 +. K 1 -. (proj 1 *. proj 2) =. proj 2)
               (Cn succ [proj 1])
               (proj 1))
-`;
+End
 
 val primrec_pr_div = Store_thm(
   "primrec_pr_div",
@@ -456,7 +459,8 @@ val pr_div_thm = Store_thm(
     Q.EXISTS_TAC `r + 1` THEN DECIDE_TAC
   ]);
 
-val pr_mod_def = Define`pr_mod = proj 0 -. (pr_div *. proj 1)`
+Definition pr_mod_def:  pr_mod = proj 0 -. (pr_div *. proj 1)
+End
 
 val pr_mod_eqn = store_thm(
   "pr_mod_eqn",
@@ -618,11 +622,11 @@ val primrec_nsnd = Store_thm(
 
    ---------------------------------------------------------------------- *)
 
-val Ackermann_def = Define`
+Definition Ackermann_def:
   (Ackermann 0 m = m + 1) ∧
   (Ackermann (SUC n) 0 = Ackermann n 1) ∧
   (Ackermann (SUC n) (SUC m) = Ackermann n (Ackermann (SUC n) m))
-`;
+End
 val H_ind = theorem "Ackermann_ind"
 val H_thm = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV Ackermann_def
 val H_def = Ackermann_def

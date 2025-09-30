@@ -26,16 +26,18 @@ val IMP_IMP = METIS_PROVE [] ``b /\ (b1 ==> b2) ==> ((b ==> b1) ==> b2)``
 
 (* === PHASE 1 : simplifies For loops and removes Dec === *)
 
-val Loop_def = Define `
-  Loop t = For (Num 1) (Num 1) t`;
+Definition Loop_def:
+  Loop t = For (Num 1) (Num 1) t
+End
 
-val phase1_def = Define `
+Definition phase1_def:
   (phase1 (Exp e) = Exp e) /\
   (phase1 (Dec x t) = Seq (Exp (Assign x (Num 0))) (phase1 t)) /\
   (phase1 (Break) = Break) /\
   (phase1 (Seq t1 t2) = Seq (phase1 t1) (phase1 t2)) /\
   (phase1 (If e t1 t2) = If e (phase1 t1) (phase1 t2)) /\
-  (phase1 (For e1 e2 t) = Loop (If e1 (Seq (phase1 t) (Exp e2)) Break))`;
+  (phase1 (For e1 e2 t) = Loop (If e1 (Seq (phase1 t) (Exp e2)) Break))
+End
 
 (* Verification of phase 1 *)
 
@@ -114,7 +116,7 @@ val phase1_pres = store_thm("phase1_pres",
 
 (* === PHASE 2 : compiles expressions into very simple assignments === *)
 
-val comp_exp_def = Define `
+Definition comp_exp_def:
   (comp_exp (Var v) s = Exp (Assign s (Var v))) /\
   (comp_exp (Num i) s = Exp (Assign s (Num i))) /\
   (comp_exp (Assign v e) s =
@@ -125,41 +127,48 @@ val comp_exp_def = Define `
   (comp_exp (Add x y) s =
      (Seq (comp_exp x s)
      (Seq (comp_exp y (s++"'"))
-          (Exp (Assign s (Add (Var s) (Var (s++"'"))))))))`;
+          (Exp (Assign s (Add (Var s) (Var (s++"'"))))))))
+End
 
-val flatten_t_def = Define `
+Definition flatten_t_def:
   (flatten_t (Exp e) n = comp_exp e n) /\
   (flatten_t (Dec x t) n = t) /\
   (flatten_t (Break) n = Break) /\
   (flatten_t (Seq t1 t2) n = Seq (flatten_t t1 n) (flatten_t t2 n)) /\
   (flatten_t (For e1 e2 t) n = For e1 e2 (flatten_t t n)) /\
   (flatten_t (If e t1 t2) n =
-     Seq (comp_exp e n) (If (Var n) (flatten_t t1 n) (flatten_t t2 n)))`;
+     Seq (comp_exp e n) (If (Var n) (flatten_t t1 n) (flatten_t t2 n)))
+End
 
-val MAX_def = Define `MAX n m = if n < m then m else n:num`
+Definition MAX_def:   MAX n m = if n < m then m else n:num
+End
 
-val exp_max_def = Define `
+Definition exp_max_def:
   (exp_max (Var v) = LENGTH v) /\
   (exp_max (Putchar e) = exp_max e) /\
   (exp_max (Add x y) = MAX (exp_max x) (exp_max y)) /\
   (exp_max (Assign v e) = MAX (LENGTH v) (exp_max e)) /\
-  (exp_max _ = 0)`;
+  (exp_max _ = 0)
+End
 
-val t_max_def = Define `
+Definition t_max_def:
   (t_max (Exp e) = exp_max e) /\
   (t_max (Dec x t) = MAX (LENGTH x) (t_max t)) /\
   (t_max (Break) = 0) /\
   (t_max (Seq t1 t2) = MAX (t_max t1) (t_max t2)) /\
   (t_max (For e1 e2 t) = MAX (exp_max e1) (MAX (exp_max e2) (t_max t))) /\
-  (t_max (If e t1 t2) = MAX (exp_max e) (MAX (t_max t1) (t_max t2)))`;
+  (t_max (If e t1 t2) = MAX (exp_max e) (MAX (t_max t1) (t_max t2)))
+End
 
-val phase2_def = Define `
-  phase2 t = flatten_t t ("temp" ++ REPLICATE (t_max t - 3) #"'")`;
+Definition phase2_def:
+  phase2 t = flatten_t t ("temp" ++ REPLICATE (t_max t - 3) #"'")
+End
 
 (* Verification of phase 2 *)
 
-val possible_var_name_def = Define `
-  possible_var_name v s = !n. ~(v ++ REPLICATE n #"'" IN FDOM s)`;
+Definition possible_var_name_def:
+  possible_var_name v s = !n. ~(v ++ REPLICATE n #"'" IN FDOM s)
+End
 
 val possible_var_name_IMP_SUBMAP = prove(
   ``possible_var_name n s.store /\ s.store SUBMAP t.store ==>
@@ -173,8 +182,9 @@ val MAX_LESS = prove(
   ``MAX n m < k <=> n < k /\ m < k``,
   SRW_TAC [] [MAX_def] \\ DECIDE_TAC);
 
-val store_var_def = Define `
-  store_var v x s = s with store := s.store |+ (v,x)`;
+Definition store_var_def:
+  store_var v x s = s with store := s.store |+ (v,x)
+End
 
 val sem_e_def = sem_e_def |> REWRITE_RULE [GSYM store_var_def]
 
@@ -311,14 +321,15 @@ val comp_exp_correct = store_thm(
     \\ REPEAT STRIP_TAC
     \\ fs [SUBMAP_DEF,FAPPLY_FUPDATE_THM,FLOOKUP_DEF, FILTER_APPEND_DISTRIB]));
 
-val phase2_subset_def = Define `
+Definition phase2_subset_def:
   (phase2_subset (Dec v t) = F) /\
   (phase2_subset (Exp e) = T) /\
   (phase2_subset Break = T) /\
   (phase2_subset (Seq t1 t2) = (phase2_subset t1 /\ phase2_subset t2)) /\
   (phase2_subset (If e t1 t2) = (phase2_subset t1 /\ phase2_subset t2)) /\
   (phase2_subset (For e1 e2 t) = ((e1 = Num 1) /\ (e2 = Num 1) /\
-     phase2_subset t))`
+     phase2_subset t))
+End
 
 val sem_t_possible_var_name = prove(
   ``!s e i r.
@@ -446,10 +457,11 @@ val pair_eq = prove(
   ``(x = (y1,y2)) <=> (FST x = y1) /\ (SND x = y2)``,
   Cases_on `x` \\ fs [] \\ METIS_TAC []);
 
-val s_with_clock_def = Define `
+Definition s_with_clock_def:
   s_with_clock c input = <| store := FEMPTY; clock := c;
                             input := input ; io_trace := [];
-                            non_det_o := K F |>`;
+                            non_det_o := K F |>
+End
 
 val lemma = prove(
   ``((if b then x1 else x2) <> x2) <=> (x1 <> x2) /\ b``,
@@ -525,7 +537,7 @@ instr =
 val _ = Datatype `
 state_a = <| state : state; pc : num; instrs : instr list |>`;
 
-val do_jump_def = Define `
+Definition do_jump_def:
 do_jump s n =
   if n > s.pc then
     (Rval 0, s with pc := n)
@@ -533,10 +545,12 @@ do_jump s n =
     (Rtimeout, s)
   else
     let st' = s.state with clock := s.state.clock - 1 in
-      (Rval 0, s with <| state := st'; pc := n |>)`;
+      (Rval 0, s with <| state := st'; pc := n |>)
+End
 
-val inc_pc_def = Define `
-inc_pc s = s with pc := s.pc + 1`;
+Definition inc_pc_def:
+inc_pc s = s with pc := s.pc + 1
+End
 
 Definition sem_a_def:
 sem_a s =
@@ -604,11 +618,12 @@ Termination
    \\ TRY DECIDE_TAC
 End
 
-val a_state_def = Define `
+Definition a_state_def:
   a_state code clock input =
-    <| state := s_with_clock clock input; pc := 0; instrs := code |>`;
+    <| state := s_with_clock clock input; pc := 0; instrs := code |>
+End
 
-val asm_semantics_def = Define `
+Definition asm_semantics_def:
 (asm_semantics code input (Terminate io_trace) =
   (* Terminate when there is a clock and some non-determinism oracle
      that gives a value result *)
@@ -623,11 +638,12 @@ val asm_semantics_def = Define `
     (r = Rbreak \/ r = Rfail)) /\
 (asm_semantics code input (Diverge io_trace) <=>
   (!c. ?s. sem_a (a_state code c input) = (Rtimeout, s)) ∧
-    lprefix_lub {fromList (FILTER ISL (SND (sem_a (a_state code c input))).state.io_trace) | c | T} io_trace)`;
+    lprefix_lub {fromList (FILTER ISL (SND (sem_a (a_state code c input))).state.io_trace) | c | T} io_trace)
+End
 
 (* Definition of phase3 *)
 
-val phase3_aux_def = Define `
+Definition phase3_aux_def:
   (phase3_aux n (Dec v t) b = []) /\
   (phase3_aux n (Exp e) b =
      case e of
@@ -652,10 +668,12 @@ val phase3_aux_def = Define `
   (phase3_aux n (For e1 e2 t) b =
      let c1 = phase3_aux n t 0 in
      let c2 = phase3_aux n t (n + 1 + LENGTH c1) in
-       c2 ++ [Jmp n])`
+       c2 ++ [Jmp n])
+End
 
-val phase3_def = Define `
-  phase3 t = phase3_aux 0 t 0`;
+Definition phase3_def:
+  phase3 t = phase3_aux 0 t 0
+End
 
 (* Verification of phase3 *)
 
@@ -663,7 +681,7 @@ val LENGTH_phase3_aux = prove(
   ``!t n b. LENGTH (phase3_aux n t b) = LENGTH (phase3_aux 0 t 0)``,
   Induct \\ fs [phase3_aux_def,LET_DEF]);
 
-val phase3_subset_def = Define `
+Definition phase3_subset_def:
   (phase3_subset (Dec v t) = F) /\
   (phase3_subset (Exp e) <=>
      (?v. e = Assign v (Getchar)) \/
@@ -675,7 +693,8 @@ val phase3_subset_def = Define `
   (phase3_subset (Seq t1 t2) = (phase3_subset t1 /\ phase3_subset t2)) /\
   (phase3_subset (If e t1 t2) <=>
      (?w. e = Var w) /\ phase3_subset t1 /\ phase3_subset t2) /\
-  (phase3_subset (For e1 e2 t) = ((e1 = Num 1) /\ (e2 = Num 1) /\ phase3_subset t))`
+  (phase3_subset (For e1 e2 t) = ((e1 = Num 1) /\ (e2 = Num 1) /\ phase3_subset t))
+End
 
 val instr_lookup_lemma = prove(
   ``(x.pc = LENGTH xs) /\ (x.instrs = xs ++ [y] ++ ys) ==>
@@ -696,8 +715,9 @@ val EL_LEMMA = prove(
   \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND]
   \\ fs [rich_listTheory.EL_LENGTH_APPEND]);
 
-val state_rel_def = Define `
-  state_rel s x = (x.state = s)`;
+Definition state_rel_def:
+  state_rel s x = (x.state = s)
+End
 
 local val fs = fsrw_tac[] val rfs = rev_full_simp_tac(srw_ss()) in
 val phase3_aux_thm = store_thm("phase3_aux_thm",
@@ -1020,8 +1040,9 @@ val phase3_pres = store_thm("phase3_pres",
 
 (* === The end-to-end compiler === *)
 
-val compile_def = Define `
-  compile t = phase3 (phase2 (phase1 t))`;
+Definition compile_def:
+  compile t = phase3 (phase2 (phase1 t))
+End
 
 (* Verification of the compile function *)
 

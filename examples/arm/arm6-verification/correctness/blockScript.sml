@@ -37,24 +37,29 @@ val tt = set_trace "types";
 
 (* ------------------------------------------------------------------------- *)
 
-val GEN_REG_LIST_def = Define`
-  GEN_REG_LIST wl n = (MAP SND o FILTER FST) (GENLIST (\b. (BIT b n,b)) wl)`;
+Definition GEN_REG_LIST_def:
+  GEN_REG_LIST wl n = (MAP SND o FILTER FST) (GENLIST (\b. (BIT b n,b)) wl)
+End
 
-val MASK_BIT_def = Define`
+Definition MASK_BIT_def:
   MASK_BIT (list:bool ** 'a) mask =
-    CLEARBIT ((LEASTBIT (list && mask)) MOD ^WL) mask`;
+    CLEARBIT ((LEASTBIT (list && mask)) MOD ^WL) mask
+End
 
-val MASKN_def = Define `MASKN n list = FUNPOW (MASK_BIT list) n UINT_MAXw`;
+Definition MASKN_def:   MASKN n list = FUNPOW (MASK_BIT list) n UINT_MAXw
+End
 
-val REG_WRITE_RP_def = Define`
+Definition REG_WRITE_RP_def:
   REG_WRITE_RP n reg mode list data =
-    REG_WRITE reg mode (RP ldm list (MASKN n list)) data`;
+    REG_WRITE reg mode (RP ldm list (MASKN n list)) data
+End
 
-val REG_WRITEN_def = Define`
+Definition REG_WRITEN_def:
   (REG_WRITEN 0 reg mode list i = reg) /\
   (REG_WRITEN (SUC n) reg mode list i =
      REG_WRITE_RP n (REG_WRITEN n reg mode list i) mode list
-       (PROJ_DATA (i n)))`;
+       (PROJ_DATA (i n)))
+End
 
 (* ------------------------------------------------------------------------- *)
 

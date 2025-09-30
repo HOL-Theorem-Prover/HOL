@@ -34,7 +34,7 @@ val _ = Datatype `
              unload : 'st -> 'res |>`;
 
 (* Given a small-step semantics and program, get the result *)
-val small_sem_def = Define `
+Definition small_sem_def:
   small_sem sem prog =
     let step_rel = (\s1 s2. sem.step s1 = SOME s2)^* in
     let init_state = sem.load prog in
@@ -44,7 +44,8 @@ val small_sem_def = Define `
           if sem.is_value s' then
             Terminate (sem.unload s')
           else
-            Crash`;
+            Crash
+End
 
 (* ----------- Generic functional big-step --------- *)
 
@@ -68,24 +69,27 @@ val _ = Datatype `
            get_clock : 'st -> num;
            unload : 'v -> 'a |>`;
 
-val eval_with_clock_def = Define `
+Definition eval_with_clock_def:
   eval_with_clock sem c p =
-    sem.eval (sem.set_clock c sem.init_st) sem.init_env p`;
+    sem.eval (sem.set_clock c sem.init_st) sem.init_env p
+End
 
-val fbs_sem_def = Define `
+Definition fbs_sem_def:
   fbs_sem sem prog =
     case some c. SND (eval_with_clock sem c prog) ≠ Timeout of
       NONE => Diverge
     | SOME c =>
         case SND (eval_with_clock sem c prog) of
           Val r => Terminate (sem.unload r)
-        | Error => Crash`;
+        | Error => Crash
+End
 
 (* 2 theorems showing when a small-step and functional big-step are equivalent *)
 
-val check_result_def = Define `
+Definition check_result_def:
   (check_result unload_f (Val x) r ⇔ unload_f x = r) ∧
-  (check_result unload_f _ r ⇔ T)`;
+  (check_result unload_f _ r ⇔ T)
+End
 
 local val rw = srw_tac[] val fs = fsrw_tac[] in
 val small_fbs_equiv = Q.store_thm ("small_fbs_equiv",
@@ -166,7 +170,7 @@ val small_fbs_equiv = Q.store_thm ("small_fbs_equiv",
    metis_tac []));
 end
 
-val same_result_def = Define `
+Definition same_result_def:
  (same_result sem_f sem_s (Val a) s ⇔
   sem_f.unload a = sem_s.unload s ∧
   sem_s.is_value s ∧
@@ -175,7 +179,8 @@ val same_result_def = Define `
   ¬sem_s.is_value s ∧
   sem_s.step s = NONE) ∧
  (same_result sem_f sem_s Timeout s ⇔
-  ?s'. sem_s.step s = SOME s')`;
+  ?s'. sem_s.step s = SOME s')
+End
 
 val small_fbs_equiv2 = Q.store_thm ("small_fbs_equiv2",
 `!sem_f sem_s.

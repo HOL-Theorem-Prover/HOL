@@ -133,29 +133,34 @@ val _ = save_thm("arm_alloc_thm",arm_alloc_thm);
 
 (* proof *)
 
-val ref_addr_def = Define `
-  (ref_addr a n = if n = 0 then 0w:word32 else a + n2w (12 * n))`;
+Definition ref_addr_def:
+  (ref_addr a n = if n = 0 then 0w:word32 else a + n2w (12 * n))
+End
 
-val ref_mem_def = Define `
+Definition ref_mem_def:
   (ref_mem i EMP (a,xs) = T) /\
   (ref_mem i (REF j) (a,xs) =
     (xs (ref_addr a i) = ref_addr a j + 1w)) /\
   (ref_mem i (DATA (x,y,z)) (a,xs) =
     (xs (ref_addr a i) = ref_addr a x) /\
     (xs (ref_addr a i + 4w) = ref_addr a y) /\
-    (xs (ref_addr a i + 8w) = z))`;
+    (xs (ref_addr a i + 8w) = z))
+End
 
-val valid_address_def = Define `
-  valid_address a i = w2n a + 12 * i + 8 < 2**32`;
+Definition valid_address_def:
+  valid_address a i = w2n a + 12 * i + 8 < 2**32
+End
 
-val ref_set_def = Define `
-  ref_set a f = { a + n2w (4 * i) | i <= 3 * f + 2 } UNION { a - n2w (4 * i) | i <= 9 }`;
+Definition ref_set_def:
+  ref_set a f = { a + n2w (4 * i) | i <= 3 * f + 2 } UNION { a - n2w (4 * i) | i <= 9 }
+End
 
-val ref_cheney_def = Define `
+Definition ref_cheney_def:
   ref_cheney (m,e) (a,d,xs,ys) =
     ~(a = 0w) /\ (a && 3w = 0w) /\ (!i. i <= e ==> ref_mem i (m i) (a,xs)) /\
     (m 0 = EMP) /\ valid_address a e /\ (!i. i <+ ref_addr a 1 ==> (xs i = ys i)) /\
-    (ref_set a e = d)`;
+    (ref_set a e = d)
+End
 
 val ref_addr_NOT_ZERO = prove(
   ``!a. ref_cheney (m,e) (a,d,xs,ys) /\ x <= e /\ ~(x = 0) ==> ~(ref_addr a x = 0w)``,
@@ -359,10 +364,11 @@ val arm_move2_thm = prove(
   ``(arm_move2 = arm_move) /\ (arm_move2_pre = arm_move_pre)``,
   TAILREC_TAC \\ SIMP_TAC std_ss [LET_DEF]);
 
-val ref_cheney_inv_def = Define `
+Definition ref_cheney_inv_def:
   ref_cheney_inv (b,i,j,k,e,f,m,w,ww,r) (a,r3,r4,d,xs,ys) =
     cheney_inv (b,b,i,j,k,e,f,m,w,ww,r) /\ ref_cheney (m,f) (a,d,xs,ys) /\
-    valid_address a e /\ (r4 = ref_addr a j) /\ (r3 = ref_addr a i)`;
+    valid_address a e /\ (r4 = ref_addr a j) /\ (r3 = ref_addr a i)
+End
 
 val ref_cheney_step_thm = prove(
   ``ref_cheney_inv (b,i,j,j,e,f,m,x,xx,r) (a,r3,r4,d,xs,ys) /\ ~(i = j) /\
@@ -489,11 +495,12 @@ val SING_IN_SUBSET0 = prove(
   ``x IN t /\ t SUBSET0 s ==> {x} SUBSET0 s``,
   SIMP_TAC bool_ss [SUBSET0_DEF,SUBSET_DEF,IN_INSERT,NOT_IN_EMPTY]);
 
-val roots_in_mem_def = Define `
+Definition roots_in_mem_def:
   (roots_in_mem [] (a,r12,m) = T) /\
   (roots_in_mem (x::xs) (a,r12,m) =
       (m r12 = ref_addr a x) /\ r12 <+ ref_addr a 1 /\ r12 <+ r12 + 4w /\
-      roots_in_mem xs (a,r12+4w,m))`;
+      roots_in_mem xs (a,r12+4w,m))
+End
 
 val NOT_ref_addr = prove(
   ``!x a. valid_address a i /\ x <+ ref_addr a 1 /\ ~(i = 0) ==>
@@ -526,9 +533,10 @@ val roots_lemma = prove(
   \\ SIMP_TAC std_ss [APPLY_UPDATE_THM,WORD_LOWER_NOT_EQ,GSYM WORD_ADD_ASSOC]
   \\ REPEAT STRIP_TAC \\ METIS_TAC [ref_cheney_def,WORD_LOWER_TRANS]);
 
-val root_address_ok_def = Define `
+Definition root_address_ok_def:
   (root_address_ok a 0 x = T) /\
-  (root_address_ok a (SUC n) x = ALIGNED a /\ a IN x /\ root_address_ok (a+4w) n x)`;
+  (root_address_ok a (SUC n) x = ALIGNED a /\ a IN x /\ root_address_ok (a+4w) n x)
+End
 
 val ref_cheney_move_roots = prove(
   ``!rs zs j m r4 r5 r7 r8 xs r12 ys jn mn.
@@ -593,7 +601,7 @@ val arm_c_init_lemma = prove(
   Cases_on `u` \\ SIMP_TAC std_ss [SIMP_RULE std_ss [LET_DEF] def6,
     WORD_ADD_0,PAIR_EQ,WORD_XOR_CLAUSES,EVAL ``0w = 1w:word32``]);
 
-val arm_coll_inv_def = Define `
+Definition arm_coll_inv_def:
   arm_coll_inv (a,x,xs) (i,e,rs,l,u,m) =
     ?x1 x2 x3 x4 x5 x6.
       roots_in_mem (rs ++ [i;e]) (a,a-24w,xs) /\
@@ -601,7 +609,8 @@ val arm_coll_inv_def = Define `
       valid_address a (l + l + 1) /\
       ref_cheney (m,l+l+1) (a,x,xs,xs) /\
       (xs (a-28w) = if u then 0w else 1w) /\ a - 28w <+ ref_addr a 1 /\ a - 28w <+ a - 24w /\
-      (xs (a-32w) = n2w (12 * l)) /\ a - 32w <+ ref_addr a 1 /\ a - 32w <+ a - 24w`;
+      (xs (a-32w) = n2w (12 * l)) /\ a - 32w <+ ref_addr a 1 /\ a - 32w <+ a - 24w
+End
 
 val roots_in_mem_carry_over = prove(
   ``!p r xs ys. ref_cheney (m,f) (a,x,xs,ys) /\ roots_in_mem p (a,r,ys) ==> roots_in_mem p (a,r,xs)``,

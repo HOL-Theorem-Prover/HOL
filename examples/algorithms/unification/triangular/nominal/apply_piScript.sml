@@ -12,7 +12,8 @@ val raw_apply_pi_q = `
      nPair (raw_apply_pi pi t1) (raw_apply_pi pi t2)) ∧
   (raw_apply_pi pi (nConst c) = nConst c)`
 
-val raw_apply_pi_def_with_choice = Define `^raw_apply_pi_q`
+Definition raw_apply_pi_def_with_choice:   ^raw_apply_pi_q
+End
 
 val raw_apply_pi_def = Q.store_thm(
   "raw_apply_pi_def",

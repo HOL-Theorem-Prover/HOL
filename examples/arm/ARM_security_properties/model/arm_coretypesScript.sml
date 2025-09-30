@@ -149,29 +149,33 @@ Definition aligned_def[nocompute]:
   aligned (w : 'a word, n : num) = (w = align(w,n))
 End
 
-val count_leading_zeroes_def = Define`
+Definition count_leading_zeroes_def:
   count_leading_zeroes (w : 'a word) =
     if w = 0w then
       dimindex(:'a)
     else
-      dimindex(:'a) - 1 - LOG2 (w2n w)`;
+      dimindex(:'a) - 1 - LOG2 (w2n w)
+End
 
-val lowest_set_bit_def = Define`
+Definition lowest_set_bit_def:
   lowest_set_bit (w : 'a word) =
     if w = 0w then
       dimindex(:'a)
     else
-      LEAST i. w ' i`;
+      LEAST i. w ' i
+End
 
 val _ = wordsLib.guess_lengths();
 
-val zero_extend32_def = Define`
+Definition zero_extend32_def:
   (zero_extend32 [b:word8] : word32 = w2w b) /\
-  (zero_extend32 [b1; b2] = w2w (b2 @@ b1))`;
+  (zero_extend32 [b1; b2] = w2w (b2 @@ b1))
+End
 
-val sign_extend32_def = Define`
+Definition sign_extend32_def:
   (sign_extend32 [b:word8] : word32 = sw2sw b) /\
-  (sign_extend32 [b1; b2] = sw2sw (b2 @@ b1))`;
+  (sign_extend32 [b1; b2] = sw2sw (b2 @@ b1))
+End
 
 val word_defs = TotalDefn.multiDefine`
   (word16 ([b1; b2] : word8 list) = b2 @@ b1) /\
@@ -179,14 +183,16 @@ val word_defs = TotalDefn.multiDefine`
   (word64 ([b1; b2; b3; b4; b5; b6; b7; b8] : word8 list) =
     word32 [b5; b6; b7; b8] @@ word32 [b1; b2; b3; b4])`;
 
-val bytes_def = Define`
+Definition bytes_def:
   (bytes (w, 4) = [(7 >< 0) w; (15 >< 8) w; (23 >< 16) w; (31 >< 24) w]) /\
   (bytes (w, 2) = [(7 >< 0) w; (15 >< 8) w]) /\
-  (bytes (w, 1) = [w2w (w:word32)] : word8 list)`;
+  (bytes (w, 1) = [w2w (w:word32)] : word8 list)
+End
 
-val i2bits_def = Define `i2bits (i,N) = n2w (Num (i % 2 ** N))`;
+Definition i2bits_def:   i2bits (i,N) = n2w (Num (i % 2 ** N))
+End
 
-val signed_sat_q_def = Define`
+Definition signed_sat_q_def:
   signed_sat_q (i:int, N:num) : ('a word # bool) =
     if dimindex(:'a) < N then
       ARB
@@ -196,9 +202,10 @@ val signed_sat_q_def = Define`
       else if i < ~(2 ** (N - 1)) then
         (i2bits (~(2 ** (N - 1)), N), T)
       else
-        (i2bits (i, N), F)`;
+        (i2bits (i, N), F)
+End
 
-val unsigned_sat_q_def = Define`
+Definition unsigned_sat_q_def:
   unsigned_sat_q (i:int, N:num) : ('a word # bool) =
     if dimindex(:'a) < N then
       ARB
@@ -208,10 +215,13 @@ val unsigned_sat_q_def = Define`
       else if i < 0 then
         (0w, T)
       else
-        (n2w (Num i), F)`;
+        (n2w (Num i), F)
+End
 
-val signed_sat_def   = Define `signed_sat   = FST o signed_sat_q`;
-val unsigned_sat_def = Define `unsigned_sat = FST o unsigned_sat_q`;
+Definition signed_sat_def:     signed_sat   = FST o signed_sat_q
+End
+Definition unsigned_sat_def:   unsigned_sat = FST o unsigned_sat_q
+End
 
 Definition LSL_C_def[nocompute]:
   LSL_C (x: 'a word, shift:num) =
@@ -246,18 +256,24 @@ Definition ROR_C_def[nocompute]:
       (result, result ' (dimindex(:'a) - 1))
 End
 
-val RRX_C_def = Define`
+Definition RRX_C_def:
   RRX_C (x: 'a word, carry_in:bool) =
     let (carry_out,result) = word_rrx(carry_in,x) in
-      (result,carry_out)`;
+      (result,carry_out)
+End
 
-val LSL_def = Define `LSL (x: 'a word, shift:num) = x << shift`;
-val LSR_def = Define `LSR (x: 'a word, shift:num) = x >>> shift`;
-val ASR_def = Define `ASR (x: 'a word, shift:num) = x >> shift`;
-val ROR_def = Define `ROR (x: 'a word, shift:num) = x #>> shift`;
+Definition LSL_def:   LSL (x: 'a word, shift:num) = x << shift
+End
+Definition LSR_def:   LSR (x: 'a word, shift:num) = x >>> shift
+End
+Definition ASR_def:   ASR (x: 'a word, shift:num) = x >> shift
+End
+Definition ROR_def:   ROR (x: 'a word, shift:num) = x #>> shift
+End
 
-val RRX_def = Define`
-  RRX (x: 'a word, carry_in:bool) = SND (word_rrx (carry_in,x))`;
+Definition RRX_def:
+  RRX (x: 'a word, carry_in:bool) = SND (word_rrx (carry_in,x))
+End
 
 (* ------------------------------------------------------------------------ *)
 
@@ -276,7 +292,7 @@ val ITAdvance_n2w = save_thm("ITAdvance_n2w",
      |> RIGHT_CONV_RULE EVAL
      |> GEN_ALL);
 
-val decode_psr_def = Define`
+Definition decode_psr_def:
   decode_psr (psr:word32) =
     <| N := psr ' 31;
        Z := psr ' 30;
@@ -292,9 +308,10 @@ val decode_psr_def = Define`
        I := psr ' 7;
        F := psr ' 6;
        T := psr ' 5;
-       M := ( 4 >< 0 ) psr |>`;
+       M := ( 4 >< 0 ) psr |>
+End
 
-val encode_psr_def = Define`
+Definition encode_psr_def:
   encode_psr (psr:ARMpsr) : word32 =
     FCP x.
       if x < 5 then psr.M ' x else
@@ -312,9 +329,10 @@ val encode_psr_def = Define`
       if x = 28 then psr.V else
       if x = 29 then psr.C else
       if x = 30 then psr.Z else
-      (* x = 31 *)   psr.N`;
+      (* x = 31 *)   psr.N
+End
 
-val version_number_def = Define`
+Definition version_number_def:
   (version_number ARMv4   = 4) /\
   (version_number ARMv4T  = 4) /\
   (version_number ARMv5T  = 5) /\
@@ -323,22 +341,27 @@ val version_number_def = Define`
   (version_number ARMv6K  = 6) /\
   (version_number ARMv6T2 = 6) /\
   (version_number ARMv7_A = 7) /\
-  (version_number ARMv7_R = 7)`;
+  (version_number ARMv7_R = 7)
+End
 
-val thumb2_support_def = Define`
-  thumb2_support = {a | (a = ARMv6T2) \/ version_number a >= 7}`;
+Definition thumb2_support_def:
+  thumb2_support = {a | (a = ARMv6T2) \/ version_number a >= 7}
+End
 
-val security_support_def = Define`
+Definition security_support_def:
   security_support = {(a,e) | ((a = ARMv6K) \/ (a = ARMv7_A)) /\
-                              Extension_Security IN e}`;
+                              Extension_Security IN e}
+End
 
-val thumbee_support_def = Define`
+Definition thumbee_support_def:
   thumbee_support = {(a,e) | (a = ARMv7_A) \/
-                             (a = ARMv7_R) /\ Extension_ThumbEE IN e}`;
+                             (a = ARMv7_R) /\ Extension_ThumbEE IN e}
+End
 
-val jazelle_support_def = Define`
+Definition jazelle_support_def:
   jazelle_support = {(a,e) | version_number a > 6 \/
-                             (a = ARMv5TE) /\ Extension_Jazelle IN e}`;
+                             (a = ARMv5TE) /\ Extension_Jazelle IN e}
+End
 
 (* ------------------------------------------------------------------------ *)
 

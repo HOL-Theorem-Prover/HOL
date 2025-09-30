@@ -251,23 +251,26 @@ val FieldHomo_def = Define`
 *)
 
 (* Actually, a field homomorphism is just a ring homomorphism. *)
-val FieldHomo_def = Define`
+Definition FieldHomo_def:
   FieldHomo f (r:'a field) (s:'b field) <=> RingHomo f r s
-`;
+End
 
 (* A function f from r to s is an isomorphism if f is a bijective homomorphism. *)
-val FieldIso_def = Define`
+Definition FieldIso_def:
   FieldIso f r s <=> FieldHomo f r s /\ BIJ f R s.carrier
-`;
+End
 
 (* A field homomorphism from r to r is an endomorphism. *)
-val FieldEndo_def = Define `FieldEndo f r <=> FieldHomo f r r`;
+Definition FieldEndo_def:   FieldEndo f r <=> FieldHomo f r r
+End
 
 (* A field isomorphism from r to r is an automorphism. *)
-val FieldAuto_def = Define `FieldAuto f r <=> FieldIso f r r`;
+Definition FieldAuto_def:   FieldAuto f r <=> FieldIso f r r
+End
 
 (* A subfield s of r if identity is a homomorphism from s to r *)
-val subfield_def = Define `subfield s r <=> FieldHomo I s r`;
+Definition subfield_def:   subfield s r <=> FieldHomo I s r
+End
 
 (* Overloads for Homomorphism and Isomorphisms with map *)
 val _ = overload_on("~~~", ``\(r:'a field) (r_:'b field) f. Field r /\ Field r_ /\ FieldHomo f r r_``);
@@ -1772,13 +1775,13 @@ val subfield_field_iso_ring_homo_subfield = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the subset field: takes a subset and gives a field candidate *)
-val subset_field_def = Define`
+Definition subset_field_def:
     subset_field (r:'a field) (s:'a -> bool) =
     <| carrier := s;
            sum := <| carrier := s; op := r.sum.op; id := #0 |>;
           prod := <| carrier := s; op := r.prod.op; id := #1 |>
      |>
-`;
+End
 (* Note: s DELETE #0 = s DIFF {#0}  by DELETE_DEF *)
 (* Note: x INSERT s = {x} UNION s   by INSERT_SING_UNION *)
 

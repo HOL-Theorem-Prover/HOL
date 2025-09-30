@@ -27,75 +27,88 @@ val Strip = S_TAC;
 Type measure = “:'a set -> real”
 Type m_space = “:'a set # 'a set set # 'a measure”
 
-val m_space_def = Define
-   `m_space (sp:'a->bool, sts:('a->bool)->bool, mu:('a->bool)->real) = sp`;
+Definition m_space_def:
+    m_space (sp:'a->bool, sts:('a->bool)->bool, mu:('a->bool)->real) = sp
+End
 
-val measurable_sets_def = Define
-   `measurable_sets (sp:'a->bool, sts:('a->bool)->bool, mu:('a->bool)->real) = sts`;
+Definition measurable_sets_def:
+    measurable_sets (sp:'a->bool, sts:('a->bool)->bool, mu:('a->bool)->real) = sts
+End
 
 val _ = hide "measure"; (* prim_recTheory *)
-val measure_def = Define
-   `measure (sp:'a->bool, sts:('a->bool)->bool, mu:('a->bool)->real) = mu`;
+Definition measure_def:
+    measure (sp:'a->bool, sts:('a->bool)->bool, mu:('a->bool)->real) = mu
+End
 
-val positive_def = Define
-   `positive m <=>
-    (measure m {} = 0) /\ !s. s IN measurable_sets m ==> 0 <= measure m s`;
+Definition positive_def:
+    positive m <=>
+    (measure m {} = 0) /\ !s. s IN measurable_sets m ==> 0 <= measure m s
+End
 
-val additive_def = Define
-   `additive m <=>
+Definition additive_def:
+    additive m <=>
     !s t. s IN measurable_sets m /\ t IN measurable_sets m /\ DISJOINT s t ==>
-         (measure m (s UNION t) = measure m s + measure m t)`;
+         (measure m (s UNION t) = measure m s + measure m t)
+End
 
-val countably_additive_def = Define
-   `countably_additive m <=>
+Definition countably_additive_def:
+    countably_additive m <=>
     !f : num -> ('a -> bool).
      f IN (UNIV -> measurable_sets m) /\
      (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) /\
      BIGUNION (IMAGE f UNIV) IN measurable_sets m ==>
-     (measure m o f) sums measure m (BIGUNION (IMAGE f UNIV))`;
+     (measure m o f) sums measure m (BIGUNION (IMAGE f UNIV))
+End
 
-val subadditive_def = Define
-   `subadditive m <=>
+Definition subadditive_def:
+    subadditive m <=>
     !s t.
      s IN measurable_sets m /\ t IN measurable_sets m ==>
-     measure m (s UNION t) <= measure m s + measure m t`;
+     measure m (s UNION t) <= measure m s + measure m t
+End
 
-val countably_subadditive_def = Define
-   `countably_subadditive m <=>
+Definition countably_subadditive_def:
+    countably_subadditive m <=>
     !f : num -> ('a -> bool).
      f IN (UNIV -> measurable_sets m) /\
      BIGUNION (IMAGE f UNIV) IN measurable_sets m /\
      summable (measure m o f) ==>
-     measure m (BIGUNION (IMAGE f UNIV)) <= suminf (measure m o f)`;
+     measure m (BIGUNION (IMAGE f UNIV)) <= suminf (measure m o f)
+End
 
-val increasing_def = Define
-   `increasing m <=>
+Definition increasing_def:
+    increasing m <=>
     !s t.
      s IN measurable_sets m /\ t IN measurable_sets m /\ s SUBSET t ==>
-     measure m s <= measure m t`;
+     measure m s <= measure m t
+End
 
-val measure_space_def = Define
-   `measure_space m <=>
-    sigma_algebra (m_space m, measurable_sets m) /\ positive m /\ countably_additive m`;
+Definition measure_space_def:
+    measure_space m <=>
+    sigma_algebra (m_space m, measurable_sets m) /\ positive m /\ countably_additive m
+End
 
-val lambda_system_def = Define
-  `lambda_system gen (lam : ('a -> bool) -> real) =
+Definition lambda_system_def:
+   lambda_system gen (lam : ('a -> bool) -> real) =
    {l |
     l IN (subsets gen) /\
-    !s. s IN (subsets gen) ==> (lam (l INTER s) + lam ((space gen DIFF l) INTER s) = lam s)}`;
+    !s. s IN (subsets gen) ==> (lam (l INTER s) + lam ((space gen DIFF l) INTER s) = lam s)}
+End
 
-val outer_measure_space_def = Define
-   `outer_measure_space m <=> positive m /\ increasing m /\ countably_subadditive m`;
+Definition outer_measure_space_def:
+    outer_measure_space m <=> positive m /\ increasing m /\ countably_subadditive m
+End
 
-val inf_measure_def = Define
-   `inf_measure m s =
+Definition inf_measure_def:
+    inf_measure m s =
     inf
     {r | ?f. f IN (UNIV -> measurable_sets m) /\
             (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) /\
-             s SUBSET BIGUNION (IMAGE f UNIV) /\ ((measure m o f) sums r)}`;
+             s SUBSET BIGUNION (IMAGE f UNIV) /\ ((measure m o f) sums r)}
+End
 
-val closed_cdi_def = Define
-   `closed_cdi p <=>
+Definition closed_cdi_def:
+    closed_cdi p <=>
     subset_class (space p) (subsets p) /\
      (!s. s IN (subsets p) ==> (space p DIFF s) IN (subsets p)) /\
      (!f : num -> 'a -> bool.
@@ -103,29 +116,33 @@ val closed_cdi_def = Define
         BIGUNION (IMAGE f UNIV) IN (subsets p)) /\
      (!f : num -> 'a -> bool.
         f IN (UNIV -> (subsets p)) /\ (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) ==>
-        BIGUNION (IMAGE f UNIV) IN (subsets p))`;
+        BIGUNION (IMAGE f UNIV) IN (subsets p))
+End
 
-val smallest_closed_cdi_def = Define
-   `smallest_closed_cdi a =
-     (space a, BIGINTER {b | (subsets a) SUBSET b /\ closed_cdi (space a, b)})`;
+Definition smallest_closed_cdi_def:
+    smallest_closed_cdi a =
+     (space a, BIGINTER {b | (subsets a) SUBSET b /\ closed_cdi (space a, b)})
+End
 
 (* NOTE: removed `measure_space m1 /\ measure_space m2` to allow possible usage of
   `measure_preserving` on pseudo-measure spaces.
 
    This is also aligned with `measureTheory.measure_preserving_def`.
  *)
-val measure_preserving_def = Define
-   `measure_preserving m1 m2 =
+Definition measure_preserving_def:
+    measure_preserving m1 m2 =
     {f |
      f IN measurable (m_space m1, measurable_sets m1) (m_space m2, measurable_sets m2) /\
      !s.
       s IN measurable_sets m2 ==>
-           (measure m1 ((PREIMAGE f s)INTER(m_space m1)) = measure m2 s)}`;
+           (measure m1 ((PREIMAGE f s)INTER(m_space m1)) = measure m2 s)}
+End
 
-val mono_convergent_def = Define
-   `mono_convergent u f s <=>
+Definition mono_convergent_def:
+    mono_convergent u f s <=>
         (!x m n. m <= n /\ x IN s ==> u m x <= u n x) /\
-        (!x. x IN s ==> (\i. u i x) --> f x)`;
+        (!x. x IN s ==> (\i. u i x) --> f x)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Basic measure theory theorems                                             *)

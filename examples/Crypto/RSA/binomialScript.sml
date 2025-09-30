@@ -15,11 +15,11 @@ val ARW = RW_TAC arith_ss;
 
 val FACT_def = ONCE_REWRITE_RULE [MULT_COMM] FACT;
 
-val BINOMIAL =
- Define
-     `(binomial a 0  = 1)
+Definition BINOMIAL:
+      (binomial a 0  = 1)
   /\  (binomial 0 (SUC b) = 0)
-  /\  (binomial (SUC a) (SUC b) = binomial a (SUC b) + binomial a b)`;
+  /\  (binomial (SUC a) (SUC b) = binomial a (SUC b) + binomial a b)
+End
 
 
 val BINOMIAL_DEF1 = store_thm("BINOMIAL_DEF1",

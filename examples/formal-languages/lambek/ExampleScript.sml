@@ -42,8 +42,9 @@ in
 end;
 
 (* check if a given sentence has category s *)
-val sentence_def = Define `
-    sentence words = arrow NL words (At "S")`;
+Definition sentence_def:
+    sentence words = arrow NL words (At "S")
+End
 
 (******************************************************************************)
 (*                                                                            *)

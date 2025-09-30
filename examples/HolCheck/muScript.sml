@@ -43,7 +43,8 @@ val _ = save_thm("STATES_def",STATES_def)
 
 val MU_SAT_def = save_thm("MU_SAT_def",Define `MU_SAT f ks e s = s IN STATES f ks e`)
 
-val MU_MODEL_SAT_def = Define `MU_MODEL_SAT f ks e = (!s. s IN ks.S0 ==> MU_SAT f ks e s)`
+Definition MU_MODEL_SAT_def:   MU_MODEL_SAT f ks e = (!s. s IN ks.S0 ==> MU_SAT f ks e s)
+End
 
 (* thms about state sets *)
 

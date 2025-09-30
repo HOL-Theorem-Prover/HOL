@@ -4,9 +4,8 @@ Ancestors
 
 (* -- EXTRACT FUNCTION -- *)
 (* General Purpose Sublist extract function *)
-val extract_def =
-    Define
-    `
+Definition extract_def:
+
     (extract _ [] = []) /\
     (extract (0,0) (x::xs) = []) /\
     (extract (SUC n, 0) (x::xs) = []) /\
@@ -16,7 +15,7 @@ val extract_def =
     (extract (SUC n, SUC m) (x::xs) =
         extract (n,m) xs
     )
-    `;
+End
 
 (* Basic Extract Properties *)
 val EXTRACT_THM = store_thm(
@@ -56,9 +55,8 @@ val EXTRACT_GEN_THM = store_thm(
 
 (* -- UNIQUE ELEMS FUNCTION -- *)
 (* Find all unqiue elements in a list *)
-val uniqueElems_def =
-    Define
-    `
+Definition uniqueElems_def:
+
     (uniqueElems [] = []) /\
     (uniqueElems (x::rst) =
         let
@@ -71,7 +69,7 @@ val uniqueElems_def =
             else
                 x::uniTail
     )
-    `;
+End
 
 (* Confirming uniqueElems contains everything in the list *)
 val UNIQUE_ELEMS_THM = store_thm(
@@ -95,9 +93,8 @@ val UNIQUE_ELEMS_THM = store_thm(
 
 (* -- FIND ELEMS FUNCTION -- *)
 (* Find first index of element in list. Returns past end of list if no elem *)
-val findElem_def =
-    Define
-    `
+Definition findElem_def:
+
     (findElem [] _ = 0) /\
     (findElem (x::rst) e =
         if
@@ -107,7 +104,7 @@ val findElem_def =
         else
             1 + findElem rst e
     )
-    `;
+End
 
 (* Confirming findElem checks lst for element e and
    find an occurrence *)
@@ -157,9 +154,8 @@ val FIND_ELEM_BND = store_thm(
 (* -- CHECK PAIRS FUNCTION -- *)
 (* check if pat is prefix of search from left to right and return failure point.
    Returns LENGTH pat if perfect match *)
-val checkPairs_def =
-    Define
-    `
+Definition checkPairs_def:
+
     (checkPairs [] = 0) /\
     (checkPairs (p::ps) =
         if
@@ -169,7 +165,7 @@ val checkPairs_def =
         else
             0
     )
-    `;
+End
 
 (* Checking that checkPairs correctly finds first point of mismatch *)
 val CHECK_PAIRS_THM = store_thm(
@@ -254,9 +250,8 @@ val CHECK_PAIRS_BND = store_thm(
 (* check if pat is prefix of search from right to left and return failure point.
    Returns LENGTH pat if perfect match. Returns LENGTH pat + 1 if search string
    is too short. *)
-val checkPrefixRL_def =
-    Define
-    `
+Definition checkPrefixRL_def:
+
     checkPrefixRL pat search =
         let
             (L = LENGTH pat);
@@ -277,7 +272,7 @@ val checkPrefixRL_def =
                         L
                     else
                         L - (1 + jLR)
-    `;
+End
 
 (* Confirming checkPrefixRL checks pat matches search from right
    to left correctly returning first point of failure *)

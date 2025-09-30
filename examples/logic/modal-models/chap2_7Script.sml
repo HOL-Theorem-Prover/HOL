@@ -7,15 +7,17 @@ Ancestors
 
 val _ = temp_delsimps ["satis_def"]
 
-val sim_def = Define`
+Definition sim_def:
   sim Z M M' <=>
   !w w'. w IN M.frame.world /\ w' IN M'.frame.world /\ Z w w' ==>
   (!p. w IN M.valt p ==> w' IN M'.valt p) /\
-  (!v. v IN M.frame.world /\ M.frame.rel w v ==> ?v'. v' IN M'.frame.world /\ Z v v' /\ M'.frame.rel w' v')`;
+  (!v. v IN M.frame.world /\ M.frame.rel w v ==> ?v'. v' IN M'.frame.world /\ Z v v' /\ M'.frame.rel w' v')
+End
 
-val preserved_under_sim_def = Define`
+Definition preserved_under_sim_def:
   preserved_under_sim (μ:'a itself) (ν:'b itself) phi <=>
-  (!M M' Z w w'. w:'a IN M.frame.world /\ w':'b IN M'.frame.world /\ sim Z M M' /\ Z w w' ==> (satis M w phi ==> satis M' w' phi))`;
+  (!M M' Z w w'. w:'a IN M.frame.world /\ w':'b IN M'.frame.world /\ sim Z M M' /\ Z w w' ==> (satis M w phi ==> satis M' w' phi))
+End
 
 
 

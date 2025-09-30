@@ -36,11 +36,12 @@ val func_11 = fetch "-" "func_11";
 
 (* reading a program, i.e. term, from an s-expression -- sexp2term *)
 
-val list2sexp_def = Define `
+Definition list2sexp_def:
   (list2sexp [] = Sym "NIL") /\
-  (list2sexp (x::xs) = Dot x (list2sexp xs))`;
+  (list2sexp (x::xs) = Dot x (list2sexp xs))
+End
 
-val sym2prim_def = Define `
+Definition sym2prim_def:
   sym2prim s =
     if s = "CONS" then SOME opCONS else
     if s = "EQUAL" then SOME opEQUAL else
@@ -52,12 +53,14 @@ val sym2prim_def = Define `
     if s = "NATP" then SOME opNATP else
     if s = "SYMBOLP" then SOME opSYMBOLP else
     if s = "CAR" then SOME opCAR else
-    if s = "CDR" then SOME opCDR else NONE`;
+    if s = "CDR" then SOME opCDR else NONE
+End
 
-val sexp2list_def = Define `
+Definition sexp2list_def:
   (sexp2list (Val n) = []) /\
   (sexp2list (Sym s) = []) /\
-  (sexp2list (Dot x y) = x::sexp2list y)`;
+  (sexp2list (Dot x y) = x::sexp2list y)
+End
 
 val IMP_isDot = prove(
   ``!x. ~isVal x /\ ~isSym x ==> isDot x``,
@@ -139,7 +142,7 @@ val sexp2term_def = tDefine "sexp2term" `
 
 (* a structural operational semantics *)
 
-val EVAL_DATA_OP_def = Define `
+Definition EVAL_DATA_OP_def:
   (EVAL_DATA_OP opCONS = ((\xs. LISP_CONS (EL 0 xs) (EL 1 xs)), 2)) /\
   (EVAL_DATA_OP opEQUAL = ((\xs. LISP_EQUAL (EL 0 xs) (EL 1 xs)), 2)) /\
   (EVAL_DATA_OP opLESS = ((\xs. LISP_LESS (EL 0 xs) (EL 1 xs)), 2)) /\
@@ -150,18 +153,22 @@ val EVAL_DATA_OP_def = Define `
   (EVAL_DATA_OP opNATP = ((\xs. LISP_NUMBERP (EL 0 xs)), 1)) /\
   (EVAL_DATA_OP opSYMBOLP = ((\xs. LISP_SYMBOLP (EL 0 xs)), 1)) /\
   (EVAL_DATA_OP opCAR = ((\xs. CAR (EL 0 xs)), 1)) /\
-  (EVAL_DATA_OP opCDR = ((\xs. CDR (EL 0 xs)), (1:num)))`;
+  (EVAL_DATA_OP opCDR = ((\xs. CDR (EL 0 xs)), (1:num)))
+End
 
-val VarBindAux_def = Define `
+Definition VarBindAux_def:
   (VarBindAux [] args = FEMPTY) /\
   (VarBindAux (p::ps) [] = FEMPTY) /\
-  (VarBindAux (p::ps) (a::as) = (VarBindAux ps as) |+ (p,a))`;
+  (VarBindAux (p::ps) (a::as) = (VarBindAux ps as) |+ (p,a))
+End
 
-val VarBind_def = Define `
-  VarBind params args = VarBindAux (REVERSE params) (REVERSE args)`;
+Definition VarBind_def:
+  VarBind params args = VarBindAux (REVERSE params) (REVERSE args)
+End
 
-val add_def_def = Define `
-  add_def fns x = FUNION fns (FEMPTY |+ x)`;
+Definition add_def_def:
+  add_def fns x = FUNION fns (FEMPTY |+ x)
+End
 
 val (R_ev_rules,R_ev_ind,R_ev_cases) = Hol_reln `
  (!s a fns io ok.

@@ -50,17 +50,17 @@ val _ = ParseExtras.temp_loose_equality()
 HOLDF (t1,t2) i is true iff i:num->bool is F in the interval [t1..t2)
 *)
 
-val HOLDF_def =
- Define
-  `HOLDF (t1,t2) i = !t. ((t1 <= t) /\ (t < t2)) ==> ~(i t)`;
+Definition HOLDF_def:
+   HOLDF (t1,t2) i = !t. ((t1 <= t) /\ (t < t2)) ==> ~(i t)
+End
 
 (*
 POSEDGE i t is true iff t>0 and i(t-1) = F and i t = T
 *)
 
-val POSEDGE_def =
- Define
-  `POSEDGE i t = if t=0 then F else (~i(t-1) /\ i t)`;
+Definition POSEDGE_def:
+   POSEDGE i t = if t=0 then F else (~i(t-1) /\ i t)
+End
 
 (*
            load       inp
@@ -90,9 +90,8 @@ In addition, if done is T then it stays true if there is no POSEDGE on
 load.
 *)
 
-val SAFE_DEV_def =
- Define
-  `SAFE_DEV f (load,inp,done,out) =
+Definition SAFE_DEV_def:
+   SAFE_DEV f (load,inp,done,out) =
     (!t. done t /\ POSEDGE load (t+1)
          ==>
          ?t'. t' > t+1            /\
@@ -100,7 +99,8 @@ val SAFE_DEV_def =
               done t'             /\
               (out t' = f(inp(t+1))))
     /\
-    (!t. done t /\ ~(POSEDGE load (t+1)) ==> done(t+1))`;
+    (!t. done t /\ ~(POSEDGE load (t+1)) ==> done(t+1))
+End
 
 (*****************************************************************************)
 (* To show that handshaking devices exist, we define below an implementation *)
@@ -122,64 +122,73 @@ val SAFE_DEV_def =
 Combinational (i.e. zero-delay) conponent with input inp and output out
 which computes a function f.
 *)
-val COMB_def =
- Define `COMB f (inp,out) = !t. out t = f(inp t)`;
+Definition COMB_def:
+  COMB f (inp,out) = !t. out t = f(inp t)
+End
 
 (*
 Component that constantly outputs T at out.
 *)
-val TRUE_def =
- Define `TRUE out = !t. out t = T`;
+Definition TRUE_def:
+  TRUE out = !t. out t = T
+End
 
 (*
 Component that constantly outputs F at out.
 *)
-val TRUE_def =
- Define `FALSE out = !t. out t = F`;
+Definition TRUE_def:
+  FALSE out = !t. out t = F
+End
 
 (*
 Combinational AND-gate, with inputs in1, in2 and output out.
 *)
-val AND_def =
- Define `AND(in1,in2,out) = !t. out t = (in1 t /\ in2 t)`;
+Definition AND_def:
+  AND(in1,in2,out) = !t. out t = (in1 t /\ in2 t)
+End
 
 (*
 Combinational OR-gate, with inputs in1, in2 and output out.
 *)
-val OR_def =
- Define `OR(in1,in2,out) = !t. out t = (in1 t \/ in2 t)`;
+Definition OR_def:
+  OR(in1,in2,out) = !t. out t = (in1 t \/ in2 t)
+End
 
 (*
 Combinational NOT-gate (i.e. inverter), with inputs inp and output out.
 *)
-val NOT_def =
- Define `NOT(inp,out) = !t. out t = ~(inp t)`;
+Definition NOT_def:
+  NOT(inp,out) = !t. out t = ~(inp t)
+End
 
 (*
 Combinational multiplexer, with select input sel that connects input
 in1 to output out if T and connects input in2 to output out if F.
 *)
-val MUX_def =
- Define
-  `MUX(sel,in1,in2,out) = !t. out t = if sel t then in1 t else in2 t`
+Definition MUX_def:
+   MUX(sel,in1,in2,out) = !t. out t = if sel t then in1 t else in2 t
+End
 
 (*
 Polymorphic unit delay component (i.e. a register):
 *)
-val DEL_def =
- Define `DEL(inp,out) = !t. out(t+1) = inp t`;
+Definition DEL_def:
+  DEL(inp,out) = !t. out(t+1) = inp t
+End
 
 (*
 Boolean unit delay component that initialises into state T
 *)
-val DELT_def =
- Define `DELT(inp,out) = (out 0 = T) /\ !t. out(t+1) = inp t`;
+Definition DELT_def:
+  DELT(inp,out) = (out 0 = T) /\ !t. out(t+1) = inp t
+End
 
 (*
 Boolean unit delay component that initialises into state F
 *)
-val DELF_def =
- Define `DELF(inp,out) = (out 0 = F) /\ !t. out(t+1) = inp t`;
+Definition DELF_def:
+  DELF(inp,out) = (out 0 = F) /\ !t. out(t+1) = inp t
+End
 
 (*****************************************************************************)
 (* Now some implementations built using the basic components,                *)
@@ -217,10 +226,10 @@ POSEDGE_IMP implements POSEDGE in the sense that
 which is proved as theorem POSEDGE_IMPL below.
 *)
 
-val POSEDGE_IMP_def =
- Define
-  `POSEDGE_IMP(inp,out) =
-     ?c0 c1. DELT(inp,c0) /\ NOT(c0,c1) /\ AND(c1,inp,out)`;
+Definition POSEDGE_IMP_def:
+   POSEDGE_IMP(inp,out) =
+     ?c0 c1. DELT(inp,c0) /\ NOT(c0,c1) /\ AND(c1,inp,out)
+End
 
 (*****************************************************************************)
 (* Implementation of an atomic handshaking device.                           *)
@@ -255,13 +264,13 @@ to compute a given function f. The implementation satisfies:
 which is proved as theorem ATM below.
 *)
 
-val ATM_def =
- Define
-  `ATM f (load,inp,done,out) =
+Definition ATM_def:
+   ATM f (load,inp,done,out) =
     ?c0 c1. POSEDGE_IMP(load,c0) /\
             NOT(c0,done)         /\
             COMB f (inp,c1)      /\
-            DEL(c1,out)`;
+            DEL(c1,out)
+End
 
 (*****************************************************************************)
 (* Next we define the serial composition of two handskaking devices.         *)
@@ -332,38 +341,39 @@ which is proved as theorem SEQ below.
 (*
 Sequential composition of devices d1 and d2
 *)
-val SEQ_def =
- Define
-  `SEQ d1 d2  (load,inp,done,out) =
+Definition SEQ_def:
+   SEQ d1 d2  (load,inp,done,out) =
     ?not_c2 c0 c1 c2 data.
      NOT(c2,not_c2)     /\
      OR(not_c2,load,c0) /\
      d1(c0,inp,c1,data) /\
      d2(c1,data,c2,out) /\
-     AND(c1,c2,done)`;
+     AND(c1,c2,done)
+End
 
 
 (*****************************************************************************)
 (* Data flip-flop                                                            *)
 (*****************************************************************************)
-val DFF_def =
- Define
-  `DFF (d,sel,q) =
-    !t. q (t+1) = if POSEDGE sel (t+1) then d (t+1) else q t`;
+Definition DFF_def:
+   DFF (d,sel,q) =
+    !t. q (t+1) = if POSEDGE sel (t+1) then d (t+1) else q t
+End
 
 
 (*****************************************************************************)
 (* The parallel composition                                                  *)
 (*****************************************************************************)
 
-val PAR_def = Define `PAR f g (load,inp,done,out) =
+Definition PAR_def:   PAR f g (load,inp,done,out) =
          ?c0 c1 start done' done'' data' data'' out' out''.
            POSEDGE_IMP(load,c0) /\ DEL(done,c1) /\
            AND (c0,c1,start) /\
            f (start,inp,done',data') /\ g (start,inp,done'',data'') /\
            DFF (data',done',out') /\ DFF (data'',done'',out'') /\
            AND (done',done'',done) /\
-           (out = (\t. (out' t, out'' t)))`;
+           (out = (\t. (out' t, out'' t)))
+End
 
 
 (*
@@ -410,8 +420,8 @@ val PAR_def = Define `PAR f g (load,inp,done,out) =
 (*****************************************************************************)
 (* The conditional                                                           *)
 (*****************************************************************************)
-val ITE_def =
-   Define `ITE e f g (load,inp,done,out) =
+Definition ITE_def:
+    ITE e f g (load,inp,done,out) =
       ?c0 c1 c2 start start' done_e data_e q not_e
        data_f data_g sel done_f done_g start_f start_g.
         POSEDGE_IMP(load,c0) /\
@@ -425,7 +435,8 @@ val ITE_def =
         f(start_f,q,done_f,data_f) /\
         g(start_g,q,done_g,data_g) /\
         MUX(sel,data_f,data_g,out) /\
-        AND(done_e,done_f,c2) /\ AND(c2,done_g,done)`;
+        AND(done_e,done_f,c2) /\ AND(c2,done_g,done)
+End
 
 
 
@@ -434,10 +445,10 @@ val ITE_def =
 (* TAILREC f1 f2 f3 = \x. if (f1 x) then (f2 x) else TAILREC f1 f2 f3 (f3 x) *)
 (*****************************************************************************)
 
-val TOTAL_def =
- Define
-   `TOTAL(f1,f2,f3) =
-      ?variant. !x. ~(f1 x) ==> (variant (f3 x)) < (variant x)`;
+Definition TOTAL_def:
+    TOTAL(f1,f2,f3) =
+      ?variant. !x. ~(f1 x) ==> (variant (f3 x)) < (variant x)
+End
 
 val TAILREC_def =
  TotalDefn.DefineSchema `TAILREC x = if f1 x then f2 x else TAILREC (f3 x)`;
@@ -464,23 +475,26 @@ val TOTAL_LEMMA = Q.store_thm
 (* The circuit is divided in 3 parts (SELECT, FINISH, CALL) for simplicity.  *)
 (*****************************************************************************)
 
-val SELECT_def = Define `SELECT (done_e,data_e,start_f,start_g) =
+Definition SELECT_def:   SELECT (done_e,data_e,start_f,start_g) =
       ?start' not_e.
         POSEDGE_IMP(done_e,start') /\
         AND(start',data_e,start_f) /\
-        NOT(data_e,not_e) /\ AND(not_e,start',start_g)`;
-val FINISH_def = Define `FINISH (done_e,done_f,done_g,done) =
+        NOT(data_e,not_e) /\ AND(not_e,start',start_g)
+End
+Definition FINISH_def:   FINISH (done_e,done_f,done_g,done) =
        ?c2 c3 c4. DEL (done_g,c3) /\ AND (done_g,c3,c4) /\
-                  AND (done_f,done_e,c2) /\ AND (c2,c4,done)`;
-val CALL_def = Define `CALL (load,inp,done,done_g,data_g,start_e,inp_e) =
+                  AND (done_f,done_e,c2) /\ AND (c2,c4,done)
+End
+Definition CALL_def:   CALL (load,inp,done,done_g,data_g,start_e,inp_e) =
       ?c0 c1 start sel.
         POSEDGE_IMP(load,c0) /\
         DEL(done,c1) /\ AND(c0,c1,start) /\
         OR(start,sel,start_e) /\
         POSEDGE_IMP(done_g,sel) /\
-        MUX(sel,data_g,inp,inp_e)`;
+        MUX(sel,data_g,inp,inp_e)
+End
 
-val REC_def = Define `REC e f g (load,inp,done,out) =
+Definition REC_def:   REC e f g (load,inp,done,out) =
       ?done_g data_g start_e q done_e
        data_e start_f start_g inp_e done_f.
         CALL (load,inp,done,done_g,data_g,start_e,inp_e) /\
@@ -489,7 +503,8 @@ val REC_def = Define `REC e f g (load,inp,done,out) =
         SELECT (done_e,data_e,start_f,start_g) /\
         f (start_f,q,done_f,out) /\
         g (start_g,q,done_g,data_g) /\
-        FINISH (done_e,done_f,done_g,done)`;
+        FINISH (done_e,done_f,done_g,done)
+End
 
 
 (*****************************************************************************)
@@ -497,9 +512,10 @@ val REC_def = Define `REC e f g (load,inp,done,out) =
 (* This definition is used in the proof of REC                               *)
 (*****************************************************************************)
 
-val COMPUTE_def = Define `COMPUTE(t,f,inp,done,out) =
+Definition COMPUTE_def:   COMPUTE(t,f,inp,done,out) =
        (?t'. t' > t + 1 /\ HOLDF (t + 1,t') done /\ done t' /\
-            (out t' = f (inp (t + 1))))`;
+            (out t' = f (inp (t + 1))))
+End
 
 (*****************************************************************************)
 (* Now we start the proofs                                                   *)
@@ -523,11 +539,11 @@ val POSEDGE_IMPL =
             THEN FULL_SIMP_TAC arith_ss [DELT_def, NOT_def, AND_def, POSEDGE]]);
 
 
-val ATM_SPEC_def =
- Define
-  `ATM_SPEC f (load,inp,done,out) =
+Definition ATM_SPEC_def:
+   ATM_SPEC f (load,inp,done,out) =
     !t. (out(t+1)  = f (inp t)) /\
-        (done(t+1) = if done t then ~(POSEDGE load (t+1)) else T)`;
+        (done(t+1) = if done t then ~(POSEDGE load (t+1)) else T)
+End
 
 val ATM_SPEC =
  Q.store_thm

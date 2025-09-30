@@ -104,7 +104,7 @@ val _ = Hol_datatype
    | Pmult of polynom => polynom
    | Popp of polynom `;
 
-val polynom_normalize_def = Define `
+Definition polynom_normalize_def:
    (polynom_normalize (Pvar i) = (Cons_varlist [i] Nil_monom))
 /\ (polynom_normalize (Pconst c) = (Cons_monom c [] Nil_monom))
 /\ (polynom_normalize (Pplus pl pr) =
@@ -114,19 +114,22 @@ val polynom_normalize_def = Define `
       (r_canonical_sum_prod (polynom_normalize pl)
                               (polynom_normalize pr)))
 /\ (polynom_normalize (Popp p) =
-      (r_canonical_sum_scalar3 (RN R1) [] (polynom_normalize p))) `;
+      (r_canonical_sum_scalar3 (RN R1) [] (polynom_normalize p)))
+End
 
-val polynom_simplify_def = Define `
+Definition polynom_simplify_def:
   polynom_simplify x =
-       r_canonical_sum_simplify (polynom_normalize x) `;
+       r_canonical_sum_simplify (polynom_normalize x)
+End
 
 
-val interp_p_def = Define `
+Definition interp_p_def:
    (interp_p vm (Pconst c) = c)
 /\ (interp_p vm (Pvar i) = varmap_find i vm)
 /\ (interp_p vm (Pplus p1 p2) = RP (interp_p vm p1) (interp_p vm p2))
 /\ (interp_p vm (Pmult p1 p2) = RM (interp_p vm p1) (interp_p vm p2))
-/\ (interp_p vm (Popp p1) = RN (interp_p vm p1)) `;
+/\ (interp_p vm (Popp p1) = RN (interp_p vm p1))
+End
 
 
 val polynom_normalize_ok = asm_store_thm

@@ -12,7 +12,7 @@ Libs
 
 <* ---------------------------------------------------------------------------------- *)
 
-val ppc_match_step_def = Define `
+Definition ppc_match_step_def:
   ppc_match_step name =
     if name = "0" then DF else
     if name = "1" then DT else
@@ -27,7 +27,8 @@ val ppc_match_step_def = Define `
     else if MEM name ["AA";"Rc";"OE";"y";"z"] then
       assign_drop name 1
     else
-      option_fail`;
+      option_fail
+End
 
 (* The following strings are copied from the PowerPC manual. *)
 

@@ -45,9 +45,8 @@ val letter_def =
 (******************************************************************************
 * B_SEM l b means "l ||= b" where l is a letter
 ******************************************************************************)
-val B_SEM_def =
- Define
-  `(B_SEM TOP b = T)
+Definition B_SEM_def:
+   (B_SEM TOP b = T)
    /\
    (B_SEM BOTTOM b = F)
    /\
@@ -59,7 +58,8 @@ val B_SEM_def =
    /\
    (B_SEM (STATE s) (B_NOT b) = ~(B_SEM (STATE s) b))
    /\
-   (B_SEM (STATE s) (B_AND(b1,b2)) = B_SEM (STATE s) b1 /\ B_SEM (STATE s) b2)`;
+   (B_SEM (STATE s) (B_AND(b1,b2)) = B_SEM (STATE s) b1 /\ B_SEM (STATE s) b2)
+End
 
 (******************************************************************************
 * Unclocked semantics of SEREs.
@@ -153,25 +153,26 @@ val US_SEM =
 (******************************************************************************
 * Complement a path
 ******************************************************************************)
-val COMPLEMENT_LETTER_def =
- Define
-  `(COMPLEMENT_LETTER TOP      = BOTTOM) /\
+Definition COMPLEMENT_LETTER_def:
+   (COMPLEMENT_LETTER TOP      = BOTTOM) /\
    (COMPLEMENT_LETTER BOTTOM   = TOP)    /\
-   (COMPLEMENT_LETTER(STATE s) = STATE s)`;
+   (COMPLEMENT_LETTER(STATE s) = STATE s)
+End
 
 (******************************************************************************
 * Complement a path
 ******************************************************************************)
-val COMPLEMENT_def =
- Define
-  `(COMPLEMENT(FINITE p)   = FINITE(MAP COMPLEMENT_LETTER p)) /\
-   (COMPLEMENT(INFINITE f) = INFINITE(COMPLEMENT_LETTER o f))`;
+Definition COMPLEMENT_def:
+   (COMPLEMENT(FINITE p)   = FINITE(MAP COMPLEMENT_LETTER p)) /\
+   (COMPLEMENT(INFINITE f) = INFINITE(COMPLEMENT_LETTER o f))
+End
 
 (******************************************************************************
 * \top^\omega
 ******************************************************************************)
-val TOP_OMEGA_def =
- Define `TOP_OMEGA = INFINITE(\n. TOP)`;
+Definition TOP_OMEGA_def:
+  TOP_OMEGA = INFINITE(\n. TOP)
+End
 
 (******************************************************************************
 * LESS m is predicate to test if a number is less than m
@@ -187,9 +188,8 @@ val TOP_OMEGA_def =
 * UF_SEM_def is unfolded version for easy definition.
 * Theorem UF_SEM gives version corresponding to LRM v1.1
 ******************************************************************************)
-val UF_SEM_def =
- Define
-   `(UF_SEM v (F_NOT f) =
+Definition UF_SEM_def:
+    (UF_SEM v (F_NOT f) =
       ~(UF_SEM (COMPLEMENT v) f))
     /\
     (UF_SEM v (F_AND(f1,f2)) =
@@ -240,7 +240,8 @@ val UF_SEM_def =
     /\
     (UF_SEM v (F_SUFFIX_IMP(r,f)) =
       !j :: (LESS(LENGTH v)).
-        US_SEM (SEL (COMPLEMENT v) (0,j)) r ==> UF_SEM (RESTN v j) f)`;
+        US_SEM (SEL (COMPLEMENT v) (0,j)) r ==> UF_SEM (RESTN v j) f)
+End
 
 (******************************************************************************
 * UF_SEM v f means "v |= f"  in the unclocked semantics
@@ -308,19 +309,19 @@ val UF_SEM =
 (*****************************************************************************)
 (* Map a function over a path (used to define Lhat -- see LRM B.2.2)         *)
 (*****************************************************************************)
-val MAP_PATH_def =
- Define
-  `(MAP_PATH g (FINITE l) = FINITE(MAP g l))
+Definition MAP_PATH_def:
+   (MAP_PATH g (FINITE l) = FINITE(MAP g l))
    /\
-   (MAP_PATH g (INFINITE f) = INFINITE(\n. g(f n)))`;
+   (MAP_PATH g (INFINITE f) = INFINITE(\n. g(f n)))
+End
 
 (******************************************************************************
 * UF_VALID M f means "Lhat(pi) |= f" for all computations pi of M
 ******************************************************************************)
-val UF_VALID_def = (* from UnclockedSemanticsScript.sml *)
- Define
-  `UF_VALID M f =
-    !v::(COMPUTATION M). UF_SEM (MAP_PATH (\s. STATE(M.L s)) v) f`;
+Definition UF_VALID_def:  (* from UnclockedSemanticsScript.sml *)
+   UF_VALID M f =
+    !v::(COMPUTATION M). UF_SEM (MAP_PATH (\s. STATE(M.L s)) v) f
+End
 
 (******************************************************************************
 * PATH M s is true of p iff p is a computation path of M
@@ -330,9 +331,8 @@ val UF_VALID_def = (* from UnclockedSemanticsScript.sml *)
 (******************************************************************************
 * O_SEM M s f means "M, s |= f"
 ******************************************************************************)
-val O_SEM_def =
- Define
-  `(O_SEM M (O_BOOL b) s = B_SEM (STATE(M.L s)) b)
+Definition O_SEM_def:
+   (O_SEM M (O_BOOL b) s = B_SEM (STATE(M.L s)) b)
    /\
    (O_SEM M (O_NOT f) s = ~(O_SEM M f s))
    /\
@@ -351,11 +351,12 @@ val O_SEM_def =
    /\
    (O_SEM M (O_EG f) s =
      ?p :: PATH M s.
-       (ELEM p 0 = s) /\ !j :: (LESS(LENGTH p)). O_SEM M f (ELEM p j))`;
+       (ELEM p 0 = s) /\ !j :: (LESS(LENGTH p)). O_SEM M f (ELEM p j))
+End
 
 (******************************************************************************
 * O_VALID M f means "M, s |= f" for all initial states s
 ******************************************************************************)
-val O_VALID_def =
- Define
-  `O_VALID M f = !s::(M.S0). O_SEM M f s`;
+Definition O_VALID_def:
+   O_VALID M f = !s::(M.S0). O_SEM M f s
+End

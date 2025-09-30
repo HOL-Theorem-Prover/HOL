@@ -63,12 +63,12 @@ val model_def =
        P: 'prop -> bool;
        L: 'state -> ('prop -> bool) |>`;
 
-val MODEL_def =
- Define
-  `MODEL M =
+Definition MODEL_def:
+   MODEL M =
     M.S0 SUBSET M.S /\
     (!s s'. (s,s') IN M.R ==> s IN M.S /\ s' IN M.S) /\
-    (!s. s IN M.S ==> M.L s SUBSET M.P)`;
+    (!s. s IN M.S ==> M.L s SUBSET M.P)
+End
 
 (*****************************************************************************)
 (* A letter is either TOP, or BOTTOM                                         *)
@@ -81,20 +81,20 @@ val letter_def =
 (*****************************************************************************)
 (* PATH M s is true of path p iff p is a computation path of model M         *)
 (*****************************************************************************)
-val PATH_def =
- Define
-  `PATH M s w =
+Definition PATH_def:
+   PATH M s w =
     (LENGTH w > 0) /\ (s = ELEM w 0) /\ s IN M.S /\
     (!n :: (LESS(LENGTH w - 1)).
       ELEM w n IN M.S /\ ELEM w (SUC n) IN M.S /\
       (ELEM w n, ELEM w (SUC n)) IN M.R) /\
     (!l. (w = FINITE l)
-         ==> !s. s IN M.S ==> ~((ELEM w (LENGTH l - 1), s) IN M.R))`;
+         ==> !s. s IN M.S ==> ~((ELEM w (LENGTH l - 1), s) IN M.R))
+End
 
 
 (*****************************************************************************)
 (* A computation of M is a path of M starting from an initial state          *)
 (*****************************************************************************)
-val COMPUTATION_def =
- Define
-  `COMPUTATION M w = ?s. s IN M.S0 /\ PATH M s w`;
+Definition COMPUTATION_def:
+   COMPUTATION M w = ?s. s IN M.S0 /\ PATH M s w
+End

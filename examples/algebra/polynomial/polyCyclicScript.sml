@@ -433,9 +433,9 @@ p =  7, k = 5, order_5(7) = order_5(7 MOD 5) = order_5(2) = 4, hence factors of 
 *)
 
 (* Define Cyclic polynomials *)
-val poly_cyclic_def = Define`
+Definition poly_cyclic_def:
    poly_cyclic (r:'a ring) n = GENLIST (\k. #1) n
-`;
+End
 (* Use overload for poly_cyclic *)
 val _ = overload_on("cyclic", ``poly_cyclic r``);
 (* cyclic n = [#1;#1;#1; ... ;#1] (n elements) = 1 + X + X^2 + ... + X^(n-1) in conventional form *)

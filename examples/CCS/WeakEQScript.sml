@@ -20,7 +20,8 @@ val _ = temp_loose_equality ();
 
 (* new definition for the epsilon transition relation. *)
 val EPS_defn = ``\E E'. TRANS E tau E'``;
-val EPS_def = Define `EPS = RTC ^EPS_defn`;
+Definition EPS_def:   EPS = RTC ^EPS_defn
+End
 
 val _ = set_mapped_fixity { fixity = Infix (NONASSOC, 450),
                             tok = ("=" ^ (UTF8.chr 0x03B5) ^ "=>"), term_name = "EPS" };
@@ -399,8 +400,9 @@ val WEAK_SUM2 = store_thm ((* NEW *)
 (*                                                                            *)
 (******************************************************************************)
 
-val WEAK_BISIM_def = Define
-   `WEAK_BISIM (R :'a simulation) = WBISIM TRANS tau R`;
+Definition WEAK_BISIM_def:
+    WEAK_BISIM (R :'a simulation) = WBISIM TRANS tau R
+End
 
 Theorem WEAK_BISIM :
     WEAK_BISIM (Wbsm: 'a simulation) =

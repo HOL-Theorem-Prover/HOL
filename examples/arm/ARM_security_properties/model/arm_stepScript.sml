@@ -37,44 +37,56 @@ val _ = Hol_datatype
 val _ = Hol_datatype
   `arm_scr_bit = scrnET | scrAW | scrFW | scrEA | scrFIQ | scrIRQ | scrNS`;
 
-val ARM_ARCH_def = Define`
-  ARM_ARCH s = s.information.arch`;
+Definition ARM_ARCH_def:
+  ARM_ARCH s = s.information.arch
+End
 
-val ARM_EXTENSIONS_def = Define`
-  ARM_EXTENSIONS s = s.information.extensions`;
+Definition ARM_EXTENSIONS_def:
+  ARM_EXTENSIONS s = s.information.extensions
+End
 
-val ARM_UNALIGNED_SUPPORT_def = Define`
-  ARM_UNALIGNED_SUPPORT s = s.information.unaligned_support`;
+Definition ARM_UNALIGNED_SUPPORT_def:
+  ARM_UNALIGNED_SUPPORT s = s.information.unaligned_support
+End
 
-val ARM_READ_CPSR_def = Define`
-  ARM_READ_CPSR s = s.psrs (0,CPSR)`;
+Definition ARM_READ_CPSR_def:
+  ARM_READ_CPSR s = s.psrs (0,CPSR)
+End
 
-val ARM_WRITE_CPSR_def = Define`
-  ARM_WRITE_CPSR d s = s with psrs updated_by ((0,CPSR) =+ d)`;
+Definition ARM_WRITE_CPSR_def:
+  ARM_WRITE_CPSR d s = s with psrs updated_by ((0,CPSR) =+ d)
+End
 
-val ARM_MODE_def = Define`
-  ARM_MODE s = (ARM_READ_CPSR s).M`;
+Definition ARM_MODE_def:
+  ARM_MODE s = (ARM_READ_CPSR s).M
+End
 
-val ARM_WRITE_MODE_def = Define`
-  ARM_WRITE_MODE m s = ARM_WRITE_CPSR (ARM_READ_CPSR s with M := m) s`;
+Definition ARM_WRITE_MODE_def:
+  ARM_WRITE_MODE m s = ARM_WRITE_CPSR (ARM_READ_CPSR s with M := m) s
+End
 
-val word4_def = Define`
+Definition word4_def:
   word4 (b3,b2,b1,b0) : word4 =
-    FCP i. (i = 3) /\ b3 \/ (i = 2) /\ b2 \/ (i = 1) /\ b1 \/ (i = 0) /\ b0`;
+    FCP i. (i = 3) /\ b3 \/ (i = 2) /\ b2 \/ (i = 1) /\ b1 \/ (i = 0) /\ b0
+End
 
-val ARM_READ_GE_def = Define`
-  ARM_READ_GE s = (ARM_READ_CPSR s).GE`;
+Definition ARM_READ_GE_def:
+  ARM_READ_GE s = (ARM_READ_CPSR s).GE
+End
 
-val ARM_WRITE_GE_def = Define`
-  ARM_WRITE_GE ge s = ARM_WRITE_CPSR (ARM_READ_CPSR s with GE := ge) s`;
+Definition ARM_WRITE_GE_def:
+  ARM_WRITE_GE ge s = ARM_WRITE_CPSR (ARM_READ_CPSR s with GE := ge) s
+End
 
-val ARM_READ_IT_def = Define`
-  ARM_READ_IT s = (ARM_READ_CPSR s).IT`;
+Definition ARM_READ_IT_def:
+  ARM_READ_IT s = (ARM_READ_CPSR s).IT
+End
 
-val ARM_WRITE_IT_def = Define`
-  ARM_WRITE_IT it s = ARM_WRITE_CPSR (ARM_READ_CPSR s with IT := it) s`;
+Definition ARM_WRITE_IT_def:
+  ARM_WRITE_IT it s = ARM_WRITE_CPSR (ARM_READ_CPSR s with IT := it) s
+End
 
-val ARM_READ_STATUS_def = Define`
+Definition ARM_READ_STATUS_def:
   (ARM_READ_STATUS psrN s = (ARM_READ_CPSR s).N) /\
   (ARM_READ_STATUS psrZ s = (ARM_READ_CPSR s).Z) /\
   (ARM_READ_STATUS psrC s = (ARM_READ_CPSR s).C) /\
@@ -85,9 +97,10 @@ val ARM_READ_STATUS_def = Define`
   (ARM_READ_STATUS psrA s = (ARM_READ_CPSR s).A) /\
   (ARM_READ_STATUS psrI s = (ARM_READ_CPSR s).I) /\
   (ARM_READ_STATUS psrF s = (ARM_READ_CPSR s).F) /\
-  (ARM_READ_STATUS psrT s = (ARM_READ_CPSR s).T)`;
+  (ARM_READ_STATUS psrT s = (ARM_READ_CPSR s).T)
+End
 
-val ARM_WRITE_STATUS_def = Define`
+Definition ARM_WRITE_STATUS_def:
   (ARM_WRITE_STATUS psrN b s =
      ARM_WRITE_CPSR (ARM_READ_CPSR s with N := b) s) /\
   (ARM_WRITE_STATUS psrZ b s =
@@ -109,29 +122,33 @@ val ARM_WRITE_STATUS_def = Define`
   (ARM_WRITE_STATUS psrF b s =
      ARM_WRITE_CPSR (ARM_READ_CPSR s with F := b) s) /\
   (ARM_WRITE_STATUS psrT b s =
-     ARM_WRITE_CPSR (ARM_READ_CPSR s with T := b) s)`;
+     ARM_WRITE_CPSR (ARM_READ_CPSR s with T := b) s)
+End
 
-val ARM_READ_SCTLR_def = Define`
+Definition ARM_READ_SCTLR_def:
   (ARM_READ_SCTLR sctlrV s = s.coprocessors.state.cp15.SCTLR.V) /\
   (ARM_READ_SCTLR sctlrA s = s.coprocessors.state.cp15.SCTLR.A) /\
   (ARM_READ_SCTLR sctlrU s = s.coprocessors.state.cp15.SCTLR.U) /\
   (ARM_READ_SCTLR sctlrEE s = s.coprocessors.state.cp15.SCTLR.EE) /\
   (ARM_READ_SCTLR sctlrTE s = s.coprocessors.state.cp15.SCTLR.TE) /\
-  (ARM_READ_SCTLR sctlrNMFI s = s.coprocessors.state.cp15.SCTLR.NMFI)`;
+  (ARM_READ_SCTLR sctlrNMFI s = s.coprocessors.state.cp15.SCTLR.NMFI)
+End
 
-val ARM_READ_SCR_def = Define`
+Definition ARM_READ_SCR_def:
   (ARM_READ_SCR scrnET s = s.coprocessors.state.cp15.SCR.nET) /\
   (ARM_READ_SCR scrAW s = s.coprocessors.state.cp15.SCR.AW) /\
   (ARM_READ_SCR scrFW s = s.coprocessors.state.cp15.SCR.FW) /\
   (ARM_READ_SCR scrEA s = s.coprocessors.state.cp15.SCR.EA) /\
   (ARM_READ_SCR scrFIQ s = s.coprocessors.state.cp15.SCR.FIQ) /\
   (ARM_READ_SCR scrIRQ s = s.coprocessors.state.cp15.SCR.IRQ) /\
-  (ARM_READ_SCR scrNS s = s.coprocessors.state.cp15.SCR.NS)`;
+  (ARM_READ_SCR scrNS s = s.coprocessors.state.cp15.SCR.NS)
+End
 
-val ARM_READ_TEEHBR_def = Define`
-  ARM_READ_TEEHBR s = s.coprocessors.state.cp14.TEEHBR`;
+Definition ARM_READ_TEEHBR_def:
+  ARM_READ_TEEHBR s = s.coprocessors.state.cp14.TEEHBR
+End
 
-val SPSR_MODE_def = Define`
+Definition SPSR_MODE_def:
   SPSR_MODE (m:word5) =
     case m
     of 0b10001w => SPSR_fiq
@@ -139,20 +156,25 @@ val SPSR_MODE_def = Define`
      | 0b10011w => SPSR_svc
      | 0b10110w => SPSR_mon
      | 0b10111w => SPSR_abt
-     | _        => SPSR_und`;
+     | _        => SPSR_und
+End
 
-val ARM_READ_SPSR_MODE_def = Define`
-  ARM_READ_SPSR_MODE m s = s.psrs (0,SPSR_MODE m)`;
+Definition ARM_READ_SPSR_MODE_def:
+  ARM_READ_SPSR_MODE m s = s.psrs (0,SPSR_MODE m)
+End
 
-val ARM_READ_SPSR_def = Define`
-  ARM_READ_SPSR s = ARM_READ_SPSR_MODE (ARM_MODE s) s`;
+Definition ARM_READ_SPSR_def:
+  ARM_READ_SPSR s = ARM_READ_SPSR_MODE (ARM_MODE s) s
+End
 
-val ARM_WRITE_SPSR_MODE_def = Define`
+Definition ARM_WRITE_SPSR_MODE_def:
   ARM_WRITE_SPSR_MODE (m:word5) d s =
-    s with psrs updated_by ((0,SPSR_MODE m) =+ d)`;
+    s with psrs updated_by ((0,SPSR_MODE m) =+ d)
+End
 
-val ARM_WRITE_SPSR_def = Define`
-  ARM_WRITE_SPSR d s = ARM_WRITE_SPSR_MODE (ARM_MODE s) d s`;
+Definition ARM_WRITE_SPSR_def:
+  ARM_WRITE_SPSR d s = ARM_WRITE_SPSR_MODE (ARM_MODE s) d s
+End
 
 local
   val l = fst (listSyntax.dest_list
@@ -166,25 +188,31 @@ in
     Drule.LIST_CONJ (List.map (rule ARM_WRITE_SPSR_MODE_def) l));
 end;
 
-val ARM_READ_MODE_SPSR_def = Define`
-  ARM_READ_MODE_SPSR s = (ARM_READ_SPSR s).M`;
+Definition ARM_READ_MODE_SPSR_def:
+  ARM_READ_MODE_SPSR s = (ARM_READ_SPSR s).M
+End
 
-val ARM_WRITE_MODE_SPSR_def = Define`
-  ARM_WRITE_MODE_SPSR m s = ARM_WRITE_SPSR (ARM_READ_SPSR s with M := m) s`;
+Definition ARM_WRITE_MODE_SPSR_def:
+  ARM_WRITE_MODE_SPSR m s = ARM_WRITE_SPSR (ARM_READ_SPSR s with M := m) s
+End
 
-val ARM_READ_GE_SPSR_def = Define`
-  ARM_READ_GE_SPSR s = (ARM_READ_SPSR s).GE`;
+Definition ARM_READ_GE_SPSR_def:
+  ARM_READ_GE_SPSR s = (ARM_READ_SPSR s).GE
+End
 
-val ARM_WRITE_GE_SPSR_def = Define`
-  ARM_WRITE_GE_SPSR ge s = ARM_WRITE_SPSR (ARM_READ_SPSR s with GE := ge) s`;
+Definition ARM_WRITE_GE_SPSR_def:
+  ARM_WRITE_GE_SPSR ge s = ARM_WRITE_SPSR (ARM_READ_SPSR s with GE := ge) s
+End
 
-val ARM_READ_IT_SPSR_def = Define`
-  ARM_READ_IT_SPSR s = (ARM_READ_SPSR s).IT`;
+Definition ARM_READ_IT_SPSR_def:
+  ARM_READ_IT_SPSR s = (ARM_READ_SPSR s).IT
+End
 
-val ARM_WRITE_IT_SPSR_def = Define`
-  ARM_WRITE_IT_SPSR it s = ARM_WRITE_SPSR (ARM_READ_SPSR s with IT := it) s`;
+Definition ARM_WRITE_IT_SPSR_def:
+  ARM_WRITE_IT_SPSR it s = ARM_WRITE_SPSR (ARM_READ_SPSR s with IT := it) s
+End
 
-val ARM_READ_STATUS_SPSR_def = Define`
+Definition ARM_READ_STATUS_SPSR_def:
   (ARM_READ_STATUS_SPSR psrN s = (ARM_READ_SPSR s).N) /\
   (ARM_READ_STATUS_SPSR psrZ s = (ARM_READ_SPSR s).Z) /\
   (ARM_READ_STATUS_SPSR psrC s = (ARM_READ_SPSR s).C) /\
@@ -195,9 +223,10 @@ val ARM_READ_STATUS_SPSR_def = Define`
   (ARM_READ_STATUS_SPSR psrA s = (ARM_READ_SPSR s).A) /\
   (ARM_READ_STATUS_SPSR psrI s = (ARM_READ_SPSR s).I) /\
   (ARM_READ_STATUS_SPSR psrF s = (ARM_READ_SPSR s).F) /\
-  (ARM_READ_STATUS_SPSR psrT s = (ARM_READ_SPSR s).T)`;
+  (ARM_READ_STATUS_SPSR psrT s = (ARM_READ_SPSR s).T)
+End
 
-val ARM_WRITE_STATUS_SPSR_def = Define`
+Definition ARM_WRITE_STATUS_SPSR_def:
   (ARM_WRITE_STATUS_SPSR psrN b s =
      ARM_WRITE_SPSR (ARM_READ_SPSR s with N := b) s) /\
   (ARM_WRITE_STATUS_SPSR psrZ b s =
@@ -219,36 +248,46 @@ val ARM_WRITE_STATUS_SPSR_def = Define`
   (ARM_WRITE_STATUS_SPSR psrF b s =
      ARM_WRITE_SPSR (ARM_READ_SPSR s with F := b) s) /\
   (ARM_WRITE_STATUS_SPSR psrT b s =
-     ARM_WRITE_SPSR (ARM_READ_SPSR s with T := b) s)`;
+     ARM_WRITE_SPSR (ARM_READ_SPSR s with T := b) s)
+End
 
-val ARM_READ_EVENT_REGISTER_def = Define`
-  ARM_READ_EVENT_REGISTER s = s.event_register 0`;
+Definition ARM_READ_EVENT_REGISTER_def:
+  ARM_READ_EVENT_REGISTER s = s.event_register 0
+End
 
-val ARM_READ_INTERRUPT_WAIT_def = Define`
-  ARM_READ_INTERRUPT_WAIT s = s.interrupt_wait 0`;
+Definition ARM_READ_INTERRUPT_WAIT_def:
+  ARM_READ_INTERRUPT_WAIT s = s.interrupt_wait 0
+End
 
-val ARM_WAIT_FOR_EVENT_def = Define`
-  ARM_WAIT_FOR_EVENT s = s with event_register updated_by (0 =+ F)`;
+Definition ARM_WAIT_FOR_EVENT_def:
+  ARM_WAIT_FOR_EVENT s = s with event_register updated_by (0 =+ F)
+End
 
-val ARM_SEND_EVENT_def = Define`
-  ARM_SEND_EVENT s = s with event_register updated_by (K (K T))`;
+Definition ARM_SEND_EVENT_def:
+  ARM_SEND_EVENT s = s with event_register updated_by (K (K T))
+End
 
-val ARM_WAIT_FOR_INTERRUPT_def = Define`
-  ARM_WAIT_FOR_INTERRUPT s = s with interrupt_wait updated_by (0 =+ T)`;
+Definition ARM_WAIT_FOR_INTERRUPT_def:
+  ARM_WAIT_FOR_INTERRUPT s = s with interrupt_wait updated_by (0 =+ T)
+End
 
-val ARM_READ_MEM_def = Define`
-  ARM_READ_MEM a s = s.memory a`;
+Definition ARM_READ_MEM_def:
+  ARM_READ_MEM a s = s.memory a
+End
 
-val ARM_WRITE_MEM_def = Define`
-  ARM_WRITE_MEM a w s = s with memory updated_by (a =+ w)`;
+Definition ARM_WRITE_MEM_def:
+  ARM_WRITE_MEM a w s = s with memory updated_by (a =+ w)
+End
 
-val ARM_WRITE_MEM_WRITE_def = Define`
-  ARM_WRITE_MEM_WRITE a w s = s with accesses updated_by CONS (MEM_WRITE a w)`;
+Definition ARM_WRITE_MEM_WRITE_def:
+  ARM_WRITE_MEM_WRITE a w s = s with accesses updated_by CONS (MEM_WRITE a w)
+End
 
-val ARM_WRITE_MEM_READ_def = Define`
-  ARM_WRITE_MEM_READ a s = s with accesses updated_by CONS (MEM_READ a)`;
+Definition ARM_WRITE_MEM_READ_def:
+  ARM_WRITE_MEM_READ a s = s with accesses updated_by CONS (MEM_READ a)
+End
 
-val RevLookUpRName_def = Define`
+Definition RevLookUpRName_def:
   RevLookUpRName (n:word4,m:word5) =
     case (n,m)
     of (0w, _       ) => RName_0usr
@@ -283,47 +322,58 @@ val RevLookUpRName_def = Define`
      | (14w,0b11011w) => RName_LRund
      | (14w,0b10110w) => RName_LRmon
      | (14w,_       ) => RName_LRusr
-     | (15w,_       ) => RName_PC`;
+     | (15w,_       ) => RName_PC
+End
 
-val ARM_READ_REG_MODE_def = Define`
-  ARM_READ_REG_MODE x s = s.registers (0,RevLookUpRName x)`;
+Definition ARM_READ_REG_MODE_def:
+  ARM_READ_REG_MODE x s = s.registers (0,RevLookUpRName x)
+End
 
-val ARM_WRITE_REG_MODE_def = Define`
+Definition ARM_WRITE_REG_MODE_def:
   ARM_WRITE_REG_MODE x w s =
-    s with registers updated_by ((0,RevLookUpRName x) =+ w)`;
+    s with registers updated_by ((0,RevLookUpRName x) =+ w)
+End
 
-val ARM_READ_REG_def = Define`
-  ARM_READ_REG n s = ARM_READ_REG_MODE (n,ARM_MODE s) s`;
+Definition ARM_READ_REG_def:
+  ARM_READ_REG n s = ARM_READ_REG_MODE (n,ARM_MODE s) s
+End
 
-val ARM_WRITE_REG_def = Define`
-  ARM_WRITE_REG n w s = ARM_WRITE_REG_MODE (n,ARM_MODE s) w s`;
+Definition ARM_WRITE_REG_def:
+  ARM_WRITE_REG n w s = ARM_WRITE_REG_MODE (n,ARM_MODE s) w s
+End
 
-val CLEAR_EXCLUSIVE_BY_ADDRESS_def = Define`
+Definition CLEAR_EXCLUSIVE_BY_ADDRESS_def:
   CLEAR_EXCLUSIVE_BY_ADDRESS (a,n) s =
     s with monitors updated_by (ExclusiveMonitors_state_fupd (\state.
-      SND (s.monitors.ClearExclusiveByAddress (a,<| proc := 0 |>,n) state)))`;
+      SND (s.monitors.ClearExclusiveByAddress (a,<| proc := 0 |>,n) state)))
+End
 
-val MARK_EXCLUSIVE_GLOBAL_def = Define`
+Definition MARK_EXCLUSIVE_GLOBAL_def:
   MARK_EXCLUSIVE_GLOBAL (a,n) s =
     s with monitors updated_by (ExclusiveMonitors_state_fupd (\state.
-      SND (s.monitors.MarkExclusiveGlobal (a,<| proc := 0 |>,n) state)))`;
+      SND (s.monitors.MarkExclusiveGlobal (a,<| proc := 0 |>,n) state)))
+End
 
-val MARK_EXCLUSIVE_LOCAL_def = Define`
+Definition MARK_EXCLUSIVE_LOCAL_def:
   MARK_EXCLUSIVE_LOCAL (a,n) s =
     s with monitors updated_by (ExclusiveMonitors_state_fupd (\state.
-      SND (s.monitors.MarkExclusiveLocal (a,<| proc := 0 |>,n) state)))`;
+      SND (s.monitors.MarkExclusiveLocal (a,<| proc := 0 |>,n) state)))
+End
 
-val CLEAR_EXCLUSIVE_LOCAL_def = Define`
+Definition CLEAR_EXCLUSIVE_LOCAL_def:
   CLEAR_EXCLUSIVE_LOCAL s =
     s with monitors updated_by (ExclusiveMonitors_state_fupd (\state.
-      SND (s.monitors.ClearExclusiveLocal 0 state)))`;
+      SND (s.monitors.ClearExclusiveLocal 0 state)))
+End
 
-val STATE_OPTION_def = Define`
+Definition STATE_OPTION_def:
   STATE_OPTION f s =
     case f s
     of Error _ => NONE
-     | ValueState _ q => SOME q`;
+     | ValueState _ q => SOME q
+End
 
-val ARM_NEXT_def = Define`
-  ARM_NEXT inp = STATE_OPTION (arm_next <| proc := 0 |> inp)`;
+Definition ARM_NEXT_def:
+  ARM_NEXT inp = STATE_OPTION (arm_next <| proc := 0 |> inp)
+End
 

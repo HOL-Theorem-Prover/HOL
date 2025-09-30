@@ -171,9 +171,11 @@ val FIXPOINT_EXISTS = store_thm
     >- (exists_tac ``0`` >> simp[FUNPOW] >> Induct_on `m` >> simp[FUNPOW])
   );
 
-val char_def = Define `char Σ p = { a | (a ∈ Σ) /\ (p ∈ a)}`;
+Definition char_def:   char Σ p = { a | (a ∈ Σ) /\ (p ∈ a)}
+End
 
-val char_neg_def = Define `char_neg Σ p = Σ DIFF (char Σ p)`;
+Definition char_neg_def:   char_neg Σ p = Σ DIFF (char Σ p)
+End
 
 val CHAR_LEMM = store_thm
   ("CHAR_LEMM",
@@ -187,11 +189,13 @@ val CHAR_NEG_LEMM = store_thm
    fs[char_neg_def,DIFF_SUBSET]
   );
 
-val d_conj_def = Define
-  `d_conj d1 d2 = { (a1 ∩ a2, e1 ∪ e2) | ((a1,e1) ∈ d1) /\ ((a2,e2) ∈ d2)}`;
+Definition d_conj_def:
+   d_conj d1 d2 = { (a1 ∩ a2, e1 ∪ e2) | ((a1,e1) ∈ d1) /\ ((a2,e2) ∈ d2)}
+End
 
-val d_conj_set_def = Define`
-  d_conj_set ts Σ = ITSET (d_conj o SND) ts {(Σ, {})}`;
+Definition d_conj_set_def:
+  d_conj_set ts Σ = ITSET (d_conj o SND) ts {(Σ, {})}
+End
 
 val D_CONJ_UNION_DISTR = store_thm
   ("D_CONJ_UNION_DISTR",
@@ -487,9 +491,10 @@ val D_CONJ_SET_LEMM3 = store_thm
         )
   );
 
-val MEM_SUBSET_def = Define`
+Definition MEM_SUBSET_def:
     (MEM_SUBSET [] l = T)
-  ∧ (MEM_SUBSET (h::ls) l = (MEM h l ∧ MEM_SUBSET ls l))`;
+  ∧ (MEM_SUBSET (h::ls) l = (MEM h l ∧ MEM_SUBSET ls l))
+End
 
 val MEM_SUBSET_SET_TO_LIST = store_thm
   ("MEM_SUBSET_SET_TO_LIST",
@@ -518,8 +523,9 @@ val MEM_SUBSET_TRANS = store_thm
    metis_tac[MEM_SUBSET_SET_TO_LIST,SUBSET_TRANS]
   );
 
-val MEM_EQUAL_def = Define`
-  (MEM_EQUAL l1 l2 = (MEM_SUBSET l1 l2 ∧ MEM_SUBSET l2 l1))`;
+Definition MEM_EQUAL_def:
+  (MEM_EQUAL l1 l2 = (MEM_SUBSET l1 l2 ∧ MEM_SUBSET l2 l1))
+End
 
 val MEM_EQUAL_SET = store_thm
   ("MEM_EQUAL_SET",
@@ -721,10 +727,11 @@ val MAP_LEMM = store_thm
    Induct_on `l` >> rpt strip_tac >> fs[]
   );
 
-val CAT_OPTIONS_def = Define`
+Definition CAT_OPTIONS_def:
    (CAT_OPTIONS [] = [])
  ∧ (CAT_OPTIONS (SOME v::ls) = v::(CAT_OPTIONS ls))
- ∧ (CAT_OPTIONS (NONE::ls) = CAT_OPTIONS ls)`;
+ ∧ (CAT_OPTIONS (NONE::ls) = CAT_OPTIONS ls)
+End
 
 val CAT_OPTIONS_MEM = store_thm
   ("CAT_OPTIONS_MEM",
@@ -767,9 +774,10 @@ val CAT_OPTIONS_EL = store_thm
    >> Cases_on `i` >> fs[EL]
   );
 
-val OPTION_TO_LIST_def = Define`
+Definition OPTION_TO_LIST_def:
     (OPTION_TO_LIST NONE = [])
-  ∧ (OPTION_TO_LIST (SOME l) = l)`;
+  ∧ (OPTION_TO_LIST (SOME l) = l)
+End
 
 val OPTION_TO_LIST_MEM = store_thm
   ("OPTION_TO_LIST_MEM",
@@ -778,11 +786,12 @@ val OPTION_TO_LIST_MEM = store_thm
    rpt strip_tac >> Cases_on `o_l` >> fs[OPTION_TO_LIST_def]
   );
 
-val LIST_INTER_def = Define`
+Definition LIST_INTER_def:
     (LIST_INTER [] ls = [])
   ∧ (LIST_INTER (x::xs) ls = if MEM x ls
                              then x::(LIST_INTER xs ls)
-                             else LIST_INTER xs ls)`;
+                             else LIST_INTER xs ls)
+End
 
 (* val GROUP_BY_def = tDefine "GROUP_BY" *)
 (*   `(GROUP_BY P [] = []) *)
@@ -803,14 +812,15 @@ val LIST_INTER_def = Define`
 
 (* ) *)
 
-val SPAN_def = Define`
+Definition SPAN_def:
    (SPAN R [] = ([],[]))
  ∧ (SPAN R (x::xs) =
     if R x
     then (let (ys,rs) = SPAN R xs
           in (x::ys,rs))
     else ([],x::xs)
-   )`;
+   )
+End
 
 val SPAN_APPEND = store_thm
   ("SPAN_APPEND",
@@ -877,9 +887,10 @@ val GROUP_BY_FLAT = store_thm
    >> strip_tac >> `[] ++ l = l` by simp[] >> metis_tac[]
   );
 
-val rel_corr_def = Define `
+Definition rel_corr_def:
   rel_corr R P =
-   !x y. R x y = (P x y ∧ P y x)`;
+   !x y. R x y = (P x y ∧ P y x)
+End
 
 Theorem REL_CORR_GROUP_BY:
   !R P. rel_corr R P ∧ equivalence R ∧ transitive P
@@ -1177,9 +1188,10 @@ val SORTED_GROUP_BY = store_thm
    )
   );
 
-val ONLY_MINIMAL_def = Define`
+Definition ONLY_MINIMAL_def:
   ONLY_MINIMAL P l =
-    FILTER (λa. ~EXISTS (λx. P x a ∧ ~(x = a)) l) l`;
+    FILTER (λa. ~EXISTS (λx. P x a ∧ ~(x = a)) l) l
+End
 
 
   (*   (ONLY_MINIMAL P [] = []) *)
@@ -1374,11 +1386,12 @@ val WF_LEMM = store_thm
     >> metis_tac[WF_IFF_WELLFOUNDED]
   );
 
-val NoNodeProcessedTwice_def = Define`
+Definition NoNodeProcessedTwice_def:
   NoNodeProcessedTwice g m (a,ns) (a2,ns2) =
     ((g DIFF (m a) ⊂ g DIFF (m a2))
          \/ ((g DIFF (m a) = g DIFF (m a2))
-           ∧ (LENGTH ns) < (LENGTH ns2)))`;
+           ∧ (LENGTH ns) < (LENGTH ns2)))
+End
 
 val NNPT_WF = store_thm
  ("NNPT_WF",

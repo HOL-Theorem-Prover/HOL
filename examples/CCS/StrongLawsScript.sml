@@ -1320,8 +1320,9 @@ QED
 (*                                                                            *)
 (******************************************************************************)
 
-val Is_Prefix_def = Define `
-    Is_Prefix E = (?(u :'a Action) E'. (E = prefix u E')) `;
+Definition Is_Prefix_def:
+    Is_Prefix E = (?(u :'a Action) E'. (E = prefix u E'))
+End
 
 val PREF_IS_PREFIX = store_thm (
    "PREF_IS_PREFIX", ``!(u :'a Action) E. Is_Prefix (prefix u E)``,
@@ -1338,9 +1339,10 @@ val PREF_IS_PREFIX = store_thm (
 (* (f 0) + (f 1) + ... + (f n).                                                *)
 (* --------------------------------------------------------------------------- *)
 
-val CCS_SIGMA_def = Define `
+Definition CCS_SIGMA_def:
    (CCS_SIGMA (f :num -> 'a CCS) 0 = f 0) /\
-   (CCS_SIGMA f (SUC n) = sum (CCS_SIGMA f n) (f (SUC n))) `;
+   (CCS_SIGMA f (SUC n) = sum (CCS_SIGMA f n) (f (SUC n)))
+End
 
 val _ = overload_on ("SIGMA", ``CCS_SIGMA``);
 
@@ -1361,9 +1363,10 @@ val [SIGMA_BASE, SIGMA_INDUCT] =
 (* (f 0) | (f 1) | ... | (f n).                                                *)
 (* --------------------------------------------------------------------------- *)
 
-val CCS_COMP_def = Define `
+Definition CCS_COMP_def:
    (CCS_COMP (f :num -> 'a CCS) 0 = f 0) /\
-   (CCS_COMP f (SUC n) = par (CCS_COMP f n) (f (SUC n))) `;
+   (CCS_COMP f (SUC n) = par (CCS_COMP f n) (f (SUC n)))
+End
 
 val _ = overload_on ("PI", ``CCS_COMP``);
 
@@ -1384,7 +1387,7 @@ val [COMP_BASE, COMP_INDUCT] =
 (* f: num -> 'a CCS representing the other process in parallel.          *)
 (* --------------------------------------------------------------------------- *)
 
-val SYNC_def = Define `
+Definition SYNC_def:
    (SYNC (u :'a Action) P f 0 =
         (if ((u = tau) \/ (PREF_ACT (f 0) = tau))
           then nil
@@ -1396,7 +1399,8 @@ val SYNC_def = Define `
           then (SYNC u P f n)
           else (if (LABEL u = COMPL (LABEL (PREF_ACT (f (SUC n)))))
                   then (sum (prefix tau (par P (PREF_PROC (f (SUC n))))) (SYNC u P f n))
-                  else (SYNC u P f n))))`;
+                  else (SYNC u P f n))))
+End
 
 val [SYNC_BASE, SYNC_INDUCT] =
     map (fn (s,thm) => save_thm (s, thm))
@@ -1408,11 +1412,12 @@ val [SYNC_BASE, SYNC_INDUCT] =
 (* This is done using the function SYNC.                                       *)
 (* --------------------------------------------------------------------------- *)
 
-val ALL_SYNC_def = Define `
+Definition ALL_SYNC_def:
    (ALL_SYNC f 0 f' m = SYNC (PREF_ACT (f 0)) (PREF_PROC (f 0)) f' m) /\
    (ALL_SYNC f (SUC n) f' m =
          sum (ALL_SYNC f n f' m)
-             (SYNC (PREF_ACT (f (SUC n))) (PREF_PROC (f (SUC n))) f' m)) `;
+             (SYNC (PREF_ACT (f (SUC n))) (PREF_PROC (f (SUC n))) f' m))
+End
 
 val [ALL_SYNC_BASE, ALL_SYNC_INDUCT] =
     map (fn (s,thm) => save_thm (s, thm))

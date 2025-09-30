@@ -20,22 +20,25 @@ val some_exists_determ = Q.store_thm ("some_exists_determ",
  rw [some_def] >>
  metis_tac []);
 
-val monotone_def = Define `
+Definition monotone_def:
   monotone (f : num -> num) ⇔
-    !x y. x ≤ y ⇒ f x ≤ f y`;
+    !x y. x ≤ y ⇒ f x ≤ f y
+End
 
-val unbounded_def = Define `
+Definition unbounded_def:
   unbounded (f : num -> num) ⇔
-    !x. ?y. x < f y`;
+    !x. ?y. x < f y
+End
 
 
 
-val check_trace_def = Define `
+Definition check_trace_def:
   (check_trace step [] ⇔ T) ∧
   (check_trace step [s] ⇔ T) ∧
   (check_trace step (s1::s2::tr) ⇔
     step s1 = SOME s2 ∧
-    check_trace step (s2::tr))`;
+    check_trace step (s2::tr))
+End
 
 val check_trace_ind = fetch "-" "check_trace_ind";
 

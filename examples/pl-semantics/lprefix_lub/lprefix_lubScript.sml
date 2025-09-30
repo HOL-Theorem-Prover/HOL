@@ -12,9 +12,10 @@ val IS_PREFIX_FILTER = Q.store_thm("IS_PREFIX_FILTER",
   Induct >> simp[IS_PREFIX_NIL] >>
   gen_tac >> Cases >> simp[] >> srw_tac[][]);
 
-val less_opt_def = Define `
+Definition less_opt_def:
   (less_opt n NONE ⇔ T) ∧
-  (less_opt n (SOME m) ⇔ n < m)`;
+  (less_opt n (SOME m) ⇔ n < m)
+End
 
 val less_opt_SUC_elim = Q.store_thm("less_opt_SUC_elim",
   `less_opt (SUC n) z ⇒ less_opt n z`,
@@ -106,13 +107,14 @@ val lnth_some_length = Q.store_thm ("lnth_some_length",
     Cases_on `LLENGTH t` >>
     full_simp_tac(srw_ss())[less_opt_def]));
 
-val llist_shorter_def = Define `
+Definition llist_shorter_def:
   llist_shorter ll1 ll2 ⇔
     case (LLENGTH ll1, LLENGTH ll2) of
     | (NONE, NONE) => T
     | (SOME x, NONE) => T
     | (NONE, SOME x) => F
-    | (SOME x, SOME y) => x ≤ y`;
+    | (SOME x, SOME y) => x ≤ y
+End
 
 val llist_shorter_lnth = Q.prove (
 `!ll1 ll2.
@@ -152,9 +154,10 @@ val llist_shorter_fromList = Q.store_thm ("llist_shorter_fromList",
  every_case_tac >>
  full_simp_tac(srw_ss())[LLENGTH_fromList]);
 
-val lprefix_chain_def = Define `
+Definition lprefix_chain_def:
   lprefix_chain ls ⇔
-    !ll1 ll2. ll1 ∈ ls ∧ ll2 ∈ ls ⇒ LPREFIX ll1 ll2 ∨ LPREFIX ll2 ll1`;
+    !ll1 ll2. ll1 ∈ ls ∧ ll2 ∈ ls ⇒ LPREFIX ll1 ll2 ∨ LPREFIX ll2 ll1
+End
 
 val lprefix_chain_subset = Q.store_thm("lprefix_chain_subset",
   `lprefix_chain ls ∧ y ⊆ ls ⇒ lprefix_chain y`,
@@ -176,9 +179,10 @@ val lprefix_chain_LNTHs_agree = Q.store_thm ("lprefix_chain_LNTHs_agree",
   srw_tac[][] >> fsrw_tac[ARITH_ss][] >>
   metis_tac[LNTH_LLENGTH_NONE,arithmeticTheory.ADD_SYM,arithmeticTheory.LESS_EQ_ADD,optionTheory.NOT_NONE_SOME]);
 
-val lprefix_chain_nth_def = Define `
+Definition lprefix_chain_nth_def:
   lprefix_chain_nth n ls =
-    some x. ?l. l ∈ ls ∧ LNTH n l = SOME x`;
+    some x. ?l. l ∈ ls ∧ LNTH n l = SOME x
+End
 
 val exists_lprefix_chain_nth = Q.store_thm ("exists_lprefix_chain_nth",
   `!ls n x.
@@ -211,9 +215,10 @@ val lprefix_chain_nth_none_mono = Q.store_thm ("lprefix_chain_nth_none_mono",
  `LNTH m l ≠ NONE` by metis_tac [LNTH_NONE_MONO] >>
  metis_tac [exists_lprefix_chain_nth, NOT_SOME_NONE, option_nchotomy]);
 
-val equiv_lprefix_chain_def = Define `
+Definition equiv_lprefix_chain_def:
   equiv_lprefix_chain ls1 ls2 ⇔
-    !n. lprefix_chain_nth n ls1 = lprefix_chain_nth n ls2`;
+    !n. lprefix_chain_nth n ls1 = lprefix_chain_nth n ls2
+End
 
 val equiv_lprefix_chain_thm = Q.store_thm ("equiv_lprefix_chain_thm",
   `!ls1 ls2.
@@ -270,10 +275,11 @@ val equiv_lprefix_chain_thm2 = Q.store_thm ("equiv_lprefix_chain_thm2",
      full_simp_tac(srw_ss())[]) >>
    metis_tac [lprefix_chain_LNTHs_agree]));
 
-val lprefix_lub_def = Define `
+Definition lprefix_lub_def:
   lprefix_lub ls lub ⇔
     (!ll. ll ∈ ls ⇒ LPREFIX ll lub) ∧
-    (∀ub. (!ll. ll ∈ ls ⇒ LPREFIX ll ub) ⇒ LPREFIX lub ub)`;
+    (∀ub. (!ll. ll ∈ ls ⇒ LPREFIX ll ub) ⇒ LPREFIX lub ub)
+End
 
 val lprefix_lub_is_chain = Q.store_thm ("lprefix_lub_is_chain",
   `!ls ll. lprefix_lub ls ll ⇒ lprefix_chain ls`,
@@ -387,13 +393,15 @@ val unique_lprefix_lub = Q.store_thm ("unique_lprefix_lub",
   srw_tac[][lprefix_lub_def] >>
   metis_tac[LPREFIX_ANTISYM,LPREFIX_REFL]);
 
-val build_lprefix_lub_f_def = Define`
+Definition build_lprefix_lub_f_def:
   build_lprefix_lub_f ls n =
-    OPTION_MAP (λx. (n+1, x)) (lprefix_chain_nth n ls)`;
+    OPTION_MAP (λx. (n+1, x)) (lprefix_chain_nth n ls)
+End
 
-val build_lprefix_lub_def = Define `
+Definition build_lprefix_lub_def:
   build_lprefix_lub ls =
-    LUNFOLD (build_lprefix_lub_f ls) 0`;
+    LUNFOLD (build_lprefix_lub_f ls) 0
+End
 
 val build_lprefix_lub_lem = Q.prove (
   `!ls. lprefix_chain ls ⇒ !m n. LNTH n (LUNFOLD (build_lprefix_lub_f ls) m) = lprefix_chain_nth (m + n) ls`,
@@ -444,9 +452,10 @@ val lprefix_lub_new_chain = Q.store_thm ("lprefix_lub_new_chain",
     lprefix_lub ls2 ll`,
   metis_tac [lprefix_lub_equiv_chain, lprefix_lub_is_chain]);
 
-val prefix_chain_def = Define`
+Definition prefix_chain_def:
   prefix_chain ls ⇔
-    ∀l1 l2. l1 ∈ ls ∧ l2 ∈ ls ⇒ l1 ≼ l2 ∨ l2 ≼ l1`;
+    ∀l1 l2. l1 ∈ ls ∧ l2 ∈ ls ⇒ l1 ≼ l2 ∨ l2 ≼ l1
+End
 
 val prefix_chain_lprefix_chain = Q.store_thm("prefix_chain_lprefix_chain",
   `prefix_chain ls ⇒ lprefix_chain (IMAGE fromList ls)`,

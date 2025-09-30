@@ -11,15 +11,18 @@ Ancestors
 
 <* ---------------------------------------------------------------------------------- *)
 
-val iiid_dummy_def = Define `iiid_dummy = <| proc:=0; program_order_index:=0 |>`;
+Definition iiid_dummy_def:   iiid_dummy = <| proc:=0; program_order_index:=0 |>
+End
 
-val x86_decode_bytes_def = Define `
-  x86_decode_bytes b = x86_decode (FOLDR APPEND [] (MAP w2bits b))`;
+Definition x86_decode_bytes_def:
+  x86_decode_bytes b = x86_decode (FOLDR APPEND [] (MAP w2bits b))
+End
 
-val x86_execute_some_def = Define `
-  x86_execute_some i w s = option_apply (x86_execute iiid_dummy i w s) (\t. SOME (SND t))`;
+Definition x86_execute_some_def:
+  x86_execute_some i w s = option_apply (x86_execute iiid_dummy i w s) (\t. SOME (SND t))
+End
 
-val X86_NEXT_def = Define `
+Definition X86_NEXT_def:
   X86_NEXT s =
     let e = XREAD_EIP s in                                     (* read eip *)
     let xs = MAP THE (XREAD_INSTR_BYTES 20 e s) in             (* read next 20 bytes *)
@@ -28,10 +31,12 @@ val X86_NEXT_def = Define `
         let (i,w) = THE m in                                   (* otherwise extract content *)
         let n = 20 - (LENGTH w DIV 8) in                       (* calc length of instruction *)
           if EVERY (\x. ~(x = NONE)) (XREAD_INSTR_BYTES n e s) (* check that the memory is there *)
-          then x86_execute_some i (n2w n) s else NONE          (* execute the instruction *)`;
+          then x86_execute_some i (n2w n) s else NONE          (* execute the instruction *)
+End
 
-val X86_NEXT_REL_def = Define `
-  X86_NEXT_REL s t = ?u. X86_ICACHE s u /\ (X86_NEXT u = SOME t)`;
+Definition X86_NEXT_REL_def:
+  X86_NEXT_REL s t = ?u. X86_ICACHE s u /\ (X86_NEXT u = SOME t)
+End
 
 
 (* help to evaluate X86_NEXT *)

@@ -75,49 +75,51 @@ val exp_def =
 ******************************************************************************)
 
 (* Compute variables in an expression *)
-val EXP_VARS_def =
- Define
-  `(EXP_VARS (CONST c) = {})
+Definition EXP_VARS_def:
+   (EXP_VARS (CONST c) = {})
    /\
    (EXP_VARS (VAR v) = {v})
    /\
    (EXP_VARS (UNOP op1 e) = EXP_VARS e)
    /\
-   (EXP_VARS (BINOP op2 (e1,e2)) = EXP_VARS e1 UNION EXP_VARS e2)`;
+   (EXP_VARS (BINOP op2 (e1,e2)) = EXP_VARS e1 UNION EXP_VARS e2)
+End
 
 (* Value of an expression in a state *)
-val EXP_SEM_def =
- Define
-  `(EXP_SEM s (CONST c) = c)
+Definition EXP_SEM_def:
+   (EXP_SEM s (CONST c) = c)
    /\
    (EXP_SEM s (VAR v) = s ' v)
    /\
    (EXP_SEM s (UNOP op1 e) = op1 (EXP_SEM s e))
    /\
-   (EXP_SEM s (BINOP op2 (e1,e2)) = op2 (EXP_SEM s e1) (EXP_SEM s e2))`;
+   (EXP_SEM s (BINOP op2 (e1,e2)) = op2 (EXP_SEM s e1) (EXP_SEM s e2))
+End
 
 (* Mnemonic names for functions to extract LHS and RHS of equations *)
-val LHS_def = Define `LHS = FST`;
-val RHS_def = Define `RHS = SND`;
+Definition LHS_def:   LHS = FST
+End
+Definition RHS_def:   RHS = SND
+End
 
 (* Set of all the variables mentioned in a system *)
-val VARS_def =
- Define
-  `VARS(I,E) =
+Definition VARS_def:
+   VARS(I,E) =
     let init_vars = BIGUNION{FDOM s | s IN I}
     and lhs_vars  = {v | ?e. (v,e) IN E}
     and rhs_vars  = BIGUNION{EXP_VARS e | ? v. (v,e) IN E}
     in
-     init_vars UNION lhs_vars UNION rhs_vars`;
+     init_vars UNION lhs_vars UNION rhs_vars
+End
 
-val MAKE_MODEL_def =
- Define
-  `MAKE_MODEL(I,E) : ((string |-> 'val)set, (string |-> 'val))model =
+Definition MAKE_MODEL_def:
+   MAKE_MODEL(I,E) : ((string |-> 'val)set, (string |-> 'val))model =
     <| S  := {s | T};
        R  := \(s,s').
               !v. (v IN VARS(I,E)) ==> ?e. (v,e) IN E /\ (s' ' v = EXP_SEM s e);
        L  := \s. {p | p s};
-       S0 :=  I |>`;
+       S0 :=  I |>
+End
 
 val MODEL_MAKE_MODEL =
  store_thm

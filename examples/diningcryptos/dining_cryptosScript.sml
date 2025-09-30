@@ -37,8 +37,8 @@ val set_ss = arith_ss ++ PRED_SET_ss;
 (* ----------------------------------------------------------------------
     Definitions
    ---------------------------------------------------------------------- *)
-val set_announcements_def = Define
-   `(set_announcements (high: bool state) (low:bool state)
+Definition set_announcements_def:
+    (set_announcements (high: bool state) (low:bool state)
                        (random:bool state) (n:num) (0:num) (s:string) =
                 if (s = (STRCAT "announces" (toString 0))) then
                         ((high (STRCAT "pays" (toString 0)))) xor
@@ -50,37 +50,44 @@ val set_announcements_def = Define
                         ((high (STRCAT "pays" (toString (SUC i))))) xor
                         ((random (STRCAT "coin" (toString (SUC i)))) xor
                          (random (STRCAT "coin" (toString i))))
-                else (set_announcements high low random n i) s)`;
+                else (set_announcements high low random n i) s)
+End
 
-val XOR_announces_def = Define
-  `(XOR_announces (low:bool state) (0:num) = low (STRCAT "announces" (toString 0))) /\
+Definition XOR_announces_def:
+   (XOR_announces (low:bool state) (0:num) = low (STRCAT "announces" (toString 0))) /\
    (XOR_announces low (SUC i) = (low (STRCAT "announces" (toString (SUC i)))) xor
-                                (XOR_announces low i))`;
+                                (XOR_announces low i))
+End
 
-val compute_result_def = Define
-   `compute_result (low:bool state) (n:num) (s:string) =
-        if (s = "result") then XOR_announces low n else low s`;
+Definition compute_result_def:
+    compute_result (low:bool state) (n:num) (s:string) =
+        if (s = "result") then XOR_announces low n else low s
+End
 
-val dcprog_def = Define
-   `dcprog (SUC(SUC(SUC n))) = (λ((high:bool state, low:bool state), random:bool state).
+Definition dcprog_def:
+    dcprog (SUC(SUC(SUC n))) = (λ((high:bool state, low:bool state), random:bool state).
         compute_result (set_announcements high low random (SUC(SUC n)) (SUC(SUC n)))
-                       (SUC(SUC n)))`;
+                       (SUC(SUC n)))
+End
 
-val dc_high_states_set_def = Define
-   `(dc_high_states_set (0:num) = {(\s:string. s = (STRCAT "pays" (toString 0)))}) /\
+Definition dc_high_states_set_def:
+    (dc_high_states_set (0:num) = {(\s:string. s = (STRCAT "pays" (toString 0)))}) /\
     (dc_high_states_set (SUC n) = (\s:string. s = (STRCAT "pays" (toString (SUC n))))
-                                  INSERT (dc_high_states_set n))`;
+                                  INSERT (dc_high_states_set n))
+End
 
-val dc_high_states_def = Define
-   `dc_high_states nsapays (SUC(SUC n)) =
+Definition dc_high_states_def:
+    dc_high_states nsapays (SUC(SUC n)) =
      if nsapays then {(\s: string. s = STRCAT "pays" (toString (SUC(SUC n))))}
-     else dc_high_states_set (SUC n)`;
+     else dc_high_states_set (SUC n)
+End
 
-val dc_low_states_def = Define
-   `dc_low_states = {(\s:string. F)}`;
+Definition dc_low_states_def:
+    dc_low_states = {(\s:string. F)}
+End
 
-val dc_random_states_def = Define
-  `(dc_random_states (0:num) = {(\s:string. s = (STRCAT "coin" (toString 0))); (\s:string. F)}) /\
+Definition dc_random_states_def:
+   (dc_random_states (0:num) = {(\s:string. s = (STRCAT "coin" (toString 0))); (\s:string. F)}) /\
    (dc_random_states (SUC n) = (IMAGE (\s:bool state.
                                         (\x:string. if x = (STRCAT "coin" (toString (SUC n))) then
                                                         T
@@ -91,14 +98,16 @@ val dc_random_states_def = Define
                                         (\x:string. if x = (STRCAT "coin" (toString (SUC n))) then
                                                         F
                                                     else (s x)))
-                                       (dc_random_states n)))`;
+                                       (dc_random_states n)))
+End
 
-val dc_prog_space_def = Define
-   `dc_prog_space (SUC(SUC n)) nsapays =
+Definition dc_prog_space_def:
+    dc_prog_space (SUC(SUC n)) nsapays =
       unif_prog_space
         (dc_high_states nsapays (SUC(SUC n)))
         dc_low_states
-        (dc_random_states (SUC n))`;
+        (dc_random_states (SUC n))
+End
 
 (* ************************************************************************* *)
 (* Case Study: The Dining Cryptographers - Basic Lemmas                      *)
@@ -601,22 +610,24 @@ val dcprog_result6 = store_thm
 (* Case Study: The Dining Cryptographers - Proofs (Anonymity)                *)
 (* ************************************************************************* *)
 
-val dc_valid_outputs_def = Define
-   `dc_valid_outputs n = {s: bool state | (s "result" = XOR_announces s n) /\
+Definition dc_valid_outputs_def:
+    dc_valid_outputs n = {s: bool state | (s "result" = XOR_announces s n) /\
                                           (XOR_announces s n) /\
                                           (!x. (~(x = "result")) /\
                                                (!i:num. i <= n ==>
                                                         ~(x = (STRCAT "announces" (toString i)))) ==>
-                                                ~ s x)}`;
+                                                ~ s x)}
+End
 
-val dc_random_witness_def = Define
-   `(dc_random_witness x (0:num) = (\s:string. if s = (STRCAT "coin" (toString 0)) then
+Definition dc_random_witness_def:
+    (dc_random_witness x (0:num) = (\s:string. if s = (STRCAT "coin" (toString 0)) then
                                                         ~(x (STRCAT "announces" (toString 0)))
                                                    else F)) /\
     (dc_random_witness x (SUC i) = (\s. if s = (STRCAT "coin" (toString (SUC i))) then
                                                 ~ (XOR_announces x (SUC i))
                                             else
-                                                dc_random_witness x i s))`;
+                                                dc_random_witness x i s))
+End
 
 val dc_random_witness_lem0 = prove
   (``!x n i. (SUC n) <= i ==> ~(dc_random_witness x n (STRCAT "coin" (toString i)))``,
@@ -707,8 +718,8 @@ val dc_valid_outputs_eq_outputs = store_thm
 
 (* ------------------------------------------------------------------------- *)
 
-val n_minus_1_announces_list = Define
-   `(n_minus_1_announces_list (0:num) = [(\s:string. s = (STRCAT "announces" (toString 0))); (\s:string. F)]) /\
+Definition n_minus_1_announces_list:
+    (n_minus_1_announces_list (0:num) = [(\s:string. s = (STRCAT "announces" (toString 0))); (\s:string. F)]) /\
     (n_minus_1_announces_list (SUC n) = (MAP (\s:bool state.
                                               (\x:string. if x = (STRCAT "announces" (toString (SUC n))) then
                                                                 T
@@ -718,16 +729,18 @@ val n_minus_1_announces_list = Define
                                               (\x:string. if x = (STRCAT "announces" (toString (SUC n))) then
                                                                 F
                                                           else s x))
-                                          (n_minus_1_announces_list n)))`;
+                                          (n_minus_1_announces_list n)))
+End
 
-val dc_valid_outputs_list = Define
-   `dc_valid_outputs_list (SUC(SUC(SUC n))) =
+Definition dc_valid_outputs_list:
+    dc_valid_outputs_list (SUC(SUC(SUC n))) =
         MAP (\l s. (s = "result") \/
                    (if (s = (STRCAT "announces" (toString (SUC(SUC n))))) then
                         ~(XOR_announces l (SUC n))
                     else
                         l s))
-             (n_minus_1_announces_list (SUC n))`;
+             (n_minus_1_announces_list (SUC n))
+End
 
 val MEM_n_minus_1_announces_list = prove
   (``!n x. MEM x (n_minus_1_announces_list n) =
@@ -865,14 +878,15 @@ val CARD_dc_valid_outputs = store_thm
 
 (* ------------------------------------------------------------------------- *)
 
-val valid_coin_assignment = Define
-  `(valid_coin_assignment r out h n (0:num) =
+Definition valid_coin_assignment:
+   (valid_coin_assignment r out h n (0:num) =
     (r (STRCAT "coin" (toString 0)) <=>
        ((r (STRCAT "coin" (toString (SUC (SUC n))))) xor (XOR_announces out (0:num)) xor ~((0:num) < h)))) /\
    (valid_coin_assignment r out h n (SUC i) =
        ((r (STRCAT "coin" (toString (SUC i))) <=>
         ((r (STRCAT "coin" (toString (SUC (SUC n))))) xor (XOR_announces out (SUC i)) xor ~((SUC i) < h))) /\
-        (valid_coin_assignment r out h n i)))`;
+        (valid_coin_assignment r out h n i)))
+End
 
 val valid_coin_assignment_result1 = prove
   (``!x out p n i j. j <= i /\ valid_coin_assignment x out p n i ==> valid_coin_assignment x out p n j``,
@@ -945,8 +959,8 @@ val valid_coin_set_eq_valid_coin_assignment = store_thm
    >> Cases_on `p = SUC (SUC n')` >- (FULL_SIMP_TAC arith_ss [xor_def] >> DECIDE_TAC)
    >> FULL_SIMP_TAC arith_ss [xor_def] >> Cases_on `SUC (SUC n') < p` >> FULL_SIMP_TAC arith_ss [xor_def] >> DECIDE_TAC);
 
-val coin_assignment = Define
-   `(coin_assignment out h n choice (0:num) =
+Definition coin_assignment:
+    (coin_assignment out h n choice (0:num) =
         (\s. if s = (STRCAT "coin" (toString 0)) then
                 (choice xor (XOR_announces out (0:num)) xor ~((0:num) < h))
              else F)) /\
@@ -954,7 +968,8 @@ val coin_assignment = Define
         (\s. if s = (STRCAT "coin" (toString (SUC i))) then
                 (choice xor (XOR_announces out (SUC i)) xor ~((SUC i) < h))
              else
-                coin_assignment out h n choice i s))`;
+                coin_assignment out h n choice i s))
+End
 
 Definition coin_assignment_set:
   coin_assignment_set out p n =
@@ -1750,31 +1765,35 @@ val dc_leakage_result = store_thm
 (* arbitrary.                                                                *)
 (* ************************************************************************* *)
 
-val insider_high_states_set_def = Define
-  `(insider_high_states_set (0:num) = {}) /\
+Definition insider_high_states_set_def:
+   (insider_high_states_set (0:num) = {}) /\
    (insider_high_states_set (SUC n) = (\s:string. s = (STRCAT "pays" (toString (SUC n))))
-                                      INSERT (insider_high_states_set n))`;
+                                      INSERT (insider_high_states_set n))
+End
 
-val insider_high_states_def = Define
-   `insider_high_states nsapays (SUC(SUC n)) =
+Definition insider_high_states_def:
+    insider_high_states nsapays (SUC(SUC n)) =
      if nsapays then {(\s: string. s = STRCAT "pays" (toString (SUC(SUC n))))}
-     else insider_high_states_set (SUC n)`;
+     else insider_high_states_set (SUC n)
+End
 
-val insider_low_states_def = Define
-   `insider_low_states = {(\s:string. s = (STRCAT "coin" (toString 0))); (\s:string. F)}`;
+Definition insider_low_states_def:
+    insider_low_states = {(\s:string. s = (STRCAT "coin" (toString 0))); (\s:string. F)}
+End
 
-val insider_random_states_def = Define
-  `(insider_random_states (0:num) = {(\s:string. F)}) /\
+Definition insider_random_states_def:
+   (insider_random_states (0:num) = {(\s:string. F)}) /\
    (insider_random_states (SUC n) =
      (IMAGE (\s:bool state. (\x:string. if x = (STRCAT "coin" (toString (SUC n))) then T
                                         else s x))
             (insider_random_states n)) UNION
      (IMAGE (\s:bool state. (\x:string. if x = (STRCAT "coin" (toString (SUC n))) then F
                                         else s x))
-            (insider_random_states n)))`;
+            (insider_random_states n)))
+End
 
-val insider_set_announcements_def = Define
-  `(insider_set_announcements (high: bool state) (low:bool state)
+Definition insider_set_announcements_def:
+   (insider_set_announcements (high: bool state) (low:bool state)
                               (random:bool state) (n:num) (0:num) (s:string) =
        if (s = (STRCAT "announces" (toString 0))) then
           ((high (STRCAT "pays" (toString 0)))) xor
@@ -1793,7 +1812,8 @@ val insider_set_announcements_def = Define
           ((random (STRCAT "coin" (toString (SUC (SUC i))))) xor
            (random (STRCAT "coin" (toString (SUC i)))))
        else
-          (insider_set_announcements high low random n (SUC i)) s)`;
+          (insider_set_announcements high low random n (SUC i)) s)
+End
 
 val insider_set_announcements_alt = store_thm
   ("insider_set_announcements_alt",
@@ -1818,18 +1838,20 @@ val insider_set_announcements_alt = store_thm
                  (insider_set_announcements high low random n (SUC i)) s))``,
      RW_TAC std_ss [FUN_EQ_THM, insider_set_announcements_def]);
 
-val insider_dcprog_def = Define
-   `insider_dcprog (SUC(SUC(SUC n))) =
+Definition insider_dcprog_def:
+    insider_dcprog (SUC(SUC(SUC n))) =
       (λ((high:bool state, low:bool state), random:bool state).
          compute_result (insider_set_announcements high low random (SUC(SUC n)) (SUC(SUC n)))
-                        (SUC(SUC n)))`;
+                        (SUC(SUC n)))
+End
 
-val insider_dc_prog_space_def = Define
-   `insider_dc_prog_space (SUC(SUC n)) nsapays =
+Definition insider_dc_prog_space_def:
+    insider_dc_prog_space (SUC(SUC n)) nsapays =
     unif_prog_space
       (insider_high_states nsapays (SUC(SUC n)))
       insider_low_states
-      (insider_random_states (SUC n))`;
+      (insider_random_states (SUC n))
+End
 
 val insider_dc_prog_space_F_set_thm = store_thm
   ("insider_dc_prog_space_F_set_thm",
@@ -1901,14 +1923,16 @@ val insider_dc3_leakage_result = store_thm
 (* Tampering w/ a visible coin doesn't create a leak                         *)
 (* ************************************************************************* *)
 
-val biased_high_states_def = Define
-   `biased_high_states n = insider_high_states_set n`;
+Definition biased_high_states_def:
+    biased_high_states n = insider_high_states_set n
+End
 
-val biased_low_states_def = Define
-   `biased_low_states = {(\s:string. s = (STRCAT "coin" (toString 0))); (\s:string. F)}`;
+Definition biased_low_states_def:
+    biased_low_states = {(\s:string. s = (STRCAT "coin" (toString 0))); (\s:string. F)}
+End
 
-val biased_random_states_def = Define
-   `(biased_random_states (0:num) = {(\s:string. F)}) /\
+Definition biased_random_states_def:
+    (biased_random_states (0:num) = {(\s:string. F)}) /\
     (biased_random_states (SUC n) = (IMAGE (\s:bool state.
                                               (\x:string. if x = (STRCAT "coin" (toString (SUC n))) then
                                                                 T
@@ -1919,20 +1943,23 @@ val biased_random_states_def = Define
                                               (\x:string. if x = (STRCAT "coin" (toString (SUC n))) then
                                                                 F
                                                           else s x))
-                                          (biased_random_states n)))`;
+                                          (biased_random_states n)))
+End
 
-val biased_dist_def = Define
-   `biased_dist high low random =
+Definition biased_dist_def:
+    biased_dist high low random =
         (\s. if L s = (\s:string. s = (STRCAT "coin" (toString 0))) then
                 (1 / 2) * (unif_prog_dist high low random s)
              else
-                (3 / 2) * (unif_prog_dist high low random s))`;
+                (3 / 2) * (unif_prog_dist high low random s))
+End
 
-val biased_dc_prog_space_def = Define
-   `biased_dc_prog_space (SUC(SUC n)) =
+Definition biased_dc_prog_space_def:
+    biased_dc_prog_space (SUC(SUC n)) =
         (((biased_high_states (SUC(SUC n))) CROSS biased_low_states) CROSS (biased_random_states (SUC (SUC n))),
          POW (((biased_high_states (SUC(SUC n))) CROSS biased_low_states) CROSS (biased_random_states (SUC (SUC n)))),
-         (\s. SIGMA (biased_dist (biased_high_states (SUC(SUC n))) biased_low_states (biased_random_states (SUC (SUC n)))) s))`;
+         (\s. SIGMA (biased_dist (biased_high_states (SUC(SUC n))) biased_low_states (biased_random_states (SUC (SUC n)))) s))
+End
 
 val prob_space_biased_dc_prog_space3 = store_thm
   ("prob_space_biased_dc_prog_space3",
@@ -3414,19 +3441,21 @@ val biased_dc3_leakage_result = store_thm
 (* Biasing a hidden coin creates a partial leak                              *)
 (* ************************************************************************* *)
 
-val biased_dist2_def = Define
-   `biased_dist2 high low random =
+Definition biased_dist2_def:
+    biased_dist2 high low random =
         (\s. if R s (STRCAT "coin" (toString (SUC 0))) then
                 (1 / 2) * (unif_prog_dist high low random s)
              else
-                (3 / 2) * (unif_prog_dist high low random s))`;
+                (3 / 2) * (unif_prog_dist high low random s))
+End
 
-val biased_dc_prog_space2_def = Define
-   `biased_dc_prog_space2 (SUC(SUC n)) =
+Definition biased_dc_prog_space2_def:
+    biased_dc_prog_space2 (SUC(SUC n)) =
         (((biased_high_states (SUC(SUC n))) CROSS biased_low_states) CROSS (biased_random_states (SUC (SUC n))),
          POW (((biased_high_states (SUC(SUC n))) CROSS biased_low_states) CROSS (biased_random_states (SUC (SUC n)))),
          (\s. SIGMA (biased_dist2 (biased_high_states (SUC(SUC n)))
-   biased_low_states (biased_random_states (SUC (SUC n)))) s))`;
+   biased_low_states (biased_random_states (SUC (SUC n)))) s))
+End
 
 val prob_space_biased_dc_prog_space23 = store_thm
   ("prob_space_biased_dc_prog_space23",

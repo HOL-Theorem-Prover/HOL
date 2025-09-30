@@ -17,9 +17,9 @@ Libs
     swapping over strings
    ---------------------------------------------------------------------- *)
 
-val swapstr_def = Define`
+Definition swapstr_def:
   swapstr x y (s:string) = if x = s then y else if y = s then x else s
-`;
+End
 
 Theorem swapstr_id[simp] :
     swapstr x x s = s
@@ -77,10 +77,10 @@ QED
     swapping lists of pairs over strings (a foldr)
    ---------------------------------------------------------------------- *)
 
-val raw_lswapstr_def = Define`
+Definition raw_lswapstr_def:
   (raw_lswapstr [] s = s) /\
   (raw_lswapstr (h::t) s = swapstr (FST h) (SND h) (raw_lswapstr t s))
-`;
+End
 val _ = export_rewrites ["raw_lswapstr_def"]
 
 val raw_lswapstr_APPEND = store_thm(

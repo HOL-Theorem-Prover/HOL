@@ -64,10 +64,12 @@ val resq_SS =
 * CLOCK c s is true is clock c is true in state s
 ******************************************************************************)
 
-val CLOCK_def = Define `CLOCK c s = B_SEM s c`;
+Definition CLOCK_def:   CLOCK c s = B_SEM s c
+End
 
-val LIST_PROJ_def =
- Define `LIST_PROJ l c = FILTER (CLOCK c) l`;
+Definition LIST_PROJ_def:
+  LIST_PROJ l c = FILTER (CLOCK c) l
+End
 
 val LENGTH_FILTER_NON_EMPTY =
  store_thm
@@ -155,12 +157,12 @@ val LENGTH_FILTER_1_NOT =
     THEN `LENGTH(FILTER P l) > 1` by PROVE_TAC[LENGTH_APPEND_GREATER_1]
     THEN DECIDE_TAC);
 
-val TOP_FREE_def =
- Define
-  `(TOP_FREE[]             = T) /\
+Definition TOP_FREE_def:
+   (TOP_FREE[]             = T) /\
    (TOP_FREE(TOP::v)       = F) /\
    (TOP_FREE(BOTTOM::v)    = TOP_FREE v) /\
-   (TOP_FREE((STATE s)::v) = TOP_FREE v)`;
+   (TOP_FREE((STATE s)::v) = TOP_FREE v)
+End
 
 val TOP_FREE_APPEND =
  store_thm
@@ -353,19 +355,19 @@ val FIRSTN_AUX =
 
 val _ = computeLib.add_funs[FIRSTN_AUX]
 
-val TAKE_FIRST_def =
- Define
-  `(TAKE_FIRST P [] = [])
+Definition TAKE_FIRST_def:
+   (TAKE_FIRST P [] = [])
    /\
    (TAKE_FIRST P (x::l) =
-     if P x then [x] else x :: TAKE_FIRST P l)`;
+     if P x then [x] else x :: TAKE_FIRST P l)
+End
 
-val TAKE_FIRSTN_def =
- Define
-  `(TAKE_FIRSTN P 0 l = [])
+Definition TAKE_FIRSTN_def:
+   (TAKE_FIRSTN P 0 l = [])
    /\
    (TAKE_FIRSTN P (SUC n) l =
-     TAKE_FIRST P l <> TAKE_FIRSTN P n (BUTFIRSTN (LENGTH(TAKE_FIRST P l)) l))`;
+     TAKE_FIRST P l <> TAKE_FIRSTN P n (BUTFIRSTN (LENGTH(TAKE_FIRST P l)) l))
+End
 
 (******************************************************************************
 * Make BUTFIRSTN executable for testing (not sure is this is needed)
@@ -480,9 +482,9 @@ val APPEND_NIL_NIL =
    Induct
     THEN RW_TAC list_ss []);
 
-val HOLDS_LAST_def =
- Define
-  `HOLDS_LAST P l = (?n. n < LENGTH l /\ P(EL n l)) /\ P(LAST l)`;
+Definition HOLDS_LAST_def:
+   HOLDS_LAST P l = (?n. n < LENGTH l /\ P(EL n l)) /\ P(LAST l)
+End
 
 val LENGTH_TAKE_FIRST =
  store_thm
@@ -1503,9 +1505,9 @@ val S_PROJ_S_EMPTY =
     THEN `LENGTH l > 0` by DECIDE_TAC
     THEN PROVE_TAC[LAST_FILTER_NON_EMPTY]);
 
-val S_CATN_def =
- Define
-  `(S_CATN 0 r = S_EMPTY) /\ (S_CATN (SUC n) r = S_CAT(r, S_CATN n r))`;
+Definition S_CATN_def:
+   (S_CATN 0 r = S_EMPTY) /\ (S_CATN (SUC n) r = S_CAT(r, S_CATN n r))
+End
 
 val US_SEM_REPEAT_CATN =
  store_thm
@@ -1576,12 +1578,12 @@ val S_SEM_REPEAT_CATN =
           THEN Q.EXISTS_TAC `v1::vlist`
           THEN RW_TAC list_ss [CONCAT_def]]]);
 
-val S_PROJ_CORRECT_def =
- Define
-  `S_PROJ_CORRECT r =
+Definition S_PROJ_CORRECT_def:
+   S_PROJ_CORRECT r =
     !l c.
      S_CLOCK_FREE r /\ TOP_FREE l /\ BOTTOM_FREE l ==>
-     ((LENGTH l > 0 ==> CLOCK c (LAST l)) /\ US_SEM (LIST_PROJ l c) r = S_SEM l c r)`;
+     ((LENGTH l > 0 ==> CLOCK c (LAST l)) /\ US_SEM (LIST_PROJ l c) r = S_SEM l c r)
+End
 
 val S_PROJ_CORRECT_EMPTY =
  store_thm
@@ -1685,24 +1687,25 @@ val S_PROJ_COR =
 (******************************************************************************
 * FUN_FILTER_COUNT P f m n = P is true for the mth time in f at position n
 ******************************************************************************)
-val FUN_FILTER_COUNT_def =
- Define
-  `(FUN_FILTER_COUNT P f 0 n = P(f n) /\ !i :: LESS n. ~P(f i))
+Definition FUN_FILTER_COUNT_def:
+   (FUN_FILTER_COUNT P f 0 n = P(f n) /\ !i :: LESS n. ~P(f i))
    /\
    (FUN_FILTER_COUNT P f (SUC m) n =
      ?n' :: LESS n.
-      FUN_FILTER_COUNT P f m n'  /\ P(f n) /\ !i :: LESS n. n' < i ==> ~P(f i))`;
+      FUN_FILTER_COUNT P f m n'  /\ P(f n) /\ !i :: LESS n. n' < i ==> ~P(f i))
+End
 
-val PATH_FILTER_def =
- Define
-  `(PATH_FILTER P (FINITE l) = FINITE(FILTER P l))
+Definition PATH_FILTER_def:
+   (PATH_FILTER P (FINITE l) = FINITE(FILTER P l))
    /\
    (PATH_FILTER P (INFINITE f) =
      if (!m:num. ?n. m <= n /\ P(f n))
       then INFINITE(f o (\m. LEAST n. FUN_FILTER_COUNT P f m n))
-      else FINITE(FILTER P (GENLIST f (LEAST i. !j. i <= j ==> ~P(f j)))))`;
+      else FINITE(FILTER P (GENLIST f (LEAST i. !j. i <= j ==> ~P(f j)))))
+End
 
-val PROJ_def = Define `PROJ p c = PATH_FILTER (CLOCK c) p`;
+Definition PROJ_def:   PROJ p c = PATH_FILTER (CLOCK c) p
+End
 
 val FUN_FILTER_COUNT_UNIQUE =
  store_thm
@@ -1743,9 +1746,8 @@ val PROJ_def =
 (******************************************************************************
 * F_CLOCK_FREE f means f contains no clocking statements
 ******************************************************************************)
-val F_CLOCK_FREE_def =
- Define
-  `(F_CLOCK_FREE (F_STRONG_BOOL b)   = T)
+Definition F_CLOCK_FREE_def:
+   (F_CLOCK_FREE (F_STRONG_BOOL b)   = T)
    /\
    (F_CLOCK_FREE (F_WEAK_BOOL b)     = T)
    /\
@@ -1765,19 +1767,20 @@ val F_CLOCK_FREE_def =
    /\
    (F_CLOCK_FREE (F_SUFFIX_IMP(r,f)) = F_CLOCK_FREE f /\ S_CLOCK_FREE r)
    /\
-   (F_CLOCK_FREE (F_CLOCK v)         = F)`;
+   (F_CLOCK_FREE (F_CLOCK v)         = F)
+End
 
-val PATH_TOP_FREE_def =
- Define
-  `(PATH_TOP_FREE(FINITE l)   = TOP_FREE l)
+Definition PATH_TOP_FREE_def:
+   (PATH_TOP_FREE(FINITE l)   = TOP_FREE l)
    /\
-   (PATH_TOP_FREE(INFINITE f) = !n. ~(f n = TOP))`;
+   (PATH_TOP_FREE(INFINITE f) = !n. ~(f n = TOP))
+End
 
-val PATH_BOTTOM_FREE_def =
- Define
-  `(PATH_BOTTOM_FREE(FINITE l)   = BOTTOM_FREE l)
+Definition PATH_BOTTOM_FREE_def:
+   (PATH_BOTTOM_FREE(FINITE l)   = BOTTOM_FREE l)
    /\
-   (PATH_BOTTOM_FREE(INFINITE f) = !n. ~(f n = BOTTOM))`;
+   (PATH_BOTTOM_FREE(INFINITE f) = !n. ~(f n = BOTTOM))
+End
 
 val HD_RESTN_TL =
  store_thm
@@ -1917,9 +1920,9 @@ val LEAST0 =
       CONV_TAC(DEPTH_CONV ETA_CONV)
        THEN DECIDE_TAC]);
 
-val IS_LEAST_def =
- Define
-  `IS_LEAST P n = P n /\ !m:num. m < n ==> ~P m`;
+Definition IS_LEAST_def:
+   IS_LEAST P n = P n /\ !m:num. m < n ==> ~P m
+End
 
 val IS_LEAST_UNIQUE =
  store_thm
@@ -2679,15 +2682,14 @@ val LS_LE_TRANS_X =
    Cases_on `n` THEN Cases_on `p`
     THEN RW_TAC arith_ss [LS,LE]);
 
-val PATH_TAKE_FIRST_def =
- Define
-  `(PATH_TAKE_FIRST P (FINITE l) = TAKE_FIRST P l)
+Definition PATH_TAKE_FIRST_def:
+   (PATH_TAKE_FIRST P (FINITE l) = TAKE_FIRST P l)
    /\
-   (PATH_TAKE_FIRST P (INFINITE f) = GENLIST f (SUC(LEAST n. P(f n))))`;
+   (PATH_TAKE_FIRST P (INFINITE f) = GENLIST f (SUC(LEAST n. P(f n))))
+End
 
-val PATH_TAKE_FIRSTN_def =
- Define
-  `(PATH_TAKE_FIRSTN P n (FINITE l) = TAKE_FIRSTN P n l)
+Definition PATH_TAKE_FIRSTN_def:
+   (PATH_TAKE_FIRSTN P n (FINITE l) = TAKE_FIRSTN P n l)
    /\
    (PATH_TAKE_FIRSTN P 0 (INFINITE f) = [])
    /\
@@ -2695,7 +2697,8 @@ val PATH_TAKE_FIRSTN_def =
      PATH_TAKE_FIRST P (INFINITE f)
      <>
      PATH_TAKE_FIRSTN P n
-      (INFINITE(\n. f(n + LENGTH(PATH_TAKE_FIRST P (INFINITE f))))))`;
+      (INFINITE(\n. f(n + LENGTH(PATH_TAKE_FIRST P (INFINITE f))))))
+End
 
 val TAKE_FIRSTN_1 =
  store_thm

@@ -324,9 +324,10 @@ THEN1 (
   Cases_on `vwalk s2 n` THEN FULL_SIMP_TAC (srw_ss()) [] ))
 
 val _ = set_fixity "COMPAT" (Infix(NONASSOC,450))
-val COMPAT_def = Define`
+Definition COMPAT_def:
   s COMPAT s0 <=> wfs s /\ wfs s0 /\
-                  (!t.walkstar s (walkstar s0 t) = walkstar s t)`
+                  (!t.walkstar s (walkstar s0 t) = walkstar s t)
+End
 val _ = TeX_notation {hol = "COMPAT", TeX = ("\\ensuremath{\\Supset}",1)}
 
 val SUBMAP_COMPAT = Q.store_thm(

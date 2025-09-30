@@ -620,10 +620,11 @@ val NAT_MOD = store_thm("NAT_MOD",
 (* longer required here.                                                     *)
 (*****************************************************************************)
 
-val rat_of_int_def = Define
-    `rat_of_int x =
+Definition rat_of_int_def:
+     rat_of_int x =
     if 0 <= x then & (Num (ABS x))
-              else rat_ainv (& (Num (ABS x)))`;
+              else rat_ainv (& (Num (ABS x)))
+End
 
 val rat_of_int_neg = store_thm("rat_of_int_neg",
     ``rat_of_int ~x = ~rat_of_int x``,
@@ -1423,23 +1424,27 @@ val STRINGP_STRCAT = prove(``!s1 s2. |= stringp (acl2_strcat s1 s2)``,
 (* FCPs                                                                      *)
 (*****************************************************************************)
 
-val fcp_encode_def =
-    Define `fcp_encode f (:'b) (x:'a ** 'b) = list f (V2L x)`;
-val fcp_decode_def =
-    Define `fcp_decode f (:'b) x =
+Definition fcp_encode_def:
+     fcp_encode f (:'b) (x:'a ** 'b) = list f (V2L x)
+End
+Definition fcp_decode_def:
+     fcp_decode f (:'b) x =
             if LENGTH (sexp_to_list I x) = dimindex(:'b)
                then L2V (sexp_to_list f x):('a ** 'b)
-               else FCP i. f nil`;
+               else FCP i. f nil
+End
 
-val fcp_detect_def =
-    Define `fcp_detect f (:'b) x =
-            listp f x /\ (LENGTH (sexp_to_list I x) = dimindex(:'b))`;
+Definition fcp_detect_def:
+     fcp_detect f (:'b) x =
+            listp f x /\ (LENGTH (sexp_to_list I x) = dimindex(:'b))
+End
 
-val fcp_fix_def =
-    Define `fcp_fix f (:'b) x =
+Definition fcp_fix_def:
+     fcp_fix f (:'b) x =
             if LENGTH (sexp_to_list I x) = dimindex(:'b)
                then fix_list f x
-               else fix_list f (fcp_encode I (:'b) ((FCP i.nil):sexp ** 'b))`;
+               else fix_list f (fcp_encode I (:'b) ((FCP i.nil):sexp ** 'b))
+End
 
 val ENCDECMAP_FCP = store_thm("ENCDECMAP_FCP",
     ``fcp_decode g (:'b) o fcp_encode f (:'b) = FCP_MAP (g o f)``,
@@ -1529,10 +1534,11 @@ val FCP_INDEX = store_thm("FCP_INDEX",
      RW_TAC int_ss [INT_ADD_CALCULATE,INT_ABS_NUM,INT_ABS_NEG] THEN
      ARITH_TAC);
 
-val update_def = Define `
+Definition update_def:
     (update (SUC n) y (x::xs) = x::update n y xs) /\
     (update 0 y (x::xs) = y::xs) /\
-    (update _ y [] = [])`;
+    (update _ y [] = [])
+End
 
 val LIST_UPDATE = store_thm("LIST_UPDATE",
     ``!x y z. x < LENGTH z ==>
@@ -1674,17 +1680,21 @@ val FCP_VALUE = store_thm("FCP_VALUE",
 (* Coding function definitions                                               *)
 (*****************************************************************************)
 
-val word_encode_def =
-    Define `word_encode (:'b) (x:'b word) = int (sw2i x)`;
-val word_decode_def =
-    Define `word_decode (:'b) x = (i2sw (sexp_to_int x)) : 'b word`;
-val word_detect_def =
-    Define `word_detect (:'b) x =
+Definition word_encode_def:
+     word_encode (:'b) (x:'b word) = int (sw2i x)
+End
+Definition word_decode_def:
+     word_decode (:'b) x = (i2sw (sexp_to_int x)) : 'b word
+End
+Definition word_detect_def:
+     word_detect (:'b) x =
            ((sexp_to_bool o  integerp) x) /\
            sexp_to_int x < 2 ** (dimindex (:'b) - 1) /\
-           ~(2 ** (dimindex (:'b) - 1)) <= sexp_to_int x`;
-val word_fix_def =
-    Define `word_fix (:'b) x = int (extend (sexp_to_int x) (dimindex (:'b)))`;
+           ~(2 ** (dimindex (:'b) - 1)) <= sexp_to_int x
+End
+Definition word_fix_def:
+     word_fix (:'b) x = int (extend (sexp_to_int x) (dimindex (:'b)))
+End
 
 (*****************************************************************************)
 (* Coding function proofs                                                    *)

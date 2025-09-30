@@ -8,8 +8,9 @@ Libs
 (* The definition of the pseudo-random number generator.                     *)
 (* ------------------------------------------------------------------------- *)
 
-val prob_pseudo_def = Define
-   `prob_pseudo a b n = siter EVEN (\x. (a * x + b) MOD (2 * n + 1))`;
+Definition prob_pseudo_def:
+    prob_pseudo a b n = siter EVEN (\x. (a * x + b) MOD (2 * n + 1))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems to allow pseudo-random bits to be computed.                      *)

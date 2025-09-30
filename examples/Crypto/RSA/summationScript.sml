@@ -10,10 +10,10 @@ app load ["bossLib", "arithmeticTheory", "numLib"];
 
 val ARW = RW_TAC arith_ss;
 
-val SUMMATION =
- Define
-     `(summation j 0 f       = 0)
-   /\ (summation j (SUC i) f = f j + summation (SUC j) i f)`;
+Definition SUMMATION:
+      (summation j 0 f       = 0)
+   /\ (summation j (SUC i) f = f j + summation (SUC j) i f)
+End
 
 
 val SUMMATION_1 = store_thm("SUMMATION_1",

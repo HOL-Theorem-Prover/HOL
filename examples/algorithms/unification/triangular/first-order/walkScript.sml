@@ -59,8 +59,9 @@ val vwalk_to_var = Q.store_thm(
                           FULL_SIMP_TAC (srw_ss()) []) THEN
   FIRST_X_ASSUM (Q.SPEC_THEN `u` MP_TAC) THEN SRW_TAC [][]);
 
-val walk_def = Define`
-  walk s t = case t of Var v => vwalk s v | t => t`;
+Definition walk_def:
+  walk s t = case t of Var v => vwalk s v | t => t
+End
 
 val walk_thm = RWstore_thm(
 "walk_thm",
@@ -213,9 +214,10 @@ val vwalk_rhs_q = `
    if x = v then y
    else vwalk_rhs s t v)`;
 
-val ELENGTH_def = Define`
+Definition ELENGTH_def:
   (ELENGTH (v, []) = 0) ∧
-  (ELENGTH (v, (h::t)) = if SND h = Var v then 0 else 1 + ELENGTH (v, t))`;
+  (ELENGTH (v, (h::t)) = if SND h = Var v then 0 else 1 + ELENGTH (v, t))
+End
 val _ = export_rewrites ["ELENGTH_def"];
 
 val vwalk_rhsR_q = `

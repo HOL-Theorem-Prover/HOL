@@ -353,9 +353,9 @@ val _ = temp_overload_on ("FALLING", ``\f. !x:num. f x <= x``);
 (* ------------------------------------------------------------------------- *)
 
 (* Define a pop function, count of pops to zero. *)
-val pop_def = Define`
+Definition pop_def:
     pop b n = if (b <= 1) \/ (n = 0) then 0 else SUC (pop b (n DIV b))
-`;
+End
 
 (* alternate form *)
 val pop_alt = save_thm("pop_alt", pop_def |> REWRITE_RULE [SUC_ONE_ADD]);
@@ -1644,10 +1644,10 @@ val loop2_div_mono_count_le = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Given a number n, generate a dividing list of n, down to before 0. *)
-val divide_by_def = Define`
+Definition divide_by_def:
     divide_by b n =
        if (b <= 1) \/ (n = 0) then [] else n::divide_by b (n DIV b)
-`;
+End
 (* Overload divide_by 2 *)
 val _ = overload_on ("halving", ``divide_by 2``);
 

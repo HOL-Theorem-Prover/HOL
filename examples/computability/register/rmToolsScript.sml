@@ -5,7 +5,7 @@ Ancestors
 Libs
   mp_then
 
-val identity_def = Define `
+Definition identity_def:
   identity = <|
   Q := {0;1};
   tf := (λs. case s of
@@ -16,7 +16,7 @@ val identity_def = Define `
   In := [0];
   Out := 0;
   |>
-`;
+End
 
 (*
    ----------------------------------
@@ -24,7 +24,7 @@ val identity_def = Define `
    ----------------------------------
 *)
 
-val dup0_def = Define `
+Definition dup0_def:
   dup0 r1 r2 r3= <|
     Q := {1;2;3;4;5};
     tf := (λs. case s of
@@ -38,7 +38,7 @@ val dup0_def = Define `
     In := [r1];
     Out := r2;
   |>
-`;
+End
 
 Definition dup_def:
   dup r1 r2 r3= <|
@@ -58,11 +58,11 @@ Definition dup_def:
 End
 
 
-val rInst_def = Define `
+Definition rInst_def:
   (rInst mnum (Inc r sopt) = Inc (npair mnum r) sopt)
     ∧
   (rInst mnum (Dec r sopt1 sopt2) = Dec (npair mnum r) sopt1 sopt2)
-`;
+End
 
 Definition mrInst_def:
   mrInst mnum m = <|
@@ -75,12 +75,12 @@ Definition mrInst_def:
 End
 
 
-val sInst_def = Define `
+Definition sInst_def:
   (sInst mnum (Inc r sopt) = Inc r (OPTION_MAP (npair mnum) sopt))
     ∧
   (sInst mnum (Dec r sopt1 sopt2) =
       Dec r (OPTION_MAP (npair mnum) sopt1) (OPTION_MAP (npair mnum) sopt2))
-`;
+End
 
 Definition msInst_def:
   msInst mnum m = <|
@@ -105,11 +105,11 @@ Definition end_link_def[simp]:
 End
 
 
-val linktf_def = Define`
+Definition linktf_def:
   linktf m1Q tf1 tf2 m2init s =
      if s ∈ m1Q then end_link (tf1 s) m2init
      else tf2 s
-`;
+End
 
 Definition link_def:
   link m1 m2 = <|
@@ -128,10 +128,10 @@ val _ = set_mapped_fixity {
 }
 
 
-val link_all_def = Define`
+Definition link_all_def:
   (link_all [] = identity) ∧
   (link_all (m::ms) = FOLDL (λa mm. a ⇨ mm) m ms)
-`;
+End
 
 (*
    -----------------------------------------

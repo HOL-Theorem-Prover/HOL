@@ -876,16 +876,16 @@ val poly_extension_field_exists_alt = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define generator of a field, relative to a subfield *)
-val field_generator_def = Define`
+Definition field_generator_def:
     field_generator (r:'a field) (s:'a field) (z:'a) =
        (IMAGE (\p. eval p z) (PolyRing s).carrier = R)
-`;
+End
 (* Note: p is a subfield polynomial, with coefficients in subfield s. *)
 
 (* Define generator set of a field, relative to a subfield *)
-val field_generators_def = Define`
+Definition field_generators_def:
     field_generators (r:'a field) (s:'a field) = {z | z IN R /\ field_generator r s z}
-`;
+End
 
 (* Overload field generator and generators set *)
 val _ = overload_on("generator", ``field_generator r``);

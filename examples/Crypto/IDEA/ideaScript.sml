@@ -84,47 +84,51 @@ val FORALL_ODDKEY = Q.prove
    by METIS_TAC [ABS_PAIR_THM]
  THEN ASM_REWRITE_TAC[]);
 
-val ZeroOddKey_def =  Define `ZeroOddKey = (0w,0w,0w,0w) : OddKey`;
-val ZeroEvenKey_def =  Define `ZeroEvenKey = (0w,0w) : EvenKey`;
-val ZeroOddKeys_def = Define
-  `ZeroOddKeys = (ZeroOddKey,ZeroOddKey,ZeroOddKey,ZeroOddKey,ZeroOddKey,
-                  ZeroOddKey,ZeroOddKey,ZeroOddKey,ZeroOddKey) : OddKeySched`;
-val ZeroEvenKeys_def = Define
-  `ZeroEvenKeys = (ZeroEvenKey,ZeroEvenKey,ZeroEvenKey,ZeroEvenKey,
-                   ZeroEvenKey,ZeroEvenKey,ZeroEvenKey,ZeroEvenKey) : EvenKeySched`;
+Definition ZeroOddKey_def:    ZeroOddKey = (0w,0w,0w,0w) : OddKey
+End
+Definition ZeroEvenKey_def:    ZeroEvenKey = (0w,0w) : EvenKey
+End
+Definition ZeroOddKeys_def:
+   ZeroOddKeys = (ZeroOddKey,ZeroOddKey,ZeroOddKey,ZeroOddKey,ZeroOddKey,
+                  ZeroOddKey,ZeroOddKey,ZeroOddKey,ZeroOddKey) : OddKeySched
+End
+Definition ZeroEvenKeys_def:
+   ZeroEvenKeys = (ZeroEvenKey,ZeroEvenKey,ZeroEvenKey,ZeroEvenKey,
+                   ZeroEvenKey,ZeroEvenKey,ZeroEvenKey,ZeroEvenKey) : EvenKeySched
+End
 
 (*---Use Both Additive and Multiplicative Inverses Now---*)
-val InverseKey_def =
- Define
-   `InverseKey (k1,k2,k3,k4) = (winv k1, - k3, - k2, winv k4) : OddKey`;
+Definition InverseKey_def:
+    InverseKey (k1,k2,k3,k4) = (winv k1, - k3, - k2, winv k4) : OddKey
+End
 
-val InverseKeys_def =
- Define
-   `InverseKeys (ok1,ok2,ok3,ok4,ok5,ok6,ok7,ok8,ok9) =
+Definition InverseKeys_def:
+    InverseKeys (ok1,ok2,ok3,ok4,ok5,ok6,ok7,ok8,ok9) =
                 (InverseKey ok9,InverseKey ok8,InverseKey ok7,InverseKey ok6,
                  InverseKey ok5,InverseKey ok4,InverseKey ok3,InverseKey ok2,
-                 InverseKey ok1) : OddKeySched`;
+                 InverseKey ok1) : OddKeySched
+End
 
-val ReverseKeys_def =
- Define
-   `ReverseKeys (ek1,ek2,ek3,ek4,ek5,ek6,ek7,ek8) =
-                (ek8,ek7,ek6,ek5,ek4,ek3,ek2,ek1) : EvenKeySched`;
+Definition ReverseKeys_def:
+    ReverseKeys (ek1,ek2,ek3,ek4,ek5,ek6,ek7,ek8) =
+                (ek8,ek7,ek6,ek5,ek4,ek3,ek2,ek1) : EvenKeySched
+End
 
-val RotateOddKeys_def =
- Define
-   `RotateOddKeys (k1,k2,k3,k4,k5,k6,k7,k8,k9) =
-            (k2,k3,k4,k5,k6,k7,k8,k9,k1) : OddKeySched`;
+Definition RotateOddKeys_def:
+    RotateOddKeys (k1,k2,k3,k4,k5,k6,k7,k8,k9) =
+            (k2,k3,k4,k5,k6,k7,k8,k9,k1) : OddKeySched
+End
 
-val RotateEvenKeys_def =
- Define
-   `RotateEvenKeys (k1,k2,k3,k4,k5,k6,k7,k8) =
-            (k2,k3,k4,k5,k6,k7,k8,k1) : EvenKeySched`;
+Definition RotateEvenKeys_def:
+    RotateEvenKeys (k1,k2,k3,k4,k5,k6,k7,k8) =
+            (k2,k3,k4,k5,k6,k7,k8,k1) : EvenKeySched
+End
 
 (*-1st and 4th are multiplications now-*)
-val OddRound_def =
- Define
-   `OddRound ((Ka, Kb, Kc, Kd):OddKey) ((Xa, Xb, Xc, Xd):Block) =
-          (Xa wmul Ka, Xc + Kc, Xb + Kb,Xd wmul Kd) :Block`;
+Definition OddRound_def:
+    OddRound ((Ka, Kb, Kc, Kd):OddKey) ((Xa, Xb, Xc, Xd):Block) =
+          (Xa wmul Ka, Xc + Kc, Xb + Kb,Xd wmul Kd) :Block
+End
 
 val OddRound_Lemma1 = Q.store_thm
 ("OddRound_Lemma1",
@@ -138,18 +142,21 @@ val OddRound_Inversion = Q.store_thm
  ARW [InverseKey_def, OddRound_def] THEN
  ARW [wmul_ASSOC, wmul_Theorem, wmul_Mul1, OddRound_Lemma1]);
 
-val Mangler1_def = Define`
+Definition Mangler1_def:
  Mangler1 ((Yin:word16), (Zin:word16), (Ke:word16), (Kf:word16)) =
-   ((Ke * Yin) + Zin) * Kf`;
+   ((Ke * Yin) + Zin) * Kf
+End
 
-val Mangler2_def = Define`
-  Mangler2 ((Yin:word16), (Ke:word16), (Yout:word16)) = (Ke * Yin) + Yout`;
+Definition Mangler2_def:
+  Mangler2 ((Yin:word16), (Ke:word16), (Yout:word16)) = (Ke * Yin) + Yout
+End
 
-val EvenRound_def = Define
- `EvenRound ((Ke, Kf):EvenKey) ((Xa, Xb, Xc, Xd):Block) =
+Definition EvenRound_def:
+  EvenRound ((Ke, Kf):EvenKey) ((Xa, Xb, Xc, Xd):Block) =
    let Yout =  Mangler1 ((Xa ?? Xb), (Xc ?? Xd), Ke, Kf) in
      let Zout = Mangler2 ((Xa ?? Xb), Ke, Yout) in
-       (Xa ?? Yout, Xb ?? Yout, Xc ?? Zout, Xd ?? Zout):Block`;
+       (Xa ?? Yout, Xb ?? Yout, Xc ?? Zout, Xd ?? Zout):Block
+End
 
 val [Mangler1] = decls "Mangler1";
 val [Mangler2] = decls "Mangler2";
@@ -175,7 +182,8 @@ val Round_def =
             (OddRound (FST oddkeys) state)`
   (WF_REL_TAC `measure (FST)` THEN RW_TAC arith_ss [ELIM_UNCURRY]);
 
-val IdeaFwd_def = Define `IdeaFwd oddkeys evenkeys= Round 17 oddkeys evenkeys`;
+Definition IdeaFwd_def:   IdeaFwd oddkeys evenkeys= Round 17 oddkeys evenkeys
+End
 
 val [OddRound] = decls "OddRound";
 val [EvenRound] = decls "EvenRound";
@@ -205,32 +213,34 @@ val MakeEnKeys_def =
                            ::K8::K7::K6::K5::K4::K3::K2::K1::rst)`
    (WF_REL_TAC `measure (FST)`);
 
-val MakeKeys_def = Define
-   `MakeKeys ((K1, K2, K3, K4, K5, K6, K7, K8):InputKey)  =
-      MakeEnKeys 6 [K8;K7;K6;K5;K4;K3;K2;K1]`;
+Definition MakeKeys_def:
+    MakeKeys ((K1, K2, K3, K4, K5, K6, K7, K8):InputKey)  =
+      MakeEnKeys 6 [K8;K7;K6;K5;K4;K3;K2;K1]
+End
 
-val ListToOddKeys_def =
- Define
-  `(ListToOddKeys [] oddkeys = oddkeys) /\
+Definition ListToOddKeys_def:
+   (ListToOddKeys [] oddkeys = oddkeys) /\
    (ListToOddKeys ((k1::k2::k3::k4::k5::k6::t): word16 list)
         ((ok1,ok2,ok3,ok4,ok5,ok6,ok7,ok8,ok9): OddKeySched)  =
     ListToOddKeys t ((k1,k2,k3,k4),ok1,ok2,ok3,ok4,ok5,ok6,ok7,ok8))   /\
    (ListToOddKeys ((k1::k2::k3::k4::t): word16 list)
                ((ok1,ok2,ok3,ok4,ok5,ok6,ok7,ok8,ok9): OddKeySched) =
-    ListToOddKeys t ((k1,k2,k3,k4),ok1,ok2,ok3,ok4,ok5,ok6,ok7,ok8))`;
+    ListToOddKeys t ((k1,k2,k3,k4),ok1,ok2,ok3,ok4,ok5,ok6,ok7,ok8))
+End
 
-val ListToEvenKeys_def =
- Define
-  `(ListToEvenKeys [] evenkeys = evenkeys) /\
+Definition ListToEvenKeys_def:
+   (ListToEvenKeys [] evenkeys = evenkeys) /\
    (ListToEvenKeys ((k1::k2::k3::k4::k5::k6::t): word16 list)
             ((ek1,ek2,ek3,ek4,ek5,ek6,ek7,ek8): EvenKeySched) =
-    ListToEvenKeys t ((k5,k6),ek1,ek2,ek3,ek4,ek5,ek6,ek7))`;
+    ListToEvenKeys t ((k5,k6),ek1,ek2,ek3,ek4,ek5,ek6,ek7))
+End
 
-val IDEA_def = Define `IDEA key =
+Definition IDEA_def:   IDEA key =
   let oddkeys = ListToOddKeys (MakeKeys key) ZeroOddKeys in
   let evenkeys = ListToEvenKeys (MakeKeys key) ZeroEvenKeys in
     (IdeaFwd oddkeys evenkeys, IdeaFwd (InverseKeys oddkeys)
-    (ReverseKeys evenkeys))`;
+    (ReverseKeys evenkeys))
+End
 
 val IDEA_CORRECT = Q.store_thm
   ("IDEA_CORRECT",

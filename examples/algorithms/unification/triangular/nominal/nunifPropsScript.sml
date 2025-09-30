@@ -17,7 +17,8 @@ val fresh_q = `
   (fresh fe a (nPair t1 t2) <=> fresh fe a t1 ∧ fresh fe a t2) ∧
   (fresh fe a (nConst c) <=> T)`;
 
-val fresh_def_with_choice = Define ‘^fresh_q’;
+Definition fresh_def_with_choice:   ^fresh_q
+End
 
 val fresh_def = Q.store_thm("fresh_def",fresh_q,SIMP_TAC (psrw_ss()) [fresh_def_with_choice]);
 
@@ -1639,14 +1640,14 @@ THEN1 (
 
 val _ = set_fixity "COMPAT" (Infix(NONASSOC,450))
 
-val COMPAT_def = Define`
+Definition COMPAT_def:
   (sx,fex) COMPAT (s,fe) <=>
      nwfs s ∧ nwfs sx ∧ FINITE fe ∧ FINITE fex ∧
      ∃ve vex. (verify_fcs fe s = SOME ve) ∧
               (verify_fcs fex sx = SOME vex) ∧
      ∀t1 t2. equiv ve (nwalk* s t1) (nwalk* s t2) ⇒
              equiv vex (nwalk* sx t1) (nwalk* sx t2)
-`;
+End
 
 val COMPAT_REFL = Q.store_thm(
 "COMPAT_REFL",

@@ -19,8 +19,10 @@ val _ = new_constant ("IN", ``:vbgc -> vbgc -> bool``)
 (* similarly, this abbreviation also allows for ∉ *)
 val _ = overload_on ("NOTIN", ``λx y. ~(x ∈ y)``)
 
-val SET_def = Define` SET(x) = ∃w. x ∈ w `
-val SUBSET_def = Define`x ⊆ y <=> ∀u. u ∈ x ⇒ u ∈ y`
+Definition SET_def:   SET(x) = ∃w. x ∈ w
+End
+Definition SUBSET_def:  x ⊆ y <=> ∀u. u ∈ x ⇒ u ∈ y
+End
 
 val EXTENSION = new_axiom ("EXTENSION", ``(a = b) <=> (∀x. x ∈ a <=> x ∈ b)``)
 
@@ -34,7 +36,8 @@ val SPEC0 = new_specification(
   CONV_RULE SKOLEM_CONV SPECIFICATION);
 val _ = export_rewrites ["SPEC0"]
 
-val EMPTY_def = Define`EMPTY = SPEC0 (λx. F)`
+Definition EMPTY_def:  EMPTY = SPEC0 (λx. F)
+End
 
 val NOT_IN_EMPTY = store_thm(
   "NOT_IN_EMPTY",
@@ -83,7 +86,8 @@ val SUBSET_TRANS = store_thm(
   ``x ⊆ y ∧ y ⊆ z ⇒ x ⊆ z``,
   SRW_TAC [][SUBSET_def])
 
-val Sets_def = Define`Sets = SPEC0 (λx. T)`
+Definition Sets_def:  Sets = SPEC0 (λx. T)
+End
 
 val SET_Sets = store_thm(
   "SET_Sets",
@@ -95,9 +99,9 @@ val SUBSET_Sets = store_thm(
   ``x ⊆ Sets``,
   SRW_TAC [][SUBSET_def, SET_Sets, SET_def] THEN METIS_TAC []);
 
-val RUS_def = Define`
+Definition RUS_def:
   RUS = SPEC0 (\x. x ∉ x)
-`;
+End
 
 (* gives result
      ⊢ RUS ∈ RUS ⇔ SET RUS ∧ RUS ∉ RUS
@@ -112,7 +116,8 @@ val RUS_not_SET = store_thm(
   ``¬ SET RUS``,
   METIS_TAC [RUSlemma]);
 
-val POW_def = Define`POW A = SPEC0 (λx. x ⊆ A)`
+Definition POW_def:  POW A = SPEC0 (λx. x ⊆ A)
+End
 val IN_POW = store_thm(
   "IN_POW",
   ``x ∈ POW A ⇔ SET x ∧ x ⊆ A``,
@@ -138,9 +143,9 @@ val POW_SET_CLOSED = store_thm(
   Q.EXISTS_TAC `w` THEN SRW_TAC [][Once SUBSET_def]);
 
 
-val SINGC_def = Define`
+Definition SINGC_def:
   SINGC a = SPEC0 (λx. x = a)
-`
+End
 
 
 val PCLASS_SINGC_EMPTY = store_thm(
@@ -161,7 +166,8 @@ val SINGC_11 = store_thm(
 val _ = export_rewrites ["SINGC_11"]
 
 
-val PAIRC_def = Define`PAIRC a b = SPEC0 (λx. (x = a) ∨ (x = b))`
+Definition PAIRC_def:  PAIRC a b = SPEC0 (λx. (x = a) ∨ (x = b))
+End
 
 val SINGC_PAIRC = store_thm(
   "SINGC_PAIRC",
@@ -201,7 +207,8 @@ val _ = export_rewrites ["SINGC_SET"]
 
 (* UNION ish operations *)
 
-val UNION_def = Define`a ∪ b = SPEC0 (λx. x ∈ a ∨ x ∈ b)`
+Definition UNION_def:  a ∪ b = SPEC0 (λx. x ∈ a ∨ x ∈ b)
+End
 
 val IN_UNION = store_thm(
   "IN_UNION",
@@ -209,7 +216,8 @@ val IN_UNION = store_thm(
   SRW_TAC [][UNION_def] THEN METIS_TAC [SET_def]);
 val _ = export_rewrites ["IN_UNION"]
 
-val BIGUNION_def = Define`BIGUNION A = SPEC0 (λx. ∃y. y ∈ A ∧ x ∈ y)`
+Definition BIGUNION_def:  BIGUNION A = SPEC0 (λx. ∃y. y ∈ A ∧ x ∈ y)
+End
 val IN_BIGUNION = store_thm(
   "IN_BIGUNION",
   ``x ∈ BIGUNION A ⇔ ∃y. y ∈ A ∧ x ∈ y``,
@@ -250,9 +258,9 @@ val BIGUNION_SET_CLOSED = store_thm(
   METIS_TAC []);
 
 (* intersections *)
-val INTER_def = Define`
+Definition INTER_def:
   s1 INTER s2 = SPEC0 (λe. e ∈ s1 ∧ e ∈ s2)
-`;
+End
 
 val IN_INTER = store_thm(
   "IN_INTER",
@@ -269,7 +277,8 @@ val INTER_SET_CLOSED = store_thm(
   ] >> rw[SUBSET_def]);
 val _ = export_rewrites ["INTER_SET_CLOSED"]
 
-val INSERT_def = Define`x INSERT y = SINGC x ∪ y`
+Definition INSERT_def:  x INSERT y = SINGC x ∪ y
+End
 
 val IN_INSERT = store_thm(
   "IN_INSERT",
@@ -334,7 +343,8 @@ val POW_SING = store_thm(
   METIS_TAC []);
 
 (* "primitive ordered pair" *)
-val POPAIR_def = Define`POPAIR a b = {{a}; {a;b}}`
+Definition POPAIR_def:  POPAIR a b = {{a}; {a;b}}
+End
 
 val POPAIR_SET = store_thm(
   "POPAIR_SET",
@@ -370,10 +380,10 @@ val POPAIR_INJ = store_thm(
   METIS_TAC [SING_11, SING_EQ_PAIR, PAIR_EQ_PAIR]);
 
 (* ordered pairs that work when classes are involved *)
-val OPAIR_def = Define`
+Definition OPAIR_def:
   OPAIR a b = SPEC0 (λx. ∃y. y ∈ a ∧ (x = POPAIR {} y)) ∪
               SPEC0 (λx. ∃y. y ∈ b ∧ (x = POPAIR {{}} y))
-`;
+End
 
 val SET_OPAIR = store_thm(
   "SET_OPAIR",
@@ -453,17 +463,17 @@ val _ = add_rule { fixity = Closefix,
                                   TOK "·", BreakSpace(1,2),
                                   TM, TOK "〉"]}
 
-val CROSS_def = Define`
+Definition CROSS_def:
   s1 CROSS s2 = SPEC0 (λx. ∃a b. a ∈ s1 ∧ b ∈ s2 ∧ (x = 〈a · b〉))
-`;
+End
 
-val FunSpace_def = Define`
+Definition FunSpace_def:
   FunSpace A B = SPEC0 (λf. f ⊆ A × B ∧ ∀a. a ∈ A ⇒ ∃!b. 〈a · b〉 ∈ f)
-`
+End
 
-val id_def = Define`
+Definition id_def:
   id A = SPEC0 (λx. ∃a. a ∈ A ∧ (x = 〈a·a〉))
-`;
+End
 
 (*
 val apply_def = new_specification("apply_def",

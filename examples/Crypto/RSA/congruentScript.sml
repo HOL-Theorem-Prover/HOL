@@ -15,7 +15,8 @@ quietdec := false;
 
 val ARW = RW_TAC arith_ss;
 
-val CONGRUENT = Define `congruent a b n = ?c d. a+c*n = b+d*n`;
+Definition CONGRUENT:   congruent a b n = ?c d. a+c*n = b+d*n
+End
 
 
 val CONGRUENT_REF = store_thm("CONGRUENT_REF",

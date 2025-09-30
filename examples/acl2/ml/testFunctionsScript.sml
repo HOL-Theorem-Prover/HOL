@@ -10,10 +10,11 @@ Libs
 (*                                                                           *)
 (*****************************************************************************)
 
-val FLAT = Define `
+Definition FLAT:
     (FLAT [] = []) /\
     (FLAT ([]::xs) = FLAT xs) /\
-    (FLAT (((y:'a)::ys)::xs) = y::FLAT (ys::xs))`;
+    (FLAT (((y:'a)::ys)::xs) = y::FLAT (ys::xs))
+End
 
 val SPLIT_def = tDefine "SPLIT"
     `(split1 [] (X,Y) = (X,Y)) /\
@@ -23,13 +24,14 @@ val SPLIT_def = tDefine "SPLIT"
     (WF_REL_TAC `measure (sum_case (LENGTH o FST) (LENGTH o FST))` THEN
      RW_TAC arith_ss [listTheory.LENGTH]);
 
-val merge_def = Define `
+Definition merge_def:
     (merge [] [] = []) /\
     (merge (a::b) [] = a::b) /\
     (merge [] (c::d) = c::d) /\
     (merge (a::b) (c::d) =
            if a < c:num then a :: merge b (c::d)
-                    else c :: merge (a::b) d)`;
+                    else c :: merge (a::b) d)
+End
 
 local
 fun varftac f tac (a,g) =
@@ -88,35 +90,43 @@ val ODD_EVEN_def = store_thm("ODD_EVEN_def",
     RW_TAC arith_ss [arithmeticTheory.EVEN,arithmeticTheory.ODD,
            arithmeticTheory.ODD_EVEN]);
 
-val ECASE = Define `
+Definition ECASE:
     (ECASE 0 _ = T) /\
     (ECASE (SUC 0) _ = T) /\
-    (ECASE (SUC (SUC n)) [] = T)`;
+    (ECASE (SUC (SUC n)) [] = T)
+End
 
-val LCASE = Define `
+Definition LCASE:
     (LCASE [] _ = T) /\
     (LCASE [x] _ = F) /\
-    (LCASE (x::y::xys) 0n = T)`;
+    (LCASE (x::y::xys) 0n = T)
+End
 
-val OLIST = Define `
+Definition OLIST:
     (OLIST [] = []) /\
     (OLIST (SOME x :: xs) = x :: OLIST xs) /\
-    (OLIST (NONE :: xs) = OLIST xs)`;
+    (OLIST (NONE :: xs) = OLIST xs)
+End
 
-val FLATTEN_TREE = Define `
+Definition FLATTEN_TREE:
     (FLATTEN_TREE (TLeaf a) = [a]) /\
-    (FLATTEN_TREE (TBranch t1 t2) = FLATTEN_TREE t1 ++ FLATTEN_TREE t2)`;
+    (FLATTEN_TREE (TBranch t1 t2) = FLATTEN_TREE t1 ++ FLATTEN_TREE t2)
+End
 
-val FT_FAST = Define `
+Definition FT_FAST:
     (FT_FAST (TLeaf a) A = (a::A)) /\
-    (FT_FAST (TBranch t1 t2) A = FT_FAST t1 (FT_FAST t2 A))`;
+    (FT_FAST (TBranch t1 t2) A = FT_FAST t1 (FT_FAST t2 A))
+End
 
-val ADDLIST_def = Define `
-    (ADDLIST [] = 0n) /\ (ADDLIST (x::xs) = x + ADDLIST xs)`;
+Definition ADDLIST_def:
+    (ADDLIST [] = 0n) /\ (ADDLIST (x::xs) = x + ADDLIST xs)
+End
 
-val GENL_def = Define `
-    (GENL 0 = []) /\ (GENL (SUC n) = n::GENL n)`;
+Definition GENL_def:
+    (GENL 0 = []) /\ (GENL (SUC n) = n::GENL n)
+End
 
-val ADDN_def = Define `
-    (ADDN n = ADDLIST (GENL n))`;
+Definition ADDN_def:
+    (ADDN n = ADDLIST (GENL n))
+End
 

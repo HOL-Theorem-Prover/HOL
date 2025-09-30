@@ -51,10 +51,11 @@ val _ = Hol_datatype `raw_term = var of string
                                | app of raw_term => raw_term
                                | lam of string => raw_term`;
 
-val fv_def = Define`
+Definition fv_def:
   (fv (var s) = {s}) /\
   (fv (app t u) = fv t UNION fv u) /\
-  (fv (lam v t) = fv t DELETE v)`;
+  (fv (lam v t) = fv t DELETE v)
+End
 
 val FINITE_fv = store_thm(
   "FINITE_fv",
@@ -62,12 +63,12 @@ val FINITE_fv = store_thm(
   Induct THEN SRW_TAC [][fv_def]);
 val _ = export_rewrites ["FINITE_fv"]
 
-val capt_def = Define`
+Definition capt_def:
   (capt x (var y) = {}) /\
   (capt x (app t u) = capt x t UNION capt x u) /\
   (capt x (lam y t) = if ~(x = y) /\ x IN fv t then {y} UNION capt x t
                       else {})
-`
+End
 
 val FINITE_capt = store_thm(
   "FINITE_capt",
@@ -81,12 +82,12 @@ val capt_fv = store_thm(
   Induct THEN SRW_TAC [][capt_def, fv_def]);
 val _ = export_rewrites ["capt_fv"]
 
-val subst_def = Define`
+Definition subst_def:
   (subst x y (var s) = if y = s then x else var s) /\
   (subst x y (app t u) = app (subst x y t) (subst x y u)) /\
   (subst x y (lam v t) = if ~(y = v) /\ ~(v IN fv x) then lam v (subst x y t)
                          else lam v t)
-`;
+End
 
 val (ialpha_rules, ialpha_ind, ialpha_cases) = Hol_reln`
   (!x y e.  ~(y IN capt x e UNION fv e) ==>
@@ -104,7 +105,8 @@ val (beta_rules, beta_ind, beta_cases) = Hol_reln`
   (!e1 e2 e2'. beta e2 e2' ==> beta (app e1 e2) (app e1 e2'))
 `;
 
-val alpha_def = Define`alpha e1 e2 = ?y. ialpha y e1 e2`
+Definition alpha_def:  alpha e1 e2 = ?y. ialpha y e1 e2
+End
 
 val renaming_sanity1 = store_thm(
   "renaming_sanity1",
@@ -142,10 +144,11 @@ val renaming_sanity4 = store_thm(
   Induct THEN SRW_TAC [][fv_def, subst_def] THEN
   SRW_TAC [][]);
 
-val collapse_def = Define`
+Definition collapse_def:
   (collapse (var s) = VAR s) /\
   (collapse (app t u) = collapse t @@ collapse u) /\
-  (collapse (lam v t) = LAM v (collapse t))`;
+  (collapse (lam v t) = LAM v (collapse t))
+End
 
 val FV_collapse = store_thm(
   "FV_collapse",

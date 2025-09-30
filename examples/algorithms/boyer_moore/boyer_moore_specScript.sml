@@ -177,13 +177,12 @@ val SOL_SHF_THM = store_thm(
 
 (* -- CHARACTER MISMATCH SHIFTS -- *)
 (* Formal Definition of Valid Character Shifts *)
-val valid_cha_shifts_def =
-   Define
-   `
+Definition valid_cha_shifts_def:
+
    valid_cha_shifts pat all_chars j a =
         (j+1) INSERT {d | 1 <= d /\ d <= j
                           /\ (EL (j-d) pat = EL a all_chars)}
-   `;
+End
 
 (* Confirmation that a valid character shift exists *)
 val CHA_SHIFT_EXISTS_THM = store_thm(
@@ -221,16 +220,15 @@ QED
 
 (* -- SUFFIX MATCH SHIFTS -- *)
 (* Formal Definition of Valid Suffix Shifts *)
-val valid_suf_shifts_def =
-    Define
-    `
+Definition valid_suf_shifts_def:
+
     valid_suf_shifts pat j  =
         {d | 1 <= d /\ d <= LENGTH pat
             /\ (!i. (MAX (j+1) d <= i) /\ (i <= LENGTH pat - 1)
                     ==> (EL (i-d) pat = EL i pat))
             /\ ((d >= j+1) \/ (EL (j-d) pat <> EL j pat))
         }
-    `;
+End
 
 (* Confirmation that a valid suffix shift exists in correct circumstances *)
 val SUF_SHIFT_EXISTS_THM = store_thm(

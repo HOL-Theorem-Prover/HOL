@@ -11,17 +11,20 @@ instead of explicit case expressions.
 
 (* the r-state monad *)
 
-val mbind_def = Define`
+Definition mbind_def:
   mbind f g s =
     case f s of
     | (Rval x,s) => g x s
-    | r => r`;
+    | r => r
+End
 
-val mibind_def = Define`
-  mibind f g = mbind f (λx. g)`;
+Definition mibind_def:
+  mibind f g = mbind f (λx. g)
+End
 
-val mfail_def = Define`
-  mfail = return Rfail`;
+Definition mfail_def:
+  mfail = return Rfail
+End
 
 val _ =
     monadsyntax.declare_monad ("for_state", {
@@ -31,32 +34,39 @@ val _ =
     })
 val _ = monadsyntax.enable_monad "for_state"
 
-val mbreak_def = Define`
-  mbreak = return Rbreak`;
+Definition mbreak_def:
+  mbreak = return Rbreak
+End
 
-val mtimeout_def = Define`
-  mtimeout = return Rtimeout`;
+Definition mtimeout_def:
+  mtimeout = return Rtimeout
+End
 
-val mreturn_def = Define`
-  mreturn = return o Rval`;
+Definition mreturn_def:
+  mreturn = return o Rval
+End
 
-val mtry_def = Define`
+Definition mtry_def:
   mtry m h k s =
   case m s of
   | (Rbreak, s) => h s
-  | _ => mibind m k s`;
+  | _ => mibind m k s
+End
 
-val lookup_store_def = Define`
+Definition lookup_store_def:
   lookup_store x s =
     case FLOOKUP s.store x of
     | NONE => mfail s
-    | SOME n => mreturn n s`;
+    | SOME n => mreturn n s
+End
 
-val get_clock_def = Define`
-  get_clock s = (s.clock,s)`;
+Definition get_clock_def:
+  get_clock s = (s.clock,s)
+End
 
-val update_state_def = Define`
-  update_state f s = ((),f s)`;
+Definition update_state_def:
+  update_state f s = ((),f s)
+End
 
 (* Expression evaluation *)
 
@@ -132,13 +142,14 @@ val mon_sem_t_if = Q.prove(
   rw[FUN_EQ_THM] >> EVAL_TAC >>
   BasicProvers.EVERY_CASE_TAC);
 
-val dec_clock_then_def = Define`
+Definition dec_clock_then_def:
   dec_clock_then f =
   do
     k <- get_clock;
     if k = 0 then mtimeout
     else do update_state dec_clock; f od
-  od`;
+  od
+End
 
 val mon_sem_t_for = Q.prove(
   `∀e1 e2 t. mon_sem_t (For e1 e2 t) =

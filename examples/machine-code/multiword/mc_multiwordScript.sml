@@ -117,8 +117,9 @@ val (mc_compare_def, _,
      word # α word # α word list # α word list + num # α word # α word
      list # α word list) # bool``;
 
-val mc_header_def = Define `
-  mc_header (s,xs:α word list) = n2w (LENGTH xs * 2) + if s then 1w else 0w:α word`;
+Definition mc_header_def:
+  mc_header (s,xs:α word list) = n2w (LENGTH xs * 2) + if s then 1w else 0w:α word
+End
 
 val (mc_icompare_def, _,
      mc_icompare_pre_def, _) =
@@ -147,10 +148,11 @@ val (mc_icompare_def, _,
      word # α word # α word list # α word list + num # α word # α word
      list # α word list) # bool``;
 
-val cmp2w_def = Define `
+Definition cmp2w_def:
   (cmp2w NONE = 0w:α word) /\
   (cmp2w (SOME T) = 1w) /\
-  (cmp2w (SOME F) = 2w)`;
+  (cmp2w (SOME F) = 2w)
+End
 
 val mc_cmp_thm = prove(
   ``!xs ys xs1 ys1 l.
@@ -293,10 +295,11 @@ val mc_icompare_thm = prove(
 
 (* addition *)
 
-val single_add_word_def = Define `
+Definition single_add_word_def:
   single_add_word w1 w2 c =
     let (z,c) = single_add w1 w2 (c <> 0w:'a word) in
-      (z:'a word, (b2w c) :'a word)`;
+      (z:'a word, (b2w c) :'a word)
+End
 
 val single_add_word_thm =
   single_add_word_def
@@ -582,10 +585,11 @@ val mc_add_thm = prove(
 
 (* subtraction *)
 
-val single_sub_word_def = Define `
+Definition single_sub_word_def:
   single_sub_word w1 w2 c =
     let (z,c) = single_sub w1 w2 (c <> 0w:'a word) in
-      (z:'a word, (b2w c) :'a word)`;
+      (z:'a word, (b2w c) :'a word)
+End
 
 val single_sub_word_thm =
   single_sub_word_def
@@ -1475,10 +1479,11 @@ val mc_imul_thm = prove(
 
 (* simple div xs into zs and zs into zs *)
 
-val single_div_pre_def = Define `
+Definition single_div_pre_def:
   single_div_pre r2 r0 r9 <=>
     r9 <> (0x0w:'a word) /\
-    (w2n r2 * dimword(:'a) + w2n r0) DIV w2n r9 < dimword(:'a)`;
+    (w2n r2 * dimword(:'a) + w2n r0) DIV w2n r9 < dimword(:'a)
+End
 
 val (mc_single_div_def, _,
      mc_single_div_pre_def, _) =
@@ -3024,10 +3029,11 @@ val MAP_K_0 = prove(
   ``!xs. MAP (\x. 0x0w) xs = REPLICATE (LENGTH xs) 0x0w``,
   Induct \\ SRW_TAC [] [REPLICATE]);
 
-val mc_div_max_def = Define `
+Definition mc_div_max_def:
   mc_div_max (xs:'a word list) (ys:'a word list) (zs:'a word list) =
     2 * LENGTH ys + 2 * LENGTH zs + 5 + dimindex (:α) +
-    LENGTH xs * (dimword (:α) + 2 * LENGTH ys + 4)`;
+    LENGTH xs * (dimword (:α) + 2 * LENGTH ys + 4)
+End
 
 val mc_div_thm = prove(
   ``(ys:'a word list) <> [] /\ mw_ok xs /\ mw_ok ys /\
@@ -3623,9 +3629,10 @@ val b2w_EQ_0w = prove(
   ``!b. (b2w b = 0w:'a word) = ~b``,
   Cases \\ EVAL_TAC \\ rw[one_neq_zero_word]);
 
-val mwi_divmod_alt_def = Define `
+Definition mwi_divmod_alt_def:
   mwi_divmod_alt w s_xs t_ys =
-    if w = 0w then mwi_div s_xs t_ys else mwi_mod s_xs t_ys`;
+    if w = 0w then mwi_div s_xs t_ys else mwi_mod s_xs t_ys
+End
 
 val mc_idiv_thm = prove(
   ``LENGTH (xs:'a word list) + LENGTH ys <= LENGTH zs /\
@@ -3883,7 +3890,7 @@ val mc_int_to_dec_thm = prove(
 
 (* top-level entry point *)
 
-val int_op_rep_def = Define `
+Definition int_op_rep_def:
   (int_op_rep Add = 0w) /\
   (int_op_rep Sub = 1w) /\
   (int_op_rep Lt  = 2w) /\
@@ -3891,7 +3898,8 @@ val int_op_rep_def = Define `
   (int_op_rep Mul = 4w) /\
   (int_op_rep Div = 5w) /\
   (int_op_rep Mod = 6w) /\
-  (int_op_rep Dec = 7w:'a word)`;
+  (int_op_rep Dec = 7w:'a word)
+End
 
 val (mc_isub_flip_def, _,
      mc_isub_flip_pre_def, _) =

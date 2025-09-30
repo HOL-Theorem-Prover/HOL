@@ -78,9 +78,9 @@ val _ = set_fixity "@@" (Infixl 901);
 (* of name-carrying terms.                                               *)
 (* --------------------------------------------------------------------- *)
 
-val FV =
- Define
-    `FV u = dFV (REP_nc u)`;
+Definition FV:
+     FV u = dFV (REP_nc u)
+End
 
 val FV_THM = Q.store_thm("FV_THM",
  `(!k.   FV (CON k:'a nc)   = {})  /\
@@ -109,9 +109,9 @@ val _ = export_rewrites ["FV_THM"]
 (* of name-carrying terms.                                               *)
 (* --------------------------------------------------------------------- *)
 
-val SUB_DEF =
- Define
-    `SUB new old u = ABS_nc ([old |-> REP_nc new] (REP_nc u))`;
+Definition SUB_DEF:
+     SUB new old u = ABS_nc ([old |-> REP_nc new] (REP_nc u))
+End
 
 val _ = add_rule {term_name = "SUB", fixity = Closefix,
                   pp_elements = [TOK "[", TM, TOK "/", TM, TOK "]"],
@@ -912,22 +912,22 @@ Q.EXISTS_TAC `\u y. BETA u (VAR y)` THEN RW_TAC std_ss [BETA]);
 (*       FVS [(t1,x1),...,(tn,xn)] = FV t1 UNION ... UNION FV tn         *)
 (* --------------------------------------------------------------------- *)
 
-val ISUB_def =
- Define
-     `($ISUB t [] = t)
-  /\  ($ISUB t ((s,x)::rst) = $ISUB ([s/x]t) rst)`;
+Definition ISUB_def:
+      ($ISUB t [] = t)
+  /\  ($ISUB t ((s,x)::rst) = $ISUB ([s/x]t) rst)
+End
 
 val _ = set_fixity "ISUB" (Infixr 501);
 
-val DOM_DEF =
- Define
-     `(DOM [] = {})
-  /\  (DOM ((x,y)::rst) = {y} UNION DOM rst)`;
+Definition DOM_DEF:
+      (DOM [] = {})
+  /\  (DOM ((x,y)::rst) = {y} UNION DOM rst)
+End
 
-val FVS_DEF =
- Define
-    `(FVS [] = {})
- /\  (FVS ((t,x)::rst) = FV t UNION FVS rst)`;
+Definition FVS_DEF:
+     (FVS [] = {})
+ /\  (FVS ((t,x)::rst) = FV t UNION FVS rst)
+End
 
 
 val FINITE_DOM = Q.store_thm("FINITE_DOM",
@@ -959,10 +959,10 @@ val _ = save_thm("RENAMING_DEF",RENAMING_DEF);
 val _ = save_thm("RENAMING_IND",RENAMING_IND);
 val _ = save_thm("RENAMING_CASES",RENAMING_CASES);
 
-val RENAME_DEF =
- Define
-     `(RENAME [] x          = x)
-  /\  (RENAME ((p,q)::ss) x = RENAME ss (if x=q then VNAME p else x))`;
+Definition RENAME_DEF:
+      (RENAME [] x          = x)
+  /\  (RENAME ((p,q)::ss) x = RENAME ss (if x=q then VNAME p else x))
+End
 
 
 val RENAMING_LEMMA = Q.store_thm("RENAMING_LEMMA",

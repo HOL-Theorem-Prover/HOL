@@ -88,22 +88,22 @@ and st' = list_mk_pair (map mk_bool_var var_list');
 (* Initial state                                                             *)
 (*****************************************************************************)
 
-val SolitaireInit_def =
- Define
-   `SolitaireInit ^st =
+Definition SolitaireInit_def:
+    SolitaireInit ^st =
      ^(list_mk_conj(map (fn v => if v="v17" then mk_neg(mk_bool_var v)
-                                            else mk_bool_var v) var_list))`;
+                                            else mk_bool_var v) var_list))
+End
 
 (*****************************************************************************)
 (* Final goal state                                                          *)
 (*****************************************************************************)
 
-val SolitaireFinal_def =
- Define
-   `SolitaireFinal ^st =
+Definition SolitaireFinal_def:
+    SolitaireFinal ^st =
      ^(list_mk_conj
         (map (fn v => if v="v17" then mk_bool_var v
-                                 else mk_neg(mk_bool_var v)) var_list))`;
+                                 else mk_neg(mk_bool_var v)) var_list))
+End
 
 (*****************************************************************************)
 (* Function to create a formula to represent a move in which a counter at v1 *)
@@ -164,9 +164,9 @@ val moves =
 (* Define transition relation as disjunction of all moves                    *)
 (*****************************************************************************)
 
-val SolitaireTrans_def =
- Define
-  `SolitaireTrans(^st,^st') = ^(list_mk_disj(map make_move_trans moves))`;
+Definition SolitaireTrans_def:
+   SolitaireTrans(^st,^st') = ^(list_mk_disj(map make_move_trans moves))
+End
 
 val (initth,transthl,finalth) =
  time

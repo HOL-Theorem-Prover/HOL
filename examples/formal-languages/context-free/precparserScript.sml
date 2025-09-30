@@ -52,7 +52,7 @@ val _ = Datatype`
 
 
 (* stack is list of tokens + terms *)
-val precparse1_def = Define`
+Definition precparse1_def:
   precparse1 pM (stk, strm) =
      case strm of
          [] =>
@@ -79,16 +79,16 @@ val precparse1_def = Define`
                  OPTION_MAP (λr. (INR r :: stk_rest, strm_rest))
                             (pM.mkApp ftm (pM.lift tok))
              | INL _ :: _ => SOME(INR (pM.lift tok) :: stk, strm_rest)
-`;
+End
 
-val wfStk_def = Define`
+Definition wfStk_def:
   (wfStk [] ⇔ T) ∧
   (wfStk [INR _] ⇔ T) ∧
   (wfStk [INL _] ⇔ F) ∧
   (wfStk (INL _ :: INR tm :: rest) ⇔ wfStk (INR tm :: rest)) ∧
   (wfStk (INR _ :: INL t :: rest) ⇔ wfStk (INL t :: rest)) ∧
   (wfStk _ ⇔ F)
-`;
+End
 val _ = export_rewrites ["wfStk_def"]
 
 val wfStk_ignores_hdvalues = store_thm(
@@ -125,10 +125,10 @@ val precparse1_reduces = store_thm(
   dsimp[precparse1_def, list_case_eq, sum_case_eq, bool_case_eq,
         option_case_eq, tokrel_case_eq] >> rw[] >> simp[]);
 
-val isFinal_def = Define`
+Definition isFinal_def:
   (isFinal ([INR _],[]) ⇔ T) ∧
   (isFinal _ ⇔ F)
-`;
+End
 val _ = export_rewrites ["isFinal_def"]
 
 

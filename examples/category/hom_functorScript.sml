@@ -4,14 +4,17 @@ Ancestors
 Libs
   boolSimps
 
-val dom_homs_def = Define`
-  dom_homs c x = IMAGE (λy. c|x→y|) c.obj`;
+Definition dom_homs_def:
+  dom_homs c x = IMAGE (λy. c|x→y|) c.obj
+End
 
-val cod_homs_def = Define`
-  cod_homs c x = IMAGE (λy. c|y→x|) c.obj`;
+Definition cod_homs_def:
+  cod_homs c x = IMAGE (λy. c|y→x|) c.obj
+End
 
-val homs_def = Define`
-  homs c = let ob = c.obj in {(c|x→y|)| x ∈ ob ∧ y ∈ ob}`;
+Definition homs_def:
+  homs c = let ob = c.obj in {(c|x→y|)| x ∈ ob ∧ y ∈ ob}
+End
 
 val dom_homs_subset_homs = Q.store_thm(
 "dom_homs_subset_homs",
@@ -33,11 +36,12 @@ srw_tac [][homs_def] >>
 srw_tac [][] >> metis_tac []);
 val _ = export_rewrites["hom_in_homs"];
 
-val pre_hom_functor_def = Define`
+Definition pre_hom_functor_def:
   (pre_hom_functor c x : (α,β,(α,β) mor set, (α,β) mor -> (α,β) mor) functor) = <|
     dom := c ; cod := ens_cat (dom_homs c x) ;
     map := λf. TypedGraphFun ((c|x→f.dom|),(c|x→f.cod|)) (λg. f o g -:c)
-  |>`;
+  |>
+End
 
 val pre_hom_functor_dom = Q.store_thm(
 "pre_hom_functor_dom",
@@ -88,9 +92,10 @@ val _ = add_rule{
   paren_style=OnlyIfNecessary,
   block_style=(AroundEachPhrase,(PP.INCONSISTENT,0))};
 
-val hom_functor_def = Define`
+Definition hom_functor_def:
   c|x→_| = inclusion_functor (dom_homs c x) (homs c) ◎
-           mk_functor (pre_hom_functor c x)`;
+           mk_functor (pre_hom_functor c x)
+End
 
 val functor_axioms_pre_hom_functor = Q.store_thm(
 "functor_axioms_pre_hom_functor",
@@ -247,11 +252,12 @@ srw_tac [][is_functor_def,extensional_functor_contra_functor,functor_axioms_cont
 val _ = export_rewrites["is_functor_contra_functor"];
 *)
 
-val pre_op_mor_functor_def = Define`
+Definition pre_op_mor_functor_def:
   pre_op_mor_functor u1 u2 = <| dom := ens_cat u1; cod := ens_cat u2;
     map := λf. TypedGraphFun
                 (IMAGE op_mor f.dom, IMAGE op_mor f.cod)
-                (op_mor o f.map o op_mor) |>`;
+                (op_mor o f.map o op_mor) |>
+End
 
 val pre_op_mor_functor_components = Q.store_thm(
 "pre_op_mor_functor_components",
@@ -286,8 +292,9 @@ srw_tac [][] >>
 fsrw_tac [][morphism_component_equality]);
 val _ = export_rewrites["pre_op_mor_functor_objf"];
 
-val op_mor_functor_def = Define`
-  op_mor_functor u1 u2 = mk_functor (pre_op_mor_functor u1 u2)`;
+Definition op_mor_functor_def:
+  op_mor_functor u1 u2 = mk_functor (pre_op_mor_functor u1 u2)
+End
 
 val is_functor_op_mor_functor = Q.store_thm(
 "is_functor_op_mor_functor",

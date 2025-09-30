@@ -636,8 +636,9 @@ val fix =
      [oracles: DEFUN ACL2::FORCE] [axioms: ] [] |- force x = x,
 *)
 
-val force_def =
- Define `force(s:sexp) = s`;
+Definition force_def:
+  force(s:sexp) = s
+End
 
 (*
      [oracles: DEFUN ACL2::IMMEDIATE-FORCE-MODEP] [axioms: ] []

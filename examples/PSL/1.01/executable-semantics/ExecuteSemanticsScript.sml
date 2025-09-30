@@ -166,14 +166,14 @@ val UF_SEM_F_UNTIL_REC =
 *
 *   w |= {r}(f)  <==>  w |=_|w| {r}(f)
 ******************************************************************************)
-val UF_SEM_F_SUFFIX_IMP_FINITE_REC_def =
- Define
-  `(UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) 0 = T)
+Definition UF_SEM_F_SUFFIX_IMP_FINITE_REC_def:
+   (UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) 0 = T)
    /\
    (UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) (SUC n) =
      UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) n
      /\
-     (US_SEM (SEL w (0, n)) r ==> UF_SEM (RESTN w n) f))`;
+     (US_SEM (SEL w (0, n)) r ==> UF_SEM (RESTN w n) f))
+End
 
 (******************************************************************************
 * Form needed for computeLib.EVAL
@@ -238,13 +238,13 @@ val UF_SEM_F_SUFFIX_IMP_FINITE_REC =
 (******************************************************************************
 * Define w |=_x {r}(f) where x is an extended number (xnum)
 ******************************************************************************)
-val UF_SEM_F_SUFFIX_IMP_REC_def =
- Define
-  `(UF_SEM_F_SUFFIX_IMP_REC w (r,f) (XNUM n) =
+Definition UF_SEM_F_SUFFIX_IMP_REC_def:
+   (UF_SEM_F_SUFFIX_IMP_REC w (r,f) (XNUM n) =
      UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) n)
    /\
    (UF_SEM_F_SUFFIX_IMP_REC w (r,f) INFINITY =
-     !n. US_SEM (SEL w (0,n)) r ==> UF_SEM (RESTN w n) f)`;
+     !n. US_SEM (SEL w (0,n)) r ==> UF_SEM (RESTN w n) f)
+End
 
 (******************************************************************************
 * w |= {r}(f)  <==>  w |=_|w| {r}(f)  (for finite and infinite paths w)
@@ -304,13 +304,14 @@ val SEL_FINITE_is_BUTFIRSTN_FIRSTN = prove
        >> Cases_on `j`
        >> RW_TAC arith_ss [BUTFIRSTN]]);
 
-val sere2regexp_def = Define
-  `(sere2regexp (S_BOOL b) = Atom (\l. B_SEM l b)) /\
+Definition sere2regexp_def:
+   (sere2regexp (S_BOOL b) = Atom (\l. B_SEM l b)) /\
    (sere2regexp (S_CAT (r1, r2)) = Cat (sere2regexp r1) (sere2regexp r2)) /\
    (sere2regexp (S_FUSION (r1, r2)) = Fuse (sere2regexp r1) (sere2regexp r2)) /\
    (sere2regexp (S_OR (r1, r2)) = Or (sere2regexp r1) (sere2regexp r2)) /\
    (sere2regexp (S_AND (r1, r2)) = And (sere2regexp r1) (sere2regexp r2)) /\
-   (sere2regexp (S_REPEAT r) = Repeat (sere2regexp r))`;
+   (sere2regexp (S_REPEAT r) = Repeat (sere2regexp r))
+End
 
 val sere2regexp = prove
   (``!r l. S_CLOCK_FREE r ==> (US_SEM l r = sem (sere2regexp r) l)``,
@@ -481,14 +482,16 @@ val EVAL_UF_SEM_F_WEAK_IMP = store_thm
 (******************************************************************************
 * always{r} = {T[*]} |-> {r}
 ******************************************************************************)
-val F_SERE_ALWAYS_def = Define
-  `F_SERE_ALWAYS r = F_WEAK_IMP(S_REPEAT S_TRUE, r)`;
+Definition F_SERE_ALWAYS_def:
+   F_SERE_ALWAYS r = F_WEAK_IMP(S_REPEAT S_TRUE, r)
+End
 
 (******************************************************************************
 * never{r} = {T[*];r} |-> {F}
 ******************************************************************************)
-val F_SERE_NEVER_def = Define
-  `F_SERE_NEVER r = F_WEAK_IMP(S_CAT(S_REPEAT S_TRUE, r), S_FALSE)`;
+Definition F_SERE_NEVER_def:
+   F_SERE_NEVER r = F_WEAK_IMP(S_CAT(S_REPEAT S_TRUE, r), S_FALSE)
+End
 
 val F_SERE_NEVER_amatch = store_thm
   ("F_SERE_NEVER_amatch",
@@ -619,7 +622,8 @@ val REST_CAT = store_thm
    Induct >- RW_TAC std_ss []
    >> RW_TAC std_ss [CAT_def, REST_CONS, TL]);
 
-val S_EMPTY_def = Define `S_EMPTY = S_REPEAT S_FALSE`;
+Definition S_EMPTY_def:   S_EMPTY = S_REPEAT S_FALSE
+End
 
 val S_EMPTY = store_thm
   ("S_EMPTY",
@@ -1036,9 +1040,10 @@ val LENGTH_IS_INFINITE = store_thm
 
 (* Safety violations *)
 
-val safety_violation_def = Define
-  `safety_violation p (f : 'a fl) =
-   ?n. !q. IS_INFINITE q ==> ~UF_SEM (CAT (SEL_REC n 0 p, q)) f`;
+Definition safety_violation_def:
+   safety_violation p (f : 'a fl) =
+   ?n. !q. IS_INFINITE q ==> ~UF_SEM (CAT (SEL_REC n 0 p, q)) f
+End
 
 val safety_violation_alt = store_thm
   ("safety_violation_alt",
@@ -1097,11 +1102,12 @@ val safety_violation_WEAK_UNTIL = store_thm
 
 (* The simple subset *)
 
-val boolean_def = Define
-  `(boolean (F_BOOL _) = T) /\
+Definition boolean_def:
+   (boolean (F_BOOL _) = T) /\
    (boolean (F_NOT f) = boolean f) /\
    (boolean (F_AND (f,g)) = boolean f /\ boolean g) /\
-   (boolean _ = F)`;
+   (boolean _ = F)
+End
 
 (*
   Cannot allow F_STRONG_IMP as simple formulas, because
@@ -1121,8 +1127,8 @@ val boolean_def = Define
   either of the conjuncts.
 *)
 
-val simple_def = Define
-  `(simple (F_BOOL b) = boolean (F_BOOL b)) /\
+Definition simple_def:
+   (simple (F_BOOL b) = boolean (F_BOOL b)) /\
    (simple (F_NOT (F_NOT f)) = simple f) /\
    (simple (F_NOT (F_AND (F_NOT (F_UNTIL (f,g)), h))) =
     simple f /\ boolean g /\ (h = F_UNTIL (F_BOOL B_TRUE, F_NOT f))) /\
@@ -1135,7 +1141,8 @@ val simple_def = Define
    (simple (F_STRONG_IMP _) = F) /\
    (simple (F_WEAK_IMP _) = F) /\
    (simple (F_ABORT _) = F) /\
-   (simple (F_STRONG_CLOCK _) = F)`;
+   (simple (F_STRONG_CLOCK _) = F)
+End
 
 val simple_ind = theorem "simple_ind";
 
@@ -1540,16 +1547,18 @@ QED
 
 (* The regexp checker *)
 
-val bool_checker_def = Define
-  `(bool_checker (F_BOOL b) = b) /\
+Definition bool_checker_def:
+   (bool_checker (F_BOOL b) = b) /\
    (bool_checker (F_NOT f) = B_NOT (bool_checker f)) /\
-   (bool_checker (F_AND (f,g)) = B_AND (bool_checker f, bool_checker g))`;
+   (bool_checker (F_AND (f,g)) = B_AND (bool_checker f, bool_checker g))
+End
 
-val boolean_checker_def = Define
-  `boolean_checker f = S_BOOL (bool_checker (F_NOT f))`;
+Definition boolean_checker_def:
+   boolean_checker f = S_BOOL (bool_checker (F_NOT f))
+End
 
-val checker_def = Define
-  `(checker (F_BOOL b) = boolean_checker (F_BOOL b)) /\
+Definition checker_def:
+   (checker (F_BOOL b) = boolean_checker (F_BOOL b)) /\
    (checker (F_NOT (F_NOT f)) = checker f) /\
    (checker (F_NOT (F_AND (F_NOT (F_UNTIL (f,g)), _))) =
     S_CAT
@@ -1560,7 +1569,8 @@ val checker_def = Define
    (checker (F_NOT f) = boolean_checker (F_NOT f)) /\
    (checker (F_AND (f,g)) = S_OR (checker f, checker g)) /\
    (checker (F_NEXT f) = S_CAT (S_TRUE, checker f)) /\
-   (checker (F_SUFFIX_IMP (r,f)) = S_FUSION (r, checker f))`;
+   (checker (F_SUFFIX_IMP (r,f)) = S_FUSION (r, checker f))
+End
 
 val boolean_checker_CLOCK_FREE = store_thm
   ("boolean_checker_CLOCK_FREE",

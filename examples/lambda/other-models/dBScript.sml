@@ -66,13 +66,13 @@ val _ = Hol_datatype
 (* Free variables.                                                       *)
 (* --------------------------------------------------------------------- *)
 
-val dFV =
- Define
-    `(dFV (dCON c)   = {})
+Definition dFV:
+     (dFV (dCON c)   = {})
  /\  (dFV (dVAR x)   = {x})
  /\  (dFV (dBOUND n) = {})
  /\  (dFV (dABS t)   = dFV t)
- /\  (dFV (dAPP t u) = (dFV t) UNION (dFV u))`;
+ /\  (dFV (dAPP t u) = (dFV t) UNION (dFV u))
+End
 
 
 val FINITE_dFV = Q.store_thm("FINITE_dFV", `!t. FINITE (dFV t)`,
@@ -85,30 +85,30 @@ val FRESH_VAR = Q.store_thm("FRESH_VAR", `!t. ?x. ~(x IN dFV t)`,
 (* Functions defined by recursion on de Bruijn terms.                    *)
 (* --------------------------------------------------------------------- *)
 
-val dDEG =
- Define
-    `(dDEG (dCON c)   = 0)
+Definition dDEG:
+     (dDEG (dCON c)   = 0)
  /\  (dDEG (dVAR x)   = 0)
  /\  (dDEG (dBOUND n) = SUC n)
  /\  (dDEG (dABS t)   = dDEG t - 1)
- /\  (dDEG (dAPP t u) = MAX (dDEG t) (dDEG u))`;
+ /\  (dDEG (dAPP t u) = MAX (dDEG t) (dDEG u))
+End
 
 
-val Abst =
- Define
-    `(Abst i x (dCON c)   = dCON c)
+Definition Abst:
+     (Abst i x (dCON c)   = dCON c)
  /\  (Abst i x (dVAR y)   = if x=y then dBOUND i else dVAR y)
  /\  (Abst i x (dBOUND j) = dBOUND j)
  /\  (Abst i x (dABS t)   = dABS (Abst (SUC i) x t))
- /\  (Abst i x (dAPP t u) = dAPP (Abst i x t) (Abst i x u))`;
+ /\  (Abst i x (dAPP t u) = dAPP (Abst i x t) (Abst i x u))
+End
 
-val Inst =
- Define
-    `(Inst i (dCON c) u     = dCON c)
+Definition Inst:
+     (Inst i (dCON c) u     = dCON c)
  /\  (Inst i (dVAR x) u     = dVAR x)
  /\  (Inst i (dBOUND j) u   = if i=j then u else dBOUND j)
  /\  (Inst i (dABS t) u     = dABS (Inst (SUC i) t u))
- /\  (Inst i (dAPP t1 t2) u = dAPP (Inst i t1 u) (Inst i t2 u))`;
+ /\  (Inst i (dAPP t1 t2) u = dAPP (Inst i t1 u) (Inst i t2 u))
+End
 
 
 val dFV_Abst = Q.store_thm("dFV_Abst",
@@ -155,7 +155,8 @@ Induct
 (* Lambda-abstraction.                                                   *)
 (* --------------------------------------------------------------------- *)
 
-val dLAMBDA = Define `dLAMBDA x t = dABS(Abst 0 x t)`;
+Definition dLAMBDA:   dLAMBDA x t = dABS(Abst 0 x t)
+End
 
 val dFV_dLAMBDA_lemma = Q.store_thm("dFV_dLAMBDA_lemma",
 `!t i x. dFV (Abst i x t) = (dFV t) DELETE x`,
@@ -194,13 +195,13 @@ val Forwards = Q.store_thm("Forwards",
   MATCH_MP_TAC dDEG_Abst THEN ASM_SIMP_TAC arith_ss []);
 
 
-val dWT =
- Define
-    `(dWT (dCON c)   = 0)
+Definition dWT:
+     (dWT (dCON c)   = 0)
  /\  (dWT (dVAR x)   = 0)
  /\  (dWT (dBOUND n) = 0)
  /\  (dWT (dABS t)   = SUC (dWT t))
- /\  (dWT (dAPP t u) = SUC (dWT t + dWT u))`;
+ /\  (dWT (dAPP t u) = SUC (dWT t + dWT u))
+End
 
 val dWT_Inst = Q.store_thm("dWT_Inst",
  `!t i x. dWT (Inst i t (dVAR x)) = dWT t`,
@@ -232,7 +233,8 @@ PROVE_TAC [Forwards,Backwards]);
 (* Substitution.                                                         *)
 (* --------------------------------------------------------------------- *)
 
-val dSUB = Define `dSUB x u t = Inst 0 (Abst 0 x t) u`;
+Definition dSUB:   dSUB x u t = Inst 0 (Abst 0 x t) u
+End
 
 val _ = add_rule {term_name = "dSUB", fixity = Parse.Closefix,
                   pp_elements = [TOK "[", TM, HardSpace 1, TOK "|->",
@@ -340,9 +342,9 @@ ZAP_TAC (arith_ss && [dFV_dLAMBDA,IN_DELETE])
 (* Beta-conversion.                                                      *)
 (* --------------------------------------------------------------------- *)
 
-val dBETA =
- Define
-    `dBETA (dABS u) t = Inst 0 u t`;
+Definition dBETA:
+     dBETA (dABS u) t = Inst 0 u t
+End
 
 val dBETA_THM = Q.store_thm("dBETA_THM",
  `!t u x. dBETA (dLAMBDA x t) u = [x |-> u] t`,
@@ -352,13 +354,13 @@ RW_TAC arith_ss [dBETA, dLAMBDA, dSUB]);
 (* The length of a term: the number of occurrences of atoms.             *)
 (* --------------------------------------------------------------------- *)
 
-val dLGH =
- Define
-     `(dLGH (dCON c)   = 1)
+Definition dLGH:
+      (dLGH (dCON c)   = 1)
   /\  (dLGH (dVAR x)   = 1)
   /\  (dLGH (dBOUND n) = 1)
   /\  (dLGH (dABS t)   = 1 + dLGH t)
-  /\  (dLGH (dAPP t u) = dLGH t + dLGH u)`;
+  /\  (dLGH (dAPP t u) = dLGH t + dLGH u)
+End
 
 val dLGH_dSUB = Q.store_thm("dLGH_dSUB",
 `!t x y. dLGH([y |-> dVAR x]t) = dLGH t`,
@@ -391,30 +393,30 @@ val dLGH_dLAMBDA_LESS = Q.store_thm("dLGH_dLAMBDA_LESS",
 `!t x. dLGH t < dLGH (dLAMBDA x t)`,
 RW_TAC arith_ss [dLAMBDA, dLGH, dLGH_Abst]);
 
-val NTH =
- Define
-    `(NTH 0 (h::t)       = h)
- /\  (NTH (SUC n) (h::t) = NTH n t)`;
+Definition NTH:
+     (NTH 0 (h::t)       = h)
+ /\  (NTH (SUC n) (h::t) = NTH n t)
+End
 
 
 (* --------------------------------------------------------------------- *)
 (* Initiality.........                                                   *)
 (* --------------------------------------------------------------------- *)
 
-val CHOM =
- Define
-    `(CHOM con var abs app xs (dCON c)   = (con:'a ->'b) c)
+Definition CHOM:
+     (CHOM con var abs app xs (dCON c)   = (con:'a ->'b) c)
  /\  (CHOM con var abs app xs (dVAR x)   = var x)
  /\  (CHOM con var abs app xs (dBOUND n) =
         if n < LENGTH xs then var (NTH n xs) else ARB)
  /\  (CHOM con var abs app xs (dABS t) =
        abs (\x. CHOM con var abs app (x::xs) t))
  /\  (CHOM con var abs app xs (dAPP t u) =
-         app (CHOM con var abs app xs t) (CHOM con var abs app xs u))`;
+         app (CHOM con var abs app xs t) (CHOM con var abs app xs u))
+End
 
-val HOM =
- Define
-    `HOM (con:'a ->'b) var abs app = CHOM con var abs app []`;
+Definition HOM:
+     HOM (con:'a ->'b) var abs app = CHOM con var abs app []
+End
 
 val hom  = Term`HOM  (con:'a ->'b) var abs app`;
 val chom = Term`CHOM (con:'a ->'b) var abs app`;
@@ -423,14 +425,14 @@ val chom = Term`CHOM (con:'a ->'b) var abs app`;
     Parallel substitution
  ---------------------------------------------------------------------------*)
 
-val PSUB =
- Define
-    `(PSUB d xs (dCON c)   = dCON c)
+Definition PSUB:
+     (PSUB d xs (dCON c)   = dCON c)
  /\  (PSUB d xs (dVAR x)   = dVAR x)
  /\  (PSUB d xs (dBOUND n) = if d <= n /\ n < d + LENGTH xs
                              then dVAR (NTH (n-d) xs) else dBOUND n)
  /\  (PSUB d xs (dABS t)   = dABS (PSUB (SUC d) xs t))
- /\  (PSUB d xs (dAPP t u) = dAPP (PSUB d xs t) (PSUB d xs u))`;
+ /\  (PSUB d xs (dAPP t u) = dAPP (PSUB d xs t) (PSUB d xs u))
+End
 
 val SUB_ELIM_LEM = Q.prove(
 `!x y. x < y ==> ?m. y-x = SUC m`,

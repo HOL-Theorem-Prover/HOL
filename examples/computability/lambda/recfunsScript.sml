@@ -14,16 +14,16 @@ val _ = set_trace "Unicode" 1
 (* Phi lifts all possible lambda-terms into the space of num->num option,
    indexing into the lambda-terms with the enumeration.  The NONE result
    corresponds to a divergence. *)
-val Phi_def = Define`
+Definition Phi_def:
   Phi n m = OPTION_MAP force_num (bnf_of (toTerm (numdB n) @@ church m))
-`;
+End
 
-val UM_def = Define`
+Definition UM_def:
   UM =
   LAM "nm"
     (cbnf_ofk @@ cforce_num @@ (cdAPP @@ (cnumdB @@ (cnfst @@ VAR "nm"))
                                       @@ (cchurch @@ (cnsnd @@ VAR "nm"))))
-`;
+End
 
 val FV_UM = Store_thm(
   "FV_UM",

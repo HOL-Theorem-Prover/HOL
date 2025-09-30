@@ -43,14 +43,16 @@ val _ = ParseExtras.temp_loose_equality()
 (*****************************************************************************)
 (* LIV (livenes) - a busy device finishes its computation eventually         *)
 (*****************************************************************************)
-val LIV_def = Define `LIV (load,inp,done,out) =
-      (!t. ~(done t) ==> (?t'. (t' > t) /\ (done t')))`;
+Definition LIV_def:   LIV (load,inp,done,out) =
+      (!t. ~(done t) ==> (?t'. (t' > t) /\ (done t')))
+End
 
 
 (*****************************************************************************)
 (* DEV - a handshaking device satisfies safety and liveness                  *)
 (*****************************************************************************)
-val DEV_def = Define `DEV f p = SAFE_DEV f p /\ LIV p`;
+Definition DEV_def:   DEV f p = SAFE_DEV f p /\ LIV p
+End
 
 
 (*****************************************************************************)

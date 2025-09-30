@@ -1106,15 +1106,15 @@ val subfield_poly_condition = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of monic irreducibles in a field, with degree equal to n *)
-val monic_irreducibles_degree_def = Define`
+Definition monic_irreducibles_degree_def:
     monic_irreducibles_degree (r:'a field) (n:num) = {p | monic p /\ ipoly p /\ (deg p = n)}
-`;
+End
 
 (* Define the set of monic irreducibles in a field, with degree dividing n *)
-val monic_irreducibles_bounded_def = Define`
+Definition monic_irreducibles_bounded_def:
     monic_irreducibles_bounded (r:'a field) (n:num) =
     BIGUNION (IMAGE (monic_irreducibles_degree r) (divisors n))
-`;
+End
 
 (* Theorem: p IN (monic_irreducibles_degree r n) <=> monic p /\ ipoly p /\ (deg p = n) *)
 (* Proof: by monic_irreducibles_degree_def *)
@@ -1500,9 +1500,9 @@ val poly_master_eq_irreducibles_product = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the count of monic irreducible polynomials of a fixed degree in subfield *)
-val monic_irreducibles_count_def = Define`
+Definition monic_irreducibles_count_def:
     monic_irreducibles_count (r:'a ring) n = CARD (monic_irreducibles_degree r n)
-`;
+End
 
 (* Theorem: FiniteRing r ==> !n. deg (Psi n) = n * (monic_irreducibles_count r n) *)
 (* Proof:
@@ -2738,13 +2738,13 @@ val field_subgroup_master_roots = store_thm(
 *)
 
 (* Define the subgroup field: takes a multiplicative group and gives a field candidate *)
-val subgroup_field_def = Define`
+Definition subgroup_field_def:
     subgroup_field (r:'a field) (g:'a group) =
     <| carrier := G UNION {#0};
            sum := <| carrier := G UNION {#0}; op := r.sum.op; id := #0 |>;
           prod := g including #0
      |>
-`;
+End
 
 (* Theorem: properties of subgroup_field *)
 (* Proof: by subgroup_field_def, including_def *)

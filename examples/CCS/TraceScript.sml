@@ -23,7 +23,8 @@ val _ = temp_loose_equality ();
 (******************************************************************************)
 
 val Reach_defn = ``\E E'. ?u. TRANS E u E'``;
-val Reach_def = Define `Reach = RTC ^Reach_defn`;
+Definition Reach_def:   Reach = RTC ^Reach_defn
+End
 
 val Reach_one = store_thm ((* NEW *)
    "Reach_one", ``!E E'. (?u. TRANS E u E') ==> Reach E E'``,
@@ -63,12 +64,14 @@ val Reach_cases2 = save_thm ((* NEW *)
 end;
 
 (* Define the set of states reachable from any CCS process *)
-val NODES_def = Define `
-    NODES (p :'a CCS) = {(q :'a CCS) | Reach p q}`;
+Definition NODES_def:
+    NODES (p :'a CCS) = {(q :'a CCS) | Reach p q}
+End
 
 (* Finite-state CCS *)
-val finite_state_def = Define `
-    finite_state (p :'a CCS) = FINITE (NODES p)`;
+Definition finite_state_def:
+    finite_state (p :'a CCS) = FINITE (NODES p)
+End
 
 val Reach_NODES = store_thm (
    "Reach_NODES", ``!p q. Reach p q ==> q IN (NODES p)``,
@@ -329,7 +332,8 @@ val _ = Unicode.unicode_version { u = UTF8.chr 0x03B5, tmnm = "epsilon"};
 val _ = TeX_notation { hol = "epsilon",
                        TeX = ("\\ensuremath{\\epsilon}", 1) };
 
-val TRACE_def = Define `TRACE = LRTC TRANS`;
+Definition TRACE_def:   TRACE = LRTC TRANS
+End
 
 val _ = type_abbrev_pp ("trace",
       ``:'a CCS -> 'a Action list -> 'a CCS -> bool``);
@@ -436,8 +440,9 @@ val WEAK_TRANS_TRACE = store_thm (
  >> MATCH_MP_TAC TRACE_trans_applied
  >> Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC []);
 
-val NO_LABEL_def = Define `
-    NO_LABEL (L :'a Action list) = ~?l. MEM (label l) L`;
+Definition NO_LABEL_def:
+    NO_LABEL (L :'a Action list) = ~?l. MEM (label l) L
+End
 
 val NO_LABEL_cases = store_thm (
    "NO_LABEL_cases",
@@ -497,9 +502,10 @@ val EPS_AND_TRACE = store_thm (
       PROVE_TAC [] ]);
 
 (* u is the unique Label in L, learnt from Robert Beers *)
-val UNIQUE_LABEL_def = Define `
+Definition UNIQUE_LABEL_def:
     UNIQUE_LABEL u (L :'a Action list) =
-        ?L1 L2. (L1 ++ [u] ++ L2 = L) /\ NO_LABEL L1 /\ NO_LABEL L2`;
+        ?L1 L2. (L1 ++ [u] ++ L2 = L) /\ NO_LABEL L1 /\ NO_LABEL L2
+End
 
 (* old equivalent definition without using NO_LABEL *)
 val UNIQUE_LABEL_DEF = store_thm (

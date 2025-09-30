@@ -13,16 +13,23 @@ val RW1 = ONCE_REWRITE_RULE;
 
 (* definitions *)
 
-val ALIGNED_def = Define `ALIGNED (x:word32) = (x && 3w = 0w)`;
+Definition ALIGNED_def:   ALIGNED (x:word32) = (x && 3w = 0w)
+End
 
-val ADDR32_def = Define `ADDR32 (x:word30) = (w2w x << 2):word32`;
-val ADDR30_def = Define `ADDR30 (x:word32) = ((31 >< 2) x):word30`;
+Definition ADDR32_def:   ADDR32 (x:word30) = (w2w x << 2):word32
+End
+Definition ADDR30_def:   ADDR30 (x:word32) = ((31 >< 2) x):word30
+End
 
-val CONTAINER_def = Define `CONTAINER x = x:bool`;
-val GUARD_def = Define `GUARD (n:num) x = x:bool`;
-val DUMMY_EQ_def = Define `DUMMY_EQ x y = (x = y:'a)`;
+Definition CONTAINER_def:   CONTAINER x = x:bool
+End
+Definition GUARD_def:   GUARD (n:num) x = x:bool
+End
+Definition DUMMY_EQ_def:   DUMMY_EQ x y = (x = y:'a)
+End
 
-val SING_SET_def = Define `SING_SET x = {x}`;
+Definition SING_SET_def:   SING_SET x = {x}
+End
 
 
 (* theorems *)

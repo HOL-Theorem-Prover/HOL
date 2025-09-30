@@ -66,9 +66,8 @@ Theorem sere_induct =
 * S_CLOCK_FREE r means r contains no clocking statements
 * (used to be in PropertiesTheory)
 ******************************************************************************)
-val S_CLOCK_FREE_def =
- Define
-  `(S_CLOCK_FREE (S_BOOL b)          ⇔ T)
+Definition S_CLOCK_FREE_def:
+   (S_CLOCK_FREE (S_BOOL b)          ⇔ T)
    /\
    (S_CLOCK_FREE (S_CAT(r1,r2))      ⇔  S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2)
    /\
@@ -80,7 +79,8 @@ val S_CLOCK_FREE_def =
    /\
    (S_CLOCK_FREE (S_REPEAT r)        ⇔ S_CLOCK_FREE r)
    /\
-   (S_CLOCK_FREE (S_CLOCK v)         ⇔ F)`;
+   (S_CLOCK_FREE (S_CLOCK v)         ⇔ F)
+End
 
 (******************************************************************************
 * Neutrality
@@ -91,12 +91,12 @@ val S_CLOCK_FREE_def =
   BOTTOM
 *)
 
-val NEUTRAL_LIST_def =
- Define
-  `(NEUTRAL_LIST[] = T)          /\
+Definition NEUTRAL_LIST_def:
+   (NEUTRAL_LIST[] = T)          /\
    (NEUTRAL_LIST(TOP::p) = F)    /\
    (NEUTRAL_LIST(BOTTOM::p) = F) /\
-   (NEUTRAL_LIST(STATE f::p) = NEUTRAL_LIST p)`;
+   (NEUTRAL_LIST(STATE f::p) = NEUTRAL_LIST p)
+End
 
 val MAP_COMPLEMENT_LETTER_NEUTRAL_LIST =
  store_thm
@@ -119,10 +119,10 @@ val COMPLEMENT_FINITE_NEUTRAL_LIST =
 
 (* A path is neutral iff it contains no occurrences of TOP or BOTTOM *)
 
-val NEUTRAL_PATH_def =
- Define
-  `(NEUTRAL_PATH(FINITE p) = NEUTRAL_LIST p) /\
-   (NEUTRAL_PATH(INFINITE f) = !n. ?s. f n = STATE s)`;
+Definition NEUTRAL_PATH_def:
+   (NEUTRAL_PATH(FINITE p) = NEUTRAL_LIST p) /\
+   (NEUTRAL_PATH(INFINITE f) = !n. ?s. f n = STATE s)
+End
 
 val COMPLEMENT_NEUTRAL_PATH =
  store_thm
@@ -136,10 +136,12 @@ val COMPLEMENT_NEUTRAL_PATH =
     THEN PROVE_TAC[COMPLEMENT_LETTER_def]);
 
 (* Top-free and bottom-free *)
-val TOP_FREE_LIST_def = Define `TOP_FREE_LIST = EVERY (\x. ~(x = TOP))`;
+Definition TOP_FREE_LIST_def:   TOP_FREE_LIST = EVERY (\x. ~(x = TOP))
+End
 
-val BOTTOM_FREE_LIST_def = Define
-  `BOTTOM_FREE_LIST = EVERY (\x. ~(x = BOTTOM))`;
+Definition BOTTOM_FREE_LIST_def:
+   BOTTOM_FREE_LIST = EVERY (\x. ~(x = BOTTOM))
+End
 
 val NEUTRAL_LIST = prove
   (``!l. NEUTRAL_LIST l = TOP_FREE_LIST l /\ BOTTOM_FREE_LIST l``,
@@ -347,14 +349,14 @@ val UF_SEM_F_UNTIL_REC =
 *
 *   w |= {r}(f)  <==>  w |=_|w| {r}(f)
 ******************************************************************************)
-val UF_SEM_F_SUFFIX_IMP_FINITE_REC_def =
- Define
-  `(UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) 0 = T)
+Definition UF_SEM_F_SUFFIX_IMP_FINITE_REC_def:
+   (UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) 0 = T)
    /\
    (UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) (SUC n) =
      UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) n
      /\
-     (US_SEM (SEL w (0, n)) r ==> UF_SEM (RESTN w n) f))`;
+     (US_SEM (SEL w (0, n)) r ==> UF_SEM (RESTN w n) f))
+End
 
 (******************************************************************************
 * Form needed for computeLib.EVAL
@@ -422,13 +424,13 @@ val UF_SEM_F_SUFFIX_IMP_FINITE_REC =
 (******************************************************************************
 * Define w |=_x {r}(f) where x is an extended number (xnum)
 ******************************************************************************)
-val UF_SEM_F_SUFFIX_IMP_REC_def =
- Define
-  `(UF_SEM_F_SUFFIX_IMP_REC w (r,f) (XNUM n) =
+Definition UF_SEM_F_SUFFIX_IMP_REC_def:
+   (UF_SEM_F_SUFFIX_IMP_REC w (r,f) (XNUM n) =
      UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) n)
    /\
    (UF_SEM_F_SUFFIX_IMP_REC w (r,f) INFINITY =
-     !n. US_SEM (SEL w (0,n)) r ==> UF_SEM (RESTN w n) f)`;
+     !n. US_SEM (SEL w (0,n)) r ==> UF_SEM (RESTN w n) f)
+End
 
 (*
 (******************************************************************************

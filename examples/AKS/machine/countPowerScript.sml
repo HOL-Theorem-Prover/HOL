@@ -1663,9 +1663,9 @@ val rootM_thm = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define integer square-root *)
-val sqrtM_def = Define`
+Definition sqrtM_def:
     sqrtM = rootM 2
-`;
+End
 
 (*
 > EVAL ``MAP sqrtM [0 .. 16]``;  =
@@ -1754,7 +1754,7 @@ val it = |- !n. power_free_test n <=> 1 < n /\ n power_free_upto ulog n: thm
 *)
 
 (* Define power_free in monadic style *)
-val power_freeM_def = Define`
+Definition power_freeM_def:
     power_freeM n =
       do
          m <- ulogM n;
@@ -1762,7 +1762,7 @@ val power_freeM_def = Define`
          if m0 then return F
          else power_free_loopM n m;
       od
-`;
+End
 
 (*
 > EVAL ``power_freeM 0``; = (F,Count 2): thm

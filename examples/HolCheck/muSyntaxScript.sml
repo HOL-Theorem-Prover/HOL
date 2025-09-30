@@ -33,7 +33,8 @@ val tsimps_mu = tsimps ``:'prop mu``;
 
 
 val mu_size_def = snd (TypeBase.size_of ``:'prop mu``)
-val mu_size2_def = Define `mu_size2 (f: 'prop mu) = mu_size (\(a:('prop)).0) f`
+Definition mu_size2_def:   mu_size2 (f: 'prop mu) = mu_size (\(a:('prop)).0) f
+End
 
 val _ = add_rule
     {term_name = "AP", fixity = Prefix 950, (* 950 is tighter than ~ *)
@@ -114,7 +115,7 @@ val mu_pnf = Hol_defn "NNF"  `
 (NNF (~(mu Q.. f)) = nu Q.. (NNF(RVNEG Q (~f)))) /\
 (NNF (~(nu Q.. f)) = mu Q.. (NNF(RVNEG Q (~f))))`
 
-val mu_pstv_size_def = Define`
+Definition mu_pstv_size_def:
 (mu_pstv_size (T:'prop mu) = mu_size2 (T: 'prop mu)) /\
 (mu_pstv_size (F:'prop mu) = mu_size2 (F: 'prop mu)) /\
 (mu_pstv_size (f /\ g) = 1+ (mu_pstv_size f + mu_pstv_size g)) /\
@@ -125,7 +126,8 @@ val mu_pstv_size_def = Define`
 (mu_pstv_size ([[(a:string)]] f) = 1+ (mu_pstv_size f)) /\
 (mu_pstv_size (mu (Q:string) .. f) = 1+ (STRLEN Q + mu_pstv_size f)) /\
 (mu_pstv_size (nu (Q:string) .. f) = 1+ (STRLEN Q + mu_pstv_size f)) /\
-(mu_pstv_size (~f) = mu_pstv_size f)`
+(mu_pstv_size (~f) = mu_pstv_size f)
+End
 
 val mu_pstv_size_lemma1 = prove(``!f Q. mu_pstv_size (RVNEG Q f) = mu_pstv_size f``,
   Induct_on `f` THEN RW_TAC std_ss [mu_pstv_size_def,RVNEG_def] THEN RW_TAC arith_ss [mu_pstv_size_def,RVNEG_def])
@@ -198,7 +200,7 @@ val ALLV_def = save_thm("ALLV_def",Define `
 
 val CLOSED_def = save_thm("CLOSED_def",Define `CLOSED (f:'prop mu) = (FV f = {})`)
 
-val IS_PROP_def = Define `
+Definition IS_PROP_def:
 (IS_PROP (T:'prop mu) = T) /\
 (IS_PROP F = T) /\
 (IS_PROP (~f) = IS_PROP f) /\
@@ -209,9 +211,10 @@ val IS_PROP_def = Define `
 (IS_PROP (<<a>> f) = F) /\
 (IS_PROP ([[a]] f) = F) /\
 (IS_PROP (mu Q.. f) =  F)  /\
-(IS_PROP (nu Q.. f) =  F)`
+(IS_PROP (nu Q.. f) =  F)
+End
 
-val AP_SUBST_def = Define `
+Definition AP_SUBST_def:
 (AP_SUBST g ap (T:'prop mu) = (T:'prop mu)) /\
 (AP_SUBST g ap F = F) /\
 (AP_SUBST g ap (~f) = ~(AP_SUBST g ap f)) /\
@@ -222,7 +225,8 @@ val AP_SUBST_def = Define `
 (AP_SUBST g ap (<<a>> f) = <<a>> (AP_SUBST g ap f)) /\
 (AP_SUBST g ap ([[a]] f) = [[a]] (AP_SUBST g ap f)) /\
 (AP_SUBST g ap (mu Q.. f) = (mu Q.. (AP_SUBST g ap f)))  /\
-(AP_SUBST g ap (nu Q.. f) =  (nu Q.. (AP_SUBST g ap f)))`
+(AP_SUBST g ap (nu Q.. f) =  (nu Q.. (AP_SUBST g ap f)))
+End
 
 val RVNEG_SYM = store_thm("RVNEG_SYM",
   ``!Q Q' (f:'prop mu). RVNEG Q (RVNEG Q' f) = RVNEG Q' (RVNEG Q f)``,

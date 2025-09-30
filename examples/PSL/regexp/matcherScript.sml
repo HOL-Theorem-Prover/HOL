@@ -67,7 +67,8 @@ fun GCONJUNCTS th =
 (* Misc. theorems                                                            *)
 (*---------------------------------------------------------------------------*)
 
-val MLEX_def = Define `MLEX f r x y = f x < f y \/ (f x = f y) /\ r x y`;
+Definition MLEX_def:   MLEX f r x y = f x < f y \/ (f x = f y) /\ r x y
+End
 
 val WF_MLEX = store_thm
   ("WF_MLEX",
@@ -82,18 +83,20 @@ val NO_MEM = store_thm
    ``!l. (!x. ~MEM x l) = (l = [])``,
    Cases >> RW_TAC std_ss [MEM] >> METIS_TAC []);
 
-val set_of_list_def = Define
-  `(set_of_list [] = {}) /\
-   (set_of_list (h :: t) = h INSERT set_of_list t)`;
+Definition set_of_list_def:
+   (set_of_list [] = {}) /\
+   (set_of_list (h :: t) = h INSERT set_of_list t)
+End
 
 val set_of_list = store_thm
   ("set_of_list",
    ``!l x. x IN set_of_list l = MEM x l``,
    Induct >> RW_TAC std_ss [set_of_list_def, MEM, NOT_IN_EMPTY, IN_INSERT]);
 
-val interval_def = Define
-  `(interval x 0 = []) /\
-   (interval x (SUC n) = x :: interval (SUC x) n)`;
+Definition interval_def:
+   (interval x 0 = []) /\
+   (interval x (SUC n) = x :: interval (SUC x) n)
+End
 
 val MEM_interval = store_thm
   ("MEM_interval",
@@ -113,10 +116,11 @@ val EVERY_MONO = store_thm
    ``!p q l. (!x. p x ==> q x) /\ EVERY p l ==> EVERY q l``,
    METIS_TAC [EVERY_MONOTONIC]);
 
-val partition_def = Define
-  `(partition p [] = ([],[])) /\
+Definition partition_def:
+   (partition p [] = ([],[])) /\
    (partition p (h :: t) =
-    let (l,r) = partition p t in if p h then (h::l,r) else (l,h::r))`;
+    let (l,r) = partition p t in if p h then (h::l,r) else (l,h::r))
+End
 
 val LENGTH_partition = store_thm
   ("LENGTH_partition",
@@ -190,9 +194,10 @@ val chr_suff1 = store_thm
 (* Dijkstra's reachability algorithm.                                        *)
 (*---------------------------------------------------------------------------*)
 
-val accepting_path_def = Define
-  `(accepting_path (t : 'a->'a->bool) a s [] = a s) /\
-   (accepting_path t a s (s' :: l) = t s s' /\ accepting_path t a s' l)`;
+Definition accepting_path_def:
+   (accepting_path (t : 'a->'a->bool) a s [] = a s) /\
+   (accepting_path t a s (s' :: l) = t s s' /\ accepting_path t a s' l)
+End
 
 val accepting_path_tail = store_thm
   ("accepting_path_tail",
@@ -417,7 +422,8 @@ Definition drop_def[nocompute]:
    (drop (SUC i) l = if NULL l then [] else drop i (TL l))
 End
 
-val BIGLIST_def = Define `BIGLIST l = drop 0 l`;
+Definition BIGLIST_def:   BIGLIST l = drop 0 l
+End
 
 val drop_nil = prove
   (``!i. drop i [] = []``,
@@ -471,31 +477,39 @@ val length_drop = store_thm
 val () = type_abbrev_pp ("na", Type`:'a # ('a->'b->'a->bool) # ('a->bool)`);
 val () = type_abbrev_pp ("da", Type`:'a # ('a->'b->'a) # ('a->bool)`);
 
-val initial_def    = Define `initial    ((i,trans,acc) : ('a,'b) na) = i`;
-val transition_def = Define `transition ((i,trans,acc) : ('a,'b) na) = trans`;
-val accept_def     = Define `accept     ((i,trans,acc) : ('a,'b) na) = acc`;
+Definition initial_def:      initial    ((i,trans,acc) : ('a,'b) na) = i
+End
+Definition transition_def:   transition ((i,trans,acc) : ('a,'b) na) = trans
+End
+Definition accept_def:       accept     ((i,trans,acc) : ('a,'b) na) = acc
+End
 
-val na_step_def = Define
-  `(na_step ((i,trans,acc) : ('a,'b) na) s [] = (acc s)) /\
+Definition na_step_def:
+   (na_step ((i,trans,acc) : ('a,'b) na) s [] = (acc s)) /\
    (na_step (i,trans,acc) s (h :: t) =
-    ?s'. trans s h s' /\ na_step (i,trans,acc) s' t)`;
+    ?s'. trans s h s' /\ na_step (i,trans,acc) s' t)
+End
 
-val na_accepts_def = Define
-  `na_accepts (i,trans,acc) l = na_step (i,trans,acc) i l`;
+Definition na_accepts_def:
+   na_accepts (i,trans,acc) l = na_step (i,trans,acc) i l
+End
 
-val da_step_def = Define
-  `(da_step ((i,trans,acc) : ('a,'b) da) s [] = acc s) /\
+Definition da_step_def:
+   (da_step ((i,trans,acc) : ('a,'b) da) s [] = acc s) /\
    (da_step (i,trans,acc) s (h :: t) =
-    da_step (i,trans,acc) (trans s h) t)`;
+    da_step (i,trans,acc) (trans s h) t)
+End
 
-val da_accepts_def = Define
-  `da_accepts (i,trans,acc) l = da_step (i,trans,acc) i l`;
+Definition da_accepts_def:
+   da_accepts (i,trans,acc) l = da_step (i,trans,acc) i l
+End
 
-val na2da_def = Define
-  `na2da (n : ('a,'b) na) =
+Definition na2da_def:
+   na2da (n : ('a,'b) na) =
    ({initial n},
     (\s c. {y | ?x. x IN s /\ (transition n) x c y}),
-    (\s. ?x. x IN s /\ accept n x))`;
+    (\s. ?x. x IN s /\ accept n x))
+End
 
 val na2da_lemma = prove
   (``!n s l. da_step (na2da n) s l = ?x. x IN s /\ na_step n x l``,
@@ -523,8 +537,8 @@ val na2da = store_thm
 (* A checker that works by constructing a deterministic finite automata.     *)
 (*---------------------------------------------------------------------------*)
 
-val regexp2na_def = Define
- `(regexp2na (Atom b) = (1, (\s x s'. (s=1) /\ b x /\ (s'=0)), \s. s=0)) /\
+Definition regexp2na_def:
+  (regexp2na (Atom b) = (1, (\s x s'. (s=1) /\ b x /\ (s'=0)), \s. s=0)) /\
    (regexp2na (r1 # r2) =
     let (i1,t1,a1) = regexp2na r1 in
     let (i2,t2,a2) = regexp2na r2 in
@@ -574,11 +588,14 @@ val regexp2na_def = Define
        \s. (s = i + 1) \/ a s)) /\
    (regexp2na (Prefix r) =
     let (i,t,a) = regexp2na r in
-    (i, t, \s. ?l. accepting_path (\s s'. ?x. t s x s') a s l))`;
+    (i, t, \s. ?l. accepting_path (\s s'. ?x. t s x s') a s l))
+End
 
-val regexp2da_def = Define `regexp2da r = na2da (regexp2na r)`;
+Definition regexp2da_def:   regexp2da r = na2da (regexp2na r)
+End
 
-val da_match_def = Define `da_match r = da_accepts (regexp2da r)`;
+Definition da_match_def:   da_match r = da_accepts (regexp2da r)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Correctness of the finite automata matcher                                *)
@@ -1226,10 +1243,11 @@ Definition exists_transition_regexp2na_def[nocompute]:
    exists_transition_regexp2na r s s' = ?x. transition_regexp2na r s x s'
 End
 
-val transition_regexp2na_fuse_def = Define
-  `(transition_regexp2na_fuse a t 0 = F) /\
+Definition transition_regexp2na_fuse_def:
+   (transition_regexp2na_fuse a t 0 = F) /\
    (transition_regexp2na_fuse a t (SUC s') =
-    a s' /\ t s' \/ transition_regexp2na_fuse a t s')`;
+    a s' /\ t s' \/ transition_regexp2na_fuse a t s')
+End
 
 val transition_regexp2na_fuse = prove
   (``!k r s x i t a.
@@ -1431,11 +1449,12 @@ val eval_accepts = prove
    >> RW_TAC std_ss [EVERY_DEF, accepting_path_def]
    >> METIS_TAC [regexp2na_trans]);
 
-val calc_transitions_def = Define
-  `(calc_transitions r l c 0 a = a) /\
+Definition calc_transitions_def:
+   (calc_transitions r l c 0 a = a) /\
    (calc_transitions r l c (SUC s') a =
     calc_transitions r l c s'
-    (if EXISTS (\s. transition_regexp2na r s c s') l then s' :: a else a))`;
+    (if EXISTS (\s. transition_regexp2na r s c s') l then s' :: a else a))
+End
 
 Definition eval_transitions_def[nocompute]:
    eval_transitions r l c =
@@ -1445,22 +1464,26 @@ End
 Definition areport_def[nocompute]:   areport h b = b
 End
 
-val astep_def = Define
-  `(astep r l [] = eval_accepts r l) /\
-   (astep r l (c :: cs) = astep r (eval_transitions r l c) cs)`;
+Definition astep_def:
+   (astep r l [] = eval_accepts r l) /\
+   (astep r l (c :: cs) = astep r (eval_transitions r l c) cs)
+End
 
-val amatch_def = Define
-  `amatch r l = let i = initial_regexp2na r in astep r [i] l`;
+Definition amatch_def:
+   amatch r l = let i = initial_regexp2na r in astep r [i] l
+End
 
-val acheckpt_def = Define
-  `(acheckpt r f h l [] = T) /\
+Definition acheckpt_def:
+   (acheckpt r f h l [] = T) /\
    (acheckpt r f h l (c :: cs) =
     let l' = eval_transitions r l c in
     let h = c :: h in
-    (eval_accepts r l' ==> areport h (f (c :: cs))) /\ acheckpt r f h l' cs)`;
+    (eval_accepts r l' ==> areport h (f (c :: cs))) /\ acheckpt r f h l' cs)
+End
 
-val acheck_def = Define
-  `acheck r f l = let i = initial_regexp2na r in acheckpt r f [] [i] l`;
+Definition acheck_def:
+   acheck r f l = let i = initial_regexp2na r in acheckpt r f [] [i] l
+End
 
 (*---------------------------------------------------------------------------*)
 (* Correctness of this version of the automata matcher.                      *)

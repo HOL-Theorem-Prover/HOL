@@ -21,7 +21,7 @@ Definition istep_def:
     sr = sl |+ (v,t))
 End
 
-val tstep_def = Define`
+Definition tstep_def:
   tstep (sl,bl) (sr,br) <=>
   (∃t1 t2.
     (walk sl t1 = walk sl t2) ∧
@@ -36,7 +36,8 @@ val tstep_def = Define`
      (walk sl t1 = t) ∧ (walk sl t2 = Var v)) ∧
     ¬ oc sl t v ∧
     (br + {|(t1,t2)|} = bl) ∧
-    (sr = sl |+ (v,t)))`;
+    (sr = sl |+ (v,t)))
+End
 
 val wfs_tstep = Q.store_thm(
 "wfs_tstep",
