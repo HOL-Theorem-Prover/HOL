@@ -69,9 +69,8 @@ val B_SEM_def =
 * (see clause for ``US_SEM v (S_REPEAT r)``).
 * Theorem US_SEM gives version corresponding to LRM Version 1.1.
 ******************************************************************************)
-val US_SEM_def =
- zDefine
-  `(US_SEM v (S_BOOL b) = (LENGTH v = 1) /\ B_SEM (ELEM v 0) b)
+Definition US_SEM_def[nocompute]:
+   (US_SEM v (S_BOOL b) = (LENGTH v = 1) /\ B_SEM (ELEM v 0) b)
    /\
    (US_SEM v (S_CAT(r1,r2)) =
      ?v1 v2. (v = v1 <> v2) /\ US_SEM v1 r1 /\ US_SEM v2 r2)
@@ -90,7 +89,8 @@ val US_SEM_def =
      (v = []))
    /\
    (US_SEM v (S_REPEAT r) =
-     ?vlist. (v = CONCAT vlist) /\ EVERY (\v. US_SEM v r) vlist)`;
+     ?vlist. (v = CONCAT vlist) /\ EVERY (\v. US_SEM v r) vlist)
+End
 
 (* Lemma for deriving theorem US_SEM below *)
 val US_SEM_REPEAT =

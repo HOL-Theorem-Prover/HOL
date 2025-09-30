@@ -415,10 +415,11 @@ val x64_syntax_list = `` [
 
   ]``;
 
-val x64_decode_aux_def = zDefine `
+Definition x64_decode_aux_def[nocompute]:
   x64_decode_aux g =
     (match_list_raw g x64_match_step tokenise (x64_syntax o tokenise) o
-    MAP (\s. let x = STR_SPLIT [#"|"] s in (EL 0 x, EL 1 x))) ^x64_syntax_list`;
+    MAP (\s. let x = STR_SPLIT [#"|"] s in (EL 0 x, EL 1 x))) ^x64_syntax_list
+End
 
 val x64_decode_prefixes_def = tDefine "x64_decode_prefixes" `
   x64_decode_prefixes w =

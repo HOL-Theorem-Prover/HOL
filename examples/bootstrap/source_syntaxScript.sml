@@ -30,4 +30,4 @@ End
 
 Datatype:                         (* a complete program is a list of   *)
   prog = Program (dec list) exp   (* function declarations followed by *)
-End                               (* an expression to evaluate         *)
+End(* an expression to evaluate         *)

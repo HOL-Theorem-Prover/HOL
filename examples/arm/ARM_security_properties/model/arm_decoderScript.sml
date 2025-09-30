@@ -74,7 +74,7 @@ val LastInITBlock_def = Define`
 
 (* ------------------------------------------------------------------------ *)
 
-val arm_decode_def = zDefine`
+Definition arm_decode_def[nocompute]:
   arm_decode v4 (ireg : word32) =
   let b n = ireg ' n
   and i2 n  = ( n + 1  >< n ) ireg : word2
@@ -359,11 +359,12 @@ val arm_decode_def = zDefine`
              (i3 5) (r 0))
       | (T,T,T, T ,_23,_22,_21,_20,_7,_6,_5,_4) =>
            Miscellaneous (Supervisor_Call (i24 0))
-      | __ => Undefined)`;
+      | __ => Undefined)
+End
 
 (* ------------------------------------------------------------------------ *)
 
-val thumb_decode_def = zDefine`
+Definition thumb_decode_def[nocompute]:
   thumb_decode arch IT (ireg : word16) =
     let IT = if arch IN thumb2_support then IT else 0w in
     let b n = ireg ' n
@@ -572,9 +573,10 @@ val thumb_decode_def = zDefine`
              Unpredictable
            else
              Branch (Branch_Target (sw2sw ((10 >< 0) ireg : word11)))
-       | _ => Undefined)`;
+       | _ => Undefined)
+End
 
-val thumbee_decode_def = zDefine`
+Definition thumbee_decode_def[nocompute]:
   thumbee_decode arch IT (ireg : word16) =
     let b n = ireg ' n
     and r n  = ( n + 2  >< n ) ireg : word4
@@ -645,7 +647,8 @@ val thumbee_decode_def = zDefine`
             LoadStore
               (Store T T F F F 9w (r 0)
                 (Mode2_immediate (((8 >< 3) ireg) << 2))))
-       | _ => (Encoding_Thumb, thumb_decode arch IT ireg)`;
+       | _ => (Encoding_Thumb, thumb_decode arch IT ireg)
+End
 
 (* ------------------------------------------------------------------------ *)
 

@@ -706,7 +706,7 @@ val aks_main_theorem = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Express AKS algorithm in terms of possible results of AKS parameter search. *)
-val aks_def = zDefine`
+Definition aks_def[nocompute]:
     aks n <=>
        power_free n /\         (* power_free n implies 1 < n *)
        case aks_param n of     (* search for AKS parameter given n *)
@@ -714,7 +714,7 @@ val aks_def = zDefine`
        | good k =>             (* found k with m <= ordz k n, where m = (ulog n) ** 2 *)
             poly_intro_checks n k (SQRT (phi k) * ulog n)
        | bad => F              (* impossible *)
-`;
+End
 (* Note: use zDefine to avoid putting into computeLib by default,
    as poly_intro_checks uses !c. 0 < c /\ c <= m ==> ((x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k))
    which is symbolic.

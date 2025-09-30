@@ -431,17 +431,21 @@ val NNF_THM = store_thm
    >> metis_tac[NNF_NEG_LEMM]
   );
 
-val LTL_FALSE_def = zDefine `
-  LTL_FALSE p  = F_CONJ (F_VAR p) (F_NEG (F_VAR p))`;
+Definition LTL_FALSE_def[nocompute]:
+  LTL_FALSE p  = F_CONJ (F_VAR p) (F_NEG (F_VAR p))
+End
 
-val LTL_TRUE_def = zDefine `
-  LTL_TRUE p = F_NEG (LTL_FALSE p)`;
+Definition LTL_TRUE_def[nocompute]:
+  LTL_TRUE p = F_NEG (LTL_FALSE p)
+End
 
-val LTL_F_def = zDefine `
-  LTL_F φ p = F_U (LTL_TRUE p) φ`
+Definition LTL_F_def[nocompute]:
+  LTL_F φ p = F_U (LTL_TRUE p) φ
+End
 
-val LTL_G_def = zDefine `
-  LTL_G φ p = F_NEG (LTL_F (F_NEG φ) p)`;
+Definition LTL_G_def[nocompute]:
+  LTL_G φ p = F_NEG (LTL_F (F_NEG φ) p)
+End
 
 (* Some example formulae*)
 

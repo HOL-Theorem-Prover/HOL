@@ -71,9 +71,8 @@ val B_SEM =
 * US_SEM w r means "w is in the language of r" in the unclocked semantics
 * where w is a word, i.e. a list of letters: w : ('prop -> bool)list
 ******************************************************************************)
-val US_SEM_def =
- zDefine
-  `(US_SEM w (S_BOOL b) = (LENGTH w = 1) /\ B_SEM (ELEM w 0) b)
+Definition US_SEM_def[nocompute]:
+   (US_SEM w (S_BOOL b) = (LENGTH w = 1) /\ B_SEM (ELEM w 0) b)
    /\
    (US_SEM w (S_CAT(r1,r2)) =
      ?w1 w2. (w = w1 <> w2) /\ US_SEM w1 r1 /\ US_SEM w2 r2)
@@ -89,7 +88,8 @@ val US_SEM_def =
      US_SEM w r1 /\ US_SEM w r2)
    /\
    (US_SEM w (S_REPEAT r) =
-     ?wlist. (w = CONCAT wlist) /\ EVERY (\w. US_SEM w r) wlist)`;
+     ?wlist. (w = CONCAT wlist) /\ EVERY (\w. US_SEM w r) wlist)
+End
 
 (******************************************************************************
 * Original unclocked "SEM 1" semantics of Sugar formulas

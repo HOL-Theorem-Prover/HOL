@@ -2061,8 +2061,9 @@ val checker = store_thm
 (******************************************************************************
 * Formula version of an operator due to Dana Fisman
 ******************************************************************************)
-val F_PREF_def =
- zDefine `F_PREF w f = ?w'. UF_SEM (CAT(w,w')) f`;
+Definition F_PREF_def[nocompute]:
+  F_PREF w f = ?w'. UF_SEM (CAT(w,w')) f
+End
 
 val EXISTS_RES_to =
  store_thm
@@ -2078,11 +2079,11 @@ val EXISTS_RES_to =
        THEN TRY(PROVE_TAC[DECIDE ``m <= j = (m=j) \/ m+1 <= j``])
        THEN DECIDE_TAC]);
 
-val ABORT_AUX_def =
- zDefine
-  `ABORT_AUX w f b n =
+Definition ABORT_AUX_def[nocompute]:
+   ABORT_AUX w f b n =
     ?(j::n to LENGTH w).
-      UF_SEM (RESTN w j) (F_BOOL b) /\ F_PREF (SEL w (0,j - 1)) f`;
+      UF_SEM (RESTN w j) (F_BOOL b) /\ F_PREF (SEL w (0,j - 1)) f
+End
 
 val EXISTS_RES_to_COR =
  SIMP_RULE std_ss []

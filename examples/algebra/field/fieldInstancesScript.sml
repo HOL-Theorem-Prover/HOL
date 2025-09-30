@@ -181,13 +181,13 @@ val trivial_field = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Galois Field *)
-val GF_def = zDefine`
+Definition GF_def[nocompute]:
   GF p :num field =
    <| carrier := { n | n < p };
           sum := add_mod p;
          prod := (mult_mod p including 0)
     |>
-`;
+End
 (* Use of zDefine to avoid incorporating into computeLib, by default. *)
 
 (*

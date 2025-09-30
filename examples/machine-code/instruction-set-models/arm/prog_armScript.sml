@@ -721,16 +721,18 @@ val WRITE8_def = Define `
   WRITE8 (a:word32) (w:word8) m = (a =+ w:word8) m`;
 
 val _ = wordsLib.guess_lengths();
-val READ32_def = zDefine `
+Definition READ32_def[nocompute]:
   READ32 a (m:word32 -> word8) =
-    (m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m (a)):word32`;
+    (m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m (a)):word32
+End
 
-val WRITE32_def = zDefine `
+Definition WRITE32_def[nocompute]:
   WRITE32 (a:word32) (w:word32) m =
     ((a + 0w =+ (w2w w):word8)
     ((a + 1w =+ (w2w (w >>> 8)):word8)
     ((a + 2w =+ (w2w (w >>> 16)):word8)
-    ((a + 3w =+ (w2w (w >>> 24)):word8) m))))`;
+    ((a + 3w =+ (w2w (w >>> 24)):word8) m))))
+End
 
 val WRITE32_blast_lemma = blastLib.BBLAST_PROVE
   ``((( 7 ><  0) (w:word32)) = (w2w w):word8) /\

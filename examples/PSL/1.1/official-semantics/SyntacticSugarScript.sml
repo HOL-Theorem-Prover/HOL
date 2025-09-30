@@ -36,22 +36,25 @@ val term_of_int = numLib.term_of_int;
 * Definition of disjunction
 ******************************************************************************)
 
-val B_OR_def =
- zDefine `B_OR(b1,b2) = B_NOT(B_AND(B_NOT b1, B_NOT b2))`;
+Definition B_OR_def[nocompute]:
+  B_OR(b1,b2) = B_NOT(B_AND(B_NOT b1, B_NOT b2))
+End
 
 (******************************************************************************
 * Definition of implication
 ******************************************************************************)
 
-val B_IMP_def =
- zDefine `B_IMP(b1,b2) = B_OR(B_NOT b1, b2)`;
+Definition B_IMP_def[nocompute]:
+  B_IMP(b1,b2) = B_OR(B_NOT b1, b2)
+End
 
 (******************************************************************************
 * Definition of logical equivalence
 ******************************************************************************)
 
-val B_IFF_def =
- zDefine `B_IFF(b1,b2) = B_AND(B_IMP(b1, b2),B_IMP(b2, b1))`;
+Definition B_IFF_def[nocompute]:
+  B_IFF(b1,b2) = B_AND(B_IMP(b1, b2),B_IMP(b2, b1))
+End
 
 (******************************************************************************
 * Additional SERE operators

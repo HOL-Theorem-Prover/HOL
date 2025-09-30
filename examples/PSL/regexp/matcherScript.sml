@@ -412,9 +412,10 @@ val dijkstra1 = store_thm
 (* (But it doesn't seem to have the desired effect, so we don't use it.)     *)
 (*---------------------------------------------------------------------------*)
 
-val drop_def = zDefine
-  `(drop 0 l = l) /\
-   (drop (SUC i) l = if NULL l then [] else drop i (TL l))`;
+Definition drop_def[nocompute]:
+   (drop 0 l = l) /\
+   (drop (SUC i) l = if NULL l then [] else drop i (TL l))
+End
 
 val BIGLIST_def = Define `BIGLIST l = drop 0 l`;
 
@@ -1186,14 +1187,17 @@ val kleene_regexp2dfa = store_thm
 (* A version of the automata matcher that is easy to execute.                *)
 (*---------------------------------------------------------------------------*)
 
-val initial_regexp2na_def = zDefine
-  `initial_regexp2na r = initial (regexp2na r)`;
+Definition initial_regexp2na_def[nocompute]:
+   initial_regexp2na r = initial (regexp2na r)
+End
 
-val accept_regexp2na_def = zDefine
-  `accept_regexp2na r = accept (regexp2na r)`;
+Definition accept_regexp2na_def[nocompute]:
+   accept_regexp2na r = accept (regexp2na r)
+End
 
-val transition_regexp2na_def = zDefine
-  `transition_regexp2na r = transition (regexp2na r)`;
+Definition transition_regexp2na_def[nocompute]:
+   transition_regexp2na r = transition (regexp2na r)
+End
 
 (*
 val (accept_regexp2na_prefix_def, accept_regexp2na_prefix_ind) = Defn.tprove
@@ -1218,8 +1222,9 @@ val (accept_regexp2na_prefix_def, accept_regexp2na_prefix_ind) = Defn.tprove
 val accept_regexp2na_prefix_ind1 = hd (GCONJUNCTS accept_regexp2na_prefix_ind);
 *)
 
-val exists_transition_regexp2na_def = zDefine
-  `exists_transition_regexp2na r s s' = ?x. transition_regexp2na r s x s'`;
+Definition exists_transition_regexp2na_def[nocompute]:
+   exists_transition_regexp2na r s s' = ?x. transition_regexp2na r s x s'
+End
 
 val transition_regexp2na_fuse_def = Define
   `(transition_regexp2na_fuse a t 0 = F) /\
@@ -1389,13 +1394,14 @@ val transition_regexp2na = store_thm
        Know `!n. ~(n + 1 <= n)` >- DECIDE_TAC
        >> METIS_TAC [regexp2na_trans, regexp2na_acc]]);
 
-val eval_accepts_def = zDefine
-  `(eval_accepts (Prefix r) l =
+Definition eval_accepts_def[nocompute]:
+   (eval_accepts (Prefix r) l =
     EXISTS (accept_regexp2na r) l \/
     let i = initial_regexp2na r in
     dijkstra (exists_transition_regexp2na r) (accept_regexp2na r)
     l (FILTER (\x. ~MEM x l) (interval 0 (SUC (initial_regexp2na r))))) /\
-   (eval_accepts r l = EXISTS (accept_regexp2na r) l)`;
+   (eval_accepts r l = EXISTS (accept_regexp2na r) l)
+End
 
 val eval_accepts = prove
   (``!r l. eval_accepts r l = EXISTS (accept_regexp2na r) l``,
@@ -1431,11 +1437,13 @@ val calc_transitions_def = Define
     calc_transitions r l c s'
     (if EXISTS (\s. transition_regexp2na r s c s') l then s' :: a else a))`;
 
-val eval_transitions_def = zDefine
-  `eval_transitions r l c =
-   calc_transitions r l c (SUC (initial_regexp2na r)) []`;
+Definition eval_transitions_def[nocompute]:
+   eval_transitions r l c =
+   calc_transitions r l c (SUC (initial_regexp2na r)) []
+End
 
-val areport_def = zDefine `areport h b = b`;
+Definition areport_def[nocompute]:   areport h b = b
+End
 
 val astep_def = Define
   `(astep r l [] = eval_accepts r l) /\

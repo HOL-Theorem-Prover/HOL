@@ -772,7 +772,8 @@ val aligned_con_rrx_thms = save_thm("aligned_con_rrx_thms",
 
 (* ------------------------------------------------------------------------- *)
 
-val aligned_bx_def = zDefine `aligned_bx a = (1 >< 0) a <> (0b10w:word2)`;
+Definition aligned_bx_def[nocompute]:   aligned_bx a = (1 >< 0) a <> (0b10w:word2)
+End
 
 val aligned_bx_n2w = save_thm("aligned_bx_n2w",
 let val thm = aligned_bx_def |> Q.SPEC `n2w a` |> GEN_ALL in

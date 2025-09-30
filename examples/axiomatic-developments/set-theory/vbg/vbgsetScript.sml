@@ -524,10 +524,10 @@ val FORMATION = new_axiom(
   ``SET a ∧ (∀x. x ∈ a ⇒ ∃!y. P x y) ∧ (∀x y. x ∈ a ∧ P x y ⇒ SET y) ⇒
     ∃w. SET w ∧ ∀y. y ∈ w ⇔ ∃x. x ∈ a ∧ P x y``);
 
-val bad_def = zDefine`
+Definition bad_def[nocompute]:
   bad f a = SET a ∧ (∀i. SET (f i)) ∧ (f 0 = {a}) ∧
             (∀i x. x ∈ f i ⇒ x ∩ f (i + 1) ≠ {})
-`;
+End
 
 val FOUNDATION2 = store_thm(
   "FOUNDATION2",

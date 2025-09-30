@@ -153,7 +153,8 @@ val NEUTRAL_LIST = prove
 (******************************************************************************
 * Evaluating boolean properties
 ******************************************************************************)
-val B_SEMS_def = zDefine `B_SEMS s b = B_SEM (STATE s) b`;
+Definition B_SEMS_def[nocompute]:   B_SEMS s b = B_SEM (STATE s) b
+End
 
 val EVAL_B_SEMS = store_thm
   ("EVAL_B_SEMS",

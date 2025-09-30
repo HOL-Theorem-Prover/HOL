@@ -902,10 +902,10 @@ val lp = ``lp: num -> num -> α -> num list -> num list -> bool``
 Overload "→"[local] = ``fnpm``
 val _ = temp_set_fixity "→" (Infixr 700)
 
-val relsupp_def = zDefine`
+Definition relsupp_def[nocompute]:
   relsupp A dpm ppm t r <=>
     ∀x. x ∉ A ∧ x ∉ GFV t ==> x ∉ supp (fn_pmact ppm dpm) r
-`;
+End
 
 Definition sidecond_def[nocompute]:
   sidecond dpm ppm A ^lp ^lf ⇔
@@ -927,7 +927,7 @@ Definition sidecond_def[nocompute]:
             (pmact ppm [(x,y)] p)))
 End
 
-val FCB_def = zDefine`
+Definition FCB_def[nocompute]:
   FCB dpm ppm A ^lp ^lf ⇔
   ∀a n v fvs bv r1 r2 ts us p.
      a ∉ A ∧ a ∉ GFVl us ∧ a ∉ supp ppm p ∧
@@ -935,7 +935,8 @@ val FCB_def = zDefine`
      LIST_REL (relsupp A dpm ppm) ts r1 ∧
      LIST_REL (relsupp A dpm ppm) us r2 ∧
      genind lp n (GLAM v fvs bv ts us) ⇒
-     a ∉ supp dpm (^lf a fvs bv r1 r2 ts us p)`
+     a ∉ supp dpm (^lf a fvs bv r1 r2 ts us p)
+End
 
 val some_2_EQ = prove(
   ``(some (x,y). (x' = x) /\ (y' = y)) = SOME(x',y')``,

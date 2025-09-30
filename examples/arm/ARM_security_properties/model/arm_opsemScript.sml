@@ -117,7 +117,7 @@ val IT_advance_def = Define`
            else
              errorT "IT_advance: unpredictable")))`;
 
-val cpsr_write_by_instr_def = zDefine`
+Definition cpsr_write_by_instr_def[nocompute]:
   cpsr_write_by_instr ii (value:word32, bytemask:word4, affect_execstate:bool) =
     let value_mode = (4 >< 0) value in
       (current_mode_is_priviledged ii ||| is_secure ii ||| read_nsacr ii |||
@@ -154,9 +154,10 @@ val cpsr_write_by_instr_def = zDefine`
                                           priviledged
                  then value ' i else b) (encode_psr cpsr)
               in
-                write_cpsr ii (decode_psr cpsr)))`;
+                write_cpsr ii (decode_psr cpsr)))
+End
 
-val spsr_write_by_instr_def = zDefine`
+Definition spsr_write_by_instr_def[nocompute]:
   spsr_write_by_instr ii (value:word32, bytemask:word4) =
     (current_mode_is_user_or_system ii ||| bad_mode ii ((4 >< 0) value)) >>=
     (\(user_or_system,badmode).
@@ -172,7 +173,8 @@ val spsr_write_by_instr_def = zDefine`
                                  i <= 7  /\ bytemask ' 0
                    then value ' i else b) (encode_psr spsr)
               in
-                write_spsr ii (decode_psr spsr)))`;
+                write_spsr ii (decode_psr spsr)))
+End
 
 val integer_zero_divide_trapping_enabled_def = Define`
   integer_zero_divide_trapping_enabled ii =

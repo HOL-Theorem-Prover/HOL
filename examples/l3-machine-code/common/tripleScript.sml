@@ -10,10 +10,11 @@ val TRIPLE_def = Define`
      FST post ==> FST pre /\
      SPEC model (assert (SND pre)) code (assert (SND post))`
 
-val TERM_TAILREC_def = zDefine`
+Definition TERM_TAILREC_def[nocompute]:
    TERM_TAILREC f g (d:'a -> bool # 'b) x =
     let (cond,y) = d (WHILE g f x) in
-      (cond /\ (?n. ~g (FUNPOW f n x)),y)`
+      (cond /\ (?n. ~g (FUNPOW f n x)),y)
+End
 
 val SHORT_TERM_TAILREC_def = Define`
    SHORT_TERM_TAILREC (f:'a -> 'a + (bool # 'b)) =

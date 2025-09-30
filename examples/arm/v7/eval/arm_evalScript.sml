@@ -53,10 +53,11 @@ val ptree_read_halfword_def = Define`
          | NONE => errorT "couldn't fetch an instruction")
      | NONE => errorT "couldn't fetch an instruction"`;
 
-val ptree_arm_next_def = zDefine
-  `ptree_arm_next ii (x:string # Encoding # word4 # ARMinstruction)
+Definition ptree_arm_next_def[nocompute]:
+   ptree_arm_next ii (x:string # Encoding # word4 # ARMinstruction)
      (pc:word32) (cycle:num) : unit M =
-   arm_instr ii (SND x)`;
+   arm_instr ii (SND x)
+End
 
 val attempt_def = Define`
   attempt c f g =
@@ -88,7 +89,8 @@ val ptree_arm_run_def = Define`
 
 (* ------------------------------------------------------------------------ *)
 
-val proc_def = zDefine `proc (n:num) f = \(i,x). if i = n then f x else ARB`;
+Definition proc_def[nocompute]:   proc (n:num) f = \(i,x). if i = n then f x else ARB
+End
 
 val mk_arm_state_def = Define`
   mk_arm_state arch regs psrs md mem =

@@ -29,31 +29,39 @@ val _ = type_abbrev("state",``:string -> 'a variable``);
 
 (* Accessors for grabbing variables by name and expected type. *)
 
-val var_acc_def = zDefine `
-  var_acc nm (f:'a state) = f nm`;
+Definition var_acc_def[nocompute]:
+  var_acc nm (f:'a state) = f nm
+End
 
-val var_nat_def = zDefine `
-  var_nat nm st = case var_acc nm st of VarNat n => n | _ => 0`;
+Definition var_nat_def[nocompute]:
+  var_nat nm st = case var_acc nm st of VarNat n => n | _ => 0
+End
 
-val var_word8_def = zDefine `
-  var_word8 nm st = case var_acc nm st of VarWord8 w => w | _ => 0w`;
+Definition var_word8_def[nocompute]:
+  var_word8 nm st = case var_acc nm st of VarWord8 w => w | _ => 0w
+End
 
-val var_word_def = zDefine `
-  var_word nm st = case var_acc nm st of VarWord w => w | _ => 0w`;
+Definition var_word_def[nocompute]:
+  var_word nm st = case var_acc nm st of VarWord w => w | _ => 0w
+End
 
-val var_mem_def = zDefine `
-  var_mem nm st = case var_acc nm st of VarMem m => m | _ => (\x. 0w)`;
+Definition var_mem_def[nocompute]:
+  var_mem nm st = case var_acc nm st of VarMem m => m | _ => (\x. 0w)
+End
 
-val var_dom_def = zDefine `
-  var_dom nm st = case var_acc nm st of VarDom d => d | _ => {}`;
+Definition var_dom_def[nocompute]:
+  var_dom nm st = case var_acc nm st of VarDom d => d | _ => {}
+End
 
-val var_bool_def = zDefine `
-  var_bool nm st = case var_acc nm st of VarBool b => b | _ => F`;
+Definition var_bool_def[nocompute]:
+  var_bool nm st = case var_acc nm st of VarBool b => b | _ => F
+End
 
 (* The variable updator. *)
 
-val var_upd_def = zDefine `
-  var_upd nm v f = ((nm =+ v) f)`;
+Definition var_upd_def[nocompute]:
+  var_upd nm v f = ((nm =+ v) f)
+End
 
 val _ = zDefine `
   default_state = (\x. VarNone)`;
@@ -78,33 +86,39 @@ val _ = Datatype `graph_function =
 
 (* The definition of execution of a single node. *)
 
-val fold_def = zDefine `
+Definition fold_def[nocompute]:
   (fold f [] s = s) /\
-  (fold f (x::xs) s = fold f xs (f x s))`;
+  (fold f (x::xs) s = fold f xs (f x s))
+End
 
-val save_vals_def = zDefine `
+Definition save_vals_def[nocompute]:
   save_vals vars vals st =
-    fold (\(var, val). var_upd var val) (ZIP (vars,vals)) st`;
+    fold (\(var, val). var_upd var val) (ZIP (vars,vals)) st
+End
 
-val init_vars_def = zDefine `
+Definition init_vars_def[nocompute]:
   init_vars vars accs st =
-    save_vals vars (MAP (\i. i st) accs) default_state`;
+    save_vals vars (MAP (\i. i st) accs) default_state
+End
 
-val return_vars_def = zDefine `
+Definition return_vars_def[nocompute]:
   return_vars inner outer inner_st =
-    save_vals outer (MAP (\v. var_acc v inner_st) inner)`;
+    save_vals outer (MAP (\v. var_acc v inner_st) inner)
+End
 
-val upd_vars_def = zDefine `
+Definition upd_vars_def[nocompute]:
   upd_vars upds st =
-    save_vals (MAP FST upds) (MAP (\(nm, vf). vf st) upds) st`;
+    save_vals (MAP FST upds) (MAP (\(nm, vf). vf st) upds) st
+End
 
 val _ = type_abbrev("stack",``:(next_node # 'a state # string) list``);
 
-val upd_stack_def = zDefine `
+Definition upd_stack_def[nocompute]:
   (upd_stack nn stf (x :: xs) = (nn, stf (FST (SND x)), SND (SND x)) :: xs) /\
-  (upd_stack nn stf [] = []:'a stack)`;
+  (upd_stack nn stf [] = []:'a stack)
+End
 
-val exec_node_def = zDefine `
+Definition exec_node_def[nocompute]:
   (exec_node Gamma st (Basic cont upds) stack =
     {upd_stack cont (K (upd_vars upds st)) stack}) /\
   (exec_node Gamma st (Cond left right cond) stack =
@@ -112,19 +126,21 @@ val exec_node_def = zDefine `
   (exec_node Gamma st (Call cont fname inputs outputs) stack =
     case Gamma fname of NONE => {upd_stack Err I stack}
       | SOME (GraphFunction inps outps graph1 ep) =>
-          {(NextNode ep, init_vars inps inputs st, fname) :: stack})`;
+          {(NextNode ep, init_vars inps inputs st, fname) :: stack})
+End
 
-val exec_node_return_def = zDefine `
+Definition exec_node_return_def[nocompute]:
   (exec_node_return _ _ (Basic _ _) stack = {}) /\
   (exec_node_return _ _ (Cond _ _ _) stack = {}) /\
   (exec_node_return Gamma st (Call cont fname inputs outputs) stack =
      case Gamma fname of NONE => {}
        | SOME (GraphFunction inps outps graph ep) =>
-            {upd_stack cont (return_vars outps outputs st) stack})`;
+            {upd_stack cont (return_vars outps outputs st) stack})
+End
 
 (* The single-step relation on graph states. *)
 
-val exec_graph_step_def = zDefine `
+Definition exec_graph_step_def[nocompute]:
   exec_graph_step Gamma stack stack' =
     case stack of
       (NextNode nn, st, fname) :: _ =>
@@ -139,15 +155,17 @@ val exec_graph_step_def = zDefine `
            | SOME node => stack' IN exec_node_return Gamma st node (TL stack)))
     | [] => F
     | [_] => F
-    | _ => stack' = upd_stack Err I (TL stack)`
+    | _ => stack' = upd_stack Err I (TL stack)
+End
 
 (* Multi-step relations. *)
 
 val _ = zDefine `
   exec_graph Gamma = RTC (exec_graph_step Gamma)`;
 
-val exec_graph_n_def = zDefine `
-  exec_graph_n Gamma n = NRC (exec_graph_step Gamma) n`;
+Definition exec_graph_n_def[nocompute]:
+  exec_graph_n Gamma n = NRC (exec_graph_step Gamma) n
+End
 
 
 (* more abstract representation of graph *)
@@ -597,17 +615,20 @@ val list_inst_trans_def = Define `
      let (t1,ys) = inst_trans t x in
        ys ++ list_inst_trans t1 xs)`;
 
-val graph_def = zDefine `
+Definition graph_def[nocompute]:
   (graph [] = K NONE) /\
-  (graph ((x,y)::xs) = (x =+ SOME y) (graph xs))`;
+  (graph ((x,y)::xs) = (x =+ SOME y) (graph xs))
+End
 
-val func_trans_def = zDefine `
+Definition func_trans_def[nocompute]:
   func_trans (Func name entry l) =
     (name,GraphFunction ret_and_all_names all_names_with_input
-            (graph (list_inst_trans 1 l)) (w2n entry))`;
+            (graph (list_inst_trans 1 l)) (w2n entry))
+End
 
-val list_func_trans_def = zDefine `
-  list_func_trans fs = graph (MAP func_trans fs)`;
+Definition list_func_trans_def[nocompute]:
+  list_func_trans fs = graph (MAP func_trans fs)
+End
 
 (* condition decompiler has to prove *)
 
@@ -1571,25 +1592,29 @@ val word64_def = Define `
           (b5:word8) (b6:word8) (b7:word8) (b8:word8)) :word64 =
     b1 @@ b2 @@ b3 @@ b4 @@ b5 @@ b6 @@ b7 @@ b8`;
 
-val READ32_def = zDefine `
-  READ32 a mem = word32 (mem (a + 3w)) (mem (a + 2w)) (mem (a + 1w)) (mem a)`;
+Definition READ32_def[nocompute]:
+  READ32 a mem = word32 (mem (a + 3w)) (mem (a + 2w)) (mem (a + 1w)) (mem a)
+End
 
-val READ64_def = zDefine `
+Definition READ64_def[nocompute]:
   READ64 a mem =
     word64 (mem (a + 7w)) (mem (a + 6w)) (mem (a + 5w)) (mem (a + 4w))
-           (mem (a + 3w)) (mem (a + 2w)) (mem (a + 1w)) (mem a)`;
+           (mem (a + 3w)) (mem (a + 2w)) (mem (a + 1w)) (mem a)
+End
 
-val READ8_def = zDefine `
-  READ8 a mem = (mem:'a word -> word8) a`;
+Definition READ8_def[nocompute]:
+  READ8 a mem = (mem:'a word -> word8) a
+End
 
-val WRITE32_def = zDefine `
+Definition WRITE32_def[nocompute]:
   WRITE32 (a:word32) (w:word32) (mem:word32->word8) =
                     (a =+ w2w w)
                    ((a + 1w =+ w2w (w >>> 8))
                    ((a + 2w =+ w2w (w >>> 16))
-                   ((a + 3w =+ w2w (w >>> 24)) mem)))`;
+                   ((a + 3w =+ w2w (w >>> 24)) mem)))
+End
 
-val WRITE64_def = zDefine `
+Definition WRITE64_def[nocompute]:
   WRITE64 (a:word64) (w:word64) (mem:word64->word8) =
                     (a =+ w2w w)
                    ((a + 1w =+ w2w (w >>> 8))
@@ -1598,10 +1623,12 @@ val WRITE64_def = zDefine `
                    ((a + 4w =+ w2w (w >>> 32))
                    ((a + 5w =+ w2w (w >>> 40))
                    ((a + 6w =+ w2w (w >>> 48))
-                   ((a + 7w =+ w2w (w >>> 56)) mem)))))))`;
+                   ((a + 7w =+ w2w (w >>> 56)) mem)))))))
+End
 
-val WRITE8_def = zDefine `
-  WRITE8 (a:'a word) (w:word8) (mem:'a word->word8) = (a =+ w) mem`;
+Definition WRITE8_def[nocompute]:
+  WRITE8 (a:'a word) (w:word8) (mem:'a word->word8) = (a =+ w) mem
+End
 
 val READ32_expand64 = store_thm("READ32_expand64",
   ``READ32 (a:word64) m =
@@ -1614,8 +1641,9 @@ val READ32_expand64 = store_thm("READ32_expand64",
 val func_name_def = Define `
   func_name (Func name entry l) = name`;
 
-val func_body_trans_def = zDefine `
-  func_body_trans f = SND (func_trans f)`;
+Definition func_body_trans_def[nocompute]:
+  func_body_trans f = SND (func_trans f)
+End
 
 val list_func_trans_thm = store_thm("list_func_trans_thm",
   ``list_func_trans fs =
@@ -1720,10 +1748,12 @@ val decomp_simp3 = store_thm("decomp_simp3",
 val CALL_TAG_def = Define `
   CALL_TAG (s:string) (is_tail_call:bool) = T`;
 
-val unspecified_pre_def = zDefine `unspecified_pre = F`;
+Definition unspecified_pre_def[nocompute]:   unspecified_pre = F
+End
 
-val SKIP_TAG_def = zDefine `
-  SKIP_TAG (s:string) = unspecified_pre`;
+Definition SKIP_TAG_def[nocompute]:
+  SKIP_TAG (s:string) = unspecified_pre
+End
 
 val SKIP_SPEC_ARM = store_thm("SKIP_SPEC_ARM",
   ``!asm n.
@@ -1783,8 +1813,9 @@ val ALIGNED_Align = store_thm("ALIGNED_Align",
     (ALIGNED (m0$Align (w,4)) = T)``,
   SIMP_TAC std_ss [Align_lemma,ALIGNED_def] \\ blastLib.BBLAST_TAC);
 
-val carry_out_def = zDefine `
-  carry_out w1 w2 c = CARRY_OUT w1 w2 c`;
+Definition carry_out_def[nocompute]:
+  carry_out w1 w2 c = CARRY_OUT w1 w2 c
+End
 
 val OVERFLOW_EQ = store_thm("OVERFLOW_EQ",
   ``OVERFLOW x y c =
@@ -1804,9 +1835,10 @@ val word32_msb_n2w = store_thm("word32_msb_n2w",
   ``word_msb ((n2w n):word32) = ((n DIV 2**31) MOD 2 = 1)``,
   SIMP_TAC (srw_ss()) [word_msb_n2w,BIT_31]);
 
-val count_leading_zero_bits_def = zDefine `
+Definition count_leading_zero_bits_def[nocompute]:
   count_leading_zero_bits (w:'a word) =
-    (n2w (arm$CountLeadingZeroBits w)):'a word`;
+    (n2w (arm$CountLeadingZeroBits w)):'a word
+End
 
 val count_leading_zero_bits_thm =
   store_thm("count_leading_zero_bits_thm",
@@ -1816,9 +1848,10 @@ val count_leading_zero_bits_thm =
     armTheory.CountLeadingZeroBits_def,count_leading_zero_bits_def,
     armTheory.HighestSetBit_def,m0Theory.HighestSetBit_def]);
 
-val word_add_with_carry_def = zDefine `
+Definition word_add_with_carry_def[nocompute]:
   word_add_with_carry (w1:'a word) w2 c =
-    FST (add_with_carry (w1,w2,c))`;
+    FST (add_with_carry (w1,w2,c))
+End
 
 (* graph format helpers *)
 

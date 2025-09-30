@@ -57,7 +57,7 @@ End
 Definition FUb_def[nocompute]: $:+< = $:+
 End
 
-val JOIN_def = zDefine`
+Definition JOIN_def[nocompute]:
   JOIN n x y =
     let lx = LENGTH x and ly = LENGTH y in
     let j = MIN n lx in
@@ -66,7 +66,8 @@ val JOIN_def = zDefine`
                 if i < lx then EL i x else EL (i - j) y
               else
                 if i - j < ly then EL (i - j) y else EL i x)
-         (MAX (j + ly) lx)`;
+         (MAX (j + ly) lx)
+End
 
 (* ------------------------------------------------------------------------- *)
 

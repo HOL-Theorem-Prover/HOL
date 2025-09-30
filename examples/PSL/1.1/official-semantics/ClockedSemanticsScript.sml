@@ -48,9 +48,8 @@ val CLOCK_TICK_def =
 * (see clause for ``S_SEM v (S_REPEAT r)``).
 * Theorem S_SEM gives LRM v1.1 version.
 ******************************************************************************)
-val S_SEM_def =
- zDefine
-  `(S_SEM v c (S_BOOL b) = CLOCK_TICK v c /\ B_SEM (ELEM v (LENGTH v - 1)) b)
+Definition S_SEM_def[nocompute]:
+   (S_SEM v c (S_BOOL b) = CLOCK_TICK v c /\ B_SEM (ELEM v (LENGTH v - 1)) b)
    /\
    (S_SEM v c (S_CAT(r1,r2)) =
      ?v1 v2. (v = v1 <> v2) /\ S_SEM v1 c r1 /\ S_SEM v2 c r2)
@@ -72,7 +71,8 @@ val S_SEM_def =
      ?vlist. (v = CONCAT vlist) /\ EVERY (\v. S_SEM v c r) vlist)
    /\
    (S_SEM v c (S_CLOCK(r,c1)) =
-       S_SEM v c1 r)`;
+       S_SEM v c1 r)
+End
 
 (* Lemma for deriving theorem S_SEM below *)
 val S_SEM_REPEAT =

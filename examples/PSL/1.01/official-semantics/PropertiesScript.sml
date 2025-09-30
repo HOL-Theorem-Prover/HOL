@@ -1416,7 +1416,8 @@ val ABORT_FREE_F_CLOCK_COMP_CORRECT =
 (******************************************************************************
 * Joe Hurd hack: EVAL should never get hold of this definition
 ******************************************************************************)
-val UNINT_def = zDefine `UNINT x = x`;
+Definition UNINT_def[nocompute]:   UNINT x = x
+End
 
 val F_CLOCK_COMP_ELIM =
  store_thm

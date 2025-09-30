@@ -95,11 +95,12 @@ val NextRISCV_cond_branch = Q.store_thm("NextRISCV_cond_branch",
    Sub-word select operation (temporary)
    ------------------------------------------------------------------------ *)
 
-val select_def = zDefine`
+Definition select_def[nocompute]:
   select (p:'a word) (w: word64) =
   let sz = 64 DIV (2 ** dimindex(:'a)) in
   let l = w2n p * sz in
-    (l + sz - 1 >< l) w : 'b word`
+    (l + sz - 1 >< l) w : 'b word
+End
 
 (* ------------------------------------------------------------------------
    Word extend abbreviations

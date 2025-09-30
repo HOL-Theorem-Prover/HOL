@@ -479,9 +479,9 @@ val is_safe_ParseCNJ = Q.store_thm(
     by (first_x_assum irule >> simp[] >> fs[rich_listTheory.IS_SUFFIX_APPEND])>>
   metis_tac[IS_SUFFIX_TRANS, IS_SUFFIX_APPEND_E]);
 
-val F_DISJ_def = zDefine‘
+Definition F_DISJ_def[nocompute]:
   F_DISJ f1 f2 = F_NEG (F_CONJ (F_NEG f1) (F_NEG f2))
-’;
+End
 
 val parseDSJ_def = Define‘
   parseDSJ d top =

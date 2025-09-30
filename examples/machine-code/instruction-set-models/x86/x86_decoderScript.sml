@@ -347,9 +347,10 @@ val x86_syntax_list = `` [
 
   ] ``;
 
-val x86_decode_aux_def = zDefine `
+Definition x86_decode_aux_def[nocompute]:
   x86_decode_aux = (match_list x86_match_step tokenise (x86_syntax o tokenise) o
-                     MAP (\s. let x = STR_SPLIT [#"|"] s in (EL 0 x, EL 1 x))) ^x86_syntax_list`;
+                     MAP (\s. let x = STR_SPLIT [#"|"] s in (EL 0 x, EL 1 x))) ^x86_syntax_list
+End
 
 val x86_decode_prefixes_def = Define `
   x86_decode_prefixes w =

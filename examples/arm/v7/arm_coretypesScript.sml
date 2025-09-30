@@ -138,11 +138,13 @@ val _ = Hol_datatype `iiid = <| proc : num |>`;
 val _ = overload_on("UInt", ``\w. int_of_num (w2n w)``);
 val _ = overload_on("SInt", ``w2i``);
 
-val align_def = zDefine
-  `align (w : 'a word, n : num) : 'a word = n2w (n * (w2n w DIV n))`;
+Definition align_def[nocompute]:
+   align (w : 'a word, n : num) : 'a word = n2w (n * (w2n w DIV n))
+End
 
-val aligned_def = zDefine`
-  aligned (w : 'a word, n : num) = (w = align(w,n))`;
+Definition aligned_def[nocompute]:
+  aligned (w : 'a word, n : num) = (w = align(w,n))
+End
 
 val count_leading_zeroes_def = Define`
   count_leading_zeroes (w : 'a word) =
@@ -208,34 +210,38 @@ val unsigned_sat_q_def = Define`
 val signed_sat_def   = Define `signed_sat   = FST o signed_sat_q`;
 val unsigned_sat_def = Define `unsigned_sat = FST o unsigned_sat_q`;
 
-val LSL_C_def = zDefine`
+Definition LSL_C_def[nocompute]:
   LSL_C (x: 'a word, shift:num) =
     if shift = 0 then
       ARB
     else
       let extended_x = w2n x * (2 ** shift) in
-        (x << shift, BIT (dimindex(:'a)) extended_x)`;
+        (x << shift, BIT (dimindex(:'a)) extended_x)
+End
 
-val LSR_C_def = zDefine`
+Definition LSR_C_def[nocompute]:
   LSR_C (x: 'a word, shift:num) =
     if shift = 0 then
       ARB
     else
-      (x >>> shift, BIT (shift - 1) (w2n x))`;
+      (x >>> shift, BIT (shift - 1) (w2n x))
+End
 
-val ASR_C_def = zDefine`
+Definition ASR_C_def[nocompute]:
   ASR_C (x: 'a word, shift:num) =
     if shift = 0 then
       ARB
     else
-      (x >> shift, x ' (MIN (dimindex(:'a) - 1) (shift - 1)))`;
+      (x >> shift, x ' (MIN (dimindex(:'a) - 1) (shift - 1)))
+End
 
-val ROR_C_def = zDefine`
+Definition ROR_C_def[nocompute]:
   ROR_C (x: 'a word, shift:num) =
     if shift = 0 then
       ARB
     else let result = x #>> shift in
-      (result, result ' (dimindex(:'a) - 1))`;
+      (result, result ' (dimindex(:'a) - 1))
+End
 
 val RRX_C_def = Define`
   RRX_C (x: 'a word, carry_in:bool) =
@@ -252,12 +258,13 @@ val RRX_def = Define`
 
 (* ------------------------------------------------------------------------ *)
 
-val ITAdvance_def = zDefine`
+Definition ITAdvance_def[nocompute]:
   ITAdvance (IT:word8) =
     if (2 >< 0) IT = 0b000w:word3 then
       0b00000000w
     else
-      ((7 '' 5) IT || w2w (((4 >< 0) IT) : word5 << 1))`;
+      ((7 '' 5) IT || w2w (((4 >< 0) IT) : word5 << 1))
+End
 
 val ITAdvance_n2w = save_thm("ITAdvance_n2w",
    ITAdvance_def
