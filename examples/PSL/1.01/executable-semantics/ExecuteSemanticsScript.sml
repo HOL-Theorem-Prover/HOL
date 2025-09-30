@@ -57,8 +57,6 @@ val Know = Q_TAC KNOW_TAC;
 val Suff = Q_TAC SUFF_TAC;
 val REVERSE = Tactical.REVERSE;
 
-val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
-
 val _ = ParseExtras.temp_loose_equality()
 
 (*
@@ -2064,7 +2062,7 @@ val checker = store_thm
 * Formula version of an operator due to Dana Fisman
 ******************************************************************************)
 val F_PREF_def =
- pureDefine `F_PREF w f = ?w'. UF_SEM (CAT(w,w')) f`;
+ zDefine `F_PREF w f = ?w'. UF_SEM (CAT(w,w')) f`;
 
 val EXISTS_RES_to =
  store_thm
@@ -2081,7 +2079,7 @@ val EXISTS_RES_to =
        THEN DECIDE_TAC]);
 
 val ABORT_AUX_def =
- pureDefine
+ zDefine
   `ABORT_AUX w f b n =
     ?(j::n to LENGTH w).
       UF_SEM (RESTN w j) (F_BOOL b) /\ F_PREF (SEL w (0,j - 1)) f`;

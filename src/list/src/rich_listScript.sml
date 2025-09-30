@@ -61,7 +61,7 @@ val SCANR = Define`
    (SCANR f (e: 'b) [] = [e]) /\
    (SCANR f e (CONS x l) = CONS (f x (HD (SCANR f e l))) (SCANR f e l))`;
 
-val SPLITP = Lib.with_flag (computeLib.auto_import_definitions, false) Define`
+val SPLITP = zDefine`
    (SPLITP P [] = ([],[])) /\
    (SPLITP P (CONS x l) =
       if P x then

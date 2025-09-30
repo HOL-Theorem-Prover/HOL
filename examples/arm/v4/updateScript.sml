@@ -35,31 +35,29 @@ val _ = set_fixity ":+<" (Infix(NONASSOC, 320));
 val _ = set_fixity "|:>" (Infix(NONASSOC, 320));
 val _ = set_fixity "|:<" (Infix(NONASSOC, 320));
 
-val _ = computeLib.auto_import_definitions := false;
-
-Definition LUPDATE_def:
+Definition LUPDATE_def[nocompute]:
   $|: a l = \m b.
       if a <=+ b /\ w2n b - w2n a < LENGTH l then
         EL (w2n b - w2n a) l
       else m b
 End
 
-Definition Ua_def: $=+> = UPDATE
+Definition Ua_def[nocompute]: $=+> = UPDATE
 End
-Definition Ub_def: $=+< = UPDATE
-End
-
-Definition LUa_def: $|:> = $|:
-End
-Definition LUb_def: $|:< = $|:
+Definition Ub_def[nocompute]: $=+< = UPDATE
 End
 
-Definition FUa_def: $:+> = $:+
+Definition LUa_def[nocompute]: $|:> = $|:
 End
-Definition FUb_def: $:+< = $:+
+Definition LUb_def[nocompute]: $|:< = $|:
 End
 
-val JOIN_def = Define`
+Definition FUa_def[nocompute]: $:+> = $:+
+End
+Definition FUb_def[nocompute]: $:+< = $:+
+End
+
+val JOIN_def = zDefine`
   JOIN n x y =
     let lx = LENGTH x and ly = LENGTH y in
     let j = MIN n lx in
@@ -69,8 +67,6 @@ val JOIN_def = Define`
               else
                 if i - j < ly then EL (i - j) y else EL i x)
          (MAX (j + ly) lx)`;
-
-val _ = computeLib.auto_import_definitions := true;
 
 (* ------------------------------------------------------------------------- *)
 
@@ -240,4 +236,3 @@ val LIST_UPDATE_SORT_RULE2 = save_thm("LIST_UPDATE_SORT_RULE2",
                (b |:> x) ((a |:> y) m)``);
 
 (* ------------------------------------------------------------------------- *)
-

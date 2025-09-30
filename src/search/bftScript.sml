@@ -37,9 +37,7 @@ val Rel_def =   (* map arg. tuples into a pair of numbers for termination *)
    `Rel(G,f,seen,fringe,acc) =
         (CARD(Parents G DIFF (LIST_TO_SET seen)), LENGTH fringe)`;
 
-val () = computeLib.auto_import_definitions := false
-
-Definition BFT_def0[induction=BFT_ind0]:
+Definition BFT_def0[nocompute,induction=BFT_ind0]:
   BFT G f seen fringe acc =
     if FINITE (Parents G)
       then case fringe
@@ -227,4 +225,3 @@ Proof
  FULL_SIMP_TAC set_ss [REACH_def,REACH_EXCLUDE,SPECIFICATION,REACH_LIST_def] THEN
  METIS_TAC[LIST_TO_SET_DEF]
 QED
-

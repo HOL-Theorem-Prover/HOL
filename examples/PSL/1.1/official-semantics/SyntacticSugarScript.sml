@@ -29,11 +29,6 @@ Libs
 val term_of_int = numLib.term_of_int;
 
 (******************************************************************************
-* pureDefine doesn't export definitions to theCompset (for EVAL).
-******************************************************************************)
-val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
-
-(******************************************************************************
 * Additional boolean operators
 ******************************************************************************)
 
@@ -42,21 +37,21 @@ val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
 ******************************************************************************)
 
 val B_OR_def =
- pureDefine `B_OR(b1,b2) = B_NOT(B_AND(B_NOT b1, B_NOT b2))`;
+ zDefine `B_OR(b1,b2) = B_NOT(B_AND(B_NOT b1, B_NOT b2))`;
 
 (******************************************************************************
 * Definition of implication
 ******************************************************************************)
 
 val B_IMP_def =
- pureDefine `B_IMP(b1,b2) = B_OR(B_NOT b1, b2)`;
+ zDefine `B_IMP(b1,b2) = B_OR(B_NOT b1, b2)`;
 
 (******************************************************************************
 * Definition of logical equivalence
 ******************************************************************************)
 
 val B_IFF_def =
- pureDefine `B_IFF(b1,b2) = B_AND(B_IMP(b1, b2),B_IMP(b2, b1))`;
+ zDefine `B_IFF(b1,b2) = B_AND(B_IMP(b1, b2),B_IMP(b2, b1))`;
 
 (******************************************************************************
 * Additional SERE operators

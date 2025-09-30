@@ -52,8 +52,6 @@ end;
 
 val Introduce = Q_TAC INTRODUCE_TAC;
 
-val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
-
 fun GCONJUNCTS th =
   let
     val tm = concl th
@@ -414,7 +412,7 @@ val dijkstra1 = store_thm
 (* (But it doesn't seem to have the desired effect, so we don't use it.)     *)
 (*---------------------------------------------------------------------------*)
 
-val drop_def = pureDefine
+val drop_def = zDefine
   `(drop 0 l = l) /\
    (drop (SUC i) l = if NULL l then [] else drop i (TL l))`;
 
@@ -1188,13 +1186,13 @@ val kleene_regexp2dfa = store_thm
 (* A version of the automata matcher that is easy to execute.                *)
 (*---------------------------------------------------------------------------*)
 
-val initial_regexp2na_def = pureDefine
+val initial_regexp2na_def = zDefine
   `initial_regexp2na r = initial (regexp2na r)`;
 
-val accept_regexp2na_def = pureDefine
+val accept_regexp2na_def = zDefine
   `accept_regexp2na r = accept (regexp2na r)`;
 
-val transition_regexp2na_def = pureDefine
+val transition_regexp2na_def = zDefine
   `transition_regexp2na r = transition (regexp2na r)`;
 
 (*
@@ -1220,7 +1218,7 @@ val (accept_regexp2na_prefix_def, accept_regexp2na_prefix_ind) = Defn.tprove
 val accept_regexp2na_prefix_ind1 = hd (GCONJUNCTS accept_regexp2na_prefix_ind);
 *)
 
-val exists_transition_regexp2na_def = pureDefine
+val exists_transition_regexp2na_def = zDefine
   `exists_transition_regexp2na r s s' = ?x. transition_regexp2na r s x s'`;
 
 val transition_regexp2na_fuse_def = Define
@@ -1391,7 +1389,7 @@ val transition_regexp2na = store_thm
        Know `!n. ~(n + 1 <= n)` >- DECIDE_TAC
        >> METIS_TAC [regexp2na_trans, regexp2na_acc]]);
 
-val eval_accepts_def = pureDefine
+val eval_accepts_def = zDefine
   `(eval_accepts (Prefix r) l =
     EXISTS (accept_regexp2na r) l \/
     let i = initial_regexp2na r in
@@ -1433,11 +1431,11 @@ val calc_transitions_def = Define
     calc_transitions r l c s'
     (if EXISTS (\s. transition_regexp2na r s c s') l then s' :: a else a))`;
 
-val eval_transitions_def = pureDefine
+val eval_transitions_def = zDefine
   `eval_transitions r l c =
    calc_transitions r l c (SUC (initial_regexp2na r)) []`;
 
-val areport_def = pureDefine `areport h b = b`;
+val areport_def = zDefine `areport h b = b`;
 
 val astep_def = Define
   `(astep r l [] = eval_accepts r l) /\
@@ -1547,4 +1545,3 @@ val acheck = store_thm
    >> RW_TAC arith_ss
       [LENGTH, FIRSTN, BUTFIRSTN, da_step_regexp2na, areport_def, eval_accepts,
        accept_regexp2na_def, eval_transitions_def, initial_regexp2na_def]);
-

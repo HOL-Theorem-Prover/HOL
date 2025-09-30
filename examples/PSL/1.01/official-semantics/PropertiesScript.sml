@@ -1414,14 +1414,9 @@ val ABORT_FREE_F_CLOCK_COMP_CORRECT =
              ABORT_FREE_INIT_CLOCK_COMP_EQUIV]);
 
 (******************************************************************************
-* Version of Define that doesn't add to the EVAL compset
-******************************************************************************)
-val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
-
-(******************************************************************************
 * Joe Hurd hack: EVAL should never get hold of this definition
 ******************************************************************************)
-val UNINT_def = pureDefine `UNINT x = x`;
+val UNINT_def = zDefine `UNINT x = x`;
 
 val F_CLOCK_COMP_ELIM =
  store_thm

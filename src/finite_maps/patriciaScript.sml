@@ -27,9 +27,7 @@ val _ = set_fixity "\\\\" (Infixl 600);
 
 val _ = Datatype `ptree = Empty | Leaf num 'a | Branch num num ptree ptree`;
 
-val _ = computeLib.auto_import_definitions := false;
-
-Definition BRANCHING_BIT_def:
+Definition BRANCHING_BIT_def[nocompute]:
   BRANCHING_BIT p0 p1 =
     if (ODD p0 = EVEN p1) \/ (p0 = p1) then 0
     else SUC (BRANCHING_BIT (DIV2 p0) (DIV2 p1))
@@ -42,14 +40,14 @@ Termination
          ONCE_REWRITE_RULE [MULT_COMM] (CONJ ADD_DIV_ADD_DIV MULT_DIV)]
 End
 
-val PEEK_def = Define`
+val PEEK_def = zDefine`
   (PEEK Empty k = NONE) /\
   (PEEK (Leaf j d) k = if k = j then SOME d else NONE) /\
   (PEEK (Branch p m l r) k = PEEK (if BIT m k then l else r) k)`;
 
 val _ = overload_on ("'", Term`$PEEK`);
 
-val JOIN_def = Define`
+val JOIN_def = zDefine`
   JOIN (p0,t0,p1,t1) =
     let m = BRANCHING_BIT p0 p1 in
       if BIT m p0 then
@@ -57,7 +55,7 @@ val JOIN_def = Define`
       else
         Branch (MOD_2EXP m p0) m t1 t0`;
 
-val ADD_def = Define`
+val ADD_def = zDefine`
   (ADD Empty (k,e) = Leaf k e) /\
   (ADD (Leaf j d) (k,e) = if j = k then Leaf k e
                            else JOIN (k, Leaf k e, j, Leaf j d)) /\
@@ -72,12 +70,12 @@ val ADD_def = Define`
 
 val _ = overload_on ("|+", Term`$ADD`);
 
-val BRANCH_def = Define`
+val BRANCH_def = zDefine`
   (BRANCH (p,m,Empty,t) = t) /\
   (BRANCH (p,m,t,Empty) = t) /\
   (BRANCH (p,m,t0,t1) = Branch p m t0 t1)`;
 
-val REMOVE_def = Define`
+val REMOVE_def = zDefine`
   (REMOVE Empty k = Empty) /\
   (REMOVE (Leaf j d) k = if j = k then Empty else Leaf j d) /\
   (REMOVE (Branch p m l r) k =
@@ -91,43 +89,42 @@ val REMOVE_def = Define`
 
 val _ = overload_on ("\\\\", Term`$REMOVE`);
 
-val TRAVERSE_AUX_def =
-  with_flag (computeLib.auto_import_definitions, true) Define`
+val TRAVERSE_AUX_def = Define`
     (TRAVERSE_AUX Empty a = a) /\
     (TRAVERSE_AUX (Leaf k d) a = k::a) /\
     (TRAVERSE_AUX (Branch p m l r) a = TRAVERSE_AUX l (TRAVERSE_AUX r a))`;
 
-val TRAVERSE_def = Define`
+val TRAVERSE_def = zDefine`
   (TRAVERSE Empty = []) /\
   (TRAVERSE (Leaf j d) = [j]) /\
   (TRAVERSE (Branch p m l r) = TRAVERSE l ++ TRAVERSE r)`;
 
-val KEYS_def = with_flag (computeLib.auto_import_definitions, true) Define`
+val KEYS_def = Define`
   KEYS t = QSORT $< (TRAVERSE t)`;
 
-val TRANSFORM_def = Define`
+val TRANSFORM_def = zDefine`
   (TRANSFORM f Empty = Empty) /\
   (TRANSFORM f (Leaf j d) = Leaf j (f d)) /\
   (TRANSFORM f (Branch p m l r) = Branch p m (TRANSFORM f l) (TRANSFORM f r))`;
 
-val EVERY_LEAF_def = Define`
+val EVERY_LEAF_def = zDefine`
   (EVERY_LEAF P Empty = T) /\
   (EVERY_LEAF P (Leaf j d) = P j d) /\
   (EVERY_LEAF P (Branch p m l r) = EVERY_LEAF P l /\ EVERY_LEAF P r)`;
 
-val EXISTS_LEAF_def = Define`
+val EXISTS_LEAF_def = zDefine`
   (EXISTS_LEAF P Empty = F) /\
   (EXISTS_LEAF P (Leaf j d) = P j d) /\
   (EXISTS_LEAF P (Branch p m l r) = EXISTS_LEAF P l \/ EXISTS_LEAF P r)`;
 
-val SIZE_def = Define `SIZE t = LENGTH (TRAVERSE t)`;
+val SIZE_def = zDefine `SIZE t = LENGTH (TRAVERSE t)`;
 
-val DEPTH_def = Define`
+val DEPTH_def = zDefine`
   (DEPTH Empty = 0) /\
   (DEPTH (Leaf j d) = 1) /\
   (DEPTH (Branch p m l r) = 1 + MAX (DEPTH l) (DEPTH r))`;
 
-val IS_PTREE_def = Define`
+val IS_PTREE_def = zDefine`
   (IS_PTREE Empty = T) /\
   (IS_PTREE (Leaf k d) = T) /\
   (IS_PTREE (Branch p m l r) =
@@ -147,21 +144,19 @@ val _ = set_fixity "UNION_PTREE" (Infixl 500);
 
 val _ = type_abbrev("ptreeset", ``:unit ptree``);
 
-val IN_PTREE_def = Define `$IN_PTREE n t = IS_SOME (PEEK (t:unit ptree) n)`;
-val INSERT_PTREE_def = Define `$INSERT_PTREE n t = ADD t (n,())`;
+val IN_PTREE_def = zDefine `$IN_PTREE n t = IS_SOME (PEEK (t:unit ptree) n)`;
+val INSERT_PTREE_def = zDefine `$INSERT_PTREE n t = ADD t (n,())`;
 
 val _ = add_listform {leftdelim = [TOK "<{"], rightdelim = [TOK "}>"],
                       separator = [TOK ";", BreakSpace(1,0)],
                       cons = "INSERT_PTREE", nilstr = "Empty",
                       block_info = (PP.INCONSISTENT, 0)};
 
-val PTREE_OF_NUMSET_def = Define`
+val PTREE_OF_NUMSET_def = zDefine`
   PTREE_OF_NUMSET t (s:num set) =
   FOLDL (combin$C $INSERT_PTREE) t (SET_TO_LIST s)`;
 
 val _ = overload_on ("|++", Term`$PTREE_OF_NUMSET`);
-
-val _ = computeLib.auto_import_definitions := true;
 
 val NUMSET_OF_PTREE_def = Define`
   NUMSET_OF_PTREE (t:unit ptree) = LIST_TO_SET (TRAVERSE t)`;

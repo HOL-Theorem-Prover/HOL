@@ -231,8 +231,6 @@ val WLE_wobound = store_thm(
   rw[wobound_def, wellorder_rrestrict, destWO_mkWO] >>
   rw[rrestrict_def, iseg_def] >> metis_tac[]);
 
-val localDefine = with_flag (computeLib.auto_import_definitions, false) Define
-
 val wellorder_cases = store_thm(
   "wellorder_cases",
   ``!w. ?s. wellorder s /\ (w = mkWO s)``,

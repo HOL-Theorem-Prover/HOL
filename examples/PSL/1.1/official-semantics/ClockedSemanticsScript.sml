@@ -31,11 +31,6 @@ Ancestors
 val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************
-* pureDefine doesn't export definitions to theCompset (for EVAL).
-******************************************************************************)
-val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
-
-(******************************************************************************
 * CLOCK_TICK v c formalises "v is a clock tick of c"
 ******************************************************************************)
 val CLOCK_TICK_def =
@@ -54,7 +49,7 @@ val CLOCK_TICK_def =
 * Theorem S_SEM gives LRM v1.1 version.
 ******************************************************************************)
 val S_SEM_def =
- pureDefine
+ zDefine
   `(S_SEM v c (S_BOOL b) = CLOCK_TICK v c /\ B_SEM (ELEM v (LENGTH v - 1)) b)
    /\
    (S_SEM v c (S_CAT(r1,r2)) =

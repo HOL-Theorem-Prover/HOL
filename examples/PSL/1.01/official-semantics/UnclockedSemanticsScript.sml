@@ -39,11 +39,6 @@ Libs
 val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************
-* pureDefine doesn't export definitions to theCompset (for EVAL).
-******************************************************************************)
-val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
-
-(******************************************************************************
 * B_SEM l b means "l |= b" where l is a letter, i.e. l : 'prop -> bool
 ******************************************************************************)
 val B_SEM_def =
@@ -77,7 +72,7 @@ val B_SEM =
 * where w is a word, i.e. a list of letters: w : ('prop -> bool)list
 ******************************************************************************)
 val US_SEM_def =
- pureDefine
+ zDefine
   `(US_SEM w (S_BOOL b) = (LENGTH w = 1) /\ B_SEM (ELEM w 0) b)
    /\
    (US_SEM w (S_CAT(r1,r2)) =
