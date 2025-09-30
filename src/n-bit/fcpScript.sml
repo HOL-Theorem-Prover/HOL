@@ -59,8 +59,9 @@ val FINITE_IMAGE_IMAGE = Q.prove(
  * Dimension of such a type, and indexing over it.                           *
  * ------------------------------------------------------------------------- *)
 
-val dimindex_def = zDefine`
-   dimindex(:'a) = if FINITE (UNIV:'a->bool) then CARD (UNIV:'a->bool) else 1`
+Definition dimindex_def[nocompute]:
+   dimindex(:'a) = if FINITE (UNIV:'a->bool) then CARD (UNIV:'a->bool) else 1
+End
 
 val NOT_FINITE_IMP_dimindex_1 = Q.store_thm("NOT_FINITE_IMP_dimindex_1",
    `~FINITE univ(:'a) ==> (dimindex(:'a) = 1)`,
@@ -108,8 +109,9 @@ val DIMINDEX_FINITE_IMAGE = Q.prove(
    THEN SIMP_TAC std_ss [FINITE_FINITE_IMAGE, HAS_SIZE]
    )
 
-val finite_index = zDefine`
-   finite_index = @f:num->'a. !x:'a. ?!n. n < dimindex(:'a) /\ (f n = x)`
+Definition finite_index[nocompute]:
+   finite_index = @f:num->'a. !x:'a. ?!n. n < dimindex(:'a) /\ (f n = x)
+End
 
 val FINITE_INDEX_WORKS_FINITE = Q.prove(
    `FINITE (UNIV:'n->bool) ==>
@@ -339,11 +341,13 @@ val finite_sum = Q.store_thm("finite_sum",
 
 val () = Hol_datatype `bit0 = BIT0A of 'a | BIT0B of 'a`
 
-val IS_BIT0A_def = zDefine`
-   (IS_BIT0A (BIT0A x) = T) /\ (IS_BIT0A (BIT0B x) = F)`
+Definition IS_BIT0A_def[nocompute]:
+   (IS_BIT0A (BIT0A x) = T) /\ (IS_BIT0A (BIT0B x) = F)
+End
 
-val IS_BIT0B_def = zDefine`
-   (IS_BIT0B (BIT0A x) = F) /\ (IS_BIT0B (BIT0B x) = T)`
+Definition IS_BIT0B_def[nocompute]:
+   (IS_BIT0B (BIT0A x) = F) /\ (IS_BIT0B (BIT0B x) = T)
+End
 
 val IS_BIT0A_OR_IS_BIT0B = Q.prove(
    `!x. IS_BIT0A x \/ IS_BIT0B x`,
@@ -450,17 +454,20 @@ val finite_bit0 = Q.store_thm("finite_bit0",
 
 val () = Hol_datatype `bit1 = BIT1A of 'a | BIT1B of 'a | BIT1C`
 
-val IS_BIT1A_def = zDefine`
+Definition IS_BIT1A_def[nocompute]:
    (IS_BIT1A (BIT1A x) = T) /\ (IS_BIT1A (BIT1B x) = F) /\
-   (IS_BIT1A (BIT1C) = F)`
+   (IS_BIT1A (BIT1C) = F)
+End
 
-val IS_BIT1B_def = zDefine`
+Definition IS_BIT1B_def[nocompute]:
    (IS_BIT1B (BIT1A x) = F) /\ (IS_BIT1B (BIT1B x) = T) /\
-   (IS_BIT1B (BIT1C) = F)`
+   (IS_BIT1B (BIT1C) = F)
+End
 
-val IS_BIT1C_def = zDefine`
+Definition IS_BIT1C_def[nocompute]:
    (IS_BIT1C (BIT1A x) = F) /\ (IS_BIT1C (BIT1B x) = F) /\
-   (IS_BIT1C (BIT1C) = T)`
+   (IS_BIT1C (BIT1C) = T)
+End
 
 val IS_BIT1A_OR_IS_BIT1B_OR_IS_BIT1C = Q.prove(
    `!x. IS_BIT1A x \/ IS_BIT1B x \/ IS_BIT1C x`,
@@ -678,11 +685,13 @@ Definition FCP_MAP_def:
    FCP_MAP f (v:'a ** 'c) = (FCP i. f (v ' i)):'b ** 'c
 End
 
-val FCP_EXISTS_def = zDefine`
-   FCP_EXISTS P (v:'b ** 'a) = ?i. i < dimindex (:'a) /\ P (v ' i)`
+Definition FCP_EXISTS_def[nocompute]:
+   FCP_EXISTS P (v:'b ** 'a) = ?i. i < dimindex (:'a) /\ P (v ' i)
+End
 
-val FCP_EVERY_def = zDefine`
-   FCP_EVERY P (v:'b ** 'a) = !i. dimindex (:'a) <= i \/ P (v ' i)`
+Definition FCP_EVERY_def[nocompute]:
+   FCP_EVERY P (v:'b ** 'a) = !i. dimindex (:'a) <= i \/ P (v ' i)
+End
 
 Definition FCP_CONCAT_def :
    FCP_CONCAT (a:'a ** 'b) (b:'a ** 'c) =

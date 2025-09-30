@@ -11791,13 +11791,13 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Integer Modulo Ring *)
-val ZN_def = zDefine`
+Definition ZN_def[nocompute]:
   ZN n : num ring =
     <| carrier := count n;
            sum := add_mod n;
           prod := times_mod n
      |>
-`;
+End
 (*
 Note: add_mod is defined in groupInstancesTheory.
 times_mod is defined in monoidInstancesTheory.
@@ -15312,7 +15312,7 @@ val principal_ideal_equal_principal_ideal = store_thm(
 (* The Trivial Integral Domain = GF(2) = {|0|, |1|}.                         *)
 (* ------------------------------------------------------------------------- *)
 
-val trivial_integal_domain_def = zDefine`
+Definition trivial_integal_domain_def[nocompute]:
   (trivial_integal_domain e0 e1) : 'a ring =
    <| carrier := {e0; e1};
       sum := <| carrier := {e0; e1};
@@ -15326,7 +15326,7 @@ val trivial_integal_domain_def = zDefine`
                                 else if y = e0 then e0
                                 else e1) |>
     |>
-`;
+End
 
 (* Theorem: {|0|, |1|} is indeed a integral domain. *)
 (* Proof: by definition, the integral domain tables are:
@@ -15361,13 +15361,13 @@ val trivial_integral_domain = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Multiplication in Modulo of prime p *)
-val ZP_def = zDefine`
+Definition ZP_def[nocompute]:
   ZP p :num ring =
    <| carrier := count p;
           sum := add_mod p;
          prod := times_mod p
     |>
-`;
+End
 (*
 - type_of ``ZP p``;
 > val it = ``:num ring`` : hol_type

@@ -290,9 +290,9 @@ val coprimes_def = zDefine `
 *)
 (* Note: j <= n ensures that coprimes n is finite. *)
 (* Note: 0 < j is only to ensure  coprimes 1 = {1} *)
-val coprimes_def = zDefine `
+Definition coprimes_def[nocompute]:
    coprimes n = {j | j IN (natural n) /\ coprime j n}
-`;
+End
 (* use zDefine as this is not computationally effective. *)
 
 (* Theorem: j IN coprimes n <=> 0 < j /\ j <= n /\ coprime j n *)

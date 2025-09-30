@@ -82,21 +82,24 @@ Cases_on `x` THEN Cases_on `x'` THEN (
    A row matches an input value i with a variable
    binding v, iff the following
    predicate holds. *)
-val PMATCH_ROW_COND_def = zDefine `PMATCH_ROW_COND pat guard inp v =
-  (pat v = inp) /\ (guard v)`
+Definition PMATCH_ROW_COND_def[nocompute]:   PMATCH_ROW_COND pat guard inp v =
+  (pat v = inp) /\ (guard v)
+End
 
 (* With this we can easily define the semantics of a row *)
-val PMATCH_ROW_def = zDefine `PMATCH_ROW pat guard rhs i =
-  (OPTION_MAP rhs (some v. PMATCH_ROW_COND pat guard i v))`
+Definition PMATCH_ROW_def[nocompute]:   PMATCH_ROW pat guard rhs i =
+  (OPTION_MAP rhs (some v. PMATCH_ROW_COND pat guard i v))
+End
 
 
 (* We defined semantics of single rows. Let's extend
    it to multiple ones, i.e. full pattern matches now. *)
 Definition PMATCH_INCOMPLETE_def:   PMATCH_INCOMPLETE = ARB
 End
-val PMATCH_def = zDefine `
+Definition PMATCH_def[nocompute]:
   (PMATCH v [] = PMATCH_INCOMPLETE) /\
-  (PMATCH v (r::rs) = option_CASE (r v) (PMATCH v rs) I)`
+  (PMATCH v (r::rs) = option_CASE (r v) (PMATCH v rs) I)
+End
 
 
 (***************************************************)

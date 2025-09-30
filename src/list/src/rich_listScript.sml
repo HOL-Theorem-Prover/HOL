@@ -64,13 +64,14 @@ Definition SCANR:
    (SCANR f e (CONS x l) = CONS (f x (HD (SCANR f e l))) (SCANR f e l))
 End
 
-val SPLITP = zDefine`
+Definition SPLITP[nocompute]:
    (SPLITP P [] = ([],[])) /\
    (SPLITP P (CONS x l) =
       if P x then
          ([], CONS x l)
       else
-         (CONS x (FST (SPLITP P l)), SND (SPLITP P l)))`;
+         (CONS x (FST (SPLITP P l)), SND (SPLITP P l)))
+End
 
 Definition SPLITP_AUX_def:
    (SPLITP_AUX acc P [] = (acc,[])) /\
@@ -162,9 +163,10 @@ Definition LIST_ELEM_COUNT_DEF:
    LIST_ELEM_COUNT e l = LENGTH (FILTER (\x. x = e) l)
 End
 
-val COUNT_LIST_def = zDefine`
+Definition COUNT_LIST_def[nocompute]:
    (COUNT_LIST 0 = []) /\
-   (COUNT_LIST (SUC n) = 0::MAP SUC (COUNT_LIST n))`;
+   (COUNT_LIST (SUC n) = 0::MAP SUC (COUNT_LIST n))
+End
 
 Definition COUNT_LIST_AUX_def:
    (COUNT_LIST_AUX 0 l = l) /\
@@ -213,8 +215,9 @@ QED
 
 (* ------------------------------------------------------------------------ *)
 
-val LASTN_def = zDefine `
-  LASTN n xs = REVERSE (TAKE n (REVERSE xs))`;
+Definition LASTN_def[nocompute]:
+  LASTN n xs = REVERSE (TAKE n (REVERSE xs))
+End
 
 val LASTN = store_thm("LASTN",
   ``(!l. LASTN 0 l = []) /\
@@ -229,8 +232,9 @@ Proof
     SNOC_INDUCT_TAC >> REWRITE_TAC [LASTN]
 QED
 
-val BUTLASTN_def = zDefine `
-  BUTLASTN n xs = REVERSE (DROP n (REVERSE xs))`;
+Definition BUTLASTN_def[nocompute]:
+  BUTLASTN n xs = REVERSE (DROP n (REVERSE xs))
+End
 
 val BUTLASTN = store_thm("BUTLASTN",
   ``(!l. BUTLASTN 0 l = l) /\

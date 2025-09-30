@@ -1000,14 +1000,14 @@ the Monoid Invertibles will be shown to be a Group.
 (* ------------------------------------------------------------------------- *)
 
 (* Define order = optional LEAST period for an element x in Group g *)
-val period_def = zDefine`
+Definition period_def[nocompute]:
   period (g:'a monoid) (x:'a) k <=> 0 < k /\ (x ** k = #e)
-`;
-val order_def = zDefine`
+End
+Definition order_def[nocompute]:
   order (g:'a monoid) (x:'a) = case OLEAST k. period g x k of
                                  NONE => 0
                                | SOME k => k
-`;
+End
 (* use zDefine here since these are not computationally effective. *)
 
 (* Expand order_def with period_def. *)
@@ -4237,13 +4237,13 @@ val plus_mod_finite_abelian_monoid = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Multiplicative Modulo Monoid *)
-val times_mod_def = zDefine`
+Definition times_mod_def[nocompute]:
   times_mod n :num monoid =
    <| carrier := count n;
            id := if n = 1 then 0 else 1;
            op := (\i j. (i * j) MOD n)
     |>
-`;
+End
 (* This monoid is taken as the multiplicative monoid of ZN ring later. *)
 (* Use of zDefine to avoid incorporating into computeLib, by default. *)
 (* Evaluation is given later in times_mod_eval. *)

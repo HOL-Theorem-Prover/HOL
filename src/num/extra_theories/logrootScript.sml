@@ -670,15 +670,17 @@ Proof
 QED
 
 
-val SQRTd_def = zDefine `SQRTd n = (ROOT 2 n, n - (ROOT 2 n * ROOT 2 n))`;
+Definition SQRTd_def[nocompute]:   SQRTd n = (ROOT 2 n, n - (ROOT 2 n * ROOT 2 n))
+End
 
-val iSQRTd_def = zDefine`
+Definition iSQRTd_def[nocompute]:
    iSQRTd (x,n) =
       let p = SQRTd n in
       let next = 4 * SND p + x in
       let ndiff = 4 * FST p + 1 in
         if next < ndiff then (2 * FST p,next)
-        else (2 * FST p + 1,next - ndiff)`;
+        else (2 * FST p + 1,next - ndiff)
+End
 
 val sqrt_zero = Q.prove(`ROOT 2 0 = 0`, RW_TAC arith_ss [ROOT_COMPUTE]);
 val sqrt_compute = SIMP_RULE arith_ss [] (SPEC ``2n`` ROOT_COMPUTE);

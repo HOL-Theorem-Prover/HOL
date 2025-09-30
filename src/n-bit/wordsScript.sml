@@ -19,8 +19,10 @@ val fcp_ss = std_ss ++ fcpLib.FCP_ss
 val WL = ``dimindex (:'a)``
 val HB = ``^WL - 1``
 
-val dimword_def  = zDefine `dimword (:'a) = 2 ** ^WL`
-val INT_MIN_def  = zDefine `INT_MIN (:'a) = 2 ** ^HB`
+Definition dimword_def[nocompute]:    dimword (:'a) = 2 ** ^WL
+End
+Definition INT_MIN_def[nocompute]:    INT_MIN (:'a) = 2 ** ^HB
+End
 Definition UINT_MAX_def:    UINT_MAX (:'a) = dimword(:'a) - 1
 End
 Definition INT_MAX_def:     INT_MAX (:'a) = INT_MIN(:'a) - 1
@@ -45,21 +47,25 @@ fun add_TeX_tokens n =
     Domain transforming maps : definitions
    ------------------------------------------------------------------------- *)
 
-val w2n_def = zDefine`
-  w2n (w:'a word) = SUM ^WL (\i. SBIT (w ' i) i)`
+Definition w2n_def[nocompute]:
+  w2n (w:'a word) = SUM ^WL (\i. SBIT (w ' i) i)
+End
 
-val n2w_def = zDefine`
-  (n2w:num->'a word) n = FCP i. BIT i n`
+Definition n2w_def[nocompute]:
+  (n2w:num->'a word) n = FCP i. BIT i n
+End
 
 val _ = add_ML_dependency "wordspp"
 val _ = Parse.add_user_printer ("wordspp.words_printer", ``words$n2w x : 'a word``)
 
-val w2w_def = zDefine`
-  (w2w:'a word -> 'b word) w = n2w (w2n w)`
+Definition w2w_def[nocompute]:
+  (w2w:'a word -> 'b word) w = n2w (w2n w)
+End
 
-val sw2sw_def = zDefine`
+Definition sw2sw_def[nocompute]:
   (sw2sw:'a word -> 'b word) w =
-    n2w (SIGN_EXTEND (dimindex(:'a)) (dimindex(:'b)) (w2n w))`
+    n2w (SIGN_EXTEND (dimindex(:'a)) (dimindex(:'b)) (w2n w))
+End
 
 val _ = add_bare_numeral_form (#"w", SOME "n2w")
 
@@ -124,32 +130,39 @@ Definition word_H_def:
   word_H = (n2w:num->'a word) (INT_MAX(:'a))
 End
 
-val word_1comp_def = zDefine`
-  word_1comp (w:'a word) = (FCP i. ~(w ' i)):'a word`
+Definition word_1comp_def[nocompute]:
+  word_1comp (w:'a word) = (FCP i. ~(w ' i)):'a word
+End
 
-val word_and_def = zDefine`
+Definition word_and_def[nocompute]:
   word_and (v:'a word) (w:'a word) =
-    (FCP i. (v ' i) /\ (w ' i)):'a word`
+    (FCP i. (v ' i) /\ (w ' i)):'a word
+End
 
-val word_or_def = zDefine`
+Definition word_or_def[nocompute]:
   word_or (v:'a word) (w:'a word) =
-    (FCP i. (v ' i) \/ (w ' i)):'a word`
+    (FCP i. (v ' i) \/ (w ' i)):'a word
+End
 
-val word_xor_def = zDefine`
+Definition word_xor_def[nocompute]:
   word_xor (v:'a word) (w:'a word) =
-    (FCP i. ~((v ' i) = (w ' i))):'a word`
+    (FCP i. ~((v ' i) = (w ' i))):'a word
+End
 
-val word_nand_def = zDefine`
+Definition word_nand_def[nocompute]:
   word_nand (v:'a word) (w:'a word) =
-    (FCP i. ~((v ' i) /\ (w ' i))):'a word`
+    (FCP i. ~((v ' i) /\ (w ' i))):'a word
+End
 
-val word_nor_def = zDefine`
+Definition word_nor_def[nocompute]:
   word_nor (v:'a word) (w:'a word) =
-    (FCP i. ~((v ' i) \/ (w ' i))):'a word`
+    (FCP i. ~((v ' i) \/ (w ' i))):'a word
+End
 
-val word_xnor_def = zDefine`
+Definition word_xnor_def[nocompute]:
   word_xnor (v:'a word) (w:'a word) =
-    (FCP i. (v ' i) = (w ' i)):'a word`
+    (FCP i. (v ' i) = (w ' i)):'a word
+End
 
 
 val () = add_infixes 490 HOLgrammars.RIGHT
@@ -185,19 +198,22 @@ val () = add_TeX_tokens 1
     Reduction operations : definitions
    ------------------------------------------------------------------------- *)
 
-val word_reduce_def = zDefine`
+Definition word_reduce_def[nocompute]:
   word_reduce f (w : 'a word) =
     $FCP (K
       (let l = GENLIST (\i. w ' (dimindex(:'a) - 1 - i)) (dimindex(:'a)) in
-         FOLDL f (HD l) (TL l))) : 1 word`
+         FOLDL f (HD l) (TL l))) : 1 word
+End
 
 (* equals 1w iff all bits are equal *)
 Definition word_compare_def:
   word_compare (a:'a word) b = if a = b then 1w else 0w :1 word
 End
 
-val reduce_and_def  = zDefine `reduce_and  = word_reduce (/\)`
-val reduce_or_def   = zDefine `reduce_or   = word_reduce (\/)`
+Definition reduce_and_def[nocompute]:    reduce_and  = word_reduce (/\)
+End
+Definition reduce_or_def[nocompute]:     reduce_or   = word_reduce (\/)
+End
 Definition reduce_xor_def:     reduce_xor  = word_reduce (<>)
 End
 Definition reduce_nand_def:    reduce_nand = word_reduce (\a b. ~(a /\ b))
@@ -211,37 +227,46 @@ End
     Bit field operations : definitions
    ------------------------------------------------------------------------- *)
 
-val word_lsb_def = zDefine`
-  word_lsb (w:'a word) = w ' 0`
+Definition word_lsb_def[nocompute]:
+  word_lsb (w:'a word) = w ' 0
+End
 
-val word_msb_def = zDefine`
-  word_msb (w:'a word) = w ' ^HB`
+Definition word_msb_def[nocompute]:
+  word_msb (w:'a word) = w ' ^HB
+End
 
-val word_slice_def = zDefine`
+Definition word_slice_def[nocompute]:
   word_slice h l = \w:'a word.
-    (FCP i. l <= i /\ i <= MIN h ^HB /\ w ' i):'a word`
+    (FCP i. l <= i /\ i <= MIN h ^HB /\ w ' i):'a word
+End
 
-val word_bits_def = zDefine`
+Definition word_bits_def[nocompute]:
   word_bits h l = \w:'a word.
-    (FCP i. i + l <= MIN h ^HB /\ w ' (i + l)):'a word`
+    (FCP i. i + l <= MIN h ^HB /\ w ' (i + l)):'a word
+End
 
-val word_signed_bits_def = zDefine`
+Definition word_signed_bits_def[nocompute]:
   word_signed_bits h l = \w:'a word.
-    (FCP i. l <= MIN h ^HB /\ w ' (MIN (i + l) (MIN h ^HB))):'a word`
+    (FCP i. l <= MIN h ^HB /\ w ' (MIN (i + l) (MIN h ^HB))):'a word
+End
 
-val word_extract_def = zDefine`
-  word_extract h l = w2w o word_bits h l`
+Definition word_extract_def[nocompute]:
+  word_extract h l = w2w o word_bits h l
+End
 
-val word_bit_def = zDefine`
-  word_bit b (w:'a word) <=> b <= ^HB /\ w ' b`
+Definition word_bit_def[nocompute]:
+  word_bit b (w:'a word) <=> b <= ^HB /\ w ' b
+End
 
-val word_reverse_def = zDefine`
-  word_reverse (w:'a word) = (FCP i. w ' (^HB - i)):'a word`
+Definition word_reverse_def[nocompute]:
+  word_reverse (w:'a word) = (FCP i. w ' (^HB - i)):'a word
+End
 
-val word_modify_def = zDefine`
-  word_modify f (w:'a word) = (FCP i. f i (w ' i)):'a word`
+Definition word_modify_def[nocompute]:
+  word_modify f (w:'a word) = (FCP i. f i (w ' i)):'a word
+End
 
-val BIT_SET_def = zDefine`
+Definition BIT_SET_def[nocompute]:
   BIT_SET i n =
     if n = 0 then
       {}
@@ -249,7 +274,8 @@ val BIT_SET_def = zDefine`
       if ODD n then
         i INSERT (BIT_SET (SUC i) (n DIV 2))
       else
-        BIT_SET (SUC i) (n DIV 2)`
+        BIT_SET (SUC i) (n DIV 2)
+End
 
 Definition bit_field_insert_def:
   bit_field_insert h l a =
@@ -284,20 +310,25 @@ val _ = TeX_notation {hol = "><", TeX = ("\\HOLTokenExtract{}", 2)}
     Word arithmetic: definitions
    ------------------------------------------------------------------------- *)
 
-val word_2comp_def = zDefine`
-  word_2comp (w:'a word) = (n2w:num->'a word) (dimword(:'a) - w2n w)`
+Definition word_2comp_def[nocompute]:
+  word_2comp (w:'a word) = (n2w:num->'a word) (dimword(:'a) - w2n w)
+End
 
-val word_add_def = zDefine`
-  word_add (v:'a word) (w:'a word) = (n2w:num->'a word) (w2n v + w2n w)`
+Definition word_add_def[nocompute]:
+  word_add (v:'a word) (w:'a word) = (n2w:num->'a word) (w2n v + w2n w)
+End
 
-val word_mul_def = zDefine`
-  word_mul (v:'a word) (w:'a word) = (n2w:num->'a word) (w2n v * w2n w)`
+Definition word_mul_def[nocompute]:
+  word_mul (v:'a word) (w:'a word) = (n2w:num->'a word) (w2n v * w2n w)
+End
 
-val word_exp_def = zDefine`
-  word_exp (v:'a word) (w:'a word) = (n2w:num->'a word) (w2n v ** w2n w)`
+Definition word_exp_def[nocompute]:
+  word_exp (v:'a word) (w:'a word) = (n2w:num->'a word) (w2n v ** w2n w)
+End
 
-val word_log2_def = zDefine`
-  word_log2 (w:'a word) = (n2w (LOG2 (w2n w)):'a word)`
+Definition word_log2_def[nocompute]:
+  word_log2 (w:'a word) = (n2w (LOG2 (w2n w)):'a word)
+End
 
 Definition add_with_carry_def:
   add_with_carry (x:'a word, y:'a word, carry_in:bool) =
@@ -378,29 +409,37 @@ Definition nzcv_def:
      ~(word_msb a = word_msb b) /\ ~(word_msb r = word_msb a))
 End
 
-val word_lt_def = zDefine`
-  word_lt a b = let (n,z,c,v) = nzcv a b in ~(n = v)`
+Definition word_lt_def[nocompute]:
+  word_lt a b = let (n,z,c,v) = nzcv a b in ~(n = v)
+End
 
-val word_gt_def = zDefine`
-  word_gt a b = let (n,z,c,v) = nzcv a b in ~z /\ (n = v)`
+Definition word_gt_def[nocompute]:
+  word_gt a b = let (n,z,c,v) = nzcv a b in ~z /\ (n = v)
+End
 
-val word_le_def = zDefine`
-  word_le a b = let (n,z,c,v) = nzcv a b in z \/ ~(n = v)`
+Definition word_le_def[nocompute]:
+  word_le a b = let (n,z,c,v) = nzcv a b in z \/ ~(n = v)
+End
 
-val word_ge_def = zDefine`
-  word_ge a b = let (n,z,c,v) = nzcv a b in n = v`
+Definition word_ge_def[nocompute]:
+  word_ge a b = let (n,z,c,v) = nzcv a b in n = v
+End
 
-val word_ls_def = zDefine`
-  word_ls a b = let (n,z,c,v) = nzcv a b in ~c \/ z`
+Definition word_ls_def[nocompute]:
+  word_ls a b = let (n,z,c,v) = nzcv a b in ~c \/ z
+End
 
-val word_hi_def = zDefine`
-  word_hi a b = let (n,z,c,v) = nzcv a b in c /\ ~z`
+Definition word_hi_def[nocompute]:
+  word_hi a b = let (n,z,c,v) = nzcv a b in c /\ ~z
+End
 
-val word_lo_def = zDefine`
-  word_lo a b = let (n,z,c,v) = nzcv a b in ~c`
+Definition word_lo_def[nocompute]:
+  word_lo a b = let (n,z,c,v) = nzcv a b in ~c
+End
 
-val word_hs_def = zDefine`
-  word_hs a b = let (n,z,c,v) = nzcv a b in c`
+Definition word_hs_def[nocompute]:
+  word_hs a b = let (n,z,c,v) = nzcv a b in c
+End
 
 Definition word_min_def:
   word_min a b = if word_lo a b then a else b
@@ -447,33 +486,39 @@ val () = add_TeX_tokens 1
     Shifts : definitions
    ------------------------------------------------------------------------- *)
 
-val word_lsl_def = zDefine`
+Definition word_lsl_def[nocompute]:
   word_lsl (w:'a word) n =
-    (FCP i. i < ^WL /\ n <= i /\ w ' (i - n)):'a word`
+    (FCP i. i < ^WL /\ n <= i /\ w ' (i - n)):'a word
+End
 
-val word_lsr_def = zDefine`
+Definition word_lsr_def[nocompute]:
   word_lsr (w:'a word) n =
-    (FCP i. i + n < ^WL /\ w ' (i + n)):'a word`
+    (FCP i. i + n < ^WL /\ w ' (i + n)):'a word
+End
 
-val word_asr_def = zDefine`
+Definition word_asr_def[nocompute]:
   word_asr (w:'a word) n =
     (FCP i. if ^WL <= i + n then
               word_msb w
             else
-              w ' (i + n)):'a word`
+              w ' (i + n)):'a word
+End
 
-val word_ror_def = zDefine`
+Definition word_ror_def[nocompute]:
   word_ror (w:'a word) n =
-    (FCP i. w ' ((i + n) MOD ^WL)):'a word`
+    (FCP i. w ' ((i + n) MOD ^WL)):'a word
+End
 
-val word_rol_def = zDefine`
+Definition word_rol_def[nocompute]:
   word_rol (w:'a word) n =
-    word_ror w (^WL - n MOD ^WL)`
+    word_ror w (^WL - n MOD ^WL)
+End
 
-val word_rrx_def = zDefine`
+Definition word_rrx_def[nocompute]:
   word_rrx(c, w:'a word) =
     (word_lsb w,
-     (FCP i. if i = ^HB then c else (word_lsr w 1) ' i):'a word)`
+     (FCP i. if i = ^HB then c else (word_lsr w 1) ' i):'a word)
+End
 
 Definition word_lsl_bv_def:
   word_lsl_bv (w:'a word) (n:'a word) = word_lsl w (w2n n)
@@ -535,12 +580,14 @@ Definition word_join_def:
     in  (cv << (dimindex (:'b))) || cw
 End
 
-val word_concat_def = zDefine`
-  word_concat (v:'a word) (w:'b word) = w2w (word_join v w)`
+Definition word_concat_def[nocompute]:
+  word_concat (v:'a word) (w:'b word) = w2w (word_join v w)
+End
 
-val word_replicate_def = zDefine`
+Definition word_replicate_def[nocompute]:
   word_replicate n (w : 'a word) =
-    FCP i. i < n * dimindex(:'a) /\ w ' (i MOD dimindex(:'a))`
+    FCP i. i < n * dimindex(:'a) /\ w ' (i MOD dimindex(:'a))
+End
 
 Definition concat_word_list_def:
   (concat_word_list ([]:'a word list) = 0w) /\
@@ -558,8 +605,9 @@ Definition saturate_n2w_def:
     if dimword(:'a) <= n then word_T else n2w n
 End
 
-val saturate_w2w_def = zDefine`
-  saturate_w2w (w: 'a word) = saturate_n2w (w2n w)`
+Definition saturate_w2w_def[nocompute]:
+  saturate_w2w (w: 'a word) = saturate_n2w (w2n w)
+End
 
 Definition saturate_add_def:
   saturate_add (a: 'a word) (b: 'a word) =

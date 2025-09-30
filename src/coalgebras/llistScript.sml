@@ -357,8 +357,9 @@ val LNTH_EQ = store_thm(
 (* which was proved independently                                            *)
 (*---------------------------------------------------------------------------*)
 
-val LUNFOLD_def = zDefine `LUNFOLD f z = llist_abs (\n. OPTION_MAP SND
-  (FUNPOW (\m. OPTION_BIND m (UNCURRY (K o f))) n (f z)))` ;
+Definition LUNFOLD_def[nocompute]:   LUNFOLD f z = llist_abs (\n. OPTION_MAP SND
+  (FUNPOW (\m. OPTION_BIND m (UNCURRY (K o f))) n (f z)))
+End
 
 (* would be somewhat ok to add this presentation to compset if you'd
    applied set_skip to option_CASE, as in:
@@ -2723,11 +2724,11 @@ QED
     LGENLIST : (num -> 'a) -> num option -> 'a llist
    ---------------------------------------------------------------------- *)
 
-val LGENLIST_def = zDefine`
+Definition LGENLIST_def[nocompute]:
   (LGENLIST f NONE = LUNFOLD (\n. SOME (n + 1, f n)) 0) /\
   (LGENLIST f (SOME lim) = LUNFOLD (\n. if n < lim then SOME (n + 1, f n)
                                         else NONE) 0)
-`;
+End
 
 val LHD_LGENLIST = Q.store_thm(
   "LHD_LGENLIST[simp,compute]",

@@ -40,22 +40,24 @@ Termination
          ONCE_REWRITE_RULE [MULT_COMM] (CONJ ADD_DIV_ADD_DIV MULT_DIV)]
 End
 
-val PEEK_def = zDefine`
+Definition PEEK_def[nocompute]:
   (PEEK Empty k = NONE) /\
   (PEEK (Leaf j d) k = if k = j then SOME d else NONE) /\
-  (PEEK (Branch p m l r) k = PEEK (if BIT m k then l else r) k)`;
+  (PEEK (Branch p m l r) k = PEEK (if BIT m k then l else r) k)
+End
 
 val _ = overload_on ("'", Term`$PEEK`);
 
-val JOIN_def = zDefine`
+Definition JOIN_def[nocompute]:
   JOIN (p0,t0,p1,t1) =
     let m = BRANCHING_BIT p0 p1 in
       if BIT m p0 then
         Branch (MOD_2EXP m p0) m t0 t1
       else
-        Branch (MOD_2EXP m p0) m t1 t0`;
+        Branch (MOD_2EXP m p0) m t1 t0
+End
 
-val ADD_def = zDefine`
+Definition ADD_def[nocompute]:
   (ADD Empty (k,e) = Leaf k e) /\
   (ADD (Leaf j d) (k,e) = if j = k then Leaf k e
                            else JOIN (k, Leaf k e, j, Leaf j d)) /\
@@ -66,16 +68,18 @@ val ADD_def = zDefine`
               else
                 Branch p m l (ADD r (k,e))
          else
-           JOIN (k, Leaf k e, p, Branch p m l r))`;
+           JOIN (k, Leaf k e, p, Branch p m l r))
+End
 
 val _ = overload_on ("|+", Term`$ADD`);
 
-val BRANCH_def = zDefine`
+Definition BRANCH_def[nocompute]:
   (BRANCH (p,m,Empty,t) = t) /\
   (BRANCH (p,m,t,Empty) = t) /\
-  (BRANCH (p,m,t0,t1) = Branch p m t0 t1)`;
+  (BRANCH (p,m,t0,t1) = Branch p m t0 t1)
+End
 
-val REMOVE_def = zDefine`
+Definition REMOVE_def[nocompute]:
   (REMOVE Empty k = Empty) /\
   (REMOVE (Leaf j d) k = if j = k then Empty else Leaf j d) /\
   (REMOVE (Branch p m l r) k =
@@ -85,7 +89,8 @@ val REMOVE_def = zDefine`
            else
              BRANCH (p, m, l, REMOVE r k)
          else
-           Branch p m l r)`;
+           Branch p m l r)
+End
 
 val _ = overload_on ("\\\\", Term`$REMOVE`);
 
@@ -95,45 +100,52 @@ Definition TRAVERSE_AUX_def:
     (TRAVERSE_AUX (Branch p m l r) a = TRAVERSE_AUX l (TRAVERSE_AUX r a))
 End
 
-val TRAVERSE_def = zDefine`
+Definition TRAVERSE_def[nocompute]:
   (TRAVERSE Empty = []) /\
   (TRAVERSE (Leaf j d) = [j]) /\
-  (TRAVERSE (Branch p m l r) = TRAVERSE l ++ TRAVERSE r)`;
+  (TRAVERSE (Branch p m l r) = TRAVERSE l ++ TRAVERSE r)
+End
 
 Definition KEYS_def:
   KEYS t = QSORT $< (TRAVERSE t)
 End
 
-val TRANSFORM_def = zDefine`
+Definition TRANSFORM_def[nocompute]:
   (TRANSFORM f Empty = Empty) /\
   (TRANSFORM f (Leaf j d) = Leaf j (f d)) /\
-  (TRANSFORM f (Branch p m l r) = Branch p m (TRANSFORM f l) (TRANSFORM f r))`;
+  (TRANSFORM f (Branch p m l r) = Branch p m (TRANSFORM f l) (TRANSFORM f r))
+End
 
-val EVERY_LEAF_def = zDefine`
+Definition EVERY_LEAF_def[nocompute]:
   (EVERY_LEAF P Empty = T) /\
   (EVERY_LEAF P (Leaf j d) = P j d) /\
-  (EVERY_LEAF P (Branch p m l r) = EVERY_LEAF P l /\ EVERY_LEAF P r)`;
+  (EVERY_LEAF P (Branch p m l r) = EVERY_LEAF P l /\ EVERY_LEAF P r)
+End
 
-val EXISTS_LEAF_def = zDefine`
+Definition EXISTS_LEAF_def[nocompute]:
   (EXISTS_LEAF P Empty = F) /\
   (EXISTS_LEAF P (Leaf j d) = P j d) /\
-  (EXISTS_LEAF P (Branch p m l r) = EXISTS_LEAF P l \/ EXISTS_LEAF P r)`;
+  (EXISTS_LEAF P (Branch p m l r) = EXISTS_LEAF P l \/ EXISTS_LEAF P r)
+End
 
-val SIZE_def = zDefine `SIZE t = LENGTH (TRAVERSE t)`;
+Definition SIZE_def[nocompute]:   SIZE t = LENGTH (TRAVERSE t)
+End
 
-val DEPTH_def = zDefine`
+Definition DEPTH_def[nocompute]:
   (DEPTH Empty = 0) /\
   (DEPTH (Leaf j d) = 1) /\
-  (DEPTH (Branch p m l r) = 1 + MAX (DEPTH l) (DEPTH r))`;
+  (DEPTH (Branch p m l r) = 1 + MAX (DEPTH l) (DEPTH r))
+End
 
-val IS_PTREE_def = zDefine`
+Definition IS_PTREE_def[nocompute]:
   (IS_PTREE Empty = T) /\
   (IS_PTREE (Leaf k d) = T) /\
   (IS_PTREE (Branch p m l r) =
      p < 2 ** m /\ IS_PTREE l /\ IS_PTREE r /\
      ~(l = Empty) /\ ~(r = Empty) /\
      EVERY_LEAF (\k d. MOD_2EXP_EQ m k p /\ BIT m k) l /\
-     EVERY_LEAF (\k d. MOD_2EXP_EQ m k p /\ ~BIT m k) r)`;
+     EVERY_LEAF (\k d. MOD_2EXP_EQ m k p /\ ~BIT m k) r)
+End
 
 (* ------------------------------------------------------------------------- *)
 
@@ -146,17 +158,20 @@ val _ = set_fixity "UNION_PTREE" (Infixl 500);
 
 val _ = type_abbrev("ptreeset", ``:unit ptree``);
 
-val IN_PTREE_def = zDefine `$IN_PTREE n t = IS_SOME (PEEK (t:unit ptree) n)`;
-val INSERT_PTREE_def = zDefine `$INSERT_PTREE n t = ADD t (n,())`;
+Definition IN_PTREE_def[nocompute]:   $IN_PTREE n t = IS_SOME (PEEK (t:unit ptree) n)
+End
+Definition INSERT_PTREE_def[nocompute]:   $INSERT_PTREE n t = ADD t (n,())
+End
 
 val _ = add_listform {leftdelim = [TOK "<{"], rightdelim = [TOK "}>"],
                       separator = [TOK ";", BreakSpace(1,0)],
                       cons = "INSERT_PTREE", nilstr = "Empty",
                       block_info = (PP.INCONSISTENT, 0)};
 
-val PTREE_OF_NUMSET_def = zDefine`
+Definition PTREE_OF_NUMSET_def[nocompute]:
   PTREE_OF_NUMSET t (s:num set) =
-  FOLDL (combin$C $INSERT_PTREE) t (SET_TO_LIST s)`;
+  FOLDL (combin$C $INSERT_PTREE) t (SET_TO_LIST s)
+End
 
 val _ = overload_on ("|++", Term`$PTREE_OF_NUMSET`);
 

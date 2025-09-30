@@ -80,7 +80,8 @@ val _ = type_abbrev("word_ptreeset", ``:('a, unit) word_ptree``);
 Definition THE_PTREE_def:    THE_PTREE (Word_ptree a t) = t
 End
 
-val SOME_PTREE_def = zDefine `SOME_PTREE t = Word_ptree (K ()) t`;
+Definition SOME_PTREE_def[nocompute]:   SOME_PTREE t = Word_ptree (K ()) t
+End
 
 Definition WordEmpty_def:    WordEmpty = SOME_PTREE Empty
 End

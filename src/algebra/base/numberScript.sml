@@ -9043,7 +9043,8 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of residues = nonzero remainders *)
-val residue_def = zDefine `residue n = { i | (0 < i) /\ (i < n) }`;
+Definition residue_def[nocompute]:   residue n = { i | (0 < i) /\ (i < n) }
+End
 (* use zDefine as this is not computationally effective. *)
 
 (* Theorem: j IN residue n ==> 0 < j /\ j < n *)
@@ -9394,9 +9395,9 @@ val natural_by_upto = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Euler's totient function *)
-val Euler_def = zDefine`
+Definition Euler_def[nocompute]:
   Euler n = { i | 0 < i /\ i < n /\ (gcd n i = 1) }
-`;
+End
 (* that is, Euler n = { i | i in (residue n) /\ (gcd n i = 1) }; *)
 (* use zDefine as this is not computationally effective. *)
 

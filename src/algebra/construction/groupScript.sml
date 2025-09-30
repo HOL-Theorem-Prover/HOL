@@ -1027,24 +1027,24 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Include an element z (zero) for the carrier, usually putting group to monoid. *)
-val including_def = zDefine`
+Definition including_def[nocompute]:
    including (g:'a group) (z:'a) :'a monoid =
       <| carrier := G UNION {z};
               op := g.op;
               id := g.id
        |>
-`;
+End
 val _ = set_fixity "including" (Infixl 600); (* like division / *)
 (* > val including_def = |- !g z. including g z = <|carrier := G UNION {z}; op := $*; id := #e|> : thm *)
 
 (* Exclude an element z (zero) from the carrier, usually putting monoid to group. *)
-val excluding_def = zDefine`
+Definition excluding_def[nocompute]:
    excluding (g:'a monoid) (z:'a) :'a group =
       <| carrier := G DIFF {z};
               op := g.op;
               id := g.id
        |>
-`;
+End
 val _ = set_fixity "excluding" (Infixl 600); (* like division / *)
 (* > val excluding_def = |- !g z. excluding g z = <|carrier := G DIFF {z}; op := $*; id := #e|> : thm *)
 (*
@@ -8797,14 +8797,14 @@ E*n -- Multiplication Modulo n, of order phi(n).
 (* ------------------------------------------------------------------------- *)
 
 (* Define (Zadd n) = Addition Modulo n Group *)
-val Zadd_def = zDefine`
+Definition Zadd_def[nocompute]:
   Zadd n : num group =
     <| carrier := count n;
             id := 0;
        (*  inv := (\i. (n - i) MOD n);  -- so that inv 0 = 0 *)
             op := (\i j. (i + j) MOD n)
      |>
-`;
+End
 (* Use of zDefine to avoid incorporating into computeLib, by default. *)
 (* This is the same as add_mod below, using {i | i < n} as carrier. *)
 
@@ -9009,13 +9009,14 @@ val _ = computeLib.set_skip (computeLib.the_compset) ``combin$FAIL`` (SOME 0);
 (* ------------------------------------------------------------------------- *)
 
 (* Define Multiplicative Modulo p Group *)
-val Zstar_def = zDefine`
+Definition Zstar_def[nocompute]:
   Zstar p : num group =
    <| carrier := residue p;
            id := 1;
        (* inv := MOD_MULT_INV p; *)
            op := (\i j. (i * j) MOD p)
-    |>`;
+    |>
+End
 (* Use of zDefine to avoid incorporating into computeLib, by default. *)
 (* This is the same as mult_mod below, using { i | i <> 0 /\ i < p } as carrier. *)
 
@@ -9232,13 +9233,14 @@ val _ = export_rewrites ["Zstar_eval", "Zstar_inv"];
 (* ------------------------------------------------------------------------- *)
 
 (* Define Multiplicative Modulo n Group *)
-val Estar_def = zDefine`
+Definition Estar_def[nocompute]:
   Estar n : num group =
    <| carrier := Euler n;
            id := 1;
       (*  inv := GCD_MOD_MULT_INV n; *)
            op := (\i j. (i * j) MOD n)
-    |>`;
+    |>
+End
 
 (*
 - type_of ``Estar n``;
@@ -9566,13 +9568,14 @@ val it = |- (Estar 10).inv 3 = 7: thm
 (* ------------------------------------------------------------------------- *)
 
 (* The trivial group: {#e} *)
-val trivial_group_def = zDefine`
+Definition trivial_group_def[nocompute]:
   trivial_group e : 'a group =
    <| carrier := {e};
            id := e;
        (* inv := (\x. e);  *)
            op := (\x y. e)
-    |>`;
+    |>
+End
 
 (*
 - type_of ``trivial_group e``;
@@ -9611,7 +9614,7 @@ val trivial_group = store_thm(
    = {e, f e, f f e, f f f e, ... }
 *)
 
-val fn_cyclic_group_def = zDefine`
+Definition fn_cyclic_group_def[nocompute]:
     fn_cyclic_group e f : 'a group =
    <| carrier := { x | ?n. FUNPOW f n e = x };
            id := e; (* Note: next comment must be in one line *)
@@ -9619,7 +9622,8 @@ val fn_cyclic_group_def = zDefine`
            op := (\x y. @z. !xi yi.
                    (FUNPOW f xi e = x) /\ (FUNPOW f yi e = y) ==>
                    (FUNPOW f (xi + yi) e = z))
-    |>`;
+    |>
+End
 
 (*
 - type_of ``fn_cyclic_group e f``;
@@ -9836,14 +9840,14 @@ val fn_cyclic_group_finite_group = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Additive Modulo Group *)
-val add_mod_def = zDefine`
+Definition add_mod_def[nocompute]:
   add_mod n : num group =
    <| carrier := { i | i < n };
            id := 0;
        (* inv := (\i. (n - i) MOD n); *)
            op := (\i j. (i + j) MOD n)
     |>
-`;
+End
 (* This group, with modulus n, is taken as the additive group in ZN ring later. *)
 (* Evaluation is given later in add_mod_eval and add_mod_inv. *)
 
@@ -10061,14 +10065,14 @@ val mult_mod_def = zDefine
 *)
 
 (* This version relies on MOD_MULT_INV, using LINEAR_GCD. *)
-val mult_mod_def = zDefine`
+Definition mult_mod_def[nocompute]:
   mult_mod p : num group =
    <| carrier := { i | i <> 0 /\ i < p };
            id := 1;
        (* inv := (\i. MOD_MULT_INV p i); *)
            op := (\i j. (i * j) MOD p)
     |>
-`;
+End
 (* This group, with prime modulus, is not used in ZN ring later. *)
 (* Evaluation is given later in mult_mod_eval and mult_mod_inv. *)
 
@@ -12354,9 +12358,9 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define reach to relate two action points a and y IN X *)
-val reach_def = zDefine`
+Definition reach_def[nocompute]:
     reach f (g:'a group) (x:'b) (y:'b) = ?a. a IN G /\ f a x = y
-`;
+End
 (* Note: use zDefine as this is not effective. *)
 
 (* Overload reach relation *)
@@ -12825,9 +12829,9 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Stabilizer of action: for x IN X, the group elements that fixes x. *)
-val stabilizer_def = zDefine`
+Definition stabilizer_def[nocompute]:
     stabilizer f (g:'a group) (x:'b) = {a | a IN G /\ f a x = x }
-`;
+End
 (* Note: use zDefine as this is not effective for computation. *)
 (*
 > stabilizer_def |> ISPEC ``$o``;
@@ -13500,10 +13504,10 @@ CARD Target = SUM CARD (orbits)
 *)
 
 (* Fixed points of action: those points fixed by all group elements. *)
-val fixed_points_def = zDefine`
+Definition fixed_points_def[nocompute]:
    fixed_points f (g:'a group) (X:'b -> bool) =
       {x | x IN X /\ !a. a IN G ==> f a x = x }
-`;
+End
 (* Note: use zDefine as this is not effective for computation. *)
 (*
 > fixed_points_def |> ISPEC ``$o``;
@@ -13645,12 +13649,12 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define singleton and non-singleton orbits *)
-val sing_orbits_def = zDefine`
+Definition sing_orbits_def[nocompute]:
     sing_orbits f (g:'a group) (X:'b -> bool) = { e | e IN (orbits f g X) /\ SING e }
-`;
-val multi_orbits_def = zDefine`
+End
+Definition multi_orbits_def[nocompute]:
     multi_orbits f (g:'a group) (X:'b -> bool) = { e | e IN (orbits f g X) /\ ~ SING e }
-`;
+End
 (* Note: use zDefine as this is not effective for computation. *)
 
 (* Theorem: e IN sing_orbits f g X <=> e IN (orbits f g X) /\ SING e *)

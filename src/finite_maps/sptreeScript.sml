@@ -95,7 +95,7 @@ Definition mk_BS_def:
   (mk_BS t1 x t2 = BS t1 x t2)
 End
 
-val delete_def = zDefine`
+Definition delete_def[nocompute]:
   (delete k LN = LN) /\
   (delete k (LS a) = if k = 0 then LN else LS a) /\
   (delete k (BN t1 t2) =
@@ -110,7 +110,7 @@ val delete_def = zDefine`
        mk_BS (delete ((k - 1) DIV 2) t1) a t2
      else
        mk_BS t1 a (delete ((k - 1) DIV 2) t2))
-`;
+End
 
 Definition fromList_def:
   fromList l = SND (FOLDL (\(i,t) a. (i + 1, insert i a t)) (0,LN) l)

@@ -1226,9 +1226,9 @@ val perfect_power_2_odd = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define a PowerFree number: a trivial perfect power *)
-val power_free_def = zDefine`
+Definition power_free_def[nocompute]:
    power_free (n:num) <=> !m e. (n = m ** e) ==> (m = n) /\ (e = 1)
-`;
+End
 (* Use zDefine as this is not computationally effective. *)
 
 (* Theorem: power_free 0 = F *)
@@ -3953,9 +3953,9 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define the prime divisors of a number *)
-val prime_divisors_def = zDefine`
+Definition prime_divisors_def[nocompute]:
     prime_divisors n = {p | prime p /\ p divides n}
-`;
+End
 (* use zDefine as this is not effective. *)
 
 (* Theorem: p IN prime_divisors n <=> prime p /\ p divides n *)
@@ -7557,9 +7557,9 @@ val coprimes_by_eq_empty = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of values with the same gcd *)
-val gcd_matches_def = zDefine `
+Definition gcd_matches_def[nocompute]:
     gcd_matches n d = {j| j IN (natural n) /\ (gcd j n = d)}
-`;
+End
 (* use zDefine as this is not computationally effective. *)
 
 (* Theorem: gcd_matches n d = (natural n) INTER {j | gcd j n = d} *)
@@ -9097,9 +9097,9 @@ EVAL ``IMAGE (\x. 3 * x) (natural 9)``; = {27; 24; 21; 18; 15; 12; 9; 6; 3}
 (* Idea: develop a special set in anticipation for counting. *)
 
 (* Define the set of positive multiples of m, up to n *)
-val multiples_upto_def = zDefine`
+Definition multiples_upto_def[nocompute]:
     multiples_upto m n = {x | m divides x /\ 0 < x /\ x <= n}
-`;
+End
 (* use zDefine as this is not effective for evalutaion. *)
 (* make this an infix operator *)
 val _ = set_fixity "multiples_upto" (Infix(NONASSOC, 550)); (* higher than arithmetic op 500. *)
@@ -10072,9 +10072,9 @@ val sq_free_disjoint = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the prime divisors of a number *)
-val prime_factors_def = zDefine`
+Definition prime_factors_def[nocompute]:
     prime_factors n = {p | prime p /\ p IN (divisors n)}
-`;
+End
 (* use zDefine as this cannot be computed. *)
 (* prime_divisors is used in triangle.hol *)
 

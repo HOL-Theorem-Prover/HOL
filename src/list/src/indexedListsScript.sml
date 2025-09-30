@@ -362,10 +362,11 @@ val LIST_RELi_APPEND_I = Q.store_thm(
     MAP2i
    ---------------------------------------------------------------------- *)
 
-val MAP2i_def = zDefine‘
+Definition MAP2i_def[nocompute]:
   (MAP2i f [] _ = []) /\
   (MAP2i f _ [] = []) /\
-  (MAP2i f (h1::t1) (h2::t2) = f 0 h1 h2::MAP2i (f o SUC) t1 t2)’;
+  (MAP2i f (h1::t1) (h2::t2) = f 0 h1 h2::MAP2i (f o SUC) t1 t2)
+End
 val _ = export_rewrites["MAP2i_def"];
 
 (* Define doesn't generate this case, though the second pattern looks as if

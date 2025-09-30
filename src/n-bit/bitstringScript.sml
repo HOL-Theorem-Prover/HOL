@@ -48,19 +48,22 @@ Definition v2s_def:
   v2s = MAP (\b. if b then #"1" else #"0")
 End
 
-val zero_extend_def = zDefine`
-  zero_extend n v = PAD_LEFT F n v`
+Definition zero_extend_def[nocompute]:
+  zero_extend n v = PAD_LEFT F n v
+End
 
-val sign_extend_def = zDefine`
-  sign_extend n v = PAD_LEFT (HD v) n v`
+Definition sign_extend_def[nocompute]:
+  sign_extend n v = PAD_LEFT (HD v) n v
+End
 
-val fixwidth_def = zDefine`
+Definition fixwidth_def[nocompute]:
   fixwidth n v =
      let l = LENGTH v in
        if l < n then
           zero_extend n v
        else
-          DROP (l - n) v`
+          DROP (l - n) v
+End
 
 Definition shiftl_def:
   shiftl v m = PAD_RIGHT F (LENGTH v + m) v
@@ -82,8 +85,9 @@ Definition rotate_def:
       if (l = 0) \/ (x = 0) then v else field (x - 1) 0 v ++ field (l - 1) x v
 End
 
-val testbit_def = zDefine`
-  testbit b v = (field b b v = [T])`
+Definition testbit_def[nocompute]:
+  testbit b v = (field b b v = [T])
+End
 
 Definition w2v_def:
   w2v (w : 'a word) =

@@ -439,10 +439,10 @@ val _ = export_rewrites ["finite_map"]
    ---------------------------------------------------------------------- *)
 
 (* helper function that we "delete" immediately after def'n below *)
-val drop_while_def = zDefine`
+Definition drop_while_def[nocompute]:
   (drop_while P [] = []) /\
   (drop_while P (h::t) = if P h then drop_while P t else h::t)
-`;
+End
 
 val bf_flatten_def = new_specification(
   "bf_flatten_def",
