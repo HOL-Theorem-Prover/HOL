@@ -46,7 +46,6 @@ fun qxchl [] ttac = ttac
   | qxchl (q::qs) ttac = qxch q (qxchl qs ttac);
 
 val _ = Rewrite.add_implicit_rewrites pairLib.pair_rws;
-val bDefine = Lib.with_flag (Defn.def_suffix, "") Define
 
 val NOT_SUC      = numTheory.NOT_SUC
 and INV_SUC      = numTheory.INV_SUC
