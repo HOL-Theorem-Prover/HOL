@@ -54,18 +54,30 @@ End
 Definition ICUT_def:   ICUT (i,j) m = \k. if IRANGE (i,j) k then m k else EMP
 End
 
-Definition D0:   D0 m k = ?x y z. m (k:num) = DATA(x,y,z)
+(* TODO Remove aliases D0, D1, R0, R1, DR0, DR1 *)
+Definition D0_def:   D0 m k = ?x y z. m (k:num) = DATA(x,y,z)
 End
-Definition D1:   D1 m x = ?k y z. (m (k:num) = DATA(x,y,z)) \/ (m k = DATA(y,x,z))
+val D0 = D0_def;
+
+Definition D1_def:   D1 m x = ?k y z. (m (k:num) = DATA(x,y,z)) \/ (m k = DATA(y,x,z))
 End
-Definition R0:   R0 m k = ?a. m (k:num) = REF a
+val D1 = D1_def;
+
+Definition R0_def:   R0 m k = ?a. m (k:num) = REF a
 End
-Definition R1:   R1 m a = ?k. m (k:num) = REF a
+val R0 = R0_def;
+
+Definition R1_def:   R1 m a = ?k. m (k:num) = REF a
 End
-Definition DR0:   DR0 m k = D0 m k \/ R0 m k
+val R1 = R1_def;
+
+Definition DR0_def:   DR0 m k = D0 m k \/ R0 m k
 End
-Definition DR1:   DR1 m k = D1 m k \/ R1 m k
+val DR0 = DR0_def;
+
+Definition DR1_def:   DR1 m k = D1 m k \/ R1 m k
 End
+val DR1 = DR1_def;
 
 Definition ADDR_def:
   (ADDR k n EMP = (n = k)) /\
@@ -828,7 +840,7 @@ Definition move_roots_def:
       (r::rs,j,m))
 End
 
-Definition cheney_collect_def:
+Definition cheney_collector_def:
   cheney_collector(i:num,e:num,root,l,u,m) =
     let u = ~u:bool in
     let i = (if u then 1+l else 1) in
@@ -1125,7 +1137,7 @@ val cheney_collector_spec = store_thm("cheney_collector_spec",
     ok_state(j2,e2,r2',l2,u2,m2) /\ (l = l2) /\
     ?f. (f o f = I) /\ (MAP f r = r2') /\ (f 0 = 0) /\
         (apply f (reachables r (basic_abs m)) = basic_abs m2)``,
-  ASM_SIMP_TAC std_ss [cheney_collect_def,LET_DEF]
+  ASM_SIMP_TAC std_ss [cheney_collector_def,LET_DEF]
   \\ Q.ABBREV_TAC `b = if ~u then 1 + l else 1`
   \\ Q.ABBREV_TAC `e = b + l`
   \\ `?r' j' m'. move_roots (r,b,m) = (r',j',m')` by METIS_TAC [PAIR]
@@ -1271,4 +1283,3 @@ val cheney_collector_spec = store_thm("cheney_collector_spec",
   \\ Induct THENL [ALL_TAC,STRIP_TAC] \\ Cases
   \\ SIMP_TAC std_ss [LENGTH,DECIDE ``~(0 = SUC n)``,MAP,ADD,EQ_ADD_RCANCEL,ZIP,MEM,CONS_11]
   \\ METIS_TAC [PAIR_EQ]);
-

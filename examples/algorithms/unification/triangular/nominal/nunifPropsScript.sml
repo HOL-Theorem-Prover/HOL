@@ -17,8 +17,8 @@ val fresh_q = `
   (fresh fe a (nPair t1 t2) <=> fresh fe a t1 ∧ fresh fe a t2) ∧
   (fresh fe a (nConst c) <=> T)`;
 
-Definition fresh_def_with_choice:   ^fresh_q
-End
+val fresh_def_with_choice =
+  with_flag (Defn.def_suffix, "_def_with_choice") Define fresh_q;
 
 val fresh_def = Q.store_thm("fresh_def",fresh_q,SIMP_TAC (psrw_ss()) [fresh_def_with_choice]);
 

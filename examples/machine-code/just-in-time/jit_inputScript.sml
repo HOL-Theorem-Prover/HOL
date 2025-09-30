@@ -86,7 +86,7 @@ Definition iENCODE1_def:
   (iENCODE1 (iJLT i)  = "<" ++ iIMM i)
 End
 
-Definition iENOCDE_def:
+Definition iENCODE_def:
   (iENCODE [] = "") /\
   (iENCODE (x::xs) = iENCODE1 x ++ iENCODE xs)
 End
@@ -96,4 +96,3 @@ End
   EVAL ``iENCODE [iSUB;iSTOP;iSWAP;iJLT 1w]``
 
 *)
-

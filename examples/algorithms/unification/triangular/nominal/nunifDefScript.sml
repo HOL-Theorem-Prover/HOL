@@ -927,7 +927,7 @@ ntunify_ind |>
 SIMP_RULE (srw_ss()) [GSYM nunify_eq_ntunify,GSYM AND_IMP_INTRO] |>
 Q.SPEC `UNCURRY P` |> SIMP_RULE (srw_ss()) [AND_IMP_INTRO] |> Q.GEN `P`);
 
-Definition verify_fcs:
+Definition verify_fcs_def:
   verify_fcs fcs s = ITSET (fcs_acc s) fcs (SOME {})
 End
 
@@ -938,4 +938,3 @@ Definition nomunify_def:
      SOME (sx,fex)
   od
 End
-

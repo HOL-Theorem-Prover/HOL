@@ -15,7 +15,7 @@ val ARW = RW_TAC arith_ss;
 
 val FACT_def = ONCE_REWRITE_RULE [MULT_COMM] FACT;
 
-Definition BINOMIAL:
+Definition binomial_def:
       (binomial a 0  = 1)
   /\  (binomial 0 (SUC b) = 0)
   /\  (binomial (SUC a) (SUC b) = binomial a (SUC b) + binomial a b)
@@ -24,23 +24,23 @@ End
 
 val BINOMIAL_DEF1 = store_thm("BINOMIAL_DEF1",
                         Term `!a. binomial a 0 = 1`,
-                        Cases_on `a` THEN REWRITE_TAC[BINOMIAL]);
+                        Cases_on `a` THEN REWRITE_TAC[binomial_def]);
 
 val BINOMIAL_DEF2 = store_thm("BINOMIAL_DEF2",
                         Term `!a b. a < b ==> (binomial a b = 0)`,
                         Induct_on `a` THEN Cases_on `b`
-                        THEN REWRITE_TAC[BINOMIAL] THEN ARW[]);
+                        THEN REWRITE_TAC[binomial_def] THEN ARW[]);
 
 val BINOMIAL_DEF3 = store_thm("BINOMIAL_DEF3",
                         Term `!a. binomial a a = 1`,
-                        Induct_on `a` THEN REWRITE_TAC[BINOMIAL]
+                        Induct_on `a` THEN REWRITE_TAC[binomial_def]
                         THEN ARW[BINOMIAL_DEF2]);
 
 val BINOMIAL_DEF4 = store_thm("BINOMIAL_DEF4",
                         Term `!a b. binomial (SUC a) (SUC b)
                                        =
                                     binomial a (SUC b) + binomial a b`,
-                        REWRITE_TAC[BINOMIAL]);
+                        REWRITE_TAC[binomial_def]);
 
 val BINOMIAL_FACT = store_thm("BINOMIAL_FACT",
 Term `!a b. binomial (a+b) b * (FACT a * FACT b)
@@ -140,4 +140,3 @@ Induct_on `n`
        ]
    ]
  );
-

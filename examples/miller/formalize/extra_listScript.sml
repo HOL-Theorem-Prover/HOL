@@ -227,7 +227,7 @@ val GTLIST1_SUBSET_GTLIST0 = store_thm
    RW_TAC std_ss [SUBSET_DEF, IN_GTLIST]
    >> DECIDE_TAC);
 
-Definition LIST_COMBS:
+Definition LIST_COMBS_def:
    (LIST_COMBS [] _ = []) /\
    (LIST_COMBS (x::xs) l = (MAP (\y. (x, y)) l) ++ (LIST_COMBS xs l))
 End
@@ -236,7 +236,7 @@ Theorem MEM_LIST_COMBS :
     !l l' x. MEM x (LIST_COMBS l l') <=> (MEM (FST x) l /\ MEM (SND x) l')
 Proof
     Induct
- >> RW_TAC list_ss [LIST_COMBS]
+ >> RW_TAC list_ss [LIST_COMBS_def]
  >> `?f s. x = (f, s)` by METIS_TAC [pair_CASES]
  >> RW_TAC list_ss [MEM_MAP, FST, SND]
  >> DECIDE_TAC
@@ -246,7 +246,7 @@ Theorem LENGTH_LIST_COMBS :
     !x y. LENGTH (LIST_COMBS x y) = LENGTH x * LENGTH y
 Proof
     Induct
- >> rw[LENGTH, LIST_COMBS, LENGTH_APPEND, LENGTH_MAP]
+ >> rw[LENGTH, LIST_COMBS_def, LENGTH_APPEND, LENGTH_MAP]
  >> `LENGTH y + LENGTH x * LENGTH y =
        1 * LENGTH y + LENGTH x * LENGTH y`
     by RW_TAC arith_ss []
@@ -257,7 +257,7 @@ QED
 Theorem LIST_COMBS_EQ_NIL :
     !x y. (LIST_COMBS x y = []) <=> ((x = []) \/ (y = []))
 Proof
-    Induct >> RW_TAC list_ss [LIST_COMBS]
+    Induct >> RW_TAC list_ss [LIST_COMBS_def]
  >> DECIDE_TAC
 QED
 
@@ -291,7 +291,7 @@ Theorem ALL_DISTINCT_LIST_COMBS :
     !l l'. ALL_DISTINCT l /\ ALL_DISTINCT l' ==> ALL_DISTINCT (LIST_COMBS l l')
 Proof
     Induct
- >> RW_TAC std_ss [LIST_COMBS, ALL_DISTINCT]
+ >> RW_TAC std_ss [LIST_COMBS_def, ALL_DISTINCT]
  >> MATCH_MP_TAC ALL_DISTINCT_APPEND
  >> CONJ_TAC >- (MATCH_MP_TAC ALL_DISTINCT_MAP >> RW_TAC std_ss [])
  >> RW_TAC std_ss [MEM_MAP, MEM_LIST_COMBS]
@@ -299,4 +299,3 @@ Proof
  >> FULL_SIMP_TAC std_ss []
  >> Cases_on `q = h` >> RW_TAC std_ss []
 QED
-

@@ -164,7 +164,7 @@ Proof
                                    “low (SUC (SUC (SUC 0)))”,
                                    “random”)
              [high, low, random, lem1, lem2, lem3]
-             [M1, H_def, L_def, FST, SND]
+             [M1, high_state_def, low_state_def, FST, SND]
              example1_conv example1_conv example1_conv
              example1_conv example1_conv example1_conv example1_conv))
   >> SIMP_TAC real_ss [lg_1, lg_inv, GSYM REAL_INV_1OVER]
@@ -204,7 +204,7 @@ Proof
                                    “low (SUC (SUC (SUC 0)))”,
                                    “random”)
              [high, low, random, lem1, lem2, lem3, w2n_11]
-             [M2, H_def, L_def, FST, SND]
+             [M2, high_state_def, low_state_def, FST, SND]
              example2_input_conv example2_input_conv example2_input_conv
              example2_input_conv example2_input_conv example2_input_conv
              example2_output_conv))
@@ -270,7 +270,7 @@ CONV_TAC (RATOR_CONV (RAND_CONV (LEAKAGE_COMPUTE_CONV (“high (SUC (SUC (SUC 0)
                               “low”,
                               “random”)
                         [high, low, random, h1, h2, lem1, lem2, lem3, lem4, lem5, lem6, w2n_11]
-                        [M3, H_def, L_def, FST, SND, w2n_11]
+                        [M3, high_state_def, low_state_def, FST, SND, w2n_11]
                         example3_h_input_conv example3_lr_input_conv example3_lr_input_conv
                         example3_h_conv example3_lr_conv example3_lr_conv
                         example3_output_conv)))
@@ -310,7 +310,7 @@ CONV_TAC (RATOR_CONV (RAND_CONV (LEAKAGE_COMPUTE_CONV (“high (SUC (SUC (SUC 0)
                               “low”,
                               “random”)
                         [high, low, random, h1, h2, lem1, lem2, lem3, lem4, lem5, lem6]
-                        [M4, H_def, L_def, FST, SND, w2n_11]
+                        [M4, high_state_def, low_state_def, FST, SND, w2n_11]
                         example4_h_input_conv example4_lr_input_conv example4_lr_input_conv
                         example4_dup_conv example4_dup_conv example4_dup_conv
                         example4_output_conv)))
@@ -368,7 +368,7 @@ CONV_TAC (RATOR_CONV (RAND_CONV (LEAKAGE_COMPUTE_CONV (“high (SUC (SUC (SUC 0)
                               “low (SUC (SUC (SUC 0)))”,
                               “random”)
                         [high, low, random, lem1, lem2, lem3]
-                        [M5, assign1, assign2, H_def, L_def, FST, SND]
+                        [M5, assign1, assign2, high_state_def, low_state_def, FST, SND]
                         example5_conv example5_conv example5_conv
 
                         example5_conv example5_conv example5_conv
@@ -434,7 +434,7 @@ PURE_REWRITE_TAC [M5', state_update, state_append, assign1, assign2]
                               “low (SUC (SUC (SUC 0)))”,
                               “random”)
                         [high, low, random, lem7, lem8, APPEND]
-                        [H_def, L_def, FST, SND, APPEND]
+                        [high_state_def, low_state_def, FST, SND, APPEND]
                         example5'_conv example5'_conv example5'_conv
                         example5'_output_conv example5'_output_conv example5'_output_conv
                         example5'_output_conv)))
@@ -483,7 +483,7 @@ CONV_TAC (RATOR_CONV (RAND_CONV (LEAKAGE_COMPUTE_CONV (“high (SUC (SUC (SUC 0)
                               “low”,
                               “random (SUC (SUC (SUC 0)))”)
                         [high, low, random, lem1,lem2]
-                        [M8, H_def, R_def, FST, SND, lem1,lem2, lem3]
+                        [M8, high_state_def, random_state_def, FST, SND, lem1,lem2, lem3]
                         example8_conv example8_conv example8_conv
                         example8_output_conv example8_conv example8_output_conv
                         example8_output_conv)))
@@ -535,7 +535,7 @@ val leakage_example8' = store_thm
 >> NTAC 4 (ONCE_REWRITE_TAC [high_thm, random_thm, low])
 >> RW_TAC set_ss [CROSS_EQNS, lem1, lem2]
 >> CONV_TAC (FIND_CONV “x UNION y” (UNION_CONV (SIMP_CONV set_ss [lem1,lem2])))
->> RW_TAC set_ss [CROSS_EQNS, lem1, lem2, M8, H_def, R_def]
+>> RW_TAC set_ss [CROSS_EQNS, lem1, lem2, M8, high_state_def, random_state_def]
 >> CONV_TAC (FIND_CONV “x UNION y”
                         (UNION_CONV (SIMP_CONV set_ss [lem1,lem2, w2n_11]
                                      THENC (FIND_CONV “(a ?? b) = (c ?? d)” WORD_EVAL_CONV))))
@@ -577,7 +577,7 @@ val hidden_flip_example = store_thm
    [unif_prog_space_leakage_computation_reduce]
 >> RW_TAC set_ss [CROSS_EQNS, lem1, flip_example_lem]
 >> CONV_TAC (FIND_CONV “x UNION y” (UNION_CONV (SIMP_CONV set_ss [flip_example_lem, lem1])))
->> RW_TAC set_ss [CROSS_EQNS, lem1, M, H_def, L_def, R_def]
+>> RW_TAC set_ss [CROSS_EQNS, lem1, M, high_state_def, low_state_def, random_state_def]
 >> CONV_TAC (FIND_CONV “x UNION y” (UNION_CONV (SIMP_CONV set_ss [flip_example_lem, lem1])))
 >> CONV_TAC (REPEATC (SIMP_CONV set_ss [REAL_SUM_IMAGE_THM]
                       THENC (FIND_CONV “x DELETE y”
@@ -618,7 +618,7 @@ val visible_flip_example = store_thm
    [unif_prog_space_visible_leakage_computation_reduce]
 >> RW_TAC set_ss [CROSS_EQNS, flip_example_lem]
 >> CONV_TAC (FIND_CONV “x UNION y” (UNION_CONV (SIMP_CONV set_ss [flip_example_lem])))
->> RW_TAC set_ss [CROSS_EQNS, lem1, M, H_def, L_def, R_def]
+>> RW_TAC set_ss [CROSS_EQNS, lem1, M, high_state_def, low_state_def, random_state_def]
 >> CONV_TAC (FIND_CONV “x UNION y” (UNION_CONV (SIMP_CONV set_ss [flip_example_lem])))
 >> CONV_TAC (REPEATC (SIMP_CONV set_ss [REAL_SUM_IMAGE_THM]
                       THENC (FIND_CONV “x DELETE y”
