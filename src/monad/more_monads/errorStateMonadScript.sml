@@ -4,35 +4,33 @@ Ancestors
 Libs
   pairSyntax simpLib BasicProvers boolSimps metisLib BasicProvers
 
-val DEF = Lib.with_flag (boolLib.def_suffix, "_DEF") TotalDefn.Define
-
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
 Type M[local] = “:'state -> ('a # 'state) option”
 
-val UNIT_DEF = DEF `UNIT (x:'b) : ('b,'a) M = \(s:'a). SOME (x, s)`;
+val UNIT_DEF = Define `UNIT (x:'b) : ('b,'a) M = \(s:'a). SOME (x, s)`;
 
-val BIND_DEF = DEF `
+val BIND_DEF = Define `
   BIND (g: ('b, 'a) M) (f: 'b -> ('c, 'a) M) (s0:'a) =
     case g s0 of
       NONE => NONE
     | SOME (b,s) => f b s
 `
 
-val IGNORE_BIND_DEF = DEF `
+val IGNORE_BIND_DEF = Define `
   IGNORE_BIND (f:('a,'b)M) (g:('c,'b)M) : ('c,'b)M = BIND f (\x. g)`;
 
-val MMAP_DEF = DEF `MMAP (f: 'c -> 'b) (m: ('c, 'a) M) = BIND m (UNIT o f)`;
+val MMAP_DEF = Define `MMAP (f: 'c -> 'b) (m: ('c, 'a) M) = BIND m (UNIT o f)`;
 
-val JOIN_DEF = DEF `JOIN (z: (('b, 'a) M, 'a) M) = BIND z I`;
+val JOIN_DEF = Define `JOIN (z: (('b, 'a) M, 'a) M) = BIND z I`;
 
-val EXT_DEF = DEF `EXT g m = BIND m g` ;
+val EXT_DEF = Define `EXT g m = BIND m g` ;
 
 (* composition in the Kleisli category:
   can compose any monad with the state transformer monad in this way *)
-val MCOMP_DEF = DEF `MCOMP g f = CURRY (OPTION_MCOMP (UNCURRY g) (UNCURRY f))`;
+val MCOMP_DEF = Define `MCOMP g f = CURRY (OPTION_MCOMP (UNCURRY g) (UNCURRY f))`;
 
 Definition FOR_def:
  (FOR : num # num # (num -> (unit, 'state) M) -> (unit, 'state) M) (i, j, a) =
@@ -348,18 +346,18 @@ val mapM_cons = store_thm("mapM_cons",
   SRW_TAC[][mapM_def,sequence_def])
 
 (* fail and choice *)
-val ES_FAIL_DEF = DEF`
+val ES_FAIL_DEF = Define`
   ES_FAIL s = NONE
 `;
 
-val ES_CHOICE_DEF = DEF`
+val ES_CHOICE_DEF = Define`
   ES_CHOICE xM yM s =
     case xM s of
        NONE => yM s
      | xr => xr
 `;
 
-val ES_GUARD_DEF = DEF`
+val ES_GUARD_DEF = Define`
   ES_GUARD b = if b then UNIT () else ES_FAIL
 `
 
@@ -418,7 +416,7 @@ val IGNORE_BIND_FAIL = store_thm(
   SRW_TAC[][])
 
 (* applicative *)
-val ES_APPLY_DEF = DEF`
+val ES_APPLY_DEF = Define`
   ES_APPLY fM xM = BIND fM (\f. BIND xM (\x. UNIT (f x)))
 `
 val _ = overload_on ("APPLICATIVE_FAPPLY", ``ES_APPLY``)
@@ -433,10 +431,9 @@ val APPLY_UNIT_UNIT = store_thm(
   ``UNIT f <*> UNIT x = UNIT (f x)``,
   SRW_TAC[][ES_APPLY_DEF]);
 
-val ES_LIFT2_DEF = DEF`
+val ES_LIFT2_DEF = Define`
   ES_LIFT2 f xM yM = MMAP f xM <*> yM
 `;
 
 
 (* ------------------------------------------------------------------------- *)
-

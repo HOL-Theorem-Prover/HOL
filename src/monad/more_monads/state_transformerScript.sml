@@ -4,8 +4,6 @@ Ancestors
 Libs
   pairSyntax simpLib BasicProvers boolSimps metisLib
 
-val DEF = Lib.with_flag (boolLib.def_suffix, "_DEF") TotalDefn.Define
-
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
@@ -13,11 +11,11 @@ val DEF = Lib.with_flag (boolLib.def_suffix, "_DEF") TotalDefn.Define
 Type M[local] = “:'state -> 'a # 'state”
 
 (* identity of the Kleisli category *)
-val UNIT_DEF = DEF `UNIT (x:'b) = \(s:'a). (x, s)`;
+val UNIT_DEF = Define `UNIT (x:'b) = \(s:'a). (x, s)`;
 
-val BIND_DEF = DEF `BIND (g: ('b, 'a) M) (f: 'b -> ('c, 'a) M) = UNCURRY f o g`;
+val BIND_DEF = Define `BIND (g: ('b, 'a) M) (f: 'b -> ('c, 'a) M) = UNCURRY f o g`;
 
-val IGNORE_BIND_DEF = DEF `IGNORE_BIND f g = BIND f (\x. g)`;
+val IGNORE_BIND_DEF = Define `IGNORE_BIND f g = BIND f (\x. g)`;
 
 val _ =
     monadsyntax.declare_monad (
@@ -29,16 +27,16 @@ val _ =
 val _ = monadsyntax.add_monadsyntax()
 val _ = monadsyntax.enable_monad "state"
 
-val MMAP_DEF = DEF `MMAP (f: 'c -> 'b) (m: ('c, 'a) M) = BIND m (UNIT o f)`;
+val MMAP_DEF = Define `MMAP (f: 'c -> 'b) (m: ('c, 'a) M) = BIND m (UNIT o f)`;
 
-val JOIN_DEF = DEF `JOIN (z: (('b, 'a) M, 'a) M) = BIND z I`;
+val JOIN_DEF = Define `JOIN (z: (('b, 'a) M, 'a) M) = BIND z I`;
 
 (* functor (on arrows) from the Kleisli category *)
-val EXT_DEF = DEF `EXT (f: 'b -> ('c, 's) M) (m: ('b, 's) M) = UNCURRY f o m`;
+val EXT_DEF = Define `EXT (f: 'b -> ('c, 's) M) (m: ('b, 's) M) = UNCURRY f o m`;
 
 (* composition in the Kleisli category *)
 val MCOMP_DEF =
-  DEF `MCOMP (g: 'b -> ('c, 's) M) (f: 'a -> ('b, 's) M) = EXT g o f` ;
+  Define `MCOMP (g: 'b -> ('c, 's) M) (f: 'a -> ('b, 's) M) = EXT g o f` ;
 
 val FOR_def = TotalDefn.tDefine "FOR"
  `(FOR : num # num # (num -> (unit, 'state) M) -> (unit, 'state) M) (i, j, a) =
@@ -360,4 +358,3 @@ val _ = TotalDefn.export_termsimp "UNIT_DEF"
 *)
 
 (* ------------------------------------------------------------------------- *)
-

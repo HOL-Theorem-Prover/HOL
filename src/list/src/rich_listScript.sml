@@ -30,9 +30,6 @@ val qexists_tac = Q.EXISTS_TAC;
 val qspecl_then = Q.SPECL_THEN;
 val qid_spec_tac = Q.ID_SPEC_TAC;
 
-val DEF0 = Lib.with_flag (boolLib.def_suffix, "") TotalDefn.Define
-val DEF = Lib.with_flag (boolLib.def_suffix, "_DEF") TotalDefn.Define
-
 val list_INDUCT = Q.prove(
    `!P. P [] /\ (!l. P l ==> !x. P (CONS x l)) ==> !l. P l`,
    REWRITE_TAC [list_INDUCT]);
@@ -47,7 +44,7 @@ val Suff = Q_TAC SUFF_TAC;
 
 (* ------------------------------------------------------------------------ *)
 
-val ELL = DEF0`
+val ELL = Define`
    (ELL 0 l = LAST l) /\
    (ELL (SUC n) l = ELL n (FRONT l))`;
 
@@ -56,15 +53,15 @@ Definition REPLICATE[simp]:
    (REPLICATE (SUC n) x = CONS x (REPLICATE n x))
 End
 
-val SCANL = DEF0`
+val SCANL = Define`
    (SCANL f (e: 'b) [] = [e]) /\
    (SCANL f e (CONS x l) = CONS e (SCANL f (f e x) l))`;
 
-val SCANR = DEF0`
+val SCANR = Define`
    (SCANR f (e: 'b) [] = [e]) /\
    (SCANR f e (CONS x l) = CONS (f x (HD (SCANR f e l))) (SCANR f e l))`;
 
-val SPLITP = Lib.with_flag (computeLib.auto_import_definitions, false) DEF0`
+val SPLITP = Lib.with_flag (computeLib.auto_import_definitions, false) Define`
    (SPLITP P [] = ([],[])) /\
    (SPLITP P (CONS x l) =
       if P x then
@@ -138,18 +135,18 @@ val SPLITR_def = TotalDefn.Define`
    SPLITR P l =
    let (a, b) = SPLITP ((~) o P) (REVERSE l) in (REVERSE b, REVERSE a)`;
 
-val PREFIX_DEF = DEF `PREFIX P l = FST (SPLITP ($~ o P) l)`;
+val PREFIX_DEF = Define `PREFIX P l = FST (SPLITP ($~ o P) l)`;
 
-val SUFFIX_DEF = DEF`
+val SUFFIX_DEF = Define`
    SUFFIX P l = FOLDL (\l' x. if P x then SNOC x l' else []) [] l`;
 
-val AND_EL_DEF = DEF `AND_EL = EVERY I`;
-val OR_EL_DEF = DEF `OR_EL = EXISTS I`;
+val AND_EL_DEF = Define `AND_EL = EVERY I`;
+val OR_EL_DEF = Define `OR_EL = EXISTS I`;
 
-val UNZIP_FST_DEF = DEF `UNZIP_FST l = FST (UNZIP l)`;
-val UNZIP_SND_DEF = DEF `UNZIP_SND l = SND (UNZIP l)`;
+val UNZIP_FST_DEF = Define `UNZIP_FST l = FST (UNZIP l)`;
+val UNZIP_SND_DEF = Define `UNZIP_SND l = SND (UNZIP l)`;
 
-val LIST_ELEM_COUNT_DEF = DEF`
+val LIST_ELEM_COUNT_DEF = Define`
    LIST_ELEM_COUNT e l = LENGTH (FILTER (\x. x = e) l)`;
 
 val COUNT_LIST_def = zDefine`
