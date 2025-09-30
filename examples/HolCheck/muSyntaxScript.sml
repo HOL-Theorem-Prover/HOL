@@ -79,7 +79,7 @@ val _ = add_rule {term_name = "nu", fixity = Prefix 2,
 (* defns for checking well-formedness of a mu-formula (bound vars must occur +vely within its scope) *)
 
 (* RVNEG(f,Q) == in f, all free ocurrances of Q are negated *)
-val RVNEG_def = save_thm("RVNEG_def",Define`
+Definition RVNEG_def:
 (RVNEG rv (T:'prop mu) = (T:'prop mu)) /\
 (RVNEG rv F = F) /\
 (RVNEG rv (f /\ g) = (RVNEG rv f) /\ (RVNEG rv g)) /\
@@ -90,7 +90,8 @@ val RVNEG_def = save_thm("RVNEG_def",Define`
 (RVNEG rv ([[a]] f) = [[a]] (RVNEG rv f)) /\
 (RVNEG rv (mu Q .. f) = if (rv=Q) then (mu Q .. f) else (mu Q .. (RVNEG rv f))) /\
 (RVNEG rv (nu Q .. f) = if (rv=Q) then (nu Q .. f) else (nu Q .. (RVNEG rv f))) /\
-(RVNEG rv (~f) = ~(RVNEG rv f))`)
+(RVNEG rv (~f) = ~(RVNEG rv f))
+End
 
 val mu_pnf = Hol_defn "NNF"  `
 (NNF (T:'prop mu) = (T:'prop mu)) /\
@@ -637,4 +638,3 @@ THEN CONJ_TAC THENL [
  THEN IMP_RES_TAC SUBF_NEG2
  THEN METIS_TAC [ALLV_SUBF,ALLV_NNF]
 ]))
-

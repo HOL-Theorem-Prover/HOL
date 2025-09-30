@@ -43,24 +43,28 @@ val NextStateX64 = utilsLib.ustore_thm("NextStateX64",
 
 (* ------------------------------------------------------------------------ *)
 
-val read_mem16_def = Lib.with_flag (Feedback.emit_MESG, false) Define`
-   read_mem16 (m: word64 -> word8) a = m (a + 1w) @@ m a`
+Definition read_mem16_def:
+   read_mem16 (m: word64 -> word8) a = m (a + 1w) @@ m a
+End
 
-val read_mem32_def = Lib.with_flag (Feedback.emit_MESG, false) Define`
+Definition read_mem32_def:
    read_mem32 (m: word64 -> word8) a =
-   m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m a`
+   m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m a
+End
 
-val read_mem64_def = Lib.with_flag (Feedback.emit_MESG, false) Define`
+Definition read_mem64_def:
    read_mem64 (m: word64 -> word8) a =
    m (a + 7w) @@ m (a + 6w) @@ m (a + 5w) @@ m (a + 4w) @@
-   m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m a`
+   m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m a
+End
 
-val read_mem128_def = Lib.with_flag (Feedback.emit_MESG, false) Define`
+Definition read_mem128_def:
    read_mem128 (m: word64 -> word8) a =
    m (a + 15w) @@ m (a + 14w) @@ m (a + 13w) @@ m (a + 12w) @@
    m (a + 11w) @@ m (a + 10w) @@ m (a + 9w) @@ m (a + 8w) @@
    m (a + 7w) @@ m (a + 6w) @@ m (a + 5w) @@ m (a + 4w) @@
-   m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m a`
+   m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m a
+End
 
 Definition write_mem16_def:
    write_mem16 (m: word64 -> word8) a (v: word16) =
@@ -832,4 +836,3 @@ val rbp = Q.store_thm("rbp",
    )
 
 (* ------------------------------------------------------------------------ *)
-
