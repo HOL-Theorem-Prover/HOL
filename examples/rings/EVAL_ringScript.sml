@@ -38,7 +38,7 @@ val p_opp_def = Term`!n.  RP n (RN n) = R0`;
 val p_distr_left = Term`!n m p.  RM (RP n m) p = RP (RM n p) (RM m p)`;
 
 
-Definition is_ring_def:
+val is_ring_def = Define `
   is_ring ^r <=>
        ^p_plus_sym
     /\ ^p_plus_assoc
@@ -47,8 +47,7 @@ Definition is_ring_def:
     /\ ^p_plus_zero_left
     /\ ^p_mult_one_left
     /\ ^p_opp_def
-    /\ ^p_distr_left
-End
+    /\ ^p_distr_left `;
 
 (* We work on an abstract_ring r *)
 val _ = set_assums [ “is_ring ^r” ];
@@ -100,8 +99,7 @@ REWRITE_TAC [mult_zero_left]);
 
 
 (* A ring is a semi_ring *)
-Definition semi_ring_of_def:   semi_ring_of = (semi_ring R0 R1 RP RM)
-End
+val semi_ring_of_def = Define `semi_ring_of = (semi_ring R0 R1 RP RM) `;
 val _ = record_terms [rator “semi_ring_of”]
 
 val ring_is_semi_ring = asm_store_thm

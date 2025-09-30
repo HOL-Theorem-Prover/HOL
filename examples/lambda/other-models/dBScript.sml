@@ -66,7 +66,7 @@ val _ = Hol_datatype
 (* Free variables.                                                       *)
 (* --------------------------------------------------------------------- *)
 
-Definition dFV:
+Definition dFV_def:
      (dFV (dCON c)   = {})
  /\  (dFV (dVAR x)   = {x})
  /\  (dFV (dBOUND n) = {})
@@ -76,7 +76,7 @@ End
 
 
 val FINITE_dFV = Q.store_thm("FINITE_dFV", `!t. FINITE (dFV t)`,
-Induct THEN RW_TAC std_ss [dFV, FINITE_UNION, FINITE_EMPTY, FINITE_SING]);
+Induct THEN RW_TAC std_ss [dFV_def, FINITE_UNION, FINITE_EMPTY, FINITE_SING]);
 
 val FRESH_VAR = Q.store_thm("FRESH_VAR", `!t. ?x. ~(x IN dFV t)`,
                             PROVE_TAC [new_exists, SPEC_ALL FINITE_dFV]);
@@ -114,7 +114,7 @@ End
 val dFV_Abst = Q.store_thm("dFV_Abst",
 `!t i x. ~(x IN dFV t) ==> (Abst i x t = t)`,
 Induct
-  THEN RW_TAC std_ss [Abst, dFV, IN_UNION, IN_SING]);
+  THEN RW_TAC std_ss [Abst, dFV_def, IN_UNION, IN_SING]);
 
 val dDEG_Abst = Q.store_thm("dDEG_Abst",
 `!t x i. dDEG t <= i ==> dDEG (Abst i x t) <= (SUC i)`,
@@ -139,7 +139,7 @@ val dDEG_Abst_Inst = Q.store_thm("dDEG_Abst_Inst",
    ~(x IN dFV t) /\ dDEG t <= SUC i ==> (Abst i x (Inst i t (dVAR x)) = t)`,
 Induct
    THEN RW_TAC arith_ss
-         [Inst, Abst, dFV, dDEG, MAX_LESS_EQ, IN_UNION, IN_SING]);
+         [Inst, Abst, dFV_def, dDEG, MAX_LESS_EQ, IN_UNION, IN_SING]);
 
 val Rename = Q.store_thm("Rename",
 `!t i x y.
@@ -148,7 +148,7 @@ val Rename = Q.store_thm("Rename",
      (Abst i x t = Abst i y (Inst i (Abst i x t) (dVAR y)))`,
 Induct
   THEN ZAP_TAC (arith_ss &&
-     [Inst, Abst, dFV, dDEG, IN_UNION, MAX_LESS_EQ, IN_SING, GSYM ADD1]) []);
+     [Inst, Abst, dFV_def, dDEG, IN_UNION, MAX_LESS_EQ, IN_SING, GSYM ADD1]) []);
 
 
 (* --------------------------------------------------------------------- *)
@@ -161,12 +161,12 @@ End
 val dFV_dLAMBDA_lemma = Q.store_thm("dFV_dLAMBDA_lemma",
 `!t i x. dFV (Abst i x t) = (dFV t) DELETE x`,
 Induct
-   THEN ZAP_TAC (std_ss && [Abst,dFV,UNION_DELETE,EMPTY_DELETE,SING_DELETE])
+   THEN ZAP_TAC (std_ss && [Abst,dFV_def,UNION_DELETE,EMPTY_DELETE,SING_DELETE])
                 [DELETE_NON_ELEMENT, IN_SING]);
 
 val dFV_dLAMBDA = Q.store_thm("dFV_dLAMBDA",
 `!t x. dFV (dLAMBDA x t) = (dFV t) DELETE x`,
-RW_TAC std_ss [dFV, dLAMBDA, dFV_dLAMBDA_lemma]);
+RW_TAC std_ss [dFV_def, dLAMBDA, dFV_dLAMBDA_lemma]);
 
 
 (* --------------------------------------------------------------------- *)
@@ -606,9 +606,9 @@ val lemma3 =
      z IN dFV ([x |-> dVAR y] t)`,
 measureInduct_on `dLGH t`
   THEN ONCE_REWRITE_TAC [dOK_cases] THEN RW_TAC std_ss [] THENL
-  [Q.PAT_X_ASSUM `_ IN _` MP_TAC THEN RW_TAC std_ss [dFV, IN_SING]
-     THEN RW_TAC std_ss [dFV, IN_SING, NEQ_dVAR_dSUB],
-   PROVE_TAC [dCON_dSUB, NOT_IN_EMPTY, dFV],
+  [Q.PAT_X_ASSUM `_ IN _` MP_TAC THEN RW_TAC std_ss [dFV_def, IN_SING]
+     THEN RW_TAC std_ss [dFV_def, IN_SING, NEQ_dVAR_dSUB],
+   PROVE_TAC [dCON_dSUB, NOT_IN_EMPTY, dFV_def],
    `FINITE (dFV t' UNION {x;y;z})`
       by RW_TAC std_ss [FINITE_UNION,FINITE_INSERT, FINITE_EMPTY, FINITE_dFV]
     THEN MP_TAC (Q.SPECL [`t'`, `x'`, `NEW (dFV t' UNION {x;y;z})`] dALPHA)
@@ -618,7 +618,7 @@ measureInduct_on `dLGH t`
       /\ dOK ([x' |-> dVAR (NEW (dFV t' UNION {x;y;z}))] t')`
       by (REPEAT CONJ_TAC THENL
           [RW_TAC std_ss [NOT_EQ_NEW,IN_UNION,IN_INSERT],
-           RW_TAC std_ss [dFV,IN_SING,GSYM NOT_EQ_NEW,IN_UNION,IN_INSERT],
+           RW_TAC std_ss [dFV_def,IN_SING,GSYM NOT_EQ_NEW,IN_UNION,IN_INSERT],
            RW_TAC std_ss [dOK_dSUB,dOK_DEF]])
    THEN RW_TAC std_ss [dLAMBDA_dSUB,dFV_dLAMBDA, IN_DELETE] THENL
     [Q.PAT_X_ASSUM `$! M` MP_TAC
@@ -630,7 +630,7 @@ measureInduct_on `dLGH t`
          THEN RW_TAC std_ss [dFV_dLAMBDA,IN_DELETE]],
      RW_TAC std_ss [NOT_EQ_NEW, IN_UNION,IN_INSERT]],
    Q.PAT_X_ASSUM `_ IN _` MP_TAC
-    THEN ZAP_TAC (std_ss && [dFV, IN_UNION, dAPP_dSUB])
+    THEN ZAP_TAC (std_ss && [dFV_def, IN_UNION, dAPP_dSUB])
             [dLGH_dAPP_LESS_2,dLGH_dAPP_LESS_1]]);
 
 val lemma4 =
@@ -663,4 +663,3 @@ Q.EXISTS_TAC
  THEN CONV_TAC SELECT_CONV
  THEN MATCH_MP_TAC new_exists THEN MATCH_MP_TAC lemma2 THEN
  ASM_REWRITE_TAC []);
-

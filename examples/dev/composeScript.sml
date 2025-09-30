@@ -136,7 +136,7 @@ End
 (*
 Component that constantly outputs F at out.
 *)
-Definition TRUE_def:
+Definition FALSE_def:
   FALSE out = !t. out t = F
 End
 

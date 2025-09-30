@@ -61,7 +61,7 @@ val _ = Hol_datatype
    | Cons_varlist of index list => canonical_sum `;
 
 
-Definition canonical_sum_merge_def:
+val canonical_sum_merge_def = Define `
   (canonical_sum_merge (Cons_monom c1 l1 t1) (Cons_monom c2 l2 t2) =
       compare (list_compare index_compare l1 l2)
         (Cons_monom c1 l1 (canonical_sum_merge t1 (Cons_monom c2 l2 t2)))
@@ -83,11 +83,10 @@ Definition canonical_sum_merge_def:
         (Cons_monom (SRP SR1 SR1) l1 (canonical_sum_merge t1 t2))
         (Cons_varlist l2 (canonical_sum_merge (Cons_varlist l1 t1) t2)))
 /\ (canonical_sum_merge s1 Nil_monom = s1)
-/\ (canonical_sum_merge Nil_monom s2 = s2)
-End
+/\ (canonical_sum_merge Nil_monom s2 = s2) `;
 
 
-Definition monom_insert_def:
+val monom_insert_def = Define `
    (monom_insert c1 l1 (Cons_monom c2 l2 t2) =
       compare (list_compare index_compare l1 l2)
         (Cons_monom c1 l1 (Cons_monom c2 l2 t2))
@@ -98,11 +97,10 @@ Definition monom_insert_def:
         (Cons_monom c1 l1 (Cons_varlist l2 t2))
         (Cons_monom (SRP c1 SR1) l1 t2)
         (Cons_varlist l2 (monom_insert c1 l1 t2)))
-/\ (monom_insert c1 l1 s = Cons_monom c1 l1 s)
-End
+/\ (monom_insert c1 l1 s = Cons_monom c1 l1 s) `;
 
 
-Definition varlist_insert_def:
+val varlist_insert_def = Define `
    (varlist_insert l1 (Cons_monom c2 l2 t2) =
       compare (list_compare index_compare l1 l2)
         (Cons_varlist l1 (Cons_monom c2 l2 t2))
@@ -113,95 +111,86 @@ Definition varlist_insert_def:
         (Cons_varlist l1 (Cons_varlist l2 t2))
         (Cons_monom (SRP SR1 SR1) l1 t2)
         (Cons_varlist l2 (varlist_insert l1 t2)))
-/\ (varlist_insert l1 s = Cons_varlist l1 s)
-End
+/\ (varlist_insert l1 s = Cons_varlist l1 s) `;
 
 
-Definition canonical_sum_scalar_def:
+val canonical_sum_scalar_def = Define `
    (canonical_sum_scalar c0 (Cons_monom c l t) =
         Cons_monom (SRM c0 c) l (canonical_sum_scalar c0 t))
 /\ (canonical_sum_scalar c0 (Cons_varlist l t) =
         Cons_monom c0 l (canonical_sum_scalar c0 t))
-/\ (canonical_sum_scalar c0 Nil_monom = Nil_monom)
-End
+/\ (canonical_sum_scalar c0 Nil_monom = Nil_monom) `;
 
 
-Definition canonical_sum_scalar2_def:
+val canonical_sum_scalar2_def = Define `
    (canonical_sum_scalar2 l0 (Cons_monom c l t) =
         monom_insert c (list_merge index_lt l0 l)
            (canonical_sum_scalar2 l0 t))
 /\ (canonical_sum_scalar2 l0 (Cons_varlist l t) =
         varlist_insert (list_merge index_lt l0 l)
            (canonical_sum_scalar2 l0 t))
-/\ (canonical_sum_scalar2 l0 Nil_monom = Nil_monom)
-End
+/\ (canonical_sum_scalar2 l0 Nil_monom = Nil_monom) `;
 
 
-Definition canonical_sum_scalar3_def:
+val canonical_sum_scalar3_def = Define `
    (canonical_sum_scalar3 c0 l0 (Cons_monom c l t) =
         monom_insert (SRM c0 c) (list_merge index_lt l0 l)
            (canonical_sum_scalar3 c0 l0 t))
 /\ (canonical_sum_scalar3 c0 l0 (Cons_varlist l t) =
         monom_insert c0 (list_merge index_lt l0 l)
            (canonical_sum_scalar3 c0 l0 t))
-/\ (canonical_sum_scalar3 c0 l0 Nil_monom = Nil_monom)
-End
+/\ (canonical_sum_scalar3 c0 l0 Nil_monom = Nil_monom) `;
 
 
-Definition canonical_sum_prod_def:
+val canonical_sum_prod_def = Define `
    (canonical_sum_prod (Cons_monom c1 l1 t1) s2 =
         canonical_sum_merge (canonical_sum_scalar3 c1 l1 s2)
                             (canonical_sum_prod t1 s2))
 /\ (canonical_sum_prod (Cons_varlist l1 t1) s2 =
         canonical_sum_merge (canonical_sum_scalar2 l1 s2)
                             (canonical_sum_prod t1 s2))
-/\ (canonical_sum_prod Nil_monom s2 = Nil_monom)
-End
+/\ (canonical_sum_prod Nil_monom s2 = Nil_monom) `;
 
 
 (* We require decidability of equality on our ring *)
-Definition canonical_sum_simplify_def:
+val canonical_sum_simplify_def = Define `
    (canonical_sum_simplify (Cons_monom c l t) =
      if c = SR0 then canonical_sum_simplify t
      else if c = SR1 then Cons_varlist l (canonical_sum_simplify t)
      else Cons_monom c l (canonical_sum_simplify t))
 /\ (canonical_sum_simplify (Cons_varlist l t) =
      Cons_varlist l (canonical_sum_simplify t))
-/\ (canonical_sum_simplify Nil_monom = Nil_monom)
-End
+/\ (canonical_sum_simplify Nil_monom = Nil_monom) `;
 
 
-Definition ivl_aux_def:
+val ivl_aux_def = Define `
    (ivl_aux vm x [] = varmap_find x vm)
 /\ (ivl_aux vm x (CONS x' t') =
-     SRM (varmap_find x vm) (ivl_aux vm x' t'))
-End
+     SRM (varmap_find x vm) (ivl_aux vm x' t')) `;
 
-Definition interp_vl_def:
+val interp_vl_def = Define `
    (interp_vl vm [] = SR1)
-/\ (interp_vl vm (CONS x t) = ivl_aux vm x t)
-End
+/\ (interp_vl vm (CONS x t) = ivl_aux vm x t) `;
 
-Definition interp_m_def:
+val interp_m_def = Define `
    (interp_m vm c [] = c)
-/\ (interp_m vm c (CONS x t) = SRM c (ivl_aux vm x t))
-End
+/\ (interp_m vm c (CONS x t) = SRM c (ivl_aux vm x t)) `;
 
-Definition ics_aux_def:
+val ics_aux_def = Define `
    (ics_aux vm a Nil_monom = a)
 /\ (ics_aux vm a (Cons_varlist l t) =
               SRP a (ics_aux vm (interp_vl vm l) t))
 /\ (ics_aux vm a (Cons_monom c l t) =
               SRP a (ics_aux vm (interp_m vm c l) t))
-End
+`;
 
-Definition interp_cs_def:
+val interp_cs_def = Define `
    (interp_cs vm Nil_monom = SR0)
 /\ (interp_cs vm (Cons_varlist l t) =
                 ics_aux vm (interp_vl vm l) t)
 /\ (interp_cs vm (Cons_monom c l t) =
                 ics_aux vm (interp_m vm c l) t)
-End
+`;
 
 
 val ivl_aux_ok = asm_store_thm
@@ -339,7 +328,7 @@ val _ = Datatype
    | SPplus spolynom spolynom
    | SPmult spolynom spolynom `;
 
-Definition spolynom_normalize_def:
+val spolynom_normalize_def = Define `
    (spolynom_normalize (SPvar i) = (Cons_varlist [i] Nil_monom))
 /\ (spolynom_normalize (SPconst c) = (Cons_monom c [] Nil_monom))
 /\ (spolynom_normalize (SPplus l r) =
@@ -347,25 +336,22 @@ Definition spolynom_normalize_def:
                               (spolynom_normalize r)))
 /\ (spolynom_normalize (SPmult l r) =
       (canonical_sum_prod (spolynom_normalize l)
-                             (spolynom_normalize r)))
-End
+                             (spolynom_normalize r))) `;
 
 
-Definition spolynom_simplify_def:
+val spolynom_simplify_def = Define `
   spolynom_simplify x =
-    canonical_sum_simplify (spolynom_normalize x)
-End
+    canonical_sum_simplify (spolynom_normalize x) `;
 
 
 
-Definition interp_sp_def:
+val interp_sp_def = Define `
    (interp_sp vm (SPconst c) = c)
 /\ (interp_sp vm (SPvar i) = varmap_find i vm)
 /\ (interp_sp vm (SPplus p1 p2) =
       SRP (interp_sp vm p1) (interp_sp vm p2))
 /\ (interp_sp vm (SPmult p1 p2) =
-      SRM (interp_sp vm p1) (interp_sp vm p2))
-End
+      SRM (interp_sp vm p1) (interp_sp vm p2)) `;
 
 
 val spolynomial_normalize_ok = asm_store_thm

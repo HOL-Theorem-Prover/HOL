@@ -33,7 +33,7 @@ val sp_mult_one_left  = Term`!n.  SRM SR1 n = n`;
 val sp_mult_zero_left = Term`!n.  SRM SR0 n = SR0`;
 val sp_distr_left     = Term`!n m p.  SRM (SRP n m) p = SRP (SRM n p) (SRM m p)`;
 
-Definition is_semi_ring_def:
+val is_semi_ring_def = Define `
   is_semi_ring =
        ^sp_plus_sym
     /\ ^sp_plus_assoc
@@ -42,8 +42,7 @@ Definition is_semi_ring_def:
     /\ ^sp_plus_zero_left
     /\ ^sp_mult_one_left
     /\ ^sp_mult_zero_left
-    /\ ^sp_distr_left
-End
+    /\ ^sp_distr_left `;
 
 (* We work on an abstract semi ring r *)
 val _ = record_terms [rator “is_semi_ring”]
