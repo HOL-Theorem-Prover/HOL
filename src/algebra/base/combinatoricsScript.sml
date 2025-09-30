@@ -2436,8 +2436,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define MAP3 similar to MAP2 in listTheory. *)
-val dDefine = Lib.with_flag (Defn.def_suffix, "_DEF") Define;
-val MAP3_DEF = dDefine`
+val MAP3_DEF = Define`
   (MAP3 f (h1::t1) (h2::t2) (h3::t3) = f h1 h2 h3::MAP3 f t1 t2 t3) /\
   (MAP3 f x y z = [])`;
 val _ = export_rewrites["MAP3_DEF"];
@@ -16262,4 +16261,3 @@ https://math.stackexchange.com/questions/3060456/
 using Pascal argument
 
 *)
-

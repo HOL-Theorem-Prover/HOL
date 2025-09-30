@@ -46,7 +46,6 @@ fun qxchl [] ttac = ttac
   | qxchl (q::qs) ttac = qxch q (qxchl qs ttac);
 
 val _ = Rewrite.add_implicit_rewrites pairLib.pair_rws;
-val dDefine = Lib.with_flag (Defn.def_suffix, "_DEF") Define
 val bDefine = Lib.with_flag (Defn.def_suffix, "") Define
 
 val NOT_SUC      = numTheory.NOT_SUC
@@ -3494,7 +3493,7 @@ val REVERSE_REV = Q.store_thm
  ‘!L. REVERSE L = REV L []’,
  PROVE_TAC [REV_REVERSE_LEM, APPEND_NIL]);
 
-val SUM_ACC_DEF = dDefine
+val SUM_ACC_DEF = Define
   ‘(SUM_ACC [] acc = acc) /\
    (SUM_ACC (h::t) acc = SUM_ACC t (h+acc))’
 
