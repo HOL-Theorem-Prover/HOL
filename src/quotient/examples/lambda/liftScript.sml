@@ -767,12 +767,12 @@ val term1_respects_Axiom = store_thm(
 (* the existence of a function `Abs' such that                      *)
 (*         Lam v t = Abs (\y. t <[ [v, Var y])                      *)
 
-val Abs1_def =
-    Define
-    `Abs1 (f : var -> ^term) =
+Definition Abs1_def:
+     Abs1 (f : var -> ^term) =
         let x = VAR "x" 0 in
         let v = variant x (FV1 (f x)) in
-           Lam1 v (f v)`;
+           Lam1 v (f v)
+End
 
 (* Prove Abs1 is respectful. *)
 

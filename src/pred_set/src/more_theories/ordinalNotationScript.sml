@@ -42,29 +42,29 @@ val osyntax_distinct = TypeBase.distinct_of ``:osyntax``;
 (* And operations over osyntax.                                              *)
 (*---------------------------------------------------------------------------*)
 
-val expt_def =
- Define
-    `(expt (End _) = End 0) /\
-     (expt (Plus e k t) = e)`;
+Definition expt_def:
+     (expt (End _) = End 0) /\
+     (expt (Plus e k t) = e)
+End
 
-val coeff_def =
- Define
-    `(coeff (End x) = x) /\
-     (coeff (Plus e k t) = k)`;
+Definition coeff_def:
+     (coeff (End x) = x) /\
+     (coeff (Plus e k t) = k)
+End
 
-val finp_def =
- Define
-  `(finp (End _) = T) /\
-   (finp (Plus _ _ _) = F)`;
+Definition finp_def:
+   (finp (End _) = T) /\
+   (finp (Plus _ _ _) = F)
+End
 
-val tail_def =
- Define
-   `tail (Plus e k t) = t`;
+Definition tail_def:
+    tail (Plus e k t) = t
+End
 
-val rank_def =
- Define
-   `(rank (End _) = 0) /\
-    (rank (Plus e k t) = 1 + rank e)`;
+Definition rank_def:
+    (rank (End _) = 0) /\
+    (rank (Plus e k t) = 1 + rank e)
+End
 
 val ord_ss = arith_ss ++ rewrites
    [expt_def, coeff_def, finp_def, tail_def, rank_def, GSYM IMP_DISJ_THM];
@@ -697,9 +697,9 @@ val main_lemma = Q.store_thm
 (* less-than on ordinals.                                                    *)
 (*---------------------------------------------------------------------------*)
 
-val ord_less_def =
- Define
-   `ord_less x y <=> is_ord x /\ is_ord y /\ oless x y`;
+Definition ord_less_def:
+    ord_less x y <=> is_ord x /\ is_ord y /\ oless x y
+End
 
 
 (*---------------------------------------------------------------------------*)
@@ -739,19 +739,18 @@ val e0_RECURSION = Q.store_thm
 (* from Manolios and Vroon, JAR.                                             *)
 (*---------------------------------------------------------------------------*)
 
-val ord_add_def =
- Define
-  `(ord_add (End m) (End n) = End (m+n)) /\
+Definition ord_add_def:
+   (ord_add (End m) (End n) = End (m+n)) /\
    (ord_add (End m) (Plus p k t) = Plus p k t) /\
    (ord_add (Plus e k t) (End m) = Plus e k (ord_add t (End m))) /\
    (ord_add (Plus e1 k1 t1) (Plus e2 k2 t2) =
      if oless e1 e2 then Plus e2 k2 t2 else
      if e1 = e2 then Plus e2 (k1+k2) t2 else
-     Plus e1 k1 (ord_add t1 (Plus e2 k2 t2)))`;
+     Plus e1 k1 (ord_add t1 (Plus e2 k2 t2)))
+End
 
-val ord_sub_def =
- Define
-  `(ord_sub (End m) (End n) = End (m-n)) /\
+Definition ord_sub_def:
+   (ord_sub (End m) (End n) = End (m-n)) /\
    (ord_sub (End m) (Plus p k t) = End 0) /\
    (ord_sub (Plus e k t) (End m) = Plus e k t) /\
    (ord_sub (Plus e1 k1 t1) (Plus e2 k2 t2) =
@@ -760,22 +759,23 @@ val ord_sub_def =
       then (if k1<k2 then End 0 else
             if k1>k2 then Plus e1 (k1-k2) t1
             else ord_sub t1 t2)
-     else Plus e1 k1 t1)`;
+     else Plus e1 k1 t1)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Weird renaming in last two clauses by Define.                             *)
 (*---------------------------------------------------------------------------*)
 
-val ord_mult_def =
- Define
-  `ord_mult x y =
+Definition ord_mult_def:
+   ord_mult x y =
     if (x = End 0) \/ (y = End 0) then End 0 else
     case (x,y)
     of (End m, End n) => End (m * n)
      | (End m, Plus e k t) => Plus (ord_add (End 0) e) k (ord_mult (End m) t)
      | (Plus e k t, End n) => Plus e (k*n) t
      | (Plus e1 k1 t1, Plus e2 k2 t2) => Plus (ord_add e1 e2) k2
-                                              (ord_mult (Plus e1 k1 t1) t2)`;
+                                              (ord_mult (Plus e1 k1 t1) t2)
+End
 
 val _ = Count.report (Count.read meter);
 
@@ -783,24 +783,25 @@ val _ = Count.report (Count.read meter);
     More efficient multiplication (again from Manolios & Vroon)
    ---------------------------------------------------------------------- *)
 
-val restn_def = Define`
+Definition restn_def:
   (restn a 0 = a) /\
   (restn a (SUC n) = restn (tail a) n)
-`;
+End
 
-val cf1_def = Define`
+Definition cf1_def:
   (cf1 (End _) b = 0) /\
   (cf1 (Plus e1 c1 k1) b = if ord_less (expt b) e1 then 1 + cf1 k1 b
                            else 0)
-`
+End
 val _ = export_rewrites ["cf1_def"]
 
-val cf2_def = Define`cf2 a b n = n + cf1 (restn a n) b`
+Definition cf2_def:  cf2 a b n = n + cf1 (restn a n) b
+End
 
-val padd_def = Define`
+Definition padd_def:
   (padd a b 0 = ord_add a b) /\
   (padd a b (SUC n) = Plus (expt a) (coeff a) (padd (tail a) b n))
-`
+End
 
 val pmult_def = tDefine "pmult" `
   pmult a b n =

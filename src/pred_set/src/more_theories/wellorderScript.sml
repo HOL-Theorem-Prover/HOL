@@ -25,10 +25,10 @@ val FORALL_SUM = sumTheory.FORALL_SUM
 (* there's another ``wellfounded`` in prim_recTheory with different type *)
 val _ = hide "wellfounded";
 
-val wellfounded_def = Define`
+Definition wellfounded_def:
   wellfounded R <=>
    !s. (?w. w IN s) ==> ?min. min IN s /\ !w. (w,min) IN R ==> w NOTIN s
-`;
+End
 val _ = overload_on ("Wellfounded", ``wellfounded``);
 
 val wellfounded_WF = store_thm(
@@ -36,11 +36,11 @@ val wellfounded_WF = store_thm(
   ``!R. wellfounded R <=> WF (CURRY R)``,
   rw[wellfounded_def, WF_DEF, SPECIFICATION]);
 
-val wellorder_def = Define`
+Definition wellorder_def:
   wellorder R <=>
     wellfounded (strict R) /\ linear_order R (domain R UNION range R) /\
     reflexive R (domain R UNION range R)
-`;
+End
 
 (* well order examples *)
 val wellorder_EMPTY = store_thm(
@@ -82,9 +82,9 @@ Theorem destWO_mkWO = #repabs_pseudo_id wellorder_results
 
 val termP_term_REP = #termP_term_REP wellorder_results
 
-val elsOf_def = Define`
+Definition elsOf_def:
   elsOf w = domain (destWO w) UNION range (destWO w)
-`;
+End
 
 val _ = overload_on("WIN", ``\p w. p IN strict (destWO w)``)
 val _ = set_fixity "WIN" (Infix(NONASSOC, 425))
@@ -171,7 +171,8 @@ val WIN_WF2 = save_thm(
   "WIN_WF2",
   WIN_WF |> SIMP_RULE (srw_ss()) [wellfounded_WF, CURRY_def])
 
-val iseg_def = Define`iseg w x = { y | (y,x) WIN w }`
+Definition iseg_def:  iseg w x = { y | (y,x) WIN w }
+End
 
 val strict_subset = store_thm(
   "strict_subset",
@@ -214,9 +215,9 @@ val wellorder_rrestrict = store_thm(
   qexists_tac `strict(destWO w)` >>
   rw[rrestrict_SUBSET, strict_subset]);
 
-val wobound_def = Define`
+Definition wobound_def:
   wobound x w = mkWO (rrestrict (destWO w) (iseg w x))
-`;
+End
 
 val WIN_wobound = store_thm(
   "WIN_wobound",
@@ -344,9 +345,9 @@ val wellorder_fromNat_SUM = store_thm(
   qexists_tac `IMAGE INL (domain w0 UNION range w0)` >>
   simp[]);
 
-val fromNatWO_def = Define`
+Definition fromNatWO_def:
   fromNatWO n = mkWO { (INL i, INL j) | i <= j /\ j < n }
-`
+End
 
 val fromNatWO_11 = store_thm(
   "fromNatWO_11",
@@ -383,14 +384,14 @@ val elsOf_wobound = store_thm(
   simp[rrestrict_def, iseg_def, domain_def, range_def] >>
   metis_tac [elsOf_WLE, WIN_elsOf]);
 
-val orderiso_def = Define`
+Definition orderiso_def:
   orderiso w1 w2 <=>
     ?f. (!x. x IN elsOf w1 ==> f x IN elsOf w2) /\
         (!x1 x2. x1 IN elsOf w1 /\ x2 IN elsOf w1 ==>
                  ((f x1 = f x2) = (x1 = x2))) /\
         (!y. y IN elsOf w2 ==> ?x. x IN elsOf w1 /\ (f x = y)) /\
         (!x y. (x,y) WIN w1 ==> (f x, f y) WIN w2)
-`;
+End
 
 val orderiso_thm = store_thm(
   "orderiso_thm",
@@ -428,9 +429,9 @@ val orderiso_TRANS = store_thm(
   rw[orderiso_def] >> qexists_tac `f' o f` >>
   rw[] >> metis_tac []);
 
-val orderlt_def = Define`
+Definition orderlt_def:
   orderlt w1 w2 = ?x. x IN elsOf w2 /\ orderiso w1 (wobound x w2)
-`;
+End
 
 val orderlt_REFL = store_thm(
   "orderlt_REFL",
@@ -524,13 +525,13 @@ val orderlt_TRANS = store_thm(
     fs[WIN_wobound]
   ]);
 
-val wleast_def = Define`
+Definition wleast_def:
   wleast w s =
     some x. x IN elsOf w /\ x NOTIN s /\
             !y. y IN elsOf w /\ y NOTIN s /\ x <> y ==> (x,y) WIN w
-`;
+End
 
-val wo2wo_def = Define`
+Definition wo2wo_def:
   wo2wo w1 w2 =
     WFREC (\x y. (x,y) WIN w1)
           (\f x. let s0 = IMAGE f (iseg w1 x) in
@@ -538,7 +539,7 @@ val wo2wo_def = Define`
                  in
                    if s1 = elsOf w2 then NONE
                    else wleast w2 s1)
-`;
+End
 
 val restrict_away = prove(
   ``IMAGE (RESTRICT f (\x y. (x,y) WIN w) x) (iseg w x) = IMAGE f (iseg w x)``,
@@ -752,7 +753,8 @@ val orderlt_trichotomy = store_thm(
     metis_tac [wo2wo_mono, THE_DEF, WIN_elsOf, option_CASES]
   ]);
 
-val wZERO_def = Define`wZERO = mkWO {}`
+Definition wZERO_def:  wZERO = mkWO {}
+End
 
 val elsOf_wZERO = store_thm(
   "elsOf_wZERO",
@@ -864,9 +866,9 @@ val orderlt_orderiso = store_thm(
     metis_tac [orderiso_thm, orderiso_SYM]
   ]);
 
-val finite_def = Define`
+Definition finite_def:
   finite w = FINITE (elsOf w)
-`;
+End
 
 val finite_iso = store_thm(
   "finite_iso",
@@ -931,9 +933,9 @@ val WLE_WIN_EQ = store_thm(
   ``(x,y) WLE w <=> (x = y) /\ x IN elsOf w \/ (x,y) WIN w``,
   metis_tac [elsOf_WLE, WLE_WIN, WIN_WLE]);
 
-val remove_def = Define`
+Definition remove_def:
   remove e w = mkWO { (x,y) | x <> e /\ y <> e /\ (x,y) WLE w }
-`;
+End
 
 val wellorder_remove = store_thm(
   "wellorder_remove",
@@ -958,12 +960,12 @@ val WIN_remove = store_thm(
   ``(x,y) WIN remove e w <=> x <> e /\ y <> e /\ (x,y) WIN w``,
   simp[remove_def, destWO_mkWO, wellorder_remove, strict_def]);
 
-val ADD1_def = Define`
+Definition ADD1_def:
   ADD1 e w =
     if e IN elsOf w then w
     else
       mkWO (destWO w UNION {(x,e) | x IN elsOf w} UNION {(e,e)})
-`;
+End
 
 val wellorder_ADD1 = store_thm(
   "wellorder_ADD1",

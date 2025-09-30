@@ -38,14 +38,14 @@ val from_inftree_11 = prove(
   ``(from_inftree t1 = from_inftree t2) = (t1 = t2)``,
   METIS_TAC [inftree_bijections])
 
-val iLf_def = Define`
+Definition iLf_def:
   iLf a = to_inftree (\p. INL a)
-`
+End
 
-val iNd_def = Define`
+Definition iNd_def:
   iNd b f = to_inftree (\p. if p = [] then INR b
                             else from_inftree (f (HD p)) (TL p))
-`
+End
 
 val iNd_is_tree = store_thm(
   "iNd_is_tree",
@@ -132,9 +132,9 @@ val relrec_total = prove(
   ONCE_REWRITE_TAC [relrec_cases] THEN SRW_TAC [][] THEN
   METIS_TAC [])
 
-val inftree_rec_def = Define`
+Definition inftree_rec_def:
   inftree_rec lf nd t = @r. relrec lf nd t r
-`
+End
 
 val inftree_rec_thm = prove(
   ``(inftree_rec lf nd (iLf a) = lf a) /\

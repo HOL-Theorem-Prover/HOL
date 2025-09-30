@@ -361,19 +361,19 @@ val _ = overload_on ("#1", ``r.prod.id``); (* define one *)
    . #0 multiplies to #0 (on the left) (no need, can be deduced from distributive law)
    . multiplication distributes over addition (on the left)
 *)
-val Ring_def = Define`
+Definition Ring_def:
     Ring (r:'a ring) <=>
        AbelianGroup r.sum  /\
        AbelianMonoid r.prod /\
        (r.sum.carrier = R) /\
        (r.prod.carrier = R) /\
        (!x y z. x IN R /\ y IN R /\ z IN R ==> (x * (y + z) = (x * y) + (x * z)))
-`;
+End
 
 (* A finite ring *)
-val FiniteRing_def = Define`
+Definition FiniteRing_def:
     FiniteRing (r:'a ring) <=> Ring r /\ FINITE R
-`;
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Simple Theorems                                                           *)
@@ -1845,7 +1845,8 @@ val ring_exp_mod_order = store_thm(
 (* ------------------------------------------------------------------------- *)
 (* Ring Subtraction Theorems.                                                *)
 (* ------------------------------------------------------------------------- *)
-val ring_sub_def = Define `ring_sub (r:'a ring) x y = x + (- y)`;
+Definition ring_sub_def:   ring_sub (r:'a ring) x y = x + (- y)
+End
 val _ = overload_on ("-", ``ring_sub r``);
 val _ = export_rewrites ["ring_sub_def"];
 
@@ -2394,7 +2395,8 @@ val ring_binomial_4 = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the Ring nonzero elements *)
-val ring_nonzero_def = Define `ring_nonzero (r:'a ring) = R DIFF {#0}`;
+Definition ring_nonzero_def:   ring_nonzero (r:'a ring) = R DIFF {#0}
+End
 val _ = overload_on ("R+", ``ring_nonzero r``); (* instead of R_plus *)
 
 (* use overloading for the multiplicative group *)
@@ -2465,7 +2467,8 @@ val ring_nonzero_mult_carrier = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define characteristic of a ring *)
-val char_def = Define` char (r:'a ring) = order r.sum #1`;
+Definition char_def:   char (r:'a ring) = order r.sum #1
+End
 
 (* Theorem: ##(char r) = #0 *)
 (* Proof: by char_def, order_property. *)
@@ -3646,26 +3649,29 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* A function f from r to s is a homomorphism if ring properties are preserved. *)
-val RingHomo_def = Define`
+Definition RingHomo_def:
   RingHomo f (r:'a ring) (s:'b ring) <=>
      (!x. x IN r.carrier ==> f x IN s.carrier) /\
      GroupHomo f (r.sum) (s.sum) /\
      MonoidHomo f (r.prod) (s.prod)
-`;
+End
 
 (* A function f from r to s is an isomorphism if f is a bijective homomorphism. *)
-val RingIso_def = Define `
+Definition RingIso_def:
   RingIso f r s <=> RingHomo f r s /\ BIJ f r.carrier s.carrier
-`;
+End
 
 (* A ring homomorphism from r to r is an endomorphism. *)
-val RingEndo_def = Define `RingEndo f r <=> RingHomo f r r`;
+Definition RingEndo_def:   RingEndo f r <=> RingHomo f r r
+End
 
 (* A ring isomorphism from r to r is an automorphism. *)
-val RingAuto_def = Define `RingAuto f r <=> RingIso f r r`;
+Definition RingAuto_def:   RingAuto f r <=> RingIso f r r
+End
 
 (* A subring s of r if identity is a homomorphism from s to r *)
-val subring_def = Define `subring s r <=> RingHomo I s r`;
+Definition subring_def:   subring s r <=> RingHomo I s r
+End
 
 (* Overloads for Homomorphism and Isomorphisms with map *)
 val _ = overload_on("~r~", ``\(r:'a ring) (r_:'b ring) f. Ring r /\ Ring r_ /\ RingHomo f r r_``);
@@ -4974,13 +4980,13 @@ val subring_ring_iso_compose = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the homomorphic image of a ring. *)
-val homo_ring_def = Define`
+Definition homo_ring_def:
   homo_ring (r:'a ring) (f:'a -> 'b) =
     <| carrier := IMAGE f R;
            sum := homo_group (r.sum) f;
           prod := homo_monoid (r.prod) f
      |>
-`;
+End
 
 (* set overloading *)
 val _ = overload_on ("fR", ``(homo_ring (r:'a ring) (f:'a -> 'b)).carrier``);
@@ -5122,13 +5128,13 @@ val homo_ring_by_inj = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define homomorphism image of Ring *)
-val ring_homo_image_def = Define`
+Definition ring_homo_image_def:
   ring_homo_image f (r:'a ring) (r_:'b ring) =
      <| carrier := IMAGE f R;
             sum := homo_image f r.sum r_.sum;
            prod := homo_image f r.prod r_.prod
       |>
-`;
+End
 (*
 We have these (based on image_op):
 - homo_ring_def;
@@ -5940,7 +5946,7 @@ val _ = temp_overload_on ("J", ``j.carrier``);
    (2) prod part is absorption: !x IN I, y IN R, x * y IN I
    (3) !x IN I, y IN R, y * x IN I
 *)
-val ideal_def = Define `
+Definition ideal_def:
   ideal (i:'a ring) (r:'a ring) <=>
     i.sum <= r.sum /\
     (i.sum.carrier = I) /\
@@ -5948,7 +5954,7 @@ val ideal_def = Define `
     (i.prod.op = r.prod.op) /\
     (i.prod.id = #1) /\
     (!x y. x IN I /\ y IN R ==> x * y IN I /\ y * x IN I)
-`;
+End
 (*
 - ideal_def;
 > val ideal_def = |- !i r. ideal i r <=>
@@ -6324,9 +6330,9 @@ val ideal_coset_eq = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define congruence by ideal in Ring *)
-val ideal_congruence_def = Define `
+Definition ideal_congruence_def:
   ideal_congruence (r:'a ring) (i:'a ring) (x:'a) (y:'a) <=> x - y IN i.carrier
-`;
+End
 
 (* set overloading *)
 val _ = overload_on ("===", ``ideal_congruence r i``);
@@ -6465,13 +6471,13 @@ val ideal_congruence_elements = store_thm(
 val _ = overload_on ("*", ``coset r.prod``);
 
 (* Integer Ring Ideals are multiples *)
-val principal_ideal_def = Define `
+Definition principal_ideal_def:
   principal_ideal (r:'a ring) (p:'a) =
     <| carrier := p * R;
            sum := <| carrier := p * R; op := r.sum.op; id := r.sum.id |>;
           prod := <| carrier := p * R; op := r.prod.op; id := r.prod.id |>
      |>
-`;
+End
 (* Note: <p>.prod is only type-compatible with monoid, it is not a monoid: prod.id may not be in carrier. *)
 
 (* set overloading *)
@@ -6826,13 +6832,13 @@ val ideal_carrier_sing = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define sum of ideals *)
-val ideal_sum_def = Define `
+Definition ideal_sum_def:
   ideal_sum (r:'a ring) (i:'a ring) (j:'a ring) =
       <| carrier := {x + y | x IN I /\ y IN J};
              sum := <| carrier := {x + y | x IN I /\ y IN J}; op := r.sum.op; id := r.sum.id |>;
             prod := <| carrier := {x + y | x IN I /\ y IN J}; op := r.prod.op; id := r.prod.id |>
        |>
-`;
+End
 val _ = overload_on ("+", ``ideal_sum r``);
 
 (* Theorem: x IN (i + j).carrier <=> ?y z. y IN I /\ z IN J /\ (x = y + z) *)
@@ -7118,11 +7124,11 @@ val principal_ideal_sum_equal_ideal = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define maximal ideal *)
-val ideal_maximal_def = Define `
+Definition ideal_maximal_def:
   ideal_maximal (r:'a ring) (i:'a ring) <=>
     (i << r) /\
     (!j:'a ring. i << j /\ j << r ==> (i = j) \/ (j = r))
-`;
+End
 
 (* use overloading *)
 val _ = overload_on ("maxi", ``ideal_maximal r``);
@@ -7132,11 +7138,11 @@ val _ = overload_on ("maxi", ``ideal_maximal r``);
 (* ------------------------------------------------------------------------- *)
 
 (* A ring element is irreducible if it is non-zero and non-unit, and its only factors are trivial. *)
-val irreducible_def = Define`
+Definition irreducible_def:
   irreducible (r:'a ring) (z:'a) <=>
     (z IN R+) /\ ~(unit z) /\
     (!x y. x IN R /\ y IN R /\ (z = x * y) ==> (unit x) \/ (unit y))
-`;
+End
 
 (* use overloading *)
 val _ = overload_on ("atom", ``irreducible r``);
@@ -7161,11 +7167,11 @@ val irreducible_element = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* A principal ideal ring = a ring with all ideals being principal ideals. *)
-val PrincipalIdealRing_def = Define`
+Definition PrincipalIdealRing_def:
   PrincipalIdealRing (r:'a ring) <=>
     (Ring r) /\
     (!(i:'a ring). i << r ==> ?p. p IN R /\ (<p> = i))
-`;
+End
 (*
 > val PrincipalIdealRing_def = |- !r. PrincipalIdealRing r <=> Ring r /\ !i. i << r ==> ?p. p IN R /\ (<p> = i)
 *)
@@ -7209,13 +7215,13 @@ val principal_ideal_ring_ideal_maximal = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* A Euclidean Ring is a ring with a norm function f for division algorithm. *)
-val EuclideanRing_def = Define`
+Definition EuclideanRing_def:
   EuclideanRing (r:'a ring) (f:'a -> num) <=>
     (Ring r) /\
     (!x. (f x = 0) <=> (x = #0)) /\
     (!x y:'a. x IN R /\ y IN R /\ y <> #0 ==>
      ?q t:'a. q IN R /\ t IN R /\ (x = q * y + t) /\ f(t) < f(y))
-`;
+End
 
 (* Theorem: EuclideanRing r ==> Ring r *)
 val euclid_ring_ring = save_thm("euclid_ring_ring",
@@ -7395,13 +7401,13 @@ val homo_ideal_def = Define`
      |>
 `;
 *)
-val homo_ideal_def = Define`
+Definition homo_ideal_def:
   homo_ideal (f:'a -> 'b) (r:'a ring) (s:'b ring) (i:'a ring) =
     <| carrier := IMAGE f I;
            sum := <| carrier := IMAGE f I; op := s.sum.op; id := f #0 |>;
           prod := <| carrier := IMAGE f I; op := s.prod.op; id := f #1 |>
      |>
-`;
+End
 
 (* Theorem: RingHomo f r s /\ i << r ==> Group (homo_ideal f r s i).sum *)
 (* Proof: checking group axioms:
@@ -7673,10 +7679,10 @@ binomial_thm:
 (* ------------------------------------------------------------------------- *)
 
 (* Ring element list. *)
-val ring_list_def = Define`
+Definition ring_list_def:
   (ring_list (r:'a ring) [] <=> T) /\
   (ring_list (r:'a ring) ((h:'a)::(t:'a list)) <=> h IN R /\ (ring_list r t))
-`;
+End
 val _ = overload_on ("rlist", ``ring_list r``);
 
 (* export simple definition. *)
@@ -7744,10 +7750,10 @@ val ring_list_SNOC = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Summation in a Ring. *)
-val ring_sum_def = Define`
+Definition ring_sum_def:
   (ring_sum (r:'a ring) [] = #0) /\
   (ring_sum (r:'a ring) ((h:'a)::(t:'a list)) = h + (ring_sum r t))
-`;
+End
 val _ = overload_on ("rsum", ``ring_sum r``);
 
 (* export simple definition. *)
@@ -7929,9 +7935,9 @@ val ring_sum_SNOC = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Ring element function. *)
-val ring_fun_def = Define`
+Definition ring_fun_def:
   ring_fun (r:'a ring) f <=> !x. f x IN R
-`;
+End
 val _ = overload_on ("rfun", ``ring_fun r``);
 
 (* export simple definition. *)
@@ -8994,10 +9000,10 @@ val _ = temp_overload_on ("I", ``i.carrier``);
 val _ = temp_overload_on ("J", ``j.carrier``);
 
 (* Divides relation in ring *)
-val ring_divides_def = Define `
+Definition ring_divides_def:
   ring_divides (r:'a ring) (q:'a) (p:'a) =
     ?s:'a. s IN R /\ (p = s * q)
-`;
+End
 
 (* Overload ring divides *)
 val _ = overload_on ("rdivides", ``ring_divides r``);
@@ -9008,10 +9014,10 @@ ring_divides_def;
 *)
 
 (* Define ring associates *)
-val ring_associates_def = Define `
+Definition ring_associates_def:
   ring_associates (r:'a ring) (p:'a) (q:'a) =
   ?s:'a. unit s /\ (p = s * q)
-`;
+End
 (* Overload ring associates *)
 val _ = overload_on ("rassoc", ``ring_associates r``);
 (*
@@ -9020,10 +9026,10 @@ val _ = overload_on ("rassoc", ``ring_associates r``);
 *)
 
 (* Define prime in ring *)
-val ring_prime_def = Define `
+Definition ring_prime_def:
   ring_prime (r:'a ring) (p:'a) =
   !a b. a IN R /\ b IN R /\ p rdivides a * b ==> (p rdivides a) \/ (p rdivides b)
-`;
+End
 (* Overload prime in ring *)
 val _ = overload_on ("rprime", ``ring_prime r``);
 (*
@@ -9474,13 +9480,13 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define greatest common divisor *)
-val ring_gcd_def = Define`
+Definition ring_gcd_def:
   ring_gcd (r:'a ring) (f:'a -> num) (p:'a) (q:'a) =
    if p = #0 then q
    else if q = #0 then p
    else let s = {a * p + b * q | (a, b) | a IN R /\ b IN R /\ 0 < f (a * p + b * q) }
          in CHOICE (preimage f s (MIN_SET (IMAGE f s)))
-`;
+End
 
 (* Overload ring gcd *)
 val _ = overload_on ("rgcd", ``ring_gcd r f``);
@@ -9783,10 +9789,10 @@ val ring_irreducible_gcd = store_thm(
   ]);
 
 (* Define ring ordering function *)
-val ring_ordering_def = Define `
+Definition ring_ordering_def:
   ring_ordering (r:'a ring) (f:'a -> num) =
     !a b. a IN R /\ b IN R /\ b <> #0 ==> f a <= f (a * b)
-`;
+End
 
 (* Theorem: EuclideanRing r /\ ring_ordering r f ==>
             !p q. p IN R /\ q IN R /\ p <> #0 /\ q rdivides p ==> f q <= f p *)
@@ -10187,14 +10193,14 @@ val _ = overload_on ("R/I", ``CosetPartition r.sum i.sum``);
 val _ = overload_on ("gen", ``cogen r.sum i.sum``);
 
 (* Define addition of ideal cosets *)
-val ideal_coset_add_def = Define`
+Definition ideal_coset_add_def:
   ideal_coset_add (r:'a ring) (i:'a ring) x y = (gen x + gen y) o I
-`;
+End
 
 (* Define multiplication of ideal cosets *)
-val ideal_coset_mult_def = Define`
+Definition ideal_coset_mult_def:
   ideal_coset_mult (r:'a ring) (i:'a ring) x y = (gen x * gen y) o I
-`;
+End
 
 (* Overload operations *)
 val _ = overload_on ("+", ``ideal_coset_add r i``);
@@ -10227,31 +10233,31 @@ val ideal_coset_element = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define addition group in Quotient Ring (R/I) *)
-val quotient_ring_add_def = Define `
+Definition quotient_ring_add_def:
   quotient_ring_add (r:'a ring) (i:'a ring) =
     <| carrier := R/I;
             id := I; (* will show: I = #0 o I *)
             op := ideal_coset_add r i
      |>
-`;
+End
 
 (* Define multiplication monoid in Quotient Ring (R/I) *)
-val quotient_ring_mult_def = Define `
+Definition quotient_ring_mult_def:
   quotient_ring_mult (r:'a ring) (i:'a ring) =
     <| carrier := R/I;
             id := #1 o I;
             op := ideal_coset_mult r i
      |>
-`;
+End
 
 (* Define Quotient Ring (R/I) *)
-val quotient_ring_def = Define `
+Definition quotient_ring_def:
   quotient_ring (r:'a ring) (i:'a ring) =
     <| carrier := R/I;
            sum := quotient_ring_add r i;
           prod := quotient_ring_mult r i
      |>
-`;
+End
 
 (* set overloading for Quotient Ring. *)
 val _ = overload_on ("/", ``quotient_ring``);
@@ -11029,12 +11035,13 @@ val quotient_ring_homo_kernel = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the Kernel Ideal of a ring homomorphism. *)
-val kernel_ideal_def = Define`
+Definition kernel_ideal_def:
   kernel_ideal f (r:'a ring) (s:'b ring) =
     <| carrier := kernel f r.sum s.sum;  (* e.g. s = r / i *)
            sum := <| carrier := kernel f r.sum s.sum; op := r.sum.op; id := r.sum.id |>;
           prod := <| carrier := kernel f r.sum s.sum; op := r.prod.op; id := r.prod.id |>
-     |>`;
+     |>
+End
 
 (* Theorem: (kernel_ideal f r s).sum = kernel_group f r.sum s.sum *)
 (* Proof: kernel_ideal_def, kernel_group_def *)
@@ -11716,7 +11723,7 @@ val ring_first_isomorphism_thm = store_thm(
 (* The Trivial Ring = {|0|}.                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val trivial_ring_def = Define`
+Definition trivial_ring_def:
   (trivial_ring z) : 'a ring =
    <| carrier := {z};
       sum := <| carrier := {z};
@@ -11726,7 +11733,7 @@ val trivial_ring_def = Define`
                 id := z;
                 op := (\x y. z) |>
     |>
-`;
+End
 
 (* Theorem: {|0|} is indeed a ring. *)
 (* Proof: by definition, the field tables are:
@@ -13265,11 +13272,11 @@ val ZN_to_ZN_ring_homo = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* The Ring from Group (symdiff_set) and Monoid (set_inter). *)
-val symdiff_set_inter_def = Define`
+Definition symdiff_set_inter_def:
   symdiff_set_inter = <| carrier := UNIV;
                              sum := symdiff_set;
                             prod := set_inter |>
-`;
+End
 (* Evaluation is given later in symdiff_eval. *)
 
 (* Theorem: symdiff_set_inter is a Ring. *)
@@ -13362,14 +13369,14 @@ return j                      // the least index j.
 *)
 
 (* Compute ordz m n = order (ZN m).prod n = ordz m n *)
-val compute_ordz_def = Define`
+Definition compute_ordz_def:
     compute_ordz m n =
          if m = 0 then ordz 0 n
     else if m = 1 then 1 (* ordz 1 n = 1 *)
     else if coprime m n then
          WHILE (\i. (n ** i) MOD m <> 1) SUC 1  (* i = 1, WHILE (n ** i (MOD m) <> 1) i <- SUC i) *)
     else 0  (* ordz m n = 0 when ~(coprime m n) *)
-`;
+End
 
 (* Examples:
 > EVAL ``compute_ordz 10 3``; --> 4
@@ -13719,28 +13726,28 @@ val it = |- ordz 7 10 = 6: thm
 (* ------------------------------------------------------------------------- *)
 
 (* Integer Additive Group *)
-val Z_add_def = Define `
+Definition Z_add_def:
   Z_add = <| carrier := univ(:int);
                   op := \(x:int) (y:int). x + y;
                   id := (0:int)
            |>
-`;
+End
 
 (* Integer Multiplicative Monoid *)
-val Z_mult_def = Define `
+Definition Z_mult_def:
   Z_mult = <| carrier := univ(:int);
                    op := \(x:int) (y:int). x * y;
                    id := (1:int)
             |>
-`;
+End
 
 (* Integer Ring *)
-val Z_def = Define `
+Definition Z_def:
   Z = <| carrier := univ(:int);
              sum := Z_add;
             prod := Z_mult
        |>
-`;
+End
 
 (* Theorem: Z_add is a Group. *)
 (* Proof: check group axioms:
@@ -13816,15 +13823,16 @@ val Z_ring = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Integer Multiples *)
-val Z_multiple_def = Define `Z_multiple (n:num) = {&n * z | z IN univ(:int)}`;
+Definition Z_multiple_def:   Z_multiple (n:num) = {&n * z | z IN univ(:int)}
+End
 
 (* Integer Ring Ideals are multiples *)
-val Z_ideal_def = Define `
+Definition Z_ideal_def:
   Z_ideal (n:num) = <| carrier := Z_multiple n;
                            sum := <| carrier := Z_multiple n; op := Z.sum.op; id := Z.sum.id |>;
                           prod := <| carrier := Z_multiple n; op := Z.prod.op; id := Z.prod.id |>
                      |>
-`;
+End
 
 (* set overloading *)
 val _ = overload_on ("Z*", ``Z_ideal``);
@@ -14564,16 +14572,16 @@ val Z_principal_ideal_ring = store_thm(
    . #1 <> #0
    . !x y IN R, x * y = #0 <=> x = #0 or y = #0
 *)
-val IntegralDomain_def = Define`
+Definition IntegralDomain_def:
   IntegralDomain (r:'a ring) <=>
     Ring r /\
     #1 <> #0 /\
     (!x y. x IN R /\ y IN R ==> ((x * y = #0) <=> (x = #0) \/ (y = #0)))
-`;
+End
 
-val FiniteIntegralDomain_def = Define`
+Definition FiniteIntegralDomain_def:
   FiniteIntegralDomain (r:'a ring) <=> IntegralDomain r /\ FINITE R
-`;
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Simple Theorems                                                           *)
@@ -14747,13 +14755,13 @@ val integral_domain_mult_rcancel = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define monoid of ring nonzero multiplication. *)
-val monoid_of_ring_nonzero_mult_def = Define`
+Definition monoid_of_ring_nonzero_mult_def:
   monoid_of_ring_nonzero_mult (r:'a ring) :'a monoid  =
   <| carrier := R+;
           op := r.prod.op;
           id := #1
     |>
-`;
+End
 (*
 - type_of ``monoid_of_ring_nonzero_mult r``;
 > val it = ``:'a monoid`` : hol_type

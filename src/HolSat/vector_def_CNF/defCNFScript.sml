@@ -18,25 +18,29 @@ val op<< = op THENL;
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val UNIQUE_def = Define`
+Definition UNIQUE_def:
   (UNIQUE (v:num->bool) n (conn, INL i, INL j) = (v n = conn (v i) (v j))) /\
   (UNIQUE v n (conn, INL i, INR b) = (v n = conn (v i) b)) /\
   (UNIQUE v n (conn, INR a, INL j) = (v n = conn a (v j))) /\
-  (UNIQUE v n (conn, INR a, INR b) = (v n = conn a b))`;
+  (UNIQUE v n (conn, INR a, INR b) = (v n = conn a b))
+End
 
-val DEF_def = Define
-  `(DEF (v:num->bool) n [] = T) /\
-   (DEF v n (x :: xs) = UNIQUE v n x /\ DEF v (SUC n) xs)`;
+Definition DEF_def:
+   (DEF (v:num->bool) n [] = T) /\
+   (DEF v n (x :: xs) = UNIQUE v n x /\ DEF v (SUC n) xs)
+End
 
-val OK_def = Define
-  `(OK n ((conn:bool->bool->bool), INL i, INL j) = i < n /\ j < n) /\
+Definition OK_def:
+   (OK n ((conn:bool->bool->bool), INL i, INL j) = i < n /\ j < n) /\
    (OK n (conn, INL i, INR (b:bool)) = i < n) /\
    (OK n (conn, INR (a:bool), INL j) = j < n) /\
-   (OK n (conn, INR a, INR b) = T)`;
+   (OK n (conn, INR a, INR b) = T)
+End
 
-val OKDEF_def = Define
-  `(OKDEF n [] = T) /\
-   (OKDEF n (x :: xs) = OK n x /\ OKDEF (SUC n) xs)`;
+Definition OKDEF_def:
+   (OKDEF n [] = T) /\
+   (OKDEF n (x :: xs) = OK n x /\ OKDEF (SUC n) xs)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)

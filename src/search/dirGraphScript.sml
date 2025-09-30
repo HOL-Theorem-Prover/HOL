@@ -15,30 +15,30 @@ val set_ss = list_ss ++ PRED_SET_ss;
 (* A node of G is a parent iff it has children.                              *)
 (*---------------------------------------------------------------------------*)
 
-val Parents_def =
- Define
-   `Parents G = {x | ~(G x = [])}`;
+Definition Parents_def:
+    Parents G = {x | ~(G x = [])}
+End
 
 (*---------------------------------------------------------------------------*)
 (* Definition of reachability in a directed graph represented as a function  *)
 (* from nodes to a finite number of children, i.e., of type 'a -> 'a list    *)
 (*---------------------------------------------------------------------------*)
 
-val REACH_def =
- Define
-   `REACH G = RTC (\x y. MEM y (G x))`;
+Definition REACH_def:
+    REACH G = RTC (\x y. MEM y (G x))
+End
 
-val REACH_LIST_def =
- Define
-   `REACH_LIST G nodes y = ?x. MEM x nodes /\ y IN REACH G x`;
+Definition REACH_LIST_def:
+    REACH_LIST G nodes y = ?x. MEM x nodes /\ y IN REACH G x
+End
 
 (*---------------------------------------------------------------------------*)
 (* Removing a set of nodes ex from G.                                        *)
 (*---------------------------------------------------------------------------*)
 
-val EXCLUDE_def =
- Define
-   `EXCLUDE G ex node = if node IN ex then [] else G node`;
+Definition EXCLUDE_def:
+    EXCLUDE G ex node = if node IN ex then [] else G node
+End
 
 (*---------------------------------------------------------------------------*)
 (* Lemmas about reachability and restricted graphs.                          *)

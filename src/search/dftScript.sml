@@ -34,10 +34,10 @@ val _ = numLib.temp_prefer_num();
 (* parent, then it has no children, and so the to_visit list shrinks.        *)
 (*---------------------------------------------------------------------------*)
 
-val Rel_def =   (* map arg. tuples into a pair of numbers for termination *)
- Define
-   `Rel(G,f,seen,to_visit,acc) =
-        (CARD(Parents G DIFF (LIST_TO_SET seen)), LENGTH to_visit)`;
+Definition Rel_def:    (* map arg. tuples into a pair of numbers for termination *)
+    Rel(G,f,seen,to_visit,acc) =
+        (CARD(Parents G DIFF (LIST_TO_SET seen)), LENGTH to_visit)
+End
 
 Definition def[nocompute,induction=DFT_ind0]:
   DFT G f seen to_visit acc =

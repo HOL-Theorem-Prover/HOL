@@ -15,12 +15,12 @@ Libs
                  Partition a list by a predicate.
  ---------------------------------------------------------------------------*)
 
-val part_def =
- Define
-     `(part P [] l1 l2 = (l1,l2))
+Definition part_def:
+      (part P [] l1 l2 = (l1,l2))
   /\  (part P (h::rst) l1 l2 =
           if P h then part P rst (h::l1) l2
-                 else part P rst  l1  (h::l2))`;
+                 else part P rst  l1  (h::l2))
+End
 
 
 (*---------------------------------------------------------------------------
@@ -28,9 +28,9 @@ val part_def =
      will be instances of theorems about "part".
  ---------------------------------------------------------------------------*)
 
-val partition_def =
- Define
-     `partition P l = part P l [] []`;
+Definition partition_def:
+      partition P l = part P l [] []
+End
 
 (*---------------------------------------------------------------------------
               Theorems about "part"

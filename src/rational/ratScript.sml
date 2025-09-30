@@ -191,13 +191,18 @@ QED
  *--------------------------------------------------------------------------*)
 
 (* numerator, denominator, sign of a fraction *)
-val rat_nmr_def = Define `rat_nmr r = frac_nmr (rep_rat r)`;
-val rat_dnm_def = Define `rat_dnm r = frac_dnm (rep_rat r)`;
-val rat_sgn_def = Define `rat_sgn r = frac_sgn (rep_rat r)`;
+Definition rat_nmr_def:   rat_nmr r = frac_nmr (rep_rat r)
+End
+Definition rat_dnm_def:   rat_dnm r = frac_dnm (rep_rat r)
+End
+Definition rat_sgn_def:   rat_sgn r = frac_sgn (rep_rat r)
+End
 
 (* additive, multiplicative inverse of a fraction *)
-val rat_0_def = Define `rat_0 = abs_rat( frac_0 )`;
-val rat_1_def = Define `rat_1 = abs_rat( frac_1 )`;
+Definition rat_0_def:   rat_0 = abs_rat( frac_0 )
+End
+Definition rat_1_def:   rat_1 = abs_rat( frac_1 )
+End
 
 (* neutral elements *)
 Definition rat_ainv_def: rat_ainv r1 = abs_rat( frac_ainv (rep_rat r1))
@@ -237,7 +242,8 @@ Definition rat_cons_def:
   abs_rat (abs_frac(SGN nmr * SGN dnm * ABS nmr, ABS dnm))
 End
 
-val rat_of_num_def = Define ` (rat_of_num 0 = rat_0) /\ (rat_of_num (SUC 0) = rat_1) /\ (rat_of_num (SUC (SUC n)) = rat_add (rat_of_num (SUC n)) rat_1)`;
+Definition rat_of_num_def:    (rat_of_num 0 = rat_0) /\ (rat_of_num (SUC 0) = rat_1) /\ (rat_of_num (SUC (SUC n)) = rat_add (rat_of_num (SUC n)) rat_1)
+End
 val _ = add_numeral_form(#"q", SOME "rat_of_num");
 
 val rat_0 = store_thm("rat_0", ``0q = abs_rat( frac_0 )``,
@@ -2596,9 +2602,9 @@ val RAT_LE_NUM_CALCULATE = save_thm(
     rat_of_int
    ---------------------------------------------------------------------- *)
 
-val rat_of_int_def = Define ‘
+Definition rat_of_int_def:
   rat_of_int i : rat = if i < 0 then - (& (Num (-i))) else &(Num i)
-’;
+End
 
 Theorem rat_of_int_11[simp]:
   (rat_of_int i1 = rat_of_int i2) <=> (i1 = i2)
@@ -3219,8 +3225,10 @@ QED
     rational min and max
    ---------------------------------------------------------------------- *)
 
-val rat_min_def = Define‘rat_min (r1:rat) r2 = if r1 < r2 then r1 else r2’;
-val rat_max_def = Define‘rat_max (r1:rat) r2 = if r1 > r2 then r1 else r2’;
+Definition rat_min_def:  rat_min (r1:rat) r2 = if r1 < r2 then r1 else r2
+End
+Definition rat_max_def:  rat_max (r1:rat) r2 = if r1 > r2 then r1 else r2
+End
 
 
 Theorem RAT_DENSE_THM:

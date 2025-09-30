@@ -585,9 +585,9 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define halves n = count of HALFs of n to 0, recursively. *)
-val halves_def = Define`
+Definition halves_def:
     halves n = if n = 0 then 0 else SUC (halves (HALF n))
-`;
+End
 
 (* Theorem: halves n = if n = 0 then 0 else 1 + (halves (HALF n)) *)
 (* Proof: by halves_def, ADD1 *)
@@ -794,9 +794,9 @@ val halves_eq_1 = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define a PerfectPower number *)
-val perfect_power_def = Define`
+Definition perfect_power_def:
   perfect_power (n:num) (m:num) <=> ?e. (n = m ** e)
-`;
+End
 
 (* Overload perfect_power *)
 val _ = overload_on("power_of", ``perfect_power``);
@@ -1401,9 +1401,9 @@ Termination WF_REL_TAC `measure (λ(n, m, k). n - m)`
 End
 
 (* Define upper LOG2 n by count_up *)
-val ulog_def = Define`
+Definition ulog_def:
     ulog n = count_up n 1 0
-`;
+End
 
 (*
 > EVAL ``ulog 1``; --> 0
@@ -2175,9 +2175,9 @@ val sqrt_upper = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define a power free property of a number *)
-val power_free_upto_def = Define`
+Definition power_free_upto_def:
     power_free_upto n k <=> !j. 1 < j /\ j <= k ==> (ROOT j n) ** j <> n
-`;
+End
 (* make this an infix relation. *)
 val _ = set_fixity "power_free_upto" (Infix(NONASSOC, 450)); (* same as relation *)
 
@@ -2327,9 +2327,9 @@ val power_free_3 = store_thm(
   metis_tac[power_free_upto_suc, DECIDE``0 < 1 /\ (1 + 1 = 2)``]);
 
 (* Define a power free test, based on (ulog n), for computation. *)
-val power_free_test_def = Define`
+Definition power_free_test_def:
     power_free_test n <=>(1 < n /\ n power_free_upto (ulog n))
-`;
+End
 
 (* Theorem: power_free_test n = power_free n *)
 (* Proof: by power_free_test_def, power_free_check_upto_ulog *)
@@ -2361,12 +2361,12 @@ val power_free_test_upto_ulog = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define power index of n, the highest index of n in power form by descending from k *)
-val power_index_def = Define `
+Definition power_index_def:
     power_index n k <=>
         if k <= 1 then 1
         else if (ROOT k n) ** k = n then k
         else power_index n (k - 1)
-`;
+End
 
 (* Theorem: power_index n 0 = 1 *)
 (* Proof: by power_index_def *)
@@ -4327,22 +4327,22 @@ val it = |- !p n. 0 < n /\ prime p ==> p ** ppidx n divides n /\ coprime p (n DI
 *)
 
 (* Define the set of primes up to n *)
-val primes_upto_def = Define`
+Definition primes_upto_def:
     primes_upto n = {p | prime p /\ p <= n}
-`;
+End
 
 (* Overload the counts of primes up to n *)
 val _ = overload_on("primes_count", ``\n. CARD (primes_upto n)``);
 
 (* Define the prime powers up to n *)
-val prime_powers_upto_def = Define`
+Definition prime_powers_upto_def:
     prime_powers_upto n = IMAGE (\p. p ** LOG p n) (primes_upto n)
-`;
+End
 
 (* Define the prime power divisors of n *)
-val prime_power_divisors_def = Define`
+Definition prime_power_divisors_def:
     prime_power_divisors n = IMAGE (\p. p ** ppidx n) (prime_divisors n)
-`;
+End
 
 (* Theorem: p IN primes_upto n <=> prime p /\ p <= n *)
 (* Proof: by primes_upto_def *)
@@ -5778,13 +5778,13 @@ e (rpt strip_tac);
 *)
 
 (* Define the Consecutive LCM Function *)
-val lcm_fun_def = Define`
+Definition lcm_fun_def:
   (lcm_fun 0 = 1) /\
   (lcm_fun (SUC n) = if n = 0 then 1 else
       case some p. ?k. 0 < k /\ prime p /\ (SUC n = p ** k) of
         SOME p => p * (lcm_fun n)
       | NONE   => lcm_fun n)
-`;
+End
 
 (* Another possible definition -- but need to work with pairs:
 
@@ -7075,11 +7075,11 @@ End
 (* Use 1 < q so that, for prime n, it gives a result n for any initial q, including q = 1. *)
 
 (* Primality test by seeking a factor exceeding (SQRT n). *)
-val prime_test_def = Define`
+Definition prime_test_def:
     prime_test n =
        if n <= 1 then F
        else factor_seek n (1 + SQRT n) 2 = n
-`;
+End
 
 (*
 EVAL ``MAP prime_test [1 .. 15]``; = [F; T; T; F; T; F; T; F; F; F; T; F; T; F; F]: thm
@@ -7449,9 +7449,9 @@ val coprimes_prime = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of coprimes by a divisor of n *)
-val coprimes_by_def = Define `
+Definition coprimes_by_def:
     coprimes_by n d = if (0 < n /\ d divides n) then coprimes (n DIV d) else {}
-`;
+End
 
 (*
 EVAL ``coprimes_by 10 2``; = {4; 3; 2; 1}
@@ -7687,9 +7687,9 @@ val gcd_matches_eq_empty = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the Euler phi function from coprime set *)
-val phi_def = Define `
+Definition phi_def:
    phi n = CARD (coprimes n)
-`;
+End
 (* Since (coprimes n) is computable, phi n is now computable *)
 
 (*
@@ -9949,9 +9949,9 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define square-free number *)
-val square_free_def = Define`
+Definition square_free_def:
     square_free n = !p. prime p /\ p divides n ==> ~(p * p divides n)
-`;
+End
 
 (* Theorem: square_free 1 *)
 (* Proof:

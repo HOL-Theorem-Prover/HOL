@@ -49,20 +49,26 @@ val _ = ratLib.deprecate_rat ();
 Type p_space = “:'a m_space”
 Type events  = “:'a set set”
 
-val p_space_def = Define `p_space = m_space`;
+Definition p_space_def:   p_space = m_space
+End
 
-val events_def = Define `events = measurable_sets`;
+Definition events_def:   events = measurable_sets
+End
 
-val prob_def = Define `prob = measure`;
+Definition prob_def:   prob = measure
+End
 
-val prob_space_def = Define
-   `prob_space p <=> measure_space p /\ (measure p (m_space p) = 1)`;
+Definition prob_space_def:
+    prob_space p <=> measure_space p /\ (measure p (m_space p) = 1)
+End
 
-val probably_def = Define
-   `probably p e <=> e IN events p /\ (prob p e = 1)`;
+Definition probably_def:
+    probably p e <=> e IN events p /\ (prob p e = 1)
+End
 
-val possibly_def = Define
-   `possibly p e <=> e IN events p /\ prob p e <> 0`;
+Definition possibly_def:
+    possibly p e <=> e IN events p /\ prob p e <> 0
+End
 
 Definition random_variable_def :
     random_variable X p s <=> X IN measurable (p_space p, events p) s
@@ -82,12 +88,14 @@ End
 
    cf. lebesgueTheory.distr_def, of type ``:'a m_space``
  *)
-val distribution_def = Define (* was: pmf in [10] *)
-   `distribution (p :'a p_space) X = (\s. prob p ((PREIMAGE X s) INTER p_space p))`;
+Definition distribution_def:   (* was: pmf in [10] *)
+    distribution (p :'a p_space) X = (\s. prob p ((PREIMAGE X s) INTER p_space p))
+End
 
 (* c.f. [2, p.36], [4, p.206], [6, p.256], etc. *)
-val distribution_function_def = Define
-   `distribution_function p X = (\x. prob p ({w | X w <= x} INTER p_space p))`;
+Definition distribution_function_def:
+    distribution_function p X = (\x. prob p ({w | X w <= x} INTER p_space p))
+End
 
 (* NOTE (fixes after k14): changed ‘i IN J’ to ‘j IN J’ *)
 Definition identical_distribution_def :
@@ -106,39 +114,45 @@ Definition joint_distribution3_def :
       (\a. prob p (PREIMAGE (\x. (X x,Y x,Z x)) a INTER p_space p))
 End
 
-val conditional_distribution_def = Define
-   `conditional_distribution (p :'a p_space) X Y a b =
-      joint_distribution p X Y (a CROSS b) / distribution p Y b`;
+Definition conditional_distribution_def:
+    conditional_distribution (p :'a p_space) X Y a b =
+      joint_distribution p X Y (a CROSS b) / distribution p Y b
+End
 
 Definition expectation_def :
     expectation = lebesgue$integral
 End
 
 (* not used *)
-val conditional_expectation_def = Define
-   `conditional_expectation p X s =
+Definition conditional_expectation_def:
+    conditional_expectation p X s =
         @f. real_random_variable f p /\
             !g. g IN s ==>
                (expectation p (\x. f x * indicator_fn g x) =
-                expectation p (\x. X x * indicator_fn g x))`;
+                expectation p (\x. X x * indicator_fn g x))
+End
 
 (* not used *)
-val conditional_prob_def = Define
-   `conditional_prob p e1 e2 =
-    conditional_expectation p (indicator_fn e1) e2`;
+Definition conditional_prob_def:
+    conditional_prob p e1 e2 =
+    conditional_expectation p (indicator_fn e1) e2
+End
 
-val cond_prob_def = Define
-   `cond_prob p e1 e2 = (prob p (e1 INTER e2)) / (prob p e2)`;
+Definition cond_prob_def:
+    cond_prob p e1 e2 = (prob p (e1 INTER e2)) / (prob p e2)
+End
 
 (* not used *)
-val rv_conditional_expectation_def = Define
-   `rv_conditional_expectation (p :'a p_space) s X Y =
-       conditional_expectation p X (IMAGE (\a. (PREIMAGE Y a) INTER p_space p) (subsets s))`;
+Definition rv_conditional_expectation_def:
+    rv_conditional_expectation (p :'a p_space) s X Y =
+       conditional_expectation p X (IMAGE (\a. (PREIMAGE Y a) INTER p_space p) (subsets s))
+End
 
 (* this only works in discrete probability spaces *)
-val uniform_distribution_def = Define
-   `uniform_distribution (s :'a algebra) =
-      (\(a :'a set). (&CARD a / &CARD (space s)) :extreal)`;
+Definition uniform_distribution_def:
+    uniform_distribution (s :'a algebra) =
+      (\(a :'a set). (&CARD a / &CARD (space s)) :extreal)
+End
 
 (* ------------------------------------------------------------------------- *)
 (*  Basic probability theorems                                               *)
@@ -2102,24 +2116,30 @@ QED
 (*  Moments and variance [2, p.49]                                            *)
 (******************************************************************************)
 
-val absolute_moment_def = Define
-   `absolute_moment p X a r = expectation p (\x. (abs (X x - a)) pow r)`;
+Definition absolute_moment_def:
+    absolute_moment p X a r = expectation p (\x. (abs (X x - a)) pow r)
+End
 
-val moment_def = Define
-   `moment p X a r = expectation p (\x. (X x - a) pow r)`;
+Definition moment_def:
+    moment p X a r = expectation p (\x. (X x - a) pow r)
+End
 
-val central_moment_def = Define
-   `central_moment p X r = moment p X (expectation p X) r`;
+Definition central_moment_def:
+    central_moment p X r = moment p X (expectation p X) r
+End
 
 (* `variance` = central second moment, this is the most used one. *)
-val variance_def = Define
-   `variance p X = central_moment p X 2`;
+Definition variance_def:
+    variance p X = central_moment p X 2
+End
 
-val standard_deviation_def = Define
-   `standard_deviation p X = sqrt (variance p X)`;
+Definition standard_deviation_def:
+    standard_deviation p X = sqrt (variance p X)
+End
 
-val second_moment_def = Define
-   `second_moment p X a = moment p X a 2`;
+Definition second_moment_def:
+    second_moment p X a = moment p X a 2
+End
 
 val second_moment_alt = store_thm
   ("second_moment_alt",
@@ -2336,8 +2356,9 @@ QED
 
 (* NOTE: this definition is new, later we shall prove that it's equivalence with
          finite variance or finite second moment at `a = 0` *)
-val finite_second_moments_def = Define
-   `finite_second_moments p X = ?a. second_moment p X a < PosInf`;
+Definition finite_second_moments_def:
+    finite_second_moments p X = ?a. second_moment p X a < PosInf
+End
 
 val finite_variance_imp_finite_second_moments = Q.prove (
    `!p X. variance p X < PosInf ==> finite_second_moments p X`,
@@ -4191,15 +4212,17 @@ Proof
 QED
 
 (* c.f. set_limsup_alt, the only difference here is the additional sigma() inside *)
-val tail_algebra_def = Define
-   `tail_algebra (p :'a p_space) (E :num -> 'a set) =
+Definition tail_algebra_def:
+    tail_algebra (p :'a p_space) (E :num -> 'a set) =
       (p_space p,
-       BIGINTER (IMAGE (\n. subsets (sigma (p_space p) (IMAGE E (from n)))) UNIV))`;
+       BIGINTER (IMAGE (\n. subsets (sigma (p_space p) (IMAGE E (from n)))) UNIV))
+End
 
-val tail_algebra_of_rv_def = Define
-   `tail_algebra_of_rv (p :'a p_space) (X :num -> 'a -> 'b) (A :num -> 'b algebra) =
+Definition tail_algebra_of_rv_def:
+    tail_algebra_of_rv (p :'a p_space) (X :num -> 'a -> 'b) (A :num -> 'b algebra) =
       (p_space p,
-       BIGINTER (IMAGE (\n. subsets (sigma_functions (p_space p) A X (from n))) UNIV))`;
+       BIGINTER (IMAGE (\n. subsets (sigma_functions (p_space p) A X (from n))) UNIV))
+End
 
 Overload tail_algebra = “tail_algebra_of_rv”
 
@@ -4405,27 +4428,32 @@ QED
 (* "The requirement of finite second moments seems unnecessary, but it does ensure the
     finiteness of E[XY] (Cauchy-Schwarz inequality!) as well as that of E[X] and E[Y]."
    [2, p.107] *)
-val uncorrelated_def = Define
-   `uncorrelated p X Y <=>
+Definition uncorrelated_def:
+    uncorrelated p X Y <=>
       finite_second_moments p X /\ finite_second_moments p Y /\
-      (expectation p (\s. X s * Y s) = expectation p X * expectation p Y)`;
+      (expectation p (\s. X s * Y s) = expectation p X * expectation p Y)
+End
 
-val uncorrelated_vars_def = Define
-   `uncorrelated_vars p X J <=>
-      !i j. i IN J /\ j IN J /\ i <> j ==> uncorrelated p (X i) (X j)`;
+Definition uncorrelated_vars_def:
+    uncorrelated_vars p X J <=>
+      !i j. i IN J /\ j IN J /\ i <> j ==> uncorrelated p (X i) (X j)
+End
 
-val orthogonal_def = Define
-   `orthogonal p X Y <=>
+Definition orthogonal_def:
+    orthogonal p X Y <=>
       finite_second_moments p X /\ finite_second_moments p Y /\
-      (expectation p (\s. X s * Y s) = 0)`;
+      (expectation p (\s. X s * Y s) = 0)
+End
 
-val orthogonal_vars_def = Define
-   `orthogonal_vars p X J <=>
-      !i j. i IN J /\ j IN J /\ i <> j ==> orthogonal p (X i) (X j)`;
+Definition orthogonal_vars_def:
+    orthogonal_vars p X J <=>
+      !i j. i IN J /\ j IN J /\ i <> j ==> orthogonal p (X i) (X j)
+End
 
-val covariance_def = Define
-   `covariance p X Y =
-      expectation p (\x. (X x - expectation p X) * (Y x - expectation p Y))`;
+Definition covariance_def:
+    covariance p X Y =
+      expectation p (\x. (X x - expectation p X) * (Y x - expectation p Y))
+End
 
 Theorem covariance_self :
     !p X. covariance p X X = variance p X

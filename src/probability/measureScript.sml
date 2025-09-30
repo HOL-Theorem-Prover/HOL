@@ -44,77 +44,88 @@ Type measure[pp] = “:'a set -> extreal”
 Type m_space[pp] = “:'a set # 'a set set # 'a measure”
 
 (* These're accessors of the triple of measure space *)
-val m_space_def = Define
-   `m_space         (sp :'a set, sts :('a set) set, mu :('a set) -> extreal) = sp`;
+Definition m_space_def:
+    m_space         (sp :'a set, sts :('a set) set, mu :('a set) -> extreal) = sp
+End
 
-val measurable_sets_def = Define
-   `measurable_sets (sp :'a set, sts :('a set) set, mu :('a set) -> extreal) = sts`;
+Definition measurable_sets_def:
+    measurable_sets (sp :'a set, sts :('a set) set, mu :('a set) -> extreal) = sts
+End
 
 val _ = hide "measure"; (* prim_recTheory *)
-val measure_def = Define
-   `measure         (sp :'a set, sts :('a set) set, mu :('a set) -> extreal) = mu`;
+Definition measure_def:
+    measure         (sp :'a set, sts :('a set) set, mu :('a set) -> extreal) = mu
+End
 
 val _ = export_rewrites ["m_space_def", "measurable_sets_def", "measure_def"];
 
 (* NOTE: `{} IN measurable_sets m` is not assumed, instead it must be provided by
    definition of the system of sets. *)
-val positive_def = Define
-   `positive m <=>
-    (measure m {} = 0) /\ !s. s IN measurable_sets m ==> 0 <= measure m s`;
+Definition positive_def:
+    positive m <=>
+    (measure m {} = 0) /\ !s. s IN measurable_sets m ==> 0 <= measure m s
+End
 
 (* NOTE: add ``s UNION t IN measurable_sets m`` into antecedents, like in the
    case of "countably_additive_def", because otherwise this definition only works
    with system of sets stable under (finite) union. *)
-val additive_def = Define
-   `additive m =
+Definition additive_def:
+    additive m =
     !s t. s IN measurable_sets m /\ t IN measurable_sets m /\ DISJOINT s t /\
           s UNION t IN measurable_sets m
-      ==> (measure m (s UNION t) = measure m s + measure m t)`;
+      ==> (measure m (s UNION t) = measure m s + measure m t)
+End
 
 (* to derive finite additivity from countable additivity for all systems *)
-val finite_additive_def = Define (* new *)
-   `finite_additive m =
+Definition finite_additive_def:   (* new *)
+    finite_additive m =
     !f :num -> ('a -> bool) n.
      (!i. i < n ==> f i IN measurable_sets m) /\
      (!i j. i < n /\ j < n /\ i <> j ==> DISJOINT (f i) (f j)) /\
      BIGUNION (IMAGE f (count n)) IN measurable_sets m ==>
-     (measure m (BIGUNION (IMAGE f (count n))) = SIGMA (measure m o f) (count n))`;
+     (measure m (BIGUNION (IMAGE f (count n))) = SIGMA (measure m o f) (count n))
+End
 
 (* NOTE: ``summable (measure m o f)`` was removed from the antecedents *)
-val countably_additive_def = Define
-   `countably_additive m =
+Definition countably_additive_def:
+    countably_additive m =
     !f :num -> ('a -> bool).
      f IN (UNIV -> measurable_sets m) /\
      (!i j. i <> j ==> DISJOINT (f i) (f j)) /\
      BIGUNION (IMAGE f UNIV) IN measurable_sets m ==>
-     (measure m (BIGUNION (IMAGE f UNIV)) = suminf (measure m o f))`;
+     (measure m (BIGUNION (IMAGE f UNIV)) = suminf (measure m o f))
+End
 
 (* NOTE: added ``s UNION t IN measurable_sets m`` into antecedents *)
-val subadditive_def = Define
-   `subadditive m =
+Definition subadditive_def:
+    subadditive m =
     !s t. s IN measurable_sets m /\ t IN measurable_sets m /\
           s UNION t IN measurable_sets m
-      ==> measure m (s UNION t) <= measure m s + measure m t`;
+      ==> measure m (s UNION t) <= measure m s + measure m t
+End
 
-val finite_subadditive_def = Define (* new *)
-   `finite_subadditive m =
+Definition finite_subadditive_def:   (* new *)
+    finite_subadditive m =
     !f :num -> ('a set) n.
      (!i. i < n ==> f i IN measurable_sets m) /\
      BIGUNION (IMAGE f (count n)) IN measurable_sets m  ==>
-     measure m (BIGUNION (IMAGE f (count n))) <= SIGMA (measure m o f) (count n)`;
+     measure m (BIGUNION (IMAGE f (count n))) <= SIGMA (measure m o f) (count n)
+End
 
-val countably_subadditive_def = Define
-   `countably_subadditive m =
+Definition countably_subadditive_def:
+    countably_subadditive m =
     !f :num -> ('a set).
      f IN (UNIV -> measurable_sets m) /\
      BIGUNION (IMAGE f UNIV) IN measurable_sets m  ==>
-     measure m (BIGUNION (IMAGE f UNIV)) <= suminf (measure m o f)`;
+     measure m (BIGUNION (IMAGE f UNIV)) <= suminf (measure m o f)
+End
 
-val increasing_def = Define
-   `increasing m =
+Definition increasing_def:
+    increasing m =
     !s t.
      s IN measurable_sets m /\ t IN measurable_sets m /\ s SUBSET t ==>
-     measure m s <= measure m t`;
+     measure m s <= measure m t
+End
 
 Definition measure_space_def :
     measure_space m <=>
@@ -133,13 +144,14 @@ Overload measurable_space = “\m. (m_space m, measurable_sets m)”
 
 (* The set of measure-preserving measurable mappings.
    NOTE: ``measure_space m1 /\ measure_space m2`` was removed. *)
-val measure_preserving_def = Define
-   `measure_preserving m1 m2 =
+Definition measure_preserving_def:
+    measure_preserving m1 m2 =
     {f |
      f IN measurable (m_space m1, measurable_sets m1) (m_space m2, measurable_sets m2) /\
      !s.
       s IN measurable_sets m2 ==>
-           (measure m1 ((PREIMAGE f s) INTER (m_space m1)) = measure m2 s)}`;
+           (measure m1 ((PREIMAGE f s) INTER (m_space m1)) = measure m2 s)}
+End
 
 (* This substitutes HVG's ‘measure_of’ methodology: instead of writing things like
    ‘measure_of m1 = measure_of m2’ now we write ‘measure_space_eq m1 m2’ instead.
@@ -1845,8 +1857,9 @@ End
 
 (* NOTE: this definition should always be used together with a system of sets,
    e.g. algebra, ring, semiring, ... because by itself `m` is not meaningful. *)
-val premeasure_def = Define `
-    premeasure m <=> positive m /\ countably_additive m`;
+Definition premeasure_def:
+    premeasure m <=> positive m /\ countably_additive m
+End
 
 (* connection with ‘sigma_finite’ *)
 Theorem sigma_finite_has_exhausting_sequence :
@@ -2444,11 +2457,12 @@ val DYNKIN_SYSTEM_PREMEASURE_INCREASING = store_thm
 
 (* (measure m) is an outer measure in (m_space m, measurable_sets m), which may
    not even be an algebra but at least `{} IN measurable_sets m` should hold. *)
-val outer_measure_space_def = Define `
+Definition outer_measure_space_def:
     outer_measure_space m <=>
      subset_class (m_space m) (measurable_sets m) /\
      {} IN (measurable_sets m) /\
-     positive m /\ increasing m /\ countably_subadditive m`;
+     positive m /\ increasing m /\ countably_subadditive m
+End
 
 (* Definition 18.1 [1, p.198] (countable S-covers with a diameter)
 
@@ -2471,14 +2485,16 @@ QED
 
 (* Defition 18.1 of [1]: outer measure of the set-function m for C (covering),
    which could be `coutable_covers sts`. *)
-val outer_measure_def = Define
-   `outer_measure (m :'a measure) (C :('a set) -> (num -> 'a set) set) =
-      \a. inf {r | ?f. f IN (C a) /\ (suminf (m o f) = r)}`;
+Definition outer_measure_def:
+    outer_measure (m :'a measure) (C :('a set) -> (num -> 'a set) set) =
+      \a. inf {r | ?f. f IN (C a) /\ (suminf (m o f) = r)}
+End
 
 (* Defition 18.1 of [1]: m-measurable sets (caratheodory sets) of m *)
-val caratheodory_sets_def = Define
-   `caratheodory_sets (sp :'a set) (m :'a measure) =
-      {a | a SUBSET sp /\ !q. q SUBSET sp ==> (m q = m (q INTER a) + m (q DIFF a))}`;
+Definition caratheodory_sets_def:
+    caratheodory_sets (sp :'a set) (m :'a measure) =
+      {a | a SUBSET sp /\ !q. q SUBSET sp ==> (m q = m (q INTER a) + m (q DIFF a))}
+End
 
 (* premeasure ==> countably_additive ==> additive *)
 val SEMIRING_PREMEASURE_ADDITIVE = store_thm
@@ -4815,8 +4831,9 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* s is a null set on measure sapce m, see [1] (p.29) *)
-val null_set_def = Define
-   `null_set m s <=> s IN measurable_sets m /\ (measure m s = 0)`;
+Definition null_set_def:
+    null_set m s <=> s IN measurable_sets m /\ (measure m s = 0)
+End
 
 (* NOTE: the type of ‘completion m’ is “:'a algebra” *)
 Definition completion_def :
@@ -4827,10 +4844,11 @@ End
 
 (* the measure space m is called complete iff any subset of a null set is again
    in `subsets m` (thus also a null set) see [1] (p.29], [5] (p.382) *)
-val complete_measure_space_def = Define
-   `complete_measure_space m <=>
+Definition complete_measure_space_def:
+    complete_measure_space m <=>
      measure_space m /\
-     !s. null_set m s ==> !t. t SUBSET s ==> t IN measurable_sets m`;
+     !s. null_set m s ==> !t. t SUBSET s ==> t IN measurable_sets m
+End
 
 val IN_NULL_SET = store_thm
   ("IN_NULL_SET", ``!m s. s IN null_set m <=> null_set m s``,
@@ -5670,9 +5688,10 @@ QED
    NOTE: the type of `v` is not `:'a m_space` but `:'a measure`, to simplify
    the statements of Radon-Nikodym theorems as much as possible.
  *)
-val measure_absolutely_continuous_def = Define
-   `measure_absolutely_continuous v m =
-      !s. s IN measurable_sets m /\ (measure m s = 0) ==> (v s = 0)`;
+Definition measure_absolutely_continuous_def:
+    measure_absolutely_continuous v m =
+      !s. s IN measurable_sets m /\ (measure m s = 0) ==> (v s = 0)
+End
 
 (* "<<" is already used in "src/n-bit/wordsScript.sml", same priority here *)
 val _ = set_fixity "<<" (Infixl 680);

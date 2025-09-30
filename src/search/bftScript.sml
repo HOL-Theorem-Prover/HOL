@@ -32,10 +32,10 @@ val dnf_ss = bool_ss ++ boolSimps.DNF_ss ++ rewrites [AND_IMP_INTRO];
 (* parent, then it has no children, and so the fringe list shrinks.          *)
 (*---------------------------------------------------------------------------*)
 
-val Rel_def =   (* map arg. tuples into a pair of numbers for termination *)
- Define
-   `Rel(G,f,seen,fringe,acc) =
-        (CARD(Parents G DIFF (LIST_TO_SET seen)), LENGTH fringe)`;
+Definition Rel_def:    (* map arg. tuples into a pair of numbers for termination *)
+    Rel(G,f,seen,fringe,acc) =
+        (CARD(Parents G DIFF (LIST_TO_SET seen)), LENGTH fringe)
+End
 
 Definition BFT_def0[nocompute,induction=BFT_ind0]:
   BFT G f seen fringe acc =

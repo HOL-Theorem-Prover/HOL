@@ -6,46 +6,52 @@ Libs
 
 val _ = ParseExtras.temp_loose_equality()
 
-val int_not_def = Define `
-  int_not i = 0 - i - 1`;
+Definition int_not_def:
+  int_not i = 0 - i - 1
+End
 
 val int_not_not = store_thm("int_not_not",
   ``!i. int_not (int_not i) = i``,
   srw_tac [] [int_not_def] \\ fs [] \\ intLib.COOPER_TAC);
 
-val int_bit_def = Define `
+Definition int_bit_def:
   int_bit b (i:int) =
-    if i < 0 then ~(BIT b (Num (int_not i))) else BIT b (Num i)`;
+    if i < 0 then ~(BIT b (Num (int_not i))) else BIT b (Num i)
+End
 
 val int_bit_not = store_thm("int_bit_not",
   ``!b i. int_bit b (int_not i) = ~(int_bit b i)``,
   srw_tac [] [int_bit_def,int_not_not]
   \\ fs [int_not_def] \\ `F` by intLib.COOPER_TAC);
 
-val bits_of_num_def = Define `
+Definition bits_of_num_def:
   bits_of_num (n:num) =
     if n = 0 then []
-    else ODD n :: bits_of_num (n DIV 2)`;
+    else ODD n :: bits_of_num (n DIV 2)
+End
 
-val bits_of_int_def = Define `
+Definition bits_of_int_def:
   bits_of_int i =
     if i < 0 then
       (MAP (~) (bits_of_num (Num (int_not i))),T)
     else
-      (bits_of_num (Num i), F)`;
+      (bits_of_num (Num i), F)
+End
 
-val num_of_bits_def = Define `
+Definition num_of_bits_def:
   (num_of_bits [] = 0:num) /\
   (num_of_bits (F::bs) = 2 * num_of_bits bs) /\
-  (num_of_bits (T::bs) = 1 + 2 * num_of_bits bs)`;
+  (num_of_bits (T::bs) = 1 + 2 * num_of_bits bs)
+End
 
-val int_of_bits_def = Define `
+Definition int_of_bits_def:
   int_of_bits (bs,rest) =
     if rest then
       int_not (& (num_of_bits (MAP (~) bs)))
-    else & (num_of_bits bs)`;
+    else & (num_of_bits bs)
+End
 
-val bits_bitwise_def = Define `
+Definition bits_bitwise_def:
   (bits_bitwise f ([],r1) ([],r2) = ([],f r1 r2)) /\
   (bits_bitwise f ([],r1) (b2::bs2,r2) =
      let (bs,r) = bits_bitwise f ([],r1) (bs2,r2) in
@@ -55,20 +61,25 @@ val bits_bitwise_def = Define `
        (f b1 r2 :: bs, r)) /\
   (bits_bitwise f (b1::bs1,r1) (b2::bs2,r2) =
      let (bs,r) = bits_bitwise f (bs1,r1) (bs2,r2) in
-       (f b1 b2 :: bs, r))`
+       (f b1 b2 :: bs, r))
+End
 
-val int_bitwise_def = Define `
+Definition int_bitwise_def:
   int_bitwise f i j =
-    int_of_bits (bits_bitwise f (bits_of_int i) (bits_of_int j))`;
+    int_of_bits (bits_bitwise f (bits_of_int i) (bits_of_int j))
+End
 
-val int_and_def = Define `
-  int_and = int_bitwise (/\)`;
+Definition int_and_def:
+  int_and = int_bitwise (/\)
+End
 
-val int_or_def = Define `
-  int_or = int_bitwise (\/)`;
+Definition int_or_def:
+  int_or = int_bitwise (\/)
+End
 
-val int_xor_def = Define `
-  int_xor = int_bitwise (<>)`;
+Definition int_xor_def:
+  int_xor = int_bitwise (<>)
+End
 
 val MOD2 = prove(
   ``n MOD 2 = if ODD n then 1 else 0``,
@@ -101,15 +112,17 @@ val int_not = store_thm("int_not",
   \\ fs [MAP_MAP_o,combinTheory.o_DEF,int_of_bits_def,num_of_bits_bits_of_num]
   \\ fs [int_not_def] \\ intLib.COOPER_TAC);
 
-val int_shift_left_def = Define `
+Definition int_shift_left_def:
   int_shift_left n i =
     let (bs,r) = bits_of_int i in
-      int_of_bits (GENLIST (K F) n ++ bs,r)`;
+      int_of_bits (GENLIST (K F) n ++ bs,r)
+End
 
-val int_shift_right_def = Define `
+Definition int_shift_right_def:
   int_shift_right n i =
     let (bs,r) = bits_of_int i in
-      int_of_bits (DROP n bs,r)`;
+      int_of_bits (DROP n bs,r)
+End
 
 val int_not_lemma = prove(
   ``!n. int_not (& n) < 0``,

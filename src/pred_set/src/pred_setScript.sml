@@ -5437,11 +5437,11 @@ val ITSET_REDUCTION = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define a function that gives closure and is commute_associative *)
-val closure_comm_assoc_fun_def = Define`
+Definition closure_comm_assoc_fun_def:
     closure_comm_assoc_fun f s <=>
        (!x y. x IN s /\ y IN s ==> f x y IN s) /\ (* closure *)
        (!x y z. x IN s /\ y IN s /\ z IN s ==> (f x (f y z) = f y (f x z))) (* comm_assoc *)
-`;
+End
 
 (* Theorem: FINITE s /\ s SUBSET t /\ closure_comm_assoc_fun f t ==>
             !(x b):: t. ITSET f (x INSERT s) b = ITSET f (s DELETE x) (f x b) *)
@@ -7225,8 +7225,9 @@ Proof
   \\ fs[] \\ PROVE_TAC[equiv_on_def]
 QED
 
-val partitions_def = TotalDefn.Define`
-  partitions X Y = ?R. R equiv_on Y /\ X = partition R Y`;
+Definition partitions_def:
+  partitions X Y = ?R. R equiv_on Y /\ X = partition R Y
+End
 
 val _ = set_fixity "partitions" (Infix(NONASSOC, 425));
 
@@ -7505,8 +7506,9 @@ Proof
   \\ METIS_TAC[]
 QED
 
-val part_def = TotalDefn.Define`
-  part v x = @s. x IN s /\ s IN v`;
+Definition part_def:
+  part v x = @s. x IN s /\ s IN v
+End
 
 Theorem part_in_partition:
   !w v x. v partitions w /\ x IN w ==>
@@ -7568,9 +7570,10 @@ Proof
   \\ rw[EQ_IMP_THM]
 QED
 
-val refines_def = TotalDefn.Define`
+Definition refines_def:
   refines v1 v2 <=>
-  !s1. s1 IN v1 ==> ?s2. s2 IN v2 /\ s1 SUBSET s2`;
+  !s1. s1 IN v1 ==> ?s2. s2 IN v2 /\ s1 SUBSET s2
+End
 
 val _ = set_fixity "refines" (Infix(NONASSOC, 425));
 
@@ -7912,9 +7915,10 @@ RWTAC [] THEN
 CCONTR_TAC THEN
 FSTAC [REST_DEF]);
 
-val chooser_def = TotalDefn.Define `
+Definition chooser_def:
   (chooser s 0 = CHOICE s) /\
-  (chooser s (SUC n) = chooser (REST s) n)`;
+  (chooser s (SUC n) = chooser (REST s) n)
+End
 
 val chooser_lem1 = Q.prove (
 `!n s t. INFINITE s /\ s SUBSET t ==> chooser s n IN t`,
@@ -7978,8 +7982,9 @@ RWTAC [] THENL
      METIS_TAC [chooser_lem1, chooser_lem3, SUBSET_REFL],
  METIS_TAC [infinite_num_inj_lem]]);
 
-val countable_def = TotalDefn.Define `
-  countable s = ?f. INJ f s (UNIV:num set)`;
+Definition countable_def:
+  countable s = ?f. INJ f s (UNIV:num set)
+End
 
 (* for HOL-Light compatibility, moved here from cardinalTheory *)
 Overload COUNTABLE[inferior] = “countable”
@@ -8088,8 +8093,10 @@ Proof
    PROVE_TAC [COUNTABLE_NUM, image_countable]
 QED
 
-val num_to_pair_def = TotalDefn.Define `num_to_pair n = (nfst n, nsnd n)`
-val pair_to_num_def = TotalDefn.Define `pair_to_num (m,n) = m *, n`
+Definition num_to_pair_def:   num_to_pair n = (nfst n, nsnd n)
+End
+Definition pair_to_num_def:   pair_to_num (m,n) = m *, n
+End
 
 val pair_to_num_formula = Q.store_thm ("pair_to_num_formula",
   `!x y. pair_to_num (x, y) = (x + y + 1) * (x + y) DIV 2 + y`,

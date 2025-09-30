@@ -67,10 +67,14 @@ Proof
   rewrite_tac [UNHEX] \\ EVAL_TAC
 QED
 
-val num_from_bin_string_def = Define `num_from_bin_string = s2n 2 UNHEX`;
-val num_from_oct_string_def = Define `num_from_oct_string = s2n 8 UNHEX`;
-val num_from_dec_string_def = Define `num_from_dec_string = s2n 10 UNHEX`;
-val num_from_hex_string_def = Define `num_from_hex_string = s2n 16 UNHEX`;
+Definition num_from_bin_string_def:   num_from_bin_string = s2n 2 UNHEX
+End
+Definition num_from_oct_string_def:   num_from_oct_string = s2n 8 UNHEX
+End
+Definition num_from_dec_string_def:   num_from_dec_string = s2n 10 UNHEX
+End
+Definition num_from_hex_string_def:   num_from_hex_string = s2n 16 UNHEX
+End
 
 Definition num_to_bin_string_def[nocompute]: num_to_bin_string = n2s 2 HEX
 End
@@ -103,21 +107,24 @@ Proof
   simp[num_to_dec_string_def, n2lA_n2l, n2s_def, FUN_EQ_THM, MAP_REVERSE]
 QED
 
-val fromBinString_def = Define`
+Definition fromBinString_def:
    fromBinString s =
       if s <> "" /\ EVERY (\c. (c = #"0") \/ (c = #"1")) s then
          SOME (num_from_bin_string s)
-      else NONE`
+      else NONE
+End
 
-val fromDecString_def = Define`
+Definition fromDecString_def:
    fromDecString s =
-      if s <> "" /\ EVERY isDigit s then SOME (num_from_dec_string s) else NONE`
+      if s <> "" /\ EVERY isDigit s then SOME (num_from_dec_string s) else NONE
+End
 
-val fromHexString_def = Define`
+Definition fromHexString_def:
    fromHexString s =
       if s <> "" /\ EVERY isHexDigit s then
          SOME (num_from_hex_string s)
-      else NONE`
+      else NONE
+End
 
 (* ------------------------------------------------------------------------- *)
 

@@ -664,15 +664,19 @@ val FCP_APPLY_UPDATE_THM = Q.store_thm("FCP_APPLY_UPDATE_THM",
  * A collection of list related operations                                  *
  * ------------------------------------------------------------------------ *)
 
-val FCP_HD_def = Define `FCP_HD v = v ' 0`
+Definition FCP_HD_def:   FCP_HD v = v ' 0
+End
 
-val FCP_TL_def = Define `FCP_TL v = FCP i. v ' (SUC i)`
+Definition FCP_TL_def:   FCP_TL v = FCP i. v ' (SUC i)
+End
 
-val FCP_CONS_def = Define`
-   FCP_CONS h (v:'a ** 'b) = (0 :+ h) (FCP i. v ' (PRE i))`
+Definition FCP_CONS_def:
+   FCP_CONS h (v:'a ** 'b) = (0 :+ h) (FCP i. v ' (PRE i))
+End
 
-val FCP_MAP_def = Define`
-   FCP_MAP f (v:'a ** 'c) = (FCP i. f (v ' i)):'b ** 'c`
+Definition FCP_MAP_def:
+   FCP_MAP f (v:'a ** 'c) = (FCP i. f (v ' i)):'b ** 'c
+End
 
 val FCP_EXISTS_def = zDefine`
    FCP_EXISTS P (v:'b ** 'a) = ?i. i < dimindex (:'a) /\ P (v ' i)`
@@ -698,14 +702,18 @@ Definition FCP_SND_def :
    FCP_SND (v :'a ** ('b + 'c)) = (FCP i. v ' i) :'a ** 'c
 End
 
-val FCP_ZIP_def = Define`
-   FCP_ZIP (a:'a ** 'b) (b:'c ** 'b) = (FCP i. (a ' i, b ' i)): ('a # 'c) ** 'b`
+Definition FCP_ZIP_def:
+   FCP_ZIP (a:'a ** 'b) (b:'c ** 'b) = (FCP i. (a ' i, b ' i)): ('a # 'c) ** 'b
+End
 
-val V2L_def = Define `V2L (v:'a ** 'b) = GENLIST ($' v) (dimindex(:'b))`
+Definition V2L_def:   V2L (v:'a ** 'b) = GENLIST ($' v) (dimindex(:'b))
+End
 
-val L2V_def = Define `L2V L = FCP i. EL i L`
+Definition L2V_def:   L2V L = FCP i. EL i L
+End
 
-val FCP_FOLD_def = Define `FCP_FOLD (f:'b -> 'a -> 'b) i v = FOLDL f i (V2L v)`
+Definition FCP_FOLD_def:   FCP_FOLD (f:'b -> 'a -> 'b) i v = FOLDL f i (V2L v)
+End
 
 (* Some theorems about these operations *)
 

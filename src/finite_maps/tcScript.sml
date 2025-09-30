@@ -88,8 +88,9 @@ REWRITE_TAC [EMPTY_REL_DEF, O_DEF]);
    Floyd-Warshall algorithm, in as low-level and symmetrical a way as
    possible, with an eye to using (R)TC induction principles. *)
 
-val subTC = Define`subTC (R:'a reln) s x y =
-  R x y \/ ?a b. (R ^|^ s)^* a b /\ a IN s /\ b IN s /\ R x a /\ R b y`;
+Definition subTC:  subTC (R:'a reln) s x y =
+  R x y \/ ?a b. (R ^|^ s)^* a b /\ a IN s /\ b IN s /\ R x a /\ R b y
+End
 
 (* Definition as first conceived becomes a theorem: *)
 (* Outer ^| s is meant just to trim off (x,x) pairs for x NOTIN s, and we
@@ -451,10 +452,12 @@ ASM_REWRITE_TAC [subTC, EMPTY_REL_DEF]);
 (* binary relations of finite RDOM, and a one-sided inverse.       *)
 (* *************************************************************** *)
 
-val FMAP_TO_RELN = Define
-`FMAP_TO_RELN (f:'a |-> 'a set) x = if x IN FDOM f then f ' x else {}`;
+Definition FMAP_TO_RELN:
+ FMAP_TO_RELN (f:'a |-> 'a set) x = if x IN FDOM f then f ' x else {}
+End
 
-val RELN_TO_FMAP = Define`RELN_TO_FMAP (R:'a reln) = FUN_FMAP R (RDOM R)`;
+Definition RELN_TO_FMAP:  RELN_TO_FMAP (R:'a reln) = FUN_FMAP R (RDOM R)
+End
 
 val RDOM_SUBSET_FDOM = store_thm ("RDOM_SUBSET_FDOM",
 ``!f:'a |-> 'a set. RDOM (FMAP_TO_RELN f) SUBSET FDOM f``,
@@ -518,8 +521,9 @@ CONV_TAC (LAND_CONV FORALL_NOT_CONV) THEN AR);
 
 (* Break out the function to be used by TC_ITER  *)
 
-val TC_MOD = Define
-`TC_MOD (x:'a) (rx:'a set) (ra:'a set) = if x IN ra then ra UNION rx else ra`;
+Definition TC_MOD:
+ TC_MOD (x:'a) (rx:'a set) (ra:'a set) = if x IN ra then ra UNION rx else ra
+End
 
 val TC_MOD_EMPTY_ID = store_thm ("TC_MOD_EMPTY_ID",
 ``!x:'a ra:'a set. TC_MOD x {} = I``,
@@ -603,9 +607,10 @@ ASM_REWRITE_TAC [EXTENSION] THENL
 
 (* Define the recursion over RDOM R *)
 
-val TC_ITER = Define
-`(TC_ITER [] (r:'a|->'a set) = r) /\
- (TC_ITER (x :: d) r = TC_ITER d (TC_MOD x (r ' x) o_f r))`;
+Definition TC_ITER:
+ (TC_ITER [] (r:'a|->'a set) = r) /\
+ (TC_ITER (x :: d) r = TC_ITER d (TC_MOD x (r ' x) o_f r))
+End
 
 val TC_ITER_THM = store_thm ("TC_ITER_THM",
 ``!R:'a reln d f s. (s UNION set d = FDOM f) /\

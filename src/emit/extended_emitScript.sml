@@ -225,8 +225,9 @@ val llcases_LNIL = llcases_def |> SPEC_ALL |> Q.INST [`l` |-> `LNIL`]
 val llcases_LCONS = llcases_def |> SPEC_ALL |> Q.INST [`l` |-> `h:::t`]
                                |> SIMP_RULE (srw_ss()) []
 
-val LLCONS_def = Define`
-  LLCONS h t = LCONS h (t ())`;
+Definition LLCONS_def:
+  LLCONS h t = LCONS h (t ())
+End
 
 val LAPPEND_llcases = prove(
   ``LAPPEND l1 l2 = llcases l2 (λ(h,t). LLCONS h (λ(). LAPPEND t l2)) l1``,

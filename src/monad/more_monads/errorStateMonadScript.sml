@@ -10,27 +10,33 @@ Libs
 
 Type M[local] = “:'state -> ('a # 'state) option”
 
-val UNIT_DEF = Define `UNIT (x:'b) : ('b,'a) M = \(s:'a). SOME (x, s)`;
+Definition UNIT_DEF:   UNIT (x:'b) : ('b,'a) M = \(s:'a). SOME (x, s)
+End
 
-val BIND_DEF = Define `
+Definition BIND_DEF:
   BIND (g: ('b, 'a) M) (f: 'b -> ('c, 'a) M) (s0:'a) =
     case g s0 of
       NONE => NONE
     | SOME (b,s) => f b s
-`
+End
 
-val IGNORE_BIND_DEF = Define `
-  IGNORE_BIND (f:('a,'b)M) (g:('c,'b)M) : ('c,'b)M = BIND f (\x. g)`;
+Definition IGNORE_BIND_DEF:
+  IGNORE_BIND (f:('a,'b)M) (g:('c,'b)M) : ('c,'b)M = BIND f (\x. g)
+End
 
-val MMAP_DEF = Define `MMAP (f: 'c -> 'b) (m: ('c, 'a) M) = BIND m (UNIT o f)`;
+Definition MMAP_DEF:   MMAP (f: 'c -> 'b) (m: ('c, 'a) M) = BIND m (UNIT o f)
+End
 
-val JOIN_DEF = Define `JOIN (z: (('b, 'a) M, 'a) M) = BIND z I`;
+Definition JOIN_DEF:   JOIN (z: (('b, 'a) M, 'a) M) = BIND z I
+End
 
-val EXT_DEF = Define `EXT g m = BIND m g` ;
+Definition EXT_DEF:   EXT g m = BIND m g
+End
 
 (* composition in the Kleisli category:
   can compose any monad with the state transformer monad in this way *)
-val MCOMP_DEF = Define `MCOMP g f = CURRY (OPTION_MCOMP (UNCURRY g) (UNCURRY f))`;
+Definition MCOMP_DEF:   MCOMP g f = CURRY (OPTION_MCOMP (UNCURRY g) (UNCURRY f))
+End
 
 Definition FOR_def:
  (FOR : num # num # (num -> (unit, 'state) M) -> (unit, 'state) M) (i, j, a) =
@@ -48,29 +54,35 @@ Definition FOREACH_def:
    (FOREACH (h :: t, a) = BIND (a h) (\u. FOREACH (t, a)))
 End
 
-val READ_def = TotalDefn.Define`
-   (READ : ('state -> 'a) -> ('a, 'state) M) f = \s. SOME (f s, s)`;
+Definition READ_def:
+   (READ : ('state -> 'a) -> ('a, 'state) M) f = \s. SOME (f s, s)
+End
 
-val WRITE_def = TotalDefn.Define`
-   (WRITE : ('state -> 'state) -> (unit, 'state) M) f = \s. SOME ((), f s)`;
+Definition WRITE_def:
+   (WRITE : ('state -> 'state) -> (unit, 'state) M) f = \s. SOME ((), f s)
+End
 
-val NARROW_def = TotalDefn.Define`
+Definition NARROW_def:
    (NARROW : 'b -> ('a, 'b # 'state) M -> ('a, 'state) M) v f =
    \s. case f (v, s) of
            NONE => NONE
-         | SOME (r, s1) => SOME (r, SND s1)`
+         | SOME (r, s1) => SOME (r, SND s1)
+End
 
-val WIDEN_def = TotalDefn.Define`
+Definition WIDEN_def:
    (WIDEN : ('a, 'state) M -> ('a, 'b # 'state) M) f =
    \(s1, s2). case f s2 of
                   NONE => NONE
-                | SOME (r, s3) => SOME (r, (s1, s3))`
+                | SOME (r, s3) => SOME (r, (s1, s3))
+End
 
-val sequence_def = TotalDefn.Define`
-   sequence = FOLDR (\m ms. BIND m (\x. BIND ms (\xs. UNIT (x::xs)))) (UNIT [])`
+Definition sequence_def:
+   sequence = FOLDR (\m ms. BIND m (\x. BIND ms (\xs. UNIT (x::xs)))) (UNIT [])
+End
 
-val mapM_def = TotalDefn.Define`
-   mapM f = sequence o MAP f`
+Definition mapM_def:
+   mapM f = sequence o MAP f
+End
 
 Definition mwhile_step_def:
   mwhile_step P g x 0 s = BIND (P x) (\b. UNIT (b,x)) s /\
@@ -346,20 +358,20 @@ val mapM_cons = store_thm("mapM_cons",
   SRW_TAC[][mapM_def,sequence_def])
 
 (* fail and choice *)
-val ES_FAIL_DEF = Define`
+Definition ES_FAIL_DEF:
   ES_FAIL s = NONE
-`;
+End
 
-val ES_CHOICE_DEF = Define`
+Definition ES_CHOICE_DEF:
   ES_CHOICE xM yM s =
     case xM s of
        NONE => yM s
      | xr => xr
-`;
+End
 
-val ES_GUARD_DEF = Define`
+Definition ES_GUARD_DEF:
   ES_GUARD b = if b then UNIT () else ES_FAIL
-`
+End
 
 val _ =
     monadsyntax.declare_monad (
@@ -416,9 +428,9 @@ val IGNORE_BIND_FAIL = store_thm(
   SRW_TAC[][])
 
 (* applicative *)
-val ES_APPLY_DEF = Define`
+Definition ES_APPLY_DEF:
   ES_APPLY fM xM = BIND fM (\f. BIND xM (\x. UNIT (f x)))
-`
+End
 val _ = overload_on ("APPLICATIVE_FAPPLY", ``ES_APPLY``)
 
 val APPLY_UNIT = store_thm(
@@ -431,9 +443,9 @@ val APPLY_UNIT_UNIT = store_thm(
   ``UNIT f <*> UNIT x = UNIT (f x)``,
   SRW_TAC[][ES_APPLY_DEF]);
 
-val ES_LIFT2_DEF = Define`
+Definition ES_LIFT2_DEF:
   ES_LIFT2 f xM yM = MMAP f xM <*> yM
-`;
+End
 
 
 (* ------------------------------------------------------------------------- *)

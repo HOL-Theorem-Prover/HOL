@@ -2528,8 +2528,9 @@ QED
 
 (* BIG_BAG_UNION: the union of all bags in a finite set *)
 
-val BIG_BAG_UNION_def = Define`
- BIG_BAG_UNION sob = \x. SIGMA (\b. b x) sob`;
+Definition BIG_BAG_UNION_def:
+ BIG_BAG_UNION sob = \x. SIGMA (\b. b x) sob
+End
 
 val BIG_BAG_UNION_EMPTY = Q.store_thm(
 "BIG_BAG_UNION_EMPTY",
@@ -2801,9 +2802,9 @@ val mlt1_INSERT_CANCEL = store_thm(
   simp[BAG_UNION_INSERT]);
 
 (* dominates R b1 b2 should be read as "b2 dominates b1 wrt relation R" *)
-val dominates_def = Define`
+Definition dominates_def:
   dominates R s1 s2 = !x. x IN s1 ==> ?y. y IN s2 /\ R x y
-`;
+End
 
 val _ = overload_on ("bdominates",
                      ``\R b1 b2. dominates R (SET_OF_BAG b1) (SET_OF_BAG b2)``)
@@ -3202,9 +3203,9 @@ val mltLT_SING0 = store_thm(
 (* elements, plus the number of elements.                                    *)
 (*---------------------------------------------------------------------------*)
 
-val bag_size_def =
- Define
-  `bag_size eltsize b = ITBAG (\e acc. 1 + eltsize e + acc) b 0`;
+Definition bag_size_def:
+   bag_size eltsize b = ITBAG (\e acc. 1 + eltsize e + acc) b 0
+End
 
 val BAG_SIZE_EMPTY = Q.store_thm
 ("BAG_SIZE_EMPTY",

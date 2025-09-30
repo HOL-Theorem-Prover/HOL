@@ -2,9 +2,10 @@ Theory numeralConv
 Ancestors
   arithmetic
 
-val BIT0_def = Define`
+Definition BIT0_def:
   (BIT0 0 = 0) /\
-  (!n. BIT0 (SUC n) = SUC (SUC (BIT0 n)))`;
+  (!n. BIT0 (SUC n) = SUC (SUC (BIT0 n)))
+End
 
 val (BIT0_0,BIT0_SUC) = CONJ_PAIR BIT0_def
 val _ = save_thm("BIT0_0",BIT0_0);

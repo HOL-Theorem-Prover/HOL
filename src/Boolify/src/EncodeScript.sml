@@ -109,9 +109,10 @@ End
         A well-formed encoder is prefix-free and injective.
  ---------------------------------------------------------------------------*)
 
-val wf_encoder_def = Define
-  `wf_encoder p (e : 'a -> bool list) =
-   !x y. p x /\ p y /\ IS_PREFIX (e x) (e y) ==> (x = y)`;
+Definition wf_encoder_def:
+   wf_encoder p (e : 'a -> bool list) =
+   !x y. p x /\ p y /\ IS_PREFIX (e x) (e y) ==> (x = y)
+End
 
 val wf_encoder_alt = store_thm
   ("wf_encoder_alt",

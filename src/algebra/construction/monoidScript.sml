@@ -164,12 +164,12 @@ val _ = overload_on ("G", ``g.carrier``);
    . Property of identity: #e * x = x * #e = x
 *)
 (* Define Monoid by predicate *)
-val Monoid_def = Define`
+Definition Monoid_def:
   Monoid (g:'a monoid) <=>
     (!x y. x IN G /\ y IN G ==> x * y IN G) /\
     (!x y z. x IN G /\ y IN G /\ z IN G ==> ((x * y) * z = x * (y * z))) /\
     #e IN G /\ (!x. x IN G ==> (#e * x = x) /\ (x * #e = x))
-`;
+End
 (* export basic definition -- but too many and's. *)
 (* val _ = export_rewrites ["Monoid_def"]; *)
 
@@ -178,26 +178,26 @@ val Monoid_def = Define`
 (* ------------------------------------------------------------------------- *)
 
 (* Abelian Monoid = a Monoid that is commutative: x * y = y * x. *)
-val AbelianMonoid_def = Define`
+Definition AbelianMonoid_def:
   AbelianMonoid (g:'a monoid) <=>
     Monoid g /\ !x y. x IN G /\ y IN G ==> (x * y = y * x)
-`;
+End
 (* export simple definition -- but this one has commutativity, so don't. *)
 (* val _ = export_rewrites ["AbelianMonoid_def"]; *)
 
 (* Finite Monoid = a Monoid with a finite carrier set. *)
-val FiniteMonoid_def = Define`
+Definition FiniteMonoid_def:
   FiniteMonoid (g:'a monoid) <=>
     Monoid g /\ FINITE G
-`;
+End
 (* export simple definition. *)
 val _ = export_rewrites ["FiniteMonoid_def"];
 
 (* Finite Abelian Monoid = a Monoid that is both Finite and Abelian. *)
-val FiniteAbelianMonoid_def = Define`
+Definition FiniteAbelianMonoid_def:
   FiniteAbelianMonoid (g:'a monoid) <=>
     AbelianMonoid g /\ FINITE G
-`;
+End
 (* export simple definition. *)
 val _ = export_rewrites ["FiniteAbelianMonoid_def"];
 
@@ -339,7 +339,8 @@ val monoid_exp_def = Define`
   (monoid_exp m x (SUC n) = x * (monoid_exp m x n))
 `;
 *)
-val monoid_exp_def = Define `monoid_exp (g:'a monoid) (x:'a) n = FUNPOW (g.op x) n #e`;
+Definition monoid_exp_def:   monoid_exp (g:'a monoid) (x:'a) n = FUNPOW (g.op x) n #e
+End
 (* val _ = export_rewrites ["monoid_exp_def"]; *)
 (*
 - monoid_exp_def;
@@ -765,7 +766,8 @@ val COMMUTING_GITSET_RECURSES = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define GPROD_SET via GITSET *)
-val GPROD_SET_def = Define `GPROD_SET g s = GITSET g s #e`;
+Definition GPROD_SET_def:   GPROD_SET g s = GITSET g s #e
+End
 
 (* Theorem: property of GPROD_SET *)
 (* Proof:
@@ -1588,9 +1590,9 @@ abelian_monoid_order_common
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of elements with a given order *)
-val orders_def = Define `
+Definition orders_def:
    orders (g:'a monoid) n = {x | x IN G /\ (ord x = n)}
-`;
+End
 
 (* Theorem: !x n. x IN orders g n <=> x IN G /\ (ord x = n) *)
 (* Proof: by orders_def *)
@@ -1827,10 +1829,10 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* The Invertibles are those with inverses. *)
-val monoid_invertibles_def = Define`
+Definition monoid_invertibles_def:
     monoid_invertibles (g:'a monoid) =
     { x | x IN G /\ (?y. y IN G /\ (x * y = #e) /\ (y * x = #e)) }
-`;
+End
 val _ = overload_on ("G*", ``monoid_invertibles g``);
 
 (* Theorem: x IN G* <=> x IN G /\ ?y. y IN G /\ (x * y = #e) /\ (y * x = #e) *)
@@ -1860,13 +1862,13 @@ val monoid_order_nonzero = store_thm(
   metis_tac[num_CASES, monoid_exp_SUC, monoid_exp_suc, monoid_exp_element]);
 
 (* The Invertibles of a monoid, will be a Group. *)
-val Invertibles_def = Define`
+Definition Invertibles_def:
   Invertibles (g:'a monoid) : 'a monoid =
     <| carrier := G*;
             op := g.op;
             id := g.id
      |>
-`;
+End
 (*
 - type_of ``Invertibles g``;
 > val it = ``:'a moniod`` : hol_type
@@ -2206,12 +2208,12 @@ will need val _ = overload_on ("H", ``(h:'b monoid).carrier``);
 
 (* A function f from g to h is a homomorphism if monoid properties are preserved. *)
 (* For monoids, need to ensure that identity is preserved, too. See: monoid_weak_iso_id. *)
-val MonoidHomo_def = Define`
+Definition MonoidHomo_def:
   MonoidHomo (f:'a -> 'b) (g:'a monoid) (h:'b monoid) <=>
     (!x. x IN G ==> f x IN h.carrier) /\
     (!x y. x IN G /\ y IN G ==> (f (x * y) = h.op (f x) (f y))) /\
     (f #e = h.id)
-`;
+End
 (*
 If MonoidHomo_def uses the condition: !x y. f (x * y) = h.op (f x) (f y)
 this will mean a corresponding change in GroupHomo_def, but then
@@ -2220,18 +2222,21 @@ h <= g ==> x * y * H = (x * H) o (y * H) with no qualification on x, y!
 *)
 
 (* A function f from g to h is an isomorphism if f is a bijective homomorphism. *)
-val MonoidIso_def = Define`
+Definition MonoidIso_def:
   MonoidIso f g h <=> MonoidHomo f g h /\ BIJ f G h.carrier
-`;
+End
 
 (* A monoid homomorphism from g to g is an endomorphism. *)
-val MonoidEndo_def = Define `MonoidEndo f g <=> MonoidHomo f g g`;
+Definition MonoidEndo_def:   MonoidEndo f g <=> MonoidHomo f g g
+End
 
 (* A monoid isomorphism from g to g is an automorphism. *)
-val MonoidAuto_def = Define `MonoidAuto f g <=> MonoidIso f g g`;
+Definition MonoidAuto_def:   MonoidAuto f g <=> MonoidIso f g g
+End
 
 (* A submonoid h of g if identity is a homomorphism from h to g *)
-val submonoid_def = Define `submonoid h g <=> MonoidHomo I h g`;
+Definition submonoid_def:   submonoid h g <=> MonoidHomo I h g
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Monoid Homomorphisms                                                      *)
@@ -2925,9 +2930,9 @@ val submonoid_order_eqn = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define an operation on images *)
-val image_op_def = Define`
+Definition image_op_def:
    image_op (g:'a monoid) (f:'a -> 'b) x y = f (CHOICE (preimage f G x) * CHOICE (preimage f G y))
-`;
+End
 
 (* Theorem: INJ f G univ(:'b) ==> !x y. x IN G /\ y IN G ==> (image_op g f (f x) (f y) = f (x * y)) *)
 (* Proof:
@@ -2944,13 +2949,13 @@ val image_op_inj = store_thm(
   rw[image_op_def, preimage_inj_choice]);
 
 (* Define the homomorphic image of a monoid. *)
-val homo_monoid_def = Define`
+Definition homo_monoid_def:
   homo_monoid (g:'a monoid) (f:'a -> 'b) =
     <| carrier := IMAGE f G;
             op := image_op g f;
             id := f #e
      |>
-`;
+End
 
 (* set overloading *)
 val _ = overload_on ("o", ``(homo_monoid (g:'a monoid) (f:'a -> 'b)).op``);
@@ -3184,17 +3189,17 @@ val homo_monoid_by_inj = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Let us take out the image of identity requirement *)
-val WeakHomo_def = Define`
+Definition WeakHomo_def:
   WeakHomo (f:'a -> 'b) (g:'a monoid) (h:'b monoid) <=>
     (!x. x IN G ==> f x IN h.carrier) /\
     (!x y. x IN G /\ y IN G ==> (f (x * y) = h.op (f x) (f y)))
     (* no requirement for: f #e = h.id *)
-`;
+End
 
 (* A function f from g to h is an isomorphism if f is a bijective homomorphism. *)
-val WeakIso_def = Define`
+Definition WeakIso_def:
   WeakIso f g h <=> WeakHomo f g h /\ BIJ f G h.carrier
-`;
+End
 
 (* Then the best we can prove about monoid identities is the following:
             Monoid g /\ Monoid h /\ WeakIso f g h ==> f #e = h.id
@@ -3451,11 +3456,11 @@ val _ = temp_overload_on ("o", ``(h:'a monoid).op``);
 val _ = temp_overload_on ("#i", ``(h:'a monoid).id``);
 
 (* A Submonoid is a subset of a monoid that's a monoid itself, keeping op, id. *)
-val Submonoid_def = Define`
+Definition Submonoid_def:
   Submonoid (h:'a monoid) (g:'a monoid) <=>
     Monoid h /\ Monoid g /\
     H SUBSET G /\ ($o = $* ) /\ (#i = #e)
-`;
+End
 
 (* Overload Submonoid *)
 val _ = overload_on ("<<", ``Submonoid``);
@@ -3664,13 +3669,13 @@ val submonoid_monoid = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define intersection of monoids *)
-val monoid_intersect_def = Define`
+Definition monoid_intersect_def:
    monoid_intersect (g:'a monoid) (h:'a monoid) =
       <| carrier := G INTER H;
               op := $*; (* g.op *)
               id := #e  (* g.id *)
        |>
-`;
+End
 
 val _ = overload_on ("mINTER", ``monoid_intersect``);
 val _ = set_fixity "mINTER" (Infix(NONASSOC, 450)); (* same as relation *)
@@ -3830,13 +3835,13 @@ val submonoid_intersect_submonoid = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define intersection of submonoids of a monoid *)
-val submonoid_big_intersect_def = Define`
+Definition submonoid_big_intersect_def:
    submonoid_big_intersect (g:'a monoid) =
       <| carrier := BIGINTER (IMAGE (\h. H) {h | h << g});
               op := $*; (* g.op *)
               id := #e  (* g.id *)
        |>
-`;
+End
 
 val _ = overload_on ("smbINTER", ``submonoid_big_intersect``);
 (*
@@ -4104,13 +4109,13 @@ val submonoid_big_intersect_submonoid = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* The trivial monoid: {#e} *)
-val trivial_monoid_def = Define`
+Definition trivial_monoid_def:
   trivial_monoid e :'a monoid =
    <| carrier := {e};
            id := e;
            op := (\x y. e)
     |>
-`;
+End
 
 (*
 - type_of ``trivial_monoid e``;
@@ -4133,13 +4138,13 @@ val trivial_monoid = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Additive Modulo Monoid *)
-val plus_mod_def = Define`
+Definition plus_mod_def:
   plus_mod n :num monoid =
    <| carrier := count n;
            id := 0;
            op := (\i j. (i + j) MOD n)
     |>
-`;
+End
 (* This monoid should be upgraded to add_mod, the additive group of ZN ring later. *)
 
 (*
@@ -4362,13 +4367,13 @@ val times_mod_finite_abelian_monoid = store_thm(
 (* The Monoid of List concatenation.                                         *)
 (* ------------------------------------------------------------------------- *)
 
-val lists_def = Define`
+Definition lists_def:
   lists :'a list monoid =
    <| carrier := UNIV;
            id := [];
            op := list$APPEND
     |>
-`;
+End
 
 (*
 > EVAL ``lists.op [1;2;3] [4;5]``;
@@ -4395,11 +4400,11 @@ val lists_monoid = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* The Monoid of set intersection *)
-val set_inter_def = Define`
+Definition set_inter_def:
   set_inter = <| carrier := UNIV;
                       id := UNIV;
                       op := (INTER) |>
-`;
+End
 
 (*
 > EVAL ``set_inter.op {1;4;5;6} {5;6;8;9}``;
@@ -4425,11 +4430,11 @@ val set_inter_abelian_monoid = store_thm(
 val _ = export_rewrites ["set_inter_abelian_monoid"];
 
 (* The Monoid of set union *)
-val set_union_def = Define`
+Definition set_union_def:
   set_union = <| carrier := UNIV;
                       id := EMPTY;
                       op := (UNION) |>
-`;
+End
 
 (*
 > EVAL ``set_union.op {1;4;5;6} {5;6;8;9}``;
@@ -4459,13 +4464,13 @@ val _ = export_rewrites ["set_union_abelian_monoid"];
 (* ------------------------------------------------------------------------- *)
 
 (* Define the number addition monoid *)
-val addition_monoid_def = Define`
+Definition addition_monoid_def:
     addition_monoid =
        <| carrier := univ(:num);
           op := $+;
           id := 0;
         |>
-`;
+End
 
 (*
 > EVAL ``addition_monoid.op 5 6``;
@@ -4507,13 +4512,13 @@ val addition_monoid_monoid = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the number multiplication monoid *)
-val multiplication_monoid_def = Define`
+Definition multiplication_monoid_def:
     multiplication_monoid =
        <| carrier := univ(:num);
           op := $*;
           id := 1;
         |>
-`;
+End
 
 (*
 > EVAL ``multiplication_monoid.op 5 6``;
@@ -4556,13 +4561,13 @@ val multiplication_monoid_monoid = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the power monoid *)
-val power_monoid_def = Define`
+Definition power_monoid_def:
     power_monoid (b:num) =
        <| carrier := {b ** j | j IN univ(:num)};
           op := $*;
           id := 1;
         |>
-`;
+End
 
 (*
 > EVAL ``(power_monoid 2).op (2 ** 3) (2 ** 4)``;

@@ -1197,13 +1197,15 @@ val tail_countable = store_thm
  >- PROVE_TAC [COUNTABLE_IMAGE_NUM]
  >> RW_TAC std_ss [EXTENSION, IN_IMAGE, GSPECIFICATION]);
 
-val set_limsup_def = Define (* "infinitely often" *)
-   `set_limsup (E :num -> 'a set) =
-      BIGINTER (IMAGE (\m. BIGUNION {E n | m <= n}) UNIV)`;
+Definition set_limsup_def:   (* "infinitely often" *)
+    set_limsup (E :num -> 'a set) =
+      BIGINTER (IMAGE (\m. BIGUNION {E n | m <= n}) UNIV)
+End
 
-val set_liminf_def = Define (* "almost always" *)
-   `set_liminf (E :num -> 'a set) =
-      BIGUNION (IMAGE (\m. BIGINTER {E n | m <= n}) UNIV)`;
+Definition set_liminf_def:   (* "almost always" *)
+    set_liminf (E :num -> 'a set) =
+      BIGUNION (IMAGE (\m. BIGINTER {E n | m <= n}) UNIV)
+End
 
 val _ = overload_on ("limsup", ``set_limsup``);
 val _ = overload_on ("liminf", ``set_liminf``);
@@ -1363,16 +1365,19 @@ QED
 
 val _ = type_abbrev_pp ("algebra", ``:('a set) # ('a set set)``);
 
-val space_def = Define
-   `space   (x :'a set, y :('a set) set) = x`;
+Definition space_def:
+    space   (x :'a set, y :('a set) set) = x
+End
 
-val subsets_def = Define
-   `subsets (x :'a set, y :('a set) set) = y`;
+Definition subsets_def:
+    subsets (x :'a set, y :('a set) set) = y
+End
 
 val _ = export_rewrites ["space_def", "subsets_def"];
 
-val subset_class_def = Define
-   `subset_class sp sts = !x. x IN sts ==> x SUBSET sp`;
+Definition subset_class_def:
+    subset_class sp sts = !x. x IN sts ==> x SUBSET sp
+End
 
 Definition algebra_def :
   algebra a =
@@ -1394,14 +1399,16 @@ End
          so that ‘measurable’ can be used in other system of sets.
         (cf. MEASURABLE_LIFT for a major related results.)
  *)
-val measurable_def = Define
-   `measurable a b = {f | f IN (space a -> space b) /\
+Definition measurable_def:
+    measurable a b = {f | f IN (space a -> space b) /\
                           !s. s IN subsets b ==>
-                              ((PREIMAGE f s) INTER space a) IN subsets a}`;
+                              ((PREIMAGE f s) INTER space a) IN subsets a}
+End
 
 (* the smallest sigma algebra generated from a set of sets *)
-val sigma_def = Define
-   `sigma sp sts = (sp, BIGINTER {s | sts SUBSET s /\ sigma_algebra (sp, s)})`;
+Definition sigma_def:
+    sigma sp sts = (sp, BIGINTER {s | sts SUBSET s /\ sigma_algebra (sp, s)})
+End
 
 Definition semiring_def : (* [7, p.39] *)
   semiring r =
@@ -1422,8 +1429,9 @@ Definition ring_def : (* see [4] *)
 End
 
 (* The smallest ring generated from a set of sets (usually a semiring) *)
-val smallest_ring_def = Define
-   `smallest_ring sp sts = (sp, BIGINTER {s | sts SUBSET s /\ ring (sp, s)})`;
+Definition smallest_ring_def:
+    smallest_ring sp sts = (sp, BIGINTER {s | sts SUBSET s /\ ring (sp, s)})
+End
 
 (* After Eugene B. Dynkin (1924-2014), a Soviet and American mathematician [5] *)
 Definition dynkin_system_def :
@@ -1437,8 +1445,9 @@ Definition dynkin_system_def :
 End
 
 (* The smallest dynkin system generated from a set of sets, cf. "sigma_def" *)
-val dynkin_def = Define
-   `dynkin sp sts = (sp, BIGINTER {d | sts SUBSET d /\ dynkin_system (sp, d)})`;
+Definition dynkin_def:
+    dynkin sp sts = (sp, BIGINTER {d | sts SUBSET d /\ dynkin_system (sp, d)})
+End
 
 (* ------------------------------------------------------------------------- *)
 (*  Basic theorems                                                           *)
@@ -4663,9 +4672,10 @@ Proof
 QED
 
 (* Definition 14.2 of [1, p.137] *)
-val prod_sigma_def = Define
-   ‘prod_sigma a b =
-      sigma (space a CROSS space b) (prod_sets (subsets a) (subsets b))’;
+Definition prod_sigma_def:
+    prod_sigma a b =
+      sigma (space a CROSS space b) (prod_sets (subsets a) (subsets b))
+End
 
 val _ = overload_on ("CROSS", “prod_sigma”);
 

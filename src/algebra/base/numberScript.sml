@@ -7787,7 +7787,8 @@ val sum_image_by_composition_without_inj = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define preimage *)
-val preimage_def = Define `preimage f s y = { x | x IN s /\ (f x = y) }`;
+Definition preimage_def:   preimage f s y = { x | x IN s /\ (f x = y) }
+End
 
 (* Theorem: x IN (preimage f s y) <=> x IN s /\ (f x = y) *)
 (* Proof: by preimage_def *)
@@ -9399,9 +9400,9 @@ val Euler_def = zDefine`
 (* that is, Euler n = { i | i in (residue n) /\ (gcd n i = 1) }; *)
 (* use zDefine as this is not computationally effective. *)
 
-val totient_def = Define`
+Definition totient_def:
   totient n = CARD (Euler n)
-`;
+End
 
 (* Theorem: x IN (Euler n) <=> 0 < x /\ x < n /\ coprime n x *)
 (* Proof: by Euler_def. *)

@@ -92,7 +92,8 @@ val PMATCH_ROW_def = zDefine `PMATCH_ROW pat guard rhs i =
 
 (* We defined semantics of single rows. Let's extend
    it to multiple ones, i.e. full pattern matches now. *)
-val PMATCH_INCOMPLETE_def = Define `PMATCH_INCOMPLETE = ARB`
+Definition PMATCH_INCOMPLETE_def:   PMATCH_INCOMPLETE = ARB
+End
 val PMATCH_def = zDefine `
   (PMATCH v [] = PMATCH_INCOMPLETE) /\
   (PMATCH v (r::rs) = option_CASE (r v) (PMATCH v rs) I)`
@@ -394,11 +395,12 @@ METIS_TAC[]);
 (* Equivalent sets of rows                         *)
 (***************************************************)
 
-val PMATCH_EQUIV_ROWS_def = Define `
+Definition PMATCH_EQUIV_ROWS_def:
  PMATCH_EQUIV_ROWS v rows1 rows2 = (
  (PMATCH v rows1 = PMATCH v rows2) /\
  ((?r. MEM r rows1 /\ IS_SOME (r v)) =
-  (?r. MEM r rows2 /\ IS_SOME (r v))))`
+  (?r. MEM r rows2 /\ IS_SOME (r v))))
+End
 
 
 val PMATCH_EQUIV_ROWS_EQUIV_EXPAND = store_thm ("PMATCH_EQUIV_ROWS_EQUIV_EXPAND",
@@ -656,10 +658,11 @@ ASM_SIMP_TAC std_ss [])
    The predicate PMATCH_ROW_REDUNDANT v rs i holds,
    iff row number i is redundant for input v in the
    list of rows rs. *)
-val PMATCH_ROW_REDUNDANT_def = Define `
+Definition PMATCH_ROW_REDUNDANT_def:
   PMATCH_ROW_REDUNDANT v rs i = (
   (i < LENGTH rs /\ (IS_SOME ((EL i rs) v) ==>
-    (?j. ((j < i) /\ IS_SOME ((EL j rs) v))))))`;
+    (?j. ((j < i) /\ IS_SOME ((EL j rs) v))))))
+End
 
 val PMATCH_ROW_REDUNDANT_NIL = store_thm ("PMATCH_ROW_REDUNDANT_NIL",
   ``PMATCH_ROW_REDUNDANT v [] i = F``,
@@ -746,12 +749,13 @@ EQ_TAC THEN STRIP_TAC THENL [
    The parameter c is used for accumulating information
    of all rows already in the info. If none of the rows
    in rows matches, c holds. *)
-val IS_REDUNDANT_ROWS_INFO_def = Define `
+Definition IS_REDUNDANT_ROWS_INFO_def:
   IS_REDUNDANT_ROWS_INFO v rows c infos <=> (
   (LENGTH rows = LENGTH infos) /\
   (!i. i < LENGTH rows ==> EL i infos ==>
      PMATCH_ROW_REDUNDANT v rows i) /\
-  (EVERY (\r. r v = NONE) rows ==> c))`
+  (EVERY (\r. r v = NONE) rows ==> c))
+End
 
 
 (* This setup allows to build up such an info
@@ -788,8 +792,9 @@ Cases_on `c` THEN FULL_SIMP_TAC list_ss [rich_listTheory.EL_APPEND2, PMATCH_ROW_
 (* However, we still need to specialise this for
    rows of the from PMATCH_ROW. For this case, it is handy
    to use an auxiliary definition. *)
-val PMATCH_ROW_COND_EX_def = Define `PMATCH_ROW_COND_EX i p g =
-?x. PMATCH_ROW_COND p g i x`
+Definition PMATCH_ROW_COND_EX_def:   PMATCH_ROW_COND_EX i p g =
+?x. PMATCH_ROW_COND p g i x
+End
 
 
 val IS_REDUNDANT_ROWS_INFO_SNOC_PMATCH_ROW = store_thm (
@@ -839,9 +844,10 @@ REPEAT STRIP_TAC THENL [
 (* We can use such a REDUNDANT_ROWS_INFO to prune
    the a pattern match *)
 
-val APPLY_REDUNDANT_ROWS_INFO_def = Define `
+Definition APPLY_REDUNDANT_ROWS_INFO_def:
   (APPLY_REDUNDANT_ROWS_INFO is xs = MAP SND (
-    FILTER (\x. ~ (FST  x)) (ZIP (is, xs))))`
+    FILTER (\x. ~ (FST  x)) (ZIP (is, xs))))
+End
 
 val APPLY_REDUNDANT_ROWS_INFO_THMS = store_thm (
   "APPLY_REDUNDANT_ROWS_INFO_THMS",
@@ -900,9 +906,10 @@ PROVE_TAC[])
 
 (* We get exhautiveness information for free using
    the accumulated information in c *)
-val PMATCH_IS_EXHAUSTIVE_def = Define `
+Definition PMATCH_IS_EXHAUSTIVE_def:
    PMATCH_IS_EXHAUSTIVE v rs = (
-   EXISTS (\r. IS_SOME (r v)) rs)`
+   EXISTS (\r. IS_SOME (r v)) rs)
+End
 
 
 val PMATCH_IS_EXHAUSTIVE_REWRITES = store_thm ("PMATCH_IS_EXHAUSTIVE_REWRITES", ``
@@ -932,9 +939,10 @@ SIMP_TAC list_ss [IS_REDUNDANT_ROWS_INFO_def,
    whether some element of infos is true or false. If in doub
    replace it with false. Technically this is done by
    building a pairwise conjunction with a given list.  *)
-val REDUNDANT_ROWS_INFOS_CONJ_def = Define `
+Definition REDUNDANT_ROWS_INFOS_CONJ_def:
   REDUNDANT_ROWS_INFOS_CONJ ip1 ip2 =
-     (MAP2 (\i1 i2. i1 /\ i2) ip1 ip2)`;
+     (MAP2 (\i1 i2. i1 /\ i2) ip1 ip2)
+End
 
 val REDUNDANT_ROWS_INFOS_CONJ_REWRITE = store_thm (
   "REDUNDANT_ROWS_INFOS_CONJ_REWRITE",
@@ -955,9 +963,10 @@ SIMP_TAC list_ss [IS_REDUNDANT_ROWS_INFO_def,
 
 
 (* Strengthening requires proof though *)
-val REDUNDANT_ROWS_INFOS_DISJ_def = Define `
+Definition REDUNDANT_ROWS_INFOS_DISJ_def:
   REDUNDANT_ROWS_INFOS_DISJ ip1 ip2 =
-     (MAP2 (\i1 i2. i1 \/ i2) ip1 ip2)`;
+     (MAP2 (\i1 i2. i1 \/ i2) ip1 ip2)
+End
 
 val REDUNDANT_ROWS_INFOS_DISJ_THM = store_thm ("REDUNDANT_ROWS_INFOS_DISJ_THM",
 ``!v rows c infos c' infos'.
@@ -973,15 +982,17 @@ METIS_TAC[])
 (* One can use the always correct, but usually much too complicated
    strongest redundant_rows_info for strengthening *)
 
-val STRONGEST_REDUNDANT_ROWS_INFO_AUX_def = Define `
+Definition STRONGEST_REDUNDANT_ROWS_INFO_AUX_def:
   (STRONGEST_REDUNDANT_ROWS_INFO_AUX v [] p infos = (p, infos)) /\
   (STRONGEST_REDUNDANT_ROWS_INFO_AUX v (r::rows) p infos =
    STRONGEST_REDUNDANT_ROWS_INFO_AUX v rows (p /\ (r v = NONE))
-   (SNOC (p ==> (r v = NONE)) infos))`
+   (SNOC (p ==> (r v = NONE)) infos))
+End
 
-val STRONGEST_REDUNDANT_ROWS_INFO_def = Define `
+Definition STRONGEST_REDUNDANT_ROWS_INFO_def:
   STRONGEST_REDUNDANT_ROWS_INFO v rows =
-  SND (STRONGEST_REDUNDANT_ROWS_INFO_AUX v rows T [])`
+  SND (STRONGEST_REDUNDANT_ROWS_INFO_AUX v rows T [])
+End
 
 val LENGTH_STRONGEST_REDUNDANT_ROWS_INFO_AUX = store_thm (
   "LENGTH_STRONGEST_REDUNDANT_ROWS_INFO_AUX",
@@ -1224,10 +1235,11 @@ ASM_SIMP_TAC (std_ss++boolSimps.CONJ_ss) []);
 
 (* The content of this section is still experimental.
    It is likely to chnage quite a bit still. *)
-val PMATCH_FLATTEN_FUN_def = Define `
+Definition PMATCH_FLATTEN_FUN_def:
   PMATCH_FLATTEN_FUN p g row v = (
     option_CASE (some x. PMATCH_ROW_COND p g v x)
-      NONE (\x. row x x))`;
+      NONE (\x. row x x))
+End
 
 
 val PMATCH_FLATTEN_THM_AUX = prove (
@@ -1323,9 +1335,10 @@ ASM_SIMP_TAC std_ss [])
 (* UNROLLING PREDICATES                            *)
 (***************************************************)
 
-val PMATCH_ROW_COND_NOT_EX_OR_EQ_def = Define `PMATCH_ROW_COND_NOT_EX_OR_EQ (i:'a) (r : 'a -> 'b option) rows =
+Definition PMATCH_ROW_COND_NOT_EX_OR_EQ_def:   PMATCH_ROW_COND_NOT_EX_OR_EQ (i:'a) (r : 'a -> 'b option) rows =
 (~(r i <> NONE) \/ ((EXISTS (\row. row i <> NONE) rows) /\
-     (THE (r i) = PMATCH i rows)))`
+     (THE (r i) = PMATCH i rows)))
+End
 
 val PMATCH_ROW_COND_NOT_EX_OR_EQ_FIRST_ROW = store_thm ("PMATCH_ROW_COND_NOT_EX_OR_EQ_FIRST_ROW",
   ``!i r r' rows.
@@ -1379,11 +1392,12 @@ Cases_on `r v` THEN ASM_SIMP_TAC std_ss [] THEN
 METIS_TAC[]);
 
 
-val PMATCH_EXPAND_PRED_def = Define `(PMATCH_EXPAND_PRED P v rows_before [] = (~(PMATCH_IS_EXHAUSTIVE v (REVERSE rows_before)) ==> P ARB)) /\
+Definition PMATCH_EXPAND_PRED_def:   (PMATCH_EXPAND_PRED P v rows_before [] = (~(PMATCH_IS_EXHAUSTIVE v (REVERSE rows_before)) ==> P ARB)) /\
 
   (PMATCH_EXPAND_PRED P v rows_before (r::rows_after) = (
   ((r v <> NONE) ==> (EVERY (\r'. (r' v <> NONE) ==> (r' v = r v)) rows_before)
-  ==> P (THE (r v))) /\ PMATCH_EXPAND_PRED P v (r::rows_before) rows_after))`;
+  ==> P (THE (r v))) /\ PMATCH_EXPAND_PRED P v (r::rows_before) rows_after))
+End
 
 
 val PMATCH_EXPAND_PRED_THM_GEN = store_thm ("PMATCH_EXPAND_PRED_THM_GEN",
@@ -1437,7 +1451,8 @@ val PMATCH_EXPAND_PRED_THM = store_thm ("PMATCH_EXPAND_PRED_THM",
 SIMP_TAC list_ss [PMATCH_EXPAND_PRED_THM_GEN]);
 
 
-val PMATCH_ROW_LIFT_def = Define `PMATCH_ROW_LIFT f r = \x. OPTION_MAP f (r x)`
+Definition PMATCH_ROW_LIFT_def:   PMATCH_ROW_LIFT f r = \x. OPTION_MAP f (r x)
+End
 
 val PMATCH_LIFT_THM = store_thm ("PMATCH_LIFT_THM",
 ``!f v rows.

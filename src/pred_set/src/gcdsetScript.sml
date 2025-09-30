@@ -488,9 +488,9 @@ PROD_IMAGE_DEF  |- !f s. PI f s = ITSET (\e acc. f e * acc) s 1: thm
 *)
 
 (* Define big_gcd for a set *)
-val big_gcd_def = Define`
+Definition big_gcd_def:
     big_gcd s = ITSET gcd s 0
-`;
+End
 
 (* Theorem: big_gcd {} = 0 *)
 (* Proof:
@@ -676,9 +676,9 @@ val big_gcd_map_times = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* big_lcm s = ITSET (\e x. lcm e x) s 1 = ITSET lcm s 1, of course! *)
-val big_lcm_def = Define`
+Definition big_lcm_def:
     big_lcm s = ITSET lcm s 1
-`;
+End
 
 (* Theorem: big_lcm {} = 1 *)
 (* Proof:

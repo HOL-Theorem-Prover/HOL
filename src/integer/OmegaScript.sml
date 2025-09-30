@@ -15,11 +15,12 @@ val ARITH_ss = numSimps.ARITH_ss
 
 val FORALL_PROD = pairTheory.FORALL_PROD;
 
-val MAP2_def = Define
-  `(MAP2 pad f [] [] = []) /\
+Definition MAP2_def:
+   (MAP2 pad f [] [] = []) /\
    (MAP2 pad f [] (y::ys) = (f pad y) :: MAP2 pad f [] ys) /\
    (MAP2 pad f (x::xs) [] = (f x pad) :: MAP2 pad f xs []) /\
-   (MAP2 pad f (x::xs) (y::ys) = f x y :: MAP2 pad f xs ys)`;
+   (MAP2 pad f (x::xs) (y::ys) = f x y :: MAP2 pad f xs ys)
+End
 
 val MAP2_zero_ADD = store_thm(
   "MAP2_zero_ADD",
@@ -27,10 +28,11 @@ val MAP2_zero_ADD = store_thm(
          (MAP2 0 $+ xs [] = xs)``,
   Induct THEN ASM_SIMP_TAC bool_ss [MAP2_def, INT_ADD_LID, INT_ADD_RID]);
 
-val sumc_def = Define
-  `(sumc _ [] = 0i) /\
+Definition sumc_def:
+   (sumc _ [] = 0i) /\
    (sumc [] _ = 0) /\
-   (sumc (c::cs) (v::vs) = c * v + sumc cs vs)`;
+   (sumc (c::cs) (v::vs) = c * v + sumc cs vs)
+End
 
 val sumc_ind = DB.fetch "-" "sumc_ind";
 
@@ -77,8 +79,9 @@ val sumc_nonsingle = store_thm(
                   f c * v + sumc (MAP f cs) vs``,
   REWRITE_TAC [sumc_def, listTheory.MAP])
 
-val modhat_def = Define
-  `modhat x y = x - y * ((2 * x + y) / (2 * y))`;
+Definition modhat_def:
+   modhat x y = x - y * ((2 * x + y) / (2 * y))
+End
 
 val MAP_MAP = prove(
   ``!l f g. MAP f (MAP g l) = MAP (f o g) l``,
@@ -164,12 +167,14 @@ val equality_removal = store_thm(
   MATCH_MP_TAC equality_removal0 THEN SRW_TAC [][]);
 
 val _ = print "Proving eliminability of quantifiers\n"
-val evalupper_def = Define
-  `(evalupper (x:int) [] = T) /\
-   (evalupper x ((c,y) :: cs) = &c * x <= y /\ evalupper x cs)`
-val evallower_def = Define
-  `(evallower (x:int) [] = T) /\
-   (evallower x ((c,y) :: cs) = y <= &c * x /\ evallower x cs)`
+Definition evalupper_def:
+   (evalupper (x:int) [] = T) /\
+   (evalupper x ((c,y) :: cs) = &c * x <= y /\ evalupper x cs)
+End
+Definition evallower_def:
+   (evallower (x:int) [] = T) /\
+   (evallower x ((c,y) :: cs) = y <= &c * x /\ evallower x cs)
+End
 
 val lt_mono = prove(
   ``!n (x:int) y. 0 < n ==> (&n * x < & n * y = x < y)``,
@@ -268,8 +273,10 @@ val M_LE_XM = prove(
   EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [] THEN
   FULL_SIMP_TAC (srw_ss()) [LE_LT1]);
 
-val fst_nzero_def = Define `fst_nzero x = 0n < FST x`
-val fst1_def = Define`fst1 x = (FST x = 1n)`
+Definition fst_nzero_def:   fst_nzero x = 0n < FST x
+End
+Definition fst1_def:  fst1 x = (FST x = 1n)
+End
 
 val _ = augment_srw_ss [rewrites [fst1_def, fst_nzero_def]]
 
@@ -307,16 +314,18 @@ val onlyuppers_satisfiable = store_thm(
   FULL_SIMP_TAC (srw_ss()) [INT_NOT_LT, INT_LE_LT] THEN
   PROVE_TAC [smaller_satisfies_uppers]);
 
-val rshadow_row_def = Define
-  `(rshadow_row (upperc, (uppery:int)) [] = T) /\
+Definition rshadow_row_def:
+   (rshadow_row (upperc, (uppery:int)) [] = T) /\
    (rshadow_row (upperc, uppery) ((lowerc, lowery) :: rs) =
       (&upperc * lowery <= &lowerc * uppery) /\
-      rshadow_row (upperc, uppery) rs)`;
+      rshadow_row (upperc, uppery) rs)
+End
 
-val real_shadow_def = Define
-  `(real_shadow [] lowers = T) /\
+Definition real_shadow_def:
+   (real_shadow [] lowers = T) /\
    (real_shadow (upper::ls) lowers =
-      rshadow_row upper lowers /\ real_shadow ls lowers)`;
+      rshadow_row upper lowers /\ real_shadow ls lowers)
+End
 
 val rshadow_row_FOLDL = prove(
   ``!lowers lc ly.
@@ -466,17 +475,19 @@ val exact_shadow_case = store_thm(
     ]
   ]);
 
-val dark_shadow_cond_row_def =
-  Define`(dark_shadow_cond_row (c,L:int) [] = T) /\
+Definition dark_shadow_cond_row_def:
+  (dark_shadow_cond_row (c,L:int) [] = T) /\
          (dark_shadow_cond_row (c,L) ((d,R)::t) =
               ~(?i. &c * &d * i < &c * R /\ &c * R <= &d * L /\
-                    &d * L < &c * &d * (i + 1)) /\ dark_shadow_cond_row (c,L) t)`;
+                    &d * L < &c * &d * (i + 1)) /\ dark_shadow_cond_row (c,L) t)
+End
 
-val dark_shadow_condition_def =
-  Define`(dark_shadow_condition [] lowers = T) /\
+Definition dark_shadow_condition_def:
+  (dark_shadow_condition [] lowers = T) /\
          (dark_shadow_condition ((c,L)::uppers) lowers =
             dark_shadow_cond_row (c,L) lowers /\
-            dark_shadow_condition uppers lowers)`;
+            dark_shadow_condition uppers lowers)
+End
 
 val constraint_mid_existence = prove(
   ``!x i j.  0 < x ==>
@@ -636,14 +647,16 @@ val basic_shadow_equivalence = store_thm(
     PROVE_TAC [real_darkcond_implies_evals]
   ]);
 
-val dark_shadow_row_def = Define
-  `(dark_shadow_row c L [] = T) /\
+Definition dark_shadow_row_def:
+   (dark_shadow_row c L [] = T) /\
    (dark_shadow_row c (L:int) ((d,R)::rs) =
-      &d * L - &c * R >= (&c - 1) * (&d - 1) /\ dark_shadow_row c L rs)`;
-val dark_shadow_def = Define
-  `(dark_shadow [] lowers = T) /\
+      &d * L - &c * R >= (&c - 1) * (&d - 1) /\ dark_shadow_row c L rs)
+End
+Definition dark_shadow_def:
+   (dark_shadow [] lowers = T) /\
    (dark_shadow ((c,L)::uppers) lowers =
-      dark_shadow_row c L lowers /\ dark_shadow uppers lowers)`;
+      dark_shadow_row c L lowers /\ dark_shadow uppers lowers)
+End
 
 val move_subs_out = prove(
   ``!x:int y z. (x - y + z = x + z - y) /\ (x - y - z = x - (y + z)) /\
@@ -843,12 +856,13 @@ val div_lemma = prove(
   SRW_TAC [][div_lemma0]);
 
 val _ = print "Now proving properties of nightmare function\n"
-val nightmare_def = Define
-  `(nightmare x c uppers lowers [] = F) /\
+Definition nightmare_def:
+   (nightmare x c uppers lowers [] = F) /\
    (nightmare x c uppers lowers ((d,R)::rs) =
       (?i. (0 <= i /\ i <= (&c * &d - &c - &d) / &c) /\ (&d * x = R + i) /\
            evalupper x uppers /\ evallower x lowers) \/
-      nightmare x c uppers lowers rs)`;
+      nightmare x c uppers lowers rs)
+End
 
 val nightmare_implies_LHS = store_thm(
   "nightmare_implies_LHS",
@@ -1063,12 +1077,13 @@ val eval_step_extra4 = store_thm(
     ((evalupper x ups /\ evallower x lows) /\ (ex /\ ex')) /\ p``,
   REWRITE_TAC [CONJ_ASSOC]);
 
-val calc_nightmare_def =
-    Define`(calc_nightmare x c [] = F) /\
+Definition calc_nightmare_def:
+    (calc_nightmare x c [] = F) /\
            (calc_nightmare x c ((d,R)::rs) =
                 (?i. (0 <= i /\ i <= (&c * &d - &c - &d) / &c) /\
                      (&d * x = R + i)) \/
-                calc_nightmare x c rs)`;
+                calc_nightmare x c rs)
+End
 
 val calculational_nightmare = store_thm(
   "calculational_nightmare",

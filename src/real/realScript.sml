@@ -2737,7 +2737,8 @@ Theorem REAL_SUB_NUMERAL[simp] =
 (* Define a constant for extracting "the positive part" of real numbers.     *)
 (* ------------------------------------------------------------------------- *)
 
-val pos_def = Define `pos (x : real) = if 0 <= x then x else 0`;
+Definition pos_def:   pos (x : real) = if 0 <= x then x else 0
+End
 
 val REAL_POS_POS = store_thm
   ("REAL_POS_POS",
@@ -3050,7 +3051,8 @@ QED
 (* More theorems about sup, and corresponding theorems about an inf operator *)
 (* ------------------------------------------------------------------------- *)
 
-val inf_def = Define `inf p = ~(sup (\r. p (~r)))`;
+Definition inf_def:   inf p = ~(sup (\r. p (~r)))
+End
 
 Theorem inf_alt :
     !p. inf p = ~(sup (IMAGE $~ p))

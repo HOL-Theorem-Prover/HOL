@@ -1095,9 +1095,9 @@ val toList_THM = store_thm(
   IMP_RES_TAC LFINITE_HAS_LENGTH THEN
   ASM_SIMP_TAC (srw_ss()) [LTAKE_THM, LHD_THM, LTL_THM]);
 
-val fromList_def = Define`
+Definition fromList_def:
   (fromList [] = LNIL) /\ (fromList (h::t) = LCONS h (fromList t))
-`;
+End
 val _ = export_rewrites ["fromList_def"]
 
 val fromList_EQ_LNIL = Q.store_thm(
@@ -1492,7 +1492,8 @@ QED
     companion LL_ALL/every (has a coinduction principle)
    ---------------------------------------------------------------------- *)
 
-val every_def = Define`every P ll = ~exists ((~) o P) ll`
+Definition every_def:  every P ll = ~exists ((~) o P) ll
+End
 val _ = overload_on ("LL_ALL", ``every``)
 val _ = overload_on ("every", ``every``)
 
@@ -2242,13 +2243,14 @@ QED
 (* Turning a stream-like linear order into a lazy list                      *)
 (* ------------------------------------------------------------------------ *)
 
-val linear_order_to_list_f_def = Define `
+Definition linear_order_to_list_f_def:
   linear_order_to_list_f lo =
     let min = minimal_elements (domain lo UNION range lo) lo in
       if min = {} then
         NONE
       else
-        SOME (rrestrict lo ((domain lo UNION range lo) DIFF min), CHOICE min)`;
+        SOME (rrestrict lo ((domain lo UNION range lo) DIFF min), CHOICE min)
+End
 
 val SUC_EX = Q.prove (`(?x. P (SUC x)) ==> $? P`,
   REWRITE_TAC [EXISTS_DEF] THEN BETA_TAC THEN MATCH_ACCEPT_TAC SELECT_AX) ;
@@ -2502,14 +2504,15 @@ val linear_order_to_llist = Q.store_thm ("linear_order_to_llist",
   REPEAT STRIP_TAC THEN IMP_RES_TAC linear_order_to_llist_eq THEN
   Q.EXISTS_TAC `ll'` THEN ASM_REWRITE_TAC [SUBSET_REFL]) ;
 
-val LPREFIX_def = Define `
+Definition LPREFIX_def:
   LPREFIX l1 l2 =
     case toList l1 of
     | NONE => (l1 = l2)
     | SOME xs =>
         case toList l2 of
         | NONE => LTAKE (LENGTH xs) l2 = SOME xs
-        | SOME ys => isPREFIX xs ys`
+        | SOME ys => isPREFIX xs ys
+End
 
 val LPREFIX_LNIL = Q.store_thm("LPREFIX_LNIL[simp]",
   `LPREFIX [||] ll /\

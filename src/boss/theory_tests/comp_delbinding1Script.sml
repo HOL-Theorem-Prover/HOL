@@ -1,7 +1,8 @@
 Theory comp_delbinding1
 
 (* compset now has foo_def in it *)
-val foo_def = Define‘foo x = x + 1’;
+Definition foo_def:  foo x = x + 1
+End
 
 val _ = case ThmSetData.current_data{settype="compute"} of
             [ThmSetData.ADD({Thy = "comp_delbinding1", Name = "foo_def"}, _)] =>

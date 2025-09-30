@@ -15,14 +15,18 @@ val ERR = mk_HOL_ERR "alignmentScript"
    Constant definitions
    ------------------------------------------------------------------------- *)
 
-val align_def   = Define `align p (w: 'a word) = (dimindex (:'a) - 1 '' p) w`
-val aligned_def = Define `aligned p w = (align p w = w)`
+Definition align_def:     align p (w: 'a word) = (dimindex (:'a) - 1 '' p) w
+End
+Definition aligned_def:   aligned p w = (align p w = w)
+End
 
-val byte_align_def = Define`
-   byte_align (w: 'a word) = align (LOG2 (dimindex(:'a) DIV 8)) w`
+Definition byte_align_def:
+   byte_align (w: 'a word) = align (LOG2 (dimindex(:'a) DIV 8)) w
+End
 
-val byte_aligned_def = Define`
-   byte_aligned (w: 'a word) = aligned (LOG2 (dimindex(:'a) DIV 8)) w`
+Definition byte_aligned_def:
+   byte_aligned (w: 'a word) = aligned (LOG2 (dimindex(:'a) DIV 8)) w
+End
 
 (* -------------------------------------------------------------------------
    Theorems

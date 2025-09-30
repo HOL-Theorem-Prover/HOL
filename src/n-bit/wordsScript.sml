@@ -21,8 +21,10 @@ val HB = ``^WL - 1``
 
 val dimword_def  = zDefine `dimword (:'a) = 2 ** ^WL`
 val INT_MIN_def  = zDefine `INT_MIN (:'a) = 2 ** ^HB`
-val UINT_MAX_def =  Define `UINT_MAX (:'a) = dimword(:'a) - 1`
-val INT_MAX_def  =  Define `INT_MAX (:'a) = INT_MIN(:'a) - 1`
+Definition UINT_MAX_def:    UINT_MAX (:'a) = dimword(:'a) - 1
+End
+Definition INT_MAX_def:     INT_MAX (:'a) = INT_MIN(:'a) - 1
+End
 
 val dimword_ML = rhs (#2 (strip_forall (concl dimword_def)))
 val INT_MIN_ML = rhs (#2 (strip_forall (concl INT_MIN_def)))
@@ -61,43 +63,66 @@ val sw2sw_def = zDefine`
 
 val _ = add_bare_numeral_form (#"w", SOME "n2w")
 
-val w2l_def = Define `w2l b w = n2l b (w2n w)`
-val l2w_def = Define `l2w b l = n2w (l2n b l)`
-val w2s_def = Define `w2s b f w = n2s b f (w2n w)`
-val s2w_def = Define `s2w b f s = n2w (s2n b f s)`
+Definition w2l_def:   w2l b w = n2l b (w2n w)
+End
+Definition l2w_def:   l2w b l = n2w (l2n b l)
+End
+Definition w2s_def:   w2s b f w = n2s b f (w2n w)
+End
+Definition s2w_def:   s2w b f s = n2w (s2n b f s)
+End
 
-val word_from_bin_list_def = Define `word_from_bin_list = l2w 2`
-val word_from_oct_list_def = Define `word_from_oct_list = l2w 8`
-val word_from_dec_list_def = Define `word_from_dec_list = l2w 10`
-val word_from_hex_list_def = Define `word_from_hex_list = l2w 16`
+Definition word_from_bin_list_def:   word_from_bin_list = l2w 2
+End
+Definition word_from_oct_list_def:   word_from_oct_list = l2w 8
+End
+Definition word_from_dec_list_def:   word_from_dec_list = l2w 10
+End
+Definition word_from_hex_list_def:   word_from_hex_list = l2w 16
+End
 
-val word_to_bin_list_def = Define `word_to_bin_list = w2l 2`
-val word_to_oct_list_def = Define `word_to_oct_list = w2l 8`
-val word_to_dec_list_def = Define `word_to_dec_list = w2l 10`
-val word_to_hex_list_def = Define `word_to_hex_list = w2l 16`
+Definition word_to_bin_list_def:   word_to_bin_list = w2l 2
+End
+Definition word_to_oct_list_def:   word_to_oct_list = w2l 8
+End
+Definition word_to_dec_list_def:   word_to_dec_list = w2l 10
+End
+Definition word_to_hex_list_def:   word_to_hex_list = w2l 16
+End
 
-val word_from_bin_string_def = Define `word_from_bin_string = s2w 2 UNHEX`
-val word_from_oct_string_def = Define `word_from_oct_string = s2w 8 UNHEX`
-val word_from_dec_string_def = Define `word_from_dec_string = s2w 10 UNHEX`
-val word_from_hex_string_def = Define `word_from_hex_string = s2w 16 UNHEX`
+Definition word_from_bin_string_def:   word_from_bin_string = s2w 2 UNHEX
+End
+Definition word_from_oct_string_def:   word_from_oct_string = s2w 8 UNHEX
+End
+Definition word_from_dec_string_def:   word_from_dec_string = s2w 10 UNHEX
+End
+Definition word_from_hex_string_def:   word_from_hex_string = s2w 16 UNHEX
+End
 
-val word_to_bin_string_def = Define `word_to_bin_string = w2s 2 HEX`
-val word_to_oct_string_def = Define `word_to_oct_string = w2s 8 HEX`
-val word_to_dec_string_def = Define `word_to_dec_string = w2s 10 HEX`
-val word_to_hex_string_def = Define `word_to_hex_string = w2s 16 HEX`
+Definition word_to_bin_string_def:   word_to_bin_string = w2s 2 HEX
+End
+Definition word_to_oct_string_def:   word_to_oct_string = w2s 8 HEX
+End
+Definition word_to_dec_string_def:   word_to_dec_string = w2s 10 HEX
+End
+Definition word_to_hex_string_def:   word_to_hex_string = w2s 16 HEX
+End
 
 (* -------------------------------------------------------------------------
     The Boolean operations : definitions
    ------------------------------------------------------------------------- *)
 
-val word_T_def = Define`
-  word_T = (n2w:num->'a word) (UINT_MAX(:'a))`
+Definition word_T_def:
+  word_T = (n2w:num->'a word) (UINT_MAX(:'a))
+End
 
-val word_L_def = Define`
-  word_L = (n2w:num->'a word) (INT_MIN(:'a))`
+Definition word_L_def:
+  word_L = (n2w:num->'a word) (INT_MIN(:'a))
+End
 
-val word_H_def = Define`
-  word_H = (n2w:num->'a word) (INT_MAX(:'a))`
+Definition word_H_def:
+  word_H = (n2w:num->'a word) (INT_MAX(:'a))
+End
 
 val word_1comp_def = zDefine`
   word_1comp (w:'a word) = (FCP i. ~(w ' i)):'a word`
@@ -167,15 +192,20 @@ val word_reduce_def = zDefine`
          FOLDL f (HD l) (TL l))) : 1 word`
 
 (* equals 1w iff all bits are equal *)
-val word_compare_def = Define`
-  word_compare (a:'a word) b = if a = b then 1w else 0w :1 word`
+Definition word_compare_def:
+  word_compare (a:'a word) b = if a = b then 1w else 0w :1 word
+End
 
 val reduce_and_def  = zDefine `reduce_and  = word_reduce (/\)`
 val reduce_or_def   = zDefine `reduce_or   = word_reduce (\/)`
-val reduce_xor_def  =  Define `reduce_xor  = word_reduce (<>)`
-val reduce_nand_def =  Define `reduce_nand = word_reduce (\a b. ~(a /\ b))`
-val reduce_nor_def  =  Define `reduce_nor  = word_reduce (\a b. ~(a \/ b))`
-val reduce_xnor_def =  Define `reduce_xnor = word_reduce (=)`
+Definition reduce_xor_def:     reduce_xor  = word_reduce (<>)
+End
+Definition reduce_nand_def:    reduce_nand = word_reduce (\a b. ~(a /\ b))
+End
+Definition reduce_nor_def:     reduce_nor  = word_reduce (\a b. ~(a \/ b))
+End
+Definition reduce_xnor_def:    reduce_xnor = word_reduce (=)
+End
 
 (* -------------------------------------------------------------------------
     Bit field operations : definitions
@@ -221,21 +251,26 @@ val BIT_SET_def = zDefine`
       else
         BIT_SET (SUC i) (n DIV 2)`
 
-val bit_field_insert_def = Define`
+Definition bit_field_insert_def:
   bit_field_insert h l a =
-    word_modify (\i. COND (l <= i /\ i <= h) (a ' (i - l)))`
+    word_modify (\i. COND (l <= i /\ i <= h) (a ' (i - l)))
+End
 
-val word_sign_extend_def = Define`
+Definition word_sign_extend_def:
   word_sign_extend n (w:'a word) =
-    n2w (SIGN_EXTEND n (dimindex(:'a)) (w2n w)) : 'a word`
+    n2w (SIGN_EXTEND n (dimindex(:'a)) (w2n w)) : 'a word
+End
 
-val word_len_def = Define `word_len (w:'a word) = dimindex (:'a)`
+Definition word_len_def:   word_len (w:'a word) = dimindex (:'a)
+End
 
-val bit_count_upto_def = Define`
-   bit_count_upto n (w : 'a word) = SUM n (\i. if w ' i then 1 else 0)`
+Definition bit_count_upto_def:
+   bit_count_upto n (w : 'a word) = SUM n (\i. if w ' i then 1 else 0)
+End
 
-val bit_count_def = Define`
-   bit_count (w : 'a word) = bit_count_upto (dimindex(:'a)) w`
+Definition bit_count_def:
+   bit_count (w : 'a word) = bit_count_upto (dimindex(:'a)) w
+End
 
 val () = add_infixes 375 HOLgrammars.RIGHT
   [("''", `$word_slice`),
@@ -264,25 +299,29 @@ val word_exp_def = zDefine`
 val word_log2_def = zDefine`
   word_log2 (w:'a word) = (n2w (LOG2 (w2n w)):'a word)`
 
-val add_with_carry_def = Define`
+Definition add_with_carry_def:
   add_with_carry (x:'a word, y:'a word, carry_in:bool) =
     let unsigned_sum = w2n x + w2n y + (if carry_in then 1 else 0) in
     let result = n2w unsigned_sum : 'a word in
     let carry_out = ~(w2n result = unsigned_sum)
     and overflow = (word_msb x = word_msb y /\ word_msb x <> word_msb result)
     in
-       (result,carry_out,overflow)`;
+       (result,carry_out,overflow)
+End
 
-val word_sub_def = Define`
-  word_sub (v:'a word) (w:'a word) = word_add v (word_2comp w)`
+Definition word_sub_def:
+  word_sub (v:'a word) (w:'a word) = word_add v (word_2comp w)
+End
 
-val word_div_def = Define`
-  word_div (v: 'a word) (w: 'a word) = n2w (w2n v DIV w2n w): 'a word`
+Definition word_div_def:
+  word_div (v: 'a word) (w: 'a word) = n2w (w2n v DIV w2n w): 'a word
+End
 
-val word_mod_def = Define`
-  word_mod (v: 'a word) (w: 'a word) = n2w (w2n v MOD w2n w): 'a word`
+Definition word_mod_def:
+  word_mod (v: 'a word) (w: 'a word) = n2w (w2n v MOD w2n w): 'a word
+End
 
-val word_quot_def = Define`
+Definition word_quot_def:
   word_quot a b =
     if word_msb a then
       if word_msb b then
@@ -293,10 +332,11 @@ val word_quot_def = Define`
       if word_msb b then
         word_2comp (word_div a (word_2comp b))
       else
-        word_div a b`
+        word_div a b
+End
 
 (* 2's complement signed remainder (sign follows dividend) *)
-val word_rem_def = Define`
+Definition word_rem_def:
   word_rem a b =
     if word_msb a then
       if word_msb b then
@@ -307,9 +347,11 @@ val word_rem_def = Define`
       if word_msb b then
         word_mod a (word_2comp b)
       else
-        word_mod a b`
+        word_mod a b
+End
 
-val word_L2_def = Define `word_L2 = word_mul word_L word_L`
+Definition word_L2_def:   word_L2 = word_mul word_L word_L
+End
 
 val () = List.app (fn (s, t) => Parse.overload_on (s, Parse.Term t))
   [("+", `$word_add`),
@@ -328,12 +370,13 @@ val () = add_infixes 600 HOLgrammars.LEFT
     Orderings : definitions
    ------------------------------------------------------------------------- *)
 
-val nzcv_def = Define `
+Definition nzcv_def:
   nzcv (a:'a word) (b:'a word) =
     let q = w2n a + w2n (- b) in
     let r = (n2w q):'a word in
       (word_msb r,r = 0w,BIT ^WL q \/ (b = 0w),
-     ~(word_msb a = word_msb b) /\ ~(word_msb r = word_msb a))`
+     ~(word_msb a = word_msb b) /\ ~(word_msb r = word_msb a))
+End
 
 val word_lt_def = zDefine`
   word_lt a b = let (n,z,c,v) = nzcv a b in ~(n = v)`
@@ -359,20 +402,25 @@ val word_lo_def = zDefine`
 val word_hs_def = zDefine`
   word_hs a b = let (n,z,c,v) = nzcv a b in c`
 
-val word_min_def = Define`
-  word_min a b = if word_lo a b then a else b`
+Definition word_min_def:
+  word_min a b = if word_lo a b then a else b
+End
 
-val word_max_def = Define`
-  word_max a b = if word_lo a b then b else a`
+Definition word_max_def:
+  word_max a b = if word_lo a b then b else a
+End
 
-val word_smin_def = Define`
-  word_smin a b = if word_lt a b then a else b`
+Definition word_smin_def:
+  word_smin a b = if word_lt a b then a else b
+End
 
-val word_smax_def = Define`
-  word_smax a b = if word_lt a b then b else a`
+Definition word_smax_def:
+  word_smax a b = if word_lt a b then b else a
+End
 
-val word_abs_def = Define`
-  word_abs w = if word_lt w (n2w 0) then word_2comp w else w`
+Definition word_abs_def:
+  word_abs w = if word_lt w (n2w 0) then word_2comp w else w
+End
 
 val () = add_infixes 450 HOLgrammars.NONASSOC
   [("<",   `word_lt`),
@@ -427,20 +475,25 @@ val word_rrx_def = zDefine`
     (word_lsb w,
      (FCP i. if i = ^HB then c else (word_lsr w 1) ' i):'a word)`
 
-val word_lsl_bv_def = Define`
-  word_lsl_bv (w:'a word) (n:'a word) = word_lsl w (w2n n)`
+Definition word_lsl_bv_def:
+  word_lsl_bv (w:'a word) (n:'a word) = word_lsl w (w2n n)
+End
 
-val word_lsr_bv_def = Define`
-  word_lsr_bv (w:'a word) (n:'a word) = word_lsr w (w2n n)`
+Definition word_lsr_bv_def:
+  word_lsr_bv (w:'a word) (n:'a word) = word_lsr w (w2n n)
+End
 
-val word_asr_bv_def = Define`
-  word_asr_bv (w:'a word) (n:'a word) = word_asr w (w2n n)`
+Definition word_asr_bv_def:
+  word_asr_bv (w:'a word) (n:'a word) = word_asr w (w2n n)
+End
 
-val word_ror_bv_def = Define`
-  word_ror_bv (w:'a word) (n:'a word) = word_ror w (w2n n)`
+Definition word_ror_bv_def:
+  word_ror_bv (w:'a word) (n:'a word) = word_ror w (w2n n)
+End
 
-val word_rol_bv_def = Define`
-  word_rol_bv (w:'a word) (n:'a word) = word_rol w (w2n n)`
+Definition word_rol_bv_def:
+  word_rol_bv (w:'a word) (n:'a word) = word_rol w (w2n n)
+End
 
 val () = add_infixes 680 HOLgrammars.LEFT
   [("<<",   `words$word_lsl`),
@@ -475,11 +528,12 @@ val () = add_TeX_tokens 3
     Concatenation : definitions
    ------------------------------------------------------------------------- *)
 
-val word_join_def = Define`
+Definition word_join_def:
   (word_join (v:'a word) (w:'b word)):('a + 'b) word =
     let cv = (w2w v):('a + 'b) word
     and cw = (w2w w):('a + 'b) word
-    in  (cv << (dimindex (:'b))) || cw`
+    in  (cv << (dimindex (:'b))) || cw
+End
 
 val word_concat_def = zDefine`
   word_concat (v:'a word) (w:'b word) = w2w (word_join v w)`
@@ -488,9 +542,10 @@ val word_replicate_def = zDefine`
   word_replicate n (w : 'a word) =
     FCP i. i < n * dimindex(:'a) /\ w ' (i MOD dimindex(:'a))`
 
-val concat_word_list_def = Define`
+Definition concat_word_list_def:
   (concat_word_list ([]:'a word list) = 0w) /\
-  (concat_word_list (h::t) = w2w h || (concat_word_list t << dimindex(:'a)))`
+  (concat_word_list (h::t) = w2w h || (concat_word_list t << dimindex(:'a)))
+End
 
 val () = add_infixes 700 HOLgrammars.RIGHT [("@@", `$word_concat`)]
 
@@ -498,24 +553,28 @@ val () = add_infixes 700 HOLgrammars.RIGHT [("@@", `$word_concat`)]
     Saturating maps/operations : definitions
    ------------------------------------------------------------------------- *)
 
-val saturate_n2w_def = Define`
+Definition saturate_n2w_def:
   (saturate_n2w: num -> 'a word) n =
-    if dimword(:'a) <= n then word_T else n2w n`
+    if dimword(:'a) <= n then word_T else n2w n
+End
 
 val saturate_w2w_def = zDefine`
   saturate_w2w (w: 'a word) = saturate_n2w (w2n w)`
 
-val saturate_add_def = Define`
+Definition saturate_add_def:
   saturate_add (a: 'a word) (b: 'a word) =
-    saturate_n2w (w2n a + w2n b) : 'a word`
+    saturate_n2w (w2n a + w2n b) : 'a word
+End
 
-val saturate_sub_def = Define`
+Definition saturate_sub_def:
   saturate_sub (a: 'a word) (b: 'a word) =
-    n2w (w2n a - w2n b) : 'a word`
+    n2w (w2n a - w2n b) : 'a word
+End
 
-val saturate_mul_def = Define`
+Definition saturate_mul_def:
   saturate_mul (a: 'a word) (b: 'a word) =
-    saturate_n2w (w2n a * w2n b) : 'a word`
+    saturate_n2w (w2n a * w2n b) : 'a word
+End
 
 (* -------------------------------------------------------------------------
     Theorems
@@ -5358,4 +5417,5 @@ val _ =
 (* For use with EmitML                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-val n2w_itself_def = Define `n2w_itself (n, (:'a)) = (n2w n): 'a word`
+Definition n2w_itself_def:   n2w_itself (n, (:'a)) = (n2w n): 'a word
+End

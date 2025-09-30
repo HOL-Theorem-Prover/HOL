@@ -49,11 +49,14 @@ val exists_path = prove(
   ``(?p. P p) = ?r. P (toPath r)``,
   SRW_TAC [][EQ_IMP_THM] THEN PROVE_TAC [toPath_onto]);
 
-val first_def = Define`first (p:('a,'b) path) = FST (fromPath p)`;
-val stopped_at_def = Define`stopped_at x:('a,'b) path = toPath (x, LNIL)`;
-val pcons_def =
-    Define`pcons x r p : ('a,'b) path =
-                      toPath (x, LCONS (r, first p) (SND (fromPath p)))`;
+Definition first_def:  first (p:('a,'b) path) = FST (fromPath p)
+End
+Definition stopped_at_def:  stopped_at x:('a,'b) path = toPath (x, LNIL)
+End
+Definition pcons_def:
+    pcons x r p : ('a,'b) path =
+                      toPath (x, LCONS (r, first p) (SND (fromPath p)))
+End
 
 Theorem stopped_at_11[simp]:
   !x y. (stopped_at x = stopped_at y : ('a,'b) path) = (x = y)
@@ -104,8 +107,9 @@ val first_thm = store_thm(
     (!x r p. first (pcons x r p : ('a,'b) path) = x)``,
   SRW_TAC [][first_def, stopped_at_def, pcons_def]);
 
-val finite_def =
-  Define`finite (sigma : ('a,'b) path) = LFINITE (SND (fromPath sigma))`;
+Definition finite_def:
+  finite (sigma : ('a,'b) path) = LFINITE (SND (fromPath sigma))
+End
 
 Overload "infinite" = “\p. ~finite p”
 
@@ -217,9 +221,10 @@ val finite_path_ind = store_thm(
                             pairTheory.FORALL_PROD, first_def, forall_path]);
 
 
-val pmap_def =
-    Define`pmap f g (p:('a,'b) path):('c,'d) path =
-             toPath ((f ## LMAP (g ## f)) (fromPath p))`;
+Definition pmap_def:
+    pmap f g (p:('a,'b) path):('c,'d) path =
+             toPath ((f ## LMAP (g ## f)) (fromPath p))
+End
 
 val pmap_thm = store_thm(
   "pmap_thm",
@@ -286,10 +291,11 @@ val _ = export_rewrites ["first_label_def"]
       SOME n indicates a path with n states, and n - 1 transitions
    ---------------------------------------------------------------------- *)
 
-val length_def =
-    Define`length p = if finite p then
+Definition length_def:
+    length p = if finite p then
                         SOME (LENGTH (THE (toList (SND (fromPath p)))) + 1)
-                      else NONE`;
+                      else NONE
+End
 
 val length_thm = store_thm(
   "length_thm",
@@ -369,9 +375,9 @@ val _ = export_rewrites ["length_pmap"]
     n must be IN PL p.
    ---------------------------------------------------------------------- *)
 
-val el_def = Define`
+Definition el_def:
   (el 0 p = first p) /\ (el (SUC n) p = el n (tail p))
-`;
+End
 val _ = export_rewrites ["el_def"]
 
 (* ----------------------------------------------------------------------
@@ -381,10 +387,10 @@ val _ = export_rewrites ["el_def"]
     n + 1 must be in PL p.
    ---------------------------------------------------------------------- *)
 
-val nth_label_def = Define`
+Definition nth_label_def:
   (nth_label 0 p = first_label p) /\
   (nth_label (SUC n) p = nth_label n (tail p))
-`;
+End
 val _ = export_rewrites ["nth_label_def"]
 
 val path_Axiom = store_thm(
@@ -427,11 +433,12 @@ val path_Axiom = store_thm(
   ]);
 
 
-val pconcat_def =
-    Define`pconcat p1 lab p2 =
+Definition pconcat_def:
+    pconcat p1 lab p2 =
              toPath (first p1, LAPPEND (SND (fromPath p1))
                                        (LCONS (lab,first p2)
-                                              (SND (fromPath p2))))`;
+                                              (SND (fromPath p2))))
+End
 
 val pconcat_thm = store_thm(
   "pconcat_thm",
@@ -489,7 +496,8 @@ QED
     accepts indices {0, 1}.
    ---------------------------------------------------------------------- *)
 
-val PL_def = Define`PL p = { i | finite p ==> i < THE (length p) }`
+Definition PL_def:  PL p = { i | finite p ==> i < THE (length p) }
+End
 
 val infinite_PL = store_thm(
   "infinite_PL",
@@ -553,9 +561,9 @@ val _ = export_rewrites ["nth_label_pmap"]
 
 (* ---------------------------------------------------------------------- *)
 
-val firstP_at_def = Define`
+Definition firstP_at_def:
   firstP_at P p i <=> i IN PL p /\ P (el i p) /\ !j. j < i ==> ~P(el j p)
-`;
+End
 
 val firstP_at_stopped = prove(
   ``!P x n. firstP_at P (stopped_at x) n <=> (n = 0) /\ P x``,
@@ -590,8 +598,10 @@ val firstP_at_zero = store_thm(
   GEN_TAC THEN CONV_TAC (HO_REWR_CONV FORALL_path) THEN
   SIMP_TAC (srw_ss()) [firstP_at_thm]);
 
-val exists_def = Define`exists P p = ?i. firstP_at P p i`
-val every_def = Define`every P p = ~exists ($~ o P) p`
+Definition exists_def:  exists P p = ?i. firstP_at P p i
+End
+Definition every_def:  every P p = ~exists ($~ o P) p
+End
 
 Theorem exists_thm[simp]:
   !P. (!x. exists P (stopped_at x) = P x) /\
@@ -664,7 +674,8 @@ val exists_induction = save_thm(
               SIMP_CONV (srw_ss()) [DISJ_IMP_THM, FORALL_AND_THM]))
   every_coinduction);
 
-val mem_def = Define`mem s p = ?i. i IN PL p /\ (s = el i p)`;
+Definition mem_def:  mem s p = ?i. i IN PL p /\ (s = el i p)
+End
 
 Theorem mem_thm[simp]:
   (!x s. mem s (stopped_at x) = (s = x)) /\
@@ -679,10 +690,10 @@ QED
        drops n elements from the front of p and returns what's left
    ---------------------------------------------------------------------- *)
 
-val drop_def = Define`
+Definition drop_def:
   (drop 0 p = p) /\
   (drop (SUC n) p = drop n (tail p))
-`;
+End
 val numeral_drop = save_thm(
   "numeral_drop",
   CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV (CONJUNCT2 drop_def));
@@ -810,10 +821,10 @@ val _ = export_rewrites ["nth_label_drop"]
     ``take n p`` takes n _labels_ from p
    ---------------------------------------------------------------------- *)
 
-val take_def = Define`
+Definition take_def:
   (take 0 p = stopped_at (first p)) /\
   (take (SUC n) p = pcons (first p) (first_label p) (take n (tail p)))
-`;
+End
 val _ = export_rewrites ["take_def"]
 
 val first_take = store_thm(
@@ -881,9 +892,9 @@ val nth_label_take = store_thm(
       has no useful meaning if i > j \/ j indexes beyond end of p
    ---------------------------------------------------------------------- *)
 
-val seg_def = Define`
+Definition seg_def:
   seg i j p = take (j - i) (drop i p)
-`;
+End
 
 val singleton_seg = store_thm(
   "singleton_seg",
@@ -976,7 +987,8 @@ val firstP_at_unique = store_thm(
     `m - 1 = n` by PROVE_TAC [] THEN SRW_TAC [ARITH_ss][]
   ]);
 
-val is_stopped_def = Define`is_stopped p = ?x. p = stopped_at x`;
+Definition is_stopped_def:  is_stopped p = ?x. p = stopped_at x
+End
 
 val is_stopped_thm = store_thm(
   "is_stopped_thm",
@@ -1124,10 +1136,11 @@ val pgenerate_onto = store_thm(
 
 val _ = print "Defining path OK-ness\n"
 
-val okpath_f_def =
-    Define`okpath_f R (X :('a,'b) path set) =
+Definition okpath_f_def:
+    okpath_f R (X :('a,'b) path set) =
               { stopped_at x | x IN UNIV } UNION
-              { pcons x r p | R x r (first p) /\ p IN X }`;
+              { pcons x r p | R x r (first p) /\ p IN X }
+End
 
 val okpath_monotone = store_thm(
   "okpath_monotone",
@@ -1135,7 +1148,8 @@ val okpath_monotone = store_thm(
   SRW_TAC [][fixedPointTheory.monotone_def, okpath_f_def,
              pred_setTheory.SUBSET_DEF] THEN PROVE_TAC []);
 
-val okpath_def = Define`okpath R = gfp (okpath_f R)`;
+Definition okpath_def:  okpath R = gfp (okpath_f R)
+End
 
 val okpath_co_ind = save_thm(
   "okpath_co_ind",
@@ -1309,9 +1323,9 @@ val okpath_seg = store_thm(
 val _ = export_rewrites ["okpath_seg"]
 
 (* "strongly normalising" for labelled transition relations *)
-val SN_def = Define`
+Definition SN_def:
   SN R = WF (\x y. ?l. R y l x)
-`;
+End
 
 val SN_finite_paths = store_thm(
   "SN_finite_paths",
@@ -1397,14 +1411,15 @@ val finite_labels = Q.store_thm
  `!p. LFINITE (labels p) = finite p`,
  SRW_TAC [] [labels_LMAP, LFINITE_MAP, finite_def]);
 
-val unfold_def =
-  Define `unfold proj f s =
+Definition unfold_def:
+   unfold proj f s =
             toPath
               (proj s,
                LUNFOLD (\s. OPTION_MAP (λ(next_s,lbl).
                                            (next_s,(lbl,proj next_s)))
                                        (f s))
-                       s)`;
+                       s)
+End
 
 val unfold_thm = Q.store_thm
 ("unfold_thm",
@@ -1483,8 +1498,9 @@ val okpath_unfold = Q.store_thm
       METIS_TAC [],
   METIS_TAC []]);
 
-val trace_machine_def =
-  Define `trace_machine P s l s' <=> (P (s++[l])) /\ (s' = s++[l])`;
+Definition trace_machine_def:
+   trace_machine P s l s' <=> (P (s++[l])) /\ (s' = s++[l])
+End
 
 local
 
@@ -1617,9 +1633,10 @@ val drop_eq_pcons = Q.store_thm
  SRW_TAC [] [] THEN
  DECIDE_TAC);
 
-val parallel_comp_def =
-  Define `parallel_comp m1 m2 (s1,s2) l (s1',s2') <=>
-            m1 s1 l s1' /\ m2 s2 l s2'`;
+Definition parallel_comp_def:
+   parallel_comp m1 m2 (s1,s2) l (s1',s2') <=>
+            m1 s1 l s1' /\ m2 s2 l s2'
+End
 
 Theorem okpath_parallel_comp:
   !p m1 m2.

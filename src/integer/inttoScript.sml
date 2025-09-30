@@ -40,7 +40,8 @@ fun maybe_thm (s, tm, tac) = if BigSig then store_thm (s, tm, tac)
    of NUMERAL to a pile of ZERO, BIT0, and BIT1) or an application of
    numeric_negate:int -> int to such a &-application. ``-0`` is possible. *)
 
-val intOrd = Define`intOrd = TO_of_LinearOrder ($< :int reln)`;
+Definition intOrd:  intOrd = TO_of_LinearOrder ($< :int reln)
+End
 
 val StrongLinearOrder_int_lt = maybe_thm ("StrongLinearOrder_int_lt",
 ``StrongLinearOrder ($< :int reln)``,
@@ -54,7 +55,8 @@ val TO_intOrd = maybe_thm ("TO_intOrd", ``TotOrd intOrd``,
 REWRITE_TAC [intOrd] THEN MATCH_MP_TAC TotOrd_TO_of_Strong THEN
 ACCEPT_TAC StrongLinearOrder_int_lt);
 
-val intto = Define`intto = TO intOrd`;
+Definition intto:  intto = TO intOrd
+End
 
 val apintto_thm = store_thm ("apintto_thm", ``apto intto = intOrd``,
 REWRITE_TAC [intto, GSYM TO_apto_TO_ID, TO_intOrd]);

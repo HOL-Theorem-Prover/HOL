@@ -12,25 +12,26 @@ val better_induction = store_thm(
   gen_tac >> strip_tac >> match_mp_tac simple_ord_induction >> simp[] >>
   qx_gen_tac `a` >> strip_tac >> fs[sup_preds_omax_NONE] >> metis_tac[]);
 
-val closed_def = Define`
+Definition closed_def:
   closed A <=> !g. (!n:num. g n IN A) ==> sup { g n | n | T} IN A
-`;
+End
 
-val unbounded_def = Define`
+Definition unbounded_def:
   unbounded (A:'a ordinal set) = !a. ?b. b IN A /\ a < b
-`;
+End
 
-val club_def = Define`club A <=> closed A /\ unbounded A`
+Definition club_def:  club A <=> closed A /\ unbounded A
+End
 
-val continuous_def = Define`
+Definition continuous_def:
   continuous f <=>
     !A:'a ordinal set.
           A <<= univ(:'a inf) ==> f (sup A) = sup (IMAGE f A)
-`;
+End
 
-val strict_mono_def = Define`
+Definition strict_mono_def:
   strict_mono f <=> !x y:'a ordinal. x < y ==> f x < f y
-`;
+End
 
 val dsimp = asm_simp_tac (srw_ss() ++ boolSimps.DNF_ss)
 

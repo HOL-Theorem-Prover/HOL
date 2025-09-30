@@ -15,9 +15,10 @@ Libs
 
 (* ------------------------------------------------------------------------- *)
 
-val GSUM_def = Define`
+Definition GSUM_def:
   (GSUM (n,0) f = 0) /\
-  (GSUM (n,SUC m) f = GSUM (n,m) f + f (n + m))`;
+  (GSUM (n,SUC m) f = GSUM (n,m) f + f (n + m))
+End
 
 val GSUM_1 = store_thm("GSUM_1",
   `!m f. GSUM (m,1) f = f m`, REWRITE_TAC [ONE,GSUM_def,ADD_CLAUSES]);
@@ -121,9 +122,10 @@ val GSUM_FUN_EQUAL = store_thm("GSUM_FUN_EQUAL",
 
 (* ------------------------------------------------------------------------- *)
 
-val SUM_def = Define`
+Definition SUM_def:
   (SUM 0 f = 0) /\
-  (SUM (SUC m) f = SUM m f + f m)`;
+  (SUM (SUC m) f = SUM m f + f m)
+End
 
 val SUM = store_thm("SUM",
   `!m f. SUM m f = GSUM (0,m) f`,

@@ -12,75 +12,91 @@ val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
 
-val toString_def = Define`
+Definition toString_def:
    toString (i : int) =
       if i < 0 then
         "~" ++ num_to_dec_string (Num ~i)
       else
-        num_to_dec_string (Num i)`
+        num_to_dec_string (Num i)
+End
 
-val fromString_def = Define`
+Definition fromString_def:
    (fromString (#"~"::t) = ~&(num_from_dec_string t)) /\
    (fromString (#"-"::t) = ~&(num_from_dec_string t)) /\
-   (fromString s = &(num_from_dec_string s))`
+   (fromString s = &(num_from_dec_string s))
+End
 
-val i2w_def = Define`
+Definition i2w_def:
   i2w (i : int) : 'a word =
-    if i < 0 then -(n2w (Num(-i))) else n2w (Num i)`
+    if i < 0 then -(n2w (Num(-i))) else n2w (Num i)
+End
 
-val w2i_def = Define`
+Definition w2i_def:
   w2i w = if word_msb w then ~(int_of_num (w2n (word_2comp w)))
-          else int_of_num (w2n w)`
+          else int_of_num (w2n w)
+End
 
-val UINT_MAX_def = Define`
-  UINT_MAX (:'a) :int = &(dimword(:'a)) - 1`
+Definition UINT_MAX_def:
+  UINT_MAX (:'a) :int = &(dimword(:'a)) - 1
+End
 
-val INT_MAX_def = Define`
-  INT_MAX (:'a) :int = &(words$INT_MIN(:'a)) - 1`
+Definition INT_MAX_def:
+  INT_MAX (:'a) :int = &(words$INT_MIN(:'a)) - 1
+End
 
-val INT_MIN_def = Define`
-  INT_MIN (:'a) = ~INT_MAX(:'a) - 1`
+Definition INT_MIN_def:
+  INT_MIN (:'a) = ~INT_MAX(:'a) - 1
+End
 
-val saturate_i2w_def = Define`
+Definition saturate_i2w_def:
   saturate_i2w i : 'a word =
     if UINT_MAX (:'a) <= i then
       word_T
     else if i < 0 then
       0w
     else
-      n2w (Num i)`
+      n2w (Num i)
+End
 
-val saturate_i2sw_def = Define`
+Definition saturate_i2sw_def:
   saturate_i2sw i : 'a word =
     if INT_MAX (:'a) <= i then
       word_H
     else if i <= INT_MIN (:'a) then
       word_L
     else
-      i2w i`
+      i2w i
+End
 
-val saturate_sw2sw_def = Define`
-  saturate_sw2sw (w: 'a word) = saturate_i2sw (w2i w)`
+Definition saturate_sw2sw_def:
+  saturate_sw2sw (w: 'a word) = saturate_i2sw (w2i w)
+End
 
-val saturate_w2sw_def = Define`
-  saturate_w2sw (w: 'a word) = saturate_i2sw (&w2n w)`
+Definition saturate_w2sw_def:
+  saturate_w2sw (w: 'a word) = saturate_i2sw (&w2n w)
+End
 
-val saturate_sw2w_def = Define`
-  saturate_sw2w (w: 'a word) = saturate_i2w (w2i w)`
+Definition saturate_sw2w_def:
+  saturate_sw2w (w: 'a word) = saturate_i2w (w2i w)
+End
 
-val signed_saturate_add_def = Define`
+Definition signed_saturate_add_def:
   signed_saturate_add (a: 'a word) (b: 'a word) =
-    saturate_i2sw (w2i a + w2i b) : 'a word`
+    saturate_i2sw (w2i a + w2i b) : 'a word
+End
 
-val signed_saturate_sub_def = Define`
+Definition signed_saturate_sub_def:
   signed_saturate_sub (a: 'a word) (b: 'a word) =
-    saturate_i2sw (w2i a - w2i b) : 'a word`
+    saturate_i2sw (w2i a - w2i b) : 'a word
+End
 
-val word_sdiv_def = Define`
-  word_sdiv (a : 'a word) (b : 'a word) = i2w (w2i a / w2i b) : 'a word`
+Definition word_sdiv_def:
+  word_sdiv (a : 'a word) (b : 'a word) = i2w (w2i a / w2i b) : 'a word
+End
 
-val word_smod_def = Define`
-  word_smod (a : 'a word) (b : 'a word) = i2w (w2i a % w2i b) : 'a word`
+Definition word_smod_def:
+  word_smod (a : 'a word) (b : 'a word) = i2w (w2i a % w2i b) : 'a word
+End
 
 (* ------------------------------------------------------------------------- *)
 

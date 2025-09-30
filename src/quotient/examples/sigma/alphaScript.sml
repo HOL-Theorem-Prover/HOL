@@ -49,13 +49,14 @@ val _ = Hol_datatype
 (* the variables must each be found at the same place.                    *)
 (* ---------------------------------------------------------------------- *)
 
-val alpha_match_def = Define
-       `(alpha_match NIL ys x1 y1 = (if ys = [] then (x1 = y1) else F)) /\
+Definition alpha_match_def:
+        (alpha_match NIL ys x1 y1 = (if ys = [] then (x1 = y1) else F)) /\
         (alpha_match (CONS (x:var) xs) ys x1 y1 =
              (if ys = [] then F else
               (if x1 = x then (y1 = HD ys) /\ (LENGTH xs = LENGTH (TL ys)) else
                (if y1 = HD ys then F else
-                alpha_match xs (TL ys) x1 y1))))`;
+                alpha_match xs (TL ys) x1 y1))))
+End
 
 val alpha_match = store_thm
    ("alpha_match",

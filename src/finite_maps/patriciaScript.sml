@@ -89,18 +89,20 @@ val REMOVE_def = zDefine`
 
 val _ = overload_on ("\\\\", Term`$REMOVE`);
 
-val TRAVERSE_AUX_def = Define`
+Definition TRAVERSE_AUX_def:
     (TRAVERSE_AUX Empty a = a) /\
     (TRAVERSE_AUX (Leaf k d) a = k::a) /\
-    (TRAVERSE_AUX (Branch p m l r) a = TRAVERSE_AUX l (TRAVERSE_AUX r a))`;
+    (TRAVERSE_AUX (Branch p m l r) a = TRAVERSE_AUX l (TRAVERSE_AUX r a))
+End
 
 val TRAVERSE_def = zDefine`
   (TRAVERSE Empty = []) /\
   (TRAVERSE (Leaf j d) = [j]) /\
   (TRAVERSE (Branch p m l r) = TRAVERSE l ++ TRAVERSE r)`;
 
-val KEYS_def = Define`
-  KEYS t = QSORT $< (TRAVERSE t)`;
+Definition KEYS_def:
+  KEYS t = QSORT $< (TRAVERSE t)
+End
 
 val TRANSFORM_def = zDefine`
   (TRANSFORM f Empty = Empty) /\
@@ -158,17 +160,22 @@ val PTREE_OF_NUMSET_def = zDefine`
 
 val _ = overload_on ("|++", Term`$PTREE_OF_NUMSET`);
 
-val NUMSET_OF_PTREE_def = Define`
-  NUMSET_OF_PTREE (t:unit ptree) = LIST_TO_SET (TRAVERSE t)`;
+Definition NUMSET_OF_PTREE_def:
+  NUMSET_OF_PTREE (t:unit ptree) = LIST_TO_SET (TRAVERSE t)
+End
 
-val UNION_PTREE_def = Define`
-  $UNION_PTREE t1 t2 = PTREE_OF_NUMSET t1 (NUMSET_OF_PTREE t2)`;
+Definition UNION_PTREE_def:
+  $UNION_PTREE t1 t2 = PTREE_OF_NUMSET t1 (NUMSET_OF_PTREE t2)
+End
 
-val IS_EMPTY_def = Define `(IS_EMPTY Empty = T) /\ (IS_EMPTY _ = F)`;
+Definition IS_EMPTY_def:   (IS_EMPTY Empty = T) /\ (IS_EMPTY _ = F)
+End
 
-val FIND_def = Define `FIND t k = THE (PEEK t k)`;
+Definition FIND_def:   FIND t k = THE (PEEK t k)
+End
 
-val ADD_LIST_def = Define `ADD_LIST = FOLDL ADD`;
+Definition ADD_LIST_def:   ADD_LIST = FOLDL ADD
+End
 
 val _ = overload_on ("|++", Term`$ADD_LIST`);
 

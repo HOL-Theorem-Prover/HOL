@@ -78,12 +78,12 @@ val IS_GCD_MINUS_R = store_thm("IS_GCD_MINUS_R",
                             PROVE_TAC[IS_GCD_MINUS_L,IS_GCD_SYM]
                      );
 
-val GCD =
- Define
-     `(gcd 0 y = y)
+Definition GCD:
+      (gcd 0 y = y)
  /\   (gcd (SUC x) 0 = SUC x)
  /\   (gcd (SUC x) (SUC y) = if y <= x then gcd (x-y) (SUC y)
-                                       else gcd (SUC x) (y-x))`;
+                                       else gcd (SUC x) (y-x))
+End
 
 val gcd_ind = GEN_ALL (DB.fetch "-" "gcd_ind");
 
@@ -330,9 +330,9 @@ val GCD_EFFICIENTLY = store_thm(
   ASM_SIMP_TAC bool_ss [DECIDE (Term`(x:num) + y - x = y`)] THEN
   SIMP_TAC bool_ss [GCD_SYM]);
 
-val lcm_def = Define`
+Definition lcm_def:
   lcm m n = if (m = 0) \/ (n = 0) then 0 else (m * n) DIV gcd m n
-`;
+End
 
 val _ = computeLib.add_persistent_funs
       ["GCD_EFFICIENTLY"

@@ -13,11 +13,13 @@ val _ = ParseExtras.temp_loose_equality()
 
 val list_ss  = arith_ss ++ listSimps.LIST_ss
 
-val GUESS_EXISTS_def = Define `
-    GUESS_EXISTS i P = ((?v. P v) = (?fv. P (i fv)))`
+Definition GUESS_EXISTS_def:
+    GUESS_EXISTS i P = ((?v. P v) = (?fv. P (i fv)))
+End
 
-val GUESS_FORALL_def = Define `
-    GUESS_FORALL i P = ((!v. P v) = (!fv. P (i fv)))`
+Definition GUESS_FORALL_def:
+    GUESS_FORALL i P = ((!v. P v) = (!fv. P (i fv)))
+End
 
 val GUESS_EXISTS_FORALL_REWRITES = store_thm ("GUESS_EXISTS_FORALL_REWRITES",
 ``(GUESS_EXISTS i P = (!v. P v ==> (?fv. P (i fv)))) /\
@@ -26,11 +28,13 @@ SIMP_TAC std_ss [GUESS_EXISTS_def, GUESS_FORALL_def] THEN
 METIS_TAC[]);
 
 
-val GUESS_EXISTS_POINT_def = Define `
-    GUESS_EXISTS_POINT i P = (!fv. P (i fv))`
+Definition GUESS_EXISTS_POINT_def:
+    GUESS_EXISTS_POINT i P = (!fv. P (i fv))
+End
 
-val GUESS_FORALL_POINT_def = Define `
-    GUESS_FORALL_POINT i P = (!fv. ~(P (i fv)))`
+Definition GUESS_FORALL_POINT_def:
+    GUESS_FORALL_POINT i P = (!fv. ~(P (i fv)))
+End
 
 val GUESS_POINT_THM = store_thm ("GUESS_POINT_THM",
 ``(GUESS_EXISTS_POINT i P ==> ((?v. P v) = T)) /\
@@ -39,13 +43,15 @@ SIMP_TAC std_ss [GUESS_EXISTS_POINT_def, GUESS_FORALL_POINT_def] THEN
 METIS_TAC[]);
 
 
-val GUESS_EXISTS_GAP_def = Define `
+Definition GUESS_EXISTS_GAP_def:
     GUESS_EXISTS_GAP i P =
-       (!v. P v ==> (?fv. v = (i fv)))`;
+       (!v. P v ==> (?fv. v = (i fv)))
+End
 
-val GUESS_FORALL_GAP_def = Define `
+Definition GUESS_FORALL_GAP_def:
     GUESS_FORALL_GAP i P =
-       (!v. ~(P v) ==> (?fv. v = (i fv)))`;
+       (!v. ~(P v) ==> (?fv. v = (i fv)))
+End
 
 
 val GUESS_REWRITES = save_thm ("GUESS_REWRITES",
@@ -742,9 +748,10 @@ val DISJ_IMP_INTRO  = store_thm ("DISJ_IMP_INTRO",
 (* Simple GUESSES                                                             *)
 (******************************************************************************)
 
-val SIMPLE_GUESS_EXISTS_def = Define `
+Definition SIMPLE_GUESS_EXISTS_def:
     SIMPLE_GUESS_EXISTS (v : 'a) (i : 'a) (P : bool) =
-      (P ==> (v = i))`
+      (P ==> (v = i))
+End
 
 val SIMPLE_GUESS_EXISTS_ALT_DEF = store_thm ("SIMPLE_GUESS_EXISTS_ALT_DEF",
   ``(!v. SIMPLE_GUESS_EXISTS (v:'a) i (P v)) <=> (
@@ -752,9 +759,10 @@ val SIMPLE_GUESS_EXISTS_ALT_DEF = store_thm ("SIMPLE_GUESS_EXISTS_ALT_DEF",
 SIMP_TAC std_ss [SIMPLE_GUESS_EXISTS_def, GUESS_EXISTS_GAP_def]);
 
 
-val SIMPLE_GUESS_FORALL_def = Define `
+Definition SIMPLE_GUESS_FORALL_def:
     SIMPLE_GUESS_FORALL (v : 'a) (i : 'a) (P : bool) =
-      (~P ==> (v = i))`
+      (~P ==> (v = i))
+End
 
 val SIMPLE_GUESS_FORALL_ALT_DEF = store_thm ("SIMPLE_GUESS_FORALL_ALT_DEF",
   ``(!v. SIMPLE_GUESS_FORALL (v:'a) i (P v)) <=> (
@@ -888,8 +896,9 @@ val SIMPLE_GUESS_EXISTS_EQ_FUN = store_thm ("SIMPLE_GUESS_EXISTS_EQ_FUN",
 (******************************************************************************)
 
 
-val IS_REMOVABLE_QUANT_FUN_def = Define `
-    IS_REMOVABLE_QUANT_FUN f = (!v. ?x. f x = v)`
+Definition IS_REMOVABLE_QUANT_FUN_def:
+    IS_REMOVABLE_QUANT_FUN f = (!v. ?x. f x = v)
+End
 
 val IS_REMOVABLE_QUANT_FUN___EXISTS_THM = store_thm ("IS_REMOVABLE_QUANT_FUN___EXISTS_THM",
   ``!f P. IS_REMOVABLE_QUANT_FUN f ==> ((?x. P (f x)) = (?x'. P x'))``,

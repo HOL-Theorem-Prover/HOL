@@ -1513,8 +1513,9 @@ val SEQ_LE_MONO = store_thm
 (* Useful Theorems on Real Sequences from util_probTheory *)
 (* ****************************************************** *)
 
-val mono_increasing_def = Define
-   `mono_increasing (f:num->real) = !m n. m <= n ==> f m <= f n`;
+Definition mono_increasing_def:
+    mono_increasing (f:num->real) = !m n. m <= n ==> f m <= f n
+End
 
 val mono_increasing_suc = store_thm
   ("mono_increasing_suc", ``!(f:num->real). mono_increasing f <=> !n. f n <= f (SUC n)``,
@@ -1529,8 +1530,9 @@ val mono_increasing_suc = store_thm
     >> Q.PAT_X_ASSUM `!n. f n <= f (SUC n)` (MP_TAC o Q.SPEC `m + d`)
     >> METIS_TAC [REAL_LE_TRANS, ADD_CLAUSES, LESS_EQ_ADD]);
 
-val mono_decreasing_def = Define
-   `mono_decreasing (f:num->real) = !m n. m <= n ==> f n <= f m`;
+Definition mono_decreasing_def:
+    mono_decreasing (f:num->real) = !m n. m <= n ==> f n <= f m
+End
 
 val mono_decreasing_suc = store_thm
   ("mono_decreasing_suc", ``!(f:num->real). mono_decreasing f <=> !n. f (SUC n) <= f n``,

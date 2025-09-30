@@ -214,31 +214,31 @@ val _ = type_abbrev ("group", Type `:'a monoid`);
 val _ = overload_on ("G", ``g.carrier``);
 val _ = overload_on ("G*", ``monoid_invertibles g``);
  *)
-val Group_def = Define`
+Definition Group_def:
   Group (g:'a group) <=>
     Monoid g /\ (G* = G)
-`;
+End
 
 (* ------------------------------------------------------------------------- *)
 (* More Group Defintions.                                                    *)
 (* ------------------------------------------------------------------------- *)
 (* Abelian Group: a Group with a commutative product: x * y = y * x. *)
-val AbelianGroup_def = Define`
+Definition AbelianGroup_def:
   AbelianGroup (g:'a group) <=>
     Group g /\ (!x y. x IN G /\ y IN G ==> (x * y = y * x))
-`;
+End
 
 (* Finite Group: a Group with a finite carrier set. *)
-val FiniteGroup_def = Define`
+Definition FiniteGroup_def:
   FiniteGroup (g:'a group) <=>
     Group g /\ FINITE G
-`;
+End
 
 (* Finite Abelian Group: a Group that is both Finite and Abelian. *)
-val FiniteAbelianGroup_def = Define`
+Definition FiniteAbelianGroup_def:
   FiniteAbelianGroup (g:'a group) <=>
     AbelianGroup g /\ FINITE G
-`;
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Basic theorems from definition.                                           *)
@@ -1399,26 +1399,29 @@ val group_comm_exp_exp = store_thm(
 (* A function f from g to h is a homomorphism if group properties are preserved. *)
 (* For group, no need to ensure that identity is preserved, see group_homo_id.   *)
 
-val GroupHomo_def = Define`
+Definition GroupHomo_def:
   GroupHomo (f:'a -> 'b) (g:'a group) (h:'b group) <=>
     (!x. x IN G ==> f x IN h.carrier) /\
     (!x y. x IN G /\ y IN G ==> (f (x * y) = h.op (f x) (f y)))
     (* no requirement for: f #e = h.id *)
-`;
+End
 
 (* A function f from g to h is an isomorphism if f is a bijective homomorphism. *)
-val GroupIso_def = Define`
+Definition GroupIso_def:
   GroupIso f g h <=> GroupHomo f g h /\ BIJ f G h.carrier
-`;
+End
 
 (* A group homomorphism from g to g is an endomorphism. *)
-val GroupEndo_def = Define `GroupEndo f g <=> GroupHomo f g g`;
+Definition GroupEndo_def:   GroupEndo f g <=> GroupHomo f g g
+End
 
 (* A group isomorphism from g to g is an automorphism. *)
-val GroupAuto_def = Define `GroupAuto f g <=> GroupIso f g g`;
+Definition GroupAuto_def:   GroupAuto f g <=> GroupIso f g g
+End
 
 (* A subgroup h of g if identity is a homomorphism from h to g *)
-val subgroup_def = Define `subgroup h g <=> GroupHomo I h g`;
+Definition subgroup_def:   subgroup h g <=> GroupHomo I h g
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Group Homomorphisms                                                       *)
@@ -2635,11 +2638,11 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* A Subgroup is a subset of a group that's a group itself, keeping op, id, inv. *)
-val Subgroup_def = Define `
+Definition Subgroup_def:
   Subgroup (h:'a group) (g:'a group) <=>
     Group h /\ Group g /\
     H SUBSET G /\ (h.op = g.op)
-`;
+End
 
 (* Overload Subgroup *)
 val _ = overload_on ("<=", ``Subgroup``);
@@ -2996,21 +2999,21 @@ val subgroup_eq = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define (left) coset of subgroup with an element a. *)
-val coset_def = Define `
+Definition coset_def:
   coset (g:'a group) a X = IMAGE (\z. a * z) X
-`;
+End
 
 (* val _ = export_rewrites ["coset_def"]; *)
 
 (* Define left coset of subgroup with an element a. *)
-val left_coset_def = Define `
+Definition left_coset_def:
   left_coset (g:'a group) X a = coset g a X
-`;
+End
 
 (* Define right coset of subgroup with an element a. *)
-val right_coset_def = Define `
+Definition right_coset_def:
   right_coset (g:'a group) X a = IMAGE (\z. z * a) X
-`;
+End
 
 (* set overloading after all above defintions. *)
 val _ = overload_on ("*", ``coset g``);
@@ -3240,9 +3243,9 @@ val subgroup_coset_card = store_thm(
 *)
 
 (* Define b ~ a  when  b IN (a * H) *)
-val inCoset_def = Define `
+Definition inCoset_def:
   inCoset (g:'a group) (h:'a group) a b <=> b IN (a * H)
-`;
+End
 
 (* Theorem: inCoset is Reflexive:
             h <= g /\ a IN G ==> inCoset g h a a *)
@@ -3314,9 +3317,9 @@ val inCoset_equiv_on_carrier = store_thm(
   metis_tac[inCoset_refl, inCoset_sym, inCoset_trans]);
 
 (* Define coset partitions of G by inCoset g h. *)
-val CosetPartition_def = Define `
+Definition CosetPartition_def:
   CosetPartition g h = partition (inCoset g h) G
-`;
+End
 
 (* Theorem: For FINITE Group g, h <= g ==>
             CARD G = SUM of CARD partitions in (CosetPartition g h) *)
@@ -3598,18 +3601,18 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Conjugate of a set s by a group element a in G is the set {a * z * |/a | z in s}. *)
-val conjugate_def = Define `
+Definition conjugate_def:
   conjugate (g:'a group) (a: 'a) (s: 'a -> bool) = { a * z * |/a | z IN s}
-`;
+End
 
 (* Conjugate of subgroup h <= g by a in G is the set {a * z * |/a | z in H}. *)
-val conjugate_subgroup_def = Define `
+Definition conjugate_subgroup_def:
   conjugate_subgroup (h:'a group) (g:'a group) a : 'a group =
       <| carrier := conjugate g a H;
               id := #e;
               op := g.op
        |>
-`;
+End
 (* > val conjugate_subgroup_def =
   |- !h g a. conjugate_subgroup h g a = <|carrier := conjugate g a H; id := #e; op := $* |> : thm
 *)
@@ -3846,13 +3849,13 @@ val subgroup_intersect_subgroup = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define intersection of subgroups of a group *)
-val subgroup_big_intersect_def = Define `
+Definition subgroup_big_intersect_def:
    subgroup_big_intersect (g:'a group) =
       <| carrier := BIGINTER (IMAGE (\h. H) {h | h <= g});
               op := $*; (* g.op *)
               id := #e  (* g.id *)
        |>
-`;
+End
 
 val _ = overload_on ("sgbINTER", ``subgroup_big_intersect``);
 (*
@@ -4047,13 +4050,13 @@ val subgroup_big_intersect_subgroup = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the subset group: takes a subset and gives a group candidate *)
-val subset_group_def = Define`
+Definition subset_group_def:
     subset_group (g:'a group) (s:'a -> bool) =
     <| carrier := s;
             op := g.op;
             id := g.id
      |>
-`;
+End
 (* val subset_group_def = |- !g s. subset_group g s = <|carrier := s; op := $*; id := #e|>: thm *)
 
 (* Theorem: properties of subset_group *)
@@ -4231,9 +4234,9 @@ val subset_group_subgroup = store_thm(
 (* Group element division.                                                   *)
 (* ------------------------------------------------------------------------- *)
 (* Define group division *)
-val group_div_def = Define `
+Definition group_div_def:
   group_div (g:'a group) (x:'a) (y:'a)  = x * |/ y
-`;
+End
 
 (* set overloading *)
 val _ = overload_on ("/", ``group_div g``);
@@ -4323,10 +4326,10 @@ val group_div_rsame = store_thm(
 
 (* A Normal Subgroup: for all x IN H, for all a IN G, a * x / a IN H
    i.e. A subgroup, H, of a group, G, is called a normal subgroup if it is invariant under conjugation. *)
-val normal_subgroup_def = Define `
+Definition normal_subgroup_def:
   normal_subgroup (h:'a group) (g:'a group) <=>
     h <= g /\ (!a z. a IN G /\ z IN H ==> a * z / a IN H)
-`;
+End
 
 (* set overloading *)
 val _ = overload_on ("<<", ``normal_subgroup``);
@@ -4452,9 +4455,9 @@ val normal_subgroup_coset_eq = store_thm(
 (* Two group elements x y are equivalent if  x / y = x * |/y in normal subgroup. *)
 
 (* Define group element equivalence by normal subgroup. *)
-val group_equiv_def = Define `
+Definition group_equiv_def:
   group_equiv (g:'a group) (h:'a group) x y  <=> x / y IN H
-`;
+End
 
 (* set overloading *)
 val _ = overload_on ("==", ``group_equiv g h``);
@@ -4597,9 +4600,9 @@ val coset_cogen_property = save_thm("coset_cogen_property",
 (* > val coset_cogen_property = |- !h g e. h <= g /\ e IN CosetPartition g h ==> (e = (cogen g h e) * H) : thm *)
 
 (* Define coset multiplication *)
-val coset_op_def = Define `
+Definition coset_op_def:
   coset_op (g:'a group) (h:'a group) (x:'a -> bool) (y:'a -> bool) = ((cogen g h x) * (cogen g h y)) * H
-`;
+End
 
 (* set overloading *)
 val _ = overload_on ("o", ``coset_op g h``);
@@ -4699,13 +4702,13 @@ val normal_coset_property = store_thm(
 (* Quotient Group                                                            *)
 (* ------------------------------------------------------------------------- *)
 (* Define the quotient group, the group divided by a normal subgroup. *)
-val quotient_group_def = Define`
+Definition quotient_group_def:
   quotient_group (g:'a group) (h:'a group) =
     <| carrier := (CosetPartition g h);
             op := coset_op g h;
             id := H
      |>
-`;
+End
 
 (* set overloading *)
 val _ = overload_on ("/", ``quotient_group``);
@@ -4960,17 +4963,18 @@ val coset_homo_group_iso_quotient_group = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define kernel of a mapping: the preimage of identity. *)
-val kernel_def = Define`
+Definition kernel_def:
   kernel f (g:'a group) (h:'b group) = preimage f G h.id
-`;
+End
 
 (* Convert kernel to a group structure *)
-val kernel_group_def = Define`
+Definition kernel_group_def:
   kernel_group f (g:'a group) (h:'b group) =
     <| carrier := kernel f g h;
             id := g.id;
             op := g.op
-     |>`;
+     |>
+End
 
 (* Theorem: !x. x IN kernel f g h <=> x IN G /\ f x = h.id *)
 (* Proof: by definition. *)
@@ -5107,13 +5111,13 @@ val kernel_quotient_group = store_thm(
 *)
 
 (* Define the homomorphic image of a group via homomorphism. *)
-val homo_image_def = Define`
+Definition homo_image_def:
   homo_image f (g:'a group) (h:'b group) =
     <| carrier := IMAGE f G;
             op := h.op;
             id := h.id
      |>
-`;
+End
 
 (* Theorem: Monoid g /\ Monoid h /\ MonoidHomo f g h ==> Monoid (homo_image f g h) *)
 (* Proof: by definition.
@@ -5742,9 +5746,9 @@ val GPROD_SET_REDUCTION = store_thm(
   ]);
 
 (* Define Group Factorial *)
-val GFACT_def = Define`
+Definition GFACT_def:
   GFACT g = GPROD_SET g G
-`;
+End
 
 (* Theorem: GFACT g is an element in Group g. *)
 (* Proof:
@@ -5821,9 +5825,9 @@ val it = |- GITSET g s b = if FINITE s then if s = {} then b else GITSET g (REST
 *)
 
 (* A general iterator for operation (op:'a -> 'a -> 'a) and (id:'a) *)
-val OP_IMAGE_DEF = Define `
+Definition OP_IMAGE_DEF:
     OP_IMAGE (op:'a -> 'a -> 'a) (id:'a) (f:'b -> 'a) (s:'b -> bool) = ITSET (\e acc. op (f e) acc) s id
-`;
+End
 
 (* Theorem: OP_IMAGE op id f {} = id *)
 (* Proof:
@@ -5913,9 +5917,9 @@ val OP_IMAGE_THM = store_thm(
   rw[COMMUTING_ITSET_RECURSES, Abbr`g`]);
 
 (* A better iterator for group operation over (f:'b -> 'a) *)
-val GROUP_IMAGE_DEF = Define `
+Definition GROUP_IMAGE_DEF:
     GROUP_IMAGE (g:'a group) (f:'b -> 'a) (s:'b -> bool) = ITSET (\e acc. (f e) * acc) s #e
-`;
+End
 
 (* overload GROUP_IMAGE *)
 val _ = temp_overload_on("GPI", ``GROUP_IMAGE g``);
@@ -6014,9 +6018,9 @@ val group_image_empty = store_thm(
   rw[GROUP_IMAGE_DEF, ITSET_EMPTY]);
 
 (* Define a group function *)
-val group_fun_def = Define `
+Definition group_fun_def:
     group_fun (g:'a group) f = !x. x IN G ==> f x IN G
-`;
+End
 
 (* overload on group function *)
 val _ = temp_overload_on("gfun", ``group_fun g``);
@@ -6648,13 +6652,13 @@ val monoid_inv_order = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the generator group, the exponential group of an element a of group g *)
-val Generated_def = Define`
+Definition Generated_def:
   Generated g a : 'a group =
     <| carrier := {x | ?k. x = a ** k };
             op := g.op;
             id := g.id
      |>
-`;
+End
 (*
 - type_of ``Generated g a``;
 > val it = ``:'a group`` : hol_type
@@ -7027,13 +7031,13 @@ val group_order_exp_cofactor = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define n-th roots of unity *)
-val roots_of_unity_def = Define`
+Definition roots_of_unity_def:
   roots_of_unity (g:'a group) (n:num):'a group =
      <| carrier := {x | x IN G /\ (x ** n = #e)};
              op := g.op;
              id := #e
       |>
-`;
+End
 (* Overload root of unity *)
 val _ = overload_on ("uroots", ``roots_of_unity g``);
 
@@ -7140,10 +7144,10 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define the group generated by a subset of the group carrier *)
-val Generated_subset_def = Define`
+Definition Generated_subset_def:
     Generated_subset (g:'a group) (s:'a -> bool) =
         <|carrier := BIGINTER (IMAGE (\h. H) {h | h <= g /\ s SUBSET H}); op := g.op; id := #e|>
-`;
+End
 (* Note: this is the minimal subgroup containing the subset. *)
 (* Similar to subgroup_big_intersect_def in subgroup theory. *)
 val _ = overload_on("gen_set", ``Generated_subset (g:'a group)``);
@@ -7437,13 +7441,13 @@ val Generated_subset_gen = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Given a Group g, and a subset s, make a group by inheriting op and id. *)
-val make_group_def = Define`
+Definition make_group_def:
     make_group (g:'a group) (s:'a -> bool) =
        <| carrier := s;
                op := g.op;
                id := g.id
         |>
-`;
+End
 
 (* Theorem: Properties of make_group g s *)
 (* Proof: by make_group_def *)
@@ -7455,10 +7459,10 @@ val make_group_property = store_thm(
   rw[make_group_def]);
 
 (* Given two subsets, define their cross-product, or direct product *)
-val subset_cross_def = Define`
+Definition subset_cross_def:
     subset_cross (g:'a group) (s1:'a -> bool) (s2:'a -> bool) =
        {x * y | x IN s1 /\ y IN s2}
-`;
+End
 
 (* Overload subset cross product *)
 val _ = overload_on("o", ``subset_cross (g:'a group)``);
@@ -7507,10 +7511,10 @@ val subset_cross_alt = store_thm(
   ]);
 
 (* Given two subgroups, define their cross-product, or direct product *)
-val subgroup_cross_def = Define`
+Definition subgroup_cross_def:
     subgroup_cross (g:'a group) (h1:'a group) (h2:'a group) =
        make_group g (h1.carrier o h2.carrier)
-`;
+End
 
 (* Overload subgroup cross product *)
 val _ = overload_on("o", ``subgroup_cross (g:'a group)``);
@@ -8334,9 +8338,9 @@ val independent_generator_2_card = store_thm(
   metis_tac[subgroup_cross_card, generated_group_card, group_order_pos, DIV_1]);
 
 (* Define the set of all subgroups of a group. *)
-val all_subgroups_def = Define`
+Definition all_subgroups_def:
     all_subgroups (g:'a group) = {h | h <= g}
-`;
+End
 
 (* Theorem: h IN all_subgroups g <=> h <= g *)
 (* Proof: by all_subgroups_def *)
@@ -8480,9 +8484,9 @@ val subgroup_cross_closure_comm_assoc_fun = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define big cross product of subsets. *)
-val subset_big_cross_def = Define`
+Definition subset_big_cross_def:
     subset_big_cross (g:'a group) (B:('a -> bool) -> bool) = ITSET (subset_cross g) B {#e}
-`;
+End
 (* overload big cross product of subsets. *)
 val _ = overload_on("ssbcross", ``subset_big_cross (g:'a group)``);
 
@@ -8546,9 +8550,9 @@ val subset_big_cross_insert = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define big cross product of subgroups. *)
-val subgroup_big_cross_def = Define`
+Definition subgroup_big_cross_def:
     subgroup_big_cross (g:'a group) (B:('a group) -> bool) = ITSET (subgroup_cross g) B (gen #e)
-`;
+End
 (* overload big cross product of subgroups. *)
 val _ = overload_on("sgbcross", ``subgroup_big_cross (g:'a group)``);
 
@@ -10312,13 +10316,13 @@ val _ = export_rewrites ["mult_mod_eval", "mult_mod_inv"];
 (* ------------------------------------------------------------------------- *)
 
 (* Define encryption and decryption of ElGamal scheme. *)
-val ElGamal_encrypt_def = Define`
+Definition ElGamal_encrypt_def:
   ElGamal_encrypt (g:'a group) (y:'a) (h:'a) (m:'a) (k:num) = (y ** k, (h ** k) * m)
-`;
+End
 
-val ElGamal_decrypt_def = Define`
+Definition ElGamal_decrypt_def:
   ElGamal_decrypt (g:'a group) (x:num) (a:'a, b:'a) = ( |/ (a ** x)) * b
-`;
+End
 
 (* Theorem: ElGamal decypt can undo ElGamal encrypt. *)
 (* Proof:
@@ -10352,14 +10356,15 @@ val ElGamal_correctness = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define symmetric difference for two sets. *)
-val symdiff_def = Define`symdiff s1 s2 = (s1 UNION s2) DIFF (s1 INTER s2)`;
+Definition symdiff_def:  symdiff s1 s2 = (s1 UNION s2) DIFF (s1 INTER s2)
+End
 
 (* The Group of set symmetric difference *)
-val symdiff_set_def = Define`
+Definition symdiff_set_def:
   symdiff_set = <| carrier := UNIV;
                        id := EMPTY;
                        op := symdiff |>
-`;
+End
 
 (*
 > EVAL ``symdiff_set.id``;
@@ -10517,9 +10522,9 @@ val _ = export_rewrites ["symdiff_set_abelian_group"];
 (* ------------------------------------------------------------------------- *)
 
 (* Define Cyclic Group *)
-val cyclic_def = Define`
+Definition cyclic_def:
   cyclic (g:'a group) <=> Group g /\ ?z. z IN G /\ (!x. x IN G ==> ?n. x = z ** n)
-`;
+End
 
 (* Apply Skolemization *)
 val lemma = prove(
@@ -11081,9 +11086,9 @@ From FiniteField theory, knowing that F* is cyclic, we can prove stronger result
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of generators for cyclic group *)
-val cyclic_generators_def = Define `
+Definition cyclic_generators_def:
     cyclic_generators (g:'a group) = {z | z IN G /\ (ord z = CARD G)}
-`;
+End
 
 (* Theorem: z IN cyclic_generators g <=> z IN G /\ (ord z = CARD G) *)
 (* Proof: by cyclic_generators_def *)
@@ -11372,9 +11377,9 @@ val cyclic_orders_card = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define a relation: eq_order *)
-val eq_order_def = Define `
+Definition eq_order_def:
     eq_order (g:'a group) x y <=> (ord x = ord y)
-`;
+End
 
 (* Theorem: (eq_order g) equiv_on G *)
 (* Proof: by eq_order_def, equiv_on_def *)
@@ -14173,13 +14178,13 @@ val image_subgroup_subgroup = store_thm(
 (* ------------------------------------------------------------------------- *)
 (* Preimage Group of Group Homomorphism.                                     *)
 (* ------------------------------------------------------------------------- *)
-val preimage_group_def = Define `
+Definition preimage_group_def:
     preimage_group (f:'a -> 'b) (g1:'a group) (g2:'b group) (h:'b -> bool) =
     <| carrier := PREIMAGE f h INTER g1.carrier;
             op := g1.op;
             id := g1.id
      |>
-`;
+End
 (* This is subset_group g1 (PREIMAGE f h INTER g1.carrier) *)
 
 

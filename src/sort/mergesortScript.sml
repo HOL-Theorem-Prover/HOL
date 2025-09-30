@@ -26,18 +26,20 @@ val mem_sorted_append = Q.prove (
  REV_FULL_SIMP_TAC (srw_ss()) [SORTED_EQ] >>
  metis_tac []);
 
-val stable_def = Define `
+Definition stable_def:
 stable R l1 l2 =
-  !p. (!x y. p x /\ p y ==> R x y) ==> FILTER p l1 = FILTER p l2`;
+  !p. (!x y. p x /\ p y ==> R x y) ==> FILTER p l1 = FILTER p l2
+End
 
-val sort2_def = Define `
+Definition sort2_def:
 sort2 R x y =
   if R x y then
     [x;y]
   else
-    [y;x]`;
+    [y;x]
+End
 
-val sort3_def = Define `
+Definition sort3_def:
 sort3 R x y z =
   if R x y then
     if R y z then
@@ -52,7 +54,8 @@ sort3 R x y z =
     else
       [y;z;x]
   else
-    [z;y;x]`;
+    [z;y;x]
+End
 
 Definition merge_def:
   (merge R [] [] = []) /\

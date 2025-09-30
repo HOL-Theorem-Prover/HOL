@@ -39,29 +39,42 @@ val frac_bij = save_thm("frac_bij", define_new_type_bijections{
  *--------------------------------------------------------------------------*)
 
 (* numerator, denominator, sign of a fraction *)
-val frac_nmr_def = Define `frac_nmr f = FST(rep_frac f)`;
-val frac_dnm_def = Define `frac_dnm f = SND(rep_frac f)`;
-val frac_sgn_def = Define `frac_sgn f1 = SGN (frac_nmr f1)`;
+Definition frac_nmr_def:   frac_nmr f = FST(rep_frac f)
+End
+Definition frac_dnm_def:   frac_dnm f = SND(rep_frac f)
+End
+Definition frac_sgn_def:   frac_sgn f1 = SGN (frac_nmr f1)
+End
 
 (* additive, multiplicative inverse of a fraction *)
-val frac_ainv_def = Define `frac_ainv f1 = abs_frac(~frac_nmr f1, frac_dnm f1)`;
-val frac_minv_def = Define `frac_minv f1 = abs_frac(frac_sgn f1 * frac_dnm f1, ABS(frac_nmr f1) )`;
+Definition frac_ainv_def:   frac_ainv f1 = abs_frac(~frac_nmr f1, frac_dnm f1)
+End
+Definition frac_minv_def:   frac_minv f1 = abs_frac(frac_sgn f1 * frac_dnm f1, ABS(frac_nmr f1) )
+End
 
 (* neutral elements *)
-val frac_0_def = Define `frac_0 = abs_frac(0i,1i)`;
-val frac_1_def = Define `frac_1 = abs_frac(1i,1i)`;
+Definition frac_0_def:   frac_0 = abs_frac(0i,1i)
+End
+Definition frac_1_def:   frac_1 = abs_frac(1i,1i)
+End
 
 (* less (absolute value) *)
-val les_abs_def = Define`les_abs f1 f2 = frac_nmr f1 * frac_dnm f2 < frac_nmr f2 * frac_dnm f1`;
+Definition les_abs_def:  les_abs f1 f2 = frac_nmr f1 * frac_dnm f2 < frac_nmr f2 * frac_dnm f1
+End
 
 (* basic arithmetics *)
-val frac_add_def = Define `frac_add f1 f2 = abs_frac(frac_nmr f1 * frac_dnm f2 + frac_nmr f2 * frac_dnm f1, frac_dnm f1*frac_dnm f2)`;
-val frac_sub_def = Define `frac_sub f1 f2 = frac_add f1 (frac_ainv f2)`;
-val frac_mul_def = Define `frac_mul f1 f2 = abs_frac(frac_nmr f1 * frac_nmr f2, frac_dnm f1*frac_dnm f2)`;
-val frac_div_def = Define `frac_div f1 f2 = frac_mul f1 (frac_minv f2)`;
+Definition frac_add_def:   frac_add f1 f2 = abs_frac(frac_nmr f1 * frac_dnm f2 + frac_nmr f2 * frac_dnm f1, frac_dnm f1*frac_dnm f2)
+End
+Definition frac_sub_def:   frac_sub f1 f2 = frac_add f1 (frac_ainv f2)
+End
+Definition frac_mul_def:   frac_mul f1 f2 = abs_frac(frac_nmr f1 * frac_nmr f2, frac_dnm f1*frac_dnm f2)
+End
+Definition frac_div_def:   frac_div f1 f2 = frac_mul f1 (frac_minv f2)
+End
 
 (*  frac_save terms are always defined (encode the definition of a fraction in the syntax) *)
-val frac_save_def = Define `frac_save (nmr:int) (dnm:num) = abs_frac(nmr,&dnm + 1)`;
+Definition frac_save_def:   frac_save (nmr:int) (dnm:num) = abs_frac(nmr,&dnm + 1)
+End
 
 (*--------------------------------------------------------------------------
  *  FRAC: thm

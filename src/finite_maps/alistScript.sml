@@ -8,8 +8,9 @@ val _ = diminish_srw_ss ["NORMEQ"]
 
 val _ = type_abbrev("alist",``:(('a # 'b) list)``);
 
-val fmap_to_alist_def = Define`
-  fmap_to_alist s = MAP (\k.(k,s ' k)) (SET_TO_LIST (FDOM s))`;
+Definition fmap_to_alist_def:
+  fmap_to_alist s = MAP (\k.(k,s ' k)) (SET_TO_LIST (FDOM s))
+End
 
 val fmap_to_alist_FEMPTY = store_thm(
   "fmap_to_alist_FEMPTY",
@@ -17,8 +18,9 @@ val fmap_to_alist_FEMPTY = store_thm(
   SRW_TAC [][fmap_to_alist_def]);
 val _ = export_rewrites ["fmap_to_alist_FEMPTY"]
 
-val alist_to_fmap_def = Define`
-  alist_to_fmap s = FOLDR (\(k,v) f.f|+(k,v)) FEMPTY s`;
+Definition alist_to_fmap_def:
+  alist_to_fmap s = FOLDR (\(k,v) f.f|+(k,v)) FEMPTY s
+End
 
 val alist_to_fmap_thm = store_thm(
   "alist_to_fmap_thm",
@@ -27,9 +29,10 @@ val alist_to_fmap_thm = store_thm(
   SRW_TAC [][alist_to_fmap_def])
 val _ = export_rewrites ["alist_to_fmap_thm"]
 
-val ALOOKUP_def = Define`
+Definition ALOOKUP_def:
   (ALOOKUP [] q = NONE) /\
-  (ALOOKUP ((x,y)::t) q = if x = q then SOME y else ALOOKUP t q)`;
+  (ALOOKUP ((x,y)::t) q = if x = q then SOME y else ALOOKUP t q)
+End
 val _ = export_rewrites["ALOOKUP_def"];
 val ALOOKUP_ind = theorem"ALOOKUP_ind";
 
@@ -572,8 +575,9 @@ val alookup_filter = Q.store_thm ("alookup_filter",
  PairCases_on `h` >>
  fs []);
 
-val alist_range_def = Define `
-alist_range m = { v | ?k. ALOOKUP m k = SOME v }`;
+Definition alist_range_def:
+alist_range m = { v | ?k. ALOOKUP m k = SOME v }
+End
 
 (* Sorting and permutation based stuff *)
 
@@ -633,12 +637,12 @@ Proof
   \\ metis_tac[ALOOKUP_MEM]
 QED
 
-val AFUPDKEY_def = Define`
+Definition AFUPDKEY_def:
   (AFUPDKEY k f [] = []) /\
   (AFUPDKEY k f ((k',v)::rest) =
      if k = k' then (k,f v)::rest
      else (k',v) :: AFUPDKEY k f rest)
-`;
+End
 
 val AFUPDKEY_ind = theorem"AFUPDKEY_ind";
 
@@ -709,9 +713,9 @@ Proof
   CASE_TAC >> fs[AFUPDKEY_def]
 QED
 
-val ADELKEY_def = Define`
+Definition ADELKEY_def:
   ADELKEY k alist = FILTER (\p. FST p <> k) alist
-`;
+End
 
 Theorem MEM_ADELKEY[simp]:
   !al. MEM (k1,v) (ADELKEY k2 al) <=> k1 <> k2 /\ MEM (k1,v) al
