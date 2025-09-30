@@ -2100,9 +2100,10 @@ QED
 (* Now define finite sums; NB: sum(m,n) f = f(m) + f(m+1) + ... + f(m+n-1)   *)
 (*---------------------------------------------------------------------------*)
 
-val sum = Lib.with_flag (boolLib.def_suffix, "") Define`
+Definition sum:
    (sum (n,0) f = 0) /\
-   (sum (n,SUC m) f = sum (n,m) f + f (n + m): real)`
+   (sum (n,SUC m) f = sum (n,m) f + f (n + m): real)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Useful manipulative theorems for sums                                     *)
