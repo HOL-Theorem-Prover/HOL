@@ -33,9 +33,6 @@ val qid_spec_tac = Q.ID_SPEC_TAC;
 val DEF0 = Lib.with_flag (boolLib.def_suffix, "") TotalDefn.Define
 val DEF = Lib.with_flag (boolLib.def_suffix, "_DEF") TotalDefn.Define
 
-val zDefine =
-   Lib.with_flag (computeLib.auto_import_definitions, false) TotalDefn.Define
-
 val list_INDUCT = Q.prove(
    `!P. P [] /\ (!l. P l ==> !x. P (CONS x l)) ==> !l. P l`,
    REWRITE_TAC [list_INDUCT]);

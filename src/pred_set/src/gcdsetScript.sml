@@ -9,9 +9,6 @@ val ARITH_ss = numSimps.ARITH_ss;
 val arith_ss = srw_ss() ++ ARITH_ss;
 val std_ss = arith_ss;
 
-val zDefine =
-   Lib.with_flag (computeLib.auto_import_definitions, false) TotalDefn.Define;
-
 fun DECIDE_TAC (g as (asl,_)) =
   ((MAP_EVERY UNDISCH_TAC (filter numSimps.is_arith asl) THEN
     CONV_TAC Arith.ARITH_CONV)

@@ -38,8 +38,6 @@ val from_inftree_11 = prove(
   ``(from_inftree t1 = from_inftree t2) = (t1 = t2)``,
   METIS_TAC [inftree_bijections])
 
-val Define = TotalDefn.Define
-
 val iLf_def = Define`
   iLf a = to_inftree (\p. INL a)
 `

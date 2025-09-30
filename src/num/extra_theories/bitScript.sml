@@ -19,8 +19,6 @@ val LEFT_REWRITE_TAC =
 
 val POP_LAST_TAC = POP_ASSUM (K ALL_TAC)
 
-val Define = TotalDefn.Define
-
 (* ------------------------------------------------------------------------- *)
 
 val _ = computeLib.auto_import_definitions := false
@@ -1581,4 +1579,3 @@ Proof
   \\ drule NOT_BIT_GT_TWOEXP
   \\ simp[]
 QED
-

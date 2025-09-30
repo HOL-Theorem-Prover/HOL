@@ -18,7 +18,6 @@ fun rw thl = SRW_TAC[] thl
 fun fs thl = full_simp_tac (srw_ss() ++ numSimps.ARITH_ss) thl;
 val rename1 = Q.RENAME1_TAC
 val qspec_then = Q.SPEC_THEN
-val zDefine = Lib.with_flag (computeLib.auto_import_definitions,false) Define
 
 Definition MAPi_def[simp,nocompute]:
   (MAPi f [] = []) /\
@@ -414,4 +413,3 @@ val MAP2i_compute = Q.store_thm(
   simp[FUN_EQ_THM]);
 val _ = computeLib.add_persistent_funs ["MAP2i_compute"]
 val _ = remove_ovl_mapping "MAP2ia" {Name = "MAP2ia", Thy = "indexedLists"}
-

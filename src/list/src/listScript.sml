@@ -46,7 +46,6 @@ fun qxchl [] ttac = ttac
   | qxchl (q::qs) ttac = qxch q (qxchl qs ttac);
 
 val _ = Rewrite.add_implicit_rewrites pairLib.pair_rws;
-val zDefine = Lib.with_flag (computeLib.auto_import_definitions, false) Define
 val dDefine = Lib.with_flag (Defn.def_suffix, "_DEF") Define
 val bDefine = Lib.with_flag (Defn.def_suffix, "") Define
 

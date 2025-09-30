@@ -27,9 +27,6 @@ fun simp l = ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) l;
 fun fs l = FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) l;
 fun rfs l = REV_FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) l;
 
-val Define = TotalDefn.Define
-val zDefine = Lib.with_flag (computeLib.auto_import_definitions, false) Define
-
 (* ----------------------------------------------------------------------- *)
 
 val lt_mult2 = Q.prove(
@@ -1744,4 +1741,3 @@ val LOG2_TWICE = store_thm(
   rw[LOG_MULT]);
 
 (* ----------------------------------------------------------------------- *)
-
