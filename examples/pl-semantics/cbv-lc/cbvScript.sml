@@ -67,16 +67,18 @@ val state_clock_idem = Q.store_thm ("state_clock_idem[simp]",
 
 (* machinery for the functional big-step definition *)
 
-val check_clock_def = Define `
+Definition check_clock_def:
   check_clock s' s =
-    s' with clock := (if s'.clock ≤ s.clock then s'.clock else s.clock)`;
+    s' with clock := (if s'.clock ≤ s.clock then s'.clock else s.clock)
+End
 
 val check_clock_id = prove(
   ``!s s'. s.clock ≤ s'.clock ⇒ check_clock s s' = s``,
  rw [check_clock_def, state_component_equality]);
 
-val dec_clock_def = Define `
-  dec_clock s = s with clock := s.clock - 1`;
+Definition dec_clock_def:
+  dec_clock s = s with clock := s.clock - 1
+End
 
 (* results *)
 
@@ -410,13 +412,14 @@ val sem_clock_val_determ = Q.store_thm ("sem_clock_val_determ",
 
 (* The top-level semantics *)
 
-val eval_def = Define `
+Definition eval_def:
 (eval e (Rval v) =
   ?c s. sem [] <| store := []; clock := c |> e = (Rval v, s)) ∧
 (eval e Rfail =
   ?c s. sem [] <| store := []; clock := c |> e = (Rfail, s)) ∧
 (eval e Rtimeout =
-  ∀c. ∃s. sem [] <| store := []; clock := c |> e = (Rtimeout, s))`;
+  ∀c. ∃s. sem [] <| store := []; clock := c |> e = (Rtimeout, s))
+End
 
 (* Contexts *)
 
@@ -429,26 +432,29 @@ ctxt =
   | TickC ctxt`;
 
 (* Fill the hole in a context with an expression *)
-val ctxt_to_exp_def = Define `
+Definition ctxt_to_exp_def:
 (ctxt_to_exp Hole e = e) ∧
 (ctxt_to_exp (FunC ctxt) e = Fun (ctxt_to_exp ctxt e)) ∧
 (ctxt_to_exp (App1C ctxt e1) e = App (ctxt_to_exp ctxt e) e1) ∧
 (ctxt_to_exp (App2C e1 ctxt) e = App e1 (ctxt_to_exp ctxt e)) ∧
-(ctxt_to_exp (TickC ctxt) e = Tick (ctxt_to_exp ctxt e))`;
+(ctxt_to_exp (TickC ctxt) e = Tick (ctxt_to_exp ctxt e))
+End
 
 (* Contextual approximation must preserve divergence and termination, but
  * can relate a failing computation to anything. *)
-val res_approx_def = Define `
+Definition res_approx_def:
 (res_approx Rfail _ ⇔ T) ∧
 (res_approx Rtimeout Rtimeout ⇔ T) ∧
 (res_approx (Rval _) (Rval _) ⇔ T) ∧
-(res_approx _ _ ⇔ F)`;
+(res_approx _ _ ⇔ F)
+End
 
-val ctxt_approx_def = Define `
+Definition ctxt_approx_def:
 ctxt_approx e1 e2 ⇔
   !ctxt r1 r2.
     eval (ctxt_to_exp ctxt e1) r1 ∧
     eval (ctxt_to_exp ctxt e2) r2
     ⇒
-    res_approx r1 r2`;
+    res_approx r1 r2
+End
 

@@ -10,8 +10,9 @@ Libs
  * not intended as an implementation strategy, because it would destroy the
  * shared-tails benefits of using triangular substutions. *)
 
-val collapse_def = Define`
-  collapse s = FUN_FMAP (\v.walkstar s (Var v)) (FDOM s)`;
+Definition collapse_def:
+  collapse s = FUN_FMAP (\v.walkstar s (Var v)) (FDOM s)
+End
 
 val collapse_APPLY_eq_walkstar = Q.store_thm(
 "collapse_APPLY_eq_walkstar",

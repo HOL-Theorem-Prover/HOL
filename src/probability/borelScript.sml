@@ -5429,8 +5429,9 @@ QED
 (*  Almost everywhere (a.e.) - basic binder definitions                      *)
 (* ------------------------------------------------------------------------- *)
 
-val almost_everywhere_def = Define
-   `almost_everywhere m P = ?N. null_set m N /\ !x. x IN (m_space m DIFF N) ==> P x`;
+Definition almost_everywhere_def:
+    almost_everywhere m P = ?N. null_set m N /\ !x. x IN (m_space m DIFF N) ==> P x
+End
 
 (* This binder syntax is learnt from Thomas Tuerk. ‘lborel’ is a required
    household measure space for `AE x. P x` without `::m`, but it's never used.

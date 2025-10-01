@@ -9,9 +9,6 @@ val ARITH_ss = numSimps.ARITH_ss;
 val arith_ss = srw_ss() ++ ARITH_ss;
 val std_ss = arith_ss;
 
-val zDefine =
-   Lib.with_flag (computeLib.auto_import_definitions, false) TotalDefn.Define;
-
 fun DECIDE_TAC (g as (asl,_)) =
   ((MAP_EVERY UNDISCH_TAC (filter numSimps.is_arith asl) THEN
     CONV_TAC Arith.ARITH_CONV)
@@ -293,9 +290,9 @@ val coprimes_def = zDefine `
 *)
 (* Note: j <= n ensures that coprimes n is finite. *)
 (* Note: 0 < j is only to ensure  coprimes 1 = {1} *)
-val coprimes_def = zDefine `
+Definition coprimes_def[nocompute]:
    coprimes n = {j | j IN (natural n) /\ coprime j n}
-`;
+End
 (* use zDefine as this is not computationally effective. *)
 
 (* Theorem: j IN coprimes n <=> 0 < j /\ j <= n /\ coprime j n *)
@@ -491,9 +488,9 @@ PROD_IMAGE_DEF  |- !f s. PI f s = ITSET (\e acc. f e * acc) s 1: thm
 *)
 
 (* Define big_gcd for a set *)
-val big_gcd_def = Define`
+Definition big_gcd_def:
     big_gcd s = ITSET gcd s 0
-`;
+End
 
 (* Theorem: big_gcd {} = 0 *)
 (* Proof:
@@ -679,9 +676,9 @@ val big_gcd_map_times = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* big_lcm s = ITSET (\e x. lcm e x) s 1 = ITSET lcm s 1, of course! *)
-val big_lcm_def = Define`
+Definition big_lcm_def:
     big_lcm s = ITSET lcm s 1
-`;
+End
 
 (* Theorem: big_lcm {} = 1 *)
 (* Proof:

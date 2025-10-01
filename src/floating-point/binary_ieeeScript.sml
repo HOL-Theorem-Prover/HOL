@@ -22,7 +22,6 @@ in
    val () = Feedback.MESG_to_string := f
 end
 
-val Define = bossLib.zDefine
 Overload tc[local] = “transitive_closure”
 
 (* ------------------------------------------------------------------------
@@ -86,41 +85,48 @@ QED
    Tests
    ------------------------------------------------------------------------ *)
 
-val float_is_nan_def = Define`
+Definition float_is_nan_def[nocompute]:
    float_is_nan (x: ('t, 'w) float) =
       case float_value x of
          NaN => T
-       | _ => F`
+       | _ => F
+End
 
-val float_is_signalling_def = Define`
+Definition float_is_signalling_def[nocompute]:
    float_is_signalling (x: ('t, 'w) float) <=>
-      float_is_nan x /\ ~word_msb x.Significand`
+      float_is_nan x /\ ~word_msb x.Significand
+End
 
-val float_is_infinite_def = Define`
+Definition float_is_infinite_def[nocompute]:
    float_is_infinite (x: ('t, 'w) float) =
       case float_value x of
          Infinity => T
-       | _ => F`
+       | _ => F
+End
 
-val float_is_normal_def = Define`
+Definition float_is_normal_def[nocompute]:
    float_is_normal (x: ('t, 'w) float) <=>
-      x.Exponent <> 0w /\ x.Exponent <> UINT_MAXw`
+      x.Exponent <> 0w /\ x.Exponent <> UINT_MAXw
+End
 
-val float_is_subnormal_def = Define`
+Definition float_is_subnormal_def[nocompute]:
    float_is_subnormal (x: ('t, 'w) float) <=>
-      (x.Exponent = 0w) /\ x.Significand <> 0w`
+      (x.Exponent = 0w) /\ x.Significand <> 0w
+End
 
-val float_is_zero_def = Define`
+Definition float_is_zero_def[nocompute]:
    float_is_zero (x: ('t, 'w) float) =
       case float_value x of
          Float r => r = 0
-       | _ => F`
+       | _ => F
+End
 
-val float_is_finite_def = Define`
+Definition float_is_finite_def[nocompute]:
    float_is_finite (x: ('t, 'w) float) =
       case float_value x of
          Float _ => T
-       | _ => F`
+       | _ => F
+End
 
 Theorem float_is_finite_thm:
   float_is_finite f ⇔ ∃r. float_value f = Float r
@@ -128,13 +134,15 @@ Proof
   simp[float_is_finite_def] >> Cases_on ‘float_value f’ >> simp[]
 QED
 
-val is_integral_def = Define `is_integral r = ?n. abs r = &(n:num)`
+Definition is_integral_def[nocompute]:   is_integral r = ?n. abs r = &(n:num)
+End
 
-val float_is_integral_def = Define`
+Definition float_is_integral_def[nocompute]:
    float_is_integral (x: ('t, 'w) float) =
       case float_value x of
          Float r => is_integral r
-       | _ => F`
+       | _ => F
+End
 
 (* ------------------------------------------------------------------------
    Abs and Negate
@@ -142,27 +150,31 @@ val float_is_integral_def = Define`
     and IEEE754:2008)
    ------------------------------------------------------------------------ *)
 
-val float_negate_def = Define`
-   float_negate (x: ('t, 'w) float) = x with Sign := ~x.Sign`
+Definition float_negate_def[nocompute]:
+   float_negate (x: ('t, 'w) float) = x with Sign := ~x.Sign
+End
 
-val float_abs_def = Define`
-   float_abs (x: ('t, 'w) float) = x with Sign := 0w`
+Definition float_abs_def[nocompute]:
+   float_abs (x: ('t, 'w) float) = x with Sign := 0w
+End
 
 (* ------------------------------------------------------------------------
    Some constants
    ------------------------------------------------------------------------ *)
 
-val float_plus_infinity_def = Define`
+Definition float_plus_infinity_def[nocompute]:
    float_plus_infinity (:'t # 'w) =
       <| Sign := 0w;
          Exponent := UINT_MAXw: 'w word;
-         Significand := 0w: 't word |>`
+         Significand := 0w: 't word |>
+End
 
-val float_plus_zero_def = Define`
+Definition float_plus_zero_def[nocompute]:
    float_plus_zero (:'t # 'w) =
       <| Sign := 0w;
          Exponent := 0w: 'w word;
-         Significand := 0w: 't word |>`
+         Significand := 0w: 't word |>
+End
 
 Definition float_top_def[nocompute]:
    float_top (:'t # 'w) =
@@ -172,24 +184,29 @@ Definition float_top_def[nocompute]:
 End
 Overload FLT_MAX = “float_top(:'a # 'b)”
 
-val float_plus_min_def = Define`
+Definition float_plus_min_def[nocompute]:
    float_plus_min (:'t # 'w) =
       <| Sign := 0w;
          Exponent := 0w: 'w word;
-         Significand := 1w: 't word |>`
+         Significand := 1w: 't word |>
+End
 
-val float_minus_infinity_def = Define`
+Definition float_minus_infinity_def[nocompute]:
    float_minus_infinity (:'t # 'w) =
-      float_negate (float_plus_infinity (:'t # 'w))`
+      float_negate (float_plus_infinity (:'t # 'w))
+End
 
-val float_minus_zero_def = Define`
-   float_minus_zero (:'t # 'w) = float_negate (float_plus_zero (:'t # 'w))`
+Definition float_minus_zero_def[nocompute]:
+   float_minus_zero (:'t # 'w) = float_negate (float_plus_zero (:'t # 'w))
+End
 
-val float_bottom_def = Define`
-   float_bottom (:'t # 'w) = float_negate (float_top (:'t # 'w))`
+Definition float_bottom_def[nocompute]:
+   float_bottom (:'t # 'w) = float_negate (float_top (:'t # 'w))
+End
 
-val float_minus_min_def = Define`
-   float_minus_min (:'t # 'w) = float_negate (float_plus_min (:'t # 'w))`
+Definition float_minus_min_def[nocompute]:
+   float_minus_min (:'t # 'w) = float_negate (float_plus_min (:'t # 'w))
+End
 
 Overload POS0 = “float_plus_zero(:'a#'b)”
 Overload NEG0 = “float_minus_zero(:'a#'b)”
@@ -218,11 +235,13 @@ Definition clear_flags_def[nocompute]:
                  |>
 End
 
-val invalidop_flags_def = Define`
-  invalidop_flags = clear_flags with InvalidOp := T`
+Definition invalidop_flags_def[nocompute]:
+  invalidop_flags = clear_flags with InvalidOp := T
+End
 
-val dividezero_flags_def = Define`
-  dividezero_flags = clear_flags with DivideByZero := T`
+Definition dividezero_flags_def[nocompute]:
+  dividezero_flags = clear_flags with DivideByZero := T
+End
 
 Datatype:
    rounding = roundTiesToEven
@@ -325,33 +344,39 @@ Proof
   simp[REAL_ABS_LE0, float_to_real_EQ0]
 QED
 
-val closest_such_def = Define`
+Definition closest_such_def[nocompute]:
    closest_such p s x =
-      @a. is_closest s x a /\ (!b. is_closest s x b /\ p b ==> p a)`
+      @a. is_closest s x a /\ (!b. is_closest s x b /\ p b ==> p a)
+End
 
-val closest_def = Define `closest = closest_such (K T)`
+Definition closest_def[nocompute]:   closest = closest_such (K T)
+End
 
-val largest_def = Define`
+Definition largest_def[nocompute]:
    largest (:'t # 'w) =
       (2r pow (UINT_MAX (:'w) - 1) / 2r pow (INT_MAX (:'w))) *
-      (2r - inv (2r pow dimindex(:'t)))`
+      (2r - inv (2r pow dimindex(:'t)))
+End
 
-val threshold_def = Define`
+Definition threshold_def[nocompute]:
    threshold (:'t # 'w) =
       (2r pow (UINT_MAX (:'w) - 1) / 2r pow (INT_MAX (:'w))) *
-      (2r - inv (2r pow SUC (dimindex(:'t))))`
+      (2r - inv (2r pow SUC (dimindex(:'t))))
+End
 
 (* Unit in the Last Place (of least precision) *)
 
 (* For a given exponent (applies when significand is not zero) *)
 
-val ULP_def = Define`
+Definition ULP_def[nocompute]:
    ULP (e:'w word, (:'t)) =
-   2 pow (if e = 0w then 1 else w2n e) / 2 pow (bias (:'w) + precision (:'t))`
+   2 pow (if e = 0w then 1 else w2n e) / 2 pow (bias (:'w) + precision (:'t))
+End
 
 (* Smallest ULP *)
 
-val ulp_def = Define `ulp (:'t # 'w) = ULP (0w:'w word, (:'t))`
+Definition ulp_def[nocompute]:   ulp (:'t # 'w) = ULP (0w:'w word, (:'t))
+End
 
 Theorem ULP_positive[simp]:
   0 < ULP (e, i) /\ 0 <= ULP (e, i) /\ ~(ULP (e,i) < 0) /\ ~(ULP (e,i) <= 0)
@@ -383,7 +408,7 @@ QED
 
 (* rounding *)
 
-val round_def = Define`
+Definition round_def[nocompute]:
    round mode (x: real) =
    case mode of
       roundTiesToEven =>
@@ -414,9 +439,10 @@ val round_def = Define`
              then float_minus_infinity (:'t # 'w)
           else if x > t
              then float_top (:'t # 'w)
-          else closest {a | float_is_finite a /\ float_to_real a <= x} x`
+          else closest {a | float_is_finite a /\ float_to_real a <= x} x
+End
 
-val integral_round_def = Define`
+Definition integral_round_def[nocompute]:
    integral_round mode (x: real) =
    case mode of
       roundTiesToEven =>
@@ -448,7 +474,8 @@ val integral_round_def = Define`
              then float_minus_infinity (:'t # 'w)
           else if x > t
              then float_top (:'t # 'w)
-          else closest {a | float_is_integral a /\ float_to_real a <= x} x`
+          else closest {a | float_is_integral a /\ float_to_real a <= x} x
+End
 
 (* ------------------------------------------------------------------------
    NaNs
@@ -464,10 +491,11 @@ val () = Datatype`
    | FP_MulAdd rounding (('t, 'w) float) (('t, 'w) float) (('t, 'w) float)
    | FP_MulSub rounding (('t, 'w) float) (('t, 'w) float) (('t, 'w) float)`
 
-val float_some_qnan_def = Define`
+Definition float_some_qnan_def[nocompute]:
    float_some_qnan (fp_op : ('t, 'w) fp_op) =
    (@f. let qnan = f fp_op in float_is_nan qnan /\ ~float_is_signalling qnan)
-     fp_op : ('t, 'w) float`
+     fp_op : ('t, 'w) float
+End
 
 (* ------------------------------------------------------------------------
    Some arithmetic operations
@@ -475,16 +503,17 @@ val float_some_qnan_def = Define`
 
 (* Round, choosing between -0.0 or +0.0 *)
 
-val float_round_def = Define`
+Definition float_round_def[nocompute]:
    float_round mode toneg r =
       let x = round mode r in
          if float_is_zero x
             then if toneg
                     then float_minus_zero (:'t # 'w)
                  else float_plus_zero (:'t # 'w)
-         else x`
+         else x
+End
 
-val float_round_with_flags_def = Define`
+Definition float_round_with_flags_def[nocompute]:
   float_round_with_flags mode to_neg r =
   let x = float_round mode to_neg r : ('t, 'w) float and a = abs r in
   let inexact = (float_value x <> Float r) in
@@ -498,26 +527,31 @@ val float_round_with_flags_def = Define`
               ((float_round mode to_neg r : ('t, 'w + 1) float).Exponent <=+
                n2w (INT_MIN (:'w))))
          ; Precision := inexact
-         |>), x)`
+         |>), x)
+End
 
-val check_for_signalling_def = Define`
+Definition check_for_signalling_def[nocompute]:
   check_for_signalling l =
-  clear_flags with InvalidOp := EXISTS float_is_signalling l`
+  clear_flags with InvalidOp := EXISTS float_is_signalling l
+End
 
-val real_to_float_def = Define`
-   real_to_float m = float_round m (m = roundTowardNegative)`
+Definition real_to_float_def[nocompute]:
+   real_to_float m = float_round m (m = roundTowardNegative)
+End
 
-val real_to_float_with_flags_def = Define`
+Definition real_to_float_with_flags_def[nocompute]:
    real_to_float_with_flags m =
-   float_round_with_flags m (m = roundTowardNegative)`
+   float_round_with_flags m (m = roundTowardNegative)
+End
 
-val float_round_to_integral_def = Define`
+Definition float_round_to_integral_def[nocompute]:
    float_round_to_integral mode (x: ('t, 'w) float) =
       case float_value x of
          Float r => integral_round mode r
-       | _ => x`
+       | _ => x
+End
 
-val float_to_int_def = Define`
+Definition float_to_int_def[nocompute]:
    float_to_int mode (x: ('t, 'w) float) =
    case float_value x of
       Float r =>
@@ -533,7 +567,8 @@ val float_to_int_def = Define`
               | roundTowardNegative => INT_FLOOR r
               | roundTowardZero =>
                   if x.Sign = 1w then INT_CEILING r else INT_FLOOR r)
-    | _ => NONE`
+    | _ => NONE
+End
 
 Definition float_sqrt_def:
    float_sqrt mode (x: ('t, 'w) float) =
@@ -548,7 +583,7 @@ Definition float_sqrt_def:
         (invalidop_flags, float_some_qnan (FP_Sqrt mode x))
 End
 
-val float_add_def = Define`
+Definition float_add_def[nocompute]:
    float_add mode (x: ('t, 'w) float) (y: ('t, 'w) float) =
       case float_value x, float_value y of
          NaN, _ => (check_for_signalling [x; y],
@@ -566,9 +601,10 @@ val float_add_def = Define`
             float_round_with_flags mode
                (if (r1 = 0) /\ (r2 = 0) /\ (x.Sign = y.Sign) then
                   x.Sign = 1w
-                else mode = roundTowardNegative) (r1 + r2)`
+                else mode = roundTowardNegative) (r1 + r2)
+End
 
-val float_sub_def = Define`
+Definition float_sub_def[nocompute]:
    float_sub mode (x: ('t, 'w) float) (y: ('t, 'w) float) =
       case float_value x, float_value y of
          NaN, _ => (check_for_signalling [x; y],
@@ -586,9 +622,10 @@ val float_sub_def = Define`
             float_round_with_flags mode
                (if (r1 = 0) /\ (r2 = 0) /\ x.Sign <> y.Sign then
                   x.Sign = 1w
-                else mode = roundTowardNegative) (r1 - r2)`
+                else mode = roundTowardNegative) (r1 - r2)
+End
 
-val float_mul_def = Define`
+Definition float_mul_def[nocompute]:
    float_mul mode (x: ('t, 'w) float) (y: ('t, 'w) float) =
       case float_value x, float_value y of
          NaN, _ => (check_for_signalling [x; y],
@@ -617,9 +654,10 @@ val float_mul_def = Define`
                 float_plus_infinity (:'t # 'w)
              else float_minus_infinity (:'t # 'w))
        | Float r1, Float r2 =>
-            float_round_with_flags mode (x.Sign <> y.Sign) (r1 * r2)`
+            float_round_with_flags mode (x.Sign <> y.Sign) (r1 * r2)
+End
 
-val float_div_def = Define`
+Definition float_div_def[nocompute]:
    float_div mode (x: ('t, 'w) float) (y: ('t, 'w) float) =
       case float_value x, float_value y of
          NaN, _ => (check_for_signalling [x; y],
@@ -647,9 +685,10 @@ val float_div_def = Define`
                         if x.Sign = y.Sign then
                            float_plus_infinity (:'t # 'w)
                         else float_minus_infinity (:'t # 'w))
-            else float_round_with_flags mode (x.Sign <> y.Sign) (r1 / r2)`
+            else float_round_with_flags mode (x.Sign <> y.Sign) (r1 / r2)
+End
 
-val float_mul_add_def = Define`
+Definition float_mul_add_def[nocompute]:
    float_mul_add mode
       (x: ('t, 'w) float) (y: ('t, 'w) float) (z: ('t, 'w) float) =
       let signP = x.Sign ?? y.Sign in
@@ -679,9 +718,9 @@ val float_mul_add_def = Define`
                  else mode = roundTowardNegative) \/
                 r < 0)
                r
-`
+End
 
-val float_mul_sub_def = Define`
+Definition float_mul_sub_def[nocompute]:
    float_mul_sub mode
       (x: ('t, 'w) float) (y: ('t, 'w) float) (z: ('t, 'w) float) =
       let signP = x.Sign ?? y.Sign in
@@ -705,7 +744,8 @@ val float_mul_sub_def = Define`
               float_round_with_flags mode
                 (if (r1 = 0) /\ (r2 = 0) /\ signP <> z.Sign then
                    signP = 1w
-                 else mode = roundTowardNegative) (r1 - r2)`
+                 else mode = roundTowardNegative) (r1 - r2)
+End
 
 (* ------------------------------------------------------------------------
    Some comparison operations
@@ -713,7 +753,7 @@ val float_mul_sub_def = Define`
 
 val () = Datatype `float_compare = LT | EQ | GT | UN`
 
-val float_compare_def = Define`
+Definition float_compare_def[nocompute]:
    float_compare (x: ('t, 'w) float) (y: ('t, 'w) float) =
       case float_value x, float_value y of
          NaN, _ => UN
@@ -731,42 +771,50 @@ val float_compare_def = Define`
                then LT
             else if r1 = r2
                then EQ
-            else GT`
+            else GT
+End
 
-val float_less_than_def = Define`
+Definition float_less_than_def[nocompute]:
    float_less_than (x: ('t, 'w) float) y =
-      (float_compare x y = LT)`
+      (float_compare x y = LT)
+End
 
-val float_less_equal_def = Define`
+Definition float_less_equal_def[nocompute]:
    float_less_equal (x: ('t, 'w) float) y =
       case float_compare x y of
          LT => T
        | EQ => T
-       | _ => F`
+       | _ => F
+End
 
-val float_greater_than_def = Define`
+Definition float_greater_than_def[nocompute]:
    float_greater_than (x: ('t, 'w) float) y =
-      (float_compare x y = GT)`
+      (float_compare x y = GT)
+End
 
-val float_greater_equal_def = Define`
+Definition float_greater_equal_def[nocompute]:
    float_greater_equal (x: ('t, 'w) float) y =
       case float_compare x y of
          GT => T
        | EQ => T
-       | _ => F`
+       | _ => F
+End
 
-val float_equal_def = Define`
+Definition float_equal_def[nocompute]:
    float_equal (x: ('t, 'w) float) y =
-      (float_compare x y = EQ)`
+      (float_compare x y = EQ)
+End
 
-val float_unordered_def = Define`
+Definition float_unordered_def[nocompute]:
    float_unordered (x: ('t, 'w) float) y =
-      (float_compare x y = UN)`
+      (float_compare x y = UN)
+End
 
-val exponent_boundary_def = Define`
+Definition exponent_boundary_def[nocompute]:
    exponent_boundary (y: ('t, 'w) float) (x: ('t, 'w) float) <=>
       (x.Sign = y.Sign) /\ (w2n x.Exponent = w2n y.Exponent + 1) /\
-      (x.Exponent <> 1w) /\ (y.Significand = -1w) /\ (x.Significand = 0w)`
+      (x.Exponent <> 1w) /\ (y.Significand = -1w) /\ (x.Significand = 0w)
+End
 
 (* ------------------------------------------------------------------------
    Some arithmetic theorems

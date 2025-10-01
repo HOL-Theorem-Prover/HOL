@@ -5,7 +5,8 @@ Ancestors
 Libs
   binderLib reductionEval
 
-val cnone_def = Define`cnone = K`;
+Definition cnone_def:  cnone = K
+End
 Theorem FV_cnone[simp]: FV cnone = ∅
 Proof SRW_TAC [][cnone_def]
 QED
@@ -19,13 +20,13 @@ Proof
   SRW_TAC [][EXTENSION, csome_def] >> metis_tac[]
 QED
 
-val cvsome_def = Define‘
+Definition cvsome_def:
   cvsome x =
     let n = NEW (FV x) in
     let s = NEW (FV x ∪ {n})
     in
         LAM n (LAM s (VAR s @@ x))
-’;
+End
 
 Theorem FV_cvsome[simp]:
   FV (cvsome h) = FV h

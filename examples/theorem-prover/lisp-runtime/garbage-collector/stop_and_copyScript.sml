@@ -22,10 +22,11 @@ val heap_address_distinct = fetch "-" "heap_address_distinct";
 val _ = type_abbrev("abs_heap",``:(num |-> ('b heap_address) list # 'a) #
           (num set) # (num set) # (num set) # (num -> num)``);
 
-val ADDR_MAP_def = Define `
+Definition ADDR_MAP_def:
   (ADDR_MAP f [] = []) /\
   (ADDR_MAP f (H_ADDR x::xs) = H_ADDR (f x) :: ADDR_MAP f xs) /\
-  (ADDR_MAP f (H_DATA y::xs) = H_DATA y :: ADDR_MAP f xs)`;
+  (ADDR_MAP f (H_DATA y::xs) = H_DATA y :: ADDR_MAP f xs)
+End
 
 val IN_THM = SIMP_RULE std_ss [EXTENSION,GSPECIFICATION]
 val ADDR_SET_def = (IN_THM o Define) `ADDR_SET s = { x | MEM (H_ADDR x) s }`;
@@ -37,22 +38,26 @@ val (gc_reachable_rules,gc_reachable_ind,gc_reachable_cases) = Hol_reln `
     a IN FDOM h /\ (h ' a = (xs,d)) /\ x IN ADDR_SET xs /\ gc_reachable (h,roots) a ==>
     gc_reachable (h,roots) x)`;
 
-val PAIR_TRANSLATE_def = Define `PAIR_TRANSLATE f (xs,a) = (ADDR_MAP f xs,a)`;
+Definition PAIR_TRANSLATE_def:   PAIR_TRANSLATE f (xs,a) = (ADDR_MAP f xs,a)
+End
 val SET_TRANSLATE_def = (IN_THM o Define) `SET_TRANSLATE f s = { x | (f x) IN s }`;
 val HAS_CHANGED_def = (IN_THM o Define) `HAS_CHANGED f = { x | ~(f x = x) }`;
 val POINTERS_def = (IN_THM o Define) `POINTERS h y =
   { a | ?b zs d. b IN y /\ b IN FDOM h /\ (h ' b = (zs,d)) /\ a IN ADDR_SET zs }`;
 
-val gc_filter_def = Define `
-  gc_filter (h,roots) = (DRESTRICT h (gc_reachable (h,roots)),roots)`;
+Definition gc_filter_def:
+  gc_filter (h,roots) = (DRESTRICT h (gc_reachable (h,roots)),roots)
+End
 
-val gc_copy_def = Define `
+Definition gc_copy_def:
   gc_copy (h1,roots1) (h2,roots2) =
     ?f. (f o f = I) /\ (FDOM h1 = SET_TRANSLATE f (FDOM h2)) /\
         (roots2 = ADDR_MAP f roots1) /\
-        !x. x IN FDOM h1 ==> (h1 ' x = PAIR_TRANSLATE f (h2 ' (f x)))`;
+        !x. x IN FDOM h1 ==> (h1 ' x = PAIR_TRANSLATE f (h2 ' (f x)))
+End
 
-val gc_exec_def = Define `gc_exec x y = gc_copy (gc_filter x) y`;
+Definition gc_exec_def:   gc_exec x y = gc_copy (gc_filter x) y
+End
 
 val (abs_step_rules,abs_step_ind,abs_step_cases) = Hol_reln `
   (!h x y z f a.
@@ -65,7 +70,8 @@ val (abs_step_rules,abs_step_ind,abs_step_cases) = Hol_reln `
     a IN z /\ (f a = a) /\ (f b = b) /\ ~(b IN FDOM h) /\ a IN FDOM h /\ (h ' a = (xs,d)) ==>
     abs_step (h,x,y,z,f) (h |+ (b,xs,d) \\ a,x,b INSERT y,z UNION (ADDR_SET xs),(a =+ b) ((b =+ a) f)))`;
 
-val abs_steps_def = Define `abs_steps = RTC abs_step`;
+Definition abs_steps_def:   abs_steps = RTC abs_step
+End
 
 val abs_steps_TRANS = store_thm("abs_steps_TRANS",
   ``!x y z. abs_steps x y /\ abs_steps y z ==> abs_steps x z``,
@@ -76,7 +82,7 @@ val (abs_gc_rules,abs_gc_ind,abs_gc_cases) = Hol_reln `
     abs_steps (h,{},{},ADDR_SET roots,I) (h2,x,{},{},f) ==>
     abs_gc (h,roots) (DRESTRICT h2 x,ADDR_MAP f roots))`;
 
-val abs_gc_inv_def = Define `
+Definition abs_gc_inv_def:
   abs_gc_inv (h1,roots1) (h,x,y,z,f) =
     let old = FDOM h UNION HAS_CHANGED f DIFF (x UNION y) in
       DISJOINT x y /\
@@ -89,7 +95,8 @@ val abs_gc_inv_def = Define `
       (!a. a IN y \/ a IN x = ~(f a = a) /\ a IN FDOM h) /\ (f o f = I) /\
       (SET_TRANSLATE f (FDOM h) = FDOM h1) /\
       (!d. d IN FDOM h1 ==>
-          (h1 ' d = if (f d) IN x then PAIR_TRANSLATE f (h ' (f d)) else h ' (f d)))`;
+          (h1 ' d = if (f d) IN x then PAIR_TRANSLATE f (h ' (f d)) else h ' (f d)))
+End
 
 val SET_TAC =
   FULL_SIMP_TAC std_ss [EXTENSION,IN_INSERT,IN_UNION,IN_DELETE,SUBSET_DEF,
@@ -251,8 +258,9 @@ val abs_steps_thm = prove(
   SIMP_TAC std_ss [GSYM AND_IMP_INTRO,abs_steps_def]
   \\ HO_MATCH_MP_TAC RTC_INDUCT \\ SIMP_TAC std_ss [] \\ METIS_TAC [abs_step_thm]);
 
-val ok_heap_def = Define `
-  ok_heap (h,roots) = (POINTERS h UNIV UNION ADDR_SET roots SUBSET FDOM h)`;
+Definition ok_heap_def:
+  ok_heap (h,roots) = (POINTERS h UNIV UNION ADDR_SET roots SUBSET FDOM h)
+End
 
 val ok_heap_IMP = store_thm("ok_heap_IMP",
   ``ok_heap (h1,roots1) ==> abs_gc_inv (h1,roots1) (h1,{},{},ADDR_SET roots1,I)``,
@@ -333,32 +341,61 @@ val _ = Hol_datatype `heap_element =
 val heap_element_distinct = fetch "-" "heap_element_distinct";
 val heap_element_11 = fetch "-" "heap_element_11";
 
-val isDATA_def = Define `isDATA x = ?i. x = H_DATA i`;
-val isADDR_def = Define `isADDR x = ?i. x = H_ADDR i`;
-val isREF_def = Define `isREF x = ?i. x = H_REF i`;
-val isBLOCK_def = Define `isBLOCK x = ?i. x = H_BLOCK i`;
-val getADDR_def = Define `getADDR (H_ADDR x) = x`;
-val getREF_def = Define `getREF (H_REF x) = x`;
-val getBLOCK_def = Define `getBLOCK (H_BLOCK y) = y`;
-val getLENGTH_def = Define `
+Definition isDATA_def:   isDATA x = ?i. x = H_DATA i
+End
+Definition isADDR_def:   isADDR x = ?i. x = H_ADDR i
+End
+Definition isREF_def:   isREF x = ?i. x = H_REF i
+End
+Definition isBLOCK_def:   isBLOCK x = ?i. x = H_BLOCK i
+End
+Definition getADDR_def:   getADDR (H_ADDR x) = x
+End
+Definition getREF_def:   getREF (H_REF x) = x
+End
+Definition getBLOCK_def:   getBLOCK (H_BLOCK y) = y
+End
+Definition getLENGTH_def:
   (getLENGTH (H_BLOCK (m,l,n)) = l + 1) /\
   (getLENGTH (H_REF i) = 0) /\
-  (getLENGTH (H_EMP) = 0)`;
+  (getLENGTH (H_EMP) = 0)
+End
 
-val RANGE_def = Define `RANGE(i:num,j) k = i <= k /\ k < j`;
-val CUT_def = Define `CUT (i,j) m = \k. if RANGE (i,j) k then m k else H_EMP`;
+Definition RANGE_def:   RANGE(i:num,j) k = i <= k /\ k < j
+End
+Definition CUT_def:   CUT (i,j) m = \k. if RANGE (i,j) k then m k else H_EMP
+End
 
-val D0 = Define `D0 m k = ?x y z. m (k:num) = H_BLOCK (x,y,z)`;
-val D1 = Define `D1 m i = ?k x y z. (m (k:num) = H_BLOCK(x,y,z)) /\ i IN ADDR_SET x`;
-val R0 = Define `R0 m k = ?a. m (k:num) = H_REF a`;
-val R1 = Define `R1 m a = ?k. m (k:num) = H_REF a`;
-val DR0 = Define `DR0 m k = D0 m k \/ R0 m k`
-val DR1 = Define `DR1 m k = D1 m k \/ R1 m k`
+(* TODO Remove aliases D0, D1, R0, R1, DR0, DR1 *)
+Definition D0_def:   D0 m k = ?x y z. m (k:num) = H_BLOCK (x,y,z)
+End
+val D0 = D0_def;
 
-val EMP_RANGE_def = Define `
-  EMP_RANGE (b,e) m = !k. k IN RANGE(b,e) ==> (m k = H_EMP)`;
+Definition D1_def:   D1 m i = ?k x y z. (m (k:num) = H_BLOCK(x,y,z)) /\ i IN ADDR_SET x
+End
+val D1 = D1_def;
 
-val rel_move_def = Define `
+Definition R0_def:   R0 m k = ?a. m (k:num) = H_REF a
+End
+val R0 = R0_def;
+
+Definition R1_def:   R1 m a = ?k. m (k:num) = H_REF a
+End
+val R1 = R1_def;
+
+Definition DR0_def:   DR0 m k = D0 m k \/ R0 m k
+End
+val DR0 = DR0_def;
+
+Definition DR1_def:   DR1 m k = D1 m k \/ R1 m k
+End
+val DR1 = DR1_def;
+
+Definition EMP_RANGE_def:
+  EMP_RANGE (b,e) m = !k. k IN RANGE(b,e) ==> (m k = H_EMP)
+End
+
+Definition rel_move_def:
   (rel_move (H_DATA x,j,m,b,e,b2,e2) = (T,H_DATA x,j,m)) /\
   (rel_move (H_ADDR a,j,m,b,e,b2,e2) =
      case m a of
@@ -368,16 +405,18 @@ val rel_move_def = Define `
                             let m = (a =+ H_REF j) m in
                             let cond = RANGE (b,e) j /\ (m j = H_EMP) /\ cond in
                             let m = (j =+ H_BLOCK (xs,n,d)) m in
-                              (cond,H_ADDR j,j + n + 1,m))`;
+                              (cond,H_ADDR j,j + n + 1,m))
+End
 
-val rel_move_list_def = Define `
+Definition rel_move_list_def:
   (rel_move_list ([],j,m,b,e,b2,e2) = (T,[],j,m)) /\
   (rel_move_list (x::xs,j,m,b,e,b2,e2) =
      let (c1,x,j,m) = rel_move (x,j,m,b,e,b2,e2) in
      let (c2,xs,j,m) = rel_move_list (xs,j,m,b,e,b2,e2) in
-       (c1 /\ c2,x::xs,j,m))`;
+       (c1 /\ c2,x::xs,j,m))
+End
 
-val rel_gc_step_def = Define `
+Definition rel_gc_step_def:
   rel_gc_step (i,j,m,b,e,b2,e2) =
     let cond = isBLOCK (m i) in
     let (xs,n,d) = getBLOCK (m i) in
@@ -387,7 +426,8 @@ val rel_gc_step_def = Define `
     let m = (i =+ H_BLOCK (ys,n,d)) m in
     let i = i + n + 1 in
     let cond = cond /\ i <= j in
-      (cond,i,j,m)`;
+      (cond,i,j,m)
+End
 
 val rel_gc_loop_def = tDefine "rel_gc_loop" `
   rel_gc_loop (i,j,m,b,e,b2,e2) =
@@ -402,14 +442,15 @@ val rel_gc_loop_def = tDefine "rel_gc_loop" `
   \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
   \\ SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC \\ DECIDE_TAC);
 
-val rel_gc_def = Define `
+Definition rel_gc_def:
   rel_gc (b:num,e:num,b2:num,e2:num,roots,m) =
     let (b2,e2,b,e) = (b,e,b2,e2) in
     let (cond,roots,j,m) = rel_move_list (roots,b,m,b,e,b2,e2) in
     let (c,i,m) = rel_gc_loop (b,j,m,b,e,b2,e2) in
     let cond = cond /\ b <= i /\ i <= e in
     let m = CUT (b,i) m in
-      (c /\ cond,b,i,e,b2,e2,roots,m)`;
+      (c /\ cond,b,i,e,b2,e2,roots,m)
+End
 
 
 
@@ -435,12 +476,13 @@ End
 
 val part_heap_ind = save_thm("part_heap_ind[allow_rebind]",part_heap_strongind);
 
-val ref_heap_mem_def = Define `
+Definition ref_heap_mem_def:
   ref_heap_mem (h,f) m =
     !a. m a = if a IN FDOM h then H_BLOCK (h ' a) else
-              if f a = a then H_EMP else H_REF (f a)`;
+              if f a = a then H_EMP else H_REF (f a)
+End
 
-val gc_inv_def = Define `
+Definition gc_inv_def:
   gc_inv (h1,roots1,h,f) (b,i,j,e,b2,e2,m,z) =
     (b <= i /\ i <= j /\ j <= e) /\
     (* semispaces are disjoint, simplified *)
@@ -455,7 +497,8 @@ val gc_inv_def = Define `
     ref_heap_mem (h,f) m /\
     (* simulation *)
     ok_heap (h1,roots1) /\
-    abs_steps (h1,{},{},ADDR_SET roots1,I) (h,D0(CUT(b,i)m),D0(CUT(i,j)m),z,f)`;
+    abs_steps (h1,{},{},ADDR_SET roots1,I) (h,D0(CUT(b,i)m),D0(CUT(i,j)m),z,f)
+End
 
 (* some lemmas *)
 
@@ -822,8 +865,9 @@ val D1_CUT_EQ_ADDR_SET_THM = prove(
          \\ METIS_TAC [heap_element_distinct])
   \\ Q.EXISTS_TAC `j` \\ ASM_SIMP_TAC std_ss [heap_element_11] \\ RANGE_TAC);
 
-val EQ_RANGE_def = Define `
-  EQ_RANGE (b,e) m m2 = !k. k IN RANGE (b,e) ==> (m k = m2 k)`;
+Definition EQ_RANGE_def:
+  EQ_RANGE (b,e) m m2 = !k. k IN RANGE (b,e) ==> (m k = m2 k)
+End
 
 val EQ_RANGE_IMP_EQ_RANGE = store_thm("EQ_RANGE_IMP_EQ_RANGE",
   ``!b e i j m m2. EQ_RANGE (b,e) m m2 /\ b <= i /\ j <= e ==> EQ_RANGE (i,j) m m2``,
@@ -1068,11 +1112,12 @@ val gc_loop_thm = store_thm("gc_loop_thm",
   \\ `(e - i3 < e - i) /\ (e - i3 = e - i3)`  by RANGE_TAC
   \\ RES_TAC \\ IMP_RES_TAC LESS_EQ_TRANS \\ ASM_SIMP_TAC std_ss [] \\ SET_TAC);
 
-val ok_full_heap_def = Define `
+Definition ok_full_heap_def:
   ok_full_heap (h,roots) (b,i,e,b2,e2,m) =
      b <= i /\ i <= e /\ b2 <= e2 /\ (e2 - b2 = e - b) /\ (~(e2 <= b) ==> e <= b2) /\
      (!k. ~RANGE (b,i) k ==> (m k = H_EMP)) /\
-     (?t. part_heap b i m t) /\ ref_heap_mem (h,I) m /\ ok_heap (h,roots)`;
+     (?t. part_heap b i m t) /\ ref_heap_mem (h,I) m /\ ok_heap (h,roots)
+End
 
 val ok_full_heap_IMP = store_thm("ok_full_heap_IMP",
   ``ok_full_heap (h,roots) (b2,i,e2,b,e,m) ==>
@@ -1163,7 +1208,7 @@ val gc_thm = store_thm("gc_thm",
 
 (* split the memory *)
 
-val split_move_def = Define `
+Definition split_move_def:
   (split_move (H_DATA x,j,mF,mT,e) = (T,H_DATA x,j,mF,mT)) /\
   (split_move (H_ADDR a,j,mF,mT,e) =
      case mF a of
@@ -1173,16 +1218,18 @@ val split_move_def = Define `
                             let mF = (a =+ H_REF j) mF in
                             let cond = j < e /\ (mT j = H_EMP) /\ cond in
                             let mT = (j =+ H_BLOCK (xs,n,d)) mT in
-                              (cond,H_ADDR j,j + n + 1,mF,mT))`;
+                              (cond,H_ADDR j,j + n + 1,mF,mT))
+End
 
-val split_move_list_def = Define `
+Definition split_move_list_def:
   (split_move_list ([],j,mF,mT,e) = (T,[],j,mF,mT)) /\
   (split_move_list (x::xs,j,mF,mT,e) =
      let (c1,x,j,mF,mT) = split_move (x,j,mF,mT,e) in
      let (c2,xs,j,mF,mT) = split_move_list (xs,j,mF,mT,e) in
-       (c1 /\ c2,x::xs,j,mF,mT))`;
+       (c1 /\ c2,x::xs,j,mF,mT))
+End
 
-val split_gc_step_def = Define `
+Definition split_gc_step_def:
   split_gc_step (i,j,mF,mT,e) =
     let cond = isBLOCK (mT i) /\ i < e in
     let (xs,n,d) = getBLOCK (mT i) in
@@ -1191,7 +1238,8 @@ val split_gc_step_def = Define `
     let mT = (i =+ H_BLOCK (ys,n,d)) mT in
     let i = i + n + 1 in
     let cond = cond /\ i <= j in
-      (cond,i,j,mF,mT)`;
+      (cond,i,j,mF,mT)
+End
 
 val split_gc_loop_def = tDefine "split_gc_loop" `
   split_gc_loop (i,j,mF,mT,e) =
@@ -1206,30 +1254,35 @@ val split_gc_loop_def = tDefine "split_gc_loop" `
   \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
   \\ SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC \\ DECIDE_TAC);
 
-val split_gc_def = Define `
+Definition split_gc_def:
   split_gc (roots,mF,mT,e) =
     let (cond,roots,j,mF,mT) = split_move_list (roots,0,mF,mT,e) in
     let (c,i,mF,mT) = split_gc_loop (0,j,mF,mT,e) in
     let mT = CUT (0,i) mT in
-      (c /\ cond,i,roots,mT,e)`;
+      (c /\ cond,i,roots,mT,e)
+End
 
 (* connection *)
 
-val ADDR_APPLY_def = Define `
+Definition ADDR_APPLY_def:
   (ADDR_APPLY f (H_ADDR a) = H_ADDR (f a)) /\
-  (ADDR_APPLY f (H_DATA x) = H_DATA x)`;
+  (ADDR_APPLY f (H_DATA x) = H_DATA x)
+End
 
-val BLOCK_APPLY_def = Define `
+Definition BLOCK_APPLY_def:
   (BLOCK_APPLY f (H_BLOCK (xs,d)) = H_BLOCK (ADDR_MAP f xs,d)) /\
   (BLOCK_APPLY f (H_REF i) = H_REF i) /\
-  (BLOCK_APPLY f (H_EMP) = H_EMP)`;
+  (BLOCK_APPLY f (H_EMP) = H_EMP)
+End
 
-val memF_def = Define `
-  memF m e = \a. if a < e then BLOCK_APPLY (\a. a - e) (m (a+e:num)) else H_EMP`;
+Definition memF_def:
+  memF m e = \a. if a < e then BLOCK_APPLY (\a. a - e) (m (a+e:num)) else H_EMP
+End
 
-val memT_def = Define `
+Definition memT_def:
   memT m e i = \a. if e <= a:num then H_EMP else
-                   if a < i then m a else BLOCK_APPLY (\a. a - e) (m a)`;
+                   if a < i then m a else BLOCK_APPLY (\a. a - e) (m a)
+End
 
 val memF_UPDATE = prove(
   ``(j < e ==> (memF ((j =+ x) m) e = memF m e)) /\
@@ -1379,12 +1432,14 @@ val split_lemma = prove(
   \\ IMP_RES_TAC gc_thm \\ FULL_SIMP_TAC std_ss []
   \\ IMP_RES_TAC spilt_gc_thm \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC []);
 
-val memI_def = Define `
-  memI m e = (\a. if a < e then H_EMP else BLOCK_APPLY (\a. a + e) (m (a - e)))`;
+Definition memI_def:
+  memI m e = (\a. if a < e then H_EMP else BLOCK_APPLY (\a. a + e) (m (a - e)))
+End
 
-val heapI_def = Define `
+Definition heapI_def:
   heapI h e = FUN_FMAP (\a. getBLOCK (BLOCK_APPLY (\a. a + e) (H_BLOCK (h ' (a - e)))))
-                       (\a. if a < e then F else (a - e:num) IN FDOM h)`;
+                       (\a. if a < e then F else (a - e:num) IN FDOM h)
+End
 
 val ADDR_MAP_ID = prove(
   ``!xs g f. (g o f = I) ==> (ADDR_MAP g (ADDR_MAP f xs) = xs)``,
@@ -1521,16 +1576,17 @@ val split_gc_thm = store_thm("split_gc_thm",
 
 (* representation of s-expressions in abstract heap, given symbol-table sym *)
 
-val LIST_FIND_def = Define `
+Definition LIST_FIND_def:
   (LIST_FIND n x [] = NONE) /\
-  (LIST_FIND n x (y::ys) = if x = y then SOME n else LIST_FIND (n+1) x ys)`;
+  (LIST_FIND n x (y::ys) = if x = y then SOME n else LIST_FIND (n+1) x ys)
+End
 
 val LIST_FIND_LESS_EQ = store_thm("LIST_FIND_LESS_EQ",
   ``!xs x k d. (LIST_FIND k x xs = SOME d) ==> k <= d``,
   Induct \\ SIMP_TAC std_ss [LIST_FIND_def,APPEND] \\ REPEAT STRIP_TAC
   \\ Cases_on `x = h` \\ FULL_SIMP_TAC std_ss [] \\ RES_TAC \\ DECIDE_TAC);
 
-val lisp_x_def = Define `
+Definition lisp_x_def:
   (lisp_x (m,sym) (a,Val k) =
         (a = H_DATA (INL ((n2w k):word30))) /\ k < 2**30) /\
   (lisp_x (m,sym) (a,Sym s) =
@@ -1539,7 +1595,8 @@ val lisp_x_def = Define `
   (lisp_x (m,sym) (a,Dot x y) =
     ?ax ay k.
         (a = H_ADDR k) /\ (m k = H_BLOCK ([ax;ay],0,())) /\
-        lisp_x (m,sym) (ax,x) /\ lisp_x (m,sym) (ay,y))`
+        lisp_x (m,sym) (ax,x) /\ lisp_x (m,sym) (ay,y))
+End
 
 val ADDR_MAP_TWICE = prove(
   ``!xs. ADDR_MAP f (ADDR_MAP g xs) = ADDR_MAP (f o g) xs``,
@@ -1646,5 +1703,3 @@ val lisp_x_gc_thm = store_thm("lisp_x_gc_thm",
     \\ ASM_SIMP_TAC std_ss [PAIR_TRANSLATE_def,ADDR_SET_def,MEM,ADDR_MAP_def]
     \\ SIMP_TAC std_ss [ADDR_MAP_THM,MAP,MEM,ADDR_APPLY_def]
     \\ FULL_SIMP_TAC std_ss [ADDR_MAP_THM,FUN_EQ_THM,IN_DEF]));
-
-

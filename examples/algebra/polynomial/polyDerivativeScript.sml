@@ -71,10 +71,10 @@ Libs
 *)
 
 (* Define Formal Derivative *)
-val poly_diff_def = Define `
+Definition poly_diff_def:
    (poly_diff (r:'a ring) [] = []) /\
    (poly_diff (r:'a ring) (h::t) = t + (poly_diff r t) >> 1)
-`;
+End
 
 (* overload on formal derivative *)
 val _ = overload_on("diff", ``poly_diff r``);

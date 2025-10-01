@@ -13,21 +13,22 @@ Libs
 
 (* set up the representative type and operations on it *)
 
-val Lfrep_def = Define`Lfrep = \l. NONE`
+Definition Lfrep_def:  Lfrep = \l. NONE
+End
 
-val Ndrep_def = Define`
+Definition Ndrep_def:
    Ndrep a t1 t2 = \l. case l of
                          [] => SOME a
                        | T::xs => t1 xs
                        | F::xs => t2 xs
-`;
+End
 
-val is_lbtree_def = Define`
+Definition is_lbtree_def:
   is_lbtree t = ?P. (!t. P t ==> (t = Lfrep) \/
                                  ?a t1 t2. P t1 /\ P t2 /\
                                            (t = Ndrep a t1 t2)) /\
                     P t
-`;
+End
 
 val type_inhabited = prove(
   ``?t. is_lbtree t``,
@@ -105,13 +106,13 @@ val is_lbtree_coinduction = prove(
 (* the path_follow function motivates the unique co-recursive function.
    for the moment we are still at the concrete/representative level *)
 
-val path_follow_def = Define`
+Definition path_follow_def:
   (path_follow g x [] = OPTION_MAP FST (g x)) /\
   (path_follow g x (h::t) =
      case g x of
        NONE => NONE
      | SOME (a,y,z) => path_follow g (if h then y else z) t)
-`;
+End
 
 
 val path_follow_is_lbtree = prove(
@@ -138,10 +139,11 @@ val path_follow_is_lbtree = prove(
 (* now start to lift the representative operations to the abstract level *)
 
 (* first define the constructors *)
-val Lf_def = Define`Lf = lbtree_abs Lfrep`
-val Nd_def = Define`
+Definition Lf_def:  Lf = lbtree_abs Lfrep
+End
+Definition Nd_def:
   Nd a t1 t2 = lbtree_abs (Ndrep a (lbtree_rep t1) (lbtree_rep t2))
-`
+End
 
 val lbtree_cases = store_thm(
   "lbtree_cases",
@@ -232,12 +234,12 @@ val lbtree_ue_Axiom = store_thm(
       syntax with this?
    ---------------------------------------------------------------------- *)
 
-val lbtree_case_def = Define`
+Definition lbtree_case_def:
   lbtree_case e f t = if t = Lf then e
                       else f (@a. ?t1 t2. t = Nd a t1 t2)
                              (@t1. ?a t2. t = Nd a t1 t2)
                              (@t2. ?a t1. t = Nd a t1 t2)
-`;
+End
 
 val lbtree_case_thm = store_thm(
   "lbtree_case_thm",
@@ -437,10 +439,10 @@ val _ = export_rewrites ["finite_map"]
    ---------------------------------------------------------------------- *)
 
 (* helper function that we "delete" immediately after def'n below *)
-val drop_while_def = zDefine`
+Definition drop_while_def[nocompute]:
   (drop_while P [] = []) /\
   (drop_while P (h::t) = if P h then drop_while P t else h::t)
-`;
+End
 
 val bf_flatten_def = new_specification(
   "bf_flatten_def",
@@ -605,9 +607,9 @@ val depth_mem = store_thm(
 
 (* mindepth x t returns SOME n if x occurs in t at minimum depth n,
    else NONE *)
-val mindepth_def = Define`
+Definition mindepth_def:
   mindepth x t = if mem x t then SOME (LEAST n. depth x t n) else NONE
-`;
+End
 
 (* following tactic is used twice in theorem below - yerk *)
 val lelim = REWRITE_RULE [GSYM AND_IMP_INTRO] WhileTheory.LEAST_ELIM
@@ -643,12 +645,12 @@ val min_tac =
 
 (* a minimum function lifted to option type: NONEs are treated as if they
    are +ve infinity *)
-val optmin_def = Define`
+Definition optmin_def:
   (optmin NONE NONE = NONE) /\
   (optmin (SOME x) NONE = SOME x) /\
   (optmin NONE (SOME y) = SOME y) /\
   (optmin (SOME x) (SOME y) = SOME (MIN x y))
-`;
+End
 
 (* recursive characterisation of mindepth *)
 val mindepth_thm = store_thm(
@@ -706,7 +708,7 @@ val mindepth_depth = store_thm(
    results in a complicated function with accumulators that is very fiddly
    to prove correct.  Its option return type also makes the ultimate proof
    ugly --- I decided it was a mistake bothering with it. *)
-val is_mmindex_def = Define`
+Definition is_mmindex_def:
   is_mmindex f l n d <=>
     n < LENGTH l /\
     (f (EL n l) = SOME d) /\
@@ -714,7 +716,7 @@ val is_mmindex_def = Define`
           (f (EL i l) = NONE) \/
           ?d'. (f (EL i l) = SOME d') /\
                d <= d' /\ (i < n ==> d < d')
-`;
+End
 
 (* the crucial fact about minimums -- two levels of LEAST-ness going on in
    here *)

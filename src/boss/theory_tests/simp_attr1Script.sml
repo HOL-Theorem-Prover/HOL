@@ -1,8 +1,8 @@
 Theory simp_attr1
 
-val fact_def = Define`
+Definition fact_def:
   fact n = if n = 0 then 1 else n * fact(n - 1)
-`;
+End
 
 val fact = store_thm(
   "fact[simp]",

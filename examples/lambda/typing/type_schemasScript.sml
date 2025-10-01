@@ -41,11 +41,11 @@ val _ = Hol_datatype`
        | tyforall of string set => type
 `;
 
-val fv_def = Define`
+Definition fv_def:
   (fv (tyvar s) = {s}) /\
   (fv (tyfun ty1 ty2) = fv ty1 UNION fv ty2) /\
   (fv (tyforall vs ty) = fv ty DIFF vs)
-`;
+End
 val _ = export_rewrites ["fv_def"]
 
 val FINITE_fv = store_thm(
@@ -54,11 +54,11 @@ val FINITE_fv = store_thm(
   Induct THEN SRW_TAC [][pred_setTheory.FINITE_DIFF]);
 val _ = export_rewrites ["FINITE_fv"]
 
-val raw_rtypm_def = Define`
+Definition raw_rtypm_def:
   (raw_rtypm pi (tyvar s) = tyvar (stringpm pi s)) /\
   (raw_rtypm pi (tyfun ty1 ty2) = tyfun (raw_rtypm pi ty1) (raw_rtypm pi ty2)) /\
   (raw_rtypm pi (tyforall vs ty) = tyforall (ssetpm pi vs) (raw_rtypm pi ty))
-`;
+End
 val _ = export_rewrites["raw_rtypm_def"];
 
 val _ = overload_on("rty_pmact", ``mk_pmact raw_rtypm``);
@@ -85,11 +85,11 @@ val fv_rtypm = prove(
   ``fv (rtypm pi ty) = ssetpm pi (fv ty)``,
   Induct_on `ty` THEN SRW_TAC [][pmact_INSERT, pmact_UNION, pmact_DIFF]);
 
-val okpm_def = Define`
+Definition okpm_def:
   okpm pi bvs avds t ⇔
      (!s. s IN bvs /\ s IN fv t ==> ~(stringpm pi s IN avds)) /\
      (!s. ~(s IN bvs) /\ s IN fv t ==> (stringpm pi s = s))
-`;
+End
 
 fun Prove(t,tac) = let val th = prove(t,tac)
                    in

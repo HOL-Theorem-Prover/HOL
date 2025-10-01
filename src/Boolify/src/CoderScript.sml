@@ -31,34 +31,34 @@ val TOP_CASE_TAC = BasicProvers.TOP_CASE_TAC;
        bool list -> 'a
  ---------------------------------------------------------------------------*)
 
-val decode_def =
-  Define
-  `decode (p : 'a -> bool) (d : bool list -> ('a # bool list) option) l =
-   case d l of SOME (x, _) => x | NONE => @x. p x`;
+Definition decode_def:
+   decode (p : 'a -> bool) (d : bool list -> ('a # bool list) option) l =
+   case d l of SOME (x, _) => x | NONE => @x. p x
+End
 
 (*---------------------------------------------------------------------------
      Well-formed (predicate,encoder,decoder) triples.
  ---------------------------------------------------------------------------*)
 
-val wf_coder_def =
-  Define
-  `wf_coder (p, e, d) <=> wf_pred p /\ wf_encoder p e /\ (d = enc2dec p e)`;
+Definition wf_coder_def:
+   wf_coder (p, e, d) <=> wf_pred p /\ wf_encoder p e /\ (d = enc2dec p e)
+End
 
-val domain_def =
-  Define
-  `domain
-   (p : 'a->bool, e : 'a->bool list, d : bool list->('a#bool list) option) = p`;
+Definition domain_def:
+   domain
+   (p : 'a->bool, e : 'a->bool list, d : bool list->('a#bool list) option) = p
+End
 
-val encoder_def =
-  Define
-  `encoder
-   (p : 'a->bool, e : 'a->bool list, d : bool list->('a#bool list) option) = e`;
+Definition encoder_def:
+   encoder
+   (p : 'a->bool, e : 'a->bool list, d : bool list->('a#bool list) option) = e
+End
 
-val decoder_def =
-  Define
-  `decoder
+Definition decoder_def:
+   decoder
    (p : 'a->bool, e : 'a->bool list, d : bool list->('a#bool list) option) =
-   decode p d`;
+   decode p d
+End
 
 (*---------------------------------------------------------------------------
      Well-formed coders have nice properties for boolification.
@@ -131,7 +131,8 @@ val wf_coder_op = store_thm
      Units
  ---------------------------------------------------------------------------*)
 
-val unit_coder_def = Define `unit_coder p = (p, encode_unit, decode_unit p)`;
+Definition unit_coder_def:   unit_coder p = (p, encode_unit, decode_unit p)
+End
 
 val wf_coder_unit = store_thm
   ("wf_coder_unit",
@@ -143,7 +144,8 @@ val wf_coder_unit = store_thm
      Booleans
  ---------------------------------------------------------------------------*)
 
-val bool_coder_def = Define `bool_coder p = (p, encode_bool, decode_bool p)`;
+Definition bool_coder_def:   bool_coder p = (p, encode_bool, decode_bool p)
+End
 
 val wf_coder_bool = store_thm
   ("wf_coder_bool",
@@ -155,9 +157,10 @@ val wf_coder_bool = store_thm
      Pairs
  ---------------------------------------------------------------------------*)
 
-val prod_coder_def = Define
-  `prod_coder (p1, e1, d1) (p2, e2, d2) =
-   (lift_prod p1 p2, encode_prod e1 e2, decode_prod (lift_prod p1 p2) d1 d2)`;
+Definition prod_coder_def:
+   prod_coder (p1, e1, d1) (p2, e2, d2) =
+   (lift_prod p1 p2, encode_prod e1 e2, decode_prod (lift_prod p1 p2) d1 d2)
+End
 
 val wf_coder_prod = store_thm
   ("wf_coder_prod",
@@ -177,9 +180,10 @@ val wf_coder_prod = store_thm
      Sums
  ---------------------------------------------------------------------------*)
 
-val sum_coder_def = Define
-  `sum_coder (p1, e1, d1) (p2, e2, d2) =
-   (lift_sum p1 p2, encode_sum e1 e2, decode_sum (lift_sum p1 p2) d1 d2)`;
+Definition sum_coder_def:
+   sum_coder (p1, e1, d1) (p2, e2, d2) =
+   (lift_sum p1 p2, encode_sum e1 e2, decode_sum (lift_sum p1 p2) d1 d2)
+End
 
 val wf_coder_sum = store_thm
   ("wf_coder_sum",
@@ -199,9 +203,10 @@ val wf_coder_sum = store_thm
      Options
  ---------------------------------------------------------------------------*)
 
-val option_coder_def = Define
-  `option_coder (p, e, d) =
-   (lift_option p, encode_option e, decode_option (lift_option p) d)`;
+Definition option_coder_def:
+   option_coder (p, e, d) =
+   (lift_option p, encode_option e, decode_option (lift_option p) d)
+End
 
 val wf_coder_option = store_thm
   ("wf_coder_option",
@@ -220,9 +225,10 @@ val wf_coder_option = store_thm
      Lists
  ---------------------------------------------------------------------------*)
 
-val list_coder_def = Define
-  `list_coder (p, e, d) =
-   (EVERY p, encode_list e, decode_list (EVERY p) d)`;
+Definition list_coder_def:
+   list_coder (p, e, d) =
+   (EVERY p, encode_list e, decode_list (EVERY p) d)
+End
 
 val wf_coder_list = store_thm
   ("wf_coder_list",
@@ -241,9 +247,10 @@ val wf_coder_list = store_thm
      Bounded lists
  ---------------------------------------------------------------------------*)
 
-val blist_coder_def = Define
-  `blist_coder m (p, e, d) =
-   (lift_blist m p, encode_blist m e, decode_blist (lift_blist m p) m d)`;
+Definition blist_coder_def:
+   blist_coder m (p, e, d) =
+   (lift_blist m p, encode_blist m e, decode_blist (lift_blist m p) m d)
+End
 
 val wf_coder_blist = store_thm
   ("wf_coder_blist",
@@ -270,7 +277,8 @@ val wf_coder_blist = store_thm
      Nums (Norrish numerals)
  ---------------------------------------------------------------------------*)
 
-val num_coder_def = Define `num_coder p = (p, encode_num, decode_num p)`;
+Definition num_coder_def:   num_coder p = (p, encode_num, decode_num p)
+End
 
 val wf_coder_num = store_thm
   ("wf_coder_num",
@@ -281,8 +289,9 @@ val wf_coder_num = store_thm
      Bounded numbers
  ---------------------------------------------------------------------------*)
 
-val bnum_coder_def =
-  Define `bnum_coder m p = (p, encode_bnum m, decode_bnum m p)`;
+Definition bnum_coder_def:
+   bnum_coder m p = (p, encode_bnum m, decode_bnum m p)
+End
 
 val wf_coder_bnum = store_thm
   ("wf_coder_bnum",
@@ -295,9 +304,10 @@ val wf_coder_bnum = store_thm
      Trees
  ---------------------------------------------------------------------------*)
 
-val tree_coder_def = Define
-  `tree_coder (p, e, d) =
-   (lift_tree p, encode_tree e, decode_tree (lift_tree p) d)`;
+Definition tree_coder_def:
+   tree_coder (p, e, d) =
+   (lift_tree p, encode_tree e, decode_tree (lift_tree p) d)
+End
 
 val wf_coder_tree = store_thm
   ("wf_coder_tree",

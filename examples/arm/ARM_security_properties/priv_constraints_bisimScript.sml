@@ -67,28 +67,28 @@ val prove_abs_spsr_const_action =
     end
 
 
-val untouched_spsr_abs_def =
-    Define `untouched_spsr_abs f (mode:bool[5]) =
+Definition untouched_spsr_abs_def:
+     untouched_spsr_abs f (mode:bool[5]) =
            !s a c s'. (f a s = ValueState c s') ==>
                 let spsr = get_spsr_by_mode mode
                  in
                     ((s'.psrs (0,spsr))=(s.psrs (0,spsr)))
                     /\
                     ((s'.psrs (0,CPSR)).M=(s.psrs (0,CPSR)).M)
-                           `;
+End
 
-val untouched_spsr_def =
-    Define `untouched_spsr f (mode:bool[5]) =
+Definition untouched_spsr_def:
+     untouched_spsr f (mode:bool[5]) =
            !s c s'. (f s = ValueState c s') ==>
            let spsr = get_spsr_by_mode mode
            in (*(spsr<>CPSR) ==>*)
                     ((s'.psrs (0,spsr))=(s.psrs (0,spsr)))
                     /\
                     ((s'.psrs (0,CPSR)).M=(s.psrs (0,CPSR)).M)
-                           `;
+End
 
-val priv_spsr_constraints_def =
-    Define `priv_spsr_constraints f cpsr mode =
+Definition priv_spsr_constraints_def:
+     priv_spsr_constraints f cpsr mode =
             ! s s' a . (f s = ValueState a s') ==>
                 (~access_violation s') ==>
                 ((s'.psrs(0,CPSR)).M = mode) ==>
@@ -96,11 +96,12 @@ val priv_spsr_constraints_def =
             in (*(spsr<>CPSR) ==>*)
                            ((s'.psrs(0,spsr)) = cpsr )
 
-              )`;
+              )
+End
 
 
-val priv_spsr_constraints_abs_def =
-    Define `priv_spsr_constraints_abs f cpsr mode =
+Definition priv_spsr_constraints_abs_def:
+     priv_spsr_constraints_abs f cpsr mode =
             ! s s' a c . (f c s = ValueState a s') ==>
                 (~access_violation s') ==>
                 ((s'.psrs(0,CPSR)).M = mode) ==>
@@ -108,7 +109,8 @@ val priv_spsr_constraints_abs_def =
             in (*(spsr<>CPSR) ==>*)
                            ((s'.psrs(0,spsr)) = cpsr )
 
-              )`;
+              )
+End
 
 (*********************   proof rules *******************************)
 
@@ -625,13 +627,14 @@ val take_svc_writing_part_spf_thm =
 );
 
 
-val satisfy_SPSR_constraints_def =
-    Define ` satisfy_SPSR_constraints f m =
+Definition satisfy_SPSR_constraints_def:
+      satisfy_SPSR_constraints f m =
                 ! s s' a.
                   (f s = ValueState a s') ==>
                  (~access_violation s') ==>
                  ((s'.psrs(0,CPSR)).M = m) ==>
-                 ((s'.psrs (0,get_spsr_by_mode(m))) = (s.psrs(0,CPSR)))`;
+                 ((s'.psrs (0,get_spsr_by_mode(m))) = (s.psrs(0,CPSR)))
+End
 
 
 fun prove_take_exception_spsr_constraints te te_def fixed_cpsr_thm fixed_cpsr_thm2
@@ -831,8 +834,8 @@ val take_irq_exception_spsr_thm =
 
 
 
-val preserve_priv_bisimilarity_def =
-Define `preserve_priv_bisimilarity f m =
+Definition preserve_priv_bisimilarity_def:
+ preserve_priv_bisimilarity f m =
            ! s1 s1' a1 s2 s2' a2 g.
              (f s1 = ValueState a1 s1') ==>
              (f s2 = ValueState a2 s2') ==>
@@ -843,7 +846,8 @@ Define `preserve_priv_bisimilarity f m =
              ((s1'.psrs(0,CPSR)) = (s2'.psrs(0,CPSR))) ==>
              ((s1'.psrs(0,CPSR)).M = m) ==>
              ((s2'.psrs(0,CPSR)).M = m) ==>
-             (priv_mode_similar  (g:bool[32]) s2' s1')`;
+             (priv_mode_similar  (g:bool[32]) s2' s1')
+End
 
 
 (*

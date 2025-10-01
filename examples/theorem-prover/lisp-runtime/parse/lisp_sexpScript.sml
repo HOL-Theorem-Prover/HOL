@@ -21,80 +21,110 @@ val SExp_distinct = fetch "-" "SExp_distinct";
 
 (* definitions *)
 
-val isDot_def = Define `
-  (isDot (Dot x y) = T) /\ (isDot (Val n) = F) /\ (isDot (Sym s) = F)`;
-val isVal_def = Define `
-  (isVal (Dot x y) = F) /\ (isVal (Val n) = T) /\ (isVal (Sym s) = F)`;
-val isSym_def = Define `
-  (isSym (Dot x y) = F) /\ (isSym (Val n) = F) /\ (isSym (Sym s) = T)`;
+Definition isDot_def:
+  (isDot (Dot x y) = T) /\ (isDot (Val n) = F) /\ (isDot (Sym s) = F)
+End
+Definition isVal_def:
+  (isVal (Dot x y) = F) /\ (isVal (Val n) = T) /\ (isVal (Sym s) = F)
+End
+Definition isSym_def:
+  (isSym (Dot x y) = F) /\ (isSym (Val n) = F) /\ (isSym (Sym s) = T)
+End
 
-val getVal_def = Define `
-  (getVal (Dot x y) = 0) /\ (getVal (Val n) = n) /\ (getVal (Sym s) = 0)`;
-val getSym_def = Define `
-  (getSym (Dot x y) = "NIL") /\ (getSym (Val n) = "NIL") /\ (getSym (Sym s) = s)`;
+Definition getVal_def:
+  (getVal (Dot x y) = 0) /\ (getVal (Val n) = n) /\ (getVal (Sym s) = 0)
+End
+Definition getSym_def:
+  (getSym (Dot x y) = "NIL") /\ (getSym (Val n) = "NIL") /\ (getSym (Sym s) = s)
+End
 
-val CAR_def = Define `
+Definition CAR_def:
   (CAR (Dot x y) = x) /\
   (CAR (Val w) = Sym "NIL") /\
-  (CAR (Sym s) = Sym "NIL")`;
+  (CAR (Sym s) = Sym "NIL")
+End
 
-val CDR_def = Define `
+Definition CDR_def:
   (CDR (Dot x y) = y) /\
   (CDR (Val w) = Sym "NIL") /\
-  (CDR (Sym s) = Sym "NIL")`;
+  (CDR (Sym s) = Sym "NIL")
+End
 
-val LISP_CONS_def  = Define `LISP_CONS x y = Dot x y`;
+Definition LISP_CONS_def:    LISP_CONS x y = Dot x y
+End
 
-val LISP_ADD_def   = Define `LISP_ADD  x y = Val (getVal x + getVal y)`;
-val LISP_SUB_def   = Define `LISP_SUB  x y = Val (getVal x - getVal y)`;
-val LISP_MULT_def  = Define `LISP_MULT x y = Val (getVal x * getVal y)`;
-val LISP_DIV_def   = Define `LISP_DIV  x y = Val (getVal x DIV getVal y)`;
-val LISP_MOD_def   = Define `LISP_MOD  x y = Val (getVal x MOD getVal y)`;
+Definition LISP_ADD_def:     LISP_ADD  x y = Val (getVal x + getVal y)
+End
+Definition LISP_SUB_def:     LISP_SUB  x y = Val (getVal x - getVal y)
+End
+Definition LISP_MULT_def:    LISP_MULT x y = Val (getVal x * getVal y)
+End
+Definition LISP_DIV_def:     LISP_DIV  x y = Val (getVal x DIV getVal y)
+End
+Definition LISP_MOD_def:     LISP_MOD  x y = Val (getVal x MOD getVal y)
+End
 
-val LISP_TEST_def  = Define `LISP_TEST x = if x then Sym "T" else Sym "NIL"`;
+Definition LISP_TEST_def:    LISP_TEST x = if x then Sym "T" else Sym "NIL"
+End
 
-val LISP_EQUAL_def   = Define `LISP_EQUAL x y = LISP_TEST (x = y)`;
-val LISP_LESS_def    = Define `LISP_LESS m n  = LISP_TEST (getVal m < getVal n)`;
-val LISP_ATOMP_def   = Define `LISP_ATOMP x   = LISP_TEST (~(isDot x))`;
-val LISP_CONSP_def   = Define `LISP_CONSP x   = LISP_TEST (isDot x)`;
-val LISP_NUMBERP_def = Define `LISP_NUMBERP x = LISP_TEST (isVal x)`;
-val LISP_SYMBOLP_def = Define `LISP_SYMBOLP x = LISP_TEST (isSym x)`;
-val LISP_SYMBOL_LESS_def = Define `LISP_SYMBOL_LESS x y = LISP_TEST (getSym x < getSym y)`;
+Definition LISP_EQUAL_def:     LISP_EQUAL x y = LISP_TEST (x = y)
+End
+Definition LISP_LESS_def:      LISP_LESS m n  = LISP_TEST (getVal m < getVal n)
+End
+Definition LISP_ATOMP_def:     LISP_ATOMP x   = LISP_TEST (~(isDot x))
+End
+Definition LISP_CONSP_def:     LISP_CONSP x   = LISP_TEST (isDot x)
+End
+Definition LISP_NUMBERP_def:   LISP_NUMBERP x = LISP_TEST (isVal x)
+End
+Definition LISP_SYMBOLP_def:   LISP_SYMBOLP x = LISP_TEST (isSym x)
+End
+Definition LISP_SYMBOL_LESS_def:   LISP_SYMBOL_LESS x y = LISP_TEST (getSym x < getSym y)
+End
 
-val TASK_CONT_def = Define `TASK_CONT = Sym "T"`;
-val TASK_EVAL_def = Define `TASK_EVAL = Sym "NIL"`;
-val TASK_FUNC_def = Define `TASK_FUNC = Sym "QUOTE"`;
+Definition TASK_CONT_def:   TASK_CONT = Sym "T"
+End
+Definition TASK_EVAL_def:   TASK_EVAL = Sym "NIL"
+End
+Definition TASK_FUNC_def:   TASK_FUNC = Sym "QUOTE"
+End
 
-val isQuote_def = Define `
+Definition isQuote_def:
   isQuote x = isDot x /\ (CAR x = Sym "QUOTE") /\
-              isDot (CDR x) /\ (CDR (CDR x) = Sym "NIL")`;
+              isDot (CDR x) /\ (CDR (CDR x) = Sym "NIL")
+End
 
-val LSIZE_def = Define `
+Definition LSIZE_def:
   (LSIZE (Dot x y) = SUC (LSIZE x + LSIZE y)) /\
   (LSIZE (Val w) = 0) /\
-  (LSIZE (Sym s) = 0)`;
+  (LSIZE (Sym s) = 0)
+End
 
-val LDEPTH_def = Define `
+Definition LDEPTH_def:
   (LDEPTH (Dot x y) = SUC (MAX (LDEPTH x) (LDEPTH y))) /\
   (LDEPTH (Val w) = 0) /\
-  (LDEPTH (Sym s) = 0)`;
+  (LDEPTH (Sym s) = 0)
+End
 
-val SUM_LSIZE_def = Define `
+Definition SUM_LSIZE_def:
   (SUM_LSIZE [] = 0) /\
-  (SUM_LSIZE (x::xs) = LSIZE x + SUM_LSIZE xs)`;
+  (SUM_LSIZE (x::xs) = LSIZE x + SUM_LSIZE xs)
+End
 
-val UPDATE_NTH_def = Define `
+Definition UPDATE_NTH_def:
   (UPDATE_NTH 0 x [] = []) /\
   (UPDATE_NTH (SUC n) x [] = []) /\
   (UPDATE_NTH 0 x (y::ys) = x::ys) /\
-  (UPDATE_NTH (SUC n) x (y::ys) = y::UPDATE_NTH n (x:'a) ys)`;
+  (UPDATE_NTH (SUC n) x (y::ys) = y::UPDATE_NTH n (x:'a) ys)
+End
 
 val _ = Hol_datatype `
   lisp_primitive_op =
     opCONS | opEQUAL | opLESS | opSYMBOL_LESS | opADD | opSUB |
     opCONSP | opNATP | opSYMBOLP | opCAR | opCDR`;
 
-val isTrue_def = Define `isTrue s = ~(s = Sym "NIL")`;
+Definition isTrue_def:   isTrue s = ~(s = Sym "NIL")
+End
 
 
 (* theorems *)

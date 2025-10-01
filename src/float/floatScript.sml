@@ -492,8 +492,9 @@ val VAL_THRESHOLD = Q.store_thm ("VAL_THRESHOLD",
 (* Lifting up of rounding (to nearest).                                      *)
 (* ------------------------------------------------------------------------- *)
 
-val error = Define`
-  error x = Val (float (round float_format To_nearest x)) - x`
+Definition error:
+  error x = Val (float (round float_format To_nearest x)) - x
+End
 
 (*-----------------------*)
 
@@ -1015,10 +1016,11 @@ val ERROR_BOUND_NORM_STRONG = Q.store_thm ("ERROR_BOUND_NORM_STRONG",
    "1 + Epsilon" property (relative error bounding).
    ------------------------------------------------------------------------- *)
 
-val normalizes = Define`
+Definition normalizes:
   normalizes x =
   inv (2 pow (bias float_format - 1)) <= abs x /\
-  abs x < threshold float_format`
+  abs x < threshold float_format
+End
 
 (* ------------------------------------------------------------------------- *)
 

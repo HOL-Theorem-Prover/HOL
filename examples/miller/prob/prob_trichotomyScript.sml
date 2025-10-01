@@ -29,11 +29,13 @@ val Cond =
 (* The simple trichotomy example used in the thesis.                         *)
 (* ------------------------------------------------------------------------- *)
 
-val prob_trichotomy_iter_def = Define
-  `prob_trichotomy_iter = BIND sdest (\x. BIND sdest (\y. UNIT (x, y)))`;
+Definition prob_trichotomy_iter_def:
+   prob_trichotomy_iter = BIND sdest (\x. BIND sdest (\y. UNIT (x, y)))
+End
 
-val prob_trichotomy_def = Define
-  `prob_trichotomy = prob_until prob_trichotomy_iter (\(x,y). x \/ y)`;
+Definition prob_trichotomy_def:
+   prob_trichotomy = prob_until prob_trichotomy_iter (\(x,y). x \/ y)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems leading to:                                                      *)

@@ -16,9 +16,10 @@ val _ = List.app (fn f => f ())
 
 (* ------------------------------------------------------------------------ *)
 
-val NextStateM0_def = Define`
+Definition NextStateM0_def:
    NextStateM0 s0 =
-   let s1 = Next s0 in if s1.exception = NoException then SOME s1 else NONE`
+   let s1 = Next s0 in if s1.exception = NoException then SOME s1 else NONE
+End
 
 val NextStateM0_thumb = ustore_thm("NextStateM0_thumb",
   `(s.exception = NoException) ==>
@@ -44,7 +45,7 @@ val NextStateM0_thumb2 = ustore_thm("NextStateM0_thumb2",
 
 (* ------------------------------------------------------------------------ *)
 
-val LDM1_def = Define`
+Definition LDM1_def:
    LDM1 (f: word4 -> RName) b (registers: word9) s r j =
     (if word_bit j registers then
        f (n2w j) =+
@@ -55,14 +56,16 @@ val LDM1_def = Define`
           else
              s.MEM (a + 3w) @@ s.MEM (a + 2w) @@ s.MEM (a + 1w) @@ s.MEM a
      else
-        I) r`
+        I) r
+End
 
-val LDM_UPTO_def = Define`
+Definition LDM_UPTO_def:
    LDM_UPTO f i (registers: word9) (b: word32, s) =
      (b + 4w * n2w (bit_count_upto (i + 1) registers),
-      s with REG := FOLDL (LDM1 f b registers s) s.REG (COUNT_LIST (i + 1)))`
+      s with REG := FOLDL (LDM1 f b registers s) s.REG (COUNT_LIST (i + 1)))
+End
 
-val STM1_def = Define`
+Definition STM1_def:
    STM1 f (b: word32) (registers: 'a word) s m j =
     (if word_bit j registers then
        let a = b + if j = 0 then 0w else 4w * n2w (bit_count_upto j registers)
@@ -73,16 +76,18 @@ val STM1_def = Define`
           (a + 1w =+ if s.AIRCR.ENDIANNESS then (23 >< 16) r else (15 >< 8) r) o
           (a =+ if s.AIRCR.ENDIANNESS then (31 >< 24) r else (7 >< 0) r)
      else
-        I) m`
+        I) m
+End
 
-val STM_UPTO_def = Define`
+Definition STM_UPTO_def:
    STM_UPTO f i (registers: 'a word) (b: word32, s) =
      (b + 4w * n2w (bit_count_upto (i + 1) registers),
-      s with MEM := FOLDL (STM1 f b registers s) s.MEM (COUNT_LIST (i + 1)))`
+      s with MEM := FOLDL (STM1 f b registers s) s.MEM (COUNT_LIST (i + 1)))
+End
 
 (* ------------------------------------------------------------------------ *)
 
-val R_name_def = Define`
+Definition R_name_def:
    R_name b (n: word4) =
      case n of
        0w  => RName_0  | 1w =>  RName_1  | 2w =>  RName_2
@@ -90,7 +95,8 @@ val R_name_def = Define`
      | 6w  => RName_6  | 7w =>  RName_7  | 8w =>  RName_8
      | 9w  => RName_9  | 10w => RName_10 | 11w => RName_11
      | 12w => RName_12 | 13w => if b then RName_SP_process else RName_SP_main
-     | 14w => RName_LR | _   => RName_PC`
+     | 14w => RName_LR | _   => RName_PC
+End
 
 (* ------------------------------------------------------------------------ *)
 
@@ -109,9 +115,10 @@ val R_x_pc = Q.store_thm("R_x_pc",
    \\ asm_simp_tac (srw_ss()) [R_name_def, DISCH_ALL R_x_not_pc]
    )
 
-val reverse_endian_def = Define`
+Definition reverse_endian_def:
    reverse_endian (w: word32) =
-   (7 >< 0) w @@ (15 >< 8) w @@ (23 >< 16) w @@ (31 >< 24) w`
+   (7 >< 0) w @@ (15 >< 8) w @@ (23 >< 16) w @@ (31 >< 24) w
+End
 
 (* ------------------------------------------------------------------------ *)
 

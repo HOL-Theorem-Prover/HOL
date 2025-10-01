@@ -5,31 +5,37 @@ Ancestors
 
 (* operations over options *)
 
-val option_orelse_def = Define `
+Definition option_orelse_def:
   option_orelse f g x =
-    let m = f x in (if m = NONE then g x else m)`;
+    let m = f x in (if m = NONE then g x else m)
+End
 
-val option_then_def = Define `
+Definition option_then_def:
   option_then f g x =
-    let m = f x in (if m = NONE then NONE else g (THE m))`;
+    let m = f x in (if m = NONE then NONE else g (THE m))
+End
 
 val _ = overload_on ("++",Term`$option_orelse`);
 val _ = overload_on (">>",Term`$option_then`);
 
-val option_fail_def = Define `option_fail = \x. NONE`;
+Definition option_fail_def:   option_fail = \x. NONE
+End
 
-val option_do_def = Define `
+Definition option_do_def:
   (option_do [] = option_fail) /\
   (option_do [t] = t) /\
-  (option_do (t1::t2::ts) = t1 >> option_do (t2::ts))`;
+  (option_do (t1::t2::ts) = t1 >> option_do (t2::ts))
+End
 
-val option_try_def = Define `
+Definition option_try_def:
   (option_try [] = option_fail) /\
   (option_try [t] = t) /\
-  (option_try (t1::t2::ts) = option_orelse t1 (option_try (t2::ts)))`;
+  (option_try (t1::t2::ts) = option_orelse t1 (option_try (t2::ts)))
+End
 
-val option_apply_def = Define `
-  option_apply x f = if x = NONE then NONE else f (THE x)`;
+Definition option_apply_def:
+  option_apply x f = if x = NONE then NONE else f (THE x)
+End
 
 (* theorems *)
 

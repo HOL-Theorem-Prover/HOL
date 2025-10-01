@@ -20,20 +20,20 @@ fun Store_thm (p as (n,t,tac)) = store_thm p before export_rewrites [n]
 
 val _ = Datatype`lnt = var string | bnd num | app lnt lnt | abs lnt`;
 
-val open_def = Define`
+Definition open_def:
   (open k u (bnd i) = if i = k then u else bnd i) /\
   (open k u (var s) = var s) /\
   (open k u (app t1 t2) = app (open k u t1) (open k u t2)) /\
   (open k u (abs t) = abs (open (k + 1) u t))
-`;
+End
 val _ = export_rewrites ["open_def"]
 
-val raw_lnpm_def = Define`
+Definition raw_lnpm_def:
   (raw_lnpm pi (var s) = var (lswapstr pi s)) /\
   (raw_lnpm pi (bnd i) = bnd i) /\
   (raw_lnpm pi (app t1 t2) = app (raw_lnpm pi t1) (raw_lnpm pi t2)) /\
   (raw_lnpm pi (abs t) = abs (raw_lnpm pi t))
-`;
+End
 val _ = export_rewrites ["raw_lnpm_def"]
 
 val _ = overload_on("ln_pmact",``mk_pmact raw_lnpm``);
@@ -58,12 +58,12 @@ val lnpm_open = prove(
   ``!i. lnpm pi (open i t1 t2) = open i (lnpm pi t1) (lnpm pi t2)``,
   Induct_on `t2` THEN SRW_TAC [][]);
 
-val fv_def = Define`
+Definition fv_def:
   (fv (var s) = {s}) /\
   (fv (bnd i) = {}) /\
   (fv (app t u) = fv t UNION fv u) /\
   (fv (abs t) = fv t)
-`;
+End
 val _ = export_rewrites ["fv_def"]
 
 val fv_lnpm = prove(
@@ -203,17 +203,17 @@ val _ = Datatype `ltype = tyOne | tyFun ltype ltype`;
 val _ = set_fixity "-->" (Infixr 700)
 val _ = overload_on ("-->", ``tyFun``);
 
-val valid_ctxt_def = Define`
+Definition valid_ctxt_def:
   (valid_ctxt [] ⇔ T) /\
   (valid_ctxt ((x,A) :: G) ⇔ (!A'. ~MEM (x, A') G) /\ valid_ctxt G)
-`;
+End
 val _ = export_rewrites ["valid_ctxt_def"]
 
 (* permutation over contexts swaps the strings and leaves the types alone *)
-val ctxtswap_def = Define`
+Definition ctxtswap_def:
   (ctxtswap pi [] = []) /\
   (ctxtswap pi (sA :: G) = (lswapstr pi (FST sA), SND sA) :: ctxtswap pi G)
-`;
+End
 val _ = export_rewrites ["ctxtswap_def"]
 
 val ctxtswap_NIL = store_thm(
@@ -259,10 +259,10 @@ val _ = export_rewrites ["valid_ctxt_swap"]
 
 (* the free variables of a context, defined with primitive recursion to
    give us nice rewrites *)
-val ctxtFV_def = Define`
+Definition ctxtFV_def:
   (ctxtFV [] = {}) /\
   (ctxtFV (h::t) = FST h INSERT ctxtFV t)
-`;
+End
 val _ = export_rewrites ["ctxtFV_def"]
 
 (* contexts have finitely many free variables *)

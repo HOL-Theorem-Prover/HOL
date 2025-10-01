@@ -68,7 +68,8 @@ val leftctxt = store_thm(
      SRW_TAC [boolSimps.ETA_ss][] THEN
   SRW_TAC [][one_hole_context_rules]);
 
-val rightctxt_def = Define`rightctxt z = \t. t @@ z`;
+Definition rightctxt_def:  rightctxt z = \t. t @@ z
+End
 val rightctxt_thm = store_thm(
   "rightctxt_thm",
   ``!t z. rightctxt z t = t @@ z``,
@@ -452,10 +453,11 @@ End
 (* NOTE: in termTheory, ‘v # M’ also denotes ‘v NOTIN FV M’ *)
 Overload "#" = “incompatible”
 
-val S_def =
-    Define`S = LAM "x" (LAM "y" (LAM "z"
+Definition S_def:
+    S = LAM "x" (LAM "y" (LAM "z"
                                      ((VAR "x" @@ VAR "z") @@
-                                      (VAR "y" @@ VAR "z"))))`;
+                                      (VAR "y" @@ VAR "z"))))
+End
 Theorem FV_S[simp]: FV S = {}
 Proof
   SRW_TAC [][S_def, EXTENSION] THEN METIS_TAC []
@@ -467,7 +469,8 @@ Theorem FV_K[simp]: FV K = {}
 Proof SRW_TAC [][K_def, EXTENSION]
 QED
 
-val I_def = Define`I = LAM "x" (VAR "x")`;
+Definition I_def:  I = LAM "x" (VAR "x")
+End
 Theorem FV_I[simp]: FV I = {}
 Proof SRW_TAC [][I_def]
 QED
@@ -499,9 +502,10 @@ Proof
  >> Cases_on ‘X = Y’ >> fs [LAM_eq_thm]
 QED
 
-val Omega_def =
-    Define`Omega = (LAM "x" (VAR "x" @@ VAR "x")) @@
-                     (LAM "x" (VAR "x" @@ VAR "x"))`
+Definition Omega_def:
+    Omega = (LAM "x" (VAR "x" @@ VAR "x")) @@
+                     (LAM "x" (VAR "x" @@ VAR "x"))
+End
 val _ = Unicode.unicode_version {tmnm = "Omega", u = UnicodeChars.Omega}
 Theorem FV_Omega[simp]: FV Omega = {}
 Proof
@@ -569,7 +573,8 @@ Proof
  >> rw [Abbr ‘Is’, MEM_GENLIST]
 QED
 
-val B_def = Define`B = S @@ (K @@ S) @@ K`;
+Definition B_def:  B = S @@ (K @@ S) @@ K
+End
 Theorem FV_B[simp]:
   FV B = {}
 Proof
@@ -581,9 +586,9 @@ val lameq_B = store_thm(
   ``B @@ f @@ g @@ x == f @@ (g @@ x)``,
   SIMP_TAC (betafy (srw_ss())) [lameq_S, lameq_K, B_def]);
 
-val C_def = Define`
+Definition C_def:
   C = S @@ (B @@ B @@ S) @@ (K @@ K)
-`;
+End
 Theorem FV_C[simp]: FV C = {}
 Proof SRW_TAC [][C_def]
 QED
@@ -593,20 +598,20 @@ val lameq_C = store_thm(
   ``C @@ f @@ x @@ y == f @@ y @@ x``,
   SIMP_TAC (betafy (srw_ss())) [C_def, lameq_S, lameq_K, lameq_B]);
 
-val Y_def = Define`
+Definition Y_def:
   Y = LAM "f" (LAM "x" (VAR "f" @@ (VAR "x" @@ VAR "x")) @@
                LAM "x" (VAR "f" @@ (VAR "x" @@ VAR "x")))
-`;
+End
 Theorem FV_Y[simp]: FV Y = {}
 Proof SRW_TAC [][Y_def, EXTENSION] THEN METIS_TAC []
 QED
 
-val Yf_def = Define`
+Definition Yf_def:
   Yf f = let x = NEW (FV f)
          in
            LAM x (f @@ (VAR x @@ VAR x)) @@
            LAM x (f @@ (VAR x @@ VAR x))
-`;
+End
 
 val YYf = store_thm(
   "YYf",

@@ -7,18 +7,21 @@ val _ = numLib.temp_prefer_num();
 
 (* translating the semantics' s-expressions into implementation s-expressions *)
 
-val atom2sexp_def = Define `
+Definition atom2sexp_def:
   (atom2sexp Nil = Sym "nil") /\
   (atom2sexp (Number n) = Val n) /\
-  (atom2sexp (String s) = Sym s)`;
+  (atom2sexp (String s) = Sym s)
+End
 
-val sexpression2sexp_def = Define `
+Definition sexpression2sexp_def:
   (sexpression2sexp (A a) = atom2sexp a) /\
-  (sexpression2sexp (Cons x y) = Dot (sexpression2sexp x) (sexpression2sexp y))`;
+  (sexpression2sexp (Cons x y) = Dot (sexpression2sexp x) (sexpression2sexp y))
+End
 
-val list2sexp_def = Define `
+Definition list2sexp_def:
   (list2sexp [] = Sym "nil") /\
-  (list2sexp (x::xs) = Dot x (list2sexp xs))`;
+  (list2sexp (x::xs) = Dot x (list2sexp xs))
+End
 
 Definition x2sexp_def:
   (x2sexp (F,xx,FunCon s) = Sym s) /\
@@ -66,10 +69,11 @@ val zip_yz_lemma = prove(
         `stack`,`l`,`list2sexp zs`])
   THEN ASM_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND])
 
-val LISP_LENGTH_def = Define `
+Definition LISP_LENGTH_def:
   (LISP_LENGTH (Dot x y) = 1 + LISP_LENGTH y) /\
   (LISP_LENGTH (Val n) = 0) /\
-  (LISP_LENGTH (Sym s) = 0)`;
+  (LISP_LENGTH (Sym s) = 0)
+End
 
 val lisp_length_EQ = (REWRITE_RULE [DECIDE ``n + 0 = n``] o Q.SPEC `0` o prove) (
   ``!n x. ?x2. !y z stack alist l.
@@ -119,19 +123,20 @@ val reverse_exp_thm = prove(
   SIMP_TAC std_ss [reverse_exp_def,LET_DEF,GSYM list2sexp_def,
     rev_exp_thm,APPEND_NIL]);
 
-val LIST_LOOKUP_def = Define `
+Definition LIST_LOOKUP_def:
   (LIST_LOOKUP (x:string) [] = (FEMPTY ' x:(sexpression + func))) /\
-  (LIST_LOOKUP x (y::ys) = if x = FST y then SND y else LIST_LOOKUP x ys)`;
+  (LIST_LOOKUP x (y::ys) = if x = FST y then SND y else LIST_LOOKUP x ys)
+End
 
-val iFunBind_def =
- Define
-  `iFunBind (a:(string # (sexpression + func)) list) f fn = (f, INR fn) :: a`;
+Definition iFunBind_def:
+   iFunBind (a:(string # (sexpression + func)) list) f fn = (f, INR fn) :: a
+End
 
-val iVarBind_def =
- Define
-  `(iVarBind a [] sl = (a : (string # (sexpression + func)) list)) /\
+Definition iVarBind_def:
+   (iVarBind a [] sl = (a : (string # (sexpression + func)) list)) /\
    (iVarBind a (x::xl) [] = iVarBind ((x,INL (A Nil)) :: a) xl []) /\
-   (iVarBind a (x::xl) (s::sl) = iVarBind ((x, INL s) :: a) xl sl)`;
+   (iVarBind a (x::xl) (s::sl) = iVarBind ((x, INL s) :: a) xl sl)
+End
 
 val (iR_ev_rules,iR_ev_ind,iR_ev_cases) =
  Hol_reln
@@ -197,24 +202,28 @@ val iR_ap_LEMMA = prove(
   THEN FULL_SIMP_TAC std_ss [FunConSemOK_def,IF_LEMMA]
   THEN EVAL_TAC THEN ASM_SIMP_TAC std_ss []);
 
-val pair2sexp_def = Define `
+Definition pair2sexp_def:
   (pair2sexp (s, INL x) = Dot (Sym s) (sexpression2sexp x)) /\
-  (pair2sexp (s, INR y) = Dot (Sym s) (func2sexp y))`;
+  (pair2sexp (s, INR y) = Dot (Sym s) (func2sexp y))
+End
 
-val alist2sexp_def = Define `
-  (alist2sexp al = list2sexp (MAP pair2sexp al))`;
+Definition alist2sexp_def:
+  (alist2sexp al = list2sexp (MAP pair2sexp al))
+End
 
-val lisp_eval_ok_def = Define `
+Definition lisp_eval_ok_def:
   lisp_eval_ok (exp_in,alist) exp_out =
     !x:SExp y:SExp stack:SExp l:num. ?x':SExp y':SExp.
       lisp_eval (term2sexp exp_in,x,y,TASK_EVAL,stack,alist2sexp alist,l) =
-      lisp_eval (sexpression2sexp exp_out,x',y',TASK_CONT,stack,alist2sexp alist,l)`;
+      lisp_eval (sexpression2sexp exp_out,x',y',TASK_CONT,stack,alist2sexp alist,l)
+End
 
-val lisp_func_ok_def = Define `
+Definition lisp_func_ok_def:
   lisp_func_ok (fn,args,alist) result =
     !y:SExp stack:SExp l:num. ?x':SExp y':SExp.
       lisp_eval (list2sexp (MAP sexpression2sexp args),func2sexp fn,y,TASK_FUNC,stack,alist2sexp alist,l) =
-      lisp_eval (sexpression2sexp result,x',y',TASK_CONT,stack,alist2sexp alist,l)`;
+      lisp_eval (sexpression2sexp result,x',y',TASK_CONT,stack,alist2sexp alist,l)
+End
 
 val lookup_aux_lemma = prove(
   ``!x a t:SExp z:SExp q:SExp.
@@ -241,7 +250,8 @@ val lookup_aux_lemma = prove(
   THEN ASM_REWRITE_TAC [GSYM alist2sexp_def]
   THEN METIS_TAC []);
 
-val lisp_eval_hide_def = Define `lisp_eval_hide = lisp_eval`;
+Definition lisp_eval_hide_def:   lisp_eval_hide = lisp_eval
+End
 
 val sexpression2sexp_11 = prove(
   ``!u v. (sexpression2sexp u = sexpression2sexp v) =
@@ -389,24 +399,27 @@ val lisp_mult_lemma = prove(
   THEN `!x. MEM x args ==> ?n. x = A (Number n)` by METIS_TAC []
   THEN RES_TAC THEN METIS_TAC []);
 
-val LISP_REDUCE_AUX_def = Define `
+Definition LISP_REDUCE_AUX_def:
   (LISP_REDUCE_AUX 0 xs alist = ((alist:(string # (sexpression + func)) list),Val 0)) /\
   (LISP_REDUCE_AUX n xs [] = ([],Val n)) /\
   (LISP_REDUCE_AUX (SUC n) xs ((y,z)::ys) =
     if MEM (Sym y) xs then LISP_REDUCE_AUX n xs ys
-                else ((y,z)::ys,Val (SUC n)))`;
+                else ((y,z)::ys,Val (SUC n)))
+End
 
-val LISP_REDUCE_A_def = Define `
+Definition LISP_REDUCE_A_def:
   LISP_REDUCE_A (stack,xs,alist) =
     if isDot stack /\ isVal (CAR stack)
-    then FST (LISP_REDUCE_AUX (getVal (CAR stack)) xs alist) else alist`;
+    then FST (LISP_REDUCE_AUX (getVal (CAR stack)) xs alist) else alist
+End
 
-val LISP_REDUCE_S_def = Define `
+Definition LISP_REDUCE_S_def:
   LISP_REDUCE_S (stack,xs,alist) =
     if isDot stack /\ isVal (CAR stack)
     then let s = (SND (LISP_REDUCE_AUX (getVal (CAR stack)) xs alist)) in
       if s = Val 0 then CDR stack else Dot s (CDR stack)
-    else stack`;
+    else stack
+End
 
 val lisp_find_in_list_thm = prove(
   ``!xs x.
@@ -755,12 +768,14 @@ val iR_ev_LEMMA = let
     THEN METIS_TAC []))
   in th end;
 
-val fmap2list_def = Define `
-  fmap2list f = MAP (\x. (x,f ' x)) (SET_TO_LIST (FDOM f))`;
+Definition fmap2list_def:
+  fmap2list f = MAP (\x. (x,f ' x)) (SET_TO_LIST (FDOM f))
+End
 
-val list2fmap_def = Define `
+Definition list2fmap_def:
   (list2fmap [] = FEMPTY) /\
-  (list2fmap ((a,x)::xs) = (list2fmap xs) |+ (a,x))`;
+  (list2fmap ((a,x)::xs) = (list2fmap xs) |+ (a,x))
+End
 
 val FDOM_list2sexp = prove(
   ``!xs x. x IN (FDOM (list2fmap xs)) <=> MEM x (MAP FST xs)``,
@@ -808,8 +823,9 @@ val LIST_LOOKUP_INTRO = prove(
   ``!x a. a ' x = LIST_LOOKUP x (fmap2list a)``,
   METIS_TAC [list2fmap_fmap2list,list2fmap_APPLY]);
 
-val iR_PERM_def = Define `
-  iR_PERM x y = (list2fmap x = list2fmap y)`;
+Definition iR_PERM_def:
+  iR_PERM x y = (list2fmap x = list2fmap y)
+End
 
 val iR_PERM_EQ = prove(
   ``!xs a. iR_PERM xs (fmap2list a) = (a = list2fmap xs)``,
@@ -903,9 +919,10 @@ val R_lisp_eval_ok = prove(
          REWRITE_TAC [iR_PERM_def]
   THEN RES_TAC THEN METIS_TAC [iR_ev_LEMMA]);
 
-val LISP_EVAL_def = Define `
+Definition LISP_EVAL_def:
   LISP_EVAL (exp,alist,limit) =
-    FST (lisp_eval (exp,Sym "nil",Sym "nil",Sym "nil",Sym "nil",alist,limit))`;
+    FST (lisp_eval (exp,Sym "nil",Sym "nil",Sym "nil",Sym "nil",alist,limit))
+End
 
 val LISP_EVAL_CORRECT = store_thm("LISP_EVAL_CORRECT",
   ``!exp alist result l.

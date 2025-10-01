@@ -7787,7 +7787,8 @@ val sum_image_by_composition_without_inj = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define preimage *)
-val preimage_def = Define `preimage f s y = { x | x IN s /\ (f x = y) }`;
+Definition preimage_def:   preimage f s y = { x | x IN s /\ (f x = y) }
+End
 
 (* Theorem: x IN (preimage f s y) <=> x IN s /\ (f x = y) *)
 (* Proof: by preimage_def *)
@@ -9042,7 +9043,8 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of residues = nonzero remainders *)
-val residue_def = zDefine `residue n = { i | (0 < i) /\ (i < n) }`;
+Definition residue_def[nocompute]:   residue n = { i | (0 < i) /\ (i < n) }
+End
 (* use zDefine as this is not computationally effective. *)
 
 (* Theorem: j IN residue n ==> 0 < j /\ j < n *)
@@ -9393,15 +9395,15 @@ val natural_by_upto = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Euler's totient function *)
-val Euler_def = zDefine`
+Definition Euler_def[nocompute]:
   Euler n = { i | 0 < i /\ i < n /\ (gcd n i = 1) }
-`;
+End
 (* that is, Euler n = { i | i in (residue n) /\ (gcd n i = 1) }; *)
 (* use zDefine as this is not computationally effective. *)
 
-val totient_def = Define`
+Definition totient_def:
   totient n = CARD (Euler n)
-`;
+End
 
 (* Theorem: x IN (Euler n) <=> 0 < x /\ x < n /\ coprime n x *)
 (* Proof: by Euler_def. *)

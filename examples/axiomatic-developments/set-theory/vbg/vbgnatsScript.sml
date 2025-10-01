@@ -4,30 +4,31 @@ Ancestors
 Libs
   boolSimps
 
-val vSUC_def = Define`vSUC x = x ∪ {x}`
+Definition vSUC_def:  vSUC x = x ∪ {x}
+End
 
-val fromNat_def = Define`
+Definition fromNat_def:
   (fromNat 0 = {}) ∧
   (fromNat (SUC n) = vSUC (fromNat n))
-`;
+End
 val _ = add_numeral_form(#"v", SOME "fromNat")
 
-val inductive_def = Define`
+Definition inductive_def:
   inductive A ⇔ SET A ∧ {} ∈ A ∧ ∀x. x ∈ A ⇒ vSUC x ∈ A
-`;
+End
 
-val Inductives_def = Define`
+Definition Inductives_def:
   Inductives = SPEC0 (λA. {} ∈ A ∧ ∀x. x ∈ A ⇒ vSUC x ∈ A)
-`;
+End
 
 val inductive_Inductives = store_thm(
   "inductive_Inductives",
   ``inductive A ⇔ A ∈ Inductives``,
   srw_tac [][inductive_def, Inductives_def, SPEC0]);
 
-val Nats_def = Define`
+Definition Nats_def:
   Nats = SPEC0 (λn. ∀s. inductive s ⇒ n ∈ s)
-`;
+End
 
 val EMPTY_IN_Nats = store_thm(
   "EMPTY_IN_Nats",
@@ -117,9 +118,9 @@ val nat_induction = save_thm(
       |> Q.GEN `P`);
 val _ = IndDefLib.export_rule_induction "nat_induction"
 
-val transitive_def = Define`
+Definition transitive_def:
   transitive X ⇔ ∀x. x ∈ X ⇒ x ⊆ X
-`;
+End
 
 val transitive_ALT = store_thm(
   "transitive_ALT",
@@ -199,12 +200,12 @@ val vSUC_IN_NATS = store_thm(
 val _ = export_rewrites ["vSUC_IN_NATS"]
 
 (* less than or equal *)
-val nle_def = Define`
+Definition nle_def:
   nle = SPEC0 (λp. ∀P. (∀x. x ∈ Nats ⇒ 〈0·x〉 ∈ P) ∧
                        (∀x y. x ∈ Nats ∧ y ∈ Nats ∧ 〈x·y〉 ∈ P ⇒
                               〈vSUC x·vSUC y〉 ∈ P) ⇒
                        p ∈ P)
-`;
+End
 
 val _ = overload_on ("<=", ``λx y. 〈x·y〉 ∈ nle``)
 val _ = overload_on ("<", ``λx:vbgc y. ¬ (y ≤ x)``)

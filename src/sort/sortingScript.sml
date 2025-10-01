@@ -8,9 +8,6 @@ Libs
   markerLib metisLib BasicProvers
 
 
-val _ = Defn.def_suffix := "_DEF";
-val _ = Defn.ind_suffix := "_IND";
-
 (*---------------------------------------------------------------------------*
  * What's a permutation? This definition uses universal quantification to    *
  * define it. There are other ways, which could be compared to this, e.g.    *
@@ -804,8 +801,9 @@ val PERM_APPEND_IFF = store_thm ("PERM_APPEND_IFF",
   (!l:'a list l1 l2. PERM (l1++l) (l2++l) = PERM l1 l2)”,
   SIMP_TAC list_ss [PERM_alt, FILTER_APPEND_DISTRIB]) ;
 
-val PERM_SINGLE_SWAP_DEF = Define ‘PERM_SINGLE_SWAP l1 l2 =
-    ?x1 x2 x3. (l1 = x1 ++ x2 ++ x3) /\ (l2 = x1 ++ x3 ++ x2)’;
+Definition PERM_SINGLE_SWAP_DEF:   PERM_SINGLE_SWAP l1 l2 =
+    ?x1 x2 x3. (l1 = x1 ++ x2 ++ x3) /\ (l2 = x1 ++ x3 ++ x2)
+End
 
 val PERM_SINGLE_SWAP_SYM = store_thm ("PERM_SINGLE_SWAP_SYM",
 “!l1 l2. PERM_SINGLE_SWAP l1 l2 = PERM_SINGLE_SWAP l2 l1”,
@@ -1435,24 +1433,26 @@ QED
 (*    elements are unordered is unaffected by sorting.                       *)
 (*---------------------------------------------------------------------------*)
 
-val STABLE_DEF = Define ‘
+Definition STABLE_DEF:
     STABLE sort r <=>
       SORTS sort r /\
       !p. (!x y. p x /\ p y ==> r x y) ==>
-          (!l. FILTER p l = FILTER p (sort r l))’;
+          (!l. FILTER p l = FILTER p (sort r l))
+End
 
 (*---------------------------------------------------------------------------*)
 (* PART3 - Split a list into < h, = h and > h                                *)
 (*---------------------------------------------------------------------------*)
 
-val PART3_DEF = Define ‘
+Definition PART3_DEF:
     (PART3 R h [] = ([],[],[])) /\
     (PART3 R h (hd::tl) =
          if R h hd /\ R hd h
             then (I ## CONS hd ## I) (PART3 R h tl)
             else if R hd h
                     then (CONS hd ## I ## I) (PART3 R h tl)
-                    else (I ## I ## CONS hd) (PART3 R h tl))’;
+                    else (I ## I ## CONS hd) (PART3 R h tl))
+End
 
 val LENGTH_FILTER =
   prove(“!a. LENGTH (FILTER P a) <= LENGTH a”,
@@ -1884,4 +1884,3 @@ Proof
   first_x_assum(qspec_then`b::rss` mp_tac)>>
   simp[]
 QED
-

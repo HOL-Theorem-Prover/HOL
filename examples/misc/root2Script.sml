@@ -13,7 +13,8 @@ Libs
 (* Need a predicate on reals that picks out the rational ones                *)
 (*---------------------------------------------------------------------------*)
 
-val Rational_def = Define `Rational r = ?p q. ~(q=0) /\ (abs(r) = &p / &q)`;
+Definition Rational_def:   Rational r = ?p q. ~(q=0) /\ (abs(r) = &p / &q)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Trivial lemmas                                                            *)

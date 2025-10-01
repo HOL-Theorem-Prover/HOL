@@ -384,7 +384,8 @@ val _ = temp_set_grammars(tyg',tmg)
 val _ = new_type("set",1)
 val _ = temp_clear_overloads_on "set"
 
-val IS_EMPTY_def = Define`IS_EMPTY s = if s = {} then T else F`
+Definition IS_EMPTY_def:  IS_EMPTY s = if s = {} then T else F
+End
 val IS_EMPTY_THM = Q.prove
 (`(IS_EMPTY {} = T) /\ (IS_EMPTY (x INSERT s) = F)`,
  SRW_TAC[][IS_EMPTY_def])
@@ -1040,9 +1041,11 @@ val _ = eCAML "bit"
 
 (* == FCP ================================================================= *)
 
-val FCPi_def = Define `FCPi (f, (:'b)) = ($FCP f):'a ** 'b`;
+Definition FCPi_def:   FCPi (f, (:'b)) = ($FCP f):'a ** 'b
+End
 
-val mk_fcp_def = Define `mk_fcp = FCPi`;
+Definition mk_fcp_def:   mk_fcp = FCPi
+End
 
 val index_comp = REWRITE_RULE [GSYM FCPi_def] index_comp;
 val fcp_subst_comp = REWRITE_RULE [GSYM FCPi_def] fcp_subst_comp;
@@ -1228,8 +1231,10 @@ val _ = eCAML "words"
 
 (* == Integer ============================================================= *)
 
-val neg_int_of_num_def = Define `neg_int_of_num n = ~ int_of_num (n + 1)`;
-val i2w_itself_def = Define `i2w_itself(i,(:'a)) = i2w i : 'a word`;
+Definition neg_int_of_num_def:   neg_int_of_num n = ~ int_of_num (n + 1)
+End
+Definition i2w_itself_def:   i2w_itself(i,(:'a)) = i2w i : 'a word
+End
 
 val i2w_itself = REWRITE_RULE [i2w_def] i2w_itself_def;
 

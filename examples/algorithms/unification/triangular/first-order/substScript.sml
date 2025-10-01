@@ -14,8 +14,9 @@ STRIP_TAC >> Induct_on `n` >> SRW_TAC [][FUNPOW_SUC]);
 
 val _ = type_abbrev_pp ("subst", ``:(num |-> 'a term)``);
 
-val rangevars_def = Define`
-  rangevars s = BIGUNION (IMAGE vars (FRANGE s))`;
+Definition rangevars_def:
+  rangevars s = BIGUNION (IMAGE vars (FRANGE s))
+End
 
 val FINITE_rangevars = RWstore_thm(
 "FINITE_rangevars",
@@ -32,18 +33,21 @@ val rangevars_FUPDATE = Q.store_thm(
 `v ∉ FDOM s ⇒ (rangevars (s |+ (v,t)) = rangevars s UNION vars t)`,
 SRW_TAC [][rangevars_def,DOMSUB_NOT_IN_DOM,UNION_COMM]);
 
-val substvars_def = Define`
-  substvars s = FDOM s UNION rangevars s`;
+Definition substvars_def:
+  substvars s = FDOM s UNION rangevars s
+End
 
 val FINITE_substvars = RWstore_thm(
 "FINITE_substvars",
 `FINITE (substvars s)`,
 SRW_TAC [][substvars_def]);
 
-val vR_def = Define`
-  vR s y x = case FLOOKUP s x of SOME t => y IN vars t | _ => F`;
+Definition vR_def:
+  vR s y x = case FLOOKUP s x of SOME t => y IN vars t | _ => F
+End
 
-val wfs_def = Define`wfs s = WF (vR s)`;
+Definition wfs_def:  wfs s = WF (vR s)
+End
 
 val wfs_FEMPTY = RWstore_thm(
 "wfs_FEMPTY",
@@ -92,10 +96,11 @@ val wfs_no_cycles = Q.store_thm(
      ] >> SRW_TAC [ARITH_ss] [ADD1])
   >> METIS_TAC []);
 
-val subst_APPLY_def = Define`
+Definition subst_APPLY_def:
   (subst_APPLY s (Var v) = case FLOOKUP s v of NONE => Var v | SOME t => t) /\
   (subst_APPLY s (Pair t1 t2) = Pair (subst_APPLY s t1) (subst_APPLY s t2)) /\
-  (subst_APPLY s (Const c) = Const c)`;
+  (subst_APPLY s (Const c) = Const c)
+End
 val _ = set_fixity "❜" (Infixr 700);
 val _ = overload_on ("❜", ``subst_APPLY``)
 val _ = export_rewrites["subst_APPLY_def"];
@@ -105,8 +110,9 @@ val subst_APPLY_FAPPLY = Q.store_thm(
 `v IN FDOM s ==> (s ' v = s ❜ (Var v))`,
 SRW_TAC [][subst_APPLY_def,FLOOKUP_DEF]);
 
-val noids_def = Define`
-  noids s = ∀v. FLOOKUP s v ≠ SOME (Var v)`;
+Definition noids_def:
+  noids s = ∀v. FLOOKUP s v ≠ SOME (Var v)
+End
 
 val subst_APPLY_id = Q.store_thm(
 "subst_APPLY_id",
@@ -115,8 +121,9 @@ EQ_TAC >>
 Induct_on `t` >> SRW_TAC [][FLOOKUP_DEF] >>
 FULL_SIMP_TAC (srw_ss()) []);
 
-val idempotent_def = Define`
-  idempotent s = !t.s ❜ (s ❜ t) = s ❜ t`;
+Definition idempotent_def:
+  idempotent s = !t.s ❜ (s ❜ t) = s ❜ t
+End
 
 val wfs_noids = Q.store_thm(
 "wfs_noids",
@@ -190,11 +197,13 @@ METIS_TAC [IN_DISJOINT]);
 
 val _ = set_fixity "s_o_s"(Infixl 740);
 
-val s_o_s_def = Define`
-  s1 s_o_s s2 = FUN_FMAP (($❜ s1) o ($❜ s2 o Var)) (FDOM s1 ∪ FDOM s2)`;
+Definition s_o_s_def:
+  s1 s_o_s s2 = FUN_FMAP (($❜ s1) o ($❜ s2 o Var)) (FDOM s1 ∪ FDOM s2)
+End
 
-val selfapp_def = Define`
-  (selfapp s = ($❜ s) o_f s)`;
+Definition selfapp_def:
+  (selfapp s = ($❜ s) o_f s)
+End
 
 val selfapp_eq_iter_APPLY = Q.store_thm(
 "selfapp_eq_iter_APPLY",
@@ -221,8 +230,9 @@ FULL_SIMP_TAC (srw_ss()) [] >> SRW_TAC [][] >>
 SRW_TAC [][] >> METIS_TAC []
 QED
 
-val vR1_def = Define`
-  vR1 s y x <=> vR s y x ∧ y NOTIN FDOM s`;
+Definition vR1_def:
+  vR1 s y x <=> vR s y x ∧ y NOTIN FDOM s
+End
 
 val vR_selfapp = Q.store_thm(
 "vR_selfapp",

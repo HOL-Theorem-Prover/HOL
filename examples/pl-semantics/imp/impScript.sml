@@ -31,18 +31,21 @@ val _ = Datatype `
       | If bexp com com
       | While bexp com`
 
-val aval_def = Define `
+Definition aval_def:
   (aval (N n) s = n) /\
   (aval (V x) s = s x) /\
-  (aval (Plus a1 a2) s = aval a1 s + aval a2 s)`;
+  (aval (Plus a1 a2) s = aval a1 s + aval a2 s)
+End
 
-val bval_def = Define `
+Definition bval_def:
   (bval (Bc v) s = v) /\
   (bval (Not b) s = ~bval b s) /\
   (bval (And b1 b2) s = (bval b1 s /\ bval b2 s)) /\
-  (bval (Less a1 a2) s = (aval a1 s < aval a2 s))`;
+  (bval (Less a1 a2) s = (aval a1 s < aval a2 s))
+End
 
-val STOP_def = Define `STOP x = x`;
+Definition STOP_def:   STOP x = x
+End
 
 (* The following function defines the semantics of statement evaluation.
    The clock decreases when entering the body of the While loop.

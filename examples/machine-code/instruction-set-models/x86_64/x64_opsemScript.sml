@@ -15,8 +15,9 @@ val _ = ParseExtras.temp_loose_equality()
 
 (* assertion *)
 
-val assertT_def = Define `
-  assertT b = if b then constT () else failureT`;
+Definition assertT_def:
+  assertT b = if b then constT () else failureT
+End
 
 val option_apply_assertT = store_thm("option_apply_assertT",
   ``!b s f. b ==> (option_apply (assertT b s) f = f ((),s))``,
@@ -25,66 +26,78 @@ val option_apply_assertT = store_thm("option_apply_assertT",
 
 (* calculate effective address *)
 
-val ea_Zr_def = Define `ea_Zr s (r:Zreg) = constT (Zea_r s r)`;
-val ea_Zi_def = Define `ea_Zi s (i:Zimm) = constT (Zea_i s i)`;
+Definition ea_Zr_def:   ea_Zr s (r:Zreg) = constT (Zea_r s r)
+End
+Definition ea_Zi_def:   ea_Zi s (i:Zimm) = constT (Zea_i s i)
+End
 
-val ea_Zrm_base_def = Define `
+Definition ea_Zrm_base_def:
   (ea_Zrm_base ii NONE = constT 0w) /\
-  (ea_Zrm_base ii (SOME r) = read_reg ii r)`;
+  (ea_Zrm_base ii (SOME r) = read_reg ii r)
+End
 
-val ea_Zrm_index_def = Define `
+Definition ea_Zrm_index_def:
   (ea_Zrm_index ii NONE = constT (0w:Zimm)) /\
   (ea_Zrm_index ii (SOME (s:word2,r)) =
-     seqT (read_reg ii r) (\idx. constT (n2w (2 ** w2n s) * idx)))`;
+     seqT (read_reg ii r) (\idx. constT (n2w (2 ** w2n s) * idx)))
+End
 
-val ea_Zrm_def = Define `
+Definition ea_Zrm_def:
   (ea_Zrm ii s (Zr r) = ea_Zr s r) /\
   (ea_Zrm ii s (Zm i b d) =
      seqT
         (parT (ea_Zrm_index ii i) (ea_Zrm_base ii b))
-          (\(idx,b). constT (Zea_m s (idx + b + d))))`;
+          (\(idx,b). constT (Zea_m s (idx + b + d))))
+End
 
-val ea_Zdest_def = Define `
+Definition ea_Zdest_def:
   (ea_Zdest ii s (Zrm_i rm i) = ea_Zrm ii s rm) /\
   (ea_Zdest ii s (Zrm_r rm r) = ea_Zrm ii s rm) /\
-  (ea_Zdest ii s (Zr_rm r rm) = ea_Zr s r)`;
+  (ea_Zdest ii s (Zr_rm r rm) = ea_Zr s r)
+End
 
-val ea_Zsrc_def = Define `
+Definition ea_Zsrc_def:
   (ea_Zsrc ii s (Zrm_i rm i) = ea_Zi s i) /\
   (ea_Zsrc ii s (Zrm_r rm r) = ea_Zr s r) /\
-  (ea_Zsrc ii s (Zr_rm r rm) = ea_Zrm ii s rm)`;
+  (ea_Zsrc ii s (Zr_rm r rm) = ea_Zrm ii s rm)
+End
 
-val ea_Zimm_rm_def = Define `
+Definition ea_Zimm_rm_def:
   (ea_Zimm_rm ii s (Zi_rm rm) = ea_Zrm ii s rm) /\
-  (ea_Zimm_rm ii s (Zi i)     = ea_Zi s i)`;
+  (ea_Zimm_rm ii s (Zi i)     = ea_Zi s i)
+End
 
 
 (* eval_ea calculates the value of an effective address *)
 
-val restrict_size_def = Define `
+Definition restrict_size_def:
   (restrict_size Z8  (i:word64) = constT (w2w ((w2w i):word8))) /\
   (restrict_size Z16 (i:word64) = constT (w2w ((w2w i):word16))) /\
   (restrict_size Z32 (i:word64) = constT (w2w ((w2w i):word32))) /\
-  (restrict_size Z64 (i:word64) = constT i)`;
+  (restrict_size Z64 (i:word64) = constT i)
+End
 
-val read_ea_def = Define `
+Definition read_ea_def:
   (read_ea ii (Zea_i s i) = seqT (constT i) (restrict_size s)) /\
   (read_ea ii (Zea_r s r) = seqT (read_reg ii r) (restrict_size s)) /\
   (read_ea ii (Zea_m Z8  a) = seqT (read_m8  ii a) (\w. constT (w2w w))) /\
   (read_ea ii (Zea_m Z16 a) = seqT (read_m16 ii a) (\w. constT (w2w w))) /\
   (read_ea ii (Zea_m Z32 a) = seqT (read_m32 ii a) (\w. constT (w2w w))) /\
-  (read_ea ii (Zea_m Z64 a) = seqT (read_m64 ii a) (\w. constT w))`;
+  (read_ea ii (Zea_m Z64 a) = seqT (read_m64 ii a) (\w. constT w))
+End
 
-val read_src_ea_def = Define `
-  read_src_ea ii s ds = seqT (ea_Zsrc ii s ds) (\ea. addT ea (read_ea ii ea))`;
+Definition read_src_ea_def:
+  read_src_ea ii s ds = seqT (ea_Zsrc ii s ds) (\ea. addT ea (read_ea ii ea))
+End
 
-val read_dest_ea_def = Define `
-  read_dest_ea ii s ds = seqT (ea_Zdest ii s ds) (\ea. addT ea (read_ea ii ea))`;
+Definition read_dest_ea_def:
+  read_dest_ea ii s ds = seqT (ea_Zdest ii s ds) (\ea. addT ea (read_ea ii ea))
+End
 
 
 (* write_ea write a value to the supplied effective address *)
 
-val write_ea_def = Define `
+Definition write_ea_def:
   (write_ea ii (Zea_i s i) x = failureT) /\  (* one cannot store into a constant *)
   (* 32-bit write clears top 32-bits, the others just update a subset of the bits *)
   (write_ea ii (Zea_r Z8 r) x = seqT (read_reg ii r)
@@ -96,133 +109,159 @@ val write_ea_def = Define `
   (write_ea ii (Zea_m Z8 a) x = write_m8 ii a (w2w x)) /\
   (write_ea ii (Zea_m Z16 a) x = write_m16 ii a (w2w x)) /\
   (write_ea ii (Zea_m Z32 a) x = write_m32 ii a (w2w x)) /\
-  (write_ea ii (Zea_m Z64 a) x = write_m64 ii a x)`;
+  (write_ea ii (Zea_m Z64 a) x = write_m64 ii a x)
+End
 
 
 (* jump_to_ea updates rip according to procedure call *)
 
-val jump_to_ea_def = Define `
+Definition jump_to_ea_def:
   (jump_to_ea ii rip (Zea_i s i) = write_rip ii (rip + i)) /\
   (jump_to_ea ii rip (Zea_r s r) = seqT (read_reg ii r) (write_rip ii)) /\
-  (jump_to_ea ii rip (Zea_m s a) = seqT (read_m64 ii a) (write_rip ii))`;
+  (jump_to_ea ii rip (Zea_m s a) = seqT (read_m64 ii a) (write_rip ii))
+End
 
 
 (* call_dest_from_ea finds the destination according to procedure call semantics *)
 
-val call_dest_from_ea_def = Define `
+Definition call_dest_from_ea_def:
   (call_dest_from_ea ii rip (Zea_i s i) = constT (rip + i)) /\
   (call_dest_from_ea ii rip (Zea_r s r) = read_reg ii r) /\
-  (call_dest_from_ea ii rip (Zea_m s a) = read_m64 ii a)`;
+  (call_dest_from_ea ii rip (Zea_m s a) = read_m64 ii a)
+End
 
-val get_ea_address_def = Define `
+Definition get_ea_address_def:
   (get_ea_address (Zea_i s i) = 0w) /\
   (get_ea_address (Zea_r s r) = 0w) /\
-  (get_ea_address (Zea_m s a) = a)`;
+  (get_ea_address (Zea_m s a) = a)
+End
 
 
 (* rip modifiers *)
 
-val bump_rip_def = Define `
+Definition bump_rip_def:
   bump_rip ii len rest =
-    parT_unit rest (seqT (read_rip ii) (\x. write_rip ii (x + len)))`;
+    parT_unit rest (seqT (read_rip ii) (\x. write_rip ii (x + len)))
+End
 
 
 (* eflag updates *)
 
-val byte_parity_def = Define `
-  byte_parity = EVEN o LENGTH o FILTER I o n2bits 8 o w2n`;
+Definition byte_parity_def:
+  byte_parity = EVEN o LENGTH o FILTER I o n2bits 8 o w2n
+End
 
-val word_size_msb_def = Define `
+Definition word_size_msb_def:
   (word_size_msb Z8  (w:word64) = word_msb ((w2w w):word8)) /\
   (word_size_msb Z16 (w:word64) = word_msb ((w2w w):word16)) /\
   (word_size_msb Z32 (w:word64) = word_msb ((w2w w):word32)) /\
-  (word_size_msb Z64 (w:word64) = word_msb w)`;
+  (word_size_msb Z64 (w:word64) = word_msb w)
+End
 
-val write_PF_def = Define `write_PF ii w = write_eflag ii Z_PF (SOME (byte_parity ((w2w w):word8)))`;
-val write_SF_def = Define `write_SF ii s w = write_eflag ii Z_SF (SOME (word_size_msb s w))`;
-val write_ZF_def = Define `
+Definition write_PF_def:   write_PF ii w = write_eflag ii Z_PF (SOME (byte_parity ((w2w w):word8)))
+End
+Definition write_SF_def:   write_SF ii s w = write_eflag ii Z_SF (SOME (word_size_msb s w))
+End
+Definition write_ZF_def:
   (write_ZF ii Z8  w = write_eflag ii Z_ZF (SOME (w2w w = 0w:word8))) /\
   (write_ZF ii Z16 w = write_eflag ii Z_ZF (SOME (w2w w = 0w:word16))) /\
   (write_ZF ii Z32 w = write_eflag ii Z_ZF (SOME (w2w w = 0w:word32))) /\
-  (write_ZF ii Z64 w = write_eflag ii Z_ZF (SOME (w = 0w)))`;
+  (write_ZF ii Z64 w = write_eflag ii Z_ZF (SOME (w = 0w)))
+End
 
-val write_logical_eflags_def = Define `
+Definition write_logical_eflags_def:
   write_logical_eflags ii s w =
      parT_unit (write_PF ii w)
     (parT_unit (write_ZF ii s w)
     (parT_unit (write_SF ii s w)
     (parT_unit (write_eflag ii Z_OF (SOME F))
     (parT_unit (write_eflag ii Z_CF (SOME F))
-               (write_eflag ii Z_AF NONE)))))`;  (* not modelled *)
+               (write_eflag ii Z_AF NONE)))))
+End(* not modelled *)
 
-val write_arith_eflags_except_CF_OF_def = Define `
+Definition write_arith_eflags_except_CF_OF_def:
   write_arith_eflags_except_CF_OF ii s w =
      parT_unit (write_PF ii w)
     (parT_unit (write_ZF ii s w)
     (parT_unit (write_SF ii s w)
-               (write_eflag ii Z_AF NONE)))`;
+               (write_eflag ii Z_AF NONE)))
+End
 
-val write_arith_eflags_def = Define `
+Definition write_arith_eflags_def:
   write_arith_eflags ii s (w,c,x) =
     parT_unit (write_eflag ii Z_CF (SOME c))
    (parT_unit (write_eflag ii Z_OF (SOME x))
-              (write_arith_eflags_except_CF_OF ii s w))`;
+              (write_arith_eflags_except_CF_OF ii s w))
+End
 
-val erase_eflags_def = Define `
+Definition erase_eflags_def:
   erase_eflags ii =
      parT_unit (write_eflag ii Z_PF NONE)
     (parT_unit (write_eflag ii Z_ZF NONE)
     (parT_unit (write_eflag ii Z_SF NONE)
     (parT_unit (write_eflag ii Z_OF NONE)
     (parT_unit (write_eflag ii Z_CF NONE)
-               (write_eflag ii Z_AF NONE)))))`;
+               (write_eflag ii Z_AF NONE)))))
+End
 
 (* binops *)
 
-val value_width_def = Define `
+Definition value_width_def:
   (value_width Z8  = 2**8) /\
   (value_width Z16 = 2**16) /\
   (value_width Z32 = 2**32) /\
-  (value_width Z64 = 2**64)`;
+  (value_width Z64 = 2**64)
+End
 
-val bool2num_def = Define `bool2num b = if b then 1 else 0`;
+Definition bool2num_def:   bool2num b = if b then 1 else 0
+End
 
-val word_signed_overflow_add_def = Define `
+Definition word_signed_overflow_add_def:
   word_signed_overflow_add s a b =
-    (word_size_msb s a = word_size_msb s b) /\ ~(word_size_msb s (a + b) = word_size_msb s a)`;
+    (word_size_msb s a = word_size_msb s b) /\ ~(word_size_msb s (a + b) = word_size_msb s a)
+End
 
-val word_signed_overflow_sub_def = Define `
+Definition word_signed_overflow_sub_def:
   word_signed_overflow_sub s a b =
-    ~(word_size_msb s a = word_size_msb s b) /\ ~(word_size_msb s (a - b) = word_size_msb s a)`;
+    ~(word_size_msb s a = word_size_msb s b) /\ ~(word_size_msb s (a - b) = word_size_msb s a)
+End
 
-val add_with_carry_out_def = Define `
+Definition add_with_carry_out_def:
   add_with_carry_out s (x:Zimm) y =
-    (x + y, value_width s <= w2n x + w2n y, word_signed_overflow_add s x y)`;
+    (x + y, value_width s <= w2n x + w2n y, word_signed_overflow_add s x y)
+End
 
-val sub_with_borrow_out_def = Define `
+Definition sub_with_borrow_out_def:
   sub_with_borrow_out s (x:Zimm) y =
-     (x - y, x <+ y, word_signed_overflow_sub s x y)`;
+     (x - y, x <+ y, word_signed_overflow_sub s x y)
+End
 
-val write_arith_result_def = Define `
-  write_arith_result ii s (w,c,x) ea = parT_unit (write_arith_eflags ii s (w,c,x)) (write_ea ii ea w)`;
+Definition write_arith_result_def:
+  write_arith_result ii s (w,c,x) ea = parT_unit (write_arith_eflags ii s (w,c,x)) (write_ea ii ea w)
+End
 
-val write_arith_result_no_CF_OF_def = Define `
+Definition write_arith_result_no_CF_OF_def:
   write_arith_result_no_CF_OF ii s w ea =
-    (parT_unit (write_arith_eflags_except_CF_OF ii s w) (write_ea ii ea w))`;
+    (parT_unit (write_arith_eflags_except_CF_OF ii s w) (write_ea ii ea w))
+End
 
-val write_arith_result_no_write_def = Define `
-  write_arith_result_no_write ii s (w,c,x) = (write_arith_eflags ii s (w,c,x))`;
+Definition write_arith_result_no_write_def:
+  write_arith_result_no_write ii s (w,c,x) = (write_arith_eflags ii s (w,c,x))
+End
 
-val write_logical_result_def = Define `
-  write_logical_result ii s w ea = (parT_unit (write_logical_eflags ii s w) (write_ea ii ea w))`;
+Definition write_logical_result_def:
+  write_logical_result ii s w ea = (parT_unit (write_logical_eflags ii s w) (write_ea ii ea w))
+End
 
-val write_logical_result_no_write_def = Define `
-  write_logical_result_no_write ii s w = (write_logical_eflags ii s w)`;
+Definition write_logical_result_no_write_def:
+  write_logical_result_no_write ii s w = (write_logical_eflags ii s w)
+End
 
-val write_result_erase_eflags_def = Define `
-  write_result_erase_eflags ii w ea = (parT_unit (erase_eflags ii) (write_ea ii ea w))`;
+Definition write_result_erase_eflags_def:
+  write_result_erase_eflags ii w ea = (parT_unit (erase_eflags ii) (write_ea ii ea w))
+End
 
-val write_binop_def = Define `
+Definition write_binop_def:
   (write_binop ii s Zadd  x y ea = (write_arith_result ii s (add_with_carry_out s x y) ea)) /\
   (write_binop ii s Zsub  x y ea = (write_arith_result ii s (sub_with_borrow_out s x y) ea)) /\
   (write_binop ii s Zcmp  x y ea = (write_arith_result_no_write ii s (sub_with_borrow_out s x y))) /\
@@ -233,9 +272,10 @@ val write_binop_def = Define `
   (write_binop ii s Zshl  x y ea = (write_result_erase_eflags ii (x << w2n y) ea)) /\
   (write_binop ii s Zshr  x y ea = (write_result_erase_eflags ii (x >>> w2n y) ea)) /\
   (write_binop ii s Zsar  x y ea = (write_result_erase_eflags ii (x >> w2n y) ea)) /\
-  (write_binop ii s _     x y ea = failureT)`;
+  (write_binop ii s _     x y ea = failureT)
+End
 
-val write_binop_with_carry_def = Define `
+Definition write_binop_with_carry_def:
   (write_binop_with_carry ii s Zadc x y cf ea =
        parT_unit (write_eflag ii Z_CF (SOME (value_width s <= w2n x + w2n y + bool2num cf)))
       (parT_unit (write_eflag ii Z_OF NONE)
@@ -244,21 +284,23 @@ val write_binop_with_carry_def = Define `
        parT_unit (write_eflag ii Z_CF (SOME (w2n x < w2n y + bool2num cf)))
       (parT_unit (write_eflag ii Z_OF NONE)
                  (write_arith_result_no_CF_OF ii s (x - (y + n2w (bool2num cf))) ea))) /\
-  (write_binop_with_carry ii s _    x y cf ea = failureT)`;
+  (write_binop_with_carry ii s _    x y cf ea = failureT)
+End
 
 (* monops *)
 
-val write_monop_def = Define `
+Definition write_monop_def:
   (write_monop ii s Znot x ea = write_ea ii ea (~x)) /\
   (write_monop ii s Zdec x ea = write_arith_result_no_CF_OF ii s (x - 1w) ea) /\
   (write_monop ii s Zinc x ea = write_arith_result_no_CF_OF ii s (x + 1w) ea) /\
   (write_monop ii s Zneg x ea =
     parT_unit (write_arith_result_no_CF_OF ii s (0w - x) ea)
-                (write_eflag ii Z_CF NONE))`;
+                (write_eflag ii Z_CF NONE))
+End
 
 (* evaluating conditions of eflags *)
 
-val read_cond_def = Define `
+Definition read_cond_def:
   (read_cond ii Z_ALWAYS = constT T) /\
   (read_cond ii Z_E      = read_eflag ii Z_ZF) /\
   (read_cond ii Z_S      = read_eflag ii Z_SF) /\
@@ -269,43 +311,48 @@ val read_cond_def = Define `
   (read_cond ii Z_A      = seqT
      (parT (read_eflag ii Z_CF) (read_eflag ii Z_ZF)) (\(c,z). constT (~c /\ ~z))) /\
   (read_cond ii Z_NA     = seqT
-     (parT (read_eflag ii Z_CF) (read_eflag ii Z_ZF)) (\(c,z). constT (c \/ z)))`;
+     (parT (read_eflag ii Z_CF) (read_eflag ii Z_ZF)) (\(c,z). constT (c \/ z)))
+End
 
 (* execute stack operations for non-RIP registers *)
 
-val x64_exec_pop_def = Define `
+Definition x64_exec_pop_def:
   x64_exec_pop ii rm =
      seqT (seqT (read_reg ii RSP) (\esp. addT esp (write_reg ii RSP (esp + 8w))))
           (\(old_esp,x). seqT (parT (ea_Zrm ii Z64 rm) (read_m64 ii old_esp))
-                              (\(ea,w). write_ea ii ea w))`;
+                              (\(ea,w). write_ea ii ea w))
+End
 
-val x64_exec_push_def = Define `
+Definition x64_exec_push_def:
   x64_exec_push ii imm_rm =
      (seqT
         (parT (seqT (ea_Zimm_rm ii Z64 imm_rm) (\ea. read_ea ii ea))
               (seqT (read_reg ii RSP) (\w. constT (w - 8w))))
-        (\(w,esp). parT_unit (write_m64 ii esp w) (write_reg ii RSP esp)))`;
+        (\(w,esp). parT_unit (write_m64 ii esp w) (write_reg ii RSP esp)))
+End
 
 (* execute stack operations for RIP register *)
 
-val x64_exec_pop_rip_def = Define `
+Definition x64_exec_pop_rip_def:
   x64_exec_pop_rip ii =
      seqT (seqT (read_reg ii RSP) (\esp. addT esp (write_reg ii RSP (esp + 8w))))
           (\(old_esp,x). seqT (read_m64 ii old_esp)
-                              (\w. write_rip ii w))`;
+                              (\w. write_rip ii w))
+End
 
-val x64_exec_push_rip_def = Define `
+Definition x64_exec_push_rip_def:
   x64_exec_push_rip ii =
      (seqT
         (parT (read_rip ii)
               (seqT (read_reg ii RSP) (\w. constT (w - 8w))))
-        (\(w,esp). parT_unit (write_m64 ii esp w) (write_reg ii RSP esp)))`;
+        (\(w,esp). parT_unit (write_m64 ii esp w) (write_reg ii RSP esp)))
+End
 
 (* check whether rm requires a lock, i.e. specifies a memory access *)
 
 (* execution of one instruction *)
 
-val x64_exec_def = Define `
+Definition x64_exec_def:
   (x64_exec ii (Zbinop binop_name s ds) len = bump_rip ii len
        (if (binop_name = Zadc) \/ (binop_name = Zsbb) then
           seqT
@@ -421,10 +468,12 @@ val x64_exec_def = Define `
              parT_unit (write_reg ii RCX new_ecx)
                        (write_rip ii
                          (if ~(new_ecx = 0w) /\ guard
-                          then rip + len + imm else rip + len))))`;
+                          then rip + len + imm else rip + len))))
+End
 
-val x64_execute_def = Define `
+Definition x64_execute_def:
   x64_execute ii (Zfull_inst prefixes i) len =
-    if MEM Zlock prefixes then lockT (x64_exec ii i len) else x64_exec ii i len`;
+    if MEM Zlock prefixes then lockT (x64_exec ii i len) else x64_exec ii i len
+End
 
 

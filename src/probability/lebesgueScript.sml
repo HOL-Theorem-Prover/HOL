@@ -80,8 +80,9 @@ Definition psfs_def :
 End
 
 (* `psfis m f ` is the set of integrals of positive simple functions equivalent to f *)
-val psfis_def = Define
-   `psfis m f = IMAGE (\(s,a,x). pos_simple_fn_integral m s a x) (psfs m f)`;
+Definition psfis_def:
+    psfis m f = IMAGE (\(s,a,x). pos_simple_fn_integral m s a x) (psfs m f)
+End
 
 (* the integral of arbitrary positive function is the sup of integrals of all
    positive simple functions smaller than f,
@@ -90,9 +91,10 @@ val psfis_def = Define
 
    changed from `!x. g x <= fx` to `!x. x IN m_space m ==> g x <= f x`
  *)
-val pos_fn_integral_def = Define
-   `pos_fn_integral m f =
-      sup {r | ?g. r IN psfis m g /\ !x. x IN m_space m ==> g x <= f x}`;
+Definition pos_fn_integral_def:
+    pos_fn_integral m f =
+      sup {r | ?g. r IN psfis m g /\ !x. x IN m_space m ==> g x <= f x}
+End
 
 (* INTEGRAL^+ *)
 val _ = Unicode.unicode_version {u = UTF8.chr 0x222B ^ Unicode.UChar.sup_plus,
@@ -137,11 +139,13 @@ End
    1) the involved function `f` is (AE) non-negative in measure space `m`.
    2) the resulting `f * m` is only called on `s IN measurable_sets m`.
  *)
-val density_measure_def = Define (* or `f * m` *)
-   `density_measure m f = \s. pos_fn_integral m (\x. f x * indicator_fn s x)`;
+Definition density_measure_def:   (* or `f * m` *)
+    density_measure m f = \s. pos_fn_integral m (\x. f x * indicator_fn s x)
+End
 
-val density_def = Define (* was: density *)
-   `density m f = (m_space m, measurable_sets m, density_measure m f)`;
+Definition density_def:   (* was: density *)
+    density m f = (m_space m, measurable_sets m, density_measure m f)
+End
 
 (* |- !m f.
         density m f =
@@ -173,8 +177,9 @@ Theorem density_measure = SIMP_RULE std_ss [FUN_EQ_THM] density_measure_def
 
    cf. density_def, probabilityTheory.distribution_def (an application)
  *)
-val distr_def = Define
-   `distr m f = \s. measure m (PREIMAGE f s INTER m_space m)`;
+Definition distr_def:
+    distr m f = \s. measure m (PREIMAGE f s INTER m_space m)
+End
 
 (* unused for now:
 val diff_measure_space_def = Define
@@ -8085,15 +8090,17 @@ QED
 (*  Radon-Nikodym Theorem                                 *)
 (**********************************************************)
 
-val RADON_F_def = Define
-   `RADON_F m v =
+Definition RADON_F_def:
+    RADON_F m v =
       {f | f IN measurable (m_space m,measurable_sets m) Borel /\
            (!x. 0 <= f x) /\
            !A. A IN measurable_sets m ==>
-               (pos_fn_integral m (\x. f x * indicator_fn A x) <= measure v A)}`;
+               (pos_fn_integral m (\x. f x * indicator_fn A x) <= measure v A)}
+End
 
-val RADON_F_integrals_def = Define
-   `RADON_F_integrals m v = {r | ?f. (r = pos_fn_integral m f) /\ f IN RADON_F m v}`;
+Definition RADON_F_integrals_def:
+    RADON_F_integrals m v = {r | ?f. (r = pos_fn_integral m f) /\ f IN RADON_F m v}
+End
 
 Theorem lemma_radon_max_in_F[local] :
     !f g m v. measure_space m /\ measure_space v /\

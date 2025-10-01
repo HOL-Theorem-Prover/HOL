@@ -27,9 +27,6 @@ fun simp l = ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) l;
 fun fs l = FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) l;
 fun rfs l = REV_FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) l;
 
-val Define = TotalDefn.Define
-val zDefine = Lib.with_flag (computeLib.auto_import_definitions, false) Define
-
 (* ----------------------------------------------------------------------- *)
 
 val lt_mult2 = Q.prove(
@@ -673,15 +670,17 @@ Proof
 QED
 
 
-val SQRTd_def = zDefine `SQRTd n = (ROOT 2 n, n - (ROOT 2 n * ROOT 2 n))`;
+Definition SQRTd_def[nocompute]:   SQRTd n = (ROOT 2 n, n - (ROOT 2 n * ROOT 2 n))
+End
 
-val iSQRTd_def = zDefine`
+Definition iSQRTd_def[nocompute]:
    iSQRTd (x,n) =
       let p = SQRTd n in
       let next = 4 * SND p + x in
       let ndiff = 4 * FST p + 1 in
         if next < ndiff then (2 * FST p,next)
-        else (2 * FST p + 1,next - ndiff)`;
+        else (2 * FST p + 1,next - ndiff)
+End
 
 val sqrt_zero = Q.prove(`ROOT 2 0 = 0`, RW_TAC arith_ss [ROOT_COMPUTE]);
 val sqrt_compute = SIMP_RULE arith_ss [] (SPEC ``2n`` ROOT_COMPUTE);
@@ -743,34 +742,38 @@ Proof
   THEN RW_TAC (arith_ss ++ boolSimps.LET_ss) [iSQRTd_def, SQRTd_def, sqrt_zero]
 QED
 
-val iSQRT0_def = Define`
+Definition iSQRT0_def:
    iSQRT0 n =
       let p = SQRTd n in
       let d = SND p - FST p in
-         if d = 0 then (2 * FST p,4 * SND p) else (SUC (2 * FST p),4 * d - 1)`;
+         if d = 0 then (2 * FST p,4 * SND p) else (SUC (2 * FST p),4 * d - 1)
+End
 
-val iSQRT1_def = Define`
+Definition iSQRT1_def:
    iSQRT1 n =
       let p = SQRTd n in
       let d = (SUC (SND p) - FST p) in
          if d = 0 then (2 * FST p, SUC (4 * SND p))
-         else (SUC (2 * FST p),4 * (d - 1))`;
+         else (SUC (2 * FST p),4 * (d - 1))
+End
 
-val iSQRT2_def = Define`
+Definition iSQRT2_def:
    iSQRT2 n =
       let p = SQRTd n in
       let d = 2 * FST p in
       let c = SUC (2 * SND p) in
       let e = c - d in
-         if e = 0 then (d,2 * c) else (SUC d, 2 * e - 1)`;
+         if e = 0 then (d,2 * c) else (SUC d, 2 * e - 1)
+End
 
-val iSQRT3_def = Define`
+Definition iSQRT3_def:
    iSQRT3 n =
       let p = SQRTd n in
       let d = 2 * FST p in
       let c = SUC (2 * (SND p)) in
       let e = SUC c - d in
-         if e = 0 then (d,SUC (2 * c)) else (SUC d, 2 * (e - 1))`;
+         if e = 0 then (d,SUC (2 * c)) else (SUC d, 2 * (e - 1))
+End
 
 Theorem numeral_sqrt[compute]:
   (SQRTd ZERO = (0,0)) /\
@@ -1744,4 +1747,3 @@ val LOG2_TWICE = store_thm(
   rw[LOG_MULT]);
 
 (* ----------------------------------------------------------------------- *)
-

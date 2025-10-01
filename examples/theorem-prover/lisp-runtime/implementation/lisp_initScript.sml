@@ -39,7 +39,8 @@ val bytes2words_def = tDefine "bytes2words" `
                      bytes2word (TAKE 4 xs) :: bytes2words (DROP 4 xs)`
   (WF_REL_TAC `measure (LENGTH)` \\ SIMP_TAC std_ss [LENGTH_DROP] \\ DECIDE_TAC)
 
-val BINIT_SYMBOLS_def = Define `BINIT_SYMBOLS = INIT_SYMBOLS ++ ["PEQUAL"]`;
+Definition BINIT_SYMBOLS_def:   BINIT_SYMBOLS = INIT_SYMBOLS ++ ["PEQUAL"]
+End
 
 val INIT_SYMBOL_ASSERTION =
   EVAL ``(FOLDR (\x y. STRLEN x + y + 1) 1 BINIT_SYMBOLS) MOD 4``
@@ -177,7 +178,7 @@ val ref_stack_space_above_ADD = prove(
   \\ FULL_SIMP_TAC (std_ss++star_ss) [ADD1,LEFT_ADD_DISTRIB,
        AC ADD_COMM ADD_ASSOC,SEP_CLAUSES]);
 
-val lisp_init_def = Define `
+Definition lisp_init_def:
   lisp_init (a1,a2,sl,sl1,e,ex,cs) (io:io_streams) (df,f,dg,g,dd,d,sp,sa1,sa_len,ds) =
      ?x xs hs.
        (ref_mem a1 (\x. H_EMP) 0 e * ref_mem a2 (\x. H_EMP) 0 e *
@@ -191,7 +192,8 @@ val lisp_init_def = Define `
        (w2n sa_len = LENGTH xs) /\ (one_byte_list sa1 xs) (fun2set(g,dg)) /\
        w2n sa1 + w2n sa_len < 2**64 /\ (w2n (EL 5 cs) < 2**30) /\
        (w2n (EL 5 ds) <= e) /\ (EL 7 ds = n2w sl1) /\
-       (one_byte_list (EL 4 cs) hs) (fun2set(d,dd)) /\ (LENGTH hs = w2n (EL 5 cs))`;
+       (one_byte_list (EL 4 cs) hs) (fun2set(d,dd)) /\ (LENGTH hs = w2n (EL 5 cs))
+End
 
 val (mc_full_init_spec,mc_full_init_def) = basic_decompile_strings x64_tools "mc_full_init"
   (SOME (``(r7:word64,df:word64 set,f:word64->word32,dg:word64 set,g:word64->word8)``,
@@ -271,8 +273,9 @@ val EL_LEMMA = prove(
   ``!x y zs. EL 1 (x::y::zs) = y``,
   SIMP_TAC bool_ss [GSYM (EVAL ``SUC 0``),TL,HD,EL]);
 
-val NO_CODE_def = Define `
-  NO_CODE = BC_CODE ((\x:num.(NONE:bc_inst_type option)),0)`;
+Definition NO_CODE_def:
+  NO_CODE = BC_CODE ((\x:num.(NONE:bc_inst_type option)),0)
+End
 
 val one_fun2set_IMP = prove(
   ``(one (a,x)) (fun2set (f,df)) ==> (f a = x) /\ a IN df``,

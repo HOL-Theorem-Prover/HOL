@@ -30,20 +30,24 @@ val string_ss = (simpLib.++ (list_ss, STRING_ss));
 (* ------------------------------------------------------------------------- *)
 (* ------------------------------------------------------------------------- *)
 
-val rec_toString_def = Define
-  `(rec_toString (0:num) = []) /\
+Definition rec_toString_def:
+   (rec_toString (0:num) = []) /\
    (rec_toString (SUC n) =
-        (rec_toString ((SUC n) DIV 10)) ++ [CHR (48 + ((SUC n) MOD 10))])`;
+        (rec_toString ((SUC n) DIV 10)) ++ [CHR (48 + ((SUC n) MOD 10))])
+End
 
-val toString_def = Define
-   `toString n = if (n = 0) then "0" else IMPLODE (rec_toString n)`;
+Definition toString_def:
+    toString n = if (n = 0) then "0" else IMPLODE (rec_toString n)
+End
 
-val rec_toNum_def = Define
-  `(rec_toNum [] n = 0:num) /\
-   (rec_toNum (c::cs) n = (10**n) * ((ORD c) - 48) + rec_toNum cs (SUC n))`;
+Definition rec_toNum_def:
+   (rec_toNum [] n = 0:num) /\
+   (rec_toNum (c::cs) n = (10**n) * ((ORD c) - 48) + rec_toNum cs (SUC n))
+End
 
-val toNum_def = Define
-   `toNum s = rec_toNum (REVERSE (EXPLODE s)) 0`;
+Definition toNum_def:
+    toNum s = rec_toNum (REVERSE (EXPLODE s)) 0
+End
 
 (* ------------------------------------------------------------------------- *)
 (* ------------------------------------------------------------------------- *)

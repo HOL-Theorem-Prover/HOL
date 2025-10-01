@@ -13,20 +13,22 @@ val std_ss' = std_ss ++ boolSimps.ETA_ss;
 (* The definition of the Bernoulli(p) sampling algorithm.                    *)
 (* ------------------------------------------------------------------------- *)
 
-val prob_bernoulli_iter_def = Define
-  `prob_bernoulli_iter p =
+Definition prob_bernoulli_iter_def:
+   prob_bernoulli_iter p =
    BIND sdest
    (\b.
     UNIT
     (if b then (if p <= (1 :real) / 2 then INR F else INL (2 * p - 1))
-     else (if p <= 1 / 2 then INL (2 * p) else INR T)))`;
+     else (if p <= 1 / 2 then INL (2 * p) else INR T)))
+End
 
 val prob_bernoulli_loop_def = new_definition
   ("prob_bernoulli_loop_def",
    ``prob_bernoulli_loop = prob_while ISL (prob_bernoulli_iter o OUTL)``);
 
-val prob_bernoulli_def = Define
-  `prob_bernoulli p = BIND (prob_bernoulli_loop (INL p)) (\a. UNIT (OUTR a))`;
+Definition prob_bernoulli_def:
+   prob_bernoulli p = BIND (prob_bernoulli_loop (INL p)) (\a. UNIT (OUTR a))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems leading to:                                                      *)

@@ -6,8 +6,9 @@ Libs
 
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 }
 
-val dis_set_def = Define`
-  dis_set pi1 pi2 = { a | lswapstr pi1 a ≠ lswapstr pi2 a }`
+Definition dis_set_def:
+  dis_set pi1 pi2 = { a | lswapstr pi1 a ≠ lswapstr pi2 a }
+End
 
 val dis_set_SUBSET_patoms = Q.store_thm(
 "dis_set_SUBSET_patoms",
@@ -58,10 +59,11 @@ val ALL_DISTINCT_DISTINCT = Q.store_thm(
 Induct_on `ls` THEN SRW_TAC [][] THEN
 METIS_TAC [MEM_DISTINCT]);
 
-val dis_list_def = Define`
+Definition dis_list_def:
   dis_list pi1 pi2 =
     DISTINCT (FILTER (λa. lswapstr pi1 a ≠ lswapstr pi2 a)
-                     (pnomsl (pi1 ++ pi2)))`;
+                     (pnomsl (pi1 ++ pi2)))
+End
 
 val dis_list_eq_dis_set = Q.store_thm(
 "dis_list_eq_dis_set",

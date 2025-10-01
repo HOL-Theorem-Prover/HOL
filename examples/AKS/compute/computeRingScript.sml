@@ -120,33 +120,33 @@ val _ = temp_overload_on("TWICE", ``\n. 2 * (n :num)``);
    just ensure that this is the case upon operations. *)
 
 (* Define ZN polynomial addition under modulus n (and unity k) *)
-val ZN_poly_add_def = Define`
+Definition ZN_poly_add_def:
     ZN_poly_add (n:num) (p:num poly) (q:num poly) = MAP2 (\x y. (x + y) MOD n) p q
-`;
+End
 (* overload ZN polynomial addition *)
 val _ = overload_on("+z", ``ZN_poly_add n``);
 val _ = set_fixity "+z" (Infixl 500); (* same as + in arithmeticScript.sml *)
 
 (* Define ZN polynomial scalar multiplication under modulus n (and unity k) *)
-val ZN_poly_cmult_def = Define`
+Definition ZN_poly_cmult_def:
     ZN_poly_cmult (n:num) (c: num) (p:num poly) = MAP (\x. (c * x) MOD n) p
-`;
+End
 (* overload ZN polynomial scalar multiplication *)
 val _ = overload_on("oz", ``ZN_poly_cmult n``);
 val _ = set_fixity "oz" (Infixl 600); (* same as * in arithmeticScript.sml *)
 
 (* Define ZN polynomial partial multiplication under modulus n (and unity k) *)
-val ZN_slide_def = Define`
+Definition ZN_slide_def:
     (ZN_slide (n:num) (p1:num poly) (p2:num poly) [] = p1) /\
     (ZN_slide (n:num) (p1:num poly) (p2:num poly) ((h::t):num poly) =
        ZN_slide n ((h oz p2) +z p1) (turn p2) t)
-`;
+End
 (* Define ZN polynomial multiplication under modulus n and unity k *)
-val ZN_poly_mult_def = Define`
+Definition ZN_poly_mult_def:
     ZN_poly_mult (n:num) (k:num) (p:num poly) (q:num poly) =
     ZN_slide n (GENLIST (K 0) k) p q
     (* Note LENGTH p = LENGTH q = k, for MOD (unity k) *)
-`;
+End
 (* overload ZN polynomial multiplication *)
 val _ = overload_on("*z", ``ZN_poly_mult n k``);
 val _ = set_fixity "*z" (Infixl 600); (* same as * in arithmeticScript.sml *)
@@ -160,10 +160,10 @@ val _ = overload_on ("zlist", ``GENLIST (K 0)``);
 *)
 
 (* Define ZN polynomial square under modulus n and unity k *)
-val ZN_poly_sq_def = Define`
+Definition ZN_poly_sq_def:
     ZN_poly_sq (n:num) (k:num) (p:num poly) = ZN_poly_mult n k p p
     (* Note LENGTH p = k, for MOD (unity k) *)
-`;
+End
 (* overload ZN polynomial square *)
 val _ = overload_on("sqz", ``ZN_poly_sq n k``);
 
@@ -176,12 +176,12 @@ val ZN_poly_exp_def = Define`
           in if EVEN m then q else (ZN_poly_mult n k p q)
 `;
 *)
-val ZN_poly_exp_def = Define`
+Definition ZN_poly_exp_def:
     ZN_poly_exp (n:num) (k:num) (p:num poly) m =
      if m = 0 then [1]
      else let q = ZN_poly_exp n k (ZN_poly_sq n k p) (HALF m)
           in if EVEN m then q else (ZN_poly_mult n k p q)
-`;
+End
 (* overload ZN polynomial exponentiation *)
 val _ = overload_on("**z", ``ZN_poly_exp n k``);
 val _ = set_fixity "**z" (Infixr 700); (* same as EXP in arithmeticScript.sml *)
@@ -195,19 +195,19 @@ val _ = set_fixity "**z" (Infixr 700); (* same as EXP in arithmeticScript.sml *)
 (* These are the initial weak polynomials with length equal to k *)
 
 (* Define (X ** m + |c|) MOD (n, unity k) *)
-val ZN_poly_special_def = Define`
+Definition ZN_poly_special_def:
     ZN_poly_special (n:num) (k:num) m (c:num) =
        if k = 0 then []
        else if k = 1 then [(1 + c) MOD n]
        else (let q = if m MOD k = 0 then [(1 + c) MOD n] else  (c MOD n) :: PAD_LEFT 0 (m MOD k) [1]
               in PAD_RIGHT 0 k q)
-`;
+End
 
 (* Define (X + c) MOD (n, unity k) *)
-val ZN_poly_monomial_def = Define`
+Definition ZN_poly_monomial_def:
     ZN_poly_monomial (n:num) (k:num) (c:num) =
        if k = 0 then [] else if k = 1 then [(1 + c) MOD n] else PAD_RIGHT 0 k [c MOD n; 1]
-`;
+End
 
 (*
 > EVAL ``let n = 5 in let k = 3 in (ZN_poly_monomial n k 1) **z n``; --> [1; 0; 1]

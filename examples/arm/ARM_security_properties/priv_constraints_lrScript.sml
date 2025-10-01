@@ -62,27 +62,29 @@ val prove_abs_LR_const_action =
         (proved_thm,tacs)
     end
 
-val untouched_LR_abs_def =
-    Define `untouched_LR_abs f mode  =
+Definition untouched_LR_abs_def:
+     untouched_LR_abs f mode  =
            !s a c s'. (f a s = ValueState c s') ==>
            let lr = get_lr_by_mode mode
                  in
                (((s'.psrs (0,CPSR)).M=(s.psrs (0,CPSR)).M) /\
                 (s'.registers (0, lr) =
-                s.registers (0, lr)))`;
+                s.registers (0, lr)))
+End
 
-val untouched_LR_def =
-    Define `untouched_LR f mode =
+Definition untouched_LR_def:
+     untouched_LR f mode =
            !s c s'. (f s = ValueState c s') ==>
               (* (ARM_MODE s' = 19w) ==> *)
            let lr = get_lr_by_mode mode
                  in
                (((s'.psrs (0,CPSR)).M=(s.psrs (0,CPSR)).M) /\
                 (s'.registers (0, lr) =
-                s.registers (0, lr)))`;
+                s.registers (0, lr)))
+End
 
-val priv_LR_constraints_def =
-    Define `priv_LR_constraints f lr_value mode =
+Definition priv_LR_constraints_def:
+     priv_LR_constraints f lr_value mode =
             ! s s' a . (f s = ValueState a s') ==>
                 (~access_violation s') ==>
                ((s'.psrs (0,CPSR)).M= mode) ==>
@@ -90,11 +92,12 @@ val priv_LR_constraints_def =
             in
                 (*((s'.psrs(0,CPSR)).M = 19w) ==>*)
                 ((s'.registers (0, lr) =
-                  lr_value))`;
+                  lr_value))
+End
 
 
-val priv_LR_constraints_abs_def =
-    Define `priv_LR_constraints_abs f lr_value mode =
+Definition priv_LR_constraints_abs_def:
+     priv_LR_constraints_abs f lr_value mode =
                 ! s s' a c. (f c s = ValueState a s') ==>
                 (~access_violation s') ==>
                ((s'.psrs (0,CPSR)).M= mode) ==>
@@ -102,7 +105,8 @@ val priv_LR_constraints_abs_def =
             in
                 (*((s'.psrs(0,CPSR)).M = 19w) ==>*)
                 ((s'.registers (0, lr) =
-                  lr_value))`;
+                  lr_value))
+End
 
 
 (*********************   proof rules *******************************)
@@ -573,8 +577,8 @@ val take_svc_writing_part_LR_thm =
               end);
 
 
-val satisfy_LR_constraints_def =
-    Define ` satisfy_LR_constraints f mode value =
+Definition satisfy_LR_constraints_def:
+      satisfy_LR_constraints f mode value =
                 ! s s' a .
                   (f s = ValueState a s') ==>
                   ((s'.psrs(0,CPSR)).M = mode) ==>
@@ -583,10 +587,11 @@ val satisfy_LR_constraints_def =
                    (if (s.psrs (0,CPSR)).T then
                         (get_pc_value s - 2w) + value
                     else
-                        (get_pc_value s) - 4w))`;
+                        (get_pc_value s) - 4w))
+End
 
-val satisfy_LR_constraints_abs_def =
-    Define ` satisfy_LR_constraints_abs f mode value =
+Definition satisfy_LR_constraints_abs_def:
+      satisfy_LR_constraints_abs f mode value =
                 ! s c s' a .
                   (f c s = ValueState a s') ==>
                   ((s'.psrs(0,CPSR)).M = mode) ==>
@@ -595,7 +600,8 @@ val satisfy_LR_constraints_abs_def =
                    (if (s.psrs (0,CPSR)).T then
                         (get_pc_value s - 2w) + value
                     else
-                        (get_pc_value s) - 4w ))`;
+                        (get_pc_value s) - 4w ))
+End
 
 
 

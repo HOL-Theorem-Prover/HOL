@@ -41,12 +41,14 @@ val ORDP_def = tDefine "ORDP" `
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [isDot_thm] \\ Cases_on `a`
   \\ FULL_SIMP_TAC std_ss [CAR_def,CDR_def,LSIZE_def] \\ DECIDE_TAC);
 
-val ORD_LESS_def = Define `
-  ORD_LESS x y = ORDP x /\ ORDP y /\ ORD_LT x y`;
+Definition ORD_LESS_def:
+  ORD_LESS x y = ORDP x /\ ORDP y /\ ORD_LT x y
+End
 
-val ord2sexp_def = Define `
+Definition ord2sexp_def:
   (ord2sexp (End n) = Val n) /\
-  (ord2sexp (Plus x n y) = Dot (Dot (ord2sexp x) (Val n)) (ord2sexp y))`;
+  (ord2sexp (Plus x n y) = Dot (Dot (ord2sexp x) (Val n)) (ord2sexp y))
+End
 
 val NOT_ord2sexp_Val_0 = prove(
   ``!x. ~(ord2sexp x = Val 0) = ~(x = End 0)``,
@@ -69,9 +71,10 @@ val oless_IMP_ORD_LT = prove(
        DECIDE ``n<m ==> ~(n=m:num)``]
   \\ Cases_on `ord2sexp x = ord2sexp y` \\ FULL_SIMP_TAC std_ss [ORD_LT_IRREFL]);
 
-val ord_size_def = Define `
+Definition ord_size_def:
   (ord_size (End k) = 0:num) /\
-  (ord_size (Plus x n y) = 1 + ord_size x + ord_size y)`;
+  (ord_size (Plus x n y) = 1 + ord_size x + ord_size y)
+End
 
 val sexp2ord_def = tDefine "sexp2ord" `
   sexp2ord x = if ~(isDot x) then End (getVal x) else

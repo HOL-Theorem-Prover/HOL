@@ -173,22 +173,28 @@ val one_string_IMP_string_mem = prove(
   THEN Induct_on `s`
   THEN ASM_SIMP_TAC std_ss [string_mem_def,IN_DELETE]);
 
-val aLISP1_def = Define `
-  aLISP1 (x,l) = SEP_EXISTS x2 x3 x4 x5 x6. aLISP (x,x2,x3,x4,x5,x6,l)`;
-val pLISP1_def = Define `
-  pLISP1 (x,l) = SEP_EXISTS x2 x3 x4 x5 x6. pLISP (x,x2,x3,x4,x5,x6,l)`;
-val xLISP1_def = Define `
-  xLISP1 (x,l) = SEP_EXISTS x2 x3 x4 x5 x6. xLISP (x,x2,x3,x4,x5,x6,l)`;
+Definition aLISP1_def:
+  aLISP1 (x,l) = SEP_EXISTS x2 x3 x4 x5 x6. aLISP (x,x2,x3,x4,x5,x6,l)
+End
+Definition pLISP1_def:
+  pLISP1 (x,l) = SEP_EXISTS x2 x3 x4 x5 x6. pLISP (x,x2,x3,x4,x5,x6,l)
+End
+Definition xLISP1_def:
+  xLISP1 (x,l) = SEP_EXISTS x2 x3 x4 x5 x6. xLISP (x,x2,x3,x4,x5,x6,l)
+End
 
-val aSTRING_SPACE_def = Define `
+Definition aSTRING_SPACE_def:
   aSTRING_SPACE a n = SEP_EXISTS df f c. aBYTE_MEMORY df f *
-      cond (one_space a (n + 1) c (fun2set (f,df)))`;
-val pSTRING_SPACE_def = Define `
+      cond (one_space a (n + 1) c (fun2set (f,df)))
+End
+Definition pSTRING_SPACE_def:
   pSTRING_SPACE a n = SEP_EXISTS df f c. pBYTE_MEMORY df f *
-      cond (one_space a (n + 1) c (fun2set (f,df)))`;
-val xSTRING_SPACE_def = Define `
+      cond (one_space a (n + 1) c (fun2set (f,df)))
+End
+Definition xSTRING_SPACE_def:
   xSTRING_SPACE a n = SEP_EXISTS df f c. xBYTE_MEMORY df f *
-      cond (one_space a (n + 1) c (fun2set (f,df)))`;
+      cond (one_space a (n + 1) c (fun2set (f,df)))
+End
 
 val one_space_EXPAND = prove(
   ``!n a b s. one_space a n b s <=>
@@ -322,9 +328,10 @@ val ppc_sexp2string_th = let
   val th = MP th (prove(goal,tac))
   in th end;
 
-val xSTACK_def = Define `
+Definition xSTACK_def:
   (xSTACK a [] = cond (ALIGNED a)) /\
-  (xSTACK a (w::ws) = xM a w * xSTACK (a + 4w) ws)`;
+  (xSTACK a (w::ws) = xM a w * xSTACK (a + 4w) ws)
+End
 
 val xSTACK_PUSH_EDI = let
   val (th,t_def) = decompilerLib.decompile

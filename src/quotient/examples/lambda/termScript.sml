@@ -116,11 +116,12 @@ val HEIGHT_LESS_EQ_ZERO1 = store_thm
 (* Definition of free variables.                                         *)
 (* --------------------------------------------------------------------- *)
 
-val FV1_def = Define
-   `(FV1 (Con1 a)        = {})                                 /\
+Definition FV1_def:
+    (FV1 (Con1 a)        = {})                                 /\
     (FV1 (Var1 x)        = {x})                                /\
     (FV1 (App1 t u)      = FV1 t UNION FV1 u)                  /\
-    (FV1 (Lam1 x u)      = FV1 u DIFF {x})`;
+    (FV1 (Lam1 x u)      = FV1 u DIFF {x})
+End
 
 
 val FINITE_FV1 = store_thm
@@ -147,11 +148,11 @@ val subs = ty_antiq( ==`:(var # 'a term1) list`== );
 (* Application of a substitution to a single variable.                   *)
 (* --------------------------------------------------------------------- *)
 
-val SUB1_def =
-    Define
-    `(SUB1 (CONS p s) y = let (x, c:'a term1) = p in
+Definition SUB1_def:
+     (SUB1 (CONS p s) y = let (x, c:'a term1) = p in
                                 (if y = x then c else SUB1 s y)) /\
-     (SUB1 NIL y = Var1 y)`;
+     (SUB1 NIL y = Var1 y)
+End
 
 val SUB1 = store_thm
    ("SUB1",
@@ -331,10 +332,10 @@ val SUB_APPEND_FREE_vsubst1 = store_thm
 (*   Only these variables are changed by a substitution                  *)
 (* --------------------------------------------------------------------- *)
 
-val BV_subst_def =
-    Define
-       `(BV_subst NIL = {}) /\
-        (BV_subst (CONS (x:(var # 'a)) xs) = (FST x INSERT BV_subst xs))`;
+Definition BV_subst_def:
+        (BV_subst NIL = {}) /\
+        (BV_subst (CONS (x:(var # 'a)) xs) = (FST x INSERT BV_subst xs))
+End
 
 
 val FINITE_BV_subst = store_thm

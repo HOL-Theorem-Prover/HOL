@@ -20,29 +20,37 @@ val std_ss' = std_ss ++ boolSimps.ETA_ss;
 (* sequences.                                                                *)
 (* ------------------------------------------------------------------------- *)
 
-val halfspace_def = Define `halfspace (b : bool) = (\x. shd x = b)`;
+Definition halfspace_def:   halfspace (b : bool) = (\x. shd x = b)
+End
 
-val mirror_def = Define `mirror (x :num -> bool) = scons (~shd x) (stl x)`;
+Definition mirror_def:   mirror (x :num -> bool) = scons (~shd x) (stl x)
+End
 
-val prefix_set_def = Define
-  `(prefix_set [] = UNIV) /\
-   (prefix_set (h :: t) = halfspace h INTER (prefix_set t o stl))`;
+Definition prefix_set_def:
+   (prefix_set [] = UNIV) /\
+   (prefix_set (h :: t) = halfspace h INTER (prefix_set t o stl))
+End
 
-val prefix_seq_def = Define `prefix_seq (h :: t) = scons h (prefix_seq t)`;
+Definition prefix_seq_def:   prefix_seq (h :: t) = scons h (prefix_seq t)
+End
 
-val prob_embed_def = Define `prob_embed l = UNIONL (MAP prefix_set l)`;
+Definition prob_embed_def:   prob_embed l = UNIONL (MAP prefix_set l)
+End
 
-val prob_algebra_def = Define
-   `prob_algebra = (univ(:num -> bool), {s | ?b. s = prob_embed b})`;
+Definition prob_algebra_def:
+    prob_algebra = (univ(:num -> bool), {s | ?b. s = prob_embed b})
+End
 
-val prob_premeasure_def = Define
-  `(prob_premeasure ([] : bool list list) = (0 :real)) /\
+Definition prob_premeasure_def:
+   (prob_premeasure ([] : bool list list) = (0 :real)) /\
    (prob_premeasure (l :: rest) =
-    (1 / 2) pow (LENGTH l) + prob_premeasure rest)`;
+    (1 / 2) pow (LENGTH l) + prob_premeasure rest)
+End
 
-val prob_measure_def = Define
-   `prob_measure s =
-        inf {r | ?c. (s = prob_embed c) /\ (prob_premeasure c = r)}`;
+Definition prob_measure_def:
+    prob_measure s =
+        inf {r | ?c. (s = prob_embed c) /\ (prob_premeasure c = r)}
+End
 
 (* NOTE: in sigma_algebraTheory, the definition of ‘measurable’ has been
    modified by removing all sigma-algebra requirements. The following
@@ -50,10 +58,11 @@ val prob_measure_def = Define
    used in the ‘miller’ example, but some related theorems may have to
    add sigma_algebra antecedents.  -- Chun Tian, 24/10/2022
  *)
-val premeasurable_def = Define
-   `premeasurable a b = {f | algebra a /\ algebra b /\
+Definition premeasurable_def:
+    premeasurable a b = {f | algebra a /\ algebra b /\
                              f IN (space a -> space b) /\
-                             !s. s IN subsets b ==> ((PREIMAGE f s)INTER(space a)) IN subsets a}`;
+                             !s. s IN subsets b ==> ((PREIMAGE f s)INTER(space a)) IN subsets a}
+End
 
 val IN_PREMEASURABLE = store_thm
   ("IN_PREMEASURABLE",
@@ -134,13 +143,14 @@ val PREMEASURABLE_COMP = store_thm
    >> METIS_TAC []);
 
 (* NOTE: there's also prob_preserving_def in real_probabilityTheory *)
-val prob_preserving_def = Define
-   `prob_preserving m1 m2 =
+Definition prob_preserving_def:
+    prob_preserving m1 m2 =
    {f |
     f IN premeasurable (m_space m1, measurable_sets m1) (m_space m2, measurable_sets m2) /\
     !s.
       s IN measurable_sets m2 ==>
-           (measure m1 ((PREIMAGE f s)INTER(m_space m1)) = measure m2 s)}`;
+           (measure m1 ((PREIMAGE f s)INTER(m_space m1)) = measure m2 s)}
+End
 
 val PROB_PRESERVING = store_thm (
    "PROB_PRESERVING",

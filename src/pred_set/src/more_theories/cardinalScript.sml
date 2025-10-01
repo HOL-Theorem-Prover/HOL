@@ -44,9 +44,9 @@ val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
 Overload "𝟙"[local] = “{()}”
 Overload "𝟚" = “{T;F}”
 
-val cardeq_def = Define`
+Definition cardeq_def:
   cardeq s1 s2 <=> ?f. BIJ f s1 s2
-`
+End
 val _ = set_fixity "=~" (Infix(NONASSOC, 450));
 val _ = Unicode.unicode_version {u = UTF8.chr 0x2248, tmnm = "=~"};
 val _ = TeX_notation {hol = "=~",            TeX = ("\\ensuremath{\\approx}", 1)};
@@ -79,9 +79,9 @@ val cardeq_TRANS = store_thm(
   metis_tac [BIJ_COMPOSE, cardeq_def]);
 
 (* less-or-equal *)
-val cardleq_def = Define`
+Definition cardleq_def:
   cardleq s1 s2 <=> ?f. INJ f s1 s2
-`;
+End
 
 val _ = overload_on ("<<=", ``cardleq``)
 
@@ -1065,9 +1065,9 @@ val INFINITE_cardleq_INSERT = store_thm(
   Cases_on `y IN s` >> simp[] >> DEEP_INTRO_TAC some_intro >>
   simp[] >> fs[INJ_DEF] >> metis_tac [DECIDE ``0 <> n + 1``])
 
-val list_def = Define`
+Definition list_def:
   list A = { l | !e. MEM e l ==> e IN A }
-`;
+End
 
 Theorem list_EMPTY[simp]: list {} = { [] }
 Proof
@@ -2009,14 +2009,16 @@ val eq_c = store_thm ("eq_c",
  >> `!f x y. (f x = y) = (y = f x)` by PROVE_TAC [EQ_SYM]
  >> ASM_REWRITE_TAC []);
 
-val cardgeq_def = Define
-   `cardgeq s t = cardleq t s`;
+Definition cardgeq_def:
+    cardgeq s t = cardleq t s
+End
 
 val _ = overload_on (">=_c", ``cardgeq``);
 val ge_c = save_thm ("ge_c",   cardgeq_def);
 
-val cardgt_def = Define
-   `cardgt s t = cardlt t s`;
+Definition cardgt_def:
+    cardgt s t = cardlt t s
+End
 
 val _ = overload_on (">_c",  ``cardgt``);
 val gt_c = save_thm ("gt_c",   cardgt_def);

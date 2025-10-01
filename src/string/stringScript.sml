@@ -70,26 +70,33 @@ val ranged_char_nchotomy = Q.store_thm("ranged_char_nchotomy",
 
 val ordn = term_of_int o Char.ord;
 
-val isLower_def = Define`
-  isLower c <=> ^(ordn #"a") <= ORD c /\ ORD c <= ^(ordn #"z")`;
+Definition isLower_def:
+  isLower c <=> ^(ordn #"a") <= ORD c /\ ORD c <= ^(ordn #"z")
+End
 
-val isUpper_def = Define`
-  isUpper c <=> ^(ordn #"A") <= ORD c /\ ORD c <= ^(ordn #"Z")`;
+Definition isUpper_def:
+  isUpper c <=> ^(ordn #"A") <= ORD c /\ ORD c <= ^(ordn #"Z")
+End
 
-val isDigit_def = Define`
-  isDigit c <=> ^(ordn #"0") <= ORD c /\ ORD c <= ^(ordn #"9")`;
+Definition isDigit_def:
+  isDigit c <=> ^(ordn #"0") <= ORD c /\ ORD c <= ^(ordn #"9")
+End
 
-val isAlpha_def = Define `isAlpha c <=> isLower c \/ isUpper c`;
+Definition isAlpha_def:   isAlpha c <=> isLower c \/ isUpper c
+End
 
-val isHexDigit_def = Define`
+Definition isHexDigit_def:
   isHexDigit c <=> ^(ordn #"0") <= ORD c /\ ORD c <= ^(ordn #"9") \/
                    ^(ordn #"a") <= ORD c /\ ORD c <= ^(ordn #"f") \/
-                   ^(ordn #"A") <= ORD c /\ ORD c <= ^(ordn #"F")`;
+                   ^(ordn #"A") <= ORD c /\ ORD c <= ^(ordn #"F")
+End
 
-val isAlphaNum_def = Define `isAlphaNum c <=> isAlpha c \/ isDigit c`;
+Definition isAlphaNum_def:   isAlphaNum c <=> isAlpha c \/ isDigit c
+End
 
-val isPrint_def = Define`
-  isPrint c <=> ^(ordn #" ") <= ORD c /\ ORD c < 127`;
+Definition isPrint_def:
+  isPrint c <=> ^(ordn #" ") <= ORD c /\ ORD c < 127
+End
 
 Theorem isAlphaNum_isPrint:
   !x. isAlphaNum x ==> isPrint x
@@ -106,28 +113,39 @@ Theorem isHexDigit_isPrint:
 Proof metis_tac[isAlphaNum_isPrint, isHexDigit_isAlphaNum]
 QED
 
-val isSpace_def = Define`
-  isSpace c <=> (ORD c = ^(ordn #" ")) \/ 9 <= ORD c /\ ORD c <= 13`;
+Definition isSpace_def:
+  isSpace c <=> (ORD c = ^(ordn #" ")) \/ 9 <= ORD c /\ ORD c <= 13
+End
 
-val isGraph_def = Define `isGraph c <=> isPrint c /\ ~isSpace c`;
+Definition isGraph_def:   isGraph c <=> isPrint c /\ ~isSpace c
+End
 
-val isPunct_def = Define `isPunct c <=> isGraph c /\ ~isAlphaNum c`;
+Definition isPunct_def:   isPunct c <=> isGraph c /\ ~isAlphaNum c
+End
 
-val isAscii_def = Define `isAscii c <=> ORD c <= 127`;
+Definition isAscii_def:   isAscii c <=> ORD c <= 127
+End
 
-val isCntrl_def = Define`
-  isCntrl c <=> ORD c < ^(ordn #" ") \/ 127 <= ORD c`;
+Definition isCntrl_def:
+  isCntrl c <=> ORD c < ^(ordn #" ") \/ 127 <= ORD c
+End
 
-val toLower_def = Define`
-  toLower c = if isUpper c then CHR (ORD c + 32) else c`;
+Definition toLower_def:
+  toLower c = if isUpper c then CHR (ORD c + 32) else c
+End
 
-val toUpper_def = Define`
-  toUpper c = if isLower c then CHR (ORD c - 32) else c`;
+Definition toUpper_def:
+  toUpper c = if isLower c then CHR (ORD c - 32) else c
+End
 
-val char_lt_def = Define `char_lt a b <=> ORD a < ORD b`;
-val char_le_def = Define `char_le a b <=> ORD a <= ORD b`;
-val char_gt_def = Define `char_gt a b <=> ORD a > ORD b`;
-val char_ge_def = Define `char_ge a b <=> ORD a >= ORD b`;
+Definition char_lt_def:   char_lt a b <=> ORD a < ORD b
+End
+Definition char_le_def:   char_le a b <=> ORD a <= ORD b
+End
+Definition char_gt_def:   char_gt a b <=> ORD a > ORD b
+End
+Definition char_ge_def:   char_ge a b <=> ORD a >= ORD b
+End
 
 Definition char_compare_def:
   char_compare c1 c2 = num_compare (ORD c1) (ORD c2)
@@ -156,7 +174,8 @@ REPEAT STRIP_TAC
   THEN STRIP_ASSUME_TAC (Q.SPEC `c` CHR_ONTO)
   THEN RW_TAC bool_ss []);
 
-val char_size_def = Define `char_size (c:char) = 0`;
+Definition char_size_def:   char_size (c:char) = 0
+End
 
 val _ = TypeBase.export [
     TypeBasePure.mk_nondatatype_info (
@@ -229,13 +248,18 @@ val _ = overload_on(GrammarSpecials.std_stringinjn_name,
                     mk_const(GrammarSpecials.string_elim_term,
                              “:string -> string”))
 
-val SUB_def = Define `SUB (s:string, n) = EL n s`;
-val STR_def = Define `STR (c:char) = [c]`;
-val TOCHAR_def = Define `TOCHAR [c] = c: char`;
+Definition SUB_def:   SUB (s:string, n) = EL n s
+End
+Definition STR_def:   STR (c:char) = [c]
+End
+Definition TOCHAR_def:   TOCHAR [c] = c: char
+End
 
-val SUBSTRING_def = Define `SUBSTRING (s:string,i,n) = SEG n i s`;
+Definition SUBSTRING_def:   SUBSTRING (s:string,i,n) = SEG n i s
+End
 
-val TRANSLATE_def = Define `TRANSLATE f (s:string) = CONCAT (MAP f s)`;
+Definition TRANSLATE_def:   TRANSLATE f (s:string) = CONCAT (MAP f s)
+End
 
 val SPLITP_MONO = Q.prove(
   `!P l. LENGTH (SND (SPLITP P l)) <= LENGTH l`,
@@ -278,10 +302,10 @@ Definition IMPLODE_def[simp]:
   (IMPLODE (c::cs) = STRING c (IMPLODE cs))
 End
 
-val EXPLODE_def = Define`
+Definition EXPLODE_def:
   (EXPLODE "" = []) /\
   (EXPLODE (STRING c s) = c :: EXPLODE s)
-`;
+End
 val _ = export_rewrites ["EXPLODE_def"]
 
 Theorem IMPLODE_EXPLODE_I[compute]:
@@ -398,9 +422,10 @@ val STRING_ACYCLIC = Q.store_thm
 Overload STRLEN[inferior] = “LENGTH : string -> num”
 val STRLEN_DEF = listTheory.LENGTH
 
-val EXTRACT_def = Define`
+Definition EXTRACT_def:
   (EXTRACT (s,i,NONE) = SUBSTRING(s,i,STRLEN s - i)) /\
-  (EXTRACT (s,i,SOME n) = SUBSTRING(s,i,n))`;
+  (EXTRACT (s,i,SOME n) = SUBSTRING(s,i,n))
+End
 
 val STRLEN_EXPLODE_THM = store_thm(
   "STRLEN_EXPLODE_THM",
@@ -412,10 +437,10 @@ val STRLEN_EXPLODE_THM = store_thm(
 (* with an ML definition of DEST_STRING in terms of the Basis String struct. *)
 (*---------------------------------------------------------------------------*)
 
-val DEST_STRING_def = Define`
+Definition DEST_STRING_def:
    (DEST_STRING "" = NONE) /\
    (DEST_STRING (STRING c rst) = SOME(c,rst))
-`;
+End
 val _ = export_rewrites ["DEST_STRING_def"]
 
 val DEST_STRING_LEMS = Q.store_thm
@@ -560,15 +585,19 @@ val isPREFIX_STRCAT = Q.store_thm
        Orderings
  ---------------------------------------------------------------------------*)
 
-val string_lt_def = Define`
+Definition string_lt_def:
   (string_lt s EMPTYSTRING <=> F) /\
   (string_lt EMPTYSTRING (STRING c s) <=> T) /\
   (string_lt (STRING c1 s1) (STRING c2 s2) <=>
-     c1 < c2 \/ (c1 = c2) /\ string_lt s1 s2)`;
+     c1 < c2 \/ (c1 = c2) /\ string_lt s1 s2)
+End
 
-val string_le_def = Define `string_le s1 s2 <=> (s1 = s2) \/ string_lt s1 s2`;
-val string_gt_def = Define `string_gt s1 s2 <=> string_lt s2 s1`;
-val string_ge_def = Define `string_ge s1 s2 <=> string_le s2 s1`;
+Definition string_le_def:   string_le s1 s2 <=> (s1 = s2) \/ string_lt s1 s2
+End
+Definition string_gt_def:   string_gt s1 s2 <=> string_lt s2 s1
+End
+Definition string_ge_def:   string_ge s1 s2 <=> string_le s2 s1
+End
 
 Overload "<"[inferior]  = “string_lt”
 Overload ">"[inferior]  = “string_gt”

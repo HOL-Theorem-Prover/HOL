@@ -90,15 +90,17 @@ val _ = export_rewrites ["fsubrep_fsubty2term"]
 
 
 (* define constructors *)
-val Top_def = Define`Top = term2fsubty (CON T)`;
-val TyVar_def = Define`TyVar s = term2fsubty (VAR s)`;
-val Fun_def = Define`
+Definition Top_def:  Top = term2fsubty (CON T)
+End
+Definition TyVar_def:  TyVar s = term2fsubty (VAR s)
+End
+Definition Fun_def:
   Fun ty1 ty2 = term2fsubty (fsubty2term ty1 @@ fsubty2term ty2)
-`;
-val ForallTy_def = Define`
+End
+Definition ForallTy_def:
   ForallTy v boundty ty =
     term2fsubty (CON F @@ fsubty2term boundty @@ LAM v (fsubty2term ty))
-`;
+End
 
 (* prove injectivity for the non-binder constructors *)
 val Fun_11 = store_thm(
@@ -154,9 +156,9 @@ val fsubty_ind = store_thm(
   METIS_TAC []);
 
 (* definition of swap *)
-val fswap_def = Define`
+Definition fswap_def:
   fswap x y ty = term2fsubty (swap x y (fsubty2term ty))
-`;
+End
 
 val fsubrep_swap = store_thm(
   "fsubrep_swap",
@@ -196,11 +198,11 @@ val fswap_comm = store_thm(
 val _ = export_rewrites ["fswap_comm"]
 
 (* define swap over contexts *)
-val ctxtswap_def = Define`
+Definition ctxtswap_def:
   (ctxtswap x y [] = []) /\
   (ctxtswap x y (h::t) = (swapstr x y (FST h), fswap x y (SND h)) ::
                          ctxtswap x y t)
-`;
+End
 val _ = export_rewrites ["ctxtswap_def"]
 
 val ctxtswap_inv = store_thm(
@@ -223,10 +225,10 @@ val MEM_ctxtswap = store_thm(
   METIS_TAC [fswap_inv]);
 val _ = export_rewrites ["MEM_ctxtswap"]
 
-val cdom_def = Define`
+Definition cdom_def:
   (cdom ([]: (string # fsubty) list)  = {}) /\
   (cdom (h::t) = FST h INSERT cdom t)
-`;
+End
 val _ = export_rewrites ["cdom_def"]
 
 val FINITE_cdom = store_thm(
@@ -242,9 +244,9 @@ val cdom_MEM = store_thm(
   METIS_TAC []);
 
 (* define fv for types *)
-val ftyFV_def = Define`
+Definition ftyFV_def:
   ftyFV ty = FV (fsubty2term ty)
-`;
+End
 
 val ftyFV_thm = store_thm(
   "ftyFV_thm",
@@ -327,10 +329,10 @@ val ftyFV_FINITE = store_thm(
 val _ = export_rewrites ["ftyFV_FINITE"]
 
 (* define FV for ctxts *)
-val ctxtFV_def = Define`
+Definition ctxtFV_def:
   (ctxtFV [] = {}) /\
   (ctxtFV (h::t) = {FST h} UNION ftyFV (SND h) UNION ctxtFV t)
-`;
+End
 val _ = export_rewrites ["ctxtFV_def"]
 
 val ctxtFV_ctxtswap = store_thm(
@@ -366,12 +368,12 @@ val ctxtswap_fresh = store_thm(
   Induct THEN SRW_TAC [][fswap_fresh]);
 
 (* wfctxt implements the restrictions defined on pp393-4 *)
-val wfctxt_def = Define`
+Definition wfctxt_def:
   (wfctxt [] = T) /\
   (wfctxt ((x,ty) :: t) = ~(x IN cdom t) /\
                           ftyFV ty SUBSET cdom t /\
                           wfctxt t)
-`;
+End
 val _ = export_rewrites ["wfctxt_def"]
 
 val wfctxt_swap = store_thm(
@@ -395,9 +397,9 @@ val wfctxt_MEM = store_thm(
                                        SUBSET_DEF] THEN
   METIS_TAC []);
 
-val fsize_def = Define`
+Definition fsize_def:
   fsize (t:fsubty) = size (fsubty2term t)
-`;
+End
 
 val fsize_thm = store_thm(
   "fsize_thm",

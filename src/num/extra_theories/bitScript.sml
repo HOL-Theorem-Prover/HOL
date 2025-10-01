@@ -19,57 +19,70 @@ val LEFT_REWRITE_TAC =
 
 val POP_LAST_TAC = POP_ASSUM (K ALL_TAC)
 
-val Define = TotalDefn.Define
-
 (* ------------------------------------------------------------------------- *)
 
-val _ = computeLib.auto_import_definitions := false
+Definition MOD_2EXP_def[nocompute]:   MOD_2EXP x n = n MOD 2 ** x
+End
 
-val MOD_2EXP_def = Define `MOD_2EXP x n = n MOD 2 ** x`
+Definition DIV_2EXP_def[nocompute]:   DIV_2EXP x n = n DIV 2 ** x
+End
 
-val DIV_2EXP_def = Define `DIV_2EXP x n = n DIV 2 ** x`
+Definition TIMES_2EXP_def[nocompute]:    TIMES_2EXP x n = n * 2 ** x
+End
 
-val TIMES_2EXP_def  = Define `TIMES_2EXP x n = n * 2 ** x`
+Definition DIVMOD_2EXP_def[nocompute]:   DIVMOD_2EXP x n = (n DIV 2 ** x,n MOD 2 ** x)
+End
 
-val DIVMOD_2EXP_def = Define `DIVMOD_2EXP x n = (n DIV 2 ** x,n MOD 2 ** x)`
+Definition SBIT_def[nocompute]:    SBIT b n = if b then 2 ** n else 0
+End
 
-val SBIT_def  = Define `SBIT b n = if b then 2 ** n else 0`
+Definition BITS_def[nocompute]:    BITS h l n = MOD_2EXP (SUC h - l) (DIV_2EXP l n)
+End
 
-val BITS_def  = Define `BITS h l n = MOD_2EXP (SUC h - l) (DIV_2EXP l n)`
+Definition BITV_def[nocompute]:    BITV n b = BITS b b n
+End
 
-val BITV_def  = Define `BITV n b = BITS b b n`
+Definition BIT_def[nocompute]:     BIT b n = (BITS b b n = 1)
+End
 
-val BIT_def   = Define `BIT b n = (BITS b b n = 1)`
+Definition SLICE_def[nocompute]:   SLICE h l n = MOD_2EXP (SUC h) n - MOD_2EXP l n
+End
 
-val SLICE_def = Define `SLICE h l n = MOD_2EXP (SUC h) n - MOD_2EXP l n`
+Definition LOG2_def[nocompute]:    LOG2 = LOG 2
+End
 
-val LOG2_def  = Define `LOG2 = LOG 2`
+Definition LOWEST_SET_BIT_def[nocompute]:   LOWEST_SET_BIT n = LEAST i. BIT i n
+End
 
-val LOWEST_SET_BIT_def = Define `LOWEST_SET_BIT n = LEAST i. BIT i n`
-
-val BIT_REVERSE_def = Define`
+Definition BIT_REVERSE_def[nocompute]:
    (BIT_REVERSE 0 x = 0) /\
-   (BIT_REVERSE (SUC n) x = (BIT_REVERSE n x) * 2 + SBIT (BIT n x) 0)`
+   (BIT_REVERSE (SUC n) x = (BIT_REVERSE n x) * 2 + SBIT (BIT n x) 0)
+End
 
-val BITWISE_def = Define`
+Definition BITWISE_def[nocompute]:
    (BITWISE 0 op x y = 0) /\
    (BITWISE (SUC n) op x y =
-      BITWISE n op x y + SBIT (op (BIT n x) (BIT n y)) n)`
+      BITWISE n op x y + SBIT (op (BIT n x) (BIT n y)) n)
+End
 
-val BIT_MODIFY_def = Define`
+Definition BIT_MODIFY_def[nocompute]:
    (BIT_MODIFY 0 f x = 0) /\
-   (BIT_MODIFY (SUC n) f x = BIT_MODIFY n f x + SBIT (f n (BIT n x)) n)`
+   (BIT_MODIFY (SUC n) f x = BIT_MODIFY n f x + SBIT (f n (BIT n x)) n)
+End
 
-val SIGN_EXTEND_def = Define`
+Definition SIGN_EXTEND_def[nocompute]:
    SIGN_EXTEND l h n =
      let m = n MOD 2 ** l in
-       if BIT (l - 1) n then 2 ** h - 2 ** l + m else m`
+       if BIT (l - 1) n then 2 ** h - 2 ** l + m else m
+End
 
-val MOD_2EXP_EQ_def = Define`
-   MOD_2EXP_EQ n a b = (MOD_2EXP n a = MOD_2EXP n b)`
+Definition MOD_2EXP_EQ_def[nocompute]:
+   MOD_2EXP_EQ n a b = (MOD_2EXP n a = MOD_2EXP n b)
+End
 
-val MOD_2EXP_MAX_def = Define`
-   MOD_2EXP_MAX n a = (MOD_2EXP n a = (2 ** n - 1))`
+Definition MOD_2EXP_MAX_def[nocompute]:
+   MOD_2EXP_MAX n a = (MOD_2EXP n a = (2 ** n - 1))
+End
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1581,4 +1594,3 @@ Proof
   \\ drule NOT_BIT_GT_TWOEXP
   \\ simp[]
 QED
-

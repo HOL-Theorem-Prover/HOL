@@ -165,11 +165,12 @@ val msgrel_TRANS = store_thm
 (* Definition of function to return all nonces from an expression.       *)
 (* --------------------------------------------------------------------- *)
 
-val freenonces1_def = Define
-   `(freenonces1 (Nonce1 n)      = {n})                                 /\
+Definition freenonces1_def:
+    (freenonces1 (Nonce1 n)      = {n})                                 /\
     (freenonces1 (Mpair1 x y)    = freenonces1 x UNION freenonces1 y)   /\
     (freenonces1 (Crypt1 k x)    = freenonces1 x)                       /\
-    (freenonces1 (Decrypt1 k x)  = freenonces1 x)`;
+    (freenonces1 (Decrypt1 k x)  = freenonces1 x)
+End
 
 (* Respectfulness theorem for the freenonces1 function. *)
 
@@ -186,11 +187,12 @@ val freenonces_RSP = store_thm
 (* Definition of left part of the uppermost Mpair1 constructor.          *)
 (* --------------------------------------------------------------------- *)
 
-val freeleft1_def = Define
-   `(freeleft1 (Nonce1 n)      = Nonce1 n)        /\
+Definition freeleft1_def:
+    (freeleft1 (Nonce1 n)      = Nonce1 n)        /\
     (freeleft1 (Mpair1 x y)    = x)               /\
     (freeleft1 (Crypt1 k x)    = freeleft1 x)     /\
-    (freeleft1 (Decrypt1 k x)  = freeleft1 x)`;
+    (freeleft1 (Decrypt1 k x)  = freeleft1 x)
+End
 
 (* Respectfulness theorem for the freeleft1 function. *)
 
@@ -208,11 +210,12 @@ val freeleft_RSP = store_thm
 (* Definition of right part of the uppermost Mpair1 constructor.         *)
 (* --------------------------------------------------------------------- *)
 
-val freeright1_def = Define
-   `(freeright1 (Nonce1 n)      = Nonce1 n)        /\
+Definition freeright1_def:
+    (freeright1 (Nonce1 n)      = Nonce1 n)        /\
     (freeright1 (Mpair1 x y)    = y)               /\
     (freeright1 (Crypt1 k x)    = freeright1 x)    /\
-    (freeright1 (Decrypt1 k x)  = freeright1 x)`;
+    (freeright1 (Decrypt1 k x)  = freeright1 x)
+End
 
 (* Respectfulness theorem for the freeright1 function. *)
 
@@ -231,11 +234,12 @@ val freeright_RSP = store_thm
 (* not Mpair.                                                            *)
 (* --------------------------------------------------------------------- *)
 
-val is_nonce1_def = Define
-   `(is_nonce1 (Nonce1 n)      = T)    /\
+Definition is_nonce1_def:
+    (is_nonce1 (Nonce1 n)      = T)    /\
     (is_nonce1 (Mpair1 x y)    = F)    /\
     (is_nonce1 (Crypt1 k x)    = is_nonce1 x)    /\
-    (is_nonce1 (Decrypt1 k x)  = is_nonce1 x)`;
+    (is_nonce1 (Decrypt1 k x)  = is_nonce1 x)
+End
 
 (* Respectfulness theorem for the is_nonce1 function. *)
 

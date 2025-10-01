@@ -10,10 +10,11 @@ infix \\
 val op \\ = op THEN;
 
 
-val xSTACK2_def = Define `
+Definition xSTACK2_def:
   (xSTACK2 r ([],l) = SEP_F) /\
   (xSTACK2 r (x::xs,l) =
-    SEP_EXISTS a. cond (ALIGNED a) * xR r a * xSPACE a l * xLIST a (x::xs))`;
+    SEP_EXISTS a. cond (ALIGNED a) * xR r a * xSPACE a l * xLIST a (x::xs))
+End
 
 val xSTACK2_xSTACK = let
   val (spec,_,s,_) = prog_x86Lib.x86_tools

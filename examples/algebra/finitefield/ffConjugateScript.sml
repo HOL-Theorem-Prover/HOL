@@ -274,9 +274,9 @@ val _ = intLib.deprecate_int ();
 (* ------------------------------------------------------------------------- *)
 
 (* Define an element conjugate with respect to a subring *)
-val ring_conjugate_def = Define `
+Definition ring_conjugate_def:
     ring_conjugate (r:'a ring) (s:'a ring) (x: 'a) n = x ** ((CARD B) ** n)
-`;
+End
 (* Overload on ring conjugate *)
 val _ = overload_on("conj", ``ring_conjugate r s``);
 (*
@@ -330,9 +330,9 @@ val ring_conjugate_0 = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of conjugates with respect to a subring *)
-val ring_conjugates_def = Define `
+Definition ring_conjugates_def:
     ring_conjugates (r:'a ring) (s:'a ring) (x: 'a) = IMAGE (conj x) univ(:num)
-`;
+End
 (* Overload on ring conjugates *)
 val _ = overload_on("Conj", ``ring_conjugates r s``);
 (*
@@ -1995,9 +1995,9 @@ val poly_monic_irreducible_eq_minimal_poly = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the conjugate equivalence relation *)
-val eq_conj_def = Define`
+Definition eq_conj_def:
     eq_conj (r:'a ring) (s:'a ring) x y = ?k. y = conj x k
-`;
+End
 
 (* Overload conjugate equivalennce relation *)
 val _ = overload_on("~~", ``eq_conj (r:'a ring) (s:'a ring)``);

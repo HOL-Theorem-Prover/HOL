@@ -210,9 +210,10 @@ val finite_set1_strong_cases = store_thm
 (* Definition of Card function to measure the size of a finite set.      *)
 (* --------------------------------------------------------------------- *)
 
-val Card1_def = Define
-   `(Card1 ([]) = 0)  /\
-    (Card1 ((a:'a) :: A) = if MEM a A then Card1 A else SUC (Card1 A))`;
+Definition Card1_def:
+    (Card1 ([]) = 0)  /\
+    (Card1 ((a:'a) :: A) = if MEM a A then Card1 A else SUC (Card1 A))
+End
 
 val Card1_RSP = store_thm
    ("Card1_RSP",
@@ -292,10 +293,11 @@ val NOT_NIL_EQUIV_CONS = store_thm
 (* if the element is not a member then the set is unchanged.             *)
 (* --------------------------------------------------------------------- *)
 
-val Delete1_def = Define
-   `($Delete1 ([]) x = [])  /\
+Definition Delete1_def:
+    ($Delete1 ([]) x = [])  /\
     ($Delete1 ((a:'a) :: A) x = if a = x then $Delete1 A x
-                                     else a :: ($Delete1 A x))`;
+                                     else a :: ($Delete1 A x))
+End
 
 val _ = add_infix ("Delete1", 500, HOLgrammars.LEFT);
 
@@ -403,10 +405,11 @@ val APPEND_RSP = store_thm
     THEN RW_TAC list_ss []
    );
 
-val Inter1_def = Define
-   `($Inter1 ([]) B = [])  /\
+Definition Inter1_def:
+    ($Inter1 ([]) B = [])  /\
     ($Inter1 ((a:'a) :: A) B = if MEM a B then a :: ($Inter1 A B)
-                                          else $Inter1 A B)`;
+                                          else $Inter1 A B)
+End
 
 val _ = add_infix ("Inter1", 600, HOLgrammars.LEFT);
 
@@ -433,15 +436,16 @@ val Inter1_RSP = store_thm
 (* Definition of Fold1 function to fold a function over a finite set.    *)
 (* --------------------------------------------------------------------- *)
 
-val Fold1_def = Define
-   `(Fold1 f (g:'a->'b) (z:'b) ([]) = z)  /\
+Definition Fold1_def:
+    (Fold1 f (g:'a->'b) (z:'b) ([]) = z)  /\
     (Fold1 f g z (a :: A) =
         if (!u v. f u v = f v u) /\
            (!u v w. f u (f v w) = f (f u v) w)
         then
            if MEM a A then Fold1 f g z A
                       else f (g a) (Fold1 f g z A)
-        else z)`;
+        else z)
+End
 
 (* Respectfulness theorem for the Fold1 function. *)
 

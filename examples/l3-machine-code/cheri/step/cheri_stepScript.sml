@@ -16,9 +16,10 @@ val _ = List.app (fn f => f ())
 
 (* Next state theorems *)
 
-val NextStateCHERI_def = Define`
+Definition NextStateCHERI_def:
    NextStateCHERI s0 =
-   let s1 = Next s0 in if s1.exception = NoException then SOME s1 else NONE`
+   let s1 = Next s0 in if s1.exception = NoException then SOME s1 else NONE
+End
 
 val exceptionSignalled_id = Q.prove(
    `!s. ~exceptionSignalled s ==>
@@ -661,7 +662,7 @@ val SCD = sev "SCD"
 
 val () = utilsLib.setStepConv (utilsLib.WGROUND_CONV THENC extract_conv)
 
-val ReadWord_def = Define`
+Definition ReadWord_def:
   ReadWord m (addr : 40 word) =
   case m ((39 >< 5) addr : 35 word) of
      Raw w256 =>
@@ -676,7 +677,8 @@ val ReadWord_def = Define`
           else if v = 5w then (159 >< 128) w256
           else if v = 6w then (255 >< 224) w256
           else                (223 >< 192) w256 : word32)
-   | _ => NONE`
+   | _ => NONE
+End
 
 val ReadInst = Q.prove(
   `(ReadWord s.mem addr = SOME w) ==> (ReadInst addr s = w)`,

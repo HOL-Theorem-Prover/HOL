@@ -26,14 +26,16 @@ val (prob_unif_def, prob_unif_ind) = Defn.tprove
 val _ = save_thm ("prob_unif_def", prob_unif_def);
 val _ = save_thm ("prob_unif_ind", prob_unif_ind);
 
-val prob_uniform_cut_def = Define
-  `(prob_uniform_cut 0 (SUC n) s = (0, s)) /\
+Definition prob_uniform_cut_def:
+   (prob_uniform_cut 0 (SUC n) s = (0, s)) /\
    (prob_uniform_cut (SUC t) (SUC n) s =
     let (res, s') = prob_unif n s
-    in if res < SUC n then (res, s') else prob_uniform_cut t (SUC n) s')`;
+    in if res < SUC n then (res, s') else prob_uniform_cut t (SUC n) s')
+End
 
-val prob_uniform_def = Define
-  `prob_uniform (SUC n) = prob_until (prob_unif n) (\x. x < SUC n)`;
+Definition prob_uniform_def:
+   prob_uniform (SUC n) = prob_until (prob_unif n) (\x. x < SUC n)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems leading to:                                                      *)

@@ -282,21 +282,24 @@ val path_limit = Q.store_thm ("path_limit",
          `SUC n' ∈ PL (f (SUC n'))` by metis_tac [PL_downward_closed] >>
          fs [take_eq])));
 
-val lfilter_map_def = Define `
-lfilter_map f l = LMAP THE (LFILTER (\x. x ≠ NONE) (LMAP f l))`;
+Definition lfilter_map_def:
+lfilter_map f l = LMAP THE (LFILTER (\x. x ≠ NONE) (LMAP f l))
+End
 
 val lfinite_lfilter = Q.store_thm ("lfinite_lfilter",
 `!l. LFINITE l ⇒ LFINITE (LFILTER P l)`,
  ho_match_mp_tac LFINITE_ind >>
  rw []);
 
-val inf_const_def = Define `
-inf_const c = LUNFOLD (\x:unit. SOME (x,c)) ARB`;
+Definition inf_const_def:
+inf_const c = LUNFOLD (\x:unit. SOME (x,c)) ARB
+End
 
-val complete_def = Define `
-complete rel p ⇔ (finite p ⇒ ¬?l s. rel (last p) l s)`;
+Definition complete_def:
+complete rel p ⇔ (finite p ⇒ ¬?l s. rel (last p) l s)
+End
 
-val compose_paths_def = Define `
+Definition compose_paths_def:
 compose_paths p1 p2 =
   unfold (\(p1,p2). (first p1, first p2))
          (\(p1,p2).
@@ -305,7 +308,8 @@ compose_paths p1 p2 =
            else if first_label p1 = first_label p2 then
              SOME ((tail p1, tail p2), first_label p1)
            else NONE)
-        (p1,p2)`;
+        (p1,p2)
+End
 
 val compose_paths_stopped = Q.store_thm ("compose_paths_stopped[simp]",
 `(!x y. compose_paths (stopped_at x) (stopped_at y) = stopped_at (x,y))`,

@@ -36,11 +36,12 @@ val ST = Q.store_thm("ST",
 val T_iff_S = Q.store_thm("T_iff_S",
   `T w ⇔ S w`, metis_tac[TS,ST]);
 
-val balanced_def = Define`
+Definition balanced_def:
   (balanced [] 0 ⇔ T) ∧
   (balanced (a::xs) n ⇔ balanced xs (SUC n)) ∧
   (balanced (b::xs) (SUC n) ⇔ balanced xs n) ∧
-  (balanced _ _ ⇔ F)`
+  (balanced _ _ ⇔ F)
+End
 val _ = export_rewrites["balanced_def"]
 val balanced_ind = theorem"balanced_ind"
 

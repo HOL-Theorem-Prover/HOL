@@ -2113,9 +2113,9 @@ val up_deg = store_thm(
 (* This is now |X| *)
 
 (* Lifting a polynomial *)
-val poly_lift_def = Define`
+Definition poly_lift_def:
   poly_lift (r:'a ring) (p:'a poly) = MAP up p
-`;
+End
 val _ = overload_on ("lift", ``poly_lift r``);
 
 (* poly_lift_def:
@@ -4928,13 +4928,13 @@ But (lift p) in (PolyRing (PolyModRing r z)) has a root X, where (lift p = MAP u
 *)
 
 (* Define the ring of constant polynomials *)
-val poly_mod_const_def = Define`
+Definition poly_mod_const_def:
     poly_mod_const (r:'a ring) (z:'a poly) =
     <| carrier := IMAGE up R;
            sum := <|carrier := IMAGE up R; op := $+z; id := #0z |>;
           prod := <|carrier := IMAGE up R; op := $*z; id := #1z |>
      |>
-`;
+End
 
 (* overload on constant polynomials of R[x]/z *)
 val _ = overload_on ("PolyModConst", ``\r z. poly_mod_const r z``);

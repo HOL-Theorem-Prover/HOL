@@ -272,12 +272,13 @@ val BIGUNION_BIGINTER = store_thm ("BIGUNION_BIGINTER",
 (* Recursion over finite sets; based on Ching-Tsun's code (archive 713).     *)
 (* ------------------------------------------------------------------------- *)
 
-val FINREC = Define
-  `(FINREC (f:'a->'b->'b) b s a 0 <=> (s = {}) /\ (a = b)) /\
+Definition FINREC:
+   (FINREC (f:'a->'b->'b) b s a 0 <=> (s = {}) /\ (a = b)) /\
    (FINREC (f:'a->'b->'b) b s a (SUC n) <=>
                 ?x c. x IN s /\
                       FINREC f b (s DELETE x) c n /\
-                      (a = f x c))`;
+                      (a = f x c))
+End
 
 val FINREC_1_LEMMA = store_thm ("FINREC_1_LEMMA",
   ``!f b s a. FINREC f b s a (SUC 0) <=> ?x. (s = {x}) /\ (a = f x b)``,
@@ -743,8 +744,9 @@ QED
 (* Segment of natural numbers starting at a specific number.                 *)
 (* ------------------------------------------------------------------------- *)
 
-val from_def = Define
-   `from n = {m:num | n <= m}`;
+Definition from_def:
+    from n = {m:num | n <= m}
+End
 
 val FROM_0 = store_thm ("FROM_0",
   ``from 0 = univ(:num)``,

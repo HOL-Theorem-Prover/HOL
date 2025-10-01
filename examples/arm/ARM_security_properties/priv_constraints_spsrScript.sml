@@ -67,8 +67,8 @@ val prove_abs_spsr_flags_const_action =
 
 
 
-val untouched_spsr_flags_abs_def =
-    Define `untouched_spsr_flags_abs f (mode:bool[5]) =
+Definition untouched_spsr_flags_abs_def:
+     untouched_spsr_flags_abs f (mode:bool[5]) =
            !s a c s'. (f a s = ValueState c s') ==>
                 let spsr =
                case mode of
@@ -86,10 +86,10 @@ val untouched_spsr_flags_abs_def =
                            ((s'.psrs(0,spsr)).F = (s.psrs(0,spsr)).F) /\
                            ((s'.psrs (0,spsr)).M=(s.psrs (0,spsr)).M) /\
                            ((s'.psrs (0,CPSR)).M=(s.psrs (0,CPSR)).M)) ))
-                           `;
+End
 
-val untouched_spsr_flags_def =
-    Define `untouched_spsr_flags f (mode:bool[5]) =
+Definition untouched_spsr_flags_def:
+     untouched_spsr_flags f (mode:bool[5]) =
            !s c s'. (f s = ValueState c s') ==>
            let spsr =
                case mode of
@@ -106,11 +106,11 @@ val untouched_spsr_flags_def =
                            ((s'.psrs(0,spsr)).F = (s.psrs(0,spsr)).F) /\
                            ((s'.psrs (0,spsr)).M=(s.psrs (0,spsr)).M)/\
                            ((s'.psrs (0,CPSR)).M=(s.psrs (0,CPSR)).M)) )
-                           `;
+End
 
 
-val priv_spsr_flags_constraints_def =
-    Define `priv_spsr_flags_constraints f cpsr mode =
+Definition priv_spsr_flags_constraints_def:
+     priv_spsr_flags_constraints f cpsr mode =
             ! s s' a . (f s = ValueState a s') ==>
                 (~access_violation s') ==>
                 ((s'.psrs(0,CPSR)).M = mode) ==>
@@ -128,11 +128,12 @@ val priv_spsr_flags_constraints_def =
                            ((s'.psrs(0,spsr)).F = cpsr.F)/\
                            ((s'.psrs (0,spsr)).M=cpsr.M))
 
-              )`;
+              )
+End
 
 
-val priv_spsr_flags_constraints_abs_def =
-    Define `priv_spsr_flags_constraints_abs f cpsr mode =
+Definition priv_spsr_flags_constraints_abs_def:
+     priv_spsr_flags_constraints_abs f cpsr mode =
                              ! s s' a c. (f c s = ValueState a s') ==>
                                (~access_violation s') ==>
                               ((s'.psrs(0,CPSR)).M = mode) ==>
@@ -152,7 +153,7 @@ val priv_spsr_flags_constraints_abs_def =
                                (((s'.psrs(0,spsr)).I = cpsr.I) /\
                            ((s'.psrs(0,spsr)).F = cpsr.F)/\
                            ((s'.psrs (0,spsr)).M=cpsr.M)))
-                               `;
+End
 
 
 (*********************   proof rules *******************************)

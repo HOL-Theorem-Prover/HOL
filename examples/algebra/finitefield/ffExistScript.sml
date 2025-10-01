@@ -654,10 +654,10 @@ val _ = add_rule {
 };
 
 (* Define  pairs of field/subfields with isomorphic subfields *)
-val iso_subfields_def = Define`
+Definition iso_subfields_def:
   r =| (s,f,s_) |= r_ <=> FiniteField (r:'a field) /\ FiniteField (r_:'b field) /\
         (CARD R = CARD R_) /\ s <<= r /\ s_ <<= r_ /\ FieldIso f s s_
-`;
+End
 
 (* export definition *)
 val _ = export_rewrites ["iso_subfields_def"];
@@ -1379,10 +1379,10 @@ See Timothy Murphy: Finite Field (Course MA364D)  Chapter 9.
                 #0 -> #0_
                 x  -> mirror f (primitive r) **_ (idx x)
 *)
-val field_iso_map_def = Define`
+Definition field_iso_map_def:
     field_iso_map (r:'a field) (s:'a field) (r_:'b field) (s_:'b field) f x =
     if x = #0 then #0_ else (mirror f (primitive r)) **_ (idx x)
-`;
+End
 
 (* Overload on image of field isomorphism *)
 val _ = overload_on("im", ``field_iso_map (r:'a field) (s:'a field) (r_:'b field) (s_:'b field)``);
@@ -2387,22 +2387,22 @@ val finite_field_clone_exists = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define a monoid bijective image *)
-val monoid_bij_image_def = Define `
+Definition monoid_bij_image_def:
   monoid_bij_image (f:'a -> 'b) (t:'b -> 'a) (g:'a monoid) =
     <|carrier := IMAGE f G;
            op := (\x y. f (g.op (t x) (t y))); (* display as: op := (\x y. f (t x * t y)) *)
            id := f #e
      |>
-`;
+End
 
 (* Define a ring bijective image *)
-val ring_bij_image_def = Define `
+Definition ring_bij_image_def:
   ring_bij_image (f:'a -> 'b) (g:'b -> 'a) (r:'a ring) =
      <| carrier := IMAGE f R;
             sum := monoid_bij_image f g r.sum;
            prod := monoid_bij_image f g r.prod
       |>
-`;
+End
 
 (* Given a Monoid g, and two functions f t that undo each other,
    Then (f g) is a Monoid, with op := (\x y. f (t x * t y))      *)

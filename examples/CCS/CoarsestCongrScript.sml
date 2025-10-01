@@ -527,9 +527,10 @@ QED
    processes are finitary, and this makes the lemma relatively easy. *)
 
 (* (KLOP :'a Label -> num -> 'a CCS) *)
-val KLOP_def = Define `
+Definition KLOP_def:
    (KLOP (a: 'a Label) (0 :num) = nil) /\
-   (KLOP a (SUC n) = sum (KLOP a n) (prefix (label a) (KLOP a n))) `;
+   (KLOP a (SUC n) = sum (KLOP a n) (prefix (label a) (KLOP a n)))
+End
 
 Theorem KLOP_closed :
     !a n. closed (KLOP a n)
@@ -864,8 +865,9 @@ val COARSEST_CONGR_FINITE = store_thm ((* NEW *)
  >> RW_TAC std_ss [PROP3_COMMON]);
 
 (* unused *)
-val KLOP_INF_def = Define `
-    KLOP_INF X a = rec X (sum (var X) (prefix (label a) (var X)))`;
+Definition KLOP_INF_def:
+    KLOP_INF X a = rec X (sum (var X) (prefix (label a) (var X)))
+End
 
 (** Bibliography:
 

@@ -30,12 +30,6 @@ val qexists_tac = Q.EXISTS_TAC;
 val qspecl_then = Q.SPECL_THEN;
 val qid_spec_tac = Q.ID_SPEC_TAC;
 
-val DEF0 = Lib.with_flag (boolLib.def_suffix, "") TotalDefn.Define
-val DEF = Lib.with_flag (boolLib.def_suffix, "_DEF") TotalDefn.Define
-
-val zDefine =
-   Lib.with_flag (computeLib.auto_import_definitions, false) TotalDefn.Define
-
 val list_INDUCT = Q.prove(
    `!P. P [] /\ (!l. P l ==> !x. P (CONS x l)) ==> !l. P l`,
    REWRITE_TAC [list_INDUCT]);
@@ -50,35 +44,40 @@ val Suff = Q_TAC SUFF_TAC;
 
 (* ------------------------------------------------------------------------ *)
 
-val ELL = DEF0`
+Definition ELL:
    (ELL 0 l = LAST l) /\
-   (ELL (SUC n) l = ELL n (FRONT l))`;
+   (ELL (SUC n) l = ELL n (FRONT l))
+End
 
 Definition REPLICATE[simp]:
    (REPLICATE 0 x = []) /\
    (REPLICATE (SUC n) x = CONS x (REPLICATE n x))
 End
 
-val SCANL = DEF0`
+Definition SCANL:
    (SCANL f (e: 'b) [] = [e]) /\
-   (SCANL f e (CONS x l) = CONS e (SCANL f (f e x) l))`;
+   (SCANL f e (CONS x l) = CONS e (SCANL f (f e x) l))
+End
 
-val SCANR = DEF0`
+Definition SCANR:
    (SCANR f (e: 'b) [] = [e]) /\
-   (SCANR f e (CONS x l) = CONS (f x (HD (SCANR f e l))) (SCANR f e l))`;
+   (SCANR f e (CONS x l) = CONS (f x (HD (SCANR f e l))) (SCANR f e l))
+End
 
-val SPLITP = Lib.with_flag (computeLib.auto_import_definitions, false) DEF0`
+Definition SPLITP[nocompute]:
    (SPLITP P [] = ([],[])) /\
    (SPLITP P (CONS x l) =
       if P x then
          ([], CONS x l)
       else
-         (CONS x (FST (SPLITP P l)), SND (SPLITP P l)))`;
+         (CONS x (FST (SPLITP P l)), SND (SPLITP P l)))
+End
 
-val SPLITP_AUX_def = TotalDefn.Define`
+Definition SPLITP_AUX_def:
    (SPLITP_AUX acc P [] = (acc,[])) /\
    (SPLITP_AUX acc P (h::t) =
-      if P h then (acc, h::t) else SPLITP_AUX (acc ++ [h]) P t)`;
+      if P h then (acc, h::t) else SPLITP_AUX (acc ++ [h]) P t)
+End
 
 Theorem SPLITP_splitAtPki:
   SPLITP P = splitAtPki (K P) $,
@@ -135,38 +134,50 @@ Theorem SPLITP_NIL_FST_IMP:
 Proof Induct \\ rw[SPLITP]
 QED
 
-val SPLITL_def = TotalDefn.Define `SPLITL P = SPLITP ((~) o P)`;
+Definition SPLITL_def:   SPLITL P = SPLITP ((~) o P)
+End
 
-val SPLITR_def = TotalDefn.Define`
+Definition SPLITR_def:
    SPLITR P l =
-   let (a, b) = SPLITP ((~) o P) (REVERSE l) in (REVERSE b, REVERSE a)`;
+   let (a, b) = SPLITP ((~) o P) (REVERSE l) in (REVERSE b, REVERSE a)
+End
 
-val PREFIX_DEF = DEF `PREFIX P l = FST (SPLITP ($~ o P) l)`;
+Definition PREFIX_DEF:   PREFIX P l = FST (SPLITP ($~ o P) l)
+End
 
-val SUFFIX_DEF = DEF`
-   SUFFIX P l = FOLDL (\l' x. if P x then SNOC x l' else []) [] l`;
+Definition SUFFIX_DEF:
+   SUFFIX P l = FOLDL (\l' x. if P x then SNOC x l' else []) [] l
+End
 
-val AND_EL_DEF = DEF `AND_EL = EVERY I`;
-val OR_EL_DEF = DEF `OR_EL = EXISTS I`;
+Definition AND_EL_DEF:   AND_EL = EVERY I
+End
+Definition OR_EL_DEF:   OR_EL = EXISTS I
+End
 
-val UNZIP_FST_DEF = DEF `UNZIP_FST l = FST (UNZIP l)`;
-val UNZIP_SND_DEF = DEF `UNZIP_SND l = SND (UNZIP l)`;
+Definition UNZIP_FST_DEF:   UNZIP_FST l = FST (UNZIP l)
+End
+Definition UNZIP_SND_DEF:   UNZIP_SND l = SND (UNZIP l)
+End
 
-val LIST_ELEM_COUNT_DEF = DEF`
-   LIST_ELEM_COUNT e l = LENGTH (FILTER (\x. x = e) l)`;
+Definition LIST_ELEM_COUNT_DEF:
+   LIST_ELEM_COUNT e l = LENGTH (FILTER (\x. x = e) l)
+End
 
-val COUNT_LIST_def = zDefine`
+Definition COUNT_LIST_def[nocompute]:
    (COUNT_LIST 0 = []) /\
-   (COUNT_LIST (SUC n) = 0::MAP SUC (COUNT_LIST n))`;
+   (COUNT_LIST (SUC n) = 0::MAP SUC (COUNT_LIST n))
+End
 
-val COUNT_LIST_AUX_def = TotalDefn.Define`
+Definition COUNT_LIST_AUX_def:
    (COUNT_LIST_AUX 0 l = l) /\
-   (COUNT_LIST_AUX (SUC n) l = COUNT_LIST_AUX n (n::l))`;
+   (COUNT_LIST_AUX (SUC n) l = COUNT_LIST_AUX n (n::l))
+End
 
 (* total version of TL *)
-val TL_T_def = TotalDefn.Define`
+Definition TL_T_def:
    (TL_T [] = []) /\
-   (TL_T (h::t) = t)`;
+   (TL_T (h::t) = t)
+End
 
 (* ------------------------------------------------------------------------ *)
 
@@ -204,8 +215,9 @@ QED
 
 (* ------------------------------------------------------------------------ *)
 
-val LASTN_def = zDefine `
-  LASTN n xs = REVERSE (TAKE n (REVERSE xs))`;
+Definition LASTN_def[nocompute]:
+  LASTN n xs = REVERSE (TAKE n (REVERSE xs))
+End
 
 val LASTN = store_thm("LASTN",
   ``(!l. LASTN 0 l = []) /\
@@ -220,8 +232,9 @@ Proof
     SNOC_INDUCT_TAC >> REWRITE_TAC [LASTN]
 QED
 
-val BUTLASTN_def = zDefine `
-  BUTLASTN n xs = REVERSE (DROP n (REVERSE xs))`;
+Definition BUTLASTN_def[nocompute]:
+  BUTLASTN n xs = REVERSE (DROP n (REVERSE xs))
+End
 
 val BUTLASTN = store_thm("BUTLASTN",
   ``(!l. BUTLASTN 0 l = l) /\
@@ -5931,10 +5944,10 @@ val DISTINCT_LIST_TO_SET_EQ_SING = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define MAX of a list *)
-val MAX_LIST_def = Define`
+Definition MAX_LIST_def:
     (MAX_LIST [] = 0) /\
     (MAX_LIST (h::t) = MAX h (MAX_LIST t))
-`;
+End
 
 (* export simple recursive definition *)
 (* val _ = export_rewrites["MAX_LIST_def"]; *)
@@ -6087,9 +6100,9 @@ val MAX_LIST_MAP_LE = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define MIN of a list *)
-val MIN_LIST_def = Define`
+Definition MIN_LIST_def:
     MIN_LIST (h::t) = if t = [] then h else MIN h (MIN_LIST t)
-`;
+End
 
 (* Theorem: MIN_LIST [x] = x *)
 (* Proof: by MIN_LIST_def *)
@@ -6497,12 +6510,12 @@ val MIN_LIST_MONO_DEC = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Definition of sublist *)
-val sublist_def = Define`
+Definition sublist_def:
     (sublist [] x = T) /\
     (sublist (h1::t1) [] = F) /\
     (sublist (h1::t1) (h2::t2) <=>
        ((h1 = h2) /\ sublist t1 t2 \/ ~(h1 = h2) /\ sublist (h1::t1) t2))
-`;
+End
 
 (* Overload sublist by infix operator *)
 val _ = temp_overload_on ("<=", ``sublist``);

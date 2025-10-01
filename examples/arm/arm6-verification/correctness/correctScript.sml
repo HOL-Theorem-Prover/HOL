@@ -59,7 +59,8 @@ val fvs = set_trace "goalstack fvs";
 
 (* ------------------------------------------------------------------------- *)
 
-val IS_MEMOP2_def = Define `IS_MEMOP2 (nmrq2,nopc1,nrw,nbw,areg) = nopc1`;
+Definition IS_MEMOP2_def:   IS_MEMOP2 (nmrq2,nopc1,nrw,nbw,areg) = nopc1
+End
 
 val arm6out_nchotomy =
   armLib.tupleCases

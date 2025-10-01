@@ -11,7 +11,8 @@ Ancestors
  * as an inductive definition, or as a particular kind of function.          *
  *---------------------------------------------------------------------------*)
 
-val PERM_def = Define `PERM L1 L2 = !x. FILTER ($= x) L1 = FILTER ($= x) L2`;
+Definition PERM_def:   PERM L1 L2 = !x. FILTER ($= x) L1 = FILTER ($= x) L2
+End
 
 
 val PERM_refl = Q.store_thm

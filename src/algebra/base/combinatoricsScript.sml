@@ -295,9 +295,9 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define rotation of a list *)
-val rotate_def = Define `
+Definition rotate_def:
   rotate n l = DROP n l ++ TAKE n l
-`;
+End
 
 (* Theorem: Rotate shifts element
             rotate n l = EL n l::(DROP (SUC n) l ++ TAKE n l) *)
@@ -493,9 +493,9 @@ val rotate_rcancel = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define a rotation turn of a list (like a turnstile) *)
-val turn_def = Define`
+Definition turn_def:
     turn l = if l = [] then [] else ((LAST l) :: (FRONT l))
-`;
+End
 
 (* Theorem: turn [] = [] *)
 (* Proof: by turn_def *)
@@ -1922,9 +1922,10 @@ val PROD_IMAGE_eq_PROD_MAP_SET_TO_LIST = store_thm(
   rw[FUN_EQ_THM]);
 
 (* Define PROD using accumulator *)
-val PROD_ACC_DEF = Lib.with_flag (Defn.def_suffix, "_DEF") Define
-  `(PROD_ACC [] acc = acc) /\
-   (PROD_ACC (h::t) acc = PROD_ACC t (h * acc))`;
+Definition PROD_ACC_DEF:
+   (PROD_ACC [] acc = acc) /\
+   (PROD_ACC (h::t) acc = PROD_ACC t (h * acc))
+End
 
 (* Theorem: PROD_ACC L n = PROD L * n *)
 (* Proof:
@@ -2436,10 +2437,10 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define MAP3 similar to MAP2 in listTheory. *)
-val dDefine = Lib.with_flag (Defn.def_suffix, "_DEF") Define;
-val MAP3_DEF = dDefine`
+Definition MAP3_DEF:
   (MAP3 f (h1::t1) (h2::t2) (h3::t3) = f h1 h2 h3::MAP3 f t1 t2 t3) /\
-  (MAP3 f x y z = [])`;
+  (MAP3 f x y z = [])
+End
 val _ = export_rewrites["MAP3_DEF"];
 val MAP3 = store_thm ("MAP3",
 ``(!f. MAP3 f [] [] [] = []) /\
@@ -3379,10 +3380,10 @@ val it = |- MDILATE_3 [1; 2; 3] = [1; 0; 0; 2; 0; 0; 3]: thm
 *)
 
 (* Dilate a list with an element e, for a factor n (n <> 0) *)
-val MDILATE_def = Define`
+Definition MDILATE_def:
    (MDILATE e n [] = []) /\
    (MDILATE e n (h::t) = if t = [] then [h] else (h:: GENLIST (K e) (PRE n)) ++ (MDILATE e n t))
-`;
+End
 (*
 > EVAL ``MDILATE 0 2 [1;2;3]``;
 val it = |- MDILATE 0 2 [1; 2; 3] = [1; 0; 2; 0; 3]: thm
@@ -4485,12 +4486,12 @@ QED
    C(0,k) = 0 if k > 0
    C(n+1,k+1) = C(n,k) + C(n,k+1)
 *)
-val binomial_def = Define`
+Definition binomial_def:
     (binomial 0 0 = 1) /\
     (binomial (SUC n) 0 = 1) /\
     (binomial 0 (SUC k) = 0)  /\
     (binomial (SUC n) (SUC k) = binomial n k + binomial n (SUC k))
-`;
+End
 
 (* Theorem: alternative definition of C(n,k). *)
 (* Proof: by binomial_def. *)
@@ -6618,9 +6619,9 @@ Note: to make 30, need 12, 20
 (* ------------------------------------------------------------------------- *)
 
 (* Define Leibniz Triangle *)
-val leibniz_def = Define`
+Definition leibniz_def:
   leibniz n k = (n + 1) * binomial n k
-`;
+End
 
 (* export simple definition *)
 val _ = export_rewrites["leibniz_def"];
@@ -7210,10 +7211,10 @@ LCM a c
 (* ------------------------------------------------------------------------- *)
 
 (* Define LCM of a list of numbers *)
-val list_lcm_def = Define`
+Definition list_lcm_def:
   (list_lcm [] = 1) /\
   (list_lcm (h::t) = lcm h (list_lcm t))
-`;
+End
 
 (* export simple definition *)
 val _ = export_rewrites["list_lcm_def"];
@@ -8088,13 +8089,13 @@ val _ = Hol_datatype`
 `;
 
 (* A triplet is a triple composed of Leibniz node and children. *)
-val triplet_def = Define`
+Definition triplet_def:
     (triplet n k):triple =
         <| a := leibniz n k;
            b := leibniz (n + 1) k;
            c := leibniz (n + 1) (k + 1)
          |>
-`;
+End
 
 (* can even do this after definition of triple type:
 
@@ -8217,10 +8218,10 @@ val leibniz_triplet_lcm = store_thm(
 val _ = temp_type_abbrev("path", Type `:num list`);
 
 (* Define paths reachable by one zigzag *)
-val leibniz_zigzag_def = Define`
+Definition leibniz_zigzag_def:
     leibniz_zigzag (p1: path) (p2: path) <=>
     ?(n k):num (x y):path. (p1 = x ++ [tb; ta] ++ y) /\ (p2 = x ++ [tb; tc] ++ y)
-`;
+End
 val _ = overload_on("zigzag", ``leibniz_zigzag``);
 val _ = set_fixity "zigzag" (Infix(NONASSOC, 450)); (* same as relation *)
 
@@ -9632,9 +9633,9 @@ val set_lcm_def = Define`
    set_lcm s = if s = {} then 1 else lcm (CHOICE s) (set_lcm (REST s))
 `;
 *)
-val set_lcm_def = Define`
+Definition set_lcm_def:
     set_lcm s = list_lcm (SET_TO_LIST s)
-`;
+End
 
 (* Theorem: set_lcm {} = 1 *)
 (* Proof:
@@ -10471,10 +10472,10 @@ val lcm_run_lower_better_iff = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the consecutive LCM function *)
-val lcm_upto_def = Define`
+Definition lcm_upto_def:
     (lcm_upto 0 = 1) /\
     (lcm_upto (SUC n) = lcm (SUC n) (lcm_upto n))
-`;
+End
 
 (* Extract theorems from definition *)
 val lcm_upto_0 = save_thm("lcm_upto_0", lcm_upto_def |> CONJUNCT1);
@@ -16262,4 +16263,3 @@ https://math.stackexchange.com/questions/3060456/
 using Pascal argument
 
 *)
-

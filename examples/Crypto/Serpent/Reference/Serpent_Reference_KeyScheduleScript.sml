@@ -8,18 +8,20 @@ Libs
 
 (*32 rounds*)
 
-val R_def = Define `R = 32`;
+Definition R_def:   R = 32
+End
 
-val PHI_def = Define `PHI = 0x9e3779b9w : word32`;
+Definition PHI_def:   PHI = 0x9e3779b9w : word32
+End
 
 (*padding*)
 
-val short2longKey_def =
-  Define
-   `short2longKey k kl =
+Definition short2longKey_def:
+    short2longKey k kl =
       let nw256 = (n2w:num->word256) (k MOD  (2**kl))
       in
-        nw256 || (1w << kl)`;
+        nw256 || (1w << kl)
+End
 
 (*used in making preKey*)
 
@@ -37,9 +39,10 @@ Hol_defn "makeSubKeyBitSlice"
 
 (*reversed preKey*)
 
-val makeRevPreKey_def = Define
-`makeRevPreKey longKey = let keySlices = word256to32l longKey in
- myBUTLASTN 8 (makeSubKeyBitSlice keySlices 131)`;
+Definition makeRevPreKey_def:
+ makeRevPreKey longKey = let keySlices = word256to32l longKey in
+ myBUTLASTN 8 (makeSubKeyBitSlice keySlices 131)
+End
 
 (*in reverse order
 
@@ -54,8 +57,8 @@ A version with mainly bit shifts, rotation and bitwise operation has been tried,
 it is slow
 *)
 
-val makeRoundKey_def = Define
-`makeRoundKey (w3:word32,w2:word32,w1:word32,w0:word32)
+Definition makeRoundKey_def:
+ makeRoundKey (w3:word32,w2:word32,w1:word32,w0:word32)
    (k3:word32,k2:word32,k1:word32,k0:word32) bitPos round =
   let bitofw0 = if w0 ' bitPos then 1 else 0 in
   let bitofw1 = if w1 ' bitPos then 2 else 0 in
@@ -79,33 +82,38 @@ val makeRoundKey_def = Define
            bitofk0) : word128)
     else
       makeRoundKey (w3,w2,w1,w0)
-        (n2w bitofk3, n2w bitofk2, n2w bitofk1, n2w bitofk0) (bitPos-1) round`;
+        (n2w bitofk3, n2w bitofk2, n2w bitofk1, n2w bitofk0) (bitPos-1) round
+End
 
 (* EL 0 is the 128bit key for first round MSBit(127)...LSBit(0) for each key
    initialize round with 32 still in reversed order here *)
 
-val makeRevSubKey_def = Define
-`(makeRevSubKey [] round = []) /\
+Definition makeRevSubKey_def:
+ (makeRevSubKey [] round = []) /\
  (makeRevSubKey (w3::w2::w1::w0::t) round =
    let roundKey = makeRoundKey (w3,w2,w1,w0) (0w,0w,0w,0w) 31 round in
-     roundKey::(makeRevSubKey t (round-1)))`;
+     roundKey::(makeRevSubKey t (round-1)))
+End
 
 (*this is the key used in the optimized version*)
 
-val makeSubKey_def = Define
- `makeSubKey revPreKey = REVERSE ( makeRevSubKey revPreKey 32)`;
+Definition makeSubKey_def:
+  makeSubKey revPreKey = REVERSE ( makeRevSubKey revPreKey 32)
+End
 
 (*this is the key used in the reference version*)
 
-val makeSubKeyHat_def = Define
- `makeSubKeyHat subKey = MAP IP subKey`;
+Definition makeSubKeyHat_def:
+  makeSubKeyHat subKey = MAP IP subKey
+End
 
-val makeKeyHat_def = Define
-`makeKeyHat userKey kl =
+Definition makeKeyHat_def:
+ makeKeyHat userKey kl =
   let longKey = short2longKey userKey kl in
   let revPreKey = makeRevPreKey longKey in
   let subKey = makeSubKey revPreKey in
-    makeSubKeyHat subKey`;
+    makeSubKeyHat subKey
+End
 
 val makeSubKeyBitSliceLength = Q.store_thm(
 "makeSubKeyBitSliceLength",

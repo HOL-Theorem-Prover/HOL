@@ -89,18 +89,20 @@ fun save_all prefix postfix =
 
 val _ = save_all "" "_eq_thm" arm_eq_thms
 
-val word_tree2_def = Define `
+Definition word_tree2_def:
   (word_tree2 (XVal w) (a,m) d = (a = ADDR32 w + 0x2w)) /\
   (word_tree2 (XSym w) (a,m) d = (a = ADDR32 w + 0x3w)) /\
   (word_tree2 (XDot x y) (a,m) d = ALIGNED a /\
      a IN d /\ (a + 4w) IN d /\
-     word_tree2 x (m a,m) d /\ word_tree2 y (m (a + 0x4w),m) d)`;
+     word_tree2 x (m a,m) d /\ word_tree2 y (m (a + 0x4w),m) d)
+End
 
-val lisp_stack_def = Define `
+Definition lisp_stack_def:
   (lisp_stack [] (a,m,d,e) = ALIGNED a) /\
   (lisp_stack ((x,y)::xs) (a,m,d,e) = (a - 4w) IN e /\ (a - 8w) IN e /\
      word_tree2 y (m (a - 4w),m) d /\ word_tree2 x (m (a - 8w),m) d /\
-     lisp_stack xs (a-8w,m,d,e))`;
+     lisp_stack xs (a-8w,m,d,e))
+End
 
 val word_tree2_11 = prove(
   ``!x y a m d. word_tree2 x (a,m) d /\ word_tree2 y (a,m) d ==> (x = y)``,
@@ -114,13 +116,15 @@ val word_tree2_ALIGNED_LEMMA = prove(
   REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [] \\ Cases_on `y`
   \\ FULL_SIMP_TAC std_ss [word_tree2_def]);
 
-val SUM_XSIZE_def = Define `
+Definition SUM_XSIZE_def:
   (SUM_XSIZE [] = 0) /\
-  (SUM_XSIZE (x::xs) = XSIZE x + SUM_XSIZE xs)`;
+  (SUM_XSIZE (x::xs) = XSIZE x + SUM_XSIZE xs)
+End
 
-val MAX_XDEPTH_def = Define `
+Definition MAX_XDEPTH_def:
   (MAX_XDEPTH [] = 0) /\
-  (MAX_XDEPTH (x::xs) = MAX (XDEPTH x + LENGTH (x::xs)) (MAX_XDEPTH xs))`;
+  (MAX_XDEPTH (x::xs) = MAX (XDEPTH x + LENGTH (x::xs)) (MAX_XDEPTH xs))
+End
 
 val LENGTH_LESS_EQ_SUM_XDEPTH = prove(
   ``!xs. LENGTH xs <= MAX_XDEPTH xs``,
@@ -133,9 +137,10 @@ val MAX_XDEPTH_DOT = prove(
   SIMP_TAC std_ss [MAX_XDEPTH_def,XDEPTH_def,ADD1,LENGTH]
   \\ SIMP_TAC std_ss [MAX_DEF] \\ DECIDE_TAC);
 
-val MAX_ADDRESSES_def = Define `
+Definition MAX_ADDRESSES_def:
   MAX_ADDRESSES r7 ys a =
-    ?i. (a = r7 + 8w - 8w * n2w (LENGTH ys) + n2w (4 * i)) /\ i < 2 * MAX_XDEPTH ys - 2`;
+    ?i. (a = r7 + 8w - 8w * n2w (LENGTH ys) + n2w (4 * i)) /\ i < 2 * MAX_XDEPTH ys - 2
+End
 
 val WORD_ADD_EQ = prove(
   ``!x y. ((x + y = x) = (y = 0w)) /\ ((y + x = x) = (y = 0w))``,
@@ -319,9 +324,10 @@ val arm_eq_loop_spec_lemma = prove(
 val arm_eq_loop_spec =
   RW [lisp_stack_def,MAP,LENGTH] (Q.SPECL [`[]`] arm_eq_loop_spec_lemma);
 
-val heap_half_def = Define `
+Definition heap_half_def:
   heap_half (a:word32,u,l:num) =
-    { a + n2w (if u then 8 * l + 8 + 4 * k else 8 + 4 * k) |k| k < 2 * l }`;
+    { a + n2w (if u then 8 * l + 8 + 4 * k else 8 + 4 * k) |k| k < 2 * l }
+End
 
 val IN_heap_half = prove(
   ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (r1,r2,r3,r4,r5,r6,a,df,f,s,rest) /\ isDot x1 ==>
@@ -359,10 +365,11 @@ val heap_half_DISJOINT = prove(
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [n2w_11,LESS_MOD]
   \\ DECIDE_TAC);
 
-val SExp2XExp_def = Define `
+Definition SExp2XExp_def:
   (SExp2XExp (Dot x y) sym = XDot (SExp2XExp x sym) (SExp2XExp y sym)) /\
   (SExp2XExp (Val n) sym = XVal (n2w n)) /\
-  (SExp2XExp (Sym s) sym = XSym (@w. (ADDR32 w,s) IN sym))`;
+  (SExp2XExp (Sym s) sym = XSym (@w. (ADDR32 w,s) IN sym))
+End
 
 val set_add_LEMMA = prove(
   ``!a x. (set_add a x = {}) ==> (x = {})``,

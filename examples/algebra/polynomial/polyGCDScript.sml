@@ -398,9 +398,9 @@ val GCD_CANCEL_MULT = prove(
 (* ------------------------------------------------------------------------- *)
 
 (* Define Polynomial GCD from Ring GCD *)
-val poly_gcd_def = Define `
+Definition poly_gcd_def:
     poly_gcd (r:'a ring) (p:'a poly) (q:'a  poly) = ring_gcd (PolyRing r) (\p. norm p) p q
-`;
+End
 (* overload on Polynomial GCD *)
 val _ = overload_on("pgcd", ``poly_gcd r``);
 (* > poly_gcd_def;
@@ -1217,9 +1217,9 @@ val poly_master_divisibility = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Need to define a monic polynomial gcd. Take care of zero gcd. *)
-val poly_monic_gcd_def = Define`
+Definition poly_monic_gcd_def:
     poly_monic_gcd (r:'a ring) p q = let d = pgcd p q in if (d = |0|) then |0| else ( |/ (lead d)) * d
-`;
+End
 (* Overload monic polynomial gcd similar to poly_gcd *)
 val _ = overload_on("mpgcd", ``poly_monic_gcd r``);
 
@@ -2109,9 +2109,9 @@ val poly_coprime_product_by_coprimes = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Need to define polynomial lcm. Note: division by zero or a unit is not defined. *)
-val poly_lcm_def = Define`
+Definition poly_lcm_def:
     poly_lcm (r:'a ring) p q = if (deg (mpgcd p q) = 0) then (p * q) else (p * q) / (mpgcd p q)
-`;
+End
 (* Overload poly_lcm similar to poly_gcd *)
 val _ = overload_on("plcm", ``poly_lcm r``);
 (*
@@ -2444,11 +2444,11 @@ val poly_coprime_product_divides = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define a set of coprime polynomials *)
-val poly_coprime_set_def = Define`
+Definition poly_coprime_set_def:
     poly_coprime_set (r:'a ring) s <=>
        (!p. p IN s ==> poly p) /\
        (!p q. p IN s /\ q IN s /\ (p <> q) ==> pcoprime p q)
-`;
+End
 (* overload on set of coprime polynomials *)
 val _ = overload_on("pcoprime_set", ``poly_coprime_set r``);
 (*

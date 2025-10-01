@@ -62,18 +62,20 @@ val _ = overload_on("UNKNOWN", ``ARB:word32``);
 
 val _ = temp_delsimps ["NORMEQ_CONV"]
 
-val read_mem32_def  = Define ` read_mem32 add mem =
-    word32 ([mem (add);mem (add+1w);mem (add+2w);mem (add+3w)])`;
+Definition read_mem32_def:     read_mem32 add mem =
+    word32 ([mem (add);mem (add+1w);mem (add+2w);mem (add+3w)])
+End
 
 
-val enabled_MMU_def = Define `enabled_MMU (c1:word32) =
+Definition enabled_MMU_def:   enabled_MMU (c1:word32) =
                                      let bit0 = BIT 0 (w2n(c1)) in
-                                         bit0`;
+                                         bit0
+End
 
 
 (* checking MMU support only for one section descriptor *)
 (* further changes in version 2: expr3 = 0 and expr7 may be 01 as well *)
-val sd_supports_MMU_def = Define `sd_supports_MMU content_of_sd si =
+Definition sd_supports_MMU_def:   sd_supports_MMU content_of_sd si =
                 let expr1 = (content_of_sd && 0x00000003w) in
                 let expr2 = (content_of_sd && 0x0000000Cw) >>> 2 in
                 let expr3 = (content_of_sd && 0x00000010w) >>> 4 in
@@ -87,13 +89,14 @@ val sd_supports_MMU_def = Define `sd_supports_MMU content_of_sd si =
                                (expr4 = 0b0w:word32) /\
                                    ((expr7 = 0b11w:word32) \/ (expr7 = 0b01w:word32)) /\
                                         (expr5 = 0b0w:word32) /\
-                                             (expr6 = si)`;
+                                             (expr6 = si)
+End
 
 
 
 (* permitted_byte *)
 (* returns (understood, permitted, message) *)
-val permitted_byte_def = Define `permitted_byte adr is_write (c1:word32) c2 (c3:bool[32]) priv mem =
+Definition permitted_byte_def:   permitted_byte adr is_write (c1:word32) c2 (c3:bool[32]) priv mem =
                     if (~(enabled_MMU c1)) then
                         (T, T, "MMU is disabled")
                     else
@@ -129,7 +132,7 @@ val permitted_byte_def = Define `permitted_byte adr is_write (c1:word32) c2 (c3:
                             )
                             else
                                 (F, UNKNOWN, "no support")
-                        `;
+End
 
 
 (* permitted_byte_pure                       *)
@@ -137,7 +140,7 @@ val permitted_byte_def = Define `permitted_byte adr is_write (c1:word32) c2 (c3:
 (* similar to permitted_byte when assuming   *)
 (*   that we always understand the MMU setup *)
 
-val permitted_byte_pure_def = Define `permitted_byte_pure adr is_write (c1:word32) c2 (c3:bool[32]) priv mem =
+Definition permitted_byte_pure_def:   permitted_byte_pure adr is_write (c1:word32) c2 (c3:bool[32]) priv mem =
                     if (~(enabled_MMU c1)) then
                         T
                     else
@@ -166,7 +169,7 @@ val permitted_byte_pure_def = Define `permitted_byte_pure adr is_write (c1:word3
                                                      )
                                            |0b11w => T
                                           )
-                        `;
+End
 
 
 (* relate permitted_byte with permitted_byte_pure *)
@@ -188,7 +191,7 @@ val permitted_byte_simp = store_thm (
 (*   returns (understood, abort, address)    *);
 
 
-val check_accesses_def = Define `check_accesses accesses c1 c2 c3 priv memory =
+Definition check_accesses_def:   check_accesses accesses c1 c2 c3 priv memory =
                          case accesses of
                          x::tl =>
                          ( let (adr, is_write) =
@@ -216,7 +219,8 @@ val check_accesses_def = Define `check_accesses accesses c1 c2 c3 priv memory =
                                )
                             )
                           )
-                          |   _ => (T, F, UNKNOWN)`;
+                          |   _ => (T, F, UNKNOWN)
+End
 
 
 
@@ -225,7 +229,7 @@ val check_accesses_def = Define `check_accesses accesses c1 c2 c3 priv memory =
 (*   returns boolean "abort"                       *)
 (* similar to check_accesses when assuming that we *)
 (*   always understand the MMU setup               *)
-val check_accesses_pure_def = Define `check_accesses_pure accesses c1 c2 c3 priv memory =
+Definition check_accesses_pure_def:   check_accesses_pure accesses c1 c2 c3 priv memory =
                        case accesses of
                          x::tl =>
                          ( let (adr, is_write) =
@@ -235,7 +239,8 @@ val check_accesses_pure_def = Define `check_accesses_pure accesses c1 c2 c3 priv
                                ) in
                             (~permitted_byte_pure adr is_write c1 c2 c3 priv memory) \/  (check_accesses_pure tl c1 c2 c3 priv memory)
                           )
-                          | _ => F`;
+                          | _ => F
+End
 
 
 
@@ -310,12 +315,13 @@ val check_accesses_understand = store_thm (
 (* access_violation_full *)
 
 
-val access_violation_full_def = Define `access_violation_full s = check_accesses s.accesses
+Definition access_violation_full_def:   access_violation_full s = check_accesses s.accesses
                                                            s.coprocessors.state.cp15.C1
                                                            s.coprocessors.state.cp15.C2
                                                            s.coprocessors.state.cp15.C3
                                                            F
-                                                           s.memory`;
+                                                           s.memory
+End
 
 (* empty access list, no violation *)
 
@@ -330,13 +336,14 @@ val empty_accesses_full_lem = store_thm(
 (* access_violation_pure *)
 
 
-val access_violation_pure_def = Define `access_violation_pure s = check_accesses_pure s.accesses
+Definition access_violation_pure_def:   access_violation_pure s = check_accesses_pure s.accesses
                                                            s.coprocessors.state.cp15.C1
                                                            s.coprocessors.state.cp15.C2
                                                            s.coprocessors.state.cp15.C3
                                                            F
 
-                                               s.memory`;
+                                               s.memory
+End
 
 (* relate access_violation_pure and access_violation_full *)
 
@@ -402,7 +409,7 @@ val _ = temp_overload_on ("return", ``constT``);
 val _ = temp_overload_on ("PAD0", ``list$PAD_LEFT #"0"``);
 
 
-val mmu_arm_next_def = Define `mmu_arm_next irpt state  =
+Definition mmu_arm_next_def:   mmu_arm_next irpt state  =
     if irpt = NoInterrupt then
     (
        case (waiting_for_interrupt  <|proc:=0|> (state with accesses := [])) of
@@ -442,6 +449,7 @@ val mmu_arm_next_def = Define `mmu_arm_next irpt state  =
           take_fiq_exception <|proc:=0|>
         else (* irpt = HW_Irq *)
           take_irq_exception <|proc:=0|>) >>=
-      (\u:unit. clear_wait_for_interrupt <|proc:=0|>)) (state with accesses := []))`;
+      (\u:unit. clear_wait_for_interrupt <|proc:=0|>)) (state with accesses := []))
+End
 
 

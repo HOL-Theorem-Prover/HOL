@@ -46,9 +46,6 @@ fun qxchl [] ttac = ttac
   | qxchl (q::qs) ttac = qxch q (qxchl qs ttac);
 
 val _ = Rewrite.add_implicit_rewrites pairLib.pair_rws;
-val zDefine = Lib.with_flag (computeLib.auto_import_definitions, false) Define
-val dDefine = Lib.with_flag (Defn.def_suffix, "_DEF") Define
-val bDefine = Lib.with_flag (Defn.def_suffix, "") Define
 
 val NOT_SUC      = numTheory.NOT_SUC
 and INV_SUC      = numTheory.INV_SUC
@@ -3495,9 +3492,10 @@ val REVERSE_REV = Q.store_thm
  ‘!L. REVERSE L = REV L []’,
  PROVE_TAC [REV_REVERSE_LEM, APPEND_NIL]);
 
-val SUM_ACC_DEF = dDefine
-  ‘(SUM_ACC [] acc = acc) /\
-   (SUM_ACC (h::t) acc = SUM_ACC t (h+acc))’
+Definition SUM_ACC_DEF:
+   (SUM_ACC [] acc = acc) /\
+   (SUM_ACC (h::t) acc = SUM_ACC t (h+acc))
+End
 
 val SUM_ACC_SUM_LEM = store_thm
 ("SUM_ACC_SUM_LEM",
@@ -3772,9 +3770,9 @@ QED
    ---------------------------------------------------------------------- *)
 
 (* the bind function is flatMap with arguments in a different order *)
-val LIST_BIND_def = Define‘
+Definition LIST_BIND_def:
   LIST_BIND l f = FLAT (MAP f l)
-’
+End
 
 val LIST_BIND_THM = store_thm(
   "LIST_BIND_THM",
@@ -3783,9 +3781,9 @@ val LIST_BIND_THM = store_thm(
   SIMP_TAC (srw_ss()) [LIST_BIND_def]);
 val _ = export_rewrites ["LIST_BIND_THM"]
 
-val LIST_IGNORE_BIND_def = Define‘
+Definition LIST_IGNORE_BIND_def:
   LIST_IGNORE_BIND m1 m2 = LIST_BIND m1 (K m2)
-’;
+End
 
 val LIST_BIND_ID = store_thm(
   "LIST_BIND_ID",
@@ -3814,7 +3812,8 @@ val LIST_BIND_LIST_BIND = store_thm(
   “LIST_BIND (LIST_BIND l g) f = LIST_BIND l (combin$C LIST_BIND f o g)”,
   Induct_on ‘l’ THEN ASM_SIMP_TAC (srw_ss()) [LIST_BIND_APPEND]);
 
-val LIST_GUARD_def = Define‘LIST_GUARD b = if b then [()] else []’;
+Definition LIST_GUARD_def:  LIST_GUARD b = if b then [()] else []
+End
 
 (* the "return" or "pure" constant for lists isn't an existing one, unlike
    the situation with 'a option, where SOME fits the bill. *)
@@ -3838,17 +3837,17 @@ val SINGL_LIST_APPLY_R = store_thm(
    created - this makes sense when you think of the list monad as being
    the non-determinism thing: you'd want every possible combination of
    the possibilities in fs and xs *)
-val LIST_APPLY_def = Define‘
+Definition LIST_APPLY_def:
   LIST_APPLY fs xs = LIST_BIND fs (combin$C MAP xs)
-’
+End
 
 (* pick up the <*> syntax *)
 val _ = overload_on("APPLICATIVE_FAPPLY", “LIST_APPLY”)
 
 (* derives the lift2 function to boot *)
-val LIST_LIFT2_def = Define‘
+Definition LIST_LIFT2_def:
   LIST_LIFT2 f xs ys = LIST_APPLY (MAP f xs) ys
-’
+End
 (* e.g.,
     > EVAL ``LIST_LIFT2 (+) [1;3;4] [10;5]``
         |- ...  = [11;6;13;8;14;9]
@@ -3899,7 +3898,7 @@ val LIST_APPLY_o = store_thm(
     Various lexicographic orderings on lists
    ---------------------------------------------------------------------- *)
 
-val SHORTLEX_def = Define‘
+Definition SHORTLEX_def:
   (SHORTLEX R [] l2 <=> l2 <> []) /\
   (SHORTLEX R (h1::t1) l2 <=>
         case l2 of
@@ -3910,7 +3909,7 @@ val SHORTLEX_def = Define‘
                         else if h1 = h2 then SHORTLEX R t1 t2
                         else F
                       else F)
-’;
+End
 
 val def' = uncurry CONJ (Lib.pair_map SPEC_ALL (CONJ_PAIR SHORTLEX_def))
 val SHORTLEX_THM = save_thm(
@@ -4086,7 +4085,7 @@ Proof
  >> rw []
 QED
 
-val LLEX_def = Define‘
+Definition LLEX_def:
   (LLEX R [] l2 <=> l2 <> []) /\
   (LLEX R (h1::t1) l2 <=>
      case l2 of
@@ -4094,7 +4093,7 @@ val LLEX_def = Define‘
        | h2::t2 => if R h1 h2 then T
                    else if h1 = h2 then LLEX R t1 t2
                    else F)
-’;
+End
 
 val def' = uncurry CONJ (Lib.pair_map SPEC_ALL (CONJ_PAIR LLEX_def))
 val LLEX_THM = save_thm(
@@ -4745,9 +4744,10 @@ val last_drop = Q.store_thm ("last_drop",
   FIRST_X_ASSUM (Q.SPEC_THEN ‘n - 1’ MP_TAC) >>
   simp[]);
 
-val dropWhile_def = Define‘
+Definition dropWhile_def:
    (dropWhile P [] = []) /\
-   (dropWhile P (h::t) = if P h then dropWhile P t else (h::t))’
+   (dropWhile P (h::t) = if P h then dropWhile P t else (h::t))
+End
 val _ = export_rewrites ["dropWhile_def"]
 
 val dropWhile_splitAtPki = Q.store_thm("dropWhile_splitAtPki",
@@ -4988,15 +4988,16 @@ QED
 
    ---------------------------------------------------------------------- *)
 
-val oHD_def = Define‘oHD l = case l of [] => NONE | h::_ => SOME h’
+Definition oHD_def:  oHD l = case l of [] => NONE | h::_ => SOME h
+End
 val oHD_thm = Q.store_thm("oHD_thm[simp]",
   ‘(oHD [] = NONE) /\ (oHD (h::t) = SOME h)’,
   rw[oHD_def]);
 
-val oEL_def = Define‘
+Definition oEL_def:
   (oEL n [] = NONE) /\
   (oEL n (x::xs) = if n = 0 then SOME x else oEL (n - 1) xs)
-’;
+End
 
 val oEL_THM = Q.store_thm(
   "oEL_THM",

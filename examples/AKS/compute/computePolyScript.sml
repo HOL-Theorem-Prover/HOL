@@ -361,11 +361,11 @@ val poly_slide_def = Define`
        let r0 = h o r2 in poly_slide r (r0 || r1) (turn r2) t)
 `;
 *)
-val poly_slide_def = Define`
+Definition poly_slide_def:
     (poly_slide (r:'a ring) p1 p2 [] = p1) /\
     (poly_slide (r:'a ring) p1 p2 ((h::t):'a poly) = poly_slide r ((h o p2) || p1) (turn p2) t)
     (* Note: turn p2 = X * p2 only when length p2 = k *)
-`;
+End
 
 (* Polynomial multiplication with MOD (unity k) *)
 (*
@@ -374,10 +374,10 @@ val unity_mod_mult_def = Define`
     poly_slide r (unity_mod r k |0|) (unity_mod r k p) (unity_mod r k q)
 `;
 *)
-val unity_mod_mult_def = Define`
+Definition unity_mod_mult_def:
     unity_mod_mult (r:'a ring) (p:'a poly) (q:'a poly) =
     poly_slide r |0| p q (* both p and q are of length k, for MOD (unity k) *)
-`;
+End
 
 (*
 > EVAL ``unity_mod_mult (ZN 5) [1;2;3] [1;2;3]``; --> [3; 3; 0]  yes!
@@ -388,10 +388,10 @@ This is correct? -- debug using Javascript!
 *)
 
 (* Polynomial square with MOD (unity k) *)
-val unity_mod_sq_def = Define`
+Definition unity_mod_sq_def:
     unity_mod_sq (r:'a ring) (p:'a poly) = unity_mod_mult r p p
     (* Note LENGTH p = k, for MOD (unity k) *)
-`;
+End
 
 (*
 > EVAL ``unity_mod_sq (ZN 5) [1;2;3]``; --> [3; 3; 0]
@@ -409,12 +409,12 @@ val unity_mod_exp_def = Define`
           in if EVEN n then q else (unity_mod_mult r p q)
 `;
 *)
-val unity_mod_exp_def = Define`
+Definition unity_mod_exp_def:
     unity_mod_exp (r:'a ring) (p:'a poly) n =
        if n = 0 then |1| (* p ** 0 = |1| *)
        else let q = unity_mod_exp r (unity_mod_sq r p) (HALF n)
              in if EVEN n then q else (unity_mod_mult r p q)
-`;
+End
 
 (*
 > EVAL ``unity_mod_exp (ZN 5) [1;1] 2``; --> [2; 2]    (X + |1|) ** 2 MOD (X ** (LENGTH [1;1]) - |1|)
@@ -435,13 +435,13 @@ val unity_mod_special_def = Define`
             else PAD_RIGHT #0 k (##c :: (PAD_LEFT #0 (n MOD k) [#1]))
 `;
 *)
-val unity_mod_special_def = Define`
+Definition unity_mod_special_def:
     unity_mod_special (r:'a ring) k n (c:num) =
        if k = 0 then |0|
        else if k = 1 then [#1 + ##c]
      else (let q = if n MOD k = 0 then [#1 + ##c] else ##c :: PAD_LEFT #0 (n MOD k) [#1]
             in PAD_RIGHT #0 k q)
-`;
+End
 (* Note: k = 0 is special since n MOD 0 is undefined, and unity 0 = |0|, with MOD |0| undefined.
    Moreover, for k = 1, (unity 1 = X - |1|), and p MOD (unity 1) = constant with degree = 0.
 By making unity_mod_special r 0 n c = |0|, this keeps the length equals to 0 = k.
@@ -456,10 +456,10 @@ By making unity_mod_special r 0 n c = (X ** n + |c|) MOD |0| (whatever that is),
 *)
 
 (* Define (X + c) MOD (unity k) *)
-val unity_mod_monomial_def = Define`
+Definition unity_mod_monomial_def:
     unity_mod_monomial (r:'a ring) (k:num) (c:num) =
        if k = 0 then |0| else if k = 1 then [#1 + ##c] else PAD_RIGHT #0 k [##c; #1]
-`;
+End
 (* Note: k = 0 is special since (unity 0 = |0|), and MOD |0| is undefined.
    Moreover, for k = 1, (unity 1 = X - |1|), and p MOD (unity 1) = constant with degree = 0.
    Thus to ensure unity_mod_monomial r k c always have length equals to k, these special cases are taken care of.
@@ -1847,10 +1847,10 @@ val unity_mod_monomial_chop = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define constant ##c in (unity k) *)
-val unity_mod_const_def = Define`
+Definition unity_mod_const_def:
     unity_mod_const (r:'a ring) k (c:num) =
        if k = 0 then |0| else PAD_RIGHT #0 k [##c]
-`;
+End
 
 (*
 EVAL ``unity_mod_const (ZN 10) 7 0``; = [0; 0; 0; 0; 0; 0; 0]
@@ -1858,8 +1858,10 @@ EVAL ``unity_mod_const (ZN 10) 7 1``; = [1; 0; 0; 0; 0; 0; 0]
 *)
 
 (* Constants zero and one in MOD (unity k) *)
-val unity_mod_zero_def = Define `unity_mod_zero (r:'a ring) k = unity_mod_const r k 0`;
-val unity_mod_one_def = Define `unity_mod_one (r:'a ring) k = unity_mod_const r k 1`;
+Definition unity_mod_zero_def:   unity_mod_zero (r:'a ring) k = unity_mod_const r k 0
+End
+Definition unity_mod_one_def:   unity_mod_one (r:'a ring) k = unity_mod_const r k 1
+End
 
 (* Theorem: LENGTH (unity_mod_const r k c) = k *)
 (* Proof:
@@ -2159,9 +2161,9 @@ val unity_mod_const_chop = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define X ** n in (unity k) *)
-val unity_mod_X_exp_def = Define `
+Definition unity_mod_X_exp_def:
     unity_mod_X_exp (r:'a ring) k n = unity_mod_special r k n 0
-`;
+End
 
 (* Theorem: unity_mod_X_exp r k 0 = unity_mod_one r k *)
 (* Proof:
@@ -2324,12 +2326,12 @@ val poly_shuffle_def = Define`
 `;
 *)
 (* Make polynomial p as the last parameter *)
-val poly_shuffle_def = Define`
+Definition poly_shuffle_def:
     poly_shuffle (r:'a ring) (n:num) (p:'a poly) =
        if p = |0| then |0| else
        let q = FRONT p in let t = DROP n q in
        (TAKE n q) ++ [HD t + LAST p] ++ TL t
-`;
+End
 (* Note: Ring r is required for the add operator. *)
 
 (* Overloading on polynomial shuffle *)

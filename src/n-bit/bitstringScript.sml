@@ -48,38 +48,46 @@ Definition v2s_def:
   v2s = MAP (\b. if b then #"1" else #"0")
 End
 
-val zero_extend_def = zDefine`
-  zero_extend n v = PAD_LEFT F n v`
+Definition zero_extend_def[nocompute]:
+  zero_extend n v = PAD_LEFT F n v
+End
 
-val sign_extend_def = zDefine`
-  sign_extend n v = PAD_LEFT (HD v) n v`
+Definition sign_extend_def[nocompute]:
+  sign_extend n v = PAD_LEFT (HD v) n v
+End
 
-val fixwidth_def = zDefine`
+Definition fixwidth_def[nocompute]:
   fixwidth n v =
      let l = LENGTH v in
        if l < n then
           zero_extend n v
        else
-          DROP (l - n) v`
+          DROP (l - n) v
+End
 
-val shiftl_def = Define`
-  shiftl v m = PAD_RIGHT F (LENGTH v + m) v`
+Definition shiftl_def:
+  shiftl v m = PAD_RIGHT F (LENGTH v + m) v
+End
 
-val shiftr_def = Define`
-  shiftr (v: bitstring) m = TAKE (LENGTH v - m) v`
+Definition shiftr_def:
+  shiftr (v: bitstring) m = TAKE (LENGTH v - m) v
+End
 
-val field_def = Define`
-  field h l v = fixwidth (SUC h - l) (shiftr v l)`
+Definition field_def:
+  field h l v = fixwidth (SUC h - l) (shiftr v l)
+End
 
-val rotate_def = Define`
+Definition rotate_def:
   rotate v m =
     let l = LENGTH v in
     let x = m MOD l
     in
-      if (l = 0) \/ (x = 0) then v else field (x - 1) 0 v ++ field (l - 1) x v`
+      if (l = 0) \/ (x = 0) then v else field (x - 1) 0 v ++ field (l - 1) x v
+End
 
-val testbit_def = zDefine`
-  testbit b v = (field b b v = [T])`
+Definition testbit_def[nocompute]:
+  testbit b v = (field b b v = [T])
+End
 
 Definition w2v_def:
   w2v (w : 'a word) =
@@ -90,38 +98,51 @@ Definition v2w_def[nocompute]:
   v2w v : 'a word = FCP i. testbit i v
 End
 
-val rev_count_list_def = Define`
-  rev_count_list n = GENLIST (\i. n - 1 - i) n`
+Definition rev_count_list_def:
+  rev_count_list n = GENLIST (\i. n - 1 - i) n
+End
 
-val modify_def = Define`
+Definition modify_def:
   modify f (v : bitstring) =
-    MAP (UNCURRY f) (ZIP (rev_count_list (LENGTH v), v)) : bitstring`
+    MAP (UNCURRY f) (ZIP (rev_count_list (LENGTH v), v)) : bitstring
+End
 
-val field_insert_def = Define`
+Definition field_insert_def:
   field_insert h l s =
-    modify (\i. COND (l <= i /\ i <= h) (testbit (i - l) s))`
+    modify (\i. COND (l <= i /\ i <= h) (testbit (i - l) s))
+End
 
-val add_def = Define`
+Definition add_def:
    add a b =
      let m = MAX (LENGTH a) (LENGTH b) in
-       zero_extend m (n2v (v2n a + v2n b))`
+       zero_extend m (n2v (v2n a + v2n b))
+End
 
-val bitwise_def = Define`
+Definition bitwise_def:
    bitwise f v1 v2 =
      let m = MAX (LENGTH v1) (LENGTH v2) in
-        MAP (UNCURRY f) (ZIP (fixwidth m v1, fixwidth m v2)) : bitstring`
+        MAP (UNCURRY f) (ZIP (fixwidth m v1, fixwidth m v2)) : bitstring
+End
 
-val bnot_def = Define `bnot = MAP (bool$~)`
-val bor_def  = Define `bor  = bitwise (\/)`
-val band_def = Define `band = bitwise (/\)`
-val bxor_def = Define `bxor = bitwise (<>)`
+Definition bnot_def:   bnot = MAP (bool$~)
+End
+Definition bor_def:    bor  = bitwise (\/)
+End
+Definition band_def:   band = bitwise (/\)
+End
+Definition bxor_def:   bxor = bitwise (<>)
+End
 
-val bnor_def = Define `bnor = bitwise (\x y. ~(x \/ y))`
-val bxnor_def = Define `bxnor = bitwise (=)`
-val bnand_def = Define `bnand = bitwise (\x y. ~(x /\ y))`
+Definition bnor_def:   bnor = bitwise (\x y. ~(x \/ y))
+End
+Definition bxnor_def:   bxnor = bitwise (=)
+End
+Definition bnand_def:   bnand = bitwise (\x y. ~(x /\ y))
+End
 
-val replicate_def = Define`
-  replicate v n = FLAT (GENLIST (K v) n) : bitstring`
+Definition replicate_def:
+  replicate v n = FLAT (GENLIST (K v) n) : bitstring
+End
 
 (* ------------------------------------------------------------------------- *)
 

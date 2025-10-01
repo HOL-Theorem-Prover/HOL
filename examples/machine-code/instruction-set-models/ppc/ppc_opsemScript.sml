@@ -9,108 +9,134 @@ Ancestors
 
 <* ---------------------------------------------------------------------------------- *)
 
-val ppc_sint_cmp_def = Define `
+Definition ppc_sint_cmp_def:
   ppc_sint_cmp ii (a:word32) (b:word32) =
     (parT_unit (write_status ii (PPC_CR0 0w) (SOME (a < b)))
     (parT_unit (write_status ii (PPC_CR0 1w) (SOME (b < a)))
     (parT_unit (write_status ii (PPC_CR0 2w) (SOME (a = b)))
-               (write_status ii (PPC_CR0 3w) NONE))))`;
+               (write_status ii (PPC_CR0 3w) NONE))))
+End
 
-val ppc_uint_cmp_def = Define `
+Definition ppc_uint_cmp_def:
   ppc_uint_cmp ii (a:word32) (b:word32) =
     (parT_unit (write_status ii (PPC_CR0 0w) (SOME (a <+ b)))
     (parT_unit (write_status ii (PPC_CR0 1w) (SOME (b <+ a)))
     (parT_unit (write_status ii (PPC_CR0 2w) (SOME (a = b)))
-               (write_status ii (PPC_CR0 3w) NONE))))`;
+               (write_status ii (PPC_CR0 3w) NONE))))
+End
 
-val ppc_clear_CR0_def = Define `
+Definition ppc_clear_CR0_def:
   ppc_clear_CR0 ii =
     (parT_unit (write_status ii (PPC_CR0 0w) NONE)
     (parT_unit (write_status ii (PPC_CR0 1w) NONE)
     (parT_unit (write_status ii (PPC_CR0 2w) NONE)
-               (write_status ii (PPC_CR0 3w) NONE))))`;
+               (write_status ii (PPC_CR0 3w) NONE))))
+End
 
-val OK_nextinstr_def = Define `
+Definition OK_nextinstr_def:
   OK_nextinstr ii f =
-    parT_unit f (seqT (read_reg ii PPC_PC) (\x. write_reg ii PPC_PC (x + 4w)))`;
+    parT_unit f (seqT (read_reg ii PPC_PC) (\x. write_reg ii PPC_PC (x + 4w)))
+End
 
-val reg_update_def = Define `
+Definition reg_update_def:
   reg_update ii rd f s1 s2 =
-    seqT (parT s1 s2) (\(x,y). write_reg ii (PPC_IR rd) (f x y))`;
+    seqT (parT s1 s2) (\(x,y). write_reg ii (PPC_IR rd) (f x y))
+End
 
-val uint_reg_update_def = Define `
+Definition uint_reg_update_def:
   uint_reg_update ii rd f s1 s2 =
     seqT (parT s1 s2)
-         (\(x,y). parT_unit (write_reg ii (PPC_IR rd) (f x y)) (ppc_uint_cmp ii (f x y) 0w))`;
+         (\(x,y). parT_unit (write_reg ii (PPC_IR rd) (f x y)) (ppc_uint_cmp ii (f x y) 0w))
+End
 
-val sint_reg_update_def = Define `
+Definition sint_reg_update_def:
   sint_reg_update ii rd f s1 s2 =
     seqT (parT s1 s2)
-         (\(x,y). parT_unit (write_reg ii (PPC_IR rd) (f x y)) (ppc_sint_cmp ii (f x y) 0w))`;
+         (\(x,y). parT_unit (write_reg ii (PPC_IR rd) (f x y)) (ppc_sint_cmp ii (f x y) 0w))
+End
 
-val uint_compare_def = Define `
+Definition uint_compare_def:
   uint_compare ii s1 s2 =
-    seqT (parT s1 s2) (\(x,y). ppc_uint_cmp ii x y)`;
+    seqT (parT s1 s2) (\(x,y). ppc_uint_cmp ii x y)
+End
 
-val sint_compare_def = Define `
+Definition sint_compare_def:
   sint_compare ii s1 s2 =
-    seqT (parT s1 s2) (\(x,y). ppc_sint_cmp ii x y)`;
+    seqT (parT s1 s2) (\(x,y). ppc_sint_cmp ii x y)
+End
 
-val bit_update_def = Define `
+Definition bit_update_def:
   bit_update ii bd (f:bool->bool->bool) s1 s2 =
-    seqT (parT s1 s2) (\(x,y). write_status ii bd (SOME (f x y)))`;
+    seqT (parT s1 s2) (\(x,y). write_status ii bd (SOME (f x y)))
+End
 
-val const_low_s_def  = Define `const_low_s w = constT ((sw2sw:word16->word32) w)`;
-val const_high_s_def = Define `const_high_s w = constT (((sw2sw:word16->word32) w) << 16)`;
+Definition const_low_s_def:    const_low_s w = constT ((sw2sw:word16->word32) w)
+End
+Definition const_high_s_def:   const_high_s w = constT (((sw2sw:word16->word32) w) << 16)
+End
 
-val const_low_def        = Define `const_low w = constT ((w2w:word16->word32) w)`;
-val const_high_def       = Define `const_high w = constT ((w2w:word16->word32) w << 16)`;
+Definition const_low_def:          const_low w = constT ((w2w:word16->word32) w)
+End
+Definition const_high_def:         const_high w = constT ((w2w:word16->word32) w << 16)
+End
 
-val conditional_def = Define `conditional x y z = if x then y else z`;
+Definition conditional_def:   conditional x y z = if x then y else z
+End
 
-val read_bit_word_def = Define `
+Definition read_bit_word_def:
   read_bit_word ii bit =
-    seqT (read_status ii bit) (\x. constT (conditional x 1w 0w))`;
+    seqT (read_status ii bit) (\x. constT (conditional x 1w 0w))
+End
 
-val read_ireg_def = Define `
-  read_ireg ii rd = read_reg ii (PPC_IR rd)`;
+Definition read_ireg_def:
+  read_ireg ii rd = read_reg ii (PPC_IR rd)
+End
 
-val gpr_or_zero_def = Define `gpr_or_zero ii d = if d = 0w then const_low 0w else read_ireg ii d`;
+Definition gpr_or_zero_def:   gpr_or_zero ii d = if d = 0w then const_low 0w else read_ireg ii d
+End
 
-val no_carry_def = Define `
-  no_carry ii = write_status ii PPC_CARRY NONE`;
+Definition no_carry_def:
+  no_carry ii = write_status ii PPC_CARRY NONE
+End
 
-val goto_label_def = Define `
+Definition goto_label_def:
   goto_label ii l =
-    seqT (read_reg ii PPC_PC) (\x. write_reg ii PPC_PC (x + sw2sw l * 4w))`;
+    seqT (read_reg ii PPC_PC) (\x. write_reg ii PPC_PC (x + sw2sw l * 4w))
+End
 
-val PREAD_M_LIST_def = Define `
+Definition PREAD_M_LIST_def:
   PREAD_M_LIST n a s =
-    if n = 0 then [] else PREAD_M a s :: PREAD_M_LIST (n-1) (a+1w) s`;
+    if n = 0 then [] else PREAD_M a s :: PREAD_M_LIST (n-1) (a+1w) s
+End
 
-val PWRITE_M_LIST_def = Define `
+Definition PWRITE_M_LIST_def:
   (PWRITE_M_LIST a [] s = s) /\
-  (PWRITE_M_LIST a (b::bs) s = PWRITE_M a (SOME b) (PWRITE_M_LIST (a+1w) bs s))`;
+  (PWRITE_M_LIST a (b::bs) s = PWRITE_M a (SOME b) (PWRITE_M_LIST (a+1w) bs s))
+End
 
-val effective_address_def = Define `
-  effective_address s1 s2 = seqT (parT s1 s2) (\(x:word32,y:word32). constT (x + y))`;
+Definition effective_address_def:
+  effective_address s1 s2 = seqT (parT s1 s2) (\(x:word32,y:word32). constT (x + y))
+End
 
-val assertT_def = Define `
-  assertT b f = seqT (if b then constT () else failureT) (\x. f)`;
+Definition assertT_def:
+  assertT b f = seqT (if b then constT () else failureT) (\x. f)
+End
 
-val ppc_write_mem_aux_def = Define `
+Definition ppc_write_mem_aux_def:
   (ppc_write_mem_aux ii addr [] = constT ()) /\
   (ppc_write_mem_aux ii addr (b::bytes) =
      parT_unit (write_mem ii addr b)
-               (ppc_write_mem_aux ii (addr+1w) bytes))`;
+               (ppc_write_mem_aux ii (addr+1w) bytes))
+End
 
-val reg_store_def = Define `
+Definition reg_store_def:
   reg_store ii size rd s1 s2 =
     seqT (parT (effective_address s1 s2) (read_ireg ii rd))
          (\(addr,x). assertT (address_aligned size addr)
-                             (ppc_write_mem_aux ii addr (REVERSE (word2bytes size x))))`;
+                             (ppc_write_mem_aux ii addr (REVERSE (word2bytes size x))))
+End
 
-val read_mem_aux_def = Define `
+Definition read_mem_aux_def:
   read_mem_aux ii size addr =
     if size = 1 then
       seqT (read_mem ii addr)
@@ -121,25 +147,29 @@ val read_mem_aux_def = Define `
     else
       seqT (parT (parT (read_mem ii (addr+0w)) (read_mem ii (addr+1w)))
                  (parT (read_mem ii (addr+2w)) (read_mem ii (addr+3w))))
-           (\((x0,x1),(x2,x3)). constT (bytes2word [x3;x2;x1;x0]))`;
+           (\((x0,x1),(x2,x3)). constT (bytes2word [x3;x2;x1;x0]))
+End
 
-val load_word_def = Define `
+Definition load_word_def:
   load_word ii size addr =
-    assertT (address_aligned size addr) (read_mem_aux ii size addr)`;
+    assertT (address_aligned size addr) (read_mem_aux ii size addr)
+End
 
-val reg_load_def = Define `
+Definition reg_load_def:
   reg_load ii size rd s1 s2 =
     seqT (effective_address s1 s2)
          (\addr. seqT (load_word ii size addr)
-                      (write_reg ii (PPC_IR rd)))`;
+                      (write_reg ii (PPC_IR rd)))
+End
 
-val ppc_branch_condition_def = Define `
+Definition ppc_branch_condition_def:
   ppc_branch_condition (b0:word5) b =
     if b0 && 16w = 16w then T else
     if b0 && 8w = 8w then (b = T) else
-    (* b0 && 4w = 4w then *) (b = F)`;
+    (* b0 && 4w = 4w then *) (b = F)
+End
 
-val ppc_exec_instr_def = Define `
+Definition ppc_exec_instr_def:
   (ppc_exec_instr ii (Padd rd r1 r2) =
        OK_nextinstr ii (reg_update ii rd $+ (read_ireg ii r1) (read_ireg ii r2))) /\
 
@@ -385,7 +415,8 @@ val ppc_exec_instr_def = Define `
       OK_nextinstr ii (reg_update ii rd $?? (read_ireg ii r1) (const_low cst))) /\
 
   (ppc_exec_instr ii (Pxoris rd r1 cst ) =
-      OK_nextinstr ii (reg_update ii rd $?? (read_ireg ii r1) (const_high cst)))`;
+      OK_nextinstr ii (reg_update ii rd $?? (read_ireg ii r1) (const_high cst)))
+End
 
 
 val ppc_assertT_lemma = store_thm("ppc_assertT_lemma",

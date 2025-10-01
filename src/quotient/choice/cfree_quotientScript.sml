@@ -44,11 +44,11 @@ val POP_TAC = POP_ASSUM (fn th => ALL_TAC);
 
 
 
-val QUOTIENT_def =
-    Define
-      `QUOTIENT R (abs:'a->'b) <=>
+Definition QUOTIENT_def:
+       QUOTIENT R (abs:'a->'b) <=>
         (!a. ?r. R r r /\ (abs r = a)) /\
-        (!r s. R r s <=> R r r /\ R s s /\ (abs r = abs s))`;
+        (!r s. R r s <=> R r r /\ R s s /\ (abs r = abs s))
+End
 
 Theorem QUOTIENT_REP:
   !R (abs:'a->'b). QUOTIENT R abs ==> (!a. ?r. R r r /\ (abs r = a))
@@ -188,12 +188,12 @@ val LIST_MAP_I =
 (* for list equivalence relation, use prefix LIST_REL, defined here: *)
 
 (* Almost MAP2, but this is totally defined: *)
-val LIST_REL_def =
-    Define
-      `(LIST_REL R [] [] = T) /\
+Definition LIST_REL_def:
+       (LIST_REL R [] [] = T) /\
        (LIST_REL R ((a:'a)::as) [] = F) /\
        (LIST_REL R [] ((b:'a)::bs) = F) /\
-       (LIST_REL R (a::as) (b::bs) = (R a b /\ LIST_REL R as bs))`;
+       (LIST_REL R (a::as) (b::bs) = (R a b /\ LIST_REL R as bs))
+End
 
 val LIST_REL_ind = fetch "-" "LIST_REL_ind";
 
@@ -317,12 +317,12 @@ val OPTION_MAP_I = store_thm
 
 (* Here is the definition of OPTION_REL: *)
 
-val OPTION_REL_def =
-    Define
-      `(OPTION_REL R (NONE)        (NONE)        = T) /\
+Definition OPTION_REL_def:
+       (OPTION_REL R (NONE)        (NONE)        = T) /\
        (OPTION_REL R (SOME (x:'a)) (NONE)        = F) /\
        (OPTION_REL R (NONE)        (SOME (y:'a)) = F) /\
-       (OPTION_REL R (SOME (x:'a)) (SOME (y:'a)) = R x y)`;
+       (OPTION_REL R (SOME (x:'a)) (SOME (y:'a)) = R x y)
+End
 
 val OPTION_REL_EQ = store_thm
    ("OPTION_REL_EQ",

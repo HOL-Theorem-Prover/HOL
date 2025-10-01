@@ -11,28 +11,37 @@ val RW1 = ONCE_REWRITE_RULE;
 
 (* mimicking the macro definitions in HOL4 *)
 
-val OR_def = Define `
+Definition OR_def:
   (OR [] = Sym "NIL") /\
-  (OR (x::xs) = if isTrue x then x else OR xs)`;
+  (OR (x::xs) = if isTrue x then x else OR xs)
+End
 
-val AND_def = Define `
+Definition AND_def:
   (AND [] = Sym "T") /\
   (AND [x] = x) /\
-  (AND (x::xs) = if isTrue x then AND xs else Sym "NIL")`;
+  (AND (x::xs) = if isTrue x then AND xs else Sym "NIL")
+End
 
-val LIST_def = Define `
+Definition LIST_def:
   (LIST [] = Sym "NIL") /\
-  (LIST (x::xs) = LISP_CONS x (LIST xs))`;
+  (LIST (x::xs) = LISP_CONS x (LIST xs))
+End
 
-val COND_LIST_def = Define `
+Definition COND_LIST_def:
   (COND_LIST [] = Sym "NIL") /\
-  (COND_LIST ((x,y)::xs) = if isTrue x then y else COND_LIST xs)`;
+  (COND_LIST ((x,y)::xs) = if isTrue x then y else COND_LIST xs)
+End
 
-val FIRST_def = Define `FIRST x = CAR x`;
-val SECOND_def = Define `SECOND x = CAR (CDR x)`;
-val THIRD_def = Define `THIRD x = CAR (CDR (CDR x))`;
-val FOURTH_def = Define `FOURTH x = CAR (CDR (CDR (CDR x)))`;
-val FIFTH_def = Define `FIFTH x = CAR (CDR (CDR (CDR (CDR x))))`;
+Definition FIRST_def:   FIRST x = CAR x
+End
+Definition SECOND_def:   SECOND x = CAR (CDR x)
+End
+Definition THIRD_def:   THIRD x = CAR (CDR (CDR x))
+End
+Definition FOURTH_def:   FOURTH x = CAR (CDR (CDR (CDR x)))
+End
+Definition FIFTH_def:   FIFTH x = CAR (CDR (CDR (CDR (CDR x))))
+End
 
 
 (* help for evaluating R_ev and R_ap *)
@@ -385,14 +394,16 @@ val R_ev_LamApp = store_thm("R_ev_LamApp",
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
   \\ SIMP_TAC std_ss [Once R_ev_cases] \\ SIMP_TAC (srw_ss()) []);
 
-val funcall_ok_def = Define `
-  funcall_ok args fns io ok = ?result. R_ap (Funcall,args,ARB,fns,io,ok) result`;
+Definition funcall_ok_def:
+  funcall_ok args fns io ok = ?result. R_ap (Funcall,args,ARB,fns,io,ok) result
+End
 
-val funcall_def = Define `
+Definition funcall_def:
   funcall args fns io ok =
     if funcall_ok args fns io ok
     then @result. R_ap (Funcall,args,ARB,fns,io,ok) result
-    else (Sym "NIL",fns,io,ok)`;
+    else (Sym "NIL",fns,io,ok)
+End
 
 val R_ap_Funcall_ARB = prove(
   ``R_ap (Funcall,args,a,fns,io,ok) x = R_ap (Funcall,args,ARB,fns,io,ok) x``,
@@ -467,10 +478,11 @@ val isTrue_CLAUSES = store_thm("isTrue_CLAUSES",
   \\ Cases_on `isTrue x` \\ ASM_SIMP_TAC std_ss [] \\ EVAL_TAC
   \\ METIS_TAC [EVAL ``Sym "NIL" = Sym "T"``]);
 
-val fns_assum_def = Define `
+Definition fns_assum_def:
   fns_assum k xs =
     EVERY (\(name,params,body). (name:string) IN FDOM k /\
-               (k ' name = (params:string list,body:term))) xs`;
+               (k ' name = (params:string list,body:term))) xs
+End
 
 val R_ev_fns_assum_lemma = prove(
   ``(!x y. R_ap x y ==> !xs. fns_assum (FST (SND (SND (SND x)))) xs ==>

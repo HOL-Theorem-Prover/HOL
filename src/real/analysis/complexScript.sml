@@ -1312,9 +1312,10 @@ val COMPLEX_DIV_ARG = store_thm("COMPLEX_DIV_ARG",
 (* The operation of nature numbers power of complex numbers           *)
 (*--------------------------------------------------------------------*)
 
-val complex_pow = Define
-`(complex_pow (z:complex) 0 = 1) /\
-      (complex_pow (z:complex) (SUC n) = z * (complex_pow z n))`;
+Definition complex_pow:
+ (complex_pow (z:complex) 0 = 1) /\
+      (complex_pow (z:complex) (SUC n) = z * (complex_pow z n))
+End
 
 val _ = overload_on ("pow",  Term`$complex_pow`);
 

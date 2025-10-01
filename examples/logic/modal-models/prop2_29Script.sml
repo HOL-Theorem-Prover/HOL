@@ -134,8 +134,9 @@ Theorem peval_satis:
 Proof Induct_on `f` >> rw[] >> metis_tac[satis_def]
 QED
 
-val equiv0_def = Define`
-     equiv0 (:β) f1 f2 <=> !M w:β. satis M w f1 <=> satis M w f2`;
+Definition equiv0_def:
+     equiv0 (:β) f1 f2 <=> !M w:β. satis M w f1 <=> satis M w f2
+End
 
 
 Theorem subst_equiv0:
@@ -333,12 +334,13 @@ QED
 
 
 
-val DEG_def =  Define
-    `DEG (VAR p) = 0 /\
+Definition DEG_def:
+     DEG (VAR p) = 0 /\
      DEG (FALSE) = 0 /\
      DEG (NOT form) = DEG form /\
      DEG (DISJ form1 form2) = MAX (DEG form1) (DEG form2) /\
-     DEG (DIAM form) = (DEG form) + 1`;
+     DEG (DIAM form) = (DEG form) + 1
+End
 
 
 

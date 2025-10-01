@@ -69,7 +69,7 @@ Definition free_vars_def:
   (free_vars (mLamApp xs z ys) = FLAT (MAP free_vars ys))
 End
 
-val primitive_arity_def = Define `
+Definition primitive_arity_def:
   (primitive_arity logic_CONSP = 1) /\
   (primitive_arity logic_NATP = 1) /\
   (primitive_arity logic_SYMBOLP = 1) /\
@@ -79,7 +79,8 @@ val primitive_arity_def = Define `
   (primitive_arity logic_NOT = 1) /\
   (primitive_arity logic_RANK = 1) /\
   (primitive_arity logic_IF = 3) /\
-  (primitive_arity _ = 2:num)`;
+  (primitive_arity _ = 2:num)
+End
 
 val _ = Hol_datatype `
   func_body = (* body of normal function defition *)
@@ -92,9 +93,10 @@ val _ = Hol_datatype `
 val _ = type_abbrev("context_type",
   ``:string |-> (string list # func_body # (SExp list -> SExp))``)
 
-val func_arity_def = Define `
+Definition func_arity_def:
   (func_arity (ctxt:context_type) (mPrimitiveFun p) = SOME (primitive_arity p)) /\
-  (func_arity ctxt (mFun f) = if f IN FDOM ctxt then SOME (LENGTH (FST (ctxt ' f))) else NONE)`;
+  (func_arity ctxt (mFun f) = if f IN FDOM ctxt then SOME (LENGTH (FST (ctxt ' f))) else NONE)
+End
 
 Definition term_ok_def:
   (term_ok ctxt (mConst s) = T) /\
@@ -106,10 +108,11 @@ Definition term_ok_def:
      EVERY (term_ok ctxt) zs /\ term_ok ctxt y /\ (LENGTH xs = LENGTH zs))
 End
 
-val formula_ok_def = Define `
+Definition formula_ok_def:
   (formula_ok ctxt (Not x) = formula_ok ctxt x) /\
   (formula_ok ctxt (Or x y) = formula_ok ctxt x /\ formula_ok ctxt y) /\
-  (formula_ok ctxt (Equal t1 t2) = term_ok ctxt t1 /\ term_ok ctxt t2)`;
+  (formula_ok ctxt (Equal t1 t2) = term_ok ctxt t1 /\ term_ok ctxt t2)
+End
 
 
 (* PART 2: Semantics
@@ -118,14 +121,16 @@ val formula_ok_def = Define `
    need a few auxilliary definitions. First we need a semantics for
    evaluation of terms. *)
 
-val FunVarBind_def = Define `
+Definition FunVarBind_def:
   (FunVarBind [] args = (\x. Sym "NIL")) /\
   (FunVarBind (p::ps) [] = (\x. Sym "NIL")) /\
-  (FunVarBind (p::ps) (a::as) = (p =+ a) (FunVarBind ps as))`;
+  (FunVarBind (p::ps) (a::as) = (p =+ a) (FunVarBind ps as))
+End
 
-val LISP_IF_def = Define `LISP_IF x y z = if isTrue x then y else z`;
+Definition LISP_IF_def:   LISP_IF x y z = if isTrue x then y else z
+End
 
-val EVAL_PRIMITIVE_def = Define `
+Definition EVAL_PRIMITIVE_def:
   (EVAL_PRIMITIVE logic_CONS xs = LISP_CONS (EL 0 xs) (EL 1 xs)) /\
   (EVAL_PRIMITIVE logic_EQUAL xs = LISP_EQUAL (EL 0 xs) (EL 1 xs)) /\
   (EVAL_PRIMITIVE logic_LESS xs = LISP_LESS (EL 0 xs) (EL 1 xs)) /\
@@ -141,12 +146,14 @@ val EVAL_PRIMITIVE_def = Define `
   (EVAL_PRIMITIVE logic_CAR xs = CAR (EL 0 xs)) /\
   (EVAL_PRIMITIVE logic_CDR xs = CDR (EL 0 xs)) /\
   (EVAL_PRIMITIVE logic_ORD_LESS xs = LISP_TEST (ORD_LT (EL 0 xs) (EL 1 xs))) /\
-  (EVAL_PRIMITIVE logic_ORDP xs = LISP_TEST (ORDP (EL 0 xs)))`;
+  (EVAL_PRIMITIVE logic_ORDP xs = LISP_TEST (ORDP (EL 0 xs)))
+End
 
-val EvalApp_def = Define `
+Definition EvalApp_def:
   (EvalApp (mPrimitiveFun p,args,ctxt) = EVAL_PRIMITIVE p args) /\
   (EvalApp (mFun name,args,ctxt) =
-     let (params,body,sem) = ctxt ' name in sem args)`;
+     let (params,body,sem) = ctxt ' name in sem args)
+End
 
 Theorem MEM_IMP_logic_term_size[local]:
   !xs x. MEM x xs ==> logic_term_size x < list_size logic_term_size xs
@@ -164,16 +171,18 @@ Definition EvalTerm_def:
        EvalTerm (FunVarBind vs xs,ctxt) x)
 End
 
-val EvalFormula_def = Define `
+Definition EvalFormula_def:
   (EvalFormula (a,ctxt) (Not f) = ~EvalFormula (a,ctxt) f) /\
   (EvalFormula (a,ctxt) (Or f1 f2) = EvalFormula (a,ctxt) f1 \/ EvalFormula (a,ctxt) f2) /\
-  (EvalFormula (a,ctxt) (Equal t1 t2) = (EvalTerm (a,ctxt) t1 = EvalTerm (a,ctxt) t2))`;
+  (EvalFormula (a,ctxt) (Equal t1 t2) = (EvalTerm (a,ctxt) t1 = EvalTerm (a,ctxt) t2))
+End
 
 (* A Milawa formula is considered to be valid if it is true for all
    variable instantiations, and syntacically well-formed. *)
 
-val MilawaValid_def = Define `
-  MilawaValid ctxt f = formula_ok ctxt f /\ !a. EvalFormula (a,ctxt) f`;
+Definition MilawaValid_def:
+  MilawaValid ctxt f = formula_ok ctxt f /\ !a. EvalFormula (a,ctxt) f
+End
 
 (* We require all functions in the context to be syntactically correct
    functions that do not to have any duplicate parameters and do not
@@ -185,7 +194,7 @@ val MilawaValid_def = Define `
 
    Notice that normal function definitions need not exist. *)
 
-val context_ok_def = Define `
+Definition context_ok_def:
   context_ok ctxt =
     (!fname params body sem.
        fname IN FDOM ctxt /\ (ctxt ' fname = (params,BODY_FUN body,sem)) ==>
@@ -198,7 +207,8 @@ val context_ok_def = Define `
        LIST_TO_SET (free_vars exp) SUBSET LIST_TO_SET (var::params) /\
        !args.
           (?v. isTrue (EvalTerm (FunVarBind (var::params) (v::args),ctxt) exp)) ==>
-          isTrue (EvalTerm (FunVarBind (var::params) ((sem args)::args),ctxt) exp))`;
+          isTrue (EvalTerm (FunVarBind (var::params) ((sem args)::args),ctxt) exp))
+End
 
 
 (* PART 3: Axioms and inference rules *)
@@ -244,7 +254,7 @@ val zero = ``mConst (Val 0)``
 val one = ``mConst (Val 1)``
 val aand = ``(\x y. mIf x y (mConst (Sym "NIL")))``
 
-val MILAWA_AXIOMS_def = Define `
+Definition MILAWA_AXIOMS_def:
   MILAWA_AXIOMS = [
   (* Axiom 1. reflexivity *)
     (^pequal ^x ^x);
@@ -435,13 +445,15 @@ val MILAWA_AXIOMS_def = Define `
              (^iff [^ordp [^cdr [^x]];
              (^iff [^consp [^cdr [^x]];
                     ^ord_lt [^car [^car [^cdr [^x]]]; ^car [^car [^x]]];
-                    ^t]); ^nnil]); ^nnil]); ^nnil]); ^nnil]); ^nnil])]))]`;
+                    ^t]); ^nnil]); ^nnil]); ^nnil]); ^nnil]); ^nnil])]))]
+End
 
 (* --- Inference rules --- *)
 
-val LOOKUP_def = Define `
+Definition LOOKUP_def:
   (LOOKUP x [] r = r) /\
-  (LOOKUP x ((y,z)::ys) r = if x = y then z else LOOKUP x ys r)`;
+  (LOOKUP x ((y,z)::ys) r = if x = y then z else LOOKUP x ys r)
+End
 
 Definition term_sub_def:
   (term_sub ss (mConst s) = mConst s) /\
@@ -450,19 +462,22 @@ Definition term_sub_def:
   (term_sub ss (mLamApp xs z ys) = mLamApp xs z (MAP (term_sub ss) ys))
 End
 
-val formula_sub_def = Define `
+Definition formula_sub_def:
   (formula_sub ss (Not x) = Not (formula_sub ss x)) /\
   (formula_sub ss (Or x y) = Or (formula_sub ss x) (formula_sub ss y)) /\
-  (formula_sub ss (Equal t1 t2) = Equal (term_sub ss t1) (term_sub ss t2))`;
+  (formula_sub ss (Equal t1 t2) = Equal (term_sub ss t1) (term_sub ss t2))
+End
 
-val or_not_equal_list_def = Define `
+Definition or_not_equal_list_def:
   (or_not_equal_list [] x = x) /\
   (or_not_equal_list ((t,s)::xs) x = Or (Not (Equal t s))
-                                        (or_not_equal_list xs x))`;
+                                        (or_not_equal_list xs x))
+End
 
-val or_list_def = Define `
+Definition or_list_def:
   (or_list [x] = x) /\
-  (or_list (x::y::xs) = Or x (or_list (y::xs)))`;
+  (or_list (x::y::xs) = Or x (or_list (y::xs)))
+End
 
 val (MilawaTrue_rules,MilawaTrue_ind,MilawaTrue_cases) = Hol_reln `
   (* Associativity *)
@@ -828,10 +843,11 @@ val MEM_MAP_FST = prove(
   \\ FULL_SIMP_TAC std_ss [] \\ Q.EXISTS_TAC `h::ys'`
   \\ FULL_SIMP_TAC std_ss [APPEND,MEM,MAP] \\ METIS_TAC []);
 
-val FunVarBindAux_def = Define `
+Definition FunVarBindAux_def:
   (FunVarBindAux [] args d = d) /\
   (FunVarBindAux (p::ps) [] d = (p =+ Sym "NIL") (FunVarBindAux ps [] d)) /\
-  (FunVarBindAux (p::ps) (a::as) d = (p =+ a) (FunVarBindAux ps as d))`;
+  (FunVarBindAux (p::ps) (a::as) d = (p =+ a) (FunVarBindAux ps as d))
+End
 
 val FunVarBindAux_APPEND = prove(
   ``!ys f xs qs d.
@@ -1383,9 +1399,10 @@ val context_ok_None = store_thm("context_ok_None",
 
 (* definition of Milawa's termination condition generator *)
 
-val callmap_sub_def = Define `
+Definition callmap_sub_def:
   callmap_sub ss zs =
-    MAP (\(xs,ys). (MAP (term_sub ss) xs, MAP (term_sub ss) ys)) zs`;
+    MAP (\(xs,ys). (MAP (term_sub ss) xs, MAP (term_sub ss) ys)) zs
+End
 
 Theorem MEM_logic_term_size[local]:
   !xs x. MEM x xs ==> logic_term_size x < list_size logic_term_size xs
@@ -1427,20 +1444,23 @@ Termination
   \\ gvs[NOT_LESS, NUMERAL_LE_LENGTH, SF numSimps.ARITH_NORM_ss]
 End
 
-val progress_obligation_def = Define `
+Definition progress_obligation_def:
   progress_obligation t formals (actuals,rulers) =
     or_list (Equal (mApp (mPrimitiveFun logic_ORD_LESS) [term_sub (ZIP (formals,actuals)) t;t])
                             (mConst (Sym "T"))::
-             MAP (\r. Equal r (mConst (Sym "NIL"))) rulers)`;
+             MAP (\r. Equal r (mConst (Sym "NIL"))) rulers)
+End
 
-val termination_obligations_def = Define `
+Definition termination_obligations_def:
   termination_obligations name body formals m (* m is the measure *) =
     if (callmap name body = []) then [] else
       ((Equal (mApp (mPrimitiveFun logic_ORDP) [m]) (mConst (Sym "T")))::
-        (MAP (progress_obligation m formals) (callmap name body)))`;
+        (MAP (progress_obligation m formals) (callmap name body)))
+End
 
-val no_rec_call_def = Define `
-  no_rec_call name exp = (callmap name exp = [])`;
+Definition no_rec_call_def:
+  no_rec_call name exp = (callmap name exp = [])
+End
 
 val is_tailrec_def = tDefine "is_tailrec" `
   (is_tailrec name (mConst c) = T) /\
@@ -1463,7 +1483,7 @@ val is_tailrec_def = tDefine "is_tailrec" `
 
 (* definition of the condition a new definition must satisfy *)
 
-val definition_ok_def = Define `
+Definition definition_ok_def:
   (definition_ok (name,params,BODY_FUN body,ctxt) =
     term_ok (ctxt |+ (name,params,BODY_FUN body,ARB)) body /\
     ~(name IN FDOM ctxt) /\ ALL_DISTINCT params /\
@@ -1474,7 +1494,8 @@ val definition_ok_def = Define `
     term_ok ctxt exp /\ ~(name IN FDOM ctxt) /\ ALL_DISTINCT (var::params) /\
     LIST_TO_SET (free_vars exp) SUBSET LIST_TO_SET (var::params)) /\
   (definition_ok (name,params,NO_FUN,ctxt) =
-    ~(name IN FDOM ctxt) /\ ALL_DISTINCT params)`;
+    ~(name IN FDOM ctxt) /\ ALL_DISTINCT params)
+End
 
 (* We now define a big-step operational semantics used for term
    evaluation. This evaluation relation is able to talk about
@@ -1546,11 +1567,14 @@ val M_ev_DETERMINISTIC = store_thm("M_ev_DETERMINISTIC",
   \\ ONCE_REWRITE_TAC [M_ev_cases] \\ SRW_TAC [] [] \\ RES_TAC
   \\ FULL_SIMP_TAC (srw_ss()) []) |> SIMP_RULE std_ss [PULL_FORALL_IMP];
 
-val Eval_M_ap_def = Define `Eval_M_ap n x = @y. M_ap n x y`;
-val Eval_M_ev_def = Define `Eval_M_ev n x = @y. M_ev n x y`;
+Definition Eval_M_ap_def:   Eval_M_ap n x = @y. M_ap n x y
+End
+Definition Eval_M_ev_def:   Eval_M_ev n x = @y. M_ev n x y
+End
 
-val EvalFun_def = Define `
-  EvalFun name ctxt args = Eval_M_ap name (mFun name, args, ctxt)`;
+Definition EvalFun_def:
+  EvalFun name ctxt args = Eval_M_ap name (mFun name, args, ctxt)
+End
 
 val M_ev_EQ_LEMMA = prove(
   ``(!x y. M_ev n x y  ==>

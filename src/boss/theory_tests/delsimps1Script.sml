@@ -1,6 +1,7 @@
 Theory delsimps1
 
-val foo_def = Define‘foo x = x * 2 + 1’;
+Definition foo_def:  foo x = x * 2 + 1
+End
 val _ = export_rewrites ["foo_def"]
 
 val _ = delsimps ["NOT_LT_ZERO_EQ_ZERO"]

@@ -26,28 +26,34 @@ val _ = add_rule {
   block_style = (AroundEachPhrase, (PP.INCONSISTENT, 0))
 };
 
-val morf_def = Define`
-  G##f = G.map f`;
+Definition morf_def:
+  G##f = G.map f
+End
 
-val objf_def = Define`
-  f@@x = @y. y ∈ f.cod.obj ∧ (f##(id x -:f.dom) = id y -:f.cod)`;
+Definition objf_def:
+  f@@x = @y. y ∈ f.cod.obj ∧ (f##(id x -:f.dom) = id y -:f.cod)
+End
 
-val functor_axioms_def = Define`
+Definition functor_axioms_def:
   functor_axioms G =
   is_category G.dom ∧ is_category G.cod ∧
   (∀f x y. f :- x → y -:G.dom ⇒ G##f :- G@@x → G@@y -:G.cod) ∧
   (∀x. x ∈ G.dom.obj ⇒ ∃y. y ∈ G.cod.obj ∧ (G##(id x -:G.dom) = id y -:G.cod)) ∧
-  (∀f g. f ≈> g -:G.dom ⇒ (G##(g o f -:G.dom) = (G##g) o (G##f) -:G.cod))`;
+  (∀f g. f ≈> g -:G.dom ⇒ (G##(g o f -:G.dom) = (G##g) o (G##f) -:G.cod))
+End
 
-val extensional_functor_def = Define`
-  extensional_functor f = extensional f.map f.dom.mor`;
+Definition extensional_functor_def:
+  extensional_functor f = extensional f.map f.dom.mor
+End
 
-val mk_functor_def = Define`
+Definition mk_functor_def:
   mk_functor (f:(α,β,γ,δ) functor) =
-    <| dom := f.dom; cod := f.cod; map := restrict f.map f.dom.mor |>`;
+    <| dom := f.dom; cod := f.cod; map := restrict f.map f.dom.mor |>
+End
 
-val is_functor_def = Define`
-  is_functor f = extensional_functor f ∧ functor_axioms f`;
+Definition is_functor_def:
+  is_functor f = extensional_functor f ∧ functor_axioms f
+End
 
 val functor_eq_thm = Q.store_thm(
 "functor_eq_thm",
@@ -163,8 +169,9 @@ fsrw_tac [][category_axioms_def] >>
 fsrw_tac [][maps_to_in_def,composable_in_def]);
 val _ = export_rewrites["is_functor_mk_functor"];
 
-val id_functor_def = Define`
-  id_functor c = mk_functor <| dom := c; cod := c; map := I |>`;
+Definition id_functor_def:
+  id_functor c = mk_functor <| dom := c; cod := c; map := I |>
+End
 
 val is_functor_id_functor = Q.store_thm(
 "is_functor_id_functor",
@@ -211,9 +218,10 @@ val _ = export_rewrites
 ["is_functor_id_functor","id_functor_dom","id_functor_cod",
  "id_functor_map","id_functor_morf","id_functor_objf"];
 
-val K_functor_def = Define`
+Definition K_functor_def:
   K_functor c1 c2 x = mk_functor <|
-    dom := c1; cod := c2; map := K (id x -:c2) |>`;
+    dom := c1; cod := c2; map := K (id x -:c2) |>
+End
 
 val is_functor_K_functor = Q.store_thm(
 "is_functor_K_functor",
@@ -268,8 +276,9 @@ val K_functor_maps_to = Q.store_thm(
 srw_tac [][])
 val _ = export_rewrites["K_functor_maps_to"];
 
-val unit_functor_def = Define`
-  unit_functor c = K_functor c unit_cat ()`;
+Definition unit_functor_def:
+  unit_functor c = K_functor c unit_cat ()
+End
 
 val is_functor_unit_functor = Q.store_thm(
 "is_functor_unit_functor",
@@ -288,9 +297,10 @@ fsrw_tac [][functor_axioms_def] >>
 SELECT_ELIM_TAC >>
 fsrw_tac [][morf_def]);
 
-val functor_comp_def = Define`
+Definition functor_comp_def:
   functor_comp (f:(γ,δ,ε,ζ) functor) (g:(α,β,γ,δ) functor) =
-    mk_functor (compose (λf g. g.map o f.map) g f)`;
+    mk_functor (compose (λf g. g.map o f.map) g f)
+End
 
 val _ = set_fixity "\226\151\142" (Infixr 800);
 val _ = overload_on("\226\151\142",``functor_comp``);
@@ -484,40 +494,47 @@ imp_res_tac functor_preserves_iso_pair >>
 first_x_assum match_mp_tac >>
 srw_tac [][]);
 
-val full_def = Define`
+Definition full_def:
   full f = ∀h a b. a ∈ f.dom.obj ∧ b ∈ f.dom.obj ∧
                    h :- f@@a → f@@b -:f.cod ⇒
                    ∃g. g :- a → b -:f.dom ∧
-                       (f##g = h)`;
+                       (f##g = h)
+End
 
-val faithful_def = Define`
+Definition faithful_def:
   faithful (f:(α,β,γ,δ)functor) =
   ∀g h a b. g :- a → b -:f.dom ∧ h :- a → b -:f.dom ∧
-   (f##g = f##h) ⇒ (g = h)`;
+   (f##g = f##h) ⇒ (g = h)
+End
 
-val embedding_def = Define`
-  embedding (f:(α,β,γ,δ)functor) = full f ∧ faithful f`;
+Definition embedding_def:
+  embedding (f:(α,β,γ,δ)functor) = full f ∧ faithful f
+End
 
-val inj_obj_def = Define`
+Definition inj_obj_def:
   inj_obj f = ∀a b. a ∈ f.dom.obj ∧ b ∈ f.dom.obj ∧
-    (f@@a = f@@b) ⇒ (a = b)`;
+    (f@@a = f@@b) ⇒ (a = b)
+End
 
 val inj_obj_INJ = Q.store_thm(
 "inj_obj_INJ",
 `∀f. is_functor f ⇒ (inj_obj f = INJ (objf f) f.dom.obj f.cod.obj)`,
 srw_tac [][INJ_DEF,inj_obj_def,objf_in_obj] >> metis_tac []);
 
-val ess_inj_obj_def = Define`
+Definition ess_inj_obj_def:
   ess_inj_obj f = ∀a b. a ∈ f.dom.obj ∧ b ∈ f.dom.obj ∧
-    (f@@a = f@@b) ⇒ (a ≅ b -:f.dom)`;
+    (f@@a = f@@b) ⇒ (a ≅ b -:f.dom)
+End
 
-val surj_obj_def = Define`
+Definition surj_obj_def:
   surj_obj f = ∀b. b ∈ f.cod.obj ⇒
-    ∃a. a ∈ f.dom.obj ∧ (f@@a = b)`;
+    ∃a. a ∈ f.dom.obj ∧ (f@@a = b)
+End
 
-val ess_surj_obj_def = Define`
+Definition ess_surj_obj_def:
   ess_surj_obj f = ∀b. b ∈ f.cod.obj ⇒
-    ∃a. a ∈ f.dom.obj ∧ (f@@a) ≅ b -:f.cod`;
+    ∃a. a ∈ f.dom.obj ∧ (f@@a) ≅ b -:f.cod
+End
 
 val embedding_ess_inj = Q.store_thm(
 "embedding_ess_inj",
@@ -592,26 +609,30 @@ metis_tac [objf_in_obj]);
 
 (* Wish we could define a category where this was just iso_pair *)
 (* Joy of Cats says that would be a quasicategory (see p 40 onwards) *)
-val cat_iso_pair_def = Define`
+Definition cat_iso_pair_def:
   cat_iso_pair f g =
     is_functor f ∧ is_functor g ∧ (f ≈> g) ∧
     (f ◎ g = id_functor g.dom) ∧
-    (g ◎ f = id_functor f.dom)`;
+    (g ◎ f = id_functor f.dom)
+End
 
-val id_on_def = Define`
-  id_on id_map x = <|dom := x; cod := x; map:= id_map x|>`;
+Definition id_on_def:
+  id_on id_map x = <|dom := x; cod := x; map:= id_map x|>
+End
 
-val gen_iso_pair_def = Define`
+Definition gen_iso_pair_def:
   gen_iso_pair mor1 mor2 comp1 comp2 id_map1 id_map2 f g =
     f ∈ mor1 ∧ g ∈ mor2 ∧ (f ≈> g) ∧
     (compose comp1 f g = id_on id_map1 f.dom) ∧
-    (compose comp2 g f = id_on id_map2 g.dom)`;
+    (compose comp2 g f = id_on id_map2 g.dom)
+End
 
-val gcat_iso_pair_def = Define`
+Definition gcat_iso_pair_def:
   gcat_iso_pair = gen_iso_pair
     {f | is_functor f} {g | is_functor g}
     (λf g. (g ◎ f).map) (λf g. (g ◎ f).map)
-    (λx. (id_functor x).map) (λy. (id_functor y).map)`;
+    (λx. (id_functor x).map) (λy. (id_functor y).map)
+End
 
 val gcat_iso_pair_eq_cat_iso_pair = Q.store_thm(
 "gcat_iso_pair_eq_cat_iso_pair",
@@ -630,14 +651,17 @@ val cat_iso_pair_sym = Q.store_thm(
 metis_tac [cat_iso_pair_def,id_functor_dom,id_functor_cod,
            functor_comp_dom_cod,composable_def]);
 
-val cat_iso_def = Define`
-  cat_iso f = ∃g. cat_iso_pair f g`;
+Definition cat_iso_def:
+  cat_iso f = ∃g. cat_iso_pair f g
+End
 
-val iso_pair_between_cats_def = Define`
-  iso_pair_between_cats c f g d = (f :- c → d) ∧ cat_iso_pair f g`;
+Definition iso_pair_between_cats_def:
+  iso_pair_between_cats c f g d = (f :- c → d) ∧ cat_iso_pair f g
+End
 
-val iso_cats_def = Define`
-  iso_cats c d = ∃f g. iso_pair_between_cats c f g d`;
+Definition iso_cats_def:
+  iso_cats c d = ∃f g. iso_pair_between_cats c f g d
+End
 
 val cat_iso_pair_bij = Q.store_thm(
 "cat_iso_pair_bij",
@@ -855,11 +879,12 @@ val cat_iso_inj_obj = Q.store_thm(
 srw_tac [][cat_iso_bij,inj_obj_def,BIJ_DEF,INJ_DEF]);
 val _ = export_rewrites["cat_iso_inj_obj"];
 
-val pre_discrete_functor_def = Define`
+Definition pre_discrete_functor_def:
   pre_discrete_functor s c f = <|
     dom := discrete_cat s;
     cod := c;
-    map := λg. id (f g.dom) -:c |>`;
+    map := λg. id (f g.dom) -:c |>
+End
 
 val pre_discrete_functor_components = Q.store_thm(
 "pre_discrete_functor_components",
@@ -877,8 +902,9 @@ SELECT_ELIM_TAC >>
 srw_tac [][] >>
 metis_tac [id_inj]);
 
-val discrete_functor_def = Define`
-  discrete_functor s c f = mk_functor (pre_discrete_functor s c f)`;
+Definition discrete_functor_def:
+  discrete_functor s c f = mk_functor (pre_discrete_functor s c f)
+End
 
 val is_functor_discrete_functor = Q.store_thm(
 "is_functor_discrete_functor",
@@ -918,12 +944,13 @@ match_mp_tac morf_id >>
 srw_tac [][]);
 val _ = export_rewrites["morf_discrete_mor"];
 
-val is_comma_cat_obj_def = Define`
+Definition is_comma_cat_obj_def:
   is_comma_cat_obj (t:(α,β,γ,δ) functor) (s:(ε,ζ,γ,δ) functor) x =
     x.dom ∈ t.dom.obj ∧ x.cod ∈ s.dom.obj ∧
-    x.map :- t@@x.dom → s@@x.cod -:t.cod`;
+    x.map :- t@@x.dom → s@@x.cod -:t.cod
+End
 
-val is_comma_cat_mor_def = Define`
+Definition is_comma_cat_mor_def:
   is_comma_cat_mor t s m =
     is_comma_cat_obj t s m.dom ∧
     is_comma_cat_obj t s m.cod ∧
@@ -932,15 +959,17 @@ val is_comma_cat_mor_def = Define`
     m.dom.map ≈> s##(SND m.map) -:t.cod ∧
     t##(FST m.map) ≈> m.cod.map -:t.cod ∧
     ((s##(SND m.map)) o m.dom.map -:t.cod =
-     m.cod.map o (t##(FST m.map)) -:t.cod)`;
+     m.cod.map o (t##(FST m.map)) -:t.cod)
+End
 
-val pre_comma_cat_def = Define`
+Definition pre_comma_cat_def:
   pre_comma_cat t s = <|
     obj := { x | is_comma_cat_obj t s x } ;
     mor := { m | is_comma_cat_mor t s m } ;
     id_map :=  λx. (id x.dom -:t.dom, id x.cod -:s.dom) ;
     comp := (λx y. ((FST y.map) o (FST x.map) -:t.dom,
-                    (SND y.map) o (SND x.map) -:s.dom)) |>`;
+                    (SND y.map) o (SND x.map) -:s.dom)) |>
+End
 
 val pre_comma_cat_obj = Q.store_thm(
 "pre_comma_cat_obj",
@@ -970,8 +999,9 @@ val _ = add_rule {
   paren_style = OnlyIfNecessary,
   block_style = (AroundEachPhrase, (PP.INCONSISTENT,0))};
 
-val comma_cat_def = Define`
-  (t↓s) = mk_cat (pre_comma_cat t s)`;
+Definition comma_cat_def:
+  (t↓s) = mk_cat (pre_comma_cat t s)
+End
 
 val is_category_comma_cat = Q.store_thm(
 "is_category_comma_cat",
@@ -1100,8 +1130,9 @@ val _ = add_rule {
   paren_style = OnlyIfNecessary,
   block_style = (AroundEachPhrase, (PP.INCONSISTENT,0))};
 
-val slice_cat_def = Define` (* should define this nicer, then show isomorphic to the below *)
-  (c/a) = (id_functor c ↓ K_functor unit_cat c a)`;
+Definition slice_cat_def:   (* should define this nicer, then show isomorphic to the below *)
+  (c/a) = (id_functor c ↓ K_functor unit_cat c a)
+End
 
 val is_category_slice_cat = Q.store_thm(
 "is_category_slice_cat",
@@ -1149,12 +1180,13 @@ conj_asm2_tac >- (
   srw_tac [][composable_in_def,id_mor,id_dom_cod] ) >>
 srw_tac [][composable_in_def]);
 
-val pre_cat_cat_def = Define`
+Definition pre_cat_cat_def:
   pre_cat_cat = <|
     obj := {c | is_category c};
     mor := {f | is_functor f};
     id_map := λf. (id_functor f).map ;
-    comp := λf g. (g ◎ f).map |>`;
+    comp := λf g. (g ◎ f).map |>
+End
 
 val pre_cat_cat_obj_mor = Q.store_thm(
 "pre_cat_cat_obj_mor",
@@ -1186,8 +1218,9 @@ srw_tac [][pre_cat_cat_def]);
 
 val _ = export_rewrites["pre_cat_cat_id","pre_cat_cat_composable_in","pre_cat_cat_compose_in"];
 
-val cat_cat_def = Define`
-  cat_cat = mk_cat pre_cat_cat`;
+Definition cat_cat_def:
+  cat_cat = mk_cat pre_cat_cat
+End
 
 val is_category_cat_cat = Q.store_thm(
 "is_category_cat_cat",

@@ -1205,12 +1205,12 @@ val object1_respects_Axiom = store_thm(
 (*         SIGMA x a = ABS (\y. a <[ [x, OVAR y])                   *)
 (* ---------------------------------------------------------------- *)
 
-val ABS1_def =
-    Define
-    `ABS1 (f : var -> obj1) =
+Definition ABS1_def:
+     ABS1 (f : var -> obj1) =
         let x = VAR "x" 0 in
         let v = variant x (FV_obj1 (f x)) in
-           SIGMA1 v (f v)`;
+           SIGMA1 v (f v)
+End
 
 (* Prove ABS1 is respectful. *)
 

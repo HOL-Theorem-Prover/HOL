@@ -15,14 +15,16 @@ val () = Parse.temp_overload_on ("bias", ``words$INT_MAX``)
 
 (* ------------------------------------------------------------------------ *)
 
-val error_def = Define`
+Definition error_def:
   error (:'t # 'w) x =
-  float_to_real (round roundTiesToEven x : ('t, 'w) float) - x`
+  float_to_real (round roundTiesToEven x : ('t, 'w) float) - x
+End
 
-val normalizes_def = Define`
+Definition normalizes_def:
   normalizes (:'t # 'w) x =
   1 < bias (:'w) /\
-  inv (2 pow (bias (:'w) - 1)) <= abs x /\ abs x < threshold (:'t # 'w)`
+  inv (2 pow (bias (:'w) - 1)) <= abs x /\ abs x < threshold (:'t # 'w)
+End
 
 (* ------------------------------------------------------------------------
      Lifting comparison operations

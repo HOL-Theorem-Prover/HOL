@@ -5,70 +5,84 @@ Ancestors
 
 (* -- define tokenise - a function which splits a string at white space and comma -- *)
 
-val STR_SPLIT_AUX_def = Define `
+Definition STR_SPLIT_AUX_def:
   (STR_SPLIT_AUX c [] curr = [IMPLODE (REVERSE curr)]) /\
   (STR_SPLIT_AUX c (x::xs) curr =
     if MEM x c then IMPLODE (REVERSE curr) :: STR_SPLIT_AUX c xs []
-               else STR_SPLIT_AUX c xs (x::curr))`;
+               else STR_SPLIT_AUX c xs (x::curr))
+End
 
-val STR_SPLIT_def = Define `
-  STR_SPLIT c s = STR_SPLIT_AUX c (EXPLODE s) []`;
+Definition STR_SPLIT_def:
+  STR_SPLIT c s = STR_SPLIT_AUX c (EXPLODE s) []
+End
 
-val tokenise_def = Define `
-  tokenise s = FILTER (\x. ~(x = "")) (STR_SPLIT [#" ";#","] s)`;
+Definition tokenise_def:
+  tokenise s = FILTER (\x. ~(x = "")) (STR_SPLIT [#" ";#","] s)
+End
 
 (* EVAL ``tokenise "testing: A, B, C"`` gives ``["testing:"; "A"; "B"; "C"]`` *)
 
 
 (* -- syntax matcher -- *)
 
-val match_init_def = Define `
-  match_init = (\w:bool list. SOME ((\x:string.[]:bool list),w))`;
+Definition match_init_def:
+  match_init = (\w:bool list. SOME ((\x:string.[]:bool list),w))
+End
 
-val match_def = Define `
-  match step s = option_do (MAP step s)`;
+Definition match_def:
+  match step s = option_do (MAP step s)
+End
 
-val match_list_def = Define `
+Definition match_list_def:
   match_list step pre res list =
     match_init >>
-    option_try (MAP (\(x,y). match step (pre x) >> (res y)) list)`;
+    option_try (MAP (\(x,y). match step (pre x) >> (res y)) list)
+End
 
-val match_list_raw_def = Define `
+Definition match_list_raw_def:
   match_list_raw g step pre res list =
     (\w:bool list. SOME (g,w)) >>
-    option_try (MAP (\(x,y). match step (pre x) >> (res y)) list)`;
+    option_try (MAP (\(x,y). match step (pre x) >> (res y)) list)
+End
 
 
 (* -- operations over bit lists -- *)
 
-val hex2bits_def = Define `
-  hex2bits = FOLDR $++ [] o MAP (\x. n2bits (4 * STRLEN x) (hex2num x)) o tokenise`;
+Definition hex2bits_def:
+  hex2bits = FOLDR $++ [] o MAP (\x. n2bits (4 * STRLEN x) (hex2num x)) o tokenise
+End
 
-val assign_def = Define `
-  assign name x (g:string->bool list, bits:bool list) = SOME ((name =+ x) g,bits)`;
+Definition assign_def:
+  assign name x (g:string->bool list, bits:bool list) = SOME ((name =+ x) g,bits)
+End
 
-val assign_drop_def = Define `
+Definition assign_drop_def:
   assign_drop name i (g:string->bool list, bits:bool list) =
-    if LENGTH bits < i then NONE else SOME ((name =+ TAKE i bits) g, DROP i bits)`;
+    if LENGTH bits < i then NONE else SOME ((name =+ TAKE i bits) g, DROP i bits)
+End
 
-val drop_eq_def = Define `
+Definition drop_eq_def:
   drop_eq v (g:string->bool list, bits:bool list) =
     let i = LENGTH v in
-      if LENGTH bits < i \/ ~(v = TAKE i bits) then NONE else SOME (g, DROP i bits)`;
+      if LENGTH bits < i \/ ~(v = TAKE i bits) then NONE else SOME (g, DROP i bits)
+End
 
-val assert_def = Define `
+Definition assert_def:
   assert p (g:string->bool list, bits:bool list) =
-    if p g then SOME (g,bits) else NONE`;
+    if p g then SOME (g,bits) else NONE
+End
 
-val DT_def = Define `
+Definition DT_def:
   (DT (g,[]) = NONE) /\
   (DT (g,F::b) = NONE) /\
-  (DT (g,T::b) = SOME (g,b))`;
+  (DT (g,T::b) = SOME (g,b))
+End
 
-val DF_def = Define `
+Definition DF_def:
   (DF (g,[]) = NONE) /\
   (DF (g,F::b) = SOME (g,b)) /\
-  (DF (g,T::b) = NONE)`;
+  (DF (g,T::b) = NONE)
+End
 
 
 (* -- simplifying rules -- *)
@@ -137,10 +151,11 @@ val DT_over_DF = store_thm("DT_over_DF",
   REWRITE_TAC [GSYM option_orelse_assoc,
     REWRITE_RULE [GSYM option_orelse_assoc] DT_over_DF_lemma]);
 
-val DTF_def = Define `
+Definition DTF_def:
   (DTF p q (g,[])= NONE) /\
   (DTF p q (g,F::b) = q (g,b)) /\
-  (DTF p q (g,T::b) = p (g,b))`;
+  (DTF p q (g,T::b) = p (g,b))
+End
 
 val DTF_THM = store_thm("DTF_THM",
   ``!x y. ((DF >> p) ++ (DT >> q) = DTF q p) /\ ((DT >> q) ++ (DF >> p) = DTF q p)``,

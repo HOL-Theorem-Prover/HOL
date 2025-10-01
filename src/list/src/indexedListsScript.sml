@@ -18,7 +18,6 @@ fun rw thl = SRW_TAC[] thl
 fun fs thl = full_simp_tac (srw_ss() ++ numSimps.ARITH_ss) thl;
 val rename1 = Q.RENAME1_TAC
 val qspec_then = Q.SPEC_THEN
-val zDefine = Lib.with_flag (computeLib.auto_import_definitions,false) Define
 
 Definition MAPi_def[simp,nocompute]:
   (MAPi f [] = []) /\
@@ -143,10 +142,10 @@ val FOLDRi_CONG' = store_thm(
   dsimp[LT_SUC] >> rpt strip_tac >> AP_TERM_TAC >>
   first_x_assum match_mp_tac >> simp[]);
 
-val findi_def = Define`
+Definition findi_def:
   findi x [] = 0 /\
   findi x (h::t) = if x = h then 0 else 1 + findi x t
-`;
+End
 
 Theorem findi_nil = findi_def |> CONJUNCT1;
 (* val findi_nil = |- !x. findi x [] = 0: thm *)
@@ -261,11 +260,11 @@ Proof
   (rw[findi_cons] >> fs[])
 QED
 
-val delN_def = Define`
+Definition delN_def:
   delN i [] = [] /\
   delN i (h::t) = if i = 0 then t
                   else h::delN (i - 1) t
-`;
+End
 
 val delN_shortens = store_thm(
   "delN_shortens",
@@ -286,11 +285,11 @@ val EL_delN_AFTER = store_thm(
   `?i0. i = SUC i0` by (Cases_on `i` >> fs[]) >> rw[] >>
   fs[arithmeticTheory.ADD_CLAUSES] >> simp[]);
 
-val fupdLast_def = Define`
+Definition fupdLast_def:
   (fupdLast f [] = []) /\
   (fupdLast f [h] = [f h]) /\
   (fupdLast f (h::t) = h::fupdLast f t)
-`;
+End
 val _ = export_rewrites ["fupdLast_def"]
 
 val fupdLast_EQ_NIL = store_thm(
@@ -363,10 +362,11 @@ val LIST_RELi_APPEND_I = Q.store_thm(
     MAP2i
    ---------------------------------------------------------------------- *)
 
-val MAP2i_def = zDefine‘
+Definition MAP2i_def[nocompute]:
   (MAP2i f [] _ = []) /\
   (MAP2i f _ [] = []) /\
-  (MAP2i f (h1::t1) (h2::t2) = f 0 h1 h2::MAP2i (f o SUC) t1 t2)’;
+  (MAP2i f (h1::t1) (h2::t2) = f 0 h1 h2::MAP2i (f o SUC) t1 t2)
+End
 val _ = export_rewrites["MAP2i_def"];
 
 (* Define doesn't generate this case, though the second pattern looks as if
@@ -389,11 +389,11 @@ val EL_MAP2i = Q.store_thm("EL_MAP2i",
       (EL n (MAP2i f l1 l2) = f n (EL n l1) (EL n l2))’,
   HO_MATCH_MP_TAC MAP2i_ind >> rw[] >> Cases_on‘n’ >> fs[]);
 
-val MAP2ia_def = Define‘
+Definition MAP2ia_def:
   (MAP2ia f i [] _ = []) /\
   (MAP2ia f i _ [] = []) /\
   (MAP2ia f i (h1::t1) (h2::t2) = f i h1 h2 :: MAP2ia f (i + 1) t1 t2)
-’;
+End
 val _= export_rewrites ["MAP2ia_def"]
 
 val MAP2ia_NIL2 = Q.store_thm(
@@ -414,4 +414,3 @@ val MAP2i_compute = Q.store_thm(
   simp[FUN_EQ_THM]);
 val _ = computeLib.add_persistent_funs ["MAP2i_compute"]
 val _ = remove_ovl_mapping "MAP2ia" {Name = "MAP2ia", Thy = "indexedLists"}
-

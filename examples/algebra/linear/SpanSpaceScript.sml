@@ -136,10 +136,10 @@ val _ = temp_overload_on ("-", ``stick_sub r``);
 (* Note: pural of basis is bases, singular of bases is basis. *)
 
 (* Basis checks a list of vectors *)
-val basis_def = Define`
+Definition basis_def:
   (basis (g:'b group) [] <=> T) /\
   (basis (g:'b group) (h::t) <=> (h IN V) /\ basis g t)
-`;
+End
 
 (* Theorem: basis g [] = T *)
 val basis_nil = save_thm("basis_nil", basis_def |> CONJUNCT1);
@@ -248,10 +248,10 @@ val VectorSum_def = Define`
   (VectorSum (r:'a field) (g:'b group) (op:'a -> 'b -> 'b) ((h:'b)::(t:'b list)) = h || VectorSum r g op t)
 `;
 *)
-val VectorSum_def = Define`
+Definition VectorSum_def:
   (VectorSum (g:'b group) [] = |0|) /\
   (VectorSum (g:'b group) ((h:'b)::(t:'b list)) = h || VectorSum g t)
-`;
+End
 
 (* overloads for convenience *)
 val _ = overload_on ("VSUM", ``VectorSum (g:'b group)``);
@@ -579,13 +579,13 @@ val vsum_basis_split = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Spanning space by a basis (list of vectors), will be a subgroup of g (the vectors). *)
-val SpanSpace_def = Define`
+Definition SpanSpace_def:
   SpanSpace (r:'a field) (g:'b group) (op:'a -> 'b -> 'b) (b:'b list) :'b group =
     <| carrier := IMAGE (\n. n |o| b) (sticks r (LENGTH b)); (* |o| hides op *)
             op := g.op; (* type: 'b -> 'b -> 'b *)
             id := g.id
      |>
-`;
+End
 
 (* Theorem: properties of SpanSpace. *)
 (* Proof: by SpanSpace_def. *)

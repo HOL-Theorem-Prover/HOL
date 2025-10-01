@@ -39,7 +39,7 @@ val val_rel_ind = Q.prove (
 
 (* Define substitution *)
 
-val shift_def = Define `
+Definition shift_def:
 (shift skip (Lit l) = Lit l) ∧
 (shift skip (Var n) =
   if n < skip then
@@ -48,9 +48,10 @@ val shift_def = Define `
     Var (n + 1)) ∧
 (shift skip (Fun e) = Fun (shift (skip + 1) e)) ∧
 (shift skip (App e1 e2) = App (shift skip e1) (shift skip e2)) ∧
-(shift skip (Tick e) = Tick (shift skip e))`;
+(shift skip (Tick e) = Tick (shift skip e))
+End
 
-val subst_def = Define `
+Definition subst_def:
 (subst skip e2 (Lit l) = Lit l) ∧
 (subst skip e2 (Var n) =
   if n < skip then
@@ -61,16 +62,18 @@ val subst_def = Define `
     Var (n - 1)) ∧
 (subst skip e2 (Fun e1) = Fun (subst (skip + 1) (shift 0 e2) e1)) ∧
 (subst skip e2 (App e1 e1') = App (subst skip e2 e1) (subst skip e2 e1')) ∧
-(subst skip e2 (Tick e1) = Tick (subst skip e2 e1))`;
+(subst skip e2 (Tick e1) = Tick (subst skip e2 e1))
+End
 
-val is_val_def = Define `
+Definition is_val_def:
 (is_val (Lit l) ⇔ T) ∧
 (is_val (Fun e) ⇔ T) ∧
 (is_val (Var n) ⇔ T) ∧
-(is_val _ ⇔ F)`;
+(is_val _ ⇔ F)
+End
 
 (* Walk a term and convert all beta-value redexes *)
-val betaV_reduce_def = Define `
+Definition betaV_reduce_def:
 (betaV_reduce (Lit l) ⇔ Lit l) ∧
 (betaV_reduce (Var n) ⇔ Var n) ∧
 (betaV_reduce (Fun e) ⇔ Fun (betaV_reduce e)) ∧
@@ -80,7 +83,8 @@ val betaV_reduce_def = Define `
   else
     App (Fun (betaV_reduce e1)) (betaV_reduce e2)) ∧
 (betaV_reduce (App e1 e2) ⇔ App (betaV_reduce e1) (betaV_reduce e2)) ∧
-(betaV_reduce (Tick e) ⇔ Tick (betaV_reduce e))`;
+(betaV_reduce (Tick e) ⇔ Tick (betaV_reduce e))
+End
 
 (* The proof *)
 

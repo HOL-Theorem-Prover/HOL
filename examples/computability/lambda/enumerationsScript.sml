@@ -9,11 +9,11 @@ val _ = set_trace "Unicode" 1
 
 fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
-val dBnum_def = Define`
+Definition dBnum_def:
   (dBnum (dV i) = 3 * i) ∧
   (dBnum (dAPP M N) = 3 * (dBnum M ⊗ dBnum N) + 1) ∧
   (dBnum (dABS M) = 3 * dBnum M + 2)
-`;
+End
 
 val mod3 = prove(
   ``((3 * n) MOD 3 = 0) ∧ (r < 3 ⇒ ((3 * n + r) MOD 3 = r))``,

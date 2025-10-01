@@ -136,14 +136,14 @@ val _ = intLib.deprecate_int ();
 (* ------------------------------------------------------------------------- *)
 
 (* Define root multiplicity *)
-val poly_root_multiplicity_set_def = Define `
+Definition poly_root_multiplicity_set_def:
   poly_root_multiplicity_set (r:'a ring) (p:'a poly) (c:'a) =
     if c IN R then {m | (factor c) ** m pdivides p} else {}
-`;
-val poly_root_multiplicity_def = Define `
+End
+Definition poly_root_multiplicity_def:
   poly_root_multiplicity (r:'a ring) (p:'a poly) (c:'a) =
     MAX_SET (poly_root_multiplicity_set r p c)
-`;
+End
 
 (* Overload on root multiplicity *)
 val _ = overload_on("multiplicity_set", ``poly_root_multiplicity_set r``);
@@ -1320,10 +1320,10 @@ val poly_root_factor_multiplicity_poly = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define separable polynomial *)
-val poly_separable_def = Define`
+Definition poly_separable_def:
   poly_separable (r:'a ring) (p:'a poly) <=>
     p <> |0| /\ !c. c IN roots p ==> (multiplicity p c = 1)
-`;
+End
 (* Note: roots |0| = R, and multiplicity_set |0| c = univ(:num), with multiplicity |0| c undefined. *)
 
 (* overload on separable polynomial *)

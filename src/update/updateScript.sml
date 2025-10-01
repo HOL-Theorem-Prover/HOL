@@ -23,9 +23,10 @@ Termination
           DECIDE ``!a b. a <= b ==> a < SUC b``]
 End
 
-val LIST_UPDATE_def = Define`
+Definition LIST_UPDATE_def:
   (LIST_UPDATE [] = I) /\
-  (LIST_UPDATE (h::t) = (FST h =+ SND h) o LIST_UPDATE t)`;
+  (LIST_UPDATE (h::t) = (FST h =+ SND h) o LIST_UPDATE t)
+End
 
 (* ------------------------------------------------------------------------
    Theorems

@@ -52,15 +52,16 @@ val TAKE_LEM = Q.prove
 (* 64 copies of ZERO                                                         *)
 (*---------------------------------------------------------------------------*)
 
-val ZEROx64_def = Define
-   `ZEROx64 = [0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w;
+Definition ZEROx64_def:
+    ZEROx64 = [0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w;
                0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w;
                0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w;
                0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w;
                0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w;
                0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w;
                0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w;
-               0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w] : word32 list`;
+               0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w] : word32 list
+End
 
 (*---------------------------------------------------------------------------*)
 (*    word32 <--> (word8 # word8 # word8 # word8)                            *)
@@ -68,27 +69,30 @@ val ZEROx64_def = Define
 
 val _ = wordsLib.guess_lengths();
 
-val w8x4to32_def = Define`
-  w8x4to32 (w1:word8) (w2:word8) (w3:word8) (w4:word8) = w1 @@ w2 @@ w3 @@ w4`;
+Definition w8x4to32_def:
+  w8x4to32 (w1:word8) (w2:word8) (w3:word8) (w4:word8) = w1 @@ w2 @@ w3 @@ w4
+End
 
-val w32to8x4_def = Define`
-  w32to8x4 (w:word32) = ((31 >< 24) w, (23 >< 16) w, (15 >< 8) w, (7 >< 0) w)`;
+Definition w32to8x4_def:
+  w32to8x4 (w:word32) = ((31 >< 24) w, (23 >< 16) w, (15 >< 8) w, (7 >< 0) w)
+End
 
-val w32List_def = Define`
+Definition w32List_def:
   (w32List (b1::b2::b3::b4::t) = w8x4to32 b1 b2 b3 b4::w32List t) /\
-  (w32List other = [])`;
+  (w32List other = [])
+End
 
-val w8List_def = Define`
+Definition w8List_def:
   (w8List [] = []) /\
-  (w8List (h::t) = let (b1,b2,b3,b4) = w32to8x4 h in b1::b2::b3::b4::w8List t)`;
+  (w8List (h::t) = let (b1,b2,b3,b4) = w32to8x4 h in b1::b2::b3::b4::w8List t)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Translate 5 32 bit words to a 20-tuple of 8-bit words.                    *)
 (*---------------------------------------------------------------------------*)
 
-val w32x5to8_def =
- Define
-   `w32x5to8 (w1,w2,w3,w4,w5) =
+Definition w32x5to8_def:
+    w32x5to8 (w1,w2,w3,w4,w5) =
       let (w1b1,w1b2,w1b3,w1b4) = w32to8x4 w1 in
       let (w2b1,w2b2,w2b3,w2b4) = w32to8x4 w2 in
       let (w3b1,w3b2,w3b3,w3b4) = w32to8x4 w3 in
@@ -96,7 +100,8 @@ val w32x5to8_def =
       let (w5b1,w5b2,w5b3,w5b4) = w32to8x4 w5
        in
         (w1b1,w1b2,w1b3,w1b4,w2b1,w2b2,w2b3,w2b4,
-         w3b1,w3b2,w3b3,w3b4,w4b1,w4b2,w4b3,w4b4,w5b1,w5b2,w5b3,w5b4)`;
+         w3b1,w3b2,w3b3,w3b4,w4b1,w4b2,w4b3,w4b4,w5b1,w5b2,w5b3,w5b4)
+End
 
 (*---------------------------------------------------------------------------*)
 (*             Padding                                                       *)
@@ -161,19 +166,19 @@ val (pBits_def, pBits_ind) =
 
 val _ = save_thm("pBits_def",pBits_def);
 
-val PaddingBits =
- Define
-   `PaddingBits len = 128w :: pBits (len+1n)`;
+Definition PaddingBits:
+    PaddingBits len = 128w :: pBits (len+1n)
+End
 
-val lBits_def =
- Define
-   `lBits(len,i) =
+Definition lBits_def:
+    lBits(len,i) =
      if i = 0 then []
-     else (7 >< 0) (n2w len : word32 >> ((i-1)*8)) :: lBits(len,i-1)`;
+     else (7 >< 0) (n2w len : word32 >> ((i-1)*8)) :: lBits(len,i-1)
+End
 
-val LengthBits_def =
- Define
-   `LengthBits len = lBits(len * 8n, 8)`;
+Definition LengthBits_def:
+    LengthBits len = lBits(len * 8n, 8)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Trickery needed to save stack. Note that input is the whole message to    *)
@@ -186,44 +191,52 @@ val LengthBits_def =
 (*      in input ++ PaddingBits(len) ++ LengthBits(len)                      *)
 (*---------------------------------------------------------------------------*)
 
-val Pad_def =
- Define
-   `Pad input =
+Definition Pad_def:
+    Pad input =
       let len = LEN input 0 in
       let padding = PaddingBits(len) ++ LengthBits(len)
-      in REV (REV padding [] ++ REV input []) []`;
+      in REV (REV padding [] ++ REV input []) []
+End
 
 (*---------------------------------------------------------------------------*)
 (* There are 4 highly similar rounds of computation, each consisting of 20   *)
 (* highly similar steps. Higher order functions to the rescue!               *)
 (*---------------------------------------------------------------------------*)
 
-val C1_def = Define `C1 = 1518500249w:word32`;
-val C2_def = Define `C2 = 1859775393w:word32`;
-val C3_def = Define `C3 = 2400959708w:word32`;
-val C4_def = Define `C4 = 3395469782w:word32`;
+Definition C1_def:   C1 = 1518500249w:word32
+End
+Definition C2_def:   C2 = 1859775393w:word32
+End
+Definition C3_def:   C3 = 2400959708w:word32
+End
+Definition C4_def:   C4 = 3395469782w:word32
+End
 
-val f1_def = Define `f1(a,b,c) = (c ?? (a && (b ?? c))) + C1 : word32`;
-val f2_def = Define `f2(a,b,c) = (a ?? b ?? c) + C2 : word32`;
-val f3_def = Define `f3(a,b,c) = ((a && b) || (c && (a || b))) + C3 : word32`;
-val f4_def = Define `f4(a,b,c) = (a ?? b ?? c) + C4 : word32`;
+Definition f1_def:   f1(a,b,c) = (c ?? (a && (b ?? c))) + C1 : word32
+End
+Definition f2_def:   f2(a,b,c) = (a ?? b ?? c) + C2 : word32
+End
+Definition f3_def:   f3(a,b,c) = ((a && b) || (c && (a || b))) + C3 : word32
+End
+Definition f4_def:   f4(a,b,c) = (a ?? b ?? c) + C4 : word32
+End
 
 
-val Helper_def =
- Define
-   `Helper (f:word32#word32#word32->word32) n (a,b,c,d,e) w =
+Definition Helper_def:
+    Helper (f:word32#word32#word32->word32) n (a,b,c,d,e) w =
       if n = 0 then (a,(b #<< 30n),c,d,e+(a #<< 5n)+f(b,c,d)+w) else
       if n = 1 then ((a #<< 30n),b,c,d+(e #<< 5n)+f(a,b,c)+w,e) else
       if n = 2 then (a,b,c+(d #<< 5n)+f(e,a,b)+w,d,e #<< 30n)   else
       if n = 3 then (a,b+(c #<< 5n)+f(d,e,a)+w,c,d #<< 30n,e)
-               else (a+(b #<< 5n)+f(c,d,e)+w,b,c #<< 30n,d,e)`;
+               else (a+(b #<< 5n)+f(c,d,e)+w,b,c #<< 30n,d,e)
+End
 
-val Round_def =
- Define
-  `(Round _ _ args [] = (args,[])) /\
+Definition Round_def:
+   (Round _ _ args [] = (args,[])) /\
    (Round helper i args (w::t) =
       if i<20 then Round helper (i+1) (helper (i MOD 5) args w) t
-              else (args, w::t))`;
+              else (args, w::t))
+End
 
 val (expand_def, expand_ind) = Defn.tprove
  (Hol_defn "expand"
@@ -243,9 +256,8 @@ val _ = computeLib.add_persistent_funs ["expand_def"];
 (* Digest a block                                                            *)
 (*---------------------------------------------------------------------------*)
 
-val digestBlock_def =
- Define
-   `digestBlock (block:word8 list) (h0,h1,h2,h3,h4) =
+Definition digestBlock_def:
+    digestBlock (block:word8 list) (h0,h1,h2,h3,h4) =
       let wlist = expand (w32List block ++ ZEROx64) in
       let (hbar1,wlist1) = Round (Helper f1) 0 (h0,h1,h2,h3,h4) wlist in
       let (hbar2,wlist2) = Round (Helper f2) 0 hbar1 wlist1 in
@@ -253,7 +265,8 @@ val digestBlock_def =
       let (hbar4,wlist4) = Round (Helper f4) 0 hbar3 wlist3 in
       let (a,b,c,d,e) = hbar4
        in
-         (h0+a, h1+b, h2+c, h3+d, h4+e)`;
+         (h0+a, h1+b, h2+c, h3+d, h4+e)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Digest a whole message, one block at a time.                              *)
@@ -279,30 +292,36 @@ val _ = save_thm("digest_def",digest_def);
 (* Compute the message digest                                                *)
 (*---------------------------------------------------------------------------*)
 
-val H0_def = Define `H0 = 1732584193w:word32`;
-val H1_def = Define `H1 = 4023233417w:word32`;
-val H2_def = Define `H2 = 2562383102w:word32`;
-val H3_def = Define `H3 = 271733878w:word32`;
-val H4_def = Define `H4 = 3285377520w:word32`;
+Definition H0_def:   H0 = 1732584193w:word32
+End
+Definition H1_def:   H1 = 4023233417w:word32
+End
+Definition H2_def:   H2 = 2562383102w:word32
+End
+Definition H3_def:   H3 = 271733878w:word32
+End
+Definition H4_def:   H4 = 3285377520w:word32
+End
 
-val computeMD_def =
- Define
-   `computeMD input = w32x5to8 (digest (Pad input) (H0,H1,H2,H3,H4))`;
+Definition computeMD_def:
+    computeMD input = w32x5to8 (digest (Pad input) (H0,H1,H2,H3,H4))
+End
 
 (*---------------------------------------------------------------------------*)
 (* Mapping strings to word8 lists.                                           *)
 (*---------------------------------------------------------------------------*)
 
-val string_to_w8_list_def = Define
-   `string_to_w8_list s = MAP (n2w o ORD) (EXPLODE s) : word8 list`;
+Definition string_to_w8_list_def:
+    string_to_w8_list s = MAP (n2w o ORD) (EXPLODE s) : word8 list
+End
 
 (*---------------------------------------------------------------------------*)
 (* Mapping strings to lists of 8 bit bytes.                                  *)
 (*---------------------------------------------------------------------------*)
 
-val stringMD_def =
- Define
-   `stringMD s = computeMD (string_to_w8_list s)`;
+Definition stringMD_def:
+    stringMD s = computeMD (string_to_w8_list s)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Generate stand-alone ML code                                              *)

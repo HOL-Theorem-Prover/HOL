@@ -17,16 +17,16 @@ Induct_on `l1` THEN RW_TAC list_ss [APPEND,MEM] THEN PROVE_TAC[]);
  * all adjacent elements of the list.                                        *
  *---------------------------------------------------------------------------*)
 
-val SORTED_def =
- Define
-    `(SORTED R  [] = T)
+Definition SORTED_def:
+     (SORTED R  [] = T)
  /\  (SORTED R [x] = T)
- /\  (SORTED R (x::y::rst) = R x y /\ SORTED R (y::rst))`;
+ /\  (SORTED R (x::y::rst) = R x y /\ SORTED R (y::rst))
+End
 
 
-val performs_sorting_def =
- Define
-    `performs_sorting f R = !l. PERM l (f R l) /\ SORTED R (f R l)`;
+Definition performs_sorting_def:
+     performs_sorting f R = !l. PERM l (f R l) /\ SORTED R (f R l)
+End
 
 
 (*---------------------------------------------------------------------------*

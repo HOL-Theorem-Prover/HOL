@@ -9,11 +9,13 @@ val _ = ParseExtras.temp_loose_equality()
 
 val _ = srw_ss()
 val _ = diminish_srw_ss ["NORMEQ"]
-val explode_def = Define`
-  explode z = {x | x In z}`;
+Definition explode_def:
+  explode z = {x | x In z}
+End
 
-val implode_def = Define`
-  implode s = @z. explode z = s`;
+Definition implode_def:
+  implode s = @z. explode z = s
+End
 
 val implode_explode = Q.store_thm(
 "implode_explode",
@@ -31,8 +33,9 @@ val explode_inj = Q.store_thm(
 srw_tac [][explode_def,EXTENSION] >>
 srw_tac [][Extension_ax]);
 
-val IsSmall_def = Define`
-  IsSmall s = ∃f z. INJ f s (explode z)`;
+Definition IsSmall_def:
+  IsSmall s = ∃f z. INJ f s (explode z)
+End
 (* WARNING THIS IS NOT HEREDITARILY SMALL *)
 
 val IsSmall_FINITE = Q.store_thm(
@@ -116,9 +119,10 @@ qexists_tac `Spec z (λx. ∃y. y ∈ s ∧ (x = f y))` >>
 fsrw_tac [DNF_ss][BIJ_DEF,INJ_DEF,SURJ_DEF,explode_def,Spec_def] >>
 metis_tac []);
 
-val the_zfrep_def = Define`
+Definition the_zfrep_def:
   the_zfrep s = @bz. BIJ (FST bz) s (IMAGE SOME (explode (SND bz))) ∧
-                     ∀x. x ∉ s ⇒ (FST bz x = NONE)`;
+                     ∀x. x ∉ s ⇒ (FST bz x = NONE)
+End
 
 val the_zfrep_inj = Q.store_thm(
 "the_zfrep_inj",
@@ -150,11 +154,13 @@ Cases_on `x ∈ s` >> res_tac >> fsrw_tac [][] >>
 fsrw_tac [DNF_ss][BIJ_DEF,SURJ_DEF] >>
 res_tac >> fsrw_tac [][]);
 
-val zfel_def = Define`
-  zfel s x = THE (zfbij s x)`;
+Definition zfel_def:
+  zfel s x = THE (zfbij s x)
+End
 
-val elzf_def = Define`
-  elzf s z = LINV (zfbij s) s (SOME z)`;
+Definition elzf_def:
+  elzf s z = LINV (zfbij s) s (SOME z)
+End
 
 val In_zfrep_thm = Q.store_thm(
 "In_zfrep_thm",
@@ -202,12 +208,14 @@ srw_tac [][EXTENSION,Extension_ax] >>
 metis_tac [Empty_def,In_zfrep_thm]);
 val _ = export_rewrites["zfrep_empty"];
 
-val IsTypedFn_def = Define`
-  IsTypedFn f = f.map In (f.dom -> f.cod)`;
+Definition IsTypedFn_def:
+  IsTypedFn f = f.map In (f.dom -> f.cod)
+End
 
-val TypedGraphFn_def = Define`
+Definition TypedGraphFn_def:
   TypedGraphFn (X,Y) f = <|
-    dom := X; cod := Y; map := GraphFn X f |>`;
+    dom := X; cod := Y; map := GraphFn X f |>
+End
 
 val TypedGraphFn_components = Q.store_thm(
 "TypedGraphFn_components",
@@ -224,8 +232,9 @@ srw_tac [][IsTypedFn_def,TypedGraphFn_def,GraphFnType,EQ_IMP_THM] >>
 srw_tac [][HasFnType_def] >> metis_tac [InFn,GraphFnAp]);
 val _ = export_rewrites["IsTypedFnTypedGraphFn"];
 
-val ComposeTypedFn_def = Define`
-  ComposeTypedFn = compose (λf g. ComposeFn (f.dom,f.cod,g.cod) g.map f.map)`;
+Definition ComposeTypedFn_def:
+  ComposeTypedFn = compose (λf g. ComposeFn (f.dom,f.cod,g.cod) g.map f.map)
+End
 
 val _ = add_infix("|o|",800,RIGHT);
 val _ = overload_on("|o|",``λg f. ComposeTypedFn f g``);
@@ -239,12 +248,13 @@ val ComposeTypedFn_components = Q.store_thm(
 srw_tac [][ComposeTypedFn_def]);
 val _ = export_rewrites["ComposeTypedFn_components"];
 
-val pre_set_cat_def = Define`
+Definition pre_set_cat_def:
  pre_set_cat =  <|
     obj := UNIV ;
     mor := {f | IsTypedFn f} ;
     id_map  := IdFn ;
-    comp := λf g. (g |o| f).map |>`;
+    comp := λf g. (g |o| f).map |>
+End
 
 val pre_set_cat_obj_mor = Q.store_thm(
 "pre_set_cat_obj_mor",
@@ -278,8 +288,9 @@ srw_tac [][compose_in_def,restrict_def,pre_set_cat_def] >>
 srw_tac [][morphism_component_equality]);
 val _ = export_rewrites["pre_set_cat_compose_in"];
 
-val set_cat_def = Define`
-  set_cat = mk_cat pre_set_cat`;
+Definition set_cat_def:
+  set_cat = mk_cat pre_set_cat
+End
 
 val is_category_set_cat = Q.store_thm(
 "is_category_set_cat",
@@ -420,11 +431,12 @@ ntac 4 (pop_assum mp_tac) >>
 fsrw_tac [][ApComposeFn,GraphFnAp] >>
 fsrw_tac [][Fst,Snd]);
 
-val pre_set_to_ens_def = Define`
+Definition pre_set_to_ens_def:
   pre_set_to_ens = <|
     dom := set_cat;
     cod := ens_cat {s | IsSmall s};
-    map := λf. TypedGraphFun (explode f.dom,explode f.cod) (λx. f.map ' x) |>`;
+    map := λf. TypedGraphFun (explode f.dom,explode f.cod) (λx. f.map ' x) |>
+End
 
 val pre_set_to_ens_components = Q.store_thm(
 "pre_set_to_ens_components",
@@ -448,8 +460,9 @@ pop_assum mp_tac >>
 srw_tac [][EXTENSION,explode_def,morphism_component_equality]);
 val _ = export_rewrites["pre_set_to_ens_objf"];
 
-val set_to_ens_def = Define`
-  set_to_ens = mk_functor pre_set_to_ens`;
+Definition set_to_ens_def:
+  set_to_ens = mk_functor pre_set_to_ens
+End
 
 val is_functor_set_to_ens = Q.store_thm(
 "is_functor_set_to_ens",
@@ -625,17 +638,19 @@ SELECT_ELIM_TAC >>
 metis_tac [cat_iso_pair_sym,cat_iso_set_to_ens,cat_iso_def]);
 val _ = export_rewrites["cat_iso_ens_to_set"];
 
-val is_locally_small_def = Define`
-  is_locally_small c = ∀s. s ∈ homs c ⇒ IsSmall s`;
+Definition is_locally_small_def:
+  is_locally_small c = ∀s. s ∈ homs c ⇒ IsSmall s
+End
 
 val _ = overload_on("is_lscat",``λc.  is_category c ∧ is_locally_small c``);
 
-val pre_rep_functor_def = Define`
+Definition pre_rep_functor_def:
   pre_rep_functor u = <|
     dom := ens_cat u ;
     cod := ens_cat {s | IsSmall s} ;
     map := λf. TypedGraphFun (explode (zfrep f.dom), explode (zfrep f.cod)) (λz. zfel f.cod (f.map (elzf f.dom z)))
-    |>`;
+    |>
+End
 
 val pre_rep_functor_components = Q.store_thm(
 "pre_rep_functor_components",
@@ -662,8 +677,9 @@ srw_tac [][] >>
 pop_assum mp_tac >> srw_tac [][TypedGraphFun_Ext]);
 val _ = export_rewrites["pre_rep_functor_objf"];
 
-val rep_functor_def = Define`
-  rep_functor u = mk_functor (pre_rep_functor u)`;
+Definition rep_functor_def:
+  rep_functor u = mk_functor (pre_rep_functor u)
+End
 
 val is_functor_rep_functor = Q.store_thm(
 "is_functor_rep_functor",
@@ -784,14 +800,17 @@ val rep_functor_not_inj_obj = Q.store_thm(
 srw_tac [][LET_THM,IN_POW]
 *)
 
-val is_self_hom_def = Define`
-  is_self_hom c h = ∃x. x ∈ c.obj ∧ (h = c|x→x|)`;
+Definition is_self_hom_def:
+  is_self_hom c h = ∃x. x ∈ c.obj ∧ (h = c|x→x|)
+End
 
-val hom_tag_def = Define`
-  hom_tag c h = if is_self_hom c h then {{{}}} else ({{}}:zfset)`;
+Definition hom_tag_def:
+  hom_tag c h = if is_self_hom c h then {{{}}} else ({{}}:zfset)
+End
 
-val the_hom_tag_def = Define`
-  the_hom_tag c h = if is_self_hom c h then {{}} else Empty`;
+Definition the_hom_tag_def:
+  the_hom_tag c h = if is_self_hom c h then {{}} else Empty
+End
 
 val hom_tag_not_empty = Q.store_thm(
 "hom_tag_not_empty",
@@ -814,12 +833,14 @@ fsrw_tac [][hom_tag_def,the_hom_tag_def] >>
 Cases_on `is_self_hom c h` >> fsrw_tac [][InSing]);
 val _ = export_rewrites["In_hom_tag"];
 
-val tagged_homset_def = Define`
-  tagged_homset c h = (hom_tag c h) # (ens_to_set@@((rep_functor (homs c))@@h))`;
+Definition tagged_homset_def:
+  tagged_homset c h = (hom_tag c h) # (ens_to_set@@((rep_functor (homs c))@@h))
+End
 
-val tag_fun_def = Define`
+Definition tag_fun_def:
   tag_fun c f x = Pair (the_hom_tag c f.cod)
-                       ((ens_to_set##((rep_functor (homs c))##f)).map ' (Snd x))`;
+                       ((ens_to_set##((rep_functor (homs c))##f)).map ' (Snd x))
+End
 
 val HasFnType_tag_fun = Q.store_thm(
 "HasFnType_tag_fun",
@@ -932,11 +953,12 @@ fsrw_tac [][] >>
 `f1.cod = set_cat` by srw_tac [][Abbr`f1`] >>
 fsrw_tac [][]);
 
-val pre_tag_functor_def = Define`
+Definition pre_tag_functor_def:
   pre_tag_functor c = <|
     dom := ens_cat (homs c);
     cod := set_cat ;
-    map := λf. TypedGraphFn (tagged_homset c f.dom, tagged_homset c f.cod) (tag_fun c f) |>`;
+    map := λf. TypedGraphFn (tagged_homset c f.dom, tagged_homset c f.cod) (tag_fun c f) |>
+End
 
 val pre_tag_functor_dom_cod = Q.store_thm(
 "pre_tag_functor_dom_cod",
@@ -986,8 +1008,9 @@ conj_tac >- (
 srw_tac [][morphism_component_equality]);
 val _ = export_rewrites["pre_tag_functor_objf"];
 
-val tag_functor_def = Define`
-  tag_functor c = mk_functor (pre_tag_functor c)`;
+Definition tag_functor_def:
+  tag_functor c = mk_functor (pre_tag_functor c)
+End
 
 val is_functor_tag_functor = Q.store_thm(
 "is_functor_tag_functor",
@@ -1185,8 +1208,9 @@ fsrw_tac [][] >>
 fsrw_tac [][GraphFnAp,restrict_def])
 val _ = export_rewrites["tag_functor_embedding"];
 
-val zYfunctor_def = Define`
-  zYfunctor c = (postcomp_functor (c°) (tag_functor c)) ◎ Yfunctor c`
+Definition zYfunctor_def:
+  zYfunctor c = (postcomp_functor (c°) (tag_functor c)) ◎ Yfunctor c
+End
 
 val is_functor_zYfunctor = Q.store_thm(
 "is_functor_zYfunctor",

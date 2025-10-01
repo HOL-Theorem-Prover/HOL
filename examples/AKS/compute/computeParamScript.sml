@@ -347,10 +347,10 @@ Both are the same due to prime_not_divides_coprime: |- !n p. prime p /\ ~(p divi
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of candidate primes *)
-val prime_candidates_def = Define `
+Definition prime_candidates_def:
   prime_candidates (n:num) (m:num) =
     {k | prime k /\ ~(k divides n) /\ !j. 0 < j /\ j < m ==> ~(k divides (n ** j - 1))}
-`;
+End
 
 (* Theorem: k IN (prime_candidates n m) <=>
            prime k /\ ~(k divides n) /\ !j. 0 < j /\ j < m ==> ~(k divides (n ** j - 1)) *)
@@ -456,10 +456,10 @@ val ZN_order_big_enough = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of candidate coprimes *)
-val coprime_candidates_def = Define `
+Definition coprime_candidates_def:
   coprime_candidates (n:num) (m:num) =
     {k | coprime k n /\ !j. 0 < j /\ j < m ==> ~(k divides (n ** j - 1))}
-`;
+End
 
 (* Theorem: k IN (coprime_candidates n m) <=> coprime k n /\ !j. 0 < j /\ j < m ==> ~(k divides (n ** j - 1)) *)
 (* Proof: by coprime_candidates_def *)
@@ -658,9 +658,9 @@ val least_coprime_candidates_property = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define set of factors *)
-val power_factors_def = Define`
+Definition power_factors_def:
   power_factors n m = {n ** j - 1 | j | 0 < j /\ j < m}
-`;
+End
 
 (* Theorem: x IN power_factors n m <=> ?j. (x = n ** j - 1) /\ 0 < j /\ j < m *)
 (* Proof: by power_factors_def. *)
@@ -766,9 +766,9 @@ val power_factors_image_suc = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define product of factors *)
-val product_factors_def = Define`
+Definition product_factors_def:
   product_factors n m = PROD_SET (power_factors n m)
-`;
+End
 
 (* Theorem: 1 < m ==> (product_factors 1 m = 0) *)
 (* Proof:
@@ -949,9 +949,9 @@ val product_factors_upper = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define non-dividing coprimes *)
-val power_factors_coprime_nondivisor_def = Define`
+Definition power_factors_coprime_nondivisor_def:
     power_factors_coprime_nondivisor n m = {x | coprime x n /\ ~(x divides (product_factors n m))}
-`;
+End
 
 (* Theorem: x IN power_factors_coprime_nondivisor n m <=>
             coprime x n /\ ~(x divides (product_factors n m)) *)
@@ -1043,9 +1043,9 @@ val power_factors_coprime_nondivisor_order = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define Common Multiple of residue n *)
-val residue_common_multiple_def = Define`
+Definition residue_common_multiple_def:
   residue_common_multiple n = {m | 0 < m /\ !j. j IN residue n ==> j divides m}
-`;
+End
 
 (* Theorem: m IN residue_common_multiple n <=> 0 < m /\ !j. 0 < j /\ j < n ==> j divides m *)
 (* Proof: by residue_common_multiple_def. *)
@@ -1139,9 +1139,9 @@ val residue_common_multiple_element_1 = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define LCM of 1..(n-1) = residue n *)
-val residue_lcm_def = Define`
+Definition residue_lcm_def:
   residue_lcm n = MIN_SET (residue_common_multiple n)
-`;
+End
 
 (* Theorem: The residue_lcm divides any common multiple
             m IN residue_common_multiple n ==> (residue_lcm n) divides m *)
@@ -1831,10 +1831,10 @@ End
     SQ (ulog n) <= 1, ulog 0 = 0, ulog 1 = 0, ulog 2 = 1, ulog 3 = 2, n <= 2.
     The check is moved to here.
 *)
-val aks_param_def = Define `
+Definition aks_param_def:
     aks_param n = if n <= 2 then nice n
                   else aks_param_search n (SQ (ulog n)) 2 (1 + HALF ((ulog n) ** 5))
-`;
+End
 
 (*
 > EVAL ``aks_param 31``;
@@ -2472,10 +2472,10 @@ Termination WF_REL_TAC `measure (λ(m,c,n,k). c - k)`
 End
 
 (* Define the caller to parameter seek loop *)
-val param_def = Define`
+Definition param_def:
     param n = if n <= 2 then nice n
                   else param_seek (SQ (ulog n)) (2 + HALF ((ulog n) ** 5)) n 2
-`;
+End
 (* Note: 2 + HALF ((ulog n) ** 5) is one more than aks_param *)
 
 (*

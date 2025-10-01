@@ -4205,7 +4205,7 @@ Definition Keccak_spt_def:
       Z = while3 1600 (1600 − c) x' [] S
     in
       TAKE x' Z
-End;
+End
 
 Triviality sponge_foldl_NOT_NIL:
   ∀xs S0 Pis.

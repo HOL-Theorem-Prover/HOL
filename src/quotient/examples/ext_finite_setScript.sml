@@ -12,7 +12,8 @@ Libs
 fun Store_Thm(n,t,tac) = store_thm(n,t,tac) before
                          export_rewrites [n]
 
-val leq_def = Define`leq x y = !e:'a. MEM e x = MEM e y`
+Definition leq_def:  leq x y = !e:'a. MEM e x = MEM e y
+End
 
 val leq_refl = Store_Thm(
   "leq_refl",
@@ -83,10 +84,11 @@ val finite_set1_strong_cases = store_thm(
   METIS_TAC [MEM]);
 
 (* Delete1 *)
-val Delete1_def = Define
-   `($Delete1 [] x = [])  /\
+Definition Delete1_def:
+    ($Delete1 [] x = [])  /\
     ($Delete1 ((a:'a) :: A) x = if a = x then $Delete1 A x
-                                     else a :: ($Delete1 A x))`;
+                                     else a :: ($Delete1 A x))
+End
 val _ = export_rewrites ["Delete1_def"]
 
 val _ = add_infix ("Delete1", 500, HOLgrammars.LEFT);
@@ -137,9 +139,10 @@ val finite_set1_Delete1_cases = store_thm
 
 (* Card1 *)
 
-val Card1_def = Define
-   `(Card1 ([]) = 0)  /\
-    (Card1 ((a:'a) :: A) = if MEM a A then Card1 A else SUC (Card1 A))`;
+Definition Card1_def:
+    (Card1 ([]) = 0)  /\
+    (Card1 ((a:'a) :: A) = if MEM a A then Card1 A else SUC (Card1 A))
+End
 val _ = export_rewrites ["Card1_def"]
 
 val NOT_MEM_Card1 = store_thm
@@ -206,14 +209,14 @@ val list2set_RSP = store_thm(
 
 (* fold *)
 
-val Fold1_def = Define`
+Definition Fold1_def:
   (Fold1 f (z:'b) [] = z) /\
   (Fold1 f z ((a:'a)::A) =
      if (!u v w. f u (f v w) = f v (f u w)) then
        if MEM a A then Fold1 f z A
        else f a (Fold1 f z A)
      else z)
-` ;
+End
 
 val MEM_lcommuting_Fold1 = store_thm(
   "MEM_lcommuting_Fold1",
@@ -246,10 +249,11 @@ val APPEND_RSP = store_thm(
                           leq (APPEND A1 B1) (APPEND A2 B2)``,
   SRW_TAC [][leq_def]);
 
-val Inter1_def = Define
-   `($Inter1 ([]) B = [])  /\
+Definition Inter1_def:
+    ($Inter1 ([]) B = [])  /\
     ($Inter1 ((a:'a) :: A) B = if MEM a B then a :: ($Inter1 A B)
-                                          else $Inter1 A B)`;
+                                          else $Inter1 A B)
+End
 
 val _ = add_infix ("Inter1", 600, HOLgrammars.LEFT);
 

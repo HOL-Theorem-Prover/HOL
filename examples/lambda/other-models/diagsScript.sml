@@ -7,14 +7,14 @@ Libs
 (* Diagram evaluation *)
 val _ = Hol_datatype `reltype = Atomic | TC`
 
-val liftrel_def = Define`
+Definition liftrel_def:
   liftrel b ty R x y = (if b then I else (~))
                          ((case ty of Atomic => I | TC => TC)
                           R x y)
-`;
+End
 
 
-val eval_def = Define`
+Definition eval_def:
   eval (Fa : ('n # 'a # 'a # bool # reltype) -> bool)
        (G : ('n # ('a + 'b) # ('a + 'b) # bool # reltype) -> bool)
        (R : 'n -> 'c -> 'c -> bool) =
@@ -30,7 +30,7 @@ val eval_def = Define`
                            liftrel p ty (R n) (g b) (f a)) /\
              (!b1 b2 n b ty. (n, INR b1, INR b2, b, ty) IN G ==>
                              liftrel b ty (R n) (g b1) (g b2))
-`;
+End
 
 (* Some example diagrams *)
 
@@ -139,24 +139,24 @@ val _ = Hol_datatype`
           | ~ of diaform
 `
 
-val evalform_def = Define`
+Definition evalform_def:
   (evalform (Lf fa ex) R <=> eval fa ex R) /\
   (evalform (f1 /\ f2) R <=> evalform f1 R /\ evalform f2 R) /\
   (evalform (~f) R <=> ~evalform f R)
-`;
+End
 
-val R0_refl_def = Define`
+Definition R0_refl_def:
   R0_refl = Lf {} {(0,INL 0,INL 0,T,Atomic)}
-`
+End
 
 val R0_refl_thm = store_thm(
   "R0_refl_thm",
   ``evalform R0_refl R = !x. R 0 x x``,
   SRW_TAC [][evalform_def, eval_def, R0_refl_def, liftrel_def, EQ_IMP_THM])
 
-val R0_sym_def = Define`
+Definition R0_sym_def:
   R0_sym = Lf {(0,0,1,T,Atomic)} {(0,INL 1, INL 0,T,Atomic)}
-`;
+End
 
 val R0_sym_thm = store_thm(
   "R0_sym_thm",
@@ -165,10 +165,10 @@ val R0_sym_thm = store_thm(
   FIRST_X_ASSUM (Q.SPEC_THEN `\n. if n = 0 then x else y` MP_TAC) THEN
   SRW_TAC [][])
 
-val R0_trans_def = Define`
+Definition R0_trans_def:
   R0_trans = Lf {(0,0,1,T,Atomic); (0,1,2,T,Atomic)}
                 {(0,INL 0, INL 2,T,Atomic)}
-`;
+End
 val R0_trans_thm = store_thm(
  "R0_trans_thm",
   ``evalform R0_trans R = !x y z. R 0 x y /\ R 0 y z ==> R 0 x z``,
@@ -183,12 +183,12 @@ val R0_trans_thm = store_thm(
   ]);
 
 
-val R0_cong_def = Define`
+Definition R0_cong_def:
   R0_cong n <=> Lf {(0,0,1,T,Atomic); (n,0,2,T,Atomic)}
                    {(n,INL 1,INL 2,T,Atomic)} /\
                 Lf {(0,1,2,T,Atomic); (n,0,1,T,Atomic)}
                    {(n,INL 0, INL 2,T,Atomic)}
-`
+End
 val R0_cong_thm = store_thm(
   "R0_cong_thm",
   ``evalform (R0_cong n) R <=> (!x y z. R 0 x y /\ R n x z ==> R n y z) /\
@@ -234,34 +234,34 @@ val R0_cong_trans = store_thm(
 
 
 (* basic concepts *)
-val Pres_def = Define`
+Definition Pres_def:
   Pres f R1 R2 = !x y. R1 x y ==> R2 (f x) (f y)
-`;
+End
 
-val onto_def = Define`
+Definition onto_def:
   onto f = !x. ?y. f y = x
-`;
+End
 
-val sRefl_def = Define`
+Definition sRefl_def:
   sRefl f R1 R2 = !b1 b2. R2 b1 b2 ==>
                          ?a1 a2. R1 a1 a2 /\ (b1 = f a1) /\ (b2 = f a2)
-`;
+End
 
-val aRefl_def = Define`
+Definition aRefl_def:
   aRefl f R1 R2 = !x y. R2 (f x) (f y) ==> R1 x y
-`;
+End
 
-val kCompl_def = Define`
+Definition kCompl_def:
   kCompl s f = !x y. (f x = f y) ==> EQC s x y
-`;
+End
 
-val kSound_def = Define`
+Definition kSound_def:
   kSound s f = !x y. s x y ==> (f x = f y)
-`;
+End
 
-val ofree_def = Define`
+Definition ofree_def:
   ofree s = !x y. EQC s x y ==> RTC s x y
-`;
+End
 
 val presrefl_atomic = store_thm(
   "presrefl_atomic",

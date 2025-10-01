@@ -29,26 +29,29 @@ val TOP_CASE_TAC = BasicProvers.TOP_CASE_TAC;
      dual of well-formed encoders.
  ---------------------------------------------------------------------------*)
 
-val wf_decoder_def = Define
-  `wf_decoder p (d : bool list -> ('a # bool list) option) =
+Definition wf_decoder_def:
+   wf_decoder p (d : bool list -> ('a # bool list) option) =
    !x.
      if p x then (?a. !b c. (d b = SOME (x, c)) = (b = APPEND a c))
-     else !a b. ~(d a = SOME (x, b))`;
+     else !a b. ~(d a = SOME (x, b))
+End
 
 (*---------------------------------------------------------------------------
      Functions to transform well-formed encoders to well-formed decoders,
      and vice versa.
  ---------------------------------------------------------------------------*)
 
-val enc2dec_def = Define
-  `enc2dec p e (l : bool list) =
+Definition enc2dec_def:
+   enc2dec p e (l : bool list) =
    if ?x t. p (x : 'a) /\ (l = APPEND (e x) t)
    then SOME (@(x, t). p x /\ (l = APPEND (e x) t))
-   else NONE`;
+   else NONE
+End
 
-val dec2enc_def = Define
-  `dec2enc (d : bool list -> ('a # bool list) option) x =
-   @l. d l = SOME (x, [])`;
+Definition dec2enc_def:
+   dec2enc (d : bool list -> ('a # bool list) option) x =
+   @l. d l = SOME (x, [])
+End
 
 (*---------------------------------------------------------------------------
      Proofs that the transformation functions are mutually inverse.
@@ -964,13 +967,14 @@ val decode_bnum_def = Q.new_definition
    ("decode_bnum_def",
     `decode_bnum m p = enc2dec p (encode_bnum m)`);
 
-val dec_bnum_def = Define
-  `(dec_bnum 0 l = SOME (0, l)) /\
+Definition dec_bnum_def:
+   (dec_bnum 0 l = SOME (0, l)) /\
    (dec_bnum (SUC m) l =
     case l of [] => NONE
     | (h :: t) =>
        (case dec_bnum m t of NONE => NONE
-        | SOME (n, t') => SOME (2 * n + (if h then 1 else 0), t')))`;
+        | SOME (n, t') => SOME (2 * n + (if h then 1 else 0), t')))
+End
 
 Theorem dec_bnum_lt:
   !m l n t. (dec_bnum m l = SOME (n, t)) ==> n < 2 ** m

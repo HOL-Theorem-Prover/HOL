@@ -2295,14 +2295,16 @@ val EXTREAL_SUM_IMAGE_POW = store_thm
 (* Supremums and infimums (these are always defined on extended reals)       *)
 (* ------------------------------------------------------------------------- *)
 
-val extreal_sup_def = Define
-   `extreal_sup p =
+Definition extreal_sup_def:
+    extreal_sup p =
        if !x. (!y. p y ==> y <= x) ==> (x = PosInf) then PosInf
        else (if !x. p x ==> (x = NegInf) then NegInf
-             else Normal (sup (\r. p (Normal r))))`;
+             else Normal (sup (\r. p (Normal r))))
+End
 
-val extreal_inf_def = Define
-   `extreal_inf p = -extreal_sup (IMAGE numeric_negate p)`;
+Definition extreal_inf_def:
+    extreal_inf p = -extreal_sup (IMAGE numeric_negate p)
+End
 
 val _ = overload_on ("sup", Term `extreal_sup`);
 val _ = overload_on ("inf", Term `extreal_inf`);
@@ -3594,11 +3596,13 @@ QED
 
    cf. set_limsup_def and set_liminf_def (borelTheory)
  *)
-val ext_limsup_def = Define
-   `ext_limsup (a :num -> extreal) = inf (IMAGE (\m. sup {a n | m <= n}) UNIV)`;
+Definition ext_limsup_def:
+    ext_limsup (a :num -> extreal) = inf (IMAGE (\m. sup {a n | m <= n}) UNIV)
+End
 
-val ext_liminf_def = Define
-   `ext_liminf (a :num -> extreal) = sup (IMAGE (\m. inf {a n | m <= n}) UNIV)`;
+Definition ext_liminf_def:
+    ext_liminf (a :num -> extreal) = sup (IMAGE (\m. inf {a n | m <= n}) UNIV)
+End
 
 val _ = overload_on ("limsup", ``ext_limsup``);
 val _ = overload_on ("liminf", ``ext_liminf``);
@@ -5465,13 +5469,15 @@ QED
 (*  Positive and negative parts of functions (moved from borelTheory)        *)
 (* ------------------------------------------------------------------------- *)
 
-val fn_plus_def = Define (* f^+ *)
-   `fn_plus (f :'a -> extreal) = (\x. if 0 < f x then f x else 0)`;
+Definition fn_plus_def:   (* f^+ *)
+    fn_plus (f :'a -> extreal) = (\x. if 0 < f x then f x else 0)
+End
 
 val _ = overload_on ("TC", ``fn_plus``); (* relationTheory *)
 
-val fn_minus_def = Define (* f^- *)
-   `fn_minus (f :'a -> extreal) = (\x. if f x < 0 then ~(f x) else 0)`;
+Definition fn_minus_def:   (* f^- *)
+    fn_minus (f :'a -> extreal) = (\x. if f x < 0 then ~(f x) else 0)
+End
 
 val _ = add_rule { fixity = Suffix 2100,
                    block_style = (AroundEachPhrase, (Portable.CONSISTENT,0)),
@@ -5954,8 +5960,9 @@ QED
 (*   Non-negative functions (not very useful)  *)
 (* ******************************************* *)
 
-val nonneg_def = Define
-   `nonneg (f :'a -> extreal) = !x. 0 <= f x`;
+Definition nonneg_def:
+    nonneg (f :'a -> extreal) = !x. 0 <= f x
+End
 
 val nonneg_abs = store_thm
   ("nonneg_abs", ``!f. nonneg (abs o f)``,

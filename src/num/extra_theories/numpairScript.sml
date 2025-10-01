@@ -64,12 +64,13 @@ val tri_LE = Store_thm(
   ``!m n. tri m <= tri n <=> m <= n``,
   SRW_TAC [][LESS_OR_EQ]);
 
-val invtri0_def = Define`
+Definition invtri0_def:
   invtri0 n a = if n < a + 1 then (n,a)
                 else invtri0 (n - (a + 1)) (a + 1)
-`;
+End
 
-val invtri_def = Define`invtri n = SND (invtri0 n 0)`;
+Definition invtri_def:  invtri n = SND (invtri0 n 0)
+End
 val _ = Unicode.unicode_version {tmnm = "invtri",
                                  u = "tri"^UnicodeChars.sup_minus^
                                      UnicodeChars.sup_1}
@@ -149,9 +150,9 @@ val invtri_le = store_thm(
     Numeric pair, fst and snd
    ---------------------------------------------------------------------- *)
 
-val npair_def = Define`
+Definition npair_def:
   npair m n = tri (m + n) + n
-`;
+End
 
 val _ = set_fixity "*," (Infixr 601)
 val _ = Unicode.unicode_version {tmnm = "*,", u = UTF8.chr 0x2297 (* \otimes *)}
@@ -161,13 +162,13 @@ val _ = TeX_notation {TeX = ("\\ensuremath{\\otimes}", 1),
                       hol = UTF8.chr 0x2297}
 
 
-val nfst_def = Define`
+Definition nfst_def:
   nfst n = tri (invtri n) + invtri n - n
-`;
+End
 
-val nsnd_def = Define`
+Definition nsnd_def:
   nsnd n = n - tri (invtri n)
-`;
+End
 
 val nfst_npair = Store_thm(
   "nfst_npair",

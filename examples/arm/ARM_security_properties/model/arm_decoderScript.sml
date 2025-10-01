@@ -32,7 +32,7 @@ val _ = temp_overload_on("IMM",``Mode1_immediate``);
 val _ = temp_overload_on("REG",``Mode1_register``);
 val _ = temp_overload_on("SHIFTED",``Mode1_register_shifted_register``);
 
-val hint_decode_def = Define`
+Definition hint_decode_def:
   hint_decode (w:word8) =
     case w
     of 0b000w => Hint_nop
@@ -43,7 +43,8 @@ val hint_decode_def = Define`
      | _      => if (7 -- 4) w = 0b1111w then
                    Hint_debug (w2w w)
                  else
-                   Hint_nop`;
+                   Hint_nop
+End
 
 val parallel_add_sub_decode_defs = TotalDefn.multiDefine`
   (parallel_add_sub_op1 (0b01w :word2) = Parallel_normal) /\
@@ -66,15 +67,17 @@ val parallel_add_sub_decode_defs = TotalDefn.multiDefine`
   (parallel_add_sub_thumb_decode (a,b) =
     (parallel_add_sub_op1 (a + 0b01w), parallel_add_sub_thumb_op2 b))`;
 
-val InITBlock_def = Define`
-  InITBlock (IT:word8) = (3 -- 0) IT <> 0w`;
+Definition InITBlock_def:
+  InITBlock (IT:word8) = (3 -- 0) IT <> 0w
+End
 
-val LastInITBlock_def = Define`
-  LastInITBlock (IT:word8) = ((3 -- 0) IT = 0b1000w)`;
+Definition LastInITBlock_def:
+  LastInITBlock (IT:word8) = ((3 -- 0) IT = 0b1000w)
+End
 
 (* ------------------------------------------------------------------------ *)
 
-val arm_decode_def = zDefine`
+Definition arm_decode_def[nocompute]:
   arm_decode v4 (ireg : word32) =
   let b n = ireg ' n
   and i2 n  = ( n + 1  >< n ) ireg : word2
@@ -359,11 +362,12 @@ val arm_decode_def = zDefine`
              (i3 5) (r 0))
       | (T,T,T, T ,_23,_22,_21,_20,_7,_6,_5,_4) =>
            Miscellaneous (Supervisor_Call (i24 0))
-      | __ => Undefined)`;
+      | __ => Undefined)
+End
 
 (* ------------------------------------------------------------------------ *)
 
-val thumb_decode_def = zDefine`
+Definition thumb_decode_def[nocompute]:
   thumb_decode arch IT (ireg : word16) =
     let IT = if arch IN thumb2_support then IT else 0w in
     let b n = ireg ' n
@@ -572,9 +576,10 @@ val thumb_decode_def = zDefine`
              Unpredictable
            else
              Branch (Branch_Target (sw2sw ((10 >< 0) ireg : word11)))
-       | _ => Undefined)`;
+       | _ => Undefined)
+End
 
-val thumbee_decode_def = zDefine`
+Definition thumbee_decode_def[nocompute]:
   thumbee_decode arch IT (ireg : word16) =
     let b n = ireg ' n
     and r n  = ( n + 2  >< n ) ireg : word4
@@ -645,12 +650,13 @@ val thumbee_decode_def = zDefine`
             LoadStore
               (Store T T F F F 9w (r 0)
                 (Mode2_immediate (((8 >< 3) ireg) << 2))))
-       | _ => (Encoding_Thumb, thumb_decode arch IT ireg)`;
+       | _ => (Encoding_Thumb, thumb_decode arch IT ireg)
+End
 
 (* ------------------------------------------------------------------------ *)
 
 (* Load/store multiple, dual and exclusive, table branch *)
-val thumb2_decode_aux1_def = Define`
+Definition thumb2_decode_aux1_def:
   thumb2_decode_aux1 IT (ireg1 : word16, ireg2 : word16) =
     let a n = ireg1 ' n
     and b n = ireg2 ' n
@@ -707,10 +713,11 @@ val thumb2_decode_aux1_def = Define`
        | ( T,a7, T,a5, T, b7,b6,b5,b4) =>
            LoadStore (Load_Dual T a7 a5 (ra 0) (rb 12) (rb 8)
              (Mode3_immediate (((7 >< 0) ireg2) << 2)))
-       | _ => Undefined`;
+       | _ => Undefined
+End
 
 (* Data-processing (shifted register) *)
-val thumb2_decode_aux2_def = Define`
+Definition thumb2_decode_aux2_def:
   thumb2_decode_aux2 (ireg1 : word16, ireg2 : word16) =
     let a n = ireg1 ' n
     and b n = ireg2 ' n
@@ -773,10 +780,11 @@ val thumb2_decode_aux2_def = Define`
               DP 0b0010w S rn rd (REG (ib3 12 @@ ib2 6) (ib2 4) (rb 0)))
        | (T, T, T, F) =>
            DP 0b0011w S rn rd (REG (ib3 12 @@ ib2 6) (ib2 4) (rb 0))
-       | _ => Undefined`;
+       | _ => Undefined
+End
 
 (* Coprocessor *)
-val thumb2_decode_aux3_def = Define`
+Definition thumb2_decode_aux3_def:
   thumb2_decode_aux3 (ireg1 : word16, ireg2 : word16) =
     let a n = ireg1 ' n
     and b n = ireg2 ' n
@@ -819,12 +827,13 @@ val thumb2_decode_aux3_def = Define`
              Coprocessor
                (Coprocessor_Data_Processing (ia4 4) (ra 0) (rb 12) (ib4 8)
                   (ib3 5) (rb 0))
-       | _ => Undefined`;
+       | _ => Undefined
+End
 
 val _ = wordsLib.guess_lengths();
 
 (* Data-processing (modified immediate) *)
-val thumb2_decode_aux4_def = Define`
+Definition thumb2_decode_aux4_def:
   thumb2_decode_aux4 (ireg1 : word16, ireg2 : word16) =
     let a n = ireg1 ' n
     and ia1 n = ( n + 0  >< n ) ireg1 : word1
@@ -881,10 +890,11 @@ val thumb2_decode_aux4_def = Define`
              DP 0b0010w S rn rd (IMM (ia1 10 @@ ib3 12 @@ ib8 0))
        | (T, T, T, F) =>
            DP 0b0011w S rn rd (IMM (ia1 10 @@ ib3 12 @@ ib8 0))
-       | _ => Undefined`;
+       | _ => Undefined
+End
 
 (* Data-processing (plain binary immediate) *)
-val thumb2_decode_aux5_def = Define`
+Definition thumb2_decode_aux5_def:
   thumb2_decode_aux5 (ireg1 : word16, ireg2 : word16) =
     let a n = ireg1 ' n
     and ia1 n = ( n + 0  >< n ) ireg1 : word1
@@ -918,10 +928,11 @@ val thumb2_decode_aux5_def = Define`
          | (T, F, T, T) =>
             DataProcessing
               (Bit_Field_Clear_Insert (ib5 0) (rb 8) (ib3 12 @@ ib2 6) (ra 0))
-         | _ => Undefined`;
+         | _ => Undefined
+End
 
 (* Branches and miscellaneous control *)
-val thumb2_decode_aux6_def = Define`
+Definition thumb2_decode_aux6_def:
   thumb2_decode_aux6 IT (ireg1 : word16, ireg2 : word16) =
     let a n = ireg1 ' n
     and b n = ireg2 ' n
@@ -1002,10 +1013,11 @@ val thumb2_decode_aux6_def = Define`
                 let I1 = ~(J1 ?? S) and I2 = ~(J2 ?? S) in
              Branch
                (Branch_Link_Exchange_Immediate (b 0) (~b12)
-                  (S @@ I1 @@ I2 @@ ia10 0 @@ ib10 1)))`;
+                  (S @@ I1 @@ I2 @@ ia10 0 @@ ib10 1)))
+End
 
 (* Load/store, memory hints *)
-val thumb2_decode_aux7_def = Define`
+Definition thumb2_decode_aux7_def:
   thumb2_decode_aux7 IT (ireg1 : word16, ireg2 : word16) =
     let a n = ireg1 ' n
     and b n = ireg2 ' n
@@ -1198,10 +1210,11 @@ val thumb2_decode_aux7_def = Define`
                       (Mode3_register (ib2 4) (rb 0)))
                else
                  Undefined
-           | _ => Undefined`;
+           | _ => Undefined
+End
 
 (* Data-processing (register) *)
-val thumb2_decode_aux8_def = Define`
+Definition thumb2_decode_aux8_def:
   thumb2_decode_aux8 (ireg1 : word16, ireg2 : word16) =
     let a n = ireg1 ' n
     and b n = ireg2 ' n
@@ -1276,10 +1289,11 @@ val thumb2_decode_aux8_def = Define`
                      else
                        Undefined
                 | _ => Undefined)
-         | _ => Undefined`;
+         | _ => Undefined
+End
 
 (* Multiplies, divide and absolute difference *)
-val thumb2_decode_aux9_def = Define`
+Definition thumb2_decode_aux9_def:
   thumb2_decode_aux9 (ireg1 : word16, ireg2 : word16) =
     let a n = ireg1 ' n in
       if ~a 8 then thumb2_decode_aux8 (ireg1,ireg2)
@@ -1341,11 +1355,12 @@ val thumb2_decode_aux9_def = Define`
            | (T, T, T, F,  F,T, T, F) =>
                DataProcessing
                  (Multiply_Accumulate_Accumulate (rb 8) rb12 (rb 0) (ra 0))
-           | _ => Undefined`;
+           | _ => Undefined
+End
 
 (* ........................................................................ *)
 
-val thumb2_decode_def = Define`
+Definition thumb2_decode_def:
   thumb2_decode arch IT (ireg1 : word16, ireg2 : word16) =
     let IT = if arch IN thumb2_support then IT else 0w
     and a n = ireg1 ' n
@@ -1368,7 +1383,8 @@ val thumb2_decode_def = Define`
        | (T,F,_,_,T) => thumb2_decode_aux6 IT (ireg1,ireg2)
        | (T,T,F,F,_) => thumb2_decode_aux7 IT (ireg1,ireg2)
        | (T,T,F,T,_) => thumb2_decode_aux9 (ireg1,ireg2)
-       | _ => Undefined)`;
+       | _ => Undefined)
+End
 
 (* ------------------------------------------------------------------------ *)
 

@@ -132,16 +132,18 @@ val state_component_equality = theorem"state_component_equality"
 
 (* machinery for the functional big-step definition *)
 
-val check_clock_def = Define `
+Definition check_clock_def:
   check_clock s' s =
-    s' with clock := (if s'.clock ≤ s.clock then s'.clock else s.clock)`;
+    s' with clock := (if s'.clock ≤ s.clock then s'.clock else s.clock)
+End
 
 val check_clock_id = prove(
   ``!s s'. s.clock ≤ s'.clock ⇒ check_clock s s' = s``,
  rw [check_clock_def, state_component_equality]);
 
-val dec_clock_def = Define `
-  dec_clock s = s with clock := s.clock - 1`;
+Definition dec_clock_def:
+  dec_clock s = s with clock := s.clock - 1
+End
 
 val dec_clock_refs = store_thm("dec_clock_refs[simp]",
   ``(dec_clock s).refs = s.refs``,
@@ -151,10 +153,11 @@ val dec_clock_next_exn = store_thm("dec_clock_next_exn[simp]",
   ``(dec_clock s).next_exn = s.next_exn``,
   rw[dec_clock_def])
 
-val is_closure_def = Define`
+Definition is_closure_def:
   is_closure (Clos _ _ _) = T ∧
   is_closure (Closrec _ _ _ _) = T ∧
-  is_closure _ = F`
+  is_closure _ = F
+End
 val _ = export_rewrites["is_closure_def"]
 
 (* results *)
@@ -315,10 +318,11 @@ QED
 
 (* alternative un-clocked relational big-step semantics for comparison *)
 
-val dest_closure_def = Define`
+Definition dest_closure_def:
   (dest_closure v (Clos env x e) = SOME (((x,v)::env),e)) ∧
   (dest_closure v (Closrec env f x e) = SOME (((x,v)::(f,Closrec env f x e)::env),e)) ∧
-  (dest_closure _ _ = NONE)`;
+  (dest_closure _ _ = NONE)
+End
 val _ = export_rewrites["dest_closure_def"];
 
 val (eval_rules,eval_ind,eval_cases) = Hol_reln`
@@ -534,12 +538,13 @@ we follow the more modern approach to making let-polymorphism sound with a
 value restriction.
 *)
 
-val is_value_def = Define`
+Definition is_value_def:
   is_value (Lit _) = T ∧
   is_value (Var _) = T ∧
   is_value (Fun _ _) = T ∧
   is_value (Funrec _ _ _) = T ∧
-  is_value _ = F`
+  is_value _ = F
+End
 val _ = export_rewrites["is_value_def"]
 
 (* syntax of types *)
@@ -605,9 +610,10 @@ in tvs bound.
 
 (* free variables in a type environment *)
 
-val tenv_vars_def = Define`
+Definition tenv_vars_def:
   tenv_vars tenv =
-    BIGUNION (IMAGE ((λ(tvs,t). tyvars t DIFF tvs) o SND) (set tenv))`
+    BIGUNION (IMAGE ((λ(tvs,t). tyvars t DIFF tvs) o SND) (set tenv))
+End
 
 val tenv_vars_cons = store_thm("tenv_vars_cons",
   ``tenv_vars ((x,tvs,t)::tenv) =
@@ -793,12 +799,13 @@ Theorem raconv_def[simp] =
   raconv_def0
   |> SIMP_RULE (std_ss++boolSimps.ETA_ss) []
 
-val tsaconv_def = Define`
+Definition tsaconv_def:
   tsaconv (ftvs1,t1) (ftvs2,t2) ⇔
     let tvs1 = ftvs1 ∩ tyvars t1 in
     let tvs2 = ftvs2 ∩ tyvars t2 in
     ∃f. BIJ f tvs1 tvs2 ∧
-        raconv f tvs1 tvs2 t1 t2`
+        raconv f tvs1 tvs2 t1 t2
+End
 
 val raconv_refl = store_thm("raconv_refl",
   ``∀tvs t. raconv (λx. x) tvs tvs t t``,
@@ -1195,13 +1202,14 @@ val fresh_ts_def = new_specification("fresh_ts_def",["fresh_ts"],fresh_ts_exists
 
 (* capture-avoiding substitution on type schemes and environments *)
 
-val tssubst_def = Define`
+Definition tssubst_def:
   tssubst s (tvs,t) (tvs2,t2) ⇔
     ∃t'.
       tvs2 ⊆ tyvars t2 ∧
       tsaconv (tvs,t) (tvs2,t') ∧
       DISJOINT (BIGUNION (IMAGE tyvars (FRANGE (DRESTRICT s (tyvars t' DIFF tvs2))))) tvs2 ∧
-      t2 = tysubst (DRESTRICT s (tyvars t' DIFF tvs2)) t'`
+      t2 = tysubst (DRESTRICT s (tyvars t' DIFF tvs2)) t'
+End
 
 val tssubst_tysubst = store_thm("tssubst_tysubst",
   ``tssubst s ({},t) ({},tysubst s t)``,
@@ -1295,10 +1303,11 @@ val tssubst_exists = store_thm("tssubst_exists",
   fs[SUBSET_DEF,IN_DISJOINT,Abbr`a`,PULL_EXISTS,IN_FRANGE_FLOOKUP] >>
   metis_tac[])
 
-val tenv_subst_def = Define`
+Definition tenv_subst_def:
   tenv_subst s tenv tenv' ⇔
     MAP FST tenv = MAP FST tenv' ∧
-    LIST_REL (tssubst s) (MAP SND tenv) (MAP SND tenv')`
+    LIST_REL (tssubst s) (MAP SND tenv) (MAP SND tenv')
+End
 
 val tenv_subst_cons = store_thm("tenv_subst_cons",
   ``tenv_subst s tenv tenv' ∧

@@ -48,7 +48,7 @@ Definition Cn_def:
 End
 
 
-val Old_Cn_def = Define `
+Definition Old_Cn_def:
   Old_Cn m ms =
     let isz = LENGTH (HD ms).In;
         mms = MAPi (λi mm. mrInst (i+2) mm) (m::ms);
@@ -60,7 +60,7 @@ val Old_Cn_def = Define `
         mix' = MAPi msInst mix;
     in
       link_all mix' with In := MAP (npair 0) (GENLIST I isz)
-`;
+End
 
 
 

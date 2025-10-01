@@ -50,10 +50,10 @@ val FINITE_LIST_TO_SET = save_thm("FINITE_LIST_TO_SET",
     in bagTheory.
  ---------------------------------------------------------------------------*)
 
-val LIST_TO_BAG_def =
-  Define
-    `(LIST_TO_BAG [] = {||})
- /\  (LIST_TO_BAG (h::t) = BAG_INSERT h (LIST_TO_BAG t))`;
+Definition LIST_TO_BAG_def:
+     (LIST_TO_BAG [] = {||})
+ /\  (LIST_TO_BAG (h::t) = BAG_INSERT h (LIST_TO_BAG t))
+End
 val _ = export_rewrites ["LIST_TO_BAG_def"]
 
 val LIST_TO_BAG_alt = store_thm ("LIST_TO_BAG_alt",
@@ -279,8 +279,9 @@ QED
     finite maps and bags.
  ---------------------------------------------------------------------------*)
 
-val BAG_OF_FMAP = Define `BAG_OF_FMAP f b =
-  \x. CARD (\k. (k IN FDOM b) /\ (x = f k (b ' k)))`
+Definition BAG_OF_FMAP:   BAG_OF_FMAP f b =
+  \x. CARD (\k. (k IN FDOM b) /\ (x = f k (b ' k)))
+End
 
 
 val BAG_OF_FMAP_THM = store_thm ("BAG_OF_FMAP_THM",

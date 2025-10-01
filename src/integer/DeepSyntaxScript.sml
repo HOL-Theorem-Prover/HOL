@@ -14,35 +14,38 @@ val _ = Hol_datatype `deep_form = Conjn of deep_form => deep_form
                                 | xEQ of int
                                 | xDivided of int => int`;
 
-val eval_form_def = Define
-  `(eval_form (Conjn f1 f2) x = eval_form f1 x /\ eval_form f2 x) /\
+Definition eval_form_def:
+   (eval_form (Conjn f1 f2) x = eval_form f1 x /\ eval_form f2 x) /\
    (eval_form (Disjn f1 f2) x = eval_form f1 x \/ eval_form f2 x) /\
    (eval_form (Negn f) x = ~eval_form f x) /\
    (eval_form (UnrelatedBool b) x = b) /\
    (eval_form (xLT i) x = x < i) /\
    (eval_form (LTx i) x = i < x) /\
    (eval_form (xEQ i) x = (x = i)) /\
-   (eval_form (xDivided i1 i2) x = i1 int_divides x + i2)`;
+   (eval_form (xDivided i1 i2) x = i1 int_divides x + i2)
+End
 
-val neginf_def = Define
-  `(neginf (Conjn f1 f2) = Conjn (neginf f1) (neginf f2)) /\
+Definition neginf_def:
+   (neginf (Conjn f1 f2) = Conjn (neginf f1) (neginf f2)) /\
    (neginf (Disjn f1 f2) = Disjn (neginf f1) (neginf f2)) /\
    (neginf (Negn f) = Negn (neginf f)) /\
    (neginf (UnrelatedBool b) = UnrelatedBool b) /\
    (neginf (xLT i) = UnrelatedBool T) /\
    (neginf (LTx i) = UnrelatedBool F) /\
    (neginf (xEQ i) = UnrelatedBool F) /\
-   (neginf (xDivided i1 i2) = xDivided i1 i2)`;
+   (neginf (xDivided i1 i2) = xDivided i1 i2)
+End
 
-val posinf_def = Define
-  `(posinf (Conjn f1 f2) = Conjn (posinf f1) (posinf f2)) /\
+Definition posinf_def:
+   (posinf (Conjn f1 f2) = Conjn (posinf f1) (posinf f2)) /\
    (posinf (Disjn f1 f2) = Disjn (posinf f1) (posinf f2)) /\
    (posinf (Negn f) = Negn (posinf f)) /\
    (posinf (UnrelatedBool b) = UnrelatedBool b) /\
    (posinf (xLT i) = UnrelatedBool F) /\
    (posinf (LTx i) = UnrelatedBool T) /\
    (posinf (xEQ i) = UnrelatedBool F) /\
-   (posinf (xDivided i1 i2) = xDivided i1 i2)`;
+   (posinf (xDivided i1 i2) = xDivided i1 i2)
+End
 
 val neginf_ok = store_thm(
   "neginf_ok",
@@ -66,15 +69,16 @@ val posinf_ok = store_thm(
     PROVE_TAC [INT_LT_REFL]
   ]);
 
-val alldivide_def = Define
-  `(alldivide (Conjn f1 f2) d = alldivide f1 d /\ alldivide f2 d) /\
+Definition alldivide_def:
+   (alldivide (Conjn f1 f2) d = alldivide f1 d /\ alldivide f2 d) /\
    (alldivide (Disjn f1 f2) d = alldivide f1 d /\ alldivide f2 d) /\
    (alldivide (Negn f) d = alldivide f d) /\
    (alldivide (UnrelatedBool b) d = T) /\
    (alldivide (xLT i) d = T) /\
    (alldivide (LTx i) d = T) /\
    (alldivide (xEQ i) d = T) /\
-   (alldivide (xDivided i1 i2) d = i1 int_divides d)`;
+   (alldivide (xDivided i1 i2) d = i1 int_divides d)
+End
 
 val add_d_neginf = store_thm(
   "add_d_neginf",
@@ -125,25 +129,27 @@ val posinf_disj1_implies_exoriginal = store_thm(
   `?c. y < i + c * d` by PROVE_TAC [can_get_big] THEN
   PROVE_TAC [add_d_posinf]);
 
-val Aset_def = Define
-  `(Aset pos (Conjn f1 f2) = Aset pos f1 UNION Aset pos f2) /\
+Definition Aset_def:
+   (Aset pos (Conjn f1 f2) = Aset pos f1 UNION Aset pos f2) /\
    (Aset pos (Disjn f1 f2) = Aset pos f1 UNION Aset pos f2) /\
    (Aset pos (Negn f) = Aset (~pos) f) /\
    (Aset pos (UnrelatedBool b) = {}) /\
    (Aset pos (xLT i) = if pos then {i} else {}) /\
    (Aset pos (LTx i) = if pos then {} else {i + 1}) /\
    (Aset pos (xEQ i) = if pos then {i + 1} else {i}) /\
-   (Aset pos (xDivided i1 i2) = {})`;
+   (Aset pos (xDivided i1 i2) = {})
+End
 
-val Bset_def = Define
-  `(Bset pos (Conjn f1 f2) = Bset pos f1 UNION Bset pos f2) /\
+Definition Bset_def:
+   (Bset pos (Conjn f1 f2) = Bset pos f1 UNION Bset pos f2) /\
    (Bset pos (Disjn f1 f2) = Bset pos f1 UNION Bset pos f2) /\
    (Bset pos (Negn f) = Bset (~pos) f) /\
    (Bset pos (UnrelatedBool b) = {}) /\
    (Bset pos (xLT i) = if pos then {} else {i + ~1}) /\
    (Bset pos (LTx i) = if pos then {i} else {}) /\
    (Bset pos (xEQ i) = if pos then {i + ~1} else {i}) /\
-   (Bset pos (xDivided i1 i2) = {})`;
+   (Bset pos (xDivided i1 i2) = {})
+End
 
 val predset_lemma = prove(
   ``!P Q R. P UNION Q SUBSET R = P SUBSET R /\ Q SUBSET R``,

@@ -124,7 +124,8 @@ val simple_induction = store_thm(
     POP_ASSUM SUBST1_TAC THEN SRW_TAC [][]
   ]);
 
-val tpm_def = Define`tpm pi t = to_term (lswap pi (from_term t))`
+Definition tpm_def:  tpm pi t = to_term (lswap pi (from_term t))
+End
 
 
 
@@ -136,7 +137,8 @@ val tpm_thm = store_thm(
   SRW_TAC [][tpm_def, LAM_def, APP_def, VAR_def, fromto_inverse]);
 val _ = export_rewrites ["tpm_thm"]
 
-val FV_def = Define`FV t = nc$FV (from_term t)`
+Definition FV_def:  FV t = nc$FV (from_term t)
+End
 
 val FV_thm = store_thm(
   "FV_thm",
@@ -158,7 +160,8 @@ val constfree_SUB = prove(
   SRW_TAC [][SUB_THM, SUB_VAR]);
 val _ = augment_srw_ss [rewrites [constfree_SUB]]
 
-val SUB_def = Define`[N/v] M = to_term (nc$SUB (from_term N) v (from_term M))`;
+Definition SUB_def:  [N/v] M = to_term (nc$SUB (from_term N) v (from_term M))
+End
 
 val SUB_THM = store_thm(
   "SUB_THM",
@@ -371,22 +374,22 @@ val FV_SUB = store_thm(
     iterated substitutions (ugh)
    ---------------------------------------------------------------------- *)
 
-val ISUB_def =
- Define
-     `($ISUB t [] = t)
-  /\  ($ISUB t ((s,x)::rst) = $ISUB ([s/x]t) rst)`;
+Definition ISUB_def:
+      ($ISUB t [] = t)
+  /\  ($ISUB t ((s,x)::rst) = $ISUB ([s/x]t) rst)
+End
 
 val _ = set_fixity "ISUB" (Infixr 501);
 
-val DOM_DEF =
- Define
-     `(DOM [] = {})
-  /\  (DOM ((x,y)::rst) = {y} UNION DOM rst)`;
+Definition DOM_DEF:
+      (DOM [] = {})
+  /\  (DOM ((x,y)::rst) = {y} UNION DOM rst)
+End
 
-val FVS_DEF =
- Define
-    `(FVS [] = {})
- /\  (FVS ((t,x)::rst) = FV t UNION FVS rst)`;
+Definition FVS_DEF:
+     (FVS [] = {})
+ /\  (FVS ((t,x)::rst) = FV t UNION FVS rst)
+End
 
 
 val FINITE_DOM = Q.store_thm("FINITE_DOM",
@@ -414,7 +417,8 @@ val ISUB_LAM = store_thm(
     size of a term
    ---------------------------------------------------------------------- *)
 
-val size_def = Define`size t = nc$size (from_term t)`;
+Definition size_def:  size t = nc$size (from_term t)
+End
 
 val size_thm = store_thm(
   "size_thm",
@@ -459,7 +463,8 @@ val gm_recursion = prove(
   SRW_TAC [][VAR_def, APP_def, LAM_def, fromto_inverse,
              combinTheory.o_ABS_R, SUB_def]);
 
-val ABS_def = Define`ABS f = to_term (nc$ABS (from_term o f))`
+Definition ABS_def:  ABS f = to_term (nc$ABS (from_term o f))
+End
 
 val ABS_axiom = prove(
   ``gmterm$ABS (\y. [VAR y/v] t) = LAM v t``,

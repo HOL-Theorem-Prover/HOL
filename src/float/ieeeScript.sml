@@ -223,7 +223,7 @@ val closest = new_definition (
 (* Rounding to floating point formats.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-val round = TotalDefn.Define `(round(X:num#num) (To_nearest) (x:real) =
+Definition round_def:   (round(X:num#num) (To_nearest) (x:real) =
   (if (x <= ~(threshold(X))) then (minus_infinity(X))
    else if (x >= threshold(X)) then (plus_infinity(X))
    else (closest (valof(X)) (\a. EVEN(fraction(a)))
@@ -245,7 +245,8 @@ val round = TotalDefn.Define `(round(X:num#num) (To_nearest) (x:real) =
    if x < ~(largest(X)) then minus_infinity(X)
    else if (x > largest(X)) then topfloat(X)
    else closest (valof(X)) (\x. T)
-  { a | is_finite(X) a /\ valof(X) a <= x } x)`;
+  { a | is_finite(X) a /\ valof(X) a <= x } x)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Rounding to integer values in floating point format.                      *)
@@ -254,7 +255,7 @@ val round = TotalDefn.Define `(round(X:num#num) (To_nearest) (x:real) =
 val is_integral = new_definition ("is_integral",
   “is_integral(X:num#num) (a:(num#num#num)) = is_finite(X) a /\ ?n. abs(valof(X) a) = &n”);
 
-val intround = TotalDefn.Define `(intround(X:num#num) (To_nearest) (x:real) =
+Definition intround_def:   (intround(X:num#num) (To_nearest) (x:real) =
   (if (x <= ~(threshold(X))) then (minus_infinity(X))
    else if (x >= threshold(X)) then (plus_infinity(X))
    else (closest (valof(X)) (\a. (?n. (EVEN n) /\ (abs(valof(X) a) = &n)))
@@ -276,7 +277,8 @@ val intround = TotalDefn.Define `(intround(X:num#num) (To_nearest) (x:real) =
    if (x < ~(largest(X))) then (minus_infinity(X))
    else if (x > largest(X)) then (topfloat(X))
    else (closest (valof(X)) (\x. T)
-  { a | is_integral(X) a /\ valof(X) a <= x } x))`;
+  { a | is_integral(X) a /\ valof(X) a <= x } x))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* A hack for our (non-standard) treatment of NaNs.                          *)
@@ -587,4 +589,3 @@ val float_abs = new_definition (
 (*---------------------------------------------------------------------------*
  * Write the theory to disk.                                                 *
  *---------------------------------------------------------------------------*)
-

@@ -11,47 +11,61 @@ val _ = temp_tight_equality ();
 val _ = type_abbrev_pp ("oset", ``:('a,unit) balanced_map``);
 
 (* Basic definitions, that correspond directly to balanced tree operations *)
-val good_oset_def = Define `
-good_oset cmp (s:'a oset) ⇔ good_cmp cmp ∧ invariant cmp s`;
+Definition good_oset_def:
+good_oset cmp (s:'a oset) ⇔ good_cmp cmp ∧ invariant cmp s
+End
 
-val oempty_def = Define `
-oempty = empty:'a oset`;
+Definition oempty_def:
+oempty = empty:'a oset
+End
 
-val osingleton_def = Define `
-osingleton v = singleton v ()`;
+Definition osingleton_def:
+osingleton v = singleton v ()
+End
 
-val oin_def = Define `
-oin cmp (v:'a) (s:'a oset) ⇔  member cmp v s`;
+Definition oin_def:
+oin cmp (v:'a) (s:'a oset) ⇔  member cmp v s
+End
 
-val oinsert_def = Define `
-oinsert cmp v s = insert cmp v () s`;
+Definition oinsert_def:
+oinsert cmp v s = insert cmp v () s
+End
 
-val odelete_def = Define `
-odelete cmp (s:'a oset) (v:'a) = delete cmp v s`;
+Definition odelete_def:
+odelete cmp (s:'a oset) (v:'a) = delete cmp v s
+End
 
-val ounion_def = Define `
-ounion cmp (s1:'a oset) s2 = union cmp s1 s2`;
+Definition ounion_def:
+ounion cmp (s1:'a oset) s2 = union cmp s1 s2
+End
 
-val oimage_def = Define `
-oimage cmp f (s:'a oset) = map_keys cmp f s`;
+Definition oimage_def:
+oimage cmp f (s:'a oset) = map_keys cmp f s
+End
 
-val osubset_def = Define `
-osubset cmp (s1:'a oset) (s2:'a oset) ⇔ isSubmapOf cmp s1 s2`;
+Definition osubset_def:
+osubset cmp (s1:'a oset) (s2:'a oset) ⇔ isSubmapOf cmp s1 s2
+End
 
-val ocompare_def = Define `
-ocompare cmp (s1:'a oset) (s2:'a oset) = compare cmp (\x y. Equal) s1 s2`;
+Definition ocompare_def:
+ocompare cmp (s1:'a oset) (s2:'a oset) = compare cmp (\x y. Equal) s1 s2
+End
 
-val oevery_def = Define `
-oevery f (s:'a oset) ⇔  every (\x y. f x) s`;
+Definition oevery_def:
+oevery f (s:'a oset) ⇔  every (\x y. f x) s
+End
 
-val oexists_def = Define `
-oexists f (s:'a oset) ⇔  exists (\x y. f x) s`;
+Definition oexists_def:
+oexists f (s:'a oset) ⇔  exists (\x y. f x) s
+End
 
-val oset_def = Define `
-oset cmp l = FOLDR (λx t. oinsert cmp x t) oempty l`;
+Definition oset_def:
+oset cmp l = FOLDR (λx t. oinsert cmp x t) oempty l
+End
 
-val oresp_equiv_def = Define `
-oresp_equiv cmp f = resp_equiv cmp (λx y:unit. f x)`;
+Definition oresp_equiv_def:
+oresp_equiv cmp f = resp_equiv cmp (λx y:unit. f x)
+End
 
 (* operations preserve good_set *)
 

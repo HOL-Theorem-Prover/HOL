@@ -219,11 +219,11 @@ val FINITE_FV_object1 = store_thm
 (* Application of a substitution to a single variable.                   *)
 (* --------------------------------------------------------------------- *)
 
-val SUB1_def =
-    Define
-    `(SUB1 (CONS p s) y = let (x,c) = p in
+Definition SUB1_def:
+     (SUB1 (CONS p s) y = let (x,c) = p in
                                 (if y = x then c else SUB1 s y)) /\
-     (SUB1 NIL y = OVAR1 y)`;
+     (SUB1 NIL y = OVAR1 y)
+End
 
 val SUB1 = store_thm
    ("SUB1",
@@ -402,10 +402,10 @@ val SUB_APPEND_FREE_vsubst1 = store_thm
 (*   Only these variables are changed by a substitution                  *)
 (* --------------------------------------------------------------------- *)
 
-val BV_subst_def =
-    Define
-       `(BV_subst NIL = {}) /\
-        (BV_subst (CONS (x:(var # 'a)) xs) = (FST x INSERT BV_subst xs))`;
+Definition BV_subst_def:
+        (BV_subst NIL = {}) /\
+        (BV_subst (CONS (x:(var # 'a)) xs) = (FST x INSERT BV_subst xs))
+End
 
 
 val FINITE_BV_subst = store_thm
@@ -886,8 +886,9 @@ val method1_0 = new_definition(
       “method1_0 = SIGMA1 (VAR "" 0) obj1_0”);
 
 
-val invoke_method1_def = Define
-   `invoke_method1 (SIGMA1 x a) o'   = a <[ [x,o']`;
+Definition invoke_method1_def:
+    invoke_method1 (SIGMA1 x a) o'   = a <[ [x,o']
+End
 
 
 val invoke_dict1_def = Define
@@ -910,9 +911,10 @@ val invoke_dict1 = store_thm
    );
 
 
-val invoke1_def = Define
-   `(invoke1 (OBJ1 d) lb        = invoke_dict1 d (OBJ1 d) lb)             /\
-    (invoke1 (allelse) lb       = obj1_0)`;
+Definition invoke1_def:
+    (invoke1 (OBJ1 d) lb        = invoke_dict1 d (OBJ1 d) lb)             /\
+    (invoke1 (allelse) lb       = obj1_0)
+End
 
 val invoke1 = store_thm
    ("invoke1",
@@ -921,12 +923,13 @@ val invoke1 = store_thm
    );
 
 
-val update_dict1_def = Define
-   `(update_dict1 (CONS e d) (lb:string) (mth:method1) =
+Definition update_dict1_def:
+    (update_dict1 (CONS e d) (lb:string) (mth:method1) =
               let (l,m) = (e:^entry1) in
                     (if l = lb then          (update_dict1 d lb mth)
                                else  (CONS e (update_dict1 d lb mth)) ))   /\
-    (update_dict1 (NIL) lb mth      = NIL)`;
+    (update_dict1 (NIL) lb mth      = NIL)
+End
 
 val update_dict1 = store_thm
    ("update_dict1",
@@ -945,9 +948,10 @@ val update_dict1 = store_thm
 
 
 
-val update1_def = Define
-   `(update1 (OBJ1 d) lb mth = OBJ1 (CONS (lb,mth) (update_dict1 d lb mth))) /\
-    (update1 (allelse) lb mth = obj1_0)`;
+Definition update1_def:
+    (update1 (OBJ1 d) lb mth = OBJ1 (CONS (lb,mth) (update_dict1 d lb mth))) /\
+    (update1 (allelse) lb mth = obj1_0)
+End
 
 val update1 = store_thm
    ("update1",

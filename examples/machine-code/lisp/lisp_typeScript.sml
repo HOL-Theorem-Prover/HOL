@@ -18,62 +18,87 @@ val SExp_distinct = fetch "-" "SExp_distinct";
 
 (* definitions *)
 
-val isDot_def = Define `
-  (isDot (Dot x y) = T) /\ (isDot (Val n) = F) /\ (isDot (Sym s) = F)`;
-val isVal_def = Define `
-  (isVal (Dot x y) = F) /\ (isVal (Val n) = T) /\ (isVal (Sym s) = F)`;
-val isSym_def = Define `
-  (isSym (Dot x y) = F) /\ (isSym (Val n) = F) /\ (isSym (Sym s) = T)`;
+Definition isDot_def:
+  (isDot (Dot x y) = T) /\ (isDot (Val n) = F) /\ (isDot (Sym s) = F)
+End
+Definition isVal_def:
+  (isVal (Dot x y) = F) /\ (isVal (Val n) = T) /\ (isVal (Sym s) = F)
+End
+Definition isSym_def:
+  (isSym (Dot x y) = F) /\ (isSym (Val n) = F) /\ (isSym (Sym s) = T)
+End
 
-val getVal_def = Define `
-  (getVal (Dot x y) = 0) /\ (getVal (Val n) = n) /\ (getVal (Sym s) = 0)`;
+Definition getVal_def:
+  (getVal (Dot x y) = 0) /\ (getVal (Val n) = n) /\ (getVal (Sym s) = 0)
+End
 
-val CAR_def = Define `
+Definition CAR_def:
   (CAR (Dot x y) = x) /\
   (CAR (Val w) = Val w) /\
-  (CAR (Sym s) = Sym s)`;
+  (CAR (Sym s) = Sym s)
+End
 
-val CDR_def = Define `
+Definition CDR_def:
   (CDR (Dot x y) = y) /\
   (CDR (Val w) = Val w) /\
-  (CDR (Sym s) = Sym s)`;
+  (CDR (Sym s) = Sym s)
+End
 
-val LISP_ADD_def   = Define `LISP_ADD  (Val m) (Val n) = Val (m + n)`;
-val LISP_SUB_def   = Define `LISP_SUB  (Val m) (Val n) = Val (m - n)`;
-val LISP_MULT_def  = Define `LISP_MULT (Val m) (Val n) = Val (m * n)`;
-val LISP_DIV_def   = Define `LISP_DIV  (Val m) (Val n) = Val (m DIV n)`;
-val LISP_MOD_def   = Define `LISP_MOD  (Val m) (Val n) = Val (m MOD n)`;
+Definition LISP_ADD_def:     LISP_ADD  (Val m) (Val n) = Val (m + n)
+End
+Definition LISP_SUB_def:     LISP_SUB  (Val m) (Val n) = Val (m - n)
+End
+Definition LISP_MULT_def:    LISP_MULT (Val m) (Val n) = Val (m * n)
+End
+Definition LISP_DIV_def:     LISP_DIV  (Val m) (Val n) = Val (m DIV n)
+End
+Definition LISP_MOD_def:     LISP_MOD  (Val m) (Val n) = Val (m MOD n)
+End
 
-val LISP_TEST_def  = Define `LISP_TEST x = if x then Sym "t" else Sym "nil"`;
+Definition LISP_TEST_def:    LISP_TEST x = if x then Sym "t" else Sym "nil"
+End
 
-val LISP_EQUAL_def   = Define `LISP_EQUAL x y = LISP_TEST (x = y)`;
-val LISP_LESS_def    = Define `LISP_LESS m n  = LISP_TEST (getVal m < getVal n)`;
-val LISP_ATOMP_def   = Define `LISP_ATOMP x   = LISP_TEST (~(isDot x))`;
-val LISP_CONSP_def   = Define `LISP_CONSP x   = LISP_TEST (isDot x)`;
-val LISP_NUMBERP_def = Define `LISP_NUMBERP x = LISP_TEST (isVal x)`;
-val LISP_SYMBOLP_def = Define `LISP_SYMBOLP x = LISP_TEST (isSym x)`;
+Definition LISP_EQUAL_def:     LISP_EQUAL x y = LISP_TEST (x = y)
+End
+Definition LISP_LESS_def:      LISP_LESS m n  = LISP_TEST (getVal m < getVal n)
+End
+Definition LISP_ATOMP_def:     LISP_ATOMP x   = LISP_TEST (~(isDot x))
+End
+Definition LISP_CONSP_def:     LISP_CONSP x   = LISP_TEST (isDot x)
+End
+Definition LISP_NUMBERP_def:   LISP_NUMBERP x = LISP_TEST (isVal x)
+End
+Definition LISP_SYMBOLP_def:   LISP_SYMBOLP x = LISP_TEST (isSym x)
+End
 
-val TASK_CONT_def = Define `TASK_CONT = Sym "t"`;
-val TASK_EVAL_def = Define `TASK_EVAL = Sym "nil"`;
-val TASK_FUNC_def = Define `TASK_FUNC = Sym "quote"`;
+Definition TASK_CONT_def:   TASK_CONT = Sym "t"
+End
+Definition TASK_EVAL_def:   TASK_EVAL = Sym "nil"
+End
+Definition TASK_FUNC_def:   TASK_FUNC = Sym "quote"
+End
 
-val isQuote_def = Define `
+Definition isQuote_def:
   isQuote x <=> isDot x /\ (CAR x = Sym "quote") /\
-                isDot (CDR x) /\ (CDR (CDR x) = Sym "nil")`;
+                isDot (CDR x) /\ (CDR (CDR x) = Sym "nil")
+End
 
-val LSIZE_def = Define `
+Definition LSIZE_def:
   (LSIZE (Dot x y) = SUC (LSIZE x + LSIZE y)) /\
   (LSIZE (Val w) = 0) /\
-  (LSIZE (Sym s) = 0)`;
+  (LSIZE (Sym s) = 0)
+End
 
-val LDEPTH_def = Define `
+Definition LDEPTH_def:
   (LDEPTH (Dot x y) = SUC (MAX (LDEPTH x) (LDEPTH y))) /\
   (LDEPTH (Val w) = 0) /\
-  (LDEPTH (Sym s) = 0)`;
+  (LDEPTH (Sym s) = 0)
+End
 
-val SUM_LSIZE_def = Define `
+Definition SUM_LSIZE_def:
   (SUM_LSIZE [] = 0) /\
-  (SUM_LSIZE (x::xs) = LSIZE x + SUM_LSIZE xs)`;
+  (SUM_LSIZE (x::xs) = LSIZE x + SUM_LSIZE xs)
+End
 
 
 (* theorems *)

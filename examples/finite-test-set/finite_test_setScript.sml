@@ -67,9 +67,10 @@ val val_term_def = tDefine"val_term"`
  \\ rw[] \\ res_tac \\ rw[]);
 val _ = export_rewrites["val_term_def"];
 
-val val_prop_def = Define`
+Definition val_prop_def:
   val_prop env (Pred f ts) = f (MAP (val_term env) ts) ∧
-  val_prop env (Nand p1 p2) = ¬(val_prop env p1 ∧ val_prop env p2)`;
+  val_prop env (Nand p1 p2) = ¬(val_prop env p1 ∧ val_prop env p2)
+End
 val _ = export_rewrites["val_prop_def"];
 
 (* Now we add quantifiers *)
@@ -86,13 +87,15 @@ val val_form_aux_def = tDefine"val_form_aux"`
 (WF_REL_TAC`measure (LENGTH o FST o FST)` \\ rw[]);
 val _ = export_rewrites["val_form_aux_def"];
 
-val val_form_def = Define`
-  val_form (qs,p) = val_form_aux (qs,p) []`;
+Definition val_form_def:
+  val_form (qs,p) = val_form_aux (qs,p) []
+End
 
 (* A test of expressiveness: Goldbach's conjecture can be represented *)
-val Goldbach_statement_def = Define`
+Definition Goldbach_statement_def:
   Goldbach_statement ⇔
-    ∀n. 2 < n ∧ EVEN n ⇒ ∃p1 p2. prime p1 ∧ prime p2 ∧ n = p1 + p2`;
+    ∀n. 2 < n ∧ EVEN n ⇒ ∃p1 p2. prime p1 ∧ prime p2 ∧ n = p1 + p2
+End
 
 (* This is unnecessary: everything could be built into the predicates themselves *)
 val _ = overload_on("Or",``λp1 p2. Nand (Nand p1 p1) (Nand p2 p2)``);
@@ -113,28 +116,32 @@ val Goldbach_Pi1 = Q.store_thm("Goldbach_Pi1",
   env is a test instance for f [= (qs,p)] if
   f is true ⇔ p[env] is true
 *)
-val test_inst_def = Define`
+Definition test_inst_def:
   test_inst env (qs,p) ⇔
     (LENGTH env = LENGTH qs) ∧
-    (val_form (qs,p) ⇔ val_prop env p)`;
+    (val_form (qs,p) ⇔ val_prop env p)
+End
 
-val solvable_def = Define`
-  solvable f ⇔ ∃env. test_inst env f`;
+Definition solvable_def:
+  solvable f ⇔ ∃env. test_inst env f
+End
 
 (* Non-constructive definition of test instances *)
 
-val nu_def = Define`
+Definition nu_def:
   nu env Forall qs p =
     (if val_form_aux (Forall::qs,p) env then 0
      else LEAST m. ¬val_form_aux (qs,p) (m::env)) ∧
   nu env Exists qs p =
     (if ¬val_form_aux (Exists::qs,p) env then 0
-     else LEAST m. val_form_aux (qs,p) (m::env))`;
+     else LEAST m. val_form_aux (qs,p) (m::env))
+End
 
-val mk_test_inst_def = Define`
+Definition mk_test_inst_def:
   mk_test_inst env [] p = env ∧
   mk_test_inst env (q::qs) p =
-    mk_test_inst ((nu env q qs p)::env) qs p`;
+    mk_test_inst ((nu env q qs p)::env) qs p
+End
 
 val LENGTH_mk_test_inst = Q.store_thm("LENGTH_mk_test_inst[simp]",
   `∀qs env p. LENGTH (mk_test_inst env qs p) = LENGTH env + LENGTH qs`,
@@ -179,10 +186,11 @@ val all_solvable = Q.store_thm("all_solvable",
 
 (* relativising a formula *)
 
-val val_form_rel_def = Define`
+Definition val_form_rel_def:
   val_form_rel [] ([],p) env = val_prop env p ∧
   val_form_rel (d::ds) (Forall::qs,p) env = (∀n::d. val_form_rel ds (qs,p) (n::env)) ∧
-  val_form_rel (d::ds) (Exists::qs,p) env = (∃n::d. val_form_rel ds (qs,p) (n::env))`
+  val_form_rel (d::ds) (Exists::qs,p) env = (∃n::d. val_form_rel ds (qs,p) (n::env))
+End
 val _ = export_rewrites["val_form_rel_def"];
 
 val val_form_iff_val_form_rel = Q.store_thm("val_form_iff_val_form_rel",
@@ -196,23 +204,26 @@ val val_form_iff_val_form_rel = Q.store_thm("val_form_iff_val_form_rel",
 
 (* A test set is a domain relativised to which a formula's truth is preserved *)
 
-val test_set_def = Define`
+Definition test_set_def:
   test_set ds (qs,p) ⇔
     (LENGTH ds = LENGTH qs) ∧
-    (val_form (qs,p) ⇔ val_form_rel ds (qs,p) [])`;
+    (val_form (qs,p) ⇔ val_form_rel ds (qs,p) [])
+End
 
 (*
   We are representing test sets as a list of domains for the quantifiers.
   Here is how to retrieve the corresponding subset of the Cartesian product
   N^(LENGTH qs) (represented as a list rather than actual tuples)
 *)
-val domains_to_set_def = Define
-  `domains_to_set ds = { ms | LIST_REL (IN) ms ds }`;
+Definition domains_to_set_def:
+   domains_to_set ds = { ms | LIST_REL (IN) ms ds }
+End
 
 (* Finitely solvable = has a finite test set *)
-val finitely_solvable_def = Define`
+Definition finitely_solvable_def:
   finitely_solvable q ⇔
-  ∃ds. test_set ds q ∧ FINITE (domains_to_set ds)`;
+  ∃ds. test_set ds q ∧ FINITE (domains_to_set ds)
+End
 
 val FINITE_domains_to_set = Q.store_thm("FINITE_domains_to_set",
   `FINITE (domains_to_set ds) ⇔ (EVERY FINITE ds ∨ EXISTS ((=){}) ds)`,

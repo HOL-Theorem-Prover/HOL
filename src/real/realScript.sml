@@ -2100,9 +2100,10 @@ QED
 (* Now define finite sums; NB: sum(m,n) f = f(m) + f(m+1) + ... + f(m+n-1)   *)
 (*---------------------------------------------------------------------------*)
 
-val sum = Lib.with_flag (boolLib.def_suffix, "") Define`
+Definition sum:
    (sum (n,0) f = 0) /\
-   (sum (n,SUC m) f = sum (n,m) f + f (n + m): real)`
+   (sum (n,SUC m) f = sum (n,m) f + f (n + m): real)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Useful manipulative theorems for sums                                     *)
@@ -2737,7 +2738,8 @@ Theorem REAL_SUB_NUMERAL[simp] =
 (* Define a constant for extracting "the positive part" of real numbers.     *)
 (* ------------------------------------------------------------------------- *)
 
-val pos_def = Define `pos (x : real) = if 0 <= x then x else 0`;
+Definition pos_def:   pos (x : real) = if 0 <= x then x else 0
+End
 
 val REAL_POS_POS = store_thm
   ("REAL_POS_POS",
@@ -3050,7 +3052,8 @@ QED
 (* More theorems about sup, and corresponding theorems about an inf operator *)
 (* ------------------------------------------------------------------------- *)
 
-val inf_def = Define `inf p = ~(sup (\r. p (~r)))`;
+Definition inf_def:   inf p = ~(sup (\r. p (~r)))
+End
 
 Theorem inf_alt :
     !p. inf p = ~(sup (IMAGE $~ p))

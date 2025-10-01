@@ -14,7 +14,7 @@ val _ = Parse.overload_on("Less",``LESS``)
 val _ = Parse.overload_on("Equal",``EQUAL``)
 val _ = Parse.overload_on("Greater",``GREATER``)
 
-val good_cmp_def = Define `
+Definition good_cmp_def:
 good_cmp cmp <=>
   (!x. cmp x x = Equal) /\
   (!x y. cmp x y = Equal ==> cmp y x = Equal) /\
@@ -22,7 +22,8 @@ good_cmp cmp <=>
   (!x y z. cmp x y = Equal /\ cmp y z = Less ==> cmp x z = Less) /\
   (!x y z. cmp x y = Less /\ cmp y z = Equal ==> cmp x z = Less) /\
   (!x y z. cmp x y = Equal /\ cmp y z = Equal ==> cmp x z = Equal) /\
-  (!x y z. cmp x y = Less /\ cmp y z = Less ==> cmp x z = Less)`;
+  (!x y z. cmp x y = Less /\ cmp y z = Less ==> cmp x z = Less)
+End
 
 val good_cmp_thm = Q.store_thm ("good_cmp_thm",
 `!cmp.
@@ -41,11 +42,12 @@ val _ = overload_on ("option_cmp", ``option_compare``);
 val option_cmp_def = save_thm("option_cmp_def",
   ternaryComparisonsTheory.option_compare_def)
 
-val option_cmp2_def = Define`
+Definition option_cmp2_def:
   (option_cmp2 cmp NONE NONE = Equal) /\
   (option_cmp2 cmp NONE (SOME x) = Greater) /\
   (option_cmp2 cmp (SOME x) NONE = Less) /\
-  (option_cmp2 cmp (SOME x) (SOME y) = cmp x y)`
+  (option_cmp2 cmp (SOME x) (SOME y) = cmp x y)
+End
 
 val _ = overload_on ("list_cmp", ``list_compare``)
 val list_cmp_def = ternaryComparisonsTheory.list_compare_def
@@ -350,14 +352,17 @@ val option_cmp2_antisym = Q.store_thm ("option_cmp2_antisym",
  rw [] >>
  metis_tac [comparison_distinct]);
 
-val resp_equiv_def = Define `
-resp_equiv cmp f <=> !k1 k2 v. cmp k1 k2 = Equal ==> f k1 v = f k2 v`;
+Definition resp_equiv_def:
+resp_equiv cmp f <=> !k1 k2 v. cmp k1 k2 = Equal ==> f k1 v = f k2 v
+End
 
-val resp_equiv2_def = Define `
-resp_equiv2 cmp cmp2 f <=> (!k1 k2. cmp k1 k2 = Equal ==> cmp2 (f k1) (f k2) = Equal)`;
+Definition resp_equiv2_def:
+resp_equiv2 cmp cmp2 f <=> (!k1 k2. cmp k1 k2 = Equal ==> cmp2 (f k1) (f k2) = Equal)
+End
 
-val equiv_inj_def = Define `
-equiv_inj cmp cmp2 f <=> (!k1 k2. cmp2 (f k1) (f k2) = Equal ==> cmp k1 k2 = Equal)`;
+Definition equiv_inj_def:
+equiv_inj cmp cmp2 f <=> (!k1 k2. cmp2 (f k1) (f k2) = Equal ==> cmp k1 k2 = Equal)
+End
 
 val antisym_resp_equiv = Q.store_thm ("antisym_resp_equiv",
 `!cmp f.

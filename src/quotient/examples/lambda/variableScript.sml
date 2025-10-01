@@ -51,15 +51,17 @@ val var_one_one = theorem "var_11";
 (* We define Base v as the string which is the base of v.          *)
 (* =============================================================== *)
 
-val Base_def =
-    Define `(Base (VAR s n) = s)`;
+Definition Base_def:
+     (Base (VAR s n) = s)
+End
 
 (* =============================================================== *)
 (* We define Index v as the "variant" number attached to the base. *)
 (* =============================================================== *)
 
-val Index_def =
-    Define `(Index (VAR s n) = n)`;
+Definition Index_def:
+     (Index (VAR s n) = n)
+End
 
 
 val Base_Index = store_thm
@@ -103,9 +105,9 @@ QED
 (* and add an integer to its "variant" number.                     *)
 (* =============================================================== *)
 
-val mk_variant_def =
-    Define
-      `mk_variant (VAR s n) m = (VAR s (n+m))`;
+Definition mk_variant_def:
+       mk_variant (VAR s n) m = (VAR s (n+m))
+End
 
 val Index_mk_variant = store_thm
    ("Index_mk_variant",

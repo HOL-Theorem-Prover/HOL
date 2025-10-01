@@ -4,8 +4,6 @@ Ancestors
 Libs
   pairSyntax simpLib BasicProvers boolSimps metisLib
 
-val DEF = Lib.with_flag (boolLib.def_suffix, "_DEF") TotalDefn.Define
-
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
@@ -13,11 +11,14 @@ val DEF = Lib.with_flag (boolLib.def_suffix, "_DEF") TotalDefn.Define
 Type M[local] = “:'state -> 'a # 'state”
 
 (* identity of the Kleisli category *)
-val UNIT_DEF = DEF `UNIT (x:'b) = \(s:'a). (x, s)`;
+Definition UNIT_DEF:   UNIT (x:'b) = \(s:'a). (x, s)
+End
 
-val BIND_DEF = DEF `BIND (g: ('b, 'a) M) (f: 'b -> ('c, 'a) M) = UNCURRY f o g`;
+Definition BIND_DEF:   BIND (g: ('b, 'a) M) (f: 'b -> ('c, 'a) M) = UNCURRY f o g
+End
 
-val IGNORE_BIND_DEF = DEF `IGNORE_BIND f g = BIND f (\x. g)`;
+Definition IGNORE_BIND_DEF:   IGNORE_BIND f g = BIND f (\x. g)
+End
 
 val _ =
     monadsyntax.declare_monad (
@@ -29,16 +30,20 @@ val _ =
 val _ = monadsyntax.add_monadsyntax()
 val _ = monadsyntax.enable_monad "state"
 
-val MMAP_DEF = DEF `MMAP (f: 'c -> 'b) (m: ('c, 'a) M) = BIND m (UNIT o f)`;
+Definition MMAP_DEF:   MMAP (f: 'c -> 'b) (m: ('c, 'a) M) = BIND m (UNIT o f)
+End
 
-val JOIN_DEF = DEF `JOIN (z: (('b, 'a) M, 'a) M) = BIND z I`;
+Definition JOIN_DEF:   JOIN (z: (('b, 'a) M, 'a) M) = BIND z I
+End
 
 (* functor (on arrows) from the Kleisli category *)
-val EXT_DEF = DEF `EXT (f: 'b -> ('c, 's) M) (m: ('b, 's) M) = UNCURRY f o m`;
+Definition EXT_DEF:   EXT (f: 'b -> ('c, 's) M) (m: ('b, 's) M) = UNCURRY f o m
+End
 
 (* composition in the Kleisli category *)
-val MCOMP_DEF =
-  DEF `MCOMP (g: 'b -> ('c, 's) M) (f: 'a -> ('b, 's) M) = EXT g o f` ;
+Definition MCOMP_DEF:
+   MCOMP (g: 'b -> ('c, 's) M) (f: 'a -> ('b, 's) M) = EXT g o f
+End
 
 val FOR_def = TotalDefn.tDefine "FOR"
  `(FOR : num # num # (num -> (unit, 'state) M) -> (unit, 'state) M) (i, j, a) =
@@ -48,30 +53,37 @@ val FOR_def = TotalDefn.tDefine "FOR"
         BIND (a i) (\u. FOR (if i < j then i + 1 else i - 1, j, a))`
   (TotalDefn.WF_REL_TAC `measure (\(i, j, a). if i < j then j - i else i - j)`)
 
-val FOREACH_def = TotalDefn.Define`
+Definition FOREACH_def:
    ((FOREACH : 'a list # ('a -> (unit, 'state) M) -> (unit, 'state) M) ([], a) =
        UNIT ()) /\
-   (FOREACH (h :: t, a) = BIND (a h) (\u. FOREACH (t, a)))`
+   (FOREACH (h :: t, a) = BIND (a h) (\u. FOREACH (t, a)))
+End
 
-val READ_def = TotalDefn.Define`
-   (READ : ('state -> 'a) -> ('a, 'state) M) f = \s. (f s, s)`;
+Definition READ_def:
+   (READ : ('state -> 'a) -> ('a, 'state) M) f = \s. (f s, s)
+End
 
-val WRITE_def = TotalDefn.Define`
-   (WRITE : ('state -> 'state) -> (unit, 'state) M) f = \s. ((), f s)`;
+Definition WRITE_def:
+   (WRITE : ('state -> 'state) -> (unit, 'state) M) f = \s. ((), f s)
+End
 
-val NARROW_def = TotalDefn.Define`
+Definition NARROW_def:
    (NARROW : 'b -> ('a, 'b # 'state) M -> ('a, 'state) M) v f =
-   \s. let (r, s1) = f (v, s) in (r, SND s1)`
+   \s. let (r, s1) = f (v, s) in (r, SND s1)
+End
 
-val WIDEN_def = TotalDefn.Define`
+Definition WIDEN_def:
    (WIDEN : ('a, 'state) M -> ('a, 'b # 'state) M) f =
-   \(s1, s2). let (r, s3) = f s2 in (r, (s1, s3))`
+   \(s1, s2). let (r, s3) = f s2 in (r, (s1, s3))
+End
 
-val sequence_def = TotalDefn.Define`
-   sequence = FOLDR (\m ms. BIND m (\x. BIND ms (\xs. UNIT (x::xs)))) (UNIT [])`
+Definition sequence_def:
+   sequence = FOLDR (\m ms. BIND m (\x. BIND ms (\xs. UNIT (x::xs)))) (UNIT [])
+End
 
-val mapM_def = TotalDefn.Define`
-   mapM f = sequence o MAP f`
+Definition mapM_def:
+   mapM f = sequence o MAP f
+End
 
 val mwhile_exists = prove(
   ``!g b. ?f.
@@ -360,4 +372,3 @@ val _ = TotalDefn.export_termsimp "UNIT_DEF"
 *)
 
 (* ------------------------------------------------------------------------- *)
-

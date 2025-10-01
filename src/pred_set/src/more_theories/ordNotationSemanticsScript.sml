@@ -8,10 +8,10 @@ val _ = export_rewrites ["ordinalNotation.finp_def", "ordinalNotation.tail_def",
                          "ordinalNotation.oless_equations",
                          "ordinalNotation.expt_def"]
 
-val ordModel_def = Define`
+Definition ordModel_def:
   (ordModel (End n) = &n) /\
   (ordModel (Plus e c t) = omega ** ordModel e * &c + ordModel t)
-`
+End
 val _ = export_rewrites ["ordModel_def"]
 
 val _ = add_rule {fixity = Closefix, term_name = "ordModel",

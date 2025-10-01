@@ -18,8 +18,9 @@ quietdec := false;
 
 val _ = ParseExtras.temp_loose_equality()
 
-val OPTION_SELECT_def = Define
-   `OPTION_SELECT P = if ~(?x. P x) then NONE else SOME @x. P x`
+Definition OPTION_SELECT_def:
+    OPTION_SELECT P = if ~(?x. P x) then NONE else SOME @x. P x
+End
 
 val OPTION_SELECT_THM = store_thm ("OPTION_SELECT_THM",
    ``(!P. ((OPTION_SELECT P = NONE) = (!x. ~(P x)))) /\
@@ -39,17 +40,21 @@ REPEAT STRIP_TAC THEN
 SELECT_ELIM_TAC THEN
 METIS_TAC[]);
 
-val rest_reflexive_def = Define `
-   rest_reflexive M R = !x. x IN M ==> R x x`
+Definition rest_reflexive_def:
+   rest_reflexive M R = !x. x IN M ==> R x x
+End
 
-val rest_antisymmetric_def = Define `
-   rest_antisymmetric M R = !x y. (x IN M /\ y IN M /\ R x y /\ R y x) ==> (x = y)`
+Definition rest_antisymmetric_def:
+   rest_antisymmetric M R = !x y. (x IN M /\ y IN M /\ R x y /\ R y x) ==> (x = y)
+End
 
-val rest_transitive_def = Define `
-   rest_transitive M R = !x y z. (x IN M /\ y IN M /\ z IN M /\ R x y /\ R y z) ==> (R x z)`
+Definition rest_transitive_def:
+   rest_transitive M R = !x y z. (x IN M /\ y IN M /\ z IN M /\ R x y /\ R y z) ==> (R x z)
+End
 
-val rest_WeakOrder_def = Define `
-   rest_WeakOrder M R = rest_reflexive M R /\ rest_antisymmetric M R /\ rest_transitive M R`
+Definition rest_WeakOrder_def:
+   rest_WeakOrder M R = rest_reflexive M R /\ rest_antisymmetric M R /\ rest_transitive M R
+End
 
 
 val rest_WeakOrder_THM = store_thm ("rest_WeakOrder_THM",
@@ -84,34 +89,42 @@ RES_TAC THEN METIS_TAC[]);
 
 
 
-val IS_UPPER_BOUND_def = Define `
-   IS_UPPER_BOUND f D M b = ((b IN D) /\ !m. m IN M ==> f m b)`;
+Definition IS_UPPER_BOUND_def:
+   IS_UPPER_BOUND f D M b = ((b IN D) /\ !m. m IN M ==> f m b)
+End
 
-val IS_SUPREMUM_def = Define `
+Definition IS_SUPREMUM_def:
    IS_SUPREMUM f D M s =
    (IS_UPPER_BOUND f D M s) /\
-   (!b. IS_UPPER_BOUND f D M b ==> (f s b))`;
+   (!b. IS_UPPER_BOUND f D M b ==> (f s b))
+End
 
-val BIGSUP_def = Define `
-   (BIGSUP f D M) = OPTION_SELECT (\s. IS_SUPREMUM f D M s)`
+Definition BIGSUP_def:
+   (BIGSUP f D M) = OPTION_SELECT (\s. IS_SUPREMUM f D M s)
+End
 
-val SUP_def = Define `
-   SUP f D a b = BIGSUP f D {a; b}`
+Definition SUP_def:
+   SUP f D a b = BIGSUP f D {a; b}
+End
 
-val IS_LOWER_BOUND_def = Define `
-   IS_LOWER_BOUND f D M b = ((b IN D) /\ !m. m IN M ==> f b m)`;
+Definition IS_LOWER_BOUND_def:
+   IS_LOWER_BOUND f D M b = ((b IN D) /\ !m. m IN M ==> f b m)
+End
 
-val IS_INFIMUM_def = Define `
+Definition IS_INFIMUM_def:
    IS_INFIMUM f D M s =
    (IS_LOWER_BOUND f D M s) /\
-   (!b. IS_LOWER_BOUND f D M b ==> (f b s))`;
+   (!b. IS_LOWER_BOUND f D M b ==> (f b s))
+End
 
 
-val BIGINF_def = Define `
-   (BIGINF f D M) = OPTION_SELECT (\s. IS_INFIMUM f D M s)`
+Definition BIGINF_def:
+   (BIGINF f D M) = OPTION_SELECT (\s. IS_INFIMUM f D M s)
+End
 
-val INF_def = Define `
-   INF f D a b = BIGINF f D {a; b}`
+Definition INF_def:
+   INF f D a b = BIGINF f D {a; b}
+End
 
 
 val INF_SUP_inv_THM___1 = prove (
@@ -187,14 +200,16 @@ val SUP_REWRITE = save_thm ("SUP_REWRITE",
 
 
 
-val IS_LATTICE_def = Define `
+Definition IS_LATTICE_def:
    IS_LATTICE f D = rest_WeakOrder D f /\
-                    (!x y. (x IN D /\ y IN D) ==> (IS_SOME (INF f D x y) /\ IS_SOME (SUP f D x y)))`
+                    (!x y. (x IN D /\ y IN D) ==> (IS_SOME (INF f D x y) /\ IS_SOME (SUP f D x y)))
+End
 
 
-val IS_COMPLETE_LATTICE_def = Define `
+Definition IS_COMPLETE_LATTICE_def:
    IS_COMPLETE_LATTICE f D = rest_WeakOrder D f /\
-                    (!M. (~(M = EMPTY) /\ (M SUBSET D)) ==> (IS_SOME (BIGINF f D M) /\ IS_SOME (BIGSUP f D M)))`
+                    (!M. (~(M = EMPTY) /\ (M SUBSET D)) ==> (IS_SOME (BIGINF f D M) /\ IS_SOME (BIGSUP f D M)))
+End
 
 
 val COMPLETE_LATTICE___IS_LATTICE = store_thm ("COMPLETE_LATTICE___IS_LATTICE",
@@ -358,9 +373,10 @@ Cases_on `M = {}` THENL [
 ]);
 
 
-val IS_NON_EMPTY_COMPLETE_LATTICE_def = Define `
+Definition IS_NON_EMPTY_COMPLETE_LATTICE_def:
    IS_NON_EMPTY_COMPLETE_LATTICE f D =
-      IS_COMPLETE_LATTICE f D /\ (~(D= EMPTY))`
+      IS_COMPLETE_LATTICE f D /\ (~(D= EMPTY))
+End
 
 val IS_NON_EMPTY_COMPLETE_LATTICE_THM = store_thm ("IS_NON_EMPTY_COMPLETE_LATTICE_THM",
 ``   IS_NON_EMPTY_COMPLETE_LATTICE f D =
@@ -711,8 +727,10 @@ MP_TAC (Q.SPECL [`inv f`, `D`, `M1`, `M2`, `s1`, `s2`] INFIMUM_INCREASE_SET) THE
 ASM_SIMP_TAC std_ss [rest_WeakOrder_THM, INF_SUP_inv_THM, inv_LATTICE, transitive_inv, inv_DEF]);
 
 
-val THE_SUP_def = Define `THE_SUP f D x y = THE (SUP f D x y)`
-val THE_INF_def = Define `THE_INF f D x y = THE (INF f D x y)`
+Definition THE_SUP_def:   THE_SUP f D x y = THE (SUP f D x y)
+End
+Definition THE_INF_def:   THE_INF f D x y = THE (INF f D x y)
+End
 
 
 

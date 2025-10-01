@@ -93,8 +93,9 @@ Cases_on `s ' v` THENL [
   `vwalk s v = x` by SRW_TAC [][Once vwalk_def,FLOOKUP_DEF] THEN METIS_TAC []
 ]);
 
-val allvars_def = Define`
-  allvars s (t1:'a term) (t2:'a term) = vars t1 ∪ vars t2 ∪ substvars s`;
+Definition allvars_def:
+  allvars s (t1:'a term) (t2:'a term) = vars t1 ∪ vars t2 ∪ substvars s
+End
 
 val FINITE_allvars = RWstore_thm(
 "FINITE_allvars",
@@ -406,8 +407,9 @@ Theorem uR_ind =
                    |> Q.SPEC `λ(a,b,c).P a b c`
                    |> SIMP_RULE std_ss [FORALL_PROD] |> Q.GEN`P`
 
-val uP_def = Define`
-  uP sx s t1 t2 <=> wfs sx ∧ s SUBMAP sx ∧ substvars sx ⊆ allvars s t1 t2`;
+Definition uP_def:
+  uP sx s t1 t2 <=> wfs sx ∧ s SUBMAP sx ∧ substvars sx ⊆ allvars s t1 t2
+End
 
 val uP_sym = Q.store_thm(
 "uP_sym",

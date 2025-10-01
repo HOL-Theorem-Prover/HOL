@@ -36,30 +36,34 @@ val _ = type_abbrev("bin_option_function",
    Type `:('a option -> 'a option -> 'a option)`);
 
 
-val OPTION_IS_LEFT_CANCELLATIVE_def = Define `
+Definition OPTION_IS_LEFT_CANCELLATIVE_def:
       OPTION_IS_LEFT_CANCELLATIVE (f:'a bin_option_function) =
-      (!x1 x2 x3. ((f x1 x2 = f x1 x3) /\ IS_SOME (f x1 x2)) ==> (x2 = x3))`
+      (!x1 x2 x3. ((f x1 x2 = f x1 x3) /\ IS_SOME (f x1 x2)) ==> (x2 = x3))
+End
 
-val OPTION_IS_RIGHT_CANCELLATIVE_def = Define `
+Definition OPTION_IS_RIGHT_CANCELLATIVE_def:
       OPTION_IS_RIGHT_CANCELLATIVE (f:'a bin_option_function) =
-      (!x1 x2 x3. ((f x2 x1 = f x3 x1) /\ IS_SOME (f x2 x1)) ==> (x2 = x3))`
+      (!x1 x2 x3. ((f x2 x1 = f x3 x1) /\ IS_SOME (f x2 x1)) ==> (x2 = x3))
+End
 
 
-val IS_SEPARATION_ALGEBRA_def = Define `
+Definition IS_SEPARATION_ALGEBRA_def:
    IS_SEPARATION_ALGEBRA f u =
    (!x. f NONE x = NONE) /\
    (!x. (f (SOME u) (SOME x) = (SOME x))) /\
    COMM f /\ ASSOC f /\
-   OPTION_IS_LEFT_CANCELLATIVE f`
+   OPTION_IS_LEFT_CANCELLATIVE f
+End
 
 
-val IS_SEPARATION_COMBINATOR_def = Define `
+Definition IS_SEPARATION_COMBINATOR_def:
    IS_SEPARATION_COMBINATOR f =
 
    (!x. f NONE x = NONE) /\
    (!x. ?u. f (SOME u) (SOME x) = (SOME x)) /\
    COMM f /\ ASSOC f /\
-   OPTION_IS_LEFT_CANCELLATIVE f`
+   OPTION_IS_LEFT_CANCELLATIVE f
+End
 
 
 
@@ -113,14 +117,16 @@ FULL_SIMP_TAC std_ss []);
 
 
 
-val IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION_def =
-Define `IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION f uf =
-   (!x. (f (SOME (uf x)) (SOME x) = (SOME x)))`
+Definition IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION_def:
+ IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION f uf =
+   (!x. (f (SOME (uf x)) (SOME x) = (SOME x)))
+End
 
-val IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION___WITH_COMBINATOR_def =
-Define `IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION___WITH_COMBINATOR f uf =
+Definition IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION___WITH_COMBINATOR_def:
+ IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION___WITH_COMBINATOR f uf =
    (IS_SEPARATION_COMBINATOR f /\
-    IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION f uf)`;
+    IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION f uf)
+End
 
 
 val IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION_THM = store_thm (
@@ -357,10 +363,12 @@ FULL_SIMP_TAC std_ss [IS_SEPARATION_ALGEBRA_HALF_EXPAND_THM,
    IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION_THM]);
 
 
-val asl_emp_def = Define `asl_emp f = \u. ?x:'a. f (SOME (u:'a)) (SOME x) = (SOME x)`
+Definition asl_emp_def:   asl_emp f = \u. ?x:'a. f (SOME (u:'a)) (SOME x) = (SOME x)
+End
 
-val asl_star_def = Define `
-asl_star = (\(f:'a option -> 'a option -> 'a option) P Q x. ?p q. (SOME x = f (SOME p) (SOME q)) /\ (p IN P) /\ (q IN Q))`
+Definition asl_star_def:
+asl_star = (\(f:'a option -> 'a option -> 'a option) P Q x. ?p q. (SOME x = f (SOME p) (SOME q)) /\ (p IN P) /\ (q IN Q))
+End
 
 
 val asl_emp_ALGEBRA = store_thm ("asl_emp_ALGEBRA",
@@ -424,12 +432,13 @@ METIS_TAC[]);
 (* BIN_OPTION_MAP                                                             *)
 (******************************************************************************)
 
-val BIN_OPTION_MAP_def = Define `
+Definition BIN_OPTION_MAP_def:
    (BIN_OPTION_MAP (f:'a -> 'a -> 'a) c NONE x = NONE) /\
    (BIN_OPTION_MAP f c x NONE = NONE) /\
    (BIN_OPTION_MAP f c (SOME x1) (SOME x2) =
       if (~(c x1 x2)) then NONE else
-      SOME (f x1 x2))`;
+      SOME (f x1 x2))
+End
 
 
 val BIN_OPTION_MAP_THM = store_thm ("BIN_OPTION_MAP_THM",
@@ -590,7 +599,8 @@ REPEAT STRIP_TAC THENL [
 ]);
 
 
-val BIN_OPTION_MAP_ALL_DEF_def = Define `BIN_OPTION_MAP_ALL_DEF f = BIN_OPTION_MAP f (K (K T))`
+Definition BIN_OPTION_MAP_ALL_DEF_def:   BIN_OPTION_MAP_ALL_DEF f = BIN_OPTION_MAP f (K (K T))
+End
 
 val BIN_OPTION_MAP_ALL_DEF_THM = save_thm ("BIN_OPTION_MAP_ALL_DEF_THM",
    let
@@ -609,12 +619,14 @@ val BIN_OPTION_MAP_ALL_DEF_THM = save_thm ("BIN_OPTION_MAP_ALL_DEF_THM",
 (* Monoid                                                                     *)
 (******************************************************************************)
 
-val ASL_IS_SEPARATE_def = Define `
-   ASL_IS_SEPARATE (f:'a option -> 'a option -> 'a option) x1 x2 = IS_SOME (f (SOME x1) (SOME x2))`;
+Definition ASL_IS_SEPARATE_def:
+   ASL_IS_SEPARATE (f:'a option -> 'a option -> 'a option) x1 x2 = IS_SOME (f (SOME x1) (SOME x2))
+End
 
 
-val ASL_IS_SUBSTATE_def = Define `
-   ASL_IS_SUBSTATE (f:'a option -> 'a option -> 'a option) s0 s2 = ?s1. f (SOME s0) (SOME s1) = (SOME s2)`;
+Definition ASL_IS_SUBSTATE_def:
+   ASL_IS_SUBSTATE (f:'a option -> 'a option -> 'a option) s0 s2 = ?s1. f (SOME s0) (SOME s1) = (SOME s2)
+End
 
 
 val ASL_IS_SUBSTATE_INTRO = store_thm ("ASL_IS_SUBSTATE_INTRO",
@@ -657,8 +669,9 @@ val ASL_IS_SUBSTATE___TRANS = store_thm ("ASL_IS_SUBSTATE___TRANS",
 METIS_TAC[ASL_IS_SUBSTATE___IS_PREORDER, PreOrder, transitive_def]);
 
 
-val ASL_OPTION_IS_SUBSTATE_def = Define `
-   ASL_OPTION_IS_SUBSTATE (f:'a option -> 'a option -> 'a option) s0 s2 = ?s1. f s0 s1 = s2`;
+Definition ASL_OPTION_IS_SUBSTATE_def:
+   ASL_OPTION_IS_SUBSTATE (f:'a option -> 'a option -> 'a option) s0 s2 = ?s1. f s0 s1 = s2
+End
 
 
 val ASL_OPTION_IS_SUBSTATE_THM = store_thm ("ASL_OPTION_IS_SUBSTATE_THM",
@@ -703,8 +716,9 @@ METIS_TAC[COMM_DEF, ASSOC_DEF]);
 
 
 
-val COMM_MONOID_def = Define `
-   COMM_MONOID f e = MONOID f e /\ COMM f`;
+Definition COMM_MONOID_def:
+   COMM_MONOID f e = MONOID f e /\ COMM f
+End
 
 
 val COMM_MONOID_THM = store_thm ("COMM_MONOID_THM",
@@ -766,9 +780,10 @@ REPEAT STRIP_TAC THENL [
 (* (used for later, more elaborate examples)                                  *)
 (******************************************************************************)
 
-val DISJOINT_FMAP_UNION_def = Define `
+Definition DISJOINT_FMAP_UNION_def:
 DISJOINT_FMAP_UNION =
-BIN_OPTION_MAP FUNION (\m1 m2. DISJOINT (FDOM m1) (FDOM m2))`
+BIN_OPTION_MAP FUNION (\m1 m2. DISJOINT (FDOM m1) (FDOM m2))
+End
 
 
 val DISJOINT_FMAP_UNION___REWRITE_helper = prove (
@@ -979,52 +994,66 @@ REWRITE_TAC [IS_SEPARATION_ALGEBRA___FINITE_MAP]);
 (* Basic separation logic definitions and rewrites                            *)
 (******************************************************************************)
 
-val asl_septraction_def = Define `
+Definition asl_septraction_def:
 asl_septraction f P Q = \s.
-?s1 s2. (SOME s2 = f (SOME s1) (SOME s)) /\ (s1 IN P) /\ (s2 IN Q)`;
+?s1 s2. (SOME s2 = f (SOME s1) (SOME s)) /\ (s1 IN P) /\ (s2 IN Q)
+End
 
-val asl_magic_wand_def = Define `
+Definition asl_magic_wand_def:
 asl_magic_wand f P Q = \s.
-!s1 s2. ((SOME s2 = f (SOME s1) (SOME s)) /\ (s1 IN P)) ==> (s2 IN Q)`;
+!s1 s2. ((SOME s2 = f (SOME s1) (SOME s)) /\ (s1 IN P)) ==> (s2 IN Q)
+End
 
-val asl_true_def = Define `asl_true = UNIV`;
-val asl_false_def = Define `asl_false = EMPTY`;
-val fasl_star_def = Define `fasl_star f = BIN_OPTION_MAP_ALL_DEF (asl_star f)`;
+Definition asl_true_def:   asl_true = UNIV
+End
+Definition asl_false_def:   asl_false = EMPTY
+End
+Definition fasl_star_def:   fasl_star f = BIN_OPTION_MAP_ALL_DEF (asl_star f)
+End
 
 
-val asl_exists_def =
- Define `asl_exists = \P:'a->('b -> bool). \s. ?x. (s IN P x)`;
+Definition asl_exists_def:
+  asl_exists = \P:'a->('b -> bool). \s. ?x. (s IN P x)
+End
 val _ = set_fixity "asl_exists" Binder;
 
-val asl_forall_def =
- Define `asl_forall = \P:'a->('b -> bool). \s. !x. (s IN P x)`;
+Definition asl_forall_def:
+  asl_forall = \P:'a->('b -> bool). \s. !x. (s IN P x)
+End
 val _ = set_fixity "asl_forall" Binder
 
-val asl_neg_def =
- Define `asl_neg = \P:('a -> bool). \s. ~(s IN P)`;
+Definition asl_neg_def:
+  asl_neg = \P:('a -> bool). \s. ~(s IN P)
+End
 
-val asl_and_def =
- Define `asl_and = \P:('a set) Q:('a set). \s. (s IN P /\ s IN Q)`;
+Definition asl_and_def:
+  asl_and = \P:('a set) Q:('a set). \s. (s IN P /\ s IN Q)
+End
 
-val asl_or_def =
- Define `asl_or = \P:('a set) Q:('a set). \s. (s IN P \/ s IN Q)`;
+Definition asl_or_def:
+  asl_or = \P:('a set) Q:('a set). \s. (s IN P \/ s IN Q)
+End
 
-val asl_imp_def =
- Define `asl_imp = \P:('a set) Q:('a set). \s. (s IN P ==> s IN Q)`;
+Definition asl_imp_def:
+  asl_imp = \P:('a set) Q:('a set). \s. (s IN P ==> s IN Q)
+End
 
-val asl_cond_def =
- Define `asl_cond = \X P:('a set) Q:('a set). \s. (if s IN X then s IN P else s IN Q)`;
+Definition asl_cond_def:
+  asl_cond = \X P:('a set) Q:('a set). \s. (if s IN X then s IN P else s IN Q)
+End
 
-val asl_trivial_cond_def =
- Define `asl_trivial_cond = \c P. if c then P else asl_false`
+Definition asl_trivial_cond_def:
+  asl_trivial_cond = \c P. if c then P else asl_false
+End
 
 val asl_and_intro = store_thm ("asl_and_intro",
 ``(\s. P s /\ Q s) = asl_and P Q``,
 SIMP_TAC std_ss [asl_and_def, IN_DEF]);
 
 
-val asl_bigand_list_def = Define `
-   asl_bigand_list l =  FOLDR asl_and asl_true l`
+Definition asl_bigand_list_def:
+   asl_bigand_list l =  FOLDR asl_and asl_true l
+End
 
 val asl_bigand_list_REWRITE = store_thm ("asl_bigand_list_REWRITE",
 ``      (asl_bigand_list [] =  asl_true) /\
@@ -1213,8 +1242,9 @@ SIMP_TAC std_ss [asl_trivial_cond_def] THEN
 METIS_TAC[]);
 
 
-val asl_bigstar_list_def = Define `
-   asl_bigstar_list f l =  FOLDR (asl_star f) (asl_emp f) l`
+Definition asl_bigstar_list_def:
+   asl_bigstar_list f l =  FOLDR (asl_star f) (asl_emp f) l
+End
 
 val asl_bigstar_list_REWRITE = store_thm ("asl_bigstar_list_REWRITE",
 ``(!f. (asl_bigstar_list f [] =  asl_emp f)) /\
@@ -1263,8 +1293,9 @@ ASM_SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM, asl_bigstar_list_REWRITE,
             asl_false___asl_star_THM]);
 
 
-val asl_bigstar_def = Define `
-   asl_bigstar f b =  if (FINITE_BAG b) then asl_bigstar_list f (BAG_TO_LIST b) else asl_false`
+Definition asl_bigstar_def:
+   asl_bigstar f b =  if (FINITE_BAG b) then asl_bigstar_list f (BAG_TO_LIST b) else asl_false
+End
 
 val asl_bigstar_list_PERM = store_thm ("asl_bigstar_list_PERM",
 ``!f l1 l2.
@@ -1452,8 +1483,9 @@ ASM_SIMP_TAC std_ss [] THEN
 METIS_TAC[IN_DEF]);
 
 
-val asl_exists_list_def = Define `
-asl_exists_list = \L P s. ?l. (LENGTH l = LENGTH L) /\ s IN P l`
+Definition asl_exists_list_def:
+asl_exists_list = \L P s. ?l. (LENGTH l = LENGTH L) /\ s IN P l
+End
 
 val asl_exists_list___ELIM = store_thm ("asl_exists_list___ELIM",
 ``asl_exists_list L P = $asl_exists (\l. asl_trivial_cond (LENGTH l = LENGTH L) (P l))``,
@@ -1491,13 +1523,15 @@ METIS_TAC[]);
 (******************************************************************************)
 
 val _ = hide "ASL_IS_PRECISE";
-val ASL_IS_PRECISE_def = Define `
+Definition ASL_IS_PRECISE_def:
    ASL_IS_PRECISE (f:'a option -> 'a option -> 'a option) (p:'a set) =
-   !x y1 y2. (y1 IN p /\ y2 IN p /\ ASL_IS_SUBSTATE f y1 x /\ ASL_IS_SUBSTATE f y2 x)==> (y1 = y2)`;
+   !x y1 y2. (y1 IN p /\ y2 IN p /\ ASL_IS_SUBSTATE f y1 x /\ ASL_IS_SUBSTATE f y2 x)==> (y1 = y2)
+End
 
-val ASL_IS_PRECISE_IN_STATE_def = Define `
+Definition ASL_IS_PRECISE_IN_STATE_def:
    ASL_IS_PRECISE_IN_STATE (f:'a option -> 'a option -> 'a option) (p:'a set) x =
-   !y1 y2. (y1 IN p /\ y2 IN p /\ ASL_IS_SUBSTATE f y1 x /\ ASL_IS_SUBSTATE f y2 x)==> (y1 = y2)`;
+   !y1 y2. (y1 IN p /\ y2 IN p /\ ASL_IS_SUBSTATE f y1 x /\ ASL_IS_SUBSTATE f y2 x)==> (y1 = y2)
+End
 
 val ASL_IS_PRECISE___IN_STATE___THM = store_thm ("ASL_IS_PRECISE___IN_STATE___THM",
    ``ASL_IS_PRECISE f p = !x. ASL_IS_PRECISE_IN_STATE f p x``,
@@ -1609,7 +1643,7 @@ METIS_TAC[]);
 (* Cross-products of separation combinators                                   *)
 (******************************************************************************)
 
-val PRODUCT_SEPARATION_COMBINATOR_def = Define `
+Definition PRODUCT_SEPARATION_COMBINATOR_def:
    (PRODUCT_SEPARATION_COMBINATOR (f1:'a bin_option_function) (f2:'b bin_option_function) NONE _ = NONE) /\
    (PRODUCT_SEPARATION_COMBINATOR f1 f2 _ NONE = NONE) /\
    (PRODUCT_SEPARATION_COMBINATOR f1 f2 (SOME (x1,x2)) (SOME (y1,y2)) =
@@ -1618,7 +1652,8 @@ val PRODUCT_SEPARATION_COMBINATOR_def = Define `
       if (IS_SOME z1 /\ IS_SOME z2) then
          SOME (THE z1, THE z2)
       else
-         NONE)`;
+         NONE)
+End
 
 
 val PRODUCT_SEPARATION_COMBINATOR_REWRITE = store_thm ("PRODUCT_SEPARATION_COMBINATOR_REWRITE",
@@ -1815,8 +1850,9 @@ SIMP_TAC std_ss [ASL_IS_SUBSTATE_def,
 
 
 
-val ID_SEPARATION_COMBINATOR_def = Define `
-   ID_SEPARATION_COMBINATOR = BIN_OPTION_MAP (\x' y'. x') ($=)`
+Definition ID_SEPARATION_COMBINATOR_def:
+   ID_SEPARATION_COMBINATOR = BIN_OPTION_MAP (\x' y'. x') ($=)
+End
 
 val ID_SEPARATION_COMBINATOR___THMS = store_thm ("ID_SEPARATION_COMBINATOR___THMS",
 ``(IS_SEPARATION_COMBINATOR ID_SEPARATION_COMBINATOR) /\
@@ -1857,8 +1893,10 @@ REPEAT STRIP_TAC THENL [
 ]);
 
 
-val asl_inl_def = Define `asl_inl f1 f2 x = \X. ((FST X) IN x) /\ ((SND X) IN (asl_emp f2))`
-val asl_inr_def = Define `asl_inr f1 f2 x = \X. ((SND X) IN x) /\ ((FST X) IN (asl_emp f1))`
+Definition asl_inl_def:   asl_inl f1 f2 x = \X. ((FST X) IN x) /\ ((SND X) IN (asl_emp f2))
+End
+Definition asl_inr_def:   asl_inr f1 f2 x = \X. ((SND X) IN x) /\ ((FST X) IN (asl_emp f1))
+End
 
 
 val asl_in_11 = store_thm ("asl_in_11",
@@ -1992,10 +2030,11 @@ SIMP_TAC std_ss [PRODUCT_SEPARATION_COMBINATOR_REWRITE,
 (* First a order on sets of states                                            *)
 (* -------------------------------------------------------------------------- *)
 
-val fasl_order_def = Define `
+Definition fasl_order_def:
    (fasl_order x' NONE = T) /\
    (fasl_order NONE (SOME x) = F) /\
-   (fasl_order (SOME x) (SOME y) = (x SUBSET y))`
+   (fasl_order (SOME x) (SOME y) = (x SUBSET y))
+End
 
 val fasl_order_THM = store_thm ("fasl_order_THM",
    ``(fasl_order NONE x = (x = NONE)) /\
@@ -2052,8 +2091,9 @@ METIS_TAC[fasl_order_IS_WEAK_ORDER, WeakOrder, transitive_def])
 
 
 
-val SUP_fasl_order_def = Define `
-   SUP_fasl_order M = if (NONE IN M) then NONE else SOME (BIGUNION (IMAGE THE M))`;
+Definition SUP_fasl_order_def:
+   SUP_fasl_order M = if (NONE IN M) then NONE else SOME (BIGUNION (IMAGE THE M))
+End
 
 
 val SUP_fasl_order_THM = store_thm ("SUP_fasl_order_THM",
@@ -2125,12 +2165,13 @@ val NONE___SUP_fasl_order = store_thm ("NONE___SUP_fasl_order",
 SIMP_TAC std_ss [SUP_fasl_order_def, COND_RATOR, COND_RAND]);
 
 
-val INF_fasl_order_def = Define `
+Definition INF_fasl_order_def:
    INF_fasl_order M =
       if !x. x IN M ==> (x = NONE) then
         NONE
       else
-        SOME (BIGINTER (IMAGE THE ((\x. IS_SOME x) INTER M)))`;
+        SOME (BIGINTER (IMAGE THE ((\x. IS_SOME x) INTER M)))
+End
 
 
 val INF_fasl_order_THM = store_thm ("INF_fasl_order_THM",
@@ -2216,32 +2257,37 @@ SIMP_TAC std_ss [SUP_fasl_order_def,
 
 val _ = type_abbrev("asl_action", Type `:'a -> ('a -> bool) option`);
 
-val ASL_IS_LOCAL_ACTION_def = Define `
+Definition ASL_IS_LOCAL_ACTION_def:
    ASL_IS_LOCAL_ACTION f op =
       !s1 s2. ASL_IS_SEPARATE f s1 s2 ==>
          fasl_order (op (THE (f (SOME s1) (SOME s2))))
-                (fasl_star f (op s1) (SOME {s2}))`;
+                (fasl_star f (op s1) (SOME {s2}))
+End
 
 
-val TRANS_REL_TO_TRANS_FUNC_def = Define `
-   (TRANS_REL_TO_TRANS_FUNC R s = if R (SOME s) NONE then NONE else (SOME (\s'. R (SOME s) (SOME s'))))`
+Definition TRANS_REL_TO_TRANS_FUNC_def:
+   (TRANS_REL_TO_TRANS_FUNC R s = if R (SOME s) NONE then NONE else (SOME (\s'. R (SOME s) (SOME s'))))
+End
 
 
-val TRANS_REL_IS_SAFE_STATE_def = Define `
-   TRANS_REL_IS_SAFE_STATE R s = ~(R (SOME s) NONE)`
+Definition TRANS_REL_IS_SAFE_STATE_def:
+   TRANS_REL_IS_SAFE_STATE R s = ~(R (SOME s) NONE)
+End
 
 
-val TRANS_REL_SAFETY_MONOTONICITY_def = Define `
+Definition TRANS_REL_SAFETY_MONOTONICITY_def:
    TRANS_REL_SAFETY_MONOTONICITY f R =
       !s1 s2. (ASL_IS_SUBSTATE f s1 s2 /\ TRANS_REL_IS_SAFE_STATE R s1) ==>
-             TRANS_REL_IS_SAFE_STATE R s2`
+             TRANS_REL_IS_SAFE_STATE R s2
+End
 
 
-val TRANS_REL_FRAME_PROPERTY_def = Define `
+Definition TRANS_REL_FRAME_PROPERTY_def:
    TRANS_REL_FRAME_PROPERTY f R =
       !s1 s2 s s'. ((SOME s = f (SOME s1) (SOME s2)) /\ TRANS_REL_IS_SAFE_STATE R s1 /\
                (R (SOME s) (SOME s'))) ==>
-              ?s1'. (SOME s' = f (SOME s1') (SOME s2)) /\ (R (SOME s1) (SOME s1'))`;
+              ?s1'. (SOME s' = f (SOME s1') (SOME s2)) /\ (R (SOME s1) (SOME s1'))
+End
 
 
 val LOCALITY_CHARACTERISATION_REL = store_thm ("LOCALITY_CHARACTERISATION_REL",
@@ -2281,11 +2327,12 @@ REPEAT STRIP_TAC THEN EQ_TAC THENL [
 
 
 
-val TRANS_FUNC_TO_TRANS_REL_def = Define
-   `TRANS_FUNC_TO_TRANS_REL f =
+Definition TRANS_FUNC_TO_TRANS_REL_def:
+    TRANS_FUNC_TO_TRANS_REL f =
       \s1 s2. if s1 = NONE then (s2 = NONE) else
             if f (THE s1) = NONE then (s2 = NONE) else
-            (IS_SOME s2 /\ ((THE s2) IN (THE (f (THE s1)))))`
+            (IS_SOME s2 /\ ((THE s2) IN (THE (f (THE s1)))))
+End
 
 val TRANS_REL_TRANS_STATE_CONV_INV = store_thm ("TRANS_REL_TRANS_STATE_CONV_INV",
 ``TRANS_REL_TO_TRANS_FUNC (TRANS_FUNC_TO_TRANS_REL f) = f``,
@@ -2298,18 +2345,20 @@ SIMP_TAC std_ss [FUN_EQ_THM, IN_DEF]);
 
 
 
-val TRANS_FUNC_SAFETY_MONOTONICITY_def =
-   Define `TRANS_FUNC_SAFETY_MONOTONICITY f (op:'a asl_action) =
+Definition TRANS_FUNC_SAFETY_MONOTONICITY_def:
+    TRANS_FUNC_SAFETY_MONOTONICITY f (op:'a asl_action) =
       !s1 s2. ASL_IS_SUBSTATE f s1 s2 /\ IS_SOME (op s1) ==>
-            IS_SOME (op s2)`;
+            IS_SOME (op s2)
+End
 
 
-val TRANS_FUNC_FRAME_PROPERTY_def =
-   Define `TRANS_FUNC_FRAME_PROPERTY f op =
+Definition TRANS_FUNC_FRAME_PROPERTY_def:
+    TRANS_FUNC_FRAME_PROPERTY f op =
 
       !s1 s2 s3 v1 v3 t. ((f (SOME s1) (SOME s2) = SOME s3) /\
                    (op s1 = SOME v1) /\ (op s3 = SOME v3) /\ (t IN v3))==>
-         ?t'. (SOME t = f (SOME t') (SOME s2)) /\ (t' IN v1)`
+         ?t'. (SOME t = f (SOME t') (SOME s2)) /\ (t' IN v1)
+End
 
 
 
@@ -2387,8 +2436,9 @@ EQ_TAC THEN STRIP_TAC THENL [
 ]);
 
 
-val HOARE_TRIPLE_def = Define `
-   HOARE_TRIPLE (P:'a set) f (Q:'a set) = (!s. s IN P ==> fasl_order (f s) (SOME Q))`
+Definition HOARE_TRIPLE_def:
+   HOARE_TRIPLE (P:'a set) f (Q:'a set) = (!s. s IN P ==> fasl_order (f s) (SOME Q))
+End
 
 
 val HOARE_TRIPLE_REWRITE = store_thm ("HOARE_TRIPLE_REWRITE",
@@ -2397,8 +2447,9 @@ val HOARE_TRIPLE_REWRITE = store_thm ("HOARE_TRIPLE_REWRITE",
 SIMP_TAC std_ss [HOARE_TRIPLE_def, fasl_order_THM]);
 
 
-val fasl_action_order_def = Define `fasl_action_order f g =
-!P Q. HOARE_TRIPLE P g Q ==> HOARE_TRIPLE P f Q`;
+Definition fasl_action_order_def:   fasl_action_order f g =
+!P Q. HOARE_TRIPLE P g Q ==> HOARE_TRIPLE P f Q
+End
 
 
 val fasl_action_order_POINTWISE_DEF = store_thm ("fasl_action_order_POINTWISE_DEF",
@@ -2469,8 +2520,9 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
 (* Lattice of local actions                                                   *)
 (* -------------------------------------------------------------------------- *)
 
-val SUP_fasl_action_order_def = Define `
-   SUP_fasl_action_order M = \x. SUP_fasl_order (IMAGE (\f. f x) M)`;
+Definition SUP_fasl_action_order_def:
+   SUP_fasl_action_order M = \x. SUP_fasl_order (IMAGE (\f. f x) M)
+End
 
 val SUP_fasl_action_order_REWRITE = store_thm ("SUP_fasl_action_order_REWRITE",
 ``!actions. SUP_fasl_action_order actions = \s.
@@ -2657,8 +2709,9 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN (
 ));
 
 
-val INF_fasl_action_order_def = Define `
-   INF_fasl_action_order M = \x. INF_fasl_order (IMAGE (\f. f x) M)`;
+Definition INF_fasl_action_order_def:
+   INF_fasl_action_order M = \x. INF_fasl_order (IMAGE (\f. f x) M)
+End
 
 
 val INF_fasl_action_order_REWRITE = store_thm ("INF_fasl_action_order_REWRITE",
@@ -2868,10 +2921,11 @@ SIMP_TAC std_ss [IS_NON_EMPTY_COMPLETE_LATTICE_def,
 (* best local actions                                                         *)
 (******************************************************************************)
 
-val best_local_action_def = Define `
+Definition best_local_action_def:
    best_local_action f P1 P2 s =
       let set = \p. ?s0 s1. ((SOME s) = f (SOME s0) (SOME s1)) /\ (s1 IN P1) /\ (p = fasl_star f (SOME P2) (SOME {s0})) in
-      INF_fasl_order set`;
+      INF_fasl_order set
+End
 
 val best_local_action_IS_LOCAL = store_thm (
   "best_local_action_IS_LOCAL",
@@ -3064,9 +3118,10 @@ METIS_TAC [best_local_action_THM]);
 
 
 
-val quant_best_local_action_def = Define `
+Definition quant_best_local_action_def:
    quant_best_local_action f qP1 qP2 =
-   INF_fasl_action_order (\g. ?x. g = best_local_action f (qP1 x) (qP2 x))`
+   INF_fasl_action_order (\g. ?x. g = best_local_action f (qP1 x) (qP2 x))
+End
 
 val quant_best_local_action_REWRITE = store_thm ("quant_best_local_action_REWRITE",
    ``quant_best_local_action f qP1 qP2 s =
@@ -3364,12 +3419,14 @@ SIMP_TAC std_ss [quant_best_local_action_REWRITE, asl_false_def, NOT_IN_EMPTY,
 (* Intuitionistic predicates                                                  *)
 (******************************************************************************)
 
-val ASL_IS_INTUITIONISTIC_def = Define `
-   ASL_IS_INTUITIONISTIC f P = (asl_star f P UNIV = P)`;
+Definition ASL_IS_INTUITIONISTIC_def:
+   ASL_IS_INTUITIONISTIC f P = (asl_star f P UNIV = P)
+End
 
-val ASL_INTUITIONISTIC_NEGATION_def = Define
-   `ASL_INTUITIONISTIC_NEGATION f P =
-   \s. !s'. ASL_IS_SEPARATE f s s' ==> ~(THE (f (SOME s) (SOME s')) IN P)`
+Definition ASL_INTUITIONISTIC_NEGATION_def:
+    ASL_INTUITIONISTIC_NEGATION f P =
+   \s. !s'. ASL_IS_SEPARATE f s s' ==> ~(THE (f (SOME s) (SOME s')) IN P)
+End
 
 val ASL_INTUITIONISTIC_NEGATION_REWRITE = store_thm ("ASL_INTUITIONISTIC_NEGATION_REWRITE",
    ``!f P. ASL_INTUITIONISTIC_NEGATION f P =
@@ -3502,9 +3559,10 @@ PROVE_TAC[ASL_IS_SUBSTATE___REFL]);
 (* Definitions of common local actions                                        *)
 (******************************************************************************)
 
-val asla_materialisation_def = Define `
+Definition asla_materialisation_def:
    asla_materialisation f p =
-      best_local_action f (asl_emp f) p`;
+      best_local_action f (asl_emp f) p
+End
 
 
 val asla_materialisation_THM = store_thm ("asla_materialisation_THM",
@@ -3529,9 +3587,10 @@ SIMP_TAC std_ss [IN_BIGINTER, IN_INTER, IN_IMAGE, IN_ABS,
 METIS_TAC[]);
 
 
-val asla_annihilation_def = Define `
+Definition asla_annihilation_def:
    asla_annihilation f p =
-      best_local_action f p (asl_emp f)`;
+      best_local_action f p (asl_emp f)
+End
 
 
 val asla_annihilation_THM = store_thm ("asla_annihilation_THM",
@@ -3652,8 +3711,9 @@ SIMP_TAC (std_ss++boolSimps.COND_elim_ss) [NOT_IN_EMPTY, IN_SING,
 METIS_TAC[NOT_EQ_FEMPTY_FUPDATE]);
 
 
-val asla_skip_def = Define `
-   asla_skip = \s. SOME {s}`;
+Definition asla_skip_def:
+   asla_skip = \s. SOME {s}
+End
 
 val ASL_IS_LOCAL_ACTION___asla_skip = store_thm ("ASL_IS_LOCAL_ACTION___asla_skip",
 ``!f. ASL_IS_LOCAL_ACTION f  asla_skip``,
@@ -3662,19 +3722,22 @@ SIMP_TAC std_ss [ASL_IS_LOCAL_ACTION___ALTERNATIVE_DEF,
    asla_skip_def, IN_SING]);
 
 
-val asla_assume_def = Define `asla_assume f P =
+Definition asla_assume_def:   asla_assume f P =
    \s. if (s IN P) then SOME {s} else
        if (s IN ASL_INTUITIONISTIC_NEGATION f P) then SOME {} else
-          NONE`;
+          NONE
+End
 
-val asla_assert_def = Define `asla_assert f P =
-   \s. if (s IN P) then SOME {s} else NONE`
+Definition asla_assert_def:   asla_assert f P =
+   \s. if (s IN P) then SOME {s} else NONE
+End
 
 
-val asla_assume_assert_def = Define `
+Definition asla_assume_assert_def:
    asla_assume_assert aa f P = \s. if (s IN P) then SOME {s} else
                   if (aa /\ s IN ASL_INTUITIONISTIC_NEGATION f P) then SOME {} else
-                  NONE`
+                  NONE
+End
 
 val asla_assume_assert_THM = store_thm ("asla_assume_assert_THM",
 ``(asla_assume_assert T = asla_assume) /\
@@ -3748,10 +3811,11 @@ SIMP_TAC std_ss [COND_RAND, COND_RATOR] THEN
 METIS_TAC[]);
 
 
-val asla_check_def = Define `
+Definition asla_check_def:
    asla_check f (a1:'a asl_action) (a2:'a asl_action) = \s:'a. if
       ?s1 s2. (SOME s = f (SOME s1) (SOME s2)) /\ IS_SOME (a1 s1) /\ IS_SOME (a2 s2)
-      then SOME {s} else NONE`;
+      then SOME {s} else NONE
+End
 
 val ASL_IS_LOCAL_ACTION___asla_check = store_thm ("ASL_IS_LOCAL_ACTION___asla_check",
 ``!f a1 a2. IS_SEPARATION_COMBINATOR f /\ ASL_IS_LOCAL_ACTION f a1 ==>
@@ -3777,8 +3841,9 @@ Q.PAT_X_ASSUM `!s1 s2 s3. P s1 s2 s3 ==> IS_SOME (a1 s3)` MATCH_MP_TAC THEN
 METIS_TAC[]);
 
 
-val asla_diverge_def = Define `
-   asla_diverge = \s. SOME {}`
+Definition asla_diverge_def:
+   asla_diverge = \s. SOME {}
+End
 
 
 val ASL_IS_LOCAL_ACTION___asla_diverge = store_thm ("ASL_IS_LOCAL_ACTION___asla_diverge",
@@ -3796,7 +3861,8 @@ SIMP_TAC std_ss [fasl_action_order_POINTWISE_DEF, asla_diverge_def,
 SIMP_TAC std_ss [FUN_EQ_THM]);
 
 
-val asla_fail_def = Define `asla_fail = \s. NONE`
+Definition asla_fail_def:   asla_fail = \s. NONE
+End
 
 val ASL_IS_LOCAL_ACTION___asla_fail = store_thm ("ASL_IS_LOCAL_ACTION___asla_fail",
 ``!f. ASL_IS_LOCAL_ACTION f  asla_fail``,
@@ -3805,10 +3871,11 @@ SIMP_TAC std_ss [ASL_IS_LOCAL_ACTION_def, asla_fail_def, fasl_star_REWRITE,
    fasl_order_THM]);
 
 
-val asla_seq_def = Define `
+Definition asla_seq_def:
    asla_seq (a1:'a asl_action) (a2:'a asl_action) = \s.
       if a1 s = NONE then NONE else
-      SUP_fasl_order (IMAGE a2 (THE (a1 s)))`;
+      SUP_fasl_order (IMAGE a2 (THE (a1 s)))
+End
 
 
 val SOME___asla_seq = store_thm ("SOME___asla_seq",
@@ -4065,9 +4132,10 @@ REPEAT STRIP_TAC THEN
 CONV_TAC (LHS_CONV (RATOR_CONV (RAND_CONV (REWR_CONV (GSYM SUP_fasl_action_order___SING))))) THEN
 ASM_SIMP_TAC std_ss [asla_seq___SUP_fasl_action_order, IN_SING]);
 
-val asla_big_seq_def = Define
-`(asla_big_seq [] = asla_skip) /\
-  (asla_big_seq (h::l) = asla_seq h (asla_big_seq l))`;
+Definition asla_big_seq_def:
+ (asla_big_seq [] = asla_skip) /\
+  (asla_big_seq (h::l) = asla_seq h (asla_big_seq l))
+End
 
 
 
@@ -4099,9 +4167,10 @@ Induct_on `l1` THENL [
 ]);
 
 
-val asla_repeat_def = Define `
+Definition asla_repeat_def:
    (asla_repeat a 0 = asla_skip) /\
-   (asla_repeat a (SUC n) = asla_seq a (asla_repeat a n))`
+   (asla_repeat a (SUC n) = asla_seq a (asla_repeat a n))
+End
 
 
 val ASL_IS_LOCAL_ACTION___asla_repeat = store_thm ("ASL_IS_LOCAL_ACTION___asla_repeat",
@@ -4135,9 +4204,10 @@ SIMP_TAC std_ss [asla_repeat_def, asla_repeat___SYM]);
 
 
 
-val asla_kleene_star_def = Define `
+Definition asla_kleene_star_def:
    asla_kleene_star a =
-   SUP_fasl_action_order {asla_repeat a n | n IN UNIV}`
+   SUP_fasl_action_order {asla_repeat a n | n IN UNIV}
+End
 
 
 val ASL_IS_LOCAL_ACTION___asla_kleene_star = store_thm ("ASL_IS_LOCAL_ACTION___asla_kleene_star",
@@ -4152,8 +4222,9 @@ ASM_SIMP_TAC std_ss [ASL_IS_LOCAL_ACTION___asla_repeat]);
 
 
 
-val asla_choice_def = Define `
-   asla_choice = SUP_fasl_action_order`
+Definition asla_choice_def:
+   asla_choice = SUP_fasl_action_order
+End
 
 val asla_choice_REWRITE = save_thm ("asla_choice_REWRITE",
 REWRITE_CONV [asla_choice_def, SUP_fasl_action_order_def] ``asla_choice actions``);
@@ -4163,8 +4234,9 @@ val ASL_IS_LOCAL_ACTION___asla_choice = save_thm ("ASL_IS_LOCAL_ACTION___asla_ch
    REWRITE_RULE [GSYM asla_choice_def] SUP_fasl_action_order_LOCAL);
 
 
-val asla_bin_choice_def = Define `
-   asla_bin_choice a1 a2 = asla_choice {a1;a2}`
+Definition asla_bin_choice_def:
+   asla_bin_choice a1 a2 = asla_choice {a1;a2}
+End
 
 val ASL_IS_LOCAL_ACTION___asla_bin_choice = store_thm ("ASL_IS_LOCAL_ACTION___asla_bin_choice",
 ``!f a1 a2. (ASL_IS_LOCAL_ACTION f a1 /\
@@ -4249,7 +4321,7 @@ val asl_predicate_def =
 
 
 
-val EVAL_asl_predicate_def = Define `
+Definition EVAL_asl_predicate_def:
    (EVAL_asl_predicate f (asl_pred_prim pp) =
        if ASL_IS_INTUITIONISTIC f (pp f) then pp f else asl_false) /\
    (EVAL_asl_predicate f asl_pred_true = asl_true) /\
@@ -4260,7 +4332,8 @@ val EVAL_asl_predicate_def = Define `
    (EVAL_asl_predicate f (asl_pred_and p1 p2) =
       asl_and (EVAL_asl_predicate f p1) (EVAL_asl_predicate f p2)) /\
    (EVAL_asl_predicate f (asl_pred_or p1 p2) =
-      asl_or (EVAL_asl_predicate f p1) (EVAL_asl_predicate f p2))`
+      asl_or (EVAL_asl_predicate f p1) (EVAL_asl_predicate f p2))
+End
 
 
 
@@ -4281,15 +4354,17 @@ REPEAT STRIP_TAC THEN (
 ));
 
 
-val EQUIV_asl_predicate_def = Define `
+Definition EQUIV_asl_predicate_def:
    EQUIV_asl_predicate f p1 p2 =
-   (EVAL_asl_predicate f p1 = EVAL_asl_predicate f p2)`
+   (EVAL_asl_predicate f p1 = EVAL_asl_predicate f p2)
+End
 
-val asl_pred_bigand_def = Define `
+Definition asl_pred_bigand_def:
        (asl_pred_bigand [] = asl_pred_true)
     /\ (asl_pred_bigand [p] = p) /\
        (asl_pred_bigand (p1::p2::L) =
-   asl_pred_and p1 (asl_pred_bigand (p2::L)))`;
+   asl_pred_and p1 (asl_pred_bigand (p2::L)))
+End
 
 
 
@@ -4309,10 +4384,11 @@ SIMP_TAC std_ss [asl_pred_bigand_def, EVAL_asl_predicate_def,
 
 
 
-val asl_predicate_IS_DECIDED_IN_STATE_def = Define `
+Definition asl_predicate_IS_DECIDED_IN_STATE_def:
    asl_predicate_IS_DECIDED_IN_STATE f s c =
    (s IN (EVAL_asl_predicate f c) \/
-    s IN (EVAL_asl_predicate f (asl_pred_neg c)))`;
+    s IN (EVAL_asl_predicate f (asl_pred_neg c)))
+End
 
 
 val asl_predicate_IS_DECIDED_IN_STATE___EXPAND_REWRITE = store_thm (
@@ -4329,10 +4405,11 @@ METIS_TAC[ASL_INTUITIONISTIC_NEGATION_IMP,
    ASL_IS_INTUITIONISTIC___EVAL_asl_predicate]);
 
 
-val asl_predicate_IS_DECIDED_def = Define `
+Definition asl_predicate_IS_DECIDED_def:
    asl_predicate_IS_DECIDED f P c =
    (!s. s IN P ==> (s IN (EVAL_asl_predicate f c) \/
-          s IN (EVAL_asl_predicate f (asl_pred_neg c))))`;
+          s IN (EVAL_asl_predicate f (asl_pred_neg c))))
+End
 
 
 
@@ -4567,11 +4644,16 @@ val asl_prim_command_def =
 
 
 val asl_prim_command_11 = fetch "-" "asl_prim_command_11";
-val asl_pc_assume_def  = Define `asl_pc_assume P = asl_pc_shallow_command (\f. asla_assume f (EVAL_asl_predicate f P))`
-val asl_pc_assert_def  = Define `asl_pc_assert P = asl_pc_shallow_command (\f. asla_assert f (EVAL_asl_predicate f P))`
-val asl_pc_skip_def    = Define `asl_pc_skip     = asl_pc_shallow_command (K asla_skip)`;
-val asl_pc_fail_def    = Define `asl_pc_fail     = asl_pc_shallow_command (K asla_fail)`;
-val asl_pc_diverge_def = Define `asl_pc_diverge  = asl_pc_shallow_command (K asla_diverge)`;
+Definition asl_pc_assume_def:    asl_pc_assume P = asl_pc_shallow_command (\f. asla_assume f (EVAL_asl_predicate f P))
+End
+Definition asl_pc_assert_def:    asl_pc_assert P = asl_pc_shallow_command (\f. asla_assert f (EVAL_asl_predicate f P))
+End
+Definition asl_pc_skip_def:      asl_pc_skip     = asl_pc_shallow_command (K asla_skip)
+End
+Definition asl_pc_fail_def:      asl_pc_fail     = asl_pc_shallow_command (K asla_fail)
+End
+Definition asl_pc_diverge_def:   asl_pc_diverge  = asl_pc_shallow_command (K asla_diverge)
+End
 
 
 val asl_pc_assume_true___skip = store_thm (
@@ -4596,9 +4678,10 @@ SIMP_TAC std_ss [asl_pc_diverge_def,
 SIMP_TAC std_ss [FUN_EQ_THM]);
 
 
-val EVAL_asl_prim_command_def = Define `
+Definition EVAL_asl_prim_command_def:
    EVAL_asl_prim_command f (asl_pc_shallow_command sc) =
-      if (ASL_IS_LOCAL_ACTION f (sc f)) then sc f else asla_fail`
+      if (ASL_IS_LOCAL_ACTION f (sc f)) then sc f else asla_fail
+End
 
 
 val EVAL_asl_prim_command_THM = store_thm ("EVAL_asl_prim_command_THM",
@@ -4650,7 +4733,7 @@ val asl_atomic_action_11 = fetch "-" "asl_atomic_action_11";
 val asl_atomic_action_distinct = fetch "-" "asl_atomic_action_distinct";
 
 
-val ASL_ATOMIC_ACTION_SEM_def = Define `
+Definition ASL_ATOMIC_ACTION_SEM_def:
 (ASL_ATOMIC_ACTION_SEM (f, lock_env) (asl_aa_pc pc) = EVAL_asl_prim_command f pc) /\
 
 (ASL_ATOMIC_ACTION_SEM (f, lock_env) (asl_aa_check pc1 pc2) = (asla_check f (EVAL_asl_prim_command f pc1) (EVAL_asl_prim_command f pc2))) /\
@@ -4659,7 +4742,8 @@ val ASL_ATOMIC_ACTION_SEM_def = Define `
 asla_materialisation f (lock_env l)) /\
 
 (ASL_ATOMIC_ACTION_SEM (f, lock_env) (asl_aa_verhoog l) =
-asla_annihilation f (lock_env l))`;
+asla_annihilation f (lock_env l))
+End
 
 
 val ASL_IS_LOCAL_ACTION___ASL_ATOMIC_ACTION_SEM = store_thm ("ASL_IS_LOCAL_ACTION___ASL_ATOMIC_ACTION_SEM",
@@ -4680,9 +4764,10 @@ Cases_on `aa` THEN SIMP_TAC std_ss [ASL_ATOMIC_ACTION_SEM_def] THENL [
 ]);
 
 
-val ASL_IS_PRIM_COMMAND_ATOMIC_ACTION_def = Define `
+Definition ASL_IS_PRIM_COMMAND_ATOMIC_ACTION_def:
    (ASL_IS_PRIM_COMMAND_ATOMIC_ACTION (asl_aa_pc _)= T) /\
-   (ASL_IS_PRIM_COMMAND_ATOMIC_ACTION _ = F)`
+   (ASL_IS_PRIM_COMMAND_ATOMIC_ACTION _ = F)
+End
 
 val ASL_IS_PRIM_COMMAND_ATOMIC_ACTION_EXISTS = store_thm (
    "ASL_IS_PRIM_COMMAND_ATOMIC_ACTION_EXISTS",
@@ -4694,21 +4779,25 @@ SIMP_TAC std_ss [ASL_IS_PRIM_COMMAND_ATOMIC_ACTION_def, asl_atomic_action_11,
 
 
 
-val ASL_GET_PRIM_COMMAND_ATOMIC_ACTION_def = Define `
-   (ASL_GET_PRIM_COMMAND_ATOMIC_ACTION (asl_aa_pc pc)= pc)`
+Definition ASL_GET_PRIM_COMMAND_ATOMIC_ACTION_def:
+   (ASL_GET_PRIM_COMMAND_ATOMIC_ACTION (asl_aa_pc pc)= pc)
+End
 
-val ASL_IS_CHECK_ATOMIC_ACTION_def = Define `
+Definition ASL_IS_CHECK_ATOMIC_ACTION_def:
    (ASL_IS_CHECK_ATOMIC_ACTION (asl_aa_check pc1 pc2) = T) /\
-   (ASL_IS_CHECK_ATOMIC_ACTION _ = F)`;
+   (ASL_IS_CHECK_ATOMIC_ACTION _ = F)
+End
 
-val ASL_IS_LOCK_ATOMIC_ACTION_def = Define `
+Definition ASL_IS_LOCK_ATOMIC_ACTION_def:
    (ASL_IS_LOCK_ATOMIC_ACTION L (asl_aa_prolaag l) = (l IN L)) /\
    (ASL_IS_LOCK_ATOMIC_ACTION L (asl_aa_verhoog l) = (l IN L)) /\
-   (ASL_IS_LOCK_ATOMIC_ACTION _ _ = F)`
+   (ASL_IS_LOCK_ATOMIC_ACTION _ _ = F)
+End
 
-val ASL_IS_SING_LOCK_ATOMIC_ACTION_def = Define `
+Definition ASL_IS_SING_LOCK_ATOMIC_ACTION_def:
    ASL_IS_SING_LOCK_ATOMIC_ACTION l =
-   ASL_IS_LOCK_ATOMIC_ACTION {l}`;
+   ASL_IS_LOCK_ATOMIC_ACTION {l}
+End
 
 val ASL_IS_SING_LOCK_ATOMIC_ACTION_REWRITE = save_thm ("ASL_IS_SING_LOCK_ATOMIC_ACTION_REWRITE",
    let
@@ -4731,9 +4820,12 @@ SIMP_TAC std_ss [ASL_IS_SING_LOCK_ATOMIC_ACTION_REWRITE,
 
 
 
-val asl_aa_skip_def = Define `asl_aa_skip = asl_aa_pc asl_pc_skip`;
-val asl_aa_diverge_def = Define `asl_aa_diverge = asl_aa_pc asl_pc_diverge`;
-val asl_aa_fail_def = Define `asl_aa_fail = asl_aa_pc asl_pc_fail`;
+Definition asl_aa_skip_def:   asl_aa_skip = asl_aa_pc asl_pc_skip
+End
+Definition asl_aa_diverge_def:   asl_aa_diverge = asl_aa_pc asl_pc_diverge
+End
+Definition asl_aa_fail_def:   asl_aa_fail = asl_aa_pc asl_pc_fail
+End
 
 
 
@@ -4744,8 +4836,9 @@ val asl_aa_fail_def = Define `asl_aa_fail = asl_aa_pc asl_pc_fail`;
 val _ = type_abbrev("asl_trace",
    Type `:('lock, 'state) asl_atomic_action list`);
 
-val ASL_TRACE_SEM_def =
-   Define `ASL_TRACE_SEM xenv t = asla_big_seq (MAP (ASL_ATOMIC_ACTION_SEM xenv) t)`;
+Definition ASL_TRACE_SEM_def:
+    ASL_TRACE_SEM xenv t = asla_big_seq (MAP (ASL_ATOMIC_ACTION_SEM xenv) t)
+End
 
 val ASL_IS_LOCAL_ACTION___ASL_TRACE_SEM = store_thm ("ASL_IS_LOCAL_ACTION___ASL_TRACE_SEM",
 ``!f lock_env t.
@@ -4904,13 +4997,14 @@ Termination
 End
 
 
-val ASL_TRACE_ZIP_PRIME_def = Define
-   `(ASL_TRACE_ZIP_PRIME [] t = {t}) /\
+Definition ASL_TRACE_ZIP_PRIME_def:
+    (ASL_TRACE_ZIP_PRIME [] t = {t}) /\
    (ASL_TRACE_ZIP_PRIME t [] = {t}) /\
    (ASL_TRACE_ZIP_PRIME (aa1::t1) (aa2::t2) =
       (let z1 = IMAGE (\x. aa1::x) (ASL_TRACE_ZIP t1 (aa2::t2)) in
        let z2 = IMAGE (\x. aa2::x) (ASL_TRACE_ZIP (aa1::t1) t2) in
-       z1 UNION z2))`;
+       z1 UNION z2))
+End
 
 
 val ASL_TRACE_ZIP_THM = store_thm ("ASL_TRACE_ZIP_THM",
@@ -5312,8 +5406,9 @@ ASM_SIMP_TAC std_ss []);
 (* Synchroniced traces                                                         *)
 (* -------------------------------------------------------------------------- *)
 
-val ASL_TRACE_GET_LOCKS_def = Define `
-   ASL_TRACE_GET_LOCKS L = FILTER (ASL_IS_LOCK_ATOMIC_ACTION L)`
+Definition ASL_TRACE_GET_LOCKS_def:
+   ASL_TRACE_GET_LOCKS L = FILTER (ASL_IS_LOCK_ATOMIC_ACTION L)
+End
 
 val ASL_TRACE_GET_LOCKS_REWRITE = store_thm ("ASL_TRACE_GET_LOCKS_REWRITE",
    ``(ASL_TRACE_GET_LOCKS L [] = []) /\
@@ -5331,8 +5426,9 @@ Induct_on `t` THENL [
 ]);
 
 
-val ASL_TRACE_GET_SING_LOCKS_def = Define `
-   ASL_TRACE_GET_SING_LOCKS l = ASL_TRACE_GET_LOCKS {l}`
+Definition ASL_TRACE_GET_SING_LOCKS_def:
+   ASL_TRACE_GET_SING_LOCKS l = ASL_TRACE_GET_LOCKS {l}
+End
 
 val ASL_TRACE_GET_SING_LOCKS_REWRITE = store_thm ("ASL_TRACE_GET_SING_LOCKS_REWRITE",
    ``(ASL_TRACE_GET_SING_LOCKS l [] = []) /\
@@ -5344,8 +5440,9 @@ SIMP_TAC list_ss [ASL_TRACE_GET_SING_LOCKS_def,
    ASL_TRACE_GET_LOCKS_REWRITE, ASL_IS_SING_LOCK_ATOMIC_ACTION_def]);
 
 
-val ASL_TRACE_REMOVE_LOCKS_def = Define `
-   ASL_TRACE_REMOVE_LOCKS L = FILTER (\x. ~ (ASL_IS_LOCK_ATOMIC_ACTION L x))`
+Definition ASL_TRACE_REMOVE_LOCKS_def:
+   ASL_TRACE_REMOVE_LOCKS L = FILTER (\x. ~ (ASL_IS_LOCK_ATOMIC_ACTION L x))
+End
 
 
 val ASL_TRACE_REMOVE_LOCKS_REWRITE = store_thm ("ASL_TRACE_REMOVE_LOCKS_REWRITE",
@@ -5383,13 +5480,15 @@ REPEAT CONJ_TAC THEN (
 ));
 
 
-val ASL_TRACE_IS_LOCK_SYNCHRONISED_def = Define `
+Definition ASL_TRACE_IS_LOCK_SYNCHRONISED_def:
    ASL_TRACE_IS_LOCK_SYNCHRONISED l t =
-      LIST_STAR [asl_aa_prolaag l;asl_aa_verhoog l] (ASL_TRACE_GET_LOCKS {l} t)`;
+      LIST_STAR [asl_aa_prolaag l;asl_aa_verhoog l] (ASL_TRACE_GET_LOCKS {l} t)
+End
 
-val ASL_TRACE_IS_NUM_LOCK_SYNCHRONISED_def = Define `
+Definition ASL_TRACE_IS_NUM_LOCK_SYNCHRONISED_def:
    ASL_TRACE_IS_NUM_LOCK_SYNCHRONISED n l t =
-      ((ASL_TRACE_GET_LOCKS {l} t) = LIST_NUM_STAR n [asl_aa_prolaag l;asl_aa_verhoog l])`;
+      ((ASL_TRACE_GET_LOCKS {l} t) = LIST_NUM_STAR n [asl_aa_prolaag l;asl_aa_verhoog l])
+End
 
 val ASL_TRACE_IS_LOCK_SYNCHRONISED___NUM = store_thm ("ASL_TRACE_IS_LOCK_SYNCHRONISED___NUM",
 ``      ASL_TRACE_IS_LOCK_SYNCHRONISED l t =
@@ -5399,14 +5498,16 @@ SIMP_TAC std_ss [ASL_TRACE_IS_LOCK_SYNCHRONISED_def, ASL_TRACE_IS_NUM_LOCK_SYNCH
    LIST_STAR_def]);
 
 
-val ASL_TRACE_IS_SYNCHRONISED_def = Define `
+Definition ASL_TRACE_IS_SYNCHRONISED_def:
    ASL_TRACE_IS_SYNCHRONISED t =
-   !l. ASL_TRACE_IS_LOCK_SYNCHRONISED l t`
+   !l. ASL_TRACE_IS_LOCK_SYNCHRONISED l t
+End
 
 
-val ASL_TRACE_IS_LOCK_FREE_def = Define `
+Definition ASL_TRACE_IS_LOCK_FREE_def:
    ASL_TRACE_IS_LOCK_FREE L t =
-   EVERY (\a. ~(ASL_IS_LOCK_ATOMIC_ACTION L a)) t`;
+   EVERY (\a. ~(ASL_IS_LOCK_ATOMIC_ACTION L a)) t
+End
 
 
 val ASL_TRACE_IS_LOCK_FREE_REWRITE = store_thm ("ASL_TRACE_IS_LOCK_FREE_REWRITE",
@@ -5447,24 +5548,36 @@ val _ = type_abbrev ("asl_program", Type `:('a, 'b, 'c, 'd) asl_proto_trace set`
 (* Some simple programs / proto traces  *)
 (* ------------------------------------ *)
 
-val asl_pt_skip_def = Define `asl_pt_skip = asl_pt_prim_command (asl_pc_skip)`;
-val asl_pt_diverge_def = Define `asl_pt_diverge = asl_pt_prim_command (asl_pc_diverge)`;
+Definition asl_pt_skip_def:   asl_pt_skip = asl_pt_prim_command (asl_pc_skip)
+End
+Definition asl_pt_diverge_def:   asl_pt_diverge = asl_pt_prim_command (asl_pc_diverge)
+End
 
 
-val asl_prog_prim_command_def = Define `asl_prog_prim_command pc = {asl_pt_prim_command pc}`;
-val asl_prog_skip_def = Define `asl_prog_skip = asl_prog_prim_command asl_pc_skip`;
-val asl_prog_diverge_def = Define `asl_prog_diverge = asl_prog_prim_command (asl_pc_diverge)`;
-val asl_prog_assume_def = Define `asl_prog_assume P = asl_prog_prim_command (asl_pc_assume P)`;
-val asl_prog_assert_def = Define `asl_prog_assert P = asl_prog_prim_command (asl_pc_assert P)`;
-val asl_prog_fail_def = Define `asl_prog_fail = asl_prog_prim_command asl_pc_fail`;
-val asl_prog_best_local_action_def = Define `asl_prog_best_local_action P Q = asl_prog_prim_command (asl_pc_shallow_command (\f. best_local_action f P Q))`
-val asl_prog_quant_best_local_action_def = Define `asl_prog_quant_best_local_action qP qQ = asl_prog_prim_command (asl_pc_shallow_command (\f. quant_best_local_action f qP qQ))`
+Definition asl_prog_prim_command_def:   asl_prog_prim_command pc = {asl_pt_prim_command pc}
+End
+Definition asl_prog_skip_def:   asl_prog_skip = asl_prog_prim_command asl_pc_skip
+End
+Definition asl_prog_diverge_def:   asl_prog_diverge = asl_prog_prim_command (asl_pc_diverge)
+End
+Definition asl_prog_assume_def:   asl_prog_assume P = asl_prog_prim_command (asl_pc_assume P)
+End
+Definition asl_prog_assert_def:   asl_prog_assert P = asl_prog_prim_command (asl_pc_assert P)
+End
+Definition asl_prog_fail_def:   asl_prog_fail = asl_prog_prim_command asl_pc_fail
+End
+Definition asl_prog_best_local_action_def:   asl_prog_best_local_action P Q = asl_prog_prim_command (asl_pc_shallow_command (\f. best_local_action f P Q))
+End
+Definition asl_prog_quant_best_local_action_def:   asl_prog_quant_best_local_action qP qQ = asl_prog_prim_command (asl_pc_shallow_command (\f. quant_best_local_action f qP qQ))
+End
 
-val asl_prog_seq_def = Define `asl_prog_seq p1 p2 =
-   \pt. ?pt1 pt2. (pt = asl_pt_seq pt1 pt2) /\ pt1 IN p1 /\ pt2 IN (asl_pt_diverge INSERT p2)`;
+Definition asl_prog_seq_def:   asl_prog_seq p1 p2 =
+   \pt. ?pt1 pt2. (pt = asl_pt_seq pt1 pt2) /\ pt1 IN p1 /\ pt2 IN (asl_pt_diverge INSERT p2)
+End
 
 
-val asl_prog_choice_def = Define `asl_prog_choice = $UNION`;
+Definition asl_prog_choice_def:   asl_prog_choice = $UNION
+End
 
 
 val asl_prog_seq_choice = store_thm ("asl_prog_seq_choice",
@@ -5483,46 +5596,55 @@ REPEAT STRIP_TAC THEN (
 ));
 
 
-val asl_prog_repeat_num_def = Define `
+Definition asl_prog_repeat_num_def:
 (asl_prog_repeat_num 0 p = asl_prog_skip) /\
 (asl_prog_repeat_num (SUC n) p =
 \pt. ?pt1 pt2. (pt = asl_pt_seq pt1 pt2) /\ pt1 IN p /\
-               pt2 IN asl_prog_repeat_num n p)`;
+               pt2 IN asl_prog_repeat_num n p)
+End
 
-val asl_prog_ndet_def = Define `asl_prog_ndet (pset:('a, 'b, 'c, 'd) asl_program set) =
-             BIGUNION pset`;
+Definition asl_prog_ndet_def:   asl_prog_ndet (pset:('a, 'b, 'c, 'd) asl_program set) =
+             BIGUNION pset
+End
 
 val asl_prog_choice_ALTERNATIVE_DEF = store_thm ("asl_prog_choice_ALTERNATIVE_DEF",
 ``!p1 p2. asl_prog_choice p1 p2 = asl_prog_ndet {p1;p2}``,
 SIMP_TAC std_ss [asl_prog_ndet_def, asl_prog_choice_def, BIGUNION_INSERT, BIGUNION_EMPTY, UNION_EMPTY]);
 
 
-val asl_prog_block_def = Define `(asl_prog_block [] = asl_prog_skip) /\
+Definition asl_prog_block_def:   (asl_prog_block [] = asl_prog_skip) /\
               (asl_prog_block [p1] = p1) /\
-              (asl_prog_block (p1::p2::L) = asl_prog_seq p1 (asl_prog_block (p2::L)))`;
+              (asl_prog_block (p1::p2::L) = asl_prog_seq p1 (asl_prog_block (p2::L)))
+End
 
 
-val asl_prog_kleene_star_def = Define `asl_prog_kleene_star p =
-\pt. ?n. pt IN asl_prog_repeat_num n p`;
+Definition asl_prog_kleene_star_def:   asl_prog_kleene_star p =
+\pt. ?n. pt IN asl_prog_repeat_num n p
+End
 
-val asl_prog_procedure_call_def = Define `asl_prog_procedure_call p arg = {asl_pt_procedure_call p arg}`;
+Definition asl_prog_procedure_call_def:   asl_prog_procedure_call p arg = {asl_pt_procedure_call p arg}
+End
 
-val asl_prog_parallel_def = Define `asl_prog_parallel p1 p2 =
-\pt. ?pt1 pt2. (pt = asl_pt_parallel pt1 pt2) /\ pt1 IN p1 /\ pt2 IN p2`;
+Definition asl_prog_parallel_def:   asl_prog_parallel p1 p2 =
+\pt. ?pt1 pt2. (pt = asl_pt_parallel pt1 pt2) /\ pt1 IN p1 /\ pt2 IN p2
+End
 
-val asl_prog_lock_declaration_def = Define `asl_prog_lock_declaration l p =
-IMAGE (asl_pt_lock_declaration l) p`;
+Definition asl_prog_lock_declaration_def:   asl_prog_lock_declaration l p =
+IMAGE (asl_pt_lock_declaration l) p
+End
 
-val asl_prog_critical_section_def = Define `asl_prog_critical_section l p =
-IMAGE (asl_pt_critical_section l) p`;
+Definition asl_prog_critical_section_def:   asl_prog_critical_section l p =
+IMAGE (asl_pt_critical_section l) p
+End
 
-val asl_prog_cond_critical_section_def = Define `asl_prog_cond_critical_section l c p =
+Definition asl_prog_cond_critical_section_def:   asl_prog_cond_critical_section l c p =
 asl_prog_critical_section l (asl_prog_seq
             (asl_prog_prim_command (asl_pc_assume c))
-            p)`;
+            p)
+End
 
 
-val asl_prog_choose_constants_def = Define `
+Definition asl_prog_choose_constants_def:
 asl_prog_choose_constants prog expL =
 
 asl_prog_ndet
@@ -5532,18 +5654,20 @@ asl_prog_seq
       (MAP (\x. asl_pred_prim (\f s. (FST x) s = SOME (SND x)))
       (ZIP (expL, constL))))))
    (prog constL))
- (\l. LENGTH l = LENGTH expL))`;
+ (\l. LENGTH l = LENGTH expL))
+End
 
 
 
-val asl_prog_ext_procedure_call_def = Define `
+Definition asl_prog_ext_procedure_call_def:
 (asl_prog_ext_procedure_call name (ref_argL, val_argL)) =
 asl_prog_choose_constants
    (\constL.(asl_prog_procedure_call name (ref_argL, constL)))
-   val_argL`;
+   val_argL
+End
 
 
-val asl_prog_ext_parallel_procedure_call_def = Define `
+Definition asl_prog_ext_parallel_procedure_call_def:
 asl_prog_ext_parallel_procedure_call name1 (ref_argL1, val_argL1)
                   name2 (ref_argL2, val_argL2) =
 
@@ -5553,15 +5677,17 @@ asl_prog_choose_constants
         (asl_prog_procedure_call name1 (ref_argL1, constL1))
         (asl_prog_procedure_call name2 (ref_argL2, constL2))))
           val_argL2)
-   val_argL1`;
+   val_argL1
+End
 
 
-val asl_procedure_call_preserve_names_wrapper_def = Define `
+Definition asl_procedure_call_preserve_names_wrapper_def:
     asl_procedure_call_preserve_names_wrapper ref_args val_args c =
    \ (arg_refL, arg_valL).
     asl_and (K (LIST_UNROLL_GIVEN_ELEMENT_NAMES arg_valL val_args /\
            LIST_UNROLL_GIVEN_ELEMENT_NAMES arg_refL ref_args))
-       (c (arg_refL, arg_valL))`;
+       (c (arg_refL, arg_valL))
+End
 
 
 val asl_prog_best_local_action___ALTERNATIVE_DEF = store_thm ("asl_prog_best_local_action___ALTERNATIVE_DEF",
@@ -5583,7 +5709,7 @@ ASM_SIMP_TAC std_ss [asl_procedure_call_preserve_names_wrapper_def,
    LIST_UNROLL_GIVEN_ELEMENT_NAMES_def, asl_bool_REWRITES]);
 
 
-val asl_prog_cond_def = Define `
+Definition asl_prog_cond_def:
    asl_prog_cond c pTrue pFalse =
       asl_prog_choice
          (asl_prog_seq
@@ -5593,9 +5719,10 @@ val asl_prog_cond_def = Define `
          (asl_prog_seq
             (asl_prog_prim_command (asl_pc_assume (asl_pred_neg c)))
             pFalse
-         )`;
+         )
+End
 
-val asl_prog_while_def = Define `
+Definition asl_prog_while_def:
    asl_prog_while c p =
       asl_prog_seq
          (asl_prog_kleene_star
@@ -5603,12 +5730,14 @@ val asl_prog_while_def = Define `
                (asl_prog_prim_command (asl_pc_assume c))
                p
             ))
-         (asl_prog_prim_command (asl_pc_assume (asl_pred_neg c)))`;
+         (asl_prog_prim_command (asl_pc_assume (asl_pred_neg c)))
+End
 
 
-val asl_prog_forall_def = Define `
+Definition asl_prog_forall_def:
    asl_prog_forall body =
-      BIGUNION (IMAGE body UNIV)`;
+      BIGUNION (IMAGE body UNIV)
+End
 
 
 val asl_prog_assume_true = store_thm (
@@ -5624,18 +5753,20 @@ SIMP_TAC std_ss [asl_prog_assume_def,
    asl_prog_diverge_def, asl_pc_assume_false___diverge]);
 
 
-val asl_prog_aquire_lock_def =
-Define `asl_prog_aquire_lock c P =
+Definition asl_prog_aquire_lock_def:
+ asl_prog_aquire_lock c P =
    asl_prog_seq
    (asl_prog_prim_command (asl_pc_shallow_command
         (\f. asla_materialisation f P)))
-   (asl_prog_prim_command (asl_pc_assume c))`;
+   (asl_prog_prim_command (asl_pc_assume c))
+End
 
 
-val asl_prog_release_lock_def =
-Define `asl_prog_release_lock P =
+Definition asl_prog_release_lock_def:
+ asl_prog_release_lock P =
    (asl_prog_prim_command (asl_pc_shallow_command
-        (\f. asla_annihilation f P)))`;
+        (\f. asla_annihilation f P)))
+End
 
 
 val asl_prog_best_local_action___false_pre =
@@ -5705,37 +5836,46 @@ METIS_TAC[best_local_action___false_pre]);
 (* Comments                             *)
 (* ------------------------------------ *)
 
-val asl_comment_loop_invariant_def = Define `
-asl_comment_loop_invariant x p = p`
+Definition asl_comment_loop_invariant_def:
+asl_comment_loop_invariant x p = p
+End
 
-val asl_comment_block_spec_def = Define `
-asl_comment_block_spec x p = p`
+Definition asl_comment_block_spec_def:
+asl_comment_block_spec x p = p
+End
 
-val asl_comment_loop_spec_def = Define `
-asl_comment_loop_spec x p = p`
+Definition asl_comment_loop_spec_def:
+asl_comment_loop_spec x p = p
+End
 
-val asl_comment_loop_unroll_def = Define `
-asl_comment_loop_unroll (x:num) p = p`
+Definition asl_comment_loop_unroll_def:
+asl_comment_loop_unroll (x:num) p = p
+End
 
-val asl_comment_location_def = Define `
-asl_comment_location (x:label list) p = p`
+Definition asl_comment_location_def:
+asl_comment_location (x:label list) p = p
+End
 
-val asl_comment_location_string_def = Define `
-asl_comment_location_string (x:string) p = p`
+Definition asl_comment_location_string_def:
+asl_comment_location_string (x:string) p = p
+End
 
-val asl_comment_location2_def = Define `
-asl_comment_location2 (x:label list) p = p`
+Definition asl_comment_location2_def:
+asl_comment_location2 (x:label list) p = p
+End
 
 val asl_comment_location2_THM = store_thm ("asl_comment_location2_THM",
 ``asl_comment_location2 = asl_comment_location``,
 SIMP_TAC std_ss [FUN_EQ_THM, asl_comment_location2_def,
  asl_comment_location_def])
 
-val asl_comment_assert_def = Define `
-asl_comment_assert (qP:'e -> 'd set) = asl_prog_skip:('a,'b','c,'d) asl_program`;
+Definition asl_comment_assert_def:
+asl_comment_assert (qP:'e -> 'd set) = asl_prog_skip:('a,'b','c,'d) asl_program
+End
 
-val asl_comment_abstraction_def = Define `
-asl_comment_abstraction (x:label) p = p`
+Definition asl_comment_abstraction_def:
+asl_comment_abstraction (x:label) p = p
+End
 
 
 val comments_thmL = [asl_comment_location_def,
@@ -5797,18 +5937,21 @@ CONJ_TAC THENL [
 End
 
 
-val ASL_PROTO_TRACES_EVAL_def = Define `
+Definition ASL_PROTO_TRACES_EVAL_def:
    ASL_PROTO_TRACES_EVAL penv prog =
-   \t. ?n. t IN (ASL_PROTO_TRACES_EVAL_PROC n penv prog)`;
+   \t. ?n. t IN (ASL_PROTO_TRACES_EVAL_PROC n penv prog)
+End
 
 
-val ASL_PROGRAM_TRACES_PROC_def = Define `
+Definition ASL_PROGRAM_TRACES_PROC_def:
    ASL_PROGRAM_TRACES_PROC n penv prog =
-      BIGUNION (IMAGE (ASL_PROTO_TRACES_EVAL_PROC n penv) prog)`;
+      BIGUNION (IMAGE (ASL_PROTO_TRACES_EVAL_PROC n penv) prog)
+End
 
-val ASL_PROGRAM_TRACES_def = Define `
+Definition ASL_PROGRAM_TRACES_def:
    ASL_PROGRAM_TRACES penv prog =
-      BIGUNION (IMAGE (ASL_PROTO_TRACES_EVAL penv) prog)`;
+      BIGUNION (IMAGE (ASL_PROTO_TRACES_EVAL penv) prog)
+End
 
 
 val ASL_PROGRAM_TRACES_PROC_IN_THM2 = store_thm ("ASL_PROGRAM_TRACES_PROC_IN_THM2",
@@ -6363,8 +6506,9 @@ ASM_SIMP_TAC std_ss []);
 (* Synchronising / lock balancing                                             *)
 (******************************************************************************)
 
-val ASL_TRACE_REMOVE_CHECKS_def = Define `
-   ASL_TRACE_REMOVE_CHECKS = FILTER (\x. ~ (ASL_IS_CHECK_ATOMIC_ACTION x))`
+Definition ASL_TRACE_REMOVE_CHECKS_def:
+   ASL_TRACE_REMOVE_CHECKS = FILTER (\x. ~ (ASL_IS_CHECK_ATOMIC_ACTION x))
+End
 
 val ASL_TRACE_REMOVE_CHECKS_APPEND = store_thm ("ASL_TRACE_REMOVE_CHECKS_APPEND",
 ``      !t1 t2. ASL_TRACE_REMOVE_CHECKS (t1 ++ t2) =
@@ -6445,17 +6589,19 @@ METIS_TAC[asla_seq___ACTION_ORDER]);
 
 
 
-val ASL_TRACE_IS_LOCK_BALANCED_LOCK_def = Define `
+Definition ASL_TRACE_IS_LOCK_BALANCED_LOCK_def:
    ASL_TRACE_IS_LOCK_BALANCED_LOCK l t =
       (LIST_ELEM_COUNT (asl_aa_prolaag l) t =
-       LIST_ELEM_COUNT (asl_aa_verhoog l) t)`
+       LIST_ELEM_COUNT (asl_aa_verhoog l) t)
+End
 
-val ASL_TRACE_IS_LOCK_BALANCED_def = Define `
+Definition ASL_TRACE_IS_LOCK_BALANCED_def:
    ASL_TRACE_IS_LOCK_BALANCED t =
-      !l. ASL_TRACE_IS_LOCK_BALANCED_LOCK l t`
+      !l. ASL_TRACE_IS_LOCK_BALANCED_LOCK l t
+End
 
 
-val ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_def = Define `
+Definition ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_def:
    (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n [] = (n = 0)) /\
 
    (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n ((asl_aa_prolaag l')::t) =
@@ -6477,7 +6623,7 @@ val ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_def = Define `
 
    (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n (_::t) =
          ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n t)
-   `;
+End
 
 
 
@@ -6503,9 +6649,10 @@ SIMP_TAC std_ss [ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_def,
 
 
 
-val ASL_TRACE_IS_STRONG_LOCK_BALANCED_def = Define `
+Definition ASL_TRACE_IS_STRONG_LOCK_BALANCED_def:
    ASL_TRACE_IS_STRONG_LOCK_BALANCED t =
-      !l. ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l 0 t`
+      !l. ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l 0 t
+End
 
 
 
@@ -6828,16 +6975,18 @@ Induct_on `u1` THENL [
 
 
 
-val ASL_TRACE_LOCK_FLAT_def = Define `
+Definition ASL_TRACE_LOCK_FLAT_def:
    (ASL_TRACE_LOCK_FLAT l [] = []) /\
    (ASL_TRACE_LOCK_FLAT l [t] = t) /\
    (ASL_TRACE_LOCK_FLAT l (t1::t2::L) =
-      t1++((asl_aa_prolaag l)::t2)++((asl_aa_verhoog l)::(ASL_TRACE_LOCK_FLAT l L)))`;
+      t1++((asl_aa_prolaag l)::t2)++((asl_aa_verhoog l)::(ASL_TRACE_LOCK_FLAT l L)))
+End
 
-val ASL_TRACE_INV_LOCK_FLAT_def = Define `
+Definition ASL_TRACE_INV_LOCK_FLAT_def:
    ASL_TRACE_INV_LOCK_FLAT l tl =
       (asl_aa_verhoog l::ASL_TRACE_LOCK_FLAT l tl ++
-         [asl_aa_prolaag l])`
+         [asl_aa_prolaag l])
+End
 
 val ASL_TRACE_INV_LOCK_FLAT_REWRITE = store_thm ("ASL_TRACE_INV_LOCK_FLAT_REWRITE",
 ``     (ASL_TRACE_INV_LOCK_FLAT l [] = [asl_aa_verhoog l; asl_aa_prolaag l]) /\
@@ -8046,18 +8195,21 @@ REPEAT STRIP_TAC THENL [
 (* Program semantic                                                           *)
 (******************************************************************************)
 
-val ASL_TRACE_SET_SEM_def = Define `
+Definition ASL_TRACE_SET_SEM_def:
    ASL_TRACE_SET_SEM xenv ts =
-   SUP_fasl_action_order (IMAGE (ASL_TRACE_SEM xenv) ts)`
+   SUP_fasl_action_order (IMAGE (ASL_TRACE_SEM xenv) ts)
+End
 
 
-val ASL_PROGRAM_SEM_def = Define `
+Definition ASL_PROGRAM_SEM_def:
    ASL_PROGRAM_SEM xenv penv prog =
-   ASL_TRACE_SET_SEM xenv (ASL_PROGRAM_TRACES penv prog)`;
+   ASL_TRACE_SET_SEM xenv (ASL_PROGRAM_TRACES penv prog)
+End
 
-val ASL_PROGRAM_SEM_PROC_def = Define `
+Definition ASL_PROGRAM_SEM_PROC_def:
    ASL_PROGRAM_SEM_PROC n xenv penv prog =
-   ASL_TRACE_SET_SEM xenv (ASL_PROGRAM_TRACES_PROC n penv prog)`;
+   ASL_TRACE_SET_SEM xenv (ASL_PROGRAM_TRACES_PROC n penv prog)
+End
 
 
 val SUP_fasl_order___BIGUNION = store_thm ("SUP_fasl_order___BIGUNION",
@@ -8165,12 +8317,13 @@ MATCH_MP_TAC ASL_PROGRAM_TRACES_PROC_SUBSET THEN
 ASM_REWRITE_TAC[]);
 
 
-val ASL_IS_EQUIV_PENV_PROC_def = Define `
+Definition ASL_IS_EQUIV_PENV_PROC_def:
    ASL_IS_EQUIV_PENV_PROC m penv penv' =
    (((FDOM penv) = (FDOM penv')) /\
    (!proc. proc IN (FDOM penv) ==>
    (!arg. (ASL_PROGRAM_TRACES_PROC m penv (asl_prog_procedure_call proc arg)) =
-      (ASL_PROGRAM_TRACES_PROC m penv' (asl_prog_procedure_call proc arg)))))`
+      (ASL_PROGRAM_TRACES_PROC m penv' (asl_prog_procedure_call proc arg)))))
+End
 
 
 val ASL_IS_EQUIV_PENV_PROC___ZERO = store_thm ("ASL_IS_EQUIV_PENV_PROC___ZERO",
@@ -8843,9 +8996,10 @@ SIMP_TAC std_ss [asla_seq___bin_choice]);
 (* Program Hoare triples                *)
 (* ------------------------------------ *)
 
-val ASL_PROGRAM_HOARE_TRIPLE_def = Define `
+Definition ASL_PROGRAM_HOARE_TRIPLE_def:
    ASL_PROGRAM_HOARE_TRIPLE xenv penv P prog Q =
-   HOARE_TRIPLE P (ASL_PROGRAM_SEM xenv penv prog) Q`
+   HOARE_TRIPLE P (ASL_PROGRAM_SEM xenv penv prog) Q
+End
 
 
 val ASL_PROGRAM_HOARE_TRIPLE_REWRITE = store_thm ("ASL_PROGRAM_HOARE_TRIPLE_REWRITE",
@@ -8862,9 +9016,10 @@ METIS_TAC[]);
 
 
 
-val ASL_PROGRAM_HOARE_TRIPLE_PROC_def = Define `
+Definition ASL_PROGRAM_HOARE_TRIPLE_PROC_def:
    ASL_PROGRAM_HOARE_TRIPLE_PROC n xenv penv P prog Q =
-   HOARE_TRIPLE P (ASL_PROGRAM_SEM_PROC n xenv penv prog) Q`
+   HOARE_TRIPLE P (ASL_PROGRAM_SEM_PROC n xenv penv prog) Q
+End
 
 
 val ASL_PROGRAM_HOARE_TRIPLE___PROC_THM = store_thm ("ASL_PROGRAM_HOARE_TRIPLE___PROC_THM",
@@ -8910,9 +9065,10 @@ METIS_TAC[]);
 (* Conditional Hoare Triples                                                  *)
 (******************************************************************************)
 
-val COND_HOARE_TRIPLE_def = Define `
+Definition COND_HOARE_TRIPLE_def:
    COND_HOARE_TRIPLE (Pcond,P) f (Qcond,Q) =
-   ((Pcond /\ Qcond) ==> HOARE_TRIPLE P f Q)`;
+   ((Pcond /\ Qcond) ==> HOARE_TRIPLE P f Q)
+End
 
 val COND_HOARE_TRIPLE_TRUE = store_thm ("COND_HOARE_TRIPLE_TRUE",
 ``COND_HOARE_TRIPLE (T,P) f (T,Q) =
@@ -8929,9 +9085,10 @@ SIMP_TAC std_ss [COND_HOARE_TRIPLE_def]);
 
 
 
-val COND_PROP___STRONG_EXISTS_def = Define
-`COND_PROP___STRONG_EXISTS P =
- ((!x. FST (P x)), asl_exists x. (SND (P x)))`;
+Definition COND_PROP___STRONG_EXISTS_def:
+ COND_PROP___STRONG_EXISTS P =
+ ((!x. FST (P x)), asl_exists x. (SND (P x)))
+End
 
 
 
@@ -8993,25 +9150,29 @@ METIS_TAC[]);
 
 
 
-val asl_cond_star_def = Define
-`asl_cond_star f P1 P2 =
- (FST P1 /\ FST P2, asl_star f (SND P1) (SND P2))`;
+Definition asl_cond_star_def:
+ asl_cond_star f P1 P2 =
+ (FST P1 /\ FST P2, asl_star f (SND P1) (SND P2))
+End
 
 
-val COND_PROP___WEAK_IMP_def = Define `
+Definition COND_PROP___WEAK_IMP_def:
 COND_PROP___WEAK_IMP P1 P2 =
-(!x. (FST P1 /\ FST P2 /\ x IN SND P1) ==> (x IN SND P2))`;
+(!x. (FST P1 /\ FST P2 /\ x IN SND P1) ==> (x IN SND P2))
+End
 
 
-val COND_PROP___IMP_def = Define `
+Definition COND_PROP___IMP_def:
 COND_PROP___IMP P1 P2 =
-(!x. (FST P1 /\ x IN SND P1) ==> (FST P2 /\ x IN SND P2))`;
+(!x. (FST P1 /\ x IN SND P1) ==> (FST P2 /\ x IN SND P2))
+End
 
 
-val COND_PROP___STRONG_IMP_def = Define `
+Definition COND_PROP___STRONG_IMP_def:
 COND_PROP___STRONG_IMP P1 P2 =
 ((FST P1 ==> FST P2) /\
- (FST P1 /\ FST P2 ==> (SND P1 = SND P2)))`;
+ (FST P1 /\ FST P2 ==> (SND P1 = SND P2)))
+End
 
 
 val COND_PROP___STRONG_IMP_IMP = store_thm ("COND_PROP___STRONG_IMP_IMP",
@@ -9024,14 +9185,16 @@ METIS_TAC[]);
 
 
 
-val COND_PROP___EQUIV_def = Define `
+Definition COND_PROP___EQUIV_def:
 COND_PROP___EQUIV P1 P2 =
-(COND_PROP___IMP P1 P2 /\ COND_PROP___IMP P2 P1)`;
+(COND_PROP___IMP P1 P2 /\ COND_PROP___IMP P2 P1)
+End
 
 
-val COND_PROP___STRONG_EQUIV_def = Define `
+Definition COND_PROP___STRONG_EQUIV_def:
 COND_PROP___STRONG_EQUIV P1 P2 =
-(COND_PROP___STRONG_IMP P1 P2 /\ COND_PROP___STRONG_IMP P2 P1)`;
+(COND_PROP___STRONG_IMP P1 P2 /\ COND_PROP___STRONG_IMP P2 P1)
+End
 
 
 val COND_PROP___STRONG_EQUIV___SYM = store_thm(
@@ -9211,10 +9374,12 @@ SIMP_TAC std_ss [COND_PROP___STRONG_EQUIV_def]);
 
 
 
-val cond_prop_false_def = Define `cond_prop_false = (F, asl_false)`
+Definition cond_prop_false_def:   cond_prop_false = (F, asl_false)
+End
 
-val COND_PROP___EXISTS_def = Define
-`$COND_PROP___EXISTS P = (T, \s. ?x. (FST (P x)) /\ s IN (SND (P x)))`
+Definition COND_PROP___EXISTS_def:
+ $COND_PROP___EXISTS P = (T, \s. ?x. (FST (P x)) /\ s IN (SND (P x)))
+End
 
 val _ = set_fixity "COND_PROP___EXISTS" Binder
 
@@ -9244,8 +9409,9 @@ METIS_TAC[]);
 
 
 
-val COND_PROP___ADD_COND_def = Define
-`COND_PROP___ADD_COND c P = (c /\ FST P, SND P)`;
+Definition COND_PROP___ADD_COND_def:
+ COND_PROP___ADD_COND c P = (c /\ FST P, SND P)
+End
 
 
 val COND_HOARE_TRIPLE___ADD_COND =
@@ -9269,8 +9435,9 @@ SIMP_TAC std_ss [COND_HOARE_TRIPLE_REWRITE,
 
 
 
-val COND_PROP_OR_def = Define `COND_PROP_OR p1 p2 =
-(FST p1 /\ FST p2, asl_or (SND p1) (SND p2))`;
+Definition COND_PROP_OR_def:   COND_PROP_OR p1 p2 =
+(FST p1 /\ FST p2, asl_or (SND p1) (SND p2))
+End
 
 
 val COND_PROP_OR___cond_prop_false = store_thm (
@@ -10412,10 +10579,11 @@ ASM_SIMP_TAC list_ss [ASL_INFERENCE___choose_constants___NIL]);
 (* Strongest post, weakest preconditions                                      *)
 (******************************************************************************)
 
-val asl_sp_opt_def = Define `
+Definition asl_sp_opt_def:
 asl_sp_opt xenv penv P prog =
 let Qset = (\Q. ASL_PROGRAM_HOARE_TRIPLE xenv penv P prog Q) in
-if Qset = EMPTY then NONE else SOME (BIGINTER Qset)`;
+if Qset = EMPTY then NONE else SOME (BIGINTER Qset)
+End
 
 
 val asl_sp_opt_THM = store_thm ("asl_sp_opt_THM",
@@ -10669,9 +10837,10 @@ METIS_TAC[ASL_INFERENCE_STRENGTHEN, SUBSET_REFL]);
 
 
 
-val asl_wlp_def = Define `
+Definition asl_wlp_def:
 asl_wlp xenv penv prog Q =
-BIGUNION (\P. ASL_PROGRAM_HOARE_TRIPLE xenv penv P prog Q)`
+BIGUNION (\P. ASL_PROGRAM_HOARE_TRIPLE xenv penv P prog Q)
+End
 
 val asl_wlp_THM = store_thm ("asl_wlp_THM",
    ``!xenv penv Q prog wlp.
@@ -10806,10 +10975,11 @@ EQ_TAC THENL [
 (******************************************************************************)
 
 
-val ASL_PROGRAM_IS_ABSTRACTION_def = Define `
+Definition ASL_PROGRAM_IS_ABSTRACTION_def:
     ASL_PROGRAM_IS_ABSTRACTION xenv penv prog1 prog2 =
     fasl_action_order (ASL_PROGRAM_SEM xenv penv prog1)
-            (ASL_PROGRAM_SEM xenv penv prog2)`;
+            (ASL_PROGRAM_SEM xenv penv prog2)
+End
 
 val ASL_PROGRAM_IS_ABSTRACTION___ALTERNATIVE_DEF = store_thm (
 "ASL_PROGRAM_IS_ABSTRACTION___ALTERNATIVE_DEF",
@@ -11986,13 +12156,14 @@ Induct_on `pt` THENL [
 
 
 
-val ASL_EQUIV_PENV_PROC_def = Define `
+Definition ASL_EQUIV_PENV_PROC_def:
    ASL_EQUIV_PENV_PROC n (penv:'c |-> ('a -> ('a, 'b, 'c, 'd) asl_program)) =
    FUN_FMAP (\proc. \arg. @prog. !m
 (penv':'c |-> ('a -> ('a, 'b, 'c, 'd) asl_program)). (FDOM penv = FDOM penv') ==>
       (ASL_PROGRAM_TRACES_PROC m penv' prog =
       ASL_PROTO_TRACES_EVAL_PROC n penv (asl_pt_procedure_call proc arg)))
-      (FDOM penv)`
+      (FDOM penv)
+End
 
 
 val ASL_EQUIV_PENV_PROC_THM = store_thm ("ASL_EQUIV_PENV_PROC_THM",
@@ -12117,25 +12288,28 @@ Cases_on `n` THEN (
 ));
 
 
-val asl_prog_IS_RESOURCE_FREE_def = Define `
+Definition asl_prog_IS_RESOURCE_FREE_def:
 asl_prog_IS_RESOURCE_FREE prog =
 !f lock_env lock_env' penv.
 ASL_PROGRAM_SEM (f, lock_env)  penv prog =
-ASL_PROGRAM_SEM (f, lock_env') penv prog`
+ASL_PROGRAM_SEM (f, lock_env') penv prog
+End
 
 
-val asl_prog_IS_PROCCALL_FREE_def = Define `
+Definition asl_prog_IS_PROCCALL_FREE_def:
 asl_prog_IS_PROCCALL_FREE prog =
 !xenv penv penv'.
 ASL_PROGRAM_SEM xenv penv  prog =
-ASL_PROGRAM_SEM xenv penv' prog`
+ASL_PROGRAM_SEM xenv penv' prog
+End
 
 
-val asl_prog_IS_RESOURCE_AND_PROCCALL_FREE_def = Define `
+Definition asl_prog_IS_RESOURCE_AND_PROCCALL_FREE_def:
 asl_prog_IS_RESOURCE_AND_PROCCALL_FREE prog =
 !f lock_env penv lock_env' penv'.
 ASL_PROGRAM_SEM (f, lock_env) penv  prog =
-ASL_PROGRAM_SEM (f, lock_env') penv' prog`
+ASL_PROGRAM_SEM (f, lock_env') penv' prog
+End
 
 
 val asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___ALTERNATIVE_DEF =
@@ -12165,16 +12339,18 @@ SIMP_TAC std_ss [GSYM ASL_EQUIV_PENV_PROC___PROGRAM_SEM,
 
 
 
-val ASL_PROCEDURE_SPEC_def = Define `
+Definition ASL_PROCEDURE_SPEC_def:
    ASL_PROCEDURE_SPEC xenv penv specs =
     !name abst. MEM (name,abst) specs ==>
-    !arg. ASL_PROGRAM_IS_ABSTRACTION xenv penv (asl_prog_procedure_call name arg) (abst arg)`;
+    !arg. ASL_PROGRAM_IS_ABSTRACTION xenv penv (asl_prog_procedure_call name arg) (abst arg)
+End
 
 
-val ASL_PROCEDURE_SPEC___wellformed_spec_def = Define
-`ASL_PROCEDURE_SPEC___wellformed_spec penv specs =
+Definition ASL_PROCEDURE_SPEC___wellformed_spec_def:
+ ASL_PROCEDURE_SPEC___wellformed_spec penv specs =
  EVERY (\x. (FST x IN FDOM penv) /\
-       (!arg. asl_prog_IS_PROCCALL_FREE ((SND x) arg))) specs`
+       (!arg. asl_prog_IS_PROCCALL_FREE ((SND x) arg))) specs
+End
 
 
 val ASL_PROCEDURE_SPEC___ASL_EQUIV_PENV_INTRO =
@@ -12264,13 +12440,15 @@ ASM_SIMP_TAC std_ss []);
 
 
 
-val ASL_proc_specs_penv_def = Define `
+Definition ASL_proc_specs_penv_def:
     ASL_proc_specs_penv penv proc_specs =
-      penv |++ (MAP (\x. (FST x, FST (SND x))) proc_specs)`
+      penv |++ (MAP (\x. (FST x, FST (SND x))) proc_specs)
+End
 
-val ASL_proc_specs_spec_def = Define `
+Definition ASL_proc_specs_spec_def:
     ASL_proc_specs_spec proc_specs =
-      MAP (\x. (FST x, SND (SND x))) proc_specs`;
+      MAP (\x. (FST x, SND (SND x))) proc_specs
+End
 
 val FDOM_ASL_proc_specs_penv = store_thm (
 "FDOM_ASL_proc_specs_penv",
@@ -12282,7 +12460,7 @@ SIMP_TAC std_ss [ASL_proc_specs_penv_def,
    combinTheory.o_DEF, ETA_THM]);
 
 
-val ASL_SPECIFICATION_def = Define `
+Definition ASL_SPECIFICATION_def:
     ASL_SPECIFICATION f lock_decls proc_specs =
     let real_proc_specs = MAP SND (FILTER FST proc_specs) in
     let assume_proc_specs = MAP SND (FILTER (\x. ~(FST x)) proc_specs) in
@@ -12294,7 +12472,8 @@ val ASL_SPECIFICATION_def = Define `
 
    ASL_PROCEDURE_SPEC (f, LIST_TO_FUN lock_decls)
    (ASL_proc_specs_penv penv real_proc_specs)
-   (ASL_proc_specs_spec real_proc_specs))`;
+   (ASL_proc_specs_spec real_proc_specs))
+End
 
 
 

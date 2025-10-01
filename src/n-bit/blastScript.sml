@@ -24,9 +24,10 @@ Libs
 val bcarry_def = new_definition ("bcarry_def",
   ``bcarry x y c <=> x /\ y \/ (x \/ y) /\ c``)
 
-val BCARRY_def = Define`
+Definition BCARRY_def:
   (BCARRY 0 x y c = c) /\
-  (BCARRY (SUC i) x y c = bcarry (x i) (y i) (BCARRY i x y c))`
+  (BCARRY (SUC i) x y c = bcarry (x i) (y i) (BCARRY i x y c))
+End
 
 (* --------------------------------------------------------
    "BSUM i x y c" is the i-th bit for the summuation of

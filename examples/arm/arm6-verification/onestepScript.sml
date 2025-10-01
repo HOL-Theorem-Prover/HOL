@@ -30,38 +30,45 @@ val FUNPOW_COMP = store_thm("FUNPOW_COMP",
   - Iterated Maps -----------------------------------------------------------
   ---------------------------------------------------------------------------*)
 
-val IMAP_def = Define `
+Definition IMAP_def:
   IMAP f init next <=>
     (!a. (f 0 a = init a)) /\
-    (!t a. (f (SUC t) a = next (f t a)))`;
+    (!t a. (f (SUC t) a = next (f t a)))
+End
 
-val IS_IMAP_INIT_def = Define`
-  IS_IMAP_INIT f init = ?next. IMAP f init next`;
+Definition IS_IMAP_INIT_def:
+  IS_IMAP_INIT f init = ?next. IMAP f init next
+End
 
-val IS_IMAP_def = Define`
-  IS_IMAP f = ?init next. IMAP f init next`;
+Definition IS_IMAP_def:
+  IS_IMAP f = ?init next. IMAP f init next
+End
 
 (*---------------------------------------------------------------------------
   - Data Abstraction Criterion ----------------------------------------------
   ---------------------------------------------------------------------------*)
 
-val RANGE_def = Define`RANGE f = IMAGE f UNIV`;
+Definition RANGE_def:  RANGE f = IMAGE f UNIV
+End
 
-val DATA_ABSTRACTION_def = Define `
+Definition DATA_ABSTRACTION_def:
   DATA_ABSTRACTION abs initi inits =
-  SURJ abs (RANGE initi) (RANGE inits)`;
+  SURJ abs (RANGE initi) (RANGE inits)
+End
 
 (*---------------------------------------------------------------------------
   - Immersions : General, Uniform and Adjunct -------------------------------
   ---------------------------------------------------------------------------*)
 
-val FREE_IMMERSION_def = Define`
+Definition FREE_IMMERSION_def:
   FREE_IMMERSION imm =
     ((imm 0 = 0) /\
-    (!t1 t2. t1 < t2 ==> imm t1 < imm t2))`;
+    (!t1 t2. t1 < t2 ==> imm t1 < imm t2))
+End
 
-val IMMERSION_def = Define `
-  IMMERSION imm = !a. FREE_IMMERSION (imm a)`;
+Definition IMMERSION_def:
+  IMMERSION imm = !a. FREE_IMMERSION (imm a)
+End
 
 val IMMERSION = REWRITE_RULE [FREE_IMMERSION_def] IMMERSION_def;
 
@@ -71,59 +78,69 @@ val IMMERSION =
    REWRITE_RULE [FREE_IMMERSION_def]) IMMERSION_def;
 *)
 
-val UIMMERSION_def = Define `
+Definition UIMMERSION_def:
   UIMMERSION imm f dur =
     ((!a. 0 < dur a) /\
      (!a. imm a 0 = 0) /\
-     (!a t. imm a (SUC t) = dur (f (imm a t) a) + imm a t))`;
+     (!a t. imm a (SUC t) = dur (f (imm a t) a) + imm a t))
+End
 
-val AUIMMERSION_def = Define `
+Definition AUIMMERSION_def:
   AUIMMERSION imm1 imm2 f dur1 dur2 =
     ((UIMMERSION imm2 f dur2) /\
      (!a. 0 < dur1 a) /\
      (!a. imm1 a 0 = 0) /\
-     (!a t. imm1 a (SUC t) = dur1 (f (imm2 a t) a) + imm1 a t))`;
+     (!a t. imm1 a (SUC t) = dur1 (f (imm2 a t) a) + imm1 a t))
+End
 
-val UNIFORM_def = Define`
-  UNIFORM imm f = ?dur. UIMMERSION imm f dur`;
+Definition UNIFORM_def:
+  UNIFORM imm f = ?dur. UIMMERSION imm f dur
+End
 
-val ADJUNCT_def = Define`
-  ADJUNCT imm1 imm2 f = ?dur1 dur2. AUIMMERSION imm1 imm2 f dur1 dur2`;
+Definition ADJUNCT_def:
+  ADJUNCT imm1 imm2 f = ?dur1 dur2. AUIMMERSION imm1 imm2 f dur1 dur2
+End
 
 (*---------------------------------------------------------------------------
   - Correctness Definitions -------------------------------------------------
   ---------------------------------------------------------------------------*)
 
-val CORRECT_def = Define `
+Definition CORRECT_def:
   CORRECT spec impl imm abs <=>
     IMMERSION imm /\ DATA_ABSTRACTION abs (impl 0) (spec 0) /\
-    (!t a. spec t (abs a) = abs (impl (imm a t) a))`;
+    (!t a. spec t (abs a) = abs (impl (imm a t) a))
+End
 
-val CORRECT_SUP_def = Define `
+Definition CORRECT_SUP_def:
   CORRECT_SUP spec impl imm1 imm2 abs <=>
     IMMERSION imm1 /\ IMMERSION imm2 /\
     DATA_ABSTRACTION abs (impl 0) (spec 0) /\
-    (!r a. spec (imm1 a r) (abs a) = abs (impl (imm2 a r) a))`;
+    (!r a. spec (imm1 a r) (abs a) = abs (impl (imm2 a r) a))
+End
 
-val IS_CORRECT_def = Define`
-  IS_CORRECT spec impl = ?imm abs. CORRECT spec impl imm abs`;
+Definition IS_CORRECT_def:
+  IS_CORRECT spec impl = ?imm abs. CORRECT spec impl imm abs
+End
 
-val IS_CORRECT_SUP_def = Define`
+Definition IS_CORRECT_SUP_def:
   IS_CORRECT_SUP spec impl =
-    ?imm1 imm2 abs. CORRECT_SUP spec impl imm1 imm2 abs`;
+    ?imm1 imm2 abs. CORRECT_SUP spec impl imm1 imm2 abs
+End
 
 (*---------------------------------------------------------------------------
   - Time-Consistent State Functions -----------------------------------------
   ---------------------------------------------------------------------------*)
 
-val TCON_def = Define `
-  TCON f = !t1 t2 a. f (t1 + t2) a = f t1 (f t2 a)`;
+Definition TCON_def:
+  TCON f = !t1 t2 a. f (t1 + t2) a = f t1 (f t2 a)
+End
 
-val TCON_IMMERSION_def = Define `
+Definition TCON_IMMERSION_def:
   TCON_IMMERSION f imm =
     !t1 t2 a.
       f (imm (f (imm a t2) a) t1 + imm a t2) a =
-      f (imm (f (imm a t2) a) t1) (f (imm a t2) a)`;
+      f (imm (f (imm a t2) a) t1) (f (imm a t2) a)
+End
 
 (*---------------------------------------------------------------------------
   - Data Abstraction Id -----------------------------------------------------

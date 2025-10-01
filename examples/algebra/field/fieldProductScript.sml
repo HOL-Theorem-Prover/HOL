@@ -39,9 +39,9 @@ Libs
 (* ------------------------------------------------------------------------- *)
 
 (* Define Field Product of a set of Elements. *)
-val field_prod_set_def = Define`
+Definition field_prod_set_def:
    field_prod_set (r:'a field) (s:'a -> bool) = GPROD_SET f* s
-`;
+End
 
 (* overload for field_prod_set *)
 val _ = overload_on ("FPROD", ``field_prod_set r``);

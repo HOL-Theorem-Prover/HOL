@@ -28,7 +28,8 @@ val CONJ_EQ_IMP = store_thm
 
 (* ------------------------------------------------------------------------- *)
 
-val xor_def = Define `xor (x:bool) y = ~(x = y)`;
+Definition xor_def:   xor (x:bool) y = ~(x = y)
+End
 val _ = set_fixity "xor" (Infixr 750);
 
 val xor_comm = store_thm

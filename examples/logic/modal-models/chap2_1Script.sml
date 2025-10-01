@@ -6,12 +6,13 @@ Ancestors
 val irule = fn th => irule th >> rpt conj_tac
 
 
-val DU_def = Define`
+Definition DU_def:
   DU (f, dom) = <| frame := <| world := {w | (FST w) IN dom /\ (SND w) IN (f (FST w)).frame.world};
                                  rel := \w1 w2. FST w1 = FST w2 /\
                                                 (FST w1) IN dom /\
                                                 (f (FST w1)).frame.rel (SND w1) (SND w2) |>;
-                                valt := \v w. (f (FST w)).valt v (SND w) |>`;
+                                valt := \v w. (f (FST w)).valt v (SND w) |>
+End
 
 val prop_2_3 = store_thm(
   "prop_2_3",
@@ -37,24 +38,27 @@ val prop_2_3 = store_thm(
      >- (`FST v = FST w` by fs[DU_def] >> metis_tac[])));
 
 
-val M_union_def = Define`
-M_union M1 M2 = DU ((λn. if n = 0 then M1 else M2), {x | x = 0 \/ x = 1})`;
+Definition M_union_def:
+M_union M1 M2 = DU ((λn. if n = 0 then M1 else M2), {x | x = 0 \/ x = 1})
+End
 
 
 
 
-val SUBMODEL_def = Define`
+Definition SUBMODEL_def:
 SUBMODEL M1 M2 <=> (M1.frame.world) ⊆ (M2.frame.world) /\
                          (!w1. w1 IN M1.frame.world ==>
                          (!v. M1.valt v w1 <=> M2.valt v w1) /\
-                         (!w2. w2 IN M1.frame.world ==> (M1.frame.rel w1 w2 <=> M2.frame.rel w1 w2)))`;
+                         (!w2. w2 IN M1.frame.world ==> (M1.frame.rel w1 w2 <=> M2.frame.rel w1 w2)))
+End
 
 
 
-val GENSUBMODEL_def = Define`
+Definition GENSUBMODEL_def:
 GENSUBMODEL M1 M2 <=> SUBMODEL M1 M2 /\
                      (!w1. w1 IN M1.frame.world ==>
-                     (!w2. w2 IN M2.frame.world /\ M2.frame.rel w1 w2 ==> w2 IN M1.frame.world))`;
+                     (!w2. w2 IN M2.frame.world /\ M2.frame.rel w1 w2 ==> w2 IN M1.frame.world))
+End
 
 
 
@@ -103,35 +107,41 @@ Induct_on `phi` >> rw[satis_def]
 
 
 
-val hom_def = Define`
+Definition hom_def:
 hom f M1 M2 <=> (!w. w IN M1.frame.world ==> ((f w) IN M2.frame.world /\ (!p. w IN M1.valt p ==> (f w) IN M2.valt p) /\
-                                            (!u. u IN M1.frame.world ==> (M1.frame.rel w u ==> M2.frame.rel (f w) (f u)))))`;
+                                            (!u. u IN M1.frame.world ==> (M1.frame.rel w u ==> M2.frame.rel (f w) (f u)))))
+End
 
 
 
-val strong_hom_def = Define`
+Definition strong_hom_def:
 strong_hom f M1 M2 <=> (!w. w IN M1.frame.world ==> ((f w) IN M2.frame.world /\ (!p. w IN M1.valt p <=> (f w) IN M2.valt p) /\
-                                            (!u. u IN M1.frame.world ==> (M1.frame.rel w u <=> M2.frame.rel (f w) (f u)))))`;
+                                            (!u. u IN M1.frame.world ==> (M1.frame.rel w u <=> M2.frame.rel (f w) (f u)))))
+End
 
 
 
-val embedding_def = Define`
-embedding f M1 M2 <=> (strong_hom f M1 M2 /\ INJ f M1.frame.world M2.frame.world)`;
+Definition embedding_def:
+embedding f M1 M2 <=> (strong_hom f M1 M2 /\ INJ f M1.frame.world M2.frame.world)
+End
 
 
 
-val iso_def = Define`
-iso f M1 M2 <=> (strong_hom f M1 M2 /\ BIJ f M1.frame.world M2.frame.world)`;
+Definition iso_def:
+iso f M1 M2 <=> (strong_hom f M1 M2 /\ BIJ f M1.frame.world M2.frame.world)
+End
 
 
 
-val tau_theory_def = Define`
-tau_theory M w  = {form | satis M w form}`;
+Definition tau_theory_def:
+tau_theory M w  = {form | satis M w form}
+End
 
 
 
-val modal_eq_def = Define`
- modal_eq M M' w w'<=> (tau_theory M w = tau_theory M' w')`;
+Definition modal_eq_def:
+ modal_eq M M' w w'<=> (tau_theory M w = tau_theory M' w')
+End
 
 val modal_eq_tau = store_thm(
 "modal_eq_tau",
@@ -140,13 +150,15 @@ rw[EQ_IMP_THM] >> fs[modal_eq_def,tau_theory_def,EXTENSION]
 >- metis_tac[]
 >- rw[EQ_IMP_THM])
 
-val tau_theory_model_def = Define`
-tau_theory_model M = {form | !w. w IN M.frame.world ==> satis M w form}`;
+Definition tau_theory_model_def:
+tau_theory_model M = {form | !w. w IN M.frame.world ==> satis M w form}
+End
 
 
 
-val modal_eq_model_def = Define`
-modal_eq_model M M' <=> (tau_theory_model M = tau_theory_model M')`;
+Definition modal_eq_model_def:
+modal_eq_model M M' <=> (tau_theory_model M = tau_theory_model M')
+End
 
 
 
@@ -201,17 +213,19 @@ fs[modal_eq_model_def,iso_def,tau_theory_model_def]
 
 
 
-val bounded_mor_def = Define`
+Definition bounded_mor_def:
  bounded_mor f M M' <=> (!w. w IN M.frame.world ==>
 ((f w) IN M'.frame.world) /\
 (!a. (satis M w (VAR a) <=> satis M' (f w) (VAR a))) /\
 (!v. v IN M.frame.world /\ M.frame.rel w v ==> M'.frame.rel (f w) (f v)) /\
-(!v'. v' IN M'.frame.world /\ M'.frame.rel (f w) v' ==> ?v. v IN M.frame.world /\ M.frame.rel w v /\ f v = v'))`;
+(!v'. v' IN M'.frame.world /\ M'.frame.rel (f w) v' ==> ?v. v IN M.frame.world /\ M.frame.rel w v /\ f v = v'))
+End
 
 
 
-val bounded_mor_image_def = Define`
-bounded_mor_image f M M' = (bounded_mor f M M' /\ (SURJ f M.frame.world M'.frame.world))`;
+Definition bounded_mor_image_def:
+bounded_mor_image f M M' = (bounded_mor f M M' /\ (SURJ f M.frame.world M'.frame.world))
+End
 
 Theorem prop_2_14:
   !M M' w f form.
@@ -261,16 +275,18 @@ QED
 (* tree-like lemma *)
 
 (* no-loop lemma *)
-val RESTRICT_def = Define`
-RESTRICT R s x y <=> R x y /\ x IN s /\ y IN s`;
+Definition RESTRICT_def:
+RESTRICT R s x y <=> R x y /\ x IN s /\ y IN s
+End
 
 
 
-val tree_def = Define`
+Definition tree_def:
 tree S r <=>
   r IN S.world /\ (!t. t IN S.world ==> RTC (RESTRICT S.rel S.world) r t) /\
   (!r0. r0 IN S.world ==> ¬S.rel r0 r) /\
-  (∀t. t ∈ S.world ∧ t ≠ r ==> ∃!t0. t0 ∈ S.world ∧ S.rel t0 t)`;
+  (∀t. t ∈ S.world ∧ t ≠ r ==> ∃!t0. t0 ∈ S.world ∧ S.rel t0 t)
+End
 
 
 
@@ -327,22 +343,24 @@ Cases_on `t0 = t1` >-
 
 
 
-val rooted_model_def = Define`
+Definition rooted_model_def:
 rooted_model M x M' <=> x IN M'.frame.world /\
                                  (!a. a IN M.frame.world <=> (a IN M'.frame.world /\ (RTC (RESTRICT M'.frame.rel M'.frame.world)) x a)) /\
                                  (!n1 n2. n1 IN M.frame.world /\ n2 IN M.frame.world ==>
                                    (M.frame.rel n1 n2 <=> (RESTRICT M'.frame.rel M'.frame.world) n1 n2)) /\
-                                 (!v n. M.valt v n <=> M'.valt v n)`;
+                                 (!v n. M.valt v n <=> M'.valt v n)
+End
 
 
 
-val tree_like_model_def = Define`
-tree_like_model M <=> ?x. tree M.frame x`;
+Definition tree_like_model_def:
+tree_like_model M <=> ?x. tree M.frame x
+End
 
 
 
 
-val bounded_preimage_rooted_def = Define`
+Definition bounded_preimage_rooted_def:
   bounded_preimage_rooted M x =
   <| frame := <| world := {l | HD l = x /\
                                LENGTH l > 0 /\
@@ -351,7 +369,8 @@ val bounded_preimage_rooted_def = Define`
                  rel := \l1 l2. (LENGTH l1) + 1 = LENGTH l2 /\
                                 (RESTRICT M.frame.rel M.frame.world) (LAST l1) (LAST l2) /\
                                 (!m. m < LENGTH l1 ==> EL m l1 = EL m l2) |>;
-     valt := \v n. M.valt v (LAST n) |>`;
+     valt := \v n. M.valt v (LAST n) |>
+End
 
 
 
@@ -715,11 +734,12 @@ val prop_2_15_strengthen = store_thm(
 
 
 
-val point_GENSUBMODEL_def = Define`
+Definition point_GENSUBMODEL_def:
   point_GENSUBMODEL M w =
    <| frame := <| world := {v | v IN M.frame.world /\ (RESTRICT M.frame.rel M.frame.world)^* w v };
 rel := λw1 w2. w1 IN M.frame.world /\ w2 IN M.frame.world /\ M.frame.rel w1 w2|>;
-          valt := M.valt |>`;
+          valt := M.valt |>
+End
 
 val point_GENSUBMODEL_GENSUBMODEL = store_thm(
   "point_GENSUBMODEL_GENSUBMODEL",

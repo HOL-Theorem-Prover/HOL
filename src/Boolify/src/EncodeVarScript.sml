@@ -20,8 +20,9 @@ val REVERSE = Tactical.REVERSE;
      Fixed size encodings---necessary for encoding variables.
  ---------------------------------------------------------------------------*)
 
-val fixed_width_def =
-  Define `fixed_width n c = !x. domain c x ==> (LENGTH (encoder c x) = n)`;
+Definition fixed_width_def:
+   fixed_width n c = !x. domain c x ==> (LENGTH (encoder c x) = n)
+End
 
 local
   val th = prove

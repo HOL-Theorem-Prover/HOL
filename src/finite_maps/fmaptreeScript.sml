@@ -15,13 +15,13 @@ Libs
    that your predicate P holds of every subtree.
 *)
 
-val construct_def = Define`
+Definition construct_def:
   construct a kfm kl =
     case kl of
       [] => SOME a
     | h :: t => if h IN FDOM kfm then kfm ' h t
                 else NONE
-`;
+End
 
 val (wf_rules, wf_ind, wf_cases) = Hol_reln`
   !a fm. (!k. k IN FDOM fm ==> wf (fm ' k)) ==> wf (construct a fm)
@@ -67,9 +67,9 @@ val bij_nchotomy = prove(
   ``!a. ?c. wf c /\ (a = fromF c)``,
   METIS_TAC [fmap_bij_thm])
 
-val FTNode_def = Define`
+Definition FTNode_def:
   FTNode i fm = fromF (construct i (toF o_f fm))
-`;
+End
 
 val toF_composed_wf = prove(
   ``!k. k IN FDOM f1 ==> wf ((toF o_f f1) ' k)``,
@@ -117,13 +117,13 @@ val (item_thm, map_thm) =
 val _ = (save_thm("item_thm", item_thm); export_rewrites ["item_thm"])
 val _ = (save_thm("map_thm", map_thm); export_rewrites ["map_thm"])
 
-val apply_path_def = Define`
+Definition apply_path_def:
   (apply_path [] ft = SOME ft) /\
   (apply_path (h::t) ft = if h IN FDOM (map ft) then apply_path t (map ft ' h)
                           else NONE)
-`;
+End
 
-val update_at_path_def = Define`
+Definition update_at_path_def:
   (update_at_path [] a ft = SOME (FTNode a (map ft))) /\
   (update_at_path (h::t) a ft =
      if h IN FDOM (map ft) then
@@ -131,9 +131,9 @@ val update_at_path_def = Define`
          NONE => NONE
        | SOME ft' => SOME (FTNode (item ft) (map ft |+ (h,ft')))
      else NONE)
-`;
+End
 
-val fupd_at_path_def = Define`
+Definition fupd_at_path_def:
   (fupd_at_path [] f ft = f ft) /\
   (fupd_at_path (h::t) f ft =
      if h IN FDOM (map ft) then
@@ -141,7 +141,7 @@ val fupd_at_path_def = Define`
          NONE => NONE
        | SOME ft' => SOME (FTNode (item ft) (map ft |+ (h, ft')))
      else NONE)
-`;
+End
 
 val forall_ft = prove(
   ``(!ft. P ft) = (!f. wf f ==> P (fromF f))``,
@@ -218,9 +218,9 @@ val relrec_total = prove(
   Q.EXISTS_TAC `FUN_FMAP f (FDOM fm)` THEN
   SRW_TAC [][FUN_FMAP_DEF]);
 
-val fmtreerec_def = Define`
+Definition fmtreerec_def:
   fmtreerec h ft = @r. relrec h ft r
-`;
+End
 
 val fmtreerec_thm = store_thm(
   "fmtreerec_thm",

@@ -35,12 +35,12 @@ Type num_set[pp] = “:unit spt”
 
 val _ = overload_on ("isEmpty", ``\t. t = LN``)
 
-val wf_def = Define`
+Definition wf_def:
   (wf LN <=> T) /\
   (wf (LS a) <=> T) /\
   (wf (BN t1 t2) <=> wf t1 /\ wf t2 /\ ~(isEmpty t1 /\ isEmpty t2)) /\
   (wf (BS t1 a t2) <=> wf t1 /\ wf t2 /\ ~(isEmpty t1 /\ isEmpty t2))
-`;
+End
 
 Definition lookup_def[nocompute]:
   (lookup k LN = NONE) /\
@@ -85,15 +85,17 @@ End
 
 val insert_ind = theorem "insert_ind";
 
-val mk_BN_def = Define `
+Definition mk_BN_def:
   (mk_BN LN LN = LN) /\
-  (mk_BN t1 t2 = BN t1 t2)`;
+  (mk_BN t1 t2 = BN t1 t2)
+End
 
-val mk_BS_def = Define `
+Definition mk_BS_def:
   (mk_BS LN x LN = LS x) /\
-  (mk_BS t1 x t2 = BS t1 x t2)`;
+  (mk_BS t1 x t2 = BS t1 x t2)
+End
 
-val delete_def = zDefine`
+Definition delete_def[nocompute]:
   (delete k LN = LN) /\
   (delete k (LS a) = if k = 0 then LN else LS a) /\
   (delete k (BN t1 t2) =
@@ -108,11 +110,11 @@ val delete_def = zDefine`
        mk_BS (delete ((k - 1) DIV 2) t1) a t2
      else
        mk_BS t1 a (delete ((k - 1) DIV 2) t2))
-`;
+End
 
-val fromList_def = Define`
+Definition fromList_def:
   fromList l = SND (FOLDL (\(i,t) a. (i + 1, insert i a t)) (0,LN) l)
-`;
+End
 
 Definition size_def[simp]:
   (size LN = 0) /\
@@ -202,7 +204,7 @@ val lookup_insert = store_thm(
     >- metis_tac [EVEN_PRE] >> simp[]
   ])
 
-val union_def = Define`
+Definition union_def:
   (union LN t = t) /\
   (union (LS a) t =
      case t of
@@ -222,7 +224,7 @@ val union_def = Define`
        | LS a' => BS t1 a t2
        | BN t1' t2' => BS (union t1 t1') a (union t2 t2')
        | BS t1' a' t2' => BS (union t1 t1') a (union t2 t2'))
-`;
+End
 
 Theorem isEmpty_union[simp]:
   isEmpty (union m1 m2) <=> isEmpty m1 /\ isEmpty m2
@@ -251,7 +253,7 @@ val lookup_union = store_thm(
   Cases_on `m2` >> simp[lookup_def, union_def] >>
   rw[optcase_lemma]);
 
-val inter_def = Define`
+Definition inter_def:
   (inter LN t = LN) /\
   (inter (LS a) t =
      case t of
@@ -271,9 +273,9 @@ val inter_def = Define`
        | LS a' => LS a
        | BN t1' t2' => mk_BN (inter t1 t1') (inter t2 t2')
        | BS t1' a' t2' => mk_BS (inter t1 t1') a (inter t2 t2'))
-`;
+End
 
-val inter_eq_def = Define`
+Definition inter_eq_def:
   (inter_eq LN t = LN) /\
   (inter_eq (LS a) t =
      case t of
@@ -295,9 +297,10 @@ val inter_eq_def = Define`
        | BS t1' a' t2' =>
            if a' = a then
              mk_BS (inter_eq t1 t1') a (inter_eq t2 t2')
-           else mk_BN (inter_eq t1 t1') (inter_eq t2 t2'))`;
+           else mk_BN (inter_eq t1 t1') (inter_eq t2 t2'))
+End
 
-val difference_def = Define`
+Definition difference_def:
   (difference LN t = LN) /\
   (difference (LS a) t =
      case t of
@@ -316,7 +319,8 @@ val difference_def = Define`
        | LN => BS t1 a t2
        | LS a' => BN t1 t2
        | BN t1' t2' => mk_BS (difference t1 t1') a (difference t2 t2')
-       | BS t1' a' t2' => mk_BN (difference t1 t1') (difference t2 t2'))`;
+       | BS t1' a' t2' => mk_BN (difference t1 t1') (difference t2 t2'))
+End
 
 val wf_mk_BN = prove(
   ``!t1 t2. wf (mk_BN t1 t2) <=> wf t1 /\ wf t2``,
@@ -672,7 +676,7 @@ val domain_delete = store_thm(
   simp[EXTENSION, domain_lookup, lookup_delete] >>
   metis_tac[]);
 
-val foldi_def = Define`
+Definition foldi_def:
   (foldi f i acc LN = acc) /\
   (foldi f i acc (LS a) = f i a acc) /\
   (foldi f i acc (BN t1 t2) =
@@ -683,7 +687,7 @@ val foldi_def = Define`
      let inc = lrnext i
      in
        foldi f (i + inc) (f i a (foldi f (i + 2 * inc) acc t1)) t2)
-`;
+End
 
 Definition spt_acc_def:
   (spt_acc i 0 = i) /\
@@ -813,8 +817,9 @@ val lookup_mapi = Q.store_thm("lookup_mapi",
   rw[mapi_def,lookup_mapi0,spt_acc_0]
   \\ CASE_TAC \\ fs[]);
 
-val toAList_def = Define `
-  toAList = foldi (\k v a. (k,v)::a) 0 []`
+Definition toAList_def:
+  toAList = foldi (\k v a. (k,v)::a) 0 []
+End
 
 val set_toAList_lemma = prove(
   ``!t a i. set (foldi (\k v a. (k,v) :: a) i a t) =
@@ -1002,12 +1007,12 @@ val foldi_FOLDR_toAList = store_thm("foldi_FOLDR_toAList",
   ``!f a t. foldi f 0 a t = FOLDR (UNCURRY f) a (toAList t)``,
   simp[toAList_def,GSYM foldi_FOLDR_toAList_lemma])
 
-val toListA_def = Define`
+Definition toListA_def:
   (toListA acc LN = acc) /\
   (toListA acc (LS a) = a::acc) /\
   (toListA acc (BN t1 t2) = toListA (toListA acc t2) t1) /\
   (toListA acc (BS t1 a t2) = toListA (a :: toListA acc t2) t1)
-`;
+End
 
 val toListA_append = store_thm("toListA_append",
   ``!t acc. toListA acc t = toListA [] t ++ acc``,
@@ -1024,7 +1029,8 @@ val isEmpty_toListA = store_thm("isEmpty_toListA",
   fs[Once toListA_append] >>
   simp[Once toListA_append,SimpR``$++``])
 
-val toList_def = Define`toList m = toListA [] m`
+Definition toList_def:  toList m = toListA [] m
+End
 
 val isEmpty_toList = store_thm("isEmpty_toList",
   ``!t. wf t ==> ((t = LN) <=> (toList t = []))``,
@@ -1169,11 +1175,12 @@ val spt_eq_thm = store_thm("spt_eq_thm",
     metis_tac[prim_recTheory.LESS_REFL,div2_even_lemma,div2_odd_lemma
              ,EVEN_ODD,optionTheory.SOME_11] ))
 
-val mk_wf_def = Define `
+Definition mk_wf_def:
   (mk_wf LN = LN) /\
   (mk_wf (LS x) = LS x) /\
   (mk_wf (BN t1 t2) = mk_BN (mk_wf t1) (mk_wf t2)) /\
-  (mk_wf (BS t1 x t2) = mk_BS (mk_wf t1) x (mk_wf t2))`;
+  (mk_wf (BS t1 x t2) = mk_BS (mk_wf t1) x (mk_wf t2))
+End
 
 Theorem wf_mk_wf[simp]: !t. wf (mk_wf t)
 Proof Induct \\ fs [wf_def,mk_wf_def,wf_mk_BS,wf_mk_BN]
@@ -1492,22 +1499,25 @@ val insert_shadow = store_thm("insert_shadow",
 
 (* the sub-map relation, a partial order *)
 
-val spt_left_def = Define `
+Definition spt_left_def:
   (spt_left LN = LN) /\
   (spt_left (LS x) = LN) /\
   (spt_left (BN t1 t2) = t1) /\
-  (spt_left (BS t1 x t2) = t1)`
+  (spt_left (BS t1 x t2) = t1)
+End
 
-val spt_right_def = Define `
+Definition spt_right_def:
   (spt_right LN = LN) /\
   (spt_right (LS x) = LN) /\
   (spt_right (BN t1 t2) = t2) /\
-  (spt_right (BS t1 x t2) = t2)`
+  (spt_right (BS t1 x t2) = t2)
+End
 
-val spt_center_def = Define `
+Definition spt_center_def:
   (spt_center (LS x) = SOME x) /\
   (spt_center (BS t1 x t2) = SOME x) /\
-  (spt_center _ = NONE)`
+  (spt_center _ = NONE)
+End
 
 Definition subspt_eq:
   (subspt LN t <=> T) /\
@@ -1779,11 +1789,12 @@ val lemmas = Q.prove(
   \\ ONCE_REWRITE_TAC [MATCH_MP (GSYM MOD_PLUS) (DECIDE ``0 < 2:num``)]
   \\ EVAL_TAC \\ fs[MOD_EQ_0,ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0]);
 
-val spt_fold_def = Define `
+Definition spt_fold_def:
   (spt_fold f acc LN = acc) /\
   (spt_fold f acc (LS a) = f a acc) /\
   (spt_fold f acc (BN t1 t2) = spt_fold f (spt_fold f acc t1) t2) /\
-  (spt_fold f acc (BS t1 a t2) = spt_fold f (f a (spt_fold f acc t1)) t2)`
+  (spt_fold f acc (BS t1 a t2) = spt_fold f (f a (spt_fold f acc t1)) t2)
+End
 
 val IMP_size_LESS_size = store_thm("IMP_size_LESS_size",
   ``!x y. subspt x y /\ domain x <> domain y ==> size x < size y``,
@@ -1824,13 +1835,15 @@ val inter_eq_LN = store_thm("inter_eq_LN",
   \\ metis_tac [optionTheory.NOT_SOME_NONE,optionTheory.SOME_11,
                 optionTheory.option_CASES]);
 
-val list_to_num_set_def = Define `
+Definition list_to_num_set_def:
   (list_to_num_set [] = LN) /\
-  (list_to_num_set (n::ns) = insert n () (list_to_num_set ns))`;
+  (list_to_num_set (n::ns) = insert n () (list_to_num_set ns))
+End
 
-val list_insert_def = Define `
+Definition list_insert_def:
   (list_insert [] t = t) /\
-  (list_insert (n::ns) t = list_insert ns (insert n () t))`;
+  (list_insert (n::ns) t = list_insert ns (insert n () t))
+End
 
 Theorem domain_list_to_num_set:
   !xs. x IN domain (list_to_num_set xs) <=> MEM x xs

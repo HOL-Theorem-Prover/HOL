@@ -48,9 +48,9 @@ val _ = save_thm ("ordlt_trichotomy", ordlt_trichotomy)
 
 val _ = overload_on ("mkOrdinal", ``ordinal_ABS``)
 
-val allOrds_def = Define`
+Definition allOrds_def:
   allOrds = mkWO { (x,y) | (x = y) \/ ordlt x y }
-`;
+End
 val EXISTS_PROD = pairTheory.EXISTS_PROD
 val EXISTS_SUM = sumTheory.EXISTS_SUM
 val FORALL_SUM = sumTheory.FORALL_SUM
@@ -150,9 +150,9 @@ val wellorder_ordinal_isomorphism = store_thm(
     fs[WIN_allOrds]
   ]);
 
-val preds_def = Define`
+Definition preds_def:
   preds (w : 'a ordinal) = { w0 | ordlt w0 w }
-`;
+End
 
 val IN_preds = store_thm(
   "IN_preds",
@@ -177,10 +177,10 @@ Proof
   metis_tac[ordlt_TRANS]
 QED
 
-val downward_closed_def = Define`
+Definition downward_closed_def:
   downward_closed s <=>
     !a b. a IN s /\ ordlt b a ==> b IN s
-`;
+End
 
 val preds_downward_closed = store_thm(
   "preds_downward_closed",
@@ -305,9 +305,9 @@ val ordlte_TRANS = store_thm(
   ``!x y z. (x:'a ordinal) < y /\ y <= z ==> x < z``,
   metis_tac [ordle_lteq, ordlt_TRANS]);
 
-val oleast_def = Define`
+Definition oleast_def:
   $oleast (P:'a ordinal -> bool) = @x. P x /\ !y. y < x ==> ~P y
-`;
+End
 
 val _ = set_fixity "oleast" Binder
 
@@ -319,15 +319,15 @@ val oleast_intro = store_thm(
     (match_mp_tac ordlt_WF0 >> metis_tac[]) >>
   rw[]);
 
-val ordSUC_def = Define`
+Definition ordSUC_def:
   ordSUC a = oleast b. a < b
-`
+End
 val _ = overload_on ("TC", ``ordSUC``)
 
-val fromNat_def = Define`
+Definition fromNat_def:
   (fromNat 0 = oleast a. T) /\
   (fromNat (SUC n) = ordSUC (fromNat n))
-`;
+End
 val fromNat_SUC = save_thm("fromNat_SUC", fromNat_def |> CONJUNCT2)
 val _ = export_rewrites ["fromNat_SUC"]
 
@@ -416,9 +416,9 @@ val ordSUC_11 = store_thm(
   metis_tac [ordlt_REFL, ordSUC_MONO]);
 val _ = export_rewrites ["ordSUC_11"]
 
-val sup_def = Define`
+Definition sup_def:
   sup ordset = oleast a. a NOTIN BIGUNION (IMAGE preds ordset)
-`;
+End
 
 val ord_induction = save_thm(
   "ord_induction",
@@ -557,10 +557,10 @@ val countableOrds_dclosed = store_thm(
   `preds a SUBSET preds b` by metis_tac [preds_lt_PSUBSET, PSUBSET_DEF] >>
   metis_tac[subset_countable]);
 
-val omax_def = Define`
+Definition omax_def:
   omax (s : 'a ordinal set) =
     some a. maximal_elements s { (x,y) | x <= y } = {a}
-`;
+End
 
 val omax_SOME = store_thm(
   "omax_SOME",
@@ -708,7 +708,8 @@ Proof
   drule_all FINITE_omax_IS_SOME >> simp[]
 QED
 
-val dclose_def = Define`dclose s = { x:'a ordinal | ?y. y IN s /\ x < y }`;
+Definition dclose_def:  dclose s = { x:'a ordinal | ?y. y IN s /\ x < y }
+End
 
 val preds_sup = store_thm(
   "preds_sup",
@@ -780,9 +781,9 @@ val allNats_dwardclosedetc = prove(
   simp[cardleq_def] >> qexists_tac `\a. INL (@n. &n = a)` >>
   simp[INJ_DEF] >> rw[] >> fs[]);
 
-val omega_def = Define`
+Definition omega_def:
   omega = sup { fromNat i | T }
-`;
+End
 val _ = overload_on ("ω", ``omega``)
 
 val lt_omega0 =
@@ -1755,9 +1756,9 @@ val x_le_ordEXP_x = store_thm(
   `b <= a ** b` by metis_tac[] >>
   metis_tac[ordlt_TRANS, ordle_lteq, ordlt_REFL])
 
-val epsilon0_def = Define`
+Definition epsilon0_def:
   epsilon0 = oleast x. omega ** x = x
-`
+End
 
 val _ = overload_on("ε₀", ``epsilon0``)
 
@@ -1956,18 +1957,18 @@ val ordEXP_under_epsilon0 = store_thm(
             Once (GSYM epsilon0_fixpoint)] >>
   metis_tac [ordlet_TRANS]);
 
-val eval_poly_def = Define`
+Definition eval_poly_def:
   eval_poly (a:'a ordinal) [] = 0 /\
   eval_poly a ((c,e)::t) = a ** e * c + eval_poly a t
-`;
+End
 val _ = export_rewrites ["eval_poly_def"]
 
-val is_polyform_def = Define`
+Definition is_polyform_def:
   (is_polyform (a:'a ordinal) [] <=> T) /\
   (is_polyform a [(c,e)] <=> 0 < c /\ c < a) /\
   (is_polyform a ((c1,e1) :: (c2,e2) :: t) <=>
      0 < c1 /\ c1 < a /\ e2 < e1 /\ is_polyform a ((c2,e2) :: t))
-`;
+End
 
 val is_polyform_ELthm = store_thm(
   "is_polyform_ELthm",

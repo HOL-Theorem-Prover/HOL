@@ -37,49 +37,61 @@ val Simplify = R_TAC;
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val group_def = Define
-  `group (gp : 'a -> bool, star) =
+Definition group_def:
+   group (gp : 'a -> bool, star) =
    star IN (gp -> gp -> gp) /\
    (!x y z :: gp. star (star x y) z = star x (star y z)) /\
-   ?e :: gp. !x :: gp. ?ix :: gp. (star e x = x) /\ (star ix x = e)`;
+   ?e :: gp. !x :: gp. ?ix :: gp. (star e x = x) /\ (star ix x = e)
+End
 
-val gset_def = Define `gset (gp : 'a -> bool, star : 'a -> 'a -> 'a) = gp`;
+Definition gset_def:   gset (gp : 'a -> bool, star : 'a -> 'a -> 'a) = gp
+End
 
-val gop_def = Define `gop (gp : 'a -> bool, star : 'a -> 'a -> 'a) = star`;
+Definition gop_def:   gop (gp : 'a -> bool, star : 'a -> 'a -> 'a) = star
+End
 
-val gid_def = Define
-  `gid (G : ('a -> bool) # ('a -> 'a -> 'a)) =
+Definition gid_def:
+   gid (G : ('a -> bool) # ('a -> 'a -> 'a)) =
    @e :: gset G. !x :: gset G. ?ix :: gset G.
-     (gop G e x = x) /\ (gop G ix x = e)`;
+     (gop G e x = x) /\ (gop G ix x = e)
+End
 
-val ginv_def = Define
-  `ginv (G : ('a -> bool) # ('a -> 'a -> 'a)) x =
-   @ix :: gset G. gop G ix x = gid G`;
+Definition ginv_def:
+   ginv (G : ('a -> bool) # ('a -> 'a -> 'a)) x =
+   @ix :: gset G. gop G ix x = gid G
+End
 
-val prod_group_def = Define
-  `prod_group G H =
-   (gset G CROSS gset H, \ (x1, y1) (x2, y2). (gop G x1 x2, gop H y1 y2))`;
+Definition prod_group_def:
+   prod_group G H =
+   (gset G CROSS gset H, \ (x1, y1) (x2, y2). (gop G x1 x2, gop H y1 y2))
+End
 
-val subgroup_def = Define
-  `subgroup G H =
-  H IN group /\ gset H SUBSET gset G /\ !g h :: gset H. gop H g h = gop G g h`;
+Definition subgroup_def:
+   subgroup G H =
+  H IN group /\ gset H SUBSET gset G /\ !g h :: gset H. gop H g h = gop G g h
+End
 
-val psubgroup_def = Define
-  `psubgroup G H = H IN subgroup G /\ gset H PSUBSET gset G`;
+Definition psubgroup_def:
+   psubgroup G H = H IN subgroup G /\ gset H PSUBSET gset G
+End
 
-val gpow_def = Define
-  `(gpow G g 0 = gid G) /\ (gpow G g (SUC n) = gop G g (gpow G g n))`;
+Definition gpow_def:
+   (gpow G g 0 = gid G) /\ (gpow G g (SUC n) = gop G g (gpow G g n))
+End
 
-val group_homo_def = Define
-  `group_homo G H f
+Definition group_homo_def:
+   group_homo G H f
    = f IN (gset G -> gset H) /\
-     (!x y :: gset G. gop H (f x) (f y) = f (gop G x y))`;
+     (!x y :: gset G. gop H (f x) (f y) = f (gop G x y))
+End
 
-val group_iso_def = Define
-  `group_iso G H f = f IN group_homo G H /\ BIJ f (gset G) (gset H)`;
+Definition group_iso_def:
+   group_iso G H f = f IN group_homo G H /\ BIJ f (gset G) (gset H)
+End
 
-val lcoset_def = Define
-  `lcoset G g H = IMAGE (gop G g) (gset H)`;
+Definition lcoset_def:
+   lcoset G g H = IMAGE (gop G g) (gset H)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)

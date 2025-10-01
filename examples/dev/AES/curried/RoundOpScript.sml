@@ -47,9 +47,10 @@ val _ = type_abbrev("key",   Type`:state`);
 val _ = type_abbrev("w8x4",  Type`:word8 # word8 # word8 # word8`);
 
 
-val ZERO_BLOCK_def = Define
- `ZERO_BLOCK = (ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,
-                ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,ZERO) : block`;
+Definition ZERO_BLOCK_def:
+  ZERO_BLOCK = (ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,
+                ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,ZERO) : block
+End
 
 (*---------------------------------------------------------------------------*)
 (* Case analysis on a block.                                                 *)
@@ -66,14 +67,15 @@ val FORALL_BLOCK = Q.store_thm
 (* XOR on blocks. Definition and algebraic properties.                       *)
 (*---------------------------------------------------------------------------*)
 
-val XOR_BLOCK_def = Define
- `XOR_BLOCK ((a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15):block)
+Definition XOR_BLOCK_def:
+  XOR_BLOCK ((a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15):block)
             ((b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15):block)
        =
       (a0 # b0,   a1 # b1,   a2 # b2,   a3 # b3,
        a4 # b4,   a5 # b5,   a6 # b6,   a7 # b7,
        a8 # b8,   a9 # b9,   a10 # b10, a11 # b11,
-       a12 # b12, a13 # b13, a14 # b14, a15 # b15)`;
+       a12 # b12, a13 # b13, a14 # b14, a15 # b15)
+End
 
 val XOR_BLOCK_ZERO = Q.store_thm
 ("XOR_BLOCK_ZERO",
@@ -104,20 +106,22 @@ val XOR_BLOCK_IDEM = Q.store_thm
 (*    Moving data into and out of a state                                    *)
 (*---------------------------------------------------------------------------*)
 
-val to_state_def = Define
- `to_state ((b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15) :block)
+Definition to_state_def:
+  to_state ((b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15) :block)
                 =
             (b0,b4,b8,b12,
              b1,b5,b9,b13,
              b2,b6,b10,b14,
-             b3,b7,b11,b15) : state`;
+             b3,b7,b11,b15) : state
+End
 
-val from_state_def = Define
- `from_state((b0,b4,b8,b12,
+Definition from_state_def:
+  from_state((b0,b4,b8,b12,
               b1,b5,b9,b13,
               b2,b6,b10,b14,
               b3,b7,b11,b15) :state)
- = (b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15) : block`;
+ = (b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15) : block
+End
 
 
 val to_state_Inversion = Q.store_thm
@@ -151,8 +155,10 @@ val genSubBytes_def = try Define
 
 val _ = Parse.reveal "S";
 
-val SubBytes_def    = Define `SubBytes = genSubBytes Sbox`;
-val InvSubBytes_def = Define `InvSubBytes = genSubBytes InvSbox`;
+Definition SubBytes_def:      SubBytes = genSubBytes Sbox
+End
+Definition InvSubBytes_def:   InvSubBytes = genSubBytes InvSbox
+End
 
 val SubBytes_Inversion = Q.store_thm
 ("SubBytes_Inversion",
@@ -165,8 +171,8 @@ val SubBytes_Inversion = Q.store_thm
     third row by 2, and the last row by 3. And the inverse operation.
  ---------------------------------------------------------------------------*)
 
-val ShiftRows_def = Define
-  `ShiftRows ((b00,b01,b02,b03,
+Definition ShiftRows_def:
+   ShiftRows ((b00,b01,b02,b03,
                b10,b11,b12,b13,
                b20,b21,b22,b23,
                b30,b31,b32,b33) :state)
@@ -174,10 +180,11 @@ val ShiftRows_def = Define
              (b00,b01,b02,b03,
               b11,b12,b13,b10,
               b22,b23,b20,b21,
-              b33,b30,b31,b32) :state`;
+              b33,b30,b31,b32) :state
+End
 
-val InvShiftRows_def = Define
-  `InvShiftRows ((b00,b01,b02,b03,
+Definition InvShiftRows_def:
+   InvShiftRows ((b00,b01,b02,b03,
                   b11,b12,b13,b10,
                   b22,b23,b20,b21,
                   b33,b30,b31,b32) :state)
@@ -185,7 +192,8 @@ val InvShiftRows_def = Define
                 (b00,b01,b02,b03,
                  b10,b11,b12,b13,
                  b20,b21,b22,b23,
-                 b30,b31,b32,b33) :state`;
+                 b30,b31,b32,b33) :state
+End
 
 (*---------------------------------------------------------------------------
         InvShiftRows inverts ShiftRows
@@ -217,19 +225,21 @@ val InvShiftRows_InvSubBytes_Commute = Q.store_thm
         Column multiplication and its inverse
  ---------------------------------------------------------------------------*)
 
-val MultCol_def = Define
- `MultCol (a,b,c,d) =
+Definition MultCol_def:
+  MultCol (a,b,c,d) =
    ((TWO ** a)   # (THREE ** b) #  c           # d,
      a           # (TWO ** b)   # (THREE ** c) # d,
      a           #  b           # (TWO ** c)   # (THREE ** d),
-    (THREE ** a) #  b           #  c           # (TWO ** d))`;
+    (THREE ** a) #  b           #  c           # (TWO ** d))
+End
 
-val InvMultCol_def = Define
- `InvMultCol (a,b,c,d) =
+Definition InvMultCol_def:
+  InvMultCol (a,b,c,d) =
    ((E_HEX ** a) # (B_HEX ** b) # (D_HEX ** c) # (NINE  ** d),
     (NINE  ** a) # (E_HEX ** b) # (B_HEX ** c) # (D_HEX ** d),
     (D_HEX ** a) # (NINE  ** b) # (E_HEX ** c) # (B_HEX ** d),
-    (B_HEX ** a) # (D_HEX ** b) # (NINE  ** c) # (E_HEX ** d))`;
+    (B_HEX ** a) # (D_HEX ** b) # (NINE  ** c) # (E_HEX ** d))
+End
 
 (*---------------------------------------------------------------------------*)
 (* Table-lookup versions of MultCol and InvMultCol.Faster to use, but        *)
@@ -413,8 +423,8 @@ val [E_HEX]    = decls "E_HEX";
 (* Mixing columns                                                            *)
 (*---------------------------------------------------------------------------*)
 
-val genMixColumns_def = Define
- `genMixColumns MC ((b00,b01,b02,b03,
+Definition genMixColumns_def:
+  genMixColumns MC ((b00,b01,b02,b03,
                      b10,b11,b12,b13,
                      b20,b21,b22,b23,
                      b30,b31,b32,b33) :state)
@@ -426,11 +436,14 @@ val genMixColumns_def = Define
     (b00', b01', b02', b03',
      b10', b11', b12', b13',
      b20', b21', b22', b23',
-     b30', b31', b32', b33') : state`;
+     b30', b31', b32', b33') : state
+End
 
 
-val MixColumns_def    = Define `MixColumns    = genMixColumns MultCol`;
-val InvMixColumns_def = Define `InvMixColumns = genMixColumns InvMultCol`;
+Definition MixColumns_def:      MixColumns    = genMixColumns MultCol
+End
+Definition InvMixColumns_def:   InvMixColumns = genMixColumns InvMultCol
+End
 
 val MixColumns_Inversion = Q.store_thm
 ("MixColumns_Inversion",
@@ -444,7 +457,8 @@ val MixColumns_Inversion = Q.store_thm
     Pairwise XOR the state with the round key
  ---------------------------------------------------------------------------*)
 
-val AddRoundKey_def = Define `AddRoundKey = XOR_BLOCK`;
+Definition AddRoundKey_def:   AddRoundKey = XOR_BLOCK
+End
 
 (*---------------------------------------------------------------------------*)
 (* For alternative decryption scheme                                         *)

@@ -141,12 +141,14 @@ val SET_TAC =
 
 val RANGE_TAC = FULL_SIMP_TAC std_ss [RANGE_def,IN_DEF,gc_inv_def] \\ DECIDE_TAC
 
-val ref_addr_def = Define `ref_addr k n = n2w (8 * n + k):word64`;
+Definition ref_addr_def:   ref_addr k n = n2w (8 * n + k):word64
+End
 
-val ref_heap_addr_def = Define `
+Definition ref_heap_addr_def:
   (ref_heap_addr (H_ADDR a) = (n2w a << 1):word32) /\
   (ref_heap_addr (H_DATA (INL (w:word30))) = w2w w << 2 !! 1w) /\
-  (ref_heap_addr (H_DATA (INR (v:29 word))) = w2w v << 3 !! 3w)`;
+  (ref_heap_addr (H_DATA (INR (v:29 word))) = w2w v << 3 !! 3w)
+End
 
 val ONE32 = ``0xFFFFFFFFw:word32``;
 val ONE64 = ``0xFFFFFFFFw:word64``;
@@ -188,16 +190,18 @@ val ADDR_SIMP = store_thm("ADDR_SIMP",
       ((w2w (0x4w * a + b + 4w && 0x3w:word64) = 0x0w:word32) = (b && 3w = 0w))``,
   METIS_TAC [ADDR_SIMP_LEMMA,ADDR_SIMP_LEMMA2,WORD_ADD_ASSOC]);
 
-val ref_aux_def = Define `
+Definition ref_aux_def:
   (ref_aux a H_EMP = SEP_EXISTS x y. one (a:word64,x) * one (a+4w,y)) /\
   (ref_aux a (H_REF n) = one (a,^ONE32) * one (a+4w,n2w n << 1)) /\
   (ref_aux a (H_BLOCK (xs,l,())) =
-     one (a,ref_heap_addr(HD xs)) * one (a+4w,ref_heap_addr(HD (TL xs))))`;
+     one (a,ref_heap_addr(HD xs)) * one (a+4w,ref_heap_addr(HD (TL xs))))
+End
 
-val ref_mem_def = Define `
+Definition ref_mem_def:
   (ref_mem a m b 0 = emp) /\
   (ref_mem a m b (SUC e) =
-     if e < b then emp else ref_aux (a + n2w (8 * e)) (m e) * ref_mem a m b e)`;
+     if e < b then emp else ref_aux (a + n2w (8 * e)) (m e) * ref_mem a m b e)
+End
 
 val ref_mem_EQ_EMP = prove(
   ``!e a m. ref_mem a m e e = emp``,
@@ -248,9 +252,10 @@ val ref_mem_UPDATE = store_thm("ref_mem_UPDATE",
   \\ `~RANGE(b,i)i /\ ~RANGE(SUC i,e)i` by RANGE_TAC
   \\ ASM_SIMP_TAC std_ss [ref_mem_IGNORE]);
 
-val memory_ok_def = Define `
+Definition memory_ok_def:
   memory_ok m =
-    !i xs n d. (m i = H_BLOCK (xs,n,d)) ==> (n = 0) /\ (LENGTH xs = 2)`;
+    !i xs n d. (m i = H_BLOCK (xs,n,d)) ==> (n = 0) /\ (LENGTH xs = 2)
+End
 
 val w2w_SUB_EQ = prove(
   ``!x y. (w2w (x - y:word64) = 0w:word32) = (w2w x = (w2w y):word32)``,
@@ -263,8 +268,9 @@ val ref_heap_addr_H_ADDR = prove(
   \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [ref_heap_addr_def,WORD_MUL_LSL,
        word_mul_n2w,w2w_def,w2n_n2w,MULT_ASSOC]);
 
-val word_32_32_def = Define `
-  word_32_32 (x:word32) (y:word32) = w2w y << 32 !! (w2w x):word64`;
+Definition word_32_32_def:
+  word_32_32 (x:word32) (y:word32) = w2w y << 32 !! (w2w x):word64
+End
 
 val w2w_word_32_32 = prove(
   ``!x y. (w2w (word_32_32 x y) = x) /\
@@ -498,9 +504,10 @@ val mc_gc_loop1_THM = prove(
   \\ CONV_TAC (DEPTH_CONV (helperLib.FORCE_PBETA_CONV))
   \\ SIMP_TAC std_ss []);
 
-val ref_stack_def = Define `
+Definition ref_stack_def:
   (ref_stack a [] = one (a:word64,^ONE32)) /\
-  (ref_stack a (x::xs) = one (a,ref_heap_addr x) * ref_stack (a+4w) xs)`;
+  (ref_stack a (x::xs) = one (a,ref_heap_addr x) * ref_stack (a+4w) xs)
+End
 
 val mc_move_list1_THM = prove(
   ``(mc_move_list1 = mc_move_list) /\ (mc_move_list1_pre = mc_move_list_pre)``,
@@ -618,27 +625,32 @@ val mc_gc_thm = store_thm("mc_gc_thm",
          (MATCH_MP_TAC ref_mem_CUT \\ FULL_SIMP_TAC (std_ss++star_ss) [])
   \\ FULL_SIMP_TAC (std_ss++star_ss) []);
 
-val word64_3232_def = Define `
-  word64_3232 (w:word64) = (w2w w, w2w (w >>> 32)):word32 # word32`;
+Definition word64_3232_def:
+  word64_3232 (w:word64) = (w2w w, w2w (w >>> 32)):word32 # word32
+End
 
-val word3232_64_def = Define `
-  word3232_64 ((w0,w1):word32 # word32) = w2w w1 << 32 !! w2w w0`;
+Definition word3232_64_def:
+  word3232_64 ((w0,w1):word32 # word32) = w2w w1 << 32 !! w2w w0
+End
 
-val ref_static_def = Define `
+Definition ref_static_def:
   (ref_static a [] = emp) /\
   (ref_static a (x::xs) =
      let (w0,w1) = word64_3232 x in
-       one (a,w0) * one (a+4w,w1) * ref_static (a+8w) xs)`;
+       one (a,w0) * one (a+4w,w1) * ref_static (a+8w) xs)
+End
 
-val ref_stack_space_def = Define `
+Definition ref_stack_space_def:
   (ref_stack_space sp 0 = emp) /\
   (ref_stack_space sp (SUC n) =
-     ref_stack_space (sp-4w) n * SEP_EXISTS w. one (sp:word64-4w,w:word32))`;
+     ref_stack_space (sp-4w) n * SEP_EXISTS w. one (sp:word64-4w,w:word32))
+End
 
-val ok_split_heap_def = Define `
+Definition ok_split_heap_def:
   ok_split_heap (roots,m,i,e) =
     i <= e /\ ADDR_SET roots UNION D1 m SUBSET D0 m /\ memory_ok m /\ (R0 m = {}) /\
-    !k. i <= k ==> (m k = H_EMP)`;
+    !k. i <= k ==> (m k = H_EMP)
+End
 
 val RANGE_LEMMA = prove(
   ``(RANGE (0,0) = {}) /\

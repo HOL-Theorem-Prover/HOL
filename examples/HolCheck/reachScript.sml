@@ -6,11 +6,13 @@ Libs
 
 infix &&; infix 8 by;
 
-val ReachNext_def = Define `ReachNext R s s' = R(s,s')`;
+Definition ReachNext_def:   ReachNext R s s' = R(s,s')
+End
 
-val ReachableRec_def = Define `
+Definition ReachableRec_def:
     (ReachableRec R s 0 = s) /\
-    (ReachableRec R s (SUC n) = {s' | s' IN ReachableRec R s n \/ ?s''. ReachNext R s'' s'  /\ s'' IN ReachableRec R s n})`;
+    (ReachableRec R s (SUC n) = {s' | s' IN ReachableRec R s n \/ ?s''. ReachNext R s'' s'  /\ s'' IN ReachableRec R s n})
+End
 
 val ReachableRecSimp = save_thm("ReachableRecSimp",prove(``!R s n state. ReachableRec R s (SUC n) state = ReachableRec R s n state \/ ?state'. R (state',state) /\ ReachableRec R s n state'``,
 REWRITE_TAC [ReachableRec_def]
@@ -18,7 +20,8 @@ THEN CONV_TAC (STRIP_QUANT_CONV (LHS_CONV (ONCE_REWRITE_CONV [GSYM (prove(``!x P
 THEN REWRITE_TAC [SET_SPEC_CONV ``state IN {s' | s' IN ReachableRec R s n \/ ?s''. ReachNext R s'' s' /\ s'' IN ReachableRec R s n}``]
 THEN SIMP_TAC std_ss [IN_DEF,ReachNext_def]));
 
-val Reachable_def = Define `Reachable R s = BIGUNION {P | ?n. P = ReachableRec R s n}`;
+Definition Reachable_def:   Reachable R s = BIGUNION {P | ?n. P = ReachableRec R s n}
+End
 
 val ReachableChain = prove(``!R s n. ReachableRec R s n SUBSET ReachableRec R s (SUC n)``,
 Induct_on `n` THENL [

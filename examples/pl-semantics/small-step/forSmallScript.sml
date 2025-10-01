@@ -29,17 +29,19 @@ small_t =
   | For e e small_t
   | Handle small_t`;
 
-val t_to_small_t_def = Define `
+Definition t_to_small_t_def:
 (t_to_small_t ((Dec string t):t) = ((Dec string (t_to_small_t t)) : small_t)) ∧
 (t_to_small_t (Exp e) = Exp e) ∧
 (t_to_small_t Break = Break) ∧
 (t_to_small_t (Seq t1 t2) = Seq (t_to_small_t t1) (t_to_small_t t2)) ∧
 (t_to_small_t (If e t1 t2) = If e (t_to_small_t t1) (t_to_small_t t2)) ∧
-(t_to_small_t (For e1 e2 t) = For e1 e2 (t_to_small_t t))`;
+(t_to_small_t (For e1 e2 t) = For e1 e2 (t_to_small_t t))
+End
 
-val is_val_e_def = Define `
+Definition is_val_e_def:
 (is_val_e (Num n) = T) ∧
-(is_val_e _ = F)`;
+(is_val_e _ = F)
+End
 
 val (step_e_rules, step_e_ind, step_e_cases) = Hol_reln `
 (!s x n.
@@ -64,10 +66,11 @@ val (step_e_rules, step_e_ind, step_e_cases) = Hol_reln `
   ⇒
   step_e (s, Assign x e1) (s2, Assign x e2))`;
 
-val is_val_t_def = Define `
+Definition is_val_t_def:
 (is_val_t (Exp e) = is_val_e e) ∧
 (is_val_t Break = T) ∧
-(is_val_t _ = F)`;
+(is_val_t _ = F)
+End
 
 val (step_t_rules, step_t_ind, step_t_cases) = Hol_reln `
 (!s t x.
@@ -108,11 +111,12 @@ val (step_t_rules, step_t_ind, step_t_cases) = Hol_reln `
 (!s e1 e2 t.
   step_t (s, For e1 e2 t) (s, Handle (If e1 (Seq t (Seq (Exp e2) (For e1 e2 t))) (Exp (Num 0)))))`;
 
-val small_diverges_def = Define `
+Definition small_diverges_def:
 small_diverges t =
-  ∀s1 t1. step_t^* (FEMPTY, t) (s1, t1) ⇒ ?s2 t2. step_t (s1, t1) (s2, t2)`;
+  ∀s1 t1. step_t^* (FEMPTY, t) (s1, t1) ⇒ ?s2 t2. step_t (s1, t1) (s2, t2)
+End
 
-val semantics_small_def = Define `
+Definition semantics_small_def:
 semantics_small t =
   let t = t_to_small_t t in
     case some s. step_t^* (FEMPTY, t) s ∧ ¬?s2 t2. step_t s (s2, t2) of
@@ -120,39 +124,44 @@ semantics_small t =
        | SOME (s1, t1) =>
            case t1 of
               | Exp e => if is_val_e e then Terminate else Crash
-              | _ => Crash`;
+              | _ => Crash
+End
 
 (* ----------- Connect to functional big step -------------- *)
 
-val for_unload_def = Define `
+Definition for_unload_def:
   for_unload st =
     case SND st of
     | Break => NONE
-    | Exp (Num n) => SOME n`;
+    | Exp (Num n) => SOME n
+End
 
-val for_small_sem_def = Define `
+Definition for_small_sem_def:
   for_small_sem =
     <| step := (\st. some st'. step_t st st');
        is_value := (\st. is_val_t (SND st));
        load := (\t. (FEMPTY, t_to_small_t t));
-       unload := for_unload |>`;
+       unload := for_unload |>
+End
 
-val for_eval_def = Define `
+Definition for_eval_def:
   for_eval st env t =
     case sem_t st t of
       (Rval v, s) => (s, Val (SOME v))
     | (Rbreak, s) => (s, Val NONE)
     | (Rtimeout, s) => (s, Timeout)
-    | (Rfail, s) => (s, Error)`;
+    | (Rfail, s) => (s, Error)
+End
 
-val for_big_sem_def = Define `
+Definition for_big_sem_def:
   for_big_sem =
     <| eval := for_eval;
        init_st := <| clock := 0; store := FEMPTY |>;
        init_env := ();
        get_clock := (\x. x.clock);
        set_clock := (\c st. st with clock := c);
-       unload := I |>`;
+       unload := I |>
+End
 
 val (res_rel_t_rules, res_rel_t_ind, res_rel_t_cases) = Hol_reln `
 (!i s.
@@ -1051,11 +1060,12 @@ val big_val_no_errors = Q.prove(
 (* Prove that the straightforward definition of the semantics are the same as
  * the ones used in the big/small equivalence *)
 
-val to_obs_def = Define `
+Definition to_obs_def:
   (to_obs (Terminate NONE) = Crash) ∧
   (to_obs (Terminate _ ) = Terminate) ∧
   (to_obs Diverge = Diverge) ∧
-  (to_obs Crash = Crash)`;
+  (to_obs Crash = Crash)
+End
 
 val some_SAT = Q.prove(
 `!P y. (some x. P x) = SOME y ⇒ P y`,
@@ -1117,8 +1127,9 @@ val sem_equiv_thm = Q.store_thm ("sem_equiv_thm",
  metis_tac [sem_equiv_lem]);
 
 (*Pretty printing*)
-val hideseq_def = Define`
-  hideseq = Seq`
+Definition hideseq_def:
+  hideseq = Seq
+End
 
 Theorem step_t_rules_hideseq = step_t_rules |> REWRITE_RULE[GSYM hideseq_def]
 

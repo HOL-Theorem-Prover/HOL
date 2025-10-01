@@ -33,9 +33,8 @@ propositions as strings
 val _ = type_abbrev("kripke", ``:(sexp,sexp)model``);
 
 (* Variables in a formula *)
-val VARS_def =
- Define
-  `(VARS TRUE = {})
+Definition VARS_def:
+   (VARS TRUE = {})
    /\
    (VARS FALSE = {})
    /\
@@ -55,4 +54,5 @@ val VARS_def =
    /\
    (VARS (UNTIL f1 f2) = VARS f1 UNION VARS f2)
    /\
-   (VARS (WEAK_UNTIL f1 f2) = VARS f1 UNION VARS f2)`;
+   (VARS (WEAK_UNTIL f1 f2) = VARS f1 UNION VARS f2)
+End

@@ -19,16 +19,17 @@ val _ = temp_add_monadsyntax()
 
 val _ = Datatype`Cont = Cont ((α -> β) -> β)`
 
-val runCont_def = Define`runCont (Cont f) = f`
+Definition runCont_def:  runCont (Cont f) = f
+End
 
-val CONT_UNIT_def = Define`
+Definition CONT_UNIT_def:
   CONT_UNIT (a:α) : (α,ρ)Cont = Cont (λf. f a)
-`;
+End
 
-val CONT_BIND_def = Define`
+Definition CONT_BIND_def:
   CONT_BIND (m : (α,ρ) Cont) (f : α -> (β,ρ) Cont) : (β,ρ) Cont =
     Cont (λ(k:β->ρ). runCont m (λa:α. runCont (f a) (λb:β. k b)))
-`;
+End
 
 val _ = overload_on ("return", ``CONT_UNIT``)
 val _ = overload_on ("monad_bind", ``CONT_BIND``)
@@ -39,9 +40,9 @@ val t6 = Q.store_thm(
   `runCont (do x <- return 2; y <- return 3; return (2 + 3) od) SUC = 6`,
   CONV_TAC EVAL)
 
-val throw_def = Define`
+Definition throw_def:
   throw (v:ρ) : (α,ρ) Cont = Cont (λk. v)
-`;
+End
 
 val eek_example = ``
   do
@@ -56,22 +57,22 @@ val eek_result = save_thm(
   "eek_result",
   EVAL ``runCont ^eek_example (λa. [a])``);
 
-val callCC_def = Define`
+Definition callCC_def:
   callCC f =
    Cont (λk. runCont (f (λa. Cont (λx. k a))) k)
-`;
+End
 
-val runC_def = Define`
+Definition runC_def:
   runC m = runCont m I
-`;
+End
 
-val reset_def = Define`
+Definition reset_def:
   (reset : (α,α)Cont -> (α,'r)Cont) = return o runC
-`;
+End
 
-val shift_def = Define`
+Definition shift_def:
   shift f = Cont (runC o f)
-`;
+End
 
 
 val okmij1 =

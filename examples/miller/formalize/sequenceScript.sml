@@ -10,23 +10,31 @@ val _ = ParseExtras.temp_loose_equality()
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val shd_def = Define `shd (f : num -> 'a) = f 0`;
+Definition shd_def:   shd (f : num -> 'a) = f 0
+End
 
-val stl_def = Define `stl (f : num -> 'a) n = f (SUC n)`;
+Definition stl_def:   stl (f : num -> 'a) n = f (SUC n)
+End
 
-val scons_def = Define
-  `(scons (h : 'a) (t : num -> 'a) 0 = h) /\ (scons h t (SUC n) = t n)`;
+Definition scons_def:
+   (scons (h : 'a) (t : num -> 'a) 0 = h) /\ (scons h t (SUC n) = t n)
+End
 
-val sdest_def = Define `sdest = \s. (shd s, stl s)`;
+Definition sdest_def:   sdest = \s. (shd s, stl s)
+End
 
-val sconst_def = Define `sconst = (K : 'a -> num -> 'a)`;
+Definition sconst_def:   sconst = (K : 'a -> num -> 'a)
+End
 
-val stake_def = Define
-  `(stake 0 s = []) /\ (stake (SUC n) s = shd s :: stake n (stl s))`;
+Definition stake_def:
+   (stake 0 s = []) /\ (stake (SUC n) s = shd s :: stake n (stl s))
+End
 
-val sdrop_def = Define `(sdrop 0 = I) /\ (sdrop (SUC n) = sdrop n o stl)`;
+Definition sdrop_def:   (sdrop 0 = I) /\ (sdrop (SUC n) = sdrop n o stl)
+End
 
-val eventually_def = Define `eventually x y = ?n. sdrop n x = sdrop n y`;
+Definition eventually_def:   eventually x y = ?n. sdrop n x = sdrop n y
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)

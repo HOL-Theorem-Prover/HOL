@@ -43,20 +43,20 @@ val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj", "LT1_EQ0"]
 val _ = ParseExtras.temp_loose_equality()
 
 
-val IS_INFINITE_PROPER_PATH_def =
- Define
-  `IS_INFINITE_PROPER_PATH f =  ?p. ((f = INFINITE p) /\ (!n. (p n = TOP) ==> (p (SUC n) = TOP)) /\
-  (!n. (p n = BOTTOM) ==> (p (SUC n) = BOTTOM)))`;
+Definition IS_INFINITE_PROPER_PATH_def:
+   IS_INFINITE_PROPER_PATH f =  ?p. ((f = INFINITE p) /\ (!n. (p n = TOP) ==> (p (SUC n) = TOP)) /\
+  (!n. (p n = BOTTOM) ==> (p (SUC n) = BOTTOM)))
+End
 
 
-val IS_FINITE_PROPER_PATH_def =
- Define
-  `IS_FINITE_PROPER_PATH f =  ?p. ((f = FINITE p) /\ PATH_TOP_FREE f /\ PATH_BOTTOM_FREE f)`;
+Definition IS_FINITE_PROPER_PATH_def:
+   IS_FINITE_PROPER_PATH f =  ?p. ((f = FINITE p) /\ PATH_TOP_FREE f /\ PATH_BOTTOM_FREE f)
+End
 
 
-val IS_INFINITE_TOP_BOTTOM_FREE_PATH_def =
- Define
-  `IS_INFINITE_TOP_BOTTOM_FREE_PATH f =  ?p. ((f = INFINITE p) /\ (!n. ?s. (p n = STATE s)))`;
+Definition IS_INFINITE_TOP_BOTTOM_FREE_PATH_def:
+   IS_INFINITE_TOP_BOTTOM_FREE_PATH f =  ?p. ((f = INFINITE p) /\ (!n. ?s. (p n = STATE s)))
+End
 
 
 val IS_INFINITE_TOP_BOTTOM_FREE_PATH___COMPLEMENT =
@@ -85,12 +85,13 @@ val IS_INFINITE_TOP_BOTTOM_FREE_PATH___RESTN =
     ASM_SIMP_TAC std_ss [RESTN_INFINITE, path_11]);
 
 
-val IS_PROPER_PATH_def =
- Define
-  `IS_PROPER_PATH f =  IS_INFINITE_PROPER_PATH f \/ IS_FINITE_PROPER_PATH f`;
+Definition IS_PROPER_PATH_def:
+   IS_PROPER_PATH f =  IS_INFINITE_PROPER_PATH f \/ IS_FINITE_PROPER_PATH f
+End
 
-val BOTTOM_OMEGA_def =
- Define `BOTTOM_OMEGA = INFINITE(\n. BOTTOM)`;
+Definition BOTTOM_OMEGA_def:
+  BOTTOM_OMEGA = INFINITE(\n. BOTTOM)
+End
 
 val COMPLEMENT_LETTER_Cases =
  store_thm
@@ -874,17 +875,17 @@ val MEM_SEL =
 
 
 
-val PATH_PROP_FREE_def =
- Define
-  `PATH_PROP_FREE (p:'prop) v =  !n. !s. (n < LENGTH v) ==> ((ELEM v n = STATE s) ==> ~(p IN s))`;
+Definition PATH_PROP_FREE_def:
+   PATH_PROP_FREE (p:'prop) v =  !n. !s. (n < LENGTH v) ==> ((ELEM v n = STATE s) ==> ~(p IN s))
+End
 
 
 
-val INSERT_PROP_def =
- Define
-  `(INSERT_PROP (c:'prop) TOP   = TOP) /\
+Definition INSERT_PROP_def:
+   (INSERT_PROP (c:'prop) TOP   = TOP) /\
    (INSERT_PROP (c:'prop) BOTTOM   = BOTTOM) /\
-   (INSERT_PROP (c:'prop) (STATE (s:'prop set)) = STATE (\x. ((s x) \/ (x = c))))`;
+   (INSERT_PROP (c:'prop) (STATE (s:'prop set)) = STATE (\x. ((s x) \/ (x = c))))
+End
 
 
 val INSERT_PROP_CASES =
@@ -897,9 +898,8 @@ val INSERT_PROP_CASES =
    Cases_on `l` THEN SIMP_TAC std_ss [INSERT_PROP_def, letter_distinct]);
 
 
-val F_SERE_FREE_def =
- Define
-  `(F_SERE_FREE (F_STRONG_BOOL b)   = T)
+Definition F_SERE_FREE_def:
+   (F_SERE_FREE (F_STRONG_BOOL b)   = T)
    /\
    (F_SERE_FREE (F_WEAK_BOOL b)     = T)
    /\
@@ -919,12 +919,13 @@ val F_SERE_FREE_def =
    /\
    (F_SERE_FREE (F_SUFFIX_IMP(r,f)) = F)
    /\
-   (F_SERE_FREE (F_CLOCK (f,c))         = F_SERE_FREE f)`;
+   (F_SERE_FREE (F_CLOCK (f,c))         = F_SERE_FREE f)
+End
 
 
-val F_CLOCK_SERE_FREE_def =
- Define
-  `F_CLOCK_SERE_FREE f = (F_CLOCK_FREE f /\ F_SERE_FREE f)`;
+Definition F_CLOCK_SERE_FREE_def:
+   F_CLOCK_SERE_FREE f = (F_CLOCK_FREE f /\ F_SERE_FREE f)
+End
 
 
 
@@ -946,11 +947,11 @@ val bexp_induct =
 
 
 
-val LETTER_RESTRICT_def =
- Define
-  `(LETTER_RESTRICT S TOP  = TOP) /\
+Definition LETTER_RESTRICT_def:
+   (LETTER_RESTRICT S TOP  = TOP) /\
    (LETTER_RESTRICT S BOTTOM  = BOTTOM) /\
-   (LETTER_RESTRICT S (STATE s)  = STATE (s INTER S))`
+   (LETTER_RESTRICT S (STATE s)  = STATE (s INTER S))
+End
 
 
 val LETTER_RESTRICT_Cases =
@@ -964,10 +965,10 @@ val LETTER_RESTRICT_Cases =
    PROVE_TAC[]);
 
 
-val PATH_MAP_def =
- Define
-  `(PATH_MAP f (FINITE l) = FINITE (MAP f l)) /\
-   (PATH_MAP f (INFINITE p) = INFINITE (\n. f (p n)))`;
+Definition PATH_MAP_def:
+   (PATH_MAP f (FINITE l) = FINITE (MAP f l)) /\
+   (PATH_MAP f (INFINITE p) = INFINITE (\n. f (p n)))
+End
 
 
 val LENGTH_PATH_MAP =
@@ -1098,9 +1099,9 @@ val SEL_PATH_MAP =
         REWRITE_TAC[LENGTH_def, GE]
       ]);
 
-val PATH_LETTER_RESTRICT_def =
- Define
-  `PATH_LETTER_RESTRICT S p = PATH_MAP (LETTER_RESTRICT S) p`;
+Definition PATH_LETTER_RESTRICT_def:
+   PATH_LETTER_RESTRICT S p = PATH_MAP (LETTER_RESTRICT S) p
+End
 
 
 val LENGTH_PATH_LETTER_RESTRICT =
@@ -1144,41 +1145,40 @@ val COMPLEMENT_PATH_LETTER_RESTRICT =
     ]);
 
 
-val LETTER_USED_VARS_def =
- Define
-   `(LETTER_USED_VARS TOP = EMPTY) /\
+Definition LETTER_USED_VARS_def:
+    (LETTER_USED_VARS TOP = EMPTY) /\
     (LETTER_USED_VARS BOTTOM = EMPTY) /\
-    (LETTER_USED_VARS (STATE s) = s)`;
+    (LETTER_USED_VARS (STATE s) = s)
+End
 
-val PATH_USED_VARS_def =
- Define
-  `PATH_USED_VARS v =
-    \x. (?n. LENGTH v > n /\ x IN LETTER_USED_VARS (ELEM v n))`
+Definition PATH_USED_VARS_def:
+   PATH_USED_VARS v =
+    \x. (?n. LENGTH v > n /\ x IN LETTER_USED_VARS (ELEM v n))
+End
 
-val B_USED_VARS_def =
- Define
-  `(B_USED_VARS (B_PROP(p:'prop)) = {p}) /\
+Definition B_USED_VARS_def:
+   (B_USED_VARS (B_PROP(p:'prop)) = {p}) /\
    (B_USED_VARS B_TRUE = EMPTY) /\
    (B_USED_VARS B_FALSE = EMPTY) /\
    (B_USED_VARS (B_NOT b) = B_USED_VARS b) /\
-   (B_USED_VARS (B_AND(b1,b2)) = B_USED_VARS b1 UNION B_USED_VARS b2)`;
+   (B_USED_VARS (B_AND(b1,b2)) = B_USED_VARS b1 UNION B_USED_VARS b2)
+End
 
 
-val S_USED_VARS_def =
- Define
-  `(S_USED_VARS (S_BOOL b) = B_USED_VARS b) /\
+Definition S_USED_VARS_def:
+   (S_USED_VARS (S_BOOL b) = B_USED_VARS b) /\
    (S_USED_VARS (S_CAT(r1,r2)) = S_USED_VARS r1 UNION S_USED_VARS r2) /\
    (S_USED_VARS (S_FUSION(r1,r2)) = S_USED_VARS r1 UNION S_USED_VARS r2) /\
    (S_USED_VARS (S_OR(r1,r2)) = S_USED_VARS r1 UNION S_USED_VARS r2) /\
    (S_USED_VARS (S_AND(r1,r2)) = S_USED_VARS r1 UNION S_USED_VARS r2) /\
    (S_USED_VARS S_EMPTY = EMPTY) /\
    (S_USED_VARS (S_CLOCK (r, c)) = S_USED_VARS r UNION B_USED_VARS c) /\
-   (S_USED_VARS (S_REPEAT r) = S_USED_VARS r)`;
+   (S_USED_VARS (S_REPEAT r) = S_USED_VARS r)
+End
 
 
-val F_USED_VARS_def =
- Define
-   `(F_USED_VARS (F_STRONG_BOOL b) = B_USED_VARS b) /\
+Definition F_USED_VARS_def:
+    (F_USED_VARS (F_STRONG_BOOL b) = B_USED_VARS b) /\
     (F_USED_VARS (F_WEAK_BOOL b) = B_USED_VARS b) /\
     (F_USED_VARS (F_NOT f) = F_USED_VARS f) /\
     (F_USED_VARS (F_AND (f,g)) = (F_USED_VARS f UNION F_USED_VARS g)) /\
@@ -1188,12 +1188,16 @@ val F_USED_VARS_def =
     (F_USED_VARS (F_STRONG_SERE r) = S_USED_VARS r) /\
     (F_USED_VARS (F_WEAK_SERE r) = S_USED_VARS r) /\
     (F_USED_VARS (F_SUFFIX_IMP (r,f)) = S_USED_VARS r UNION F_USED_VARS f) /\
-    (F_USED_VARS (F_CLOCK (f, p)) = (F_USED_VARS f UNION B_USED_VARS p))`;
+    (F_USED_VARS (F_CLOCK (f, p)) = (F_USED_VARS f UNION B_USED_VARS p))
+End
 
 
-val BEXP_PROP_FREE_def = Define `BEXP_PROP_FREE c b = ~(c IN B_USED_VARS b)`;
-val S_PROP_FREE_def = Define `S_PROP_FREE c r = ~(c IN S_USED_VARS r)`;
-val F_PROP_FREE_def = Define `F_PROP_FREE c f = ~(c IN F_USED_VARS f)`;
+Definition BEXP_PROP_FREE_def:   BEXP_PROP_FREE c b = ~(c IN B_USED_VARS b)
+End
+Definition S_PROP_FREE_def:   S_PROP_FREE c r = ~(c IN S_USED_VARS r)
+End
+Definition F_PROP_FREE_def:   F_PROP_FREE c f = ~(c IN F_USED_VARS f)
+End
 
 
 val FINITE___B_USED_VARS =
@@ -1676,15 +1680,15 @@ val F_USED_VARS_INTER_SUBSET_THM =
   ]);
 
 
-val LETTER_VAR_RENAMING_def =
- Define
-   `(LETTER_VAR_RENAMING (f:'a->'b) TOP = TOP) /\
+Definition LETTER_VAR_RENAMING_def:
+    (LETTER_VAR_RENAMING (f:'a->'b) TOP = TOP) /\
     (LETTER_VAR_RENAMING f BOTTOM = BOTTOM) /\
-    (LETTER_VAR_RENAMING f (STATE s) = STATE (IMAGE f s))`;
+    (LETTER_VAR_RENAMING f (STATE s) = STATE (IMAGE f s))
+End
 
-val PATH_VAR_RENAMING_def =
- Define
-  `PATH_VAR_RENAMING f p = PATH_MAP (LETTER_VAR_RENAMING f) p`;
+Definition PATH_VAR_RENAMING_def:
+   PATH_VAR_RENAMING f p = PATH_MAP (LETTER_VAR_RENAMING f) p
+End
 
 
 val LENGTH_PATH_VAR_RENAMING =
@@ -1779,30 +1783,29 @@ val PATH_VAR_RENAMING___BOTTOM_OMEGA =
     REWRITE_TAC[PATH_VAR_RENAMING_def, BOTTOM_OMEGA_def, PATH_MAP_def, LETTER_VAR_RENAMING_def]);
 
 
-val B_VAR_RENAMING_def =
- Define
-   `(B_VAR_RENAMING (f:'a->'b) (B_TRUE) = B_TRUE) /\
+Definition B_VAR_RENAMING_def:
+    (B_VAR_RENAMING (f:'a->'b) (B_TRUE) = B_TRUE) /\
     (B_VAR_RENAMING f (B_FALSE) = B_FALSE) /\
     (B_VAR_RENAMING f (B_PROP p) = (B_PROP (f p))) /\
     (B_VAR_RENAMING f (B_NOT b) = B_NOT (B_VAR_RENAMING f b)) /\
-    (B_VAR_RENAMING f (B_AND(b1,b2)) = (B_AND(B_VAR_RENAMING f b1, B_VAR_RENAMING f b2)))`;
+    (B_VAR_RENAMING f (B_AND(b1,b2)) = (B_AND(B_VAR_RENAMING f b1, B_VAR_RENAMING f b2)))
+End
 
 
-val S_VAR_RENAMING_def =
- Define
-  `(S_VAR_RENAMING f (S_BOOL b) = S_BOOL (B_VAR_RENAMING f b)) /\
+Definition S_VAR_RENAMING_def:
+   (S_VAR_RENAMING f (S_BOOL b) = S_BOOL (B_VAR_RENAMING f b)) /\
    (S_VAR_RENAMING f (S_CAT(r1,r2)) = S_CAT(S_VAR_RENAMING f r1, S_VAR_RENAMING f r2)) /\
    (S_VAR_RENAMING f (S_FUSION(r1,r2)) = S_FUSION(S_VAR_RENAMING f r1, S_VAR_RENAMING f r2)) /\
    (S_VAR_RENAMING f (S_OR(r1,r2)) = S_OR(S_VAR_RENAMING f r1, S_VAR_RENAMING f r2)) /\
    (S_VAR_RENAMING f (S_AND(r1,r2)) = S_AND(S_VAR_RENAMING f r1, S_VAR_RENAMING f r2)) /\
    (S_VAR_RENAMING f S_EMPTY = S_EMPTY) /\
    (S_VAR_RENAMING f (S_CLOCK (r, c)) = S_CLOCK (S_VAR_RENAMING f r, B_VAR_RENAMING f c)) /\
-   (S_VAR_RENAMING f (S_REPEAT r) = S_REPEAT (S_VAR_RENAMING f r))`;
+   (S_VAR_RENAMING f (S_REPEAT r) = S_REPEAT (S_VAR_RENAMING f r))
+End
 
 
-val F_VAR_RENAMING_def =
- Define
-   `(F_VAR_RENAMING f' (F_STRONG_BOOL b) = F_STRONG_BOOL (B_VAR_RENAMING f' b)) /\
+Definition F_VAR_RENAMING_def:
+    (F_VAR_RENAMING f' (F_STRONG_BOOL b) = F_STRONG_BOOL (B_VAR_RENAMING f' b)) /\
     (F_VAR_RENAMING f' (F_WEAK_BOOL b) = F_WEAK_BOOL (B_VAR_RENAMING f' b)) /\
     (F_VAR_RENAMING f' (F_NOT f) = F_NOT (F_VAR_RENAMING f' f)) /\
     (F_VAR_RENAMING f' (F_AND (f,g)) = F_AND(F_VAR_RENAMING f' f, F_VAR_RENAMING f' g)) /\
@@ -1812,7 +1815,8 @@ val F_VAR_RENAMING_def =
     (F_VAR_RENAMING f' (F_STRONG_SERE r) = F_STRONG_SERE (S_VAR_RENAMING f' r)) /\
     (F_VAR_RENAMING f' (F_WEAK_SERE r) = F_WEAK_SERE (S_VAR_RENAMING f' r)) /\
     (F_VAR_RENAMING f' (F_SUFFIX_IMP (r,f)) = F_SUFFIX_IMP(S_VAR_RENAMING f' r, F_VAR_RENAMING f' f)) /\
-    (F_VAR_RENAMING f' (F_CLOCK (f, p)) = F_CLOCK(F_VAR_RENAMING f' f, B_VAR_RENAMING f' p))`;
+    (F_VAR_RENAMING f' (F_CLOCK (f, p)) = F_CLOCK(F_VAR_RENAMING f' f, B_VAR_RENAMING f' p))
+End
 
 
 val B_SEM___VAR_RENAMING =
@@ -2292,31 +2296,30 @@ val F_VAR_RENAMING___F_CLOCK_SERE_FREE =
     ));
 
 
-val WEAK_UF_SEM_def =
- Define
-   `WEAK_UF_SEM v f = UF_SEM (PATH_APPEND v TOP_OMEGA) f`;
+Definition WEAK_UF_SEM_def:
+    WEAK_UF_SEM v f = UF_SEM (PATH_APPEND v TOP_OMEGA) f
+End
 
 
-val STRONG_UF_SEM_def =
- Define
-   `STRONG_UF_SEM v f = UF_SEM (PATH_APPEND v BOTTOM_OMEGA) f`;
+Definition STRONG_UF_SEM_def:
+    STRONG_UF_SEM v f = UF_SEM (PATH_APPEND v BOTTOM_OMEGA) f
+End
 
 
-val IS_PATH_WITH_REPLACEMENTS_def =
- Define
-  `IS_PATH_WITH_REPLACEMENTS v w x = (LENGTH v = LENGTH w) /\
-      (!n. n < LENGTH v ==> ((ELEM v n = ELEM w n) \/ (ELEM v n = x)))`;
+Definition IS_PATH_WITH_REPLACEMENTS_def:
+   IS_PATH_WITH_REPLACEMENTS v w x = (LENGTH v = LENGTH w) /\
+      (!n. n < LENGTH v ==> ((ELEM v n = ELEM w n) \/ (ELEM v n = x)))
+End
 
 
-val IS_LIST_WITH_REPLACEMENTS_def =
- Define
-  `IS_LIST_WITH_REPLACEMENTS v w x = (LENGTH v = LENGTH w) /\
-      (!n. n < LENGTH v ==> ((EL n v = EL n w) \/ (EL n v = x)))`;
+Definition IS_LIST_WITH_REPLACEMENTS_def:
+   IS_LIST_WITH_REPLACEMENTS v w x = (LENGTH v = LENGTH w) /\
+      (!n. n < LENGTH v ==> ((EL n v = EL n w) \/ (EL n v = x)))
+End
 
 
-val IS_TOP_BOTTOM_WELL_BEHAVED_def =
- Define
-  `(IS_TOP_BOTTOM_WELL_BEHAVED (F_STRONG_BOOL b)   = T)
+Definition IS_TOP_BOTTOM_WELL_BEHAVED_def:
+   (IS_TOP_BOTTOM_WELL_BEHAVED (F_STRONG_BOOL b)   = T)
    /\
    (IS_TOP_BOTTOM_WELL_BEHAVED (F_WEAK_BOOL b)     = T)
    /\
@@ -2334,15 +2337,15 @@ val IS_TOP_BOTTOM_WELL_BEHAVED_def =
    /\
    (IS_TOP_BOTTOM_WELL_BEHAVED (F_ABORT (f,b))     = IS_TOP_BOTTOM_WELL_BEHAVED f)
    /\
-   (IS_TOP_BOTTOM_WELL_BEHAVED (F_SUFFIX_IMP(r,f)) = ((UF_SEM TOP_OMEGA (F_SUFFIX_IMP (r, f))) /\ ~(UF_SEM BOTTOM_OMEGA (F_SUFFIX_IMP (r, f)))) /\ IS_TOP_BOTTOM_WELL_BEHAVED f)`;
+   (IS_TOP_BOTTOM_WELL_BEHAVED (F_SUFFIX_IMP(r,f)) = ((UF_SEM TOP_OMEGA (F_SUFFIX_IMP (r, f))) /\ ~(UF_SEM BOTTOM_OMEGA (F_SUFFIX_IMP (r, f)))) /\ IS_TOP_BOTTOM_WELL_BEHAVED f)
+End
 
 
 
 
 
-val IS_PSL_G_def =
- Define
-   `(IS_PSL_G (F_STRONG_BOOL b) = T) /\
+Definition IS_PSL_G_def:
+    (IS_PSL_G (F_STRONG_BOOL b) = T) /\
     (IS_PSL_G (F_WEAK_BOOL b) = T) /\
     (IS_PSL_G (F_NOT f) = IS_PSL_F f) /\
     (IS_PSL_G (F_AND (f,g)) = (IS_PSL_G f /\ IS_PSL_G g)) /\
@@ -2363,20 +2366,20 @@ val IS_PSL_G_def =
     (IS_PSL_F (F_STRONG_SERE r) = F) /\
     (IS_PSL_F (F_WEAK_SERE r) = F) /\
     (IS_PSL_F (F_SUFFIX_IMP (r,f)) = F) /\
-    (IS_PSL_F (F_CLOCK v) = F)`;
+    (IS_PSL_F (F_CLOCK v) = F)
+End
 
 
-val IS_PSL_PREFIX_def =
-  Define
-   `(IS_PSL_PREFIX (F_NOT f) = IS_PSL_PREFIX f) /\
+Definition IS_PSL_PREFIX_def:
+    (IS_PSL_PREFIX (F_NOT f) = IS_PSL_PREFIX f) /\
     (IS_PSL_PREFIX (F_AND (f,g)) = (IS_PSL_PREFIX f /\ IS_PSL_PREFIX g)) /\
     (IS_PSL_PREFIX (F_ABORT (f, p)) = (IS_PSL_PREFIX f)) /\
-    (IS_PSL_PREFIX f = (IS_PSL_G f \/ IS_PSL_F f))`;
+    (IS_PSL_PREFIX f = (IS_PSL_G f \/ IS_PSL_F f))
+End
 
 
-val IS_PSL_GF_def=
- Define
-   `(IS_PSL_GF (F_STRONG_BOOL b) = T) /\
+Definition IS_PSL_GF_def:
+    (IS_PSL_GF (F_STRONG_BOOL b) = T) /\
     (IS_PSL_GF (F_WEAK_BOOL b) = T) /\
     (IS_PSL_GF (F_NOT f) = IS_PSL_FG f) /\
     (IS_PSL_GF (F_AND (f,g)) = (IS_PSL_GF f /\ IS_PSL_GF g)) /\
@@ -2398,15 +2401,16 @@ val IS_PSL_GF_def=
     (IS_PSL_FG (F_STRONG_SERE r) = F) /\
     (IS_PSL_FG (F_WEAK_SERE r) = F) /\
     (IS_PSL_FG (F_SUFFIX_IMP (r,f)) = F) /\
-    (IS_PSL_FG (F_CLOCK v) = F)`;
+    (IS_PSL_FG (F_CLOCK v) = F)
+End
 
 
-val IS_PSL_STREET_def =
-  Define
-   `(IS_PSL_STREET (F_NOT f) = IS_PSL_STREET f) /\
+Definition IS_PSL_STREET_def:
+    (IS_PSL_STREET (F_NOT f) = IS_PSL_STREET f) /\
     (IS_PSL_STREET (F_AND (f,g)) = (IS_PSL_STREET f /\ IS_PSL_STREET g)) /\
     (IS_PSL_STREET (F_ABORT (f, p)) = (IS_PSL_STREET f)) /\
-    (IS_PSL_STREET f = (IS_PSL_GF f \/ IS_PSL_FG f))`;
+    (IS_PSL_STREET f = (IS_PSL_GF f \/ IS_PSL_FG f))
+End
 
 
 val IS_PSL_THM = save_thm("IS_PSL_THM",
@@ -3946,38 +3950,41 @@ val WEAK_STRONG_UF_SEM_THM =
    ]);
 
 
-val UF_EQUIVALENT_def =
- Define `UF_EQUIVALENT f1 f2 =
-         !v. ((UF_SEM v f1 = UF_SEM v f2))`
+Definition UF_EQUIVALENT_def:
+  UF_EQUIVALENT f1 f2 =
+         !v. ((UF_SEM v f1 = UF_SEM v f2))
+End
 
 
-val UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE_def =
- Define `UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f1 f2 =
-         !v. IS_INFINITE_TOP_BOTTOM_FREE_PATH v ==> ((UF_SEM v f1 = UF_SEM v f2))`
+Definition UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE_def:
+  UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f1 f2 =
+         !v. IS_INFINITE_TOP_BOTTOM_FREE_PATH v ==> ((UF_SEM v f1 = UF_SEM v f2))
+End
 
-val F_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE_def =
- Define `F_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f1 f2 =
-         !v c. IS_INFINITE_TOP_BOTTOM_FREE_PATH v ==> ((F_SEM v c f1 = F_SEM v c f2))`
+Definition F_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE_def:
+  F_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f1 f2 =
+         !v c. IS_INFINITE_TOP_BOTTOM_FREE_PATH v ==> ((F_SEM v c f1 = F_SEM v c f2))
+End
 
-val F_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE_def =
- Define
-   `F_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE f =
-      (!v c. IS_INFINITE_TOP_BOTTOM_FREE_PATH v ==> ~(F_SEM v c f))`;
+Definition F_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE_def:
+    F_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE f =
+      (!v c. IS_INFINITE_TOP_BOTTOM_FREE_PATH v ==> ~(F_SEM v c f))
+End
 
-val F_IS_TAUTOLOGY___INFINITE_TOP_BOTTOM_FREE_def =
- Define
-   `F_IS_TAUTOLOGY___INFINITE_TOP_BOTTOM_FREE f =
-      (!v c. IS_INFINITE_TOP_BOTTOM_FREE_PATH v ==> F_SEM v c f)`;
+Definition F_IS_TAUTOLOGY___INFINITE_TOP_BOTTOM_FREE_def:
+    F_IS_TAUTOLOGY___INFINITE_TOP_BOTTOM_FREE f =
+      (!v c. IS_INFINITE_TOP_BOTTOM_FREE_PATH v ==> F_SEM v c f)
+End
 
-val UF_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE_def =
- Define
-   `UF_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE f =
-      (!v. IS_INFINITE_TOP_BOTTOM_FREE_PATH v ==> ~(UF_SEM v f))`;
+Definition UF_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE_def:
+    UF_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE f =
+      (!v. IS_INFINITE_TOP_BOTTOM_FREE_PATH v ==> ~(UF_SEM v f))
+End
 
-val UF_IS_TAUTOLOGY___INFINITE_TOP_BOTTOM_FREE_def =
- Define
-   `UF_IS_TAUTOLOGY___INFINITE_TOP_BOTTOM_FREE f =
-      (!v. IS_INFINITE_TOP_BOTTOM_FREE_PATH v ==> UF_SEM v f)`;
+Definition UF_IS_TAUTOLOGY___INFINITE_TOP_BOTTOM_FREE_def:
+    UF_IS_TAUTOLOGY___INFINITE_TOP_BOTTOM_FREE f =
+      (!v. IS_INFINITE_TOP_BOTTOM_FREE_PATH v ==> UF_SEM v f)
+End
 
 
 
@@ -4210,10 +4217,10 @@ EQ_TAC THEN REPEAT STRIP_TAC THENL [
 ]);
 
 
-val S_BOOL_BIGCAT_def =
- Define
-  `(S_BOOL_BIGCAT [b1] = S_BOOL b1) /\
-   (S_BOOL_BIGCAT (b1::b2::l) = S_CAT (S_BOOL b1, S_BOOL_BIGCAT (b2::l)))`
+Definition S_BOOL_BIGCAT_def:
+   (S_BOOL_BIGCAT [b1] = S_BOOL b1) /\
+   (S_BOOL_BIGCAT (b1::b2::l) = S_CAT (S_BOOL b1, S_BOOL_BIGCAT (b2::l)))
+End
 
 
 

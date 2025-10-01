@@ -53,14 +53,16 @@ val (R_TAC, AR_TAC, R_TAC', AR_TAC') = SIMPLIFY_TACS std_c;
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val eval_poly_def = Define
-  `(eval_poly [] x = 0:num) /\
-   (eval_poly (a :: rest) x = a + x * eval_poly rest x)`;
+Definition eval_poly_def:
+   (eval_poly [] x = 0:num) /\
+   (eval_poly (a :: rest) x = a + x * eval_poly rest x)
+End
 
-val factor_poly_def = Define
-  `(factor_poly [x] a = [0:num])
+Definition factor_poly_def:
+   (factor_poly [x] a = [0:num])
    /\ (factor_poly (x :: y :: z) a =
-       let l = factor_poly (y :: z) a in (y + a * HD l) :: l)`;
+       let l = factor_poly (y :: z) a in (y + a * HD l) :: l)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)

@@ -167,22 +167,24 @@ End
 
 val miw_ty = ty_antiq (hd (tl (snd (dest_type (type_of “Microcode”)))));
 
-val ROM_def = Define ‘
+Definition ROM_def:
         ROM contents (addr:bus,data:time->^miw_ty) =
-          !t. data t = contents (addr t)’;
+          !t. data t = contents (addr t)
+End
 
-val Decoder_def = Define
-         ‘Decoder (
+Definition Decoder_def:
+          Decoder (
           miw:time->^miw_ty,test0,test1,addr,
           wmem,rmem,wmar,wpc,rpc,wacc,racc,wir,rir,warg,alu0,alu1,rbuf) =
           !t.
             ((wmem t,rmem t,wmar t,wpc t,rpc t,wacc t,
               racc t,wir t,rir t,warg t,alu0 t,alu1 t,rbuf t),
              ((test0 t,test1 t),addr t)) =
-            miw t’;
+            miw t
+End
 
-val MpcUnit_def = Define
-         ‘MpcUnit (test0,test1,zeroflag,opcode,addr,mpc) =
+Definition MpcUnit_def:
+          MpcUnit (test0,test1,zeroflag,opcode,addr,mpc) =
           ?w1 w2 const0 const1 const3 b1 b2 b3 b4 b5.
             AND (test1,zeroflag,w1) /\
             OR (test0,w1,w2) /\
@@ -194,10 +196,11 @@ val MpcUnit_def = Define
             HWC 1 const1 /\
             MUX (w2,const1,b3,b4) /\
             ADDER 4 (b2,b4,b5) /\
-            DEL (b5,mpc)’;
+            DEL (b5,mpc)
+End
 
-val CntlUnit_def = Define
-         ‘CntlUnit (
+Definition CntlUnit_def:
+          CntlUnit (
           (zeroflag,opcode,
            wmem,rmem,wmar,wpc,rpc,wacc,racc,wir,rir,warg,alu0,alu1,rbuf),
           mpc) =
@@ -206,10 +209,11 @@ val CntlUnit_def = Define
             Decoder (
               miw,test0,test1,addr,
               wmem,rmem,wmar,wpc,rpc,wacc,racc,wir,rir,warg,alu0,alu1,rbuf) /\
-            MpcUnit (test0,test1,zeroflag,opcode,addr,mpc)’;
+            MpcUnit (test0,test1,zeroflag,opcode,addr,mpc)
+End
 
-val Tamarack_def = Define
-         ‘Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf) =
+Definition Tamarack_def:
+          Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf) =
           ?zeroflag opcode
            wmem rmem wmar wpc rpc wacc racc wir rir warg alu0 alu1 rbuf.
             CntlUnit (
@@ -219,15 +223,19 @@ val Tamarack_def = Define
             DataPath n (
               (wmem,rmem,wmar,wpc,rpc,wacc,racc,wir,rir,warg,alu0,alu1,rbuf,
                zeroflag,opcode),
-              (mem,mar,pc,acc,ir,arg,buf))’;
+              (mem,mar,pc,acc,ir,arg,buf))
+End
 
-val Inst_def = Define ‘Inst n (mem:num->num,pc) = mem (pc MOD (2 EXP n))’;
+Definition Inst_def:   Inst n (mem:num->num,pc) = mem (pc MOD (2 EXP n))
+End
 
-val Opc_def = Define ‘Opc n inst = ((inst DIV (2 EXP n)) MOD (2 EXP 3))’;
+Definition Opc_def:   Opc n inst = ((inst DIV (2 EXP n)) MOD (2 EXP 3))
+End
 
-val Addr_def = Define ‘Addr n inst = (inst MOD (2 EXP n))’;
+Definition Addr_def:   Addr n inst = (inst MOD (2 EXP n))
+End
 
-val NextState_def = Define ‘
+Definition NextState_def:
           NextState n (mem,pc,acc) =
           let inst = Inst n (mem,pc) in
           let opc = Opc n inst in
@@ -238,16 +246,18 @@ val NextState_def = Define ‘
            if (opc = 3) then (mem,(INCn (n+3) pc),(SUBn (n+3) (acc,mem addr))) else
            if (opc = 4) then (mem,(INCn (n+3) pc),mem addr) else
            if (opc = 5) then (Update (mem,addr,acc),(INCn (n+3) pc),acc) else
-                             (mem,(INCn (n+3) pc),acc))’;
+                             (mem,(INCn (n+3) pc),acc))
+End
 
-val Behaviour_def = Define
-        ‘Behaviour n (mem,pc,acc) =
+Definition Behaviour_def:
+         Behaviour n (mem,pc,acc) =
           !t.
             (mem (t+1),pc (t+1),acc (t+1)) =
-              NextState n (mem t,pc t,acc t)’;
+              NextState n (mem t,pc t,acc t)
+End
 
-val MicroCycles_def = Define
-         ‘MicroCycles n (mem,pc,acc) =
+Definition MicroCycles_def:
+          MicroCycles n (mem,pc,acc) =
           let opc = Opc n (Inst n (mem,pc)) in
           (if (opc = 0) then (if (acc = 0) then 5 else 6) else
            if (opc = 1) then 4 else
@@ -256,16 +266,19 @@ val MicroCycles_def = Define
            if (opc = 4) then 6 else
            if (opc = 5) then 6 else
            if (opc = 6) then 6 else
-                             5)’;
+                             5)
+End
 
-val REV_TimeOfCycle_def = Define ‘
+Definition REV_TimeOfCycle_def:
   (REV_TimeOfCycle 0 n mem pc acc = 0) /\
   (REV_TimeOfCycle (SUC t) n mem pc acc =
      let prev = (REV_TimeOfCycle t n mem pc acc) in
-     (prev + (MicroCycles n (mem prev,pc prev,acc prev))))’;
+     (prev + (MicroCycles n (mem prev,pc prev,acc prev))))
+End
 
-val TimeOfCycle_def = Define ‘
-  TimeOfCycle n (mem,pc,acc) t = REV_TimeOfCycle t n mem pc acc’;
+Definition TimeOfCycle_def:
+  TimeOfCycle n (mem,pc,acc) t = REV_TimeOfCycle t n mem pc acc
+End
 
 
 

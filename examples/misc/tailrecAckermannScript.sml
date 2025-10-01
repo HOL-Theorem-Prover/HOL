@@ -4,10 +4,10 @@ Ancestors[qualified]
 
 val _ = Hol_datatype `work = DO of num => num | PENDING of num`;
 
-val wsize_def = Define`
+Definition wsize_def:
   (wsize (DO n m) = (2 * n, m)) ∧
   (wsize (PENDING n) = (2 * n + 1, 0))
-`
+End
 
 val A'_defn = Hol_defn "A'" `
   A' results stk =

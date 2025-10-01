@@ -24,9 +24,12 @@ val _ = Datatype `formula =
   | Bot`;
 
 
-val Not_def = Define `Not A = A Imp Bot`;
-val BiImp_def = Define `A BiImp B = (A Imp B) And (B Imp A)`;
-val Top_def = Define `Top = Bot Imp Bot`;
+Definition Not_def:   Not A = A Imp Bot
+End
+Definition BiImp_def:   A BiImp B = (A Imp B) And (B Imp A)
+End
+Definition Top_def:   Top = Bot Imp Bot
+End
 
 (* Natural Deduction for intuitionistic logic                      *)
 (* N is the 'deduciblility' relation for this system               *)
@@ -198,7 +201,8 @@ Proof
             metis_tac[N_ore]))
 QED
 
-val NThm = Define `NThm A = N EMPTY A`;
+Definition NThm:   NThm A = N EMPTY A
+End
 
 (* Example deductions *)
 val N_example = Q.prove(`NThm (A Imp (B Imp A))`,
@@ -252,7 +256,8 @@ val (G_rules, G_ind, G_cases) = Hol_reln `
 val [G_ax, G_bot, G_lc, G_landl, G_landr, G_rand,
      G_lor, G_rorl, G_rorr, G_limp, G_rimp, G_cut] = CONJUNCTS G_rules;
 
-val GThm = Define `GThm A = G EMPTY_BAG A`;
+Definition GThm:   GThm A = G EMPTY_BAG A
+End
 
 val G_example1 =
     Q.prove(`GThm ((A And B) Imp (B And A))`, rw[GThm,G_rules]);

@@ -30,8 +30,6 @@ Type reln = “:'a -> 'a -> bool”
 val AR = ASM_REWRITE_TAC [];
 fun ulist x = [x];
 
-val _ = Defn.def_suffix := ""; (* replacing default "_def" *)
-
 (* ***************************************************************** *)
 (* Following switch, BigSig, allows "maybe_thm" to act either as     *)
 (* store_thm or as prove, thus maximizing or minimizing the output   *)
@@ -71,15 +69,17 @@ val cpn_nchotomy = TypeBase.nchotomy_of ``:ordering``
 val _ = type_abbrev ("cpn", ``:ordering``)
 val _ = type_abbrev ("comp", Type`:'a->'a->cpn`);
 
-val TotOrd = Define`TotOrd (c: 'a comp) =
+Definition TotOrd:  TotOrd (c: 'a comp) =
    (!x y. (c x y = EQUAL) <=> (x = y)) /\
    (!x y. (c x y = GREATER) <=> (c y x = LESS)) /\
-   (!x y z. (c x y = LESS) /\ (c y z = LESS) ==> (c x z = LESS))`;
+   (!x y z. (c x y = LESS) /\ (c y z = LESS) ==> (c x z = LESS))
+End
 
-val TO_of_LinearOrder = Define
- `TO_of_LinearOrder (r:'a->'a->bool) x y =
+Definition TO_of_LinearOrder:
+  TO_of_LinearOrder (r:'a->'a->bool) x y =
    if x = y then EQUAL else if r x y then LESS
-                                     else GREATER`;
+                                     else GREATER
+End
 
 (* lemma to ease use of "trichotomous" and work with disjunctions *)
 
@@ -273,18 +273,21 @@ val toto_trans_less = save_thm ("toto_trans_less",
               CONJ totoLLtrans (CONJ totoLGtrans (CONJ totoGGtrans
                 (CONJ totoGLtrans (CONJ totoLEtrans totoELtrans)))));
 
-val WeakLinearOrder_of_TO =
- Define`WeakLinearOrder_of_TO (c:'a comp) x y =
-        case c x y of LESS => T | EQUAL => T | GREATER => F`;
+Definition WeakLinearOrder_of_TO:
+ WeakLinearOrder_of_TO (c:'a comp) x y =
+        case c x y of LESS => T | EQUAL => T | GREATER => F
+End
 
-val StrongLinearOrder_of_TO =
- Define`StrongLinearOrder_of_TO (c:'a comp) x y =
-        case c x y of LESS => T | EQUAL => F | GREATER => F`;
+Definition StrongLinearOrder_of_TO:
+ StrongLinearOrder_of_TO (c:'a comp) x y =
+        case c x y of LESS => T | EQUAL => F | GREATER => F
+End
 
 (* TO_of_LinearOrder is defined in totoTheory. *)
 
-val toto_of_LinearOrder = Define
-`toto_of_LinearOrder (r:'a reln) = TO (TO_of_LinearOrder r)`;
+Definition toto_of_LinearOrder:
+ toto_of_LinearOrder (r:'a reln) = TO (TO_of_LinearOrder r)
+End
 
 val Weak_Weak_of = maybe_thm ("Weak_Weak_of",
 Term`!c:'a toto. WeakLinearOrder (WeakLinearOrder_of_TO (apto c))`,
@@ -402,14 +405,16 @@ Cases_on `x:'a = x'` THEN ASM_REWRITE_TAC [cpn_case_def] THENL
 
 (* Converse of a total order; its correspondence to inv for relations. *)
 
-val TO_inv = Define`TO_inv (c:'a comp) x y = c y x`;
+Definition TO_inv:  TO_inv (c:'a comp) x y = c y x
+End
 
 val TotOrd_inv = maybe_thm ("TotOrd_inv", Term
 `!c:'a comp. TotOrd c ==> TotOrd (TO_inv c)`,
 GEN_TAC THEN REWRITE_TAC [TotOrd, TO_inv] THEN
 REPEAT STRIP_TAC THEN AR THENL [MATCH_ACCEPT_TAC EQ_SYM_EQ, RES_TAC]);
 
-val toto_inv = Define`toto_inv (c:'a toto) = TO (TO_inv (apto c))`;
+Definition toto_inv:  toto_inv (c:'a toto) = TO (TO_inv (apto c))
+End
 
 val inv_TO = maybe_thm ("inv_TO", Term
 `!r:'a comp. TotOrd r ==> (toto_inv (TO r) = TO (TO_inv r))`,
@@ -548,11 +553,13 @@ IMP_RES_TAC StrongOrder_ALT THENL
  ASM_REWRITE_TAC [SPLIT_PAIRS]
 ]);
 
-val lexTO = Define`(R:'a comp) lexTO (V:'b comp) = TO_of_LinearOrder (
-  StrongLinearOrder_of_TO R LEX StrongLinearOrder_of_TO V)`;
+Definition lexTO:  (R:'a comp) lexTO (V:'b comp) = TO_of_LinearOrder (
+  StrongLinearOrder_of_TO R LEX StrongLinearOrder_of_TO V)
+End
 
-val lextoto = Define
-          `(c:'a toto) lextoto (v:'b toto) = TO (apto c lexTO apto v)`;
+Definition lextoto:
+           (c:'a toto) lextoto (v:'b toto) = TO (apto c lexTO apto v)
+End
 
 val lexTO_THM = maybe_thm ("lexTO_thm",
 Term`!R:'a comp V:'b comp. TotOrd R /\ TotOrd V ==> !x y.
@@ -630,13 +637,15 @@ THEN REPEAT CONJ_TAC THENL
 ,REWRITE_TAC [DISJ_ASSOC] THEN ACCEPT_TAC (CONV_RULE (ONCE_DEPTH_CONV
                (REWR_CONV DISJ_SYM)) LESS_LESS_CASES)]);
 **** *)
-val numOrd = Define`numOrd = TO_of_LinearOrder ($< :num reln)`;
+Definition numOrd:  numOrd = TO_of_LinearOrder ($< :num reln)
+End
 
 val TO_numOrd = store_thm ("TO_numOrd", Term`TotOrd numOrd`,
 REWRITE_TAC [numOrd] THEN MATCH_MP_TAC TotOrd_TO_of_Strong THEN
 ACCEPT_TAC StrongLinearOrder_LESS);
 
-val numto = Define`numto = TO numOrd`;
+Definition numto:  numto = TO numOrd
+End
 
 val apnumto_thm = store_thm ("apnumto_thm", Term`apto numto = numOrd`,
 REWRITE_TAC [numto, GSYM TO_apto_TO_ID, TO_numOrd]);
@@ -694,8 +703,8 @@ MATCH_MP_TAC LESS_EQ_LESS_TRANS THENL
 [EXISTS_TAC (Term`n - 1`), EXISTS_TAC (Term`n - 2`)] THEN
 ASM_SIMP_TAC arith_ss [half_lem]);
 
-val num_dtOrd = Define
-`(num_dtOrd zer zer = EQUAL) /\
+Definition num_dtOrd:
+ (num_dtOrd zer zer = EQUAL) /\
  (num_dtOrd zer (bit1 x) = LESS) /\
  (num_dtOrd zer (bit2 x) = LESS) /\
  (num_dtOrd (bit1 x) zer = GREATER) /\
@@ -703,7 +712,8 @@ val num_dtOrd = Define
  (num_dtOrd (bit1 x) (bit2 y) = LESS) /\
  (num_dtOrd (bit2 x) (bit1 y) = GREATER) /\
  (num_dtOrd (bit1 x) (bit1 y) = num_dtOrd x y) /\
- (num_dtOrd (bit2 x) (bit2 y) = num_dtOrd x y)`;
+ (num_dtOrd (bit2 x) (bit2 y) = num_dtOrd x y)
+End
 
 val num_dt_distinct = theorem "num_dt_distinct";
 
@@ -816,7 +826,8 @@ REWRITE_TAC [qk_numOrd_def, ZERO_to_dt, BIT1_to_dt, BIT2_to_dt, num_dtOrd]);
 
 (* ******** From here on we can imitate the treatment of numOrd ********** *)
 
-val qk_numto = Define`qk_numto = TO qk_numOrd`;
+Definition qk_numto:  qk_numto = TO qk_numOrd
+End
 
 val ap_qk_numto_thm = store_thm ("ap_qk_numto_thm", Term
 `apto qk_numto = qk_numOrd`,
@@ -828,9 +839,11 @@ REWRITE_TAC [qk_numto, GSYM TO_apto_TO_ID, TO_qk_numOrd]);
 (* see no way to bring that down to one.                                *)
 (* ******************************************************************** *)
 
-val charOrd = Define`charOrd (a:char) (b:char) = numOrd (ORD a) (ORD b)`;
+Definition charOrd:  charOrd (a:char) (b:char) = numOrd (ORD a) (ORD b)
+End
 
-val charto = Define`charto = TO (charOrd)`;
+Definition charto:  charto = TO (charOrd)
+End
 
 val TO_charOrd = maybe_thm ("TO_charOrd", Term`TotOrd charOrd`,
 REWRITE_TAC [TotOrd, charOrd] THEN
@@ -880,10 +893,11 @@ REWRITE_TAC [char_lt_def, ORD_11]);
 (*  an exemplar of how any datatype can be ordered if its components are. *)
 (* ********************************************************************** *)
 
-val listorder = Define`(listorder (V:'a reln) l [] = F) /\
+Definition listorder:  (listorder (V:'a reln) l [] = F) /\
                        (listorder V [] (s :: m) = T) /\
                        (listorder V (r :: l) (s :: m) =
-                           V r s \/ (r = s) /\ listorder V l m)`;
+                           V r s \/ (r = s) /\ listorder V l m)
+End
 
 val SLO_listorder = maybe_thm ("SLO_listorder", Term`!V:'a reln.
               StrongLinearOrder V ==> StrongLinearOrder (listorder V)`,
@@ -910,8 +924,9 @@ REPEAT CONJ_TAC THENL
   STRIP_TAC THEN RES_TAC THEN ASM_REWRITE_TAC [CONS_11]
 ]]);
 
-val ListOrd = Define`ListOrd (c:'a toto) =
-         TO_of_LinearOrder (listorder (StrongLinearOrder_of_TO (apto c)))`;
+Definition ListOrd:  ListOrd (c:'a toto) =
+         TO_of_LinearOrder (listorder (StrongLinearOrder_of_TO (apto c)))
+End
 
 val TO_ListOrd = maybe_thm ("TO_ListOrd",
                          Term`!c:'a toto. TotOrd (ListOrd c)`,
@@ -939,7 +954,8 @@ Cases_on `apto c a b` THEN
 ASM_REWRITE_TAC [cpn_case_def, all_cpn_distinct] THEN
 IMP_RES_TAC toto_cpn_eqn THEN ASM_REWRITE_TAC [all_cpn_distinct]);
 
-val listoto = Define`listoto (c:'a toto) = TO (ListOrd c)`;
+Definition listoto:  listoto (c:'a toto) = TO (ListOrd c)
+End
 
 val aplistoto = store_thm ("aplistoto", Term`!c:'a toto.
 (apto (listoto c) [] [] = EQUAL) /\
@@ -956,7 +972,8 @@ MATCH_ACCEPT_TAC ListOrd_THM);
 
 (* ***** string a synonym for char list -- makes stringto very easy. ***** *)
 
-val stringto = Define`stringto = listoto charto`;
+Definition stringto:  stringto = listoto charto
+End
 
 (* *********************************************************************** *)
 (* ********* what was btOrd, etc. to be rethought - April 2013 *********** *)
@@ -967,7 +984,8 @@ val stringto = Define`stringto = listoto charto`;
 (* Following may be useful for obtaining total orders on abstract types   *)
 (* from total orders on their representations.                            *)
 (* ********************************************************************** *)
-val imageOrd = Define`imageOrd (f:'a->'c) (cp:'c comp) a b = cp (f a) (f b)`;
+Definition imageOrd:  imageOrd (f:'a->'c) (cp:'c comp) a b = cp (f a) (f b)
+End
 
 val TO_injection = maybe_thm ("TO_injection", Term
 `!cp:'c comp. TotOrd cp ==> !f:'d->'c.
@@ -1005,4 +1023,3 @@ val TO_of_LinearOrder_LEX = store_thm("TO_of_LinearOrder_LEX",
   ``!R V. irreflexive R /\ irreflexive V
     ==> (TO_of_LinearOrder (R LEX V) = (TO_of_LinearOrder R) lexTO (TO_of_LinearOrder V))``,
   simp[lexTO,StrongLinearOrder_of_TO_TO_of_LinearOrder])
-

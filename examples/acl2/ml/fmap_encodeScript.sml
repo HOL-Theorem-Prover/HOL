@@ -43,9 +43,11 @@ val fold_def = TotalDefn.tDefine "fold" `fold f v map =
 (*                                                                           *)
 (*****************************************************************************)
 
-val M2L_def = Define `M2L = fold CONS []`;
+Definition M2L_def:   M2L = fold CONS []
+End
 
-val L2M_def = Define `L2M = FOLDR (combin$C FUPDATE) FEMPTY`;
+Definition L2M_def:   L2M = FOLDR (combin$C FUPDATE) FEMPTY
+End
 
 val L2M = store_thm("L2M",
     ``(L2M [] = FEMPTY) /\ (!a b. L2M (a::b) = L2M b |+ a)``,
@@ -56,11 +58,13 @@ val L2M = store_thm("L2M",
 (* a finite map would have.                                                  *)
 (*****************************************************************************)
 
-val uniql_def =
-    Define `uniql l = !x y y'. MEM (x,y) l /\ MEM (x,y') l ==> (y = y')`;
+Definition uniql_def:
+     uniql l = !x y y'. MEM (x,y) l /\ MEM (x,y') l ==> (y = y')
+End
 
-val uniqs_def =
-    Define `uniqs s = !x y y'. (x,y) IN s /\ (x,y') IN s ==> (y = y')`;
+Definition uniqs_def:
+     uniqs s = !x y y'. (x,y) IN s /\ (x,y') IN s ==> (y = y')
+End
 
 (*****************************************************************************)
 (* Theorems about uniqs and l                                                *)
@@ -299,7 +303,8 @@ val L2M_M2L = store_thm("L2M_M2L",
 (* SETEQ                                                                     *)
 (*****************************************************************************)
 
-val SETEQ_def = Define `SETEQ l1 l2 = !x. MEM x l1 = MEM x l2`;
+Definition SETEQ_def:   SETEQ l1 l2 = !x. MEM x l1 = MEM x l2
+End
 
 val SETEQ_TRANS = store_thm("SETEQ_TRANS",
     ``!l1 l2 l3. SETEQ l1 l2 /\ SETEQ l2 l3 ==> SETEQ l1 l3``,
@@ -343,9 +348,12 @@ val M2L_L2M_MAP_SETEQ = store_thm("M2L_L2M_MAP_SETEQ",
 (*                                                                           *)
 (*****************************************************************************)
 
-val SORTSET_def = Define `SORTSET sort relation = sort relation o SET_TO_LIST o set`;
-val SORTEDSET_def = Define `SORTEDSET r l = SORTED r l /\ ALL_DISTINCT l`;
-val MAPSET_def = Define `MAPSET r l = SORTED r l /\ ALL_DISTINCT (MAP FST l)`;
+Definition SORTSET_def:   SORTSET sort relation = sort relation o SET_TO_LIST o set
+End
+Definition SORTEDSET_def:   SORTEDSET r l = SORTED r l /\ ALL_DISTINCT l
+End
+Definition MAPSET_def:   MAPSET r l = SORTED r l /\ ALL_DISTINCT (MAP FST l)
+End
 
 local
 val not = ``$~ : bool -> bool``;
@@ -633,7 +641,8 @@ val COM_LT_TOTAL = prove(``!a b. a < b \/ b < a \/ (a = b : complex_rational)``,
 (* SEXP Ordering theorems                                                    *)
 (*****************************************************************************)
 
-val SEXP_LE_def = Define `SEXP_LE a b = |= lexorder a b`;
+Definition SEXP_LE_def:   SEXP_LE a b = |= lexorder a b
+End
 
 val _ = overload_on ("<=", ``SEXP_LE``);
 
@@ -900,7 +909,8 @@ val SEXP_LE_TOTAL = store_thm("SEXP_LE_TOTAL", ``total SEXP_LE``,
                arithmeticTheory.LESS_OR_EQ,stringTheory.ORD_11, ratTheory.RAT_LES_TOTAL, sexpTheory.STRING_LESS_EQ_def,
                DECIDE ``a + c < 1n + (a + b) + (1 + (c + d))``, DECIDE ``b + d < 1n + (a + b) + (1 + (c + d))``]);
 
-val SEXP_LT_def = Define `SEXP_LT a b = ~(a = b) /\ SEXP_LE a b`;
+Definition SEXP_LT_def:   SEXP_LT a b = ~(a = b) /\ SEXP_LE a b
+End
 
 val _ = overload_on ("<", ``SEXP_LT``);
 
@@ -924,20 +934,26 @@ val TRANSITIVE_K = store_thm("TRANSITIVE_K",
 (* Encoding definitions                                                      *)
 (*****************************************************************************)
 
-val map_fmap_def = Define `map_fmap m1 m2 = L2M o MAP (m1 ## m2) o M2L`;
+Definition map_fmap_def:   map_fmap m1 m2 = L2M o MAP (m1 ## m2) o M2L
+End
 
-val all_fmap_def = Define `all_fmap p1 p2 = EVERY (all_pair p1 p2) o M2L`;
+Definition all_fmap_def:   all_fmap p1 p2 = EVERY (all_pair p1 p2) o M2L
+End
 
-val fix_fmap_def = Define `fix_fmap f1 f2 = list (pair I I) o
-                                    QSORT3 ($<= LEX (K (K T))) o M2L o L2M o sexp_to_list (sexp_to_pair I I) o fix_list (fix_pair f1 f2)`;
+Definition fix_fmap_def:   fix_fmap f1 f2 = list (pair I I) o
+                                    QSORT3 ($<= LEX (K (K T))) o M2L o L2M o sexp_to_list (sexp_to_pair I I) o fix_list (fix_pair f1 f2)
+End
 
-val encode_fmap_def = Define `encode_fmap fenc tenc = list (pair fenc tenc) o QSORT3 ((inv_image $<= fenc) LEX (K (K T))) o M2L`;
+Definition encode_fmap_def:   encode_fmap fenc tenc = list (pair fenc tenc) o QSORT3 ((inv_image $<= fenc) LEX (K (K T))) o M2L
+End
 
-val decode_fmap_def = Define `decode_fmap fdec tdec = L2M o sexp_to_list (sexp_to_pair fdec tdec)`;
+Definition decode_fmap_def:   decode_fmap fdec tdec = L2M o sexp_to_list (sexp_to_pair fdec tdec)
+End
 
-val detect_fmap_def = Define `detect_fmap fdet tdet x =
+Definition detect_fmap_def:   detect_fmap fdet tdet x =
                                           (MAPSET ($<= LEX (K (K T))) o sexp_to_list (sexp_to_pair I I)) x /\
-                                          (listp (pairp fdet tdet) x)`;
+                                          (listp (pairp fdet tdet) x)
+End
 
 (*****************************************************************************)
 (* Encoding proofs                                                           *)
@@ -1380,11 +1396,12 @@ val ains_def =
   GEN_TAC THEN Cases THEN
   RW_TAC std_ss [hol_defaxiomsTheory.ACL2_SIMPS, sexpTheory.sexp_size_def]);
 
-val insert_def = Define `(insert R (x,y) [] = [(x,y)]) /\
+Definition insert_def:   (insert R (x,y) [] = [(x,y)]) /\
                          (insert R (x,y) ((hx,hy)::tl) =
                              if hx = x then ((x,y)::tl)
                                        else if R x hx then ((x,y)::(hx,hy)::tl)
-                                                            else (hx,hy) :: insert R (x,y) tl)`;
+                                                            else (hx,hy) :: insert R (x,y) tl)
+End
 
 val ains_insert = store_thm("ains_insert", ``!l f g x y. ONE_ONE f ==> (ains (pair f g (x,y)) (list (pair f g) l) = list (pair f g) (insert (inv_image SEXP_LE f) (x,y) l))``,
     Induct THEN ONCE_REWRITE_TAC [ains_def] THEN TRY (Cases_on `h`) THEN

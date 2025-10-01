@@ -44,9 +44,12 @@ Libs
 (* abbreviations below (this idea due to Konrad). It is strange that         *)
 (* rewriting the big term is no problem, but compiling it breaks.            *)
 (*****************************************************************************)
-val ACL2_CL_def     = Define `ACL2_CL      = ("ACL2", "COMMON-LISP")`;
-val ACL2_USER_def   = Define `ACL2_USER    = ("ACL2-USER" , "ACL2")`;
-val ACL_USER_CL_def = Define `ACL2_USER_CL = ("ACL2-USER" , "COMMON-LISP")`;
+Definition ACL2_CL_def:       ACL2_CL      = ("ACL2", "COMMON-LISP")
+End
+Definition ACL2_USER_def:     ACL2_USER    = ("ACL2-USER" , "ACL2")
+End
+Definition ACL_USER_CL_def:   ACL2_USER_CL = ("ACL2-USER" , "COMMON-LISP")
+End
 
 (*****************************************************************************)
 (* Convert imported ACL2 package structure:                                  *)
@@ -115,14 +118,14 @@ val ACL2_KNOWN_PACKAGES_def =
 (*    if for all i: ~(sym_name=xi and pkg_name=yi)                           *)
 (*                                                                           *)
 (*****************************************************************************)
-val LOOKUP_def =
- Define
-  `(LOOKUP pkg_name [] _ = pkg_name)
+Definition LOOKUP_def:
+   (LOOKUP pkg_name [] _ = pkg_name)
    /\
    (LOOKUP pkg_name ((x1,y1,z1)::a) sym_name =
      if (sym_name=x1) /\ (pkg_name=y1)
        then z1
-       else LOOKUP pkg_name a sym_name)`;
+       else LOOKUP pkg_name a sym_name)
+End
 
 (*****************************************************************************)
 (* (defun valid-pkg-triples-aux (tail triples)                               *)
@@ -144,19 +147,19 @@ val LOOKUP_def =
 (*              (not (equal p2 ""))                                          *)
 (*              (valid-pkg-triples-aux (cdr tail) triples)))))               *)
 (*****************************************************************************)
-val VALID_PKG_TRIPLES_AUX_def =
- Define
-  `(VALID_PKG_TRIPLES_AUX [] triples = T)
+Definition VALID_PKG_TRIPLES_AUX_def:
+   (VALID_PKG_TRIPLES_AUX [] triples = T)
    /\
    (VALID_PKG_TRIPLES_AUX ((sym_name,_,p2)::tail) triples =
      (LOOKUP p2 triples sym_name = p2) /\
      ~(sym_name = "ACL2-PKG-WITNESS")  /\
      ~(p2 = "")                        /\
-     (VALID_PKG_TRIPLES_AUX tail triples))`;
+     (VALID_PKG_TRIPLES_AUX tail triples))
+End
 
-val VALID_PKG_TRIPLES_def =
- Define
-  `VALID_PKG_TRIPLES triples = VALID_PKG_TRIPLES_AUX triples triples`;
+Definition VALID_PKG_TRIPLES_def:
+   VALID_PKG_TRIPLES triples = VALID_PKG_TRIPLES_AUX triples triples
+End
 
 
 (*

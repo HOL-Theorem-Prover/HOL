@@ -36,7 +36,7 @@ val APPEND_CASES = store_thm(
     ordering positions
    ---------------------------------------------------------------------- *)
 
-val posn_lt_def = Define`
+Definition posn_lt_def:
   (posn_lt _ [] = F) /\
   (posn_lt [] _ = T) /\
   (posn_lt (In::ps1) (In::ps2) = posn_lt ps1 ps2) /\
@@ -46,7 +46,7 @@ val posn_lt_def = Define`
   (posn_lt (Lt::_) (Rt::_) = T) /\
   (posn_lt (Rt::ps1) (Rt::ps2) = posn_lt ps1 ps2) /\
   (posn_lt (Rt::_) _ = F)
-`;
+End
 val _ = export_rewrites ["posn_lt_def"]
 
 

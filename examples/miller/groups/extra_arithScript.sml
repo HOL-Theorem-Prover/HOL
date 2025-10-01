@@ -24,13 +24,15 @@ val Simplify = R_TAC;
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val is_lcm_def = Define
-  `is_lcm a b l =
+Definition is_lcm_def:
+   is_lcm a b l =
    divides a l /\ divides b l /\
-   !n. divides a n /\ divides b n ==> divides l n`;
+   !n. divides a n /\ divides b n ==> divides l n
+End
 
-val lcm_def = Define
-  `lcm a b = if (a = 0) /\ (b = 0) then 0 else (a * b) DIV gcd a b`;
+Definition lcm_def:
+   lcm a b = if (a = 0) /\ (b = 0) then 0 else (a * b) DIV gcd a b
+End
 
 Definition exponent_def:
   exponent m n = LEAST k. ~divides (m EXP SUC k) n

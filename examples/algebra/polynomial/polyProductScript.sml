@@ -293,9 +293,9 @@ val it = |- IMAGE (\s. poly_prod (IMAGE (\c. Y + SUC c) s)) (POW (count 2)) =
 *)
 
 (* Define Polynomial Product of a set of Polynomials. *)
-val poly_prod_set_def = Define`
+Definition poly_prod_set_def:
    poly_prod_set (r:'a ring) (s:'a poly -> bool) = GPROD_SET (PolyRing r).prod s
-`;
+End
 
 (* overload for poly_prod_set *)
 val _ = overload_on ("PPROD", ``poly_prod_set r``);
@@ -1721,12 +1721,12 @@ val poly_monic_divides_poly_prod_factors_property = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define a multiplicative function for poly_set *)
-val poly_set_multiplicative_fun_def = Define`
+Definition poly_set_multiplicative_fun_def:
    poly_set_multiplicative_fun (r:'a ring) f <=>
        (f {} = |1|) /\
        (!s. FINITE s /\ pset s ==> poly (f s)) /\
        (!s t. FINITE s /\ FINITE t /\ pset s /\ pset t ==> (f (s UNION t) * f (s INTER t) = f s * f t))
-`;
+End
 
 (* Theorem: Ring r ==> poly_set_multiplicative_fun r PPROD *)
 (* Proof:
@@ -1849,12 +1849,12 @@ val poly_prod_set_mult_fun_by_partition = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define a multiplicative polynomial function for set of ring elements *)
-val ring_set_multiplicative_fun_def = Define`
+Definition ring_set_multiplicative_fun_def:
    ring_set_multiplicative_fun (r:'a ring) f <=>
        (f {} = |1|) /\
        (!s. FINITE s /\ s SUBSET R ==> poly (f s)) /\
        (!s t. FINITE s /\ FINITE t /\ s SUBSET R /\ t SUBSET R ==> (f (s UNION t) * f (s INTER t) = f s * f t))
-`;
+End
 
 (* Theorem: s SUBSET R /\ t SUBSET R <=> (s UNION t) SUBSET R *)
 (* Proof: by IN_UNION, SUBSET_DEF *)

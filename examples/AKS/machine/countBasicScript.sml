@@ -719,7 +719,8 @@ val power_ofM_thm = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the power_of_two monad *)
-val power_twoM_def = Define `power_twoM = power_ofM 2`;
+Definition power_twoM_def:   power_twoM = power_ofM 2
+End
 
 (*
 > EVAL ``power_twoM 63``; = (F,Count 29): thm
@@ -820,7 +821,7 @@ val power_twoM_steps_bound = store_thm(
 *)
 
 (* Define the ulog monad *)
-val ulogM_def = Define`
+Definition ulogM_def:
     ulogM n =
       do
          gd <- zeroM n;
@@ -832,7 +833,7 @@ val ulogM_def = Define`
                  subM x y;
               od
       od
-`;
+End
 
 (*
 > EVAL ``MAP ulogM [0 .. 5]``; =

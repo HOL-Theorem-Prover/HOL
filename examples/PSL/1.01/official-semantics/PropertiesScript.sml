@@ -107,13 +107,13 @@ end;
 * NEXT_RISE w c (i,j)  =   w^{i,j} |=T {(\neg c)[*];c}
 * (i is the first rising edge after j of clock c in word w)
 ******************************************************************************)
-val NEXT_RISE_def =
- Define
-  `NEXT_RISE w c (i,j) =
+Definition NEXT_RISE_def:
+   NEXT_RISE w c (i,j) =
     S_SEM
      (SEL w (i,j))
      B_TRUE
-     (S_CAT(S_REPEAT(S_BOOL(B_NOT c)),S_BOOL c))`;
+     (S_CAT(S_REPEAT(S_BOOL(B_NOT c)),S_BOOL c))
+End
 
 val NEXT_RISE_IMP =
  store_thm
@@ -305,9 +305,8 @@ val sere_induct = save_thm
 (******************************************************************************
 * S_CLOCK_FREE r means r contains no clocking statements
 ******************************************************************************)
-val S_CLOCK_FREE_def =
- Define
-  `(S_CLOCK_FREE (S_BOOL b)          = T)
+Definition S_CLOCK_FREE_def:
+   (S_CLOCK_FREE (S_BOOL b)          = T)
    /\
    (S_CLOCK_FREE (S_CAT(r1,r2))      =  S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2)
    /\
@@ -319,7 +318,8 @@ val S_CLOCK_FREE_def =
    /\
    (S_CLOCK_FREE (S_REPEAT r)        = S_CLOCK_FREE r)
    /\
-   (S_CLOCK_FREE (S_CLOCK v)         = F)`;
+   (S_CLOCK_FREE (S_CLOCK v)         = F)
+End
 
 (******************************************************************************
 * Proof that if S_CLOCK_FREE r then the unclocked semantics of
@@ -382,9 +382,8 @@ val F_SEM_TRUE_WEAK_NOT_EQ =
 (******************************************************************************
 * F_CLOCK_FREE f means f contains no clocking statements
 ******************************************************************************)
-val F_CLOCK_FREE_def =
- Define
-  `(F_CLOCK_FREE (F_BOOL b)            = T)
+Definition F_CLOCK_FREE_def:
+   (F_CLOCK_FREE (F_BOOL b)            = T)
    /\
    (F_CLOCK_FREE (F_NOT f)             = F_CLOCK_FREE f)
    /\
@@ -402,7 +401,8 @@ val F_CLOCK_FREE_def =
    /\
    (F_CLOCK_FREE (F_ABORT (f,b))       = F_CLOCK_FREE f)
    /\
-   (F_CLOCK_FREE (F_STRONG_CLOCK v)    = F)`;
+   (F_CLOCK_FREE (F_STRONG_CLOCK v)    = F)
+End
 
 (******************************************************************************
 * If F_CLOCK_FREE f then the unclocked semantics of an
@@ -788,10 +788,10 @@ val LENGTH_RESTN =
 (******************************************************************************
 * F_INIT_CLOCK_COMP_CORRECT f  =  (p |=T f  <==>  p |= (F_INIT_CLOCK_COMP T f))
 ******************************************************************************)
-val F_INIT_CLOCK_COMP_CORRECT_def =
- Define
-  `F_INIT_CLOCK_COMP_CORRECT f =
-    !w c. (F_SEM w c f = UF_SEM w (F_INIT_CLOCK_COMP c f))`;
+Definition F_INIT_CLOCK_COMP_CORRECT_def:
+   F_INIT_CLOCK_COMP_CORRECT f =
+    !w c. (F_SEM w c f = UF_SEM w (F_INIT_CLOCK_COMP c f))
+End
 
 val F_BOOL_INIT_CLOCK_COMP_ELIM =
  store_thm
@@ -1303,9 +1303,8 @@ end;
 (******************************************************************************
 * F_ABORT_FREE f means f contains no abort statements
 ******************************************************************************)
-val F_ABORT_FREE_def =
- Define
-  `(F_ABORT_FREE (F_BOOL b)            = T)
+Definition F_ABORT_FREE_def:
+   (F_ABORT_FREE (F_BOOL b)            = T)
    /\
    (F_ABORT_FREE (F_NOT f)             = F_ABORT_FREE f)
    /\
@@ -1323,7 +1322,8 @@ val F_ABORT_FREE_def =
    /\
    (F_ABORT_FREE (F_ABORT (f,b))       = F)
    /\
-   (F_ABORT_FREE (F_STRONG_CLOCK(f,c)) = F_ABORT_FREE f)`;
+   (F_ABORT_FREE (F_STRONG_CLOCK(f,c)) = F_ABORT_FREE f)
+End
 
 (******************************************************************************
 * Proof that if there are no aborts then
@@ -1414,14 +1414,10 @@ val ABORT_FREE_F_CLOCK_COMP_CORRECT =
              ABORT_FREE_INIT_CLOCK_COMP_EQUIV]);
 
 (******************************************************************************
-* Version of Define that doesn't add to the EVAL compset
-******************************************************************************)
-val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
-
-(******************************************************************************
 * Joe Hurd hack: EVAL should never get hold of this definition
 ******************************************************************************)
-val UNINT_def = pureDefine `UNINT x = x`;
+Definition UNINT_def[nocompute]:   UNINT x = x
+End
 
 val F_CLOCK_COMP_ELIM =
  store_thm
@@ -1454,8 +1450,9 @@ val S_CAT_ASSOC =
    RW_TAC simp_list_ss [US_SEM_def]
     THEN PROVE_TAC[APPEND_ASSOC]);
 
-val S_NONEMPTY_def =
- Define `S_NONEMPTY r = !w. US_SEM w r ==> ~(NULL w)`;
+Definition S_NONEMPTY_def:
+  S_NONEMPTY r = !w. US_SEM w r ==> ~(NULL w)
+End
 
 val TL_APPEND =
  store_thm

@@ -485,21 +485,24 @@ end
 
 (* definition of term2term *)
 
-val ISORT_INSERT_def = Define `
+Definition ISORT_INSERT_def:
   (ISORT_INSERT ord x [] = [x]) /\
   (ISORT_INSERT ord x (y::ys) =
-     if ord y x then y::ISORT_INSERT ord x ys else x::y::ys)`;
+     if ord y x then y::ISORT_INSERT ord x ys else x::y::ys)
+End
 
-val ISORT_def = Define `
+Definition ISORT_def:
   (ISORT ord [] = []) /\
-  (ISORT ord (x::xs) = ISORT_INSERT ord x (ISORT ord xs))`;
+  (ISORT ord (x::xs) = ISORT_INSERT ord x (ISORT ord xs))
+End
 
-val REMOVE_DUPLICATES_def = Define `
+Definition REMOVE_DUPLICATES_def:
   (REMOVE_DUPLICATES [] = []) /\
   (REMOVE_DUPLICATES (x::xs) =
-     if MEM x xs then REMOVE_DUPLICATES xs else x::REMOVE_DUPLICATES xs)`;
+     if MEM x xs then REMOVE_DUPLICATES xs else x::REMOVE_DUPLICATES xs)
+End
 
-val logic_sym2prim_def = Define `
+Definition logic_sym2prim_def:
   logic_sym2prim s =
     if s = "CONS" then SOME logic_CONS else
     if s = "EQUAL" then SOME logic_EQUAL else
@@ -516,9 +519,10 @@ val logic_sym2prim_def = Define `
     if s = "RANK" then SOME logic_RANK else
     if s = "IF" then SOME logic_IF else
     if s = "ORDP" then SOME logic_ORDP else
-    if s = "ORD<" then SOME logic_ORD_LESS else NONE`;
+    if s = "ORD<" then SOME logic_ORD_LESS else NONE
+End
 
-val prim2p_def = Define `
+Definition prim2p_def:
   (prim2p opCONS = logic_CONS) /\
   (prim2p opEQUAL = logic_EQUAL) /\
   (prim2p opLESS = logic_LESS) /\
@@ -529,9 +533,10 @@ val prim2p_def = Define `
   (prim2p opNATP = logic_NATP) /\
   (prim2p opSYMBOLP = logic_SYMBOLP) /\
   (prim2p opCAR = logic_CAR) /\
-  (prim2p opCDR = logic_CDR)`;
+  (prim2p opCDR = logic_CDR)
+End
 
-val func2f_def = Define `
+Definition func2f_def:
   (func2f (PrimitiveFun opCONS) = mPrimitiveFun logic_CONS) /\
   (func2f (PrimitiveFun opEQUAL) = mPrimitiveFun logic_EQUAL) /\
   (func2f (PrimitiveFun opLESS) = mPrimitiveFun logic_LESS) /\
@@ -552,11 +557,13 @@ val func2f_def = Define `
   (func2f Define = mFun "DEFINE") /\
   (func2f Print = mFun "PRINT") /\
   (func2f Error = mFun "ERROR") /\
-  (func2f Funcall = mFun "FUNCALL")`
+  (func2f Funcall = mFun "FUNCALL")
+End
 
-val SUM_def = Define `
+Definition SUM_def:
   (SUM [] = 0:num) /\
-  (SUM (x::xs) = x + SUM xs)`;
+  (SUM (x::xs) = x + SUM xs)
+End
 
 Theorem pair_size_def[local] = #2 (TypeBase.size_of “:'a # 'b”)
 
@@ -721,7 +728,7 @@ val MR_ev_VARS = prove(
 
 end
 
-val logic_prim2sym_def = Define `
+Definition logic_prim2sym_def:
   (logic_prim2sym logic_CONS = "CONS") /\
   (logic_prim2sym logic_EQUAL = "EQUAL") /\
   (logic_prim2sym logic_LESS = "<") /\
@@ -737,20 +744,23 @@ val logic_prim2sym_def = Define `
   (logic_prim2sym logic_RANK = "RANK") /\
   (logic_prim2sym logic_IF = "IF") /\
   (logic_prim2sym logic_ORDP = "ORDP") /\
-  (logic_prim2sym logic_ORD_LESS = "ORD<")`;
+  (logic_prim2sym logic_ORD_LESS = "ORD<")
+End
 
 val bad_names_tm =
   ``["NIL"; "QUOTE"; "CONS"; "EQUAL"; "<"; "SYMBOL-<"; "+"; "-"; "CONSP";
      "NATP"; "SYMBOLP"; "CAR"; "CDR"; "NOT"; "RANK"; "IF"; "ORDP"; "ORD<"]``
 
-val INDEX_OF_def = Define `
+Definition INDEX_OF_def:
   (INDEX_OF n x [] = NONE) /\
-  (INDEX_OF n x (y::xs) = if x = y then SOME n else INDEX_OF (n+1:num) x xs)`;
+  (INDEX_OF n x (y::xs) = if x = y then SOME n else INDEX_OF (n+1:num) x xs)
+End
 
-val logic_func2sexp_def = Define `
+Definition logic_func2sexp_def:
   (logic_func2sexp (mPrimitiveFun p) = Sym (logic_prim2sym p)) /\
   (logic_func2sexp (mFun f) =
-     if MEM f ^bad_names_tm then Val (THE (INDEX_OF 0 f ^bad_names_tm)) else Sym f)`
+     if MEM f ^bad_names_tm then Val (THE (INDEX_OF 0 f ^bad_names_tm)) else Sym f)
+End
 
 Definition t2sexp_def:
   (t2sexp (mConst s) = list2sexp [Sym "QUOTE"; s]) /\
@@ -759,12 +769,13 @@ Definition t2sexp_def:
   (t2sexp (mLamApp xs z ys) = list2sexp (list2sexp [Sym "LAMBDA"; list2sexp (MAP Sym xs); t2sexp z]::MAP t2sexp ys))
 End
 
-val f2sexp_def = Define `
+Definition f2sexp_def:
   (f2sexp (Or x y) = list2sexp [Sym "POR*"; f2sexp x; f2sexp y]) /\
   (f2sexp (Not x) = list2sexp [Sym "PNOT*"; f2sexp x]) /\
-  (f2sexp (Equal t1 t2) = list2sexp [Sym "PEQUAL*"; t2sexp t1; t2sexp t2])`;
+  (f2sexp (Equal t1 t2) = list2sexp [Sym "PEQUAL*"; t2sexp t1; t2sexp t2])
+End
 
-val let2t_def = Define `
+Definition let2t_def:
   let2t ts body =
     let vars = MAP Sym (MAP FST ts) in
     let terms = MAP SND ts in
@@ -773,9 +784,10 @@ val let2t_def = Define `
                     (FILTER (\x. ~MEM x vars) body_vars) in
     let formals = MAP getSym (id_vars ++ vars) in
     let actuals = MAP (mVar o getSym) id_vars ++ terms in
-      mLamApp formals body actuals`;
+      mLamApp formals body actuals
+End
 
-val or2t_def = Define `
+Definition or2t_def:
   (or2t [] = mConst (Sym "NIL")) /\
   (or2t [x] = x) /\
   (or2t (x::y::xs) =
@@ -787,7 +799,8 @@ val or2t_def = Define `
        else
          let2t [("SPECIAL-VAR-FOR-OR",x)]
             (mApp (mPrimitiveFun logic_IF)
-               [mVar "SPECIAL-VAR-FOR-OR"; mVar "SPECIAL-VAR-FOR-OR"; else_term]))`
+               [mVar "SPECIAL-VAR-FOR-OR"; mVar "SPECIAL-VAR-FOR-OR"; else_term]))
+End
 
 val term2t_def = tDefine "term2t" `
   (term2t (Const c) = mConst c) /\
@@ -828,7 +841,7 @@ val LENGTH_EQ_3 = prove(
   \\ Cases_on `t` \\ SIMP_TAC (srw_ss()) []
   \\ DECIDE_TAC)
 
-val f2func_def = Define `
+Definition f2func_def:
   (f2func (mPrimitiveFun logic_CONS) = PrimitiveFun opCONS) /\
   (f2func (mPrimitiveFun logic_EQUAL) = PrimitiveFun opEQUAL) /\
   (f2func (mPrimitiveFun logic_LESS) = PrimitiveFun opLESS) /\
@@ -849,7 +862,8 @@ val f2func_def = Define `
                         if name = "PRINT" then Print else
                         if name = "ERROR" then Error else
                         if name = "FUNCALL" then Funcall else
-                          Fun name)`
+                          Fun name)
+End
 
 Theorem MEM_logic_term_size[local]:
   !xs x. MEM x xs ==> logic_term_size x < list_size logic_term_size xs
@@ -872,14 +886,16 @@ Termination
   \\ EVAL_TAC \\ DECIDE_TAC
 End
 
-val term2term_def = Define `term2term x = t2term (term2t x)`;
+Definition term2term_def:   term2term x = t2term (term2t x)
+End
 
 
 (* MR_ev (term2term x,...) ==> MR_ev (x,...) *)
 
-val func_name_ok_def = Define `
+Definition func_name_ok_def:
   func_name_ok f =
-    ~MEM f [Fun "IF"; Fun "DEFINE"; Fun "FUNCALL"; Fun "PRINT"; Fun "ERROR"]`;
+    ~MEM f [Fun "IF"; Fun "DEFINE"; Fun "FUNCALL"; Fun "PRINT"; Fun "ERROR"]
+End
 
 val f2func_func2f = prove(
   ``!f. func_name_ok f ==> (f2func (func2f f) = f) /\
@@ -1501,24 +1517,27 @@ val ordp_lemma = prove(
   \\ SRW_TAC [] [] \\ FULL_SIMP_TAC std_ss [isTrue_def,getVal_def]
   \\ FULL_SIMP_TAC std_ss [GSYM ord__lemma,LISP_TEST_def]);
 
-val fake_ftbl_entries_def = Define `
+Definition fake_ftbl_entries_def:
   fake_ftbl_entries =
     ["IF"; "EQUAL"; "SYMBOLP"; "SYMBOL-<"; "NATP"; "<"; "+"; "-";
      "CONSP"; "CONS"; "CAR"; "CDR"; "ERROR"; "PRINT"; "DEFINE";
      "DEFUN"; "FUNCALL"; "LOOKUP-SAFE"; "DEFINE-SAFE";
-     "DEFINE-SAFE-LIST"; "MILAWA-INIT"; "MILAWA-MAIN"]`;
+     "DEFINE-SAFE-LIST"; "MILAWA-INIT"; "MILAWA-MAIN"]
+End
 
-val MilawaTrueFun_def = Define `
+Definition MilawaTrueFun_def:
   MilawaTrueFun ctxt f args result =
-    MilawaTrue ctxt (Equal (mApp (mFun f) (MAP mConst args)) (mConst result))`;
+    MilawaTrue ctxt (Equal (mApp (mFun f) (MAP mConst args)) (mConst result))
+End
 
-val runtime_inv_def = Define `
+Definition runtime_inv_def:
   runtime_inv (ctxt:context_type) k =
     !name params body sem args ok.
       name IN FDOM ctxt /\ (ctxt ' name = (params,body,sem)) /\
       (LENGTH args = LENGTH params) ==>
       ?ok2. MR_ap (Fun name,args,ARB,ctxt,k,ok) (sem args,ok2) /\
-            (ok2 ==> MilawaTrueFun ctxt name args (sem args))`;
+            (ok2 ==> MilawaTrueFun ctxt name args (sem args))
+End
 
 val MR_ap_CTXT = prove(
   ``MR_ap (Fun fc,args,a,ctxt \\ name,k,ok) (sem args,ok2) ==>
@@ -1838,8 +1857,9 @@ val MilawaTrue_or_not_equal_list = prove(
 
 val M_ev_induct = IndDefLib.derive_strong_induction(M_ev_rules,M_ev_ind);
 
-val inst_term_def = Define `
-  inst_term a exp = term_sub (MAP (\v. (v,mConst (a v))) (free_vars exp)) exp`;
+Definition inst_term_def:
+  inst_term a exp = term_sub (MAP (\v. (v,mConst (a v))) (free_vars exp)) exp
+End
 
 val MAP_EQ = prove(
   ``!xs f g. (MAP f xs = MAP g xs) = EVERY (\x. f x = g x) xs``,
@@ -2143,15 +2163,17 @@ val MEM_ZIP_MAP_EQ = prove(
   Induct \\ Cases_on `ys`
   \\ FULL_SIMP_TAC (srw_ss()) [LENGTH,ADD1] \\ METIS_TAC []);
 
-val term_funs_def = Define `
+Definition term_funs_def:
   term_funs ctxt =
     !name params body sem.
       name IN FDOM ctxt /\ (ctxt ' name = (params,BODY_FUN body,sem)) ==>
-      MilawaTrue ctxt (Equal (mApp (mFun name) (MAP mVar params)) body)`;
+      MilawaTrue ctxt (Equal (mApp (mFun name) (MAP mVar params)) body)
+End
 
-val proof_in_full_ctxt_def = Define `
+Definition proof_in_full_ctxt_def:
   proof_in_full_ctxt ctxt full_ctxt =
-    !x. MilawaTrue ctxt x ==> MilawaTrue full_ctxt x`;
+    !x. MilawaTrue ctxt x ==> MilawaTrue full_ctxt x
+End
 
 val ind =
   M_ev_induct

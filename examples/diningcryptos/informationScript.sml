@@ -28,31 +28,35 @@ val _ = ratLib.deprecate_rat();
 (* Basic Definitions                                                         *)
 (* ************************************************************************* *)
 
-val KL_divergence_def = Define
-   `KL_divergence b s u v =
-        integral (space s, subsets s, u) (\x. logr b ((RN_deriv (space s, subsets s, v) u) x))`;
+Definition KL_divergence_def:
+    KL_divergence b s u v =
+        integral (space s, subsets s, u) (\x. logr b ((RN_deriv (space s, subsets s, v) u) x))
+End
 
-val mutual_information_def = Define
-   `mutual_information b p s1 s2 X Y  =
+Definition mutual_information_def:
+    mutual_information b p s1 s2 X Y  =
         let prod_space =
                 prod_measure_space (space s1, subsets s1, distribution p X)
                                    (space s2, subsets s2, distribution p Y) in
         KL_divergence b
                 (p_space prod_space, events prod_space)
                 (joint_distribution p X Y)
-                (prob prod_space)`;
+                (prob prod_space)
+End
 
-val entropy_def = Define
-   `entropy b p s X = mutual_information b p s s X X`;
+Definition entropy_def:
+    entropy b p s X = mutual_information b p s s X X
+End
 
 
-val conditional_mutual_information_def = Define
-   `conditional_mutual_information b p s1 s2 s3 X Y Z =
+Definition conditional_mutual_information_def:
+    conditional_mutual_information b p s1 s2 s3 X Y Z =
         let prod_space =
             prod_measure_space (space s2, subsets s2, distribution p Y)
                                (space s3, subsets s3, distribution p Z) in
         mutual_information b p s1 (p_space prod_space, events prod_space) X (\x. (Y x, Z x)) -
-        mutual_information b p s1 s3 X Z`;
+        mutual_information b p s1 s3 X Z
+End
 
 
 (* ************************************************************************* *)

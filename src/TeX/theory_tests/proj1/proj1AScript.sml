@@ -1,6 +1,7 @@
 Theory proj1A
 
-val foo_def = Define`foo x = x * 2 + 1`;
+Definition foo_def:  foo x = x * 2 + 1
+End
 
 val Athm = Q.store_thm(
   "Athm",

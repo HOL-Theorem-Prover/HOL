@@ -221,9 +221,9 @@ val exists_range_cons = store_thm(
 (* List Range                                                                *)
 (* ------------------------------------------------------------------------- *)
 
-val listRangeINC_def = Define`
+Definition listRangeINC_def:
   listRangeINC m n = GENLIST (\i. m + i) (n + 1 - m)
-`;
+End
 
 val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                    fixity = Closefix,
@@ -260,9 +260,9 @@ val listRangeINC_EMPTY = store_thm(
   SRW_TAC [][listRangeINC_def] THEN
   `n + 1 - m = 0` by DECIDE_TAC THEN SRW_TAC[][]);
 
-val listRangeLHI_def = Define`
+Definition listRangeLHI_def:
   listRangeLHI m n = GENLIST (\i. m + i) (n - m)
-`;
+End
 
 val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                    fixity = Closefix,

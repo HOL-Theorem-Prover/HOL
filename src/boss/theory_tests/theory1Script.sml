@@ -6,10 +6,12 @@ val _ = register_hook("magnus_bug",
                       (fn TheoryDelta.ExportTheory _ => delete_const "h"
                         | _ => ()))
 
-val f_def = Define`f x = x + 1`;
+Definition f_def:  f x = x + 1
+End
 val _ = export_rewrites ["f_def"]
 
-val g_def = Define`g n m = f (n * m)`;
+Definition g_def:  g n m = f (n * m)
+End
 val _ = export_rewrites ["g_def"]
 
 val i = EVAL ``g 3 4``
@@ -19,11 +21,12 @@ val i = EVAL ``g 3 4``
 
 val _ = delete_const "g";
 
-val h_def = Define`
+Definition h_def:
   h n = n + 1
-`;
+End
 
-val f2_def = Define`f2 n = n + 1`;
+Definition f2_def:  f2 n = n + 1
+End
 val _ = export_rewrites ["f2_def"]
 
 val f2_SUC = store_thm(
@@ -33,12 +36,18 @@ val f2_SUC = store_thm(
 
 val _ = delete_binding "f2_def"
 
-val f3_def = Define`f3 n = n + 1`;
-val f3_def = Define`f3 n = n + 2`;
-val f3_def = Define`f3 n = n + 3`;
-val f3_def = Define`f3 n = n + 4`;
+Definition f3_def:  f3 n = n + 1
+End
+Definition f3_def:  f3 n = n + 2
+End
+Definition f3_def:  f3 n = n + 3
+End
+Definition f3_def:  f3 n = n + 4
+End
 
-val g3_def = Define`g3 n = f3 (n + 1)`
-val f3_def = Define`f3 n = n + 5`;
+Definition g3_def:  g3 n = f3 (n + 1)
+End
+Definition f3_def:  f3 n = n + 5
+End
 
 

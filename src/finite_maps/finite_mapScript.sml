@@ -2138,8 +2138,9 @@ val _ =
 (* added 17 March 2009 by Thomas Tuerk, updated 26 March                     *)
 (*---------------------------------------------------------------------------*)
 
-val FMAP_MAP2_def = Define
-`FMAP_MAP2 f m = FUN_FMAP (\x. f (x,m ' x)) (FDOM m)`;
+Definition FMAP_MAP2_def:
+ FMAP_MAP2 f m = FUN_FMAP (\x. f (x,m ' x)) (FDOM m)
+End
 
 
 val FMAP_MAP2_THM = store_thm ("FMAP_MAP2_THM",
@@ -2503,9 +2504,10 @@ val DOMSUB_MAP_KEYS = Q.store_thm("DOMSUB_MAP_KEYS",
 
 (* Relate the values in two finite maps *)
 
-val fmap_rel_def = Define`
+Definition fmap_rel_def:
   fmap_rel R f1 f2 <=>
-    FDOM f2 = FDOM f1 /\ (!x. x IN FDOM f1 ==> R (f1 ' x) (f2 ' x))`
+    FDOM f2 = FDOM f1 /\ (!x. x IN FDOM f1 ==> R (f1 ' x) (f2 ' x))
+End
 
 val fmap_rel_FUPDATE_same = store_thm(
 "fmap_rel_FUPDATE_same",
@@ -2605,10 +2607,11 @@ QED
      Some helpers for fupdate_NORMALISE_CONV
  ---------------------------------------------------------------------------*)
 
-val fmap_EQ_UPTO_def = Define `
+Definition fmap_EQ_UPTO_def:
   fmap_EQ_UPTO f1 f2 vs <=>
     (FDOM f1 INTER (COMPL vs) = FDOM f2 INTER (COMPL vs)) /\
-    (!x. x IN FDOM f1 INTER (COMPL vs) ==> (f1 ' x = f2 ' x))`
+    (!x. x IN FDOM f1 INTER (COMPL vs) ==> (f1 ' x = f2 ' x))
+End
 
 val fmap_EQ_UPTO___EMPTY = store_thm (
   "fmap_EQ_UPTO___EMPTY",
@@ -2665,9 +2668,9 @@ CONJ_TAC THEN GEN_TAC THENL [
 (* From Ramana Kumar                                                         *)
 (*---------------------------------------------------------------------------*)
 
-val fmap_size_def =
- Define
-   `fmap_size kz vz fm = SIGMA (\k. kz k + vz (fm ' k)) (FDOM fm)`;
+Definition fmap_size_def:
+    fmap_size kz vz fm = SIGMA (\k. kz k + vz (fm ' k)) (FDOM fm)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Various lemmas from the CakeML project https://cakeml.org                 *)
@@ -3126,7 +3129,8 @@ end
     Removes a whole bunch of keys at once
    ---------------------------------------------------------------------- *)
 
-val FDIFF_def = Define `FDIFF f1 s = DRESTRICT f1 (COMPL s)`;
+Definition FDIFF_def:   FDIFF f1 s = DRESTRICT f1 (COMPL s)
+End
 
 Theorem FDOM_FDIFF[simp]:
   x IN FDOM (FDIFF refs f2) <=> x IN FDOM refs /\ x NOTIN f2

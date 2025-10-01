@@ -2,17 +2,19 @@ Theory extNat
 
 val _ = type_abbrev("extnat",``:num option``)
 
-val extnat_le_def = Define`
+Definition extnat_le_def:
 (extnat_le NONE NONE <=> T) ∧
 (extnat_le NONE (SOME _) <=> F) ∧
 (extnat_le (SOME _) NONE <=> T)∧
-(extnat_le (SOME (x:num)) (SOME y) <=> x<=y)`
+(extnat_le (SOME (x:num)) (SOME y) <=> x<=y)
+End
 
-val extnat_plus_def = Define`
+Definition extnat_plus_def:
 (extnat_plus NONE NONE = NONE ) ∧
 (extnat_plus (SOME _) NONE = NONE ) ∧
 (extnat_plus NONE (SOME _) = NONE) ∧
-(extnat_plus (SOME (x:num)) (SOME y) = SOME (x+y) )`
+(extnat_plus (SOME (x:num)) (SOME y) = SOME (x+y) )
+End
 
 val _ = overload_on ("<=",``extnat_le``);
 val _ = overload_on ("+",``extnat_plus``);

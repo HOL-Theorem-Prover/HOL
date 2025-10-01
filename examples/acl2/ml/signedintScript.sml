@@ -305,22 +305,26 @@ val BITWISE_TOP = store_thm("BITWISE_TOP",
 (*                                                                           *)
 (*****************************************************************************)
 
-val i2n_def = Define `i2n i l =
-    Num (if 0 <= i then i % 2 ** l else (i + 1) rem (2 ** l) - 1 + 2 ** l)`;
+Definition i2n_def:   i2n i l =
+    Num (if 0 <= i then i % 2 ** l else (i + 1) rem (2 ** l) - 1 + 2 ** l)
+End
 
-val extend_def = Define `extend i l =
-    let m = i2n i l in if BIT (l - 1) m then & m - 2 ** l else & m`;
+Definition extend_def:   extend i l =
+    let m = i2n i l in if BIT (l - 1) m then & m - 2 ** l else & m
+End
 
-val sw2i_def = Define `sw2i (x:'a word) =
+Definition sw2i_def:   sw2i (x:'a word) =
          (if BIT (dimindex (:'a) - 1) (w2n x) then
             & (w2n x) - 2 ** dimindex (:'a)
           else
-            & (w2n x))`;
+            & (w2n x))
+End
 
-val i2sw_def = Define `i2sw x =
+Definition i2sw_def:   i2sw x =
         let m = extend x (dimindex (:'b))
         in  if m < 0    then n2w (Num (m + 2 ** dimindex (:'b)))
-                        else n2w (Num m):'b word`;
+                        else n2w (Num m):'b word
+End
 
 val iand_def = tDefine "iand"
        `iand i j =
@@ -337,9 +341,11 @@ val iand_def = tDefine "iand"
               ARITH_PROVE ``a < 0 ==> 0i <= ~a``,
               ARITH_PROVE ``~(a < 0) ==> 0i <= a``] THEN ARITH_TAC);
 
-val inot_def = Define `inot x = ~(x + 1i)`;
+Definition inot_def:   inot x = ~(x + 1i)
+End
 
-val ibit_def = Define `ibit i j = ODD (Num (ABS (j / 2 ** i)))`;
+Definition ibit_def:   ibit i j = ODD (Num (ABS (j / 2 ** i)))
+End
 
 (*****************************************************************************)
 (* I2N_NUM        : |- !a b. i2n (& a) b = a MOD 2 ** b                      *)

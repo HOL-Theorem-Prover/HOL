@@ -1401,10 +1401,10 @@ val it = |- WF R ==> (!p_1 p_2. ~gd p_1 p_2 ==> R (t p_1,m p_2) (p_1,p_2)) ==>
 *)
 
 (* Define loop_count for 2 arguments *)
-val loop2_count_def = Define`
+Definition loop2_count_def:
     loop2_count guard modify transform x y =
        loop_count (\(x,y). guard x y) (\(x,y). (transform x, modify y)) (x, y)
-`;
+End
 
 (* Theorem: WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) ==>
       !x y. loop2_count guard modify transform x y =
@@ -1522,9 +1522,9 @@ val loop2_modify_count_exit_le = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the iterating list *)
-val iterating_def = Define`
+Definition iterating_def:
     iterating f x y = if y = 0 then [] else x::iterating f (f x) (y - 1)
-`;
+End
 
 (*
 EVAL ``iterating SQ 2 (pop 2 10)``; = [2; 4; 16; 256]: thm
@@ -1952,10 +1952,10 @@ val it = |- WF R ==> (!p_1 p_1' p_2. ~gd p_1 p_1' p_2 ==> R (c p_1,t p_1',m p_2)
 *)
 
 (* Define loop_count for 3 arguments *)
-val loop3_count_def = Define`
+Definition loop3_count_def:
     loop3_count guard modify transform convert x y z =
        loop_count (\(x,y,z). guard x y z) (\(x,y,z). (convert x, transform y, modify z)) (x, y, z)
-`;
+End
 
 (* Theorem: WF R /\ (!x y z. ~guard x y z ==> R (convert x, transform y,modify z) (x,y,z)) ==>
       !x y z. loop3_count guard modify transform convert x y z =
@@ -2554,10 +2554,10 @@ val it = |- WF R ==> (!p_1 p_2. ~gd p_1 p_2 ==> R (t p_1,m p_2) (p_1,p_2)) ==>
 (* Define loop_count for 2 arguments *)
 
 (* Define loop_arg for 2 arguments *)
-val loop2_arg_def = Define`
+Definition loop2_arg_def:
     loop2_arg guard modify transform x y =
        loop_arg (\(x,y). guard x y) (\(x,y). (transform x, modify y)) (x, y)
-`;
+End
 
 (* Obtain theorem by transform:
 

@@ -207,14 +207,14 @@ val _ =
        | SOMETIME of wff
        | ALWAYS   of wff`;
 
-val Eval_def =
- Define
-  `(Eval (ATOM p)     R s = p s)                                        /\
+Definition Eval_def:
+   (Eval (ATOM p)     R s = p s)                                        /\
    (Eval (NOT f)      R s = ~(Eval f R s))                              /\
    (Eval (AND f1 f2)  R s = (Eval f1 R s /\ Eval f2 R s))               /\
    (Eval (OR f1 f2)   R s = (Eval f1 R s \/ Eval f2 R s))               /\
    (Eval (SOMETIME f) R s = ?s'. Reachable R (Eq s) s' /\  Eval f R s') /\
-   (Eval (ALWAYS f)   R s = !s'. Reachable R (Eq s) s' ==> Eval f R s')`;
+   (Eval (ALWAYS f)   R s = !s'. Reachable R (Eq s) s' ==> Eval f R s')
+End
 
 (*****************************************************************************)
 (* Compute the term_bdd of                                                   *)
@@ -294,14 +294,14 @@ val _ =
         | aSOMETIME of awff
         | aALWAYS   of awff`;
 
-val aEval_def =
- Define
-  `(aEval (aATOM a)     (R,L) s = L a s)                                           /\
+Definition aEval_def:
+   (aEval (aATOM a)     (R,L) s = L a s)                                           /\
    (aEval (aNOT f)      (R,L) s = ~(aEval f (R,L) s))                              /\
    (aEval (aAND f1 f2)  (R,L) s = (aEval f1 (R,L) s /\ aEval f2 (R,L) s))          /\
    (aEval (aOR f1 f2)   (R,L) s = (aEval f1 (R,L) s \/ aEval f2 (R,L) s))          /\
    (aEval (aSOMETIME f) (R,L) s = ?s'. Reachable R (Eq s) s' /\  aEval f (R,L) s') /\
-   (aEval (aALWAYS f)   (R,L) s = !s'. Reachable R (Eq s) s' ==> aEval f (R,L) s')`;
+   (aEval (aALWAYS f)   (R,L) s = !s'. Reachable R (Eq s) s' ==> aEval f (R,L) s')
+End
 
 (*****************************************************************************)
 (* Compute the term_bdd of                                                   *)

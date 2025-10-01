@@ -2,10 +2,10 @@ Theory ward
 Ancestors
   divides list
 
-val list_exp_def = Define`
+Definition list_exp_def:
   (list_exp l 0 = []) ∧
   (list_exp l (SUC n) = l ++ list_exp l n)
-`;
+End
 
 
 

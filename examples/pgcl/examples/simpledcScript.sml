@@ -58,57 +58,68 @@ val lemma = I prove;
 
 (* ---------------- Creates a list of the Ints 0 through n ----------------- *)
 
-val zero_to_n_Int_list = Define
-   `(zero_to_n_Int_list 0 = []) /\
-    (zero_to_n_Int_list (SUC n) = SNOC (Int (&n)) (zero_to_n_Int_list n))`;
+Definition zero_to_n_Int_list:
+    (zero_to_n_Int_list 0 = []) /\
+    (zero_to_n_Int_list (SUC n) = SNOC (Int (&n)) (zero_to_n_Int_list n))
+End
 
 (* ------------------- Computes the xor of a value list ------------------- *)
 
-val xor_def = Define
-  `(xor [] = Int 0) /\
-   (xor ((Int i)::l) = if i=0 then xor l else Int(1 - (int_of_value(xor l))))`;
+Definition xor_def:
+   (xor [] = Int 0) /\
+   (xor ((Int i)::l) = if i=0 then xor l else Int(1 - (int_of_value(xor l))))
+End
 
 (* ----------------- Computes the xor values in an array ------------------ *)
 
-val Xor_def = Define
-  `Xor (Array a) = xor a`;
+Definition Xor_def:
+   Xor (Array a) = xor a
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Defining heads and tails and yes and no                                   *)
 (* ------------------------------------------------------------------------- *)
 
-val Heads_def = Define `Heads = Int 1`;
+Definition Heads_def:   Heads = Int 1
+End
 
-val Tails_def = Define `Tails = Int 0`;
+Definition Tails_def:   Tails = Int 0
+End
 
-val Yes_def = Define `Yes = Int 1`;
+Definition Yes_def:   Yes = Int 1
+End
 
-val No_def = Define `No = Int 0`;
+Definition No_def:   No = Int 0
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Protocol Definition                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-val initialize_var_N_def = Define
-   `initialize_var_N n = Assign "N" (\s. Int (&n))`;
+Definition initialize_var_N_def:
+    initialize_var_N n = Assign "N" (\s. Int (&n))
+End
 
-val initialize_var_NSApays_def = Define
-   `initialize_var_NSApays nsapays =
+Definition initialize_var_NSApays_def:
+    initialize_var_NSApays nsapays =
         if nsapays then Assign "NSApays" (\s. Yes)
-                   else Assign "NSApays" (\s. No)`;
+                   else Assign "NSApays" (\s. No)
+End
 
-val set_payer_def = Define
-  `set_payer n nsapays =
+Definition set_payer_def:
+   set_payer n nsapays =
         if nsapays then Assign "payer" (\s. Int (&n))
-                   else NondetAssign "payer" (zero_to_n_Int_list n)`;
+                   else NondetAssign "payer" (zero_to_n_Int_list n)
+End
 
-val initialize_def = Define
-  `initialize n nsapays = Program [initialize_var_N n;
+Definition initialize_def:
+   initialize n nsapays = Program [initialize_var_N n;
                                    initialize_var_NSApays nsapays;
-                                   set_payer n nsapays]`;
+                                   set_payer n nsapays]
+End
 
-val flip_coins_def = Define
-   `flip_coins =
+Definition flip_coins_def:
+    flip_coins =
         Program
         [
           New_Array "Coins" "N";
@@ -117,10 +128,11 @@ val flip_coins_def = Define
                 ProbAssign "coinflip" [Heads; Tails];
                 Assign_Array_i "Coins" "i" (\s. s "coinflip")
            ]
-        ]`;
+        ]
+End
 
-val set_announcements_def = Define
-   `set_announcements =
+Definition set_announcements_def:
+    set_announcements =
         Program
         [
            New_Array "Announces" "N";
@@ -135,20 +147,23 @@ val set_announcements_def = Define
                    (Assign "pays" (\s. No));
                 Assign_Array_i "Announces" "i" (\s. xor [s "previouscoin"; s "currentcoin"; s "pays"])
              ]
-        ]`;
+        ]
+End
 
-val compute_result_def = Define
-   `compute_result = Assign "result" (\s. Xor (s "Announces"))`;
+Definition compute_result_def:
+    compute_result = Assign "result" (\s. Xor (s "Announces"))
+End
 
-val dcprog_def = Define
-   `dcprog n nsapays =
+Definition dcprog_def:
+    dcprog n nsapays =
         Program
         [
            initialize n nsapays;
            flip_coins;
            set_announcements;
            compute_result
-        ]`;
+        ]
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Proofs                                                                    *)
@@ -1716,11 +1731,12 @@ val wlp_seq = store_thm
          wlp (Seq prog prog') postE = wlp prog (wlp prog' postE)``,
    RW_TAC std_ss [wlp_def]);
 
-val flip_coins_g = Define
-   `flip_coins_g = (\s. int_of_value (s "i") < int_of_value (s "N"))`;
+Definition flip_coins_g:
+    flip_coins_g = (\s. int_of_value (s "i") < int_of_value (s "N"))
+End
 
-val flip_coins_invariant_constant = Define
-   `flip_coins_invariant_constant n nsapays pay =
+Definition flip_coins_invariant_constant:
+    flip_coins_invariant_constant n nsapays pay =
     (\s. (s "N" = Int (&n)) /\
     (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
     ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
@@ -1733,38 +1749,45 @@ val flip_coins_invariant_constant = Define
           ((get_Array_i (s "Coins") k) = Tails))) /\
     (s "payer" = Int (& pay)) /\
     (0 <= int_of_value (s "payer")) /\
-    (int_of_value (s "payer") <= int_of_value (s "N")))`;
+    (int_of_value (s "payer") <= int_of_value (s "N")))
+End
 
-val flip_coins_invariant_j_lt_i = Define
-   `flip_coins_invariant_j_lt_i j =
-    (\s. (j < num_of_value (s "i")))`;
+Definition flip_coins_invariant_j_lt_i:
+    flip_coins_invariant_j_lt_i j =
+    (\s. (j < num_of_value (s "i")))
+End
 
-val flip_coins_invariant_coins_j_eq_heads = Define
-   `flip_coins_invariant_coins_j_eq_heads j =
-    (\s. (get_Array_i (s "Coins") j) = Heads)`;
+Definition flip_coins_invariant_coins_j_eq_heads:
+    flip_coins_invariant_coins_j_eq_heads j =
+    (\s. (get_Array_i (s "Coins") j) = Heads)
+End
 
-val flip_coins_invariant_heads = Define
-   `flip_coins_invariant_heads n nsapays pay j =
+Definition flip_coins_invariant_heads:
+    flip_coins_invariant_heads n nsapays pay j =
         (\s. if flip_coins_invariant_constant n nsapays pay s then
                         if flip_coins_invariant_j_lt_i j s then
                                 if flip_coins_invariant_coins_j_eq_heads j s then 1 else 0
                         else 1/2
-                 else 0:posreal)`;
+                 else 0:posreal)
+End
 
-val flip_coins_loopbody = Define
-   `flip_coins_loopbody =
+Definition flip_coins_loopbody:
+    flip_coins_loopbody =
          Seq (Program [ProbAssign "coinflip" [Heads; Tails];
                        Assign_Array_i "Coins" "i" (\s. s "coinflip")])
-             (Assign "i" (\s. Int (int_of_value (s "i") + 1)))`;
+             (Assign "i" (\s. Int (int_of_value (s "i") + 1)))
+End
 
-val flip_coins_loop = Define
-   `flip_coins_loop = While flip_coins_g flip_coins_loopbody`;
+Definition flip_coins_loop:
+    flip_coins_loop = While flip_coins_g flip_coins_loopbody
+End
 
-val flip_coins_postE_heads = Define
-   `flip_coins_postE_heads n nsapays pay j=
+Definition flip_coins_postE_heads:
+    flip_coins_postE_heads n nsapays pay j=
         bool_exp (\s. (flip_coins_invariant_constant n nsapays pay s) /\
                       (flip_coins_invariant_coins_j_eq_heads j s) /\
-                      (~(flip_coins_g s)))`;
+                      (~(flip_coins_g s)))
+End
 
 val flip_coins_loop_result_heads = store_thm
   ("flip_coins_loop_result_heads",
@@ -1897,23 +1920,26 @@ val flip_coins_loop_result_heads = store_thm
         by METIS_TAC [update_Array_i_el, int_of_value_def, NUM_OF_INT, INT_LT]
    ++ RW_TAC posreal_reduce_ss []);
 
-val flip_coins_invariant_coins_j_eq_tails = Define
-   `flip_coins_invariant_coins_j_eq_tails j =
-    (\s. (get_Array_i (s "Coins") j) = Tails)`;
+Definition flip_coins_invariant_coins_j_eq_tails:
+    flip_coins_invariant_coins_j_eq_tails j =
+    (\s. (get_Array_i (s "Coins") j) = Tails)
+End
 
-val flip_coins_invariant_tails = Define
-   `flip_coins_invariant_tails n nsapays pay j =
+Definition flip_coins_invariant_tails:
+    flip_coins_invariant_tails n nsapays pay j =
         (\s. if flip_coins_invariant_constant n nsapays pay s then
                         if flip_coins_invariant_j_lt_i j s then
                                 if flip_coins_invariant_coins_j_eq_tails j s then 1 else 0
                         else 1/2
-                 else 0:posreal)`;
+                 else 0:posreal)
+End
 
-val flip_coins_postE_tails = Define
-   `flip_coins_postE_tails n nsapays pay j=
+Definition flip_coins_postE_tails:
+    flip_coins_postE_tails n nsapays pay j=
         bool_exp (\s. (flip_coins_invariant_constant n nsapays pay s) /\
                       (flip_coins_invariant_coins_j_eq_tails j s) /\
-                      (~(flip_coins_g s)))`;
+                      (~(flip_coins_g s)))
+End
 
 val flip_coins_loop_result_tails = store_thm
   ("flip_coins_loop_result_tails",
@@ -2122,14 +2148,16 @@ val flip_coins_wlp_lem9 = store_thm
        ++ FULL_SIMP_TAC arith_ss [NOT_LESS_EQUAL],
        METIS_TAC [length_of_n_list, Array_length_def]]);
 
-val flip_coins_postE_heads_or_tails = Define
-   `flip_coins_postE_heads_or_tails n nsapays pay =
+Definition flip_coins_postE_heads_or_tails:
+    flip_coins_postE_heads_or_tails n nsapays pay =
     bool_exp (\s. flip_coins_invariant_constant n nsapays pay s /\
-                  (~(flip_coins_g s)))`;
+                  (~(flip_coins_g s)))
+End
 
-val flip_coins_invariant_heads_or_tails = Define
-   `flip_coins_invariant_heads_or_tails n nsapays pay =
-    bool_exp (flip_coins_invariant_constant n nsapays pay)`;
+Definition flip_coins_invariant_heads_or_tails:
+    flip_coins_invariant_heads_or_tails n nsapays pay =
+    bool_exp (flip_coins_invariant_constant n nsapays pay)
+End
 
 val flip_coins_loop_result_heads_or_tails = store_thm
   ("flip_coins_loop_result_heads_or_tails",
@@ -2227,11 +2255,12 @@ val flip_coins_wlp_lem10 = store_thm
        ++ FULL_SIMP_TAC arith_ss [NOT_LESS_EQUAL],
        METIS_TAC [length_of_n_list, Array_length_def]]);
 
-val set_announcements_g = Define
-   `set_announcements_g = (\s. int_of_value (s "i") < int_of_value (s "N"))`;
+Definition set_announcements_g:
+    set_announcements_g = (\s. int_of_value (s "i") < int_of_value (s "N"))
+End
 
-val set_announcements_j_eq_xor = Define
-   `set_announcements_j_eq_xor j =
+Definition set_announcements_j_eq_xor:
+    set_announcements_j_eq_xor j =
     (\s. if j = (num_of_value (s "payer"))
          then
             if j = 0
@@ -2256,10 +2285,11 @@ val set_announcements_j_eq_xor = Define
                ((get_Array_i (s "Announces") j) =
                 (xor [No;
                       get_Array_i (s "Coins") j;
-                      get_Array_i (s "Coins") (j - 1)])))`;
+                      get_Array_i (s "Coins") (j - 1)])))
+End
 
-val set_announcements_invariant_constant = Define
-   `set_announcements_invariant_constant n nsapays a pay =
+Definition set_announcements_invariant_constant:
+    set_announcements_invariant_constant n nsapays a pay =
     (\s. (s "N" = Int (&n)) /\
     (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
     ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
@@ -2280,19 +2310,22 @@ val set_announcements_invariant_constant = Define
          (((get_Array_i (s "Announces") k) = Yes) \/
           ((get_Array_i (s "Announces") k) = No))) /\
     (!j. (j < num_of_value (s "i")) ==>
-         (set_announcements_j_eq_xor j s)))`;
+         (set_announcements_j_eq_xor j s)))
+End
 
-val set_announcements_invariant = Define
-   `set_announcements_invariant n nsapays a pay =
-        bool_exp (set_announcements_invariant_constant n nsapays a pay)`;
+Definition set_announcements_invariant:
+    set_announcements_invariant n nsapays a pay =
+        bool_exp (set_announcements_invariant_constant n nsapays a pay)
+End
 
-val set_announcements_postE = Define
-   `set_announcements_postE n nsapays a pay =
+Definition set_announcements_postE:
+    set_announcements_postE n nsapays a pay =
         bool_exp (\s. (set_announcements_invariant_constant n nsapays a pay s) /\
-                      (~(set_announcements_g s)))`;
+                      (~(set_announcements_g s)))
+End
 
-val set_announcements_loopbody = Define
-   `set_announcements_loopbody =
+Definition set_announcements_loopbody:
+    set_announcements_loopbody =
                (Seq
                   (Seq
                      (Assign "currentcoin"
@@ -2317,10 +2350,12 @@ val set_announcements_loopbody = Define
                                  xor
                                    [s "previouscoin"; s "currentcoin";
                                     s "pays"])))))
-                  (Assign "i" (\s. Int (int_of_value (s "i") + 1))))`;
+                  (Assign "i" (\s. Int (int_of_value (s "i") + 1))))
+End
 
-val set_announcements_loop = Define
-   `set_announcements_loop = While set_announcements_g set_announcements_loopbody`;
+Definition set_announcements_loop:
+    set_announcements_loop = While set_announcements_g set_announcements_loopbody
+End
 
 val dc_prog_string_inequalities = store_thm
   ("dc_prog_string_inequalities",
@@ -2918,8 +2953,8 @@ val set_announcements_loop_result = store_thm
    ++ ASM_REWRITE_TAC []
    ++ METIS_TAC [int_of_value_def, NUM_OF_INT, LESS_0_CASES]);
 
-val set_announcements_preE = Define
-   `set_announcements_preE n nsapays a pay =
+Definition set_announcements_preE:
+    set_announcements_preE n nsapays a pay =
     (\s. (s "N" = Int (&n)) /\
     (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
     ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
@@ -2930,7 +2965,8 @@ val set_announcements_preE = Define
     (Array_length (s "Coins") = num_of_value (s "N")) /\
     (!k. (k < num_of_value (s "N")) ==>
          (((get_Array_i (s "Coins") k) = Heads) \/
-          ((get_Array_i (s "Coins") k) = Tails))))`;
+          ((get_Array_i (s "Coins") k) = Tails))))
+End
 
 val wlp_set_announcements_result = store_thm
   ("wlp_set_announcements_result",
@@ -2958,8 +2994,8 @@ val wlp_set_announcements_result = store_thm
        METIS_TAC [int_of_value_def, NUM_OF_INT],
        METIS_TAC [length_of_n_list, Array_length_def]]);
 
-val compute_result_postE = Define
-   `compute_result_postE n nsapays pay =
+Definition compute_result_postE:
+    compute_result_postE n nsapays pay =
     bool_exp (\s.
     (s "N" = Int (&n)) /\
     (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
@@ -2979,7 +3015,8 @@ val compute_result_postE = Define
           ((get_Array_i (s "Announces") k) = No))) /\
     (!j. (j < num_of_value (s "N")) ==>
          (set_announcements_j_eq_xor j s)) /\
-    (if nsapays then s "result" = No else s "result" = Yes))`;
+    (if nsapays then s "result" = No else s "result" = Yes))
+End
 
 val FIRSTN_LENGTH = store_thm
   ("FIRSTN_LENGTH",
@@ -3615,8 +3652,8 @@ val wlp_initialize_result = store_thm
    >> PROVE_TAC [leq_trans, wlp_mono]
    ++ RW_TAC std_ss [wlp_set_payer_result]);
 
-val dc_prog_result_postE = Define
-   `dc_prog_result_postE n nsapays =
+Definition dc_prog_result_postE:
+    dc_prog_result_postE n nsapays =
     bool_exp (\s.
     (s "N" = Int (&n)) /\
     (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
@@ -3636,7 +3673,8 @@ val dc_prog_result_postE = Define
           ((get_Array_i (s "Announces") k) = No))) /\
     (!j. (j < num_of_value (s "N")) ==>
          (set_announcements_j_eq_xor j s)) /\
-    (if nsapays then s "result" = No else s "result" = Yes))`;
+    (if nsapays then s "result" = No else s "result" = Yes))
+End
 
 val wlp_Program_flip_coins_set_announcements_compute_result_result2 = store_thm
   ("wlp_Program_flip_coins_set_announcements_compute_result_result2",

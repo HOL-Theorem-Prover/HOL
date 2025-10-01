@@ -10,9 +10,9 @@ val _ = augment_srw_ss [rewrites [LET_THM]]
     Swapping over sets of strings
    ---------------------------------------------------------------------- *)
 
-val swapset_def = Define`
+Definition swapset_def:
   swapset x y ss = IMAGE (swapstr x y) ss
-`;
+End
 
 val swapset_inverse = store_thm(
   "swapset_inverse",
@@ -349,13 +349,13 @@ val _ = export_rewrites ["swap_eq_var", "swap_eq_con", "swap_eq_app",
     supporting recursion over lambda calculus terms using swap
    ---------------------------------------------------------------------- *)
 
-val swapping_def = Define`
+Definition swapping_def:
   swapping f fv ⇔
     (!x z. f x x z = z) /\
     (!x y z. f x y (f x y z) = z) /\
     (!x y z. ~(x IN fv z) /\ ~(y IN fv z) ==> (f x y z = z)) /\
     (!x y z s. s IN fv (f x y z) ⇔ swapstr x y s IN fv z)
-`
+End
 
 val LET_NEW_congruence = store_thm(
   "LET_NEW_congruence",
@@ -408,11 +408,11 @@ val swapping_implies_identity_swap = store_thm(
   SRW_TAC [][swapping_def]);
 
 
-val swapfn_def = Define`
+Definition swapfn_def:
   swapfn (dswap:string -> string -> 'a -> 'a)
          (rswap:string -> string -> 'b -> 'b)
          x y f d = rswap x y (f (dswap x y d))
-`;
+End
 
 val fresh_new_subst0 = prove(
   ``FINITE X /\ (!p. FINITE (pFV p)) ==>
@@ -660,10 +660,10 @@ val swap_RECURSION_simple = save_thm(
     list swap
    ---------------------------------------------------------------------- *)
 
-val lswap_def = Define`
+Definition lswap_def:
   (lswap [] t = t) /\
   (lswap (h::hs) t = swap (FST h) (SND h) (lswap hs t))
-`;
+End
 
 val lswap_thm = store_thm(
   "lswap_thm",

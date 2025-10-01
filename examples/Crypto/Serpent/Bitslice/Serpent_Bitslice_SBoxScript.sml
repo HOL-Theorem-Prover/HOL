@@ -6,7 +6,7 @@ Libs
 
 (* RNDxxx is the SBox in xxx round, invRNDxxx is the invSBox in xxx round *)
 
-val RND00_def = Define`
+Definition RND00_def:
   RND00  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = b ?? c in
     let t02 = a || d in
@@ -26,9 +26,10 @@ val RND00_def = Define`
     let w = ~t15 in
     let t17 = w ?? t14 in
     let x = t12 ?? t17 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val InvRND00_def = Define`
+Definition InvRND00_def:
   InvRND00  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = c ?? d in
     let t02 = a || b in
@@ -49,9 +50,10 @@ val InvRND00_def = Define`
     let t17 = t05 && t13 in
     let t18 = t14 || t17 in
     let w = t15 ?? t18 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val RND01_def = Define`
+Definition RND01_def:
   RND01  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = a || d in
     let t02 = c ?? d in
@@ -71,9 +73,10 @@ val RND01_def = Define`
     let t16 = t10 || x in
     let t17 = t05 && t16 in
     let w = c ?? t17 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val InvRND01_def = Define`
+Definition InvRND01_def:
   InvRND01  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = a ?? b in
     let t02 = b || d in
@@ -93,9 +96,10 @@ val InvRND01_def = Define`
     let z = t01 ?? t04 in
     let t17 = c ?? t15 in
     let w = t14 ?? t17 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val  RND02_def = Define`
+Definition  RND02_def:
     RND02  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = a || c in
     let t02 = a ?? b in
@@ -113,9 +117,10 @@ val  RND02_def = Define`
     let t14 = b ?? t13 in
     let z = ~t09 in
     let y = t12 ?? t14 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val InvRND02_def = Define`
+Definition InvRND02_def:
   InvRND02  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = a ?? d in
     let t02 = c ?? d in
@@ -135,9 +140,10 @@ val InvRND02_def = Define`
     let t16 = w ?? x in
     let t17 = t10 ?? t15 in
     let y = t16 ?? t17 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val  RND03_def = Define`
+Definition  RND03_def:
   RND03  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = a ?? c in
     let t02 = a || d in
@@ -157,9 +163,10 @@ val  RND03_def = Define`
     let y = t08 ?? t11 in
     let w = t14 ?? t15 in
     let x = t05 ?? t04 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val  InvRND03_def = Define`
+Definition  InvRND03_def:
   InvRND03  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = c || d in
     let t02 = a || d in
@@ -178,9 +185,10 @@ val  InvRND03_def = Define`
     let x = b ?? t12 in
     let t16 = b || t13 in
     let z = t14 ?? t16 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val  RND04_def = Define`
+Definition  RND04_def:
   RND04  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = a || b in
     let t02 = b || c in
@@ -201,9 +209,10 @@ val  RND04_def = Define`
     let y = t13 ?? t08 in
     let x = t15 ?? t16 in
     let w = ~t14 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val  InvRND04_def = Define`
+Definition  InvRND04_def:
   InvRND04  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = b || d in
     let t02 = c || d in
@@ -222,9 +231,10 @@ val  InvRND04_def = Define`
     let t15 = a ?? t04 in
     let y = t11 ?? t13 in
     let w = t15 ?? t09 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val  RND05_def = Define`
+Definition  RND05_def:
   RND05  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = b ?? d in
     let t02 = b || d in
@@ -243,9 +253,10 @@ val  RND05_def = Define`
     let y = t09 ?? t13 in
     let x = t07 ?? t08 in
     let z = t12 ?? t14 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val  InvRND05_def = Define`
+Definition  InvRND05_def:
   InvRND05  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = a && d in
     let t02 = c ?? t01 in
@@ -264,9 +275,10 @@ val  InvRND05_def = Define`
     let t15 = t02 ?? t13 in
     let t16 = b ?? d in
     let y = t16 ?? t15 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val  RND06_def = Define`
+Definition  RND06_def:
   RND06  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = a && d in
     let t02 = b ?? c in
@@ -287,9 +299,10 @@ val  RND06_def = Define`
     let t17 = a ?? b in
     let t18 = y ?? t15 in
     let w = t17 ?? t18 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val InvRND06_def = Define`
+Definition InvRND06_def:
   InvRND06  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = a ?? c in
     let t02 = ~c in
@@ -310,9 +323,10 @@ val InvRND06_def = Define`
     let t17 = a ?? x in
     let z = t17 ?? t15 in
     let y = t16 ?? t14 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val RND07_def = Define`
+Definition RND07_def:
   RND07  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = a && c in
     let t02 = ~d in
@@ -333,9 +347,10 @@ val RND07_def = Define`
     let t17 = t02 || t14 in
     let w = t15 ?? t17 in
     let y = a ?? t16 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val InvRND07_def = Define`
+Definition InvRND07_def:
   InvRND07  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = a && b in
     let t02 = a || b in
@@ -355,57 +370,106 @@ val InvRND07_def = Define`
     let t16 = t01 || t10 in
     let w = t13 ?? t15 in
     let y = t14 ?? t16 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val RND08_def = Define `RND08 b128 = RND00 b128`;
-val RND09_def = Define `RND09 b128 = RND01 b128`;
-val RND10_def = Define `RND10 b128 = RND02 b128`;
-val RND11_def = Define `RND11 b128 = RND03 b128`;
-val RND12_def = Define `RND12 b128 = RND04 b128`;
-val RND13_def = Define `RND13 b128 = RND05 b128`;
-val RND14_def = Define `RND14 b128 = RND06 b128`;
-val RND15_def = Define `RND15 b128 = RND07 b128`;
-val RND16_def = Define `RND16 b128 = RND00 b128`;
-val RND17_def = Define `RND17 b128 = RND01 b128`;
-val RND18_def = Define `RND18 b128 = RND02 b128`;
-val RND19_def = Define `RND19 b128 = RND03 b128`;
-val RND20_def = Define `RND20 b128 = RND04 b128`;
-val RND21_def = Define `RND21 b128 = RND05 b128`;
-val RND22_def = Define `RND22 b128 = RND06 b128`;
-val RND23_def = Define `RND23 b128 = RND07 b128`;
-val RND24_def = Define `RND24 b128 = RND00 b128`;
-val RND25_def = Define `RND25 b128 = RND01 b128`;
-val RND26_def = Define `RND26 b128 = RND02 b128`;
-val RND27_def = Define `RND27 b128 = RND03 b128`;
-val RND28_def = Define `RND28 b128 = RND04 b128`;
-val RND29_def = Define `RND29 b128 = RND05 b128`;
-val RND30_def = Define `RND30 b128 = RND06 b128`;
-val RND31_def = Define `RND31 b128 = RND07 b128`;
+Definition RND08_def:   RND08 b128 = RND00 b128
+End
+Definition RND09_def:   RND09 b128 = RND01 b128
+End
+Definition RND10_def:   RND10 b128 = RND02 b128
+End
+Definition RND11_def:   RND11 b128 = RND03 b128
+End
+Definition RND12_def:   RND12 b128 = RND04 b128
+End
+Definition RND13_def:   RND13 b128 = RND05 b128
+End
+Definition RND14_def:   RND14 b128 = RND06 b128
+End
+Definition RND15_def:   RND15 b128 = RND07 b128
+End
+Definition RND16_def:   RND16 b128 = RND00 b128
+End
+Definition RND17_def:   RND17 b128 = RND01 b128
+End
+Definition RND18_def:   RND18 b128 = RND02 b128
+End
+Definition RND19_def:   RND19 b128 = RND03 b128
+End
+Definition RND20_def:   RND20 b128 = RND04 b128
+End
+Definition RND21_def:   RND21 b128 = RND05 b128
+End
+Definition RND22_def:   RND22 b128 = RND06 b128
+End
+Definition RND23_def:   RND23 b128 = RND07 b128
+End
+Definition RND24_def:   RND24 b128 = RND00 b128
+End
+Definition RND25_def:   RND25 b128 = RND01 b128
+End
+Definition RND26_def:   RND26 b128 = RND02 b128
+End
+Definition RND27_def:   RND27 b128 = RND03 b128
+End
+Definition RND28_def:   RND28 b128 = RND04 b128
+End
+Definition RND29_def:   RND29 b128 = RND05 b128
+End
+Definition RND30_def:   RND30 b128 = RND06 b128
+End
+Definition RND31_def:   RND31 b128 = RND07 b128
+End
 
-val InvRND08_def = Define `InvRND08 b128 = InvRND00 b128`;
-val InvRND09_def = Define `InvRND09 b128 = InvRND01 b128`;
-val InvRND10_def = Define `InvRND10 b128 = InvRND02 b128`;
-val InvRND11_def = Define `InvRND11 b128 = InvRND03 b128`;
-val InvRND12_def = Define `InvRND12 b128 = InvRND04 b128`;
-val InvRND13_def = Define `InvRND13 b128 = InvRND05 b128`;
-val InvRND14_def = Define `InvRND14 b128 = InvRND06 b128`;
-val InvRND15_def = Define `InvRND15 b128 = InvRND07 b128`;
-val InvRND16_def = Define `InvRND16 b128 = InvRND00 b128`;
-val InvRND17_def = Define `InvRND17 b128 = InvRND01 b128`;
-val InvRND18_def = Define `InvRND18 b128 = InvRND02 b128`;
-val InvRND19_def = Define `InvRND19 b128 = InvRND03 b128`;
-val InvRND20_def = Define `InvRND20 b128 = InvRND04 b128`;
-val InvRND21_def = Define `InvRND21 b128 = InvRND05 b128`;
-val InvRND22_def = Define `InvRND22 b128 = InvRND06 b128`;
-val InvRND23_def = Define `InvRND23 b128 = InvRND07 b128`;
-val InvRND24_def = Define `InvRND24 b128 = InvRND00 b128`;
-val InvRND25_def = Define `InvRND25 b128 = InvRND01 b128`;
-val InvRND26_def = Define `InvRND26 b128 = InvRND02 b128`;
-val InvRND27_def = Define `InvRND27 b128 = InvRND03 b128`;
-val InvRND28_def = Define `InvRND28 b128 = InvRND04 b128`;
-val InvRND29_def = Define `InvRND29 b128 = InvRND05 b128`;
-val InvRND30_def = Define `InvRND30 b128 = InvRND06 b128`;
-val InvRND31_def = Define `InvRND31 b128 = InvRND07 b128`;
+Definition InvRND08_def:   InvRND08 b128 = InvRND00 b128
+End
+Definition InvRND09_def:   InvRND09 b128 = InvRND01 b128
+End
+Definition InvRND10_def:   InvRND10 b128 = InvRND02 b128
+End
+Definition InvRND11_def:   InvRND11 b128 = InvRND03 b128
+End
+Definition InvRND12_def:   InvRND12 b128 = InvRND04 b128
+End
+Definition InvRND13_def:   InvRND13 b128 = InvRND05 b128
+End
+Definition InvRND14_def:   InvRND14 b128 = InvRND06 b128
+End
+Definition InvRND15_def:   InvRND15 b128 = InvRND07 b128
+End
+Definition InvRND16_def:   InvRND16 b128 = InvRND00 b128
+End
+Definition InvRND17_def:   InvRND17 b128 = InvRND01 b128
+End
+Definition InvRND18_def:   InvRND18 b128 = InvRND02 b128
+End
+Definition InvRND19_def:   InvRND19 b128 = InvRND03 b128
+End
+Definition InvRND20_def:   InvRND20 b128 = InvRND04 b128
+End
+Definition InvRND21_def:   InvRND21 b128 = InvRND05 b128
+End
+Definition InvRND22_def:   InvRND22 b128 = InvRND06 b128
+End
+Definition InvRND23_def:   InvRND23 b128 = InvRND07 b128
+End
+Definition InvRND24_def:   InvRND24 b128 = InvRND00 b128
+End
+Definition InvRND25_def:   InvRND25 b128 = InvRND01 b128
+End
+Definition InvRND26_def:   InvRND26 b128 = InvRND02 b128
+End
+Definition InvRND27_def:   InvRND27 b128 = InvRND03 b128
+End
+Definition InvRND28_def:   InvRND28 b128 = InvRND04 b128
+End
+Definition InvRND29_def:   InvRND29 b128 = InvRND05 b128
+End
+Definition InvRND30_def:   InvRND30 b128 = InvRND06 b128
+End
+Definition InvRND31_def:   InvRND31 b128 = InvRND07 b128
+End
 
 val tac =
   SIMP_TAC std_ss [FORALL_PROD,LET_THM,

@@ -33,15 +33,18 @@ val _ = Parse.type_abbrev("x86_set",``:x86_el set``);
 (* Converting from x86-state tuple to x86_set                                    *)
 (* ----------------------------------------------------------------------------- *)
 
-val x86_2set'_def = Define `
+Definition x86_2set'_def:
   x86_2set' (rs,st,ep,ms) (r,e,s,m,i) =
     IMAGE (\a. xReg a (r a)) rs UNION
     IMAGE (\a. xStatus a (s a)) st UNION
     (if ep then {xEIP e} else {}) UNION
-    IMAGE (\a. xMem a (m a) (X86_ACCURATE a (r,e,s,m,i))) ms`;
+    IMAGE (\a. xMem a (m a) (X86_ACCURATE a (r,e,s,m,i))) ms
+End
 
-val x86_2set_def   = Define `x86_2set s = x86_2set' (UNIV,UNIV,T,UNIV) s`;
-val x86_2set''_def = Define `x86_2set'' x s = x86_2set s DIFF x86_2set' x s`;
+Definition x86_2set_def:     x86_2set s = x86_2set' (UNIV,UNIV,T,UNIV) s
+End
+Definition x86_2set''_def:   x86_2set'' x s = x86_2set s DIFF x86_2set' x s
+End
 
 (* theorems *)
 
@@ -90,7 +93,8 @@ val SPLIT_x86_2set_EXISTS = prove(
   \\ FULL_SIMP_TAC std_ss [EXTENSION,IN_DIFF,IN_UNION,DISJOINT_DEF,NOT_IN_EMPTY,IN_INTER]
   \\ METIS_TAC []);
 
-val X86_GET_MEMORY_def = Define `X86_GET_MEMORY (r,e,t,m,i) = m`;
+Definition X86_GET_MEMORY_def:   X86_GET_MEMORY (r,e,t,m,i) = m
+End
 
 val IN_x86_2set = prove(``
   (!r x s. xReg r x IN (x86_2set s) = (x = XREAD_REG r s)) /\
@@ -161,36 +165,46 @@ val EMPTY_x86_2set = prove(``
 (* Defining the X86_MODEL                                                        *)
 (* ----------------------------------------------------------------------------- *)
 
-val xR_def = Define `xR a x = SEP_EQ {xReg a x}`;
-val xM1_def = Define `xM1 a x b = SEP_EQ {xMem a x b}`;
-val xS1_def = Define `xS1 a x = SEP_EQ {xStatus a x}`;
-val xPC_def = Define `xPC x = SEP_EQ {xEIP x}`;
+Definition xR_def:   xR a x = SEP_EQ {xReg a x}
+End
+Definition xM1_def:   xM1 a x b = SEP_EQ {xMem a x b}
+End
+Definition xS1_def:   xS1 a x = SEP_EQ {xStatus a x}
+End
+Definition xPC_def:   xPC x = SEP_EQ {xEIP x}
+End
 
-val xS_def = Define `
+Definition xS_def:
   xS (x0,x1,x2,x3,x4,x5) =
     xS1 X_CF x0 * xS1 X_PF x1 * xS1 X_AF x2 *
-    xS1 X_ZF x3 * xS1 X_SF x4 * xS1 X_OF x5`;
+    xS1 X_ZF x3 * xS1 X_SF x4 * xS1 X_OF x5
+End
 
-val X86_INSTR_PERM_def = Define `
-  X86_INSTR_PERM b = {Xread;Xexecute} UNION (if b then {Xwrite} else {})`;
+Definition X86_INSTR_PERM_def:
+  X86_INSTR_PERM b = {Xread;Xexecute} UNION (if b then {Xwrite} else {})
+End
 
-val X86_INSTR_def    = Define `
+Definition X86_INSTR_def:
   (X86_INSTR (a,([],b)) = {}) /\
   (X86_INSTR (a,((c:word8)::cs,b)) =
-     xMem a (SOME (c,X86_INSTR_PERM b)) T INSERT X86_INSTR (a+1w,(cs,b)))`;
+     xMem a (SOME (c,X86_INSTR_PERM b)) T INSERT X86_INSTR (a+1w,(cs,b)))
+End
 
-val X86_MODEL_def = Define `
+Definition X86_MODEL_def:
   X86_MODEL = (x86_2set, X86_NEXT_REL, X86_INSTR, X86_ICACHE,
-               (K F):x86_state->bool)`;
+               (K F):x86_state->bool)
+End
 
-val xCODE_def = Define `xCODE = CODE_POOL X86_INSTR`;
+Definition xCODE_def:   xCODE = CODE_POOL X86_INSTR
+End
 
-val xM_def = Define `
+Definition xM_def:
   xM a (w:word32) =
     ~xM1 a        (SOME ((7 >< 0) w,{Xread;Xwrite})) *
     ~xM1 (a + 1w) (SOME ((7 >< 0) (w >> 8),{Xread;Xwrite})) *
     ~xM1 (a + 2w) (SOME ((7 >< 0) (w >> 16),{Xread;Xwrite})) *
-    ~xM1 (a + 3w) (SOME ((7 >< 0) (w >> 24),{Xread;Xwrite}))`;
+    ~xM1 (a + 3w) (SOME ((7 >< 0) (w >> 24),{Xread;Xwrite}))
+End
 
 (* theorems *)
 
@@ -251,15 +265,17 @@ val CODE_POOL_x86_2set_AUX_LEMMA = prove(
   ``!x y z. ~(z IN y) ==> ((x = z INSERT y) = z IN x /\ (x DELETE z = y))``,
   SIMP_TAC std_ss [EXTENSION,SUBSET_DEF,IN_INSERT,NOT_IN_EMPTY,IN_DELETE] \\ METIS_TAC []);
 
-val address_list_def = Define `
+Definition address_list_def:
   (address_list a 0 = {}) /\
-  (address_list a (SUC n) = a INSERT address_list (a+1w) n)`;
+  (address_list a (SUC n) = a INSERT address_list (a+1w) n)
+End
 
-val x86_pool_def = Define `
+Definition x86_pool_def:
   (x86_pool (r,s,e,m,i) p ([],d) = T) /\
   (x86_pool (r,s,e,m,i) p ((c::cs),d) =
      (SOME (c:word8,X86_INSTR_PERM d) = m p) /\ X86_ACCURATE p (r,s,e,m,i) /\
-     x86_pool (r,s,e,m,i) (p+1w) (cs,d))`;
+     x86_pool (r,s,e,m,i) (p+1w) (cs,d))
+End
 
 val LEMMA1 = prove(
   ``!p q cs y b. xMem p y b IN X86_INSTR (q,(cs,d)) ==> ?k. k < LENGTH cs /\ (p = q + n2w k)``,
@@ -330,9 +346,10 @@ val CODE_POOL_x86_2set = store_thm("CODE_POOL_x86_2set",
       else xCODE {(p,(cs,d))} (x86_2set' (rs,st,ei,ms) (r,s,e,m,i))``,
   METIS_TAC [CODE_POOL_x86_2set_LEMMA]);
 
-val icache_revert_def = Define `
+Definition icache_revert_def:
   icache_revert (m1:x86_memory,i1:x86_memory) (m2:x86_memory,i2:x86_memory) a =
-    if m1 a = m2 a then i1 a else i2 a`;
+    if m1 a = m2 a then i1 a else i2 a
+End
 
 val X86_ACCURATE_UPDATE = store_thm("X86_ACCURATE_UPDATE",
   ``(X86_ACCURATE a ((xr =+ yr) r,e,s,m,i) = X86_ACCURATE a (r,e,s,m,i)) /\
@@ -407,8 +424,9 @@ val IMP_X86_SPEC_LEMMA = prove(
   \\ Q.EXISTS_TAC `t2`
   \\ FULL_SIMP_TAC std_ss [optionTheory.SOME_11] \\ METIS_TAC []);
 
-val X86_ICACHE_EXTRACT_def = Define `
-  X86_ICACHE_EXTRACT ((r1,e1,s1,m1,i1):x86_state) = i1`;
+Definition X86_ICACHE_EXTRACT_def:
+  X86_ICACHE_EXTRACT ((r1,e1,s1,m1,i1):x86_state) = i1
+End
 
 val X86_ICACHE_THM2 = prove(
   ``!s t. X86_ICACHE s t = ?z. t = X86_ICACHE_UPDATE z s``,
@@ -442,9 +460,10 @@ val X86_ICACHE_icache_revert = prove(
   \\ FULL_SIMP_TAC std_ss [X86_ACCURATE_def,icache_revert_def]
   \\ Cases_on `m1 a = m2 a` \\ ASM_SIMP_TAC std_ss []);
 
-val X86_ICACHE_REVERT_def = Define `
+Definition X86_ICACHE_REVERT_def:
   X86_ICACHE_REVERT (r2,e2,s2,m2,i2) (r1,e1,s1,m1,i1) =
-    (r2,e2,s2,m2,icache_revert (m1,i1) (m2,i2))`;
+    (r2,e2,s2,m2,icache_revert (m1,i1) (m2,i2))
+End
 
 val X86_ICACHE_X86_ICACHE_REVERT = store_thm("X86_ICACHE_X86_ICACHE_REVERT",
   ``!s t u. X86_ICACHE s t /\ (X86_ICACHE_EXTRACT t = X86_ICACHE_EXTRACT u) ==>
@@ -546,22 +565,28 @@ val xS_HIDE = store_thm("xS_HIDE",
 (* Byte-sized data memory                                                        *)
 (* ----------------------------------------------------------------------------- *)
 
-val xDATA_PERM_def = Define `
-  xDATA_PERM exec = if exec then {Xread;Xwrite;Xexecute} else {Xread;Xwrite}`;
+Definition xDATA_PERM_def:
+  xDATA_PERM exec = if exec then {Xread;Xwrite;Xexecute} else {Xread;Xwrite}
+End
 
-val xBYTE_MEMORY_ANY_SET_def = Define `
+Definition xBYTE_MEMORY_ANY_SET_def:
   xBYTE_MEMORY_ANY_SET df f exec c =
-    { xMem a (SOME (f a, xDATA_PERM exec)) (c a) | a | a IN df }`;
+    { xMem a (SOME (f a, xDATA_PERM exec)) (c a) | a | a IN df }
+End
 
-val xBYTE_MEMORY_ANY_C_def = Define `
-  xBYTE_MEMORY_ANY_C exec df f c = SEP_EQ (xBYTE_MEMORY_ANY_SET df f exec c)`;
+Definition xBYTE_MEMORY_ANY_C_def:
+  xBYTE_MEMORY_ANY_C exec df f c = SEP_EQ (xBYTE_MEMORY_ANY_SET df f exec c)
+End
 
-val xBYTE_MEMORY_ANY_def = Define `
+Definition xBYTE_MEMORY_ANY_def:
   xBYTE_MEMORY_ANY exec df f =
-    SEP_EXISTS c. SEP_EQ (xBYTE_MEMORY_ANY_SET df f exec c)`;
+    SEP_EXISTS c. SEP_EQ (xBYTE_MEMORY_ANY_SET df f exec c)
+End
 
-val xBYTE_MEMORY_def = Define `xBYTE_MEMORY = xBYTE_MEMORY_ANY F`;
-val xBYTE_MEMORY_X_def = Define `xBYTE_MEMORY_X = xBYTE_MEMORY_ANY T`;
+Definition xBYTE_MEMORY_def:   xBYTE_MEMORY = xBYTE_MEMORY_ANY F
+End
+Definition xBYTE_MEMORY_X_def:   xBYTE_MEMORY_X = xBYTE_MEMORY_ANY T
+End
 
 val IN_xDATA_PERM = store_thm("IN_xDATA_PERM",
   ``(Xread IN xDATA_PERM exec) /\
@@ -638,19 +663,22 @@ val xBYTE_MEMORY_ANY_INTRO = store_thm("xBYTE_MEMORY_ANY_INTRO",
 (* Word-sized data memory                                                        *)
 (* ----------------------------------------------------------------------------- *)
 
-val xMEMORY_DOMAIN_def = Define `
-  xMEMORY_DOMAIN df = BIGUNION { {b;b+1w;b+2w;b+3w} | ALIGNED b /\ b IN df }`;
+Definition xMEMORY_DOMAIN_def:
+  xMEMORY_DOMAIN df = BIGUNION { {b;b+1w;b+2w;b+3w} | ALIGNED b /\ b IN df }
+End
 
-val xMEMORY_FUNC_def = Define `
+Definition xMEMORY_FUNC_def:
   xMEMORY_FUNC (f:word32->word32) a =
     let w = f (ADDR32 (ADDR30 a)) in
       if a && 3w = 0w then (7 >< 0) (w) else
       if a && 3w = 1w then (7 >< 0) (w >> 8) else
       if a && 3w = 2w then (7 >< 0) (w >> 16) else
-      if a && 3w = 3w then (7 >< 0) (w >> 24) else 0w:word8`;
+      if a && 3w = 3w then (7 >< 0) (w >> 24) else 0w:word8
+End
 
-val xMEMORY_def = Define `
-  xMEMORY df f = xBYTE_MEMORY (xMEMORY_DOMAIN df) (xMEMORY_FUNC f)`;
+Definition xMEMORY_def:
+  xMEMORY df f = xBYTE_MEMORY (xMEMORY_DOMAIN df) (xMEMORY_FUNC f)
+End
 
 val xM_LEMMA = prove(
   ``!w a f. ALIGNED a ==> (xM a w = xMEMORY {a} ((a =+ w) f))``,
@@ -763,7 +791,8 @@ val xMEMORY_INTRO = store_thm("xMEMORY_INTRO",
 (* Conversions between code and data                                             *)
 (* ----------------------------------------------------------------------------- *)
 
-val xCODE_SET_def = Define `xCODE_SET df f = { (a,[f a],T) | a IN df }`;
+Definition xCODE_SET_def:   xCODE_SET df f = { (a,[f a],T) | a IN df }
+End
 
 val xCODE_IMP_BYTE_MEMORY = store_thm("xCODE_IMP_BYTE_MEMORY",
   ``!df f. SEP_IMP (xCODE (xCODE_SET df f)) (xBYTE_MEMORY_X df f)``,
@@ -1015,9 +1044,10 @@ val X86_SPEC_EXLPODE_CODE = save_thm("X86_SPEC_EXLPODE_CODE",
 
 (* Stack --- sp points at top of stack, stack grows towards smaller addresses *)
 
-val xSTACK_def = Define `
+Definition xSTACK_def:
   xSTACK bp xs = xR EBP bp * xR ESP (bp - n2w (4 * LENGTH xs)) *
-                 SEP_ARRAY xM (-4w) bp xs * cond (ALIGNED bp)`;
+                 SEP_ARRAY xM (-4w) bp xs * cond (ALIGNED bp)
+End
 
 val STAR6 = prove(
   ``p1 * p2 * p3 * p4 * p5 * p6 = (p1 * p2 * p5) * (STAR p3 p4 * p6)``,

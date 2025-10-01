@@ -4,25 +4,36 @@ Ancestors
 Libs
   metisLib
 
-val xor_def = Define `xor x y = (x \/ y) /\ ~(x=y)`
+Definition xor_def:   xor x y = (x \/ y) /\ ~(x=y)
+End
 
-val MOD16_ONE_def = Define `MOD16_ONE (v3:bool,v2:bool,v1:bool,v0:bool) = (F,F,F,T)`
-val MOD16_IS_ONE_def = Define `MOD16_IS_ONE (v3:bool,v2:bool,v1:bool,v0:bool) = ~v3 /\ ~v2 /\ ~v1 /\ v0`
+Definition MOD16_ONE_def:   MOD16_ONE (v3:bool,v2:bool,v1:bool,v0:bool) = (F,F,F,T)
+End
+Definition MOD16_IS_ONE_def:   MOD16_IS_ONE (v3:bool,v2:bool,v1:bool,v0:bool) = ~v3 /\ ~v2 /\ ~v1 /\ v0
+End
 
-val MOD16_INC_def = Define `MOD16_INC (v3,v2,v1,v0) = (xor (v0 /\ v1 /\ v2) v3,xor (v0 /\ v1) v2,xor v0 v1,~v0)`
+Definition MOD16_INC_def:   MOD16_INC (v3,v2,v1,v0) = (xor (v0 /\ v1 /\ v2) v3,xor (v0 /\ v1) v2,xor v0 v1,~v0)
+End
 
-val MOD16_INC8_def = Define `MOD16_INC8 (v3,v2,v1,v0) = (F,xor (v0 /\ v1) v2,xor v0 v1,~v0)`
+Definition MOD16_INC8_def:   MOD16_INC8 (v3,v2,v1,v0) = (F,xor (v0 /\ v1) v2,xor v0 v1,~v0)
+End
 
-val MOD16_INC4_def = Define `MOD16_INC4 (v3,v2,v1,v0) = (F,F,xor v0 v1,~v0)`
+Definition MOD16_INC4_def:   MOD16_INC4 (v3,v2,v1,v0) = (F,F,xor v0 v1,~v0)
+End
 
-val MOD16_HOLD_def = Define `MOD16_HOLD (v3,v2,v1,v0) = (v3,v2,v1,v0)`
+Definition MOD16_HOLD_def:   MOD16_HOLD (v3,v2,v1,v0) = (v3,v2,v1,v0)
+End
 
-val MOD16_ZERO_def = Define `MOD16_ZERO (v3:bool,v2:bool,v1:bool,v0:bool) = (F,F,F,F)`
-val MOD16_IS_ZERO_def = Define `MOD16_IS_ZERO (v3:bool,v2:bool,v1:bool,v0:bool) = ~v3 /\ ~v2 /\ ~v1 /\ ~v0`
+Definition MOD16_ZERO_def:   MOD16_ZERO (v3:bool,v2:bool,v1:bool,v0:bool) = (F,F,F,F)
+End
+Definition MOD16_IS_ZERO_def:   MOD16_IS_ZERO (v3:bool,v2:bool,v1:bool,v0:bool) = ~v3 /\ ~v2 /\ ~v1 /\ ~v0
+End
 
-val MOD16_IS_16_def = Define `MOD16_IS_16 (v3:bool,v2:bool,v1:bool,v0:bool) = v3 /\ v2 /\ v1 /\ v0`
+Definition MOD16_IS_16_def:   MOD16_IS_16 (v3:bool,v2:bool,v1:bool,v0:bool) = v3 /\ v2 /\ v1 /\ v0
+End
 
-val MOD16_IS_4_def = Define `MOD16_IS_4 (v3:bool,v2:bool,v1:bool,v0:bool) = ~v3 /\ v2 /\ ~v1 /\ ~v0`
+Definition MOD16_IS_4_def:   MOD16_IS_4 (v3:bool,v2:bool,v1:bool,v0:bool) = ~v3 /\ v2 /\ ~v1 /\ ~v0
+End
 
 val MOD16_EQ_def = `MOD16_EQ (v3:bool,v2:bool,v1:bool,v0:bool) (w3:bool,w2:bool,w1:bool,w0:bool) =
 (v3=w3) /\ (v2=w2) /\ (v1=w1) /\ (v0=w0)`;
@@ -75,7 +86,8 @@ REPEAT STRIP_TAC
 THEN METIS_TAC [DECIDE ``n<4 ==> ((n=0) \/ (n=1) \/  (n=2) \/ (n=3))``]
 ]));
 
-val MOD16_PROJ_def = Define `MOD16_PROJ (b3,b2,b1,b0) i = if i = 0 then b0 else if i=1 then b1 else if i=2 then b2 else b3`
+Definition MOD16_PROJ_def:   MOD16_PROJ (b3,b2,b1,b0) i = if i = 0 then b0 else if i=1 then b1 else if i=2 then b2 else b3
+End
 
 val N2B'_defn = Hol_defn "MOD16_N2B'"
 `MOD16_N2B' n k (b3,b2,b1,b0) =
@@ -87,7 +99,8 @@ val N2B'_defn = Hol_defn "MOD16_N2B'"
 val (MOD16_N2B'_def,N2B'_ind) = Defn.tprove(N2B'_defn,WF_REL_TAC `measure (FST o SND)`);
 val _ = save_thm("MOD16_N2B'_def",MOD16_N2B'_def)
 
-val MOD16_N2B_def = Define `MOD16_N2B n (b3,b2,b1,b0) = MOD16_N2B' n 3 (b3,b2,b1,b0)`
+Definition MOD16_N2B_def:   MOD16_N2B n (b3,b2,b1,b0) = MOD16_N2B' n 3 (b3,b2,b1,b0)
+End
 
 val MOD16_N2B_15 = save_thm("MOD16_N2B_15",prove(``!b3 b2 b0 b1. MOD16_N2B 15 (b3,b2,b1,b0) = b3 /\ b2 /\ b1 /\ b0``,
 SIMP_TAC arith_ss [MOD16_N2B_def,MOD16_N2B'_def,MOD16_PROJ_def]));

@@ -26,9 +26,10 @@ val _ = Hol_datatype `
 
 (* semantics *)
 
-val iFETCH_def = Define `
+Definition iFETCH_def:
   (iFETCH n [] = NONE) /\
-  (iFETCH n (x::xs) = if n = 0 then SOME x else iFETCH (n-1) xs)`;
+  (iFETCH n (x::xs) = if n = 0 then SOME x else iFETCH (n-1) xs)
+End
 
 val (iSTEP_rules,iSTEP_ind,iSTEP_cases) =
  Hol_reln
@@ -70,10 +71,11 @@ val (iEXEC_rules,iEXEC_ind,iEXEC_cases) =
 
 (* concrete syntax (string form) *)
 
-val iIMM_def = Define `
-  iIMM i = [ CHR (ORD #"0" + w2n i) ]`;
+Definition iIMM_def:
+  iIMM i = [ CHR (ORD #"0" + w2n i) ]
+End
 
-val iENCODE1_def = Define `
+Definition iENCODE1_def:
   (iENCODE1 iPOP  = "p") /\
   (iENCODE1 iSUB  = "-") /\
   (iENCODE1 iSWAP = "s") /\
@@ -81,15 +83,16 @@ val iENCODE1_def = Define `
   (iENCODE1 (iPUSH i) = "c" ++ iIMM i) /\
   (iENCODE1 (iJUMP i) = "j" ++ iIMM i) /\
   (iENCODE1 (iJEQ i)  = "=" ++ iIMM i) /\
-  (iENCODE1 (iJLT i)  = "<" ++ iIMM i)`;
+  (iENCODE1 (iJLT i)  = "<" ++ iIMM i)
+End
 
-val iENOCDE_def = Define `
+Definition iENCODE_def:
   (iENCODE [] = "") /\
-  (iENCODE (x::xs) = iENCODE1 x ++ iENCODE xs)`;
+  (iENCODE (x::xs) = iENCODE1 x ++ iENCODE xs)
+End
 
 (* example:
 
   EVAL ``iENCODE [iSUB;iSTOP;iSWAP;iJLT 1w]``
 
 *)
-

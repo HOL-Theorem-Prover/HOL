@@ -7,33 +7,42 @@ val _ = ParseExtras.temp_loose_equality()
 
 (* --- definitions --- *)
 
-val TEMPORAL_def = Define `
+Definition TEMPORAL_def:
   TEMPORAL ((to_set,next,instr,less,allow): ('a,'b,'c) processor) c exp =
    !state seq r.
      rel_sequence next seq state ==>
      let f p state = SEP_REFINE (p * CODE_POOL instr c * r) less to_set state
                      \/ allow state in
-        exp f seq`
+        exp f seq
+End
 
 val f = ``f: 'a set set -> 'b set``
 val seq = ``seq: num -> 'b``
 
-val NOW_def        = Define `NOW p ^f seq        = f p (seq 0)`
-val NEXT_def       = Define `NEXT p ^f seq       = p f (\n. seq (n + 1:num))`
-val EVENTUALLY_def = Define `EVENTUALLY p ^f seq = ?k. p f (\n. seq (n + k:num))`
-val ALWAYS_def     = Define `ALWAYS p ^f seq      = !k. p f (\n. seq (n + k:num))`
+Definition NOW_def:          NOW p ^f seq        = f p (seq 0)
+End
+Definition NEXT_def:         NEXT p ^f seq       = p f (\n. seq (n + 1:num))
+End
+Definition EVENTUALLY_def:   EVENTUALLY p ^f seq = ?k. p f (\n. seq (n + k:num))
+End
+Definition ALWAYS_def:       ALWAYS p ^f seq      = !k. p f (\n. seq (n + k:num))
+End
 
-val T_AND_def     = Define `T_AND p q ^f ^seq = p ^f ^seq /\ q ^f ^seq`
-val T_IMPLIES_def = Define `T_IMPLIES p q ^f ^seq = p f seq ==> q f seq`
+Definition T_AND_def:       T_AND p q ^f ^seq = p ^f ^seq /\ q ^f ^seq
+End
+Definition T_IMPLIES_def:   T_IMPLIES p q ^f ^seq = p f seq ==> q f seq
+End
 
-val T_OR_F_def    = Define `T_OR_F p post ^f ^seq = p ^f ^seq \/
-                                (EVENTUALLY (NOW post)) ^f ^seq`
+Definition T_OR_F_def:      T_OR_F p post ^f ^seq = p ^f ^seq \/
+                                (EVENTUALLY (NOW post)) ^f ^seq
+End
 
-val SPEC_1_def = Define `
+Definition SPEC_1_def:
   SPEC_1 model pre code post err <=>
     TEMPORAL model code
       (T_IMPLIES (NOW pre)
-                 (T_OR_F (NEXT (EVENTUALLY (NOW post))) err))`;
+                 (T_OR_F (NEXT (EVENTUALLY (NOW post))) err))
+End
 
 (* --- theorems --- *)
 

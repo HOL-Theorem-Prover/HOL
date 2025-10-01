@@ -16,9 +16,10 @@ val _ = List.app (fn f => f ())
 
 (* ------------------------------------------------------------------------ *)
 
-val NextStateARM8_def = Define`
+Definition NextStateARM8_def:
    NextStateARM8 s0 =
-     let s1 = Next s0 in if s1.exception = NoException then SOME s1 else NONE`
+     let s1 = Next s0 in if s1.exception = NoException then SOME s1 else NONE
+End
 
 val NextStateARM8 = ustore_thm("NextStateARM8",
   `(s.exception = NoException) ==>
@@ -35,17 +36,20 @@ val NextStateARM8 = ustore_thm("NextStateARM8",
 
 (* ------------------------------------------------------------------------ *)
 
-val mem_half_def = Define`
-   mem_half (m:word64 -> word8) a = (m (a + 1w) @@ m a) : word16`
+Definition mem_half_def:
+   mem_half (m:word64 -> word8) a = (m (a + 1w) @@ m a) : word16
+End
 
-val mem_word_def = Define`
+Definition mem_word_def:
    mem_word (m:word64 -> word8) a =
-     (m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m a) : word32`
+     (m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m a) : word32
+End
 
-val mem_dword_def = Define`
+Definition mem_dword_def:
    mem_dword (m:word64 -> word8) a =
      (m (a + 7w) @@ m (a + 6w) @@ m (a + 5w) @@ m (a + 4w) @@
-      m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m a) : word64`
+      m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m a) : word64
+End
 
 (* ------------------------------------------------------------------------ *)
 

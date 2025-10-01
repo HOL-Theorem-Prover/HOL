@@ -52,11 +52,12 @@ val Cond =
 (* The definition of the binomial random number generator.                   *)
 (* ------------------------------------------------------------------------- *)
 
-val prob_binomial_def = Define
-  `(prob_binomial 0 = UNIT 0) /\
+Definition prob_binomial_def:
+   (prob_binomial 0 = UNIT 0) /\
    (prob_binomial (SUC n) =
     BIND (prob_binomial n)
-    (\m. BIND sdest (\b. UNIT (if b then SUC m else m))))`;
+    (\m. BIND sdest (\b. UNIT (if b then SUC m else m))))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems leading to:                                                      *)

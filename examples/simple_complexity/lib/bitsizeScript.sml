@@ -142,10 +142,10 @@ val _ = ParseExtras.tight_equality();
 (* ------------------------------------------------------------------------- *)
 
 (* Decode a binary list *)
-val decode_def = Define`
+Definition decode_def:
     (decode [] = 0) /\
     (decode (h::t) = h + 2 * decode t)
-`;
+End
 
 (*
 > EVAL ``decode [0; 1]``;
@@ -165,10 +165,10 @@ val it = |- decode [1] = 1: thm
 *)
 
 (* Encode a number to a binary list *)
-val encode_def = Define`
+Definition encode_def:
     (encode 0 = []) /\
     (encode (SUC n) = (SUC n) MOD 2 :: encode (HALF (SUC n)))
-`;
+End
 
 (* Theorem: 0 < n ==> (encode n = n MOD 2 :: encode (HALF n)) *)
 (* Proof:
@@ -324,9 +324,9 @@ val decode_snoc = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Correct binary list of a number *)
-val binary_def = Define`
+Definition binary_def:
     binary n = if n = 0 then [0] else encode n
-`;
+End
 (*
 > EVAL ``binary 0``;
 val it = |- binary 0 = [0]: thm
@@ -395,9 +395,9 @@ val binary_length = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define number of bits of a number, recursively. *)
-val size_def = Define`
+Definition size_def:
     size n = if n = 0 then 1 else if n = 1 then 1 else SUC (size (HALF n))
-`;
+End
 (* Both 0 and 1 needs no halving to count. *)
 
 (*
@@ -1436,10 +1436,10 @@ val size_exp_exp_le = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Encode a number to fix-bit binary *)
-val to_bits_def = Define`
+Definition to_bits_def:
     (to_bits n 0 = []) /\
     (to_bits n (SUC m) = n MOD 2 :: to_bits (HALF n) m)
-`;
+End
 
 (*
 > EVAL ``to_bits 5 3``;

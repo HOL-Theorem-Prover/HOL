@@ -13,10 +13,10 @@ Definition n2s_def:
                  STRING (CHR (r - 1)) s0
 End
 
-val s2n_def = Define`
+Definition s2n_def:
   (s2n "" = 0) /\
   (s2n (STRING c s) = s2n s * 256 + ORD c + 1)
-`;
+End
 
 val s2n_n2s = store_thm(
   "s2n_n2s",
@@ -108,14 +108,14 @@ val s2n_onto = store_thm(
 
 val _ = export_rewrites ["n2s_s2n", "s2n_n2s", "n2s_11", "s2n_11"]
 
-val n2nsum_def = Define`
+Definition n2nsum_def:
   n2nsum n = if ODD n then INL (n DIV 2) else INR (n DIV 2)
-`;
+End
 
-val nsum2n_def = Define`
+Definition nsum2n_def:
   (nsum2n (INL n) = 2 * n + 1) /\
   (nsum2n (INR n) = 2 * n)
-`;
+End
 val _ = export_rewrites ["nsum2n_def"]
 
 val div_lemma = prove(
@@ -140,13 +140,13 @@ val nsum2n_n2nsum = store_thm(
   ``nsum2n (n2nsum n) = n``,
   rw[n2nsum_def, odd_lemma]);
 
-val s2ssum_def = Define`
+Definition s2ssum_def:
   s2ssum s = SUM_MAP n2s n2s (n2nsum (s2n s))
-`;
+End
 
-val ssum2s_def = Define`
+Definition ssum2s_def:
   ssum2s sm = n2s (nsum2n (SUM_MAP s2n s2n sm))
-`;
+End
 
 val sumpp_compose = prove(
   ``SUM_MAP f g (SUM_MAP a b x) = SUM_MAP (f o a) (g o b) x``,
