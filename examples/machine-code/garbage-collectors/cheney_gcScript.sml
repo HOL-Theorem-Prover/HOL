@@ -90,7 +90,7 @@ Definition abs_def:
     ?k k'. (m a = DATA(k,k',d)) /\ ADDR k n (m k) /\ ADDR k' n' (m k')
 End
 
-Definition basic_abs:
+Definition basic_abs_def:
   basic_abs m (a,n,n',d) = (m a = DATA(n,n',d))
 End
 
@@ -644,7 +644,7 @@ val PATH_CUT_expand = prove(
                   PATH (r,p) (basic_abs(CUT (b,j) m))``,
   Induct \\ REWRITE_TAC [PATH_def] \\ REPEAT STRIP_TAC
   \\ `RANGE (b,i) r ==> RANGE (b,j) r` by (REWRITE_TAC [RANGE_def] \\ DECIDE_TAC)
-  \\ FULL_SIMP_TAC bool_ss [CUT_def,basic_abs,IN_DEF]
+  \\ FULL_SIMP_TAC bool_ss [CUT_def,basic_abs_def,IN_DEF]
   \\ METIS_TAC [heap_type_distinct]);
 
 val reachable_CUT_expand = prove(
@@ -774,7 +774,7 @@ val cheney_inv_step = store_thm("cheney_inv_step",
    (MATCH_MP_TAC SUBSET_TRANS \\ Q.EXISTS_TAC `i INSERT RANGE(b,i)` \\ STRIP_TAC
     THEN1 (REWRITE_TAC [SUBSET_DEF,IN_INSERT] \\ SIMP_TAC std_ss [IN_DEF,RANGE_def] \\ DECIDE_TAC)
     \\ REWRITE_TAC [INSERT_SUBSET] \\ SIMP_TAC std_ss [IN_DEF] \\ STRIP_TAC THENL [
-      SIMP_TAC std_ss [reachable_def,basic_abs]
+      SIMP_TAC std_ss [reachable_def,basic_abs_def]
       \\ FULL_SIMP_TAC bool_ss [SUBSET_DEF,IN_INSERT,IN_UNION]
       \\ FULL_SIMP_TAC bool_ss [IN_DEF]
       \\ `(r i) \/ D1 (CUT (b,i) m'') i` by METIS_TAC []
@@ -782,7 +782,7 @@ val cheney_inv_step = store_thm("cheney_inv_step",
       \\ `?t. r t /\ reachable t (basic_abs (CUT (b,i) m'')) h` by METIS_TAC []
       \\ `PATH (h,[i]) (basic_abs (CUT (b,i + 1) ((i =+ DATA (x',y',d))m'')))` by
        (`RANGE (b,i+1) h /\ ~(h = i)` by (FULL_SIMP_TAC bool_ss [RANGE_def] \\ DECIDE_TAC)
-        \\ ASM_SIMP_TAC std_ss [PATH_def,APPEND,IN_DEF,basic_abs,CUT_def,UPDATE_def]
+        \\ ASM_SIMP_TAC std_ss [PATH_def,APPEND,IN_DEF,basic_abs_def,CUT_def,UPDATE_def]
         \\ METIS_TAC [])
       \\ Q.EXISTS_TAC `t` \\ FULL_SIMP_TAC bool_ss [reachable_def]  \\ DISJ2_TAC
       THEN1 (Q.EXISTS_TAC `[]` \\ ASM_SIMP_TAC bool_ss [APPEND])
@@ -944,7 +944,7 @@ val basic_abs_EQ_abs = prove(
   ``!m. (!k i. ~(m k = REF i)) ==> (basic_abs m = abs m)``,
   REWRITE_TAC [FUN_EQ_THM] \\ REPEAT STRIP_TAC
   \\ `?a y z d. x = (a,y,z,d)` by METIS_TAC [PAIR]
-  \\ ASM_SIMP_TAC std_ss [abs_def,basic_abs]
+  \\ ASM_SIMP_TAC std_ss [abs_def,basic_abs_def]
   \\ EQ_TAC \\ REPEAT STRIP_TAC THENL [
     Q.EXISTS_TAC `y` \\ Q.EXISTS_TAC `z` \\ ASM_REWRITE_TAC []
     \\ STRIP_TAC THENL [Cases_on `m y`,Cases_on `m z`]
@@ -1218,7 +1218,7 @@ val cheney_collector_spec = store_thm("cheney_collector_spec",
    (REWRITE_TAC [METIS_PROVE [PAIR] ``!f g. (f = g) = !x y z d. f (x,y,z,d) = g (x,y,z,d)``]
     \\ ASM_SIMP_TAC bool_ss [reachables_def]
     \\ FULL_SIMP_TAC bool_ss [SUBSET_DEF,IN_INSERT]
-    \\ FULL_SIMP_TAC bool_ss [IN_DEF,basic_abs,abs_def]
+    \\ FULL_SIMP_TAC bool_ss [IN_DEF,basic_abs_def,abs_def]
     \\ REPEAT STRIP_TAC \\ EQ_TAC \\ STRIP_TAC THENL [
         IMP_RES_TAC CUT_EQ_DATA_IMP
         \\ ASM_SIMP_TAC std_ss [heap_type_11]

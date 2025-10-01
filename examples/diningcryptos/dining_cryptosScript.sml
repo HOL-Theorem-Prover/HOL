@@ -2124,7 +2124,7 @@ val prob_space_biased_dc_prog_space3 = store_thm
       {s | L s = (\s. s = STRCAT "coin" (toString 0))}) =
        (biased_high_states (SUC (SUC 0)) CROSS {(\s. s = STRCAT "coin" (toString 0))} CROSS
       biased_random_states (SUC (SUC 0)))`
-        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [IN_INTER, L_def, GSPECIFICATION, IN_CROSS, IN_SING, biased_low_states_def]
+        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [IN_INTER, low_state_def, GSPECIFICATION, IN_CROSS, IN_SING, biased_low_states_def]
             >> DECIDE_TAC)
    >> POP_ORW
    >> `(biased_high_states (SUC (SUC 0)) CROSS biased_low_states CROSS
@@ -2132,7 +2132,7 @@ val prob_space_biased_dc_prog_space3 = store_thm
       {s | ~(L s = (\s. s = STRCAT "coin" (toString 0)))}) =
        (biased_high_states (SUC (SUC 0)) CROSS {(\s:string. F)} CROSS
       biased_random_states (SUC (SUC 0)))`
-        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [IN_INTER, L_def, GSPECIFICATION, IN_CROSS, IN_SING, biased_low_states_def]
+        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [IN_INTER, low_state_def, GSPECIFICATION, IN_CROSS, IN_SING, biased_low_states_def]
             >> METIS_TAC [])
    >> POP_ORW
   >> RW_TAC bool_ss [(COMPUTE_CARD ``(biased_high_states (SUC (SUC 0)) CROSS
@@ -2223,12 +2223,12 @@ val biased_dc3_leakage_result = store_thm
                                                      THENC (TRY_CONV dc_dup_conv)))))
                 dc_dup_conv)]
    >> Q.ABBREV_TAC `foo = (SUC (SUC 0))`
-   >> RW_TAC std_ss [joint_distribution_def, L_def, H_def, PAIR, ETA_THM, FST, SND, PROB, PSPACE, distribution_def]
+   >> RW_TAC std_ss [joint_distribution_def, low_state_def, high_state_def, PAIR, ETA_THM, FST, SND, PROB, PSPACE, distribution_def]
    >> `IMAGE L
         (biased_high_states foo CROSS biased_low_states CROSS
          biased_random_states foo) =
         biased_low_states`
-        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_IMAGE, IN_CROSS, L_def]
+        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_IMAGE, IN_CROSS, low_state_def]
             >> EQ_TAC >> RW_TAC std_ss [] >> RW_TAC std_ss []
             >> Q.UNABBREV_TAC `foo`
             >> Q.EXISTS_TAC `(((\s:string. s = STRCAT "pays" (toString (SUC (SUC 0)))),x),(\s:string. F))`
@@ -2296,7 +2296,7 @@ val biased_dc3_leakage_result = store_thm
                         {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 (insider_dcprog (SUC foo) ((h,(\s. s = STRCAT "coin" (toString 0))),r) = x)}`
                  by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, GSPECIFICATION, IN_IMAGE, IN_PREIMAGE, IN_SING,
-                                    IN_CROSS, L_def]
+                                    IN_CROSS, low_state_def]
                      >> (EQ_TAC >> RW_TAC std_ss [] >> RW_TAC std_ss [])
                      >- (Q.PAT_X_ASSUM `P = (\s:string. s = STRCAT "coin" (toString 0))` (ASSUME_TAC o GSYM)
                          >> Q.EXISTS_TAC `(FST(FST x'),SND x')`
@@ -2370,7 +2370,7 @@ val biased_dc3_leakage_result = store_thm
                         {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 (insider_dcprog (SUC foo) ((h,(\s:string. F)),r) = x)}`
                  by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, GSPECIFICATION, IN_IMAGE, IN_PREIMAGE, IN_SING,
-                                    IN_CROSS, L_def]
+                                    IN_CROSS, low_state_def]
                      >> (EQ_TAC >> RW_TAC std_ss [] >> RW_TAC std_ss [])
                      >- (Q.PAT_X_ASSUM `P = (\s:string. F)` (ASSUME_TAC o GSYM)
                          >> Q.EXISTS_TAC `(FST(FST x'),SND x')`
@@ -2440,7 +2440,7 @@ val biased_dc3_leakage_result = store_thm
                 >> Suff `PREIMAGE L {z} INTER (biased_high_states foo CROSS biased_low_states CROSS
                                                 biased_random_states foo) = {}`
                 >- RW_TAC bool_ss [INTER_EMPTY, REAL_SUM_IMAGE_THM]
-                >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [NOT_IN_EMPTY, L_def, IN_CROSS, IN_INTER, IN_PREIMAGE, IN_SING, biased_low_states_def]
+                >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [NOT_IN_EMPTY, low_state_def, IN_CROSS, IN_INTER, IN_PREIMAGE, IN_SING, biased_low_states_def]
                 >> METIS_TAC []])
    >> `!x z. (PREIMAGE (\x. (insider_dcprog (SUC foo) x,SND (FST x)))
            {(x,z)} INTER
@@ -2450,7 +2450,7 @@ val biased_dc3_leakage_result = store_thm
            PREIMAGE L {z} INTER
            (biased_high_states foo CROSS biased_low_states CROSS
             biased_random_states foo))`
-        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, IN_CROSS, IN_PREIMAGE, IN_SING, L_def])
+        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, IN_CROSS, IN_PREIMAGE, IN_SING, low_state_def])
    >> POP_ORW
    >> RW_TAC std_ss [] >> POP_ASSUM (K ALL_TAC)
    >> `!x z.
@@ -2494,7 +2494,7 @@ val biased_dc3_leakage_result = store_thm
                  IMAGE (λ(h,r). ((h, (\s. s = STRCAT "coin" (toString 0))),r))
                         (biased_high_states foo CROSS biased_random_states foo)`
                  by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, GSPECIFICATION, IN_IMAGE, IN_PREIMAGE, IN_SING,
-                                    IN_CROSS, L_def]
+                                    IN_CROSS, low_state_def]
                      >> (EQ_TAC >> RW_TAC std_ss [] >> RW_TAC std_ss [])
                      >- (Q.PAT_X_ASSUM `P = (\s:string. s = STRCAT "coin" (toString 0))` (ASSUME_TAC o GSYM)
                          >> Q.EXISTS_TAC `(FST(FST x),SND x)`
@@ -2549,7 +2549,7 @@ val biased_dc3_leakage_result = store_thm
                  IMAGE (λ(h,r). ((h, (\s:string. F)),r))
                         (biased_high_states foo CROSS biased_random_states foo)`
                  by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, GSPECIFICATION, IN_IMAGE, IN_PREIMAGE, IN_SING,
-                                    IN_CROSS, L_def]
+                                    IN_CROSS, low_state_def]
                      >> (EQ_TAC >> RW_TAC std_ss [] >> RW_TAC std_ss [])
                      >- (Q.PAT_X_ASSUM `P = (\s:string. F)` (ASSUME_TAC o GSYM)
                          >> Q.EXISTS_TAC `(FST(FST x),SND x)`
@@ -2600,7 +2600,7 @@ val biased_dc3_leakage_result = store_thm
                 Suff `PREIMAGE L {z} INTER (biased_high_states foo CROSS biased_low_states CROSS
                                                 biased_random_states foo) = {}`
                 >- RW_TAC bool_ss [REAL_SUM_IMAGE_THM]
-                >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [NOT_IN_EMPTY, L_def, IN_CROSS, IN_INTER, IN_PREIMAGE, IN_SING, biased_low_states_def]
+                >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [NOT_IN_EMPTY, low_state_def, IN_CROSS, IN_INTER, IN_PREIMAGE, IN_SING, biased_low_states_def]
                 >> METIS_TAC []])
    >> RW_TAC std_ss [] >> POP_ASSUM (K ALL_TAC)
    >> `!x y z.
@@ -2743,7 +2743,7 @@ val biased_dc3_leakage_result = store_thm
            PREIMAGE FST {(y,z)} INTER
            (biased_high_states foo CROSS biased_low_states CROSS
             biased_random_states foo))`
-        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, IN_CROSS, IN_PREIMAGE, IN_SING, L_def])
+        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, IN_CROSS, IN_PREIMAGE, IN_SING, low_state_def])
    >> POP_ORW
    >> RW_TAC std_ss [] >> POP_ASSUM (K ALL_TAC)
    >> `!x y z.
@@ -3369,9 +3369,9 @@ val biased_dc3_leakage_result = store_thm
    >> Q.ABBREV_TAC `s2 = (s1 CROSS biased_high_states (SUC (SUC 0)))`
    >> RW_TAC bool_ss [biased_high_states_def, biased_random_states_def, insider_high_states_set_def,
                       insider_dcprog_def, compute_result_alt, insider_set_announcements_alt, XOR_announces_def,
-                      H_def, L_def, PAIR, ETA_THM, xor_def, STRCAT_toString_inj]
+                      high_state_def, low_state_def, PAIR, ETA_THM, xor_def, STRCAT_toString_inj]
    >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   L_def, SND]
+                                                   low_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)))))
@@ -3388,19 +3388,19 @@ val biased_dc3_leakage_result = store_thm
    >> Q.UNABBREV_TAC `s2` >> Q.UNABBREV_TAC `s1`
    >> RW_TAC bool_ss [biased_high_states_def, biased_low_states_def, biased_random_states_def, insider_high_states_set_def,
                       insider_dcprog_def, compute_result_alt, insider_set_announcements_alt, XOR_announces_def,
-                      H_def, L_def, PAIR, ETA_THM, xor_def, STRCAT_toString_inj]
+                      high_state_def, low_state_def, PAIR, ETA_THM, xor_def, STRCAT_toString_inj]
    >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   L_def, SND]
+                                                   low_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)))))
    >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   L_def, SND]
+                                                   low_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)))))
    >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   L_def, SND]
+                                                   low_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)
@@ -3753,19 +3753,19 @@ val prob_space_biased_dc_prog_space23 = store_thm
                 dc_dup_conv)]
    >> RW_TAC bool_ss [biased_high_states_def, biased_low_states_def, biased_random_states_def, insider_high_states_set_def,
                       insider_dcprog_def, compute_result_alt, insider_set_announcements_alt, XOR_announces_def,
-                      H_def, L_def, R_def, PAIR, ETA_THM, xor_def, STRCAT_toString_inj]
+                      high_state_def, low_state_def, random_state_def, PAIR, ETA_THM, xor_def, STRCAT_toString_inj]
    >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   H_def, L_def, R_def, SND]
+                                                   high_state_def, low_state_def, random_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)))))
    >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   H_def, L_def, R_def, SND]
+                                                   high_state_def, low_state_def, random_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)))))
    >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   H_def, L_def, R_def, SND]
+                                                   high_state_def, low_state_def, random_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)
@@ -3832,12 +3832,12 @@ val biased_dc3_leakage_result2 = store_thm
                                                      THENC (TRY_CONV dc_dup_conv)))))
                 dc_dup_conv)]
    >> Q.ABBREV_TAC `foo = (SUC (SUC 0))`
-   >> RW_TAC std_ss [joint_distribution_def, L_def, H_def, R_def, PAIR, ETA_THM, FST, SND, PROB, PSPACE, distribution_def]
+   >> RW_TAC std_ss [joint_distribution_def, low_state_def, high_state_def, random_state_def, PAIR, ETA_THM, FST, SND, PROB, PSPACE, distribution_def]
    >> `IMAGE L
         (biased_high_states foo CROSS biased_low_states CROSS
          biased_random_states foo) =
         biased_low_states`
-        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_IMAGE, IN_CROSS, L_def]
+        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_IMAGE, IN_CROSS, low_state_def]
             >> EQ_TAC >> RW_TAC std_ss [] >> RW_TAC std_ss []
             >> Q.UNABBREV_TAC `foo`
             >> Q.EXISTS_TAC `(((\s:string. s = STRCAT "pays" (toString (SUC (SUC 0)))),x),(\s:string. F))`
@@ -3901,7 +3901,7 @@ val biased_dc3_leakage_result2 = store_thm
                 >> Suff `PREIMAGE L {z} INTER (biased_high_states foo CROSS biased_low_states CROSS
                                                 biased_random_states foo) = {}`
                 >- RW_TAC bool_ss [INTER_EMPTY, REAL_SUM_IMAGE_THM]
-                >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [NOT_IN_EMPTY, L_def, IN_CROSS, IN_INTER, IN_PREIMAGE]
+                >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [NOT_IN_EMPTY, low_state_def, IN_CROSS, IN_INTER, IN_PREIMAGE]
                 >> METIS_TAC [])
             >> `(PREIMAGE (insider_dcprog (SUC foo)) {x} INTER
                  PREIMAGE L {z} INTER
@@ -3916,7 +3916,7 @@ val biased_dc3_leakage_result2 = store_thm
                                 ~r (STRCAT "coin" (toString 1)) /\
                                 (insider_dcprog (SUC foo) ((h,z),r) = x)})`
                  by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, GSPECIFICATION, IN_IMAGE, IN_PREIMAGE, IN_SING,
-                                    IN_CROSS, L_def, IN_UNION]
+                                    IN_CROSS, low_state_def, IN_UNION]
                      >> (EQ_TAC >> RW_TAC std_ss [] >> RW_TAC std_ss [])
                      >- (Cases_on `SND x' (STRCAT "coin" (toString 1))`
                          >- (DISJ1_TAC >> Q.EXISTS_TAC `(FST(FST x'), SND x')`
@@ -4053,7 +4053,7 @@ val biased_dc3_leakage_result2 = store_thm
            PREIMAGE L {z} INTER
            (biased_high_states foo CROSS biased_low_states CROSS
             biased_random_states foo))`
-        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, IN_CROSS, IN_PREIMAGE, IN_SING, L_def])
+        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, IN_CROSS, IN_PREIMAGE, IN_SING, low_state_def])
    >> POP_ORW
    >> POP_ORW
    >> `!x z.
@@ -4092,7 +4092,7 @@ val biased_dc3_leakage_result2 = store_thm
             >- (Suff `PREIMAGE L {z} INTER (biased_high_states foo CROSS biased_low_states CROSS
                                                 biased_random_states foo) = {}`
                 >- RW_TAC bool_ss [INTER_EMPTY, REAL_SUM_IMAGE_THM]
-                >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [NOT_IN_EMPTY, L_def, IN_CROSS, IN_INTER, IN_PREIMAGE]
+                >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [NOT_IN_EMPTY, low_state_def, IN_CROSS, IN_INTER, IN_PREIMAGE]
                 >> METIS_TAC [])
             >> `(PREIMAGE L {z} INTER
                 (biased_high_states foo CROSS biased_low_states CROSS
@@ -4104,7 +4104,7 @@ val biased_dc3_leakage_result2 = store_thm
                         {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 ~r (STRCAT "coin" (toString 1))})`
                  by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, GSPECIFICATION, IN_IMAGE, IN_PREIMAGE, IN_SING,
-                                    IN_CROSS, L_def, IN_UNION]
+                                    IN_CROSS, low_state_def, IN_UNION]
                      >> (EQ_TAC >> RW_TAC std_ss [] >> RW_TAC std_ss [])
                      >- (Cases_on `SND x (STRCAT "coin" (toString 1))`
                          >- (DISJ1_TAC >> Q.EXISTS_TAC `(FST(FST x), SND x)`
@@ -4387,7 +4387,7 @@ val biased_dc3_leakage_result2 = store_thm
            PREIMAGE FST {(y,z)} INTER
            (biased_high_states foo CROSS biased_low_states CROSS
             biased_random_states foo))`
-        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, IN_CROSS, IN_PREIMAGE, IN_SING, L_def])
+        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, IN_CROSS, IN_PREIMAGE, IN_SING, low_state_def])
    >> POP_ORW
    >> POP_ORW
    >> `!x y z.
@@ -4868,7 +4868,7 @@ val biased_dc3_leakage_result2 = store_thm
             >> POP_ORW
             >> Q.UNABBREV_TAC `foo` >> RW_TAC bool_ss [biased_random_states_def]
             >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   L_def, SND]
+                                                   low_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)
@@ -4942,7 +4942,7 @@ val biased_dc3_leakage_result2 = store_thm
             >> POP_ORW
             >> Q.UNABBREV_TAC `foo` >> RW_TAC bool_ss [biased_random_states_def]
             >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   L_def, SND]
+                                                   low_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)
@@ -5321,9 +5321,9 @@ val biased_dc3_leakage_result2 = store_thm
    >> Q.ABBREV_TAC `s3 = (s1 CROSS (biased_high_states (SUC (SUC 0)) CROSS biased_low_states))`
    >> RW_TAC bool_ss [biased_high_states_def, biased_random_states_def, insider_high_states_set_def,
                       insider_dcprog_def, compute_result_alt, insider_set_announcements_alt, XOR_announces_def,
-                      H_def, L_def, PAIR, ETA_THM, xor_def, STRCAT_toString_inj]
+                      high_state_def, low_state_def, PAIR, ETA_THM, xor_def, STRCAT_toString_inj]
    >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   L_def, SND]
+                                                   low_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)))))
@@ -5341,20 +5341,20 @@ val biased_dc3_leakage_result2 = store_thm
    >> Q.UNABBREV_TAC `s3` >> Q.UNABBREV_TAC `s2` >> Q.UNABBREV_TAC `s1`
    >> RW_TAC bool_ss [biased_high_states_def, biased_low_states_def, biased_random_states_def, insider_high_states_set_def,
                       insider_dcprog_def, compute_result_alt, insider_set_announcements_alt, XOR_announces_def,
-                      H_def, L_def, PAIR, ETA_THM, xor_def, STRCAT_toString_inj]
+                      high_state_def, low_state_def, PAIR, ETA_THM, xor_def, STRCAT_toString_inj]
    >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   L_def, SND]
+                                                   low_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)))))
    >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   L_def, SND]
+                                                   low_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)))))
    >> RW_TAC std_ss []
    >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   L_def, SND]
+                                                   low_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)
@@ -5404,4 +5404,3 @@ val biased_dc3_leakage_result2 = store_thm
    >> RW_TAC real_ss [REAL_SUB_LDISTRIB, REAL_MUL_ASSOC, REAL_INV_1OVER,
                       REAL_ARITH ``!(x:real) y z a. x + (y - z) - a = y + (x - (z + a))``, GSYM real_sub]
    >> Q.UNABBREV_TAC `v` >> RW_TAC std_ss []);
-

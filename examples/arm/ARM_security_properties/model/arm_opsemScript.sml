@@ -891,7 +891,7 @@ End
 
 (* ------------------------------------------------------------------------ *)
 
-Definition null_check_if_thumbee_def:
+Definition null_check_if_thumbEE_def:
   null_check_if_thumbEE ii n (f:unit M) =
     current_instr_set ii >>=
     (\iset.
@@ -3972,4 +3972,3 @@ val _ = map save_thm instructions;
 val _ = computeLib.add_persistent_funs (map fst instructions);
 
 (* ------------------------------------------------------------------------ *)
-

@@ -366,18 +366,30 @@ End
 Definition CUT_def:   CUT (i,j) m = \k. if RANGE (i,j) k then m k else H_EMP
 End
 
-Definition D0:   D0 m k = ?x y z. m (k:num) = H_BLOCK (x,y,z)
+(* TODO Remove aliases D0, D1, R0, R1, DR0, DR1 *)
+Definition D0_def:   D0 m k = ?x y z. m (k:num) = H_BLOCK (x,y,z)
 End
-Definition D1:   D1 m i = ?k x y z. (m (k:num) = H_BLOCK(x,y,z)) /\ i IN ADDR_SET x
+val D0 = D0_def;
+
+Definition D1_def:   D1 m i = ?k x y z. (m (k:num) = H_BLOCK(x,y,z)) /\ i IN ADDR_SET x
 End
-Definition R0:   R0 m k = ?a. m (k:num) = H_REF a
+val D1 = D1_def;
+
+Definition R0_def:   R0 m k = ?a. m (k:num) = H_REF a
 End
-Definition R1:   R1 m a = ?k. m (k:num) = H_REF a
+val R0 = R0_def;
+
+Definition R1_def:   R1 m a = ?k. m (k:num) = H_REF a
 End
-Definition DR0:   DR0 m k = D0 m k \/ R0 m k
+val R1 = R1_def;
+
+Definition DR0_def:   DR0 m k = D0 m k \/ R0 m k
 End
-Definition DR1:   DR1 m k = D1 m k \/ R1 m k
+val DR0 = DR0_def;
+
+Definition DR1_def:   DR1 m k = D1 m k \/ R1 m k
 End
+val DR1 = DR1_def;
 
 Definition EMP_RANGE_def:
   EMP_RANGE (b,e) m = !k. k IN RANGE(b,e) ==> (m k = H_EMP)
@@ -1691,5 +1703,3 @@ val lisp_x_gc_thm = store_thm("lisp_x_gc_thm",
     \\ ASM_SIMP_TAC std_ss [PAIR_TRANSLATE_def,ADDR_SET_def,MEM,ADDR_MAP_def]
     \\ SIMP_TAC std_ss [ADDR_MAP_THM,MAP,MEM,ADDR_APPLY_def]
     \\ FULL_SIMP_TAC std_ss [ADDR_MAP_THM,FUN_EQ_THM,IN_DEF]));
-
-
