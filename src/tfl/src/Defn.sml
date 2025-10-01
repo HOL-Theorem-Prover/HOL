@@ -1237,14 +1237,6 @@ fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
     in TotalDefn.
  ---------------------------------------------------------------------------*)
 
-fun holexnMessage (HOL_ERR (HOL_ERROR recd)) =
-    let val {origin_structure,origin_function,source_location,message} = recd
-    in String.concat
-        [origin_structure, ".", origin_function, ":",
-         locn.toShortString source_location, ": ", message]
-    end
-  | holexnMessage e = General.exnMessage e
-
 fun is_simple_arg t =
   is_var t orelse
   (case Lib.total dest_pair t of
@@ -1271,8 +1263,7 @@ fun prim_mk_defn stem eqns =
                List.all is_simple_arg args
             then
               (* not recursive, yet failed *)
-              raise err ("Simple definition failed with message: "^
-                         holexnMessage e)
+              raise wrap_exn "Defn" "prim_mk_defn (simple definition)" e
             else
              let
                 val (tup_eqs, stem', untuple) = pairf (stem, eqns)

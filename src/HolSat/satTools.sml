@@ -124,7 +124,7 @@ fun satCheck model t =
    end
    handle Interrupt => raise Interrupt
         | HOL_ERR herr =>
-            if function_of herr = "EQT_ELIM" andalso is_neg t then
+            if top_function_of herr = "EQT_ELIM" andalso is_neg t then
                  (UNDISCH (EQF_ELIM (REWRITE_CONV [] t))
                   handle HOL_ERR _ => raise satCheckError)
             else raise satCheckError

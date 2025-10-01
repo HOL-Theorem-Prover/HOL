@@ -1534,7 +1534,7 @@ fun WORD_SUB_CONV tm =
       THENC PURE_REWRITE_CONV [WORD_SUB_INTRO, WORD_NEG_SUB, WORD_SUB_RNEG,
               WORD_NEG_NEG, WORD_MULT_CLAUSES, NEG1_WORD1]) tm
    handle (e as HOL_ERR herr) =>
-      if function_of herr = "CHANGED_CONV"
+      if top_function_of herr = "CHANGED_CONV"
          then raise Conv.UNCHANGED
       else raise e
 
@@ -1830,7 +1830,7 @@ fun WORD_BIT_INDEX_CONV toindex =
             Drule.ISPEC w (Drule.MATCH_MP thm lt)
          end
          handle e as HOL_ERR herr =>
-           if function_of herr = "EQT_ELIM" then
+           if top_function_of herr = "EQT_ELIM" then
               raise ERR "WORD_BIT_INDEX_CONV" "index too large"
            else raise e
    end

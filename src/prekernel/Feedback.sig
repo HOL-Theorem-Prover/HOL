@@ -1,28 +1,35 @@
 signature Feedback =
 sig
-    datatype hol_error = HOL_ERROR of
-      {origin_structure : string,
-       origin_function  : string,
-       source_location  : locn.locn,
-       message          : string}
+
+    type origin =
+      {origin_structure:string,
+       origin_function:string,
+       source_location : locn.locn}
+
+    datatype hol_error =
+      HOL_ERROR of
+        {origins : origin list,
+         message : string}
 
     val mk_hol_error    : string -> string -> locn.locn -> string -> hol_error
-    val dest_hol_error  : hol_error -> string * string * locn.locn * string
+    val wrap_hol_error  : string -> string -> locn.locn -> hol_error -> hol_error
     val empty_hol_error : hol_error
-    val structure_of    : hol_error -> string
-    val function_of     : hol_error -> string
-    val location_of     : hol_error -> locn.locn
+    val top_structure_of: hol_error -> string
+    val top_function_of : hol_error -> string
+    val top_location_of : hol_error -> locn.locn
+    val origins_of      : hol_error -> origin list
     val message_of      : hol_error -> string
     val set_message     : string -> hol_error -> hol_error
-    val set_origin_function : string -> hol_error -> hol_error
+    val set_top_function : string -> hol_error -> hol_error
     val pp_hol_error    : hol_error -> HOLPP.pretty
 
     exception HOL_ERR of hol_error
     exception BATCH_ERR of string
 
-    val render_exn        : string -> exn -> 'a
     val mk_HOL_ERR        : string -> string -> string -> exn
     val mk_HOL_ERRloc     : string -> string -> locn.locn -> string -> exn
+
+    val render_exn        : string -> exn -> 'a
     val wrap_exn          : string -> string -> exn -> exn
     val wrap_exn_loc      : string -> string -> locn.locn -> exn -> exn
 

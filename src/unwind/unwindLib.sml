@@ -117,7 +117,7 @@ fun CONJ_FORALL_ONCE_CONV t =
         end
    end
    handle (e as HOL_ERR herr) =>
-      if function_of herr = "CONJ_FORALL_ONCE_CONV" then
+      if top_function_of herr = "CONJ_FORALL_ONCE_CONV" then
          raise e
       else raise UNWIND_ERR "CONJ_FORALL_ONCE_CONV" ""
 end;

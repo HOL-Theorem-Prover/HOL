@@ -184,8 +184,8 @@ fun FIRSTCQC_CONV [] t = failwith "no conversion worked"
     in
       c t
       handle e as HOL_ERR herr =>
-               if structure_of herr = "Opening" andalso
-                  function_of herr = "CONGPROC" andalso
+               if top_structure_of herr = "Opening" andalso
+                  top_function_of herr = "CONGPROC" andalso
                   message_of herr = "Congruence gives no change"
                 then raise e
                 else FIRSTCQC_CONV cs t

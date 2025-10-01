@@ -13,58 +13,41 @@ struct
 
 local open HOLPP in end
 
+type origin =
+  {origin_structure:string,
+   origin_function:string,
+   source_location : locn.locn}
+
+fun mk_origin s1 s2 loc =
+  {origin_structure = s1,
+   origin_function = s2,
+   source_location = loc}
+
 datatype hol_error =
   HOL_ERROR of
-     {origin_structure : string,
-      origin_function  : string,
-      source_location  : locn.locn,
-      message          : string}
+     {origins : origin list,
+      message : string}
 
 fun mk_hol_error s1 s2 loc mesg =
   HOL_ERROR
-     {origin_structure = s1,
-      origin_function  = s2,
-      source_location  = loc,
-      message          = mesg}
+    {origins = [mk_origin s1 s2 loc],
+     message = mesg}
 
-val empty_hol_error = mk_hol_error "" "" locn.Loc_None ""
+fun wrap_hol_error s f l (HOL_ERROR {origins,message}) =
+    HOL_ERROR
+       {origins = mk_origin s f l::origins,
+        message = message}
 
-fun dest_hol_error (HOL_ERROR recd) =
-  let val {origin_structure, origin_function, source_location, message} = recd
-  in (origin_structure, origin_function, source_location, message)
-  end
+val empty_hol_error =
+  HOL_ERROR
+    {origins = [], message = ""}
 
-fun structure_of (HOL_ERROR {origin_structure,...}) = origin_structure
-fun function_of (HOL_ERROR {origin_function,...}) = origin_function
-fun location_of (HOL_ERROR {source_location,...}) = source_location
-fun message_of (HOL_ERROR {message,...}) = message
+fun empty_origins_error sfn =
+  HOL_ERROR
+   {origins = [mk_origin "Feedback" sfn locn.Loc_Unknown],
+    message = "no origin"}
 
-fun pp_hol_error (err as HOL_ERROR recd) =
-  let open HOLPP
-      val {origin_structure, origin_function, source_location, message} = recd
-  in if err = empty_hol_error then
-        add_string "<empty-hol-error>"
-     else
-     block INCONSISTENT 0 (List.concat [
-       [add_string "at ",
-        add_string (origin_structure^"."^origin_function),add_string ":",
-        add_break(1,0)],
-       (case source_location
-         of locn.Loc_Unknown => []
-          | _ => [add_string (locn.toString source_location ^":"),add_break(1,0)]),
-        [add_string message]
-     ])
-  end
-
-fun format_err_recd recd =
-  HOLPP.pp_to_string (!Globals.linewidth) pp_hol_error (HOL_ERROR recd)
-
-val _ =
-  let fun pp i _ e = pp_hol_error e
-  in PolyML.addPrettyPrinter pp
-  end
-
-(*---------------------------------------------------------------------------*)
+(*-------------------------------------------------------------------------*)
 (* Exceptions used in HOL code.                                              *)
 (*---------------------------------------------------------------------------*)
 
@@ -72,35 +55,67 @@ exception HOL_ERR of hol_error;
 
 exception BATCH_ERR of string;
 
-(*---------------------------------------------------------------------------
-     Curried version of HOL_ERR; can be more comfortable to use.
- ---------------------------------------------------------------------------*)
+fun origins_of (HOL_ERROR {origins,...}) = origins
+fun message_of (HOL_ERROR {message,...}) = message
+
+fun top_structure_of herr =
+  case origins_of herr
+   of [] => raise HOL_ERR (empty_origins_error "top_structure_of")
+    | h::_ => #origin_structure h
+
+fun top_function_of herr =
+  case origins_of herr
+   of [] => raise HOL_ERR (empty_origins_error "top_function_of")
+    | h::_ => #origin_function h
+
+fun top_location_of herr =
+  case origins_of herr
+   of [] => raise HOL_ERR (empty_origins_error "top_location_of")
+    | h::_ => #source_location h
+
+val pp_hol_error =
+  let open HOLPP
+      fun pp_origin {origin_structure,origin_function,source_location} =
+        block INCONSISTENT 2
+          ([add_string "at ",
+            add_string (origin_structure^"."^origin_function),add_string ":"]
+           @
+           (case source_location
+            of locn.Loc_Unknown => []
+             | _ => [add_break(1,0),
+                     add_string (locn.toString source_location ^":")]))
+  in
+  fn (err as HOL_ERROR{origins,message}) =>
+    if err = empty_hol_error then
+        add_string "<empty-hol-error>"
+     else
+        block INCONSISTENT 2
+          (pr_list pp_origin [NL] origins @ [NL, add_string message])
+  end
+
+fun format_hol_error holerr =
+  HOLPP.pp_to_string (!Globals.linewidth) pp_hol_error holerr
+
+val _ =
+  let fun pp i _ e = pp_hol_error e
+  in PolyML.addPrettyPrinter pp
+  end
 
 fun mk_HOL_ERRloc s1 s2 locn s3 = HOL_ERR (mk_hol_error s1 s2 locn s3)
 
 fun mk_HOL_ERR s1 s2 s3 = HOL_ERR (mk_hol_error s1 s2 locn.Loc_Unknown s3)
 
-(* Errors with a known location. *)
-
-fun set_origin_function fnm (HOL_ERROR recd) =
-  let val {origin_structure, source_location, message, ...} = recd
-  in HOL_ERROR
-      {origin_structure = origin_structure,
-       source_location = source_location,
-       origin_function = fnm,
+fun set_top_function fnm (HOL_ERROR {origins,message}) =
+  case origins
+   of [] => raise HOL_ERR (empty_origins_error "set_origin_function")
+    | h::t => HOL_ERROR
+      {origins = {origin_structure = #origin_structure h,
+                  source_location = #source_location h,
+                  origin_function = fnm} :: t,
        message = message}
-  end
 
-fun set_message msg (HOL_ERROR recd) =
-  let val{origin_structure, source_location, origin_function, ...} = recd
-  in HOL_ERROR
-      {origin_structure = origin_structure,
-       source_location = source_location,
-       origin_function = origin_function,
-       message = msg}
-  end
-
-fun format_hol_error(HOL_ERROR recd) = format_err_recd recd
+fun set_message msg (HOL_ERROR {origins,message}) =
+    HOL_ERROR {origins = origins, message = msg}
 
 val ERR = mk_HOL_ERR "Feedback"  (* local to this file *)
 
@@ -141,8 +156,8 @@ fun quiet_messages f = Portable.with_flag (emit_MESG, false) f
  * Formatting and output for exceptions, messages, and warnings.             *
  *---------------------------------------------------------------------------*)
 
-fun format_ERR (HOL_ERROR recd) =
-   String.concat ["\nException raised ", format_err_recd recd, "\n"]
+fun format_ERR holerr =
+   String.concat ["\nException raised ", format_hol_error holerr, "\n"]
 
 fun format_MESG s = String.concat ["<<HOL message: ", s, ">>\n"]
 
@@ -189,20 +204,17 @@ in
 end
 
 (*---------------------------------------------------------------------------
-    Takes an exception, grabs its message as best as possible, then
-    make a HOL exception out of it. Subtlety: if we see that the
-    exception is an Interrupt, we raise it.
+    Support for backtracing exceptions, treating HOL_ERR specially.
+    Subtlety: if we see that the exception is an Interrupt, we raise it.
  ---------------------------------------------------------------------------*)
 
-fun wrap_exn s f Portable.Interrupt = raise Portable.Interrupt
-  | wrap_exn s f (HOL_ERR (HOL_ERROR recd)) =
-      mk_HOL_ERR s f (format_err_recd recd)
-  | wrap_exn s f exn = mk_HOL_ERR s f (General.exnMessage exn)
+fun wrap_exn_loc s f l e =
+    case e
+     of Portable.Interrupt => raise Portable.Interrupt
+      | HOL_ERR holerr => HOL_ERR (wrap_hol_error s f l holerr)
+      | exn => mk_HOL_ERRloc s f l (General.exnMessage exn)
 
-fun wrap_exn_loc s f l Portable.Interrupt = raise Portable.Interrupt
-  | wrap_exn_loc s f l (HOL_ERR (HOL_ERROR recd)) =
-      mk_HOL_ERRloc s f l (format_err_recd recd)
-  | wrap_exn_loc s f l exn = mk_HOL_ERRloc s f l (General.exnMessage exn)
+fun wrap_exn s f = wrap_exn_loc s f locn.Loc_Unknown
 
 fun HOL_MESG s =
   if !emit_MESG then !MESG_outstream (!MESG_to_string s) else ()

@@ -50,18 +50,6 @@ val show_axioms = ref true
 val show_scrub = ref true
 
 (*---------------------------------------------------------------------------*
- * Assignable function for printing errors.                                  *
- *---------------------------------------------------------------------------*)
-
-fun outHOL_ERR_default {message,origin_function,origin_structure} =
-   (TextIO.output (TextIO.stdOut,
-                   "\nException raised at " ^ origin_structure ^ "." ^
-                   origin_function ^ ":\n" ^ message ^ "\n")
-    ; TextIO.flushOut TextIO.stdOut)
-
-val output_HOL_ERR = ref outHOL_ERR_default
-
-(*---------------------------------------------------------------------------*
  * Prettyprinting flags                                                      *
  *---------------------------------------------------------------------------*)
 

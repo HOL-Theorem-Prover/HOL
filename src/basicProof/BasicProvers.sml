@@ -612,7 +612,7 @@ fun by0 k (q, tac) (g as (asl,w)) = let
 in
   (SUBGOAL_THEN tm finisher gTHEN1 (tac THEN k)) g
    handle HOL_ERR _ =>
-    raise ERR "by" ("by's tactic failed to prove subgoal"^mk_errmsg())
+   raise ERR "by" ("by's tactic failed to prove subgoal"^mk_errmsg())
 end
 
 val op by = by0 NO_TAC
@@ -621,7 +621,7 @@ val byA = by0 ALL_TAC
 fun (q suffices_by tac) g =
   (Q_TAC SUFF_TAC q gTHEN1 (tac THEN NO_TAC)) g
   handle e as HOL_ERR herr =>
-         if function_of herr = "Q_TAC" then raise e
+         if top_function_of herr = "Q_TAC" then raise e
          else
            case qlinenum q of
                SOME l => raise ERR "suffices_by"

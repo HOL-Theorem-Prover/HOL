@@ -54,7 +54,7 @@ local
       f (t, tac)
       handle e as HOL_ERR herr =>
         let val m = message_of herr
-            val f = function_of herr
+            val f = top_function_of herr
         in
            mesg ("Proof of \n\n" ^ Parse.term_to_string t ^ "\n\nfailed.\n")
            ;
@@ -231,12 +231,13 @@ val op >- = op THEN1
 
 fun op>>-(tac1, n) tac2 g =
   op>- (tac1, tac2) g
-  handle e as HOL_ERR er =>
-         if is_substring "THEN1" (message_of er) then raise e
+  handle e as HOL_ERR holerr =>
+         if is_substring "THEN1" (message_of holerr) then raise e
          else
-           raise HOL_ERR
-             (set_message
-                (message_of er ^ " (THEN1 on line "^Int.toString n^")") er)
+           raise HOL_ERR (set_message
+              (String.concat
+                 [message_of holerr,
+                  " (THEN1 on line ", Int.toString n, ")"]) holerr)
 
 fun (f ?? x) = f x
 
@@ -884,7 +885,7 @@ local
       (gl, (if is_neg w then NEG_DISCH ant else DISCH ant) o prf)
    end
    handle HOL_ERR e =>
-          raise ERR "DISCH_THEN" (function_of e ^ ":" ^ message_of e)
+          raise ERR "DISCH_THEN" (top_function_of e ^ ":" ^ message_of e)
   val NOT_NOT_E = boolTheory.NOT_CLAUSES |> CONJUNCT1
   val NOT_NOT_I = NOT_NOT_E |> GSYM
   val NOT_IMP_F = IMP_ANTISYM_RULE (SPEC_ALL boolTheory.F_IMP)

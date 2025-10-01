@@ -237,7 +237,7 @@ in
     else ALL_CONV
 end tm
 handle (e as HOL_ERR herr) =>
-    if function_of herr = "REWR_CONV" then
+    if top_function_of herr = "REWR_CONV" then
        raise ERR "IntDP_Munge" "Uneliminable natural number term remains"
     else raise e
 

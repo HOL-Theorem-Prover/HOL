@@ -535,7 +535,7 @@ local
       EQT_ELIM (AC_CONV (INT_MUL_ASSOC, INT_MUL_SYM)
                 (mk_eq(tm, mk_mult(list_mk_mult rest, var))))
     end handle (e as HOL_ERR herr) =>
-        (if structure_of herr = "Lib" then
+        (if top_structure_of herr = "Lib" then
            ALL_CONV tm
          else raise e)
     else if is_comb tm then

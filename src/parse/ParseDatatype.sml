@@ -272,7 +272,7 @@ fun parse_harg G qb =
       else
         (parse_atom G qb
          handle e as HOL_ERR herr =>
-            if structure_of herr = "Parse" then
+            if top_structure_of herr = "Parse" then
                 raise ERR "parse_harg" (message_of herr)
             else raise e)
     | (base_tokens.BT_AQ ty, _) => (qbuf.advance qb; dAQ ty)

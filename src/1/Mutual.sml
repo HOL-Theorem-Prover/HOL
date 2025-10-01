@@ -380,8 +380,8 @@ fun MUTUAL_INDUCT_THEN1 th =
        => raise ERR "MUTUAL_INDUCT_THEN" "tactic application error"
    end
    handle (e as HOL_ERR herr) =>
-            if structure_of herr = "Mutual" andalso
-               function_of herr = "MUTUAL_INDUCT_THEN" then
+            if top_structure_of herr = "Mutual" andalso
+               top_function_of herr = "MUTUAL_INDUCT_THEN" then
               raise e
             else raise ILL_FORMED
         | otherwise => raise ILL_FORMED
