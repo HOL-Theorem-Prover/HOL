@@ -16,7 +16,7 @@
 
    fun mload s = (print ("Loading "^s^"\n"); load s);
    app mload ["simpLib", "boolSimps", "arithmeticTheory", "Q",
-              "mesonLib", "metisLib", "whileTheory",
+              "mesonLib", "metisLib", "WhileTheory",
               "pairSyntax", "combinSyntax"];
 *)
 Theory numeral[bare]

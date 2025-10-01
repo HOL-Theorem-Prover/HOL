@@ -4,16 +4,16 @@ quietdec := true;
 loadPath := (concat Globals.HOLDIR "/examples/dev/sw") :: !loadPath;
 
 app load ["numLib", "pred_setSimps", "pred_setTheory",
-     "arithmeticTheory", "wordsTheory", "pairTheory", "listTheory", "whileTheory", "finite_mapTheory", "fcpLib", "wordsLib"];
+     "arithmeticTheory", "wordsTheory", "pairTheory", "listTheory", "WhileTheory", "finite_mapTheory", "fcpLib", "wordsLib"];
 
 open numLib pred_setSimps pred_setTheory arithmeticTheory wordsTheory
-     pairTheory listTheory whileTheory finite_mapTheory wordsLib;
+     pairTheory listTheory WhileTheory finite_mapTheory wordsLib;
 
 quietdec := false;
 *)
 Theory preARM
 Ancestors
-  pred_set arithmetic words pair list while finite_map
+  pred_set arithmetic words pair list While finite_map
 Libs
   numLib pred_setSimps wordsLib
 

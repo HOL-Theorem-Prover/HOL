@@ -10,7 +10,7 @@ quietdec := false;
 *)
 Theory rules
 Ancestors
-  relation arithmetic preARM pair pred_set list rich_list while
+  relation arithmetic preARM pair pred_set list rich_list While
   ARMComposition IL words
 Libs
   numLib pred_setSimps

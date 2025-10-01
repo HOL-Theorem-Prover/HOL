@@ -14,7 +14,7 @@ Libs
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-(* val _ = load "whileTheory"; *)
+(* val _ = load "WhileTheory"; *)
 val _ = temp_overload_on("SQ", ``\n. n * n``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
 val _ = temp_overload_on("TWICE", ``\n. 2 * n``);

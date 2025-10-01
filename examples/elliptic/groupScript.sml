@@ -1178,7 +1178,7 @@ val cyclic_group_alt = store_thm
           (cyclic_group e f).mult (FUNPOW f i e) (FUNPOW f j e) =
           FUNPOW f ((i + j) MOD n) e)``,
    REPEAT GEN_TAC
-   ++ SIMP_TAC std_ss [whileTheory.LEAST_EXISTS]
+   ++ SIMP_TAC std_ss [WhileTheory.LEAST_EXISTS]
    ++ Q.SPEC_TAC (`LEAST k. ~(k = 0) /\ (FUNPOW f k e = e)`,`k`)
    ++ GEN_TAC
    ++ STRIP_TAC
@@ -1328,7 +1328,7 @@ val cyclic_group = store_thm
    ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
    ++ CONJ_TAC >> (RW_TAC std_ss [] ++ METIS_TAC [])
    ++ POP_ASSUM MP_TAC
-   ++ SIMP_TAC std_ss [whileTheory.LEAST_EXISTS]
+   ++ SIMP_TAC std_ss [WhileTheory.LEAST_EXISTS]
    ++ Q.SPEC_TAC (`LEAST n. ~(n = 0) /\ (FUNPOW f n e = e)`,`k`)
    ++ REPEAT GEN_TAC
    ++ STRIP_TAC
