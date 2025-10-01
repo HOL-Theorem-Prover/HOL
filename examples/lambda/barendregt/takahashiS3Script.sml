@@ -10,6 +10,8 @@ Libs
     A mechanisation of §3 of
 
      Takahashi 1995, "Parallel Reductions in λ-Calculus"
+     Information and Computation, 1995.
+     doi:10.1006/inco.1995.1057.
 
     leading to ⊢ has_benf M ⇔ has_bnf M
    ---------------------------------------------------------------------- *)

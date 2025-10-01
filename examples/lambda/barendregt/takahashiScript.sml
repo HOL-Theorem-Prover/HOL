@@ -4,7 +4,15 @@ Ancestors
 Libs
   binderLib
 
-val redAPP_exists =
+(* based on
+
+   Masako Takahashi. Parallel reductions in λ-calculus.
+   Information and Computation, 1995.
+   doi:10.1006/inco.1995.1057.
+
+*)
+
+Theorem redAPP_exists[local] =
     parameter_tm_recursion
         |> INST_TYPE [alpha |-> ``:term``, ``:ρ`` |-> ``:term``]
         |> Q.INST [`ap` |-> `\rt ru t u p. t @@ u @@ p`,
@@ -17,11 +25,13 @@ val redAPP_exists =
 
 val redAPP_def = new_specification("redAPP_def", ["redAPP"], redAPP_exists)
 
-val redAPP_LAM = prove(
-  ``redAPP (LAM v M) N = [N/v]M``,
+Theorem redAPP_LAM[local]:
+  redAPP (LAM v M) N = [N/v]M
+Proof
   Q_TAC (NEW_TAC "z") `{v} ∪ FV M ∪ FV N` >>
   `LAM v M = LAM z ([VAR z/v]M)` by rw[SIMPLE_ALPHA] >>
-  simp[redAPP_def, lemma15a]);
+  simp[redAPP_def, lemma15a]
+QED
 
 (*
 
@@ -33,19 +43,19 @@ which case it performs a β-reduction:
    redAPP (LAM v M) N = [N/v]M
 *)
 
-val redAPP_thm = save_thm(
-  "redAPP_thm",
+Theorem redAPP_thm[simp] =
   redAPP_def
       |> CONJ_PAIR
       |> apfst
            (fn th1 => th1 |> CONJUNCTS |> front_last |> #1
                           |> (fn l => l @ [GEN_ALL redAPP_LAM]) |> LIST_CONJ)
-      |> uncurry CONJ)
-val _ = export_rewrites ["redAPP_thm"]
+      |> uncurry CONJ
 
-val pmact_COND = prove(
-  ``pmact a pi (COND p q r) = COND p (pmact a pi q) (pmact a pi r)``,
-  rw[]);
+Theorem pmact_COND[local]:
+  pmact a pi (COND p q r) = COND p (pmact a pi q) (pmact a pi r)
+Proof
+  rw[]
+QED
 
 (* Takahashi's superscript star operator *)
 val (tstar_thm, tpm_tstar) = define_recursive_term_function'
@@ -58,52 +68,56 @@ val (tstar_thm, tpm_tstar) = define_recursive_term_function'
 `;
 
 (* tstar (LAM v M @@ N) = [tstar N/v] (tstar M) *)
-val tstar_redex =
+Theorem tstar_redex =
     tstar_thm |> CONJUNCTS |> el 2
               |> Q.INST [`M` |-> `LAM v M`]
               |> SIMP_RULE (srw_ss()) [last (CONJUNCTS tstar_thm)]
 
 val _ = overload_on("RTC", ``tstar``)
 
-val varreflind_refl = prove(
-  ``∀P X. (∀s. P (VAR s) (VAR s)) ∧
-          (∀v M1 M2. v ∉ X ∧ P M1 M2 ⇒ P (LAM v M1) (LAM v M2)) ∧
-          (∀M1 M2 N1 N2. P M1 M2 ∧ P N1 N2 ⇒
-                         P (M1 @@ N1) (M2 @@ N2)) ∧
-          (∀M1 M2 N1 N2 v.
-             v ∉ X ∧ v ∉ FV N1 ∧ v ∉ FV N2 ∧ P M1 M2 ∧ P N1 N2 ⇒
-             P (LAM v M1 @@ N1) ([N2/v]M2)) ∧ FINITE X ⇒
-    ∀M. P M M``,
+Theorem varreflind_refl[local]:
+  ∀P X. (∀s. P (VAR s) (VAR s)) ∧
+        (∀v M1 M2. v ∉ X ∧ P M1 M2 ⇒ P (LAM v M1) (LAM v M2)) ∧
+        (∀M1 M2 N1 N2. P M1 M2 ∧ P N1 N2 ⇒
+                       P (M1 @@ N1) (M2 @@ N2)) ∧
+        (∀M1 M2 N1 N2 v.
+           v ∉ X ∧ v ∉ FV N1 ∧ v ∉ FV N2 ∧ P M1 M2 ∧ P N1 N2 ⇒
+           P (LAM v M1 @@ N1) ([N2/v]M2)) ∧ FINITE X ⇒
+        ∀M. P M M
+Proof
   rpt gen_tac >> strip_tac >>
-  ho_match_mp_tac nc_INDUCTION2 >> qexists_tac `X` >> simp[])
+  ho_match_mp_tac nc_INDUCTION2 >> qexists_tac `X` >> simp[]
+QED
 
-val varreflind0 = prove(
-  ``∀P X. (∀s. P (VAR s) (VAR s)) ∧
-          (∀v M1 M2. v ∉ X ∧ P M1 M2 ⇒ P (LAM v M1) (LAM v M2)) ∧
-          (∀M1 M2 N1 N2. P M1 M2 ∧ P N1 N2 ⇒
-                         P (M1 @@ N1) (M2 @@ N2)) ∧
-          (∀M1 M2 N1 N2 v.
-             v ∉ X ∧ v ∉ FV N1 ∧ v ∉ FV N2 ∧ P M1 M2 ∧ P N1 N2 ⇒
-             P (LAM v M1 @@ N1) ([N2/v]M2)) ∧ FINITE X ⇒
-    ∀M N. M =β=> N ⇒ P M N``,
+Theorem varreflind0[local]:
+  ∀P X. (∀s. P (VAR s) (VAR s)) ∧
+        (∀v M1 M2. v ∉ X ∧ P M1 M2 ⇒ P (LAM v M1) (LAM v M2)) ∧
+        (∀M1 M2 N1 N2. P M1 M2 ∧ P N1 N2 ⇒
+                       P (M1 @@ N1) (M2 @@ N2)) ∧
+        (∀M1 M2 N1 N2 v.
+           v ∉ X ∧ v ∉ FV N1 ∧ v ∉ FV N2 ∧ P M1 M2 ∧ P N1 N2 ⇒
+           P (LAM v M1 @@ N1) ([N2/v]M2)) ∧ FINITE X ⇒
+    ∀M N. M =β=> N ⇒ P M N
+Proof
   rpt gen_tac >> strip_tac >> ho_match_mp_tac grandbeta_bvc_ind >>
   qexists_tac `X` >> simp[] >>
-  match_mp_tac varreflind_refl >> qexists_tac `X` >> simp[])
+  match_mp_tac varreflind_refl >> qexists_tac `X` >> simp[]
+QED
 
-val varreflind =
+Theorem varreflind[local] =
     varreflind0
         |> Q.SPEC `λM N. P M N ∧ M =β=> N`
         |> SIMP_RULE (srw_ss()) [grandbeta_rules, GSYM CONJ_ASSOC]
 
-val grandbeta_refl = store_thm(
-  "grandbeta_refl",
-  ``M =β=> M``,
-  simp[grandbeta_rules]);
-val _ = export_rewrites ["grandbeta_refl"]
+Theorem grandbeta_refl[simp]:
+  M =β=> M
+Proof
+  simp[grandbeta_rules]
+QED
 
-val takahashi_5 = store_thm(
-  "takahashi_5",
-  ``∀M N. M =β=> N ⇒ N =β=> M^*``,
+Theorem takahashi_5:
+  ∀M N. M =β=> N ⇒ N =β=> M^*
+Proof
   ho_match_mp_tac varreflind >> qexists_tac `{}` >>
   simp[tstar_thm, grandbeta_rules] >>
   rpt conj_tac
@@ -113,10 +127,11 @@ val takahashi_5 = store_thm(
          by (qspec_then `M1` FULL_STRUCT_CASES_TAC term_CASES >> fs[] >>
              metis_tac[]) >>
       fs[tstar_thm, abs_grandbeta] >> fs[abs_grandbeta, grandbeta_rules]) >>
-  simp[grandbeta_subst])
+  simp[grandbeta_subst]
+QED
 
-val grandbeta_diamond = store_thm(
-  "grandbeta_diamond",
-  ``diamond_property $=b=>``,
-  metis_tac [takahashi_5, diamond_property_def]);
-
+Theorem grandbeta_diamond:
+  diamond_property $=b=>
+Proof
+  metis_tac [takahashi_5, diamond_property_def]
+QED
