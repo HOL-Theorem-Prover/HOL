@@ -13,7 +13,7 @@ Libs
 local open OpenTheoryMap
   val ns = ["While"]
 in
-  fun ot0 x y = OpenTheory_const_name{const={Thy="while",Name=x},name=(ns,y)}
+  fun ot0 x y = OpenTheory_const_name{const={Thy="While",Name=x},name=(ns,y)}
   fun ot x = ot0 x x
 end
 
