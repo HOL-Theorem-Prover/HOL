@@ -173,12 +173,6 @@ Definition COUNT_LIST_AUX_def:
    (COUNT_LIST_AUX (SUC n) l = COUNT_LIST_AUX n (n::l))
 End
 
-(* total version of TL *)
-Definition TL_T_def:
-   (TL_T [] = []) /\
-   (TL_T (h::t) = t)
-End
-
 (* ------------------------------------------------------------------------ *)
 
 val TAKE = Q.store_thm("TAKE",
@@ -191,15 +185,19 @@ val DROP = Q.store_thm("DROP",
     (!n x l:'a list. DROP (SUC n) (CONS x l) = DROP n l)`,
   SRW_TAC [] []);
 
-val tlt_lem = Q.prove (
-  `FUNPOW TL_T n [] = []`,
-  Induct_on `n` THEN ASM_SIMP_TAC list_ss [FUNPOW, TL_T_def]) ;
+Theorem FUNPOW_TL_NIL[simp]:
+  FUNPOW TL n [] = []
+Proof
+  Induct_on ‘n’ >> simp[FUNPOW_SUC]
+QED
 
-val DROP_FUNPOW_TL = Q.store_thm("DROP_FUNPOW_TL",
-  `(!n l. DROP n l = FUNPOW TL_T n l)`,
+Theorem DROP_FUNPOW_TL:
+  !n l. DROP n l = FUNPOW TL n l
+Proof
   Induct THEN1 SIMP_TAC list_ss [DROP, FUNPOW]
-  THEN Cases_on `l` THEN1 SIMP_TAC list_ss [DROP_def, tlt_lem]
-  THEN ASM_SIMP_TAC list_ss [DROP, FUNPOW, TL_T_def]) ;
+  THEN Cases_on `l` THEN1 simp[DROP_def]
+  THEN simp[DROP, FUNPOW]
+QED
 
 val NOT_NULL_SNOC = Q.store_thm("NOT_NULL_SNOC",
    `!x l. ~NULL (SNOC x l)`,
