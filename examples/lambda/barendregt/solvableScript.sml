@@ -1868,6 +1868,99 @@ QED
 Theorem principal_hnf_tpm' =
         principal_hnf_tpm |> REWRITE_RULE [GSYM solvable_iff_has_hnf]
 
+(* Genericity, following
+
+    Takahashi, Masako. *A Simple Proof of the Genericity Lemma*.
+    Logic, Language and Computation: Festschrift in Honor of Satoru Takasu.
+    1994, Springer. doi: 10.1007/BFb0032397
+*)
+
+Theorem unsolvable_APP_I:
+  unsolvable M ⇒ unsolvable (M @@ N)
+Proof
+  metis_tac[solvable_iff_has_hnf, has_hnf_APP_E]
+QED
+
+Theorem unsolvable_appstar_I:
+  ∀M Ns. unsolvable M ⇒ unsolvable (M @* Ns)
+Proof
+  Induct_on ‘Ns’ >> simp[unsolvable_APP_I]
+QED
+
+Theorem equal_hnfs_E:
+  ∀xs ys x y Xs Ys.
+    LAMl xs (VAR x @* Xs) = LAMl ys (VAR y @* Ys) ⇒
+    LENGTH Xs = LENGTH Ys ∧ LENGTH xs = LENGTH ys ∧
+    (MEM x xs ⇔ MEM y ys) ∧ (¬MEM y ys ⇒ x = y)
+Proof
+  Induct >> simp[] >> Cases_on ‘ys’ >> simp[] >>
+  simp[LAM_eq_thm, tpm_LAMl, tpm_appstar] >> rpt strip_tac >>~-
+  ([‘x = h2 ∨ MEM x xs ⇔ y = h1 ∨ MEM y ys’],
+   first_x_assum drule >> simp[MEM_listpm] >> Cases_on ‘MEM x xs’ >> simp[] >>
+   rw[swapstr_def]) >>~-
+  ([‘¬MEM y ys’, ‘y ≠ h1’, ‘h2 ≠ h1’, ‘x = y (* g *)’],
+   first_x_assum drule >> simp[MEM_listpm] >> rw[swapstr_def] >>
+   gvs[FV_LAMl, FV_appstar]) >>
+  metis_tac[LENGTH_listpm]
+QED
+
+(*
+
+Theorem lameq_hnfs_E:
+  LAMl xs (VAR x @* Xs) == LAMl ys (VAR y @* Ys) ⇒
+  ∃zs z Xs' Ys'.
+    LAMl xs (VAR x @* Xs) = LAMl zs (VAR z @* Xs') ∧
+    LAMl ys (VAR y @* Ys) = LAMl zs (VAR z @* Ys') ∧
+    ALL_DISTINCT zs ∧
+    LIST_REL (λt1 t2. t1 == t2) Xs' Ys'
+Proof
+  strip_tac >> drule_then strip_assume_tac lameq_CR >>
+  IMP_RES_THEN strip_assume_tac hnf_betastar_cases >> gvs[] >>
+  drule_then strip_assume_tac equal_hnfs_E >> simp[LIST_REL_EL_EQN]
+QED
+
+Theorem takahashi_lemma1_0[local]:
+  ∀N M P.
+    unsolvable M ∧ bnf N ∧ [M/x] P == N ⇒ ∀M'. [M'/x] P == N
+Proof
+  completeInduct_on ‘size N’ >> gvs[PULL_FORALL] >> rpt gen_tac >>
+  disch_then SUBST_ALL_TAC >> strip_tac >>
+  ‘solvable N ∧ solvable P ∧ solvable ([M/x]P)’
+    by metis_tac[unsolvable_subst, bnf_solvable, lameq_solvable_cong] >>
+  ‘FINITE (FV M ∪ FV M' ∪ FV N ∪ FV P ∪ {x})’ by simp[] >>
+  drule_then strip_assume_tac bnf_characterisation_X >>
+  qpat_x_assum ‘bnf N’ mp_tac >>
+  pop_assum (ONCE_REWRITE_TAC o single) >> rw[] >>
+  ‘has_hnf P’ by metis_tac[solvable_iff_has_hnf] >>
+  ‘∃hP. hnf hP ∧ P == hP’ by metis_tac[has_hnf_def] >>
+  drule_then strip_assume_tac hnf_cases_genX >>
+  qpat_x_assum ‘hnf hP’ mp_tac >>
+  pop_assum (ONCE_REWRITE_TAC o single) >> rw[] >>
+  rename [‘[M/x]P == LAMl ys (VAR z @* Ns) (* a *)’,
+          ‘P == LAMl us (VAR v @* Ps)’] >>
+  ‘x ≠ v’
+    by (strip_tac >> gvs[] >>
+        ‘[M/v] (LAMl us (VAR v @* Ps)) =
+         LAMl us (M @* MAP [M/v] Ps)’
+          by gvs[LAMl_SUB, DISJOINT_SYM, appstar_SUB] >>
+        ‘unsolvable (LAMl us (M @* MAP [M/v] Ps))’
+          by simp[unsolvable_appstar_I] >>
+        pop_assum mp_tac >> pop_assum (SUBST1_TAC o SYM) >>
+        strip_tac >>
+        ‘unsolvable ([M/v]P)’
+          by metis_tac[lameq_sub_cong, lameq_refl, lameq_solvable_cong]) >>
+  ‘[M/x]P == LAMl us (VAR v @* MAP [M/x] Ps)’
+    by (irule lameq_TRANS >> irule_at Any lameq_sub_cong >>
+        first_assum $ irule_at Any >> irule_at Any lameq_REFL >>
+        irule (METIS_PROVE[lameq_REFL] “x = y ⇒ x == y”) >>
+        gvs[LAMl_SUB, DISJOINT_SYM, appstar_SUB]) >>
+
+
+
+  ho_match_mp_tac strong_bvc_term_ind >>
+  qexists ‘λ(t1,t2). FV t1 ∪ FV t2’ >> simp[FORALL_PROD]
+
+
 val _ = html_theory "solvable";
 
 (* References:
