@@ -62,35 +62,6 @@ Proof
   metis_tac[scons_hdtl]
 QED
 
-
-Definition seeds_def:
-  seeds f sd 0 = sd /\
-  seeds f sd (SUC n) = SND (f (seeds f sd n))
-End
-
-Definition sunfold_def:
-  sunfold f sd = λn. FST (f (seeds f sd n))
-End
-
-Theorem seeds_lemma:
-  ∀n f sd0 a sd.
-    f sd0 = (a,sd) ⇒
-    (seeds f sd0 n = case n of 0 => sd0
-                            | SUC m => seeds f sd m)
-Proof
-  Induct >> simp[seeds_def] >> rw[] >> first_x_assum drule >>
-  Cases_on ‘n’ >> simp[seeds_def]
-QED
-
-Theorem sunfold_thm:
-  sunfold f sd0 = let (a,sd) = f sd0
-                  in
-                    scons a (sunfold f sd)
-Proof
-  simp[FUN_EQ_THM,sunfold_def,scons_alt] >> pairarg_tac >> simp[] >>
-  drule_then assume_tac seeds_lemma >> simp[] >> Cases >> simp[]
-QED
-
 Theorem sbisimulation:
   (s1 = s2) ⇔
   ∃R. R s1 s2 ∧
@@ -108,8 +79,48 @@ Proof
   gvs[stl_def, ADD1, FUN_EQ_THM]
 QED
 
+Definition siterate_def:
+  siterate f x = λn. FUNPOW f n x
+End
+
+Theorem shd_siterate[simp]:
+  shd (siterate f sd) = sd
+Proof
+  simp[siterate_def]
+QED
+
+Theorem stl_siterate[simp]:
+  stl (siterate f sd) = siterate f (f sd)
+Proof
+  simp[stl_def, siterate_def, FUN_EQ_THM, GSYM ADD1, FUNPOW]
+QED
+
+Theorem siterate_scons_eqn:
+  siterate f sd = scons sd (siterate f (f sd))
+Proof
+  simp[Once sbisimulation] >>
+  qexists
+    ‘λs1 s2. ∃sd. s1 = siterate f sd ∧ s2 = scons sd (siterate f (f sd))’ >>
+  rw[]>> simp[]
+QED
+
+Definition sunfold_def:
+  sunfold hd tl sd = λn. hd (siterate tl sd n)
+End
+
+Theorem sunfold_thm:
+  sunfold hd tl sd0 =
+  let a = hd sd0;
+      sd = tl sd0;
+  in
+    scons a (sunfold hd tl sd)
+Proof
+  simp[FUN_EQ_THM,sunfold_def,scons_alt] >> Cases >> simp[] >>
+  simp[siterate_def, FUNPOW]
+QED
+
 Definition smap_def:
-  smap f s = sunfold (\s. (f (shd s), stl s)) s
+  smap f s = sunfold (f o shd) stl s
 End
 
 Theorem smap_thm[simp]:
@@ -238,7 +249,6 @@ Proof
   LEAST_ELIM_TAC >> conj_tac >- metis_tac[] >> rw[]
 QED
 
-
 Definition sconst_def:
   sconst x = λi. x
 End
@@ -249,41 +259,97 @@ Proof
   simp[sconst_def, scons_alt, FUN_EQ_THM] >> Cases >> simp[]
 QED
 
-Definition siterate_def:
-  siterate f sd = sunfold (λsd0. (sd0, f sd0)) sd
+Definition sdrop_def:
+  sdrop n s = FUNPOW stl n s
 End
 
-Theorem shd_siterate[simp]:
-  shd (siterate f sd) = sd
+Theorem sdrop_thm[simp]:
+  sdrop 0 s = s ∧
+  sdrop (SUC n) s = stl (sdrop n s) ∧
+  sdrop (NUMERAL (BIT2 n)) s = stl (sdrop (NUMERAL (BIT1 n)) s) ∧
+  sdrop (NUMERAL (BIT1 n)) s = stl (sdrop (NUMERAL (BIT1 n) - 1) s)
 Proof
-  simp[siterate_def, Once sunfold_thm]
+  simp[sdrop_def, numeralTheory.numeral_funpow, PRE_SUB1] >>
+  simp[GSYM FUNPOW_SUC] >> simp[FUNPOW]
 QED
 
-Theorem stl_siterate[simp]:
-  stl (siterate f sd) = siterate f (f sd)
+Theorem sdrop_eq_mono:
+  ∀m n s t. sdrop m s = sdrop m t ∧ m ≤ n ⇒ sdrop n s = sdrop n t
 Proof
-  simp[stl_def, siterate_def] >>
-  simp[Once sunfold_thm, SimpLHS, scons_alt, GSYM ADD1, FUN_EQ_THM]
+  simp[sdrop_def, LESS_EQ_EXISTS, PULL_EXISTS] >> ONCE_REWRITE_TAC[ADD_COMM] >>
+  simp[FUNPOW_ADD]
 QED
 
-Theorem siterate_scons_eqn:
-  siterate f sd = scons sd (siterate f (f sd))
+Theorem stl_sdrop:
+  stl (sdrop i s) = sdrop i (stl s)
 Proof
-  simp[Once sbisimulation] >>
-  qexists
-    ‘λs1 s2. ∃sd. s1 = siterate f sd ∧ s2 = scons sd (siterate f (f sd))’ >>
-  rw[]>> simp[]
+  simp[sdrop_def, GSYM FUNPOW_SUC, FUNPOW]
 QED
 
-Theorem siterate_FUNPOW:
-  siterate f sd = λi. FUNPOW f i sd
+Definition sexists_def:
+  sexists P s = ∃i. P (s i)
+End
+
+Theorem sexists_thm[simp]:
+  sexists P (scons h t) ⇔ P h ∨ sexists P t
 Proof
-  simp[Once sbisimulation] >>
-  qexists‘λs1 s2. ∃sd. s1 = siterate f sd ∧ s2 = λi. FUNPOW f i sd’ >>
-  rw[]
-  >- (rpt $ irule_at Any EQ_REFL)
-  >- simp[Once sunfold_thm, siterate_def] >>
-  disj1_tac >> qexists ‘f sd’ >> simp[SimpLHS, stl_def, FUNPOW_ADD] >>
-  simp[siterate_def, Once sunfold_thm, SimpLHS, scons_alt, GSYM ADD1] >>
-  simp[GSYM siterate_def, FUN_EQ_THM]
+  simp[sexists_def, scons_alt] >>
+  simp[SimpLHS, Once EXISTS_NUM]
+QED
+
+Theorem sexists_ind:
+  ∀P.
+    (∀h t. P h ⇒ Q (scons h t)) ∧
+    (∀h t. Q t ∧ sexists P t ⇒ Q (scons h t)) ⇒
+    ∀s. sexists P s ⇒ Q s
+Proof
+  simp[sexists_def, PULL_EXISTS] >> gen_tac >> strip_tac >>
+  Induct_on ‘i’
+  >- (rpt strip_tac >> first_x_assum drule >>
+      disch_then $ qspec_then ‘stl s’ mp_tac >> simp[]) >>
+  rw[] >>
+  first_x_assum $ qspec_then ‘stl s’ mp_tac >>
+  ‘P (stl s i)’ by simp[stl_def, GSYM ADD1] >>
+  simp[] >> strip_tac >> first_x_assum drule_all >>
+  disch_then $ qspec_then ‘shd s’ mp_tac >> simp[]
+QED
+
+(* eventually two sequences exactly coincide *)
+Definition seventuallyeq_def:
+  seventuallyeq s t ⇔ ∃i. sdrop i s = sdrop i t
+End
+
+Theorem seventuallyeq_REFL:
+  seventuallyeq s s
+Proof
+  simp[seventuallyeq_def]
+QED
+
+Theorem seventuallyeq_SYM:
+  seventuallyeq s t ⇔ seventuallyeq t s
+Proof
+  metis_tac[seventuallyeq_def]
+QED
+
+Theorem seventuallyeq_TRANS:
+  seventuallyeq s t ∧ seventuallyeq t u ⇒ seventuallyeq s u
+Proof
+  simp[seventuallyeq_def, PULL_EXISTS] >> qx_genl_tac [‘i’, ‘j’] >>
+  strip_tac >> qexists ‘MAX i j’ >>
+  rpt (dxrule_then assume_tac sdrop_eq_mono) >>
+  rpt (first_x_assum (resolve_then Any assume_tac (iffRL $ cj 1 MAX_LE))) >>
+  metis_tac[LESS_EQ_REFL]
+QED
+
+Theorem seventuallyeq_ind:
+  ∀P.
+    (∀s. P s s) ∧
+    (∀h1 h2 s t. P s t ∧ seventuallyeq s t ⇒ P (scons h1 s) (scons h2 t)) ⇒
+    ∀s t. seventuallyeq s t ⇒ P s t
+Proof
+  simp[seventuallyeq_def, PULL_EXISTS] >> gen_tac >> strip_tac >>
+  Induct_on ‘i’ >> simp[] >> rw[] >>
+  Cases_on ‘s’ using stream_cases >>
+  Cases_on ‘t’ using stream_cases >>
+  last_x_assum irule >> gvs[stl_sdrop] >> metis_tac[]
 QED
