@@ -1008,10 +1008,14 @@ local
             handle Conv.UNCHANGED => raise ERR "" "") ()
         handle Feedback.HOL_ERR _ =>
 
-        profile "rewrite(10)(BBLAST)" blastLib.BBLAST_PROVE t
+        (profile "rewrite(10)(BBLAST)" (Feedback.trace("print blast counterexamples", 0) blastLib.BBLAST_PROVE) t
+
         handle Feedback.HOL_ERR _ =>
 
         profile "rewrite(11)(arith)" arith_prove t
+
+        | HolSatLib.SAT_cex _ => profile "rewrite(11)(arith)" arith_prove t)
+
     in
       (state_cache_thm state thm, thm)
     end
