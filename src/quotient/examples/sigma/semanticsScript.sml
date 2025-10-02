@@ -72,11 +72,11 @@ val TC_INDUCT_TAC =
 (* Barendregt's Lemma 3.2.2:  *)
 
 
-val TC_DIAMOND1 = store_thm
-   ("TC_DIAMOND1",
-    “!R (a:'a) b. TC R a b ==>
+Theorem TC_DIAMOND1:
+     !R (a:'a) b. TC R a b ==>
           (DIAMOND R ==> (!c. R a c ==>
-               (?d. R b d /\ TC R c d)))”,
+               (?d. R b d /\ TC R c d)))
+Proof
     GEN_TAC
     THEN TC_INDUCT_TAC
     THEN REPEAT STRIP_TAC
@@ -93,13 +93,13 @@ val TC_DIAMOND1 = store_thm
         THEN ASM_REWRITE_TAC[]
         THEN IMP_RES_TAC (REWRITE_RULE[transitive_def] TC_TRANSITIVE)
       ]
-   );
+QED
 
-val TC_DIAMOND2 = store_thm
-   ("TC_DIAMOND2",
-    “!R (a:'a) b. TC R a b ==>
+Theorem TC_DIAMOND2:
+     !R (a:'a) b. TC R a b ==>
           (DIAMOND R ==> (!c. TC R a c ==>
-               (?d. TC R b d /\ TC R c d)))”,
+               (?d. TC R b d /\ TC R c d)))
+Proof
     GEN_TAC
     THEN TC_INDUCT_TAC
     THEN REPEAT STRIP_TAC
@@ -115,18 +115,18 @@ val TC_DIAMOND2 = store_thm
         THEN ASM_REWRITE_TAC[]
         THEN IMP_RES_TAC (REWRITE_RULE[transitive_def] TC_TRANSITIVE)
       ]
-   );
+QED
 
-val TC_DIAMOND = store_thm
-   ("TC_DIAMOND",
-    “!R:'a->'a->bool. DIAMOND R ==> DIAMOND (TC R)”,
+Theorem TC_DIAMOND:
+     !R:'a->'a->bool. DIAMOND R ==> DIAMOND (TC R)
+Proof
     REPEAT STRIP_TAC
     THEN REWRITE_TAC[DIAMOND]
     THEN REPEAT STRIP_TAC
     THEN IMP_RES_TAC TC_DIAMOND2
     THEN EXISTS_TAC ``d'':'a``
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
 
@@ -178,23 +178,23 @@ Proof
       ]
 QED
 
-val SUB_invoke_method = store_thm
-   ("SUB_invoke_method",
-    “!m o' x L. ((invoke_method m o') <[ [x,L]) =
-                    invoke_method (m <[ [x,L]) (o' <[ [x,L])”,
+Theorem SUB_invoke_method:
+     !m o' x L. ((invoke_method m o') <[ [x,L]) =
+                    invoke_method (m <[ [x,L]) (o' <[ [x,L])
+Proof
     MUTUAL_INDUCT_THEN object_induct ASSUME_TAC
     THEN REPEAT GEN_TAC
     THEN SIMPLE_SUBST_TAC
     THEN REWRITE_TAC[invoke_method]
     THEN DEP_REWRITE_TAC[BARENDREGT_SUBSTITUTION_LEMMA]
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
-val FV_invoke_dict = store_thm
-   ("FV_invoke_dict",
-    “!d o' lb. FV_obj (invoke_dict d o' lb) SUBSET
-                  (FV_dict d UNION FV_obj o')”,
+Theorem FV_invoke_dict:
+     !d o' lb. FV_obj (invoke_dict d o' lb) SUBSET
+                  (FV_dict d UNION FV_obj o')
+Proof
     MUTUAL_INDUCT_THEN object_induct ASSUME_TAC
     THEN REWRITE_TAC[invoke_dict]
     THEN REWRITE_TAC[obj_0, FV_object]
@@ -226,12 +226,12 @@ val FV_invoke_dict = store_thm
         THEN REWRITE_TAC[UNION_ASSOC]
         THEN REWRITE_TAC[SUBSET_UNION]
       ]
-   );
+QED
 
-val SUB_invoke_dict = store_thm
-   ("SUB_invoke_dict",
-    “!d o' l x L. ((invoke_dict d o' l) <[ [x,L]) =
-                      invoke_dict (d <[ [x,L]) (o' <[ [x,L]) l”,
+Theorem SUB_invoke_dict:
+     !d o' l x L. ((invoke_dict d o' l) <[ [x,L]) =
+                      invoke_dict (d <[ [x,L]) (o' <[ [x,L]) l
+Proof
     MUTUAL_INDUCT_THEN object_induct ASSUME_TAC
     THEN REPEAT GEN_TAC
     THENL
@@ -247,12 +247,12 @@ val SUB_invoke_dict = store_thm
             ASM_REWRITE_TAC[]
           ]
       ]
-   );
+QED
 
 
-val FV_invoke = store_thm
-   ("FV_invoke",
-    “!a lb. FV_obj (invoke a lb) SUBSET FV_obj a”,
+Theorem FV_invoke:
+     !a lb. FV_obj (invoke a lb) SUBSET FV_obj a
+Proof
     MUTUAL_INDUCT_THEN object_induct ASSUME_TAC
     THEN REWRITE_TAC[invoke_def]
     THEN REWRITE_TAC[obj_0, FV_object, EMPTY_SUBSET]
@@ -262,24 +262,24 @@ val FV_invoke = store_thm
                            FV_invoke_dict)
     THEN REWRITE_TAC[FV_object]
     THEN REWRITE_TAC[UNION_IDEMPOT]
-   );
+QED
 
-val SUB_invoke = store_thm
-   ("SUB_invoke",
-    “!d l x L. ((invoke (OBJ d) l) <[ [x,L]) =
-                    invoke ((OBJ d) <[ [x,L]) l”,
+Theorem SUB_invoke:
+     !d l x L. ((invoke (OBJ d) l) <[ [x,L]) =
+                    invoke ((OBJ d) <[ [x,L]) l
+Proof
     REPEAT GEN_TAC
     THEN REWRITE_TAC[invoke,SUB_object]
     THEN REWRITE_TAC[SUB_invoke_dict]
     THEN REWRITE_TAC[SUB_object]
-   );
+QED
 
 
 
-val FV_update_dict = store_thm
-   ("FV_update_dict",
-    “!d lb mth. FV_dict (update_dict d lb mth) SUBSET
-                   (FV_dict d UNION FV_method mth)”,
+Theorem FV_update_dict:
+     !d lb mth. FV_dict (update_dict d lb mth) SUBSET
+                   (FV_dict d UNION FV_method mth)
+Proof
     MUTUAL_INDUCT_THEN object_induct ASSUME_TAC
     THEN REWRITE_TAC[update_dict]
     THEN REWRITE_TAC[FV_object, EMPTY_SUBSET]
@@ -309,12 +309,12 @@ val FV_update_dict = store_thm
             THEN REWRITE_TAC[SUBSET_UNION]
           ]
       ]
-   );
+QED
 
-val SUB_update_dict = store_thm
-   ("SUB_update_dict",
-    “!d lb mth x L. ((update_dict d lb mth) <[ [x,L]) =
-                        update_dict (d <[ [x,L]) lb (mth <[ [x,L])”,
+Theorem SUB_update_dict:
+     !d lb mth x L. ((update_dict d lb mth) <[ [x,L]) =
+                        update_dict (d <[ [x,L]) lb (mth <[ [x,L])
+Proof
     MUTUAL_INDUCT_THEN object_induct ASSUME_TAC
     THENL
       [ REWRITE_TAC[update_dict,SUB_object],
@@ -329,13 +329,13 @@ val SUB_update_dict = store_thm
             ASM_REWRITE_TAC[SUB_object]
           ]
       ]
-   );
+QED
 
 
-val FV_update = store_thm
-   ("FV_update",
-    “!a lb mth. FV_obj (update a lb mth) SUBSET
-                   (FV_obj a UNION FV_method mth)”,
+Theorem FV_update:
+     !a lb mth. FV_obj (update a lb mth) SUBSET
+                   (FV_obj a UNION FV_method mth)
+Proof
     MUTUAL_INDUCT_THEN object_induct ASSUME_TAC
     THEN REWRITE_TAC[update_def]
     THEN REWRITE_TAC[obj_0, FV_object, EMPTY_SUBSET]
@@ -344,14 +344,14 @@ val FV_update = store_thm
     THEN ASSUME_TAC (SPEC_ALL (SPEC “l:^dict” FV_update_dict))
     THEN ASM_REWRITE_TAC[UNION_SUBSET]
     THEN REWRITE_TAC[SUBSET_UNION]
-   );
+QED
 
-val SUB_update = store_thm
-   ("SUB_update",
-    “!d lb mth x L. ((update (OBJ d) lb mth) <[ [x,L]) =
-                      update ((OBJ d) <[ [x,L]) lb (mth <[ [x,L])”,
+Theorem SUB_update:
+     !d lb mth x L. ((update (OBJ d) lb mth) <[ [x,L]) =
+                      update ((OBJ d) <[ [x,L]) lb (mth <[ [x,L])
+Proof
     REWRITE_TAC[update,SUB_object,SUB_update_dict]
-   );
+QED
 
 
 
@@ -412,41 +412,41 @@ val _ = save_thm ("SIGMA_R_strong_ind", SIGMA_R_strong_ind);
 
 (* SIGMA_R is a deterministic relation. *)
 
-val SIGMA_R_deterministic = store_thm
-   ("SIGMA_R_deterministic",
-    “!o1 o2. SIGMA_R o1 o2 ==>
+Theorem SIGMA_R_deterministic:
+     !o1 o2. SIGMA_R o1 o2 ==>
                 !o3. SIGMA_R o1 o3 ==>
-                          (o2 = o3)”,
+                          (o2 = o3)
+Proof
     rule_induct SIGMA_R_strong_ind
     THEN REPEAT CONJ_TAC
     THEN REPEAT GEN_TAC
     THEN REWRITE_TAC SIGMA_R_inv_thms
     THEN REWRITE_TAC[object_distinct,object_one_one]
     THEN RW_TAC std_ss []
-   );
+QED
 
 (* Note that SIGMA_R is not reflexive, symmetric, or transitive. *)
 
-val SIGMA_R_FV = store_thm
-   ("SIGMA_R_FV",
-    “!o1 o2. SIGMA_R o1 o2 ==>
-                     (FV_obj o2 SUBSET FV_obj o1)”,
+Theorem SIGMA_R_FV:
+     !o1 o2. SIGMA_R o1 o2 ==>
+                     (FV_obj o2 SUBSET FV_obj o1)
+Proof
     rule_induct SIGMA_R_strong_ind
     THEN ONCE_REWRITE_TAC[FV_object]
     THEN REWRITE_TAC[FV_invoke,FV_update]
-   );
+QED
 
 val [obj_cases, dict_cases, entry_cases, method_cases]
     = CONJUNCTS object_cases;
 
-val SIGMA_R_equals = store_thm
-   ("SIGMA_R_equals",
-    “(!o1 l o2. SIGMA_R (INVOKE o1 l) o2 =
+Theorem SIGMA_R_equals:
+     (!o1 l o2. SIGMA_R (INVOKE o1 l) o2 =
                    (?d. (o1 = OBJ d) /\ (o2 = invoke o1 l))) /\
         (!o1 l o2. SIGMA_R (UPDATE o1 l m) o2 =
                    (?d. (o1 = OBJ d) /\ (o2 = update o1 l m))) /\
         (!x o2. SIGMA_R (OVAR x) o2 = F) /\
-        (!d o2. SIGMA_R (OBJ d) o2 = F)”,
+        (!d o2. SIGMA_R (OBJ d) o2 = F)
+Proof
     REWRITE_TAC SIGMA_R_inv_thms
     THEN REWRITE_TAC[object_distinct,object_one_one]
     THEN REPEAT STRIP_TAC
@@ -468,7 +468,7 @@ val SIGMA_R_equals = store_thm
         THEN EXISTS_TAC “m:method”
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 
 (* --------------------------------------------------------------------- *)
@@ -487,9 +487,9 @@ val SIGMA_R_equals = store_thm
 
 (* Barendregt Proposition 3.1.16, SIGMA_R is substitutive. *)
 
-val SIGMA_R_SUBSTITUTIVE = store_thm
-   ("SIGMA_R_SUBSTITUTIVE",
-    “SUBSTITUTIVE_obj SIGMA_R”,
+Theorem SIGMA_R_SUBSTITUTIVE:
+     SUBSTITUTIVE_obj SIGMA_R
+Proof
     REWRITE_TAC[SUBSTITUTIVE]
     THEN MUTUAL_INDUCT_THEN object_induct ASSUME_TAC
     THEN REWRITE_TAC[SIGMA_R_equals]
@@ -500,7 +500,7 @@ val SIGMA_R_SUBSTITUTIVE = store_thm
     THEN EXISTS_TAC “(d:^dict) <[ [x,L]”
     THEN REWRITE_TAC[SUB_invoke,SUB_update]
     THEN REWRITE_TAC[SUB_object]
-   );
+QED
 
 
 
@@ -612,9 +612,8 @@ val [REDL_obj_REFL, REDL_OBJ, REDL_INVOKE, REDL_UPDATE,
 
 
 
-val REDL_height_ind_thm_LEMMA = store_thm
-   ("REDL_height_ind_thm_LEMMA",
-    “!n P_0 P_1 P_2 P_3.
+Theorem REDL_height_ind_thm_LEMMA:
+     !n P_0 P_1 P_2 P_3.
          (!o1. P_0 o1 o1) /\
          (!d1 d2. P_1 d1 d2 ==> P_0 (OBJ d1) (OBJ d2)) /\
          (!o1 l o2. P_0 o1 o2 ==> P_0 (INVOKE o1 l) (INVOKE o2 l)) /\
@@ -647,7 +646,8 @@ val REDL_height_ind_thm_LEMMA = store_thm
                      P_2 e1 e2)) /\
          (!m1 m2. REDL_method m1 m2 ==>
                     ((HEIGHT_method m1 <= n) ==>
-                     P_3 m1 m2))”,
+                     P_3 m1 m2))
+Proof
     INDUCT_TAC
     THEN REPEAT GEN_TAC
     THEN STRIP_TAC
@@ -734,12 +734,11 @@ val REDL_height_ind_thm_LEMMA = store_thm
             THEN ASM_REWRITE_TAC[]
           ]
       ]
-   );
+QED
 
 
-val REDL_height_ind_thm = store_thm
-   ("REDL_height_ind_thm",
-    “!P_0 P_1 P_2 P_3.
+Theorem REDL_height_ind_thm:
+     !P_0 P_1 P_2 P_3.
          (!o1. P_0 o1 o1) /\
          (!d1 d2. P_1 d1 d2 ==> P_0 (OBJ d1) (OBJ d2)) /\
          (!o1 l o2. P_0 o1 o2 ==> P_0 (INVOKE o1 l) (INVOKE o2 l)) /\
@@ -765,7 +764,8 @@ val REDL_height_ind_thm = store_thm
          (!o1 o2. REDL_obj o1 o2 ==> P_0 o1 o2) /\
          (!d1 d2. REDL_dict d1 d2 ==> P_1 d1 d2) /\
          (!e1 e2. REDL_entry e1 e2 ==> P_2 e1 e2) /\
-         (!m1 m2. REDL_method m1 m2 ==> P_3 m1 m2)”,
+         (!m1 m2. REDL_method m1 m2 ==> P_3 m1 m2)
+Proof
     REPEAT STRIP_TAC
     THENL
       (map (fn tm => MP_TAC (SPEC_ALL (SPEC tm REDL_height_ind_thm_LEMMA)))
@@ -777,12 +777,11 @@ val REDL_height_ind_thm = store_thm
     THEN REPEAT STRIP_TAC
     THEN FIRST_ASSUM MATCH_MP_TAC
     THEN ASM_REWRITE_TAC[LESS_EQ_REFL]
-   );
+QED
 
 
-val REDL_height_strong_ind_LEMMA = store_thm
-   ("REDL_height_strong_ind_LEMMA",
-    “!n P_0 P_1 P_2 P_3.
+Theorem REDL_height_strong_ind_LEMMA:
+     !n P_0 P_1 P_2 P_3.
          (!o1. P_0 o1 o1) /\
          (!d1 d2. P_1 d1 d2 /\ REDL_dict d1 d2 ==> P_0 (OBJ d1) (OBJ d2)) /\
          (!o1 l o2.
@@ -813,7 +812,7 @@ val REDL_height_strong_ind_LEMMA = store_thm
          (!d1 d2. REDL_dict d1 d2 ==> HEIGHT_dict d1 <= n ==> P_1 d1 d2) /\
          (!e1 e2. REDL_entry e1 e2 ==> HEIGHT_entry e1 <= n ==> P_2 e1 e2) /\
          (!m1 m2. REDL_method m1 m2 ==> HEIGHT_method m1 <= n ==> P_3 m1 m2)
-    ”,
+Proof
     INDUCT_TAC
     THEN REPEAT GEN_TAC
     THEN STRIP_TAC
@@ -908,12 +907,11 @@ val REDL_height_strong_ind_LEMMA = store_thm
             THEN ASM_REWRITE_TAC[]
           ]
       ]
-   );
+QED
 
 
-val REDL_height_strong_ind = store_thm
-   ("REDL_height_strong_ind",
-    “!P_0 P_1 P_2 P_3.
+Theorem REDL_height_strong_ind:
+     !P_0 P_1 P_2 P_3.
          (!o1. P_0 o1 o1) /\
          (!d1 d2. P_1 d1 d2 /\ REDL_dict d1 d2 ==> P_0 (OBJ d1) (OBJ d2)) /\
          (!o1 l o2.
@@ -944,7 +942,8 @@ val REDL_height_strong_ind = store_thm
          (!o1 o2. REDL_obj o1 o2 ==> P_0 o1 o2) /\
          (!d1 d2. REDL_dict d1 d2 ==> P_1 d1 d2) /\
          (!e1 e2. REDL_entry e1 e2 ==> P_2 e1 e2) /\
-         (!m1 m2. REDL_method m1 m2 ==> P_3 m1 m2)”,
+         (!m1 m2. REDL_method m1 m2 ==> P_3 m1 m2)
+Proof
     REPEAT STRIP_TAC
     THENL
       (map (fn tm => MP_TAC (SPEC_ALL (SPEC tm REDL_height_strong_ind_LEMMA)))
@@ -956,7 +955,7 @@ val REDL_height_strong_ind = store_thm
     THEN REPEAT STRIP_TAC
     THEN FIRST_ASSUM MATCH_MP_TAC
     THEN ASM_REWRITE_TAC[LESS_EQ_REFL]
-   );
+QED
 
 
 
@@ -1042,16 +1041,16 @@ val SHIFT_IN_DIFF2 = TAC_PROOF(([],
    );
 
 
-val SUBST_REVERSE = store_thm
-   ("SUBST_REVERSE",
-    “(!M x y. ~(y IN FV_obj M DIFF {x})    ==>
+Theorem SUBST_REVERSE:
+     (!M x y. ~(y IN FV_obj M DIFF {x})    ==>
                 (((M <[ [x,OVAR y]) <[ [y,OVAR x]) = M)) /\
         (!M x y. ~(y IN FV_dict M DIFF {x})    ==>
                 (((M <[ [x,OVAR y]) <[ [y,OVAR x]) = M)) /\
         (!M x y. ~(y IN FV_entry M DIFF {x})    ==>
                 (((M <[ [x,OVAR y]) <[ [y,OVAR x]) = M)) /\
         (!M x y. ~(y IN FV_method M DIFF {x})    ==>
-                (((M <[ [x,OVAR y]) <[ [y,OVAR x]) = M))”,
+                (((M <[ [x,OVAR y]) <[ [y,OVAR x]) = M))
+Proof
     MUTUAL_INDUCT_THEN object_height_induct ASSUME_TAC
     THEN REWRITE_TAC[FV_object,IN_UNION,IN_DIFF,IN,DE_MORGAN_THM]
     THEN REPEAT STRIP_TAC
@@ -1117,7 +1116,7 @@ val SUBST_REVERSE = store_thm
         THEN DEP_ASM_REWRITE_TAC[]
         THEN REWRITE_TAC[IN_DIFF,IN]
       ]
-   );
+QED
 
 
 val REDL_SUBSTITUTIVE_SAME = TAC_PROOF(([],
@@ -1164,9 +1163,8 @@ val REDL_SUBSTITUTIVE_SAME = TAC_PROOF(([],
    );
 
 
-val REDL_SUBSTITUTIVE_LEMMA = store_thm
-   ("REDL_SUBSTITUTIVE_LEMMA",
-    “(!M M'.
+Theorem REDL_SUBSTITUTIVE_LEMMA:
+     (!M M'.
           REDL_obj M M' ==>
             (!N N' x. REDL_obj N N' ==>
                 REDL_obj (M <[ [x,N]) (M' <[ [x,N']))) /\
@@ -1181,7 +1179,8 @@ val REDL_SUBSTITUTIVE_LEMMA = store_thm
         (!M M'.
           REDL_method M M' ==>
             (!N N' x. REDL_obj N N' ==>
-                REDL_method (M <[ [x,N]) (M' <[ [x,N'])))”,
+                REDL_method (M <[ [x,N]) (M' <[ [x,N'])))
+Proof
     rule_induct REDL_height_strong_ind (* strong, not weak induction *)
     THEN REPEAT STRIP_TAC (* 12 subgoals *)
     THEN SIMPLE_SUBST_TAC
@@ -1193,12 +1192,11 @@ val REDL_SUBSTITUTIVE_LEMMA = store_thm
                         REWRITE_RULE[SIGMA_one_one])
     THEN DEP_ASM_REWRITE_TAC[]
     THEN REWRITE_TAC[REDL_rules_sat]
-   );
+QED
 
 
-val REDL_invoke_SAME = store_thm
-   ("REDL_invoke_SAME",
-    “(!M.
+Theorem REDL_invoke_SAME:
+     (!M.
           (!N N' l. REDL_obj N N' ==>
                 REDL_obj (invoke_dict M N l) (invoke_dict M N' l))) /\
         (!(M:^entry).
@@ -1207,7 +1205,8 @@ val REDL_invoke_SAME = store_thm
                          (invoke_method (SND M) N'))) /\
         (!M.
           (!N N'. REDL_obj N N' ==>
-                REDL_obj (invoke_method M N) (invoke_method M N')))”,
+                REDL_obj (invoke_method M N) (invoke_method M N')))
+Proof
     MUTUAL_INDUCT_THEN object_induct ASSUME_TAC
     THEN REPEAT STRIP_TAC
     THENL (* 4 subgoals *)
@@ -1225,7 +1224,7 @@ val REDL_invoke_SAME = store_thm
         FIRST_ASSUM MATCH_MP_TAC
         THEN FIRST_ASSUM ACCEPT_TAC
       ]
-   );
+QED
 
 
 val REDL_invoke_LEMMA1 = TAC_PROOF(([],
@@ -1275,9 +1274,8 @@ val REDL_invoke_LEMMA1 = TAC_PROOF(([],
    );
 
 
-val REDL_invoke_LEMMA = store_thm
-   ("REDL_invoke_LEMMA",
-    “(!D M'.
+Theorem REDL_invoke_LEMMA:
+     (!D M'.
           REDL_obj (OBJ D) M' ==>
             (!l.
                 REDL_obj (invoke (OBJ D) l) (invoke M' l))) /\
@@ -1294,13 +1292,14 @@ val REDL_invoke_LEMMA = store_thm
         (!M M'.
           REDL_method M M' ==>
             (!N N'. REDL_obj N N' ==>
-                REDL_obj (invoke_method M N) (invoke_method M' N')))”,
+                REDL_obj (invoke_method M N) (invoke_method M' N')))
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC REDL_invoke_LEMMA1
     THEN ASM_REWRITE_TAC[]
     THEN FIRST_ASSUM (ASSUME_TAC o REWRITE_RULE[] o SPEC “D:^dict”)
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
 val REDL_update_SAME1 = TAC_PROOF(([],
@@ -1326,19 +1325,19 @@ val REDL_update_SAME1 = TAC_PROOF(([],
       ]
    );
 
-val REDL_update_SAME = store_thm
-   ("REDL_update_SAME",
-    “(!D N N' l. REDL_method N N' ==>
+Theorem REDL_update_SAME:
+     (!D N N' l. REDL_method N N' ==>
                 REDL_obj (update (OBJ D) l N) (update (OBJ D) l N')) /\
         (!M N N' l. REDL_method N N' ==>
-                REDL_dict (update_dict M l N) (update_dict M l N'))”,
+                REDL_dict (update_dict M l N) (update_dict M l N'))
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC REDL_update_SAME1
     THEN ASM_REWRITE_TAC[]
     THEN FIRST_ASSUM MATCH_MP_TAC
     THEN EXISTS_TAC “D:^dict”
     THEN REFL_TAC
-   );
+QED
 
 
 val REDL_update_LEMMA1 = TAC_PROOF(([],
@@ -1384,29 +1383,29 @@ val REDL_update_LEMMA1 = TAC_PROOF(([],
    );
 
 
-val REDL_update_LEMMA = store_thm
-   ("REDL_update_LEMMA",
-    “(!D M'.
+Theorem REDL_update_LEMMA:
+     (!D M'.
           REDL_obj (OBJ D) M' ==>
             (!N N' l. REDL_method N N' ==>
                 REDL_obj (update (OBJ D) l N) (update M' l N'))) /\
         (!M M'.
           REDL_dict M M' ==>
             (!N N' l. REDL_method N N' ==>
-                REDL_dict (update_dict M l N) (update_dict M' l N')))”,
+                REDL_dict (update_dict M l N) (update_dict M' l N')))
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC REDL_update_LEMMA1
     THEN ASM_REWRITE_TAC[]
     THEN FIRST_ASSUM MATCH_MP_TAC
     THEN EXISTS_TAC “D:^dict”
     THEN REFL_TAC
-   );
+QED
 
 
-val REDL_OBJ_IMP = store_thm
-   ("REDL_OBJ_IMP",
-    “!o1 d.
-          REDL_obj (OBJ d) o1 ==> (?d2. o1 = OBJ d2)”,
+Theorem REDL_OBJ_IMP:
+     !o1 d.
+          REDL_obj (OBJ d) o1 ==> (?d2. o1 = OBJ d2)
+Proof
     ONCE_REWRITE_TAC REDL_inv_thms
     THEN REWRITE_TAC[object_distinct,NOT_NIL_CONS, object_one_one]
     THEN REPEAT STRIP_TAC
@@ -1417,13 +1416,13 @@ val REDL_OBJ_IMP = store_thm
         EXISTS_TAC “d2:^dict”
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 
-val REDL_OBJ_IMP_dict = store_thm
-   ("REDL_OBJ_IMP_dict",
-    “!d1 d2.
-          REDL_obj (OBJ d1) (OBJ d2) ==> REDL_dict d1 d2”,
+Theorem REDL_OBJ_IMP_dict:
+     !d1 d2.
+          REDL_obj (OBJ d1) (OBJ d2) ==> REDL_dict d1 d2
+Proof
     REPEAT GEN_TAC
     THEN DISCH_THEN (STRIP_ASSUME_TAC o
                 REWRITE_RULE[object_distinct,NOT_NIL_CONS, object_one_one] o
@@ -1433,13 +1432,13 @@ val REDL_OBJ_IMP_dict = store_thm
 
         ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 
-val NOT_IN_SUBSET_DIFF = store_thm
-   ("NOT_IN_SUBSET_DIFF",
-    “!s1 s2 t (x:'a).
-          s2 SUBSET s1 /\ ~(x IN s1 DIFF t) ==> ~(x IN s2 DIFF t)”,
+Theorem NOT_IN_SUBSET_DIFF:
+     !s1 s2 t (x:'a).
+          s2 SUBSET s1 /\ ~(x IN s1 DIFF t) ==> ~(x IN s2 DIFF t)
+Proof
     REPEAT GEN_TAC
     THEN REWRITE_TAC[IN_DIFF,IN,DE_MORGAN_THM]
     THEN STRIP_TAC
@@ -1449,13 +1448,12 @@ val NOT_IN_SUBSET_DIFF = store_thm
 
         ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 
 
-val REDL_obj_cases = store_thm
-   ("REDL_obj_cases",
-    “(!d1 o2.
+Theorem REDL_obj_cases:
+     (!d1 o2.
           REDL_obj (OBJ d1) o2 ==>
           (?d2. (o2 = (OBJ d2)) /\ REDL_dict d1 d2)) /\
         (!o1 l o2.
@@ -1472,7 +1470,8 @@ val REDL_obj_cases = store_thm
            (?d1 d2 m2. (o1 = OBJ d1) /\
                     (o2 = (update (OBJ d2) l m2)) /\
                     REDL_dict d1 d2 /\
-                    REDL_method m1 m2)))”,
+                    REDL_method m1 m2)))
+Proof
     REPEAT CONJ_TAC
     THEN REPEAT GEN_TAC THEN DISCH_THEN (STRIP_ASSUME_TAC o
             REWRITE_RULE[object_distinct,NOT_NIL_CONS,object_one_one] o
@@ -1516,17 +1515,17 @@ val REDL_obj_cases = store_thm
         THEN EXISTS_TAC “m2:method”
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 
-val REDL_dict_cases = store_thm
-   ("REDL_dict_cases",
-    “(!e1 d1 d2.
+Theorem REDL_dict_cases:
+     (!e1 d1 d2.
           REDL_dict (CONS e1 d1) d2 ==>
           (?e2 d3. (d2 = (CONS e2 d3)) /\
                    REDL_entry e1 e2 /\ REDL_dict d1 d3)) /\
         (!d2.
-          REDL_dict [] d2 ==> (d2 = []))”,
+          REDL_dict [] d2 ==> (d2 = []))
+Proof
     CONJ_TAC
     THEN REPEAT GEN_TAC THEN DISCH_THEN (STRIP_ASSUME_TAC o
             REWRITE_RULE[object_distinct,NOT_NIL_CONS,object_one_one] o
@@ -1541,14 +1540,14 @@ val REDL_dict_cases = store_thm
         THEN EXISTS_TAC “d2':^dict”
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 
-val REDL_entry_cases = store_thm
-   ("REDL_entry_cases",
-    “!l m1 e2.
+Theorem REDL_entry_cases:
+     !l m1 e2.
           REDL_entry (l,m1) e2 ==>
-          (?m2. (e2 = (l,m2)) /\ REDL_method m1 m2)”,
+          (?m2. (e2 = (l,m2)) /\ REDL_method m1 m2)
+Proof
     REPEAT GEN_TAC THEN DISCH_THEN (STRIP_ASSUME_TAC o
             REWRITE_RULE[object_distinct,NOT_NIL_CONS,object_one_one] o
             ONCE_REWRITE_RULE REDL_inv_thms)
@@ -1560,14 +1559,14 @@ val REDL_entry_cases = store_thm
         EXISTS_TAC “m2:method”
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 
-val REDL_method_cases = store_thm
-   ("REDL_method_cases",
-    “!x o1 m2.
+Theorem REDL_method_cases:
+     !x o1 m2.
           REDL_method (SIGMA x o1) m2 ==>
-          (?o2. (m2 = SIGMA x o2) /\ REDL_obj o1 o2)”,
+          (?o2. (m2 = SIGMA x o2) /\ REDL_obj o1 o2)
+Proof
     REPEAT GEN_TAC THEN DISCH_THEN (STRIP_ASSUME_TAC o
             ONCE_REWRITE_RULE REDL_inv_thms)
     THENL
@@ -1595,13 +1594,12 @@ val REDL_method_cases = store_thm
         THEN DEP_ASM_REWRITE_TAC[]
         THEN ASM_REWRITE_TAC[IN_DIFF,IN]
       ]
-   );
+QED
 
 
 
-val REDL_DIAMOND_LEMMA = store_thm
-   ("REDL_DIAMOND_LEMMA",
-    “(!o1 o2.
+Theorem REDL_DIAMOND_LEMMA:
+     (!o1 o2.
           REDL_obj o1 o2 ==>
           (!o3. REDL_obj o1 o3 ==>
                 (?o4. REDL_obj o2 o4 /\ REDL_obj o3 o4))) /\
@@ -1616,7 +1614,8 @@ val REDL_DIAMOND_LEMMA = store_thm
         (!m1 m2.
           REDL_method m1 m2 ==>
           (!m3. REDL_method m1 m3 ==>
-                (?m4. REDL_method m2 m4 /\ REDL_method m3 m4)))”,
+                (?m4. REDL_method m2 m4 /\ REDL_method m3 m4)))
+Proof
     rule_induct REDL_strong_ind (* strong, not weak induction *)
     THEN REPEAT STRIP_TAC
     THENL (* 12 subgoals *)
@@ -1724,14 +1723,14 @@ val REDL_DIAMOND_LEMMA = store_thm
         THEN EXISTS_TAC “SIGMA x o4”
         THEN DEP_ASM_REWRITE_TAC[REDL_rules_sat]
       ]
-   );
+QED
 
-val REDL_DIAMOND = store_thm
-   ("REDL_DIAMOND",
-    “DIAMOND REDL_obj /\
+Theorem REDL_DIAMOND:
+     DIAMOND REDL_obj /\
         DIAMOND REDL_dict /\
         DIAMOND REDL_entry /\
-        DIAMOND REDL_method”,
+        DIAMOND REDL_method
+Proof
     REWRITE_TAC[DIAMOND]
     THEN REPEAT STRIP_TAC
     THEN IMP_RES_TAC REDL_DIAMOND_LEMMA
@@ -1748,7 +1747,7 @@ val REDL_DIAMOND = store_thm
         EXISTS_TAC “m4':method”
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 
 (* copied: *)
@@ -1804,16 +1803,16 @@ TC   R   =   R-arrow with "*" superscript after   =   transitive closure
 *)
 
 
-val RED1_SIGMA_IMP_REDL_LEMMA = store_thm
-   ("RED1_SIGMA_IMP_REDL_LEMMA",
-    “(!R o1 o2.
+Theorem RED1_SIGMA_IMP_REDL_LEMMA:
+     (!R o1 o2.
           RED1_obj R o1 o2 ==> (R = SIGMA_R) ==> REDL_obj o1 o2) /\
         (!R d1 d2.
           RED1_dict R d1 d2 ==> (R = SIGMA_R) ==> REDL_dict d1 d2) /\
         (!R e1 e2.
           RED1_entry R e1 e2 ==> (R = SIGMA_R) ==> REDL_entry e1 e2) /\
         (!R m1 m2.
-          RED1_method R m1 m2 ==> (R = SIGMA_R) ==> REDL_method m1 m2)”,
+          RED1_method R m1 m2 ==> (R = SIGMA_R) ==> REDL_method m1 m2)
+Proof
     rule_induct RED1_ind_thm
     THEN REPEAT STRIP_TAC
     THEN POP_ASSUM REWRITE_ALL_THM
@@ -1837,35 +1836,35 @@ val RED1_SIGMA_IMP_REDL_LEMMA = store_thm
 
         DEP_ASM_REWRITE_TAC[REDL_rules_sat]
       ]
-   );
+QED
 
 
-val RED1_SIGMA_IMP_REDL = store_thm
-   ("RED1_SIGMA_IMP_REDL",
-    “(!o1 o2.
+Theorem RED1_SIGMA_IMP_REDL:
+     (!o1 o2.
           RED1_obj SIGMA_R o1 o2 ==> REDL_obj o1 o2) /\
         (!d1 d2.
           RED1_dict SIGMA_R d1 d2 ==> REDL_dict d1 d2) /\
         (!e1 e2.
           RED1_entry SIGMA_R e1 e2 ==> REDL_entry e1 e2) /\
         (!m1 m2.
-          RED1_method SIGMA_R m1 m2 ==> REDL_method m1 m2)”,
+          RED1_method SIGMA_R m1 m2 ==> REDL_method m1 m2)
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC RED1_SIGMA_IMP_REDL_LEMMA
     THEN POP_ASSUM (STRIP_ASSUME_TAC o REWRITE_RULE[])
-   );
+QED
 
-val RC_RED1_SIGMA_IMP_REDL = store_thm
-   ("RC_RED1_SIGMA_IMP_REDL",
-    “(!o1 o2. RC (RED1_obj SIGMA_R) o1 o2 ==> REDL_obj o1 o2) /\
+Theorem RC_RED1_SIGMA_IMP_REDL:
+     (!o1 o2. RC (RED1_obj SIGMA_R) o1 o2 ==> REDL_obj o1 o2) /\
         (!d1 d2. RC (RED1_dict SIGMA_R) d1 d2 ==> REDL_dict d1 d2) /\
         (!e1 e2. RC (RED1_entry SIGMA_R) e1 e2 ==> REDL_entry e1 e2) /\
-        (!m1 m2. RC (RED1_method SIGMA_R) m1 m2 ==> REDL_method m1 m2)”,
+        (!m1 m2. RC (RED1_method SIGMA_R) m1 m2 ==> REDL_method m1 m2)
+Proof
     REPEAT CONJ_TAC
     THEN RC_INDUCT_TAC
     THEN REWRITE_TAC[REDL_rules_sat]
     THEN REWRITE_TAC[RED1_SIGMA_IMP_REDL]
-   );
+QED
 
 val [RED1_R, RED1_OBJ, RED1_INVOKE, RED1_UPDATE1, RED1_UPDATE,
      RED1_CONS1, RED1_CONS2, RED1_PAIR, RED1_SIGMA] = CONJUNCTS RED1_rules_sat;
@@ -1876,27 +1875,26 @@ val [RED_obj_RED1, RED_obj_REFL, RED_obj_TRANS,
      RED_method_RED1, RED_method_REFL, RED_method_TRANS]
     = CONJUNCTS (CONV_RULE (DEPTH_CONV LEFT_IMP_EXISTS_CONV) RED_rules_sat);
 
-val RED1_SIGMA_R = store_thm
-   ("RED1_SIGMA_R",
-    “(!d l.
+Theorem RED1_SIGMA_R:
+     (!d l.
           RED1_obj SIGMA_R (INVOKE (OBJ d) l) (invoke (OBJ d) l)) /\
         (!d l m.
-          RED1_obj SIGMA_R (UPDATE (OBJ d) l m) (update (OBJ d) l m))”,
+          RED1_obj SIGMA_R (UPDATE (OBJ d) l m) (update (OBJ d) l m))
+Proof
     REPEAT STRIP_TAC
     THEN MATCH_MP_TAC RED1_R
     THEN REWRITE_TAC[SIGMA_R_rules_sat]
-   );
+QED
 
-val RED_SIGMA_R = store_thm
-   ("RED_SIGMA_R",
-    “(!d1 d2 l.
+Theorem RED_SIGMA_R:
+     (!d1 d2 l.
           RED_dict SIGMA_R d1 d2 ==>
           RED_obj SIGMA_R (INVOKE (OBJ d1) l) (invoke (OBJ d2) l)) /\
         (!d1 d2 l m1 m2.
           RED_dict SIGMA_R d1 d2 /\
           RED_method SIGMA_R m1 m2 ==>
           RED_obj SIGMA_R (UPDATE (OBJ d1) l m1) (update (OBJ d2) l m2))
-    ”,
+Proof
     REPEAT STRIP_TAC
     THENL
       [ MATCH_MP_TAC RED_obj_TRANS
@@ -1925,15 +1923,15 @@ val RED_SIGMA_R = store_thm
             THEN REWRITE_TAC[RED1_SIGMA_R]
           ]
       ]
-   );
+QED
 
 
-val REDL_IMP_RED_SIGMA = store_thm
-   ("REDL_IMP_RED_SIGMA",
-    “(!o1 o2. REDL_obj o1 o2 ==> RED_obj SIGMA_R o1 o2) /\
+Theorem REDL_IMP_RED_SIGMA:
+     (!o1 o2. REDL_obj o1 o2 ==> RED_obj SIGMA_R o1 o2) /\
         (!d1 d2. REDL_dict d1 d2 ==> RED_dict SIGMA_R d1 d2) /\
         (!e1 e2. REDL_entry e1 e2 ==> RED_entry SIGMA_R e1 e2) /\
-        (!m1 m2. REDL_method m1 m2 ==> RED_method SIGMA_R m1 m2)”,
+        (!m1 m2. REDL_method m1 m2 ==> RED_method SIGMA_R m1 m2)
+Proof
     rule_induct REDL_ind_thm
     THEN REPEAT STRIP_TAC
     THENL (* 12 subgoals *)
@@ -1970,37 +1968,37 @@ val REDL_IMP_RED_SIGMA = store_thm
         IMP_RES_TAC RED_COMPAT
         THEN ASM_REWRITE_TAC[]
      ]
-   );
+QED
 
 
-val TC_RC_SIGMA_IMP_RED_SIGMA = store_thm
-   ("TC_RC_SIGMA_IMP_RED_SIGMA",
-    “(!o1 o2. TC (RC (RED1_obj SIGMA_R)) o1 o2
+Theorem TC_RC_SIGMA_IMP_RED_SIGMA:
+     (!o1 o2. TC (RC (RED1_obj SIGMA_R)) o1 o2
                  ==> RED_obj SIGMA_R o1 o2) /\
         (!d1 d2. TC (RC (RED1_dict SIGMA_R)) d1 d2
                  ==> RED_dict SIGMA_R d1 d2) /\
         (!e1 e2. TC (RC (RED1_entry SIGMA_R)) e1 e2
                  ==> RED_entry SIGMA_R e1 e2) /\
         (!m1 m2. TC (RC (RED1_method SIGMA_R)) m1 m2
-                 ==> RED_method SIGMA_R m1 m2)”,
+                 ==> RED_method SIGMA_R m1 m2)
+Proof
     REPEAT CONJ_TAC
     THEN TC_INDUCT_TAC
     THEN REPEAT STRIP_TAC
     THEN IMP_RES_TAC RC_RED1_SIGMA_IMP_REDL
     THEN IMP_RES_TAC REDL_IMP_RED_SIGMA
     THEN IMP_RES_TAC RED_TRANS
-   );
+QED
 
-val RED_IMP_TC_RC_RED1 = store_thm
-   ("RED_IMP_TC_RC_RED1",
-    “(!R o1 o2. RED_obj R o1 o2
+Theorem RED_IMP_TC_RC_RED1:
+     (!R o1 o2. RED_obj R o1 o2
                    ==> TC (RC (RED1_obj R)) o1 o2) /\
         (!R d1 d2. RED_dict R d1 d2
                    ==> TC (RC (RED1_dict R)) d1 d2) /\
         (!R e1 e2. RED_entry R e1 e2
                    ==> TC (RC (RED1_entry R)) e1 e2) /\
         (!R m1 m2. RED_method R m1 m2
-                   ==> TC (RC (RED1_method R)) m1 m2)”,
+                   ==> TC (RC (RED1_method R)) m1 m2)
+Proof
     rule_induct RED_ind_thm
     THEN REPEAT STRIP_TAC
     THEN IMP_RES_TAC (REWRITE_RULE[transitive_def] TC_TRANSITIVE)
@@ -2008,18 +2006,18 @@ val RED_IMP_TC_RC_RED1 = store_thm
     THEN REWRITE_TAC[RC_REFLEXIVE]
     THEN IMP_RES_TAC RC_SUBSET
     THEN FIRST_ASSUM ACCEPT_TAC
-   );
+QED
 
-val TC_RC_SIGMA_IS_RED_SIGMA = store_thm
-   ("TC_RC_SIGMA_IS_RED_SIGMA",
-    “(!o1 o2. TC (RC (RED1_obj SIGMA_R)) o1 o2
+Theorem TC_RC_SIGMA_IS_RED_SIGMA:
+     (!o1 o2. TC (RC (RED1_obj SIGMA_R)) o1 o2
                  = RED_obj SIGMA_R o1 o2) /\
         (!d1 d2. TC (RC (RED1_dict SIGMA_R)) d1 d2
                  = RED_dict SIGMA_R d1 d2) /\
         (!e1 e2. TC (RC (RED1_entry SIGMA_R)) e1 e2
                  = RED_entry SIGMA_R e1 e2) /\
         (!m1 m2. TC (RC (RED1_method SIGMA_R)) m1 m2
-                 = RED_method SIGMA_R m1 m2)”,
+                 = RED_method SIGMA_R m1 m2)
+Proof
     REPEAT CONJ_TAC
     THEN REPEAT GEN_TAC
     THEN ( EQ_TAC
@@ -2029,26 +2027,26 @@ val TC_RC_SIGMA_IS_RED_SIGMA = store_thm
 
                IMP_RES_TAC RED_IMP_TC_RC_RED1
              ])
-   );
+QED
 
 
-val TC_REDL_IMP_RED_SIGMA = store_thm
-   ("TC_REDL_IMP_RED_SIGMA",
-    “(!o1 o2. TC REDL_obj o1 o2 ==> RED_obj SIGMA_R o1 o2) /\
+Theorem TC_REDL_IMP_RED_SIGMA:
+     (!o1 o2. TC REDL_obj o1 o2 ==> RED_obj SIGMA_R o1 o2) /\
         (!d1 d2. TC REDL_dict d1 d2 ==> RED_dict SIGMA_R d1 d2) /\
         (!e1 e2. TC REDL_entry e1 e2 ==> RED_entry SIGMA_R e1 e2) /\
-        (!m1 m2. TC REDL_method m1 m2 ==> RED_method SIGMA_R m1 m2)”,
+        (!m1 m2. TC REDL_method m1 m2 ==> RED_method SIGMA_R m1 m2)
+Proof
     REPEAT CONJ_TAC
     THEN TC_INDUCT_TAC
     THEN REPEAT STRIP_TAC
     THEN IMP_RES_TAC REDL_IMP_RED_SIGMA
     THEN IMP_RES_TAC RED_TRANS
-   );
+QED
 
-val TC_MONOTONIC_LEMMA = store_thm
-   ("TC_MONOTONIC_LEMMA",
-    “!R1 R2 (a:'a) b.
-          TC R1 a b ==> (!x y. R1 x y ==> R2 x y) ==> TC R2 a b”,
+Theorem TC_MONOTONIC_LEMMA:
+     !R1 R2 (a:'a) b.
+          TC R1 a b ==> (!x y. R1 x y ==> R2 x y) ==> TC R2 a b
+Proof
     GEN_TAC THEN GEN_TAC
     THEN TC_INDUCT_TAC
     THEN REPEAT STRIP_TAC
@@ -2059,23 +2057,23 @@ val TC_MONOTONIC_LEMMA = store_thm
         RES_TAC
         THEN IMP_RES_TAC (REWRITE_RULE[transitive_def] TC_TRANSITIVE)
       ]
-   );
+QED
 
-val TC_MONOTONIC = store_thm
-   ("TC_MONOTONIC",
-    “!R1 R2 (a:'a) b.
+Theorem TC_MONOTONIC:
+     !R1 R2 (a:'a) b.
           (!x y. R1 x y ==> R2 x y) ==>
-                (TC R1 a b ==> TC R2 a b)”,
+                (TC R1 a b ==> TC R2 a b)
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC TC_MONOTONIC_LEMMA
-   );
+QED
 
-val TC_REDL_IS_RED_SIGMA_LEMMA = store_thm
-   ("TC_REDL_IS_RED_SIGMA_LEMMA",
-    “(!o1 o2. TC REDL_obj o1 o2 = RED_obj SIGMA_R o1 o2) /\
+Theorem TC_REDL_IS_RED_SIGMA_LEMMA:
+     (!o1 o2. TC REDL_obj o1 o2 = RED_obj SIGMA_R o1 o2) /\
         (!d1 d2. TC REDL_dict d1 d2 = RED_dict SIGMA_R d1 d2) /\
         (!e1 e2. TC REDL_entry e1 e2 = RED_entry SIGMA_R e1 e2) /\
-        (!m1 m2. TC REDL_method m1 m2 = RED_method SIGMA_R m1 m2)”,
+        (!m1 m2. TC REDL_method m1 m2 = RED_method SIGMA_R m1 m2)
+Proof
     REPEAT CONJ_TAC
     THEN REPEAT GEN_TAC
     THEN ( EQ_TAC
@@ -2088,14 +2086,14 @@ val TC_REDL_IS_RED_SIGMA_LEMMA = store_thm
                THEN MATCH_MP_TAC TC_MONOTONIC
                THEN REWRITE_TAC[RC_RED1_SIGMA_IMP_REDL]
              ])
-   );
+QED
 
-val TC_REDL_IS_RED_SIGMA = store_thm
-   ("TC_REDL_IS_RED_SIGMA",
-    “(TC REDL_obj = RED_obj SIGMA_R) /\
+Theorem TC_REDL_IS_RED_SIGMA:
+     (TC REDL_obj = RED_obj SIGMA_R) /\
         (TC REDL_dict = RED_dict SIGMA_R) /\
         (TC REDL_entry = RED_entry SIGMA_R) /\
-        (TC REDL_method = RED_method SIGMA_R)”,
+        (TC REDL_method = RED_method SIGMA_R)
+Proof
     REPEAT CONJ_TAC
     THENL
       [ EXT_TAC “o1:obj”
@@ -2119,63 +2117,63 @@ val TC_REDL_IS_RED_SIGMA = store_thm
         THEN GEN_TAC
       ]
     THEN REWRITE_TAC[TC_REDL_IS_RED_SIGMA_LEMMA]
-   );
+QED
 
 
 
-val SIGMA_R_CHURCH_ROSSER = store_thm
-   ("SIGMA_R_CHURCH_ROSSER",
-    “CHURCH_ROSSER SIGMA_R”,
+Theorem SIGMA_R_CHURCH_ROSSER:
+     CHURCH_ROSSER SIGMA_R
+Proof
     REWRITE_TAC[CHURCH_ROSSER]
     THEN REWRITE_TAC[GSYM TC_REDL_IS_RED_SIGMA]
     THEN REPEAT CONJ_TAC
     THEN MATCH_MP_TAC TC_DIAMOND
     THEN REWRITE_TAC[REDL_DIAMOND]
-   );
+QED
 (* Soli Deo Gloria!!!  To God Alone Be The Glory!!! *)
 
 
-val SIGMA_R_NORMAL_FORM_EXISTS = store_thm
-   ("SIGMA_R_NORMAL_FORM_EXISTS",
-    “(!M N. REQUAL_obj SIGMA_R M N ==>
+Theorem SIGMA_R_NORMAL_FORM_EXISTS:
+     (!M N. REQUAL_obj SIGMA_R M N ==>
                 (?Z. RED_obj SIGMA_R M Z /\ RED_obj SIGMA_R N Z)) /\
         (!M N. REQUAL_dict SIGMA_R M N ==>
                 (?Z. RED_dict SIGMA_R M Z /\ RED_dict SIGMA_R N Z)) /\
         (!M N. REQUAL_entry SIGMA_R M N ==>
                 (?Z. RED_entry SIGMA_R M Z /\ RED_entry SIGMA_R N Z)) /\
         (!M N. REQUAL_method SIGMA_R M N ==>
-                (?Z. RED_method SIGMA_R M Z /\ RED_method SIGMA_R N Z))”,
+                (?Z. RED_method SIGMA_R M Z /\ RED_method SIGMA_R N Z))
+Proof
     MATCH_MP_TAC NORMAL_FORM_EXISTS
     THEN REWRITE_TAC[SIGMA_R_CHURCH_ROSSER]
-   );
+QED
 
-val SIGMA_R_NORMAL_FORM_REDUCED_TO = store_thm
-   ("SIGMA_R_NORMAL_FORM_REDUCED_TO",
-    “(!M N. NORMAL_FORM_OF_obj SIGMA_R N M ==>
+Theorem SIGMA_R_NORMAL_FORM_REDUCED_TO:
+     (!M N. NORMAL_FORM_OF_obj SIGMA_R N M ==>
                RED_obj SIGMA_R M N) /\
         (!M N. NORMAL_FORM_OF_dict SIGMA_R N M ==>
                RED_dict SIGMA_R M N) /\
         (!M N. NORMAL_FORM_OF_entry SIGMA_R N M ==>
                RED_entry SIGMA_R M N) /\
         (!M N. NORMAL_FORM_OF_method SIGMA_R N M ==>
-               RED_method SIGMA_R M N)”,
+               RED_method SIGMA_R M N)
+Proof
     MATCH_MP_TAC NORMAL_FORM_REDUCED_TO
     THEN REWRITE_TAC[SIGMA_R_CHURCH_ROSSER]
-   );
+QED
 
-val SIGMA_R_NORMAL_FORM_UNIQUE = store_thm
-   ("SIGMA_R_NORMAL_FORM_UNIQUE",
-    “(!M N1 N2. NORMAL_FORM_OF_obj SIGMA_R N1 M /\
+Theorem SIGMA_R_NORMAL_FORM_UNIQUE:
+     (!M N1 N2. NORMAL_FORM_OF_obj SIGMA_R N1 M /\
                    NORMAL_FORM_OF_obj SIGMA_R N2 M ==> (N1 = N2)) /\
         (!M N1 N2. NORMAL_FORM_OF_dict SIGMA_R N1 M /\
                    NORMAL_FORM_OF_dict SIGMA_R N2 M ==> (N1 = N2)) /\
         (!M N1 N2. NORMAL_FORM_OF_entry SIGMA_R N1 M /\
                    NORMAL_FORM_OF_entry SIGMA_R N2 M ==> (N1 = N2)) /\
         (!M N1 N2. NORMAL_FORM_OF_method SIGMA_R N1 M /\
-                   NORMAL_FORM_OF_method SIGMA_R N2 M ==> (N1 = N2))”,
+                   NORMAL_FORM_OF_method SIGMA_R N2 M ==> (N1 = N2))
+Proof
     MATCH_MP_TAC NORMAL_FORM_UNIQUE
     THEN REWRITE_TAC[SIGMA_R_CHURCH_ROSSER]
-   );
+QED
 
 
 val _ = print_theory_to_file "semantics.lst";

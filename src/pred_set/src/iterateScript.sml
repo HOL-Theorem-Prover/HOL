@@ -651,9 +651,11 @@ Proof
   >> simp[]
 QED
 
-val HAS_SIZE_NUMSEG = store_thm ("HAS_SIZE_NUMSEG",
- “!m n. {m..n} HAS_SIZE ((n + 1:num) - m)”,
-  REWRITE_TAC[HAS_SIZE, FINITE_NUMSEG, CARD_NUMSEG]);
+Theorem HAS_SIZE_NUMSEG:
+  !m n. {m..n} HAS_SIZE ((n + 1:num) - m)
+Proof
+  REWRITE_TAC[HAS_SIZE, FINITE_NUMSEG, CARD_NUMSEG]
+QED
 
 Theorem CARD_NUMSEG_1:
  !n. CARD{1..n} = n
@@ -661,9 +663,11 @@ Proof
   simp[CARD_NUMSEG]
 QED
 
-val HAS_SIZE_NUMSEG_1 = store_thm ("HAS_SIZE_NUMSEG_1",
- “!n. {1..n} HAS_SIZE n”,
-  REWRITE_TAC[CARD_NUMSEG, HAS_SIZE, FINITE_NUMSEG] THEN ARITH_TAC);
+Theorem HAS_SIZE_NUMSEG_1:
+  !n. {1..n} HAS_SIZE n
+Proof
+  REWRITE_TAC[CARD_NUMSEG, HAS_SIZE, FINITE_NUMSEG] THEN ARITH_TAC
+QED
 
 Theorem NUMSEG_CLAUSES:
   (!m. {m..0} = if m = 0 then {0} else {}) /\
@@ -690,12 +694,14 @@ Proof
   simp[LE] >> rpt strip_tac >> metis_tac[]
 QED
 
-val FINITE_INDEX_NUMBERS = store_thm ("FINITE_INDEX_NUMBERS",
- “!s:'a->bool.
+Theorem FINITE_INDEX_NUMBERS:
+  !s:'a->bool.
         FINITE s =
          ?k:num->bool f. (!i j. i IN k /\ j IN k /\ (f i = f j) ==> (i = j)) /\
-                         FINITE k /\ (s = IMAGE f k)”,
-  MESON_TAC[FINITE_INDEX_NUMSEG, FINITE_NUMSEG, IMAGE_FINITE]);
+                         FINITE k /\ (s = IMAGE f k)
+Proof
+  MESON_TAC[FINITE_INDEX_NUMSEG, FINITE_NUMSEG, IMAGE_FINITE]
+QED
 
 Theorem DISJOINT_NUMSEG:
   !m n p q. DISJOINT {m..n} {p..q} <=> n < p \/ q < m \/ n < m \/ q < p

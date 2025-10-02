@@ -62,13 +62,15 @@ Definition list_compare_def:
      | GREATER => GREATER)
 End
 
-val compare_equal = store_thm("compare_equal",
-  “(!x y. (cmp x y = EQUAL) = (x = y)) ==>
-   !l1 l2. (list_compare cmp l1 l2 = EQUAL) = (l1 = l2)”,
+Theorem compare_equal:
+   (!x y. (cmp x y = EQUAL) = (x = y)) ==>
+   !l1 l2. (list_compare cmp l1 l2 = EQUAL) = (l1 = l2)
+Proof
  DISCH_THEN (ASSUME_TAC o GSYM)
    THEN NTAC 2 (Induct THENL [ALL_TAC,GEN_TAC])
    THEN TRY (ASM_REWRITE_TAC[] THEN Cases_on `cmp h h'`)
-   THEN RW_TAC bool_ss [list_compare_def]);
+   THEN RW_TAC bool_ss [list_compare_def]
+QED
 
 (* looks out of place *)
 Definition list_merge_def:

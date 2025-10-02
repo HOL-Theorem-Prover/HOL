@@ -157,12 +157,14 @@ val INR_INL_11 = save_thm("INR_INL_11",
 val _ = export_rewrites ["INR_INL_11"]
 
 (* Prove that left injections and right injections are not equal.       *)
-val INR_neq_INL = store_thm("INR_neq_INL",
-   “!v1 v2. ~(INR v2 :('a,'b)sum = INL v1)”,
+Theorem INR_neq_INL:
+    !v1 v2. ~(INR v2 :('a,'b)sum = INL v1)
+Proof
    PURE_REWRITE_TAC [R_11,REP_INL,REP_INR] THEN
    REPEAT GEN_TAC THEN
    CONV_TAC (REDEPTH_CONV (FUN_EQ_CONV ORELSEC BETA_CONV)) THEN
-   DISCH_THEN (CONTR_TAC o SIMP o SPECL [“T”,“v1:'a”,“v2:'b”]));
+   DISCH_THEN (CONTR_TAC o SIMP o SPECL [“T”,“v1:'a”,“v2:'b”])
+QED
 
 (*----------------------------------------------------------------------*)
 (* The abstract `axiomatization` of the sum type consists of the single *)
@@ -174,10 +176,11 @@ val INR_neq_INL = store_thm("INR_neq_INL",
 (* this axiom.                                                          *)
 (*----------------------------------------------------------------------*)
 
-val sum_axiom = store_thm("sum_axiom",
-    “!(f:'a->'c).
+Theorem sum_axiom:
+     !(f:'a->'c).
        !(g:'b->'c).
-       ?!h. ((h o INL) = f) /\ ((h o INR) = g)”,
+       ?!h. ((h o INL) = f) /\ ((h o INR) = g)
+Proof
 PURE_REWRITE_TAC [boolTheory.EXISTS_UNIQUE_DEF,o_DEF] THEN
 CONV_TAC (REDEPTH_CONV (BETA_CONV ORELSEC FUN_EQ_CONV)) THEN
 REPEAT (FILTER_STRIP_TAC “x:('a,'b)sum->'c”) THENL
@@ -190,7 +193,8 @@ REPEAT (FILTER_STRIP_TAC “x:('a,'b)sum->'c”) THENL
  REPEAT GEN_TAC THEN DISCH_THEN (CONJUNCTS_THEN2 MP_TAC
  (REWRITE1_TAC o (CONV_RULE (ONCE_DEPTH_CONV SYM_CONV)))) THEN
  REPEAT STRIP_TAC THEN STRIP_ASSUME_TAC (SPEC “s:('a,'b)sum” A_ONTO) THEN
- ASM_REWRITE_TAC (map (SYM o SPEC_ALL) [INL_DEF,INR_DEF])]);
+ ASM_REWRITE_TAC (map (SYM o SPEC_ALL) [INL_DEF,INR_DEF])]
+QED
 
 
 (* ---------------------------------------------------------------------*)
@@ -326,26 +330,32 @@ val [sum_EXISTS,sum_UNIQUE] =
    end;
 
 (* Prove that: !x. ISL(x) \/ ISR(x)                                     *)
-val ISL_OR_ISR = store_thm("ISL_OR_ISR",
-    “!x:('a,'b)sum. ISL(x) \/ ISR(x)”,
+Theorem ISL_OR_ISR:
+     !x:('a,'b)sum. ISL(x) \/ ISR(x)
+Proof
     STRIP_TAC THEN
     STRIP_ASSUME_TAC (SPEC “x:('a,'b)sum” sum_CASES) THEN
-    ASM_REWRITE_TAC [ISL,ISR]);
+    ASM_REWRITE_TAC [ISL,ISR]
+QED
 
 (* Prove that: |- !x. ISL(x) ==> INL (OUTL x) = x                       *)
-val INL = store_thm("INL",
-    “!x:('a,'b)sum. ISL(x) ==> (INL (OUTL x) = x)”,
+Theorem INL:
+     !x:('a,'b)sum. ISL(x) ==> (INL (OUTL x) = x)
+Proof
     STRIP_TAC THEN
     STRIP_ASSUME_TAC (SPEC “x:('a,'b)sum” sum_CASES) THEN
-    ASM_REWRITE_TAC [ISL,OUTL]);
+    ASM_REWRITE_TAC [ISL,OUTL]
+QED
 val _ = export_rewrites ["INL"]
 
 (* Prove that: |- !x. ISR(x) ==> INR (OUTR x) = x                       *)
-val INR = store_thm("INR",
-    “!x:('a,'b)sum. ISR(x) ==> (INR (OUTR x) = x)”,
+Theorem INR:
+     !x:('a,'b)sum. ISR(x) ==> (INR (OUTR x) = x)
+Proof
     STRIP_TAC THEN
     STRIP_ASSUME_TAC (SPEC “x:('a,'b)sum” sum_CASES) THEN
-    ASM_REWRITE_TAC [ISR,OUTR]);
+    ASM_REWRITE_TAC [ISR,OUTR]
+QED
 val _ = export_rewrites ["INR"]
 
 val sum_case_cong = save_thm("sum_case_cong",

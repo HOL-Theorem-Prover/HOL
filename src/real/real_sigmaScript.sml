@@ -1422,13 +1422,15 @@ val SUM_SWAP_NUMSEG = store_thm ("SUM_SWAP_NUMSEG",
   REPEAT GEN_TAC THEN MATCH_MP_TAC SUM_SWAP THEN
   REWRITE_TAC[FINITE_NUMSEG]);
 
-val SUM_ADD_SPLIT = store_thm ("SUM_ADD_SPLIT",
- “!f m n p.
-    m <= n + 1:num ==> ((sum {m..n+p} f = sum{m..n} f + sum{n+1..n+p} f))”,
+Theorem SUM_ADD_SPLIT:
+  !f m n p.
+    m <= n + 1:num ==> ((sum {m..n+p} f = sum{m..n} f + sum{n+1..n+p} f))
+Proof
   REPEAT STRIP_TAC THEN ASSUME_TAC NUMSEG_ADD_SPLIT THEN
   POP_ASSUM (MP_TAC o Q.SPECL [`m`,`n`,`p`]) THEN DISCH_TAC THEN
   ASM_SIMP_TAC std_ss [SUM_UNION, DISJOINT_NUMSEG, FINITE_NUMSEG,
-           ARITH_PROVE ``x < x + 1:num``]);
+           ARITH_PROVE ``x < x + 1:num``]
+QED
 
 (* cf. realTheory.SUM_OFFSET *)
 Theorem SUM_OFFSET' : (* was: SUM_OFFSET *)

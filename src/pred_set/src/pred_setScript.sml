@@ -95,10 +95,11 @@ end
 (* The axiom of specification: x IN {y | P y} iff P x                   *)
 (* ---------------------------------------------------------------------*)
 
-val SPECIFICATION = store_thm(
-  "SPECIFICATION",
-  “!P x. $IN (x:'a) (P:'a set) = P x”,
-  REWRITE_TAC [IN_DEF] THEN BETA_TAC THEN REWRITE_TAC []);
+Theorem SPECIFICATION:
+   !P x. $IN (x:'a) (P:'a set) = P x
+Proof
+  REWRITE_TAC [IN_DEF] THEN BETA_TAC THEN REWRITE_TAC []
+QED
 
 val IN_APP = Tactical.store_thm (
   "IN_APP",
@@ -1875,13 +1876,15 @@ val IMAGE_SUBSET =
      REPEAT STRIP_TAC THEN RES_TAC THEN
      EXISTS_TAC (“x':'a”) THEN ASM_REWRITE_TAC []);
 
-val IMAGE_INTER = store_thm ("IMAGE_INTER",
-“!(f:'a->'b) s t. IMAGE f (s INTER t) SUBSET (IMAGE f s INTER IMAGE f t)”,
+Theorem IMAGE_INTER:
+ !(f:'a->'b) s t. IMAGE f (s INTER t) SUBSET (IMAGE f s INTER IMAGE f t)
+Proof
      REPEAT GEN_TAC THEN
      REWRITE_TAC [SUBSET_DEF,IN_IMAGE,IN_INTER] THEN
      REPEAT STRIP_TAC THEN
      EXISTS_TAC (“x':'a”) THEN
-     CONJ_TAC THEN FIRST_ASSUM ACCEPT_TAC);
+     CONJ_TAC THEN FIRST_ASSUM ACCEPT_TAC
+QED
 
 val IMAGE_11 = store_thm(
   "IMAGE_11",
@@ -2071,9 +2074,11 @@ val SURJ_COMPOSE =
       EXISTS_TAC (“y'':'a”) THEN
       ASM_REWRITE_TAC []]);
 
-val SURJ_EMPTY = store_thm ("SURJ_EMPTY",
-“!f:'a->'b. (!s. SURJ f {} s = (s = {})) /\ (!s. SURJ f s {} = (s = {}))”,
-     REWRITE_TAC [SURJ_DEF,NOT_IN_EMPTY,EXTENSION]);
+Theorem SURJ_EMPTY:
+ !f:'a->'b. (!s. SURJ f {} s = (s = {})) /\ (!s. SURJ f s {} = (s = {}))
+Proof
+     REWRITE_TAC [SURJ_DEF,NOT_IN_EMPTY,EXTENSION]
+QED
 
 val IMAGE_SURJ =
     store_thm
@@ -4386,13 +4391,14 @@ val INFINITE_INJ_NOT_SURJ = Q.store_thm("INFINITE_INJ_NOT_SURJ",
   METIS_TAC[result_part1, result_part2]);
 
 (* and applying to the UNIV set *)
-val INFINITE_UNIV = store_thm (
-  "INFINITE_UNIV",
-  “INFINITE (UNIV:'a set)
+Theorem INFINITE_UNIV:
+   INFINITE (UNIV:'a set)
         =
-   ?f:'a->'a. (!x y. (f x = f y) ==> (x = y)) /\ (?y. !x. ~(f x = y))”,
+   ?f:'a->'a. (!x y. (f x = f y) ==> (x = y)) /\ (?y. !x. ~(f x = y))
+Proof
 
-  simp[INFINITE_INJ_NOT_SURJ, INJ_DEF, SURJ_DEF]);
+  simp[INFINITE_INJ_NOT_SURJ, INJ_DEF, SURJ_DEF]
+QED
 
 Theorem INFINITE_NUM_UNIV[simp] = num_INFINITE
 

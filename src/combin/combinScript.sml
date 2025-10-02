@@ -101,12 +101,14 @@ Proof
    THEN REFL_TAC
 QED
 
-val o_ASSOC = store_thm("o_ASSOC",
-   “!f g h. f o (g o h) = (f o g) o h”,
+Theorem o_ASSOC:
+    !f g h. f o (g o h) = (f o g) o h
+Proof
    REPEAT GEN_TAC
    THEN REWRITE_TAC [ o_DEF ]
    THEN CONV_TAC (REDEPTH_CONV BETA_CONV)
-   THEN REFL_TAC);
+   THEN REFL_TAC
+QED
 
 Theorem o_ASSOC' = GSYM o_ASSOC
 
@@ -136,12 +138,14 @@ Proof
  >> BETA_TAC >> REFL_TAC
 QED
 
-val S_THM = store_thm("S_THM",
-   “!f g x. S f g x = f x (g x)”,
+Theorem S_THM:
+    !f g x. S f g x = f x (g x)
+Proof
    REPEAT GEN_TAC
    THEN PURE_REWRITE_TAC [ S_DEF ]
    THEN CONV_TAC (DEPTH_CONV BETA_CONV)
-   THEN REFL_TAC);
+   THEN REFL_TAC
+QED
 
 val S_ABS_L = store_thm(
   "S_ABS_L",
@@ -153,24 +157,28 @@ val S_ABS_R = store_thm(
   ``S f (\x. g x) = \x. (f x) (g x)``,
   REWRITE_TAC [FUN_EQ_THM, S_THM] THEN BETA_TAC THEN REWRITE_TAC[]);
 
-val C_THM = store_thm("C_THM",
-   “!f x y. C f x y = f y x”,
+Theorem C_THM:
+    !f x y. C f x y = f y x
+Proof
    REPEAT GEN_TAC
    THEN PURE_REWRITE_TAC [ C_DEF ]
    THEN CONV_TAC (DEPTH_CONV BETA_CONV)
-   THEN REFL_TAC);
+   THEN REFL_TAC
+QED
 
 val C_ABS_L = store_thm(
   "C_ABS_L",
   ``C (\x. f x) y = (\x. f x y)``,
   REWRITE_TAC [FUN_EQ_THM, C_THM] THEN BETA_TAC THEN REWRITE_TAC []);
 
-val W_THM = store_thm("W_THM",
-   “!f x. W f x = f x x”,
+Theorem W_THM:
+    !f x. W f x = f x x
+Proof
    REPEAT GEN_TAC
    THEN PURE_REWRITE_TAC [ W_DEF ]
    THEN CONV_TAC (DEPTH_CONV BETA_CONV)
-   THEN REFL_TAC);
+   THEN REFL_TAC
+QED
 
 Theorem I_THM[compute]:
    !x. I x = x
@@ -187,9 +195,11 @@ Proof
   REWRITE_TAC[FUN_EQ_THM] >> BETA_TAC >> REWRITE_TAC[I_THM]
 QED
 
-val I_o_ID = store_thm("I_o_ID",
-   “!f. (I o f = f) /\ (f o I = f)”,
-   REWRITE_TAC [I_THM, o_THM, FUN_EQ_THM]);
+Theorem I_o_ID:
+    !f. (I o f = f) /\ (f o I = f)
+Proof
+   REWRITE_TAC [I_THM, o_THM, FUN_EQ_THM]
+QED
 
 Theorem K_o_THM[compute]:
   (!f v. K v o f = K v) /\ (!f v. f o K v = K (f v))

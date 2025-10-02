@@ -2,9 +2,10 @@ Theory gh179a[bare]
 Libs
   HolKernel Parse boolLib
 
-val tyexists = store_thm("tyexists", “?x:bool. (\x. T) x”,
+Theorem tyexists:  ?x:bool. (\x. T) x
+Proof
   BETA_TAC >> REWRITE_TAC[]
-);
+QED
 
 val foo_TYDEF = new_type_definition("foo", tyexists);
 
@@ -15,10 +16,11 @@ val foo_bijs = define_new_type_bijections {
 val A_def = new_definition ("A_def", ``A = b2f T``)
 val B_def = new_definition ("B_def", ``B = b2f F``)
 
-val A_neq_B = store_thm("A_neq_B", “A <> B”,
+Theorem A_neq_B:  A <> B
+Proof
   REWRITE_TAC[A_def,B_def] >>
   DISCH_THEN (mp_tac o AP_TERM ``f2b``) >>
   REWRITE_TAC [foo_bijs]
-);
+QED
 
 val _ = delete_type "foo"

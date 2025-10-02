@@ -1382,11 +1382,12 @@ val less_lesseq  = hd(amatch``Number_Natural_less m (Number_Natural_suc n) <=>
 val trichotomy   = hd(amatch``_ \/ _ \/ (_ = _)``);
 
 (* |- !A. A ==> ~A ==> F *)
-val F_IMP2 = store_thm
-  ("F_IMP2", “!A. A ==> ~A ==> F”,
+Theorem F_IMP2:  !A. A ==> ~A ==> F
+Proof
   PURE_REWRITE_TAC[GSYM imp_F]
   \\ gen_tac
-  \\ disch_then(fn th => disch_then(ACCEPT_TAC o C MP th)));
+  \\ disch_then(fn th => disch_then(ACCEPT_TAC o C MP th))
+QED
 
 (* |- Number_Natural_less =
       (\m n. ?P. (!n. P (Number_Natural_suc n) ==> P n) /\ P m /\ ~P n)

@@ -90,10 +90,11 @@ val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="unint"},na
 val Abbrev_def = new_definition("Abbrev_def", ``Abbrev (x:bool) = x``)
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="Abbrev"},name=(["Unwanted"],"id")}
 
-val Abbrev_CONG = store_thm(
-  "Abbrev_CONG",
-  “r1 = r2 ==> Abbrev(v = r1) = Abbrev (v = r2)”,
-  STRIP_TAC THEN ASM_REWRITE_TAC[]);
+Theorem Abbrev_CONG:
+   r1 = r2 ==> Abbrev(v = r1) = Abbrev (v = r2)
+Proof
+  STRIP_TAC THEN ASM_REWRITE_TAC[]
+QED
 
 
 (* ----------------------------------------------------------------------
@@ -180,10 +181,11 @@ val hide_def = new_definition(
   "hide_def",
   “hide (nm:bool) (x:bool) = x”);
 
-val hideCONG = store_thm(
-  "hideCONG",
-  “hide nm x = hide nm x”,
-  REWRITE_TAC[]);
+Theorem hideCONG:
+   hide nm x = hide nm x
+Proof
+  REWRITE_TAC[]
+QED
 
 val NoAsms = new_definition("NoAsms", “NoAsms = T”)
 val IgnAsm_def = new_definition("IgnAsm_def", “IgnAsm (v:'a) = T”)

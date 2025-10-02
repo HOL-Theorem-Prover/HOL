@@ -59,11 +59,11 @@ val TC_INDUCT_TAC =
 (* Barendregt's Lemma 3.2.2:  *)
 
 
-val TC_DIAMOND1 = store_thm
-   ("TC_DIAMOND1",
-    “!R (a:'a) b. TC R a b ==>
+Theorem TC_DIAMOND1:
+     !R (a:'a) b. TC R a b ==>
           (DIAMOND R ==> (!c. R a c ==>
-               (?d. R b d /\ TC R c d)))”,
+               (?d. R b d /\ TC R c d)))
+Proof
     GEN_TAC
     THEN TC_INDUCT_TAC
     THEN REPEAT STRIP_TAC
@@ -80,13 +80,13 @@ val TC_DIAMOND1 = store_thm
         THEN ASM_REWRITE_TAC[]
         THEN IMP_RES_TAC (REWRITE_RULE[transitive_def] TC_TRANSITIVE)
       ]
-   );
+QED
 
-val TC_DIAMOND2 = store_thm
-   ("TC_DIAMOND2",
-    “!R (a:'a) b. TC R a b ==>
+Theorem TC_DIAMOND2:
+     !R (a:'a) b. TC R a b ==>
           (DIAMOND R ==> (!c. TC R a c ==>
-               (?d. TC R b d /\ TC R c d)))”,
+               (?d. TC R b d /\ TC R c d)))
+Proof
     GEN_TAC
     THEN TC_INDUCT_TAC
     THEN REPEAT STRIP_TAC
@@ -102,18 +102,18 @@ val TC_DIAMOND2 = store_thm
         THEN ASM_REWRITE_TAC[]
         THEN IMP_RES_TAC (REWRITE_RULE[transitive_def] TC_TRANSITIVE)
       ]
-   );
+QED
 
-val TC_DIAMOND = store_thm
-   ("TC_DIAMOND",
-    “!R:'a->'a->bool. DIAMOND R ==> DIAMOND (TC R)”,
+Theorem TC_DIAMOND:
+     !R:'a->'a->bool. DIAMOND R ==> DIAMOND (TC R)
+Proof
     REPEAT STRIP_TAC
     THEN REWRITE_TAC[DIAMOND]
     THEN REPEAT STRIP_TAC
     THEN IMP_RES_TAC TC_DIAMOND2
     THEN EXISTS_TAC ``d'':'a``
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
 
@@ -179,10 +179,10 @@ val _ = save_thm ("BETA_R_strong_ind", BETA_R_strong_ind);
 
 (* BETA_R is a deterministic relation. *)
 
-val SUB_RENAME_SUB = store_thm
-   ("SUB_RENAME_SUB",
-    “!a:^term x y t. ((a <[ [(x,Var y)]) <[ [(y,Var x)] = a) ==>
-                          (((a <[ [(x,Var y)]) <[ [y,t]) = (a <[ [x,t]))”,
+Theorem SUB_RENAME_SUB:
+     !a:^term x y t. ((a <[ [(x,Var y)]) <[ [(y,Var x)] = a) ==>
+                          (((a <[ [(x,Var y)]) <[ [y,t]) = (a <[ [x,t]))
+Proof
     MUTUAL_INDUCT_THEN term_height_induct ASSUME_TAC
     THEN REPEAT GEN_TAC
     THENL
@@ -214,23 +214,23 @@ val SUB_RENAME_SUB = store_thm
         THEN RES_TAC
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
-val SUB_RENAME_TERM = store_thm
-   ("SUB_RENAME_TERM",
-    “!a:^term b x y t. (Lam x a = Lam y b) ==>
-                          ((a <[ [x,t]) = (b <[ [y,t]))”,
+Theorem SUB_RENAME_TERM:
+     !a:^term b x y t. (Lam x a = Lam y b) ==>
+                          ((a <[ [x,t]) = (b <[ [y,t]))
+Proof
     REWRITE_TAC[Lam_one_one]
     THEN REPEAT STRIP_TAC
     THEN FIRST_ASSUM (REWRITE_THM o SYM)
     THEN MATCH_MP_TAC SUB_RENAME_SUB
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
-val BETA_R_deterministic = store_thm
-   ("BETA_R_deterministic",
-    “!t1:^term t2.
-         BETA_R t1 t2 ==> !t3.  BETA_R t1 t3 ==> (t2 = t3)”,
+Theorem BETA_R_deterministic:
+     !t1:^term t2.
+         BETA_R t1 t2 ==> !t3.  BETA_R t1 t3 ==> (t2 = t3)
+Proof
     rule_induct BETA_R_strong_ind
     THEN REPEAT GEN_TAC
     THEN REWRITE_TAC BETA_R_inv_thms
@@ -238,13 +238,13 @@ val BETA_R_deterministic = store_thm
     THEN STRIP_TAC
     THEN IMP_RES_TAC SUB_RENAME_TERM
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 (* Note that BETA_R is not reflexive, symmetric, or transitive. *)
 
-val FV_SUB = store_thm
-   ("FV_SUB",
-    “!u:^term x t. FV (u <[ [(x,t)]) SUBSET FV u DIFF {x} UNION FV t”,
+Theorem FV_SUB:
+     !u:^term x t. FV (u <[ [(x,t)]) SUBSET FV u DIFF {x} UNION FV t
+Proof
     MUTUAL_INDUCT_THEN term_height_induct ASSUME_TAC
     THEN REPEAT GEN_TAC
     THENL
@@ -283,25 +283,25 @@ val FV_SUB = store_thm
         THEN RES_TAC(* 2 subgoals *)
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
-val BETA_FV = store_thm
-   ("BETA_FV",
-    “!t1:^term t2. BETA_R t1 t2 ==>
-                           (FV t2 SUBSET FV t1)”,
+Theorem BETA_FV:
+     !t1:^term t2. BETA_R t1 t2 ==>
+                           (FV t2 SUBSET FV t1)
+Proof
     rule_induct BETA_R_strong_ind
     THEN REWRITE_TAC[FV_term]
     THEN REWRITE_TAC[FV_SUB]
-   );
+QED
 
 
-val BETA_R_equals = store_thm
-   ("BETA_R_equals",
-    “(!a t:^term. BETA_R (Con a) t = F) /\
+Theorem BETA_R_equals:
+     (!a t:^term. BETA_R (Con a) t = F) /\
         (!x t:^term. BETA_R (Var x) t = F) /\
         (!t u t':^term. BETA_R (App t u) t' =
                    (?x u'. (t = Lam x u') /\ (t' = u' <[ [x,u]))) /\
-        (!x u t:^term. BETA_R (Lam x u) t = F)”,
+        (!x u t:^term. BETA_R (Lam x u) t = F)
+Proof
     REWRITE_TAC BETA_R_inv_thms
     THEN REWRITE_TAC[term_distinct,term_one_one]
     THEN REPEAT STRIP_TAC
@@ -317,7 +317,7 @@ val BETA_R_equals = store_thm
         THEN EXISTS_TAC “u:^term”
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 
 (* --------------------------------------------------------------------- *)
@@ -336,9 +336,9 @@ val BETA_R_equals = store_thm
 
 (* Barendregt Proposition 3.1.16, BETA_R is substitutive. *)
 
-val BETA_R_SUBSTITUTIVE = store_thm
-   ("BETA_R_SUBSTITUTIVE",
-    “SUBSTITUTIVE (BETA_R:^term_rel)”,
+Theorem BETA_R_SUBSTITUTIVE:
+     SUBSTITUTIVE (BETA_R:^term_rel)
+Proof
     REWRITE_TAC[SUBSTITUTIVE]
     THEN REPEAT GEN_TAC
     THEN DISCH_THEN (STRIP_ASSUME_TAC o REWRITE_RULE BETA_R_inv_thms)
@@ -354,7 +354,7 @@ val BETA_R_SUBSTITUTIVE = store_thm
     THEN REWRITE_TAC[]
     THEN MATCH_MP_TAC BARENDREGT_SUBSTITUTION_LEMMA
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
 
@@ -417,9 +417,8 @@ val [REDL_REFL, REDL_Lam, REDL_App, REDL_BETA]
 
 
 
-val REDL_height_ind_thm_LEMMA = store_thm
-   ("REDL_height_ind_thm_LEMMA",
-    “!n P_0:^term_rel.
+Theorem REDL_height_ind_thm_LEMMA:
+     !n P_0:^term_rel.
          (!t. P_0 t t) /\
          (!x t1 t2. P_0 t1 t2 ==> P_0 (Lam x t1) (Lam x t2)) /\
          (!t1 u1 t2 u2.
@@ -436,7 +435,8 @@ val REDL_height_ind_thm_LEMMA = store_thm
             ==> P_0 (Lam x t1) (Lam x t2)) ==>
          (!t1 t2. REDL t1 t2 ==>
                     ((HEIGHT t1 <= n) ==>
-                     P_0 t1 t2))”,
+                     P_0 t1 t2))
+Proof
     INDUCT_TAC
     THEN REPEAT GEN_TAC
     THEN STRIP_TAC
@@ -494,11 +494,10 @@ val REDL_height_ind_thm_LEMMA = store_thm
               ]
           ]
       ]
-   );
+QED
 
-val REDL_height_ind_thm = store_thm
-   ("REDL_height_ind_thm",
-    “!P_0:^term_rel.
+Theorem REDL_height_ind_thm:
+     !P_0:^term_rel.
          (!t. P_0 t t) /\
          (!x t1 t2. P_0 t1 t2 ==> P_0 (Lam x t1) (Lam x t2)) /\
          (!t1 u1 t2 u2.
@@ -512,7 +511,8 @@ val REDL_height_ind_thm = store_thm
             (!t1' t2'.
                REDL t1' t2' /\ (HEIGHT t1 = HEIGHT t1') ==> P_0 t1' t2') ==>
             P_0 (Lam x t1) (Lam x t2)) ==>
-         !t1 t2. REDL t1 t2 ==> P_0 t1 t2”,
+         !t1 t2. REDL t1 t2 ==> P_0 t1 t2
+Proof
     REPEAT STRIP_TAC
     THEN MP_TAC (SPEC_ALL
              (SPEC “HEIGHT (t1:^term)” REDL_height_ind_thm_LEMMA))
@@ -520,11 +520,10 @@ val REDL_height_ind_thm = store_thm
     THEN REPEAT STRIP_TAC
     THEN FIRST_ASSUM MATCH_MP_TAC
     THEN ASM_REWRITE_TAC[LESS_EQ_REFL]
-   );
+QED
 
-val REDL_height_strong_ind_LEMMA = store_thm
-   ("REDL_height_strong_ind_LEMMA",
-    “!n P_0:^term_rel.
+Theorem REDL_height_strong_ind_LEMMA:
+     !n P_0:^term_rel.
          (!t. P_0 t t) /\
          (!t1 u1 t2 u2.
             P_0 t1 t2 /\ REDL t1 t2 /\ P_0 u1 u2 /\ REDL u1 u2 ==>
@@ -541,7 +540,7 @@ val REDL_height_strong_ind_LEMMA = store_thm
              P_0 t1' t2') /\ REDL t1 t2 ==>
            P_0 (Lam x t1) (Lam x t2)) ==>
          !t1 t2. REDL t1 t2 ==> HEIGHT t1 <= n ==> P_0 t1 t2
-    ”,
+Proof
     INDUCT_TAC
     THEN REPEAT GEN_TAC
     THEN STRIP_TAC
@@ -601,11 +600,10 @@ val REDL_height_strong_ind_LEMMA = store_thm
               ]
           ]
       ]
-   );
+QED
 
-val REDL_height_strong_ind = store_thm
-   ("REDL_height_strong_ind",
-    “!P_0.
+Theorem REDL_height_strong_ind:
+     !P_0.
          (!t:^term. P_0 t t) /\
          (!t1 u1 t2 u2.
             P_0 t1 t2 /\ REDL t1 t2 /\ P_0 u1 u2 /\ REDL u1 u2 ==>
@@ -621,7 +619,8 @@ val REDL_height_strong_ind = store_thm
              REDL t1' t2' /\ (HEIGHT t1 = HEIGHT t1') ==>
              P_0 t1' t2') /\ REDL t1 t2 ==>
            P_0 (Lam x t1) (Lam x t2)) ==>
-         !t1 t2. REDL t1 t2 ==> P_0 t1 t2”,
+         !t1 t2. REDL t1 t2 ==> P_0 t1 t2
+Proof
     REPEAT STRIP_TAC
     THEN MP_TAC (SPEC_ALL (SPEC “HEIGHT (t1:^term)”
                                  REDL_height_strong_ind_LEMMA))
@@ -629,13 +628,13 @@ val REDL_height_strong_ind = store_thm
     THEN REPEAT STRIP_TAC
     THEN FIRST_ASSUM MATCH_MP_TAC
     THEN ASM_REWRITE_TAC[LESS_EQ_REFL]
-   );
+QED
 
 
-val REDL_FV = store_thm
-   ("REDL_FV",
-    “!(M:^term) M'.
-          REDL M M' ==> (FV M' SUBSET FV M)”,
+Theorem REDL_FV:
+     !(M:^term) M'.
+          REDL M M' ==> (FV M' SUBSET FV M)
+Proof
     rule_induct REDL_strong_ind (* strong, not weak induction *)
     THEN REWRITE_TAC[FV_term,SUBSET_REFL]
     THEN REPEAT STRIP_TAC (* 3 subgoals *)
@@ -653,26 +652,26 @@ val REDL_FV = store_thm
         THEN MATCH_MP_TAC SUBSET_DIFF
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 
-val REDL_RENAME = store_thm
-   ("REDL_RENAME",
-    “!t1:^term t2 t1' x y.
+Theorem REDL_RENAME:
+     !t1:^term t2 t1' x y.
           REDL t1 t2 /\ (Lam x t1 = Lam y t1') ==>
-          (Lam x t2 = Lam y (t2 <[ [x, Var y]))”,
+          (Lam x t2 = Lam y (t2 <[ [x, Var y]))
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC REDL_FV
     THEN IMP_RES_TAC LAMBDA_RENAME
-   );
+QED
 
 
 
-val REDL_SUBSTITUTIVE_BASE = store_thm
-   ("REDL_SUBSTITUTIVE_BASE",
-    “!(M:^term) N.
+Theorem REDL_SUBSTITUTIVE_BASE:
+     !(M:^term) N.
           REDL M N ==>
-            !L x. REDL (M <[ [x,L]) (N <[ [x,L])”,
+            !L x. REDL (M <[ [x,L]) (N <[ [x,L])
+Proof
     rule_induct REDL_height_strong_ind (* strong, not weak induction *)
     THEN REPEAT STRIP_TAC (* 4 subgoals *)
     THENL
@@ -705,28 +704,28 @@ val REDL_SUBSTITUTIVE_BASE = store_thm
         THEN FIRST_ASSUM MATCH_MP_TAC
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 (* This is necessary for when we change a bound variable: *)
 
-val REDL_CHANGE_VAR = store_thm
-   ("REDL_CHANGE_VAR",
-    “!t1:^term t2 x y t1'.
+Theorem REDL_CHANGE_VAR:
+     !t1:^term t2 x y t1'.
            REDL t1 t2 /\ (Lam x t1 = Lam y t1')  ==>
-           REDL t1' (t2 <[ [x, Var y])”,
+           REDL t1' (t2 <[ [x, Var y])
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_THEN REWRITE_THM Lam_one_one_RENAME
     THEN MATCH_MP_TAC REDL_SUBSTITUTIVE_BASE
     THEN FIRST_ASSUM ACCEPT_TAC
-   );
+QED
 
 
 (* This is Barendregt's Lemma 3.2.4 Case 1. *)
-val REDL_SUBSTITUTIVE_SAME = store_thm
-   ("REDL_SUBSTITUTIVE_SAME",
-    “!M:^term.
+Theorem REDL_SUBSTITUTIVE_SAME:
+     !M:^term.
           (!N N' x. REDL N N' ==>
-                    REDL (M <[ [x,N]) (M <[ [x,N']))”,
+                    REDL (M <[ [x,N]) (M <[ [x,N']))
+Proof
     MUTUAL_INDUCT_THEN term_height_induct ASSUME_TAC
     THEN REPEAT STRIP_TAC
     THENL (* 3 subgoals *)
@@ -743,19 +742,19 @@ val REDL_SUBSTITUTIVE_SAME = store_thm
         SIMPLE_SUBST_TAC
         THEN DEP_ASM_REWRITE_TAC[REDL_rules_sat]
       ]
-   );
+QED
 
 
 
 
 
 (* This is Barendregt's Lemma 3.2.4. *)
-val REDL_SUBSTITUTIVE = store_thm
-   ("REDL_SUBSTITUTIVE",
-    “!M:^term M'.
+Theorem REDL_SUBSTITUTIVE:
+     !M:^term M'.
           REDL M M' ==>
             (!N N' x. REDL N N' ==>
-                REDL (M <[ [x,N]) (M' <[ [x,N']))”,
+                REDL (M <[ [x,N]) (M' <[ [x,N']))
+Proof
     rule_induct REDL_height_strong_ind (* strong, not weak induction *)
     THEN REPEAT STRIP_TAC (* 4 subgoals *)
     THENL
@@ -787,15 +786,14 @@ val REDL_SUBSTITUTIVE = store_thm
         THEN IMP_RES_THEN REWRITE_THM Lam_one_one
         THEN ASM_REWRITE_TAC[]
      ]
-   );
+QED
 
 
 
 (* Barendregt lemma 3.2.5 (expanded) *)
 
-val REDL_cases = store_thm
-   ("REDL_cases",
-    “(!a t2:^term.
+Theorem REDL_cases:
+     (!a t2:^term.
           REDL (Con a) t2 ==>
           (t2 = Con a)) /\
         (!x t2:^term.
@@ -810,7 +808,8 @@ val REDL_cases = store_thm
                           REDL u u'))) /\
         (!x t t2:^term.
           REDL (Lam x t) t2 ==>
-          (?t'. (t2 = Lam x t') /\ REDL t t'))”,
+          (?t'. (t2 = Lam x t') /\ REDL t t'))
+Proof
     REPEAT CONJ_TAC
     THEN REPEAT GEN_TAC THEN DISCH_THEN (STRIP_ASSUME_TAC o
             REWRITE_RULE[term_distinct,term_one_one] o
@@ -843,45 +842,45 @@ val REDL_cases = store_thm
         THEN IMP_RES_TAC REDL_CHANGE_VAR
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 val [REDL_Con_case, REDL_Var_case, REDL_App_case, REDL_Lam_case]
     = CONJUNCTS REDL_cases;
 
 
-val REDL_Lam_CONF = store_thm
-   ("REDL_Lam_CONF",
-    “!t1:^term t2 t3 x.
+Theorem REDL_Lam_CONF:
+     !t1:^term t2 t3 x.
           REDL (Lam x t1) t3 /\ REDL (Lam x t2) t3 ==>
-          (?t4. t3 = Lam x t4)”,
+          (?t4. t3 = Lam x t4)
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC REDL_Lam_case
     THEN ASM_REWRITE_TAC[term_one_one]
     THEN EXISTS_TAC “t'':^term”
     THEN REFL_TAC
-   );
+QED
 
-val REDL_Lam_MONO = store_thm
-   ("REDL_Lam_MONO",
-    “!x t1:^term t2.
+Theorem REDL_Lam_MONO:
+     !x t1:^term t2.
           REDL (Lam x t1) (Lam x t2) ==>
-          REDL t1 t2”,
+          REDL t1 t2
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC REDL_Lam_case
     THEN REWRITE_ALL_TAC[term_one_one]
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
 
 (* Barendregt Lemma 3.2.6. *)
 
-val REDL_DIAMOND_LEMMA = store_thm
-   ("REDL_DIAMOND_LEMMA",
-    “!t1:^term t2.
+Theorem REDL_DIAMOND_LEMMA:
+     !t1:^term t2.
           REDL t1 t2 ==>
           (!t3. REDL t1 t3 ==>
-                (?t4. REDL t2 t4 /\ REDL t3 t4))”,
+                (?t4. REDL t2 t4 /\ REDL t3 t4))
+Proof
     rule_induct REDL_strong_ind (* strong, not weak induction *)
     THEN REPEAT STRIP_TAC
     THENL (* 4 subgoals *)
@@ -946,19 +945,19 @@ val REDL_DIAMOND_LEMMA = store_thm
             THEN DEP_ASM_REWRITE_TAC[REDL_SUBSTITUTIVE]
           ]
       ]
-   );
+QED
 
 
 
-val REDL_DIAMOND = store_thm
-   ("REDL_DIAMOND",
-    “DIAMOND (REDL:^term_rel)”,
+Theorem REDL_DIAMOND:
+     DIAMOND (REDL:^term_rel)
+Proof
     REWRITE_TAC[DIAMOND]
     THEN REPEAT STRIP_TAC
     THEN IMP_RES_TAC REDL_DIAMOND_LEMMA
     THEN EXISTS_TAC “t4'':^term”
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
 
@@ -1023,9 +1022,8 @@ val [REDC_Con, REDC_Var, REDC_Lam, REDC_App, REDC_BETA]
 
 
 
-val REDC_height_ind_thm_LEMMA = store_thm
-   ("REDC_height_ind_thm_LEMMA",
-    “!n P_0.
+Theorem REDC_height_ind_thm_LEMMA:
+     !n P_0.
          (!a. P_0 (Con a) (Con a)) /\
          (!x. P_0 (Var x) (Var x)) /\
          (!x t1 t2.
@@ -1043,7 +1041,8 @@ val REDC_height_ind_thm_LEMMA = store_thm
  ==>
          (!t1:^term t2. REDC t1 t2 ==>
                     ((HEIGHT t1 <= n) ==>
-                     P_0 t1 t2))”,
+                     P_0 t1 t2))
+Proof
     INDUCT_TAC
     THEN REPEAT GEN_TAC
     THEN STRIP_TAC
@@ -1102,11 +1101,10 @@ val REDC_height_ind_thm_LEMMA = store_thm
               ]
           ]
       ]
-   );
+QED
 
-val REDC_height_ind_thm = store_thm
-   ("REDC_height_ind_thm",
-    “!P_0.
+Theorem REDC_height_ind_thm:
+     !P_0.
          (!a. P_0 (Con a) (Con a)) /\
          (!x. P_0 (Var x) (Var x)) /\
          (!x t1 t2.
@@ -1121,7 +1119,8 @@ val REDC_height_ind_thm = store_thm
                REDC t1' t2' /\ (HEIGHT t1 = HEIGHT t1') ==> P_0 t1' t2') /\
             P_0 u1 u2 ==>
             P_0 (App (Lam x t1) u1) (t2 <[ [(x,u2)])) ==>
-         !t1:^term t2. REDC t1 t2 ==> P_0 t1 t2”,
+         !t1:^term t2. REDC t1 t2 ==> P_0 t1 t2
+Proof
     REPEAT STRIP_TAC
     THEN MP_TAC (SPEC_ALL (SPEC “HEIGHT (t1:^term)”
                                 REDC_height_ind_thm_LEMMA))
@@ -1129,11 +1128,10 @@ val REDC_height_ind_thm = store_thm
     THEN REPEAT STRIP_TAC
     THEN FIRST_ASSUM MATCH_MP_TAC
     THEN ASM_REWRITE_TAC[LESS_EQ_REFL]
-   );
+QED
 
-val REDC_height_strong_ind_LEMMA = store_thm
-   ("REDC_height_strong_ind_LEMMA",
-    “!n P_0.
+Theorem REDC_height_strong_ind_LEMMA:
+     !n P_0.
          (!a. P_0 (Con a) (Con a)) /\
          (!x. P_0 (Var x) (Var x)) /\
          (!t1 u1 t2 u2.
@@ -1152,7 +1150,7 @@ val REDC_height_strong_ind_LEMMA = store_thm
              P_0 t1' t2') /\ REDC t1 t2 ==>
            P_0 (Lam x t1) (Lam x t2)) ==>
          !t1:^term t2. REDC t1 t2 ==> HEIGHT t1 <= n ==> P_0 t1 t2
-    ”,
+Proof
     INDUCT_TAC
     THEN REPEAT GEN_TAC
     THEN STRIP_TAC
@@ -1212,11 +1210,10 @@ val REDC_height_strong_ind_LEMMA = store_thm
               ]
           ]
       ]
-   );
+QED
 
-val REDC_height_strong_ind = store_thm
-   ("REDC_height_strong_ind",
-    “!P_0.
+Theorem REDC_height_strong_ind:
+     !P_0.
          (!a. P_0 (Con a) (Con a)) /\
          (!x. P_0 (Var x) (Var x)) /\
          (!t1 u1 t2 u2.
@@ -1234,7 +1231,8 @@ val REDC_height_strong_ind = store_thm
              REDC t1' t2' /\ (HEIGHT t1 = HEIGHT t1') ==>
              P_0 t1' t2') /\ REDC t1 t2 ==>
            P_0 (Lam x t1) (Lam x t2)) ==>
-         !(t1:^term) t2. REDC t1 t2 ==> P_0 t1 t2”,
+         !(t1:^term) t2. REDC t1 t2 ==> P_0 t1 t2
+Proof
     REPEAT STRIP_TAC
     THEN MP_TAC (SPEC_ALL (SPEC “HEIGHT (t1:^term)”
                                  REDC_height_strong_ind_LEMMA))
@@ -1242,13 +1240,13 @@ val REDC_height_strong_ind = store_thm
     THEN REPEAT STRIP_TAC
     THEN FIRST_ASSUM MATCH_MP_TAC
     THEN ASM_REWRITE_TAC[LESS_EQ_REFL]
-   );
+QED
 
 
-val REDC_FV = store_thm
-   ("REDC_FV",
-    “!(M:^term) M'.
-          REDC M M' ==> (FV M' SUBSET FV M)”,
+Theorem REDC_FV:
+     !(M:^term) M'.
+          REDC M M' ==> (FV M' SUBSET FV M)
+Proof
     rule_induct REDC_strong_ind (* strong, not weak induction *)
     THEN REWRITE_TAC[FV_term,SUBSET_REFL]
     THEN REPEAT STRIP_TAC (* 3 subgoals *)
@@ -1266,18 +1264,18 @@ val REDC_FV = store_thm
         THEN MATCH_MP_TAC SUBSET_DIFF
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 
-val REDC_RENAME = store_thm
-   ("REDC_RENAME",
-    “!(t1:^term) t2 t1' x y.
+Theorem REDC_RENAME:
+     !(t1:^term) t2 t1' x y.
           REDC t1 t2 /\ (Lam x t1 = Lam y t1') ==>
-          (Lam x t2 = Lam y (t2 <[ [x, Var y]))”,
+          (Lam x t2 = Lam y (t2 <[ [x, Var y]))
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC REDC_FV
     THEN IMP_RES_TAC LAMBDA_RENAME
-   );
+QED
 
 (* NOT TRUE for REDC!  REDC (Var x) (Var x), but not REDC ((\x.x)N) ((\x.x)N) !
 
@@ -1322,11 +1320,11 @@ val REDC_SUBSTITUTIVE_BASE = store_thm
 
 *)
 
-val NOT_LAMBDA_SUBSTITUTIVE = store_thm
-   ("NOT_LAMBDA_SUBSTITUTIVE",
-    “!(t1:^term) y z.
+Theorem NOT_LAMBDA_SUBSTITUTIVE:
+     !(t1:^term) y z.
           (!t x. ~(t1 = Lam x t)) ==>
-          (!t x. ~(t1 <[ [y,Var z] = Lam x t))”,
+          (!t x. ~(t1 <[ [y,Var z] = Lam x t))
+Proof
     MUTUAL_INDUCT_THEN term_height_induct ASSUME_TAC (* 4 subgoals *)
     THEN REPEAT GEN_TAC
     THEN DISCH_TAC
@@ -1344,13 +1342,13 @@ val NOT_LAMBDA_SUBSTITUTIVE = store_thm
         POP_ASSUM (MP_TAC o SPECL[``t1:^term``,``v:var``])
         THEN REWRITE_TAC[]
       ]
-   );
+QED
 
-val REDC_SUBSTITUTIVE_VAR = store_thm
-   ("REDC_SUBSTITUTIVE_VAR",
-    “!(M:^term) N.
+Theorem REDC_SUBSTITUTIVE_VAR:
+     !(M:^term) N.
           REDC M N ==>
-            !y x. REDC (M <[ [x,Var y]) (N <[ [x,Var y])”,
+            !y x. REDC (M <[ [x,Var y]) (N <[ [x,Var y])
+Proof
     rule_induct REDC_height_strong_ind (* strong, not weak induction *)
     THEN REPEAT STRIP_TAC (* 5 subgoals *)
     THENL
@@ -1390,20 +1388,20 @@ val REDC_SUBSTITUTIVE_VAR = store_thm
         THEN FIRST_ASSUM MATCH_MP_TAC
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 (* This is for when we change a bound variable: *)
 
-val REDC_CHANGE_VAR = store_thm
-   ("REDC_CHANGE_VAR",
-    “!(t1:^term) t2 x y t1'.
+Theorem REDC_CHANGE_VAR:
+     !(t1:^term) t2 x y t1'.
            REDC t1 t2 /\ (Lam x t1 = Lam y t1')  ==>
-           REDC t1' (t2 <[ [x, Var y])”,
+           REDC t1' (t2 <[ [x, Var y])
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_THEN REWRITE_THM Lam_one_one_RENAME
     THEN MATCH_MP_TAC REDC_SUBSTITUTIVE_VAR
     THEN FIRST_ASSUM ACCEPT_TAC
-   );
+QED
 
 
 (* Takahashi's trick, an alternative way to prove the diamond lemma. *)
@@ -1411,9 +1409,9 @@ val REDC_CHANGE_VAR = store_thm
 
 (* Complete developments exist. *)
 
-val REDC_EXISTS = store_thm
-   ("REDC_EXISTS",
-    “!t:^term. ?t'. REDC t t'”,
+Theorem REDC_EXISTS:
+     !t:^term. ?t'. REDC t t'
+Proof
     MUTUAL_INDUCT_THEN term_induct STRIP_ASSUME_TAC (* 3 subgoals *)
     THEN REPEAT GEN_TAC
     THENL (* 4 subgoals *)
@@ -1448,12 +1446,12 @@ val REDC_EXISTS = store_thm
         THEN MATCH_MP_TAC REDC_Lam
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
-val TAKAHASHI_TRIANGLE = store_thm
-   ("TAKAHASHI_TRIANGLE",
-    “!(a:^term) d. REDC a d ==>
-                      !b. REDL a b ==> REDL b d”,
+Theorem TAKAHASHI_TRIANGLE:
+     !(a:^term) d. REDC a d ==>
+                      !b. REDL a b ==> REDL b d
+Proof
     rule_induct REDC_ind_thm (* strong, not weak induction *)
     THEN REPEAT STRIP_TAC
     THENL (* 5 subgoals *)
@@ -1496,19 +1494,19 @@ val TAKAHASHI_TRIANGLE = store_thm
             THEN ASM_REWRITE_TAC[]
           ]
       ]
-   );
+QED
 
 
-val REDL_DIAMOND_TAKAHASHI = store_thm
-   ("REDL_DIAMOND_TAKAHASHI",
-    “DIAMOND (REDL:^term_rel)”,
+Theorem REDL_DIAMOND_TAKAHASHI:
+     DIAMOND (REDL:^term_rel)
+Proof
     REWRITE_TAC[DIAMOND]
     THEN REPEAT STRIP_TAC
     THEN STRIP_ASSUME_TAC (SPEC ``a:^term`` REDC_EXISTS)
     THEN IMP_RES_TAC TAKAHASHI_TRIANGLE
     THEN EXISTS_TAC “t':^term”
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
 
@@ -1594,22 +1592,22 @@ val RED1_BETA_IMP_REDL_LEMMA = TAC_PROOF(([],
       ]
    );
 
-val RED1_BETA_IMP_REDL = store_thm
-   ("RED1_BETA_IMP_REDL",
-    “!t1:^term t2.
-          RED1 BETA_R t1 t2 ==> REDL t1 t2”,
+Theorem RED1_BETA_IMP_REDL:
+     !t1:^term t2.
+          RED1 BETA_R t1 t2 ==> REDL t1 t2
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC RED1_BETA_IMP_REDL_LEMMA
     THEN POP_ASSUM (STRIP_ASSUME_TAC o REWRITE_RULE[])
-   );
+QED
 
-val RC_RED1_BETA_IMP_REDL = store_thm
-   ("RC_RED1_BETA_IMP_REDL",
-    “!t1:^term t2. RC (RED1 BETA_R) t1 t2 ==> REDL t1 t2”,
+Theorem RC_RED1_BETA_IMP_REDL:
+     !t1:^term t2. RC (RED1 BETA_R) t1 t2 ==> REDL t1 t2
+Proof
     RC_INDUCT_TAC
     THEN REWRITE_TAC[REDL_rules_sat]
     THEN REWRITE_TAC[RED1_BETA_IMP_REDL]
-   );
+QED
 
 val [RED1_R, RED1_App1, RED1_App2, RED1_Lam] = CONJUNCTS RED1_rules_sat;
 
@@ -1618,22 +1616,21 @@ val [RED_RED1, RED_REFL, RED_TRANS]
     = CONJUNCTS (CONV_RULE (DEPTH_CONV LEFT_IMP_EXISTS_CONV) RED_rules_sat);
 
 
-val RED1_BETA_R = store_thm
-   ("RED1_BETA_R",
-    “!x t:^term u.
-          RED1 BETA_R (App (Lam x t) u) (t <[ [x,u])”,
+Theorem RED1_BETA_R:
+     !x t:^term u.
+          RED1 BETA_R (App (Lam x t) u) (t <[ [x,u])
+Proof
     REPEAT STRIP_TAC
     THEN MATCH_MP_TAC RED1_R
     THEN REWRITE_TAC[BETA_R_rules_sat]
-   );
+QED
 
-val RED_BETA_R = store_thm
-   ("RED_BETA_R",
-    “!x t1:^term t2 u1 u2.
+Theorem RED_BETA_R:
+     !x t1:^term t2 u1 u2.
           RED BETA_R t1 t2 /\
           RED BETA_R u1 u2 ==>
           RED BETA_R (App (Lam x t1) u1) (t2 <[ [x,u2])
-    ”,
+Proof
     REPEAT STRIP_TAC
     THEN MATCH_MP_TAC RED_TRANS
     THEN EXISTS_TAC “App (Lam x t2) u2:^term”
@@ -1649,12 +1646,12 @@ val RED_BETA_R = store_thm
         DEP_ASM_REWRITE_TAC[RED_RED1]
         THEN REWRITE_TAC[RED1_BETA_R]
       ]
-   );
+QED
 
 
-val REDL_IMP_RED_BETA = store_thm
-   ("REDL_IMP_RED_BETA",
-    “!t1:^term t2. REDL t1 t2 ==> RED BETA_R t1 t2”,
+Theorem REDL_IMP_RED_BETA:
+     !t1:^term t2. REDL t1 t2 ==> RED BETA_R t1 t2
+Proof
     rule_induct REDL_ind_thm
     THEN REPEAT STRIP_TAC
     THENL (* 4 subgoals *)
@@ -1671,30 +1668,30 @@ val REDL_IMP_RED_BETA = store_thm
         MATCH_MP_TAC RED_BETA_R
         THEN ASM_REWRITE_TAC[]
      ]
-   );
+QED
 
 
-val RC_RED1_IMP_RED = store_thm
-   ("RC_RED1_IMP_RED",
-    “!R t1:^term t2. RC (RED1 R) t1 t2
-                         ==> RED R t1 t2”,
+Theorem RC_RED1_IMP_RED:
+     !R t1:^term t2. RC (RED1 R) t1 t2
+                         ==> RED R t1 t2
+Proof
     GEN_TAC
     THEN RC_INDUCT_TAC
     THEN REPEAT STRIP_TAC
     THEN REWRITE_TAC[RED_REFL]
     THEN IMP_RES_TAC RED_RED1
-   );
+QED
 
-val TC_RC_RED1_IMP_RED = store_thm
-   ("TC_RC_RED1_IMP_RED",
-    “!R t1:^term t2. TC (RC (RED1 R)) t1 t2
-                         ==> RED R t1 t2”,
+Theorem TC_RC_RED1_IMP_RED:
+     !R t1:^term t2. TC (RC (RED1 R)) t1 t2
+                         ==> RED R t1 t2
+Proof
     GEN_TAC
     THEN TC_INDUCT_TAC
     THEN REPEAT STRIP_TAC
     THEN IMP_RES_TAC RC_RED1_IMP_RED
     THEN IMP_RES_TAC RED_TRANS
-   );
+QED
 
 (*
 val TC_RC_BETA_IMP_RED_BETA = store_thm
@@ -1709,21 +1706,21 @@ val TC_RC_BETA_IMP_RED_BETA = store_thm
    );
 *)
 
-val RED_IMP_TC_RC_RED1 = store_thm
-   ("RED_IMP_TC_RC_RED1",
-    “!R t1:^term t2. RED R t1 t2
-                         ==> TC (RC (RED1 R)) t1 t2”,
+Theorem RED_IMP_TC_RC_RED1:
+     !R t1:^term t2. RED R t1 t2
+                         ==> TC (RC (RED1 R)) t1 t2
+Proof
     rule_induct RED_ind_thm
     THEN REPEAT STRIP_TAC
     THEN IMP_RES_TAC (REWRITE_RULE[transitive_def] TC_TRANSITIVE)
     THEN MATCH_MP_TAC TC_SUBSET
     THEN REWRITE_TAC[RC_REFLEXIVE]
     THEN IMP_RES_TAC RC_SUBSET
-   );
+QED
 
-val TC_RC_RED1_IS_RED = store_thm
-   ("TC_RC_RED1_IS_RED",
-    “!R:^term_rel. TC (RC (RED1 R)) = RED R”,
+Theorem TC_RC_RED1_IS_RED:
+     !R:^term_rel. TC (RC (RED1 R)) = RED R
+Proof
     CONV_TAC (TOP_DEPTH_CONV FUN_EQ_CONV)
     THEN REPEAT GEN_TAC
     THEN EQ_TAC
@@ -1733,17 +1730,17 @@ val TC_RC_RED1_IS_RED = store_thm
 
         IMP_RES_TAC RED_IMP_TC_RC_RED1
       ]
-   );
+QED
 
 
-val TC_REDL_IMP_RED_BETA = store_thm
-   ("TC_REDL_IMP_RED_BETA",
-    “!t1:^term t2. TC REDL t1 t2 ==> RED BETA_R t1 t2”,
+Theorem TC_REDL_IMP_RED_BETA:
+     !t1:^term t2. TC REDL t1 t2 ==> RED BETA_R t1 t2
+Proof
     TC_INDUCT_TAC
     THEN REPEAT STRIP_TAC
     THEN IMP_RES_TAC REDL_IMP_RED_BETA
     THEN IMP_RES_TAC RED_TRANS
-   );
+QED
 
 
 val TC_MONOTONIC_LEMMA = TAC_PROOF(([],
@@ -1761,21 +1758,21 @@ val TC_MONOTONIC_LEMMA = TAC_PROOF(([],
       ]
    );
 
-val TC_MONOTONIC = store_thm
-   ("TC_MONOTONIC",
-    “!R1 R2 (a:'a) b.
+Theorem TC_MONOTONIC:
+     !R1 R2 (a:'a) b.
           (!x y. R1 x y ==> R2 x y) ==>
-                (TC R1 a b ==> TC R2 a b)”,
+                (TC R1 a b ==> TC R2 a b)
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC TC_MONOTONIC_LEMMA
-   );
+QED
 
 
 (* Barendregt Lemma 3.2.7. *)
 
-val TC_REDL_IS_RED_BETA = store_thm
-   ("TC_REDL_IS_RED_BETA",
-    “TC (REDL:^term_rel) = RED BETA_R”,
+Theorem TC_REDL_IS_RED_BETA:
+     TC (REDL:^term_rel) = RED BETA_R
+Proof
     CONV_TAC (TOP_DEPTH_CONV FUN_EQ_CONV)
     THEN REPEAT GEN_TAC
     THEN EQ_TAC
@@ -1786,54 +1783,54 @@ val TC_REDL_IS_RED_BETA = store_thm
         THEN MATCH_MP_TAC TC_MONOTONIC
         THEN REWRITE_TAC[RC_RED1_BETA_IMP_REDL]
       ]
-   );
+QED
 
 
 (* The Church-Rosser Theorem!
    Barendregt Theorem 3.2.8 (i)
 *)
 
-val BETA_R_CHURCH_ROSSER = store_thm
-   ("BETA_R_CHURCH_ROSSER",
-    “CHURCH_ROSSER (BETA_R:^term_rel)”,
+Theorem BETA_R_CHURCH_ROSSER:
+     CHURCH_ROSSER (BETA_R:^term_rel)
+Proof
     REWRITE_TAC[CHURCH_ROSSER]
     THEN REWRITE_TAC[GSYM TC_REDL_IS_RED_BETA]
     THEN REPEAT CONJ_TAC
     THEN MATCH_MP_TAC TC_DIAMOND
     THEN REWRITE_TAC[REDL_DIAMOND]
-   );
+QED
 (* Soli Deo Gloria!!!  To God Alone Be The Glory!!! *)
 
 
 (* Barendregt Theorem 3.2.8 (ii). *)
 
-val BETA_R_NORMAL_FORM_EXISTS = store_thm
-   ("BETA_R_NORMAL_FORM_EXISTS",
-    “!M:^term N. REQUAL BETA_R M N ==>
-                      (?Z. RED BETA_R M Z /\ RED BETA_R N Z)”,
+Theorem BETA_R_NORMAL_FORM_EXISTS:
+     !M:^term N. REQUAL BETA_R M N ==>
+                      (?Z. RED BETA_R M Z /\ RED BETA_R N Z)
+Proof
     MATCH_MP_TAC NORMAL_FORM_EXISTS
     THEN REWRITE_TAC[BETA_R_CHURCH_ROSSER]
-   );
+QED
 
 (* Barendregt Corollary 3.2.9 (i). *)
 
-val BETA_R_NORMAL_FORM_REDUCED_TO = store_thm
-   ("BETA_R_NORMAL_FORM_REDUCED_TO",
-    “!M:^term N. NORMAL_FORM_OF BETA_R N M ==>
-                     RED BETA_R M N”,
+Theorem BETA_R_NORMAL_FORM_REDUCED_TO:
+     !M:^term N. NORMAL_FORM_OF BETA_R N M ==>
+                     RED BETA_R M N
+Proof
     MATCH_MP_TAC NORMAL_FORM_REDUCED_TO
     THEN REWRITE_TAC[BETA_R_CHURCH_ROSSER]
-   );
+QED
 
 (* Barendregt Corollary 3.2.9 (ii). *)
 
-val BETA_R_NORMAL_FORM_UNIQUE = store_thm
-   ("BETA_R_NORMAL_FORM_UNIQUE",
-    “!M:^term N1 N2. NORMAL_FORM_OF BETA_R N1 M /\
-                         NORMAL_FORM_OF BETA_R N2 M ==> (N1 = N2)”,
+Theorem BETA_R_NORMAL_FORM_UNIQUE:
+     !M:^term N1 N2. NORMAL_FORM_OF BETA_R N1 M /\
+                         NORMAL_FORM_OF BETA_R N2 M ==> (N1 = N2)
+Proof
     MATCH_MP_TAC NORMAL_FORM_UNIQUE
     THEN REWRITE_TAC[BETA_R_CHURCH_ROSSER]
-   );
+QED
 
 
 val _ = print_theory_to_file "-" "beta.lst";

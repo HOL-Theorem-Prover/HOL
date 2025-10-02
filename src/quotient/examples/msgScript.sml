@@ -136,24 +136,24 @@ val [CD, DC, NONCE, MPAIR, CRYPT, DECRYPT, msgSYM, msgTRANS]
 (* The cryptographic message equivalence relation is reflexive,    *)
 (* symmetric and transitive.                                       *)
 
-val msgrel_REFL = store_thm
-   ("msgrel_REFL",
-    “!X. msgrel X X”,
+Theorem msgrel_REFL:
+     !X. msgrel X X
+Proof
     Induct
     THEN RW_TAC std_ss [msgrel_rules_sat]
-   );
+QED
 
-val msgrel_SYM = store_thm
-   ("msgrel_SYM",
-    “!X Y. msgrel X Y ==> msgrel Y X”,
+Theorem msgrel_SYM:
+     !X Y. msgrel X Y ==> msgrel Y X
+Proof
     REWRITE_TAC [msgSYM]
-   );
+QED
 
-val msgrel_TRANS = store_thm
-   ("msgrel_TRANS",
-    “!X Y Z. msgrel X Y /\ msgrel Y Z ==> msgrel X Z”,
+Theorem msgrel_TRANS:
+     !X Y Z. msgrel X Y /\ msgrel Y Z ==> msgrel X Z
+Proof
     PROVE_TAC [msgTRANS]
-   );
+QED
 
 
 
@@ -174,13 +174,13 @@ End
 
 (* Respectfulness theorem for the freenonces1 function. *)
 
-val freenonces_RSP = store_thm
-   ("freenonces_RSP",
-    “!V W. msgrel V W ==> (freenonces1 V = freenonces1 W)”,
+Theorem freenonces_RSP:
+     !V W. msgrel V W ==> (freenonces1 V = freenonces1 W)
+Proof
     rule_induct msgrel_ind_thm
     THEN REPEAT STRIP_TAC
     THEN RW_TAC std_ss [freenonces1_def]
-   );
+QED
 
 
 (* --------------------------------------------------------------------- *)
@@ -196,14 +196,14 @@ End
 
 (* Respectfulness theorem for the freeleft1 function. *)
 
-val freeleft_RSP = store_thm
-   ("freeleft_RSP",
-    “!V W. msgrel V W ==> msgrel (freeleft1 V) (freeleft1 W)”,
+Theorem freeleft_RSP:
+     !V W. msgrel V W ==> msgrel (freeleft1 V) (freeleft1 W)
+Proof
     rule_induct msgrel_strong_ind
     THEN REPEAT STRIP_TAC
     THEN RW_TAC std_ss[freeleft1_def,msgrel_REFL,msgrel_SYM]
     THEN IMP_RES_TAC msgrel_TRANS
-   );
+QED
 
 
 (* --------------------------------------------------------------------- *)
@@ -219,14 +219,14 @@ End
 
 (* Respectfulness theorem for the freeright1 function. *)
 
-val freeright_RSP = store_thm
-   ("freeright_RSP",
-    “!V W. msgrel V W ==> msgrel (freeright1 V) (freeright1 W)”,
+Theorem freeright_RSP:
+     !V W. msgrel V W ==> msgrel (freeright1 V) (freeright1 W)
+Proof
     rule_induct msgrel_strong_ind
     THEN REPEAT STRIP_TAC
     THEN RW_TAC std_ss[freeright1_def,msgrel_REFL,msgrel_SYM]
     THEN IMP_RES_TAC msgrel_TRANS
-   );
+QED
 
 
 (* --------------------------------------------------------------------- *)
@@ -243,13 +243,13 @@ End
 
 (* Respectfulness theorem for the is_nonce1 function. *)
 
-val is_nonce_RSP = store_thm
-   ("is_nonce_RSP",
-    “!V W. msgrel V W ==> (is_nonce1 V = is_nonce1 W)”,
+Theorem is_nonce_RSP:
+     !V W. msgrel V W ==> (is_nonce1 V = is_nonce1 W)
+Proof
     rule_induct msgrel_strong_ind
     THEN REPEAT STRIP_TAC
     THEN RW_TAC std_ss[is_nonce1_def]
-   );
+QED
 
 
 
@@ -351,15 +351,15 @@ to lift automatically.
 (* lower level.  That layer may now be completely forgotten.        *)
 (* ---------------------------------------------------------------- *)
 
-val Mpair_EQUALS = store_thm
-   ("Mpair_EQUALS",
-    “!X X' Y Y'. (Mpair X Y = Mpair X' Y') = (X = X') /\ (Y = Y')”,
+Theorem Mpair_EQUALS:
+     !X X' Y Y'. (Mpair X Y = Mpair X' Y') = (X = X') /\ (Y = Y')
+Proof
     PROVE_TAC[left_def,right_def]
-    );
+QED
 
-val Nonce_EQUALS = store_thm
-   ("Nonce_EQUALS",
-    “!n n'. (Nonce n = Nonce n') = (n = n')”,
+Theorem Nonce_EQUALS:
+     !n n'. (Nonce n = Nonce n') = (n = n')
+Proof
     REPEAT GEN_TAC
     THEN EQ_TAC
     THENL
@@ -369,35 +369,35 @@ val Nonce_EQUALS = store_thm
 
         DISCH_THEN REWRITE_THM
       ]
-    );
+QED
 
-val Crypt_EQUALS = store_thm
-   ("Crypt_EQUALS",
-    “!k X X'. (Crypt k X = Crypt k X') = (X = X')”,
+Theorem Crypt_EQUALS:
+     !k X X'. (Crypt k X = Crypt k X') = (X = X')
+Proof
     PROVE_TAC[msgDC]
-    );
+QED
 
-val Decrypt_EQUALS = store_thm
-   ("Decrypt_EQUALS",
-    “!k X X'. (Decrypt k X = Decrypt k X') = (X = X')”,
+Theorem Decrypt_EQUALS:
+     !k X X'. (Decrypt k X = Decrypt k X') = (X = X')
+Proof
     PROVE_TAC[msgCD]
-    );
+QED
 
-val Nonce_NOT_EQ_Mpair = store_thm
-   ("Decrypt_NOT_EQ_Mpair",
-    “!N X Y. ~(Nonce N = Mpair X Y)”,
+Theorem Decrypt_NOT_EQ_Mpair:
+     !N X Y. ~(Nonce N = Mpair X Y)
+Proof
     PROVE_TAC[is_nonce_def]
-    );
+QED
 
 (* Here is a proof using the lifted induction theorem for messages: *)
 
-val FINITE_nonces = store_thm
-   ("FINITE_nonces",
-    “!M. FINITE (nonces M)”,
+Theorem FINITE_nonces:
+     !M. FINITE (nonces M)
+Proof
     HO_MATCH_MP_TAC msg_induction
     THEN REWRITE_TAC[nonces_def]
     THEN REWRITE_TAC[FINITE_INSERT,FINITE_EMPTY,FINITE_UNION]
-   );
+QED
 
 
 

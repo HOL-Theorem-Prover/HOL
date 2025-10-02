@@ -74,33 +74,33 @@ Definition Index_def:
 End
 
 
-val Base_Index = store_thm
-   ("Base_Index",
-    “!x. VAR (Base x) (Index x) = x”,
+Theorem Base_Index:
+     !x. VAR (Base x) (Index x) = x
+Proof
     Induct
     THEN REWRITE_TAC[Base_def,Index_def]
-   );
+QED
 
 (* RW_TAC std_ss (type_rws "var") (* or list_ss or arith_ss *) *)
 
 
-val VAR_EQ_IMP = store_thm
-   ("VAR_EQ_IMP",
-    “!x y. (Base x = Base y) /\ (Index x = Index y) ==> (x = y)”,
+Theorem VAR_EQ_IMP:
+     !x y. (Base x = Base y) /\ (Index x = Index y) ==> (x = y)
+Proof
     Induct
     THEN GEN_TAC THEN GEN_TAC
     THEN Induct
     THEN RW_TAC std_ss [Base_def,Index_def]
-   );
+QED
 
-val VAR_EQ = store_thm
-   ("VAR_EQ",
-    “!x y. (x = y) = (Base x = Base y) /\ (Index x = Index y)”,
+Theorem VAR_EQ:
+     !x y. (x = y) = (Base x = Base y) /\ (Index x = Index y)
+Proof
     GEN_TAC THEN GEN_TAC  THEN
     EQ_TAC  THENL
     [ DISCH_THEN REWRITE_THM,
       REWRITE_TAC[VAR_EQ_IMP] ]
-   );
+QED
 
 
 (* =============================================================== *)
@@ -119,40 +119,40 @@ Definition mk_variant_def:
        mk_variant (VAR s n) m = (VAR s (n+m))
 End
 
-val Index_mk_variant = store_thm
-   ("Index_mk_variant",
-    “!x k. Index(mk_variant x k) = Index x + k”,
+Theorem Index_mk_variant:
+     !x k. Index(mk_variant x k) = Index x + k
+Proof
     Induct  THEN
     REWRITE_TAC[mk_variant_def,Index_def]
-   );
+QED
 
-val Base_mk_variant = store_thm
-   ("Base_mk_variant",
-    “!x k. Base(mk_variant x k) = Base x”,
+Theorem Base_mk_variant:
+     !x k. Base(mk_variant x k) = Base x
+Proof
     Induct  THEN
     REWRITE_TAC[mk_variant_def,Base_def]
-   );
+QED
 
-val mk_variant_ident = store_thm
-   ("mk_variant_ident",
-    “!x k. (mk_variant x k = x) = (k = 0)”,
+Theorem mk_variant_ident:
+     !x k. (mk_variant x k = x) = (k = 0)
+Proof
     Induct
     THEN RW_TAC arith_ss [mk_variant_def]
-   );
+QED
 
-val mk_variant_equal = store_thm
-   ("mk_variant_equal",
-    “!x m n. (mk_variant x m = mk_variant x n) = (m = n)”,
+Theorem mk_variant_equal:
+     !x m n. (mk_variant x m = mk_variant x n) = (m = n)
+Proof
     Induct
     THEN RW_TAC arith_ss [mk_variant_def]
-   );
+QED
 
-val mk_variant_compose = store_thm
-   ("mk_variant_compose",
-    “!x m n. mk_variant (mk_variant x m) n = (mk_variant x (m+n))”,
+Theorem mk_variant_compose:
+     !x m n. mk_variant (mk_variant x m) n = (mk_variant x (m+n))
+Proof
     Induct
     THEN RW_TAC arith_ss [mk_variant_def]
-   );
+QED
 
 
 (* =============================================================== *)
@@ -171,29 +171,29 @@ val is_variant = new_definition (
 val _ = set_fixity "is_variant" (Infix(NONASSOC, 450))
 
 
-val is_variant_reflexive = store_thm
-   ("is_variant_reflexive",
-    “!x. x is_variant x”,
+Theorem is_variant_reflexive:
+     !x. x is_variant x
+Proof
     Induct
     THEN RW_TAC arith_ss [is_variant]
-   );
+QED
 
-val mk_variant_is_variant = store_thm
-   ("mk_variant_is_variant",
-    “!x k. (mk_variant x k) is_variant x”,
+Theorem mk_variant_is_variant:
+     !x k. (mk_variant x k) is_variant x
+Proof
     Induct
     THEN RW_TAC arith_ss [mk_variant_def,is_variant,Base_def,Index_def]
-   );
+QED
 
-val is_variant_TRANS = store_thm
-   ("is_variant_TRANS",
-    “!x y z. (z is_variant y) /\ (y is_variant x) ==> (z is_variant x)”,
+Theorem is_variant_TRANS:
+     !x y z. (z is_variant y) /\ (y is_variant x) ==> (z is_variant x)
+Proof
     RW_TAC arith_ss [is_variant]
-   );
+QED
 
-val is_variant_SOME_mk_variant = store_thm
-   ("is_variant_SOME_mk_variant",
-    “!x y. y is_variant x = (?k. y = mk_variant x k)”,
+Theorem is_variant_SOME_mk_variant:
+     !x y. y is_variant x = (?k. y = mk_variant x k)
+Proof
     Induct
     THEN GEN_TAC THEN GEN_TAC
     THEN Induct
@@ -207,7 +207,7 @@ val is_variant_SOME_mk_variant = store_thm
          STRIP_TAC
          THEN RW_TAC arith_ss []
       ]
-   );
+QED
 
 Theorem is_variant_NOT_EQ:
    !x y. (y is_variant x) /\ ~(x = y) ==> (y is_variant mk_variant x 1)
@@ -234,10 +234,10 @@ val variant_set =
           (variant_set x (SUC k) = (mk_variant x k) INSERT
                                        (variant_set x k))”);
 
-val IN_variant_set = store_thm
-   ("IN_variant_set",
-    “!m x y. (y IN variant_set x m)
-           = (?n. (n < m) /\ (y = mk_variant x n))”,
+Theorem IN_variant_set:
+     !m x y. (y IN variant_set x m)
+           = (?n. (n < m) /\ (y = mk_variant x n))
+Proof
     INDUCT_TAC
     THEN ASM_REWRITE_TAC[variant_set,IN,NOT_LESS_0,LESS_THM]
     THEN REPEAT STRIP_TAC
@@ -259,30 +259,30 @@ val IN_variant_set = store_thm
            ASM_REWRITE_TAC[]
          ]
       ]
-   );
+QED
 
 
-val FINITE_variant_set = store_thm
-   ("FINITE_variant_set",
-    “!m x. FINITE (variant_set x m)”,
+Theorem FINITE_variant_set:
+     !m x. FINITE (variant_set x m)
+Proof
     INDUCT_TAC
     THEN REWRITE_TAC[variant_set]
     THEN ASM_REWRITE_TAC[FINITE_EMPTY,FINITE_INSERT]
-   );
+QED
 
 
-val FINITE_SL = store_thm
-   ("FINITE_SL",
-    “!l:('a)list. FINITE (SL l)”,
+Theorem FINITE_SL:
+     !l:('a)list. FINITE (SL l)
+Proof
     LIST_INDUCT_TAC
     THEN REWRITE_TAC[SL]
     THEN ASM_REWRITE_TAC[FINITE_EMPTY,FINITE_INSERT]
-   );
+QED
 
 
-val CARD_variant_set = store_thm
-   ("CARD_variant_set",
-    “!m x. CARD (variant_set x m) = m”,
+Theorem CARD_variant_set:
+     !m x. CARD (variant_set x m) = m
+Proof
     INDUCT_TAC
     THEN REWRITE_TAC[variant_set,CARD_DEF]
     THEN GEN_TAC
@@ -296,7 +296,7 @@ val CARD_variant_set = store_thm
 
            ASM_REWRITE_TAC[]
           ]
-   );
+QED
 
 
 (* =================================================================== *)
@@ -377,52 +377,52 @@ end;
 (* is guarranteed to be finite.                                   *)
 
 
-val variant_in_variant_set = store_thm
-   ("variant_in_variant_set",
-    “!x s. FINITE s ==> (variant x s) IN (variant_set x (SUC(CARD s)))”,
+Theorem variant_in_variant_set:
+     !x s. FINITE s ==> (variant x s) IN (variant_set x (SUC(CARD s)))
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_THEN REWRITE_THM variant
-   );
+QED
 
 
-val variant_not_in_set = store_thm
-   ("variant_not_in_set",
-    “!x s. FINITE s ==> ~(variant x s IN s)”,
+Theorem variant_not_in_set:
+     !x s. FINITE s ==> ~(variant x s IN s)
+Proof
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN IMP_RES_THEN REWRITE_THM variant
-   );
+QED
 
 
-val variant_minimum = store_thm
-   ("variant_minimum",
-    “!x s y. FINITE s /\ y IN (variant_set x (SUC(CARD s))) /\ ~(y IN s) ==>
-                     (Index(variant x s)) <= (Index y)”,
+Theorem variant_minimum:
+     !x s y. FINITE s /\ y IN (variant_set x (SUC(CARD s))) /\ ~(y IN s) ==>
+                     (Index(variant x s)) <= (Index y)
+Proof
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN IMP_RES_TAC variant
-   );
+QED
 
 
 
-val variant_not_in_subset = store_thm
-   ("variant_not_in_subset",
-    “!x s t. FINITE s /\ t SUBSET s ==> ~(variant x s IN t)”,
+Theorem variant_not_in_subset:
+     !x s t. FINITE s /\ t SUBSET s ==> ~(variant x s IN t)
+Proof
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN IMP_RES_THEN (ASSUME_TAC o SPEC_ALL) variant_not_in_set
     THEN IMP_RES_TAC NOT_IN_SUBSET
-   );
+QED
 
-val variant_is_variant = store_thm
-   ("variant_is_variant",
-    “!x s. FINITE s ==> (variant x s) is_variant x”,
+Theorem variant_is_variant:
+     !x s. FINITE s ==> (variant x s) is_variant x
+Proof
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN IMP_RES_THEN (STRIP_ASSUME_TAC o SPEC_ALL)
             (REWRITE_RULE[IN_variant_set] variant_in_variant_set)
     THEN ASM_REWRITE_TAC[mk_variant_is_variant]
-   );
+QED
 
 
 (* Now we wish to express the variant definition more simply,   *)
@@ -430,13 +430,13 @@ val variant_is_variant = store_thm
 (* without referring to any variant-sets.                       *)
 
 
-val variant_DEF = store_thm
-   ("variant_DEF",
-    “!x s.
+Theorem variant_DEF:
+     !x s.
               FINITE s ==>
               ((variant x s) is_variant x /\ ~((variant x s) IN s))
               /\ !z. z is_variant x /\ ~(z IN s) ==>
-                     (Index (variant x s) <= Index z)”,
+                     (Index (variant x s) <= Index z)
+Proof
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN IMP_RES_THEN REWRITE_THM variant
@@ -460,16 +460,16 @@ val variant_DEF = store_thm
          THEN IMP_RES_TAC LESS_IMP_LESS_OR_EQ
          THEN IMP_RES_TAC LESS_EQ_TRANS
       ]
-   );
+QED
 
 
-val variant_minimum_DEF = store_thm
-   ("variant_minimum_DEF",
-    “!x s y. FINITE s /\ y is_variant x /\ ~(y IN s) ==>
-                     (Index(variant x s) <= Index y)”,
+Theorem variant_minimum_DEF:
+     !x s y. FINITE s /\ y is_variant x /\ ~(y IN s) ==>
+                     (Index(variant x s) <= Index y)
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC variant_DEF
-   );
+QED
 
 (* =============================================================== *)
 (* Now we need to prove that the variant function as defined above *)
@@ -484,26 +484,26 @@ val variant_minimum_DEF = store_thm
 (* =============================================================== *)
 
 
-val Base_variant = store_thm
-   ("Base_variant",
-    “!x s. FINITE s ==> (Base (variant x s) = Base x)”,
+Theorem Base_variant:
+     !x s. FINITE s ==> (Base (variant x s) = Base x)
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_THEN (STRIP_ASSUME_TAC o SPEC_ALL)
                (REWRITE_RULE[is_variant] variant_is_variant)
-   );
+QED
 
-val Index_variant = store_thm
-   ("Index_variant",
-    “!x s. FINITE s ==> Index x <= Index (variant x s)”,
+Theorem Index_variant:
+     !x s. FINITE s ==> Index x <= Index (variant x s)
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_THEN (STRIP_ASSUME_TAC o SPEC_ALL)
                (REWRITE_RULE[is_variant] variant_is_variant)
-   );
+QED
 
 
-val variant_EMPTY = store_thm
-   ("variant_EMPTY",
-    “!x. variant x EMPTY = x”,
+Theorem variant_EMPTY:
+     !x. variant x EMPTY = x
+Proof
     GEN_TAC
     THEN ASSUME_TAC (INST_TYPE[==`:'a`== |-> ==`:var`==] FINITE_EMPTY)
     THEN IMP_RES_THEN (STRIP_ASSUME_TAC o SPEC_ALL)
@@ -519,18 +519,18 @@ val variant_EMPTY = store_thm
     THEN REWRITE_TAC[LESS_0]
     THEN ONCE_REWRITE_TAC[EQ_SYM_EQ]
     THEN REWRITE_TAC[mk_variant_ident]
-   );
+QED
 
 
-val LESS_EQ_NOT_EQ = store_thm
-   ("LESS_EQ_NOT_EQ",
-    “!m n. m <= n /\ ~(m = n) ==> (m+1) <= n”,
+Theorem LESS_EQ_NOT_EQ:
+     !m n. m <= n /\ ~(m = n) ==> (m+1) <= n
+Proof
     REWRITE_TAC[SYM(SPEC_ALL ADD1),SYM(SPEC_ALL LESS_EQ)]
     THEN REWRITE_TAC[LESS_OR_EQ]
     THEN REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN RES_TAC
-   );
+QED
 
 
 val SET_IN_OUT =
@@ -542,9 +542,9 @@ val SET_IN_OUT =
     );
 
 
-val variant_not_ident = store_thm
-   ("variant_not_ident",
-    “!x s. FINITE s /\ (x IN s) ==> ~(x = variant x s)”,
+Theorem variant_not_ident:
+     !x s. FINITE s /\ (x IN s) ==> ~(x = variant x s)
+Proof
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN MATCH_MP_TAC SET_IN_OUT
@@ -552,31 +552,31 @@ val variant_not_ident = store_thm
     THEN ASM_REWRITE_TAC[]
     THEN MATCH_MP_TAC variant_not_in_set
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
-val Index_variant_not_ident = store_thm
-   ("Index_variant_not_ident",
-    “!x s. FINITE s /\ (x IN s) ==> ~(Index x = Index (variant x s))”,
+Theorem Index_variant_not_ident:
+     !x s. FINITE s /\ (x IN s) ==> ~(Index x = Index (variant x s))
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_THEN (ASSUME_TAC o SYM o SPEC_ALL) Base_variant
     THEN IMP_RES_TAC VAR_EQ
     THEN IMP_RES_TAC variant_not_ident
-   );
+QED
 
-val variant_mk_variant_is_variant = store_thm
-   ("variant_mk_variant_is_variant",
-    “!x k s. FINITE s ==> (variant (mk_variant x k) s) is_variant x”,
+Theorem variant_mk_variant_is_variant:
+     !x k s. FINITE s ==> (variant (mk_variant x k) s) is_variant x
+Proof
     REPEAT STRIP_TAC
     THEN MATCH_MP_TAC is_variant_TRANS
     THEN EXISTS_TAC “mk_variant x k”
     THEN IMP_RES_TAC variant_is_variant
     THEN ASM_REWRITE_TAC[mk_variant_is_variant]
-   );
+QED
 
-val variant_mk_variant_not_ident = store_thm
-   ("variant_mk_variant_not_ident",
-    “!x s. FINITE s ==> ~(variant (mk_variant x 1) s = x)”,
+Theorem variant_mk_variant_not_ident:
+     !x s. FINITE s ==> ~(variant (mk_variant x 1) s = x)
+Proof
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN ONCE_REWRITE_TAC[SYM(SPEC_ALL Base_Index)]
@@ -588,13 +588,13 @@ val variant_mk_variant_not_ident = store_thm
     THEN REWRITE_TAC[LESS_EQ,ADD1]
     THEN REWRITE_TAC[SYM(SPEC_ALL Index_mk_variant)]
     THEN IMP_RES_THEN REWRITE_THM Index_variant
-   );
+QED
 
 
-val variant_THM = store_thm
-   ("variant_THM",
-    “!x s. FINITE s ==>
-              (variant x s = (if x IN s then variant (mk_variant x 1) s  else  x))”,
+Theorem variant_THM:
+     !x s. FINITE s ==>
+              (variant x s = (if x IN s then variant (mk_variant x 1) s  else  x))
+Proof
     REPEAT STRIP_TAC
     THEN COND_CASES_TAC
     THEN MATCH_MP_TAC VAR_EQ_IMP
@@ -622,38 +622,35 @@ val variant_THM = store_thm
               IMP_RES_THEN REWRITE_THM Index_variant
            ]
       ]
-   );
+QED
 
 
-val variant_ident =
- store_thm
-  ("variant_ident",
-   “!x s. FINITE s /\ ~(x IN s) ==> (variant x s = x)”,
+Theorem variant_ident:
+    !x s. FINITE s /\ ~(x IN s) ==> (variant x s = x)
+Proof
     REPEAT STRIP_TAC THEN
     IMP_RES_THEN ONCE_REWRITE_THM variant_THM THEN
     ASM_REWRITE_TAC[]
-  );
+QED
 
 
-val variant_DELETE =
- store_thm
-  ("variant_DELETE",
-   “!x s. FINITE s ==> (variant x (s DELETE x) = x)”,
+Theorem variant_DELETE:
+    !x s. FINITE s ==> (variant x (s DELETE x) = x)
+Proof
     REPEAT STRIP_TAC THEN
     MATCH_MP_TAC variant_ident THEN
     ASM_REWRITE_TAC[FINITE_DELETE,IN_DELETE]
-  );
+QED
 
 
-val variant_increment =
- store_thm
-  ("variant_increment",
-   “!x s.
-      FINITE s /\ (x IN s) ==> (variant x s = variant (mk_variant x 1) s)”,
+Theorem variant_increment:
+    !x s.
+      FINITE s /\ (x IN s) ==> (variant x s = variant (mk_variant x 1) s)
+Proof
    REPEAT STRIP_TAC
    THEN IMP_RES_THEN (ASSUME_TAC o SPEC “x:var”) variant_THM
    THEN ASM_REWRITE_TAC[]
-  );
+QED
 
 
 
@@ -686,22 +683,20 @@ val variants =
 *)
 
 
-val variants_THM =
- store_thm
-  ("variants_THM",
-   “(variants NIL s  =  NIL)  /\
+Theorem variants_THM:
+    (variants NIL s  =  NIL)  /\
     (variants (CONS x xs) s  =
-         (CONS (variant x s) (variants xs ((variant x s) INSERT s))))”,
+         (CONS (variant x s) (variants xs ((variant x s) INSERT s))))
+Proof
    REWRITE_TAC[variants]
    THEN CONV_TAC (DEPTH_CONV let_CONV)
    THEN REFL_TAC
-  );
+QED
 
 
-val NOT_IN_variants_INSERT =
- store_thm
-  ("NOT_IN_variants_INSERT",
-   “!xs y s. FINITE s ==> ~(y IN SL (variants xs (y INSERT s)))”,
+Theorem NOT_IN_variants_INSERT:
+    !xs y s. FINITE s ==> ~(y IN SL (variants xs (y INSERT s)))
+Proof
    LIST_INDUCT_TAC
    THEN REWRITE_TAC[variants_THM,SL,IN,DE_MORGAN_THM]
    THEN REPEAT GEN_TAC
@@ -718,28 +713,26 @@ val NOT_IN_variants_INSERT =
         THEN FIRST_ASSUM MATCH_MP_TAC
         THEN ASM_REWRITE_TAC[FINITE_INSERT]
      ]
-  );
+QED
 
 
-val variants_APPEND =
- store_thm
-  ("variants_APPEND",
-   “!x y s.
+Theorem variants_APPEND:
+    !x y s.
         variants (APPEND x y) s  =
-        APPEND (variants x s) (variants y (SL(variants x s) UNION s))”,
+        APPEND (variants x s) (variants y (SL(variants x s) UNION s))
+Proof
    LIST_INDUCT_TAC
    THEN REWRITE_TAC[variants_THM,SL,APPEND,UNION]
    THEN REPEAT STRIP_TAC
    THEN ASM_REWRITE_TAC[CONS_11]
    THEN ONCE_REWRITE_TAC[UNION_COMM]
    THEN REWRITE_TAC[UNION]
-  );
+QED
 
 
-val DISJOINT_variants =
- store_thm
-  ("DISJOINT_variants",
-   “!x s. FINITE s ==> (DISJOINT (SL (variants x s)) s)”,
+Theorem DISJOINT_variants:
+    !x s. FINITE s ==> (DISJOINT (SL (variants x s)) s)
+Proof
    LIST_INDUCT_TAC
    THEN REWRITE_TAC[variants_THM,SL,DISJOINT_EMPTY,DISJOINT_INSERT]
    THEN REPEAT GEN_TAC
@@ -749,23 +742,21 @@ val DISJOINT_variants =
    THEN ONCE_REWRITE_TAC[DISJOINT_SYM]
    THEN ASM_REWRITE_TAC[DISJOINT_INSERT,FINITE_INSERT]
    THEN DISCH_THEN REWRITE_THM
-  );
+QED
 
-val DISJOINT_variants_SL =
- store_thm
-  ("DISJOINT_variants_SL",
-   “!x l. DISJOINT (SL (variants x (SL l))) (SL l)”,
+Theorem DISJOINT_variants_SL:
+    !x l. DISJOINT (SL (variants x (SL l))) (SL l)
+Proof
    REPEAT STRIP_TAC
    THEN MATCH_MP_TAC DISJOINT_variants
    THEN REWRITE_TAC[FINITE_SL]
-  );
+QED
 
 
 
-val DL_variants =
- store_thm
-  ("DL_variants",
-   “!x s. FINITE s ==> DL (variants x s)”,
+Theorem DL_variants:
+    !x s. FINITE s ==> DL (variants x s)
+Proof
    LIST_INDUCT_TAC
    THEN REWRITE_TAC[variants_THM,DL]
    THEN REPEAT GEN_TAC
@@ -773,44 +764,40 @@ val DL_variants =
    THEN IMP_RES_THEN REWRITE_THM NOT_IN_variants_INSERT
    THEN FIRST_ASSUM MATCH_MP_TAC
    THEN ASM_REWRITE_TAC[FINITE_INSERT]
-  );
+QED
 
-val DL_variants_SL =
- store_thm
-  ("DL_variants_SL",
-   “!x l. DL (variants x (SL l))”,
+Theorem DL_variants_SL:
+    !x l. DL (variants x (SL l))
+Proof
    REPEAT STRIP_TAC
    THEN MATCH_MP_TAC DL_variants
    THEN REWRITE_TAC[FINITE_SL]
-  );
+QED
 
 
-val LENGTH_variants =
- store_thm
-  ("LENGTH_variants",
-   “!x s. LENGTH (variants x s) = LENGTH x”,
+Theorem LENGTH_variants:
+    !x s. LENGTH (variants x s) = LENGTH x
+Proof
    LIST_INDUCT_TAC
    THEN ASM_REWRITE_TAC[variants_THM,LENGTH]
-  );
+QED
 
 
-val NOT_IN_variants =
- store_thm
-  ("NOT_IN_variants",
-   “!x y s. FINITE s /\ y IN s ==> ~(y IN SL (variants x s))”,
+Theorem NOT_IN_variants:
+    !x y s. FINITE s /\ y IN s ==> ~(y IN SL (variants x s))
+Proof
    REPEAT GEN_TAC THEN STRIP_TAC
    THEN IMP_RES_THEN (ASSUME_TAC o SPEC_ALL) DISJOINT_variants
    THEN IMP_RES_TAC IN_DISJOINT_IMP
-  );
+QED
 
 
-val DISJOINT_variants_UNION =
- store_thm
-  ("DISJOINT_variants_UNION",
-   “!x s t.
+Theorem DISJOINT_variants_UNION:
+    !x s t.
      FINITE s /\ FINITE t ==>
      DISJOINT (SL(variants x (s UNION t))) s /\
-     DISJOINT (SL(variants x (s UNION t))) t”,
+     DISJOINT (SL(variants x (s UNION t))) t
+Proof
    REPEAT GEN_TAC
    THEN STRIP_TAC
    THEN (MP_TAC o SPECL[“x:(var)list”,“(s:(var)-> bool) UNION t”])
@@ -818,57 +805,53 @@ val DISJOINT_variants_UNION =
    THEN ASM_REWRITE_TAC[FINITE_UNION]
    THEN ONCE_REWRITE_TAC[DISJOINT_SYM]
    THEN REWRITE_TAC[DISJOINT_UNION]
-  );
+QED
 
 
-val DISJOINT_variants_APPEND =
- store_thm
-  ("DISJOINT_variants_APPEND",
-    “!x a b.
+Theorem DISJOINT_variants_APPEND:
+     !x a b.
      DISJOINT (SL (variants x (SL (APPEND a b)))) (SL a) /\
-     DISJOINT (SL (variants x (SL (APPEND a b)))) (SL b) ”,
+     DISJOINT (SL (variants x (SL (APPEND a b)))) (SL b)
+Proof
    REPEAT GEN_TAC
    THEN REWRITE_TAC[SL_APPEND]
    THEN MATCH_MP_TAC DISJOINT_variants_UNION
    THEN REWRITE_TAC[FINITE_SL]
-  );
+QED
 
 
-val DISJOINT_variants_UNION1 =
- store_thm
-  ("DISJOINT_variants_UNION1",
-    “!x s t.
+Theorem DISJOINT_variants_UNION1:
+     !x s t.
          FINITE s /\ FINITE t ==>
-         DISJOINT (SL (variants x (s UNION t))) s”,
+         DISJOINT (SL (variants x (s UNION t))) s
+Proof
    REPEAT STRIP_TAC
    THEN IMP_RES_TAC DISJOINT_variants_UNION
    THEN ASM_REWRITE_TAC[]
-  );
+QED
 
 
-val DISJOINT_variants_UNION2 =
- store_thm
-  ("DISJOINT_variants_UNION2",
-    “!x s t.
+Theorem DISJOINT_variants_UNION2:
+     !x s t.
          FINITE s /\ FINITE t ==>
-         DISJOINT (SL (variants x (s UNION t))) t”,
+         DISJOINT (SL (variants x (s UNION t))) t
+Proof
    REPEAT STRIP_TAC
    THEN IMP_RES_TAC DISJOINT_variants_UNION
    THEN ASM_REWRITE_TAC[]
-  );
+QED
 
 
-val DISJOINT_variants_UNION3 =
- store_thm
-  ("DISJOINT_variants_UNION3",
-    “!x s t u.
+Theorem DISJOINT_variants_UNION3:
+     !x s t u.
       FINITE s /\ FINITE t /\ FINITE u ==>
       DISJOINT (SL(variants x (s UNION (t UNION u)))) s /\
       DISJOINT (SL(variants x (s UNION (t UNION u)))) t /\
       DISJOINT (SL(variants x (s UNION (t UNION u)))) u /\
       DISJOINT s (SL(variants x (s UNION (t UNION u)))) /\
       DISJOINT t (SL(variants x (s UNION (t UNION u)))) /\
-      DISJOINT u (SL(variants x (s UNION (t UNION u))))”,
+      DISJOINT u (SL(variants x (s UNION (t UNION u))))
+Proof
    REPEAT GEN_TAC
    THEN REWRITE_TAC[(SYM o SPEC_ALL) FINITE_UNION]
    THEN DISCH_THEN (MP_TAC o SPEC_ALL o MATCH_MP DISJOINT_variants)
@@ -878,72 +861,52 @@ val DISJOINT_variants_UNION3 =
    THEN ASM_REWRITE_TAC[]
    THEN ONCE_REWRITE_TAC[DISJOINT_SYM]
    THEN ASM_REWRITE_TAC[]
-  );
+QED
 
-val DISJOINT_variants_UNION_LEFT_1 =
- store_thm
-  ("DISJOINT_variants_UNION_LEFT_1",
-    “!x s t u.
+Theorem DISJOINT_variants_UNION_LEFT_1:
+     !x s t u.
       FINITE s /\ FINITE t /\ FINITE u ==>
-      DISJOINT (SL(variants x (s UNION (t UNION u)))) s”,
+      DISJOINT (SL(variants x (s UNION (t UNION u)))) s
+Proof
    REPEAT GEN_TAC
    THEN REWRITE_TAC[(SYM o SPEC_ALL) FINITE_UNION]
    THEN DISCH_THEN (MP_TAC o SPEC_ALL o MATCH_MP DISJOINT_variants)
    THEN ONCE_REWRITE_TAC[DISJOINT_SYM]
    THEN REWRITE_TAC[DISJOINT_UNION]
    THEN STRIP_TAC
-  );
+QED
 
-val DISJOINT_variants_UNION_LEFT_2 =
- store_thm
-  ("DISJOINT_variants_UNION_LEFT_2",
-    “!x s t u.
+Theorem DISJOINT_variants_UNION_LEFT_2:
+     !x s t u.
       FINITE s /\ FINITE t /\ FINITE u ==>
-      DISJOINT (SL(variants x (s UNION (t UNION u)))) t”,
+      DISJOINT (SL(variants x (s UNION (t UNION u)))) t
+Proof
    REPEAT GEN_TAC
    THEN REWRITE_TAC[(SYM o SPEC_ALL) FINITE_UNION]
    THEN DISCH_THEN (MP_TAC o SPEC_ALL o MATCH_MP DISJOINT_variants)
    THEN ONCE_REWRITE_TAC[DISJOINT_SYM]
    THEN REWRITE_TAC[DISJOINT_UNION]
    THEN STRIP_TAC
-  );
+QED
 
-val DISJOINT_variants_UNION_LEFT_3 =
- store_thm
-  ("DISJOINT_variants_UNION_LEFT_3",
-    “!x s t u.
+Theorem DISJOINT_variants_UNION_LEFT_3:
+     !x s t u.
       FINITE s /\ FINITE t /\ FINITE u ==>
-      DISJOINT (SL(variants x (s UNION (t UNION u)))) u”,
+      DISJOINT (SL(variants x (s UNION (t UNION u)))) u
+Proof
    REPEAT GEN_TAC
    THEN REWRITE_TAC[(SYM o SPEC_ALL) FINITE_UNION]
    THEN DISCH_THEN (MP_TAC o SPEC_ALL o MATCH_MP DISJOINT_variants)
    THEN ONCE_REWRITE_TAC[DISJOINT_SYM]
    THEN REWRITE_TAC[DISJOINT_UNION]
    THEN STRIP_TAC
-  );
+QED
 
-val DISJOINT_variants_UNION_RIGHT_1 =
- store_thm
-  ("DISJOINT_variants_UNION_RIGHT_1",
-    “!x s t u.
+Theorem DISJOINT_variants_UNION_RIGHT_1:
+     !x s t u.
       FINITE s /\ FINITE t /\ FINITE u ==>
-      DISJOINT s (SL(variants x (s UNION (t UNION u))))”,
-   REPEAT GEN_TAC
-   THEN REWRITE_TAC[(SYM o SPEC_ALL) FINITE_UNION]
-   THEN DISCH_THEN (MP_TAC o SPEC_ALL o MATCH_MP DISJOINT_variants)
-   THEN ONCE_REWRITE_TAC[DISJOINT_SYM]
-   THEN REWRITE_TAC[DISJOINT_UNION]
-   THEN STRIP_TAC
-   THEN ONCE_REWRITE_TAC[DISJOINT_SYM]
-   THEN ASM_REWRITE_TAC[]
-  );
-
-val DISJOINT_variants_UNION_RIGHT_2 =
- store_thm
-  ("DISJOINT_variants_UNION_RIGHT_2",
-    “!x s t u.
-      FINITE s /\ FINITE t /\ FINITE u ==>
-      DISJOINT t (SL(variants x (s UNION (t UNION u))))”,
+      DISJOINT s (SL(variants x (s UNION (t UNION u))))
+Proof
    REPEAT GEN_TAC
    THEN REWRITE_TAC[(SYM o SPEC_ALL) FINITE_UNION]
    THEN DISCH_THEN (MP_TAC o SPEC_ALL o MATCH_MP DISJOINT_variants)
@@ -952,14 +915,13 @@ val DISJOINT_variants_UNION_RIGHT_2 =
    THEN STRIP_TAC
    THEN ONCE_REWRITE_TAC[DISJOINT_SYM]
    THEN ASM_REWRITE_TAC[]
-  );
+QED
 
-val DISJOINT_variants_UNION_RIGHT_3 =
- store_thm
-  ("DISJOINT_variants_UNION_RIGHT_3",
-    “!x s t u.
+Theorem DISJOINT_variants_UNION_RIGHT_2:
+     !x s t u.
       FINITE s /\ FINITE t /\ FINITE u ==>
-      DISJOINT u (SL(variants x (s UNION (t UNION u))))”,
+      DISJOINT t (SL(variants x (s UNION (t UNION u))))
+Proof
    REPEAT GEN_TAC
    THEN REWRITE_TAC[(SYM o SPEC_ALL) FINITE_UNION]
    THEN DISCH_THEN (MP_TAC o SPEC_ALL o MATCH_MP DISJOINT_variants)
@@ -968,7 +930,22 @@ val DISJOINT_variants_UNION_RIGHT_3 =
    THEN STRIP_TAC
    THEN ONCE_REWRITE_TAC[DISJOINT_SYM]
    THEN ASM_REWRITE_TAC[]
-  );
+QED
+
+Theorem DISJOINT_variants_UNION_RIGHT_3:
+     !x s t u.
+      FINITE s /\ FINITE t /\ FINITE u ==>
+      DISJOINT u (SL(variants x (s UNION (t UNION u))))
+Proof
+   REPEAT GEN_TAC
+   THEN REWRITE_TAC[(SYM o SPEC_ALL) FINITE_UNION]
+   THEN DISCH_THEN (MP_TAC o SPEC_ALL o MATCH_MP DISJOINT_variants)
+   THEN ONCE_REWRITE_TAC[DISJOINT_SYM]
+   THEN REWRITE_TAC[DISJOINT_UNION]
+   THEN STRIP_TAC
+   THEN ONCE_REWRITE_TAC[DISJOINT_SYM]
+   THEN ASM_REWRITE_TAC[]
+QED
 
 
 val _ = print_theory_to_file "-" "variable.lst";

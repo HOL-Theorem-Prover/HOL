@@ -272,15 +272,16 @@ val numeral_lte = store_thm(
 val _ = print "Developing numeral rewrites for subtraction\n";
 val _ = print "   (includes initiality theorem for bit functions)\n";
 
-val numeral_pre = store_thm(
-  "numeral_pre",
-  “(PRE ZERO = ZERO) /\
+Theorem numeral_pre:
+   (PRE ZERO = ZERO) /\
      (PRE (BIT1 ZERO) = ZERO) /\
      (!n. PRE (BIT1 (BIT1 n)) = BIT2 (PRE (BIT1 n))) /\
      (!n. PRE (BIT1 (BIT2 n)) = BIT2 (BIT1 n)) /\
-     (!n. PRE (BIT2 n) = BIT1 n)”,
+     (!n. PRE (BIT2 n) = BIT1 n)
+Proof
   SIMP_TAC bool_ss [BIT1, BIT2, PRE, PRE_ADD,
-                    ADD_CLAUSES, ADD_ASSOC, PRE, ALT_ZERO]);
+                    ADD_CLAUSES, ADD_ASSOC, PRE, ALT_ZERO]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* We could just go on and prove similar rewrites for subtraction, but       *)

@@ -53,12 +53,13 @@ Definition tendsto :
       (&0 < (dist m)(x,y) /\ (dist m)(x,y) <= (dist m)(x,z))
 End
 
-val DORDER_LEMMA = store_thm("DORDER_LEMMA",
-  “!g:'a->'a->bool.
+Theorem DORDER_LEMMA:
+   !g:'a->'a->bool.
       dorder g ==>
         !P Q. (?n. g n n /\ (!m. g m n ==> P m)) /\
               (?n. g n n /\ (!m. g m n ==> Q m))
-                  ==> (?n. g n n /\ (!m. g m n ==> P m /\ Q m))”,
+                  ==> (?n. g n n /\ (!m. g m n ==> P m /\ Q m))
+Proof
   GEN_TAC THEN REWRITE_TAC[dorder] THEN DISCH_TAC THEN REPEAT GEN_TAC THEN
   DISCH_THEN(CONJUNCTS_THEN2 (X_CHOOSE_THEN “N1:'a” STRIP_ASSUME_TAC)
                              (X_CHOOSE_THEN “N2:'a” STRIP_ASSUME_TAC)) THEN
@@ -71,7 +72,8 @@ val DORDER_LEMMA = store_thm("DORDER_LEMMA",
   FIRST_ASSUM(UNDISCH_TAC o
     assert(is_conj o snd o dest_imp o snd o dest_forall) o concl) THEN
   DISCH_THEN(MP_TAC o SPEC “m:'a”) THEN ASM_REWRITE_TAC[] THEN
-  DISCH_TAC THEN ASM_REWRITE_TAC[]);
+  DISCH_TAC THEN ASM_REWRITE_TAC[]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Following tactic is useful in the following proofs                        *)
@@ -95,8 +97,9 @@ fun DORDER_THEN tac th =
 (* Show that sequences and pointwise limits in a metric space are directed   *)
 (*---------------------------------------------------------------------------*)
 
-val DORDER_NGE = store_thm("DORDER_NGE",
-  “dorder ($>= :num->num->bool)”,
+Theorem DORDER_NGE:
+   dorder ($>= :num->num->bool)
+Proof
   REWRITE_TAC[dorder, GREATER_EQ, LESS_EQ_REFL] THEN
   REPEAT GEN_TAC THEN
   DISJ_CASES_TAC(SPECL [“x:num”, “y:num”] LESS_EQ_CASES) THENL
@@ -104,10 +107,12 @@ val DORDER_NGE = store_thm("DORDER_NGE",
   GEN_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[] THEN
   MATCH_MP_TAC LESS_EQ_TRANS THENL
     [EXISTS_TAC “y:num”, EXISTS_TAC “x:num”] THEN
-  ASM_REWRITE_TAC[]);
+  ASM_REWRITE_TAC[]
+QED
 
-val DORDER_TENDSTO = store_thm("DORDER_TENDSTO",
-  “!m:('a)metric. !x. dorder(tendsto(m,x))”,
+Theorem DORDER_TENDSTO:
+   !m:('a)metric. !x. dorder(tendsto(m,x))
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[dorder, tendsto] THEN
   MAP_EVERY X_GEN_TAC [“u:'a”, “v:'a”] THEN
   REWRITE_TAC[REAL_LE_REFL] THEN
@@ -116,7 +121,8 @@ val DORDER_TENDSTO = store_thm("DORDER_TENDSTO",
   THENL [EXISTS_TAC “v:'a”, EXISTS_TAC “u:'a”] THEN ASM_REWRITE_TAC[] THEN
   GEN_TAC THEN DISCH_THEN STRIP_ASSUME_TAC THEN ASM_REWRITE_TAC[] THEN
   MATCH_MP_TAC REAL_LE_TRANS THEN FIRST_ASSUM
-    (fn th => (EXISTS_TAC o rand o concl) th THEN ASM_REWRITE_TAC[] THEN NO_TAC));
+    (fn th => (EXISTS_TAC o rand o concl) th THEN ASM_REWRITE_TAC[] THEN NO_TAC)
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Simpler characterization of limit in a metric topology                    *)
@@ -185,22 +191,25 @@ QED
 
 val geq = Term`$>= : num->num->bool`;
 
-val SEQ_TENDS = store_thm("SEQ_TENDS",
-  “!d:('a)metric. !x x0. (x tends x0)(mtop(d), ^geq) =
-     !e. &0 < e ==> ?N. !n. ^geq n N ==> dist(d)(x(n),x0) < e”,
-  REPEAT GEN_TAC THEN REWRITE_TAC[MTOP_TENDS, GREATER_EQ, LESS_EQ_REFL]);
+Theorem SEQ_TENDS:
+   !d:('a)metric. !x x0. (x tends x0)(mtop(d), ^geq) =
+     !e. &0 < e ==> ?N. !n. ^geq n N ==> dist(d)(x(n),x0) < e
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC[MTOP_TENDS, GREATER_EQ, LESS_EQ_REFL]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* And of limit of function between metric spaces                            *)
 (*---------------------------------------------------------------------------*)
 
-val LIM_TENDS = store_thm("LIM_TENDS",
-  “!m1:('a)metric. !m2:('b)metric. !f x0 y0.
+Theorem LIM_TENDS:
+   !m1:('a)metric. !m2:('b)metric. !f x0 y0.
       limpt(mtop m1) x0 UNIV ==>
         ((f tends y0)(mtop(m2),tendsto(m1,x0)) =
           !e. &0 < e ==>
             ?d. &0 < d /\ !x. &0 < (dist m1)(x,x0) /\ (dist m1)(x,x0) <= d ==>
-              (dist m2)(f(x),y0) < e)”,
+              (dist m2)(f(x),y0) < e)
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   REWRITE_TAC[MTOP_TENDS, tendsto] THEN
   AP_TERM_TAC THEN ABS_TAC THEN
@@ -224,19 +233,21 @@ val LIM_TENDS = store_thm("LIM_TENDS",
     ONCE_REWRITE_TAC[METRIC_SYM] THEN ASM_REWRITE_TAC[] THEN
     MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC “(dist m1)(x0:'a,y)” THEN
     ASM_REWRITE_TAC[] THEN MATCH_MP_TAC REAL_LT_IMP_LE THEN
-    FIRST_ASSUM ACCEPT_TAC]);
+    FIRST_ASSUM ACCEPT_TAC]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Similar, more conventional version, is also true at a limit point         *)
 (*---------------------------------------------------------------------------*)
 
-val LIM_TENDS2 = store_thm("LIM_TENDS2",
-  “!m1:('a)metric. !m2:('b)metric. !f x0 y0.
+Theorem LIM_TENDS2:
+   !m1:('a)metric. !m2:('b)metric. !f x0 y0.
       limpt(mtop m1) x0 UNIV ==>
         ((f tends y0)(mtop(m2),tendsto(m1,x0)) =
           !e. &0 < e ==>
             ?d. &0 < d /\ !x. &0 < (dist m1)(x,x0) /\ (dist m1)(x,x0) < d ==>
-              (dist m2)(f(x),y0) < e)”,
+              (dist m2)(f(x),y0) < e)
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   FIRST_ASSUM(fn th => REWRITE_TAC[MATCH_MP LIM_TENDS th]) THEN
   AP_TERM_TAC THEN ABS_TAC THEN AP_TERM_TAC THEN
@@ -247,15 +258,17 @@ val LIM_TENDS2 = store_thm("LIM_TENDS2",
     EXISTS_TAC “d / &2” THEN ASM_REWRITE_TAC[REAL_LT_HALF1] THEN
     GEN_TAC THEN DISCH_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN
     ASM_REWRITE_TAC[] THEN MATCH_MP_TAC REAL_LET_TRANS THEN
-    EXISTS_TAC “d / &2” THEN ASM_REWRITE_TAC[REAL_LT_HALF2]]);
+    EXISTS_TAC “d / &2” THEN ASM_REWRITE_TAC[REAL_LT_HALF2]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Simpler characterization of boundedness for the real line                 *)
 (*---------------------------------------------------------------------------*)
 
-val MR1_BOUNDED = store_thm("MR1_BOUNDED",
-  “!(g:'a->'a->bool) f. bounded(mr1,g) f =
-        ?k N. g N N /\ (!n. g n N ==> abs(f n) < k)”,
+Theorem MR1_BOUNDED:
+   !(g:'a->'a->bool) f. bounded(mr1,g) f =
+        ?k N. g N N /\ (!n. g n N ==> abs(f n) < k)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[bounded, MR1_DEF] THEN
   (CONV_TAC o LAND_CONV o RAND_CONV o ABS_CONV) SWAP_EXISTS_CONV
   THEN CONV_TAC(ONCE_DEPTH_CONV SWAP_EXISTS_CONV) THEN
@@ -275,34 +288,40 @@ val MR1_BOUNDED = store_thm("MR1_BOUNDED",
     ONCE_REWRITE_TAC[ABS_SUB] THEN
     FIRST_ASSUM MATCH_MP_TAC THEN FIRST_ASSUM ACCEPT_TAC,
     DISCH_TAC THEN MAP_EVERY EXISTS_TAC [“k:real”, “&0”] THEN
-    ASM_REWRITE_TAC[REAL_SUB_LZERO, ABS_NEG]]);
+    ASM_REWRITE_TAC[REAL_SUB_LZERO, ABS_NEG]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Firstly, prove useful forms of null and bounded nets                      *)
 (*---------------------------------------------------------------------------*)
 
-val NET_NULL = store_thm("NET_NULL",
-  “!g:'a->'a->bool. !x x0.
-      (x tends x0)(mtop(mr1),g) = ((\n. x(n) - x0) tends &0)(mtop(mr1),g)”,
+Theorem NET_NULL:
+   !g:'a->'a->bool. !x x0.
+      (x tends x0)(mtop(mr1),g) = ((\n. x(n) - x0) tends &0)(mtop(mr1),g)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[MTOP_TENDS] THEN BETA_TAC THEN
   REWRITE_TAC[MR1_DEF, REAL_SUB_LZERO] THEN EQUAL_TAC THEN
-  REWRITE_TAC[REAL_NEG_SUB]);
+  REWRITE_TAC[REAL_NEG_SUB]
+QED
 
-val NET_CONV_BOUNDED = store_thm("NET_CONV_BOUNDED",
-  “!g:'a->'a->bool. !x x0.
-      (x tends x0)(mtop(mr1),g) ==> bounded(mr1,g) x”,
+Theorem NET_CONV_BOUNDED:
+   !g:'a->'a->bool. !x x0.
+      (x tends x0)(mtop(mr1),g) ==> bounded(mr1,g) x
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[MTOP_TENDS, bounded] THEN
   DISCH_THEN(MP_TAC o SPEC “&1”) THEN
   REWRITE_TAC[REAL_LT, ONE, LESS_0] THEN
   REWRITE_TAC[GSYM(ONE)] THEN
   DISCH_THEN(X_CHOOSE_THEN “N:'a” STRIP_ASSUME_TAC) THEN
   MAP_EVERY EXISTS_TAC [“&1”, “x0:real”, “N:'a”] THEN
-  ASM_REWRITE_TAC[]);
+  ASM_REWRITE_TAC[]
+QED
 
-val NET_CONV_NZ = store_thm("NET_CONV_NZ",
-  “!g:'a->'a->bool. !x x0.
+Theorem NET_CONV_NZ:
+   !g:'a->'a->bool. !x x0.
       (x tends x0)(mtop(mr1),g) /\ ~(x0 = &0) ==>
-        ?N. g N N /\ (!n. g n N ==> ~(x n = &0))”,
+        ?N. g N N /\ (!n. g n N ==> ~(x n = &0))
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[MTOP_TENDS, bounded] THEN
   DISCH_THEN(CONJUNCTS_THEN2 (MP_TAC o SPEC “abs(x0)”) ASSUME_TAC) THEN
   ASM_REWRITE_TAC[GSYM ABS_NZ] THEN
@@ -311,12 +330,14 @@ val NET_CONV_NZ = store_thm("NET_CONV_NZ",
   GEN_TAC THEN DISCH_THEN(ANTE_RES_THEN MP_TAC) THEN
   CONV_TAC CONTRAPOS_CONV THEN REWRITE_TAC[] THEN
   DISCH_THEN SUBST1_TAC THEN
-  REWRITE_TAC[MR1_DEF, REAL_SUB_RZERO, REAL_LT_REFL]);
+  REWRITE_TAC[MR1_DEF, REAL_SUB_RZERO, REAL_LT_REFL]
+QED
 
-val NET_CONV_IBOUNDED = store_thm("NET_CONV_IBOUNDED",
-  “!g:'a->'a->bool. !x x0.
+Theorem NET_CONV_IBOUNDED:
+   !g:'a->'a->bool. !x x0.
       (x tends x0)(mtop(mr1),g) /\ ~(x0 = &0) ==>
-        bounded(mr1,g) (\n. inv(x n))”,
+        bounded(mr1,g) (\n. inv(x n))
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[MTOP_TENDS, MR1_BOUNDED, MR1_DEF] THEN
   BETA_TAC THEN REWRITE_TAC[ABS_NZ] THEN
   DISCH_THEN(CONJUNCTS_THEN2 MP_TAC ASSUME_TAC) THEN
@@ -352,16 +373,18 @@ val NET_CONV_IBOUNDED = store_thm("NET_CONV_IBOUNDED",
       REWRITE_TAC[]], ALL_TAC] THEN
   SUBGOAL_THEN “~(x(n:'a) = &0)” (SUBST1_TAC o MATCH_MP ABS_INV) THENL
    [ASM_REWRITE_TAC[ABS_NZ], ALL_TAC] THEN
-  MATCH_MP_TAC REAL_LT_INV THEN ASM_REWRITE_TAC[REAL_LT_HALF1]);
+  MATCH_MP_TAC REAL_LT_INV THEN ASM_REWRITE_TAC[REAL_LT_HALF1]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Now combining theorems for null nets                                      *)
 (*---------------------------------------------------------------------------*)
 
-val NET_NULL_ADD = store_thm("NET_NULL_ADD",
-  “!g:'a->'a->bool. dorder g ==>
+Theorem NET_NULL_ADD:
+   !g:'a->'a->bool. dorder g ==>
         !x y. (x tends &0)(mtop(mr1),g) /\ (y tends &0)(mtop(mr1),g) ==>
-                ((\n. x(n) + y(n)) tends &0)(mtop(mr1),g)”,
+                ((\n. x(n) + y(n)) tends &0)(mtop(mr1),g)
+Proof
   GEN_TAC THEN DISCH_TAC THEN REPEAT GEN_TAC THEN
   REWRITE_TAC[MTOP_TENDS, MR1_DEF, REAL_SUB_LZERO, ABS_NEG] THEN
   DISCH_THEN(curry op THEN (X_GEN_TAC “e:real” THEN DISCH_TAC) o
@@ -374,12 +397,14 @@ val NET_NULL_ADD = store_thm("NET_NULL_ADD",
   EXISTS_TAC “abs(x(m:'a)) + abs(y(m:'a))” THEN
   REWRITE_TAC[ABS_TRIANGLE] THEN RULE_ASSUM_TAC BETA_RULE THEN
   GEN_REWR_TAC RAND_CONV [GSYM REAL_HALF_DOUBLE] THEN
-  MATCH_MP_TAC REAL_LT_ADD2 THEN ASM_REWRITE_TAC[]);
+  MATCH_MP_TAC REAL_LT_ADD2 THEN ASM_REWRITE_TAC[]
+QED
 
-val NET_NULL_MUL = store_thm("NET_NULL_MUL",
-  “!g:'a->'a->bool. dorder g ==>
+Theorem NET_NULL_MUL:
+   !g:'a->'a->bool. dorder g ==>
       !x y. bounded(mr1,g) x /\ (y tends &0)(mtop(mr1),g) ==>
-              ((\n. x(n) * y(n)) tends &0)(mtop(mr1),g)”,
+              ((\n. x(n) * y(n)) tends &0)(mtop(mr1),g)
+Proof
   GEN_TAC THEN DISCH_TAC THEN
   REPEAT GEN_TAC THEN REWRITE_TAC[MR1_BOUNDED] THEN
   REWRITE_TAC[MTOP_TENDS, MR1_DEF, REAL_SUB_LZERO, ABS_NEG] THEN
@@ -405,11 +430,13 @@ val NET_NULL_MUL = store_thm("NET_NULL_MUL",
     DISCH_THEN SUBST_ALL_TAC THEN UNDISCH_TAC “&0 < &0” THEN
     REWRITE_TAC[REAL_LT_REFL], ALL_TAC] THEN BETA_TAC THEN
   REWRITE_TAC[ABS_MUL] THEN MATCH_MP_TAC REAL_LT_MUL2 THEN
-  ASM_REWRITE_TAC[ABS_POS]);
+  ASM_REWRITE_TAC[ABS_POS]
+QED
 
-val NET_NULL_CMUL = store_thm("NET_NULL_CMUL",
-  “!g:'a->'a->bool. !k x.
-      (x tends &0)(mtop(mr1),g) ==> ((\n. k * x(n)) tends &0)(mtop(mr1),g)”,
+Theorem NET_NULL_CMUL:
+   !g:'a->'a->bool. !k x.
+      (x tends &0)(mtop(mr1),g) ==> ((\n. k * x(n)) tends &0)(mtop(mr1),g)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[MTOP_TENDS, MR1_DEF] THEN
   BETA_TAC THEN REWRITE_TAC[REAL_SUB_LZERO, ABS_NEG] THEN
   DISCH_THEN(curry op THEN (X_GEN_TAC “e:real” THEN DISCH_TAC) o MP_TAC) THEN
@@ -433,49 +460,57 @@ val NET_NULL_CMUL = store_thm("NET_NULL_CMUL",
       ASM_REWRITE_TAC[ABS_ZERO], ALL_TAC] THEN
     REWRITE_TAC[ABS_MUL] THEN
     SUBGOAL_THEN “&0 < abs k” (fn th => REWRITE_TAC[MATCH_MP REAL_LT_LMUL th])
-    THEN ASM_REWRITE_TAC[GSYM ABS_NZ]]);
+    THEN ASM_REWRITE_TAC[GSYM ABS_NZ]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Now real arithmetic theorems for convergent nets                          *)
 (*---------------------------------------------------------------------------*)
 
-val NET_ADD = store_thm("NET_ADD",
-  “!g:'a->'a->bool. dorder g ==>
+Theorem NET_ADD:
+   !g:'a->'a->bool. dorder g ==>
       !x x0 y y0. (x tends x0)(mtop(mr1),g) /\ (y tends y0)(mtop(mr1),g) ==>
-                      ((\n. x(n) + y(n)) tends (x0 + y0))(mtop(mr1),g)”,
+                      ((\n. x(n) + y(n)) tends (x0 + y0))(mtop(mr1),g)
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN REPEAT GEN_TAC THEN
   ONCE_REWRITE_TAC[NET_NULL] THEN
   DISCH_THEN(fn th => FIRST_ASSUM(MP_TAC o C MATCH_MP th o MATCH_MP NET_NULL_ADD))
   THEN MATCH_MP_TAC(TAUT ‘(a = b) ==> a ==> b’) THEN EQUAL_TAC THEN
   BETA_TAC THEN REWRITE_TAC[real_sub, REAL_NEG_ADD] THEN
-  CONV_TAC(AC_CONV(REAL_ADD_ASSOC,REAL_ADD_SYM)));
+  CONV_TAC(AC_CONV(REAL_ADD_ASSOC,REAL_ADD_SYM))
+QED
 
-val NET_NEG = store_thm("NET_NEG",
-  “!g:'a->'a->bool. dorder g ==>
+Theorem NET_NEG:
+   !g:'a->'a->bool. dorder g ==>
         (!x x0. (x tends x0)(mtop(mr1),g) =
-                  ((\n. ~(x n)) tends ~x0)(mtop(mr1),g))”,
+                  ((\n. ~(x n)) tends ~x0)(mtop(mr1),g))
+Proof
   GEN_TAC THEN DISCH_TAC THEN REPEAT GEN_TAC THEN
   REWRITE_TAC[MTOP_TENDS, MR1_DEF] THEN BETA_TAC THEN
   REWRITE_TAC[REAL_SUB_NEG2] THEN
   GEN_REWR_TAC (RAND_CONV o ONCE_DEPTH_CONV) [ABS_SUB]
-  THEN REFL_TAC);
+  THEN REFL_TAC
+QED
 
-val NET_SUB = store_thm("NET_SUB",
-  “!g:'a->'a->bool. dorder g ==>
+Theorem NET_SUB:
+   !g:'a->'a->bool. dorder g ==>
       !x x0 y y0. (x tends x0)(mtop(mr1),g) /\ (y tends y0)(mtop(mr1),g) ==>
-                      ((\n. x(n) - y(n)) tends (x0 - y0))(mtop(mr1),g)”,
+                      ((\n. x(n) - y(n)) tends (x0 - y0))(mtop(mr1),g)
+Proof
   GEN_TAC THEN DISCH_TAC THEN REPEAT GEN_TAC THEN DISCH_TAC THEN
   REWRITE_TAC[real_sub] THEN
   CONV_TAC(EXACT_CONV[X_BETA_CONV “n:'a” “-(y (n:'a))”]) THEN
   FIRST_ASSUM(MATCH_MP_TAC o MATCH_MP NET_ADD) THEN
   ASM_REWRITE_TAC[] THEN
   FIRST_ASSUM(fn th => ONCE_REWRITE_TAC[GSYM(MATCH_MP NET_NEG th)]) THEN
-  ASM_REWRITE_TAC[]);
+  ASM_REWRITE_TAC[]
+QED
 
-val NET_MUL = store_thm("NET_MUL",
-  “!g:'a->'a->bool. dorder g ==>
+Theorem NET_MUL:
+   !g:'a->'a->bool. dorder g ==>
         !x y x0 y0. (x tends x0)(mtop(mr1),g) /\ (y tends y0)(mtop(mr1),g) ==>
-              ((\n. x(n) * y(n)) tends (x0 * y0))(mtop(mr1),g)”,
+              ((\n. x(n) * y(n)) tends (x0 * y0))(mtop(mr1),g)
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[NET_NULL] THEN
   DISCH_TAC THEN BETA_TAC THEN
@@ -498,12 +533,14 @@ val NET_MUL = store_thm("NET_MUL",
     ASM_REWRITE_TAC[] THEN MATCH_MP_TAC NET_CONV_BOUNDED THEN
     EXISTS_TAC “x0:real” THEN ONCE_REWRITE_TAC[NET_NULL] THEN
     ASM_REWRITE_TAC[],
-    MATCH_MP_TAC NET_NULL_CMUL THEN ASM_REWRITE_TAC[]]);
+    MATCH_MP_TAC NET_NULL_CMUL THEN ASM_REWRITE_TAC[]]
+QED
 
-val NET_INV = store_thm("NET_INV",
-  “!g:'a->'a->bool. dorder g ==>
+Theorem NET_INV:
+   !g:'a->'a->bool. dorder g ==>
         !x x0. (x tends x0)(mtop(mr1),g) /\ ~(x0 = &0) ==>
-                   ((\n. inv(x(n))) tends inv x0)(mtop(mr1),g)”,
+                   ((\n. inv(x(n))) tends inv x0)(mtop(mr1),g)
+Proof
   GEN_TAC THEN DISCH_TAC THEN REPEAT GEN_TAC THEN
   DISCH_THEN(fn th => STRIP_ASSUME_TAC th THEN
     MP_TAC(CONJ (MATCH_MP NET_CONV_IBOUNDED th)
@@ -560,24 +597,28 @@ val NET_INV = store_thm("NET_INV",
   REWRITE_TAC[ABS_MUL] THEN SUBGOAL_THEN “&0 < abs(inv x0)”
     (fn th => ASM_REWRITE_TAC[MATCH_MP REAL_LT_LMUL th]) THEN
   REWRITE_TAC[GSYM ABS_NZ] THEN
-  MATCH_MP_TAC REAL_INV_NZ THEN ASM_REWRITE_TAC[]);
+  MATCH_MP_TAC REAL_INV_NZ THEN ASM_REWRITE_TAC[]
+QED
 
-val NET_DIV = store_thm("NET_DIV",
-  “!g:'a->'a->bool. dorder g ==>
+Theorem NET_DIV:
+   !g:'a->'a->bool. dorder g ==>
       !x x0 y y0. (x tends x0)(mtop(mr1),g) /\
                   (y tends y0)(mtop(mr1),g) /\ ~(y0 = &0) ==>
-                      ((\n. x(n) / y(n)) tends (x0 / y0))(mtop(mr1),g)”,
+                      ((\n. x(n) / y(n)) tends (x0 / y0))(mtop(mr1),g)
+Proof
   GEN_TAC THEN DISCH_TAC THEN REPEAT GEN_TAC THEN DISCH_TAC THEN
   REWRITE_TAC[real_div] THEN
   CONV_TAC(EXACT_CONV[X_BETA_CONV “n:'a” “inv(y(n:'a))”]) THEN
   FIRST_ASSUM(MATCH_MP_TAC o MATCH_MP NET_MUL) THEN
   ASM_REWRITE_TAC[] THEN
   FIRST_ASSUM(MATCH_MP_TAC o MATCH_MP NET_INV) THEN
-  ASM_REWRITE_TAC[]);
+  ASM_REWRITE_TAC[]
+QED
 
-val NET_ABS = store_thm("NET_ABS",
-  “!g x x0. (x tends x0)(mtop(mr1),g) ==>
-               ((\n:'a. abs(x n)) tends abs(x0))(mtop(mr1),g)”,
+Theorem NET_ABS:
+   !g x x0. (x tends x0)(mtop(mr1),g) ==>
+               ((\n:'a. abs(x n)) tends abs(x0))(mtop(mr1),g)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[MTOP_TENDS] THEN
   DISCH_TAC THEN X_GEN_TAC “e:real” THEN
   DISCH_THEN(fn th => POP_ASSUM(MP_TAC o C MATCH_MP th)) THEN
@@ -587,18 +628,20 @@ val NET_ABS = store_thm("NET_ABS",
   MATCH_MP_TAC REAL_LET_TRANS THEN
   EXISTS_TAC “dist(mr1)(x(n:'a),x0)” THEN CONJ_TAC THENL
    [REWRITE_TAC[MR1_DEF, ABS_SUB_ABS],
-    FIRST_ASSUM MATCH_MP_TAC THEN FIRST_ASSUM ACCEPT_TAC]);
+    FIRST_ASSUM MATCH_MP_TAC THEN FIRST_ASSUM ACCEPT_TAC]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Comparison between limits                                                 *)
 (*---------------------------------------------------------------------------*)
 
-val NET_LE = store_thm("NET_LE",
-  “!g:'a->'a->bool. dorder g ==>
+Theorem NET_LE:
+   !g:'a->'a->bool. dorder g ==>
       !x x0 y y0. (x tends x0)(mtop(mr1),g) /\
                   (y tends y0)(mtop(mr1),g) /\
                   (?N. g N N /\ !n. g n N ==> x(n) <= y(n))
-                        ==> x0 <= y0”,
+                        ==> x0 <= y0
+Proof
   GEN_TAC THEN DISCH_TAC THEN REPEAT GEN_TAC THEN DISCH_TAC THEN
   GEN_REWR_TAC I [TAUT ‘a = ~~a:bool’] THEN
   PURE_ONCE_REWRITE_TAC[REAL_NOT_LE] THEN
@@ -621,7 +664,8 @@ val NET_LE = store_thm("NET_LE",
   REWRITE_TAC[REAL_NOT_LE] THEN MATCH_MP_TAC ABS_BETWEEN2 THEN
   MAP_EVERY EXISTS_TAC [“y0:real”, “x0:real”] THEN
   ASM_REWRITE_TAC[] THEN ONCE_REWRITE_TAC[GSYM REAL_SUB_LT] THEN
-  FIRST_ASSUM ACCEPT_TAC);
+  FIRST_ASSUM ACCEPT_TAC
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*  Net As Type                                                              *)

@@ -111,32 +111,35 @@ val lcm_eliminate = store_thm(
   PROVE_TAC [INT_MUL_SYM]);
 
 
-val lt_justify_multiplication = store_thm(
-  "lt_justify_multiplication",
-  “!n x y:int. 0 < n ==> (x < y = n * x < n * y)”,
+Theorem lt_justify_multiplication:
+   !n x y:int. 0 < n ==> (x < y = n * x < n * y)
+Proof
   REPEAT STRIP_TAC THEN
   `n * x < n * y = 0 < n * y - n * x`
      by PROVE_TAC [INT_LT_ADD_SUB, INT_ADD_LID] THEN
   POP_ASSUM SUBST_ALL_TAC THEN
   ASM_REWRITE_TAC [GSYM INT_SUB_LDISTRIB, INT_MUL_SIGN_CASES] THEN
   `~(n < 0)` by PROVE_TAC [INT_LT_TRANS, INT_LT_REFL] THEN
-  ASM_REWRITE_TAC [INT_ADD_LID, GSYM INT_LT_ADD_SUB]);
+  ASM_REWRITE_TAC [INT_ADD_LID, GSYM INT_LT_ADD_SUB]
+QED
 
-val eq_justify_multiplication = store_thm(
-  "eq_justify_multiplication",
-  “!n x y:int. 0 < n ==> ((x = y) = (n * x = n * y))”,
-  PROVE_TAC [INT_EQ_RMUL, INT_LT_REFL, INT_MUL_COMM]);
+Theorem eq_justify_multiplication:
+   !n x y:int. 0 < n ==> ((x = y) = (n * x = n * y))
+Proof
+  PROVE_TAC [INT_EQ_RMUL, INT_LT_REFL, INT_MUL_COMM]
+QED
 
-val justify_divides = store_thm(
-  "justify_divides",
-  “!n x y:int. 0 < n ==> (x int_divides y = n * x int_divides n * y)”,
-  PROVE_TAC [INT_DIVIDES_MUL_BOTH, INT_LT_REFL]);
+Theorem justify_divides:
+   !n x y:int. 0 < n ==> (x int_divides y = n * x int_divides n * y)
+Proof
+  PROVE_TAC [INT_DIVIDES_MUL_BOTH, INT_LT_REFL]
+QED
 
-val justify_divides2 = store_thm(
-  "justify_divides2",
-  “!n c x y:int.
+Theorem justify_divides2:
+   !n c x y:int.
         n * x int_divides n * y + c =
-        n * x int_divides n * y + c /\ n int_divides c”,
+        n * x int_divides n * y + c /\ n int_divides c
+Proof
   REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THEN
   ASM_REWRITE_TAC [] THEN POP_ASSUM MP_TAC THEN
   REWRITE_TAC [INT_DIVIDES] THEN
@@ -147,7 +150,8 @@ val justify_divides2 = store_thm(
   `m * (n * x) = n * (m * x)` by PROVE_TAC [INT_MUL_COMM, INT_MUL_ASSOC] THEN
   POP_ASSUM SUBST_ALL_TAC THEN
   REWRITE_TAC [GSYM INT_LDISTRIB] THEN
-  PROVE_TAC [INT_MUL_COMM]);
+  PROVE_TAC [INT_MUL_COMM]
+QED
 
 val justify_divides3 = store_thm(
   "justify_divides3",

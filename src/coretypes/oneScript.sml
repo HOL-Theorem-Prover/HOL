@@ -91,8 +91,9 @@ val one = store_thm("one[simp]",
     Prove also the following theorem:
  ---------------------------------------------------------------------------*)
 
-val one_Axiom = store_thm("one_Axiom",
-    “!e:'a. ?!fn. fn one = e”,
+Theorem one_Axiom:
+     !e:'a. ?!fn. fn one = e
+Proof
     STRIP_TAC THEN
     CONV_TAC EXISTS_UNIQUE_CONV THEN
     STRIP_TAC THENL
@@ -101,7 +102,8 @@ val one_Axiom = store_thm("one_Axiom",
      REPEAT STRIP_TAC THEN
      CONV_TAC FUN_EQ_CONV THEN
      ONCE_REWRITE_TAC [one] THEN
-     ASM_REWRITE_TAC[]]);
+     ASM_REWRITE_TAC[]]
+QED
 
 val one_prim_rec = store_thm
  ("one_prim_rec",

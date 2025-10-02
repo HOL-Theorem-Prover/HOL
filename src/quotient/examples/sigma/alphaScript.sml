@@ -58,16 +58,16 @@ Definition alpha_match_def:
                 alpha_match xs (TL ys) x1 y1))))
 End
 
-val alpha_match = store_thm
-   ("alpha_match",
-    “(!x1 y1. alpha_match [] [] x1 y1 = (x1 = y1)) /\
+Theorem alpha_match:
+     (!x1 y1. alpha_match [] [] x1 y1 = (x1 = y1)) /\
         (!ys y x1 y1. alpha_match [] (CONS y ys) x1 y1 = F) /\
         (!xs x x1 y1. alpha_match (CONS x xs) [] x1 y1 = F) /\
         (!xs ys x y x1 y1. alpha_match (CONS x xs) (CONS y ys) x1 y1 =
                            (((x1 = x) /\ (y1 = y)
                              /\ (LENGTH xs = LENGTH ys)) \/
                             (~(x1 = x) /\ ~(y1 = y)
-                             /\ alpha_match xs ys x1 y1)))”,
+                             /\ alpha_match xs ys x1 y1)))
+Proof
     REWRITE_TAC[alpha_match_def]
     THEN REWRITE_TAC[NOT_CONS_NIL]
     THEN REWRITE_TAC[HD,TL]
@@ -79,29 +79,29 @@ val alpha_match = store_thm
         COND_CASES_TAC
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
-val alpha_match_NIL = store_thm
-   ("alpha_match_NIL",
-    “alpha_match [] [] = $=”,
+Theorem alpha_match_NIL:
+     alpha_match [] [] = $=
+Proof
     EXT_TAC “x:var”
     THEN GEN_TAC
     THEN EXT_TAC “y:var”
     THEN GEN_TAC
     THEN REWRITE_TAC[alpha_match]
-   );
+QED
 
-val alpha_match_REFL = store_thm
-   ("alpha_match_REFL",
-    “!xs x. alpha_match xs xs x x”,
+Theorem alpha_match_REFL:
+     !xs x. alpha_match xs xs x x
+Proof
     LIST_INDUCT_TAC
     THEN ASM_REWRITE_TAC[alpha_match]
     THEN REWRITE_TAC[EXCLUDED_MIDDLE]
-   );
+QED
 
-val alpha_match_SYM = store_thm
-   ("alpha_match_SYM",
-    “!xs ys x1 y1. alpha_match xs ys x1 y1 = alpha_match ys xs y1 x1”,
+Theorem alpha_match_SYM:
+     !xs ys x1 y1. alpha_match xs ys x1 y1 = alpha_match ys xs y1 x1
+Proof
     LIST_INDUCT_TAC
     THEN REWRITE_TAC[alpha_match]
     THENL
@@ -120,12 +120,12 @@ val alpha_match_SYM = store_thm
         THEN STRIP_TAC
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
-val alpha_match_TRANS = store_thm
-   ("alpha_match_TRANS",
-    “!xs ys zs x y z. alpha_match xs ys x y /\ alpha_match ys zs y z
-                         ==> alpha_match xs zs x z”,
+Theorem alpha_match_TRANS:
+     !xs ys zs x y z. alpha_match xs ys x y /\ alpha_match ys zs y z
+                         ==> alpha_match xs zs x z
+Proof
     LIST_INDUCT_TAC
     THENL
       [ LIST_INDUCT_TAC
@@ -148,15 +148,15 @@ val alpha_match_TRANS = store_thm
         THEN ASM_REWRITE_TAC[]
         THEN RES_TAC
       ]
-   );
+QED
 
 
-val alpha_match_SUB_var = store_thm
-   ("alpha_match_SUB_var",
-    “!xs ys x y. alpha_match xs ys x y =
+Theorem alpha_match_SUB_var:
+     !xs ys x y. alpha_match xs ys x y =
                     ((LENGTH xs = LENGTH ys) /\
                      (SUB1 (xs // ys) x = OVAR1 y) /\
-                     (SUB1 (ys // xs) y = OVAR1 x))”,
+                     (SUB1 (ys // xs) y = OVAR1 x))
+Proof
     LIST_INDUCT_TAC
     THENL
       [ LIST_INDUCT_TAC
@@ -195,12 +195,12 @@ val alpha_match_SUB_var = store_thm
               ]
           ]
       ]
-   );
+QED
 
 
-val alpha_match_IDENT = store_thm
-   ("alpha_match_IDENT",
-    “!xs x y. alpha_match xs xs x y = (x = y)”,
+Theorem alpha_match_IDENT:
+     !xs x y. alpha_match xs xs x y = (x = y)
+Proof
     LIST_INDUCT_TAC
     THENL
       [ REWRITE_TAC[alpha_match],
@@ -216,14 +216,14 @@ val alpha_match_IDENT = store_thm
             THEN REWRITE_TAC[EXCLUDED_MIDDLE]
           ]
       ]
-   );
+QED
 
 
-val alpha_match_NOT_EQ = store_thm
-   ("alpha_match_NOT_EQ",
-    “!xs ys x y x' y'.
+Theorem alpha_match_NOT_EQ:
+     !xs ys x y x' y'.
          alpha_match (CONS x xs) (CONS y ys) x' y' /\ ~(x' = x)
-          ==> alpha_match xs ys x' y' /\ ~(y' = y)”,
+          ==> alpha_match xs ys x' y' /\ ~(y' = y)
+Proof
     REPEAT GEN_TAC
     THEN REWRITE_TAC[alpha_match_SUB_var]
     THEN REWRITE_TAC[LENGTH,INV_SUC_EQ,vsubst1,SUB1]
@@ -239,15 +239,15 @@ val alpha_match_NOT_EQ = store_thm
         DISCH_TAC
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 
-val alpha_match_pair = store_thm
-   ("alpha_match_pair",
-    “!xs ys x1 y1 x2 y2.
+Theorem alpha_match_pair:
+     !xs ys x1 y1 x2 y2.
              alpha_match xs ys x1 y1 /\
              alpha_match xs ys x2 y2 ==>
-               ((x1 = x2) = (y1 = y2))”,
+               ((x1 = x2) = (y1 = y2))
+Proof
     LIST_INDUCT_TAC
     THENL
       [ LIST_INDUCT_TAC
@@ -264,11 +264,11 @@ val alpha_match_pair = store_thm
         THEN ASSUM_LIST (EVERY o (map (REWRITE_THM o GSYM)))
         THEN RES_TAC
       ]
-   );
+QED
 
-val alpha_match_LENGTH = store_thm
-   ("alpha_match_LENGTH",
-    “!xs ys x y. alpha_match xs ys x y ==> (LENGTH xs = LENGTH ys)”,
+Theorem alpha_match_LENGTH:
+     !xs ys x y. alpha_match xs ys x y ==> (LENGTH xs = LENGTH ys)
+Proof
     LIST_INDUCT_TAC
     THENL
       [ LIST_INDUCT_TAC
@@ -282,7 +282,7 @@ val alpha_match_LENGTH = store_thm
         THEN RES_TAC
         THEN ASM_REWRITE_TAC[LENGTH]
       ]
-   );
+QED
 
 
 
@@ -369,12 +369,12 @@ val [ALPHA1_OVAR1, ALPHA1_OBJ1, ALPHA1_INVOKE1, ALPHA1_UPDATE1,
 
 
 
-val ALPHA1_REFL = store_thm
-   ("ALPHA1_REFL",
-    “(!a xs. ALPHA1_obj a a xs xs) /\
+Theorem ALPHA1_REFL:
+     (!a xs. ALPHA1_obj a a xs xs) /\
         (!d xs. ALPHA1_dict d d xs xs) /\
         (!e xs. ALPHA1_entry e e xs xs) /\
-        (!m xs. ALPHA1_method m m xs xs)”,
+        (!m xs. ALPHA1_method m m xs xs)
+Proof
     MUTUAL_INDUCT_THEN obj1_induction ASSUME_TAC
     THEN REPEAT GEN_TAC
     THENL (* 8 subgoals *)
@@ -402,7 +402,7 @@ val ALPHA1_REFL = store_thm
         MATCH_MP_TAC ALPHA1_PAIR
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 
 val ALPHA1_IMP_SYM = TAC_PROOF(([],
@@ -443,21 +443,21 @@ val ALPHA1_IMP_SYM = TAC_PROOF(([],
       ]
    );
 
-val ALPHA1_SYM = store_thm
-   ("ALPHA1_SYM",
-    “(!o1 o2 xs ys. ALPHA1_obj o1 o2 xs ys =
+Theorem ALPHA1_SYM:
+     (!o1 o2 xs ys. ALPHA1_obj o1 o2 xs ys =
                        ALPHA1_obj o2 o1 ys xs) /\
         (!d1 d2 xs ys. ALPHA1_dict d1 d2 xs ys =
                        ALPHA1_dict d2 d1 ys xs) /\
         (!e1 e2 xs ys. ALPHA1_entry e1 e2 xs ys =
                        ALPHA1_entry e2 e1 ys xs) /\
         (!m1 m2 xs ys. ALPHA1_method m1 m2 xs ys =
-                       ALPHA1_method m2 m1 ys xs)”,
+                       ALPHA1_method m2 m1 ys xs)
+Proof
     REPEAT STRIP_TAC
     THEN EQ_TAC
     THEN STRIP_TAC
     THEN IMP_RES_TAC ALPHA1_IMP_SYM
-   );
+QED
 
 
 val ALPHA1_TRANS1 = TAC_PROOF(([],
@@ -561,9 +561,8 @@ val ALPHA1_TRANS1 = TAC_PROOF(([],
    );
 
 
-val ALPHA1_TRANS = store_thm
-   ("ALPHA1_TRANS",
-    “(!o1 o2 o3 xs ys zs. ALPHA1_obj o1 o2 xs ys /\
+Theorem ALPHA1_TRANS:
+     (!o1 o2 o3 xs ys zs. ALPHA1_obj o1 o2 xs ys /\
                              ALPHA1_obj o2 o3 ys zs ==>
                              ALPHA1_obj o1 o3 xs zs) /\
         (!d1 d2 d3 xs ys zs. ALPHA1_dict d1 d2 xs ys /\
@@ -574,49 +573,49 @@ val ALPHA1_TRANS = store_thm
                              ALPHA1_entry e1 e3 xs zs) /\
         (!m1 m2 m3 xs ys zs. ALPHA1_method m1 m2 xs ys /\
                              ALPHA1_method m2 m3 ys zs ==>
-                             ALPHA1_method m1 m3 xs zs)”,
+                             ALPHA1_method m1 m3 xs zs)
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC ALPHA1_TRANS1
-   );
+QED
 
 
-val ALPHA1_LENGTH = store_thm
-   ("ALPHA1_LENGTH",
-    “(!o1 o2 xs ys. ALPHA1_obj o1 o2 xs ys ==>
+Theorem ALPHA1_LENGTH:
+     (!o1 o2 xs ys. ALPHA1_obj o1 o2 xs ys ==>
                        (LENGTH xs = LENGTH ys)) /\
         (!d1 d2 xs ys. ALPHA1_dict d1 d2 xs ys ==>
                        (LENGTH xs = LENGTH ys)) /\
         (!e1 e2 xs ys. ALPHA1_entry e1 e2 xs ys ==>
                        (LENGTH xs = LENGTH ys)) /\
         (!m1 m2 xs ys. ALPHA1_method m1 m2 xs ys ==>
-                       (LENGTH xs = LENGTH ys))”,
+                       (LENGTH xs = LENGTH ys))
+Proof
     rule_induct ALPHA1_ind_thm
     THEN REWRITE_TAC[LENGTH,INV_SUC_EQ]
     THEN REPEAT STRIP_TAC
     THEN IMP_RES_TAC alpha_match_LENGTH
-   );
+QED
 
 
-val ALPHA1_HEIGHT = store_thm
-   ("ALPHA1_HEIGHT",
-    “(!o1 o2 xs ys. ALPHA1_obj o1 o2 xs ys ==>
+Theorem ALPHA1_HEIGHT:
+     (!o1 o2 xs ys. ALPHA1_obj o1 o2 xs ys ==>
                        (HEIGHT_obj1 o1 = HEIGHT_obj1 o2)) /\
         (!d1 d2 xs ys. ALPHA1_dict d1 d2 xs ys ==>
                        (HEIGHT_dict1 d1 = HEIGHT_dict1 d2)) /\
         (!e1 e2 xs ys. ALPHA1_entry e1 e2 xs ys ==>
                        (HEIGHT_entry1 e1 = HEIGHT_entry1 e2)) /\
         (!m1 m2 xs ys. ALPHA1_method m1 m2 xs ys ==>
-                       (HEIGHT_method1 m1 = HEIGHT_method1 m2))”,
+                       (HEIGHT_method1 m1 = HEIGHT_method1 m2))
+Proof
     rule_induct ALPHA1_ind_thm
     THEN REWRITE_TAC[HEIGHT1_def,INV_SUC_EQ]
     THEN REPEAT STRIP_TAC
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
-val ALPHA1_object_similar = store_thm
-   ("ALPHA1_object_similar",
-    “(!x a xs ys. ALPHA1_obj (OVAR1 x) a xs ys ==> (?y. a = OVAR1 y)) /\
+Theorem ALPHA1_object_similar:
+     (!x a xs ys. ALPHA1_obj (OVAR1 x) a xs ys ==> (?y. a = OVAR1 y)) /\
         (!d1 a xs ys. ALPHA1_obj (OBJ1 d1) a xs ys ==> (?d2. a = OBJ1 d2)) /\
         (!o1 l1 a xs ys. ALPHA1_obj (INVOKE1 o1 l1) a xs ys ==>
                    (?o2 l2. a = INVOKE1 o2 l2)) /\
@@ -628,7 +627,8 @@ val ALPHA1_object_similar = store_thm
         (!l1 m1 e xs ys. ALPHA1_entry (l1,m1) e xs ys ==>
                    (?l2 m2. e = (l2,m2))) /\
         (!x1 o1 m xs ys. ALPHA1_method (SIGMA1 x1 o1) m xs ys ==>
-                   (?x2 o2. m = SIGMA1 x2 o2))”,
+                   (?x2 o2. m = SIGMA1 x2 o2))
+Proof
     PURE_ONCE_REWRITE_TAC ALPHA1_inv_thms
     THEN REWRITE_TAC[object1_one_one,object1_distinct]
     THEN REPEAT STRIP_TAC
@@ -660,12 +660,11 @@ val ALPHA1_object_similar = store_thm
         THEN EXISTS_TAC “o2:obj1”
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 
-val ALPHA1_object_pos = store_thm
-   ("ALPHA1_object_pos",
-    “(!x y xs ys. ALPHA1_obj (OVAR1 x) (OVAR1 y) xs ys
+Theorem ALPHA1_object_pos:
+     (!x y xs ys. ALPHA1_obj (OVAR1 x) (OVAR1 y) xs ys
                        = alpha_match xs ys x y) /\
         (!d1 d2 xs ys. ALPHA1_obj (OBJ1 d1) (OBJ1 d2) xs ys
                        = ALPHA1_dict d1 d2 xs ys) /\
@@ -682,7 +681,8 @@ val ALPHA1_object_pos = store_thm
         (!l1 l2 m1 m2 xs ys. ALPHA1_entry (l1,m1) (l2,m2) xs ys
                        = ((l1 = l2) /\ ALPHA1_method m1 m2 xs ys)) /\
         (!x1 x2 o1 o2 xs ys. ALPHA1_method (SIGMA1 x1 o1) (SIGMA1 x2 o2) xs ys
-                       = ALPHA1_obj o1 o2 (CONS x1 xs) (CONS x2 ys))”,
+                       = ALPHA1_obj o1 o2 (CONS x1 xs) (CONS x2 ys))
+Proof
     REPEAT CONJ_TAC
     THEN REPEAT GEN_TAC
     THEN (EQ_TAC
@@ -700,12 +700,11 @@ val ALPHA1_object_pos = store_thm
                                             THEN NO_TAC)
                                   (CONJUNCTS ALPHA1_rules_sat))
                 ])
-   );
+QED
 
 
-val ALPHA1_object_neg = store_thm
-   ("ALPHA1_object_neg",
-    “(!x d xs ys. ALPHA1_obj (OVAR1 x) (OBJ1 d) xs ys = F) /\
+Theorem ALPHA1_object_neg:
+     (!x d xs ys. ALPHA1_obj (OVAR1 x) (OBJ1 d) xs ys = F) /\
         (!x a l xs ys. ALPHA1_obj (OVAR1 x) (INVOKE1 a l) xs ys = F) /\
         (!x a l m xs ys. ALPHA1_obj (OVAR1 x) (UPDATE1 a l m) xs ys = F) /\
         (!d x xs ys. ALPHA1_obj (OBJ1 d) (OVAR1 x) xs ys = F) /\
@@ -721,10 +720,11 @@ val ALPHA1_object_neg = store_thm
           ALPHA1_obj (UPDATE1 o1 l1 m1) (INVOKE1 o2 l2) xs ys = F)
          /\
         (!e d xs ys. ALPHA1_dict (CONS e d) NIL xs ys = F) /\
-        (!e d xs ys. ALPHA1_dict NIL (CONS e d) xs ys = F)”,
+        (!e d xs ys. ALPHA1_dict NIL (CONS e d) xs ys = F)
+Proof
     PURE_ONCE_REWRITE_TAC ALPHA1_inv_thms
     THEN REWRITE_TAC[object1_one_one,object1_distinct]
-   );
+QED
 
 
 (* We have no use for the following induction principle at present,
@@ -971,9 +971,8 @@ val FORALL_OR_IMP = TAC_PROOF(([],
    );
 
 
-val ALPHA1_FREE_CONTEXT = store_thm
-   ("ALPHA1_FREE_CONTEXT",
-    “(!o1 o2 xs ys xs' ys'.
+Theorem ALPHA1_FREE_CONTEXT:
+     (!o1 o2 xs ys xs' ys'.
           ((LENGTH xs = LENGTH ys) = (LENGTH xs' = LENGTH ys')) /\
           (!x. (x IN FV_obj1 o1) ==>
                (SUB1 (xs // ys) x = SUB1 (xs' // ys') x)) /\
@@ -1000,7 +999,8 @@ val ALPHA1_FREE_CONTEXT = store_thm
                (SUB1 (xs // ys) x = SUB1 (xs' // ys') x)) /\
           (!y. (y IN FV_method1 m2) ==>
                (SUB1 (ys // xs) y = SUB1 (ys' // xs') y))  ==>
-          (ALPHA1_method m1 m2 xs ys = ALPHA1_method m1 m2 xs' ys'))”,
+          (ALPHA1_method m1 m2 xs ys = ALPHA1_method m1 m2 xs' ys'))
+Proof
     MUTUAL_INDUCT_THEN obj1_induction ASSUME_TAC
     THEN REPEAT STRIP_TAC
     THEN EQ_TAC
@@ -1110,12 +1110,11 @@ val ALPHA1_FREE_CONTEXT = store_thm
         THEN ASM_REWRITE_TAC[]
         THEN RES_TAC
       ]
-   );
+QED
 
 
-val ALPHA1_EXTRANEOUS_CONTEXT = store_thm
-   ("ALPHA1_EXTRANEOUS_CONTEXT",
-    “(!o1 o2 xs ys x y.
+Theorem ALPHA1_EXTRANEOUS_CONTEXT:
+     (!o1 o2 xs ys x y.
           ~(x IN FV_obj1 o1) /\ ~(y IN FV_obj1 o2) ==>
           (ALPHA1_obj o1 o2 (CONS x xs) (CONS y ys) =
            ALPHA1_obj o1 o2 xs ys)) /\
@@ -1130,7 +1129,8 @@ val ALPHA1_EXTRANEOUS_CONTEXT = store_thm
         (!m1 m2 xs ys x y.
           ~(x IN FV_method1 m1) /\ ~(y IN FV_method1 m2) ==>
           (ALPHA1_method m1 m2 (CONS x xs) (CONS y ys) =
-           ALPHA1_method m1 m2 xs ys))”,
+           ALPHA1_method m1 m2 xs ys))
+Proof
     REPEAT STRIP_TAC
     THEN FIRST (map MATCH_MP_TAC (CONJUNCTS ALPHA1_FREE_CONTEXT))
     THEN REWRITE_TAC[LENGTH,INV_SUC_EQ]
@@ -1142,7 +1142,7 @@ val ALPHA1_EXTRANEOUS_CONTEXT = store_thm
     THEN ASM_REWRITE_TAC[]
     THEN POP_ASSUM REWRITE_ALL_THM
     THEN RES_TAC
-   );
+QED
 
 val [ALPHA1_EXTRANEOUS_CONTEXT_obj, ALPHA1_EXTRANEOUS_CONTEXT_dict1,
      ALPHA1_EXTRANEOUS_CONTEXT_entry1, ALPHA1_EXTRANEOUS_CONTEXT_method1] =
@@ -1168,13 +1168,13 @@ val ALPHA1_subst =
                ALPHA1_obj (SUB1 s1 x) (SUB1 s2 y) xs' ys')”);
 
 
-val ALPHA1_subst_UNION = store_thm
-   ("ALPHA1_subst_UNION",
-    “!xs ys xs' ys' t11 t12 t21 t22 s1 s2.
+Theorem ALPHA1_subst_UNION:
+     !xs ys xs' ys' t11 t12 t21 t22 s1 s2.
          ALPHA1_subst xs ys xs' ys' (t11 UNION t12) (t21 UNION t22) s1 s2
          ==>
          (ALPHA1_subst xs ys xs' ys' t11 t21 s1 s2  /\
-          ALPHA1_subst xs ys xs' ys' t12 t22 s1 s2)”,
+          ALPHA1_subst xs ys xs' ys' t12 t22 s1 s2)
+Proof
     REPEAT GEN_TAC
     THEN REWRITE_TAC[ALPHA1_subst]
     THEN REWRITE_TAC[IN_UNION]
@@ -1182,27 +1182,27 @@ val ALPHA1_subst_UNION = store_thm
     THEN ASM_REWRITE_TAC[]
     THEN FIRST_ASSUM MATCH_MP_TAC
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
-val ALPHA1_subst_LENGTH = store_thm
-   ("ALPHA1_subst_LENGTH",
-    “!xs ys xs' ys' t1 t2 s1 s2.
+Theorem ALPHA1_subst_LENGTH:
+     !xs ys xs' ys' t1 t2 s1 s2.
          ALPHA1_subst xs ys xs' ys' t1 t2 s1 s2
          ==>
-         (LENGTH xs' = LENGTH ys')”,
+         (LENGTH xs' = LENGTH ys')
+Proof
     REWRITE_TAC[ALPHA1_subst]
     THEN REPEAT STRIP_TAC
-   );
+QED
 
 
 
-val variant_not_in_sub = store_thm
-   ("variant_not_in_sub",
-    “!v v' s t x.
+Theorem variant_not_in_sub:
+     !v v' s t x.
          FINITE t /\ (x IN t) /\
          (v' = variant v (FV_subst1 s t))
          ==>
-         ~(v' IN FV_obj1 (SUB1 s x))”,
+         ~(v' IN FV_obj1 (SUB1 s x))
+Proof
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN MP_TAC (SPECL [“v:var”,“FV_subst1 s t”] variant_not_in_set)
@@ -1218,13 +1218,12 @@ val variant_not_in_sub = store_thm
     THEN STRIP_TAC
     THEN POP_ASSUM (MP_TAC o SPEC “x:var”)
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
 
-val ALPHA1_SUB = store_thm
-   ("ALPHA1_SUB",
-    “(!o1 o2 xs ys. ALPHA1_obj o1 o2 xs ys ==>
+Theorem ALPHA1_SUB:
+     (!o1 o2 xs ys. ALPHA1_obj o1 o2 xs ys ==>
           (!xs' ys' s1 s2.
             ALPHA1_subst xs ys xs' ys' (FV_obj1 o1) (FV_obj1 o2) s1 s2 ==>
             ALPHA1_obj (o1 <[ s1) (o2 <[ s2) xs' ys')) /\
@@ -1239,7 +1238,8 @@ val ALPHA1_SUB = store_thm
         (!m1 m2 xs ys. ALPHA1_method m1 m2 xs ys ==>
           (!xs' ys' s1 s2.
             ALPHA1_subst xs ys xs' ys' (FV_method1 m1) (FV_method1 m2) s1 s2 ==>
-            ALPHA1_method (m1 <[ s1) (m2 <[ s2) xs' ys'))”,
+            ALPHA1_method (m1 <[ s1) (m2 <[ s2) xs' ys'))
+Proof
     rule_induct ALPHA1_strong_ind
     THEN REWRITE_TAC[FV_object1_def]
     THEN REPEAT STRIP_TAC
@@ -1318,21 +1318,21 @@ val ALPHA1_SUB = store_thm
               ]
           ]
       ]
-   );
+QED
 (* Soli Deo Gloria!!! *)
 
 
 
 
-val ALPHA1_CHANGE_VAR = store_thm
-   ("ALPHA1_CHANGE_VAR",
-    “!y x s v a.
+Theorem ALPHA1_CHANGE_VAR:
+     !y x s v a.
          ~(x IN FV_subst1 s (FV_obj1 a DIFF {v})) /\
          ~(y IN FV_subst1 s (FV_obj1 a DIFF {v})) ==>
          ALPHA1_obj
              (a <[ CONS (v, OVAR1 x) s)
              (a <[ CONS (v, OVAR1 y) s)
-             [x] [y]”,
+             [x] [y]
+Proof
     REWRITE_TAC[FV_subst1]
     THEN REWRITE_TAC[IN_UNION_SET,IN_IMAGE,o_THM]
     THEN CONV_TAC (DEPTH_CONV NOT_EXISTS_CONV)
@@ -1399,35 +1399,35 @@ val ALPHA1_CHANGE_VAR = store_thm
               ]
           ]
       ]
-   );
+QED
 
 
 
-val obj_SUB_distinct = store_thm
-   ("obj_SUB_distinct",
-    “(!d xs ys x. ~(OBJ1 d = SUB1 (xs // ys) x)) /\
+Theorem obj_SUB_distinct:
+     (!d xs ys x. ~(OBJ1 d = SUB1 (xs // ys) x)) /\
         (!o' l xs ys x. ~(INVOKE1 o' l = SUB1 (xs // ys) x)) /\
         (!o' l m xs ys x. ~(UPDATE1 o' l m = SUB1 (xs // ys) x)) /\
         (!d xs ys x. ~(SUB1 (xs // ys) x = OBJ1 d)) /\
         (!o' l xs ys x. ~(SUB1 (xs // ys) x = INVOKE1 o' l)) /\
-        (!o' l m xs ys x. ~(SUB1 (xs // ys) x = UPDATE1 o' l m))”,
+        (!o' l m xs ys x. ~(SUB1 (xs // ys) x = UPDATE1 o' l m))
+Proof
     REPEAT CONJ_TAC
     THEN REPEAT GEN_TAC
     THEN STRIP_ASSUME_TAC (SPEC_ALL SUB_vsubst_OVAR1)
     THEN ASM_REWRITE_TAC[object1_distinct]
-   );
+QED
 
 
-val FREE_SUBST = store_thm
-   ("FREE_SUBST",
-    “(!a s.
+Theorem FREE_SUBST:
+     (!a s.
           DISJOINT (FV_obj1 a) (BV_subst s) ==> ((a <[ s) = a)) /\
         (!d s.
           DISJOINT (FV_dict1 d) (BV_subst s) ==> ((d <[ s) = d)) /\
         (!e s.
           DISJOINT (FV_entry1 e) (BV_subst s) ==> ((e <[ s) = e)) /\
         (!m s.
-          DISJOINT (FV_method1 m) (BV_subst s) ==> ((m <[ s) = m))”,
+          DISJOINT (FV_method1 m) (BV_subst s) ==> ((m <[ s) = m))
+Proof
     MUTUAL_INDUCT_THEN obj1_induction ASSUME_TAC
     THEN REWRITE_TAC[FV_object1_def,SUB_object1_def]
     THEN CONV_TAC (DEPTH_CONV let_CONV)
@@ -1466,13 +1466,13 @@ val FREE_SUBST = store_thm
             THEN FIRST_ASSUM (REWRITE_THM o GSYM)
           ]
       ]
-   );
+QED
 
 
-val BLOCKED_SUBST = store_thm
-   ("BLOCKED_SUBST",
-    “!o' x o1.
-          (SIGMA1 x o' <[ [x,o1]) = SIGMA1 x o'”,
+Theorem BLOCKED_SUBST:
+     !o' x o1.
+          (SIGMA1 x o' <[ [x,o1]) = SIGMA1 x o'
+Proof
     REPEAT GEN_TAC
     THEN REWRITE_TAC[SUB_object1_def]
     THEN DEP_REWRITE_TAC[variant_ident]
@@ -1495,15 +1495,15 @@ val BLOCKED_SUBST = store_thm
         THEN COND_CASES_TAC
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 
-val PARTIALLY_BLOCKED_SUBST = store_thm
-   ("PARTIALLY_BLOCKED_SUBST",
-    “!xs ys x y o'.
+Theorem PARTIALLY_BLOCKED_SUBST:
+     !xs ys x y o'.
          (LENGTH xs = LENGTH ys) ==>
          (SIGMA1 x o' <[ (APPEND xs [x] // APPEND ys [y]) =
-          SIGMA1 x o' <[ (xs // ys))”,
+          SIGMA1 x o' <[ (xs // ys))
+Proof
     REPEAT STRIP_TAC
     THEN MATCH_MP_TAC (hd (rev (CONJUNCTS subst_EQ1)))
     THEN REWRITE_TAC[FV_object1_def,IN_DIFF,IN]
@@ -1519,7 +1519,7 @@ val PARTIALLY_BLOCKED_SUBST = store_thm
         THEN DEP_REWRITE_TAC[SUB_FREE_vsubst1]
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 
 (* THe following two theorems are unnecessary.
@@ -1867,9 +1867,8 @@ val ALPHA1_SWITCH_LEMMA = TAC_PROOF(([],
    );
 
 
-val ALPHA1_SWITCH = store_thm
-   ("ALPHA1_SWITCH",
-    “(!o1 o2 xs xs' ys ys' x y.
+Theorem ALPHA1_SWITCH:
+     (!o1 o2 xs xs' ys ys' x y.
           (LENGTH xs = LENGTH xs') /\ (LENGTH ys = LENGTH ys') /\
           ALPHA1_obj (o1 <[ (APPEND xs [x] // APPEND xs' [y])) o2 xs' ys /\
           ALPHA1_obj o1 (o2 <[ (APPEND ys [y] // APPEND ys' [x])) xs ys'
@@ -1892,7 +1891,8 @@ val ALPHA1_SWITCH = store_thm
           ALPHA1_method (m1 <[ (APPEND xs [x] // APPEND xs' [y])) m2 xs' ys/\
           ALPHA1_method m1 (m2 <[ (APPEND ys [y] // APPEND ys' [x])) xs ys'
             ==>
-          ALPHA1_method m1 m2 (APPEND xs [x]) (APPEND ys [y]))”,
+          ALPHA1_method m1 m2 (APPEND xs [x]) (APPEND ys [y]))
+Proof
     REPEAT STRIP_TAC
     THENL (map (MATCH_MP_TAC o
                 REWRITE_RULE[AND_IMP_INTRO] o
@@ -1907,14 +1907,14 @@ val ALPHA1_SWITCH = store_thm
     THEN EXISTS_TAC “xs':var list”
     THEN EXISTS_TAC “ys':var list”
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
-val ALPHA1_SIGMA_subst = store_thm
-   ("ALPHA1_SIGMA_subst",
-    “!o1 o2 x y a.
+Theorem ALPHA1_SIGMA_subst:
+     !o1 o2 x y a.
          ALPHA1_method (SIGMA1 x o1) (SIGMA1 y o2) [] [] ==>
-         (ALPHA1_obj (o1 <[ [x, a]) (o2 <[ [y, a]) [] [])”,
+         (ALPHA1_obj (o1 <[ [x, a]) (o2 <[ [y, a]) [] [])
+Proof
     REWRITE_TAC[ALPHA1_object_pos]
     THEN REPEAT GEN_TAC
     THEN DISCH_TAC
@@ -1926,15 +1926,15 @@ val ALPHA1_SIGMA_subst = store_thm
     THEN REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN ASM_REWRITE_TAC[ALPHA1_REFL]
-   );
+QED
 
 
-val ALPHA1_method_one_one = store_thm
-   ("ALPHA1_method_one_one",
-    “!o1 o2 x y.
+Theorem ALPHA1_method_one_one:
+     !o1 o2 x y.
          ALPHA1_method (SIGMA1 x o1) (SIGMA1 y o2) [] [] =
          (ALPHA1_obj (o1 <[ [x, OVAR1 y]) o2 [] [] /\
-          ALPHA1_obj o1 (o2 <[ [y, OVAR1 x]) [] [])”,
+          ALPHA1_obj o1 (o2 <[ [y, OVAR1 x]) [] [])
+Proof
     REPEAT GEN_TAC
     THEN EQ_TAC
     THENL
@@ -1957,7 +1957,7 @@ val ALPHA1_method_one_one = store_thm
         THEN EXISTS_TAC “[]:var list”
         THEN ASM_REWRITE_TAC[LENGTH,APPEND,vsubst1]
       ]
-   );
+QED
 
 
 
@@ -1982,33 +1982,32 @@ val ALPHA_method =
     “ALPHA_method m1 m2 = ALPHA1_method m1 m2 [] []”);
 
 
-val ALPHA_object = store_thm
-   ("ALPHA_object",
-    “(!o1 o2. ALPHA_obj o1 o2 = ALPHA1_obj o1 o2 [] []) /\
+Theorem ALPHA_object:
+     (!o1 o2. ALPHA_obj o1 o2 = ALPHA1_obj o1 o2 [] []) /\
         (!d1 d2. ALPHA_dict d1 d2 = ALPHA1_dict d1 d2 [] []) /\
         (!e1 e2. ALPHA_entry e1 e2 = ALPHA1_entry e1 e2 [] []) /\
-        (!m1 m2. ALPHA_method m1 m2 = ALPHA1_method m1 m2 [] [])”,
+        (!m1 m2. ALPHA_method m1 m2 = ALPHA1_method m1 m2 [] [])
+Proof
     REWRITE_TAC[ALPHA_obj,ALPHA_dict,ALPHA_entry,ALPHA_method]
-   );
+QED
 
 
-val ALPHA_HEIGHT = store_thm
-   ("ALPHA_HEIGHT",
-    “(!o1 o2. ALPHA_obj o1 o2 ==>
+Theorem ALPHA_HEIGHT:
+     (!o1 o2. ALPHA_obj o1 o2 ==>
                        (HEIGHT_obj1 o1 = HEIGHT_obj1 o2)) /\
         (!d1 d2. ALPHA_dict d1 d2 ==>
                        (HEIGHT_dict1 d1 = HEIGHT_dict1 d2)) /\
         (!e1 e2. ALPHA_entry e1 e2 ==>
                        (HEIGHT_entry1 e1 = HEIGHT_entry1 e2)) /\
         (!m1 m2. ALPHA_method m1 m2 ==>
-                       (HEIGHT_method1 m1 = HEIGHT_method1 m2))”,
+                       (HEIGHT_method1 m1 = HEIGHT_method1 m2))
+Proof
     REWRITE_TAC[ALPHA_object,ALPHA1_HEIGHT]
-   );
+QED
 
 
-val ALPHA_object_similar = store_thm
-   ("ALPHA_object_similar",
-    “(!x a. ALPHA_obj (OVAR1 x) a ==> (?y. a = OVAR1 y)) /\
+Theorem ALPHA_object_similar:
+     (!x a. ALPHA_obj (OVAR1 x) a ==> (?y. a = OVAR1 y)) /\
         (!d1 a. ALPHA_obj (OBJ1 d1) a ==> (?d2. a = OBJ1 d2)) /\
         (!o1 l1 a. ALPHA_obj (INVOKE1 o1 l1) a ==>
                    (?o2 l2. a = INVOKE1 o2 l2)) /\
@@ -2020,51 +2019,51 @@ val ALPHA_object_similar = store_thm
         (!l1 m1 e. ALPHA_entry (l1,m1) e ==>
                    (?l2 m2. e = (l2,m2))) /\
         (!x1 o1 m. ALPHA_method (SIGMA1 x1 o1) m ==>
-                   (?x2 o2. m = SIGMA1 x2 o2))”,
+                   (?x2 o2. m = SIGMA1 x2 o2))
+Proof
     REWRITE_TAC[ALPHA_object,ALPHA1_object_similar]
-   );
+QED
 
 
-val ALPHA_REFL = store_thm
-   ("ALPHA_REFL",
-    “(!a. ALPHA_obj a a) /\
+Theorem ALPHA_REFL:
+     (!a. ALPHA_obj a a) /\
         (!d. ALPHA_dict d d) /\
         (!e. ALPHA_entry e e) /\
-        (!m. ALPHA_method m m)”,
+        (!m. ALPHA_method m m)
+Proof
     REWRITE_TAC[ALPHA_object,ALPHA1_REFL]
-   );
+QED
 
 
-val ALPHA_SYM = store_thm
-   ("ALPHA_SYM",
-    “(!o1 o2. ALPHA_obj o1 o2 = ALPHA_obj o2 o1) /\
+Theorem ALPHA_SYM:
+     (!o1 o2. ALPHA_obj o1 o2 = ALPHA_obj o2 o1) /\
         (!d1 d2. ALPHA_dict d1 d2 = ALPHA_dict d2 d1) /\
         (!e1 e2. ALPHA_entry e1 e2 = ALPHA_entry e2 e1) /\
-        (!m1 m2. ALPHA_method m1 m2 = ALPHA_method m2 m1)”,
+        (!m1 m2. ALPHA_method m1 m2 = ALPHA_method m2 m1)
+Proof
     REWRITE_TAC[ALPHA_object]
     THEN REPEAT STRIP_TAC
     THEN EQ_TAC
     THEN DISCH_THEN (REWRITE_THM o ONCE_REWRITE_RULE[ALPHA1_SYM])
-   );
+QED
 
 
-val ALPHA_TRANS = store_thm
-   ("ALPHA_TRANS",
-    “(!o1 o2 o3. ALPHA_obj o1 o2 /\ ALPHA_obj o2 o3 ==>
+Theorem ALPHA_TRANS:
+     (!o1 o2 o3. ALPHA_obj o1 o2 /\ ALPHA_obj o2 o3 ==>
                              ALPHA_obj o1 o3) /\
         (!d1 d2 d3. ALPHA_dict d1 d2 /\ ALPHA_dict d2 d3 ==>
                              ALPHA_dict d1 d3) /\
         (!e1 e2 e3. ALPHA_entry e1 e2 /\ ALPHA_entry e2 e3 ==>
                              ALPHA_entry e1 e3) /\
         (!m1 m2 m3. ALPHA_method m1 m2 /\ ALPHA_method m2 m3 ==>
-                             ALPHA_method m1 m3)”,
+                             ALPHA_method m1 m3)
+Proof
     REWRITE_TAC[ALPHA_object,ALPHA1_TRANS]
-   );
+QED
 
 
-val ALPHA_object_pos = store_thm
-   ("ALPHA_object_pos",
-    “(!x y.
+Theorem ALPHA_object_pos:
+     (!x y.
           ALPHA_obj (OVAR1 x) (OVAR1 y) = (x = y)) /\
         (!d1 d2.
           ALPHA_obj (OBJ1 d1) (OBJ1 d2) = ALPHA_dict d1 d2) /\
@@ -2083,15 +2082,16 @@ val ALPHA_object_pos = store_thm
           (l1 = l2) /\ ALPHA_method m1 m2) (* /\
         (!x1 x2 o1 o2.
           ALPHA_method (SIGMA1 x1 o1) (SIGMA1 x2 o2) =
-          ALPHA1_obj o1 o2 [x1] [x2]) *)”,
+          ALPHA1_obj o1 o2 [x1] [x2]) *)
+Proof
     REWRITE_TAC[ALPHA_object,ALPHA1_object_pos,alpha_match]
-   );
+QED
 
 
-val ALPHA_method_SIGMA = store_thm
-   ("ALPHA_method_SIGMA",
-    “!x o1 o2.
-          ALPHA_method (SIGMA1 x o1) (SIGMA1 x o2) = ALPHA_obj o1 o2”,
+Theorem ALPHA_method_SIGMA:
+     !x o1 o2.
+          ALPHA_method (SIGMA1 x o1) (SIGMA1 x o2) = ALPHA_obj o1 o2
+Proof
     REWRITE_TAC[ALPHA_object,ALPHA1_object_pos]
     THEN REPEAT GEN_TAC
     THEN FIRST (map MATCH_MP_TAC (CONJUNCTS ALPHA1_FREE_CONTEXT))
@@ -2099,12 +2099,11 @@ val ALPHA_method_SIGMA = store_thm
     THEN REPEAT STRIP_TAC
     THEN COND_CASES_TAC
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
-val ALPHA_object_neg = store_thm
-   ("ALPHA_object_neg",
-    “(!x d. ALPHA_obj (OVAR1 x) (OBJ1 d) = F) /\
+Theorem ALPHA_object_neg:
+     (!x d. ALPHA_obj (OVAR1 x) (OBJ1 d) = F) /\
         (!x a l. ALPHA_obj (OVAR1 x) (INVOKE1 a l) = F) /\
         (!x a l m. ALPHA_obj (OVAR1 x) (UPDATE1 a l m) = F) /\
         (!d x. ALPHA_obj (OBJ1 d) (OVAR1 x) = F) /\
@@ -2120,9 +2119,10 @@ val ALPHA_object_neg = store_thm
           ALPHA_obj (UPDATE1 o1 l1 m1) (INVOKE1 o2 l2) = F)
          /\
         (!e d. ALPHA_dict (CONS e d) NIL = F) /\
-        (!e d. ALPHA_dict NIL (CONS e d) = F)”,
+        (!e d. ALPHA_dict NIL (CONS e d) = F)
+Proof
     REWRITE_TAC[ALPHA_object,ALPHA1_object_neg]
-   );
+QED
 
 
 (* --------------------------------------------------------------------- *)
@@ -2135,12 +2135,12 @@ val ALPHA_object_neg = store_thm
 (* --------------------------------------------------------------------- *)
 
 
-val ALPHA_FV = store_thm
-   ("ALPHA_FV",
-    “(!o1 o2. ALPHA_obj o1 o2 ==> (FV_obj1 o1 = FV_obj1 o2)) /\
+Theorem ALPHA_FV:
+     (!o1 o2. ALPHA_obj o1 o2 ==> (FV_obj1 o1 = FV_obj1 o2)) /\
         (!d1 d2. ALPHA_dict d1 d2 ==> (FV_dict1 d1 = FV_dict1 d2)) /\
         (!e1 e2. ALPHA_entry e1 e2 ==> (FV_entry1 e1 = FV_entry1 e2)) /\
-        (!m1 m2. ALPHA_method m1 m2 ==> (FV_method1 m1 = FV_method1 m2))”,
+        (!m1 m2. ALPHA_method m1 m2 ==> (FV_method1 m1 = FV_method1 m2))
+Proof
     REWRITE_TAC[ALPHA_object]
     THEN REPEAT STRIP_TAC
     THENL (map IMP_RES_TAC (CONJUNCTS ALPHA1_SYM))
@@ -2155,7 +2155,7 @@ val ALPHA_FV = store_thm
     THEN DISCH_TAC
     THEN RES_TAC
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
 
@@ -2178,9 +2178,8 @@ val ALPHA_subst =
                ALPHA_obj (SUB1 s1 x) (SUB1 s2 x))”);
 
 
-val ALPHA_SUB_CONTEXT = store_thm
-   ("ALPHA_SUB_CONTEXT",
-    “(!o1 o2 s1 s2. ALPHA_obj o1 o2 /\
+Theorem ALPHA_SUB_CONTEXT:
+     (!o1 o2 s1 s2. ALPHA_obj o1 o2 /\
                        ALPHA_subst (FV_obj1 o1) s1 s2 ==>
                        ALPHA_obj (o1 <[ s1) (o2 <[ s2)) /\
         (!d1 d2 s1 s2. ALPHA_dict d1 d2 /\
@@ -2191,7 +2190,8 @@ val ALPHA_SUB_CONTEXT = store_thm
                        ALPHA_entry (e1 <[ s1) (e2 <[ s2)) /\
         (!m1 m2 s1 s2. ALPHA_method m1 m2 /\
                        ALPHA_subst (FV_method1 m1) s1 s2 ==>
-                       ALPHA_method (m1 <[ s1) (m2 <[ s2))”,
+                       ALPHA_method (m1 <[ s1) (m2 <[ s2))
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC ALPHA_FV
     THEN REWRITE_ALL_TAC[ALPHA_object]
@@ -2208,45 +2208,45 @@ val ALPHA_SUB_CONTEXT = store_thm
     THEN ASM_REWRITE_TAC[]
     THEN FIRST_ASSUM MATCH_MP_TAC
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
-val ALPHA_SUB = store_thm
-   ("ALPHA_SUB",
-    “(!o1 o2 s. ALPHA_obj o1 o2 ==>
+Theorem ALPHA_SUB:
+     (!o1 o2 s. ALPHA_obj o1 o2 ==>
                        ALPHA_obj (o1 <[ s) (o2 <[ s)) /\
         (!d1 d2 s. ALPHA_dict d1 d2 ==>
                        ALPHA_dict (d1 <[ s) (d2 <[ s)) /\
         (!e1 e2 s. ALPHA_entry e1 e2 ==>
                        ALPHA_entry (e1 <[ s) (e2 <[ s)) /\
         (!m1 m2 s. ALPHA_method m1 m2 ==>
-                       ALPHA_method (m1 <[ s) (m2 <[ s))”,
+                       ALPHA_method (m1 <[ s) (m2 <[ s))
+Proof
     REPEAT STRIP_TAC
     THENL (map MATCH_MP_TAC (CONJUNCTS ALPHA_SUB_CONTEXT))
     THEN ASM_REWRITE_TAC[ALPHA_subst,ALPHA_REFL]
-   );
+QED
 
 
-val ALPHA_CHANGE_VAR = store_thm
-   ("ALPHA_CHANGE_VAR",
-    “!y x s v a.
+Theorem ALPHA_CHANGE_VAR:
+     !y x s v a.
          ~(x IN FV_subst1 s (FV_obj1 a DIFF {v})) /\
          ~(y IN FV_subst1 s (FV_obj1 a DIFF {v})) ==>
          ALPHA_method (SIGMA1 x (a <[ CONS (v, OVAR1 x) s))
-                      (SIGMA1 y (a <[ CONS (v, OVAR1 y) s))”,
+                      (SIGMA1 y (a <[ CONS (v, OVAR1 y) s))
+Proof
     REPEAT STRIP_TAC
     THEN REWRITE_TAC[ALPHA_object,ALPHA1_object_pos]
     THEN MATCH_MP_TAC ALPHA1_CHANGE_VAR
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
-val ALPHA_CHANGE_ONE_VAR = store_thm
-   ("ALPHA_CHANGE_ONE_VAR",
-    “!x v a.
+Theorem ALPHA_CHANGE_ONE_VAR:
+     !x v a.
          ~(x IN (FV_obj1 a DIFF {v})) ==>
          ALPHA_method (SIGMA1 x (a <[ [v, OVAR1 x]))
-                      (SIGMA1 v a)”,
+                      (SIGMA1 v a)
+Proof
     REPEAT STRIP_TAC
     THEN MP_TAC (SPECL [“v:var”,“x:var”,“[]:^subs1”,
                         “v:var”,“a:obj1”]
@@ -2261,7 +2261,7 @@ val ALPHA_CHANGE_ONE_VAR = store_thm
     THEN REWRITE_TAC[SUB1]
     THEN COND_CASES_TAC
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
 (* The following theorem is unused.
@@ -2299,22 +2299,22 @@ val ALPHA_SWITCH = store_thm
 
 *)
 
-val ALPHA_method_one_one = store_thm
-   ("ALPHA_method_one_one",
-    “!o1 o2 x y.
+Theorem ALPHA_method_one_one:
+     !o1 o2 x y.
          ALPHA_method (SIGMA1 x o1) (SIGMA1 y o2) =
          (ALPHA_obj (o1 <[ [x, OVAR1 y]) o2 /\
-          ALPHA_obj o1 (o2 <[ [y, OVAR1 x]))”,
+          ALPHA_obj o1 (o2 <[ [y, OVAR1 x]))
+Proof
     REWRITE_TAC[ALPHA_object,ALPHA1_method_one_one]
-   );
+QED
 
-val ALPHA_SIGMA_subst = store_thm
-   ("ALPHA_SIGMA_subst",
-    “!o1 o2 x y a.
+Theorem ALPHA_SIGMA_subst:
+     !o1 o2 x y a.
          ALPHA_method (SIGMA1 x o1) (SIGMA1 y o2) ==>
-         (ALPHA_obj (o1 <[ [x, a]) (o2 <[ [y, a]))”,
+         (ALPHA_obj (o1 <[ [x, a]) (o2 <[ [y, a]))
+Proof
     REWRITE_TAC[ALPHA_object,ALPHA1_SIGMA_subst]
-   );
+QED
 
 
 (* --------------------------------------------------------------------- *)
@@ -2324,28 +2324,28 @@ val ALPHA_SIGMA_subst = store_thm
 (* It has two forms, one for method invocation and one for update.       *)
 (* --------------------------------------------------------------------- *)
 
-val obj1_0_RSP = store_thm
-   ("obj1_0_RSP",
-    “ALPHA_obj obj1_0 obj1_0”,
+Theorem obj1_0_RSP:
+     ALPHA_obj obj1_0 obj1_0
+Proof
     REWRITE_TAC[ALPHA_REFL]
-   );
+QED
 
-val method1_0_RSP = store_thm
-   ("method1_0_RSP",
-    “ALPHA_method method1_0 method1_0”,
+Theorem method1_0_RSP:
+     ALPHA_method method1_0 method1_0
+Proof
     REWRITE_TAC[ALPHA_REFL]
-   );
+QED
 
 
 (* --------------------------------------------------------------------- *)
 (* Definition of method invocation.                                      *)
 (* --------------------------------------------------------------------- *)
 
-val invoke_method1_RSP = store_thm
-   ("invoke_method1_RSP",
-    “!m1 m2 o1 o2.
+Theorem invoke_method1_RSP:
+     !m1 m2 o1 o2.
          ALPHA_method m1 m2 /\ ALPHA_obj o1 o2 ==>
-         ALPHA_obj (invoke_method1 m1 o1) (invoke_method1 m2 o2)”,
+         ALPHA_obj (invoke_method1 m1 o1) (invoke_method1 m2 o2)
+Proof
     MUTUAL_INDUCT_THEN obj1_induction ASSUME_TAC
     THEN GEN_TAC
     THEN MUTUAL_INDUCT_THEN obj1_induction ASSUME_TAC
@@ -2368,13 +2368,13 @@ val invoke_method1_RSP = store_thm
         THEN ASM_REWRITE_TAC[]
         THEN REWRITE_TAC[ALPHA1_REFL]
       ]
-   );
+QED
 
-val invoke_dict1_RSP = store_thm
-   ("invoke_dict1_RSP",
-    “!d1 d2 o1 o2 lb.
+Theorem invoke_dict1_RSP:
+     !d1 d2 o1 o2 lb.
          ALPHA_dict d1 d2 /\ ALPHA_obj o1 o2 ==>
-         ALPHA_obj (invoke_dict1 d1 o1 lb) (invoke_dict1 d2 o2 lb)”,
+         ALPHA_obj (invoke_dict1 d1 o1 lb) (invoke_dict1 d2 o2 lb)
+Proof
     MUTUAL_INDUCT_THEN obj1_induction ASSUME_TAC
     THEN MUTUAL_INDUCT_THEN obj1_induction ASSUME_TAC
     THEN REWRITE_TAC[ALPHA_object_neg]
@@ -2391,12 +2391,12 @@ val invoke_dict1_RSP = store_thm
     THEN ASM_REWRITE_TAC[]
     THEN COND_CASES_TAC
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
-val invoke1_RSP = store_thm
-   ("invoke1_RSP",
-    “!o1 o2 lb. ALPHA_obj o1 o2 ==>
-                   ALPHA_obj (invoke1 o1 lb) (invoke1 o2 lb)”,
+Theorem invoke1_RSP:
+     !o1 o2 lb. ALPHA_obj o1 o2 ==>
+                   ALPHA_obj (invoke1 o1 lb) (invoke1 o2 lb)
+Proof
     MUTUAL_INDUCT_THEN obj1_induction ASSUME_TAC
     THENL [GEN_TAC, ALL_TAC, GEN_TAC, GEN_TAC]
     THEN MUTUAL_INDUCT_THEN obj1_induction ASSUME_TAC
@@ -2409,13 +2409,13 @@ val invoke1_RSP = store_thm
     THEN FIRST_ASSUM (ASSUME_TAC o REWRITE_RULE[ALPHA_object_pos])
     THEN IMP_RES_TAC invoke_dict1_RSP
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
-val update_dict1_RSP = store_thm
-   ("update_dict1_RSP",
-    “!d1 d2 lb m1 m2.
+Theorem update_dict1_RSP:
+     !d1 d2 lb m1 m2.
          ALPHA_dict d1 d2 /\ ALPHA_method m1 m2 ==>
-         ALPHA_dict (update_dict1 d1 lb m1) (update_dict1 d2 lb m2)”,
+         ALPHA_dict (update_dict1 d1 lb m1) (update_dict1 d2 lb m2)
+Proof
     MUTUAL_INDUCT_THEN obj1_induction ASSUME_TAC
     THEN MUTUAL_INDUCT_THEN obj1_induction ASSUME_TAC
     THEN REWRITE_TAC[ALPHA_object_neg]
@@ -2435,13 +2435,13 @@ val update_dict1_RSP = store_thm
     THEN ONCE_REWRITE_TAC[GSYM PAIR]
     THEN PURE_REWRITE_TAC[ALPHA_object_pos]
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
-val update1_RSP = store_thm
-   ("update1_RSP",
-    “!o1 o2 lb m1 m2.
+Theorem update1_RSP:
+     !o1 o2 lb m1 m2.
          ALPHA_obj o1 o2 /\ ALPHA_method m1 m2 ==>
-         ALPHA_obj (update1 o1 lb m1) (update1 o2 lb m2)”,
+         ALPHA_obj (update1 o1 lb m1) (update1 o2 lb m2)
+Proof
     MUTUAL_INDUCT_THEN obj1_induction ASSUME_TAC
     THENL [GEN_TAC, ALL_TAC, GEN_TAC, GEN_TAC]
     THEN MUTUAL_INDUCT_THEN obj1_induction ASSUME_TAC
@@ -2454,7 +2454,7 @@ val update1_RSP = store_thm
     THEN STRIP_TAC
     THEN IMP_RES_TAC update_dict1_RSP
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
 

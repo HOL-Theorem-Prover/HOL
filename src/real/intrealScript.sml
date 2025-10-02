@@ -442,19 +442,25 @@ val real_of_int_mul = store_thm("real_of_int_mul[simp]",
   Cases_on `m` \\ Cases_on `n` \\ fs [real_of_int_def] \\ rw []
   \\ fs [INT_MUL_CALCULATE]);
 
-val real_of_int_lt = store_thm("real_of_int_lt[simp]",
-  “real_of_int m < real_of_int n <=> m < n”,
+Theorem real_of_int_lt[simp]:
+   real_of_int m < real_of_int n <=> m < n
+Proof
   simp[real_of_int_def] >> map_every Cases_on [‘m’, ‘n’] >>
-  simp[]);
+  simp[]
+QED
 
-val real_of_int_11 = store_thm("real_of_int_11[simp]",
-  “(real_of_int m = real_of_int n) <=> (m = n)”,
+Theorem real_of_int_11[simp]:
+   (real_of_int m = real_of_int n) <=> (m = n)
+Proof
   simp[real_of_int_def] >> map_every Cases_on [‘m’, ‘n’] >>
-  simp[]);
+  simp[]
+QED
 
-val real_of_int_le = store_thm("real_of_int_le[simp]",
-  “real_of_int m <= real_of_int n <=> m <= n”,
-  simp[REAL_LE_LT, INT_LE_LT]);
+Theorem real_of_int_le[simp]:
+   real_of_int m <= real_of_int n <=> m <= n
+Proof
+  simp[REAL_LE_LT, INT_LE_LT]
+QED
 
 Theorem INT_FLOOR_MONO:
   x < y ==> INT_FLOOR x <= INT_FLOOR y

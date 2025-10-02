@@ -843,10 +843,12 @@ Definition integral :
     integral(a,b) f = @i. Dint(a,b) f i
 End
 
-val INTEGRABLE_DINT = store_thm("INTEGRABLE_DINT",
- “!f a b. integrable(a,b) f ==> Dint(a,b) f (integral(a,b) f)”,
+Theorem INTEGRABLE_DINT:
+  !f a b. integrable(a,b) f ==> Dint(a,b) f (integral(a,b) f)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[integrable, integral] THEN
-  CONV_TAC(RAND_CONV SELECT_CONV) THEN REWRITE_TAC[]);
+  CONV_TAC(RAND_CONV SELECT_CONV) THEN REWRITE_TAC[]
+QED
 
 (* ------------------------------------------------------------------------ *)
 (* Lemmas about combining gauges                                            *)
@@ -920,52 +922,67 @@ val DINT_UNIQ = store_thm("DINT_UNIQ",
 (* Other more or less trivial lemmas.                                        *)
 (* ------------------------------------------------------------------------- *)
 
-val DIVISION_BOUNDS = store_thm("DIVISION_BOUNDS",
- “!d a b. division(a,b) d ==> !n. a <= d(n) /\ d(n) <= b”,
-  MESON_TAC[DIVISION_UBOUND, DIVISION_LBOUND]);
+Theorem DIVISION_BOUNDS:
+  !d a b. division(a,b) d ==> !n. a <= d(n) /\ d(n) <= b
+Proof
+  MESON_TAC[DIVISION_UBOUND, DIVISION_LBOUND]
+QED
 
-val TDIV_BOUNDS = store_thm("TDIV_BOUNDS",
- “!d p a b. tdiv(a,b) (d,p)
-             ==> !n. a <= d(n) /\ d(n) <= b /\ a <= p(n) /\ p(n) <= b”,
-  REWRITE_TAC[tdiv] THEN ASM_MESON_TAC[DIVISION_BOUNDS, REAL_LE_TRANS]);
+Theorem TDIV_BOUNDS:
+  !d p a b. tdiv(a,b) (d,p)
+             ==> !n. a <= d(n) /\ d(n) <= b /\ a <= p(n) /\ p(n) <= b
+Proof
+  REWRITE_TAC[tdiv] THEN ASM_MESON_TAC[DIVISION_BOUNDS, REAL_LE_TRANS]
+QED
 
-val TDIV_LE = store_thm("TDIV_LE",
- “!d p a b. tdiv(a,b) (d,p) ==> a <= b”,
-  MESON_TAC[tdiv, DIVISION_LE]);
+Theorem TDIV_LE:
+  !d p a b. tdiv(a,b) (d,p) ==> a <= b
+Proof
+  MESON_TAC[tdiv, DIVISION_LE]
+QED
 
-val DINT_WRONG = store_thm("DINT_WRONG",
- “!a b f i. b < a ==> Dint(a,b) f i”,
+Theorem DINT_WRONG:
+  !a b f i. b < a ==> Dint(a,b) f i
+Proof
   REWRITE_TAC[Dint, gauge] THEN REPEAT STRIP_TAC THEN
   EXISTS_TAC “\x:real. &0” THEN
   ASM_SIMP_TAC std_ss[REAL_ARITH ``b < a ==> (a <= x /\ x <= b <=> F)``] THEN
-  ASM_MESON_TAC[REAL_NOT_LE, TDIV_LE]);
+  ASM_MESON_TAC[REAL_NOT_LE, TDIV_LE]
+QED
 
-val DINT_INTEGRAL = store_thm("DINT_INTEGRAL",
- “!f a b i. a <= b /\ Dint(a,b) f i ==> (integral(a,b) f = i)”,
+Theorem DINT_INTEGRAL:
+  !f a b i. a <= b /\ Dint(a,b) f i ==> (integral(a,b) f = i)
+Proof
   REPEAT STRIP_TAC THEN REWRITE_TAC[integral] THEN
-  MATCH_MP_TAC SELECT_UNIQUE THEN ASM_MESON_TAC[DINT_UNIQ]);
+  MATCH_MP_TAC SELECT_UNIQUE THEN ASM_MESON_TAC[DINT_UNIQ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Linearity.                                                                *)
 (* ------------------------------------------------------------------------- *)
 
-val DINT_NEG = store_thm("DINT_NEG",
- “!f a b i. Dint(a,b) f i ==> Dint(a,b) (\x. ~f x) (~i)”,
+Theorem DINT_NEG:
+  !f a b i. Dint(a,b) f i ==> Dint(a,b) (\x. ~f x) (~i)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[Dint] THEN
   SIMP_TAC arith_ss[rsum, REAL_MUL_LNEG, SUM_NEG] THEN
-  SIMP_TAC arith_ss[REAL_SUB_LNEG, ABS_NEG, real_sub]);
+  SIMP_TAC arith_ss[REAL_SUB_LNEG, ABS_NEG, real_sub]
+QED
 
-val DINT_0 = store_thm("DINT_0",
- “!a b. Dint(a,b) (\x. &0) (&0)”,
+Theorem DINT_0:
+  !a b. Dint(a,b) (\x. &0) (&0)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[Dint] THEN GEN_TAC THEN DISCH_TAC THEN
   EXISTS_TAC (Term`\x:real. &1`) THEN REWRITE_TAC[gauge,REAL_LT_01] THEN
   REPEAT STRIP_TAC THEN REWRITE_TAC[REAL_SUB_RZERO] THEN
-  REWRITE_TAC[rsum, REAL_MUL_LZERO, SUM_0, ABS_0] THEN RW_TAC arith_ss[]);
+  REWRITE_TAC[rsum, REAL_MUL_LZERO, SUM_0, ABS_0] THEN RW_TAC arith_ss[]
+QED
 
-val DINT_ADD = store_thm("DINT_ADD",
-“!f g a b i j.
+Theorem DINT_ADD:
+ !f g a b i j.
         Dint(a,b) f i /\ Dint(a,b) g j
-        ==> Dint(a,b) (\x. f x + g x) (i + j)”,
+        ==> Dint(a,b) (\x. f x + g x) (i + j)
+Proof
         REPEAT GEN_TAC THEN REWRITE_TAC[Dint] THEN STRIP_TAC THEN
         X_GEN_TAC (Term`e:real`) THEN DISCH_TAC THEN
         REPEAT(FIRST_X_ASSUM(MP_TAC o SPEC ``e / &2``)) THEN
@@ -989,23 +1006,29 @@ val DINT_ADD = store_thm("DINT_ADD",
           abs (rsum (D,p) f - i) + abs (rsum (D,p) g - j) /\ (abs (rsum (D,p) f - i) +
           abs (rsum (D,p) g - j)< e)`` THENL
            [CONJ_TAC THEN REWRITE_TAC[ABS_TRIANGLE], ASM_REWRITE_TAC[]]
-            THEN PROVE_TAC [REAL_LET_TRANS]]);
+            THEN PROVE_TAC [REAL_LET_TRANS]]
+QED
 
-val DINT_SUB = store_thm("DINT_SUB",
- “!f g a b i j.
+Theorem DINT_SUB:
+  !f g a b i j.
         Dint(a,b) f i /\ Dint(a,b) g j
-        ==> Dint(a,b) (\x. f x - g x) (i - j)”,
-  SIMP_TAC arith_ss[real_sub, DINT_ADD, DINT_NEG]);
+        ==> Dint(a,b) (\x. f x - g x) (i - j)
+Proof
+  SIMP_TAC arith_ss[real_sub, DINT_ADD, DINT_NEG]
+QED
 
-val DSIZE_EQ = store_thm("DSIZE_EQ",
-“!a b D. division(a,b) D ==>
-        (sum(0,dsize D)(\n. D(SUC n) - D n) - (b - a) = 0)”,
+Theorem DSIZE_EQ:
+ !a b D. division(a,b) D ==>
+        (sum(0,dsize D)(\n. D(SUC n) - D n) - (b - a) = 0)
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN SIMP_TAC arith_ss[SUM_CANCEL] THEN
   RW_TAC arith_ss[REAL_SUB_0] THEN MP_TAC DIVISION_LHS THEN
-  MP_TAC DIVISION_RHS THEN PROVE_TAC []);
+  MP_TAC DIVISION_RHS THEN PROVE_TAC []
+QED
 
-val DINT_CONST = store_thm("DINT_CONST",
- “!a b c. Dint(a,b) (\x. c) (c * (b - a))”,
+Theorem DINT_CONST:
+  !a b c. Dint(a,b) (\x. c) (c * (b - a))
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[Dint] THEN REPEAT STRIP_TAC THEN
   EXISTS_TAC (Term`\x:real. &1`) THEN REWRITE_TAC[gauge,REAL_LT_01] THEN
   REPEAT STRIP_TAC THEN REWRITE_TAC[rsum] THEN
@@ -1014,10 +1037,12 @@ val DINT_CONST = store_thm("DINT_CONST",
   UNDISCH_TAC(Term`tdiv(a,b)(D,p)`) THEN REWRITE_TAC[tdiv] THEN
   STRIP_TAC THEN UNDISCH_TAC(Term`division(a,b) D`) THEN
   SIMP_TAC arith_ss[DSIZE_EQ] THEN REWRITE_TAC[ABS_0] THEN STRIP_TAC THEN
-  RW_TAC arith_ss[REAL_MUL_RZERO]);
+  RW_TAC arith_ss[REAL_MUL_RZERO]
+QED
 
-val DINT_CMUL = store_thm("DINT_CMUL",
-“!f a b c i. Dint(a,b) f i ==> Dint(a,b) (\x. c * f x) (c * i)”,
+Theorem DINT_CMUL:
+ !f a b c i. Dint(a,b) f i ==> Dint(a,b) (\x. c * f x) (c * i)
+Proof
   REPEAT GEN_TAC THEN ASM_CASES_TAC (Term`c = &0`) THENL
    [MP_TAC(SPECL [Term`a:real`, Term`b:real`, Term`c:real`] DINT_CONST) THEN
     ASM_SIMP_TAC arith_ss[REAL_MUL_LZERO],
@@ -1040,7 +1065,8 @@ val DINT_CMUL = store_thm("DINT_CMUL",
                 DISCH_THEN(MP_TAC o SPECL [Term`D:num->real`, Term`p:num->real`]) THEN
                 ASM_REWRITE_TAC[] THEN DISCH_TAC) THEN
                 POP_ASSUM MP_TAC THEN UNDISCH_TAC(Term`0 < abs c`) THEN
-                RW_TAC arith_ss[REAL_LT_RDIV_EQ] THEN PROVE_TAC[REAL_MUL_SYM]]]]);
+                RW_TAC arith_ss[REAL_LT_RDIV_EQ] THEN PROVE_TAC[REAL_MUL_SYM]]]]
+QED
 
 val DINT_LINEAR = store_thm("DINT_LINEAR",
   ``!f g a b i j.
@@ -1389,10 +1415,12 @@ val INTEGRATION_BY_PARTS = store_thm("INTEGRATION_BY_PARTS",
 (* Various simple lemmas about divisions.                                    *)
 (* ------------------------------------------------------------------------- *)
 
-val DIVISION_LE_SUC = store_thm("DIVISION_LE_SUC",
- “!d a b. division(a,b) d ==> !n. d(n) <= d(SUC n)”,
+Theorem DIVISION_LE_SUC:
+  !d a b. division(a,b) d ==> !n. d(n) <= d(SUC n)
+Proof
   REWRITE_TAC[DIVISION_THM, GREATER_EQ] THEN
-  MESON_TAC[LESS_CASES, LE, REAL_LE_REFL, REAL_LT_IMP_LE]);
+  MESON_TAC[LESS_CASES, LE, REAL_LE_REFL, REAL_LT_IMP_LE]
+QED
 
 Theorem DIVISION_MONO_LE:
   !d a b. division(a,b) d ==> !m n. m <= n ==> d(m) <= d(n)
@@ -2362,10 +2390,12 @@ val INTEGRABLE_LIMIT = store_thm("INTEGRABLE_LIMIT",
 (* Hence continuous functions are integrable.                                *)
 (* ------------------------------------------------------------------------- *)
 
-val INTEGRABLE_CONST = store_thm("INTEGRABLE_CONST",
- “!a b c. integrable(a,b) (\x. c)”,
+Theorem INTEGRABLE_CONST:
+  !a b c. integrable(a,b) (\x. c)
+Proof
   REWRITE_TAC[integrable] THEN REPEAT GEN_TAC THEN
-  EXISTS_TAC(Term`c*(b-a):real`) THEN SIMP_TAC arith_ss[DINT_CONST]);
+  EXISTS_TAC(Term`c*(b-a):real`) THEN SIMP_TAC arith_ss[DINT_CONST]
+QED
 
 val INTEGRABLE_ADD = store_thm("INTEGRABLE_ADD",
   ``!f g a b. a<=b /\ integrable(a,b) f /\ integrable(a,b) g ==>
@@ -2676,30 +2706,38 @@ val INTEGRAL_0 = store_thm("INTEGRAL_0",
   RW_TAC std_ss[] THEN MATCH_MP_TAC DINT_INTEGRAL THEN
   ASM_REWRITE_TAC[DINT_0]);
 
-val INTEGRAL_CONST = store_thm("INTEGRAL_CONST",
- “!a b c. a <= b ==> (integral(a,b) (\x. c) = c * (b - a))”,
+Theorem INTEGRAL_CONST:
+  !a b c. a <= b ==> (integral(a,b) (\x. c) = c * (b - a))
+Proof
   REPEAT STRIP_TAC THEN MATCH_MP_TAC DINT_INTEGRAL THEN
-  ASM_SIMP_TAC arith_ss[DINT_CONST]);
+  ASM_SIMP_TAC arith_ss[DINT_CONST]
+QED
 
-val INTEGRAL_CMUL = store_thm("INTEGRAL_CMUL",
-“!f c a b. a <= b /\ integrable(a,b) f
-           ==> (integral(a,b) (\x. c * f(x)) = c * integral(a,b) f)”,
+Theorem INTEGRAL_CMUL:
+ !f c a b. a <= b /\ integrable(a,b) f
+           ==> (integral(a,b) (\x. c * f(x)) = c * integral(a,b) f)
+Proof
         REPEAT STRIP_TAC THEN MATCH_MP_TAC DINT_INTEGRAL THEN
-        ASM_SIMP_TAC arith_ss[DINT_CMUL, INTEGRABLE_DINT]);
+        ASM_SIMP_TAC arith_ss[DINT_CMUL, INTEGRABLE_DINT]
+QED
 
-val INTEGRAL_ADD = store_thm("INTEGRAL_ADD",
-“!f g a b. a <= b /\ integrable(a,b) f /\ integrable(a,b) g
+Theorem INTEGRAL_ADD:
+ !f g a b. a <= b /\ integrable(a,b) f /\ integrable(a,b) g
              ==> (integral(a,b) (\x. f(x) + g(x)) =
-                 integral(a,b) f + integral(a,b) g)”,
+                 integral(a,b) f + integral(a,b) g)
+Proof
         REPEAT STRIP_TAC THEN MATCH_MP_TAC DINT_INTEGRAL THEN
-        ASM_SIMP_TAC arith_ss[DINT_ADD, INTEGRABLE_DINT]);
+        ASM_SIMP_TAC arith_ss[DINT_ADD, INTEGRABLE_DINT]
+QED
 
-val INTEGRAL_SUB = store_thm("INTEGRAL_SUB",
- “!f g a b. a <= b /\ integrable(a,b) f /\ integrable(a,b) g
+Theorem INTEGRAL_SUB:
+  !f g a b. a <= b /\ integrable(a,b) f /\ integrable(a,b) g
              ==> (integral(a,b) (\x. f(x) - g(x)) =
-                 integral(a,b) f - integral(a,b) g)”,
+                 integral(a,b) f - integral(a,b) g)
+Proof
   REPEAT STRIP_TAC THEN MATCH_MP_TAC DINT_INTEGRAL THEN
-  ASM_SIMP_TAC arith_ss[DINT_SUB, INTEGRABLE_DINT]);
+  ASM_SIMP_TAC arith_ss[DINT_SUB, INTEGRABLE_DINT]
+QED
 
 val INTEGRAL_BY_PARTS = store_thm("INTEGRAL_BY_PARTS",
   ``!f g f' g' a b.

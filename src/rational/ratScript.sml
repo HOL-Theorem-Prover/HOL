@@ -592,30 +592,33 @@ val RAT_MINV_CALCULATE = store_thm("RAT_MINV_CALCULATE", ``!f1. ~(0 = frac_nmr f
  *  |- !f1 f2. rat_add (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_add f1 f2 )
  *--------------------------------------------------------------------------*)
 
-val RAT_ADD_CALCULATE = store_thm(
-  "RAT_ADD_CALCULATE",
-  “!f1 f2. rat_add (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_add f1 f2 )”,
-  REPEAT GEN_TAC THEN REWRITE_TAC[rat_add_def] THEN PROVE_TAC[RAT_ADD_CONG] );
+Theorem RAT_ADD_CALCULATE:
+   !f1 f2. rat_add (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_add f1 f2 )
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC[rat_add_def] THEN PROVE_TAC[RAT_ADD_CONG]
+QED
 
 (*--------------------------------------------------------------------------
  *  RAT_SUB_CALCULATE: thm
  *  |- !f1 f2. rat_sub (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_sub f1 f2 )
  *--------------------------------------------------------------------------*)
 
-val RAT_SUB_CALCULATE = store_thm(
-  "RAT_SUB_CALCULATE",
-  “!f1 f2. rat_sub (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_sub f1 f2 )”,
-  REPEAT GEN_TAC THEN REWRITE_TAC[rat_sub_def] THEN PROVE_TAC[RAT_SUB_CONG] );
+Theorem RAT_SUB_CALCULATE:
+   !f1 f2. rat_sub (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_sub f1 f2 )
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC[rat_sub_def] THEN PROVE_TAC[RAT_SUB_CONG]
+QED
 
 (*--------------------------------------------------------------------------
  *  RAT_MUL_CALCULATE: thm
  *  |- !f1 f2. rat_mul (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_mul f1 f2 )
  *--------------------------------------------------------------------------*)
 
-val RAT_MUL_CALCULATE = store_thm(
-  "RAT_MUL_CALCULATE",
-  “!f1 f2. rat_mul (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_mul f1 f2 )”,
-  REPEAT GEN_TAC THEN REWRITE_TAC[rat_mul_def] THEN PROVE_TAC[RAT_MUL_CONG]);
+Theorem RAT_MUL_CALCULATE:
+   !f1 f2. rat_mul (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_mul f1 f2 )
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC[rat_mul_def] THEN PROVE_TAC[RAT_MUL_CONG]
+QED
 
 (* ----------------------------------------------------------------------
     RAT_DIV_CALCULATE: thm
@@ -624,22 +627,24 @@ val RAT_MUL_CALCULATE = store_thm(
          (rat_div (abs_rat f1) (abs_rat f2) = abs_rat(frac_div f1 f2))
    ---------------------------------------------------------------------- *)
 
-val RAT_DIV_CALCULATE = store_thm(
-  "RAT_DIV_CALCULATE",
-  “!f1 f2. frac_nmr f2 <> 0 ==>
-           (rat_div (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_div f1 f2 ))”,
-  REPEAT STRIP_TAC THEN REWRITE_TAC[rat_div_def] THEN PROVE_TAC[RAT_DIV_CONG]);
+Theorem RAT_DIV_CALCULATE:
+   !f1 f2. frac_nmr f2 <> 0 ==>
+           (rat_div (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_div f1 f2 ))
+Proof
+  REPEAT STRIP_TAC THEN REWRITE_TAC[rat_div_def] THEN PROVE_TAC[RAT_DIV_CONG]
+QED
 
 (*--------------------------------------------------------------------------
  *  RAT_EQ_CALCULATE: thm
  *  |- !f1 f2. (abs_rat f1 = abs_rat f2) = (frac_nmr f1 * frac_dnm f2 = frac_nmr f2 * frac_dnm f1)
  *--------------------------------------------------------------------------*)
 
-val RAT_EQ_CALCULATE = store_thm(
-  "RAT_EQ_CALCULATE",
-  “!f1 f2. (abs_rat f1 = abs_rat f2) <=>
-           (frac_nmr f1 * frac_dnm f2 = frac_nmr f2 * frac_dnm f1)”,
-  PROVE_TAC[RAT_ABS_EQUIV, rat_equiv_def] );
+Theorem RAT_EQ_CALCULATE:
+   !f1 f2. (abs_rat f1 = abs_rat f2) <=>
+           (frac_nmr f1 * frac_dnm f2 = frac_nmr f2 * frac_dnm f1)
+Proof
+  PROVE_TAC[RAT_ABS_EQUIV, rat_equiv_def]
+QED
 
 
 (* ----------------------------------------------------------------------
@@ -648,10 +653,10 @@ val RAT_EQ_CALCULATE = store_thm(
                (frac_nmr f1 * frac_dnm f2 < frac_nmr f2 * frac_dnm f1)
    ---------------------------------------------------------------------- *)
 
-val RAT_LES_CALCULATE = store_thm(
-  "RAT_LES_CALCULATE",
-  “!f1 f2. (abs_rat f1 < abs_rat f2) =
-           (frac_nmr f1 * frac_dnm f2 < frac_nmr f2 * frac_dnm f1)”,
+Theorem RAT_LES_CALCULATE:
+   !f1 f2. (abs_rat f1 < abs_rat f2) =
+           (frac_nmr f1 * frac_dnm f2 < frac_nmr f2 * frac_dnm f1)
+Proof
   REPEAT GEN_TAC THEN
   REWRITE_TAC[rat_les_def, rat_sgn_def, RAT_SUB_CALCULATE, RAT_SGN_CONG] THEN
   REWRITE_TAC[frac_sgn_def, frac_sub_def, frac_add_def, frac_ainv_def] THEN
@@ -660,7 +665,8 @@ val RAT_LES_CALCULATE = store_thm(
   FRAC_NMRDNM_TAC THEN
   REWRITE_TAC[INT_SGN_CLAUSES, int_gt] THEN
   `~frac_nmr f1 * frac_dnm f2 = ~(frac_nmr f1 * frac_dnm f2)` by ARITH_TAC THEN
-  ASM_REWRITE_TAC[INT_LT_ADDNEG, INT_ADD_LID] );
+  ASM_REWRITE_TAC[INT_LT_ADDNEG, INT_ADD_LID]
+QED
 
 val RAT_LEQ_CALCULATE = store_thm("RAT_LEQ_CALCULATE",
   ``!f1 f2. (abs_rat f1 <= abs_rat f2) =
@@ -1087,14 +1093,16 @@ val RAT_1_NOT_0 = store_thm("RAT_1_NOT_0", ``~ (1q=0q)``,
    |- !r1. rat_mul r1 0q = 0q
  *--------------------------------------------------------------------------*)
 
-val RAT_MUL_LZERO = store_thm(
-  "RAT_MUL_LZERO[simp]", “!r1. rat_mul 0q r1 = 0q”,
-  GEN_TAC THEN RAT_CALCEQ_TAC);
+Theorem RAT_MUL_LZERO[simp]:  !r1. rat_mul 0q r1 = 0q
+Proof
+  GEN_TAC THEN RAT_CALCEQ_TAC
+QED
 
-val RAT_MUL_RZERO = store_thm(
-  "RAT_MUL_RZERO[simp]",
-  “!r1. rat_mul r1 0q = 0q”,
-  PROVE_TAC[RAT_MUL_LZERO, RAT_MUL_COMM] );
+Theorem RAT_MUL_RZERO[simp]:
+   !r1. rat_mul r1 0q = 0q
+Proof
+  PROVE_TAC[RAT_MUL_LZERO, RAT_MUL_COMM]
+QED
 
 (*--------------------------------------------------------------------------
    RAT_SUB_ADDAINV: thm
@@ -1202,8 +1210,9 @@ val RAT_EQ_AINV = store_thm("RAT_EQ_AINV[simp]",
   ``!r1 r2. (rat_ainv r1 = rat_ainv r2) = (r1=r2)``,
         REWRITE_TAC[RAT_AINV_EQ, RAT_AINV_AINV] ) ;
 
-val RAT_AINV_MINV = store_thm("RAT_AINV_MINV",
-  “!r1. r1 <> 0q ==> (rat_ainv (rat_minv r1) = rat_minv (rat_ainv r1))”,
+Theorem RAT_AINV_MINV:
+   !r1. r1 <> 0q ==> (rat_ainv (rat_minv r1) = rat_minv (rat_ainv r1))
+Proof
   REPEAT STRIP_TAC THEN
   FIRST_ASSUM MP_TAC THEN
   RULE_ASSUM_TAC (REWRITE_RULE[rat_nmr_def, RAT_EQ0_NMR]) THEN
@@ -1225,7 +1234,8 @@ val RAT_AINV_MINV = store_thm("RAT_AINV_MINV",
   TRY (INT_RING_TAC THEN NO_TAC) THEN
   METIS_TAC[integerTheory.INT_LT_REFL, integerTheory.INT_LT_TRANS,
             integerTheory.INT_NOT_LT, integerTheory.INT_LE_ANTISYM,
-            integerTheory.INT_MUL_RZERO]);
+            integerTheory.INT_MUL_RZERO]
+QED
 
 (*--------------------------------------------------------------------------
    RAT_SUB_RDISTRIB: thm

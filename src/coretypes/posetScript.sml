@@ -41,10 +41,11 @@ val function_def = new_definition
   ("function_def",
    ``function a b (f : 'a -> 'b) = !x. a x ==> b (f x)``);
 
-val function_in = store_thm
-  ("function_in",
-   “function s s t /\ s x ==> s (t x)”,
-   RW_TAC (srw_ss()) [function_def]);
+Theorem function_in:
+    function s s t /\ s x ==> s (t x)
+Proof
+   RW_TAC (srw_ss()) [function_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* A HOL type of partial orders                                              *)
@@ -314,17 +315,19 @@ val gfp_unique = store_thm
    >> STRIP_TAC
    >> RW_TAC bool_ss [poset_def, gfp_def]);
 
-val lfp_induct = store_thm
-  ("lfp_induct",
-   “lfp (s,r) b lfix /\ s x /\ r (b x) x
-    ==> r lfix x”,
-   RW_TAC bool_ss [lfp_def]);
+Theorem lfp_induct:
+    lfp (s,r) b lfix /\ s x /\ r (b x) x
+    ==> r lfix x
+Proof
+   RW_TAC bool_ss [lfp_def]
+QED
 
-val gfp_coinduct = store_thm
-  ("gfp_coinduct",
-   “gfp (s,r) b gfix /\ s x /\ r x (b x)
-   ==> r x gfix”,
-   RW_TAC bool_ss [gfp_def]);
+Theorem gfp_coinduct:
+    gfp (s,r) b gfix /\ s x /\ r x (b x)
+   ==> r x gfix
+Proof
+   RW_TAC bool_ss [gfp_def]
+QED
 
 val glb_unique = Q.store_thm("glb_unique",`
   poset (s,r) /\
