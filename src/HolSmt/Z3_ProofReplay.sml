@@ -29,6 +29,8 @@ local
   val F_OR = HolSmtTheory.F_OR
   val CONJ_CONG = HolSmtTheory.CONJ_CONG
   val NOT_NOT_ELIM = HolSmtTheory.NOT_NOT_ELIM
+  val NOT_NOT_INTRO = HolSmtTheory.NOT_NOT_INTRO
+  val NOT_REVERSE = HolSmtTheory.NOT_REVERSE
   val NOT_FALSE = HolSmtTheory.NOT_FALSE
   val NNF_CONJ = HolSmtTheory.NNF_CONJ
   val NNF_DISJ = HolSmtTheory.NNF_DISJ
@@ -1043,11 +1045,40 @@ local
 
     let
       val (lhs, rhs) = boolSyntax.dest_eq t
-      val thm = profile "rewrite(12)(unification)" Library.gen_instantiation
+      val thm = profile "rewrite(12.1)(unification)" Library.gen_instantiation
         (lhs, rhs, #var_set state)
       val asl = Thm.hyp thm
     in
       (state_define (state_cache_thm state thm) asl, thm)
+    end
+
+    handle Feedback.HOL_ERR _ =>
+
+    let
+      val (lhs, rhs) = boolSyntax.dest_eq t
+      val rhs = boolSyntax.dest_neg (boolSyntax.dest_neg rhs)
+      val thm = profile "rewrite(12.2)(unification)" Library.gen_instantiation
+        (lhs, rhs, #var_set state)
+      fun not_not_conv tm = Thm.SPEC tm NOT_NOT_INTRO
+      val thm = Conv.CONV_RULE (Conv.RHS_CONV not_not_conv) thm
+      val asl = Thm.hyp thm
+    in
+      (state_define (state_cache_thm state thm) asl, thm)
+    end
+
+    handle Feedback.HOL_ERR _ =>
+
+    let
+      val (lhs, rhs) = boolSyntax.dest_eq t
+      val neg_lhs = boolSyntax.mk_neg lhs
+      val var = boolSyntax.dest_neg rhs
+      val def = boolSyntax.mk_eq (var, neg_lhs)
+      val p = Term.mk_var ("p", Type.bool)
+      val q = Term.mk_var ("q", Type.bool)
+      val thm' = Thm.INST [p |-> var, q |-> lhs] NOT_REVERSE
+      val thm = Drule.UNDISCH thm'
+    in
+      (state_define (state_cache_thm state thm) [def], thm)
     end
   end
 
