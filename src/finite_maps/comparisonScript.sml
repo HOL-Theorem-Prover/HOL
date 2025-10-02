@@ -79,27 +79,34 @@ Overload string_cmp = “string_compare”
 Theorem string_cmp_def = stringTheory.string_compare_def
 (* relationship to toto *)
 
-val TotOrder_imp_good_cmp = store_thm("TotOrder_imp_good_cmp",
-  ``!cmp. TotOrd cmp ==> good_cmp cmp``,
-  rw[TotOrd,good_cmp_thm] >> metis_tac[])
+Theorem TotOrder_imp_good_cmp:
+    !cmp. TotOrd cmp ==> good_cmp cmp
+Proof
+  rw[TotOrd,good_cmp_thm] >> metis_tac[]
+QED
 
 val _ = temp_overload_on ("invert", ``ternaryComparisons$invert_comparison``)
 
-val TO_inv_invert = store_thm("TO_inv_invert",
-  ``!c. TotOrd c ==> TO_inv c = CURRY (invert o UNCURRY c)``,
+Theorem TO_inv_invert:
+    !c. TotOrd c ==> TO_inv c = CURRY (invert o UNCURRY c)
+Proof
   simp[FUN_EQ_THM,TO_inv] >> gen_tac >> strip_tac >>
   map_every qx_gen_tac[`x`,`y`] >>
   Cases_on`c x y`>>simp[]>>
-  fs[TotOrd] >> metis_tac[])
+  fs[TotOrd] >> metis_tac[]
+QED
 
-val option_cmp2_TO_inv = store_thm("option_cmp2_TO_inv",
-  ``!c. option_cmp2 c = TO_inv (option_cmp (TO_inv c))``,
+Theorem option_cmp2_TO_inv:
+    !c. option_cmp2 c = TO_inv (option_cmp (TO_inv c))
+Proof
   simp[FUN_EQ_THM,TO_inv] >>
   gen_tac >> Cases >> Cases >>
-  simp[option_cmp2_def,option_cmp_def,TO_inv]);
+  simp[option_cmp2_def,option_cmp_def,TO_inv]
+QED
 
-val list_cmp_ListOrd = store_thm("list_cmp_ListOrd",
-  ``!c. TotOrd c ==> list_cmp c = ListOrd (TO c)``,
+Theorem list_cmp_ListOrd:
+    !c. TotOrd c ==> list_cmp c = ListOrd (TO c)
+Proof
   simp[FUN_EQ_THM,PULL_FORALL] >>
   ho_match_mp_tac list_cmp_ind >>
   simp[list_cmp_def,ListOrd,TO_of_LinearOrder,
@@ -107,26 +114,36 @@ val list_cmp_ListOrd = store_thm("list_cmp_ListOrd",
   rw[] >>
   fs[GSYM TO_apto_TO_ID,TotOrd] >>
   BasicProvers.CASE_TAC >>
-  metis_tac[cmp_thms])
+  metis_tac[cmp_thms]
+QED
 
-val TotOrd_list_cmp = store_thm("TotOrd_list_cmp",
-  ``!c. TotOrd c ==> TotOrd (list_cmp c)``,
-  srw_tac[][] >> imp_res_tac list_cmp_ListOrd >> simp[TO_ListOrd])
+Theorem TotOrd_list_cmp:
+    !c. TotOrd c ==> TotOrd (list_cmp c)
+Proof
+  srw_tac[][] >> imp_res_tac list_cmp_ListOrd >> simp[TO_ListOrd]
+QED
 
-val pair_cmp_lexTO = store_thm("pair_cmp_lexTO",
-  ``!R V. TotOrd R /\ TotOrd V ==> pair_cmp R V = R lexTO V``,
-  simp[FUN_EQ_THM,lexTO_thm,pair_cmp_def,pairTheory.FORALL_PROD])
+Theorem pair_cmp_lexTO:
+    !R V. TotOrd R /\ TotOrd V ==> pair_cmp R V = R lexTO V
+Proof
+  simp[FUN_EQ_THM,lexTO_thm,pair_cmp_def,pairTheory.FORALL_PROD]
+QED
 
-val num_cmp_numOrd = store_thm("num_cmp_numOrd",
-  ``num_cmp = numOrd``,
-  simp[FUN_EQ_THM,num_cmp_def,numOrd,TO_of_LinearOrder])
+Theorem num_cmp_numOrd:
+    num_cmp = numOrd
+Proof
+  simp[FUN_EQ_THM,num_cmp_def,numOrd,TO_of_LinearOrder]
+QED
 
-val char_cmp_charOrd = store_thm("char_cmp_charOrd",
-  ``char_cmp = charOrd``,
-  simp[FUN_EQ_THM,char_cmp_def,charOrd,num_cmp_numOrd])
+Theorem char_cmp_charOrd:
+    char_cmp = charOrd
+Proof
+  simp[FUN_EQ_THM,char_cmp_def,charOrd,num_cmp_numOrd]
+QED
 
-val string_cmp_stringto = store_thm("string_cmp_stringto",
-  ``string_cmp = apto stringto``,
+Theorem string_cmp_stringto:
+    string_cmp = apto stringto
+Proof
   simp[FUN_EQ_THM,stringto] >>
   Induct >- ( Cases >> simp[aplistoto,string_cmp_def,list_cmp_def] ) >>
   gen_tac >> Cases >>
@@ -135,7 +152,8 @@ val string_cmp_stringto = store_thm("string_cmp_stringto",
   simp[MATCH_MP list_cmp_ListOrd TO_charOrd,listoto,charto] >>
   rpt AP_THM_TAC >>
   match_mp_tac (GSYM TO_apto_TO_IMP) >>
-  simp[TO_ListOrd])
+  simp[TO_ListOrd]
+QED
 
 (* cmps are good *)
 
@@ -426,8 +444,9 @@ Proof
  fs []
 QED
 
-val TO_of_LinearOrder_LLEX = store_thm("TO_of_LinearOrder_LLEX",
-  ``!R. irreflexive R ==> (TO_of_LinearOrder (LLEX R) = list_cmp (TO_of_LinearOrder R))``,
+Theorem TO_of_LinearOrder_LLEX:
+    !R. irreflexive R ==> (TO_of_LinearOrder (LLEX R) = list_cmp (TO_of_LinearOrder R))
+Proof
   srw_tac[][relationTheory.irreflexive_def] >>
   simp[FUN_EQ_THM] >>
   Induct >- (
@@ -435,4 +454,5 @@ val TO_of_LinearOrder_LLEX = store_thm("TO_of_LinearOrder_LLEX",
   gen_tac >> Cases >>
   simp[list_cmp_def,TO_of_LinearOrder] >>
   pop_assum(assume_tac o GSYM) >> simp[] >>
-  srw_tac[][TO_of_LinearOrder] >> full_simp_tac(srw_ss())[] >> rev_full_simp_tac(srw_ss())[])
+  srw_tac[][TO_of_LinearOrder] >> full_simp_tac(srw_ss())[] >> rev_full_simp_tac(srw_ss())[]
+QED

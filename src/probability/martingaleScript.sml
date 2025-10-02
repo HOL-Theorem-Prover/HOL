@@ -5745,68 +5745,77 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* ‘sub_sigma_algebra’ is a partial-order between sigma-algebra *)
-val SUB_SIGMA_ALGEBRA_REFL = store_thm
-  ("SUB_SIGMA_ALGEBRA_REFL",
-  ``!a. sigma_algebra a ==> sub_sigma_algebra a a``,
-    RW_TAC std_ss [sub_sigma_algebra_def, SUBSET_REFL]);
+Theorem SUB_SIGMA_ALGEBRA_REFL:
+    !a. sigma_algebra a ==> sub_sigma_algebra a a
+Proof
+    RW_TAC std_ss [sub_sigma_algebra_def, SUBSET_REFL]
+QED
 
-val SUB_SIGMA_ALGEBRA_TRANS = store_thm
-  ("SUB_SIGMA_ALGEBRA_TRANS",
-  ``!a b c. sub_sigma_algebra a b /\ sub_sigma_algebra b c ==> sub_sigma_algebra a c``,
+Theorem SUB_SIGMA_ALGEBRA_TRANS:
+    !a b c. sub_sigma_algebra a b /\ sub_sigma_algebra b c ==> sub_sigma_algebra a c
+Proof
     RW_TAC std_ss [sub_sigma_algebra_def]
  >> MATCH_MP_TAC SUBSET_TRANS
- >> Q.EXISTS_TAC `subsets b` >> art []);
+ >> Q.EXISTS_TAC `subsets b` >> art []
+QED
 
-val SUB_SIGMA_ALGEBRA_ANTISYM = store_thm
-  ("SUB_SIGMA_ALGEBRA_ANTISYM",
-  ``!a b. sub_sigma_algebra a b /\ sub_sigma_algebra b a ==> (a = b)``,
+Theorem SUB_SIGMA_ALGEBRA_ANTISYM:
+    !a b. sub_sigma_algebra a b /\ sub_sigma_algebra b a ==> (a = b)
+Proof
     RW_TAC std_ss [sub_sigma_algebra_def]
  >> Q.PAT_X_ASSUM `space b = space a` K_TAC
  >> ONCE_REWRITE_TAC [GSYM SPACE]
  >> ASM_REWRITE_TAC [CLOSED_PAIR_EQ]
- >> MATCH_MP_TAC SUBSET_ANTISYM >> art []);
+ >> MATCH_MP_TAC SUBSET_ANTISYM >> art []
+QED
 
-val SUB_SIGMA_ALGEBRA_ORDER = store_thm
-  ("SUB_SIGMA_ALGEBRA_ORDER", ``Order sub_sigma_algebra``,
+Theorem SUB_SIGMA_ALGEBRA_ORDER:   Order sub_sigma_algebra
+Proof
     RW_TAC std_ss [Order, antisymmetric_def, transitive_def]
  >- (MATCH_MP_TAC SUB_SIGMA_ALGEBRA_ANTISYM >> art [])
- >> IMP_RES_TAC SUB_SIGMA_ALGEBRA_TRANS);
+ >> IMP_RES_TAC SUB_SIGMA_ALGEBRA_TRANS
+QED
 
 (* Another form of measureTheory.MEASURE_SPACE_RESTRICTION *)
-val SUB_SIGMA_ALGEBRA_MEASURE_SPACE = store_thm
-  ("SUB_SIGMA_ALGEBRA_MEASURE_SPACE",
-  ``!m a. measure_space m /\ sub_sigma_algebra a (m_space m,measurable_sets m) ==>
-          measure_space (m_space m,subsets a,measure m)``,
+Theorem SUB_SIGMA_ALGEBRA_MEASURE_SPACE:
+    !m a. measure_space m /\ sub_sigma_algebra a (m_space m,measurable_sets m) ==>
+          measure_space (m_space m,subsets a,measure m)
+Proof
     RW_TAC std_ss [sub_sigma_algebra_def, space_def, subsets_def]
  >> MATCH_MP_TAC MEASURE_SPACE_RESTRICTION
  >> Q.EXISTS_TAC `measurable_sets m`
  >> simp [MEASURE_SPACE_REDUCE]
- >> METIS_TAC [SPACE]);
+ >> METIS_TAC [SPACE]
+QED
 
-val FILTRATION_BOUNDED = store_thm
-  ("FILTRATION_BOUNDED",
-  ``!A a. filtration A a ==> !n. sub_sigma_algebra (a n) A``,
-    PROVE_TAC [filtration_def]);
+Theorem FILTRATION_BOUNDED:
+    !A a. filtration A a ==> !n. sub_sigma_algebra (a n) A
+Proof
+    PROVE_TAC [filtration_def]
+QED
 
-val FILTRATION_MONO = store_thm
-  ("FILTRATION_MONO",
-  ``!A a. filtration A a ==> !i j. i <= j ==> subsets (a i) SUBSET subsets (a j)``,
-    PROVE_TAC [filtration_def]);
+Theorem FILTRATION_MONO:
+    !A a. filtration A a ==> !i j. i <= j ==> subsets (a i) SUBSET subsets (a j)
+Proof
+    PROVE_TAC [filtration_def]
+QED
 
 (* all sigma-algebras in `filtration A` are subset of A *)
-val FILTRATION_SUBSETS = store_thm
-  ("FILTRATION_SUBSETS",
-  ``!A a. filtration A a ==> !n. subsets (a n) SUBSET (subsets A)``,
-    RW_TAC std_ss [filtration_def, sub_sigma_algebra_def]);
+Theorem FILTRATION_SUBSETS:
+    !A a. filtration A a ==> !n. subsets (a n) SUBSET (subsets A)
+Proof
+    RW_TAC std_ss [filtration_def, sub_sigma_algebra_def]
+QED
 
-val FILTRATION = store_thm
-  ("FILTRATION",
-  ``!A a. filtration A a <=> (!n. sub_sigma_algebra (a n) A) /\
+Theorem FILTRATION:
+    !A a. filtration A a <=> (!n. sub_sigma_algebra (a n) A) /\
                              (!n. subsets (a n) SUBSET (subsets A)) /\
-                             (!i j. i <= j ==> subsets (a i) SUBSET subsets (a j))``,
+                             (!i j. i <= j ==> subsets (a i) SUBSET subsets (a j))
+Proof
     rpt GEN_TAC >> EQ_TAC
  >- (DISCH_TAC >> IMP_RES_TAC FILTRATION_SUBSETS >> fs [filtration_def])
- >> RW_TAC std_ss [filtration_def]);
+ >> RW_TAC std_ss [filtration_def]
+QED
 
 (* all sub measure spaces of a sigma-finite fms are also sigma-finite *)
 Theorem SIGMA_FINITE_FILTERED_MEASURE_SPACE :
@@ -5851,10 +5860,10 @@ Definition infty_sigma_algebra_def:
       sigma sp (BIGUNION (IMAGE (\(i :num). subsets (a i)) UNIV))
 End
 
-val INFTY_SIGMA_ALGEBRA_BOUNDED = store_thm
-  ("INFTY_SIGMA_ALGEBRA_BOUNDED",
-  ``!A a. filtration A a ==>
-          sub_sigma_algebra (infty_sigma_algebra (space A) a) A``,
+Theorem INFTY_SIGMA_ALGEBRA_BOUNDED:
+    !A a. filtration A a ==>
+          sub_sigma_algebra (infty_sigma_algebra (space A) a) A
+Proof
     RW_TAC std_ss [sub_sigma_algebra_def, FILTRATION, infty_sigma_algebra_def]
  >- (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA \\
      RW_TAC std_ss [subset_class_def, IN_BIGUNION_IMAGE, IN_UNIV] \\
@@ -5863,11 +5872,12 @@ val INFTY_SIGMA_ALGEBRA_BOUNDED = store_thm
  >- REWRITE_TAC [SPACE_SIGMA]
  >> MATCH_MP_TAC SIGMA_SUBSET >> art []
  >> RW_TAC std_ss [SUBSET_DEF, IN_BIGUNION_IMAGE, IN_UNIV]
- >> PROVE_TAC [SUBSET_DEF]);
+ >> PROVE_TAC [SUBSET_DEF]
+QED
 
-val INFTY_SIGMA_ALGEBRA_MAXIMAL = store_thm
-  ("INFTY_SIGMA_ALGEBRA_MAXIMAL",
-  ``!A a. filtration A a ==> !n. sub_sigma_algebra (a n) (infty_sigma_algebra (space A) a)``,
+Theorem INFTY_SIGMA_ALGEBRA_MAXIMAL:
+    !A a. filtration A a ==> !n. sub_sigma_algebra (a n) (infty_sigma_algebra (space A) a)
+Proof
  (* proof *)
     RW_TAC std_ss [sub_sigma_algebra_def, FILTRATION, infty_sigma_algebra_def]
  >- (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA \\
@@ -5880,7 +5890,8 @@ val INFTY_SIGMA_ALGEBRA_MAXIMAL = store_thm
  >> CONJ_TAC
  >- (RW_TAC std_ss [SUBSET_DEF, IN_BIGUNION_IMAGE, IN_UNIV] \\
      Q.EXISTS_TAC `n` >> art [])
- >> REWRITE_TAC [SIGMA_SUBSET_SUBSETS]);
+ >> REWRITE_TAC [SIGMA_SUBSET_SUBSETS]
+QED
 
 (* A construction of sigma-filteration from only measurable functions *)
 Theorem filtration_from_measurable_functions :

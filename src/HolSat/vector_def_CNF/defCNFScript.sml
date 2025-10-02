@@ -46,21 +46,23 @@ End
 (* Theorems.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val DEF_SNOC = store_thm
-  ("DEF_SNOC",
-   ``!n x l v. DEF v n (SNOC x l) = DEF v n l /\ UNIQUE v (n + LENGTH l) x``,
+Theorem DEF_SNOC:
+     !n x l v. DEF v n (SNOC x l) = DEF v n l /\ UNIQUE v (n + LENGTH l) x
+Proof
    (Induct_on `l` THEN1 RW_TAC arith_ss [SNOC, DEF_def, LENGTH]) THEN
-   RW_TAC std_ss [SNOC, LENGTH, DEF_def, ADD_CLAUSES, CONJ_ASSOC]);
+   RW_TAC std_ss [SNOC, LENGTH, DEF_def, ADD_CLAUSES, CONJ_ASSOC]
+QED
 
-val OKDEF_SNOC = store_thm
-  ("OKDEF_SNOC",
-   ``!n x l. OKDEF n (SNOC x l) = OKDEF n l /\ OK (n + LENGTH l) x``,
+Theorem OKDEF_SNOC:
+     !n x l. OKDEF n (SNOC x l) = OKDEF n l /\ OK (n + LENGTH l) x
+Proof
    (Induct_on `l` THEN1 RW_TAC arith_ss [SNOC, OKDEF_def, LENGTH]) THEN
-   RW_TAC std_ss [SNOC, LENGTH, OKDEF_def, ADD_CLAUSES, CONJ_ASSOC]);
+   RW_TAC std_ss [SNOC, LENGTH, OKDEF_def, ADD_CLAUSES, CONJ_ASSOC]
+QED
 
-val CONSISTENCY = store_thm
-  ("CONSISTENCY",
-   ``!n l. OKDEF n l ==> ?v. DEF v n l``,
+Theorem CONSISTENCY:
+     !n l. OKDEF n l ==> ?v. DEF v n l
+Proof
    REPEAT GEN_TAC THEN
    Q.SPEC_TAC (`n`, `n`) THEN
    Q.SPEC_TAC (`l`, `l`) THEN
@@ -125,13 +127,14 @@ val CONSISTENCY = store_thm
      Q.EXISTS_TAC `\m. if m = n + LENGTH l then q y (v x) else v m` THEN
      RW_TAC arith_ss [],
      Q.EXISTS_TAC `\m. if m = n + LENGTH l then q y y' else v m` THEN
-     RW_TAC arith_ss []]]);
+     RW_TAC arith_ss []]]
+QED
 
-val BIGSTEP = store_thm(
-  "BIGSTEP",
-  ``!P Q R.
+Theorem BIGSTEP:
+    !P Q R.
        (!v:num->bool. P v ==> (Q = R v)) ==>
-       ((?v. P v) /\ Q = (?v. P v /\ R v))``,
+       ((?v. P v) /\ Q = (?v. P v /\ R v))
+Proof
   REPEAT STRIP_TAC THEN
   EQ_TAC THENL [
    STRIP_TAC THEN
@@ -145,12 +148,14 @@ val BIGSTEP = store_thm(
    ASM_REWRITE_TAC [] THEN
    EXISTS_TAC ``v:num->bool`` THEN
    ASM_REWRITE_TAC []
-  ]);
+  ]
+QED
 
-val FINAL_DEF = store_thm(
-  "FINAL_DEF",
-  ``!v n x. (v n = x) = (v n = x) /\ DEF v (SUC n) []``,
-  SIMP_TAC boolSimps.bool_ss [DEF_def]);
+Theorem FINAL_DEF:
+    !v n x. (v n = x) = (v n = x) /\ DEF v (SUC n) []
+Proof
+  SIMP_TAC boolSimps.bool_ss [DEF_def]
+QED
 
 val _ = app
             (fn s => remove_ovl_mapping s {Thy = "defCNF", Name = s})

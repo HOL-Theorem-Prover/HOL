@@ -479,10 +479,11 @@ QED
    Only-if part: (ls = HD ls::TL ls) ==> ls <> []
    This is true                by NOT_NIL_CONS
 *)
-val LIST_NOT_NIL = store_thm(
-  "LIST_NOT_NIL",
-  ``!ls. ls <> [] <=> (ls = HD ls::TL ls)``,
-  metis_tac[list_CASES, HD, TL, NOT_NIL_CONS]);
+Theorem LIST_NOT_NIL:
+    !ls. ls <> [] <=> (ls = HD ls::TL ls)
+Proof
+  metis_tac[list_CASES, HD, TL, NOT_NIL_CONS]
+QED
 
 Theorem CONS:
   !l : 'a list. ~NULL l ==> HD l :: TL l = l
@@ -804,10 +805,11 @@ QED
    l <> [] <=> LENGTH l <> 0,
             or 0 < LENGTH l             by NOT_ZERO_LT_ZERO
 *)
-val LENGTH_NON_NIL = store_thm(
-  "LENGTH_NON_NIL",
-  ``!l. 0 < LENGTH l <=> l <> []``,
-  metis_tac[LENGTH_NIL, NOT_ZERO_LT_ZERO]);
+Theorem LENGTH_NON_NIL:
+    !l. 0 < LENGTH l <=> l <> []
+Proof
+  metis_tac[LENGTH_NIL, NOT_ZERO_LT_ZERO]
+QED
 
 (* val LENGTH_EQ_0 = save_thm("LENGTH_EQ_0", LENGTH_EQ_NUM |> CONJUNCT1); *)
 val LENGTH_EQ_0 = save_thm("LENGTH_EQ_0", LENGTH_NIL);
@@ -830,9 +832,9 @@ QED
    Only-if part: (l = [x]) ==> (LENGTH l = 1)
      True by LENGTH.
 *)
-val LENGTH_EQ_1 = store_thm(
-  "LENGTH_EQ_1",
-  ``!l. (LENGTH l = 1) <=> ?x. l = [x]``,
+Theorem LENGTH_EQ_1:
+    !l. (LENGTH l = 1) <=> ?x. l = [x]
+Proof
   rw [GSYM LENGTH1]
 (*rw[EQ_IMP_THM] >| [
     `LENGTH l <> 0` by decide_tac >>
@@ -841,7 +843,8 @@ val LENGTH_EQ_1 = store_thm(
     `LENGTH t = 0` by decide_tac >>
     metis_tac[LENGTH_NIL],
     rw[]
-  ]*));
+  ]*)
+QED
 
 Theorem LENGTH2 :
     (2 = LENGTH l) <=> ?a b. l = [a;b]
@@ -3304,10 +3307,11 @@ val _ = export_rewrites ["GENLIST_NUMERALS"]
 
 (* Theorem: GENLIST f 0 = [] *)
 (* Proof: by GENLIST *)
-val GENLIST_0 = store_thm(
-  "GENLIST_0",
-  ``!f. GENLIST f 0 = []``,
-  rw[]);
+Theorem GENLIST_0:
+    !f. GENLIST f 0 = []
+Proof
+  rw[]
+QED
 
 (* Theorem: GENLIST f 1 = [f 0] *)
 (* Proof:
@@ -3317,10 +3321,11 @@ val GENLIST_0 = store_thm(
     = SNOC (f 0) []              by GENLIST
     = [f 0]                      by SNOC
 *)
-val GENLIST_1 = store_thm(
-  "GENLIST_1",
-  ``!f. GENLIST f 1 = [f 0]``,
-  rw[]);
+Theorem GENLIST_1:
+    !f. GENLIST f 1 = [f 0]
+Proof
+  rw[]
+QED
 
 Theorem MEM_GENLIST:
  MEM x (GENLIST f n) <=> ?m. m < n /\ (x = f m)
@@ -3406,11 +3411,12 @@ QED
       This contradicts LENGTH [] = 0.
    Only-if part: GENLIST f 0 = [], true   by GENLIST_0
 *)
-val GENLIST_EQ_NIL = store_thm(
-  "GENLIST_EQ_NIL",
-  ``!f n. (GENLIST f n = []) <=> (n = 0)``,
+Theorem GENLIST_EQ_NIL:
+    !f n. (GENLIST f n = []) <=> (n = 0)
+Proof
   rw[EQ_IMP_THM] >>
-  metis_tac[LENGTH_GENLIST, LENGTH_NIL]);
+  metis_tac[LENGTH_GENLIST, LENGTH_NIL]
+QED
 
 (* Theorem: LAST (GENLIST f (SUC n)) = f n *)
 (* Proof:
@@ -3418,10 +3424,11 @@ val GENLIST_EQ_NIL = store_thm(
    = LAST (SNOC (f n) (GENLIST f n))  by GENLIST
    = f n                              by LAST_SNOC
 *)
-val GENLIST_LAST = store_thm(
-  "GENLIST_LAST",
-  ``!f n. LAST (GENLIST f (SUC n)) = f n``,
-  rw[GENLIST]);
+Theorem GENLIST_LAST:
+    !f n. LAST (GENLIST f (SUC n)) = f n
+Proof
+  rw[GENLIST]
+QED
 
 (* Note:
 
@@ -3447,9 +3454,9 @@ val GENLIST_LAST = store_thm(
      <=> (!k. k < n ==> (f k = c)) /\ (f n = c)        by induction hypothesis
      <=> !k. k < SUC n ==> (f k = c)
 *)
-val GENLIST_CONSTANT = store_thm(
-  "GENLIST_CONSTANT",
-  ``!f n c. (!k. k < n ==> (f k = c)) <=> EVERY (\x. x = c) (GENLIST f n)``,
+Theorem GENLIST_CONSTANT:
+    !f n c. (!k. k < n ==> (f k = c)) <=> EVERY (\x. x = c) (GENLIST f n)
+Proof
   strip_tac >>
   Induct_on ‘n’ >-
   rw[] >>
@@ -3457,7 +3464,8 @@ val GENLIST_CONSTANT = store_thm(
   metis_tac[prim_recTheory.LESS_SUC] >>
   Cases_on `k = n` >-
   rw_tac std_ss[] >>
-  metis_tac[prim_recTheory.LESS_THM]);
+  metis_tac[prim_recTheory.LESS_THM]
+QED
 
 Theorem isPREFIX_NIL :
     !x. [] <<= x /\ (x <<= [] <=> (x = []))

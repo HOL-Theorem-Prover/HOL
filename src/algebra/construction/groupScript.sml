@@ -270,12 +270,13 @@ val _ = export_rewrites ["group_all_invertible"];
 
 (* Theorem: The Invertibles of a monoid form a group. *)
 (* Proof: by checking definition. *)
-val monoid_invertibles_is_group = store_thm(
-  "monoid_invertibles_is_group",
-  ``!g. Monoid g ==> Group (Invertibles g)``,
+Theorem monoid_invertibles_is_group:
+    !g. Monoid g ==> Group (Invertibles g)
+Proof
   rw[Group_def, monoid_invertibles_is_monoid] >>
   rw[Invertibles_def, monoid_invertibles_def, EXTENSION, EQ_IMP_THM] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: FiniteMonoid g ==> FiniteGroup (Invertibles g) *)
 (* Proof:
@@ -286,54 +287,61 @@ val monoid_invertibles_is_group = store_thm(
    Also Group (Invertibles g)           by monoid_invertibles_is_group
     ==> FiniteGroup (Invertibles g)     by FiniteGroup_def
 *)
-val finite_monoid_invertibles_is_finite_group = store_thm(
-  "finite_monoid_invertibles_is_finite_group",
-  ``!g:'a monoid. FiniteMonoid g ==> FiniteGroup (Invertibles g)``,
+Theorem finite_monoid_invertibles_is_finite_group:
+    !g:'a monoid. FiniteMonoid g ==> FiniteGroup (Invertibles g)
+Proof
   metis_tac[monoid_invertibles_is_group, FiniteGroup_def, FiniteMonoid_def,
-            Invertibles_subset, SUBSET_FINITE]);
+            Invertibles_subset, SUBSET_FINITE]
+QED
 
 (* Theorem: Finite Abelian Group = Finite Group /\ commutativity. *)
 (* Proof: by definitions. *)
-val FiniteAbelianGroup_def_alt = store_thm(
-  "FiniteAbelianGroup_def_alt",
-  ``!g:'a group. FiniteAbelianGroup g <=>
-                FiniteGroup g /\ (!x y. x IN G /\ y IN G ==> (x * y = y * x))``,
-  rw[FiniteAbelianGroup_def, FiniteGroup_def, AbelianGroup_def, EQ_IMP_THM]);
+Theorem FiniteAbelianGroup_def_alt:
+    !g:'a group. FiniteAbelianGroup g <=>
+                FiniteGroup g /\ (!x y. x IN G /\ y IN G ==> (x * y = y * x))
+Proof
+  rw[FiniteAbelianGroup_def, FiniteGroup_def, AbelianGroup_def, EQ_IMP_THM]
+QED
 
 (* Theorem: FiniteGroup g ==> Group g *)
 (* Proof: by FiniteGroup_def *)
-val finite_group_is_group = store_thm(
-  "finite_group_is_group",
-  ``!g:'a group. FiniteGroup g ==> Group g``,
-  rw[FiniteGroup_def]);
+Theorem finite_group_is_group:
+    !g:'a group. FiniteGroup g ==> Group g
+Proof
+  rw[FiniteGroup_def]
+QED
 
 (* Theorem: FiniteGroup g ==> Monoid g *)
 (* Proof: by finite_group_is_group, group_is_monoid *)
-val finite_group_is_monoid = store_thm(
-  "finite_group_is_monoid",
-  ``!g:'a group. FiniteGroup g ==> Monoid g``,
-  rw[FiniteGroup_def]);
+Theorem finite_group_is_monoid:
+    !g:'a group. FiniteGroup g ==> Monoid g
+Proof
+  rw[FiniteGroup_def]
+QED
 
 (* Theorem: For FINITE Group is FINITE monoid. *)
 (* Proof: by group_is_monoid. *)
-val finite_group_is_finite_monoid = store_thm(
-  "finite_group_is_finite_monoid",
-  ``!g:'a group. FiniteGroup g ==> FiniteMonoid g``,
-  rw[FiniteGroup_def, FiniteMonoid_def, group_is_monoid]);
+Theorem finite_group_is_finite_monoid:
+    !g:'a group. FiniteGroup g ==> FiniteMonoid g
+Proof
+  rw[FiniteGroup_def, FiniteMonoid_def, group_is_monoid]
+QED
 
 (* Theorem: AbelianGroup g ==> AbelianMonoid g *)
 (* Proof: by AbelianGroup_def, AbelianMonoid_def, group_is_monoid. *)
-val abelian_group_is_abelian_monoid = store_thm(
-  "abelian_group_is_abelian_monoid[simp]",
-  ``!g. AbelianGroup g ==> AbelianMonoid g``,
-  rw[AbelianGroup_def, AbelianMonoid_def]);
+Theorem abelian_group_is_abelian_monoid[simp]:
+    !g. AbelianGroup g ==> AbelianMonoid g
+Proof
+  rw[AbelianGroup_def, AbelianMonoid_def]
+QED
 
 (* Theorem: FiniteAbelianGroup g ==> FiniteAbelianMonoid g *)
 (* Proof: by FiniteAbelianGroup_def, FiniteAbelianMonoid_def, abelian_group_is_abelian_monoid. *)
-val finite_abelian_group_is_finite_abelian_monoid = store_thm(
-  "finite_abelian_group_is_finite_abelian_monoid",
-  ``!g. FiniteAbelianGroup g ==> FiniteAbelianMonoid g``,
-  rw_tac std_ss[FiniteAbelianGroup_def, FiniteAbelianMonoid_def, abelian_group_is_abelian_monoid]);
+Theorem finite_abelian_group_is_finite_abelian_monoid:
+    !g. FiniteAbelianGroup g ==> FiniteAbelianMonoid g
+Proof
+  rw_tac std_ss[FiniteAbelianGroup_def, FiniteAbelianMonoid_def, abelian_group_is_abelian_monoid]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Group theorems (from Monoid).                                             *)
@@ -548,12 +556,13 @@ val group_carrier_nonempty = lift_monoid_thm "carrier_nonempty";
    ==>             y = z                by group_lid
    Only-if part: true by substitution.
 *)
-val group_lcancel = store_thm(
-  "group_lcancel",
-  ``!g:'a group. Group g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> ((x * y = x * z) = (y = z))``,
+Theorem group_lcancel:
+    !g:'a group. Group g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> ((x * y = x * z) = (y = z))
+Proof
   rw[EQ_IMP_THM] >>
   `( |/x * x) * y = ( |/x * x) * z` by rw[group_assoc] >>
-  metis_tac[group_linv, group_lid]);
+  metis_tac[group_linv, group_lid]
+QED
 
 (* Theorem: [Right cancellation] y * x = z * x <=> y = z *)
 (* Proof:
@@ -565,12 +574,13 @@ val group_lcancel = store_thm(
    ==>              y = z             by group_rid
    Only-if part: true by substitution.
 *)
-val group_rcancel = store_thm(
-  "group_rcancel",
-  ``!g:'a group. Group g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> ((y * x = z * x) = (y = z))``,
+Theorem group_rcancel:
+    !g:'a group. Group g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> ((y * x = z * x) = (y = z))
+Proof
   rw[EQ_IMP_THM] >>
   `y * (x * |/x) = z * (x * |/x)` by rw[GSYM group_assoc] >>
-  metis_tac[group_rinv, group_rid]);
+  metis_tac[group_rinv, group_rid]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Inverses with assocative law.                                             *)
@@ -578,17 +588,19 @@ val group_rcancel = store_thm(
 
 (* Theorem: y = x * ( |/ x * y) /\ y = |/x * (x * y) *)
 (* Proof: by group_assoc and group_linv or group_rinv. *)
-val group_linv_assoc = store_thm(
-  "group_linv_assoc",
-  ``!g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> (y = x * ( |/ x * y)) /\ (y = |/x * (x * y))``,
-  rw[GSYM group_assoc]);
+Theorem group_linv_assoc:
+    !g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> (y = x * ( |/ x * y)) /\ (y = |/x * (x * y))
+Proof
+  rw[GSYM group_assoc]
+QED
 
 (* Theorem: y = y * |/ x * x /\ y = y * x * |/x *)
 (* Proof: by group_assoc and group_linv or group_rinv. *)
-val group_rinv_assoc = store_thm(
-  "group_rinv_assoc",
-  ``!g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> (y = y * |/ x * x) /\ (y = y * x * |/x)``,
-  rw[group_assoc]);
+Theorem group_rinv_assoc:
+    !g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> (y = y * |/ x * x) /\ (y = y * x * |/x)
+Proof
+  rw[group_assoc]
+QED
 
 (* Theorem: [Solve left unknown] x * y = z <=> x = z * |/y *)
 (* Proof:
@@ -601,10 +613,11 @@ val group_rinv_assoc = store_thm(
    = (z * |/y) * y   by substituting x
    = z               by group_rinv_assoc
 *)
-val group_lsolve = store_thm(
-  "group_lsolve",
-  ``!g:'a group. Group g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> ((x * y = z) = (x = z * |/y))``,
-  rw[group_rinv_assoc, EQ_IMP_THM]);
+Theorem group_lsolve:
+    !g:'a group. Group g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> ((x * y = z) = (x = z * |/y))
+Proof
+  rw[group_rinv_assoc, EQ_IMP_THM]
+QED
 
 (* Theorem: [Solve left unknown] x * y = z <=> x = z * |/y *)
 (* Another proof:
@@ -633,10 +646,11 @@ val group_lsolve = store_thm(
     = x ( |/x * z)     by substituting y
     = z                by group_linv_assoc
 *)
-val group_rsolve = store_thm(
-  "group_rsolve",
-  ``!g:'a group. Group g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> ((x * y = z) = (y = |/x * z))``,
-  rw[group_linv_assoc, EQ_IMP_THM]);
+Theorem group_rsolve:
+    !g:'a group. Group g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> ((x * y = z) = (y = |/x * z))
+Proof
+  rw[group_linv_assoc, EQ_IMP_THM]
+QED
 
 (* Theorem: [Left identity unique] y * x = x <=> y = #e *)
 (* Proof:
@@ -647,10 +661,11 @@ val group_rsolve = store_thm(
        y * x = x = #e * x    by group_lid
            y = #e            by group_rcancel
 *)
-val group_lid_unique = store_thm(
-  "group_lid_unique",
-  ``!g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> ((y * x = x) = (y = #e))``,
-  rw[group_lsolve]);
+Theorem group_lid_unique:
+    !g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> ((y * x = x) = (y = #e))
+Proof
+  rw[group_lsolve]
+QED
 
 (* Theorem: [Right identity unique] x * y = x <=> y = #e *)
 (* Proof:
@@ -658,17 +673,19 @@ val group_lid_unique = store_thm(
    <=> y = |/x * x    by group_rsolve
          = #e         by group_linv
 *)
-val group_rid_unique = store_thm(
-  "group_rid_unique",
-  ``!g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> ((x * y = x) = (y = #e))``,
-  rw[group_rsolve]);
+Theorem group_rid_unique:
+    !g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> ((x * y = x) = (y = #e))
+Proof
+  rw[group_rsolve]
+QED
 
 (* Theorem: Group identity is unique. *)
 (* Proof: from group_ild_unique and group_rid_unique. *)
-val group_id_unique = store_thm(
-  "group_id_unique",
-  ``!g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> ((y * x = x) = (y = #e)) /\ ((x * y = x) = (y = #e))``,
-  rw[group_lid_unique, group_rid_unique]);
+Theorem group_id_unique:
+    !g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> ((y * x = x) = (y = #e)) /\ ((x * y = x) = (y = #e))
+Proof
+  rw[group_lid_unique, group_rid_unique]
+QED
 
 (* Note: These are stronger claims than monoid_id_unique. *)
 
@@ -678,10 +695,11 @@ val group_id_unique = store_thm(
    <=> x = #e * |/y    by group_lsolve
          = |/ y        by group_lid
 *)
-val group_linv_unique = store_thm(
-  "group_linv_unique",
-  ``!g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> ((x * y = #e) = (x = |/y))``,
-  rw[group_lsolve]);
+Theorem group_linv_unique:
+    !g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> ((x * y = #e) = (x = |/y))
+Proof
+  rw[group_lsolve]
+QED
 
 (* Theorem: [Right inverse unique] x * y = #e <=> y = |/x *)
 (* Proof:
@@ -689,20 +707,22 @@ val group_linv_unique = store_thm(
    <=> y = |/x * #e    by group_rsolve
          = |/x         by group_rid
 *)
-val group_rinv_unique = store_thm(
-  "group_rinv_unique",
-  ``!g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> ((x * y = #e) = (y = |/x))``,
-  rw[group_rsolve]);
+Theorem group_rinv_unique:
+    !g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> ((x * y = #e) = (y = |/x))
+Proof
+  rw[group_rsolve]
+QED
 
 (* Theorem: [Inverse of inverse] |/( |/ x) = x *)
 (* Proof:
        x * |/x = #e      by group_rinv
    <=> x = |/x ( |/x)    by group_linv_unique
 *)
-val group_inv_inv = store_thm(
-  "group_inv_inv",
-  ``!g:'a group. Group g ==> !x. x IN G ==> ( |/( |/x) = x)``,
-  metis_tac[group_rinv, group_linv_unique, group_inv_element]);
+Theorem group_inv_inv:
+    !g:'a group. Group g ==> !x. x IN G ==> ( |/( |/x) = x)
+Proof
+  metis_tac[group_rinv, group_linv_unique, group_inv_element]
+QED
 
 val _ = export_rewrites ["group_inv_inv"];
 
@@ -714,10 +734,11 @@ val _ = export_rewrites ["group_inv_inv"];
    ==> |/( |/x) = |/( |/y)
    ==>        x = y         by group_inv_inv
 *)
-val group_inv_eq = store_thm(
-  "group_inv_eq",
-  ``!g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> (( |/x = |/y) = (x = y))``,
-  metis_tac[group_inv_inv]);
+Theorem group_inv_eq:
+    !g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> (( |/x = |/y) = (x = y))
+Proof
+  metis_tac[group_inv_inv]
+QED
 
 val _ = export_rewrites ["group_inv_eq"];
 
@@ -727,10 +748,11 @@ val _ = export_rewrites ["group_inv_eq"];
    <=> |/( |/x) = |/y
    <=>        x = |/y    by group_inv_inv
 *)
-val group_inv_eq_swap = store_thm(
-  "group_inv_eq_swap",
-  ``!g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> (( |/x = y) = (x = |/y))``,
-  metis_tac[group_inv_inv]);
+Theorem group_inv_eq_swap:
+    !g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> (( |/x = y) = (x = |/y))
+Proof
+  metis_tac[group_inv_inv]
+QED
 
 val _ = export_rewrites ["group_inv_eq_swap"];
 
@@ -739,10 +761,11 @@ val _ = export_rewrites ["group_inv_eq_swap"];
        #e * #e = #e    by group_id_id
    <=>      #e = |/#e  by group_linv_unique
 *)
-val group_inv_id = store_thm(
-  "group_inv_id",
-  ``!g:'a group. Group g ==> ( |/ #e = #e)``,
-  metis_tac[group_lid, group_linv_unique, group_id_element]);
+Theorem group_inv_id:
+    !g:'a group. Group g ==> ( |/ #e = #e)
+Proof
+  metis_tac[group_lid, group_linv_unique, group_id_element]
+QED
 
 val _ = export_rewrites ["group_inv_id"];
 
@@ -751,10 +774,11 @@ val _ = export_rewrites ["group_inv_id"];
       |/x = #e = |/#e    by group_inv_id
    <=>  x = #e           by group_inv_eq
 *)
-val group_inv_eq_id = store_thm(
-  "group_inv_eq_id",
-  ``!g:'a group. Group g ==> !x. x IN G ==> (( |/x = #e) = (x = #e))``,
-  rw[]);
+Theorem group_inv_eq_id:
+    !g:'a group. Group g ==> !x. x IN G ==> (( |/x = #e) = (x = #e))
+Proof
+  rw[]
+QED
 
 (* Theorem: [Inverse of product] |/(x * y) = |/y * |/x *)
 (* Proof:
@@ -767,14 +791,15 @@ val group_inv_eq_id = store_thm(
    = #e                        by group_rinv
    Hence |/(x y) = |/y * |/x   by group_rinv_unique.
 *)
-val group_inv_op = store_thm(
-  "group_inv_op",
-  ``!g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> ( |/(x * y) = |/y * |/x)``,
+Theorem group_inv_op:
+    !g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> ( |/(x * y) = |/y * |/x)
+Proof
   rpt strip_tac >>
   `(x * y) * ( |/y * |/x) = x * (y * |/y) * |/x` by rw[group_assoc] >>
   `_ = #e` by rw_tac std_ss[group_rinv, group_rid] >>
   pop_assum mp_tac >>
-  rw[group_rinv_unique]);
+  rw[group_rinv_unique]
+QED
 
 (* Theorem: [Pair Reduction] Group g ==> (x * z) * |/ (y * z) = x * |/ y *)
 (* Proof:
@@ -785,16 +810,17 @@ val group_inv_op = store_thm(
    = (x * #e) * |/ y            by group_rinv
    = x * |/ y                   by group_rid
 *)
-val group_pair_reduce = store_thm(
-  "group_pair_reduce",
-  ``!g:'a group. Group g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> ((x * z) * |/ (y * z) = x * |/ y)``,
+Theorem group_pair_reduce:
+    !g:'a group. Group g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> ((x * z) * |/ (y * z) = x * |/ y)
+Proof
   rpt strip_tac >>
   `!a. a IN G ==> |/ a IN G` by rw[] >>
   `(x * z) * |/ (y * z) = (x * z) * ( |/ z * |/ y)` by rw_tac std_ss[group_inv_op] >>
   `_ = (x * (z * |/ z)) * |/ y` by rw[group_assoc] >>
   `_ = (x * #e) * |/ y` by rw_tac std_ss[group_rinv] >>
   `_ = x * |/ y` by rw_tac std_ss[group_rid] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: The identity is a fixed point: x * x = x ==> x = #e. *)
 (* Proof:
@@ -805,10 +831,11 @@ val group_pair_reduce = store_thm(
    For the only-if part:
        #e * #e = #e       by group_id_id
 *)
-val group_id_fix = store_thm(
-  "group_id_fix",
-  ``!g:'a group. Group g ==> !x. x IN G ==> ((x * x = x) = (x = #e))``,
-  metis_tac[group_lid, group_rcancel, group_id_element]);
+Theorem group_id_fix:
+    !g:'a group. Group g ==> !x. x IN G ==> ((x * x = x) = (x = #e))
+Proof
+  metis_tac[group_lid, group_rcancel, group_id_element]
+QED
 
 (* Theorem: Group g ==> !x y. x IN G /\ y IN G ==> (( |/ x * y = #e) <=> (x = y)) *)
 (* Proof:
@@ -821,11 +848,12 @@ val group_id_fix = store_thm(
    Only-if part: x = y ==> |/ x * y = #e
        True by group_linv.
 *)
-val group_op_linv_eq_id = store_thm(
-  "group_op_linv_eq_id",
-  ``!g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> (( |/ x * y = #e) <=> (x = y))``,
+Theorem group_op_linv_eq_id:
+    !g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> (( |/ x * y = #e) <=> (x = y))
+Proof
   rw[EQ_IMP_THM] >>
-  metis_tac[group_inv_element, group_rinv_unique, group_inv_inv]);
+  metis_tac[group_inv_element, group_rinv_unique, group_inv_inv]
+QED
 
 (* Theorem: Group g ==> !x y. x IN G /\ y IN G ==> ((x * |/ y = #e) <=> (x = y)) *)
 (* Proof:
@@ -838,11 +866,12 @@ val group_op_linv_eq_id = store_thm(
    Only-if part: x = y ==> x * |/ y = #e
        True by group_rinv.
 *)
-val group_op_rinv_eq_id = store_thm(
-  "group_op_rinv_eq_id",
-  ``!g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> ((x * |/ y = #e) <=> (x = y))``,
+Theorem group_op_rinv_eq_id:
+    !g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> ((x * |/ y = #e) <=> (x = y))
+Proof
   rw[EQ_IMP_THM] >>
-  metis_tac[group_inv_element, group_linv_unique, group_inv_inv]);
+  metis_tac[group_inv_element, group_linv_unique, group_inv_inv]
+QED
 
 (* Theorem: Group g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> (( |/ x * y = z) <=> (y = x * z)) *)
 (* Proof:
@@ -853,15 +882,16 @@ val group_op_rinv_eq_id = store_thm(
    <=>            #e * y = x * z      by group_rinv
    <=>                 y = x * z      by group_lid
 *)
-val group_op_linv_eqn = store_thm(
-  "group_op_linv_eqn",
-  ``!g:'a group. Group g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> (( |/ x * y = z) <=> (y = x * z))``,
+Theorem group_op_linv_eqn:
+    !g:'a group. Group g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> (( |/ x * y = z) <=> (y = x * z))
+Proof
   rpt strip_tac >>
   `|/ x IN G` by rw[] >>
   `( |/ x * y = z) <=> (x * ( |/ x * y) = x * z)` by rw[group_lcancel] >>
   `_ = ((x * |/ x) * y = x * z)` by rw[group_assoc] >>
   `_ = (y = x * z)` by rw[] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: Group g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> ((x * |/ y = z) <=> (x = z * y)) *)
 (* Proof:
@@ -872,15 +902,16 @@ val group_op_linv_eqn = store_thm(
    <=>           x * #e  = z * y      by group_linv
    <=>                 x = z * y      by group_rid
 *)
-val group_op_rinv_eqn = store_thm(
-  "group_op_rinv_eqn",
-  ``!g:'a group. Group g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> ((x * |/ y = z) <=> (x = z * y))``,
+Theorem group_op_rinv_eqn:
+    !g:'a group. Group g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> ((x * |/ y = z) <=> (x = z * y))
+Proof
   rpt strip_tac >>
   `|/ y IN G` by rw[] >>
   `(x * |/ y = z) <=> ((x * |/ y) * y = z * y)` by rw[group_rcancel] >>
   `_ = (x * ( |/ y * y) = z * y)` by rw[group_assoc] >>
   `_ = (x = z * y)` by rw[] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: Monoid g /\ x IN G* ==> ((Invertibles g).inv x = |/ x) *)
 (* Proof:
@@ -892,15 +923,16 @@ val group_op_rinv_eqn = store_thm(
     and x * ( |/ x) = #e                  by monoid_inv_def
     ==> |/ x = (Invertibles g).inv x      by group_rinv_unique
 *)
-val Invertibles_inv = store_thm(
-  "Invertibles_inv",
-  ``!(g:'a monoid) x. Monoid g /\ x IN G* ==> ((Invertibles g).inv x = |/ x)``,
+Theorem Invertibles_inv:
+    !(g:'a monoid) x. Monoid g /\ x IN G* ==> ((Invertibles g).inv x = |/ x)
+Proof
   rpt strip_tac >>
   `Group (Invertibles g)` by rw[monoid_invertibles_is_group] >>
   `(Invertibles g).carrier = G*` by rw[Invertibles_carrier] >>
   `( |/ x) IN G*` by rw[monoid_inv_invertible] >>
   `x * ( |/ x) = #e` by rw[monoid_inv_def] >>
-  metis_tac[group_rinv_unique, Invertibles_property]);
+  metis_tac[group_rinv_unique, Invertibles_property]
+QED
 
 (* Theorem: Monoid g ==> ( |/ #e = #e) *)
 (* Proof:
@@ -912,14 +944,15 @@ val Invertibles_inv = store_thm(
       = (Invertibles g).id                     by group_inv_id
       = #e                                     by by Invertibles_property
 *)
-val monoid_inv_id = store_thm(
-  "monoid_inv_id",
-  ``!g:'a monoid. Monoid g ==> ( |/ #e = #e)``,
+Theorem monoid_inv_id:
+    !g:'a monoid. Monoid g ==> ( |/ #e = #e)
+Proof
   rpt strip_tac >>
   `Group (Invertibles g)` by rw[monoid_invertibles_is_group] >>
   `(Invertibles g).id = #e` by rw[Invertibles_property] >>
   `#e IN G*` by rw[monoid_id_invertible] >>
-  metis_tac[group_inv_id, Invertibles_inv]);
+  metis_tac[group_inv_id, Invertibles_inv]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Group Defintion without explicit mention of Monoid.                       *)
@@ -950,14 +983,14 @@ val monoid_inv_id = store_thm(
    = x'' x'             by #e = x'x            left_inverse
    = #e                 by #e = x''x'          left_inverse
 *)
-val group_def_alt = store_thm(
-  "group_def_alt",
-  ``!g:'a group. Group g <=>
+Theorem group_def_alt:
+    !g:'a group. Group g <=>
         (!x y. x IN G /\ y IN G ==> x * y IN G) /\
         (!x y z. x IN G /\ y IN G /\ z IN G ==> ((x * y) * z = x * (y * z))) /\
          #e IN G /\
         (!x. x IN G ==> (#e * x = x)) /\
-        (!x. x IN G ==> ?y. y IN G /\ (y * x = #e))``,
+        (!x. x IN G ==> ?y. y IN G /\ (y * x = #e))
+Proof
   rw[group_assoc, EQ_IMP_THM] >-
   metis_tac[group_linv, group_inv_element] >>
   rw_tac std_ss[Group_def, Monoid_def, monoid_invertibles_def, EXTENSION, EQ_IMP_THM, GSPECIFICATION] >| [
@@ -968,7 +1001,8 @@ val group_def_alt = store_thm(
     `?z. z IN G /\ (z * y = #e)` by metis_tac[] >>
     `z * y * x = z * (y * x)` by rw_tac std_ss[] >>
     `z * #e * y = z * (#e * y)` by rw_tac std_ss[]
-  ] >> metis_tac[]);
+  ] >> metis_tac[]
+QED
 
 (* Theorem: Group g <=> Monoid g /\ (!x. x IN G ==> ?y. y IN G /\ (y * x = #e)) *)
 (* Proof:
@@ -990,9 +1024,9 @@ val group_def_alt = store_thm(
        Thus ?y. y * x = #e  /\ x * y = #e
          or x IN G*                     by monoid_invertibles_element
 *)
-val group_def_by_inverse = store_thm(
-  "group_def_by_inverse",
-  ``!g:'a group. Group g <=> Monoid g /\ (!x. x IN G ==> ?y. y IN G /\ (y * x = #e))``,
+Theorem group_def_by_inverse:
+    !g:'a group. Group g <=> Monoid g /\ (!x. x IN G ==> ?y. y IN G /\ (y * x = #e))
+Proof
   rw_tac std_ss[Group_def, EXTENSION, EQ_IMP_THM] >-
   metis_tac[monoid_invertibles_element] >-
   metis_tac[monoid_invertibles_element] >>
@@ -1000,7 +1034,8 @@ val group_def_by_inverse = store_thm(
   `?z. z IN G /\ (z * y = #e)` by rw[] >>
   `z * y * x = z * (y * x)` by rw_tac std_ss[monoid_assoc] >>
   `x = z` by metis_tac[monoid_lid, monoid_rid] >>
-  metis_tac[monoid_invertibles_element]);
+  metis_tac[monoid_invertibles_element]
+QED
 
 (* Alternative concise definition of a group. *)
 
@@ -1057,22 +1092,24 @@ val _ = set_fixity "excluding" (Infixl 600); (* like division / *)
 (* Theorem: (g including z).op = g.op /\ (g including z).id = g.id /\
             !x. x IN (g including z).carrier = x IN G \/ (x = z) *)
 (* Proof: by IN_UNION, IN_SING. *)
-val group_including_property = store_thm(
-  "group_including_property",
-  ``!g:'a group. !z:'a. ((g including z).op = g.op) /\
+Theorem group_including_property:
+    !g:'a group. !z:'a. ((g including z).op = g.op) /\
                         ((g including z).id = g.id) /\
-                        (!x. x IN (g including z).carrier ==> x IN G \/ (x = z))``,
-  rw[including_def]);
+                        (!x. x IN (g including z).carrier ==> x IN G \/ (x = z))
+Proof
+  rw[including_def]
+QED
 
 (* Theorem: (g excluding z).op = g.op /\ (g excluding z).id = g.id /\
             !x. x IN (g excluding z).carrier = x IN G /\ (x <> z) *)
 (* Proof: by IN_DIFF, IN_SING. *)
-val group_excluding_property = store_thm(
-  "group_excluding_property",
-  ``!g:'a group. !z:'a. ((g excluding z).op = g.op) /\
+Theorem group_excluding_property:
+    !g:'a group. !z:'a. ((g excluding z).op = g.op) /\
                         ((g excluding z).id = g.id) /\
-                        (!x. x IN (g excluding z).carrier ==> x IN G /\ (x <> z))``,
-  rw[excluding_def]);
+                        (!x. x IN (g excluding z).carrier ==> x IN G /\ (x <> z))
+Proof
+  rw[excluding_def]
+QED
 
 (* Theorem: ((g including z) excluding z).op = g.op /\ ((g including z) excluding z).id = g.id /\
             If z NOTIN G, then ((g including z) excluding z).carrier = G. *)
@@ -1080,41 +1117,45 @@ val group_excluding_property = store_thm(
    If z NOTIN G,
    then G UNION {z} DIFF {z} = G    by IN_UNION, IN_DIFF, IN_SING.
 *)
-val group_including_excluding_property = store_thm(
-  "group_including_excluding_property",
-  ``!g:'a group. !z:'a. (((g including z) excluding z).op = g.op) /\
+Theorem group_including_excluding_property:
+    !g:'a group. !z:'a. (((g including z) excluding z).op = g.op) /\
                         (((g including z) excluding z).id = g.id) /\
-                        (z NOTIN G ==> (((g including z) excluding z).carrier = G))``,
+                        (z NOTIN G ==> (((g including z) excluding z).carrier = G))
+Proof
   rw_tac std_ss[including_def, excluding_def] >>
   rw[EXTENSION, EQ_IMP_THM] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: If z NOTIN G, then Group g = Group ((g including z) excluding z). *)
 (* Proof: by group_including_excluding_property. *)
-val group_including_excluding_group = store_thm(
-  "group_including_excluding_group",
-  ``!g:'a group. !z:'a. z NOTIN G ==> (Group g = Group ((g including z) excluding z))``,
-  rw_tac std_ss[group_def_alt, group_including_excluding_property]);
+Theorem group_including_excluding_group:
+    !g:'a group. !z:'a. z NOTIN G ==> (Group g = Group ((g including z) excluding z))
+Proof
+  rw_tac std_ss[group_def_alt, group_including_excluding_property]
+QED
 
 (* Theorem: If z NOTIN G, then AbelianGroup g = AbelianGroup ((g including z) excluding z). *)
 (* Proof: by group_including_excluding_property. *)
-val group_including_excluding_abelian = store_thm(
-  "group_including_excluding_abelian",
-  ``!g:'a group. !z:'a. z NOTIN G ==> (AbelianGroup g = AbelianGroup ((g including z) excluding z))``,
-  rw_tac std_ss[AbelianGroup_def, group_def_alt, group_including_excluding_property]);
+Theorem group_including_excluding_abelian:
+    !g:'a group. !z:'a. z NOTIN G ==> (AbelianGroup g = AbelianGroup ((g including z) excluding z))
+Proof
+  rw_tac std_ss[AbelianGroup_def, group_def_alt, group_including_excluding_property]
+QED
 
 (* Theorem: g including z excluding z explicit expression. *)
 (* Proof: by definition. *)
-val group_including_excluding_eqn = store_thm(
-  "group_including_excluding_eqn",
-  ``!g:'a group. !z:'a. g including z excluding z = if z IN G then <| carrier := G DELETE z; op := g.op; id := g.id |> else g``,
+Theorem group_including_excluding_eqn:
+    !g:'a group. !z:'a. g including z excluding z = if z IN G then <| carrier := G DELETE z; op := g.op; id := g.id |> else g
+Proof
   rw[including_def, excluding_def] >| [
     rw[EXTENSION] >>
     metis_tac[],
     rw[monoid_component_equality] >>
     rw[EXTENSION] >>
     metis_tac[]
-  ]);
+  ]
+QED
 (* better -- Michael's solution *)
 Theorem group_including_excluding_eqn[allow_rebind]:
   !g:'a group. !z:'a. g including z excluding z =
@@ -1130,10 +1171,11 @@ QED
 
 (* Theorem: (g excluding z).op = g.op *)
 (* Proof: by definition. *)
-val group_excluding_op = store_thm(
-  "group_excluding_op",
-  ``!g:'a group. !z:'a. (g excluding z).op = g.op``,
-  rw_tac std_ss[excluding_def]);
+Theorem group_excluding_op:
+    !g:'a group. !z:'a. (g excluding z).op = g.op
+Proof
+  rw_tac std_ss[excluding_def]
+QED
 
 val _ = export_rewrites ["group_excluding_op"];
 val _ = computeLib.add_persistent_funs ["group_excluding_op"];
@@ -1153,12 +1195,13 @@ val _ = computeLib.add_persistent_funs ["group_excluding_op"];
        = x * (x ** n)                                   by group_excluding_property
        = x ** SUC n                                     by group_exp_SUC
 *)
-val group_excluding_exp = store_thm(
-  "group_excluding_exp",
-  ``!(g:'a group) z x n. (g excluding z).exp x n = x ** n``,
+Theorem group_excluding_exp:
+    !(g:'a group) z x n. (g excluding z).exp x n = x ** n
+Proof
   rpt strip_tac >>
   Induct_on `n` >>
-  rw[group_excluding_property]);
+  rw[group_excluding_property]
+QED
 
 (* Theorem: AbelianMonoid g ==>
            !z. z NOTIN G* ==> (monoid_invertibles (g excluding z) = G* ) *)
@@ -1172,16 +1215,17 @@ val group_excluding_exp = store_thm(
    (3) x IN G /\ y IN G /\ x * y = #e /\ y * x = #e ==> ?y. (y IN G /\ y <> z) /\ (x * y = #e) /\ (y * x = #e)
        Take the same y, then y <> z   by monoid_invertibles_element
 *)
-val abelian_monoid_invertible_excluding = store_thm(
-  "abelian_monoid_invertible_excluding",
-  ``!g:'a monoid. AbelianMonoid g ==>
-   !z. z NOTIN G* ==> (monoid_invertibles (g excluding z) = G* )``,
+Theorem abelian_monoid_invertible_excluding:
+    !g:'a monoid. AbelianMonoid g ==>
+   !z. z NOTIN G* ==> (monoid_invertibles (g excluding z) = G* )
+Proof
   rw_tac std_ss[AbelianMonoid_def] >>
   rw[monoid_invertibles_def, excluding_def, EXTENSION] >>
   rw[EQ_IMP_THM] >-
   metis_tac[] >-
   metis_tac[monoid_invertibles_element] >>
-  metis_tac[monoid_invertibles_element]);
+  metis_tac[monoid_invertibles_element]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Group Exponentiation with Inverses.                                       *)
@@ -1203,20 +1247,22 @@ val abelian_monoid_invertible_excluding = store_thm(
    = ( |/x) * ( |/x) ** n     by group_exp_comm
    = ( |/x) ** SUC n          by group_exp_SUC
 *)
-val group_exp_inv = store_thm(
-  "group_exp_inv",
-  ``!g:'a group. Group g ==> !x. x IN G ==> !n. |/ (x ** n) = ( |/ x) ** n``,
+Theorem group_exp_inv:
+    !g:'a group. Group g ==> !x. x IN G ==> !n. |/ (x ** n) = ( |/ x) ** n
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
-  rw_tac std_ss[group_exp_SUC, group_inv_op, group_exp_comm, group_inv_element, group_exp_element]);
+  rw_tac std_ss[group_exp_SUC, group_inv_op, group_exp_comm, group_inv_element, group_exp_element]
+QED
 
 (* Theorem: Exponential of Inverse:  ( |/x) ** n = |/(x ** n) *)
 (* Proof: by group_exp_inv. *)
-val group_inv_exp = store_thm(
-  "group_inv_exp",
-  ``!g:'a group. Group g ==> !x. x IN G ==> !n. ( |/ x) ** n = |/ (x ** n)``,
-  rw[group_exp_inv]);
+Theorem group_inv_exp:
+    !g:'a group. Group g ==> !x. x IN G ==> !n. ( |/ x) ** n = |/ (x ** n)
+Proof
+  rw[group_exp_inv]
+QED
 
 (* Theorem: For m < n, x ** m = x ** n ==> x ** (n-m) = #e *)
 (* Proof:
@@ -1226,14 +1272,15 @@ val group_inv_exp = store_thm(
    = x ** m                   by given
    Hence x ** (n-m) = #e      by group_lid_unique
 *)
-val group_exp_eq = store_thm(
-  "group_exp_eq",
-  ``!g:'a group. Group g ==> !x. x IN G ==> !m n. m < n /\ (x ** m = x ** n) ==> (x ** (n-m) = #e)``,
+Theorem group_exp_eq:
+    !g:'a group. Group g ==> !x. x IN G ==> !m n. m < n /\ (x ** m = x ** n) ==> (x ** (n-m) = #e)
+Proof
   rpt strip_tac >>
   `(n-m) + m = n` by decide_tac >>
   `x ** (n-m) * x ** m = x ** ((n-m) + m)` by rw_tac std_ss[group_exp_add] >>
   pop_assum mp_tac >>
-  rw_tac std_ss[group_lid_unique, group_exp_element]);
+  rw_tac std_ss[group_lid_unique, group_exp_element]
+QED
 
 (* Theorem: Group g /\ x IN G ==> (x ** m) ** n = (x ** n) ** m *)
 (* Proof:
@@ -1242,10 +1289,11 @@ val group_exp_eq = store_thm(
    = x ** (n * m)    by MULT_COMM
    = (x ** n) ** m   by group_exp_mult
 *)
-val group_exp_mult_comm = store_thm(
-  "group_exp_mult_comm",
-  ``!g:'a group. Group g ==> !x. x IN G ==> !m n. (x ** m) ** n = (x ** n) ** m``,
-  metis_tac[group_exp_mult, MULT_COMM]);
+Theorem group_exp_mult_comm:
+    !g:'a group. Group g ==> !x. x IN G ==> !m n. (x ** m) ** n = (x ** n) ** m
+Proof
+  metis_tac[group_exp_mult, MULT_COMM]
+QED
 
 (* group_exp_mult is exported, never export a commutative version. *)
 
@@ -1270,9 +1318,9 @@ val group_exp_mult_comm = store_thm(
        = y ** SUC m  * x ** n     by group_exp_SUC
        = RHS
 *)
-val group_comm_exp_exp = store_thm(
-  "group_comm_exp_exp",
-  ``!g:'a group. Group g ==> !x y. x IN G /\ y IN G /\ (x * y = y * x) ==> !n m. x ** n * y ** m = y ** m * x ** n``,
+Theorem group_comm_exp_exp:
+    !g:'a group. Group g ==> !x y. x IN G /\ y IN G /\ (x * y = y * x) ==> !n m. x ** n * y ** m = y ** m * x ** n
+Proof
   rpt strip_tac >>
   Induct_on `m` >-
   rw[] >>
@@ -1281,7 +1329,8 @@ val group_comm_exp_exp = store_thm(
   `_ = (y * x ** n) * y ** m` by metis_tac[group_comm_exp] >>
   `_ = y * (x ** n * y ** m)` by rw[group_assoc] >>
   `_ = y * (y ** m * x ** n)` by metis_tac[] >>
-  rw[group_assoc]);
+  rw[group_assoc]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Group Maps Documentation                                                  *)
@@ -1434,19 +1483,21 @@ End
    f #e = h.op (f #e) (f #e)         by group_id_id
    ==> f #e = h.id                   by group_id_fix
 *)
-val group_homo_id = store_thm(
-  "group_homo_id",
-  ``!f g h. Group g /\ Group h /\ GroupHomo f g h ==> (f #e = h.id)``,
+Theorem group_homo_id:
+    !f g h. Group g /\ Group h /\ GroupHomo f g h ==> (f #e = h.id)
+Proof
   rw_tac std_ss[GroupHomo_def] >>
   `#e IN G` by rw[] >>
-  metis_tac[group_id_fix, group_id_id]);
+  metis_tac[group_id_fix, group_id_id]
+QED
 
 (* Theorem: GroupHomo f g h ==> !x. x IN G ==> f x IN h.carrier *)
 (* Proof: by GroupHomo_def *)
-val group_homo_element = store_thm(
-  "group_homo_element",
-  ``!f g h. GroupHomo f g h ==> !x. x IN G ==> f x IN h.carrier``,
-  rw_tac std_ss[GroupHomo_def]);
+Theorem group_homo_element:
+    !f g h. GroupHomo f g h ==> !x. x IN G ==> f x IN h.carrier
+Proof
+  rw_tac std_ss[GroupHomo_def]
+QED
 
 (* Theorem: Group g /\ Group h /\ GroupHomo f g h ==> f ( |/x) = h.inv (f x) *)
 (* Proof:
@@ -1456,39 +1507,43 @@ val group_homo_element = store_thm(
      h.id = h.op (f |/x) (f x)         by group_homo_id
    ==> f |/x = h.inv (f x)             by group_linv_unique
 *)
-val group_homo_inv = store_thm(
-  "group_homo_inv",
-  ``!f g h. Group g /\ Group h /\ GroupHomo f g h ==> !x. x IN G ==> (f ( |/x) = h.inv (f x))``,
+Theorem group_homo_inv:
+    !f g h. Group g /\ Group h /\ GroupHomo f g h ==> !x. x IN G ==> (f ( |/x) = h.inv (f x))
+Proof
   rpt strip_tac >>
   `|/x IN G` by rw_tac std_ss[group_inv_element] >>
   `f x IN h.carrier /\ f ( |/x) IN h.carrier` by metis_tac[GroupHomo_def] >>
   `h.op (f ( |/x)) (f x) = f ( |/x * x)` by metis_tac[GroupHomo_def] >>
-  metis_tac[group_linv_unique, group_homo_id, group_linv]);
+  metis_tac[group_linv_unique, group_homo_id, group_linv]
+QED
 
 (* Theorem: Group g /\ Group h /\ (!x. x IN G ==> (f1 x = f2 x)) ==> (GroupHomo f1 g h = GroupHomo f2 g h) *)
 (* Proof: by GroupHomo_def, group_op_element *)
-val group_homo_cong = store_thm(
-  "group_homo_cong",
-  ``!(g:'a group) (h:'b group) f1 f2. Group g /\ Group h /\ (!x. x IN G ==> (f1 x = f2 x)) ==>
-          (GroupHomo f1 g h = GroupHomo f2 g h)``,
+Theorem group_homo_cong:
+    !(g:'a group) (h:'b group) f1 f2. Group g /\ Group h /\ (!x. x IN G ==> (f1 x = f2 x)) ==>
+          (GroupHomo f1 g h = GroupHomo f2 g h)
+Proof
   rw_tac std_ss[GroupHomo_def, EQ_IMP_THM] >-
   metis_tac[group_op_element] >>
-  metis_tac[group_op_element]);
+  metis_tac[group_op_element]
+QED
 
 (* Theorem: GroupHomo I g g *)
 (* Proof: by GroupHomo_def. *)
-val group_homo_I_refl = store_thm(
-  "group_homo_I_refl",
-  ``!g:'a group. GroupHomo I g g``,
-  rw[GroupHomo_def]);
+Theorem group_homo_I_refl:
+    !g:'a group. GroupHomo I g g
+Proof
+  rw[GroupHomo_def]
+QED
 
 (* Theorem: GroupHomo f1 g h /\ GroupHomo f2 h k ==> GroupHomo f2 o f1 g k *)
 (* Proof: true by GroupHomo_def. *)
-val group_homo_trans = store_thm(
-  "group_homo_trans",
-  ``!(g:'a group) (h:'b group) (k:'c group).
-    !f1 f2. GroupHomo f1 g h /\ GroupHomo f2 h k ==> GroupHomo (f2 o f1) g k``,
-  rw[GroupHomo_def]);
+Theorem group_homo_trans:
+    !(g:'a group) (h:'b group) (k:'c group).
+    !f1 f2. GroupHomo f1 g h /\ GroupHomo f2 h k ==> GroupHomo (f2 o f1) g k
+Proof
+  rw[GroupHomo_def]
+QED
 
 (* Theorem: Group g /\ GroupHomo f g h /\ BIJ f G h.carrier ==> GroupHomo (LINV f G) h g *)
 (* Proof:
@@ -1511,9 +1566,9 @@ val group_homo_trans = store_thm(
           = (LINV f G (f x1)) * (LINV f G (f y1))   by BIJ_LINV_THM, x1 IN G, y1 IN G
           = (LINV f G x) * (LINV f G y)             by x = f x1, y = f y1.
 *)
-val group_homo_sym = store_thm(
-  "group_homo_sym",
-  ``!(g:'a group) (h:'b group) f. Group g /\ GroupHomo f g h /\ BIJ f G h.carrier ==> GroupHomo (LINV f G) h g``,
+Theorem group_homo_sym:
+    !(g:'a group) (h:'b group) f. Group g /\ GroupHomo f g h /\ BIJ f G h.carrier ==> GroupHomo (LINV f G) h g
+Proof
   rpt strip_tac >>
   `BIJ (LINV f G) h.carrier G` by rw[BIJ_LINV_BIJ] >>
   fs[GroupHomo_def] >>
@@ -1522,7 +1577,8 @@ val group_homo_sym = store_thm(
   `?x1. (x = f x1) /\ x1 IN G` by metis_tac[BIJ_DEF, SURJ_DEF] >>
   `?y1. (y = f y1) /\ y1 IN G` by metis_tac[BIJ_DEF, SURJ_DEF] >>
   `g.op x1 y1 IN G` by rw[] >>
-  metis_tac[BIJ_LINV_THM]);
+  metis_tac[BIJ_LINV_THM]
+QED
 
 Theorem group_homo_sym_any:
   Group g /\ GroupHomo f g h /\
@@ -1541,11 +1597,12 @@ QED
 
 (* Theorem: GroupHomo f1 g h /\ GroupHomo f2 h k ==> GroupHomo (f2 o f1) g k *)
 (* Proof: by GroupHomo_def *)
-val group_homo_compose = store_thm(
-  "group_homo_compose",
-  ``!(g:'a group) (h:'b group) (k:'c group).
-   !f1 f2. GroupHomo f1 g h /\ GroupHomo f2 h k ==> GroupHomo (f2 o f1) g k``,
-  rw_tac std_ss[GroupHomo_def]);
+Theorem group_homo_compose:
+    !(g:'a group) (h:'b group) (k:'c group).
+   !f1 f2. GroupHomo f1 g h /\ GroupHomo f2 h k ==> GroupHomo (f2 o f1) g k
+Proof
+  rw_tac std_ss[GroupHomo_def]
+QED
 (* This is the same as group_homo_trans. *)
 
 (* Theorem: Group g /\ Group h /\ GroupHomo f g h ==> MonoidHomo f g h *)
@@ -1555,13 +1612,14 @@ val group_homo_compose = store_thm(
    (2) x IN G /\ y IN G ==> f (x * y) = h.op (f x) (f y), true     by GroupHomo_def
    (3) Group g /\ Group h /\ GroupHomo f g h ==> f #e = h.id, true by group_homo_id
 *)
-val group_homo_is_monoid_homo = store_thm(
-  "group_homo_is_monoid_homo",
-  ``!g:'a group h f. Group g /\ Group h /\ GroupHomo f g h ==> MonoidHomo f g h``,
+Theorem group_homo_is_monoid_homo:
+    !g:'a group h f. Group g /\ Group h /\ GroupHomo f g h ==> MonoidHomo f g h
+Proof
   rw[MonoidHomo_def] >-
   fs[GroupHomo_def] >-
   fs[GroupHomo_def] >>
-  fs[group_homo_id]);
+  fs[group_homo_id]
+QED
 
 (* Theorem: (GroupHomo f g h /\ f #e = h.id) <=> MonoidHomo f g h *)
 (* Proof: by MonoidHomo_def, GroupHomo_def. *)
@@ -1578,11 +1636,12 @@ QED
     and MonoidHomo f g h   by group_homo_is_monoid_homo
     The result follows     by monoid_homo_exp
 *)
-val group_homo_exp = store_thm(
-  "group_homo_exp",
-  ``!g:'a group h:'b group f. Group g /\ Group h /\ GroupHomo f g h ==>
-   !x. x IN G ==> !n. f (x ** n) = h.exp (f x) n``,
-  rw[group_is_monoid, group_homo_is_monoid_homo, monoid_homo_exp]);
+Theorem group_homo_exp:
+    !g:'a group h:'b group f. Group g /\ Group h /\ GroupHomo f g h ==>
+   !x. x IN G ==> !n. f (x ** n) = h.exp (f x) n
+Proof
+  rw[group_is_monoid, group_homo_is_monoid_homo, monoid_homo_exp]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Group Isomorphisms                                                        *)
@@ -1597,13 +1656,14 @@ val group_homo_exp = store_thm(
        true by INJ_DEF and SURJ_DEF, and
        x IN G /\ GroupHomo f g h ==> f x IN H  by GroupHomo_def
 *)
-val group_iso_property = store_thm(
-  "group_iso_property",
-  ``!f g h. GroupIso f g h <=> GroupHomo f g h /\ (!y. y IN h.carrier ==> ?!x. x IN G /\ (f x = y))``,
+Theorem group_iso_property:
+    !f g h. GroupIso f g h <=> GroupHomo f g h /\ (!y. y IN h.carrier ==> ?!x. x IN G /\ (f x = y))
+Proof
   rw[GroupIso_def, EQ_IMP_THM] >-
   metis_tac[BIJ_THM] >>
   rw[BIJ_THM] >>
-  metis_tac[GroupHomo_def]);
+  metis_tac[GroupHomo_def]
+QED
 
 (* Theorem: Group g /\ Group h /\ GroupIso f g h ==> f #e = h.id *)
 (* Proof:
@@ -1611,10 +1671,11 @@ val group_iso_property = store_thm(
    and GroupIso = WeakIso, GroupHomo = WeakHomo,
    this follows by monoid_iso_id.
 *)
-val group_iso_id = store_thm(
-  "group_iso_id",
-  ``!f g h. Group g /\ Group h /\ GroupIso f g h ==> (f #e = h.id)``,
-  rw[monoid_weak_iso_id, group_is_monoid, GroupIso_def, GroupHomo_def, WeakIso_def, WeakHomo_def]);
+Theorem group_iso_id:
+    !f g h. Group g /\ Group h /\ GroupIso f g h ==> (f #e = h.id)
+Proof
+  rw[monoid_weak_iso_id, group_is_monoid, GroupIso_def, GroupHomo_def, WeakIso_def, WeakHomo_def]
+QED
 (* However,
    this result is worse than (proved earlier):
 - group_homo_id;
@@ -1623,10 +1684,11 @@ val group_iso_id = store_thm(
 
 (* Theorem: GroupIso f g h ==> !x. x IN G ==> f x IN h.carrier *)
 (* Proof: by GroupIso_def, group_homo_element *)
-val group_iso_element = store_thm(
-  "group_iso_element",
-  ``!f g h. GroupIso f g h ==> !x. x IN G ==> f x IN h.carrier``,
-  metis_tac[GroupIso_def, group_homo_element]);
+Theorem group_iso_element:
+    !f g h. GroupIso f g h ==> !x. x IN G ==> f x IN h.carrier
+Proof
+  metis_tac[GroupIso_def, group_homo_element]
+QED
 
 (* Theorem: GroupIso I g g *)
 (* Proof:
@@ -1634,10 +1696,11 @@ val group_iso_element = store_thm(
    (1) GroupHomo I g g, true by group_homo_I_refl
    (2) BIJ I R R, true by BIJ_I_SAME
 *)
-val group_iso_I_refl = store_thm(
-  "group_iso_I_refl",
-  ``!g:'a group. GroupIso I g g``,
-  rw[GroupIso_def, group_homo_I_refl, BIJ_I_SAME]);
+Theorem group_iso_I_refl:
+    !g:'a group. GroupIso I g g
+Proof
+  rw[GroupIso_def, group_homo_I_refl, BIJ_I_SAME]
+QED
 
 (* Theorem: GroupIso f1 g h /\ GroupIso f2 h k ==> GroupIso (f2 o f1) g k *)
 (* Proof:
@@ -1647,13 +1710,14 @@ val group_iso_I_refl = store_thm(
    (2) BIJ f1 G h.carrier /\ BIJ f2 h.carrier k.carrier ==> BIJ (f2 o f1) G k.carrier
        True by BIJ_COMPOSE.
 *)
-val group_iso_trans = store_thm(
-  "group_iso_trans",
-  ``!(g:'a group) (h:'b group) (k:'c group).
-    !f1 f2. GroupIso f1 g h /\ GroupIso f2 h k ==> GroupIso (f2 o f1) g k``,
+Theorem group_iso_trans:
+    !(g:'a group) (h:'b group) (k:'c group).
+    !f1 f2. GroupIso f1 g h /\ GroupIso f2 h k ==> GroupIso (f2 o f1) g k
+Proof
   rw[GroupIso_def] >-
   metis_tac[group_homo_trans] >>
-  metis_tac[BIJ_COMPOSE]);
+  metis_tac[BIJ_COMPOSE]
+QED
 
 (* Theorem: Group g ==> !f. GroupIso f g h ==> GroupIso (LINV f G) h g *)
 (* Proof:
@@ -1663,10 +1727,11 @@ val group_iso_trans = store_thm(
    (2) BIJ f G h.carrier ==> BIJ (LINV f G) h.carrier G
        True by BIJ_LINV_BIJ
 *)
-val group_iso_sym = store_thm(
-  "group_iso_sym",
-  ``!(g:'a group) (h:'b group) f. Group g /\ GroupIso f g h ==> GroupIso (LINV f G) h g``,
-  rw[GroupIso_def, group_homo_sym, BIJ_LINV_BIJ]);
+Theorem group_iso_sym:
+    !(g:'a group) (h:'b group) f. Group g /\ GroupIso f g h ==> GroupIso (LINV f G) h g
+Proof
+  rw[GroupIso_def, group_homo_sym, BIJ_LINV_BIJ]
+QED
 
 (* Theorem: GroupIso f1 g h /\ GroupIso f2 h k ==> GroupIso (f2 o f1) g k *)
 (* Proof:
@@ -1676,22 +1741,24 @@ val group_iso_sym = store_thm(
    (2) BIJ f1 G h.carrier /\ BIJ f2 h.carrier k.carrier ==> BIJ (f2 o f1) G k.carrier
        True by BIJ_COMPOSE
 *)
-val group_iso_compose = store_thm(
-  "group_iso_compose",
-  ``!(g:'a group) (h:'b group) (k:'c group).
-   !f1 f2. GroupIso f1 g h /\ GroupIso f2 h k ==> GroupIso (f2 o f1) g k``,
+Theorem group_iso_compose:
+    !(g:'a group) (h:'b group) (k:'c group).
+   !f1 f2. GroupIso f1 g h /\ GroupIso f2 h k ==> GroupIso (f2 o f1) g k
+Proof
   rw_tac std_ss[GroupIso_def] >-
   metis_tac[group_homo_compose] >>
-  metis_tac[BIJ_COMPOSE]);
+  metis_tac[BIJ_COMPOSE]
+QED
 (* This is the same as group_iso_trans. *)
 
 (* Theorem: Group g /\ Group h /\ GroupIso f g h ==> MonoidIso f g h *)
 (* Proof: by GroupIso_def, MonoidIso_def, group_homo_is_monoid_homo *)
-val group_iso_is_monoid_iso = store_thm(
-  "group_iso_is_monoid_iso",
-  ``!(g:'a group) (h:'b group) f. Group g /\ Group h /\ GroupIso f g h ==> MonoidIso f g h``,
+Theorem group_iso_is_monoid_iso:
+    !(g:'a group) (h:'b group) f. Group g /\ Group h /\ GroupIso f g h ==> MonoidIso f g h
+Proof
   rw[GroupIso_def, MonoidIso_def] >>
-  rw[group_homo_is_monoid_homo]);
+  rw[group_homo_is_monoid_homo]
+QED
 
 (* Theorem: (GroupIso f g h /\ f #e = h.id) <=> MonoidIso f g h *)
 (* Proof:
@@ -1713,11 +1780,12 @@ QED
     and MonoidIso f g h    by group_iso_is_monoid_iso
     The result follows     by monoid_iso_exp
 *)
-val group_iso_exp = store_thm(
-  "group_iso_exp",
-  ``!g:'a group h:'b group f. Group g /\ Group h /\ GroupIso f g h ==>
-   !x. x IN G ==> !n. f (x ** n) = h.exp (f x) n``,
-  rw[group_is_monoid, group_iso_is_monoid_iso, monoid_iso_exp]);
+Theorem group_iso_exp:
+    !g:'a group h:'b group f. Group g /\ Group h /\ GroupIso f g h ==>
+   !x. x IN G ==> !n. f (x ** n) = h.exp (f x) n
+Proof
+  rw[group_is_monoid, group_iso_is_monoid_iso, monoid_iso_exp]
+QED
 
 (* Theorem: Group g /\ Group h /\ GroupIso f g h ==> !x. x IN G ==> (order h (f x) = ord x) *)
 (* Proof:
@@ -1725,11 +1793,12 @@ val group_iso_exp = store_thm(
     and MonoidIso f h g                         by group_iso_is_monoid_iso
    Thus !x. x IN H ==> (order h (f x) = ord x)  by monoid_iso_order
 *)
-val group_iso_order = store_thm(
-  "group_iso_order",
-  ``!(g:'a group) (h:'b group) f. Group g /\ Group h /\ GroupIso f g h ==>
-    !x. x IN G ==> (order h (f x) = ord x)``,
-  rw[group_is_monoid, group_iso_is_monoid_iso, monoid_iso_order]);
+Theorem group_iso_order:
+    !(g:'a group) (h:'b group) f. Group g /\ Group h /\ GroupIso f g h ==>
+    !x. x IN G ==> (order h (f x) = ord x)
+Proof
+  rw[group_is_monoid, group_iso_is_monoid_iso, monoid_iso_order]
+QED
 
 (* Theorem: Group g /\ GroupIso f g h ==> GroupIso (LINV f G) h g *)
 (* Proof:
@@ -1748,23 +1817,25 @@ val group_iso_order = store_thm(
    (3) BIJ f G h.carrier ==> BIJ (LINV f G) h.carrier G
        True by BIJ_LINV_BIJ
 *)
-val group_iso_linv_iso = store_thm(
-  "group_iso_linv_iso",
-  ``!(g:'a group) (h:'b group) f. Group g /\ GroupIso f g h ==> GroupIso (LINV f G) h g``,
+Theorem group_iso_linv_iso:
+    !(g:'a group) (h:'b group) f. Group g /\ GroupIso f g h ==> GroupIso (LINV f G) h g
+Proof
   rw_tac std_ss[GroupIso_def, GroupHomo_def] >-
   metis_tac[BIJ_LINV_ELEMENT] >-
  (qabbrev_tac `x' = LINV f G x` >>
   qabbrev_tac `y' = LINV f G y` >>
   metis_tac[BIJ_LINV_THM, BIJ_LINV_ELEMENT, group_op_element]) >>
-  rw_tac std_ss[BIJ_LINV_BIJ]);
+  rw_tac std_ss[BIJ_LINV_BIJ]
+QED
 (* This is the same as group_iso_sym. *)
 
 (* Theorem: GroupIso f g h ==> BIJ f G h.carrier *)
 (* Proof: by GroupIso_def *)
-val group_iso_bij = store_thm(
-  "group_iso_bij",
-  ``!(g:'a group) (h:'b group) f. GroupIso f g h ==> BIJ f G h.carrier``,
-  rw_tac std_ss[GroupIso_def]);
+Theorem group_iso_bij:
+    !(g:'a group) (h:'b group) f. GroupIso f g h ==> BIJ f G h.carrier
+Proof
+  rw_tac std_ss[GroupIso_def]
+QED
 
 (* Note: read the discussion in group_iso_id for the condition: f #e = h.id:
    group_iso_id  |- !f g h. Group g /\ Group h /\ GroupIso f g h ==> (f #e = h.id)
@@ -1818,9 +1889,9 @@ val group_iso_bij = store_thm(
                      = f #e               by group_linv
                      = h.id
 *)
-val group_iso_group = store_thm(
-  "group_iso_group",
-  ``!(g:'a group) (h:'b group) f. Group g /\ GroupIso f g h /\ (f #e = h.id) ==> Group h``,
+Theorem group_iso_group:
+    !(g:'a group) (h:'b group) f. Group g /\ GroupIso f g h /\ (f #e = h.id) ==> Group h
+Proof
   rw[group_iso_property] >>
   `(!x. x IN G ==> f x IN h.carrier) /\ !x y. x IN G /\ y IN G ==> (f (x * y) = h.op (f x) (f y))`
     by metis_tac[GroupHomo_def] >>
@@ -1838,14 +1909,16 @@ val group_iso_group = store_thm(
     metis_tac[group_id_element, GroupHomo_def],
     metis_tac[group_lid, group_id_element],
     metis_tac[group_linv, group_inv_element]
-  ]);
+  ]
+QED
 
 (* Theorem: GroupIso f g h /\ FINITE G ==> (CARD G = CARD h.carrier) *)
 (* Proof: by GroupIso_def, FINITE_BIJ_CARD. *)
-val group_iso_card_eq = store_thm(
-  "group_iso_card_eq",
-  ``!g:'a group h:'b group f. GroupIso f g h /\ FINITE G ==> (CARD G = CARD h.carrier)``,
-  metis_tac[GroupIso_def, FINITE_BIJ_CARD]);
+Theorem group_iso_card_eq:
+    !g:'a group h:'b group f. GroupIso f g h /\ FINITE G ==> (CARD G = CARD h.carrier)
+Proof
+  metis_tac[GroupIso_def, FINITE_BIJ_CARD]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Group Automorphisms                                                       *)
@@ -1853,32 +1926,36 @@ val group_iso_card_eq = store_thm(
 
 (* Theorem: Group g /\ GroupAuto f g ==> (f #e = #e) *)
 (* Proof: by GroupAuto_def, group_iso_id *)
-val group_auto_id = store_thm(
-  "group_auto_id",
-  ``!f g. Group g /\ GroupAuto f g ==> (f #e = #e)``,
-  rw_tac std_ss[GroupAuto_def, group_iso_id]);
+Theorem group_auto_id:
+    !f g. Group g /\ GroupAuto f g ==> (f #e = #e)
+Proof
+  rw_tac std_ss[GroupAuto_def, group_iso_id]
+QED
 
 (* Theorem: GroupAuto f g ==> !x. x IN G ==> f x IN G *)
 (* Proof: by GroupAuto_def, group_iso_element *)
-val group_auto_element = store_thm(
-  "group_auto_element",
-  ``!f g. GroupAuto f g ==> !x. x IN G ==> f x IN G``,
-  metis_tac[GroupAuto_def, group_iso_element]);
+Theorem group_auto_element:
+    !f g. GroupAuto f g ==> !x. x IN G ==> f x IN G
+Proof
+  metis_tac[GroupAuto_def, group_iso_element]
+QED
 
 (* Theorem: GroupAuto f1 g /\ GroupAuto f2 g ==> GroupAuto (f1 o f2) g *)
 (* Proof: by GroupAuto_def, group_iso_compose *)
-val group_auto_compose = store_thm(
-  "group_auto_compose",
-  ``!(g:'a group). !f1 f2. GroupAuto f1 g /\ GroupAuto f2 g ==> GroupAuto (f1 o f2) g``,
-  metis_tac[GroupAuto_def, group_iso_compose]);
+Theorem group_auto_compose:
+    !(g:'a group). !f1 f2. GroupAuto f1 g /\ GroupAuto f2 g ==> GroupAuto (f1 o f2) g
+Proof
+  metis_tac[GroupAuto_def, group_iso_compose]
+QED
 
 (* Theorem: Group g /\ GroupAuto f g ==> MonoidAuto f g *)
 (* Proof: by GroupAuto_def, MonoidAuto_def, group_iso_is_monoid_iso *)
-val group_auto_is_monoid_auto = store_thm(
-  "group_auto_is_monoid_auto",
-  ``!(g:'a group) f. Group g /\ GroupAuto f g ==> MonoidAuto f g``,
+Theorem group_auto_is_monoid_auto:
+    !(g:'a group) f. Group g /\ GroupAuto f g ==> MonoidAuto f g
+Proof
   rw[GroupAuto_def, MonoidAuto_def] >>
-  rw[group_iso_is_monoid_iso]);
+  rw[group_iso_is_monoid_iso]
+QED
 
 (* Theorem: Group g /\ GroupAuto f g ==> !x. x IN G ==> !n. f (x ** n) = (f x) ** n *)
 (* Proof:
@@ -1886,11 +1963,12 @@ val group_auto_is_monoid_auto = store_thm(
     and MonoidAuto f g     by group_auto_is_monoid_auto
     The result follows     by monoid_auto_exp
 *)
-val group_auto_exp = store_thm(
-  "group_auto_exp",
-  ``!g:'a group f. Group g /\ GroupAuto f g ==>
-   !x. x IN G ==> !n. f (x ** n) = (f x) ** n``,
-  rw[group_is_monoid, group_auto_is_monoid_auto, monoid_auto_exp]);
+Theorem group_auto_exp:
+    !g:'a group f. Group g /\ GroupAuto f g ==>
+   !x. x IN G ==> !n. f (x ** n) = (f x) ** n
+Proof
+  rw[group_is_monoid, group_auto_is_monoid_auto, monoid_auto_exp]
+QED
 
 (* Theorem: Group g /\ GroupAuto f g ==> !x. x IN G ==> (order h (f x) = ord x) *)
 (* Proof:
@@ -1898,11 +1976,12 @@ val group_auto_exp = store_thm(
     and MonoidAuto f h                        by group_auto_is_monoid_auto
    Thus !x. x IN H ==> (ord (f x) = ord x)    by monoid_auto_order
 *)
-val group_auto_order = store_thm(
-  "group_auto_order",
-  ``!(g:'a group) f. Group g /\ GroupAuto f g ==>
-    !x. x IN G ==> (ord (f x) = ord x)``,
-  rw[group_is_monoid, group_auto_is_monoid_auto, monoid_auto_order]);
+Theorem group_auto_order:
+    !(g:'a group) f. Group g /\ GroupAuto f g ==>
+    !x. x IN G ==> (ord (f x) = ord x)
+Proof
+  rw[group_is_monoid, group_auto_is_monoid_auto, monoid_auto_order]
+QED
 
 (* Theorem: GroupAuto I g *)
 (* Proof:
@@ -1912,10 +1991,11 @@ val group_auto_order = store_thm(
    <=> T /\ BIJ f G G                 by GroupHomo_def, I_THM
    <=> T /\ T                         by BIJ_I_SAME
 *)
-val group_auto_I = store_thm(
-  "group_auto_I",
-  ``!(g:'a group). GroupAuto I g``,
-  rw_tac std_ss[GroupAuto_def, GroupIso_def, GroupHomo_def, BIJ_I_SAME]);
+Theorem group_auto_I:
+    !(g:'a group). GroupAuto I g
+Proof
+  rw_tac std_ss[GroupAuto_def, GroupIso_def, GroupHomo_def, BIJ_I_SAME]
+QED
 
 (* Theorem: Group g /\ GroupAuto f g ==> GroupAuto (LINV f G) g *)
 (* Proof:
@@ -1924,17 +2004,19 @@ val group_auto_I = store_thm(
    ==> GroupIso (LINV f G) g         by group_iso_linv_iso
    ==> GroupAuto (LINV f G) g        by GroupAuto_def
 *)
-val group_auto_linv_auto = store_thm(
-  "group_auto_linv_auto",
-  ``!(g:'a group) f. Group g /\ GroupAuto f g ==> GroupAuto (LINV f G) g``,
-  rw_tac std_ss[GroupAuto_def, group_iso_linv_iso]);
+Theorem group_auto_linv_auto:
+    !(g:'a group) f. Group g /\ GroupAuto f g ==> GroupAuto (LINV f G) g
+Proof
+  rw_tac std_ss[GroupAuto_def, group_iso_linv_iso]
+QED
 
 (* Theorem: GroupAuto f g ==> f PERMUTES G *)
 (* Proof: by GroupAuto_def, GroupIso_def *)
-val group_auto_bij = store_thm(
-  "group_auto_bij",
-  ``!g:'a group. !f. GroupAuto f g ==> f PERMUTES G``,
-  rw_tac std_ss[GroupAuto_def, GroupIso_def]);
+Theorem group_auto_bij:
+    !g:'a group. !f. GroupAuto f g ==> f PERMUTES G
+Proof
+  rw_tac std_ss[GroupAuto_def, GroupIso_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Subgroups                                                                 *)
@@ -1951,18 +2033,20 @@ val group_auto_bij = store_thm(
    <=> H SUBSET G
        (!x y. x IN H /\ y IN H ==> (h.op x y = x * y))              by SUBSET_DEF
 *)
-val subgroup_eqn = store_thm(
-  "subgroup_eqn",
-  ``!(g:'a group) (h:'a group). subgroup h g <=>
-     H SUBSET G /\ (!x y. x IN H /\ y IN H ==> (h.op x y = x * y))``,
-  rw_tac std_ss[subgroup_def, GroupHomo_def, SUBSET_DEF]);
+Theorem subgroup_eqn:
+    !(g:'a group) (h:'a group). subgroup h g <=>
+     H SUBSET G /\ (!x y. x IN H /\ y IN H ==> (h.op x y = x * y))
+Proof
+  rw_tac std_ss[subgroup_def, GroupHomo_def, SUBSET_DEF]
+QED
 
 (* Theorem: subgroup h g ==> H SUBSET G *)
 (* Proof: by subgroup_eqn *)
-val subgroup_subset = store_thm(
-  "subgroup_subset",
-  ``!(g:'a group) (h:'a group). subgroup h g ==> H SUBSET G``,
-  rw_tac std_ss[subgroup_eqn]);
+Theorem subgroup_subset:
+    !(g:'a group) (h:'a group). subgroup h g ==> H SUBSET G
+Proof
+  rw_tac std_ss[subgroup_eqn]
+QED
 
 (* Theorem: subgroup h g /\ GroupHomo f g k ==> GroupHomo f h k *)
 (* Proof:
@@ -1978,20 +2062,22 @@ val subgroup_subset = store_thm(
        = f (x * y)              by subgroup_eqn
        = k.op (f x) (f y)       by GroupHomo_def
 *)
-val subgroup_homo_homo = store_thm(
-  "subgroup_homo_homo",
-  ``!(g:'a group) (h:'a group) (k:'b group) f. subgroup h g /\ GroupHomo f g k ==> GroupHomo f h k``,
-  rw_tac std_ss[subgroup_def, GroupHomo_def]);
+Theorem subgroup_homo_homo:
+    !(g:'a group) (h:'a group) (k:'b group) f. subgroup h g /\ GroupHomo f g k ==> GroupHomo f h k
+Proof
+  rw_tac std_ss[subgroup_def, GroupHomo_def]
+QED
 
 (* Theorem: subgroup g g *)
 (* Proof:
    By subgroup_def, this is to show:
    GroupHomo I g g, true by group_homo_I_refl.
 *)
-val subgroup_reflexive = store_thm(
-  "subgroup_reflexive",
-  ``!g:'a group. subgroup g g``,
-  rw[subgroup_def, group_homo_I_refl]);
+Theorem subgroup_reflexive:
+    !g:'a group. subgroup g g
+Proof
+  rw[subgroup_def, group_homo_I_refl]
+QED
 
 (* Theorem: subgroup g h /\ subgroup h k ==> subgroup g k *)
 (* Proof:
@@ -2000,10 +2086,11 @@ val subgroup_reflexive = store_thm(
    Since I o I = I       by combinTheory.I_o_ID
    This is true          by group_homo_trans
 *)
-val subgroup_transitive = store_thm(
-  "subgroup_transitive",
-  ``!(g h k):'a group. subgroup g h /\ subgroup h k ==> subgroup g k``,
-  prove_tac[subgroup_def, combinTheory.I_o_ID, group_homo_trans]);
+Theorem subgroup_transitive:
+    !(g h k):'a group. subgroup g h /\ subgroup h k ==> subgroup g k
+Proof
+  prove_tac[subgroup_def, combinTheory.I_o_ID, group_homo_trans]
+QED
 
 (* Theorem: subgroup h g /\ subgroup g h ==> GroupIso I h g *)
 (* Proof:
@@ -2013,12 +2100,13 @@ val subgroup_transitive = store_thm(
    (1) x IN H ==> x IN G, true    by subgroup_subset, subgroup h g
    (2) x IN G ==> x IN H, true    by subgroup_subset, subgroup g h
 *)
-val subgroup_I_antisym = store_thm(
-  "subgroup_I_antisym",
-  ``!(g:'a monoid) h. subgroup h g /\ subgroup g h ==> GroupIso I h g``,
+Theorem subgroup_I_antisym:
+    !(g:'a monoid) h. subgroup h g /\ subgroup g h ==> GroupIso I h g
+Proof
   rw_tac std_ss[subgroup_def, GroupIso_def] >>
   fs[GroupHomo_def] >>
-  rw_tac std_ss[BIJ_DEF, INJ_DEF, SURJ_DEF]);
+  rw_tac std_ss[BIJ_DEF, INJ_DEF, SURJ_DEF]
+QED
 
 (* Theorem: subgroup h g /\ G SUBSET H ==> GroupIso I h g *)
 (* Proof:
@@ -2028,14 +2116,15 @@ val subgroup_I_antisym = store_thm(
    (1) x IN H ==> x IN G, true    by subgroup_subset, subgroup h g
    (2) x IN G ==> x IN H, true    by G SUBSET H, given
 *)
-val subgroup_carrier_antisym = store_thm(
-  "subgroup_carrier_antisym",
-  ``!(g:'a group) h. subgroup h g /\ G SUBSET H ==> GroupIso I h g``,
+Theorem subgroup_carrier_antisym:
+    !(g:'a group) h. subgroup h g /\ G SUBSET H ==> GroupIso I h g
+Proof
   rpt (stripDup[subgroup_def]) >>
   rw_tac std_ss[GroupIso_def] >>
   `H SUBSET G` by rw[subgroup_subset] >>
   fs[GroupHomo_def, SUBSET_DEF] >>
-  rw_tac std_ss[BIJ_DEF, INJ_DEF, SURJ_DEF]);
+  rw_tac std_ss[BIJ_DEF, INJ_DEF, SURJ_DEF]
+QED
 
 (* Theorem: Group g /\ Group h /\ subgroup h g ==> submonoid h g *)
 (* Proof:
@@ -2056,11 +2145,12 @@ QED
     and submonoid h g                         by subgroup_is_submonoid0
    Thus !x. x IN H ==> (order h x = ord x)    by submonoid_order_eqn
 *)
-val subgroup_order_eqn = store_thm(
-  "subgroup_order_eqn",
-  ``!g:'a group h. Group g /\ Group h /\ subgroup h g ==>
-   !x. x IN H ==> (order h x = ord x)``,
-  rw[group_is_monoid, subgroup_is_submonoid0, submonoid_order_eqn]);
+Theorem subgroup_order_eqn:
+    !g:'a group h. Group g /\ Group h /\ subgroup h g ==>
+   !x. x IN H ==> (order h x = ord x)
+Proof
+  rw[group_is_monoid, subgroup_is_submonoid0, submonoid_order_eqn]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Homomorphic Image of a Group.                                             *)
@@ -2077,12 +2167,13 @@ val _ = overload_on ("homo_group", ``homo_monoid``);
    hence   CHOICE (preimage f G x) * CHOICE (preimage f G y) IN G      by group_op_element
    so    f (CHOICE (preimage f G x) * CHOICE (preimage f G y)) IN fG   by GroupHomo_def
 *)
-val homo_group_closure = store_thm(
-  "homo_group_closure",
-  ``!(g:'a group) (f:'a -> 'b). Group g /\ GroupHomo f g (homo_group g f) ==>
-     !x y. x IN fG /\ y IN fG ==> x o y IN fG``,
+Theorem homo_group_closure:
+    !(g:'a group) (f:'a -> 'b). Group g /\ GroupHomo f g (homo_group g f) ==>
+     !x y. x IN fG /\ y IN fG ==> x o y IN fG
+Proof
   rw_tac std_ss[GroupHomo_def, homo_monoid_def, image_op_def] >>
-  rw_tac std_ss[preimage_choice_property, group_op_element]);
+  rw_tac std_ss[preimage_choice_property, group_op_element]
+QED
 
 (* Theorem: [Associative] Group g /\ GroupHomo f g (homo_group g f) ==>
             x IN fG /\ y IN fG /\ z IN fG ==> (x o y) o z = x o (y o z) *)
@@ -2102,10 +2193,10 @@ val homo_group_closure = store_thm(
    = f (CHOICE (preimage f G x)) o (f (CHOICE (preimage f G y)) o f (CHOICE (preimage f G z)))   by homo_monoid_property
    = x o (y o z)                                                                                 by contracting x, y, z
 *)
-val homo_group_assoc = store_thm(
-  "homo_group_assoc",
-  ``!(g:'a group) (f:'a -> 'b). Group g /\ GroupHomo f g (homo_group g f) ==>
-   !x y z. x IN fG /\ y IN fG /\ z IN fG ==> ((x o y) o z = x o (y o z))``,
+Theorem homo_group_assoc:
+    !(g:'a group) (f:'a -> 'b). Group g /\ GroupHomo f g (homo_group g f) ==>
+   !x y z. x IN fG /\ y IN fG /\ z IN fG ==> ((x o y) o z = x o (y o z))
+Proof
   rw_tac std_ss[GroupHomo_def] >>
   `(fG = IMAGE f G) /\ !x y. x IN fG /\ y IN fG ==>
      (x o y = f (CHOICE (preimage f G x) * CHOICE (preimage f G y)))` by rw_tac std_ss[homo_monoid_property] >>
@@ -2116,7 +2207,8 @@ val homo_group_assoc = store_thm(
   `CHOICE (preimage f G y) * CHOICE (preimage f G z) IN G` by rw[] >>
   `CHOICE (preimage f G x) * CHOICE (preimage f G y) * CHOICE (preimage f G z) =
    CHOICE (preimage f G x) * (CHOICE (preimage f G y) * CHOICE (preimage f G z))` by rw[group_assoc] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: [Identity] Group g /\ GroupHomo f g (homo_group g f) ==> #i IN fG /\ #i o x = x /\ x o #i = x. *)
 (* Proof:
@@ -2129,15 +2221,16 @@ val homo_group_assoc = store_thm(
         = x
    similarly for x o #i = x             by group_rid
 *)
-val homo_group_id = store_thm(
-  "homo_group_id",
-  ``!(g:'a group) (f:'a -> 'b). Group g /\ GroupHomo f g (homo_group g f) ==>
-      #i IN fG /\ (!x. x IN fG ==> (#i o x = x) /\ (x o #i = x))``,
+Theorem homo_group_id:
+    !(g:'a group) (f:'a -> 'b). Group g /\ GroupHomo f g (homo_group g f) ==>
+      #i IN fG /\ (!x. x IN fG ==> (#i o x = x) /\ (x o #i = x))
+Proof
   rw_tac std_ss[GroupHomo_def, homo_monoid_property] >| [
     rw[],
     metis_tac[group_lid, group_id_element, preimage_choice_property],
     metis_tac[group_rid, group_id_element, preimage_choice_property]
-  ]);
+  ]
+QED
 
 (* Theorem: [Inverse] Group g /\ GroupHomo f g (homo_monoid g f) ==> x IN fG ==> ?z. z IN fG /\ z o x = #i. *)
 (* Proof:
@@ -2149,15 +2242,16 @@ val homo_group_id = store_thm(
                 = f #e                                                           by group_lid
                 = #i                                                             by homo_monoid_id
 *)
-val homo_group_inv = store_thm(
-  "homo_group_inv",
-  ``!(g:'a group) (f:'a -> 'b). Group g /\ GroupHomo f g (homo_monoid g f) ==>
-     !x. x IN fG ==> ?z. z IN fG /\ (z o x = #i)``,
+Theorem homo_group_inv:
+    !(g:'a group) (f:'a -> 'b). Group g /\ GroupHomo f g (homo_monoid g f) ==>
+     !x. x IN fG ==> ?z. z IN fG /\ (z o x = #i)
+Proof
   rw_tac std_ss[GroupHomo_def, homo_monoid_property] >>
   `CHOICE (preimage f G x) IN G /\ (f (CHOICE (preimage f G x)) = x)` by metis_tac[preimage_choice_property] >>
   `|/ (CHOICE (preimage f G x)) IN G /\ ( |/ (CHOICE (preimage f G x)) * CHOICE (preimage f G x) = #e)` by rw[] >>
   qexists_tac `f ( |/ (CHOICE (preimage f G x)))` >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: [Commutative] AbelianGroup g /\ GroupHomo f g (homo_group g f) ==>
             x IN fG /\ y IN fG ==> (x o y = y o x) *)
@@ -2176,16 +2270,17 @@ val homo_group_inv = store_thm(
    = f (CHOICE (preimage f G y)) o f (CHOICE (preimage f G x))   by homo_monoid_property
    = y o x                                                       by contracting x, y
 *)
-val homo_group_comm = store_thm(
-  "homo_group_comm",
-  ``!(g:'a group) (f:'a -> 'b). AbelianGroup g /\ GroupHomo f g (homo_group g f) ==>
-   !x y. x IN fG /\ y IN fG ==> (x o y = y o x)``,
+Theorem homo_group_comm:
+    !(g:'a group) (f:'a -> 'b). AbelianGroup g /\ GroupHomo f g (homo_group g f) ==>
+   !x y. x IN fG /\ y IN fG ==> (x o y = y o x)
+Proof
   rw_tac std_ss[AbelianGroup_def, GroupHomo_def] >>
   `(fG = IMAGE f G) /\ !x y. x IN fG /\ y IN fG ==> (x o y = f (CHOICE (preimage f G x) * CHOICE (preimage f G y)))` by rw[homo_monoid_property] >>
   `CHOICE (preimage f G x) IN G /\ (f (CHOICE (preimage f G x)) = x)` by metis_tac[preimage_choice_property] >>
   `CHOICE (preimage f G y) IN G /\ (f (CHOICE (preimage f G y)) = y)` by metis_tac[preimage_choice_property] >>
   `CHOICE (preimage f G x) * CHOICE (preimage f G y) = CHOICE (preimage f G y) * CHOICE (preimage f G x)` by rw[] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: Homomorphic image of a group is a group.
             Group g /\ GroupHomo f g (homo_monoid g f) ==> Group (homo_monoid g f) *)
@@ -2197,9 +2292,9 @@ val homo_group_comm = store_thm(
    (4) x IN fG ==> #i o x = x, true by homo_group_id
    (5) x IN fG ==> ?y. y IN fG /\ (y o x = #i), true by homo_group_inv
 *)
-val homo_group_group = store_thm(
-  "homo_group_group",
-  ``!(g:'a group) f. Group g /\ GroupHomo f g (homo_monoid g f) ==> Group (homo_monoid g f)``,
+Theorem homo_group_group:
+    !(g:'a group) f. Group g /\ GroupHomo f g (homo_monoid g f) ==> Group (homo_monoid g f)
+Proof
   rpt strip_tac >>
   rw[group_def_alt] >| [
     rw[homo_group_closure],
@@ -2207,7 +2302,8 @@ val homo_group_group = store_thm(
     rw[homo_group_id],
     rw[homo_group_id],
     rw[homo_group_inv]
-  ]);
+  ]
+QED
 
 (* Theorem: Homomorphic image of an Abelian group is an Abelian group.
             AbelianGroup g /\ GroupHomo f g (homo_group g f) ==> AbelianGroup (homo_monoid g f) *)
@@ -2217,10 +2313,11 @@ val homo_group_group = store_thm(
    (1) Group (homo_group g f), true                 by homo_group_group, Group g
    (2) x IN fG /\ y IN fG ==> x o y = y o x, true   by homo_group_comm, AbelianGroup g
 *)
-val homo_group_abelian_group = store_thm(
-  "homo_group_abelian_group",
-  ``!(g:'a group) f. AbelianGroup g /\ GroupHomo f g (homo_group g f) ==> AbelianGroup (homo_monoid g f)``,
-  metis_tac[homo_group_group, AbelianGroup_def, homo_group_comm]);
+Theorem homo_group_abelian_group:
+    !(g:'a group) f. AbelianGroup g /\ GroupHomo f g (homo_group g f) ==> AbelianGroup (homo_monoid g f)
+Proof
+  metis_tac[homo_group_group, AbelianGroup_def, homo_group_comm]
+QED
 
 (* Theorem: Group g /\ INJ f G UNIV ==> GroupHomo f g (homo_group g f) *)
 (* Proof:
@@ -2228,12 +2325,13 @@ val homo_group_abelian_group = store_thm(
    (1) x IN G ==> f x IN IMAGE f G, true                 by IN_IMAGE
    (2) x IN G /\ y IN G ==> f (x * y) = f x o f y, true  by homo_monoid_op_inj
 *)
-val homo_group_by_inj = store_thm(
-  "homo_group_by_inj",
-  ``!(g:'a group) (f:'a -> 'b). Group g /\ INJ f G UNIV ==> GroupHomo f g (homo_group g f)``,
+Theorem homo_group_by_inj:
+    !(g:'a group) (f:'a -> 'b). Group g /\ INJ f G UNIV ==> GroupHomo f g (homo_group g f)
+Proof
   rw_tac std_ss[GroupHomo_def, homo_monoid_property] >-
   rw[] >>
-  rw[homo_monoid_op_inj]);
+  rw[homo_monoid_op_inj]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Injective Image of Group.                                                 *)
@@ -2673,25 +2771,28 @@ val subgroup_property = |- !g h. h <= g ==> Group h /\ Group g /\ (h.op = $* )
 
 (* Theorem: properties of subgroup *)
 (* Proof: Assume h <= g, then derive all consequences of definition *)
-val subgroup_property = store_thm(
-  "subgroup_property",
-  ``!(g:'a group) h. h <= g ==> Group h /\ Group g /\ (!x y. x IN H /\ y IN H ==> (h.op x y = x * y))``,
-  rw_tac std_ss[Subgroup_def]);
+Theorem subgroup_property:
+    !(g:'a group) h. h <= g ==> Group h /\ Group g /\ (!x y. x IN H /\ y IN H ==> (h.op x y = x * y))
+Proof
+  rw_tac std_ss[Subgroup_def]
+QED
 
 (* Theorem: elements in subgroup are also in group. *)
 (* Proof: since subgroup carrier is a subset of group carrier. *)
-val subgroup_element = store_thm(
-  "subgroup_element",
-  ``!(g:'a group) (h:'a group). h <= g ==> !z. z IN H ==> z IN G``,
-  rw_tac std_ss[Subgroup_def, SUBSET_DEF]);
+Theorem subgroup_element:
+    !(g:'a group) (h:'a group). h <= g ==> !z. z IN H ==> z IN G
+Proof
+  rw_tac std_ss[Subgroup_def, SUBSET_DEF]
+QED
 
 (* Theorem: A subgroup h of g implies identity is a homomorphism from h to g.
         or  h <= g ==> Group h /\ Group g /\ GroupHomo I h g  *)
 (* Proof: check definitions. *)
-val subgroup_homomorphism = store_thm(
-  "subgroup_homomorphism",
-  ``!(g:'a group) h. h <= g ==> Group h /\ Group g /\ subgroup h g``,
-  rw_tac std_ss[Subgroup_def, subgroup_def, GroupHomo_def, SUBSET_DEF]);
+Theorem subgroup_homomorphism:
+    !(g:'a group) h. h <= g ==> Group h /\ Group g /\ subgroup h g
+Proof
+  rw_tac std_ss[Subgroup_def, subgroup_def, GroupHomo_def, SUBSET_DEF]
+QED
 
 (* original:
 g `!(g:'a group) h. h <= g = Group h /\ Group g /\ subgroup h g`;
@@ -2704,17 +2805,19 @@ but subgroup_def uses homomorphism I, and so cannot show this for any x y.
 
 (* Theorem: h <= g ==> H SUBSET G *)
 (* Proof: by Subgroup_def *)
-val subgroup_carrier_subset = store_thm(
-  "subgroup_carrier_subset",
-  ``!(g:'a group) h. h <= g ==> H SUBSET G``,
-  rw[Subgroup_def]);
+Theorem subgroup_carrier_subset:
+    !(g:'a group) h. h <= g ==> H SUBSET G
+Proof
+  rw[Subgroup_def]
+QED
 
 (* Theorem: h <= g ==> (h.op = $* ) *)
 (* Proof: by Subgroup_def *)
-val subgroup_op = store_thm(
-  "subgroup_op",
-  ``!(g:'a group) h. h <= g ==> (h.op = g.op)``,
-  rw[Subgroup_def]);
+Theorem subgroup_op:
+    !(g:'a group) h. h <= g ==> (h.op = g.op)
+Proof
+  rw[Subgroup_def]
+QED
 
 (* Theorem: h <= g ==> h.id = #e *)
 (* Proof:
@@ -2727,35 +2830,39 @@ val subgroup_op = store_thm(
    or
    by group_homo_id and subgroup_homomorphism.
 *)
-val subgroup_id = store_thm(
-  "subgroup_id",
-  ``!g h. h <= g ==> (h.id = #e)``,
+Theorem subgroup_id:
+    !g h. h <= g ==> (h.id = #e)
+Proof
   rpt strip_tac >>
   `!x. I x = x` by rw[] >>
-  metis_tac[group_homo_id, subgroup_homomorphism, subgroup_def]);
+  metis_tac[group_homo_id, subgroup_homomorphism, subgroup_def]
+QED
 
 (* Theorem: h <= g ==> h.inv x = |/x *)
 (* Proof: by group_homo_inv and subgroup_homomorphism. *)
-val subgroup_inv = store_thm(
-  "subgroup_inv",
-  ``!g h. h <= g ==> !x. x IN H ==> (h.inv x = |/ x)``,
+Theorem subgroup_inv:
+    !g h. h <= g ==> !x. x IN H ==> (h.inv x = |/ x)
+Proof
   rpt strip_tac >>
   `!x. I x = x` by rw[] >>
-  metis_tac[group_homo_inv, subgroup_homomorphism, subgroup_def]);
+  metis_tac[group_homo_inv, subgroup_homomorphism, subgroup_def]
+QED
 
 (* Theorem: h <= g ==> Group g /\ Group h *)
 (* Proof: by Subgroup_def *)
-val subgroup_has_groups = store_thm(
-  "subgroup_has_groups",
-  ``!g:'a group h. h <= g ==> Group g /\ Group h``,
-  metis_tac[Subgroup_def]);
+Theorem subgroup_has_groups:
+    !g:'a group h. h <= g ==> Group g /\ Group h
+Proof
+  metis_tac[Subgroup_def]
+QED
 
 (* Theorem: h <= g ==> Group h *)
 (* Proof: by Subgroup_def *)
-val subgroup_is_group = store_thm(
-  "subgroup_is_group",
-  ``!g:'a group h. h <= g ==> Group h``,
-  metis_tac[Subgroup_def]);
+Theorem subgroup_is_group:
+    !g:'a group h. h <= g ==> Group h
+Proof
+  metis_tac[Subgroup_def]
+QED
 
 (* Theorem: h <= g ==> h << g *)
 (* Proof:
@@ -2779,10 +2886,11 @@ QED
 
 (* Theorem: h <= g ==> !x. x IN H ==> !n. h.exp x n = x ** n *)
 (* Proof: by subgroup_is_submonoid, submonoid_exp *)
-val subgroup_exp = store_thm(
-  "subgroup_exp",
-  ``!(g:'a group) h. h <= g ==> !x. x IN H ==> !n. h.exp x n = x ** n``,
-  rw_tac std_ss[subgroup_is_submonoid, submonoid_exp]);
+Theorem subgroup_exp:
+    !(g:'a group) h. h <= g ==> !x. x IN H ==> !n. h.exp x n = x ** n
+Proof
+  rw_tac std_ss[subgroup_is_submonoid, submonoid_exp]
+QED
 
 (* Theorem: h <= g <=> H <> {} /\ H SUBSET G /\ h.op = g.op /\ h.id = #e /\ !x y IN H, x * |/ y IN H *)
 (* Proof:
@@ -2800,11 +2908,11 @@ val subgroup_exp = store_thm(
        x * y = x * |/ ( |/ y) IN H                      by group_inv_inv
        Verify by group_def_alt.
 *)
-val subgroup_alt = store_thm(
-  "subgroup_alt",
-  ``!g:'a group. Group g ==>
+Theorem subgroup_alt:
+    !g:'a group. Group g ==>
       !h. h <= g <=> (H <> {} /\ H SUBSET G /\ (h.op = g.op) /\ (h.id = #e) /\
-                      !x y. x IN H /\ y IN H ==> x * |/ y IN H)``,
+                      !x y. x IN H /\ y IN H ==> x * |/ y IN H)
+Proof
   rw[Subgroup_def, EQ_IMP_THM] >-
   metis_tac[group_id_element, MEMBER_NOT_EMPTY] >-
   rw[subgroup_id, Subgroup_def] >-
@@ -2816,28 +2924,31 @@ val subgroup_alt = store_thm(
   `!x y. x IN H /\ y IN H ==> x * y IN H` by metis_tac[group_inv_inv] >>
   rw[group_def_alt] >-
   rw[group_assoc] >>
-  metis_tac[group_linv]);
+  metis_tac[group_linv]
+QED
 
 (* Theorem: h <= g <=>
        (Group g /\  (h.op = g.op) /\ (h.id = #e) /\
         H <> {} /\ H SUBSET G /\ !x y. x IN H /\ y IN H ==> x * |/ y IN H) *)
 (* Proof: by Subgroup_def, subgroup_alt *)
-val subgroup_thm = store_thm(
-  "subgroup_thm",
-  ``!g:'a group h. h <= g <=>
+Theorem subgroup_thm:
+    !g:'a group h. h <= g <=>
        (Group g /\  (h.op = g.op) /\ (h.id = #e) /\
-        H <> {} /\ H SUBSET G /\ !x y. x IN H /\ y IN H ==> x * |/ y IN H)``,
-  metis_tac[subgroup_alt, Subgroup_def]);
+        H <> {} /\ H SUBSET G /\ !x y. x IN H /\ y IN H ==> x * |/ y IN H)
+Proof
+  metis_tac[subgroup_alt, Subgroup_def]
+QED
 
 (* Theorem: h <= g ==> !x. x IN H ==> (order h x = ord x) *)
 (* Proof:
    Note Group g /\ Group h /\ subgroup h g    by subgroup_homomorphism, h <= g
    Thus !x. x IN H ==> (order h x = ord x)    by subgroup_order_eqn
 *)
-val subgroup_order = store_thm(
-  "subgroup_order",
-  ``!g:'a group h. h <= g ==> !x. x IN H ==> (order h x = ord x)``,
-  metis_tac[subgroup_homomorphism, subgroup_order_eqn]);
+Theorem subgroup_order:
+    !g:'a group h. h <= g ==> !x. x IN H ==> (order h x = ord x)
+Proof
+  metis_tac[subgroup_homomorphism, subgroup_order_eqn]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Subgroup Theorems                                                         *)
@@ -2847,10 +2958,11 @@ val subgroup_order = store_thm(
 (* Proof: by definition, this is to show:
    G SUBSET G, true by SUBSET_REFL.
 *)
-val subgroup_refl = store_thm(
-  "subgroup_refl",
-  ``!g:'a group. Group g ==> g <= g``,
-  rw[Subgroup_def]);
+Theorem subgroup_refl:
+    !g:'a group. Group g ==> g <= g
+Proof
+  rw[Subgroup_def]
+QED
 
 (* Theorem: h <= g /\ g <= h ==> (h = g) *)
 (* Proof:
@@ -2862,21 +2974,23 @@ val subgroup_refl = store_thm(
        True by Subgroup_def.
    (3) h <= g /\ g <= h ==> h.id = #e
 *)
-val subgroup_antisym = store_thm(
-  "subgroup_antisym",
-  ``!(g:'a group) (h:'a group). h <= g /\ g <= h ==> (h = g)``,
-  metis_tac[monoid_component_equality, Subgroup_def, SUBSET_ANTISYM, subgroup_id]);
+Theorem subgroup_antisym:
+    !(g:'a group) (h:'a group). h <= g /\ g <= h ==> (h = g)
+Proof
+  metis_tac[monoid_component_equality, Subgroup_def, SUBSET_ANTISYM, subgroup_id]
+QED
 
 (* Theorem: h <= t /\ t <= g ==> h <= g *)
 (* Proof: by definition, this is to show:
    H SUBSET t.carrier /\ t.carrier SUBSET G ==> H SUBSET G
    True by SUBSET_TRANS.
 *)
-val subgroup_trans = store_thm(
-  "subgroup_trans",
-  ``!(g:'a group) (h:'a group) (t:'a group). h <= t /\ t <= g ==> h <= g``,
+Theorem subgroup_trans:
+    !(g:'a group) (h:'a group) (t:'a group). h <= t /\ t <= g ==> h <= g
+Proof
   rw[Subgroup_def] >>
-  metis_tac[SUBSET_TRANS]);
+  metis_tac[SUBSET_TRANS]
+QED
 
 (* Theorem: FiniteGroup g ==> !h. h <= g ==> FINITE H *)
 (* Proof:
@@ -2885,10 +2999,11 @@ val subgroup_trans = store_thm(
      and h <= g ==> Group h /\ H SUBSET G  by Subgroup_def
    Hence FINITE H                          by SUBSET_FINITE
 *)
-val finite_subgroup_carrier_finite = store_thm(
-  "finite_subgroup_carrier_finite",
-  ``!g:'a group. FiniteGroup g ==> !h. h <= g ==> FINITE H``,
-  metis_tac[FiniteGroup_def, Subgroup_def, SUBSET_FINITE]);
+Theorem finite_subgroup_carrier_finite:
+    !g:'a group. FiniteGroup g ==> !h. h <= g ==> FINITE H
+Proof
+  metis_tac[FiniteGroup_def, Subgroup_def, SUBSET_FINITE]
+QED
 
 (* Theorem: FiniteGroup g ==> !h. h <= g ==> FiniteGroup h *)
 (* Proof:
@@ -2898,10 +3013,11 @@ val finite_subgroup_carrier_finite = store_thm(
    Hence FINITE H                          by SUBSET_FINITE
     thus FiniteGroup h                     by FiniteGroup_def
 *)
-val finite_subgroup_finite_group = store_thm(
-  "finite_subgroup_finite_group",
-  ``!g:'a group. FiniteGroup g ==> !h. h <= g ==> FiniteGroup h``,
-  metis_tac[FiniteGroup_def, Subgroup_def, SUBSET_FINITE]);
+Theorem finite_subgroup_finite_group:
+    !g:'a group. FiniteGroup g ==> !h. h <= g ==> FiniteGroup h
+Proof
+  metis_tac[FiniteGroup_def, Subgroup_def, SUBSET_FINITE]
+QED
 
 (* Theorem: AbelianGroup g /\ h <= g ==> AbelianGroup h *)
 (* Proof:
@@ -2916,46 +3032,51 @@ val finite_subgroup_finite_group = store_thm(
     ==> h.op x y = h.op y x           by above, h.op = $*
    Thus AbelianGroup h                by AbelianGroup_def
 *)
-val abelian_subgroup_abelian = store_thm(
-  "abelian_subgroup_abelian",
-  ``!(g:'a group) h. AbelianGroup g /\ h <= g ==> AbelianGroup h``,
-  rw_tac std_ss[AbelianGroup_def, Subgroup_def, SUBSET_DEF]);
+Theorem abelian_subgroup_abelian:
+    !(g:'a group) h. AbelianGroup g /\ h <= g ==> AbelianGroup h
+Proof
+  rw_tac std_ss[AbelianGroup_def, Subgroup_def, SUBSET_DEF]
+QED
 
 (* Theorem: h <= g ==> Group h /\ Group g *)
 (* Proof: by subgroup_property *)
-val subgroup_groups = store_thm(
-  "subgroup_groups",
-  ``!(g:'a group) h. h <= g ==> Group h /\ Group g``,
-  metis_tac[subgroup_property]);
+Theorem subgroup_groups:
+    !(g:'a group) h. h <= g ==> Group h /\ Group g
+Proof
+  metis_tac[subgroup_property]
+QED
 
 (* Theorem: h <= g ==> Group g /\ Group h /\ H <> {} /\ H SUBSET G /\ (h.op = $* ) /\ (h.id = #e) /\
                        (!x. x IN H ==> (h.inv x = |/ x)) /\
                        (!x y. x IN H /\ y IN H ==> x * ( |/ y) IN H) *)
 (* Proof: by subgroup_property, subgroup_alt, subgroup_inv *)
-val subgroup_property_all = store_thm(
-  "subgroup_property_all",
-  ``!(g:'a group) h. h <= g ==> Group g /\ Group h /\
+Theorem subgroup_property_all:
+    !(g:'a group) h. h <= g ==> Group g /\ Group h /\
     H <> {} /\ H SUBSET G /\ (h.op = g.op ) /\ (h.id = #e) /\
     (!x. x IN H ==> (h.inv x = |/ x)) /\
-    (!x y. x IN H /\ y IN H ==> x * ( |/ y) IN H)``,
-  metis_tac[subgroup_property, subgroup_inv, subgroup_alt]);
+    (!x y. x IN H /\ y IN H ==> x * ( |/ y) IN H)
+Proof
+  metis_tac[subgroup_property, subgroup_inv, subgroup_alt]
+QED
 
 (* Theorem: h <= g ==> !x y. x IN H /\ y IN H ==> x * |/ y IN H *)
 (* Proof: by subgroup_property_all *)
-val subgroup_inv_closure = store_thm(
-  "subgroup_inv_closure",
-  ``!(g:'a group) h. h <= g ==> !x y. x IN H /\ y IN H ==> x * ( |/ y) IN H``,
-  rw[subgroup_property_all]);
+Theorem subgroup_inv_closure:
+    !(g:'a group) h. h <= g ==> !x y. x IN H /\ y IN H ==> x * ( |/ y) IN H
+Proof
+  rw[subgroup_property_all]
+QED
 
 (* Theorem: h <= g ==> H <> {} *)
 (* Proof: by subgroup_property_all, or
      h <= g ==> Group h     by Subgroup_def
             ==> H <> {}     by group_carrier_nonempty
 *)
-val subgroup_carrier_nonempty = store_thm(
-  "subgroup_carrier_nonempty",
-  ``!(g:'a group) h. h <= g ==> H <> {}``,
-  rw[Subgroup_def, group_carrier_nonempty]);
+Theorem subgroup_carrier_nonempty:
+    !(g:'a group) h. h <= g ==> H <> {}
+Proof
+  rw[Subgroup_def, group_carrier_nonempty]
+QED
 
 (* Theorem: h <= g /\ (H = G) ==> (h = g) *)
 (* Proof:
@@ -2969,9 +3090,9 @@ val subgroup_carrier_nonempty = store_thm(
    Thus g <= h.
    With given h <= g, h = g        by subgroup_antisym
 *)
-val subgroup_eq_carrier = store_thm(
-  "subgroup_eq_carrier",
-  ``!(g:'a group) h. h <= g /\ (H = G) ==> (h = g)``,
+Theorem subgroup_eq_carrier:
+    !(g:'a group) h. h <= g /\ (H = G) ==> (h = g)
+Proof
   rpt strip_tac >>
   (irule subgroup_antisym >> rpt conj_tac) >| [
     `Group h /\ Group g` by metis_tac[subgroup_groups] >>
@@ -2981,7 +3102,8 @@ val subgroup_eq_carrier = store_thm(
     metis_tac[subgroup_alt] >>
     metis_tac[subgroup_alt, subgroup_inv, group_op_element],
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: h1 <= g /\ h2 <= g ==> ((h1 = h2) <=> (h1.carrier = h2.carrier)) *)
 (* Proof:
@@ -2989,10 +3111,11 @@ val subgroup_eq_carrier = store_thm(
     and h2 <= g ==> h2.op = g.op /\ h2.id = #e    by subgroup_op, subgroup_id
    Thus (h1 = h2) <=> (h1.carrier = h2.carrier)   by monoid_component_equality
 *)
-val subgroup_eq = store_thm(
-  "subgroup_eq",
-  ``!g:'a group. !h1 h2. h1 <= g /\ h2 <= g ==> ((h1 = h2) <=> (h1.carrier = h2.carrier))``,
-  metis_tac[subgroup_op, subgroup_id, monoid_component_equality]);
+Theorem subgroup_eq:
+    !g:'a group. !h1 h2. h1 <= g /\ h2 <= g ==> ((h1 = h2) <=> (h1.carrier = h2.carrier))
+Proof
+  metis_tac[subgroup_op, subgroup_id, monoid_component_equality]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Cosets, especially cosets of a subgroup.                                  *)
@@ -3034,18 +3157,20 @@ val right_coset_alt = save_thm("right_coset_alt",
 
 (* Theorem: a * X SUBSET G *)
 (* Proof: by definition. *)
-val coset_property = store_thm(
-  "coset_property",
-  ``!(g:'a group) a. Group g /\ a IN G ==> !X. X SUBSET G ==> a * X SUBSET G``,
+Theorem coset_property:
+    !(g:'a group) a. Group g /\ a IN G ==> !X. X SUBSET G ==> a * X SUBSET G
+Proof
   rw[coset_def, SUBSET_DEF] >>
-  metis_tac[group_op_element]);
+  metis_tac[group_op_element]
+QED
 
 (* Theorem: a * {} = {} *)
 (* Proof: by definition. *)
-val coset_empty = store_thm(
-  "coset_empty",
-  ``!(g:'a group) a. Group g /\ a IN G ==> (a * {} = {})``,
-  rw[coset_def]);
+Theorem coset_empty:
+    !(g:'a group) a. Group g /\ a IN G ==> (a * {} = {})
+Proof
+  rw[coset_def]
+QED
 
 (* Theorem: For x IN a * X <=> ?y IN X /\ x = a * y *)
 (* Proof: by coset_def, x is IN IMAGE.
@@ -3053,11 +3178,12 @@ val coset_empty = store_thm(
      z IN X <=> ?y. y IN X /\ (a * z = a * y)
    Take y = z.
 *)
-val coset_element = store_thm(
-  "coset_element",
-  ``!(g:'a group) X a. a IN G ==> !x. x IN a * X <=> ?y. y IN X /\ (x = a * y)``,
+Theorem coset_element:
+    !(g:'a group) X a. a IN G ==> !x. x IN a * X <=> ?y. y IN X /\ (x = a * y)
+Proof
   rw[coset_def] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem alias *)
 val in_coset = save_thm("in_coset", coset_element);
@@ -3072,13 +3198,14 @@ val in_coset = |- !g X a. a IN G ==> !x. x IN a * X <=> ?y. y IN X /\ (x = a * y
    (1) a * z IN G, true by group_op_element.
    (2) ?z. (x = a * z) /\ z IN G, true by z = |/a * x, from group_rsolve.
 *)
-val group_coset_eq_itself = store_thm(
-  "group_coset_eq_itself",
-  ``!(g:'a group) a. Group g /\ a IN G ==> (a * G = G)``,
+Theorem group_coset_eq_itself:
+    !(g:'a group) a. Group g /\ a IN G ==> (a * G = G)
+Proof
   rw[coset_def, EXTENSION, EQ_IMP_THM] >-
   rw[] >>
   qexists_tac `|/a * x` >>
-  rw[group_linv_assoc]);
+  rw[group_linv_assoc]
+QED
 
 (* Theorem: [Cosets of a group are permutations]
             (a * G) = G *)
@@ -3087,34 +3214,37 @@ val group_coset_eq_itself = store_thm(
    (1) a IN G /\ x IN G ==> a*x IN G, true by group_op_element
    (2) a IN G /\ x IN G ==> ?z. (x = a * z) /\ z IN G, true by group_rsolve
 *)
-val group_coset_is_permutation = store_thm(
-  "group_coset_is_permutation",
-  ``!(g:'a group) a. Group g /\ a IN G ==> (a * G = G)``,
+Theorem group_coset_is_permutation:
+    !(g:'a group) a. Group g /\ a IN G ==> (a * G = G)
+Proof
   rw[coset_def, EXTENSION, EQ_IMP_THM] >| [
     rw_tac std_ss[group_op_element] >>
     rw[],
     `|/ a * x IN G` by rw[] >>
     metis_tac[group_rsolve]
-  ]);
+  ]
+QED
 
 (* Theorem: Group g, h <= g, a IN G /\ x IN a * H ==> x IN G *)
 (* Proof:
    Coset contains all  x = a*z  where a IN G and z IN H, so x IN G by group_op_element.
 *)
-val subgroup_coset_subset = store_thm(
-  "subgroup_coset_subset",
-  ``!(g:'a group) (h:'a group) a x. h <= g /\ a IN G /\ x IN a * H ==> x IN G``,
+Theorem subgroup_coset_subset:
+    !(g:'a group) (h:'a group) a x. h <= g /\ a IN G /\ x IN a * H ==> x IN G
+Proof
   rw_tac std_ss[coset_def, Subgroup_def, SUBSET_DEF, IMAGE_DEF, GSPECIFICATION] >>
-  rw_tac std_ss[group_op_element]);
+  rw_tac std_ss[group_op_element]
+QED
 
 (* Theorem: For all x IN H, a * x IN a * H. *)
 (* Proof: by coset definition
    or to prove: ?z. (a * x = a * z) /\ z IN H. Take z = x.
 *)
-val element_coset_property = store_thm(
-  "element_coset_property",
-  ``!(g:'a group) X a. a IN G ==> !x. x IN X ==> a * x IN a * X``,
-  rw[coset_def]);
+Theorem element_coset_property:
+    !(g:'a group) X a. a IN G ==> !x. x IN X ==> a * x IN a * X
+Proof
+  rw[coset_def]
+QED
 
 (* Theorem: For h <= g, x IN x * H *)
 (* Proof:
@@ -3123,11 +3253,12 @@ val element_coset_property = store_thm(
    Essentially this is to prove:
    (1) ?z. (x = x * z) /\ z IN H, true by z = #e.
 *)
-val subgroup_coset_nonempty = store_thm(
-  "subgroup_coset_nonempty",
-  ``!(g:'a group) h. h <= g ==> !x. x IN G ==> x IN x * H``,
+Theorem subgroup_coset_nonempty:
+    !(g:'a group) h. h <= g ==> !x. x IN G ==> x IN x * H
+Proof
   rw[coset_def] >>
-  metis_tac[subgroup_id, group_rid, group_id_element, Subgroup_def]);
+  metis_tac[subgroup_id, group_rid, group_id_element, Subgroup_def]
+QED
 
 (* eliminate "group" from default simpset *)
 (* val groupSS = diminish_srw_ss ["group"]; *)
@@ -3183,10 +3314,11 @@ val subgroup_coset_eq2 = prove(
 (* Proof:
    By subgroup_coset_eq1 and subgroup_coset_eq2.
 *)
-val subgroup_coset_eq = store_thm(
-  "subgroup_coset_eq",
-  ``!(g:'a group) h. h <= g ==> !x y. x IN G /\ y IN G ==> ((x * H = y * H) <=> |/y * x IN H)``,
-  metis_tac[subgroup_coset_eq1, subgroup_coset_eq2]);
+Theorem subgroup_coset_eq:
+    !(g:'a group) h. h <= g ==> !x y. x IN G /\ y IN G ==> ((x * H = y * H) <=> |/y * x IN H)
+Proof
+  metis_tac[subgroup_coset_eq1, subgroup_coset_eq2]
+QED
 
 (* Theorem: There is a bijection between subgroup and its cosets. *)
 (* Proof:
@@ -3199,26 +3331,28 @@ val subgroup_coset_eq = store_thm(
    (4) x IN a * H ==> ?x'. x' IN H /\ (a * x' = x)
        True by coset_element.
 *)
-val subgroup_to_coset_bij = store_thm(
-  "subgroup_to_coset_bij",
-  ``!(g:'a group) h. h <= g ==> !a. a IN G ==> BIJ (\x. a * x) H (a * H)``,
+Theorem subgroup_to_coset_bij:
+    !(g:'a group) h. h <= g ==> !a. a IN G ==> BIJ (\x. a * x) H (a * H)
+Proof
   rw_tac std_ss[BIJ_DEF, SURJ_DEF, INJ_DEF, element_coset_property] >| [
     metis_tac[group_lcancel, subgroup_element, Subgroup_def],
     metis_tac[coset_element]
-  ]);
+  ]
+QED
 
 (* Theorem: All cosets of subgroup are of the same size as the subgroup *)
 (* Proof:
    Due to BIJ (\x. a*x) H (a * H), and sets are FINITE.
 *)
 (* Note: An infinite group can have a finite subgroup, e.g. the units of complex multiplication. *)
-val subgroup_coset_card = store_thm(
-  "subgroup_coset_card",
-  ``!(g:'a group) h. h <= g /\ FINITE H  ==> !a. a IN G ==> (CARD (a * H) = CARD H)``,
+Theorem subgroup_coset_card:
+    !(g:'a group) h. h <= g /\ FINITE H  ==> !a. a IN G ==> (CARD (a * H) = CARD H)
+Proof
   rpt strip_tac >>
   `BIJ (\x. a * x) H (a * H)` by rw_tac std_ss[subgroup_to_coset_bij] >>
   `FINITE (a * H)` by rw[coset_def] >>
-  metis_tac[FINITE_BIJ_CARD_EQ]);
+  metis_tac[FINITE_BIJ_CARD_EQ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Lagrange's Theorem by Subgroups and Cosets                                *)
@@ -3252,10 +3386,11 @@ End
 (* Proof:
    Follows from subgroup_coset_nonempty.
 *)
-val inCoset_refl = store_thm(
-  "inCoset_refl",
-  ``!(g:'a group) h. h <= g ==> !a. a IN G ==> inCoset g h a a``,
-  rw_tac std_ss[inCoset_def, subgroup_coset_nonempty]);
+Theorem inCoset_refl:
+    !(g:'a group) h. h <= g ==> !a. a IN G ==> inCoset g h a a
+Proof
+  rw_tac std_ss[inCoset_def, subgroup_coset_nonempty]
+QED
 
 (* Theorem: inCoset is Symmetric:
             h <= g /\ a IN G /\ b IN G ==> (inCoset g h a b ==> inCoset g h b a) *)
@@ -3269,14 +3404,15 @@ val inCoset_refl = store_thm(
    The result follows        by element_coset_property:
    !x. x IN H ==> b * x IN b * H  -- take x = |/z.
 *)
-val inCoset_sym = store_thm(
-  "inCoset_sym",
-  ``!(g:'a group) h. h <= g ==> !a b. a IN G /\ b IN G /\ inCoset g h a b ==> inCoset g h b a``,
+Theorem inCoset_sym:
+    !(g:'a group) h. h <= g ==> !a b. a IN G /\ b IN G /\ inCoset g h a b ==> inCoset g h b a
+Proof
   rw_tac std_ss[inCoset_def] >>
   `Group h/\ Group g /\ !x. x IN H ==> x IN G` by metis_tac[Subgroup_def, subgroup_element] >>
   `?z. z IN H /\ (b = a * z)` by rw_tac std_ss[GSYM coset_element] >>
   `|/z IN H` by metis_tac[subgroup_inv, group_inv_element] >>
-  metis_tac[element_coset_property, group_rinv_assoc]);
+  metis_tac[element_coset_property, group_rinv_assoc]
+QED
 
 (* Theorem: inCoset is Transitive:
             h <= g /\ a IN G /\ b IN G /\ c IN G
@@ -3296,25 +3432,27 @@ val inCoset_sym = store_thm(
    Since y * z in H          by group_op_element
    Hence  c IN (a * H), the result follows from element_coset_property.
 *)
-val inCoset_trans = store_thm(
-  "inCoset_trans",
-  ``!(g:'a group) h. h <= g ==> !a b c. a IN G /\ b IN G /\ c IN G /\ inCoset g h a b /\ inCoset g h b c ==> inCoset g h a c``,
+Theorem inCoset_trans:
+    !(g:'a group) h. h <= g ==> !a b c. a IN G /\ b IN G /\ c IN G /\ inCoset g h a b /\ inCoset g h b c ==> inCoset g h a c
+Proof
   rw_tac std_ss[inCoset_def] >>
   `Group h /\ Group g /\ !x. x IN H ==> x IN G` by metis_tac[Subgroup_def, subgroup_element] >>
   `?y. y IN H /\ (b = a * y) /\ ?z. z IN H /\ (c = b * z)` by rw_tac std_ss[GSYM coset_element] >>
   `c = a * (y * z)` by rw[group_assoc] >>
-  metis_tac[element_coset_property, group_op_element, subgroup_property]);
+  metis_tac[element_coset_property, group_op_element, subgroup_property]
+QED
 
 (* Theorem: inCoset is an equivalence relation.
             Group g /\ h <= g ==> (inCoset g h) is an equivalent relation on G. *)
 (* Proof:
    By inCoset_refl, inCoset_sym, and inCoset_trans.
 *)
-val inCoset_equiv_on_carrier = store_thm(
-  "inCoset_equiv_on_carrier",
-  ``!(g:'a group) h. h <= g ==> inCoset g h equiv_on G``,
+Theorem inCoset_equiv_on_carrier:
+    !(g:'a group) h. h <= g ==> inCoset g h equiv_on G
+Proof
   rw_tac std_ss[equiv_on_def] >>
-  metis_tac[inCoset_refl, inCoset_sym, inCoset_trans]);
+  metis_tac[inCoset_refl, inCoset_sym, inCoset_trans]
+QED
 
 (* Define coset partitions of G by inCoset g h. *)
 Definition CosetPartition_def:
@@ -3327,10 +3465,11 @@ End
    Apply partition_CARD
     |- !R s. R equiv_on s /\ FINITE s ==> (CARD s = SIGMA CARD (partition R s))
 *)
-val carrier_card_by_coset_partition = store_thm(
-  "carrier_card_by_coset_partition",
-  ``!(g:'a group) h. h <= g /\ FINITE G ==> (CARD G = SIGMA CARD (CosetPartition g h))``,
-  rw_tac std_ss[CosetPartition_def, inCoset_equiv_on_carrier, partition_CARD]);
+Theorem carrier_card_by_coset_partition:
+    !(g:'a group) h. h <= g /\ FINITE G ==> (CARD G = SIGMA CARD (CosetPartition g h))
+Proof
+  rw_tac std_ss[CosetPartition_def, inCoset_equiv_on_carrier, partition_CARD]
+QED
 
 (* Theorem: Elements in CosetPartition are cosets of some a In G *)
 (* Proof:
@@ -3340,23 +3479,25 @@ val carrier_card_by_coset_partition = store_thm(
    Since y IN x * H ==> ?z. z IN H /\ (y = x * z)
    so need to show: x IN G /\ z IN G ==> y IN G, which is true by group_op_element.
 *)
-val coset_partition_element = store_thm(
-  "coset_partition_element",
-  ``!(g:'a group) h. h <= g ==> (!e. e IN CosetPartition g h <=> ?a. a IN G /\ (e = a * H))``,
+Theorem coset_partition_element:
+    !(g:'a group) h. h <= g ==> (!e. e IN CosetPartition g h <=> ?a. a IN G /\ (e = a * H))
+Proof
   rpt strip_tac >>
   `!x z. x IN G /\ z IN H ==> x * z IN G` by metis_tac[group_op_element, Subgroup_def, subgroup_element] >>
   rw[CosetPartition_def, inCoset_def, partition_def, EQ_IMP_THM,
      coset_def, EXTENSION] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: For FINITE group, CARD element in CosetPartiton = CARD subgroup. *)
 (* Proof:
    By coset_partition_element and subgroup_coset_card
 *)
-val coset_partition_element_card = store_thm(
-  "coset_partition_element_card",
-  ``!(g:'a group) h. h <= g /\ FINITE G ==> !e. e IN CosetPartition g h ==> (CARD e = CARD H)``,
-  metis_tac[coset_partition_element, subgroup_coset_card, Subgroup_def, SUBSET_FINITE]);
+Theorem coset_partition_element_card:
+    !(g:'a group) h. h <= g /\ FINITE G ==> !e. e IN CosetPartition g h ==> (CARD e = CARD H)
+Proof
+  metis_tac[coset_partition_element, subgroup_coset_card, Subgroup_def, SUBSET_FINITE]
+QED
 
 (* Theorem: (Lagrange Identity)
             For FINITE Group g and subgroup h,
@@ -3369,35 +3510,38 @@ val coset_partition_element_card = store_thm(
    = SIGMA CARD (CosetPartition g h)     by carrier_card_by_coset_partition
    = CARD H * CARD (CosetPartition g h)  by SIGMA_CARD_CONSTANT
 *)
-val Lagrange_identity = store_thm(
-  "Lagrange_identity",
-  ``!(g:'a group) h. h <= g /\ FINITE G ==> (CARD G = CARD H * CARD (CosetPartition g h))``,
+Theorem Lagrange_identity:
+    !(g:'a group) h. h <= g /\ FINITE G ==> (CARD G = CARD H * CARD (CosetPartition g h))
+Proof
   rpt strip_tac >>
   `FINITE (CosetPartition g h)` by metis_tac[CosetPartition_def, inCoset_equiv_on_carrier, FINITE_partition] >>
-  metis_tac[carrier_card_by_coset_partition, SIGMA_CARD_CONSTANT, coset_partition_element_card]);
+  metis_tac[carrier_card_by_coset_partition, SIGMA_CARD_CONSTANT, coset_partition_element_card]
+QED
 
 (* Theorem: (Coset Partition size)
             For FINITE Group g, size of coset partition = (size of group) div (size of subgroup). *)
 (* Proof:
    By Lagrange_identity and MULT_DIV.
 *)
-val coset_partition_card = store_thm(
-  "coset_partition_card",
-  ``!(g:'a group) h. h <= g /\ FINITE G ==> (CARD (CosetPartition g h) = CARD G DIV CARD H)``,
+Theorem coset_partition_card:
+    !(g:'a group) h. h <= g /\ FINITE G ==> (CARD (CosetPartition g h) = CARD G DIV CARD H)
+Proof
   rpt strip_tac >>
   `Group h /\ FINITE H` by metis_tac[Subgroup_def, SUBSET_FINITE] >>
   `0 < CARD H` by metis_tac[group_id_element, MEMBER_NOT_EMPTY, CARD_EQ_0, NOT_ZERO_LT_ZERO] >>
-  metis_tac[Lagrange_identity, MULT_DIV, MULT_SYM]);
+  metis_tac[Lagrange_identity, MULT_DIV, MULT_SYM]
+QED
 
 (* Theorem: (Lagrange Theorem)
             For FINITE Group g, size of subgroup divides size of group. *)
 (* Proof:
    By Lagrange_identity and divides_def.
 *)
-val Lagrange_thm = store_thm(
-  "Lagrange_thm",
-  ``!(g:'a group) h. h <= g /\ FINITE G ==> (CARD H) divides (CARD G)``,
-  metis_tac[Lagrange_identity, MULT_SYM, dividesTheory.divides_def]);
+Theorem Lagrange_thm:
+    !(g:'a group) h. h <= g /\ FINITE G ==> (CARD H) divides (CARD G)
+Proof
+  metis_tac[Lagrange_identity, MULT_SYM, dividesTheory.divides_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Alternate proof without using inCoset.                                    *)
@@ -3415,16 +3559,17 @@ val Lagrange_thm = store_thm(
    The result follows by element_coset_property:
    !x. x IN H ==> b * x IN b * H  -- take x = |/z.
 *)
-val subgroup_coset_sym = store_thm(
-  "subgroup_coset_sym",
-  ``!(g:'a group) h. h <= g ==> !a b. a IN G /\ b IN G /\ b IN (a * H) ==> a IN (b * H)``,
+Theorem subgroup_coset_sym:
+    !(g:'a group) h. h <= g ==> !a b. a IN G /\ b IN G /\ b IN (a * H) ==> a IN (b * H)
+Proof
   rpt strip_tac >>
   `?z. z IN H /\ (b = a * z)` by rw_tac std_ss[GSYM coset_element] >>
   `Group g /\ Group h` by metis_tac[Subgroup_def] >>
   `|/ z IN H` by metis_tac[subgroup_inv, group_inv_element] >>
   `z IN G /\ |/ z IN G` by metis_tac[subgroup_element] >>
   `b * |/ z = a` by rw_tac std_ss[group_rinv_assoc] >>
-  metis_tac[element_coset_property]);
+  metis_tac[element_coset_property]
+QED
 
 (* Theorem: Subgroup Coset membership is Transitive:
             Group g /\ h <= g /\ a IN G /\ b IN G /\ c IN G
@@ -3441,30 +3586,32 @@ val subgroup_coset_sym = store_thm(
    Since y * z in H          by group_op_element
    Hence  c IN (a * H), the result follows from element_coset_property.
 *)
-val subgroup_coset_trans = store_thm(
-  "subgroup_coset_trans",
-  ``!(g:'a group) h. h <= g ==> !a b c. a IN G /\ b IN G /\ c IN G /\ b IN (a * H) /\ c IN (b * H) ==> c IN (a * H)``,
+Theorem subgroup_coset_trans:
+    !(g:'a group) h. h <= g ==> !a b c. a IN G /\ b IN G /\ c IN G /\ b IN (a * H) /\ c IN (b * H) ==> c IN (a * H)
+Proof
   rpt strip_tac >>
   `?y. y IN H /\ (b = a * y) /\ ?z. z IN H /\ (c = b * z)` by rw_tac std_ss[GSYM coset_element] >>
   `Group g /\ Group h /\ (!x y. x IN H /\ y IN H ==> (h.op x y = x * y))` by metis_tac[subgroup_property] >>
   `y IN G /\ z IN G` by metis_tac[subgroup_element] >>
   `c = a * (y * z)` by rw_tac std_ss[group_assoc] >>
   `y * z IN H` by metis_tac[group_op_element] >>
-  rw_tac std_ss[element_coset_property]);
+  rw_tac std_ss[element_coset_property]
+QED
 
 (* Theorem: inCoset is an equivalence relation.
             h <= g ==> (inCoset g h) is an equivalent relation on G. *)
 (* Proof:
    By subgroup_coset_nonempty, subgroup_coset_sym, and subgroup_coset_trans.
 *)
-val subgroup_incoset_equiv = store_thm(
-  "subgroup_incoset_equiv",
-  ``!(g:'a group) h. h <= g ==> (left_coset g H) equiv_on G``,
+Theorem subgroup_incoset_equiv:
+    !(g:'a group) h. h <= g ==> (left_coset g H) equiv_on G
+Proof
   rw_tac std_ss[left_coset_def, equiv_on_def] >| [
     metis_tac[subgroup_coset_nonempty, SPECIFICATION],
     metis_tac[subgroup_coset_sym, SPECIFICATION],
     metis_tac[subgroup_coset_trans, SPECIFICATION]
-  ]);
+  ]
+QED
 
 (* Theorem: For FINITE Group g, h <= g ==>
             CARD G = SUM of CARD partitions by (left_coset g H) *)
@@ -3472,10 +3619,11 @@ val subgroup_incoset_equiv = store_thm(
    Apply partition_CARD
     |- !R s. R equiv_on s /\ FINITE s ==> (CARD s = SIGMA CARD (partition R s))
 *)
-val carrier_card_by_subgroup_coset_partition = store_thm(
-  "carrier_card_by_subgroup_coset_partition",
-  ``!(g:'a group) h. h <= g /\ FINITE G ==> (CARD G = SIGMA CARD (partition (left_coset g H) G))``,
-  rw_tac std_ss[subgroup_incoset_equiv, partition_CARD]);
+Theorem carrier_card_by_subgroup_coset_partition:
+    !(g:'a group) h. h <= g /\ FINITE G ==> (CARD G = SIGMA CARD (partition (left_coset g H) G))
+Proof
+  rw_tac std_ss[subgroup_incoset_equiv, partition_CARD]
+QED
 
 (* Theorem: Elements in coset partition are cosets of some a In G *)
 (* Proof:
@@ -3488,25 +3636,27 @@ val carrier_card_by_subgroup_coset_partition = store_thm(
       Let x = a, need to show a * H = {y | y IN G /\ a * H y}
       This is true by SPECIFICATION.
 *)
-val subgroup_coset_partition_element = store_thm(
-  "subgroup_coset_partition_element",
-  ``!(g:'a group) h. h <= g ==> (!e. e IN (partition (left_coset g H) G) <=> ?a. a IN G /\ (e = a * H))``,
+Theorem subgroup_coset_partition_element:
+    !(g:'a group) h. h <= g ==> (!e. e IN (partition (left_coset g H) G) <=> ?a. a IN G /\ (e = a * H))
+Proof
   rpt strip_tac >>
   `!x z. x IN G /\ z IN H ==> x * z IN G` by metis_tac[Subgroup_def, SUBSET_DEF, group_op_element] >>
   rw[partition_def, EQ_IMP_THM, left_coset_def, coset_def, EXTENSION] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: For FINITE group, CARD element in subgroup coset partiton = CARD subgroup. *)
 (* Proof:
    By subgroup_coset_partition_element and subgroup_coset_card
 *)
-val subgroup_coset_card_partition_element = store_thm(
-  "subgroup_coset_card_partition_element",
-  ``!(g:'a group) h. h <= g /\ FINITE G ==> !e. e IN (partition (left_coset g H) G) ==> (CARD e = CARD H)``,
+Theorem subgroup_coset_card_partition_element:
+    !(g:'a group) h. h <= g /\ FINITE G ==> !e. e IN (partition (left_coset g H) G) ==> (CARD e = CARD H)
+Proof
   rpt strip_tac >>
   `?a. a IN G /\ (e = a * H)` by rw_tac std_ss[GSYM subgroup_coset_partition_element] >>
   `FINITE H` by metis_tac[Subgroup_def, SUBSET_FINITE] >>
-  metis_tac[subgroup_coset_card]);
+  metis_tac[subgroup_coset_card]
+QED
 
 (* Theorem: (Lagrange Identity)
             For FINITE Group g and subgroup h,
@@ -3519,11 +3669,12 @@ val subgroup_coset_card_partition_element = store_thm(
    = SIGMA CARD (CosetPartition g h)   by carrier_card_by_subgroup_coset_partition
    = CARD H * CARD (CosetPartition g h)  by SIGMA_CARD_CONSTANT
 *)
-val Lagrange_identity_alt = store_thm(
-  "Lagrange_identity_alt",
-  ``!(g:'a group) h. h <= g /\ FINITE G ==> (CARD G = CARD H * CARD (partition (left_coset g H) G))``,
+Theorem Lagrange_identity_alt:
+    !(g:'a group) h. h <= g /\ FINITE G ==> (CARD G = CARD H * CARD (partition (left_coset g H) G))
+Proof
   metis_tac[carrier_card_by_subgroup_coset_partition, subgroup_coset_card_partition_element,
-             SIGMA_CARD_CONSTANT, FINITE_partition]);
+             SIGMA_CARD_CONSTANT, FINITE_partition]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Useful Coset theorems.                                                    *)
@@ -3536,11 +3687,12 @@ val Lagrange_identity_alt = store_thm(
    <=> ?y. y IN G /\ y = x * H                by left_coset_def
    <=> x IN CosetPartition g h                   by coset_partition_element
 *)
-val subgroup_coset_in_partition = store_thm(
-  "subgroup_coset_in_partition",
-  ``!g h:'a group. h <= g ==> !x. x IN IMAGE (left_coset g H) G <=> x IN CosetPartition g h``,
+Theorem subgroup_coset_in_partition:
+    !g h:'a group. h <= g ==> !x. x IN IMAGE (left_coset g H) G <=> x IN CosetPartition g h
+Proof
   rw_tac std_ss[IN_IMAGE, left_coset_def, coset_partition_element] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: CosetPartition g h = IMAGE (left_coset g H) G *)
 (* Proof:
@@ -3548,11 +3700,12 @@ val subgroup_coset_in_partition = store_thm(
    <=> ?a. a IN G /\ (e = a * H)      by coset_partition_element
    <=> e IN IMAGE (left_coset g H) G  by IN_IMAGE
 *)
-val coset_partition_eq_coset_image = store_thm(
-  "coset_partition_eq_coset_image",
-  ``!(g:'a group) h. h <= g ==> (CosetPartition g h = IMAGE (left_coset g H) G)``,
+Theorem coset_partition_eq_coset_image:
+    !(g:'a group) h. h <= g ==> (CosetPartition g h = IMAGE (left_coset g H) G)
+Proof
   rw[Once EXTENSION] >>
-  metis_tac[left_coset_def, coset_partition_element]);
+  metis_tac[left_coset_def, coset_partition_element]
+QED
 
 (* Theorem: #e * H = H *)
 (* Proof:
@@ -3633,9 +3786,9 @@ End
           = |/( |/a) * ( |/ z) * |/a
           = a * ( |/z) * |/a, and |/z IN H.
 *)
-val conjugate_subgroup_group = store_thm(
-  "conjugate_subgroup_group",
-  ``!(g:'a group) h. h <= g ==> !a. a IN G ==> Group (conjugate_subgroup h g a)``,
+Theorem conjugate_subgroup_group:
+    !(g:'a group) h. h <= g ==> !a. a IN G ==> Group (conjugate_subgroup h g a)
+Proof
   rpt strip_tac >>
   `Group h /\ Group g /\ !z. z IN H ==> z IN G` by metis_tac[Subgroup_def, subgroup_element] >>
   `#e IN H` by metis_tac[subgroup_id, group_id_element] >>
@@ -3659,20 +3812,22 @@ val conjugate_subgroup_group = store_thm(
     rw_tac std_ss[group_lid, group_op_element],
     `|/z IN H` by metis_tac[subgroup_inv, group_inv_element] >>
     metis_tac[group_linv, group_rid, group_rinv]
-  ]);
+  ]
+QED
 
 (* Theorem: Group g, h <= g, a in G ==> (conjugate_subgroup h g a) <= g *)
 (* Proof:
    By conjugate_subgroup_group, and (conjugate_subgroup h g a).carrier SUBSET G.
 *)
-val conjugate_subgroup_subgroup = store_thm(
-  "conjugate_subgroup_subgroup",
-  ``!(g:'a group) h. h <= g ==> !a::G. (conjugate_subgroup h g a) <= g``,
+Theorem conjugate_subgroup_subgroup:
+    !(g:'a group) h. h <= g ==> !a::G. (conjugate_subgroup h g a) <= g
+Proof
   rw_tac std_ss[RES_FORALL_THM] >>
   `Group (conjugate_subgroup h g a)` by rw_tac std_ss[conjugate_subgroup_group] >>
   `Group g` by metis_tac[Subgroup_def] >>
   rw_tac std_ss[conjugate_subgroup_def, conjugate_def, Subgroup_def, SUBSET_DEF, GSPECIFICATION] >>
-  metis_tac[group_inv_element, group_op_element, subgroup_element]);
+  metis_tac[group_inv_element, group_op_element, subgroup_element]
+QED
 
 (* Theorem: [Bijection between subgroup and its conjugate]
             Group g, h <= g, a in G ==>
@@ -3688,9 +3843,9 @@ val conjugate_subgroup_subgroup = store_thm(
    (4) z IN H ==> ?z'. z' IN H /\ (a * z' * |/ a = a * z * |/ a)
        True by taking z' = z.
 *)
-val subgroup_conjugate_subgroup_bij = store_thm(
-  "subgroup_conjugate_subgroup_bij",
-  ``!(g:'a group) h. h <= g ==> !a. a IN G ==> BIJ (\z. a * z * |/ a) H (conjugate_subgroup h g a).carrier``,
+Theorem subgroup_conjugate_subgroup_bij:
+    !(g:'a group) h. h <= g ==> !a. a IN G ==> BIJ (\z. a * z * |/ a) H (conjugate_subgroup h g a).carrier
+Proof
   rw_tac std_ss[conjugate_subgroup_def, conjugate_def, BIJ_DEF, INJ_DEF, SURJ_DEF, GSPECIFICATION] >| [
     metis_tac[],
     `Group g /\ z IN G /\ z' IN G` by metis_tac[subgroup_property, subgroup_element] >>
@@ -3698,7 +3853,8 @@ val subgroup_conjugate_subgroup_bij = store_thm(
     metis_tac[group_lcancel, group_rcancel],
     metis_tac[],
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Subgroup Intersection                                                     *)
@@ -3720,15 +3876,16 @@ val _ = temp_overload_on ("#i", ``(h:'a monoid).id``);
     also x IN K, by k <= g, k.inv x = |/ x          by subgroup_inv
     Therefore |/ x IN H INTER K                     by IN_INTER, group_inv_element
 *)
-val subgroup_intersect_has_inv = store_thm(
-  "subgroup_intersect_has_inv",
-  ``!(g:'a group) h k. h <= g /\ k <= g ==> !x. x IN H INTER K ==> |/ x IN H INTER K``,
+Theorem subgroup_intersect_has_inv:
+    !(g:'a group) h k. h <= g /\ k <= g ==> !x. x IN H INTER K ==> |/ x IN H INTER K
+Proof
   rpt strip_tac >>
   `h << g /\ k << g` by rw[subgroup_is_submonoid] >>
   `x IN H /\ x IN K` by metis_tac[IN_INTER] >>
   `(h.inv x = |/ x) /\ (k.inv x = |/ x)` by rw[subgroup_inv] >>
   `Group h /\ Group k` by metis_tac[subgroup_homomorphism] >>
-  metis_tac[IN_INTER, group_inv_element]);
+  metis_tac[IN_INTER, group_inv_element]
+QED
 
 (* Theorem: h <= g /\ k <= g ==> Group (h mINTER k) *)
 (* Proof:
@@ -3752,9 +3909,9 @@ val subgroup_intersect_has_inv = store_thm(
              ==> x IN G                  by subgroup_element
        Hence x * y = #e and y * x = #e   by group_id
 *)
-val subgroup_intersect_group = store_thm(
-  "subgroup_intersect_group",
-  ``!(g:'a group) h k. h <= g /\ k <= g ==> Group (h mINTER k)``,
+Theorem subgroup_intersect_group:
+    !(g:'a group) h k. h <= g /\ k <= g ==> Group (h mINTER k)
+Proof
   rpt strip_tac >>
   `h << g /\ k << g` by rw[subgroup_is_submonoid] >>
   `Group h /\ Group k /\ Group g` by metis_tac[subgroup_homomorphism] >>
@@ -3768,7 +3925,8 @@ val subgroup_intersect_group = store_thm(
     qexists_tac `|/ x` >>
     `x IN G` by metis_tac[IN_INTER, subgroup_element] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: h <= g /\ k <= g ==> !x. x IN H INTER K ==> ((h mINTER k).inv x = |/ x) *)
 (* Proof:
@@ -3785,9 +3943,9 @@ val subgroup_intersect_group = store_thm(
    Therefore (h mINTER k).op ( |/ x) x = (h mINTER k).id     by group_linv
    Hence (h mINTER k).inv x = |/ x                by group_linv_unique
 *)
-val subgroup_intersect_inv = store_thm(
-  "subgroup_intersect_inv",
-  ``!(g:'a group) h k. h <= g /\ k <= g ==> !x. x IN H INTER K ==> ((h mINTER k).inv x = |/ x)``,
+Theorem subgroup_intersect_inv:
+    !(g:'a group) h k. h <= g /\ k <= g ==> !x. x IN H INTER K ==> ((h mINTER k).inv x = |/ x)
+Proof
   rpt strip_tac >>
   `Group g /\ Group h` by metis_tac[subgroup_homomorphism] >>
   `h << g /\ k << g` by rw[subgroup_is_submonoid] >>
@@ -3797,7 +3955,8 @@ val subgroup_intersect_inv = store_thm(
   `Group (h mINTER k)` by metis_tac[subgroup_intersect_group] >>
   `|/ x IN H INTER K` by rw[subgroup_intersect_has_inv] >>
   `x IN G /\ |/ x IN G` by metis_tac[IN_INTER, subgroup_element] >>
-  metis_tac[group_linv, group_linv_unique]);
+  metis_tac[group_linv, group_linv_unique]
+QED
 
 (* Theorem: properties of subgroup_intersect:
    h <= g /\ k <= g ==>
@@ -3806,14 +3965,15 @@ val subgroup_intersect_inv = store_thm(
      ((h mINTER k).id = #e) /\
      (!x. x IN H INTER K ==> ((h mINTER k).inv x = |/ x)) *)
 (* Proof: by subgroup_is_submonoid, submonoid_intersect_property, subgroup_intersect_inv. *)
-val subgroup_intersect_property = store_thm(
-  "subgroup_intersect_property",
-  ``!(g:'a group) h k. h <= g /\ k <= g ==>
+Theorem subgroup_intersect_property:
+    !(g:'a group) h k. h <= g /\ k <= g ==>
      ((h mINTER k).carrier = H INTER K) /\
      (!x y. x IN H INTER K /\ y IN H INTER K ==> ((h mINTER k).op x y = x * y)) /\
      ((h mINTER k).id = #e) /\
-     (!x. x IN H INTER K ==> ((h mINTER k).inv x = |/ x))``,
-  metis_tac[subgroup_is_submonoid, submonoid_intersect_property, subgroup_intersect_inv]);
+     (!x. x IN H INTER K ==> ((h mINTER k).inv x = |/ x))
+Proof
+  metis_tac[subgroup_is_submonoid, submonoid_intersect_property, subgroup_intersect_inv]
+QED
 
 (* Theorem: h <= g /\ k <= g ==> (h mINTER k) <= g *)
 (* Proof:
@@ -3829,9 +3989,9 @@ val subgroup_intersect_property = store_thm(
        By monoid_intersect_def, this is to show: $o = $*
        which is true by Subgroup_def.
 *)
-val subgroup_intersect_subgroup = store_thm(
-  "subgroup_intersect_subgroup",
-  ``!(g:'a group) h k. h <= g /\ k <= g ==> (h mINTER k) <= g``,
+Theorem subgroup_intersect_subgroup:
+    !(g:'a group) h k. h <= g /\ k <= g ==> (h mINTER k) <= g
+Proof
   rpt strip_tac >>
   rw[Subgroup_def] >| [
     metis_tac[subgroup_intersect_group],
@@ -3842,7 +4002,8 @@ val subgroup_intersect_subgroup = store_thm(
     metis_tac[SUBSET_TRANS],
     rw[monoid_intersect_def] >>
     metis_tac[Subgroup_def]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Subgroup Big Intersection                                                 *)
@@ -3868,12 +4029,13 @@ val it = |- !g. sgbINTER g =
    (!x y. x IN (sgbINTER g).carrier /\ y IN (sgbINTER g).carrier ==> ((sgbINTER g).op x y = x * y)) /\
    ((sgbINTER g).id = #e) *)
 (* Proof: by subgroup_big_intersect_def. *)
-val subgroup_big_intersect_property = store_thm(
-  "subgroup_big_intersect_property",
-  ``!g:'a group. ((sgbINTER g).carrier = BIGINTER (IMAGE (\h. H) {h | h <= g})) /\
+Theorem subgroup_big_intersect_property:
+    !g:'a group. ((sgbINTER g).carrier = BIGINTER (IMAGE (\h. H) {h | h <= g})) /\
    (!x y. x IN (sgbINTER g).carrier /\ y IN (sgbINTER g).carrier ==> ((sgbINTER g).op x y = x * y)) /\
-   ((sgbINTER g).id = #e)``,
-  rw[subgroup_big_intersect_def]);
+   ((sgbINTER g).id = #e)
+Proof
+  rw[subgroup_big_intersect_def]
+QED
 
 (* Theorem: x IN (sgbINTER g).carrier <=> (!h. h <= g ==> x IN H) *)
 (* Proof:
@@ -3884,11 +4046,12 @@ val subgroup_big_intersect_property = store_thm(
    <=> !P. ?h. (P = H) /\ h <= g) ==> x IN P               by GSPECIFICATION
    <=> !h. h <= g ==> x IN H
 *)
-val subgroup_big_intersect_element = store_thm(
-  "subgroup_big_intersect_element",
-  ``!g:'a group. !x. x IN (sgbINTER g).carrier <=> (!h. h <= g ==> x IN H)``,
+Theorem subgroup_big_intersect_element:
+    !g:'a group. !x. x IN (sgbINTER g).carrier <=> (!h. h <= g ==> x IN H)
+Proof
   rw[subgroup_big_intersect_def] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: x IN (sgbINTER g).carrier /\ y IN (sgbINTER g).carrier ==> (sgbINTER g).op x y IN (sgbINTER g).carrier *)
 (* Proof:
@@ -3899,15 +4062,16 @@ val subgroup_big_intersect_element = store_thm(
      Now, (sgbINTER g).op x y = x * y                       by subgroup_big_intersect_property
      Hence (sgbINTER g).op x y IN (sgbINTER g).carrier      by subgroup_big_intersect_element
 *)
-val subgroup_big_intersect_op_element = store_thm(
-  "subgroup_big_intersect_op_element",
-  ``!g:'a group. !x y. x IN (sgbINTER g).carrier /\ y IN (sgbINTER g).carrier ==>
-                     (sgbINTER g).op x y IN (sgbINTER g).carrier``,
+Theorem subgroup_big_intersect_op_element:
+    !g:'a group. !x y. x IN (sgbINTER g).carrier /\ y IN (sgbINTER g).carrier ==>
+                     (sgbINTER g).op x y IN (sgbINTER g).carrier
+Proof
   rpt strip_tac >>
   `!h. h <= g ==> x IN H /\ y IN H` by metis_tac[subgroup_big_intersect_element] >>
   `!h. h <= g ==> x * y IN H` by metis_tac[Subgroup_def, group_op_element, subgroup_property] >>
   `(sgbINTER g).op x y = x * y` by rw[subgroup_big_intersect_property] >>
-  metis_tac[subgroup_big_intersect_element]);
+  metis_tac[subgroup_big_intersect_element]
+QED
 
 (* Theorem: (sgbINTER g).id IN (sgbINTER g).carrier *)
 (* Proof:
@@ -3917,14 +4081,15 @@ val subgroup_big_intersect_op_element = store_thm(
    Hence !h. h <= g ==> (sgbINTER g).id IN H            by above
       or (sgbINTER g).id IN (sgbINTER g).carrier        by subgroup_big_intersect_element
 *)
-val subgroup_big_intersect_has_id = store_thm(
-  "subgroup_big_intersect_has_id",
-  ``!g:'a group. (sgbINTER g).id IN (sgbINTER g).carrier``,
+Theorem subgroup_big_intersect_has_id:
+    !g:'a group. (sgbINTER g).id IN (sgbINTER g).carrier
+Proof
   rpt strip_tac >>
   `!h. h <= g ==> (#i = #e)` by rw[subgroup_id] >>
   `!h. h <= g ==> #i IN H` by rw[Subgroup_def] >>
   `(sgbINTER g).id = #e` by metis_tac[subgroup_big_intersect_property] >>
-  metis_tac[subgroup_big_intersect_element]);
+  metis_tac[subgroup_big_intersect_element]
+QED
 
 (* Theorem: !x. x IN (sgbINTER g).carrier ==> |/ x IN (sgbINTER g).carrier *)
 (* Proof:
@@ -3935,15 +4100,16 @@ val subgroup_big_intersect_has_id = store_thm(
       so !h. h <= g ==> |/ x IN H          by group_inv_element
    Hence |/ x IN (sgbINTER g).carrier      by subgroup_big_intersect_element
 *)
-val subgroup_big_intersect_has_inv = store_thm(
-  "subgroup_big_intersect_has_inv",
-  ``!g:'a group. !x. x IN (sgbINTER g).carrier ==> |/ x IN (sgbINTER g).carrier``,
+Theorem subgroup_big_intersect_has_inv:
+    !g:'a group. !x. x IN (sgbINTER g).carrier ==> |/ x IN (sgbINTER g).carrier
+Proof
   rpt strip_tac >>
   `!h. h <= g ==> x IN H` by metis_tac[subgroup_big_intersect_element] >>
   `!h. h <= g ==> (h.inv x = |/ x)` by rw[subgroup_inv] >>
   `!h. h <= g ==> Group h` by rw[Subgroup_def] >>
   `!h. h <= g ==> |/ x IN H` by metis_tac[group_inv_element] >>
-  metis_tac[subgroup_big_intersect_element]);
+  metis_tac[subgroup_big_intersect_element]
+QED
 
 (* Theorem: Group g ==> (sgbINTER g).carrier SUBSET G *)
 (* Proof:
@@ -3956,16 +4122,17 @@ val subgroup_big_intersect_has_inv = store_thm(
      Now h <= g ==> H SUBSET G     by Subgroup_def
    Hence P SUBSET G                by BIGINTER_SUBSET
 *)
-val subgroup_big_intersect_subset = store_thm(
-  "subgroup_big_intersect_subset",
-  ``!g:'a group. Group g ==> (sgbINTER g).carrier SUBSET G``,
+Theorem subgroup_big_intersect_subset:
+    !g:'a group. Group g ==> (sgbINTER g).carrier SUBSET G
+Proof
   rw[subgroup_big_intersect_def] >>
   qabbrev_tac `P = IMAGE (\h. H) {h | h <= g}` >>
   (`!x. x IN P <=> ?h. (H = x) /\ h <= g` by (rw[Abbr`P`] >> metis_tac[])) >>
   `g <= g` by rw[subgroup_refl] >>
   `P <> {}` by metis_tac[MEMBER_NOT_EMPTY] >>
   `!h:'a group. h <= g ==> H SUBSET G` by rw[Subgroup_def] >>
-  metis_tac[BIGINTER_SUBSET]);
+  metis_tac[BIGINTER_SUBSET]
+QED
 
 (* Theorem: Group g ==> Group (smbINTER g) *)
 (* Proof:
@@ -3999,9 +4166,9 @@ val subgroup_big_intersect_subset = store_thm(
        = |/ x * x                                      by subgroup_big_intersect_property
        = #e                                            by group_linv
 *)
-val subgroup_big_intersect_group = store_thm(
-  "subgroup_big_intersect_group",
-  ``!g:'a group. Group g ==> Group (sgbINTER g)``,
+Theorem subgroup_big_intersect_group:
+    !g:'a group. Group g ==> Group (sgbINTER g)
+Proof
   rpt strip_tac >>
   `(sgbINTER g).carrier SUBSET G` by rw[subgroup_big_intersect_subset] >>
   rw_tac std_ss[group_def_alt] >| [
@@ -4024,7 +4191,8 @@ val subgroup_big_intersect_group = store_thm(
     `|/ x * x = #e` suffices_by rw[subgroup_big_intersect_property] >>
     `x IN G` by metis_tac[SUBSET_DEF] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: Group g ==> (sgbINTER g) <= g *)
 (* Proof:
@@ -4036,14 +4204,15 @@ val subgroup_big_intersect_group = store_thm(
    (3) (sgbINTER g).op = $*
        True by subgroup_big_intersect_def
 *)
-val subgroup_big_intersect_subgroup = store_thm(
-  "subgroup_big_intersect_subgroup",
-  ``!g:'a group. Group g ==> (sgbINTER g) <= g``,
+Theorem subgroup_big_intersect_subgroup:
+    !g:'a group. Group g ==> (sgbINTER g) <= g
+Proof
   rw_tac std_ss[Subgroup_def] >| [
     rw[subgroup_big_intersect_group],
     rw[subgroup_big_intersect_subset],
     rw[subgroup_big_intersect_def]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Subset Group (to be subgroup)                                             *)
@@ -4061,13 +4230,14 @@ End
 
 (* Theorem: properties of subset_group *)
 (* Proof: by subset_group_def *)
-val subset_group_property = store_thm(
-  "subset_group_property",
-  ``!(g:'a group) s.
+Theorem subset_group_property:
+    !(g:'a group) s.
      ((subset_group g s).carrier = s) /\
      ((subset_group g s).op = g.op) /\
-     ((subset_group g s).id = #e)``,
-  rw_tac std_ss[subset_group_def]);
+     ((subset_group g s).id = #e)
+Proof
+  rw_tac std_ss[subset_group_def]
+QED
 
 (* Theorem: x IN s ==> !n. (subset_group g s).exp x n = x ** n *)
 (* Proof:
@@ -4085,13 +4255,14 @@ val subset_group_property = store_thm(
         = x * (x ** n)                 by induction hypothesis
         = x ** SUC n                   by group_exp_SUC
 *)
-val subset_group_exp = store_thm(
-  "subset_group_exp",
-  ``!(g:'a group) s. !x. x IN s ==> !n. (subset_group g s).exp x n = x ** n``,
+Theorem subset_group_exp:
+    !(g:'a group) s. !x. x IN s ==> !n. (subset_group g s).exp x n = x ** n
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[subset_group_property] >>
-  rw[subset_group_property]);
+  rw[subset_group_property]
+QED
 
 (* Theorem: x IN s ==> (order (subset_group g s) x = order g x) *)
 (* Proof:
@@ -4099,10 +4270,11 @@ val subset_group_exp = store_thm(
     and (subset_group g s).id = #e               by subset_group_property
    Thus order (subset_group g s) x = order g x   by order_def, period_def
 *)
-val subset_group_order = store_thm(
-  "subset_group_order",
-  ``!(g:'a group) s. !x. x IN s ==> (order (subset_group g s) x = order g x)``,
-  rw[order_def, period_def, subset_group_property, subset_group_exp]);
+Theorem subset_group_order:
+    !(g:'a group) s. !x. x IN s ==> (order (subset_group g s) x = order g x)
+Proof
+  rw[order_def, period_def, subset_group_property, subset_group_exp]
+QED
 
 (* Theorem: Monoid g /\ #e IN s /\ (s SUBSET G) /\
            (!x y. x IN s /\ y IN s ==> x * y IN s)  ==> (subset_group g s) << g *)
@@ -4111,11 +4283,12 @@ val subset_group_order = store_thm(
    Then H = s          by subset_group_property
    Thus h << g         by subset_group_property, submonoid_alt
 *)
-val subset_group_submonoid = store_thm(
-  "subset_group_submonoid",
-  ``!(g:'a monoid) s. Monoid g /\ #e IN s /\ (s SUBSET G) /\
-           (!x y. x IN s /\ y IN s ==> x * y IN s)  ==> (subset_group g s) << g``,
-  rw[submonoid_alt, subset_group_property]);
+Theorem subset_group_submonoid:
+    !(g:'a monoid) s. Monoid g /\ #e IN s /\ (s SUBSET G) /\
+           (!x y. x IN s /\ y IN s ==> x * y IN s)  ==> (subset_group g s) << g
+Proof
+  rw[submonoid_alt, subset_group_property]
+QED
 
 (* Theorem: Group g /\ s <> {} /\ (s SUBSET G) /\
             (!x y. x IN s /\ y IN s ==> x * ( |/ y) IN s) ==> (subset_group g s) <= g *)
@@ -4124,11 +4297,12 @@ val subset_group_submonoid = store_thm(
    Then H = s          by subset_group_property
    Thus h <= g         by subset_group_property, subgroup_alt
 *)
-val subset_group_subgroup = store_thm(
-  "subset_group_subgroup",
-  ``!(g:'a group) s. Group g /\ s <> {} /\ (s SUBSET G) /\
-   (!x y. x IN s /\ y IN s ==> x * |/ y IN s) ==> (subset_group g s) <= g``,
-  rw[subgroup_alt, subset_group_property]);
+Theorem subset_group_subgroup:
+    !(g:'a group) s. Group g /\ s <> {} /\ (s SUBSET G) /\
+   (!x y. x IN s /\ y IN s ==> x * |/ y IN s) ==> (subset_group g s) <= g
+Proof
+  rw[subgroup_alt, subset_group_property]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Quotient Group Documentation                                              *)
@@ -4251,10 +4425,11 @@ val _ = export_rewrites ["group_div_def"];
    and |/y IN G     by group_inv_element
    hence true       by group_op_element
 *)
-val group_div_element = store_thm(
-  "group_div_element",
-  ``!g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> x / y IN G``,
-  rw[group_div_def]);
+Theorem group_div_element:
+    !g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> x / y IN G
+Proof
+  rw[group_div_def]
+QED
 
 val _ = export_rewrites ["group_div_element"];
 
@@ -4263,10 +4438,11 @@ val _ = export_rewrites ["group_div_element"];
    x / x = x * |/x   by group_div_def
          = #e        by group_rinv
 *)
-val group_div_cancel = store_thm(
-  "group_div_cancel",
-  ``!g:'a group. Group g ==> !x. x IN G ==> (x / x = #e)``,
-  rw[group_div_def]);
+Theorem group_div_cancel:
+    !g:'a group. Group g ==> !x. x IN G ==> (x / x = #e)
+Proof
+  rw[group_div_def]
+QED
 
 val _ = export_rewrites ["group_div_cancel"];
 
@@ -4282,17 +4458,18 @@ val _ = export_rewrites ["group_div_cancel"];
    = x1 * (y1 / y2) * |/ x1 * (x1 / x2)          by group_assoc
    = x1 * (y1 / y2) / x1 * (x1 / x2)             by group_div_def
 *)
-val group_div_pair = store_thm(
-  "group_div_pair",
-  ``!g:'a group. Group g ==> !x1 y1 x2 y2. x1 IN G /\ y1 IN G /\ x2 IN G /\ y2 IN G ==>
-    ((x1 * y1) / (x2 * y2) = (x1 * (y1 / y2) / x1) * (x1 / x2))``,
+Theorem group_div_pair:
+    !g:'a group. Group g ==> !x1 y1 x2 y2. x1 IN G /\ y1 IN G /\ x2 IN G /\ y2 IN G ==>
+    ((x1 * y1) / (x2 * y2) = (x1 * (y1 / y2) / x1) * (x1 / x2))
+Proof
   rw_tac std_ss[group_div_def] >>
   `|/ x1 IN G /\ |/ y1 IN G /\ |/ x2 IN G /\ |/ y2 IN G` by rw[group_assoc] >>
   `(x1 * y1) * |/ (x2 * y2) = x1 * y1 * ( |/ y2 * |/ x2)` by rw[group_inv_op] >>
   `_ = x1 * (y1 * |/ y2 * |/ x2)` by rw[group_assoc] >>
   `_ = x1 * (y1 * |/ y2 * ( |/ x1 * x1 * |/ x2))` by rw_tac std_ss[group_linv, group_lid] >>
   `_ = (x1 * (y1 * |/ y2) * |/ x1) * (x1 * |/ x2)` by rw[group_assoc] >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* Theorem: (z * x) / (z * y) = z * (x / y) / z  *)
 (* Proof:
@@ -4301,10 +4478,11 @@ val group_div_pair = store_thm(
    = z * (x / y) / z * #e         by group_div_cancel
    = z * (x / y) / z              by group_rid
 *)
-val group_div_lsame = store_thm(
-  "group_div_lsame",
-  ``!g:'a group. Group g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> ((z * x) / (z * y) = z * (x / y) / z)``,
-  rw[group_assoc, group_div_pair]);
+Theorem group_div_lsame:
+    !g:'a group. Group g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> ((z * x) / (z * y) = z * (x / y) / z)
+Proof
+  rw[group_assoc, group_div_pair]
+QED
 
 (* Theorem: (x * z) / (y * z) = x / y  *)
 (* Proof:
@@ -4315,10 +4493,11 @@ val group_div_lsame = store_thm(
    = #e * (x / y)                by group_div_cancel
    = x / y                       by group_lid
 *)
-val group_div_rsame = store_thm(
-  "group_div_rsame",
-  ``!g:'a group. Group g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> ((x * z) / (y * z) = x / y)``,
-  rw[group_assoc, group_div_pair]);
+Theorem group_div_rsame:
+    !g:'a group. Group g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> ((x * z) / (y * z) = x / y)
+Proof
+  rw[group_assoc, group_div_pair]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Normal Subgroup                                                           *)
@@ -4347,30 +4526,33 @@ val normal_subgroup_property = save_thm("normal_subgroup_property",
 
 (* Theorem: h << g ==> h <= g /\ Group h /\ Group g *)
 (* Proof: by normal_subgroup_def and subgroup_property. *)
-val normal_subgroup_groups = store_thm(
-  "normal_subgroup_groups",
-  ``!g h:'a group. h << g ==> h <= g /\ Group h /\ Group g``,
-  metis_tac[normal_subgroup_def, subgroup_property]);
+Theorem normal_subgroup_groups:
+    !g h:'a group. h << g ==> h <= g /\ Group h /\ Group g
+Proof
+  metis_tac[normal_subgroup_def, subgroup_property]
+QED
 
 (* Theorem: g << g *)
 (* Proof: by definition, this is to show:
    g <= g,
    True by subgroup_refl
 *)
-val normal_subgroup_refl = store_thm(
-  "normal_subgroup_refl",
-  ``!g:'a group. Group g ==> g << g``,
-  rw[normal_subgroup_def, subgroup_refl]);
+Theorem normal_subgroup_refl:
+    !g:'a group. Group g ==> g << g
+Proof
+  rw[normal_subgroup_def, subgroup_refl]
+QED
 
 (* Theorem: h << g /\ g << h ==> h = g *)
 (* Proof: by definition, this is to show:
    h <= g /\ g <= h ==> h = g,
    True by subgroup_antisym.
 *)
-val normal_subgroup_antisym = store_thm(
-  "normal_subgroup_antisym",
-  ``!(g:'a group) (h:'a group). h << g /\ g << h ==> (h = g)``,
-  rw[normal_subgroup_def, subgroup_antisym]);
+Theorem normal_subgroup_antisym:
+    !(g:'a group) (h:'a group). h << g /\ g << h ==> (h = g)
+Proof
+  rw[normal_subgroup_def, subgroup_antisym]
+QED
 
 (* Note: Subgroup normality is not transitive:
 see: http://groupprops.subwiki.org/wiki/Normality_is_not_transitive
@@ -4407,9 +4589,9 @@ Try to show A is normal in B and B is normal in S4 but A is not normal in G.
       i.e. z' = a * z * |/a IN H,
               = a * z / a   IN H.
 *)
-val normal_subgroup_alt = store_thm(
-  "normal_subgroup_alt",
-  ``!g h:'a group. h << g <=> h <= g /\ (!a. a IN G ==> (a * H = H * a))``,
+Theorem normal_subgroup_alt:
+    !g h:'a group. h << g <=> h <= g /\ (!a. a IN G ==> (a * H = H * a))
+Proof
   rw_tac std_ss[normal_subgroup_def, coset_def, right_coset_def, EQ_IMP_THM] >| [
     rw[EXTENSION] >>
     `Group h /\ Group g` by metis_tac[subgroup_property] >>
@@ -4427,7 +4609,8 @@ val normal_subgroup_alt = store_thm(
     full_simp_tac std_ss [IMAGE_DEF, EXTENSION, GSPECIFICATION] >>
     `?z'. (a * z = z' * a) /\ z' IN H` by metis_tac[] >>
     metis_tac[group_rinv_assoc, group_div_def, Subgroup_def, SUBSET_DEF]
-  ]);
+  ]
+QED
 
 (* Theorem: x * H = y * H ==> x / y IN H  if  H is a normal subgroup *)
 (* Proof:
@@ -4436,9 +4619,9 @@ val normal_subgroup_alt = store_thm(
      or x * |/ y                 IN H  by group_assoc, group_rinv, group_lid
      or x / y                    IN H  by group_div_def
 *)
-val normal_subgroup_coset_eq = store_thm(
-  "normal_subgroup_coset_eq",
-  ``!g h:'a group. h << g ==> !x y. x IN G /\ y IN G ==> ((x * H = y * H) <=> x / y IN H)``,
+Theorem normal_subgroup_coset_eq:
+    !g h:'a group. h << g ==> !x y. x IN G /\ y IN G ==> ((x * H = y * H) <=> x / y IN H)
+Proof
   rw_tac std_ss[normal_subgroup_def, group_div_def] >>
   `|/y * x IN H <=> x * |/ y IN H` suffices_by rw_tac std_ss[subgroup_coset_eq] >>
   `Group h /\ Group g` by metis_tac[subgroup_property] >>
@@ -4446,7 +4629,8 @@ val normal_subgroup_coset_eq = store_thm(
   `_ = x * |/ y` by rw_tac std_ss[group_rinv, group_lid] >>
   `|/ x * (x * |/ y) * x = |/ x * x * |/ y * x` by rw[group_assoc] >>
   `_ = |/ y * x` by rw_tac std_ss[group_linv, group_lid, group_inv_element] >>
-  metis_tac[group_inv_element, group_inv_inv]);
+  metis_tac[group_inv_element, group_inv_inv]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Equivalence induced by Normal Subgroup                                    *)
@@ -4471,11 +4655,12 @@ val _ = set_fixity "==" (Infix(NONASSOC, 450));
    or: since h << g, h.id = #e     by subgroup_id
    hence   z * |/z = z * #e * |/z  IN H   by normal_subgroup_property.
 *)
-val group_normal_equiv_reflexive = store_thm(
-  "group_normal_equiv_reflexive",
-  ``!g h:'a group. h << g ==> !z. z IN G ==> z == z``,
+Theorem group_normal_equiv_reflexive:
+    !g h:'a group. h << g ==> !z. z IN G ==> z == z
+Proof
   rw_tac std_ss[normal_subgroup_def, group_equiv_def, group_div_def] >>
-  metis_tac[group_id_element, subgroup_id, group_rid, Subgroup_def]);
+  metis_tac[group_id_element, subgroup_id, group_rid, Subgroup_def]
+QED
 
 (* Theorem: [== is symmetric] h << g ==> x == y <=> y == x   for x, y IN G. *)
 (* Proof:
@@ -4486,14 +4671,15 @@ val group_normal_equiv_reflexive = store_thm(
            if  y / x         IN H    by group_div_def
            iff y == x                by group_equiv_def
 *)
-val group_normal_equiv_symmetric = store_thm(
-  "group_normal_equiv_symmetric",
-  ``!g h:'a group. h << g ==> !x y. x IN G /\ y IN G ==> (x == y <=> y == x)``,
+Theorem group_normal_equiv_symmetric:
+    !g h:'a group. h << g ==> !x y. x IN G /\ y IN G ==> (x == y <=> y == x)
+Proof
   rw_tac std_ss[normal_subgroup_def, group_equiv_def, group_div_def] >>
   `Group h /\ Group g` by metis_tac[Subgroup_def] >>
   `|/ ( x * |/ y) = y * |/ x` by rw[group_inv_inv, group_inv_op] >>
   `|/ ( y * |/ x) = x * |/ y` by rw[group_inv_inv, group_inv_op] >>
-  metis_tac[group_inv_element, subgroup_inv]);
+  metis_tac[group_inv_element, subgroup_inv]
+QED
 
 (* Theorem: [== is transitive] h << g ==> x == y /\ y == z ==> x == z   for x, y, z IN G. *)
 (* Proof:
@@ -4504,25 +4690,27 @@ val group_normal_equiv_symmetric = store_thm(
    or  x * |/ z               IN H   by group_assoc, group_linv
    i..e. x == z                      by by group_equiv_def, group_div_def
 *)
-val group_normal_equiv_transitive = store_thm(
-  "group_normal_equiv_transitive",
-  ``!g h:'a group. h << g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> (x == y /\ y == z ==> x == z)``,
+Theorem group_normal_equiv_transitive:
+    !g h:'a group. h << g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> (x == y /\ y == z ==> x == z)
+Proof
   rw_tac std_ss[normal_subgroup_def, group_equiv_def, group_div_def] >>
   `Group h /\ Group g` by metis_tac[Subgroup_def] >>
   `(x * |/ y) * (y * |/ z) = (x * |/ y) * y * |/ z` by rw[group_assoc] >>
   `_ = x * |/ z` by rw_tac std_ss[group_linv, group_rid, group_assoc, group_inv_element] >>
-  metis_tac[group_op_element, subgroup_property]);
+  metis_tac[group_op_element, subgroup_property]
+QED
 
 (* Theorem: [== is an equivalence relation] h << g ==> $== equiv_on G. *)
 (* Proof: by group_normal_equiv_reflexive, group_normal_equiv_symmetric, group_normal_equiv_transitive. *)
-val group_normal_equiv = store_thm(
-  "group_normal_equiv",
-  ``!g h:'a group. h << g ==> $== equiv_on G``,
+Theorem group_normal_equiv:
+    !g h:'a group. h << g ==> $== equiv_on G
+Proof
   rw_tac std_ss[equiv_on_def] >| [
     rw_tac std_ss[group_normal_equiv_reflexive],
     rw_tac std_ss[group_normal_equiv_symmetric],
     metis_tac[group_normal_equiv_transitive]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Normal Equivalence Classes are Cosets of Normal Subgroup.                 *)
@@ -4538,14 +4726,15 @@ val group_normal_equiv = store_thm(
            iff   x IN IMAGE (\z. y * z) H   by normal_subgroup_alt
            iff   x IN yH                    by coset definition
 *)
-val group_normal_equiv_property = store_thm(
-  "group_normal_equiv_property",
-  ``!h g:'a group. h << g ==> !x y. x IN G /\ y IN G ==> (x == y <=> x IN y * H)``,
+Theorem group_normal_equiv_property:
+    !h g:'a group. h << g ==> !x y. x IN G /\ y IN G ==> (x == y <=> x IN y * H)
+Proof
   rw_tac std_ss[group_equiv_def] >>
   `x / y IN H <=> x IN H * y` suffices_by metis_tac[normal_subgroup_alt] >>
   rw_tac std_ss[group_div_def, right_coset_def, IN_IMAGE] >>
   `x * |/ y IN H <=> ?z. z IN H /\ (z = x * |/ y)` by rw_tac std_ss[] >>
-  metis_tac[group_lsolve, normal_subgroup_subgroup, Subgroup_def, SUBSET_DEF]);
+  metis_tac[group_lsolve, normal_subgroup_subgroup, Subgroup_def, SUBSET_DEF]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* The map to set of costes and the induced binary operation.                *)
@@ -4613,24 +4802,26 @@ val _ = overload_on ("o", ``coset_op g h``);
    H IN CosetPartition g h   by coset_partition_element
    hence cogen g h H * H = H by cogen_def
 *)
-val cogen_of_subgroup = store_thm(
-  "cogen_of_subgroup",
-  ``!g h:'a group. h <= g ==> (cogen g h H * H = H)``,
+Theorem cogen_of_subgroup:
+    !g h:'a group. h <= g ==> (cogen g h H * H = H)
+Proof
   rpt strip_tac >>
   `#e * H = H` by rw_tac std_ss[coset_id_eq_subgroup] >>
   `Group g` by metis_tac[Subgroup_def] >>
   `H IN CosetPartition g h` by metis_tac[coset_partition_element, group_id_element] >>
-  rw_tac std_ss[cogen_def]);
+  rw_tac std_ss[cogen_def]
+QED
 
 (* Theorem: h <= g ==> !x. x IN G ==> cogen g h (x * H) IN G *)
 (* Proof:
    Since x * H  IN CosetPartition g h   by coset_partition_element
    cogen g h (x * H) IN G               by cogen_def
 *)
-val cogen_coset_element = store_thm(
-  "cogen_coset_element",
-  ``!g h:'a group. h <= g ==> !x. x IN G ==> cogen g h (x * H) IN G``,
-  metis_tac[cogen_def, coset_partition_element]);
+Theorem cogen_coset_element:
+    !g h:'a group. h <= g ==> !x. x IN G ==> cogen g h (x * H) IN G
+Proof
+  metis_tac[cogen_def, coset_partition_element]
+QED
 
 (* Theorem: x / cogen g h (x * H) IN H if H is a normal subgroup. *)
 (* Proof:
@@ -4639,14 +4830,15 @@ val cogen_coset_element = store_thm(
          ((cogen g h (x * H)) * H = x * H)  by cogen_def
    hence x / cogen g h (x * H) IN H   by normal_subgroup_coset_eq
 *)
-val normal_cogen_property = store_thm(
-  "normal_cogen_property",
-  ``!g h:'a group. h << g ==> !x. x IN G ==> x / cogen g h (x * H) IN H``,
+Theorem normal_cogen_property:
+    !g h:'a group. h << g ==> !x. x IN G ==> x / cogen g h (x * H) IN H
+Proof
   rpt strip_tac >>
   `h <= g` by rw_tac std_ss[normal_subgroup_subgroup] >>
   `x * H IN CosetPartition g h` by metis_tac[coset_partition_element] >>
   `cogen g h (x * H) IN G /\ ((cogen g h (x * H)) * H = x * H)` by rw_tac std_ss[cogen_def] >>
-  metis_tac[normal_subgroup_coset_eq]);
+  metis_tac[normal_subgroup_coset_eq]
+QED
 
 (* Theorem: h << g ==> cogen g h (a * H) * b * H = a * b * H  *)
 (* Proof:
@@ -4655,15 +4847,16 @@ val normal_cogen_property = store_thm(
    but  (a * b) / (cogen g h (a * H) * b) = a / cogen g h (a * H)  by group_div_rsame
    and  a / cogen g h (a * H) IN H    by normal_cogen_property.
 *)
-val normal_coset_property1 = store_thm(
-  "normal_coset_property1",
-  ``!g h:'a group. h << g ==> !a b. a IN G /\ b IN G ==> (cogen g h (a * H) * b * H = a * b * H)``,
+Theorem normal_coset_property1:
+    !g h:'a group. h << g ==> !a b. a IN G /\ b IN G ==> (cogen g h (a * H) * b * H = a * b * H)
+Proof
   rpt strip_tac >>
   `h <= g /\ Group g` by metis_tac[normal_subgroup_groups] >>
   `cogen g h (a * H) IN G` by rw_tac std_ss[cogen_coset_element] >>
   `a / cogen g h (a * H) IN H` by rw_tac std_ss[normal_cogen_property] >>
   `(a * b) / (cogen g h (a * H) * b) = a / cogen g h (a * H)` by rw_tac std_ss[group_div_rsame] >>
-  metis_tac[normal_subgroup_coset_eq, group_op_element]);
+  metis_tac[normal_subgroup_coset_eq, group_op_element]
+QED
 
 (* Theorem: h << g ==> a * cogen g h (b * H) * H = a * b * H  *)
 (* Proof:
@@ -4673,16 +4866,17 @@ val normal_coset_property1 = store_thm(
    and  b / cogen g h (b * H) IN H          by normal_cogen_property
    hence a * b / cogen g h (b * H) / a IN H by normal_subgroup_property
 *)
-val normal_coset_property2 = store_thm(
-  "normal_coset_property2",
-  ``!g h:'a group. h << g ==> !a b. a IN G /\ b IN G ==> (a * cogen g h (b * H) * H = a * b * H)``,
+Theorem normal_coset_property2:
+    !g h:'a group. h << g ==> !a b. a IN G /\ b IN G ==> (a * cogen g h (b * H) * H = a * b * H)
+Proof
   rpt strip_tac >>
   `h <= g /\ Group g` by metis_tac[normal_subgroup_groups] >>
   `cogen g h (b * H) IN G` by rw_tac std_ss[cogen_coset_element] >>
   `b / cogen g h (b * H) IN H` by rw_tac std_ss[normal_cogen_property] >>
   `a * b / (a * cogen g h (b * H)) = a * (b / cogen g h (b * H)) / a` by rw_tac std_ss[group_div_lsame] >>
   `a * b / (a * cogen g h (b * H)) IN H` by rw_tac std_ss[normal_subgroup_property] >>
-  metis_tac[normal_subgroup_coset_eq, group_op_element]);
+  metis_tac[normal_subgroup_coset_eq, group_op_element]
+QED
 
 (* Theorem: h << g ==> !a b. a IN G /\ b IN G ==> (cogen g h (a * H) * cogen g h (b * H) * H = a * b * H) *)
 (* Proof:
@@ -4693,10 +4887,11 @@ val normal_coset_property2 = store_thm(
    = a * cogen g h (b * H) * H        by normal_coset_property1, h << g
    = a * b * H                        by normal_coset_property2, h << g
 *)
-val normal_coset_property = store_thm(
-  "normal_coset_property",
-  ``!g h:'a group. h << g ==> !a b. a IN G /\ b IN G ==> (cogen g h (a * H) * cogen g h (b * H) * H = a * b * H)``,
-  rw_tac std_ss[normal_subgroup_subgroup, cogen_coset_element, normal_coset_property1, normal_coset_property2]);
+Theorem normal_coset_property:
+    !g h:'a group. h << g ==> !a b. a IN G /\ b IN G ==> (cogen g h (a * H) * cogen g h (b * H) * H = a * b * H)
+Proof
+  rw_tac std_ss[normal_subgroup_subgroup, cogen_coset_element, normal_coset_property1, normal_coset_property2]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Quotient Group                                                            *)
@@ -4731,12 +4926,13 @@ val _ = set_fixity "/" (Infixl 600); (* same as "*" in arithmeticScript.sml *)
       or (cogen g h x * cogen g h y IN G) * H IN CosetPartition g h   by coset_partition_element.
 
 *)
-val quotient_group_closure = store_thm(
-  "quotient_group_closure",
-  ``!g h:'a group. h <= g ==> !x y. x IN CosetPartition g h /\ y IN CosetPartition g h ==> x o y IN CosetPartition g h``,
+Theorem quotient_group_closure:
+    !g h:'a group. h <= g ==> !x y. x IN CosetPartition g h /\ y IN CosetPartition g h ==> x o y IN CosetPartition g h
+Proof
   rw_tac std_ss[coset_op_def] >>
   `cogen g h x IN G /\ cogen g h y IN G` by rw_tac std_ss[cogen_def] >>
-  metis_tac[group_op_element, coset_partition_element, Subgroup_def]);
+  metis_tac[group_op_element, coset_partition_element, Subgroup_def]
+QED
 
 (* Theorem: [Quotient Group Associativity]
    h << g ==> x IN CosetPartition g h /\ y IN CosetPartition g h /\ z IN CosetPartition g h ==> (x o y) o z = x o (y o z)  *)
@@ -4758,13 +4954,14 @@ val quotient_group_closure = store_thm(
    For h << g, this implies t / cogen g h (t * H)  IN H   by normal_cogen_property
 
 *)
-val quotient_group_assoc = store_thm(
-  "quotient_group_assoc",
-  ``!g h:'a group. h << g ==> !x y z. x IN CosetPartition g h /\ y IN CosetPartition g h /\ z IN CosetPartition g h
-      ==> ((x o y) o z = x o (y o z))``,
+Theorem quotient_group_assoc:
+    !g h:'a group. h << g ==> !x y z. x IN CosetPartition g h /\ y IN CosetPartition g h /\ z IN CosetPartition g h
+      ==> ((x o y) o z = x o (y o z))
+Proof
   rw_tac std_ss[coset_op_def] >>
   `h <= g /\ Group g` by metis_tac[normal_subgroup_groups] >>
-  rw[group_assoc, normal_coset_property1, normal_coset_property2, cogen_coset_element, cogen_def]);
+  rw[group_assoc, normal_coset_property1, normal_coset_property2, cogen_coset_element, cogen_def]
+QED
 
 (* Theorem: [Quotient Group Identity]
    h << g ==> H IN CosetPartition g h /\ !x. x INCosetPartition g h ==> H o x = x *)
@@ -4780,9 +4977,9 @@ val quotient_group_assoc = store_thm(
              = cogen g h x * H                  by above
              = x
 *)
-val quotient_group_id = store_thm(
-  "quotient_group_id",
-  ``!g h:'a group. h << g ==> H IN CosetPartition g h /\ !x. x IN CosetPartition g h ==> (H o x = x)``,
+Theorem quotient_group_id:
+    !g h:'a group. h << g ==> H IN CosetPartition g h /\ !x. x IN CosetPartition g h ==> (H o x = x)
+Proof
   ntac 3 strip_tac >>
   `h <= g /\ Group g` by metis_tac[normal_subgroup_def, Subgroup_def] >>
   `#e * H = H` by rw_tac std_ss[coset_id_eq_subgroup] >>
@@ -4792,7 +4989,8 @@ val quotient_group_id = store_thm(
     `cogen g h x IN G /\ (cogen g h x * H = x)` by rw_tac std_ss[cogen_def] >>
     `cogen g h (#e * H) * cogen g h x * H = #e * cogen g h x * H` by rw_tac std_ss[normal_coset_property1] >>
     metis_tac[group_lid]
-  ]);
+  ]
+QED
 
 (* Theorem: [Quotient Group Inverse]
    h << g ==> x IN CosetPartition g h ==> ?y. y IN CosetPartition g h /\ (y o x = H) *)
@@ -4807,15 +5005,16 @@ val quotient_group_id = store_thm(
          = ( |/ (cogen g h x) * cogen g h x) * H                     by coset_op_def
          = #e * H = H                                                by coset_id_eq_subgroup
 *)
-val quotient_group_inv = store_thm(
-  "quotient_group_inv",
-  ``!g h:'a group. h << g ==> !x. x IN CosetPartition g h ==> ?y. y IN CosetPartition g h /\ (y o x = H)``,
+Theorem quotient_group_inv:
+    !g h:'a group. h << g ==> !x. x IN CosetPartition g h ==> ?y. y IN CosetPartition g h /\ (y o x = H)
+Proof
   rpt strip_tac >>
   `h <= g /\ Group g` by metis_tac[normal_subgroup_groups] >>
   `cogen g h x IN G /\ (cogen g h x * H = x)` by rw_tac std_ss[cogen_def] >>
   `|/ (cogen g h x) IN G /\ ( |/ (cogen g h x) * cogen g h x = #e)` by rw[] >>
   `|/ (cogen g h x) * H IN CosetPartition g h` by metis_tac[coset_partition_element] >>
-  metis_tac[coset_op_def, normal_coset_property1, coset_id_eq_subgroup]);
+  metis_tac[coset_op_def, normal_coset_property1, coset_id_eq_subgroup]
+QED
 
 (* Theorem: quotient_group is a group for normal subgroup
    i.e. h << g ==> Group (quotient_group g h)               *)
@@ -4832,9 +5031,9 @@ val quotient_group_inv = store_thm(
    (5) x IN CosetPartition g h ==> ?y. y IN CosetPartition g h /\ (y o x = H)
        true by quotient_group_inv.
 *)
-val quotient_group_group = store_thm(
-  "quotient_group_group",
-  ``!g h:'a group. h << g ==> Group (quotient_group g h)``,
+Theorem quotient_group_group:
+    !g h:'a group. h << g ==> Group (quotient_group g h)
+Proof
   rpt strip_tac >>
   `h <= g /\ Group h /\ Group g` by metis_tac[normal_subgroup_groups] >>
   rw_tac std_ss[group_def_alt, quotient_group_def] >| [
@@ -4843,7 +5042,8 @@ val quotient_group_group = store_thm(
     rw_tac std_ss[quotient_group_id],
     rw_tac std_ss[quotient_group_id],
     rw_tac std_ss[quotient_group_inv]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Group Homomorphism by left_coset via normal subgroup.                     *)
@@ -4872,9 +5072,9 @@ val quotient_group_group = store_thm(
        so     x * z * / x  IN H  since z IN H   by normal_subgroup_property
        hence their product is IN H              by group_op_element
 *)
-val normal_subgroup_coset_homo = store_thm(
-  "normal_subgroup_coset_homo",
-  ``!g h:'a group. h << g ==> GroupHomo (left_coset g H) g (g / h)``,
+Theorem normal_subgroup_coset_homo:
+    !g h:'a group. h << g ==> GroupHomo (left_coset g H) g (g / h)
+Proof
   rw_tac std_ss[GroupHomo_def, quotient_group_def, left_coset_def] >-
   metis_tac[coset_partition_element, normal_subgroup_subgroup] >>
   rw_tac std_ss[coset_op_def] >>
@@ -4887,7 +5087,8 @@ val normal_subgroup_coset_homo = store_thm(
   rw_tac std_ss[group_div_pair] >>
   `x / cogen g h (x * H) IN H /\ y / cogen g h (y * H) IN H` by rw_tac std_ss[normal_cogen_property] >>
   `x * (y / cogen g h (y * H)) / x IN H` by rw_tac std_ss[normal_subgroup_property] >>
-  metis_tac[group_op_element]);
+  metis_tac[group_op_element]
+QED
 
 (* Theorem: x o y = (CHOICE (preimage (left_coset g H) G x) * CHOICE (preimage (left_coset g H) G y)) * H *)
 (* Proof:
@@ -4907,10 +5108,10 @@ val normal_subgroup_coset_homo = store_thm(
    Hence (cogen g h x) * ((cogen g h y) / (CHOICE (preimage (left_coset g H) G y))) / (cogen g h x)   by normal_subgroup_property
    and the whole product is thus in H                by group_op_element, as h <= g ==> Group h.
 *)
-val normal_coset_op_property = store_thm(
-  "normal_coset_op_property",
-  ``!g h:'a group. h << g ==> !x y. x IN CosetPartition g h /\ y IN CosetPartition g h ==>
-     (x o y = (CHOICE (preimage (left_coset g H) G x) * CHOICE (preimage (left_coset g H) G y)) * H)``,
+Theorem normal_coset_op_property:
+    !g h:'a group. h << g ==> !x y. x IN CosetPartition g h /\ y IN CosetPartition g h ==>
+     (x o y = (CHOICE (preimage (left_coset g H) G x) * CHOICE (preimage (left_coset g H) G y)) * H)
+Proof
   rw_tac std_ss[coset_op_def] >>
   `h <= g /\ Group g /\ !a z. a IN G /\ z IN H ==> a * z / a IN H` by metis_tac[normal_subgroup_def, subgroup_property] >>
   `cogen g h x IN G /\ ((cogen g h x) * H = x)` by rw_tac std_ss[cogen_def] >>
@@ -4923,7 +5124,8 @@ val normal_coset_op_property = store_thm(
   `(cogen g h y) / CHOICE (preimage (left_coset g H) G y) IN H` by metis_tac[normal_subgroup_coset_eq] >>
   `(cogen g h x * cogen g h y) / (CHOICE (preimage (left_coset g H) G x) * CHOICE (preimage (left_coset g H) G y)) IN H` suffices_by rw_tac std_ss[normal_subgroup_coset_eq, group_op_element] >>
   rw_tac std_ss[group_div_pair] >>
-  prove_tac[group_op_element, subgroup_property]);
+  prove_tac[group_op_element, subgroup_property]
+QED
 (* This theorem does not help to prove identity below, but helps to prove isomorphism. *)
 
 (* Theorem: h << g ==> GroupIso I (homo_group g (left_coset g H)) (g / h)  *)
@@ -4942,9 +5144,9 @@ val normal_coset_op_property = store_thm(
        Since h <= g  by normal_subgroup_def
        this is true by BIJ and subgroup_coset_in_partition.
 *)
-val coset_homo_group_iso_quotient_group = store_thm(
-  "coset_homo_group_iso_quotient_group",
-  ``!g h:'a group. h << g ==> GroupIso I (homo_group g (left_coset g H)) (g / h)``,
+Theorem coset_homo_group_iso_quotient_group:
+    !g h:'a group. h << g ==> GroupIso I (homo_group g (left_coset g H)) (g / h)
+Proof
   rw_tac std_ss[GroupIso_def] >| [
     `h <= g` by metis_tac[normal_subgroup_def] >>
     rw_tac std_ss[GroupHomo_def, homo_monoid_def, quotient_group_def] >| [
@@ -4956,7 +5158,8 @@ val coset_homo_group_iso_quotient_group = store_thm(
     `h <= g` by metis_tac[normal_subgroup_def] >>
     rw_tac std_ss[homo_monoid_def, quotient_group_def] >>
     rw_tac std_ss[BIJ_DEF, INJ_DEF, SURJ_DEF, subgroup_coset_in_partition]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Kernel Group of Group Homomorphism.                                       *)
@@ -4978,11 +5181,12 @@ End
 
 (* Theorem: !x. x IN kernel f g h <=> x IN G /\ f x = h.id *)
 (* Proof: by definition. *)
-val kernel_property = store_thm(
-  "kernel_property",
-  ``!(g:'a group) (h:'b group). !f x. x IN kernel f g h <=> x IN G /\ (f x = h.id)``,
+Theorem kernel_property:
+    !(g:'a group) (h:'b group). !f x. x IN kernel f g h <=> x IN G /\ (f x = h.id)
+Proof
   simp_tac std_ss [kernel_def, preimage_def] >>
-  rw[]);
+  rw[]
+QED
 
 (* export trivial truth. *)
 val _ = export_rewrites ["kernel_property"];
@@ -5022,9 +5226,9 @@ val kernel_element = |- !g h f x. x IN kernel f g h <=> x IN G /\ (f x = h.id): 
                 = h.id            by group_inv_id
    Hence |/ x IN kernel f g h     by preimage_of_image
 *)
-val kernel_group_group = store_thm(
-  "kernel_group_group",
-  ``!(g:'a group) (h:'b group). !f. Group g /\ Group h /\ GroupHomo f g h ==> Group (kernel_group f g h)``,
+Theorem kernel_group_group:
+    !(g:'a group) (h:'b group). !f. Group g /\ Group h /\ GroupHomo f g h ==> Group (kernel_group f g h)
+Proof
   rw_tac std_ss[GroupHomo_def] >>
   rw_tac std_ss[group_def_alt, kernel_group_def] >| [
     `x IN G /\ y IN G` by metis_tac[kernel_property] >>
@@ -5046,7 +5250,8 @@ val kernel_group_group = store_thm(
     `_ = h.inv h.id` by metis_tac[kernel_property] >>
     `_ = h.id` by rw[] >>
     metis_tac[kernel_def, preimage_of_image]
-  ]);
+  ]
+QED
 
 (* Theorem: Group g /\ Group h /\ GroupHomo f g h ==> (kernel_group f g h) <= g *)
 (* Proof: by Subgroup_def.
@@ -5057,14 +5262,15 @@ val kernel_group_group = store_thm(
    (3) x IN (kernel_group f g h).carrier /\ y IN (kernel_group f g h).carrier ==> (kernel_group f g h).op x y = x * y
    True by kernel_group_def.
 *)
-val kernel_group_subgroup = store_thm(
-  "kernel_group_subgroup",
-  ``!(g:'a group) (h:'b group). !f. Group g /\ Group h /\ GroupHomo f g h ==> (kernel_group f g h) <= g``,
+Theorem kernel_group_subgroup:
+    !(g:'a group) (h:'b group). !f. Group g /\ Group h /\ GroupHomo f g h ==> (kernel_group f g h) <= g
+Proof
   rw_tac std_ss[Subgroup_def] >| [
     rw_tac std_ss[kernel_group_group],
     rw[kernel_group_def, kernel_def, preimage_subset],
     full_simp_tac (srw_ss()) [kernel_group_def]
-  ]);
+  ]
+QED
 
 (* Theorem: Group g /\ Group h /\ GroupHomo f g h ==> (kernel_group f g h) << g *)
 (* Proof: by normal_subgroup_def.
@@ -5080,24 +5286,26 @@ val kernel_group_subgroup = store_thm(
    = h.id                               by group_rinv
    Hence a * z * |/ a IN kernel f g h   by preimage_of_image
 *)
-val kernel_group_normal = store_thm(
-  "kernel_group_normal",
-  ``!(g:'a group) (h:'b group). !f. Group g /\ Group h /\ GroupHomo f g h ==> (kernel_group f g h) << g``,
+Theorem kernel_group_normal:
+    !(g:'a group) (h:'b group). !f. Group g /\ Group h /\ GroupHomo f g h ==> (kernel_group f g h) << g
+Proof
   rw_tac std_ss[normal_subgroup_def, kernel_group_subgroup, kernel_group_def] >>
   `z IN G /\ (f z = h.id)` by metis_tac[kernel_property] >>
   `|/ a IN G /\ a * z IN G /\ a * z * |/ a IN G` by rw[] >>
   `f (a * z * |/ a) = h.id` by metis_tac[group_rid, group_rinv, group_homo_inv, GroupHomo_def] >>
-  metis_tac[kernel_property, group_div_def]);
+  metis_tac[kernel_property, group_div_def]
+QED
 
 (* Theorem: Group g /\ Group h /\ GroupHomo f g h ==> Group (g / (kernel_group f g h)) *)
 (* Proof:
    By kernel_group_normal, kernel_group f g h << g.
    By quotient_group_group, Group (g / (kernel_group f g h))
 *)
-val kernel_quotient_group = store_thm(
-  "kernel_quotient_group",
-  ``!(g:'a group) (h:'b group). !f. Group g /\ Group h /\ GroupHomo f g h ==> Group (g / kernel_group f g h)``,
-  rw[kernel_group_normal, quotient_group_group]);
+Theorem kernel_quotient_group:
+    !(g:'a group) (h:'b group). !f. Group g /\ Group h /\ GroupHomo f g h ==> Group (g / kernel_group f g h)
+Proof
+  rw[kernel_group_normal, quotient_group_group]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Homomorphic Image and Kernel.                                             *)
@@ -5141,9 +5349,9 @@ End
    Hence x IN h.carrier        by MonoidHomo_def
    Hence h.op x h.id = x      by monoid_rid
 *)
-val homo_image_monoid = store_thm(
-  "homo_image_monoid",
-  ``!(g:'a monoid) (h:'b monoid). !f. Monoid g /\ Monoid h /\ MonoidHomo f g h ==> Monoid (homo_image f g h)``,
+Theorem homo_image_monoid:
+    !(g:'a monoid) (h:'b monoid). !f. Monoid g /\ Monoid h /\ MonoidHomo f g h ==> Monoid (homo_image f g h)
+Proof
   rw_tac std_ss[MonoidHomo_def] >>
   `!x. x IN IMAGE f G ==> ?a. a IN G /\ (f a = x)` by metis_tac[IN_IMAGE] >>
   rw_tac std_ss[homo_image_def, Monoid_def] >| [
@@ -5161,7 +5369,8 @@ val homo_image_monoid = store_thm(
     rw[],
     `x IN h.carrier` by metis_tac[] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: Group g /\ Group h /\ GroupHomo f g h ==> Group (homo_image f g h) *)
 (* Proof: by definition.
@@ -5199,9 +5408,9 @@ val homo_image_monoid = store_thm(
             = f #e                    by group_rinv
             = h.id                    by group_homo_id
 *)
-val homo_image_group = store_thm(
-  "homo_image_group",
-  ``!(g:'a group) (h:'b group). !f. Group g /\ Group h /\ GroupHomo f g h ==> Group (homo_image f g h)``,
+Theorem homo_image_group:
+    !(g:'a group) (h:'b group). !f. Group g /\ Group h /\ GroupHomo f g h ==> Group (homo_image f g h)
+Proof
   rpt strip_tac >>
   `f #e = h.id` by rw_tac std_ss[group_homo_id] >>
   `MonoidHomo f g h` by prove_tac[GroupHomo_def, MonoidHomo_def] >>
@@ -5211,7 +5420,8 @@ val homo_image_group = store_thm(
   `|/ a IN G` by rw[] >>
   `( |/ a * a = #e) /\ (a * |/ a = #e)` by rw[] >>
   `f ( |/ a) IN IMAGE f G` by metis_tac[GroupHomo_def, IN_IMAGE] >>
-  metis_tac[GroupHomo_def]);
+  metis_tac[GroupHomo_def]
+QED
 
 (* Theorem: Group g /\ Group h /\ GroupHomo f g h ==> (homo_image f g h) <= h *)
 (* Proof: by Subgroup_def.
@@ -5224,15 +5434,16 @@ val homo_image_group = store_thm(
    (3) x IN (homo_image f g h).carrier /\ y IN (homo_image f g h).carrier ==> (homo_image f g h).op x y = h.op x y
    True by homo_image_def.
 *)
-val homo_image_subgroup = store_thm(
-  "homo_image_subgroup",
-  ``!(g:'a group) (h:'b group). !f. Group g /\ Group h /\ GroupHomo f g h ==> (homo_image f g h) <= h``,
+Theorem homo_image_subgroup:
+    !(g:'a group) (h:'b group). !f. Group g /\ Group h /\ GroupHomo f g h ==> (homo_image f g h) <= h
+Proof
   rw_tac std_ss[Subgroup_def] >| [
     rw_tac std_ss[homo_image_group],
     rw[homo_image_def, SUBSET_DEF] >>
     metis_tac[GroupHomo_def],
     rw_tac std_ss[homo_image_def]
-  ]);
+  ]
+QED
 
 (* Theorem: Group g /\ Group h /\ SURJ f G h.carrier ==> GroupIso I h (homo_image f g h) *)
 (* Proof:
@@ -5244,12 +5455,13 @@ val homo_image_subgroup = store_thm(
        Note x IN IMAGE f G ==> ?z. z IN G /\ f z = x    by IN_IMAGE
         and z IN G ==> f z = x IN h.carrier             by SURJ_DEF
 *)
-val group_homo_image_surj_property = store_thm(
-  "group_homo_image_surj_property",
-  ``!(g:'a group) (h:'b group). !f. Group g /\ Group h /\
-     SURJ f G h.carrier ==> GroupIso I h (homo_image f g h)``,
+Theorem group_homo_image_surj_property:
+    !(g:'a group) (h:'b group). !f. Group g /\ Group h /\
+     SURJ f G h.carrier ==> GroupIso I h (homo_image f g h)
+Proof
   rw_tac std_ss[BIJ_DEF, SURJ_DEF, INJ_DEF, GroupIso_def, GroupHomo_def, homo_image_def] >>
-  metis_tac[IN_IMAGE]);
+  metis_tac[IN_IMAGE]
+QED
 
 (* Theorem: Monoid g /\ MonoidHomo f g h ==> Monoid (homo_image f g h) *)
 (* Proof:
@@ -5291,9 +5503,9 @@ val group_homo_image_surj_property = store_thm(
           = f a                                 by monoid_rid
           = x
 *)
-val monoid_homo_homo_image_monoid = store_thm(
-  "monoid_homo_homo_image_monoid",
-  ``!(g:'a monoid) (h:'b monoid) f. Monoid g /\ MonoidHomo f g h ==> Monoid (homo_image f g h)``,
+Theorem monoid_homo_homo_image_monoid:
+    !(g:'a monoid) (h:'b monoid) f. Monoid g /\ MonoidHomo f g h ==> Monoid (homo_image f g h)
+Proof
   rw_tac std_ss[MonoidHomo_def] >>
   `!x. x IN IMAGE f G ==> ?a. a IN G /\ (f a = x)` by metis_tac[IN_IMAGE] >>
   rw_tac std_ss[homo_image_def, Monoid_def] >| [
@@ -5320,7 +5532,8 @@ val monoid_homo_homo_image_monoid = store_thm(
     `?a. a IN G /\ (f a = x)` by rw_tac std_ss[] >>
     `h.op x h.id = f (a * #e)` by rw_tac std_ss[monoid_id_element] >>
     metis_tac[monoid_rid]
-  ]);
+  ]
+QED
 
 (*
 GroupHomo_def is weaker than MonoidHomo_def.
@@ -5351,9 +5564,9 @@ Better keep GroupHomo, just use MonoidHomo if necessary.
           = f #e                         by group_rinv
           = h.id                         by MonoidHomo_def
 *)
-val group_homo_homo_image_group = store_thm(
-  "group_homo_homo_image_group",
-  ``!(g:'a group) (h:'b group) f. Group g /\ MonoidHomo f g h ==> Group (homo_image f g h)``,
+Theorem group_homo_homo_image_group:
+    !(g:'a group) (h:'b group) f. Group g /\ MonoidHomo f g h ==> Group (homo_image f g h)
+Proof
   rpt strip_tac >>
   `Monoid (homo_image f g h)` by rw[monoid_homo_homo_image_monoid] >>
   rw_tac std_ss[Group_def, monoid_invertibles_def, homo_image_def, GSPECIFICATION, EXTENSION, EQ_IMP_THM] >>
@@ -5361,7 +5574,8 @@ val group_homo_homo_image_group = store_thm(
   `|/ a IN G` by rw[] >>
   `( |/ a * a = #e) /\ (a * |/ a = #e)` by rw[] >>
   `f ( |/ a) IN IMAGE f G` by metis_tac[IN_IMAGE] >>
-  metis_tac[MonoidHomo_def]);
+  metis_tac[MonoidHomo_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* First Isomorphic Theorem for Group.                                       *)
@@ -5412,11 +5626,11 @@ val group_homo_homo_image_group = store_thm(
    = h.op (f y) h.inv (f y)       by above
    = h.id                         by group_rinv
 *)
-val homo_image_homo_quotient_kernel = store_thm(
-  "homo_image_homo_quotient_kernel",
-  ``!(g:'a group) (h:'b group). !f. Group g /\ Group h /\ GroupHomo f g h ==>
+Theorem homo_image_homo_quotient_kernel:
+    !(g:'a group) (h:'b group). !f. Group g /\ Group h /\ GroupHomo f g h ==>
             GroupHomo (\z. (CHOICE (preimage f G z)) * (kernel f g h) )
-                     (homo_image f g h) (g / (kernel_group f g h))``,
+                     (homo_image f g h) (g / (kernel_group f g h))
+Proof
   rw_tac std_ss[homo_image_def, quotient_group_def] >>
   `(kernel_group f g h).carrier = kernel f g h` by rw_tac std_ss[kernel_group_def] >>
   rw_tac std_ss[GroupHomo_def] >| [
@@ -5443,7 +5657,8 @@ val homo_image_homo_quotient_kernel = store_thm(
     `_ = h.op (f y) (h.inv (h.op z z'))` by metis_tac[group_homo_inv] >>
     `_ = h.id` by metis_tac[group_rinv] >>
     metis_tac[kernel_property, group_div_element]
-  ]);
+  ]
+QED
 
 (* Theorem:  BIJ (\z. CHOICE (preimage f G z) * kernel f g h)
              (homo_image f g h).carrier (g / kernel_group f g h).carrier *)
@@ -5488,11 +5703,11 @@ val homo_image_homo_quotient_kernel = store_thm(
    = h.op z (h.inv z)                               by group_homo_inv
    = h.id                                           by group_linv
 *)
-val homo_image_to_quotient_kernel_bij = store_thm(
-  "homo_image_to_quotient_kernel_bij",
-  ``!(g:'a group) (h:'b group). !f. Group g /\ Group h /\ GroupHomo f g h ==>
+Theorem homo_image_to_quotient_kernel_bij:
+    !(g:'a group) (h:'b group). !f. Group g /\ Group h /\ GroupHomo f g h ==>
             BIJ (\z. (CHOICE (preimage f G z)) * (kernel f g h) )
-                     (homo_image f g h).carrier (g / (kernel_group f g h)).carrier``,
+                     (homo_image f g h).carrier (g / (kernel_group f g h)).carrier
+Proof
   rw_tac std_ss[homo_image_def, quotient_group_def] >>
   `(kernel_group f g h).carrier = kernel f g h` by rw_tac std_ss[kernel_group_def] >>
   rw_tac std_ss[BIJ_DEF, SURJ_DEF, INJ_DEF] >| [
@@ -5528,7 +5743,8 @@ val homo_image_to_quotient_kernel_bij = store_thm(
     `_ = h.op z (h.inv z)` by metis_tac[group_homo_inv] >>
     `_ = h.id` by metis_tac[group_rinv] >>
     metis_tac[kernel_property, group_div_def, group_div_element]
-  ]);
+  ]
+QED
 
 (* Theorem: Group g /\ Group h /\ GroupHomo f g h ==>
             GroupIso (\z. (CHOICE (preimage f G z)) * (kernel f g h) ) (homo_image f g h) (g / (kernel_group f g h)) *)
@@ -5538,12 +5754,13 @@ val homo_image_to_quotient_kernel_bij = store_thm(
    (2) BIJ (\z. CHOICE (preimage f G z) * kernel f g h) (homo_image f g h).carrier (g / kernel_group f g h).carrier
    True by homo_image_to_quotient_kernel_bij.
 *)
-val homo_image_iso_quotient_kernel = store_thm(
-  "homo_image_iso_quotient_kernel",
-  ``!(g:'a group) (h:'b group). !f. Group g /\ Group h /\ GroupHomo f g h ==>
+Theorem homo_image_iso_quotient_kernel:
+    !(g:'a group) (h:'b group). !f. Group g /\ Group h /\ GroupHomo f g h ==>
             GroupIso (\z. (CHOICE (preimage f G z)) * (kernel f g h) )
-                     (homo_image f g h) (g / (kernel_group f g h))``,
-  rw[GroupIso_def, homo_image_homo_quotient_kernel, homo_image_to_quotient_kernel_bij]);
+                     (homo_image f g h) (g / (kernel_group f g h))
+Proof
+  rw[GroupIso_def, homo_image_homo_quotient_kernel, homo_image_to_quotient_kernel_bij]
+QED
 
 (* Theorem [First Isomorphism Theorem for Groups]
    Let G and H be groups, and let f: G -> H be a homomorphism. Then:
@@ -5558,15 +5775,16 @@ val homo_image_iso_quotient_kernel = store_thm(
    (c) by homo_image_iso_quotient_kernel
    (d) by group_homo_image_surj_property
 *)
-val group_first_isomorphism_thm = store_thm(
-  "group_first_isomorphism_thm",
-  ``!(g:'a group) (h:'b group). !f. Group g /\ Group h /\ GroupHomo f g h ==>
+Theorem group_first_isomorphism_thm:
+    !(g:'a group) (h:'b group). !f. Group g /\ Group h /\ GroupHomo f g h ==>
       (kernel_group f g h) << g /\
       (homo_image f g h) <= h /\
       GroupIso (\z. (CHOICE (preimage f G z)) * (kernel f g h) )
                     (homo_image f g h) (g / (kernel_group f g h)) /\
-      (SURJ f G h.carrier ==> GroupIso I h (homo_image f g h))``,
-  rw[kernel_group_normal, homo_image_subgroup, homo_image_iso_quotient_kernel, group_homo_image_surj_property]);
+      (SURJ f G h.carrier ==> GroupIso I h (homo_image f g h))
+Proof
+  rw[kernel_group_normal, homo_image_subgroup, homo_image_iso_quotient_kernel, group_homo_image_surj_property]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Iterated Product Documentation                                            *)
@@ -5621,10 +5839,11 @@ val group_first_isomorphism_thm = store_thm(
 (* Proof:
    This is trivial by group_coset_eq_itself.
 *)
-val GPROD_SET_IMAGE = store_thm(
-  "GPROD_SET_IMAGE",
-  ``!g a. Group g /\ a IN G ==> (GPROD_SET g (a * G) = GPROD_SET g G)``,
-  rw[group_coset_eq_itself]);
+Theorem GPROD_SET_IMAGE:
+    !g a. Group g /\ a IN G ==> (GPROD_SET g (a * G) = GPROD_SET g G)
+Proof
+  rw[group_coset_eq_itself]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* An Invariant Property when reducing GPROD_SET g (IMAGE (\z. a*z) G):
@@ -5658,11 +5877,11 @@ val GPROD_SET_IMAGE = store_thm(
        = (a*x) * GPROD_SET g q                   by DELETE_NON_ELEMENT, (a*x) NOTIN q.
        = LHS
 *)
-val GPROD_SET_REDUCTION_INSERT = store_thm(
-  "GPROD_SET_REDUCTION_INSERT",
-  ``!g s. FiniteAbelianGroup g /\ s SUBSET G ==>
+Theorem GPROD_SET_REDUCTION_INSERT:
+    !g s. FiniteAbelianGroup g /\ s SUBSET G ==>
    !a x::(G). x NOTIN s ==>
-   (a * x * GPROD_SET g (a * (G DIFF (x INSERT s))) = GPROD_SET g (a * (G DIFF s)))``,
+   (a * x * GPROD_SET g (a * (G DIFF (x INSERT s))) = GPROD_SET g (a * (G DIFF s)))
+Proof
   rw[coset_def, IMAGE_DEF, EXTENSION, RES_FORALL_THM] >>
   qabbrev_tac `p = {a * z | z | z IN G /\ z NOTIN s}` >>
   qabbrev_tac `q = {a * z | z | z IN G /\ z <> x /\ z NOTIN s}` >>
@@ -5674,7 +5893,8 @@ val GPROD_SET_REDUCTION_INSERT = store_thm(
   `a * x IN G` by rw[] >>
   `AbelianMonoid g` by rw[abelian_group_is_abelian_monoid] >>
   `FINITE q` by metis_tac[SUBSET_FINITE] >>
-  metis_tac[GPROD_SET_THM, DELETE_NON_ELEMENT]);
+  metis_tac[GPROD_SET_THM, DELETE_NON_ELEMENT]
+QED
 
 (* Theorem: (a ** n) * <building n-steps GPROD_SET> * <reducing n-steps GPROD_SET> = GPROD_SET g G *)
 (* Proof:
@@ -5709,10 +5929,10 @@ val GPROD_SET_REDUCTION_INSERT = store_thm(
            GPROD_SET g (a * (G DIFF t))   by GPROD_SET_REDUCTION_INSERT
          = RHS                            by induction
 *)
-val GPROD_SET_REDUCTION = store_thm(
-  "GPROD_SET_REDUCTION",
-  ``!g s. FiniteAbelianGroup g /\ s SUBSET G ==>
-   !a::(G). a ** (CARD s) * (GPROD_SET g s) * GPROD_SET g (a * (G DIFF s)) = GPROD_SET g G``,
+Theorem GPROD_SET_REDUCTION:
+    !g s. FiniteAbelianGroup g /\ s SUBSET G ==>
+   !a::(G). a ** (CARD s) * (GPROD_SET g s) * GPROD_SET g (a * (G DIFF s)) = GPROD_SET g G
+Proof
   completeInduct_on `CARD s` >>
   pop_assum (assume_tac o SIMP_RULE bool_ss[GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO]) >>
   rw[RES_FORALL_THM] >>
@@ -5743,7 +5963,8 @@ val GPROD_SET_REDUCTION = store_thm(
     `_ = a ** (CARD t) * GPROD_SET g t * ((a * x) * GPROD_SET g t')` by rw[group_assoc] >>
     `_ = a ** (CARD t) * GPROD_SET g t * GPROD_SET g (a * (G DIFF t))` by metis_tac[GPROD_SET_REDUCTION_INSERT] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Define Group Factorial *)
 Definition GFACT_def:
@@ -5756,10 +5977,11 @@ End
    This is true by GPROD_SET_PROPERTY:
    !g s. FiniteAbelianMonoid g /\ s SUBSET G ==> GPROD_SET g s IN G : thm
 *)
-val GFACT_element = store_thm(
-  "GFACT_element",
-  ``!g. FiniteAbelianMonoid g ==> GFACT g IN G``,
-  rw_tac std_ss[FiniteAbelianMonoid_def, GFACT_def, GPROD_SET_PROPERTY, SUBSET_REFL]);
+Theorem GFACT_element:
+    !g. FiniteAbelianMonoid g ==> GFACT g IN G
+Proof
+  rw_tac std_ss[FiniteAbelianMonoid_def, GFACT_def, GPROD_SET_PROPERTY, SUBSET_REFL]
+QED
 
 (* Theorem: For FiniteAbelian Group g, a IN G ==> GFACT g = a ** (CARD g) * GFACT g *)
 (* Proof:
@@ -5772,9 +5994,9 @@ val GFACT_element = store_thm(
    ==> a ** (CARD G) * GPROD_SET g G * #e = GPROD_SET g G              by GPROD_SET_EMPTY.
    ==> a ** (CARD G) * GPROD_SET g G = GPROD_SET g G                   by group_assoc and group_rid
 *)
-val GFACT_identity = store_thm(
-  "GFACT_identity",
-  ``!(g:'a group) a. FiniteAbelianGroup g /\ a IN G ==> (GFACT g = a ** (CARD G) * GFACT g)``,
+Theorem GFACT_identity:
+    !(g:'a group) a. FiniteAbelianGroup g /\ a IN G ==> (GFACT g = a ** (CARD G) * GFACT g)
+Proof
   rw[GFACT_def] >>
   `G SUBSET G` by rw[] >>
   `G DIFF G = {}` by rw[] >>
@@ -5786,22 +6008,24 @@ val GFACT_identity = store_thm(
   `_ = a ** (CARD G) * GPROD_SET g G * GPROD_SET g {}` by rw[coset_empty] >>
   `_ = a ** (CARD G) * GPROD_SET g G * #e` by metis_tac[GPROD_SET_EMPTY] >>
   `_ = a ** (CARD G) * GPROD_SET g G` by rw[] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: For FiniteAbelian Group g, a IN G ==> a ** (CARD g) = #e *)
 (* Proof:
    Since  a ** (CARD G) * GFACT g = GFACT g    by GFACT_identity
    Hence  a ** (CARD G) = #e                   by group_lid_unique
 *)
-val finite_abelian_Fermat = store_thm(
-  "finite_abelian_Fermat",
-  ``!(g:'a group) a. FiniteAbelianGroup g /\ a IN G ==> (a ** (CARD G) = #e)``,
+Theorem finite_abelian_Fermat:
+    !(g:'a group) a. FiniteAbelianGroup g /\ a IN G ==> (a ** (CARD G) = #e)
+Proof
   rpt strip_tac >>
   `AbelianGroup g /\ Group g /\ FINITE G` by metis_tac[FiniteAbelianGroup_def, AbelianGroup_def, FiniteGroup_def] >>
   `AbelianMonoid g` by rw[abelian_group_is_abelian_monoid] >>
   `GFACT g IN G` by rw[GFACT_element] >>
   `a ** (CARD G) * GFACT g = GFACT g` by rw[GFACT_identity] >>
-  metis_tac[group_exp_element, group_lid_unique]);
+  metis_tac[group_exp_element, group_lid_unique]
+QED
 
 
 (* ------------------------------------------------------------------------- *)
@@ -5835,10 +6059,11 @@ End
    = ITSET (\e acc. op (f e) acc) {} id    by OP_IMAGE_DEF
    = id                                    by ITSET_EMPTY
 *)
-val OP_IMAGE_EMPTY = store_thm(
-  "OP_IMAGE_EMPTY",
-  ``!op id f. OP_IMAGE op id f {} = id``,
-  rw[OP_IMAGE_DEF, ITSET_EMPTY]);
+Theorem OP_IMAGE_EMPTY:
+    !op id f. OP_IMAGE op id f {} = id
+Proof
+  rw[OP_IMAGE_DEF, ITSET_EMPTY]
+QED
 
 (* Theorem: OP_IMAGE op id f {x} = op (f x) id *)
 (* Proof:
@@ -5847,10 +6072,11 @@ val OP_IMAGE_EMPTY = store_thm(
    = (\e acc. op (f e) acc) x id            by ITSET_SING
    = op (f x) id                            by application
 *)
-val OP_IMAGE_SING = store_thm(
-  "OP_IMAGE_SING",
-  ``!op id f x. OP_IMAGE op id f {x} = op (f x) id``,
-  rw[OP_IMAGE_DEF, ITSET_SING]);
+Theorem OP_IMAGE_SING:
+    !op id f x. OP_IMAGE op id f {x} = op (f x) id
+Proof
+  rw[OP_IMAGE_DEF, ITSET_SING]
+QED
 
 (*
 Now the hard part: show (\e acc. op (f e) acc) is an accumulative function for ITSET.
@@ -5904,17 +6130,18 @@ val _ = overload_on("FUN_COMM", ``\op f. !x y z. op (f x) (op (f y) z) = op (f y
       or show: ITSET g (e INSERT s) id = g e (ITSET g (s DELETE e) id)
       Given FUN_COMM op f, the is true by COMMUTING_ITSET_RECURSES.
 *)
-val OP_IMAGE_THM = store_thm(
-  "OP_IMAGE_THM",
-  ``!op id f. (OP_IMAGE op id f {} = id)  /\
+Theorem OP_IMAGE_THM:
+    !op id f. (OP_IMAGE op id f {} = id)  /\
    (FUN_COMM op f ==> !s. FINITE s ==>
-    !e. OP_IMAGE op id f (e INSERT s) = op (f e) (OP_IMAGE op id f (s DELETE e)))``,
+    !e. OP_IMAGE op id f (e INSERT s) = op (f e) (OP_IMAGE op id f (s DELETE e)))
+Proof
   rpt strip_tac >-
   rw[OP_IMAGE_EMPTY] >>
   rw[OP_IMAGE_DEF] >>
   qabbrev_tac `g = \e acc. op (f e) acc` >>
   rw[] >>
-  rw[COMMUTING_ITSET_RECURSES, Abbr`g`]);
+  rw[COMMUTING_ITSET_RECURSES, Abbr`g`]
+QED
 
 (* A better iterator for group operation over (f:'b -> 'a) *)
 Definition GROUP_IMAGE_DEF:
@@ -5931,24 +6158,27 @@ val it = |- !g f s. GPI f s = ITSET (\e acc. f e * acc) s #e: thm
 
 (* Theorem: GPI = OP_IMAGE (g.op) (g.id) *)
 (* Proof: by GROUP_IMAGE_DEF, OP_IMAGE_DEF, FUN_EQ_THM *)
-val group_image_as_op_image = store_thm(
-  "group_image_as_op_image",
-  ``!g:'a group. GPI = OP_IMAGE (g.op) (g.id)``,
-  rw[GROUP_IMAGE_DEF, OP_IMAGE_DEF, FUN_EQ_THM]);
+Theorem group_image_as_op_image:
+    !g:'a group. GPI = OP_IMAGE (g.op) (g.id)
+Proof
+  rw[GROUP_IMAGE_DEF, OP_IMAGE_DEF, FUN_EQ_THM]
+QED
 
 (* Theorem: SUM_IMAGE = OP_IMAGE (\(x y):num. x + y) 0 *)
 (* Proof: by SUM_IMAGE_DEF, OP_IMAGE_DEF, FUN_EQ_THM *)
-val sum_image_as_op_image = store_thm(
-  "sum_image_as_op_image",
-  ``SIGMA = OP_IMAGE (\(x y):num. x + y) 0``,
-  rw[SUM_IMAGE_DEF, OP_IMAGE_DEF, FUN_EQ_THM]);
+Theorem sum_image_as_op_image:
+    SIGMA = OP_IMAGE (\(x y):num. x + y) 0
+Proof
+  rw[SUM_IMAGE_DEF, OP_IMAGE_DEF, FUN_EQ_THM]
+QED
 
 (* Theorem: PROD_IMAGE = OP_IMAGE (\(x y):num. x * y) 1 *)
 (* Proof: by PROD_IMAGE_DEF, OP_IMAGE_DEF, FUN_EQ_THM *)
-val prod_image_as_op_image = store_thm(
-  "prod_image_as_op_image",
-  ``PI = OP_IMAGE (\(x y):num. x * y) 1``,
-  rw[PROD_IMAGE_DEF, OP_IMAGE_DEF, FUN_EQ_THM]);
+Theorem prod_image_as_op_image:
+    PI = OP_IMAGE (\(x y):num. x * y) 1
+Proof
+  rw[PROD_IMAGE_DEF, OP_IMAGE_DEF, FUN_EQ_THM]
+QED
 
 (*
 val _ = clear_overloads_on("GITSET");
@@ -5969,13 +6199,14 @@ val _ = overload_on("GPI", ``GROUP_IMAGE g``);
 
    Hence GITSET g = ITSET (\e acc. g.op e acc)  by FUN_EQ_THM
 *)
-val GITSET_AS_ITSET = store_thm(
-  "GITSET_AS_ITSET",
-  ``!g:'a group. GITSET g = ITSET (\e acc. g.op e acc)``,
+Theorem GITSET_AS_ITSET:
+    !g:'a group. GITSET g = ITSET (\e acc. g.op e acc)
+Proof
   rw[FUN_EQ_THM] >>
   `g.op = (\e acc. e * acc)` by rw[FUN_EQ_THM] >>
   `ITSET g.op = ITSET (\e acc. e * acc)` by rw[ITSET_CONG] >>
-  rw[]);
+  rw[]
+QED
 
 (*
 > ITSET_def |> ISPEC ``s:'b -> bool`` |> ISPEC ``(g:'a group).op`` |> ISPEC ``b:'a``;
@@ -5994,16 +6225,17 @@ val it = |- GITSET g s b = if FINITE s then if s = {} then b else GITSET g (REST
    = GPI I x                        by GROUP_IMAGE_DEF
    Hence GPROD_SET g = GPI I        by FUN_EQ_THM
 *)
-val GPROD_SET_AS_GROUP_IMAGE = store_thm(
-  "GPROD_SET_AS_GROUP_IMAGE",
-  ``!g:'a group. GPROD_SET g = GPI I``,
+Theorem GPROD_SET_AS_GROUP_IMAGE:
+    !g:'a group. GPROD_SET g = GPI I
+Proof
   rw[FUN_EQ_THM] >>
   `g.op = (\e acc. e * acc)` by rw[FUN_EQ_THM] >>
   `ITSET g.op = ITSET (\e acc. e * acc)` by rw[ITSET_CONG] >>
   `GPROD_SET g x = GITSET g x #e` by rw[GPROD_SET_def] >>
   `_ = ITSET (\e acc. e * acc) x #e` by rw[] >>
   `_ = GPI I x` by rw[GROUP_IMAGE_DEF] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: GPI f {} = #e *)
 (* Proof
@@ -6012,10 +6244,11 @@ val GPROD_SET_AS_GROUP_IMAGE = store_thm(
    = ITSET (\e acc. f e * acc) {} #e  by GROUP_IMAGE_DEF
    = #e                               by ITSET_EMPTY
 *)
-val group_image_empty = store_thm(
-  "group_image_empty",
-  ``!g:'a group. !f. GPI f {} = #e``,
-  rw[GROUP_IMAGE_DEF, ITSET_EMPTY]);
+Theorem group_image_empty:
+    !g:'a group. !f. GPI f {} = #e
+Proof
+  rw[GROUP_IMAGE_DEF, ITSET_EMPTY]
+QED
 
 (* Define a group function *)
 Definition group_fun_def:
@@ -6034,10 +6267,11 @@ val _ = temp_overload_on("gfun", ``group_fun g``);
    = f x * #e                          by ITSET_SING
    = f x                               by monoid_rid
 *)
-val group_image_sing = store_thm(
-  "group_image_sing",
-  ``!g:'a group. Monoid g ==> !f. gfun f ==> !x. x IN G ==> (GPI f {x} = f x)``,
-  rw[GROUP_IMAGE_DEF, group_fun_def, ITSET_SING]);
+Theorem group_image_sing:
+    !g:'a group. Monoid g ==> !f. gfun f ==> !x. x IN G ==> (GPI f {x} = f x)
+Proof
+  rw[GROUP_IMAGE_DEF, group_fun_def, ITSET_SING]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Group Order Documentation                                          *)
@@ -6183,17 +6417,19 @@ val group_image_sing = store_thm(
     thus CARD G <> 0              by CARD_EQ_0, FINITE G
       or 0 < CARD G               by NOT_ZERO_LT_ZERO
 *)
-val finite_group_card_pos = store_thm(
-  "finite_group_card_pos",
-  ``!g:'a group. FiniteGroup g ==> 0 < CARD G``,
-  metis_tac[FiniteGroup_def, group_carrier_nonempty, CARD_EQ_0, NOT_ZERO_LT_ZERO]);
+Theorem finite_group_card_pos:
+    !g:'a group. FiniteGroup g ==> 0 < CARD G
+Proof
+  metis_tac[FiniteGroup_def, group_carrier_nonempty, CARD_EQ_0, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: For FINITE Group g and x IN G, x ** n cannot be all distinct. *)
 (* Proof: by finite_monoid_exp_not_distinct. *)
-val finite_group_exp_not_distinct = store_thm(
-  "finite_group_exp_not_distinct",
-  ``!g:'a group. FiniteGroup g ==> !x. x IN G ==> ?h k. (x ** h = x ** k) /\ h <> k``,
-  rw[finite_monoid_exp_not_distinct, finite_group_is_finite_monoid]);
+Theorem finite_group_exp_not_distinct:
+    !g:'a group. FiniteGroup g ==> !x. x IN G ==> ?h k. (x ** h = x ** k) /\ h <> k
+Proof
+  rw[finite_monoid_exp_not_distinct, finite_group_is_finite_monoid]
+QED
 
 (* Theorem: For FINITE Group g and x IN G, there is k > 0 such that x ** k = #e. *)
 (* Proof:
@@ -6204,15 +6440,16 @@ val finite_group_exp_not_distinct = store_thm(
 
    Note: Probably can be improved to bound k <= CARD G.
 *)
-val finite_group_exp_period_exists = store_thm(
-  "finite_group_exp_period_exists",
-  ``!g:'a group. FiniteGroup g ==> !x. x IN G ==> ?k. 0 < k /\ (x ** k = #e)``,
+Theorem finite_group_exp_period_exists:
+    !g:'a group. FiniteGroup g ==> !x. x IN G ==> ?k. 0 < k /\ (x ** k = #e)
+Proof
   rpt strip_tac >>
   `?m n. m <> n /\ (x ** m = x ** n)` by metis_tac[finite_group_exp_not_distinct] >>
   Cases_on `m < n` >| [
     `0 < n-m` by decide_tac,
     `n < m /\ 0 < m-n` by decide_tac
-  ] >> metis_tac[group_exp_eq, FiniteGroup_def]);
+  ] >> metis_tac[group_exp_eq, FiniteGroup_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Group Order                                                        *)
@@ -6237,26 +6474,29 @@ Thus if the theorem only needs 0 < ord x, there is no need for FiniteGroup g.
     But ?k. 0 < k /\ (x ** k = #e)    by finite_group_exp_period_exists
    Hence a contradiction.
 *)
-val group_order_nonzero = store_thm(
-  "group_order_nonzero",
-  ``!g:'a group. FiniteGroup g ==> !x. x IN G ==> ord x <> 0``,
+Theorem group_order_nonzero:
+    !g:'a group. FiniteGroup g ==> !x. x IN G ==> ord x <> 0
+Proof
   spose_not_then strip_assume_tac >>
   `ord x = 0` by decide_tac >>
-  metis_tac[order_eq_0, finite_group_exp_period_exists]);
+  metis_tac[order_eq_0, finite_group_exp_period_exists]
+QED
 
 (* Theorem: FiniteGroup g ==> !x. x IN G ==> 0 < ord x *)
 (* Proof: by group_order_nonzero *)
-val group_order_pos = store_thm(
-  "group_order_pos",
-  ``!g:'a group. FiniteGroup g ==> !x. x IN G ==> 0 < ord x``,
-  metis_tac[group_order_nonzero, NOT_ZERO_LT_ZERO]);
+Theorem group_order_pos:
+    !g:'a group. FiniteGroup g ==> !x. x IN G ==> 0 < ord x
+Proof
+  metis_tac[group_order_nonzero, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: The finite group element order m satisfies: 0 < m and x ** m = #e. *)
 (* Proof: by group_order_pos, order_property. *)
-val group_order_property = store_thm(
-  "group_order_property",
-  ``!g:'a group. FiniteGroup g ==> !x. x IN G ==> 0 < ord x /\ (x ** ord x = #e)``,
-  rw[group_order_pos, order_property]);
+Theorem group_order_property:
+    !g:'a group. FiniteGroup g ==> !x. x IN G ==> 0 < ord x /\ (x ** ord x = #e)
+Proof
+  rw[group_order_pos, order_property]
+QED
 
 (* Theorem: For Group g, if 0 < m, |/ x = x ** (m-1) where m = ord x *)
 (* Proof:
@@ -6266,15 +6506,16 @@ val group_order_property = store_thm(
          = #e                       by order_property
    Thus |/ x = y                    by group_rinv_unique
 *)
-val group_order_inv = store_thm(
-  "group_order_inv",
-  ``!g:'a group. Group g ==> !x. x IN G /\ 0 < ord x ==> ( |/x = x ** ((ord x)-1))``,
+Theorem group_order_inv:
+    !g:'a group. Group g ==> !x. x IN G /\ 0 < ord x ==> ( |/x = x ** ((ord x)-1))
+Proof
   rpt strip_tac >>
   qabbrev_tac `y = x ** ((ord x) - 1)` >>
   `y IN G` by rw[Abbr`y`] >>
   `SUC ((ord x) - 1) = ord x` by decide_tac >>
   `x * y = x ** (ord x)` by metis_tac[group_exp_SUC] >>
-  metis_tac[group_rinv_unique, order_property]);
+  metis_tac[group_rinv_unique, order_property]
+QED
 
 (* Theorem: For Group g, if 0 < m, x ** n = x ** (n mod m), where m = ord x *)
 (* Proof:
@@ -6287,15 +6528,16 @@ val group_order_inv = store_thm(
    = #e * (x ** r)               by group_id_exp
    = x ** r                      by group_lid
 *)
-val group_exp_mod = store_thm(
-  "group_exp_mod",
-  ``!g:'a group. Group g ==> !x. x IN G /\ 0 < ord x ==> !n. x ** n = x ** (n MOD ord x)``,
+Theorem group_exp_mod:
+    !g:'a group. Group g ==> !x. x IN G /\ 0 < ord x ==> !n. x ** n = x ** (n MOD ord x)
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = ord x` >>
   `x ** m = #e` by rw[order_property, Abbr`m`] >>
   `n = (n DIV m) * m + (n MOD m)` by rw[DIVISION] >>
   `_ = m * (n DIV m) + (n MOD m)` by decide_tac >>
-  metis_tac[group_exp_add, group_exp_mult, group_id_exp, group_lid, group_exp_element]);
+  metis_tac[group_exp_add, group_exp_mult, group_id_exp, group_lid, group_exp_element]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Characterization of Group Order                                           *)
@@ -6305,35 +6547,38 @@ val group_exp_mod = store_thm(
 
 (* Theorem: If 0 < n, ord x = n iff x ** n = #e with 0 < n, and !m < n, x ** m <> #e. *)
 (* Proof: true by order_thm. *)
-val group_order_thm = store_thm(
-  "group_order_thm",
-  ``!g:'a group. !n. 0 < n ==>
-   !x. (ord x = n) <=> (x ** n = #e) /\ (!m. 0 < m /\ m < n ==> (x ** m) <> #e)``,
-  rw[order_thm]);
+Theorem group_order_thm:
+    !g:'a group. !n. 0 < n ==>
+   !x. (ord x = n) <=> (x ** n = #e) /\ (!m. 0 < m /\ m < n ==> (x ** m) <> #e)
+Proof
+  rw[order_thm]
+QED
 
 (* Theorem: For Group g, m, n < (ord x), x ** m = x ** n ==> m = n *)
 (* Proof:
    Otherwise x ** (m-n) = #e by group_exp_eq,
    contradicting minimal nature of element order.
 *)
-val group_order_unique = store_thm(
-  "group_order_unique",
-  ``!g:'a group. Group g ==> !x. x IN G ==>
-   !m n. m < ord x /\ n < ord x /\ (x ** m = x ** n) ==> (m = n)``,
+Theorem group_order_unique:
+    !g:'a group. Group g ==> !x. x IN G ==>
+   !m n. m < ord x /\ n < ord x /\ (x ** m = x ** n) ==> (m = n)
+Proof
   spose_not_then strip_assume_tac >>
   Cases_on `m < n` >| [
     `0 < n-m /\ n-m < ord x` by decide_tac,
     `n < m /\ 0 < m-n /\ m-n < ord x` by decide_tac
   ] >>
-  metis_tac[group_exp_eq, order_minimal]);
+  metis_tac[group_exp_eq, order_minimal]
+QED
 
 (* Theorem: Group g /\ x IN G ==> !n m. n < ord x /\ m < ord x /\ (x ** n = x ** m) ==> (n = m) *)
 (* Proof: by group_order_unique *)
-val group_exp_equal = store_thm(
-  "group_exp_equal",
-  ``!(g:'a group) x. Group g /\ x IN G ==>
-   !n m. n < ord x /\ m < ord x /\ (x ** n = x ** m) ==> (n = m)``,
-  metis_tac[group_order_unique]);
+Theorem group_exp_equal:
+    !(g:'a group) x. Group g /\ x IN G ==>
+   !n m. n < ord x /\ m < ord x /\ (x ** n = x ** m) ==> (n = m)
+Proof
+  metis_tac[group_order_unique]
+QED
 
 (* Theorem: [property of finite group order]
    For x IN G, if (ord x = n), 0 < n /\ (x ** n = #e) /\ (!m. 0 < m /\ m < n ==> (x ** m) <> #e
@@ -6342,11 +6587,12 @@ val group_exp_equal = store_thm(
    ord x = n ==> 0 < n /\ x ** n = #e                  by group_order_property
    ord x = n ==> !m. 0 < m /\ m < n ==> x ** m <> #e   by order_minimal
 *)
-val finite_group_order = store_thm(
-  "finite_group_order",
-  ``!g:'a group. FiniteGroup g ==> !x. x IN G ==>
-      !n. (ord x = n) ==> (0 < n /\ (x ** n = #e) /\ (!m. 0 < m /\ m < n ==> (x ** m) <> #e))``,
-  metis_tac[group_order_property, order_minimal]);
+Theorem finite_group_order:
+    !g:'a group. FiniteGroup g ==> !x. x IN G ==>
+      !n. (ord x = n) ==> (0 < n /\ (x ** n = #e) /\ (!m. 0 < m /\ m < n ==> (x ** m) <> #e))
+Proof
+  metis_tac[group_order_property, order_minimal]
+QED
 
 (* Theorem: FiniteGroup g /\ !z. z IN G /\ (ord z = CARD G) ==>
             !x. x IN G ==> ?n. n < CARD G /\ (x = z ** n) *)
@@ -6363,10 +6609,10 @@ val finite_group_order = store_thm(
    i.e. IMAGE f (count (CARD G)) = G     by IMAGE_SURJ
    Hence ?n. n < CARD G /\ x = z ** n    by IN_IMAGE, IN_COUNT
 *)
-val finite_group_primitive_property = store_thm(
-  "finite_group_primitive_property",
-  ``!g:'a group. FiniteGroup g ==> !z. z IN G /\ (ord z = CARD G) ==>
-   (!x. x IN G ==> ?n. n < CARD G /\ (x = z ** n))``,
+Theorem finite_group_primitive_property:
+    !g:'a group. FiniteGroup g ==> !z. z IN G /\ (ord z = CARD G) ==>
+   (!x. x IN G ==> ?n. n < CARD G /\ (x = z ** n))
+Proof
   rpt (stripDup[FiniteGroup_def]) >>
   qabbrev_tac `f = \n. z ** n` >>
   `INJ f (count (CARD G)) G` by
@@ -6376,7 +6622,8 @@ val finite_group_primitive_property = store_thm(
   `CARD (count (CARD G)) = CARD G` by rw[] >>
   `SURJ f (count (CARD G)) G` by rw[FINITE_INJ_AS_SURJ] >>
   `IMAGE f (count (CARD G)) = G` by rw[GSYM IMAGE_SURJ] >>
-  metis_tac[IN_IMAGE, IN_COUNT]);
+  metis_tac[IN_IMAGE, IN_COUNT]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Lifting Theorems from Monoid Order                                        *)
@@ -6466,17 +6713,19 @@ val group_order_common_coprime = lift_monoid_order_thm "common_coprime";
 
 (* Theorem: Group g ==> (orders g 1 = {#e}) *)
 (* Proof: by group_is_monoid, orders_eq_1 *)
-val group_orders_eq_1 = store_thm(
-  "group_orders_eq_1",
-  ``!g:'a group. Group g ==> (orders g 1 = {#e})``,
-  rw[group_is_monoid, orders_eq_1]);
+Theorem group_orders_eq_1:
+    !g:'a group. Group g ==> (orders g 1 = {#e})
+Proof
+  rw[group_is_monoid, orders_eq_1]
+QED
 
 (* Theorem: Group g /\ x IN G ==> !n. (x ** n = #e) <=> (ord x) divides n *)
 (* Proof: by group_order_condition *)
-val group_order_divides_exp = store_thm(
-  "group_order_divides_exp",
-  ``!(g:'a group) x. Group g /\ x IN G ==> !n. (x ** n = #e) <=> (ord x) divides n``,
-  rw[group_order_condition]);
+Theorem group_order_divides_exp:
+    !(g:'a group) x. Group g /\ x IN G ==> !n. (x ** n = #e) <=> (ord x) divides n
+Proof
+  rw[group_order_condition]
+QED
 
 (* Another proof of subgroup_order in subgroupTheory. *)
 
@@ -6501,10 +6750,11 @@ val subgroup_order = prove(
 
 (* Theorem: Group g ==> !x. x IN G /\ 0 < ord x ==> !n. x ** n = x ** (n MOD (ord x)) *)
 (* Proof: by monoid_exp_mod_order, group_is_monoid *)
-val group_exp_mod_order = store_thm(
-  "group_exp_mod_order",
-  ``!g:'a group. Group g ==> !x. x IN G /\ 0 < ord x ==> !n. x ** n = x ** (n MOD (ord x))``,
-  metis_tac[monoid_exp_mod_order, group_is_monoid]);
+Theorem group_exp_mod_order:
+    !g:'a group. Group g ==> !x. x IN G /\ 0 < ord x ==> !n. x ** n = x ** (n MOD (ord x))
+Proof
+  metis_tac[monoid_exp_mod_order, group_is_monoid]
+QED
 
 (* Theorem: In a Finite Abelian Group, every order divides the maximal order.
             FiniteAbelianGroup g ==> !x. x IN G ==> ord x divides maximal_order g *)
@@ -6512,29 +6762,32 @@ val group_exp_mod_order = store_thm(
    Since 0 < ord x     by group_order_pos
    The result is true  by monoid_order_divides_maximal
 *)
-val group_order_divides_maximal = store_thm(
-  "group_order_divides_maximal",
-  ``!g:'a group. FiniteAbelianGroup g ==> !x. x IN G ==> (ord x) divides (maximal_order g)``,
+Theorem group_order_divides_maximal:
+    !g:'a group. FiniteAbelianGroup g ==> !x. x IN G ==> (ord x) divides (maximal_order g)
+Proof
   metis_tac[monoid_order_divides_maximal, group_order_pos, finite_group_is_finite_monoid,
-             FiniteAbelianGroup_def_alt, FiniteAbelianMonoid_def_alt]);
+             FiniteAbelianGroup_def_alt, FiniteAbelianMonoid_def_alt]
+QED
 
 (* Theorem: AbelianGroup g ==> !x y. x IN G /\ y IN G ==>
             ?z. z IN G /\ (ord z * gcd (ord x) (ord y) = lcm (ord x) (ord y)) *)
 (* Proof: by AbelianGroup_def, group_order_common *)
-val abelian_group_order_common = store_thm(
-  "abelian_group_order_common",
-  ``!g:'a group. AbelianGroup g ==> !x y. x IN G /\ y IN G ==>
-   ?z. z IN G /\ (ord z * gcd (ord x) (ord y) = lcm (ord x) (ord y))``,
-  rw[AbelianGroup_def, group_order_common]);
+Theorem abelian_group_order_common:
+    !g:'a group. AbelianGroup g ==> !x y. x IN G /\ y IN G ==>
+   ?z. z IN G /\ (ord z * gcd (ord x) (ord y) = lcm (ord x) (ord y))
+Proof
+  rw[AbelianGroup_def, group_order_common]
+QED
 
 (* Theorem: AbelianGroup g ==> !x y. x IN G /\ y IN G /\ coprime (ord x) (ord y) ==>
             ?z. z IN G /\ (ord z = ord x * ord y) *)
 (* Proof: by AbelianGroup_def, group_order_common_coprime *)
-val abelian_group_order_common_coprime = store_thm(
-  "abelian_group_order_common_coprime",
-  ``!g:'a group. AbelianGroup g ==> !x y. x IN G /\ y IN G /\ coprime (ord x) (ord y) ==>
-   ?z. z IN G /\ (ord z = ord x * ord y)``,
-  rw[AbelianGroup_def, group_order_common_coprime]);
+Theorem abelian_group_order_common_coprime:
+    !g:'a group. AbelianGroup g ==> !x y. x IN G /\ y IN G /\ coprime (ord x) (ord y) ==>
+   ?z. z IN G /\ (ord z = ord x * ord y)
+Proof
+  rw[AbelianGroup_def, group_order_common_coprime]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Order of Inverse                                                          *)
@@ -6564,9 +6817,9 @@ group_order_inv
    = ord (x ** (n - 1)) * gcd n (n - 1)    by group_order_inv
    = n                                     by group_order_power
 *)
-val group_inv_order = store_thm(
-  "group_inv_order",
-  ``!(g:'a group) x. Group g /\ x IN G ==> (ord ( |/ x) = ord x)``,
+Theorem group_inv_order:
+    !(g:'a group) x. Group g /\ x IN G ==> (ord ( |/ x) = ord x)
+Proof
   rpt strip_tac >>
   qabbrev_tac `n = ord x` >>
   Cases_on `n = 0` >| [
@@ -6580,7 +6833,8 @@ val group_inv_order = store_thm(
     metis_tac[order_eq_0],
     `0 < n` by decide_tac >>
     metis_tac[MULT_RIGHT_1, coprime_PRE, group_order_inv, group_order_power]
-  ]);
+  ]
+QED
 
 (*
 > group_order_property |> ISPEC ``Invertibles g``;
@@ -6601,12 +6855,13 @@ val it = |- FiniteGroup (Invertibles g) ==> !x. x IN (Invertibles g).carrier ==>
     and (Invertibles g).exp = $**          by Invertibles_property
     ==> 0 < ord x /\ x ** ord x = #e       by above
 *)
-val monoid_inv_order_property = store_thm(
-  "monoid_inv_order_property",
-  ``!g:'a monoid. FiniteMonoid g ==> !x. x IN G* ==> 0 < ord x /\ (x ** ord x = #e)``,
+Theorem monoid_inv_order_property:
+    !g:'a monoid. FiniteMonoid g ==> !x. x IN G* ==> 0 < ord x /\ (x ** ord x = #e)
+Proof
   ntac 4 strip_tac >>
   `FiniteGroup (Invertibles g)` by rw[finite_monoid_invertibles_is_finite_group] >>
-  metis_tac[group_order_property, Invertibles_order, Invertibles_property]);
+  metis_tac[group_order_property, Invertibles_order, Invertibles_property]
+QED
 
 (*
 This proof is quite complicated:
@@ -6633,14 +6888,15 @@ val it = |- FiniteGroup (Invertibles g) ==> !x. x IN (Invertibles g).carrier ==>
     and (Invertibles g).inv x = |/ x           by Invertibles_inv
     ==> ord ( |/ x) = ord x                    by above
 *)
-val monoid_inv_order = store_thm(
-  "monoid_inv_order",
-  ``!(g:'a monoid) x. Monoid g /\ x IN G* ==> (ord ( |/ x) = ord x)``,
+Theorem monoid_inv_order:
+    !(g:'a monoid) x. Monoid g /\ x IN G* ==> (ord ( |/ x) = ord x)
+Proof
   rpt strip_tac >>
   `Group (Invertibles g)` by rw[monoid_invertibles_is_group] >>
   `(Invertibles g).carrier = G*` by rw[Invertibles_carrier] >>
   `(Invertibles g).inv x = |/ x` by metis_tac[Invertibles_inv] >>
-  metis_tac[group_inv_order, Invertibles_order]);
+  metis_tac[group_inv_order, Invertibles_order]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Application of Finite Group element order:                                *)
@@ -6671,42 +6927,47 @@ val _ = overload_on("Gen", ``\a. (Generated g a).carrier``);
 
 (* Theorem: x IN Gen a <=> ?n. x = a ** n *)
 (* Proof: by Generated_def *)
-val generated_element = store_thm(
-  "generated_element",
-  ``!g:'a group. !a x. x IN Gen a <=> ?n. x = a ** n``,
-  rw[Generated_def]);
+Theorem generated_element:
+    !g:'a group. !a x. x IN Gen a <=> ?n. x = a ** n
+Proof
+  rw[Generated_def]
+QED
 
 (* Theorem: ((gen a).op = g.op) /\ ((gen a).id = #e) *)
 (* Proof: by Generated_def. *)
-val generated_property = store_thm(
-  "generated_property",
-  ``!(g:'a group) a. ((gen a).op = g.op) /\ ((gen a).id = #e)``,
-  rw[Generated_def]);
+Theorem generated_property:
+    !(g:'a group) a. ((gen a).op = g.op) /\ ((gen a).id = #e)
+Proof
+  rw[Generated_def]
+QED
 
 (* Theorem: !a. a IN G ==> (Gen a = IMAGE (g.exp a) univ(:num)) *)
 (* Proof: by Generated_def, EXTENSION *)
-val generated_carrier = store_thm(
-  "generated_carrier",
-  ``!(g:'a group) a. a IN G ==> (Gen a = IMAGE (g.exp a) univ(:num))``,
-  rw[Generated_def, EXTENSION]);
+Theorem generated_carrier:
+    !(g:'a group) a. a IN G ==> (Gen a = IMAGE (g.exp a) univ(:num))
+Proof
+  rw[Generated_def, EXTENSION]
+QED
 
 (* Theorem: Group g ==> !x. x IN G ==> x IN (Gen x) *)
 (* Proof: by Generated_def, group_exp_1 *)
-val generated_gen_element = store_thm(
-  "generated_gen_element",
-  ``!g:'a group. Group g ==> !x. x IN G ==> x IN (Gen x)``,
+Theorem generated_gen_element:
+    !g:'a group. Group g ==> !x. x IN G ==> x IN (Gen x)
+Proof
   rw[Generated_def] >>
-  metis_tac[group_exp_1]);
+  metis_tac[group_exp_1]
+QED
 
 (* Theorem: #e IN (Gen a) *)
 (* Proof:
    Note a ** 0 = #e    by group_exp_0
     ==> #e IN (Gen a)  by generated_element
 *)
-val generated_carrier_has_id = store_thm(
-  "generated_carrier_has_id",
-  ``!g:'a group. !a. #e IN (Gen a)``,
-  metis_tac[generated_element, group_exp_0]);
+Theorem generated_carrier_has_id:
+    !g:'a group. !a. #e IN (Gen a)
+Proof
+  metis_tac[generated_element, group_exp_0]
+QED
 
 (* Theorem: Group g ==> (Gen #e = {#e}) *)
 (* Proof:
@@ -6715,10 +6976,11 @@ val generated_carrier_has_id = store_thm(
    = {x | x = #e}              by group_id_exp, Group g
    = {#e}                      by EXTENSION
 *)
-val generated_id_carrier = store_thm(
-  "generated_id_carrier",
-  ``!g:'a group. Group g ==> (Gen #e = {#e})``,
-  rw[Generated_def, EXTENSION]);
+Theorem generated_id_carrier:
+    !g:'a group. Group g ==> (Gen #e = {#e})
+Proof
+  rw[Generated_def, EXTENSION]
+QED
 
 (* Theorem: Group g ==> gen #e <= g *)
 (* Proof:
@@ -6733,10 +6995,11 @@ val generated_id_carrier = store_thm(
          so x * |/ y = #e        by group_inv_id, group_id_id
          or x * |/ y IN (Gen #e) by IN_SING
 *)
-val generated_id_subgroup = store_thm(
-  "generated_id_subgroup",
-  ``!g:'a group. Group g ==> gen #e <= g``,
-  rw[generated_id_carrier, subgroup_alt, generated_property]);
+Theorem generated_id_subgroup:
+    !g:'a group. Group g ==> gen #e <= g
+Proof
+  rw[generated_id_carrier, subgroup_alt, generated_property]
+QED
 
 (* Note for the next theorem:
    FINITE is required to have the order m, giving the inverse.
@@ -6764,9 +7027,9 @@ val generated_id_subgroup = store_thm(
         = a ** ((m-1) * k)                 by group_exp_mult
         Pick k' = (m-1) * k, and y = a ** k' = |/ (a ** k).
 *)
-val generated_group = store_thm(
-  "generated_group",
-  ``!(g:'a group) a. FiniteGroup g /\ a IN G ==> Group (gen a)``,
+Theorem generated_group:
+    !(g:'a group) a. FiniteGroup g /\ a IN G ==> Group (gen a)
+Proof
   rpt (stripDup[FiniteGroup_def]) >>
   rw_tac std_ss[group_def_alt, Generated_def, RES_FORALL_THM, GSPECIFICATION] >-
   metis_tac[group_exp_add] >-
@@ -6774,7 +7037,8 @@ val generated_group = store_thm(
   metis_tac[group_exp_0] >-
   rw_tac std_ss[group_lid, group_exp_element] >>
   `0 < ord a` by rw[group_order_pos] >>
-  metis_tac[group_order_inv, group_exp_inv, group_exp_mult, group_linv, group_exp_element]);
+  metis_tac[group_order_inv, group_exp_inv, group_exp_mult, group_linv, group_exp_element]
+QED
 
 (* Theorem: Group g /\ a IN G ==> (Gen a) SUBSET G *)
 (* Proof:
@@ -6782,11 +7046,12 @@ val generated_group = store_thm(
    a IN G ==> a ** n IN G                   by group_exp_element
    Hence (Gen a) SUBSET G                   by SUBSET_DEF
 *)
-val generated_subset = store_thm(
-  "generated_subset",
-  ``!(g:'a group) a. Group g /\ a IN G ==> (Gen a) SUBSET G``,
+Theorem generated_subset:
+    !(g:'a group) a. Group g /\ a IN G ==> (Gen a) SUBSET G
+Proof
   rw[Generated_def, SUBSET_DEF] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: The generated group <a> for a IN G is subgroup of G. *)
 (* Proof:
@@ -6795,14 +7060,15 @@ val generated_subset = store_thm(
    (2) (Gen a) SUBSET G           true by generated_subset
    (3) gen a).op x y = x * y      true by Generated_def.
 *)
-val generated_subgroup = store_thm(
-  "generated_subgroup",
-  ``!(g:'a group) a. FiniteGroup g /\ a IN G ==> Subgroup (gen a) g``,
+Theorem generated_subgroup:
+    !(g:'a group) a. FiniteGroup g /\ a IN G ==> Subgroup (gen a) g
+Proof
   rpt (stripDup[FiniteGroup_def]) >>
   rw_tac std_ss[Subgroup_def, SUBSET_DEF, GSPECIFICATION] >-
   rw_tac std_ss[generated_group] >-
   metis_tac[generated_subset, SUBSET_DEF] >>
-  rw_tac std_ss[Generated_def]);
+  rw_tac std_ss[Generated_def]
+QED
 
 (* Theorem: FiniteGroup g /\ a IN G ==> FINITE (Gen a) *)
 (* Proof:
@@ -6810,10 +7076,11 @@ val generated_subgroup = store_thm(
    Group g ==> (Gen a) SUBSET G           by generated_subset
    Hence FINITE (Gen a)                   by SUBSET_FINITE
 *)
-val generated_group_finite = store_thm(
-  "generated_group_finite",
-  ``!(g:'a group) a. FiniteGroup g /\ a IN G ==> FINITE (Gen a)``,
-  metis_tac[FiniteGroup_def, generated_subset, SUBSET_FINITE]);
+Theorem generated_group_finite:
+    !(g:'a group) a. FiniteGroup g /\ a IN G ==> FINITE (Gen a)
+Proof
+  metis_tac[FiniteGroup_def, generated_subset, SUBSET_FINITE]
+QED
 
 (* Theorem: FiniteGroup g /\ a IN G ==> FiniteGroup (gen a) *)
 (* Proof:
@@ -6821,10 +7088,11 @@ val generated_group_finite = store_thm(
    FiniteGroup g ==> Group (gen a)    by generated_group
    and FiniteGroup (gen a)            by FiniteGroup_def
 *)
-val generated_finite_group = store_thm(
-  "generated_finite_group",
-  ``!(g:'a group) a. FiniteGroup g /\ a IN G ==> FiniteGroup (gen a)``,
-  rw[FiniteGroup_def, generated_group, generated_group_finite]);
+Theorem generated_finite_group:
+    !(g:'a group) a. FiniteGroup g /\ a IN G ==> FiniteGroup (gen a)
+Proof
+  rw[FiniteGroup_def, generated_group, generated_group_finite]
+QED
 
 (* Theorem: a IN G /\ z IN (Gen a) ==> !n. (gen a).exp z n = z ** n *)
 (* Proof:
@@ -6834,10 +7102,11 @@ val generated_finite_group = store_thm(
    = g.exp z n                             by monoid_exp_def
    = z ** n                                by notation
 *)
-val generated_exp = store_thm(
-  "generated_exp",
-  ``!g:'a group. !a z. a IN G /\ z IN (Gen a) ==> !n. (gen a).exp z n = z ** n``,
-  rw[Generated_def, monoid_exp_def]);
+Theorem generated_exp:
+    !g:'a group. !a z. a IN G /\ z IN (Gen a) ==> !n. (gen a).exp z n = z ** n
+Proof
+  rw[Generated_def, monoid_exp_def]
+QED
 
 (* Theorem: There is a bijection from (count m) to (gen a), where m = ord x and 0 < m *)
 (* Proof:
@@ -6854,15 +7123,16 @@ val generated_exp = store_thm(
    (3) same as (1)
    (4) a IN G ==> ?n. n < ord a /\ (a ** n = a ** k),           true by group_exp_mod, n = k mod order.
 *)
-val group_order_to_generated_bij = store_thm(
-  "group_order_to_generated_bij",
-  ``!(g:'a group) a. Group g /\ a IN G /\ 0 < ord a ==> BIJ (\n. a ** n) (count (ord a)) (Gen a)``,
+Theorem group_order_to_generated_bij:
+    !(g:'a group) a. Group g /\ a IN G /\ 0 < ord a ==> BIJ (\n. a ** n) (count (ord a)) (Gen a)
+Proof
   rpt strip_tac >>
   rw[BIJ_DEF, SURJ_DEF, INJ_DEF, Generated_def] >-
   metis_tac[] >-
   metis_tac[group_order_unique] >-
   metis_tac[] >>
-  metis_tac[group_exp_mod, MOD_LESS]);
+  metis_tac[group_exp_mod, MOD_LESS]
+QED
 
 (* Theorem: The order of the generated_subgroup is the order of its element *)
 (* Proof:
@@ -6871,10 +7141,11 @@ val group_order_to_generated_bij = store_thm(
     and CARD (count (ord a)) = ord a            by CARD_COUNT
    Thus CARD (Gen a) = ord a                    by FINITE_BIJ
 *)
-val generated_group_card = store_thm(
-  "generated_group_card",
-  ``!(g:'a group) a. Group g /\ a IN G /\ 0 < ord a ==> (CARD (Gen a) = ord a)``,
-  metis_tac[group_order_to_generated_bij, FINITE_BIJ, FINITE_COUNT, CARD_COUNT]);
+Theorem generated_group_card:
+    !(g:'a group) a. Group g /\ a IN G /\ 0 < ord a ==> (CARD (Gen a) = ord a)
+Proof
+  metis_tac[group_order_to_generated_bij, FINITE_BIJ, FINITE_COUNT, CARD_COUNT]
+QED
 
 (* Theorem: Group g ==> !a. a IN G /\ 0 < ord a ==> (Gen a = IMAGE (\j. a ** j) (count (ord a))) *)
 (* Proof:
@@ -6886,13 +7157,14 @@ val generated_group_card = store_thm(
    (2) ?x'. a ** j = a ** x'
        Take x' = j.
 *)
-val generated_carrier_as_image = store_thm(
-  "generated_carrier_as_image",
-  ``!g:'a group. Group g ==> !a. a IN G /\ 0 < ord a ==>
-               (Gen a = IMAGE (\j. a ** j) (count (ord a)))``,
+Theorem generated_carrier_as_image:
+    !g:'a group. Group g ==> !a. a IN G /\ 0 < ord a ==>
+               (Gen a = IMAGE (\j. a ** j) (count (ord a)))
+Proof
   rw[generated_carrier, EXTENSION, EQ_IMP_THM] >-
   metis_tac[group_exp_mod, MOD_LESS] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Group Order and Divisibility                                              *)
@@ -6907,13 +7179,14 @@ val generated_carrier_as_image = store_thm(
     and CARD (Gen x)) = ord x   by generated_group_card
    The result follows.
 *)
-val group_order_divides = store_thm(
-  "group_order_divides",
-  ``!g:'a group. FiniteGroup g ==> !x. x IN G ==> (ord x) divides (CARD G)``,
+Theorem group_order_divides:
+    !g:'a group. FiniteGroup g ==> !x. x IN G ==> (ord x) divides (CARD G)
+Proof
   rpt (stripDup[FiniteGroup_def]) >>
   `gen x <= g` by rw[generated_subgroup] >>
   `(CARD (Gen x)) divides (CARD G)` by rw[Lagrange_thm] >>
-  metis_tac[generated_group_card, group_order_pos]);
+  metis_tac[generated_group_card, group_order_pos]
+QED
 
 (* Theorem: For FiniteGroup g, a IN G ==> a ** (CARD g) = #e *)
 (* Proof:
@@ -6926,13 +7199,14 @@ val group_order_divides = store_thm(
    = (#e) ** k                  by order_property
    = #e                         by group_id_exp
 *)
-val finite_group_Fermat = store_thm(
-  "finite_group_Fermat",
-  ``!(g:'a group) a. FiniteGroup g /\ a IN G ==> (a ** (CARD G) = #e)``,
+Theorem finite_group_Fermat:
+    !(g:'a group) a. FiniteGroup g /\ a IN G ==> (a ** (CARD G) = #e)
+Proof
   rpt (stripDup[FiniteGroup_def]) >>
   `(ord a) divides (CARD G)` by rw[group_order_divides] >>
   `?k. CARD G = (ord a) * k` by rw[GSYM divides_def] >>
-  metis_tac[group_exp_mult, group_id_exp, order_property]);
+  metis_tac[group_exp_mult, group_id_exp, order_property]
+QED
 
 (* Theorem: x IN (Gen a) ==> (x ** (CARD (Gen a)) = #e) *)
 (* Proof:
@@ -6944,15 +7218,16 @@ val finite_group_Fermat = store_thm(
      and !n. (gen a).exp x n = x ** n    by generated_exp
    The result follows.
 *)
-val generated_Fermat = store_thm(
-  "generated_Fermat",
-  ``!(g:'a group) a. FiniteGroup g /\ a IN G ==>
-   !x. x IN (Gen a) ==> (x ** (CARD (Gen a)) = #e)``,
+Theorem generated_Fermat:
+    !(g:'a group) a. FiniteGroup g /\ a IN G ==>
+   !x. x IN (Gen a) ==> (x ** (CARD (Gen a)) = #e)
+Proof
   rpt strip_tac >>
   `FiniteGroup (gen a)` by rw[generated_finite_group] >>
   `(gen a).id = #e` by rw[generated_property] >>
   `!n. (gen a).exp x n = x ** n` by rw[generated_exp] >>
-  metis_tac[finite_group_Fermat]);
+  metis_tac[finite_group_Fermat]
+QED
 
 (* Theorem: Group g /\ x IN G /\ 0 < ord x ==>
            !n m. (x ** n = x ** m) <=> (n MOD (ord x) = m MOD (ord x)) *)
@@ -6965,11 +7240,12 @@ val generated_Fermat = store_thm(
         ==> n MOD ord x = m MOD ord x    by group_exp_equal
    Only-if part: trivially true.
 *)
-val group_exp_eq_condition = store_thm(
-  "group_exp_eq_condition",
-  ``!(g:'a group) x. Group g /\ x IN G /\ 0 < ord x ==>
-     !n m. (x ** n = x ** m) <=> (n MOD (ord x) = m MOD (ord x))``,
-  metis_tac[group_exp_mod, group_exp_equal, MOD_LESS]);
+Theorem group_exp_eq_condition:
+    !(g:'a group) x. Group g /\ x IN G /\ 0 < ord x ==>
+     !n m. (x ** n = x ** m) <=> (n MOD (ord x) = m MOD (ord x))
+Proof
+  metis_tac[group_exp_mod, group_exp_equal, MOD_LESS]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Group Order                                                        *)
@@ -6989,15 +7265,16 @@ val group_exp_eq_condition = store_thm(
         but coprime k (ord x) means gcd k (ord x) = 1  by notation
       Hence ord (x ** k) = ord x                       by MULT_RIGHT_1
 *)
-val group_order_power_eq_order = store_thm(
-  "group_order_power_eq_order",
-  ``!(g:'a group) x. Group g /\ x IN G /\ 0 < ord x ==>
-   !k. (ord (x ** k) = ord x) <=> coprime k (ord x)``,
+Theorem group_order_power_eq_order:
+    !(g:'a group) x. Group g /\ x IN G /\ 0 < ord x ==>
+   !k. (ord (x ** k) = ord x) <=> coprime k (ord x)
+Proof
   rpt strip_tac >>
   `ord (x ** k) * gcd k (ord x) = ord x` by metis_tac[group_order_power, GCD_SYM] >>
   rw[EQ_IMP_THM] >-
   metis_tac[MULT_RIGHT_ID] >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: Group g /\ x IN G /\ 0 < ord x /\ n divides (ord x) ==>
             (ord (x ** ((ord x) DIV n)) = n) *)
@@ -7011,10 +7288,10 @@ val group_order_power_eq_order = store_thm(
      so gcd m k = k                  by GCD_MULTIPLE_ALT
   Hence ord (x ** k) = n             by EQ_MULT_RCANCEL
 *)
-val group_order_exp_cofactor = store_thm(
-  "group_order_exp_cofactor",
-  ``!(g:'a group) x n. Group g /\ x IN G /\ 0 < ord x /\ n divides (ord x) ==>
-        (ord (x ** ((ord x) DIV n)) = n)``,
+Theorem group_order_exp_cofactor:
+    !(g:'a group) x n. Group g /\ x IN G /\ 0 < ord x /\ n divides (ord x) ==>
+        (ord (x ** ((ord x) DIV n)) = n)
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = ord x` >>
   qabbrev_tac `k = m DIV n` >>
@@ -7024,7 +7301,8 @@ val group_order_exp_cofactor = store_thm(
   `m = k * n` by rw[GSYM DIVIDES_EQN, Abbr`k`] >>
   `_ = n * k` by rw[MULT_COMM] >>
   `k <> 0` by metis_tac[MULT_0] >>
-  metis_tac[GCD_MULTIPLE_ALT, EQ_MULT_RCANCEL]);
+  metis_tac[GCD_MULTIPLE_ALT, EQ_MULT_RCANCEL]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Roots of Unity form a Subgroup                                            *)
@@ -7048,17 +7326,19 @@ val it = |- !g n. uroots n = <|carrier := {x | x IN G /\ (x ** n = #e)}; op := $
 
 (* Theorem: x IN (uroots n).carrier <=> x IN G /\ (x ** n = #e) *)
 (* Proof: by roots_of_unity_def *)
-val roots_of_unity_element = store_thm(
-  "roots_of_unity_element",
-  ``!g:'a group. !n x. x IN (uroots n).carrier <=> x IN G /\ (x ** n = #e)``,
-  rw[roots_of_unity_def]);
+Theorem roots_of_unity_element:
+    !g:'a group. !n x. x IN (uroots n).carrier <=> x IN G /\ (x ** n = #e)
+Proof
+  rw[roots_of_unity_def]
+QED
 
 (* Theorem: (uroots n).carrier SUBSET G *)
 (* Proof: by roots_of_unity_element, SUBSET_DEF. *)
-val roots_of_unity_subset = store_thm(
-  "roots_of_unity_subset",
-  ``!g:'a group. !n. (uroots n).carrier SUBSET G``,
-  rw[roots_of_unity_element, SUBSET_DEF]);
+Theorem roots_of_unity_subset:
+    !g:'a group. !n. (uroots n).carrier SUBSET G
+Proof
+  rw[roots_of_unity_element, SUBSET_DEF]
+QED
 
 (* Theorem: (uroots 0).carrier = G *)
 (* Proof:
@@ -7066,17 +7346,19 @@ val roots_of_unity_subset = store_thm(
    Since   x ** 0 = #e                                  by group_exp_0
    (uroots 0).carrier = {x | x IN G /\ T} = G           by EXTENSION
 *)
-val roots_of_unity_0 = store_thm(
-  "roots_of_unity_0",
-  ``!g:'a group. (uroots 0).carrier = G``,
-  rw[roots_of_unity_def]);
+Theorem roots_of_unity_0:
+    !g:'a group. (uroots 0).carrier = G
+Proof
+  rw[roots_of_unity_def]
+QED
 
 (* Theorem: #e IN (uroots n).carrier *)
 (* Proof: by group_id_exp. *)
-val group_uroots_has_id = store_thm(
-  "group_uroots_has_id",
-  ``!g:'a group. Group g ==> !n. #e IN (uroots n).carrier``,
-  rw[roots_of_unity_def]);
+Theorem group_uroots_has_id:
+    !g:'a group. Group g ==> !n. #e IN (uroots n).carrier
+Proof
+  rw[roots_of_unity_def]
+QED
 
 (* Theorem: AbelianGroup g ==> uroots n <= g *)
 (* Proof:
@@ -7092,13 +7374,14 @@ val group_uroots_has_id = store_thm(
        = #e * #e                   by group_inv_exp
        = #e                        by group_id_id
 *)
-val group_uroots_subgroup = store_thm(
-  "group_uroots_subgroup",
-  ``!g:'a group. AbelianGroup g ==> !n. uroots n <= g``,
+Theorem group_uroots_subgroup:
+    !g:'a group. AbelianGroup g ==> !n. uroots n <= g
+Proof
   rw[AbelianGroup_def] >>
   rw[subgroup_alt, roots_of_unity_def, EXTENSION, SUBSET_DEF] >-
   metis_tac[group_id_element, group_id_exp] >>
-  rw[group_inv_exp, group_inv_id, group_comm_op_exp]);
+  rw[group_inv_exp, group_inv_id, group_comm_op_exp]
+QED
 
 (* Theorem: AbelianGroup g ==> !n. Group (uroots n) *)
 (* Proof: by group_uroots_subgroup, Subgroup_def *)
@@ -7155,19 +7438,21 @@ val _ = overload_on("gen_set", ``Generated_subset (g:'a group)``);
 (* Theorem: ((gen_set s).carrier = BIGINTER (IMAGE (\h. H) {h | h <= g /\ s SUBSET H})) /\
             ((gen_set s).op = g.op) /\ ((gen_set s).id = #e) *)
 (* Proof: by Generated_subset_def *)
-val Generated_subset_property = store_thm(
-  "Generated_subset_property",
-  ``!(g:'a group) s. ((gen_set s).carrier = BIGINTER (IMAGE (\h. H) {h | h <= g /\ s SUBSET H})) /\
-                    ((gen_set s).op = g.op) /\ ((gen_set s).id = #e)``,
-  rw[Generated_subset_def]);
+Theorem Generated_subset_property:
+    !(g:'a group) s. ((gen_set s).carrier = BIGINTER (IMAGE (\h. H) {h | h <= g /\ s SUBSET H})) /\
+                    ((gen_set s).op = g.op) /\ ((gen_set s).id = #e)
+Proof
+  rw[Generated_subset_def]
+QED
 
 (* Theorem: s SUBSET (gen_set s).carrier *)
 (* Proof: by Generated_subset_def, SUBSET_DEF *)
-val Generated_subset_has_set = store_thm(
-  "Generated_subset_has_set",
-  ``!(g:'a group) s. s SUBSET (gen_set s).carrier``,
+Theorem Generated_subset_has_set:
+    !(g:'a group) s. s SUBSET (gen_set s).carrier
+Proof
   rw[Generated_subset_def, SUBSET_DEF] >>
-  simp[]);
+  simp[]
+QED
 
 (* Theorem: Group g /\ s SUBSET G ==> (gen_set s).carrier SUBSET G *)
 (* Proof:
@@ -7227,9 +7512,9 @@ QED
          so h.inv x IN H          by subgroup_property, group_inv_element
          or |/ x = y IN H         by subgroup_inv
 *)
-val Generated_subset_group = store_thm(
-  "Generated_subset_group",
-  ``!(g:'a group) s. Group g /\ s SUBSET G ==> Group (gen_set s)``,
+Theorem Generated_subset_group:
+    !(g:'a group) s. Group g /\ s SUBSET G ==> Group (gen_set s)
+Proof
   rpt strip_tac >>
   rw_tac std_ss[group_def_alt, Generated_subset_def, IN_BIGINTER, IN_IMAGE] >| [
     `h <= g` by fs[] >>
@@ -7255,7 +7540,8 @@ val Generated_subset_group = store_thm(
     `h IN {h | h <= g /\ s SUBSET H}` by rw[] >>
     `x IN H` by metis_tac[] >>
     metis_tac[subgroup_property, subgroup_inv, group_inv_element]
-  ]);
+  ]
+QED
 
 (* Theorem: Group g /\ s SUBSET G ==> (gen_set s) <= g *)
 (* Proof:
@@ -7264,20 +7550,22 @@ val Generated_subset_group = store_thm(
    (2) (gen_set s).carrier SUBSET G, true   by Generated_subset_subset
    (3) (gen_set s).op = $*, true            by Generated_subset_property
 *)
-val Generated_subset_subgroup = store_thm(
-  "Generated_subset_subgroup",
-  ``!(g:'a group) s. Group g /\ s SUBSET G ==> (gen_set s) <= g``,
+Theorem Generated_subset_subgroup:
+    !(g:'a group) s. Group g /\ s SUBSET G ==> (gen_set s) <= g
+Proof
   rw[Subgroup_def] >-
   rw[Generated_subset_group] >-
   rw[Generated_subset_subset] >>
-  rw[Generated_subset_property]);
+  rw[Generated_subset_property]
+QED
 
 (* Theorem: Group g /\ s SUBSET G ==> (gen_set s) <= g *)
 (* Proof: by Generated_subset_def, monoid_exp_def, FUN_EQ_THM *)
-val Generated_subset_exp = store_thm(
-  "Generated_subset_exp",
-  ``!(g:'a group) s. (gen_set s).exp = g.exp``,
-  rw[Generated_subset_def, monoid_exp_def, FUN_EQ_THM]);
+Theorem Generated_subset_exp:
+    !(g:'a group) s. (gen_set s).exp = g.exp
+Proof
+  rw[Generated_subset_def, monoid_exp_def, FUN_EQ_THM]
+QED
 
 (* Theorem: FiniteGroup g /\ a IN G ==> (gen_set (Gen a) = gen a) *)
 (* Proof:
@@ -7298,9 +7586,9 @@ val Generated_subset_exp = store_thm(
        Note x IN H       by the first implication,
        Thus x IN P       by the second implication.
 *)
-val Generated_subset_gen = store_thm(
-  "Generated_subset_gen",
-  ``!(g:'a group) a. FiniteGroup g /\ a IN G ==> (gen_set (Gen a) = gen a)``,
+Theorem Generated_subset_gen:
+    !(g:'a group) a. FiniteGroup g /\ a IN G ==> (gen_set (Gen a) = gen a)
+Proof
   rpt (stripDup[FiniteGroup_def]) >>
   rw[Generated_def, Generated_subset_def, SUBSET_DEF, EXTENSION] >>
   rw[EQ_IMP_THM] >| [
@@ -7308,7 +7596,8 @@ val Generated_subset_gen = store_thm(
     `gen a <= g` by rw[generated_subgroup] >>
     metis_tac[generated_element],
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Group Theory Documentation                                         *)
@@ -7451,12 +7740,13 @@ End
 
 (* Theorem: Properties of make_group g s *)
 (* Proof: by make_group_def *)
-val make_group_property = store_thm(
-  "make_group_property",
-  ``!(g:'a group) s. ((make_group g s).carrier = s) /\
+Theorem make_group_property:
+    !(g:'a group) s. ((make_group g s).carrier = s) /\
                     ((make_group g s).op = g.op) /\
-                    ((make_group g s).id = g.id)``,
-  rw[make_group_def]);
+                    ((make_group g s).id = g.id)
+Proof
+  rw[make_group_def]
+QED
 
 (* Given two subsets, define their cross-product, or direct product *)
 Definition subset_cross_def:
@@ -7473,11 +7763,12 @@ val it = |- !g s1 s2. s1 o s2 = {x * y | x IN s1 /\ y IN s2}: thm
 
 (* Theorem: x IN s1 /\ y IN s2 ==> x * y IN s1 o s2 *)
 (* Proof: by subset_cross_def *)
-val subset_cross_element = store_thm(
-  "subset_cross_element",
-  ``!g:'a group. !s1 s2. !x y. x IN s1 /\ y IN s2 ==> x * y IN s1 o s2``,
+Theorem subset_cross_element:
+    !g:'a group. !s1 s2. !x y. x IN s1 /\ y IN s2 ==> x * y IN s1 o s2
+Proof
   rw[subset_cross_def] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: z IN s1 o s2 <=> ?x y. x IN s1 /\ y IN s2 /\ (z = x * y) *)
 (* Proof:
@@ -7485,11 +7776,12 @@ val subset_cross_element = store_thm(
       (?x y. (z = x * y) /\ x IN s1 /\ y IN s2) <=> ?x y. x IN s1 /\ y IN s2 /\ (z = x * y)
    The candidates are just the x, y themselves.
 *)
-val subset_cross_element_iff = store_thm(
-  "subset_cross_element_iff",
-  ``!g:'a group. !s1 s2 z. z IN s1 o s2 <=> ?x y. x IN s1 /\ y IN s2 /\ (z = x * y)``,
+Theorem subset_cross_element_iff:
+    !g:'a group. !s1 s2 z. z IN s1 o s2 <=> ?x y. x IN s1 /\ y IN s2 /\ (z = x * y)
+Proof
   rw[subset_cross_def] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: s1 o s2 = IMAGE (\(x, y). x * y) (s1 CROSS s2) *)
 (* Proof:
@@ -7499,16 +7791,17 @@ val subset_cross_element_iff = store_thm(
    (2) FST x' IN s1 /\ SND x' IN s2 ==> ?x y. ((\(x,y). x * y) x' = x * y) /\ x IN s1 /\ y IN s2
        Let x = FST x', y = SND x', this is true y UNCURRY.
 *)
-val subset_cross_alt = store_thm(
-  "subset_cross_alt",
-  ``!(g:'a group) s1 s2. s1 o s2 = IMAGE (\(x, y). x * y) (s1 CROSS s2)``,
+Theorem subset_cross_alt:
+    !(g:'a group) s1 s2. s1 o s2 = IMAGE (\(x, y). x * y) (s1 CROSS s2)
+Proof
   rw[subset_cross_def, EXTENSION, EQ_IMP_THM] >| [
     qexists_tac `(x', y)` >>
     simp[],
     qexists_tac `FST x'` >>
     qexists_tac `SND x'` >>
     simp[pairTheory.UNCURRY]
-  ]);
+  ]
+QED
 
 (* Given two subgroups, define their cross-product, or direct product *)
 Definition subgroup_cross_def:
@@ -7525,11 +7818,12 @@ val it = |- !g h1 h2. h1 o h2 = make_group g (h1.carrier o h2.carrier): thm
 
 (* Theorem: ((h1 o h2).carrier = h1.carrier o h2.carrier) /\ ((h1 o h2).op = g.op) /\ ((h1 o h2).id = #e) *)
 (* Proof: by subgroup_cross_def, make_group_def *)
-val subgroup_cross_property = store_thm(
-  "subgroup_cross_property",
-  ``!(g h1 h2):'a group. ((h1 o h2).carrier = h1.carrier o h2.carrier) /\
-                        ((h1 o h2).op = g.op) /\ ((h1 o h2).id = #e)``,
-  rw[subgroup_cross_def, make_group_def]);
+Theorem subgroup_cross_property:
+    !(g h1 h2):'a group. ((h1 o h2).carrier = h1.carrier o h2.carrier) /\
+                        ((h1 o h2).op = g.op) /\ ((h1 o h2).id = #e)
+Proof
+  rw[subgroup_cross_def, make_group_def]
+QED
 
 (* The following is a reformulation of:
 subgroup_alt
@@ -7588,10 +7882,10 @@ subgroup_alt
             so x * |/ y IN H o H            by subset_cross_element
             or x * |/ y IN H                by subgroup_cross_property
 *)
-val subgroup_test_by_cross = store_thm(
-  "subgroup_test_by_cross",
-  ``!g:'a group. Group g ==>
-   !h. h <= g <=> H <> {} /\ H SUBSET G /\ (h o h = h) /\ (IMAGE ( |/) H = H)``,
+Theorem subgroup_test_by_cross:
+    !g:'a group. Group g ==>
+   !h. h <= g <=> H <> {} /\ H SUBSET G /\ (h o h = h) /\ (IMAGE ( |/) H = H)
+Proof
   rw[EQ_IMP_THM] >-
   metis_tac[subgroup_carrier_nonempty] >-
   rw[subgroup_carrier_subset] >-
@@ -7610,7 +7904,8 @@ val subgroup_test_by_cross = store_thm(
   rw[subgroup_alt] >-
   fs[subgroup_cross_property, monoid_component_equality] >-
   fs[subgroup_cross_property, monoid_component_equality] >>
-  prove_tac[subgroup_cross_property, subset_cross_element, IN_IMAGE]);
+  prove_tac[subgroup_cross_property, subset_cross_element, IN_IMAGE]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Subset Cross Properties                                                   *)
@@ -7624,12 +7919,13 @@ val subgroup_test_by_cross = store_thm(
     ?x' y. (x = x' * y) /\ x' IN s1 /\ ?x y'. (y = x * y') /\ x IN s2 /\ y' IN s3
    By SUBSET_DEF, the candidates are readily chosen, with equations valid by group_assoc.
 *)
-val subset_cross_assoc = store_thm(
-  "subset_cross_assoc",
-  ``!g:'a group. Group g ==> !s1 s2 s3. s1 SUBSET G /\ s2 SUBSET G /\ s3 SUBSET G ==>
-       ((s1 o s2) o s3 = s1 o (s2 o s3))``,
+Theorem subset_cross_assoc:
+    !g:'a group. Group g ==> !s1 s2 s3. s1 SUBSET G /\ s2 SUBSET G /\ s3 SUBSET G ==>
+       ((s1 o s2) o s3 = s1 o (s2 o s3))
+Proof
   rw[subset_cross_def, EXTENSION] >>
-  prove_tac[group_assoc, SUBSET_DEF]);
+  prove_tac[group_assoc, SUBSET_DEF]
+QED
 
 (* Theorem: h <= g ==> (h o h = h) *)
 (* Proof:
@@ -7645,14 +7941,15 @@ val subset_cross_assoc = store_thm(
                  = y               by group_id
                  = z               by above
 *)
-val subset_cross_self = store_thm(
-  "subset_cross_self",
-  ``!(g h):'a group. h <= g ==> (H o H = H)``,
+Theorem subset_cross_self:
+    !(g h):'a group. h <= g ==> (H o H = H)
+Proof
   rpt strip_tac >>
   `Group g /\ Group h` by metis_tac[subgroup_property] >>
   rw[subset_cross_element_iff, EXTENSION, EQ_IMP_THM] >-
   metis_tac[subgroup_op, group_op_element] >>
-  metis_tac[subgroup_id, subgroup_op, group_id_element, group_id]);
+  metis_tac[subgroup_id, subgroup_op, group_id_element, group_id]
+QED
 
 (* Theorem: AbelianGroup g ==> !s1 s2. s1 SUBSET G /\ s2 SUBSET G ==> (s1 o s2 = s2 o s1) *)
 (* Proof:
@@ -7664,12 +7961,13 @@ val subset_cross_self = store_thm(
   = {y * x | y IN s2 /\ x IN s1}    by above, SUBSET_DEF
   = s2 o s1                         by subset_cross_def
 *)
-val subset_cross_comm = store_thm(
-  "subset_cross_comm",
-  ``!g:'a group. AbelianGroup g ==> !s1 s2. s1 SUBSET G /\ s2 SUBSET G ==> (s1 o s2 = s2 o s1)``,
+Theorem subset_cross_comm:
+    !g:'a group. AbelianGroup g ==> !s1 s2. s1 SUBSET G /\ s2 SUBSET G ==> (s1 o s2 = s2 o s1)
+Proof
   rw[AbelianGroup_def] >>
   rw[subset_cross_def, EXTENSION] >>
-  metis_tac[SUBSET_DEF]);
+  metis_tac[SUBSET_DEF]
+QED
 
 (* Theorem: Group g ==> !s1 s2. s1 SUBSET G /\ s2 SUBSET G ==> (s1 o s2) SUBSET G *)
 (* Proof:
@@ -7679,11 +7977,12 @@ val subset_cross_comm = store_thm(
    and y IN s2 ==> y IN G       by SUBSET_DEF, s2 SUBSET G
    ==> x * y IN G               by group_op_element
 *)
-val subset_cross_subset = store_thm(
-  "subset_cross_subset",
-  ``!g:'a group. Group g ==> !s1 s2. s1 SUBSET G /\ s2 SUBSET G ==> (s1 o s2) SUBSET G``,
+Theorem subset_cross_subset:
+    !g:'a group. Group g ==> !s1 s2. s1 SUBSET G /\ s2 SUBSET G ==> (s1 o s2) SUBSET G
+Proof
   rw[subset_cross_def, SUBSET_DEF, pairTheory.EXISTS_PROD] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: Group g ==> !s1 s2. s1 SUBSET G /\ s2 SUBSET G ==>
             (IMAGE ( |/) (s1 o s2) = (IMAGE ( |/) s2) o (IMAGE ( |/) s1)) *)
@@ -7694,12 +7993,13 @@ val subset_cross_subset = store_thm(
    Both directions are satisfied by group_inv_op:
       |- !g. Group g ==> !x y. x IN G /\ y IN G ==> ( |/ (x * y) = |/ y * |/ x)
 *)
-val subset_cross_inv = store_thm(
-  "subset_cross_inv",
-  ``!g:'a group. Group g ==> !s1 s2. s1 SUBSET G /\ s2 SUBSET G ==>
-         (IMAGE ( |/) (s1 o s2) = (IMAGE ( |/) s2) o (IMAGE ( |/) s1))``,
+Theorem subset_cross_inv:
+    !g:'a group. Group g ==> !s1 s2. s1 SUBSET G /\ s2 SUBSET G ==>
+         (IMAGE ( |/) (s1 o s2) = (IMAGE ( |/) s2) o (IMAGE ( |/) s1))
+Proof
   rw[subset_cross_def, SUBSET_DEF, pairTheory.EXISTS_PROD, EXTENSION] >>
-  metis_tac[group_inv_op]);
+  metis_tac[group_inv_op]
+QED
 
 (* Theorem: FINITE s1 /\ FINITE s2 ==> FINITE (s1 o s2) *)
 (* Proof:
@@ -7707,10 +8007,11 @@ val subset_cross_inv = store_thm(
     and FINITE (s1 CROSS s2)                             by FINITE_CROSS
    Thus FINITE (s1 o s2)                                 by IMAGE_FINITE
 *)
-val subset_cross_finite = store_thm(
-  "subset_cross_finite",
-  ``!g:'a group. !s1 s2. FINITE s1 /\ FINITE s2 ==> FINITE (s1 o s2)``,
-  rw[subset_cross_alt]);
+Theorem subset_cross_finite:
+    !g:'a group. !s1 s2. FINITE s1 /\ FINITE s2 ==> FINITE (s1 o s2)
+Proof
+  rw[subset_cross_alt]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Subgroup Cross Properties                                                 *)
@@ -7726,13 +8027,14 @@ val subset_cross_finite = store_thm(
       (h1.carrier o h2.carrier) o h3.carrier = h1.carrier o (h2.carrier o h3.carrier)
    This is true by subset_cross_assoc.
 *)
-val subgroup_cross_assoc = store_thm(
-  "subgroup_cross_assoc",
-  ``!g:'a group. !h1 h2 h3. h1 <= g /\ h2 <= g /\ h3 <= g ==>
-       ((h1 o h2) o h3 = h1 o (h2 o h3))``,
+Theorem subgroup_cross_assoc:
+    !g:'a group. !h1 h2 h3. h1 <= g /\ h2 <= g /\ h3 <= g ==>
+       ((h1 o h2) o h3 = h1 o (h2 o h3))
+Proof
   rpt strip_tac >>
   `Group g` by metis_tac[subgroup_property] >>
-  rw[subgroup_cross_property, monoid_component_equality, subgroup_carrier_subset, subset_cross_assoc]);
+  rw[subgroup_cross_property, monoid_component_equality, subgroup_carrier_subset, subset_cross_assoc]
+QED
 
 (* Theorem: h <= g ==> (h o h = h) *)
 (* Proof:
@@ -7741,13 +8043,14 @@ val subgroup_cross_assoc = store_thm(
    (2) h <= g ==> $* = h.op, true     by subgroup_op
    (3) h <= g ==> #e = h.id, true     by subgroup_id
 *)
-val subgroup_cross_self = store_thm(
-  "subgroup_cross_self",
-  ``!(g h):'a group. h <= g ==> (h o h = h)``,
+Theorem subgroup_cross_self:
+    !(g h):'a group. h <= g ==> (h o h = h)
+Proof
   rw[subgroup_cross_property, monoid_component_equality] >-
   rw[subset_cross_self] >-
   rw[subgroup_op] >>
-  rw[subgroup_id]);
+  rw[subgroup_id]
+QED
 
 (* Theorem: AbelianGroup g ==> !h1 h2. h1 <= g /\ h2 <= g ==> (h1 o h2 = h2 o h1) *)
 (* Proof:
@@ -7759,11 +8062,12 @@ val subgroup_cross_self = store_thm(
    and s2 SUBSET G          by subgroup_carrier_subset
    so s1 o s2 = s2 o s1     by subset_cross_comm
 *)
-val subgroup_cross_comm = store_thm(
-  "subgroup_cross_comm",
-  ``!g:'a group. AbelianGroup g ==> !h1 h2. h1 <= g /\ h2 <= g ==> (h1 o h2 = h2 o h1)``,
+Theorem subgroup_cross_comm:
+    !g:'a group. AbelianGroup g ==> !h1 h2. h1 <= g /\ h2 <= g ==> (h1 o h2 = h2 o h1)
+Proof
   rw[AbelianGroup_def, subgroup_cross_property,
-     monoid_component_equality, subset_cross_comm, subgroup_carrier_subset]);
+     monoid_component_equality, subset_cross_comm, subgroup_carrier_subset]
+QED
 
 (* Theorem: h1 <= g /\ h2 <= g /\ (h1 o h2 = h2 o h1) ==> (h1 o h2) <= g *)
 (* Proof:
@@ -7817,9 +8121,9 @@ val subgroup_cross_comm = store_thm(
        = H o K                            by subgroup_cross_property, monoid_component_equality, h1 o h2 = h2 o h1
        = (h1 o h2).carrier                by subgroup_cross_property
 *)
-val subgroup_cross_subgroup = store_thm(
-  "subgroup_cross_subgroup",
-  ``!(g h1 h2):'a group. h1 <= g /\ h2 <= g /\ (h1 o h2 = h2 o h1) ==> (h1 o h2) <= g``,
+Theorem subgroup_cross_subgroup:
+    !(g h1 h2):'a group. h1 <= g /\ h2 <= g /\ (h1 o h2 = h2 o h1) ==> (h1 o h2) <= g
+Proof
   rpt strip_tac >>
   `Group g /\ Group h1 /\ Group h2` by metis_tac[subgroup_property] >>
   rw[subgroup_test_by_cross] >-
@@ -7850,24 +8154,27 @@ val subgroup_cross_subgroup = store_thm(
   `_ = k o h` by metis_tac[subgroup_test_by_cross] >>
   `_ = h o k` by metis_tac[subgroup_cross_property, monoid_component_equality] >>
   `_ = (h1 o h2).carrier` by rw[subgroup_cross_property, Abbr`h`, Abbr`k`] >>
-  rw[]);
+  rw[]
+QED
 
 (* This is a milestone theorem for me! *)
 (* This is just Lemma X.1 in Appendix of "Finite Group Theory" by Irving Martin Isaacs. *)
 
 (* Theorem: h1 <= g /\ h2 <= g /\ (h1 o h2 = h2 o h1) ==> Group (h1 o h2) *)
 (* Proof: by subgroup_cross_subgroup, subgroup_property *)
-val subgroup_cross_group = store_thm(
-  "subgroup_cross_group",
-  ``!(g h1 h2):'a group. h1 <= g /\ h2 <= g /\ (h1 o h2 = h2 o h1) ==> Group (h1 o h2)``,
-  metis_tac[subgroup_cross_subgroup, subgroup_property]);
+Theorem subgroup_cross_group:
+    !(g h1 h2):'a group. h1 <= g /\ h2 <= g /\ (h1 o h2 = h2 o h1) ==> Group (h1 o h2)
+Proof
+  metis_tac[subgroup_cross_subgroup, subgroup_property]
+QED
 
 (* Theorem: AbelianGroup g ==> !h1 h2. h1 <= g /\ h2 <= g ==> (h1 o h2) <= g *)
 (* Proof: by subgroup_cross_comm, subgroup_cross_subgroup *)
-val abelian_subgroup_cross_subgroup = store_thm(
-  "abelian_subgroup_cross_subgroup",
-  ``!g:'a group. AbelianGroup g ==> !h1 h2. h1 <= g /\ h2 <= g ==> (h1 o h2) <= g``,
-  rw[subgroup_cross_comm, subgroup_cross_subgroup]);
+Theorem abelian_subgroup_cross_subgroup:
+    !g:'a group. AbelianGroup g ==> !h1 h2. h1 <= g /\ h2 <= g ==> (h1 o h2) <= g
+Proof
+  rw[subgroup_cross_comm, subgroup_cross_subgroup]
+QED
 
 (* Theorem: h1 <= g /\ h2 <= g /\ (h1 o h2 = h2 o h1) /\
             FiniteGroup h1 /\ FiniteGroup h2 ==> FiniteGroup (h1 o h2) *)
@@ -7878,20 +8185,22 @@ val abelian_subgroup_cross_subgroup = store_thm(
     ==> FINITE (h1.carrier o h2.carrier)          by subset_cross_finite
      or FINITE (h1 o h2).carrier                  by subgroup_cross_property
 *)
-val subgroup_cross_finite = store_thm(
-  "subgroup_cross_finite",
-  ``!g:'a group. !h1 h2. h1 <= g /\ h2 <= g /\ (h1 o h2 = h2 o h1) /\
-                FiniteGroup h1 /\ FiniteGroup h2 ==> FiniteGroup (h1 o h2)``,
-  metis_tac[FiniteGroup_def, subgroup_cross_group, subset_cross_finite, subgroup_cross_property]);
+Theorem subgroup_cross_finite:
+    !g:'a group. !h1 h2. h1 <= g /\ h2 <= g /\ (h1 o h2 = h2 o h1) /\
+                FiniteGroup h1 /\ FiniteGroup h2 ==> FiniteGroup (h1 o h2)
+Proof
+  metis_tac[FiniteGroup_def, subgroup_cross_group, subset_cross_finite, subgroup_cross_property]
+QED
 
 (* Theorem: AbelianGroup g ==> !h1 h2. h1 <= g /\ h2 <= g /\
             FiniteGroup h1 /\ FiniteGroup h2 ==> FiniteGroup (h1 o h2) *)
 (* Proof: by subgroup_cross_finite, subgroup_cross_comm. *)
-val abelian_subgroup_cross_finite = store_thm(
-  "abelian_subgroup_cross_finite",
-  ``!g:'a group. AbelianGroup g ==> !h1 h2. h1 <= g /\ h2 <= g /\
-                FiniteGroup h1 /\ FiniteGroup h2 ==> FiniteGroup (h1 o h2)``,
-  rw[subgroup_cross_finite, subgroup_cross_comm]);
+Theorem abelian_subgroup_cross_finite:
+    !g:'a group. AbelianGroup g ==> !h1 h2. h1 <= g /\ h2 <= g /\
+                FiniteGroup h1 /\ FiniteGroup h2 ==> FiniteGroup (h1 o h2)
+Proof
+  rw[subgroup_cross_finite, subgroup_cross_comm]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Subgroup Cross Cardinality                                                *)
@@ -8005,12 +8314,12 @@ val it = |- !g s1 s2 z. z IN s1 o s2 ==> left z IN s1 /\ right z IN s2 /\ (z = l
           = x2                               by group_linv, group_rid
        Take this d, and the result follows.
 *)
-val subset_cross_to_preimage_cross_bij = store_thm(
-  "subset_cross_to_preimage_cross_bij",
-  ``!(g h1 h2):'a group. h1 <= g /\ h2 <= g ==>
+Theorem subset_cross_to_preimage_cross_bij:
+    !(g h1 h2):'a group. h1 <= g /\ h2 <= g ==>
    let (s1 = h1.carrier) in let (s2 = h2.carrier) in let (f = (\(x, y). x * y)) in
    !z. z IN (s1 o s2) ==>
-       BIJ (\d. ((left z) * d, ( |/ d) * (right z))) (s1 INTER s2) (preimage f (s1 CROSS s2) z)``,
+       BIJ (\d. ((left z) * d, ( |/ d) * (right z))) (s1 INTER s2) (preimage f (s1 CROSS s2) z)
+Proof
   rw_tac std_ss[] >>
   qabbrev_tac `s = s1 CROSS s2` >>
   `Group g /\ Group h1 /\ Group h2` by metis_tac[subgroup_property] >>
@@ -8050,7 +8359,8 @@ val subset_cross_to_preimage_cross_bij = store_thm(
   `d IN s2` by metis_tac[subgroup_inv, group_inv_element, group_inv_inv] >>
   `(left z) * d = x1` by rw[GSYM group_assoc, Abbr`d`] >>
   `( |/ d) * right z = x2` by rw[group_assoc] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: h1 <= g /\ h2 <= g /\ FINITE G ==>
             let (s1 = h1.carrier) in let (s2 = h2.carrier) in let (f = (\(x, y). x * y)) in
@@ -8070,11 +8380,11 @@ val subset_cross_to_preimage_cross_bij = store_thm(
     ==> FINITE (s1 INTER s2)               by FINITE_INTER
    Thus CARD t = CARD (s1 INTER s2)        by FINITE_BIJ
 *)
-val subset_cross_partition_property = store_thm(
-  "subset_cross_partition_property",
-  ``!(g h1 h2):'a group. h1 <= g /\ h2 <= g /\ FINITE G ==>
+Theorem subset_cross_partition_property:
+    !(g h1 h2):'a group. h1 <= g /\ h2 <= g /\ FINITE G ==>
    let (s1 = h1.carrier) in let (s2 = h2.carrier) in let (f = (\(x, y). x * y)) in
-   !t. t IN partition (feq f) (s1 CROSS s2) ==> (CARD t = CARD (s1 INTER s2))``,
+   !t. t IN partition (feq f) (s1 CROSS s2) ==> (CARD t = CARD (s1 INTER s2))
+Proof
   rw_tac std_ss[] >>
   qabbrev_tac `s = s1 CROSS s2` >>
   `partition (feq f) s = IMAGE (preimage f s) (IMAGE f s)` by rw[feq_partition, IMAGE_COMPOSE] >>
@@ -8083,7 +8393,8 @@ val subset_cross_partition_property = store_thm(
   `?m. BIJ m (s1 INTER s2) t` by metis_tac[subset_cross_to_preimage_cross_bij] >>
   `FINITE s1 /\ FINITE s2` by metis_tac[subgroup_carrier_subset, SUBSET_FINITE] >>
   `FINITE (s1 INTER s2)` by rw[] >>
-  metis_tac[FINITE_BIJ]);
+  metis_tac[FINITE_BIJ]
+QED
 
 (* Theorem: h1 <= g /\ h2 <= g /\ FINITE G ==>
             let (s1 = h1.carrier) in let (s2 = h2.carrier) in let (f = (\(x, y). x * y)) in
@@ -8096,13 +8407,14 @@ val subset_cross_partition_property = store_thm(
     ==> FINITE (s1 INTER s2)                         by FINITE_INTER
    Thus CARD (preimage f s z) = CARD (s1 INTER s2)   by FINITE_BIJ
 *)
-val subset_cross_element_preimage_card = store_thm(
-  "subset_cross_element_preimage_card",
-  ``!(g h1 h2):'a group. h1 <= g /\ h2 <= g /\ FINITE G ==>
+Theorem subset_cross_element_preimage_card:
+    !(g h1 h2):'a group. h1 <= g /\ h2 <= g /\ FINITE G ==>
    let (s1 = h1.carrier) in let (s2 = h2.carrier) in let (f = (\(x, y). x * y)) in
-   !z. z IN (s1 o s2) ==> (CARD (preimage f (s1 CROSS s2) z) = CARD (s1 INTER s2))``,
+   !z. z IN (s1 o s2) ==> (CARD (preimage f (s1 CROSS s2) z) = CARD (s1 INTER s2))
+Proof
   metis_tac[subset_cross_to_preimage_cross_bij, subgroup_carrier_subset,
-             SUBSET_FINITE, FINITE_INTER, FINITE_BIJ]);
+             SUBSET_FINITE, FINITE_INTER, FINITE_BIJ]
+QED
 
 (* Theorem: INJ (preimage (\(x, y). x * y) (s1 CROSS s2)) (s1 o s2) univ(:('a # 'a -> bool)) *)
 (* Proof:
@@ -8119,13 +8431,14 @@ val subset_cross_element_preimage_card = store_thm(
         ==> y = x1 * x2                                     by implication
          or x = y
 *)
-val subset_cross_preimage_inj = store_thm(
-  "subset_cross_preimage_inj",
-  ``!g:'a group. !(s1 s2):'a -> bool.
-     INJ (preimage (\(x, y). x * y) (s1 CROSS s2)) (s1 o s2) univ(:('a # 'a -> bool))``,
+Theorem subset_cross_preimage_inj:
+    !g:'a group. !(s1 s2):'a -> bool.
+     INJ (preimage (\(x, y). x * y) (s1 CROSS s2)) (s1 o s2) univ(:('a # 'a -> bool))
+Proof
   rw[INJ_DEF] >>
   fs[preimage_def, pairTheory.FORALL_PROD, EXTENSION] >>
-  metis_tac[subset_cross_element_iff]);
+  metis_tac[subset_cross_element_iff]
+QED
 
 (* Theorem: h1 <= g /\ h2 <= g /\ FINITE G ==>
             let (s1 = h1.carrier) in let (s2 = h2.carrier) in
@@ -8158,11 +8471,11 @@ val subset_cross_preimage_inj = store_thm(
     = CARD (s1 o s2) * CARD (s1 INTER s2)              by MULT_COMM
     = CARD (h1 o h2).carrier * CARD (s1 INTER s2)      by subgroup_cross_property
 *)
-val subgroup_cross_card_eqn = store_thm(
-  "subgroup_cross_card_eqn",
-  ``!(g h1 h2):'a group. h1 <= g /\ h2 <= g /\ FINITE G ==>
+Theorem subgroup_cross_card_eqn:
+    !(g h1 h2):'a group. h1 <= g /\ h2 <= g /\ FINITE G ==>
    let (s1 = h1.carrier) in let (s2 = h2.carrier) in
-    (CARD (h1 o h2).carrier * CARD (s1 INTER s2) = (CARD s1) * (CARD s2))``,
+    (CARD (h1 o h2).carrier * CARD (s1 INTER s2) = (CARD s1) * (CARD s2))
+Proof
   rw_tac std_ss[] >>
   qabbrev_tac `s = s1 CROSS s2` >>
   `s1 SUBSET G /\ s2 SUBSET G` by rw[subgroup_carrier_subset, Abbr`s1`, Abbr`s2`] >>
@@ -8177,7 +8490,8 @@ val subgroup_cross_card_eqn = store_thm(
   `CARD s1 * CARD s2 = CARD (s1 CROSS s2)` by rw[CARD_CROSS] >>
   `_ = SIGMA CARD (partition (feq f) s)` by rw[finite_card_by_feq_partition, Abbr`s`] >>
   `_ = CARD (s1 INTER s2) * CARD (s1 o s2)` by metis_tac[SIGMA_CARD_CONSTANT, subset_cross_partition_property] >>
-  rw[subgroup_cross_property, Abbr`s1`, Abbr`s2`]);
+  rw[subgroup_cross_property, Abbr`s1`, Abbr`s2`]
+QED
 
 (* Another proof of the same theorem *)
 
@@ -8246,11 +8560,11 @@ QED
         CARD (h1 o h2).carrier * CARD (s1 INTER s2) = (CARD s1) * (CARD s2)
     Thus the result follows         by DIV_SOLVE, 0 < CARD (s1 INTER s2)
 *)
-val subgroup_cross_card = store_thm(
-  "subgroup_cross_card",
-  ``!(g h1 h2):'a group. h1 <= g /\ h2 <= g /\ FINITE G ==>
+Theorem subgroup_cross_card:
+    !(g h1 h2):'a group. h1 <= g /\ h2 <= g /\ FINITE G ==>
    let (s1 = h1.carrier) in let (s2 = h2.carrier) in
-       (CARD (h1 o h2).carrier = ((CARD s1) * (CARD s2)) DIV (CARD (s1 INTER s2)))``,
+       (CARD (h1 o h2).carrier = ((CARD s1) * (CARD s2)) DIV (CARD (s1 INTER s2)))
+Proof
   rw_tac std_ss[] >>
   `Group h1 /\ Group h2` by metis_tac[subgroup_property] >>
   `FINITE s1 /\ FINITE s2` by metis_tac[subgroup_carrier_subset, SUBSET_FINITE] >>
@@ -8258,7 +8572,8 @@ val subgroup_cross_card = store_thm(
   `#e IN s1 INTER s2` by rw[] >>
   `FINITE (s1 INTER s2)` by rw[] >>
   `CARD (s1 INTER s2) <> 0` by metis_tac[CARD_EQ_0, MEMBER_NOT_EMPTY] >>
-  metis_tac[subgroup_cross_card_eqn, DIV_SOLVE, NOT_ZERO_LT_ZERO]);
+  metis_tac[subgroup_cross_card_eqn, DIV_SOLVE, NOT_ZERO_LT_ZERO]
+QED
 
 (* Another milestone theorem for me! *)
 (* This is just Lemma X.2 in Appendix of "Finite Group Theory" by Irving Martin Isaacs. *)
@@ -8288,10 +8603,11 @@ val _ = overload_on("independent",
    <=> (Gen b) INTER (Gen a) = {#e}     by INTER_COMM
    <=> independent g b a                by notation
 *)
-val independent_sym = store_thm(
-  "independent_sym",
-  ``!g:'a group. !a b. independent g a b = independent g b a``,
-  rw[INTER_COMM]);
+Theorem independent_sym:
+    !g:'a group. !a b. independent g a b = independent g b a
+Proof
+  rw[INTER_COMM]
+QED
 
 (* Theorem: Group g ==>
             !a b. a IN G /\ b IN G /\ independent g a b ==> ((gen a = gen b) <=> (a = b)) *)
@@ -8306,13 +8622,14 @@ val independent_sym = store_thm(
 
    Only-if part: a = b ==> gen a = gen b, true trivially.
 *)
-val independent_generated_eq = store_thm(
-  "independent_generated_eq",
-  ``!g:'a group. Group g ==>
-   !a b. a IN G /\ b IN G /\ independent g a b ==> ((gen a = gen b) <=> (a = b))``,
+Theorem independent_generated_eq:
+    !g:'a group. Group g ==>
+   !a b. a IN G /\ b IN G /\ independent g a b ==> ((gen a = gen b) <=> (a = b))
+Proof
   rw[EQ_IMP_THM] >>
   `Gen a = Gen b` by rw[Generated_def, monoid_component_equality] >>
-  metis_tac[generated_gen_element, IN_INTER, IN_SING]);
+  metis_tac[generated_gen_element, IN_INTER, IN_SING]
+QED
 
 (* Theorem: FiniteGroup g ==> !a b. a IN G /\ b IN G /\ independent g a b ==>
                 (CARD ((gen a) o (gen b)).carrier = (ord a) * (ord b)) *)
@@ -8328,14 +8645,15 @@ val independent_generated_eq = store_thm(
       = ((ord a) * (ord b)) DIV 1        by above
       = (ord a) * (ord b)                by DIV_1
 *)
-val independent_generator_2_card = store_thm(
-  "independent_generator_2_card",
-  ``!g:'a group. FiniteGroup g ==> !a b. a IN G /\ b IN G /\ independent g a b ==>
-                (CARD ((gen a) o (gen b)).carrier = (ord a) * (ord b))``,
+Theorem independent_generator_2_card:
+    !g:'a group. FiniteGroup g ==> !a b. a IN G /\ b IN G /\ independent g a b ==>
+                (CARD ((gen a) o (gen b)).carrier = (ord a) * (ord b))
+Proof
   rpt (stripDup[FiniteGroup_def]) >>
   `(gen a) <= g /\ (gen b) <= g` by rw[generated_subgroup] >>
   `CARD {#e} = 1` by rw[] >>
-  metis_tac[subgroup_cross_card, generated_group_card, group_order_pos, DIV_1]);
+  metis_tac[subgroup_cross_card, generated_group_card, group_order_pos, DIV_1]
+QED
 
 (* Define the set of all subgroups of a group. *)
 Definition all_subgroups_def:
@@ -8344,10 +8662,11 @@ End
 
 (* Theorem: h IN all_subgroups g <=> h <= g *)
 (* Proof: by all_subgroups_def *)
-val all_subgroups_element = store_thm(
-  "all_subgroups_element",
-  ``!g:'a group. !h. h IN all_subgroups g <=> h <= g``,
-  rw[all_subgroups_def]);
+Theorem all_subgroups_element:
+    !g:'a group. !h. h IN all_subgroups g <=> h <= g
+Proof
+  rw[all_subgroups_def]
+QED
 
 (* Theorem: Group g ==> (IMAGE (\h:'a group. H) (all_subgroups g)) SUBSET (POW G) *)
 (* Proof:
@@ -8358,11 +8677,12 @@ val all_subgroups_element = store_thm(
      or s IN (POW G)                            by IN_POW
    The result follows                           by SUBSET_DEF
 *)
-val all_subgroups_subset = store_thm(
-  "all_subgroups_subset",
-  ``!g:'a group. Group g ==> (IMAGE (\h:'a group. H) (all_subgroups g)) SUBSET (POW G)``,
+Theorem all_subgroups_subset:
+    !g:'a group. Group g ==> (IMAGE (\h:'a group. H) (all_subgroups g)) SUBSET (POW G)
+Proof
   rw[all_subgroups_element, SUBSET_DEF, IN_POW] >>
-  metis_tac[subgroup_carrier_subset, SUBSET_DEF]);
+  metis_tac[subgroup_carrier_subset, SUBSET_DEF]
+QED
 
 (* Theorem: Group g ==> (gen #e) IN (all_subgroups g) *)
 (* Proof:
@@ -8370,10 +8690,11 @@ val all_subgroups_subset = store_thm(
     and (gen #e) <= g                  by generated_id_subgroup, Group g
     ==> (gen #e) IN (all_subgroups g)  by all_subgroups_element
 *)
-val all_subgroups_has_gen_id = store_thm(
-  "all_subgroups_has_gen_id",
-  ``!g:'a group. Group g ==> (gen #e) IN (all_subgroups g)``,
-  rw[generated_id_subgroup, all_subgroups_element]);
+Theorem all_subgroups_has_gen_id:
+    !g:'a group. Group g ==> (gen #e) IN (all_subgroups g)
+Proof
+  rw[generated_id_subgroup, all_subgroups_element]
+QED
 
 (* Theorem: FiniteGroup g ==> FINITE (all_subgroups g) *)
 (* Proof:
@@ -8392,9 +8713,9 @@ val all_subgroups_has_gen_id = store_thm(
     and FINITE (IMAGE f s)             by above
     ==> FINITE s                       by FINITE_INJ
 *)
-val all_subgroups_finite = store_thm(
-  "all_subgroups_finite",
-  ``!g:'a group. FiniteGroup g ==> FINITE (all_subgroups g)``,
+Theorem all_subgroups_finite:
+    !g:'a group. FiniteGroup g ==> FINITE (all_subgroups g)
+Proof
   rw[FiniteGroup_def] >>
   qabbrev_tac `f = \h:'a group. H` >>
   qabbrev_tac `s = all_subgroups g` >>
@@ -8402,7 +8723,8 @@ val all_subgroups_finite = store_thm(
   `FINITE (POW G)` by rw[FINITE_POW] >>
   `FINITE (IMAGE f s)` by metis_tac[SUBSET_FINITE] >>
   (`INJ f s (IMAGE f s)` by (rw[INJ_DEF, all_subgroups_element, Abbr`f`, Abbr`s`] >> metis_tac[subgroup_eq])) >>
-  metis_tac[FINITE_INJ]);
+  metis_tac[FINITE_INJ]
+QED
 
 (* Theorem: FiniteGroup g ==> !s. s SUBSET G ==> (IMAGE gen s) SUBSET all_subgroups g *)
 (* Proof:
@@ -8413,10 +8735,11 @@ val all_subgroups_finite = store_thm(
    Thus h IN all_subgroups g        by all_subgroups_element
    The result follows               by SUBSET_DEF
 *)
-val generated_image_subset_all_subgroups = store_thm(
-  "generated_image_subset_all_subgroups",
-  ``!g:'a group. FiniteGroup g ==> !s. s SUBSET G ==> (IMAGE gen s) SUBSET all_subgroups g``,
-  metis_tac[generated_subgroup, SUBSET_DEF, all_subgroups_element, IN_IMAGE]);
+Theorem generated_image_subset_all_subgroups:
+    !g:'a group. FiniteGroup g ==> !s. s SUBSET G ==> (IMAGE gen s) SUBSET all_subgroups g
+Proof
+  metis_tac[generated_subgroup, SUBSET_DEF, all_subgroups_element, IN_IMAGE]
+QED
 
 (* Theorem: Group g ==> !s. s SUBSET G ==> (IMAGE Gen s) SUBSET (POW G) *)
 (* Proof:
@@ -8427,11 +8750,12 @@ val generated_image_subset_all_subgroups = store_thm(
    Thus z IN POW G                  by IN_POW
    The result follows               by SUBSET_DEF
 *)
-val generated_image_subset_power_set = store_thm(
-  "generated_image_subset_power_set",
-  ``!g:'a group. Group g ==> !s. s SUBSET G ==> (IMAGE Gen s) SUBSET (POW G)``,
+Theorem generated_image_subset_power_set:
+    !g:'a group. Group g ==> !s. s SUBSET G ==> (IMAGE Gen s) SUBSET (POW G)
+Proof
   rw[IN_POW, SUBSET_DEF] >>
-  metis_tac[generated_subset, SUBSET_DEF]);
+  metis_tac[generated_subset, SUBSET_DEF]
+QED
 
 (* Theorem: AbelianGroup g ==> closure_comm_assoc_fun (subset_cross g) (POW G) *)
 (* Proof:
@@ -8445,16 +8769,17 @@ val generated_image_subset_power_set = store_thm(
        = (y o x) o z         by subset_cross_comm, AbelianGroup g
        = y o (x o z)         by subset_cross_assoc, Group g
 *)
-val subset_cross_closure_comm_assoc_fun = store_thm(
-  "subset_cross_closure_comm_assoc_fun",
-  ``!g:'a group. AbelianGroup g ==> closure_comm_assoc_fun (subset_cross g) (POW G)``,
+Theorem subset_cross_closure_comm_assoc_fun:
+    !g:'a group. AbelianGroup g ==> closure_comm_assoc_fun (subset_cross g) (POW G)
+Proof
   rpt strip_tac >>
   `Group g` by metis_tac[AbelianGroup_def] >>
   rw[closure_comm_assoc_fun_def, IN_POW] >-
   rw[subset_cross_subset] >>
   `x o (y o z) = (x o y) o z` by rw[subset_cross_assoc] >>
   `_ = (y o x) o z` by rw[subset_cross_comm] >>
-  rw[subset_cross_assoc]);
+  rw[subset_cross_assoc]
+QED
 
 (* Theorem: AbelianGroup g ==> closure_comm_assoc_fun (subgroup_cross g) (all_subgroups g) *)
 (* Proof:
@@ -8468,16 +8793,17 @@ val subset_cross_closure_comm_assoc_fun = store_thm(
        = (y o x) o z         by subgroup_cross_comm, AbelianGroup g
        = y o (x o z)         by subgroup_cross_assoc
 *)
-val subgroup_cross_closure_comm_assoc_fun = store_thm(
-  "subgroup_cross_closure_comm_assoc_fun",
-  ``!g:'a group. AbelianGroup g ==> closure_comm_assoc_fun (subgroup_cross g) (all_subgroups g)``,
+Theorem subgroup_cross_closure_comm_assoc_fun:
+    !g:'a group. AbelianGroup g ==> closure_comm_assoc_fun (subgroup_cross g) (all_subgroups g)
+Proof
   rpt strip_tac >>
   `Group g` by metis_tac[AbelianGroup_def] >>
   rw[closure_comm_assoc_fun_def, all_subgroups_element] >-
   rw[abelian_subgroup_cross_subgroup] >>
   `x o (y o z) = (x o y) o z` by rw[subgroup_cross_assoc] >>
   `_ = (y o x) o z` by rw[subgroup_cross_comm] >>
-  rw[subgroup_cross_assoc]);
+  rw[subgroup_cross_assoc]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Big Cross of Subsets.                                                     *)
@@ -8501,10 +8827,11 @@ val it = |- !g B. ssbcross B = ITSET $o B {#e}: thm
    = ITSET $o {} {#e}    by subset_big_cross_def
    = {#e}                by ITSET_EMPTY
 *)
-val subset_big_cross_empty = store_thm(
-  "subset_big_cross_empty",
-  ``!g:'a group. ssbcross {} = {#e}``,
-  rw[subset_big_cross_def, ITSET_EMPTY]);
+Theorem subset_big_cross_empty:
+    !g:'a group. ssbcross {} = {#e}
+Proof
+  rw[subset_big_cross_def, ITSET_EMPTY]
+QED
 
 (* Theorem: FiniteAbelianGroup g ==> !B. B SUBSET (POW G) ==>
             !s. s SUBSET G ==> (ssbcross (s INSERT B) = s o ssbcross (B DELETE s)) *)
@@ -8524,26 +8851,28 @@ val subset_big_cross_empty = store_thm(
    = s o ITSET $o (B DELETE s) {#e}     by SUBSET_COMMUTING_ITSET_RECURSES
    = s o ssbcross (B DELETE s))         by subset_big_cross_def
 *)
-val subset_big_cross_thm = store_thm(
-  "subset_big_cross_thm",
-  ``!g:'a group. FiniteAbelianGroup g ==> !B. B SUBSET (POW G) ==>
-   !s. s SUBSET G ==> (ssbcross (s INSERT B) = s o ssbcross (B DELETE s))``,
+Theorem subset_big_cross_thm:
+    !g:'a group. FiniteAbelianGroup g ==> !B. B SUBSET (POW G) ==>
+   !s. s SUBSET G ==> (ssbcross (s INSERT B) = s o ssbcross (B DELETE s))
+Proof
   rw[FiniteAbelianGroup_def] >>
   `Group g` by metis_tac[AbelianGroup_def] >>
   `closure_comm_assoc_fun (subset_cross g) (POW G)` by rw[subset_cross_closure_comm_assoc_fun] >>
   `FINITE B` by metis_tac[FINITE_POW, SUBSET_FINITE] >>
   `s IN (POW G)` by rw[IN_POW] >>
   `{#e} IN (POW G)` by rw[IN_POW] >>
-  metis_tac[subset_big_cross_def, SUBSET_COMMUTING_ITSET_RECURSES]);
+  metis_tac[subset_big_cross_def, SUBSET_COMMUTING_ITSET_RECURSES]
+QED
 
 (* Theorem: FiniteAbelianGroup g ==> !B. B SUBSET (POW G) ==>
             !s. s SUBSET G /\ s NOTIN B ==> (ssbcross (s INSERT B) = s o ssbcross B) *)
 (* Proof: by subset_big_cross_thm, DELETE_NON_ELEMENT *)
-val subset_big_cross_insert = store_thm(
-  "subset_big_cross_insert",
-  ``!g:'a group. FiniteAbelianGroup g ==> !B. B SUBSET (POW G) ==>
-   !s. s SUBSET G /\ s NOTIN B ==> (ssbcross (s INSERT B) = s o ssbcross B)``,
-  rw[subset_big_cross_thm, DELETE_NON_ELEMENT]);
+Theorem subset_big_cross_insert:
+    !g:'a group. FiniteAbelianGroup g ==> !B. B SUBSET (POW G) ==>
+   !s. s SUBSET G /\ s NOTIN B ==> (ssbcross (s INSERT B) = s o ssbcross B)
+Proof
+  rw[subset_big_cross_thm, DELETE_NON_ELEMENT]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Big Cross of Subgroups.                                                   *)
@@ -8567,10 +8896,11 @@ val it = |- !g B. sgbcross B = ITSET $o B (gen #e): thm
    = ITSET $o {} (gen #e)    by subgroup_big_cross_def
    = gen #e                  by ITSET_EMPTY
 *)
-val subgroup_big_cross_empty = store_thm(
-  "subgroup_big_cross_empty",
-  ``!g:'a group. sgbcross {} = gen #e``,
-  rw[subgroup_big_cross_def, ITSET_EMPTY]);
+Theorem subgroup_big_cross_empty:
+    !g:'a group. sgbcross {} = gen #e
+Proof
+  rw[subgroup_big_cross_def, ITSET_EMPTY]
+QED
 
 (* Theorem: FiniteAbelianGroup g ==> !B. B SUBSET (all_subgroups g) ==>
             !h. h IN (all_subgroups g) ==> (sgbcross (h INSERT B) = h o sgbcross (B DELETE h)) *)
@@ -8589,26 +8919,28 @@ val subgroup_big_cross_empty = store_thm(
    = h o ITSET $o (B DELETE h) (gen #e) by SUBSET_COMMUTING_ITSET_RECURSES
    = h o sgbcross (B DELETE h))         by subgroup_big_cross_def
 *)
-val subgroup_big_cross_thm = store_thm(
-  "subgroup_big_cross_thm",
-  ``!g:'a group. FiniteAbelianGroup g ==> !B. B SUBSET (all_subgroups g) ==>
-   !h. h IN (all_subgroups g) ==> (sgbcross (h INSERT B) = h o sgbcross (B DELETE h))``,
+Theorem subgroup_big_cross_thm:
+    !g:'a group. FiniteAbelianGroup g ==> !B. B SUBSET (all_subgroups g) ==>
+   !h. h IN (all_subgroups g) ==> (sgbcross (h INSERT B) = h o sgbcross (B DELETE h))
+Proof
   rw[FiniteAbelianGroup_def] >>
   `Group g /\ FiniteGroup g` by metis_tac[AbelianGroup_def, FiniteGroup_def] >>
   `closure_comm_assoc_fun (subgroup_cross g) (all_subgroups g)`
      by rw[subgroup_cross_closure_comm_assoc_fun] >>
   `FINITE B` by metis_tac[all_subgroups_finite, SUBSET_FINITE] >>
   `(gen #e) IN (all_subgroups g)` by rw[all_subgroups_has_gen_id] >>
-  metis_tac[subgroup_big_cross_def, SUBSET_COMMUTING_ITSET_RECURSES]);
+  metis_tac[subgroup_big_cross_def, SUBSET_COMMUTING_ITSET_RECURSES]
+QED
 
 (* Theorem: FiniteAbelianGroup g ==> !B. B SUBSET (all_subgroups g) ==>
             !h. h IN (all_subgroups g) /\ h NOTIN B ==> (sgbcross (h INSERT B) = h o sgbcross B) *)
 (* Proof: by subgroup_big_cross_thm, DELETE_NON_ELEMENT *)
-val subgroup_big_cross_insert = store_thm(
-  "subgroup_big_cross_insert",
-  ``!g:'a group. FiniteAbelianGroup g ==> !B. B SUBSET (all_subgroups g) ==>
-   !h. h IN (all_subgroups g) /\ h NOTIN B ==> (sgbcross (h INSERT B) = h o sgbcross B)``,
-  rw[subgroup_big_cross_thm, DELETE_NON_ELEMENT]);
+Theorem subgroup_big_cross_insert:
+    !g:'a group. FiniteAbelianGroup g ==> !B. B SUBSET (all_subgroups g) ==>
+   !h. h IN (all_subgroups g) /\ h NOTIN B ==> (sgbcross (h INSERT B) = h o sgbcross B)
+Proof
+  rw[subgroup_big_cross_thm, DELETE_NON_ELEMENT]
+QED
 
 (*
 
@@ -8825,31 +9157,34 @@ We define Zadd_eval and Zadd_inv below, and put them into computeLib.
 
 (* Theorem: Evaluation of Zadd for each record field. *)
 (* Proof: by Zadd_def. *)
-val Zadd_eval = store_thm(
-  "Zadd_eval",
-  ``!n. ((Z n).carrier = count n) /\
+Theorem Zadd_eval:
+    !n. ((Z n).carrier = count n) /\
        (!x y. (Z n).op x y = (x + y) MOD n) /\
-       ((Z n).id = 0)``,
-  rw_tac std_ss[Zadd_def]);
+       ((Z n).id = 0)
+Proof
+  rw_tac std_ss[Zadd_def]
+QED
 (* This is later exported to computeLib, with Zadd_inv_compute. *)
 
 (* Theorem: x IN (Z n).carrier <=> x < n *)
 (* Proof: by definition, IN_COUNT. *)
-val Zadd_element = store_thm(
-  "Zadd_element",
-  ``!n x. x IN (Z n).carrier <=> x < n``,
-  rw[Zadd_def]); (* by IN_COUNT *)
+Theorem Zadd_element:
+    !n x. x IN (Z n).carrier <=> x < n
+Proof
+  rw[Zadd_def]
+QED(* by IN_COUNT *)
 
 (* Theorem: properties of Zn. *)
 (* Proof: by definition. *)
-val Zadd_property = store_thm(
-  "Zadd_property",
-  ``!n. (!x. x IN (Z n).carrier <=> x < n) /\
+Theorem Zadd_property:
+    !n. (!x. x IN (Z n).carrier <=> x < n) /\
        ((Z n).id = 0) /\
        (!x y. (Z n).op x y = (x + y) MOD n) /\
        FINITE (Z n).carrier /\
-       (CARD (Z n).carrier = n)``,
-  rw_tac std_ss[Zadd_def, IN_COUNT, FINITE_COUNT, CARD_COUNT]);
+       (CARD (Z n).carrier = n)
+Proof
+  rw_tac std_ss[Zadd_def, IN_COUNT, FINITE_COUNT, CARD_COUNT]
+QED
 
 (* Theorem: (Z n).carrier = count n *)
 (* Proof: by Zadd_def. *)
@@ -8877,17 +9212,19 @@ QED
 
 (* Theorem: FINITE (Z n).carrier *)
 (* Proof: by Zadd_property *)
-val Zadd_finite = store_thm(
-  "Zadd_finite",
-  ``!n. FINITE (Z n).carrier``,
-  rw[Zadd_property]);
+Theorem Zadd_finite:
+    !n. FINITE (Z n).carrier
+Proof
+  rw[Zadd_property]
+QED
 
 (* Theorem: CARD (Z n).carrier = n *)
 (* Proof: by Zadd_property *)
-val Zadd_card = store_thm(
-  "Zadd_card",
-  ``!n. CARD (Z n).carrier = n``,
-  rw[Zadd_property]);
+Theorem Zadd_card:
+    !n. CARD (Z n).carrier = n
+Proof
+  rw[Zadd_property]
+QED
 
 (* Theorem: Zn is a group if n > 0. *)
 (* Proof: by definitions:
@@ -8897,9 +9234,9 @@ val Zadd_card = store_thm(
       If x = 0, let y = 0, true by ZERO_MOD.
       If x <> 0, let y = n - x, true by DIVMOD_ID.
 *)
-val Zadd_group = store_thm(
-  "Zadd_group",
-  ``!n. 0 < n ==> Group (Z n)``,
+Theorem Zadd_group:
+    !n. 0 < n ==> Group (Z n)
+Proof
   rw_tac std_ss[group_def_alt, Zadd_property] >| [
     rw_tac std_ss[MOD_ADD_ASSOC],
     Cases_on `x = 0` >| [
@@ -8907,23 +9244,26 @@ val Zadd_group = store_thm(
       `n - x < n /\ ((n - x) + x = n)` by decide_tac >>
       metis_tac[DIVMOD_ID]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: Zn is a FiniteGroup if n > 0. *)
 (* Proof: by Zadd_group and FINITE_Zadd_carrier. *)
-val Zadd_finite_group = store_thm(
-  "Zadd_finite_group",
-  ``!n. 0 < n ==> FiniteGroup (Z n)``,
-  rw_tac std_ss[FiniteGroup_def, Zadd_group, Zadd_property]);
+Theorem Zadd_finite_group:
+    !n. 0 < n ==> FiniteGroup (Z n)
+Proof
+  rw_tac std_ss[FiniteGroup_def, Zadd_group, Zadd_property]
+QED
 
 (* Theorem: Zn is a finite Abelian group if n > 0. *)
 (* Proof: by Zadd_finite_group and arithmetic. *)
-val Zadd_finite_abelian_group = store_thm(
-  "Zadd_finite_abelian_group",
-  ``!n. 0 < n ==> FiniteAbelianGroup (Z n)``,
+Theorem Zadd_finite_abelian_group:
+    !n. 0 < n ==> FiniteAbelianGroup (Z n)
+Proof
   rw_tac std_ss[FiniteAbelianGroup_def, AbelianGroup_def, Zadd_property] >-
   rw_tac std_ss[Zadd_group] >>
-  rw_tac arith_ss [Zadd_def]);
+  rw_tac arith_ss [Zadd_def]
+QED
 
 (* Theorem: 0 < n ==> !x m. (Z n).exp x m = (x * m) MOD n *)
 (* Proof:
@@ -8943,25 +9283,27 @@ val Zadd_finite_abelian_group = store_thm(
       = (m + x * m) MOD n              by MOD_PLUS, MOD_MOD
       = (x * SUC m) MOD n              by MULT_SUC
 *)
-val Zadd_exp = store_thm(
-  "Zadd_exp",
-  ``!n. 0 < n ==> !x m. (Z n).exp x m = (x * m) MOD n``,
+Theorem Zadd_exp:
+    !n. 0 < n ==> !x m. (Z n).exp x m = (x * m) MOD n
+Proof
   rpt strip_tac >>
   `Group (Z n)` by rw[Zadd_group] >>
   Induct_on `m` >-
   rw[group_exp_0, Zadd_property] >>
   rw_tac std_ss[group_exp_SUC, Zadd_property] >>
-  metis_tac[MOD_PLUS, MOD_MOD, MULT_SUC]);
+  metis_tac[MOD_PLUS, MOD_MOD, MULT_SUC]
+QED
 
 (* Theorem: (Z n).inv x = (n - x) MOD n *)
 (* Proof: by MOD_ADD_INV and group_linv_unique. *)
-val Zadd_inv = store_thm(
-  "Zadd_inv",
-  ``!n x. 0 < n /\ x < n ==> ((Z n).inv x = (n - x) MOD n)``,
+Theorem Zadd_inv:
+    !n x. 0 < n /\ x < n ==> ((Z n).inv x = (n - x) MOD n)
+Proof
   rpt strip_tac >>
   `x IN (Z n).carrier /\ (n - x) MOD n IN (Z n).carrier` by rw_tac std_ss[Zadd_property] >>
   `((n - x) MOD n + x) MOD n = 0` by rw_tac std_ss[MOD_ADD_INV] >>
-  metis_tac[Zadd_group, group_linv_unique, Zadd_property]);
+  metis_tac[Zadd_group, group_linv_unique, Zadd_property]
+QED
 
 (* Due to zDefine before, now export the Define to computeLib. *)
 
@@ -8986,10 +9328,11 @@ val _ = computeLib.add_persistent_funs ["Zadd_eval"];
 
 (* Theorem: As function, (Z n).inv x = (n - x) MOD n *)
 (* Proof: by Zadd_inv. *)
-val Zadd_inv_compute = store_thm(
-  "Zadd_inv_compute",
-  ``!n x. (Z n).inv x = if 0 < n /\ x < n then (n - x) MOD n else FAIL ((Z n).inv x) bad_element``,
-  rw_tac std_ss[Zadd_inv, combinTheory.FAIL_DEF]);
+Theorem Zadd_inv_compute:
+    !n x. (Z n).inv x = if 0 < n /\ x < n then (n - x) MOD n else FAIL ((Z n).inv x) bad_element
+Proof
+  rw_tac std_ss[Zadd_inv, combinTheory.FAIL_DEF]
+QED
 
 val _ = computeLib.add_persistent_funs ["Zadd_inv_compute"];
 val _ = computeLib.set_skip (computeLib.the_compset) ``combin$FAIL`` (SOME 0);
@@ -9030,31 +9373,34 @@ val _ = temp_overload_on("Z*", ``Zstar``);
 
 (* Theorem: Evaluation of Zstar for each record field. *)
 (* Proof: by Zstar_def. *)
-val Zstar_eval = store_thm(
-  "Zstar_eval",
-  ``!p. ((Z* p).carrier = residue p) /\
+Theorem Zstar_eval:
+    !p. ((Z* p).carrier = residue p) /\
        (!x y. (Z* p).op x y = (x * y) MOD p) /\
-       ((Z* p).id = 1)``,
-  rw_tac std_ss[Zstar_def]);
+       ((Z* p).id = 1)
+Proof
+  rw_tac std_ss[Zstar_def]
+QED
 (* This is put to computeLib later, together with Zstar_inv_compute. *)
 
 (* Theorem: x IN (Z* p).carrier ==> 0 < x /\ x < p *)
 (* Proof: by definition. *)
-val Zstar_element = store_thm(
-  "Zstar_element",
-  ``!p x. x IN (Z* p).carrier <=> 0 < x /\ x < p``,
-  rw[Zstar_def, residue_def]);
+Theorem Zstar_element:
+    !p x. x IN (Z* p).carrier <=> 0 < x /\ x < p
+Proof
+  rw[Zstar_def, residue_def]
+QED
 
 (* Theorem: properties of Z* p. *)
 (* Proof: by definition. *)
-val Zstar_property = store_thm(
-  "Zstar_property",
-  ``!p. ((Z* p).carrier = residue p) /\
+Theorem Zstar_property:
+    !p. ((Z* p).carrier = residue p) /\
        ((Z* p).id = 1) /\
        (!x y. (Z* p).op x y = (x * y) MOD p) /\
        FINITE (Z* p).carrier /\
-       (0 < p ==> (CARD (Z* p).carrier = p - 1))``,
-  rw[Zstar_def, residue_finite, residue_card]);
+       (0 < p ==> (CARD (Z* p).carrier = p - 1))
+Proof
+  rw[Zstar_def, residue_finite, residue_card]
+QED
 
 (* Theorem: (Z* p).carrier = residue p *)
 (* Proof: by Zstar_def. *)
@@ -9082,17 +9428,19 @@ QED
 
 (* Theorem: FINITE (Z* p).carrier *)
 (* Proof: by Zstar_property *)
-val Zstar_finite = store_thm(
-  "Zstar_finite",
-  ``!p. FINITE (Z* p).carrier``,
-  rw[Zstar_property]);
+Theorem Zstar_finite:
+    !p. FINITE (Z* p).carrier
+Proof
+  rw[Zstar_property]
+QED
 
 (* Theorem: 0 < p ==> (CARD (Z* p).carrier = p - 1) *)
 (* Proof: by Zstar_property *)
-val Zstar_card = store_thm(
-  "Zstar_card",
-  ``!p. 0 < p ==> (CARD (Z* p).carrier = p - 1)``,
-  rw[Zstar_property]);
+Theorem Zstar_card:
+    !p. 0 < p ==> (CARD (Z* p).carrier = p - 1)
+Proof
+  rw[Zstar_property]
+QED
 
 (* Theorem: Z* p is a Group for prime p. *)
 (* Proof: check definitions.
@@ -9103,9 +9451,9 @@ val Zstar_card = store_thm(
    Inverse: ?y. (0 < y /\ y < p) /\ ((y * x) MOD p = 1)
       true by MOD_MULT_INV_DEF.
 *)
-val Zstar_group = store_thm(
-  "Zstar_group",
-  ``!p. prime p ==> Group (Z* p)``,
+Theorem Zstar_group:
+    !p. prime p ==> Group (Z* p)
+Proof
   rw_tac std_ss[group_def_alt, Zstar_property, residue_def, GSPECIFICATION, ONE_LT_PRIME] >| [
     `x MOD p <> 0 /\ y MOD p <> 0` by rw_tac arith_ss[] >>
     `(x * y) MOD p <> 0` by metis_tac[EUCLID_LEMMA] >>
@@ -9113,25 +9461,28 @@ val Zstar_group = store_thm(
     rw_tac arith_ss[],
     rw_tac std_ss[PRIME_POS, MOD_MULT_ASSOC],
     metis_tac[MOD_MULT_INV_DEF]
-  ]);
+  ]
+QED
 
 (* Theorem: If p is prime, Z*p is a Finite Group. *)
 (* Proof: by Zstar_group, FINITE (Z* p).carrier *)
-val Zstar_finite_group = store_thm(
-  "Zstar_finite_group",
-  ``!p. prime p ==> FiniteGroup (Z* p)``,
-  rw[FiniteGroup_def, Zstar_group, Zstar_property]);
+Theorem Zstar_finite_group:
+    !p. prime p ==> FiniteGroup (Z* p)
+Proof
+  rw[FiniteGroup_def, Zstar_group, Zstar_property]
+QED
 
 (* Theorem: If p is prime, Z*p is a Finite Abelian Group. *)
 (* Proof:
    Verify all finite Abelian group axioms for Z*p.
 *)
-val Zstar_finite_abelian_group = store_thm(
-  "Zstar_finite_abelian_group",
-  ``!p. prime p ==> FiniteAbelianGroup (Z* p)``,
+Theorem Zstar_finite_abelian_group:
+    !p. prime p ==> FiniteAbelianGroup (Z* p)
+Proof
   rw_tac std_ss[FiniteAbelianGroup_def, AbelianGroup_def, Zstar_property, residue_def, GSPECIFICATION] >-
   rw_tac std_ss[Zstar_group] >>
-  rw_tac arith_ss[]);
+  rw_tac arith_ss[]
+QED
 
 (* Theorem: (Z* p).exp a n = a ** n MOD p *)
 (* Proof:
@@ -9150,16 +9501,17 @@ val Zstar_finite_abelian_group = store_thm(
     = (a*(a**n)) MOD p            by MOD_TIMES2
     = (a**(SUC n) MOD p           by EXP
 *)
-val Zstar_exp = store_thm(
-  "Zstar_exp",
-  ``!p a. prime p /\ a IN (Z* p).carrier ==> !n. (Z* p).exp a n = (a ** n) MOD p``,
+Theorem Zstar_exp:
+    !p a. prime p /\ a IN (Z* p).carrier ==> !n. (Z* p).exp a n = (a ** n) MOD p
+Proof
   rw[Zstar_def, monoid_exp_def, residue_def] >>
   `0 < p /\ 1 < p` by rw_tac std_ss[PRIME_POS, ONE_LT_PRIME] >>
   Induct_on `n` >-
   rw_tac std_ss[FUNPOW_0, EXP, ONE_MOD] >>
   rw_tac std_ss[FUNPOW_SUC, EXP] >>
   `a MOD p = a` by rw_tac arith_ss[] >>
-  metis_tac[MOD_TIMES2]);
+  metis_tac[MOD_TIMES2]
+QED
 
 (*
 - group_order_property |> ISPEC ``(Z* p)``;
@@ -9177,9 +9529,9 @@ val Zstar_exp = store_thm(
 
 (* Theorem: (Z* p).inv x = x ** (order (Z* p) x - 1) *)
 (* Proof: by group_order_property and group_rinv_unique. *)
-val Zstar_inv = store_thm(
-  "Zstar_inv",
-  ``!p. prime p ==> !x. 0 < x /\ x < p ==> ((Z* p).inv x = (Z* p).exp x (order (Z* p) x - 1))``,
+Theorem Zstar_inv:
+    !p. prime p ==> !x. 0 < x /\ x < p ==> ((Z* p).inv x = (Z* p).exp x (order (Z* p) x - 1))
+Proof
   rpt strip_tac >>
   `x IN residue p` by rw_tac std_ss[residue_def, GSPECIFICATION] >>
   `x IN (Z* p).carrier /\ ((Z* p).id = 1)` by rw_tac std_ss[Zstar_property] >>
@@ -9187,17 +9539,19 @@ val Zstar_inv = store_thm(
   `FiniteGroup (Z* p)` by rw_tac std_ss[FiniteGroup_def, Zstar_property] >>
   `0 < order (Z* p) x /\ ((Z* p).exp x (order (Z* p) x) = 1)` by rw_tac std_ss[group_order_property] >>
   `SUC ((order (Z* p) x) - 1) = order (Z* p) x` by rw_tac arith_ss[] >>
-  metis_tac[group_rinv_unique, group_exp_SUC, group_exp_element]);
+  metis_tac[group_rinv_unique, group_exp_SUC, group_exp_element]
+QED
 
 (* val _ = computeLib.add_persistent_funs ["Zstar_inv"]; -- cannot put a non-function. *)
 
 (* Theorem: As function, (Z* p).inv x = x ** (order (Z* p) x - 1) *)
 (* Proof: by Zstar_inv. *)
-val Zstar_inv_compute = store_thm(
-  "Zstar_inv_compute",
-  ``!p x. (Z* p).inv x = if prime p /\ 0 < x /\ x < p then (Z* p).exp x (order (Z* p) x - 1)
-                           else FAIL ((Z* p).inv x) bad_element``,
-  rw_tac std_ss[Zstar_inv, combinTheory.FAIL_DEF]);
+Theorem Zstar_inv_compute:
+    !p x. (Z* p).inv x = if prime p /\ 0 < x /\ x < p then (Z* p).exp x (order (Z* p) x - 1)
+                           else FAIL ((Z* p).inv x) bad_element
+Proof
+  rw_tac std_ss[Zstar_inv, combinTheory.FAIL_DEF]
+QED
 
 (* Now put thse input computeLib for EVAL *)
 val _ = computeLib.add_persistent_funs ["Zstar_eval"];
@@ -9250,42 +9604,46 @@ End
 (* Theorem: Estar n =
        <|carrier := {i | 0 < i /\ i < n /\ coprime n i} ; id := 1; op := (\i j. (i * j) MOD n)|>*)
 (* Proof: by Estar_def, Euler_def *)
-val Estar_alt = store_thm(
-  "Estar_alt",
-  ``!n. Estar n =
-       <|carrier := {i | 0 < i /\ i < n /\ coprime n i} ; id := 1; op := (\i j. (i * j) MOD n)|>``,
-  rw[Estar_def, Euler_def]);
+Theorem Estar_alt:
+    !n. Estar n =
+       <|carrier := {i | 0 < i /\ i < n /\ coprime n i} ; id := 1; op := (\i j. (i * j) MOD n)|>
+Proof
+  rw[Estar_def, Euler_def]
+QED
 
 (* Theorem: Evaluation of Zstar for each record field. *)
 (* Proof: by Etar_def. *)
-val Estar_eval = store_thm(
-  "Estar_eval[compute]",
-  ``!n. ((Estar n).carrier = Euler n) /\
+Theorem Estar_eval[compute]:
+    !n. ((Estar n).carrier = Euler n) /\
        (!x y. (Estar n).op x y = (x * y) MOD n) /\
-       ((Estar n).id = 1)``,
-  rw_tac std_ss[Estar_def]);
+       ((Estar n).id = 1)
+Proof
+  rw_tac std_ss[Estar_def]
+QED
 (* This is put to computeLib, later also Estar_inv_compute. *)
 
 (* Theorem: x IN (Estar n).carrier <=> 0 < x /\ x < n /\ coprime n x *)
 (* Proof: by Estar_def, Euler_def *)
-val Estar_element = store_thm(
-  "Estar_element",
-  ``!n x. x IN (Estar n).carrier <=> 0 < x /\ x < n /\ coprime n x``,
-  rw[Estar_def, Euler_def]);
+Theorem Estar_element:
+    !n x. x IN (Estar n).carrier <=> 0 < x /\ x < n /\ coprime n x
+Proof
+  rw[Estar_def, Euler_def]
+QED
 
 (* Theorem: properties of (Estar n). *)
 (* Proof: by definition. *)
-val Estar_property = store_thm(
-  "Estar_property",
-  ``!n. ((Estar n).carrier = Euler n) /\
+Theorem Estar_property:
+    !n. ((Estar n).carrier = Euler n) /\
        ((Estar n).id = 1) /\
        (!x y. (Estar n).op x y = (x * y) MOD n) /\
        FINITE (Estar n).carrier /\
-       (CARD (Estar n).carrier = totient n)``,
+       (CARD (Estar n).carrier = totient n)
+Proof
   rw_tac std_ss[Estar_def, totient_def] >>
   rw_tac std_ss[Euler_def] >>
   `{i | 0 < i /\ i < n /\ coprime n i} SUBSET count n` by rw[SUBSET_DEF] >>
-  metis_tac[FINITE_COUNT, SUBSET_FINITE]);
+  metis_tac[FINITE_COUNT, SUBSET_FINITE]
+QED
 
 (* Theorem: (Estar n).carrier = Euler n *)
 (* Proof: by Estar_def. *)
@@ -9313,24 +9671,27 @@ QED
 
 (* Theorem: FINITE (Estar n).carrier *)
 (* Proof: by Estar_property *)
-val Estar_finite = store_thm(
-  "Estar_finite",
-  ``!n. FINITE (Estar n).carrier``,
-  rw[Estar_property]);
+Theorem Estar_finite:
+    !n. FINITE (Estar n).carrier
+Proof
+  rw[Estar_property]
+QED
 
 (* Theorem: CARD (Estar n).carrier = totient n *)
 (* Proof: by Estar_property *)
-val Estar_card = store_thm(
-  "Estar_card",
-  ``!n. CARD (Estar n).carrier = totient n``,
-  rw[Estar_property]);
+Theorem Estar_card:
+    !n. CARD (Estar n).carrier = totient n
+Proof
+  rw[Estar_property]
+QED
 
 (* Theorem: CARD (Estar n).carrier = totient n *)
 (* Proof: by Estar_card, phi_eq_totient *)
-val Estar_card_alt = store_thm(
-  "Estar_card_alt",
-  ``!n. 1 < n ==> (CARD (Estar n).carrier = phi n)``,
-  rw[Estar_card, phi_eq_totient]);
+Theorem Estar_card_alt:
+    !n. 1 < n ==> (CARD (Estar n).carrier = phi n)
+Proof
+  rw[Estar_card, phi_eq_totient]
+QED
 
 (* Theorem: Estar is a Group *)
 (* Proof: check definitions.
@@ -9343,29 +9704,32 @@ val Estar_card_alt = store_thm(
    Inverse: 1 < n /\ coprime n x ==> ?y. (0 < y /\ y < n /\ coprime n y) /\ ((y * x) MOD n = 1)
       true by GEN_MULT_INV_DEF.
 *)
-val Estar_group = store_thm(
-  "Estar_group",
-  ``!n. 1 < n ==> Group (Estar n)``,
+Theorem Estar_group:
+    !n. 1 < n ==> Group (Estar n)
+Proof
   rw_tac std_ss[group_def_alt, Estar_property, Euler_def, GSPECIFICATION, GCD_1] >-
   rw_tac std_ss[MOD_NONZERO_WHEN_GCD_ONE, PRODUCT_WITH_GCD_ONE] >-
   rw_tac arith_ss[] >-
   rw_tac std_ss[MOD_WITH_GCD_ONE, PRODUCT_WITH_GCD_ONE, ONE_LT_POS] >-
   rw_tac std_ss[MOD_MULT_ASSOC, ONE_LT_POS] >>
-  metis_tac[GEN_MULT_INV_DEF]);
+  metis_tac[GEN_MULT_INV_DEF]
+QED
 
 (* Theorem: Estar is a Finite Group *)
 (* Proof: by Estar_group, FINITE (Estar n).carrier. *)
-val Estar_finite_group = store_thm(
-  "Estar_finite_group",
-  ``!n. 1 < n ==> FiniteGroup (Estar n)``,
-  rw[FiniteGroup_def, Estar_group, Estar_property]);
+Theorem Estar_finite_group:
+    !n. 1 < n ==> FiniteGroup (Estar n)
+Proof
+  rw[FiniteGroup_def, Estar_group, Estar_property]
+QED
 
 (* Theorem: Estar is a Finite Abelian Group *)
 (* Proof: by checking definitions. *)
-val Estar_finite_abelian_group = store_thm(
-  "Estar_finite_abelian_group",
-  ``!n. 1 < n ==> FiniteAbelianGroup (Estar n)``,
-  rw_tac arith_ss [FiniteAbelianGroup_def, AbelianGroup_def, Estar_group, Estar_property]);
+Theorem Estar_finite_abelian_group:
+    !n. 1 < n ==> FiniteAbelianGroup (Estar n)
+Proof
+  rw_tac arith_ss [FiniteAbelianGroup_def, AbelianGroup_def, Estar_group, Estar_property]
+QED
 
 (* Theorem: (Estar n).exp a k = a ** k MOD n *)
 (* Proof:
@@ -9384,9 +9748,9 @@ val Estar_finite_abelian_group = store_thm(
    = (a * (a ** k)) MOD n           by MOD_TIMES2
    = (a ** (SUC k) MOD n            by EXP
 *)
-val Estar_exp = store_thm(
-  "Estar_exp",
-  ``!n a. 1 < n /\ a IN (Estar n).carrier ==> !k. (Estar n).exp a k = (a ** k) MOD n``,
+Theorem Estar_exp:
+    !n a. 1 < n /\ a IN (Estar n).carrier ==> !k. (Estar n).exp a k = (a ** k) MOD n
+Proof
   rpt strip_tac >>
   `Group (Estar n)` by rw_tac std_ss[Estar_group] >>
   `0 < n` by decide_tac >>
@@ -9395,7 +9759,8 @@ val Estar_exp = store_thm(
     rw_tac std_ss[group_exp_SUC, EXP, Estar_def] >>
     `!x. x IN (Estar n).carrier ==> (x MOD n = x)` by rw[Estar_def, Euler_def, residue_def] >>
     metis_tac[MOD_TIMES2]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Euler-Fermat Theorem.                                                     *)
@@ -9410,12 +9775,13 @@ val Estar_exp = store_thm(
      and !k. (Estar n).exp k = a ** k MOD n  by Estar_exp
    Hence a ** (totient n) MOD n = 1          by finite_abelian_Fermat
 *)
-val Euler_Fermat_eqn = store_thm(
-  "Euler_Fermat_eqn",
-  ``!n a. 1 < n /\ a < n /\ coprime n a ==> (a ** (totient n) MOD n = 1)``,
+Theorem Euler_Fermat_eqn:
+    !n a. 1 < n /\ a < n /\ coprime n a ==> (a ** (totient n) MOD n = 1)
+Proof
   rpt strip_tac >>
   `0 < a` by metis_tac[GCD_0, NOT_ZERO, LESS_NOT_EQ] >>
-  metis_tac[Estar_finite_abelian_group, Euler_element, Estar_property, finite_abelian_Fermat, Estar_exp]);
+  metis_tac[Estar_finite_abelian_group, Euler_element, Estar_property, finite_abelian_Fermat, Estar_exp]
+QED
 
 (* Theorem: 1 < n /\ coprime n a ==> (a ** (totient n) MOD n = 1) *)
 (* Proof:
@@ -9426,22 +9792,24 @@ val Euler_Fermat_eqn = store_thm(
       = b ** totient n MOD n   by MOD_EXP
       = 1                      by Euler_Fermat_eqn
 *)
-val Euler_Fermat_thm = store_thm(
-  "Euler_Fermat_thm",
-  ``!n a. 1 < n /\ coprime n a ==> (a ** (totient n) MOD n = 1)``,
+Theorem Euler_Fermat_thm:
+    !n a. 1 < n /\ coprime n a ==> (a ** (totient n) MOD n = 1)
+Proof
   rpt strip_tac >>
   qabbrev_tac `b = a MOD n` >>
   `b < n` by rw[Abbr`b`] >>
   `coprime n b` by rw[coprime_mod, Abbr`b`] >>
   `a ** totient n MOD n = b ** totient n MOD n` by rw[MOD_EXP, Abbr`b`] >>
-  metis_tac[Euler_Fermat_eqn]);
+  metis_tac[Euler_Fermat_eqn]
+QED
 
 (* Theorem: 1 < n /\ coprime a n ==> (a ** (totient n) MOD n = 1) *)
 (* Proof: by Euler_Fermat_thm, GCD_SYM *)
-val Euler_Fermat_alt = store_thm(
-  "Euler_Fermat_alt",
-  ``!n a. 1 < n /\ coprime a n ==> (a ** (totient n) MOD n = 1)``,
-  rw[Euler_Fermat_thm, GCD_SYM]);
+Theorem Euler_Fermat_alt:
+    !n a. 1 < n /\ coprime a n ==> (a ** (totient n) MOD n = 1)
+Proof
+  rw[Euler_Fermat_thm, GCD_SYM]
+QED
 
 (* Theorem: For prime p, 0 < a < p ==> a ** (p - 1) MOD p = 1 *)
 (* Proof
@@ -9459,10 +9827,11 @@ val Euler_Fermat_alt = store_thm(
    Hence  (a ** (totient p) MOD p = 1)   by Euler_Fermat_eqn, 1 < p
    or      a ** (p-1) MOD p = 1          by Euler_card_prime
 *)
-val Fermat_little_thm = store_thm(
-  "Fermat_little_thm",
-  ``!p a. prime p /\ 0 < a /\ a < p ==> (a ** (p - 1) MOD p = 1)``,
-  rw[ONE_LT_PRIME, prime_coprime_all_lt, Euler_Fermat_eqn, GSYM Euler_card_prime]);
+Theorem Fermat_little_thm:
+    !p a. prime p /\ 0 < a /\ a < p ==> (a ** (p - 1) MOD p = 1)
+Proof
+  rw[ONE_LT_PRIME, prime_coprime_all_lt, Euler_Fermat_eqn, GSYM Euler_card_prime]
+QED
 
 (* Theorem: prime p ==> (a ** p MOD p = a MOD p) *)
 (* Proof:
@@ -9488,9 +9857,9 @@ val Fermat_little_thm = store_thm(
       = a MOD p                        by MOD_MOD
       = b                              by notation
 *)
-val Fermat_little_eqn = store_thm(
-  "Fermat_little_eqn",
-  ``!p a. prime p ==> (a ** p MOD p = a MOD p)``,
+Theorem Fermat_little_eqn:
+    !p a. prime p ==> (a ** p MOD p = a MOD p)
+Proof
   rpt strip_tac >>
   `0 < p` by rw[PRIME_POS] >>
   qabbrev_tac `b = a MOD p` >>
@@ -9501,7 +9870,8 @@ val Fermat_little_eqn = store_thm(
   `0 < b` by decide_tac >>
   `b ** (p - 1) MOD p = 1` by rw[Fermat_little_thm] >>
   `p = SUC (p - 1)` by decide_tac >>
-  metis_tac[EXP, MOD_TIMES2, MOD_MOD, MULT_RIGHT_1]);
+  metis_tac[EXP, MOD_TIMES2, MOD_MOD, MULT_RIGHT_1]
+QED
 
 (* Theorem: 1 < n /\ a < n /\ coprime n a ==>
            ((Estar n).inv a = a ** ((totient n) - 1) MOD n) *)
@@ -9523,10 +9893,10 @@ val Fermat_little_eqn = store_thm(
       = (Estar n).id                               by Estar_property
    Therefore b = (Estar n).inv a                   by group_rinv_unique
 *)
-val Estar_inv = store_thm(
-  "Estar_inv",
-  ``!n a. 1 < n /\ a < n /\ coprime n a ==>
-      ((Estar n).inv a = a ** ((totient n) - 1) MOD n)``,
+Theorem Estar_inv:
+    !n a. 1 < n /\ a < n /\ coprime n a ==>
+      ((Estar n).inv a = a ** ((totient n) - 1) MOD n)
+Proof
   rpt strip_tac >>
   `Group (Estar n)` by rw_tac std_ss[Estar_group] >>
   `0 < a` by metis_tac[GCD_0, NOT_ZERO, LESS_NOT_EQ] >>
@@ -9542,16 +9912,18 @@ val Estar_inv = store_thm(
   `0 < totient n` by rw[Euler_card_bounds] >>
   `SUC (totient n - 1) = totient n` by decide_tac >>
   rw[Euler_Fermat_eqn]) >>
-  metis_tac[group_rinv_unique]);
+  metis_tac[group_rinv_unique]
+QED
 
 (* Theorem: As function, (Estar n).inv a = a ** (totient n - 1) MOD n) *)
 (* Proof: by Estar_inv. *)
-val Estar_inv_compute = store_thm(
-  "Estar_inv_compute[compute]",
-  ``!n a. (Estar n).inv a = if 1 < n /\ a < n /\ coprime n a
+Theorem Estar_inv_compute[compute]:
+    !n a. (Estar n).inv a = if 1 < n /\ a < n /\ coprime n a
                            then a ** ((totient n) - 1) MOD n
-                           else FAIL ((Estar n).inv a) bad_element``,
-  rw_tac std_ss[Estar_inv, combinTheory.FAIL_DEF]);
+                           else FAIL ((Estar n).inv a) bad_element
+Proof
+  rw_tac std_ss[Estar_inv, combinTheory.FAIL_DEF]
+QED
 (* put in computeLib for Estar inverse computation *)
 
 (*
@@ -9600,10 +9972,11 @@ QED
 
 (* Theorem: {#e} is indeed a group *)
 (* Proof: check by definition. *)
-val trivial_group = store_thm(
-  "trivial_group",
-  ``!e. FiniteAbelianGroup (trivial_group e)``,
-  rw_tac std_ss[trivial_group_def, FiniteAbelianGroup_def, FiniteGroup_def, AbelianGroup_def, group_def_alt, IN_SING, FINITE_SING, GSPECIFICATION]);
+Theorem trivial_group:
+    !e. FiniteAbelianGroup (trivial_group e)
+Proof
+  rw_tac std_ss[trivial_group_def, FiniteAbelianGroup_def, FiniteGroup_def, AbelianGroup_def, group_def_alt, IN_SING, FINITE_SING, GSPECIFICATION]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* The Function Cyclic Group.                                                *)
@@ -9681,15 +10054,15 @@ val fn_cyclic_group_def = Define
            That is, FUNPOW f (i + j) e = FUNPOW f ((i + j) MOD h) e
            which is true by FUNPOW_MOD
 *)
-val fn_cyclic_group_alt = store_thm(
-  "fn_cyclic_group_alt",
-  ``!e f n.
+Theorem fn_cyclic_group_alt:
+    !e f n.
      (?k. k <> 0 /\ (FUNPOW f k e = e)) /\
      (n = LEAST k. k <> 0 /\ (FUNPOW f k e = e)) ==>
      ((fn_cyclic_group e f).carrier = { FUNPOW f k e | k < n }) /\
      ((fn_cyclic_group e f).id = e) /\
   (* (!i. (fn_cyclic_group e f).inv (FUNPOW f i e) = FUNPOW f ((n - i MOD n) MOD n) e) /\ *)
-     (!i j. (fn_cyclic_group e f).op (FUNPOW f i e) (FUNPOW f j e) = FUNPOW f ((i + j) MOD n) e)``,
+     (!i j. (fn_cyclic_group e f).op (FUNPOW f i e) (FUNPOW f j e) = FUNPOW f ((i + j) MOD n) e)
+Proof
   rpt gen_tac >>
   simp_tac std_ss [WhileTheory.LEAST_EXISTS] >>
   Q.SPEC_TAC (`LEAST k. k <> 0 /\ (FUNPOW f k e = e)`,`h`) >>
@@ -9707,7 +10080,8 @@ val fn_cyclic_group_alt = store_thm(
     metis_tac[FUNPOW_ADD, ADD_COMM],
     rw[] >>
     metis_tac[FUNPOW_MOD]
-  ]);
+  ]
+QED
 
 (* Theorem: (fn_cyclic_group e f).carrier = { x | ?n. FUNPOW f n e = x } *)
 (* Proof: by fn_cyclic_group_def. *)
@@ -9763,9 +10137,9 @@ QED
                = 0                                   by DIVMOD_ID
                Thus true since FUNPOW f 0 e = e      by FUNPOW_0
 *)
-val fn_cyclic_group_group = store_thm(
-  "fn_cyclic_group_group",
-  ``!e f. (?n. n <> 0 /\ (FUNPOW f n e = e)) ==> Group (fn_cyclic_group e f)``,
+Theorem fn_cyclic_group_group:
+    !e f. (?n. n <> 0 /\ (FUNPOW f n e = e)) ==> Group (fn_cyclic_group e f)
+Proof
   rpt gen_tac >>
   disch_then assume_tac >>
   mp_tac (Q.SPECL [`e`,`f`,`LEAST n. n <> 0 /\ (FUNPOW f n e = e)`] fn_cyclic_group_alt) >>
@@ -9790,7 +10164,8 @@ val fn_cyclic_group_group = store_thm(
     rw_tac std_ss[] >-
     metis_tac[MOD_LESS] >>
     metis_tac[LESS_MOD, MOD_PLUS, SUB_ADD, LESS_IMP_LESS_OR_EQ, DIVMOD_ID, FUNPOW_0]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteAbelianGroup (fn_cyclic_group e f) *)
 (* Proof:
@@ -9805,9 +10180,9 @@ val fn_cyclic_group_group = store_thm(
        (2) FUNPOW f ((k + k') MOD h) e = FUNPOW f ((k' + k) MOD h) e, true by ADD_COMM
        (3) FINITE {FUNPOW f k e | k < h}, true by FINITE_COUNT_IMAGE
 *)
-val fn_cyclic_group_finite_abelian_group = store_thm(
-  "fn_cyclic_group_finite_abelian_group",
-  ``!e f. (?n. n <> 0 /\ (FUNPOW f n e = e)) ==> FiniteAbelianGroup (fn_cyclic_group e f)``,
+Theorem fn_cyclic_group_finite_abelian_group:
+    !e f. (?n. n <> 0 /\ (FUNPOW f n e = e)) ==> FiniteAbelianGroup (fn_cyclic_group e f)
+Proof
   rpt gen_tac >>
   (disch_then assume_tac) >>
   mp_tac (Q.SPECL [`e`,`f`,`LEAST n. n <> 0 /\ (FUNPOW f n e = e)`] fn_cyclic_group_alt) >>
@@ -9826,14 +10201,16 @@ val fn_cyclic_group_finite_abelian_group = store_thm(
       rw_tac std_ss[ADD_COMM],
       rw_tac std_ss[FINITE_COUNT_IMAGE]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteGroup (fn_cyclic_group e f) *)
 (* Proof: by fn_cyclic_group_finite_abelian_group. *)
-val fn_cyclic_group_finite_group = store_thm(
-  "fn_cyclic_group_finite_group",
-  ``!e f. (?n. n <> 0 /\ (FUNPOW f n e = e)) ==> FiniteGroup (fn_cyclic_group e f)``,
-  metis_tac[fn_cyclic_group_finite_abelian_group, FiniteAbelianGroup_def, AbelianGroup_def, FiniteGroup_def]);
+Theorem fn_cyclic_group_finite_group:
+    !e f. (?n. n <> 0 /\ (FUNPOW f n e = e)) ==> FiniteGroup (fn_cyclic_group e f)
+Proof
+  metis_tac[fn_cyclic_group_finite_abelian_group, FiniteAbelianGroup_def, AbelianGroup_def, FiniteGroup_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* The Group of Addition Modulo n.                                           *)
@@ -9858,12 +10235,13 @@ End
 
 (* Theorem: add_mod evaluation. *)
 (* Proof: by add_mod_def. *)
-val add_mod_eval = store_thm(
-  "add_mod_eval",
-  ``!n. ((add_mod n).carrier = {i | i < n}) /\
+Theorem add_mod_eval:
+    !n. ((add_mod n).carrier = {i | i < n}) /\
        (!x y. (add_mod n).op x y = (x + y) MOD n) /\
-       ((add_mod n).id = 0)``,
-  rw_tac std_ss[add_mod_def]);
+       ((add_mod n).id = 0)
+Proof
+  rw_tac std_ss[add_mod_def]
+QED
 
 (* Now put these to computeLib *)
 val _ = computeLib.add_persistent_funs ["add_mod_eval"];
@@ -9879,21 +10257,23 @@ val _ = computeLib.add_persistent_funs ["add_mod_eval"];
 
 (* Theorem: x IN (add_mod n).carrier <=> x < n *)
 (* Proof: by add_mod_def *)
-val add_mod_element = store_thm(
-  "add_mod_element",
-  ``!n x. x IN (add_mod n).carrier <=> x < n``,
-  rw[add_mod_def]);
+Theorem add_mod_element:
+    !n x. x IN (add_mod n).carrier <=> x < n
+Proof
+  rw[add_mod_def]
+QED
 
 (* Theorem: properties of (add_mod n) *)
 (* Proof: by definition. *)
-val add_mod_property = store_thm(
-  "add_mod_property",
-  ``!n. (!x. x IN (add_mod n).carrier <=> x < n) /\
+Theorem add_mod_property:
+    !n. (!x. x IN (add_mod n).carrier <=> x < n) /\
        ((add_mod n).id = 0) /\
        (!x y. (add_mod n).op x y = (x + y) MOD n) /\
        FINITE (add_mod n).carrier /\
-       (CARD (add_mod n).carrier = n)``,
-  rw_tac std_ss[add_mod_def, GSYM count_def, FINITE_COUNT, CARD_COUNT, IN_COUNT]);
+       (CARD (add_mod n).carrier = n)
+Proof
+  rw_tac std_ss[add_mod_def, GSYM count_def, FINITE_COUNT, CARD_COUNT, IN_COUNT]
+QED
 
 (* Theorem: (add_mod n).carrier = { i | i < n } *)
 (* Proof: by add_mod_def. *)
@@ -9921,17 +10301,19 @@ QED
 
 (* Theorem: FINITE (add_mod n).carrier *)
 (* Proof: by add_mod_property *)
-val add_mod_finite = store_thm(
-  "add_mod_finite",
-  ``!n. FINITE (add_mod n).carrier``,
-  rw[add_mod_property]);
+Theorem add_mod_finite:
+    !n. FINITE (add_mod n).carrier
+Proof
+  rw[add_mod_property]
+QED
 
 (* Theorem: CARD (add_mod n).carrier = n *)
 (* Proof: by add_mod_property *)
-val add_mod_card = store_thm(
-  "add_mod_card",
-  ``!n. CARD (add_mod n).carrier = n``,
-  rw[add_mod_property]);
+Theorem add_mod_card:
+    !n. CARD (add_mod n).carrier = n
+Proof
+  rw[add_mod_property]
+QED
 
 (* Theorem: Additive Modulo Group is a group. *)
 (* Proof: check group definitions.
@@ -9949,37 +10331,41 @@ val add_mod_card = store_thm(
    If x = 0, take y = 0.        (0 + 0) MOD n = 0 MOD n = 0  by ZERO_MOD
    If x <> 0, take y = n-x. (n - x + x) MOD n = n MOD n = 0  by DIVMOD_ID
 *)
-val add_mod_group = store_thm(
-  "add_mod_group",
-  ``!n. 0 < n ==> Group (add_mod n)``,
+Theorem add_mod_group:
+    !n. 0 < n ==> Group (add_mod n)
+Proof
   rw_tac std_ss[group_def_alt, add_mod_property] >| [
     metis_tac[LESS_MOD, MOD_PLUS, ADD_ASSOC],
     Cases_on `x = 0` >| [
       metis_tac[ZERO_MOD, ADD],
       metis_tac[DIVMOD_ID, DECIDE ``x <> 0 /\ x < n ==> n - x < n /\ (n - x + x = n)``]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: Additive Modulo Group is an Abelian group. *)
 (* Proof: by add_mod_group and ADD_COMM. *)
-val add_mod_abelian_group = store_thm(
-  "add_mod_abelian_group",
-  ``!n. 0 < n ==> AbelianGroup (add_mod n)``,
-  rw_tac std_ss[AbelianGroup_def, add_mod_group, add_mod_property, ADD_COMM]);
+Theorem add_mod_abelian_group:
+    !n. 0 < n ==> AbelianGroup (add_mod n)
+Proof
+  rw_tac std_ss[AbelianGroup_def, add_mod_group, add_mod_property, ADD_COMM]
+QED
 
 (* Theorem: Additive Modulo Group is a Finite Group. *)
 (* Proof: by add_mod_group and add_mod_property. *)
-val add_mod_finite_group = store_thm(
-  "add_mod_finite_group",
-  ``!n. 0 < n ==> FiniteGroup (add_mod n)``,
-  rw_tac std_ss[FiniteGroup_def, add_mod_group, add_mod_property]);
+Theorem add_mod_finite_group:
+    !n. 0 < n ==> FiniteGroup (add_mod n)
+Proof
+  rw_tac std_ss[FiniteGroup_def, add_mod_group, add_mod_property]
+QED
 
 (* Theorem: Additive Modulo Group is a Finite Abelian Group. *)
 (* Proof: by add_mod_abelian_group and add_mod_property. *)
-val add_mod_finite_abelian_group = store_thm(
-  "add_mod_finite_abelian_group",
-  ``!n. 0 < n ==> FiniteAbelianGroup (add_mod n)``,
-  rw_tac std_ss[FiniteAbelianGroup_def, add_mod_abelian_group, add_mod_property]);
+Theorem add_mod_finite_abelian_group:
+    !n. 0 < n ==> FiniteAbelianGroup (add_mod n)
+Proof
+  rw_tac std_ss[FiniteAbelianGroup_def, add_mod_abelian_group, add_mod_property]
+QED
 
 (* Theorem: 0 < n ==> !x m. (add_mod n).exp x m = (x * m) MOD n *)
 (* Proof:
@@ -9999,31 +10385,34 @@ val add_mod_finite_abelian_group = store_thm(
        = (x + x * m) MOD n                        by MOD_PLUS, MOD_MOD
        = (x * SUC m) MOD n                        by MULT_SUC
 *)
-val add_mod_exp = store_thm(
-  "add_mod_exp",
-  ``!n. 0 < n ==> !x m. (add_mod n).exp x m = (x * m) MOD n``,
+Theorem add_mod_exp:
+    !n. 0 < n ==> !x m. (add_mod n).exp x m = (x * m) MOD n
+Proof
   rpt strip_tac >>
   Induct_on `m` >-
   rw[add_mod_property] >>
   rw_tac std_ss[group_exp_SUC, add_mod_property] >>
-  metis_tac[MOD_PLUS, MOD_MOD, MULT_SUC]);
+  metis_tac[MOD_PLUS, MOD_MOD, MULT_SUC]
+QED
 
 (* Theorem: (add_mod n).inv x = (n - x) MOD n *)
 (* Proof: by MOD_ADD_INV and group_linv_unique. *)
-val add_mod_inv = store_thm(
-  "add_mod_inv",
-  ``!n x. 0 < n /\ x < n ==> ((add_mod n).inv x = (n - x) MOD n)``,
+Theorem add_mod_inv:
+    !n x. 0 < n /\ x < n ==> ((add_mod n).inv x = (n - x) MOD n)
+Proof
   rpt strip_tac >>
   `x IN (add_mod n).carrier /\ (n - x) MOD n IN (add_mod n).carrier` by rw_tac std_ss[add_mod_property] >>
   `((n - x) MOD n + x) MOD n = 0` by rw_tac std_ss[MOD_ADD_INV] >>
-  metis_tac[add_mod_group, group_linv_unique, add_mod_property]);
+  metis_tac[add_mod_group, group_linv_unique, add_mod_property]
+QED
 
 (* Theorem: (add_mod n).inv x = (n - x) MOD n as function *)
 (* Proof: by add_mod_inv. *)
-val add_mod_inv_compute = store_thm(
-  "add_mod_inv_compute",
-  ``!n x. (add_mod n).inv x = if 0 < n /\ x < n then (n - x) MOD n else FAIL ((add_mod n).inv x) bad_element``,
-  rw_tac std_ss[add_mod_inv, combinTheory.FAIL_DEF]);
+Theorem add_mod_inv_compute:
+    !n x. (add_mod n).inv x = if 0 < n /\ x < n then (n - x) MOD n else FAIL ((add_mod n).inv x) bad_element
+Proof
+  rw_tac std_ss[add_mod_inv, combinTheory.FAIL_DEF]
+QED
 
 (* val _ = computeLib.add_persistent_funs ["add_mod_inv"]; -- cannot put a non-function. *)
 
@@ -10083,31 +10472,34 @@ End
 
 (* Theorem: x IN (mult_mod p).carrier <=> x <> 0 /\ x < p *)
 (* Proof: by mult_mod_def *)
-val mult_mod_element = store_thm(
-  "mult_mod_element",
-  ``!p x. x IN (mult_mod p).carrier <=> x <> 0 /\ x < p``,
-  rw[mult_mod_def]);
+Theorem mult_mod_element:
+    !p x. x IN (mult_mod p).carrier <=> x <> 0 /\ x < p
+Proof
+  rw[mult_mod_def]
+QED
 
 (* Theorem: x IN (mult_mod p).carrier <=> 0 < x /\ x < p *)
 (* Proof: by mult_mod_def *)
-val mult_mod_element_alt = store_thm(
-  "mult_mod_element_alt",
-  ``!p x. x IN (mult_mod p).carrier <=> 0 < x /\ x < p``,
-  rw[mult_mod_def]);
+Theorem mult_mod_element_alt:
+    !p x. x IN (mult_mod p).carrier <=> 0 < x /\ x < p
+Proof
+  rw[mult_mod_def]
+QED
 
 (* Theorem: properties of (mult_mod p) *)
 (* Proof: by definition. *)
-val mult_mod_property = store_thm(
-  "mult_mod_property",
-  ``!p. (!x. x IN (mult_mod p).carrier ==> x <> 0) /\
+Theorem mult_mod_property:
+    !p. (!x. x IN (mult_mod p).carrier ==> x <> 0) /\
        (!x. x IN (mult_mod p).carrier <=> 0 < x /\ x < p) /\
        ((mult_mod p).id = 1) /\
        (!x y. (mult_mod p).op x y = (x * y) MOD p) /\
        FINITE (mult_mod p).carrier /\
-       (0 < p ==> (CARD (mult_mod p).carrier = p - 1))``,
+       (0 < p ==> (CARD (mult_mod p).carrier = p - 1))
+Proof
   rw_tac std_ss[mult_mod_def, GSPECIFICATION, NOT_ZERO_LT_ZERO] >-
   metis_tac[residue_def, residue_finite] >>
-  metis_tac[residue_def, residue_card]);
+  metis_tac[residue_def, residue_card]
+QED
 
 (* Theorem: (mult_mod p).carrier = { i | i <> 0 /\ i < p } *)
 (* Proof: by mult_mod_def. *)
@@ -10135,17 +10527,19 @@ QED
 
 (* Theorem: FINITE (mult_mod p).carrier *)
 (* Proof: by mult_mod_property *)
-val mult_mod_finite = store_thm(
-  "mult_mod_finite",
-  ``!p. FINITE (mult_mod p).carrier``,
-  rw[mult_mod_property]);
+Theorem mult_mod_finite:
+    !p. FINITE (mult_mod p).carrier
+Proof
+  rw[mult_mod_property]
+QED
 
 (* Theorem: 0 < p ==> (CARD (mult_mod p).carrier = p - 1) *)
 (* Proof: by mult_mod_property *)
-val mult_mod_card = store_thm(
-  "mult_mod_card",
-  ``!p. 0 < p ==> (CARD (mult_mod p).carrier = p - 1)``,
-  rw[mult_mod_property]);
+Theorem mult_mod_card:
+    !p. 0 < p ==> (CARD (mult_mod p).carrier = p - 1)
+Proof
+  rw[mult_mod_property]
+QED
 
 (* Theorem: Multiplicative Modulo Group is a group for prime p. *)
 (* Proof: check group definitions.
@@ -10168,9 +10562,9 @@ val mult_mod_card = store_thm(
    (4) Multiplicative inverse: prime p /\ x <> 0 /\ x < p ==> ?y. (y <> 0 /\ y < p) /\ ((y * x) MOD p = 1)
        True by MOD_MULT_INV_DEF.
 *)
-val mult_mod_group = store_thm(
-  "mult_mod_group",
-  ``!p. prime p ==> Group (mult_mod p)``,
+Theorem mult_mod_group:
+    !p. prime p ==> Group (mult_mod p)
+Proof
   rpt strip_tac >>
   `0 < p` by rw_tac std_ss[PRIME_POS] >>
   rw_tac std_ss[group_def_alt, mult_mod_property] >| [
@@ -10178,28 +10572,32 @@ val mult_mod_group = store_thm(
     rw_tac std_ss[MOD_MULT_ASSOC],
     rw_tac std_ss[ONE_LT_PRIME],
     metis_tac[MOD_MULT_INV_DEF, NOT_ZERO_LT_ZERO]
-  ]);
+  ]
+QED
 
 (* Theorem: Multiplicative Modulo Group is an Abelian group for prime p. *)
 (* Proof: by mult_mod_group and MULT_COMM. *)
-val mult_mod_abelian_group = store_thm(
-  "mult_mod_abelian_group",
-  ``!p. prime p ==> AbelianGroup (mult_mod p)``,
-  rw_tac std_ss[AbelianGroup_def, mult_mod_group, mult_mod_property, MULT_COMM, PRIME_POS]);
+Theorem mult_mod_abelian_group:
+    !p. prime p ==> AbelianGroup (mult_mod p)
+Proof
+  rw_tac std_ss[AbelianGroup_def, mult_mod_group, mult_mod_property, MULT_COMM, PRIME_POS]
+QED
 
 (* Theorem: Multiplicative Modulo Group is a Finite Abelian Group for prime p. *)
 (* Proof: by mult_mod_group and mult_mod_property. *)
-val mult_mod_finite_group = store_thm(
-  "mult_mod_finite_group",
-  ``!p. prime p ==> FiniteGroup (mult_mod p)``,
-  rw_tac std_ss[FiniteGroup_def, mult_mod_group, mult_mod_property]);
+Theorem mult_mod_finite_group:
+    !p. prime p ==> FiniteGroup (mult_mod p)
+Proof
+  rw_tac std_ss[FiniteGroup_def, mult_mod_group, mult_mod_property]
+QED
 
 (* Theorem: Multiplicative Modulo Group is a Finite Abelian Group for prime p. *)
 (* Proof: by mult_mod_abelian_group and mult_mod_property. *)
-val mult_mod_finite_abelian_group = store_thm(
-  "mult_mod_finite_abelian_group",
-  ``!p. prime p ==> FiniteAbelianGroup (mult_mod p)``,
-  rw_tac std_ss[FiniteAbelianGroup_def, mult_mod_abelian_group, mult_mod_property]);
+Theorem mult_mod_finite_abelian_group:
+    !p. prime p ==> FiniteAbelianGroup (mult_mod p)
+Proof
+  rw_tac std_ss[FiniteAbelianGroup_def, mult_mod_abelian_group, mult_mod_property]
+QED
 
 (* Theorem: (mult_mod p).exp a n = a ** n MOD p *)
 (* Proof:
@@ -10218,25 +10616,27 @@ val mult_mod_finite_abelian_group = store_thm(
     = (a * (a ** n)) MOD p           by MOD_TIMES2
     = (a ** (SUC n) MOD p            by EXP
 *)
-val mult_mod_exp = store_thm(
-  "mult_mod_exp",
-  ``!p a. prime p /\ a IN (mult_mod p).carrier ==> !n. (mult_mod p).exp a n = (a ** n) MOD p``,
+Theorem mult_mod_exp:
+    !p a. prime p /\ a IN (mult_mod p).carrier ==> !n. (mult_mod p).exp a n = (a ** n) MOD p
+Proof
   rw[mult_mod_def, monoid_exp_def, residue_def] >>
   `0 < p /\ 1 < p` by rw_tac std_ss[PRIME_POS, ONE_LT_PRIME] >>
   Induct_on `n` >-
   rw_tac std_ss[FUNPOW_0, EXP, ONE_MOD] >>
   rw_tac std_ss[FUNPOW_SUC, EXP] >>
   `a MOD p = a` by rw_tac arith_ss[] >>
-  metis_tac[MOD_TIMES2]);
+  metis_tac[MOD_TIMES2]
+QED
 
 (* Theorem: due to zDefine before, now export the Define to computeLib. *)
 (* Proof: by mult_mod_def. *)
-val mult_mod_eval = store_thm(
-  "mult_mod_eval",
-  ``!p. ((mult_mod p).carrier = { i | i <> 0 /\ i < p }) /\
+Theorem mult_mod_eval:
+    !p. ((mult_mod p).carrier = { i | i <> 0 /\ i < p }) /\
        (!x y. (mult_mod p).op x y = (x * y) MOD p) /\
-       ((mult_mod p).id = 1)``,
-  rw_tac std_ss[mult_mod_def]);
+       ((mult_mod p).id = 1)
+Proof
+  rw_tac std_ss[mult_mod_def]
+QED
 
 (*
 - group_order_property |> ISPEC ``(mult_mod p)``;
@@ -10254,27 +10654,29 @@ val mult_mod_eval = store_thm(
 
 (* Theorem: (mult_mod p).inv x = x ** (order (mult_mod p) x - 1) *)
 (* Proof: by group_order_property and group_rinv_unique. *)
-val mult_mod_inv = store_thm(
-  "mult_mod_inv",
-  ``!p. prime p ==> !x. 0 < x /\ x < p ==> ((mult_mod p).inv x = (mult_mod p).exp x (order (mult_mod p) x - 1))``,
+Theorem mult_mod_inv:
+    !p. prime p ==> !x. 0 < x /\ x < p ==> ((mult_mod p).inv x = (mult_mod p).exp x (order (mult_mod p) x - 1))
+Proof
   rpt strip_tac >>
   `x IN (mult_mod p).carrier /\ ((mult_mod p).id = 1)` by rw_tac std_ss[mult_mod_property] >>
   `Group (mult_mod p)` by rw_tac std_ss[mult_mod_group] >>
   `FiniteGroup (mult_mod p)` by rw_tac std_ss[FiniteGroup_def, mult_mod_property] >>
   `0 < order (mult_mod p) x /\ ((mult_mod p).exp x (order (mult_mod p) x) = 1)` by rw_tac std_ss[group_order_property] >>
   `SUC ((order (mult_mod p) x) - 1) = order (mult_mod p) x` by rw_tac arith_ss[] >>
-  metis_tac[group_rinv_unique, group_exp_SUC, group_exp_element]);
+  metis_tac[group_rinv_unique, group_exp_SUC, group_exp_element]
+QED
 
 (* val _ = computeLib.add_persistent_funs ["mult_mod_inv"]; -- cannot put a non-function. *)
 
 (* Theorem: As function, (mult_mod p).inv x = x ** (order (mult_mod p) x - 1) *)
 (* Proof: by mult_mod_inv. *)
-val mult_mod_inv_compute = store_thm(
-  "mult_mod_inv_compute",
-  ``!p x. (mult_mod p).inv x = if prime p /\ 0 < x /\ x < p
+Theorem mult_mod_inv_compute:
+    !p x. (mult_mod p).inv x = if prime p /\ 0 < x /\ x < p
                             then (mult_mod p).exp x (order (mult_mod p) x - 1)
-                            else FAIL ((mult_mod p).inv x) bad_element``,
-  rw_tac std_ss[mult_mod_inv, combinTheory.FAIL_DEF]);
+                            else FAIL ((mult_mod p).inv x) bad_element
+Proof
+  rw_tac std_ss[mult_mod_inv, combinTheory.FAIL_DEF]
+QED
 
 (* Now put thse input computeLib for EVAL *)
 val _ = computeLib.add_persistent_funs ["mult_mod_eval"];
@@ -10344,16 +10746,17 @@ End
  = #e * m                                  by group_id_exp
  = m                                       by group_lid
 *)
-val ElGamal_correctness = store_thm(
-  "ElGamal_correctness",
-  ``!g:'a group. Group g ==> !y h m::G. !k x. (h = y ** x) ==> (ElGamal_decrypt g x (ElGamal_encrypt g y h m k) = m)``,
+Theorem ElGamal_correctness:
+    !g:'a group. Group g ==> !y h m::G. !k x. (h = y ** x) ==> (ElGamal_decrypt g x (ElGamal_encrypt g y h m k) = m)
+Proof
   rw_tac std_ss[ElGamal_encrypt_def, ElGamal_decrypt_def, RES_FORALL_THM] >>
   `|/ ((y ** k) ** x) * ((y ** x) ** k * m) = |/ (y ** (k*x)) * (y ** (x*k) * m)` by rw_tac std_ss[group_exp_mult] >>
   `_ = ( |/ y)**(k*x) * (y**(x*k) * m)` by rw_tac std_ss[group_exp_inv] >>
   `_ = ( |/ y)**(k*x) * (y**(k*x) * m)` by rw_tac std_ss[MULT_COMM] >>
   `_ = (( |/ y)**(k*x) * y**(k*x)) * m` by rw_tac std_ss[group_assoc, group_inv_element, group_exp_element] >>
   `_ = ( |/y * y)**(k*x) * m` by rw_tac std_ss[group_linv, group_rinv, group_comm_op_exp, group_inv_element] >>
-  rw_tac std_ss[group_linv, group_id_exp, group_lid]);
+  rw_tac std_ss[group_linv, group_id_exp, group_lid]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* A Group from Sets.                                                        *)
@@ -10380,25 +10783,27 @@ val it = |- symdiff_set.op {1; 2; 3; 4} {1; 4; 5; 6} = {2; 3; 5; 6}: thm
 
 (* Theorem: symdiff_set is a Group. *)
 (* Proof: check definitions. *)
-val symdiff_set_group = store_thm(
-  "symdiff_set_group",
-  ``Group symdiff_set``,
+Theorem symdiff_set_group:
+    Group symdiff_set
+Proof
   rw[group_def_alt, symdiff_set_def] >| [
     rw[EXTENSION, symdiff_def] >> metis_tac[],
     rw[EXTENSION, symdiff_def],
     qexists_tac `x` >> rw[EXTENSION, symdiff_def]
-  ]);
+  ]
+QED
 
 val _ = export_rewrites ["symdiff_set_group"];
 
 (* Theorem: symdiff_set is an abelian Group. *)
 (* Proof: check definitions. *)
-val symdiff_set_abelian_group = store_thm(
-  "symdiff_set_abelian_group",
-  ``AbelianGroup symdiff_set``,
+Theorem symdiff_set_abelian_group:
+    AbelianGroup symdiff_set
+Proof
   rw[AbelianGroup_def, symdiff_set_def] >>
   rw[symdiff_def, EXTENSION] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 val _ = export_rewrites ["symdiff_set_abelian_group"];
 
@@ -10554,27 +10959,30 @@ val cyclic_gen_def = new_specification(
 
 (* Theorem: cyclic g ==> Group g *)
 (* Proof: by cyclic_def *)
-val cyclic_group = store_thm(
-  "cyclic_group",
-  ``!g:'a group. cyclic g ==> Group g``,
-  rw[cyclic_def]);
+Theorem cyclic_group:
+    !g:'a group. cyclic g ==> Group g
+Proof
+  rw[cyclic_def]
+QED
 
 (* export simple result *)
 val _ = export_rewrites ["cyclic_group"];
 
 (* Theorem: cyclic g ==> !x. x IN G ==> ?n. x = (cyclic_gen g) ** n *)
 (* Proof: by cyclic_gen_def. *)
-val cyclic_element = store_thm(
-  "cyclic_element",
-  ``!g:'a group. cyclic g ==> (!x. x IN G ==> ?n. x = (cyclic_gen g) ** n)``,
-  rw[cyclic_gen_def]);
+Theorem cyclic_element:
+    !g:'a group. cyclic g ==> (!x. x IN G ==> ?n. x = (cyclic_gen g) ** n)
+Proof
+  rw[cyclic_gen_def]
+QED
 
 (* Theorem cyclic g ==> (cyclic_gen g) IN G *)
 (* Proof: by cyclic_gen_def. *)
-val cyclic_gen_element = store_thm(
-  "cyclic_gen_element",
-  ``!g:'a group. cyclic g ==> (cyclic_gen g) IN G``,
-  rw[cyclic_gen_def]);
+Theorem cyclic_gen_element:
+    !g:'a group. cyclic g ==> (cyclic_gen g) IN G
+Proof
+  rw[cyclic_gen_def]
+QED
 
 (* Theorem: FiniteGroup g ==> !x. x IN G ==> cyclic (gen x) *)
 (* Proof:
@@ -10585,15 +10993,16 @@ val cyclic_gen_element = store_thm(
        x IN (Gen x)   by generated_gen_element
        Let z = x, the assertion is true by generated_element
 *)
-val cyclic_generated_group = store_thm(
-  "cyclic_generated_group",
-  ``!g:'a group. FiniteGroup g ==> !x. x IN G ==> cyclic (gen x)``,
+Theorem cyclic_generated_group:
+    !g:'a group. FiniteGroup g ==> !x. x IN G ==> cyclic (gen x)
+Proof
   rpt strip_tac >>
   `Group g /\ FINITE G` by metis_tac[FiniteGroup_def] >>
   rw[cyclic_def] >-
   rw[generated_group] >>
   `x IN (Gen x)` by rw[generated_gen_element] >>
-  metis_tac[generated_subgroup, generated_element, subgroup_exp, subgroup_element]);
+  metis_tac[generated_subgroup, generated_element, subgroup_exp, subgroup_element]
+QED
 
 (* Theorem: cyclic g /\ FINITE G ==> ord (cyclic_gen g) = CARD G *)
 (* Proof:
@@ -10607,15 +11016,16 @@ val cyclic_generated_group = store_thm(
    or ord z = CARD (Gen z)           by generated_group_card, group_order_pos
             = CARD G                 by above
 *)
-val cyclic_gen_order = store_thm(
-  "cyclic_gen_order",
-  ``!g:'a group. cyclic g /\ FINITE G ==> (ord (cyclic_gen g) = CARD G)``,
+Theorem cyclic_gen_order:
+    !g:'a group. cyclic g /\ FINITE G ==> (ord (cyclic_gen g) = CARD G)
+Proof
   rpt strip_tac >>
   `Group g /\ cyclic_gen g IN G /\ !x. x IN G ==> ?n. x = cyclic_gen g ** n` by rw[cyclic_gen_def] >>
   `FiniteGroup g` by rw[FiniteGroup_def] >>
   `G SUBSET (Gen (cyclic_gen g))` by rw[generated_element, SUBSET_DEF] >>
   `(Gen (cyclic_gen g)) SUBSET G` by metis_tac[generated_subgroup, Subgroup_def] >>
-  metis_tac[generated_group_card, group_order_pos, SUBSET_ANTISYM]);
+  metis_tac[generated_group_card, group_order_pos, SUBSET_ANTISYM]
+QED
 
 (* Theorem: cyclic g /\ FINITE G ==>
            !n. 0 < n /\ ((CARD G) MOD n = 0) ==> (ord (cyclic_gen g ** (CARD G DIV n)) = n) *)
@@ -10639,10 +11049,10 @@ val cyclic_gen_order = store_thm(
    Therefore  ord t * m = n * m
           or  ord t = n                     by MULT_RIGHT_CANCEL
 *)
-val cyclic_gen_power_order = store_thm(
-  "cyclic_gen_power_order",
-  ``!g:'a group. cyclic g /\ FINITE G ==>
-   !n. 0 < n /\ ((CARD G) MOD n = 0) ==> (ord (cyclic_gen g ** (CARD G DIV n)) = n)``,
+Theorem cyclic_gen_power_order:
+    !g:'a group. cyclic g /\ FINITE G ==>
+   !n. 0 < n /\ ((CARD G) MOD n = 0) ==> (ord (cyclic_gen g ** (CARD G DIV n)) = n)
+Proof
   rpt strip_tac >>
   `Group g` by rw[] >>
   `FiniteGroup g` by rw[FiniteGroup_def] >>
@@ -10656,7 +11066,8 @@ val cyclic_gen_power_order = store_thm(
   `_ = n * m` by rw[MULT_COMM] >>
   `gcd (CARD G) m = m` by metis_tac[GCD_MULTIPLE_ALT] >>
   `m <> 0` by metis_tac[group_carrier_nonempty, CARD_EQ_0, GCD_EQ_0] >>
-  metis_tac[MULT_RIGHT_CANCEL]);
+  metis_tac[MULT_RIGHT_CANCEL]
+QED
 
 (* Theorem: cyclic g ==> (g = (gen (cyclic_gen g))) *)
 (* Proof:
@@ -10677,9 +11088,9 @@ val cyclic_gen_power_order = store_thm(
     and (gen z).id = #e           by generated_property
    Therefore g = (gen z)          by monoid_component_equality
 *)
-val cyclic_generated_by_gen = store_thm(
-  "cyclic_generated_by_gen",
-  ``!g:'a group. cyclic g ==> (g = (gen (cyclic_gen g)))``,
+Theorem cyclic_generated_by_gen:
+    !g:'a group. cyclic g ==> (g = (gen (cyclic_gen g)))
+Proof
   rpt strip_tac >>
   `Group g` by rw[] >>
   qabbrev_tac `z = cyclic_gen g` >>
@@ -10687,7 +11098,8 @@ val cyclic_generated_by_gen = store_thm(
   `(Gen z) SUBSET G` by rw[generated_subset] >>
   `G SUBSET (Gen z)` by metis_tac[SUBSET_DEF, cyclic_gen_def, generated_element] >>
   `G = Gen z` by rw[SUBSET_ANTISYM] >>
-  metis_tac[monoid_component_equality, generated_property]);
+  metis_tac[monoid_component_equality, generated_property]
+QED
 
 (* Theorem: cyclic g /\ FINITE G ==> !x. x IN G ==>
             ?n. n < CARD G /\ (x = (cyclic_gen g) ** n) *)
@@ -10703,10 +11115,10 @@ val cyclic_generated_by_gen = store_thm(
      and z ** k = z (k MOD m)    by group_exp_mod, 0 < m
    Just take n = k MOD m.
 *)
-val cyclic_element_by_gen = store_thm(
-  "cyclic_element_by_gen",
-  ``!g:'a group. cyclic g /\ FINITE G ==> !x. x IN G ==>
-     ?n. n < CARD G /\ (x = (cyclic_gen g) ** n)``,
+Theorem cyclic_element_by_gen:
+    !g:'a group. cyclic g /\ FINITE G ==> !x. x IN G ==>
+     ?n. n < CARD G /\ (x = (cyclic_gen g) ** n)
+Proof
   rpt strip_tac >>
   `Group g` by rw[] >>
   `FiniteGroup g` by metis_tac[FiniteGroup_def] >>
@@ -10717,7 +11129,8 @@ val cyclic_element_by_gen = store_thm(
   `ord z = m` by rw[cyclic_gen_order, Abbr`z`, Abbr`m`] >>
   `?k. x = z ** k` by rw[cyclic_element, Abbr`z`] >>
   qexists_tac `k MOD m` >>
-  metis_tac[group_exp_mod, MOD_LESS]);
+  metis_tac[group_exp_mod, MOD_LESS]
+QED
 
 (* Theorem: cyclic g /\ FINITE G ==> !x. x IN G ==>
             x IN (Gen ((cyclic_gen g) ** ((CARD G) DIV (ord x)))) *)
@@ -10746,10 +11159,10 @@ val cyclic_element_by_gen = store_thm(
            = y ** s               by y = z ** k
    Therefore x IN (Gen y)         by generated_element
 *)
-val cyclic_element_in_generated = store_thm(
-  "cyclic_element_in_generated",
-  ``!g:'a group. cyclic g /\ FINITE G ==> !x. x IN G ==>
-        x IN (Gen ((cyclic_gen g) ** ((CARD G) DIV (ord x))))``,
+Theorem cyclic_element_in_generated:
+    !g:'a group. cyclic g /\ FINITE G ==> !x. x IN G ==>
+        x IN (Gen ((cyclic_gen g) ** ((CARD G) DIV (ord x))))
+Proof
   rpt strip_tac >>
   `Group g ` by rw[] >>
   `FiniteGroup g` by metis_tac[FiniteGroup_def] >>
@@ -10768,7 +11181,8 @@ val cyclic_element_in_generated = store_thm(
   `k divides t` by rw[GSYM dividend_divides_divisor_multiple, Abbr`k`] >>
   `?s. t = s * k` by rw[GSYM divides_def] >>
   `x = y ** s` by metis_tac[group_exp_mult, MULT_COMM] >>
-  metis_tac[generated_element]);
+  metis_tac[generated_element]
+QED
 
 (* Theorem: cyclic g /\ FINITE G ==> !n. n divides CARD G ==> ?x. x IN G /\ (ord x = n) *)
 (* Proof:
@@ -10782,9 +11196,9 @@ val cyclic_element_in_generated = store_thm(
       Then x IN G                               by group_exp_element
        and ord x = n                            by group_order_exp_cofactor, 0 < m
 *)
-val cyclic_finite_has_order_divisor = store_thm(
-  "cyclic_finite_has_order_divisor",
-  ``!g:'a group. cyclic g /\ FINITE G ==> !n. n divides CARD G ==> ?x. x IN G /\ (ord x = n)``,
+Theorem cyclic_finite_has_order_divisor:
+    !g:'a group. cyclic g /\ FINITE G ==> !n. n divides CARD G ==> ?x. x IN G /\ (ord x = n)
+Proof
   rpt strip_tac >>
   `Group g` by rw[] >>
   `FiniteGroup g` by metis_tac[FiniteGroup_def] >>
@@ -10793,7 +11207,8 @@ val cyclic_finite_has_order_divisor = store_thm(
   `z IN G /\ (ord z = m)` by rw[cyclic_gen_element, cyclic_gen_order, Abbr`z`, Abbr`m`] >>
   `0 < m` by rw[finite_group_card_pos, Abbr`m`] >>
   qabbrev_tac `x = z ** (m DIV n)` >>
-  metis_tac[group_order_exp_cofactor, group_exp_element]);
+  metis_tac[group_order_exp_cofactor, group_exp_element]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Cyclic Group Properties                                                   *)
@@ -10812,9 +11227,9 @@ val cyclic_finite_has_order_divisor = store_thm(
      (Gen z) = G                          by SUBSET_EQ_CARD
      Thus !x. x IN G ==> ?n. x = z ** n   by generated_element
 *)
-val cyclic_finite_alt = store_thm(
-  "cyclic_finite_alt",
-  ``!g:'a group. FiniteGroup g ==> (cyclic g <=> (?z. z IN G /\ (ord z = CARD G)))``,
+Theorem cyclic_finite_alt:
+    !g:'a group. FiniteGroup g ==> (cyclic g <=> (?z. z IN G /\ (ord z = CARD G)))
+Proof
   rpt strip_tac >>
   `Group g /\ FINITE G` by metis_tac[FiniteGroup_def] >>
   rw[EQ_IMP_THM] >-
@@ -10825,7 +11240,8 @@ val cyclic_finite_alt = store_thm(
   `(Gen z) SUBSET G` by metis_tac[generated_subset] >>
   `CARD (Gen z) = ord z` by rw[generated_group_card, finite_group_card_pos] >>
   `Gen z = G` by metis_tac[SUBSET_EQ_CARD, SUBSET_FINITE] >>
-  metis_tac[generated_element]);
+  metis_tac[generated_element]
+QED
 
 (* Theorem: cyclic g ==> !x y. x IN G /\ y IN G ==> (x * y = y * x) *)
 (* Proof:
@@ -10839,17 +11255,19 @@ val cyclic_finite_alt = store_thm(
    = (z ** m) * (z ** n)         by group_exp_add
    = y * x
 *)
-val cyclic_group_comm = store_thm(
-  "cyclic_group_comm",
-  ``!g:'a group. cyclic g ==> !x y. x IN G /\ y IN G ==> (x * y = y * x)``,
-  metis_tac[cyclic_group, cyclic_gen_def, cyclic_element, group_exp_add, ADD_COMM]);;
+Theorem cyclic_group_comm:
+    !g:'a group. cyclic g ==> !x y. x IN G /\ y IN G ==> (x * y = y * x)
+Proof
+  metis_tac[cyclic_group, cyclic_gen_def, cyclic_element, group_exp_add, ADD_COMM]
+QED
 
 (* Theorem: cyclic g ==> AbelianGroup g *)
 (* Proof: by cyclic_group_comm, cyclic_group, AbelianGroup_def *)
-val cyclic_group_abelian = store_thm(
-  "cyclic_group_abelian",
-  ``!g:'a group. cyclic g ==> AbelianGroup g``,
-  rw[cyclic_group_comm, AbelianGroup_def]);
+Theorem cyclic_group_abelian:
+    !g:'a group. cyclic g ==> AbelianGroup g
+Proof
+  rw[cyclic_group_comm, AbelianGroup_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Cyclic Subgroups                                                          *)
@@ -10883,9 +11301,9 @@ val cyclic_group_abelian = store_thm(
    Therefore for any x IN H, ?q. x = s ** q.
    Result follows by cyclic_def.
 *)
-val cyclic_subgroup_cyclic = store_thm(
-  "cyclic_subgroup_cyclic",
-  ``!g h:'a group. cyclic g /\ h <= g ==> cyclic h``,
+Theorem cyclic_subgroup_cyclic:
+    !g h:'a group. cyclic g /\ h <= g ==> cyclic h
+Proof
   rpt strip_tac >>
   `Group g /\ (cyclic_gen g) IN G` by rw[cyclic_gen_def] >>
   `Group h /\ (h.op = g.op) /\ !x. x IN H ==> x IN G` by metis_tac[Subgroup_def, SUBSET_DEF] >>
@@ -10924,7 +11342,8 @@ val cyclic_subgroup_cyclic = store_thm(
   `|/ ((z ** m) ** q) IN H` by metis_tac[group_inv_element] >>
   `z ** r IN H` by metis_tac[group_rsolve, group_exp_element, group_op_element] >>
   `m <= r` by metis_tac[] >>
-  `~(r < m)` by decide_tac);
+  `~(r < m)` by decide_tac
+QED
 
 (* Theorem: cyclic g /\ FINITE G ==> !n. (?h. h <= g /\ (CARD H = n)) <=> (n divides (CARD G)) *)
 (* Proof:
@@ -10955,9 +11374,9 @@ val cyclic_subgroup_cyclic = store_thm(
          and CARD (Gen x)
            = ord x = n                by generated_group_card
 *)
-val cyclic_subgroup_condition = store_thm(
-  "cyclic_subgroup_condition",
-  ``!g:'a group. cyclic g /\ FINITE G ==> !n. (?h. h <= g /\ (CARD H = n)) <=> (n divides (CARD G))``,
+Theorem cyclic_subgroup_condition:
+    !g:'a group. cyclic g /\ FINITE G ==> !n. (?h. h <= g /\ (CARD H = n)) <=> (n divides (CARD G))
+Proof
   rw[EQ_IMP_THM] >-
   rw[Lagrange_thm] >>
   qabbrev_tac `z = cyclic_gen g` >>
@@ -10976,7 +11395,8 @@ val cyclic_subgroup_condition = store_thm(
   `ord x = n` by metis_tac[EQ_MULT_RCANCEL] >>
   `x IN G` by rw[Abbr`x`] >>
   qexists_tac `gen x` >>
-  metis_tac[generated_subgroup, generated_group_card, NOT_ZERO_LT_ZERO]);
+  metis_tac[generated_subgroup, generated_group_card, NOT_ZERO_LT_ZERO]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Cyclic Group Examples                                                     *)
@@ -10994,17 +11414,18 @@ val cyclic_subgroup_condition = store_thm(
    ==> ord (cyclic_gen (uroots n)) = CARD (uroots n)
                             by cyclic_gen_order, subgroup_order
 *)
-val cyclic_uroots_has_primitive = store_thm(
-  "cyclic_uroots_has_primitive",
-  ``!g:'a group. FINITE G /\ cyclic g ==>
-     !n. ?z. z IN (uroots n).carrier /\ (ord z = CARD (uroots n).carrier)``,
+Theorem cyclic_uroots_has_primitive:
+    !g:'a group. FINITE G /\ cyclic g ==>
+     !n. ?z. z IN (uroots n).carrier /\ (ord z = CARD (uroots n).carrier)
+Proof
   rpt strip_tac >>
   `Group g` by rw[] >>
   `AbelianGroup g` by rw[cyclic_group_abelian] >>
   `(uroots n) <= g` by rw[group_uroots_subgroup] >>
   `cyclic (uroots n)` by metis_tac[cyclic_subgroup_cyclic] >>
   `(cyclic_gen (uroots n)) IN (uroots n).carrier` by rw[cyclic_gen_element] >>
-  metis_tac[cyclic_gen_order, subgroup_order, Subgroup_def, SUBSET_FINITE]);
+  metis_tac[cyclic_gen_order, subgroup_order, Subgroup_def, SUBSET_FINITE]
+QED
 
 (* This cyclic_uroots_has_primitive, originally for the next one, is not used. *)
 
@@ -11014,13 +11435,14 @@ val cyclic_uroots_has_primitive = store_thm(
     and (uroots n) <= g          by group_uroots_subgroup
    Thus cyclic (uroots n)        by cyclic_subgroup_cyclic
 *)
-val cyclic_uroots_cyclic = store_thm(
-  "cyclic_uroots_cyclic",
-  ``!g:'a group. cyclic g ==> !n. cyclic (uroots n)``,
+Theorem cyclic_uroots_cyclic:
+    !g:'a group. cyclic g ==> !n. cyclic (uroots n)
+Proof
   rpt strip_tac >>
   `AbelianGroup g` by rw[cyclic_group_abelian] >>
   `(uroots n) <= g` by rw[group_uroots_subgroup] >>
-  metis_tac[cyclic_subgroup_cyclic]);
+  metis_tac[cyclic_subgroup_cyclic]
+QED
 
 (* Theorem: 1 < n ==> (order (add_mod n) 1 = n) *)
 (* Proof:
@@ -11033,16 +11455,17 @@ val cyclic_uroots_cyclic = store_thm(
      Now (add_mod n).id = 0                   by add_mod_property
       so order (add_mod n) 1 = n              by group_order_thm
 *)
-val add_mod_order_1 = store_thm(
-  "add_mod_order_1",
-  ``!n. 1 < n ==> (order (add_mod n) 1 = n)``,
+Theorem add_mod_order_1:
+    !n. 1 < n ==> (order (add_mod n) 1 = n)
+Proof
   rpt strip_tac >>
   `0 < n` by decide_tac >>
   `!m. (add_mod n).exp 1 m = m MOD n` by rw[add_mod_exp] >>
   `1 IN (add_mod n).carrier` by rw[add_mod_element] >>
   `(add_mod n).exp 1 n = 0` by rw[] >>
   `!m. 0 < m /\ m < n ==> (add_mod n).exp 1 m <> 0` by rw[NOT_ZERO_LT_ZERO] >>
-  metis_tac[group_order_thm, add_mod_property]);
+  metis_tac[group_order_thm, add_mod_property]
+QED
 
 (* Theorem: 0 < n ==> cyclic (add_mod n) *)
 (* Proof:
@@ -11060,9 +11483,9 @@ val add_mod_order_1 = store_thm(
         and order (add_mod n) 1 = n        by add_mod_order_1, 1 < n
        Thus cyclic (add_mod n)             by cyclic_finite_alt
 *)
-val add_mod_cylic = store_thm(
-  "add_mod_cylic",
-  ``!n. 0 < n ==> cyclic (add_mod n)``,
+Theorem add_mod_cylic:
+    !n. 0 < n ==> cyclic (add_mod n)
+Proof
   rpt strip_tac >>
   `Group (add_mod n)` by rw[add_mod_group] >>
   `FiniteGroup (add_mod n)` by rw[add_mod_finite_group] >>
@@ -11070,7 +11493,8 @@ val add_mod_cylic = store_thm(
   Cases_on `n = 1` >-
   metis_tac[cyclic_finite_alt, group_order_id, group_id_element] >>
   `1 < n` by decide_tac >>
-  metis_tac[cyclic_finite_alt, add_mod_order_1, add_mod_element]);
+  metis_tac[cyclic_finite_alt, add_mod_order_1, add_mod_element]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Order of elements in a Cyclic Group                                       *)
@@ -11096,24 +11520,27 @@ End
 
 (* Theorem: z IN cyclic_generators g <=> z IN G /\ (ord z = CARD G) *)
 (* Proof: by cyclic_generators_def *)
-val cyclic_generators_element = store_thm(
-  "cyclic_generators_element",
-  ``!g:'a group. !z. z IN cyclic_generators g <=> z IN G /\ (ord z = CARD G)``,
-  rw[cyclic_generators_def]);
+Theorem cyclic_generators_element:
+    !g:'a group. !z. z IN cyclic_generators g <=> z IN G /\ (ord z = CARD G)
+Proof
+  rw[cyclic_generators_def]
+QED
 
 (* Theorem: (cyclic_generators g) SUBSET G *)
 (* Proof: by cyclic_generators_def, SUBSET_DEF *)
-val cyclic_generators_subset = store_thm(
-  "cyclic_generators_subset",
-  ``!g:'a group. (cyclic_generators g) SUBSET G``,
-  rw[cyclic_generators_def, SUBSET_DEF]);
+Theorem cyclic_generators_subset:
+    !g:'a group. (cyclic_generators g) SUBSET G
+Proof
+  rw[cyclic_generators_def, SUBSET_DEF]
+QED
 
 (* Theorem: FINITE G ==> FINITE (cyclic_generators g) *)
 (* Proof: by cyclic_generators_subset, SUBSET_FINITE *)
-val cyclic_generators_finite = store_thm(
-  "cyclic_generators_finite",
-  ``!g:'a group. FINITE G ==> FINITE (cyclic_generators g)``,
-  metis_tac[cyclic_generators_subset, SUBSET_FINITE]);
+Theorem cyclic_generators_finite:
+    !g:'a group. FINITE G ==> FINITE (cyclic_generators g)
+Proof
+  metis_tac[cyclic_generators_subset, SUBSET_FINITE]
+QED
 
 (* Theorem: cyclic g /\ FINITE G ==> (cyclic_generators g) <> {} *)
 (* Proof:
@@ -11123,10 +11550,11 @@ val cyclic_generators_finite = store_thm(
    Hence z IN cyclic_generators g      by cyclic_generators_element
       or (cyclic_generators g) <> {}   by MEMBER_NOT_EMPTY
 *)
-val cyclic_generators_nonempty = store_thm(
-  "cyclic_generators_nonempty",
-  ``!g:'a group. cyclic g /\ FINITE G ==> (cyclic_generators g) <> {}``,
-  metis_tac[cyclic_generators_element, cyclic_gen_element, cyclic_gen_order, MEMBER_NOT_EMPTY]);
+Theorem cyclic_generators_nonempty:
+    !g:'a group. cyclic g /\ FINITE G ==> (cyclic_generators g) <> {}
+Proof
+  metis_tac[cyclic_generators_element, cyclic_gen_element, cyclic_gen_order, MEMBER_NOT_EMPTY]
+QED
 
 (* Theorem: cyclic g /\ FINITE G ==>
             BIJ (\j. (cyclic_gen g) ** j) (coprimes (CARD G)) (cyclic_generators g) *)
@@ -11169,10 +11597,10 @@ val cyclic_generators_nonempty = store_thm(
            Also ord (z ** k) = m ==> coprime k m by group_order_power_eq_order
            Take j = k, and j IN coprimes m       by coprimes_element
 *)
-val cyclic_generators_coprimes_bij = store_thm(
-  "cyclic_generators_coprimes_bij",
-  ``!g:'a group. cyclic g /\ FINITE G ==>
-      BIJ (\j. (cyclic_gen g) ** j) (coprimes (CARD G)) (cyclic_generators g)``,
+Theorem cyclic_generators_coprimes_bij:
+    !g:'a group. cyclic g /\ FINITE G ==>
+      BIJ (\j. (cyclic_gen g) ** j) (coprimes (CARD G)) (cyclic_generators g)
+Proof
   rpt strip_tac >>
   `Group g ` by rw[] >>
   `FiniteGroup g` by metis_tac[FiniteGroup_def] >>
@@ -11205,7 +11633,8 @@ val cyclic_generators_coprimes_bij = store_thm(
     `k <> 0` by metis_tac[group_exp_0] >>
     `0 < k /\ k <= m` by decide_tac >>
     metis_tac[group_order_power_eq_order, coprimes_element]
-  ]);
+  ]
+QED
 
 (* Theorem: cyclic g /\ FINITE G ==> (CARD (cyclic_generators g) = phi (CARD G)) *)
 (* Proof:
@@ -11219,9 +11648,9 @@ val cyclic_generators_coprimes_bij = store_thm(
        = CARD (coprimes m)             by FINITE_BIJ_CARD_EQ
        = phi m                         by phi_def
 *)
-val cyclic_generators_card = store_thm(
-  "cyclic_generators_card",
-  ``!g:'a group. cyclic g /\ FINITE G ==> (CARD (cyclic_generators g) = phi (CARD G))``,
+Theorem cyclic_generators_card:
+    !g:'a group. cyclic g /\ FINITE G ==> (CARD (cyclic_generators g) = phi (CARD G))
+Proof
   rpt strip_tac >>
   qabbrev_tac `z = cyclic_gen g` >>
   qabbrev_tac `m = CARD G` >>
@@ -11229,7 +11658,8 @@ val cyclic_generators_card = store_thm(
   `BIJ (\j. z ** j) (coprimes m) (cyclic_generators g)` by rw[cyclic_generators_coprimes_bij, Abbr`z`, Abbr`m`] >>
   `FINITE (coprimes m)` by rw[coprimes_finite] >>
   `FINITE (cyclic_generators g)` by rw[cyclic_generators_finite] >>
-  metis_tac[phi_def, FINITE_BIJ_CARD_EQ]);
+  metis_tac[phi_def, FINITE_BIJ_CARD_EQ]
+QED
 
 (*
 Goolge: order of elements in a cyclic group.
@@ -11285,10 +11715,10 @@ This can be checked to make sense via the identity: n = SUM phi(d), over d | n.
           = ord y               by y = z ** k
           = CARD H              by generated_group_card, group_order_pos
 *)
-val cyclic_generators_gen_cofactor_eq_orders = store_thm(
-  "cyclic_generators_gen_cofactor_eq_orders",
-  ``!g:'a group. cyclic g /\ FINITE G ==> !n. n divides (CARD G) ==>
-   (cyclic_generators (Generated g ((cyclic_gen g) ** ((CARD G) DIV n))) = orders g n)``,
+Theorem cyclic_generators_gen_cofactor_eq_orders:
+    !g:'a group. cyclic g /\ FINITE G ==> !n. n divides (CARD G) ==>
+   (cyclic_generators (Generated g ((cyclic_gen g) ** ((CARD G) DIV n))) = orders g n)
+Proof
   rpt strip_tac >>
   `Group g ` by rw[] >>
   `FiniteGroup g` by metis_tac[FiniteGroup_def] >>
@@ -11312,7 +11742,8 @@ val cyclic_generators_gen_cofactor_eq_orders = store_thm(
   `order h x = n` by rw[subgroup_order, Abbr`n`] >>
   `ord y = n` by rw[group_order_exp_cofactor, Abbr`m`, Abbr`y`, Abbr`k`] >>
   `CARD H = ord y` by rw[generated_group_card, group_order_pos, Abbr`h`] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: cyclic g /\ FINITE G ==>
             !n. CARD (orders g n) = if (n divides CARD G) then phi n else 0 *)
@@ -11345,10 +11776,10 @@ val cyclic_generators_gen_cofactor_eq_orders = store_thm(
         Now (ord x) divides m         by group_order_divides
         which contradicts ~(n divides m).
 *)
-val cyclic_orders_card = store_thm(
-  "cyclic_orders_card",
-  ``!g:'a group. cyclic g /\ FINITE G ==>
-   !n. CARD (orders g n) = if (n divides CARD G) then phi n else 0``,
+Theorem cyclic_orders_card:
+    !g:'a group. cyclic g /\ FINITE G ==>
+   !n. CARD (orders g n) = if (n divides CARD G) then phi n else 0
+Proof
   rpt strip_tac >>
   `Group g ` by rw[] >>
   `FiniteGroup g` by metis_tac[FiniteGroup_def] >>
@@ -11374,7 +11805,8 @@ val cyclic_orders_card = store_thm(
     `FINITE (orders g n)` by rw[orders_finite] >>
     `orders g n <> {}` by rw[GSYM CARD_EQ_0] >>
     metis_tac[MEMBER_NOT_EMPTY, orders_element, group_order_divides]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Partition by order equality                                               *)
@@ -11387,10 +11819,11 @@ End
 
 (* Theorem: (eq_order g) equiv_on G *)
 (* Proof: by eq_order_def, equiv_on_def *)
-val eq_order_equiv = store_thm(
-  "eq_order_equiv",
-  ``!g:'a group. (eq_order g) equiv_on G``,
-  rw[eq_order_def, equiv_on_def]);
+Theorem eq_order_equiv:
+    !g:'a group. (eq_order g) equiv_on G
+Proof
+  rw[eq_order_def, equiv_on_def]
+QED
 
 (* Theorem: cyclic g /\ FINITE G ==> !n. n divides CARD G ==> orders g n <> {} *)
 (* Proof:
@@ -11404,9 +11837,9 @@ val eq_order_equiv = store_thm(
      so x IN (orders g n)   by orders_element
    Thus orders g n <> {}    by MEMBER_NOT_EMPTY
 *)
-val cyclic_orders_nonempty = store_thm(
-  "cyclic_orders_nonempty",
-  ``!g:'a group. cyclic g /\ FINITE G ==> !n. n divides CARD G ==> orders g n <> {}``,
+Theorem cyclic_orders_nonempty:
+    !g:'a group. cyclic g /\ FINITE G ==> !n. n divides CARD G ==> orders g n <> {}
+Proof
   rpt strip_tac >>
   `Group g ` by rw[] >>
   `FiniteGroup g` by metis_tac[FiniteGroup_def] >>
@@ -11418,7 +11851,8 @@ val cyclic_orders_nonempty = store_thm(
   qabbrev_tac `x = z ** (m DIV n)` >>
   `x IN G` by rw[Abbr`x`] >>
   `ord x = n` by metis_tac[group_order_exp_cofactor] >>
-  metis_tac[orders_element, MEMBER_NOT_EMPTY]);
+  metis_tac[orders_element, MEMBER_NOT_EMPTY]
+QED
 
 (* Theorem: cyclic g /\ FINITE G ==>
             (partition (eq_order g) G = {orders g n | n | n divides (CARD G)}) *)
@@ -11433,16 +11867,17 @@ val cyclic_orders_nonempty = store_thm(
          ==> ?z. z IN G /\ (ord z = n)     by orders_element, , MEMBER_NOT_EMPTY
        Let x' = z, then the result follows.
 *)
-val cyclic_eq_order_partition = store_thm(
-  "cyclic_eq_order_partition",
-  ``!g:'a group. cyclic g /\ FINITE G ==>
-     (partition (eq_order g) G = {orders g n | n | n divides (CARD G)})``,
+Theorem cyclic_eq_order_partition:
+    !g:'a group. cyclic g /\ FINITE G ==>
+     (partition (eq_order g) G = {orders g n | n | n divides (CARD G)})
+Proof
   rpt strip_tac >>
   `Group g ` by rw[] >>
   `FiniteGroup g` by metis_tac[FiniteGroup_def] >>
   rw[partition_def, eq_order_def, orders_def, EXTENSION, EQ_IMP_THM] >-
   metis_tac[group_order_divides] >>
-  metis_tac[orders_element, cyclic_orders_nonempty, MEMBER_NOT_EMPTY]);
+  metis_tac[orders_element, cyclic_orders_nonempty, MEMBER_NOT_EMPTY]
+QED
 
 (* Theorem: cyclic g /\ FINITE G ==>
             (partition (eq_order g) G = {orders g n | n | n IN divisors (CARD G)}) *)
@@ -11454,13 +11889,14 @@ val cyclic_eq_order_partition = store_thm(
       = {orders g n | n | n divides (CARD G)}      by cyclic_eq_order_partition
       = {orders g n | n | n IN divisors (CARD G)}  by divisors_element_alt, 0 < CARD G
 *)
-val cyclic_eq_order_partition_alt = store_thm(
-  "cyclic_eq_order_partition_alt",
-  ``!g:'a group. cyclic g /\ FINITE G ==>
-                (partition (eq_order g) G = {orders g n | n | n IN divisors (CARD G)})``,
+Theorem cyclic_eq_order_partition_alt:
+    !g:'a group. cyclic g /\ FINITE G ==>
+                (partition (eq_order g) G = {orders g n | n | n IN divisors (CARD G)})
+Proof
   rpt strip_tac >>
   `0 < CARD G` by metis_tac[finite_group_card_pos, cyclic_group, FiniteGroup_def] >>
-  rw[cyclic_eq_order_partition, divisors_element_alt]);
+  rw[cyclic_eq_order_partition, divisors_element_alt]
+QED
 
 (* We have shown: in a finite cyclic group G,
    For each divisor d | |G|, there are phi(d) elements of order d.
@@ -11500,10 +11936,10 @@ val cyclic_eq_order_partition_alt = store_thm(
           so y IN orders g n        by orders_element
        So take x'' = y.
 *)
-val cyclic_eq_order_partition_by_card = store_thm(
-  "cyclic_eq_order_partition_by_card",
-  ``!g:'a group. cyclic g /\ FINITE G ==>
-      (IMAGE CARD (partition (eq_order g) g.carrier) = IMAGE phi (divisors (CARD G)))``,
+Theorem cyclic_eq_order_partition_by_card:
+    !g:'a group. cyclic g /\ FINITE G ==>
+      (IMAGE CARD (partition (eq_order g) g.carrier) = IMAGE phi (divisors (CARD G)))
+Proof
   rpt strip_tac >>
   `Group g` by rw[] >>
   `FiniteGroup g` by metis_tac[FiniteGroup_def] >>
@@ -11527,7 +11963,8 @@ val cyclic_eq_order_partition_by_card = store_thm(
     `y IN G` by rw[Abbr`y`] >>
     `ord y = n` by rw[group_order_exp_cofactor, Abbr`y`, Abbr`m`] >>
     metis_tac[cyclic_orders_card, orders_element]
-  ]);
+  ]
+QED
 
 (* Theorem: eq_order g = feq ord *)
 (* Proof:
@@ -11536,10 +11973,11 @@ val cyclic_eq_order_partition_by_card = store_thm(
    <=> feq ord x y     by feq_def
    Hence true by FUN_EQ_THM.
 *)
-val eq_order_is_feq_order = store_thm(
-  "eq_order_is_feq_order",
-  ``!g:'a group. eq_order g = feq ord``,
-  rw[eq_order_def, FUN_EQ_THM, fequiv_def]);
+Theorem eq_order_is_feq_order:
+    !g:'a group. eq_order g = feq ord
+Proof
+  rw[eq_order_def, FUN_EQ_THM, fequiv_def]
+QED
 
 (* Theorem: orders g = feq_class ord G *)
 (* Proof:
@@ -11607,14 +12045,15 @@ QED
    Then cyclic (add_mod n)        by add_mod_cylic
     and CARD g.carrier = n        by add_mod_card
 *)
-val finite_cyclic_group_existence = store_thm(
-  "finite_cyclic_group_existence",
-  ``!n. 0 < n ==> ?g:num group. cyclic g /\ (CARD g.carrier = n)``,
+Theorem finite_cyclic_group_existence:
+    !n. 0 < n ==> ?g:num group. cyclic g /\ (CARD g.carrier = n)
+Proof
   rpt strip_tac >>
   qexists_tac `add_mod n` >>
   rpt strip_tac >-
   rw[add_mod_cylic] >>
-  rw[add_mod_card]);
+  rw[add_mod_card]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Cyclic Group index relative to a generator.                               *)
@@ -11639,9 +12078,9 @@ val finite_cyclic_group_existence = store_thm(
    If INFINITE G,
       Take n = k, the result follows.
 *)
-val cyclic_index_exists = store_thm(
-  "cyclic_index_exists",
-  ``!(g:'a group) x. cyclic g /\ x IN G ==> ?n. (x = (cyclic_gen g) ** n) /\ (FINITE G ==> n < CARD G)``,
+Theorem cyclic_index_exists:
+    !(g:'a group) x. cyclic g /\ x IN G ==> ?n. (x = (cyclic_gen g) ** n) /\ (FINITE G ==> n < CARD G)
+Proof
   rpt strip_tac >>
   `Group g` by rw[] >>
   `cyclic_gen g IN G /\ ?n. x = (cyclic_gen g) ** n` by rw[cyclic_gen_def] >>
@@ -11653,7 +12092,8 @@ val cyclic_index_exists = store_thm(
     qexists_tac `n MOD (CARD G)` >>
     rw[Once group_exp_mod],
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Apply Skolemization *)
 val lemma = prove(
@@ -11693,10 +12133,10 @@ val cyclic_index_def =
     and 0 < CARD G                        by finite_group_card_pos
    Thus n = cyclic_index g x              by group_exp_equal
 *)
-val finite_cyclic_index_property = store_thm(
-  "finite_cyclic_index_property",
-  ``!g:'a group. cyclic g /\ FINITE G ==>
-   !n. n < CARD G ==> (cyclic_index g ((cyclic_gen g) ** n) = n)``,
+Theorem finite_cyclic_index_property:
+    !g:'a group. cyclic g /\ FINITE G ==>
+   !n. n < CARD G ==> (cyclic_index g ((cyclic_gen g) ** n) = n)
+Proof
   rpt strip_tac >>
   `Group g` by rw[] >>
   `FiniteGroup g` by rw[FiniteGroup_def] >>
@@ -11705,7 +12145,8 @@ val finite_cyclic_index_property = store_thm(
   `x IN G` by rw[Abbr`x`] >>
   `(x = (cyclic_gen g) ** (cyclic_index g x)) /\ cyclic_index g x < CARD G` by fs[cyclic_index_def] >>
   `ord (cyclic_gen g) = CARD G` by rw[cyclic_gen_order] >>
-  metis_tac[group_exp_equal, finite_group_card_pos]);
+  metis_tac[group_exp_equal, finite_group_card_pos]
+QED
 
 (* Theorem: cyclic g /\ FINITE G /\ x IN G ==>
             !n. n < CARD G ==> ((x = (cyclic_gen g) ** n) <=> (n = cyclic_index g x)) *)
@@ -11715,14 +12156,15 @@ val finite_cyclic_index_property = store_thm(
    Only-if part: (n = cyclic_index g x) ==> (x = (cyclic_gen g) ** n)
       This is true by cyclic_index_def
 *)
-val finite_cyclic_index_unique = store_thm(
-  "finite_cyclic_index_unique",
-  ``!g:'a group x. cyclic g /\ FINITE G /\ x IN G ==>
-   !n. n < CARD G ==> ((x = (cyclic_gen g) ** n) <=> (n = cyclic_index g x))``,
+Theorem finite_cyclic_index_unique:
+    !g:'a group x. cyclic g /\ FINITE G /\ x IN G ==>
+   !n. n < CARD G ==> ((x = (cyclic_gen g) ** n) <=> (n = cyclic_index g x))
+Proof
   rpt strip_tac >>
   `Group g` by rw[] >>
   rw[cyclic_index_def, EQ_IMP_THM] >>
-  rw[finite_cyclic_index_property]);
+  rw[finite_cyclic_index_property]
+QED
 
 (* Theorem: cyclic g /\ FINITE G /\ x IN G /\ y IN G ==>
             (cyclic_index g (x * y) = ((cyclic_index g x) + (cyclic_index g y)) MOD (CARD G)) *)
@@ -11742,10 +12184,10 @@ val finite_cyclic_index_unique = store_thm(
    Note (h + k) MOD (CARD G) < CARD G                   by MOD_LESS
    Thus (h + k) MOD (CARD G) = cyclic_index g (x * y)   by finite_cyclic_index_unique
 *)
-val finite_cyclic_index_add = store_thm(
-  "finite_cyclic_index_add",
-  ``!g:'a group x y. cyclic g /\ FINITE G /\ x IN G /\ y IN G ==>
-    (cyclic_index g (x * y) = ((cyclic_index g x) + (cyclic_index g y)) MOD (CARD G))``,
+Theorem finite_cyclic_index_add:
+    !g:'a group x y. cyclic g /\ FINITE G /\ x IN G /\ y IN G ==>
+    (cyclic_index g (x * y) = ((cyclic_index g x) + (cyclic_index g y)) MOD (CARD G))
+Proof
   rpt strip_tac >>
   `Group g` by rw[] >>
   `FiniteGroup g` by rw[FiniteGroup_def] >>
@@ -11761,7 +12203,8 @@ val finite_cyclic_index_add = store_thm(
   `_ = x * y` by metis_tac[cyclic_index_def] >>
   `0 < CARD G` by rw[finite_group_card_pos] >>
   `(h + k) MOD (CARD G) < CARD G` by rw[] >>
-  metis_tac[finite_cyclic_index_unique]);
+  metis_tac[finite_cyclic_index_unique]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Cyclic Group Uniqueness.                                           *)
@@ -11790,11 +12233,11 @@ val finite_cyclic_index_add = store_thm(
        = g2.op (g2.exp (cyclic_gen g2) (cyclic_index g1 x))
                (g2.exp (cyclic_gen g2) (cyclic_index g1 x'))                   by group_exp_add
 *)
-val finite_cyclic_group_homo = store_thm(
-  "finite_cyclic_group_homo",
-  ``!g1:'a group g2:'b group. cyclic g1 /\ cyclic g2 /\
+Theorem finite_cyclic_group_homo:
+    !g1:'a group g2:'b group. cyclic g1 /\ cyclic g2 /\
    FINITE g1.carrier /\ FINITE g2.carrier /\ (CARD g1.carrier = CARD g2.carrier) ==>
-      GroupHomo (\x. g2.exp (cyclic_gen g2) (cyclic_index g1 x)) g1 g2``,
+      GroupHomo (\x. g2.exp (cyclic_gen g2) (cyclic_index g1 x)) g1 g2
+Proof
   rpt strip_tac >>
   `Group g2 /\ FiniteGroup g2` by rw[FiniteGroup_def, cyclic_group] >>
   `cyclic_gen g2 IN g2.carrier` by rw[cyclic_gen_def] >>
@@ -11803,7 +12246,8 @@ val finite_cyclic_group_homo = store_thm(
   `g2.exp (cyclic_gen g2) (cyclic_index g1 (g1.op x x')) =
     g2.exp (cyclic_gen g2) (((cyclic_index g1 x) + (cyclic_index g1 x')) MOD (CARD g1.carrier))` by rw[finite_cyclic_index_add] >>
   `_ = g2.exp (cyclic_gen g2) ((cyclic_index g1 x) + (cyclic_index g1 x'))` by metis_tac[group_exp_mod, group_order_pos] >>
-  rw[group_exp_add]);
+  rw[group_exp_add]
+QED
 
 (* Theorem: cyclic g1 /\ cyclic g2 /\
    FINITE g1.carrier /\ FINITE g2.carrier /\ (CARD g1.carrier = CARD g2.carrier) ==>
@@ -11839,11 +12283,11 @@ val finite_cyclic_group_homo = store_thm(
            = g2.exp (cyclic_gen g2) (cyclic_index g2 x)    by finite_cyclic_index_property
            = x                                             by cyclic_index_def
 *)
-val finite_cyclic_group_bij = store_thm(
-  "finite_cyclic_group_bij",
-  ``!g1:'a group g2:'b group. cyclic g1 /\ cyclic g2 /\
+Theorem finite_cyclic_group_bij:
+    !g1:'a group g2:'b group. cyclic g1 /\ cyclic g2 /\
    FINITE g1.carrier /\ FINITE g2.carrier /\ (CARD g1.carrier = CARD g2.carrier) ==>
-      BIJ (\x. g2.exp (cyclic_gen g2) (cyclic_index g1 x)) g1.carrier g2.carrier``,
+      BIJ (\x. g2.exp (cyclic_gen g2) (cyclic_index g1 x)) g1.carrier g2.carrier
+Proof
   rpt strip_tac >>
   `Group g2 /\ FiniteGroup g2` by rw[FiniteGroup_def, cyclic_group] >>
   `cyclic_gen g2 IN g2.carrier` by rw[cyclic_gen_def] >>
@@ -11860,7 +12304,8 @@ val finite_cyclic_group_bij = store_thm(
     `cyclic_index g2 x < CARD g2.carrier` by rw[cyclic_index_def] >>
     `cyclic_index g1 (g1.exp (cyclic_gen g1) (cyclic_index g2 x)) = cyclic_index g2 x` by fs[finite_cyclic_index_property] >>
     rw[cyclic_index_def]
-  ]);
+  ]
+QED
 
 (* Theorem: cyclic g1 /\ cyclic g2 /\
    FINITE g1.carrier /\ FINITE g2.carrier /\ (CARD g1.carrier = CARD g2.carrier) ==>
@@ -11872,14 +12317,15 @@ val finite_cyclic_group_bij = store_thm(
    (2) BIJ (\x. g2.exp (cyclic_gen g2) (cyclic_index g1 x)) g1.carrier g2.carrier
        This is true by finite_cyclic_group_bij
 *)
-val finite_cyclic_group_iso = store_thm(
-  "finite_cyclic_group_iso",
-  ``!g1:'a group g2:'b group. cyclic g1 /\ cyclic g2 /\
+Theorem finite_cyclic_group_iso:
+    !g1:'a group g2:'b group. cyclic g1 /\ cyclic g2 /\
    FINITE g1.carrier /\ FINITE g2.carrier /\ (CARD g1.carrier = CARD g2.carrier) ==>
-      GroupIso (\x. g2.exp (cyclic_gen g2) (cyclic_index g1 x)) g1 g2``,
+      GroupIso (\x. g2.exp (cyclic_gen g2) (cyclic_index g1 x)) g1 g2
+Proof
   rw[GroupIso_def] >-
   rw[finite_cyclic_group_homo] >>
-  rw[finite_cyclic_group_bij]);
+  rw[finite_cyclic_group_bij]
+QED
 
 (* Theorem: cyclic g1 /\ cyclic g2 /\ FINITE g1.carrier /\ FINITE g2.carrier /\
             (CARD g1.carrier = CARD g2.carrier) ==> ?f. GroupIso f g1 g2 *)
@@ -11887,11 +12333,12 @@ val finite_cyclic_group_iso = store_thm(
    Let f = \x. g2.exp (cyclic_gen g2) (cyclic_index g1 x).
    The result follows by finite_cyclic_group_iso
 *)
-val finite_cyclic_group_uniqueness = store_thm(
-  "finite_cyclic_group_uniqueness",
-  ``!g1:'a group g2:'b group. cyclic g1 /\ cyclic g2 /\ FINITE g1.carrier /\ FINITE g2.carrier /\
-        (CARD g1.carrier = CARD g2.carrier) ==> ?f. GroupIso f g1 g2``,
-  metis_tac[finite_cyclic_group_iso]);
+Theorem finite_cyclic_group_uniqueness:
+    !g1:'a group g2:'b group. cyclic g1 /\ cyclic g2 /\ FINITE g1.carrier /\ FINITE g2.carrier /\
+        (CARD g1.carrier = CARD g2.carrier) ==> ?f. GroupIso f g1 g2
+Proof
+  metis_tac[finite_cyclic_group_iso]
+QED
 
 (* This completes the classification of finite cyclic groups. *)
 
@@ -11911,9 +12358,9 @@ val finite_cyclic_group_uniqueness = store_thm(
           = cyclic_gen g ** (n + n')                 by group_exp_mod, 0 < CARD G
           = cyclic_gen g ** n * cyclic_gen g ** n'   by group_exp_add
 *)
-val finite_cyclic_group_add_mod_homo = store_thm(
-  "finite_cyclic_group_add_mod_homo",
-  ``!g:'a group. cyclic g /\ FINITE G ==> GroupHomo (\n. (cyclic_gen g) ** n) (add_mod (CARD G)) g``,
+Theorem finite_cyclic_group_add_mod_homo:
+    !g:'a group. cyclic g /\ FINITE G ==> GroupHomo (\n. (cyclic_gen g) ** n) (add_mod (CARD G)) g
+Proof
   rpt strip_tac >>
   `Group g /\ FiniteGroup g` by rw[FiniteGroup_def, cyclic_group] >>
   `cyclic_gen g IN G` by rw[cyclic_gen_def] >>
@@ -11921,7 +12368,8 @@ val finite_cyclic_group_add_mod_homo = store_thm(
   rw[GroupHomo_def] >>
   `0 < CARD G` by decide_tac >>
   `cyclic_gen g ** ((n + n') MOD CARD G) = cyclic_gen g ** (n + n')` by metis_tac[group_exp_mod] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: cyclic g /\ FINITE G ==> BIJ (\n. (cyclic_gen g) ** n) (add_mod (CARD G)).carrier G *)
 (* Proof:
@@ -11936,16 +12384,17 @@ val finite_cyclic_group_add_mod_homo = store_thm(
    (3) x IN G ==> ?n. n < CARD G /\ (cyclic_gen g ** n = x)
        This is true                         by cyclic_index_def
 *)
-val finite_cyclic_group_add_mod_bij = store_thm(
-  "finite_cyclic_group_add_mod_bij",
-  ``!g:'a group. cyclic g /\ FINITE G ==> BIJ (\n. (cyclic_gen g) ** n) (add_mod (CARD G)).carrier G``,
+Theorem finite_cyclic_group_add_mod_bij:
+    !g:'a group. cyclic g /\ FINITE G ==> BIJ (\n. (cyclic_gen g) ** n) (add_mod (CARD G)).carrier G
+Proof
   rpt strip_tac >>
   `Group g /\ FiniteGroup g` by rw[FiniteGroup_def, cyclic_group] >>
   `cyclic_gen g IN G` by rw[cyclic_gen_def] >>
   `order g (cyclic_gen g) = CARD G` by rw[cyclic_gen_order] >>
   rw[BIJ_DEF, INJ_DEF, SURJ_DEF] >-
   metis_tac[finite_cyclic_index_property] >>
-  metis_tac[cyclic_index_def]);
+  metis_tac[cyclic_index_def]
+QED
 
 (* Theorem: cyclic g /\ FINITE G ==> GroupIso (\n. (cyclic_gen g) ** n) (add_mod (CARD G)) g *)
 (* Proof:
@@ -11955,12 +12404,13 @@ val finite_cyclic_group_add_mod_bij = store_thm(
    (2) BIJ (\n. cyclic_gen g ** n) (add_mod (CARD G)).carrier G
        This is true by finite_cyclic_group_add_mod_bij
 *)
-val finite_cyclic_group_add_mod_iso = store_thm(
-  "finite_cyclic_group_add_mod_iso",
-  ``!g:'a group. cyclic g /\ FINITE G ==> GroupIso (\n. (cyclic_gen g) ** n) (add_mod (CARD G)) g``,
+Theorem finite_cyclic_group_add_mod_iso:
+    !g:'a group. cyclic g /\ FINITE G ==> GroupIso (\n. (cyclic_gen g) ** n) (add_mod (CARD G)) g
+Proof
   rw_tac std_ss[GroupIso_def] >-
   rw[finite_cyclic_group_add_mod_homo] >>
-  rw[finite_cyclic_group_add_mod_bij]);
+  rw[finite_cyclic_group_add_mod_bij]
+QED
 
 (* Theorem: cyclic g1 /\ cyclic g2 /\ FINITE g1.carrier /\ FINITE g2.carrier /\
             (CARD g1.carrier = CARD g2.carrier) ==> ?f. GroupIso f g1 g2 *)
@@ -12009,10 +12459,10 @@ QED
       = CARD G                      by cyclic_gen_order, FINITE G
       = CARD h.carrier              by group_iso_card_eq
 *)
-val cyclic_iso_gen = store_thm(
-  "cyclic_iso_gen",
-  ``!(g:'a group) (h:'b group) f. cyclic g /\ cyclic h /\ FINITE G /\
-        GroupIso f g h ==> f (cyclic_gen g) IN (cyclic_generators h)``,
+Theorem cyclic_iso_gen:
+    !(g:'a group) (h:'b group) f. cyclic g /\ cyclic h /\ FINITE G /\
+        GroupIso f g h ==> f (cyclic_gen g) IN (cyclic_generators h)
+Proof
   rpt strip_tac >>
   `Group g /\ Group h` by rw[] >>
   `cyclic_gen g IN G` by rw[cyclic_gen_element] >>
@@ -12020,7 +12470,8 @@ val cyclic_iso_gen = store_thm(
   metis_tac[group_iso_element] >>
   `order h (f (cyclic_gen g)) = ord (cyclic_gen g)` by rw[group_iso_order] >>
   `_ = CARD G` by rw[cyclic_gen_order] >>
-  metis_tac[group_iso_card_eq]);
+  metis_tac[group_iso_card_eq]
+QED
 
 (*===========================================================================*)
 
@@ -14104,13 +14555,14 @@ QED
       = CARD H * CARD (CosetPartition g h)    by Lagrange_identity
       = CARD H * CARD ((g / h).carrier)       by quotient_group_def
 *)
-val count_formula = store_thm(
-  "count_formula",
-  ``!g:'a group h. FiniteGroup g /\ h << g ==> CARD G = CARD H * CARD ((g / h).carrier)``,
+Theorem count_formula:
+    !g:'a group h. FiniteGroup g /\ h << g ==> CARD G = CARD H * CARD ((g / h).carrier)
+Proof
   rpt strip_tac >>
   `(g / h).carrier = CosetPartition g h` by simp[quotient_group_def] >>
   fs[FiniteGroup_def, normal_subgroup_def] >>
-  rw[Lagrange_identity]);
+  rw[Lagrange_identity]
+QED
 
 (* iso_group_same_card: If two groups g and h are isomorphic, then CARD g = CARD h. *)
 (* Theorem:  FINITE G /\ GroupIso f g h ==> CARD G = CARD h.carrier *)
@@ -14118,33 +14570,36 @@ val count_formula = store_thm(
    Note BIJ f G h.carrier          by group_iso_bij
    Thus CARD G = CARD h.carrier    by FINITE_BIJ_CARD, FINITE G
 *)
-val iso_group_same_card = store_thm(
-  "iso_group_same_card",
-  ``!f g:'a group h. FINITE G /\ GroupIso f g h ==> CARD G = CARD h.carrier``,
+Theorem iso_group_same_card:
+    !f g:'a group h. FINITE G /\ GroupIso f g h ==> CARD G = CARD h.carrier
+Proof
   rpt strip_tac >>
   `BIJ f G h.carrier` by fs[group_iso_bij] >>
-  metis_tac[FINITE_BIJ_CARD]);
+  metis_tac[FINITE_BIJ_CARD]
+QED
 
 (* lemma 1' (Subgroup_subgroup):
    The definition "Subgroup_def" implies the definition "subgroup_def" *)
 (* Theorem: h <= g ==> subgroup h g *)
 (* Proof: by subgroup_homomorphism *)
-val Subgroup_subgroup = store_thm(
-  "Subgroup_subgroup",
-  ``!g:'a group h. h <= g ==> subgroup h g``,
-  rw[subgroup_homomorphism]);
+Theorem Subgroup_subgroup:
+    !g:'a group h. h <= g ==> subgroup h g
+Proof
+  rw[subgroup_homomorphism]
+QED
 
 (* Theorem: h <= g /\ GroupHomo f g k ==> GroupHomo f h k *)
 (* Proof:
    Note subgroup h g          by Subgroup_subgroup
    Thus GroupHomo f h k       by subgroup_homo_homo
 *)
-val Subgroup_homo_homo = store_thm(
-  "Subgroup_homo_homo",
-  ``!g:'a group h k f. h <= g /\ GroupHomo f g k ==> GroupHomo f h k``,
+Theorem Subgroup_homo_homo:
+    !g:'a group h k f. h <= g /\ GroupHomo f g k ==> GroupHomo f h k
+Proof
   rpt strip_tac >>
   `subgroup h g` by metis_tac[Subgroup_subgroup] >>
-  metis_tac[subgroup_homo_homo]);
+  metis_tac[subgroup_homo_homo]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Lemma 1                                                                   *)
@@ -14160,14 +14615,15 @@ val Subgroup_homo_homo = store_thm(
     and Group h                   by subgroup_groups
    Thus homo_image f h g2 <= g2   by homo_image_subgroup
 *)
-val image_subgroup_subgroup = store_thm(
-  "image_subgroup_subgroup",
-  ``!g1:'a group g2 h f. Group g1 /\ Group g2 /\ GroupHomo f g1 g2 /\ h <= g1 ==> homo_image f h g2 <= g2``,
+Theorem image_subgroup_subgroup:
+    !g1:'a group g2 h f. Group g1 /\ Group g2 /\ GroupHomo f g1 g2 /\ h <= g1 ==> homo_image f h g2 <= g2
+Proof
   rpt strip_tac >>
   `subgroup h g1` by fs[Subgroup_subgroup] >>
   `GroupHomo f h g2` by metis_tac[subgroup_homo_homo] >>
   `Group h` by metis_tac[subgroup_groups] >>
-  metis_tac[homo_image_subgroup]);
+  metis_tac[homo_image_subgroup]
+QED
 
 (* This is Lemma 1 *)
 
@@ -14194,11 +14650,12 @@ End
 
 (* Theorem: x IN (PREIMAGE f h) INTER g1.carrier ==> x IN g1.carrier /\ f x IN h *)
 (* Proof: by definitions. *)
-val preimage_group_property = store_thm(
-    "preimage_group_property",
-    ``!(f:'a -> 'b) (g1:'a group) (g2:'b group) (h:'b -> bool) x.
-       x IN (PREIMAGE f h) INTER g1.carrier ==> x IN g1.carrier /\ f x IN h``,
-    rpt strip_tac >> fs[INTER_DEF, PREIMAGE_def]);
+Theorem preimage_group_property:
+      !(f:'a -> 'b) (g1:'a group) (g2:'b group) (h:'b -> bool) x.
+       x IN (PREIMAGE f h) INTER g1.carrier ==> x IN g1.carrier /\ f x IN h
+Proof
+    rpt strip_tac >> fs[INTER_DEF, PREIMAGE_def]
+QED
 
 (* Theorem: Group g1 /\ Group g2 /\ GroupHomo f g1 g2 /\ h <= g2 ==>
             Group (preimage_group f g1 g2 h.carrier) *)
@@ -14224,9 +14681,9 @@ val preimage_group_property = store_thm(
         and   y IN g1.carrier   by group_inv_element
         and g1.op y x = g1.id   by group_inv_thm
 *)
-val preimage_group_group = store_thm(
-    "preimage_group_group",
- ``!f g1:'a group g2:'b group h. Group g1 /\ Group g2 /\ GroupHomo f g1 g2 /\ h <= g2 ==> Group (preimage_group f g1 g2 h.carrier)``,
+Theorem preimage_group_group:
+   !f g1:'a group g2:'b group h. Group g1 /\ Group g2 /\ GroupHomo f g1 g2 /\ h <= g2 ==> Group (preimage_group f g1 g2 h.carrier)
+Proof
     rpt strip_tac >> rw_tac std_ss[group_def_alt] >> fs[preimage_group_def, preimage_group_property] >>
     fs[PREIMAGE_def]
     >- (fs[GroupHomo_def] >>
@@ -14244,7 +14701,8 @@ val preimage_group_group = store_thm(
        `Group h` by fs[Subgroup_def] >> fs[group_inv_element])
         >- (`Group h` by fs[Subgroup_def] >>
            `h.inv (f x) IN h.carrier` by fs[group_inv_element] >> rw[])
-        >- fs[group_inv_thm]));
+        >- fs[group_inv_thm])
+QED
 
 (* Theorem: Group g1 /\ Group g2 /\ GroupHomo f g1 g2 /\ h <= g2 ==>
             preimage_group f g1 g2 h.carrier <= g1 *)
@@ -14284,13 +14742,14 @@ QED
     <=> !x. x IN g /\ f(x) = #e ==> x IN g /\ #e IN 'h                 substitute ``f(x)`` by ``#e``
     <=> T                                                              by definition of subgroup
 *)
-val preimage_subgroup_kernel = store_thm(
-    "preimage_subgroup_kernel",
-    ``!f g1:'a group g2 h2. Group g1 /\ Group g2 /\ h2 <= g2 /\ GroupHomo f g1 g2 ==>
-             (kernel f g1 g2) SUBSET (PREIMAGE f h2.carrier) INTER g1.carrier``,
+Theorem preimage_subgroup_kernel:
+      !f g1:'a group g2 h2. Group g1 /\ Group g2 /\ h2 <= g2 /\ GroupHomo f g1 g2 ==>
+             (kernel f g1 g2) SUBSET (PREIMAGE f h2.carrier) INTER g1.carrier
+Proof
     rpt strip_tac >> simp[SUBSET_DEF] >> rpt strip_tac >> rw[PREIMAGE_def] >>
     `h2.id = g2.id` by metis_tac[subgroup_id] >> `Group h2` by metis_tac[Subgroup_def] >>
-    `h2.id IN h2.carrier` by metis_tac[group_id_element] >> metis_tac[]);
+    `h2.id IN h2.carrier` by metis_tac[group_id_element] >> metis_tac[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Lemma 4                                                                   *)
@@ -14323,10 +14782,10 @@ val preimage_subgroup_kernel = store_thm(
                              by substitute ``x`` by ``f(x')`` and substitute ``y`` by ``f(y')``
    <=> T                                                                      by condition satisfied
 *)
-val normal_preimage_normal = store_thm(
-    "normal_preimage_normal",
-    ``!f:'a -> 'b g1:'a group g2:'b group h2. Group g1 /\ Group g2 /\ h2 <= g2 /\ GroupHomo f g1 g2 ==>
-    (h2 << g2 ==> (preimage_group f g1 g2 h2.carrier) << g1)``,
+Theorem normal_preimage_normal:
+      !f:'a -> 'b g1:'a group g2:'b group h2. Group g1 /\ Group g2 /\ h2 <= g2 /\ GroupHomo f g1 g2 ==>
+    (h2 << g2 ==> (preimage_group f g1 g2 h2.carrier) << g1)
+Proof
     rpt strip_tac >>
     fs[normal_subgroup_def] >> rpt strip_tac >>
     simp[preimage_subgroup_subgroup] >>
@@ -14335,7 +14794,8 @@ val normal_preimage_normal = store_thm(
     `f (g1.inv a) = g2.inv (f a)` by fs[group_homo_inv] >>
     `f (g1.op (g1.op a z) (g1.inv a)) = g2.op (g2.op (f a) (f z)) (g2.inv (f a))` by rw[] >>
     `(f a) IN g2.carrier` by metis_tac[group_homo_element] >>
-    metis_tac[]);
+    metis_tac[]
+QED
 
 (* Theorem: Group g1 /\ Group g2 /\ h2 <= g2 /\ GroupHomo f g1 g2 /\ SURJ f g1.carrier g2.carrier ==>
             ((preimage_group f g1 g2 h2.carrier) << g1 ==> (h2 << g2)) *)
@@ -14350,9 +14810,9 @@ val normal_preimage_normal = store_thm(
       = g2.op (g2.op a z) (g2.inv a)  by GroupHomo_def, group_homo_inv
    Thus g2.op (g2.op a z) (g2.inv a) IN h2.carrier    by GroupHomo_def
 *)
-val normal_surj_normal = store_thm(
-    "normal_surj_normal",
-    ``!f:'a -> 'b g1:'a group g2:'b group h2. Group g1 /\ Group g2 /\ h2 <= g2 /\ GroupHomo f g1 g2 /\ SURJ f g1.carrier g2.carrier ==> ((preimage_group f g1 g2 h2.carrier) << g1 ==> (h2 << g2))``,
+Theorem normal_surj_normal:
+      !f:'a -> 'b g1:'a group g2:'b group h2. Group g1 /\ Group g2 /\ h2 <= g2 /\ GroupHomo f g1 g2 /\ SURJ f g1.carrier g2.carrier ==> ((preimage_group f g1 g2 h2.carrier) << g1 ==> (h2 << g2))
+Proof
     rpt strip_tac >> fs[normal_subgroup_def] >> rpt strip_tac >> fs[preimage_group_def] >> fs[PREIMAGE_def] >>
     `IMAGE f g1.carrier = g2.carrier` by fs[IMAGE_SURJ] >>
     `h2.carrier SUBSET g2.carrier` by fs[Subgroup_def] >>
@@ -14365,7 +14825,8 @@ val normal_surj_normal = store_thm(
     `(f (g1.inv (CHOICE (preimage f g1.carrier a)))) = (g2.inv (f (CHOICE (preimage f g1.carrier a))))` by fs[group_homo_inv] >>
     `f (g1.op (g1.op (CHOICE (preimage f g1.carrier a)) (CHOICE (preimage f g1.carrier z))) (g1.inv (CHOICE (preimage f g1.carrier a)))) = g2.op (g2.op (f (CHOICE (preimage f g1.carrier a))) (f (CHOICE (preimage f g1.carrier z)))) (f (g1.inv (CHOICE (preimage f g1.carrier a))))` by fs[GroupHomo_def] >>
     `_ = g2.op (g2.op (f (CHOICE (preimage f g1.carrier a))) (f (CHOICE (preimage f g1.carrier z)))) (g2.inv (f (CHOICE (preimage f g1.carrier a))))` by rw[] >>
-    `_ = g2.op (g2.op a z) (g2.inv a)` by rw[] >> metis_tac[]);
+    `_ = g2.op (g2.op a z) (g2.inv a)` by rw[] >> metis_tac[]
+QED
 
 
 (* Theorem: Group g1 /\ Group g2 /\ h2 <= g2 /\ GroupHomo f g1 g2 /\ SURJ f g1.carrier g2.carrier ==>
@@ -14376,11 +14837,12 @@ val normal_surj_normal = store_thm(
    Only-if part: preimage_group f g1 g2 h2.carrier << g1 ==> h2 << g2
       This is true                    by normal_surj_normal
 *)
-val normal_iff_preimage_normal = store_thm(
-    "normal_iff_preimage_normal",
-    ``!f:'a -> 'b g1:'a group g2:'b group h2. Group g1 /\ Group g2 /\ h2 <= g2 /\ GroupHomo f g1 g2 /\ SURJ f g1.carrier g2.carrier ==>
-    (h2 << g2 <=> (preimage_group f g1 g2 h2.carrier) << g1)``,
-    rpt strip_tac >> eq_tac >- metis_tac[normal_preimage_normal] >> metis_tac[normal_surj_normal]);
+Theorem normal_iff_preimage_normal:
+      !f:'a -> 'b g1:'a group g2:'b group h2. Group g1 /\ Group g2 /\ h2 <= g2 /\ GroupHomo f g1 g2 /\ SURJ f g1.carrier g2.carrier ==>
+    (h2 << g2 <=> (preimage_group f g1 g2 h2.carrier) << g1)
+Proof
+    rpt strip_tac >> eq_tac >- metis_tac[normal_preimage_normal] >> metis_tac[normal_surj_normal]
+QED
 
 (* This is Lemma 4 *)
 
@@ -14415,22 +14877,24 @@ val normal_iff_preimage_normal = store_thm(
 (* Theorem: Group g1 /\ Group g2 /\ h <= g2 /\ GroupHomo f g1 g2 /\ SURJ f g1.carrier g2.carrier ==>
             IMAGE f (PREIMAGE f h.carrier INTER g1.carrier) = h.carrier *)
 (* Proof: by SURJ_IMAGE_PREIMAGE *)
-val image_preimage_group = store_thm(
-  "image_preimage_group",
-  ``!f g1:'a group g2 h.
+Theorem image_preimage_group:
+    !f g1:'a group g2 h.
       Group g1 /\ Group g2 /\ h <= g2 /\ GroupHomo f g1 g2 /\ SURJ f g1.carrier g2.carrier ==>
-        IMAGE f (PREIMAGE f h.carrier INTER g1.carrier) = h.carrier``,
+        IMAGE f (PREIMAGE f h.carrier INTER g1.carrier) = h.carrier
+Proof
   rpt strip_tac >>
   `h.carrier SUBSET g2.carrier` by metis_tac[Subgroup_def] >>
-  metis_tac[SURJ_IMAGE_PREIMAGE]);
+  metis_tac[SURJ_IMAGE_PREIMAGE]
+QED
 
 (* Theorem: Group g1 /\ Group g2 /\ h <= g1 /\ GroupHomo f g1 g2 ==>
             h.carrier SUBSET PREIMAGE f (IMAGE f h.carrier) INTER g1.carrier *)
 (* Proof: by PREIMAGE_IMAGE *)
-val subset_preimage_image = store_thm(
-    "subset_preimage_image",
-    ``!f g1:'a group g2 h. Group g1 /\ Group g2 /\ h <= g1 /\ GroupHomo f g1 g2 ==> h.carrier SUBSET PREIMAGE f (IMAGE f h.carrier) INTER g1.carrier``,
-    rpt strip_tac >> `h.carrier SUBSET g1.carrier` by metis_tac[Subgroup_def] >> fs[PREIMAGE_IMAGE]);
+Theorem subset_preimage_image:
+      !f g1:'a group g2 h. Group g1 /\ Group g2 /\ h <= g1 /\ GroupHomo f g1 g2 ==> h.carrier SUBSET PREIMAGE f (IMAGE f h.carrier) INTER g1.carrier
+Proof
+    rpt strip_tac >> `h.carrier SUBSET g1.carrier` by metis_tac[Subgroup_def] >> fs[PREIMAGE_IMAGE]
+QED
 
 (* Theorem: Group g1 /\ Group g2 /\ h <= g1 /\ GroupHomo f g1 g2 /\
             SURJ f g1.carrier g2.carrier /\ kernel f g1 g2 SUBSET h.carrier ==>
@@ -14461,9 +14925,9 @@ val subset_preimage_image = store_thm(
       = x                                by group_rid
      or x IN H
 *)
-val preimage_image_subset = store_thm(
-    "preimage_image_subset",
-    ``!f g1:'a group g2 h. Group g1 /\ Group g2 /\ h <= g1 /\ GroupHomo f g1 g2 /\ SURJ f g1.carrier g2.carrier /\ kernel f g1 g2 SUBSET h.carrier ==> PREIMAGE f (IMAGE f h.carrier) INTER g1.carrier SUBSET h.carrier``,
+Theorem preimage_image_subset:
+      !f g1:'a group g2 h. Group g1 /\ Group g2 /\ h <= g1 /\ GroupHomo f g1 g2 /\ SURJ f g1.carrier g2.carrier /\ kernel f g1 g2 SUBSET h.carrier ==> PREIMAGE f (IMAGE f h.carrier) INTER g1.carrier SUBSET h.carrier
+Proof
     rpt strip_tac >> fs[SUBSET_DEF] >> rpt strip_tac >> fs[PREIMAGE_def] >>
     `H SUBSET g1.carrier` by fs[Subgroup_def] >>
     `x' IN g1.carrier` by fs[SUBSET_DEF] >>
@@ -14489,7 +14953,8 @@ val preimage_image_subset = store_thm(
     `_ = g1.op x (g1.op (g1.inv x') x')` by metis_tac[group_assoc] >>
     `g1.op (g1.inv x') x' = g1.id` by metis_tac[group_linv] >>
     `h.op (h.op x (h.inv x')) x' = g1.op x g1.id` by metis_tac[] >>
-    `g1.op x g1.id = x` by metis_tac[group_id] >> metis_tac[]);
+    `g1.op x g1.id = x` by metis_tac[group_id] >> metis_tac[]
+QED
 
 (* Theorem: Group g1 /\ Group g2 /\ h1 <= g1 /\ h2 <= g2 /\ GroupHomo f g1 g2 /\
             SURJ f g1.carrier g2.carrier /\ kernel f g1 g2 SUBSET h1.carrier ==>
@@ -14557,9 +15022,9 @@ QED
    Thus CARD t.carrier = (CARD k.carrier) * CARD (t / k).carrier
                              by count_formula
 *)
-val homo_count_formula = store_thm(
-    "homo_count_formula",
-    ``!f g1 g2 h. FiniteGroup g1 /\ Group g2 /\ h <= g2 /\ GroupHomo f g1 g2 ==> CARD (preimage_group f g1 g2 h.carrier).carrier = (CARD (kernel_group f (preimage_group f g1 g2 h.carrier) g2).carrier) * CARD (preimage_group f g1 g2 h.carrier / kernel_group f (preimage_group f g1 g2 h.carrier) g2).carrier``,
+Theorem homo_count_formula:
+      !f g1 g2 h. FiniteGroup g1 /\ Group g2 /\ h <= g2 /\ GroupHomo f g1 g2 ==> CARD (preimage_group f g1 g2 h.carrier).carrier = (CARD (kernel_group f (preimage_group f g1 g2 h.carrier) g2).carrier) * CARD (preimage_group f g1 g2 h.carrier / kernel_group f (preimage_group f g1 g2 h.carrier) g2).carrier
+Proof
     rpt strip_tac >>
     `Group g1` by metis_tac[finite_group_is_group] >>
     `preimage_group f g1 g2 h.carrier <= g1` by metis_tac[preimage_subgroup_subgroup] >>
@@ -14567,7 +15032,8 @@ val homo_count_formula = store_thm(
     `Group (preimage_group f g1 g2 h.carrier)` by metis_tac[preimage_group_group] >>
     `kernel_group f (preimage_group f g1 g2 h.carrier) g2 << (preimage_group f g1 g2 h.carrier)` by metis_tac[kernel_group_normal] >>
     `FiniteGroup (preimage_group f g1 g2 h.carrier)` by metis_tac[finite_subgroup_finite_group] >>
-    metis_tac[count_formula]);
+    metis_tac[count_formula]
+QED
 
 (* Theorem: Group g1 /\ Group g2 /\ h <= g2 /\ GroupHomo f g1 g2 ==>
             GroupIso (\z. coset (preimage_group f g1 g2 h.carrier)
@@ -14581,9 +15047,8 @@ val homo_count_formula = store_thm(
    also GroupHomo f (preimage_group f g1 g2 h.carrier) g2    by Subgroup_homo_homo
    The result follows                                        by group_first_isomorphism_thm
 *)
-val image_iso_preimage_quotient = store_thm(
-    "image_iso_preimage_quotient",
-    ``!f g1:'a group g2 h. Group g1 /\ Group g2 /\ h <= g2 /\ GroupHomo f g1 g2 ==>
+Theorem image_iso_preimage_quotient:
+      !f g1:'a group g2 h. Group g1 /\ Group g2 /\ h <= g2 /\ GroupHomo f g1 g2 ==>
     GroupIso
          (λz.
              coset (preimage_group f g1 g2 h.carrier)
@@ -14593,12 +15058,14 @@ val image_iso_preimage_quotient = store_thm(
                (kernel f (preimage_group f g1 g2 h.carrier) g2))
          (homo_image f (preimage_group f g1 g2 h.carrier) g2)
          (preimage_group f g1 g2 h.carrier /
-          kernel_group f (preimage_group f g1 g2 h.carrier) g2)``,
+          kernel_group f (preimage_group f g1 g2 h.carrier) g2)
+Proof
     rpt strip_tac >>
     `Group (preimage_group f g1 g2 h.carrier)` by metis_tac[preimage_group_group] >>
     `(preimage_group f g1 g2 h.carrier) <= g1` by metis_tac[preimage_subgroup_subgroup] >>
     `GroupHomo f (preimage_group f g1 g2 h.carrier) g2` by metis_tac[Subgroup_homo_homo] >>
-    imp_res_tac group_first_isomorphism_thm);
+    imp_res_tac group_first_isomorphism_thm
+QED
 
 (* Theorem: FiniteGroup g1 /\ Group g2 /\ h <= g2 /\ GroupHomo f g1 g2 ==>
             FINITE (homo_image f (preimage_group f g1 g2 h.carrier) g2).carrier *)
@@ -14658,17 +15125,18 @@ QED
       {x | x IN g1.carrier /\ f x = g2.id} = {x | x IN H /\ f x = g2.id}
    Since each is the other's SUBSET, they are equal by SET_EQ_SUBSET.
 *)
-val homo_restrict_same_kernel = store_thm(
-  "homo_restrict_same_kernel",
-  ``!f g1:'a group g2 h:'a group. H SUBSET g1.carrier /\
-          GroupHomo f g1 g2 /\ (kernel f g1 g2) SUBSET H ==> kernel f g1 g2 = kernel f h g2``,
+Theorem homo_restrict_same_kernel:
+    !f g1:'a group g2 h:'a group. H SUBSET g1.carrier /\
+          GroupHomo f g1 g2 /\ (kernel f g1 g2) SUBSET H ==> kernel f g1 g2 = kernel f h g2
+Proof
   rpt strip_tac >>
   fs[kernel_def] >>
   fs[preimage_def] >>
   fs[SET_EQ_SUBSET] >>
   rpt strip_tac >-
   fs[SUBSET_DEF] >>
-  fs[SUBSET_DEF]);
+  fs[SUBSET_DEF]
+QED
 
 (* Theorem: FiniteGroup g1 /\ Group g2 /\ h <= g2 /\
             GroupHomo f g1 g2 /\ SURJ f g1.carrier g2.carrier ==>
@@ -14696,9 +15164,9 @@ val homo_restrict_same_kernel = store_thm(
       = CARD k * CARD h.carrier                         by image_preimage_group
       = CARD h.carrier * CARD k                         by MULT_COMM
 *)
-val preimage_cardinality = store_thm(
-    "preimage_cardinality",
-    ``!f g1:'a group g2 h. FiniteGroup g1 /\ Group g2 /\ h <= g2 /\ GroupHomo f g1 g2 /\ SURJ f g1.carrier g2.carrier ==> CARD ((preimage_group f g1 g2 h.carrier).carrier) = CARD h.carrier * CARD (kernel f g1 g2)``,
+Theorem preimage_cardinality:
+      !f g1:'a group g2 h. FiniteGroup g1 /\ Group g2 /\ h <= g2 /\ GroupHomo f g1 g2 /\ SURJ f g1.carrier g2.carrier ==> CARD ((preimage_group f g1 g2 h.carrier).carrier) = CARD h.carrier * CARD (kernel f g1 g2)
+Proof
     rpt strip_tac >>
     `Group g1` by fs[finite_group_is_group] >>
     `CARD (preimage_group f g1 g2 h.carrier).carrier = (CARD (kernel_group f (preimage_group f g1 g2 h.carrier) g2).carrier) * CARD (preimage_group f g1 g2 h.carrier / kernel_group f (preimage_group f g1 g2 h.carrier) g2).carrier` by metis_tac[homo_count_formula] >>
@@ -14722,7 +15190,8 @@ val preimage_cardinality = store_thm(
     `CARD (preimage_group f g1 g2 h.carrier).carrier =
      CARD (kernel f g1 g2) * CARD h.carrier` by fs[] >>
     `CARD (kernel f g1 g2) * CARD h.carrier = CARD h.carrier * CARD (kernel f g1 g2)` by metis_tac[MULT_COMM] >>
-    metis_tac[]);
+    metis_tac[]
+QED
 
 (* This is Lemma 6 *)
 
@@ -14767,9 +15236,8 @@ val preimage_cardinality = store_thm(
        CARD h2.carrier * CARD (kernel f g1 g2)
        This is true                                   by preimage_cardinality
 *)
-val corres_thm = store_thm(
-   "corres_thm",
-   ``!f g1:'a group g2:'b group h1 h2.
+Theorem corres_thm:
+     !f g1:'a group g2:'b group h1 h2.
    Group g1 /\ Group g2 /\ GroupHomo f g1 g2 /\ SURJ f g1.carrier g2.carrier /\
    h1 <= g1 /\ (kernel f g1 g2) SUBSET h1.carrier /\ h2 <= g2 ==>
    homo_image f h1 g2 <= g2 /\
@@ -14779,11 +15247,13 @@ val corres_thm = store_thm(
    IMAGE f (PREIMAGE f h2.carrier INTER g1.carrier) = h2.carrier /\
    PREIMAGE f (IMAGE f h1.carrier) INTER g1.carrier = h1.carrier /\
    (FiniteGroup g1 ==> CARD (preimage_group f g1 g2 h2.carrier).carrier =
-                       CARD h2.carrier * CARD (kernel f g1 g2))``,
+                       CARD h2.carrier * CARD (kernel f g1 g2))
+Proof
    rpt strip_tac >-
    metis_tac[image_subgroup_subgroup] >- metis_tac[preimage_subgroup_subgroup] >-
    metis_tac[preimage_subgroup_kernel] >- metis_tac[normal_iff_preimage_normal] >-
-   metis_tac[bij_corres] >- metis_tac[bij_corres] >- metis_tac[preimage_cardinality]);
+   metis_tac[bij_corres] >- metis_tac[bij_corres] >- metis_tac[preimage_cardinality]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Congruences Documentation                                                 *)
@@ -14833,20 +15303,21 @@ val corres_thm = store_thm(
 val it = |- !a. FiniteAbelianGroup (Zstar p) /\ a IN (Zstar p).carrier ==>
                 ((Zstar p).exp a (CARD (Zstar p).carrier) = (Zstar p).id): thm
 *)
-val fermat_little = store_thm(
-  "fermat_little",
-  ``!p a. prime p /\ 0 < a /\ a < p ==> (a ** (p - 1) MOD p = 1)``,
+Theorem fermat_little:
+    !p a. prime p /\ 0 < a /\ a < p ==> (a ** (p - 1) MOD p = 1)
+Proof
   rpt strip_tac >>
   `FiniteAbelianGroup (Zstar p)` by rw_tac std_ss[Zstar_finite_abelian_group] >>
   `a IN (Zstar p).carrier /\ ((Zstar p).id = 1)` by rw[Zstar_def, residue_def] >>
   `CARD (Zstar p).carrier = p - 1` by rw_tac std_ss[PRIME_POS, Zstar_property] >>
-  metis_tac[finite_abelian_Fermat, Zstar_exp]);
+  metis_tac[finite_abelian_Fermat, Zstar_exp]
+QED
 
 (* Theorem: Fermat's Little Theorem for all a: (a**(p-1) MOD p = if (a MOD p = 0) then 0 else 1  when p is prime. *)
 (* Proof: by cases of a, and restricted Fermat's Little Theorem. *)
-val fermat_little_alt = store_thm(
-  "fermat_little_alt",
-  ``!p a. prime p ==> (a**(p-1) MOD p = if (a MOD p = 0) then 0 else 1)``,
+Theorem fermat_little_alt:
+    !p a. prime p ==> (a**(p-1) MOD p = if (a MOD p = 0) then 0 else 1)
+Proof
   rpt strip_tac >>
   `0 < p /\ 1 < p` by rw_tac std_ss[PRIME_POS, ONE_LT_PRIME] >>
   `a ** (p-1) MOD p = (a MOD p) ** (p-1) MOD p` by metis_tac[EXP_MOD] >>
@@ -14857,13 +15328,14 @@ val fermat_little_alt = store_thm(
     `0 < a MOD p` by decide_tac >>
     `a MOD p < p` by rw[MOD_LESS] >>
     metis_tac[fermat_little]
-  ]);
+  ]
+QED
 
 (* Theorem: For prime p, a**p = a (mod p) *)
 (* Proof: by fermat_little. *)
-val fermat_little_thm = store_thm(
-  "fermat_little_thm",
-  ``!p. prime p ==> !a. a ** p MOD p = a MOD p``,
+Theorem fermat_little_thm:
+    !p. prime p ==> !a. a ** p MOD p = a MOD p
+Proof
   rpt strip_tac >>
   `0 < p` by rw_tac std_ss[PRIME_POS] >>
   `a ** p MOD p = (a MOD p) ** p MOD p` by rw_tac std_ss[MOD_EXP] >>
@@ -14876,7 +15348,8 @@ val fermat_little_thm = store_thm(
   `_ = ((a MOD p) * (a MOD p) ** (p-1) MOD p) MOD p` by metis_tac[MOD_TIMES2, MOD_MOD] >>
   `_ = ((a MOD p) * 1) MOD p` by rw_tac std_ss[fermat_little] >>
   `_ = a MOD p` by rw_tac std_ss[MULT_RIGHT_1, MOD_MOD] >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* Theorem: For prime p > 2, x ** p + y ** p = z ** p ==> x + y = z (mod p) *)
 (* Proof:
@@ -14884,16 +15357,17 @@ val fermat_little_thm = store_thm(
    ==>  x ** p + y ** p = z ** p   mod p
    ==>       x +      y = z        mod p   by Fermat's Little Theorem.
 *)
-val fermat_roots = store_thm(
-  "fermat_roots",
-  ``!p. prime p ==> !x y z. (x ** p + y ** p = z ** p) ==> ((x + y) MOD p = z MOD p)``,
+Theorem fermat_roots:
+    !p. prime p ==> !x y z. (x ** p + y ** p = z ** p) ==> ((x + y) MOD p = z MOD p)
+Proof
   rpt strip_tac >>
   `0 < p` by rw_tac std_ss[PRIME_POS] >>
   `z ** p MOD p = (x ** p + y ** p) MOD p` by rw_tac std_ss[] >>
   `_ = (x ** p MOD p + y ** p MOD p) MOD p` by metis_tac[MOD_PLUS] >>
   `_ = (x MOD p + y MOD p) MOD p` by rw_tac std_ss[fermat_little_thm] >>
   `_ = (x + y) MOD p` by rw_tac std_ss[MOD_PLUS] >>
-  metis_tac[fermat_little_thm]);
+  metis_tac[fermat_little_thm]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Multiplicative Inverse by Fermat's Little Theorem                         *)
@@ -14909,9 +15383,9 @@ val fermat_roots = store_thm(
    a * (a ** (p-2) MOD p = a**(p-1) MOD p = 1   by  fermat_little.
    Hence (a ** (p-2) MOD p) is the multiplicative inverse by group_rinv_unique.
 *)
-val Zstar_inverse = store_thm(
-  "Zstar_inverse",
-  ``!p. prime p ==> !a. 0 < a /\ a < p ==> ((Zstar p).inv a = (a**(p-2)) MOD p)``,
+Theorem Zstar_inverse:
+    !p. prime p ==> !a. 0 < a /\ a < p ==> ((Zstar p).inv a = (a**(p-2)) MOD p)
+Proof
   rpt strip_tac >>
   `a IN (Zstar p).carrier` by rw_tac std_ss[Zstar_element] >>
   `Group (Zstar p)` by rw_tac std_ss[Zstar_group] >>
@@ -14924,44 +15398,48 @@ val Zstar_inverse = store_thm(
   `_ = (a * a**(p-2)) MOD p` by rw_tac std_ss[MOD_TIMES2] >>
   `_ = a ** (p-1) MOD p` by metis_tac[EXP] >>
   `_ = 1` by rw_tac std_ss[fermat_little] >>
-  metis_tac[group_rinv_unique, group_exp_element]);
+  metis_tac[group_rinv_unique, group_exp_element]
+QED
 
 (* Theorem: As function, for prime p, (Zstar p).inv a = a**(p-2) MOD p *)
 (* Proof: by Zstar_inverse. *)
-val Zstar_inverse_compute = store_thm(
-  "Zstar_inverse_compute",
-  ``!p a. (Zstar p).inv a =
-          if (prime p /\ 0 < a /\ a < p) then (a**(p-2) MOD p) else ((Zstar p).inv a)``,
-  rw_tac std_ss[Zstar_inverse]);
+Theorem Zstar_inverse_compute:
+    !p a. (Zstar p).inv a =
+          if (prime p /\ 0 < a /\ a < p) then (a**(p-2) MOD p) else ((Zstar p).inv a)
+Proof
+  rw_tac std_ss[Zstar_inverse]
+QED
 
 (* Theorem: 2 is prime. *)
 (* Proof: by definition of prime. *)
-val PRIME_2 = store_thm(
-  "PRIME_2",
-  ``prime 2``,
+Theorem PRIME_2:
+    prime 2
+Proof
   rw_tac std_ss  [prime_def] >>
   `0 < 2` by decide_tac >>
   `0 < b /\ b <= 2` by metis_tac[DIVIDES_LE, ZERO_DIVIDES, NOT_ZERO_LT_ZERO] >>
-  rw_tac arith_ss []);
+  rw_tac arith_ss []
+QED
 
 (* Theorem: 3 is prime. *)
 (* Proof: by definition of prime. *)
-val PRIME_3 = store_thm(
-  "PRIME_3",
-  ``prime 3``,
+Theorem PRIME_3:
+    prime 3
+Proof
   rw_tac std_ss[prime_def] >>
   `b <= 3` by rw_tac std_ss[DIVIDES_LE] >>
   `(b=0) \/ (b=1) \/ (b=2) \/ (b=3)` by decide_tac >-
   fs[] >-
   fs[] >-
   full_simp_tac arith_ss [divides_def] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: 5 is prime. *)
 (* Proof: by definition of prime. *)
-val PRIME_5 = store_thm(
-  "PRIME_5",
-  ``prime 5``,
+Theorem PRIME_5:
+    prime 5
+Proof
   rw_tac std_ss[prime_def] >>
   `0 < 5` by decide_tac >>
   `0 < b /\ b <= 5` by metis_tac[DIVIDES_LE, ZERO_DIVIDES, NOT_ZERO_LT_ZERO] >>
@@ -14970,13 +15448,14 @@ val PRIME_5 = store_thm(
   full_simp_tac arith_ss [divides_def] >-
   full_simp_tac arith_ss [divides_def] >-
   full_simp_tac arith_ss [divides_def] >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* Theorem: 7 is prime. *)
 (* Proof: by definition of prime. *)
-val PRIME_7 = store_thm(
-  "PRIME_7",
-  ``prime 7``,
+Theorem PRIME_7:
+    prime 7
+Proof
   rw_tac std_ss[prime_def] >>
   `0 < 7` by decide_tac >>
   `0 < b /\ b <= 7` by metis_tac[DIVIDES_LE, ZERO_DIVIDES, NOT_ZERO_LT_ZERO] >>
@@ -14987,7 +15466,8 @@ val PRIME_7 = store_thm(
   full_simp_tac arith_ss [divides_def] >-
   full_simp_tac arith_ss [divides_def] >-
   full_simp_tac arith_ss [divides_def] >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* These computation uses Zstar_inv_compute of groupInstances.
 
@@ -15032,9 +15512,9 @@ EVAL ``(Zstar 5).inv 2``;
    a * (a ** (p-2) MOD p = a**(p-1) MOD p = 1   by  fermat_little.
    Hence (a ** (p-2) MOD p) is the multiplicative inverse by group_rinv_unique.
 *)
-val mult_mod_inverse = store_thm(
-  "mult_mod_inverse",
-  ``!p. prime p ==> !a. 0 < a /\ a < p ==> ((mult_mod p).inv a = (a**(p-2)) MOD p)``,
+Theorem mult_mod_inverse:
+    !p. prime p ==> !a. 0 < a /\ a < p ==> ((mult_mod p).inv a = (a**(p-2)) MOD p)
+Proof
   rpt strip_tac >>
   `a IN (mult_mod p).carrier` by rw_tac std_ss[mult_mod_property] >>
   `Group (mult_mod p)` by rw_tac std_ss[mult_mod_group] >>
@@ -15046,15 +15526,17 @@ val mult_mod_inverse = store_thm(
   `_ = (a * a**(p-2)) MOD p` by metis_tac[MOD_TIMES2, MOD_MOD] >>
   `_ = a ** (p-1) MOD p` by metis_tac[EXP] >>
   `_ = 1` by rw_tac std_ss[fermat_little] >>
-  metis_tac[group_rinv_unique, mult_mod_property]);
+  metis_tac[group_rinv_unique, mult_mod_property]
+QED
 
 (* Theorem: As function, for prime p, (mult_mod p).inv a = a**(p-2) MOD p *)
 (* Proof: by mult_mod_inverse. *)
-val mult_mod_inverse_compute = store_thm(
-  "mult_mod_inverse_compute",
-  ``!p a. (mult_mod p).inv a =
-          if (prime p /\ 0 < a /\ a < p) then (a**(p-2) MOD p) else (mult_mod p).inv a``,
-  rw_tac std_ss[mult_mod_inverse]);
+Theorem mult_mod_inverse_compute:
+    !p a. (mult_mod p).inv a =
+          if (prime p /\ 0 < a /\ a < p) then (a**(p-2) MOD p) else (mult_mod p).inv a
+Proof
+  rw_tac std_ss[mult_mod_inverse]
+QED
 
 (* These computation uses mult_mod_inv_compute of groupInstances.
 

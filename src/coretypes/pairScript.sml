@@ -150,15 +150,16 @@ end;
 val _ = ot0 "FST" "fst"
 val _ = ot0 "SND" "snd"
 
-val PAIR_FST_SND_EQ = store_thm(
-  "PAIR_FST_SND_EQ",
-  ``!(p:'a # 'b) q. (p = q) <=> (FST p = FST q) /\ (SND p = SND q)``,
+Theorem PAIR_FST_SND_EQ:
+    !(p:'a # 'b) q. (p = q) <=> (FST p = FST q) /\ (SND p = SND q)
+Proof
   REPEAT GEN_TAC THEN
   X_CHOOSE_THEN ``p1:'a`` (X_CHOOSE_THEN ``p2:'b`` SUBST_ALL_TAC)
                 (SPEC ``p:'a # 'b`` ABS_PAIR_THM) THEN
   X_CHOOSE_THEN ``q1:'a`` (X_CHOOSE_THEN ``q2:'b`` SUBST_ALL_TAC)
                 (SPEC ``q:'a # 'b`` ABS_PAIR_THM) THEN
-  REWRITE_TAC [PAIR_EQ, FST, SND]);
+  REWRITE_TAC [PAIR_EQ, FST, SND]
+QED
 
 val SWAP_def = new_definition ("SWAP_def", ``SWAP a = (SND a, FST a)``)
 
@@ -356,15 +357,16 @@ QED
 (*                (UNCURRY f M = UNCURRY f' M')                             *)
 (* -------------------------------------------------------------------------*)
 
-val UNCURRY_CONG = store_thm(
-  "UNCURRY_CONG",
-  ``!f' f M' M.
+Theorem UNCURRY_CONG:
+    !f' f M' M.
        (M = M') /\ (!x y. (M' = (x,y)) ==> (f x y = f' x y)) ==>
-       (UNCURRY f M = UNCURRY f' M')``,
+       (UNCURRY f M = UNCURRY f' M')
+Proof
   REPEAT STRIP_TAC THEN
   Q.SPEC_THEN `M` FULL_STRUCT_CASES_TAC pair_CASES THEN
   Q.SPEC_THEN `M'` FULL_STRUCT_CASES_TAC pair_CASES THEN
-  FULL_SIMP_TAC bool_ss [PAIR_EQ, UNCURRY_DEF])
+  FULL_SIMP_TAC bool_ss [PAIR_EQ, UNCURRY_DEF]
+QED
 
 (*---------------------------------------------------------------------------
          LAMBDA_PROD = |- !P. (\p. P p) = (\(p1,p2). P (p1,p2))
@@ -422,21 +424,23 @@ Theorem PROD_ALL_THM[simp,compute]:
 Proof REWRITE_TAC [PROD_ALL_def, FST, SND]
 QED
 
-val PROD_ALL_MONO = store_thm(
-  "PROD_ALL_MONO",
-  ``(!x:'a. P x ==> P' x) /\ (!y:'b. Q y ==> Q' y) ==>
-    PROD_ALL P Q p ==> PROD_ALL P' Q' p``,
+Theorem PROD_ALL_MONO:
+    (!x:'a. P x ==> P' x) /\ (!y:'b. Q y ==> Q' y) ==>
+    PROD_ALL P Q p ==> PROD_ALL P' Q' p
+Proof
   Q.SPEC_THEN `p` STRUCT_CASES_TAC ABS_PAIR_THM THEN
-  REWRITE_TAC [PROD_ALL_THM] THEN REPEAT STRIP_TAC THEN RES_TAC);
+  REWRITE_TAC [PROD_ALL_THM] THEN REPEAT STRIP_TAC THEN RES_TAC
+QED
 val _ = IndDefLib.export_mono "PROD_ALL_MONO"
 
-val PROD_ALL_CONG = store_thm(
-  "PROD_ALL_CONG",
-  ``!p p' P P' Q Q'.
+Theorem PROD_ALL_CONG:
+    !p p' P P' Q Q'.
       (p = p') /\ (!x:'a y:'b. (p' = (x,y)) ==> (P x <=> P' x)) /\
       (!x:'a y:'b. (p' = (x,y)) ==> (Q y <=> Q' y)) ==>
-      (PROD_ALL P Q p <=> PROD_ALL P' Q' p')``,
-  SIMP_TAC (BasicProvers.srw_ss()) [FORALL_PROD, PAIR_EQ]);
+      (PROD_ALL P Q p <=> PROD_ALL P' Q' p')
+Proof
+  SIMP_TAC (BasicProvers.srw_ss()) [FORALL_PROD, PAIR_EQ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* ELIM_PEXISTS = |- !P. (?p. P (FST p) (SND p)) = ?p1 p2. P p1 p2           *)
@@ -591,34 +595,38 @@ Proof
  THEN REWRITE_TAC[]
 QED
 
-val o_UNCURRY_R = store_thm(
-  "o_UNCURRY_R",
-  ``f o UNCURRY g = UNCURRY ((o) f o g)``,
-  SRW_TAC [][FUN_EQ_THM, UNCURRY]);
+Theorem o_UNCURRY_R:
+    f o UNCURRY g = UNCURRY ((o) f o g)
+Proof
+  SRW_TAC [][FUN_EQ_THM, UNCURRY]
+QED
 
-val C_UNCURRY_L = store_thm(
-  "C_UNCURRY_L",
-  ``combin$C (UNCURRY f) x = UNCURRY (combin$C (combin$C o f) x)``,
-  SRW_TAC [][FUN_EQ_THM, UNCURRY]);
+Theorem C_UNCURRY_L:
+    combin$C (UNCURRY f) x = UNCURRY (combin$C (combin$C o f) x)
+Proof
+  SRW_TAC [][FUN_EQ_THM, UNCURRY]
+QED
 
-val S_UNCURRY_R = store_thm(
-  "S_UNCURRY_R",
-  ``S f (UNCURRY g) = UNCURRY (S (S o ((o) f) o (,)) g)``,
-  SRW_TAC [][FUN_EQ_THM, UNCURRY, PAIR]);
+Theorem S_UNCURRY_R:
+    S f (UNCURRY g) = UNCURRY (S (S o ((o) f) o (,)) g)
+Proof
+  SRW_TAC [][FUN_EQ_THM, UNCURRY, PAIR]
+QED
 
 val UNCURRY' = prove(
   ``UNCURRY f = \p. f (FST p) (SND p)``,
   SRW_TAC [][FUN_EQ_THM, UNCURRY]);
 
-val FORALL_UNCURRY = store_thm(
-  "FORALL_UNCURRY",
-  ``(!) (UNCURRY f) = (!) ((!) o f)``,
+Theorem FORALL_UNCURRY:
+    (!) (UNCURRY f) = (!) ((!) o f)
+Proof
   SRW_TAC [][UNCURRY', combinTheory.o_DEF] THEN
   Q.SUBGOAL_THEN `!x. f x = \y. f x y` (fn th => ONCE_REWRITE_TAC [th]) THENL [
     REWRITE_TAC [FUN_EQ_THM] THEN BETA_TAC THEN REWRITE_TAC [],
     ALL_TAC
   ] THEN
-  SRW_TAC [][FORALL_PROD, FST, SND]);
+  SRW_TAC [][FORALL_PROD, FST, SND]
+QED
 
 (* --------------------------------------------------------------------- *)
 (* A nice theorem from Tom Melham, lifted from examples/lambda/ncScript  *)
@@ -745,10 +753,11 @@ val _ = TypeBase.export [
 
  ---------------------------------------------------------------------------*)
 
-val datatype_pair = store_thm(
-  "datatype_pair",
-  ``DATATYPE (pair ((,) : 'a -> 'b -> 'a # 'b))``,
-  REWRITE_TAC [DATATYPE_TAG_THM]);
+Theorem datatype_pair:
+    DATATYPE (pair ((,) : 'a -> 'b -> 'a # 'b))
+Proof
+  REWRITE_TAC [DATATYPE_TAG_THM]
+QED
 
 
 (*---------------------------------------------------------------------------
@@ -782,16 +791,18 @@ Proof
   REWRITE_TAC [UNCURRY_DEF] THEN BETA_TAC THEN REFL_TAC
 QED
 
-val LEX_MONO = store_thm("LEX_MONO",
-  ``(!x y. R1 x y ==> R2 x y) /\
+Theorem LEX_MONO:
+    (!x y. R1 x y ==> R2 x y) /\
     (!x y. R3 x y ==> R4 x y)
     ==>
-    (R1 LEX R3) x y ==> (R2 LEX R4) x y``,
+    (R1 LEX R3) x y ==> (R2 LEX R4) x y
+Proof
   STRIP_TAC THEN
   Q.SPEC_THEN`x`FULL_STRUCT_CASES_TAC pair_CASES THEN
   Q.SPEC_THEN`y`FULL_STRUCT_CASES_TAC pair_CASES THEN
   SRW_TAC[][LEX_DEF_THM] THEN
-  PROVE_TAC[])
+  PROVE_TAC[]
+QED
 val () = IndDefLib.export_mono"LEX_MONO";
 
 Theorem WF_LEX:
@@ -853,32 +864,36 @@ REPEAT STRIP_TAC THEN MATCH_MP_TAC relationTheory.WF_SUBSET
 QED
 
 (* more relational properties of LEX *)
-val total_LEX = store_thm(
-  "total_LEX",
-  ``total R1 /\ total R2 ==> total (R1 LEX R2)``,
+Theorem total_LEX:
+    total R1 /\ total R2 ==> total (R1 LEX R2)
+Proof
   ASM_SIMP_TAC (srw_ss()) [total_def, FORALL_PROD, LEX_DEF, UNCURRY_DEF] THEN
-  METIS_TAC[]);
+  METIS_TAC[]
+QED
 val _ = export_rewrites ["total_LEX"]
 
-val transitive_LEX = store_thm(
-  "transitive_LEX",
-  ``transitive R1 /\ transitive R2 ==> transitive (R1 LEX R2)``,
+Theorem transitive_LEX:
+    transitive R1 /\ transitive R2 ==> transitive (R1 LEX R2)
+Proof
   SIMP_TAC (srw_ss()) [transitive_def, FORALL_PROD, LEX_DEF, UNCURRY_DEF] THEN
-  METIS_TAC[]);
+  METIS_TAC[]
+QED
 val _ = export_rewrites ["transitive_LEX"]
 
-val reflexive_LEX = store_thm(
-  "reflexive_LEX",
-  ``reflexive (R1 LEX R2) <=> reflexive R1 \/ reflexive R2``,
+Theorem reflexive_LEX:
+    reflexive (R1 LEX R2) <=> reflexive R1 \/ reflexive R2
+Proof
   SIMP_TAC (srw_ss()) [reflexive_def, LEX_DEF, FORALL_PROD, UNCURRY_DEF] THEN
-  METIS_TAC[])
+  METIS_TAC[]
+QED
 val _ = export_rewrites ["reflexive_LEX"]
 
-val symmetric_LEX = store_thm(
-  "symmetric_LEX",
-  ``symmetric R1 /\ symmetric R2 ==> symmetric (R1 LEX R2)``,
+Theorem symmetric_LEX:
+    symmetric R1 /\ symmetric R2 ==> symmetric (R1 LEX R2)
+Proof
   SIMP_TAC (srw_ss()) [symmetric_def, LEX_DEF, FORALL_PROD, UNCURRY_DEF] THEN
-  METIS_TAC[]);
+  METIS_TAC[]
+QED
 val _ = export_rewrites ["symmetric_LEX"]
 
 Theorem LEX_CONG:

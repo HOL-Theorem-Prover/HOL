@@ -199,9 +199,11 @@ val toto_antisym = store_thm ("toto_antisym",
 Term`!c:'a toto x y. (apto c x y = GREATER) <=> (apto c y x = LESS)`,
 REWRITE_TAC [toto_thm]);
 
-val toto_not_less_refl = store_thm ("toto_not_less_refl",
-``!cmp:'a toto h. (apto cmp h h = LESS) <=> F``,
-SRW_TAC [] [toto_antisym, toto_refl]);
+Theorem toto_not_less_refl:
+  !cmp:'a toto h. (apto cmp h h = LESS) <=> F
+Proof
+SRW_TAC [] [toto_antisym, toto_refl]
+QED
 
 val toto_swap_cases = store_thm ("toto_swap_cases",
 Term`!c:'a toto x y. apto c y x =
@@ -233,9 +235,11 @@ GEN_TAC THEN DISCH_TAC THEN REPEAT CONJ_TAC THEN REPEAT GEN_TAC THEN
 IMP_RES_THEN (SUBST1_TAC o SYM o SPEC_ALL) TO_equal_eq THEN
 DISCH_TAC THEN ASM_REWRITE_TAC [all_cpn_distinct]);
 
-val NOT_EQ_LESS_IMP = store_thm ("NOT_EQ_LESS_IMP",
-``!cmp:'a toto x y. apto cmp x y <> LESS ==> (x = y) \/ (apto cmp y x = LESS)``,
-METIS_TAC [cpn_nchotomy, toto_equal_eq, toto_antisym]);
+Theorem NOT_EQ_LESS_IMP:
+  !cmp:'a toto x y. apto cmp x y <> LESS ==> (x = y) \/ (apto cmp y x = LESS)
+Proof
+METIS_TAC [cpn_nchotomy, toto_equal_eq, toto_antisym]
+QED
 
 (* Seven forms of transitivity: *)
 
@@ -1013,13 +1017,17 @@ IMP_RES_THEN SUBST1_TAC TO_apto_TO_IMP THEN REWRITE_TAC [oneOrd]);
 
 (* intto moved to inttoTheory, to avoid always loading intLib *)
 
-val StrongLinearOrder_of_TO_TO_of_LinearOrder = store_thm("StrongLinearOrder_of_TO_TO_of_LinearOrder",
-  ``!R. irreflexive R ==> (StrongLinearOrder_of_TO (TO_of_LinearOrder R) = R)``,
+Theorem StrongLinearOrder_of_TO_TO_of_LinearOrder:
+    !R. irreflexive R ==> (StrongLinearOrder_of_TO (TO_of_LinearOrder R) = R)
+Proof
   srw_tac[][irreflexive_def] >>
   srw_tac[][FUN_EQ_THM,StrongLinearOrder_of_TO,TO_of_LinearOrder] >>
-  srw_tac[][])
+  srw_tac[][]
+QED
 
-val TO_of_LinearOrder_LEX = store_thm("TO_of_LinearOrder_LEX",
-  ``!R V. irreflexive R /\ irreflexive V
-    ==> (TO_of_LinearOrder (R LEX V) = (TO_of_LinearOrder R) lexTO (TO_of_LinearOrder V))``,
-  simp[lexTO,StrongLinearOrder_of_TO_TO_of_LinearOrder])
+Theorem TO_of_LinearOrder_LEX:
+    !R V. irreflexive R /\ irreflexive V
+    ==> (TO_of_LinearOrder (R LEX V) = (TO_of_LinearOrder R) lexTO (TO_of_LinearOrder V))
+Proof
+  simp[lexTO,StrongLinearOrder_of_TO_TO_of_LinearOrder]
+QED

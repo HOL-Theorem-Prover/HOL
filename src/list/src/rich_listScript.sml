@@ -223,12 +223,14 @@ Definition LASTN_def[nocompute]:
   LASTN n xs = REVERSE (TAKE n (REVERSE xs))
 End
 
-val LASTN = store_thm("LASTN",
-  ``(!l. LASTN 0 l = []) /\
-    (!n x l. LASTN (SUC n) (SNOC x l) = SNOC x (LASTN n l))``,
+Theorem LASTN:
+    (!l. LASTN 0 l = []) /\
+    (!n x l. LASTN (SUC n) (SNOC x l) = SNOC x (LASTN n l))
+Proof
   FULL_SIMP_TAC std_ss [LASTN_def,REVERSE_SNOC,
     TAKE,REVERSE_DEF]
-  THEN FULL_SIMP_TAC std_ss [SNOC_APPEND]);
+  THEN FULL_SIMP_TAC std_ss [SNOC_APPEND]
+QED
 
 Theorem SNOC_LASTN :
     !l x n. LASTN (SUC n) (SNOC x l) = SNOC x (LASTN n l)
@@ -240,11 +242,13 @@ Definition BUTLASTN_def[nocompute]:
   BUTLASTN n xs = REVERSE (DROP n (REVERSE xs))
 End
 
-val BUTLASTN = store_thm("BUTLASTN",
-  ``(!l. BUTLASTN 0 l = l) /\
-    (!n x l. BUTLASTN (SUC n) (SNOC x l) = BUTLASTN n l)``,
+Theorem BUTLASTN:
+    (!l. BUTLASTN 0 l = l) /\
+    (!n x l. BUTLASTN (SUC n) (SNOC x l) = BUTLASTN n l)
+Proof
   FULL_SIMP_TAC std_ss [BUTLASTN_def,DROP,
-    REVERSE_REVERSE,REVERSE_SNOC]);
+    REVERSE_REVERSE,REVERSE_SNOC]
+QED
 
 local
    val is_sublist_thm = Prim_rec.prove_rec_fn_exists list_Axiom
@@ -4337,15 +4341,16 @@ Proof
 QED
 
 (* alternative definition of UNIQUE *)
-val UNIQUE_LIST_ELEM_COUNT = store_thm (
-   "UNIQUE_LIST_ELEM_COUNT", ``!e L. UNIQUE e L = (LIST_ELEM_COUNT e L = 1)``,
+Theorem UNIQUE_LIST_ELEM_COUNT:   !e L. UNIQUE e L = (LIST_ELEM_COUNT e L = 1)
+Proof
     rpt GEN_TAC
  >> REWRITE_TAC [LIST_ELEM_COUNT_DEF]
  >> Q_TAC KNOW_TAC `(\x. x = e) = ($= e)`
  >- ( REWRITE_TAC [FUN_EQ_THM] >> GEN_TAC >> BETA_TAC \\
       METIS_TAC [] )
  >> DISCH_TAC >> ASM_REWRITE_TAC []
- >> RW_TAC std_ss [UNIQUE_LENGTH_FILTER]);
+ >> RW_TAC std_ss [UNIQUE_LENGTH_FILTER]
+QED
 
 Theorem LIST_ELEM_COUNT_CARD_EL:
   !ls. LIST_ELEM_COUNT x ls = CARD { n | n < LENGTH ls /\ (EL n ls = x) }
@@ -4519,10 +4524,11 @@ QED
    = FRONT l ++ [LAST l]      by APPEND_FRONT_LAST, l <> []
    = SNOC (LAST l) (FRONT l)  by SNOC_APPEND
  *)
-val SNOC_LAST_FRONT' = store_thm(
-   "SNOC_LAST_FRONT'",
-  ``!l. l <> [] ==> (l = SNOC (LAST l) (FRONT l))``,
-  rw[APPEND_FRONT_LAST, SNOC_APPEND]);
+Theorem SNOC_LAST_FRONT':
+    !l. l <> [] ==> (l = SNOC (LAST l) (FRONT l))
+Proof
+  rw[APPEND_FRONT_LAST, SNOC_APPEND]
+QED
 
 (* Theorem: REVERSE [x] = [x] *)
 (* Proof:
@@ -4530,10 +4536,11 @@ val SNOC_LAST_FRONT' = store_thm(
     = [] ++ [x]       by REVERSE_DEF
     = [x]             by APPEND
 *)
-val REVERSE_SING = store_thm(
-  "REVERSE_SING",
-  ``!x. REVERSE [x] = [x]``,
-  rw[]);
+Theorem REVERSE_SING:
+    !x. REVERSE [x] = [x]
+Proof
+  rw[]
+QED
 
 (* Theorem: ls <> [] ==> (HD (REVERSE ls) = LAST ls) *)
 (* Proof:
@@ -4570,10 +4577,11 @@ QED
       = HD l2                         by EL_LENGTH_APPEND
       = HD (h::t) = h                 by notation
 *)
-val EL_LENGTH_APPEND_0 = store_thm(
-  "EL_LENGTH_APPEND_0",
-  ``!ls h t. EL (LENGTH ls) (ls ++ h::t) = h``,
-  rw[EL_LENGTH_APPEND]);
+Theorem EL_LENGTH_APPEND_0:
+    !ls h t. EL (LENGTH ls) (ls ++ h::t) = h
+Proof
+  rw[EL_LENGTH_APPEND]
+QED
 
 (* Theorem: EL (LENGTH ls + 1) (ls ++ h::k::t) = k *)
 (* Proof:
@@ -4584,14 +4592,15 @@ val EL_LENGTH_APPEND_0 = store_thm(
       = EL (LENGTH l1) (l1 ++ k::t)  by above
       = k                            by EL_LENGTH_APPEND_0
 *)
-val EL_LENGTH_APPEND_1 = store_thm(
-  "EL_LENGTH_APPEND_1",
-  ``!ls h k t. EL (LENGTH ls + 1) (ls ++ h::k::t) = k``,
+Theorem EL_LENGTH_APPEND_1:
+    !ls h k t. EL (LENGTH ls + 1) (ls ++ h::k::t) = k
+Proof
   rpt strip_tac >>
   qabbrev_tac `l1 = ls ++ [h]` >>
   `LENGTH l1 = LENGTH ls + 1` by rw[Abbr`l1`] >>
   `ls ++ h::k::t = l1 ++ k::t` by rw[Abbr`l1`] >>
-  metis_tac[EL_LENGTH_APPEND_0]);
+  metis_tac[EL_LENGTH_APPEND_0]
+QED
 
 (* Theorem: 0 < LENGTH ls <=> (ls = HD ls::TL ls) *)
 (* Proof:
@@ -4603,46 +4612,52 @@ val EL_LENGTH_APPEND_1 = store_thm(
       Note LENGTH ls = SUC (LENGTH (TL ls))     by LENGTH
        but 0 < SUC (LENGTH (TL ls))             by SUC_POS
 *)
-val LIST_HEAD_TAIL = store_thm(
-  "LIST_HEAD_TAIL",
-  ``!ls. 0 < LENGTH ls <=> (ls = HD ls::TL ls)``,
-  metis_tac[LIST_NOT_NIL, NOT_NIL_EQ_LENGTH_NOT_0]);
+Theorem LIST_HEAD_TAIL:
+    !ls. 0 < LENGTH ls <=> (ls = HD ls::TL ls)
+Proof
+  metis_tac[LIST_NOT_NIL, NOT_NIL_EQ_LENGTH_NOT_0]
+QED
 
 (* Theorem: p <> [] /\ q <> [] ==> ((p = q) <=> ((HD p = HD q) /\ (TL p = TL q))) *)
 (* Proof: by cases on p and cases on q, CONS_11 *)
-val LIST_EQ_HEAD_TAIL = store_thm(
-  "LIST_EQ_HEAD_TAIL",
-  ``!p q. p <> [] /\ q <> [] ==>
-         ((p = q) <=> ((HD p = HD q) /\ (TL p = TL q)))``,
-  (Cases_on `p` >> Cases_on `q` >> fs[]));
+Theorem LIST_EQ_HEAD_TAIL:
+    !p q. p <> [] /\ q <> [] ==>
+         ((p = q) <=> ((HD p = HD q) /\ (TL p = TL q)))
+Proof
+  (Cases_on `p` >> Cases_on `q` >> fs[])
+QED
 
 (* Theorem: [x] = [y] <=> x = y *)
 (* Proof: by EQ_LIST and notation. *)
-val LIST_SING_EQ = store_thm(
-  "LIST_SING_EQ",
-  ``!x y. ([x] = [y]) <=> (x = y)``,
-  rw_tac bool_ss[]);
+Theorem LIST_SING_EQ:
+    !x y. ([x] = [y]) <=> (x = y)
+Proof
+  rw_tac bool_ss[]
+QED
 
 (* Theorem: LENGTH [x] = 1 *)
 (* Proof: by LENGTH, ONE. *)
-val LENGTH_SING = store_thm(
-  "LENGTH_SING",
-  ``!x. LENGTH [x] = 1``,
-  rw_tac bool_ss[LENGTH, ONE]);
+Theorem LENGTH_SING:
+    !x. LENGTH [x] = 1
+Proof
+  rw_tac bool_ss[LENGTH, ONE]
+QED
 
 (* Theorem: ls <> [] ==> LENGTH (TL ls) < LENGTH ls *)
 (* Proof: by LENGTH_TL, LENGTH_EQ_0 *)
-val LENGTH_TL_LT = store_thm(
-  "LENGTH_TL_LT",
-  ``!ls. ls <> [] ==> LENGTH (TL ls) < LENGTH ls``,
-  metis_tac[LENGTH_TL, LENGTH_EQ_0, NOT_ZERO_LT_ZERO, DECIDE``n <> 0 ==> n - 1 < n``]);
+Theorem LENGTH_TL_LT:
+    !ls. ls <> [] ==> LENGTH (TL ls) < LENGTH ls
+Proof
+  metis_tac[LENGTH_TL, LENGTH_EQ_0, NOT_ZERO_LT_ZERO, DECIDE``n <> 0 ==> n - 1 < n``]
+QED
 
 (* Theorem: MAP f [x] = [f x] *)
 (* Proof: by MAP *)
-val MAP_SING = store_thm(
-  "MAP_SING",
-  ``!f x. MAP f [x] = [f x]``,
-  rw[]);
+Theorem MAP_SING:
+    !f x. MAP f [x] = [f x]
+Proof
+  rw[]
+QED
 
 (* listTheory.MAP_TL  |- !l f. MAP f (TL l) = TL (MAP f l) *)
 
@@ -4673,14 +4688,15 @@ LAST_EL  |- !ls. ls <> [] ==> LAST ls = EL (PRE (LENGTH ls)) ls
       = EL (SUC (PRE (LENGTH t))) (h::t)   by EL
       = EL (LENGTH t) (h::t)               bu SUC_PRE, 0 < LENGTH t
 *)
-val LAST_EL_CONS = store_thm(
-  "LAST_EL_CONS",
-  ``!h t. t <> [] ==> (LAST t = EL (LENGTH t) (h::t))``,
+Theorem LAST_EL_CONS:
+    !h t. t <> [] ==> (LAST t = EL (LENGTH t) (h::t))
+Proof
   rpt strip_tac >>
   `0 < LENGTH t` by metis_tac[LENGTH_EQ_0, NOT_ZERO_LT_ZERO] >>
   `LAST t = EL (PRE (LENGTH t)) t` by rw[LAST_EL] >>
   `_ = EL (SUC (PRE (LENGTH t))) (h::t)` by rw[] >>
-  metis_tac[SUC_PRE]);
+  metis_tac[SUC_PRE]
+QED
 
 (* Theorem alias *)
 val FRONT_LENGTH = save_thm ("FRONT_LENGTH", LENGTH_FRONT);
@@ -4688,10 +4704,11 @@ val FRONT_LENGTH = save_thm ("FRONT_LENGTH", LENGTH_FRONT);
 
 (* Theorem: l <> [] /\ n < LENGTH (FRONT l) ==> (EL n (FRONT l) = EL n l) *)
 (* Proof: by EL_FRONT, NULL *)
-val FRONT_EL = store_thm(
-  "FRONT_EL",
-  ``!l n. l <> [] /\ n < LENGTH (FRONT l) ==> (EL n (FRONT l) = EL n l)``,
-  metis_tac[EL_FRONT, NULL, list_CASES]);
+Theorem FRONT_EL:
+    !l n. l <> [] /\ n < LENGTH (FRONT l) ==> (EL n (FRONT l) = EL n l)
+Proof
+  metis_tac[EL_FRONT, NULL, list_CASES]
+QED
 
 (* Theorem: (LENGTH l = 1) ==> (FRONT l = []) *)
 (* Proof:
@@ -4700,11 +4717,12 @@ val FRONT_EL = store_thm(
    = FRONT [x]          by above
    = []                 by FRONT_DEF
 *)
-val FRONT_EQ_NIL = store_thm(
-  "FRONT_EQ_NIL",
-  ``!l. (LENGTH l = 1) ==> (FRONT l = [])``,
+Theorem FRONT_EQ_NIL:
+    !l. (LENGTH l = 1) ==> (FRONT l = [])
+Proof
   rw[LENGTH_EQ_1] >>
-  rw[FRONT_DEF]);
+  rw[FRONT_DEF]
+QED
 
 (* Theorem: 1 < LENGTH l ==> FRONT l <> [] *)
 (* Proof:
@@ -4718,9 +4736,9 @@ val FRONT_EQ_NIL = store_thm(
     = h::FRONT (k::t)          by FRONT_CONS
     <> []                      by list_CASES
 *)
-val FRONT_NON_NIL = store_thm(
-  "FRONT_NON_NIL",
-  ``!l. 1 < LENGTH l ==> FRONT l <> []``,
+Theorem FRONT_NON_NIL:
+    !l. 1 < LENGTH l ==> FRONT l <> []
+Proof
   rpt strip_tac >>
   `LENGTH l <> 0` by decide_tac >>
   `?h s. l = h::s` by metis_tac[list_CASES, LENGTH_EQ_0] >>
@@ -4728,7 +4746,8 @@ val FRONT_NON_NIL = store_thm(
   `LENGTH s <> 0` by decide_tac >>
   `?k t. s = k::t` by metis_tac[list_CASES, LENGTH_EQ_0] >>
   `FRONT l = h::FRONT (k::t)` by fs[FRONT_CONS] >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: ls <> [] ==> MEM (HD ls) ls *)
 (* Proof:
@@ -4737,10 +4756,11 @@ val FRONT_NON_NIL = store_thm(
     <=> MEM h (h::t)   by HD
     <=> T              by MEM
 *)
-val HEAD_MEM = store_thm(
-  "HEAD_MEM",
-  ``!ls. ls <> [] ==> MEM (HD ls) ls``,
-  (Cases_on `ls` >> simp[]));
+Theorem HEAD_MEM:
+    !ls. ls <> [] ==> MEM (HD ls) ls
+Proof
+  (Cases_on `ls` >> simp[])
+QED
 
 (* Theorem: ls <> [] ==> MEM (LAST ls) ls *)
 (* Proof:
@@ -4760,12 +4780,13 @@ val HEAD_MEM = store_thm(
          <=> LAST ls = h \/ T                  by induction hypothesis
          <=> T                                 by logical or
 *)
-val LAST_MEM = store_thm(
-  "LAST_MEM",
-  ``!ls. ls <> [] ==> MEM (LAST ls) ls``,
+Theorem LAST_MEM:
+    !ls. ls <> [] ==> MEM (LAST ls) ls
+Proof
   Induct >-
   decide_tac >>
-  (Cases_on `ls = []` >> rw[LAST_DEF]));
+  (Cases_on `ls = []` >> rw[LAST_DEF])
+QED
 
 (* Idea: the last equals the head when there is no tail. *)
 
@@ -4854,17 +4875,19 @@ QED
 
 (* Theorem: DROP 1 (h::t) = t *)
 (* Proof: DROP_def *)
-val DROP_1 = store_thm(
-  "DROP_1",
-  ``!h t. DROP 1 (h::t) = t``,
-  rw[]);
+Theorem DROP_1:
+    !h t. DROP 1 (h::t) = t
+Proof
+  rw[]
+QED
 
 (* Theorem: FRONT [x] = [] *)
 (* Proof: FRONT_def *)
-val FRONT_SING = store_thm(
-  "FRONT_SING",
-  ``!x. FRONT [x] = []``,
-  rw[]);
+Theorem FRONT_SING:
+    !x. FRONT [x] = []
+Proof
+  rw[]
+QED
 
 (* Theorem: ls <> [] ==> (TL ls = DROP 1 ls) *)
 (* Proof:
@@ -4873,12 +4896,13 @@ val FRONT_SING = store_thm(
       = t                by TL
       = DROP 1 (h::t)    by DROP_def
 *)
-val TAIL_BY_DROP = store_thm(
-  "TAIL_BY_DROP",
-  ``!ls. ls <> [] ==> (TL ls = DROP 1 ls)``,
+Theorem TAIL_BY_DROP:
+    !ls. ls <> [] ==> (TL ls = DROP 1 ls)
+Proof
   Cases_on `ls` >-
   decide_tac >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: ls <> [] ==> (FRONT ls = TAKE (LENGTH ls - 1) ls) *)
 (* Proof:
@@ -4898,16 +4922,17 @@ val TAIL_BY_DROP = store_thm(
          = h::TAKE (LENGTH ls - 1) ls         by induction hypothesis
          = TAKE (LENGTH (h::ls) - 1) (h::ls)  by TAKE_def
 *)
-val FRONT_BY_TAKE = store_thm(
-  "FRONT_BY_TAKE",
-  ``!ls. ls <> [] ==> (FRONT ls = TAKE (LENGTH ls - 1) ls)``,
+Theorem FRONT_BY_TAKE:
+    !ls. ls <> [] ==> (FRONT ls = TAKE (LENGTH ls - 1) ls)
+Proof
   Induct >-
   decide_tac >>
   rpt strip_tac >>
   Cases_on `ls = []` >-
   rw[] >>
   `LENGTH ls <> 0` by rw[] >>
-  rw[FRONT_DEF]);
+  rw[FRONT_DEF]
+QED
 
 (* Theorem: HD (h::t ++ ls) = h *)
 (* Proof:
@@ -5024,15 +5049,16 @@ QED
    = MAP (\(x, y). (f x, y)) o (\j. (\(x, y). (x, g y)) (j,j)) ls      by MAP_COMPOSE
    = MAP (\x. (f x, g x)) ls                                           by FUN_EQ_THM
 *)
-val ZIP_MAP_MAP = store_thm(
-  "ZIP_MAP_MAP",
-  ``!ls f g. ZIP ((MAP f ls), (MAP g ls)) = MAP (\x. (f x, g x)) ls``,
+Theorem ZIP_MAP_MAP:
+    !ls f g. ZIP ((MAP f ls), (MAP g ls)) = MAP (\x. (f x, g x)) ls
+Proof
   rw[ZIP_MAP, MAP_COMPOSE] >>
   qabbrev_tac `f1 = \p. (f (FST p),SND p)` >>
   qabbrev_tac `f2 = \x. (x,g x)` >>
   qabbrev_tac `f3 = \x. (f x,g x)` >>
   `f1 o f2 = f3` by rw[FUN_EQ_THM, Abbr`f1`, Abbr`f2`, Abbr`f3`] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: MAP2 f (MAP g1 ls) (MAP g2 ls) = MAP (\x. f (g1 x) (g2 x)) ls *)
 (* Proof:
@@ -5045,21 +5071,23 @@ val ZIP_MAP_MAP = store_thm(
    = MAP ((UNCURRY f) o (\x. (g1 x, g2 x))) ls             by MAP_COMPOSE
    = MAP (\x. f (g1 x) (g2 y)) ls                          by FUN_EQ_THM
 *)
-val MAP2_MAP_MAP = store_thm(
-  "MAP2_MAP_MAP",
-  ``!ls f g1 g2. MAP2 f (MAP g1 ls) (MAP g2 ls) = MAP (\x. f (g1 x) (g2 x)) ls``,
+Theorem MAP2_MAP_MAP:
+    !ls f g1 g2. MAP2 f (MAP g1 ls) (MAP g2 ls) = MAP (\x. f (g1 x) (g2 x)) ls
+Proof
   rw[MAP2_MAP, ZIP_MAP_MAP, MAP_COMPOSE] >>
   qabbrev_tac `f1 = UNCURRY f o (\x. (g1 x,g2 x))` >>
   qabbrev_tac `f2 = \x. f (g1 x) (g2 x)` >>
   `f1 = f2` by rw[FUN_EQ_THM, Abbr`f1`, Abbr`f2`] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: EL n (l1 ++ l2) = if n < LENGTH l1 then EL n l1 else EL (n - LENGTH l1) l2 *)
 (* Proof: by EL_APPEND1, EL_APPEND2 *)
-val EL_APPEND = store_thm(
-  "EL_APPEND",
-  ``!n l1 l2. EL n (l1 ++ l2) = if n < LENGTH l1 then EL n l1 else EL (n - LENGTH l1) l2``,
-  rw[EL_APPEND1, EL_APPEND2]);
+Theorem EL_APPEND:
+    !n l1 l2. EL n (l1 ++ l2) = if n < LENGTH l1 then EL n l1 else EL (n - LENGTH l1) l2
+Proof
+  rw[EL_APPEND1, EL_APPEND2]
+QED
 
 (* Theorem: j < LENGTH ls ==> ?l1 l2. ls = l1 ++ (EL j ls)::l2 *)
 (* Proof:
@@ -5120,9 +5148,9 @@ QED
    (3) LENGTH l1 = LENGTH (l1 ++ l) ==> l1 = l1 ++ l, true since l = [] by LENGTH_APPEND, LENGTH_NIL
    (4) LENGTH l1 = LENGTH (l1 ++ l) ==> l ++ m2 = m2, true since l = [] by LENGTH_APPEND, LENGTH_NIL
 *)
-val APPEND_EQ_APPEND_EQ = store_thm(
-  "APPEND_EQ_APPEND_EQ",
-  ``!l1 l2 m1 m2. (l1 ++ l2 = m1 ++ m2) /\ (LENGTH l1 = LENGTH m1) <=> (l1 = m1) /\ (l2 = m2)``,
+Theorem APPEND_EQ_APPEND_EQ:
+    !l1 l2 m1 m2. (l1 ++ l2 = m1 ++ m2) /\ (LENGTH l1 = LENGTH m1) <=> (l1 = m1) /\ (l2 = m2)
+Proof
   rw[APPEND_EQ_APPEND] >>
   rw[EQ_IMP_THM] >-
   fs[] >-
@@ -5132,7 +5160,8 @@ val APPEND_EQ_APPEND_EQ = store_thm(
   fs[]) >>
   fs[] >>
   `LENGTH l = 0` by decide_tac >>
-  fs[]);
+  fs[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* More about DROP and TAKE                                                  *)
@@ -5172,10 +5201,11 @@ QED
    = h::TAKE 0 t              by TAKE_0
    = TAKE 1 (h::t)            by TAKE_def
 *)
-val TAKE_1_APPEND = store_thm(
-  "TAKE_1_APPEND",
-  ``!x y. x <> [] ==> (TAKE 1 (x ++ y) = TAKE 1 x)``,
-  Cases_on `x`>> rw[]);
+Theorem TAKE_1_APPEND:
+    !x y. x <> [] ==> (TAKE 1 (x ++ y) = TAKE 1 x)
+Proof
+  Cases_on `x`>> rw[]
+QED
 
 (* Theorem: x <> [] ==> (DROP 1 (x ++ y) = (DROP 1 x) ++ y) *)
 (* Proof:
@@ -5187,10 +5217,11 @@ val TAKE_1_APPEND = store_thm(
    = t ++ y                   by DROP_0
    = (DROP 1 (h::t)) ++ y     by DROP_def
 *)
-val DROP_1_APPEND = store_thm(
-  "DROP_1_APPEND",
-  ``!x y. x <> [] ==> (DROP 1 (x ++ y) = (DROP 1 x) ++ y)``,
-  Cases_on `x` >> rw[]);
+Theorem DROP_1_APPEND:
+    !x y. x <> [] ==> (DROP 1 (x ++ y) = (DROP 1 x) ++ y)
+Proof
+  Cases_on `x` >> rw[]
+QED
 
 (* Theorem: DROP (SUC n) x = DROP 1 (DROP n x) *)
 (* Proof:
@@ -5215,13 +5246,14 @@ val DROP_1_APPEND = store_thm(
          = DROP (SUC (n-1)) x     by induction hypothesis
          = DROP n x = LHS         by SUC (n-1) = n, n <> 0.
 *)
-val DROP_SUC = store_thm(
-  "DROP_SUC",
-  ``!n x. DROP (SUC n) x = DROP 1 (DROP n x)``,
+Theorem DROP_SUC:
+    !n x. DROP (SUC n) x = DROP 1 (DROP n x)
+Proof
   Induct_on `x` >>
   rw[DROP_def] >>
   `n = SUC (n-1)` by decide_tac >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: TAKE (SUC n) x = (TAKE n x) ++ (TAKE 1 (DROP n x)) *)
 (* Proof:
@@ -5249,13 +5281,14 @@ val DROP_SUC = store_thm(
          = h :: TAKE (SUC (n-1)) x  by induction hypothesis
          = h :: TAKE n x            by SUC (n-1) = n, n <> 0.
 *)
-val TAKE_SUC = store_thm(
-  "TAKE_SUC",
-  ``!n x. TAKE (SUC n) x = (TAKE n x) ++ (TAKE 1 (DROP n x))``,
+Theorem TAKE_SUC:
+    !n x. TAKE (SUC n) x = (TAKE n x) ++ (TAKE 1 (DROP n x))
+Proof
   Induct_on `x` >>
   rw[TAKE_def, DROP_def] >>
   `n = SUC (n-1)` by decide_tac >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: k < LENGTH x ==> (TAKE (SUC k) x = SNOC (EL k x) (TAKE k x)) *)
 (* Proof:
@@ -5287,9 +5320,9 @@ val TAKE_SUC = store_thm(
          = SNOC (EL (SUC k) (h::t)) (TAKE (SUC k) (h::t))   by TAKE_def
          = RHS
 *)
-val TAKE_SUC_BY_TAKE = store_thm(
-  "TAKE_SUC_BY_TAKE",
-  ``!k x. k < LENGTH x ==> (TAKE (SUC k) x = SNOC (EL k x) (TAKE k x))``,
+Theorem TAKE_SUC_BY_TAKE:
+    !k x. k < LENGTH x ==> (TAKE (SUC k) x = SNOC (EL k x) (TAKE k x))
+Proof
   Induct_on `k` >| [
     rpt strip_tac >>
     `LENGTH x <> 0` by decide_tac >>
@@ -5300,7 +5333,8 @@ val TAKE_SUC_BY_TAKE = store_thm(
     `?h t. x = h::t` by metis_tac[LENGTH_NIL, list_CASES] >>
     `k < LENGTH t` by metis_tac[LENGTH, LESS_MONO_EQ] >>
     rw_tac std_ss[TAKE_def, SNOC, EL_restricted]
-  ]);
+  ]
+QED
 
 (* Theorem: k < LENGTH x ==> (DROP k x = (EL k x) :: (DROP (SUC k) x)) *)
 (* Proof:
@@ -5328,9 +5362,9 @@ val TAKE_SUC_BY_TAKE = store_thm(
          = EL (SUC k) (h::t)::DROP (SUC (SUC k)) (h::t)  by EL
          = RHS
 *)
-val DROP_BY_DROP_SUC = store_thm(
-  "DROP_BY_DROP_SUC",
-  ``!k x. k < LENGTH x ==> (DROP k x = (EL k x) :: (DROP (SUC k) x))``,
+Theorem DROP_BY_DROP_SUC:
+    !k x. k < LENGTH x ==> (DROP k x = (EL k x) :: (DROP (SUC k) x))
+Proof
   Induct_on `k` >| [
     rpt strip_tac >>
     `LENGTH x <> 0` by decide_tac >>
@@ -5341,7 +5375,8 @@ val DROP_BY_DROP_SUC = store_thm(
     `?h t. x = h::t` by metis_tac[LENGTH_NIL, list_CASES] >>
     `k < LENGTH t` by metis_tac[LENGTH, LESS_MONO_EQ] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: n < LENGTH ls ==> ?u. DROP n ls = [EL n ls] ++ u *)
 (* Proof:
@@ -5370,9 +5405,9 @@ val DROP_BY_DROP_SUC = store_thm(
        = [EL (SUC n) (h::t)] ++ u           by EL_restricted
        Take this u.
 *)
-val DROP_HEAD_ELEMENT = store_thm(
-  "DROP_HEAD_ELEMENT",
-  ``!ls n. n < LENGTH ls ==> ?u. DROP n ls = [EL n ls] ++ u``,
+Theorem DROP_HEAD_ELEMENT:
+    !ls n. n < LENGTH ls ==> ?u. DROP n ls = [EL n ls] ++ u
+Proof
   Induct_on `n` >| [
     rpt strip_tac >>
     `LENGTH ls <> 0` by decide_tac >>
@@ -5385,7 +5420,8 @@ val DROP_HEAD_ELEMENT = store_thm(
     `n < LENGTH t` by decide_tac >>
     `?u. DROP n t = [EL n t] ++ u` by rw[] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: DROP n (TAKE n ls) = [] *)
 (* Proof:
@@ -5396,10 +5432,11 @@ val DROP_HEAD_ELEMENT = store_thm(
       Then LENGTH (TAKE n ls) = LENGTH ls   by LENGTH_TAKE_EQ
       Thus DROP n (TAKE n ls) = []          by DROP_LENGTH_TOO_LONG
 *)
-val DROP_TAKE_EQ_NIL = store_thm(
-  "DROP_TAKE_EQ_NIL",
-  ``!ls n. DROP n (TAKE n ls) = []``,
-  rw[LENGTH_TAKE_EQ, DROP_LENGTH_TOO_LONG]);
+Theorem DROP_TAKE_EQ_NIL:
+    !ls n. DROP n (TAKE n ls) = []
+Proof
+  rw[LENGTH_TAKE_EQ, DROP_LENGTH_TOO_LONG]
+QED
 
 (* Theorem: TAKE m (DROP n ls) = DROP n (TAKE (n + m) ls) *)
 (* Proof:
@@ -5421,9 +5458,9 @@ val DROP_TAKE_EQ_NIL = store_thm(
       = TAKE m []                 by TAKE_nil
       = TAKE m (DROP n ls)        by DROP_LENGTH_TOO_LONG
 *)
-val TAKE_DROP_SWAP = store_thm(
-  "TAKE_DROP_SWAP",
-  ``!ls m n. TAKE m (DROP n ls) = DROP n (TAKE (n + m) ls)``,
+Theorem TAKE_DROP_SWAP:
+    !ls m n. TAKE m (DROP n ls) = DROP n (TAKE (n + m) ls)
+Proof
   rpt strip_tac >>
   Cases_on `n <= LENGTH ls` >| [
     qabbrev_tac `x = TAKE m (DROP n ls)` >>
@@ -5435,7 +5472,8 @@ val TAKE_DROP_SWAP = store_thm(
     `DROP n ls = []` by rw[DROP_LENGTH_TOO_LONG] >>
     `TAKE (n + m) ls = ls` by rw[TAKE_LENGTH_TOO_LONG] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* cf. TAKE_DROP |- !n l. TAKE n l ++ DROP n l = l *)
 Theorem TAKE_DROP_SUC :
@@ -5455,17 +5493,19 @@ QED
     = TAKE (LENGTH l1) (l1 ++ LUPDATE x k l2)      by LUPDATE_APPEND2
     = l1                                           by TAKE_LENGTH_APPEND
 *)
-val TAKE_LENGTH_APPEND2 = store_thm(
-  "TAKE_LENGTH_APPEND2",
-  ``!l1 l2 x k. TAKE (LENGTH l1) (LUPDATE x (LENGTH l1 + k) (l1 ++ l2)) = l1``,
-  rw_tac std_ss[LUPDATE_APPEND2, TAKE_LENGTH_APPEND]);
+Theorem TAKE_LENGTH_APPEND2:
+    !l1 l2 x k. TAKE (LENGTH l1) (LUPDATE x (LENGTH l1 + k) (l1 ++ l2)) = l1
+Proof
+  rw_tac std_ss[LUPDATE_APPEND2, TAKE_LENGTH_APPEND]
+QED
 
 (* Theorem: LENGTH (TAKE n l) <= LENGTH l *)
 (* Proof: by LENGTH_TAKE_EQ *)
-val LENGTH_TAKE_LE = store_thm(
-  "LENGTH_TAKE_LE",
-  ``!n l. LENGTH (TAKE n l) <= LENGTH l``,
-  rw[LENGTH_TAKE_EQ]);
+Theorem LENGTH_TAKE_LE:
+    !n l. LENGTH (TAKE n l) <= LENGTH l
+Proof
+  rw[LENGTH_TAKE_EQ]
+QED
 
 (* Theorem: ALL_DISTINCT ls ==>
             !k e. MEM e (TAKE k ls) /\ MEM e (DROP k ls) ==> F *)
@@ -6078,12 +6118,13 @@ QED
          set l = {x}   by LIST_TO_SET_DEF
       or SING (set l)  by SING_DEF
 *)
-val SING_LIST_TO_SET = store_thm((* was: LIST_TO_SET_SING *)
-  "SING_LIST_TO_SET",
-  ``!l. (LENGTH l = 1) ==> SING (set l)``,
+Theorem SING_LIST_TO_SET:
+    !l. (LENGTH l = 1) ==> SING (set l)
+Proof
   rw[LENGTH_EQ_1, SING_DEF] >>
   `set [x] = {x}` by rw[] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Mono-list Theory: a mono-list is a list l with SING (set l) *)
 
@@ -6160,14 +6201,15 @@ QED
        and MEM x t <=/=> (x = h)  by EXTENSION
    Therefore, e <> h, so take h' = e.
 *)
-val NON_MONO_TAIL_PROPERTY = store_thm(
-  "NON_MONO_TAIL_PROPERTY",
-  ``!l. ~SING (set (h::t)) ==> ?h'. h' IN set t /\ h' <> h``,
+Theorem NON_MONO_TAIL_PROPERTY:
+    !l. ~SING (set (h::t)) ==> ?h'. h' IN set t /\ h' <> h
+Proof
   rw[SING_INSERT] >>
   `set t <> {}` by metis_tac[LIST_TO_SET_EQ_EMPTY] >>
   `?e. e IN set t` by metis_tac[MEMBER_NOT_EMPTY] >>
   full_simp_tac (srw_ss())[EXTENSION] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* GENLIST Theorems                                                          *)
@@ -6193,13 +6235,14 @@ val GENLIST_K_CONS = save_thm("GENLIST_K_CONS",
    = GENLIST (K e) m ++ GENLIST (\t. e) n                by K_THM
    = GENLIST (K e) m ++ GENLIST (K e) n                  by above
 *)
-val GENLIST_K_ADD = store_thm(
-  "GENLIST_K_ADD",
-  ``!e n m. GENLIST (K e) (n + m) = GENLIST (K e) m ++ GENLIST (K e) n``,
+Theorem GENLIST_K_ADD:
+    !e n m. GENLIST (K e) (n + m) = GENLIST (K e) m ++ GENLIST (K e) n
+Proof
   rpt strip_tac >>
   `(\t. e) = K e` by rw[FUN_EQ_THM] >>
   rw[GENLIST_APPEND] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: (!k. k < n ==> (f k = e)) ==> (GENLIST f n = GENLIST (K e) n) *)
 (* Proof:
@@ -6216,12 +6259,13 @@ val GENLIST_K_ADD = store_thm(
       = SNOC e (GENLIST (K e) n)    by induction hypothesis
       = GENLIST (K e) (SUC n)       by GENLIST
 *)
-val GENLIST_K_LESS = store_thm(
-  "GENLIST_K_LESS",
-  ``!f e n. (!k. k < n ==> (f k = e)) ==> (GENLIST f n = GENLIST (K e) n)``,
+Theorem GENLIST_K_LESS:
+    !f e n. (!k. k < n ==> (f k = e)) ==> (GENLIST f n = GENLIST (K e) n)
+Proof
   rpt strip_tac >>
   Induct_on `n` >>
-  rw[GENLIST]);
+  rw[GENLIST]
+QED
 
 (* Theorem: (!k. 0 < k /\ k <= n ==> (f k = e)) ==> (GENLIST (f o SUC) n = GENLIST (K e) n) *)
 (* Proof:
@@ -6237,12 +6281,13 @@ val GENLIST_K_LESS = store_thm(
        = SNOC e GENLIST (K e) n            by induction hypothesis
        = GENLIST (K e) (SUC n)             by GENLIST
 *)
-val GENLIST_K_RANGE = store_thm(
-  "GENLIST_K_RANGE",
-  ``!f e n. (!k. 0 < k /\ k <= n ==> (f k = e)) ==> (GENLIST (f o SUC) n = GENLIST (K e) n)``,
+Theorem GENLIST_K_RANGE:
+    !f e n. (!k. 0 < k /\ k <= n ==> (f k = e)) ==> (GENLIST (f o SUC) n = GENLIST (K e) n)
+Proof
   rpt strip_tac >>
   Induct_on `n` >>
-  rw[GENLIST]);
+  rw[GENLIST]
+QED
 
 (* Theorem: GENLIST (K c) a ++ GENLIST (K c) b = GENLIST (K c) (a + b) *)
 (* Proof:
@@ -6253,14 +6298,15 @@ val GENLIST_K_RANGE = store_thm(
    = GENLIST (K c) a ++ GENLIST (\t. c) b               by applying constant function
    = GENLIST (K c) a ++ GENLIST (K c) b                 by GENLIST_FUN_EQ
 *)
-val GENLIST_K_APPEND = store_thm(
-  "GENLIST_K_APPEND",
-  ``!a b c. GENLIST (K c) a ++ GENLIST (K c) b = GENLIST (K c) (a + b)``,
+Theorem GENLIST_K_APPEND:
+    !a b c. GENLIST (K c) a ++ GENLIST (K c) b = GENLIST (K c) (a + b)
+Proof
   rpt strip_tac >>
   `(\t. c) = K c` by rw[FUN_EQ_THM] >>
   `GENLIST (K c) (a + b) = GENLIST (K c) (b + a)` by rw[] >>
   `_ = GENLIST (K c) a ++ GENLIST (\t. (K c) (t + a)) b` by rw[GENLIST_APPEND] >>
-  rw[GENLIST_FUN_EQ]);
+  rw[GENLIST_FUN_EQ]
+QED
 
 (* Theorem: GENLIST (K c) n ++ [c] = [c] ++ GENLIST (K c) n *)
 (* Proof:
@@ -6271,10 +6317,11 @@ val GENLIST_K_APPEND = store_thm(
    = GENLIST (K c) 1 ++ GENLIST (K c) n      by GENLIST_K_APPEND
    = [c] ++ GENLIST (K c) n                  by GENLIST_1
 *)
-val GENLIST_K_APPEND_K = store_thm(
-  "GENLIST_K_APPEND_K",
-  ``!c n. GENLIST (K c) n ++ [c] = [c] ++ GENLIST (K c) n``,
-  metis_tac[GENLIST_K_APPEND, GENLIST_1, ADD_COMM, combinTheory.K_THM]);
+Theorem GENLIST_K_APPEND_K:
+    !c n. GENLIST (K c) n ++ [c] = [c] ++ GENLIST (K c) n
+Proof
+  metis_tac[GENLIST_K_APPEND, GENLIST_1, ADD_COMM, combinTheory.K_THM]
+QED
 
 (* Theorem: 0 < n ==> (MEM x (GENLIST (K c) n) <=> (x = c)) *)
 (* Proof:
@@ -6393,9 +6440,9 @@ QED
        Note ALL_DISTINCT [x] = T     by ALL_DISTINCT_SING
         and set [x] = {x}            by MONO_LIST_TO_SET
 *)
-val DISTINCT_LIST_TO_SET_EQ_SING = store_thm(
-  "DISTINCT_LIST_TO_SET_EQ_SING",
-  ``!l x. ALL_DISTINCT l /\ (set l = {x}) <=> (l = [x])``,
+Theorem DISTINCT_LIST_TO_SET_EQ_SING:
+    !l x. ALL_DISTINCT l /\ (set l = {x}) <=> (l = [x])
+Proof
   rw[EQ_IMP_THM] >>
   qabbrev_tac `P = ($= x)` >>
   `!y. P y ==> (y = x)` by rw[Abbr`P`] >>
@@ -6407,7 +6454,8 @@ val DISTINCT_LIST_TO_SET_EQ_SING = store_thm(
   `t <> []` by rw[] >>
   `?u v. t = u::v` by metis_tac[list_CASES] >>
   `MEM u t` by rw[] >>
-  metis_tac[EVERY_DEF]);
+  metis_tac[EVERY_DEF]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Maximum of a List                                                         *)
@@ -6442,10 +6490,11 @@ val _ = export_rewrites["MAX_LIST_NIL", "MAX_LIST_CONS"];
    = MAX x 0               by MAX_LIST_NIL
    = x                     by MAX_0
 *)
-val MAX_LIST_SING = store_thm(
-  "MAX_LIST_SING",
-  ``!x. MAX_LIST [x] = x``,
-  rw[]);
+Theorem MAX_LIST_SING:
+    !x. MAX_LIST [x] = x
+Proof
+  rw[]
+QED
 
 (* Theorem: (MAX_LIST l = 0) <=> EVERY (\x. x = 0) l *)
 (* Proof:
@@ -6461,11 +6510,12 @@ val MAX_LIST_SING = store_thm(
       <=> (h = 0) /\ EVERY (\x. x = 0) l   by induction hypothesis
       <=> EVERY (\x. x = 0) (h::l)         by EVERY_DEF
 *)
-val MAX_LIST_EQ_0 = store_thm(
-  "MAX_LIST_EQ_0",
-  ``!l. (MAX_LIST l = 0) <=> EVERY (\x. x = 0) l``,
+Theorem MAX_LIST_EQ_0:
+    !l. (MAX_LIST l = 0) <=> EVERY (\x. x = 0) l
+Proof
   Induct >>
-  rw[MAX_EQ_0]);
+  rw[MAX_EQ_0]
+QED
 
 (* Theorem: l <> [] ==> MEM (MAX_LIST l) l *)
 (* Proof:
@@ -6485,16 +6535,17 @@ val MAX_LIST_EQ_0 = store_thm(
          If x = h, MEM x (h::l)        by MEM
          If x = MAX_LIST l, MEM x l    by induction hypothesis
 *)
-val MAX_LIST_MEM = store_thm(
-  "MAX_LIST_MEM",
-  ``!l. l <> [] ==> MEM (MAX_LIST l) l``,
+Theorem MAX_LIST_MEM:
+    !l. l <> [] ==> MEM (MAX_LIST l) l
+Proof
   Induct >-
   rw[] >>
   rpt strip_tac >>
   Cases_on `l = []` >-
   rw[] >>
   rw[] >>
-  metis_tac[MAX_CASES]);
+  metis_tac[MAX_CASES]
+QED
 
 (* Theorem: MEM x l ==> x <= MAX_LIST l *)
 (* Proof:
@@ -6508,14 +6559,15 @@ val MAX_LIST_MEM = store_thm(
      If MEM x l, x <= MAX_LIST l                   by induction hypothesis
      or          x <= MAX h (MAX_LIST l)           by MAX_LE, LESS_EQ_TRANS
 *)
-val MAX_LIST_PROPERTY = store_thm(
-  "MAX_LIST_PROPERTY",
-  ``!l x. MEM x l ==> x <= MAX_LIST l``,
+Theorem MAX_LIST_PROPERTY:
+    !l x. MEM x l ==> x <= MAX_LIST l
+Proof
   Induct >-
   rw[] >>
   rw[MAX_LIST_CONS] >-
   decide_tac >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: l <> [] ==> !x. MEM x l /\ (!y. MEM y l ==> y <= x) ==> (x = MAX_LIST l) *)
 (* Proof:
@@ -6524,10 +6576,11 @@ val MAX_LIST_PROPERTY = store_thm(
      and MEM m l ==> m <= x    by MAX_LIST_MEM, implication, l <> []
    Hence x = m                 by EQ_LESS_EQ
 *)
-val MAX_LIST_TEST = store_thm(
-  "MAX_LIST_TEST",
-  ``!l. l <> [] ==> !x. MEM x l /\ (!y. MEM y l ==> y <= x) ==> (x = MAX_LIST l)``,
-  metis_tac[MAX_LIST_MEM, MAX_LIST_PROPERTY, EQ_LESS_EQ]);
+Theorem MAX_LIST_TEST:
+    !l. l <> [] ==> !x. MEM x l /\ (!y. MEM y l ==> y <= x) ==> (x = MAX_LIST l)
+Proof
+  metis_tac[MAX_LIST_MEM, MAX_LIST_PROPERTY, EQ_LESS_EQ]
+QED
 
 (* Theorem: MAX_LIST t <= MAX_LIST (h::t) *)
 (* Proof:
@@ -6535,10 +6588,11 @@ val MAX_LIST_TEST = store_thm(
     and MAX_LIST t <= MAX h (MAX_LIST t)       by MAX_IS_MAX
    Thus MAX_LIST t <= MAX_LIST (h::t)
 *)
-val MAX_LIST_LE = store_thm(
-  "MAX_LIST_LE",
-  ``!h t. MAX_LIST t <= MAX_LIST (h::t)``,
-  rw_tac std_ss[MAX_LIST_def]);
+Theorem MAX_LIST_LE:
+    !h t. MAX_LIST t <= MAX_LIST (h::t)
+Proof
+  rw_tac std_ss[MAX_LIST_def]
+QED
 
 (* Theorem: (!x. f x <= g x) ==> !ls. MAX_LIST (MAP f ls) <= MAX_LIST (MAP g ls) *)
 (* Proof:
@@ -6557,13 +6611,14 @@ val MAX_LIST_LE = store_thm(
       = MAX_LIST (g h::MAP g ls)                 by MAX_LIST_def
       = MAX_LIST (MAP g (h::ls))                 by MAP
 *)
-val MAX_LIST_MAP_LE = store_thm(
-  "MAX_LIST_MAP_LE",
-  ``!f g. (!x. f x <= g x) ==> !ls. MAX_LIST (MAP f ls) <= MAX_LIST (MAP g ls)``,
+Theorem MAX_LIST_MAP_LE:
+    !f g. (!x. f x <= g x) ==> !ls. MAX_LIST (MAP f ls) <= MAX_LIST (MAP g ls)
+Proof
   rpt strip_tac >>
   Induct_on `ls` >-
   rw[] >>
-  rw[]);
+  rw[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Minimum of a List                                                         *)
@@ -6576,17 +6631,19 @@ End
 
 (* Theorem: MIN_LIST [x] = x *)
 (* Proof: by MIN_LIST_def *)
-val MIN_LIST_SING = store_thm(
-  "MIN_LIST_SING",
-  ``!x. MIN_LIST [x] = x``,
-  rw[MIN_LIST_def]);
+Theorem MIN_LIST_SING:
+    !x. MIN_LIST [x] = x
+Proof
+  rw[MIN_LIST_def]
+QED
 
 (* Theorem: t <> [] ==> (MIN_LIST (h::t) = MIN h (MIN_LIST t)) *)
 (* Proof: by MIN_LIST_def *)
-val MIN_LIST_CONS = store_thm(
-  "MIN_LIST_CONS",
-  ``!h t. t <> [] ==> (MIN_LIST (h::t) = MIN h (MIN_LIST t))``,
-  rw[MIN_LIST_def]);
+Theorem MIN_LIST_CONS:
+    !h t. t <> [] ==> (MIN_LIST (h::t) = MIN h (MIN_LIST t))
+Proof
+  rw[MIN_LIST_def]
+QED
 
 (* export simple results *)
 val _ = export_rewrites["MIN_LIST_SING", "MIN_LIST_CONS"];
@@ -6609,16 +6666,17 @@ val _ = export_rewrites["MIN_LIST_SING", "MIN_LIST_CONS"];
          If x = h, MEM x (h::l)        by MEM
          If x = MIN_LIST l, MEM x l    by induction hypothesis
 *)
-val MIN_LIST_MEM = store_thm(
-  "MIN_LIST_MEM",
-  ``!l. l <> [] ==> MEM (MIN_LIST l) l``,
+Theorem MIN_LIST_MEM:
+    !l. l <> [] ==> MEM (MIN_LIST l) l
+Proof
   Induct >-
   rw[] >>
   rpt strip_tac >>
   Cases_on `l = []` >-
   rw[] >>
   rw[] >>
-  metis_tac[MIN_CASES]);
+  metis_tac[MIN_CASES]
+QED
 
 (* Theorem: l <> [] ==> !x. MEM x l ==> (MIN_LIST l) <= x *)
 (* Proof:
@@ -6637,15 +6695,16 @@ val MIN_LIST_MEM = store_thm(
         If MEM x l, MIN_LIST l <= x                by induction hypothesis
         or          MIN h (MIN_LIST l) <= x        by MIN_LE, LESS_EQ_TRANS
 *)
-val MIN_LIST_PROPERTY = store_thm(
-  "MIN_LIST_PROPERTY",
-  ``!l. l <> [] ==> !x. MEM x l ==> (MIN_LIST l) <= x``,
+Theorem MIN_LIST_PROPERTY:
+    !l. l <> [] ==> !x. MEM x l ==> (MIN_LIST l) <= x
+Proof
   Induct >-
   rw[] >>
   rpt strip_tac >>
   Cases_on `l = []` >-
   fs[MIN_LIST_SING, MEM] >>
-  fs[MIN_LIST_CONS, MEM]);
+  fs[MIN_LIST_CONS, MEM]
+QED
 
 (* Theorem: l <> [] ==> !x. MEM x l /\ (!y. MEM y l ==> x <= y) ==> (x = MIN_LIST l) *)
 (* Proof:
@@ -6654,20 +6713,22 @@ val MIN_LIST_PROPERTY = store_thm(
      and MEM m l ==> x <= m    by MIN_LIST_MEM, implication, l <> []
    Hence x = m                 by EQ_LESS_EQ
 *)
-val MIN_LIST_TEST = store_thm(
-  "MIN_LIST_TEST",
-  ``!l. l <> [] ==> !x. MEM x l /\ (!y. MEM y l ==> x <= y) ==> (x = MIN_LIST l)``,
-  metis_tac[MIN_LIST_MEM, MIN_LIST_PROPERTY, EQ_LESS_EQ]);
+Theorem MIN_LIST_TEST:
+    !l. l <> [] ==> !x. MEM x l /\ (!y. MEM y l ==> x <= y) ==> (x = MIN_LIST l)
+Proof
+  metis_tac[MIN_LIST_MEM, MIN_LIST_PROPERTY, EQ_LESS_EQ]
+QED
 
 (* Theorem: l <> [] ==> MIN_LIST l <= MAX_LIST l *)
 (* Proof:
    Since MEM (MIN_LIST l) l          by MIN_LIST_MEM
       so MIN_LIST l <= MAX_LIST l    by MAX_LIST_PROPERTY
 *)
-val MIN_LIST_LE_MAX_LIST = store_thm(
-  "MIN_LIST_LE_MAX_LIST",
-  ``!l. l <> [] ==> MIN_LIST l <= MAX_LIST l``,
-  rw[MIN_LIST_MEM, MAX_LIST_PROPERTY]);
+Theorem MIN_LIST_LE_MAX_LIST:
+    !l. l <> [] ==> MIN_LIST l <= MAX_LIST l
+Proof
+  rw[MIN_LIST_MEM, MAX_LIST_PROPERTY]
+QED
 
 (* Theorem: t <> [] ==> MIN_LIST (h::t) <= MIN_LIST t *)
 (* Proof:
@@ -6675,10 +6736,11 @@ val MIN_LIST_LE_MAX_LIST = store_thm(
     and MIN h (MIN_LIST t) <= MIN_LIST t       by MIN_IS_MIN
    Thus MIN_LIST (h::t) <= MIN_LIST t
 *)
-val MIN_LIST_LE = store_thm(
-  "MIN_LIST_LE",
-  ``!h t. t <> [] ==> MIN_LIST (h::t) <= MIN_LIST t``,
-  rw_tac std_ss[MIN_LIST_def]);
+Theorem MIN_LIST_LE:
+    !h t. t <> [] ==> MIN_LIST (h::t) <= MIN_LIST t
+Proof
+  rw_tac std_ss[MIN_LIST_def]
+QED
 
 (* Theorem: a <= b /\ c <= d ==> MIN a c <= MIN b d *)
 (* Proof: by MIN_DEF *)
@@ -6710,16 +6772,17 @@ val MIN_LE_PAIR = prove(
       = MIN_LIST (g h::MAP g ls)                 by MIN_LIST_def
       = MIN_LIST (MAP g (h::ls))                 by MAP
 *)
-val MIN_LIST_MAP_LE = store_thm(
-  "MIN_LIST_MAP_LE",
-  ``!f g. (!x. f x <= g x) ==> !ls. MIN_LIST (MAP f ls) <= MIN_LIST (MAP g ls)``,
+Theorem MIN_LIST_MAP_LE:
+    !f g. (!x. f x <= g x) ==> !ls. MIN_LIST (MAP f ls) <= MIN_LIST (MAP g ls)
+Proof
   rpt strip_tac >>
   Induct_on `ls` >-
   rw[] >>
   rpt strip_tac >>
   Cases_on `ls = []` >-
   rw[MIN_LIST_def] >>
-  rw[MIN_LIST_def, MIN_LE_PAIR]);
+  rw[MIN_LIST_def, MIN_LE_PAIR]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Increasing and decreasing list bounds                                     *)
@@ -6836,9 +6899,9 @@ QED
        = LAST ls                       by MAX_DEF, h <= LAST ls
        = LAST (h::ls)                  by LAST_DEF
 *)
-val MAX_LIST_MONO_INC = store_thm(
-  "MAX_LIST_MONO_INC",
-  ``!ls. ls <> [] /\ MONO_INC ls ==> (MAX_LIST ls = LAST ls)``,
+Theorem MAX_LIST_MONO_INC:
+    !ls. ls <> [] /\ MONO_INC ls ==> (MAX_LIST ls = LAST ls)
+Proof
   Induct >-
   rw[] >>
   rpt strip_tac >>
@@ -6854,7 +6917,8 @@ val MAX_LIST_MONO_INC = store_thm(
   `SUC m <= SUC n` by decide_tac >>
   `EL (SUC m) (h::ls) <= EL (SUC n) (h::ls)` by rw[] >>
   fs[]) >>
-  rw[MAX_DEF, LAST_DEF]);
+  rw[MAX_DEF, LAST_DEF]
+QED
 
 (* Theorem: ls <> [] /\ MONO_DEC ls ==> (MAX_LIST ls = HD ls) *)
 (* Proof:
@@ -6875,9 +6939,9 @@ val MAX_LIST_MONO_INC = store_thm(
        = h                             by MAX_DEF, HD ls <= h
        = HD (h::ls)                    by HD
 *)
-val MAX_LIST_MONO_DEC = store_thm(
-  "MAX_LIST_MONO_DEC",
-  ``!ls. ls <> [] /\ MONO_DEC ls ==> (MAX_LIST ls = HD ls)``,
+Theorem MAX_LIST_MONO_DEC:
+    !ls. ls <> [] /\ MONO_DEC ls ==> (MAX_LIST ls = HD ls)
+Proof
   Induct >-
   rw[] >>
   rpt strip_tac >>
@@ -6894,7 +6958,8 @@ val MAX_LIST_MONO_DEC = store_thm(
   `SUC m <= SUC n` by decide_tac >>
   `EL (SUC n) (h::ls) <= EL (SUC m) (h::ls)` by rw[] >>
   fs[]) >>
-  rw[MAX_DEF]);
+  rw[MAX_DEF]
+QED
 
 (* Theorem: ls <> [] /\ MONO_INC ls ==> (MIN_LIST ls = HD ls) *)
 (* Proof:
@@ -6915,9 +6980,9 @@ val MAX_LIST_MONO_DEC = store_thm(
        = h                             by MIN_DEF, h <= HD ls
        = HD (h::ls)                    by HD
 *)
-val MIN_LIST_MONO_INC = store_thm(
-  "MIN_LIST_MONO_INC",
-  ``!ls. ls <> [] /\ MONO_INC ls ==> (MIN_LIST ls = HD ls)``,
+Theorem MIN_LIST_MONO_INC:
+    !ls. ls <> [] /\ MONO_INC ls ==> (MIN_LIST ls = HD ls)
+Proof
   Induct >-
   rw[] >>
   rpt strip_tac >>
@@ -6934,7 +6999,8 @@ val MIN_LIST_MONO_INC = store_thm(
   `SUC m <= SUC n` by decide_tac >>
   `EL (SUC m) (h::ls) <= EL (SUC n) (h::ls)` by rw[] >>
   fs[]) >>
-  rw[MIN_DEF]);
+  rw[MIN_DEF]
+QED
 
 (* Theorem: ls <> [] /\ MONO_DEC ls ==> (MIN_LIST ls = LAST ls) *)
 (* Proof:
@@ -6955,9 +7021,9 @@ val MIN_LIST_MONO_INC = store_thm(
        = LAST ls                       by MIN_DEF, LAST ls <= h
        = LAST (h::ls)                  by LAST_DEF
 *)
-val MIN_LIST_MONO_DEC = store_thm(
-  "MIN_LIST_MONO_DEC",
-  ``!ls. ls <> [] /\ MONO_DEC ls ==> (MIN_LIST ls = LAST ls)``,
+Theorem MIN_LIST_MONO_DEC:
+    !ls. ls <> [] /\ MONO_DEC ls ==> (MIN_LIST ls = LAST ls)
+Proof
   Induct >-
   rw[] >>
   rpt strip_tac >>
@@ -6973,7 +7039,8 @@ val MIN_LIST_MONO_DEC = store_thm(
   `SUC m <= SUC n` by decide_tac >>
   `EL (SUC n) (h::ls) <= EL (SUC m) (h::ls)` by rw[] >>
   fs[]) >>
-  rw[MIN_DEF, LAST_DEF]);
+  rw[MIN_DEF, LAST_DEF]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Sublist: an order-preserving portion of a list                            *)
@@ -6998,27 +7065,30 @@ val it = |- (!x. [] <= x <=> T) /\ (!t1 h1. h1::t1 <= [] <=> F) /\
 
 (* Theorem: [] <= p *)
 (* Proof: by sublist_def *)
-val sublist_nil = store_thm(
-  "sublist_nil",
-  ``!p. [] <= p``,
-  rw[sublist_def]);
+Theorem sublist_nil:
+    !p. [] <= p
+Proof
+  rw[sublist_def]
+QED
 
 (* Theorem: p <= q <=> h::p <= h::q *)
 (* Proof: by sublist_def *)
-val sublist_cons = store_thm(
-  "sublist_cons",
-  ``!h p q. p <= q <=> h::p <= h::q``,
-  rw[sublist_def]);
+Theorem sublist_cons:
+    !h p q. p <= q <=> h::p <= h::q
+Proof
+  rw[sublist_def]
+QED
 
 (* Theorem: p <= [] <=> (p = []) *)
 (* Proof:
    If p = [], then [] <= []           by sublist_nil
    If p = h::t, then h::t <= [] = F   by sublist_def
 *)
-val sublist_of_nil = store_thm(
-  "sublist_of_nil",
-  ``!p. p <= [] <=> (p = [])``,
-  (Cases_on `p` >> rw[sublist_def]));
+Theorem sublist_of_nil:
+    !p. p <= [] <=> (p = [])
+Proof
+  (Cases_on `p` >> rw[sublist_def])
+QED
 
 (* Theorem: (!p q. (h::p) <= q ==> p <= q) = (!p q. p <= q ==> p <= (h::q)) *)
 (* Proof:
@@ -7031,11 +7101,12 @@ val sublist_of_nil = store_thm(
         ==> (h::p) <= (h::q) by implication
         ==>      p <= q      by sublist_cons
 *)
-val sublist_cons_eq = store_thm(
-  "sublist_cons_eq",
-  ``!h. (!p q. (h::p) <= q ==> p <= q) = (!p q. p <= q ==> p <= (h::q))``,
+Theorem sublist_cons_eq:
+    !h. (!p q. (h::p) <= q ==> p <= q) = (!p q. p <= q ==> p <= (h::q))
+Proof
   rw[EQ_IMP_THM] >>
-  metis_tac[sublist_cons]);
+  metis_tac[sublist_cons]
+QED
 
 (* Theorem: h::p <= q ==> p <= q *)
 (* Proof:
@@ -7052,21 +7123,23 @@ val sublist_cons_eq = store_thm(
         If h'' = h, then t <= q        by sublist_def, induction hypothesis
         If h'' <> h, then h''::t <= q  by sublist_def, induction hypothesis
 *)
-val sublist_cons_remove = store_thm(
-  "sublist_cons_remove",
-  ``!h p q. h::p <= q ==> p <= q``,
+Theorem sublist_cons_remove:
+    !h p q. h::p <= q ==> p <= q
+Proof
   Induct_on `q` >-
   rw[sublist_def] >>
   rpt strip_tac >>
   (Cases_on `p` >> simp[sublist_def]) >>
-  (Cases_on `h'' = h` >> metis_tac[sublist_def]));
+  (Cases_on `h'' = h` >> metis_tac[sublist_def])
+QED
 
 (* Theorem: p <= q ==> p <= h::q *)
 (* Proof: by sublist_cons_eq, sublist_cons_remove *)
-val sublist_cons_include = store_thm(
-  "sublist_cons_include",
-  ``!h p q. p <= q ==> p <= h::q``,
-  metis_tac[sublist_cons_eq, sublist_cons_remove]);
+Theorem sublist_cons_include:
+    !h p q. p <= q ==> p <= h::q
+Proof
+  metis_tac[sublist_cons_eq, sublist_cons_remove]
+QED
 
 (* Theorem: p <= q ==> LENGTH p <= LENGTH q *)
 (* Proof:
@@ -7092,9 +7165,9 @@ val sublist_cons_include = store_thm(
             ==> LENGTH (h'::t) <= SUC(LENGTH q)   by arithemtic
               = LENGTH (h'::t) <= LENGTH (h::q)
 *)
-val sublist_length = store_thm(
-  "sublist_length",
-  ``!p q. p <= q ==> LENGTH p <= LENGTH q``,
+Theorem sublist_length:
+    !p q. p <= q ==> LENGTH p <= LENGTH q
+Proof
   Induct_on `q` >-
   rw[sublist_of_nil] >>
   rpt strip_tac >>
@@ -7102,7 +7175,8 @@ val sublist_length = store_thm(
   (Cases_on `h = h'` >> fs[sublist_def]) >>
   `LENGTH (h'::t) <= LENGTH q` by rw[] >>
   `LENGTH t < LENGTH (h'::t)` by rw[LENGTH_TL_LT] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: [Reflexive] p <= p *)
 (* Proof:
@@ -7110,10 +7184,11 @@ val sublist_length = store_thm(
    Base: [] <= [], true                      by sublist_nil
    Step: p <= p ==> !h. h::p <= h::p, true   by sublist_cons
 *)
-val sublist_refl = store_thm(
-  "sublist_refl",
-  ``!p:'a list. p <= p``,
-  Induct >> rw[sublist_def]);
+Theorem sublist_refl:
+    !p:'a list. p <= p
+Proof
+  Induct >> rw[sublist_def]
+QED
 
 (* Theorem: [Anti-symmetric] !p q. (p <= q) /\ (q <= p) ==> (p = q) *)
 (* Proof:
@@ -7139,9 +7214,9 @@ val sublist_refl = store_thm(
             = F                                    by arithmetic
           Hence the implication is T.
 *)
-val sublist_antisym = store_thm(
-  "sublist_antisym",
-  ``!p q:'a list. p <= q /\ q <= p ==> (p = q)``,
+Theorem sublist_antisym:
+    !p q:'a list. p <= q /\ q <= p ==> (p = q)
+Proof
   Induct_on `q` >-
   rw[sublist_of_nil] >>
   rpt strip_tac >>
@@ -7149,7 +7224,8 @@ val sublist_antisym = store_thm(
   fs[sublist_def] >>
   (Cases_on `h' = h` >> fs[sublist_def]) >>
   `LENGTH (h'::t) <= LENGTH q /\ LENGTH (h::q) <= LENGTH t` by rw[sublist_length] >>
-  fs[LENGTH_TL_LT]);
+  fs[LENGTH_TL_LT]
+QED
 
 (* Theorem [Transitive]: for all lists p, q, r; (p <= q) /\ (q <= r) ==> (p <= r) *)
 (* Proof:
@@ -7183,9 +7259,9 @@ val sublist_antisym = store_thm(
           (h' = h) /\ t <= r \/ h' <> h /\ h'::t <= r
           Same reasoning as (3).
 *)
-val sublist_trans = store_thm(
-  "sublist_trans",
-  ``!p q r:'a list. p <= q /\ q <= r ==> p <= r``,
+Theorem sublist_trans:
+    !p q r:'a list. p <= q /\ q <= r ==> p <= r
+Proof
   Induct_on `r` >-
   fs[sublist_of_nil] >>
   rpt strip_tac >>
@@ -7194,7 +7270,8 @@ val sublist_trans = store_thm(
   metis_tac[] >-
   metis_tac[sublist_cons] >-
   metis_tac[sublist_cons_remove] >>
-  metis_tac[sublist_cons_remove]);
+  metis_tac[sublist_cons_remove]
+QED
 
 (* The above theorems show that sublist is a partial ordering. *)
 
@@ -7224,15 +7301,16 @@ val sublist_trans = store_thm(
            ==> SNOC h' p <= SNOC h' q      by induction hypothesis
            ==> SNOC h' p <= h::SNOC h' q   by sublist_cons_include
 *)
-val sublist_snoc = store_thm(
-  "sublist_snoc",
-  ``!h p q. p <= q ==> SNOC h p <= SNOC h q``,
+Theorem sublist_snoc:
+    !h p q. p <= q ==> SNOC h p <= SNOC h q
+Proof
   Induct_on `q` >-
   rw[sublist_of_nil, sublist_refl] >>
   rw[sublist_def] >>
   Cases_on `p` >-
   rw[sublist_nil, sublist_cons_include] >>
-  metis_tac[sublist_def, sublist_cons, SNOC]);
+  metis_tac[sublist_def, sublist_cons, SNOC]
+QED
 
 (* Theorem: MEM x ls ==> [x] <= ls *)
 (* Proof:
@@ -7248,14 +7326,15 @@ val sublist_snoc = store_thm(
           ==> [x] <= ls        by induction hypothesis
           ==> [x] <= h::ls     by sublist_cons_include
 *)
-val sublist_member_sing = store_thm(
-  "sublist_member_sing",
-  ``!ls x. MEM x ls ==> [x] <= ls``,
+Theorem sublist_member_sing:
+    !ls x. MEM x ls ==> [x] <= ls
+Proof
   Induct >-
   rw[] >>
   rw[] >-
   rw[sublist_nil, GSYM sublist_cons] >>
-  rw[sublist_cons_include]);
+  rw[sublist_cons_include]
+QED
 
 (* Theorem: TAKE n ls <= ls *)
 (* Proof:
@@ -7274,15 +7353,16 @@ val sublist_member_sing = store_thm(
        Now    TAKE (n - 1) ls <= ls     by induction hypothesis
       Thus h::TAKE (n - 1) ls <= h::ls  by sublist_cons
 *)
-val sublist_take = store_thm(
-  "sublist_take",
-  ``!ls n. TAKE n ls <= ls``,
+Theorem sublist_take:
+    !ls n. TAKE n ls <= ls
+Proof
   Induct >-
   rw[sublist_nil] >>
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[sublist_nil] >>
-  rw[GSYM sublist_cons]);
+  rw[GSYM sublist_cons]
+QED
 
 (* Theorem: DROP n ls <= ls *)
 (* Proof:
@@ -7301,49 +7381,54 @@ val sublist_take = store_thm(
       <= ls                  by induction hypothesis
       <= h::ls               by sublist_cons_include
 *)
-val sublist_drop = store_thm(
-  "sublist_drop",
-  ``!ls n. DROP n ls <= ls``,
+Theorem sublist_drop:
+    !ls n. DROP n ls <= ls
+Proof
   Induct >-
   rw[sublist_nil] >>
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[sublist_refl] >>
-  rw[sublist_cons_include]);
+  rw[sublist_cons_include]
+QED
 
 (* Theorem: ls <> [] ==> TL ls <= ls *)
 (* Proof:
    Note TL ls = DROP 1 ls    by TAIL_BY_DROP, ls <> []
    Thus TL ls <= ls          by sublist_drop
 *)
-val sublist_tail = store_thm(
-  "sublist_tail",
-  ``!ls. ls <> [] ==> TL ls <= ls``,
-  rw[TAIL_BY_DROP, sublist_drop]);
+Theorem sublist_tail:
+    !ls. ls <> [] ==> TL ls <= ls
+Proof
+  rw[TAIL_BY_DROP, sublist_drop]
+QED
 
 (* Theorem: ls <> [] ==> FRONT ls <= ls *)
 (* Proof:
    Note FRONT ls = TAKE (LENGTH ls - 1) ls   by FRONT_BY_TAKE
      so FRONT ls <= ls                       by sublist_take
 *)
-val sublist_front = store_thm(
-  "sublist_front",
-  ``!ls. ls <> [] ==> FRONT ls <= ls``,
-  rw[FRONT_BY_TAKE, sublist_take]);
+Theorem sublist_front:
+    !ls. ls <> [] ==> FRONT ls <= ls
+Proof
+  rw[FRONT_BY_TAKE, sublist_take]
+QED
 
 (* Theorem: ls <> [] ==> [HD ls] <= ls *)
 (* Proof: HEAD_MEM, sublist_member_sing *)
-val sublist_head_sing = store_thm(
-  "sublist_head_sing",
-  ``!ls. ls <> [] ==> [HD ls] <= ls``,
-  rw[HEAD_MEM, sublist_member_sing]);
+Theorem sublist_head_sing:
+    !ls. ls <> [] ==> [HD ls] <= ls
+Proof
+  rw[HEAD_MEM, sublist_member_sing]
+QED
 
 (* Theorem: ls <> [] ==> [LAST ls] <= ls *)
 (* Proof: LAST_MEM, sublist_member_sing *)
-val sublist_last_sing = store_thm(
-  "sublist_last_sing",
-  ``!ls. ls <> [] ==> [LAST ls] <= ls``,
-  rw[LAST_MEM, sublist_member_sing]);
+Theorem sublist_last_sing:
+    !ls. ls <> [] ==> [LAST ls] <= ls
+Proof
+  rw[LAST_MEM, sublist_member_sing]
+QED
 
 (* Theorem: l <= ls ==> !P. EVERY P ls ==> EVERY P l *)
 (* Proof:
@@ -7367,13 +7452,14 @@ val sublist_last_sing = store_thm(
         For the second case, h <> k,
             EVERY P (k::t) = EVERY P l    by induction hypothesis
 *)
-val sublist_every = store_thm(
-  "sublist_every",
-  ``!l ls. l <= ls ==> !P. EVERY P ls ==> EVERY P l``,
+Theorem sublist_every:
+    !l ls. l <= ls ==> !P. EVERY P ls ==> EVERY P l
+Proof
   Induct_on `ls` >-
   rw[sublist_of_nil] >>
   (Cases_on `l` >> simp[]) >>
-  metis_tac[sublist_def, EVERY_DEF]);
+  metis_tac[sublist_def, EVERY_DEF]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* More sublists, applying partial order properties                          *)
@@ -7415,17 +7501,18 @@ Just prove it as an exercise.
             Thus P x y                    by induction hypothesis
              and P x y /\ x <= y ==> P x (h::y).
 *)
-val sublist_induct = store_thm(
-  "sublist_induct",
-  ``!P. (!y. P [] y) /\
+Theorem sublist_induct:
+    !P. (!y. P [] y) /\
        (!h x y. P x y /\ x <= y ==> P (h::x) (h::y)) /\
        (!h x y. P x y /\ x <= y ==> P x (h::y)) ==>
-        !x y. x <= y ==> P x y``,
+        !x y. x <= y ==> P x y
+Proof
   ntac 2 strip_tac >>
   Induct_on `y` >-
   rw[sublist_of_nil] >>
   rpt strip_tac >>
-  (Cases_on `x` >> fs[sublist_def]));
+  (Cases_on `x` >> fs[sublist_def])
+QED
 
 (*
 Note that from definition:
@@ -7534,10 +7621,11 @@ QED
        ==>   (x ++ p) <= q        by sublist_cons_remove
        ==>          p <= q        by induction hypothesis
 *)
-val sublist_append_remove = store_thm(
-  "sublist_append_remove",
-  ``!p q x. x ++ p <= q ==> p <= q``,
-  Induct_on `x` >> metis_tac[sublist_cons_remove, APPEND]);
+Theorem sublist_append_remove:
+    !p q x. x ++ p <= q ==> p <= q
+Proof
+  Induct_on `x` >> metis_tac[sublist_cons_remove, APPEND]
+QED
 
 (* Theorem: [Include append to right] p <= q ==> p <= (x ++ q) *)
 (* Proof:
@@ -7554,10 +7642,11 @@ val sublist_append_remove = store_thm(
        ==>   p <= h::(x ++ q)     by sublist_cons_include
          =   p <= h::x ++ q       by APPEND
 *)
-val sublist_append_include = store_thm(
-  "sublist_append_include",
-  ``!p q x. p <= q ==> p <= x ++ q``,
-  Induct_on `x` >> metis_tac[sublist_cons_include, APPEND]);
+Theorem sublist_append_include:
+    !p q x. p <= q ==> p <= x ++ q
+Proof
+  Induct_on `x` >> metis_tac[sublist_cons_include, APPEND]
+QED
 
 (* Theorem: [append after] p <= (p ++ q) *)
 (* Proof:
@@ -7568,10 +7657,11 @@ val sublist_append_include = store_thm(
         ==> h::p <= h::(p ++ q)     by sublist_cons
         ==> h::p <= h::p ++ q       by APPEND
 *)
-val sublist_append_suffix = store_thm(
-  "sublist_append_suffix",
-  ``!p q. p <= p ++ q``,
-  Induct_on `p` >> rw[sublist_def]);
+Theorem sublist_append_suffix:
+    !p q. p <= p ++ q
+Proof
+  Induct_on `p` >> rw[sublist_def]
+QED
 
 (* Theorem: [append before] p <= (q ++ p) *)
 (* Proof:
@@ -7584,12 +7674,13 @@ val sublist_append_suffix = store_thm(
        ==> p <= h::(q ++ p)  by sublist_cons_include
         =  p <= h::q ++ p    by APPEND
 *)
-val sublist_append_prefix = store_thm(
-  "sublist_append_prefix",
-  ``!p q. p <= q ++ p``,
+Theorem sublist_append_prefix:
+    !p q. p <= q ++ p
+Proof
   Induct_on `q` >-
   rw[sublist_refl] >>
-  rw[sublist_cons_include]);
+  rw[sublist_cons_include]
+QED
 
 (* Theorem: [prefix append] p <= q <=> (x ++ p) <= (x ++ q) *)
 (* Proof:
@@ -7603,10 +7694,11 @@ val sublist_append_prefix = store_thm(
                 <=> h::(x ++ p) <= h::(x ++ q)   by sublist_cons
                 <=>   h::x ++ p <= h::x ++ q     by APPEND
 *)
-val sublist_prefix = store_thm(
-  "sublist_prefix",
-  ``!x p q. p <= q <=> (x ++ p) <= (x ++ q)``,
-  Induct_on `x` >> metis_tac[sublist_cons, APPEND]);
+Theorem sublist_prefix:
+    !x p q. p <= q <=> (x ++ p) <= (x ++ q)
+Proof
+  Induct_on `x` >> metis_tac[sublist_cons, APPEND]
+QED
 
 (* Theorem: [no append to left] !p q. (p ++ q) <= q ==> p = [] *)
 (* Proof:
@@ -7632,9 +7724,9 @@ val sublist_prefix = store_thm(
              which is F, hence neither h' <> h.
          All these shows that p = h'::t is impossible.
 *)
-val sublist_prefix_nil = store_thm(
-  "sublist_prefix_nil",
-  ``!p q. (p ++ q) <= q ==> (p = [])``,
+Theorem sublist_prefix_nil:
+    !p q. (p ++ q) <= q ==> (p = [])
+Proof
   Induct_on `q` >-
   rw[sublist_of_nil] >>
   rpt strip_tac >>
@@ -7646,7 +7738,8 @@ val sublist_prefix_nil = store_thm(
     `t ++ h::q = (t ++ [h])++ q` by rw[] >>
     `t ++ [h] <> []` by rw[] >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Theorem: [tail append - if] p <= q ==> (p ++ [h]) <= (q ++ [h]) *)
 (* Proof:
@@ -7679,23 +7772,25 @@ QED
              Then h''::t ++ [h'] <= q ++ [h'] by sublist_def, different heads
               ==>         h''::t <= q         by induction hypothesis
 *)
-val sublist_append_only_if = store_thm(
-  "sublist_append_only_if",
-  ``!p q h. (p ++ [h]) <= (q ++ [h]) ==> p <= q``,
+Theorem sublist_append_only_if:
+    !p q h. (p ++ [h]) <= (q ++ [h]) ==> p <= q
+Proof
   Induct_on `q` >-
   metis_tac[sublist_prefix_nil, sublist_nil, APPEND] >>
   rpt strip_tac >>
   (Cases_on `p` >> fs[sublist_def]) >-
   metis_tac[] >>
   `h''::(t ++ [h']) = (h''::t) ++ [h']` by rw[] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: [tail append] p <= q <=> p ++ [h] <= q ++ [h] *)
 (* Proof: by sublist_append_if, sublist_append_only_if *)
-val sublist_append_iff = store_thm(
-  "sublist_append_iff",
-  ``!p q h. p <= q <=> (p ++ [h]) <= (q ++ [h])``,
-  metis_tac[sublist_append_if, sublist_append_only_if]);
+Theorem sublist_append_iff:
+    !p q h. p <= q <=> (p ++ [h]) <= (q ++ [h])
+Proof
+  metis_tac[sublist_append_if, sublist_append_only_if]
+QED
 
 (* Theorem: [suffix append] sublist p q ==> sublist (p ++ x) (q ++ x) *)
 (* Proof:
@@ -7709,14 +7804,15 @@ val sublist_append_iff = store_thm(
        <=> (p ++ [h]) ++ x <= (q ++ [h]) ++ x    by induction hypothesis
        <=>     p ++ (h::x) <= q ++ (h::x)        by APPEND
 *)
-val sublist_suffix = store_thm(
-  "sublist_suffix",
-  ``!x p q. p <= q <=> (p ++ x) <= (q ++ x)``,
+Theorem sublist_suffix:
+    !x p q. p <= q <=> (p ++ x) <= (q ++ x)
+Proof
   Induct >-
   rw[] >>
   rpt strip_tac >>
   `!z. z ++ h::x = (z ++ [h]) ++ x` by rw[] >>
-  metis_tac[sublist_append_iff]);
+  metis_tac[sublist_append_iff]
+QED
 
 (* Theorem : (a <= b) /\ (c <= d) ==> (a ++ c) <= (b ++ d) *)
 (* Proof:
@@ -7724,10 +7820,11 @@ val sublist_suffix = store_thm(
     and a ++ d <= b ++ d    by sublist_suffix
     ==> a ++ c <= b ++ d    by sublist_trans
 *)
-val sublist_append_pair = store_thm(
-  "sublist_append_pair",
-  ``!a b c d. (a <= b) /\ (c <= d) ==> (a ++ c) <= (b ++ d)``,
-  metis_tac[sublist_prefix, sublist_suffix, sublist_trans]);
+Theorem sublist_append_pair:
+    !a b c d. (a <= b) /\ (c <= d) ==> (a ++ c) <= (b ++ d)
+Proof
+  metis_tac[sublist_prefix, sublist_suffix, sublist_trans]
+QED
 
 (* Theorem: [Extended Append, or Decomposition] (h::t) <= q <=> ?x y. (q = x ++ (h::y)) /\ (t <= y) *)
 (* Proof:
@@ -7769,9 +7866,9 @@ val sublist_append_pair = store_thm(
           = sublist (h::t) q              by inductive hypothesis (only-if)
         ==> sublist (h::t) (h'::q)        by SUBLIST, different head.
 *)
-val sublist_append_extend = store_thm(
-  "sublist_append_extend",
-  ``!h t q. h::t <= q  <=> ?x y. (q = x ++ (h::y)) /\ (t <= y)``,
+Theorem sublist_append_extend:
+    !h t q. h::t <= q  <=> ?x y. (q = x ++ (h::y)) /\ (t <= y)
+Proof
   ntac 2 strip_tac >>
   Induct >-
   rw[sublist_of_nil] >>
@@ -7787,7 +7884,8 @@ val sublist_append_extend = store_thm(
     `h::t <= h::y` by rw[GSYM sublist_cons] >>
     `x ++ [h] ++ y = x ++ (h::y)` by rw[] >>
     metis_tac[sublist_append_include]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Applications of sublist.                                                  *)
@@ -7816,15 +7914,16 @@ val sublist_append_extend = store_thm(
                ==>     MAP f p <= h::MAP f q       by sublist_cons_include
                 or     MAP f p <= MAP f (h::q)     by MAP
 *)
-val MAP_SUBLIST = store_thm(
-  "MAP_SUBLIST",
-  ``!f p q. p <= q ==> (MAP f p) <= (MAP f q)``,
+Theorem MAP_SUBLIST:
+    !f p q. p <= q ==> (MAP f p) <= (MAP f q)
+Proof
   strip_tac >>
   Induct_on `q` >-
   rw[sublist_of_nil, sublist_nil] >>
   rpt strip_tac >>
   (Cases_on `p` >> simp[sublist_def]) >>
-  metis_tac[sublist_def, sublist_cons_include, MAP]);
+  metis_tac[sublist_def, sublist_cons_include, MAP]
+QED
 
 (* Theorem: l1 <= l2 ==> SUM l1 <= SUM l2 *)
 (* Proof:
@@ -7849,15 +7948,16 @@ val MAP_SUBLIST = store_thm(
           ==>      SUM p <= h + SUM q   by arithmetic
           ==>      SUM p <= SUM (h::q)  by SUM
 *)
-val SUM_SUBLIST = store_thm(
-  "SUM_SUBLIST",
-  ``!p q. p <= q ==> SUM p <= SUM q``,
+Theorem SUM_SUBLIST:
+    !p q. p <= q ==> SUM p <= SUM q
+Proof
   Induct_on `q` >-
   rw[sublist_of_nil] >>
   rpt strip_tac >>
   (Cases_on `p` >> fs[sublist_def]) >>
   `h' + SUM t <= SUM q` by metis_tac[SUM] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Idea: express order-preserving in sublist *)
 

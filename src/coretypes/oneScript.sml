@@ -142,10 +142,11 @@ Proof
  REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC [one] THEN ASM_REWRITE_TAC[]
 QED
 
-val FORALL_ONE = store_thm(
-  "FORALL_ONE[simp]",
-  ``(!x:unit. P x) <=> P ()``,
-  simpLib.SIMP_TAC boolSimps.bool_ss [EQ_IMP_THM, one_induction]);
+Theorem FORALL_ONE[simp]:
+    (!x:unit. P x) <=> P ()
+Proof
+  simpLib.SIMP_TAC boolSimps.bool_ss [EQ_IMP_THM, one_induction]
+QED
 
 (* This (and the next) was in examples/lambda/basics/termSceipt.sml, etc. *)
 Theorem FORALL_ONE_FN :

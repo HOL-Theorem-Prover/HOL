@@ -15,41 +15,45 @@ val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="stmarker"}
 
 (* the following move_<dir>_<op> theorems will loop if more than one term
    is marked at the same level *)
-val move_left_conj = store_thm(
-  "move_left_conj",
-  ``!p q m. (p /\ stmarker m <=> stmarker m /\ p) /\
+Theorem move_left_conj:
+    !p q m. (p /\ stmarker m <=> stmarker m /\ p) /\
             ((stmarker m /\ p) /\ q <=> stmarker m /\ (p /\ q)) /\
-            (p /\ (stmarker m /\ q) <=> stmarker m /\ (p /\ q))``,
+            (p /\ (stmarker m /\ q) <=> stmarker m /\ (p /\ q))
+Proof
   REWRITE_TAC [stmarker_def, CONJ_ASSOC] THEN
   REPEAT STRIP_TAC THEN REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) THEN
-  MATCH_ACCEPT_TAC CONJ_COMM);
+  MATCH_ACCEPT_TAC CONJ_COMM
+QED
 
-val move_right_conj = store_thm(
-  "move_right_conj",
-  ``!p q m. (stmarker m /\ p <=> p /\ stmarker m) /\
+Theorem move_right_conj:
+    !p q m. (stmarker m /\ p <=> p /\ stmarker m) /\
             (p /\ (q /\ stmarker m) <=> (p /\ q) /\ stmarker m) /\
-            ((p /\ stmarker m) /\ q <=> (p /\ q) /\ stmarker m)``,
+            ((p /\ stmarker m) /\ q <=> (p /\ q) /\ stmarker m)
+Proof
   REWRITE_TAC [stmarker_def, GSYM CONJ_ASSOC] THEN
   REPEAT STRIP_TAC THEN REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) THEN
-  MATCH_ACCEPT_TAC CONJ_COMM);
+  MATCH_ACCEPT_TAC CONJ_COMM
+QED
 
-val move_left_disj = store_thm(
-  "move_left_disj",
-  ``!p q m. (p \/ stmarker m <=> stmarker m \/ p) /\
+Theorem move_left_disj:
+    !p q m. (p \/ stmarker m <=> stmarker m \/ p) /\
             ((stmarker m \/ p) \/ q <=> stmarker m \/ (p \/ q)) /\
-            (p \/ (stmarker m \/ q) <=> stmarker m \/ (p \/ q))``,
+            (p \/ (stmarker m \/ q) <=> stmarker m \/ (p \/ q))
+Proof
   REWRITE_TAC [stmarker_def, DISJ_ASSOC] THEN
   REPEAT STRIP_TAC THEN REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) THEN
-  MATCH_ACCEPT_TAC DISJ_COMM);
+  MATCH_ACCEPT_TAC DISJ_COMM
+QED
 
-val move_right_disj = store_thm(
-  "move_right_disj",
-  ``!p q m. (stmarker m \/ p <=> p \/ stmarker m) /\
+Theorem move_right_disj:
+    !p q m. (stmarker m \/ p <=> p \/ stmarker m) /\
             (p \/ (q \/ stmarker m) <=> (p \/ q) \/ stmarker m) /\
-            ((p \/ stmarker m) \/ q <=> (p \/ q) \/ stmarker m)``,
+            ((p \/ stmarker m) \/ q <=> (p \/ q) \/ stmarker m)
+Proof
   REWRITE_TAC [stmarker_def, GSYM DISJ_ASSOC] THEN
   REPEAT STRIP_TAC THEN REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) THEN
-  MATCH_ACCEPT_TAC DISJ_COMM);
+  MATCH_ACCEPT_TAC DISJ_COMM
+QED
 
 (* Note, if you want to move a pair of things to the edge of a term,
    you can move one of them, and then the second in two successive
@@ -158,18 +162,19 @@ val Case_def = new_definition(
   "Case_def",
   ``Case X = T``);
 
-val add_Case = store_thm (
-  "add_Case",
-  ``!X. P <=> (Case X ==> P)``,
-  REWRITE_TAC [Case_def]);
-
-val elim_Case = store_thm (
-  "elim_Case",
-  ``(Case X /\ Y) = Y /\
-    (Y /\ Case X) = Y /\
-    (Case X ==> Y) = Y``,
+Theorem add_Case:
+    !X. P <=> (Case X ==> P)
+Proof
   REWRITE_TAC [Case_def]
-  );
+QED
+
+Theorem elim_Case:
+    (Case X /\ Y) = Y /\
+    (Y /\ Case X) = Y /\
+    (Case X ==> Y) = Y
+Proof
+  REWRITE_TAC [Case_def]
+QED
 
 (* ----------------------------------------------------------------------
     hide

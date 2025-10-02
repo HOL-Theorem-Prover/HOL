@@ -1761,21 +1761,24 @@ Proof
   \\ first_x_assum MATCH_ACCEPT_TAC
 QED
 
-val itself_induction = store_thm("itself_induction",
-  ``!P. P the_value ==> !i. P i``,
+Theorem itself_induction:
+    !P. P the_value ==> !i. P i
+Proof
   rpt strip_tac
   \\ PURE_ONCE_REWRITE_TAC[itself_unique]
-  \\ first_assum ACCEPT_TAC);
+  \\ first_assum ACCEPT_TAC
+QED
 
 (* |- !(e :'b). ?(f :'a prove_base_assums$itself -> 'b).
         f (the_value :'a prove_base_assums$itself) = e
  *)
-val itself_Axiom = store_thm
-  ("itself_Axiom", ``!(e :'b). ?f. f the_value = e``,
+Theorem itself_Axiom:   !(e :'b). ?f. f the_value = e
+Proof
   gen_tac
   \\ qexists_tac`\x. e`
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
-  \\ REFL_TAC);
+  \\ REFL_TAC
+QED
 
 (* |- RES_FORALL = (\p m. !x. x IN p ==> m x) *)
 val RES_FORALL_DEF = new_definition("RES_FORALL_DEF",concl boolTheory.RES_FORALL_DEF);

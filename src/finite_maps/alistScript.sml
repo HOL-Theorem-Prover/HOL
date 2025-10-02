@@ -12,21 +12,23 @@ Definition fmap_to_alist_def:
   fmap_to_alist s = MAP (\k.(k,s ' k)) (SET_TO_LIST (FDOM s))
 End
 
-val fmap_to_alist_FEMPTY = store_thm(
-  "fmap_to_alist_FEMPTY",
-  ``(fmap_to_alist FEMPTY = [])``,
-  SRW_TAC [][fmap_to_alist_def]);
+Theorem fmap_to_alist_FEMPTY:
+    (fmap_to_alist FEMPTY = [])
+Proof
+  SRW_TAC [][fmap_to_alist_def]
+QED
 val _ = export_rewrites ["fmap_to_alist_FEMPTY"]
 
 Definition alist_to_fmap_def:
   alist_to_fmap s = FOLDR (\(k,v) f.f|+(k,v)) FEMPTY s
 End
 
-val alist_to_fmap_thm = store_thm(
-  "alist_to_fmap_thm",
-  ``(alist_to_fmap [] = FEMPTY) /\
-    (alist_to_fmap ((k,v)::t) = alist_to_fmap t |+ (k,v))``,
-  SRW_TAC [][alist_to_fmap_def])
+Theorem alist_to_fmap_thm:
+    (alist_to_fmap [] = FEMPTY) /\
+    (alist_to_fmap ((k,v)::t) = alist_to_fmap t |+ (k,v))
+Proof
+  SRW_TAC [][alist_to_fmap_def]
+QED
 val _ = export_rewrites ["alist_to_fmap_thm"]
 
 Definition ALOOKUP_def:
@@ -42,22 +44,25 @@ val lemma = Q.prove(
 SRW_TAC [][fmap_to_alist_def,REST_DEF] THEN
 MATCH_MP_TAC MAP_CONG THEN SRW_TAC [][DOMSUB_FAPPLY_THM]);
 
-val ALOOKUP_FAILS = store_thm(
-  "ALOOKUP_FAILS",
-  ``(ALOOKUP l x = NONE) <=> !k v. MEM (k,v) l ==> k <> x``,
+Theorem ALOOKUP_FAILS:
+    (ALOOKUP l x = NONE) <=> !k v. MEM (k,v) l ==> k <> x
+Proof
   Induct_on `l` THEN SRW_TAC [][] THEN
-  Cases_on `h` THEN SRW_TAC [][] THEN METIS_TAC []);
+  Cases_on `h` THEN SRW_TAC [][] THEN METIS_TAC []
+QED
 
-val ALOOKUP_NONE = store_thm(
-"ALOOKUP_NONE",
-``!l x. (ALOOKUP l x = NONE) = ~MEM x (MAP FST l)``,
-SRW_TAC[][ALOOKUP_FAILS,MEM_MAP,pairTheory.FORALL_PROD])
+Theorem ALOOKUP_NONE:
+  !l x. (ALOOKUP l x = NONE) = ~MEM x (MAP FST l)
+Proof
+SRW_TAC[][ALOOKUP_FAILS,MEM_MAP,pairTheory.FORALL_PROD]
+QED
 
-val ALOOKUP_TABULATE = store_thm(
-  "ALOOKUP_TABULATE",
-  ``MEM x l ==>
-    (ALOOKUP (MAP (\k. (k, f k)) l) x = SOME (f x))``,
-  Induct_on `l` THEN SRW_TAC [][]);
+Theorem ALOOKUP_TABULATE:
+    MEM x l ==>
+    (ALOOKUP (MAP (\k. (k, f k)) l) x = SOME (f x))
+Proof
+  Induct_on `l` THEN SRW_TAC [][]
+QED
 
 Theorem ALOOKUP_EQ_FLOOKUP:
  (FLOOKUP (alist_to_fmap al) = ALOOKUP al) /\
@@ -77,32 +82,37 @@ SRW_TAC [][FUN_EQ_THM] THEN Q.ID_SPEC_TAC `x` THENL [
 QED
 val _ = export_rewrites ["ALOOKUP_EQ_FLOOKUP"]
 
-val MEM_fmap_to_alist = store_thm(
-  "MEM_fmap_to_alist",
-  ``MEM (x,y) (fmap_to_alist fm) <=> x IN FDOM fm /\ (fm ' x = y)``,
-  SRW_TAC [][fmap_to_alist_def, MEM_MAP] THEN METIS_TAC []);
+Theorem MEM_fmap_to_alist:
+    MEM (x,y) (fmap_to_alist fm) <=> x IN FDOM fm /\ (fm ' x = y)
+Proof
+  SRW_TAC [][fmap_to_alist_def, MEM_MAP] THEN METIS_TAC []
+QED
 
-val MEM_fmap_to_alist_FLOOKUP = store_thm(
-"MEM_fmap_to_alist_FLOOKUP",
-``!p fm. MEM p (fmap_to_alist fm) = (FLOOKUP fm (FST p) = SOME (SND p))``,
-Cases >> rw[MEM_fmap_to_alist,FLOOKUP_DEF])
+Theorem MEM_fmap_to_alist_FLOOKUP:
+  !p fm. MEM p (fmap_to_alist fm) = (FLOOKUP fm (FST p) = SOME (SND p))
+Proof
+Cases >> rw[MEM_fmap_to_alist,FLOOKUP_DEF]
+QED
 
-val MEM_pair_fmap_to_alist_FLOOKUP = store_thm(
-"MEM_pair_fmap_to_alist_FLOOKUP",
-``!x y fm. MEM (x,y) (fmap_to_alist fm) = (FLOOKUP fm x = SOME y)``,
-rw[MEM_fmap_to_alist_FLOOKUP])
+Theorem MEM_pair_fmap_to_alist_FLOOKUP:
+  !x y fm. MEM (x,y) (fmap_to_alist fm) = (FLOOKUP fm x = SOME y)
+Proof
+rw[MEM_fmap_to_alist_FLOOKUP]
+QED
 val _ = export_rewrites ["MEM_pair_fmap_to_alist_FLOOKUP"]
 
-val LENGTH_fmap_to_alist = store_thm(
-"LENGTH_fmap_to_alist",
-``!fm. LENGTH (fmap_to_alist fm) = CARD (FDOM fm)``,
-rw[fmap_to_alist_def,SET_TO_LIST_CARD])
+Theorem LENGTH_fmap_to_alist:
+  !fm. LENGTH (fmap_to_alist fm) = CARD (FDOM fm)
+Proof
+rw[fmap_to_alist_def,SET_TO_LIST_CARD]
+QED
 val _ = export_rewrites["LENGTH_fmap_to_alist"]
 
-val fmap_to_alist_to_fmap = store_thm(
-  "fmap_to_alist_to_fmap",
-  ``alist_to_fmap (fmap_to_alist fm) = fm``,
-  SRW_TAC [][FLOOKUP_EXT])
+Theorem fmap_to_alist_to_fmap:
+    alist_to_fmap (fmap_to_alist fm) = fm
+Proof
+  SRW_TAC [][FLOOKUP_EXT]
+QED
 val _ = export_rewrites ["fmap_to_alist_to_fmap"]
 
 Theorem ALOOKUP_MEM:
@@ -113,27 +123,30 @@ Cases_on `h` THEN POP_ASSUM MP_TAC THEN
 SRW_TAC [][]
 QED
 
-val ALOOKUP_SOME_FAPPLY_alist_to_fmap = store_thm(
-"ALOOKUP_SOME_FAPPLY_alist_to_fmap",
-``!al k v. (ALOOKUP al k = SOME v) ==> (alist_to_fmap al ' k = v)``,
+Theorem ALOOKUP_SOME_FAPPLY_alist_to_fmap:
+  !al k v. (ALOOKUP al k = SOME v) ==> (alist_to_fmap al ' k = v)
+Proof
 REPEAT STRIP_TAC THEN
 Q_TAC SUFF_TAC `FLOOKUP (alist_to_fmap al) k = SOME v` THEN1
   SRW_TAC[][FLOOKUP_DEF,MEM_MAP] THEN
-SRW_TAC[][])
+SRW_TAC[][]
+QED
 val _ = export_rewrites["ALOOKUP_SOME_FAPPLY_alist_to_fmap"]
 
-val alist_to_fmap_FAPPLY_MEM = store_thm(
-"alist_to_fmap_FAPPLY_MEM",
-``!al z. z IN FDOM (alist_to_fmap al) ==> MEM (z, (alist_to_fmap al) ' z) al``,
+Theorem alist_to_fmap_FAPPLY_MEM:
+  !al z. z IN FDOM (alist_to_fmap al) ==> MEM (z, (alist_to_fmap al) ' z) al
+Proof
 rpt strip_tac >>
 match_mp_tac ALOOKUP_MEM >>
 ONCE_REWRITE_TAC[SYM(CONJUNCT1 ALOOKUP_EQ_FLOOKUP)] >>
-REWRITE_TAC[FLOOKUP_DEF] >> rw[])
+REWRITE_TAC[FLOOKUP_DEF] >> rw[]
+QED
 
-val ALOOKUP_MAP = store_thm(
-"ALOOKUP_MAP",
-``!f al. ALOOKUP (MAP (\(x,y). (x,f y)) al) = OPTION_MAP f o (ALOOKUP al)``,
-gen_tac >> Induct >- rw[FUN_EQ_THM] >> Cases >> rw[FUN_EQ_THM] >> rw[])
+Theorem ALOOKUP_MAP:
+  !f al. ALOOKUP (MAP (\(x,y). (x,f y)) al) = OPTION_MAP f o (ALOOKUP al)
+Proof
+gen_tac >> Induct >- rw[FUN_EQ_THM] >> Cases >> rw[FUN_EQ_THM] >> rw[]
+QED
 
 Theorem ALOOKUP_MAP_2:
   !f al x.
@@ -160,11 +173,12 @@ Induct THEN SRW_TAC [][] THEN
 Cases_on `h` THEN SRW_TAC [][] THEN METIS_TAC []
 QED
 
-val alist_to_fmap_APPEND = store_thm(
-"alist_to_fmap_APPEND",
-``!l1 l2. alist_to_fmap (l1 ++ l2) = FUNION (alist_to_fmap l1) (alist_to_fmap l2)``,
+Theorem alist_to_fmap_APPEND:
+  !l1 l2. alist_to_fmap (l1 ++ l2) = FUNION (alist_to_fmap l1) (alist_to_fmap l2)
+Proof
 Induct >- rw[FUNION_FEMPTY_1] >>
-Cases >> rw[FUNION_FUPDATE_1])
+Cases >> rw[FUNION_FUPDATE_1]
+QED
 val _ = export_rewrites["alist_to_fmap_APPEND"]
 
 Theorem ALOOKUP_prefix:
@@ -178,10 +192,11 @@ HO_MATCH_MP_TAC ALOOKUP_ind THEN
 SRW_TAC [][]
 QED
 
-val ALOOKUP_APPEND = store_thm(
-"ALOOKUP_APPEND",
-``!l1 l2 k. ALOOKUP (l1 ++ l2) k = case ALOOKUP l1 k of SOME v => SOME v | NONE => ALOOKUP l2 k``,
-rw[] >> Cases_on `ALOOKUP l1 k` >> rw[ALOOKUP_prefix])
+Theorem ALOOKUP_APPEND:
+  !l1 l2 k. ALOOKUP (l1 ++ l2) k = case ALOOKUP l1 k of SOME v => SOME v | NONE => ALOOKUP l2 k
+Proof
+rw[] >> Cases_on `ALOOKUP l1 k` >> rw[ALOOKUP_prefix]
+QED
 
 Theorem FUPDATE_LIST_EQ_APPEND_REVERSE:
  !ls fm. fm |++ ls = alist_to_fmap (REVERSE ls ++ fmap_to_alist fm)
@@ -204,18 +219,20 @@ Proof
 SRW_TAC [][FUPDATE_LIST_EQ_APPEND_REVERSE,FLOOKUP_DEF,FUNION_DEF,ALOOKUP_FAILS,MEM_MAP,pairTheory.EXISTS_PROD]
 QED
 
-val FUNION_alist_to_fmap = store_thm("FUNION_alist_to_fmap",
-  ``!ls fm. FUNION (alist_to_fmap ls) fm = fm |++ (REVERSE ls)``,
+Theorem FUNION_alist_to_fmap:
+    !ls fm. FUNION (alist_to_fmap ls) fm = fm |++ (REVERSE ls)
+Proof
   Induct THEN1 SRW_TAC[][FUNION_FEMPTY_1,FUPDATE_LIST] THEN
   Q.X_GEN_TAC `p` THEN PairCases_on `p` THEN
   SRW_TAC[][FUPDATE_LIST_THM,alist_to_fmap_thm,FUPDATE_LIST_APPEND] THEN
-  SRW_TAC[][FUNION_FUPDATE_1])
+  SRW_TAC[][FUNION_FUPDATE_1]
+QED
 
-val alist_to_fmap_MAP = store_thm(
-"alist_to_fmap_MAP",
-``!f1 f2 al. INJ f1 (set (MAP FST al)) UNIV ==>
+Theorem alist_to_fmap_MAP:
+  !f1 f2 al. INJ f1 (set (MAP FST al)) UNIV ==>
  (alist_to_fmap (MAP (\ (x,y). (f1 x, f2 y)) al) =
-  MAP_KEYS f1 (f2 o_f alist_to_fmap al))``,
+  MAP_KEYS f1 (f2 o_f alist_to_fmap al))
+Proof
 NTAC 2 GEN_TAC THEN
 Induct THEN1 SRW_TAC[][] THEN
 Cases THEN SRW_TAC[][INJ_INSERT] THEN
@@ -225,23 +242,25 @@ SRW_TAC[][GSYM FUPDATE_PURGE] THEN
 Q.MATCH_ABBREV_TAC `x = MAP_KEYS f1 (fm |+ (k,v))` THEN
 `INJ f1 (k INSERT FDOM fm) UNIV` by (
   SRW_TAC[][Abbr`fm`,INJ_INSERT] ) THEN
-SRW_TAC[][MAP_KEYS_FUPDATE])
+SRW_TAC[][MAP_KEYS_FUPDATE]
+QED
 
-val alist_to_fmap_to_alist = store_thm(
-"alist_to_fmap_to_alist",
-``!al. fmap_to_alist (alist_to_fmap al) =
-       MAP (\k. (k, THE (ALOOKUP al k))) (SET_TO_LIST (set (MAP FST al)))``,
+Theorem alist_to_fmap_to_alist:
+  !al. fmap_to_alist (alist_to_fmap al) =
+       MAP (\k. (k, THE (ALOOKUP al k))) (SET_TO_LIST (set (MAP FST al)))
+Proof
 SRW_TAC[][fmap_to_alist_def,MAP_EQ_f,MEM_MAP] THEN
 Q.MATCH_ASSUM_RENAME_TAC `MEM p al` THEN
 PairCases_on `p` THEN SRW_TAC[][] THEN
 Cases_on `ALOOKUP al p0` THEN
 IMP_RES_TAC ALOOKUP_FAILS THEN
-SRW_TAC[][])
+SRW_TAC[][]
+QED
 
-val alist_to_fmap_to_alist_PERM = store_thm(
-"alist_to_fmap_to_alist_PERM",
-``!al. ALL_DISTINCT (MAP FST al) ==>
-       PERM (fmap_to_alist (alist_to_fmap al)) al``,
+Theorem alist_to_fmap_to_alist_PERM:
+  !al. ALL_DISTINCT (MAP FST al) ==>
+       PERM (fmap_to_alist (alist_to_fmap al)) al
+Proof
 SRW_TAC[][alist_to_fmap_to_alist,ALL_DISTINCT_PERM_LIST_TO_SET_TO_LIST] THEN
 MATCH_MP_TAC PERM_TRANS THEN
 Q.EXISTS_TAC `MAP (\k. (k, THE (ALOOKUP al k))) (MAP FST al)` THEN
@@ -260,13 +279,14 @@ Q.MATCH_ASSUM_ABBREV_TAC `MAP f1 al = al` THEN
 Q.MATCH_ABBREV_TAC `MAP f2 al = al` THEN
 Q_TAC SUFF_TAC `!x. MEM x al ==> (f1 x = f2 x)` THEN1 PROVE_TAC[MAP_EQ_f] THEN
 SRW_TAC[][Abbr`f1`,Abbr`f2`] THEN
-PROVE_TAC[])
+PROVE_TAC[]
+QED
 
-val ALOOKUP_LEAST_EL = store_thm(
-"ALOOKUP_LEAST_EL",
-``!ls k. ALOOKUP ls k = if MEM k (MAP FST ls) then
+Theorem ALOOKUP_LEAST_EL:
+  !ls k. ALOOKUP ls k = if MEM k (MAP FST ls) then
          SOME (EL (LEAST n. EL n (MAP FST ls) = k) (MAP SND ls))
-         else NONE``,
+         else NONE
+Proof
 Induct THEN1 SRW_TAC[][] THEN
 Cases THEN SRW_TAC[][] THEN
 FULL_SIMP_TAC(srw_ss())[MEM_MAP] THEN1 (
@@ -304,12 +324,13 @@ Cases_on `m < z` THEN1 (
   METIS_TAC[EL_MAP] ) THEN
 Cases_on `z < m` THEN1 METIS_TAC[EL_MAP] THEN
 `m = z` by DECIDE_TAC THEN
-SRW_TAC[][])
+SRW_TAC[][]
+QED
 
-val ALOOKUP_ALL_DISTINCT_MEM = store_thm(
-"ALOOKUP_ALL_DISTINCT_MEM",
-``ALL_DISTINCT (MAP FST al) /\ MEM (k,v) al ==>
-  (ALOOKUP al k = SOME v)``,
+Theorem ALOOKUP_ALL_DISTINCT_MEM:
+  ALL_DISTINCT (MAP FST al) /\ MEM (k,v) al ==>
+  (ALOOKUP al k = SOME v)
+Proof
 rw[ALOOKUP_LEAST_EL] >- (
   rw[MEM_MAP,pairTheory.EXISTS_PROD] >>
   PROVE_TAC[]) >>
@@ -329,11 +350,12 @@ qmatch_rename_tac `EL m (MAP SND al) = v` >>
 fs[EL_ALL_DISTINCT_EL_EQ] >>
 unabbrev_all_tac >> fs[] >>
 `m = n` by PROVE_TAC[] >>
-fs[EL_MAP])
+fs[EL_MAP]
+QED
 
-val ALL_DISTINCT_fmap_to_alist_keys = store_thm(
-"ALL_DISTINCT_fmap_to_alist_keys",
-``!fm. ALL_DISTINCT (MAP FST (fmap_to_alist fm))``,
+Theorem ALL_DISTINCT_fmap_to_alist_keys:
+  !fm. ALL_DISTINCT (MAP FST (fmap_to_alist fm))
+Proof
 qsuff_tac `!s fm. (s = FDOM fm) ==> ALL_DISTINCT (MAP FST (fmap_to_alist fm))`
   >- rw[] >>
 ho_match_mp_tac SET_TO_LIST_IND >> rw[] >>
@@ -346,7 +368,8 @@ rw[REST_DEF,MAP_MAP_o] >>
 qmatch_assum_abbrev_tac `ALL_DISTINCT (MAP f1 ls)` >>
 qmatch_abbrev_tac `ALL_DISTINCT (MAP f2 ls)` >>
 qsuff_tac `MAP f2 ls = MAP f1 ls` >- rw[] >>
-rw[MAP_EQ_f,Abbr`f1`,Abbr`f2`,Abbr`ls`,DOMSUB_FAPPLY_THM])
+rw[MAP_EQ_f,Abbr`f1`,Abbr`f2`,Abbr`ls`,DOMSUB_FAPPLY_THM]
+QED
 val _ = export_rewrites["ALL_DISTINCT_fmap_to_alist_keys"]
 
 Theorem fmap_to_alist_inj:
@@ -358,9 +381,9 @@ qsuff_tac `alist_to_fmap af1 = alist_to_fmap af2` >- metis_tac[fmap_to_alist_to_
 simp[GSYM fmap_EQ_THM,pairTheory.EXISTS_PROD,MEM_MAP,MEM_fmap_to_alist]
 QED
 
-val fmap_to_alist_preserves_FDOM = store_thm(
-"fmap_to_alist_preserves_FDOM",
-``!fm1 fm2. (FDOM fm1 = FDOM fm2) ==> (MAP FST (fmap_to_alist fm1) = MAP FST (fmap_to_alist fm2))``,
+Theorem fmap_to_alist_preserves_FDOM:
+  !fm1 fm2. (FDOM fm1 = FDOM fm2) ==> (MAP FST (fmap_to_alist fm1) = MAP FST (fmap_to_alist fm2))
+Proof
 qsuff_tac `
   !s fm1 fm2. (FDOM fm1 = s) /\ (FDOM fm2 = s) ==>
               (MAP FST (fmap_to_alist fm1) = MAP FST (fmap_to_alist fm2))`
@@ -377,11 +400,12 @@ rw[REST_DEF,MAP_MAP_o] >>
 qmatch_assum_abbrev_tac `MAP f1 ls = MAP f2 ls` >>
 qmatch_abbrev_tac `MAP f3 ls = MAP f4 ls` >>
 qsuff_tac `(MAP f3 ls = MAP f1 ls) /\ (MAP f4 ls = MAP f2 ls)` >- rw[] >>
-rw[MAP_EQ_f,Abbr`f1`,Abbr`f2`,Abbr`f3`,Abbr`f4`,Abbr`ls`,DOMSUB_FAPPLY_THM])
+rw[MAP_EQ_f,Abbr`f1`,Abbr`f2`,Abbr`f3`,Abbr`f4`,Abbr`ls`,DOMSUB_FAPPLY_THM]
+QED
 
-val PERM_fmap_to_alist = store_thm(
-"PERM_fmap_to_alist",
-``PERM (fmap_to_alist fm1) (fmap_to_alist fm2) = (fm1 = fm2)``,
+Theorem PERM_fmap_to_alist:
+  PERM (fmap_to_alist fm1) (fmap_to_alist fm2) = (fm1 = fm2)
+Proof
 rw[EQ_IMP_THM] >>
 qmatch_assum_abbrev_tac `PERM af1 af2` >>
 qsuff_tac `alist_to_fmap af1 = alist_to_fmap af2` >-
@@ -411,105 +435,124 @@ qmatch_assum_rename_tac `(q,r1) = EL n1 afx` >>
 qmatch_assum_rename_tac `(q,r2) = EL n2 afy` >>
 rpt (qpat_x_assum `(X,Y) = EL N Z` (assume_tac o SYM)) >>
 `LENGTH afy = LENGTH afx` by rw[PERM_LENGTH] >> fs[] >>
-metis_tac[pairTheory.PAIR_EQ,pairTheory.FST])
+metis_tac[pairTheory.PAIR_EQ,pairTheory.FST]
+QED
 
-val alist_to_fmap_PERM = store_thm(
-"alist_to_fmap_PERM",
-``!l1 l2. PERM l1 l2 /\ ALL_DISTINCT (MAP FST l1) ==> (alist_to_fmap l1 = alist_to_fmap l2)``,
+Theorem alist_to_fmap_PERM:
+  !l1 l2. PERM l1 l2 /\ ALL_DISTINCT (MAP FST l1) ==> (alist_to_fmap l1 = alist_to_fmap l2)
+Proof
 rpt strip_tac >>
 match_mp_tac (fst (EQ_IMP_RULE PERM_fmap_to_alist)) >>
-metis_tac[PERM_TRANS,PERM_SYM,ALL_DISTINCT_PERM,PERM_MAP,alist_to_fmap_to_alist_PERM])
+metis_tac[PERM_TRANS,PERM_SYM,ALL_DISTINCT_PERM,PERM_MAP,alist_to_fmap_to_alist_PERM]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Various lemmas from the CakeML project https://cakeml.org                 *)
 (*---------------------------------------------------------------------------*)
 
-val ALOOKUP_ALL_DISTINCT_EL = store_thm("ALOOKUP_ALL_DISTINCT_EL",
-  ``!ls n. n < LENGTH ls /\ ALL_DISTINCT (MAP FST ls) ==>
-           (ALOOKUP ls (FST (EL n ls)) = SOME (SND (EL n ls)))``,
+Theorem ALOOKUP_ALL_DISTINCT_EL:
+    !ls n. n < LENGTH ls /\ ALL_DISTINCT (MAP FST ls) ==>
+           (ALOOKUP ls (FST (EL n ls)) = SOME (SND (EL n ls)))
+Proof
   Induct >> simp[] >>
   Cases >> simp[] >>
   Cases >> simp[] >>
   rw[] >> fs[MEM_MAP] >>
-  metis_tac[MEM_EL])
+  metis_tac[MEM_EL]
+QED
 
-val ALOOKUP_ZIP_MAP_SND = store_thm("ALOOKUP_ZIP_MAP_SND",
-  ``!l1 l2 k f.
+Theorem ALOOKUP_ZIP_MAP_SND:
+    !l1 l2 k f.
       (LENGTH l1 = LENGTH l2) ==>
-      (ALOOKUP (ZIP(l1,MAP f l2)) = OPTION_MAP f o (ALOOKUP (ZIP(l1,l2))))``,
+      (ALOOKUP (ZIP(l1,MAP f l2)) = OPTION_MAP f o (ALOOKUP (ZIP(l1,l2))))
+Proof
   Induct >> simp[LENGTH_NIL,LENGTH_NIL_SYM,FUN_EQ_THM] >>
-  gen_tac >> Cases >> simp[] >> rw[] >> rw[])
+  gen_tac >> Cases >> simp[] >> rw[] >> rw[]
+QED
 
-val ALOOKUP_FILTER = store_thm("ALOOKUP_FILTER",
-  ``!ls x. ALOOKUP (FILTER (\(k,v). P k) ls) x =
-           if P x then ALOOKUP ls x else NONE``,
-  Induct >> simp[] >> Cases >> simp[] >> rw[] >> fs[] >> metis_tac[])
+Theorem ALOOKUP_FILTER:
+    !ls x. ALOOKUP (FILTER (\(k,v). P k) ls) x =
+           if P x then ALOOKUP ls x else NONE
+Proof
+  Induct >> simp[] >> Cases >> simp[] >> rw[] >> fs[] >> metis_tac[]
+QED
 
-val ALOOKUP_APPEND_same = store_thm("ALOOKUP_APPEND_same",
-  ``!l1 l2 l.
-      (ALOOKUP l1 = ALOOKUP l2) ==> (ALOOKUP (l1 ++ l) = ALOOKUP (l2 ++ l))``,
-  rw[ALOOKUP_APPEND,FUN_EQ_THM])
+Theorem ALOOKUP_APPEND_same:
+    !l1 l2 l.
+      (ALOOKUP l1 = ALOOKUP l2) ==> (ALOOKUP (l1 ++ l) = ALOOKUP (l2 ++ l))
+Proof
+  rw[ALOOKUP_APPEND,FUN_EQ_THM]
+QED
 
-val ALOOKUP_IN_FRANGE = store_thm("ALOOKUP_IN_FRANGE",
-  ``!ls k v. (ALOOKUP ls k = SOME v) ==> v IN FRANGE (alist_to_fmap ls)``,
+Theorem ALOOKUP_IN_FRANGE:
+    !ls k v. (ALOOKUP ls k = SOME v) ==> v IN FRANGE (alist_to_fmap ls)
+Proof
   Induct >> simp[] >> Cases >> simp[] >> rw[] >>
   simp[IN_FRANGE,DOMSUB_FAPPLY_THM] >>
   full_simp_tac std_ss [Once(SYM (CONJUNCT1 ALOOKUP_EQ_FLOOKUP)),FLOOKUP_DEF] >>
-  fs[] >> METIS_TAC[])
+  fs[] >> METIS_TAC[]
+QED
 
-val FRANGE_alist_to_fmap_SUBSET = store_thm(
-"FRANGE_alist_to_fmap_SUBSET",
-``FRANGE (alist_to_fmap ls) SUBSET IMAGE SND (set ls)``,
+Theorem FRANGE_alist_to_fmap_SUBSET:
+  FRANGE (alist_to_fmap ls) SUBSET IMAGE SND (set ls)
+Proof
 srw_tac[DNF_ss][FRANGE_DEF,SUBSET_DEF,pairTheory.EXISTS_PROD] >>
 qmatch_assum_rename_tac `MEM z (MAP FST ls)` >>
 qexists_tac `z` >>
 match_mp_tac alist_to_fmap_FAPPLY_MEM >>
-rw[])
+rw[]
+QED
 
-val IN_FRANGE_alist_to_fmap_suff = store_thm(
-"IN_FRANGE_alist_to_fmap_suff",
-``(!v. MEM v (MAP SND ls) ==> P v) ==>
-  (!v. v IN FRANGE (alist_to_fmap ls) ==> P v)``,
+Theorem IN_FRANGE_alist_to_fmap_suff:
+  (!v. MEM v (MAP SND ls) ==> P v) ==>
+  (!v. v IN FRANGE (alist_to_fmap ls) ==> P v)
+Proof
 rw[] >>
 imp_res_tac(SIMP_RULE(srw_ss())[SUBSET_DEF]FRANGE_alist_to_fmap_SUBSET) >>
 fs[MEM_MAP] >>
-PROVE_TAC[])
+PROVE_TAC[]
+QED
 
-val alist_to_fmap_MAP_matchable = store_thm(
-"alist_to_fmap_MAP_matchable",
-``!f1 f2 al mal v. INJ f1 (set (MAP FST al)) UNIV /\
+Theorem alist_to_fmap_MAP_matchable:
+  !f1 f2 al mal v. INJ f1 (set (MAP FST al)) UNIV /\
   (mal = MAP (\(x,y). (f1 x,f2 y)) al) /\
   (v = MAP_KEYS f1 (f2 o_f alist_to_fmap al)) ==>
-  (alist_to_fmap mal = v)``,
-METIS_TAC[alist_to_fmap_MAP])
+  (alist_to_fmap mal = v)
+Proof
+METIS_TAC[alist_to_fmap_MAP]
+QED
 
-val MAP_values_fmap_to_alist = store_thm(
-"MAP_values_fmap_to_alist",
-``!f fm. MAP (\(k,v). (k, f v)) (fmap_to_alist fm) = fmap_to_alist (f o_f fm)``,
-rw[fmap_to_alist_def,MAP_MAP_o,MAP_EQ_f])
+Theorem MAP_values_fmap_to_alist:
+  !f fm. MAP (\(k,v). (k, f v)) (fmap_to_alist fm) = fmap_to_alist (f o_f fm)
+Proof
+rw[fmap_to_alist_def,MAP_MAP_o,MAP_EQ_f]
+QED
 
 val INJ_I = prove (
 ``!s t. INJ I s t <=> s SUBSET t``,
 SRW_TAC[][INJ_DEF,SUBSET_DEF])
 
-val MAP_KEYS_I = store_thm(
-"MAP_KEYS_I[simp]",
-``!fm. MAP_KEYS I fm = fm``,
+Theorem MAP_KEYS_I[simp]:
+  !fm. MAP_KEYS I fm = fm
+Proof
 rw[GSYM fmap_EQ_THM,MAP_KEYS_def,EXTENSION] >>
-metis_tac[MAP_KEYS_def,INJ_I,SUBSET_UNIV,combinTheory.I_THM])
+metis_tac[MAP_KEYS_def,INJ_I,SUBSET_UNIV,combinTheory.I_THM]
+QED
 
-val alist_to_fmap_MAP_values = store_thm(
-"alist_to_fmap_MAP_values",
-``!f (al:('c,'a) alist).
-   alist_to_fmap (MAP (\(k,v). (k, f v)) al) = f o_f (alist_to_fmap al)``,
+Theorem alist_to_fmap_MAP_values:
+  !f (al:('c,'a) alist).
+   alist_to_fmap (MAP (\(k,v). (k, f v)) al) = f o_f (alist_to_fmap al)
+Proof
 rw[] >>
 Q.ISPECL_THEN [`I:'c->'c`,`f`,`al`] match_mp_tac alist_to_fmap_MAP_matchable >>
-SRW_TAC[][INJ_DEF,SUBSET_DEF,MAP_KEYS_I])
+SRW_TAC[][INJ_DEF,SUBSET_DEF,MAP_KEYS_I]
+QED
 
-val set_MAP_FST_fmap_to_alist = store_thm(
-"set_MAP_FST_fmap_to_alist[simp]",
-``set (MAP FST (fmap_to_alist fm)) = FDOM fm``,
-METIS_TAC[fmap_to_alist_to_fmap,FDOM_alist_to_fmap])
+Theorem set_MAP_FST_fmap_to_alist[simp]:
+  set (MAP FST (fmap_to_alist fm)) = FDOM fm
+Proof
+METIS_TAC[fmap_to_alist_to_fmap,FDOM_alist_to_fmap]
+QED
 
 Theorem alookup_distinct_reverse:
  !l k. ALL_DISTINCT (MAP FST l) ==> (ALOOKUP (REVERSE l) k = ALOOKUP l k)
@@ -547,8 +590,9 @@ Proof
  fs [FLOOKUP_UPDATE]
 QED
 
-val fupdate_list_funion = store_thm("fupdate_list_funion",
-``!m l. m|++l = FUNION (FEMPTY |++l) m``,
+Theorem fupdate_list_funion:
+  !m l. m|++l = FUNION (FEMPTY |++l) m
+Proof
  Induct_on `l`
  >- rw [FUPDATE_LIST, FUNION_FEMPTY_1] >>
  REWRITE_TAC [FUPDATE_LIST_THM] >>
@@ -560,7 +604,8 @@ val fupdate_list_funion = store_thm("fupdate_list_funion",
  PairCases_on `h` >>
  fs [FLOOKUP_UPDATE, flookup_fupdate_list] >>
  BasicProvers.EVERY_CASE_TAC >>
- fs []);
+ fs []
+QED
 
 Theorem mem_to_flookup:
  !x y l. ALL_DISTINCT (MAP FST l) /\ MEM (x,y) l ==> (FLOOKUP (FEMPTY |++ l) x = SOME y)
@@ -618,9 +663,10 @@ Proof
  metis_tac []
 QED
 
-val ALOOKUP_ALL_DISTINCT_PERM_same = store_thm("ALOOKUP_ALL_DISTINCT_PERM_same",
-  ``!l1 l2. ALL_DISTINCT (MAP FST l1) /\ PERM (MAP FST l1) (MAP FST l2) /\
-            (set l1 = set l2) ==> (ALOOKUP l1 = ALOOKUP l2)``,
+Theorem ALOOKUP_ALL_DISTINCT_PERM_same:
+    !l1 l2. ALL_DISTINCT (MAP FST l1) /\ PERM (MAP FST l1) (MAP FST l2) /\
+            (set l1 = set l2) ==> (ALOOKUP l1 = ALOOKUP l2)
+Proof
   simp[EXTENSION] >>
   rw[FUN_EQ_THM] >>
   Cases_on`ALOOKUP l2 x` >- (
@@ -633,7 +679,8 @@ val ALOOKUP_ALL_DISTINCT_PERM_same = store_thm("ALOOKUP_ALL_DISTINCT_PERM_same",
   `ALL_DISTINCT (MAP FST l2)` by (
     metis_tac[ALL_DISTINCT_PERM]) >>
   imp_res_tac ALOOKUP_ALL_DISTINCT_MEM >>
-  metis_tac[])
+  metis_tac[]
+QED
 
 Theorem FEVERY_alist_to_fmap:
   EVERY P ls ==> FEVERY P (alist_to_fmap ls)

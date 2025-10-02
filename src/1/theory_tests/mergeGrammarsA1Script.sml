@@ -42,8 +42,9 @@ Libs
 
 val _ = set_fixity "=" (Infix(NONASSOC, 450));
 
-val a_theorem = store_thm(
-  "a_theorem",
-  ``x:bool = x /\ y = y``,
-  REWRITE_TAC[]);
+Theorem a_theorem:
+    x:bool = x /\ y = y
+Proof
+  REWRITE_TAC[]
+QED
 

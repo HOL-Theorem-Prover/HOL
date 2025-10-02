@@ -93,12 +93,12 @@ val lem1 = Q.prove
 (* which says that p divides (a*b) ==> p divides a or p divides b.           *)
 (*---------------------------------------------------------------------------*)
 
-val UNIQUE_PRIME_FACTORS = store_thm
-("UNIQUE_PRIME_FACTORS",
- ``!n b1 b2.
+Theorem UNIQUE_PRIME_FACTORS:
+   !n b1 b2.
    (FINITE_BAG b1 /\ (!m. BAG_IN m b1 ==> prime m) /\ (n=BAG_GEN_PROD b1 1)) /\
    (FINITE_BAG b2 /\ (!m. BAG_IN m b2 ==> prime m) /\ (n=BAG_GEN_PROD b2 1))
-    ==> (b1 = b2)``,
+    ==> (b1 = b2)
+Proof
 numLib.completeInduct_on `n` THEN
  REPEAT STRIP_TAC THEN POP_ASSUM SUBST_ALL_TAC THEN
  `(b1 = {||}) \/ ?b1' e. b1 = BAG_INSERT e b1'` by METIS_TAC [BAG_cases] THENL
@@ -126,16 +126,18 @@ numLib.completeInduct_on `n` THEN
        METIS_TAC [BAG_GEN_PROD_POSITIVE,BAG_IN_BAG_INSERT,NOT_ZERO_LT_ZERO,
              NOT_PRIME_0,DECIDE``!n.(n=0) \/ (n=1) \/ 1<n``,NOT_PRIME_1]) THEN
  `b2' = b1'` by METIS_TAC[FINITE_BAG_THM,BAG_IN_BAG_INSERT] THEN
-METIS_TAC [BAG_INSERT_ONE_ONE]]);
+METIS_TAC [BAG_INSERT_ONE_ONE]]
+QED
 
 
-val PRIME_FACTORIZATION = store_thm
-("PRIME_FACTORIZATION",
- ``!n. 0 < n ==>
+Theorem PRIME_FACTORIZATION:
+   !n. 0 < n ==>
       !b. FINITE_BAG b /\ (!x. BAG_IN x b ==> prime x) /\
           (BAG_GEN_PROD b 1 = n) ==>
-      (b = PRIME_FACTORS n)``,
- METIS_TAC [PRIME_FACTORS_def,UNIQUE_PRIME_FACTORS]);
+      (b = PRIME_FACTORS n)
+Proof
+ METIS_TAC [PRIME_FACTORS_def,UNIQUE_PRIME_FACTORS]
+QED
 
 
 Theorem PRIME_FACTORS_1:

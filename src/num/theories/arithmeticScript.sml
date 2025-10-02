@@ -1707,10 +1707,11 @@ QED
    Note 0 < FACT n    by FACT_LESS
      so 1 <= FACT n   by arithmetic
 *)
-val FACT_GE_1 = store_thm(
-  "FACT_GE_1",
-  ``!n. 1 <= FACT n``,
-  metis_tac[FACT_LESS, LESS_OR, ONE]);
+Theorem FACT_GE_1:
+    !n. 1 <= FACT n
+Proof
+  metis_tac[FACT_LESS, LESS_OR, ONE]
+QED
 
 (* Idea: test if a function f is factorial. *)
 
@@ -3568,17 +3569,19 @@ QED
 
 (* Theorem: m <> 0 ==> m ** n <> 0 *)
 (* Proof: by EXP_EQ_0 *)
-val EXP_NONZERO = store_thm(
-  "EXP_NONZERO",
-  ``!m n. m <> 0 ==> m ** n <> 0``,
-  metis_tac[EXP_EQ_0]);
+Theorem EXP_NONZERO:
+    !m n. m <> 0 ==> m ** n <> 0
+Proof
+  metis_tac[EXP_EQ_0]
+QED
 
 (* Theorem: 0 < m ==> 0 < m ** n *)
 (* Proof: by EXP_NONZERO *)
-val EXP_POS = store_thm(
-  "EXP_POS",
-  ``!m n. 0 < m ==> 0 < m ** n``,
-  rw[EXP_NONZERO]);
+Theorem EXP_POS:
+    !m n. 0 < m ==> 0 < m ** n
+Proof
+  rw[EXP_NONZERO]
+QED
 
 Theorem ONE_LE_EXP[simp]:
   1 <= x EXP y <=> 0 < x \/ y = 0
@@ -3588,10 +3591,11 @@ QED
 
 (* Theorem: n ** 0 = 1 *)
 (* Proof: by EXP *)
-val EXP_0 = store_thm(
-  "EXP_0",
-  ``!n. n ** 0 = 1``,
-  rw_tac std_ss[EXP]);
+Theorem EXP_0:
+    !n. n ** 0 = 1
+Proof
+  rw_tac std_ss[EXP]
+QED
 
 Theorem EXP_1[simp]:
   !n. (1 EXP n = 1) /\ (n EXP 1 = n)
@@ -3617,10 +3621,11 @@ QED
    n ** 2 = n * (n ** 1) = n * (n * (n ** 0)) = n * (n * 1) = n * n
    or n ** 2 = n * (n ** 1) = n * n  by EXP_1:  !n. (1 ** n = 1) /\ (n ** 1 = n)
 *)
-val EXP_2 = store_thm(
-  "EXP_2",
-  ``!n. n ** 2 = n * n``,
-  metis_tac[EXP, TWO, EXP_1]);
+Theorem EXP_2:
+    !n. n ** 2 = n * n
+Proof
+  metis_tac[EXP, TWO, EXP_1]
+QED
 
 Theorem EXP_EQ_1[simp]:
   !n m. (n EXP m = 1) <=> (n = 1) \/ (m = 0)
@@ -4089,17 +4094,19 @@ QED
 
 (* Theorem: (MAX n m = n) \/ (MAX n m = m) *)
 (* Proof: by MAX_DEF *)
-val MAX_CASES = store_thm(
-  "MAX_CASES",
-  ``!m n. (MAX n m = n) \/ (MAX n m = m)``,
-  rw[MAX_DEF]);
+Theorem MAX_CASES:
+    !m n. (MAX n m = n) \/ (MAX n m = m)
+Proof
+  rw[MAX_DEF]
+QED
 
 (* Theorem: (MIN n m = n) \/ (MIN n m = m) *)
 (* Proof: by MIN_DEF *)
-val MIN_CASES = store_thm(
-  "MIN_CASES",
-  ``!m n. (MIN n m = n) \/ (MIN n m = m)``,
-  rw[MIN_DEF]);
+Theorem MIN_CASES:
+    !m n. (MIN n m = n) \/ (MIN n m = m)
+Proof
+  rw[MIN_DEF]
+QED
 
 Theorem EXISTS_GREATEST:
    !P. (?x. P x) /\ (?x:num. !y. y > x ==> ~P y) <=>
@@ -4476,10 +4483,11 @@ val _ = export_rewrites ["FUNPOW_1"]
 
 (* Theorem: FUNPOW f 2 x = f (f x) *)
 (* Proof: by definition. *)
-val FUNPOW_2 = store_thm(
-  "FUNPOW_2",
-  ``!f x. FUNPOW f 2 x = f (f x)``,
-  simp_tac bool_ss [FUNPOW, TWO, ONE]);
+Theorem FUNPOW_2:
+    !f x. FUNPOW f 2 x = f (f x)
+Proof
+  simp_tac bool_ss [FUNPOW, TWO, ONE]
+QED
 
 (* Theorem: FUNPOW (K c) n x = if n = 0 then x else c *)
 (* Proof:
@@ -4497,12 +4505,13 @@ val FUNPOW_2 = store_thm(
          = c                                by either case
          = if SUC n = 0 then x else c       by SUC n = 0 is false
 *)
-val FUNPOW_K = store_thm(
-  "FUNPOW_K",
-  ``!n x c. FUNPOW (K c) n x = if n = 0 then x else c``,
+Theorem FUNPOW_K:
+    !n x c. FUNPOW (K c) n x = if n = 0 then x else c
+Proof
   Induct >-
   rw[] >>
-  metis_tac[FUNPOW, combinTheory.K_THM, SUC_NOT_ZERO]);
+  metis_tac[FUNPOW, combinTheory.K_THM, SUC_NOT_ZERO]
+QED
 
 Theorem FUNPOW_CONG:
   !n x f g.
@@ -5405,17 +5414,19 @@ QED
    <=>   n - m = 0  or p = 0  by MULT_EQ_0
    <=>    n = m  or p = 0     by SUB_EQUAL_0
 *)
-val MULT_RIGHT_CANCEL = store_thm(
-  "MULT_RIGHT_CANCEL",
-  ``!m n p. (n * p = m * p) <=> (p = 0) \/ (n = m)``,
-  rw[]);
+Theorem MULT_RIGHT_CANCEL:
+    !m n p. (n * p = m * p) <=> (p = 0) \/ (n = m)
+Proof
+  rw[]
+QED
 
 (* Theorem: p * n = p * m <=> p = 0 \/ n = m *)
 (* Proof: by MULT_RIGHT_CANCEL and MULT_COMM. *)
-val MULT_LEFT_CANCEL = store_thm(
-  "MULT_LEFT_CANCEL",
-  ``!m n p. (p * n = p * m) <=> (p = 0) \/ (n = m)``,
-  rw[MULT_RIGHT_CANCEL, MULT_COMM]);
+Theorem MULT_LEFT_CANCEL:
+    !m n p. (p * n = p * m) <=> (p = 0) \/ (n = m)
+Proof
+  rw[MULT_RIGHT_CANCEL, MULT_COMM]
+QED
 
 (* Theorem: m * (n * p) = n * (m * p) *)
 (* Proof:
@@ -5424,10 +5435,11 @@ val MULT_LEFT_CANCEL = store_thm(
    = (n * m) * p       by MULT_COMM
    = n * (m * p)       by MULT_ASSOC
 *)
-val MULT_COMM_ASSOC = store_thm(
-  "MULT_COMM_ASSOC",
-  ``!m n p. m * (n * p) = n * (m * p)``,
-  metis_tac[MULT_COMM, MULT_ASSOC]);
+Theorem MULT_COMM_ASSOC:
+    !m n p. m * (n * p) = n * (m * p)
+Proof
+  metis_tac[MULT_COMM, MULT_ASSOC]
+QED
 
 (* Theorem: 0 < n ==> ((n * m) DIV n = m) *)
 (* Proof:
@@ -5437,34 +5449,38 @@ val MULT_COMM_ASSOC = store_thm(
    Hence (n * m) DIV n = m    by DIV_UNIQUE:
    |- !n k q. (?r. (k = q * n + r) /\ r < n) ==> (k DIV n = q)
 *)
-val MULT_TO_DIV = store_thm(
-  "MULT_TO_DIV",
-  ``!m n. 0 < n ==> ((n * m) DIV n = m)``,
-  metis_tac[MULT_COMM, ADD_0, DIV_UNIQUE]);
+Theorem MULT_TO_DIV:
+    !m n. 0 < n ==> ((n * m) DIV n = m)
+Proof
+  metis_tac[MULT_COMM, ADD_0, DIV_UNIQUE]
+QED
 (* This is commutative version of:
 arithmeticTheory.MULT_DIV |- !n q. 0 < n ==> (q * n DIV n = q)
 *)
 
 (* Theorem: m * (n * p) = m * p * n *)
 (* Proof: by MULT_ASSOC, MULT_COMM *)
-val MULT_ASSOC_COMM = store_thm(
-  "MULT_ASSOC_COMM",
-  ``!m n p. m * (n * p) = m * p * n``,
-  metis_tac[MULT_ASSOC, MULT_COMM]);
+Theorem MULT_ASSOC_COMM:
+    !m n p. m * (n * p) = m * p * n
+Proof
+  metis_tac[MULT_ASSOC, MULT_COMM]
+QED
 
 (* Theorem: 0 < n ==> !m. (m * n = n) <=> (m = 1) *)
 (* Proof: by MULT_EQ_ID *)
-val MULT_LEFT_ID = store_thm(
-  "MULT_LEFT_ID",
-  ``!n. 0 < n ==> !m. (m * n = n) <=> (m = 1)``,
-  metis_tac[MULT_EQ_ID, NOT_ZERO_LT_ZERO]);
+Theorem MULT_LEFT_ID:
+    !n. 0 < n ==> !m. (m * n = n) <=> (m = 1)
+Proof
+  metis_tac[MULT_EQ_ID, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: 0 < n ==> !m. (n * m = n) <=> (m = 1) *)
 (* Proof: by MULT_EQ_ID *)
-val MULT_RIGHT_ID = store_thm(
-  "MULT_RIGHT_ID",
-  ``!n. 0 < n ==> !m. (n * m = n) <=> (m = 1)``,
-  metis_tac[MULT_EQ_ID, MULT_COMM, NOT_ZERO_LT_ZERO]);
+Theorem MULT_RIGHT_ID:
+    !n. 0 < n ==> !m. (n * m = n) <=> (m = 1)
+Proof
+  metis_tac[MULT_EQ_ID, MULT_COMM, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem alias *)
 Theorem MULT_EQ_SELF = MULT_RIGHT_ID;
@@ -5487,12 +5503,13 @@ Theorem MULT_EQ_SELF = MULT_RIGHT_ID;
       = b MOD n                            by MOD_MOD
       = b                                  by LESS_MOD, b < n
 *)
-val MOD_EQN = store_thm(
-  "MOD_EQN",
-  ``!n. 0 < n ==> !a b. (a MOD n = b) <=> ?c. (a = c * n + b) /\ (b < n)``,
+Theorem MOD_EQN:
+    !n. 0 < n ==> !a b. (a MOD n = b) <=> ?c. (a = c * n + b) /\ (b < n)
+Proof
   rw_tac std_ss[EQ_IMP_THM] >-
   metis_tac[DIVISION] >>
-  metis_tac[MOD_PLUS, MOD_EQ_0, ADD, MOD_MOD, LESS_MOD]);
+  metis_tac[MOD_PLUS, MOD_EQ_0, ADD, MOD_MOD, LESS_MOD]
+QED
 
 (* Theorem: If n > 0, k MOD n = 0 ==> !x. (k*x) MOD n = 0 *)
 (* Proof:
@@ -5514,10 +5531,11 @@ QED
    = ((x MOD n + y MOD n) MOD n + z MOD n) MOD n   by MOD_PLUS
    = (x MOD n + y MOD n + z MOD n) MOD n           by MOD_MOD
 *)
-val MOD_PLUS3 = store_thm(
-  "MOD_PLUS3",
-  ``!n. 0 < n ==> !x y z. (x + y + z) MOD n = (x MOD n + y MOD n + z MOD n) MOD n``,
-  metis_tac[MOD_PLUS, MOD_MOD]);
+Theorem MOD_PLUS3:
+    !n. 0 < n ==> !x y z. (x + y + z) MOD n = (x MOD n + y MOD n + z MOD n) MOD n
+Proof
+  metis_tac[MOD_PLUS, MOD_MOD]
+QED
 
 (* Theorem: Addition is associative in MOD: if x, y, z all < n,
             ((x + y) MOD n + z) MOD n = (x + (y + z) MOD n) MOD n. *)
@@ -5538,11 +5556,12 @@ val MOD_PLUS3 = store_thm(
    = (x MOD n + (y + z) MOD n) MOD n     by MOD_PLUS
    = (x + (y + z) MOD n) MOD n           by LESS_MOD, x < n
 *)
-val MOD_ADD_ASSOC = store_thm(
-  "MOD_ADD_ASSOC",
-  ``!n x y z. 0 < n /\ x < n /\ y < n /\ z < n ==>
-              ((x + y) MOD n + z) MOD n = (x + (y + z) MOD n) MOD n``,
-  metis_tac[LESS_MOD, MOD_PLUS, ADD_ASSOC]);
+Theorem MOD_ADD_ASSOC:
+    !n x y z. 0 < n /\ x < n /\ y < n /\ z < n ==>
+              ((x + y) MOD n + z) MOD n = (x + (y + z) MOD n) MOD n
+Proof
+  metis_tac[LESS_MOD, MOD_PLUS, ADD_ASSOC]
+QED
 
 (* Theorem: mutliplication is associative in MOD:
             (x*y MOD n * z) MOD n = (x * y*Z MOD n) MOD n  *)
@@ -5563,11 +5582,12 @@ val MOD_ADD_ASSOC = store_thm(
    = (x MOD n * (y * z) MOD n) MOD n    by MOD_TIMES2
    = (x * (y * z) MOD n) MOD n          by LESS_MOD, x < n
 *)
-val MOD_MULT_ASSOC = store_thm(
-  "MOD_MULT_ASSOC",
-  ``!n x y z. 0 < n /\ x < n /\ y < n /\ z < n ==>
-              ((x * y) MOD n * z) MOD n = (x * (y * z) MOD n) MOD n``,
-  metis_tac[LESS_MOD, MOD_TIMES2, MULT_ASSOC]);
+Theorem MOD_MULT_ASSOC:
+    !n x y z. 0 < n /\ x < n /\ y < n /\ z < n ==>
+              ((x * y) MOD n * z) MOD n = (x * (y * z) MOD n) MOD n
+Proof
+  metis_tac[LESS_MOD, MOD_TIMES2, MULT_ASSOC]
+QED
 
 (* Theorem: If n > 0, ((n - x) MOD n + x) MOD n = 0  for x < n. *)
 (* Proof:
@@ -5578,20 +5598,22 @@ val MOD_MULT_ASSOC = store_thm(
    = (1*n) MOD n                        by MULT_LEFT_1
    = 0                                  by MOD_EQ_0
 *)
-val MOD_ADD_INV = store_thm(
-  "MOD_ADD_INV",
-  ``!n x. 0 < n /\ x < n ==> (((n - x) MOD n + x) MOD n = 0)``,
-  metis_tac[LESS_MOD, MOD_PLUS, SUB_ADD, LESS_IMP_LESS_OR_EQ, MOD_EQ_0, MULT_LEFT_1]);
+Theorem MOD_ADD_INV:
+    !n x. 0 < n /\ x < n ==> (((n - x) MOD n + x) MOD n = 0)
+Proof
+  metis_tac[LESS_MOD, MOD_PLUS, SUB_ADD, LESS_IMP_LESS_OR_EQ, MOD_EQ_0, MULT_LEFT_1]
+QED
 
 (* Theorem: n < m ==> ((n MOD m = 0) <=> (n = 0)) *)
 (* Proof:
    Note n < m ==> (n MOD m = n)    by LESS_MOD
    Thus (n MOD m = 0) <=> (n = 0)  by above
 *)
-val MOD_EQ_0_IFF = store_thm(
-  "MOD_EQ_0_IFF",
-  ``!m n. n < m ==> ((n MOD m = 0) <=> (n = 0))``,
-  rw_tac bool_ss[LESS_MOD]);
+Theorem MOD_EQ_0_IFF:
+    !m n. n < m ==> ((n MOD m = 0) <=> (n = 0))
+Proof
+  rw_tac bool_ss[LESS_MOD]
+QED
 
 (* Theorem: ((a MOD n) ** m) MOD n = (a ** m) MOD n  *)
 (* Proof: by induction on m.
@@ -5607,9 +5629,9 @@ val MOD_EQ_0_IFF = store_thm(
      = (a * a ** m) MOD n                             by MOD_TIMES2
      = a ** SUC m MOD n                               by EXP
 *)
-val MOD_EXP = store_thm(
-  "MOD_EXP",
-  ``!n. 0 < n ==> !a m. ((a MOD n) ** m) MOD n = (a ** m) MOD n``,
+Theorem MOD_EXP:
+    !n. 0 < n ==> !a m. ((a MOD n) ** m) MOD n = (a ** m) MOD n
+Proof
   rpt strip_tac >>
   Induct_on `m` >-
   rw[EXP] >>
@@ -5617,7 +5639,8 @@ val MOD_EXP = store_thm(
   `_ = ((a MOD n) * (((a MOD n) ** m) MOD n)) MOD n` by metis_tac[MOD_TIMES2, MOD_MOD] >>
   `_ = ((a MOD n) * (a ** m MOD n)) MOD n` by rw[] >>
   `_ = (a * a ** m) MOD n` by rw[MOD_TIMES2] >>
-  rw[EXP]);
+  rw[EXP]
+QED
 
 Theorem ODD_bool_to_bit[simp]:
   ODD (bool_to_bit b) = b /\

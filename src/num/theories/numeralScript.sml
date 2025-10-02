@@ -662,21 +662,23 @@ val numeral_funpow = store_thm(
 
 val _ = print "min and max for numerals\n"
 
-val numeral_MIN = store_thm(
-  "numeral_MIN",
-  ``(MIN 0 x = 0) /\
+Theorem numeral_MIN:
+    (MIN 0 x = 0) /\
     (MIN x 0 = 0) /\
-    (MIN (NUMERAL x) (NUMERAL y) = NUMERAL (if x < y then x else y))``,
+    (MIN (NUMERAL x) (NUMERAL y) = NUMERAL (if x < y then x else y))
+Proof
   REWRITE_TAC [MIN_0] THEN
-  REWRITE_TAC [MIN_DEF, NUMERAL_DEF]);
+  REWRITE_TAC [MIN_DEF, NUMERAL_DEF]
+QED
 
-val numeral_MAX = store_thm(
-  "numeral_MAX",
-  ``(MAX 0 x = x) /\
+Theorem numeral_MAX:
+    (MAX 0 x = x) /\
     (MAX x 0 = x) /\
-    (MAX (NUMERAL x) (NUMERAL y) = NUMERAL (if x < y then y else x))``,
+    (MAX (NUMERAL x) (NUMERAL y) = NUMERAL (if x < y then y else x))
+Proof
   REWRITE_TAC [MAX_0] THEN
-  REWRITE_TAC [MAX_DEF, NUMERAL_DEF]);
+  REWRITE_TAC [MAX_DEF, NUMERAL_DEF]
+QED
 
 
 val _ = print "DIVMOD for numerals\n"
@@ -728,9 +730,9 @@ val texp_help_def = new_recursive_definition {
   rec_axiom = TypeBase.axiom_of ``:num``};
 val _ = OpenTheory_add"texp_help"
 
-val texp_help_thm = store_thm(
-  "texp_help_thm",
-  ``!n a. texp_help n a = (a + 1) * 2 EXP (n + 1)``,
+Theorem texp_help_thm:
+    !n a. texp_help n a = (a + 1) * 2 EXP (n + 1)
+Proof
   INDUCT_TAC THEN SRW_TAC [][texp_help_def] THENL [
     SRW_TAC [][EXP, MULT_CLAUSES, ONE, TWO, ADD_CLAUSES, BIT2],
     SRW_TAC [][EXP, ADD_CLAUSES] THEN
@@ -738,29 +740,33 @@ val texp_help_thm = store_thm(
       SRW_TAC [][BIT1, TWO, ONE, MULT_CLAUSES, ADD_CLAUSES] THEN
     SRW_TAC [][RIGHT_ADD_DISTRIB, MULT_CLAUSES, TIMES2, LEFT_ADD_DISTRIB,
                AC ADD_ASSOC ADD_COMM, AC MULT_ASSOC MULT_COMM]
-  ]);
+  ]
+QED
 
-val texp_help0 = store_thm(
-  "texp_help0",
-  ``texp_help n 0 = 2 ** (n + 1)``,
+Theorem texp_help0:
+    texp_help n 0 = 2 ** (n + 1)
+Proof
   SRW_TAC [][texp_help_thm, ADD_CLAUSES, MULT_CLAUSES, EXP_ADD, EXP_1,
-             MULT_COMM]);
+             MULT_COMM]
+QED
 
-val numeral_texp_help = store_thm(
-  "numeral_texp_help",
-  ``(texp_help ZERO acc = BIT2 acc) /\
+Theorem numeral_texp_help:
+    (texp_help ZERO acc = BIT2 acc) /\
     (texp_help (BIT1 n) acc = texp_help (PRE (BIT1 n)) (BIT1 acc)) /\
-    (texp_help (BIT2 n) acc = texp_help (BIT1 n) (BIT1 acc))``,
-  SRW_TAC [][texp_help_def, BIT1, BIT2, ADD_CLAUSES, PRE, ALT_ZERO]);
+    (texp_help (BIT2 n) acc = texp_help (BIT1 n) (BIT1 acc))
+Proof
+  SRW_TAC [][texp_help_def, BIT1, BIT2, ADD_CLAUSES, PRE, ALT_ZERO]
+QED
 
-val TWO_EXP_THM = store_thm(
-  "TWO_EXP_THM",
-  ``(2 EXP 0 = 1) /\
+Theorem TWO_EXP_THM:
+    (2 EXP 0 = 1) /\
     (2 EXP (NUMERAL (BIT1 n)) = NUMERAL (texp_help (PRE (BIT1 n)) ZERO)) /\
-    (2 EXP (NUMERAL (BIT2 n)) = NUMERAL (texp_help (BIT1 n) ZERO))``,
+    (2 EXP (NUMERAL (BIT2 n)) = NUMERAL (texp_help (BIT1 n) ZERO))
+Proof
   SRW_TAC [][texp_help0, EXP, ALT_ZERO] THEN
   SRW_TAC [][NUMERAL_DEF, EXP_BASE_INJECTIVE, numeral_lt] THEN
-  SRW_TAC [][BIT1, BIT2, PRE, ADD_CLAUSES, ALT_ZERO]);
+  SRW_TAC [][BIT1, BIT2, PRE, ADD_CLAUSES, ALT_ZERO]
+QED
 
 val onecount_def = new_specification(
   "onecount_def", ["onecount"],
@@ -919,10 +925,11 @@ val internal_mult_def = new_definition(
   ``internal_mult = $*``);
 val _ = OpenTheory_add "internal_mult"
 
-val DIV2_BIT1 = store_thm(
-  "DIV2_BIT1",
-  ``DIV2 (BIT1 x) = x``,
-  SRW_TAC [][REWRITE_RULE [NUMERAL_DEF] numeral_div2]);
+Theorem DIV2_BIT1:
+    DIV2 (BIT1 x) = x
+Proof
+  SRW_TAC [][REWRITE_RULE [NUMERAL_DEF] numeral_div2]
+QED
 
 val odd_lemma = prove(
   ``!n. ODD n ==> ?m. n = BIT1 m``,

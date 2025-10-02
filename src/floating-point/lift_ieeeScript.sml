@@ -1772,12 +1772,13 @@ Proof
   \\ fs[float_to_real_def, float_plus_zero_def]
 QED
 
-val non_representable_float_is_zero = store_thm (
-  "non_representable_float_is_zero",
-  ``!ff P.
+Theorem non_representable_float_is_zero:
+    !ff P.
       2 * abs ff <= ulp ((:'a#'b) :('a#'b) itself) ==>
-      (float_to_real ((float_round roundTiesToEven P ff):('a, 'b) float) = 0)``,
+      (float_to_real ((float_round roundTiesToEven P ff):('a, 'b) float) = 0)
+Proof
   rpt strip_tac \\ Cases_on `P`
   \\ fs [round_roundTiesToEven_is_plus_zero,
-         round_roundTiesToEven_is_minus_zero, zero_to_real]);
+         round_roundTiesToEven_is_minus_zero, zero_to_real]
+QED
 

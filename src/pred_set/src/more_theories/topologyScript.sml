@@ -107,9 +107,10 @@ val topology_tybij = define_new_type_bijections
    {name="topology_tybij",
     ABS="topology", REP="open_in",tyax=topology_tydef};
 
-val ISTOPOLOGY_OPEN_IN = store_thm
-  ("ISTOPOLOGY_OPEN_IN", ``!top. istopology (open_in top)``,
-    PROVE_TAC [topology_tybij]);
+Theorem ISTOPOLOGY_OPEN_IN:   !top. istopology (open_in top)
+Proof
+    PROVE_TAC [topology_tybij]
+QED
 
 Theorem TOPOLOGY_EQ:
   !top1 top2. (top1 = top2) <=> !s. (open_in top1) s <=> (open_in top2) s
@@ -130,63 +131,81 @@ val topspace = new_definition ("topspace",
   ``topspace top = BIGUNION {s | (open_in top) s}``);
 
 (* the "universe" of global topology is the universe itself *)
-val open_topspace = store_thm
-  ("open_topspace", ``!top. open top ==> (topspace top = UNIV)``,
+Theorem open_topspace:   !top. open top ==> (topspace top = UNIV)
+Proof
     GEN_TAC >> REWRITE_TAC [open_DEF]
  >> DISCH_TAC >> REWRITE_TAC [EXTENSION]
  >> REWRITE_TAC [topspace, IN_UNIV, IN_BIGUNION]
  >> GEN_TAC >> Q.EXISTS_TAC `UNIV`
  >> REWRITE_TAC [IN_UNIV, GSPECIFICATION]
  >> Q.EXISTS_TAC `UNIV` >> BETA_TAC
- >> ASM_SIMP_TAC std_ss []);
+ >> ASM_SIMP_TAC std_ss []
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Main properties of open sets.                                             *)
 (* ------------------------------------------------------------------------- *)
 
-val OPEN_IN_CLAUSES = store_thm ("OPEN_IN_CLAUSES",
- ``!top.
+Theorem OPEN_IN_CLAUSES:
+   !top.
         open_in top {} /\
         (!s t. open_in top s /\ open_in top t ==> open_in top (s INTER t)) /\
-        (!k. (!s. s IN k ==> open_in top s) ==> open_in top (BIGUNION k))``,
+        (!k. (!s. s IN k ==> open_in top s) ==> open_in top (BIGUNION k))
+Proof
   SIMP_TAC std_ss [IN_DEF, SUBSET_DEF,
-  SIMP_RULE std_ss [istopology, IN_DEF, SUBSET_DEF] ISTOPOLOGY_OPEN_IN]);
+  SIMP_RULE std_ss [istopology, IN_DEF, SUBSET_DEF] ISTOPOLOGY_OPEN_IN]
+QED
 
-val OPEN_IN_SUBSET = store_thm ("OPEN_IN_SUBSET",
- ``!top s. open_in top s ==> s SUBSET (topspace top)``,
-  REWRITE_TAC[topspace] THEN SET_TAC[]);
+Theorem OPEN_IN_SUBSET:
+   !top s. open_in top s ==> s SUBSET (topspace top)
+Proof
+  REWRITE_TAC[topspace] THEN SET_TAC[]
+QED
 
-val OPEN_IN_EMPTY = store_thm ("OPEN_IN_EMPTY",
- ``!top. open_in top {}``,
-  REWRITE_TAC[OPEN_IN_CLAUSES]);
+Theorem OPEN_IN_EMPTY:
+   !top. open_in top {}
+Proof
+  REWRITE_TAC[OPEN_IN_CLAUSES]
+QED
 
-val OPEN_IN_INTER = store_thm ("OPEN_IN_INTER",
- ``!top s t. open_in top s /\ open_in top t ==> open_in top (s INTER t)``,
-  REWRITE_TAC[OPEN_IN_CLAUSES]);
+Theorem OPEN_IN_INTER:
+   !top s t. open_in top s /\ open_in top t ==> open_in top (s INTER t)
+Proof
+  REWRITE_TAC[OPEN_IN_CLAUSES]
+QED
 
-val OPEN_IN_BIGUNION = store_thm ("OPEN_IN_BIGUNION",
- ``!top k. (!s. s IN k ==> open_in top s) ==> open_in top (BIGUNION k)``,
-  REWRITE_TAC[OPEN_IN_CLAUSES]);
+Theorem OPEN_IN_BIGUNION:
+   !top k. (!s. s IN k ==> open_in top s) ==> open_in top (BIGUNION k)
+Proof
+  REWRITE_TAC[OPEN_IN_CLAUSES]
+QED
 
 Theorem OPEN_IN_UNIONS[local] = OPEN_IN_BIGUNION
 
-val BIGUNION_2 = store_thm ("BIGUNION_2",
- ``!s t. BIGUNION {s;t} = s UNION t``,
-  SET_TAC[]);
+Theorem BIGUNION_2:
+   !s t. BIGUNION {s;t} = s UNION t
+Proof
+  SET_TAC[]
+QED
 
-val OPEN_IN_UNION = store_thm ("OPEN_IN_UNION",
- ``!top s t. open_in top s /\ open_in top t ==> open_in top (s UNION t)``,
+Theorem OPEN_IN_UNION:
+   !top s t. open_in top s /\ open_in top t ==> open_in top (s UNION t)
+Proof
   REPEAT STRIP_TAC THEN REWRITE_TAC[GSYM BIGUNION_2] THEN
-  MATCH_MP_TAC OPEN_IN_BIGUNION THEN REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]);
+  MATCH_MP_TAC OPEN_IN_BIGUNION THEN REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]
+QED
 
-val OPEN_IN_TOPSPACE = store_thm ("OPEN_IN_TOPSPACE",
- ``!top. open_in top (topspace top)``,
-  SIMP_TAC std_ss [topspace, OPEN_IN_BIGUNION, GSPECIFICATION]);
+Theorem OPEN_IN_TOPSPACE:
+   !top. open_in top (topspace top)
+Proof
+  SIMP_TAC std_ss [topspace, OPEN_IN_BIGUNION, GSPECIFICATION]
+QED
 
-val OPEN_IN_BIGINTER = store_thm ("OPEN_IN_BIGINTER",
- ``!top s:('a->bool)->bool.
+Theorem OPEN_IN_BIGINTER:
+   !top s:('a->bool)->bool.
         FINITE s /\ ~(s = {}) /\ (!t. t IN s ==> open_in top t)
-        ==> open_in top (BIGINTER s)``,
+        ==> open_in top (BIGINTER s)
+Proof
   GEN_TAC THEN REWRITE_TAC[GSYM AND_IMP_INTRO] THEN
   KNOW_TAC ``!s. (s <> {} ==> (!t. t IN s ==> open_in top t) ==>
                                open_in top (BIGINTER s)) =
@@ -200,14 +219,16 @@ val OPEN_IN_BIGINTER = store_thm ("OPEN_IN_BIGINTER",
   MAP_EVERY X_GEN_TAC [``f:('a->bool)->bool``, ``s:'a->bool``] THEN
   ASM_CASES_TAC ``f:('a->bool)->bool = {}`` THEN
   ASM_SIMP_TAC std_ss [BIGINTER_EMPTY, INTER_UNIV] THEN REPEAT STRIP_TAC THEN
-  MATCH_MP_TAC OPEN_IN_INTER THEN ASM_SIMP_TAC std_ss []);
+  MATCH_MP_TAC OPEN_IN_INTER THEN ASM_SIMP_TAC std_ss []
+QED
 
 Theorem OPEN_IN_INTERS[local] = OPEN_IN_BIGINTER
 
-val OPEN_IN_SUBOPEN = store_thm ("OPEN_IN_SUBOPEN",
- ``!top s:'a->bool.
+Theorem OPEN_IN_SUBOPEN:
+   !top s:'a->bool.
         open_in top s <=>
-        !x. x IN s ==> ?t. open_in top t /\ x IN t /\ t SUBSET s``,
+        !x. x IN s ==> ?t. open_in top t /\ x IN t /\ t SUBSET s
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL [PROVE_TAC[SUBSET_REFL], ALL_TAC] THEN
   SIMP_TAC std_ss [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM] THEN
   REWRITE_TAC[DECIDE ``a ==> b /\ c <=> (a ==> b) /\ (a ==> c)``] THEN
@@ -215,7 +236,8 @@ val OPEN_IN_SUBOPEN = store_thm ("OPEN_IN_SUBOPEN",
   ONCE_REWRITE_TAC[GSYM FORALL_IN_IMAGE] THEN REPEAT STRIP_TAC THEN
   FIRST_X_ASSUM(MP_TAC o MATCH_MP OPEN_IN_BIGUNION) THEN
   MATCH_MP_TAC EQ_IMPLIES THEN AP_TERM_TAC THEN REPEAT (POP_ASSUM MP_TAC) THEN
-  SET_TAC[]);
+  SET_TAC[]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Characterize a neighbourhood of a point relative to a topology            *)
@@ -263,9 +285,10 @@ Proof
     SIMP_TAC (srw_ss()) [] ]
 QED
 
-val OPEN_SUBOPEN = store_thm("OPEN_SUBOPEN",
-  ``!S' top. open_in(top) S' <=>
-             !x:'a. S' x ==> ?P. P x /\ open_in(top) P /\ P SUBSET S'``,
+Theorem OPEN_SUBOPEN:
+    !S' top. open_in(top) S' <=>
+             !x:'a. S' x ==> ?P. P x /\ open_in(top) P /\ P SUBSET S'
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL [
     DISCH_TAC THEN GEN_TAC THEN DISCH_TAC THEN
     EXISTS_TAC “S':'a->bool” THEN ASM_REWRITE_TAC[SUBSET_REFL],
@@ -278,7 +301,8 @@ val OPEN_SUBOPEN = store_thm("OPEN_SUBOPEN",
         SIMP_TAC (srw_ss()) [SUBSET_applied] THEN REPEAT STRIP_TAC THEN
         FULL_SIMP_TAC (srw_ss()) [IN_DEF]],
       MATCH_MP_TAC OPEN_IN_BIGUNION THEN
-      SIMP_TAC (srw_ss()) []]]);
+      SIMP_TAC (srw_ss()) []]]
+QED
 
 Theorem OPEN_NEIGH:
   !A top.
@@ -313,23 +337,27 @@ End
 Definition closed_DEF: closed (s :'a topology) = (closed_in s) UNIV
 End
 
-val closed_topspace = store_thm
-  ("closed_topspace", ``!top. closed top ==> (topspace top = UNIV)``,
+Theorem closed_topspace:   !top. closed top ==> (topspace top = UNIV)
+Proof
     GEN_TAC >> REWRITE_TAC [closed_DEF, closed_in]
  >> REWRITE_TAC [UNIV_SUBSET]
- >> STRIP_TAC >> ASM_REWRITE_TAC []);
+ >> STRIP_TAC >> ASM_REWRITE_TAC []
+QED
 
 (* original definition of "closed_in" in HOL4 *)
-val CLOSED_IN_OPEN_IN_COMPL = store_thm
-  ("CLOSED_IN_OPEN_IN_COMPL",
-  ``!top. closed top ==> (!s. closed_in top s = open_in top (COMPL s))``,
+Theorem CLOSED_IN_OPEN_IN_COMPL:
+    !top. closed top ==> (!s. closed_in top s = open_in top (COMPL s))
+Proof
     rpt STRIP_TAC
  >> IMP_RES_TAC closed_topspace
- >> ASM_REWRITE_TAC [closed_in, GSYM COMPL_DEF, SUBSET_UNIV]);
+ >> ASM_REWRITE_TAC [closed_in, GSYM COMPL_DEF, SUBSET_UNIV]
+QED
 
-val CLOSED_IN_SUBSET = store_thm ("CLOSED_IN_SUBSET",
- ``!top s. closed_in top s ==> s SUBSET (topspace top)``,
-  PROVE_TAC[closed_in]);
+Theorem CLOSED_IN_SUBSET:
+   !top s. closed_in top s ==> s SUBSET (topspace top)
+Proof
+  PROVE_TAC[closed_in]
+QED
 
 Theorem CLOSED_IN_EMPTY[simp]: !top. closed_in top {}
 Proof
@@ -384,32 +412,39 @@ Proof
   PROVE_TAC[OPEN_IN_SUBSET, SET_RULE ``s SUBSET t ==> (t INTER s = s)``]
 QED
 
-val OPEN_IN_CLOSED_IN = store_thm ("OPEN_IN_CLOSED_IN",
- ``!top s. s SUBSET topspace top
-       ==> (open_in top s <=> closed_in top (topspace top DIFF s))``,
-  SIMP_TAC std_ss [OPEN_IN_CLOSED_IN_EQ]);
+Theorem OPEN_IN_CLOSED_IN:
+   !top s. s SUBSET topspace top
+       ==> (open_in top s <=> closed_in top (topspace top DIFF s))
+Proof
+  SIMP_TAC std_ss [OPEN_IN_CLOSED_IN_EQ]
+QED
 
-val OPEN_IN_DIFF = store_thm ("OPEN_IN_DIFF",
- ``!top s t:'a->bool.
-      open_in top s /\ closed_in top t ==> open_in top (s DIFF t)``,
+Theorem OPEN_IN_DIFF:
+   !top s t:'a->bool.
+      open_in top s /\ closed_in top t ==> open_in top (s DIFF t)
+Proof
   REPEAT STRIP_TAC THEN
   SUBGOAL_THEN ``s DIFF t :'a->bool = s INTER (topspace top DIFF t)``
   SUBST1_TAC THENL
    [FIRST_X_ASSUM(MP_TAC o MATCH_MP OPEN_IN_SUBSET) THEN SET_TAC[],
-    MATCH_MP_TAC OPEN_IN_INTER THEN PROVE_TAC[closed_in]]);
+    MATCH_MP_TAC OPEN_IN_INTER THEN PROVE_TAC[closed_in]]
+QED
 
-val CLOSED_IN_DIFF = store_thm ("CLOSED_IN_DIFF",
- ``!top s t:'a->bool.
-        closed_in top s /\ open_in top t ==> closed_in top (s DIFF t)``,
+Theorem CLOSED_IN_DIFF:
+   !top s t:'a->bool.
+        closed_in top s /\ open_in top t ==> closed_in top (s DIFF t)
+Proof
   REPEAT STRIP_TAC THEN
   SUBGOAL_THEN ``s DIFF t :'a->bool = s INTER (topspace top DIFF t)``
   SUBST1_TAC THENL
    [FIRST_X_ASSUM(MP_TAC o MATCH_MP CLOSED_IN_SUBSET) THEN SET_TAC[],
-    MATCH_MP_TAC CLOSED_IN_INTER THEN PROVE_TAC[OPEN_IN_CLOSED_IN_EQ]]);
+    MATCH_MP_TAC CLOSED_IN_INTER THEN PROVE_TAC[OPEN_IN_CLOSED_IN_EQ]]
+QED
 
-val CLOSED_IN_BIGUNION = store_thm ("CLOSED_IN_BIGUNION",
- ``!top s. FINITE s /\ (!t. t IN s ==> closed_in top t)
-           ==> closed_in top (BIGUNION s)``,
+Theorem CLOSED_IN_BIGUNION:
+   !top s. FINITE s /\ (!t. t IN s ==> closed_in top t)
+           ==> closed_in top (BIGUNION s)
+Proof
   GEN_TAC THEN REWRITE_TAC[GSYM AND_IMP_INTRO] THEN
   KNOW_TAC ``!s. ((!t. t IN s ==> closed_in top t) ==>
                    closed_in top (BIGUNION s)) =
@@ -418,7 +453,8 @@ val CLOSED_IN_BIGUNION = store_thm ("CLOSED_IN_BIGUNION",
   [FULL_SIMP_TAC std_ss [], ALL_TAC] THEN DISC_RW_KILL THEN
   MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
   REWRITE_TAC[BIGUNION_INSERT, BIGUNION_EMPTY, CLOSED_IN_EMPTY, IN_INSERT] THEN
-  PROVE_TAC[CLOSED_IN_UNION]);
+  PROVE_TAC[CLOSED_IN_UNION]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Define limit point in topological space                                   *)
@@ -482,103 +518,141 @@ val _ = set_fixity "hull" (Infix(NONASSOC, 499));
 val hull = new_definition ("hull",
   ``P hull s = BIGINTER {t | P t /\ s SUBSET t}``);
 
-val HULL_P = store_thm ("HULL_P",
- ``!P s. P s ==> (P hull s = s)``,
+Theorem HULL_P:
+   !P s. P s ==> (P hull s = s)
+Proof
   SIMP_TAC std_ss [hull, EXTENSION, IN_BIGINTER, GSPECIFICATION] THEN
-  MESON_TAC[SUBSET_DEF]);
+  MESON_TAC[SUBSET_DEF]
+QED
 
-val P_HULL = store_thm ("P_HULL",
- ``!P s. (!f. (!s. s IN f ==> P s) ==> P(BIGINTER f)) ==> P(P hull s)``,
-  REWRITE_TAC[hull] THEN SIMP_TAC std_ss [GSPECIFICATION]);
+Theorem P_HULL:
+   !P s. (!f. (!s. s IN f ==> P s) ==> P(BIGINTER f)) ==> P(P hull s)
+Proof
+  REWRITE_TAC[hull] THEN SIMP_TAC std_ss [GSPECIFICATION]
+QED
 
-val HULL_EQ = store_thm ("HULL_EQ",
- ``!P s. (!f. (!s. s IN f ==> P s) ==> P(BIGINTER f))
-         ==> ((P hull s = s) <=> P s)``,
-  MESON_TAC[P_HULL, HULL_P]);
+Theorem HULL_EQ:
+   !P s. (!f. (!s. s IN f ==> P s) ==> P(BIGINTER f))
+         ==> ((P hull s = s) <=> P s)
+Proof
+  MESON_TAC[P_HULL, HULL_P]
+QED
 
-val HULL_HULL = store_thm ("HULL_HULL",
- ``!P s. P hull (P hull s) = P hull s``,
+Theorem HULL_HULL:
+   !P s. P hull (P hull s) = P hull s
+Proof
   SIMP_TAC std_ss [hull, EXTENSION, IN_BIGINTER, GSPECIFICATION, SUBSET_DEF] >>
-  METIS_TAC[]);
+  METIS_TAC[]
+QED
 
-val HULL_SUBSET = store_thm ("HULL_SUBSET",
- ``!P s. s SUBSET (P hull s)``,
-  SIMP_TAC std_ss [hull,SUBSET_DEF,IN_BIGINTER,GSPECIFICATION] >> MESON_TAC[]);
+Theorem HULL_SUBSET:
+   !P s. s SUBSET (P hull s)
+Proof
+  SIMP_TAC std_ss [hull,SUBSET_DEF,IN_BIGINTER,GSPECIFICATION] >> MESON_TAC[]
+QED
 
-val HULL_MONO = store_thm ("HULL_MONO",
- ``!P s t. s SUBSET t ==> (P hull s) SUBSET (P hull t)``,
+Theorem HULL_MONO:
+   !P s t. s SUBSET t ==> (P hull s) SUBSET (P hull t)
+Proof
    SIMP_TAC std_ss [hull, SUBSET_DEF, IN_BIGINTER, GSPECIFICATION] THEN
-   METIS_TAC[]);
+   METIS_TAC[]
+QED
 
-val HULL_ANTIMONO = store_thm ("HULL_ANTIMONO",
- ``!P Q s. P SUBSET Q ==> (Q hull s) SUBSET (P hull s)``,
+Theorem HULL_ANTIMONO:
+   !P Q s. P SUBSET Q ==> (Q hull s) SUBSET (P hull s)
+Proof
   SIMP_TAC std_ss [SUBSET_DEF, hull, IN_BIGINTER, GSPECIFICATION] THEN
-  MESON_TAC[IN_DEF]);
+  MESON_TAC[IN_DEF]
+QED
 
-val HULL_MINIMAL = store_thm ("HULL_MINIMAL",
- ``!P s t. s SUBSET t /\ P t ==> (P hull s) SUBSET t``,
-  SIMP_TAC std_ss [hull,SUBSET_DEF,IN_BIGINTER,GSPECIFICATION] >> METIS_TAC[]);
+Theorem HULL_MINIMAL:
+   !P s t. s SUBSET t /\ P t ==> (P hull s) SUBSET t
+Proof
+  SIMP_TAC std_ss [hull,SUBSET_DEF,IN_BIGINTER,GSPECIFICATION] >> METIS_TAC[]
+QED
 
-val SUBSET_HULL = store_thm ("SUBSET_HULL",
- ``!P s t. P t ==> ((P hull s) SUBSET t <=> s SUBSET t)``,
-  SIMP_TAC std_ss [hull,SUBSET_DEF,IN_BIGINTER,GSPECIFICATION] >> METIS_TAC[]);
+Theorem SUBSET_HULL:
+   !P s t. P t ==> ((P hull s) SUBSET t <=> s SUBSET t)
+Proof
+  SIMP_TAC std_ss [hull,SUBSET_DEF,IN_BIGINTER,GSPECIFICATION] >> METIS_TAC[]
+QED
 
-val HULL_UNIQUE = store_thm ("HULL_UNIQUE",
- ``!P s t. s SUBSET t /\ P t /\ (!t'. s SUBSET t' /\ P t' ==> t SUBSET t')
-           ==> (P hull s = t)``,
+Theorem HULL_UNIQUE:
+   !P s t. s SUBSET t /\ P t /\ (!t'. s SUBSET t' /\ P t' ==> t SUBSET t')
+           ==> (P hull s = t)
+Proof
   REPEAT STRIP_TAC THEN MATCH_MP_TAC SUBSET_ANTISYM THEN
   SIMP_TAC std_ss [hull, SUBSET_DEF, IN_BIGINTER, GSPECIFICATION] THEN
-  ASM_MESON_TAC[SUBSET_HULL, SUBSET_DEF]);
+  ASM_MESON_TAC[SUBSET_HULL, SUBSET_DEF]
+QED
 
-val HULL_UNION_SUBSET = store_thm ("HULL_UNION_SUBSET",
- ``!P s t. (P hull s) UNION (P hull t) SUBSET (P hull (s UNION t))``,
-  SIMP_TAC std_ss [UNION_SUBSET, HULL_MONO, SUBSET_UNION]);
+Theorem HULL_UNION_SUBSET:
+   !P s t. (P hull s) UNION (P hull t) SUBSET (P hull (s UNION t))
+Proof
+  SIMP_TAC std_ss [UNION_SUBSET, HULL_MONO, SUBSET_UNION]
+QED
 
-val HULL_UNION = store_thm ("HULL_UNION",
- ``!P s t. P hull (s UNION t) = P hull ((P hull s) UNION (P hull t))``,
+Theorem HULL_UNION:
+   !P s t. P hull (s UNION t) = P hull ((P hull s) UNION (P hull t))
+Proof
   REPEAT STRIP_TAC >> ONCE_REWRITE_TAC[hull] >>
   AP_TERM_TAC >> SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, UNION_SUBSET] >>
-  METIS_TAC[SUBSET_HULL]);
+  METIS_TAC[SUBSET_HULL]
+QED
 
-val HULL_UNION_LEFT = store_thm ("HULL_UNION_LEFT",
- ``!P s t:'a->bool.
-        P hull (s UNION t) = P hull ((P hull s) UNION t)``,
+Theorem HULL_UNION_LEFT:
+   !P s t:'a->bool.
+        P hull (s UNION t) = P hull ((P hull s) UNION t)
+Proof
   REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC[hull] THEN
   AP_TERM_TAC THEN SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, UNION_SUBSET] >>
-  METIS_TAC[SUBSET_HULL]);
+  METIS_TAC[SUBSET_HULL]
+QED
 
-val HULL_UNION_RIGHT = store_thm ("HULL_UNION_RIGHT",
- ``!P s t:'a->bool.
-        P hull (s UNION t) = P hull (s UNION (P hull t))``,
+Theorem HULL_UNION_RIGHT:
+   !P s t:'a->bool.
+        P hull (s UNION t) = P hull (s UNION (P hull t))
+Proof
   REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC[hull] THEN
   AP_TERM_TAC THEN SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, UNION_SUBSET] >>
-  MESON_TAC[SUBSET_HULL]);
+  MESON_TAC[SUBSET_HULL]
+QED
 
-val HULL_REDUNDANT_EQ = store_thm ("HULL_REDUNDANT_EQ",
- ``!P a s. a IN (P hull s) <=> (P hull (a INSERT s) = P hull s)``,
-  REWRITE_TAC[hull] THEN SET_TAC[]);
+Theorem HULL_REDUNDANT_EQ:
+   !P a s. a IN (P hull s) <=> (P hull (a INSERT s) = P hull s)
+Proof
+  REWRITE_TAC[hull] THEN SET_TAC[]
+QED
 
-val HULL_REDUNDANT = store_thm ("HULL_REDUNDANT",
- ``!P a s. a IN (P hull s) ==> (P hull (a INSERT s) = P hull s)``,
-  REWRITE_TAC[HULL_REDUNDANT_EQ]);
+Theorem HULL_REDUNDANT:
+   !P a s. a IN (P hull s) ==> (P hull (a INSERT s) = P hull s)
+Proof
+  REWRITE_TAC[HULL_REDUNDANT_EQ]
+QED
 
-val HULL_INDUCT = store_thm ("HULL_INDUCT",
- ``!P p s. (!x:'a. x IN s ==> p x) /\ P {x | p x}
-           ==> !x. x IN P hull s ==> p x``,
+Theorem HULL_INDUCT:
+   !P p s. (!x:'a. x IN s ==> p x) /\ P {x | p x}
+           ==> !x. x IN P hull s ==> p x
+Proof
   REPEAT GEN_TAC THEN
   MP_TAC(ISPECL [``P:('a->bool)->bool``, ``s:'a->bool``, ``{x:'a | p x}``]
                 HULL_MINIMAL) THEN
-  SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION]);
+  SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION]
+QED
 
-val HULL_INC = store_thm ("HULL_INC",
- ``!P s x. x IN s ==> x IN P hull s``,
-  MESON_TAC[REWRITE_RULE[SUBSET_DEF] HULL_SUBSET]);
+Theorem HULL_INC:
+   !P s x. x IN s ==> x IN P hull s
+Proof
+  MESON_TAC[REWRITE_RULE[SUBSET_DEF] HULL_SUBSET]
+QED
 
-val HULL_IMAGE_SUBSET = store_thm ("HULL_IMAGE_SUBSET",
- ``!P f s. (P (P hull s)) /\ (!s. P s ==> P(IMAGE f s))
-           ==> (P hull (IMAGE f s)) SUBSET ((IMAGE f (P hull s)))``,
+Theorem HULL_IMAGE_SUBSET:
+   !P f s. (P (P hull s)) /\ (!s. P s ==> P(IMAGE f s))
+           ==> (P hull (IMAGE f s)) SUBSET ((IMAGE f (P hull s)))
+Proof
   REPEAT STRIP_TAC THEN MATCH_MP_TAC HULL_MINIMAL THEN
-  ASM_SIMP_TAC std_ss [IMAGE_SUBSET, HULL_SUBSET]);
+  ASM_SIMP_TAC std_ss [IMAGE_SUBSET, HULL_SUBSET]
+QED
 
 Theorem HULL_IMAGE_GALOIS:
   !P f g s. (!s. P(P hull s)) /\
@@ -613,28 +687,34 @@ Proof
   SET_TAC[]
 QED
 
-val IS_HULL = store_thm ("IS_HULL",
- ``!P s. (!f. (!s. s IN f ==> P s) ==> P(BIGINTER f))
-         ==> (P s <=> ?t. s = P hull t)``,
-  MESON_TAC[HULL_P, P_HULL]);
+Theorem IS_HULL:
+   !P s. (!f. (!s. s IN f ==> P s) ==> P(BIGINTER f))
+         ==> (P s <=> ?t. s = P hull t)
+Proof
+  MESON_TAC[HULL_P, P_HULL]
+QED
 
-val HULLS_EQ = store_thm ("HULLS_EQ",
- ``!P s t.
+Theorem HULLS_EQ:
+   !P s t.
         (!f. (!s. s IN f ==> P s) ==> P (BIGINTER f)) /\
         s SUBSET (P hull t) /\ t SUBSET (P hull s)
-        ==> (P hull s = P hull t)``,
+        ==> (P hull s = P hull t)
+Proof
   REPEAT STRIP_TAC THEN MATCH_MP_TAC SUBSET_ANTISYM THEN
   CONJ_TAC THEN MATCH_MP_TAC HULL_MINIMAL THEN
-  ASM_SIMP_TAC std_ss [P_HULL]);
+  ASM_SIMP_TAC std_ss [P_HULL]
+QED
 
-val HULL_P_AND_Q = store_thm ("HULL_P_AND_Q",
- ``!P Q. (!f. (!s. s IN f ==> P s) ==> P(BIGINTER f)) /\
+Theorem HULL_P_AND_Q:
+   !P Q. (!f. (!s. s IN f ==> P s) ==> P(BIGINTER f)) /\
          (!f. (!s. s IN f ==> Q s) ==> Q(BIGINTER f)) /\
          (!s. Q s ==> Q(P hull s))
-         ==> ((\x. P x /\ Q x) hull s = P hull (Q hull s))``,
+         ==> ((\x. P x /\ Q x) hull s = P hull (Q hull s))
+Proof
   REPEAT STRIP_TAC THEN
   MATCH_MP_TAC HULL_UNIQUE THEN ASM_SIMP_TAC std_ss [HULL_INC, SUBSET_HULL] THEN
-  ASM_MESON_TAC[P_HULL, HULL_SUBSET, SUBSET_TRANS]);
+  ASM_MESON_TAC[P_HULL, HULL_SUBSET, SUBSET_TRANS]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Subspace topology (from real_topologyTheory)                              *)

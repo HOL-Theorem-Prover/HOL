@@ -1549,9 +1549,9 @@ QED
 (* Useful lemmas for proving inequalities of limits                          *)
 (*---------------------------------------------------------------------------*)
 
-val LE_SEQ_IMP_LE_LIM = store_thm
-  ("LE_SEQ_IMP_LE_LIM",
-   ``!x y f. (!n. x <= f n) /\ f --> y ==> x <= y``,
+Theorem LE_SEQ_IMP_LE_LIM:
+     !x y f. (!n. x <= f n) /\ f --> y ==> x <= y
+Proof
    RW_TAC boolSimps.bool_ss [SEQ]
    THEN MATCH_MP_TAC REAL_LE_EPSILON
    THEN RW_TAC boolSimps.bool_ss []
@@ -1564,11 +1564,12 @@ val LE_SEQ_IMP_LE_LIM = store_thm
    THEN simpLib.FULL_SIMP_TAC boolSimps.bool_ss
         [REAL_NOT_LE, REAL_NEG_SUB, REAL_LT_SUB_RADD]
    THEN PROVE_TAC [REAL_LET_TRANS, REAL_LT_ADDR, REAL_LTE_TRANS, REAL_LE_TRANS,
-                   REAL_LT_LE, REAL_ADD_SYM]);
+                   REAL_LT_LE, REAL_ADD_SYM]
+QED
 
-val SEQ_LE_IMP_LIM_LE = store_thm
-  ("SEQ_LE_IMP_LIM_LE",
-   ``!x y f. (!n. f n <= x) /\ f --> y ==> y <= x``,
+Theorem SEQ_LE_IMP_LIM_LE:
+     !x y f. (!n. f n <= x) /\ f --> y ==> y <= x
+Proof
    RW_TAC boolSimps.bool_ss [SEQ]
    THEN MATCH_MP_TAC REAL_LE_EPSILON
    THEN RW_TAC boolSimps.bool_ss []
@@ -1587,11 +1588,12 @@ val SEQ_LE_IMP_LIM_LE = store_thm
           MATCH_MP_TAC REAL_LE_TRANS
           THEN Q.EXISTS_TAC `f N + e`
           THEN (CONJ_TAC THEN1 PROVE_TAC [REAL_LT_LE, REAL_ADD_SYM])
-          THEN PROVE_TAC [REAL_LE_ADD2, REAL_LE_REFL]]);
+          THEN PROVE_TAC [REAL_LE_ADD2, REAL_LE_REFL]]
+QED
 
-val SEQ_MONO_LE = store_thm
-  ("SEQ_MONO_LE",
-   ``!f x n. (!n. f n <= f (n + 1)) /\ f --> x ==> f n <= x``,
+Theorem SEQ_MONO_LE:
+     !f x n. (!n. f n <= f (n + 1)) /\ f --> x ==> f n <= x
+Proof
    RW_TAC boolSimps.bool_ss [SEQ]
    THEN MATCH_MP_TAC REAL_LE_EPSILON
    THEN RW_TAC boolSimps.bool_ss []
@@ -1620,14 +1622,16 @@ val SEQ_MONO_LE = store_thm
                [REAL_LT_LE, REAL_ADD_SYM, REAL_LE_TRANS, REAL_LE_ADDR],
           MP_TAC (numLib.ARITH_PROVE
                   ``(N - i = N - SUC i) \/ (N - i = (N - SUC i) + 1)``)
-          THEN PROVE_TAC [REAL_LE_REFL, REAL_LE_TRANS]]);
+          THEN PROVE_TAC [REAL_LE_REFL, REAL_LE_TRANS]]
+QED
 
-val SEQ_LE_MONO = store_thm
-  ("SEQ_LE_MONO",
-   ``!f x n. (!n. f (n + 1) <= f n) /\ f --> x ==> x <= f n``,
+Theorem SEQ_LE_MONO:
+     !f x n. (!n. f (n + 1) <= f n) /\ f --> x ==> x <= f n
+Proof
    REPEAT GEN_TAC
    THEN MP_TAC (Q.SPECL [`\n. ~f n`, `~x`, `n`] SEQ_MONO_LE)
-   THEN RW_TAC boolSimps.bool_ss [GSYM SEQ_NEG, REAL_LE_NEG]);
+   THEN RW_TAC boolSimps.bool_ss [GSYM SEQ_NEG, REAL_LE_NEG]
+QED
 
 (* ****************************************************** *)
 (* Useful Theorems on Real Sequences from util_probTheory *)
@@ -1637,8 +1641,8 @@ Definition mono_increasing_def:
     mono_increasing (f:num->real) = !m n. m <= n ==> f m <= f n
 End
 
-val mono_increasing_suc = store_thm
-  ("mono_increasing_suc", ``!(f:num->real). mono_increasing f <=> !n. f n <= f (SUC n)``,
+Theorem mono_increasing_suc:   !(f:num->real). mono_increasing f <=> !n. f n <= f (SUC n)
+Proof
     RW_TAC std_ss [mono_increasing_def]
     >> EQ_TAC
     >- RW_TAC real_ss []
@@ -1648,14 +1652,15 @@ val mono_increasing_suc = store_thm
     >> Induct_on `d` >- RW_TAC real_ss []
     >> RW_TAC std_ss []
     >> Q.PAT_X_ASSUM `!n. f n <= f (SUC n)` (MP_TAC o Q.SPEC `m + d`)
-    >> METIS_TAC [REAL_LE_TRANS, ADD_CLAUSES, LESS_EQ_ADD]);
+    >> METIS_TAC [REAL_LE_TRANS, ADD_CLAUSES, LESS_EQ_ADD]
+QED
 
 Definition mono_decreasing_def:
     mono_decreasing (f:num->real) = !m n. m <= n ==> f n <= f m
 End
 
-val mono_decreasing_suc = store_thm
-  ("mono_decreasing_suc", ``!(f:num->real). mono_decreasing f <=> !n. f (SUC n) <= f n``,
+Theorem mono_decreasing_suc:   !(f:num->real). mono_decreasing f <=> !n. f (SUC n) <= f n
+Proof
     RW_TAC std_ss [mono_decreasing_def]
     >> EQ_TAC
     >- RW_TAC real_ss []
@@ -1665,12 +1670,13 @@ val mono_decreasing_suc = store_thm
     >> Induct_on `d` >- RW_TAC real_ss []
     >> RW_TAC std_ss []
     >> Q.PAT_X_ASSUM `!n. f (SUC n) <= f n` (MP_TAC o Q.SPEC `m + d`)
-    >> METIS_TAC [REAL_LE_TRANS, ADD_CLAUSES, LESS_EQ_ADD]);
+    >> METIS_TAC [REAL_LE_TRANS, ADD_CLAUSES, LESS_EQ_ADD]
+QED
 
-val mono_increasing_converges_to_sup = store_thm
-  ("mono_increasing_converges_to_sup",
-   ``!f r. mono_increasing f /\ f --> r ==>
-           (r = sup (IMAGE f UNIV))``,
+Theorem mono_increasing_converges_to_sup:
+     !f r. mono_increasing f /\ f --> r ==>
+           (r = sup (IMAGE f UNIV))
+Proof
    RW_TAC std_ss [mono_increasing_def]
    >> Suff `f --> sup (IMAGE f UNIV)`
    >- METIS_TAC [SEQ_UNIQ]
@@ -1703,15 +1709,16 @@ val mono_increasing_converges_to_sup = store_thm
    >> Q.EXISTS_TAC `r`
    >> RW_TAC std_ss []
    >> MATCH_MP_TAC SEQ_MONO_LE
-   >> RW_TAC std_ss [DECIDE ``!n:num. n <= n + 1``]);
+   >> RW_TAC std_ss [DECIDE ``!n:num. n <= n + 1``]
+QED
 
-val INCREASING_SEQ = store_thm
-  ("INCREASING_SEQ",
-   ``!f l.
+Theorem INCREASING_SEQ:
+     !f l.
        (!n. f n <= f (SUC n)) /\
        (!n. f n <= l) /\
        (!e. 0 < e ==> ?n. l < f n + e) ==>
-       f --> l``,
+       f --> l
+Proof
    RW_TAC std_ss [SEQ, GREATER_EQ]
    >> Q.PAT_X_ASSUM `!e. P e` (MP_TAC o Q.SPEC `e`)
    >> RW_TAC std_ss []
@@ -1729,15 +1736,16 @@ val INCREASING_SEQ = store_thm
    >> RW_TAC std_ss [ADD_CLAUSES]
    >> Q.PAT_X_ASSUM `!n. f n <= f (SUC n)` (MP_TAC o Q.SPEC `n + d`)
    >> POP_ASSUM MP_TAC
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
 Theorem X_LE_MAX[local] = cj 1 MAX_LE
 Theorem MAX_LE_X[local] = cj 2 MAX_LE
 
-val SEQ_SANDWICH = store_thm
-  ("SEQ_SANDWICH",
-   ``!f g h l.
-       f --> l /\ h --> l /\ (!n. f n <= g n /\ g n <= h n) ==> g --> l``,
+Theorem SEQ_SANDWICH:
+     !f g h l.
+       f --> l /\ h --> l /\ (!n. f n <= g n /\ g n <= h n) ==> g --> l
+Proof
    RW_TAC std_ss [SEQ, GREATER_EQ]
    >> Q.PAT_X_ASSUM `!e. P e ==> Q e` (MP_TAC o Q.SPEC `e`)
    >> Q.PAT_X_ASSUM `!e. P e ==> Q e` (MP_TAC o Q.SPEC `e`)
@@ -1751,18 +1759,20 @@ val SEQ_SANDWICH = store_thm
    >> DISCH_THEN (MP_TAC o Q.SPEC `n`)
    >> RW_TAC std_ss [abs]
    >> REPEAT (POP_ASSUM MP_TAC)
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val SER_POS = store_thm
-  ("SER_POS",
-   ``!f. summable f /\ (!n. 0 <= f n) ==> 0 <= suminf f``,
+Theorem SER_POS:
+     !f. summable f /\ (!n. 0 <= f n) ==> 0 <= suminf f
+Proof
    RW_TAC std_ss []
    >> MP_TAC (Q.SPECL [`f`, `0`] SER_POS_LE)
-   >> RW_TAC std_ss [sum]);
+   >> RW_TAC std_ss [sum]
+QED
 
-val SER_POS_MONO = store_thm
-  ("SER_POS_MONO",
-   ``!f. (!n. 0 <= f n) ==> mono (\n. sum (0, n) f)``,
+Theorem SER_POS_MONO:
+     !f. (!n. 0 <= f n) ==> mono (\n. sum (0, n) f)
+Proof
    RW_TAC std_ss [mono]
    >> DISJ1_TAC
    >> HO_MATCH_MP_TAC TRIANGLE_2D_NUM
@@ -1772,11 +1782,12 @@ val SER_POS_MONO = store_thm
    >> Q.EXISTS_TAC `sum (0, d + n) f`
    >> RW_TAC real_ss [sum]
    >> Q.PAT_X_ASSUM `!n. 0 <= f n` (MP_TAC o Q.SPEC `d + n`)
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val POS_SUMMABLE = store_thm
-  ("POS_SUMMABLE",
-   ``!f. (!n. 0 <= f n) /\ (?x. !n. sum (0, n) f <= x) ==> summable f``,
+Theorem POS_SUMMABLE:
+     !f. (!n. 0 <= f n) /\ (?x. !n. sum (0, n) f <= x) ==> summable f
+Proof
    RW_TAC std_ss [summable, sums, GSYM convergent]
    >> MATCH_MP_TAC SEQ_BCONV
    >> RW_TAC std_ss [SER_POS_MONO, netsTheory.MR1_BOUNDED]
@@ -1785,11 +1796,12 @@ val POS_SUMMABLE = store_thm
    >> RW_TAC arith_ss []
    >> RW_TAC std_ss [abs, SUM_POS]
    >> Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `n`)
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val SUMMABLE_LE = store_thm
-  ("SUMMABLE_LE",
-   ``!f x. summable f /\ (!n. sum (0, n) f <= x) ==> suminf f <= x``,
+Theorem SUMMABLE_LE:
+     !f x. summable f /\ (!n. sum (0, n) f <= x) ==> suminf f <= x
+Proof
    Strip
    >> Suff `0 < suminf f - x ==> F` >- REAL_ARITH_TAC
    >> Strip
@@ -1807,55 +1819,61 @@ val SUMMABLE_LE = store_thm
        >> REAL_ARITH_TAC)
    >> RW_TAC std_ss [abs]
    >> rpt (POP_ASSUM MP_TAC)
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val SUMS_EQ = store_thm
-  ("SUMS_EQ",
-   ``!f x. f sums x = summable f /\ (suminf f = x)``,
-   PROVE_TAC [SUM_SUMMABLE, SUM_UNIQ, summable]);
+Theorem SUMS_EQ:
+     !f x. f sums x = summable f /\ (suminf f = x)
+Proof
+   PROVE_TAC [SUM_SUMMABLE, SUM_UNIQ, summable]
+QED
 
-val SUMINF_POS = store_thm
-  ("SUMINF_POS",
-   ``!f. (!n. 0 <= f n) /\ summable f ==> 0 <= suminf f``,
+Theorem SUMINF_POS:
+     !f. (!n. 0 <= f n) /\ summable f ==> 0 <= suminf f
+Proof
    RW_TAC std_ss []
    >> Know `0 = sum (0, 0) f` >- RW_TAC std_ss [sum]
    >> DISCH_THEN (ONCE_REWRITE_TAC o wrap)
    >> MATCH_MP_TAC SER_POS_LE
-   >> RW_TAC std_ss []);
+   >> RW_TAC std_ss []
+QED
 
-val SUM_CONST_R = store_thm
-  ("SUM_CONST_R",
-   ``!n r. sum (0,n) (K r) = &n * r``,
+Theorem SUM_CONST_R:
+     !n r. sum (0,n) (K r) = &n * r
+Proof
    Induct >- RW_TAC real_ss [sum]
    >> RW_TAC bool_ss [sum, ADD1, K_THM, GSYM REAL_ADD, REAL_ADD_RDISTRIB]
-   >> RW_TAC real_ss []);
+   >> RW_TAC real_ss []
+QED
 
-val SUMS_ZERO = store_thm
-  ("SUMS_ZERO",
-   ``(K 0) sums 0``,
-   RW_TAC real_ss [sums, SEQ, SUM_CONST_R, abs, REAL_SUB_REFL, REAL_LE_REFL]);
+Theorem SUMS_ZERO:
+     (K 0) sums 0
+Proof
+   RW_TAC real_ss [sums, SEQ, SUM_CONST_R, abs, REAL_SUB_REFL, REAL_LE_REFL]
+QED
 
 Theorem LT_SUC'[local] = DECIDE “!a b. a < SUC b = a < b \/ (a = b)”
 
-val SUMINF_ADD = store_thm
-  ("SUMINF_ADD",
-   ``!f g.
+Theorem SUMINF_ADD:
+     !f g.
        summable f /\ summable g ==>
        summable (\n. f n + g n) /\
-       (suminf f + suminf g = suminf (\n. f n + g n))``,
+       (suminf f + suminf g = suminf (\n. f n + g n))
+Proof
     RW_TAC std_ss []
  >> ( Know `f sums suminf f /\ g sums suminf g` >- PROVE_TAC [SUMMABLE_SUM]
    >> STRIP_TAC
    >> Know `(\n. f n + g n) sums (suminf f + suminf g)`
    >- RW_TAC std_ss [SER_ADD]
-   >> RW_TAC std_ss [SUMS_EQ] ));
+   >> RW_TAC std_ss [SUMS_EQ] )
+QED
 
-val SUMINF_2D = store_thm
-  ("SUMINF_2D",
-   ``!f g h.
+Theorem SUMINF_2D:
+     !f g h.
        (!m n. 0 <= f m n) /\ (!n. f n sums g n) /\ summable g /\
        BIJ h UNIV (UNIV CROSS UNIV) ==>
-       (UNCURRY f o h) sums suminf g``,
+       (UNCURRY f o h) sums suminf g
+Proof
    RW_TAC std_ss []
    >> RW_TAC std_ss [sums]
    >> Know `g sums suminf g` >- PROVE_TAC [SUMMABLE_SUM]
@@ -2133,11 +2151,12 @@ val SUMINF_2D = store_thm
        >> RW_TAC std_ss [UNCURRY_DEF])
    >> Q.PAT_X_ASSUM `BIJ h a b` MP_TAC
    >> RW_TAC std_ss [BIJ_DEF, INJ_DEF, IN_UNIV, IN_CROSS]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val POW_HALF_SER = store_thm
-  ("POW_HALF_SER",
-   ``(\n. (1 / 2) pow (n + 1)) sums 1``,
+Theorem POW_HALF_SER:
+     (\n. (1 / 2) pow (n + 1)) sums 1
+Proof
    Know `(\n. (1 / 2) pow n) sums inv (1 - (1 / 2))`
    >- (MATCH_MP_TAC GP
        >> RW_TAC std_ss [abs, HALF_POS, REAL_LT_IMP_LE, HALF_LT_1])
@@ -2147,20 +2166,22 @@ val POW_HALF_SER = store_thm
    >- RW_TAC arith_ss [REAL_MUL_LINV, REAL_INJ]
    >> DISCH_THEN (ONCE_REWRITE_TAC o wrap)
    >> HO_MATCH_MP_TAC SER_CMUL
-   >> RW_TAC std_ss []);
+   >> RW_TAC std_ss []
+QED
 
-val SER_POS_COMPARE = store_thm
-  ("SER_POS_COMPARE",
-   ``!f g.
+Theorem SER_POS_COMPARE:
+     !f g.
        (!n. 0 <= f n) /\ summable g /\ (!n. f n <= g n) ==>
-       summable f /\ suminf f <= suminf g``,
+       summable f /\ suminf f <= suminf g
+Proof
    REVERSE (rpt (STRONG_CONJ_TAC ORELSE STRIP_TAC))
    >- PROVE_TAC [SER_LE]
    >> MATCH_MP_TAC SER_COMPAR
    >> Q.EXISTS_TAC `g`
    >> RW_TAC std_ss []
    >> Q.EXISTS_TAC `0`
-   >> RW_TAC arith_ss [abs]);
+   >> RW_TAC arith_ss [abs]
+QED
 
 (* moved here from real_sigmaTheory *)
 Theorem SEQ_REAL_SUM_IMAGE :

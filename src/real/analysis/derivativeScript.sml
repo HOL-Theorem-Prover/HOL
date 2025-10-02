@@ -67,17 +67,21 @@ Proof
              REAL_ARITH ``u <= &1 ==> &0:real <= &1 - u /\ ((&1 - u) + u = &1)``]
 QED
 
-val IN_CONVEX_SET = store_thm ("IN_CONVEX_SET",
- ``!s a b u.
+Theorem IN_CONVEX_SET:
+   !s a b u.
         convex s /\ a IN s /\ b IN s /\ &0 <= u /\ u <= &1
-        ==> ((&1 - u) * a + u * b) IN s``,
-  MESON_TAC[CONVEX_ALT]);
+        ==> ((&1 - u) * a + u * b) IN s
+Proof
+  MESON_TAC[CONVEX_ALT]
+QED
 
-val LIMPT_APPROACHABLE = store_thm ("LIMPT_APPROACHABLE",
- ``!x s. x limit_point_of s <=>
-                !e. &0 < e ==> ?x'. x' IN s /\ ~(x' = x) /\ dist(x',x) < e``,
+Theorem LIMPT_APPROACHABLE:
+   !x s. x limit_point_of s <=>
+                !e. &0 < e ==> ?x'. x' IN s /\ ~(x' = x) /\ dist(x',x) < e
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[limit_point_of] THEN
-  MESON_TAC[open_def, DIST_SYM, OPEN_BALL, CENTRE_IN_BALL, IN_BALL]);
+  MESON_TAC[open_def, DIST_SYM, OPEN_BALL, CENTRE_IN_BALL, IN_BALL]
+QED
 
 Theorem LIMPT_OF_CONVEX :
     !s x:real. convex s /\ x IN s ==> (x limit_point_of s <=> ~(s = {x}))
@@ -111,17 +115,20 @@ Proof
       Q.UNABBREV_TAC `u` >> FULL_SIMP_TAC real_ss [min_def] ]
 QED
 
-val TRIVIAL_LIMIT_WITHIN_CONVEX = store_thm ("TRIVIAL_LIMIT_WITHIN_CONVEX",
- ``!s x:real.
-        convex s /\ x IN s ==> (trivial_limit(at x within s) <=> (s = {x}))``,
-  SIMP_TAC std_ss [TRIVIAL_LIMIT_WITHIN, LIMPT_OF_CONVEX]);
+Theorem TRIVIAL_LIMIT_WITHIN_CONVEX:
+   !s x:real.
+        convex s /\ x IN s ==> (trivial_limit(at x within s) <=> (s = {x}))
+Proof
+  SIMP_TAC std_ss [TRIVIAL_LIMIT_WITHIN, LIMPT_OF_CONVEX]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* A general lemma.                                                          *)
 (* ------------------------------------------------------------------------- *)
 
-val CONVEX_CONNECTED = store_thm ("CONVEX_CONNECTED",
- ``!s:real->bool. convex s ==> connected s``,
+Theorem CONVEX_CONNECTED:
+   !s:real->bool. convex s ==> connected s
+Proof
   SIMP_TAC std_ss [CONVEX_ALT, connected, SUBSET_DEF, EXTENSION, IN_INTER,
               IN_UNION, NOT_IN_EMPTY, NOT_FORALL_THM, NOT_EXISTS_THM] THEN
   GEN_TAC THEN DISCH_TAC THEN REPEAT GEN_TAC THEN
@@ -139,7 +146,8 @@ val CONVEX_CONNECTED = store_thm ("CONVEX_CONNECTED",
   REWRITE_TAC[REAL_LE_LT] THEN STRIP_TAC THENL
    [ALL_TAC, METIS_TAC[REAL_MUL_RZERO, REAL_LT_01]] THEN
   EXISTS_TAC ``e / abs((x' - x):real)`` THEN
-  ASM_SIMP_TAC real_ss [REAL_LT_RDIV_EQ, REAL_LT_DIV]);
+  ASM_SIMP_TAC real_ss [REAL_LT_RDIV_EQ, REAL_LT_DIV]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Explicit expressions for convexity in terms of arbitrary sums.            *)
@@ -208,12 +216,13 @@ Proof
     FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_MESON_TAC[REAL_ADD_SYM]]
 QED
 
-val CONVEX_INDEXED = store_thm ("CONVEX_INDEXED",
- ``!s:real->bool.
+Theorem CONVEX_INDEXED:
+   !s:real->bool.
         convex s <=>
             !k u x. (!i:num. 1 <= i /\ i <= k ==> &0 <= u(i) /\ x(i) IN s) /\
                     (sum { 1n..k} u = &1)
-                    ==> sum { 1n..k} (\i. u(i) * x(i)) IN s``,
+                    ==> sum { 1n..k} (\i. u(i) * x(i)) IN s
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL
    [REPEAT STRIP_TAC THEN MATCH_MP_TAC CONVEX_SUM THEN
     ASM_SIMP_TAC std_ss [IN_NUMSEG, FINITE_NUMSEG],
@@ -223,14 +232,16 @@ val CONVEX_INDEXED = store_thm ("CONVEX_INDEXED",
     DISCH_THEN(MP_TAC o SPEC ``\n:num. if n = 1 then u else v:real``) THEN
     DISCH_THEN(MP_TAC o SPEC ``\n:num. if n = 1 then x else y:real``) THEN
     REWRITE_TAC [TWO, SUM_CLAUSES_NUMSEG, NUMSEG_SING, SUM_SING] THEN
-    SIMP_TAC arith_ss [] THEN METIS_TAC[]]);
+    SIMP_TAC arith_ss [] THEN METIS_TAC[]]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Convexity of general and special intervals.                               *)
 (* ------------------------------------------------------------------------- *)
 
-val IS_INTERVAL_CONVEX = store_thm ("IS_INTERVAL_CONVEX",
- ``!s:real->bool. is_interval s ==> convex s``,
+Theorem IS_INTERVAL_CONVEX:
+   !s:real->bool. is_interval s ==> convex s
+Proof
   REWRITE_TAC[is_interval, convex] THEN
   REPEAT STRIP_TAC THEN
   KNOW_TAC ``x IN (s:real->bool) /\ y IN s ==>
@@ -245,14 +256,18 @@ val IS_INTERVAL_CONVEX = store_thm ("IS_INTERVAL_CONVEX",
   FIRST_X_ASSUM(SUBST1_TAC o SYM) THEN
   ASM_SIMP_TAC real_ss [REAL_ADD_RDISTRIB] THEN
   ASM_SIMP_TAC real_ss [REAL_LE_LMUL, REAL_LE_LADD, REAL_LE_RADD] THEN
-  CONJ_TAC THEN MATCH_MP_TAC REAL_LE_LMUL_IMP THEN ASM_REWRITE_TAC []);
+  CONJ_TAC THEN MATCH_MP_TAC REAL_LE_LMUL_IMP THEN ASM_REWRITE_TAC []
+QED
 
-val IS_INTERVAL_CONNECTED = store_thm ("IS_INTERVAL_CONNECTED",
- ``!s:real->bool. is_interval s ==> connected s``,
-  MESON_TAC[IS_INTERVAL_CONVEX, CONVEX_CONNECTED]);
+Theorem IS_INTERVAL_CONNECTED:
+   !s:real->bool. is_interval s ==> connected s
+Proof
+  MESON_TAC[IS_INTERVAL_CONVEX, CONVEX_CONNECTED]
+QED
 
-val IS_INTERVAL_CONNECTED_1 = store_thm ("IS_INTERVAL_CONNECTED_1",
- ``!s:real->bool. is_interval s <=> connected s``,
+Theorem IS_INTERVAL_CONNECTED_1:
+   !s:real->bool. is_interval s <=> connected s
+Proof
   GEN_TAC THEN EQ_TAC THEN REWRITE_TAC[IS_INTERVAL_CONNECTED] THEN
   ONCE_REWRITE_TAC[MONO_NOT_EQ] THEN
   SIMP_TAC std_ss [IS_INTERVAL, connected, NOT_FORALL_THM,
@@ -264,28 +279,35 @@ val IS_INTERVAL_CONNECTED_1 = store_thm ("IS_INTERVAL_CONNECTED_1",
    real_gt, NOT_IN_EMPTY, GSPECIFICATION] THEN
   SIMP_TAC real_ss [] THEN
   REPEAT CONJ_TAC THENL [simp[REAL_NOT_LT, REAL_LE_TOTAL],
-   metis_tac[REAL_LT_TOTAL], metis_tac[REAL_LE_LT], metis_tac[REAL_LE_LT]]);
+   metis_tac[REAL_LT_TOTAL], metis_tac[REAL_LE_LT], metis_tac[REAL_LE_LT]]
+QED
 
-val CONVEX_INTERVAL = store_thm ("CONVEX_INTERVAL",
- ``!a b:real. convex(interval [a,b]) /\ convex(interval (a,b))``,
-  METIS_TAC [IS_INTERVAL_CONVEX, IS_INTERVAL_INTERVAL]);
+Theorem CONVEX_INTERVAL:
+   !a b:real. convex(interval [a,b]) /\ convex(interval (a,b))
+Proof
+  METIS_TAC [IS_INTERVAL_CONVEX, IS_INTERVAL_INTERVAL]
+QED
 
 
 (* ------------------------------------------------------------------------- *)
 (* On real, is_interval, convex and connected are all equivalent.            *)
 (* ------------------------------------------------------------------------- *)
 
-val IS_INTERVAL_CONVEX_1 = store_thm ("IS_INTERVAL_CONVEX_1",
- ``!s:real->bool. is_interval s <=> convex s``,
-  MESON_TAC[IS_INTERVAL_CONVEX, CONVEX_CONNECTED, IS_INTERVAL_CONNECTED_1]);
+Theorem IS_INTERVAL_CONVEX_1:
+   !s:real->bool. is_interval s <=> convex s
+Proof
+  MESON_TAC[IS_INTERVAL_CONVEX, CONVEX_CONNECTED, IS_INTERVAL_CONNECTED_1]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*                                                                           *)
 (* ------------------------------------------------------------------------- *)
 
-val CONNECTED_COMPACT_INTERVAL_1 = store_thm ("CONNECTED_COMPACT_INTERVAL_1",
- ``!s:real->bool. connected s /\ compact s <=> ?a b. s = interval[a,b]``,
-  REWRITE_TAC[GSYM IS_INTERVAL_CONNECTED_1, IS_INTERVAL_COMPACT]);
+Theorem CONNECTED_COMPACT_INTERVAL_1:
+   !s:real->bool. connected s /\ compact s <=> ?a b. s = interval[a,b]
+Proof
+  REWRITE_TAC[GSYM IS_INTERVAL_CONNECTED_1, IS_INTERVAL_COMPACT]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*                                                                           *)
@@ -309,33 +331,39 @@ Proof
   MATCH_MP_TAC REAL_LT_LMUL_IMP THEN ASM_REAL_ARITH_TAC
 QED
 
-val REAL_CONVEX_BOUND_LT = store_thm ("REAL_CONVEX_BOUND_LT",
- ``!x y a u v:real. x < a /\ y < a /\ &0 <= u /\ &0 <= v /\ (u + v = &1)
-               ==> u * x + v * y < a``,
+Theorem REAL_CONVEX_BOUND_LT:
+   !x y a u v:real. x < a /\ y < a /\ &0 <= u /\ &0 <= v /\ (u + v = &1)
+               ==> u * x + v * y < a
+Proof
   REPEAT STRIP_TAC THEN MATCH_MP_TAC REAL_LTE_TRANS THEN
   Q.EXISTS_TAC `u * a + v * a:real` THEN CONJ_TAC THENL
    [ASM_SIMP_TAC real_ss [REAL_CONVEX_BOUND2_LT],
     ALL_TAC] THEN
    MATCH_MP_TAC REAL_EQ_IMP_LE THEN
    UNDISCH_TAC ``u + v = &1:real`` THEN
-   SIMP_TAC real_ss [GSYM REAL_ADD_RDISTRIB]);
+   SIMP_TAC real_ss [GSYM REAL_ADD_RDISTRIB]
+QED
 
-val CONVEX_DISTANCE = store_thm ("CONVEX_DISTANCE",
- ``!s a. (\x. dist(a,x)) convex_on s``,
+Theorem CONVEX_DISTANCE:
+   !s a. (\x. dist(a,x)) convex_on s
+Proof
   SIMP_TAC std_ss [convex_on, dist] THEN REPEAT STRIP_TAC THEN
   GEN_REWR_TAC (LAND_CONV o RAND_CONV o LAND_CONV) [GSYM REAL_MUL_LID] THEN
   FIRST_ASSUM(SUBST1_TAC o SYM) THEN
   REWRITE_TAC[REAL_ARITH
    ``(u + v) * z - (u * x + v * y) = u * (z - x) + v * (z - y:real)``] THEN
-  ASM_MESON_TAC[ABS_TRIANGLE, ABS_MUL, ABS_REFL]);
+  ASM_MESON_TAC[ABS_TRIANGLE, ABS_MUL, ABS_REFL]
+QED
 
 val lemma = REWRITE_RULE[convex_on, IN_UNIV]
    (ISPEC ``univ(:real)`` CONVEX_DISTANCE);
 
-val CONVEX_BALL = store_thm ("CONVEX_BALL",
- ``!x:real e. convex(ball(x,e))``,
+Theorem CONVEX_BALL:
+   !x:real e. convex(ball(x,e))
+Proof
   SIMP_TAC std_ss [convex, IN_BALL] THEN REPEAT STRIP_TAC THEN
-  ASM_MESON_TAC[REAL_LET_TRANS, REAL_CONVEX_BOUND_LT, lemma]);
+  ASM_MESON_TAC[REAL_LET_TRANS, REAL_CONVEX_BOUND_LT, lemma]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Derivatives. The definition is slightly tricky since we make it work over *)
@@ -356,24 +384,28 @@ val has_derivative = new_definition ("has_derivative",
 (* These are the only cases we'll care about, probably.                      *)
 (* ------------------------------------------------------------------------- *)
 
-val has_derivative_within = store_thm ("has_derivative_within",
- ``!f:real->real f' x s.
+Theorem has_derivative_within:
+   !f:real->real f' x s.
     (f has_derivative f') (at x within s) <=>
          linear f' /\
          ((\y. inv(abs(y - x)) * (f(y) - (f(x) + f'(y - x)))) --> 0)
-         (at x within s)``,
+         (at x within s)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[has_derivative] THEN AP_TERM_TAC THEN
   ASM_CASES_TAC ``trivial_limit(at (x:real) within s)`` THENL
-   [ASM_REWRITE_TAC[LIM], ASM_SIMP_TAC std_ss [NETLIMIT_WITHIN]]);
+   [ASM_REWRITE_TAC[LIM], ASM_SIMP_TAC std_ss [NETLIMIT_WITHIN]]
+QED
 
-val has_derivative_at = store_thm ("has_derivative_at",
- ``!f:real->real f' x.
+Theorem has_derivative_at:
+   !f:real->real f' x.
     (f has_derivative f') (at x) <=>
          linear f' /\
          ((\y. inv(abs(y - x)) * (f(y) - (f(x) + f'(y - x)))) --> 0)
-         (at x)``,
+         (at x)
+Proof
   ONCE_REWRITE_TAC[GSYM WITHIN_UNIV] THEN
-  REWRITE_TAC[has_derivative_within]);
+  REWRITE_TAC[has_derivative_within]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* More explicit epsilon-delta forms.                                        *)
@@ -417,64 +449,80 @@ Proof
  >> MESON_TAC []
 QED
 
-val HAS_DERIVATIVE_WITHIN_OPEN = store_thm ("HAS_DERIVATIVE_WITHIN_OPEN",
- ``!f f' a s.
+Theorem HAS_DERIVATIVE_WITHIN_OPEN:
+   !f f' a s.
          a IN s /\ open s
          ==> ((f has_derivative f') (at a within s) <=>
-              (f has_derivative f') (at a))``,
-  SIMP_TAC std_ss [has_derivative_within, has_derivative_at, LIM_WITHIN_OPEN]);
+              (f has_derivative f') (at a))
+Proof
+  SIMP_TAC std_ss [has_derivative_within, has_derivative_at, LIM_WITHIN_OPEN]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Combining theorems.                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-val HAS_DERIVATIVE_LINEAR = store_thm ("HAS_DERIVATIVE_LINEAR",
- ``!f net. linear f ==> (f has_derivative f) net``,
+Theorem HAS_DERIVATIVE_LINEAR:
+   !f net. linear f ==> (f has_derivative f) net
+Proof
   RW_TAC real_ss [has_derivative, real_sub] THEN
   ASM_SIMP_TAC real_ss [GSYM LINEAR_ADD, GSYM LINEAR_CMUL, GSYM LINEAR_NEG] THEN
   ASM_SIMP_TAC real_ss [REAL_ARITH ``a + -(b + (a + -b)) = 0:real``] THEN
-  ASM_SIMP_TAC real_ss [LINEAR_0, LIM_CONST]);
+  ASM_SIMP_TAC real_ss [LINEAR_0, LIM_CONST]
+QED
 
-val HAS_DERIVATIVE_ID = store_thm ("HAS_DERIVATIVE_ID",
- ``!net. ((\x. x) has_derivative (\h. h)) net``,
-  SIMP_TAC real_ss [HAS_DERIVATIVE_LINEAR, LINEAR_ID]);
+Theorem HAS_DERIVATIVE_ID:
+   !net. ((\x. x) has_derivative (\h. h)) net
+Proof
+  SIMP_TAC real_ss [HAS_DERIVATIVE_LINEAR, LINEAR_ID]
+QED
 
-val HAS_DERIVATIVE_CONST = store_thm ("HAS_DERIVATIVE_CONST",
- ``!c net. ((\x. c) has_derivative (\h. 0)) net``,
+Theorem HAS_DERIVATIVE_CONST:
+   !c net. ((\x. c) has_derivative (\h. 0)) net
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[has_derivative, linear] THEN
-  SIMP_TAC real_ss [REAL_ADD_RID, REAL_SUB_REFL, REAL_MUL_RZERO, LIM_CONST]);
+  SIMP_TAC real_ss [REAL_ADD_RID, REAL_SUB_REFL, REAL_MUL_RZERO, LIM_CONST]
+QED
 
-val HAS_DERIVATIVE_CMUL = store_thm ("HAS_DERIVATIVE_CMUL",
- ``!f f' net c. (f has_derivative f') net
-                ==> ((\x. c * f(x)) has_derivative (\h. c * f'(h))) net``,
+Theorem HAS_DERIVATIVE_CMUL:
+   !f f' net c. (f has_derivative f') net
+                ==> ((\x. c * f(x)) has_derivative (\h. c * f'(h))) net
+Proof
   REPEAT GEN_TAC THEN SIMP_TAC real_ss [has_derivative, LINEAR_COMPOSE_CMUL] THEN
   DISCH_THEN(MP_TAC o SPEC ``c:real`` o MATCH_MP LIM_CMUL o CONJUNCT2) THEN
   SIMP_TAC real_ss [REAL_MUL_RZERO] THEN MATCH_MP_TAC EQ_IMPLIES THEN
   AP_THM_TAC THEN AP_THM_TAC THEN
-  AP_TERM_TAC THEN ABS_TAC THEN REAL_ARITH_TAC);
+  AP_TERM_TAC THEN ABS_TAC THEN REAL_ARITH_TAC
+QED
 
-val HAS_DERIVATIVE_NEG = store_thm ("HAS_DERIVATIVE_NEG",
- ``!f f' net. (f has_derivative f') net
-            ==> ((\x. -(f(x))) has_derivative (\h. -(f'(h)))) net``,
+Theorem HAS_DERIVATIVE_NEG:
+   !f f' net. (f has_derivative f') net
+            ==> ((\x. -(f(x))) has_derivative (\h. -(f'(h)))) net
+Proof
   ONCE_REWRITE_TAC[REAL_NEG_MINUS1] THEN
-  SIMP_TAC real_ss [HAS_DERIVATIVE_CMUL]);
+  SIMP_TAC real_ss [HAS_DERIVATIVE_CMUL]
+QED
 
-val HAS_DERIVATIVE_ADD = store_thm ("HAS_DERIVATIVE_ADD",
- ``!f f' g g' net.
+Theorem HAS_DERIVATIVE_ADD:
+   !f f' g g' net.
         (f has_derivative f') net /\ (g has_derivative g') net
-        ==> ((\x. f(x) + g(x)) has_derivative (\h. f'(h) + g'(h))) net``,
+        ==> ((\x. f(x) + g(x)) has_derivative (\h. f'(h) + g'(h))) net
+Proof
   REPEAT GEN_TAC THEN SIMP_TAC std_ss [has_derivative, LINEAR_COMPOSE_ADD] THEN
   DISCH_THEN(MP_TAC o MATCH_MP (TAUT `(a /\ b) /\ (c /\ d) ==> b /\ d`)) THEN
   DISCH_THEN(MP_TAC o MATCH_MP LIM_ADD) THEN REWRITE_TAC[REAL_ADD_LID] THEN
   MATCH_MP_TAC EQ_IMPLIES THEN SIMP_TAC std_ss [] THEN
   AP_THM_TAC THEN AP_THM_TAC THEN
-  AP_TERM_TAC THEN ABS_TAC THEN REAL_ARITH_TAC);
+  AP_TERM_TAC THEN ABS_TAC THEN REAL_ARITH_TAC
+QED
 
-val HAS_DERIVATIVE_SUB = store_thm ("HAS_DERIVATIVE_SUB",
- ``!f f' g g' net.
+Theorem HAS_DERIVATIVE_SUB:
+   !f f' g g' net.
         (f has_derivative f') net /\ (g has_derivative g') net
-        ==> ((\x. f(x) - g(x)) has_derivative (\h. f'(h) - g'(h))) net``,
-  SIMP_TAC real_ss [real_sub, HAS_DERIVATIVE_ADD, HAS_DERIVATIVE_NEG]);
+        ==> ((\x. f(x) - g(x)) has_derivative (\h. f'(h) - g'(h))) net
+Proof
+  SIMP_TAC real_ss [real_sub, HAS_DERIVATIVE_ADD, HAS_DERIVATIVE_NEG]
+QED
 
 Theorem HAS_DERIVATIVE_SUM :
     !f f' net s. FINITE s /\ (!a. a IN s ==> ((f a) has_derivative (f' a)) net)
@@ -493,25 +541,29 @@ QED
 (* Limit transformation for derivatives.                                     *)
 (* ------------------------------------------------------------------------- *)
 
-val HAS_DERIVATIVE_TRANSFORM_WITHIN = store_thm ("HAS_DERIVATIVE_TRANSFORM_WITHIN",
- ``!f f' g x s d.
+Theorem HAS_DERIVATIVE_TRANSFORM_WITHIN:
+   !f f' g x s d.
        &0 < d /\ x IN s /\
        (!x'. x' IN s /\ dist (x',x) < d ==> (f x' = g x')) /\
        (f has_derivative f') (at x within s)
-       ==> (g has_derivative f') (at x within s)``,
+       ==> (g has_derivative f') (at x within s)
+Proof
   REPEAT GEN_TAC THEN SIMP_TAC std_ss [has_derivative_within, IMP_CONJ] THEN
   DISCH_TAC THEN DISCH_TAC THEN DISCH_TAC THEN DISCH_TAC THEN
   MATCH_MP_TAC(REWRITE_RULE[TAUT `a /\ b /\ c ==> d <=> a /\ b ==> c ==> d`]
     LIM_TRANSFORM_WITHIN) THEN
-  Q.EXISTS_TAC `d:real` THEN ASM_SIMP_TAC std_ss [DIST_REFL]);
+  Q.EXISTS_TAC `d:real` THEN ASM_SIMP_TAC std_ss [DIST_REFL]
+QED
 
-val HAS_DERIVATIVE_TRANSFORM_AT = store_thm ("HAS_DERIVATIVE_TRANSFORM_AT",
- ``!f f' g x d.
+Theorem HAS_DERIVATIVE_TRANSFORM_AT:
+   !f f' g x d.
        &0 < d /\ (!x'. dist (x',x) < d ==> (f x' = g x')) /\
        (f has_derivative f') (at x)
-       ==> (g has_derivative f') (at x)``,
+       ==> (g has_derivative f') (at x)
+Proof
   ONCE_REWRITE_TAC[GSYM WITHIN_UNIV] THEN
-  MESON_TAC[HAS_DERIVATIVE_TRANSFORM_WITHIN, IN_UNIV]);
+  MESON_TAC[HAS_DERIVATIVE_TRANSFORM_WITHIN, IN_UNIV]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Differentiability.                                                        *)
@@ -535,23 +587,28 @@ val differentiable_on = new_definition ("differentiable_on",
 val frechet_derivative = new_definition ("frechet_derivative",
  ``frechet_derivative f net = @f'. (f has_derivative f') net``);
 
-val FRECHET_DERIVATIVE_WORKS = store_thm ("FRECHET_DERIVATIVE_WORKS",
- ``!f net. f differentiable net <=>
-           (f has_derivative (frechet_derivative f net)) net``,
+Theorem FRECHET_DERIVATIVE_WORKS:
+   !f net. f differentiable net <=>
+           (f has_derivative (frechet_derivative f net)) net
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[frechet_derivative] THEN
-  CONV_TAC(RAND_CONV SELECT_CONV) THEN REWRITE_TAC[differentiable]);
+  CONV_TAC(RAND_CONV SELECT_CONV) THEN REWRITE_TAC[differentiable]
+QED
 
-val LINEAR_FRECHET_DERIVATIVE = store_thm ("LINEAR_FRECHET_DERIVATIVE",
- ``!f net. f differentiable net ==> linear(frechet_derivative f net)``,
-  SIMP_TAC std_ss [FRECHET_DERIVATIVE_WORKS, has_derivative]);
+Theorem LINEAR_FRECHET_DERIVATIVE:
+   !f net. f differentiable net ==> linear(frechet_derivative f net)
+Proof
+  SIMP_TAC std_ss [FRECHET_DERIVATIVE_WORKS, has_derivative]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Differentiability implies continuity.  377                                *)
 (* ------------------------------------------------------------------------- *)
 
-val LIM_MUL_ABS_WITHIN = store_thm ("LIM_MUL_ABS_WITHIN",
- ``!f a s. (f --> 0) (at a within s)
-           ==> ((\x. abs(x - a) * f(x)) --> 0) (at a within s)``,
+Theorem LIM_MUL_ABS_WITHIN:
+   !f a s. (f --> 0) (at a within s)
+           ==> ((\x. abs(x - a) * f(x)) --> 0) (at a within s)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[LIM_WITHIN] THEN
   DISCH_TAC THEN GEN_TAC THEN POP_ASSUM (MP_TAC o Q.SPEC `e:real`) THEN
   ASM_CASES_TAC ``&0 < e:real`` THEN ASM_REWRITE_TAC[dist, REAL_SUB_RZERO] THEN
@@ -559,7 +616,8 @@ val LIM_MUL_ABS_WITHIN = store_thm ("LIM_MUL_ABS_WITHIN",
   EXISTS_TAC ``min d (&1:real)`` THEN ASM_REWRITE_TAC[REAL_LT_MIN, REAL_LT_01] THEN
   REPEAT STRIP_TAC THEN SIMP_TAC std_ss [ABS_MUL, ABS_ABS] THEN
   GEN_REWR_TAC RAND_CONV [GSYM REAL_MUL_LID] THEN
-  ASM_SIMP_TAC std_ss [REAL_LT_MUL2, ABS_POS]);
+  ASM_SIMP_TAC std_ss [REAL_LT_MUL2, ABS_POS]
+QED
 
 Theorem DIFFERENTIABLE_IMP_CONTINUOUS_WITHIN :
     !f:real->real x s.
@@ -587,15 +645,19 @@ Proof
   SIMP_TAC std_ss [REAL_ARITH ``(a + (b - (c + a))) - (0 + 0) = b - c:real``]
 QED
 
-val DIFFERENTIABLE_IMP_CONTINUOUS_AT = store_thm ("DIFFERENTIABLE_IMP_CONTINUOUS_AT",
- ``!f:real->real x. f differentiable (at x) ==> f continuous (at x)``,
+Theorem DIFFERENTIABLE_IMP_CONTINUOUS_AT:
+   !f:real->real x. f differentiable (at x) ==> f continuous (at x)
+Proof
   ONCE_REWRITE_TAC[GSYM WITHIN_UNIV] THEN
-  REWRITE_TAC[DIFFERENTIABLE_IMP_CONTINUOUS_WITHIN]);
+  REWRITE_TAC[DIFFERENTIABLE_IMP_CONTINUOUS_WITHIN]
+QED
 
-val DIFFERENTIABLE_IMP_CONTINUOUS_ON = store_thm ("DIFFERENTIABLE_IMP_CONTINUOUS_ON",
- ``!f:real->real s. f differentiable_on s ==> f continuous_on s``,
+Theorem DIFFERENTIABLE_IMP_CONTINUOUS_ON:
+   !f:real->real s. f differentiable_on s ==> f continuous_on s
+Proof
   SIMP_TAC std_ss [differentiable_on, CONTINUOUS_ON_EQ_CONTINUOUS_WITHIN,
-           DIFFERENTIABLE_IMP_CONTINUOUS_WITHIN]);
+           DIFFERENTIABLE_IMP_CONTINUOUS_WITHIN]
+QED
 
 Theorem HAS_DERIVATIVE_WITHIN_SUBSET :
     !f f' s t x. (f has_derivative f') (at x within s) /\ t SUBSET s
@@ -612,30 +674,35 @@ Proof
     REWRITE_TAC[differentiable] THEN MESON_TAC[HAS_DERIVATIVE_WITHIN_SUBSET]
 QED
 
-val DIFFERENTIABLE_ON_SUBSET = store_thm ("DIFFERENTIABLE_ON_SUBSET",
- ``!f:real->real s t.
-      f differentiable_on t /\ s SUBSET t ==> f differentiable_on s``,
+Theorem DIFFERENTIABLE_ON_SUBSET:
+   !f:real->real s t.
+      f differentiable_on t /\ s SUBSET t ==> f differentiable_on s
+Proof
   REWRITE_TAC[differentiable_on] THEN
-  MESON_TAC[SUBSET_DEF, DIFFERENTIABLE_WITHIN_SUBSET]);
+  MESON_TAC[SUBSET_DEF, DIFFERENTIABLE_WITHIN_SUBSET]
+QED
 
-val DIFFERENTIABLE_ON_EMPTY = store_thm ("DIFFERENTIABLE_ON_EMPTY",
- ``!f. f differentiable_on {}``,
-  REWRITE_TAC[differentiable_on, NOT_IN_EMPTY]);
+Theorem DIFFERENTIABLE_ON_EMPTY:
+   !f. f differentiable_on {}
+Proof
+  REWRITE_TAC[differentiable_on, NOT_IN_EMPTY]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Several results are easier using a "multiplied-out" variant.              *)
 (* (I got this idea from Dieudonne's proof of the chain rule).               *)
 (* ------------------------------------------------------------------------- *)
 
-val HAS_DERIVATIVE_WITHIN_ALT = store_thm ("HAS_DERIVATIVE_WITHIN_ALT",
- ``!f:real->real f' s x.
+Theorem HAS_DERIVATIVE_WITHIN_ALT:
+   !f:real->real f' s x.
      (f has_derivative f') (at x within s) <=>
             linear f' /\
             !e. &0 < e
                 ==> ?d. &0 < d /\
                         !y. y IN s /\ abs(y - x) < d
                             ==> abs(f(y) - f(x) - f'(y - x)) <=
-                                e * abs(y - x)``,
+                                e * abs(y - x)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[has_derivative_within, LIM_WITHIN] THEN
   ASM_REWRITE_TAC[dist, REAL_SUB_RZERO] THEN
   ASM_CASES_TAC ``linear(f':real->real)`` THEN
@@ -663,28 +730,32 @@ val HAS_DERIVATIVE_WITHIN_ALT = store_thm ("HAS_DERIVATIVE_WITHIN_ALT",
     MATCH_MP_TAC REAL_LET_TRANS THEN
     EXISTS_TAC ``e / &2 * abs(y - x :real)`` THEN
     ASM_SIMP_TAC arith_ss [REAL_LT_RMUL, REAL_LT_LDIV_EQ, REAL_LT] THEN
-    UNDISCH_TAC ``&0 < e:real`` THEN REAL_ARITH_TAC]);
+    UNDISCH_TAC ``&0 < e:real`` THEN REAL_ARITH_TAC]
+QED
 
-val HAS_DERIVATIVE_AT_ALT = store_thm ("HAS_DERIVATIVE_AT_ALT",
- ``!f:real->real f' x.
+Theorem HAS_DERIVATIVE_AT_ALT:
+   !f:real->real f' x.
      (f has_derivative f') (at x) <=>
         linear f' /\
         !e. &0 < e
             ==> ?d. &0 < d /\
                     !y. abs(y - x) < d
-                        ==> abs(f(y) - f(x) - f'(y - x)) <= e * abs(y - x)``,
+                        ==> abs(f(y) - f(x) - f'(y - x)) <= e * abs(y - x)
+Proof
   ONCE_REWRITE_TAC[GSYM WITHIN_UNIV] THEN
-  REWRITE_TAC[HAS_DERIVATIVE_WITHIN_ALT, IN_UNIV]);
+  REWRITE_TAC[HAS_DERIVATIVE_WITHIN_ALT, IN_UNIV]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* The chain rule.    499                                                    *)
 (* ------------------------------------------------------------------------- *)
 
-val DIFF_CHAIN_WITHIN = store_thm ("DIFF_CHAIN_WITHIN",
- ``!f:real->real g:real->real f' g' x s.
+Theorem DIFF_CHAIN_WITHIN:
+   !f:real->real g:real->real f' g' x s.
         (f has_derivative f') (at x within s) /\
         (g has_derivative g') (at (f x) within (IMAGE f s))
-        ==> ((g o f) has_derivative (g' o f'))(at x within s)``,
+        ==> ((g o f) has_derivative (g' o f'))(at x within s)
+Proof
   REPEAT GEN_TAC THEN SIMP_TAC std_ss [HAS_DERIVATIVE_WITHIN_ALT, LINEAR_COMPOSE] THEN
   DISCH_THEN(CONJUNCTS_THEN2 STRIP_ASSUME_TAC MP_TAC) THEN
   FIRST_ASSUM(X_CHOOSE_TAC ``B1:real`` o MATCH_MP LINEAR_BOUNDED_POS) THEN
@@ -777,7 +848,8 @@ val DIFF_CHAIN_WITHIN = store_thm ("DIFF_CHAIN_WITHIN",
   ONCE_REWRITE_TAC [REAL_ARITH ``a * b * c * d = (c * a) * b * d:real``] THEN
   SIMP_TAC real_ss [REAL_MUL_LINV] THEN MATCH_MP_TAC(REAL_ARITH
   ``u <= x * b /\ v <= b ==> u + v <= b * (&1 + x:real)``) THEN
-  ASM_REWRITE_TAC[]);
+  ASM_REWRITE_TAC[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Component of the differential must be zero if it exists at a local        *)
@@ -918,21 +990,24 @@ Proof
   METIS_TAC [REAL_MUL_COMM]
 QED
 
-val DIFFERENTIAL_COMPONENT_NEG_AT_MAXIMUM = store_thm ("DIFFERENTIAL_COMPONENT_NEG_AT_MAXIMUM",
- ``!f:real->real f' x s e.
+Theorem DIFFERENTIAL_COMPONENT_NEG_AT_MAXIMUM:
+   !f:real->real f' x s e.
         x IN s /\ convex s /\ (f has_derivative f') (at x within s) /\
         &0 < e /\ (!w. w IN s INTER ball(x,e) ==> (f w) <= (f x))
-        ==> !y. y IN s ==> (f'(y - x)) <= &0``,
+        ==> !y. y IN s ==> (f'(y - x)) <= &0
+Proof
   REPEAT STRIP_TAC THEN
   MP_TAC(ISPECL [
    ``\x. -((f:real->real) x)``, ``\x. -((f':real->real) x)``,
    ``x:real``, ``s:real->bool``, ``e:real``]
         DIFFERENTIAL_COMPONENT_POS_AT_MINIMUM) THEN
   ASM_SIMP_TAC real_ss [HAS_DERIVATIVE_NEG] THEN
-  ASM_SIMP_TAC real_ss [REAL_LE_NEG2, REAL_NEG_GE0]);
+  ASM_SIMP_TAC real_ss [REAL_LE_NEG2, REAL_NEG_GE0]
+QED
 
-val CONVEX_CBALL = store_thm ("CONVEX_CBALL",
- ``!x:real e. convex(cball(x,e))``,
+Theorem CONVEX_CBALL:
+   !x:real e. convex(cball(x,e))
+Proof
   REWRITE_TAC[convex, IN_CBALL, dist] THEN MAP_EVERY X_GEN_TAC
    [``x:real``, ``e:real``, ``y:real``, ``z:real``, ``u:real``, ``v:real``] THEN
   STRIP_TAC THEN ONCE_REWRITE_TAC[REAL_ARITH ``a - b = &1 * a - b:real``] THEN
@@ -944,7 +1019,8 @@ val CONVEX_CBALL = store_thm ("CONVEX_CBALL",
   REWRITE_TAC[ABS_TRIANGLE, ABS_MUL] THEN
   MATCH_MP_TAC REAL_CONVEX_BOUND_LE THEN ASM_REWRITE_TAC[REAL_ABS_POS] THEN
   ASM_SIMP_TAC real_ss [REAL_ARITH
-   ``&0 <= u /\ &0 <= v /\ (u + v = &1) ==> (abs(u) + abs(v) = &1:real)``]);
+   ``&0 <= u /\ &0 <= v /\ (u + v = &1) ==> (abs(u) + abs(v) = &1:real)``]
+QED
 
 Theorem DIFFERENTIAL_COMPONENT_ZERO_AT_MAXMIN :
     !f:real->real f' x s.
@@ -1021,12 +1097,13 @@ QED
 (* The traditional Rolle theorem in one dimension.      1056                 *)
 (* ------------------------------------------------------------------------- *)
 
-val ROLLE = store_thm ("ROLLE",
- ``!f:real->real f' a b.
+Theorem ROLLE:
+   !f:real->real f' a b.
         a < b /\ (f a = f b) /\
         f continuous_on interval[a,b] /\
         (!x. x IN interval(a,b) ==> (f has_derivative f'(x)) (at x))
-        ==> ?x. x IN interval(a,b) /\ (f'(x) = \v. 0)``,
+        ==> ?x. x IN interval(a,b) /\ (f'(x) = \v. 0)
+Proof
   REPEAT STRIP_TAC THEN
   SUBGOAL_THEN
    ``?x. x:real IN interval(a,b) /\
@@ -1054,17 +1131,19 @@ val ROLLE = store_thm ("ROLLE",
   STRIP_TAC THEN Q.EXISTS_TAC `x` THEN
   REPEAT(FIRST_X_ASSUM(MP_TAC o MATCH_MP INTERVAL_CASES)) THEN
   ASM_REWRITE_TAC[] THEN REPEAT(DISCH_THEN(DISJ_CASES_THEN SUBST_ALL_TAC)) THEN
-  ASM_MESON_TAC[REAL_LE_ANTISYM, SUBSET_DEF, INTERVAL_OPEN_SUBSET_CLOSED]);
+  ASM_MESON_TAC[REAL_LE_ANTISYM, SUBSET_DEF, INTERVAL_OPEN_SUBSET_CLOSED]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* One-dimensional mean value theorem. 1076                                  *)
 (* ------------------------------------------------------------------------- *)
 
-val MVT = store_thm ("MVT",
- ``!f:real->real f' a b.
+Theorem MVT:
+   !f:real->real f' a b.
         a < b /\ f continuous_on interval[a,b] /\
         (!x. x IN interval(a,b) ==> (f has_derivative f'(x)) (at x))
-        ==> ?x. x IN interval(a,b) /\ (f(b) - f(a) = f'(x) (b - a))``,
+        ==> ?x. x IN interval(a,b) /\ (f(b) - f(a) = f'(x) (b - a))
+Proof
   REPEAT STRIP_TAC THEN
   MP_TAC(SPECL [``\x. f(x) - ((f b - f a) / (b - a)) * x:real``,
                 ``\k:real x:real.
@@ -1095,18 +1174,20 @@ val MVT = store_thm ("MVT",
       MATCH_MP_TAC HAS_DERIVATIVE_SUB THEN
       ASM_SIMP_TAC real_ss [HAS_DERIVATIVE_CMUL, HAS_DERIVATIVE_ID, ETA_AX]]] THEN
   `b - a <> 0` by (UNDISCH_TAC ``a < b:real`` THEN REAL_ARITH_TAC) THEN
-  ASM_SIMP_TAC real_ss [REAL_DIV_RMUL] THEN REAL_ARITH_TAC);
+  ASM_SIMP_TAC real_ss [REAL_DIV_RMUL] THEN REAL_ARITH_TAC
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* A nice generalization (see Havin's proof of 5.19 from Rudin's book).      *)
 (* ------------------------------------------------------------------------- *)
 
-val MVT_GENERAL = store_thm ("MVT_GENERAL",
- ``!f:real->real f' a b.
+Theorem MVT_GENERAL:
+   !f:real->real f' a b.
         a < b /\ f continuous_on interval[a,b] /\
         (!x. x IN interval(a,b) ==> (f has_derivative f'(x)) (at x))
         ==> ?x. x IN interval(a,b) /\
-                abs(f(b) - f(a)) <= abs(f'(x) (b - a))``,
+                abs(f(b) - f(a)) <= abs(f'(x) (b - a))
+Proof
   REPEAT STRIP_TAC THEN
   MP_TAC(SPECL [``((\y. (f(b) - f(a)) * y)) o (f:real->real)``,
                 ``\x t. ((f(b:real) - f(a)) *
@@ -1134,7 +1215,8 @@ val MVT_GENERAL = store_thm ("MVT_GENERAL",
   Q.EXISTS_TAC `abs((f:real->real) b - f a)` THEN
   ASM_SIMP_TAC real_ss [GSYM ABS_MUL] THEN
   ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN MATCH_MP_TAC REAL_LT_IMP_NE THEN
-  POP_ASSUM MP_TAC THEN REAL_ARITH_TAC);
+  POP_ASSUM MP_TAC THEN REAL_ARITH_TAC
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Operator norm.                                                            *)
@@ -1143,11 +1225,12 @@ val MVT_GENERAL = store_thm ("MVT_GENERAL",
 val oabs = new_definition ("oabs",
          ``oabs (f:real->real) = sup { abs(f x) | abs(x) = &1 }``);
 
-val ABS_BOUND_GENERALIZE = store_thm ("ABS_BOUND_GENERALIZE",
- ``!f:real->real b.
+Theorem ABS_BOUND_GENERALIZE:
+   !f:real->real b.
         linear f
         ==> ((!x. (abs(x) = &1) ==> abs(f x) <= b) <=>
-             (!x. abs(f x) <= b * abs(x)))``,
+             (!x. abs(f x) <= b * abs(x)))
+Proof
   REPEAT STRIP_TAC THEN EQ_TAC THEN DISCH_TAC THENL
    [ALL_TAC, ASM_MESON_TAC[REAL_MUL_RID]] THEN
   X_GEN_TAC ``x:real`` THEN ASM_CASES_TAC ``x:real = 0`` THENL
@@ -1160,31 +1243,35 @@ val ABS_BOUND_GENERALIZE = store_thm ("ABS_BOUND_GENERALIZE",
   ONCE_REWRITE_TAC[REAL_ABS_MUL] THEN ASM_SIMP_TAC std_ss [ABS_ABS, GSYM ABS_INV] THEN
   REWRITE_TAC [GSYM ABS_MUL] THEN
   FIRST_ASSUM(fn th => REWRITE_TAC[GSYM(MATCH_MP LINEAR_CMUL th)]) THEN
-  ASM_SIMP_TAC real_ss [ABS_MUL, ABS_INV, ABS_ABS, REAL_MUL_LINV, ABS_0]);
+  ASM_SIMP_TAC real_ss [ABS_MUL, ABS_INV, ABS_ABS, REAL_MUL_LINV, ABS_0]
+QED
 
-val OABS = store_thm ("OABS",
- ``!f:real->real.
+Theorem OABS:
+   !f:real->real.
         linear f
         ==> (!x. abs(f x) <= oabs f * abs(x)) /\
-            (!b. (!x. abs(f x) <= b * abs(x)) ==> oabs f <= b)``,
+            (!b. (!x. abs(f x) <= b * abs(x)) ==> oabs f <= b)
+Proof
   GEN_TAC THEN DISCH_TAC THEN
   MP_TAC(Q.SPEC `{ abs((f:real->real) x) | abs(x) = &1 }` SUP) THEN
   SIMP_TAC std_ss [GSPECIFICATION, LEFT_IMP_EXISTS_THM] THEN
   SIMP_TAC std_ss [LEFT_FORALL_IMP_THM, RIGHT_EXISTS_AND_THM, EXISTS_REFL] THEN
   ASM_SIMP_TAC std_ss [ABS_BOUND_GENERALIZE, GSYM oabs, GSYM MEMBER_NOT_EMPTY] THEN
   DISCH_THEN MATCH_MP_TAC THEN SIMP_TAC std_ss [GSPECIFICATION] THEN
-  ASM_MESON_TAC[REAL_CHOOSE_SIZE, LINEAR_BOUNDED, REAL_POS]);
+  ASM_MESON_TAC[REAL_CHOOSE_SIZE, LINEAR_BOUNDED, REAL_POS]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Still more general bound theorem.   1168                                  *)
 (* ------------------------------------------------------------------------- *)
 
-val DIFFERENTIABLE_BOUND = store_thm ("DIFFERENTIABLE_BOUND",
- ``!f:real->real f' s B.
+Theorem DIFFERENTIABLE_BOUND:
+   !f:real->real f' s B.
         convex s /\
         (!x. x IN s ==> (f has_derivative f'(x)) (at x within s)) /\
         (!x. x IN s ==> oabs(f'(x)) <= B)
-        ==> !x y. x IN s /\ y IN s ==> abs(f(x) - f(y)) <= B * abs(x - y)``,
+        ==> !x y. x IN s /\ y IN s ==> abs(f(x) - f(y)) <= B * abs(x - y)
+Proof
   ONCE_REWRITE_TAC[ABS_SUB] THEN REPEAT STRIP_TAC THEN
   SUBGOAL_THEN
     ``!x y. x IN s ==> abs((f':real->real->real)(x) y) <= B * abs(y)``
@@ -1256,14 +1343,15 @@ val DIFFERENTIABLE_BOUND = store_thm ("DIFFERENTIABLE_BOUND",
   MATCH_MP_TAC HAS_DERIVATIVE_ADD THEN REWRITE_TAC [HAS_DERIVATIVE_CONST] THEN
   ONCE_REWRITE_TAC [REAL_MUL_COMM] THEN
   ONCE_REWRITE_TAC [METIS [] ``(\u. (y - x) * u) = (\u. (y - x) * (\u. u) u:real)``] THEN
-  MATCH_MP_TAC HAS_DERIVATIVE_CMUL THEN SIMP_TAC std_ss [HAS_DERIVATIVE_ID]);
+  MATCH_MP_TAC HAS_DERIVATIVE_CMUL THEN SIMP_TAC std_ss [HAS_DERIVATIVE_ID]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Uniformly convergent sequence of derivatives.   1948                      *)
 (* ------------------------------------------------------------------------- *)
 
-val HAS_DERIVATIVE_SEQUENCE_LIPSCHITZ = store_thm ("HAS_DERIVATIVE_SEQUENCE_LIPSCHITZ",
- ``!s f:num->real->real f' g'.
+Theorem HAS_DERIVATIVE_SEQUENCE_LIPSCHITZ:
+   !s f:num->real->real f' g'.
         convex s /\
         (!n x. x IN s ==> ((f n) has_derivative (f' n x)) (at x within s)) /\
         (!e. &0 < e
@@ -1272,7 +1360,8 @@ val HAS_DERIVATIVE_SEQUENCE_LIPSCHITZ = store_thm ("HAS_DERIVATIVE_SEQUENCE_LIPS
         ==> !e. &0 < e
                 ==> ?N. !m n x y. m >= N /\ n >= N /\ x IN s /\ y IN s
                                   ==> abs((f m x - f n x) - (f m y - f n y))
-                                      <= e * abs(x - y)``,
+                                      <= e * abs(x - y)
+Proof
   REPEAT STRIP_TAC THEN FIRST_X_ASSUM(MP_TAC o Q.SPEC `e / &2`) THEN
   ASM_REWRITE_TAC[REAL_HALF] THEN
   Q_TAC SUFF_TAC `!N. (!n x h. n >= N /\ x IN s ==>
@@ -1306,10 +1395,11 @@ val HAS_DERIVATIVE_SEQUENCE_LIPSCHITZ = store_thm ("HAS_DERIVATIVE_SEQUENCE_LIPS
   [DISCH_THEN MATCH_MP_TAC THEN ASM_SIMP_TAC real_ss [ABS_NEG], ALL_TAC] THEN
   ONCE_REWRITE_TAC [REAL_MUL_COMM] THEN SIMP_TAC real_ss [real_div] THEN
   ONCE_REWRITE_TAC [REAL_ARITH ``a * (b * c) = (a * b) * c:real``] THEN
-  SIMP_TAC real_ss [GSYM real_div, REAL_LE_RDIV_EQ] THEN REAL_ARITH_TAC);
+  SIMP_TAC real_ss [GSYM real_div, REAL_LE_RDIV_EQ] THEN REAL_ARITH_TAC
+QED
 
-val HAS_DERIVATIVE_SEQUENCE = store_thm ("HAS_DERIVATIVE_SEQUENCE",
- ``!s f:num->real->real f' g'.
+Theorem HAS_DERIVATIVE_SEQUENCE:
+   !s f:num->real->real f' g'.
         convex s /\
         (!n x. x IN s ==> ((f n) has_derivative (f' n x)) (at x within s)) /\
         (!e. &0 < e
@@ -1318,7 +1408,8 @@ val HAS_DERIVATIVE_SEQUENCE = store_thm ("HAS_DERIVATIVE_SEQUENCE",
         (?x l. x IN s /\ ((\n. f n x) --> l) sequentially)
         ==> ?g. !x. x IN s
                     ==> ((\n. f n x) --> g x) sequentially /\
-                        (g has_derivative g'(x)) (at x within s)``,
+                        (g has_derivative g'(x)) (at x within s)
+Proof
 
   REPEAT GEN_TAC THEN
   DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
@@ -1471,14 +1562,15 @@ val HAS_DERIVATIVE_SEQUENCE = store_thm ("HAS_DERIVATIVE_SEQUENCE",
      abs(y + z) <= abs(y) + abs(z)
      ==> abs(a) <= abs(x) + abs(y) + abs(z:real)``) THEN
   ONCE_REWRITE_TAC [REAL_ARITH ``a + b + c = a + (b + c:real)``] THEN
-  SIMP_TAC std_ss [ABS_TRIANGLE] THEN AP_TERM_TAC THEN REAL_ARITH_TAC);
+  SIMP_TAC std_ss [ABS_TRIANGLE] THEN AP_TERM_TAC THEN REAL_ARITH_TAC
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Differentiation of a series.   HAS_DERIVATIVE_SEQUENCE     2187               *)
 (* ------------------------------------------------------------------------- *)
 
-val HAS_DERIVATIVE_SERIES = store_thm ("HAS_DERIVATIVE_SERIES",
-  ``!s f:num->real->real f' g' k.
+Theorem HAS_DERIVATIVE_SERIES:
+    !s f:num->real->real f' g' k.
         convex s /\
         (!n x. x IN s ==> ((f n) has_derivative (f' n x)) (at x within s)) /\
         (!e. &0 < e
@@ -1487,7 +1579,8 @@ val HAS_DERIVATIVE_SERIES = store_thm ("HAS_DERIVATIVE_SERIES",
                                       g' x h) <= e * abs(h)) /\
         (?x l. x IN s /\ ((\n. f n x) sums l) k)
         ==> ?g. !x. x IN s ==> ((\n. f n x) sums (g x)) k /\
-                               (g has_derivative g'(x)) (at x within s)``,
+                               (g has_derivative g'(x)) (at x within s)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[sums_def, GSYM numseg] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   ONCE_REWRITE_TAC [METIS [] ``sum (k INTER {0 .. n}) (\n. f n x) =
@@ -1496,10 +1589,11 @@ val HAS_DERIVATIVE_SERIES = store_thm ("HAS_DERIVATIVE_SERIES",
    `(\n:num x:real h:real. sum(k INTER { 0n .. n}) (\n. f' n x h):real)` THEN
   ASM_SIMP_TAC real_ss [FINITE_INTER_NUMSEG] THEN RW_TAC std_ss [] THEN
   ONCE_REWRITE_TAC [METIS [] ``(\n. f' n x h) = (\n. (\n h. f' n x h) n h)``] THEN
-  MATCH_MP_TAC HAS_DERIVATIVE_SUM THEN METIS_TAC [FINITE_INTER_NUMSEG, ETA_AX]);
+  MATCH_MP_TAC HAS_DERIVATIVE_SUM THEN METIS_TAC [FINITE_INTER_NUMSEG, ETA_AX]
+QED
 
-val HAS_DERIVATIVE_SERIES' = store_thm ("HAS_DERIVATIVE_SERIES'",
- ``!s f f' g' k.
+Theorem HAS_DERIVATIVE_SERIES':
+   !s f f' g' k.
          convex s /\
          (!n x. x IN s
                 ==> (f n has_derivative (\y. f' n x * y)) (at x within s)) /\
@@ -1509,7 +1603,8 @@ val HAS_DERIVATIVE_SERIES' = store_thm ("HAS_DERIVATIVE_SERIES'",
          (?x l. x IN s /\ ((\n. f n x) sums l) k)
          ==> ?g. !x. x IN s
                      ==> ((\n. f n x) sums g x) k /\
-                         (g has_derivative (\y. g' x * y)) (at x within s)``,
+                         (g has_derivative (\y. g' x * y)) (at x within s)
+Proof
   REPEAT STRIP_TAC THEN
   ONCE_REWRITE_TAC [METIS [] ``(\y. g' x * y) = (\x y. (g':real->real) x * y) x``] THEN
   MATCH_MP_TAC HAS_DERIVATIVE_SERIES THEN
@@ -1520,19 +1615,21 @@ val HAS_DERIVATIVE_SERIES' = store_thm ("HAS_DERIVATIVE_SERIES'",
   SIMP_TAC std_ss [SUM_RMUL, GSYM REAL_SUB_RDISTRIB, ABS_MUL] THEN
   Q_TAC SUFF_TAC `!n. {x | x <= n} = { 0n .. n}` THENL
   [METIS_TAC[REAL_LE_RMUL_IMP, ABS_POS], ALL_TAC] THEN
-  RW_TAC arith_ss [EXTENSION, GSPECIFICATION, IN_NUMSEG]);
+  RW_TAC arith_ss [EXTENSION, GSPECIFICATION, IN_NUMSEG]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Derivative with composed bilinear function.                               *)
 (* ------------------------------------------------------------------------- *)
 
-val HAS_DERIVATIVE_BILINEAR_WITHIN = store_thm ("HAS_DERIVATIVE_BILINEAR_WITHIN",
- ``!h:real->real->real f g f' g' x:real s.
+Theorem HAS_DERIVATIVE_BILINEAR_WITHIN:
+   !h:real->real->real f g f' g' x:real s.
         (f has_derivative f') (at x within s) /\
         (g has_derivative g') (at x within s) /\
         bilinear h
         ==> ((\x. h (f x) (g x)) has_derivative
-             (\d. h (f x) (g' d) + h (f' d) (g x))) (at x within s)``,
+             (\d. h (f x) (g' d) + h (f' d) (g x))) (at x within s)
+Proof
   REPEAT STRIP_TAC THEN
   SUBGOAL_THEN ``((g:real->real) --> g(x)) (at x within s)`` ASSUME_TAC THENL
    [REWRITE_TAC[GSYM CONTINUOUS_WITHIN] THEN
@@ -1610,38 +1707,45 @@ val HAS_DERIVATIVE_BILINEAR_WITHIN = store_thm ("HAS_DERIVATIVE_BILINEAR_WITHIN"
      [BILINEAR_RZERO, BILINEAR_LZERO, BILINEAR_LADD, BILINEAR_RADD,
       BILINEAR_LMUL, BILINEAR_RMUL, BILINEAR_LSUB, BILINEAR_RSUB]) THEN
     MATCH_MP_TAC EQ_IMPLIES THEN AP_THM_TAC THEN
-    BINOP_TAC THEN SIMP_TAC real_ss [FUN_EQ_THM] THEN REAL_ARITH_TAC]);
+    BINOP_TAC THEN SIMP_TAC real_ss [FUN_EQ_THM] THEN REAL_ARITH_TAC]
+QED
 
-val HAS_DERIVATIVE_BILINEAR_AT = store_thm ("HAS_DERIVATIVE_BILINEAR_AT",
- ``!h:real->real->real f g f' g' x:real.
+Theorem HAS_DERIVATIVE_BILINEAR_AT:
+   !h:real->real->real f g f' g' x:real.
         (f has_derivative f') (at x) /\
         (g has_derivative g') (at x) /\
         bilinear h
         ==> ((\x. h (f x) (g x)) has_derivative
-             (\d. h (f x) (g' d) + h (f' d) (g x))) (at x)``,
+             (\d. h (f x) (g' d) + h (f' d) (g x))) (at x)
+Proof
   REWRITE_TAC[has_derivative_at] THEN
   ONCE_REWRITE_TAC[GSYM WITHIN_UNIV] THEN
-  REWRITE_TAC[GSYM has_derivative_within, HAS_DERIVATIVE_BILINEAR_WITHIN]);
+  REWRITE_TAC[GSYM has_derivative_within, HAS_DERIVATIVE_BILINEAR_WITHIN]
+QED
 
-val HAS_DERIVATIVE_MUL_WITHIN = store_thm ("HAS_DERIVATIVE_MUL_WITHIN",
- ``!f f' g:real->real g' a s.
+Theorem HAS_DERIVATIVE_MUL_WITHIN:
+   !f f' g:real->real g' a s.
         ((f) has_derivative (f')) (at a within s) /\
         (g has_derivative g') (at a within s)
         ==> ((\x. f x * g x) has_derivative
-             (\h. f a * g' h + f' h * g a)) (at a within s)``,
+             (\h. f a * g' h + f' h * g a)) (at a within s)
+Proof
   REPEAT GEN_TAC THEN
   DISCH_THEN(MP_TAC o MATCH_MP (REWRITE_RULE[BILINEAR_DOT]
    (Q.ISPEC `\x y:real. x * y` HAS_DERIVATIVE_BILINEAR_WITHIN))) THEN
-  SIMP_TAC std_ss [o_DEF]);
+  SIMP_TAC std_ss [o_DEF]
+QED
 
-val HAS_DERIVATIVE_MUL_AT = store_thm ("HAS_DERIVATIVE_MUL_AT",
- ``!f f' g:real->real g' a.
+Theorem HAS_DERIVATIVE_MUL_AT:
+   !f f' g:real->real g' a.
         ((f) has_derivative (f')) (at a) /\
         (g has_derivative g') (at a)
         ==> ((\x. f x * g x) has_derivative
-             (\h. f a * g' h + f' h * g a)) (at a)``,
+             (\h. f a * g' h + f' h * g a)) (at a)
+Proof
   ONCE_REWRITE_TAC[GSYM WITHIN_UNIV] THEN
-  REWRITE_TAC[HAS_DERIVATIVE_MUL_WITHIN]);
+  REWRITE_TAC[HAS_DERIVATIVE_MUL_WITHIN]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Considering derivative R->R as a vector.                                  *)
@@ -1664,31 +1768,35 @@ Proof
     REWRITE_TAC [has_vector_derivative, HAS_DERIVATIVE_WITHIN_SUBSET]
 QED
 
-val HAS_VECTOR_DERIVATIVE_BILINEAR_WITHIN = store_thm ("HAS_VECTOR_DERIVATIVE_BILINEAR_WITHIN",
- ``!h:real->real->real f g f' g' x s.
+Theorem HAS_VECTOR_DERIVATIVE_BILINEAR_WITHIN:
+   !h:real->real->real f g f' g' x s.
         (f has_vector_derivative f') (at x within s) /\
         (g has_vector_derivative g') (at x within s) /\
         bilinear h
         ==> ((\x. h (f x) (g x)) has_vector_derivative
-             (h (f x) g' + h f' (g x))) (at x within s)``,
+             (h (f x) g' + h f' (g x))) (at x within s)
+Proof
   REPEAT GEN_TAC THEN SIMP_TAC std_ss [has_vector_derivative] THEN
   DISCH_TAC THEN
   FIRST_ASSUM(MP_TAC o MATCH_MP HAS_DERIVATIVE_BILINEAR_WITHIN) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[bilinear, linear]) THEN
-  FULL_SIMP_TAC real_ss [REAL_ADD_LDISTRIB]);
+  FULL_SIMP_TAC real_ss [REAL_ADD_LDISTRIB]
+QED
 
-val HAS_VECTOR_DERIVATIVE_BILINEAR_AT = store_thm ("HAS_VECTOR_DERIVATIVE_BILINEAR_AT",
- ``!h:real->real->real f g f' g' x.
+Theorem HAS_VECTOR_DERIVATIVE_BILINEAR_AT:
+   !h:real->real->real f g f' g' x.
         (f has_vector_derivative f') (at x) /\
         (g has_vector_derivative g') (at x) /\
         bilinear h
         ==> ((\x. h (f x) (g x)) has_vector_derivative
-             (h (f x) g' + h f' (g x))) (at x)``,
+             (h (f x) g' + h f' (g x))) (at x)
+Proof
   REPEAT GEN_TAC THEN SIMP_TAC real_ss [has_vector_derivative] THEN
   DISCH_TAC THEN
   FIRST_ASSUM(MP_TAC o MATCH_MP HAS_DERIVATIVE_BILINEAR_AT) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[bilinear, linear]) THEN
-  FULL_SIMP_TAC real_ss [REAL_ADD_LDISTRIB]);
+  FULL_SIMP_TAC real_ss [REAL_ADD_LDISTRIB]
+QED
 
 Theorem HAS_VECTOR_DERIVATIVE_AT_WITHIN :
     !f f' x s. (f has_vector_derivative f') (at x)
@@ -1702,11 +1810,12 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* See limTheory.HAS_DERIVATIVE_POW' for a better version without sum *)
-val HAS_DERIVATIVE_POW = store_thm ("HAS_DERIVATIVE_POW",
- ``!q0 n.
+Theorem HAS_DERIVATIVE_POW:
+   !q0 n.
      ((\q. q pow n) has_derivative
       (\q. sum { 1n..n} (\i. q0 pow (n - i) * q * q0 pow (i - 1))))
-     (at q0)``,
+     (at q0)
+Proof
   GEN_TAC THEN INDUCT_TAC THENL
   [`0 < 1:num` by SIMP_TAC arith_ss [] THEN
    FULL_SIMP_TAC real_ss [GSYM NUMSEG_EMPTY, SUM_CLAUSES, pow] THEN
@@ -1728,12 +1837,14 @@ val HAS_DERIVATIVE_POW = store_thm ("HAS_DERIVATIVE_POW",
    (\q. (\q. q) q0 * (\q. sum {1 .. n} (\i. q0 pow (n - i) * q * q0 pow (i - 1))) q +
      (\q. q) q * (\q. q pow n) q0)) (at q0)` THENL
   [SIMP_TAC std_ss [], ALL_TAC] THEN MATCH_MP_TAC HAS_DERIVATIVE_MUL_AT THEN
-  ASM_SIMP_TAC std_ss [HAS_DERIVATIVE_ID]);
+  ASM_SIMP_TAC std_ss [HAS_DERIVATIVE_ID]
+QED
 
-val EXP_CONVERGES_UNIFORMLY_CAUCHY = store_thm ("EXP_CONVERGES_UNIFORMLY_CAUCHY",
- ``!R e. &0 < e /\ &0 < R
+Theorem EXP_CONVERGES_UNIFORMLY_CAUCHY:
+   !R e. &0 < e /\ &0 < R
          ==> ?N. !m n z. m >= N /\ abs(z) <= R
-             ==> abs(sum{m..n} (\i. z pow i / (&(FACT i)))) < e``,
+             ==> abs(sum{m..n} (\i. z pow i / (&(FACT i)))) < e
+Proof
   REPEAT STRIP_TAC THEN
   MP_TAC(Q.ISPECL [`&1 / &2:real`, `\i. R pow i / (&(FACT i):real)`,
                  `from 0`] SERIES_RATIO) THEN
@@ -1778,12 +1889,15 @@ val EXP_CONVERGES_UNIFORMLY_CAUCHY = store_thm ("EXP_CONVERGES_UNIFORMLY_CAUCHY"
    SIMP_TAC std_ss [REAL_LE_LT] THEN DISJ2_TAC THEN
    REWRITE_TAC [ABS_REFL] THEN MATCH_MP_TAC REAL_LE_INV THEN
    SIMP_TAC std_ss [REAL_LE_LT] THEN DISJ1_TAC THEN
-   SIMP_TAC std_ss [FACT_LESS, REAL_LT]);
+   SIMP_TAC std_ss [FACT_LESS, REAL_LT]
+QED
 
-val REAL_MUL_NZ = store_thm ("REAL_MUL_NZ",
-  ``!a b:real. a <> 0 /\ b <> 0 ==> a * b <> 0``,
+Theorem REAL_MUL_NZ:
+    !a b:real. a <> 0 /\ b <> 0 ==> a * b <> 0
+Proof
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC [MONO_NOT_EQ] THEN
-  SIMP_TAC real_ss [REAL_ENTIRE]);
+  SIMP_TAC real_ss [REAL_ENTIRE]
+QED
 
 (* `sum (0, SUC n)` is defined by realTheory.sum
    `sum {0 ..   n}` is defined by iterateTheory.sum_def
@@ -1905,16 +2019,19 @@ Proof
  >> METIS_TAC [REAL_ARITH ``x:real <= x + &1``]
 QED
 
-val EXP_CONVERGES_UNIQUE = store_thm ("EXP_CONVERGES_UNIQUE",
- ``!w z. ((\n. z pow n / (&(FACT n))) sums w) (from 0) <=> (w = exp(z))``,
+Theorem EXP_CONVERGES_UNIQUE:
+   !w z. ((\n. z pow n / (&(FACT n))) sums w) (from 0) <=> (w = exp(z))
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THEN SIMP_TAC std_ss [EXP_CONVERGES] THEN
   DISCH_THEN(MP_TAC o C CONJ (Q.SPEC `z` EXP_CONVERGES)) THEN
-  REWRITE_TAC[SERIES_UNIQUE]);
+  REWRITE_TAC[SERIES_UNIQUE]
+QED
 
-val EXP_CONVERGES_UNIFORMLY = store_thm ("EXP_CONVERGES_UNIFORMLY",
- ``!R e. &0 < R /\ &0 < e
+Theorem EXP_CONVERGES_UNIFORMLY:
+   !R e. &0 < R /\ &0 < e
          ==> ?N. !n z. n >= N /\ abs(z) < R
-            ==> abs(sum{ 0n..n} (\i. z pow i / (&(FACT i))) - exp(z)) <= e``,
+            ==> abs(sum{ 0n..n} (\i. z pow i / (&(FACT i))) - exp(z)) <= e
+Proof
   REPEAT STRIP_TAC THEN
   MP_TAC(Q.SPECL [`R:real`, `e / &2`] EXP_CONVERGES_UNIFORMLY_CAUCHY) THEN
   ASM_REWRITE_TAC[REAL_HALF] THEN STRIP_TAC THEN Q.EXISTS_TAC `N` THEN
@@ -1933,10 +2050,12 @@ val EXP_CONVERGES_UNIFORMLY = store_thm ("EXP_CONVERGES_UNIFORMLY",
   DISCH_THEN (ASSUME_TAC o Q.SPECL [`f`,`M + 1`]) THEN
   ONCE_ASM_REWRITE_TAC [] THEN POP_ASSUM K_TAC THEN
   GEN_REWR_TAC (RAND_CONV o RAND_CONV o RAND_CONV) [GSYM REAL_HALF] THEN
-  REAL_ARITH_TAC);
+  REAL_ARITH_TAC
+QED
 
-val HAS_DERIVATIVE_EXP = store_thm ("HAS_DERIVATIVE_EXP",
- ``!z. (exp has_derivative (\y. exp z * y)) (at z)``,
+Theorem HAS_DERIVATIVE_EXP:
+   !z. (exp has_derivative (\y. exp z * y)) (at z)
+Proof
   REPEAT GEN_TAC THEN MP_TAC(Q.ISPECL
    [`ball((&0),abs(z:real) + &1)`,
     `\n z. z pow n / (&(FACT n):real)`,
@@ -2023,22 +2142,31 @@ val HAS_DERIVATIVE_EXP = store_thm ("HAS_DERIVATIVE_EXP",
   DISCH_THEN (ASSUME_TAC o ONCE_REWRITE_RULE [EQ_SYM_EQ]) THEN
   ASM_REWRITE_TAC [] THEN ONCE_REWRITE_TAC [REAL_ARITH ``a * b * c = (a * c) * b:real``] THEN
   ABS_TAC THEN SIMP_TAC std_ss [SUM_RMUL] THEN AP_THM_TAC THEN AP_TERM_TAC THEN
-  MATCH_MP_TAC SUM_EQ' THEN SIMP_TAC arith_ss [GSYM POW_ADD, IN_NUMSEG]);
+  MATCH_MP_TAC SUM_EQ' THEN SIMP_TAC arith_ss [GSYM POW_ADD, IN_NUMSEG]
+QED
 
-val HAS_DERIVATIVE_IMP_CONTINUOUS_AT = store_thm ("HAS_DERIVATIVE_IMP_CONTINUOUS_AT",
- ``!f f' x. (f has_derivative f') (at x) ==> f continuous at x``,
+Theorem HAS_DERIVATIVE_IMP_CONTINUOUS_AT:
+   !f f' x. (f has_derivative f') (at x) ==> f continuous at x
+Proof
   RW_TAC std_ss [] THEN MATCH_MP_TAC DIFFERENTIABLE_IMP_CONTINUOUS_AT THEN
-  METIS_TAC[differentiable]);
+  METIS_TAC[differentiable]
+QED
 
-val CONTINUOUS_AT_EXP = store_thm ("CONTINUOUS_AT_EXP",
- ``!z. exp continuous at z``,
-  METIS_TAC[HAS_DERIVATIVE_EXP, HAS_DERIVATIVE_IMP_CONTINUOUS_AT]);
+Theorem CONTINUOUS_AT_EXP:
+   !z. exp continuous at z
+Proof
+  METIS_TAC[HAS_DERIVATIVE_EXP, HAS_DERIVATIVE_IMP_CONTINUOUS_AT]
+QED
 
-val CONTINUOUS_WITHIN_EXP = store_thm ("CONTINUOUS_WITHIN_EXP",
- ``!s z. exp continuous (at z within s)``,
-  METIS_TAC[CONTINUOUS_AT_WITHIN, CONTINUOUS_AT_EXP]);
+Theorem CONTINUOUS_WITHIN_EXP:
+   !s z. exp continuous (at z within s)
+Proof
+  METIS_TAC[CONTINUOUS_AT_WITHIN, CONTINUOUS_AT_EXP]
+QED
 
-val CONTINUOUS_ON_EXP = store_thm ("CONTINUOUS_ON_EXP",
- ``!s. exp continuous_on s``,
-  METIS_TAC[CONTINUOUS_AT_IMP_CONTINUOUS_ON, CONTINUOUS_AT_EXP]);
+Theorem CONTINUOUS_ON_EXP:
+   !s. exp continuous_on s
+Proof
+  METIS_TAC[CONTINUOUS_AT_IMP_CONTINUOUS_ON, CONTINUOUS_AT_EXP]
+QED
 

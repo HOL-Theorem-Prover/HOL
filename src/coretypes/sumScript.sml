@@ -133,24 +133,26 @@ val REP_INR = TAC_PROOF(([],
    REFL_TAC);
 
 (* Prove that INL is one-to-one                                         *)
-val INL_11 = store_thm(
-  "INL_11",
-  ``(INL x = ((INL y):('a,'b)sum)) = (x = y)``,
+Theorem INL_11:
+    (INL x = ((INL y):('a,'b)sum)) = (x = y)
+Proof
    EQ_TAC THENL
    [PURE_REWRITE_TAC [R_11,REP_INL] THEN
    CONV_TAC (REDEPTH_CONV (FUN_EQ_CONV ORELSEC BETA_CONV)) THEN
    DISCH_THEN (ACCEPT_TAC o SIMP o SPECL [“T”,“x:'a”,“y:'b”]),
-   DISCH_THEN SUBST1_TAC THEN REFL_TAC]);
+   DISCH_THEN SUBST1_TAC THEN REFL_TAC]
+QED
 
 (* Prove that INR is one-to-one                                         *)
-val INR_11 = store_thm(
-  "INR_11",
-  ``(INR x = (INR y:('a,'b)sum)) = (x = y)``,
+Theorem INR_11:
+    (INR x = (INR y:('a,'b)sum)) = (x = y)
+Proof
    EQ_TAC THENL
    [PURE_REWRITE_TAC [R_11,REP_INR] THEN
    CONV_TAC (REDEPTH_CONV (FUN_EQ_CONV ORELSEC BETA_CONV)) THEN
    DISCH_THEN (ACCEPT_TAC o SYM o SIMP o SPECL[“F”,“x:'a”,“y:'b”]),
-   DISCH_THEN SUBST1_TAC THEN REFL_TAC]);
+   DISCH_THEN SUBST1_TAC THEN REFL_TAC]
+QED
 
 val INR_INL_11 = save_thm("INR_INL_11",
                           CONJ (GEN_ALL INL_11) (GEN_ALL INR_11));
@@ -374,18 +376,20 @@ val SUM_MAP_def = Prim_rec.new_recursive_definition{
 val _ = temp_set_mapped_fixity{tok = "++", term_name = "SUM_MAP",
                                fixity = Infixl 480}
 
-val SUM_MAP = store_thm (
-  "SUM_MAP",
-  ``!f g (z:'a + 'b).
+Theorem SUM_MAP:
+    !f g (z:'a + 'b).
          (f ++ g) z = if ISL z then INL (f (OUTL z))
-                      else INR (g (OUTR z)) :'c + 'd``,
-  SIMP_TAC (srw_ss()) [FORALL_SUM]);
+                      else INR (g (OUTR z)) :'c + 'd
+Proof
+  SIMP_TAC (srw_ss()) [FORALL_SUM]
+QED
 
-val SUM_MAP_CASE = store_thm (
-  "SUM_MAP_CASE",
-  ``!f g (z:'a + 'b).
-         (f ++ g) z = sum_CASE z (INL o f) (INR o g) :'c + 'd``,
-  SIMP_TAC (srw_ss()) [FORALL_SUM]);
+Theorem SUM_MAP_CASE:
+    !f g (z:'a + 'b).
+         (f ++ g) z = sum_CASE z (INL o f) (INR o g) :'c + 'd
+Proof
+  SIMP_TAC (srw_ss()) [FORALL_SUM]
+QED
 
 Theorem SUM_MAP_I[simp,quotient_simp]:
   (I ++ I) = (I : 'a + 'b -> 'a + 'b)
@@ -399,22 +403,28 @@ Proof
   SIMP_TAC (srw_ss()) [FORALL_SUM, FUN_EQ_THM]
 QED
 
-val cond_sum_expand = store_thm("cond_sum_expand",
-``(!x y z. ((if P then INR x else INL y) = INR z) = (P /\ (z = x))) /\
+Theorem cond_sum_expand:
+  (!x y z. ((if P then INR x else INL y) = INR z) = (P /\ (z = x))) /\
   (!x y z. ((if P then INR x else INL y) = INL z) = (~P /\ (z = y))) /\
   (!x y z. ((if P then INL x else INR y) = INL z) = (P /\ (z = x))) /\
-  (!x y z. ((if P then INL x else INR y) = INR z) = (~P /\ (z = y)))``,
-Cases_on `P` THEN FULL_SIMP_TAC(srw_ss())[] THEN SRW_TAC[][EQ_IMP_THM])
+  (!x y z. ((if P then INL x else INR y) = INR z) = (~P /\ (z = y)))
+Proof
+Cases_on `P` THEN FULL_SIMP_TAC(srw_ss())[] THEN SRW_TAC[][EQ_IMP_THM]
+QED
 val _ = export_rewrites["cond_sum_expand"]
 
-val NOT_ISL_ISR = store_thm("NOT_ISL_ISR",
-  ``!x. ~ISL x = ISR x``,
-  GEN_TAC THEN Q.SPEC_THEN `x` STRUCT_CASES_TAC sum_CASES THEN SRW_TAC[][])
+Theorem NOT_ISL_ISR:
+    !x. ~ISL x = ISR x
+Proof
+  GEN_TAC THEN Q.SPEC_THEN `x` STRUCT_CASES_TAC sum_CASES THEN SRW_TAC[][]
+QED
 val _ = export_rewrites["NOT_ISL_ISR"]
 
-val NOT_ISR_ISL = store_thm("NOT_ISR_ISL",
-  ``!x. ~ISR x = ISL x``,
-  GEN_TAC THEN Q.SPEC_THEN `x` STRUCT_CASES_TAC sum_CASES THEN SRW_TAC[][])
+Theorem NOT_ISR_ISL:
+    !x. ~ISR x = ISL x
+Proof
+  GEN_TAC THEN Q.SPEC_THEN `x` STRUCT_CASES_TAC sum_CASES THEN SRW_TAC[][]
+QED
 val _ = export_rewrites["NOT_ISR_ISL"]
 
 (* ----------------------------------------------------------------------
@@ -428,21 +438,23 @@ val SUM_ALL_def = Prim_rec.new_recursive_definition {
   rec_axiom = sum_Axiom}
 val _ = export_rewrites ["SUM_ALL_def"]
 
-val SUM_ALL_MONO = store_thm(
-  "SUM_ALL_MONO",
-  ``(!x:'a. P x ==> P' x) /\ (!y:'b. Q y ==> Q' y) ==>
-    SUM_ALL P Q s ==> SUM_ALL P' Q' s``,
+Theorem SUM_ALL_MONO:
+    (!x:'a. P x ==> P' x) /\ (!y:'b. Q y ==> Q' y) ==>
+    SUM_ALL P Q s ==> SUM_ALL P' Q' s
+Proof
   Q.SPEC_THEN `s` STRUCT_CASES_TAC sum_CASES THEN
-  REWRITE_TAC [SUM_ALL_def] THEN REPEAT STRIP_TAC THEN RES_TAC);
+  REWRITE_TAC [SUM_ALL_def] THEN REPEAT STRIP_TAC THEN RES_TAC
+QED
 val _ = IndDefLib.export_mono "SUM_ALL_MONO"
 
-val SUM_ALL_CONG = store_thm(
-  "SUM_ALL_CONG[defncong]",
-  ``!(s:'a + 'b) s' P P' Q Q'.
+Theorem SUM_ALL_CONG[defncong]:
+    !(s:'a + 'b) s' P P' Q Q'.
        (s = s') /\ (!a. (s' = INL a) ==> (P a <=> P' a)) /\
        (!b. (s' = INR b) ==> (Q b <=> Q' b)) ==>
-       (SUM_ALL P Q s <=> SUM_ALL P' Q' s')``,
-  SIMP_TAC (srw_ss()) [FORALL_SUM]);
+       (SUM_ALL P Q s <=> SUM_ALL P' Q' s')
+Proof
+  SIMP_TAC (srw_ss()) [FORALL_SUM]
+QED
 
 (* ----------------------------------------------------------------------
     SUM_FIN, sums built from particular sets
@@ -571,10 +583,11 @@ val _ = add "OUTL" "destLeft"
 end
 
 
-val datatype_sum = store_thm(
-  "datatype_sum",
-  ``DATATYPE (sum (INL:'a -> 'a + 'b) (INR:'b -> 'a + 'b))``,
-  REWRITE_TAC[DATATYPE_TAG_THM]);
+Theorem datatype_sum:
+    DATATYPE (sum (INL:'a -> 'a + 'b) (INR:'b -> 'a + 'b))
+Proof
+  REWRITE_TAC[DATATYPE_TAG_THM]
+QED
 
 (* ----------------------------------------------------------------------
     Theorems to support the quotient package

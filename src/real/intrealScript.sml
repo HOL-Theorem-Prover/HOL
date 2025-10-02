@@ -426,24 +426,32 @@ Theorem INT_CEILING_COMPUTE[compute,simp] =
 val () = () (* makes Theorem syntax work *)
 end (* local *)
 
-val real_of_int_add = store_thm("real_of_int_add[simp]",
-  ``real_of_int (m + n) = real_of_int m + real_of_int n``,
+Theorem real_of_int_add[simp]:
+    real_of_int (m + n) = real_of_int m + real_of_int n
+Proof
   Cases_on `m` \\ Cases_on `n` \\ fs [real_of_int_def] \\ rw []
   \\ fs [INT_ADD_CALCULATE]
-  \\ rw [] \\ fs [] \\ fs [GSYM NOT_LESS,add_ints]);
+  \\ rw [] \\ fs [] \\ fs [GSYM NOT_LESS,add_ints]
+QED
 
-val real_of_int_neg = store_thm("real_of_int_neg[simp]",
-  ``real_of_int (-m) = -real_of_int m``,
-  Cases_on `m` \\ fs [real_of_int_def]);
+Theorem real_of_int_neg[simp]:
+    real_of_int (-m) = -real_of_int m
+Proof
+  Cases_on `m` \\ fs [real_of_int_def]
+QED
 
-val real_of_int_sub = store_thm("real_of_int_sub[simp]",
-  ``real_of_int (m - n) = real_of_int m - real_of_int n``,
-  fs [int_sub,real_sub]);
+Theorem real_of_int_sub[simp]:
+    real_of_int (m - n) = real_of_int m - real_of_int n
+Proof
+  fs [int_sub,real_sub]
+QED
 
-val real_of_int_mul = store_thm("real_of_int_mul[simp]",
-  ``real_of_int (m * n) = real_of_int m * real_of_int n``,
+Theorem real_of_int_mul[simp]:
+    real_of_int (m * n) = real_of_int m * real_of_int n
+Proof
   Cases_on `m` \\ Cases_on `n` \\ fs [real_of_int_def] \\ rw []
-  \\ fs [INT_MUL_CALCULATE]);
+  \\ fs [INT_MUL_CALCULATE]
+QED
 
 Theorem real_of_int_lt[simp]:
    real_of_int m < real_of_int n <=> m < n

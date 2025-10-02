@@ -55,9 +55,9 @@ val EXISTS_PROD = pairTheory.EXISTS_PROD
 val EXISTS_SUM = sumTheory.EXISTS_SUM
 val FORALL_SUM = sumTheory.FORALL_SUM
 
-val wellorder_allOrds = store_thm(
-  "wellorder_allOrds",
-  ``wellorder { (x,y) | x = y \/ ordlt x y }``,
+Theorem wellorder_allOrds:
+    wellorder { (x,y) | x = y \/ ordlt x y }
+Proof
   simp[wellorder_def, strict_def, wellfounded_WF, relationTheory.WF_DEF] >>
   rpt conj_tac >| [
     simp_tac (srw_ss() ++ CONJ_ss)
@@ -68,20 +68,23 @@ val wellorder_allOrds = store_thm(
       >- (simp[antisym_def] >> metis_tac [ordlt_TRANS, ordlt_REFL]) >>
     metis_tac [ordlt_trichotomy],
     simp[reflexive_def]
-  ])
+  ]
+QED
 
-val WIN_allOrds = store_thm(
-  "WIN_allOrds",
-  ``(x,y) WIN allOrds <=> ordlt x y``,
+Theorem WIN_allOrds:
+    (x,y) WIN allOrds <=> ordlt x y
+Proof
   simp[allOrds_def, destWO_mkWO, wellorder_allOrds, strict_def] >>
-  metis_tac [ordlt_REFL]);
+  metis_tac [ordlt_REFL]
+QED
 
-val elsOf_allOrds = store_thm(
-  "elsOf_allOrds",
-  ``elsOf allOrds = univ(:'a ordinal)``,
+Theorem elsOf_allOrds:
+    elsOf allOrds = univ(:'a ordinal)
+Proof
   rw[elsOf_def, EXTENSION, in_domain, in_range, allOrds_def,
      destWO_mkWO, wellorder_allOrds] >>
-  metis_tac [ordlt_trichotomy]);
+  metis_tac [ordlt_trichotomy]
+QED
 
 val (mkOrdinal_REP, orderiso_mkOrdinal) =
   theorem "ordinal_QUOTIENT"
@@ -89,34 +92,37 @@ val (mkOrdinal_REP, orderiso_mkOrdinal) =
           |> CONJ_PAIR
 
 
-val ordlt_mkOrdinal = store_thm(
-  "ordlt_mkOrdinal",
-  ``ordlt o1 o2 <=>
-    !w1 w2. (mkOrdinal w1 = o1) /\ (mkOrdinal w2 = o2) ==> orderlt w1 w2``,
+Theorem ordlt_mkOrdinal:
+    ordlt o1 o2 <=>
+    !w1 w2. (mkOrdinal w1 = o1) /\ (mkOrdinal w2 = o2) ==> orderlt w1 w2
+Proof
   rw[definition "ordlt_def"] >> eq_tac >> rpt strip_tac >| [
     `orderiso w1 (ordinal_REP o1) /\ orderiso w2 (ordinal_REP o2)`
       by metis_tac [orderiso_mkOrdinal, mkOrdinal_REP] >>
     metis_tac [orderlt_orderiso],
     simp[mkOrdinal_REP]
-  ]);
+  ]
+QED
 
-val orderlt_iso_REFL = store_thm(
-  "orderlt_iso_REFL",
-  ``orderiso w1 w2 ==> ~orderlt w1 w2``,
-  metis_tac [orderlt_orderiso, orderlt_REFL, orderiso_REFL]);
+Theorem orderlt_iso_REFL:
+    orderiso w1 w2 ==> ~orderlt w1 w2
+Proof
+  metis_tac [orderlt_orderiso, orderlt_REFL, orderiso_REFL]
+QED
 
-val orderiso_wobound2 = store_thm(
-  "orderiso_wobound2",
-  ``orderiso (wobound x w) (wobound y w) ==> ~((x,y) WIN w)``,
+Theorem orderiso_wobound2:
+    orderiso (wobound x w) (wobound y w) ==> ~((x,y) WIN w)
+Proof
   rpt strip_tac >>
   qsuff_tac `orderlt (wobound x w) (wobound y w)`
      >- metis_tac [orderlt_iso_REFL] >>
   simp[orderlt_def] >> qexists_tac `x` >>
-  simp[elsOf_wobound, wobound2,orderiso_REFL]);
+  simp[elsOf_wobound, wobound2,orderiso_REFL]
+QED
 
-val wellorder_ordinal_isomorphism = store_thm(
-  "wellorder_ordinal_isomorphism",
-  ``!w. orderiso w (wobound (mkOrdinal w) allOrds)``,
+Theorem wellorder_ordinal_isomorphism:
+    !w. orderiso w (wobound (mkOrdinal w) allOrds)
+Proof
   spose_not_then assume_tac >>
   pop_assum (strip_assume_tac o REWRITE_RULE [] o
              HO_MATCH_MP (REWRITE_RULE [relationTheory.WF_DEF] orderlt_WF)) >>
@@ -148,26 +154,29 @@ val wellorder_ordinal_isomorphism = store_thm(
     `~((mkOrdinal E, mkOrdinal w) WIN allOrds)`
        by metis_tac[orderiso_wobound2,orderiso_SYM]>>
     fs[WIN_allOrds]
-  ]);
+  ]
+QED
 
 Definition preds_def:
   preds (w : 'a ordinal) = { w0 | ordlt w0 w }
 End
 
-val IN_preds = store_thm(
-  "IN_preds",
-  ``x IN preds w <=> ordlt x w``,
-  rw[preds_def]);
+Theorem IN_preds:
+    x IN preds w <=> ordlt x w
+Proof
+  rw[preds_def]
+QED
 val _ = export_rewrites ["IN_preds"]
 
-val preds_11 = store_thm(
-  "preds_11",
-  ``(preds w1 = preds w2) = (w1 = w2)``,
+Theorem preds_11:
+    (preds w1 = preds w2) = (w1 = w2)
+Proof
   rw[EQ_IMP_THM] >>
   spose_not_then strip_assume_tac >>
   `ordlt w1 w2 \/ ordlt w2 w1` by metis_tac [ordlt_trichotomy] >>
   qpat_x_assum `x = y` mp_tac >> rw[EXTENSION, preds_def] >>
-  metis_tac [ordlt_REFL]);
+  metis_tac [ordlt_REFL]
+QED
 val _ = export_rewrites ["preds_11"]
 
 Theorem ordlt_preds_mono:
@@ -182,14 +191,15 @@ Definition downward_closed_def:
     !a b. a IN s /\ ordlt b a ==> b IN s
 End
 
-val preds_downward_closed = store_thm(
-  "preds_downward_closed",
-  ``downward_closed (preds w)``,
-  rw[downward_closed_def, preds_def] >> metis_tac [ordlt_TRANS]);
+Theorem preds_downward_closed:
+    downward_closed (preds w)
+Proof
+  rw[downward_closed_def, preds_def] >> metis_tac [ordlt_TRANS]
+QED
 
-val preds_bij = store_thm(
-  "preds_bij",
-  ``BIJ preds UNIV (downward_closed DELETE UNIV)``,
+Theorem preds_bij:
+    BIJ preds UNIV (downward_closed DELETE UNIV)
+Proof
   rw[BIJ_DEF, INJ_DEF, SURJ_DEF, preds_11] >>
   fs[SPECIFICATION, preds_downward_closed] >>
   rw[EXTENSION] >| [
@@ -199,20 +209,23 @@ val preds_bij = store_thm(
     qsuff_tac `?w. w NOTIN x`
        >- metis_tac [downward_closed_def, ordlt_trichotomy] >>
     fs[EXTENSION] >> metis_tac[]
-  ]);
+  ]
+QED
 
-val preds_lt_PSUBSET = store_thm(
-  "preds_lt_PSUBSET",
-  ``ordlt w1 w2 <=> preds w1 PSUBSET preds w2``,
+Theorem preds_lt_PSUBSET:
+    ordlt w1 w2 <=> preds w1 PSUBSET preds w2
+Proof
   simp[PSUBSET_DEF, SUBSET_DEF, preds_def, EQ_IMP_THM, EXTENSION] >> conj_tac
     >- metis_tac [ordlt_TRANS, ordlt_REFL] >>
   simp_tac (srw_ss() ++ CONJ_ss) [] >>
-  metis_tac [ordlt_REFL, ordlt_TRANS, ordlt_trichotomy])
+  metis_tac [ordlt_REFL, ordlt_TRANS, ordlt_trichotomy]
+QED
 
-val preds_wobound = store_thm(
-  "preds_wobound",
-  ``preds ord = elsOf (wobound ord allOrds)``,
-  simp[EXTENSION, elsOf_wobound, preds_def, WIN_allOrds]);
+Theorem preds_wobound:
+    preds ord = elsOf (wobound ord allOrds)
+Proof
+  simp[EXTENSION, elsOf_wobound, preds_def, WIN_allOrds]
+QED
 
 Theorem cardeq_ordinals_exist:
   (s:'b set) <<= univ(:num + 'a) ==>
@@ -228,38 +241,41 @@ Proof
   metis_tac[BIJ_SYM, BIJ_COMPOSE]
 QED
 
-val preds_inj_univ = store_thm(
-  "preds_inj_univ",
-  ``preds (ord:'a ordinal) <<= univ(:'a inf)``,
+Theorem preds_inj_univ:
+    preds (ord:'a ordinal) <<= univ(:'a inf)
+Proof
   simp[preds_wobound] >>
   qspec_then `ordinal_REP ord` mp_tac wellorder_ordinal_isomorphism >>
   simp[mkOrdinal_REP] >> strip_tac >> imp_res_tac orderiso_SYM >>
   pop_assum (strip_assume_tac o SIMP_RULE (srw_ss())[orderiso_thm]) >>
   simp[cardleq_def] >> qexists_tac `f` >>
-  fs[BIJ_DEF, INJ_DEF]);
+  fs[BIJ_DEF, INJ_DEF]
+QED
 
 val _ = type_abbrev("cord", ``:unit ordinal``)
 
-val unitinf_univnum = store_thm(
-  "unitinf_univnum",
-  ``univ(:unit inf) =~ univ(:num)``,
+Theorem unitinf_univnum:
+    univ(:unit inf) =~ univ(:num)
+Proof
   simp[cardeq_def] >>
   qexists_tac `\s. case s of INL n => n + 1 | INR () => 0` >>
   simp[BIJ_DEF, INJ_DEF, SURJ_DEF, EXISTS_SUM, FORALL_SUM] >>
   Cases >> simp[arithmeticTheory.ADD1] >>
-  qexists_tac `()` >> simp[])
+  qexists_tac `()` >> simp[]
+QED
 
-val cord_countable_preds = store_thm(
-  "cord_countable_preds",
-  ``countable (preds (ord:cord))``,
+Theorem cord_countable_preds:
+    countable (preds (ord:cord))
+Proof
   simp[countable_thm] >>
   qsuff_tac `preds ord <<= univ(:unit inf)`
      >- metis_tac [unitinf_univnum, CARDEQ_CARDLEQ, cardeq_REFL] >>
-  simp[preds_inj_univ]);
+  simp[preds_inj_univ]
+QED
 
-val univ_ord_greater_cardinal = store_thm(
-  "univ_ord_greater_cardinal",
-  ``~(univ(:'a ordinal) <<= univ(:'a inf))``,
+Theorem univ_ord_greater_cardinal:
+    ~(univ(:'a ordinal) <<= univ(:'a inf))
+Proof
   strip_tac >>
   `elsOf allOrds = univ(:'a ordinal)` by simp[elsOf_allOrds] >>
   `elsOf (allOrds:'a ordinal wellorder) <<= univ(:'a inf)`
@@ -271,39 +287,46 @@ val univ_ord_greater_cardinal = store_thm(
   `mkOrdinal w IN elsOf allOrds` by simp[elsOf_allOrds] >>
   `orderlt (allOrds:'a ordinal wellorder) (allOrds:'a ordinal wellorder)`
      by metis_tac [orderlt_def, orderiso_TRANS] >>
-  fs[orderlt_REFL]);
+  fs[orderlt_REFL]
+QED
 
-val univ_cord_uncountable = store_thm(
-  "univ_cord_uncountable",
-  ``~countable (univ(:cord))``,
+Theorem univ_cord_uncountable:
+    ~countable (univ(:cord))
+Proof
   simp[countable_thm] >> strip_tac >>
   `univ(:cord) <<= univ(:unit inf)`
      by metis_tac [CARDEQ_CARDLEQ, cardeq_REFL, unitinf_univnum] >>
-  fs[univ_ord_greater_cardinal]);
+  fs[univ_ord_greater_cardinal]
+QED
 
-val ordle_lteq = store_thm(
-  "ordle_lteq",
-  ``(a:'a ordinal) <= b <=> a < b \/ (a = b)``,
-  metis_tac [ordlt_trichotomy, ordlt_REFL, ordlt_TRANS])
+Theorem ordle_lteq:
+    (a:'a ordinal) <= b <=> a < b \/ (a = b)
+Proof
+  metis_tac [ordlt_trichotomy, ordlt_REFL, ordlt_TRANS]
+QED
 
-val ordle_ANTISYM = store_thm(
-  "ordle_ANTISYM",
-  ``a <= b /\ b <= a ==> (a = b)``,
-  metis_tac [ordlt_trichotomy]);
+Theorem ordle_ANTISYM:
+    a <= b /\ b <= a ==> (a = b)
+Proof
+  metis_tac [ordlt_trichotomy]
+QED
 
-val ordle_TRANS = store_thm(
-  "ordle_TRANS",
-  ``!x y z. (x:'a ordinal) <= y /\ y <= z ==> x <= z``,
-  metis_tac [ordlt_TRANS, ordle_lteq]);
+Theorem ordle_TRANS:
+    !x y z. (x:'a ordinal) <= y /\ y <= z ==> x <= z
+Proof
+  metis_tac [ordlt_TRANS, ordle_lteq]
+QED
 
-val ordlet_TRANS = store_thm(
-  "ordlet_TRANS",
-  ``!x y z. (x:'a ordinal) <= y /\ y < z ==> x < z``,
-  metis_tac [ordle_lteq, ordlt_TRANS]);
-val ordlte_TRANS = store_thm(
-  "ordlte_TRANS",
-  ``!x y z. (x:'a ordinal) < y /\ y <= z ==> x < z``,
-  metis_tac [ordle_lteq, ordlt_TRANS]);
+Theorem ordlet_TRANS:
+    !x y z. (x:'a ordinal) <= y /\ y < z ==> x < z
+Proof
+  metis_tac [ordle_lteq, ordlt_TRANS]
+QED
+Theorem ordlte_TRANS:
+    !x y z. (x:'a ordinal) < y /\ y <= z ==> x < z
+Proof
+  metis_tac [ordle_lteq, ordlt_TRANS]
+QED
 
 Definition oleast_def:
   $oleast (P:'a ordinal -> bool) = @x. P x /\ !y. y < x ==> ~P y
@@ -311,13 +334,14 @@ End
 
 val _ = set_fixity "oleast" Binder
 
-val oleast_intro = store_thm(
-  "oleast_intro",
-  ``!Q P. (?a. P a) /\ (!a. (!b. b < a ==> ~ P b) /\ P a ==> Q a) ==>
-          Q ($oleast P)``,
+Theorem oleast_intro:
+    !Q P. (?a. P a) /\ (!a. (!b. b < a ==> ~ P b) /\ P a ==> Q a) ==>
+          Q ($oleast P)
+Proof
   rw[oleast_def] >> SELECT_ELIM_TAC >> conj_tac >-
     (match_mp_tac ordlt_WF0 >> metis_tac[]) >>
-  rw[]);
+  rw[]
+QED
 
 Definition ordSUC_def:
   ordSUC a = oleast b. a < b
@@ -334,10 +358,11 @@ val _ = export_rewrites ["fromNat_SUC"]
 val _ = add_numeral_form (#"o", SOME "fromNat")
 
 (* prints as 0 <= a *)
-val ordlt_ZERO = store_thm(
-  "ordlt_ZERO",
-  ``~(a < 0)``,
- simp[fromNat_def] >> DEEP_INTRO_TAC oleast_intro >> simp[])
+Theorem ordlt_ZERO:
+    ~(a < 0)
+Proof
+ simp[fromNat_def] >> DEEP_INTRO_TAC oleast_intro >> simp[]
+QED
 val _ = export_rewrites ["ordlt_ZERO"]
 
 val preds_surj = save_thm(
@@ -346,9 +371,9 @@ val preds_surj = save_thm(
             |> SIMP_RULE (srw_ss()) [SURJ_DEF] |> CONJUNCT2
             |> REWRITE_RULE [SPECIFICATION]);
 
-val no_maximal_ordinal = store_thm(
-  "no_maximal_ordinal",
-  ``!a. ?b. a < b``,
+Theorem no_maximal_ordinal:
+    !a. ?b. a < b
+Proof
   simp[preds_lt_PSUBSET] >> gen_tac >>
   qabbrev_tac `P = preds a UNION {a}` >>
   `a NOTIN preds a` by simp[ordlt_REFL] >>
@@ -366,38 +391,43 @@ val no_maximal_ordinal = store_thm(
                           metis_tac [ordlt_TRANS]) >>
   `?b. preds b = P` by metis_tac [preds_surj] >>
   qexists_tac `b` >> simp[Abbr`P`] >>
-  simp[PSUBSET_DEF, EXTENSION] >> metis_tac [ordlt_REFL]);
+  simp[PSUBSET_DEF, EXTENSION] >> metis_tac [ordlt_REFL]
+QED
 
-val ordlt_SUC = store_thm(
-  "ordlt_SUC",
-  ``a < ordSUC a``,
+Theorem ordlt_SUC:
+    a < ordSUC a
+Proof
   simp[ordSUC_def] >> DEEP_INTRO_TAC oleast_intro >> conj_tac
-  >- metis_tac[no_maximal_ordinal] >> simp[]);
+  >- metis_tac[no_maximal_ordinal] >> simp[]
+QED
 val _ = export_rewrites ["ordlt_SUC"]
 
-val ordSUC_ZERO = store_thm(
-  "ordSUC_ZERO",
-  ``ordSUC a <> 0``,
+Theorem ordSUC_ZERO:
+    ordSUC a <> 0
+Proof
   simp[ordSUC_def] >> DEEP_INTRO_TAC oleast_intro >> conj_tac
   >- metis_tac [ordlt_SUC] >>
-  rpt strip_tac >> fs[]);
+  rpt strip_tac >> fs[]
+QED
 val _ = export_rewrites ["ordSUC_ZERO"]
 
-val ordlt_DISCRETE1 = store_thm(
-  "ordlt_DISCRETE1",
-  ``~(a < b /\ b < ordSUC a)``,
+Theorem ordlt_DISCRETE1:
+    ~(a < b /\ b < ordSUC a)
+Proof
   simp[ordSUC_def] >> DEEP_INTRO_TAC oleast_intro >> conj_tac >-
-  metis_tac [ordlt_SUC] >> metis_tac [ordle_lteq]);
+  metis_tac [ordlt_SUC] >> metis_tac [ordle_lteq]
+QED
 
-val ordlt_SUC_DISCRETE = store_thm(
-  "ordlt_SUC_DISCRETE",
-  ``a < ordSUC b <=> a < b \/ (a = b)``,
+Theorem ordlt_SUC_DISCRETE:
+    a < ordSUC b <=> a < b \/ (a = b)
+Proof
   Tactical.REVERSE eq_tac >- metis_tac [ordlt_TRANS, ordlt_SUC] >>
-  metis_tac [ordlt_trichotomy, ordlt_DISCRETE1]);
+  metis_tac [ordlt_trichotomy, ordlt_DISCRETE1]
+QED
 
-val ordSUC_MONO = store_thm(
-  "ordSUC_MONO",
-  ``a^+ < b^+ <=> a < b``,
+Theorem ordSUC_MONO:
+    a^+ < b^+ <=> a < b
+Proof
   eq_tac >> spose_not_then strip_assume_tac
   >- (fs[ordlt_SUC_DISCRETE]
       >- (`(a = b) \/ b < a` by metis_tac [ordlt_trichotomy] >>
@@ -405,15 +435,17 @@ val ordSUC_MONO = store_thm(
       rw[] >> fs[ordlt_SUC]) >>
   fs[ordlt_SUC_DISCRETE] >>
   `b < a^+` by metis_tac [ordlt_trichotomy] >>
-  fs[ordlt_SUC_DISCRETE] >> metis_tac [ordlt_TRANS, ordlt_REFL])
+  fs[ordlt_SUC_DISCRETE] >> metis_tac [ordlt_TRANS, ordlt_REFL]
+QED
 val _ = export_rewrites ["ordSUC_MONO"]
 
-val ordSUC_11 = store_thm(
-  "ordSUC_11",
-  ``(a^+ = b^+) <=> (a = b)``,
+Theorem ordSUC_11:
+    (a^+ = b^+) <=> (a = b)
+Proof
   simp[EQ_IMP_THM] >> strip_tac >> spose_not_then assume_tac >>
   `a < b \/ b < a` by metis_tac [ordlt_trichotomy] >>
-  metis_tac [ordlt_REFL, ordSUC_MONO]);
+  metis_tac [ordlt_REFL, ordSUC_MONO]
+QED
 val _ = export_rewrites ["ordSUC_11"]
 
 Definition sup_def:
@@ -463,38 +495,43 @@ Proof
   simp[Abbr`apreds`] >> metis_tac [IN_preds]
 QED
 
-val suple_thm = store_thm(
-  "suple_thm",
-  ``!b s:'a ordinal set. s <<= univ(:'a inf) /\ b IN s ==> b <= sup s``,
-  metis_tac [sup_thm, ordlt_REFL]);
+Theorem suple_thm:
+    !b s:'a ordinal set. s <<= univ(:'a inf) /\ b IN s ==> b <= sup s
+Proof
+  metis_tac [sup_thm, ordlt_REFL]
+QED
 
-val sup_eq_sup = store_thm(
-  "sup_eq_sup",
-  ``(s1:'a ordinal set) <<= univ(:'a inf) /\
+Theorem sup_eq_sup:
+    (s1:'a ordinal set) <<= univ(:'a inf) /\
     (s2:'a ordinal set) <<= univ(:'a inf) /\
     (!a. a IN s1 ==> ?b. b IN s2 /\ a <= b) /\
-    (!b. b IN s2 ==> ?a. a IN s1 /\ b <= a) ==> (sup s1 = sup s2)``,
+    (!b. b IN s2 ==> ?a. a IN s1 /\ b <= a) ==> (sup s1 = sup s2)
+Proof
   strip_tac >> match_mp_tac ordle_ANTISYM >> simp[sup_thm] >>
-  metis_tac [suple_thm, ordle_TRANS]);
+  metis_tac [suple_thm, ordle_TRANS]
+QED
 
-val Unum_cle_Uinf = store_thm(
-  "Unum_cle_Uinf",
-  ``univ(:num) <<= univ(:'a inf)``,
-  simp[cardleq_def] >> qexists_tac `INL` >> simp[INJ_INL]);
+Theorem Unum_cle_Uinf:
+    univ(:num) <<= univ(:'a inf)
+Proof
+  simp[cardleq_def] >> qexists_tac `INL` >> simp[INJ_INL]
+QED
 
-val csup_thm = store_thm(
-  "csup_thm",
-  ``countable (s : 'a ordinal set) ==> !b. b < sup s <=> ?d. d IN s /\ b < d``,
+Theorem csup_thm:
+    countable (s : 'a ordinal set) ==> !b. b < sup s <=> ?d. d IN s /\ b < d
+Proof
   simp[countable_thm] >>
-  metis_tac [sup_thm, cardleq_def, Unum_cle_Uinf, cardleq_TRANS])
+  metis_tac [sup_thm, cardleq_def, Unum_cle_Uinf, cardleq_TRANS]
+QED
 
-val predimage_sup_thm = store_thm(
-  "predimage_sup_thm",
-  ``!b:'a ordinal.
-          b < sup (IMAGE f (preds (a:'a ordinal))) <=> ?d. d < a /\ b < f d``,
+Theorem predimage_sup_thm:
+    !b:'a ordinal.
+          b < sup (IMAGE f (preds (a:'a ordinal))) <=> ?d. d < a /\ b < f d
+Proof
   match_mp_tac (sup_thm |> Q.INST [`s` |-> `IMAGE f (preds (a:'b ordinal))`]
                         |> SIMP_RULE (srw_ss() ++ DNF_ss) []) >>
-  metis_tac [cardleq_TRANS, IMAGE_cardleq, preds_inj_univ]);
+  metis_tac [cardleq_TRANS, IMAGE_cardleq, preds_inj_univ]
+QED
 
 val impI = DECIDE ``~p \/ q <=> (p ==> q)``
 
@@ -511,26 +548,28 @@ val suppred_suplt_ELIM = save_thm(
   predimage_suplt_ELIM |> Q.INST [`f` |-> `\x.x`]
                        |> SIMP_RULE (srw_ss()) []);
 
-val sup_EMPTY = store_thm(
-  "sup_EMPTY",
-  ``sup {} = 0``,
+Theorem sup_EMPTY:
+    sup {} = 0
+Proof
   simp[sup_def] >> DEEP_INTRO_TAC oleast_intro >> simp[] >>
   qx_gen_tac `a` >> disch_then (qspec_then `0` mp_tac) >>
-  simp[ordle_lteq]);
+  simp[ordle_lteq]
+QED
 val _ = export_rewrites ["sup_EMPTY"]
 
-val sup_SING = store_thm(
-  "sup_SING",
-  ``sup {a} = a``,
+Theorem sup_SING:
+    sup {a} = a
+Proof
   simp[sup_def] >> DEEP_INTRO_TAC oleast_intro >> simp[] >> conj_tac >-
     (qexists_tac `a` >> simp[]) >>
   simp[] >> qx_gen_tac `b` >> rw[ordle_lteq] >>
-  metis_tac [ordlt_REFL]);
+  metis_tac [ordlt_REFL]
+QED
 val _ = export_rewrites ["sup_SING"]
 
-val sup_preds_SUC = store_thm(
-  "sup_preds_SUC",
-  ``sup (preds a^+) = a``,
+Theorem sup_preds_SUC:
+    sup (preds a^+) = a
+Proof
   simp[sup_def] >> DEEP_INTRO_TAC oleast_intro >> simp[] >> conj_tac >-
     (qsuff_tac `?b. !x. b IN preds x ==> a^+ <= x ` >- metis_tac[] >>
      simp[] >> qexists_tac `a^+` >> simp[ordle_lteq]) >>
@@ -541,30 +580,33 @@ val sup_preds_SUC = store_thm(
   rpt strip_tac
   >- (`?x. a < x /\ x < a^+` by metis_tac [] >>
       fs[ordlt_SUC_DISCRETE] >> metis_tac [ordlt_REFL, ordlt_TRANS]) >>
-  res_tac >> fs[ordlt_SUC]);
+  res_tac >> fs[ordlt_SUC]
+QED
 
 val _ = overload_on ("countableOrd", ``\a. countable(preds a)``)
 
-val preds_ordSUC = store_thm(
-  "preds_ordSUC",
-  ``preds a^+ = a INSERT preds a``,
-  simp[EXTENSION, ordlt_SUC_DISCRETE] >> metis_tac[]);
+Theorem preds_ordSUC:
+    preds a^+ = a INSERT preds a
+Proof
+  simp[EXTENSION, ordlt_SUC_DISCRETE] >> metis_tac[]
+QED
 
-val countableOrds_dclosed = store_thm(
-  "countableOrds_dclosed",
-  ``a < b /\ countableOrd b ==> countableOrd a``,
+Theorem countableOrds_dclosed:
+    a < b /\ countableOrd b ==> countableOrd a
+Proof
   strip_tac >>
   `preds a SUBSET preds b` by metis_tac [preds_lt_PSUBSET, PSUBSET_DEF] >>
-  metis_tac[subset_countable]);
+  metis_tac[subset_countable]
+QED
 
 Definition omax_def:
   omax (s : 'a ordinal set) =
     some a. maximal_elements s { (x,y) | x <= y } = {a}
 End
 
-val omax_SOME = store_thm(
-  "omax_SOME",
-  ``(omax s = SOME a) <=> a IN s /\ !b. b IN s ==> b <= a``,
+Theorem omax_SOME:
+    (omax s = SOME a) <=> a IN s /\ !b. b IN s ==> b <= a
+Proof
   simp[omax_def] >> DEEP_INTRO_TAC some_intro >> simp[] >>
   conj_tac
   >- (qx_gen_tac `b` >> simp[maximal_elements_def, EXTENSION] >>
@@ -578,43 +620,49 @@ val omax_SOME = store_thm(
   disch_then (Q.X_CHOOSE_THEN `b` strip_assume_tac) >>
   Cases_on `b = a`
   >- (qpat_x_assum `P /\ Q <=/=> R` mp_tac >> simp[] >> metis_tac [ordle_lteq]) >>
-  fs[] >> metis_tac []);
+  fs[] >> metis_tac []
+QED
 
-val omax_NONE = store_thm(
-  "omax_NONE",
-  ``(omax s = NONE) <=> !a. a IN s ==> ?b. b IN s /\ a < b``,
+Theorem omax_NONE:
+    (omax s = NONE) <=> !a. a IN s ==> ?b. b IN s /\ a < b
+Proof
   simp[omax_def] >> DEEP_INTRO_TAC some_intro >>
   simp[maximal_elements_def, EXTENSION] >>
-  metis_tac [ordle_lteq]);
+  metis_tac [ordle_lteq]
+QED
 
-val omax_EMPTY = store_thm(
-  "omax_EMPTY",
-  ``omax {} = NONE``,
-  simp[omax_NONE]);
+Theorem omax_EMPTY:
+    omax {} = NONE
+Proof
+  simp[omax_NONE]
+QED
 val _ = export_rewrites ["omax_EMPTY"]
 
-val preds_0 = store_thm(
-  "preds_0",
-  ``preds 0 = {}``,
-  simp[preds_def]);
+Theorem preds_0:
+    preds 0 = {}
+Proof
+  simp[preds_def]
+QED
 val _ = export_rewrites ["preds_0"]
 
-val ordleq0 = store_thm(
-  "ordleq0",
-  ``(x:'a ordinal) <= 0 <=> (x = 0)``,
-  eq_tac >> simp[ordle_lteq]);
+Theorem ordleq0:
+    (x:'a ordinal) <= 0 <=> (x = 0)
+Proof
+  eq_tac >> simp[ordle_lteq]
+QED
 val _ = export_rewrites ["ordleq0"]
 
-val preds_EQ_EMPTY = store_thm(
-  "preds_EQ_EMPTY",
-  ``preds x = {} <=> x = 0``,
+Theorem preds_EQ_EMPTY:
+    preds x = {} <=> x = 0
+Proof
   simp[EQ_IMP_THM] >> simp[EXTENSION] >>
-  disch_then (qspec_then `0` mp_tac) >> simp[]);
+  disch_then (qspec_then `0` mp_tac) >> simp[]
+QED
 val _ = export_rewrites ["preds_EQ_EMPTY"]
 
-val omax_sup = store_thm(
-  "omax_sup",
-  ``(omax s = SOME a) ==> (sup s = a)``,
+Theorem omax_sup:
+    (omax s = SOME a) ==> (sup s = a)
+Proof
   simp[omax_SOME, sup_def] >> strip_tac >>
   DEEP_INTRO_TAC oleast_intro >> simp[] >> conj_tac
   >- (qsuff_tac `?b. !c. b IN preds c ==> c NOTIN s` >- metis_tac[] >>
@@ -622,46 +670,50 @@ val omax_sup = store_thm(
   dsimp [] >> qx_gen_tac `b` >> strip_tac >>
   `!c. b IN preds c ==> c NOTIN s` by metis_tac[] >>
   fs [] >> qsuff_tac `a <= b /\ b <= a` >- metis_tac [ordlt_trichotomy] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
-val preds_omax_SOME_SUC = store_thm(
-  "preds_omax_SOME_SUC",
-  ``(omax (preds a) = SOME b) <=> (a = b^+)``,
+Theorem preds_omax_SOME_SUC:
+    (omax (preds a) = SOME b) <=> (a = b^+)
+Proof
   simp[omax_SOME] >> eq_tac >> strip_tac
   >- (qsuff_tac `a <= b^+ /\ b^+ <= a` >- metis_tac [ordlt_trichotomy] >>
       rpt strip_tac >- metis_tac [ordlt_SUC] >>
       metis_tac [ordlt_SUC_DISCRETE, ordlt_TRANS, ordlt_REFL]) >>
-  simp[ordlt_SUC_DISCRETE, ordle_lteq]);
+  simp[ordlt_SUC_DISCRETE, ordle_lteq]
+QED
 
 Theorem omax_preds_SUC[simp]: omax (preds a^+) = SOME a
 Proof metis_tac [preds_omax_SOME_SUC]
 QED
 
-val simple_ord_induction = store_thm(
-  "simple_ord_induction",
-  ``!P. P 0 /\ (!a. P a ==> P a^+) /\
+Theorem simple_ord_induction:
+    !P. P 0 /\ (!a. P a ==> P a^+) /\
         (!a. (omax (preds a) = NONE) /\ 0 < a /\ (!b. b < a ==> P b) ==> P a) ==>
-        !a. P a``,
+        !a. P a
+Proof
   gen_tac >> strip_tac >>
   ho_match_mp_tac ord_induction >> qx_gen_tac `a` >>
   Cases_on `a = 0` >> simp[] >>
   `(omax (preds a) = NONE) \/ ?a0. omax (preds a) = SOME a0`
     by metis_tac [option_CASES]
   >- (`0 < a` by metis_tac [ordlt_ZERO, ordle_lteq] >> metis_tac[]) >>
-  fs[preds_omax_SOME_SUC]);
+  fs[preds_omax_SOME_SUC]
+QED
 
 val _ = overload_on ("islimit", ``\a:'a ordinal. omax (preds a) = NONE``)
 
-val sup_preds_omax_NONE = store_thm(
-  "sup_preds_omax_NONE",
-  ``(omax (preds a) = NONE) <=> (sup (preds a) = a)``,
+Theorem sup_preds_omax_NONE:
+    (omax (preds a) = NONE) <=> (sup (preds a) = a)
+Proof
   simp[omax_NONE, sup_def] >> DEEP_INTRO_TAC oleast_intro >> simp[] >>
   simp_tac(srw_ss() ++ DNF_ss) [impI] >>
   qexists_tac `a` >> conj_tac >- simp[ordle_lteq] >>
   qx_gen_tac `c` >> strip_tac >> Tactical.REVERSE eq_tac
   >- (rw[] >> metis_tac[]) >>
   strip_tac >> qsuff_tac `c <= a /\ a <= c` >- metis_tac [ordlt_trichotomy] >>
-  metis_tac [ordlt_TRANS, ordlt_REFL]);
+  metis_tac [ordlt_TRANS, ordlt_REFL]
+QED
 
 Theorem preds_nat:
   preds (&n) = IMAGE fromNat (count n)
@@ -711,10 +763,11 @@ QED
 Definition dclose_def:  dclose s = { x:'a ordinal | ?y. y IN s /\ x < y }
 End
 
-val preds_sup = store_thm(
-  "preds_sup",
-  ``s <<= univ(:'a inf) ==> (preds (sup s:'a ordinal) = dclose s)``,
-  simp[EXTENSION, sup_thm, dclose_def]);
+Theorem preds_sup:
+    s <<= univ(:'a inf) ==> (preds (sup s:'a ordinal) = dclose s)
+Proof
+  simp[EXTENSION, sup_thm, dclose_def]
+QED
 
 fun mklesup th =
     th |> UNDISCH_ALL |> Q.SPEC `sup s`
@@ -730,10 +783,10 @@ fun mksuple th =
 
 val csup_suple = save_thm("csup_suple", mksuple csup_thm)
 
-val preds_sup_thm = store_thm(
-  "preds_sup_thm",
-  ``downward_closed s /\ s <> univ(:'a ordinal) ==>
-    !b. b < sup s <=> ?d. d IN s /\ b < d``,
+Theorem preds_sup_thm:
+    downward_closed s /\ s <> univ(:'a ordinal) ==>
+    !b. b < sup s <=> ?d. d IN s /\ b < d
+Proof
   strip_tac >>
   qspec_then `s` mp_tac preds_surj >> simp[] >>
   disch_then (Q.X_CHOOSE_THEN `a` ASSUME_TAC) >>
@@ -751,21 +804,24 @@ val preds_sup_thm = store_thm(
   simp[sup_preds_SUC] >> eq_tac >- (strip_tac >> qexists_tac `b` >> simp[]) >>
   simp[ordlt_SUC_DISCRETE] >>
   disch_then (Q.X_CHOOSE_THEN `c` strip_assume_tac) >- metis_tac[ordlt_TRANS] >>
-  rw[]);
+  rw[]
+QED
 
 val preds_lesup = save_thm("preds_lesup", mklesup preds_sup_thm)
 val preds_suple = save_thm("preds_suple", mksuple preds_sup_thm)
 
-val ordlt_fromNat = store_thm(
-  "ordlt_fromNat",
-  ``!n (x:'a ordinal). x < &n <=> ?m. (x = &m) /\ m < n``,
+Theorem ordlt_fromNat:
+    !n (x:'a ordinal). x < &n <=> ?m. (x = &m) /\ m < n
+Proof
   Induct >>
-  dsimp [ordlt_SUC_DISCRETE, DECIDE ``m < SUC n <=> m < n \/ (m = n)``]);
+  dsimp [ordlt_SUC_DISCRETE, DECIDE ``m < SUC n <=> m < n \/ (m = n)``]
+QED
 
-val fromNat_ordlt = store_thm(
-  "fromNat_ordlt",
-  ``(&n:'a ordinal < &m) <=> (n < m)``,
-  simp[ordlt_fromNat]);
+Theorem fromNat_ordlt:
+    (&n:'a ordinal < &m) <=> (n < m)
+Proof
+  simp[ordlt_fromNat]
+QED
 val _ = export_rewrites ["fromNat_ordlt"]
 
 val allNats_dwardclosedetc = prove(
@@ -790,22 +846,25 @@ val lt_omega0 =
   MATCH_MP preds_sup_thm allNats_dwardclosedetc
            |> SIMP_RULE (srw_ss() ++ DNF_ss) [SYM omega_def, ordlt_fromNat]
 
-val lt_omega = store_thm(
-  "lt_omega",
-  ``!a. a < omega <=> ?m. a = &m``,
+Theorem lt_omega:
+    !a. a < omega <=> ?m. a = &m
+Proof
   simp_tac (srw_ss() ++ DNF_ss) [lt_omega0, EQ_IMP_THM] >> qx_gen_tac `n` >>
-  qexists_tac `SUC n` >> simp[]);
+  qexists_tac `SUC n` >> simp[]
+QED
 
-val fromNat_lt_omega = store_thm(
-  "fromNat_lt_omega",
-  ``!n. &n < omega``,
-  simp[lt_omega]);
+Theorem fromNat_lt_omega:
+    !n. &n < omega
+Proof
+  simp[lt_omega]
+QED
 val _ = export_rewrites ["fromNat_lt_omega"]
 
-val fromNat_eq_omega = store_thm(
-  "fromNat_eq_omega",
-  ``!n. &n <> omega``,
-  metis_tac [ordlt_REFL, fromNat_lt_omega]);
+Theorem fromNat_eq_omega:
+    !n. &n <> omega
+Proof
+  metis_tac [ordlt_REFL, fromNat_lt_omega]
+QED
 val _ = export_rewrites ["fromNat_eq_omega"]
 
 (* recursion principles *)
@@ -813,14 +872,14 @@ val restrict_away = prove(
   ``IMAGE (RESTRICT f $< (a:'a ordinal)) (preds a) = IMAGE f (preds a)``,
   rw[EXTENSION, relationTheory.RESTRICT_DEF] >> srw_tac[CONJ_ss][]);
 
-val ord_RECURSION = store_thm(
-  "ord_RECURSION",
-  ``!(z:'b) (sf:'a ordinal -> 'b -> 'b) (lf:'a ordinal -> 'b set -> 'b).
+Theorem ord_RECURSION:
+    !(z:'b) (sf:'a ordinal -> 'b -> 'b) (lf:'a ordinal -> 'b set -> 'b).
        ?h : 'a ordinal -> 'b.
          (h 0 = z) /\
          (!a. h a^+ = sf a (h a)) /\
          !a. 0 < a /\ islimit a ==>
-             (h a = lf a (IMAGE h (preds a)))``,
+             (h a = lf a (IMAGE h (preds a)))
+Proof
   rpt gen_tac >>
   qexists_tac `WFREC $< (\g x. if x = 0 then z
                                else
@@ -832,7 +891,8 @@ val ord_RECURSION = store_thm(
   >- simp[Once relationTheory.WFREC_THM, relationTheory.RESTRICT_DEF, SimpLHS,
           ordlt_WF] >>
   simp[relationTheory.WFREC_THM, ordlt_WF, restrict_away] >> qx_gen_tac `a` >>
-  strip_tac >> `a <> 0` by metis_tac [ordlt_REFL] >> simp[])
+  strip_tac >> `a <> 0` by metis_tac [ordlt_REFL] >> simp[]
+QED
 
 val ordADD_def = new_specification(
   "ordADD_def", ["ordADD"],
@@ -844,42 +904,46 @@ val ordADD_def = new_specification(
 val _ = export_rewrites ["ordADD_def"]
 val _ = overload_on ("+", ``ordADD``)
 
-val ordADD_0L = store_thm(
-  "ordADD_0L",
-  ``!a:'a ordinal. 0 + a = a``,
+Theorem ordADD_0L:
+    !a:'a ordinal. 0 + a = a
+Proof
   ho_match_mp_tac simple_ord_induction >> simp[] >> qx_gen_tac `a` >>
   strip_tac >>
   `IMAGE ($+ 0) (preds a) = preds a`
     by (rpt (asm_simp_tac (srw_ss() ++ CONJ_ss)[EXTENSION])) >>
-  fs[sup_preds_omax_NONE]);
+  fs[sup_preds_omax_NONE]
+QED
 val _ = export_rewrites ["ordADD_0L"]
 
-val ubsup_thm = store_thm(
-  "ubsup_thm",
-  ``(!a. a IN s ==> a < b) ==> !c. c < sup s <=> ?d. d IN s /\ c < d``,
+Theorem ubsup_thm:
+    (!a. a IN s ==> a < b) ==> !c. c < sup s <=> ?d. d IN s /\ c < d
+Proof
   strip_tac >> simp[sup_def] >> gen_tac >> DEEP_INTRO_TAC oleast_intro >>
   dsimp[impI] >>
   qexists_tac `b` >> conj_tac >- metis_tac [ordlt_TRANS, ordlt_REFL] >>
   qx_gen_tac `a` >> strip_tac >> eq_tac >- metis_tac[] >>
   disch_then (Q.X_CHOOSE_THEN `d` strip_assume_tac) >>
-  `d <= a`by metis_tac[] >> fs[ordle_lteq] >> rw[] >> metis_tac [ordlt_TRANS]);
+  `d <= a`by metis_tac[] >> fs[ordle_lteq] >> rw[] >> metis_tac [ordlt_TRANS]
+QED
 
-val ordADD_fromNat = store_thm(
-  "ordADD_fromNat",
-  ``ordADD (&n) (&m) = &(n + m)``,
-  Induct_on `m` >> simp[arithmeticTheory.ADD_CLAUSES]);
+Theorem ordADD_fromNat:
+    ordADD (&n) (&m) = &(n + m)
+Proof
+  Induct_on `m` >> simp[arithmeticTheory.ADD_CLAUSES]
+QED
 val _ = export_rewrites ["ordADD_fromNat"]
 
-val omax_preds_omega = store_thm(
-  "omax_preds_omega",
-  ``omax (preds omega) = NONE``,
+Theorem omax_preds_omega:
+    omax (preds omega) = NONE
+Proof
   simp_tac (srw_ss() ++ DNF_ss) [omax_NONE, lt_omega] >> qx_gen_tac `m` >>
-  qexists_tac `SUC m` >> simp[]);
+  qexists_tac `SUC m` >> simp[]
+QED
 val omega_islimit = save_thm("omega_islimit", omax_preds_omega)
 
-val ordADD_fromNat_omega = store_thm(
-  "ordADD_fromNat_omega",
-  ``&n + omega = omega``,
+Theorem ordADD_fromNat_omega:
+    &n + omega = omega
+Proof
   simp[ordADD_def,omax_preds_omega] >>
   `!a. a IN IMAGE ($+ (&n)) (preds omega) ==> a < omega` by dsimp[lt_omega] >>
   pop_assum (assume_tac o MATCH_MP ubsup_thm) >>
@@ -891,47 +955,53 @@ val ordADD_fromNat_omega = store_thm(
   simp[lt_omega] >> qx_gen_tac `m` >> strip_tac >>
   full_simp_tac (srw_ss() ++ DNF_ss) [lt_omega, impI] >>
   first_x_assum (qspec_then `&m` mp_tac) >> simp[] >>
-  qexists_tac `m+1` >> decide_tac);
+  qexists_tac `m+1` >> decide_tac
+QED
 
 val lt_suppreds = save_thm(
   "lt_suppreds",
   predimage_sup_thm |> Q.INST [`f` |-> `\x. x`] |> SIMP_RULE (srw_ss()) [])
 
-val ORD_ONE = store_thm(
-  "ORD_ONE",
-  ``0^+ = 1``,
-  simp_tac bool_ss [GSYM fromNat_SUC] >> simp[]);
+Theorem ORD_ONE:
+    0^+ = 1
+Proof
+  simp_tac bool_ss [GSYM fromNat_SUC] >> simp[]
+QED
 val _ = export_rewrites ["ORD_ONE"]
 
-val ordSUC_NUMERAL = store_thm(
-  "ordSUC_NUMERAL",
-  ``(&NUMERAL n)^+ = &(NUMERAL n + 1)``,
-  simp[GSYM arithmeticTheory.ADD1]);
+Theorem ordSUC_NUMERAL:
+    (&NUMERAL n)^+ = &(NUMERAL n + 1)
+Proof
+  simp[GSYM arithmeticTheory.ADD1]
+QED
 val _ = export_rewrites ["ordSUC_NUMERAL"]
 
-val ordZERO_ltSUC = store_thm(
-  "ordZERO_ltSUC",
-  ``0 < x^+``,
-  metis_tac [ordSUC_ZERO, ordlt_ZERO, ordlt_trichotomy]);
+Theorem ordZERO_ltSUC:
+    0 < x^+
+Proof
+  metis_tac [ordSUC_ZERO, ordlt_ZERO, ordlt_trichotomy]
+QED
 val _ = export_rewrites ["ordZERO_ltSUC"]
 
-val ordlt_CANCEL_ADDR = store_thm(
-  "ordlt_CANCEL_ADDR",
-  ``!(b:'a ordinal) a. a < a + b <=> 0 < b``,
+Theorem ordlt_CANCEL_ADDR:
+    !(b:'a ordinal) a. a < a + b <=> 0 < b
+Proof
   ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
   >- (qx_gen_tac `b` >> strip_tac >> qx_gen_tac `a` >>
       Cases_on `b = 0` >- simp[] >>
       match_mp_tac ordlt_TRANS >> qexists_tac `a^+` >> simp[] >>
       spose_not_then strip_assume_tac >> fs[ordle_lteq]) >>
   simp_tac (srw_ss() ++ CONJ_ss)[predimage_sup_thm] >> rpt strip_tac >>
-  simp[GSYM lt_suppreds] >> fs[sup_preds_omax_NONE]);
+  simp[GSYM lt_suppreds] >> fs[sup_preds_omax_NONE]
+QED
 val _ = export_rewrites ["ordlt_CANCEL_ADDR"]
 
-val ordlt_CANCEL_ADDL = store_thm(
-  "ordlt_CANCEL_ADDL",
-  ``a + b < a <=> F``,
+Theorem ordlt_CANCEL_ADDL:
+    a + b < a <=> F
+Proof
   simp[ordle_lteq] >> Cases_on `0 < b` >> simp[] >>
-  fs[ordleq0]);
+  fs[ordleq0]
+QED
 val _ = export_rewrites ["ordlt_CANCEL_ADDL"]
 
 val ordADD_CANCEL_LEMMA0 = prove(
@@ -946,40 +1016,44 @@ val ordADD_CANCEL1 = save_thm(
                              |> GEN_ALL))
 val _ = export_rewrites ["ordADD_CANCEL1"]
 
-val ordADD_MONO = store_thm(
-  "ordADD_MONO",
-  ``!b:'a ordinal a c. a < b ==> c + a < c + b``,
+Theorem ordADD_MONO:
+    !b:'a ordinal a c. a < b ==> c + a < c + b
+Proof
   ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
   >- (ntac 2 strip_tac >> simp[ordlt_SUC_DISCRETE] >> rw[] >> rw[]) >>
   qx_gen_tac `b` >> strip_tac >> simp[predimage_sup_thm] >>
   map_every qx_gen_tac [`a`, `c`] >> strip_tac >>
   `?d. d < b /\ a < d`
     by (simp[GSYM lt_suppreds] >> fs[sup_preds_omax_NONE]) >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
-val ordlt_CANCEL = store_thm(
-  "ordlt_CANCEL",
-  ``!b a (c:'a ordinal). c + a < c + b <=> a < b``,
+Theorem ordlt_CANCEL:
+    !b a (c:'a ordinal). c + a < c + b <=> a < b
+Proof
   simp[EQ_IMP_THM, ordADD_MONO] >> rpt strip_tac >>
-  metis_tac[ordlt_trichotomy, ordlt_REFL, ordlt_TRANS, ordADD_MONO]);
+  metis_tac[ordlt_trichotomy, ordlt_REFL, ordlt_TRANS, ordADD_MONO]
+QED
 val _ = export_rewrites ["ordlt_CANCEL"]
 
-val ordADD_RIGHT_CANCEL = store_thm(
-  "ordADD_RIGHT_CANCEL",
-  ``!b a c. ((a:'a ordinal) + b = a + c) <=> (b = c)``,
-  metis_tac[ordlt_trichotomy, ordADD_MONO, ordlt_REFL]);
+Theorem ordADD_RIGHT_CANCEL:
+    !b a c. ((a:'a ordinal) + b = a + c) <=> (b = c)
+Proof
+  metis_tac[ordlt_trichotomy, ordADD_MONO, ordlt_REFL]
+QED
 val _ = export_rewrites ["ordADD_RIGHT_CANCEL"]
 
-val leqLEFT_CANCEL = store_thm(
-  "leqLEFT_CANCEL",
-  ``!x a. x <= a + x``,
+Theorem leqLEFT_CANCEL:
+    !x a. x <= a + x
+Proof
   ho_match_mp_tac simple_ord_induction >> rpt conj_tac >- simp[] >- simp[] >>
   qx_gen_tac `x` >> strip_tac >>
   qx_gen_tac `a` >> strip_tac >>
   `?b. a + x < b /\ b < x` by metis_tac[omax_NONE, IN_preds] >>
   `b <= a + b` by metis_tac[] >>
   `a + x < a + b` by metis_tac [ordle_lteq, ordlt_TRANS] >>
-  fs[] >> metis_tac[ordlt_TRANS, ordlt_REFL]);
+  fs[] >> metis_tac[ordlt_TRANS, ordlt_REFL]
+QED
 val _ = export_rewrites ["leqLEFT_CANCEL"]
 
 val lemma = prove(
@@ -989,35 +1063,39 @@ val lemma = prove(
   >- (simp[ordlt_SUC_DISCRETE] >> metis_tac[]) >>
   simp[predimage_sup_thm]);
 
-val ordlt_EXISTS_ADD = store_thm(
-  "ordlt_EXISTS_ADD",
-  ``!a b:'a ordinal. a < b <=> ?c. c <> 0 /\ b = a + c``,
+Theorem ordlt_EXISTS_ADD:
+    !a b:'a ordinal. a < b <=> ?c. c <> 0 /\ b = a + c
+Proof
   simp_tac (srw_ss() ++ DNF_ss) [EQ_IMP_THM] >> Tactical.REVERSE conj_tac
   >- metis_tac[ordlt_trichotomy, ordlt_ZERO] >>
   map_every qx_gen_tac [`a`, `b`] >> strip_tac >>
   `b <= a + b` by simp[] >> fs[ordle_lteq]
   >- (`?c. a + c = b` by metis_tac[lemma] >> rw[] >> strip_tac >> fs[]) >>
-  qexists_tac `b` >> simp[] >> strip_tac >> fs[]);
+  qexists_tac `b` >> simp[] >> strip_tac >> fs[]
+QED
 
-val ordle_EXISTS_ADD = store_thm(
-  "ordle_EXISTS_ADD",
-  ``!a b:'a ordinal. a <= b <=> ?c. b = a + c``,
-  simp[ordle_lteq] >> metis_tac [ordlt_EXISTS_ADD, ordADD_def]);
+Theorem ordle_EXISTS_ADD:
+    !a b:'a ordinal. a <= b <=> ?c. b = a + c
+Proof
+  simp[ordle_lteq] >> metis_tac [ordlt_EXISTS_ADD, ordADD_def]
+QED
 
-val ordle_CANCEL_ADDR = store_thm(
-  "ordle_CANCEL_ADDR",
-  ``x <= x + a``,
-  simp[ordle_lteq] >> metis_tac[ordlt_trichotomy, ordlt_ZERO]);
+Theorem ordle_CANCEL_ADDR:
+    x <= x + a
+Proof
+  simp[ordle_lteq] >> metis_tac[ordlt_trichotomy, ordlt_ZERO]
+QED
 val _ = export_rewrites ["ordle_CANCEL_ADDR"]
 
-val dclose_BIGUNION = store_thm(
-  "dclose_BIGUNION",
-  ``dclose s = BIGUNION (IMAGE preds s)``,
-  dsimp[Once EXTENSION, dclose_def] >> metis_tac[]);
+Theorem dclose_BIGUNION:
+    dclose s = BIGUNION (IMAGE preds s)
+Proof
+  dsimp[Once EXTENSION, dclose_def] >> metis_tac[]
+QED
 
-val countableOrds_uncountable = store_thm(
-  "countableOrds_uncountable",
-  ``~countable { a:'a ordinal | countableOrd a }``,
+Theorem countableOrds_uncountable:
+    ~countable { a:'a ordinal | countableOrd a }
+Proof
   strip_tac >> qabbrev_tac `CO = { a | countableOrd a }` >>
   `CO <<= univ(:'a inf)`
      by metis_tac[countable_thm, cardleq_TRANS, Unum_cle_Uinf] >>
@@ -1032,52 +1110,57 @@ val countableOrds_uncountable = store_thm(
   `countable (preds (sup CO)^+)` by simp[preds_ordSUC] >>
   `(sup CO)^+ IN CO` by simp[Abbr`CO`] >>
   `sup CO < (sup CO)^+` by simp[] >>
-  metis_tac [ordlt_REFL]);
+  metis_tac [ordlt_REFL]
+QED
 
-val dclose_cardleq_univinf = store_thm(
-  "dclose_cardleq_univinf",
-  ``(s:'a ordinal set) <<= univ(:'a inf) ==> dclose s <<= univ(:'a inf)``,
+Theorem dclose_cardleq_univinf:
+    (s:'a ordinal set) <<= univ(:'a inf) ==> dclose s <<= univ(:'a inf)
+Proof
   strip_tac >> simp[dclose_BIGUNION] >>
   match_mp_tac CARD_BIGUNION >>
-  dsimp[preds_inj_univ] >> metis_tac [cardleq_TRANS, IMAGE_cardleq]);
+  dsimp[preds_inj_univ] >> metis_tac [cardleq_TRANS, IMAGE_cardleq]
+QED
 
-val sup_lt_implies = store_thm(
-  "sup_lt_implies",
-  ``(s:'a ordinal set) <<= univ(:'a inf) /\ sup s < a /\ b IN s ==> b < a``,
+Theorem sup_lt_implies:
+    (s:'a ordinal set) <<= univ(:'a inf) /\ sup s < a /\ b IN s ==> b < a
+Proof
   strip_tac >>
   `sup s <= a` by simp[ordle_lteq] >>
   pop_assum mp_tac >> simp[sup_thm, impI] >> strip_tac >>
   `b <= a` by simp[] >> fs[ordle_lteq] >> fs[] >>
-  `a <= sup s` by metis_tac [mklesup sup_thm]);
+  `a <= sup s` by metis_tac [mklesup sup_thm]
+QED
 
-val sup_eq_max = store_thm(
-  "sup_eq_max",
-  ``(!b. b IN s ==> b <= a) /\ a IN s ==> sup s = a``,
+Theorem sup_eq_max:
+    (!b. b IN s ==> b <= a) /\ a IN s ==> sup s = a
+Proof
   strip_tac >>
   `!b. b IN s ==> b < a^+` by fs[ordlt_SUC_DISCRETE, ordle_lteq] >>
   pop_assum (assume_tac o MATCH_MP ubsup_thm) >>
   `a <= sup s` by metis_tac [ordlt_REFL] >>
   `sup s <= a` by simp[impI] >>
-  metis_tac [ordle_ANTISYM]);
+  metis_tac [ordle_ANTISYM]
+QED
 
-val sup_eq_SUC = store_thm(
-  "sup_eq_SUC",
-  ``s:'a ordinal set <<= univ(:'a inf) /\ sup s = a^+ ==> a^+ IN s``,
+Theorem sup_eq_SUC:
+    s:'a ordinal set <<= univ(:'a inf) /\ sup s = a^+ ==> a^+ IN s
+Proof
   rpt strip_tac >> `a < sup s` by simp[] >>
   pop_assum mp_tac >> pop_assum (mp_tac o SYM) >> simp[sup_thm] >> strip_tac >>
   disch_then (Q.X_CHOOSE_THEN `b` strip_assume_tac) >>
   qsuff_tac `b = a^+` >- metis_tac[] >>
   match_mp_tac ordle_ANTISYM >> conj_tac
   >- metis_tac [sup_lt_implies, ordlt_REFL] >>
-  simp[ordlt_SUC_DISCRETE] >> metis_tac[ordle_lteq, ordlt_REFL]);
+  simp[ordlt_SUC_DISCRETE] >> metis_tac[ordle_lteq, ordlt_REFL]
+QED
 
 
-val generic_continuity = store_thm(
-  "generic_continuity",
-  ``(!a. 0 < a /\ islimit a ==> f a :'a ordinal = sup (IMAGE f (preds a))) /\
+Theorem generic_continuity:
+    (!a. 0 < a /\ islimit a ==> f a :'a ordinal = sup (IMAGE f (preds a))) /\
     (!x y. x <= y ==> f x <= f y) ==>
     !s:'a ordinal set.
-          s <<= univ(:'a inf) /\ s <> {} ==> f (sup s) = sup (IMAGE f s)``,
+          s <<= univ(:'a inf) /\ s <> {} ==> f (sup s) = sup (IMAGE f s)
+Proof
   rpt strip_tac >>
   `islimit (sup s) \/ ?a. omax (preds (sup s)) = SOME a`
     by metis_tac [option_CASES]
@@ -1112,17 +1195,21 @@ val generic_continuity = store_thm(
     match_mp_tac sup_eq_max >> dsimp[] >>
     ntac 2 strip_tac >> first_x_assum match_mp_tac >>
     metis_tac [mklesup sup_thm]
-  ])
+  ]
+QED
 
-val ord_CASES = store_thm(
-  "ord_CASES",
-  ``!a. (a = 0) \/ (?a0. a = a0^+) \/ (0 < a /\ islimit a)``,
+Theorem ord_CASES:
+    !a. (a = 0) \/ (?a0. a = a0^+) \/ (0 < a /\ islimit a)
+Proof
   gen_tac >> Cases_on `a = 0` >- simp[] >>
   `0 < a` by metis_tac [ordlt_trichotomy, ordlt_ZERO] >>
   Cases_on `omax (preds a)` >> simp[] >>
-  fs[preds_omax_SOME_SUC]);
+  fs[preds_omax_SOME_SUC]
+QED
 
-val islimit_0 = store_thm("islimit_0", ``islimit 0``, simp[])
+Theorem islimit_0:   islimit 0
+Proof simp[]
+QED
 
 (* An intermediate value theorem of sorts.
 
@@ -1131,12 +1218,12 @@ val islimit_0 = store_thm("islimit_0", ``islimit 0``, simp[])
    side condition, which is annoying.
 *)
 
-val ordinal_IVT = store_thm(
-  "ordinal_IVT",
-  ``(!a:'a ordinal.
+Theorem ordinal_IVT:
+    (!a:'a ordinal.
        0 < a /\ islimit a ==> f a : 'a ordinal = sup (IMAGE f (preds a))) /\
     (!x y. x <= y ==> f x <= f y) /\ a1 < a2 /\ f a1 <= c /\ c < f a2 ==>
-    ?b. a1 <= b /\ b < a2 /\ f b <= c /\ c < f b^+``,
+    ?b. a1 <= b /\ b < a2 /\ f b <= c /\ c < f b^+
+Proof
   strip_tac >>
   qabbrev_tac `mu = oleast a. c < f a /\ a1 < a` >>
   `c < f mu /\ a1 < mu /\ (!a. a < mu ==> f a <= c \/ a <= a1)`
@@ -1157,15 +1244,16 @@ val ordinal_IVT = store_thm(
   `a1 <= d` by metis_tac[ordlt_SUC_DISCRETE, ordle_lteq] >>
   `f d <= c` by metis_tac[ordle_ANTISYM] >>
   `d < a2` suffices_by metis_tac[] >>
-  metis_tac[ordle_TRANS, ordle_TRANS]);
+  metis_tac[ordle_TRANS, ordle_TRANS]
+QED
 
 val ordADD_continuous = save_thm(
   "ordADD_continuous",
   generic_continuity |> Q.INST [`f` |-> `$+ a`] |> SIMP_RULE (srw_ss()) [])
 
-val ordADD_ASSOC = store_thm(
-  "ordADD_ASSOC",
-  ``!a b c:'a ordinal. a + (b + c) = (a + b) + c``,
+Theorem ordADD_ASSOC:
+    !a b c:'a ordinal. a + (b + c) = (a + b) + c
+Proof
   qsuff_tac `!c a b:'a ordinal. a + (b + c) = (a + b) + c` >- simp[] >>
   ho_match_mp_tac simple_ord_induction >> simp[predimage_sup_thm] >>
   qx_gen_tac `c` >> strip_tac >> map_every qx_gen_tac [`a`, `b`] >>
@@ -1174,7 +1262,8 @@ val ordADD_ASSOC = store_thm(
   simp[] >>
   match_mp_tac ordADD_continuous >>
   simp[IMAGE_cardleq_rwt, preds_inj_univ] >>
-  metis_tac [preds_0, preds_11, ordlt_REFL]);
+  metis_tac [preds_0, preds_11, ordlt_REFL]
+QED
 
 val exists_C = prove(
   ``(?h:'a -> 'a -> 'a. P h) <=> (?h. P (combin$C h))``,
@@ -1183,14 +1272,15 @@ val exists_C = prove(
       qsuff_tac `combin$C (combin$C h) = h` >- simp[] >>
       simp[FUN_EQ_THM]) >> metis_tac[]);
 
-val ADD1R = store_thm(
-  "ADD1R",
-  ``a + 1 = a^+``,
-  REWRITE_TAC [GSYM ORD_ONE] >> simp[]);
+Theorem ADD1R:
+    a + 1 = a^+
+Proof
+  REWRITE_TAC [GSYM ORD_ONE] >> simp[]
+QED
 
-val ordADD_weak_MONO = store_thm(
-  "ordADD_weak_MONO",
-  ``!c a b:'a ordinal. a < b ==> a + c <= b + c``,
+Theorem ordADD_weak_MONO:
+    !c a b:'a ordinal. a < b ==> a + c <= b + c
+Proof
   ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
   >- simp[ordle_lteq] >>
   qx_gen_tac `c` >> strip_tac >> map_every qx_gen_tac [`a`, `b`] >>
@@ -1198,7 +1288,8 @@ val ordADD_weak_MONO = store_thm(
   strip_tac >>
   `a + d <= b + d` by metis_tac[] >>
   `b + d IN IMAGE ($+ b) (preds c)` by simp[] >>
-  metis_tac[sup_lt_implies, IMAGE_cardleq_rwt, preds_inj_univ]);
+  metis_tac[sup_lt_implies, IMAGE_cardleq_rwt, preds_inj_univ]
+QED
 
 (* Multiplication *)
 
@@ -1214,44 +1305,51 @@ val ordMULT_def = new_specification(
 val _ = export_rewrites ["ordMULT_def"]
 val _ = overload_on ("*", ``ordMULT``)
 
-val ordMULT_0L = store_thm(
-  "ordMULT_0L",
-  ``!a:'a ordinal. 0 * a = 0``,
+Theorem ordMULT_0L:
+    !a:'a ordinal. 0 * a = 0
+Proof
   ho_match_mp_tac simple_ord_induction >> simp[] >> qx_gen_tac `a` >>
   strip_tac >> qsuff_tac `IMAGE ($* 0) (preds a) = {0}` >> simp[] >>
-  simp[EXTENSION] >> metis_tac[]);
+  simp[EXTENSION] >> metis_tac[]
+QED
 val _ = export_rewrites ["ordMULT_0L"]
 
-val ordMULT_0R = store_thm("ordMULT_0R", ``!a:'a ordinal. a * 0 = 0``, simp[]);
+Theorem ordMULT_0R:   !a:'a ordinal. a * 0 = 0
+Proof simp[]
+QED
 
-val ordMULT_1L = store_thm(
-  "ordMULT_1L",
-  ``!a. 1 * (a:'a ordinal) = a``,
+Theorem ordMULT_1L:
+    !a. 1 * (a:'a ordinal) = a
+Proof
   ho_match_mp_tac simple_ord_induction >> simp[ADD1R] >> qx_gen_tac `a` >>
   strip_tac >> qsuff_tac `IMAGE ($* 1) (preds a) = preds a`
   >- fs [sup_preds_omax_NONE] >>
-  dsimp[EXTENSION] >> asm_simp_tac (srw_ss() ++ CONJ_ss) []);
+  dsimp[EXTENSION] >> asm_simp_tac (srw_ss() ++ CONJ_ss) []
+QED
 val _ = export_rewrites ["ordMULT_1L"]
 
-val ordMULT_1R = store_thm(
-  "ordMULT_1R",
-  ``!a:'a ordinal. a * 1 = a``,
-  simp_tac bool_ss [GSYM ORD_ONE, ordMULT_def, ordADD_0L]);
+Theorem ordMULT_1R:
+    !a:'a ordinal. a * 1 = a
+Proof
+  simp_tac bool_ss [GSYM ORD_ONE, ordMULT_def, ordADD_0L]
+QED
 val _ = export_rewrites ["ordMULT_1R"]
 
-val ordMULT_2R = store_thm(
-  "ordMULT_2R",
-  ``(a:'a ordinal) * 2 = a + a``,
-  `2 = 1^+` by simp[] >> pop_assum SUBST1_TAC >> simp[]);
+Theorem ordMULT_2R:
+    (a:'a ordinal) * 2 = a + a
+Proof
+  `2 = 1^+` by simp[] >> pop_assum SUBST1_TAC >> simp[]
+QED
 
-val islimit_SUC_lt = store_thm(
-  "islimit_SUC_lt",
-  ``islimit b /\ a < b ==> a^+ < b``,
-  fs[omax_NONE] >> metis_tac [ordlt_SUC_DISCRETE, ordlt_trichotomy, ordle_lteq])
+Theorem islimit_SUC_lt:
+    islimit b /\ a < b ==> a^+ < b
+Proof
+  fs[omax_NONE] >> metis_tac [ordlt_SUC_DISCRETE, ordlt_trichotomy, ordle_lteq]
+QED
 
-val ordMULT_lt_MONO_R = store_thm(
-  "ordMULT_lt_MONO_R",
-  ``!a b c:'a ordinal. a < b /\ 0 < c ==> c * a < c * b``,
+Theorem ordMULT_lt_MONO_R:
+    !a b c:'a ordinal. a < b /\ 0 < c ==> c * a < c * b
+Proof
   qsuff_tac `!b a c:'a ordinal. a < b /\ 0 < c ==> c * a < c * b` >- metis_tac[]>>
   ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
   >- (simp[ordlt_SUC_DISCRETE] >> qx_gen_tac `b` >> strip_tac >>
@@ -1263,31 +1361,35 @@ val ordMULT_lt_MONO_R = store_thm(
   strip_tac >> simp[predimage_sup_thm] >>
   `?d. a < d /\ d < b`
     by metis_tac[sup_preds_omax_NONE, IN_preds, preds_inj_univ, sup_thm] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
-val ordMULT_le_MONO_R = store_thm(
-  "ordMULT_le_MONO_R",
-  ``!a b c:'a ordinal. a <= b ==> c * a <= c * b``,
+Theorem ordMULT_le_MONO_R:
+    !a b c:'a ordinal. a <= b ==> c * a <= c * b
+Proof
   simp[ordle_lteq] >> rpt strip_tac >> simp[] >>
   Cases_on `c = 0` >> simp[] >>
   `0 < c` by metis_tac [ordlt_ZERO, ordlt_trichotomy] >>
-  metis_tac [ordMULT_lt_MONO_R])
+  metis_tac [ordMULT_lt_MONO_R]
+QED
 
-val ordMULT_lt_MONO_R_EQN = store_thm(
-  "ordMULT_lt_MONO_R_EQN",
-  ``c * a < c * b <=> a < b /\ 0 < c``,
+Theorem ordMULT_lt_MONO_R_EQN:
+    c * a < c * b <=> a < b /\ 0 < c
+Proof
   simp[EQ_IMP_THM, ordMULT_lt_MONO_R] >>
-  Cases_on `0 < c` >- metis_tac [ordMULT_le_MONO_R] >> fs[]);
+  Cases_on `0 < c` >- metis_tac [ordMULT_le_MONO_R] >> fs[]
+QED
 val _ = export_rewrites ["ordMULT_lt_MONO_R_EQN"]
 
-val ordADD_le_MONO_L = store_thm(
-  "ordADD_le_MONO_L",
-  ``x <= y ==> x + z <= y + z``,
-  simp[ordle_lteq, SimpL ``$==>``] >> simp[DISJ_IMP_THM, ordADD_weak_MONO]);
+Theorem ordADD_le_MONO_L:
+    x <= y ==> x + z <= y + z
+Proof
+  simp[ordle_lteq, SimpL ``$==>``] >> simp[DISJ_IMP_THM, ordADD_weak_MONO]
+QED
 
-val ordMULT_le_MONO_L = store_thm(
-  "ordMULT_le_MONO_L",
-  ``!a b c:'a ordinal. a <= b ==> a * c <= b * c``,
+Theorem ordMULT_le_MONO_L:
+    !a b c:'a ordinal. a <= b ==> a * c <= b * c
+Proof
   qsuff_tac `!c a b:'a ordinal. a <= b ==> a * c <= b * c` >- metis_tac[] >>
   ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
   >- (qx_gen_tac `c` >> strip_tac >> map_every qx_gen_tac [`a`, `b`] >>
@@ -1300,35 +1402,39 @@ val ordMULT_le_MONO_L = store_thm(
   match_mp_tac ordle_TRANS >> qexists_tac `b * d` >> simp[] >>
   qsuff_tac `b * d IN IMAGE ($* b) (preds c)`
   >- metis_tac [mklesup sup_thm, IMAGE_cardleq_rwt, preds_inj_univ] >>
-  simp[] >> metis_tac[]);
+  simp[] >> metis_tac[]
+QED
 
-val ordMULT_CANCEL_R = store_thm(
-  "ordMULT_CANCEL_R",
-  ``(z * x = z * y:'a ordinal) <=> (z = 0) \/ (x = y)``,
+Theorem ordMULT_CANCEL_R:
+    (z * x = z * y:'a ordinal) <=> (z = 0) \/ (x = y)
+Proof
   simp[EQ_IMP_THM, DISJ_IMP_THM] >> strip_tac >>
   Tactical.REVERSE (Cases_on `0 < z`) >- fs[] >>
   `x < y \/ (x = y) \/ y < x` by metis_tac [ordlt_trichotomy] >>
-  metis_tac [ordMULT_lt_MONO_R_EQN, ordlt_REFL]);
+  metis_tac [ordMULT_lt_MONO_R_EQN, ordlt_REFL]
+QED
 val _ = export_rewrites ["ordMULT_CANCEL_R"]
 
 val ordMULT_continuous0 =
   generic_continuity |> Q.INST [`f` |-> `$* a`]
                      |> SIMP_RULE (srw_ss()) []
 
-val ordMULT_continuous = store_thm(
-  "ordMULT_continuous",
-  ``!s:'a ordinal set. s <<= univ(:'a inf) ==> a * sup s = sup (IMAGE ($* a) s)``,
-  rpt strip_tac >> Cases_on `s = {}` >> simp[ordMULT_continuous0]);
+Theorem ordMULT_continuous:
+    !s:'a ordinal set. s <<= univ(:'a inf) ==> a * sup s = sup (IMAGE ($* a) s)
+Proof
+  rpt strip_tac >> Cases_on `s = {}` >> simp[ordMULT_continuous0]
+QED
 
-val ordMULT_fromNat = store_thm(
-  "ordMULT_fromNat",
-  ``(&n : 'a ordinal) * &m = &(n * m)``,
-  Induct_on `m` >> simp[arithmeticTheory.MULT_CLAUSES]);
+Theorem ordMULT_fromNat:
+    (&n : 'a ordinal) * &m = &(n * m)
+Proof
+  Induct_on `m` >> simp[arithmeticTheory.MULT_CLAUSES]
+QED
 val _ = export_rewrites ["ordMULT_fromNat"]
 
-val omega_MUL_fromNat = store_thm(
-  "omega_MUL_fromNat",
-  ``0 < n ==> &n * omega = omega``,
+Theorem omega_MUL_fromNat:
+    0 < n ==> &n * omega = omega
+Proof
   simp[omax_preds_omega] >> strip_tac >>
   match_mp_tac ordle_ANTISYM >> dsimp[predimage_sup_thm, lt_omega, impI] >>
   conj_tac >- simp[ordle_lteq] >>
@@ -1337,11 +1443,12 @@ val omega_MUL_fromNat = store_thm(
   dsimp[predimage_sup_thm, lt_omega] >>
   qexists_tac `m + 1` >> simp[arithmeticTheory.LEFT_ADD_DISTRIB] >>
   qsuff_tac `m <= m * n /\ m * n < n + m * n` >- DECIDE_TAC >>
-  simp[]);
+  simp[]
+QED
 
-val ordMULT_LDISTRIB = store_thm(
-  "ordMULT_LDISTRIB",
-  ``!a b c:'a ordinal. c * (a + b) = c * a + c * b``,
+Theorem ordMULT_LDISTRIB:
+    !a b c:'a ordinal. c * (a + b) = c * a + c * b
+Proof
   qsuff_tac `!b a c. c * (a + b) = c * a + c * b` >- simp[] >>
   ho_match_mp_tac simple_ord_induction >> simp[ordADD_ASSOC] >>
   qx_gen_tac `b` >> strip_tac >>
@@ -1349,16 +1456,18 @@ val ordMULT_LDISTRIB = store_thm(
   simp[ordADD_continuous, ordMULT_continuous, IMAGE_cardleq_rwt,
        preds_inj_univ] >>
   rpt strip_tac >> AP_TERM_TAC >> dsimp[EXTENSION] >>
-  asm_simp_tac (srw_ss() ++ CONJ_ss) [])
+  asm_simp_tac (srw_ss() ++ CONJ_ss) []
+QED
 
-val ordMULT_ASSOC = store_thm(
-  "ordMULT_ASSOC",
-  ``!a b c:'a ordinal. a * (b * c) = (a * b) * c``,
+Theorem ordMULT_ASSOC:
+    !a b c:'a ordinal. a * (b * c) = (a * b) * c
+Proof
   qsuff_tac `!c a b:'a ordinal. a * (b * c) = (a * b) * c` >- simp[] >>
   ho_match_mp_tac simple_ord_induction >> simp[ordMULT_LDISTRIB] >>
   simp[ordMULT_continuous, IMAGE_cardleq_rwt, preds_inj_univ] >>
   rpt strip_tac >> AP_TERM_TAC >> dsimp[EXTENSION] >>
-  asm_simp_tac (srw_ss() ++ CONJ_ss) [])
+  asm_simp_tac (srw_ss() ++ CONJ_ss) []
+QED
 
 val ordDIVISION0 = prove(
   ``!a b:'a ordinal. 0 < b ==> ?q r. a = b * q + r /\ r < b``,
@@ -1436,9 +1545,9 @@ val _ = overload_on ("/", ``ordDIV``)
 val _ = set_fixity "%" (Infixl 650)
 val _ = overload_on ("%", ``ordMOD``)
 
-val ordDIV_UNIQUE = store_thm(
-  "ordDIV_UNIQUE",
-  ``!a b q r. 0 < (b:'a ordinal) /\ a = b*q + r /\ r < b ==> a / b = q``,
+Theorem ordDIV_UNIQUE:
+    !a b q r. 0 < (b:'a ordinal) /\ a = b*q + r /\ r < b ==> a / b = q
+Proof
   rpt strip_tac >>
   `a = b * (a / b) + a % b /\ a % b < b` by metis_tac [ordDIVISION] >>
   `a / b < q \/ a / b = q \/ q < a / b` by metis_tac [ordlt_trichotomy] >| [
@@ -1469,15 +1578,17 @@ val ordDIV_UNIQUE = store_thm(
           simp[] >> strip_tac >> fs[]) >>
     `b <= b * bb + a % b`
       by metis_tac [ordle_CANCEL_ADDR, ordADD_le_MONO_L, ordle_TRANS]
-  ]);
+  ]
+QED
 
-val ordMOD_UNIQUE = store_thm(
-  "ordMOD_UNIQUE",
-  ``!a b q r. 0 < b /\ a = b * q + r /\ r < b ==> a % b = r``,
+Theorem ordMOD_UNIQUE:
+    !a b q r. 0 < b /\ a = b * q + r /\ r < b ==> a % b = r
+Proof
   rpt strip_tac >>
   `(a = b * (a / b) + a % b) /\ a % b < b` by metis_tac [ordDIVISION] >>
   `a / b = q` by metis_tac [ordDIV_UNIQUE] >> pop_assum SUBST_ALL_TAC >>
-  qabbrev_tac `r' = a % b` >> fs[])
+  qabbrev_tac `r' = a % b` >> fs[]
+QED
 
 (* Exponentiation *)
 val ordEXP_def = new_specification(
@@ -1493,34 +1604,38 @@ val ordEXP_def = new_specification(
 val _ = export_rewrites ["ordEXP_def"]
 val _ = overload_on ("**", ``ordEXP``)
 
-val ordEXP_1R = store_thm(
-  "ordEXP_1R",
-  ``(a:'a ordinal) ** 1 = a``,
-  simp_tac bool_ss [GSYM ORD_ONE, ordEXP_def] >> simp[]);
+Theorem ordEXP_1R:
+    (a:'a ordinal) ** 1 = a
+Proof
+  simp_tac bool_ss [GSYM ORD_ONE, ordEXP_def] >> simp[]
+QED
 val _ = export_rewrites ["ordEXP_1R"]
 
-val ordEXP_1L = store_thm(
-  "ordEXP_1L",
-  ``!a:'a ordinal. 1 ** a = 1``,
+Theorem ordEXP_1L:
+    !a:'a ordinal. 1 ** a = 1
+Proof
   ho_match_mp_tac simple_ord_induction >> simp[] >> qx_gen_tac `a` >>
   strip_tac >> qsuff_tac `IMAGE ($** 1) (preds a) = {1}` >> simp[] >>
-  simp[EXTENSION] >> asm_simp_tac (srw_ss() ++ CONJ_ss) [] >> metis_tac[]);
+  simp[EXTENSION] >> asm_simp_tac (srw_ss() ++ CONJ_ss) [] >> metis_tac[]
+QED
 val _ = export_rewrites ["ordEXP_1L"]
 
-val ordEXP_2R = store_thm(
-  "ordEXP_2R",
-  ``(a:'a ordinal) ** 2 = a * a``,
-  `2 = 1^+` by simp[] >> pop_assum SUBST1_TAC >> simp[]);
+Theorem ordEXP_2R:
+    (a:'a ordinal) ** 2 = a * a
+Proof
+  `2 = 1^+` by simp[] >> pop_assum SUBST1_TAC >> simp[]
+QED
 
-val ordEXP_fromNat = store_thm(
-  "ordEXP_fromNat",
-  ``(&x:'a ordinal) ** &n = &(x ** n)``,
-  Induct_on `n` >> simp[arithmeticTheory.EXP]);
+Theorem ordEXP_fromNat:
+    (&x:'a ordinal) ** &n = &(x ** n)
+Proof
+  Induct_on `n` >> simp[arithmeticTheory.EXP]
+QED
 val _ = export_rewrites ["ordEXP_fromNat"]
 
-val ordEXP_le_MONO_L = store_thm(
-  "ordEXP_le_MONO_L",
-  ``!x a b. a <= b ==> a ** x <= b ** x``,
+Theorem ordEXP_le_MONO_L:
+    !x a b. a <= b ==> a ** x <= b ** x
+Proof
   ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
   >- (qx_gen_tac `x` >> strip_tac >> map_every qx_gen_tac [`a`, `b`] >>
       strip_tac >> match_mp_tac ordle_TRANS >>
@@ -1530,30 +1645,34 @@ val ordEXP_le_MONO_L = store_thm(
   qx_gen_tac `d` >> strip_tac >>
   `a ** d <= b ** d` by simp[] >>
   `b ** d IN IMAGE ($** b) (preds x)` by (simp[] >> metis_tac[]) >>
-  metis_tac [mklesup sup_thm, ordle_TRANS, IMAGE_cardleq_rwt, preds_inj_univ]);
+  metis_tac [mklesup sup_thm, ordle_TRANS, IMAGE_cardleq_rwt, preds_inj_univ]
+QED
 
-val IFF_ZERO_lt = store_thm(
-  "IFF_ZERO_lt",
-  ``(x:'a ordinal <> 0 <=> 0 < x) /\ (1 <= x <=> 0 < x)``,
+Theorem IFF_ZERO_lt:
+    (x:'a ordinal <> 0 <=> 0 < x) /\ (1 <= x <=> 0 < x)
+Proof
   REWRITE_TAC [GSYM ORD_ONE] >> simp[ordlt_SUC_DISCRETE] >>
-  metis_tac [ordlt_trichotomy, ordlt_ZERO]);
+  metis_tac [ordlt_trichotomy, ordlt_ZERO]
+QED
 
-val islimit_SUC = store_thm(
-  "islimit_SUC",
-  ``islimit x^+ <=> F``,
+Theorem islimit_SUC:
+    islimit x^+ <=> F
+Proof
   simp[omax_NONE, impI, ordlt_SUC_DISCRETE] >>
-  metis_tac[ordle_lteq]);
+  metis_tac[ordle_lteq]
+QED
 val _ = export_rewrites ["islimit_SUC"]
 
-val islimit_fromNat = store_thm(
-  "islimit_fromNat",
-  ``islimit &x <=> x = 0``,
-  Cases_on `x` >> simp[]);
+Theorem islimit_fromNat:
+    islimit &x <=> x = 0
+Proof
+  Cases_on `x` >> simp[]
+QED
 val _ = export_rewrites ["islimit_fromNat"]
 
-val ordEXP_ZERO_limit = store_thm(
-  "ordEXP_ZERO_limit",
-  ``!x. islimit x ==> 0 ** x = 1``,
+Theorem ordEXP_ZERO_limit:
+    !x. islimit x ==> 0 ** x = 1
+Proof
   ho_match_mp_tac simple_ord_induction >> simp[] >>
   qx_gen_tac `x` >> strip_tac >>
   qsuff_tac `IMAGE ($** 0) (preds x) = {0; 1}`
@@ -1573,25 +1692,28 @@ val ordEXP_ZERO_limit = store_thm(
   qx_gen_tac `z` >> strip_tac >> Cases_on `islimit z` >- metis_tac[] >>
   `?z0. z = z0^+`
     by metis_tac [preds_omax_SOME_SUC, option_CASES] >>
-  simp[])
+  simp[]
+QED
 
-val ordEXP_ZERO_nonlimit = store_thm(
-  "ordEXP_ZERO_nonlimit",
-  ``~islimit x ==> 0 ** x = 0``,
+Theorem ordEXP_ZERO_nonlimit:
+    ~islimit x ==> 0 ** x = 0
+Proof
   metis_tac [preds_omax_SOME_SUC, option_CASES, ordEXP_def,
-             ordMULT_0R]);
+             ordMULT_0R]
+QED
 
-val sup_EQ_0 = store_thm(
-  "sup_EQ_0",
-  ``s:'a ordinal set <<= univ(:'a inf) ==> (sup s = 0 <=> s = {} \/ s = {0})``,
+Theorem sup_EQ_0:
+    s:'a ordinal set <<= univ(:'a inf) ==> (sup s = 0 <=> s = {} \/ s = {0})
+Proof
   strip_tac >>
   qspec_then `0` (mp_tac o Q.AP_TERM `$~`) (sup_thm |> UNDISCH_ALL) >>
   simp_tac pure_ss [NOT_EXISTS_THM] >> simp[impI] >>
-  disch_then (K ALL_TAC) >> simp[EXTENSION] >> metis_tac[])
+  disch_then (K ALL_TAC) >> simp[EXTENSION] >> metis_tac[]
+QED
 
-val ordADD_EQ_0 = store_thm(
-  "ordADD_EQ_0",
-  ``!y x. (x:'a ordinal) + y = 0 <=> x = 0 /\ y = 0``,
+Theorem ordADD_EQ_0:
+    !y x. (x:'a ordinal) + y = 0 <=> x = 0 /\ y = 0
+Proof
   ho_match_mp_tac simple_ord_induction >> simp[] >>
   simp[sup_EQ_0, IMAGE_cardleq_rwt, preds_inj_univ] >>
   qx_gen_tac `y` >> strip_tac >> qx_gen_tac `x` >>
@@ -1599,17 +1721,19 @@ val ordADD_EQ_0 = store_thm(
   simp[EXTENSION] >>
   `y <> 0` by metis_tac [ordlt_REFL] >> simp[] >>
   qexists_tac `x^+` >> simp[] >> qexists_tac `1` >>
-  metis_tac [ADD1R, islimit_SUC_lt, ORD_ONE])
+  metis_tac [ADD1R, islimit_SUC_lt, ORD_ONE]
+QED
 val _ = export_rewrites ["ordADD_EQ_0"]
 
-val IMAGE_EQ_SING = store_thm(
-  "IMAGE_EQ_SING",
-  ``IMAGE f s = {x} <=> (?y. y IN s) /\ !y. y IN s ==> f y = x``,
-  simp[EXTENSION] >> metis_tac []);
+Theorem IMAGE_EQ_SING:
+    IMAGE f s = {x} <=> (?y. y IN s) /\ !y. y IN s ==> f y = x
+Proof
+  simp[EXTENSION] >> metis_tac []
+QED
 
-val ordMULT_EQ_0 = store_thm(
-  "ordMULT_EQ_0",
-  ``!x y. x * y = 0 <=> x = 0 \/ y = 0``,
+Theorem ordMULT_EQ_0:
+    !x y. x * y = 0 <=> x = 0 \/ y = 0
+Proof
   CONV_TAC SWAP_FORALL_CONV >>
   ho_match_mp_tac simple_ord_induction >> simp[] >>
   simp_tac (srw_ss() ++ CONJ_ss) [] >> qx_gen_tac `x` >> strip_tac >>
@@ -1619,12 +1743,13 @@ val ordMULT_EQ_0 = store_thm(
   >- (simp[IMAGE_EQ_SING] >> strip_tac >>
       pop_assum (qspec_then `1` mp_tac) >> simp[] >>
       disch_then match_mp_tac >> metis_tac [islimit_SUC_lt, ORD_ONE]) >>
-  simp[IMAGE_EQ_SING] >> metis_tac[]);
+  simp[IMAGE_EQ_SING] >> metis_tac[]
+QED
 val _ = export_rewrites ["ordMULT_EQ_0"]
 
-val ordEXP_EQ_0 = store_thm(
-  "ordEXP_EQ_0",
-  ``!y x. x ** y = 0 <=> x = 0 /\ ~islimit y``,
+Theorem ordEXP_EQ_0:
+    !y x. x ** y = 0 <=> x = 0 /\ ~islimit y
+Proof
   ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
   >- metis_tac[] >>
   qx_gen_tac `y` >> strip_tac >>
@@ -1632,21 +1757,24 @@ val ordEXP_EQ_0 = store_thm(
   simp[IFF_ZERO_lt] >>
   `preds y <> {}` by (strip_tac >> fs[]) >> simp[] >>
   simp[IMAGE_EQ_SING] >> qx_gen_tac `x` >> DISJ2_TAC >>
-  qexists_tac `0` >> simp[]);
+  qexists_tac `0` >> simp[]
+QED
 
-val ZERO_lt_ordEXP_I = store_thm(
-  "ZERO_lt_ordEXP_I",
-  ``!a x:'a ordinal. 0 < a ==> 0 < a ** x``,
-  metis_tac [IFF_ZERO_lt, ordEXP_EQ_0]);
+Theorem ZERO_lt_ordEXP_I:
+    !a x:'a ordinal. 0 < a ==> 0 < a ** x
+Proof
+  metis_tac [IFF_ZERO_lt, ordEXP_EQ_0]
+QED
 
-val ZERO_lt_ordEXP = store_thm(
-  "ZERO_lt_ordEXP",
-  ``0 < a ** x <=> 0 < a \/ islimit x``,
-  metis_tac [ordEXP_EQ_0, IFF_ZERO_lt])
+Theorem ZERO_lt_ordEXP:
+    0 < a ** x <=> 0 < a \/ islimit x
+Proof
+  metis_tac [ordEXP_EQ_0, IFF_ZERO_lt]
+QED
 
-val ordEXP_lt_MONO_R = store_thm(
-  "ordEXP_lt_MONO_R",
-  ``!y x a:'a ordinal. 1 < a /\ x < y ==> a ** x < a ** y``,
+Theorem ordEXP_lt_MONO_R:
+    !y x a:'a ordinal. 1 < a /\ x < y ==> a ** x < a ** y
+Proof
   ho_match_mp_tac simple_ord_induction >> simp[] >> rpt conj_tac >>
   qx_gen_tac `y` >> strip_tac >> map_every qx_gen_tac [`x`, `a`]
   >- (simp[ordlt_SUC_DISCRETE] >> rw[] >| [
@@ -1656,34 +1784,38 @@ val ordEXP_lt_MONO_R = store_thm(
       simp[ZERO_lt_ordEXP] >> DISJ1_TAC >>
       match_mp_tac ordlt_TRANS >> qexists_tac `1` >> simp[]) >>
   simp[predimage_sup_thm] >> fs[omax_NONE] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
-val ordEXP_lt_IFF = store_thm(
-  "ordEXP_lt_IFF",
-  ``!x y a:'a ordinal. 1 < a ==> (a ** x < a ** y <=> x < y)``,
+Theorem ordEXP_lt_IFF:
+    !x y a:'a ordinal. 1 < a ==> (a ** x < a ** y <=> x < y)
+Proof
   simp[EQ_IMP_THM, ordEXP_lt_MONO_R] >> rpt strip_tac >>
   spose_not_then strip_assume_tac >> fs[ordle_lteq]
-  >- metis_tac[ordlt_TRANS, ordlt_REFL, ordEXP_lt_MONO_R] >> fs[]);
+  >- metis_tac[ordlt_TRANS, ordlt_REFL, ordEXP_lt_MONO_R] >> fs[]
+QED
 val _ = export_rewrites ["ordEXP_lt_IFF"]
 
-val ordEXP_le_MONO_R = store_thm(
-  "ordEXP_le_MONO_R",
-  ``!x y a. 0 < a /\ x <= y ==> a ** x <= a ** y``,
+Theorem ordEXP_le_MONO_R:
+    !x y a. 0 < a /\ x <= y ==> a ** x <= a ** y
+Proof
   rpt gen_tac >> simp[ordle_lteq] >> rw[] >> Cases_on `a = 1` >- simp[] >>
   qsuff_tac `1 < a` >- metis_tac [ordEXP_lt_MONO_R] >>
   spose_not_then strip_assume_tac >> fs[ordle_lteq] >> fs[] >>
-  metis_tac [ORD_ONE, ordlt_DISCRETE1]);
+  metis_tac [ORD_ONE, ordlt_DISCRETE1]
+QED
 
-val ordEXP_continuous = store_thm(
-  "ordEXP_continuous",
-  ``!a s:'a ordinal set.
+Theorem ordEXP_continuous:
+    !a s:'a ordinal set.
        0 < a /\ s <<= univ(:'a inf) /\ s <> {} ==>
-       a ** sup s = sup (IMAGE ($** a) s)``,
-  simp[generic_continuity, ordEXP_le_MONO_R]);
+       a ** sup s = sup (IMAGE ($** a) s)
+Proof
+  simp[generic_continuity, ordEXP_le_MONO_R]
+QED
 
-val ordEXP_ADD = store_thm(
-  "ordEXP_ADD",
-  ``0 < x ==> x ** (y + z) = x ** y * x ** z``,
+Theorem ordEXP_ADD:
+    0 < x ==> x ** (y + z) = x ** y * x ** z
+Proof
   map_every qid_spec_tac [`x`,`y`,`z`] >>
   ho_match_mp_tac simple_ord_induction >> simp[ordMULT_ASSOC] >>
   qx_gen_tac `z` >> strip_tac >> map_every qx_gen_tac [`y`, `x`] >>
@@ -1691,11 +1823,12 @@ val ordEXP_ADD = store_thm(
   simp[ordEXP_continuous, IMAGE_cardleq_rwt, preds_inj_univ,
        ordMULT_continuous, GSYM IMAGE_COMPOSE] >>
   simp[combinTheory.o_DEF] >> strip_tac >> AP_TERM_TAC >>
-  simp[EXTENSION] >> metis_tac[]);
+  simp[EXTENSION] >> metis_tac[]
+QED
 
-val ordEXP_MUL = store_thm(
-  "ordEXP_MUL",
-  ``0 < x ==> x ** (y * z) = (x ** y) ** z``,
+Theorem ordEXP_MUL:
+    0 < x ==> x ** (y * z) = (x ** y) ** z
+Proof
   strip_tac >> map_every qid_spec_tac [`y`, `z`] >>
   ho_match_mp_tac simple_ord_induction >> simp[ordEXP_ADD] >>
   qx_gen_tac `z` >> strip_tac >> qx_gen_tac `y` >>
@@ -1703,14 +1836,15 @@ val ordEXP_MUL = store_thm(
   simp[ordEXP_continuous, IMAGE_cardleq_rwt, preds_inj_univ,
        GSYM IMAGE_COMPOSE] >>
   simp[combinTheory.o_DEF] >> AP_TERM_TAC >>
-  simp[EXTENSION] >> metis_tac []);
+  simp[EXTENSION] >> metis_tac []
+QED
 
-val fixpoints_exist = store_thm(
-  "fixpoints_exist",
-  ``(!s:'a ordinal set. s <> {} /\ s <<= univ(:'a inf) ==>
+Theorem fixpoints_exist:
+    (!s:'a ordinal set. s <> {} /\ s <<= univ(:'a inf) ==>
                         f (sup s) = sup (IMAGE f s)) /\
     (!x. x <= f x) ==>
-    !a. ?b. a <= b /\ f b = b``,
+    !a. ?b. a <= b /\ f b = b
+Proof
   rpt strip_tac >> qexists_tac `sup { FUNPOW f n a | n | T }` >>
   `{FUNPOW f n a | n | T} <<= univ(:'a inf)`
     by (simp[cardleq_def] >>
@@ -1731,11 +1865,12 @@ val fixpoints_exist = store_thm(
     by (strip_tac >> qexists_tac `SUC n` >>
         simp[arithmeticTheory.FUNPOW_SUC]) >>
   `!n. ?m. FUNPOW f n a <= f (FUNPOW f m a)`
-    by (strip_tac >> qexists_tac `n` >> simp[]) >> simp[]);
+    by (strip_tac >> qexists_tac `n` >> simp[]) >> simp[]
+QED
 
-val x_le_ordEXP_x = store_thm(
-  "x_le_ordEXP_x",
-  ``!a x. 1 < a ==> x <= a ** x``,
+Theorem x_le_ordEXP_x:
+    !a x. 1 < a ==> x <= a ** x
+Proof
   gen_tac >> Cases_on `1 < a` >> simp[] >>
   ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac >>
   qx_gen_tac `x` >> strip_tac
@@ -1754,7 +1889,8 @@ val x_le_ordEXP_x = store_thm(
   `a ** b < a ** b^+` by simp[] >>
   `a ** b^+ <= b` by metis_tac[] >>
   `b <= a ** b` by metis_tac[] >>
-  metis_tac[ordlt_TRANS, ordle_lteq, ordlt_REFL])
+  metis_tac[ordlt_TRANS, ordle_lteq, ordlt_REFL]
+QED
 
 Definition epsilon0_def:
   epsilon0 = oleast x. omega ** x = x
@@ -1762,19 +1898,21 @@ End
 
 val _ = overload_on("ε₀", ``epsilon0``)
 
-val epsilon0_fixpoint = store_thm(
-  "epsilon0_fixpoint",
-  ``omega ** epsilon0 = epsilon0``,
+Theorem epsilon0_fixpoint:
+    omega ** epsilon0 = epsilon0
+Proof
   simp[epsilon0_def] >> DEEP_INTRO_TAC oleast_intro >> simp[] >>
   metis_tac [fromNat_lt_omega, ordEXP_continuous, x_le_ordEXP_x,
-             fixpoints_exist]);
+             fixpoints_exist]
+QED
 
-val epsilon0_least_fixpoint = store_thm(
-  "epsilon0_least_fixpoint",
-  ``!a. a < epsilon0 ==> a < omega ** a /\ omega ** a < epsilon0``,
+Theorem epsilon0_least_fixpoint:
+    !a. a < epsilon0 ==> a < omega ** a /\ omega ** a < epsilon0
+Proof
   gen_tac >> simp[epsilon0_def] >> DEEP_INTRO_TAC oleast_intro >>
   metis_tac [epsilon0_fixpoint, x_le_ordEXP_x, ordle_lteq, ordEXP_lt_MONO_R,
-             fromNat_lt_omega]);
+             fromNat_lt_omega]
+QED
 
 val zero_lt_epsilon0 =
   epsilon0_fixpoint |> SIMP_RULE (srw_ss()) [ASSUME ``epsilon0 = 0``]
@@ -1792,24 +1930,26 @@ val omega_lt_epsilon0 = save_thm(
            |> SIMP_RULE (srw_ss()) [])
 val _ = export_rewrites ["omega_lt_epsilon0"]
 
-val fromNat_lt_epsilon0 = store_thm(
-  "fromNat_lt_epsilon0",
-  ``&n < epsilon0``,
-  metis_tac [ordlt_TRANS, fromNat_lt_omega, omega_lt_epsilon0]);
+Theorem fromNat_lt_epsilon0:
+    &n < epsilon0
+Proof
+  metis_tac [ordlt_TRANS, fromNat_lt_omega, omega_lt_epsilon0]
+QED
 val _ = export_rewrites ["fromNat_lt_epsilon0"]
 
-val add_nat_islimit = store_thm(
-  "add_nat_islimit",
-  ``0 < n ==> islimit (a + &n) = F``,
-  Induct_on `n` >> simp[]);
+Theorem add_nat_islimit:
+    0 < n ==> islimit (a + &n) = F
+Proof
+  Induct_on `n` >> simp[]
+QED
 val _ = export_rewrites ["add_nat_islimit"]
 
-val strict_continuity_preserves_islimit = store_thm(
-  "strict_continuity_preserves_islimit",
-  ``(!s. s <<= univ(:'a inf) /\ s <> {} ==>
+Theorem strict_continuity_preserves_islimit:
+    (!s. s <<= univ(:'a inf) /\ s <> {} ==>
          f (sup s) = sup (IMAGE f s) : 'a ordinal) /\
     (!x y. x < y ==> f x < f y) /\
-    islimit (a:'a ordinal) /\ a <> 0 ==> islimit (f a)``,
+    islimit (a:'a ordinal) /\ a <> 0 ==> islimit (f a)
+Proof
   strip_tac >> fs[sup_preds_omax_NONE] >>
   first_assum (fn th => simp_tac (srw_ss()) [SimpRHS, Once (SYM th)]) >>
   `preds a <> {}`
@@ -1823,41 +1963,46 @@ val strict_continuity_preserves_islimit = store_thm(
         (fn th => simp_tac (srw_ss()) [SimpR ``ordlt``, Once (SYM th)]) >>
       simp[preds_inj_univ]) >>
   asm_simp_tac (srw_ss() ++ DNF_ss) [] >> qx_gen_tac `x` >> strip_tac >>
-  match_mp_tac suple_thm >> simp[preds_inj_univ])
+  match_mp_tac suple_thm >> simp[preds_inj_univ]
+QED
 
-val add_omega_islimit = store_thm(
-  "add_omega_islimit",
-  ``islimit (a + omega)``,
+Theorem add_omega_islimit:
+    islimit (a + omega)
+Proof
   ho_match_mp_tac strict_continuity_preserves_islimit >>
-  simp[omax_preds_omega, ordADD_continuous])
+  simp[omax_preds_omega, ordADD_continuous]
+QED
 val _ = export_rewrites ["add_omega_islimit"]
 
-val islimit_mul_R = store_thm(
-  "islimit_mul_R",
-  ``!a. islimit a ==> islimit (b * a)``,
+Theorem islimit_mul_R:
+    !a. islimit a ==> islimit (b * a)
+Proof
   Cases_on `b = 0` >- simp[] >> fs[IFF_ZERO_lt] >> gen_tac >>
   Cases_on `a = 0` >- simp[] >> fs[IFF_ZERO_lt] >> strip_tac >>
   qspec_then `$* b` mp_tac
     (Q.GEN `f` strict_continuity_preserves_islimit) >> simp[] >>
-  simp[ordMULT_continuous, IFF_ZERO_lt])
+  simp[ordMULT_continuous, IFF_ZERO_lt]
+QED
 
-val mul_omega_islimit = store_thm(
-  "mul_omega_islimit",
-  ``islimit (omega * a)``,
-  qspec_then `a` strip_assume_tac ord_CASES >> simp[islimit_mul_R]);
+Theorem mul_omega_islimit:
+    islimit (omega * a)
+Proof
+  qspec_then `a` strip_assume_tac ord_CASES >> simp[islimit_mul_R]
+QED
 
-val omega_exp_islimit = store_thm(
-  "omega_exp_islimit",
-  ``0 < a ==> islimit (omega ** a)``,
+Theorem omega_exp_islimit:
+    0 < a ==> islimit (omega ** a)
+Proof
   qspec_then `a` strip_assume_tac ord_CASES
   >- simp[]
   >- (simp[] >> simp[islimit_mul_R, omax_preds_omega]) >>
   strip_tac >> ho_match_mp_tac strict_continuity_preserves_islimit >>
-  simp[IFF_ZERO_lt, ordEXP_continuous]);
+  simp[IFF_ZERO_lt, ordEXP_continuous]
+QED
 
-val expbound_add = store_thm(
-  "expbound_add",
-  ``!a x y. x < omega ** a /\ y < omega ** a ==> x + y < omega ** a``,
+Theorem expbound_add:
+    !a x y. x < omega ** a /\ y < omega ** a ==> x + y < omega ** a
+Proof
   ho_match_mp_tac simple_ord_induction >> simp[] >> rpt conj_tac
   >- metis_tac [IFF_ZERO_lt, ordADD_def]
   >- (qx_gen_tac `a` >> strip_tac >>
@@ -1888,7 +2033,8 @@ val expbound_add = store_thm(
       metis_tac[]) >>
   `omega ** c <= omega ** b` by simp[] >>
   `y < omega ** b` by metis_tac [ordlte_TRANS] >>
-  metis_tac[])
+  metis_tac[]
+QED
 
 Theorem downduct[local]:
   (!n. n <= m /\ P (SUC n) ==> P n) /\ P m ==>
@@ -1901,9 +2047,9 @@ Proof
   metis_tac[arithmeticTheory.ADD_COMM]
 QED
 
-val addL_fixpoint_iff = store_thm(
-  "addL_fixpoint_iff",
-  ``a + b = b <=> a * omega <= b``,
+Theorem addL_fixpoint_iff:
+    a + b = b <=> a * omega <= b
+Proof
   eq_tac
   >- (simp[omega_islimit, ordMULT_def, EQ_IMP_THM, sup_thm, IMAGE_cardleq_rwt,
            preds_inj_univ, lt_omega] >> strip_tac >>
@@ -1920,19 +2066,21 @@ val addL_fixpoint_iff = store_thm(
       disch_then (qx_choose_then `c` SUBST_ALL_TAC) >>
       simp[ordADD_ASSOC] >>
       `a + a * omega = a * (1 + omega)` by simp[ordMULT_LDISTRIB] >>
-      simp[ordADD_fromNat_omega, omega_islimit]))
+      simp[ordADD_fromNat_omega, omega_islimit])
+QED
 
 (* And so, arithmetic (addition, multiplication and exponentiation) is
    closed under epsilon0 *)
-val ordADD_under_epsilon0 = store_thm(
-  "ordADD_under_epsilon0",
-  ``x < epsilon0 /\ y < epsilon0 ==> x + y < epsilon0``,
+Theorem ordADD_under_epsilon0:
+    x < epsilon0 /\ y < epsilon0 ==> x + y < epsilon0
+Proof
   ONCE_REWRITE_TAC [GSYM epsilon0_fixpoint] >>
-  simp[expbound_add])
+  simp[expbound_add]
+QED
 
-val ordMUL_under_epsilon0 = store_thm(
-  "ordMUL_under_epsilon0",
-  ``x < epsilon0 /\ y < epsilon0 ==> x * y < epsilon0``,
+Theorem ordMUL_under_epsilon0:
+    x < epsilon0 /\ y < epsilon0 ==> x * y < epsilon0
+Proof
   strip_tac >> imp_res_tac epsilon0_least_fixpoint >>
   `x * y < omega ** x * omega ** y`
     by (match_mp_tac ordlet_TRANS >>
@@ -1942,11 +2090,12 @@ val ordMUL_under_epsilon0 = store_thm(
   pop_assum SUBST_ALL_TAC >>
   qsuff_tac `omega ** (x + y) < epsilon0` >- metis_tac[ordlt_TRANS] >>
   metis_tac [epsilon0_fixpoint, ordADD_under_epsilon0, fromNat_lt_omega,
-             ordEXP_lt_IFF]);
+             ordEXP_lt_IFF]
+QED
 
-val ordEXP_under_epsilon0 = store_thm(
-  "ordEXP_under_epsilon0",
-  ``a < epsilon0 /\ b < epsilon0 ==> a ** b < epsilon0``,
+Theorem ordEXP_under_epsilon0:
+    a < epsilon0 /\ b < epsilon0 ==> a ** b < epsilon0
+Proof
   strip_tac >>
   `a < omega ** a` by imp_res_tac epsilon0_least_fixpoint >>
   `a ** b <= (omega ** a) ** b` by metis_tac [ordEXP_le_MONO_L, ordle_lteq] >>
@@ -1955,7 +2104,8 @@ val ordEXP_under_epsilon0 = store_thm(
   `omega ** (a * b) < epsilon0`
     by simp[ordEXP_lt_IFF, ordMUL_under_epsilon0,
             Once (GSYM epsilon0_fixpoint)] >>
-  metis_tac [ordlet_TRANS]);
+  metis_tac [ordlet_TRANS]
+QED
 
 Definition eval_poly_def:
   eval_poly (a:'a ordinal) [] = 0 /\
@@ -1970,11 +2120,11 @@ Definition is_polyform_def:
      0 < c1 /\ c1 < a /\ e2 < e1 /\ is_polyform a ((c2,e2) :: t))
 End
 
-val is_polyform_ELthm = store_thm(
-  "is_polyform_ELthm",
-  ``is_polyform a ces <=>
+Theorem is_polyform_ELthm:
+    is_polyform a ces <=>
       (!i j. i < j /\ j < LENGTH ces ==> SND (EL j ces) < SND (EL i ces)) /\
-      (!c e. MEM (c,e) ces ==> 0 < c /\ c < a)``,
+      (!c e. MEM (c,e) ces ==> 0 < c /\ c < a)
+Proof
   map_every qid_spec_tac [`ces`, `a`] >>
   ho_match_mp_tac (theorem "is_polyform_ind") >> simp[is_polyform_def] >>
   simp[DISJ_IMP_THM, FORALL_AND_THM] >> rpt strip_tac >>
@@ -1995,12 +2145,13 @@ val is_polyform_ELthm = store_thm(
     >- (first_x_assum (qspecl_then [`0`, `SUC 0`] mp_tac) >> simp[])
     >- (first_x_assum (qspecl_then [`SUC i`, `SUC j`] mp_tac) >> simp[])
     >- res_tac >> res_tac
-  ]);
+  ]
+QED
 
-val polyform_exists = store_thm(
-  "polyform_exists",
-  ``!a:'a ordinal b.
-      1 < a ==> ?ces. is_polyform a ces /\ b = eval_poly a ces``,
+Theorem polyform_exists:
+    !a:'a ordinal b.
+      1 < a ==> ?ces. is_polyform a ces /\ b = eval_poly a ces
+Proof
   gen_tac >> Cases_on `1 < a` >> simp[is_polyform_ELthm] >>
   `0 < a` by (match_mp_tac ordlt_TRANS >> qexists_tac `1` >> simp[]) >>
   ho_match_mp_tac ord_induction >>
@@ -2061,7 +2212,8 @@ val polyform_exists = store_thm(
     by (simp_tac bool_ss [SimpR ``ordlt``, Once (GSYM ordMULT_1R)] >>
         match_mp_tac ordMULT_le_MONO_R >> simp[IFF_ZERO_lt] >> fs[]) >>
   `a ** e0 * c0 <= a ** e0 * c0 + eval_poly a t` by simp[] >>
-  metis_tac [ordle_TRANS, ordle_lteq, ordlt_REFL, ordlt_TRANS])
+  metis_tac [ordle_TRANS, ordle_lteq, ordlt_REFL, ordlt_TRANS]
+QED
 
 val polyform_def = new_specification(
   "polyform_def",
@@ -2076,9 +2228,9 @@ val CNF_thm = save_thm(
   "CNF_thm",
   polyform_def |> SPEC ``omega`` |> SIMP_RULE (srw_ss()) [])
 
-val polyform_0 = store_thm(
-  "polyform_0",
-  ``1 < a ==> polyform a 0 = []``,
+Theorem polyform_0:
+    1 < a ==> polyform a 0 = []
+Proof
   strip_tac >>
   qspecl_then [`a`, `0`] mp_tac polyform_def >> simp[] >>
   `polyform a 0 = [] \/ ?c e t. polyform a 0 = (c,e)::t`
@@ -2087,20 +2239,23 @@ val polyform_0 = store_thm(
   simp[SimpL ``$==>``] >> strip_tac >> fs[]
   >- fs[ordEXP_EQ_0] >>
   `0 < c` by metis_tac[is_polyform_ELthm,listTheory.MEM] >>
-  metis_tac[IFF_ZERO_lt]);
+  metis_tac[IFF_ZERO_lt]
+QED
 
-val polyform_EQ_NIL = store_thm(
-  "polyform_EQ_NIL",
-  ``1 < a ==> (polyform a x = [] <=> x = 0)``,
+Theorem polyform_EQ_NIL:
+    1 < a ==> (polyform a x = [] <=> x = 0)
+Proof
   simp[EQ_IMP_THM, polyform_0] >>
   rpt strip_tac >>
-  qspecl_then [`a`, `x`] mp_tac polyform_def >> simp[]);
+  qspecl_then [`a`, `x`] mp_tac polyform_def >> simp[]
+QED
 
-val is_polyform_CONS_E = store_thm(
-  "is_polyform_CONS_E",
-  ``is_polyform a ((c,e)::t) ==> 0 < c /\ c < a /\ is_polyform a t``,
+Theorem is_polyform_CONS_E:
+    is_polyform a ((c,e)::t) ==> 0 < c /\ c < a /\ is_polyform a t
+Proof
   Cases_on `t` >> simp[is_polyform_def] >> Cases_on `h` >>
-  simp[is_polyform_def]);
+  simp[is_polyform_def]
+QED
 
 val expbounds = prove(
   ``1 < (a:'a ordinal) /\ y < a ** e /\ c < a /\ e < e' ==>
@@ -2118,9 +2273,9 @@ val expbounds = prove(
          metis_tac [ordlt_DISCRETE1]) >>
   metis_tac [ordlte_TRANS, ordle_TRANS])
 
-val is_polyform_head_dominates_tail = store_thm(
-  "is_polyform_head_dominates_tail",
-  ``1 < a /\ is_polyform a ((c,e)::t) ==> eval_poly a t < a ** e``,
+Theorem is_polyform_head_dominates_tail:
+    1 < a /\ is_polyform a ((c,e)::t) ==> eval_poly a t < a ** e
+Proof
   qsuff_tac
      `!a ces. 1 < a /\ is_polyform a ces /\ ces <> [] ==>
               eval_poly a (TL ces) < a ** SND (HD ces)`
@@ -2129,13 +2284,15 @@ val is_polyform_head_dominates_tail = store_thm(
   ho_match_mp_tac (theorem "is_polyform_ind") >> simp[is_polyform_def] >>
   rpt strip_tac
   >- (spose_not_then strip_assume_tac >> fs[] >> fs[ordEXP_EQ_0]) >>
-  fs[] >> metis_tac[is_polyform_CONS_E, expbounds])
+  fs[] >> metis_tac[is_polyform_CONS_E, expbounds]
+QED
 
-val cx_lt_x = store_thm(
-  "cx_lt_x",
-  ``x * c < (x:'a ordinal) <=> 0 < x /\ c = 0``,
+Theorem cx_lt_x:
+    x * c < (x:'a ordinal) <=> 0 < x /\ c = 0
+Proof
   simp_tac bool_ss [SimpLHS, SimpR ``ordlt``, Once (GSYM ordMULT_1R)] >>
-  simp[] >> metis_tac [IFF_ZERO_lt]);
+  simp[] >> metis_tac [IFF_ZERO_lt]
+QED
 val _ = export_rewrites ["cx_lt_x"]
 
 val explemma = prove(
@@ -2197,22 +2354,24 @@ Proof
   metis_tac [is_polyform_CONS_E]
 QED
 
-val polyform_eval_poly = store_thm(
-  "polyform_eval_poly",
-  ``1 < a /\ is_polyform a b ==> (polyform a (eval_poly a b) = b)``,
-  strip_tac >> match_mp_tac polyform_UNIQUE >> simp[]);
+Theorem polyform_eval_poly:
+    1 < a /\ is_polyform a b ==> (polyform a (eval_poly a b) = b)
+Proof
+  strip_tac >> match_mp_tac polyform_UNIQUE >> simp[]
+QED
 
-val CNF_nat = store_thm(
-  "CNF_nat",
-  ``CNF &n = if n = 0 then [] else [(&n,0)]``,
-  rw[] >> match_mp_tac polyform_UNIQUE >> rw[is_polyform_def] >> decide_tac);
+Theorem CNF_nat:
+    CNF &n = if n = 0 then [] else [(&n,0)]
+Proof
+  rw[] >> match_mp_tac polyform_UNIQUE >> rw[is_polyform_def] >> decide_tac
+QED
 
 val _ = overload_on ("ordLOG", ``\b x. SND (HD (polyform b x))``)
 val _ = overload_on ("olog", ``\x. ordLOG omega x``)
-val ordLOG_correct = store_thm(
-  "ordLOG_correct",
-  ``1 < b /\ 0 < x ==> ordEXP b (ordLOG b x) <= x /\
-    !a. ordLOG b x < a ==> x < ordEXP b a``,
+Theorem ordLOG_correct:
+    1 < b /\ 0 < x ==> ordEXP b (ordLOG b x) <= x /\
+    !a. ordLOG b x < a ==> x < ordEXP b a
+Proof
   strip_tac >>
   `(polyform b x = []) \/ ?c e t. polyform b x = (c,e) :: t`
     by metis_tac [pairTheory.pair_CASES, listTheory.list_CASES]
@@ -2229,7 +2388,8 @@ val ordLOG_correct = store_thm(
   (is_polyform_head_dominates_tail
      |> Q.INST [`a` |-> `b`, `c` |-> `1`, `e` |-> `a`, `t` |-> `polyform b x`]
      |> MP_TAC) >> simp[] >> disch_then match_mp_tac >>
-  simp[is_polyform_def] >> metis_tac[]);
+  simp[is_polyform_def] >> metis_tac[]
+QED
 
 (* |- 0 < x ==> omega ** olog x <= x /\ !a. olog x < a ==> x < omega ** a *)
 val olog_correct = save_thm(

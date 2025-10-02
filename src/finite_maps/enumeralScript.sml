@@ -79,9 +79,11 @@ val bt_to_list_ac_thm = maybe_thm ("bt_to_list_ac_thm",
 ``!t:'a bt m. bt_to_list_ac t m = bt_to_list t ++ m``,
 Induct THEN SRW_TAC [] [bt_to_list, bt_to_list_ac]);
 
-val bt_to_list_thm = store_thm ("bt_to_list_thm",
-``!t:'a bt. bt_to_list t = bt_to_list_ac t []``,
-REWRITE_TAC [bt_to_list_ac_thm, APPEND_NIL]);
+Theorem bt_to_list_thm:
+  !t:'a bt. bt_to_list t = bt_to_list_ac t []
+Proof
+REWRITE_TAC [bt_to_list_ac_thm, APPEND_NIL]
+QED
 
 (* Although we should have no need to prove in HOL that bl's built with
 BL_CONS have the desirable balance properties that make them efficient,
@@ -159,9 +161,11 @@ Definition smerge:
                                  | GREATER => y :: (smerge cmp (x :: l) m))
 End
 
-val smerge_nil = store_thm ("smerge_nil",
-``!cmp:'a toto l. (smerge cmp l [] = l) /\ (smerge cmp [] l = l)``,
-REPEAT STRIP_TAC THEN Cases_on `l` THEN REWRITE_TAC [smerge]);
+Theorem smerge_nil:
+  !cmp:'a toto l. (smerge cmp l [] = l) /\ (smerge cmp [] l = l)
+Proof
+REPEAT STRIP_TAC THEN Cases_on `l` THEN REWRITE_TAC [smerge]
+QED
 
 (* corresponding merge_set will need ORL hypotheses, and corresp. merge_ORL
    will need 3 `merge ... =  ... UNION ...` by MATCH_MP_TAC merge_set THEN...*)
@@ -178,8 +182,9 @@ SRW_TAC [] [toto_equal_eq] THEN
 RW_TAC bool_ss [toto_equal_eq, EXTENSION, IN_INSERT, IN_UNION, DISJ_ASSOC] THEN
 tautLib.TAUT_TAC);
 
-val smerge_OL = store_thm ("smerge_OL",
-``!cmp:'a toto l m. OL cmp l /\ OL cmp m ==> OL cmp (smerge cmp l m)``,
+Theorem smerge_OL:
+  !cmp:'a toto l m. OL cmp l /\ OL cmp m ==> OL cmp (smerge cmp l m)
+Proof
 GEN_TAC THEN Induct THEN
 SRW_TAC [] [smerge, OL, smerge_nil] THEN
 Induct_on `m` THEN
@@ -206,7 +211,8 @@ Cases_on `apto cmp h h'` THEN SRW_TAC [] [OL] THENL
    RES_TAC THEN IMP_RES_TAC totoGLtrans
   ]
   ,RES_TAC
-]]);
+]]
+QED
 
 Definition OL_sublists:
  (OL_sublists cmp ([]:'a list option list) = T) /\
@@ -238,10 +244,12 @@ val incr_smerge_set = maybe_thm ("incr_smerge_set", ``!cmp lol l:'a list.
 HO_MATCH_MP_TAC OL_sublists_ind THEN
 RW_TAC bool_ss [incr_smerge, smerge_set, lol_set, UNION_ASSOC]);
 
-val incr_smerge_OL = store_thm ("incr_smerge_OL", ``!cmp lol l:'a list.
-OL_sublists cmp lol /\ OL cmp l ==> OL_sublists cmp (incr_smerge cmp l lol)``,
+Theorem incr_smerge_OL:   !cmp lol l:'a list.
+OL_sublists cmp lol /\ OL cmp l ==> OL_sublists cmp (incr_smerge cmp l lol)
+Proof
 HO_MATCH_MP_TAC OL_sublists_ind THEN
-RW_TAC bool_ss [incr_smerge, smerge_OL, OL_sublists]);
+RW_TAC bool_ss [incr_smerge, smerge_OL, OL_sublists]
+QED
 
 Definition smerge_out:
  (smerge_out (cmp:'a toto) l ([]:'a list option list) = l) /\
@@ -366,13 +374,15 @@ Definition bt_to_set_lb_ub:  bt_to_set_lb_ub cmp lb t (ub:'a) =
 {x | x IN ENUMERAL cmp t /\ (apto cmp lb x = LESS) /\ (apto cmp x ub = LESS)}
 End
 
-val IN_bt_to_set = store_thm ("IN_bt_to_set",
-``(!cmp:'a toto y. y IN ENUMERAL cmp nt = F) /\
+Theorem IN_bt_to_set:
+  (!cmp:'a toto y. y IN ENUMERAL cmp nt = F) /\
   (!cmp:'a toto l x r y. y IN ENUMERAL cmp (node l x r) =
    y IN ENUMERAL cmp l /\ (apto cmp y x = LESS) \/ (y = x) \/
-   y IN ENUMERAL cmp r /\ (apto cmp x y = LESS))``,
+   y IN ENUMERAL cmp r /\ (apto cmp x y = LESS))
+Proof
 SRW_TAC [] [bt_to_set] THEN CONV_TAC (DEPTH_CONV SET_SPEC_CONV) THEN
-tautLib.TAUT_TAC);
+tautLib.TAUT_TAC
+QED
 
 (* Following look-up function (disguised as two theorems) to make bt's
    imitate IN on finite sets, may or may not be the reasonable way to go. *)
@@ -381,13 +391,15 @@ val NOT_IN_nt = save_thm ("NOT_IN_nt", CONJUNCT1 IN_bt_to_set);
 
 (* NOT_IN_nt = |- !cmp y. y IN ENUMERAL cmp nt <=> F *)
 
-val IN_node = store_thm ("IN_node",
-``!cmp x:'a l y r. x IN ENUMERAL cmp (node l y r) <=> case apto cmp x y of
- LESS => x IN ENUMERAL cmp l | EQUAL => T | GREATER => x IN ENUMERAL cmp r``,
+Theorem IN_node:
+  !cmp x:'a l y r. x IN ENUMERAL cmp (node l y r) <=> case apto cmp x y of
+ LESS => x IN ENUMERAL cmp l | EQUAL => T | GREATER => x IN ENUMERAL cmp r
+Proof
 SRW_TAC [] [bt_to_set] THEN Cases_on `apto cmp x y` THEN
 (Q.SUBGOAL_THEN `(x = y) = (apto cmp x y = EQUAL)` SUBST1_TAC
            THEN1 MATCH_ACCEPT_TAC (GSYM toto_equal_eq)) THEN
-IMP_RES_TAC toto_antisym THEN SRW_TAC [] []);
+IMP_RES_TAC toto_antisym THEN SRW_TAC [] []
+QED
 
 (* Following "mut_rec" theorems seem relevant to conversion to ol's, not to
    evaluating IN. *)
@@ -498,12 +510,14 @@ SRW_TAC [] [bt_to_set_ub_mut_rec, bt_to_ol_ub,
                     LIST_TO_SET_APPEND, EXTENSION, ol_set_lb_ub] THEN
 SRW_TAC [] [NOT_IN_nt, bt_to_set_ub]);
 
-val ol_set = store_thm ("ol_set",
-``!cmp:'a toto t. ENUMERAL cmp t = set (bt_to_ol cmp t)``,
+Theorem ol_set:
+  !cmp:'a toto t. ENUMERAL cmp t = set (bt_to_ol cmp t)
+Proof
 GEN_TAC THEN Induct THEN
 SRW_TAC [] [bt_to_set_mut_rec, bt_to_ol,
                     LIST_TO_SET_APPEND, EXTENSION, ol_set_lb, ol_set_ub] THEN
-REWRITE_TAC [NOT_IN_nt]);
+REWRITE_TAC [NOT_IN_nt]
+QED
 
 (* We have neglected so far to prove that bt_to_ol and its kin produce
    lists satisfying OL cmp. *)
@@ -531,51 +545,59 @@ val MEM_lb_ub_lem = maybe_thm ("MEM_lb_ub_lem",
 REWRITE_TAC [GSYM ol_set_lb_ub] THEN
 SRW_TAC [] [bt_to_set_lb_ub]);
 
-val OL_bt_to_ol_lb_ub = store_thm ("OL_bt_to_ol_lb_ub",
-``!cmp:'a toto t lb ub. OL cmp (bt_to_ol_lb_ub cmp lb t ub)``,
+Theorem OL_bt_to_ol_lb_ub:
+  !cmp:'a toto t lb ub. OL cmp (bt_to_ol_lb_ub cmp lb t ub)
+Proof
 GEN_TAC THEN Induct THEN
 SRW_TAC [] [bt_to_ol_lb_ub, ol_set_lb_ub, list_split_lem] THEN
-IMP_RES_TAC MEM_lb_ub_lem THEN REWRITE_TAC [OL]);
+IMP_RES_TAC MEM_lb_ub_lem THEN REWRITE_TAC [OL]
+QED
 
 val MEM_lb_lem = maybe_thm ("MEM_lb_lem",
 ``!cmp:'a toto lb t a. MEM a (bt_to_ol_lb cmp lb t) ==>(apto cmp lb a = LESS)``,
 REWRITE_TAC [GSYM ol_set_lb] THEN
 SRW_TAC [] [bt_to_set_lb]);
 
-val OL_bt_to_ol_lb = store_thm ("OL_bt_to_ol_lb",
-``!cmp:'a toto t lb. OL cmp (bt_to_ol_lb cmp lb t)``,
+Theorem OL_bt_to_ol_lb:
+  !cmp:'a toto t lb. OL cmp (bt_to_ol_lb cmp lb t)
+Proof
 GEN_TAC THEN Induct THEN
 SRW_TAC []
  [bt_to_ol_lb, ol_set_lb, list_split_lem, OL_bt_to_ol_lb_ub] THENL
 [REWRITE_TAC [OL]
 ,IMP_RES_TAC MEM_lb_ub_lem
 ,IMP_RES_TAC MEM_lb_lem
-]);
+]
+QED
 
 val MEM_ub_lem = maybe_thm ("MEM_ub_lem",
 ``!cmp:'a toto t ub a. MEM a (bt_to_ol_ub cmp t ub) ==>(apto cmp a ub = LESS)``,
 REWRITE_TAC [GSYM ol_set_ub] THEN
 SRW_TAC [] [bt_to_set_ub]);
 
-val OL_bt_to_ol_ub = store_thm ("OL_bt_to_ol_ub",
-``!cmp:'a toto t ub. OL cmp (bt_to_ol_ub cmp t ub)``,
+Theorem OL_bt_to_ol_ub:
+  !cmp:'a toto t ub. OL cmp (bt_to_ol_ub cmp t ub)
+Proof
 GEN_TAC THEN Induct THEN
 SRW_TAC []
  [bt_to_ol_ub, ol_set_ub, list_split_lem, OL_bt_to_ol_lb_ub] THENL
 [REWRITE_TAC [OL]
 ,IMP_RES_TAC MEM_ub_lem
 ,IMP_RES_TAC MEM_lb_ub_lem
-]);
+]
+QED
 
-val OL_bt_to_ol = store_thm ("OL_bt_to_ol",
-``!cmp:'a toto t. OL cmp (bt_to_ol cmp t)``,
+Theorem OL_bt_to_ol:
+  !cmp:'a toto t. OL cmp (bt_to_ol cmp t)
+Proof
 GEN_TAC THEN Induct THEN
 SRW_TAC []
  [bt_to_ol, ol_set, list_split_lem, OL_bt_to_ol_lb, OL_bt_to_ol_ub] THENL
 [REWRITE_TAC [OL]
 ,IMP_RES_TAC MEM_ub_lem
 ,IMP_RES_TAC MEM_lb_lem
-]);
+]
+QED
 
 (* ******* Now to suppress the APPENDing ******** *)
 
@@ -649,9 +671,11 @@ val bt_FINITE = maybe_thm ("bt_FINITE",
 ``!cmp:'a toto t:'a bt. FINITE (ENUMERAL cmp t)``,
 REWRITE_TAC [ol_set, FINITE_LIST_TO_SET]);
 
-val OWL_bt_to_ol = store_thm ("OWL_bt_to_ol",
-``!cmp:'a toto t. OWL cmp (ENUMERAL cmp t) (bt_to_ol cmp t)``,
-RW_TAC bool_ss [OWL, ol_set, OL_bt_to_ol]);
+Theorem OWL_bt_to_ol:
+  !cmp:'a toto t. OWL cmp (ENUMERAL cmp t) (bt_to_ol cmp t)
+Proof
+RW_TAC bool_ss [OWL, ol_set, OL_bt_to_ol]
+QED
 
 (* We already have the two pieces of OWL:
 
@@ -679,28 +703,34 @@ Definition UO:  UO (cmp:'a toto) (s:'a set) (t:'a set) =
          s UNION {y | y IN t /\ (!z. z IN s ==> (apto cmp z y = LESS))}
 End
 
-val EMPTY_OU = store_thm ("EMPTY_OU",
-``!cmp:'a toto sl:'a set. OU cmp {} sl = sl``,
-REWRITE_TAC [OU, NOT_IN_EMPTY, UNION_EMPTY, GSPEC_F]);
+Theorem EMPTY_OU:
+  !cmp:'a toto sl:'a set. OU cmp {} sl = sl
+Proof
+REWRITE_TAC [OU, NOT_IN_EMPTY, UNION_EMPTY, GSPEC_F]
+QED
 
-val OU_EMPTY = store_thm ("OU_EMPTY",
-``!cmp:'a toto t:'a set. OU cmp t {} = t``,
-REWRITE_TAC [OU, NOT_IN_EMPTY, UNION_EMPTY, GSPEC_ID]);
+Theorem OU_EMPTY:
+  !cmp:'a toto t:'a set. OU cmp t {} = t
+Proof
+REWRITE_TAC [OU, NOT_IN_EMPTY, UNION_EMPTY, GSPEC_ID]
+QED
 
 val sing_UO = maybe_thm ("sing_UO",``!cmp:'a toto x:'a t:'a set.
         {x} UNION {y | y IN t /\ (apto cmp x y = LESS)} = UO cmp {x} t``,
 RW_TAC bool_ss [UO, IN_SING]);
 
-val LESS_UO_LEM = store_thm ("LESS_UO_LEM",
-``!cmp:'a toto x:'a y:'a s:'a set.
-  (!z. z IN UO cmp {x} s ==> (apto cmp y z = LESS)) <=> (apto cmp y x = LESS)``,
+Theorem LESS_UO_LEM:
+  !cmp:'a toto x:'a y:'a s:'a set.
+  (!z. z IN UO cmp {x} s ==> (apto cmp y z = LESS)) <=> (apto cmp y x = LESS)
+Proof
 RW_TAC bool_ss [GSYM sing_UO] THEN EQ_TAC THEN
 REWRITE_TAC [IN_UNION, IN_SING] THEN
 CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THENL
 [CONV_TAC LEFT_IMP_FORALL_CONV THEN
  Q.EXISTS_TAC `x` THEN RW_TAC bool_ss []
 ,REPEAT STRIP_TAC THENL [AR, IMP_RES_TAC toto_trans_less]
-]);
+]
+QED
 
 val bt_to_set_OU_UO = maybe_thm ("bt_to_set_OU_UO",
 ``!cmp:'a toto l:'a bt x:'a r:'a bt. ENUMERAL cmp (node l x r) =
@@ -747,9 +777,10 @@ val cpn_NOT_LESS = maybe_thm ("cpn_NOT_LESS",
 ``!c:cpn. c <> LESS ==> (c = GREATER) \/ (c = EQUAL)``,
 METIS_TAC [cpn_nchotomy]);
 
-val LESS_ALL_OU = store_thm ("LESS_ALL_OU",
-``!cmp:'a toto x:'a u:'a set v:'a set.
-   LESS_ALL cmp x (OU cmp u v) = LESS_ALL cmp x u /\ LESS_ALL cmp x v``,
+Theorem LESS_ALL_OU:
+  !cmp:'a toto x:'a u:'a set v:'a set.
+   LESS_ALL cmp x (OU cmp u v) = LESS_ALL cmp x u /\ LESS_ALL cmp x v
+Proof
 RW_TAC bool_ss [GSYM LESS_ALL_UNION] THEN REWRITE_TAC [LESS_ALL] THEN
 EQ_TAC THENL
 [REPEAT STRIP_TAC THEN Cases_on `y IN OU cmp u v` THENL
@@ -763,12 +794,15 @@ EQ_TAC THENL
   ]
  ]
 ,METIS_TAC [OU_SUBSET_UNION, SUBSET_DEF]
-]);
+]
+QED
 
-val OU_ASSOC = store_thm ("OU_ASSOC",
-``!cmp a b c:'a set. OU cmp a (OU cmp b c) = OU cmp (OU cmp a b) c``,
+Theorem OU_ASSOC:
+  !cmp a b c:'a set. OU cmp a (OU cmp b c) = OU cmp (OU cmp a b) c
+Proof
 RW_TAC bool_ss [IN_OU, EXTENSION, IN_UNION] THEN
-REWRITE_TAC [LESS_ALL_OU] THEN METIS_TAC []);
+REWRITE_TAC [LESS_ALL_OU] THEN METIS_TAC []
+QED
 
 Definition bl_to_set:
  (bl_to_set (cmp:'a toto) (nbl:'a bl) = {}) /\
@@ -806,16 +840,20 @@ REWRITE_TAC [bl_to_bt, bl_rev_set_lem, bt_to_set, EMPTY_OU]);
   (bl_to_set cmp (BL_ACCUM a t b) =
       a INSERT (OU cmp (ENUMERAL cmp t) (bl_to_set cmp b))) . *)
 
-val LESS_ALL_UO_LEM = store_thm ("LESS_ALL_UO_LEM",
-``!cmp:'a toto a s. LESS_ALL cmp a s ==> (UO cmp {a} s = a INSERT s)``,
-SRW_TAC [] [LESS_ALL, UO, EXTENSION, IN_UNION] THEN METIS_TAC []);
+Theorem LESS_ALL_UO_LEM:
+  !cmp:'a toto a s. LESS_ALL cmp a s ==> (UO cmp {a} s = a INSERT s)
+Proof
+SRW_TAC [] [LESS_ALL, UO, EXTENSION, IN_UNION] THEN METIS_TAC []
+QED
 
-val LESS_ALL_OU_UO_LEM = store_thm ("LESS_ALL_OU_UO_LEM",
-``!cmp:'a toto a s t. LESS_ALL cmp a s /\ LESS_ALL cmp a t ==>
-                      (OU cmp (UO cmp {a} s) t = a INSERT (OU cmp s t))``,
+Theorem LESS_ALL_OU_UO_LEM:
+  !cmp:'a toto a s t. LESS_ALL cmp a s /\ LESS_ALL cmp a t ==>
+                      (OU cmp (UO cmp {a} s) t = a INSERT (OU cmp s t))
+Proof
 REPEAT STRIP_TAC THEN IMP_RES_THEN SUBST1_TAC LESS_ALL_UO_LEM THEN
 SRW_TAC [] [UO, OU, EXTENSION, IN_UNION] THEN
-METIS_TAC [LESS_ALL]);
+METIS_TAC [LESS_ALL]
+QED
 
 val BL_ACCUM_set = maybe_thm ("BL_ACCUM_set",
 ``!cmp:'a toto a b t.
@@ -1092,40 +1130,50 @@ MATCH_MP_TAC sdiff_set THEN AR);
 (*                  Theorems to assist conversions                       *)
 (* ********************************************************************* *)
 
-val ENUMERAL_set = store_thm ("ENUMERAL_set",
-``!cmp l:'a list. set l = ENUMERAL cmp (list_to_bt (incr_ssort cmp l))``,
+Theorem ENUMERAL_set:
+  !cmp l:'a list. set l = ENUMERAL cmp (list_to_bt (incr_ssort cmp l))
+Proof
 REPEAT GEN_TAC THEN CONV_TAC (LAND_CONV (REWR_CONV (GSYM incr_ssort_set))) THEN
 Q.SUBGOAL_THEN
 `incr_ssort cmp l = bt_to_ol cmp (list_to_bt (incr_ssort cmp l))`
 SUBST1_TAC THENL
 [MATCH_MP_TAC (GSYM bt_to_ol_ID_IMP) THEN MATCH_ACCEPT_TAC incr_ssort_OL
 ,REWRITE_TAC [list_to_bt_ID, ol_set]
-]);
+]
+QED
 
-val OL_ENUMERAL = store_thm ("OL_ENUMERAL",
-``!cmp l:'a list. OL cmp l ==> (set l = ENUMERAL cmp (list_to_bt l))``,
+Theorem OL_ENUMERAL:
+  !cmp l:'a list. OL cmp l ==> (set l = ENUMERAL cmp (list_to_bt l))
+Proof
 REPEAT STRIP_TAC THEN
 Q.SUBGOAL_THEN
 `l = bt_to_ol cmp (list_to_bt l)` SUBST1_TAC THENL
 [MATCH_MP_TAC (GSYM bt_to_ol_ID_IMP) THEN AR
 ,REWRITE_TAC [list_to_bt_ID, ol_set]
-]);
+]
+QED
 
 val bt_to_ol_thm = maybe_thm ("bt_to_ol_thm",
 ``!cmp:'a toto t. bt_to_ol cmp t = bt_to_ol_ac cmp t []``,
 SRW_TAC [] [ol_ac_thm]);
 
-val OWL_UNION_THM = store_thm ("OWL_UNION_THM", ``!cmp:'a toto s l t m.
-    OWL cmp s l /\ OWL cmp t m ==> OWL cmp (s UNION t) (smerge cmp l m)``,
-METIS_TAC [OWL, OL_UNION_IMP]);
+Theorem OWL_UNION_THM:   !cmp:'a toto s l t m.
+    OWL cmp s l /\ OWL cmp t m ==> OWL cmp (s UNION t) (smerge cmp l m)
+Proof
+METIS_TAC [OWL, OL_UNION_IMP]
+QED
 
-val OWL_INTER_THM = store_thm ("OWL_INTER_THM", ``!cmp:'a toto s l t m.
-    OWL cmp s l /\ OWL cmp t m ==> OWL cmp (s INTER t) (sinter cmp l m)``,
-METIS_TAC [OWL, OL_INTER_IMP]);
+Theorem OWL_INTER_THM:   !cmp:'a toto s l t m.
+    OWL cmp s l /\ OWL cmp t m ==> OWL cmp (s INTER t) (sinter cmp l m)
+Proof
+METIS_TAC [OWL, OL_INTER_IMP]
+QED
 
-val OWL_DIFF_THM = store_thm ("OWL_DIFF_THM", ``!cmp:'a toto s l t m.
-    OWL cmp s l /\ OWL cmp t m ==> OWL cmp (s DIFF t) (sdiff cmp l m)``,
-METIS_TAC [OWL, OL_DIFF_IMP]);
+Theorem OWL_DIFF_THM:   !cmp:'a toto s l t m.
+    OWL cmp s l /\ OWL cmp t m ==> OWL cmp (s DIFF t) (sdiff cmp l m)
+Proof
+METIS_TAC [OWL, OL_DIFF_IMP]
+QED
 
 (* ******************************************************************* *)
 (*  Test for a bt with no spurious nodes, as should be invariably the  *)
@@ -1187,13 +1235,17 @@ val OL_bt_thm = maybe_thm ("OL_bt_thm",
 GEN_TAC THEN Cases THEN
 SRW_TAC [] [OL_bt, bt_to_ol, OL_bt_lb_thm, OL_bt_ub_thm, bt_to_list]);
 
-val better_bt_to_ol = store_thm ("better_bt_to_ol",
-``!cmp t:'a bt. bt_to_ol cmp t = if OL_bt cmp t then bt_to_list_ac t []
-                                                else bt_to_ol_ac cmp t []``,
-METIS_TAC [OL_bt_thm, bt_to_list_thm, bt_to_ol_thm]);
+Theorem better_bt_to_ol:
+  !cmp t:'a bt. bt_to_ol cmp t = if OL_bt cmp t then bt_to_list_ac t []
+                                                else bt_to_ol_ac cmp t []
+Proof
+METIS_TAC [OL_bt_thm, bt_to_list_thm, bt_to_ol_thm]
+QED
 
 (* ******************* Theorem to support set_TO_OWL ********************* *)
 
-val set_OWL_thm = store_thm ("set_OWL_thm",
-``!cmp l:'a list. OWL cmp (set l) (incr_ssort cmp l)``,
-REWRITE_TAC [OWL, incr_ssort_set, incr_ssort_OL]);
+Theorem set_OWL_thm:
+  !cmp l:'a list. OWL cmp (set l) (incr_ssort cmp l)
+Proof
+REWRITE_TAC [OWL, incr_ssort_set, incr_ssort_OL]
+QED

@@ -143,11 +143,14 @@ QED
 val LESS_THM =
   CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM;
 
-val UNHEX_HEX = store_thm("UNHEX_HEX",
-  ``!n. n < 16 ==> (UNHEX (HEX n) = n)``, SRW_TAC [] [LESS_THM] \\ EVAL_TAC);
+Theorem UNHEX_HEX:
+    !n. n < 16 ==> (UNHEX (HEX n) = n)
+Proof SRW_TAC [] [LESS_THM] \\ EVAL_TAC
+QED
 
-val HEX_UNHEX = store_thm("HEX_UNHEX",
-  ``!c. isHexDigit c ==> (HEX (UNHEX c) = toUpper c)``,
+Theorem HEX_UNHEX:
+    !c. isHexDigit c ==> (HEX (UNHEX c) = toUpper c)
+Proof
   Cases
   \\ SRW_TAC [] [isHexDigit_def]
   \\ Q.PAT_ASSUM `n < 256` (K ALL_TAC)
@@ -155,17 +158,20 @@ val HEX_UNHEX = store_thm("HEX_UNHEX",
       `n < 71` by DECIDE_TAC]
   \\ FULL_SIMP_TAC std_ss [LESS_THM]
   \\ FULL_SIMP_TAC arith_ss []
-  \\ EVAL_TAC);
+  \\ EVAL_TAC
+QED
 
-val DEC_UNDEC = store_thm("DEC_UNDEC",
-  ``!c. isDigit c ==> (HEX (UNHEX c) = c)``,
+Theorem DEC_UNDEC:
+    !c. isDigit c ==> (HEX (UNHEX c) = c)
+Proof
   Cases
   \\ SRW_TAC [] [isDigit_def]
   \\ Q.PAT_ASSUM `n < 256` (K ALL_TAC)
   \\ `n < 58` by DECIDE_TAC
   \\ FULL_SIMP_TAC std_ss [LESS_THM]
   \\ FULL_SIMP_TAC arith_ss []
-  \\ EVAL_TAC);
+  \\ EVAL_TAC
+QED
 
 val MAP_ID = Q.prove(
   `!l. EVERY (\x. f x = x) l ==> (MAP f l = l)`,
@@ -240,9 +246,11 @@ Proof METIS_TAC [toNum_toString]
 QED
 Theorem toString_11 = toString_inj
 
-val STRCAT_toString_inj = store_thm("STRCAT_toString_inj",
-   ``!n m s. (STRCAT s (toString n) = STRCAT s (toString m)) = (n = m)``,
-   SRW_TAC [] []);
+Theorem STRCAT_toString_inj:
+     !n m s. (STRCAT s (toString n) = STRCAT s (toString m)) = (n = m)
+Proof
+   SRW_TAC [] []
+QED
 
 (* ------------------------------------------------------------------------- *)
 

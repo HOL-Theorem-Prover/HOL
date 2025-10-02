@@ -3094,14 +3094,15 @@ Proof
     rw [rpow, powr_lemma]
 QED
 
-val  RPOW_SUC_N = store_thm
-        ("RPOW_SUC_N",
-        ``!(a:real) (n:num). 0 < a ==>(a rpow (&n+1)= a pow SUC n)``,
+Theorem RPOW_SUC_N:
+          !(a:real) (n:num). 0 < a ==>(a rpow (&n+1)= a pow SUC n)
+Proof
  RW_TAC std_ss [] THEN
  KNOW_TAC``&n + (1:real)= & SUC n`` THEN1
      RW_TAC std_ss [REAL]THEN
        DISCH_TAC THEN ONCE_ASM_REWRITE_TAC[] THEN
-       RW_TAC std_ss [GEN_RPOW]) ;
+       RW_TAC std_ss [GEN_RPOW]
+QED
 
 (* NOTE: removed ‘0 < a’ under the new definition *)
 Theorem RPOW_0 :
@@ -3124,10 +3125,11 @@ Proof
     rw [rpow, LN_1, EXP_0]
 QED
 
-val  RPOW_POS_LT= store_thm
-        ("RPOW_POS_LT",
-        ``! a b. (0 < a)==> (0 < a rpow b)``,
-              RW_TAC std_ss [rpow, EXP_POS_LT]);
+Theorem RPOW_POS_LT:
+          ! a b. (0 < a)==> (0 < a rpow b)
+Proof
+              RW_TAC std_ss [rpow, EXP_POS_LT]
+QED
 
 (* NOTE: the antecedent has changed from ‘0 <> a’ to ‘0 < a’ *)
 Theorem RPOW_NZ :
@@ -3136,10 +3138,11 @@ Proof
     RW_TAC std_ss [rpow, EXP_NZ]
 QED
 
-val  LN_RPOW= store_thm
-        ("LN_RPOW",
-        ``! a b. (0 < a)==> (ln (a rpow b)= (b*ln a))``,
- RW_TAC std_ss [rpow,LN_EXP]);
+Theorem LN_RPOW:
+          ! a b. (0 < a)==> (ln (a rpow b)= (b*ln a))
+Proof
+ RW_TAC std_ss [rpow,LN_EXP]
+QED
 
 (* NOTE: added antecedent ‘0 < a’ under the new definition *)
 Theorem RPOW_ADD :
@@ -3176,11 +3179,12 @@ Proof
  >> RW_TAC std_ss [rpow, LN_DIV, REAL_SUB_LDISTRIB, EXP_SUB]
 QED
 
-val  RPOW_INV= store_thm
-        ("RPOW_INV",
-        ``! a b .  (0 < a)==>((inv a) rpow b= inv (a rpow b))``,
+Theorem RPOW_INV:
+          ! a b .  (0 < a)==>((inv a) rpow b= inv (a rpow b))
+Proof
 
-RW_TAC real_ss [rpow, REAL_INV_1OVER, LN_DIV, REAL_SUB_LDISTRIB, EXP_SUB, LN_1, EXP_0]);
+RW_TAC real_ss [rpow, REAL_INV_1OVER, LN_DIV, REAL_SUB_LDISTRIB, EXP_SUB, LN_1, EXP_0]
+QED
 
 Theorem RPOW_MUL :
     !a b c. 0 < a /\ 0 < b ==> (((a*b) rpow c) = (a rpow c)*(b rpow c))
@@ -3735,9 +3739,9 @@ val exp_convex_lemma6 = prove (
    >> Q.UNABBREV_TAC `f`
    >> RW_TAC real_ss [exp_convex_lemma2, exp_convex_lemma3, exp_convex_lemma4]);
 
-val exp_convex = store_thm
-  ("exp_convex",
-   ``exp IN convex_fn``,
+Theorem exp_convex:
+     exp IN convex_fn
+Proof
    RW_TAC std_ss [convex_fn, EXTENSION, NOT_IN_EMPTY, GSPECIFICATION]
    >> Cases_on `t = 0` >- RW_TAC real_ss []
    >> Cases_on `t = 1` >- RW_TAC real_ss []
@@ -3751,7 +3755,8 @@ val exp_convex = store_thm
    >> `0 < t'` by (Q.UNABBREV_TAC `t'` >> RW_TAC real_ss [REAL_LT_SUB_LADD])
    >> `t' < 1` by (Q.UNABBREV_TAC `t'` >> RW_TAC real_ss [REAL_LT_SUB_RADD, REAL_LT_ADDR])
    >> ONCE_REWRITE_TAC [REAL_ADD_COMM]
-   >> MATCH_MP_TAC exp_convex_lemma6 >> RW_TAC std_ss []);
+   >> MATCH_MP_TAC exp_convex_lemma6 >> RW_TAC std_ss []
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* ------------ ln and lg are concave on (0,infty] ------------------------- *)

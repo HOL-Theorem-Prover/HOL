@@ -128,10 +128,10 @@ Proof
   SRW_TAC [] [w2i_def]
 QED
 
-val w2i_n2w_pos = store_thm(
-  "w2i_n2w_pos",
-  ``!n. n < INT_MIN (:'a) ==>
-    (w2i (n2w n : bool ** 'a) = &n)``,
+Theorem w2i_n2w_pos:
+    !n. n < INT_MIN (:'a) ==>
+    (w2i (n2w n : bool ** 'a) = &n)
+Proof
   SRW_TAC [][w2i_def, word_msb_n2w, bitTheory.BIT_def, INT_SUB, dimword_def,
              bitTheory.BITS_def, DECIDE ``SUC x - x = 1``,
              wordsTheory.INT_MIN_def, DIV_2EXP_def, MOD_2EXP_def,
@@ -140,12 +140,13 @@ val w2i_n2w_pos = store_thm(
   FULL_SIMP_TAC (srw_ss()) [LESS_DIV_EQ_ZERO] THEN
   MATCH_MP_TAC LESS_TRANS THEN
   Q.EXISTS_TAC `2 ** (dimindex (:'a) - 1)` THEN
-  SRW_TAC [ARITH_ss][DIMINDEX_GT_0, bitTheory.TWOEXP_MONO])
+  SRW_TAC [ARITH_ss][DIMINDEX_GT_0, bitTheory.TWOEXP_MONO]
+QED
 
-val w2i_n2w_neg = store_thm(
-  "w2i_n2w_neg",
-  ``!n. INT_MIN (:'a) <= n /\ n < dimword (:'a) ==>
-      (w2i (n2w n : 'a word) = ~ &(dimword(:'a) - n))``,
+Theorem w2i_n2w_neg:
+    !n. INT_MIN (:'a) <= n /\ n < dimword (:'a) ==>
+      (w2i (n2w n : 'a word) = ~ &(dimword(:'a) - n))
+Proof
   SRW_TAC [ARITH_ss][w2i_def, word_msb_n2w, bitTheory.BIT_def, dimword_def,
                      bitTheory.BITS_def, DECIDE ``SUC x - x = 1``,
                      wordsTheory.INT_MIN_def, DIV_2EXP_def, MOD_2EXP_def,
@@ -166,18 +167,20 @@ val w2i_n2w_neg = store_thm(
            Q_TAC SUFF_TAC `0 < dimindex (:'a)` THEN1 DECIDE_TAC THEN
            SRW_TAC [][DIMINDEX_GT_0]) THEN
     FULL_SIMP_TAC (srw_ss()) []
-  ])
+  ]
+QED
 
-val i2w_w2i = store_thm(
-  "i2w_w2i[simp]",
-  ``!w. i2w (w2i w) = w``,
-  SRW_TAC [][i2w_def, w2i_def] THEN FULL_SIMP_TAC (srw_ss()) [])
+Theorem i2w_w2i[simp]:
+    !w. i2w (w2i w) = w
+Proof
+  SRW_TAC [][i2w_def, w2i_def] THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val w2i_i2w = store_thm(
-  "w2i_i2w",
-  ``!i. INT_MIN (:'a) <= i /\ i <= INT_MAX (:'a)
+Theorem w2i_i2w:
+    !i. INT_MIN (:'a) <= i /\ i <= INT_MAX (:'a)
       ==>
-    (w2i (i2w i : 'a word) = i)``,
+    (w2i (i2w i : 'a word) = i)
+Proof
   STRIP_TAC THEN SIMP_TAC (srw_ss()) [INT_MIN_def, INT_MAX_def] THEN
   `dimword(:'a) = 2 * INT_MIN(:'a)` by ACCEPT_TAC dimword_IS_TWICE_INT_MIN THEN
   `0 < dimword(:'a)` by ACCEPT_TAC ZERO_LT_dimword THEN
@@ -204,11 +207,12 @@ val w2i_i2w = store_thm(
     `n MOD (2 * INT_MIN(:'a)) = n` by (MATCH_MP_TAC MOD_UNIQUE THEN
                                    Q.EXISTS_TAC `0` THEN DECIDE_TAC) THEN
     ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) []
-  ])
+  ]
+QED
 
-val word_msb_i2w = store_thm(
-  "word_msb_i2w",
-  ``!i. word_msb (i2w i : 'a word) = &(INT_MIN(:'a)) <= i % &(dimword(:'a))``,
+Theorem word_msb_i2w:
+    !i. word_msb (i2w i : 'a word) = &(INT_MIN(:'a)) <= i % &(dimword(:'a))
+Proof
   STRIP_TAC THEN
   `dimword(:'a) = 2 * INT_MIN(:'a)` by ACCEPT_TAC dimword_IS_TWICE_INT_MIN THEN
   `0 < dimword(:'a)` by ACCEPT_TAC ZERO_LT_dimword THEN
@@ -231,7 +235,8 @@ val word_msb_i2w = store_thm(
         by (Q.SPEC_THEN `i` STRIP_ASSUME_TAC INT_NUM_CASES THEN
             FULL_SIMP_TAC (srw_ss()) []) THEN
     ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [word_msb_n2w_numeric, INT_MOD]
-  ])
+  ]
+QED
 
 Theorem w2i_11[simp]:
   !v w. (w2i v = w2i w) <=> (v = w)
@@ -448,17 +453,23 @@ Proof
   METIS_TAC [DECIDE ``0n < n ==> n - 1 < n``, DIMINDEX_GT_0]
 QED
 
-val WORD_GTi = store_thm("WORD_GTi",
-  ``!a b. a > b = w2i a > w2i b``,
-  REWRITE_TAC [WORD_GREATER, int_gt, WORD_LTi])
+Theorem WORD_GTi:
+    !a b. a > b = w2i a > w2i b
+Proof
+  REWRITE_TAC [WORD_GREATER, int_gt, WORD_LTi]
+QED
 
-val WORD_LEi = store_thm("WORD_LEi",
-  ``!a b. a <= b = w2i a <= w2i b``,
-  REWRITE_TAC [WORD_LESS_OR_EQ, INT_LE_LT, WORD_LTi, w2i_11])
+Theorem WORD_LEi:
+    !a b. a <= b = w2i a <= w2i b
+Proof
+  REWRITE_TAC [WORD_LESS_OR_EQ, INT_LE_LT, WORD_LTi, w2i_11]
+QED
 
-val WORD_GEi = store_thm("WORD_GEi",
-  ``!a b. a >= b = w2i a >= w2i b``,
-  REWRITE_TAC [WORD_GREATER_EQ, int_ge, WORD_LEi])
+Theorem WORD_GEi:
+    !a b. a >= b = w2i a >= w2i b
+Proof
+  REWRITE_TAC [WORD_GREATER_EQ, int_ge, WORD_LEi]
+QED
 
 val sum_num = intLib.COOPER_PROVE
   ``(Num (&a + &b) = a + b) /\
@@ -1602,12 +1613,15 @@ Proof
   fs [i2w_def, wordsTheory.w2w_def]
 QED
 
-val i2w_w2n = store_thm("i2w_w2n",
-  ``i2w (&w2n w) = w``,
-  fs [i2w_def]);
+Theorem i2w_w2n:
+    i2w (&w2n w) = w
+Proof
+  fs [i2w_def]
+QED
 
-val w2n_i2w = store_thm("w2n_i2w",
-  ``&w2n ((i2w n):'a word) = n % (& dimword (:'a))``,
+Theorem w2n_i2w:
+    &w2n ((i2w n):'a word) = n % (& dimword (:'a))
+Proof
   fs [i2w_def] \\ Cases_on `n` \\ fs []
   \\ `dimword (:'a) <> 0` by (assume_tac ZERO_LT_dimword \\ decide_tac)
   \\ imp_res_tac integerTheory.INT_MOD \\ fs []
@@ -1621,13 +1635,16 @@ val w2n_i2w = store_thm("w2n_i2w",
   \\ rename1 `n <> 0n` \\ pop_assum mp_tac \\ rw []
   \\ `n MOD k < k` by fs [MOD_LESS]
   \\ `n MOD k <= k` by fs []
-  \\ fs [INT_SUB]);
+  \\ fs [INT_SUB]
+QED
 
-val w2i_eq_w2n = store_thm("w2i_eq_w2n",
-  ``w2i (w:'a word) =
-    if w2n w < INT_MIN (:'a) then & (w2n w) else & (w2n w) - & dimword (:'a)``,
+Theorem w2i_eq_w2n:
+    w2i (w:'a word) =
+    if w2n w < INT_MIN (:'a) then & (w2n w) else & (w2n w) - & dimword (:'a)
+Proof
   Cases_on `w` \\ rw [w2i_n2w_pos]
   \\ fs [NOT_LESS] \\ fs [w2i_n2w_neg]
   \\ `n <= dimword (:'a)` by decide_tac
-  \\ imp_res_tac (GSYM INT_SUB) \\ fs []);
+  \\ imp_res_tac (GSYM INT_SUB) \\ fs []
+QED
 

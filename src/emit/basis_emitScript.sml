@@ -389,10 +389,11 @@ End
 val IS_EMPTY_THM = Q.prove
 (`(IS_EMPTY {} = T) /\ (IS_EMPTY (x INSERT s) = F)`,
  SRW_TAC[][IS_EMPTY_def])
-val IS_EMPTY_REWRITE = store_thm(
-"IS_EMPTY_REWRITE",
-``((s = {}) = IS_EMPTY s) /\ (({} = s) = IS_EMPTY s)``,
-SRW_TAC[][EQ_IMP_THM,IS_EMPTY_def])
+Theorem IS_EMPTY_REWRITE:
+  ((s = {}) = IS_EMPTY s) /\ (({} = s) = IS_EMPTY s)
+Proof
+SRW_TAC[][EQ_IMP_THM,IS_EMPTY_def]
+QED
 
 val defs =
   map DEFN_NOSIG [CONJ (F_INTRO NOT_IN_EMPTY) IN_INSERT,

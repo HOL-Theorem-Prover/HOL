@@ -289,25 +289,28 @@ Proof
   DECIDE_TAC
 QED
 
-val LHD_EQ_NONE = store_thm(
-  "LHD_EQ_NONE",
-  ``!ll. ((LHD ll = NONE) = (ll = LNIL)) /\ ((NONE = LHD ll) = (ll = LNIL))``,
+Theorem LHD_EQ_NONE:
+    !ll. ((LHD ll = NONE) = (ll = LNIL)) /\ ((NONE = LHD ll) = (ll = LNIL))
+Proof
   GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `ll` llist_CASES) THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 val _ = export_rewrites ["LHD_EQ_NONE"]
 
-val LTL_EQ_NONE = store_thm(
-  "LTL_EQ_NONE",
-  ``!ll. ((LTL ll = NONE) = (ll = LNIL)) /\ ((NONE = LTL ll) = (ll = LNIL))``,
+Theorem LTL_EQ_NONE:
+    !ll. ((LTL ll = NONE) = (ll = LNIL)) /\ ((NONE = LTL ll) = (ll = LNIL))
+Proof
   GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `ll` llist_CASES) THEN
-  SRW_TAC [][LTL_THM]);
+  SRW_TAC [][LTL_THM]
+QED
 val _ = export_rewrites ["LTL_EQ_NONE"]
 
-val LHDTL_EQ_SOME = store_thm(
-  "LHDTL_EQ_SOME",
-  ``!h t ll. (ll = LCONS h t) <=> (LHD ll = SOME h) /\ (LTL ll = SOME t)``,
+Theorem LHDTL_EQ_SOME:
+    !h t ll. (ll = LCONS h t) <=> (LHD ll = SOME h) /\ (LTL ll = SOME t)
+Proof
   REPEAT GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `ll` llist_CASES) THEN
-  SRW_TAC [][LHD_THM, LTL_THM]);
+  SRW_TAC [][LHD_THM, LTL_THM]
+QED
 
 
 (* ----------------------------------------------------------------------
@@ -322,13 +325,14 @@ val LNTH = new_recursive_definition{
   def = ``(LNTH 0 ll = LHD ll) /\
           (LNTH (SUC n) ll = OPTION_JOIN (OPTION_MAP (LNTH n) (LTL ll)))``};
 
-val LNTH_THM = store_thm(
-  "LNTH_THM",
-  ``(!n. LNTH n LNIL = NONE) /\
+Theorem LNTH_THM:
+    (!n. LNTH n LNIL = NONE) /\
     (!h t. LNTH 0 (LCONS h t) = SOME h) /\
-    (!n h t. LNTH (SUC n) (LCONS h t) = LNTH n t)``,
+    (!n h t. LNTH (SUC n) (LCONS h t) = LNTH n t)
+Proof
   SRW_TAC [][LNTH] THEN Induct_on `n` THEN
-  SRW_TAC [][LNTH]);
+  SRW_TAC [][LNTH]
+QED
 val _ = export_rewrites ["LNTH_THM"]
 
 (* ----------------------------------------------------------------------
@@ -348,11 +352,12 @@ val LNTH_llist_rep = prove(
   ``!n r. lrep_ok r ==> (LNTH n (llist_abs r) = r n)``,
   SIMP_TAC bool_ss [LNTH_rep, llist_repabs']) ;
 
-val LNTH_EQ = store_thm(
-  "LNTH_EQ",
-  ``!ll1 ll2. (ll1 = ll2) = (!n. LNTH n ll1 = LNTH n ll2)``,
+Theorem LNTH_EQ:
+    !ll1 ll2. (ll1 = ll2) = (!n. LNTH n ll1 = LNTH n ll2)
+Proof
   SIMP_TAC (srw_ss()) [forall_llist, LNTH_llist_rep, llist_abs_11,
-                       FUN_EQ_THM]);
+                       FUN_EQ_THM]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* LUNFOLD by definition                                                     *)
@@ -483,12 +488,12 @@ QED
 
 val eq_imp_lem = Q.prove (`(p = q) ==> p ==> q`, DECIDE_TAC)  ;
 
-val llist_ue_Axiom = store_thm(
-  "llist_ue_Axiom",
-  ``!f : 'a -> ('a # 'b) option.
+Theorem llist_ue_Axiom:
+    !f : 'a -> ('a # 'b) option.
       ?!g : 'a -> 'b llist.
         (!x. LHD (g x) = OPTION_MAP SND (f x)) /\
-        (!x. LTL (g x) = OPTION_MAP (g o FST) (f x))``,
+        (!x. LTL (g x) = OPTION_MAP (g o FST) (f x))
+Proof
   MP_TAC llist_Axiom_1ue THEN
   MATCH_MP_TAC eq_imp_lem THEN
   AP_TERM_TAC THEN SIMP_TAC bool_ss [FUN_EQ_THM, GSYM FORALL_AND_THM] THEN
@@ -497,31 +502,33 @@ val llist_ue_Axiom = store_thm(
   AP_TERM_TAC THEN SIMP_TAC bool_ss [FUN_EQ_THM] THEN GEN_TAC THEN
   Cases_on `f x` THEN llist_CASE_TAC ``(g : 'a -> 'b llist) x`` THEN
   SIMP_TAC std_ss [OPTION_MAP_DEF, LHD_THM, LTL_THM, pair_CASE_def,
-    LCONS_NOT_NIL, LCONS_11]) ;
+    LCONS_NOT_NIL, LCONS_11]
+QED
 
-val llist_Axiom = store_thm(
-  "llist_Axiom",
-  ``!f : 'a -> ('a # 'b) option.
+Theorem llist_Axiom:
+    !f : 'a -> ('a # 'b) option.
       ?g.
          (!x. LHD (g x) = OPTION_MAP SND (f x)) /\
-         (!x. LTL (g x) = OPTION_MAP (g o FST) (f x))``,
+         (!x. LTL (g x) = OPTION_MAP (g o FST) (f x))
+Proof
   MATCH_ACCEPT_TAC
     (CONJUNCT1
-      (SIMP_RULE bool_ss [EXISTS_UNIQUE_THM, FORALL_AND_THM] llist_ue_Axiom)));
+      (SIMP_RULE bool_ss [EXISTS_UNIQUE_THM, FORALL_AND_THM] llist_ue_Axiom))
+QED
 
 (* ----------------------------------------------------------------------
     Another consequence of the finality theorem is the principle of
     bisimulation, including for lists unfolded from different generators
    ---------------------------------------------------------------------- *)
 
-val LUNFOLD_BISIMULATION = store_thm(
-  "LUNFOLD_BISIMULATION",
-  ``!f1 f2 x1 x2. (LUNFOLD f1 x1 = LUNFOLD f2 x2) =
+Theorem LUNFOLD_BISIMULATION:
+    !f1 f2 x1 x2. (LUNFOLD f1 x1 = LUNFOLD f2 x2) =
       ?R. R x1 x2 /\
         !y1 y2.  R y1 y2 ==>
            (f1 y1 = NONE) /\ (f2 y2 = NONE) \/
            ?h t1 t2.
-             (f1 y1 = SOME (t1, h)) /\ (f2 y2 = SOME (t2, h)) /\ R t1 t2``,
+             (f1 y1 = SOME (t1, h)) /\ (f2 y2 = SOME (t2, h)) /\ R t1 t2
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL [
     DISCH_THEN (fn th =>
       Q.EXISTS_TAC `\x1 x2. LUNFOLD f1 x1 = LUNFOLD f2 x2` THEN
@@ -535,32 +542,34 @@ val LUNFOLD_BISIMULATION = store_thm(
     Ho_Rewrite.REWRITE_TAC [LNTH_EQ, PULL_FORALL] THEN
     Induct_on `n` THEN REPEAT STRIP_TAC THEN
     ONCE_REWRITE_TAC [LUNFOLD] THEN RES_TAC THEN
-    ASM_SIMP_TAC std_ss [pair_CASE_def, LNTH_THM] ]) ;
+    ASM_SIMP_TAC std_ss [pair_CASE_def, LNTH_THM] ]
+QED
 
-val LLIST_BISIMULATION0 = store_thm(
-  "LLIST_BISIMULATION0",
-  ``!ll1 ll2. (ll1 = ll2) =
+Theorem LLIST_BISIMULATION0:
+    !ll1 ll2. (ll1 = ll2) =
               ?R. R ll1 ll2 /\
                   !ll3 ll4.  R ll3 ll4 ==>
                              (ll3 = LNIL) /\ (ll4 = LNIL) \/
                              ?h t1 t2.
                                  (ll3 = h:::t1) /\ (ll4 = h:::t2) /\
-                                 R t1 t2``,
+                                 R t1 t2
+Proof
   REPEAT GEN_TAC THEN
   CONV_TAC (LHS_CONV (ONCE_DEPTH_CONV (REWR_CONV (SYM LUNFOLD_LTL_HD)))) THEN
   REWRITE_TAC [LUNFOLD_BISIMULATION] THEN
   REPEAT (FIRST [AP_TERM_TAC, ABS_TAC, AP_THM_TAC]) THEN
-  SIMP_TAC std_ss [LTL_HD_iff]) ;
+  SIMP_TAC std_ss [LTL_HD_iff]
+QED
 
-val LLIST_BISIMULATION = store_thm(
-  "LLIST_BISIMULATION",
-  ``!ll1 ll2.
+Theorem LLIST_BISIMULATION:
+    !ll1 ll2.
        (ll1 = ll2) =
        ?R. R ll1 ll2 /\
            !ll3 ll4.
               R ll3 ll4 ==>
               (ll3 = [||]) /\ (ll4 = [||]) \/
-              (LHD ll3 = LHD ll4) /\ R (THE (LTL ll3)) (THE (LTL ll4))``,
+              (LHD ll3 = LHD ll4) /\ R (THE (LTL ll3)) (THE (LTL ll4))
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL [
     DISCH_THEN SUBST_ALL_TAC THEN Q.EXISTS_TAC `(=)` THEN SRW_TAC [][],
     STRIP_TAC THEN ONCE_REWRITE_TAC [LLIST_BISIMULATION0] THEN
@@ -573,18 +582,19 @@ val LLIST_BISIMULATION = store_thm(
     FULL_SIMP_TAC (srw_ss()) [] THEN
     Q.SPEC_THEN `ll4` FULL_STRUCT_CASES_TAC llist_CASES THEN
     FULL_SIMP_TAC (srw_ss()) []
-  ]);
+  ]
+QED
 
-val LLIST_STRONG_BISIMULATION = store_thm(
-  "LLIST_STRONG_BISIMULATION",
-  ``!ll1 ll2.
+Theorem LLIST_STRONG_BISIMULATION:
+    !ll1 ll2.
        (ll1 = ll2) =
        ?R. R ll1 ll2 /\
            !ll3 ll4.
               R ll3 ll4 ==>
               (ll3 = ll4) \/
               ?h t1 t2. (ll3 = h ::: t1) /\ (ll4 = h ::: t2) /\
-                        R t1 t2``,
+                        R t1 t2
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL [
     DISCH_THEN SUBST_ALL_TAC THEN Q.EXISTS_TAC `(=)` THEN SRW_TAC [][],
     STRIP_TAC THEN ONCE_REWRITE_TAC [LLIST_BISIMULATION0] THEN
@@ -598,7 +608,8 @@ val LLIST_STRONG_BISIMULATION = store_thm(
       Q.SPEC_THEN `ll3` FULL_STRUCT_CASES_TAC llist_CASES THEN
       SRW_TAC [][]
     ]
-  ]);
+  ]
+QED
 
 (* ----------------------------------------------------------------------
     LTAKE : num -> 'a llist -> 'a list option
@@ -632,24 +643,25 @@ Proof
     o_DEF, OPTION_MAP_CASE]
 QED
 
-val LTAKE_THM = store_thm(
-  "LTAKE_THM",
-  ``(!l. LTAKE 0 l = SOME []) /\
+Theorem LTAKE_THM:
+    (!l. LTAKE 0 l = SOME []) /\
     (!n. LTAKE (SUC n) LNIL = NONE) /\
-    (!n h t. LTAKE (SUC n) (LCONS h t) = OPTION_MAP (CONS h) (LTAKE n t))``,
+    (!n h t. LTAKE (SUC n) (LCONS h t) = OPTION_MAP (CONS h) (LTAKE n t))
+Proof
   SRW_TAC [][LTAKE, LHD_THM, LTL_THM] THEN REPEAT GEN_TAC THEN
-  Cases_on `LTAKE n t` THEN SRW_TAC [][]);
+  Cases_on `LTAKE n t` THEN SRW_TAC [][]
+QED
 val _ = export_rewrites ["LTAKE_THM"]
 
 (* can also prove llist equality by proving all prefixes are the same *)
-val LTAKE_SNOC_LNTH = store_thm(
-  "LTAKE_SNOC_LNTH",
-  ``!n ll. LTAKE (SUC n) ll =
+Theorem LTAKE_SNOC_LNTH:
+    !n ll. LTAKE (SUC n) ll =
              case LTAKE n ll of
                NONE => NONE
              | SOME l => (case LNTH n ll of
                              NONE => NONE
-                           | SOME e => SOME (l ++ [e]))``,
+                           | SOME e => SOME (l ++ [e]))
+Proof
   Induct THENL [
     SRW_TAC [][LTAKE,LNTH],
     GEN_TAC THEN
@@ -662,16 +674,18 @@ val LTAKE_SNOC_LNTH = store_thm(
         SRW_TAC [][] THEN Cases_on `LNTH n t` THEN SRW_TAC [][]
       ]
     ]
-  ]);
+  ]
+QED
 
-val LTAKE_EQ_NONE_LNTH = store_thm(
-  "LTAKE_EQ_NONE_LNTH",
-  ``!n ll. (LTAKE n ll = NONE) ==> (LNTH n ll = NONE)``,
+Theorem LTAKE_EQ_NONE_LNTH:
+    !n ll. (LTAKE n ll = NONE) ==> (LNTH n ll = NONE)
+Proof
   Induct THEN ASM_SIMP_TAC (srw_ss()) [LTAKE,LNTH] THEN
   Q.X_GEN_TAC `ll` THEN
   Q.SPEC_THEN `ll` STRUCT_CASES_TAC llist_CASES THEN
   ASM_SIMP_TAC (srw_ss()) [LHD_THM, LTL_THM] THEN
-  Cases_on `LTAKE n t` THEN SRW_TAC [][]);
+  Cases_on `LTAKE n t` THEN SRW_TAC [][]
+QED
 
 Theorem LTAKE_NIL_EQ_SOME[simp]:
   !l m. (LTAKE m LNIL = SOME l) <=> (m = 0) /\ (l = [])
@@ -680,10 +694,11 @@ Proof
   PROVE_TAC []
 QED
 
-val LTAKE_NIL_EQ_NONE = store_thm(
-  "LTAKE_NIL_EQ_NONE",
-  ``!m. (LTAKE m LNIL = NONE) = (0 < m)``,
-  GEN_TAC THEN Cases_on `m` THEN SIMP_TAC (srw_ss()) [LTAKE, LHD_THM]);
+Theorem LTAKE_NIL_EQ_NONE:
+    !m. (LTAKE m LNIL = NONE) = (0 < m)
+Proof
+  GEN_TAC THEN Cases_on `m` THEN SIMP_TAC (srw_ss()) [LTAKE, LHD_THM]
+QED
 val _ = export_rewrites ["LTAKE_NIL_EQ_NONE"]
 
 val SNOC_11 = prove(
@@ -692,9 +707,9 @@ val SNOC_11 = prove(
   Induct THEN REPEAT GEN_TAC THEN SIMP_TAC (srw_ss()) [] THEN
   Cases_on `l2` THEN SRW_TAC [][] THEN METIS_TAC []);
 
-val LTAKE_EQ = store_thm(
-  "LTAKE_EQ",
-  ``!ll1 ll2. (ll1 = ll2) = (!n. LTAKE n ll1 = LTAKE n ll2)``,
+Theorem LTAKE_EQ:
+    !ll1 ll2. (ll1 = ll2) = (!n. LTAKE n ll1 = LTAKE n ll2)
+Proof
   SRW_TAC [][EQ_IMP_THM] THEN
   SRW_TAC [][LNTH_EQ] THEN
   POP_ASSUM (Q.SPEC_THEN `SUC n` MP_TAC) THEN
@@ -708,14 +723,16 @@ val LTAKE_EQ = store_thm(
     METIS_TAC [LTAKE_EQ_NONE_LNTH],
     Cases_on `LNTH n ll1` THEN Cases_on `LNTH n ll2` THEN
     SRW_TAC [][SNOC_11]
-  ]);
+  ]
+QED
 
 (* more random facts about LTAKE *)
-val LTAKE_CONS_EQ_NONE = store_thm(
-  "LTAKE_CONS_EQ_NONE",
-  ``!m h t. (LTAKE m (LCONS h t) = NONE) =
-            (?n. (m = SUC n) /\ (LTAKE n t = NONE))``,
-  GEN_TAC THEN Cases_on `m` THEN SIMP_TAC (srw_ss()) []);
+Theorem LTAKE_CONS_EQ_NONE:
+    !m h t. (LTAKE m (LCONS h t) = NONE) =
+            (?n. (m = SUC n) /\ (LTAKE n t = NONE))
+Proof
+  GEN_TAC THEN Cases_on `m` THEN SIMP_TAC (srw_ss()) []
+QED
 
 Theorem LTAKE_CONS_EQ_SOME:
   !m h t l.
@@ -727,15 +744,16 @@ Proof
   SIMP_TAC (srw_ss()) [] THEN PROVE_TAC []
 QED
 
-val LTAKE_EQ_SOME_CONS = store_thm(
-  "LTAKE_EQ_SOME_CONS",
-  ``!n l x. (LTAKE n l = SOME x) ==> !h. ?y. LTAKE n (LCONS h l) = SOME y``,
+Theorem LTAKE_EQ_SOME_CONS:
+    !n l x. (LTAKE n l = SOME x) ==> !h. ?y. LTAKE n (LCONS h l) = SOME y
+Proof
   Induct THEN SIMP_TAC (srw_ss()) [LTAKE, LHD_THM, LTL_THM] THEN
   REPEAT GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `l` llist_CASES) THEN
   SIMP_TAC (srw_ss()) [LHD_THM, LTL_THM] THEN
   Cases_on `LTAKE n t` THEN SIMP_TAC (srw_ss()) [] THEN RES_TAC THEN
   REPEAT STRIP_TAC THEN FIRST_ASSUM (STRIP_ASSUME_TAC o Q.SPEC `h`) THEN
-  ASM_SIMP_TAC (srw_ss()) []);
+  ASM_SIMP_TAC (srw_ss()) []
+QED
 
 (* ----------------------------------------------------------------------
     Finality allows us to  define MAP
@@ -822,10 +840,10 @@ Proof SRW_TAC [][EQ_IMP_THM] THEN
       FULL_SIMP_TAC (srw_ss()) []
 QED
 
-val LAPPEND_ASSOC = store_thm(
-  "LAPPEND_ASSOC",
-  ``!ll1 ll2 ll3. LAPPEND (LAPPEND ll1 ll2) ll3 =
-                  LAPPEND ll1 (LAPPEND ll2 ll3)``,
+Theorem LAPPEND_ASSOC:
+    !ll1 ll2 ll3. LAPPEND (LAPPEND ll1 ll2) ll3 =
+                  LAPPEND ll1 (LAPPEND ll2 ll3)
+Proof
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC [LLIST_STRONG_BISIMULATION] THEN
   Q.EXISTS_TAC `\l1 l2. ?u. (l1 = LAPPEND (LAPPEND u ll2) ll3) /\
                             (l2 = LAPPEND u (LAPPEND ll2 ll3))` THEN
@@ -833,12 +851,13 @@ val LAPPEND_ASSOC = store_thm(
     PROVE_TAC [],
     STRUCT_CASES_TAC (Q.SPEC `u` llist_CASES) THEN SRW_TAC [][] THEN
     PROVE_TAC []
-  ]);
+  ]
+QED
 
-val LMAP_MAP = store_thm(
-  "LMAP_MAP",
-  ``!(f:'a -> 'b) (g:'c -> 'a) (ll:'c llist).
-        LMAP f (LMAP g ll) = LMAP (f o g) ll``,
+Theorem LMAP_MAP:
+    !(f:'a -> 'b) (g:'c -> 'a) (ll:'c llist).
+        LMAP f (LMAP g ll) = LMAP (f o g) ll
+Proof
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC [LLIST_BISIMULATION] THEN
   Q.EXISTS_TAC `λll1 ll2. ?ll0. (ll1 = LMAP f (LMAP g ll0)) /\
                                 (ll2 = LMAP (f o g) ll0)` THEN
@@ -848,16 +867,18 @@ val LMAP_MAP = store_thm(
       (Q.ISPEC `ll0:'c llist` llist_CASES) THEN
     FULL_SIMP_TAC (srw_ss()) [LMAP, LTL_THM, LHD_THM] THEN
     PROVE_TAC []
-  ]);
+  ]
+QED
 
-val LAPPEND_NIL_2ND = store_thm(
-  "LAPPEND_NIL_2ND",
-  ``!ll. LAPPEND ll LNIL = ll``,
+Theorem LAPPEND_NIL_2ND:
+    !ll. LAPPEND ll LNIL = ll
+Proof
   GEN_TAC THEN ONCE_REWRITE_TAC [LLIST_BISIMULATION] THEN
   Q.EXISTS_TAC `\ll1 ll2. ll1 = LAPPEND ll2 LNIL` THEN
   SIMP_TAC (srw_ss()) [] THEN GEN_TAC THEN
   STRUCT_CASES_TAC (Q.SPEC `ll4` llist_CASES) THEN
-  SIMP_TAC (srw_ss()) []);
+  SIMP_TAC (srw_ss()) []
+QED
 
 Theorem LHD_LAPPEND:
    LHD (LAPPEND l1 l2) = if l1 = LNIL then LHD l2 else LHD l1
@@ -900,18 +921,19 @@ val (LFINITE_rules,LFINITE_ind,LFINITE_cases) = Hol_reln`
   (!h t. LFINITE t ==> LFINITE (h:::t))
 `;
 
-val LFINITE_THM = store_thm(
-  "LFINITE_THM",
-  ``(LFINITE LNIL = T) /\
-    (!h t. LFINITE (LCONS h t) = LFINITE t)``,
+Theorem LFINITE_THM:
+    (LFINITE LNIL = T) /\
+    (!h t. LFINITE (LCONS h t) = LFINITE t)
+Proof
   REPEAT STRIP_TAC THEN
   CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [LFINITE_cases])) THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 val _ = export_rewrites ["LFINITE_THM"]
 
-val LFINITE = store_thm(
-  "LFINITE",
-  ``LFINITE ll = ?n. LTAKE n ll = NONE``,
+Theorem LFINITE:
+    LFINITE ll = ?n. LTAKE n ll = NONE
+Proof
   EQ_TAC THENL [
     Q.ID_SPEC_TAC `ll` THEN HO_MATCH_MP_TAC LFINITE_ind THEN
     SRW_TAC [][] THEN Q.EXISTS_TAC `SUC n` THEN SRW_TAC [][],
@@ -920,7 +942,8 @@ val LFINITE = store_thm(
     Induct THEN SRW_TAC [][] THEN
     Q.SPEC_THEN `ll` FULL_STRUCT_CASES_TAC llist_CASES THEN
     FULL_SIMP_TAC (srw_ss()) []
-  ]);
+  ]
+QED
 
 val (llength_rel_rules,llength_rel_ind,llength_rel_cases) = Hol_reln`
   llength_rel [||] 0  /\
@@ -952,15 +975,16 @@ val LLENGTH = new_definition(
   "LLENGTH",
   ``LLENGTH ll = if LFINITE ll then SOME (@n. llength_rel ll n) else NONE``);
 
-val LLENGTH_THM = store_thm(
-  "LLENGTH_THM",
-  ``(LLENGTH LNIL = SOME 0) /\
-    (!h t. LLENGTH (LCONS h t) = OPTION_MAP SUC (LLENGTH t))``,
+Theorem LLENGTH_THM:
+    (LLENGTH LNIL = SOME 0) /\
+    (!h t. LLENGTH (LCONS h t) = OPTION_MAP SUC (LLENGTH t))
+Proof
   SRW_TAC [][LLENGTH] THEN
   `?n. llength_rel t n` by METIS_TAC [lfinite_llength] THEN
   `!m. llength_rel t m = (m = n)` by METIS_TAC [llength_unique] THEN
   SRW_TAC [][] THEN
-  ONCE_REWRITE_TAC [llength_rel_cases] THEN SRW_TAC [][]);
+  ONCE_REWRITE_TAC [llength_rel_cases] THEN SRW_TAC [][]
+QED
 val _ = export_rewrites ["LLENGTH_THM"]
 
 Theorem LLENGTH_0[simp]:
@@ -972,15 +996,17 @@ Proof
   SIMP_TAC std_ss [OPTION_MAP_DEF, NOT_SUC]
 QED
 
-val LFINITE_HAS_LENGTH = store_thm(
-  "LFINITE_HAS_LENGTH",
-  ``!ll. LFINITE ll ==> ?n. LLENGTH ll = SOME n``,
-  SRW_TAC [][LLENGTH]);
+Theorem LFINITE_HAS_LENGTH:
+    !ll. LFINITE ll ==> ?n. LLENGTH ll = SOME n
+Proof
+  SRW_TAC [][LLENGTH]
+QED
 
-val NOT_LFINITE_NO_LENGTH = store_thm(
-  "NOT_LFINITE_NO_LENGTH",
-  ``!ll. ~LFINITE ll ==> (LLENGTH ll = NONE)``,
-  SIMP_TAC (srw_ss()) [LLENGTH]);
+Theorem NOT_LFINITE_NO_LENGTH:
+    !ll. ~LFINITE ll ==> (LLENGTH ll = NONE)
+Proof
+  SIMP_TAC (srw_ss()) [LLENGTH]
+QED
 
 Theorem LFINITE_LLENGTH:
    LFINITE ll <=> ?n. LLENGTH ll = SOME n
@@ -1048,9 +1074,9 @@ Proof
   simp[PULL_EXISTS] >> Cases>>simp[]
 QED
 
-val NOT_LFINITE_APPEND = store_thm(
-  "NOT_LFINITE_APPEND",
-  ``!ll1 ll2. ~LFINITE ll1 ==> (LAPPEND ll1 ll2 = ll1)``,
+Theorem NOT_LFINITE_APPEND:
+    !ll1 ll2. ~LFINITE ll1 ==> (LAPPEND ll1 ll2 = ll1)
+Proof
   REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC [LLIST_BISIMULATION] THEN
   Q.EXISTS_TAC `\ll1 ll2. ~LFINITE ll2 /\  ?ll3. ll1 = LAPPEND ll2 ll3` THEN
   ASM_SIMP_TAC (srw_ss()) [] THEN REPEAT STRIP_TAC THENL [
@@ -1058,7 +1084,8 @@ val NOT_LFINITE_APPEND = store_thm(
     REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC (Q.SPEC `ll4` llist_CASES) THEN
     FULL_SIMP_TAC (srw_ss()) [LFINITE_THM, LAPPEND, LHD_THM, LTL_THM] THEN
     PROVE_TAC []
-  ]);
+  ]
+QED
 
 Theorem LFINITE_LAPPEND_IMP_NIL:
    !ll. LFINITE ll ==> !l2. (LAPPEND ll l2 = ll) ==> (l2 = [||])
@@ -1066,24 +1093,25 @@ Proof
   ho_match_mp_tac LFINITE_INDUCTION >> simp[]
 QED
 
-val LLENGTH_MAP = store_thm(
-  "LLENGTH_MAP",
-  ``!ll f. LLENGTH (LMAP f ll) = LLENGTH ll``,
+Theorem LLENGTH_MAP:
+    !ll f. LLENGTH (LMAP f ll) = LLENGTH ll
+Proof
   REPEAT GEN_TAC THEN Cases_on `LFINITE ll` THENL [
     POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `ll` THEN
     HO_MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
     SIMP_TAC (srw_ss()) [LLENGTH_THM, LMAP],
     PROVE_TAC [NOT_LFINITE_NO_LENGTH, LFINITE_MAP]
-  ]);
+  ]
+QED
 
-val LLENGTH_APPEND = store_thm(
-  "LLENGTH_APPEND",
-  ``!ll1 ll2.
+Theorem LLENGTH_APPEND:
+    !ll1 ll2.
        LLENGTH (LAPPEND ll1 ll2) =
          if LFINITE ll1 /\ LFINITE ll2 then
            SOME (THE (LLENGTH ll1) + THE (LLENGTH ll2))
          else
-           NONE``,
+           NONE
+Proof
   REPEAT GEN_TAC THEN
   Cases_on `LFINITE (LAPPEND ll1 ll2)` THENL [
     POP_ASSUM (fn th => `LFINITE ll1 /\ LFINITE ll2` by
@@ -1098,7 +1126,8 @@ val LLENGTH_APPEND = store_thm(
     `LLENGTH (LAPPEND ll1 ll2) = NONE`
       by PROVE_TAC [NOT_LFINITE_NO_LENGTH] THEN
     FULL_SIMP_TAC (srw_ss()) []
-  ]);
+  ]
+QED
 
 (* ----------------------------------------------------------------------
     mapping in and out of ordinary (finite) lists
@@ -1108,14 +1137,15 @@ val toList = new_definition(
   "toList",
   ``toList ll = if LFINITE ll then LTAKE (THE (LLENGTH ll)) ll else NONE``);
 
-val toList_THM = store_thm(
-  "toList_THM",
-  ``(toList LNIL = SOME []) /\
-    (!h t. toList (LCONS h t) = OPTION_MAP (CONS h) (toList t))``,
+Theorem toList_THM:
+    (toList LNIL = SOME []) /\
+    (!h t. toList (LCONS h t) = OPTION_MAP (CONS h) (toList t))
+Proof
   SIMP_TAC (srw_ss()) [toList, LFINITE_THM, LLENGTH_THM, LTAKE_THM] THEN
   REPEAT GEN_TAC THEN COND_CASES_TAC THEN SIMP_TAC (srw_ss()) [] THEN
   IMP_RES_TAC LFINITE_HAS_LENGTH THEN
-  ASM_SIMP_TAC (srw_ss()) [LTAKE_THM, LHD_THM, LTL_THM]);
+  ASM_SIMP_TAC (srw_ss()) [LTAKE_THM, LHD_THM, LTL_THM]
+QED
 
 Definition fromList_def:
   (fromList [] = LNIL) /\ (fromList (h::t) = LCONS h (fromList t))
@@ -1146,26 +1176,30 @@ Proof
   Induct THEN ASM_SIMP_TAC (srw_ss()) []
 QED
 
-val LLENGTH_fromList = store_thm(
-  "LLENGTH_fromList[simp]",
-  ``!l. LLENGTH (fromList l) = SOME (LENGTH l)``,
-  Induct THEN ASM_SIMP_TAC (srw_ss()) []);
+Theorem LLENGTH_fromList[simp]:
+    !l. LLENGTH (fromList l) = SOME (LENGTH l)
+Proof
+  Induct THEN ASM_SIMP_TAC (srw_ss()) []
+QED
 
-val LTAKE_fromList = store_thm(
-  "LTAKE_fromList",
-  ``!l. LTAKE (LENGTH l) (fromList l) = SOME l``,
-  Induct THEN ASM_SIMP_TAC (srw_ss()) []);
+Theorem LTAKE_fromList:
+    !l. LTAKE (LENGTH l) (fromList l) = SOME l
+Proof
+  Induct THEN ASM_SIMP_TAC (srw_ss()) []
+QED
 
-val from_toList = store_thm(
-  "from_toList",
-  ``!l. toList (fromList l) = SOME l``,
-  Induct THEN ASM_SIMP_TAC (srw_ss()) [toList_THM]);
+Theorem from_toList:
+    !l. toList (fromList l) = SOME l
+Proof
+  Induct THEN ASM_SIMP_TAC (srw_ss()) [toList_THM]
+QED
 
-val LFINITE_toList = store_thm(
-  "LFINITE_toList",
-  ``!ll. LFINITE ll ==> ?l. toList ll = SOME l``,
+Theorem LFINITE_toList:
+    !ll. LFINITE ll ==> ?l. toList ll = SOME l
+Proof
   HO_MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
-  REPEAT STRIP_TAC THEN ASM_SIMP_TAC (srw_ss()) [toList_THM]);
+  REPEAT STRIP_TAC THEN ASM_SIMP_TAC (srw_ss()) [toList_THM]
+QED
 
 Theorem LFINITE_toList_SOME:
    LFINITE ll <=> IS_SOME (toList ll)
@@ -1174,12 +1208,13 @@ Proof
   rw[] >> fs[toList]
 QED
 
-val to_fromList = store_thm(
-  "to_fromList",
-  ``!ll. LFINITE ll ==> (fromList (THE (toList ll)) = ll)``,
+Theorem to_fromList:
+    !ll. LFINITE ll ==> (fromList (THE (toList ll)) = ll)
+Proof
   HO_MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
   SIMP_TAC (srw_ss()) [toList_THM] THEN REPEAT STRIP_TAC THEN
-  IMP_RES_TAC LFINITE_toList THEN FULL_SIMP_TAC (srw_ss()) []);
+  IMP_RES_TAC LFINITE_toList THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
 Theorem LTAKE_LAPPEND2:
   !n l1 l2.
@@ -1253,19 +1288,21 @@ Proof
   ASM_SIMP_TAC std_ss [FUNPOW_BIND_NONE]
 QED
 
-val LDROP_THM = store_thm(
-  "LDROP_THM",
-  ``(!ll. LDROP 0 ll = SOME ll) /\
+Theorem LDROP_THM:
+    (!ll. LDROP 0 ll = SOME ll) /\
     (!n. LDROP (SUC n) LNIL = NONE) /\
-    (!n h t. LDROP (SUC n) (LCONS h t) = LDROP n t)``,
-  SIMP_TAC (srw_ss()) [LDROP, LTL_THM]);
+    (!n h t. LDROP (SUC n) (LCONS h t) = LDROP n t)
+Proof
+  SIMP_TAC (srw_ss()) [LDROP, LTL_THM]
+QED
 val _ = export_rewrites ["LDROP_THM"]
 
-val LDROP1_THM = store_thm(
-  "LDROP1_THM",
-  ``LDROP 1 = LTL``,
+Theorem LDROP1_THM:
+    LDROP 1 = LTL
+Proof
   SIMP_TAC bool_ss [DECIDE ``1 = SUC 0``,
-    LDROP_FUNPOW, FUN_EQ_THM, FUNPOW, OPTION_BIND_def]);
+    LDROP_FUNPOW, FUN_EQ_THM, FUNPOW, OPTION_BIND_def]
+QED
 
 Theorem LNTH_HD_LDROP:
    !n ll. LNTH n ll = OPTION_BIND (LDROP n ll) LHD
@@ -1277,57 +1314,61 @@ Proof
   ASM_SIMP_TAC std_ss [FUNPOW_BIND_NONE]
 QED
 
-val NOT_LFINITE_TAKE = store_thm(
-  "NOT_LFINITE_TAKE",
-  ``!ll. ~LFINITE ll ==> !n. ?y. LTAKE n ll = SOME y``,
+Theorem NOT_LFINITE_TAKE:
+    !ll. ~LFINITE ll ==> !n. ?y. LTAKE n ll = SOME y
+Proof
   SIMP_TAC (srw_ss()) [LFINITE] THEN REPEAT STRIP_TAC THEN
   POP_ASSUM (ASSUME_TAC o Q.SPEC `n`) THEN
-  Cases_on `LTAKE n ll` THEN FULL_SIMP_TAC (srw_ss()) []);
+  Cases_on `LTAKE n ll` THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val LFINITE_TAKE = store_thm(
-  "LFINITE_TAKE",
-  ``!n ll. LFINITE ll /\ n <= THE (LLENGTH ll) ==>
-           ?y. LTAKE n ll = SOME y``,
+Theorem LFINITE_TAKE:
+    !n ll. LFINITE ll /\ n <= THE (LLENGTH ll) ==>
+           ?y. LTAKE n ll = SOME y
+Proof
   Induct THEN SIMP_TAC (srw_ss()) [LTAKE_THM] THEN GEN_TAC THEN
   STRUCT_CASES_TAC (Q.SPEC `ll` llist_CASES) THEN
   SIMP_TAC (srw_ss()) [] THEN
   REPEAT STRIP_TAC THEN IMP_RES_TAC LFINITE_HAS_LENGTH THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN
   `?z. LTAKE n t = SOME z` by ASM_SIMP_TAC (srw_ss()) [] THEN
-  ASM_SIMP_TAC (srw_ss()) []);
+  ASM_SIMP_TAC (srw_ss()) []
+QED
 
-val NOT_LFINITE_DROP = store_thm(
-  "NOT_LFINITE_DROP",
-  ``!ll. ~LFINITE ll ==> !n. ?y. LDROP n ll = SOME y``,
+Theorem NOT_LFINITE_DROP:
+    !ll. ~LFINITE ll ==> !n. ?y. LDROP n ll = SOME y
+Proof
   CONV_TAC (BINDER_CONV RIGHT_IMP_FORALL_CONV THENC
             SWAP_VARS_CONV) THEN
   Induct THEN SIMP_TAC (srw_ss()) [LDROP] THEN GEN_TAC THEN
   STRUCT_CASES_TAC (Q.SPEC `ll` llist_CASES) THEN
-  ASM_SIMP_TAC (srw_ss()) []);
+  ASM_SIMP_TAC (srw_ss()) []
+QED
 
-val LFINITE_DROP = store_thm(
-  "LFINITE_DROP",
-  ``!n ll. LFINITE ll /\ n <= THE (LLENGTH ll) ==>
-           ?y. LDROP n ll = SOME y``,
+Theorem LFINITE_DROP:
+    !n ll. LFINITE ll /\ n <= THE (LLENGTH ll) ==>
+           ?y. LDROP n ll = SOME y
+Proof
   Induct THEN SIMP_TAC (srw_ss()) [LDROP_THM] THEN GEN_TAC THEN
   STRUCT_CASES_TAC (Q.SPEC `ll` llist_CASES) THEN
   SIMP_TAC (srw_ss()) [LLENGTH_THM, LFINITE_THM, LDROP_THM] THEN
   REPEAT STRIP_TAC THEN IMP_RES_TAC LFINITE_HAS_LENGTH THEN
-  FULL_SIMP_TAC (srw_ss()) []);
+  FULL_SIMP_TAC (srw_ss()) []
+QED
 
 val option_case_NONE = prove(
   ``!f x y. (option_CASE x NONE f = SOME y) =
             (?z. (x = SOME z) /\ (f z = SOME y))``,
   REPEAT GEN_TAC THEN Cases_on `x` THEN SIMP_TAC (srw_ss()) []);
 
-val LTAKE_DROP = store_thm(
-  "LTAKE_DROP",
-  ``(!n ll:'a llist.
+Theorem LTAKE_DROP:
+    (!n ll:'a llist.
         ~LFINITE ll ==>
         (LAPPEND (fromList (THE (LTAKE n ll))) (THE (LDROP n ll)) = ll)) /\
     (!n ll:'a llist.
         LFINITE ll /\ n <= THE (LLENGTH ll) ==>
-        (LAPPEND (fromList (THE (LTAKE n ll))) (THE (LDROP n ll)) = ll))``,
+        (LAPPEND (fromList (THE (LTAKE n ll))) (THE (LDROP n ll)) = ll))
+Proof
   CONJ_TAC THEN Induct THEN SRW_TAC [][] THENL [
     Q.SPEC_THEN `ll` FULL_STRUCT_CASES_TAC llist_CASES THEN
     FULL_SIMP_TAC (srw_ss()) [] THEN
@@ -1343,17 +1384,20 @@ val LTAKE_DROP = store_thm(
     `?z. LTAKE n t = SOME z` by ASM_SIMP_TAC (srw_ss()) [LFINITE_TAKE] THEN
     FULL_SIMP_TAC (srw_ss()) [] THEN
     `z = THE (LTAKE n t)` by ASM_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][]
-  ]);
+  ]
+QED
 
-val LDROP_ADD = store_thm("LDROP_ADD",
-  ``!k1 k2 x.
+Theorem LDROP_ADD:
+    !k1 k2 x.
       LDROP (k1 + k2) x = case LDROP k1 x of
                           | NONE => NONE
-                          | SOME ll => LDROP k2 ll``,
+                          | SOME ll => LDROP k2 ll
+Proof
   ONCE_REWRITE_TAC [ADD_COMM] THEN
   REWRITE_TAC [LDROP_FUNPOW, FUNPOW_ADD] THEN
   REPEAT GEN_TAC THEN CASE_TAC THEN
-  REWRITE_TAC [FUNPOW_BIND_NONE]) ;
+  REWRITE_TAC [FUNPOW_BIND_NONE]
+QED
 
 Theorem LDROP_SOME_LLENGTH:
    (LDROP n ll = SOME l) /\ (LLENGTH ll = SOME m) ==>
@@ -1457,9 +1501,9 @@ Proof
   SRW_TAC [][]
 QED
 
-val exists_LNTH = store_thm(
-  "exists_LNTH",
-  ``!l. exists P l = ?n e. (SOME e = LNTH n l) /\ P e``,
+Theorem exists_LNTH:
+    !l. exists P l = ?n e. (SOME e = LNTH n l) /\ P e
+Proof
   SIMP_TAC (srw_ss() ++ DNF_ss) [EQ_IMP_THM] THEN CONJ_TAC THENL [
     HO_MATCH_MP_TAC exists_ind THEN SRW_TAC [][] THENL [
       MAP_EVERY Q.EXISTS_TAC [`0`, `h`] THEN SRW_TAC [][],
@@ -1470,13 +1514,15 @@ val exists_LNTH = store_thm(
     Induct THEN REPEAT GEN_TAC THEN
     Q.SPEC_THEN `l` STRUCT_CASES_TAC llist_CASES THEN
     SRW_TAC [][] THEN METIS_TAC []
-  ]);
+  ]
+QED
 
-val MONO_exists = store_thm(
-  "MONO_exists",
-  ``(!x. P x ==> Q x) ==> (exists P l ==> exists Q l)``,
+Theorem MONO_exists:
+    (!x. P x ==> Q x) ==> (exists P l ==> exists Q l)
+Proof
   STRIP_TAC THEN Q.ID_SPEC_TAC `l` THEN HO_MATCH_MP_TAC exists_ind THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 val _ = IndDefLib.export_mono "MONO_exists"
 
 val exists_strong_ind = save_thm(
@@ -1485,9 +1531,9 @@ val exists_strong_ind = save_thm(
              |> SIMP_RULE (srw_ss()) []
              |> Q.GEN `Q` |> Q.GEN `P`);
 
-val exists_LDROP = store_thm(
-  "exists_LDROP",
-  ``exists P ll <=> ?n a t. (LDROP n ll = SOME (a:::t)) /\ P a``,
+Theorem exists_LDROP:
+    exists P ll <=> ?n a t. (LDROP n ll = SOME (a:::t)) /\ P a
+Proof
   EQ_TAC THENL [
     Q_TAC SUFF_TAC
        `!ll. exists P ll ==> ?n a t. (LDROP n ll = SOME (a:::t)) /\ P a`
@@ -1502,7 +1548,8 @@ val exists_LDROP = store_thm(
     Induct THEN SRW_TAC [][] THEN
     Q.SPEC_THEN `ll` FULL_STRUCT_CASES_TAC llist_CASES THEN
     FULL_SIMP_TAC (srw_ss()) [LDROP]
-  ]);
+  ]
+QED
 
 Theorem exists_thm_strong:
   exists P ll <=> ?n a t l. LDROP n ll = SOME (a:::t) /\ P a /\
@@ -1542,16 +1589,17 @@ End
 val _ = overload_on ("LL_ALL", ``every``)
 val _ = overload_on ("every", ``every``)
 
-val every_coind = store_thm(
-  "every_coind",
-  ``!P Q.
+Theorem every_coind:
+    !P Q.
        (!h t. Q (h:::t) ==> P h /\ Q t) ==>
-       !ll. Q ll ==> every P ll``,
+       !ll. Q ll ==> every P ll
+Proof
   SIMP_TAC (srw_ss()) [every_def] THEN
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `!ll. exists ($~ o P) ll ==> ~Q ll` THEN1 METIS_TAC [] THEN
   HO_MATCH_MP_TAC exists_ind THEN
-  SRW_TAC [][DECIDE ``(~p ==> ~q) = (q ==> p)``] THEN METIS_TAC []);
+  SRW_TAC [][DECIDE ``(~p ==> ~q) = (q ==> p)``] THEN METIS_TAC []
+QED
 
 Theorem every_thm[simp]:
     (every P [||] = T) /\
@@ -1560,11 +1608,12 @@ Proof SRW_TAC [][every_def]
 QED
 val LL_ALL_THM = save_thm("LL_ALL_THM", every_thm)
 
-val MONO_every = store_thm(
-  "MONO_every",
-  ``(!x. P x ==> Q x) ==> (every P l ==> every Q l)``,
+Theorem MONO_every:
+    (!x. P x ==> Q x) ==> (every P l ==> every Q l)
+Proof
   STRIP_TAC THEN Q.ID_SPEC_TAC `l` THEN HO_MATCH_MP_TAC every_coind THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 val _ = export_mono "MONO_every"
 
 val every_strong_coind = save_thm(
@@ -1704,42 +1753,46 @@ val LFILTER = new_specification
       SRW_TAC [][]
     ]));
 
-val LFILTER_THM = store_thm(
-  "LFILTER_THM",
-  ``(!P. LFILTER P LNIL = LNIL) /\
+Theorem LFILTER_THM:
+    (!P. LFILTER P LNIL = LNIL) /\
     (!P h t. LFILTER P (LCONS h t) = if P h then LCONS h (LFILTER P t)
-                                     else LFILTER P t)``,
+                                     else LFILTER P t)
+Proof
   REPEAT STRIP_TAC THEN CONV_TAC (LHS_CONV (REWR_CONV LFILTER)) THEN
   SIMP_TAC (srw_ss()) [] THEN
   Cases_on `P h` THEN ASM_SIMP_TAC (srw_ss()) [] THEN
   Cases_on `exists P t` THEN ASM_SIMP_TAC (srw_ss()) [] THEN
-  ONCE_REWRITE_TAC [LFILTER] THEN ASM_SIMP_TAC (srw_ss()) []);
+  ONCE_REWRITE_TAC [LFILTER] THEN ASM_SIMP_TAC (srw_ss()) []
+QED
 val _ = export_rewrites ["LFILTER_THM"]
 
-val LFILTER_NIL = store_thm(
-  "LFILTER_NIL",
-  ``!P ll. LL_ALL ($~ o P) ll ==> (LFILTER P ll = LNIL)``,
+Theorem LFILTER_NIL:
+    !P ll. LL_ALL ($~ o P) ll ==> (LFILTER P ll = LNIL)
+Proof
   ONCE_REWRITE_TAC [LFILTER, every_def] THEN
   `!P. $~ o $~ o P = P` by (GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN
                             SIMP_TAC (srw_ss()) []) THEN
-  ASM_SIMP_TAC (srw_ss()) []);
+  ASM_SIMP_TAC (srw_ss()) []
+QED
 
-val LFILTER_EQ_NIL = store_thm(
-  "LFILTER_EQ_NIL",
-  ``!ll. (LFILTER P ll = LNIL) = every ((~) o P) ll``,
+Theorem LFILTER_EQ_NIL:
+    !ll. (LFILTER P ll = LNIL) = every ((~) o P) ll
+Proof
   SIMP_TAC (srw_ss() ++ DNF_ss) [EQ_IMP_THM, LFILTER_NIL] THEN
   HO_MATCH_MP_TAC every_coind THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
-val LFILTER_APPEND = store_thm(
-  "LFILTER_APPEND",
-  ``!P ll1 ll2. LFINITE ll1 ==>
+Theorem LFILTER_APPEND:
+    !P ll1 ll2. LFINITE ll1 ==>
                 (LFILTER P (LAPPEND ll1 ll2) =
-                 LAPPEND (LFILTER P ll1) (LFILTER P ll2))``,
+                 LAPPEND (LFILTER P ll1) (LFILTER P ll2))
+Proof
   REPEAT GEN_TAC THEN Q.ID_SPEC_TAC `ll1` THEN
   HO_MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
   SIMP_TAC (srw_ss()) [] THEN REPEAT STRIP_TAC THEN
-  COND_CASES_TAC THEN ASM_SIMP_TAC (srw_ss()) []);
+  COND_CASES_TAC THEN ASM_SIMP_TAC (srw_ss()) []
+QED
 
 Theorem LFILTER_fromList[simp]:
   !p l. LFILTER p (fromList l) = fromList (FILTER p l)
@@ -1907,21 +1960,22 @@ val LFLATTEN = new_specification
       ] THEN SRW_TAC [][LET_THM]
     ]));
 
-val LFLATTEN_THM = store_thm(
-  "LFLATTEN_THM",
-  ``(LFLATTEN LNIL = LNIL) /\
+Theorem LFLATTEN_THM:
+    (LFLATTEN LNIL = LNIL) /\
     (!tl. LFLATTEN (LCONS LNIL t) = LFLATTEN t) /\
     (!h t tl. LFLATTEN (LCONS (LCONS h t) tl) =
-              LCONS h (LFLATTEN (LCONS t tl)))``,
+              LCONS h (LFLATTEN (LCONS t tl)))
+Proof
   REPEAT STRIP_TAC THEN CONV_TAC (LHS_CONV (REWR_CONV LFLATTEN)) THEN
   SIMP_TAC (srw_ss()) [LL_ALL_THM, LHD_THM, LTL_THM] THEN
   COND_CASES_TAC THEN SIMP_TAC (srw_ss()) [] THEN
-  ONCE_REWRITE_TAC [LFLATTEN] THEN ASM_SIMP_TAC (srw_ss()) []);
+  ONCE_REWRITE_TAC [LFLATTEN] THEN ASM_SIMP_TAC (srw_ss()) []
+QED
 val _ = export_rewrites ["LFLATTEN_THM"]
 
-val LFLATTEN_APPEND = store_thm(
-  "LFLATTEN_APPEND",
-  ``!h t. LFLATTEN (LCONS h t) = LAPPEND h (LFLATTEN t)``,
+Theorem LFLATTEN_APPEND:
+    !h t. LFLATTEN (LCONS h t) = LAPPEND h (LFLATTEN t)
+Proof
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC [LLIST_STRONG_BISIMULATION] THEN
   Q.EXISTS_TAC `\ll1 ll2. ?h t. (ll1 = LFLATTEN (LCONS h t)) /\
                                 (ll2 = LAPPEND h (LFLATTEN t))` THEN
@@ -1935,28 +1989,31 @@ val LFLATTEN_APPEND = store_thm(
         `?h0 t0. h = LCONS h0 t0` by PROVE_TAC [llist_CASES, th]) THEN
       SRW_TAC [][] THEN PROVE_TAC []
     ]
-  ]);
+  ]
+QED
 val _ = export_rewrites ["LFLATTEN_APPEND"]
 
 
-val LFLATTEN_EQ_NIL = store_thm(
-  "LFLATTEN_EQ_NIL",
-  ``!ll. (LFLATTEN ll = LNIL) = LL_ALL ($= LNIL) ll``,
+Theorem LFLATTEN_EQ_NIL:
+    !ll. (LFLATTEN ll = LNIL) = LL_ALL ($= LNIL) ll
+Proof
   GEN_TAC THEN EQ_TAC THENL [
     Q.ID_SPEC_TAC `ll` THEN
     HO_MATCH_MP_TAC every_coind THEN
     SRW_TAC [][],
     ONCE_REWRITE_TAC [LFLATTEN] THEN SIMP_TAC (srw_ss()) []
- ]);
+ ]
+QED
 
-val LFLATTEN_SINGLETON = store_thm(
-  "LFLATTEN_SINGLETON",
-  ``!h. LFLATTEN (LCONS h LNIL) = h``,
+Theorem LFLATTEN_SINGLETON:
+    !h. LFLATTEN (LCONS h LNIL) = h
+Proof
   GEN_TAC THEN ONCE_REWRITE_TAC [LLIST_BISIMULATION] THEN
   Q.EXISTS_TAC `\ll1 ll2. ll1 = LFLATTEN (LCONS ll2 LNIL)` THEN
   SIMP_TAC (srw_ss()) [] THEN GEN_TAC THEN
   STRUCT_CASES_TAC (Q.SPEC `ll4` llist_CASES) THEN
-  SIMP_TAC (srw_ss()) [LFLATTEN_THM, LHD_THM, LTL_THM]);
+  SIMP_TAC (srw_ss()) [LFLATTEN_THM, LHD_THM, LTL_THM]
+QED
 
 Theorem LFINITE_LFLATTEN_EQN:
   !lll:'a llist llist.

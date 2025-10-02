@@ -770,11 +770,13 @@ fun NET_PROVE_TAC [def] =
   REWRITE_TAC [ETA_AX] THEN
   ASM_SIMP_TAC std_ss [GSYM(CONJUNCT2 net_tybij)];
 
-val AT = store_thm ("AT",
- ``!a:real x y.
-        netord(at a) x y <=> &0 < dist(x,a) /\ dist(x,a) <= dist(y,a)``,
+Theorem AT:
+   !a:real x y.
+        netord(at a) x y <=> &0 < dist(x,a) /\ dist(x,a) <= dist(y,a)
+Proof
   GEN_TAC THEN NET_PROVE_TAC[at] THEN
-  METIS_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS, REAL_LET_TRANS]);
+  METIS_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS, REAL_LET_TRANS]
+QED
 
 (* Connection between HOL4's “tendsto” and HOL-Light's “at”, cf. [at_def] *)
 Theorem tendsto_mr1 :
@@ -784,49 +786,65 @@ Proof
  >> METIS_TAC [DIST_SYM]
 QED
 
-val AT_INFINITY = store_thm ("AT_INFINITY",
- ``!x y. netord at_infinity x y <=> abs(x) >= abs(y)``,
+Theorem AT_INFINITY:
+   !x y. netord at_infinity x y <=> abs(x) >= abs(y)
+Proof
   NET_PROVE_TAC[at_infinity] THEN
   REWRITE_TAC[real_ge, REAL_LE_REFL] THEN
-  MESON_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS]);
+  MESON_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS]
+QED
 
-val AT_POSINFINITY = store_thm ("AT_POSINFINITY",
- ``!x y. netord at_posinfinity x y <=> x >= y``,
+Theorem AT_POSINFINITY:
+   !x y. netord at_posinfinity x y <=> x >= y
+Proof
   NET_PROVE_TAC[at_posinfinity] THEN
   REWRITE_TAC[real_ge, REAL_LE_REFL] THEN
-  MESON_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS]);
+  MESON_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS]
+QED
 
-val AT_NEGINFINITY = store_thm ("AT_NEGINFINITY",
- ``!x y. netord at_neginfinity x y <=> x <= y``,
+Theorem AT_NEGINFINITY:
+   !x y. netord at_neginfinity x y <=> x <= y
+Proof
   NET_PROVE_TAC[at_neginfinity] THEN
   REWRITE_TAC[real_ge, REAL_LE_REFL] THEN
-  MESON_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS]);
+  MESON_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS]
+QED
 
-val SEQUENTIALLY = store_thm ("SEQUENTIALLY",
- ``!m n. netord sequentially m n <=> m >= n``,
+Theorem SEQUENTIALLY:
+   !m n. netord sequentially m n <=> m >= n
+Proof
   NET_PROVE_TAC[sequentially] THEN REWRITE_TAC[GREATER_EQ, LESS_EQ_REFL] THEN
-  MESON_TAC[LESS_EQ_CASES, LESS_EQ_REFL, LESS_EQ_TRANS]);
+  MESON_TAC[LESS_EQ_CASES, LESS_EQ_REFL, LESS_EQ_TRANS]
+QED
 
-val WITHIN = store_thm ("WITHIN",
- ``!n s x y. netord(n within s) x y <=> netord n x y /\ x IN s``,
+Theorem WITHIN:
+   !n s x y. netord(n within s) x y <=> netord n x y /\ x IN s
+Proof
   GEN_TAC THEN GEN_TAC THEN SIMP_TAC std_ss [within, GSYM FUN_EQ_THM] THEN
   REWRITE_TAC[GSYM(CONJUNCT2 net_tybij), ETA_AX] THEN
-  METIS_TAC[NET]);
+  METIS_TAC[NET]
+QED
 
-val IN_DIRECTION = store_thm ("IN_DIRECTION",
- ``!a v x y. netord(a in_direction v) x y <=>
+Theorem IN_DIRECTION:
+   !a v x y. netord(a in_direction v) x y <=>
                 &0 < dist(x,a) /\ dist(x,a) <= dist(y,a) /\
-                 ?c. &0 <= c /\ (x - a = c * v)``,
-  SIMP_TAC std_ss [WITHIN, AT, in_direction, GSPECIFICATION] THEN METIS_TAC []);
+                 ?c. &0 <= c /\ (x - a = c * v)
+Proof
+  SIMP_TAC std_ss [WITHIN, AT, in_direction, GSPECIFICATION] THEN METIS_TAC []
+QED
 
-val WITHIN_UNIV = store_thm ("WITHIN_UNIV",
- ``!x:real. (at x within UNIV) = at x``,
-  REWRITE_TAC[within, at, IN_UNIV] THEN REWRITE_TAC[ETA_AX, net_tybij]);
+Theorem WITHIN_UNIV:
+   !x:real. (at x within UNIV) = at x
+Proof
+  REWRITE_TAC[within, at, IN_UNIV] THEN REWRITE_TAC[ETA_AX, net_tybij]
+QED
 
-val WITHIN_WITHIN = store_thm ("WITHIN_WITHIN",
- ``!net s t. ((net within s) within t) = (net within (s INTER t))``,
+Theorem WITHIN_WITHIN:
+   !net s t. ((net within s) within t) = (net within (s INTER t))
+Proof
   ONCE_REWRITE_TAC[within] THEN
-  REWRITE_TAC[WITHIN, IN_INTER, GSYM CONJ_ASSOC]);
+  REWRITE_TAC[WITHIN, IN_INTER, GSYM CONJ_ASSOC]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Identify trivial limits, where we can't approach arbitrarily closely.     *)

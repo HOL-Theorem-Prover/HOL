@@ -89,9 +89,11 @@ Definition invert_comparison_def:
 End
 val _ = export_rewrites["invert_comparison_def"]
 
-val invert_eq_EQUAL = store_thm("invert_eq_EQUAL[simp]",
-  ``!x. (invert_comparison x = EQUAL) <=> (x = EQUAL)``,
-  Cases >> simp[])
+Theorem invert_eq_EQUAL[simp]:
+    !x. (invert_comparison x = EQUAL) <=> (x = EQUAL)
+Proof
+  Cases >> simp[]
+QED
 
 val ordering_distinct = DB.fetch "-" "ordering_distinct";
 

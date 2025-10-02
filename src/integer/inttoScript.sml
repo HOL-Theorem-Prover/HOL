@@ -58,64 +58,94 @@ ACCEPT_TAC StrongLinearOrder_int_lt);
 Definition intto:  intto = TO intOrd
 End
 
-val apintto_thm = store_thm ("apintto_thm", ``apto intto = intOrd``,
-REWRITE_TAC [intto, GSYM TO_apto_TO_ID, TO_intOrd]);
+Theorem apintto_thm:   apto intto = intOrd
+Proof
+REWRITE_TAC [intto, GSYM TO_apto_TO_ID, TO_intOrd]
+QED
 
-val pos_pos_thm = store_thm ("pos_pos_thm",
-``!m:num n:num. intOrd (&m) (&n) = numOrd m n``,
- SRW_TAC [] [TO_of_LinearOrder, intOrd, numOrd]);
+Theorem pos_pos_thm:
+  !m:num n:num. intOrd (&m) (&n) = numOrd m n
+Proof
+ SRW_TAC [] [TO_of_LinearOrder, intOrd, numOrd]
+QED
 
-val neg_neg_thm = store_thm ("neg_neg_thm",
-``!m:num n:num. intOrd (numeric_negate (&m)) (numeric_negate (&n)) =
-                numOrd n m``,
- SRW_TAC [] [TO_of_LinearOrder, intOrd, numOrd]);
+Theorem neg_neg_thm:
+  !m:num n:num. intOrd (numeric_negate (&m)) (numeric_negate (&n)) =
+                numOrd n m
+Proof
+ SRW_TAC [] [TO_of_LinearOrder, intOrd, numOrd]
+QED
 
-val BIT1_nz = store_thm ("BIT1_nz",
-``!n. BIT1 n <> 0``,
+Theorem BIT1_nz:
+  !n. BIT1 n <> 0
+Proof
 SRW_TAC [] [arithmeticTheory.NOT_ZERO_LT_ZERO, numeralTheory.numeral_lt,
-                    GSYM arithmeticTheory.ALT_ZERO]);
+                    GSYM arithmeticTheory.ALT_ZERO]
+QED
 
-val BIT2_nz = store_thm ("BIT2_nz",
-``!n. BIT2 n <> 0``,
+Theorem BIT2_nz:
+  !n. BIT2 n <> 0
+Proof
 SRW_TAC [] [arithmeticTheory.NOT_ZERO_LT_ZERO, numeralTheory.numeral_lt,
-                    GSYM arithmeticTheory.ALT_ZERO]);
+                    GSYM arithmeticTheory.ALT_ZERO]
+QED
 
-val neg_lt_BIT1_thm = store_thm ("neg_lt_BIT1_thm",
-``!m:num n:num. intOrd (numeric_negate (&m)) (& (BIT1 n)) = LESS``,
-SRW_TAC [] [TO_of_LinearOrder, intOrd, BIT1_nz]);
+Theorem neg_lt_BIT1_thm:
+  !m:num n:num. intOrd (numeric_negate (&m)) (& (BIT1 n)) = LESS
+Proof
+SRW_TAC [] [TO_of_LinearOrder, intOrd, BIT1_nz]
+QED
 
-val neg_lt_BIT2_thm = store_thm ("neg_lt_BIT2_thm",
-``!m:num n:num. intOrd (numeric_negate (&m)) (& (BIT2 n)) = LESS``,
-SRW_TAC [] [TO_of_LinearOrder, intOrd, BIT2_nz]);
+Theorem neg_lt_BIT2_thm:
+  !m:num n:num. intOrd (numeric_negate (&m)) (& (BIT2 n)) = LESS
+Proof
+SRW_TAC [] [TO_of_LinearOrder, intOrd, BIT2_nz]
+QED
 
-val neg_BIT1_lt_thm = store_thm ("neg_BIT1_lt_thm",
-``!m:num n:num. intOrd (numeric_negate (& (BIT1 m))) (& n) = LESS``,
-SRW_TAC [] [TO_of_LinearOrder, intOrd,  BIT1_nz]);
+Theorem neg_BIT1_lt_thm:
+  !m:num n:num. intOrd (numeric_negate (& (BIT1 m))) (& n) = LESS
+Proof
+SRW_TAC [] [TO_of_LinearOrder, intOrd,  BIT1_nz]
+QED
 
-val neg_BIT2_lt_thm = store_thm ("neg_BIT2_lt_thm",
-``!m:num n:num. intOrd (numeric_negate (& (BIT2 m))) (& n) = LESS``,
-SRW_TAC [] [TO_of_LinearOrder, intOrd, BIT2_nz]);
+Theorem neg_BIT2_lt_thm:
+  !m:num n:num. intOrd (numeric_negate (& (BIT2 m))) (& n) = LESS
+Proof
+SRW_TAC [] [TO_of_LinearOrder, intOrd, BIT2_nz]
+QED
 
-val neg_ZERO_eq_ZERO_thm = store_thm ("neg_ZERO_eq_ZERO_thm",
-``intOrd (numeric_negate (& ZERO)) (& ZERO) = EQUAL``,
-SRW_TAC [] [TO_of_LinearOrder, intOrd, GSYM arithmeticTheory.ALT_ZERO]);
+Theorem neg_ZERO_eq_ZERO_thm:
+  intOrd (numeric_negate (& ZERO)) (& ZERO) = EQUAL
+Proof
+SRW_TAC [] [TO_of_LinearOrder, intOrd, GSYM arithmeticTheory.ALT_ZERO]
+QED
 
-val BIT1_gt_neg_thm = store_thm ("BIT1_gt_neg_thm",
-``!m:num n:num. intOrd (& (BIT1 m)) (numeric_negate (&n)) = GREATER``,
-SRW_TAC [] [TO_of_LinearOrder, intOrd, BIT1_nz]);
+Theorem BIT1_gt_neg_thm:
+  !m:num n:num. intOrd (& (BIT1 m)) (numeric_negate (&n)) = GREATER
+Proof
+SRW_TAC [] [TO_of_LinearOrder, intOrd, BIT1_nz]
+QED
 
-val BIT2_gt_neg_thm = store_thm ("BIT2_gt_neg_thm",
-``!m:num n:num. intOrd (& (BIT2 m)) (numeric_negate (&n)) = GREATER``,
-SRW_TAC [] [TO_of_LinearOrder, intOrd, BIT2_nz]);
+Theorem BIT2_gt_neg_thm:
+  !m:num n:num. intOrd (& (BIT2 m)) (numeric_negate (&n)) = GREATER
+Proof
+SRW_TAC [] [TO_of_LinearOrder, intOrd, BIT2_nz]
+QED
 
-val gt_neg_BIT1_thm = store_thm ("gt_neg_BIT1_thm",
-``!m:num n:num. intOrd (& m) (numeric_negate (& (BIT1 n))) = GREATER``,
-SRW_TAC [] [TO_of_LinearOrder, intOrd, BIT1_nz]);
+Theorem gt_neg_BIT1_thm:
+  !m:num n:num. intOrd (& m) (numeric_negate (& (BIT1 n))) = GREATER
+Proof
+SRW_TAC [] [TO_of_LinearOrder, intOrd, BIT1_nz]
+QED
 
-val gt_neg_BIT2_thm = store_thm ("gt_neg_BIT2_thm",
-``!m:num n:num. intOrd (& m) (numeric_negate (& (BIT2 n))) = GREATER``,
-SRW_TAC [] [TO_of_LinearOrder, intOrd, BIT2_nz]);
+Theorem gt_neg_BIT2_thm:
+  !m:num n:num. intOrd (& m) (numeric_negate (& (BIT2 n))) = GREATER
+Proof
+SRW_TAC [] [TO_of_LinearOrder, intOrd, BIT2_nz]
+QED
 
-val ZERO_eq_neg_ZERO_thm = store_thm ("ZERO_eq_neg_ZERO_thm",
-``intOrd (& ZERO) (numeric_negate (& ZERO)) = EQUAL``,
-SRW_TAC [] [TO_of_LinearOrder, intOrd, GSYM arithmeticTheory.ALT_ZERO]);
+Theorem ZERO_eq_neg_ZERO_thm:
+  intOrd (& ZERO) (numeric_negate (& ZERO)) = EQUAL
+Proof
+SRW_TAC [] [TO_of_LinearOrder, intOrd, GSYM arithmeticTheory.ALT_ZERO]
+QED

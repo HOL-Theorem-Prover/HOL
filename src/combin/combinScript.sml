@@ -112,15 +112,17 @@ QED
 
 Theorem o_ASSOC' = GSYM o_ASSOC
 
-val o_ABS_L = store_thm(
-  "o_ABS_L",
-  ``(\x:'a. f x:'c) o (g:'b -> 'a) = (\x. f (g x))``,
-  REWRITE_TAC [FUN_EQ_THM, o_THM] THEN BETA_TAC THEN REWRITE_TAC []);
+Theorem o_ABS_L:
+    (\x:'a. f x:'c) o (g:'b -> 'a) = (\x. f (g x))
+Proof
+  REWRITE_TAC [FUN_EQ_THM, o_THM] THEN BETA_TAC THEN REWRITE_TAC []
+QED
 
-val o_ABS_R = store_thm(
-  "o_ABS_R",
-  ``f o (\x. g x) = (\x. f (g x))``,
-  REWRITE_TAC [FUN_EQ_THM, o_THM] THEN BETA_TAC THEN REWRITE_TAC []);
+Theorem o_ABS_R:
+    f o (\x. g x) = (\x. f (g x))
+Proof
+  REWRITE_TAC [FUN_EQ_THM, o_THM] THEN BETA_TAC THEN REWRITE_TAC []
+QED
 
 Theorem K_THM[compute]:
     !x y. K x y = x
@@ -147,15 +149,17 @@ Proof
    THEN REFL_TAC
 QED
 
-val S_ABS_L = store_thm(
-  "S_ABS_L",
-  ``S (\x. f x) g = \x. (f x) (g x)``,
-  REWRITE_TAC [FUN_EQ_THM, S_THM] THEN BETA_TAC THEN REWRITE_TAC []);
+Theorem S_ABS_L:
+    S (\x. f x) g = \x. (f x) (g x)
+Proof
+  REWRITE_TAC [FUN_EQ_THM, S_THM] THEN BETA_TAC THEN REWRITE_TAC []
+QED
 
-val S_ABS_R = store_thm(
-  "S_ABS_R",
-  ``S f (\x. g x) = \x. (f x) (g x)``,
-  REWRITE_TAC [FUN_EQ_THM, S_THM] THEN BETA_TAC THEN REWRITE_TAC[]);
+Theorem S_ABS_R:
+    S f (\x. g x) = \x. (f x) (g x)
+Proof
+  REWRITE_TAC [FUN_EQ_THM, S_THM] THEN BETA_TAC THEN REWRITE_TAC[]
+QED
 
 Theorem C_THM:
     !f x y. C f x y = f y x
@@ -166,10 +170,11 @@ Proof
    THEN REFL_TAC
 QED
 
-val C_ABS_L = store_thm(
-  "C_ABS_L",
-  ``C (\x. f x) y = (\x. f x y)``,
-  REWRITE_TAC [FUN_EQ_THM, C_THM] THEN BETA_TAC THEN REWRITE_TAC []);
+Theorem C_ABS_L:
+    C (\x. f x) y = (\x. f x y)
+Proof
+  REWRITE_TAC [FUN_EQ_THM, C_THM] THEN BETA_TAC THEN REWRITE_TAC []
+QED
 
 Theorem W_THM:
     !f x. W f x = f x x
@@ -353,45 +358,51 @@ QED
 (* Theorems using combinators to specify let-movements                       *)
 (*---------------------------------------------------------------------------*)
 
-val GEN_LET_RAND = store_thm(
-  "GEN_LET_RAND",
-  ``P (LET f v) = LET (P o f) v``,
-  REWRITE_TAC [LET_THM, o_THM]);
+Theorem GEN_LET_RAND:
+    P (LET f v) = LET (P o f) v
+Proof
+  REWRITE_TAC [LET_THM, o_THM]
+QED
 
-val GEN_LET_RATOR = store_thm(
-  "GEN_LET_RATOR",
-  ``(LET f v) x = LET (C f x) v``,
-  REWRITE_TAC [LET_THM, C_THM]);
+Theorem GEN_LET_RATOR:
+    (LET f v) x = LET (C f x) v
+Proof
+  REWRITE_TAC [LET_THM, C_THM]
+QED
 
-val LET_FORALL_ELIM = store_thm(
-  "LET_FORALL_ELIM",
-  ``LET f v = (!) (S ((==>) o Abbrev o (C (=) v)) f)``,
+Theorem LET_FORALL_ELIM:
+    LET f v = (!) (S ((==>) o Abbrev o (C (=) v)) f)
+Proof
   REWRITE_TAC [S_DEF, LET_THM, C_DEF] THEN BETA_TAC THEN
   REWRITE_TAC [o_THM, markerTheory.Abbrev_def] THEN BETA_TAC THEN
   EQ_TAC THEN REPEAT STRIP_TAC THENL [
     ASM_REWRITE_TAC [],
     FIRST_X_ASSUM MATCH_MP_TAC THEN REFL_TAC
-  ]);
+  ]
+QED
 
-val GEN_literal_case_RAND = store_thm(
-  "GEN_literal_case_RAND",
-  ``P (literal_case f v) = literal_case (P o f) v``,
-  REWRITE_TAC [literal_case_THM, o_THM]);
+Theorem GEN_literal_case_RAND:
+    P (literal_case f v) = literal_case (P o f) v
+Proof
+  REWRITE_TAC [literal_case_THM, o_THM]
+QED
 
-val GEN_literal_case_RATOR = store_thm(
-  "GEN_literal_case_RATOR",
-  ``(literal_case f v) x = literal_case (C f x) v``,
-  REWRITE_TAC [literal_case_THM, C_THM]);
+Theorem GEN_literal_case_RATOR:
+    (literal_case f v) x = literal_case (C f x) v
+Proof
+  REWRITE_TAC [literal_case_THM, C_THM]
+QED
 
-val literal_case_FORALL_ELIM = store_thm(
-  "literal_case_FORALL_ELIM",
-  ``literal_case f v = (!) (S ((==>) o Abbrev o (C (=) v)) f)``,
+Theorem literal_case_FORALL_ELIM:
+    literal_case f v = (!) (S ((==>) o Abbrev o (C (=) v)) f)
+Proof
   REWRITE_TAC [S_DEF, literal_case_THM, C_DEF] THEN BETA_TAC THEN
   REWRITE_TAC [o_THM, markerTheory.Abbrev_def] THEN BETA_TAC THEN
   EQ_TAC THEN REPEAT STRIP_TAC THENL [
     ASM_REWRITE_TAC [],
     FIRST_X_ASSUM MATCH_MP_TAC THEN REFL_TAC
-  ]);
+  ]
+QED
 
 (* ----------------------------------------------------------------------
     Predicates on functions
@@ -432,8 +443,10 @@ val MONOID_DEF = new_definition("MONOID_DEF",
 (*  Theorems about operators                                                *)
 (* ======================================================================== *)
 
-val ASSOC_CONJ = store_thm ("ASSOC_CONJ", ``ASSOC $/\``,
-  REWRITE_TAC[ASSOC_DEF,CONJ_ASSOC]);
+Theorem ASSOC_CONJ:   ASSOC $/\
+Proof
+  REWRITE_TAC[ASSOC_DEF,CONJ_ASSOC]
+QED
 
 val ASSOC_SYM = save_thm ("ASSOC_SYM",
   CONV_RULE
@@ -441,22 +454,30 @@ val ASSOC_SYM = save_thm ("ASSOC_SYM",
     ASSOC_DEF);
 
 
-val ASSOC_DISJ = store_thm ("ASSOC_DISJ",
-  ``ASSOC $\/``,
-  REWRITE_TAC[ASSOC_DEF,DISJ_ASSOC]);
+Theorem ASSOC_DISJ:
+    ASSOC $\/
+Proof
+  REWRITE_TAC[ASSOC_DEF,DISJ_ASSOC]
+QED
 
-val FCOMM_ASSOC = store_thm ("FCOMM_ASSOC",
-  ``!f: 'a->'a->'a. FCOMM f f = ASSOC f``,
-  REWRITE_TAC[ASSOC_DEF,FCOMM_DEF]);
+Theorem FCOMM_ASSOC:
+    !f: 'a->'a->'a. FCOMM f f = ASSOC f
+Proof
+  REWRITE_TAC[ASSOC_DEF,FCOMM_DEF]
+QED
 
-val MONOID_CONJ_T = store_thm ("MONOID_CONJ_T",
-  ``MONOID $/\ T``,
-  REWRITE_TAC[MONOID_DEF,CONJ_ASSOC, LEFT_ID_DEF,ASSOC_DEF,RIGHT_ID_DEF]);
+Theorem MONOID_CONJ_T:
+    MONOID $/\ T
+Proof
+  REWRITE_TAC[MONOID_DEF,CONJ_ASSOC, LEFT_ID_DEF,ASSOC_DEF,RIGHT_ID_DEF]
+QED
 
-val MONOID_DISJ_F = store_thm ("MONOID_DISJ_F",
-  ``MONOID $\/ F``,
+Theorem MONOID_DISJ_F:
+    MONOID $\/ F
+Proof
   REWRITE_TAC[MONOID_DEF,DISJ_ASSOC,
-              LEFT_ID_DEF,ASSOC_DEF,RIGHT_ID_DEF]);
+              LEFT_ID_DEF,ASSOC_DEF,RIGHT_ID_DEF]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Congruence rule for composition. Grist for the termination condition      *)

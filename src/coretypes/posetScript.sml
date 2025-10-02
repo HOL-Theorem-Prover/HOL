@@ -104,53 +104,61 @@ val complete_def = new_definition
   ("complete_def",
    ``complete (p : 'a poset) = !c. (?x. lub p c x) /\ (?x. glb p c x)``);
 
-val poset_nonempty = store_thm
-  ("poset_nonempty",
-   ``!s r. poset (s,r) ==> ?x. s x``,
-   RW_TAC bool_ss [poset_def]);
+Theorem poset_nonempty:
+     !s r. poset (s,r) ==> ?x. s x
+Proof
+   RW_TAC bool_ss [poset_def]
+QED
 
-val poset_refl = store_thm
-  ("poset_refl",
-   ``!s r x. poset (s,r) /\ s x ==> r x x``,
-   RW_TAC bool_ss [poset_def]);
+Theorem poset_refl:
+     !s r x. poset (s,r) /\ s x ==> r x x
+Proof
+   RW_TAC bool_ss [poset_def]
+QED
 
-val poset_antisym = store_thm
-  ("poset_antisym",
-   ``!s r x y.
-       poset (s,r) /\ s x /\ s y /\ r x y /\ r y x ==> (x = y)``,
-   RW_TAC bool_ss [poset_def]);
+Theorem poset_antisym:
+     !s r x y.
+       poset (s,r) /\ s x /\ s y /\ r x y /\ r y x ==> (x = y)
+Proof
+   RW_TAC bool_ss [poset_def]
+QED
 
-val poset_trans = store_thm
-  ("poset_trans",
-   ``!s r x y z.
-       poset (s,r) /\ s x /\ s y /\ s z /\ r x y /\ r y z ==> r x z``,
-   RW_TAC bool_ss [poset_def] >> RES_TAC);
+Theorem poset_trans:
+     !s r x y z.
+       poset (s,r) /\ s x /\ s y /\ s z /\ r x y /\ r y z ==> r x z
+Proof
+   RW_TAC bool_ss [poset_def] >> RES_TAC
+QED
 
-val lub_pred = store_thm
-  ("lub_pred",
-   ``!s r p x. lub (s,r) (\j. s j /\ p j) x = lub (s,r) p x``,
+Theorem lub_pred:
+     !s r p x. lub (s,r) (\j. s j /\ p j) x = lub (s,r) p x
+Proof
    RW_TAC bool_ss [lub_def]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val glb_pred = store_thm
-  ("glb_pred",
-   ``!s r p x. glb (s,r) (\j. s j /\ p j) x = glb (s,r) p x``,
+Theorem glb_pred:
+     !s r p x. glb (s,r) (\j. s j /\ p j) x = glb (s,r) p x
+Proof
    RW_TAC bool_ss [glb_def]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val complete_up = store_thm
-  ("complete_up",
-   ``!p c. complete p ==> ?x. lub p c x``,
-   PROVE_TAC [complete_def]);
+Theorem complete_up:
+     !p c. complete p ==> ?x. lub p c x
+Proof
+   PROVE_TAC [complete_def]
+QED
 
-val complete_down = store_thm
-  ("complete_down",
-   ``!p c. complete p ==> ?x. glb p c x``,
-   PROVE_TAC [complete_def]);
+Theorem complete_down:
+     !p c. complete p ==> ?x. glb p c x
+Proof
+   PROVE_TAC [complete_def]
+QED
 
-val complete_top = store_thm
-  ("complete_top",
-   ``!p : 'a poset. poset p /\ complete p ==> ?x. top p x``,
+Theorem complete_top:
+     !p : 'a poset. poset p /\ complete p ==> ?x. top p x
+Proof
    GEN_TAC
    >> Know `?s r. p = (s,r)` >- pair_cases_tac
    >> STRIP_TAC
@@ -158,11 +166,12 @@ val complete_top = store_thm
    >> Q.PAT_X_ASSUM `!p. X p` (MP_TAC o Q.SPEC `\x. T`)
    >> RW_TAC bool_ss [lub_def]
    >> Q.EXISTS_TAC `x`
-   >> RW_TAC bool_ss [top_def]);
+   >> RW_TAC bool_ss [top_def]
+QED
 
-val complete_bottom = store_thm
-  ("complete_bottom",
-   ``!p : 'a poset. poset p /\ complete p ==> ?x. bottom p x``,
+Theorem complete_bottom:
+     !p : 'a poset. poset p /\ complete p ==> ?x. bottom p x
+Proof
    GEN_TAC
    >> Know `?s r. p = (s,r)` >- pair_cases_tac
    >> STRIP_TAC
@@ -170,7 +179,8 @@ val complete_bottom = store_thm
    >> Q.PAT_X_ASSUM `!p. X p` (MP_TAC o Q.SPEC `\x. T`)
    >> RW_TAC bool_ss [glb_def]
    >> Q.EXISTS_TAC `x'`
-   >> RW_TAC bool_ss [bottom_def]);
+   >> RW_TAC bool_ss [bottom_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Pointwise lifting of posets                                               *)
@@ -181,9 +191,9 @@ val pointwise_lift_def = new_definition
    ``pointwise_lift (t : 'a -> bool) ((s,r) : 'b poset) =
      (function t s, \f g. !x. t x ==> r (f x) (g x))``);
 
-val complete_pointwise = store_thm
-  ("complete_pointwise",
-   ``!p t. complete p ==> complete (pointwise_lift t p)``,
+Theorem complete_pointwise:
+     !p t. complete p ==> complete (pointwise_lift t p)
+Proof
    GEN_TAC
    >> Know `?s r. p = (s,r)` >- pair_cases_tac
    >> STRIP_TAC
@@ -231,7 +241,8 @@ val complete_pointwise = store_thm
     >> Q.PAT_X_ASSUM `!y. P y ==> !x. Q x y` (MP_TAC o Q.SPEC `f'`)
     >> MATCH_MP_TAC (PROVE [] ``(y ==> z) /\ x ==> ((x ==> y) ==> z)``)
     >> CONJ_TAC >- METIS_TAC []
-    >> METIS_TAC []]);
+    >> METIS_TAC []]
+QED
 
 (*
 val lub_pointwise_push = store_thm
@@ -275,11 +286,12 @@ val continuous_def = new_definition
    “continuous (p : 'a poset) f <=> up_continuous p f /\ down_continuous p f”);
 
 
-val monotonic_comp = store_thm
-  ("monotonic_comp",
-   ``monotonic (s,r) f /\ monotonic (s,r) g /\ function s s g
-     ==> monotonic (s,r) (f o g)``,
-   RW_TAC (srw_ss()) [monotonic_def, function_def]);
+Theorem monotonic_comp:
+     monotonic (s,r) f /\ monotonic (s,r) g /\ function s s g
+     ==> monotonic (s,r) (f o g)
+Proof
+   RW_TAC (srw_ss()) [monotonic_def, function_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Least and greatest fixed points.                                          *)
@@ -295,25 +307,27 @@ val gfp_def = new_definition
    ``gfp ((s,r) : 'a poset) f x <=>
      s x /\ (f x = x) /\ !y. s y /\ r y (f y) ==> r y x``);
 
-val lfp_unique = store_thm
-  ("lfp_unique",
-   ``!p f x x'.
+Theorem lfp_unique:
+     !p f x x'.
         poset p /\ lfp p f x /\ lfp p f x' ==>
-        (x = x')``,
+        (x = x')
+Proof
    GEN_TAC
    >> Know `?s r. p = (s,r)` >- pair_cases_tac
    >> STRIP_TAC
-   >> RW_TAC bool_ss [poset_def, lfp_def]);
+   >> RW_TAC bool_ss [poset_def, lfp_def]
+QED
 
-val gfp_unique = store_thm
-  ("gfp_unique",
-   ``!p f x x'.
+Theorem gfp_unique:
+     !p f x x'.
         poset p /\ gfp p f x /\ gfp p f x' ==>
-        (x = x')``,
+        (x = x')
+Proof
    GEN_TAC
    >> Know `?s r. p = (s,r)` >- pair_cases_tac
    >> STRIP_TAC
-   >> RW_TAC bool_ss [poset_def, gfp_def]);
+   >> RW_TAC bool_ss [poset_def, gfp_def]
+QED
 
 Theorem lfp_induct:
     lfp (s,r) b lfix /\ s x /\ r (b x) x
@@ -351,11 +365,11 @@ QED
 (* The Knaster-Tarski theorem                                                *)
 (* ------------------------------------------------------------------------- *)
 
-val knaster_tarski_lfp = store_thm
-  ("knaster_tarski_lfp",
-   ``!p f.
+Theorem knaster_tarski_lfp:
+     !p f.
        poset p /\ complete p /\ function (carrier p) (carrier p) f /\
-       monotonic p f ==> ?x. lfp p f x``,
+       monotonic p f ==> ?x. lfp p f x
+Proof
    RW_TAC bool_ss []
    >> Know `?x. top p x` >- PROVE_TAC [complete_top]
    >> Know `?s r. p = (s,r)` >- pair_cases_tac
@@ -393,13 +407,14 @@ val knaster_tarski_lfp = store_thm
        >> RW_TAC bool_ss []
        >> Q.PAT_X_ASSUM `monotonic X Y`
           (MATCH_MP_TAC o REWRITE_RULE [monotonic_def])
-       >> PROVE_TAC []]);
+       >> PROVE_TAC []]
+QED
 
-val knaster_tarski_gfp = store_thm
-  ("knaster_tarski_gfp",
-   ``!p f.
+Theorem knaster_tarski_gfp:
+     !p f.
        poset p /\ complete p /\ function (carrier p) (carrier p) f /\
-       monotonic p f ==> ?x. gfp p f x``,
+       monotonic p f ==> ?x. gfp p f x
+Proof
    RW_TAC bool_ss []
    >> Know `?x. bottom p x` >- PROVE_TAC [complete_bottom]
    >> Know `?s r. p = (s,r)` >- pair_cases_tac
@@ -437,11 +452,13 @@ val knaster_tarski_gfp = store_thm
        >> RW_TAC bool_ss []
        >> Q.PAT_X_ASSUM `monotonic X Y`
           (MATCH_MP_TAC o REWRITE_RULE [monotonic_def])
-       >> PROVE_TAC []]);
+       >> PROVE_TAC []]
+QED
 
-val knaster_tarski = store_thm
-  ("knaster_tarski",
-   ``!p f.
+Theorem knaster_tarski:
+     !p f.
        poset p /\ complete p /\ function (carrier p) (carrier p) f /\
-       monotonic p f ==> (?x. lfp p f x) /\ (?x. gfp p f x)``,
-   PROVE_TAC [knaster_tarski_lfp, knaster_tarski_gfp]);
+       monotonic p f ==> (?x. lfp p f x) /\ (?x. gfp p f x)
+Proof
+   PROVE_TAC [knaster_tarski_lfp, knaster_tarski_gfp]
+QED

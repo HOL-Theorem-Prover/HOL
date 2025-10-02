@@ -17,15 +17,16 @@ val GEN_REWRITE_TAC = fn c => fn thl =>
 (* Abstract left inverses for binary injections (we could construct them...) *)
 (* ------------------------------------------------------------------------- *)
 
-val INJ_INVERSE2 = store_thm(
-  "INJ_INVERSE2",
-  ``!P:'A->'B->'C.
+Theorem INJ_INVERSE2:
+    !P:'A->'B->'C.
      (!x1 y1 x2 y2. (P x1 y1 = P x2 y2) <=> (x1 = x2) /\ (y1 = y2)) ==>
-     ?X Y. !x y. (X(P x y) = x) /\ (Y(P x y) = y)``,
+     ?X Y. !x y. (X(P x y) = x) /\ (Y(P x y) = y)
+Proof
   GEN_TAC THEN DISCH_TAC THEN
   Q.EXISTS_TAC `\z:'C. @x:'A. ?y:'B. P x y = z` THEN
   Q.EXISTS_TAC `\z:'C. @y:'B. ?x:'A. P x y = z` THEN
-  REPEAT GEN_TAC THEN ASM_SIMP_TAC hol_ss []);
+  REPEAT GEN_TAC THEN ASM_SIMP_TAC hol_ss []
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Define an injective pairing function on ":num".                           *)
@@ -65,12 +66,13 @@ val INJN = new_definition(
   "INJN",
   Term`INJN (m:num) = \(n:num) (a:'a). n = m`);
 
-val INJN_INJ = store_thm (
-  "INJN_INJ",
-  ``!n1 n2. (INJN n1 :num->'a->bool = INJN n2) = (n1 = n2)``,
+Theorem INJN_INJ:
+    !n1 n2. (INJN n1 :num->'a->bool = INJN n2) = (n1 = n2)
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[] THEN
   POP_ASSUM(MP_TAC o C Q.AP_THM `n1:num` o REWRITE_RULE[INJN]) THEN
-  DISCH_THEN(MP_TAC o C Q.AP_THM `a:'a`) THEN SIMP_TAC bool_ss []);
+  DISCH_THEN(MP_TAC o C Q.AP_THM `a:'a`) THEN SIMP_TAC bool_ss []
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Injection A->Z, where Z == num->A->bool.                                  *)
@@ -80,14 +82,15 @@ val INJA = new_definition(
   "INJA",
   Term`INJA (a:'a) = \(n:num) b. b = a`);
 
-val INJA_INJ = store_thm(
-  "INJA_INJ",
-  ``!a1 a2. (INJA a1 = INJA a2) = (a1:'a = a2)``,
+Theorem INJA_INJ:
+    !a1 a2. (INJA a1 = INJA a2) = (a1:'a = a2)
+Proof
   REPEAT GEN_TAC THEN SIMP_TAC bool_ss [INJA, FUN_EQ_THM] THEN
   EQ_TAC THENL [
     DISCH_THEN(MP_TAC o Q.SPEC `a1:'a`) THEN REWRITE_TAC[],
     DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Injection (num->Z)->Z, where Z == num->A->bool.                           *)
@@ -97,15 +100,16 @@ val INJF = new_definition(
   "INJF",
   Term`INJF (f:num->(num->'a->bool)) = \n. f (nfst n) (nsnd n)`);
 
-val INJF_INJ = store_thm(
-  "INJF_INJ",
-  ``!f1 f2. (INJF f1 :num->'a->bool = INJF f2) = (f1 = f2)``,
+Theorem INJF_INJ:
+    !f1 f2. (INJF f1 :num->'a->bool = INJF f2) = (f1 = f2)
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[FUN_EQ_THM] THEN
   MAP_EVERY Q.X_GEN_TAC [`n:num`, `m:num`, `a:'a`] THEN
   POP_ASSUM(MP_TAC o REWRITE_RULE[INJF]) THEN
   DISCH_THEN(MP_TAC o C Q.AP_THM `a:'a` o C Q.AP_THM `n *, m`) THEN
-  SIMP_TAC bool_ss [NUMPAIR_DEST]);
+  SIMP_TAC bool_ss [NUMPAIR_DEST]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Injection Z->Z->Z, where Z == num->A->bool.                               *)
@@ -191,34 +195,37 @@ val CONSTR = new_definition(
 (* Some lemmas.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val MK_REC_INJ = store_thm(
-  "MK_REC_INJ",
-  ``!x y. (mk_rec x :'a recspace = mk_rec y)
-         ==> (ZRECSPACE x /\ ZRECSPACE y ==> (x = y))``,
+Theorem MK_REC_INJ:
+    !x y. (mk_rec x :'a recspace = mk_rec y)
+         ==> (ZRECSPACE x /\ ZRECSPACE y ==> (x = y))
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   REWRITE_TAC[snd recspace_tydef] THEN
   DISCH_THEN(fn th => ONCE_REWRITE_TAC[GSYM th]) THEN
-  ASM_REWRITE_TAC[]);
+  ASM_REWRITE_TAC[]
+QED
 
-val DEST_REC_INJ = store_thm(
-  "DEST_REC_INJ",
-  ``!x y. (dest_rec x = dest_rec y) = (x:'a recspace = y)``,
+Theorem DEST_REC_INJ:
+    !x y. (dest_rec x = dest_rec y) = (x:'a recspace = y)
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[] THEN
   POP_ASSUM(MP_TAC o Q.AP_TERM `mk_rec:(num->'a->bool)->'a recspace`) THEN
-  REWRITE_TAC[fst recspace_tydef]);
+  REWRITE_TAC[fst recspace_tydef]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Show that the set is freely inductively generated.                        *)
 (* ------------------------------------------------------------------------- *)
 
-val CONSTR_BOT = store_thm(
-  "CONSTR_BOT",
-  ``!c i r. ~(CONSTR c i r :'a recspace = BOTTOM)``,
+Theorem CONSTR_BOT:
+    !c i r. ~(CONSTR c i r :'a recspace = BOTTOM)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[CONSTR, BOTTOM] THEN
   DISCH_THEN(MP_TAC o MATCH_MP MK_REC_INJ) THEN
   REWRITE_TAC[ZCONSTR_ZBOT, ZRECSPACE_RULES] THEN
   MATCH_MP_TAC(CONJUNCT2 ZRECSPACE_RULES) THEN
-  SIMP_TAC bool_ss [fst recspace_tydef, snd recspace_tydef]);
+  SIMP_TAC bool_ss [fst recspace_tydef, snd recspace_tydef]
+QED
 
 Theorem CONSTR_INJ:
   !c1 i1 r1 c2 i2 r2. (CONSTR c1 i1 r1 :'a recspace = CONSTR c2 i2 r2) <=>
@@ -237,11 +244,11 @@ Proof
   ]
 QED
 
-val CONSTR_IND = store_thm(
-  "CONSTR_IND",
-  ``!P. P(BOTTOM) /\
+Theorem CONSTR_IND:
+    !P. P(BOTTOM) /\
         (!c i r. (!n. P(r n)) ==> P(CONSTR c i r)) ==>
-        !x:'a recspace. P(x)``,
+        !x:'a recspace. P(x)
+Proof
   REPEAT STRIP_TAC THEN
   MP_TAC(Q.SPEC `\z:num->'a->bool. ZRECSPACE(z) /\ P(mk_rec z)`
          ZRECSPACE_INDUCT) THEN
@@ -262,16 +269,17 @@ val CONSTR_IND = store_thm(
     REWRITE_TAC[tautLib.TAUT_PROVE ``(a ==> a /\ b) = (a ==> b)``] THEN
     DISCH_THEN MATCH_MP_TAC THEN
     REWRITE_TAC[fst recspace_tydef, snd recspace_tydef]
-  ]);;
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Now prove the recursion theorem (this subcase is all we need).            *)
 (* ------------------------------------------------------------------------- *)
 
-val CONSTR_REC = store_thm(
-  "CONSTR_REC",
-  ``!Fn:num->'a->(num->'a recspace)->(num->'b)->'b.
-      ?f. (!c i r. f (CONSTR c i r) = Fn c i r (\n. f (r n)))``,
+Theorem CONSTR_REC:
+    !Fn:num->'a->(num->'a recspace)->(num->'b)->'b.
+      ?f. (!c i r. f (CONSTR c i r) = Fn c i r (\n. f (r n)))
+Proof
   REPEAT STRIP_TAC THEN
   (MP_TAC o prove_nonschematic_inductive_relations_exist bool_monoset)
     ``(Z:'a recspace->'b->bool) BOTTOM b /\
@@ -310,7 +318,8 @@ val CONSTR_REC = store_thm(
     REPEAT GEN_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN GEN_TAC THEN
     FIRST_ASSUM(fn th => GEN_REWRITE_TAC I [GSYM th]) THEN
     SIMP_TAC bool_ss []
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* The following is useful for coding up functions casewise.                 *)

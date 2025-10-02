@@ -33,21 +33,22 @@ in
   val of_length_def = new_specification ("of_length_def", ["of_length"], th);
 end;
 
-val fixed_width_univ = store_thm
-  ("fixed_width_univ",
-   ``!(phi : 'a -> bool) c n.
+Theorem fixed_width_univ:
+     !(phi : 'a -> bool) c n.
        wf_coder c /\ fixed_width n c ==>
        ((!x. domain c x ==> phi x) =
-        !w :: of_length n. phi (decoder c w))``,
+        !w :: of_length n. phi (decoder c w))
+Proof
    RW_TAC bool_ss [RES_FORALL_THM, fixed_width_def, of_length_def]
    >> REPEAT (STRIP_TAC ORELSE EQ_TAC)
-   >> PROVE_TAC [wf_coder, wf_coder_closed]);
+   >> PROVE_TAC [wf_coder, wf_coder_closed]
+QED
 
-val of_length_univ_suc = store_thm
-  ("of_length_univ_suc",
-   ``!phi n.
+Theorem of_length_univ_suc:
+     !phi n.
        (!w :: of_length (SUC n). phi (w : 'a list)) =
-       (!x. !w :: of_length n. phi (x :: w))``,
+       (!x. !w :: of_length n. phi (x :: w))
+Proof
    SIMP_TAC bool_ss [RES_FORALL_THM, of_length_def] THEN
    REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
    [Q.PAT_ASSUM `!x. Q x` MATCH_MP_TAC THEN
@@ -55,28 +56,31 @@ val of_length_univ_suc = store_thm
     MP_TAC (ISPEC ``w : 'a list`` list_CASES) THEN
     STRIP_TAC THENL
     [FULL_SIMP_TAC arith_ss [LENGTH],
-     FULL_SIMP_TAC arith_ss [LENGTH]]]);
+     FULL_SIMP_TAC arith_ss [LENGTH]]]
+QED
 
-val of_length_univ_zero = store_thm
-  ("of_length_univ_zero",
-   ``!phi. (!w :: of_length 0. phi w) = phi ([] : 'a list)``,
-   SIMP_TAC bool_ss [RES_FORALL_THM, of_length_def, LENGTH_NIL]);
+Theorem of_length_univ_zero:
+     !phi. (!w :: of_length 0. phi w) = phi ([] : 'a list)
+Proof
+   SIMP_TAC bool_ss [RES_FORALL_THM, of_length_def, LENGTH_NIL]
+QED
 
-val fixed_width_exists = store_thm
-  ("fixed_width_exists",
-   ``!(phi : 'a -> bool) c n.
+Theorem fixed_width_exists:
+     !(phi : 'a -> bool) c n.
        wf_coder c /\ fixed_width n c ==>
        ((?x. domain c x /\ phi x) =
-        ?w :: of_length n. phi (decoder c w))``,
+        ?w :: of_length n. phi (decoder c w))
+Proof
    RW_TAC bool_ss [RES_EXISTS_THM, fixed_width_def, of_length_def]
    >> REPEAT (STRIP_TAC ORELSE EQ_TAC)
-   >> PROVE_TAC [wf_coder, wf_coder_closed]);
+   >> PROVE_TAC [wf_coder, wf_coder_closed]
+QED
 
-val of_length_exists_suc = store_thm
-  ("of_length_exists_suc",
-   ``!phi n.
+Theorem of_length_exists_suc:
+     !phi n.
        (?w :: of_length (SUC n). phi (w : 'a list)) =
-       (?x. ?w :: of_length n. phi (x :: w))``,
+       (?x. ?w :: of_length n. phi (x :: w))
+Proof
    SIMP_TAC bool_ss [RES_EXISTS_THM, of_length_def] THEN
    REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
    [MP_TAC (ISPEC ``w:'a list`` list_CASES) THEN
@@ -86,44 +90,48 @@ val of_length_exists_suc = store_thm
     EXISTS_TAC ``t : 'a list`` THEN
     ASM_SIMP_TAC bool_ss [],
     EXISTS_TAC ``(x : 'a) :: w`` THEN
-    ASM_SIMP_TAC arith_ss [LENGTH]]);
+    ASM_SIMP_TAC arith_ss [LENGTH]]
+QED
 
-val of_length_exists_zero = store_thm
-  ("of_length_exists_zero",
-   ``!phi. (?w :: of_length 0. phi w) = phi ([] : 'a list)``,
-   SIMP_TAC bool_ss [RES_EXISTS_THM, of_length_def, LENGTH_NIL]);
+Theorem of_length_exists_zero:
+     !phi. (?w :: of_length 0. phi w) = phi ([] : 'a list)
+Proof
+   SIMP_TAC bool_ss [RES_EXISTS_THM, of_length_def, LENGTH_NIL]
+QED
 
 (*---------------------------------------------------------------------------
      Units
  ---------------------------------------------------------------------------*)
 
-val fixed_width_unit = store_thm
-  ("fixed_width_unit",
-   ``!p. fixed_width 0 (unit_coder p)``,
+Theorem fixed_width_unit:
+     !p. fixed_width 0 (unit_coder p)
+Proof
    SIMP_TAC arith_ss
    [unit_coder_def, fixed_width_def, domain_def, encoder_def,
-    encode_unit_def, LENGTH]);
+    encode_unit_def, LENGTH]
+QED
 
 (*---------------------------------------------------------------------------
         Booleans
  ---------------------------------------------------------------------------*)
 
-val fixed_width_bool = store_thm
-  ("fixed_width_bool",
-   ``!p. fixed_width 1 (bool_coder p)``,
+Theorem fixed_width_bool:
+     !p. fixed_width 1 (bool_coder p)
+Proof
    SIMP_TAC arith_ss
    [bool_coder_def, fixed_width_def, domain_def, encoder_def,
-    encode_bool_def, LENGTH]);
+    encode_bool_def, LENGTH]
+QED
 
 (*---------------------------------------------------------------------------
         Pairs
  ---------------------------------------------------------------------------*)
 
-val fixed_width_prod = store_thm
-  ("fixed_width_prod",
-   ``!c1 c2 n1 n2.
+Theorem fixed_width_prod:
+     !c1 c2 n1 n2.
        fixed_width n1 c1 /\ fixed_width n2 c2 ==>
-       fixed_width (n1 + n2) (prod_coder c1 c2)``,
+       fixed_width (n1 + n2) (prod_coder c1 c2)
+Proof
    REPEAT GEN_TAC
    >> Know `?p1 e1 d1. c1 = (p1, e1, d1)` >- PROVE_TAC [pairTheory.ABS_PAIR_THM]
    >> Know `?p2 e2 d2. c2 = (p2, e2, d2)` >- PROVE_TAC [pairTheory.ABS_PAIR_THM]
@@ -131,17 +139,18 @@ val fixed_width_prod = store_thm
    >> REPEAT (POP_ASSUM MP_TAC)
    >> RW_TAC std_ss [fixed_width_def, prod_coder_def, domain_def, encoder_def]
    >> Cases_on `x`
-   >> FULL_SIMP_TAC std_ss [lift_prod_def, encode_prod_def, LENGTH_APPEND]);
+   >> FULL_SIMP_TAC std_ss [lift_prod_def, encode_prod_def, LENGTH_APPEND]
+QED
 
 (*---------------------------------------------------------------------------
         Sums
  ---------------------------------------------------------------------------*)
 
-val fixed_width_sum = store_thm
-  ("fixed_width_sum",
-   ``!c1 c2 n.
+Theorem fixed_width_sum:
+     !c1 c2 n.
        fixed_width n c1 /\ fixed_width n c2 ==>
-       fixed_width (SUC n) (sum_coder c1 c2)``,
+       fixed_width (SUC n) (sum_coder c1 c2)
+Proof
    REPEAT GEN_TAC
    >> Know `?p1 e1 d1. c1 = (p1, e1, d1)` >- PROVE_TAC [pairTheory.ABS_PAIR_THM]
    >> Know `?p2 e2 d2. c2 = (p2, e2, d2)` >- PROVE_TAC [pairTheory.ABS_PAIR_THM]
@@ -149,15 +158,17 @@ val fixed_width_sum = store_thm
    >> REPEAT (POP_ASSUM MP_TAC)
    >> RW_TAC std_ss [fixed_width_def, sum_coder_def, domain_def, encoder_def]
    >> Cases_on `x`
-   >> FULL_SIMP_TAC std_ss [lift_sum_def, encode_sum_def, LENGTH]);
+   >> FULL_SIMP_TAC std_ss [lift_sum_def, encode_sum_def, LENGTH]
+QED
 
 (*---------------------------------------------------------------------------
         Bounded numbers
  ---------------------------------------------------------------------------*)
 
-val fixed_width_bnum = store_thm
-  ("fixed_width_bnum",
-   ``!m p. fixed_width m (bnum_coder m p)``,
+Theorem fixed_width_bnum:
+     !m p. fixed_width m (bnum_coder m p)
+Proof
    RW_TAC std_ss
-   [fixed_width_def, encode_bnum_length, bnum_coder_def, encoder_def]);
+   [fixed_width_def, encode_bnum_length, bnum_coder_def, encoder_def]
+QED
 

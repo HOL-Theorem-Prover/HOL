@@ -59,10 +59,11 @@ val _ = set_fixity "downto" (Infix(NONASSOC, 450)); (* same as relation *)
 
 (* Theorem: EVERY (\c. c IN R) p ==> !k. k < LENGTH p ==> EL k p IN R *)
 (* Proof: by EVERY_EL. *)
-val EVERY_ELEMENT_PROPERTY = store_thm(
-  "EVERY_ELEMENT_PROPERTY",
-  ``!p R. EVERY (\c. c IN R) p ==> !k. k < LENGTH p ==> EL k p IN R``,
-  rw[EVERY_EL]);
+Theorem EVERY_ELEMENT_PROPERTY:
+    !p R. EVERY (\c. c IN R) p ==> !k. k < LENGTH p ==> EL k p IN R
+Proof
+  rw[EVERY_EL]
+QED
 
 (* Theorem: (!x. P x ==> (Q o f) x) /\ EVERY P l ==> EVERY Q (MAP f l) *)
 (* Proof:
@@ -71,17 +72,19 @@ val EVERY_ELEMENT_PROPERTY = store_thm(
      ==> EVERY Q o f l         by EVERY_MONOTONIC
      ==> EVERY Q (MAP f l)     by EVERY_MAP
 *)
-val EVERY_MONOTONIC_MAP = store_thm(
-  "EVERY_MONOTONIC_MAP",
-  ``!l f P Q. (!x. P x ==> (Q o f) x) /\ EVERY P l ==> EVERY Q (MAP f l)``,
-  metis_tac[EVERY_MONOTONIC, EVERY_MAP]);
+Theorem EVERY_MONOTONIC_MAP:
+    !l f P Q. (!x. P x ==> (Q o f) x) /\ EVERY P l ==> EVERY Q (MAP f l)
+Proof
+  metis_tac[EVERY_MONOTONIC, EVERY_MAP]
+QED
 
 (* Theorem: EVERY (\j. j < n) ls ==> EVERY (\j. j <= n) ls *)
 (* Proof: by EVERY_EL, arithmetic. *)
-val EVERY_LT_IMP_EVERY_LE = store_thm(
-  "EVERY_LT_IMP_EVERY_LE",
-  ``!ls n. EVERY (\j. j < n) ls ==> EVERY (\j. j <= n) ls``,
-  simp[EVERY_EL, LESS_IMP_LESS_OR_EQ]);
+Theorem EVERY_LT_IMP_EVERY_LE:
+    !ls n. EVERY (\j. j < n) ls ==> EVERY (\j. j <= n) ls
+Proof
+  simp[EVERY_EL, LESS_IMP_LESS_OR_EQ]
+QED
 
 (* Theorem: (LENGTH (h1::t1) = LENGTH (h2::t2)) /\
             (!k. k < LENGTH (h1::t1) ==> P (EL k (h1::t1)) (EL k (h2::t2))) ==>
@@ -100,11 +103,11 @@ val EVERY_LT_IMP_EVERY_LE = store_thm(
      or P (EL (PRE (k + 1) t1)) (EL (PRE (k + 1)) t2)     by EL_CONS
      or P (EL k t1) (EL k t2)                             by PRE, ADD1
 *)
-val EL_ALL_PROPERTY = store_thm(
-  "EL_ALL_PROPERTY",
-  ``!h1 t1 h2 t2 P. (LENGTH (h1::t1) = LENGTH (h2::t2)) /\
+Theorem EL_ALL_PROPERTY:
+    !h1 t1 h2 t2 P. (LENGTH (h1::t1) = LENGTH (h2::t2)) /\
      (!k. k < LENGTH (h1::t1) ==> P (EL k (h1::t1)) (EL k (h2::t2))) ==>
-     (P h1 h2) /\ (!k. k < LENGTH t1 ==> P (EL k t1) (EL k t2))``,
+     (P h1 h2) /\ (!k. k < LENGTH t1 ==> P (EL k t1) (EL k t2))
+Proof
   rpt strip_tac >| [
     `0 < LENGTH (h1::t1)` by metis_tac[LENGTH, SUC_POS] >>
     metis_tac[EL, HD],
@@ -112,7 +115,8 @@ val EL_ALL_PROPERTY = store_thm(
     `k + 1 < LENGTH (h1::t1)` by metis_tac[LENGTH] >>
     `0 < k + 1 /\ (PRE (k + 1) = k)` by decide_tac >>
     metis_tac[EL_CONS]
-  ]);
+  ]
+QED
 
 (*
 LUPDATE_SEM     |- (!e n l. LENGTH (LUPDATE e n l) = LENGTH l) /\
@@ -147,15 +151,16 @@ val LUPDATE_EL = save_thm("LUPDATE_EL", LUPDATE_SEM |> CONJUNCT2);
        = EL x (LUPDATE q n ls)                  by LUPDATE_EL
        = EL x l2                                by notation
 *)
-val LUPDATE_SAME_SPOT = store_thm(
-  "LUPDATE_SAME_SPOT",
-  ``!ls n p q. LUPDATE q n (LUPDATE p n ls) = LUPDATE q n ls``,
+Theorem LUPDATE_SAME_SPOT:
+    !ls n p q. LUPDATE q n (LUPDATE p n ls) = LUPDATE q n ls
+Proof
   rpt strip_tac >>
   qabbrev_tac `l1 = LUPDATE q n (LUPDATE p n ls)` >>
   qabbrev_tac `l2 = LUPDATE q n ls` >>
   `LENGTH l1 = LENGTH l2` by rw[LUPDATE_LEN, Abbr`l1`, Abbr`l2`] >>
   `!x. x < LENGTH l1 ==> (EL x l1 = EL x l2)` by fs[LUPDATE_EL, Abbr`l1`, Abbr`l2`] >>
-  rw[LIST_EQ]);
+  rw[LIST_EQ]
+QED
 
 (* Theorem: m <> n ==>
      (LUPDATE q n (LUPDATE p m ls) = LUPDATE p m (LUPDATE q n ls)) *)
@@ -181,15 +186,16 @@ val LUPDATE_SAME_SPOT = store_thm(
     = EL x l1
    Hence l1 = l2                              by LIST_EQ
 *)
-val LUPDATE_DIFF_SPOT = store_thm(
-  "LUPDATE_DIFF_SPOT",
-  `` !ls m n p q. m <> n ==>
-     (LUPDATE q n (LUPDATE p m ls) = LUPDATE p m (LUPDATE q n ls))``,
+Theorem LUPDATE_DIFF_SPOT:
+     !ls m n p q. m <> n ==>
+     (LUPDATE q n (LUPDATE p m ls) = LUPDATE p m (LUPDATE q n ls))
+Proof
   rpt strip_tac >>
   qabbrev_tac `l1 = LUPDATE q n (LUPDATE p m ls)` >>
   qabbrev_tac `l2 = LUPDATE p m (LUPDATE q n ls)` >>
   irule LIST_EQ >>
-  rw[LUPDATE_EL, Abbr`l1`, Abbr`l2`]);
+  rw[LUPDATE_EL, Abbr`l1`, Abbr`l2`]
+QED
 
 (* Theorem: LUPDATE a (LENGTH ls) (ls ++ (h::t)) = ls ++ (a::t) *)
 (* Proof:
@@ -198,10 +204,11 @@ val LUPDATE_DIFF_SPOT = store_thm(
    = ls ++ LUPDATE a 0 (h::t)                         by arithmetic
    = ls ++ (a::t)                                     by LUPDATE_def
 *)
-val LUPDATE_APPEND_0 = store_thm(
-  "LUPDATE_APPEND_0",
-  ``!ls a h t. LUPDATE a (LENGTH ls) (ls ++ (h::t)) = ls ++ (a::t)``,
-  rw_tac std_ss[LUPDATE_APPEND2, LUPDATE_def]);
+Theorem LUPDATE_APPEND_0:
+    !ls a h t. LUPDATE a (LENGTH ls) (ls ++ (h::t)) = ls ++ (a::t)
+Proof
+  rw_tac std_ss[LUPDATE_APPEND2, LUPDATE_def]
+QED
 
 (* Theorem: LUPDATE b (LENGTH ls + 1) (ls ++ h::k::t) = ls ++ h::b::t *)
 (* Proof:
@@ -210,15 +217,16 @@ val LUPDATE_APPEND_0 = store_thm(
    = ls ++ LUPDATE b 1 (h::k::t)                      by arithmetic
    = ls ++ (h::b::t)                                  by LUPDATE_def
 *)
-val LUPDATE_APPEND_1 = store_thm(
-  "LUPDATE_APPEND_1",
-  ``!ls b h k t. LUPDATE b (LENGTH ls + 1) (ls ++ h::k::t) = ls ++ h::b::t``,
+Theorem LUPDATE_APPEND_1:
+    !ls b h k t. LUPDATE b (LENGTH ls + 1) (ls ++ h::k::t) = ls ++ h::b::t
+Proof
   rpt strip_tac >>
   `LUPDATE b 1 (h::k::t) = h::LUPDATE b 0 (k::t)` by rw[GSYM LUPDATE_def] >>
   `_ = h::b::t` by rw[LUPDATE_def] >>
   `LUPDATE b (LENGTH ls + 1) (ls ++ h::k::t) =
     ls ++ LUPDATE b (LENGTH ls + 1 - LENGTH ls) (h::k::t)` by metis_tac[LUPDATE_APPEND2, DECIDE``n <= n + 1``] >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: LUPDATE b (LENGTH ls + 1)
               (LUPDATE a (LENGTH ls) (ls ++ h::k::t)) = ls ++ a::b::t *)
@@ -229,12 +237,13 @@ val LUPDATE_APPEND_1 = store_thm(
    = LUPDATE b (LENGTH ls + 1) (ls ++ a::k::t)
    = ls ++ a::b::t              by LUPDATE_APPEND2_1
 *)
-val LUPDATE_APPEND_0_1 = store_thm(
-  "LUPDATE_APPEND_0_1",
-  ``!ls a b h k t.
+Theorem LUPDATE_APPEND_0_1:
+    !ls a b h k t.
     LUPDATE b (LENGTH ls + 1)
-      (LUPDATE a (LENGTH ls) (ls ++ h::k::t)) = ls ++ a::b::t``,
-  rw_tac std_ss[LUPDATE_APPEND_0, LUPDATE_APPEND_1]);
+      (LUPDATE a (LENGTH ls) (ls ++ h::k::t)) = ls ++ a::b::t
+Proof
+  rw_tac std_ss[LUPDATE_APPEND_0, LUPDATE_APPEND_1]
+QED
 
 (* Theorem: let fs = FILTER P ls in
             ALL_DISTINCT ls /\ ls = l1 ++ x::l2 ++ y::l3 /\ P x /\ P y ==>
@@ -339,10 +348,11 @@ QED
    = l ++ []                by DROP_def, TAKE_def
    = l                      by APPEND
 *)
-val rotate_0 = store_thm(
-  "rotate_0",
-  ``!l. rotate 0 l = l``,
-  rw[rotate_def]);
+Theorem rotate_0:
+    !l. rotate 0 l = l
+Proof
+  rw[rotate_def]
+QED
 
 (* Theorem: rotate n [] = [] *)
 (* Proof:
@@ -351,10 +361,11 @@ val rotate_0 = store_thm(
    = [] ++ []                 by DROP_def, TAKE_def
    = []                       by APPEND
 *)
-val rotate_nil = store_thm(
-  "rotate_nil",
-  ``!n. rotate n [] = []``,
-  rw[rotate_def]);
+Theorem rotate_nil:
+    !n. rotate n [] = []
+Proof
+  rw[rotate_def]
+QED
 
 (* Theorem: rotate (LENGTH l) l = l *)
 (* Proof:
@@ -364,10 +375,11 @@ val rotate_nil = store_thm(
    = [] ++ l                                  by TAKE_LENGTH_ID
    = l
 *)
-val rotate_full = store_thm(
-  "rotate_full",
-  ``!l. rotate (LENGTH l) l = l``,
-  rw[rotate_def, DROP_LENGTH_NIL]);
+Theorem rotate_full:
+    !l. rotate (LENGTH l) l = l
+Proof
+  rw[rotate_def, DROP_LENGTH_NIL]
+QED
 
 (* Theorem: n < LENGTH l ==> rotate (SUC n) l = rotate 1 (rotate n l) *)
 (* Proof:
@@ -382,14 +394,15 @@ val rotate_full = store_thm(
        = DROP 1 (DROP n l) ++ (TAKE n l ++ TAKE 1 (DROP n l))             by DROP_1_APPEND, TAKE_1_APPEND
        = LHS
 *)
-val rotate_suc = store_thm(
-  "rotate_suc",
-  ``!l n. n < LENGTH l ==> (rotate (SUC n) l = rotate 1 (rotate n l))``,
+Theorem rotate_suc:
+    !l n. n < LENGTH l ==> (rotate (SUC n) l = rotate 1 (rotate n l))
+Proof
   rpt strip_tac >>
   `LENGTH l <> 0` by decide_tac >>
   `l <> []` by metis_tac[LENGTH_NIL] >>
   `DROP n l <> []` by simp[DROP_EQ_NIL] >>
-  rw[rotate_def, DROP_1_APPEND, TAKE_1_APPEND, DROP_SUC, TAKE_SUC]);
+  rw[rotate_def, DROP_1_APPEND, TAKE_1_APPEND, DROP_SUC, TAKE_SUC]
+QED
 
 (* Theorem: Rotate keeps LENGTH (of necklace): LENGTH (rotate n l) = LENGTH l *)
 (* Proof:
@@ -400,15 +413,16 @@ val rotate_suc = store_thm(
    = LENGTH (TAKE n l ++ DROP n l)           by LENGTH_APPEND
    = LENGTH l                                by TAKE_DROP
 *)
-val rotate_same_length = store_thm(
-  "rotate_same_length",
-  ``!l n. LENGTH (rotate n l) = LENGTH l``,
+Theorem rotate_same_length:
+    !l n. LENGTH (rotate n l) = LENGTH l
+Proof
   rpt strip_tac >>
   `LENGTH (rotate n l) = LENGTH (DROP n l ++ TAKE n l)` by rw[rotate_def] >>
   `_ = LENGTH (DROP n l) + LENGTH (TAKE n l)` by rw[] >>
   `_ = LENGTH (TAKE n l) + LENGTH (DROP n l)` by rw[ADD_COMM] >>
   `_ = LENGTH (TAKE n l ++ DROP n l)` by rw[] >>
-  rw_tac std_ss[TAKE_DROP]);
+  rw_tac std_ss[TAKE_DROP]
+QED
 
 (* Theorem: Rotate keeps SET (of elements): set (rotate n l) = set l *)
 (* Proof:
@@ -419,15 +433,16 @@ val rotate_same_length = store_thm(
    = set (TAKE n l ++ DROP n l)            by LIST_TO_SET_APPEND
    = set l                                 by TAKE_DROP
 *)
-val rotate_same_set = store_thm(
-  "rotate_same_set",
-  ``!l n. set (rotate n l) = set l``,
+Theorem rotate_same_set:
+    !l n. set (rotate n l) = set l
+Proof
   rpt strip_tac >>
   `set (rotate n l) = set (DROP n l ++ TAKE n l)` by rw[rotate_def] >>
   `_ = set (DROP n l) UNION set (TAKE n l)` by rw[] >>
   `_ = set (TAKE n l) UNION set (DROP n l)` by rw[UNION_COMM] >>
   `_ = set (TAKE n l ++ DROP n l)` by rw[] >>
-  rw_tac std_ss[TAKE_DROP]);
+  rw_tac std_ss[TAKE_DROP]
+QED
 
 (* Theorem: n + m <= LENGTH l ==> rotate n (rotate m l) = rotate (n + m) l *)
 (* Proof:
@@ -443,16 +458,17 @@ val rotate_same_set = store_thm(
      = rotate (SUC (n + m)) l              by rotate_suc
      = rotate (SUC n + m) l                by ADD_CLAUSES
 *)
-val rotate_add = store_thm(
-  "rotate_add",
-  ``!n m l. n + m <= LENGTH l ==> (rotate n (rotate m l) = rotate (n + m) l)``,
+Theorem rotate_add:
+    !n m l. n + m <= LENGTH l ==> (rotate n (rotate m l) = rotate (n + m) l)
+Proof
   Induct >-
   rw[rotate_0] >>
   rw[] >>
   `LENGTH (rotate m l) = LENGTH l` by rw[rotate_same_length] >>
   `LENGTH (rotate (n + m) l) = LENGTH l` by rw[rotate_same_length] >>
   `n < LENGTH l /\ n + m < LENGTH l /\ n + m <= LENGTH l` by decide_tac >>
-  rw[rotate_suc, ADD_CLAUSES]);
+  rw[rotate_suc, ADD_CLAUSES]
+QED
 
 (* Theorem: !k. k < LENGTH l ==> rotate (LENGTH l - k) (rotate k l) = l *)
 (* Proof:
@@ -463,13 +479,14 @@ val rotate_add = store_thm(
    = rotate (LENGTH l) l                by arithmetic
    = l                                  by rotate_full
 *)
-val rotate_lcancel = store_thm(
-  "rotate_lcancel",
-  ``!k l. k < LENGTH l ==> (rotate (LENGTH l - k) (rotate k l) = l)``,
+Theorem rotate_lcancel:
+    !k l. k < LENGTH l ==> (rotate (LENGTH l - k) (rotate k l) = l)
+Proof
   rpt strip_tac >>
   `LENGTH l - k + k = LENGTH l` by decide_tac >>
   `LENGTH l <= LENGTH l` by rw[] >>
-  rw[rotate_add, rotate_full]);
+  rw[rotate_add, rotate_full]
+QED
 
 (* Theorem: !k. k < LENGTH l ==> rotate k (rotate (LENGTH l - k) l) = l *)
 (* Proof:
@@ -480,13 +497,14 @@ val rotate_lcancel = store_thm(
    = rotate (LENGTH l) l                by arithmetic
    = l                                  by rotate_full
 *)
-val rotate_rcancel = store_thm(
-  "rotate_rcancel",
-  ``!k l. k < LENGTH l ==> (rotate k (rotate (LENGTH l - k) l) = l)``,
+Theorem rotate_rcancel:
+    !k l. k < LENGTH l ==> (rotate k (rotate (LENGTH l - k) l) = l)
+Proof
   rpt strip_tac >>
   `k + (LENGTH l - k) = LENGTH l` by decide_tac >>
   `LENGTH l <= LENGTH l` by rw[] >>
-  rw[rotate_add, rotate_full]);
+  rw[rotate_add, rotate_full]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* List Turn                                                                 *)
@@ -499,17 +517,19 @@ End
 
 (* Theorem: turn [] = [] *)
 (* Proof: by turn_def *)
-val turn_nil = store_thm(
-  "turn_nil",
-  ``turn [] = []``,
-  rw[turn_def]);
+Theorem turn_nil:
+    turn [] = []
+Proof
+  rw[turn_def]
+QED
 
 (* Theorem: l <> [] ==> (turn l = (LAST l) :: (FRONT l)) *)
 (* Proof: by turn_def *)
-val turn_not_nil = store_thm(
-  "turn_not_nil",
-  ``!l. l <> [] ==> (turn l = (LAST l) :: (FRONT l))``,
-  rw[turn_def]);
+Theorem turn_not_nil:
+    !l. l <> [] ==> (turn l = (LAST l) :: (FRONT l))
+Proof
+  rw[turn_def]
+QED
 
 (* Theorem: LENGTH (turn l) = LENGTH l *)
 (* Proof:
@@ -523,10 +543,11 @@ val turn_not_nil = store_thm(
       = SUC (PRE (LENGTH l))             by LENGTH_FRONT
       = LENGTH l                         by SUC_PRE, 0 < LENGTH l
 *)
-val turn_length = store_thm(
-  "turn_length",
-  ``!l. LENGTH (turn l) = LENGTH l``,
-  metis_tac[turn_def, list_CASES, LENGTH, LENGTH_FRONT_CONS, SUC_PRE, NOT_ZERO_LT_ZERO]);
+Theorem turn_length:
+    !l. LENGTH (turn l) = LENGTH l
+Proof
+  metis_tac[turn_def, list_CASES, LENGTH, LENGTH_FRONT_CONS, SUC_PRE, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: (turn p = []) <=> (p = []) *)
 (* Proof:
@@ -535,10 +556,11 @@ val turn_length = store_thm(
    <=> LENGTH p = 0            by turn_length
    <=> p = []                  by LENGTH_NIL
 *)
-val turn_eq_nil = store_thm(
-  "turn_eq_nil",
-  ``!p. (turn p = []) <=> (p = [])``,
-  metis_tac[turn_length, LENGTH_NIL]);
+Theorem turn_eq_nil:
+    !p. (turn p = []) <=> (p = [])
+Proof
+  metis_tac[turn_length, LENGTH_NIL]
+QED
 
 (* Theorem: ls <> [] ==> (HD (turn ls) = LAST ls) *)
 (* Proof:
@@ -546,10 +568,11 @@ val turn_eq_nil = store_thm(
    = HD (LAST ls :: FRONT ls)    by turn_def, ls <> []
    = LAST ls                     by HD
 *)
-val head_turn = store_thm(
-  "head_turn",
-  ``!ls. ls <> [] ==> (HD (turn ls) = LAST ls)``,
-  rw[turn_def]);
+Theorem head_turn:
+    !ls. ls <> [] ==> (HD (turn ls) = LAST ls)
+Proof
+  rw[turn_def]
+QED
 
 (* Theorem: ls <> [] ==> (TL (turn ls) = FRONT ls) *)
 (* Proof:
@@ -586,10 +609,11 @@ val _ = overload_on("turn_exp", ``\l n. FUNPOW turn n l``);
    = FUNPOW turn 0 l    by notation
    = l                  by FUNPOW
 *)
-val turn_exp_0 = store_thm(
-  "turn_exp_0",
-  ``!l. turn_exp l 0 = l``,
-  rw[]);
+Theorem turn_exp_0:
+    !l. turn_exp l 0 = l
+Proof
+  rw[]
+QED
 
 (* Theorem: turn_exp l 1 = turn l *)
 (* Proof:
@@ -597,10 +621,11 @@ val turn_exp_0 = store_thm(
    = FUNPOW turn 1 l    by notation
    = turn l             by FUNPOW
 *)
-val turn_exp_1 = store_thm(
-  "turn_exp_1",
-  ``!l. turn_exp l 1 = turn l``,
-  rw[]);
+Theorem turn_exp_1:
+    !l. turn_exp l 1 = turn l
+Proof
+  rw[]
+QED
 
 (* Theorem: turn_exp l 2 = turn (turn l) *)
 (* Proof:
@@ -610,10 +635,11 @@ val turn_exp_1 = store_thm(
    = turn (turn_exp l 1)     by notation
    = turn (turn l)           by turn_exp_1
 *)
-val turn_exp_2 = store_thm(
-  "turn_exp_2",
-  ``!l. turn_exp l 2 = turn (turn l)``,
-  metis_tac[FUNPOW_SUC, turn_exp_1, TWO]);
+Theorem turn_exp_2:
+    !l. turn_exp l 2 = turn (turn l)
+Proof
+  metis_tac[FUNPOW_SUC, turn_exp_1, TWO]
+QED
 
 (* Theorem: turn_exp l (SUC n) = turn_exp (turn l) n *)
 (* Proof:
@@ -622,10 +648,11 @@ val turn_exp_2 = store_thm(
    = FUNPOW turn n (turn l)   by FUNPOW
    = turn_exp (turn l) n      by notation
 *)
-val turn_exp_SUC = store_thm(
-  "turn_exp_SUC",
-  ``!l n. turn_exp l (SUC n) = turn_exp (turn l) n``,
-  rw[FUNPOW]);
+Theorem turn_exp_SUC:
+    !l n. turn_exp l (SUC n) = turn_exp (turn l) n
+Proof
+  rw[FUNPOW]
+QED
 
 (* Theorem: turn_exp l (SUC n) = turn (turn_exp l n) *)
 (* Proof:
@@ -634,10 +661,11 @@ val turn_exp_SUC = store_thm(
    = turn (FUNPOW turn n l)   by FUNPOW_SUC
    = turn (turn_exp l n)      by notation
 *)
-val turn_exp_suc = store_thm(
-  "turn_exp_suc",
-  ``!l n. turn_exp l (SUC n) = turn (turn_exp l n)``,
-  rw[FUNPOW_SUC]);
+Theorem turn_exp_suc:
+    !l n. turn_exp l (SUC n) = turn (turn_exp l n)
+Proof
+  rw[FUNPOW_SUC]
+QED
 
 (* Theorem: LENGTH (turn_exp l n) = LENGTH l *)
 (* Proof:
@@ -650,13 +678,14 @@ val turn_exp_suc = store_thm(
       = LENGTH (turn_exp l n)          by turn_length
       = LENGTH l                       by induction hypothesis
 *)
-val turn_exp_length = store_thm(
-  "turn_exp_length",
-  ``!l n. LENGTH (turn_exp l n) = LENGTH l``,
+Theorem turn_exp_length:
+    !l n. LENGTH (turn_exp l n) = LENGTH l
+Proof
   strip_tac >>
   Induct >-
   rw[] >>
-  rw[turn_exp_suc, turn_length]);
+  rw[turn_exp_suc, turn_length]
+QED
 
 (* Theorem: n < LENGTH ls ==>
             (HD (turn_exp ls n) = EL (if n = 0 then 0 else LENGTH ls - n) ls) *)
@@ -694,10 +723,10 @@ val turn_exp_length = store_thm(
          = EL (k - n - 1) ls                 by FRONT_EL, k - n - 1 < PRE k, n <> 0
          = EL (k - SUC n) ls                 by arithmetic
 *)
-val head_turn_exp = store_thm(
-  "head_turn_exp",
-  ``!ls n. n < LENGTH ls ==>
-         (HD (turn_exp ls n) = EL (if n = 0 then 0 else LENGTH ls - n) ls)``,
+Theorem head_turn_exp:
+    !ls n. n < LENGTH ls ==>
+         (HD (turn_exp ls n) = EL (if n = 0 then 0 else LENGTH ls - n) ls)
+Proof
   (Induct_on `n` >> simp[]) >>
   rpt strip_tac >>
   qabbrev_tac `k = LENGTH ls` >>
@@ -715,7 +744,8 @@ val head_turn_exp = store_thm(
     `LENGTH (FRONT ls) = PRE (LENGTH ls)` by rw[FRONT_LENGTH] >>
     `n < PRE (LENGTH ls)` by decide_tac >>
     rw[FRONT_EL]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* SUM Theorems                                                              *)
@@ -735,10 +765,11 @@ val SUM_CONS = save_thm("SUM_CONS", SUM |> CONJUNCT2);
 
 (* Theorem: SUM [n] = n *)
 (* Proof: by SUM *)
-val SUM_SING = store_thm(
-  "SUM_SING",
-  ``!n. SUM [n] = n``,
-  rw[]);
+Theorem SUM_SING:
+    !n. SUM [n] = n
+Proof
+  rw[]
+QED
 
 (* Theorem: SUM (s ++ t) = SUM s + SUM t *)
 (* Proof: by induction on s *)
@@ -768,12 +799,13 @@ val SUM_APPEND = store_thm(
          = SUM (MAP ($* k) (h::s))        by MAP
          = RHS
 *)
-val SUM_MULT = store_thm(
-  "SUM_MULT",
-  ``!s k. k * SUM s = SUM (MAP ($* k) s)``,
+Theorem SUM_MULT:
+    !s k. k * SUM s = SUM (MAP ($* k) s)
+Proof
   Induct_on `s` >-
   metis_tac[SUM, MAP, MULT_0] >>
-  metis_tac[SUM, MAP, LEFT_ADD_DISTRIB]);
+  metis_tac[SUM, MAP, LEFT_ADD_DISTRIB]
+QED
 
 (* Theorem: (m + n) * SUM s = SUM (m * s) + SUM (n * s)  *)
 (* Proof: generalization of
@@ -783,10 +815,11 @@ val SUM_MULT = store_thm(
    = m * SUM s + n * SUM s                               by RIGHT_ADD_DISTRIB
    = SUM (MAP (\x. m * x) s) + SUM (MAP (\x. n * x) s)   by SUM_MULT
 *)
-val SUM_RIGHT_ADD_DISTRIB = store_thm(
-  "SUM_RIGHT_ADD_DISTRIB",
-  ``!s m n. (m + n) * SUM s = SUM (MAP ($* m) s) + SUM (MAP ($* n) s)``,
-  metis_tac[RIGHT_ADD_DISTRIB, SUM_MULT]);
+Theorem SUM_RIGHT_ADD_DISTRIB:
+    !s m n. (m + n) * SUM s = SUM (MAP ($* m) s) + SUM (MAP ($* n) s)
+Proof
+  metis_tac[RIGHT_ADD_DISTRIB, SUM_MULT]
+QED
 
 (* Theorem: (SUM s) * (m + n) = SUM (m * s) + SUM (n * s)  *)
 (* Proof: generalization of
@@ -796,10 +829,11 @@ val SUM_RIGHT_ADD_DISTRIB = store_thm(
    = (m + n) * SUM s                           by MULT_COMM
    = SUM (MAP ($* m) s) + SUM (MAP ($* n) s)   by SUM_RIGHT_ADD_DISTRIB
 *)
-val SUM_LEFT_ADD_DISTRIB = store_thm(
-  "SUM_LEFT_ADD_DISTRIB",
-  ``!s m n. (SUM s) * (m + n) = SUM (MAP ($* m) s) + SUM (MAP ($* n) s)``,
-  metis_tac[SUM_RIGHT_ADD_DISTRIB, MULT_COMM]);
+Theorem SUM_LEFT_ADD_DISTRIB:
+    !s m n. (SUM s) * (m + n) = SUM (MAP ($* m) s) + SUM (MAP ($* n) s)
+Proof
+  metis_tac[SUM_RIGHT_ADD_DISTRIB, MULT_COMM]
+QED
 
 
 (*
@@ -867,9 +901,9 @@ val SUM_LEFT_ADD_DISTRIB = store_thm(
        = SIGMA f (n INSERT count n)       by SUM_IMAGE_THM, FINITE_COUNT
        = SIGMA f (count (SUC n))          by COUNT_SUC
 *)
-val SUM_GENLIST = store_thm(
-  "SUM_GENLIST",
-  ``!f n. SUM (GENLIST f n) = SIGMA f (count n)``,
+Theorem SUM_GENLIST:
+    !f n. SUM (GENLIST f n) = SIGMA f (count n)
+Proof
   strip_tac >>
   Induct >-
   rw[SUM_IMAGE_THM] >>
@@ -880,7 +914,8 @@ val SUM_GENLIST = store_thm(
     by metis_tac[IN_COUNT, prim_recTheory.LESS_REFL, DELETE_NON_ELEMENT] >>
   `_ = SIGMA f (n INSERT count n)` by rw[SUM_IMAGE_THM] >>
   `_ = SIGMA f (count (SUC n))` by rw[COUNT_SUC] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: SUM (k=0..n) f(k) = f(0) + SUM (k=1..n) f(k)  *)
 (* Proof:
@@ -888,10 +923,11 @@ val SUM_GENLIST = store_thm(
    = SUM (f 0 :: GENLIST (f o SUC) n)   by GENLIST_CONS
    = f 0 + SUM (GENLIST (f o SUC) n)    by SUM definition.
 *)
-val SUM_DECOMPOSE_FIRST = store_thm(
-  "SUM_DECOMPOSE_FIRST",
-  ``!f n. SUM (GENLIST f (SUC n)) = f 0 + SUM (GENLIST (f o SUC) n)``,
-  metis_tac[GENLIST_CONS, SUM]);
+Theorem SUM_DECOMPOSE_FIRST:
+    !f n. SUM (GENLIST f (SUC n)) = f 0 + SUM (GENLIST (f o SUC) n)
+Proof
+  metis_tac[GENLIST_CONS, SUM]
+QED
 
 (* Theorem: SUM (k=0..n) f(k) = SUM (k=0..(n-1)) f(k) + f n *)
 (* Proof:
@@ -901,14 +937,15 @@ val SUM_DECOMPOSE_FIRST = store_thm(
    = SUM (GENLIST f n) + SUM [f n]   by SUM_APPEND
    = SUM (GENLIST f n) + f n         by SUM definition: SUM (h::t) = h + SUM t, and SUM [] = 0.
 *)
-val SUM_DECOMPOSE_LAST = store_thm(
-  "SUM_DECOMPOSE_LAST",
-  ``!f n. SUM (GENLIST f (SUC n)) = SUM (GENLIST f n) + f n``,
+Theorem SUM_DECOMPOSE_LAST:
+    !f n. SUM (GENLIST f (SUC n)) = SUM (GENLIST f n) + f n
+Proof
   rpt strip_tac >>
   `SUM (GENLIST f (SUC n)) = SUM (SNOC (f n) (GENLIST f n))` by metis_tac[GENLIST] >>
   `_ = SUM ((GENLIST f n) ++ [f n])` by metis_tac[SNOC_APPEND] >>
   `_ = SUM (GENLIST f n) + SUM [f n]` by metis_tac[SUM_APPEND] >>
-  rw[SUM]);
+  rw[SUM]
+QED
 
 (* Theorem: SUM (GENLIST a n) + SUM (GENLIST b n) = SUM (GENLIST (\k. a k + b k) n) *)
 (* Proof: by induction on n.
@@ -926,12 +963,13 @@ val SUM_DECOMPOSE_LAST = store_thm(
      = SUM (GENLIST (\k. a k + b k) n) + (a n + b n)          by induction hypothesis
      = SUM (GENLIST (\k. a k + b k) (SUC n))                  by SUM_DECOMPOSE_LAST
 *)
-val SUM_ADD_GENLIST = store_thm(
-  "SUM_ADD_GENLIST",
-  ``!a b n. SUM (GENLIST a n) + SUM (GENLIST b n) = SUM (GENLIST (\k. a k + b k) n)``,
+Theorem SUM_ADD_GENLIST:
+    !a b n. SUM (GENLIST a n) + SUM (GENLIST b n) = SUM (GENLIST (\k. a k + b k) n)
+Proof
   Induct_on `n` >-
   rw[] >>
-  rw[SUM_DECOMPOSE_LAST]);
+  rw[SUM_DECOMPOSE_LAST]
+QED
 
 (* Theorem: SUM (GENLIST a n ++ GENLIST b n) = SUM (GENLIST (\k. a k + b k) n) *)
 (* Proof:
@@ -939,10 +977,11 @@ val SUM_ADD_GENLIST = store_thm(
    = SUM (GENLIST a n) + SUM (GENLIST b n)  by SUM_APPEND
    = SUM (GENLIST (\k. a k + b k) n)        by SUM_ADD_GENLIST
 *)
-val SUM_GENLIST_APPEND = store_thm(
-  "SUM_GENLIST_APPEND",
-  ``!a b n. SUM (GENLIST a n ++ GENLIST b n) = SUM (GENLIST (\k. a k + b k) n)``,
-  metis_tac[SUM_APPEND, SUM_ADD_GENLIST]);
+Theorem SUM_GENLIST_APPEND:
+    !a b n. SUM (GENLIST a n ++ GENLIST b n) = SUM (GENLIST (\k. a k + b k) n)
+Proof
+  metis_tac[SUM_APPEND, SUM_ADD_GENLIST]
+QED
 
 (* Theorem: 0 < n ==> SUM (GENLIST f (SUC n)) = f 0 + SUM (GENLIST (f o SUC) (PRE n)) + f n *)
 (* Proof:
@@ -952,10 +991,11 @@ val SUM_GENLIST_APPEND = store_thm(
    = f 0 + SUM (GENLIST (f o SUC) m) + f n         by SUM_DECOMPOSE_FIRST
    = f 0 + SUM (GENLIST (f o SUC) (PRE n)) + f n   by PRE_SUC_EQ
 *)
-val SUM_DECOMPOSE_FIRST_LAST = store_thm(
-  "SUM_DECOMPOSE_FIRST_LAST",
-  ``!f n. 0 < n ==> (SUM (GENLIST f (SUC n)) = f 0 + SUM (GENLIST (f o SUC) (PRE n)) + f n)``,
-  metis_tac[SUM_DECOMPOSE_LAST, SUM_DECOMPOSE_FIRST, SUC_EXISTS, PRE_SUC_EQ]);
+Theorem SUM_DECOMPOSE_FIRST_LAST:
+    !f n. 0 < n ==> (SUM (GENLIST f (SUC n)) = f 0 + SUM (GENLIST (f o SUC) (PRE n)) + f n)
+Proof
+  metis_tac[SUM_DECOMPOSE_LAST, SUM_DECOMPOSE_FIRST, SUC_EXISTS, PRE_SUC_EQ]
+QED
 
 (* Theorem: (SUM l) MOD n = (SUM (MAP (\x. x MOD n) l)) MOD n *)
 (* Proof: by list induction.
@@ -973,16 +1013,17 @@ val SUM_DECOMPOSE_FIRST_LAST = store_thm(
     = (SUM (h MOD n ::(MAP (\x. x MOD n) l))) MOD n               by SUM
     = (SUM (MAP (\x. x MOD n) (h::l))) MOD n                      by MAP
 *)
-val SUM_MOD = store_thm(
-  "SUM_MOD",
-  ``!n. 0 < n ==> !l. (SUM l) MOD n = (SUM (MAP (\x. x MOD n) l)) MOD n``,
+Theorem SUM_MOD:
+    !n. 0 < n ==> !l. (SUM l) MOD n = (SUM (MAP (\x. x MOD n) l)) MOD n
+Proof
   rpt strip_tac >>
   Induct_on `l` >-
   rw[] >>
   rpt strip_tac >>
   `SUM (h::l) MOD n = (h MOD n + (SUM l) MOD n) MOD n` by rw_tac std_ss[SUM, MOD_PLUS] >>
   `_ = ((h MOD n) MOD n + SUM (MAP (\x. x MOD n) l) MOD n) MOD n` by rw_tac std_ss[MOD_MOD] >>
-  rw[MOD_PLUS]);
+  rw[MOD_PLUS]
+QED
 
 (* Theorem: SUM l = 0 <=> l = EVERY (\x. x = 0) l *)
 (* Proof: by induction on l.
@@ -996,11 +1037,12 @@ val SUM_MOD = store_thm(
    <=> h = 0 /\ EVERY (\x. x = 0) l   by induction hypothesis
    <=> EVERY (\x. x = 0) (h::l)       by EVERY_DEF
 *)
-val SUM_EQ_0 = store_thm(
-  "SUM_EQ_0",
-  ``!l. (SUM l = 0) <=> EVERY (\x. x = 0) l``,
+Theorem SUM_EQ_0:
+    !l. (SUM l = 0) <=> EVERY (\x. x = 0) l
+Proof
   Induct >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: SUM (GENLIST ((\k. f k) o SUC) (PRE n)) MOD n =
             SUM (GENLIST ((\k. f k MOD n) o SUC) (PRE n)) MOD n *)
@@ -1011,13 +1053,14 @@ val SUM_EQ_0 = store_thm(
    = SUM (GENLIST ((\x. x MOD n) o (\k. f k) o SUC) (PRE n)) MOD n      by composition associative
    = SUM (GENLIST ((\k. f k MOD n) o SUC) (PRE n)) MOD n                by composition
 *)
-val SUM_GENLIST_MOD = store_thm(
-  "SUM_GENLIST_MOD",
-  ``!n. 0 < n ==> !f. SUM (GENLIST ((\k. f k) o SUC) (PRE n)) MOD n = SUM (GENLIST ((\k. f k MOD n) o SUC) (PRE n)) MOD n``,
+Theorem SUM_GENLIST_MOD:
+    !n. 0 < n ==> !f. SUM (GENLIST ((\k. f k) o SUC) (PRE n)) MOD n = SUM (GENLIST ((\k. f k MOD n) o SUC) (PRE n)) MOD n
+Proof
   rpt strip_tac >>
   `SUM (GENLIST ((\k. f k) o SUC) (PRE n)) MOD n =
     SUM (MAP (\x. x MOD n) (GENLIST ((\k. f k) o SUC) (PRE n))) MOD n` by metis_tac[SUM_MOD] >>
-  rw_tac std_ss[MAP_GENLIST, combinTheory.o_ASSOC, combinTheory.o_ABS_L]);
+  rw_tac std_ss[MAP_GENLIST, combinTheory.o_ASSOC, combinTheory.o_ABS_L]
+QED
 
 (* Theorem: SUM (GENLIST (\j. x) n) = n * x *)
 (* Proof:
@@ -1035,12 +1078,13 @@ val SUM_GENLIST_MOD = store_thm(
      = n * x + x                          by induction hypothesis
      = SUC n * x                          by MULT
 *)
-val SUM_CONSTANT = store_thm(
-  "SUM_CONSTANT",
-  ``!n x. SUM (GENLIST (\j. x) n) = n * x``,
+Theorem SUM_CONSTANT:
+    !n x. SUM (GENLIST (\j. x) n) = n * x
+Proof
   Induct >-
   rw[] >>
-  rw_tac std_ss[GENLIST, SUM_SNOC, MULT]);
+  rw_tac std_ss[GENLIST, SUM_SNOC, MULT]
+QED
 
 (* Theorem: SUM (GENLIST (K m) n) = m * n *)
 (* Proof:
@@ -1058,13 +1102,14 @@ val SUM_CONSTANT = store_thm(
       = m + m * n                         by ADD_COMM
       = m * SUC n                         by MULT_SUC
 *)
-val SUM_GENLIST_K = store_thm(
-  "SUM_GENLIST_K",
-  ``!m n. SUM (GENLIST (K m) n) = m * n``,
+Theorem SUM_GENLIST_K:
+    !m n. SUM (GENLIST (K m) n) = m * n
+Proof
   strip_tac >>
   Induct >-
   rw[] >>
-  rw[GENLIST, SUM_SNOC, MULT_SUC]);
+  rw[GENLIST, SUM_SNOC, MULT_SUC]
+QED
 
 (* Theorem: (LENGTH l1 = LENGTH l2) /\ (!k. k <= LENGTH l1 ==> EL k l1 <= EL k l2) ==> SUM l1 <= SUM l2 *)
 (* Proof:
@@ -1083,10 +1128,10 @@ val SUM_GENLIST_K = store_thm(
           <= h1 + SUM t1          by EL_ALL_PROPERTY, induction hypothesis
            = SUM l2               by SUM_CONS
 *)
-val SUM_LE = store_thm(
-  "SUM_LE",
-  ``!l1 l2. (LENGTH l1 = LENGTH l2) /\ (!k. k < LENGTH l1 ==> EL k l1 <= EL k l2) ==>
-           SUM l1 <= SUM l2``,
+Theorem SUM_LE:
+    !l1 l2. (LENGTH l1 = LENGTH l2) /\ (!k. k < LENGTH l1 ==> EL k l1 <= EL k l2) ==>
+           SUM l1 <= SUM l2
+Proof
   Induct >-
   metis_tac[LENGTH_EQ_0, EQ_LESS_EQ] >>
   rpt strip_tac >>
@@ -1095,7 +1140,8 @@ val SUM_LE = store_thm(
   `SUM (h::l1) = h + SUM l1` by rw[SUM_CONS] >>
   `SUM l2 = h1 + SUM t1` by rw[SUM_CONS] >>
   `(h <= h1) /\ SUM l1 <= SUM t1` by metis_tac[EL_ALL_PROPERTY] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: MEM x l ==> x <= SUM l *)
 (* Proof:
@@ -1110,22 +1156,24 @@ val SUM_LE = store_thm(
           ==> x <= SUM l                   by induction hypothesis
            or x <= h + SUM l = SUM (h::l)  by SUM
 *)
-val SUM_LE_MEM = store_thm(
-  "SUM_LE_MEM",
-  ``!l x. MEM x l ==> x <= SUM l``,
+Theorem SUM_LE_MEM:
+    !l x. MEM x l ==> x <= SUM l
+Proof
   Induct >-
   rw[] >>
   rw[] >-
   decide_tac >>
   `x <= SUM l` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: n < LENGTH l ==> (EL n l) <= SUM l *)
 (* Proof: by SUM_LE_MEM, MEM_EL *)
-val SUM_LE_EL = store_thm(
-  "SUM_LE_EL",
-  ``!l n. n < LENGTH l ==> (EL n l) <= SUM l``,
-  metis_tac[SUM_LE_MEM, MEM_EL]);
+Theorem SUM_LE_EL:
+    !l n. n < LENGTH l ==> (EL n l) <= SUM l
+Proof
+  metis_tac[SUM_LE_MEM, MEM_EL]
+QED
 
 (* Theorem: m < n /\ n < LENGTH l ==> (EL m l) + (EL n l) <= SUM l *)
 (* Proof:
@@ -1154,9 +1202,9 @@ val SUM_LE_EL = store_thm(
            <= h + SUM l             by arithmetic
             = SUM (h::l)            by SUM
 *)
-val SUM_LE_SUM_EL = store_thm(
-  "SUM_LE_SUM_EL",
-  ``!l m n. m < n /\ n < LENGTH l ==> (EL m l) + (EL n l) <= SUM l``,
+Theorem SUM_LE_SUM_EL:
+    !l m n. m < n /\ n < LENGTH l ==> (EL m l) + (EL n l) <= SUM l
+Proof
   Induct >-
   rw[] >>
   rw[] >>
@@ -1173,7 +1221,8 @@ val SUM_LE_SUM_EL = store_thm(
     `EL m (h::l) = EL j l` by rw[] >>
     `EL j l + EL k l <= SUM l` by rw[] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: SUM (GENLIST (\j. n * 2 ** j) m) = n * (2 ** m - 1) *)
 (* Proof:
@@ -1199,9 +1248,9 @@ val SUM_LE_SUM_EL = store_thm(
        = n * (2 * 2 ** m - 1)                                   by arithmetic
        = n * (2 ** SUC m - 1)                                   by EXP
 *)
-val SUM_DOUBLING_LIST = store_thm(
-  "SUM_DOUBLING_LIST",
-  ``!m n. SUM (GENLIST (\j. n * 2 ** j) m) = n * (2 ** m - 1)``,
+Theorem SUM_DOUBLING_LIST:
+    !m n. SUM (GENLIST (\j. n * 2 ** j) m) = n * (2 ** m - 1)
+Proof
   rpt strip_tac >>
   Induct_on `m` >-
   rw[] >>
@@ -1210,7 +1259,8 @@ val SUM_DOUBLING_LIST = store_thm(
   `_ = SUM (GENLIST f m) + (n * 2 ** m)` by rw[SUM_SNOC] >>
   `_ = n * (2 ** m - 1) + n * 2 ** m` by rw[] >>
   `_ = n * (2 ** m - 1 + 2 ** m)` by rw[LEFT_ADD_DISTRIB] >>
-  rw[EXP]);
+  rw[EXP]
+QED
 
 
 (* Idea: key theorem, almost like pigeonhole principle. *)
@@ -1302,17 +1352,18 @@ QED
        = f (MAX h (MAX_LIST ls))         by MAX_SWAP
        = f (MAX_LIST (h::ls))            by MAX_LIST_def
 *)
-val MAX_LIST_MONO_MAP = store_thm(
-  "MAX_LIST_MONO_MAP",
-  ``!f. (!x y. x <= y ==> f x <= f y) ==>
-   !ls. ls <> [] ==> (MAX_LIST (MAP f ls) = f (MAX_LIST ls))``,
+Theorem MAX_LIST_MONO_MAP:
+    !f. (!x y. x <= y ==> f x <= f y) ==>
+   !ls. ls <> [] ==> (MAX_LIST (MAP f ls) = f (MAX_LIST ls))
+Proof
   rpt strip_tac >>
   Induct_on `ls` >-
   rw[] >>
   rpt strip_tac >>
   Cases_on `ls = []` >-
   rw[] >>
-  rw[MAX_SWAP]);
+  rw[MAX_SWAP]
+QED
 
 (* Theorem: (!x y. x <= y ==> f x <= f y) ==>
            !ls. ls <> [] ==> (MIN_LIST (MAP f ls) = f (MIN_LIST ls)) *)
@@ -1335,17 +1386,18 @@ val MAX_LIST_MONO_MAP = store_thm(
        = f (MIN h (MIN_LIST ls))         by MIN_SWAP
        = f (MIN_LIST (h::ls))            by MIN_LIST_def
 *)
-val MIN_LIST_MONO_MAP = store_thm(
-  "MIN_LIST_MONO_MAP",
-  ``!f. (!x y. x <= y ==> f x <= f y) ==>
-   !ls. ls <> [] ==> (MIN_LIST (MAP f ls) = f (MIN_LIST ls))``,
+Theorem MIN_LIST_MONO_MAP:
+    !f. (!x y. x <= y ==> f x <= f y) ==>
+   !ls. ls <> [] ==> (MIN_LIST (MAP f ls) = f (MIN_LIST ls))
+Proof
   rpt strip_tac >>
   Induct_on `ls` >-
   rw[] >>
   rpt strip_tac >>
   Cases_on `ls = []` >-
   rw[] >>
-  rw[MIN_SWAP]);
+  rw[MIN_SWAP]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* List Nub and Set                                                          *)
@@ -1374,10 +1426,11 @@ val nub_cons = save_thm("nub_cons", nub_def |> CONJUNCT2);
    = x ::[]        by nub_nil
    = [x]           by notation
 *)
-val nub_sing = store_thm(
-  "nub_sing",
-  ``!x. nub [x] = [x]``,
-  rw[nub_def]);
+Theorem nub_sing:
+    !x. nub [x] = [x]
+Proof
+  rw[nub_def]
+QED
 
 (* Theorem: ALL_DISTINCT (nub l) *)
 (* Proof:
@@ -1397,12 +1450,13 @@ val nub_sing = store_thm(
          ==> ALL_DISTINCT (h::nub l)   by ALL_DISTINCT, ~(MEM h l)
           or ALL_DISTINCT (nub (h::l))
 *)
-val nub_all_distinct = store_thm(
-  "nub_all_distinct",
-  ``!l. ALL_DISTINCT (nub l)``,
+Theorem nub_all_distinct:
+    !l. ALL_DISTINCT (nub l)
+Proof
   Induct >-
   rw[nub_nil] >>
-  rw[nub_cons]);
+  rw[nub_cons]
+QED
 
 (* Theorem: CARD (set l) = LENGTH (nub l) *)
 (* Proof:
@@ -1412,13 +1466,14 @@ val nub_all_distinct = store_thm(
       = CARD (set (nub l))     by above
       = LENGTH (nub l)         by ALL_DISTINCT_CARD_LIST_TO_SET, ALL_DISTINCT (nub l)
 *)
-val CARD_LIST_TO_SET_EQ = store_thm(
-  "CARD_LIST_TO_SET_EQ",
-  ``!l. CARD (set l) = LENGTH (nub l)``,
+Theorem CARD_LIST_TO_SET_EQ:
+    !l. CARD (set l) = LENGTH (nub l)
+Proof
   rpt strip_tac >>
   `set (nub l) = set l` by rw[nub_set] >>
   `ALL_DISTINCT (nub l)` by rw[nub_all_distinct] >>
-  rw[GSYM ALL_DISTINCT_CARD_LIST_TO_SET]);
+  rw[GSYM ALL_DISTINCT_CARD_LIST_TO_SET]
+QED
 
 (* Theorem: set [x] = {x} *)
 (* Proof:
@@ -1427,10 +1482,11 @@ val CARD_LIST_TO_SET_EQ = store_thm(
    = x INSERT {}                  by LIST_TO_SET
    = {x}                          by INSERT_DEF
 *)
-val MONO_LIST_TO_SET = store_thm(
-  "MONO_LIST_TO_SET",
-  ``!x. set [x] = {x}``,
-  rw[]);
+Theorem MONO_LIST_TO_SET:
+    !x. set [x] = {x}
+Proof
+  rw[]
+QED
 
 (* Theorem: ~(MEM h l1) /\ (set (h::l1) = set l2) ==>
             ?p1 p2. ~(MEM h p1) /\ ~(MEM h p2) /\ (nub l2 = p1 ++ [h] ++ p2) /\ (set l1 = set (p1 ++ p2)) *)
@@ -1471,10 +1527,10 @@ val MONO_LIST_TO_SET = store_thm(
 
   Thus set l1 = set (p1 ++ p2)           by SUBSET_ANTISYM
 *)
-val LIST_TO_SET_REDUCTION = store_thm(
-  "LIST_TO_SET_REDUCTION",
-  ``!l1 l2 h. ~(MEM h l1) /\ (set (h::l1) = set l2) ==>
-   ?p1 p2. ~(MEM h p1) /\ ~(MEM h p2) /\ (nub l2 = p1 ++ [h] ++ p2) /\ (set l1 = set (p1 ++ p2))``,
+Theorem LIST_TO_SET_REDUCTION:
+    !l1 l2 h. ~(MEM h l1) /\ (set (h::l1) = set l2) ==>
+   ?p1 p2. ~(MEM h p1) /\ ~(MEM h p2) /\ (nub l2 = p1 ++ [h] ++ p2) /\ (set l1 = set (p1 ++ p2))
+Proof
   rpt strip_tac >>
   `MEM h (nub l2)` by metis_tac[MEM, nub_set] >>
   qabbrev_tac `l = nub l2` >>
@@ -1489,7 +1545,8 @@ val LIST_TO_SET_REDUCTION = store_thm(
   rewrite_tac[SUBSET_DEF] >>
   rpt strip_tac >-
   metis_tac[MEM_APPEND, MEM, nub_set] >>
-  metis_tac[MEM_APPEND, MEM, nub_set]);
+  metis_tac[MEM_APPEND, MEM, nub_set]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* List Padding                                                              *)
@@ -1497,17 +1554,19 @@ val LIST_TO_SET_REDUCTION = store_thm(
 
 (* Theorem: PAD_LEFT c n [] = GENLIST (K c) n *)
 (* Proof: by PAD_LEFT *)
-val PAD_LEFT_NIL = store_thm(
-  "PAD_LEFT_NIL",
-  ``!n c. PAD_LEFT c n [] = GENLIST (K c) n``,
-  rw[PAD_LEFT]);
+Theorem PAD_LEFT_NIL:
+    !n c. PAD_LEFT c n [] = GENLIST (K c) n
+Proof
+  rw[PAD_LEFT]
+QED
 
 (* Theorem: PAD_RIGHT c n [] = GENLIST (K c) n *)
 (* Proof: by PAD_RIGHT *)
-val PAD_RIGHT_NIL = store_thm(
-  "PAD_RIGHT_NIL",
-  ``!n c. PAD_RIGHT c n [] = GENLIST (K c) n``,
-  rw[PAD_RIGHT]);
+Theorem PAD_RIGHT_NIL:
+    !n c. PAD_RIGHT c n [] = GENLIST (K c) n
+Proof
+  rw[PAD_RIGHT]
+QED
 
 (* Theorem: LENGTH (PAD_LEFT c n s) = MAX n (LENGTH s) *)
 (* Proof:
@@ -1517,10 +1576,11 @@ val PAD_RIGHT_NIL = store_thm(
    = n - LENGTH s + LENGTH s                              by LENGTH_GENLIST
    = MAX n (LENGTH s)                                     by MAX_DEF
 *)
-val PAD_LEFT_LENGTH = store_thm(
-  "PAD_LEFT_LENGTH",
-  ``!n c s. LENGTH (PAD_LEFT c n s) = MAX n (LENGTH s)``,
-  rw[PAD_LEFT, MAX_DEF]);
+Theorem PAD_LEFT_LENGTH:
+    !n c s. LENGTH (PAD_LEFT c n s) = MAX n (LENGTH s)
+Proof
+  rw[PAD_LEFT, MAX_DEF]
+QED
 
 (* Theorem: LENGTH (PAD_RIGHT c n s) = MAX n (LENGTH s) *)
 (* Proof:
@@ -1530,10 +1590,11 @@ val PAD_LEFT_LENGTH = store_thm(
    = LENGTH s + (n - LENGTH s)                            by LENGTH_GENLIST
    = MAX n (LENGTH s)                                     by MAX_DEF
 *)
-val PAD_RIGHT_LENGTH = store_thm(
-  "PAD_RIGHT_LENGTH",
-  ``!n c s. LENGTH (PAD_RIGHT c n s) = MAX n (LENGTH s)``,
-  rw[PAD_RIGHT, MAX_DEF]);
+Theorem PAD_RIGHT_LENGTH:
+    !n c s. LENGTH (PAD_RIGHT c n s) = MAX n (LENGTH s)
+Proof
+  rw[PAD_RIGHT, MAX_DEF]
+QED
 
 (* Theorem: n <= LENGTH l ==> (PAD_LEFT c n l = l) *)
 (* Proof:
@@ -1543,12 +1604,13 @@ val PAD_RIGHT_LENGTH = store_thm(
    = [] ++ l                   by GENLIST
    = l                         by APPEND
 *)
-val PAD_LEFT_ID = store_thm(
-  "PAD_LEFT_ID",
-  ``!l c n. n <= LENGTH l ==> (PAD_LEFT c n l = l)``,
+Theorem PAD_LEFT_ID:
+    !l c n. n <= LENGTH l ==> (PAD_LEFT c n l = l)
+Proof
   rpt strip_tac >>
   `n - LENGTH l = 0` by decide_tac >>
-  rw[PAD_LEFT]);
+  rw[PAD_LEFT]
+QED
 
 (* Theorem: n <= LENGTH l ==> (PAD_RIGHT c n l = l) *)
 (* Proof:
@@ -1558,26 +1620,29 @@ val PAD_LEFT_ID = store_thm(
    = [] ++ l                   by GENLIST
    = l                         by APPEND_NIL
 *)
-val PAD_RIGHT_ID = store_thm(
-  "PAD_RIGHT_ID",
-  ``!l c n. n <= LENGTH l ==> (PAD_RIGHT c n l = l)``,
+Theorem PAD_RIGHT_ID:
+    !l c n. n <= LENGTH l ==> (PAD_RIGHT c n l = l)
+Proof
   rpt strip_tac >>
   `n - LENGTH l = 0` by decide_tac >>
-  rw[PAD_RIGHT]);
+  rw[PAD_RIGHT]
+QED
 
 (* Theorem: PAD_LEFT c 0 l = l *)
 (* Proof: by PAD_LEFT_ID *)
-val PAD_LEFT_0 = store_thm(
-  "PAD_LEFT_0",
-  ``!l c. PAD_LEFT c 0 l = l``,
-  rw_tac std_ss[PAD_LEFT_ID]);
+Theorem PAD_LEFT_0:
+    !l c. PAD_LEFT c 0 l = l
+Proof
+  rw_tac std_ss[PAD_LEFT_ID]
+QED
 
 (* Theorem: PAD_RIGHT c 0 l = l *)
 (* Proof: by PAD_RIGHT_ID *)
-val PAD_RIGHT_0 = store_thm(
-  "PAD_RIGHT_0",
-  ``!l c. PAD_RIGHT c 0 l = l``,
-  rw_tac std_ss[PAD_RIGHT_ID]);
+Theorem PAD_RIGHT_0:
+    !l c. PAD_RIGHT c 0 l = l
+Proof
+  rw_tac std_ss[PAD_RIGHT_ID]
+QED
 
 (* Theorem: LENGTH l <= n ==> !c. PAD_LEFT c (SUC n) l = c:: PAD_LEFT c n l *)
 (* Proof:
@@ -1591,9 +1656,9 @@ val PAD_RIGHT_0 = store_thm(
    = [c] ++ PAD_LEFT c n l                         by PAD_LEFT
    = c :: PAD_LEFT c n l                           by CONS_APPEND
 *)
-val PAD_LEFT_CONS = store_thm(
-  "PAD_LEFT_CONS",
-  ``!l n. LENGTH l <= n ==> !c. PAD_LEFT c (SUC n) l = c:: PAD_LEFT c n l``,
+Theorem PAD_LEFT_CONS:
+    !l n. LENGTH l <= n ==> !c. PAD_LEFT c (SUC n) l = c:: PAD_LEFT c n l
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = LENGTH l` >>
   `SUC n - m = SUC (n - m)` by decide_tac >>
@@ -1604,7 +1669,8 @@ val PAD_LEFT_CONS = store_thm(
   `_ = [c] ++ ((GENLIST (K c) (n - m)) ++ l)` by rw[APPEND_ASSOC] >>
   `_ = [c] ++ PAD_LEFT c n l` by rw[PAD_LEFT] >>
   `_ = c :: PAD_LEFT c n l` by rw[] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: LENGTH l <= n ==> !c. PAD_RIGHT c (SUC n) l = SNOC c (PAD_RIGHT c n l) *)
 (* Proof:
@@ -1615,13 +1681,14 @@ val PAD_LEFT_CONS = store_thm(
    = SNOC c (l ++ (GENLIST (K c) (n - LENGTH l)))  by APPEND_SNOC
    = SNOC c (PAD_RIGHT c n l)                      by PAD_RIGHT
 *)
-val PAD_RIGHT_SNOC = store_thm(
-  "PAD_RIGHT_SNOC",
-  ``!l n. LENGTH l <= n ==> !c. PAD_RIGHT c (SUC n) l = SNOC c (PAD_RIGHT c n l)``,
+Theorem PAD_RIGHT_SNOC:
+    !l n. LENGTH l <= n ==> !c. PAD_RIGHT c (SUC n) l = SNOC c (PAD_RIGHT c n l)
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = LENGTH l` >>
   `SUC n - m = SUC (n - m)` by decide_tac >>
-  rw[PAD_RIGHT, GENLIST, APPEND_SNOC]);
+  rw[PAD_RIGHT, GENLIST, APPEND_SNOC]
+QED
 
 (* Theorem: h :: PAD_RIGHT c n t = PAD_RIGHT c (SUC n) (h::t) *)
 (* Proof:
@@ -1631,10 +1698,11 @@ val PAD_RIGHT_SNOC = store_thm(
    = (h::t) ++ GENLIST (K c) (SUC n - LENGTH (h::t))   by LENGTH
    = PAD_RIGHT c (SUC n) (h::t)                        by PAD_RIGHT
 *)
-val PAD_RIGHT_CONS = store_thm(
-  "PAD_RIGHT_CONS",
-  ``!h t c n. h :: PAD_RIGHT c n t = PAD_RIGHT c (SUC n) (h::t)``,
-  rw[PAD_RIGHT]);
+Theorem PAD_RIGHT_CONS:
+    !h t c n. h :: PAD_RIGHT c n t = PAD_RIGHT c (SUC n) (h::t)
+Proof
+  rw[PAD_RIGHT]
+QED
 
 (* Theorem: l <> [] ==> (LAST (PAD_LEFT c n l) = LAST l) *)
 (* Proof:
@@ -1644,12 +1712,13 @@ val PAD_RIGHT_CONS = store_thm(
    = LAST (h::t)           by LAST_APPEND_CONS
    = LAST l                by notation
 *)
-val PAD_LEFT_LAST = store_thm(
-  "PAD_LEFT_LAST",
-  ``!l c n. l <> [] ==> (LAST (PAD_LEFT c n l) = LAST l)``,
+Theorem PAD_LEFT_LAST:
+    !l c n. l <> [] ==> (LAST (PAD_LEFT c n l) = LAST l)
+Proof
   rpt strip_tac >>
   `?h t. l = h::t` by metis_tac[list_CASES] >>
-  rw[PAD_LEFT, LAST_APPEND_CONS]);
+  rw[PAD_LEFT, LAST_APPEND_CONS]
+QED
 
 (* Theorem: (PAD_LEFT c n l = []) <=> ((l = []) /\ (n = 0)) *)
 (* Proof:
@@ -1659,11 +1728,12 @@ val PAD_LEFT_LAST = store_thm(
    <=> GENLIST (K c) n = [] /\ l = []                by LENGTH l = 0
    <=> n = 0 /\ l = []                               by GENLIST_EQ_NIL
 *)
-val PAD_LEFT_EQ_NIL = store_thm(
-  "PAD_LEFT_EQ_NIL",
-  ``!l c n. (PAD_LEFT c n l = []) <=> ((l = []) /\ (n = 0))``,
+Theorem PAD_LEFT_EQ_NIL:
+    !l c n. (PAD_LEFT c n l = []) <=> ((l = []) /\ (n = 0))
+Proof
   rw[PAD_LEFT, EQ_IMP_THM] >>
-  fs[GENLIST_EQ_NIL]);
+  fs[GENLIST_EQ_NIL]
+QED
 
 (* Theorem: (PAD_RIGHT c n l = []) <=> ((l = []) /\ (n = 0)) *)
 (* Proof:
@@ -1673,11 +1743,12 @@ val PAD_LEFT_EQ_NIL = store_thm(
    <=> l = [] /\ GENLIST (K c) n = []                by LENGTH l = 0
    <=> l = [] /\ n = 0                               by GENLIST_EQ_NIL
 *)
-val PAD_RIGHT_EQ_NIL = store_thm(
-  "PAD_RIGHT_EQ_NIL",
-  ``!l c n. (PAD_RIGHT c n l = []) <=> ((l = []) /\ (n = 0))``,
+Theorem PAD_RIGHT_EQ_NIL:
+    !l c n. (PAD_RIGHT c n l = []) <=> ((l = []) /\ (n = 0))
+Proof
   rw[PAD_RIGHT, EQ_IMP_THM] >>
-  fs[GENLIST_EQ_NIL]);
+  fs[GENLIST_EQ_NIL]
+QED
 
 (* Theorem: 0 < n ==> (PAD_LEFT c n [] = PAD_LEFT c n [c]) *)
 (* Proof:
@@ -1688,14 +1759,15 @@ val PAD_RIGHT_EQ_NIL = store_thm(
     = GENLIST (K c) k ++ [c]   by SNOC_APPEND
     = PAD_LEFT c n [c]         by PAD_LEFT
 *)
-val PAD_LEFT_NIL_EQ = store_thm(
-  "PAD_LEFT_NIL_EQ",
-  ``!n c. 0 < n ==> (PAD_LEFT c n [] = PAD_LEFT c n [c])``,
+Theorem PAD_LEFT_NIL_EQ:
+    !n c. 0 < n ==> (PAD_LEFT c n [] = PAD_LEFT c n [c])
+Proof
   rw[PAD_LEFT] >>
   `SUC (n - 1) = n` by decide_tac >>
   qabbrev_tac `f = (K c):num -> 'a` >>
   `f (n - 1) = c` by rw[Abbr`f`] >>
-  metis_tac[SNOC_APPEND, GENLIST]);
+  metis_tac[SNOC_APPEND, GENLIST]
+QED
 
 (* Theorem: 0 < n ==> (PAD_RIGHT c n [] = PAD_RIGHT c n [c]) *)
 (* Proof:
@@ -1707,12 +1779,13 @@ val PAD_LEFT_NIL_EQ = store_thm(
     = PAD_RIGHT c (SUC (n - 1)) [c]  by PAD_RIGHT
     = PAD_RIGHT c n [c]              by 0 < n
 *)
-val PAD_RIGHT_NIL_EQ = store_thm(
-  "PAD_RIGHT_NIL_EQ",
-  ``!n c. 0 < n ==> (PAD_RIGHT c n [] = PAD_RIGHT c n [c])``,
+Theorem PAD_RIGHT_NIL_EQ:
+    !n c. 0 < n ==> (PAD_RIGHT c n [] = PAD_RIGHT c n [c])
+Proof
   rw[PAD_RIGHT] >>
   `SUC (n - 1) = n` by decide_tac >>
-  metis_tac[GENLIST_K_CONS]);
+  metis_tac[GENLIST_K_CONS]
+QED
 
 (* Theorem: PAD_RIGHT c n ls = ls ++ PAD_RIGHT c (n - LENGTH ls) [] *)
 (* Proof:
@@ -1721,10 +1794,11 @@ val PAD_RIGHT_NIL_EQ = store_thm(
    = ls ++ ([] ++ GENLIST (K c) ((n - LENGTH ls) - 0)   by APPEND_NIL, LENGTH
    = ls ++ PAD_RIGHT c (n - LENGTH ls) []               by PAD_RIGHT
 *)
-val PAD_RIGHT_BY_RIGHT = store_thm(
-  "PAD_RIGHT_BY_RIGHT",
-  ``!ls c n. PAD_RIGHT c n ls = ls ++ PAD_RIGHT c (n - LENGTH ls) []``,
-  rw[PAD_RIGHT]);
+Theorem PAD_RIGHT_BY_RIGHT:
+    !ls c n. PAD_RIGHT c n ls = ls ++ PAD_RIGHT c (n - LENGTH ls) []
+Proof
+  rw[PAD_RIGHT]
+QED
 
 (* Theorem: PAD_RIGHT c n ls = ls ++ PAD_LEFT c (n - LENGTH ls) [] *)
 (* Proof:
@@ -1733,10 +1807,11 @@ val PAD_RIGHT_BY_RIGHT = store_thm(
    = ls ++ (GENLIST (K c) ((n - LENGTH ls) - 0) ++ [])  by APPEND_NIL, LENGTH
    = ls ++ PAD_LEFT c (n - LENGTH ls) []               by PAD_LEFT
 *)
-val PAD_RIGHT_BY_LEFT = store_thm(
-  "PAD_RIGHT_BY_LEFT",
-  ``!ls c n. PAD_RIGHT c n ls = ls ++ PAD_LEFT c (n - LENGTH ls) []``,
-  rw[PAD_RIGHT, PAD_LEFT]);
+Theorem PAD_RIGHT_BY_LEFT:
+    !ls c n. PAD_RIGHT c n ls = ls ++ PAD_LEFT c (n - LENGTH ls) []
+Proof
+  rw[PAD_RIGHT, PAD_LEFT]
+QED
 
 (* Theorem: PAD_LEFT c n ls = (PAD_RIGHT c (n - LENGTH ls) []) ++ ls *)
 (* Proof:
@@ -1745,10 +1820,11 @@ val PAD_RIGHT_BY_LEFT = store_thm(
    = ([] ++ GENLIST (K c) ((n - LENGTH ls) - 0) ++ ls  by APPEND_NIL, LENGTH
    = (PAD_RIGHT c (n - LENGTH ls) []) ++ ls            by PAD_RIGHT
 *)
-val PAD_LEFT_BY_RIGHT = store_thm(
-  "PAD_LEFT_BY_RIGHT",
-  ``!ls c n. PAD_LEFT c n ls = (PAD_RIGHT c (n - LENGTH ls) []) ++ ls``,
-  rw[PAD_RIGHT, PAD_LEFT]);
+Theorem PAD_LEFT_BY_RIGHT:
+    !ls c n. PAD_LEFT c n ls = (PAD_RIGHT c (n - LENGTH ls) []) ++ ls
+Proof
+  rw[PAD_RIGHT, PAD_LEFT]
+QED
 
 (* Theorem: PAD_LEFT c n ls = (PAD_LEFT c (n - LENGTH ls) []) ++ ls *)
 (* Proof:
@@ -1757,10 +1833,11 @@ val PAD_LEFT_BY_RIGHT = store_thm(
    = ((GENLIST (K c) ((n - LENGTH ls) - 0) ++ []) ++ ls  by APPEND_NIL, LENGTH
    = (PAD_LEFT c (n - LENGTH ls) []) ++ ls               by PAD_LEFT
 *)
-val PAD_LEFT_BY_LEFT = store_thm(
-  "PAD_LEFT_BY_LEFT",
-  ``!ls c n. PAD_LEFT c n ls = (PAD_LEFT c (n - LENGTH ls) []) ++ ls``,
-  rw[PAD_LEFT]);
+Theorem PAD_LEFT_BY_LEFT:
+    !ls c n. PAD_LEFT c n ls = (PAD_LEFT c (n - LENGTH ls) []) ++ ls
+Proof
+  rw[PAD_LEFT]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* PROD for List, similar to SUM for List                                    *)
@@ -1772,10 +1849,11 @@ val _ = overload_on("EVERY_POSITIVE", ``\l. EVERY (\k. 0 < k) l``);
 
 (* Theorem: EVERY_POSITIVE ls <=> POSITIVE ls *)
 (* Proof: by EVERY_MEM *)
-val POSITIVE_THM = store_thm(
-  "POSITIVE_THM",
-  ``!ls. EVERY_POSITIVE ls <=> POSITIVE ls``,
-  rw[EVERY_MEM]);
+Theorem POSITIVE_THM:
+    !ls. EVERY_POSITIVE ls <=> POSITIVE ls
+Proof
+  rw[EVERY_MEM]
+QED
 
 (* Note: For product of a number list, any zero element will make the product 0. *)
 
@@ -1798,17 +1876,19 @@ val PROD_CONS = save_thm("PROD_CONS", PROD |> CONJUNCT2);
 
 (* Theorem: PROD [n] = n *)
 (* Proof: by PROD *)
-val PROD_SING = store_thm(
-  "PROD_SING",
-  ``!n. PROD [n] = n``,
-  rw[]);
+Theorem PROD_SING:
+    !n. PROD [n] = n
+Proof
+  rw[]
+QED
 
 (* Theorem: PROD ls = if ls = [] then 1 else (HD ls) * PROD (TL ls) *)
 (* Proof: by PROD *)
-val PROD_eval = store_thm(
-  "PROD_eval[compute]", (* put in computeLib *)
-  ``!ls. PROD ls = if ls = [] then 1 else (HD ls) * PROD (TL ls)``,
-  metis_tac[PROD, list_CASES, HD, TL]);
+Theorem PROD_eval[compute]: (* put in computeLib *)
+    !ls. PROD ls = if ls = [] then 1 else (HD ls) * PROD (TL ls)
+Proof
+  metis_tac[PROD, list_CASES, HD, TL]
+QED
 
 (* enable PROD computation -- use [compute] above. *)
 (* val _ = computeLib.add_persistent_funs ["PROD_eval"]; *)
@@ -1827,12 +1907,13 @@ val PROD_eval = store_thm(
         or h = 1 /\ !x. MEM x ls ==> (x = 1)    by induction hypothesis
         or !x. MEM x (h::ls) ==> (x = 1)        by MEM
 *)
-val PROD_eq_1 = store_thm(
-  "PROD_eq_1",
-  ``!ls. (PROD ls = 1) = !x. MEM x ls ==> (x = 1)``,
+Theorem PROD_eq_1:
+    !ls. (PROD ls = 1) = !x. MEM x ls ==> (x = 1)
+Proof
   Induct >>
   rw[] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: PROD (SNOC x l) = (PROD l) * x *)
 (* Proof:
@@ -1851,12 +1932,13 @@ val PROD_eq_1 = store_thm(
       = (h * PROD l) * x        by MULT_ASSOC
       = PROD (h::l) * x         by PROD
 *)
-val PROD_SNOC = store_thm(
-  "PROD_SNOC",
-  ``!x l. PROD (SNOC x l) = (PROD l) * x``,
+Theorem PROD_SNOC:
+    !x l. PROD (SNOC x l) = (PROD l) * x
+Proof
   strip_tac >>
   Induct >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: PROD (APPEND l1 l2) = PROD l1 * PROD l2 *)
 (* Proof:
@@ -1874,10 +1956,11 @@ val PROD_SNOC = store_thm(
        = (h * PROD l1) * PROD l2   by MULT_ASSOC
        = PROD (h::l1) * PROD l2    by PROD
 *)
-val PROD_APPEND = store_thm(
-  "PROD_APPEND",
-  ``!l1 l2. PROD (APPEND l1 l2) = PROD l1 * PROD l2``,
-  Induct >> rw[]);
+Theorem PROD_APPEND:
+    !l1 l2. PROD (APPEND l1 l2) = PROD l1 * PROD l2
+Proof
+  Induct >> rw[]
+QED
 
 (* Theorem: PROD (MAP f ls) = FOLDL (\a e. a * f e) 1 ls *)
 (* Proof:
@@ -1896,13 +1979,14 @@ val PROD_APPEND = store_thm(
        = (\a e. a * f e) (FOLDL (\a e. a * f e) 1 ls) x    by function application
        = FOLDL (\a e. a * f e) 1 (SNOC x ls)               by FOLDL_SNOC
 *)
-val PROD_MAP_FOLDL = store_thm(
-  "PROD_MAP_FOLDL",
-  ``!ls f. PROD (MAP f ls) = FOLDL (\a e. a * f e) 1 ls``,
+Theorem PROD_MAP_FOLDL:
+    !ls f. PROD (MAP f ls) = FOLDL (\a e. a * f e) 1 ls
+Proof
   HO_MATCH_MP_TAC SNOC_INDUCT >>
   rpt strip_tac >-
   rw[] >>
-  rw[MAP_SNOC, PROD_SNOC, FOLDL_SNOC]);
+  rw[MAP_SNOC, PROD_SNOC, FOLDL_SNOC]
+QED
 
 (* Theorem: FINITE s ==> !f. PI f s = PROD (MAP f (SET_TO_LIST s)) *)
 (* Proof:
@@ -1912,14 +1996,15 @@ val PROD_MAP_FOLDL = store_thm(
    = FOLDL (\a e. a * f e) 1 (SET_TO_LIST s)                  by FUN_EQ_THM
    = PROD (MAP f (SET_TO_LIST s))                             by PROD_MAP_FOLDL
 *)
-val PROD_IMAGE_eq_PROD_MAP_SET_TO_LIST = store_thm(
-  "PROD_IMAGE_eq_PROD_MAP_SET_TO_LIST",
-  ``!s. FINITE s ==> !f. PI f s = PROD (MAP f (SET_TO_LIST s))``,
+Theorem PROD_IMAGE_eq_PROD_MAP_SET_TO_LIST:
+    !s. FINITE s ==> !f. PI f s = PROD (MAP f (SET_TO_LIST s))
+Proof
   rw[PROD_IMAGE_DEF] >>
   rw[ITSET_eq_FOLDL_SET_TO_LIST, PROD_MAP_FOLDL] >>
   rpt AP_THM_TAC >>
   AP_TERM_TAC >>
-  rw[FUN_EQ_THM]);
+  rw[FUN_EQ_THM]
+QED
 
 (* Define PROD using accumulator *)
 Definition PROD_ACC_DEF:
@@ -1943,16 +2028,18 @@ End
       = (h * PROD L) * n     by MULT_COMM
       = PROD (h::L) * n      by PROD
 *)
-val PROD_ACC_PROD_LEM = store_thm(
-  "PROD_ACC_PROD_LEM",
-  ``!L n. PROD_ACC L n = PROD L * n``,
+Theorem PROD_ACC_PROD_LEM:
+    !L n. PROD_ACC L n = PROD L * n
+Proof
   Induct >>
-  rw[PROD_ACC_DEF]);
+  rw[PROD_ACC_DEF]
+QED
 (* proof SUM_ACC_SUM_LEM *)
-val PROD_ACC_PROD_LEM = store_thm
-("PROD_ACC_SUM_LEM",
- ``!L n. PROD_ACC L n = PROD L * n``,
- Induct THEN RW_TAC arith_ss [PROD_ACC_DEF, PROD]);
+Theorem PROD_ACC_SUM_LEM:
+   !L n. PROD_ACC L n = PROD L * n
+Proof
+ Induct THEN RW_TAC arith_ss [PROD_ACC_DEF, PROD]
+QED
 
 (* Theorem: PROD L = PROD_ACC L 1 *)
 (* Proof: Put n = 1 in PROD_ACC_PROD_LEM *)
@@ -1980,13 +2067,14 @@ QED
       = m * m ** n                         by MULT_COMM
       = m * SUC n                          by EXP
 *)
-val PROD_GENLIST_K = store_thm(
-  "PROD_GENLIST_K",
-  ``!m n. PROD (GENLIST (K m) n) = m ** n``,
+Theorem PROD_GENLIST_K:
+    !m n. PROD (GENLIST (K m) n) = m ** n
+Proof
   strip_tac >>
   Induct >-
   rw[] >>
-  rw[GENLIST, PROD_SNOC, EXP]);
+  rw[GENLIST, PROD_SNOC, EXP]
+QED
 
 (* Same as PROD_GENLIST_K, formulated slightly different. *)
 
@@ -1997,12 +2085,13 @@ val PROD_GENLIST_K = store_thm(
       = PROD (GENLIST (K x) n)    by GENLIST_FUN_EQ
       = x ** n                    by PROD_GENLIST_K
 *)
-val PROD_CONSTANT = store_thm(
-  "PROD_CONSTANT",
-  ``!n x. PROD (GENLIST (\j. x) n) = x ** n``,
+Theorem PROD_CONSTANT:
+    !n x. PROD (GENLIST (\j. x) n) = x ** n
+Proof
   rpt strip_tac >>
   `(\j. x) = K x` by rw[FUN_EQ_THM] >>
-  metis_tac[PROD_GENLIST_K, GENLIST_FUN_EQ]);
+  metis_tac[PROD_GENLIST_K, GENLIST_FUN_EQ]
+QED
 
 (* Theorem: (PROD l = 0) <=> MEM 0 l *)
 (* Proof:
@@ -2018,12 +2107,13 @@ val PROD_CONSTANT = store_thm(
       If PROD l = 0, then MEM 0 l       by induction hypothesis
                        or MEM 0 (h::l)  by MEM
 *)
-val PROD_EQ_0 = store_thm(
-  "PROD_EQ_0",
-  ``!l. (PROD l = 0) <=> MEM 0 l``,
+Theorem PROD_EQ_0:
+    !l. (PROD l = 0) <=> MEM 0 l
+Proof
   Induct >-
   rw[] >>
-  metis_tac[PROD_CONS, MULT_EQ_0, MEM]);
+  metis_tac[PROD_CONS, MULT_EQ_0, MEM]
+QED
 
 (* Theorem: EVERY (\x. 0 < x) l ==> 0 < PROD l *)
 (* Proof:
@@ -2031,17 +2121,19 @@ val PROD_EQ_0 = store_thm(
    Then MEM 0 l              by PROD_EQ_0
      or 0 < 0 = F            by EVERY_MEM
 *)
-val PROD_POS = store_thm(
-  "PROD_POS",
-  ``!l. EVERY (\x. 0 < x) l ==> 0 < PROD l``,
-  metis_tac[EVERY_MEM, PROD_EQ_0, NOT_ZERO_LT_ZERO]);
+Theorem PROD_POS:
+    !l. EVERY (\x. 0 < x) l ==> 0 < PROD l
+Proof
+  metis_tac[EVERY_MEM, PROD_EQ_0, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: POSITIVE l ==> 0 < PROD l *)
 (* Proof: PROD_POS, EVERY_MEM *)
-val PROD_POS_ALT = store_thm(
-  "PROD_POS_ALT",
-  ``!l. POSITIVE l ==> 0 < PROD l``,
-  rw[PROD_POS, EVERY_MEM]);
+Theorem PROD_POS_ALT:
+    !l. POSITIVE l ==> 0 < PROD l
+Proof
+  rw[PROD_POS, EVERY_MEM]
+QED
 
 (* Theorem: PROD (GENLIST (\j. n ** 2 ** j) m) = n ** (2 ** m - 1) *)
 (* Proof:
@@ -2067,9 +2159,9 @@ val PROD_POS_ALT = store_thm(
        = n ** (2 * 2 ** m - 1)                                     by arithmetic
        = n ** (2 ** SUC m - 1)                                     by EXP
 *)
-val PROD_SQUARING_LIST = store_thm(
-  "PROD_SQUARING_LIST",
-  ``!m n. PROD (GENLIST (\j. n ** 2 ** j) m) = n ** (2 ** m - 1)``,
+Theorem PROD_SQUARING_LIST:
+    !m n. PROD (GENLIST (\j. n ** 2 ** j) m) = n ** (2 ** m - 1)
+Proof
   rpt strip_tac >>
   Induct_on `m` >-
   rw[] >>
@@ -2078,7 +2170,8 @@ val PROD_SQUARING_LIST = store_thm(
   `_ = PROD (GENLIST f m) * (n ** 2 ** m)` by rw[PROD_SNOC] >>
   `_ = n ** (2 ** m - 1) * n ** 2 ** m` by rw[] >>
   `_ = n ** (2 ** m - 1 + 2 ** m)` by rw[EXP_ADD] >>
-  rw[EXP]);
+  rw[EXP]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* List Range                                                                *)
@@ -2093,10 +2186,11 @@ val PROD_SQUARING_LIST = store_thm(
    Note EVERY_POSITIVE [m .. n]   by listRangeINC_EVERY
    Thus 0 < PROD [m .. n]         by PROD_POS
 *)
-val listRangeINC_PROD_pos = store_thm(
-  "listRangeINC_PROD_pos",
-  ``!m n. 0 < m ==> 0 < PROD [m .. n]``,
-  rw[PROD_POS, listRangeINC_EVERY]);
+Theorem listRangeINC_PROD_pos:
+    !m n. 0 < m ==> 0 < PROD [m .. n]
+Proof
+  rw[PROD_POS, listRangeINC_EVERY]
+QED
 
 (* Theorem: 0 < m /\ m <= n ==> (PROD [m .. n] = PROD [1 .. n] DIV PROD [1 .. (m - 1)]) *)
 (* Proof:
@@ -2112,9 +2206,9 @@ val listRangeINC_PROD_pos = store_thm(
     Now 0 < PROD [1 .. (m - 1)]                               by listRangeINC_PROD_pos
    The result follows                                         by MULT_TO_DIV
 *)
-val listRangeINC_PROD = store_thm(
-  "listRangeINC_PROD",
-  ``!m n. 0 < m /\ m <= n ==> (PROD [m .. n] = PROD [1 .. n] DIV PROD [1 .. (m - 1)])``,
+Theorem listRangeINC_PROD:
+    !m n. 0 < m /\ m <= n ==> (PROD [m .. n] = PROD [1 .. n] DIV PROD [1 .. (m - 1)])
+Proof
   rpt strip_tac >>
   Cases_on `m = 1` >-
   rw[listRangeINC_EMPTY] >>
@@ -2122,7 +2216,8 @@ val listRangeINC_PROD = store_thm(
   `[1 .. n] = [1 .. (m - 1)] ++ [m .. n]` by metis_tac[listRangeINC_APPEND] >>
   `PROD [1 .. n] = PROD [1 .. (m - 1)] * PROD [m .. n]` by rw[GSYM PROD_APPEND] >>
   `0 < PROD [1 .. (m - 1)]` by rw[listRangeINC_PROD_pos] >>
-  metis_tac[MULT_TO_DIV]);
+  metis_tac[MULT_TO_DIV]
+QED
 
 (* Theorem: 0 < m ==> 0 < PROD [m ..< n] *)
 (* Proof:
@@ -2133,10 +2228,11 @@ val listRangeINC_PROD = store_thm(
    Note EVERY_POSITIVE [m ..< n]   by listRangeLHI_EVERY
    Thus 0 < PROD [m ..< n]         by PROD_POS
 *)
-val listRangeLHI_PROD_pos = store_thm(
-  "listRangeLHI_PROD_pos",
-  ``!m n. 0 < m ==> 0 < PROD [m ..< n]``,
-  rw[PROD_POS, listRangeLHI_EVERY]);
+Theorem listRangeLHI_PROD_pos:
+    !m n. 0 < m ==> 0 < PROD [m ..< n]
+Proof
+  rw[PROD_POS, listRangeLHI_EVERY]
+QED
 
 (* Theorem: 0 < m /\ m <= n ==> (PROD [m ..< n] = PROD [1 ..< n] DIV PROD [1 ..< m]) *)
 (* Proof:
@@ -2156,9 +2252,9 @@ val listRangeLHI_PROD_pos = store_thm(
       = PROD [1 .. n'] DIV PROD [1 .. m']       by m' = m - 1
       = PROD [1 ..< n] DIV PROD [1 ..< m]       by listRangeLHI_to_INC
 *)
-val listRangeLHI_PROD = store_thm(
-  "listRangeLHI_PROD",
-  ``!m n. 0 < m /\ m <= n ==> (PROD [m ..< n] = PROD [1 ..< n] DIV PROD [1 ..< m])``,
+Theorem listRangeLHI_PROD:
+    !m n. 0 < m /\ m <= n ==> (PROD [m ..< n] = PROD [1 ..< n] DIV PROD [1 ..< m])
+Proof
   rpt strip_tac >>
   `m <> 0 /\ n <> 0` by decide_tac >>
   `?n' m'. (n = n' + 1) /\ (m = m' + 1)` by metis_tac[num_CASES, ADD1] >>
@@ -2171,7 +2267,8 @@ val listRangeLHI_PROD = store_thm(
     `_ = PROD [1 .. n'] DIV PROD [1 .. m']` by rw[] >>
     `_ = PROD [1 ..< n] DIV PROD [1 ..< m]` by rw[GSYM listRangeLHI_to_INC] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* List Summation and Product                                                *)
@@ -2197,12 +2294,13 @@ val it = |- tri 0 = 0 /\ !n. tri (SUC n) = SUC n + tri n: thm
        = tri n + (SUC n)                 by induction hypothesis
        = tri (SUC n)                     by tri_def
 *)
-val sum_1_to_n_eq_tri_n = store_thm(
-  "sum_1_to_n_eq_tri_n",
-  ``!n. SUM [1 .. n] = tri n``,
+Theorem sum_1_to_n_eq_tri_n:
+    !n. SUM [1 .. n] = tri n
+Proof
   Induct >-
   rw[listRangeINC_EMPTY, SUM_NIL, numpairTheory.tri_def] >>
-  rw[listRangeINC_SNOC, ADD1, SUM_SNOC, numpairTheory.tri_def]);
+  rw[listRangeINC_SNOC, ADD1, SUM_SNOC, numpairTheory.tri_def]
+QED
 
 (* Theorem: SUM [1 .. n] = HALF (n * (n + 1)) *)
 (* Proof:
@@ -2210,10 +2308,11 @@ val sum_1_to_n_eq_tri_n = store_thm(
    = tri n                by sum_1_to_n_eq_tri_n
    = HALF (n * (n + 1))   by tri_formula
 *)
-val sum_1_to_n_eqn = store_thm(
-  "sum_1_to_n_eqn",
-  ``!n. SUM [1 .. n] = HALF (n * (n + 1))``,
-  rw[sum_1_to_n_eq_tri_n, numpairTheory.tri_formula]);
+Theorem sum_1_to_n_eqn:
+    !n. SUM [1 .. n] = HALF (n * (n + 1))
+Proof
+  rw[sum_1_to_n_eq_tri_n, numpairTheory.tri_formula]
+QED
 
 (* Theorem: 2 * SUM [1 .. n] = n * (n + 1) *)
 (* Proof:
@@ -2224,12 +2323,13 @@ val sum_1_to_n_eqn = store_thm(
       = (SUM [1 .. n]) * 2         by sum_1_to_n_eqn
       = 2 * SUM [1 .. n]           by MULT_COMM
 *)
-val sum_1_to_n_double = store_thm(
-  "sum_1_to_n_double",
-  ``!n. 2 * SUM [1 .. n] = n * (n + 1)``,
+Theorem sum_1_to_n_double:
+    !n. 2 * SUM [1 .. n] = n * (n + 1)
+Proof
   rpt strip_tac >>
   `2 divides (n * (n + 1))` by rw[EVEN_PARTNERS, GSYM EVEN_ALT] >>
-  metis_tac[sum_1_to_n_eqn, DIV_MULT_EQ, MULT_COMM, DECIDE``0 < 2``]);
+  metis_tac[sum_1_to_n_eqn, DIV_MULT_EQ, MULT_COMM, DECIDE``0 < 2``]
+QED
 
 (* Theorem: PROD [1 .. n] = FACT n *)
 (* Proof:
@@ -2246,12 +2346,13 @@ val sum_1_to_n_double = store_thm(
        = (FACT n) * (SUC n)               by induction hypothesis
        = FACT (SUC n)                     by FACT
 *)
-val prod_1_to_n_eq_fact_n = store_thm(
-  "prod_1_to_n_eq_fact_n",
-  ``!n. PROD [1 .. n] = FACT n``,
+Theorem prod_1_to_n_eq_fact_n:
+    !n. PROD [1 .. n] = FACT n
+Proof
   Induct >-
   rw[listRangeINC_EMPTY, PROD_NIL, FACT] >>
-  rw[listRangeINC_SNOC, ADD1, PROD_SNOC, FACT]);
+  rw[listRangeINC_SNOC, ADD1, PROD_SNOC, FACT]
+QED
 
 (* This is numerical version of:
 poly_cyclic_cofactor  |- !r. Ring r /\ #1 <> #0 ==> !n. unity n = unity 1 * cyclic n
@@ -2285,9 +2386,9 @@ poly_cyclic_cofactor  |- !r. Ring r /\ #1 <> #0 ==> !n. unity n = unity 1 * cycl
           = (t ** n - 1) + (t - 1) * t ** n                       by induction hypothesis
           = t ** SUC n - 1                                        by EXP
 *)
-val power_predecessor_eqn = store_thm(
-  "power_predecessor_eqn",
-  ``!t n. t ** n - 1 = (t - 1) * SUM (MAP (\j. t ** j) [0 ..< n])``,
+Theorem power_predecessor_eqn:
+    !t n. t ** n - 1 = (t - 1) * SUM (MAP (\j. t ** j) [0 ..< n])
+Proof
   rpt strip_tac >>
   qabbrev_tac `f = \j. t ** j` >>
   Induct_on `n` >-
@@ -2309,7 +2410,8 @@ val power_predecessor_eqn = store_thm(
   `_ = (t ** n - 1) + (t * t ** n - t ** n)` by rw[LEFT_SUB_DISTRIB] >>
   `_ = t * t ** n - 1` by rw[] >>
   `_ = t ** SUC n - 1 ` by rw[GSYM EXP] >>
-  rw[]);
+  rw[]
+QED
 
 (* Above is the formal proof of the following observation for any base:
         9 = 9 * 1
@@ -2332,12 +2434,13 @@ val power_predecessor_eqn = store_thm(
    Then (t ** n - 1) = (t - 1) * s    by power_predecessor_eqn
    Thus s = (t ** n - 1) DIV (t - 1)  by MULT_TO_DIV, 0 < t - 1
 *)
-val geometric_sum_eqn = store_thm(
-  "geometric_sum_eqn",
-  ``!t n. 1 < t ==> (SUM (MAP (\j. t ** j) [0 ..< n]) = (t ** n - 1) DIV (t - 1))``,
+Theorem geometric_sum_eqn:
+    !t n. 1 < t ==> (SUM (MAP (\j. t ** j) [0 ..< n]) = (t ** n - 1) DIV (t - 1))
+Proof
   rpt strip_tac >>
   `0 < t - 1` by decide_tac >>
-  rw_tac std_ss[power_predecessor_eqn, MULT_TO_DIV]);
+  rw_tac std_ss[power_predecessor_eqn, MULT_TO_DIV]
+QED
 
 (* Theorem: 1 < t ==> (SUM (MAP (\j. t ** j) [0 .. n]) = (t ** (n + 1) - 1) DIV (t - 1)) *)
 (* Proof:
@@ -2345,10 +2448,11 @@ val geometric_sum_eqn = store_thm(
    = SUM (MAP (\j. t ** j) [0 ..< n + 1])   by listRangeLHI_to_INC
    = (t ** (n + 1) - 1) DIV (t - 1)         by geometric_sum_eqn
 *)
-val geometric_sum_eqn_alt = store_thm(
-  "geometric_sum_eqn_alt",
-  ``!t n. 1 < t ==> (SUM (MAP (\j. t ** j) [0 .. n]) = (t ** (n + 1) - 1) DIV (t - 1))``,
-  rw_tac std_ss[GSYM listRangeLHI_to_INC, geometric_sum_eqn]);
+Theorem geometric_sum_eqn_alt:
+    !t n. 1 < t ==> (SUM (MAP (\j. t ** j) [0 .. n]) = (t ** (n + 1) - 1) DIV (t - 1))
+Proof
+  rw_tac std_ss[GSYM listRangeLHI_to_INC, geometric_sum_eqn]
+QED
 
 (* Theorem: SUM [1 ..< n] = HALF (n * (n - 1)) *)
 (* Proof:
@@ -2364,9 +2468,9 @@ val geometric_sum_eqn_alt = store_thm(
       = HALF ((n - 1) * (n - 1 + 1))  by sum_1_to_n_eqn
       = HALF (n * (n - 1))            by arithmetic
 *)
-val arithmetic_sum_eqn = store_thm(
-  "arithmetic_sum_eqn",
-  ``!n. SUM [1 ..< n] = HALF (n * (n - 1))``,
+Theorem arithmetic_sum_eqn:
+    !n. SUM [1 ..< n] = HALF (n * (n - 1))
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[listRangeLHI_EMPTY] >>
@@ -2374,7 +2478,8 @@ val arithmetic_sum_eqn = store_thm(
   `SUM [1 ..< n] = SUM [1 .. n - 1]` by rw[GSYM listRangeLHI_to_INC] >>
   `_ = HALF ((n - 1) * (n - 1 + 1))` by rw[sum_1_to_n_eqn] >>
   `_ = HALF (n * (n - 1))` by rw[] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem alias *)
 val arithmetic_sum_eqn_alt = save_thm("arithmetic_sum_eqn_alt", sum_1_to_n_eqn);
@@ -2389,9 +2494,9 @@ val arithmetic_sum_eqn_alt = save_thm("arithmetic_sum_eqn_alt", sum_1_to_n_eqn);
    = SUM (GENLIST (f o SUC) n)                     by FUN_EQ_THM
    = SUM (MAP f [1 .. n])                          by listRangeINC_MAP
 *)
-val SUM_GENLIST_REVERSE = store_thm(
-  "SUM_GENLIST_REVERSE",
-  ``!f n. SUM (GENLIST (\j. f (n - j)) n) = SUM (MAP f [1 .. n])``,
+Theorem SUM_GENLIST_REVERSE:
+    !f n. SUM (GENLIST (\j. f (n - j)) n) = SUM (MAP f [1 .. n])
+Proof
   rpt strip_tac >>
   `GENLIST (\j. f (n - (PRE n - j))) n = GENLIST (f o SUC) n` by
   (irule LIST_EQ >>
@@ -2403,7 +2508,8 @@ val SUM_GENLIST_REVERSE = store_thm(
   `_ = SUM (GENLIST (\j. g (PRE n - j)) n)` by rw[REVERSE_GENLIST] >>
   `_ = SUM (GENLIST (f o SUC) n)` by rw[Abbr`g`] >>
   `_ = SUM (MAP f [1 .. n])` by rw[listRangeINC_MAP] >>
-  decide_tac);
+  decide_tac
+QED
 (* Note: locate here due to use of listRangeINC_MAP *)
 
 (* Theorem: SIGMA f (count n) = SUM (MAP f [0 ..< n]) *)
@@ -2442,10 +2548,12 @@ Definition MAP3_DEF:
   (MAP3 f x y z = [])
 End
 val _ = export_rewrites["MAP3_DEF"];
-val MAP3 = store_thm ("MAP3",
-``(!f. MAP3 f [] [] [] = []) /\
-  (!f h1 t1 h2 t2 h3 t3. MAP3 f (h1::t1) (h2::t2) (h3::t3) = f h1 h2 h3::MAP3 f t1 t2 t3)``,
-  METIS_TAC[MAP3_DEF]);
+Theorem MAP3:
+  (!f. MAP3 f [] [] [] = []) /\
+  (!f h1 t1 h2 t2 h3 t3. MAP3 f (h1::t1) (h2::t2) (h3::t3) = f h1 h2 h3::MAP3 f t1 t2 t3)
+Proof
+  METIS_TAC[MAP3_DEF]
+QED
 
 (*
 LENGTH_MAP   |- !l f. LENGTH (MAP f l) = LENGTH l
@@ -2480,9 +2588,9 @@ LENGTH_MAP2  |- !xs ys. LENGTH (MAP2 f xs ys) = MIN (LENGTH xs) (LENGTH ys)
              = MIN (SUC (MIN (LENGTH lx) (LENGTH t))) (SUC (LESS_TWICE t'))    by MIN_DEF
              = SUC (MIN (MIN (LENGTH lx) (LENGTH t)) (LENGTH t'')) = LHS       by MIN_DEF
 *)
-val LENGTH_MAP3 = store_thm(
-  "LENGTH_MAP3",
-  ``!lx ly lz f. LENGTH (MAP3 f lx ly lz) = MIN (MIN (LENGTH lx) (LENGTH ly)) (LENGTH lz)``,
+Theorem LENGTH_MAP3:
+    !lx ly lz f. LENGTH (MAP3 f lx ly lz) = MIN (MIN (LENGTH lx) (LENGTH ly)) (LENGTH lz)
+Proof
   Induct_on `lx` >-
   rw[] >>
   rpt strip_tac >>
@@ -2490,7 +2598,8 @@ val LENGTH_MAP3 = store_thm(
   rw[] >>
   Cases_on `lz` >-
   rw[] >>
-  rw[MIN_DEF]);
+  rw[MIN_DEF]
+QED
 
 (*
 EL_MAP   |- !n l. n < LENGTH l ==> !f. EL n (MAP f l) = f (EL n l)
@@ -2528,10 +2637,10 @@ EL_MAP2  |- !ts tt n. n < MIN (LENGTH ts) (LENGTH tt) ==> (EL n (MAP2 f ts tt) =
         = f (EL (SUC n) lx) (EL (SUC n) ly) (EL (SUC n) lz)
                                                    by EL
 *)
-val EL_MAP3 = store_thm(
-  "EL_MAP3",
-  ``!lx ly lz n. n < MIN (MIN (LENGTH lx) (LENGTH ly)) (LENGTH lz) ==>
-   !f. EL n (MAP3 f lx ly lz) = f (EL n lx) (EL n ly) (EL n lz)``,
+Theorem EL_MAP3:
+    !lx ly lz n. n < MIN (MIN (LENGTH lx) (LENGTH ly)) (LENGTH lz) ==>
+   !f. EL n (MAP3 f lx ly lz) = f (EL n lx) (EL n ly) (EL n lz)
+Proof
   Induct_on `n` >| [
     rw[] >>
     `?x tx. lx = x::tx` by metis_tac[LENGTH_EQ_0, list_CASES, NOT_ZERO_LT_ZERO] >>
@@ -2545,7 +2654,8 @@ val EL_MAP3 = store_thm(
     `?z tz. lz = z::tz` by metis_tac[LENGTH_EQ_0, list_CASES] >>
     `n < LENGTH tx /\ n < LENGTH ty /\ n < LENGTH tz` by fs[] >>
     rw[]
-  ]);
+  ]
+QED
 
 (*
 MEM_MAP  |- !l f x. MEM x (MAP f l) <=> ?y. x = f y /\ MEM y l
@@ -2572,9 +2682,9 @@ MEM_MAP  |- !l f x. MEM x (MAP f l) <=> ?y. x = f y /\ MEM y l
             Then ?y1 y2. x = f y1 y2 /\ MEM y1 l1 /\ MEM y2 t   by induction hypothesis
             Take this y1 and y2, the result follows      by MEM
 *)
-val MEM_MAP2 = store_thm(
-  "MEM_MAP2",
-  ``!f x l1 l2. MEM x (MAP2 f l1 l2) ==> ?y1 y2. (x = f y1 y2) /\ MEM y1 l1 /\ MEM y2 l2``,
+Theorem MEM_MAP2:
+    !f x l1 l2. MEM x (MAP2 f l1 l2) ==> ?y1 y2. (x = f y1 y2) /\ MEM y1 l1 /\ MEM y2 l2
+Proof
   ntac 2 strip_tac >>
   Induct_on `l1` >-
   rw[] >>
@@ -2583,7 +2693,8 @@ val MEM_MAP2 = store_thm(
   fs[] >>
   fs[] >-
   metis_tac[] >>
-  metis_tac[MEM]);
+  metis_tac[MEM]
+QED
 
 (* Theorem: MEM x (MAP3 f l1 l2 l3) ==> ?y1 y2 y3. (x = f y1 y2 y3) /\ MEM y1 l1 /\ MEM y2 l2 /\ MEM y3 l3 *)
 (* Proof:
@@ -2615,10 +2726,10 @@ val MEM_MAP2 = store_thm(
                                                          by induction hypothesis
             Take this y1, y2 and y3, the result follows  by MEM
 *)
-val MEM_MAP3 = store_thm(
-  "MEM_MAP3",
-  ``!f x l1 l2 l3. MEM x (MAP3 f l1 l2 l3) ==>
-   ?y1 y2 y3. (x = f y1 y2 y3) /\ MEM y1 l1 /\ MEM y2 l2 /\ MEM y3 l3``,
+Theorem MEM_MAP3:
+    !f x l1 l2 l3. MEM x (MAP3 f l1 l2 l3) ==>
+   ?y1 y2 y3. (x = f y1 y2 y3) /\ MEM y1 l1 /\ MEM y2 l2 /\ MEM y3 l3
+Proof
   ntac 2 strip_tac >>
   Induct_on `l1` >-
   rw[] >>
@@ -2629,7 +2740,8 @@ val MEM_MAP3 = store_thm(
   fs[] >>
   fs[] >-
   metis_tac[] >>
-  metis_tac[MEM]);
+  metis_tac[MEM]
+QED
 
 (* Theorem: SUM (MAP (K c) ls) = c * LENGTH ls *)
 (* Proof:
@@ -2649,12 +2761,13 @@ val MEM_MAP3 = store_thm(
       = c * (SUC (LENGTH ls))      by ADD1
       = c * LENGTH (h::ls)         by LENGTH
 *)
-val SUM_MAP_K = store_thm(
-  "SUM_MAP_K",
-  ``!ls c. SUM (MAP (K c) ls) = c * LENGTH ls``,
+Theorem SUM_MAP_K:
+    !ls c. SUM (MAP (K c) ls) = c * LENGTH ls
+Proof
   Induct >-
   rw[] >>
-  rw[ADD1]);
+  rw[ADD1]
+QED
 
 (* Theorem: a <= b ==> SUM (MAP (K a) ls) <= SUM (MAP (K b) ls) *)
 (* Proof:
@@ -2663,10 +2776,11 @@ val SUM_MAP_K = store_thm(
    <= b * LENGTH ls             by a <= b
     = SUM (MAP (K b) ls)        by SUM_MAP_K
 *)
-val SUM_MAP_K_LE = store_thm(
-  "SUM_MAP_K_LE",
-  ``!ls a b. a <= b ==> SUM (MAP (K a) ls) <= SUM (MAP (K b) ls)``,
-  rw[SUM_MAP_K]);
+Theorem SUM_MAP_K_LE:
+    !ls a b. a <= b ==> SUM (MAP (K a) ls) <= SUM (MAP (K b) ls)
+Proof
+  rw[SUM_MAP_K]
+QED
 
 (* Theorem: SUM (MAP2 (\x y. c) lx ly) = c * LENGTH (MAP2 (\x y. c) lx ly) *)
 (* Proof:
@@ -2695,15 +2809,16 @@ val SUM_MAP_K_LE = store_thm(
          = c * (SUC (LENGTH (MAP2 (\x y. c) lx t))      by ADD1
          = c * LENGTH (MAP2 (\x y. c) (h::lx) (h'::t))  by LENGTH
 *)
-val SUM_MAP2_K = store_thm(
-  "SUM_MAP2_K",
-  ``!lx ly c. SUM (MAP2 (\x y. c) lx ly) = c * LENGTH (MAP2 (\x y. c) lx ly)``,
+Theorem SUM_MAP2_K:
+    !lx ly c. SUM (MAP2 (\x y. c) lx ly) = c * LENGTH (MAP2 (\x y. c) lx ly)
+Proof
   Induct >-
   rw[] >>
   rpt strip_tac >>
   Cases_on `ly` >-
   rw[] >>
-  rw[ADD1, MIN_DEF]);
+  rw[ADD1, MIN_DEF]
+QED
 
 (* Theorem: SUM (MAP3 (\x y z. c) lx ly lz) = c * LENGTH (MAP3 (\x y z. c) lx ly lz) *)
 (* Proof:
@@ -2739,9 +2854,9 @@ val SUM_MAP2_K = store_thm(
             = c * (SUC (LENGTH (MAP3 (\x y z. c) lx t t'))             by ADD1
             = c * LENGTH (MAP3 (\x y z. c) (h::lx) (h'::t) (h''::t'))  by LENGTH
 *)
-val SUM_MAP3_K = store_thm(
-  "SUM_MAP3_K",
-  ``!lx ly lz c. SUM (MAP3 (\x y z. c) lx ly lz) = c * LENGTH (MAP3 (\x y z. c) lx ly lz)``,
+Theorem SUM_MAP3_K:
+    !lx ly lz c. SUM (MAP3 (\x y z. c) lx ly lz) = c * LENGTH (MAP3 (\x y z. c) lx ly lz)
+Proof
   Induct >-
   rw[] >>
   rpt strip_tac >>
@@ -2749,7 +2864,8 @@ val SUM_MAP3_K = store_thm(
   rw[] >>
   Cases_on `lz` >-
   rw[] >>
-  rw[ADD1]);
+  rw[ADD1]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Bounds on Lists                                                           *)
@@ -2773,9 +2889,9 @@ val SUM_MAP3_K = store_thm(
       = MAX_LIST (h::ls) * (1 + LENGTH ls)               by LEFT_ADD_DISTRIB
       = MAX_LIST (h::ls) * LENGTH (h::ls)                by LENGTH
 *)
-val SUM_UPPER = store_thm(
-  "SUM_UPPER",
-  ``!ls. SUM ls <= (MAX_LIST ls) * LENGTH ls``,
+Theorem SUM_UPPER:
+    !ls. SUM ls <= (MAX_LIST ls) * LENGTH ls
+Proof
   Induct_on `ls` >-
   rw[] >>
   strip_tac >>
@@ -2784,7 +2900,8 @@ val SUM_UPPER = store_thm(
   `MAX_LIST (h::ls) + MAX_LIST ls * LENGTH ls <= MAX_LIST (h::ls) + MAX_LIST (h::ls) * LENGTH ls` by rw[] >>
   `MAX_LIST (h::ls) + MAX_LIST (h::ls) * LENGTH ls = MAX_LIST (h::ls) * (1 + LENGTH ls)` by rw[] >>
   `_ = MAX_LIST (h::ls) * LENGTH (h::ls)` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (MIN_LIST ls) * LENGTH ls <= SUM ls *)
 (* Proof:
@@ -2809,9 +2926,9 @@ val SUM_UPPER = store_thm(
        <= h + SUM ls                                by induction hypothesis
         = SUM (h::ls)                               by SUM
 *)
-val SUM_LOWER = store_thm(
-  "SUM_LOWER",
-  ``!ls. (MIN_LIST ls) * LENGTH ls <= SUM ls``,
+Theorem SUM_LOWER:
+    !ls. (MIN_LIST ls) * LENGTH ls <= SUM ls
+Proof
   Induct_on `ls` >-
   rw[] >>
   strip_tac >>
@@ -2821,7 +2938,8 @@ val SUM_LOWER = store_thm(
   `_ = (MIN h (MIN_LIST ls)) + (MIN h (MIN_LIST ls)) * LENGTH ls` by rw[] >>
   `(MIN h (MIN_LIST ls)) <= h` by rw[] >>
   `(MIN h (MIN_LIST ls)) * LENGTH ls <= (MIN_LIST ls) * LENGTH ls` by rw[] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: EVERY (\x. f x <= g x) ls ==> SUM (MAP f ls) <= SUM (MAP g ls) *)
 (* Proof:
@@ -2842,14 +2960,15 @@ val SUM_LOWER = store_thm(
          = SUM (g h :: MAP g ls)          by SUM
          = SUM (MAP g (h::ls))            by MAP
 *)
-val SUM_MAP_LE = store_thm(
-  "SUM_MAP_LE",
-  ``!f g ls. EVERY (\x. f x <= g x) ls ==> SUM (MAP f ls) <= SUM (MAP g ls)``,
+Theorem SUM_MAP_LE:
+    !f g ls. EVERY (\x. f x <= g x) ls ==> SUM (MAP f ls) <= SUM (MAP g ls)
+Proof
   rpt strip_tac >>
   Induct_on `ls` >>
   rw[] >>
   rw[] >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: EVERY (\x. f x < g x) ls /\ ls <> [] ==> SUM (MAP f ls) < SUM (MAP g ls) *)
 (* Proof:
@@ -2877,14 +2996,15 @@ val SUM_MAP_LE = store_thm(
          = SUM (g h :: MAP g ls)          by SUM
          = SUM (MAP g (h::ls))            by MAP
 *)
-val SUM_MAP_LT = store_thm(
-  "SUM_MAP_LT",
-  ``!f g ls. EVERY (\x. f x < g x) ls /\ ls <> [] ==> SUM (MAP f ls) < SUM (MAP g ls)``,
+Theorem SUM_MAP_LT:
+    !f g ls. EVERY (\x. f x < g x) ls /\ ls <> [] ==> SUM (MAP f ls) < SUM (MAP g ls)
+Proof
   rpt strip_tac >>
   Induct_on `ls` >>
   rw[] >>
   rw[] >>
-  (Cases_on `ls = []` >> fs[]));
+  (Cases_on `ls = []` >> fs[])
+QED
 
 (*
 MAX_LIST_PROPERTY  |- !l x. MEM x l ==> x <= MAX_LIST l
@@ -2898,13 +3018,14 @@ MIN_LIST_PROPERTY  |- !l. l <> [] ==> !x. MEM x l ==> MIN_LIST l <= x
    Thus f y <= f (MAX_LIST ls)       by given
      or   e <= f (MAX_LIST ls)       by e = f y
 *)
-val MEM_MAP_UPPER = store_thm(
-  "MEM_MAP_UPPER",
-  ``!f. MONO f ==> !ls e. MEM e (MAP f ls) ==> e <= f (MAX_LIST ls)``,
+Theorem MEM_MAP_UPPER:
+    !f. MONO f ==> !ls e. MEM e (MAP f ls) ==> e <= f (MAX_LIST ls)
+Proof
   rpt strip_tac >>
   `?y. (e = f y) /\ MEM y ls` by rw[GSYM MEM_MAP] >>
   `y <= MAX_LIST ls` by rw[MAX_LIST_PROPERTY] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: MONO2 f ==> !lx ly e. MEM e (MAP2 f lx ly) ==> e <= f (MAX_LIST lx) (MAX_LIST ly) *)
 (* Proof:
@@ -2914,10 +3035,11 @@ val MEM_MAP_UPPER = store_thm(
     and ey <= MAX_LIST ly                 by MAX_LIST_PROPERTY
    The result follows by the non-decreasing condition on f.
 *)
-val MEM_MAP2_UPPER = store_thm(
-  "MEM_MAP2_UPPER",
-  ``!f. MONO2 f ==> !lx ly e. MEM e (MAP2 f lx ly) ==> e <= f (MAX_LIST lx) (MAX_LIST ly)``,
-  metis_tac[MEM_MAP2, MAX_LIST_PROPERTY]);
+Theorem MEM_MAP2_UPPER:
+    !f. MONO2 f ==> !lx ly e. MEM e (MAP2 f lx ly) ==> e <= f (MAX_LIST lx) (MAX_LIST ly)
+Proof
+  metis_tac[MEM_MAP2, MAX_LIST_PROPERTY]
+QED
 
 (* Theorem: MONO3 f ==>
    !lx ly lz e. MEM e (MAP3 f lx ly lz) ==> e <= f (MAX_LIST lx) (MAX_LIST ly) (MAX_LIST lz) *)
@@ -2929,11 +3051,12 @@ val MEM_MAP2_UPPER = store_thm(
     and ez <= MAX_LIST lz                 by MAX_LIST_PROPERTY
    The result follows by the non-decreasing condition on f.
 *)
-val MEM_MAP3_UPPER = store_thm(
-  "MEM_MAP3_UPPER",
-  ``!f. MONO3 f ==>
-   !lx ly lz e. MEM e (MAP3 f lx ly lz) ==> e <= f (MAX_LIST lx) (MAX_LIST ly) (MAX_LIST lz)``,
-  metis_tac[MEM_MAP3, MAX_LIST_PROPERTY]);
+Theorem MEM_MAP3_UPPER:
+    !f. MONO3 f ==>
+   !lx ly lz e. MEM e (MAP3 f lx ly lz) ==> e <= f (MAX_LIST lx) (MAX_LIST ly) (MAX_LIST lz)
+Proof
+  metis_tac[MEM_MAP3, MAX_LIST_PROPERTY]
+QED
 
 (* Theorem: MONO f ==> !ls e. MEM e (MAP f ls) ==> f (MIN_LIST ls) <= e *)
 (* Proof:
@@ -2943,14 +3066,15 @@ val MEM_MAP3_UPPER = store_thm(
    Thus f (MIN_LIST ls) <= f y       by given
      or f (MIN_LIST ls) <= e         by e = f y
 *)
-val MEM_MAP_LOWER = store_thm(
-  "MEM_MAP_LOWER",
-  ``!f. MONO f ==> !ls e. MEM e (MAP f ls) ==> f (MIN_LIST ls) <= e``,
+Theorem MEM_MAP_LOWER:
+    !f. MONO f ==> !ls e. MEM e (MAP f ls) ==> f (MIN_LIST ls) <= e
+Proof
   rpt strip_tac >>
   `?y. (e = f y) /\ MEM y ls` by rw[GSYM MEM_MAP] >>
   `ls <> []` by metis_tac[MEM] >>
   `MIN_LIST ls <= y` by rw[MIN_LIST_PROPERTY] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: MONO2 f ==>
             !lx ly e. MEM e (MAP2 f lx ly) ==> f (MIN_LIST lx) (MIN_LIST ly) <= e *)
@@ -2962,11 +3086,12 @@ val MEM_MAP_LOWER = store_thm(
     and MIN_LIST ly <= ey                by MIN_LIST_PROPERTY
    The result follows by the non-decreasing condition on f.
 *)
-val MEM_MAP2_LOWER = store_thm(
-  "MEM_MAP2_LOWER",
-  ``!f. MONO2 f ==>
-   !lx ly e. MEM e (MAP2 f lx ly) ==> f (MIN_LIST lx) (MIN_LIST ly) <= e``,
-  metis_tac[MEM_MAP2, MEM, MIN_LIST_PROPERTY]);
+Theorem MEM_MAP2_LOWER:
+    !f. MONO2 f ==>
+   !lx ly e. MEM e (MAP2 f lx ly) ==> f (MIN_LIST lx) (MIN_LIST ly) <= e
+Proof
+  metis_tac[MEM_MAP2, MEM, MIN_LIST_PROPERTY]
+QED
 
 (* Theorem: MONO3 f ==>
    !lx ly lz e. MEM e (MAP3 f lx ly lz) ==> f (MIN_LIST lx) (MIN_LIST ly) (MIN_LIST lz) <= e *)
@@ -2979,14 +3104,15 @@ val MEM_MAP2_LOWER = store_thm(
     and MIN_LIST lz <= ez                by MIN_LIST_PROPERTY
    The result follows by the non-decreasing condition on f.
 *)
-val MEM_MAP3_LOWER = store_thm(
-  "MEM_MAP3_LOWER",
-  ``!f. MONO3 f ==>
-   !lx ly lz e. MEM e (MAP3 f lx ly lz) ==> f (MIN_LIST lx) (MIN_LIST ly) (MIN_LIST lz) <= e``,
+Theorem MEM_MAP3_LOWER:
+    !f. MONO3 f ==>
+   !lx ly lz e. MEM e (MAP3 f lx ly lz) ==> f (MIN_LIST lx) (MIN_LIST ly) (MIN_LIST lz) <= e
+Proof
   rpt strip_tac >>
   `?ex ey ez. (e = f ex ey ez) /\ MEM ex lx /\ MEM ey ly /\ MEM ez lz` by rw[MEM_MAP3] >>
   `lx <> [] /\ ly <> [] /\ lz <> []` by metis_tac[MEM] >>
-  rw[MIN_LIST_PROPERTY]);
+  rw[MIN_LIST_PROPERTY]
+QED
 
 (* Theorem: (!x. f x <= g x) ==> !ls n. EL n (MAP f ls) <= EL n (MAP g ls) *)
 (* Proof:
@@ -3010,15 +3136,16 @@ val MEM_MAP3_LOWER = store_thm(
        = EL (SUC k) (g h::MAP g ls)   by EL
        = EL n (MAP g (h::ls))         by MAP
 *)
-val MAP_LE = store_thm(
-  "MAP_LE",
-  ``!(f:num -> num) g. (!x. f x <= g x) ==> !ls n. EL n (MAP f ls) <= EL n (MAP g ls)``,
+Theorem MAP_LE:
+    !(f:num -> num) g. (!x. f x <= g x) ==> !ls n. EL n (MAP f ls) <= EL n (MAP g ls)
+Proof
   ntac 3 strip_tac >>
   Induct_on `ls` >-
   rw[] >>
   Cases_on `n` >-
   rw[] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: (!x y. f x y <= g x y) ==> !lx ly n. EL n (MAP2 f lx ly) <= EL n (MAP2 g lx ly) *)
 (* Proof:
@@ -3047,10 +3174,10 @@ val MAP_LE = store_thm(
           = EL (SUC k) (g h h'::MAP2 g lx t)   by EL
           = EL n (MAP2 g (h::lx) (h'::t))      by MAP2
 *)
-val MAP2_LE = store_thm(
-  "MAP2_LE",
-  ``!(f:num -> num -> num) g. (!x y. f x y <= g x y) ==>
-   !lx ly n. EL n (MAP2 f lx ly) <= EL n (MAP2 g lx ly)``,
+Theorem MAP2_LE:
+    !(f:num -> num -> num) g. (!x y. f x y <= g x y) ==>
+   !lx ly n. EL n (MAP2 f lx ly) <= EL n (MAP2 g lx ly)
+Proof
   ntac 3 strip_tac >>
   Induct_on `lx` >-
   rw[] >>
@@ -3059,7 +3186,8 @@ val MAP2_LE = store_thm(
   rw[] >>
   Cases_on `n` >-
   rw[] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: (!x y z. f x y z <= g x y z) ==>
             !lx ly lz n. EL n (MAP3 f lx ly lz) <= EL n (MAP3 g lx ly lz) *)
@@ -3094,10 +3222,10 @@ val MAP2_LE = store_thm(
              = EL (SUC k) (g h h' h''::MAP3 g lx t t')   by EL
              = EL n (MAP3 g (h::lx) (h'::t) (h''::t'))   by MAP3
 *)
-val MAP3_LE = store_thm(
-  "MAP3_LE",
-  ``!(f:num -> num -> num -> num) g. (!x y z. f x y z <= g x y z) ==>
-   !lx ly lz n. EL n (MAP3 f lx ly lz) <= EL n (MAP3 g lx ly lz)``,
+Theorem MAP3_LE:
+    !(f:num -> num -> num -> num) g. (!x y z. f x y z <= g x y z) ==>
+   !lx ly lz n. EL n (MAP3 f lx ly lz) <= EL n (MAP3 g lx ly lz)
+Proof
   ntac 3 strip_tac >>
   Induct_on `lx` >-
   rw[] >>
@@ -3108,7 +3236,8 @@ val MAP3_LE = store_thm(
   rw[] >>
   Cases_on `n` >-
   rw[] >>
-  rw[]);
+  rw[]
+QED
 
 (*
 SUM_MAP_PLUS       |- !f g ls. SUM (MAP (\x. f x + g x) ls) = SUM (MAP f ls) + SUM (MAP g ls)
@@ -3124,12 +3253,13 @@ SUM_MAP_PLUS_ZIP   |- !ls1 ls2. LENGTH ls1 = LENGTH ls2 /\ (!x y. f (x,y) = g x 
    (2) LENGTH (MAP f1 ls) = LENGTH (MAP f2 ls)
        This is true                by LENGTH_MAP
 *)
-val SUM_MONO_MAP = store_thm(
-  "SUM_MONO_MAP",
-  ``!f1 f2. (!x. f1 x <= f2 x) ==> !ls. SUM (MAP f1 ls) <= SUM (MAP f2 ls)``,
+Theorem SUM_MONO_MAP:
+    !f1 f2. (!x. f1 x <= f2 x) ==> !ls. SUM (MAP f1 ls) <= SUM (MAP f2 ls)
+Proof
   rpt strip_tac >>
   irule SUM_LE >>
-  rw[EL_MAP]);
+  rw[EL_MAP]
+QED
 
 (* Theorem: (!x y. f1 x y <= f2 x y) ==> !lx ly. SUM (MAP2 f1 lx ly) <= SUM (MAP2 f2 lx ly) *)
 (* Proof:
@@ -3139,12 +3269,13 @@ val SUM_MONO_MAP = store_thm(
    (2) LENGTH (MAP2 f1 lx ly) = LENGTH (MAP2 f2 lx ly)
        This is true                by LENGTH_MAP2
 *)
-val SUM_MONO_MAP2 = store_thm(
-  "SUM_MONO_MAP2",
-  ``!f1 f2. (!x y. f1 x y <= f2 x y) ==> !lx ly. SUM (MAP2 f1 lx ly) <= SUM (MAP2 f2 lx ly)``,
+Theorem SUM_MONO_MAP2:
+    !f1 f2. (!x y. f1 x y <= f2 x y) ==> !lx ly. SUM (MAP2 f1 lx ly) <= SUM (MAP2 f2 lx ly)
+Proof
   rpt strip_tac >>
   irule SUM_LE >>
-  rw[EL_MAP2]);
+  rw[EL_MAP2]
+QED
 
 (* Theorem: (!x y z. f1 x y z <= f2 x y z) ==> !lx ly lz. SUM (MAP3 f1 lx ly lz) <= SUM (MAP3 f2 lx ly lz) *)
 (* Proof:
@@ -3154,13 +3285,14 @@ val SUM_MONO_MAP2 = store_thm(
    (2)LENGTH (MAP3 f1 lx ly lz) = LENGTH (MAP3 f2 lx ly lz)
        This is true                by LENGTH_MAP3
 *)
-val SUM_MONO_MAP3 = store_thm(
-  "SUM_MONO_MAP3",
-  ``!f1 f2. (!x y z. f1 x y z <= f2 x y z) ==>
-   !lx ly lz. SUM (MAP3 f1 lx ly lz) <= SUM (MAP3 f2 lx ly lz)``,
+Theorem SUM_MONO_MAP3:
+    !f1 f2. (!x y z. f1 x y z <= f2 x y z) ==>
+   !lx ly lz. SUM (MAP3 f1 lx ly lz) <= SUM (MAP3 f2 lx ly lz)
+Proof
   rpt strip_tac >>
   irule SUM_LE >>
-  rw[EL_MAP3, LENGTH_MAP3]);
+  rw[EL_MAP3, LENGTH_MAP3]
+QED
 
 (* Theorem: MONO f ==> !ls. SUM (MAP f ls) <= f (MAX_LIST ls) * LENGTH ls *)
 (* Proof:
@@ -3182,16 +3314,17 @@ val SUM_MONO_MAP3 = store_thm(
    Note SUM (MAP (K c) ls) = c * LENGTH ls           by SUM_MAP_K
    Thus SUM (MAP f ls) <= c * LENGTH ls              by Claim
 *)
-val SUM_MAP_UPPER = store_thm(
-  "SUM_MAP_UPPER",
-  ``!f. MONO f ==> !ls. SUM (MAP f ls) <= f (MAX_LIST ls) * LENGTH ls``,
+Theorem SUM_MAP_UPPER:
+    !f. MONO f ==> !ls. SUM (MAP f ls) <= f (MAX_LIST ls) * LENGTH ls
+Proof
   rpt strip_tac >>
   qabbrev_tac `c = f (MAX_LIST ls)` >>
   `SUM (MAP f ls) <= SUM (MAP (K c) ls)` by
   ((irule SUM_LE >> rw[]) >>
   rw[EL_MAP, EL_MEM, MAX_LIST_PROPERTY, Abbr`c`]) >>
   `SUM (MAP (K c) ls) = c * LENGTH ls` by rw[SUM_MAP_K] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: MONO2 f ==>
             !lx ly. SUM (MAP2 f lx ly) <= (f (MAX_LIST lx) (MAX_LIST ly)) * LENGTH (MAP2 f lx ly) *)
@@ -3219,10 +3352,10 @@ val SUM_MAP_UPPER = store_thm(
     and LENGTH (MAP2 (\x y. c) lx ly) = LENGTH (MAP2 f lx ly)          by LENGTH_MAP2
    Thus SUM (MAP f lx ly) <= c * LENGTH (MAP2 f lx ly)                 by Claim
 *)
-val SUM_MAP2_UPPER = store_thm(
-  "SUM_MAP2_UPPER",
-  ``!f. MONO2 f ==>
-   !lx ly. SUM (MAP2 f lx ly) <= (f (MAX_LIST lx) (MAX_LIST ly)) * LENGTH (MAP2 f lx ly)``,
+Theorem SUM_MAP2_UPPER:
+    !f. MONO2 f ==>
+   !lx ly. SUM (MAP2 f lx ly) <= (f (MAX_LIST lx) (MAX_LIST ly)) * LENGTH (MAP2 f lx ly)
+Proof
   rpt strip_tac >>
   qabbrev_tac `c = f (MAX_LIST lx) (MAX_LIST ly)` >>
   `SUM (MAP2 f lx ly) <= SUM (MAP2 (\x y. c) lx ly)` by
@@ -3230,7 +3363,8 @@ val SUM_MAP2_UPPER = store_thm(
   rw[EL_MAP2, EL_MEM, MAX_LIST_PROPERTY, Abbr`c`]) >>
   `SUM (MAP2 (\x y. c) lx ly) = c * LENGTH (MAP2 (\x y. c) lx ly)` by rw[SUM_MAP2_K, Abbr`c`] >>
   `c * LENGTH (MAP2 (\x y. c) lx ly) = c * LENGTH (MAP2 f lx ly)` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: MONO3 f ==>
            !lx ly lz. SUM (MAP3 f lx ly lz) <=
@@ -3262,10 +3396,10 @@ val SUM_MAP2_UPPER = store_thm(
     and LENGTH (MAP3 (\x y z. c) lx ly lz) = LENGTH (MAP3 f lx ly lz)             by LENGTH_MAP3
    Thus SUM (MAP f lx ly lz) <= c * LENGTH (MAP3 f lx ly lz)                      by Claim
 *)
-val SUM_MAP3_UPPER = store_thm(
-  "SUM_MAP3_UPPER",
-  ``!f. MONO3 f ==>
-   !lx ly lz. SUM (MAP3 f lx ly lz) <= f (MAX_LIST lx) (MAX_LIST ly) (MAX_LIST lz) * LENGTH (MAP3 f lx ly lz)``,
+Theorem SUM_MAP3_UPPER:
+    !f. MONO3 f ==>
+   !lx ly lz. SUM (MAP3 f lx ly lz) <= f (MAX_LIST lx) (MAX_LIST ly) (MAX_LIST lz) * LENGTH (MAP3 f lx ly lz)
+Proof
   rpt strip_tac >>
   qabbrev_tac `c = f (MAX_LIST lx) (MAX_LIST ly) (MAX_LIST lz)` >>
   `SUM (MAP3 f lx ly lz) <= SUM (MAP3 (\x y z. c) lx ly lz)` by
@@ -3275,7 +3409,8 @@ val SUM_MAP3_UPPER = store_thm(
   rw[EL_MAP3, EL_MEM, MAX_LIST_PROPERTY, Abbr`c`]) >>
   `SUM (MAP3 (\x y z. c) lx ly lz) = c * LENGTH (MAP3 (\x y z. c) lx ly lz)` by rw[SUM_MAP3_K] >>
   `c * LENGTH (MAP3 (\x y z. c) lx ly lz) = c * LENGTH (MAP3 f lx ly lz)` by rw[LENGTH_MAP3] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: MONO f ==> MONO_INC (GENLIST f n) *)
 (* Proof:
@@ -3284,10 +3419,11 @@ val SUM_MAP3_UPPER = store_thm(
     and !k. k < n ==> EL k ls = f k   by EL_GENLIST
    Thus MONO_INC ls
 *)
-val GENLIST_MONO_INC = store_thm(
-  "GENLIST_MONO_INC",
-  ``!f:num -> num n. MONO f ==> MONO_INC (GENLIST f n)``,
-  rw[]);
+Theorem GENLIST_MONO_INC:
+    !f:num -> num n. MONO f ==> MONO_INC (GENLIST f n)
+Proof
+  rw[]
+QED
 
 (* Theorem: RMONO f ==> MONO_DEC (GENLIST f n) *)
 (* Proof:
@@ -3296,10 +3432,11 @@ val GENLIST_MONO_INC = store_thm(
     and !k. k < n ==> EL k ls = f k   by EL_GENLIST
    Thus MONO_DEC ls
 *)
-val GENLIST_MONO_DEC = store_thm(
-  "GENLIST_MONO_DEC",
-  ``!f:num -> num n. RMONO f ==> MONO_DEC (GENLIST f n)``,
-  rw[]);
+Theorem GENLIST_MONO_DEC:
+    !f:num -> num n. RMONO f ==> MONO_DEC (GENLIST f n)
+Proof
+  rw[]
+QED
 
 (* Theorem: MONO_INC [m .. n] *)
 (* Proof:
@@ -3395,20 +3532,22 @@ val it = |- MDILATE #0 3 [a; b; #1] = [a; #0; #0; b; #0; #0; #1]: thm
 
 (* Theorem: MDILATE e n [] = [] *)
 (* Proof: by MDILATE_def *)
-val MDILATE_NIL = store_thm(
-  "MDILATE_NIL",
-  ``!e n. MDILATE e n [] = []``,
-  rw[MDILATE_def]);
+Theorem MDILATE_NIL:
+    !e n. MDILATE e n [] = []
+Proof
+  rw[MDILATE_def]
+QED
 
 (* export simple result *)
 val _ = export_rewrites["MDILATE_NIL"];
 
 (* Theorem: MDILATE e n [x] = [x] *)
 (* Proof: by MDILATE_def *)
-val MDILATE_SING = store_thm(
-  "MDILATE_SING",
-  ``!e n x. MDILATE e n [x] = [x]``,
-  rw[MDILATE_def]);
+Theorem MDILATE_SING:
+    !e n x. MDILATE e n [x] = [x]
+Proof
+  rw[MDILATE_def]
+QED
 
 (* export simple result *)
 val _ = export_rewrites["MDILATE_SING"];
@@ -3416,11 +3555,12 @@ val _ = export_rewrites["MDILATE_SING"];
 (* Theorem: MDILATE e n (h::t) =
             if t = [] then [h] else (h:: GENLIST (K e) (PRE n)) ++ (MDILATE e n t) *)
 (* Proof: by MDILATE_def *)
-val MDILATE_CONS = store_thm(
-  "MDILATE_CONS",
-  ``!e n h t. MDILATE e n (h::t) =
-    if t = [] then [h] else (h:: GENLIST (K e) (PRE n)) ++ (MDILATE e n t)``,
-  rw[MDILATE_def]);
+Theorem MDILATE_CONS:
+    !e n h t. MDILATE e n (h::t) =
+    if t = [] then [h] else (h:: GENLIST (K e) (PRE n)) ++ (MDILATE e n t)
+Proof
+  rw[MDILATE_def]
+QED
 
 (* Theorem: MDILATE e 1 l = l *)
 (* Proof:
@@ -3438,20 +3578,22 @@ val MDILATE_CONS = store_thm(
       = [h] ++ l                           by GENLIST_0
       = h::l                               by CONS_APPEND
 *)
-val MDILATE_1 = store_thm(
-  "MDILATE_1",
-  ``!l e. MDILATE e 1 l = l``,
+Theorem MDILATE_1:
+    !l e. MDILATE e 1 l = l
+Proof
   Induct_on `l` >>
-  rw[MDILATE_def]);
+  rw[MDILATE_def]
+QED
 
 (* Theorem: MDILATE e 0 l = l *)
 (* Proof:
    By induction on l, and note GENLIST (K e) (PRE 0) = GENLIST (K e) 0 = [].
 *)
-val MDILATE_0 = store_thm(
-  "MDILATE_0",
-  ``!l e. MDILATE e 0 l = l``,
-  Induct_on `l` >> rw[MDILATE_def]);
+Theorem MDILATE_0:
+    !l e. MDILATE e 0 l = l
+Proof
+  Induct_on `l` >> rw[MDILATE_def]
+QED
 
 (* Theorem: LENGTH (MDILATE e n l) =
             if n = 0 then LENGTH l else if l = [] then 0 else SUC (n * PRE (LENGTH l)) *)
@@ -3488,10 +3630,10 @@ val MDILATE_0 = store_thm(
        = SUC (n * LENGTH l)               by SUC_PRE, 0 < LENGTH l
        = SUC (n * PRE (LENGTH (h::l)))    by LENGTH, PRE_SUC_EQ
 *)
-val MDILATE_LENGTH = store_thm(
-  "MDILATE_LENGTH",
-  ``!l e n. LENGTH (MDILATE e n l) =
-   if n = 0 then LENGTH l else if l = [] then 0 else SUC (n * PRE (LENGTH l))``,
+Theorem MDILATE_LENGTH:
+    !l e n. LENGTH (MDILATE e n l) =
+   if n = 0 then LENGTH l else if l = [] then 0 else SUC (n * PRE (LENGTH l))
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[MDILATE_0] >>
@@ -3505,7 +3647,8 @@ val MDILATE_LENGTH = store_thm(
   `_ = n + n * PRE (LENGTH l)` by decide_tac >>
   `_ = n * SUC (PRE (LENGTH l))` by rw[MULT_SUC] >>
   `_ = n * LENGTH l` by metis_tac[SUC_PRE] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: LENGTH l <= LENGTH (MDILATE e n l) *)
 (* Proof:
@@ -3528,12 +3671,13 @@ val MDILATE_LENGTH = store_thm(
       = SUC (LENGTH t)                 by ADD1
       = LENGTH (h::t)                  by LENGTH
 *)
-val MDILATE_LENGTH_LOWER = store_thm(
-  "MDILATE_LENGTH_LOWER",
-  ``!l e n. LENGTH l <= LENGTH (MDILATE e n l)``,
+Theorem MDILATE_LENGTH_LOWER:
+    !l e n. LENGTH l <= LENGTH (MDILATE e n l)
+Proof
   rw[MDILATE_LENGTH] >>
   `?h t. l = h::t` by metis_tac[list_CASES] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: 0 < n ==> LENGTH (MDILATE e n l) <= SUC (n * PRE (LENGTH l)) *)
 (* Proof:
@@ -3550,10 +3694,11 @@ val MDILATE_LENGTH_LOWER = store_thm(
         LENGTH (MDILATE e n l)
       = SUC (n * PRE (LENGTH l))   by MDILATE_LENGTH, n <> 0
 *)
-val MDILATE_LENGTH_UPPER = store_thm(
-  "MDILATE_LENGTH_UPPER",
-  ``!l e n. 0 < n ==> LENGTH (MDILATE e n l) <= SUC (n * PRE (LENGTH l))``,
-  rw[MDILATE_LENGTH]);
+Theorem MDILATE_LENGTH_UPPER:
+    !l e n. 0 < n ==> LENGTH (MDILATE e n l) <= SUC (n * PRE (LENGTH l))
+Proof
+  rw[MDILATE_LENGTH]
+QED
 
 (* Theorem: k < LENGTH (MDILATE e n l) ==>
             (EL k (MDILATE e n l) = if n = 0 then EL k l else if k MOD n = 0 then EL (k DIV n) l else e) *)
@@ -3627,10 +3772,10 @@ val MDILATE_LENGTH_UPPER = store_thm(
            = EL (k - n) (MDILATE e n l)              by EL_APPEND, n <= k
            = e                                       by induction hypothesis, (k - n) MOD n <> 0
 *)
-val MDILATE_EL = store_thm(
-  "MDILATE_EL",
-  ``!l e n k. k < LENGTH (MDILATE e n l) ==>
-      (EL k (MDILATE e n l) = if n = 0 then EL k l else if k MOD n = 0 then EL (k DIV n) l else e)``,
+Theorem MDILATE_EL:
+    !l e n k. k < LENGTH (MDILATE e n l) ==>
+      (EL k (MDILATE e n l) = if n = 0 then EL k l else if k MOD n = 0 then EL (k DIV n) l else e)
+Proof
   ntac 3 strip_tac >>
   Cases_on `n = 0` >-
   rw[MDILATE_0] >>
@@ -3673,7 +3818,8 @@ val MDILATE_EL = store_thm(
     `(k - n) MOD n = k MOD n` by rw[SUB_MOD] >>
     `EL (k - n) (MDILATE e n l) = e` by rw[] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* This is a milestone theorem. *)
 
@@ -3693,9 +3839,9 @@ val MDILATE_EL = store_thm(
    Only-if part: l = [] ==> MDILATE e n l = []
       True by MDILATE_NIL
 *)
-val MDILATE_EQ_NIL = store_thm(
-  "MDILATE_EQ_NIL",
-  ``!l e n. (MDILATE e n l = []) <=> (l = [])``,
+Theorem MDILATE_EQ_NIL:
+    !l e n. (MDILATE e n l = []) <=> (l = [])
+Proof
   rw[EQ_IMP_THM] >>
   spose_not_then strip_assume_tac >>
   Cases_on `n = 0` >| [
@@ -3704,7 +3850,8 @@ val MDILATE_EQ_NIL = store_thm(
     `LENGTH (MDILATE e n l) = SUC (n * PRE (LENGTH l))` by rw[MDILATE_LENGTH] >>
     `LENGTH (MDILATE e n l) <> 0` by decide_tac >>
     metis_tac[LENGTH_EQ_0]
-  ]);
+  ]
+QED
 
 (* Theorem: LAST (MDILATE e n l) = LAST l *)
 (* Proof:
@@ -3732,9 +3879,9 @@ val MDILATE_EQ_NIL = store_thm(
       = EL (PRE (LENGTH l)) l                by above
       = LAST l                               by LAST_EL
 *)
-val MDILATE_LAST = store_thm(
-  "MDILATE_LAST",
-  ``!l e n. LAST (MDILATE e n l) = LAST l``,
+Theorem MDILATE_LAST:
+    !l e n. LAST (MDILATE e n l) = LAST l
+Proof
   rpt strip_tac >>
   Cases_on `l = []` >-
   rw[] >>
@@ -3749,7 +3896,8 @@ val MDILATE_LAST = store_thm(
   `k MOD n = 0` by metis_tac[MOD_EQ_0, MULT_COMM] >>
   `k DIV n = PRE (LENGTH l)` by metis_tac[MULT_DIV, MULT_COMM] >>
   `k < LENGTH (MDILATE e n l)` by rw[Abbr`k`] >>
-  rw[MDILATE_EL]);
+  rw[MDILATE_EL]
+QED
 
 (*
 Succesive dilation:
@@ -3839,11 +3987,12 @@ val _ = export_rewrites["DILATE_SING"];
 (* Theorem: DILATE e n m (h::t) =
             if t = [] then [h] else h:: (TAKE n t ++ (GENLIST (K e) m) ++ DILATE e n m (DROP n t)) *)
 (* Proof: by DILATE_def, list_CASES *)
-val DILATE_CONS = store_thm(
-  "DILATE_CONS",
-  ``!n m h t e. DILATE e n m (h::t) =
-    if t = [] then [h] else h:: (TAKE n t ++ (GENLIST (K e) m) ++ DILATE e n m (DROP n t))``,
-  metis_tac[DILATE_def, list_CASES]);
+Theorem DILATE_CONS:
+    !n m h t e. DILATE e n m (h::t) =
+    if t = [] then [h] else h:: (TAKE n t ++ (GENLIST (K e) m) ++ DILATE e n m (DROP n t))
+Proof
+  metis_tac[DILATE_def, list_CASES]
+QED
 
 (* Theorem: DILATE e 0 n (h::t) = if t = [] then [h] else h::(GENLIST (K e) n ++ DILATE e 0 n t) *)
 (* Proof:
@@ -3855,10 +4004,11 @@ val DILATE_CONS = store_thm(
    = h:: ([] ++ (GENLIST (K e) n) ++ DILATE e 0 n t)                 by TAKE_0, DROP_0
    = h:: (GENLIST (K e) n ++ DILATE e 0 n t)                         by APPEND
 *)
-val DILATE_0_CONS = store_thm(
-  "DILATE_0_CONS",
-  ``!n h t e. DILATE e 0 n (h::t) = if t = [] then [h] else h::(GENLIST (K e) n ++ DILATE e 0 n t)``,
-  rw[DILATE_CONS]);
+Theorem DILATE_0_CONS:
+    !n h t e. DILATE e 0 n (h::t) = if t = [] then [h] else h::(GENLIST (K e) n ++ DILATE e 0 n t)
+Proof
+  rw[DILATE_CONS]
+QED
 
 (* Theorem: DILATE e 0 0 l = l *)
 (* Proof:
@@ -3874,11 +4024,12 @@ val DILATE_0_CONS = store_thm(
        = h:: DILATE e 0 0 l                       by APPEND
        = h::l                                     by induction hypothesis
 *)
-val DILATE_0_0 = store_thm(
-  "DILATE_0_0",
-  ``!l e. DILATE e 0 0 l = l``,
+Theorem DILATE_0_0:
+    !l e. DILATE e 0 0 l = l
+Proof
   Induct >>
-  rw[DILATE_0_CONS]);
+  rw[DILATE_0_CONS]
+QED
 
 (* Theorem: DILATE e 0 (SUC n) l = DILATE e n 1 (DILATE e 0 n l) *)
 (* Proof:
@@ -3917,9 +4068,9 @@ val DILATE_0_0 = store_thm(
         = h::(GENLIST (K e) n ++ GENLIST (K e) 1 ++ DILATE e n 1 (DILATE e 0 n l))   by above [2], [3]
         = h::(GENLIST (K e) (SUC n) ++ DILATE e n 1 (DILATE e 0 n l))       by above [4]
 *)
-val DILATE_0_SUC = store_thm(
-  "DILATE_0_SUC",
-  ``!l e n. DILATE e 0 (SUC n) l = DILATE e n 1 (DILATE e 0 n l)``,
+Theorem DILATE_0_SUC:
+    !l e n. DILATE e 0 (SUC n) l = DILATE e n 1 (DILATE e 0 n l)
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[DILATE_0_0] >>
@@ -3934,7 +4085,8 @@ val DILATE_0_SUC = store_thm(
   `TAKE n a = GENLIST (K e) n` by metis_tac[TAKE_LENGTH_APPEND] >>
   `DROP n a = DILATE e 0 n l` by metis_tac[DROP_LENGTH_APPEND] >>
   `GENLIST (K e) (SUC n) = GENLIST (K e) n ++ GENLIST (K e) 1` by rw_tac std_ss[SUC_ONE_ADD, GENLIST_K_ADD] >>
-  metis_tac[DILATE_0_CONS, DILATE_CONS]);
+  metis_tac[DILATE_0_CONS, DILATE_CONS]
+QED
 
 (* Theorem: LENGTH (DILATE e 0 n l) = if l = [] then 0 else SUC (SUC n * PRE (LENGTH l)) *)
 (* Proof:
@@ -3968,9 +4120,9 @@ val DILATE_0_SUC = store_thm(
         = SUC (SUC n * LENGTH l)                   by SUC_PRE, 0 < LENGTH l
         = SUC (SUC n * PRE (LENGTH (h::l)))        by LENGTH, PRE_SUC_EQ
 *)
-val DILATE_0_LENGTH = store_thm(
-  "DILATE_0_LENGTH",
-  ``!l e n. LENGTH (DILATE e 0 n l) = if l = [] then 0 else SUC (SUC n * PRE (LENGTH l))``,
+Theorem DILATE_0_LENGTH:
+    !l e n. LENGTH (DILATE e 0 n l) = if l = [] then 0 else SUC (SUC n * PRE (LENGTH l))
+Proof
   Induct >-
   rw[] >>
   rw_tac std_ss[LENGTH] >>
@@ -3985,7 +4137,8 @@ val DILATE_0_LENGTH = store_thm(
   `_ = SUC (SUC n + SUC n * PRE (LENGTH l))` by rw[] >>
   `_ = SUC (SUC n * SUC (PRE (LENGTH l)))` by rw[MULT_SUC] >>
   `_ = SUC (SUC n * LENGTH l)` by rw[SUC_PRE] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: LENGTH l <= LENGTH (DILATE e 0 n l) *)
 (* Proof:
@@ -4004,12 +4157,13 @@ val DILATE_0_LENGTH = store_thm(
       = SUC (LENGTH t)                 by ADD1
       = LENGTH (h::t)                  by LENGTH
 *)
-val DILATE_0_LENGTH_LOWER = store_thm(
-  "DILATE_0_LENGTH_LOWER",
-  ``!l e n. LENGTH l <= LENGTH (DILATE e 0 n l)``,
+Theorem DILATE_0_LENGTH_LOWER:
+    !l e n. LENGTH l <= LENGTH (DILATE e 0 n l)
+Proof
   rw[DILATE_0_LENGTH] >>
   `?h t. l = h::t` by metis_tac[list_CASES] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: LENGTH (DILATE e 0 n l) <= SUC (SUC n * PRE (LENGTH l)) *)
 (* Proof:
@@ -4025,10 +4179,11 @@ val DILATE_0_LENGTH_LOWER = store_thm(
         LENGTH (DILATE e 0 n l)
       = SUC (SUC n * PRE (LENGTH l))   by DILATE_0_LENGTH
 *)
-val DILATE_0_LENGTH_UPPER = store_thm(
-  "DILATE_0_LENGTH_UPPER",
-  ``!l e n. LENGTH (DILATE e 0 n l) <= SUC (SUC n * PRE (LENGTH l))``,
-  rw[DILATE_0_LENGTH]);
+Theorem DILATE_0_LENGTH_UPPER:
+    !l e n. LENGTH (DILATE e 0 n l) <= SUC (SUC n * PRE (LENGTH l))
+Proof
+  rw[DILATE_0_LENGTH]
+QED
 
 (* Theorem: k < LENGTH (DILATE e 0 n l) ==>
             (EL k (DILATE e 0 n l) = if k MOD (SUC n) = 0 then EL (k DIV (SUC n)) l else e) *)
@@ -4165,9 +4320,9 @@ QED
    Only-if part: l = [] ==> DILATE e 0 n l = []
       True by DILATE_NIL
 *)
-val DILATE_0_EQ_NIL = store_thm(
-  "DILATE_0_EQ_NIL",
-  ``!l e n. (DILATE e 0 n l = []) <=> (l = [])``,
+Theorem DILATE_0_EQ_NIL:
+    !l e n. (DILATE e 0 n l = []) <=> (l = [])
+Proof
   rw[EQ_IMP_THM] >>
   spose_not_then strip_assume_tac >>
   Cases_on `n = 0` >| [
@@ -4176,7 +4331,8 @@ val DILATE_0_EQ_NIL = store_thm(
     `LENGTH (DILATE e 0 n l) = SUC (SUC n * PRE (LENGTH l))` by rw[DILATE_0_LENGTH] >>
     `LENGTH (DILATE e 0 n l) <> 0` by decide_tac >>
     metis_tac[LENGTH_EQ_0]
-  ]);
+  ]
+QED
 
 (* Theorem: LAST (DILATE e 0 n l) = LAST l *)
 (* Proof:
@@ -4205,9 +4361,9 @@ val DILATE_0_EQ_NIL = store_thm(
       = EL (PRE (LENGTH l)) l                by above
       = LAST l                               by LAST_EL
 *)
-val DILATE_0_LAST = store_thm(
-  "DILATE_0_LAST",
-  ``!l e n. LAST (DILATE e 0 n l) = LAST l``,
+Theorem DILATE_0_LAST:
+    !l e n. LAST (DILATE e 0 n l) = LAST l
+Proof
   rpt strip_tac >>
   Cases_on `l = []` >-
   rw[] >>
@@ -4225,7 +4381,8 @@ val DILATE_0_LAST = store_thm(
   `k DIV m = PRE (LENGTH l)` by metis_tac[MULT_DIV, MULT_COMM] >>
   `k < LENGTH (DILATE e 0 n l)` by simp[Abbr`k`] >>
   Q.RM_ABBREV_TAC ‘k’ >>
-  rw[DILATE_0_EL]);
+  rw[DILATE_0_EL]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* FUNPOW with incremental cons.                                             *)
@@ -4518,24 +4675,26 @@ QED
       = 0 + 0             by induction hypothesis
       = 0
 *)
-val binomial_less_0 = store_thm(
-  "binomial_less_0",
-  ``!n k. n < k ==> (binomial n k = 0)``,
+Theorem binomial_less_0:
+    !n k. n < k ==> (binomial n k = 0)
+Proof
   Induct_on `n` >-
   metis_tac[binomial_def, num_CASES, NOT_ZERO] >>
   rw[binomial_def] >>
   `?h. k = SUC h` by metis_tac[SUC_NOT, NOT_ZERO, SUC_EXISTS, LESS_TRANS] >>
-  metis_tac[binomial_def, LESS_MONO_EQ, LESS_TRANS, LESS_SUC, ADD_0]);
+  metis_tac[binomial_def, LESS_MONO_EQ, LESS_TRANS, LESS_SUC, ADD_0]
+QED
 
 (* Theorem: C(n,0) = 1 *)
 (* Proof:
    If n = 0, C(n, 0) = C(0, 0) = 1            by binomial_def
    If n <> 0, n = SUC m, and C(SUC m, 0) = 1  by binomial_def
 *)
-val binomial_n_0 = store_thm(
-  "binomial_n_0",
-  ``!n. binomial n 0 = 1``,
-  metis_tac[binomial_def, num_CASES]);
+Theorem binomial_n_0:
+    !n. binomial n 0 = 1
+Proof
+  metis_tac[binomial_def, num_CASES]
+QED
 
 (* Theorem: C(n,n) = 1 *)
 (* Proof:
@@ -4548,12 +4707,13 @@ val binomial_n_0 = store_thm(
    = 1 + 0               by binomial_less_0
    = 1
 *)
-val binomial_n_n = store_thm(
-  "binomial_n_n",
-  ``!n. binomial n n = 1``,
+Theorem binomial_n_n:
+    !n. binomial n n = 1
+Proof
   Induct_on `n` >-
   metis_tac[binomial_def] >>
-  metis_tac[binomial_def, LESS_SUC, binomial_less_0, ADD_0]);
+  metis_tac[binomial_def, LESS_SUC, binomial_less_0, ADD_0]
+QED
 
 (* Theorem: binomial 0 n = if n = 0 then 1 else 0 *)
 (* Proof:
@@ -4562,17 +4722,19 @@ val binomial_n_n = store_thm(
    If n <> 0, then 0 < n.
       binomial 0 n = 0     by binomial_less_0
 *)
-val binomial_0_n = store_thm(
-  "binomial_0_n",
-  ``!n. binomial 0 n = if n = 0 then 1 else 0``,
-  rw[binomial_n_0, binomial_less_0]);
+Theorem binomial_0_n:
+    !n. binomial 0 n = if n = 0 then 1 else 0
+Proof
+  rw[binomial_n_0, binomial_less_0]
+QED
 
 (* Theorem: C(n+1,k+1) = C(n,k) + C(n,k+1) *)
 (* Proof: by definition. *)
-val binomial_recurrence = store_thm(
-  "binomial_recurrence",
-  ``!n k. binomial (SUC n) (SUC k) = binomial n k + binomial n (SUC k)``,
-  rw[binomial_def]);
+Theorem binomial_recurrence:
+    !n k. binomial (SUC n) (SUC k) = binomial n k + binomial n (SUC k)
+Proof
+  rw[binomial_def]
+QED
 
 (* Theorem: C(n+k,k) = (n+k)!/n!k!  *)
 (* Proof:
@@ -4592,9 +4754,9 @@ val binomial_recurrence = store_thm(
       = ((SUC n + k)!(SUC k) + (n + SUC k)(SUC n))/(SUC n)!(SUC k)!
       = (SUC n + SUC k)!/(SUC n)!(SUC k)!
 *)
-val binomial_formula = store_thm(
-  "binomial_formula",
-  ``!n k. binomial (n+k) k * (FACT n * FACT k) = FACT (n+k)``,
+Theorem binomial_formula:
+    !n k. binomial (n+k) k * (FACT n * FACT k) = FACT (n+k)
+Proof
   Induct_on `k` >-
   metis_tac[binomial_n_0, FACT, MULT_CLAUSES, ADD_0] >>
   Induct_on `n` >-
@@ -4620,7 +4782,8 @@ val binomial_formula = store_thm(
         by metis_tac[ADD_COMM, SUC_ADD_SYM] >>
   `_ = FACT (SUC (n+k)) * (SUC k + SUC n)` by metis_tac[LEFT_ADD_DISTRIB] >>
   `_ = (SUC n + SUC k) * FACT (SUC (n+k))` by metis_tac[MULT_COMM, ADD_COMM] >>
-  metis_tac[FACT]);
+  metis_tac[FACT]
+QED
 
 (* Theorem: C(n,k) = n!/k!(n-k)!  for 0 <= k <= n *)
 (* Proof:
@@ -4629,10 +4792,11 @@ val binomial_formula = store_thm(
    = binomial ((n-k)+k) k * (FACT (n-k) * FACT k)   by binomial_formula
    = binomial n k * (FACT (n-k) * FACT k))          by SUB_ADD, k <= n.
 *)
-val binomial_formula2 = store_thm(
-  "binomial_formula2",
-  ``!n k. k <= n ==> (FACT n = binomial n k * (FACT (n-k) * FACT k))``,
-  metis_tac[binomial_formula, SUB_ADD]);
+Theorem binomial_formula2:
+    !n k. k <= n ==> (FACT n = binomial n k * (FACT (n-k) * FACT k))
+Proof
+  metis_tac[binomial_formula, SUB_ADD]
+QED
 
 (* Theorem: k <= n ==> binomial n k = (FACT n) DIV ((FACT k) * (FACT (n - k))) *)
 (* Proof:
@@ -4641,10 +4805,11 @@ val binomial_formula2 = store_thm(
   = (FACT n) DIV ((FACT (n - k) * FACT k))      by binomial_formula2
   = (FACT n) DIV ((FACT k * FACT (n - k)))      by MULT_COMM
 *)
-val binomial_formula3 = store_thm(
-  "binomial_formula3",
-  ``!n k. k <= n ==> (binomial n k = (FACT n) DIV ((FACT k) * (FACT (n - k))))``,
-  metis_tac[binomial_formula2, MULT_COMM, MULT_DIV, MULT_EQ_0, FACT_LESS, NOT_ZERO]);
+Theorem binomial_formula3:
+    !n k. k <= n ==> (binomial n k = (FACT n) DIV ((FACT k) * (FACT (n - k))))
+Proof
+  metis_tac[binomial_formula2, MULT_COMM, MULT_DIV, MULT_EQ_0, FACT_LESS, NOT_ZERO]
+QED
 
 (* Theorem alias. *)
 val binomial_fact = save_thm("binomial_fact", binomial_formula3);
@@ -4656,10 +4821,11 @@ val binomial_fact = save_thm("binomial_fact", binomial_formula3);
   = (FACT n) DIV ((FACT k * FACT (n - k)))      by binomial_formula3
   = (FACT n) DIV (FACT k) DIV (FACT (n - k))    by DIV_DIV_DIV_MULT
 *)
-val binomial_n_k = store_thm(
-  "binomial_n_k",
-  ``!n k. k <= n ==> (binomial n k = (FACT n) DIV (FACT k) DIV (FACT (n - k)))``,
-  metis_tac[DIV_DIV_DIV_MULT, binomial_formula3, MULT_EQ_0, FACT_LESS, NOT_ZERO]);
+Theorem binomial_n_k:
+    !n k. k <= n ==> (binomial n k = (FACT n) DIV (FACT k) DIV (FACT (n - k)))
+Proof
+  metis_tac[DIV_DIV_DIV_MULT, binomial_formula3, MULT_EQ_0, FACT_LESS, NOT_ZERO]
+QED
 
 (* Theorem: binomial n 1 = n *)
 (* Proof:
@@ -4676,9 +4842,9 @@ val binomial_n_k = store_thm(
       = (n * FACT (n-1)) DIV (FACT (n-1))     by FACT
       = n                                     by MULT_DIV, FACT_LESS
 *)
-val binomial_n_1 = store_thm(
-  "binomial_n_1",
-  ``!n. binomial n 1 = n``,
+Theorem binomial_n_1:
+    !n. binomial n 1 = n
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[binomial_0_n] >>
@@ -4688,7 +4854,8 @@ val binomial_n_1 = store_thm(
   `_ = FACT n DIV (FACT (n-1))` by rw[] >>
   `_ = (n * FACT (n-1)) DIV (FACT (n-1))` by metis_tac[FACT] >>
   `_ = n` by rw[MULT_DIV, FACT_LESS] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: k <= n ==> (binomial n k = binomial n (n-k)) *)
 (* Proof:
@@ -4699,13 +4866,14 @@ val binomial_n_1 = store_thm(
    = (FACT n) DIV (FACT (n - k) * FACT (n-(n-k)))   by n - (n-k) = k
    = binomial n (n-k)                               by binomial_formula3, (n-k) <= n.
 *)
-val binomial_sym = store_thm(
-  "binomial_sym",
-  ``!n k. k <= n ==> (binomial n k = binomial n (n-k))``,
+Theorem binomial_sym:
+    !n k. k <= n ==> (binomial n k = binomial n (n-k))
+Proof
   rpt strip_tac >>
   `n - (n-k) = k` by decide_tac >>
   `(n-k) <= n` by decide_tac >>
-  rw[binomial_formula3, MULT_COMM]);
+  rw[binomial_formula3, MULT_COMM]
+QED
 
 (* Theorem: k <= n ==> (FACT k * FACT (n-k)) divides (FACT n) *)
 (* Proof:
@@ -4713,10 +4881,11 @@ val binomial_sym = store_thm(
                 = binomial n k * (FACT k * FACT (n - k))   by MULT_COMM
    Hence (FACT k * FACT (n-k)) divides (FACT n)            by divides_def
 *)
-val binomial_is_integer = store_thm(
-  "binomial_is_integer",
-  ``!n k. k <= n ==> (FACT k * FACT (n-k)) divides (FACT n)``,
-  metis_tac[binomial_formula2, MULT_COMM, divides_def]);
+Theorem binomial_is_integer:
+    !n k. k <= n ==> (FACT k * FACT (n-k)) divides (FACT n)
+Proof
+  metis_tac[binomial_formula2, MULT_COMM, divides_def]
+QED
 
 (* Theorem: k <= n ==> 0 < binomial n k *)
 (* Proof:
@@ -4724,10 +4893,11 @@ val binomial_is_integer = store_thm(
      and  0 < FACT n, 0 < FACT (n-k), 0 < FACT k           by FACT_LESS
    Hence  0 < binomial n k                                 by ZERO_LESS_MULT
 *)
-val binomial_pos = store_thm(
-  "binomial_pos",
-  ``!n k. k <= n ==> 0 < binomial n k``,
-  metis_tac[binomial_formula2, FACT_LESS, ZERO_LESS_MULT]);
+Theorem binomial_pos:
+    !n k. k <= n ==> 0 < binomial n k
+Proof
+  metis_tac[binomial_formula2, FACT_LESS, ZERO_LESS_MULT]
+QED
 
 (* Theorem: (binomial n k = 0) <=> n < k *)
 (* Proof:
@@ -4738,15 +4908,16 @@ val binomial_pos = store_thm(
    Only-if part: n < k ==> (binomial n k = 0)
       This is true                         by binomial_less_0
 *)
-val binomial_eq_0 = store_thm(
-  "binomial_eq_0",
-  ``!n k. (binomial n k = 0) <=> n < k``,
+Theorem binomial_eq_0:
+    !n k. (binomial n k = 0) <=> n < k
+Proof
   rw[EQ_IMP_THM] >| [
     spose_not_then strip_assume_tac >>
     `k <= n` by decide_tac >>
     metis_tac[binomial_pos, NOT_ZERO],
     rw[binomial_less_0]
-  ]);
+  ]
+QED
 
 (* Theorem: binomial 1 n = if 1 < n then 0 else 1 *)
 (* Proof:
@@ -4790,9 +4961,9 @@ QED
       Since  0 < FACT (n-1-k) * FACT k                            by FACT_LESS, MULT_EQ_0
              n * binomial (n-1) k = (n-k) * (binomial n k)        by MULT_RIGHT_CANCEL
 *)
-val binomial_up_eqn = store_thm(
-  "binomial_up_eqn",
-  ``!n. 0 < n ==> !k. n * binomial (n-1) k = (n-k) * (binomial n k)``,
+Theorem binomial_up_eqn:
+    !n. 0 < n ==> !k. n * binomial (n-1) k = (n-k) * (binomial n k)
+Proof
   rpt strip_tac >>
   `!n. n <> 0 <=> 0 < n` by decide_tac >>
   Cases_on `n <= k` >| [
@@ -4810,17 +4981,19 @@ val binomial_up_eqn = store_thm(
     `_ = n * (binomial (n-1) k * (FACT (n-1-k) * FACT k))` by rw_tac std_ss[GSYM binomial_formula2] >>
     `_ = (n * binomial (n-1) k) * (FACT (n-1-k) * FACT k)` by rw[MULT_ASSOC] >>
     metis_tac[FACT_LESS, MULT_EQ_0, MULT_RIGHT_CANCEL]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < n ==> !k. binomial (n-1) k = ((n-k) * (binomial n k)) DIV n *)
 (* Proof:
    Since  n * binomial (n-1) k = (n-k) * (binomial n k)        by binomial_up_eqn
               binomial (n-1) k = (n-k) * (binomial n k) DIV n  by DIV_SOLVE, 0 < n.
 *)
-val binomial_up = store_thm(
-  "binomial_up",
-  ``!n. 0 < n ==> !k. binomial (n-1) k = ((n-k) * (binomial n k)) DIV n``,
-  rw[binomial_up_eqn, DIV_SOLVE]);
+Theorem binomial_up:
+    !n. 0 < n ==> !k. binomial (n-1) k = ((n-k) * (binomial n k)) DIV n
+Proof
+  rw[binomial_up_eqn, DIV_SOLVE]
+QED
 
 (* Relating Binomial to its right-entry:
 
@@ -4851,9 +5024,9 @@ val binomial_up = store_thm(
       Since  0 < FACT (n-1-k) * FACT k                            by FACT_LESS, MULT_EQ_0
              (k+1) * binomial n (k+1) = (n-k) * (binomial n k)    by MULT_RIGHT_CANCEL
 *)
-val binomial_right_eqn = store_thm(
-  "binomial_right_eqn",
-  ``!n. 0 < n ==> !k. (k + 1) * binomial n (k+1) = (n - k) * binomial n k``,
+Theorem binomial_right_eqn:
+    !n. 0 < n ==> !k. (k + 1) * binomial n (k+1) = (n - k) * binomial n k
+Proof
   rpt strip_tac >>
   `!n. n <> 0 <=> 0 < n` by decide_tac >>
   Cases_on `n <= k` >| [
@@ -4876,17 +5049,19 @@ val binomial_right_eqn = store_thm(
     `_ = (binomial n (k+1) * (k+1)) * (FACT (n-1-k) * FACT k)` by rw[MULT_ASSOC] >>
     `_ = (k+1) * binomial n (k+1) * (FACT (n-1-k) * FACT k)` by rw_tac std_ss[MULT_COMM] >>
     metis_tac[FACT_LESS, MULT_EQ_0, MULT_RIGHT_CANCEL]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < n ==> !k. binomial n (k+1) = (n - k) * binomial n k DIV (k+1) *)
 (* Proof:
    Since  (k + 1) * binomial n (k+1) = (n - k) * binomial n k  by binomial_right_eqn
           binomial n (k+1) = (n - k) * binomial n k DIV (k+1)  by DIV_SOLVE, 0 < k+1.
 *)
-val binomial_right = store_thm(
-  "binomial_right",
-  ``!n. 0 < n ==> !k. binomial n (k+1) = (n - k) * binomial n k DIV (k+1)``,
-  rw[binomial_right_eqn, DIV_SOLVE, DECIDE ``!k. 0 < k+1``]);
+Theorem binomial_right:
+    !n. 0 < n ==> !k. binomial n (k+1) = (n - k) * binomial n k DIV (k+1)
+Proof
+  rw[binomial_right_eqn, DIV_SOLVE, DECIDE ``!k. 0 < k+1``]
+QED
 
 (*
        k < HALF n <=> k + 1 <= n - k
@@ -4915,9 +5090,9 @@ n = 6, HALF n = 3, binomial 6 k: 1, 6, 15, 20, 15, 6, 1
     and 0 < binomial n (k + 1)             by MULT_0, MULT_EQ_0
   Hence binomial n k < binomial n (k + 1)  by MULT_EQ_LESS_TO_MORE
 *)
-val binomial_monotone = store_thm(
-  "binomial_monotone",
-  ``!n k. k < HALF n ==> binomial n k < binomial n (k + 1)``,
+Theorem binomial_monotone:
+    !n k. k < HALF n ==> binomial n k < binomial n (k + 1)
+Proof
   rpt strip_tac >>
   `k + 1 < n - k` by rw[GSYM LESS_HALF_IFF] >>
   `0 < k + 1 /\ 0 < n - k` by decide_tac >>
@@ -4925,7 +5100,8 @@ val binomial_monotone = store_thm(
   `HALF n <= n` by rw[DIV_LESS_EQ] >>
   `0 < binomial n k` by rw[binomial_pos] >>
   `0 < binomial n (k + 1)` by metis_tac[MULT_0, MULT_EQ_0, NOT_ZERO] >>
-  metis_tac[MULT_EQ_LESS_TO_MORE]);
+  metis_tac[MULT_EQ_LESS_TO_MORE]
+QED
 
 (* Theorem: binomial n k <= binomial n (HALF n) *)
 (* Proof:
@@ -4962,9 +5138,9 @@ val binomial_monotone = store_thm(
             Thus binomial n (n - k) < binomial n (HALF n)  by binomial_monotone, MONOTONE_MAX
          Hence true.
 *)
-val binomial_max = store_thm(
-  "binomial_max",
-  ``!n k. binomial n k <= binomial n (HALF n)``,
+Theorem binomial_max:
+    !n k. binomial n k <= binomial n (HALF n)
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[binomial_0_n] >>
@@ -4984,7 +5160,8 @@ val binomial_max = store_thm(
     `n - k < HALF n` by decide_tac >>
     `binomial n (n - k) < binomial n (HALF n)` by rw[binomial_monotone, MONOTONE_MAX] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Idea: the recurrence relation for binomial defines itself. *)
 
@@ -5039,23 +5216,25 @@ QED
    By Euclid's lemma, a prime divides a product must divide a factor.
    So p divides C(n,k).
 *)
-val prime_divides_binomials = store_thm(
-  "prime_divides_binomials",
-  ``!n. prime n ==> 1 < n /\ (!k. 0 < k /\ k < n ==> n divides (binomial n k))``,
+Theorem prime_divides_binomials:
+    !n. prime n ==> 1 < n /\ (!k. 0 < k /\ k < n ==> n divides (binomial n k))
+Proof
   rpt strip_tac >-
   metis_tac[ONE_LT_PRIME] >>
   `(n = n-k + k) /\ (n-k) < n` by decide_tac >>
   `FACT n = (binomial n k) * (FACT (n-k) * FACT k)` by metis_tac[binomial_formula] >>
   `~(n divides (FACT k)) /\ ~(n divides (FACT (n-k)))` by metis_tac[PRIME_BIG_NOT_DIVIDES_FACT] >>
   `n divides (FACT n)` by metis_tac[DIVIDES_FACT, LESS_TRANS] >>
-  metis_tac[P_EUCLIDES]);
+  metis_tac[P_EUCLIDES]
+QED
 
 (* Theorem: n is prime ==> n divides C(n,k)  for all 0 < k < n *)
 (* Proof: by prime_divides_binomials *)
-val prime_divides_binomials_alt = store_thm(
-  "prime_divides_binomials_alt",
-  ``!n k. prime n /\ 0 < k /\ k < n ==> n divides (binomial n k)``,
-  rw[prime_divides_binomials]);
+Theorem prime_divides_binomials_alt:
+    !n k. prime n /\ 0 < k /\ k < n ==> n divides (binomial n k)
+Proof
+  rw[prime_divides_binomials]
+QED
 
 (* Theorem: If prime p divides n, p does not divide (n-1)!/(n-p)! *)
 (* Proof:
@@ -5064,10 +5243,10 @@ val prime_divides_binomials_alt = store_thm(
    as p cannot divide any of the numerator.
    Note: when p divides n, the nearest multiples for p are n+/-p.
 *)
-val prime_divisor_property = store_thm(
-  "prime_divisor_property",
-  ``!n p. 1 < n /\ p < n /\ prime p /\ p divides n ==>
-   ~(p divides ((FACT (n-1)) DIV (FACT (n-p))))``,
+Theorem prime_divisor_property:
+    !n p. 1 < n /\ p < n /\ prime p /\ p divides n ==>
+   ~(p divides ((FACT (n-1)) DIV (FACT (n-p))))
+Proof
   spose_not_then strip_assume_tac >>
   `1 < p` by metis_tac[ONE_LT_PRIME] >>
   `n-p < n-1` by decide_tac >>
@@ -5085,7 +5264,8 @@ val prime_divisor_property = store_thm(
   `n-p < y /\ y < n` by metis_tac[] >>
   `y < n + p` by decide_tac >>
   `y = n` by metis_tac[MULTIPLE_INTERVAL] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: n divides C(n,k)  for all 0 < k < n ==> n is prime *)
 (* Proof:
@@ -5096,9 +5276,9 @@ val prime_divisor_property = store_thm(
    cannot be an integer as p cannot divide any of the numerator.
    Note: when p divides n, the nearest multiples for p are n+/-p.
 *)
-val divides_binomials_imp_prime = store_thm(
-  "divides_binomials_imp_prime",
-  ``!n. 1 < n /\ (!k. 0 < k /\ k < n ==> n divides (binomial n k)) ==> prime n``,
+Theorem divides_binomials_imp_prime:
+    !n. 1 < n /\ (!k. 0 < k /\ k < n ==> n divides (binomial n k)) ==> prime n
+Proof
   (spose_not_then strip_assume_tac) >>
   `?p. prime p /\ p < n /\ p divides n` by metis_tac[PRIME_FACTOR_PROPER] >>
   `n divides (binomial n p)` by metis_tac[PRIME_POS] >>
@@ -5116,24 +5296,27 @@ val divides_binomials_imp_prime = store_thm(
   `_ = q * ((FACT (p-1) * p)* FACT (n-p))` by metis_tac[MULT_COMM] >>
   `_ = q * FACT (p-1) * p * FACT (n-p)` by metis_tac[MULT_ASSOC] >>
   `FACT (n-1) DIV FACT (n-p) = q * FACT (p-1) * p` by metis_tac[MULT_DIV, FACT_LESS] >>
-  metis_tac[divides_def, prime_divisor_property]);
+  metis_tac[divides_def, prime_divisor_property]
+QED
 
 (* Theorem: n is prime iff n divides C(n,k)  for all 0 < k < n *)
 (* Proof:
    By prime_divides_binomials and
    divides_binomials_imp_prime.
 *)
-val prime_iff_divides_binomials = store_thm(
-  "prime_iff_divides_binomials",
-  ``!n. prime n <=> 1 < n /\ (!k. 0 < k /\ k < n ==> n divides (binomial n k))``,
-  metis_tac[prime_divides_binomials, divides_binomials_imp_prime]);
+Theorem prime_iff_divides_binomials:
+    !n. prime n <=> 1 < n /\ (!k. 0 < k /\ k < n ==> n divides (binomial n k))
+Proof
+  metis_tac[prime_divides_binomials, divides_binomials_imp_prime]
+QED
 
 (* Theorem: prime n <=> 1 < n /\ !k. 0 < k /\ k < n ==> ((binomial n k) MOD n = 0) *)
 (* Proof: by prime_iff_divides_binomials *)
-val prime_iff_divides_binomials_alt = store_thm(
-  "prime_iff_divides_binomials_alt",
-  ``!n. prime n <=> 1 < n /\ !k. 0 < k /\ k < n ==> ((binomial n k) MOD n = 0)``,
-  rw[prime_iff_divides_binomials, DIVIDES_MOD_0]);
+Theorem prime_iff_divides_binomials_alt:
+    !n. prime n <=> 1 < n /\ !k. 0 < k /\ k < n ==> ((binomial n k) MOD n = 0)
+Proof
+  rw[prime_iff_divides_binomials, DIVIDES_MOD_0]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Binomial Theorem                                                          *)
@@ -5159,22 +5342,24 @@ i.e.
 = (\k. (binomial n (k+1)) * x**(n-k) * y**(k+1))
 *)
 (* Theorem: Binomial index shift for GENLIST *)
-val GENLIST_binomial_index_shift = store_thm(
-  "GENLIST_binomial_index_shift",
-  ``!n x y. GENLIST ((\k. binomial n k * x ** SUC(n - k) * y ** k) o SUC) n =
-           GENLIST (\k. binomial n (SUC k) * x ** (n-k) * y**(SUC k)) n``,
+Theorem GENLIST_binomial_index_shift:
+    !n x y. GENLIST ((\k. binomial n k * x ** SUC(n - k) * y ** k) o SUC) n =
+           GENLIST (\k. binomial n (SUC k) * x ** (n-k) * y**(SUC k)) n
+Proof
   rw_tac std_ss[GENLIST_FUN_EQ] >>
   `SUC (n - SUC k) = n - k` by decide_tac >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* This is closely related to above, with (SUC n) replacing (n),
    but does not require k < n. *)
 (* Proof: by function equality. *)
-val binomial_index_shift = store_thm(
-  "binomial_index_shift",
-  ``!n x y. (\k. binomial (SUC n) k * x ** ((SUC n) - k) * y ** k) o SUC =
-           (\k. binomial (SUC n) (SUC k) * x ** (n-k) * y ** (SUC k))``,
-  rw_tac std_ss[FUN_EQ_THM]);
+Theorem binomial_index_shift:
+    !n x y. (\k. binomial (SUC n) k * x ** ((SUC n) - k) * y ** k) o SUC =
+           (\k. binomial (SUC n) (SUC k) * x ** (n-k) * y ** (SUC k))
+Proof
+  rw_tac std_ss[FUN_EQ_THM]
+QED
 
 (* Pattern for binomial expansion:
 
@@ -5188,25 +5373,27 @@ val binomial_index_shift = store_thm(
 
 (* Theorem: multiply x into a binomial term *)
 (* Proof: by function equality and EXP. *)
-val binomial_term_merge_x = store_thm(
-  "binomial_term_merge_x",
-  ``!n x y. (\k. x * k) o (\k. binomial n k * x ** (n - k) * y ** k) =
-           (\k. binomial n k * x ** (SUC(n - k)) * y ** k)``,
+Theorem binomial_term_merge_x:
+    !n x y. (\k. x * k) o (\k. binomial n k * x ** (n - k) * y ** k) =
+           (\k. binomial n k * x ** (SUC(n - k)) * y ** k)
+Proof
   rw_tac std_ss[FUN_EQ_THM] >>
   `x * (binomial n k * x ** (n - k) * y ** k) =
     binomial n k * (x * x ** (n - k)) * y ** k` by decide_tac >>
-  metis_tac[EXP]);
+  metis_tac[EXP]
+QED
 
 (* Theorem: multiply y into a binomial term *)
 (* Proof: by functional equality and EXP. *)
-val binomial_term_merge_y = store_thm(
-  "binomial_term_merge_y",
-  ``!n x y. (\k. y * k) o (\k. binomial n k * x ** (n - k) * y ** k) =
-           (\k. binomial n k * x ** (n - k) * y ** (SUC k))``,
+Theorem binomial_term_merge_y:
+    !n x y. (\k. y * k) o (\k. binomial n k * x ** (n - k) * y ** k) =
+           (\k. binomial n k * x ** (n - k) * y ** (SUC k))
+Proof
   rw_tac std_ss[FUN_EQ_THM] >>
   `y * (binomial n k * x ** (n - k) * y ** k) =
     binomial n k * x ** (n - k) * (y * y ** k)` by decide_tac >>
-  metis_tac[EXP]);
+  metis_tac[EXP]
+QED
 
 (* Theorem: [Binomial Theorem]  (x + y)^n = SUM (k=0..n) C(n,k)x^(n-k)y^k  *)
 (* Proof:
@@ -5245,9 +5432,9 @@ val binomial_term_merge_y = store_thm(
     = SUM (k=0..(SUC n))C(SUC n,k) x^((SUC n)-k)y^k
                                               by synthesis of sum
 *)
-val binomial_thm = store_thm(
-  "binomial_thm",
-  ``!n x y. (x + y) ** n = SUM (GENLIST (\k. (binomial n k) * x ** (n-k) * y ** k) (SUC n))``,
+Theorem binomial_thm:
+    !n x y. (x + y) ** n = SUM (GENLIST (\k. (binomial n k) * x ** (n-k) * y ** k) (SUC n))
+Proof
   Induct_on `n` >-
   rw[EXP, binomial_n_n] >>
   rw_tac std_ss[EXP] >>
@@ -5306,7 +5493,8 @@ val binomial_thm = store_thm(
         by rw[SUM_DECOMPOSE_FIRST] >>
   `_ = SUM (GENLIST (\k. binomial (SUC n) k * x ** (SUC n - k) * y ** k) (SUC (SUC n)))`
         by rw[SUM_DECOMPOSE_LAST] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* This is a milestone theorem. *)
 
@@ -5363,10 +5551,11 @@ val _ = overload_on("binomial_horizontal", ``\n. GENLIST (binomial n) (n + 1)``)
    = [binomial 0 0]                  by SNOC
    = [1]                             by binomial_n_0
 *)
-val binomial_horizontal_0 = store_thm(
-  "binomial_horizontal_0",
-  ``binomial_horizontal 0 = [1]``,
-  rw[binomial_n_0]);
+Theorem binomial_horizontal_0:
+    binomial_horizontal 0 = [1]
+Proof
+  rw[binomial_n_0]
+QED
 
 (* Theorem: LENGTH (binomial_horizontal n) = n + 1 *)
 (* Proof:
@@ -5374,17 +5563,19 @@ val binomial_horizontal_0 = store_thm(
    = LENGTH (GENLIST (binomial n) (n + 1)) by notation
    = n + 1                                 by LENGTH_GENLIST
 *)
-val binomial_horizontal_len = store_thm(
-  "binomial_horizontal_len",
-  ``!n. LENGTH (binomial_horizontal n) = n + 1``,
-  rw[]);
+Theorem binomial_horizontal_len:
+    !n. LENGTH (binomial_horizontal n) = n + 1
+Proof
+  rw[]
+QED
 
 (* Theorem: k < n + 1 ==> MEM (binomial n k) (binomial_horizontal n) *)
 (* Proof: by MEM_GENLIST *)
-val binomial_horizontal_mem = store_thm(
-  "binomial_horizontal_mem",
-  ``!n k. k < n + 1 ==> MEM (binomial n k) (binomial_horizontal n)``,
-  metis_tac[MEM_GENLIST]);
+Theorem binomial_horizontal_mem:
+    !n k. k < n + 1 ==> MEM (binomial n k) (binomial_horizontal n)
+Proof
+  metis_tac[MEM_GENLIST]
+QED
 
 (* Theorem: MEM (binomial n k) (binomial_horizontal n) <=> k <= n *)
 (* Proof:
@@ -5401,9 +5592,9 @@ val binomial_horizontal_mem = store_thm(
       Note k <= n ==> k < n + 1,
       Take m = k, the result follows.
 *)
-val binomial_horizontal_mem_iff = store_thm(
-  "binomial_horizontal_mem_iff",
-  ``!n k. MEM (binomial n k) (binomial_horizontal n) <=> k <= n``,
+Theorem binomial_horizontal_mem_iff:
+    !n k. MEM (binomial n k) (binomial_horizontal n) <=> k <= n
+Proof
   rw[EQ_IMP_THM] >| [
     spose_not_then strip_assume_tac >>
     `binomial n k = 0` by rw[binomial_less_0] >>
@@ -5413,7 +5604,8 @@ val binomial_horizontal_mem_iff = store_thm(
     rw[MEM_GENLIST] >>
     `k < n + 1` by decide_tac >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Theorem: MEM x (binomial_horizontal n) <=> ?k. k <= n /\ (x = binomial n k) *)
 (* Proof:
@@ -5422,17 +5614,19 @@ val binomial_horizontal_mem_iff = store_thm(
    Since m < n + 1 <=> m <= n              by LE_LT1
    This is trivially true.
 *)
-val binomial_horizontal_member = store_thm(
-  "binomial_horizontal_member",
-  ``!n x. MEM x (binomial_horizontal n) <=> ?k. k <= n /\ (x = binomial n k)``,
-  metis_tac[MEM_GENLIST, LE_LT1]);
+Theorem binomial_horizontal_member:
+    !n x. MEM x (binomial_horizontal n) <=> ?k. k <= n /\ (x = binomial n k)
+Proof
+  metis_tac[MEM_GENLIST, LE_LT1]
+QED
 
 (* Theorem: k <= n ==> (EL k (binomial_horizontal n) = binomial n k) *)
 (* Proof: by EL_GENLIST *)
-val binomial_horizontal_element = store_thm(
-  "binomial_horizontal_element",
-  ``!n k. k <= n ==> (EL k (binomial_horizontal n) = binomial n k)``,
-  rw[EL_GENLIST]);
+Theorem binomial_horizontal_element:
+    !n k. k <= n ==> (EL k (binomial_horizontal n) = binomial n k)
+Proof
+  rw[EL_GENLIST]
+QED
 
 (* Theorem: EVERY (\x. 0 < x) (binomial_horizontal n) *)
 (* Proof:
@@ -5442,19 +5636,21 @@ val binomial_horizontal_element = store_thm(
    <=> !k. k <= n ==> 0 < binomial n k                  by arithmetic
    <=> T                                                by binomial_pos
 *)
-val binomial_horizontal_pos = store_thm(
-  "binomial_horizontal_pos",
-  ``!n. EVERY (\x. 0 < x) (binomial_horizontal n)``,
+Theorem binomial_horizontal_pos:
+    !n. EVERY (\x. 0 < x) (binomial_horizontal n)
+Proof
   rpt strip_tac >>
   `!k n. k < n + 1 <=> k <= n` by decide_tac >>
-  rw_tac std_ss[EVERY_GENLIST, LESS_EQ_IFF_LESS_SUC, binomial_pos]);
+  rw_tac std_ss[EVERY_GENLIST, LESS_EQ_IFF_LESS_SUC, binomial_pos]
+QED
 
 (* Theorem: MEM x (binomial_horizontal n) ==> 0 < x *)
 (* Proof: by binomial_horizontal_pos, EVERY_MEM *)
-val binomial_horizontal_pos_alt = store_thm(
-  "binomial_horizontal_pos_alt",
-  ``!n x. MEM x (binomial_horizontal n) ==> 0 < x``,
-  metis_tac[binomial_horizontal_pos, EVERY_MEM]);
+Theorem binomial_horizontal_pos_alt:
+    !n x. MEM x (binomial_horizontal n) ==> 0 < x
+Proof
+  metis_tac[binomial_horizontal_pos, EVERY_MEM]
+QED
 
 (* Theorem: SUM (binomial_horizontal n) = 2 ** n *)
 (* Proof:
@@ -5462,10 +5658,11 @@ val binomial_horizontal_pos_alt = store_thm(
    = SUM (GENLIST (binomial n) (n + 1))   by notation
    = 2 ** n                               by binomial_sum, ADD1
 *)
-val binomial_horizontal_sum = store_thm(
-  "binomial_horizontal_sum",
-  ``!n. SUM (binomial_horizontal n) = 2 ** n``,
-  rw_tac std_ss[binomial_sum, GSYM ADD1]);
+Theorem binomial_horizontal_sum:
+    !n. SUM (binomial_horizontal n) = 2 ** n
+Proof
+  rw_tac std_ss[binomial_sum, GSYM ADD1]
+QED
 
 (* Theorem: MAX_LIST (binomial_horizontal n) = binomial n (HALF n) *)
 (* Proof:
@@ -5477,9 +5674,9 @@ val binomial_horizontal_sum = store_thm(
     and !x. MEM x l ==> x <= m    by binomial_max, MEM_GENLIST
    Thus m = MAX_LIST l            by MAX_LIST_TEST
 *)
-val binomial_horizontal_max = store_thm(
-  "binomial_horizontal_max",
-  ``!n. MAX_LIST (binomial_horizontal n) = binomial n (HALF n)``,
+Theorem binomial_horizontal_max:
+    !n. MAX_LIST (binomial_horizontal n) = binomial n (HALF n)
+Proof
   rpt strip_tac >>
   qabbrev_tac `l = binomial_horizontal n` >>
   qabbrev_tac `m = binomial n (HALF n)` >>
@@ -5487,7 +5684,8 @@ val binomial_horizontal_max = store_thm(
   `HALF n <= n` by rw[DIV_LESS_EQ] >>
   `HALF n < n + 1` by decide_tac >>
   `MEM m l` by rw[binomial_horizontal_mem, Abbr`l`, Abbr`m`] >>
-  metis_tac[binomial_max, MEM_GENLIST, MAX_LIST_TEST]);
+  metis_tac[binomial_max, MEM_GENLIST, MAX_LIST_TEST]
+QED
 
 (* Theorem: MAX_SET (IMAGE (binomial n) (count (n + 1))) = binomial n (HALF n) *)
 (* Proof:
@@ -5503,9 +5701,9 @@ val binomial_horizontal_max = store_thm(
     ==> f (HALF n) IN s             by IN_IMAGE
    Thus MAX_SET s = f (HALF n)      by MAX_SET_TEST
 *)
-val binomial_row_max = store_thm(
-  "binomial_row_max",
-  ``!n. MAX_SET (IMAGE (binomial n) (count (n + 1))) = binomial n (HALF n)``,
+Theorem binomial_row_max:
+    !n. MAX_SET (IMAGE (binomial n) (count (n + 1))) = binomial n (HALF n)
+Proof
   rpt strip_tac >>
   qabbrev_tac `f = binomial n` >>
   qabbrev_tac `s = IMAGE f (count (n + 1))` >>
@@ -5516,7 +5714,8 @@ val binomial_row_max = store_thm(
   `HALF n <= n` by rw[DIV_LESS_EQ] >>
   `HALF n IN (count (n + 1))` by rw[] >>
   `f (HALF n) IN s` by metis_tac[IN_IMAGE] >>
-  rw[MAX_SET_TEST]);
+  rw[MAX_SET_TEST]
+QED
 
 (* Theorem: k <= m /\ m <= n ==>
            ((binomial m k) * (binomial n m) = (binomial n k) * (binomial (n - k) (m - k))) *)
@@ -5536,10 +5735,10 @@ val binomial_row_max = store_thm(
 
    = (binomial n k) * (binomial (n - k) (m - k))   binomial formula
 *)
-val binomial_product_identity = store_thm(
-  "binomial_product_identity",
-  ``!m n k. k <= m /\ m <= n ==>
-           ((binomial m k) * (binomial n m) = (binomial n k) * (binomial (n - k) (m - k)))``,
+Theorem binomial_product_identity:
+    !m n k. k <= m /\ m <= n ==>
+           ((binomial m k) * (binomial n m) = (binomial n k) * (binomial (n - k) (m - k)))
+Proof
   rpt strip_tac >>
   `m - k <= n - k` by decide_tac >>
   `(n - k) - (m - k) = n - m` by decide_tac >>
@@ -5549,7 +5748,8 @@ val binomial_product_identity = store_thm(
   `FACT (n - k) = binomial (n - k) (m - k) * (FACT (n - m) * FACT (m - k))` by metis_tac[binomial_formula2] >>
   `FACT n = FACT (n - m) * (FACT k * (FACT (m - k) * ((binomial m k) * (binomial n m))))` by metis_tac[MULT_ASSOC, MULT_COMM] >>
   `FACT n = FACT (n - m) * (FACT k * (FACT (m - k) * ((binomial n k) * (binomial (n - k) (m - k)))))` by metis_tac[MULT_ASSOC, MULT_COMM] >>
-  metis_tac[MULT_LEFT_CANCEL, FACT_LESS, NOT_ZERO]);
+  metis_tac[MULT_LEFT_CANCEL, FACT_LESS, NOT_ZERO]
+QED
 
 (* Theorem: binomial n (HALF n) <= 4 ** (HALF n) *)
 (* Proof:
@@ -5582,9 +5782,9 @@ val binomial_product_identity = store_thm(
          = 2 * 4 ** m                  by EXP_EXP_MULT
       Hence binomial n m <= 4 ** m.
 *)
-val binomial_middle_upper_bound = store_thm(
-  "binomial_middle_upper_bound",
-  ``!n. binomial n (HALF n) <= 4 ** (HALF n)``,
+Theorem binomial_middle_upper_bound:
+    !n. binomial n (HALF n) <= 4 ** (HALF n)
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = HALF n` >>
   qabbrev_tac `l = binomial_horizontal n` >>
@@ -5607,7 +5807,8 @@ val binomial_middle_upper_bound = store_thm(
     `_ = 2 * 2 ** (2 * m)` by metis_tac[EXP, ADD1] >>
     `_ = 2 * 4 ** m` by rw[EXP_EXP_MULT] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Stirling's Approximation                                                  *)
@@ -5696,9 +5897,9 @@ val _ = overload_on("Stirling",
    = 2 ** (SUC n) DIV (2 * pi * n) ** h                                          by EXP
    = 2 ** (n + 1)) DIV (SQRT (2 * pi * n))                                       by ADD1, assumption
 *)
-val binomial_middle_by_stirling = store_thm(
-  "binomial_middle_by_stirling",
-  ``Stirling ==> !n. 0 < n /\ EVEN n ==> (binomial n (HALF n) = (2 ** (n + 1)) DIV (SQRT (2 * pi * n)))``,
+Theorem binomial_middle_by_stirling:
+    Stirling ==> !n. 0 < n /\ EVEN n ==> (binomial n (HALF n) = (2 ** (n + 1)) DIV (SQRT (2 * pi * n)))
+Proof
   rpt strip_tac >>
   `HALF n <= n /\ (n = 2 * HALF n)` by rw[DIV_LESS_EQ, EVEN_HALF] >>
   qabbrev_tac `k = HALF n` >>
@@ -5730,7 +5931,8 @@ val binomial_middle_by_stirling = store_thm(
   `_ = 2 DIV (2 * pi * n) ** h * (n DIV k) ** n` by metis_tac[] >>
   `_ = 2 DIV (2 * pi * n) ** h * 2 ** n` by metis_tac[] >>
   `_ = (2 * 2 ** n DIV (2 * pi * n) ** h)` by metis_tac[] >>
-  metis_tac[EXP, ADD1]);
+  metis_tac[EXP, ADD1]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Useful theorems for Binomial                                              *)
@@ -5746,10 +5948,10 @@ val binomial_middle_by_stirling = store_thm(
       then 0 <= PRE k ==> 0 < k
        and PRE k < PRE n ==> k < n                by INV_PRE_LESS
 *)
-val binomial_range_shift = store_thm(
-  "binomial_range_shift",
-  ``!n . 0 < n ==> ((!k. 0 < k /\ k < n ==> ((binomial n k) MOD n = 0)) <=>
-                   (!h. h < PRE n ==> ((binomial n (SUC h)) MOD n = 0)))``,
+Theorem binomial_range_shift:
+    !n . 0 < n ==> ((!k. 0 < k /\ k < n ==> ((binomial n k) MOD n = 0)) <=>
+                   (!h. h < PRE n ==> ((binomial n (SUC h)) MOD n = 0)))
+Proof
   rw_tac std_ss[EQ_IMP_THM] >| [
     `0 < SUC h /\ SUC h < n` by decide_tac >>
     rw_tac std_ss[],
@@ -5757,7 +5959,8 @@ val binomial_range_shift = store_thm(
     `?h. k = SUC h` by metis_tac[num_CASES] >>
     `h < PRE n` by decide_tac >>
     rw_tac std_ss[]
-  ]);
+  ]
+QED
 
 (* Theorem: binomial n k MOD n = 0 <=> (binomial n k * x ** (n-k) * y ** k) MOD n = 0 *)
 (* Proof:
@@ -5767,21 +5970,22 @@ val binomial_range_shift = store_thm(
    If part, apply 0 * z = 0  by MULT.
    Only-if part, pick x = 1, y = 1, apply EXP_1.
 *)
-val binomial_mod_zero = store_thm(
-  "binomial_mod_zero",
-  ``!n. 0 < n ==> !k. (binomial n k MOD n = 0) <=> (!x y. (binomial n k * x ** (n-k) * y ** k) MOD n = 0)``,
+Theorem binomial_mod_zero:
+    !n. 0 < n ==> !k. (binomial n k MOD n = 0) <=> (!x y. (binomial n k * x ** (n-k) * y ** k) MOD n = 0)
+Proof
   rw_tac std_ss[EQ_IMP_THM] >-
   metis_tac[MOD_TIMES2, ZERO_MOD, MULT] >>
-  metis_tac[EXP_1, MULT_RIGHT_1]);
+  metis_tac[EXP_1, MULT_RIGHT_1]
+QED
 
 
 (* Theorem: (!k. 0 < k /\ k < n ==> (!x y. ((binomial n k * x ** (n - k) * y ** k) MOD n = 0))) <=>
             (!h. h < PRE n ==> (!x y. ((binomial n (SUC h) * x ** (n - (SUC h)) * y ** (SUC h)) MOD n = 0))) *)
 (* Proof: by h = PRE k, or k = SUC h. *)
-val binomial_range_shift_alt = store_thm(
-  "binomial_range_shift_alt",
-  ``!n . 0 < n ==> ((!k. 0 < k /\ k < n ==> (!x y. ((binomial n k * x ** (n - k) * y ** k) MOD n = 0))) <=>
-                   (!h. h < PRE n ==> (!x y. ((binomial n (SUC h) * x ** (n - (SUC h)) * y ** (SUC h)) MOD n = 0))))``,
+Theorem binomial_range_shift_alt:
+    !n . 0 < n ==> ((!k. 0 < k /\ k < n ==> (!x y. ((binomial n k * x ** (n - k) * y ** k) MOD n = 0))) <=>
+                   (!h. h < PRE n ==> (!x y. ((binomial n (SUC h) * x ** (n - (SUC h)) * y ** (SUC h)) MOD n = 0))))
+Proof
   rw_tac std_ss[EQ_IMP_THM] >| [
     `0 < SUC h /\ SUC h < n` by decide_tac >>
     rw_tac std_ss[],
@@ -5789,7 +5993,8 @@ val binomial_range_shift_alt = store_thm(
     `?h. k = SUC h` by metis_tac[num_CASES] >>
     `h < PRE n` by decide_tac >>
     rw_tac std_ss[]
-  ]);
+  ]
+QED
 
 (* Theorem: !k. 0 < k /\ k < n ==> (binomial n k) MOD n = 0 <=>
             !x y. SUM (GENLIST ((\k. (binomial n k * x ** (n - k) * y ** k) MOD n) o SUC) (PRE n)) = 0 *)
@@ -5801,17 +6006,18 @@ val binomial_range_shift_alt = store_thm(
    <=> !x y. EVERY (\x. x = 0) (GENLIST ((\k. binomial n k * x ** (n - k) * y ** k) o SUC) (PRE n)  by FUN_EQ_THM
    <=> !x y. SUM (GENLIST ((\k. (binomial n k * x ** (n - k) * y ** k) MOD n) o SUC) (PRE n)) = 0   by SUM_EQ_0
 *)
-val binomial_mod_zero_alt = store_thm(
-  "binomial_mod_zero_alt",
-  ``!n. 0 < n ==> ((!k. 0 < k /\ k < n ==> ((binomial n k) MOD n = 0)) <=>
-                  !x y. SUM (GENLIST ((\k. (binomial n k * x ** (n - k) * y ** k) MOD n) o SUC) (PRE n)) = 0)``,
+Theorem binomial_mod_zero_alt:
+    !n. 0 < n ==> ((!k. 0 < k /\ k < n ==> ((binomial n k) MOD n = 0)) <=>
+                  !x y. SUM (GENLIST ((\k. (binomial n k * x ** (n - k) * y ** k) MOD n) o SUC) (PRE n)) = 0)
+Proof
   rpt strip_tac >>
   `!x y. (\k. (binomial n (SUC k) * x ** (n - SUC k) * y ** (SUC k)) MOD n) = (\k. (binomial n k * x ** (n - k) * y ** k) MOD n) o SUC` by rw_tac std_ss[FUN_EQ_THM] >>
   `(!k. 0 < k /\ k < n ==> ((binomial n k) MOD n = 0)) <=>
     (!k. 0 < k /\ k < n ==> (!x y. ((binomial n k * x ** (n - k) * y ** k) MOD n = 0)))` by rw_tac std_ss[binomial_mod_zero] >>
   `_ = (!h. h < PRE n ==> (!x y. ((binomial n (SUC h) * x ** (n - (SUC h)) * y ** (SUC h)) MOD n = 0)))` by rw_tac std_ss[binomial_range_shift_alt] >>
   `_ = !x y h. h < PRE n ==> (((binomial n (SUC h) * x ** (n - (SUC h)) * y ** (SUC h)) MOD n = 0))` by metis_tac[] >>
-  rw_tac std_ss[EVERY_GENLIST, SUM_EQ_0]);
+  rw_tac std_ss[EVERY_GENLIST, SUM_EQ_0]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Binomial Theorem with prime exponent                                      *)
@@ -5828,15 +6034,16 @@ val binomial_mod_zero_alt = store_thm(
    = (x^p mod p  + 0 + y^p mod p) mod p                                         by prime_iff_divides_binomials
    = (x^p + y^p) (mod p)                                                        by MOD_PLUS
 *)
-val binomial_thm_prime = store_thm(
-  "binomial_thm_prime",
-  ``!p. prime p ==> (!x y. (x + y) ** p MOD p = (x ** p + y ** p) MOD p)``,
+Theorem binomial_thm_prime:
+    !p. prime p ==> (!x y. (x + y) ** p MOD p = (x ** p + y ** p) MOD p)
+Proof
   rpt strip_tac >>
   `0 < p` by rw_tac std_ss[PRIME_POS] >>
   `!k. 0 < k /\ k < p ==> ((binomial p k) MOD p  = 0)` by metis_tac[prime_iff_divides_binomials, DIVIDES_MOD_0] >>
   `SUM (GENLIST ((\k. binomial p k * x ** (p - k) * y ** k) o SUC) (PRE p)) MOD p = 0` by metis_tac[SUM_GENLIST_MOD, binomial_mod_zero_alt, ZERO_MOD] >>
   `(x + y) ** p MOD p = (x ** p + SUM (GENLIST ((\k. binomial p k * x ** (p - k) * y ** k) o SUC) (PRE p)) + y ** p) MOD p` by rw_tac std_ss[binomial_thm, SUM_DECOMPOSE_FIRST_LAST, binomial_n_0, binomial_n_n, EXP] >>
-  metis_tac[MOD_PLUS3, ADD_0, MOD_PLUS]);
+  metis_tac[MOD_PLUS3, ADD_0, MOD_PLUS]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Leibniz Harmonic Triangle Documentation                                   *)
@@ -6632,10 +6839,11 @@ val _ = export_rewrites["leibniz_def"];
    = (0 + 1) * binomial 0 n     by leibniz_def
    = if n = 0 then 1 else 0     by binomial_n_0
 *)
-val leibniz_0_n = store_thm(
-  "leibniz_0_n",
-  ``!n. leibniz 0 n = if n = 0 then 1 else 0``,
-  rw[binomial_0_n]);
+Theorem leibniz_0_n:
+    !n. leibniz 0 n = if n = 0 then 1 else 0
+Proof
+  rw[binomial_0_n]
+QED
 
 (* Theorem: leibniz n 0 = n + 1 *)
 (* Proof:
@@ -6644,10 +6852,11 @@ val leibniz_0_n = store_thm(
    = (n + 1) * 1                by binomial_n_0
    = n + 1
 *)
-val leibniz_n_0 = store_thm(
-  "leibniz_n_0",
-  ``!n. leibniz n 0 = n + 1``,
-  rw[binomial_n_0]);
+Theorem leibniz_n_0:
+    !n. leibniz n 0 = n + 1
+Proof
+  rw[binomial_n_0]
+QED
 
 (* Theorem: leibniz n n = n + 1 *)
 (* Proof:
@@ -6656,10 +6865,11 @@ val leibniz_n_0 = store_thm(
    = (n + 1) * 1                by binomial_n_n
    = n + 1
 *)
-val leibniz_n_n = store_thm(
-  "leibniz_n_n",
-  ``!n. leibniz n n = n + 1``,
-  rw[binomial_n_n]);
+Theorem leibniz_n_n:
+    !n. leibniz n n = n + 1
+Proof
+  rw[binomial_n_n]
+QED
 
 (* Theorem: n < k ==> leibniz n k = 0 *)
 (* Proof:
@@ -6668,10 +6878,11 @@ val leibniz_n_n = store_thm(
    = (n + 1) * 0                by binomial_less_0
    = 0
 *)
-val leibniz_less_0 = store_thm(
-  "leibniz_less_0",
-  ``!n k. n < k ==> (leibniz n k = 0)``,
-  rw[binomial_less_0]);
+Theorem leibniz_less_0:
+    !n k. n < k ==> (leibniz n k = 0)
+Proof
+  rw[binomial_less_0]
+QED
 
 (* Theorem: k <= n ==> (leibniz n k = leibniz n (n-k)) *)
 (* Proof:
@@ -6680,10 +6891,11 @@ val leibniz_less_0 = store_thm(
    = (n + 1) * binomial n (n-k)   by binomial_sym
    = leibniz n (n-k)              by leibniz_def
 *)
-val leibniz_sym = store_thm(
-  "leibniz_sym",
-  ``!n k. k <= n ==> (leibniz n k = leibniz n (n-k))``,
-  rw[leibniz_def, GSYM binomial_sym]);
+Theorem leibniz_sym:
+    !n k. k <= n ==> (leibniz n k = leibniz n (n-k))
+Proof
+  rw[leibniz_def, GSYM binomial_sym]
+QED
 
 (* Theorem: k < HALF n ==> leibniz n k < leibniz n (k + 1) *)
 (* Proof:
@@ -6693,10 +6905,11 @@ val leibniz_sym = store_thm(
    <=>           binomial n k < binomial n (k + 1)              by LT_MULT_LCANCEL
    <=>  T                                                       by binomial_monotone
 *)
-val leibniz_monotone = store_thm(
-  "leibniz_monotone",
-  ``!n k. k < HALF n ==> leibniz n k < leibniz n (k + 1)``,
-  rw[leibniz_def, binomial_monotone]);
+Theorem leibniz_monotone:
+    !n k. k < HALF n ==> leibniz n k < leibniz n (k + 1)
+Proof
+  rw[leibniz_def, binomial_monotone]
+QED
 
 (* Theorem: k <= n ==> 0 < leibniz n k *)
 (* Proof:
@@ -6704,10 +6917,11 @@ val leibniz_monotone = store_thm(
      and 0 < n + 1, 0 < binomial n k           by binomial_pos
    Hence 0 < leibniz n k                       by ZERO_LESS_MULT
 *)
-val leibniz_pos = store_thm(
-  "leibniz_pos",
-  ``!n k. k <= n ==> 0 < leibniz n k``,
-  rw[leibniz_def, binomial_pos, ZERO_LESS_MULT, DECIDE``!n. 0 < n + 1``]);
+Theorem leibniz_pos:
+    !n k. k <= n ==> 0 < leibniz n k
+Proof
+  rw[leibniz_def, binomial_pos, ZERO_LESS_MULT, DECIDE``!n. 0 < n + 1``]
+QED
 
 (* Theorem: (leibniz n k = 0) <=> n < k *)
 (* Proof:
@@ -6716,24 +6930,27 @@ val leibniz_pos = store_thm(
    <=> binomial n k = 0                 by MULT_EQ_0, n + 1 <> 0
    <=> n < k                            by binomial_eq_0
 *)
-val leibniz_eq_0 = store_thm(
-  "leibniz_eq_0",
-  ``!n k. (leibniz n k = 0) <=> n < k``,
-  rw[leibniz_def, binomial_eq_0]);
+Theorem leibniz_eq_0:
+    !n k. (leibniz n k = 0) <=> n < k
+Proof
+  rw[leibniz_def, binomial_eq_0]
+QED
 
 (* Theorem: leibniz n = (\j. (n + 1) * j) o (binomial n) *)
 (* Proof: by leibniz_def and function equality. *)
-val leibniz_alt = store_thm(
-  "leibniz_alt",
-  ``!n. leibniz n = (\j. (n + 1) * j) o (binomial n)``,
-  rw[leibniz_def, FUN_EQ_THM]);
+Theorem leibniz_alt:
+    !n. leibniz n = (\j. (n + 1) * j) o (binomial n)
+Proof
+  rw[leibniz_def, FUN_EQ_THM]
+QED
 
 (* Theorem: leibniz n k = (\j. (n + 1) * j) (binomial n k) *)
 (* Proof: by leibniz_def *)
-val leibniz_def_alt = store_thm(
-  "leibniz_def_alt",
-  ``!n k. leibniz n k = (\j. (n + 1) * j) (binomial n k)``,
-  rw_tac std_ss[leibniz_def]);
+Theorem leibniz_def_alt:
+    !n k. leibniz n k = (\j. (n + 1) * j) (binomial n k)
+Proof
+  rw_tac std_ss[leibniz_def]
+QED
 
 (*
 Picture of Leibniz Triangle L-corner:
@@ -6765,22 +6982,24 @@ or a * b = c * (a - b)
    = (n - k) * ((n + 1) * binomial n k)           by MULT_ASSOC
    = (n - k) * leibniz n k                        by leibniz_def
 *)
-val leibniz_up_eqn = store_thm(
-  "leibniz_up_eqn",
-  ``!n. 0 < n ==> !k. (n + 1) * leibniz (n - 1) k = (n - k) * leibniz n k``,
+Theorem leibniz_up_eqn:
+    !n. 0 < n ==> !k. (n + 1) * leibniz (n - 1) k = (n - k) * leibniz n k
+Proof
   rw[leibniz_def] >>
   `1 <= n` by decide_tac >>
-  metis_tac[SUB_ADD, binomial_up_eqn, MULT_ASSOC, MULT_COMM]);
+  metis_tac[SUB_ADD, binomial_up_eqn, MULT_ASSOC, MULT_COMM]
+QED
 
 (* Theorem: 0 < n ==> !k. leibniz (n - 1) k = (n - k) * leibniz n k DIV (n + 1) *)
 (* Proof:
    Since  (n + 1) * leibniz (n - 1) k = (n - k) * leibniz n k    by leibniz_up_eqn
           leibniz (n - 1) k = (n - k) * leibniz n k DIV (n + 1)  by DIV_SOLVE, 0 < n+1.
 *)
-val leibniz_up = store_thm(
-  "leibniz_up",
-  ``!n. 0 < n ==> !k. leibniz (n - 1) k = (n - k) * leibniz n k DIV (n + 1)``,
-  rw[leibniz_up_eqn, DIV_SOLVE]);
+Theorem leibniz_up:
+    !n. 0 < n ==> !k. leibniz (n - 1) k = (n - k) * leibniz n k DIV (n + 1)
+Proof
+  rw[leibniz_up_eqn, DIV_SOLVE]
+QED
 
 (* Theorem: 0 < n ==> !k. leibniz (n - 1) k = (n - k) * binomial n k *)
 (* Proof:
@@ -6790,10 +7009,11 @@ val leibniz_up = store_thm(
    = (n + 1) * ((n - k) * binomial n k) DIV (n + 1)     by MULT_ASSOC, MULT_COMM
    = (n - k) * binomial n k                             by MULT_DIV, 0 < n + 1
 *)
-val leibniz_up_alt = store_thm(
-  "leibniz_up_alt",
-  ``!n. 0 < n ==> !k. leibniz (n - 1) k = (n - k) * binomial n k``,
-  metis_tac[leibniz_up, leibniz_def, MULT_DIV, MULT_ASSOC, MULT_COMM, DECIDE``0 < x + 1``]);
+Theorem leibniz_up_alt:
+    !n. 0 < n ==> !k. leibniz (n - 1) k = (n - k) * binomial n k
+Proof
+  metis_tac[leibniz_up, leibniz_def, MULT_DIV, MULT_ASSOC, MULT_COMM, DECIDE``0 < x + 1``]
+QED
 
 (* Theorem: 0 < n ==> !k. (k + 1) * leibniz n (k+1) = (n - k) * leibniz n k *)
 (* Proof:
@@ -6808,20 +7028,22 @@ val leibniz_up_alt = store_thm(
    = (n - k) * ((n + 1) * binomial n k)       by MULT_ASSOC
    = (n - k) * leibniz n k                    by leibniz_def
 *)
-val leibniz_right_eqn = store_thm(
-  "leibniz_right_eqn",
-  ``!n. 0 < n ==> !k. (k + 1) * leibniz n (k+1) = (n - k) * leibniz n k``,
-  metis_tac[leibniz_def, MULT_COMM, MULT_ASSOC, binomial_right_eqn]);
+Theorem leibniz_right_eqn:
+    !n. 0 < n ==> !k. (k + 1) * leibniz n (k+1) = (n - k) * leibniz n k
+Proof
+  metis_tac[leibniz_def, MULT_COMM, MULT_ASSOC, binomial_right_eqn]
+QED
 
 (* Theorem: 0 < n ==> !k. leibniz n (k+1) = (n - k) * (leibniz n k) DIV (k + 1) *)
 (* Proof:
    Since  (k + 1) * leibniz n (k+1) = (n - k) * leibniz n k    by leibniz_right_eqn
           leibniz n (k+1) = (n - k) * (leibniz n k) DIV (k+1)  by DIV_SOLVE, 0 < k+1.
 *)
-val leibniz_right = store_thm(
-  "leibniz_right",
-  ``!n. 0 < n ==> !k. leibniz n (k+1) = (n - k) * (leibniz n k) DIV (k+1)``,
-  rw[leibniz_right_eqn, DIV_SOLVE]);
+Theorem leibniz_right:
+    !n. 0 < n ==> !k. leibniz n (k+1) = (n - k) * (leibniz n k) DIV (k+1)
+Proof
+  rw[leibniz_right_eqn, DIV_SOLVE]
+QED
 
 (* Note: Following is the property from Leibniz Harmonic Triangle:
    1 / leibniz n (k+1) = 1 / leibniz (n-1) k  - 1 / leibniz n k
@@ -6894,10 +7116,10 @@ val it = |- !a b c. (a * b = c * (a - b)) ==> (lcm a b = lcm a c): thm
 
       Since (k+1) <> 0, the result follows      by MULT_LEFT_CANCEL
 *)
-val leibniz_property = store_thm(
-  "leibniz_property",
-  ``!n. 0 < n ==>
-   !k. leibniz n k * leibniz (n-1) k = leibniz n (k+1) * (leibniz n k - leibniz (n-1) k)``,
+Theorem leibniz_property:
+    !n. 0 < n ==>
+   !k. leibniz n k * leibniz (n-1) k = leibniz n (k+1) * (leibniz n k - leibniz (n-1) k)
+Proof
   rpt strip_tac >>
   Cases_on `n <= k` >-
   rw[leibniz_less_0] >>
@@ -6913,7 +7135,8 @@ val leibniz_property = store_thm(
   `_ = (n + 1) * (a * b) - (n - k) * (a * b)` by metis_tac[MULT_ASSOC, MULT_COMM] >>
   `_ = ((n+1) - (n-k)) * (a * b)` by rw_tac std_ss[RIGHT_SUB_DISTRIB] >>
   `_ = (k + 1) * (a * b)` by rw_tac std_ss[] >>
-  metis_tac[MULT_LEFT_CANCEL]);
+  metis_tac[MULT_LEFT_CANCEL]
+QED
 
 (* Theorem: k <= n ==> (leibniz n k = (n + 1) * FACT n DIV (FACT k * FACT (n - k))) *)
 (* Proof:
@@ -6924,10 +7147,11 @@ val leibniz_property = store_thm(
    = (n + 1) * (FACT n DIV (FACT k * FACT (n - k)))     by binomial_formula3
    = (n + 1) * FACT n DIV (FACT k * FACT (n - k))       by MULTIPLY_DIV
 *)
-val leibniz_formula = store_thm(
-  "leibniz_formula",
-  ``!n k. k <= n ==> (leibniz n k = (n + 1) * FACT n DIV (FACT k * FACT (n - k)))``,
-  metis_tac[leibniz_def, binomial_formula3, binomial_is_integer, FACT_LESS, MULTIPLY_DIV, ZERO_LESS_MULT]);
+Theorem leibniz_formula:
+    !n k. k <= n ==> (leibniz n k = (n + 1) * FACT n DIV (FACT k * FACT (n - k)))
+Proof
+  metis_tac[leibniz_def, binomial_formula3, binomial_is_integer, FACT_LESS, MULTIPLY_DIV, ZERO_LESS_MULT]
+QED
 
 (* Theorem: 0 < n ==>
    !k. k < n ==> leibniz n (k+1) = leibniz n k * leibniz (n-1) k DIV (leibniz n k - leibniz (n-1) k) *)
@@ -6939,16 +7163,17 @@ val leibniz_formula = store_thm(
    Hence by MULT_COMM, DIV_SOLVE, 0 < (leibniz n k - leibniz (n-1) k),
    leibniz n (k+1) = leibniz n k * leibniz (n-1) k DIV (leibniz n k - leibniz (n-1) k)
 *)
-val leibniz_recurrence = store_thm(
-  "leibniz_recurrence",
-  ``!n. 0 < n ==>
-   !k. k < n ==> (leibniz n (k+1) = leibniz n k * leibniz (n-1) k DIV (leibniz n k - leibniz (n-1) k))``,
+Theorem leibniz_recurrence:
+    !n. 0 < n ==>
+   !k. k < n ==> (leibniz n (k+1) = leibniz n k * leibniz (n-1) k DIV (leibniz n k - leibniz (n-1) k))
+Proof
   rpt strip_tac >>
   `k <= n /\ k <= (n-1)` by decide_tac >>
   `leibniz n (k+1) * (leibniz n k - leibniz (n-1) k) = leibniz n k * leibniz (n-1) k` by rw[leibniz_property] >>
   `0 < leibniz n k /\ 0 < leibniz (n-1) k` by rw[leibniz_pos] >>
   `0 < (leibniz n k - leibniz (n-1) k)` by metis_tac[MULT_EQ_0, NOT_ZERO_LT_ZERO] >>
-  rw_tac std_ss[DIV_SOLVE, MULT_COMM]);
+  rw_tac std_ss[DIV_SOLVE, MULT_COMM]
+QED
 
 (* Theorem: 0 < k /\ k <= n ==>
    (leibniz n k = leibniz n (k-1) * leibniz (n-1) (k-1) DIV (leibniz n (k-1) - leibniz (n-1) (k-1))) *)
@@ -6960,14 +7185,15 @@ val leibniz_recurrence = store_thm(
          0 < n and h < n.
    Hence true by leibniz_recurrence.
 *)
-val leibniz_n_k = store_thm(
-  "leibniz_n_k",
-  ``!n k. 0 < k /\ k <= n ==>
-   (leibniz n k = leibniz n (k-1) * leibniz (n-1) (k-1) DIV (leibniz n (k-1) - leibniz (n-1) (k-1)))``,
+Theorem leibniz_n_k:
+    !n k. 0 < k /\ k <= n ==>
+   (leibniz n k = leibniz n (k-1) * leibniz (n-1) (k-1) DIV (leibniz n (k-1) - leibniz (n-1) (k-1)))
+Proof
   rpt strip_tac >>
   `?h. k = h + 1` by metis_tac[num_CASES, NOT_ZERO_LT_ZERO, ADD1] >>
   `(h = k - 1) /\ h < n /\ 0 < n` by decide_tac >>
-  metis_tac[leibniz_recurrence]);
+  metis_tac[leibniz_recurrence]
+QED
 
 (* Theorem: 0 < n ==>
    !k. lcm (leibniz n k) (leibniz (n-1) k) = lcm (leibniz n k) (leibniz n (k+1)) *)
@@ -6976,10 +7202,11 @@ val leibniz_n_k = store_thm(
    leibniz n k * leibniz (n - 1) k = leibniz n (k + 1) * (leibniz n k - leibniz (n - 1) k)
    Hence true by LCM_EXCHANGE.
 *)
-val leibniz_lcm_exchange = store_thm(
-  "leibniz_lcm_exchange",
-  ``!n. 0 < n ==> !k. lcm (leibniz n k) (leibniz (n-1) k) = lcm (leibniz n k) (leibniz n (k+1))``,
-  rw[leibniz_property, LCM_EXCHANGE]);
+Theorem leibniz_lcm_exchange:
+    !n. 0 < n ==> !k. lcm (leibniz n k) (leibniz (n-1) k) = lcm (leibniz n k) (leibniz n (k+1))
+Proof
+  rw[leibniz_property, LCM_EXCHANGE]
+QED
 
 (* Theorem: 4 ** n <= leibniz (2 * n) n *)
 (* Proof:
@@ -7005,9 +7232,9 @@ val leibniz_lcm_exchange = store_thm(
     = (2 ** 2) ** n                             by EXP_EXP_MULT
     = 4 ** n                                    by arithmetic
 *)
-val leibniz_middle_lower = store_thm(
-  "leibniz_middle_lower",
-  ``!n. 4 ** n <= leibniz (2 * n) n``,
+Theorem leibniz_middle_lower:
+    !n. 4 ** n <= leibniz (2 * n) n
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = 2 * n` >>
   `n = HALF m` by rw[HALF_TWICE, Abbr`m`] >>
@@ -7019,7 +7246,8 @@ val leibniz_middle_lower = store_thm(
   `SUM l2 = SUM (GENLIST (binomial m) (SUC m))` by rw[ADD1, Abbr`l2`] >>
   `_ = 2 ** m` by rw[binomial_sum] >>
   `_ = 4 ** n` by rw[EXP_EXP_MULT, Abbr`m`] >>
-  metis_tac[SUM_LE, LENGTH_GENLIST]);
+  metis_tac[SUM_LE, LENGTH_GENLIST]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Property of Leibniz Triangle                                              *)
@@ -7221,17 +7449,19 @@ val _ = export_rewrites["list_lcm_def"];
 
 (* Theorem: list_lcm [] = 1 *)
 (* Proof: by list_lcm_def. *)
-val list_lcm_nil = store_thm(
-  "list_lcm_nil",
-  ``list_lcm [] = 1``,
-  rw[]);
+Theorem list_lcm_nil:
+    list_lcm [] = 1
+Proof
+  rw[]
+QED
 
 (* Theorem: list_lcm (h::t) = lcm h (list_lcm t) *)
 (* Proof: by list_lcm_def. *)
-val list_lcm_cons = store_thm(
-  "list_lcm_cons",
-  ``!h t. list_lcm (h::t) = lcm h (list_lcm t)``,
-  rw[]);
+Theorem list_lcm_cons:
+    !h t. list_lcm (h::t) = lcm h (list_lcm t)
+Proof
+  rw[]
+QED
 
 (* Theorem: list_lcm [x] = x *)
 (* Proof:
@@ -7240,10 +7470,11 @@ val list_lcm_cons = store_thm(
    = lcm x 1                by list_lcm_nil
    = x                      by LCM_1
 *)
-val list_lcm_sing = store_thm(
-  "list_lcm_sing",
-  ``!x. list_lcm [x] = x``,
-  rw[]);
+Theorem list_lcm_sing:
+    !x. list_lcm [x] = x
+Proof
+  rw[]
+QED
 
 (* Theorem: list_lcm (SNOC x l) = list_lcm (x::l) *)
 (* Proof:
@@ -7261,13 +7492,14 @@ val list_lcm_sing = store_thm(
    = lcm x (lcm h (list_lcm l))    by LCM_ASSOC_COMM
    = lcm x (list_lcm h::l)         by list_lcm_def
 *)
-val list_lcm_snoc = store_thm(
-  "list_lcm_snoc",
-  ``!x l. list_lcm (SNOC x l) = lcm x (list_lcm l)``,
+Theorem list_lcm_snoc:
+    !x l. list_lcm (SNOC x l) = lcm x (list_lcm l)
+Proof
   strip_tac >>
   Induct >-
   rw[] >>
-  rw[LCM_ASSOC_COMM]);
+  rw[LCM_ASSOC_COMM]
+QED
 
 (* Theorem: list_lcm (MAP (\k. n * k) l) = if l = [] then 1 else n * list_lcm l *)
 (* Proof:
@@ -7292,15 +7524,16 @@ val list_lcm_snoc = store_thm(
      = n * (lcm h (list_lcm l))                     by LCM_COMMON_FACTOR
      = n * list_lcm (h::l)                          by list_lcm_cons
 *)
-val list_lcm_map_times = store_thm(
-  "list_lcm_map_times",
-  ``!n l. list_lcm (MAP (\k. n * k) l) = if l = [] then 1 else n * list_lcm l``,
+Theorem list_lcm_map_times:
+    !n l. list_lcm (MAP (\k. n * k) l) = if l = [] then 1 else n * list_lcm l
+Proof
   Induct_on `l` >-
   rw[] >>
   rpt strip_tac >>
   Cases_on `l = []` >-
   rw[] >>
-  rw_tac std_ss[LCM_COMMON_FACTOR, MAP, list_lcm_cons]);
+  rw_tac std_ss[LCM_COMMON_FACTOR, MAP, list_lcm_cons]
+QED
 
 (* Theorem: EVERY_POSITIVE l ==> 0 < list_lcm l *)
 (* Proof:
@@ -7318,19 +7551,21 @@ val list_lcm_map_times = store_thm(
         so h <= lcm h (list_lcm l)                by LCM_LE, 0 < h.
      Hence 0 < list_lcm (h::l)                    by LESS_LESS_EQ_TRANS
 *)
-val list_lcm_pos = store_thm(
-  "list_lcm_pos",
-  ``!l. EVERY_POSITIVE l ==> 0 < list_lcm l``,
+Theorem list_lcm_pos:
+    !l. EVERY_POSITIVE l ==> 0 < list_lcm l
+Proof
   Induct >-
   rw[] >>
-  metis_tac[EVERY_DEF, list_lcm_cons, LCM_LE, LESS_LESS_EQ_TRANS]);
+  metis_tac[EVERY_DEF, list_lcm_cons, LCM_LE, LESS_LESS_EQ_TRANS]
+QED
 
 (* Theorem: POSITIVE l ==> 0 < list_lcm l *)
 (* Proof: by list_lcm_pos, EVERY_MEM *)
-val list_lcm_pos_alt = store_thm(
-  "list_lcm_pos_alt",
-  ``!l. POSITIVE l ==> 0 < list_lcm l``,
-  rw[list_lcm_pos, EVERY_MEM]);
+Theorem list_lcm_pos_alt:
+    !l. POSITIVE l ==> 0 < list_lcm l
+Proof
+  rw[list_lcm_pos, EVERY_MEM]
+QED
 
 (* Theorem: EVERY_POSITIVE l ==> SUM l <= (LENGTH l) * list_lcm l *)
 (* Proof:
@@ -7362,9 +7597,9 @@ val list_lcm_pos_alt = store_thm(
    = LENGTH (h::l) * (lcm h (list_lcm l))     by LENGTH
    = LENGTH (h::l) * list_lcm (h::l)          by list_lcm_cons
 *)
-val list_lcm_lower_bound = store_thm(
-  "list_lcm_lower_bound",
-  ``!l. EVERY_POSITIVE l ==> SUM l <= (LENGTH l) * list_lcm l``,
+Theorem list_lcm_lower_bound:
+    !l. EVERY_POSITIVE l ==> SUM l <= (LENGTH l) * list_lcm l
+Proof
   Induct >>
   rw[] >>
   Cases_on `l = []` >-
@@ -7375,7 +7610,8 @@ val list_lcm_lower_bound = store_thm(
   `h <= lcm h (list_lcm l) /\ list_lcm l <= lcm h (list_lcm l)` by rw[LCM_LE] >>
   `LENGTH l * list_lcm l <= LENGTH l * (lcm h (list_lcm l))` by rw[LE_MULT_LCANCEL] >>
   `h + SUM l <= h + LENGTH l * list_lcm l` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Another version to eliminate EVERY by MEM. *)
 val list_lcm_lower_bound_alt = save_thm("list_lcm_lower_bound_alt",
@@ -7401,12 +7637,13 @@ val it = |- !l. POSITIVE l ==> SUM l <= LENGTH l * list_lcm l: thm
         (list_lcm l) divides (lcm h (list_lcm l))  by LCM_IS_LEAST_COMMON_MULTIPLE
         Hence x divides (lcm h (list_lcm l))       by DIVIDES_TRANS
 *)
-val list_lcm_is_common_multiple = store_thm(
-  "list_lcm_is_common_multiple",
-  ``!x l. MEM x l ==> x divides (list_lcm l)``,
+Theorem list_lcm_is_common_multiple:
+    !x l. MEM x l ==> x divides (list_lcm l)
+Proof
   Induct_on `l` >>
   rw[] >>
-  metis_tac[LCM_IS_LEAST_COMMON_MULTIPLE, DIVIDES_TRANS]);
+  metis_tac[LCM_IS_LEAST_COMMON_MULTIPLE, DIVIDES_TRANS]
+QED
 
 (* Theorem: If m is a common multiple of members of l, (list_lcm l) divides m.
            (!x. MEM x l ==> x divides m) ==> (list_lcm l) divides m *)
@@ -7424,12 +7661,13 @@ val list_lcm_is_common_multiple = store_thm(
          giving   (list_lcm l) divides m           by induction hypothesis
      Hence        divides (lcm h (list_lcm l)) m   by LCM_IS_LEAST_COMMON_MULTIPLE
 *)
-val list_lcm_is_least_common_multiple = store_thm(
-  "list_lcm_is_least_common_multiple",
-  ``!l m. (!x. MEM x l ==> x divides m) ==> (list_lcm l) divides m``,
+Theorem list_lcm_is_least_common_multiple:
+    !l m. (!x. MEM x l ==> x divides m) ==> (list_lcm l) divides m
+Proof
   Induct >-
   rw[] >>
-  rw[LCM_IS_LEAST_COMMON_MULTIPLE]);
+  rw[LCM_IS_LEAST_COMMON_MULTIPLE]
+QED
 
 (*
 > EVAL ``list_lcm []``;
@@ -7476,12 +7714,13 @@ val it = |- (list_lcm (GENLIST SUC 5) = list_lcm (GENLIST (leibniz 5) (SUC 5))) 
       = lcm (lcm h (list_lcm l1)) (list_lcm l2)    by LCM_ASSOC
       = lcm (list_lcm (h::l1)) (list_lcm l2)       by list_lcm_cons
 *)
-val list_lcm_append = store_thm(
-  "list_lcm_append",
-  ``!l1 l2. list_lcm (l1 ++ l2) = lcm (list_lcm l1) (list_lcm l2)``,
+Theorem list_lcm_append:
+    !l1 l2. list_lcm (l1 ++ l2) = lcm (list_lcm l1) (list_lcm l2)
+Proof
   Induct >-
   rw[] >>
-  rw[LCM_ASSOC]);
+  rw[LCM_ASSOC]
+QED
 
 (* Theorem: list_lcm (l1 ++ l2 ++ l3) = list_lcm [(list_lcm l1); (list_lcm l2); (list_lcm l3)] *)
 (* Proof:
@@ -7492,10 +7731,11 @@ val list_lcm_append = store_thm(
    = lcm (list_lcm l1) (list_lcm [(list_lcm l2); list_lcm l3])  by list_lcm_cons
    = list_lcm [list_lcm l1; list_lcm l2; list_lcm l3]           by list_lcm_cons
 *)
-val list_lcm_append_3 = store_thm(
-  "list_lcm_append_3",
-  ``!l1 l2 l3. list_lcm (l1 ++ l2 ++ l3) = list_lcm [(list_lcm l1); (list_lcm l2); (list_lcm l3)]``,
-  rw[list_lcm_append, LCM_ASSOC, list_lcm_cons]);
+Theorem list_lcm_append_3:
+    !l1 l2 l3. list_lcm (l1 ++ l2 ++ l3) = list_lcm [(list_lcm l1); (list_lcm l2); (list_lcm l3)]
+Proof
+  rw[list_lcm_append, LCM_ASSOC, list_lcm_cons]
+QED
 
 (* Theorem: list_lcm (REVERSE l) = list_lcm l *)
 (* Proof:
@@ -7512,9 +7752,9 @@ val list_lcm_append_3 = store_thm(
       = list_lcm ([h] ++ l)                         by list_lcm_append
       = list_lcm (h::l)                             by CONS_APPEND
 *)
-val list_lcm_reverse = store_thm(
-  "list_lcm_reverse",
-  ``!l. list_lcm (REVERSE l) = list_lcm l``,
+Theorem list_lcm_reverse:
+    !l. list_lcm (REVERSE l) = list_lcm l
+Proof
   Induct >-
   rw[] >>
   rpt strip_tac >>
@@ -7524,7 +7764,8 @@ val list_lcm_reverse = store_thm(
   `_ = lcm (list_lcm [h]) (list_lcm l)` by rw[LCM_COMM] >>
   `_ = list_lcm ([h] ++ l)` by rw[list_lcm_append] >>
   `_ = list_lcm (h::l)` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: list_lcm [1 .. (n + 1)] = lcm (n + 1) (list_lcm [1 .. n])) *)
 (* Proof:
@@ -7532,10 +7773,11 @@ val list_lcm_reverse = store_thm(
    = list_lcm (SONC (n + 1) [1 .. n])   by listRangeINC_SNOC, 1 <= n + 1
    = lcm (n + 1) (list_lcm [1 .. n])    by list_lcm_snoc
 *)
-val list_lcm_suc = store_thm(
-  "list_lcm_suc",
-  ``!n. list_lcm [1 .. (n + 1)] = lcm (n + 1) (list_lcm [1 .. n])``,
-  rw[listRangeINC_SNOC, list_lcm_snoc]);
+Theorem list_lcm_suc:
+    !n. list_lcm [1 .. (n + 1)] = lcm (n + 1) (list_lcm [1 .. n])
+Proof
+  rw[listRangeINC_SNOC, list_lcm_snoc]
+QED
 
 (* Theorem: l <> [] /\ EVERY_POSITIVE l ==> (SUM l) DIV (LENGTH l) <= list_lcm l *)
 (* Proof:
@@ -7543,10 +7785,11 @@ val list_lcm_suc = store_thm(
     and SUM l <= LENGTH l * list_lcm l          by list_lcm_lower_bound
      so (SUM l) DIV (LENGTH l) <= list_lcm l    by DIV_LE
 *)
-val list_lcm_nonempty_lower = store_thm(
-  "list_lcm_nonempty_lower",
-  ``!l. l <> [] /\ EVERY_POSITIVE l ==> (SUM l) DIV (LENGTH l) <= list_lcm l``,
-  metis_tac[list_lcm_lower_bound, DIV_LE, LENGTH_NIL, NOT_ZERO_LT_ZERO]);
+Theorem list_lcm_nonempty_lower:
+    !l. l <> [] /\ EVERY_POSITIVE l ==> (SUM l) DIV (LENGTH l) <= list_lcm l
+Proof
+  metis_tac[list_lcm_lower_bound, DIV_LE, LENGTH_NIL, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: l <> [] /\ POSITIVE l ==> (SUM l) DIV (LENGTH l) <= list_lcm l *)
 (* Proof:
@@ -7554,10 +7797,11 @@ val list_lcm_nonempty_lower = store_thm(
     and SUM l <= LENGTH l * list_lcm l          by list_lcm_lower_bound_alt
      so (SUM l) DIV (LENGTH l) <= list_lcm l    by DIV_LE
 *)
-val list_lcm_nonempty_lower_alt = store_thm(
-  "list_lcm_nonempty_lower_alt",
-  ``!l. l <> [] /\ POSITIVE l ==> (SUM l) DIV (LENGTH l) <= list_lcm l``,
-  metis_tac[list_lcm_lower_bound_alt, DIV_LE, LENGTH_NIL, NOT_ZERO_LT_ZERO]);
+Theorem list_lcm_nonempty_lower_alt:
+    !l. l <> [] /\ POSITIVE l ==> (SUM l) DIV (LENGTH l) <= list_lcm l
+Proof
+  metis_tac[list_lcm_lower_bound_alt, DIV_LE, LENGTH_NIL, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: MEM x l /\ MEM y l ==> (lcm x y) <= list_lcm l *)
 (* Proof:
@@ -7565,10 +7809,11 @@ val list_lcm_nonempty_lower_alt = store_thm(
     and y divides (list_lcm l)          by list_lcm_is_common_multiple
     ==> (lcm x y) divides (list_lcm l)  by LCM_IS_LEAST_COMMON_MULTIPLE
 *)
-val list_lcm_divisor_lcm_pair = store_thm(
-  "list_lcm_divisor_lcm_pair",
-  ``!l x y. MEM x l /\ MEM y l ==> (lcm x y) divides list_lcm l``,
-  rw[list_lcm_is_common_multiple, LCM_IS_LEAST_COMMON_MULTIPLE]);
+Theorem list_lcm_divisor_lcm_pair:
+    !l x y. MEM x l /\ MEM y l ==> (lcm x y) divides list_lcm l
+Proof
+  rw[list_lcm_is_common_multiple, LCM_IS_LEAST_COMMON_MULTIPLE]
+QED
 
 (* Theorem: POSITIVE l /\ MEM x l /\ MEM y l ==> (lcm x y) <= list_lcm l *)
 (* Proof:
@@ -7576,20 +7821,22 @@ val list_lcm_divisor_lcm_pair = store_thm(
     Now 0 < list_lcm l                  by list_lcm_pos_alt
    Thus (lcm x y) <= list_lcm l         by DIVIDES_LE
 *)
-val list_lcm_lower_by_lcm_pair = store_thm(
-  "list_lcm_lower_by_lcm_pair",
-  ``!l x y. POSITIVE l /\ MEM x l /\ MEM y l ==> (lcm x y) <= list_lcm l``,
-  rw[list_lcm_divisor_lcm_pair, list_lcm_pos_alt, DIVIDES_LE]);
+Theorem list_lcm_lower_by_lcm_pair:
+    !l x y. POSITIVE l /\ MEM x l /\ MEM y l ==> (lcm x y) <= list_lcm l
+Proof
+  rw[list_lcm_divisor_lcm_pair, list_lcm_pos_alt, DIVIDES_LE]
+QED
 
 (* Theorem: 0 < m /\ (!x. MEM x l ==> x divides m) ==> list_lcm l <= m *)
 (* Proof:
    Note list_lcm l divides m     by list_lcm_is_least_common_multiple
    Thus list_lcm l <= m          by DIVIDES_LE, 0 < m
 *)
-val list_lcm_upper_by_common_multiple = store_thm(
-  "list_lcm_upper_by_common_multiple",
-  ``!l m. 0 < m /\ (!x. MEM x l ==> x divides m) ==> list_lcm l <= m``,
-  rw[list_lcm_is_least_common_multiple, DIVIDES_LE]);
+Theorem list_lcm_upper_by_common_multiple:
+    !l m. 0 < m /\ (!x. MEM x l ==> x divides m) ==> list_lcm l <= m
+Proof
+  rw[list_lcm_is_least_common_multiple, DIVIDES_LE]
+QED
 
 (* Theorem: list_lcm ls = FOLDR lcm 1 ls *)
 (* Proof:
@@ -7605,10 +7852,11 @@ val list_lcm_upper_by_common_multiple = store_thm(
        = lcm h (FOLDR lcm 1 ls)   by induction hypothesis
        = FOLDR lcm 1 (h::ls)      by FOLDR
 *)
-val list_lcm_by_FOLDR = store_thm(
-  "list_lcm_by_FOLDR",
-  ``!ls. list_lcm ls = FOLDR lcm 1 ls``,
-  Induct >> rw[]);
+Theorem list_lcm_by_FOLDR:
+    !ls. list_lcm ls = FOLDR lcm 1 ls
+Proof
+  Induct >> rw[]
+QED
 
 (* Theorem: list_lcm ls = FOLDL lcm 1 ls *)
 (* Proof:
@@ -7618,14 +7866,15 @@ val list_lcm_by_FOLDR = store_thm(
       = FOLDR lcm 1 ls          by list_lcm_by FOLDR
       = FOLDL lcm 1 ls          by FOLDL_EQ_FOLDR, COMM lcm, ASSOC lcm
 *)
-val list_lcm_by_FOLDL = store_thm(
-  "list_lcm_by_FOLDL",
-  ``!ls. list_lcm ls = FOLDL lcm 1 ls``,
+Theorem list_lcm_by_FOLDL:
+    !ls. list_lcm ls = FOLDL lcm 1 ls
+Proof
   simp[list_lcm_by_FOLDR] >>
   irule (GSYM FOLDL_EQ_FOLDR) >>
   rpt strip_tac >-
   rw[LCM_ASSOC, combinTheory.ASSOC_DEF] >>
-  rw[LCM_COMM, combinTheory.COMM_DEF]);
+  rw[LCM_COMM, combinTheory.COMM_DEF]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Lists in Leibniz Triangle                                                 *)
@@ -7657,10 +7906,11 @@ val _ = overload_on("leibniz_vertical", ``\n. [1 .. (n+1)]``);
    = GENLIST (\i. 1 + i) (n+1 + 1 - 1)   by listRangeINC_def
    = GENLIST (\i. 1 + i) (n + 1)         by arithmetic
 *)
-val leibniz_vertical_alt = store_thm(
-  "leibniz_vertical_alt",
-  ``!n. leibniz_vertical n = GENLIST (\i. 1 + i) (n + 1)``,
-  rw[listRangeINC_def]);
+Theorem leibniz_vertical_alt:
+    !n. leibniz_vertical n = GENLIST (\i. 1 + i) (n + 1)
+Proof
+  rw[listRangeINC_def]
+QED
 
 (* Theorem: leibniz_vertical 0 = [1] *)
 (* Proof:
@@ -7669,10 +7919,11 @@ val leibniz_vertical_alt = store_thm(
    = [1 .. 1]             by arithmetic
    = [1]                  by listRangeINC_SING
 *)
-val leibniz_vertical_0 = store_thm(
-  "leibniz_vertical_0",
-  ``leibniz_vertical 0 = [1]``,
-  rw[]);
+Theorem leibniz_vertical_0:
+    leibniz_vertical 0 = [1]
+Proof
+  rw[]
+QED
 
 (* Theorem: LENGTH (leibniz_vertical n) = n + 1 *)
 (* Proof:
@@ -7681,10 +7932,11 @@ val leibniz_vertical_0 = store_thm(
    = n + 1 + 1 - 1                   by listRangeINC_LEN
    = n + 1                           by arithmetic
 *)
-val leibniz_vertical_len = store_thm(
-  "leibniz_vertical_len",
-  ``!n. LENGTH (leibniz_vertical n) = n + 1``,
-  rw[listRangeINC_LEN]);
+Theorem leibniz_vertical_len:
+    !n. LENGTH (leibniz_vertical n) = n + 1
+Proof
+  rw[listRangeINC_LEN]
+QED
 
 (* Theorem: leibniz_vertical n <> [] *)
 (* Proof:
@@ -7693,10 +7945,11 @@ val leibniz_vertical_len = store_thm(
     <> 0                            by ADD1, SUC_NOT_ZERO
     Thus leibniz_vertical n <> []   by LENGTH_EQ_0
 *)
-val leibniz_vertical_not_nil = store_thm(
-  "leibniz_vertical_not_nil",
-  ``!n. leibniz_vertical n <> []``,
-  metis_tac[leibniz_vertical_len, LENGTH_EQ_0, DECIDE``!n. n + 1 <> 0``]);
+Theorem leibniz_vertical_not_nil:
+    !n. leibniz_vertical n <> []
+Proof
+  metis_tac[leibniz_vertical_len, LENGTH_EQ_0, DECIDE``!n. n + 1 <> 0``]
+QED
 
 (* Theorem: EVERY_POSITIVE (leibniz_vertical n) *)
 (* Proof:
@@ -7706,17 +7959,19 @@ val leibniz_vertical_not_nil = store_thm(
    <=> !i. i < n + 1 ==> T                        by arithmetic
    <=> T
 *)
-val leibniz_vertical_pos = store_thm(
-  "leibniz_vertical_pos",
-  ``!n. EVERY_POSITIVE (leibniz_vertical n)``,
-  rw[leibniz_vertical_alt, EVERY_GENLIST]);
+Theorem leibniz_vertical_pos:
+    !n. EVERY_POSITIVE (leibniz_vertical n)
+Proof
+  rw[leibniz_vertical_alt, EVERY_GENLIST]
+QED
 
 (* Theorem: POSITIVE (leibniz_vertical n) *)
 (* Proof: by leibniz_vertical_pos, EVERY_MEM *)
-val leibniz_vertical_pos_alt = store_thm(
-  "leibniz_vertical_pos_alt",
-  ``!n. POSITIVE (leibniz_vertical n)``,
-  rw[leibniz_vertical_pos, EVERY_MEM]);
+Theorem leibniz_vertical_pos_alt:
+    !n. POSITIVE (leibniz_vertical n)
+Proof
+  rw[leibniz_vertical_pos, EVERY_MEM]
+QED
 
 (* Theorem: 0 < x /\ x <= (n + 1) <=> MEM x (leibniz_vertical n) *)
 (* Proof:
@@ -7726,10 +7981,11 @@ val leibniz_vertical_pos_alt = store_thm(
    <=> 1 <= x /\ x <= n + 1            by listRangeINC_MEM
    <=> 0 < x /\ x <= n + 1             by num_CASES, LESS_EQ_MONO
 *)
-val leibniz_vertical_mem = store_thm(
-  "leibniz_vertical_mem",
-  ``!n x. 0 < x /\ x <= (n + 1) <=> MEM x (leibniz_vertical n)``,
-  rw[]);
+Theorem leibniz_vertical_mem:
+    !n x. 0 < x /\ x <= (n + 1) <=> MEM x (leibniz_vertical n)
+Proof
+  rw[]
+QED
 
 (* Theorem: leibniz_vertical (n + 1) = SNOC (n + 2) (leibniz_vertical n) *)
 (* Proof:
@@ -7738,10 +7994,11 @@ val leibniz_vertical_mem = store_thm(
    = SNOC (n+1 + 1) [1 .. (n+1)]         by listRangeINC_SNOC
    = SNOC (n + 2) (leibniz_vertical n)   by notation
 *)
-val leibniz_vertical_snoc = store_thm(
-  "leibniz_vertical_snoc",
-  ``!n. leibniz_vertical (n + 1) = SNOC (n + 2) (leibniz_vertical n)``,
-  rw[listRangeINC_SNOC]);;
+Theorem leibniz_vertical_snoc:
+    !n. leibniz_vertical (n + 1) = SNOC (n + 2) (leibniz_vertical n)
+Proof
+  rw[listRangeINC_SNOC]
+QED
 
 (* Use overloading for leibniz_up n. *)
 val _ = overload_on("leibniz_up", ``\n. REVERSE (leibniz_vertical n)``);
@@ -7753,10 +8010,11 @@ val _ = overload_on("leibniz_up", ``\n. REVERSE (leibniz_vertical n)``);
    = REVERSE [1]                   by leibniz_vertical_0
    = [1]                           by REVERSE_SING
 *)
-val leibniz_up_0 = store_thm(
-  "leibniz_up_0",
-  ``leibniz_up 0 = [1]``,
-  rw[]);
+Theorem leibniz_up_0:
+    leibniz_up 0 = [1]
+Proof
+  rw[]
+QED
 
 (* Theorem: LENGTH (leibniz_up n) = n + 1 *)
 (* Proof:
@@ -7765,10 +8023,11 @@ val leibniz_up_0 = store_thm(
    = LENGTH (leibniz_vertical n)             by LENGTH_REVERSE
    = n + 1                                   by leibniz_vertical_len
 *)
-val leibniz_up_len = store_thm(
-  "leibniz_up_len",
-  ``!n. LENGTH (leibniz_up n) = n + 1``,
-  rw[leibniz_vertical_len]);
+Theorem leibniz_up_len:
+    !n. LENGTH (leibniz_up n) = n + 1
+Proof
+  rw[leibniz_vertical_len]
+QED
 
 (* Theorem: EVERY_POSITIVE (leibniz_up n) *)
 (* Proof:
@@ -7777,10 +8036,11 @@ val leibniz_up_len = store_thm(
    <=> EVERY_POSITIVE (leibniz_vertical n)             by EVERY_REVERSE
    <=> T                                               by leibniz_vertical_pos
 *)
-val leibniz_up_pos = store_thm(
-  "leibniz_up_pos",
-  ``!n. EVERY_POSITIVE (leibniz_up n)``,
-  rw[leibniz_vertical_pos, EVERY_REVERSE]);
+Theorem leibniz_up_pos:
+    !n. EVERY_POSITIVE (leibniz_up n)
+Proof
+  rw[leibniz_vertical_pos, EVERY_REVERSE]
+QED
 
 (* Theorem: 0 < x /\ x <= (n + 1) <=> MEM x (leibniz_up n) *)
 (* Proof:
@@ -7790,10 +8050,11 @@ val leibniz_up_pos = store_thm(
    <=> MEM x (leibniz_vertical n)               by MEM_REVERSE
    <=> T                                        by leibniz_vertical_mem
 *)
-val leibniz_up_mem = store_thm(
-  "leibniz_up_mem",
-  ``!n x. 0 < x /\ x <= (n + 1) <=> MEM x (leibniz_up n)``,
-  rw[]);
+Theorem leibniz_up_mem:
+    !n x. 0 < x /\ x <= (n + 1) <=> MEM x (leibniz_up n)
+Proof
+  rw[]
+QED
 
 (* Theorem: leibniz_up (n + 1) = (n + 2) :: (leibniz_up n) *)
 (* Proof:
@@ -7802,10 +8063,11 @@ val leibniz_up_mem = store_thm(
    = REVERSE (SNOC (n + 2) (leibniz_vertical n))   by leibniz_vertical_snoc
    = (n + 2) :: (leibniz_up n)                     by REVERSE_SNOC
 *)
-val leibniz_up_cons = store_thm(
-  "leibniz_up_cons",
-  ``!n. leibniz_up (n + 1) = (n + 2) :: (leibniz_up n)``,
-  rw[leibniz_vertical_snoc, REVERSE_SNOC]);
+Theorem leibniz_up_cons:
+    !n. leibniz_up (n + 1) = (n + 2) :: (leibniz_up n)
+Proof
+  rw[leibniz_vertical_snoc, REVERSE_SNOC]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Horizontal List in Leibniz Triangle                                       *)
@@ -7853,10 +8115,11 @@ val it = |- leibniz_horizontal 8 = [9; 72; 252; 504; 630; 504; 252; 72; 9]: thm
    = [leibniz 0 0]                  by GENLIST
    = [1]                            by leibniz_n_0
 *)
-val leibniz_horizontal_0 = store_thm(
-  "leibniz_horizontal_0",
-  ``leibniz_horizontal 0 = [1]``,
-  rw_tac std_ss[GENLIST_1, leibniz_n_0]);
+Theorem leibniz_horizontal_0:
+    leibniz_horizontal 0 = [1]
+Proof
+  rw_tac std_ss[GENLIST_1, leibniz_n_0]
+QED
 
 (* Theorem: LENGTH (leibniz_horizontal n) = n + 1 *)
 (* Proof:
@@ -7864,10 +8127,11 @@ val leibniz_horizontal_0 = store_thm(
    = LENGTH (GENLIST (leibniz n) (n + 1))   by notation
    = n + 1                                  by LENGTH_GENLIST
 *)
-val leibniz_horizontal_len = store_thm(
-  "leibniz_horizontal_len",
-  ``!n. LENGTH (leibniz_horizontal n) = n + 1``,
-  rw[]);
+Theorem leibniz_horizontal_len:
+    !n. LENGTH (leibniz_horizontal n) = n + 1
+Proof
+  rw[]
+QED
 
 (* Theorem: k <= n ==> EL k (leibniz_horizontal n) = leibniz n k *)
 (* Proof:
@@ -7877,10 +8141,11 @@ val leibniz_horizontal_len = store_thm(
    = EL k (GENLIST (leibniz n) (SUC n))   by ADD1
    = leibniz n k                          by EL_GENLIST, k < SUC n.
 *)
-val leibniz_horizontal_el = store_thm(
-  "leibniz_horizontal_el",
-  ``!n k. k <= n ==> (EL k (leibniz_horizontal n) = leibniz n k)``,
-  rw[LESS_EQ_IMP_LESS_SUC]);
+Theorem leibniz_horizontal_el:
+    !n k. k <= n ==> (EL k (leibniz_horizontal n) = leibniz n k)
+Proof
+  rw[LESS_EQ_IMP_LESS_SUC]
+QED
 
 (* Theorem: k <= n ==> MEM (leibniz n k) (leibniz_horizontal n) *)
 (* Proof:
@@ -7888,10 +8153,11 @@ val leibniz_horizontal_el = store_thm(
    Thus MEM (leibniz n k) (GENLIST (leibniz n) (n + 1))        by MEM_GENLIST
      or MEM (leibniz n k) (leibniz_horizontal n)               by notation
 *)
-val leibniz_horizontal_mem = store_thm(
-  "leibniz_horizontal_mem",
-  ``!n k. k <= n ==> MEM (leibniz n k) (leibniz_horizontal n)``,
-  metis_tac[MEM_GENLIST, DECIDE``k <= n ==> k < n + 1``]);
+Theorem leibniz_horizontal_mem:
+    !n k. k <= n ==> MEM (leibniz n k) (leibniz_horizontal n)
+Proof
+  metis_tac[MEM_GENLIST, DECIDE``k <= n ==> k < n + 1``]
+QED
 
 (* Theorem: MEM (leibniz n k) (leibniz_horizontal n) <=> k <= n *)
 (* Proof:
@@ -7908,9 +8174,9 @@ val leibniz_horizontal_mem = store_thm(
       Note k <= n ==> k < n + 1,
       Take m = k, the result follows.
 *)
-val leibniz_horizontal_mem_iff = store_thm(
-  "leibniz_horizontal_mem_iff",
-  ``!n k. MEM (leibniz n k) (leibniz_horizontal n) <=> k <= n``,
+Theorem leibniz_horizontal_mem_iff:
+    !n k. MEM (leibniz n k) (leibniz_horizontal n) <=> k <= n
+Proof
   rw_tac bool_ss[EQ_IMP_THM] >| [
     spose_not_then strip_assume_tac >>
     `leibniz n k = 0` by rw[leibniz_less_0] >>
@@ -7920,7 +8186,8 @@ val leibniz_horizontal_mem_iff = store_thm(
     rw[MEM_GENLIST] >>
     `k < n + 1` by decide_tac >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Theorem: MEM x (leibniz_horizontal n) <=> ?k. k <= n /\ (x = leibniz n k) *)
 (* Proof:
@@ -7929,17 +8196,19 @@ val leibniz_horizontal_mem_iff = store_thm(
    Since m < n + 1 <=> m <= n              by LE_LT1
    This is trivially true.
 *)
-val leibniz_horizontal_member = store_thm(
-  "leibniz_horizontal_member",
-  ``!n x. MEM x (leibniz_horizontal n) <=> ?k. k <= n /\ (x = leibniz n k)``,
-  metis_tac[MEM_GENLIST, LE_LT1]);
+Theorem leibniz_horizontal_member:
+    !n x. MEM x (leibniz_horizontal n) <=> ?k. k <= n /\ (x = leibniz n k)
+Proof
+  metis_tac[MEM_GENLIST, LE_LT1]
+QED
 
 (* Theorem: k <= n ==> (EL k (leibniz_horizontal n) = leibniz n k) *)
 (* Proof: by EL_GENLIST *)
-val leibniz_horizontal_element = store_thm(
-  "leibniz_horizontal_element",
-  ``!n k. k <= n ==> (EL k (leibniz_horizontal n) = leibniz n k)``,
-  rw[EL_GENLIST]);
+Theorem leibniz_horizontal_element:
+    !n k. k <= n ==> (EL k (leibniz_horizontal n) = leibniz n k)
+Proof
+  rw[EL_GENLIST]
+QED
 
 (* Theorem: TAKE 1 (leibniz_horizontal (n + 1)) = [n + 2] *)
 (* Proof:
@@ -7952,22 +8221,24 @@ val leibniz_horizontal_element = store_thm(
    = [SUC n + 1]                                                         by leibniz_n_0
    = [n + 2]                                                             by ADD1
 *)
-val leibniz_horizontal_head = store_thm(
-  "leibniz_horizontal_head",
-  ``!n. TAKE 1 (leibniz_horizontal (n + 1)) = [n + 2]``,
+Theorem leibniz_horizontal_head:
+    !n. TAKE 1 (leibniz_horizontal (n + 1)) = [n + 2]
+Proof
   rpt strip_tac >>
   `(!n. n + 1 = SUC n) /\ (!n. n + 2 = SUC (SUC n))` by decide_tac >>
-  rw[GENLIST_CONS, leibniz_n_0]);
+  rw[GENLIST_CONS, leibniz_n_0]
+QED
 
 (* Theorem: k <= n ==> (leibniz n k) divides list_lcm (leibniz_horizontal n) *)
 (* Proof:
    Note MEM (leibniz n k) (leibniz_horizontal n)                by leibniz_horizontal_mem
      so (leibniz n k) divides list_lcm (leibniz_horizontal n)   by list_lcm_is_common_multiple
 *)
-val leibniz_horizontal_divisor = store_thm(
-  "leibniz_horizontal_divisor",
-  ``!n k. k <= n ==> (leibniz n k) divides list_lcm (leibniz_horizontal n)``,
-  rw[leibniz_horizontal_mem, list_lcm_is_common_multiple]);
+Theorem leibniz_horizontal_divisor:
+    !n k. k <= n ==> (leibniz n k) divides list_lcm (leibniz_horizontal n)
+Proof
+  rw[leibniz_horizontal_mem, list_lcm_is_common_multiple]
+QED
 
 (* Theorem: EVERY_POSITIVE (leibniz_horizontal n) *)
 (* Proof:
@@ -7988,10 +8259,11 @@ QED
 
 (* Theorem: POSITIVE (leibniz_horizontal n) *)
 (* Proof: by leibniz_horizontal_pos, EVERY_MEM *)
-val leibniz_horizontal_pos_alt = store_thm(
-  "leibniz_horizontal_pos_alt",
-  ``!n. POSITIVE (leibniz_horizontal n)``,
-  metis_tac[leibniz_horizontal_pos, EVERY_MEM]);
+Theorem leibniz_horizontal_pos_alt:
+    !n. POSITIVE (leibniz_horizontal n)
+Proof
+  metis_tac[leibniz_horizontal_pos, EVERY_MEM]
+QED
 
 (* Theorem: leibniz_horizontal n = MAP (\j. (n+1) * j) (binomial_horizontal n) *)
 (* Proof:
@@ -8001,10 +8273,11 @@ val leibniz_horizontal_pos_alt = store_thm(
    = MAP (\j. (n + 1) * j) (GENLIST (binomial n) (n + 1)) by MAP_GENLIST
    = MAP (\j. (n + 1) * j) (binomial_horizontal n)        by notation
 *)
-val leibniz_horizontal_alt = store_thm(
-  "leibniz_horizontal_alt",
-  ``!n. leibniz_horizontal n = MAP (\j. (n+1) * j) (binomial_horizontal n)``,
-  rw_tac std_ss[leibniz_alt, MAP_GENLIST]);
+Theorem leibniz_horizontal_alt:
+    !n. leibniz_horizontal n = MAP (\j. (n+1) * j) (binomial_horizontal n)
+Proof
+  rw_tac std_ss[leibniz_alt, MAP_GENLIST]
+QED
 
 (* Theorem: list_lcm (leibniz_horizontal n) = (n + 1) * list_lcm (binomial_horizontal n) *)
 (* Proof:
@@ -8014,14 +8287,15 @@ val leibniz_horizontal_alt = store_thm(
    = list_lcm (MAP (\j (n+1) * j) (binomial_horizontal n))  by leibniz_horizontal_alt
    = (n + 1) * list_lcm (binomial_horizontal n)             by list_lcm_map_times, [1]
 *)
-val leibniz_horizontal_lcm_alt = store_thm(
-  "leibniz_horizontal_lcm_alt",
-  ``!n. list_lcm (leibniz_horizontal n) = (n + 1) * list_lcm (binomial_horizontal n)``,
+Theorem leibniz_horizontal_lcm_alt:
+    !n. list_lcm (leibniz_horizontal n) = (n + 1) * list_lcm (binomial_horizontal n)
+Proof
   rpt strip_tac >>
   `LENGTH (binomial_horizontal n) = n + 1` by rw[binomial_horizontal_len] >>
   `n + 1 <> 0` by decide_tac >>
   `binomial_horizontal n <> []` by metis_tac[LENGTH_NIL] >>
-  rw_tac std_ss[leibniz_horizontal_alt, list_lcm_map_times]);
+  rw_tac std_ss[leibniz_horizontal_alt, list_lcm_map_times]
+QED
 
 (* Theorem: SUM (leibniz_horizontal n) = (n + 1) * SUM (binomial_horizontal n) *)
 (* Proof:
@@ -8029,12 +8303,13 @@ val leibniz_horizontal_lcm_alt = store_thm(
    = SUM (MAP (\j. (n + 1) * j) (binomial_horizontal n))   by leibniz_horizontal_alt
    = (n + 1) * SUM (binomial_horizontal n)                 by SUM_MULT
 *)
-val leibniz_horizontal_sum = store_thm(
-  "leibniz_horizontal_sum",
-  ``!n. SUM (leibniz_horizontal n) = (n + 1) * SUM (binomial_horizontal n)``,
+Theorem leibniz_horizontal_sum:
+    !n. SUM (leibniz_horizontal n) = (n + 1) * SUM (binomial_horizontal n)
+Proof
   rw[leibniz_horizontal_alt, SUM_MULT] >>
   `(\j. j * (n + 1)) = $* (n + 1)` by rw[FUN_EQ_THM] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: SUM (leibniz_horizontal n) = (n + 1) * 2 ** n *)
 (* Proof:
@@ -8042,10 +8317,11 @@ val leibniz_horizontal_sum = store_thm(
    = (n + 1) * SUM (binomial_horizontal n)       by leibniz_horizontal_sum
    = (n + 1) * 2 ** n                            by binomial_horizontal_sum
 *)
-val leibniz_horizontal_sum_eqn = store_thm(
-  "leibniz_horizontal_sum_eqn",
-  ``!n. SUM (leibniz_horizontal n) = (n + 1) * 2 ** n``,
-  rw[leibniz_horizontal_sum, binomial_horizontal_sum]);
+Theorem leibniz_horizontal_sum_eqn:
+    !n. SUM (leibniz_horizontal n) = (n + 1) * 2 ** n
+Proof
+  rw[leibniz_horizontal_sum, binomial_horizontal_sum]
+QED
 
 (* Theorem: SUM (leibniz_horizontal n) DIV LENGTH (leibniz_horizontal n) = SUM (binomial_horizontal n) *)
 (* Proof:
@@ -8056,10 +8332,11 @@ val leibniz_horizontal_sum_eqn = store_thm(
       = ((n + 1) * SUM (binomial_horizontal n))  DIV (n + 1)     by leibniz_horizontal_sum
       = SUM (binomial_horizontal n)                              by MULT_TO_DIV, 0 < n + 1
 *)
-val leibniz_horizontal_average = store_thm(
-  "leibniz_horizontal_average",
-  ``!n. SUM (leibniz_horizontal n) DIV LENGTH (leibniz_horizontal n) = SUM (binomial_horizontal n)``,
-  metis_tac[leibniz_horizontal_sum, leibniz_horizontal_len, MULT_TO_DIV, DECIDE``0 < n + 1``]);
+Theorem leibniz_horizontal_average:
+    !n. SUM (leibniz_horizontal n) DIV LENGTH (leibniz_horizontal n) = SUM (binomial_horizontal n)
+Proof
+  metis_tac[leibniz_horizontal_sum, leibniz_horizontal_len, MULT_TO_DIV, DECIDE``0 < n + 1``]
+QED
 
 (* Theorem: SUM (leibniz_horizontal n) DIV LENGTH (leibniz_horizontal n) = 2 ** n *)
 (* Proof:
@@ -8067,10 +8344,11 @@ val leibniz_horizontal_average = store_thm(
       = SUM (binomial_horizontal n)    by leibniz_horizontal_average
       = 2 ** n                         by binomial_horizontal_sum
 *)
-val leibniz_horizontal_average_eqn = store_thm(
-  "leibniz_horizontal_average_eqn",
-  ``!n. SUM (leibniz_horizontal n) DIV LENGTH (leibniz_horizontal n) = 2 ** n``,
-  rw[leibniz_horizontal_average, binomial_horizontal_sum]);
+Theorem leibniz_horizontal_average_eqn:
+    !n. SUM (leibniz_horizontal n) DIV LENGTH (leibniz_horizontal n) = 2 ** n
+Proof
+  rw[leibniz_horizontal_average, binomial_horizontal_sum]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Transform from Vertical LCM to Horizontal LCM.                            *)
@@ -8124,30 +8402,33 @@ val _ = temp_overload_on("tc", ``(triplet n k).c``);
 
 (* Theorem: (ta = leibniz n k) /\ (tb = leibniz (n + 1) k) /\ (tc = leibniz (n + 1) (k + 1)) *)
 (* Proof: by triplet_def *)
-val leibniz_triplet_member = store_thm(
-  "leibniz_triplet_member",
-  ``!n k. (ta = leibniz n k) /\ (tb = leibniz (n + 1) k) /\ (tc = leibniz (n + 1) (k + 1))``,
-  rw[triplet_def]);
+Theorem leibniz_triplet_member:
+    !n k. (ta = leibniz n k) /\ (tb = leibniz (n + 1) k) /\ (tc = leibniz (n + 1) (k + 1))
+Proof
+  rw[triplet_def]
+QED
 
 (* Theorem: (k + 1) * tc = (n + 1 - k) * tb *)
 (* Proof:
    Apply: > leibniz_right_eqn |> SPEC ``n+1``;
    val it = |- 0 < n + 1 ==> !k. (k + 1) * leibniz (n + 1) (k + 1) = (n + 1 - k) * leibniz (n + 1) k: thm
 *)
-val leibniz_right_entry = store_thm(
-  "leibniz_right_entry",
-  ``!(n k):num. (k + 1) * tc = (n + 1 - k) * tb``,
-  rw_tac arith_ss[triplet_def, leibniz_right_eqn]);
+Theorem leibniz_right_entry:
+    !(n k):num. (k + 1) * tc = (n + 1 - k) * tb
+Proof
+  rw_tac arith_ss[triplet_def, leibniz_right_eqn]
+QED
 
 (* Theorem: (n + 2) * ta = (n + 1 - k) * tb *)
 (* Proof:
    Apply: > leibniz_up_eqn |> SPEC ``n+1``;
    val it = |- 0 < n + 1 ==> !k. (n + 1 + 1) * leibniz (n + 1 - 1) k = (n + 1 - k) * leibniz (n + 1) k: thm
 *)
-val leibniz_up_entry = store_thm(
-  "leibniz_up_entry",
-  ``!(n k):num. (n + 2) * ta = (n + 1 - k) * tb``,
-  rw_tac std_ss[triplet_def, leibniz_up_eqn |> SPEC ``n+1`` |> SIMP_RULE arith_ss[]]);
+Theorem leibniz_up_entry:
+    !(n k):num. (n + 2) * ta = (n + 1 - k) * tb
+Proof
+  rw_tac std_ss[triplet_def, leibniz_up_eqn |> SPEC ``n+1`` |> SIMP_RULE arith_ss[]]
+QED
 
 (* Theorem: ta * tb = tc * (tb - ta) *)
 (* Proof:
@@ -8155,10 +8436,11 @@ val leibniz_up_entry = store_thm(
    val it = |- 0 < n + 1 ==> !k. !k. leibniz (n + 1) k * leibniz (n + 1 - 1) k =
      leibniz (n + 1) (k + 1) * (leibniz (n + 1) k - leibniz (n + 1 - 1) k): thm
 *)
-val leibniz_triplet_property = store_thm(
-  "leibniz_triplet_property",
-  ``!(n k):num. ta * tb = tc * (tb - ta)``,
-  rw_tac std_ss[triplet_def, MULT_COMM, leibniz_property |> SPEC ``n+1`` |> SIMP_RULE arith_ss[]]);
+Theorem leibniz_triplet_property:
+    !(n k):num. ta * tb = tc * (tb - ta)
+Proof
+  rw_tac std_ss[triplet_def, MULT_COMM, leibniz_property |> SPEC ``n+1`` |> SIMP_RULE arith_ss[]]
+QED
 
 (* Direct proof of same result, for the paper. *)
 
@@ -8205,10 +8487,11 @@ QED
             !k. lcm (leibniz (n + 1) k) (leibniz (n + 1 - 1) k) =
                 lcm (leibniz (n + 1) k) (leibniz (n + 1) (k + 1)): thm
 *)
-val leibniz_triplet_lcm = store_thm(
-  "leibniz_triplet_lcm",
-  ``!(n k):num. lcm tb ta = lcm tb tc``,
-  rw_tac std_ss[triplet_def, leibniz_lcm_exchange |> SPEC ``n+1`` |> SIMP_RULE arith_ss[]]);
+Theorem leibniz_triplet_lcm:
+    !(n k):num. lcm tb ta = lcm tb tc
+Proof
+  rw_tac std_ss[triplet_def, leibniz_lcm_exchange |> SPEC ``n+1`` |> SIMP_RULE arith_ss[]]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Zigzag Path in Leibniz Triangle                                           *)
@@ -8243,9 +8526,9 @@ val _ = set_fixity "zigzag" (Infix(NONASSOC, 450)); (* same as relation *)
    = list_lcm (x ++ [tb; tc] ++ y)                      by list_lcm_append
    = list_lcm p2                                        by above
 *)
-val list_lcm_zigzag = store_thm(
-  "list_lcm_zigzag",
-  ``!p1 p2. p1 zigzag p2 ==> (list_lcm p1 = list_lcm p2)``,
+Theorem list_lcm_zigzag:
+    !p1 p2. p1 zigzag p2 ==> (list_lcm p1 = list_lcm p2)
+Proof
   rw_tac std_ss[leibniz_zigzag_def] >>
   `list_lcm (x ++ [tb; ta] ++ y) = lcm (list_lcm (x ++ [tb; ta])) (list_lcm y)` by rw[list_lcm_append] >>
   `_ = lcm (list_lcm (x ++ ([tb; ta]))) (list_lcm y)` by rw[] >>
@@ -8254,7 +8537,8 @@ val list_lcm_zigzag = store_thm(
   `_ = lcm (list_lcm (x ++ ([tb; tc]))) (list_lcm y)`  by rw[list_lcm_append] >>
   `_ = lcm (list_lcm (x ++ [tb; tc])) (list_lcm y)` by rw[] >>
   `_ = list_lcm (x ++ [tb; tc] ++ y)` by rw[list_lcm_append] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: p1 zigzag p2 ==> !x. ([x] ++ p1) zigzag ([x] ++ p2) *)
 (* Proof:
@@ -8270,10 +8554,11 @@ val list_lcm_zigzag = store_thm(
    Take new x = [x] ++ x, new y = y.
    Then ([x] ++ p1) zigzag ([x] ++ p2)   by leibniz_zigzag_def
 *)
-val leibniz_zigzag_tail = store_thm(
-  "leibniz_zigzag_tail",
-  ``!p1 p2. p1 zigzag p2 ==> !x. ([x] ++ p1) zigzag ([x] ++ p2)``,
-  metis_tac[leibniz_zigzag_def, APPEND]);
+Theorem leibniz_zigzag_tail:
+    !p1 p2. p1 zigzag p2 ==> !x. ([x] ++ p1) zigzag ([x] ++ p2)
+Proof
+  metis_tac[leibniz_zigzag_def, APPEND]
+QED
 
 (* Theorem: k <= n ==>
             TAKE (k + 1) (leibniz_horizontal (n + 1)) ++ DROP k (leibniz_horizontal n) zigzag
@@ -8357,13 +8642,14 @@ QED
          (triplet 0 0).c = 2     by EVAL_TAC
    Hence (leibniz_up 1) zigzag (leibniz_horizontal 1)   by leibniz_zigzag_def
 *)
-val leibniz_triplet_0 = store_thm(
-  "leibniz_triplet_0",
-  ``(leibniz_up 1) zigzag (leibniz_horizontal 1)``,
+Theorem leibniz_triplet_0:
+    (leibniz_up 1) zigzag (leibniz_horizontal 1)
+Proof
   `leibniz_up 1 = [] ++ [2; 1] ++ []` by EVAL_TAC >>
   `leibniz_horizontal 1 = [] ++ [2; 2] ++ []` by EVAL_TAC >>
   `((triplet 0 0).a = 1) /\ ((triplet 0 0).b = 2) /\ ((triplet 0 0).c = 2)` by EVAL_TAC >>
-  metis_tac[leibniz_zigzag_def]);
+  metis_tac[leibniz_zigzag_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Wriggle Paths in Leibniz Triangle                                         *)
@@ -8393,13 +8679,14 @@ val _ = set_fixity "wriggle" (Infix(NONASSOC, 450)); (* same as relation *)
        = list_lcm p1'     by list_lcm_zigzag
        = list_lcm p2      by induction hypothesis
 *)
-val list_lcm_wriggle = store_thm(
-  "list_lcm_wriggle",
-  ``!p1 p2. p1 wriggle p2 ==> (list_lcm p1 = list_lcm p2)``,
+Theorem list_lcm_wriggle:
+    !p1 p2. p1 wriggle p2 ==> (list_lcm p1 = list_lcm p2)
+Proof
   ho_match_mp_tac RTC_STRONG_INDUCT >>
   rpt strip_tac >-
   rw[] >>
-  metis_tac[list_lcm_zigzag]);
+  metis_tac[list_lcm_zigzag]
+QED
 
 (* Theorem: p1 zigzag p2 ==> p1 wriggle p2 *)
 (* Proof:
@@ -8407,10 +8694,11 @@ val list_lcm_wriggle = store_thm(
    = p1 (RTC zigzag) p2    by notation
    = p1 zigzag p2          by RTC_SINGLE
 *)
-val leibniz_zigzag_wriggle = store_thm(
-  "leibniz_zigzag_wriggle",
-  ``!p1 p2. p1 zigzag p2 ==> p1 wriggle p2``,
-  rw[]);
+Theorem leibniz_zigzag_wriggle:
+    !p1 p2. p1 zigzag p2 ==> p1 wriggle p2
+Proof
+  rw[]
+QED
 
 (* Theorem: p1 wriggle p2 ==> !x. ([x] ++ p1) wriggle ([x] ++ p2) *)
 (* Proof:
@@ -8425,27 +8713,30 @@ val leibniz_zigzag_wriggle = store_thm(
        With [x] ++ p1' wriggle [x] ++ p2   by induction hypothesis
       Hence [x] ++ p1 wriggle [x] ++ p2    by RTC_TRANS
 *)
-val leibniz_wriggle_tail = store_thm(
-  "leibniz_wriggle_tail",
-  ``!p1 p2. p1 wriggle p2 ==> !x. ([x] ++ p1) wriggle ([x] ++ p2)``,
+Theorem leibniz_wriggle_tail:
+    !p1 p2. p1 wriggle p2 ==> !x. ([x] ++ p1) wriggle ([x] ++ p2)
+Proof
   ho_match_mp_tac RTC_STRONG_INDUCT >>
   rpt strip_tac >-
   rw[] >>
-  metis_tac[leibniz_zigzag_tail, leibniz_zigzag_wriggle, RTC_TRANS]);
+  metis_tac[leibniz_zigzag_tail, leibniz_zigzag_wriggle, RTC_TRANS]
+QED
 
 (* Theorem: p1 wriggle p1 *)
 (* Proof: by RTC_REFL *)
-val leibniz_wriggle_refl = store_thm(
-  "leibniz_wriggle_refl",
-  ``!p1. p1 wriggle p1``,
-  metis_tac[RTC_REFL]);
+Theorem leibniz_wriggle_refl:
+    !p1. p1 wriggle p1
+Proof
+  metis_tac[RTC_REFL]
+QED
 
 (* Theorem: p1 wriggle p2 /\ p2 wriggle p3 ==> p1 wriggle p3 *)
 (* Proof: by RTC_TRANS *)
-val leibniz_wriggle_trans = store_thm(
-  "leibniz_wriggle_trans",
-  ``!p1 p2 p3. p1 wriggle p2 /\ p2 wriggle p3 ==> p1 wriggle p3``,
-  metis_tac[RTC_TRANS]);
+Theorem leibniz_wriggle_trans:
+    !p1 p2 p3. p1 wriggle p2 /\ p2 wriggle p3 ==> p1 wriggle p3
+Proof
+  metis_tac[RTC_TRANS]
+QED
 
 (* Theorem: k <= n + 1 ==>
             TAKE (k + 1) (leibniz_horizontal (n + 1)) ++ DROP k (leibniz_horizontal n) wriggle
@@ -8468,10 +8759,10 @@ val leibniz_wriggle_trans = store_thm(
         and p3 wriggle p1                by induction hypothesis
        Hence p2 wriggle p1               by RTC_RULES
 *)
-val leibniz_horizontal_wriggle_step = store_thm(
-  "leibniz_horizontal_wriggle_step",
-  ``!n k. k <= n + 1 ==> TAKE (k + 1) (leibniz_horizontal (n + 1)) ++ DROP k (leibniz_horizontal n) wriggle
-                        leibniz_horizontal (n + 1)``,
+Theorem leibniz_horizontal_wriggle_step:
+    !n k. k <= n + 1 ==> TAKE (k + 1) (leibniz_horizontal (n + 1)) ++ DROP k (leibniz_horizontal n) wriggle
+                        leibniz_horizontal (n + 1)
+Proof
   Induct_on `n + 1 - k` >| [
     rpt strip_tac >>
     rw_tac arith_ss[] >>
@@ -8488,19 +8779,21 @@ val leibniz_horizontal_wriggle_step = store_thm(
     qabbrev_tac `p3 = TAKE (k + 2) (leibniz_horizontal (n + 1)) ++ DROP (k + 1) (leibniz_horizontal n)` >>
     `p2 zigzag p3` by rw[leibniz_horizontal_zigzag, Abbr`p1`, Abbr`p2`, Abbr`p3`] >>
     metis_tac[RTC_RULES]
-  ]);
+  ]
+QED
 
 (* Theorem: ([leibniz (n + 1) 0] ++ leibniz_horizontal n) wriggle leibniz_horizontal (n + 1) *)
 (* Proof:
    Apply > leibniz_horizontal_wriggle_step |> SPEC ``n:num`` |> SPEC ``0`` |> SIMP_RULE std_ss[DROP_0];
    val it = |- TAKE 1 (leibniz_horizontal (n + 1)) ++ leibniz_horizontal n wriggle leibniz_horizontal (n + 1): thm
 *)
-val leibniz_horizontal_wriggle = store_thm(
-  "leibniz_horizontal_wriggle",
-  ``!n. ([leibniz (n + 1) 0] ++ leibniz_horizontal n) wriggle leibniz_horizontal (n + 1)``,
+Theorem leibniz_horizontal_wriggle:
+    !n. ([leibniz (n + 1) 0] ++ leibniz_horizontal n) wriggle leibniz_horizontal (n + 1)
+Proof
   rpt strip_tac >>
   `TAKE 1 (leibniz_horizontal (n + 1)) = [leibniz (n + 1) 0]` by rw[leibniz_horizontal_head, binomial_n_0] >>
-  metis_tac[leibniz_horizontal_wriggle_step |> SPEC ``n:num`` |> SPEC ``0`` |> SIMP_RULE std_ss[DROP_0]]);
+  metis_tac[leibniz_horizontal_wriggle_step |> SPEC ``n:num`` |> SPEC ``0`` |> SIMP_RULE std_ss[DROP_0]]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Path Transform keeping LCM                                                *)
@@ -8526,9 +8819,9 @@ val leibniz_horizontal_wriggle = store_thm(
         Hence leibniz_up (SUC n) wriggle
               leibniz_horizontal (SUC n)                   by leibniz_wriggle_trans, ADD1
 *)
-val leibniz_up_wriggle_horizontal = store_thm(
-  "leibniz_up_wriggle_horizontal",
-  ``!n. (leibniz_up n) wriggle (leibniz_horizontal n)``,
+Theorem leibniz_up_wriggle_horizontal:
+    !n. (leibniz_up n) wriggle (leibniz_horizontal n)
+Proof
   Induct >-
   rw[leibniz_up_0, leibniz_horizontal_0] >>
   qabbrev_tac `x = leibniz (n + 1) 0` >>
@@ -8536,7 +8829,8 @@ val leibniz_up_wriggle_horizontal = store_thm(
   `leibniz_up (n + 1) = [x] ++ (leibniz_up n)` by rw[leibniz_up_cons, Abbr`x`] >>
   `([x] ++ (leibniz_up n)) wriggle ([x] ++ (leibniz_horizontal n))` by rw[leibniz_wriggle_tail] >>
   `([x] ++ (leibniz_horizontal n)) wriggle (leibniz_horizontal (n + 1))` by rw[leibniz_horizontal_wriggle, Abbr`x`] >>
-  metis_tac[leibniz_wriggle_trans, ADD1]);
+  metis_tac[leibniz_wriggle_trans, ADD1]
+QED
 
 (* Theorem: list_lcm (leibniz_vertical n) = list_lcm (leibniz_horizontal n) *)
 (* Proof:
@@ -8546,10 +8840,11 @@ val leibniz_up_wriggle_horizontal = store_thm(
        = list_lcm (leibniz_up n)                        by list_lcm_reverse
        = list_lcm (leibniz_horizontal n)                by list_lcm_wriggle
 *)
-val leibniz_lcm_property = store_thm(
-  "leibniz_lcm_property",
-  ``!n. list_lcm (leibniz_vertical n) = list_lcm (leibniz_horizontal n)``,
-  metis_tac[leibniz_up_wriggle_horizontal, list_lcm_wriggle, list_lcm_reverse]);
+Theorem leibniz_lcm_property:
+    !n. list_lcm (leibniz_vertical n) = list_lcm (leibniz_horizontal n)
+Proof
+  metis_tac[leibniz_up_wriggle_horizontal, list_lcm_wriggle, list_lcm_reverse]
+QED
 
 (* This is a milestone theorem. *)
 
@@ -8558,10 +8853,11 @@ val leibniz_lcm_property = store_thm(
    Note (leibniz n k) divides list_lcm (leibniz_horizontal n)   by leibniz_horizontal_divisor
     ==> (leibniz n k) divides list_lcm (leibniz_vertical n)     by leibniz_lcm_property
 *)
-val leibniz_vertical_divisor = store_thm(
-  "leibniz_vertical_divisor",
-  ``!n k. k <= n ==> (leibniz n k) divides list_lcm (leibniz_vertical n)``,
-  metis_tac[leibniz_horizontal_divisor, leibniz_lcm_property]);
+Theorem leibniz_vertical_divisor:
+    !n k. k <= n ==> (leibniz n k) divides list_lcm (leibniz_vertical n)
+Proof
+  metis_tac[leibniz_horizontal_divisor, leibniz_lcm_property]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Lower Bound of Leibniz LCM                                                *)
@@ -8576,15 +8872,16 @@ val leibniz_vertical_divisor = store_thm(
    >= SUM (binomial_horizontal n)                 by list_lcm_lower_bound, [1]
    = 2 ** n                                       by binomial_horizontal_sum
 *)
-val leibniz_horizontal_lcm_lower = store_thm(
-  "leibniz_horizontal_lcm_lower",
-  ``!n. 2 ** n <= list_lcm (leibniz_horizontal n)``,
+Theorem leibniz_horizontal_lcm_lower:
+    !n. 2 ** n <= list_lcm (leibniz_horizontal n)
+Proof
   rpt strip_tac >>
   `LENGTH (binomial_horizontal n) = n + 1` by rw[binomial_horizontal_len] >>
   `EVERY_POSITIVE (binomial_horizontal n)` by rw[binomial_horizontal_pos] >>
   `list_lcm (leibniz_horizontal n) = (n + 1) * list_lcm (binomial_horizontal n)` by rw[leibniz_horizontal_lcm_alt] >>
   `SUM (binomial_horizontal n) = 2 ** n` by rw[binomial_horizontal_sum] >>
-  metis_tac[list_lcm_lower_bound]);
+  metis_tac[list_lcm_lower_bound]
+QED
 
 (* Theorem: 2 ** n <= list_lcm (leibniz_vertical n) *)
 (* Proof:
@@ -8592,17 +8889,19 @@ val leibniz_horizontal_lcm_lower = store_thm(
   = list_lcm (leibniz_horizontal n)      by leibniz_lcm_property
   >= 2 ** n                              by leibniz_horizontal_lcm_lower
 *)
-val leibniz_vertical_lcm_lower = store_thm(
-  "leibniz_vertical_lcm_lower",
-  ``!n. 2 ** n <= list_lcm (leibniz_vertical n)``,
-  rw_tac std_ss[leibniz_horizontal_lcm_lower, leibniz_lcm_property]);
+Theorem leibniz_vertical_lcm_lower:
+    !n. 2 ** n <= list_lcm (leibniz_vertical n)
+Proof
+  rw_tac std_ss[leibniz_horizontal_lcm_lower, leibniz_lcm_property]
+QED
 
 (* Theorem: 2 ** n <= list_lcm [1 .. (n + 1)] *)
 (* Proof: by leibniz_vertical_lcm_lower. *)
-val lcm_lower_bound = store_thm(
-  "lcm_lower_bound",
-  ``!n. 2 ** n <= list_lcm [1 .. (n + 1)]``,
-  rw[leibniz_vertical_lcm_lower]);
+Theorem lcm_lower_bound:
+    !n. 2 ** n <= list_lcm [1 .. (n + 1)]
+Proof
+  rw[leibniz_vertical_lcm_lower]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Leibniz LCM Invariance                                                    *)
@@ -8632,10 +8931,11 @@ val it = |- list_lcm (leibniz_seg_arm 5 1 4) = 60: thm
    = MAP (\x. leibniz (a - x) b) []            by listRangeLHI_def
    = []                                        by MAP
 *)
-val leibniz_col_arm_0 = store_thm(
-  "leibniz_col_arm_0",
-  ``!a b. leibniz_col_arm a b 0 = []``,
-  rw[]);
+Theorem leibniz_col_arm_0:
+    !a b. leibniz_col_arm a b 0 = []
+Proof
+  rw[]
+QED
 
 (* Theorem: leibniz_seg_arm a b 0 = [] *)
 (* Proof:
@@ -8644,10 +8944,11 @@ val leibniz_col_arm_0 = store_thm(
    = MAP (\x. leibniz a (b + x)) []            by listRangeLHI_def
    = []                                        by MAP
 *)
-val leibniz_seg_arm_0 = store_thm(
-  "leibniz_seg_arm_0",
-  ``!a b. leibniz_seg_arm a b 0 = []``,
-  rw[]);
+Theorem leibniz_seg_arm_0:
+    !a b. leibniz_seg_arm a b 0 = []
+Proof
+  rw[]
+QED
 
 (* Theorem: leibniz_col_arm a b 1 = [leibniz a b] *)
 (* Proof:
@@ -8657,10 +8958,11 @@ val leibniz_seg_arm_0 = store_thm(
    = (\x. leibniz (a - x) b) 0 ::[]            by MAP
    = [leibniz a b]                             by function application
 *)
-val leibniz_col_arm_1 = store_thm(
-  "leibniz_col_arm_1",
-  ``!a b. leibniz_col_arm a b 1 = [leibniz a b]``,
-  rw[listRangeLHI_def]);
+Theorem leibniz_col_arm_1:
+    !a b. leibniz_col_arm a b 1 = [leibniz a b]
+Proof
+  rw[listRangeLHI_def]
+QED
 
 (* Theorem: leibniz_seg_arm a b 1 = [leibniz a b] *)
 (* Proof:
@@ -8670,10 +8972,11 @@ val leibniz_col_arm_1 = store_thm(
    = (\x. leibniz a (b + x)) 0 :: []           by MAP
    = [leibniz a b]                             by function application
 *)
-val leibniz_seg_arm_1 = store_thm(
-  "leibniz_seg_arm_1",
-  ``!a b. leibniz_seg_arm a b 1 = [leibniz a b]``,
-  rw[listRangeLHI_def]);
+Theorem leibniz_seg_arm_1:
+    !a b. leibniz_seg_arm a b 1 = [leibniz a b]
+Proof
+  rw[listRangeLHI_def]
+QED
 
 (* Theorem: LENGTH (leibniz_col_arm a b n) = n *)
 (* Proof:
@@ -8683,10 +8986,11 @@ val leibniz_seg_arm_1 = store_thm(
    = LENGTH (GENLIST (\i. i) n)                       by listRangeLHI_def
    = m                                                by LENGTH_GENLIST
 *)
-val leibniz_col_arm_len = store_thm(
-  "leibniz_col_arm_len",
-  ``!a b n. LENGTH (leibniz_col_arm a b n) = n``,
-  rw[]);
+Theorem leibniz_col_arm_len:
+    !a b n. LENGTH (leibniz_col_arm a b n) = n
+Proof
+  rw[]
+QED
 
 (* Theorem: LENGTH (leibniz_seg_arm a b n) = n *)
 (* Proof:
@@ -8696,10 +9000,11 @@ val leibniz_col_arm_len = store_thm(
    = LENGTH (GENLIST (\i. i) n)                       by listRangeLHI_def
    = m                                                by LENGTH_GENLIST
 *)
-val leibniz_seg_arm_len = store_thm(
-  "leibniz_seg_arm_len",
-  ``!a b n. LENGTH (leibniz_seg_arm a b n) = n``,
-  rw[]);
+Theorem leibniz_seg_arm_len:
+    !a b n. LENGTH (leibniz_seg_arm a b n) = n
+Proof
+  rw[]
+QED
 
 (* Theorem: k < n ==> !a b. EL k (leibniz_col_arm a b n) = leibniz (a - k) b *)
 (* Proof:
@@ -8710,10 +9015,11 @@ val leibniz_seg_arm_len = store_thm(
    = (\x. leibniz (a - x) b) k                    by EL_listRangeLHI
    = leibniz (a - k) b
 *)
-val leibniz_col_arm_el = store_thm(
-  "leibniz_col_arm_el",
-  ``!n k. k < n ==> !a b. EL k (leibniz_col_arm a b n) = leibniz (a - k) b``,
-  rw[EL_MAP, EL_listRangeLHI]);
+Theorem leibniz_col_arm_el:
+    !n k. k < n ==> !a b. EL k (leibniz_col_arm a b n) = leibniz (a - k) b
+Proof
+  rw[EL_MAP, EL_listRangeLHI]
+QED
 
 (* Theorem: k < n ==> !a b. EL k (leibniz_seg_arm a b n) = leibniz a (b + k) *)
 (* Proof:
@@ -8724,10 +9030,11 @@ val leibniz_col_arm_el = store_thm(
    = (\x. leibniz a (b + x)) k                    by EL_listRangeLHI
    = leibniz a (b + k)
 *)
-val leibniz_seg_arm_el = store_thm(
-  "leibniz_seg_arm_el",
-  ``!n k. k < n ==> !a b. EL k (leibniz_seg_arm a b n) = leibniz a (b + k)``,
-  rw[EL_MAP, EL_listRangeLHI]);
+Theorem leibniz_seg_arm_el:
+    !n k. k < n ==> !a b. EL k (leibniz_seg_arm a b n) = leibniz a (b + k)
+Proof
+  rw[EL_MAP, EL_listRangeLHI]
+QED
 
 (* Theorem: TAKE 1 (leibniz_seg_arm a b (n + 1)) = [leibniz a b] *)
 (* Proof:
@@ -8739,11 +9046,12 @@ val leibniz_seg_arm_el = store_thm(
    = [EL 0 (leibniz_seg_arm a b (n + 1))]              by SNOC_NIL
    = leibniz a b                                       by leibniz_seg_arm_el
 *)
-val leibniz_seg_arm_head = store_thm(
-  "leibniz_seg_arm_head",
-  ``!a b n. TAKE 1 (leibniz_seg_arm a b (n + 1)) = [leibniz a b]``,
+Theorem leibniz_seg_arm_head:
+    !a b n. TAKE 1 (leibniz_seg_arm a b (n + 1)) = [leibniz a b]
+Proof
   metis_tac[leibniz_seg_arm_len, leibniz_seg_arm_el,
-             ONE, TAKE_SUC_BY_TAKE, TAKE_0, SNOC_NIL, DECIDE``!n. 0 < n + 1 /\ (n + 0 = n)``]);
+             ONE, TAKE_SUC_BY_TAKE, TAKE_0, SNOC_NIL, DECIDE``!n. 0 < n + 1 /\ (n + 0 = n)``]
+QED
 
 (* Theorem: leibniz_col_arm (a + 1) b (n + 1) = leibniz (a + 1) b :: leibniz_col_arm a b n *)
 (* Proof:
@@ -8760,9 +9068,9 @@ val leibniz_seg_arm_head = store_thm(
    = leibniz (a + 1) b :: MAP (\x. leibniz (a - x) b) [0 ..< n]        by above
    = leibniz (a + 1) b :: leibniz_col_arm a b n                        by notation
 *)
-val leibniz_col_arm_cons = store_thm(
-  "leibniz_col_arm_cons",
-  ``!a b n. leibniz_col_arm (a + 1) b (n + 1) = leibniz (a + 1) b :: leibniz_col_arm a b n``,
+Theorem leibniz_col_arm_cons:
+    !a b n. leibniz_col_arm (a + 1) b (n + 1) = leibniz (a + 1) b :: leibniz_col_arm a b n
+Proof
   rpt strip_tac >>
   `!a x. a + 1 - SUC x + 1 = a - x + 1` by decide_tac >>
   `!a x. a + 1 - SUC x = a - x` by decide_tac >>
@@ -8772,7 +9080,8 @@ val leibniz_col_arm_cons = store_thm(
   `_ = leibniz (a + 1) b :: MAP (\x. leibniz (a + 1 - x) b) [0+1 ..< (n+1)]` by rw[] >>
   `_ = leibniz (a + 1) b :: MAP ((\x. leibniz (a + 1 - x) b) o SUC) [0 ..< n]` by rw[listRangeLHI_MAP_SUC] >>
   `_ = leibniz (a + 1) b :: leibniz_col_arm a b n` by rw[] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: k < n ==> !a b.
     TAKE (k + 1) (leibniz_seg_arm (a + 1) b (n + 1)) ++ DROP k (leibniz_seg_arm a b n) zigzag
@@ -8802,11 +9111,11 @@ val leibniz_col_arm_cons = store_thm(
            = x ++ [t.b; t.c] ++ y
    Therefore p1 zigzag p2                             by leibniz_zigzag_def
 *)
-val leibniz_seg_arm_zigzag_step = store_thm(
-  "leibniz_seg_arm_zigzag_step",
-  ``!n k. k < n ==> !a b.
+Theorem leibniz_seg_arm_zigzag_step:
+    !n k. k < n ==> !a b.
     TAKE (k + 1) (leibniz_seg_arm (a + 1) b (n + 1)) ++ DROP k (leibniz_seg_arm a b n) zigzag
-    TAKE (k + 2) (leibniz_seg_arm (a + 1) b (n + 1)) ++ DROP (k + 1) (leibniz_seg_arm a b n)``,
+    TAKE (k + 2) (leibniz_seg_arm (a + 1) b (n + 1)) ++ DROP (k + 1) (leibniz_seg_arm a b n)
+Proof
   rpt strip_tac >>
   qabbrev_tac `x = TAKE k (leibniz_seg_arm (a + 1) b (n + 1))` >>
   qabbrev_tac `y = DROP (k + 1) (leibniz_seg_arm a b n)` >>
@@ -8830,7 +9139,8 @@ val leibniz_seg_arm_zigzag_step = store_thm(
   qabbrev_tac `p2 = TAKE (k + 2) (leibniz_seg_arm (a + 1) b (n + 1)) ++ y` >>
   `p1 = x ++ [t.b; t.a] ++ y` by rw[Abbr`p1`, Abbr`x`, Abbr`y`] >>
   `p2 = x ++ [t.b; t.c] ++ y` by rw[Abbr`p2`, Abbr`x`] >>
-  metis_tac[leibniz_zigzag_def]);
+  metis_tac[leibniz_zigzag_def]
+QED
 
 (* Theorem: k < n + 1 ==> !a b.
             TAKE (k + 1) (leibniz_seg_arm (a + 1) b (n + 1)) ++ DROP k (leibniz_seg_arm a b n) wriggle
@@ -8855,11 +9165,11 @@ val leibniz_seg_arm_zigzag_step = store_thm(
         and p3 wriggle p1                by induction hypothesis
        Hence p2 wriggle p1               by RTC_RULES
 *)
-val leibniz_seg_arm_wriggle_step = store_thm(
-  "leibniz_seg_arm_wriggle_step",
-  ``!n k. k < n + 1 ==> !a b.
+Theorem leibniz_seg_arm_wriggle_step:
+    !n k. k < n + 1 ==> !a b.
     TAKE (k + 1) (leibniz_seg_arm (a + 1) b (n + 1)) ++ DROP k (leibniz_seg_arm a b n) wriggle
-    leibniz_seg_arm (a + 1) b (n + 1)``,
+    leibniz_seg_arm (a + 1) b (n + 1)
+Proof
   Induct_on `n - k` >| [
     rpt strip_tac >>
     `k = n` by decide_tac >>
@@ -8873,7 +9183,8 @@ val leibniz_seg_arm_wriggle_step = store_thm(
     `k + 1 < n + 1` by decide_tac >>
     `k + 1 + 1 = k + 2` by decide_tac >>
     metis_tac[RTC_RULES]
-  ]);
+  ]
+QED
 
 (* Theorem: ([leibniz (a + 1) b] ++ leibniz_seg_arm a b n) wriggle leibniz_seg_arm (a + 1) b (n + 1) *)
 (* Proof:
@@ -8890,12 +9201,13 @@ val leibniz_seg_arm_wriggle_step = store_thm(
    = TAKE 1 (leibniz_seg_arm (a + 1) b (n + 1)) ++ DROP 0 (leibniz_seg_arm a b n)  by DROP_0
    wriggle leibniz_seg_arm (a + 1) b (n + 1)            by leibniz_seg_arm_wriggle_step, put k = 0
 *)
-val leibniz_seg_arm_wriggle_row_arm = store_thm(
-  "leibniz_seg_arm_wriggle_row_arm",
-  ``!a b n. ([leibniz (a + 1) b] ++ leibniz_seg_arm a b n) wriggle leibniz_seg_arm (a + 1) b (n + 1)``,
+Theorem leibniz_seg_arm_wriggle_row_arm:
+    !a b n. ([leibniz (a + 1) b] ++ leibniz_seg_arm a b n) wriggle leibniz_seg_arm (a + 1) b (n + 1)
+Proof
   rpt strip_tac >>
   `0 < n + 1 /\ (0 + 1 = 1)` by decide_tac >>
-  metis_tac[leibniz_seg_arm_head, leibniz_seg_arm_wriggle_step, DROP_0]);
+  metis_tac[leibniz_seg_arm_head, leibniz_seg_arm_wriggle_step, DROP_0]
+QED
 
 (* Theorem: b <= a /\ n <= a + 1 - b ==> (leibniz_col_arm a b n) wriggle (leibniz_seg_arm a b n) *)
 (* Proof:
@@ -8942,9 +9254,9 @@ val leibniz_seg_arm_wriggle_row_arm = store_thm(
         Hence leibniz_col_arm a b (SUC n) wriggle
               leibniz_seg_arm a b (SUC n)                 by leibniz_wriggle_trans, ADD1
 *)
-val leibniz_col_arm_wriggle_row_arm = store_thm(
-  "leibniz_col_arm_wriggle_row_arm",
-  ``!a b n. b <= a /\ n <= a + 1 - b ==> (leibniz_col_arm a b n) wriggle (leibniz_seg_arm a b n)``,
+Theorem leibniz_col_arm_wriggle_row_arm:
+    !a b n. b <= a /\ n <= a + 1 - b ==> (leibniz_col_arm a b n) wriggle (leibniz_seg_arm a b n)
+Proof
   Induct_on `n` >-
   rw[leibniz_col_arm_0, leibniz_seg_arm_0] >>
   rpt strip_tac >>
@@ -8964,17 +9276,19 @@ val leibniz_col_arm_wriggle_row_arm = store_thm(
       `([x] ++ (leibniz_seg_arm a b n)) wriggle (leibniz_seg_arm (a + 1) b (n + 1))` by rw[leibniz_seg_arm_wriggle_row_arm, Abbr`x`] >>
       metis_tac[leibniz_wriggle_trans, ADD1]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: b <= a /\ n <= a + 1 - b ==> (list_lcm (leibniz_col_arm a b n) = list_lcm (leibniz_seg_arm a b n)) *)
 (* Proof:
    Since (leibniz_col_arm a b n) wriggle (leibniz_seg_arm a b n)   by leibniz_col_arm_wriggle_row_arm
      the result follows                                            by list_lcm_wriggle
 *)
-val leibniz_lcm_invariance = store_thm(
-  "leibniz_lcm_invariance",
-  ``!a b n. b <= a /\ n <= a + 1 - b ==> (list_lcm (leibniz_col_arm a b n) = list_lcm (leibniz_seg_arm a b n))``,
-  rw[leibniz_col_arm_wriggle_row_arm, list_lcm_wriggle]);
+Theorem leibniz_lcm_invariance:
+    !a b n. b <= a /\ n <= a + 1 - b ==> (list_lcm (leibniz_col_arm a b n) = list_lcm (leibniz_seg_arm a b n))
+Proof
+  rw[leibniz_col_arm_wriggle_row_arm, list_lcm_wriggle]
+QED
 
 (* This is a milestone theorem. *)
 
@@ -8994,9 +9308,9 @@ val leibniz_lcm_invariance = store_thm(
    = REVERSE (leibniz_vertical n)                     by notation
    = leibniz_up n                                     by notation
 *)
-val leibniz_col_arm_n_0 = store_thm(
-  "leibniz_col_arm_n_0",
-  ``!n. leibniz_col_arm n 0 (n + 1) = leibniz_up n``,
+Theorem leibniz_col_arm_n_0:
+    !n. leibniz_col_arm n 0 (n + 1) = leibniz_up n
+Proof
   rpt strip_tac >>
   `(\x. x + 1) = SUC` by rw[FUN_EQ_THM] >>
   `(\x. leibniz x 0) o (\x. n - x + 0) = (\x. leibniz (n - x) 0)` by rw[FUN_EQ_THM] >>
@@ -9007,7 +9321,8 @@ val leibniz_col_arm_n_0 = store_thm(
   `_ = REVERSE (MAP SUC [0 .. n])` by rw[ADD1] >>
   `_ = REVERSE (MAP (I o SUC) [0 .. n])` by rw[] >>
   `_ = REVERSE [1 .. (n+1)]` by rw[GSYM listRangeINC_MAP_SUC] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: leibniz_seg_arm n 0 (n + 1) = leibniz_horizontal n *)
 (* Proof:
@@ -9020,9 +9335,9 @@ val leibniz_col_arm_n_0 = store_thm(
    = GENLIST (leibniz n) (n + 1)                 by I_THM
    = leibniz_horizontal n                        by notation
 *)
-val leibniz_seg_arm_n_0 = store_thm(
-  "leibniz_seg_arm_n_0",
-  ``!n. leibniz_seg_arm n 0 (n + 1) = leibniz_horizontal n``,
+Theorem leibniz_seg_arm_n_0:
+    !n. leibniz_seg_arm n 0 (n + 1) = leibniz_horizontal n
+Proof
   rpt strip_tac >>
   `(\x. x) = I` by rw[FUN_EQ_THM] >>
   `(\x. leibniz n x) = leibniz n` by rw[FUN_EQ_THM] >>
@@ -9031,7 +9346,8 @@ val leibniz_seg_arm_n_0 = store_thm(
   `_ = MAP (leibniz n) (GENLIST I (n + 1))` by metis_tac[] >>
   `_ = GENLIST ((leibniz n) o I) (n + 1)` by rw[MAP_GENLIST] >>
   `_ = GENLIST (leibniz n) (n + 1)` by rw[] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: (leibniz_up n) wriggle (leibniz_horizontal n) *)
 (* Proof:
@@ -9041,19 +9357,21 @@ val leibniz_seg_arm_n_0 = store_thm(
    wriggle leibniz_seg_arm n 0 (n + 1)   by leibniz_col_arm_wriggle_row_arm
    = leibniz_horizontal n                by leibniz_seg_arm_n_0
 *)
-val leibniz_up_wriggle_horizontal_alt = store_thm(
-  "leibniz_up_wriggle_horizontal_alt",
-  ``!n. (leibniz_up n) wriggle (leibniz_horizontal n)``,
+Theorem leibniz_up_wriggle_horizontal_alt:
+    !n. (leibniz_up n) wriggle (leibniz_horizontal n)
+Proof
   rpt strip_tac >>
   `0 <= n /\ n + 1 <= n + 1 - 0` by decide_tac >>
-  metis_tac[leibniz_col_arm_wriggle_row_arm, leibniz_col_arm_n_0, leibniz_seg_arm_n_0]);
+  metis_tac[leibniz_col_arm_wriggle_row_arm, leibniz_col_arm_n_0, leibniz_seg_arm_n_0]
+QED
 
 (* Theorem: list_lcm (leibniz_up n) = list_lcm (leibniz_horizontal n) *)
 (* Proof: by leibniz_up_wriggle_horizontal_alt, list_lcm_wriggle *)
-val leibniz_up_lcm_eq_horizontal_lcm = store_thm(
-  "leibniz_up_lcm_eq_horizontal_lcm",
-  ``!n. list_lcm (leibniz_up n) = list_lcm (leibniz_horizontal n)``,
-  rw[leibniz_up_wriggle_horizontal_alt, list_lcm_wriggle]);
+Theorem leibniz_up_lcm_eq_horizontal_lcm:
+    !n. list_lcm (leibniz_up n) = list_lcm (leibniz_horizontal n)
+Proof
+  rw[leibniz_up_wriggle_horizontal_alt, list_lcm_wriggle]
+QED
 
 (* This is another proof of the milestone theorem. *)
 
@@ -9172,24 +9490,27 @@ val _ = overload_on("leibniz_col", ``\h. IMAGE (\i. leibniz i 0) (count h)``);
 
 (* Theorem: leibniz_seg n k h = {leibniz n (k + j) | j | j IN (count h)} *)
 (* Proof: by notation *)
-val leibniz_seg_def = store_thm(
-  "leibniz_seg_def",
-  ``!n k h. leibniz_seg n k h = {leibniz n (k + j) | j | j IN (count h)}``,
-  rw[EXTENSION]);
+Theorem leibniz_seg_def:
+    !n k h. leibniz_seg n k h = {leibniz n (k + j) | j | j IN (count h)}
+Proof
+  rw[EXTENSION]
+QED
 
 (* Theorem: leibniz_row n h = {leibniz n j | j | j IN (count h)} *)
 (* Proof: by notation *)
-val leibniz_row_def = store_thm(
-  "leibniz_row_def",
-  ``!n h. leibniz_row n h = {leibniz n j | j | j IN (count h)}``,
-  rw[EXTENSION]);
+Theorem leibniz_row_def:
+    !n h. leibniz_row n h = {leibniz n j | j | j IN (count h)}
+Proof
+  rw[EXTENSION]
+QED
 
 (* Theorem: leibniz_col h = {leibniz j 0 | j | j IN (count h)} *)
 (* Proof: by notation *)
-val leibniz_col_def = store_thm(
-  "leibniz_col_def",
-  ``!h. leibniz_col h = {leibniz j 0 | j | j IN (count h)}``,
-  rw[EXTENSION]);
+Theorem leibniz_col_def:
+    !h. leibniz_col h = {leibniz j 0 | j | j IN (count h)}
+Proof
+  rw[EXTENSION]
+QED
 
 (* Theorem: leibniz_col n = natural n *)
 (* Proof:
@@ -9200,10 +9521,11 @@ val leibniz_col_def = store_thm(
    = IMAGE SUC (count n)                  by FUN_EQ_THM
    = natural n                            by notation
 *)
-val leibniz_col_eq_natural = store_thm(
-  "leibniz_col_eq_natural",
-  ``!n. leibniz_col n = natural n``,
-  rw[leibniz_n_0, ADD1, FUN_EQ_THM]);
+Theorem leibniz_col_eq_natural:
+    !n. leibniz_col n = natural n
+Proof
+  rw[leibniz_n_0, ADD1, FUN_EQ_THM]
+QED
 
 (* The following can be taken as a generalisation of the Leibniz Triplet LCM exchange. *)
 (* When length h = 1, the top row is a singleton, and the next row is a duplet, altogether a triplet. *)
@@ -9258,10 +9580,10 @@ val leibniz_col_eq_natural = store_thm(
      = big_lcm (IMAGE q (count (SUC (h + 1))))                    by upto_by_count
      = big_lcm (IMAGE q (count (SUC h + 1)))                      by ADD
 *)
-val big_lcm_seg_transform = store_thm(
-  "big_lcm_seg_transform",
-  ``!n k h. lcm (leibniz (n + 1) k) (big_lcm (leibniz_seg n k h)) =
-           big_lcm (leibniz_seg (n + 1) k (h + 1))``,
+Theorem big_lcm_seg_transform:
+    !n k h. lcm (leibniz (n + 1) k) (big_lcm (leibniz_seg n k h)) =
+           big_lcm (leibniz_seg (n + 1) k (h + 1))
+Proof
   rpt strip_tac >>
   qabbrev_tac `p = (\j. leibniz n (k + j))` >>
   qabbrev_tac `q = (\j. leibniz (n + 1) (k + j))` >>
@@ -9285,19 +9607,21 @@ val big_lcm_seg_transform = store_thm(
     `_ = lcm (q (h + 1)) (big_lcm (IMAGE q (count (h + 1))))` by rw[ADD1] >>
     `_ = big_lcm (IMAGE q (count (SUC (h + 1))))` by rw[upto_by_count, big_lcm_insert] >>
     metis_tac[ADD]
-  ]);
+  ]
+QED
 
 (* Theorem: lcm (leibniz (n + 1) 0) (big_lcm (leibniz_row n h)) = big_lcm (leibniz_row (n + 1) (h + 1)) *)
 (* Proof:
    Note !n h. leibniz_row n h = leibniz_seg n 0 h   by FUN_EQ_THM
    Take k = 0 in big_lcm_seg_transform, the result follows.
 *)
-val big_lcm_row_transform = store_thm(
-  "big_lcm_row_transform",
-  ``!n h. lcm (leibniz (n + 1) 0) (big_lcm (leibniz_row n h)) = big_lcm (leibniz_row (n + 1) (h + 1))``,
+Theorem big_lcm_row_transform:
+    !n h. lcm (leibniz (n + 1) 0) (big_lcm (leibniz_row n h)) = big_lcm (leibniz_row (n + 1) (h + 1))
+Proof
   rpt strip_tac >>
   `!n h. leibniz_row n h = leibniz_seg n 0 h` by rw[FUN_EQ_THM] >>
-  metis_tac[big_lcm_seg_transform]);
+  metis_tac[big_lcm_seg_transform]
+QED
 
 (* Theorem: big_lcm (leibniz_col (n + 1)) = big_lcm (leibniz_row n (n + 1)) *)
 (* Proof:
@@ -9325,9 +9649,9 @@ val big_lcm_row_transform = store_thm(
        = big_lcm (IMAGE (leibniz (n + 1)) (count (n + 1 + 1)))             by big_lcm_line_transform
        = big_lcm (IMAGE (leibniz (SUC n)) (count (SUC n + 1)))             by ADD1
 *)
-val big_lcm_corner_transform = store_thm(
-  "big_lcm_corner_transform",
-  ``!n. big_lcm (leibniz_col (n + 1)) = big_lcm (leibniz_row n (n + 1))``,
+Theorem big_lcm_corner_transform:
+    !n. big_lcm (leibniz_col (n + 1)) = big_lcm (leibniz_row n (n + 1))
+Proof
   Induct >-
   rw[COUNT_1, IMAGE_SING] >>
   qabbrev_tac `f = \i. leibniz i 0` >>
@@ -9336,7 +9660,8 @@ val big_lcm_corner_transform = store_thm(
   `_ = lcm (leibniz (n + 1) 0) (big_lcm (IMAGE (leibniz n) (count (n + 1))))` by rw[Abbr`f`] >>
   `_ = big_lcm (IMAGE (leibniz (n + 1)) (count (n + 1 + 1)))` by rw[big_lcm_row_transform] >>
   `_ = big_lcm (IMAGE (leibniz (SUC n)) (count (SUC n + 1)))` by rw[ADD1] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: (!x. x IN (count (n + 1)) ==> 0 < f x) ==>
             SUM (GENLIST f (n + 1)) <= (n + 1) * big_lcm (IMAGE f (count (n + 1))) *)
@@ -9377,10 +9702,10 @@ val big_lcm_corner_transform = store_thm(
           >= SUM (GENLIST f (n + 1)) + f (n + 1)                            by induction hypothesis
            = LHS                                                            by above
 *)
-val big_lcm_count_lower_bound = store_thm(
-  "big_lcm_count_lower_bound",
-  ``!f n. (!x. x IN (count (n + 1)) ==> 0 < f x) ==>
-    SUM (GENLIST f (n + 1)) <= (n + 1) * big_lcm (IMAGE f (count (n + 1)))``,
+Theorem big_lcm_count_lower_bound:
+    !f n. (!x. x IN (count (n + 1)) ==> 0 < f x) ==>
+    SUM (GENLIST f (n + 1)) <= (n + 1) * big_lcm (IMAGE f (count (n + 1)))
+Proof
   rpt strip_tac >>
   Induct_on `n` >| [
     rpt strip_tac >>
@@ -9407,7 +9732,8 @@ val big_lcm_count_lower_bound = store_thm(
     `SUM (GENLIST f (SUC n + 1)) = SUM (GENLIST f (SUC (n + 1)))` by rw[ADD] >>
     `_ = SUM (GENLIST f (n + 1)) + f (n + 1)` by rw[GENLIST, SUM_SNOC] >>
     metis_tac[LESS_EQ_TRANS, DECIDE``!a x y. 0 < a /\ x <= y ==> x + a <= y + a``]
-  ]);
+  ]
+QED
 
 (* Theorem: big_lcm (natural (n + 1)) = (n + 1) * big_lcm (IMAGE (binomial n) (count (n + 1))) *)
 (* Proof:
@@ -9426,9 +9752,9 @@ val big_lcm_count_lower_bound = store_thm(
    = big_lcm (IMAGE ($* (n + 1)) (IMAGE (binomial n) (count (n + 1))))  by IMAGE_COMPOSE, o_DEF
    = (n + 1) * big_lcm (IMAGE (binomial n) (count (n + 1)))  by big_lcm_map_times, FINITE_COUNT, [1]
 *)
-val big_lcm_natural_eqn = store_thm(
-  "big_lcm_natural_eqn",
-  ``!n. big_lcm (natural (n + 1)) = (n + 1) * big_lcm (IMAGE (binomial n) (count (n + 1)))``,
+Theorem big_lcm_natural_eqn:
+    !n. big_lcm (natural (n + 1)) = (n + 1) * big_lcm (IMAGE (binomial n) (count (n + 1)))
+Proof
   rpt strip_tac >>
   `SUC = \i. leibniz i 0` by rw[leibniz_n_0, FUN_EQ_THM] >>
   `leibniz n = \j. (n + 1) * binomial n j` by rw[leibniz_def, FUN_EQ_THM] >>
@@ -9440,7 +9766,8 @@ val big_lcm_natural_eqn = store_thm(
   `_ = big_lcm (IMAGE (\j. (n + 1) * binomial n j) (count (n + 1)))` by rw[] >>
   `_ = big_lcm (IMAGE ($* (n + 1)) (IMAGE (binomial n) (count (n + 1))))` by rw[GSYM IMAGE_COMPOSE, combinTheory.o_DEF] >>
   `_ = (n + 1) * big_lcm (IMAGE (binomial n) (count (n + 1)))` by rw[big_lcm_map_times] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: 2 ** n <= big_lcm (natural (n + 1)) *)
 (* Proof:
@@ -9451,14 +9778,15 @@ val big_lcm_natural_eqn = store_thm(
    = SUM (GENLIST (binomial n) (SUC n))                      by ADD1
    = 2 ** n                                                  by binomial_sum
 *)
-val big_lcm_lower_bound = store_thm(
-  "big_lcm_lower_bound",
-  ``!n. 2 ** n <= big_lcm (natural (n + 1))``,
+Theorem big_lcm_lower_bound:
+    !n. 2 ** n <= big_lcm (natural (n + 1))
+Proof
   rpt strip_tac >>
   `!x. x IN (count (n + 1)) ==> 0 < (binomial n) x` by rw[binomial_pos] >>
   `big_lcm (IMAGE SUC (count (n + 1))) = (n + 1) * big_lcm (IMAGE (binomial n) (count (n + 1)))` by rw[big_lcm_natural_eqn] >>
   `SUM (GENLIST (binomial n) (n + 1)) = 2 ** n` by rw[GSYM binomial_sum, ADD1] >>
-  metis_tac[big_lcm_count_lower_bound]);
+  metis_tac[big_lcm_count_lower_bound]
+QED
 
 (* Another proof of the milestone theorem. *)
 
@@ -9478,12 +9806,13 @@ val big_lcm_lower_bound = store_thm(
      = lcm h (list_lcm l)           by induction hypothesis
      = list_lcm (h::l)              by list_lcm_cons
 *)
-val big_lcm_eq_list_lcm = store_thm(
-  "big_lcm_eq_list_lcm",
-  ``!l. big_lcm (set l) = list_lcm l``,
+Theorem big_lcm_eq_list_lcm:
+    !l. big_lcm (set l) = list_lcm l
+Proof
   Induct >-
   rw[big_lcm_empty] >>
-  rw[big_lcm_insert]);
+  rw[big_lcm_insert]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* List LCM depends only on its set of elements                              *)
@@ -9511,9 +9840,9 @@ val big_lcm_eq_list_lcm = store_thm(
        = lcm h (list_lcm l)           by induction hypothesis, MEM x l
        = list_lcm (h::l)              by list_lcm_cons
 *)
-val list_lcm_absorption = store_thm(
-  "list_lcm_absorption",
-  ``!x l. MEM x l ==> (list_lcm (x::l) = list_lcm l)``,
+Theorem list_lcm_absorption:
+    !x l. MEM x l ==> (list_lcm (x::l) = list_lcm l)
+Proof
   rpt strip_tac >>
   Induct_on `l` >-
   metis_tac[MEM] >>
@@ -9523,7 +9852,8 @@ val list_lcm_absorption = store_thm(
     `lcm x (lcm h (list_lcm l)) = lcm h (lcm x (list_lcm l))` by rw[LCM_ASSOC_COMM] >>
     `_  = lcm h (list_lcm (x::l))` by metis_tac[list_lcm_cons] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: list_lcm (nub l) = list_lcm l *)
 (* Proof:
@@ -9543,12 +9873,13 @@ val list_lcm_absorption = store_thm(
          = lcm h (list_lcm l)       by induction hypothesis
          = list_lcm (h::l)          by list_lcm_cons
 *)
-val list_lcm_nub = store_thm(
-  "list_lcm_nub",
-  ``!l. list_lcm (nub l) = list_lcm l``,
+Theorem list_lcm_nub:
+    !l. list_lcm (nub l) = list_lcm l
+Proof
   Induct >-
   rw[nub_nil] >>
-  metis_tac[nub_cons, list_lcm_cons, list_lcm_absorption]);
+  metis_tac[nub_cons, list_lcm_cons, list_lcm_absorption]
+QED
 
 (* Theorem: (set l1 = set l2) ==> (list_lcm (nub l1) = list_lcm (nub l2)) *)
 (* Proof:
@@ -9586,9 +9917,9 @@ val list_lcm_nub = store_thm(
               = list_lcm (p1 ++ [h] ++ p2)                by APPEND_ASSOC
               = list_lcm (nub l2)                         by above
 *)
-val list_lcm_nub_eq_if_set_eq = store_thm(
-  "list_lcm_nub_eq_if_set_eq",
-  ``!l1 l2. (set l1 = set l2) ==> (list_lcm (nub l1) = list_lcm (nub l2))``,
+Theorem list_lcm_nub_eq_if_set_eq:
+    !l1 l2. (set l1 = set l2) ==> (list_lcm (nub l1) = list_lcm (nub l2))
+Proof
   Induct >-
   rw[LIST_TO_SET_EQ_EMPTY] >>
   rpt strip_tac >>
@@ -9602,7 +9933,8 @@ val list_lcm_nub_eq_if_set_eq = store_thm(
   `_ = lcm h (lcm (list_lcm p1) (list_lcm p2))` by rw[list_lcm_append] >>
   `_ = lcm (list_lcm p1) (lcm h (list_lcm p2))` by rw[LCM_ASSOC_COMM] >>
   `_ = lcm (list_lcm p1) (list_lcm ([h] ++ p2))` by rw[list_lcm_cons] >>
-  metis_tac[list_lcm_append, APPEND_ASSOC]);
+  metis_tac[list_lcm_append, APPEND_ASSOC]
+QED
 
 (* Theorem: (set l1 = set l2) ==> (list_lcm l1 = list_lcm l2) *)
 (* Proof:
@@ -9610,10 +9942,11 @@ val list_lcm_nub_eq_if_set_eq = store_thm(
    ==> list_lcm (nub l1) = list_lcm (nub l2)   by list_lcm_nub_eq_if_set_eq
    ==>       list_lcm l1 = list_lcm l2         by list_lcm_nub
 *)
-val list_lcm_eq_if_set_eq = store_thm(
-  "list_lcm_eq_if_set_eq",
-  ``!l1 l2. (set l1 = set l2) ==> (list_lcm l1 = list_lcm l2)``,
-  metis_tac[list_lcm_nub_eq_if_set_eq, list_lcm_nub]);
+Theorem list_lcm_eq_if_set_eq:
+    !l1 l2. (set l1 = set l2) ==> (list_lcm l1 = list_lcm l2)
+Proof
+  metis_tac[list_lcm_nub_eq_if_set_eq, list_lcm_nub]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Set LCM by List LCM                                                       *)
@@ -9644,10 +9977,11 @@ End
    = lcm_list []                 by SET_TO_LIST_EMPTY
    = 1                           by list_lcm_nil
 *)
-val set_lcm_empty = store_thm(
-  "set_lcm_empty",
-  ``set_lcm {} = 1``,
-  rw[set_lcm_def]);
+Theorem set_lcm_empty:
+    set_lcm {} = 1
+Proof
+  rw[set_lcm_def]
+QED
 
 (* Theorem: FINITE s /\ s <> {} ==> (set_lcm s = lcm (CHOICE s) (set_lcm (REST s))) *)
 (* Proof:
@@ -9657,10 +9991,11 @@ val set_lcm_empty = store_thm(
    = lcm (CHOICE s) (list_lcm (SET_TO_LIST (REST s))) by list_lcm_cons
    = lcm (CHOICE s) (set_lcm (REST s))                by set_lcm_def
 *)
-val set_lcm_nonempty = store_thm(
-  "set_lcm_nonempty",
-  ``!s. FINITE s /\ s <> {} ==> (set_lcm s = lcm (CHOICE s) (set_lcm (REST s)))``,
-  rw[set_lcm_def, SET_TO_LIST_THM, list_lcm_cons]);
+Theorem set_lcm_nonempty:
+    !s. FINITE s /\ s <> {} ==> (set_lcm s = lcm (CHOICE s) (set_lcm (REST s)))
+Proof
+  rw[set_lcm_def, SET_TO_LIST_THM, list_lcm_cons]
+QED
 
 (* Theorem: set_lcm {x} = x *)
 (* Proof:
@@ -9669,10 +10004,11 @@ val set_lcm_nonempty = store_thm(
    = list_lcm [x]                  by SET_TO_LIST_SING
    = x                             by list_lcm_sing
 *)
-val set_lcm_sing = store_thm(
-  "set_lcm_sing",
-  ``!x. set_lcm {x} = x``,
-  rw_tac std_ss[set_lcm_def, SET_TO_LIST_SING, list_lcm_sing]);
+Theorem set_lcm_sing:
+    !x. set_lcm {x} = x
+Proof
+  rw_tac std_ss[set_lcm_def, SET_TO_LIST_SING, list_lcm_sing]
+QED
 
 (* Theorem: set_lcm (set l) = list_lcm l *)
 (* Proof:
@@ -9687,10 +10023,11 @@ val set_lcm_sing = store_thm(
       = list_lcm t                        by notation
       = list_lcm l                        by list_lcm_eq_if_set_eq, set t = set l
 *)
-val set_lcm_eq_list_lcm = store_thm(
-  "set_lcm_eq_list_lcm",
-  ``!l. set_lcm (set l) = list_lcm l``,
-  rw[FINITE_LIST_TO_SET, SET_TO_LIST_INV, set_lcm_def, list_lcm_eq_if_set_eq]);
+Theorem set_lcm_eq_list_lcm:
+    !l. set_lcm (set l) = list_lcm l
+Proof
+  rw[FINITE_LIST_TO_SET, SET_TO_LIST_INV, set_lcm_def, list_lcm_eq_if_set_eq]
+QED
 
 (* Theorem: FINITE s ==> (set_lcm s = big_lcm s) *)
 (* Proof:
@@ -9699,17 +10036,19 @@ val set_lcm_eq_list_lcm = store_thm(
    = big_lcm (set (SET_TO_LIST s))  by big_lcm_eq_list_lcm
    = big_lcm s                      by SET_TO_LIST_INV, FINITE s
 *)
-val set_lcm_eq_big_lcm = store_thm(
-  "set_lcm_eq_big_lcm",
-  ``!s. FINITE s ==> (big_lcm s = set_lcm s)``,
-  metis_tac[set_lcm_def, big_lcm_eq_list_lcm, SET_TO_LIST_INV]);
+Theorem set_lcm_eq_big_lcm:
+    !s. FINITE s ==> (big_lcm s = set_lcm s)
+Proof
+  metis_tac[set_lcm_def, big_lcm_eq_list_lcm, SET_TO_LIST_INV]
+QED
 
 (* Theorem: FINITE s ==> !x. set_lcm (x INSERT s) = lcm x (set_lcm s) *)
 (* Proof: by big_lcm_insert, set_lcm_eq_big_lcm *)
-val set_lcm_insert = store_thm(
-  "set_lcm_insert",
-  ``!s. FINITE s ==> !x. set_lcm (x INSERT s) = lcm x (set_lcm s)``,
-  rw[big_lcm_insert, GSYM set_lcm_eq_big_lcm]);
+Theorem set_lcm_insert:
+    !s. FINITE s ==> !x. set_lcm (x INSERT s) = lcm x (set_lcm s)
+Proof
+  rw[big_lcm_insert, GSYM set_lcm_eq_big_lcm]
+QED
 
 (* Theorem: FINITE s /\ x IN s ==> x divides (set_lcm s) *)
 (* Proof:
@@ -9718,12 +10057,13 @@ val set_lcm_insert = store_thm(
     ==> x divides list_lcm (SET_TO_LIST s)  by list_lcm_is_common_multiple
      or x divides (set_lcm s)               by set_lcm_def
 *)
-val set_lcm_is_common_multiple = store_thm(
-  "set_lcm_is_common_multiple",
-  ``!x s. FINITE s /\ x IN s ==> x divides (set_lcm s)``,
+Theorem set_lcm_is_common_multiple:
+    !x s. FINITE s /\ x IN s ==> x divides (set_lcm s)
+Proof
   rw[set_lcm_def] >>
   `MEM x (SET_TO_LIST s)` by rw[MEM_SET_TO_LIST] >>
-  rw[list_lcm_is_common_multiple]);
+  rw[list_lcm_is_common_multiple]
+QED
 
 (* Theorem: FINITE s /\ (!x. x IN s ==> x divides m) ==> set_lcm s divides m *)
 (* Proof:
@@ -9732,10 +10072,11 @@ val set_lcm_is_common_multiple = store_thm(
    Thus list_lcm (SET_TO_LIST s) divides m      by list_lcm_is_least_common_multiple
      or                set_lcm s divides m      by set_lcm_def
 *)
-val set_lcm_is_least_common_multiple = store_thm(
-  "set_lcm_is_least_common_multiple",
-  ``!s m. FINITE s /\ (!x. x IN s ==> x divides m) ==> set_lcm s divides m``,
-  metis_tac[set_lcm_def, MEM_SET_TO_LIST, list_lcm_is_least_common_multiple]);
+Theorem set_lcm_is_least_common_multiple:
+    !s m. FINITE s /\ (!x. x IN s ==> x divides m) ==> set_lcm s divides m
+Proof
+  metis_tac[set_lcm_def, MEM_SET_TO_LIST, list_lcm_is_least_common_multiple]
+QED
 
 (* Theorem: FINITE s /\ PAIRWISE_COPRIME s ==> (set_lcm s = PROD_SET s) *)
 (* Proof:
@@ -9754,9 +10095,9 @@ val set_lcm_is_least_common_multiple = store_thm(
          = e * (PROD_SET s)       by LCM_COPRIME
          = PROD_SET (e INSERT s)  by PROD_SET_INSERT, e NOTIN s
 *)
-val pairwise_coprime_prod_set_eq_set_lcm = store_thm(
-  "pairwise_coprime_prod_set_eq_set_lcm",
-  ``!s. FINITE s /\ PAIRWISE_COPRIME s ==> (set_lcm s = PROD_SET s)``,
+Theorem pairwise_coprime_prod_set_eq_set_lcm:
+    !s. FINITE s /\ PAIRWISE_COPRIME s ==> (set_lcm s = PROD_SET s)
+Proof
   `!s. FINITE s ==> PAIRWISE_COPRIME s ==> (set_lcm s = PROD_SET s)` suffices_by rw[] >>
   Induct_on `FINITE` >>
   rpt strip_tac >-
@@ -9768,7 +10109,8 @@ val pairwise_coprime_prod_set_eq_set_lcm = store_thm(
   `_ = lcm e (PROD_SET s)` by rw[] >>
   `_ = e * (PROD_SET s)` by rw[LCM_COPRIME] >>
   `_ = PROD_SET (e INSERT s)` by rw[PROD_SET_INSERT] >>
-  rw[]);
+  rw[]
+QED
 
 (* This is a generalisation of LCM_COPRIME |- !m n. coprime m n ==> (lcm m n = m * n)  *)
 
@@ -9778,10 +10120,11 @@ val pairwise_coprime_prod_set_eq_set_lcm = store_thm(
     and set_lcm s divides m         by set_lcm_is_least_common_multiple
     ==> (PROD_SET s) divides m
 *)
-val pairwise_coprime_prod_set_divides = store_thm(
-  "pairwise_coprime_prod_set_divides",
-  ``!s m. FINITE s /\ PAIRWISE_COPRIME s /\ (!x. x IN s ==> x divides m) ==> (PROD_SET s) divides m``,
-  rw[set_lcm_is_least_common_multiple, GSYM pairwise_coprime_prod_set_eq_set_lcm]);
+Theorem pairwise_coprime_prod_set_divides:
+    !s m. FINITE s /\ PAIRWISE_COPRIME s /\ (!x. x IN s ==> x divides m) ==> (PROD_SET s) divides m
+Proof
+  rw[set_lcm_is_least_common_multiple, GSYM pairwise_coprime_prod_set_eq_set_lcm]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Nair's Trick - using List LCM directly                                    *)
@@ -9796,10 +10139,11 @@ val _ = overload_on("lcm_run", ``\n. list_lcm [1 .. n]``);
    = list_lcm [1 .. n]      by notation
    = FOLDL lcm 1 [1 .. n]   by list_lcm_by_FOLDL
 *)
-val lcm_run_by_FOLDL = store_thm(
-  "lcm_run_by_FOLDL",
-  ``!n. lcm_run n = FOLDL lcm 1 [1 .. n]``,
-  rw[list_lcm_by_FOLDL]);
+Theorem lcm_run_by_FOLDL:
+    !n. lcm_run n = FOLDL lcm 1 [1 .. n]
+Proof
+  rw[list_lcm_by_FOLDL]
+QED
 
 (* Theorem: lcm_run n = FOLDL lcm 1 [1 .. n] *)
 (* Proof:
@@ -9807,10 +10151,11 @@ val lcm_run_by_FOLDL = store_thm(
    = list_lcm [1 .. n]      by notation
    = FOLDR lcm 1 [1 .. n]   by list_lcm_by_FOLDR
 *)
-val lcm_run_by_FOLDR = store_thm(
-  "lcm_run_by_FOLDR",
-  ``!n. lcm_run n = FOLDR lcm 1 [1 .. n]``,
-  rw[list_lcm_by_FOLDR]);
+Theorem lcm_run_by_FOLDR:
+    !n. lcm_run n = FOLDR lcm 1 [1 .. n]
+Proof
+  rw[list_lcm_by_FOLDR]
+QED
 
 (* Theorem: lcm_run 0 = 1 *)
 (* Proof:
@@ -9819,10 +10164,11 @@ val lcm_run_by_FOLDR = store_thm(
    = list_lcm []          by listRangeINC_EMPTY, 0 < 1
    = 1                    by list_lcm_nil
 *)
-val lcm_run_0 = store_thm(
-  "lcm_run_0",
-  ``lcm_run 0 = 1``,
-  rw[listRangeINC_EMPTY]);
+Theorem lcm_run_0:
+    lcm_run 0 = 1
+Proof
+  rw[listRangeINC_EMPTY]
+QED
 
 (* Theorem: lcm_run 1 = 1 *)
 (* Proof:
@@ -9831,10 +10177,11 @@ val lcm_run_0 = store_thm(
    = list_lcm [1]         by leibniz_vertical_0
    = 1                    by list_lcm_sing
 *)
-val lcm_run_1 = store_thm(
-  "lcm_run_1",
-  ``lcm_run 1 = 1``,
-  rw[leibniz_vertical_0, list_lcm_sing]);
+Theorem lcm_run_1:
+    lcm_run 1 = 1
+Proof
+  rw[leibniz_vertical_0, list_lcm_sing]
+QED
 
 (* Theorem alias *)
 val lcm_run_suc = save_thm("lcm_run_suc", list_lcm_suc);
@@ -9847,18 +10194,20 @@ val lcm_run_suc = save_thm("lcm_run_suc", list_lcm_suc);
       = list_lcm [1 .. n]           by notation
       > 0                           by list_lcm_pos
 *)
-val lcm_run_pos = store_thm(
-  "lcm_run_pos",
-  ``!n. 0 < lcm_run n``,
-  rw[list_lcm_pos, listRangeINC_EVERY]);
+Theorem lcm_run_pos:
+    !n. 0 < lcm_run n
+Proof
+  rw[list_lcm_pos, listRangeINC_EVERY]
+QED
 
 (* Theorem: (lcm_run 2 = 2) /\ (lcm_run 3 = 6) /\ (lcm_run 4 = 12) /\ (lcm_run 5 = 60) /\ ...  *)
 (* Proof: by evaluation *)
-val lcm_run_small = store_thm(
-  "lcm_run_small",
-  ``(lcm_run 2 = 2) /\ (lcm_run 3 = 6) /\ (lcm_run 4 = 12) /\ (lcm_run 5 = 60) /\
-   (lcm_run 6 = 60) /\ (lcm_run 7 = 420) /\ (lcm_run 8 = 840) /\ (lcm_run 9 = 2520)``,
-  EVAL_TAC);
+Theorem lcm_run_small:
+    (lcm_run 2 = 2) /\ (lcm_run 3 = 6) /\ (lcm_run 4 = 12) /\ (lcm_run 5 = 60) /\
+   (lcm_run 6 = 60) /\ (lcm_run 7 = 420) /\ (lcm_run 8 = 840) /\ (lcm_run 9 = 2520)
+Proof
+  EVAL_TAC
+QED
 
 (* Theorem: (n + 1) divides lcm_run (n + 1) /\ (lcm_run n) divides lcm_run (n + 1) *)
 (* Proof:
@@ -9875,16 +10224,17 @@ val lcm_run_small = store_thm(
          = lcm (n + 1) (lcm_run n)             by notation
       Hence true                               by LCM_DIVISORS
 *)
-val lcm_run_divisors = store_thm(
-  "lcm_run_divisors",
-  ``!n. (n + 1) divides lcm_run (n + 1) /\ (lcm_run n) divides lcm_run (n + 1)``,
+Theorem lcm_run_divisors:
+    !n. (n + 1) divides lcm_run (n + 1) /\ (lcm_run n) divides lcm_run (n + 1)
+Proof
   strip_tac >>
   Cases_on `n = 0` >-
   rw[lcm_run_0] >>
   `(n - 1 + 1 = n) /\ (n - 1 + 2 = n + 1)` by decide_tac >>
   `lcm_run (n + 1) = list_lcm (SNOC (n + 1) [1 .. n])` by metis_tac[leibniz_vertical_snoc] >>
   `_ = lcm (n + 1) (lcm_run n)` by rw[list_lcm_snoc] >>
-  rw[LCM_DIVISORS]);
+  rw[LCM_DIVISORS]
+QED
 
 (* Theorem: lcm_run n <= lcm_run (n + 1) *)
 (* Proof:
@@ -9948,9 +10298,9 @@ val lcm_run_leibniz_divisor = |- !n k. k <= n ==> leibniz n k divides lcm_run (n
      so      n * 4 ** n <= n * leibniz m n        by LESS_MONO_MULT, MULT_COMM
      or      n * 4 ** n <= lcm_run (m + 1)        by LESS_EQ_TRANS
 *)
-val lcm_run_lower_odd = store_thm(
-  "lcm_run_lower_odd",
-  ``!n. n * 4 ** n <= lcm_run (2 * n + 1)``,
+Theorem lcm_run_lower_odd:
+    !n. n * 4 ** n <= lcm_run (2 * n + 1)
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[] >>
@@ -9973,7 +10323,8 @@ val lcm_run_lower_odd = store_thm(
   `n * leibniz m n divides lcm_run (m + 1)` by metis_tac[LCM_DIVIDES] >>
   `n * leibniz m n <= lcm_run (m + 1)` by rw[DIVIDES_LE, lcm_run_pos] >>
   `4 ** n <= leibniz m n` by rw[leibniz_middle_lower, Abbr`m`] >>
-  metis_tac[LESS_MONO_MULT, MULT_COMM, LESS_EQ_TRANS]);
+  metis_tac[LESS_MONO_MULT, MULT_COMM, LESS_EQ_TRANS]
+QED
 
 (* Theorem: n * 4 ** n <= lcm_run (2 * (n + 1)) *)
 (* Proof:
@@ -9982,12 +10333,13 @@ val lcm_run_lower_odd = store_thm(
    >= lcm_run (2 * n + 1)       by lcm_run_monotone
    >= n * 4 ** n                by lcm_run_lower_odd
 *)
-val lcm_run_lower_even = store_thm(
-  "lcm_run_lower_even",
-  ``!n. n * 4 ** n <= lcm_run (2 * (n + 1))``,
+Theorem lcm_run_lower_even:
+    !n. n * 4 ** n <= lcm_run (2 * (n + 1))
+Proof
   rpt strip_tac >>
   `2 * (n + 1) = 2 * n + 1 + 1` by decide_tac >>
-  metis_tac[lcm_run_monotone, lcm_run_lower_odd, LESS_EQ_TRANS]);
+  metis_tac[lcm_run_monotone, lcm_run_lower_odd, LESS_EQ_TRANS]
+QED
 
 (* Theorem: ODD n ==> (HALF n) * HALF (2 ** n) <= lcm_run n *)
 (* Proof:
@@ -10002,9 +10354,9 @@ val lcm_run_lower_even = store_thm(
    Since k * 4 ** k <= lcm_run (2 * k + 1)  by lcm_run_lower_odd
    The result follows.
 *)
-val lcm_run_odd_lower = store_thm(
-  "lcm_run_odd_lower",
-  ``!n. ODD n ==> (HALF n) * HALF (2 ** n) <= lcm_run n``,
+Theorem lcm_run_odd_lower:
+    !n. ODD n ==> (HALF n) * HALF (2 ** n) <= lcm_run n
+Proof
   rpt strip_tac >>
   qabbrev_tac `k = HALF n` >>
   `n = 2 * k + 1` by rw[ODD_HALF, Abbr`k`] >>
@@ -10012,7 +10364,8 @@ val lcm_run_odd_lower = store_thm(
   `_ = HALF (2 * 2 ** (2 * k))` by rw[EXP] >>
   `_ = 2 ** (2 * k)` by rw[HALF_TWICE] >>
   `_ = 4 ** k` by rw[EXP_EXP_MULT] >>
-  metis_tac[lcm_run_lower_odd]);
+  metis_tac[lcm_run_lower_odd]
+QED
 
 Theorem HALF_MULT_EVEN'[local] = ONCE_REWRITE_RULE [MULT_COMM] HALF_MULT_EVEN
 
@@ -10070,9 +10423,9 @@ QED
        = 2 ** (SUC m)                  by EXP
        = 2 ** n                        by n = SUC m
 *)
-val lcm_run_odd_lower_alt = store_thm(
-  "lcm_run_odd_lower_alt",
-  ``!n. ODD n /\ 5 <= n ==> 2 ** n <= lcm_run n``,
+Theorem lcm_run_odd_lower_alt:
+    !n. ODD n /\ 5 <= n ==> 2 ** n <= lcm_run n
+Proof
   rpt strip_tac >>
   `2 ** n <= HALF n * HALF (2 ** n)` by
   (`HALF 5 = 2` by EVAL_TAC >>
@@ -10083,7 +10436,8 @@ val lcm_run_odd_lower_alt = store_thm(
   `_ = HALF n * 2 ** m` by rw[HALF_TWICE] >>
   `2 * 2 ** m <= HALF n * 2 ** m` by rw[LESS_MONO_MULT] >>
   rw[EXP]) >>
-  metis_tac[lcm_run_odd_lower, LESS_EQ_TRANS]);
+  metis_tac[lcm_run_odd_lower, LESS_EQ_TRANS]
+QED
 
 (* Theorem: EVEN n /\ 8 <= n ==> 2 ** n <= lcm_run n *)
 (* Proof:
@@ -10144,16 +10498,17 @@ QED
       Note 7 <= n ==> 5 <= n     by arithmetic
       Hence true                 by lcm_run_odd_lower_alt
 *)
-val lcm_run_lower_better = store_thm(
-  "lcm_run_lower_better",
-  ``!n. 7 <= n ==> 2 ** n <= lcm_run n``,
+Theorem lcm_run_lower_better:
+    !n. 7 <= n ==> 2 ** n <= lcm_run n
+Proof
   rpt strip_tac >>
   `EVEN n \/ ODD n` by rw[EVEN_OR_ODD] >| [
     `ODD 7` by rw[] >>
     `n <> 7` by metis_tac[ODD_EVEN] >>
     rw[lcm_run_even_lower_alt],
     rw[lcm_run_odd_lower_alt]
-  ]);
+  ]
+QED
 
 
 (* ------------------------------------------------------------------------- *)
@@ -10211,9 +10566,9 @@ and lcm B A = lcm ((2*n + 1) * binomial 2*n n) (n * binomial 2*n n)
       = n * leibniz m n                       by leibniz_def
    Thus (n * leibniz m n) divides lcm_run (m + 1)
 *)
-val lcm_run_odd_factor = store_thm(
-  "lcm_run_odd_factor",
-  ``!n. 0 < n ==> n * (leibniz (2 * n) n) divides lcm_run (2 * n + 1)``,
+Theorem lcm_run_odd_factor:
+    !n. 0 < n ==> n * (leibniz (2 * n) n) divides lcm_run (2 * n + 1)
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = 2 * n` >>
   `n <= m /\ n + 1 <= m` by rw[Abbr`m`] >>
@@ -10231,7 +10586,8 @@ val lcm_run_odd_factor = store_thm(
   `_ = lcm ((m + 1) * k) (n * k)` by rw[Abbr`m`] >>
   `_ = n * (m + 1) * k` by rw[LCM_COMMON_COPRIME, LCM_SYM] >>
   `_ = n * leibniz m n` by rw[leibniz_def, Abbr`k`] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: n * 4 ** n <= lcm_run (2 * n + 1) *)
 (* Proof:
@@ -10351,9 +10707,9 @@ QED
       With h * 4 ** h <= lcm_run n       by lcm_run_lower_odd
         or     2 ** n <= lcm_run n       by LESS_EQ_TRANS
 *)
-val lcm_run_lower_odd_iff = store_thm(
-  "lcm_run_lower_odd_iff",
-  ``!n. ODD n ==> (2 ** n <= lcm_run n <=> 5 <= n)``,
+Theorem lcm_run_lower_odd_iff:
+    !n. ODD n ==> (2 ** n <= lcm_run n <=> 5 <= n)
+Proof
   rw[EQ_IMP_THM] >| [
     spose_not_then strip_assume_tac >>
     `n < 5` by decide_tac >>
@@ -10369,7 +10725,8 @@ val lcm_run_lower_odd_iff = store_thm(
     `_ = 2 ** n` by rw[GSYM EXP] >>
     `h * 4 ** h <= lcm_run n` by rw[lcm_run_lower_odd] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: EVEN n ==> (2 ** n <= lcm_run n <=> (n = 0) \/ 8 <= n) *)
 (* Proof:
@@ -10412,9 +10769,9 @@ val lcm_run_lower_odd_iff = store_thm(
 
          Overall 2 ** n <= lcm_run n             by LESS_EQ_TRANS
 *)
-val lcm_run_lower_even_iff = store_thm(
-  "lcm_run_lower_even_iff",
-  ``!n. EVEN n ==> (2 ** n <= lcm_run n <=> (n = 0) \/ 8 <= n)``,
+Theorem lcm_run_lower_even_iff:
+    !n. EVEN n ==> (2 ** n <= lcm_run n <=> (n = 0) \/ 8 <= n)
+Proof
   rw[EQ_IMP_THM] >| [
     spose_not_then strip_assume_tac >>
     `n < 8` by decide_tac >>
@@ -10441,7 +10798,8 @@ val lcm_run_lower_even_iff = store_thm(
     `_ = 2 ** (2 * k + 2)` by rw[GSYM EXP_ADD] >>
     `_ = 2 ** n` by rw[] >>
     metis_tac[LESS_EQ_TRANS]
-  ]);
+  ]
+QED
 
 (* Theorem: 2 ** n <= lcm_run n <=> (n = 0) \/ (n = 5) \/ 7 <= n *)
 (* Proof:
@@ -10452,9 +10810,9 @@ val lcm_run_lower_even_iff = store_thm(
       Then n <> 0, n <> 6, so 5 <= n    by arithmetic
       Thus true                         by lcm_run_lower_odd_iff
 *)
-val lcm_run_lower_better_iff = store_thm(
-  "lcm_run_lower_better_iff",
-  ``!n. 2 ** n <= lcm_run n <=> (n = 0) \/ (n = 5) \/ 7 <= n``,
+Theorem lcm_run_lower_better_iff:
+    !n. 2 ** n <= lcm_run n <=> (n = 0) \/ (n = 5) \/ 7 <= n
+Proof
   rpt strip_tac >>
   Cases_on `EVEN n` >| [
     `ODD 5 /\ ODD 7` by rw[] >>
@@ -10463,7 +10821,8 @@ val lcm_run_lower_better_iff = store_thm(
     `EVEN 0 /\ EVEN 6` by rw[] >>
     `ODD n /\ n <> 0 /\ n <> 6` by metis_tac[EVEN_ODD] >>
     metis_tac[lcm_run_lower_odd_iff, DECIDE``5 <= n <=> (n = 5) \/ (n = 6) \/ (7 <= n)``]
-  ]);
+  ]
+QED
 
 (* This is the ultimate goal! *)
 
@@ -10486,10 +10845,11 @@ val lcm_upto_SUC = save_thm("lcm_upto_SUC", lcm_upto_def |> CONJUNCT2);
 
 (* Theorem: (lcm_upto 0 = 1) /\ (!n. lcm_upto (n+1) = lcm (n+1) (lcm_upto n)) *)
 (* Proof: by lcm_upto_def *)
-val lcm_upto_alt = store_thm(
-  "lcm_upto_alt",
-  ``(lcm_upto 0 = 1) /\ (!n. lcm_upto (n+1) = lcm (n+1) (lcm_upto n))``,
-  metis_tac[lcm_upto_def, ADD1]);
+Theorem lcm_upto_alt:
+    (lcm_upto 0 = 1) /\ (!n. lcm_upto (n+1) = lcm (n+1) (lcm_upto n))
+Proof
+  metis_tac[lcm_upto_def, ADD1]
+QED
 
 (* Theorem: lcm_upto 1 = 1 *)
 (* Proof:
@@ -10500,19 +10860,21 @@ val lcm_upto_alt = store_thm(
    = lcm 1 1                   by ONE
    = 1                         by LCM_REF
 *)
-val lcm_upto_1 = store_thm(
-  "lcm_upto_1",
-  ``lcm_upto 1 = 1``,
-  metis_tac[lcm_upto_def, LCM_REF, ONE]);
+Theorem lcm_upto_1:
+    lcm_upto 1 = 1
+Proof
+  metis_tac[lcm_upto_def, LCM_REF, ONE]
+QED
 
 (* Theorem: lcm_upto n for small n *)
 (* Proof: by evaluation. *)
-val lcm_upto_small = store_thm(
-  "lcm_upto_small",
-  ``(lcm_upto 2 = 2) /\ (lcm_upto 3 = 6) /\ (lcm_upto 4 = 12) /\
+Theorem lcm_upto_small:
+    (lcm_upto 2 = 2) /\ (lcm_upto 3 = 6) /\ (lcm_upto 4 = 12) /\
    (lcm_upto 5 = 60) /\ (lcm_upto 6 = 60) /\ (lcm_upto 7 = 420) /\
-   (lcm_upto 8 = 840) /\ (lcm_upto 9 = 2520) /\ (lcm_upto 10 = 2520)``,
-  EVAL_TAC);
+   (lcm_upto 8 = 840) /\ (lcm_upto 9 = 2520) /\ (lcm_upto 10 = 2520)
+Proof
+  EVAL_TAC
+QED
 
 (* Theorem: lcm_upto n = list_lcm [1 .. n] *)
 (* Proof:
@@ -10529,12 +10891,13 @@ val lcm_upto_small = store_thm(
        = list_lcm (SNOC (SUC n) [1 .. n])    by list_lcm_snoc
        = list_lcm [1 .. (SUC n)]             by listRangeINC_SNOC, ADD1, 1 <= n + 1
 *)
-val lcm_upto_eq_list_lcm = store_thm(
-  "lcm_upto_eq_list_lcm",
-  ``!n. lcm_upto n = list_lcm [1 .. n]``,
+Theorem lcm_upto_eq_list_lcm:
+    !n. lcm_upto n = list_lcm [1 .. n]
+Proof
   Induct >-
   rw[lcm_upto_0, list_lcm_nil, listRangeINC_EMPTY] >>
-  rw[lcm_upto_SUC, list_lcm_snoc, listRangeINC_SNOC, ADD1]);
+  rw[lcm_upto_SUC, list_lcm_snoc, listRangeINC_SNOC, ADD1]
+QED
 
 (* Theorem: 2 ** n <= lcm_upto (n + 1) *)
 (* Proof:
@@ -10542,10 +10905,11 @@ val lcm_upto_eq_list_lcm = store_thm(
    = list_lcm [1 .. (n + 1)]   by lcm_upto_eq_list_lcm
    >= 2 ** n                   by lcm_lower_bound
 *)
-val lcm_upto_lower = store_thm(
-  "lcm_upto_lower",
-  ``!n. 2 ** n <= lcm_upto (n + 1)``,
-  rw[lcm_upto_eq_list_lcm, lcm_lower_bound]);
+Theorem lcm_upto_lower:
+    !n. 2 ** n <= lcm_upto (n + 1)
+Proof
+  rw[lcm_upto_eq_list_lcm, lcm_lower_bound]
+QED
 
 (* Theorem: 0 < lcm_upto (n + 1) *)
 (* Proof:
@@ -10553,10 +10917,11 @@ val lcm_upto_lower = store_thm(
    >= 2 ** n                   by lcm_upto_lower
     > 0                        by EXP_POS, 0 < 2
 *)
-val lcm_upto_pos = store_thm(
-  "lcm_upto_pos",
-  ``!n. 0 < lcm_upto (n + 1)``,
-  metis_tac[lcm_upto_lower, EXP_POS, LESS_LESS_EQ_TRANS, DECIDE``0 < 2``]);
+Theorem lcm_upto_pos:
+    !n. 0 < lcm_upto (n + 1)
+Proof
+  metis_tac[lcm_upto_lower, EXP_POS, LESS_LESS_EQ_TRANS, DECIDE``0 < 2``]
+QED
 
 (* Theorem: (n + 1) divides lcm_upto (n + 1) /\ (lcm_upto n) divides lcm_upto (n + 1) *)
 (* Proof:
@@ -10564,10 +10929,11 @@ val lcm_upto_pos = store_thm(
      so (n + 1) divides lcm_upto (n + 1)
     and (lcm_upto n) divides lcm_upto (n + 1)         by LCM_DIVISORS
 *)
-val lcm_upto_divisors = store_thm(
-  "lcm_upto_divisors",
-  ``!n. (n + 1) divides lcm_upto (n + 1) /\ (lcm_upto n) divides lcm_upto (n + 1)``,
-  rw[lcm_upto_alt, LCM_DIVISORS]);
+Theorem lcm_upto_divisors:
+    !n. (n + 1) divides lcm_upto (n + 1) /\ (lcm_upto n) divides lcm_upto (n + 1)
+Proof
+  rw[lcm_upto_alt, LCM_DIVISORS]
+QED
 
 (* Theorem: lcm_upto n <= lcm_upto (n + 1) *)
 (* Proof:
@@ -10575,10 +10941,11 @@ val lcm_upto_divisors = store_thm(
     and 0 < lcm_upto (n + 1)                  by lcm_upto_pos
      so lcm_upto n <= lcm_upto (n + 1)          by DIVIDES_LE
 *)
-val lcm_upto_monotone = store_thm(
-  "lcm_upto_monotone",
-  ``!n. lcm_upto n <= lcm_upto (n + 1)``,
-  rw[lcm_upto_divisors, lcm_upto_pos, DIVIDES_LE]);
+Theorem lcm_upto_monotone:
+    !n. lcm_upto n <= lcm_upto (n + 1)
+Proof
+  rw[lcm_upto_divisors, lcm_upto_pos, DIVIDES_LE]
+QED
 
 (* Theorem: k <= n ==> (leibniz n k) divides lcm_upto (n + 1) *)
 (* Proof:
@@ -10586,10 +10953,11 @@ val lcm_upto_monotone = store_thm(
     ==> (leibniz n k) divides list_lcm [1 .. (n + 1)]         by notation
      or (leibniz n k) divides lcm_upto (n + 1)                by lcm_upto_eq_list_lcm
 *)
-val lcm_upto_leibniz_divisor = store_thm(
-  "lcm_upto_leibniz_divisor",
-  ``!n k. k <= n ==> (leibniz n k) divides lcm_upto (n + 1)``,
-  metis_tac[leibniz_vertical_divisor, lcm_upto_eq_list_lcm]);
+Theorem lcm_upto_leibniz_divisor:
+    !n k. k <= n ==> (leibniz n k) divides lcm_upto (n + 1)
+Proof
+  metis_tac[leibniz_vertical_divisor, lcm_upto_eq_list_lcm]
+QED
 
 (* Theorem: n * 4 ** n <= lcm_upto (2 * n + 1) *)
 (* Proof:
@@ -10624,9 +10992,9 @@ val lcm_upto_leibniz_divisor = store_thm(
      so      n * 4 ** n <= n * leibniz m n        by LESS_MONO_MULT, MULT_COMM
      or      n * 4 ** n <= lcm_upto (m + 1)       by LESS_EQ_TRANS
 *)
-val lcm_upto_lower_odd = store_thm(
-  "lcm_upto_lower_odd",
-  ``!n. n * 4 ** n <= lcm_upto (2 * n + 1)``,
+Theorem lcm_upto_lower_odd:
+    !n. n * 4 ** n <= lcm_upto (2 * n + 1)
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[] >>
@@ -10650,7 +11018,8 @@ val lcm_upto_lower_odd = store_thm(
   `n * leibniz m n divides lcm_upto (m + 1)` by metis_tac[LCM_DIVIDES] >>
   `n * leibniz m n <= lcm_upto (m + 1)` by rw[DIVIDES_LE, lcm_upto_pos] >>
   `4 ** n <= leibniz m n` by rw[leibniz_middle_lower, Abbr`m`] >>
-  metis_tac[LESS_MONO_MULT, MULT_COMM, LESS_EQ_TRANS]);
+  metis_tac[LESS_MONO_MULT, MULT_COMM, LESS_EQ_TRANS]
+QED
 
 (* Theorem: n * 4 ** n <= lcm_upto (2 * (n + 1)) *)
 (* Proof:
@@ -10659,12 +11028,13 @@ val lcm_upto_lower_odd = store_thm(
    >= lcm_upto (2 * n + 1)       by lcm_upto_monotone
    >= n * 4 ** n                 by lcm_upto_lower_odd
 *)
-val lcm_upto_lower_even = store_thm(
-  "lcm_upto_lower_even",
-  ``!n. n * 4 ** n <= lcm_upto (2 * (n + 1))``,
+Theorem lcm_upto_lower_even:
+    !n. n * 4 ** n <= lcm_upto (2 * (n + 1))
+Proof
   rpt strip_tac >>
   `2 * (n + 1) = 2 * n + 1 + 1` by decide_tac >>
-  metis_tac[lcm_upto_monotone, lcm_upto_lower_odd, LESS_EQ_TRANS]);
+  metis_tac[lcm_upto_monotone, lcm_upto_lower_odd, LESS_EQ_TRANS]
+QED
 
 (* Theorem: 7 <= n ==> 2 ** n <= lcm_upto n *)
 (* Proof:
@@ -10698,9 +11068,9 @@ val lcm_upto_lower_even = store_thm(
           = 2 ** (2 * m)               by EXP_EXP_MULT
           = 2 ** n                     by n = 2 * m
 *)
-val lcm_upto_lower_better = store_thm(
-  "lcm_upto_lower_better",
-  ``!n. 7 <= n ==> 2 ** n <= lcm_upto n``,
+Theorem lcm_upto_lower_better:
+    !n. 7 <= n ==> 2 ** n <= lcm_upto n
+Proof
   rpt strip_tac >>
   Cases_on `ODD n` >| [
     `?k. n = SUC (2 * k)` by rw[GSYM ODD_EXISTS] >>
@@ -10723,7 +11093,8 @@ val lcm_upto_lower_better = store_thm(
     `2 ** n = 4 ** m` by rw[EXP_EXP_MULT] >>
     `_ = 4 * 4 ** k` by rw[EXP] >>
     metis_tac[lcm_upto_lower_even, LESS_EQ_TRANS]
-  ]);
+  ]
+QED
 
 (* This is a very significant result. *)
 
@@ -10749,9 +11120,9 @@ val lcm_upto_lower_better = store_thm(
        = HALF ((n * (n + 1)) DIV n)   by DIV_DIV_DIV_MULT, 0 < 2, 0 < n
        = HALF (n + 1)                 by MULT_TO_DIV
 *)
-val lcm_run_lower_simple = store_thm(
-  "lcm_run_lower_simple",
-  ``!n. HALF (n + 1) <= lcm_run n``,
+Theorem lcm_run_lower_simple:
+    !n. HALF (n + 1) <= lcm_run n
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[lcm_run_0] >>
@@ -10762,7 +11133,8 @@ val lcm_run_lower_simple = store_thm(
   `_ = (HALF (n * (n + 1))) DIV n` by rw[sum_1_to_n_eqn, Abbr`l`] >>
   `_ = HALF ((n * (n + 1)) DIV n)` by rw[DIV_DIV_DIV_MULT] >>
   `_ = HALF (n + 1)` by rw[MULT_TO_DIV] >>
-  metis_tac[list_lcm_nonempty_lower]);
+  metis_tac[list_lcm_nonempty_lower]
+QED
 
 (* This is a simple result, good but not very useful. *)
 
@@ -10774,13 +11146,14 @@ val lcm_run_lower_simple = store_thm(
    If n <> 0,
       Then n - 1 + 1 = n, hence true trivially.
 *)
-val lcm_run_alt = store_thm(
-  "lcm_run_alt",
-  ``!n. lcm_run n = list_lcm (leibniz_vertical (n - 1))``,
+Theorem lcm_run_alt:
+    !n. lcm_run n = list_lcm (leibniz_vertical (n - 1))
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[lcm_run_0, lcm_run_1] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: 2 ** (n - 1) <= lcm_run n *)
 (* Proof:
@@ -10799,9 +11172,9 @@ val lcm_run_alt = store_thm(
       >= (SUM l) DIV (LENGTH l)       by list_lcm_nonempty_lower, l <> []
        = 2 ** (n - 1)                 by leibniz_horizontal_average_eqn
 *)
-val lcm_run_lower_good = store_thm(
-  "lcm_run_lower_good",
-  ``!n. 2 ** (n - 1) <= lcm_run n``,
+Theorem lcm_run_lower_good:
+    !n. 2 ** (n - 1) <= lcm_run n
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[lcm_run_0] >>
@@ -10811,7 +11184,8 @@ val lcm_run_lower_good = store_thm(
   `LENGTH l = n` by metis_tac[leibniz_horizontal_len] >>
   `l <> []` by metis_tac[LENGTH_NIL] >>
   `EVERY_POSITIVE l` by rw[leibniz_horizontal_pos, Abbr`l`] >>
-  metis_tac[list_lcm_nonempty_lower, leibniz_horizontal_average_eqn]);
+  metis_tac[list_lcm_nonempty_lower, leibniz_horizontal_average_eqn]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Upper Bound by Leibniz Triangle                                           *)
@@ -10821,19 +11195,21 @@ val lcm_run_lower_good = store_thm(
 (* Proof: by leibniz_up_alt:
 leibniz_up_alt |- !n. 0 < n ==> !k. leibniz (n - 1) k = (n - k) * binomial n k
 *)
-val leibniz_eqn = store_thm(
-  "leibniz_eqn",
-  ``!n k. leibniz n k = (n + 1 - k) * binomial (n + 1) k``,
-  rw[GSYM leibniz_up_alt]);
+Theorem leibniz_eqn:
+    !n k. leibniz n k = (n + 1 - k) * binomial (n + 1) k
+Proof
+  rw[GSYM leibniz_up_alt]
+QED
 
 (* Theorem: leibniz n (k + 1) = (n - k) * binomial (n + 1) (k + 1) *)
 (* Proof: by leibniz_up_alt:
 leibniz_up_alt |- !n. 0 < n ==> !k. leibniz (n - 1) k = (n - k) * binomial n k
 *)
-val leibniz_right_alt = store_thm(
-  "leibniz_right_alt",
-  ``!n k. leibniz n (k + 1) = (n - k) * binomial (n + 1) (k + 1)``,
-  metis_tac[leibniz_up_alt, DECIDE``0 < n + 1 /\ (n + 1 - 1 = n) /\ (n + 1 - (k + 1) = n - k)``]);
+Theorem leibniz_right_alt:
+    !n k. leibniz n (k + 1) = (n - k) * binomial (n + 1) (k + 1)
+Proof
+  metis_tac[leibniz_up_alt, DECIDE``0 < n + 1 /\ (n + 1 - 1 = n) /\ (n + 1 - (k + 1) = n - k)``]
+QED
 
 (* Leibniz Stack:
        \
@@ -10908,10 +11284,10 @@ Then lcm_run_upper_bound |- !n. lcm_run n <= 4 ** n  follows by complete inducti
                 k! (m - k)!      (m + 1)! (n - m)!
    = leibniz m k * binomial (n + 1) (m + 1)                    by leibniz_def
 *)
-val leibniz_binomial_identity = store_thm(
-  "leibniz_binomial_identity",
-  ``!m n k. k <= m /\ m <= n ==>
-           ((leibniz n k) * (binomial (n - k) (m - k)) = (leibniz m k) * (binomial (n + 1) (m + 1)))``,
+Theorem leibniz_binomial_identity:
+    !m n k. k <= m /\ m <= n ==>
+           ((leibniz n k) * (binomial (n - k) (m - k)) = (leibniz m k) * (binomial (n + 1) (m + 1)))
+Proof
   rw[leibniz_def] >>
   `m + 1 <= n + 1` by decide_tac >>
   `m - k <= n - k` by decide_tac >>
@@ -10924,7 +11300,8 @@ val leibniz_binomial_identity = store_thm(
   `!n. FACT (n + 1) = (n + 1) * FACT n` by metis_tac[FACT, ADD1] >>
   `FACT (n + 1) = FACT (n - m) * (FACT k * (FACT (m - k) * ((m + 1) * (binomial m k) * (binomial (n + 1) (m + 1)))))` by metis_tac[MULT_ASSOC, MULT_COMM] >>
   `FACT (n + 1) = FACT (n - m) * (FACT k * (FACT (m - k) * ((n + 1) * (binomial n k) * (binomial (n - k) (m - k)))))` by metis_tac[MULT_ASSOC, MULT_COMM] >>
-  metis_tac[MULT_LEFT_CANCEL, FACT_LESS, NOT_ZERO_LT_ZERO]);
+  metis_tac[MULT_LEFT_CANCEL, FACT_LESS, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: k <= m /\ m <= n ==> leibniz n k divides leibniz m k * binomial (n + 1) (m + 1) *)
 (* Proof:
@@ -10933,10 +11310,11 @@ val leibniz_binomial_identity = store_thm(
    Thus leibniz n k divides leibniz m k * binomial (n + 1) (m + 1)
                                                                by divides_def, MULT_COMM
 *)
-val leibniz_divides_leibniz_factor = store_thm(
-  "leibniz_divides_leibniz_factor",
-  ``!m n k. k <= m /\ m <= n ==> leibniz n k divides leibniz m k * binomial (n + 1) (m + 1)``,
-  metis_tac[leibniz_binomial_identity, divides_def, MULT_COMM]);
+Theorem leibniz_divides_leibniz_factor:
+    !m n k. k <= m /\ m <= n ==> leibniz n k divides leibniz m k * binomial (n + 1) (m + 1)
+Proof
+  metis_tac[leibniz_binomial_identity, divides_def, MULT_COMM]
+QED
 
 (* Theorem: n <= 2 * m + 1 /\ m <= n /\ MEM x (leibniz_horizontal n) ==>
             x divides list_lcm (leibniz_horizontal m) * binomial (n + 1) (m + 1) *)
@@ -10975,10 +11353,10 @@ val leibniz_divides_leibniz_factor = store_thm(
         or p divides q                           by notation
       Thus x divides q                           by DIVIDES_TRANS
 *)
-val leibniz_horizontal_member_divides = store_thm(
-  "leibniz_horizontal_member_divides",
-  ``!m n x. n <= 2 * m + 1 /\ m <= n /\ MEM x (leibniz_horizontal n) ==>
-           x divides list_lcm (leibniz_horizontal m) * binomial (n + 1) (m + 1)``,
+Theorem leibniz_horizontal_member_divides:
+    !m n x. n <= 2 * m + 1 /\ m <= n /\ MEM x (leibniz_horizontal n) ==>
+           x divides list_lcm (leibniz_horizontal m) * binomial (n + 1) (m + 1)
+Proof
   rpt strip_tac >>
   qabbrev_tac `q = list_lcm (leibniz_horizontal m) * binomial (n + 1) (m + 1)` >>
   `?k. k <= n /\ (x = leibniz n k)` by rw[GSYM leibniz_horizontal_member] >>
@@ -10998,7 +11376,8 @@ val leibniz_horizontal_member_divides = store_thm(
     `(leibniz m j) divides list_lcm (leibniz_horizontal m)` by rw[list_lcm_is_common_multiple] >>
     `p divides q` by rw[GSYM DIVIDES_CANCEL, binomial_pos, Abbr`p`, Abbr`q`] >>
     metis_tac[DIVIDES_TRANS]
-  ]);
+  ]
+QED
 
 (* Theorem: n <= 2 * m /\ m <= n ==> (lcm_run n) divides (lcm_run m) * binomial n m *)
 (* Proof:
@@ -11021,9 +11400,9 @@ val leibniz_horizontal_member_divides = store_thm(
            list_lcm (leibniz_horizontal h) divides q       by list_lcm_is_least_common_multiple
       Thus (lcm_run n) divides (lcm_run m) * binomial n m  by above
 *)
-val lcm_run_divides_property = store_thm(
-  "lcm_run_divides_property",
-  ``!m n. n <= 2 * m /\ m <= n ==> (lcm_run n) divides (lcm_run m) * binomial n m``,
+Theorem lcm_run_divides_property:
+    !m n. n <= 2 * m /\ m <= n ==> (lcm_run n) divides (lcm_run m) * binomial n m
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[lcm_run_0] >>
@@ -11032,7 +11411,8 @@ val lcm_run_divides_property = store_thm(
   `m - 1 <= n - 1` by decide_tac >>
   `n - 1 <= 2 * (m - 1) + 1` by decide_tac >>
   `(n - 1 + 1 = n) /\ (m - 1 + 1 = m)` by decide_tac >>
-  metis_tac[leibniz_horizontal_member_divides, list_lcm_is_least_common_multiple, leibniz_lcm_property]);
+  metis_tac[leibniz_horizontal_member_divides, list_lcm_is_least_common_multiple, leibniz_lcm_property]
+QED
 
 (* Theorem: n <= 2 * m /\ m <= n ==> (lcm_run n) <= (lcm_run m) * binomial n m *)
 (* Proof:
@@ -11042,12 +11422,13 @@ val lcm_run_divides_property = store_thm(
     Now (lcm_run n) divides (lcm_run m) * binomial n m   by lcm_run_divides_property
    Thus (lcm_run n) <= (lcm_run m) * binomial n m        by DIVIDES_LE
 *)
-val lcm_run_bound_recurrence = store_thm(
-  "lcm_run_bound_recurrence",
-  ``!m n. n <= 2 * m /\ m <= n ==> (lcm_run n) <= (lcm_run m) * binomial n m``,
+Theorem lcm_run_bound_recurrence:
+    !m n. n <= 2 * m /\ m <= n ==> (lcm_run n) <= (lcm_run m) * binomial n m
+Proof
   rpt strip_tac >>
   `0 < lcm_run m * binomial n m` by metis_tac[lcm_run_pos, binomial_pos, MULT_EQ_0, NOT_ZERO_LT_ZERO] >>
-  rw[lcm_run_divides_property, DIVIDES_LE]);
+  rw[lcm_run_divides_property, DIVIDES_LE]
+QED
 
 (* Theorem: lcm_run n <= 4 ** n *)
 (* Proof:
@@ -11094,9 +11475,9 @@ val lcm_run_bound_recurrence = store_thm(
                 = 4 ** n                   by n = 2 * m + 1
          Hence lcm_run n <= 4 ** n.
 *)
-val lcm_run_upper_bound = store_thm(
-  "lcm_run_upper_bound",
-  ``!n. lcm_run n <= 4 ** n``,
+Theorem lcm_run_upper_bound:
+    !n. lcm_run n <= 4 ** n
+Proof
   completeInduct_on `n` >>
   Cases_on `EVEN n` >| [
     Cases_on `n = 0` >-
@@ -11123,7 +11504,8 @@ val lcm_run_upper_bound = store_thm(
     `c <= 4 ** (m + 1) * 4 ** m` by rw[LESS_MONO_MULT2, Abbr`c`] >>
     `4 ** (m + 1) * 4 ** m = 4 ** n` by metis_tac[MULT_COMM, EXP_ADD, ADD_ASSOC, TIMES2] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* This is a milestone theorem. *)
 
@@ -11172,24 +11554,27 @@ n = 6       6 30 60 60 30  6 = 6 * (1  5 10 10  5  1) = leibniz_horizontal 5
    = n * (if n = 0 then 1 else 0)    by binomial_0_n
    = 0
 *)
-val beta_0_n = store_thm(
-  "beta_0_n",
-  ``!n. beta 0 n = 0``,
-  rw[binomial_0_n]);
+Theorem beta_0_n:
+    !n. beta 0 n = 0
+Proof
+  rw[binomial_0_n]
+QED
 
 (* Theorem: beta n 0 = 0 *)
 (* Proof: by notation *)
-val beta_n_0 = store_thm(
-  "beta_n_0",
-  ``!n. beta n 0 = 0``,
-  rw[]);
+Theorem beta_n_0:
+    !n. beta n 0 = 0
+Proof
+  rw[]
+QED
 
 (* Theorem: n < k ==> (beta n k = 0) *)
 (* Proof: by notation, binomial_less_0 *)
-val beta_less_0 = store_thm(
-  "beta_less_0",
-  ``!n k. n < k ==> (beta n k = 0)``,
-  rw[binomial_less_0]);
+Theorem beta_less_0:
+    !n k. n < k ==> (beta n k = 0)
+Proof
+  rw[binomial_less_0]
+QED
 
 (* Theorem: beta (n + 1) (k + 1) = leibniz n k *)
 (* Proof:
@@ -11205,9 +11590,9 @@ val beta_less_0 = store_thm(
       and leibniz n k = 0                        by leibniz_less_0
      Hence true.
 *)
-val beta_eqn = store_thm(
-  "beta_eqn",
-  ``!n k. beta (n + 1) (k + 1) = leibniz n k``,
+Theorem beta_eqn:
+    !n k. beta (n + 1) (k + 1) = leibniz n k
+Proof
   rpt strip_tac >>
   Cases_on `k <= n` >| [
     `(n + 1) - (k + 1) = n - k` by decide_tac >>
@@ -11221,14 +11606,16 @@ val beta_eqn = store_thm(
     `FACT k <> 0 /\ FACT (n - k) <> 0` by metis_tac[FACT_LESS, NOT_ZERO_LT_ZERO] >>
     metis_tac[EQ_MULT_LCANCEL, MULT_ASSOC],
     rw[beta_less_0, leibniz_less_0]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < n /\ 0 < k ==> (beta n k = leibniz (n - 1) (k - 1)) *)
 (* Proof: by beta_eqn *)
-val beta_alt = store_thm(
-  "beta_alt",
-  ``!n k. 0 < n /\ 0 < k ==> (beta n k = leibniz (n - 1) (k - 1))``,
-  rw[GSYM beta_eqn]);
+Theorem beta_alt:
+    !n k. 0 < n /\ 0 < k ==> (beta n k = leibniz (n - 1) (k - 1))
+Proof
+  rw[GSYM beta_eqn]
+QED
 
 (* Theorem: 0 < k /\ k <= n ==> 0 < beta n k *)
 (* Proof:
@@ -11239,10 +11626,11 @@ val beta_alt = store_thm(
    <=> k <> 0 /\ k <= n              by binomial_pos
    <=> 0 < k /\ k <= n               by NOT_ZERO_LT_ZERO
 *)
-val beta_pos = store_thm(
-  "beta_pos",
-  ``!n k. 0 < k /\ k <= n ==> 0 < beta n k``,
-  metis_tac[MULT_EQ_0, binomial_pos, NOT_ZERO_LT_ZERO]);
+Theorem beta_pos:
+    !n k. 0 < k /\ k <= n ==> 0 < beta n k
+Proof
+  metis_tac[MULT_EQ_0, binomial_pos, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: (beta n k = 0) <=> (k = 0) \/ n < k *)
 (* Proof:
@@ -11251,10 +11639,11 @@ val beta_pos = store_thm(
    <=> (k = 0) \/ (binomial n k = 0)    by MULT_EQ_0
    <=> (k = 0) \/ (n < k)               by binomial_eq_0
 *)
-val beta_eq_0 = store_thm(
-  "beta_eq_0",
-  ``!n k. (beta n k = 0) <=> (k = 0) \/ n < k``,
-  rw[binomial_eq_0]);
+Theorem beta_eq_0:
+    !n k. (beta n k = 0) <=> (k = 0) \/ n < k
+Proof
+  rw[binomial_eq_0]
+QED
 
 (*
 binomial_sym  |- !n k. k <= n ==> (binomial n k = binomial n (n - k))
@@ -11275,13 +11664,14 @@ leibniz_sym   |- !n k. k <= n ==> (leibniz n k = leibniz n (n - k))
       = leibniz (n - 1) (n - k + 1 - 1)  by arithmetic
       = beta n (n - k + 1)               by beta_alt
 *)
-val beta_sym = store_thm(
-  "beta_sym",
-  ``!n k. k <= n ==> (beta n k = beta n (n - k + 1))``,
+Theorem beta_sym:
+    !n k. k <= n ==> (beta n k = beta n (n - k + 1))
+Proof
   rpt strip_tac >>
   Cases_on `k = 0` >-
   rw[beta_n_0, beta_less_0] >>
-  rw[beta_alt, Once leibniz_sym]);
+  rw[beta_alt, Once leibniz_sym]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Beta Horizontal List                                                      *)
@@ -11309,10 +11699,11 @@ val _ = temp_overload_on("beta_horizontal", ``\n. GENLIST (beta n o SUC) n``); (
    = GENLIST (beta 0 o SUC) 0    by notation
    = []                          by GENLIST
 *)
-val beta_horizontal_0 = store_thm(
-  "beta_horizontal_0",
-  ``beta_horizontal 0 = []``,
-  rw[]);
+Theorem beta_horizontal_0:
+    beta_horizontal 0 = []
+Proof
+  rw[]
+QED
 
 (* Theorem: LENGTH (beta_horizontal n) = n *)
 (* Proof:
@@ -11320,10 +11711,11 @@ val beta_horizontal_0 = store_thm(
    = LENGTH (GENLIST (beta n o SUC) n)     by notation
    = n                                     by LENGTH_GENLIST
 *)
-val beta_horizontal_len = store_thm(
-  "beta_horizontal_len",
-  ``!n. LENGTH (beta_horizontal n) = n``,
-  rw[]);
+Theorem beta_horizontal_len:
+    !n. LENGTH (beta_horizontal n) = n
+Proof
+  rw[]
+QED
 
 (* Theorem: beta_horizontal (n + 1) = leibniz_horizontal n *)
 (* Proof:
@@ -11334,17 +11726,19 @@ val beta_horizontal_len = store_thm(
       = leibniz n k                                       by beta_eqn
    Thus beta_horizontal (n + 1) = leibniz_horizontal n    by GENLIST_FUN_EQ
 *)
-val beta_horizontal_eqn = store_thm(
-  "beta_horizontal_eqn",
-  ``!n. beta_horizontal (n + 1) = leibniz_horizontal n``,
-  rw[GENLIST_FUN_EQ, beta_eqn, ADD1]);
+Theorem beta_horizontal_eqn:
+    !n. beta_horizontal (n + 1) = leibniz_horizontal n
+Proof
+  rw[GENLIST_FUN_EQ, beta_eqn, ADD1]
+QED
 
 (* Theorem: 0 < n ==> (beta_horizontal n = leibniz_horizontal (n - 1)) *)
 (* Proof: by beta_horizontal_eqn *)
-val beta_horizontal_alt = store_thm(
-  "beta_horizontal_alt",
-  ``!n. 0 < n ==> (beta_horizontal n = leibniz_horizontal (n - 1))``,
-  metis_tac[beta_horizontal_eqn, DECIDE``0 < n ==> (n - 1 + 1 = n)``]);
+Theorem beta_horizontal_alt:
+    !n. 0 < n ==> (beta_horizontal n = leibniz_horizontal (n - 1))
+Proof
+  metis_tac[beta_horizontal_eqn, DECIDE``0 < n ==> (n - 1 + 1 = n)``]
+QED
 
 (* Theorem: 0 < k /\ k <= n ==> MEM (beta n k) (beta_horizontal n) *)
 (* Proof:
@@ -11354,14 +11748,15 @@ val beta_horizontal_alt = store_thm(
      and SUC m = k <= n ==> m < n     by arithmetic
    So take this m, and the result follows.
 *)
-val beta_horizontal_mem = store_thm(
-  "beta_horizontal_mem",
-  ``!n k. 0 < k /\ k <= n ==> MEM (beta n k) (beta_horizontal n)``,
+Theorem beta_horizontal_mem:
+    !n k. 0 < k /\ k <= n ==> MEM (beta n k) (beta_horizontal n)
+Proof
   rpt strip_tac >>
   rw[MEM_GENLIST] >>
   `?m. k = SUC m` by metis_tac[num_CASES, NOT_ZERO_LT_ZERO] >>
   `m < n` by decide_tac >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* too weak:
 binomial_horizontal_mem  |- !n k. k < n + 1 ==> MEM (binomial n k) (binomial_horizontal n)
@@ -11384,9 +11779,9 @@ leibniz_horizontal_mem   |- !n k. k <= n ==> MEM (leibniz n k) (leibniz_horizont
        and SUC m <= n <=> m < n           by LESS_EQ
         so Take this m, and the result follows.
 *)
-val beta_horizontal_mem_iff = store_thm(
-  "beta_horizontal_mem_iff",
-  ``!n k. MEM (beta n k) (beta_horizontal n) <=> 0 < k /\ k <= n``,
+Theorem beta_horizontal_mem_iff:
+    !n k. MEM (beta n k) (beta_horizontal n) <=> 0 < k /\ k <= n
+Proof
   rw[MEM_GENLIST] >>
   rewrite_tac[EQ_IMP_THM] >>
   strip_tac >| [
@@ -11397,7 +11792,8 @@ val beta_horizontal_mem_iff = store_thm(
     strip_tac >>
     `?m. k = SUC m` by metis_tac[num_CASES, NOT_ZERO_LT_ZERO] >>
     metis_tac[LESS_EQ]
-  ]);
+  ]
+QED
 
 (* Theorem: MEM x (beta_horizontal n) <=> ?k. 0 < k /\ k <= n /\ (x = beta n k) *)
 (* Proof:
@@ -11406,18 +11802,20 @@ val beta_horizontal_mem_iff = store_thm(
    Since 0 < k /\ k <= n <=> ?m. (k = SUC m) /\ m < n  by num_CASES, LESS_EQ
    This is trivially true.
 *)
-val beta_horizontal_member = store_thm(
-  "beta_horizontal_member",
-  ``!n x. MEM x (beta_horizontal n) <=> ?k. 0 < k /\ k <= n /\ (x = beta n k)``,
+Theorem beta_horizontal_member:
+    !n x. MEM x (beta_horizontal n) <=> ?k. 0 < k /\ k <= n /\ (x = beta n k)
+Proof
   rw[MEM_GENLIST] >>
-  metis_tac[num_CASES, NOT_ZERO_LT_ZERO, SUC_NOT_ZERO, LESS_EQ]);
+  metis_tac[num_CASES, NOT_ZERO_LT_ZERO, SUC_NOT_ZERO, LESS_EQ]
+QED
 
 (* Theorem: k < n ==> (EL k (beta_horizontal n) = beta n (k + 1)) *)
 (* Proof: by EL_GENLIST, ADD1 *)
-val beta_horizontal_element = store_thm(
-  "beta_horizontal_element",
-  ``!n k. k < n ==> (EL k (beta_horizontal n) = beta n (k + 1))``,
-  rw[EL_GENLIST, ADD1]);
+Theorem beta_horizontal_element:
+    !n k. k < n ==> (EL k (beta_horizontal n) = beta n (k + 1))
+Proof
+  rw[EL_GENLIST, ADD1]
+QED
 
 (* Theorem: 0 < n ==> (lcm_run n = list_lcm (beta_horizontal n)) *)
 (* Proof:
@@ -11429,10 +11827,11 @@ val beta_horizontal_element = store_thm(
    = list_lcm (leibniz_horizontal k)  by leibniz_lcm_property
    = list_lcm (beta_horizontal n)     by beta_horizontal_eqn
 *)
-val lcm_run_by_beta_horizontal = store_thm(
-  "lcm_run_by_beta_horizontal",
-  ``!n. 0 < n ==> (lcm_run n = list_lcm (beta_horizontal n))``,
-  metis_tac[leibniz_lcm_property, beta_horizontal_eqn, num_CASES, ADD1, NOT_ZERO_LT_ZERO]);
+Theorem lcm_run_by_beta_horizontal:
+    !n. 0 < n ==> (lcm_run n = list_lcm (beta_horizontal n))
+Proof
+  metis_tac[leibniz_lcm_property, beta_horizontal_eqn, num_CASES, ADD1, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: 0 < k /\ k <= n ==> (beta n k) divides lcm_run n *)
 (* Proof:
@@ -11441,10 +11840,11 @@ val lcm_run_by_beta_horizontal = store_thm(
    also lcm_run n = list_lcm (beta_horizontal n)    by lcm_run_by_beta_horizontal, 0 < n
    Thus (beta n k) divides lcm_run n                by list_lcm_is_common_multiple
 *)
-val lcm_run_beta_divisor = store_thm(
-  "lcm_run_beta_divisor",
-  ``!n k. 0 < k /\ k <= n ==> (beta n k) divides lcm_run n``,
-  rw[beta_horizontal_mem, lcm_run_by_beta_horizontal, list_lcm_is_common_multiple]);
+Theorem lcm_run_beta_divisor:
+    !n k. 0 < k /\ k <= n ==> (beta n k) divides lcm_run n
+Proof
+  rw[beta_horizontal_mem, lcm_run_by_beta_horizontal, list_lcm_is_common_multiple]
+QED
 
 (* Theorem: k <= m /\ m <= n ==> (beta n k) divides (beta m k) * (binomial n m) *)
 (* Proof:
@@ -11455,12 +11855,13 @@ val lcm_run_beta_divisor = store_thm(
                               = (k * binomial m k) * binomial n m    by MULT_ASSOC
      or (beta n k) divides (beta m k) * (binomial n m)               by notation
 *)
-val beta_divides_beta_factor = store_thm(
-  "beta_divides_beta_factor",
-  ``!m n k. k <= m /\ m <= n ==> (beta n k) divides (beta m k) * (binomial n m)``,
+Theorem beta_divides_beta_factor:
+    !m n k. k <= m /\ m <= n ==> (beta n k) divides (beta m k) * (binomial n m)
+Proof
   rw[] >>
   `binomial n k divides binomial m k * binomial n m` by metis_tac[binomial_product_identity, divides_def, MULT_COMM] >>
-  metis_tac[DIVIDES_CANCEL_COMM, MULT_ASSOC]);
+  metis_tac[DIVIDES_CANCEL_COMM, MULT_ASSOC]
+QED
 
 (* Theorem: n <= 2 * m /\ m <= n ==> (lcm_run n) divides (binomial n m) * (lcm_run m) *)
 (* Proof:
@@ -11506,9 +11907,9 @@ val beta_divides_beta_factor = store_thm(
           (list_lcm (beta_horizontal n)) divides q      by list_lcm_is_least_common_multiple, Claim
        or                    (lcm_run n) divides q      by lcm_run_by_beta_horizontal, 0 < n
 *)
-val lcm_run_divides_property_alt = store_thm(
-  "lcm_run_divides_property_alt",
-  ``!m n. n <= 2 * m /\ m <= n ==> (lcm_run n) divides (binomial n m) * (lcm_run m)``,
+Theorem lcm_run_divides_property_alt:
+    !m n. n <= 2 * m /\ m <= n ==> (lcm_run n) divides (binomial n m) * (lcm_run m)
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[lcm_run_0] >>
@@ -11533,7 +11934,8 @@ val lcm_run_divides_property_alt = store_thm(
     metis_tac[DIVIDES_TRANS]
   ]) >>
   `(list_lcm (beta_horizontal n)) divides q` by metis_tac[list_lcm_is_least_common_multiple] >>
-  metis_tac[lcm_run_by_beta_horizontal]);
+  metis_tac[lcm_run_by_beta_horizontal]
+QED
 
 (* This is the original lcm_run_divides_property to give lcm_run_upper_bound. *)
 
@@ -11645,15 +12047,16 @@ QED
        Now 0 < list_lcm l           by list_lcm_pos, EVERY_MEM
         so x <= list_lcm l          by DIVIDES_LE, 0 < list_lcm l
 *)
-val list_lcm_ge_max = store_thm(
-  "list_lcm_ge_max",
-  ``!l. POSITIVE l ==> MAX_LIST l <= list_lcm l``,
+Theorem list_lcm_ge_max:
+    !l. POSITIVE l ==> MAX_LIST l <= list_lcm l
+Proof
   rpt strip_tac >>
   Cases_on `l = []` >-
   rw[MAX_LIST_NIL, list_lcm_nil] >>
   `MEM (MAX_LIST l) l` by rw[MAX_LIST_MEM] >>
   `0 < list_lcm l` by rw[list_lcm_pos, EVERY_MEM] >>
-  rw[list_lcm_is_common_multiple, DIVIDES_LE]);
+  rw[list_lcm_is_common_multiple, DIVIDES_LE]
+QED
 
 (* Theorem: (n + 1) * binomial n (HALF n) <= list_lcm [1 .. (n + 1)] *)
 (* Proof:
@@ -11666,9 +12069,9 @@ val list_lcm_ge_max = store_thm(
   >= (n + 1) * MAX_LIST (binomial_horizontal n)  by list_lcm_ge_max, [1], LE_MULT_LCANCEL
   = (n + 1) * binomial n (HALF n)                by binomial_horizontal_max
 *)
-val lcm_lower_bound_by_list_lcm = store_thm(
-  "lcm_lower_bound_by_list_lcm",
-  ``!n. (n + 1) * binomial n (HALF n) <= list_lcm [1 .. (n + 1)]``,
+Theorem lcm_lower_bound_by_list_lcm:
+    !n. (n + 1) * binomial n (HALF n) <= list_lcm [1 .. (n + 1)]
+Proof
   rpt strip_tac >>
   `MAX_LIST (binomial_horizontal n) <= list_lcm (binomial_horizontal n)` by
   (irule list_lcm_ge_max >>
@@ -11676,7 +12079,8 @@ val lcm_lower_bound_by_list_lcm = store_thm(
   `list_lcm (leibniz_vertical n) = list_lcm (leibniz_horizontal n)` by rw[leibniz_lcm_property] >>
   `_ = (n + 1) * list_lcm (binomial_horizontal n)` by rw[leibniz_horizontal_lcm_alt] >>
   `n + 1 <> 0` by decide_tac >>
-  metis_tac[LE_MULT_LCANCEL, binomial_horizontal_max]);
+  metis_tac[LE_MULT_LCANCEL, binomial_horizontal_max]
+QED
 
 (* Theorem: FINITE s /\ (!x. x IN s ==> 0 < x) ==> MAX_SET s <= big_lcm s *)
 (* Proof:
@@ -11691,15 +12095,16 @@ val lcm_lower_bound_by_list_lcm = store_thm(
        Now 0 < big_lcm s           by big_lcm_positive
         so x <= big_lcm s          by DIVIDES_LE, 0 < big_lcm s
 *)
-val big_lcm_ge_max = store_thm(
-  "big_lcm_ge_max",
-  ``!s. FINITE s /\ (!x. x IN s ==> 0 < x) ==> MAX_SET s <= big_lcm s``,
+Theorem big_lcm_ge_max:
+    !s. FINITE s /\ (!x. x IN s ==> 0 < x) ==> MAX_SET s <= big_lcm s
+Proof
   rpt strip_tac >>
   Cases_on `s = {}` >-
   rw[MAX_SET_EMPTY, big_lcm_empty] >>
   `(MAX_SET s) IN s` by rw[MAX_SET_IN_SET] >>
   `0 < big_lcm s` by rw[big_lcm_positive] >>
-  rw[big_lcm_is_common_multiple, DIVIDES_LE]);
+  rw[big_lcm_is_common_multiple, DIVIDES_LE]
+QED
 
 (* Theorem: (n + 1) * binomial n (HALF n) <= big_lcm (natural (n + 1)) *)
 (* Proof:
@@ -11715,9 +12120,9 @@ val big_lcm_ge_max = store_thm(
    >= (n + 1) * MAX_SET (IMAGE (binomial n) (count (n + 1)))  by claim, LE_MULT_LCANCEL
    = (n + 1) * binomial n (HALF n)                            by binomial_row_max
 *)
-val lcm_lower_bound_by_big_lcm = store_thm(
-  "lcm_lower_bound_by_big_lcm",
-  ``!n. (n + 1) * binomial n (HALF n) <= big_lcm (natural (n + 1))``,
+Theorem lcm_lower_bound_by_big_lcm:
+    !n. (n + 1) * binomial n (HALF n) <= big_lcm (natural (n + 1))
+Proof
   rpt strip_tac >>
   `MAX_SET (IMAGE (binomial n) (count (n + 1))) <=
        big_lcm (IMAGE (binomial n) (count (n + 1)))` by
@@ -11725,7 +12130,8 @@ val lcm_lower_bound_by_big_lcm = store_thm(
   metis_tac[binomial_pos, IN_IMAGE, IN_COUNT, DECIDE``x < n + 1 ==> x <= n``] >>
   rw[]
   ) >>
-  metis_tac[big_lcm_natural_eqn, LE_MULT_LCANCEL, binomial_row_max, DECIDE``n + 1 <> 0``]);
+  metis_tac[big_lcm_natural_eqn, LE_MULT_LCANCEL, binomial_row_max, DECIDE``n + 1 <> 0``]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Consecutive LCM function                                                  *)
@@ -11758,10 +12164,10 @@ val lcm_lower_bound_by_big_lcm = store_thm(
          = (SQRT (n DIV (2 * pi)) * 2 ** n        by assumption, m = n - 1
       Hence SQRT (n DIV (2 * pi))) * (2 ** n) <= list_lcm [1 .. n]
 *)
-val lcm_lower_bound_by_list_lcm_stirling = store_thm(
-  "lcm_lower_bound_by_list_lcm_stirling",
-  ``Stirling /\ (!n c. n DIV (SQRT (c * (n - 1))) = SQRT (n DIV c)) ==>
-   !n. ODD n ==> (SQRT (n DIV (2 * pi))) * (2 ** n) <= list_lcm [1 .. n]``,
+Theorem lcm_lower_bound_by_list_lcm_stirling:
+    Stirling /\ (!n c. n DIV (SQRT (c * (n - 1))) = SQRT (n DIV c)) ==>
+   !n. ODD n ==> (SQRT (n DIV (2 * pi))) * (2 ** n) <= list_lcm [1 .. n]
+Proof
   rpt strip_tac >>
   `!n. 0 < n /\ EVEN n ==> (binomial n (HALF n) = 2 ** (n + 1) DIV SQRT (2 * pi * n))` by prove_tac[binomial_middle_by_stirling] >>
   `n <> 0` by metis_tac[EVEN_0, EVEN_ODD] >>
@@ -11779,7 +12185,8 @@ val lcm_lower_bound_by_list_lcm_stirling = store_thm(
     `n * binomial m (HALF m) = n * (2 ** n DIV SQRT (2 * pi * m))` by rw[] >>
     `_ = (n DIV SQRT (2 * pi * m)) * 2 ** n` by metis_tac[MULT_COMM] >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Theorem: big_lcm (natural n) <= big_lcm (natural (n + 1)) *)
 (* Proof:
@@ -11791,16 +12198,17 @@ val lcm_lower_bound_by_list_lcm_stirling = store_thm(
      = big_lcm (natural (SUC n))              by natural_suc
      = big_lcm (natural (n + 1))              by ADD1
 *)
-val big_lcm_non_decreasing = store_thm(
-  "big_lcm_non_decreasing",
-  ``!n. big_lcm (natural n) <= big_lcm (natural (n + 1))``,
+Theorem big_lcm_non_decreasing:
+    !n. big_lcm (natural n) <= big_lcm (natural (n + 1))
+Proof
   rpt strip_tac >>
   `FINITE (natural n)` by rw[natural_finite] >>
   `0 < big_lcm (natural n)` by rw[big_lcm_positive, natural_element] >>
   `big_lcm (natural (n + 1)) = big_lcm (natural (SUC n))` by rw[ADD1] >>
   `_ = big_lcm ((SUC n) INSERT (natural n))` by rw[natural_suc] >>
   `_ = lcm (SUC n) (big_lcm (natural n))` by rw[big_lcm_insert] >>
-  rw[LCM_LE]);
+  rw[LCM_LE]
+QED
 
 (* Theorem: Stirling /\ (!n c. n DIV (SQRT (c * (n - 1))) = SQRT (n DIV c)) ==>
             !n. ODD n ==> (SQRT (n DIV (2 * pi))) * (2 ** n) <= big_lcm (natural n) *)
@@ -11829,10 +12237,10 @@ val big_lcm_non_decreasing = store_thm(
          = (SQRT (n DIV (2 * pi)) * 2 ** n        by assumption, m = n - 1
       Hence SQRT (n DIV (2 * pi))) * (2 ** n) <= big_lcm (natural n)
 *)
-val lcm_lower_bound_by_big_lcm_stirling = store_thm(
-  "lcm_lower_bound_by_big_lcm_stirling",
-  ``Stirling /\ (!n c. n DIV (SQRT (c * (n - 1))) = SQRT (n DIV c)) ==>
-   !n. ODD n ==> (SQRT (n DIV (2 * pi))) * (2 ** n) <= big_lcm (natural n)``,
+Theorem lcm_lower_bound_by_big_lcm_stirling:
+    Stirling /\ (!n c. n DIV (SQRT (c * (n - 1))) = SQRT (n DIV c)) ==>
+   !n. ODD n ==> (SQRT (n DIV (2 * pi))) * (2 ** n) <= big_lcm (natural n)
+Proof
   rpt strip_tac >>
   `!n. 0 < n /\ EVEN n ==> (binomial n (HALF n) = 2 ** (n + 1) DIV SQRT (2 * pi * n))` by prove_tac[binomial_middle_by_stirling] >>
   `n <> 0` by metis_tac[EVEN_0, EVEN_ODD] >>
@@ -11850,7 +12258,8 @@ val lcm_lower_bound_by_big_lcm_stirling = store_thm(
     `n * binomial m (HALF m) = n * (2 ** n DIV SQRT (2 * pi * m))` by rw[] >>
     `_ = (n DIV SQRT (2 * pi * m)) * 2 ** n` by metis_tac[MULT_COMM] >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Extra Theorems (not used)                                                 *)
@@ -11882,9 +12291,9 @@ Note prime_not_divides_coprime.
     = m * 1                               by coprime p q, from Claim
     = m
 *)
-val gcd_prime_product_property = store_thm(
-  "gcd_prime_product_property",
-  ``!p m n. prime p /\ m divides n /\ ~((p * m) divides n) ==> (gcd (p * m) n = m)``,
+Theorem gcd_prime_product_property:
+    !p m n. prime p /\ m divides n /\ ~((p * m) divides n) ==> (gcd (p * m) n = m)
+Proof
   rpt strip_tac >>
   `?q. n = q * m` by rw[GSYM divides_def] >>
   `m <> 0` by metis_tac[MULT_0] >>
@@ -11894,7 +12303,8 @@ val gcd_prime_product_property = store_thm(
   `gcd p q = p` by metis_tac[prime_def] >>
   `p divides q` by rw[divides_iff_gcd_fix] >>
   metis_tac[DIVIDES_MULTIPLE_IFF, MULT_COMM]) >>
-  metis_tac[GCD_COMMON_FACTOR, MULT_COMM, MULT_RIGHT_1]);
+  metis_tac[GCD_COMMON_FACTOR, MULT_COMM, MULT_RIGHT_1]
+QED
 
 (* Theorem: prime p /\ m divides n /\ ~((p * m) divides n) ==>(lcm (p * m) n = p * n) *)
 (* Proof:
@@ -11906,15 +12316,16 @@ val gcd_prime_product_property = store_thm(
        = m * (p * n)                       by MULT_ASSOC
    Thus   lcm (p * m) n = p * n            by MULT_LEFT_CANCEL
 *)
-val lcm_prime_product_property = store_thm(
-  "lcm_prime_product_property",
-  ``!p m n. prime p /\ m divides n /\ ~((p * m) divides n) ==>(lcm (p * m) n = p * n)``,
+Theorem lcm_prime_product_property:
+    !p m n. prime p /\ m divides n /\ ~((p * m) divides n) ==>(lcm (p * m) n = p * n)
+Proof
   rpt strip_tac >>
   `m <> 0` by metis_tac[MULT_0] >>
   `m * lcm (p * m) n = gcd (p * m) n * lcm (p * m) n` by rw[gcd_prime_product_property] >>
   `_ = (p * m) * n` by rw[GCD_LCM] >>
   `_ = m * (p * n)` by metis_tac[MULT_COMM, MULT_ASSOC] >>
-  metis_tac[MULT_LEFT_CANCEL]);
+  metis_tac[MULT_LEFT_CANCEL]
+QED
 
 (* Theorem: prime p /\ p divides list_lcm l ==> p divides PROD_SET (set l) *)
 (* Proof:
@@ -11953,9 +12364,9 @@ val lcm_prime_product_property = store_thm(
          Then PROD_SET (h INSERT set l) = h * PROD_SET (set l)  by PROD_SET_INSERT
            or p divides PROD_SET (h INSERT set l)               by DIVIDES_MULTIPLE
 *)
-val list_lcm_prime_factor = store_thm(
-  "list_lcm_prime_factor",
-  ``!p l. prime p /\ p divides list_lcm l ==> p divides PROD_SET (set l)``,
+Theorem list_lcm_prime_factor:
+    !p l. prime p /\ p divides list_lcm l ==> p divides PROD_SET (set l)
+Proof
   strip_tac >>
   Induct >-
   rw[] >>
@@ -11975,7 +12386,8 @@ val list_lcm_prime_factor = store_thm(
     fs[ABSORPTION] >>
     rw[PROD_SET_INSERT] >>
     metis_tac[DIVIDES_MULTIPLE]
-  ]);
+  ]
+QED
 
 (* Theorem: prime p /\ p divides PROD_SET (set l) ==> ?x. MEM x l /\ p divides x *)
 (* Proof:
@@ -12002,9 +12414,9 @@ val list_lcm_prime_factor = store_thm(
          Case p divides PROD_SET (set l).
               Then ?x. MEM x l /\ p divides x                     by induction hypothesis
 *)
-val list_product_prime_factor = store_thm(
-  "list_product_prime_factor",
-  ``!p l. prime p /\ p divides PROD_SET (set l) ==> ?x. MEM x l /\ p divides x``,
+Theorem list_product_prime_factor:
+    !p l. prime p /\ p divides PROD_SET (set l) ==> ?x. MEM x l /\ p divides x
+Proof
   strip_tac >>
   Induct >| [
     rpt strip_tac >>
@@ -12019,14 +12431,16 @@ val list_product_prime_factor = store_thm(
     `p divides h \/ p divides (PROD_SET (set l))` by rw[P_EUCLIDES] >-
     metis_tac[] >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Theorem: prime p /\ p divides list_lcm l ==> ?x. MEM x l /\ p divides x *)
 (* Proof: by list_lcm_prime_factor, list_product_prime_factor *)
-val list_lcm_prime_factor_member = store_thm(
-  "list_lcm_prime_factor_member",
-  ``!p l. prime p /\ p divides list_lcm l ==> ?x. MEM x l /\ p divides x``,
-  rw[list_lcm_prime_factor, list_product_prime_factor]);
+Theorem list_lcm_prime_factor_member:
+    !p l. prime p /\ p divides list_lcm l ==> ?x. MEM x l /\ p divides x
+Proof
+  rw[list_lcm_prime_factor, list_product_prime_factor]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Count Helper Documentation                                                *)

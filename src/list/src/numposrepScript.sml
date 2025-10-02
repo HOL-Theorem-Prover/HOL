@@ -205,17 +205,20 @@ Proof
   Q.X_GEN_TAC`z` THEN Cases_on`0=z MOD b` THEN simp[]
 QED
 
-val l2n_SNOC_0 = store_thm("l2n_SNOC_0",
-  ``!b ls. 0 < b ==> (l2n b (SNOC 0 ls) = l2n b ls)``,
-  GEN_TAC THEN Induct THEN simp[l2n_def])
+Theorem l2n_SNOC_0:
+    !b ls. 0 < b ==> (l2n b (SNOC 0 ls) = l2n b ls)
+Proof
+  GEN_TAC THEN Induct THEN simp[l2n_def]
+QED
 
 val MOD_EQ_0_0 = prove(
   ``!n b. 0 < b ==> (n MOD b = 0) ==> n < b ==> (n = 0)``,
   SRW_TAC[][MOD_EQ_0_DIVISOR] THEN Cases_on`d` THEN FULL_SIMP_TAC(srw_ss())[])
 
-val LOG_l2n = store_thm("LOG_l2n",
-  ``!b. 1 < b ==> !l. l <> [] /\ 0 < LAST l /\ EVERY ($> b) l ==>
-        (LOG b (l2n b l) = PRE (LENGTH l))``,
+Theorem LOG_l2n:
+    !b. 1 < b ==> !l. l <> [] /\ 0 < LAST l /\ EVERY ($> b) l ==>
+        (LOG b (l2n b l) = PRE (LENGTH l))
+Proof
   NTAC 2 STRIP_TAC THEN Induct THEN simp[l2n_def] THEN
   rw[] THEN fs[LAST_DEF] THEN
   Cases_on`l=[]` THEN fs[l2n_def] THEN1 (
@@ -237,18 +240,22 @@ val LOG_l2n = store_thm("LOG_l2n",
   fs[EVERY_MEM] THEN
   RES_TAC THEN
   `z = 0` by METIS_TAC[MOD_EQ_0_0,GREATER_DEF] THEN
-  fs[])
+  fs[]
+QED
 
-val l2n_dropWhile_0 = store_thm("l2n_dropWhile_0",
-  ``!b ls.
-      0 < b ==> (l2n b (REVERSE (dropWhile ($= 0) (REVERSE ls))) = l2n b ls)``,
+Theorem l2n_dropWhile_0:
+    !b ls.
+      0 < b ==> (l2n b (REVERSE (dropWhile ($= 0) (REVERSE ls))) = l2n b ls)
+Proof
   GEN_TAC >> HO_MATCH_MP_TAC SNOC_INDUCT >>
   simp[dropWhile_def,REVERSE_SNOC] >> rw[] >>
-  rw[] >> rw[l2n_SNOC_0] >> rw[SNOC_APPEND])
+  rw[] >> rw[l2n_SNOC_0] >> rw[SNOC_APPEND]
+QED
 
-val LOG_l2n_dropWhile = store_thm("LOG_l2n_dropWhile",
-  ``!b l. 1 < b /\ EXISTS ($<> 0) l /\ EVERY ($>b) l ==>
-          (LOG b (l2n b l) = PRE (LENGTH (dropWhile ($= 0) (REVERSE l))))``,
+Theorem LOG_l2n_dropWhile:
+    !b l. 1 < b /\ EXISTS ($<> 0) l /\ EVERY ($>b) l ==>
+          (LOG b (l2n b l) = PRE (LENGTH (dropWhile ($= 0) (REVERSE l))))
+Proof
   Tactical.REPEAT STRIP_TAC >>
   `0 < b` by simp[] >>
   simp[Once(GSYM l2n_dropWhile_0)] >>
@@ -268,7 +275,8 @@ val LOG_l2n_dropWhile = store_thm("LOG_l2n_dropWhile",
   Q_TAC SUFF_TAC`~ (($= 0) (HD ls))` >- simp[] >>
   Q.UNABBREV_TAC`ls` >>
   MATCH_MP_TAC HD_dropWhile >>
-  fs[EXISTS_MEM] >> METIS_TAC[])
+  fs[EXISTS_MEM] >> METIS_TAC[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 

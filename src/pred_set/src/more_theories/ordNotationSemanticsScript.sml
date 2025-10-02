@@ -23,51 +23,57 @@ val _ = add_rule {fixity = Closefix, term_name = "ordModel",
                   paren_style = OnlyIfNecessary,
                   pp_elements = [TOK "⟦", TM, TOK "⟧"]}
 
-val osyntax_EQ_0 = store_thm(
-  "osyntax_EQ_0",
-  ``!a. is_ord a ==> ((<[a]> = 0) <=> (a = End 0))``,
+Theorem osyntax_EQ_0:
+    !a. is_ord a ==> ((<[a]> = 0) <=> (a = End 0))
+Proof
   Induct_on `is_ord` THEN SRW_TAC [][ordModel_def] THEN
-  `k <> 0` by DECIDE_TAC THEN SRW_TAC [][ordEXP_EQ_0]);
+  `k <> 0` by DECIDE_TAC THEN SRW_TAC [][ordEXP_EQ_0]
+QED
 
-val oless_0 = store_thm(
-  "oless_0",
-  ``!n. oless n (End 0) = F``,
-  Cases_on `n` >> simp[]);
+Theorem oless_0:
+    !n. oless n (End 0) = F
+Proof
+  Cases_on `n` >> simp[]
+QED
 val _ = export_rewrites ["oless_0"]
 
-val oless_0a = store_thm(
-  "oless_0a",
-  ``oless (End 0) n <=> n <> End 0``,
-  Cases_on `n` >> simp[]);
+Theorem oless_0a:
+    oless (End 0) n <=> n <> End 0
+Proof
+  Cases_on `n` >> simp[]
+QED
 val _ = export_rewrites ["oless_0a"]
 
-val oless_x_End = store_thm(
-  "oless_x_End",
-  ``oless x (End n) <=> ?m. (x = End m) /\ m < n``,
-  Cases_on `x` >> simp[]);
+Theorem oless_x_End:
+    oless x (End n) <=> ?m. (x = End m) /\ m < n
+Proof
+  Cases_on `x` >> simp[]
+QED
 
-val is_ord_expt = store_thm(
-  "is_ord_expt",
-  ``is_ord e ==> is_ord (expt e)``,
-  Cases_on `e` >> simp[]);
+Theorem is_ord_expt:
+    is_ord e ==> is_ord (expt e)
+Proof
+  Cases_on `e` >> simp[]
+QED
 
-val ordModel_lt_epsilon0 = store_thm(
-  "ordModel_lt_epsilon0",
-  ``!a. <[a]> < epsilon0``,
+Theorem ordModel_lt_epsilon0:
+    !a. <[a]> < epsilon0
+Proof
   Induct_on `a` THEN
   SRW_TAC [][ordMUL_under_epsilon0, ordEXP_under_epsilon0,
-             ordADD_under_epsilon0, ordModel_def]);
+             ordADD_under_epsilon0, ordModel_def]
+QED
 
 val asimp = asm_simp_tac (srw_ss() ++ ARITH_ss)
 val bsimp = asm_simp_tac bool_ss
 val csimp = asm_simp_tac (srw_ss() ++ boolSimps.CONJ_ss)
 val dsimp = asm_simp_tac (srw_ss() ++ boolSimps.DNF_ss)
 
-val ord_less_models_ordlt = store_thm(
-  "ord_less_models_ordlt",
-  ``!x. is_ord x ==>
+Theorem ord_less_models_ordlt:
+    !x. is_ord x ==>
         (!y. oless x y /\ is_ord y ==> <[x]> :'a ordinal < <[y]>) /\
-        (~finp x ==> <[tail x]> < omega ** <[expt x]> :'a ordinal)``,
+        (~finp x ==> <[tail x]> < omega ** <[expt x]> :'a ordinal)
+Proof
   completeInduct_on `osyntax_size x` THEN
   RULE_ASSUM_TAC
     (SIMP_RULE (srw_ss() ++ boolSimps.DNF_ss) [AND_IMP_INTRO]) >> fs[] >>
@@ -111,11 +117,12 @@ val ord_less_models_ordlt = store_thm(
       match_mp_tac ordlte_TRANS >> qexists_tac `omega ** <[e2]> * &(SUC c)` >>
       conj_tac >- simp[] >>
       match_mp_tac ordle_TRANS >> qexists_tac `omega ** <[e2]> * &c2` >> simp[]) >>
-  simp[]);
+  simp[]
+QED
 
-val oless_total = store_thm(
-  "oless_total",
-  ``!m n. oless m n \/ oless n m \/ (m = n)``,
+Theorem oless_total:
+    !m n. oless m n \/ oless n m \/ (m = n)
+Proof
   Induct
   >- (map_every qx_gen_tac [`i`, `n`] >>
       `(?j. n = End j) \/ (?e2 c2 t2. n = Plus e2 c2 t2)`
@@ -126,26 +133,30 @@ val oless_total = store_thm(
     by (Cases_on `n` >> simp[]) >> simp[] >>
   `oless e1 e2 \/ oless e2 e1 \/ (e2 = e1)` by metis_tac[] >> rw[] >>
   `oless t1 t2 \/ oless t2 t1 \/ (t2 = t1)` by metis_tac[] >> rw[] >>
-  metis_tac [DECIDE ``x:num < y \/ y < x \/ (x = y)``]);
+  metis_tac [DECIDE ``x:num < y \/ y < x \/ (x = y)``]
+QED
 
-val ord_less_modelled = store_thm(
-  "ord_less_modelled",
-  ``ord_less x y <=> is_ord x /\ is_ord y /\ <[x]> < <[y]>``,
+Theorem ord_less_modelled:
+    ord_less x y <=> is_ord x /\ is_ord y /\ <[x]> < <[y]>
+Proof
   metis_tac [ord_less_def, ord_less_models_ordlt, ordlt_REFL, ordlt_TRANS,
-             oless_total])
+             oless_total]
+QED
 
-val oless_modelled = store_thm(
-  "oless_modelled",
-  ``is_ord x /\ is_ord y ==> (oless x y <=> <[x]> < <[y]>)``,
-  metis_tac [ord_less_def, ord_less_modelled]);
+Theorem oless_modelled:
+    is_ord x /\ is_ord y ==> (oless x y <=> <[x]> < <[y]>)
+Proof
+  metis_tac [ord_less_def, ord_less_modelled]
+QED
 
-val WF_ord_less = store_thm(
-  "WF_ord_less",
-  ``WF ord_less``,
+Theorem WF_ord_less:
+    WF ord_less
+Proof
   match_mp_tac relationTheory.WF_SUBSET >>
   qexists_tac `inv_image ordlt ordModel` >>
   simp[relationTheory.WF_inv_image, ordlt_WF] >>
-  simp[ord_less_modelled, relationTheory.inv_image_def]);
+  simp[ord_less_modelled, relationTheory.inv_image_def]
+QED
 
 (* |- <[expt t]> < <[e]> /\ is_ord e /\ is_ord t ==> <[t]> < omega ** <[e]> *)
 val neqend0_lemma = prove(
@@ -162,9 +173,9 @@ val tail_dominated = save_thm(
     |> REWRITE_RULE [ASSUME ``<[expt t]> < <[e]> :'a ordinal``]
     |> DISCH_ALL |> REWRITE_RULE [AND_IMP_INTRO]);
 
-val addL_disappears = store_thm(
-  "addL_disappears",
-  ``!e a. a < omega ** e ==> (a + omega ** e = omega ** e)``,
+Theorem addL_disappears:
+    !e a. a < omega ** e ==> (a + omega ** e = omega ** e)
+Proof
   ho_match_mp_tac simple_ord_induction >> simp[] >> rpt conj_tac
   >- (qx_gen_tac `a` >> strip_tac >> `a = 0` by metis_tac [IFF_ZERO_lt] >>
       simp[])
@@ -225,30 +236,34 @@ val addL_disappears = store_thm(
   >- (`omega ** x < omega ** y` by simp[] >>
       `a < omega ** y` by metis_tac [ordlt_TRANS] >>
       metis_tac [ordlt_REFL]) >>
-  metis_tac [ordlt_CANCEL, ordEXP_lt_IFF, lt_omega, ordle_lteq]);
+  metis_tac [ordlt_CANCEL, ordEXP_lt_IFF, lt_omega, ordle_lteq]
+QED
 
-val add_nat1_disappears = store_thm(
-  "add_nat1_disappears",
-  ``omega <= a ==> (&n + a = a)``,
+Theorem add_nat1_disappears:
+    omega <= a ==> (&n + a = a)
+Proof
   rpt strip_tac >> fs [ordle_EXISTS_ADD] >>
-  qspecl_then  [`1`, `&n`] mp_tac addL_disappears >> simp[ordADD_ASSOC]);
+  qspecl_then  [`1`, `&n`] mp_tac addL_disappears >> simp[ordADD_ASSOC]
+QED
 
-val add_nat1_disappears_kexp = store_thm(
-  "add_nat1_disappears_kexp",
-  ``e <> 0 /\ 0 < k ==> (&n + omega ** e * &k = omega ** e * &k)``,
+Theorem add_nat1_disappears_kexp:
+    e <> 0 /\ 0 < k ==> (&n + omega ** e * &k = omega ** e * &k)
+Proof
   strip_tac >> match_mp_tac add_nat1_disappears >> match_mp_tac ordle_TRANS >>
   qexists_tac `omega ** e` >> simp[] >>
   match_mp_tac ordle_TRANS >> qexists_tac `omega ** 1` >> simp[] >>
-  metis_tac [IFF_ZERO_lt]);
+  metis_tac [IFF_ZERO_lt]
+QED
 
-val add_disappears_kexp = store_thm(
-  "add_disappears_kexp",
-  ``e <> 0 /\ 0 < k /\ a < omega ** e ==> (a + omega ** e * &k = omega ** e * &k)``,
+Theorem add_disappears_kexp:
+    e <> 0 /\ 0 < k /\ a < omega ** e ==> (a + omega ** e * &k = omega ** e * &k)
+Proof
   strip_tac >>
   `(k = 0) \/ ?k0. k = SUC k0` by (Cases_on `k` >> simp[]) >- fs[] >>
   `k = 1 + k0` by decide_tac >> pop_assum SUBST1_TAC >>
   bsimp[GSYM ordADD_fromNat, ordMULT_LDISTRIB] >>
-  simp[ordADD_ASSOC, addL_disappears]);
+  simp[ordADD_ASSOC, addL_disappears]
+QED
 
 (* |- e1 < e2 ==> &k * omega ** e1 < omega ** e2 *)
 val kexp_lt = let
@@ -266,9 +281,9 @@ in
            DISJ_CASES zero_ltk_or_eqzero zero_ltk eqzero |> DISCH_ALL)
 end
 
-val ord_add_correct = store_thm(
-  "ord_add_correct",
-  ``!x y. is_ord x /\ is_ord y ==> (<[ord_add x y]> = <[x]> + <[y]>)``,
+Theorem ord_add_correct:
+    !x y. is_ord x /\ is_ord y ==> (<[ord_add x y]> = <[x]> + <[y]>)
+Proof
   ho_match_mp_tac ord_add_ind >>
   simp_tac (srw_ss() ++ boolSimps.CONJ_ss)
     [ord_add_def, oless_modelled, AND_IMP_INTRO, is_ord_expt, ordADD_ASSOC] >>
@@ -280,12 +295,13 @@ val ord_add_correct = store_thm(
   >- (AP_THM_TAC >> AP_TERM_TAC >> simp[GSYM ordADD_ASSOC] >>
       simp[add_disappears_kexp, tail_dominated, osyntax_EQ_0] >>
       bsimp[GSYM ordADD_fromNat, ordMULT_LDISTRIB]) >>
-  simp[ordADD_ASSOC]);
+  simp[ordADD_ASSOC]
+QED
 
-val notation_exists = store_thm(
-  "notation_exists",
-  ``!a. a < epsilon0 ==> ?n. is_ord n /\ (<[n]> = a) /\
-                    (0 < a ==> (<[expt n]> = SND (HD (CNF a))))``,
+Theorem notation_exists:
+    !a. a < epsilon0 ==> ?n. is_ord n /\ (<[n]> = a) /\
+                    (0 < a ==> (<[expt n]> = SND (HD (CNF a))))
+Proof
   ho_match_mp_tac ord_induction >> rpt strip_tac >>
   `(CNF a = []) \/ ?c e t. (CNF a = (c,e)::t)`
     by metis_tac [listTheory.list_CASES, pairTheory.pair_CASES]
@@ -335,24 +351,27 @@ val notation_exists = store_thm(
         strip_tac >> spose_not_then assume_tac >> fs[]) >>
     `0 < eval_poly omega t` by (spose_not_then assume_tac >> fs[polyform_0]) >>
     pop_assum (fn th => RULE_ASSUM_TAC (REWRITE_RULE [th])) >> rw[] >>
-    fs[is_polyform_def]);
+    fs[is_polyform_def]
+QED
 
-val ordModel_11 = store_thm(
-  "ordModel_11",
-  ``is_ord n1 /\ is_ord n2 ==> ((<[n1]> = <[n2]>) <=> (n1 = n2))``,
+Theorem ordModel_11:
+    is_ord n1 /\ is_ord n2 ==> ((<[n1]> = <[n2]>) <=> (n1 = n2))
+Proof
   simp[EQ_IMP_THM] >> rpt strip_tac >>
   `(n1 = n2) \/ oless n1 n2 \/ oless n2 n1` by metis_tac [oless_total] >>
-  pop_assum mp_tac >> simp[oless_modelled]);
+  pop_assum mp_tac >> simp[oless_modelled]
+QED
 
-val ordModel_BIJ = store_thm(
-  "ordModel_BIJ",
-  ``BIJ ordModel { n | is_ord n } { a | a < epsilon0 }``,
+Theorem ordModel_BIJ:
+    BIJ ordModel { n | is_ord n } { a | a < epsilon0 }
+Proof
   simp[pred_setTheory.BIJ_DEF, pred_setTheory.INJ_DEF, pred_setTheory.SURJ_DEF,
-       ordModel_lt_epsilon0, ordModel_11] >> metis_tac [notation_exists]);
+       ordModel_lt_epsilon0, ordModel_11] >> metis_tac [notation_exists]
+QED
 
-val nat_times_omega = store_thm(
-  "nat_times_omega",
-  ``!e m. 0 < m /\ 0 < e ==> (&m * omega ** e = omega ** e)``,
+Theorem nat_times_omega:
+    !e m. 0 < m /\ 0 < e ==> (&m * omega ** e = omega ** e)
+Proof
   ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
   >- (qx_gen_tac `e` >> strip_tac >>
       Cases_on `0 < e` >- simp[ordMULT_ASSOC] >> fs[] >>
@@ -382,12 +401,13 @@ val nat_times_omega = store_thm(
       metis_tac [ORD_ONE, islimit_SUC_lt]) >>
   qx_gen_tac `a` >> strip_tac >> qexists_tac `a` >> simp[] >>
   bsimp [Once (GSYM ordMULT_1L), SimpR ``ordlt``] >>
-  match_mp_tac ordMULT_le_MONO_L >> simp[])
+  match_mp_tac ordMULT_le_MONO_L >> simp[]
+QED
 
-val kexp_sum_times_nat = store_thm(
-  "kexp_sum_times_nat",
-  ``!c2 c t e. 0 < c2 /\ 0 < c /\ t < omega ** e ==>
-               ((omega ** e * &c + t) * &c2 = omega ** e * &(c * c2) + t)``,
+Theorem kexp_sum_times_nat:
+    !c2 c t e. 0 < c2 /\ 0 < c /\ t < omega ** e ==>
+               ((omega ** e * &c + t) * &c2 = omega ** e * &(c * c2) + t)
+Proof
   Induct >> simp[] >> map_every qx_gen_tac [`c`, `t`, `e`] >> simp[] >>
   REVERSE (Cases_on `0 < e`)
   >- (fs[] >> strip_tac >> `t = 0` by metis_tac [IFF_ZERO_lt] >>
@@ -403,13 +423,14 @@ val kexp_sum_times_nat = store_thm(
   bsimp[GSYM ordMULT_fromNat, fromNat_SUC, ordMULT_ASSOC] >>
   simp[ordMULT_def] >>
   simp[GSYM ordADD_ASSOC] >> match_mp_tac (GEN_ALL add_disappears_kexp) >>
-  simp[] >> strip_tac >> fs[])
+  simp[] >> strip_tac >> fs[]
+QED
 
-val kexp_mult = store_thm(
-  "kexp_mult",
-  ``!e2 e1 c t.
+Theorem kexp_mult:
+    !e2 e1 c t.
        0 < e2 /\ t < omega ** e1 /\ 0 < c ==>
-       ((omega ** e1 * &c + t) * omega ** e2 = omega ** (e1 + e2))``,
+       ((omega ** e1 * &c + t) * omega ** e2 = omega ** (e1 + e2))
+Proof
   ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
   >- (qx_gen_tac `e2` >> strip_tac >> map_every qx_gen_tac [`e1`, `c`, `t`] >>
       strip_tac >>
@@ -447,11 +468,12 @@ val kexp_mult = store_thm(
   Cases_on `0 < a`
   >- (qexists_tac `a` >> simp[]) >>
   qexists_tac `1` >> `1 < e2` by metis_tac [ORD_ONE, islimit_SUC_lt] >>
-  simp[] >> fs[])
+  simp[] >> fs[]
+QED
 
-val ord_mult_correct = store_thm(
-  "ord_mult_correct",
-  ``!x y. is_ord x /\ is_ord y ==> (<[ord_mult x y]> = <[x]> * <[y]>)``,
+Theorem ord_mult_correct:
+    !x y. is_ord x /\ is_ord y ==> (<[ord_mult x y]> = <[x]> * <[y]>)
+Proof
   ho_match_mp_tac ord_mult_ind >> csimp[] >> map_every qx_gen_tac [`x`, `y`] >>
   rpt strip_tac >>
   `(?m. x = End m) \/ ?e1 c1 t1. x = Plus e1 c1 t1` by (Cases_on `x` >> simp[])
@@ -483,7 +505,8 @@ val ord_mult_correct = store_thm(
   simp[Once EQ_SYM_EQ] >> match_mp_tac kexp_mult >> simp[] >>
   conj_tac >- (spose_not_then assume_tac >> fs[] >> metis_tac [osyntax_EQ_0]) >>
   Q.UNDISCH_THEN `oless (expt t1) e1` mp_tac >>
-  simp[oless_modelled, is_ord_expt, tail_dominated])
+  simp[oless_modelled, is_ord_expt, tail_dominated]
+QED
 
 (* also showing the more efficient version of multiplication correct *)
 val model_expt0 =
@@ -494,16 +517,17 @@ val model_expt0 =
                     ordModel_11]
       |> DISCH_ALL
 
-val model_expt = store_thm(
-  "model_expt",
-  ``is_ord a ==> (<[expt a]> = if a = End 0 then 0 else olog <[a]>)``,
+Theorem model_expt:
+    is_ord a ==> (<[expt a]> = if a = End 0 then 0 else olog <[a]>)
+Proof
   rw[] >>
   `0 < <[a]>` by(spose_not_then assume_tac >> fs[] >> metis_tac [osyntax_EQ_0]) >>
-  simp[model_expt0]);
+  simp[model_expt0]
+QED
 
-val ord_less_expt_monotone = store_thm(
-  "ord_less_expt_monotone",
-  ``ord_less x y ==> (expt x = expt y) \/ ord_less (expt x) (expt y)``,
+Theorem ord_less_expt_monotone:
+    ord_less x y ==> (expt x = expt y) \/ ord_less (expt x) (expt y)
+Proof
   rw[ord_less_modelled, is_ord_expt, model_expt] >>
   bsimp[GSYM ordModel_11, is_ord_rules, is_ord_expt, model_expt, ordModel_def]
   >- metis_tac [ordle_lteq, ordlt_ZERO] >>
@@ -513,11 +537,12 @@ val ord_less_expt_monotone = store_thm(
         metis_tac [osyntax_EQ_0]) >>
   `<[y]> :'a ordinal < omega ** olog <[x]> /\
    omega ** olog <[x]> <= <[x]> : 'a ordinal` by metis_tac [olog_correct] >>
-  metis_tac [ordlet_TRANS, ordlt_TRANS, ordlt_REFL]);
+  metis_tac [ordlet_TRANS, ordlt_TRANS, ordlt_REFL]
+QED
 
-val mvjar_lemma3 = store_thm(
-  "mvjar_lemma3",
-  ``ord_less d b ==> cf1 a b <= cf1 a d``,
+Theorem mvjar_lemma3:
+    ord_less d b ==> cf1 a b <= cf1 a d
+Proof
   Induct_on `cf1 a b` >- metis_tac[DECIDE ``0n <= n``] >>
   rpt strip_tac >>
   `?n. (a = End n) \/ (?e1 c1 k1. a = Plus e1 c1 k1)`
@@ -530,24 +555,26 @@ val mvjar_lemma3 = store_thm(
   qsuff_tac `ord_less (expt d) e1` >- simp[] >>
   `(expt d = expt b) \/ ord_less (expt d) (expt b)`
     by metis_tac [ord_less_expt_monotone]
-  >- simp[] >> metis_tac [ord_less_modelled, ordlt_TRANS])
+  >- simp[] >> metis_tac [ord_less_modelled, ordlt_TRANS]
+QED
 
 val _ = export_rewrites ["ordinalNotation.restn_def",
                          "ordinalNotation.coeff_def"]
 
-val mvjar_lemma4 = store_thm(
-  "mvjar_lemma4",
-  ``!a n b. n <= cf1 a b ==> (cf1 a b = cf2 a b n)``,
+Theorem mvjar_lemma4:
+    !a n b. n <= cf1 a b ==> (cf1 a b = cf2 a b n)
+Proof
   simp[cf2_def] >> Induct_on `a` >> simp[] >>
   map_every qx_gen_tac [`n`, `m`, `b`] >>
   Cases_on `ord_less (expt b) a` >> simp[] >> strip_tac >>
   `(m = 0) \/ (?k. m = SUC k)` by (Cases_on `m` >> simp[]) >> simp[] >>
   asm_simp_tac (srw_ss() ++ numSimps.ARITH_NORM_ss) [arithmeticTheory.ADD1] >>
-  asimp[]);
+  asimp[]
+QED
 
-val mvjar_lemma5 = store_thm(
-  "mvjar_lemma5",
-  ``(padd a b (cf1 a b) = ord_add a b)``,
+Theorem mvjar_lemma5:
+    (padd a b (cf1 a b) = ord_add a b)
+Proof
   Induct_on `cf1 a b` >> simp[] >- metis_tac [padd_def] >>
   map_every qx_gen_tac [`a`, `b`] >>
   `?n. (a = End n) \/ (?e1 c1 k1. a = Plus e1 c1 k1)`
@@ -557,29 +584,32 @@ val mvjar_lemma5 = store_thm(
   `cf1 k1 b + 1 = SUC (cf1 k1 b)` by decide_tac >> simp[padd_def] >>
   strip_tac >> Cases_on `b` >> simp[ord_add_def] >> fs[ord_less_def] >>
   qpat_x_assum `oless XX YY` mp_tac >>
-  simp[oless_modelled] >> rw[] >> metis_tac [ordlt_TRANS, ordlt_REFL]);
+  simp[oless_modelled] >> rw[] >> metis_tac [ordlt_TRANS, ordlt_REFL]
+QED
 
-val better_pmult_def = store_thm(
-  "better_pmult_def",
-  ``(pmult a (Plus be bc bt) n =
+Theorem better_pmult_def:
+    (pmult a (Plus be bc bt) n =
       if a = End 0 then End 0
       else
         let m = cf2 (expt a) be n
         in
-          Plus (padd (expt a) be m) bc (pmult a bt m))``,
-  Cases_on `a` >> simp[SimpLHS, Once pmult_def] >> simp[]);
+          Plus (padd (expt a) be m) bc (pmult a bt m))
+Proof
+  Cases_on `a` >> simp[SimpLHS, Once pmult_def] >> simp[]
+QED
 
-val better_ord_mult_def = store_thm(
-  "better_ord_mult_def",
-  ``ord_mult a (Plus be bc bt) =
+Theorem better_ord_mult_def:
+    ord_mult a (Plus be bc bt) =
       if a = End 0 then End 0
-      else Plus (ord_add (expt a) be) bc (ord_mult a bt)``,
-  Cases_on `a` >> simp[SimpLHS, Once ord_mult_def] >> simp[]);
+      else Plus (ord_add (expt a) be) bc (ord_mult a bt)
+Proof
+  Cases_on `a` >> simp[SimpLHS, Once ord_mult_def] >> simp[]
+QED
 
-val mvjar_theorem10 = store_thm(
-  "mvjar_theorem10",
-  ``!n a b. is_ord a /\ is_ord b /\ n <= cf1 (expt a) (expt b) ==>
-            (<[pmult a b n]> = <[a]> * <[b]>)``,
+Theorem mvjar_theorem10:
+    !n a b. is_ord a /\ is_ord b /\ n <= cf1 (expt a) (expt b) ==>
+            (<[pmult a b n]> = <[a]> * <[b]>)
+Proof
   Induct_on `b`
   >- (Cases_on `a` >> simp[pmult_def] >> rw[] >>
       qmatch_abbrev_tac
@@ -605,5 +635,6 @@ val mvjar_theorem10 = store_thm(
   qsuff_tac `LHS = <[ord_mult a (Plus be bc bt)]>`
   >- simp[Abbr`RHS`, ord_mult_correct] >>
   simp[Abbr`LHS`, Once better_ord_mult_def, ord_add_correct] >>
-  simp[ord_mult_correct, ord_add_correct, is_ord_expt]);
+  simp[ord_mult_correct, ord_add_correct, is_ord_expt]
+QED
 

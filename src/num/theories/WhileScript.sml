@@ -137,9 +137,9 @@ val LEAST_DEF = new_definition(
 val _ = ot0 "LEAST" "least"
 val _ = set_fixity "LEAST" Binder;
 
-val LEAST_INTRO = store_thm(
-  "LEAST_INTRO",
-  ``!P x. P x ==> P ($LEAST P)``,
+Theorem LEAST_INTRO:
+    !P x. P x ==> P ($LEAST P)
+Proof
   GEN_TAC THEN SIMP_TAC (srw_ss()) [LEAST_DEF] THEN
   Q_TAC SUFF_TAC `!m n. P (m + n) ==> P (WHILE ($~ o P) SUC n)`
   THENL [
@@ -155,11 +155,12 @@ val LEAST_INTRO = store_thm(
     SRW_TAC [][ADD_CLAUSES] THEN
     FIRST_X_ASSUM MATCH_MP_TAC THEN
     ASM_SIMP_TAC bool_ss [ADD_CLAUSES]
-  ]);
+  ]
+QED
 
-val LESS_LEAST = store_thm(
-  "LESS_LEAST",
-  ``!P m. m < $LEAST P ==> ~ P m``,
+Theorem LESS_LEAST:
+    !P m. m < $LEAST P ==> ~ P m
+Proof
   GEN_TAC THEN
   Q.ASM_CASES_TAC `?x. P x` THENL [
     POP_ASSUM STRIP_ASSUME_TAC THEN
@@ -183,22 +184,25 @@ val LESS_LEAST = store_thm(
       METIS_TAC [LESS_ADD_SUC, LESS_TRANS, LESS_REFL]
     ],
     METIS_TAC []
-  ]);
+  ]
+QED
 
-val FULL_LEAST_INTRO = store_thm(
-  "FULL_LEAST_INTRO",
-  ``!x. P x ==> P ($LEAST P) /\ $LEAST P <= x``,
-  METIS_TAC [LEAST_INTRO, NOT_LESS, LESS_LEAST]);
+Theorem FULL_LEAST_INTRO:
+    !x. P x ==> P ($LEAST P) /\ $LEAST P <= x
+Proof
+  METIS_TAC [LEAST_INTRO, NOT_LESS, LESS_LEAST]
+QED
 
-val LEAST_ELIM = store_thm(
-  "LEAST_ELIM",
-  ``!Q P. (?n. P n) /\ (!n. (!m. m < n ==> ~ P m) /\ P n ==> Q n) ==>
-          Q ($LEAST P)``,
-  METIS_TAC [LEAST_INTRO, LESS_LEAST]);
+Theorem LEAST_ELIM:
+    !Q P. (?n. P n) /\ (!n. (!m. m < n ==> ~ P m) /\ P n ==> Q n) ==>
+          Q ($LEAST P)
+Proof
+  METIS_TAC [LEAST_INTRO, LESS_LEAST]
+QED
 
-val LEAST_EXISTS = store_thm
-  ("LEAST_EXISTS",
-   ``!p. (?n. p n) = (p ($LEAST p) /\ !n. n < $LEAST p ==> ~p n)``,
+Theorem LEAST_EXISTS:
+     !p. (?n. p n) = (p ($LEAST p) /\ !n. n < $LEAST p ==> ~p n)
+Proof
    GEN_TAC
    THEN MATCH_MP_TAC EQ_TRANS
    THEN Q.EXISTS_TAC `?n. p n /\ (!m. m < n ==> ~p m)`
@@ -211,27 +215,31 @@ val LEAST_EXISTS = store_thm
           THEN METIS_TAC [],
           (Tactical.REVERSE EQ_TAC THEN1 METIS_TAC [])
           THEN STRIP_TAC
-          THEN METIS_TAC [LESS_LEAST, LEAST_INTRO]]);
+          THEN METIS_TAC [LESS_LEAST, LEAST_INTRO]]
+QED
 
-val LEAST_EXISTS_IMP = store_thm
-  ("LEAST_EXISTS_IMP",
-   ``!p. (?n. p n) ==> (p ($LEAST p) /\ !n. n < $LEAST p ==> ~p n)``,
-   REWRITE_TAC [LEAST_EXISTS]);
+Theorem LEAST_EXISTS_IMP:
+     !p. (?n. p n) ==> (p ($LEAST p) /\ !n. n < $LEAST p ==> ~p n)
+Proof
+   REWRITE_TAC [LEAST_EXISTS]
+QED
 
-val LEAST_EQ = store_thm(
-  "LEAST_EQ",
-  ``((LEAST n. n = x) = x) /\ ((LEAST n. x = n) = x)``,
+Theorem LEAST_EQ:
+    ((LEAST n. n = x) = x) /\ ((LEAST n. x = n) = x)
+Proof
   CONJ_TAC THEN
   Q.SPEC_THEN `\n. n = x` (MATCH_MP_TAC o BETA_RULE) LEAST_ELIM THEN
-  SIMP_TAC (srw_ss()) []);
+  SIMP_TAC (srw_ss()) []
+QED
 val _ = export_rewrites ["LEAST_EQ"]
 
-val LEAST_T = store_thm(
-  "LEAST_T[simp]",
-  ``(LEAST x. T) = 0``,
+Theorem LEAST_T[simp]:
+    (LEAST x. T) = 0
+Proof
   DEEP_INTRO_TAC LEAST_ELIM THEN SIMP_TAC (srw_ss()) [] THEN
   Q.X_GEN_TAC `n` THEN STRIP_TAC THEN SPOSE_NOT_THEN ASSUME_TAC THEN
-  FULL_SIMP_TAC (srw_ss()) [NOT_ZERO_LT_ZERO] THEN METIS_TAC[]);
+  FULL_SIMP_TAC (srw_ss()) [NOT_ZERO_LT_ZERO] THEN METIS_TAC[]
+QED
 
 Theorem LEAST_LESS_EQ[simp]:
   (LEAST x. y <= x) = y
@@ -253,24 +261,26 @@ val OLEAST_def = new_definition(
   ``(OLEAST) P = if ?n. P n then SOME (LEAST n. P n) else NONE``)
 val _ = set_fixity "OLEAST" Binder
 
-val OLEAST_INTRO = store_thm(
-  "OLEAST_INTRO",
-  ``((!n. ~ P n) ==> Q NONE) /\
+Theorem OLEAST_INTRO:
+    ((!n. ~ P n) ==> Q NONE) /\
     (!n. P n /\ (!m. m < n ==> ~P m) ==> Q (SOME n)) ==>
-    Q ((OLEAST) P)``,
+    Q ((OLEAST) P)
+Proof
   STRIP_TAC THEN SIMP_TAC (srw_ss()) [OLEAST_def] THEN SRW_TAC [][] THENL [
     DEEP_INTRO_TAC LEAST_ELIM THEN METIS_TAC [],
     FULL_SIMP_TAC (srw_ss()) []
-  ]);
+  ]
+QED
 
-val OLEAST_EQNS = store_thm(
-  "OLEAST_EQNS",
-  ``((OLEAST n. n = x) = SOME x) /\
+Theorem OLEAST_EQNS:
+    ((OLEAST n. n = x) = SOME x) /\
     ((OLEAST n. x = n) = SOME x) /\
     ((OLEAST n. F) = NONE) /\
-    ((OLEAST n. T) = SOME 0)``,
+    ((OLEAST n. T) = SOME 0)
+Proof
   REPEAT STRIP_TAC THEN DEEP_INTRO_TAC OLEAST_INTRO THEN SRW_TAC [][] THEN
-  METIS_TAC [NOT_ZERO_LT_ZERO]);
+  METIS_TAC [NOT_ZERO_LT_ZERO]
+QED
 val _ = export_rewrites ["OLEAST_EQNS"]
 
 Theorem OLEAST_EQ_NONE[simp]:
@@ -301,9 +311,9 @@ val OWHILE_def = new_definition(
 
 val LEAST_ELIM_TAC = DEEP_INTRO_TAC LEAST_ELIM
 
-val OWHILE_THM = store_thm(
-  "OWHILE_THM",
-  ``OWHILE G f (s:'a) = if G s then OWHILE G f (f s) else SOME s``,
+Theorem OWHILE_THM:
+    OWHILE G f (s:'a) = if G s then OWHILE G f (f s) else SOME s
+Proof
   SIMP_TAC (srw_ss()) [OWHILE_def] THEN
   ASM_CASES_TAC ``(G:'a ->bool) s`` THENL [
     ASM_REWRITE_TAC [] THEN
@@ -351,21 +361,24 @@ val OWHILE_THM = store_thm(
     Q_TAC SUFF_TAC `N = 0` THEN1 SRW_TAC [][] THEN
     FIRST_X_ASSUM (Q.SPEC_THEN `0` MP_TAC) THEN
     ASM_SIMP_TAC (srw_ss()) [] THEN METIS_TAC [NOT_ZERO_LT_ZERO]
-  ]);
+  ]
+QED
 
-val OWHILE_EQ_NONE = store_thm(
-  "OWHILE_EQ_NONE",
-  ``(OWHILE G f (s:'a) = NONE) <=> !n. G (FUNPOW f n s)``,
-  SRW_TAC [][OWHILE_def] THEN FULL_SIMP_TAC (srw_ss()) []);
+Theorem OWHILE_EQ_NONE:
+    (OWHILE G f (s:'a) = NONE) <=> !n. G (FUNPOW f n s)
+Proof
+  SRW_TAC [][OWHILE_def] THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val OWHILE_ENDCOND = store_thm(
-  "OWHILE_ENDCOND",
-  ``(OWHILE G f (s:'a) = SOME s') ==> ~G s'``,
-  SRW_TAC [][OWHILE_def] THEN LEAST_ELIM_TAC THEN METIS_TAC []);
+Theorem OWHILE_ENDCOND:
+    (OWHILE G f (s:'a) = SOME s') ==> ~G s'
+Proof
+  SRW_TAC [][OWHILE_def] THEN LEAST_ELIM_TAC THEN METIS_TAC []
+QED
 
-val OWHILE_WHILE = store_thm(
-  "OWHILE_WHILE",
-  ``(OWHILE G f s = SOME s') ==> (WHILE G f s = s')``,
+Theorem OWHILE_WHILE:
+    (OWHILE G f s = SOME s') ==> (WHILE G f s = s')
+Proof
   SIMP_TAC (srw_ss()) [OWHILE_def] THEN
   STRIP_TAC THEN
   SRW_TAC [][] THEN LEAST_ELIM_TAC THEN CONJ_TAC THEN1 METIS_TAC [] THEN
@@ -381,12 +394,13 @@ val OWHILE_WHILE = store_thm(
     FIRST_X_ASSUM MATCH_MP_TAC THEN SRW_TAC [][] THEN
     FIRST_X_ASSUM (Q.SPEC_THEN `SUC m` MP_TAC) THEN
     SRW_TAC [][FUNPOW, LESS_MONO_EQ]
-  ]);
+  ]
+QED
 
-val OWHILE_INV_IND = store_thm(
-  "OWHILE_INV_IND",
-  ``!G f s. P s /\ (!x. P x /\ G x ==> P (f x)) ==>
-            !s'. (OWHILE G f s = SOME s') ==> P s'``,
+Theorem OWHILE_INV_IND:
+    !G f s. P s /\ (!x. P x /\ G x ==> P (f x)) ==>
+            !s'. (OWHILE G f s = SOME s') ==> P s'
+Proof
   SIMP_TAC (srw_ss()) [OWHILE_def] THEN REPEAT STRIP_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][] THEN
   LEAST_ELIM_TAC THEN CONJ_TAC THEN1 METIS_TAC [] THEN
@@ -398,19 +412,20 @@ val OWHILE_INV_IND = store_thm(
     FIRST_X_ASSUM (fn th => Q.SPEC_THEN `0` MP_TAC th THEN
                             Q.SPEC_THEN `SUC m` (MP_TAC o Q.GEN `m`) th) THEN
     SRW_TAC [][LESS_MONO_EQ, FUNPOW, LESS_0]
-  ]);
+  ]
+QED
 
 val IF_SOME_EQ_SOME_LEMMA = prove(
   ``!b (x:'a) y. ((if b then SOME x else NONE) = SOME y) <=> b /\ (x = y)``,
   Cases THEN
   FULL_SIMP_TAC bool_ss [optionTheory.NOT_NONE_SOME,optionTheory.SOME_11]);
 
-val OWHILE_IND = store_thm(
-  "OWHILE_IND",
-  ``!P G (f:'a->'a).
+Theorem OWHILE_IND:
+    !P G (f:'a->'a).
       (!s. ~(G s) ==> P s s) /\
       (!s1 s2. G s1 /\ P (f s1) s2 ==> P s1 s2) ==>
-      !s1 s2. (OWHILE G f s1 = SOME s2) ==> P s1 s2``,
+      !s1 s2. (OWHILE G f s1 = SOME s2) ==> P s1 s2
+Proof
   SIMP_TAC bool_ss [OWHILE_def,IF_SOME_EQ_SOME_LEMMA] THEN REPEAT STRIP_TAC
   THEN (Q.SPEC `\n. ~G (FUNPOW f n s1)` LEAST_EXISTS_IMP
       |> SIMP_RULE bool_ss [PULL_EXISTS] |> IMP_RES_TAC)
@@ -427,7 +442,8 @@ val OWHILE_IND = store_thm(
   THEN Q.PAT_ASSUM `!s1. bb /\ bbb ==> bbbb` MATCH_MP_TAC
   THEN FULL_SIMP_TAC bool_ss [] THEN REPEAT STRIP_TAC
   THEN IMP_RES_TAC prim_recTheory.LESS_MONO THEN RES_TAC
-  THEN FULL_SIMP_TAC bool_ss [FUNPOW]);
+  THEN FULL_SIMP_TAC bool_ss [FUNPOW]
+QED
 
 Theorem WHILE_FUNPOW:
   (?n. ~P (FUNPOW f n s))

@@ -78,13 +78,14 @@ Proof
   SRW_TAC [][stopped_at_def, pcons_def]
 QED
 
-val path_cases = store_thm(
-  "path_cases",
-  ``!p. (?x. p = stopped_at x) \/ (?x r q. p = pcons x r q)``,
+Theorem path_cases:
+    !p. (?x. p = stopped_at x) \/ (?x r q. p = pcons x r q)
+Proof
   SIMP_TAC (srw_ss()) [stopped_at_def, pcons_def, forall_path,
                        exists_path, first_def, pairTheory.EXISTS_PROD,
                        pairTheory.FORALL_PROD] THEN
-  PROVE_TAC [pairTheory.ABS_PAIR_THM, llistTheory.llist_CASES]);
+  PROVE_TAC [pairTheory.ABS_PAIR_THM, llistTheory.llist_CASES]
+QED
 
 Theorem FORALL_path:
   !P. (!p. P p) <=> (!x. P (stopped_at x)) /\ (!x r p. P (pcons x r p))
@@ -101,11 +102,12 @@ Proof
   METIS_TAC []
 QED
 
-val first_thm = store_thm(
-  "first_thm",
-  ``(!x. first (stopped_at x : ('a,'b) path) = x) /\
-    (!x r p. first (pcons x r p : ('a,'b) path) = x)``,
-  SRW_TAC [][first_def, stopped_at_def, pcons_def]);
+Theorem first_thm:
+    (!x. first (stopped_at x : ('a,'b) path) = x) /\
+    (!x r p. first (pcons x r p : ('a,'b) path) = x)
+Proof
+  SRW_TAC [][first_def, stopped_at_def, pcons_def]
+QED
 
 Definition finite_def:
   finite (sigma : ('a,'b) path) = LFINITE (SND (fromPath sigma))
@@ -113,11 +115,12 @@ End
 
 Overload "infinite" = “\p. ~finite p”
 
-val finite_thm = store_thm(
-  "finite_thm",
-  ``(!x. finite (stopped_at x : ('a,'b) path) = T) /\
-    (!x r p. finite (pcons x r p : ('a,'b) path) = finite p)``,
-  SRW_TAC [][finite_def, pcons_def, stopped_at_def, llistTheory.LFINITE_THM]);
+Theorem finite_thm:
+    (!x. finite (stopped_at x : ('a,'b) path) = T) /\
+    (!x r p. finite (pcons x r p : ('a,'b) path) = finite p)
+Proof
+  SRW_TAC [][finite_def, pcons_def, stopped_at_def, llistTheory.LFINITE_THM]
+QED
 
 val _ = export_rewrites ["finite_thm"]
 
@@ -139,9 +142,8 @@ val last_thm =
 
 val _ = export_rewrites ["first_thm", "last_thm"]
 
-val path_bisimulation = store_thm(
-  "path_bisimulation",
-  ``!p1 p2.
+Theorem path_bisimulation:
+    !p1 p2.
        (p1 = p2) =
        ?R. R p1 p2 /\
            !q1 q2.
@@ -149,7 +151,8 @@ val path_bisimulation = store_thm(
               (?x. (q1 = stopped_at x) /\ (q2 = stopped_at x)) \/
               (?x r q1' q2'.
                    (q1 = pcons x r q1') /\ (q2 = pcons x r q2') /\
-                   R q1' q2')``,
+                   R q1' q2')
+Proof
   SIMP_TAC (srw_ss()) [pcons_def, stopped_at_def, pairTheory.FORALL_PROD,
                        EQ_IMP_THM, FORALL_AND_THM, forall_path,
                        GSYM LEFT_FORALL_IMP_THM] THEN
@@ -205,20 +208,22 @@ val path_bisimulation = store_thm(
         ]
       ]
     ]
-  ]);
+  ]
+QED
 
-val finite_path_ind = store_thm(
-  "finite_path_ind",
-  ``!P.  (!x. P (stopped_at x)) /\
+Theorem finite_path_ind:
+    !P.  (!x. P (stopped_at x)) /\
          (!x r p. finite p /\ P p ==> P (pcons x r p)) ==>
-         (!q. finite q ==> P q)``,
+         (!q. finite q ==> P q)
+Proof
   GEN_TAC THEN STRIP_TAC THEN
   SIMP_TAC (srw_ss()) [forall_path, pairTheory.FORALL_PROD, finite_def] THEN
   Q_TAC SUFF_TAC
         `(!pl. LFINITE pl ==> !x. P (toPath (x, pl)))` THEN1 PROVE_TAC [] THEN
   HO_MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
   FULL_SIMP_TAC (srw_ss()) [finite_def, pcons_def, stopped_at_def,
-                            pairTheory.FORALL_PROD, first_def, forall_path]);
+                            pairTheory.FORALL_PROD, first_def, forall_path]
+QED
 
 
 Definition pmap_def:
@@ -226,29 +231,32 @@ Definition pmap_def:
              toPath ((f ## LMAP (g ## f)) (fromPath p))
 End
 
-val pmap_thm = store_thm(
-  "pmap_thm",
-  ``(!x. pmap f g (stopped_at x) = stopped_at (f x)) /\
+Theorem pmap_thm:
+    (!x. pmap f g (stopped_at x) = stopped_at (f x)) /\
     (!x r p.
-         pmap f g (pcons x r p) = pcons (f x) (g r) (pmap f g p))``,
-  SRW_TAC [][pmap_def, stopped_at_def, pcons_def, first_def]);
+         pmap f g (pcons x r p) = pcons (f x) (g r) (pmap f g p))
+Proof
+  SRW_TAC [][pmap_def, stopped_at_def, pcons_def, first_def]
+QED
 val _ = export_rewrites ["pmap_thm"]
 
-val first_pmap = store_thm(
-  "first_pmap",
-  ``!p. first (pmap f g p) = f (first p)``,
-  CONV_TAC (HO_REWR_CONV FORALL_path) THEN SRW_TAC [][]);
+Theorem first_pmap:
+    !p. first (pmap f g p) = f (first p)
+Proof
+  CONV_TAC (HO_REWR_CONV FORALL_path) THEN SRW_TAC [][]
+QED
 val _ = export_rewrites ["first_pmap"]
 
-val last_pmap = store_thm(
-  "last_pmap",
-  ``!p. finite p ==> (last (pmap f g p) = f (last p))``,
-  HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][]);
+Theorem last_pmap:
+    !p. finite p ==> (last (pmap f g p) = f (last p))
+Proof
+  HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][]
+QED
 val _ = export_rewrites ["last_pmap"]
 
-val finite_pmap = store_thm(
-  "finite_pmap",
-  ``!(f:'a -> 'c) (g:'b -> 'd) p. finite (pmap f g p) = finite p``,
+Theorem finite_pmap:
+    !(f:'a -> 'c) (g:'b -> 'd) p. finite (pmap f g p) = finite p
+Proof
   Q_TAC SUFF_TAC
        `(!p. finite p ==> !(f:'a -> 'c) (g:'b -> 'd). finite (pmap f g p)) /\
         (!p. finite p ==> !(f:'a -> 'c) (g:'b -> 'd) p0. (
@@ -258,7 +266,8 @@ val finite_pmap = store_thm(
   SRW_TAC [][] THEN
   Q.ISPEC_THEN `p0` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC)
                path_cases THEN
-  FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []);
+  FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []
+QED
 val _ = export_rewrites ["finite_pmap"]
 
 
@@ -297,32 +306,35 @@ Definition length_def:
                       else NONE
 End
 
-val length_thm = store_thm(
-  "length_thm",
-  ``(!x. length (stopped_at x) = SOME 1) /\
+Theorem length_thm:
+    (!x. length (stopped_at x) = SOME 1) /\
     (!x r p. length (pcons x r p) =
                 if finite p then SOME (THE (length p) + 1)
-                else NONE)``,
+                else NONE)
+Proof
   SRW_TAC [][length_def, finite_def, stopped_at_def, pcons_def, toList_THM,
              LFINITE_THM] THEN
   IMP_RES_TAC LFINITE_toList THEN
-  SRW_TAC [numSimps.ARITH_ss][]);
+  SRW_TAC [numSimps.ARITH_ss][]
+QED
 
-val alt_length_thm = store_thm(
-  "alt_length_thm",
-  ``(!x. length (stopped_at x) = SOME 1) /\
-    (!x r p. length (pcons x r p) = OPTION_MAP SUC (length p))``,
+Theorem alt_length_thm:
+    (!x. length (stopped_at x) = SOME 1) /\
+    (!x r p. length (pcons x r p) = OPTION_MAP SUC (length p))
+Proof
   SRW_TAC [][length_def, finite_def, stopped_at_def, pcons_def, toList_THM,
              LFINITE_THM] THEN
   IMP_RES_TAC LFINITE_toList THEN
-  SRW_TAC [numSimps.ARITH_ss][]);
+  SRW_TAC [numSimps.ARITH_ss][]
+QED
 
-val length_never_zero = store_thm(
-  "length_never_zero",
-  ``!p. ~(length p = SOME 0)``,
+Theorem length_never_zero:
+    !p. ~(length p = SOME 0)
+Proof
   GEN_TAC THEN
   Q.SPEC_THEN `p` STRUCT_CASES_TAC path_cases THEN
-  SRW_TAC [][alt_length_thm]);
+  SRW_TAC [][alt_length_thm]
+QED
 
 val finite_length_lemma = prove(
   ``!p. finite p = ?n. length p = SOME n``,
@@ -336,12 +348,13 @@ val finite_length_lemma = prove(
   ]);
 
 
-val finite_length = store_thm(
-  "finite_length",
-  ``!p. (finite p = (?n. length p = SOME n)) /\
-        (~finite p = (length p = NONE))``,
+Theorem finite_length:
+    !p. (finite p = (?n. length p = SOME n)) /\
+        (~finite p = (length p = NONE))
+Proof
   PROVE_TAC [finite_length_lemma, optionTheory.option_CASES,
-             optionTheory.NOT_NONE_SOME]);
+             optionTheory.NOT_NONE_SOME]
+QED
 
 Theorem length_cases :
     !p. (finite p <=> (?n. length p = SOME (SUC n))) /\
@@ -355,9 +368,9 @@ Proof
  >> Q.EXISTS_TAC ‘n1’ >> rw []
 QED
 
-val length_pmap = store_thm(
-  "length_pmap",
-  ``!f g p. length (pmap f g p) = length p``,
+Theorem length_pmap:
+    !f g p. length (pmap f g p) = length p
+Proof
   REPEAT GEN_TAC THEN Cases_on `finite p` THENL [
     Q_TAC SUFF_TAC `!p. finite p ==> (length (pmap f g p) = length p)` THEN1
           METIS_TAC [] THEN
@@ -365,7 +378,8 @@ val length_pmap = store_thm(
     SRW_TAC [][length_thm],
     `~finite (pmap f g p)` by METIS_TAC [finite_pmap] THEN
     METIS_TAC [finite_length]
-  ]);
+  ]
+QED
 val _ = export_rewrites ["length_pmap"]
 
 (* ----------------------------------------------------------------------
@@ -393,13 +407,13 @@ Definition nth_label_def:
 End
 val _ = export_rewrites ["nth_label_def"]
 
-val path_Axiom = store_thm(
-  "path_Axiom",
-  ``!f: 'a -> 'b # ('c # 'a) option.
+Theorem path_Axiom:
+    !f: 'a -> 'b # ('c # 'a) option.
        ?g : 'a -> ('b, 'c) path.
          !x. g x = case f x of
                      (y, NONE) => stopped_at y
-                   | (y, SOME (l, v)) => pcons y l (g v)``,
+                   | (y, SOME (l, v)) => pcons y l (g v)
+Proof
   GEN_TAC THEN
   STRIP_ASSUME_TAC
     (Q.ISPEC `λ(x:'a,ks:'c option).
@@ -430,7 +444,8 @@ val path_Axiom = store_thm(
       PROVE_TAC [LHD_EQ_NONE] THEN
     ASM_SIMP_TAC std_ss [],
     ASM_SIMP_TAC (srw_ss()) [first_def]
-  ]);
+  ]
+QED
 
 
 Definition pconcat_def:
@@ -440,20 +455,22 @@ Definition pconcat_def:
                                               (SND (fromPath p2))))
 End
 
-val pconcat_thm = store_thm(
-  "pconcat_thm",
-  ``(!x lab p2. pconcat (stopped_at x) lab p2 = pcons x lab p2) /\
+Theorem pconcat_thm:
+    (!x lab p2. pconcat (stopped_at x) lab p2 = pcons x lab p2) /\
     (!x r p lab p2.
-                pconcat (pcons x r p) lab p2 = pcons x r (pconcat p lab p2))``,
-  SRW_TAC [][pconcat_def, pcons_def, first_def, stopped_at_def]);
+                pconcat (pcons x r p) lab p2 = pcons x r (pconcat p lab p2))
+Proof
+  SRW_TAC [][pconcat_def, pcons_def, first_def, stopped_at_def]
+QED
 
-val pconcat_eq_stopped = store_thm(
-  "pconcat_eq_stopped",
-  ``!p1 lab p2 x. ~(pconcat p1 lab p2 = stopped_at x)  /\
-                  ~(stopped_at x = pconcat p1 lab p2)``,
+Theorem pconcat_eq_stopped:
+    !p1 lab p2 x. ~(pconcat p1 lab p2 = stopped_at x)  /\
+                  ~(stopped_at x = pconcat p1 lab p2)
+Proof
   GEN_TAC THEN
   Q.ISPEC_THEN `p1` STRUCT_CASES_TAC path_cases THEN
-  SRW_TAC [][pconcat_thm]);
+  SRW_TAC [][pconcat_thm]
+QED
 
 Theorem pconcat_eq_pcons:
   !x r p p1 lab p2.
@@ -499,14 +516,15 @@ QED
 Definition PL_def:  PL p = { i | finite p ==> i < THE (length p) }
 End
 
-val infinite_PL = store_thm(
-  "infinite_PL",
-  ``!p. ~finite p ==> !i. i IN PL p``,
-  SRW_TAC [][PL_def]);
+Theorem infinite_PL:
+    !p. ~finite p ==> !i. i IN PL p
+Proof
+  SRW_TAC [][PL_def]
+QED
 
-val PL_pcons = store_thm(
-  "PL_pcons",
-  ``!x r q. PL (pcons x r q) = 0 INSERT IMAGE SUC (PL q)``,
+Theorem PL_pcons:
+    !x r q. PL (pcons x r q) = 0 INSERT IMAGE SUC (PL q)
+Proof
   SRW_TAC [ARITH_ss]
           [PL_def, pred_setTheory.EXTENSION, length_thm,
            EQ_IMP_THM, arithmeticTheory.ADD1]
@@ -516,47 +534,54 @@ val PL_pcons = store_thm(
     FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [],
     DECIDE_TAC,
     FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) []
-  ]);
+  ]
+QED
 
-val PL_stopped_at = store_thm(
-  "PL_stopped_at",
-  ``!x. PL (stopped_at x) = {0}``,
-  SRW_TAC [ARITH_ss][pred_setTheory.EXTENSION, PL_def, length_thm]);
+Theorem PL_stopped_at:
+    !x. PL (stopped_at x) = {0}
+Proof
+  SRW_TAC [ARITH_ss][pred_setTheory.EXTENSION, PL_def, length_thm]
+QED
 
 val PL_thm = save_thm("PL_thm", CONJ PL_stopped_at PL_pcons);
 val _ = export_rewrites ["PL_thm"]
 
-val PL_0 = store_thm(
-  "PL_0",
-  ``!p. 0 IN PL p``,
-  CONV_TAC (HO_REWR_CONV FORALL_path) THEN SRW_TAC [][])
+Theorem PL_0:
+    !p. 0 IN PL p
+Proof
+  CONV_TAC (HO_REWR_CONV FORALL_path) THEN SRW_TAC [][]
+QED
 val _ = export_rewrites ["PL_0"]
 
 
-val PL_downward_closed = store_thm(
-  "PL_downward_closed",
-  ``!i p. i IN PL p ==> !j. j < i ==> j IN PL p``,
-  SRW_TAC [][PL_def] THEN PROVE_TAC [arithmeticTheory.LESS_TRANS]);
+Theorem PL_downward_closed:
+    !i p. i IN PL p ==> !j. j < i ==> j IN PL p
+Proof
+  SRW_TAC [][PL_def] THEN PROVE_TAC [arithmeticTheory.LESS_TRANS]
+QED
 
 
-val PL_pmap = store_thm(
-  "PL_pmap",
-  ``PL (pmap f g p) = PL p``,
-  SRW_TAC [][PL_def, length_pmap, pred_setTheory.EXTENSION]);
+Theorem PL_pmap:
+    PL (pmap f g p) = PL p
+Proof
+  SRW_TAC [][PL_def, length_pmap, pred_setTheory.EXTENSION]
+QED
 val _ = export_rewrites ["PL_pmap"]
 
-val el_pmap = store_thm(
-  "el_pmap",
-  ``!i p. i IN PL p ==> (el i (pmap f g p) = f (el i p))``,
-  Induct THEN CONV_TAC (HO_REWR_CONV FORALL_path) THEN SRW_TAC [][]);
+Theorem el_pmap:
+    !i p. i IN PL p ==> (el i (pmap f g p) = f (el i p))
+Proof
+  Induct THEN CONV_TAC (HO_REWR_CONV FORALL_path) THEN SRW_TAC [][]
+QED
 val _ = export_rewrites ["el_pmap"]
 
-val nth_label_pmap = store_thm(
-  "nth_label_pmap",
-  ``!i p. SUC i IN PL p ==> (nth_label i (pmap f g p) = g (nth_label i p))``,
+Theorem nth_label_pmap:
+    !i p. SUC i IN PL p ==> (nth_label i (pmap f g p) = g (nth_label i p))
+Proof
   Induct THEN GEN_TAC THEN
   Q.SPEC_THEN `p` STRUCT_CASES_TAC path_cases THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 val _ = export_rewrites ["nth_label_pmap"]
 
 (* ---------------------------------------------------------------------- *)
@@ -592,11 +617,12 @@ val firstP_at_thm = save_thm(
 
 
 
-val firstP_at_zero = store_thm(
-  "firstP_at_zero",
-  ``!P p. firstP_at P p 0 = P (first p)``,
+Theorem firstP_at_zero:
+    !P p. firstP_at P p 0 = P (first p)
+Proof
   GEN_TAC THEN CONV_TAC (HO_REWR_CONV FORALL_path) THEN
-  SIMP_TAC (srw_ss()) [firstP_at_thm]);
+  SIMP_TAC (srw_ss()) [firstP_at_thm]
+QED
 
 Definition exists_def:  exists P p = ?i. firstP_at P p i
 End
@@ -621,44 +647,49 @@ Theorem every_thm[simp]:
 Proof SRW_TAC [][every_def, exists_thm]
 QED
 
-val not_every = store_thm(
-  "not_every",
-  ``!P p. ~every P p = exists ($~ o P) p``,
-  SRW_TAC [][every_def]);
+Theorem not_every:
+    !P p. ~every P p = exists ($~ o P) p
+Proof
+  SRW_TAC [][every_def]
+QED
 
-val not_exists = store_thm(
-  "not_exists",
-  ``!P p. ~exists P p = every ($~ o P) p``,
-  SRW_TAC [boolSimps.ETA_ss][every_def, combinTheory.o_DEF]);
+Theorem not_exists:
+    !P p. ~exists P p = every ($~ o P) p
+Proof
+  SRW_TAC [boolSimps.ETA_ss][every_def, combinTheory.o_DEF]
+QED
 
 val _ = export_rewrites ["not_exists", "not_every"]
 
-val exists_el = store_thm(
-  "exists_el",
-  ``!P p. exists P p = ?i. i IN PL p /\ P (el i p)``,
+Theorem exists_el:
+    !P p. exists P p = ?i. i IN PL p /\ P (el i p)
+Proof
   SRW_TAC [][exists_def, firstP_at_def] THEN EQ_TAC THENL [
     PROVE_TAC [],
     DISCH_THEN (STRIP_ASSUME_TAC o CONV_RULE numLib.EXISTS_LEAST_CONV) THEN
     PROVE_TAC [PL_downward_closed]
-  ]);
+  ]
+QED
 
-val every_el = store_thm(
-  "every_el",
-  ``!P p. every P p = !i. i IN PL p ==> P (el i p)``,
-  REWRITE_TAC [every_def, exists_el] THEN SRW_TAC [][] THEN PROVE_TAC []);
+Theorem every_el:
+    !P p. every P p = !i. i IN PL p ==> P (el i p)
+Proof
+  REWRITE_TAC [every_def, exists_el] THEN SRW_TAC [][] THEN PROVE_TAC []
+QED
 
-val every_coinduction = store_thm(
-  "every_coinduction",
-  ``!P Q. (!x. P (stopped_at x) ==> Q x) /\
+Theorem every_coinduction:
+    !P Q. (!x. P (stopped_at x) ==> Q x) /\
           (!x r p. P (pcons x r p) ==> Q x /\ P p) ==>
-          (!p. P p ==> every Q p)``,
+          (!p. P p ==> every Q p)
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN REWRITE_TAC [every_def, exists_def] THEN
   SIMP_TAC (srw_ss()) [GSYM RIGHT_FORALL_IMP_THM] THEN
   CONV_TAC SWAP_VARS_CONV THEN Induct THEN
   CONV_TAC (HO_REWR_CONV FORALL_path) THENL [
     SRW_TAC [][firstP_at_thm, combinTheory.o_THM] THEN PROVE_TAC [],
     SRW_TAC [ARITH_ss][firstP_at_thm] THEN PROVE_TAC []
-  ]);
+  ]
+QED
 
 val double_neg_lemma = prove(``$~ o $~ o P = P``,
                              SRW_TAC [][FUN_EQ_THM, combinTheory.o_THM])
@@ -700,22 +731,23 @@ val numeral_drop = save_thm(
 val _ = export_rewrites ["drop_def", "numeral_drop"]
 
 
-val finite_drop = store_thm(
-  "finite_drop",
-  ``!p n. n IN PL p ==> (finite (drop n p) = finite p)``,
+Theorem finite_drop:
+    !p n. n IN PL p ==> (finite (drop n p) = finite p)
+Proof
   Induct_on `n` THENL [
     SRW_TAC [][],
     CONV_TAC (HO_REWR_CONV FORALL_path) THEN
     SRW_TAC [][]
-  ]);
+  ]
+QED
 val _ = export_rewrites ["finite_drop"]
 
-val length_drop = store_thm(
-  "length_drop",
-  ``!p n. n IN PL p ==>
+Theorem length_drop:
+    !p n. n IN PL p ==>
           (length (drop n p) = case (length p) of
                                  NONE => NONE
-                               | SOME m => SOME (m - n))``,
+                               | SOME m => SOME (m - n))
+Proof
   Induct_on `n` THENL [
     REPEAT STRIP_TAC THEN
     Cases_on `length p` THEN SRW_TAC [][drop_def],
@@ -723,12 +755,13 @@ val length_drop = store_thm(
     SRW_TAC [][length_thm] THEN
     Cases_on `length p` THEN SRW_TAC [numSimps.ARITH_ss][] THEN
     PROVE_TAC [finite_length]
-  ]);
+  ]
+QED
 
 
-val PL_drop = store_thm(
-  "PL_drop",
-  ``!p i. i IN PL p ==> (PL (drop i p) = IMAGE (\n. n - i) (PL p))``,
+Theorem PL_drop:
+    !p i. i IN PL p ==> (PL (drop i p) = IMAGE (\n. n - i) (PL p))
+Proof
   Induct_on `i` THENL [
     SRW_TAC [][],
     CONV_TAC (HO_REWR_CONV FORALL_path) THEN
@@ -738,7 +771,8 @@ val PL_drop = store_thm(
       SRW_TAC [][] THEN PROVE_TAC [arithmeticTheory.LESS_EQ_REFL],
       SRW_TAC [][] THEN PROVE_TAC []
     ]
-  ]);
+  ]
+QED
 
 Theorem IN_PL_drop[simp]:
   !i j p. i IN PL p ==> (j IN PL (drop i p) <=> i + j IN PL p)
@@ -750,33 +784,36 @@ Proof
   ]
 QED
 
-val first_drop = store_thm(
-  "first_drop",
-  ``!i p. i IN PL p ==> (first (drop i p) = el i p)``,
+Theorem first_drop:
+    !i p. i IN PL p ==> (first (drop i p) = el i p)
+Proof
   Induct THENL [
     SRW_TAC [][],
     CONV_TAC (HO_REWR_CONV FORALL_path) THEN
     SRW_TAC [][]
-  ]);
+  ]
+QED
 val _ = export_rewrites ["first_drop"]
 
-val first_label_drop = store_thm(
-  "first_label_drop",
-  ``!i p. i IN PL p ==> (first_label (drop i p) = nth_label i p)``,
+Theorem first_label_drop:
+    !i p. i IN PL p ==> (first_label (drop i p) = nth_label i p)
+Proof
   Induct THENL [
     SRW_TAC [][nth_label_def],
     CONV_TAC (HO_REWR_CONV FORALL_path) THEN
     SRW_TAC [][nth_label_def]
-  ]);
+  ]
+QED
 val _ = export_rewrites ["first_label_drop"]
 
-val tail_drop = store_thm(
-  "tail_drop",
-  ``!i p. (i + 1) IN PL p ==> (tail (drop i p) = drop (i + 1) p)``,
+Theorem tail_drop:
+    !i p. (i + 1) IN PL p ==> (tail (drop i p) = drop (i + 1) p)
+Proof
   Induct THEN
   CONV_TAC (HO_REWR_CONV FORALL_path) THEN
   SRW_TAC [][CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV drop_def] THEN
-  FULL_SIMP_TAC (srw_ss()) [DECIDE ``SUC x + y = SUC (x + y)``]);
+  FULL_SIMP_TAC (srw_ss()) [DECIDE ``SUC x + y = SUC (x + y)``]
+QED
 val _ = export_rewrites ["tail_drop"]
 
 (* from examples/lambda/barengregt/head_reductionScript.sml *)
@@ -796,25 +833,27 @@ Proof
   SRW_TAC [][]
 QED
 
-val el_drop = store_thm(
-  "el_drop",
-  ``!i j p. i + j IN PL p ==> (el i (drop j p) = el (i + j) p)``,
+Theorem el_drop:
+    !i j p. i + j IN PL p ==> (el i (drop j p) = el (i + j) p)
+Proof
   Induct_on `j` THENL [
     SRW_TAC [][],
     GEN_TAC THEN CONV_TAC (HO_REWR_CONV FORALL_path) THEN
     SRW_TAC [][arithmeticTheory.ADD_CLAUSES]
-  ]);
+  ]
+QED
 val _ = export_rewrites ["el_drop"]
 
-val nth_label_drop = store_thm(
-  "nth_label_drop",
-  ``!i j p.  SUC(i + j) IN PL p ==>
-             (nth_label i (drop j p) = nth_label (i + j) p)``,
+Theorem nth_label_drop:
+    !i j p.  SUC(i + j) IN PL p ==>
+             (nth_label i (drop j p) = nth_label (i + j) p)
+Proof
   Induct_on `j` THENL [
     SRW_TAC [][],
     GEN_TAC THEN CONV_TAC (HO_REWR_CONV FORALL_path) THEN
     SRW_TAC [][arithmeticTheory.ADD_CLAUSES]
-  ]);
+  ]
+QED
 val _ = export_rewrites ["nth_label_drop"]
 
 (* ----------------------------------------------------------------------
@@ -827,64 +866,70 @@ Definition take_def:
 End
 val _ = export_rewrites ["take_def"]
 
-val first_take = store_thm(
-  "first_take",
-  ``!p i. first (take i p) = first p``,
-  REPEAT GEN_TAC THEN Cases_on `i` THEN SRW_TAC [][]);
+Theorem first_take:
+    !p i. first (take i p) = first p
+Proof
+  REPEAT GEN_TAC THEN Cases_on `i` THEN SRW_TAC [][]
+QED
 val _ = export_rewrites ["first_take"]
 
-val finite_take = store_thm(
-  "finite_take",
-  ``!p i. i IN PL p ==> finite (take i p)``,
+Theorem finite_take:
+    !p i. i IN PL p ==> finite (take i p)
+Proof
   Induct_on `i` THENL [
     SRW_TAC [][finite_thm, take_def],
     CONV_TAC (HO_REWR_CONV FORALL_path) THEN
     SRW_TAC [][take_def]
-  ]);
+  ]
+QED
 val _ = export_rewrites ["finite_take"]
 
-val length_take = store_thm(
-  "length_take",
-  ``!p i. i IN PL p ==> (length (take i p) = SOME (i + 1))``,
+Theorem length_take:
+    !p i. i IN PL p ==> (length (take i p) = SOME (i + 1))
+Proof
   Induct_on `i`  THENL [
     SRW_TAC [][length_thm, take_def],
     CONV_TAC (HO_REWR_CONV FORALL_path) THEN
     SRW_TAC [][length_thm, arithmeticTheory.ADD1]
-  ]);
+  ]
+QED
 val _ = export_rewrites ["length_take"]
 
 
-val PL_take = store_thm(
-  "PL_take",
-  ``!p i. i IN PL p ==> (PL (take i p) = { n | n <= i })``,
+Theorem PL_take:
+    !p i. i IN PL p ==> (PL (take i p) = { n | n <= i })
+Proof
   Induct_on `i` THENL [
     SRW_TAC [][],
     CONV_TAC (HO_REWR_CONV FORALL_path) THEN
     SRW_TAC [][pred_setTheory.EXTENSION, EQ_IMP_THM] THEN
     SRW_TAC [][] THEN POP_ASSUM MP_TAC THEN Cases_on `x'` THEN SRW_TAC [][]
-  ]);
+  ]
+QED
 val _ = export_rewrites ["PL_take"]
 
-val last_take = store_thm(
-  "last_take",
-  ``!i p. i IN PL p ==> (last (take i p) = el i p)``,
+Theorem last_take:
+    !i p. i IN PL p ==> (last (take i p) = el i p)
+Proof
   Induct_on `i` THENL [
     SRW_TAC [][],
     CONV_TAC (HO_REWR_CONV FORALL_path) THEN
     SRW_TAC [][]
-  ]);
+  ]
+QED
 val _ = export_rewrites ["last_take"]
 
-val nth_label_take = store_thm(
-  "nth_label_take",
-  ``!n p i. i < n /\ n IN PL p ==> (nth_label i (take n p) = nth_label i p)``,
+Theorem nth_label_take:
+    !n p i. i < n /\ n IN PL p ==> (nth_label i (take n p) = nth_label i p)
+Proof
   Induct THENL [
     SRW_TAC [][],
     GEN_TAC THEN
     Q.SPEC_THEN `p` STRUCT_CASES_TAC path_cases THEN SRW_TAC [][] THEN
     Cases_on `i` THEN SRW_TAC [][] THEN
     FULL_SIMP_TAC (srw_ss()) []
-  ]);
+  ]
+QED
 
 (* ----------------------------------------------------------------------
     seg i j p
@@ -896,16 +941,17 @@ Definition seg_def:
   seg i j p = take (j - i) (drop i p)
 End
 
-val singleton_seg = store_thm(
-  "singleton_seg",
-  ``!i p. i IN PL p ==> (seg i i p = stopped_at (el i p))``,
-  SRW_TAC [][seg_def]);
+Theorem singleton_seg:
+    !i p. i IN PL p ==> (seg i i p = stopped_at (el i p))
+Proof
+  SRW_TAC [][seg_def]
+QED
 val _ = export_rewrites ["singleton_seg"]
 
-val recursive_seg = store_thm(
-  "recursive_seg",
-  ``!i j p. i < j /\ j IN PL p ==>
-            (seg i j p = pcons (el i p) (nth_label i p) (seg (i + 1) j p))``,
+Theorem recursive_seg:
+    !i j p. i < j /\ j IN PL p ==>
+            (seg i j p = pcons (el i p) (nth_label i p) (seg (i + 1) j p))
+Proof
   SRW_TAC [][seg_def] THEN
   `~(j - i = 0)` by DECIDE_TAC THEN
   `?v. j - i = SUC v` by PROVE_TAC [arithmeticTheory.num_CASES] THEN
@@ -916,40 +962,45 @@ val recursive_seg = store_thm(
     SRW_TAC [][] THEN REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) THEN
     `i + 1 < j \/ (i + 1 = j)` by DECIDE_TAC THEN
     PROVE_TAC [tail_drop, PL_downward_closed]
-  ]);
+  ]
+QED
 
 
 val PLdc_le = prove(
   ``i <= j ==> j IN PL p ==> i IN PL p``,
   PROVE_TAC [arithmeticTheory.LESS_OR_EQ, PL_downward_closed]);
 
-val PL_seg = store_thm(
-  "PL_seg",
-  ``!i j p. i <= j /\ j IN PL p ==> (PL (seg i j p) = {n | n <= j - i})``,
+Theorem PL_seg:
+    !i j p. i <= j /\ j IN PL p ==> (PL (seg i j p) = {n | n <= j - i})
+Proof
   SRW_TAC [][seg_def] THEN `i IN PL p` by IMP_RES_TAC PLdc_le THEN
-  SRW_TAC [numSimps.ARITH_ss][]);
+  SRW_TAC [numSimps.ARITH_ss][]
+QED
 val _ = export_rewrites ["PL_seg"]
 
 
-val finite_seg = store_thm(
-  "finite_seg",
-  ``!p i j. i <= j /\ j IN PL p ==> finite (seg i j p)``,
+Theorem finite_seg:
+    !p i j. i <= j /\ j IN PL p ==> finite (seg i j p)
+Proof
   REPEAT STRIP_TAC THEN
   `i IN PL p` by IMP_RES_TAC PLdc_le THEN
-  SRW_TAC [numSimps.ARITH_ss][seg_def]);
+  SRW_TAC [numSimps.ARITH_ss][seg_def]
+QED
 val _ = export_rewrites ["finite_seg"]
 
-val first_seg = store_thm(
-  "first_seg",
-  ``!i j p. i <= j /\ j IN PL p ==> (first (seg i j p) = el i p)``,
-  SRW_TAC [][seg_def] THEN IMP_RES_TAC PLdc_le THEN SRW_TAC [][]);
+Theorem first_seg:
+    !i j p. i <= j /\ j IN PL p ==> (first (seg i j p) = el i p)
+Proof
+  SRW_TAC [][seg_def] THEN IMP_RES_TAC PLdc_le THEN SRW_TAC [][]
+QED
 val _ = export_rewrites ["first_seg"]
 
-val last_seg = store_thm(
-  "last_seg",
-  ``!i j p. i <= j /\ j IN PL p ==> (last (seg i j p) = el j p)``,
+Theorem last_seg:
+    !i j p. i <= j /\ j IN PL p ==> (last (seg i j p) = el j p)
+Proof
   REPEAT STRIP_TAC THEN IMP_RES_TAC PLdc_le THEN
-  SRW_TAC [numSimps.ARITH_ss][seg_def]);
+  SRW_TAC [numSimps.ARITH_ss][seg_def]
+QED
 val _ = export_rewrites ["last_seg"]
 
 (* ----------------------------------------------------------------------
@@ -974,9 +1025,9 @@ val labels_def =
 val _ = export_rewrites ["labels_def"]
 
 
-val firstP_at_unique = store_thm(
-  "firstP_at_unique",
-  ``!P p n. firstP_at P p n ==> !m. firstP_at P p m = (m = n)``,
+Theorem firstP_at_unique:
+    !P p n. firstP_at P p n ==> !m. firstP_at P p m = (m = n)
+Proof
   SIMP_TAC (srw_ss()) [EQ_IMP_THM] THEN GEN_TAC THEN
   CONV_TAC SWAP_VARS_CONV THEN Induct THENL [
     SIMP_TAC (srw_ss()) [firstP_at_zero] THEN
@@ -985,16 +1036,18 @@ val firstP_at_unique = store_thm(
     CONV_TAC (HO_REWR_CONV FORALL_path) THEN
     SRW_TAC [ARITH_ss][firstP_at_thm] THEN
     `m - 1 = n` by PROVE_TAC [] THEN SRW_TAC [ARITH_ss][]
-  ]);
+  ]
+QED
 
 Definition is_stopped_def:  is_stopped p = ?x. p = stopped_at x
 End
 
-val is_stopped_thm = store_thm(
-  "is_stopped_thm",
-  ``(!x. is_stopped (stopped_at x) = T) /\
-    (!x r p. is_stopped (pcons x r p) = F)``,
-  SRW_TAC [][is_stopped_def]);
+Theorem is_stopped_thm:
+    (!x. is_stopped (stopped_at x) = T) /\
+    (!x r p. is_stopped (pcons x r p) = F)
+Proof
+  SRW_TAC [][is_stopped_def]
+QED
 
 val _ = export_rewrites ["is_stopped_thm"]
 
@@ -1060,14 +1113,15 @@ val filter_eq_pcons = prove(
   GEN_TAC THEN HO_MATCH_MP_TAC exists_induction THEN
   SRW_TAC [][filter_def] THEN PROVE_TAC []);
 
-val filter_every = store_thm(
-  "filter_every",
-  ``!P p. exists P p ==> every P (filter P p)``,
+Theorem filter_every:
+    !P p. exists P p ==> every P (filter P p)
+Proof
   GEN_TAC THEN
   Q_TAC SUFF_TAC `!p. (?q. (p = filter P q) /\ exists P q) ==>
                       every P p` THEN1 PROVE_TAC [] THEN
   HO_MATCH_MP_TAC every_coinduction THEN
-  PROVE_TAC [filter_eq_stopped, filter_eq_pcons]);
+  PROVE_TAC [filter_eq_stopped, filter_eq_pcons]
+QED
 
 val _ = print "Defining generation of paths from functions\n"
 
@@ -1083,33 +1137,37 @@ val pgenerate_def = new_specification ("pgenerate_def",
         POP_ASSUM (fn th => CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [th]))) THEN
         SIMP_TAC (srw_ss()) [combinTheory.o_DEF]));
 
-val pgenerate_infinite = store_thm(
-  "pgenerate_infinite",
-  ``!f g. ~finite (pgenerate f g)``,
+Theorem pgenerate_infinite:
+    !f g. ~finite (pgenerate f g)
+Proof
   Q_TAC SUFF_TAC `!p. finite p ==> !f g. ~(p = pgenerate f g)` THEN1
   PROVE_TAC [] THEN
   HO_MATCH_MP_TAC finite_path_ind THEN CONJ_TAC THENL [
     ONCE_REWRITE_TAC [pgenerate_def] THEN SRW_TAC [][],
     REPEAT GEN_TAC THEN STRIP_TAC THEN ONCE_REWRITE_TAC [pgenerate_def] THEN
     SRW_TAC [][]
-  ]);
+  ]
+QED
 
-val pgenerate_not_stopped = store_thm(
-  "pgenerate_not_stopped",
-  ``!f g x. ~(stopped_at x = pgenerate f g)``,
-  PROVE_TAC [pgenerate_infinite, finite_thm]);
+Theorem pgenerate_not_stopped:
+    !f g x. ~(stopped_at x = pgenerate f g)
+Proof
+  PROVE_TAC [pgenerate_infinite, finite_thm]
+QED
 
 val _ = export_rewrites ["pgenerate_not_stopped"]
 
-val el_pgenerate = store_thm(
-  "el_pgenerate",
-  ``!n f g. el n (pgenerate f g) = f n``,
-  Induct THEN ONCE_REWRITE_TAC [pgenerate_def] THEN SRW_TAC [][el_def]);
+Theorem el_pgenerate:
+    !n f g. el n (pgenerate f g) = f n
+Proof
+  Induct THEN ONCE_REWRITE_TAC [pgenerate_def] THEN SRW_TAC [][el_def]
+QED
 
-val nth_label_pgenerate = store_thm(
-  "nth_label_pgenerate",
-  ``!n f g. nth_label n (pgenerate f g) = g n``,
-  Induct THEN ONCE_REWRITE_TAC [pgenerate_def] THEN SRW_TAC [][nth_label_def]);
+Theorem nth_label_pgenerate:
+    !n f g. nth_label n (pgenerate f g) = g n
+Proof
+  Induct THEN ONCE_REWRITE_TAC [pgenerate_def] THEN SRW_TAC [][nth_label_def]
+QED
 
 Theorem pgenerate_11:
   !f1 g1 f2 g2. (pgenerate f1 g1 = pgenerate f2 g2) <=>
@@ -1120,9 +1178,9 @@ Proof
 QED
 
 
-val pgenerate_onto = store_thm(
-  "pgenerate_onto",
-  ``!p. ~finite p ==> ?f g. p = pgenerate f g``,
+Theorem pgenerate_onto:
+    !p. ~finite p ==> ?f g. p = pgenerate f g
+Proof
   REPEAT STRIP_TAC THEN
   MAP_EVERY Q.EXISTS_TAC [`\n. el n p`, `\n. nth_label n p`] THEN
   ONCE_REWRITE_TAC [path_bisimulation] THEN
@@ -1132,7 +1190,8 @@ val pgenerate_onto = store_thm(
   Q.SPEC_THEN `q1` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC) path_cases THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN
   CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [pgenerate_def])) THEN
-  SRW_TAC [][el_def, nth_label_def, combinTheory.o_DEF]);
+  SRW_TAC [][el_def, nth_label_def, combinTheory.o_DEF]
+QED
 
 val _ = print "Defining path OK-ness\n"
 
@@ -1142,11 +1201,12 @@ Definition okpath_f_def:
               { pcons x r p | R x r (first p) /\ p IN X }
 End
 
-val okpath_monotone = store_thm(
-  "okpath_monotone",
-  ``!R. monotone (okpath_f R)``,
+Theorem okpath_monotone:
+    !R. monotone (okpath_f R)
+Proof
   SRW_TAC [][fixedPointTheory.monotone_def, okpath_f_def,
-             pred_setTheory.SUBSET_DEF] THEN PROVE_TAC []);
+             pred_setTheory.SUBSET_DEF] THEN PROVE_TAC []
+QED
 
 Definition okpath_def:  okpath R = gfp (okpath_f R)
 End
@@ -1187,30 +1247,32 @@ Proof
   ]
 QED
 
-val finite_okpath_ind = store_thm(
-  "finite_okpath_ind",
-  ``!R.
+Theorem finite_okpath_ind:
+    !R.
         (!x. P (stopped_at x)) /\
         (!x r p. okpath R p /\ finite p /\ R x r (first p) /\ P p ==>
                  P (pcons x r p)) ==>
-        !sigma. okpath R sigma /\ finite sigma ==> P sigma``,
+        !sigma. okpath R sigma /\ finite sigma ==> P sigma
+Proof
   GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `!sigma. finite sigma ==> okpath R sigma ==> P sigma` THEN1
         PROVE_TAC [] THEN
   HO_MATCH_MP_TAC finite_path_ind THEN
-  ASM_SIMP_TAC (srw_ss()) []);
+  ASM_SIMP_TAC (srw_ss()) []
+QED
 
-val okpath_pmap = store_thm(
-  "okpath_pmap",
-  ``!R f g p. okpath R p /\ (!x r y. R x r y ==> R (f x) (g r) (f y)) ==>
-              okpath R (pmap f g p)``,
+Theorem okpath_pmap:
+    !R f g p. okpath R p /\ (!x r y. R x r y ==> R (f x) (g r) (f y)) ==>
+              okpath R (pmap f g p)
+Proof
   REPEAT STRIP_TAC THEN
   Q_TAC SUFF_TAC
         `!p. (?p0. okpath R p0 /\ (p = pmap f g p0)) ==> okpath R p` THEN1
         METIS_TAC[] THEN
   HO_MATCH_MP_TAC okpath_co_ind THEN SRW_TAC [][] THEN
   Q.SPEC_THEN `p0` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC) path_cases THEN
-  FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []);
+  FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []
+QED
 
 val plink_def = new_specification(
   "plink_def",
@@ -1269,22 +1331,24 @@ Proof
   SRW_TAC [][] THEN PROVE_TAC []
 QED
 
-val first_plink = store_thm(
-  "first_plink",
-  ``!p1 p2. (last p1 = first p2) ==> (first (plink p1 p2) = first p1)``,
-  CONV_TAC (HO_REWR_CONV FORALL_path) THEN SRW_TAC [][]);
+Theorem first_plink:
+    !p1 p2. (last p1 = first p2) ==> (first (plink p1 p2) = first p1)
+Proof
+  CONV_TAC (HO_REWR_CONV FORALL_path) THEN SRW_TAC [][]
+QED
 val _ = export_rewrites ["first_plink"]
 
 
-val last_plink = store_thm(
-  "last_plink",
-  ``!p1 p2. finite p1 /\ finite p2 /\ (last p1 = first p2) ==>
-            (last (plink p1 p2) = last p2)``,
+Theorem last_plink:
+    !p1 p2. finite p1 /\ finite p2 /\ (last p1 = first p2) ==>
+            (last (plink p1 p2) = last p2)
+Proof
   Q_TAC SUFF_TAC `!p1. finite p1 ==>
                        !p2. finite p2 /\ (last p1 = first p2) ==>
                             (last (plink p1 p2) = last p2)`
         THEN1 PROVE_TAC [] THEN
-  HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][]);
+  HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][]
+QED
 val _ = export_rewrites ["last_plink"]
 
 
@@ -1301,25 +1365,28 @@ Proof
   HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][] THEN PROVE_TAC []
 QED
 
-val okpath_take = store_thm(
-  "okpath_take",
-  ``!R p i. i IN PL p /\ okpath R p ==> okpath R (take i p)``,
+Theorem okpath_take:
+    !R p i. i IN PL p /\ okpath R p ==> okpath R (take i p)
+Proof
   Induct_on `i` THEN1 SRW_TAC [][] THEN
-  GEN_TAC THEN CONV_TAC (HO_REWR_CONV FORALL_path) THEN SRW_TAC [][]);
+  GEN_TAC THEN CONV_TAC (HO_REWR_CONV FORALL_path) THEN SRW_TAC [][]
+QED
 val _ = export_rewrites ["okpath_take"]
 
-val okpath_drop = store_thm(
-  "okpath_drop",
-  ``!R p i. i IN PL p /\ okpath R p ==> okpath R (drop i p)``,
+Theorem okpath_drop:
+    !R p i. i IN PL p /\ okpath R p ==> okpath R (drop i p)
+Proof
   Induct_on `i` THEN1 SRW_TAC [][] THEN
-  GEN_TAC THEN CONV_TAC (HO_REWR_CONV FORALL_path) THEN SRW_TAC [][]);
+  GEN_TAC THEN CONV_TAC (HO_REWR_CONV FORALL_path) THEN SRW_TAC [][]
+QED
 val _ = export_rewrites ["okpath_drop"]
 
-val okpath_seg = store_thm(
-  "okpath_seg",
-  ``!R p i j. i <= j /\ j IN PL p /\ okpath R p ==> okpath R (seg i j p)``,
+Theorem okpath_seg:
+    !R p i j. i <= j /\ j IN PL p /\ okpath R p ==> okpath R (seg i j p)
+Proof
   SRW_TAC [][seg_def] THEN IMP_RES_TAC PLdc_le THEN
-  SRW_TAC [numSimps.ARITH_ss][]);
+  SRW_TAC [numSimps.ARITH_ss][]
+QED
 val _ = export_rewrites ["okpath_seg"]
 
 (* "strongly normalising" for labelled transition relations *)
@@ -1327,9 +1394,9 @@ Definition SN_def:
   SN R = WF (\x y. ?l. R y l x)
 End
 
-val SN_finite_paths = store_thm(
-  "SN_finite_paths",
-  ``!R p. SN R /\ okpath R p ==> finite p``,
+Theorem SN_finite_paths:
+    !R p. SN R /\ okpath R p ==> finite p
+Proof
   SIMP_TAC (srw_ss()) [SN_def, GSYM AND_IMP_INTRO, RIGHT_FORALL_IMP_THM] THEN
   GEN_TAC THEN
   DISCH_THEN (MP_TAC o MATCH_MP relationTheory.WF_INDUCTION_THM) THEN
@@ -1339,11 +1406,12 @@ val SN_finite_paths = store_thm(
   POP_ASSUM HO_MATCH_MP_TAC THEN SIMP_TAC (srw_ss()) [] THEN GEN_TAC THEN
   STRIP_TAC THEN GEN_TAC THEN
   Q.SPEC_THEN `p` STRUCT_CASES_TAC path_cases THEN
-  SRW_TAC [][] THEN PROVE_TAC []);
+  SRW_TAC [][] THEN PROVE_TAC []
+QED
 
-val finite_paths_SN = store_thm(
-  "finite_paths_SN",
-  ``!R. (!p. okpath R p ==> finite p) ==> SN R``,
+Theorem finite_paths_SN:
+    !R. (!p. okpath R p ==> finite p) ==> SN R
+Proof
   SRW_TAC [][SN_def, prim_recTheory.WF_IFF_WELLFOUNDED,
              prim_recTheory.wellfounded_def] THEN
   SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
@@ -1363,12 +1431,14 @@ val finite_paths_SN = store_thm(
     ASM_SIMP_TAC (srw_ss()) [GSYM arithmeticTheory.ADD1],
     Q.EXISTS_TAC `SUC n` THEN
     SIMP_TAC (srw_ss()) [combinTheory.o_DEF, arithmeticTheory.ADD_CLAUSES]
-  ]);
+  ]
+QED
 
-val SN_finite_paths_EQ = store_thm(
-  "SN_finite_paths_EQ",
-  ``!R. SN R = !p. okpath R p ==> finite p``,
-  PROVE_TAC [finite_paths_SN, SN_finite_paths]);
+Theorem SN_finite_paths_EQ:
+    !R. SN R = !p. okpath R p ==> finite p
+Proof
+  PROVE_TAC [finite_paths_SN, SN_finite_paths]
+QED
 
 Theorem labels_LMAP:
   !p. labels p = LMAP FST (SND (fromPath p))

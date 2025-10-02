@@ -321,15 +321,17 @@ Proof
   Induct_on `s` THEN SRW_TAC [][]
 QED
 
-val IMPLODE_EXPLODE = store_thm(
-  "IMPLODE_EXPLODE",
-  ``IMPLODE (EXPLODE s) = s``,
-  Induct_on `s` THEN SRW_TAC [][]);
+Theorem IMPLODE_EXPLODE:
+    IMPLODE (EXPLODE s) = s
+Proof
+  Induct_on `s` THEN SRW_TAC [][]
+QED
 
-val EXPLODE_IMPLODE = store_thm(
-  "EXPLODE_IMPLODE",
-  ``EXPLODE (IMPLODE cs) = cs``,
-  Induct_on `cs` THEN SRW_TAC [][]);
+Theorem EXPLODE_IMPLODE:
+    EXPLODE (IMPLODE cs) = cs
+Proof
+  Induct_on `cs` THEN SRW_TAC [][]
+QED
 
 fun stac(n,t) = store_thm(n,t,METIS_TAC [EXPLODE_IMPLODE, IMPLODE_EXPLODE])
 val EXPLODE_ONTO = stac("EXPLODE_ONTO", ``!cs. ?s. cs = EXPLODE s``);
@@ -435,10 +437,11 @@ Definition EXTRACT_def:
   (EXTRACT (s,i,SOME n) = SUBSTRING(s,i,n))
 End
 
-val STRLEN_EXPLODE_THM = store_thm(
-  "STRLEN_EXPLODE_THM",
-  ``STRLEN s = LENGTH (EXPLODE s)``,
-  SRW_TAC [][IMPLODE_EXPLODE_I]);
+Theorem STRLEN_EXPLODE_THM:
+    STRLEN s = LENGTH (EXPLODE s)
+Proof
+  SRW_TAC [][IMPLODE_EXPLODE_I]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Destruct a string. This will be used to re-phrase the HOL development     *)
@@ -532,10 +535,11 @@ Overload STRCAT[inferior] = “list$APPEND : string -> string -> string”
 
 val STRCAT_def = save_thm("STRCAT_def", stringinst APPEND)
 
-val STRCAT = store_thm(
-  "STRCAT",
-  ``STRCAT s1 s2 = STRCAT s1 s2``,
-  SRW_TAC [][]);
+Theorem STRCAT:
+    STRCAT s1 s2 = STRCAT s1 s2
+Proof
+  SRW_TAC [][]
+QED
 
 Theorem STRCAT_EQNS:
   (STRCAT "" s = s) /\
@@ -574,15 +578,16 @@ val STRLEN_CAT = save_thm("STRLEN_CAT", stringinst LENGTH_APPEND)
        Is one string a prefix of another?
  ---------------------------------------------------------------------------*)
 
-val isPREFIX_DEF = store_thm(
-  "isPREFIX_DEF",
-  ``!s1 s2.
+Theorem isPREFIX_DEF:
+    !s1 s2.
        isPREFIX s1 s2 =
        case (DEST_STRING s1, DEST_STRING s2)
         of (NONE, _) => T
          | (SOME __, NONE) => F
-         | (SOME(c1,t1),SOME(c2,t2)) => (c1=c2) /\ isPREFIX t1 t2``,
-  Cases_on `s1` THEN Cases_on `s2` THEN SRW_TAC [][]);
+         | (SOME(c1,t1),SOME(c2,t2)) => (c1=c2) /\ isPREFIX t1 t2
+Proof
+  Cases_on `s1` THEN Cases_on `s2` THEN SRW_TAC [][]
+QED
 
 Theorem isPREFIX_IND:
   !P. (!s1 s2.
@@ -624,31 +629,39 @@ Overload ">"[inferior]  = “string_gt”
 Overload "<="[inferior] = “string_le”
 Overload ">="[inferior] = “string_ge”
 
-val string_lt_nonrefl = store_thm("string_lt_nonrefl",
-  ``!s:string. ~(s < s)``,
-  Induct THEN ASM_SIMP_TAC std_ss [string_lt_def,char_lt_def]);
+Theorem string_lt_nonrefl:
+    !s:string. ~(s < s)
+Proof
+  Induct THEN ASM_SIMP_TAC std_ss [string_lt_def,char_lt_def]
+QED
 
-val string_lt_antisym = store_thm("string_lt_antisym",
-  ``!s t:string. ~(s < t /\ t < s)``,
+Theorem string_lt_antisym:
+    !s t:string. ~(s < t /\ t < s)
+Proof
   SIMP_TAC std_ss []
   THEN Induct THEN Cases_on `t` THEN SIMP_TAC std_ss [string_lt_def,char_lt_def]
   THEN REPEAT STRIP_TAC THEN Cases_on `h = h'` THEN ASM_SIMP_TAC std_ss []
-  THEN FULL_SIMP_TAC std_ss [GSYM ORD_11] THEN DECIDE_TAC);
+  THEN FULL_SIMP_TAC std_ss [GSYM ORD_11] THEN DECIDE_TAC
+QED
 
-val string_lt_cases = store_thm("string_lt_cases",
-  ``!s t:string. (s = t) \/ s < t \/ t < s``,
+Theorem string_lt_cases:
+    !s t:string. (s = t) \/ s < t \/ t < s
+Proof
   Induct THEN Cases_on `t` THEN SIMP_TAC std_ss [string_lt_def,char_lt_def]
   THEN SIMP_TAC std_ss [CONS_11,GSYM ORD_11] THEN STRIP_TAC
-  THEN Cases_on `ORD h = ORD h'` THEN ASM_SIMP_TAC std_ss [] THEN DECIDE_TAC);
+  THEN Cases_on `ORD h = ORD h'` THEN ASM_SIMP_TAC std_ss [] THEN DECIDE_TAC
+QED
 
-val string_lt_trans = store_thm("string_lt_trans",
-  ``!s1 s2 s3:string. s1 < s2 /\ s2 < s3 ==> s1 < s3``,
+Theorem string_lt_trans:
+    !s1 s2 s3:string. s1 < s2 /\ s2 < s3 ==> s1 < s3
+Proof
   Induct THEN Cases_on `s2` THEN Cases_on `s3`
   THEN SIMP_TAC std_ss [string_lt_def,char_lt_def,GSYM ORD_11] THEN STRIP_TAC
   THEN Cases_on `ORD h'' < ORD h'` THEN ASM_SIMP_TAC std_ss [IMP_CONJ_THM]
   THEN STRIP_TAC THEN1 (REPEAT STRIP_TAC THEN DECIDE_TAC)
   THEN REPEAT STRIP_TAC THEN IMP_RES_TAC arithmeticTheory.LESS_TRANS
-  THEN METIS_TAC []);
+  THEN METIS_TAC []
+QED
 
 val string_lt_ind = theorem"string_lt_ind";
 

@@ -186,34 +186,40 @@ val TC_NOT_LESS_0 = prove ( “!n. ~(TC (\x y. y = SUC x) n 0)”,
   ONCE_REWRITE_TAC [relationTheory.TC_CASES2]
   THEN BETA_TAC THEN REWRITE_TAC [GSYM NOT_SUC] ) ;
 
-val TC_IM_RTC_SUC = store_thm ("TC_IM_RTC_SUC",
-  ``!m n. TC (\x y. y = SUC x) m (SUC n) = RTC (\x y. y = SUC x) m n``,
+Theorem TC_IM_RTC_SUC:
+    !m n. TC (\x y. y = SUC x) m (SUC n) = RTC (\x y. y = SUC x) m n
+Proof
   ONCE_REWRITE_TAC [relationTheory.TC_CASES2] THEN BETA_TAC
     THEN REWRITE_TAC [relationTheory.RTC_CASES_TC, INV_SUC_EQ]
     THEN REPEAT (STRIP_TAC ORELSE EQ_TAC)
     THEN ASM_REWRITE_TAC []
     THEN DISJ2_TAC THEN EXISTS_TAC ``n : num``
-    THEN ASM_REWRITE_TAC []) ;
+    THEN ASM_REWRITE_TAC []
+QED
 
-val RTC_IM_TC = store_thm ("RTC_IM_TC",
-  ``!m n. RTC (\x y. y = f x) (f m) n = TC (\x y. y = f x) m n``,
+Theorem RTC_IM_TC:
+    !m n. RTC (\x y. y = f x) (f m) n = TC (\x y. y = f x) m n
+Proof
   REWRITE_TAC [relationTheory.EXTEND_RTC_TC_EQN]
    THEN BETA_TAC THEN REPEAT (STRIP_TAC ORELSE EQ_TAC)
    THENL [Q.EXISTS_TAC `f m`,
      FIRST_X_ASSUM (ASSUME_TAC o SYM)]
-   THEN ASM_REWRITE_TAC []) ;
+   THEN ASM_REWRITE_TAC []
+QED
 
 val TC_LESS_MONO_EQ = prove (
   ``!m n. TC (\x y. y = SUC x) (SUC m) (SUC n) = TC (\x y. y = SUC x) m n``,
   REWRITE_TAC [TC_IM_RTC_SUC, RTC_IM_TC] ) ;
 
-val LESS_ALT = store_thm ("LESS_ALT",
-  ``$< = TC (\x y. y = SUC x)``,
+Theorem LESS_ALT:
+    $< = TC (\x y. y = SUC x)
+Proof
   REWRITE_TAC [FUN_EQ_THM] THEN
   INDUCT_TAC THEN INDUCT_TAC THEN
   REWRITE_TAC [NOT_LESS_0, TC_NOT_LESS_0, LESS_0, TC_LESS_0,
     TC_LESS_MONO_EQ, LESS_MONO_EQ]
-  THEN FIRST_ASSUM MATCH_ACCEPT_TAC) ;
+  THEN FIRST_ASSUM MATCH_ACCEPT_TAC
+QED
 
 Theorem LESS_SUC_REFL:
     !n. n < SUC n

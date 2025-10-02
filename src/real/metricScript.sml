@@ -661,97 +661,135 @@ QED
 
 Overload dist = “real_dist”;
 
-val DIST_REFL = store_thm ("DIST_REFL",
- ``!x. dist(x,x) = &0``,
-  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC);
+Theorem DIST_REFL:
+   !x. dist(x,x) = &0
+Proof
+  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC
+QED
 
-val DIST_SYM = store_thm ("DIST_SYM",
- ``!x y. dist(x,y) = dist(y,x)``,
-  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC);
+Theorem DIST_SYM:
+   !x y. dist(x,y) = dist(y,x)
+Proof
+  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC
+QED
 
-val DIST_TRIANGLE = store_thm ("DIST_TRIANGLE",
- ``!x:real y z. dist(x,z) <= dist(x,y) + dist(y,z)``,
-  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC);
+Theorem DIST_TRIANGLE:
+   !x:real y z. dist(x,z) <= dist(x,y) + dist(y,z)
+Proof
+  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC
+QED
 
-val DIST_TRIANGLE_ALT = store_thm ("DIST_TRIANGLE_ALT",
- ``!x y z. dist(y,z) <= dist(x,y) + dist(x,z)``,
-  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC);
+Theorem DIST_TRIANGLE_ALT:
+   !x y z. dist(y,z) <= dist(x,y) + dist(x,z)
+Proof
+  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC
+QED
 
-val DIST_EQ_0 = store_thm ("DIST_EQ_0",
- ``!x y. (dist(x,y) = 0:real) <=> (x = y)``,
-  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC);
+Theorem DIST_EQ_0:
+   !x y. (dist(x,y) = 0:real) <=> (x = y)
+Proof
+  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC
+QED
 
-val DIST_POS_LT = store_thm ("DIST_POS_LT",
- ``!x y. ~(x = y) ==> &0 < dist(x,y)``,
-  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC);
+Theorem DIST_POS_LT:
+   !x y. ~(x = y) ==> &0 < dist(x,y)
+Proof
+  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC
+QED
 
-val DIST_NZ = store_thm ("DIST_NZ",
- ``!x y. ~(x = y) <=> &0 < dist(x,y)``,
-  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC);
+Theorem DIST_NZ:
+   !x y. ~(x = y) <=> &0 < dist(x,y)
+Proof
+  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC
+QED
 
-val DIST_TRIANGLE_LE = store_thm ("DIST_TRIANGLE_LE",
- ``!x y z e. dist(x,z) + dist(y,z) <= e ==> dist(x,y) <= e``,
-  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC);
+Theorem DIST_TRIANGLE_LE:
+   !x y z e. dist(x,z) + dist(y,z) <= e ==> dist(x,y) <= e
+Proof
+  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC
+QED
 
-val DIST_TRIANGLE_LT = store_thm ("DIST_TRIANGLE_LT",
- ``!x y z e. dist(x,z) + dist(y,z) < e ==> dist(x,y) < e``,
-  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC);
+Theorem DIST_TRIANGLE_LT:
+   !x y z e. dist(x,z) + dist(y,z) < e ==> dist(x,y) < e
+Proof
+  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC
+QED
 
-val DIST_TRIANGLE_HALF_L = store_thm ("DIST_TRIANGLE_HALF_L",
- ``!x1 x2 y. dist(x1,y) < e / &2 /\ dist(x2,y) < e / &2 ==> dist(x1,x2) < e``,
+Theorem DIST_TRIANGLE_HALF_L:
+   !x1 x2 y. dist(x1,y) < e / &2 /\ dist(x2,y) < e / &2 ==> dist(x1,x2) < e
+Proof
   REPEAT STRIP_TAC THEN KNOW_TAC `` dist (x1,y) + dist (x2,y) < e`` THENL
   [METIS_TAC [REAL_LT_ADD2, REAL_HALF_DOUBLE],
    DISCH_TAC THEN MATCH_MP_TAC REAL_LET_TRANS THEN
    EXISTS_TAC ``dist (x1,y) + dist (x2,y)`` THEN
-   METIS_TAC [DIST_TRIANGLE, DIST_SYM]]);
+   METIS_TAC [DIST_TRIANGLE, DIST_SYM]]
+QED
 
-val DIST_TRIANGLE_HALF_R = store_thm ("DIST_TRIANGLE_HALF_R",
- ``!x1 x2 y. dist(y,x1) < e / &2 /\ dist(y,x2) < e / &2 ==> dist(x1,x2) < e``,
+Theorem DIST_TRIANGLE_HALF_R:
+   !x1 x2 y. dist(y,x1) < e / &2 /\ dist(y,x2) < e / &2 ==> dist(x1,x2) < e
+Proof
   REPEAT STRIP_TAC THEN KNOW_TAC `` dist (y, x1) + dist (y, x2) < e`` THENL
   [METIS_TAC [REAL_LT_ADD2, REAL_HALF_DOUBLE],
    DISCH_TAC THEN MATCH_MP_TAC REAL_LET_TRANS THEN
    EXISTS_TAC ``dist (y, x1) + dist (y, x2)`` THEN
-   METIS_TAC [DIST_TRIANGLE, DIST_SYM]]);
+   METIS_TAC [DIST_TRIANGLE, DIST_SYM]]
+QED
 
-val DIST_TRIANGLE_ADD = store_thm ("DIST_TRIANGLE_ADD",
- ``!x x' y y'. dist(x + y,x' + y') <= dist(x,x') + dist(y,y')``,
-  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC);
+Theorem DIST_TRIANGLE_ADD:
+   !x x' y y'. dist(x + y,x' + y') <= dist(x,x') + dist(y,y')
+Proof
+  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC
+QED
 
-val DIST_MUL = store_thm ("DIST_MUL",
- ``!x y c. dist(c * x,c * y) = abs(c) * dist(x,y)``,
-  REWRITE_TAC[dist, GSYM ABS_MUL] THEN REAL_ARITH_TAC);
+Theorem DIST_MUL:
+   !x y c. dist(c * x,c * y) = abs(c) * dist(x,y)
+Proof
+  REWRITE_TAC[dist, GSYM ABS_MUL] THEN REAL_ARITH_TAC
+QED
 
-val DIST_TRIANGLE_ADD_HALF = store_thm ("DIST_TRIANGLE_ADD_HALF",
- ``!x x' y y':real.
-    dist(x,x') < e / &2 /\ dist(y,y') < e / &2 ==> dist(x + y,x' + y') < e``,
+Theorem DIST_TRIANGLE_ADD_HALF:
+   !x x' y y':real.
+    dist(x,x') < e / &2 /\ dist(y,y') < e / &2 ==> dist(x + y,x' + y') < e
+Proof
   REPEAT STRIP_TAC THEN KNOW_TAC `` dist (x, x') + dist (y, y') < e`` THENL
   [METIS_TAC [REAL_LT_ADD2, REAL_HALF_DOUBLE],
    DISCH_TAC THEN MATCH_MP_TAC REAL_LET_TRANS THEN
    EXISTS_TAC ``dist (x, x') + dist (y, y')`` THEN
-   METIS_TAC [DIST_TRIANGLE_ADD, DIST_SYM]]);
+   METIS_TAC [DIST_TRIANGLE_ADD, DIST_SYM]]
+QED
 
-val DIST_LE_0 = store_thm ("DIST_LE_0",
- ``!x y. dist(x,y) <= &0 <=> (x = y)``,
-  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC);
+Theorem DIST_LE_0:
+   !x y. dist(x,y) <= &0 <=> (x = y)
+Proof
+  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC
+QED
 
-val DIST_POS_LE = store_thm ("DIST_POS_LE",
- ``!x y. &0 <= dist(x,y)``,
-  METIS_TAC [DIST_EQ_0, DIST_NZ, REAL_LE_LT]);
+Theorem DIST_POS_LE:
+   !x y. &0 <= dist(x,y)
+Proof
+  METIS_TAC [DIST_EQ_0, DIST_NZ, REAL_LE_LT]
+QED
 
-val DIST_EQ = store_thm ("DIST_EQ",
- ``!w x y z. (dist(w,x) = dist(y,z)) <=> (dist(w,x) pow 2 = dist(y,z) pow 2)``,
+Theorem DIST_EQ:
+   !w x y z. (dist(w,x) = dist(y,z)) <=> (dist(w,x) pow 2 = dist(y,z) pow 2)
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL [RW_TAC std_ss [],
   DISCH_TAC THEN MATCH_MP_TAC POW_EQ THEN EXISTS_TAC ``1:num`` THEN
-  RW_TAC arith_ss [DIST_POS_LE]]);
+  RW_TAC arith_ss [DIST_POS_LE]]
+QED
 
-val DIST_0 = store_thm ("DIST_0",
- ``!x. (dist(x,0) = abs(x)) /\ (dist(0,x) = abs(x))``,
-  RW_TAC arith_ss [dist, REAL_SUB_RZERO, REAL_SUB_LZERO, ABS_NEG]);
+Theorem DIST_0:
+   !x. (dist(x,0) = abs(x)) /\ (dist(0,x) = abs(x))
+Proof
+  RW_TAC arith_ss [dist, REAL_SUB_RZERO, REAL_SUB_LZERO, ABS_NEG]
+QED
 
-val REAL_CHOOSE_DIST = store_thm ("REAL_CHOOSE_DIST",
- ``!x e. &0 <= e ==> (?y. dist (x,y) = e)``,
+Theorem REAL_CHOOSE_DIST:
+   !x e. &0 <= e ==> (?y. dist (x,y) = e)
+Proof
   REPEAT STRIP_TAC THEN EXISTS_TAC ``x - e:real`` THEN
-  ASM_REWRITE_TAC [dist, REAL_SUB_SUB2, ABS_REFL]);
+  ASM_REWRITE_TAC [dist, REAL_SUB_SUB2, ABS_REFL]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* F_sigma and G_delta sets in a topological space (ported from HOL Light)   *)
