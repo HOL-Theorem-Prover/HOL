@@ -136,10 +136,11 @@ val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT,0)),
 val _ = overload_on ("()", ``one``);
 val _ = type_abbrev_pp("unit",``:one``);
 
-val one_induction = Q.store_thm
-("one_induction",
- `!P:one->bool. P one ==> !x. P x`,
- REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC [one] THEN ASM_REWRITE_TAC[]);
+Theorem one_induction:
+  !P:one->bool. P one ==> !x. P x
+Proof
+ REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC [one] THEN ASM_REWRITE_TAC[]
+QED
 
 val FORALL_ONE = store_thm(
   "FORALL_ONE[simp]",
@@ -175,10 +176,11 @@ val one_case_def = new_definition (
   "one_case_def",
   Term`one_CASE (u:unit) (x:'a) = x`);
 
-val one_case_thm = Q.store_thm
- ("one_case_thm",
-  `!x:'a. one_CASE () x = x`,
-  ONCE_REWRITE_TAC [GSYM one] THEN REWRITE_TAC [one_case_def]);
+Theorem one_case_thm:
+   !x:'a. one_CASE () x = x
+Proof
+  ONCE_REWRITE_TAC [GSYM one] THEN REWRITE_TAC [one_case_def]
+QED
 
 
 val _ = TypeBase.export (

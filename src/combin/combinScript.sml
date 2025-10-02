@@ -207,14 +207,16 @@ Proof
   REWRITE_TAC [o_THM, K_THM, FUN_EQ_THM]
 QED
 
-val UPDATE_APPLY = Q.store_thm("UPDATE_APPLY",
-   `(!a x f. (a =+ x) f a = x) /\
-    (!a b x f. a <> b ==> ((a =+ x) f b = f b))`,
+Theorem UPDATE_APPLY:
+    (!a x f. (a =+ x) f a = x) /\
+    (!a b x f. a <> b ==> ((a =+ x) f b = f b))
+Proof
    REWRITE_TAC [UPDATE_def]
    THEN BETA_TAC
    THEN REWRITE_TAC []
    THEN REPEAT STRIP_TAC
-   THEN ASM_REWRITE_TAC [])
+   THEN ASM_REWRITE_TAC []
+QED
 
 Theorem UPDATE_APPLY1 = cj 1 UPDATE_APPLY
 
@@ -225,8 +227,9 @@ Proof
   THEN BETA_TAC THEN REWRITE_TAC []
 QED
 
-val UPDATE_COMMUTES = Q.store_thm("UPDATE_COMMUTES",
-  `!f a b c d. ~(a = b) ==> ((a =+ c) ((b =+ d) f) = (b =+ d) ((a =+ c) f))`,
+Theorem UPDATE_COMMUTES:
+   !f a b c d. ~(a = b) ==> ((a =+ c) ((b =+ d) f) = (b =+ d) ((a =+ c) f))
+Proof
   REPEAT STRIP_TAC
   THEN PURE_REWRITE_TAC [UPDATE_def,FUN_EQ_THM]
   THEN BETA_TAC THEN GEN_TAC
@@ -234,18 +237,22 @@ val UPDATE_COMMUTES = Q.store_thm("UPDATE_COMMUTES",
   THEN BETA_TAC
   THEN PURE_ASM_REWRITE_TAC []
   THEN NTAC 2 (POP_ASSUM (fn th => RULE_ASSUM_TAC (PURE_REWRITE_RULE [th])))
-  THEN POP_ASSUM MP_TAC THEN REWRITE_TAC []);
+  THEN POP_ASSUM MP_TAC THEN REWRITE_TAC []
+QED
 
-val UPDATE_EQ = Q.store_thm("UPDATE_EQ",
-  `!f a b c. (a =+ c) ((a =+ b) f) = (a =+ c) f`,
+Theorem UPDATE_EQ:
+   !f a b c. (a =+ c) ((a =+ b) f) = (a =+ c) f
+Proof
   REPEAT STRIP_TAC
   THEN PURE_REWRITE_TAC [UPDATE_def,FUN_EQ_THM]
   THEN TRY GEN_TAC THEN BETA_TAC
   THEN NTAC 2 (TRY COND_CASES_TAC)
-  THEN BETA_TAC THEN ASM_REWRITE_TAC []);
+  THEN BETA_TAC THEN ASM_REWRITE_TAC []
+QED
 
-val UPDATE_APPLY_ID = Q.store_thm("UPDATE_APPLY_ID",
-  `!f a b. (f a = b) = ((a =+ b) f = f)`,
+Theorem UPDATE_APPLY_ID:
+   !f a b. (f a = b) = ((a =+ b) f = f)
+Proof
   REPEAT GEN_TAC
   THEN EQ_TAC
   THEN PURE_REWRITE_TAC [UPDATE_def,FUN_EQ_THM]
@@ -258,7 +265,8 @@ val UPDATE_APPLY_ID = Q.store_thm("UPDATE_APPLY_ID",
     BETA_TAC THEN STRIP_TAC
     THEN POP_ASSUM (Q.SPEC_THEN `a` ASSUME_TAC)
     THEN RULE_ASSUM_TAC (REWRITE_RULE [])
-    THEN ASM_REWRITE_TAC []]);
+    THEN ASM_REWRITE_TAC []]
+QED
 
 val UPDATE_APPLY_ID' = GSYM UPDATE_APPLY_ID
 Theorem UPDATE_APPLY_ID_RWT =
@@ -270,9 +278,11 @@ Theorem UPDATE_APPLY_ID_RWT =
 val UPDATE_APPLY_IMP_ID = save_thm("UPDATE_APPLY_IMP_ID",
   GEN_ALL (fst (EQ_IMP_RULE (SPEC_ALL UPDATE_APPLY_ID))));
 
-val APPLY_UPDATE_ID = Q.store_thm("APPLY_UPDATE_ID",
-  `!f a. (a =+ f a) f = f`,
-  REWRITE_TAC [GSYM UPDATE_APPLY_ID]);
+Theorem APPLY_UPDATE_ID:
+   !f a. (a =+ f a) f = f
+Proof
+  REWRITE_TAC [GSYM UPDATE_APPLY_ID]
+QED
 
 Theorem UPD11_SAME_BASE:
   !f a b c d.
@@ -297,8 +307,9 @@ Proof
   ]
 QED
 
-val SAME_KEY_UPDATE_DIFFER = Q.store_thm("SAME_KEY_UPDATE_DIFFER",
-  `!f1 f2 a b c. ~(b = c) ==> ~((a =+ b) f = (a =+ c) f)`,
+Theorem SAME_KEY_UPDATE_DIFFER:
+   !f1 f2 a b c. ~(b = c) ==> ~((a =+ b) f = (a =+ c) f)
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC
   THEN PURE_REWRITE_TAC [UPDATE_def,FUN_EQ_THM]
   THEN BETA_TAC
@@ -306,22 +317,26 @@ val SAME_KEY_UPDATE_DIFFER = Q.store_thm("SAME_KEY_UPDATE_DIFFER",
   THEN POP_ASSUM (Q.SPEC_THEN `a` ASSUME_TAC)
   THEN RULE_ASSUM_TAC (REWRITE_RULE [])
   THEN POP_ASSUM (fn th => RULE_ASSUM_TAC (REWRITE_RULE [th]))
-  THEN POP_ASSUM CONTR_TAC);
+  THEN POP_ASSUM CONTR_TAC
+QED
 
-val UPD11_SAME_KEY_AND_BASE = Q.store_thm("UPD11_SAME_KEY_AND_BASE",
-  `!f a b c. ((a =+ b) f = (a =+ c) f) = (b = c)`,
+Theorem UPD11_SAME_KEY_AND_BASE:
+   !f a b c. ((a =+ b) f = (a =+ c) f) = (b = c)
+Proof
   REPEAT GEN_TAC THEN EQ_TAC
   THEN PURE_REWRITE_TAC [UPDATE_def,FUN_EQ_THM]
   THEN BETA_TAC THEN STRIP_TAC
   THEN ASM_REWRITE_TAC []
   THEN POP_ASSUM (Q.SPEC_THEN `a` ASSUME_TAC)
   THEN RULE_ASSUM_TAC (REWRITE_RULE [])
-  THEN ASM_REWRITE_TAC []);
+  THEN ASM_REWRITE_TAC []
+QED
 
-val UPD_SAME_KEY_UNWIND = Q.store_thm("UPD_SAME_KEY_UNWIND",
-  `!f1 f2 a b c.
+Theorem UPD_SAME_KEY_UNWIND:
+   !f1 f2 a b c.
       ((a =+ b) f1 = (a =+ c) f2) ==>
-      (b = c) /\ !v. (a =+ v) f1 = (a =+ v) f2`,
+      (b = c) /\ !v. (a =+ v) f1 = (a =+ v) f2
+Proof
   PURE_REWRITE_TAC [UPDATE_def,FUN_EQ_THM]
   THEN BETA_TAC THEN REPEAT STRIP_TAC
   THENL [
@@ -331,7 +346,8 @@ val UPD_SAME_KEY_UNWIND = Q.store_thm("UPD_SAME_KEY_UNWIND",
     COND_CASES_TAC THEN REWRITE_TAC []
     THEN FIRST_ASSUM (Q.SPEC_THEN `x` ASSUME_TAC)
     THEN Q.PAT_ASSUM `~(a = x)` (fn th => RULE_ASSUM_TAC (REWRITE_RULE [th]))
-    THEN ASM_REWRITE_TAC []]);
+    THEN ASM_REWRITE_TAC []]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Theorems using combinators to specify let-movements                       *)
@@ -468,11 +484,13 @@ QED
 
 val FAIL_DEF = Q.new_definition("FAIL_DEF", `FAIL = \x y. x`);
 
-val FAIL_THM = Q.store_thm("FAIL_THM", `FAIL x y = x`,
+Theorem FAIL_THM:  FAIL x y = x
+Proof
     REPEAT GEN_TAC
     THEN PURE_REWRITE_TAC [ FAIL_DEF ]
     THEN CONV_TAC (DEPTH_CONV BETA_CONV)
-    THEN REFL_TAC);
+    THEN REFL_TAC
+QED
 
 
 Overload flip = “C”

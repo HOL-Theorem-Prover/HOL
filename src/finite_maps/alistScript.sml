@@ -59,10 +59,10 @@ val ALOOKUP_TABULATE = store_thm(
     (ALOOKUP (MAP (\k. (k, f k)) l) x = SOME (f x))``,
   Induct_on `l` THEN SRW_TAC [][]);
 
-val ALOOKUP_EQ_FLOOKUP = Q.store_thm(
-"ALOOKUP_EQ_FLOOKUP",
-`(FLOOKUP (alist_to_fmap al) = ALOOKUP al) /\
- (ALOOKUP (fmap_to_alist fm) = FLOOKUP fm)`,
+Theorem ALOOKUP_EQ_FLOOKUP:
+ (FLOOKUP (alist_to_fmap al) = ALOOKUP al) /\
+ (ALOOKUP (fmap_to_alist fm) = FLOOKUP fm)
+Proof
 SRW_TAC [][FUN_EQ_THM] THEN Q.ID_SPEC_TAC `x` THENL [
   Q.ID_SPEC_TAC `al` THEN
   HO_MATCH_MP_TAC ALOOKUP_ind THEN
@@ -73,7 +73,8 @@ SRW_TAC [][FUN_EQ_THM] THEN Q.ID_SPEC_TAC `x` THENL [
     MATCH_MP_TAC ALOOKUP_TABULATE THEN SRW_TAC [][],
     SRW_TAC [][ALOOKUP_FAILS, MEM_MAP]
   ]
-])
+]
+QED
 val _ = export_rewrites ["ALOOKUP_EQ_FLOOKUP"]
 
 val MEM_fmap_to_alist = store_thm(
@@ -104,12 +105,13 @@ val fmap_to_alist_to_fmap = store_thm(
   SRW_TAC [][FLOOKUP_EXT])
 val _ = export_rewrites ["fmap_to_alist_to_fmap"]
 
-val ALOOKUP_MEM = Q.store_thm(
-"ALOOKUP_MEM",
-`!al k v.(ALOOKUP al k = SOME v) ==> MEM (k,v) al`,
+Theorem ALOOKUP_MEM:
+ !al k v.(ALOOKUP al k = SOME v) ==> MEM (k,v) al
+Proof
 Induct THEN SRW_TAC [][] THEN
 Cases_on `h` THEN POP_ASSUM MP_TAC THEN
-SRW_TAC [][]);
+SRW_TAC [][]
+QED
 
 val ALOOKUP_SOME_FAPPLY_alist_to_fmap = store_thm(
 "ALOOKUP_SOME_FAPPLY_alist_to_fmap",
@@ -141,20 +143,22 @@ Proof
   gen_tac >> Induct >> simp[] >> Cases >> simp[] >> srw_tac[][]
 QED
 
-val FDOM_alist_to_fmap = Q.store_thm(
-"FDOM_alist_to_fmap",
-`!al.FDOM (alist_to_fmap al) = set (MAP FST al)`,
+Theorem FDOM_alist_to_fmap:
+ !al.FDOM (alist_to_fmap al) = set (MAP FST al)
+Proof
 Induct THEN SRW_TAC [][alist_to_fmap_def] THEN
-Cases_on `h` THEN FULL_SIMP_TAC (srw_ss()) [alist_to_fmap_def]);
+Cases_on `h` THEN FULL_SIMP_TAC (srw_ss()) [alist_to_fmap_def]
+QED
 val _ = export_rewrites["FDOM_alist_to_fmap"];
 
-val alist_to_fmap_prefix = Q.store_thm(
-"alist_to_fmap_prefix",
-`!ls l1 l2.
+Theorem alist_to_fmap_prefix:
+ !ls l1 l2.
  (alist_to_fmap l1 = alist_to_fmap l2) ==>
- (alist_to_fmap (ls ++ l1) = alist_to_fmap (ls ++ l2))`,
+ (alist_to_fmap (ls ++ l1) = alist_to_fmap (ls ++ l2))
+Proof
 Induct THEN SRW_TAC [][] THEN
-Cases_on `h` THEN SRW_TAC [][] THEN METIS_TAC []);
+Cases_on `h` THEN SRW_TAC [][] THEN METIS_TAC []
+QED
 
 val alist_to_fmap_APPEND = store_thm(
 "alist_to_fmap_APPEND",
@@ -163,38 +167,42 @@ Induct >- rw[FUNION_FEMPTY_1] >>
 Cases >> rw[FUNION_FUPDATE_1])
 val _ = export_rewrites["alist_to_fmap_APPEND"]
 
-val ALOOKUP_prefix = Q.store_thm(
-"ALOOKUP_prefix",
-`!ls k ls2.
+Theorem ALOOKUP_prefix:
+ !ls k ls2.
  ((ALOOKUP ls k = SOME v) ==>
   (ALOOKUP (ls ++ ls2) k = SOME v)) /\
  ((ALOOKUP ls k = NONE) ==>
-  (ALOOKUP (ls ++ ls2) k = ALOOKUP ls2 k))`,
+  (ALOOKUP (ls ++ ls2) k = ALOOKUP ls2 k))
+Proof
 HO_MATCH_MP_TAC ALOOKUP_ind THEN
-SRW_TAC [][]);
+SRW_TAC [][]
+QED
 
 val ALOOKUP_APPEND = store_thm(
 "ALOOKUP_APPEND",
 ``!l1 l2 k. ALOOKUP (l1 ++ l2) k = case ALOOKUP l1 k of SOME v => SOME v | NONE => ALOOKUP l2 k``,
 rw[] >> Cases_on `ALOOKUP l1 k` >> rw[ALOOKUP_prefix])
 
-val FUPDATE_LIST_EQ_APPEND_REVERSE = Q.store_thm(
-"FUPDATE_LIST_EQ_APPEND_REVERSE",
-`!ls fm. fm |++ ls = alist_to_fmap (REVERSE ls ++ fmap_to_alist fm)`,
+Theorem FUPDATE_LIST_EQ_APPEND_REVERSE:
+ !ls fm. fm |++ ls = alist_to_fmap (REVERSE ls ++ fmap_to_alist fm)
+Proof
 Induct THEN1 SRW_TAC [][FUPDATE_LIST_THM,FUNION_FEMPTY_1] THEN
 Cases THEN FULL_SIMP_TAC(srw_ss())[FUPDATE_LIST_THM] THEN
-SRW_TAC[][FUNION_ASSOC,FUNION_FUPDATE_2,FUNION_FEMPTY_2,FUNION_FUPDATE_1])
+SRW_TAC[][FUNION_ASSOC,FUNION_FUPDATE_2,FUNION_FEMPTY_2,FUNION_FUPDATE_1]
+QED
 
-val FLOOKUP_FUPDATE_LIST_ALOOKUP_SOME = Q.store_thm(
-"FLOOKUP_FUPDATE_LIST_ALOOKUP_SOME",
-`(ALOOKUP ls k = SOME v) ==> (FLOOKUP (fm |++ (REVERSE ls)) k = SOME v)`,
+Theorem FLOOKUP_FUPDATE_LIST_ALOOKUP_SOME:
+ (ALOOKUP ls k = SOME v) ==> (FLOOKUP (fm |++ (REVERSE ls)) k = SOME v)
+Proof
 SRW_TAC [][FUPDATE_LIST_EQ_APPEND_REVERSE,FLOOKUP_DEF,FUNION_DEF,ALOOKUP_SOME_FAPPLY_alist_to_fmap,MEM_MAP,pairTheory.EXISTS_PROD] THEN
-METIS_TAC [ALOOKUP_MEM]);
+METIS_TAC [ALOOKUP_MEM]
+QED
 
-val FLOOKUP_FUPDATE_LIST_ALOOKUP_NONE = Q.store_thm(
-"FLOOKUP_FUPDATE_LIST_ALOOKUP_NONE",
-`(ALOOKUP ls k = NONE) ==> (FLOOKUP (fm |++ (REVERSE ls)) k = FLOOKUP fm k)`,
-SRW_TAC [][FUPDATE_LIST_EQ_APPEND_REVERSE,FLOOKUP_DEF,FUNION_DEF,ALOOKUP_FAILS,MEM_MAP,pairTheory.EXISTS_PROD]);
+Theorem FLOOKUP_FUPDATE_LIST_ALOOKUP_NONE:
+ (ALOOKUP ls k = NONE) ==> (FLOOKUP (fm |++ (REVERSE ls)) k = FLOOKUP fm k)
+Proof
+SRW_TAC [][FUPDATE_LIST_EQ_APPEND_REVERSE,FLOOKUP_DEF,FUNION_DEF,ALOOKUP_FAILS,MEM_MAP,pairTheory.EXISTS_PROD]
+QED
 
 val FUNION_alist_to_fmap = store_thm("FUNION_alist_to_fmap",
   ``!ls fm. FUNION (alist_to_fmap ls) fm = fm |++ (REVERSE ls)``,
@@ -503,8 +511,9 @@ val set_MAP_FST_fmap_to_alist = store_thm(
 ``set (MAP FST (fmap_to_alist fm)) = FDOM fm``,
 METIS_TAC[fmap_to_alist_to_fmap,FDOM_alist_to_fmap])
 
-val alookup_distinct_reverse = Q.store_thm ("alookup_distinct_reverse",
-`!l k. ALL_DISTINCT (MAP FST l) ==> (ALOOKUP (REVERSE l) k = ALOOKUP l k)`,
+Theorem alookup_distinct_reverse:
+ !l k. ALL_DISTINCT (MAP FST l) ==> (ALOOKUP (REVERSE l) k = ALOOKUP l k)
+Proof
  Induct_on `l` >>
  rw [] >>
  PairCases_on `h` >>
@@ -516,14 +525,16 @@ val alookup_distinct_reverse = Q.store_thm ("alookup_distinct_reverse",
  fs [] >>
  imp_res_tac ALOOKUP_MEM >>
  fs [MEM_MAP] >>
- metis_tac [FST]);
+ metis_tac [FST]
+QED
 
-val flookup_fupdate_list = Q.store_thm ("flookup_fupdate_list",
-`!l k m.
+Theorem flookup_fupdate_list:
+ !l k m.
   FLOOKUP (m |++ l) k =
   case ALOOKUP (REVERSE l) k of
      | SOME v => SOME v
-     | NONE => FLOOKUP m k`,
+     | NONE => FLOOKUP m k
+Proof
  ho_match_mp_tac ALOOKUP_ind >>
  rw [FUPDATE_LIST_THM, ALOOKUP_def, FLOOKUP_UPDATE] >>
  BasicProvers.FULL_CASE_TAC >>
@@ -533,7 +544,8 @@ val flookup_fupdate_list = Q.store_thm ("flookup_fupdate_list",
  rw [] >>
  imp_res_tac FLOOKUP_FUPDATE_LIST_ALOOKUP_NONE >>
  imp_res_tac FLOOKUP_FUPDATE_LIST_ALOOKUP_SOME >>
- fs [FLOOKUP_UPDATE]);
+ fs [FLOOKUP_UPDATE]
+QED
 
 val fupdate_list_funion = store_thm("fupdate_list_funion",
 ``!m l. m|++l = FUNION (FEMPTY |++l) m``,
@@ -550,8 +562,9 @@ val fupdate_list_funion = store_thm("fupdate_list_funion",
  BasicProvers.EVERY_CASE_TAC >>
  fs []);
 
-val mem_to_flookup = Q.store_thm ("mem_to_flookup",
-`!x y l. ALL_DISTINCT (MAP FST l) /\ MEM (x,y) l ==> (FLOOKUP (FEMPTY |++ l) x = SOME y)`,
+Theorem mem_to_flookup:
+ !x y l. ALL_DISTINCT (MAP FST l) /\ MEM (x,y) l ==> (FLOOKUP (FEMPTY |++ l) x = SOME y)
+Proof
  Induct_on `l` >>
  rw [] >>
  fs [flookup_fupdate_list] >>
@@ -566,14 +579,17 @@ val mem_to_flookup = Q.store_thm ("mem_to_flookup",
  BasicProvers.EVERY_CASE_TAC >>
  fs [MEM_MAP] >>
  rw [] >>
- metis_tac [FST]);
+ metis_tac [FST]
+QED
 
-val alookup_filter = Q.store_thm ("alookup_filter",
-`!f l x. ALOOKUP l x = ALOOKUP (FILTER (\(x',y). x = x') l) x`,
+Theorem alookup_filter:
+ !f l x. ALOOKUP l x = ALOOKUP (FILTER (\(x',y). x = x') l) x
+Proof
  Induct_on `l` >>
  rw [ALOOKUP_def] >>
  PairCases_on `h` >>
- fs []);
+ fs []
+QED
 
 Definition alist_range_def:
 alist_range m = { v | ?k. ALOOKUP m k = SOME v }
@@ -581,12 +597,13 @@ End
 
 (* Sorting and permutation based stuff *)
 
-val alookup_stable_sorted = Q.store_thm ("alookup_stable_sorted",
-`!R sort x l.
+Theorem alookup_stable_sorted:
+ !R sort x l.
   transitive R /\ total R /\
   STABLE sort (inv_image R FST)
   ==>
-  (ALOOKUP (sort (inv_image R FST) l) x = ALOOKUP l x)`,
+  (ALOOKUP (sort (inv_image R FST) l) x = ALOOKUP l x)
+Proof
  rw [] >>
  ONCE_REWRITE_TAC [alookup_filter] >>
  fs [STABLE_DEF, SORTS_DEF] >>
@@ -598,7 +615,8 @@ val alookup_stable_sorted = Q.store_thm ("alookup_stable_sorted",
  PairCases_on `x'` >>
  PairCases_on `y` >>
  fs [transitive_def, total_def] >>
- metis_tac []);
+ metis_tac []
+QED
 
 val ALOOKUP_ALL_DISTINCT_PERM_same = store_thm("ALOOKUP_ALL_DISTINCT_PERM_same",
   ``!l1 l2. ALL_DISTINCT (MAP FST l1) /\ PERM (MAP FST l1) (MAP FST l2) /\

@@ -685,33 +685,37 @@ val _ = print "DIVMOD for numerals\n"
 (* For calculation                                                           *)
 (*---------------------------------------------------------------------------*)
 
-val divmod_POS = Q.store_thm
-("divmod_POS",
- `!n. 0<n ==>
+Theorem divmod_POS:
+  !n. 0<n ==>
     (DIVMOD (a,m,n) =
       if m < n then
              (a,m)
            else
-             (let q = findq (1,m,n) in DIVMOD (a + q,m - n * q,n)))`,
- RW_TAC bool_ss [Once DIVMOD_THM,NOT_ZERO_LT_ZERO,prim_recTheory.LESS_REFL])
+             (let q = findq (1,m,n) in DIVMOD (a + q,m - n * q,n)))
+Proof
+ RW_TAC bool_ss [Once DIVMOD_THM,NOT_ZERO_LT_ZERO,prim_recTheory.LESS_REFL]
+QED
 
-val DIVMOD_NUMERAL_CALC = Q.store_thm
-("DIVMOD_NUMERAL_CALC",
- `(!m n. m DIV (BIT1 n) = FST(DIVMOD (ZERO,m,BIT1 n))) /\
+Theorem DIVMOD_NUMERAL_CALC:
+  (!m n. m DIV (BIT1 n) = FST(DIVMOD (ZERO,m,BIT1 n))) /\
   (!m n. m DIV (BIT2 n) = FST(DIVMOD (ZERO,m,BIT2 n))) /\
   (!m n. m MOD (BIT1 n) = SND(DIVMOD (ZERO,m,BIT1 n))) /\
-  (!m n. m MOD (BIT2 n) = SND(DIVMOD (ZERO,m,BIT2 n)))`,
- METIS_TAC [DIVMOD_CALC,numeral_lt,ALT_ZERO]);
+  (!m n. m MOD (BIT2 n) = SND(DIVMOD (ZERO,m,BIT2 n)))
+Proof
+ METIS_TAC [DIVMOD_CALC,numeral_lt,ALT_ZERO]
+QED
 
-val numeral_div2 = Q.store_thm("numeral_div2",
-   `(DIV2 0 = 0) /\
+Theorem numeral_div2:
+    (DIV2 0 = 0) /\
      (!n. DIV2 (NUMERAL (BIT1 n)) = NUMERAL n) /\
-     (!n. DIV2 (NUMERAL (BIT2 n)) = NUMERAL (SUC n))`,
+     (!n. DIV2 (NUMERAL (BIT2 n)) = NUMERAL (SUC n))
+Proof
   RW_TAC bool_ss [ALT_ZERO, NUMERAL_DEF, BIT1, BIT2]
     THEN REWRITE_TAC [DIV2_def, ADD_ASSOC, GSYM TIMES2]
     THEN METIS_TAC [ZERO_DIV, ALT_ZERO, NUMERAL_DEF, DIVMOD_ID, ADD_CLAUSES,
                     MULT_COMM, ADD_DIV_ADD_DIV, LESS_DIV_EQ_ZERO,
-                    numeral_lt, numeral_suc]);
+                    numeral_lt, numeral_suc]
+QED
 
 (* ----------------------------------------------------------------------
     Rewrites to optimise calculations with powers of 2

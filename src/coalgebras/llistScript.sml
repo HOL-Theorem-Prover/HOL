@@ -280,12 +280,14 @@ Proof
   SRW_TAC [][LTL, LNIL, llist_repabs', lrep_ok_rules, LHD]
 QED
 
-val LTL_HD_iff = Q.store_thm ("LTL_HD_iff",
-  `((LTL_HD x = SOME (t, h)) = (x = LCONS h t)) /\
-    ((LTL_HD x = NONE) = (x = LNIL))`,
+Theorem LTL_HD_iff:
+   ((LTL_HD x = SOME (t, h)) = (x = LCONS h t)) /\
+    ((LTL_HD x = NONE) = (x = LNIL))
+Proof
   llist_CASE_TAC ``x :'a llist`` THEN
   SIMP_TAC std_ss [LTL_HD_LCONS, LTL_HD_LNIL, LCONS_NOT_NIL, LCONS_11] THEN
-  DECIDE_TAC) ;
+  DECIDE_TAC
+QED
 
 val LHD_EQ_NONE = store_thm(
   "LHD_EQ_NONE",
@@ -333,10 +335,12 @@ val _ = export_rewrites ["LNTH_THM"]
     LNTH is just llist_rep with arguments swapped
    ---------------------------------------------------------------------- *)
 
-val LNTH_rep = Q.store_thm ("LNTH_rep",
-  `!i ll. LNTH i ll = llist_rep ll i`,
+Theorem LNTH_rep:
+   !i ll. LNTH i ll = llist_rep ll i
+Proof
   Induct THEN GEN_TAC THEN llist_CASE_TAC ``ll : 'a llist`` THEN
-  ASM_SIMP_TAC std_ss [LNTH_THM, llist_rep_LCONS, llist_rep_LNIL, NOT_SUC]) ;
+  ASM_SIMP_TAC std_ss [LNTH_THM, llist_rep_LCONS, llist_rep_LNIL, NOT_SUC]
+QED
 
 (* can also prove that two lists are equal "extensionally", by showing
    that LNTH is everywhere the same over them *)
@@ -367,11 +371,11 @@ End
    and you never had a concrete function f that actually wanted to generate
    an infinite list.
 *)
-val LUNFOLD = Q.store_thm (
-  "LUNFOLD",
-  `!f x.
+Theorem LUNFOLD:
+   !f x.
      LUNFOLD f x =
-       case f x of NONE => [||] | SOME (v1,v2) => v2 ::: LUNFOLD f v1`,
+       case f x of NONE => [||] | SOME (v1,v2) => v2 ::: LUNFOLD f v1
+Proof
   REPEAT GEN_TAC THEN
   REWRITE_TAC [LUNFOLD_def] THEN
   irule (GSYM llist_if_rep_abs) THEN
@@ -380,7 +384,8 @@ val LUNFOLD = Q.store_thm (
     FUNPOW_BIND_NONE, OPTION_MAP_DEF, FUN_EQ_THM] THEN
   GEN_TAC THEN Cases_on `n` THEN
   SIMP_TAC std_ss [FUNPOW, OPTION_MAP_DEF, NOT_SUC, UNCURRY_VAR,
-    SUC_SUB1, OPTION_BIND_def, llist_repabs', lrep_ok_MAP_FUNPOW_BIND]) ;
+    SUC_SUB1, OPTION_BIND_def, llist_repabs', lrep_ok_MAP_FUNPOW_BIND]
+QED
 
 (* this is the uniqueness in the definition of llist as final coalgebra *)
 Theorem LUNFOLD_UNIQUE:
@@ -614,16 +619,18 @@ val LTAKE = new_recursive_definition {
   name = "LTAKE",
   rec_axiom = num_Axiom};
 
-val LTAKE_LUNFOLD = Q.store_thm ("LTAKE_LUNFOLD",
-  `(LTAKE 0 (LUNFOLD f x) = SOME []) /\
+Theorem LTAKE_LUNFOLD:
+   (LTAKE 0 (LUNFOLD f x) = SOME []) /\
   (LTAKE (SUC n) (LUNFOLD f x) =
     case f x of NONE => NONE
-      | SOME (tx, hx) => OPTION_MAP (CONS hx) (LTAKE n (LUNFOLD f tx)))`,
+      | SOME (tx, hx) => OPTION_MAP (CONS hx) (LTAKE n (LUNFOLD f tx)))
+Proof
   CONJ_TAC THEN REWRITE_TAC [LTAKE, LHD_LUNFOLD, LTL_LUNFOLD] THEN
   Cases_on `f x` THEN
   Ho_Rewrite.REWRITE_TAC [BETA_THM, THE_DEF,
     OPTION_MAP_DEF, option_case_def, pair_CASE_def,
-    o_DEF, OPTION_MAP_CASE]) ;
+    o_DEF, OPTION_MAP_CASE]
+QED
 
 val LTAKE_THM = store_thm(
   "LTAKE_THM",
@@ -852,21 +859,27 @@ val LAPPEND_NIL_2ND = store_thm(
   STRUCT_CASES_TAC (Q.SPEC `ll4` llist_CASES) THEN
   SIMP_TAC (srw_ss()) []);
 
-val LHD_LAPPEND = Q.store_thm("LHD_LAPPEND",
-  `LHD (LAPPEND l1 l2) = if l1 = LNIL then LHD l2 else LHD l1`,
-  qspec_then`l1`FULL_STRUCT_CASES_TAC llist_CASES >> rw[])
+Theorem LHD_LAPPEND:
+   LHD (LAPPEND l1 l2) = if l1 = LNIL then LHD l2 else LHD l1
+Proof
+  qspec_then`l1`FULL_STRUCT_CASES_TAC llist_CASES >> rw[]
+QED
 
-val LTL_LAPPEND = Q.store_thm("LTL_LAPPEND",
-  `LTL (LAPPEND l1 l2) = if l1 = LNIL then LTL l2
-                         else SOME (LAPPEND (THE (LTL l1)) l2)`,
-  qspec_then`l1`FULL_STRUCT_CASES_TAC llist_CASES >> rw[]);
+Theorem LTL_LAPPEND:
+   LTL (LAPPEND l1 l2) = if l1 = LNIL then LTL l2
+                         else SOME (LAPPEND (THE (LTL l1)) l2)
+Proof
+  qspec_then`l1`FULL_STRUCT_CASES_TAC llist_CASES >> rw[]
+QED
 
 
-val LTAKE_LAPPEND1 = Q.store_thm("LTAKE_LAPPEND1",
-  `!n l1 l2. IS_SOME (LTAKE n l1) ==> (LTAKE n (LAPPEND l1 l2) = LTAKE n l1)`,
+Theorem LTAKE_LAPPEND1:
+   !n l1 l2. IS_SOME (LTAKE n l1) ==> (LTAKE n (LAPPEND l1 l2) = LTAKE n l1)
+Proof
   Induct >> rw[LTAKE_THM] >>
   qspec_then`l1`FULL_STRUCT_CASES_TAC llist_CASES >> fs[] >>
-  Cases_on`LTAKE n t`>>fs[])
+  Cases_on`LTAKE n t`>>fs[]
+QED
 
 Theorem LTAKE_LMAP:
   !n f ll. LTAKE n (LMAP f ll) =
@@ -950,12 +963,14 @@ val LLENGTH_THM = store_thm(
   ONCE_REWRITE_TAC [llength_rel_cases] THEN SRW_TAC [][]);
 val _ = export_rewrites ["LLENGTH_THM"]
 
-val LLENGTH_0 = Q.store_thm("LLENGTH_0[simp]",
-  `(LLENGTH x = SOME 0) <=> (x = [||])`,
+Theorem LLENGTH_0[simp]:
+   (LLENGTH x = SOME 0) <=> (x = [||])
+Proof
   llist_CASE_TAC ``x : 'a llist`` THEN
   SIMP_TAC bool_ss [LLENGTH_THM, LCONS_NOT_NIL] THEN
   Cases_on `LLENGTH t` THEN
-  SIMP_TAC std_ss [OPTION_MAP_DEF, NOT_SUC]) ;
+  SIMP_TAC std_ss [OPTION_MAP_DEF, NOT_SUC]
+QED
 
 val LFINITE_HAS_LENGTH = store_thm(
   "LFINITE_HAS_LENGTH",
@@ -967,12 +982,14 @@ val NOT_LFINITE_NO_LENGTH = store_thm(
   ``!ll. ~LFINITE ll ==> (LLENGTH ll = NONE)``,
   SIMP_TAC (srw_ss()) [LLENGTH]);
 
-val LFINITE_LLENGTH = Q.store_thm("LFINITE_LLENGTH",
-  `LFINITE ll <=> ?n. LLENGTH ll = SOME n`,
+Theorem LFINITE_LLENGTH:
+   LFINITE ll <=> ?n. LLENGTH ll = SOME n
+Proof
   rw[EQ_IMP_THM,LFINITE_HAS_LENGTH] >>
   spose_not_then strip_assume_tac >>
   imp_res_tac NOT_LFINITE_NO_LENGTH >>
-  fs[])
+  fs[]
+QED
 
 val LFINITE_INDUCTION = save_thm(
   "LFINITE_INDUCTION",
@@ -1017,17 +1034,19 @@ Proof
   ]
 QED
 
-val LTAKE_LNTH_EL = Q.store_thm ("LTAKE_LNTH_EL",
-  `!n ll m l.
+Theorem LTAKE_LNTH_EL:
+   !n ll m l.
     (LTAKE n ll = SOME l) /\
     m < n
     ==>
-    (LNTH m ll = SOME (EL m l))`,
+    (LNTH m ll = SOME (EL m l))
+Proof
   Induct>>simp[]>>
   (* "Cases" *)
   (fn (g as(_,w)) => (gen_tac >>
     FULL_STRUCT_CASES_TAC(ISPEC(#1(dest_forall w))llist_CASES))g) >>
-  simp[PULL_EXISTS] >> Cases>>simp[]);
+  simp[PULL_EXISTS] >> Cases>>simp[]
+QED
 
 val NOT_LFINITE_APPEND = store_thm(
   "NOT_LFINITE_APPEND",
@@ -1041,9 +1060,11 @@ val NOT_LFINITE_APPEND = store_thm(
     PROVE_TAC []
   ]);
 
-val LFINITE_LAPPEND_IMP_NIL = Q.store_thm("LFINITE_LAPPEND_IMP_NIL",
-  `!ll. LFINITE ll ==> !l2. (LAPPEND ll l2 = ll) ==> (l2 = [||])`,
-  ho_match_mp_tac LFINITE_INDUCTION >> simp[])
+Theorem LFINITE_LAPPEND_IMP_NIL:
+   !ll. LFINITE ll ==> !l2. (LAPPEND ll l2 = ll) ==> (l2 = [||])
+Proof
+  ho_match_mp_tac LFINITE_INDUCTION >> simp[]
+QED
 
 val LLENGTH_MAP = store_thm(
   "LLENGTH_MAP",
@@ -1101,20 +1122,23 @@ Definition fromList_def:
 End
 val _ = export_rewrites ["fromList_def"]
 
-val fromList_EQ_LNIL = Q.store_thm(
-  "fromList_EQ_LNIL[simp]",
-  `(fromList l = LNIL) <=> (l = [])`,
-  Cases_on `l` >> simp[]);
+Theorem fromList_EQ_LNIL[simp]:
+   (fromList l = LNIL) <=> (l = [])
+Proof
+  Cases_on `l` >> simp[]
+QED
 
-val LHD_fromList = Q.store_thm(
-  "LHD_fromList",
-  `LHD (fromList l) = if NULL l then NONE else SOME (HD l)`,
-  Cases_on `l` >> simp[]);
+Theorem LHD_fromList:
+   LHD (fromList l) = if NULL l then NONE else SOME (HD l)
+Proof
+  Cases_on `l` >> simp[]
+QED
 
-val LTL_fromList = Q.store_thm(
-  "LTL_fromList",
-  `LTL (fromList l) = if NULL l then NONE else SOME (fromList (TL l))`,
-  Cases_on `l` >> simp[]);
+Theorem LTL_fromList:
+   LTL (fromList l) = if NULL l then NONE else SOME (fromList (TL l))
+Proof
+  Cases_on `l` >> simp[]
+QED
 
 Theorem LFINITE_fromList[simp] :
     !l. LFINITE (fromList l)
@@ -1143,10 +1167,12 @@ val LFINITE_toList = store_thm(
   HO_MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
   REPEAT STRIP_TAC THEN ASM_SIMP_TAC (srw_ss()) [toList_THM]);
 
-val LFINITE_toList_SOME = Q.store_thm("LFINITE_toList_SOME",
-  `LFINITE ll <=> IS_SOME (toList ll)`,
+Theorem LFINITE_toList_SOME:
+   LFINITE ll <=> IS_SOME (toList ll)
+Proof
   EQ_TAC >> simp[IS_SOME_EXISTS,LFINITE_toList] >>
-  rw[] >> fs[toList])
+  rw[] >> fs[toList]
+QED
 
 val to_fromList = store_thm(
   "to_fromList",
@@ -1194,10 +1220,12 @@ Proof
             from_toList]
 QED
 
-val lnth_fromList_some = Q.store_thm ("lnth_fromList_some",
-  `!n l. n < LENGTH l <=> (LNTH n (fromList l) = SOME (EL n l))`,
+Theorem lnth_fromList_some:
+   !n l. n < LENGTH l <=> (LNTH n (fromList l) = SOME (EL n l))
+Proof
   Induct_on `l` >> rw [] >>
-  Cases_on `n` >> rw [LNTH_THM] >> fs []);
+  Cases_on `n` >> rw [LNTH_THM] >> fs []
+QED
 
 (* ----------------------------------------------------------------------
     LDROP : num -> 'a llist -> 'a llist option
@@ -1216,12 +1244,14 @@ val FUNPOW_BIND_NONE = Q.prove (
   `!n. FUNPOW (\m. OPTION_BIND m g) n NONE = NONE`,
   Induct THEN ASM_SIMP_TAC bool_ss [FUNPOW, OPTION_BIND_def]) ;
 
-val LDROP_FUNPOW = Q.store_thm ("LDROP_FUNPOW",
-  `!n ll. LDROP n ll = FUNPOW (\m. OPTION_BIND m LTL) n (SOME ll)`,
+Theorem LDROP_FUNPOW:
+   !n ll. LDROP n ll = FUNPOW (\m. OPTION_BIND m LTL) n (SOME ll)
+Proof
   Induct THEN RULE_ASSUM_TAC GSYM THEN
   SIMP_TAC std_ss [LDROP, FUNPOW, FUNPOW_BIND_NONE] THEN
   GEN_TAC THEN Cases_on `LTL ll` THEN
-  ASM_SIMP_TAC std_ss [FUNPOW_BIND_NONE]) ;
+  ASM_SIMP_TAC std_ss [FUNPOW_BIND_NONE]
+QED
 
 val LDROP_THM = store_thm(
   "LDROP_THM",
@@ -1237,13 +1267,15 @@ val LDROP1_THM = store_thm(
   SIMP_TAC bool_ss [DECIDE ``1 = SUC 0``,
     LDROP_FUNPOW, FUN_EQ_THM, FUNPOW, OPTION_BIND_def]);
 
-val LNTH_HD_LDROP = Q.store_thm ("LNTH_HD_LDROP",
-  `!n ll. LNTH n ll = OPTION_BIND (LDROP n ll) LHD`,
+Theorem LNTH_HD_LDROP:
+   !n ll. LNTH n ll = OPTION_BIND (LDROP n ll) LHD
+Proof
   REWRITE_TAC [LDROP_FUNPOW] THEN
   Induct THEN RULE_ASSUM_TAC GSYM THEN
   SIMP_TAC std_ss [LNTH, FUNPOW, FUNPOW_BIND_NONE] THEN
   GEN_TAC THEN Cases_on `LTL ll` THEN
-  ASM_SIMP_TAC std_ss [FUNPOW_BIND_NONE]) ;
+  ASM_SIMP_TAC std_ss [FUNPOW_BIND_NONE]
+QED
 
 val NOT_LFINITE_TAKE = store_thm(
   "NOT_LFINITE_TAKE",
@@ -1323,9 +1355,10 @@ val LDROP_ADD = store_thm("LDROP_ADD",
   REPEAT GEN_TAC THEN CASE_TAC THEN
   REWRITE_TAC [FUNPOW_BIND_NONE]) ;
 
-val LDROP_SOME_LLENGTH = Q.store_thm("LDROP_SOME_LLENGTH",
-  `(LDROP n ll = SOME l) /\ (LLENGTH ll = SOME m) ==>
-     n <= m /\ (LLENGTH l = SOME (m - n))`,
+Theorem LDROP_SOME_LLENGTH:
+   (LDROP n ll = SOME l) /\ (LLENGTH ll = SOME m) ==>
+     n <= m /\ (LLENGTH l = SOME (m - n))
+Proof
   `!ll. LFINITE ll ==>
      !n m l.
        (LDROP n ll = SOME l) /\ (LLENGTH ll = SOME m) ==>
@@ -1337,27 +1370,33 @@ val LDROP_SOME_LLENGTH = Q.store_thm("LDROP_SOME_LLENGTH",
     metis_tac[NOT_LFINITE_NO_LENGTH,NOT_NONE_SOME] ) >>
   ho_match_mp_tac LFINITE_INDUCTION >>
   strip_tac >- ( Cases >> simp[] ) >>
-  ntac 3 strip_tac >> Cases >> simp[PULL_EXISTS] )
+  ntac 3 strip_tac >> Cases >> simp[PULL_EXISTS]
+QED
 
-val LFINITE_LNTH_NONE = Q.store_thm("LFINITE_LNTH_NONE",
-  `LFINITE ll <=> ?n. LNTH n ll = NONE`,
+Theorem LFINITE_LNTH_NONE:
+   LFINITE ll <=> ?n. LNTH n ll = NONE
+Proof
   EQ_TAC >- (
     qid_spec_tac`ll` >>
     ho_match_mp_tac LFINITE_INDUCTION >>
     rw[] >> qexists_tac`SUC n` >> simp[] ) >>
   metis_tac[NOT_LFINITE_TAKE,LTAKE_LNTH_EL,
             NOT_SOME_NONE,
-            LESS_SUC_REFL]);
+            LESS_SUC_REFL]
+QED
 
-val infinite_lnth_some = Q.store_thm ("infinite_lnth_some",
-  `!ll. ~LFINITE ll <=> !n. ?x. LNTH n ll = SOME x`,
+Theorem infinite_lnth_some:
+   !ll. ~LFINITE ll <=> !n. ?x. LNTH n ll = SOME x
+Proof
   rw [LFINITE_LNTH_NONE] >>
-  metis_tac [NOT_SOME_NONE, option_nchotomy]);
+  metis_tac [NOT_SOME_NONE, option_nchotomy]
+QED
 
-val LNTH_LAPPEND = Q.store_thm("LNTH_LAPPEND",
-  `LNTH n (LAPPEND l1 l2) =
+Theorem LNTH_LAPPEND:
+   LNTH n (LAPPEND l1 l2) =
    case LLENGTH l1 of NONE => LNTH n l1
-   | SOME m => if n < m then LNTH n l1 else LNTH (n-m) l2`,
+   | SOME m => if n < m then LNTH n l1 else LNTH (n-m) l2
+Proof
   Cases_on`LFINITE l1` >- (
     map_every qid_spec_tac[`l2`,`n`] >>
     pop_assum mp_tac >> qid_spec_tac`l1` >>
@@ -1374,24 +1413,29 @@ val LNTH_LAPPEND = Q.store_thm("LNTH_LAPPEND",
   qspecl_then[`SUC n`,`l1`,`l2`]mp_tac LTAKE_LAPPEND1 >>
   simp[] >> strip_tac >>
   imp_res_tac LTAKE_LNTH_EL >>
-  rpt(pop_assum(qspec_then`n`mp_tac)) >> simp[])
+  rpt(pop_assum(qspec_then`n`mp_tac)) >> simp[]
+QED
 
-val LNTH_ADD = Q.store_thm("LNTH_ADD",
-  `!a b ll. LNTH (a + b) ll = OPTION_BIND (LDROP a ll) (LNTH b)`,
+Theorem LNTH_ADD:
+   !a b ll. LNTH (a + b) ll = OPTION_BIND (LDROP a ll) (LNTH b)
+Proof
   Induct >> simp[] >> rpt gen_tac >>
   `b + SUC a = SUC (a + b)` by simp[] >>
   pop_assum SUBST1_TAC >>
   qspec_then`ll`FULL_STRUCT_CASES_TAC llist_CASES >>
-  simp[])
+  simp[]
+QED
 
-val lnth_some_down_closed = Q.store_thm ("lnth_some_down_closed",
-  `!ll x n1 n2.
+Theorem lnth_some_down_closed:
+   !ll x n1 n2.
     (LNTH n1 ll = SOME x) /\ n2 <= n1
    ==>
-    ?y. (LNTH n2 ll = SOME y)`,
+    ?y. (LNTH n2 ll = SOME y)
+Proof
   Induct_on `n1` >> rw [] >>
   Q.ISPEC_THEN`ll`FULL_STRUCT_CASES_TAC llist_CASES >>
-  fs [] >> Cases_on `n2` >> fs []);
+  fs [] >> Cases_on `n2` >> fs []
+QED
 
 (* ----------------------------------------------------------------------
     exists : ('a -> bool) -> 'a llist -> bool
@@ -2013,43 +2057,45 @@ QED
 val LUNZIP_THM = new_specification ("LUNZIP_THM", ["LUNZIP"], LUNZIP_exists);
 val _ = export_rewrites ["LUNZIP_THM"]
 
-val LZIP_LUNZIP = Q.store_thm
-("LZIP_LUNZIP",
- `!ll: ('a # 'b) llist. LZIP(LUNZIP ll) = ll`,
+Theorem LZIP_LUNZIP:
+  !ll: ('a # 'b) llist. LZIP(LUNZIP ll) = ll
+Proof
  REWRITE_TAC [Once LLIST_STRONG_BISIMULATION] THEN
  GEN_TAC THEN
  Q.EXISTS_TAC `λl1 l2. l1 = LZIP (LUNZIP l2)` THEN
  SRW_TAC [][] THEN
  Q.ISPEC_THEN `ll4` STRUCT_CASES_TAC llist_CASES THEN
  SRW_TAC [][] THEN
- Cases_on `h` THEN SRW_TAC [][] THEN SRW_TAC [][]);
+ Cases_on `h` THEN SRW_TAC [][] THEN SRW_TAC [][]
+QED
 val _ = export_rewrites ["LZIP_LUNZIP"]
 
-val LUNFOLD_THM = Q.store_thm
-("LUNFOLD_THM",
-  `!f x v1 v2.
+Theorem LUNFOLD_THM:
+   !f x v1 v2.
      ((f x = NONE) ==> (LUNFOLD f x = [||])) /\
-     ((f x = SOME (v1,v2)) ==> (LUNFOLD f x = v2:::LUNFOLD f v1))`,
+     ((f x = SOME (v1,v2)) ==> (LUNFOLD f x = v2:::LUNFOLD f v1))
+Proof
  SRW_TAC [] [] THEN1
  SRW_TAC [] [Once LUNFOLD] THEN
- SRW_TAC [] [Once LUNFOLD]);
+ SRW_TAC [] [Once LUNFOLD]
+QED
 
-val LLIST_EQ = Q.store_thm
-("LLIST_EQ",
- `!f g.
+Theorem LLIST_EQ:
+  !f g.
    (!x. ((f x = [||]) /\ (g x = [||])) \/
         (?h y. (f x = h:::f y) /\ (g x = h:::g y)))
    ==>
-   (!x. f x = g x)`,
+   (!x. f x = g x)
+Proof
  SRW_TAC [] [] THEN
  SRW_TAC [] [Once LLIST_BISIMULATION0] THEN
  Q.EXISTS_TAC `λll1 ll2. ?x. (ll1 = f x) /\ (ll2 = g x)` THEN
  SRW_TAC [] [] THEN
- METIS_TAC []);
+ METIS_TAC []
+QED
 
-val LUNFOLD_EQ = Q.store_thm
-("LUNFOLD_EQ",
- `!R f s ll.
+Theorem LUNFOLD_EQ:
+  !R f s ll.
     R s ll /\
     (!s ll.
        R s ll
@@ -2059,7 +2105,8 @@ val LUNFOLD_EQ = Q.store_thm
          (f s = SOME (s',x)) /\ (LHD ll = SOME x) /\ (LTL ll = SOME ll') /\
          R s' ll')
     ==>
-    (LUNFOLD f s = ll)`,
+    (LUNFOLD f s = ll)
+Proof
  SRW_TAC [] [] THEN
  SRW_TAC [] [Once LLIST_BISIMULATION] THEN
  Q.EXISTS_TAC `λll1 ll2. ?s. (ll1 = LUNFOLD f s) /\ R s ll2` THEN
@@ -2069,12 +2116,13 @@ val LUNFOLD_EQ = Q.store_thm
  SRW_TAC [] [LUNFOLD_THM] THEN
  IMP_RES_TAC LUNFOLD_THM THEN
  SRW_TAC [] [] THEN
- METIS_TAC []);
+ METIS_TAC []
+QED
 
-val LMAP_LUNFOLD = Q.store_thm
-("LMAP_LUNFOLD",
- `!f g s.
-   LMAP f (LUNFOLD g s) = LUNFOLD (λs. OPTION_MAP (λ(x, y). (x, f y)) (g s)) s`,
+Theorem LMAP_LUNFOLD:
+  !f g s.
+   LMAP f (LUNFOLD g s) = LUNFOLD (λs. OPTION_MAP (λ(x, y). (x, f y)) (g s)) s
+Proof
  SRW_TAC [] [] THEN
  MATCH_MP_TAC (GSYM LUNFOLD_EQ) THEN
  SRW_TAC [] [] THEN
@@ -2084,22 +2132,25 @@ val LMAP_LUNFOLD = Q.store_thm
  SRW_TAC [] [LUNFOLD_THM] THEN
  Cases_on `x` THEN
  IMP_RES_TAC LUNFOLD_THM THEN
- SRW_TAC [] []);
+ SRW_TAC [] []
+QED
 
-val LNTH_LDROP = Q.store_thm
-("LNTH_LDROP",
- `!n l x. (LNTH n l = SOME x) ==> (LHD (THE (LDROP n l)) = SOME x)`,
+Theorem LNTH_LDROP:
+  !n l x. (LNTH n l = SOME x) ==> (LHD (THE (LDROP n l)) = SOME x)
+Proof
  Induct THEN
  SRW_TAC [] [LNTH, LDROP] THEN
  Cases_on `LTL l` THEN
  SRW_TAC [] [] THEN
- FULL_SIMP_TAC (srw_ss()) []);
+ FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val LAPPEND_fromList = Q.store_thm
-("LAPPEND_fromList",
- `!l1 l2. LAPPEND (fromList l1) (fromList l2) = fromList (l1 ++ l2)`,
+Theorem LAPPEND_fromList:
+  !l1 l2. LAPPEND (fromList l1) (fromList l2) = fromList (l1 ++ l2)
+Proof
  Induct THEN
- SRW_TAC [] []);
+ SRW_TAC [] []
+QED
 
 Theorem LFLATTEN_fromList: !l.
   LFLATTEN(fromList(MAP fromList l)) = fromList(FLAT l)
@@ -2107,19 +2158,22 @@ Proof
   Induct >> rw[LAPPEND_fromList]
 QED
 
-val LTAKE_LENGTH = Q.store_thm ("LTAKE_LENGTH",
-`!n ll l. (LTAKE n ll = SOME l) ==> (n = LENGTH l)`,
+Theorem LTAKE_LENGTH:
+ !n ll l. (LTAKE n ll = SOME l) ==> (n = LENGTH l)
+Proof
 Induct THEN
 SRW_TAC [] [] THEN
 SRW_TAC [] [] THEN
 `(ll = [||]) \/ ?h t. ll = h:::t` by METIS_TAC [llist_CASES] THEN
 SRW_TAC [] [] THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
-METIS_TAC []);
+METIS_TAC []
+QED
 
-val LTAKE_TAKE_LESS = Q.store_thm("LTAKE_TAKE_LESS",
-  `(LTAKE n ll = SOME l) /\ m <= n ==>
-   (LTAKE m ll = SOME (TAKE m l))`,
+Theorem LTAKE_TAKE_LESS:
+   (LTAKE n ll = SOME l) /\ m <= n ==>
+   (LTAKE m ll = SOME (TAKE m l))
+Proof
   rw[] >> Cases_on`n=m`>>fs[] >>
   imp_res_tac LTAKE_LENGTH >> rw[] >>
   Cases_on`LTAKE m ll` >- (
@@ -2130,26 +2184,30 @@ val LTAKE_TAKE_LESS = Q.store_thm("LTAKE_TAKE_LESS",
   simp[LIST_EQ_REWRITE,EL_TAKE] >> rw[] >>
   qmatch_assum_rename_tac`n < LENGTH x` >>
   `n < LENGTH l` by decide_tac >>
-  imp_res_tac LTAKE_LNTH_EL >> fs[]);
+  imp_res_tac LTAKE_LNTH_EL >> fs[]
+QED
 
-val LTAKE_LLENGTH_NONE = Q.store_thm("LTAKE_LLENGTH_NONE",
-  `(LLENGTH ll = SOME n) /\ n < m ==> (LTAKE m ll = NONE)`,
+Theorem LTAKE_LLENGTH_NONE:
+   (LLENGTH ll = SOME n) /\ n < m ==> (LTAKE m ll = NONE)
+Proof
   rw[] >> `LFINITE ll` by metis_tac[LFINITE_LLENGTH] >>
   `!ll. LFINITE ll ==> !m n. (LLENGTH ll = SOME n) /\ n < m
     ==> (LTAKE m ll = NONE)` suffices_by metis_tac[] >>
   rpt (pop_assum kall_tac) >>
   ho_match_mp_tac LFINITE_INDUCTION >> rw[] >>
   simp[LTAKE_CONS_EQ_NONE] >>
-  Cases_on`m`>>fs[])
+  Cases_on`m`>>fs[]
+QED
 
 Theorem LTAKE_LLENGTH_SOME:
   LLENGTH ll = SOME n ==> ?l. LTAKE n ll = SOME l /\ toList ll = SOME l
 Proof metis_tac[LFINITE_LLENGTH,to_fromList,from_toList,THE_DEF,toList]
 QED
 
-val toList_LAPPEND_APPEND = Q.store_thm("toList_LAPPEND_APPEND",
-  `(toList (LAPPEND l1 l2) = SOME x) ==>
-    (x = (THE(toList l1)++THE(toList l2)))`,
+Theorem toList_LAPPEND_APPEND:
+   (toList (LAPPEND l1 l2) = SOME x) ==>
+    (x = (THE(toList l1)++THE(toList l2)))
+Proof
   Cases_on`l2=[||]`>>simp[toList_THM,LAPPEND_NIL_2ND] >>
   strip_tac >> fs[toList] >>
   rfs[LLENGTH_APPEND] >>
@@ -2162,7 +2220,8 @@ val toList_LAPPEND_APPEND = Q.store_thm("toList_LAPPEND_APPEND",
     qspec_then`l2`FULL_STRUCT_CASES_TAC llist_CASES >> fs[] >>
     decide_tac ) >>
   fs[LTAKE_LAPPEND2,Abbr`n`] >>
-  simp[toList]);
+  simp[toList]
+QED
 
 Theorem LNTH_LLENGTH_NONE :
     !x n l. (LLENGTH l = SOME x) /\ x <= n ==> (LNTH n l = NONE)
@@ -2179,18 +2238,20 @@ Proof
   metis_tac[LTAKE_EQ_NONE_LNTH,NOT_NONE_SOME]
 QED
 
-val LNTH_NONE_MONO = Q.store_thm ("LNTH_NONE_MONO",
-  `!m n l.
+Theorem LNTH_NONE_MONO:
+   !m n l.
     (LNTH m l = NONE) /\ m <= n
    ==>
-    (LNTH n l = NONE)`,
+    (LNTH n l = NONE)
+Proof
   rw[] >> match_mp_tac(GEN_ALL LNTH_LLENGTH_NONE) >>
   `LFINITE l` by metis_tac[LFINITE_LNTH_NONE] >>
   `?z. LLENGTH l = SOME z` by metis_tac[LFINITE_HAS_LENGTH] >>
   imp_res_tac LTAKE_LLENGTH_SOME >>
   imp_res_tac LTAKE_LENGTH >>
   `~(m < z)` by metis_tac[LTAKE_LNTH_EL,NOT_SOME_NONE] >>
-  rw[] >> decide_tac);
+  rw[] >> decide_tac
+QED
 
 (* NOTE: this is just another version of lnth_some_down_closed *)
 Theorem LNTH_IS_SOME_MONO :
@@ -2443,8 +2504,8 @@ Proof
   ]
 QED
 
-val linear_order_to_llist_eq = Q.store_thm ("linear_order_to_llist_eq",
-  `!lo X.
+Theorem linear_order_to_llist_eq:
+   !lo X.
   linear_order lo X /\
   finite_prefixes lo X
   ==>
@@ -2452,7 +2513,8 @@ val linear_order_to_llist_eq = Q.store_thm ("linear_order_to_llist_eq",
     (X = { x | ?i. LNTH i ll = SOME x }) /\
     (lo = { (x,y) | ?i j. i <= j /\ (LNTH i ll = SOME x) /\
                               (LNTH j ll = SOME y) }) /\
-    (!i j x. (LNTH i ll = SOME x) /\ (LNTH j ll = SOME x) ==> (i = j))`,
+    (!i j x. (LNTH i ll = SOME x) /\ (LNTH j ll = SOME x) ==> (i = j))
+Proof
   REPEAT STRIP_TAC THEN
   Q.EXISTS_TAC `LUNFOLD linear_order_to_list_f lo` THEN
   Ho_Rewrite.REWRITE_TAC [EXTENSION, IN_GSPEC_IFF] THEN
@@ -2490,10 +2552,11 @@ val linear_order_to_llist_eq = Q.store_thm ("linear_order_to_llist_eq",
     FIRST_ASSUM ACCEPT_TAC THEN
     POP_ASSUM DISJ_CASES_TAC THEN
     IMP_RES_TAC linear_order_to_list_lem2a THEN
-    REV_FULL_SIMP_TAC bool_ss [SOME_11]]) ;
+    REV_FULL_SIMP_TAC bool_ss [SOME_11]]
+QED
 
-val linear_order_to_llist = Q.store_thm ("linear_order_to_llist",
-`!lo X.
+Theorem linear_order_to_llist:
+ !lo X.
   linear_order lo X /\
   finite_prefixes lo X
   ==>
@@ -2501,9 +2564,11 @@ val linear_order_to_llist = Q.store_thm ("linear_order_to_llist",
     (X = { x | ?i. LNTH i ll = SOME x }) /\
     lo SUBSET { (x,y) | ?i j. i <= j /\ (LNTH i ll = SOME x) /\
                               (LNTH j ll = SOME y) } /\
-    (!i j x. (LNTH i ll = SOME x) /\ (LNTH j ll = SOME x) ==> (i = j))`,
+    (!i j x. (LNTH i ll = SOME x) /\ (LNTH j ll = SOME x) ==> (i = j))
+Proof
   REPEAT STRIP_TAC THEN IMP_RES_TAC linear_order_to_llist_eq THEN
-  Q.EXISTS_TAC `ll'` THEN ASM_REWRITE_TAC [SUBSET_REFL]) ;
+  Q.EXISTS_TAC `ll'` THEN ASM_REWRITE_TAC [SUBSET_REFL]
+QED
 
 Definition LPREFIX_def:
   LPREFIX l1 l2 =
@@ -2515,33 +2580,38 @@ Definition LPREFIX_def:
         | SOME ys => isPREFIX xs ys
 End
 
-val LPREFIX_LNIL = Q.store_thm("LPREFIX_LNIL[simp]",
-  `LPREFIX [||] ll /\
-   (LPREFIX ll [||] <=> (ll = [||]))`,
+Theorem LPREFIX_LNIL[simp]:
+   LPREFIX [||] ll /\
+   (LPREFIX ll [||] <=> (ll = [||]))
+Proof
   rw[LPREFIX_def,toList_THM] >>
   CASE_TAC >>
   simp[IS_PREFIX_NIL] >>
   rw[EQ_IMP_THM] >> fs[toList_THM] >>
   (* "Cases_on `ll`" *)
   Q.ISPEC_THEN`ll`FULL_STRUCT_CASES_TAC llist_CASES >>
-  fs[toList_THM]);
+  fs[toList_THM]
+QED
 
-val LPREFIX_LCONS = Q.store_thm("LPREFIX_LCONS",
-  `(!ll h t.
+Theorem LPREFIX_LCONS:
+   (!ll h t.
      LPREFIX ll (h:::t) <=>
       ((ll = [||]) \/ ?l. (ll = h:::l) /\ LPREFIX l t)) /\
    (!h t ll.
      LPREFIX (h:::t) ll <=>
-      ?l. (ll = h:::l) /\ LPREFIX t l)`,
+      ?l. (ll = h:::l) /\ LPREFIX t l)
+Proof
   rw[] >>
   Q.ISPEC_THEN`ll`FULL_STRUCT_CASES_TAC llist_CASES >>
   simp[LPREFIX_def,toList_THM] >>
-  every_case_tac >> fs[] >> rw[EQ_IMP_THM]);
+  every_case_tac >> fs[] >> rw[EQ_IMP_THM]
+QED
 
-val LPREFIX_LUNFOLD = Q.store_thm("LPREFIX_LUNFOLD",
-  `LPREFIX ll (LUNFOLD f n) <=>
+Theorem LPREFIX_LUNFOLD:
+   LPREFIX ll (LUNFOLD f n) <=>
    case f n of NONE => (ll = LNIL)
-   | SOME (n,x) => !h t. (ll = h:::t) ==> (h = x) /\ LPREFIX t (LUNFOLD f n)`,
+   | SOME (n,x) => !h t. (ll = h:::t) ==> (h = x) /\ LPREFIX t (LUNFOLD f n)
+Proof
   CASE_TAC >- (
     simp[LUNFOLD_THM,LPREFIX_LNIL] ) >>
   CASE_TAC >>
@@ -2549,11 +2619,14 @@ val LPREFIX_LUNFOLD = Q.store_thm("LPREFIX_LUNFOLD",
   simp[LPREFIX_LCONS] >>
   (* "Cases_on `ll`" *)
   Q.ISPEC_THEN`ll`FULL_STRUCT_CASES_TAC llist_CASES >>
-  simp[]);
+  simp[]
+QED
 
-val LPREFIX_REFL = Q.store_thm("LPREFIX_REFL[simp]",
-  `LPREFIX ll ll`,
-  rw[LPREFIX_def] >> CASE_TAC >> simp[]);
+Theorem LPREFIX_REFL[simp]:
+   LPREFIX ll ll
+Proof
+  rw[LPREFIX_def] >> CASE_TAC >> simp[]
+QED
 
 Theorem LPREFIX_ANTISYM:
   LPREFIX l1 l2 /\ LPREFIX l2 l1 ==> l1 = l2
@@ -2576,17 +2649,20 @@ Proof
   simp[TAKE_APPEND1]
 QED
 
-val LPREFIX_fromList = Q.store_thm ("LPREFIX_fromList",
-  `!l ll.
+Theorem LPREFIX_fromList:
+   !l ll.
     LPREFIX (fromList l) ll <=>
       case toList ll of
       | NONE => LTAKE (LENGTH l) ll = SOME l
-      | SOME ys => isPREFIX l ys`,
-  rw [LPREFIX_def, from_toList]);
+      | SOME ys => isPREFIX l ys
+Proof
+  rw [LPREFIX_def, from_toList]
+QED
 
-val prefixes_lprefix_total = Q.store_thm("prefixes_lprefix_total",
-  `!ll. !l1 l2. LPREFIX l1 ll /\ LPREFIX l2 ll ==>
-    LPREFIX l1 l2 \/ LPREFIX l2 l1`,
+Theorem prefixes_lprefix_total:
+   !ll. !l1 l2. LPREFIX l1 ll /\ LPREFIX l2 ll ==>
+    LPREFIX l1 l2 \/ LPREFIX l2 l1
+Proof
   rw[LPREFIX_def] >> reverse every_case_tac >> fs[]
   >- metis_tac[prefixes_is_prefix_total] >>
   rpt(pop_assum mp_tac) >>
@@ -2599,7 +2675,8 @@ val prefixes_lprefix_total = Q.store_thm("prefixes_lprefix_total",
   `l1 = (TAKE (LENGTH l1) l2)` by (
     metis_tac[LTAKE_TAKE_LESS,SOME_11] ) >>
   simp[IS_PREFIX_APPEND] >>
-  metis_tac[TAKE_DROP])
+  metis_tac[TAKE_DROP]
+QED
 
 Theorem LPREFIX_LAPPEND1[local]:
   LPREFIX ll (LAPPEND ll l2)
@@ -2611,15 +2688,17 @@ Proof
             IS_PREFIX_APPEND]
 QED
 
-val LTAKE_IMP_LDROP = Q.store_thm("LTAKE_IMP_LDROP",
-  `!n ll l1.
+Theorem LTAKE_IMP_LDROP:
+   !n ll l1.
     (LTAKE n ll = SOME l1) ==>
      ?l2. (LDROP n ll = SOME l2) /\
-          (LAPPEND (fromList l1) l2 = ll)`,
+          (LAPPEND (fromList l1) l2 = ll)
+Proof
   Induct >> simp[] >>
   gen_tac >> qspec_then`ll`FULL_STRUCT_CASES_TAC llist_CASES >> rw[] >>
   first_x_assum(fn th => first_x_assum (strip_assume_tac o MATCH_MP th)) >>
-  rw[])
+  rw[]
+QED
 
 val LDROP_EQ_LNIL' = Q.prove (
   `!n ll. (LDROP n ll = SOME LNIL) <=> (LLENGTH ll = SOME n)`,
@@ -2631,8 +2710,9 @@ val LDROP_EQ_LNIL' = Q.prove (
 
 val LDROP_EQ_LNIL = save_thm("LDROP_EQ_LNIL", SPEC_ALL LDROP_EQ_LNIL') ;
 
-val LPREFIX_APPEND = Q.store_thm("LPREFIX_APPEND",
-  `LPREFIX l1 l2 <=> ?ll. l2 = LAPPEND l1 ll`,
+Theorem LPREFIX_APPEND:
+   LPREFIX l1 l2 <=> ?ll. l2 = LAPPEND l1 ll
+Proof
   reverse EQ_TAC >- metis_tac[LPREFIX_LAPPEND1] >>
   simp[LPREFIX_def] >>
   Cases_on`toList l1`>>fs[]
@@ -2661,7 +2741,8 @@ val LPREFIX_APPEND = Q.store_thm("LPREFIX_APPEND",
     rpt(first_x_assum(qspec_then`LENGTH x`mp_tac)) >>
     simp[TAKE_APPEND1] ) >>
   pop_assum(strip_assume_tac o MATCH_MP LTAKE_IMP_LDROP) >>
-  rw[LNTH_LAPPEND]);
+  rw[LNTH_LAPPEND]
+QED
 
 val LFINITE_LDROP_APPEND1 = Q.prove(
   `!l. LFINITE l ==>
@@ -2671,31 +2752,39 @@ val LFINITE_LDROP_APPEND1 = Q.prove(
   conj_tac >- ( Cases >> simp[] ) >>
   ntac 3 strip_tac >> Cases >> simp[] )
 
-val NOT_LFINITE_DROP_LFINITE = Q.store_thm("NOT_LFINITE_DROP_LFINITE",
-  `!n l t. ~LFINITE l /\ (LDROP n l = SOME t) ==> ~LFINITE t`,
+Theorem NOT_LFINITE_DROP_LFINITE:
+   !n l t. ~LFINITE l /\ (LDROP n l = SOME t) ==> ~LFINITE t
+Proof
   Induct >> simp[] >> gen_tac >>
   qspec_then`l`FULL_STRUCT_CASES_TAC llist_CASES >>
-  simp[] >> metis_tac[])
+  simp[] >> metis_tac[]
+QED
 
-val LDROP_APPEND1 = Q.store_thm("LDROP_APPEND1",
-  `(LDROP n l1 = SOME l) ==>
-   (LDROP n (LAPPEND l1 l2) = SOME (LAPPEND l l2))`,
+Theorem LDROP_APPEND1:
+   (LDROP n l1 = SOME l) ==>
+   (LDROP n (LAPPEND l1 l2) = SOME (LAPPEND l l2))
+Proof
   rw[] >>
   Cases_on`LFINITE l1` >- (
     metis_tac[LFINITE_LDROP_APPEND1] ) >>
   imp_res_tac NOT_LFINITE_DROP_LFINITE >>
-  simp[NOT_LFINITE_APPEND])
+  simp[NOT_LFINITE_APPEND]
+QED
 
-val LDROP_fromList = Q.store_thm("LDROP_fromList",
-  `!ls n.
+Theorem LDROP_fromList:
+   !ls n.
     LDROP n (fromList ls) =
-    if n <= LENGTH ls then SOME (fromList (DROP n ls)) else NONE`,
+    if n <= LENGTH ls then SOME (fromList (DROP n ls)) else NONE
+Proof
   Induct >- ( Cases >> simp[] ) >>
-  gen_tac >> Cases >> simp[])
+  gen_tac >> Cases >> simp[]
+QED
 
-val LDROP_SUC = Q.store_thm("LDROP_SUC",
-  `LDROP (SUC n) ls = OPTION_BIND (LDROP n ls) LTL`,
-  SIMP_TAC std_ss [LDROP_FUNPOW, FUNPOW_SUC]) ;
+Theorem LDROP_SUC:
+   LDROP (SUC n) ls = OPTION_BIND (LDROP n ls) LTL
+Proof
+  SIMP_TAC std_ss [LDROP_FUNPOW, FUNPOW_SUC]
+QED
 
 Theorem LDROP_1[simp]:
   LDROP (1: num) (h:::t) = SOME t
@@ -2730,17 +2819,18 @@ Definition LGENLIST_def[nocompute]:
                                         else NONE) 0)
 End
 
-val LHD_LGENLIST = Q.store_thm(
-  "LHD_LGENLIST[simp,compute]",
-  `LHD (LGENLIST f limopt) =
-    if limopt = SOME 0 then NONE else SOME (f 0)`,
-  Cases_on `limopt` >> simp[LGENLIST_def] >> rw[] >> simp[EXISTS_PROD]);
+Theorem LHD_LGENLIST[simp,compute]:
+   LHD (LGENLIST f limopt) =
+    if limopt = SOME 0 then NONE else SOME (f 0)
+Proof
+  Cases_on `limopt` >> simp[LGENLIST_def] >> rw[] >> simp[EXISTS_PROD]
+QED
 
-val LTL_LGENLIST = Q.store_thm(
-  "LTL_LGENLIST[simp,compute]",
-  `LTL (LGENLIST f limopt) =
+Theorem LTL_LGENLIST[simp,compute]:
+   LTL (LGENLIST f limopt) =
     if limopt = SOME 0 then NONE
-    else SOME (LGENLIST (f o SUC) (OPTION_MAP PRE limopt))`,
+    else SOME (LGENLIST (f o SUC) (OPTION_MAP PRE limopt))
+Proof
   Cases_on `limopt` >> simp[LGENLIST_def]
   >- (`!m. LUNFOLD (\n. SOME (n + 1, f n)) (m + 1) =
            LUNFOLD (\n. SOME (n + 1, f (SUC n))) m`
@@ -2754,18 +2844,19 @@ val LTL_LGENLIST = Q.store_thm(
      suffices_by metis_tac[DECIDE ``0 + 1 = 1``] >>
   dsimp[LNTH_EQ] >> Induct_on `n` >>
   simp[LNTH_LUNFOLD, DECIDE ``0 < x ==> (y < PRE x <=> y + 1 < x)``,
-       ADD1] >> rw[]);
+       ADD1] >> rw[]
+QED
 
 (* maybe useful? *)
-val numopt_BISIMULATION = Q.store_thm(
-  "numopt_BISIMULATION",
-  `!mopt nopt.
+Theorem numopt_BISIMULATION:
+   !mopt nopt.
      (mopt = nopt) <=>
      ?R. R mopt nopt /\
          !m n. R m n ==>
                (m = SOME 0) /\ (n = SOME 0) \/
                m <> SOME 0 /\ n <> SOME 0 /\
-               R (OPTION_MAP PRE m) (OPTION_MAP PRE n)`,
+               R (OPTION_MAP PRE m) (OPTION_MAP PRE n)
+Proof
   simp[EQ_IMP_THM, FORALL_AND_THM] >> conj_tac
   >- (gen_tac >> qexists_tac `(=)` >> simp[]) >>
   rpt strip_tac >>
@@ -2780,18 +2871,20 @@ val numopt_BISIMULATION = Q.store_thm(
   Induct >> rpt strip_tac >- (res_tac >> fs[]) >>
   rename1 `R (SOME (SUC m0)) (SOME n0)` >>
   `n0 <> 0 /\ R (SOME m0) (SOME (PRE n0))` by (res_tac >> fs[]) >>
-  `m0 = PRE n0` by res_tac >> simp[])
+  `m0 = PRE n0` by res_tac >> simp[]
+QED
 
-val LGENLIST_EQ_LNIL = Q.store_thm(
-  "LGENLIST_EQ_LNIL[simp]",
-  `((LGENLIST f n = LNIL) <=> (n = SOME 0)) /\
-   ((LNIL = LGENLIST f n) <=> (n = SOME 0))`,
+Theorem LGENLIST_EQ_LNIL[simp]:
+   ((LGENLIST f n = LNIL) <=> (n = SOME 0)) /\
+   ((LNIL = LGENLIST f n) <=> (n = SOME 0))
+Proof
   Cases_on `n` >> simp[LGENLIST_def] >> rpt conj_tac >>
-  simp[Once LUNFOLD] >> rename [`0 < limit`] >> Cases_on `limit` >> simp[]);
+  simp[Once LUNFOLD] >> rename [`0 < limit`] >> Cases_on `limit` >> simp[]
+QED
 
-val LFINITE_LGENLIST = Q.store_thm(
-  "LFINITE_LGENLIST[simp]",
-  `LFINITE (LGENLIST f n) <=> n <> NONE`,
+Theorem LFINITE_LGENLIST[simp]:
+   LFINITE (LGENLIST f n) <=> n <> NONE
+Proof
   Cases_on `n` >> simp[]
   >- (`!l. LFINITE l ==> !f. l <> LGENLIST f NONE` suffices_by metis_tac[] >>
       simp[LGENLIST_def] >>
@@ -2804,13 +2897,15 @@ val LFINITE_LGENLIST = Q.store_thm(
   `!m. m <= n ==>
        LFINITE (LUNFOLD (\x. if x < n then SOME (x + 1, f x) else NONE) m)`
     suffices_by metis_tac[DECIDE ``0 <= x``] >>
-  Induct_on `n - m` >> simp[Once LUNFOLD])
+  Induct_on `n - m` >> simp[Once LUNFOLD]
+QED
 
-val LTL_HD_LTL_LHD = Q.store_thm(
-  "LTL_HD_LTL_LHD",
-  `LTL_HD l = OPTION_BIND (LHD l) (\h. OPTION_BIND (LTL l) (λt. SOME (t, h)))`,
+Theorem LTL_HD_LTL_LHD:
+   LTL_HD l = OPTION_BIND (LHD l) (\h. OPTION_BIND (LTL l) (λt. SOME (t, h)))
+Proof
   simp[LTL_HD_HD, LTL_HD_TL] >>
-  Cases_on `LTL_HD l` >> simp[]);
+  Cases_on `LTL_HD l` >> simp[]
+QED
 
 Theorem LGENLIST_SOME[simp]:
   (LGENLIST f (SOME 0) = [||]) /\
@@ -2825,40 +2920,44 @@ val LGENLIST_SOME_compute = save_thm(
   CONJ (CONJUNCT1 LGENLIST_SOME)
        (CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV (CONJUNCT2 LGENLIST_SOME)))
 
-val LNTH_LGENLIST = Q.store_thm(
-  "LNTH_LGENLIST",
-  `!n f lim.
+Theorem LNTH_LGENLIST:
+   !n f lim.
      LNTH n (LGENLIST f lim) =
        case lim of NONE => SOME (f n)
-                 | SOME lim0 => if n < lim0 then SOME (f n) else NONE`,
+                 | SOME lim0 => if n < lim0 then SOME (f n) else NONE
+Proof
   Induct_on `n` >> simp[LNTH] >> rpt gen_tac
   >- (Cases_on `lim` >> simp[] >> rename [`0 < n`] >> Cases_on `n` >> simp[]) >>
   Cases_on `lim` >> simp[] >>
-  rename [`SUC n < lim`] >> Cases_on `lim` >> simp[]);
+  rename [`SUC n < lim`] >> Cases_on `lim` >> simp[]
+QED
 
-val LNTH_LMAP = Q.store_thm(
-  "LNTH_LMAP[simp]",
-  `!n f l. LNTH n (LMAP f l) = OPTION_MAP f (LNTH n l)`,
+Theorem LNTH_LMAP[simp]:
+   !n f l. LNTH n (LMAP f l) = OPTION_MAP f (LNTH n l)
+Proof
   Induct >> simp[LNTH] >> rpt gen_tac >>
-  Q.SPEC_THEN `l` STRUCT_CASES_TAC llist_CASES >> simp[])
+  Q.SPEC_THEN `l` STRUCT_CASES_TAC llist_CASES >> simp[]
+QED
 
-val LLENGTH_LGENLIST = Q.store_thm(
-  "LLENGTH_LGENLIST[simp,compute]",
-  `!f. LLENGTH (LGENLIST f limopt) = limopt`,
+Theorem LLENGTH_LGENLIST[simp,compute]:
+   !f. LLENGTH (LGENLIST f limopt) = limopt
+Proof
   Cases_on `limopt`
   >- metis_tac[NOT_LFINITE_NO_LENGTH, LFINITE_LGENLIST] >>
-  rename [`LGENLIST _ (SOME n)`] >> Induct_on `n` >> simp[]);
+  rename [`LGENLIST _ (SOME n)`] >> Induct_on `n` >> simp[]
+QED
 
-val LMAP_LGENLIST = Q.store_thm(
-  "LMAP_LGENLIST[simp]",
-  `LMAP f (LGENLIST g limopt) = LGENLIST (f o g) limopt`,
+Theorem LMAP_LGENLIST[simp]:
+   LMAP f (LGENLIST g limopt) = LGENLIST (f o g) limopt
+Proof
   simp[LNTH_EQ, LNTH_LGENLIST] >>
-  Cases_on `limopt` >> simp[] >> rw[]);
+  Cases_on `limopt` >> simp[] >> rw[]
+QED
 
-val LGENLIST_EQ_CONS = Q.store_thm(
-  "LGENLIST_EQ_CONS",
-  `(LGENLIST f NONE = h:::t) <=>
-     (h = f 0) /\ (t = LGENLIST (f o (+) 1) NONE)`,
+Theorem LGENLIST_EQ_CONS:
+   (LGENLIST f NONE = h:::t) <=>
+     (h = f 0) /\ (t = LGENLIST (f o (+) 1) NONE)
+Proof
   simp[LGENLIST_def] >> simp[SimpLHS, Once LUNFOLD] >>
   `!m. LUNFOLD (\n. SOME (n + 1, f n)) m =
        LUNFOLD (\n. SOME (n + 1, f(n + m))) 0` suffices_by metis_tac[] >>
@@ -2874,7 +2973,8 @@ val LGENLIST_EQ_CONS = Q.store_thm(
   pop_assum mp_tac >>
   simp[SimpL ``$==>``, Once LUNFOLD] >> rw[] >>
   map_every qexists_tac [`k+1`, `m`] >> simp[] >>
-  simp[Once LUNFOLD, SimpLHS]);
+  simp[Once LUNFOLD, SimpLHS]
+QED
 
 (* ----------------------------------------------------------------------
     LREPEAT : 'a list -> 'a llist
@@ -2888,10 +2988,10 @@ Definition LREPEAT_def[nocompute]:
               else LGENLIST (\n. EL (n MOD LENGTH l) l) NONE
 End
 
-val LGENLIST_CHUNK_GENLIST = Q.store_thm(
-  "LGENLIST_CHUNK_GENLIST",
-  `LGENLIST f NONE =
-     LAPPEND (fromList (GENLIST f n)) (LGENLIST (f o (+) n) NONE)`,
+Theorem LGENLIST_CHUNK_GENLIST:
+   LGENLIST f NONE =
+     LAPPEND (fromList (GENLIST f n)) (LGENLIST (f o (+) n) NONE)
+Proof
   simp[Once LLIST_STRONG_BISIMULATION] >>
   qexists_tac `\l1 l2. ?m n.
     (l1 = LGENLIST (f o (+) m) NONE) /\
@@ -2908,45 +3008,52 @@ val LGENLIST_CHUNK_GENLIST = Q.store_thm(
   Cases_on `n` >> simp[]
   >- (simp[LGENLIST_EQ_CONS] >> qexists_tac `0` >> simp[o_DEF]) >>
   rename [`SUC k`] >> qexists_tac `k` >> simp[GENLIST_CONS] >>
-  simp[o_DEF, ADD1]);
+  simp[o_DEF, ADD1]
+QED
 
-val LREPEAT_thm = Q.store_thm(
-  "LREPEAT_thm",
-  `LREPEAT l = LAPPEND (fromList l) (LREPEAT l)`,
+Theorem LREPEAT_thm:
+   LREPEAT l = LAPPEND (fromList l) (LREPEAT l)
+Proof
   rw[LREPEAT_def] >- (Cases_on `l` >> fs[]) >>
   `0 < LENGTH l /\ l <> []` by (Cases_on `l` >> fs[]) >>
   qmatch_abbrev_tac `LGENLIST f NONE = LAPPEND (fromList l) _` >>
   `(l = GENLIST f (LENGTH l)) /\ (f = f o (+) (LENGTH l))`
      suffices_by metis_tac[LGENLIST_CHUNK_GENLIST] >>
   simp[Abbr`f`, o_DEF] >>
-  simp[LIST_EQ_REWRITE])
+  simp[LIST_EQ_REWRITE]
+QED
 
-val LREPEAT_NIL = Q.store_thm(
-  "LREPEAT_NIL[simp,compute]",
-  `LREPEAT [] = LNIL`,
-  simp[LREPEAT_def]);
+Theorem LREPEAT_NIL[simp,compute]:
+   LREPEAT [] = LNIL
+Proof
+  simp[LREPEAT_def]
+QED
 
-val LREPEAT_EQ_LNIL = Q.store_thm(
-  "LREPEAT_EQ_LNIL[simp]",
-  `((LREPEAT l = LNIL) <=> (l = [])) /\
-   ((LNIL = LREPEAT l) <=> (l = []))`,
-  Cases_on `l` >> simp[] >> conj_tac >> simp[Once LREPEAT_thm])
+Theorem LREPEAT_EQ_LNIL[simp]:
+   ((LREPEAT l = LNIL) <=> (l = [])) /\
+   ((LNIL = LREPEAT l) <=> (l = []))
+Proof
+  Cases_on `l` >> simp[] >> conj_tac >> simp[Once LREPEAT_thm]
+QED
 
-val LHD_LREPEAT = Q.store_thm(
-  "LHD_LREPEAT[simp,compute]",
-  `LHD (LREPEAT l) = LHD (fromList l)`,
-  Cases_on `l = []` >> simp[] >> simp[Once LREPEAT_thm, LHD_LAPPEND]);
+Theorem LHD_LREPEAT[simp,compute]:
+   LHD (LREPEAT l) = LHD (fromList l)
+Proof
+  Cases_on `l = []` >> simp[] >> simp[Once LREPEAT_thm, LHD_LAPPEND]
+QED
 
-val LTL_LREPEAT = Q.store_thm(
-  "LTL_LREPEAT[simp,compute]",
-  `LTL (LREPEAT l) = OPTION_MAP (\t. LAPPEND t (LREPEAT l)) (LTL (fromList l))`,
+Theorem LTL_LREPEAT[simp,compute]:
+   LTL (LREPEAT l) = OPTION_MAP (\t. LAPPEND t (LREPEAT l)) (LTL (fromList l))
+Proof
   Cases_on `l = []` >> simp[] >> simp[Once LREPEAT_thm, LTL_LAPPEND] >>
-  Cases_on `l` >> fs[]);
+  Cases_on `l` >> fs[]
+QED
 
-val LLENGTH_LREPEAT = Q.store_thm(
-  "LLENGTH_LREPEAT",
-  `LLENGTH (LREPEAT l) = if NULL l then SOME 0 else NONE`,
-  rw[LREPEAT_def])
+Theorem LLENGTH_LREPEAT:
+   LLENGTH (LREPEAT l) = if NULL l then SOME 0 else NONE
+Proof
+  rw[LREPEAT_def]
+QED
 
 (* --------------------------------------------------------------------------
    Case constant, distinctness etc. for TypeBase

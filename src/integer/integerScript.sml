@@ -1837,11 +1837,12 @@ val LE_NUM_OF_INT = store_thm
    ``!n i. & n <= i ==> n <= Num i``,
    METIS_TAC [NUM_OF_INT, INT_OF_NUM, INT_LE_TRANS, INT_POS, INT_LE]);
 
-val NUM_LT = Q.store_thm(
-  "NUM_LT",
-  ‘0 <= x /\ 0 <= y ==> (Num x < Num y <=> x < y)’,
+Theorem NUM_LT:
+   0 <= x /\ 0 <= y ==> (Num x < Num y <=> x < y)
+Proof
   map_every (fn q => Q.SPEC_THEN q strip_assume_tac INT_NUM_CASES) [‘x’, ‘y’] >>
-  simp[INT_LE, INT_LT, INT_NEG_GE0]);
+  simp[INT_LE, INT_LT, INT_NEG_GE0]
+QED
 
 (*----------------------------------------------------------------------*)
 (* Define division                                                      *)
@@ -2449,11 +2450,12 @@ val INT_ABS_LT0 = store_thm(
   GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `p` INT_NUM_CASES) THEN
   ASM_SIMP_TAC int_ss [INT_ABS_NEG, INT_ABS_NUM, INT_LT, INT_LT_NEG]);
 
-val INT_ABS_0LT = Q.store_thm(
-  "INT_ABS_0LT[simp]",
-  ‘0 < ABS p <=> p <> 0’,
+Theorem INT_ABS_0LT[simp]:
+   0 < ABS p <=> p <> 0
+Proof
   ‘0 < ABS p <=> 0 <= ABS p /\ ABS p <> 0’ by metis_tac[INT_LE_LT, INT_LT_REFL] >>
-  pop_assum SUBST1_TAC >> simp[]);
+  pop_assum SUBST1_TAC >> simp[]
+QED
 
 val INT_ABS_LE0 = store_thm(
   "INT_ABS_LE0[simp]",
@@ -2512,12 +2514,13 @@ Proof
                        INT_LT_CALCULATE, INT_LE_REFL, INT_LE, INT_NOT_LE]
 QED
 
-val INT_ABS_EQ_ABS = Q.store_thm(
-  "INT_ABS_EQ_ABS",
-  ‘(ABS x = ABS y) <=> (x = y) \/ (x = -y)’,
+Theorem INT_ABS_EQ_ABS:
+   (ABS x = ABS y) <=> (x = y) \/ (x = -y)
+Proof
   rw[INT_ABS, EQ_IMP_THM] >>
   fs[INT_NEG_LT0, INT_NOT_LT, INT_EQ_NEG, INT_NEGNEG, INT_NEG_GE0] >>
-  metis_tac[INT_LET_TRANS, INT_LT_TRANS, INT_LT_REFL, INT_LE_ANTISYM, INT_NEG_0]);
+  metis_tac[INT_LET_TRANS, INT_LT_TRANS, INT_LT_REFL, INT_LE_ANTISYM, INT_NEG_0]
+QED
 
 
 
@@ -3429,8 +3432,8 @@ val INT_MOD_CALCULATE = save_thm(
   "INT_MOD_CALCULATE",
   LIST_CONJ [INT_MOD, INT_MOD_NEG, INT_NEGNEG, INT_INJ, INT_NEG_EQ0]);
 
-val INT_MOD_REDUCE = Q.store_thm("INT_MOD_REDUCE",
-  `!m n.
+Theorem INT_MOD_REDUCE:
+   !m n.
      (0i % &(NUMERAL (BIT1 n)) = 0i) /\
      (0i % &(NUMERAL (BIT2 n)) = 0i) /\
      (0i % -&(NUMERAL (BIT1 n)) = 0i) /\
@@ -3448,11 +3451,13 @@ val INT_MOD_REDUCE = Q.store_thm("INT_MOD_REDUCE",
      (x % -&(NUMERAL (BIT1 n)) =
         (-x / &(NUMERAL(BIT1 n)) * &(NUMERAL(BIT1 n)) + x)) /\
      (x % -&(NUMERAL (BIT2 n)) =
-        (-x / &(NUMERAL(BIT2 n)) * &(NUMERAL(BIT2 n)) + x))`,
+        (-x / &(NUMERAL(BIT2 n)) * &(NUMERAL(BIT2 n)) + x))
+Proof
   SIMP_TAC int_ss
     [INT_MOD_CALCULATE, BIT1, BIT2, NUMERAL_DEF, ALT_ZERO, ZERO_MOD, int_mod,
      INT_NEG_0, INT_DIV_0, INT_MUL_LZERO, INT_SUB_RZERO, INT_NEG_SUB,
-     INT_SUB_RNEG]);
+     INT_SUB_RNEG]
+QED
 
 
 val INT_REM_CALCULATE = save_thm(

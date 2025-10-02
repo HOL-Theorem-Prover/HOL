@@ -1370,9 +1370,9 @@ val SN_finite_paths_EQ = store_thm(
   ``!R. SN R = !p. okpath R p ==> finite p``,
   PROVE_TAC [finite_paths_SN, SN_finite_paths]);
 
-val labels_LMAP = Q.store_thm
-("labels_LMAP",
- `!p. labels p = LMAP FST (SND (fromPath p))`,
+Theorem labels_LMAP:
+  !p. labels p = LMAP FST (SND (fromPath p))
+Proof
  HO_MATCH_MP_TAC LLIST_EQ THEN
  SRW_TAC [] [] THEN
  ASSUME_TAC (Q.SPEC `p` path_cases) THEN
@@ -1380,7 +1380,8 @@ val labels_LMAP = Q.store_thm
  FULL_SIMP_TAC (srw_ss()) [] THEN
  FULL_SIMP_TAC (srw_ss()) [stopped_at_def, pcons_def,
                            path_rep_bijections_thm] THEN
- METIS_TAC []);
+ METIS_TAC []
+QED
 
 local
 
@@ -1406,10 +1407,11 @@ val labels_plink = Q.store_thm
 
 end;
 
-val finite_labels = Q.store_thm
-("finite_labels",
- `!p. LFINITE (labels p) = finite p`,
- SRW_TAC [] [labels_LMAP, LFINITE_MAP, finite_def]);
+Theorem finite_labels:
+  !p. LFINITE (labels p) = finite p
+Proof
+ SRW_TAC [] [labels_LMAP, LFINITE_MAP, finite_def]
+QED
 
 Definition unfold_def:
    unfold proj f s =
@@ -1421,32 +1423,34 @@ Definition unfold_def:
                        s)
 End
 
-val unfold_thm = Q.store_thm
-("unfold_thm",
- `!proj f s.
+Theorem unfold_thm:
+  !proj f s.
    unfold proj f s =
      case f s of
        NONE => stopped_at (proj s)
-     | SOME (s',l) => pcons (proj s) l (unfold proj f s')`,
+     | SOME (s',l) => pcons (proj s) l (unfold proj f s')
+Proof
  SRW_TAC [] [unfold_def] THEN
  Cases_on `f s` THEN
  SRW_TAC [] [stopped_at_def, pcons_def, toPath_11, Once LUNFOLD] THEN
  Cases_on `x` THEN
- SRW_TAC [] [toPath_11, path_rep_bijections_thm, first_def]);
+ SRW_TAC [] [toPath_11, path_rep_bijections_thm, first_def]
+QED
 
-val unfold_thm2 = Q.store_thm
-("unfold_thm2",
- `!proj f x v1 v2.
+Theorem unfold_thm2:
+  !proj f x v1 v2.
     ((f x = NONE) ==> (unfold proj f x = stopped_at (proj x))) /\
     ((f x = SOME (v1,v2)) ==>
-     (unfold proj f x = pcons (proj x) v2 (unfold proj f v1)))`,
+     (unfold proj f x = pcons (proj x) v2 (unfold proj f v1)))
+Proof
  SRW_TAC [] [] THEN1
  SRW_TAC [] [Once unfold_thm] THEN
- SRW_TAC [] [Once unfold_thm]);
+ SRW_TAC [] [Once unfold_thm]
+QED
 
-val labels_unfold = Q.store_thm
-("labels_unfold",
- `!proj f s. labels (unfold proj f s) = LUNFOLD f s`,
+Theorem labels_unfold:
+  !proj f s. labels (unfold proj f s) = LUNFOLD f s
+Proof
  SRW_TAC [] [labels_LMAP, unfold_def, path_rep_bijections_thm, LMAP_LUNFOLD,
              optionTheory.OPTION_MAP_COMPOSE, combinTheory.o_DEF] THEN
  `!s. (OPTION_MAP (\x. (λ(x,y). (x,FST y))
@@ -1458,21 +1462,22 @@ val labels_unfold = Q.store_thm
              Cases_on `x` THEN
              SRW_TAC [] []) THEN
 SRW_TAC [] [] THEN
-METIS_TAC []);
+METIS_TAC []
+QED
 
 val okpath_co_ind2 = Q.prove (
 `!P R p.
   (!x r p. P (pcons x r p) ==> R x r (first p) /\ P p) /\ P p ==> okpath R p`,
 METIS_TAC [okpath_co_ind]);
 
-val okpath_unfold = Q.store_thm
-("okpath_unfold",
- `!P m proj f s.
+Theorem okpath_unfold:
+  !P m proj f s.
      P s /\
      (!s s' l. P s /\ (f s = SOME (s', l)) ==> P s') /\
      (!s s' l. P s /\ (f s = SOME (s',l)) ==> m (proj s) l (proj s'))
      ==>
-     okpath m (unfold proj f s)`,
+     okpath m (unfold proj f s)
+Proof
  SRW_TAC [] [] THEN
  HO_MATCH_MP_TAC okpath_co_ind2 THEN
  SRW_TAC [] [] THEN
@@ -1496,7 +1501,8 @@ val okpath_unfold = Q.store_thm
       FULL_SIMP_TAC (srw_ss()) [] THEN
       SRW_TAC [] [] THEN
       METIS_TAC [],
-  METIS_TAC []]);
+  METIS_TAC []]
+QED
 
 Definition trace_machine_def:
    trace_machine P s l s' <=> (P (s++[l])) /\ (s' = s++[l])
@@ -1565,13 +1571,13 @@ val trace_machine_thm = Q.store_thm
 
 end;
 
-val trace_machine_thm2 = Q.store_thm
-("trace_machine_thm2",
- `!n l P p init.
+Theorem trace_machine_thm2:
+  !n l P p init.
     okpath (trace_machine P) p /\
     P (first p)
     ==>
-    ((LTAKE n (labels p) = SOME l) ==> P (first p ++ l))`,
+    ((LTAKE n (labels p) = SOME l) ==> P (first p ++ l))
+Proof
  Induct_on `n` THEN
  SRW_TAC [] [] THEN
  SRW_TAC [] [] THEN
@@ -1585,7 +1591,8 @@ val trace_machine_thm2 = Q.store_thm
                   by METIS_TAC [path_cases] THEN
  FULL_SIMP_TAC (srw_ss()) [trace_machine_def] THEN
  SRW_TAC [] [] THEN
- METIS_TAC [listTheory.APPEND, listTheory.APPEND_ASSOC]);
+ METIS_TAC [listTheory.APPEND, listTheory.APPEND_ASSOC]
+QED
 
 local
 
@@ -1619,9 +1626,9 @@ QED
 
 end;
 
-val drop_eq_pcons = Q.store_thm
-("drop_eq_pcons",
- `!n p h l t. n IN PL p /\ (drop n p = pcons h l t) ==> n + 1 IN PL p`,
+Theorem drop_eq_pcons:
+  !n p h l t. n IN PL p /\ (drop n p = pcons h l t) ==> n + 1 IN PL p
+Proof
  Induct THEN
  SRW_TAC [] [] THEN
  `(?x. p = stopped_at x) \/ (?h l t. p = pcons h l t)`
@@ -1631,7 +1638,8 @@ val drop_eq_pcons = Q.store_thm
  RES_TAC THEN
  Q.EXISTS_TAC `n+1` THEN
  SRW_TAC [] [] THEN
- DECIDE_TAC);
+ DECIDE_TAC
+QED
 
 Definition parallel_comp_def:
    parallel_comp m1 m2 (s1,s2) l (s1',s2') <=>
@@ -1711,13 +1719,13 @@ Proof
            SRW_TAC [] []]]
 QED
 
-val build_pcomp_trace = Q.store_thm
-("build_pcomp_trace",
- `!m1 p1 m2 p2.
+Theorem build_pcomp_trace:
+  !m1 p1 m2 p2.
    okpath m1 p1 /\ okpath m2 p2 /\ (labels p1 = labels p2)
    ==>
    ?p. okpath (parallel_comp m1 m2) p /\ (labels p = labels p1) /\
-       (first p = (first p1, first p2))`,
+       (first p = (first p1, first p2))
+Proof
  SRW_TAC [] [] THEN
  Q.EXISTS_TAC `unfold (λ(p1,p2). (first p1, first p2))
                  (λ(p1,p2).
@@ -1751,12 +1759,13 @@ val build_pcomp_trace = Q.store_thm
       `(?x. r = stopped_at x) \/ ?h t p. r = pcons h t p`
                    by METIS_TAC [path_cases] THEN
       FULL_SIMP_TAC (srw_ss()) [],
-  SRW_TAC [] [Once unfold_thm]]);
+  SRW_TAC [] [Once unfold_thm]]
+QED
 
-val nth_label_LNTH = Q.store_thm
-("nth_label_LNTH",
- `!n p x.
-    (LNTH n (labels p) = SOME x) = (n + 1 IN PL p /\ (nth_label n p = x))`,
+Theorem nth_label_LNTH:
+  !n p x.
+    (LNTH n (labels p) = SOME x) = (n + 1 IN PL p /\ (nth_label n p = x))
+Proof
  Induct THEN
  SRW_TAC [] [] THEN
  `(labels p = [||]) \/ ?h t. labels p = h:::t` by METIS_TAC [llist_CASES] THEN
@@ -1771,15 +1780,16 @@ val nth_label_LNTH = Q.store_thm
       SRW_TAC [] [] THEN
       DECIDE_TAC,
   `n + 1 = x'` by DECIDE_TAC THEN
-      SRW_TAC [] []]);
+      SRW_TAC [] []]
+QED
 
-val nth_label_LTAKE = Q.store_thm
-("nth_label_LTAKE",
- `!n p l i v.
+Theorem nth_label_LTAKE:
+  !n p l i v.
    (LTAKE n (labels p) = SOME l) /\
    i < LENGTH l
    ==>
-   (nth_label i p = EL i l)`,
+   (nth_label i p = EL i l)
+Proof
  Induct THEN
  SRW_TAC [] [] THEN
  FULL_SIMP_TAC (srw_ss()) [LTAKE_SNOC_LNTH] THEN
@@ -1794,29 +1804,32 @@ val nth_label_LTAKE = Q.store_thm
  METIS_TAC [rich_listTheory.EL_APPEND1] THEN
  SRW_TAC [] [] THEN
  FULL_SIMP_TAC (srw_ss()) [nth_label_LNTH] THEN
- METIS_TAC [LTAKE_LENGTH, listTheory.SNOC_APPEND, listTheory.EL_LENGTH_SNOC]);
+ METIS_TAC [LTAKE_LENGTH, listTheory.SNOC_APPEND, listTheory.EL_LENGTH_SNOC]
+QED
 
-val finite_path_end_cases = Q.store_thm
-("finite_path_end_cases",
- `!p.
+Theorem finite_path_end_cases:
+  !p.
     finite p ==>
     (?x. p = stopped_at x) \/
-    (?p' l s. p = plink p' (pcons (last p') l (stopped_at s)))`,
+    (?p' l s. p = plink p' (pcons (last p') l (stopped_at s)))
+Proof
  HO_MATCH_MP_TAC finite_path_ind THEN
  SRW_TAC [] [] THENL
  [Q.EXISTS_TAC `stopped_at x` THEN
       SRW_TAC [] [],
   Q.EXISTS_TAC `pcons x r p'` THEN
       SRW_TAC [] [] THEN
-      METIS_TAC []]);
+      METIS_TAC []]
+QED
 
-val simulation_trace_inclusion = Q.store_thm ("simulation_trace_inclusion",
-`!R M1 M2 p t_init.
+Theorem simulation_trace_inclusion:
+ !R M1 M2 p t_init.
    (!s1 l s2 t1. R s1 t1 /\ M1 s1 l s2 ==> ?t2. R s2 t2 /\ M2 t1 l t2) /\
    okpath M1 p /\
    R (first p) t_init
    ==>
-   ?q. okpath M2 q /\ (labels p = labels q) /\ (first q = t_init)`,
+   ?q. okpath M2 q /\ (labels p = labels q) /\ (first q = t_init)
+Proof
 SRW_TAC [] [] THEN
 `?next_t. !s1 l s2 t1. R s1 t1 /\ M1 s1 l s2 ==>
      R s2 (next_t s1 l s2 t1) /\ M2 t1 l (next_t s1 l s2 t1)` by
@@ -1852,7 +1865,8 @@ SRW_TAC [] [] THENL
      `(?x. q = stopped_at x) \/ ?h l p. q = pcons h l p`
                        by METIS_TAC [path_cases] THEN
      SRW_TAC [] [],
- SRW_TAC [] [Once unfold_def, first_def, path_rep_bijections_thm]]);
+ SRW_TAC [] [Once unfold_def, first_def, path_rep_bijections_thm]]
+QED
 
 Theorem infinite_path_cases :
     !p. infinite p ==> ?x r q. (p = pcons x r q) /\ infinite q

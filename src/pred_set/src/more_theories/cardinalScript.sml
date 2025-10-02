@@ -1347,9 +1347,9 @@ Proof
   metis_tac[]
 QED
 
-val count_cardle = Q.store_thm(
-  "count_cardle[simp]",
-  ‘count n <<= A <=> (FINITE A ==> n <= CARD A)’,
+Theorem count_cardle[simp]:
+   count n <<= A <=> (FINITE A ==> n <= CARD A)
+Proof
   simp[cardleq_def] >> Cases_on ‘FINITE A’ >> simp[]
   >- (eq_tac
       >- metis_tac[DECIDE “x:num <= y <=> ~(y < x)”, PHP, CARD_COUNT,
@@ -1365,7 +1365,8 @@ val count_cardle = Q.store_thm(
          metis_tac [IMAGE_FINITE, FINITE_COUNT, FINITE_DIFF_down]) >>
   qexists_tac ‘\m. if m < n then f m else a’ >> simp[] >> conj_tac
   >- fs[INJ_DEF] >>
-  rw[])
+  rw[]
+QED
 
 Theorem CANTOR[simp]:
   A <</= POW A
@@ -1382,10 +1383,11 @@ Proof
   csimp[] >> simp[] >> metis_tac[]
 QED
 
-val cardlt_cardle = Q.store_thm(
-  "cardlt_cardle",
-  ‘A <</= B ==> A <<= B’,
-  metis_tac[cardlt_lenoteq]);
+Theorem cardlt_cardle:
+   A <</= B ==> A <<= B
+Proof
+  metis_tac[cardlt_lenoteq]
+QED
 
 Theorem set_exp_product:
   (A ** B1) ** B2 =~ A ** (B1 CROSS B2)
@@ -1427,9 +1429,9 @@ Proof
   simp[set_exp_def, FUN_EQ_THM] >> metis_tac[]
 QED
 
-val POW_EQ_X_EXP_X = Q.store_thm(
-  "POW_EQ_X_EXP_X",
-  ‘INFINITE A ==> POW A =~ A ** A’,
+Theorem POW_EQ_X_EXP_X:
+   INFINITE A ==> POW A =~ A ** A
+Proof
   strip_tac >> irule cardleq_ANTISYM >> conj_tac
   >- (‘POW A =~ count 2 ** A’ by simp[POW_TWO_set_exp] >>
       ‘count 2 ** A <<= A ** A’
@@ -1448,7 +1450,8 @@ val POW_EQ_X_EXP_X = Q.store_thm(
   ‘count 2 ** (A CROSS A) <<= count 2 ** A’
     suffices_by metis_tac[CARDEQ_CARDLEQ, cardeq_REFL, set_exp_product] >>
   irule set_exp_cardle_cong >> simp[] >> irule CARDEQ_SUBSET_CARDLEQ >>
-  simp[SET_SQUARED_CARDEQ_SET]);
+  simp[SET_SQUARED_CARDEQ_SET]
+QED
 
 Theorem setexp_eq_EMPTY[simp]:
   A ** B = {} <=> A = {} /\ B <> {}

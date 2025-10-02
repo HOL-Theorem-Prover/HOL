@@ -260,21 +260,26 @@ Proof
 METIS_TAC[MAP2_DEF]
 QED
 
-val MAP2_NIL = Q.store_thm(
-  "MAP2_NIL[simp]",
-  ‘MAP2 f x [] = []’,
-  Cases_on ‘x’ >> simp[])
+Theorem MAP2_NIL[simp]:
+   MAP2 f x [] = []
+Proof
+  Cases_on ‘x’ >> simp[]
+QED
 
-val LENGTH_MAP2 = Q.store_thm ("LENGTH_MAP2[simp]",
-  ‘!xs ys. LENGTH (MAP2 f xs ys) = MIN (LENGTH xs) (LENGTH ys)’,
+Theorem LENGTH_MAP2[simp]:
+   !xs ys. LENGTH (MAP2 f xs ys) = MIN (LENGTH xs) (LENGTH ys)
+Proof
   Induct \\ rw [] \\ Cases_on ‘ys’ \\ fs [arithmeticTheory.MIN_DEF, MAP2_DEF]
-  \\ SRW_TAC[][]);
+  \\ SRW_TAC[][]
+QED
 
-val EL_MAP2 = Q.store_thm("EL_MAP2",
-  ‘!ts tt n.
+Theorem EL_MAP2:
+   !ts tt n.
     n < MIN (LENGTH ts) (LENGTH tt) ==>
-      (EL n (MAP2 f ts tt) = f (EL n ts) (EL n tt))’,
-  Induct \\ rw [] \\ Cases_on ‘tt’ \\ Cases_on ‘n’ \\ fs [EL]);
+      (EL n (MAP2 f ts tt) = f (EL n ts) (EL n tt))
+Proof
+  Induct \\ rw [] \\ Cases_on ‘tt’ \\ Cases_on ‘n’ \\ fs [EL]
+QED
 
 Theorem MAP2_APPEND:
   !xs ys xs1 ys1 f.
@@ -393,10 +398,11 @@ QED
 
 val list_INDUCT0 = save_thm("list_INDUCT0",TypeBase.induction_of “:'a list”);
 
-val list_INDUCT = Q.store_thm
-("list_INDUCT",
- ‘!P. P [] /\ (!t. P t ==> !h. P (h::t)) ==> !l. P l’,
- REWRITE_TAC [list_INDUCT0]);  (* must use REWRITE_TAC, ACCEPT_TAC refuses
+Theorem list_INDUCT:
+  !P. P [] /\ (!t. P t ==> !h. P (h::t)) ==> !l. P l
+Proof
+ REWRITE_TAC [list_INDUCT0]
+QED(* must use REWRITE_TAC, ACCEPT_TAC refuses
                                    to respect bound variable names *)
 
 Theorem list_induction[allow_rebind] = list_INDUCT
@@ -588,9 +594,11 @@ Proof
   asm_simp_tac (srw_ss()) [EL]
 QED
 
-val MAP_TL = Q.store_thm("MAP_TL",
-  ‘!l f. MAP f (TL l) = TL (MAP f l)’,
-  Induct THEN REWRITE_TAC [TL_DEF, MAP]);
+Theorem MAP_TL:
+   !l f. MAP f (TL l) = TL (MAP f l)
+Proof
+  Induct THEN REWRITE_TAC [TL_DEF, MAP]
+QED
 
 Theorem MEM_TL:
  !l x. MEM x (TL l) ==> MEM x l
@@ -708,24 +716,28 @@ Theorem MEM_FILTER:
 Proof Induct_on ‘L’ THEN SRW_TAC [] [] THEN PROVE_TAC[]
 QED
 
-val MEM_FLAT = Q.store_thm
-("MEM_FLAT",
- ‘!x L. MEM x (FLAT L) = (?l. MEM l L /\ MEM x l)’,
- Induct_on ‘L’ THEN SRW_TAC [] [FLAT] THEN PROVE_TAC[]);
+Theorem MEM_FLAT:
+  !x L. MEM x (FLAT L) = (?l. MEM l L /\ MEM x l)
+Proof
+ Induct_on ‘L’ THEN SRW_TAC [] [FLAT] THEN PROVE_TAC[]
+QED
 
-val FLAT_APPEND = Q.store_thm ("FLAT_APPEND",
-   ‘!l1 l2. FLAT (APPEND l1 l2) = APPEND (FLAT l1) (FLAT l2)’,
+Theorem FLAT_APPEND:
+    !l1 l2. FLAT (APPEND l1 l2) = APPEND (FLAT l1) (FLAT l2)
+Proof
    LIST_INDUCT_TAC
    THEN REWRITE_TAC [APPEND, FLAT]
-   THEN ASM_REWRITE_TAC [APPEND_ASSOC]);
+   THEN ASM_REWRITE_TAC [APPEND_ASSOC]
+QED
 val _ = export_rewrites ["FLAT_APPEND"]
 
-val FLAT_compute = Q.store_thm(
-  "FLAT_compute",
-  ‘(FLAT [] = []) /\
+Theorem FLAT_compute:
+   (FLAT [] = []) /\
    (FLAT ([]::t) = FLAT t) /\
-   (FLAT ((h::t1)::t2) = h::FLAT (t1::t2))’,
-  SIMP_TAC (srw_ss()) []);
+   (FLAT ((h::t1)::t2) = h::FLAT (t1::t2))
+Proof
+  SIMP_TAC (srw_ss()) []
+QED
 
 Theorem EVERY_FLAT:
   EVERY P (FLAT ls) <=> EVERY (EVERY P) ls
@@ -856,9 +868,11 @@ Proof
    Cases_on ‘l’ THEN REWRITE_TAC[NULL, NOT_CONS_NIL]
 QED
 
-val NULL_LENGTH = Q.store_thm("NULL_LENGTH",
-  ‘!l. NULL l = (LENGTH l = 0)’,
-  REWRITE_TAC[NULL_EQ, LENGTH_NIL]);
+Theorem NULL_LENGTH:
+   !l. NULL l = (LENGTH l = 0)
+Proof
+  REWRITE_TAC[NULL_EQ, LENGTH_NIL]
+QED
 
 Theorem NULL_MAP[simp]:
   NULL (MAP f ls) = NULL ls
@@ -1055,21 +1069,22 @@ Proof
       Cases_on ‘p’ >> fs[])
 QED
 
-val MEM_SPLIT = Q.store_thm
-("MEM_SPLIT",
- ‘!x l. (MEM x l) = ?l1 l2. (l = l1 ++ x::l2)’,
+Theorem MEM_SPLIT:
+  !x l. (MEM x l) = ?l1 l2. (l = l1 ++ x::l2)
+Proof
  Induct_on ‘l’ THEN SRW_TAC [] [] THEN EQ_TAC THENL [
    SRW_TAC [][] THEN1 (MAP_EVERY Q.EXISTS_TAC [‘[]’,‘l’] THEN SRW_TAC [][]) THEN
    MAP_EVERY Q.EXISTS_TAC [‘a::l1’, ‘l2’] THEN SRW_TAC [] [],
    DISCH_THEN (Q.X_CHOOSE_THEN ‘l1’ (Q.X_CHOOSE_THEN ‘l2’ ASSUME_TAC)) THEN
    Cases_on ‘l1’ THEN FULL_SIMP_TAC(srw_ss()) [] THEN PROVE_TAC[]
- ])
+ ]
+QED
 
-val LIST_EQ_REWRITE = Q.store_thm
-("LIST_EQ_REWRITE",
- ‘!l1 l2. (l1 = l2) =
+Theorem LIST_EQ_REWRITE:
+  !l1 l2. (l1 = l2) =
       ((LENGTH l1 = LENGTH l2) /\
-       ((!x. (x < LENGTH l1) ==> (EL x l1 = EL x l2))))’,
+       ((!x. (x < LENGTH l1) ==> (EL x l1 = EL x l2))))
+Proof
 
  LIST_INDUCT_TAC THEN Cases_on ‘l2’ THEN (
    ASM_SIMP_TAC arith_ss [LENGTH, NOT_CONS_NIL, CONS_11, EL]
@@ -1084,16 +1099,17 @@ val LIST_EQ_REWRITE = Q.store_thm
      Q.PAT_X_ASSUM ‘!x. x < Y ==> P x’ (MP_TAC o SPEC “SUC x”) THEN
      ASM_SIMP_TAC arith_ss [EL, HD, TL]
    ]
- ]);
+ ]
+QED
 
 val LIST_EQ = save_thm("LIST_EQ",
     GENL[“l1:'a list”, “l2:'a list”]
     (snd(EQ_IMP_RULE (SPEC_ALL LIST_EQ_REWRITE))));
 
-val FOLDL_EQ_FOLDR = Q.store_thm
-("FOLDL_EQ_FOLDR",
- ‘!f l e. (ASSOC f /\ COMM f) ==>
-          ((FOLDL f e l) = (FOLDR f e l))’,
+Theorem FOLDL_EQ_FOLDR:
+  !f l e. (ASSOC f /\ COMM f) ==>
+          ((FOLDL f e l) = (FOLDR f e l))
+Proof
 GEN_TAC THEN
 FULL_SIMP_TAC bool_ss [RIGHT_FORALL_IMP_THM, COMM_DEF,
   ASSOC_DEF] THEN
@@ -1104,7 +1120,8 @@ STRIP_TAC THEN LIST_INDUCT_TAC THENL [
   POP_ASSUM (K ALL_TAC) THEN
   Q.SPEC_TAC (‘l’, ‘l’) THEN
   LIST_INDUCT_TAC THEN ASM_SIMP_TAC bool_ss [FOLDR]
-]);
+]
+QED
 
 Theorem FOLDR_CONS:
  !f ls a. FOLDR (\x y. f x :: y) a ls = (MAP f ls)++a
@@ -1112,10 +1129,11 @@ Proof
 GEN_TAC THEN Induct THEN SRW_TAC[] [FOLDR, MAP]
 QED
 
-val LENGTH_TL = Q.store_thm
-("LENGTH_TL",
-  ‘!l. 0 < LENGTH l ==> (LENGTH (TL l) = LENGTH l - 1)’,
-  Cases_on ‘l’ THEN SIMP_TAC arith_ss [LENGTH, TL]);
+Theorem LENGTH_TL:
+   !l. 0 < LENGTH l ==> (LENGTH (TL l) = LENGTH l - 1)
+Proof
+  Cases_on ‘l’ THEN SIMP_TAC arith_ss [LENGTH, TL]
+QED
 
 Theorem LENGTH_TL_LE:
   !ls. LENGTH (TL ls) <= LENGTH ls
@@ -1123,30 +1141,34 @@ Proof
   Cases \\ rw[]
 QED
 
-val FILTER_EQ_NIL = Q.store_thm
-("FILTER_EQ_NIL",
- ‘!P l. (FILTER P l = []) = (EVERY (\x. ~(P x)) l)’,
+Theorem FILTER_EQ_NIL:
+  !P l. (FILTER P l = []) = (EVERY (\x. ~(P x)) l)
+Proof
  GEN_TAC THEN INDUCT_THEN list_INDUCT ASSUME_TAC THEN (
     ASM_SIMP_TAC bool_ss [FILTER, EVERY_DEF, COND_RATOR, COND_RAND,
                           NOT_CONS_NIL]
- ));
+ )
+QED
 
-val FILTER_NEQ_NIL = Q.store_thm
-("FILTER_NEQ_NIL",
- ‘!P l. ~(FILTER P l = []) = ?x. MEM x l /\ P x’,
- SIMP_TAC bool_ss [FILTER_EQ_NIL, EVERY_NOT_EXISTS, EXISTS_MEM]);
+Theorem FILTER_NEQ_NIL:
+  !P l. ~(FILTER P l = []) = ?x. MEM x l /\ P x
+Proof
+ SIMP_TAC bool_ss [FILTER_EQ_NIL, EVERY_NOT_EXISTS, EXISTS_MEM]
+QED
 
-val FILTER_EQ_ID = Q.store_thm
-("FILTER_EQ_ID",
- ‘!P l. (FILTER P l = l) = (EVERY P l)’,
+Theorem FILTER_EQ_ID:
+  !P l. (FILTER P l = l) = (EVERY P l)
+Proof
  Induct_on ‘l’ THEN SRW_TAC [] [] THEN
  DISCH_THEN (ASSUME_TAC o Q.AP_TERM ‘MEM a’) THEN
- FULL_SIMP_TAC (srw_ss()) [MEM_FILTER]);
+ FULL_SIMP_TAC (srw_ss()) [MEM_FILTER]
+QED
 
-val FILTER_NEQ_ID = Q.store_thm
-("FILTER_NEQ_ID",
- ‘!P l. ~(FILTER P l = l) = ?x. MEM x l /\ ~(P x)’,
- SIMP_TAC bool_ss [FILTER_EQ_ID, EVERY_NOT_EXISTS, EXISTS_MEM]);
+Theorem FILTER_NEQ_ID:
+  !P l. ~(FILTER P l = l) = ?x. MEM x l /\ ~(P x)
+Proof
+ SIMP_TAC bool_ss [FILTER_EQ_ID, EVERY_NOT_EXISTS, EXISTS_MEM]
+QED
 
 Theorem FILTER_EQ_CONS:
   !P l h lr.
@@ -1186,22 +1208,23 @@ Theorem FILTER_T[simp]:
 Proof Induct >> simp[]
 QED
 
-val FILTER_APPEND_DISTRIB = Q.store_thm
-("FILTER_APPEND_DISTRIB",
- ‘!P L M. FILTER P (APPEND L M) = APPEND (FILTER P L) (FILTER P M)’,
+Theorem FILTER_APPEND_DISTRIB:
+  !P L M. FILTER P (APPEND L M) = APPEND (FILTER P L) (FILTER P M)
+Proof
    GEN_TAC THEN INDUCT_THEN list_INDUCT ASSUME_TAC
-    THEN RW_TAC bool_ss [FILTER, APPEND]);
+    THEN RW_TAC bool_ss [FILTER, APPEND]
+QED
 
 Theorem MEM[simp]:
   (!x:'a. MEM x [] <=> F) /\ (!x:'a h t. MEM x (h::t) <=> x = h \/ MEM x t)
 Proof SRW_TAC [] []
 QED
 
-val FILTER_EQ_APPEND = Q.store_thm
-("FILTER_EQ_APPEND",
- ‘!P l l1 l2.
+Theorem FILTER_EQ_APPEND:
+  !P l l1 l2.
   (FILTER P l = l1 ++ l2) =
-  (?l3 l4. (l = l3++l4) /\ (FILTER P l3 = l1) /\ (FILTER P l4 = l2))’,
+  (?l3 l4. (l = l3++l4) /\ (FILTER P l3 = l1) /\ (FILTER P l4 = l2))
+Proof
 GEN_TAC THEN INDUCT_THEN list_INDUCT ASSUME_TAC THEN1 (
   ASM_SIMP_TAC bool_ss [FILTER, APPEND_eq_NIL] THEN PROVE_TAC[]
 ) THEN
@@ -1258,35 +1281,40 @@ ASM_SIMP_TAC bool_ss [FILTER] THENL [
        PROVE_TAC[]
     ]
   ]
-]);
+]
+QED
 
-val EVERY_FILTER = Q.store_thm
-("EVERY_FILTER",
- ‘!P1 P2 l. EVERY P1 (FILTER P2 l) =
-            EVERY (\x. P2 x ==> P1 x) l’,
+Theorem EVERY_FILTER:
+  !P1 P2 l. EVERY P1 (FILTER P2 l) =
+            EVERY (\x. P2 x ==> P1 x) l
+Proof
 
 GEN_TAC THEN GEN_TAC THEN LIST_INDUCT_TAC THEN (
   ASM_SIMP_TAC bool_ss [FILTER, EVERY_DEF, COND_RATOR, COND_RAND]
-));
+)
+QED
 
-val EVERY_FILTER_IMP = Q.store_thm
-("EVERY_FILTER_IMP",
- ‘!P1 P2 l. EVERY P1 l ==> EVERY P1 (FILTER P2 l)’,
+Theorem EVERY_FILTER_IMP:
+  !P1 P2 l. EVERY P1 l ==> EVERY P1 (FILTER P2 l)
+Proof
 GEN_TAC THEN GEN_TAC THEN LIST_INDUCT_TAC THEN (
   ASM_SIMP_TAC bool_ss [FILTER, EVERY_DEF, COND_RATOR, COND_RAND]
-));
+)
+QED
 
-val FILTER_COND_REWRITE = Q.store_thm
-("FILTER_COND_REWRITE",
- ‘(FILTER P [] = []) /\
+Theorem FILTER_COND_REWRITE:
+  (FILTER P [] = []) /\
   (!h. (P h) ==> ((FILTER P (h::l) = h::FILTER P l))) /\
-  (!h. ~(P h) ==> (FILTER P (h::l) = FILTER P l))’,
-SIMP_TAC bool_ss [FILTER]);
+  (!h. ~(P h) ==> (FILTER P (h::l) = FILTER P l))
+Proof
+SIMP_TAC bool_ss [FILTER]
+QED
 
-val NOT_NULL_MEM = Q.store_thm
-("NOT_NULL_MEM",
- ‘!l. ~(NULL l) = (?e. MEM e l)’,
-  Cases_on ‘l’ THEN SIMP_TAC bool_ss [EXISTS_OR_THM, MEM, NOT_CONS_NIL, NULL]);
+Theorem NOT_NULL_MEM:
+  !l. ~(NULL l) = (?e. MEM e l)
+Proof
+  Cases_on ‘l’ THEN SIMP_TAC bool_ss [EXISTS_OR_THM, MEM, NOT_CONS_NIL, NULL]
+QED
 
 (* Computing EL when n is in numeral representation *)
 Theorem EL_compute[allow_rebind]:
@@ -1439,19 +1467,23 @@ Proof
   Induct_on ‘LIST_REL’ THEN SRW_TAC [] [LENGTH]
 QED
 
-val LIST_REL_SPLIT1 = Q.store_thm("LIST_REL_SPLIT1",
-  ‘!xs1 zs.
+Theorem LIST_REL_SPLIT1:
+   !xs1 zs.
       LIST_REL P (xs1 ++ xs2) zs <=>
-      ?ys1 ys2. (zs = ys1 ++ ys2) /\ LIST_REL P xs1 ys1 /\ LIST_REL P xs2 ys2’,
+      ?ys1 ys2. (zs = ys1 ++ ys2) /\ LIST_REL P xs1 ys1 /\ LIST_REL P xs2 ys2
+Proof
   Induct >> fs[APPEND] >> Cases_on ‘zs’ >> fs[] >> rpt strip_tac >>
-  simp[LIST_REL_CONS1, PULL_EXISTS] >> metis_tac[]);
+  simp[LIST_REL_CONS1, PULL_EXISTS] >> metis_tac[]
+QED
 
-val LIST_REL_SPLIT2 = Q.store_thm("LIST_REL_SPLIT2",
-  ‘!xs1 zs.
+Theorem LIST_REL_SPLIT2:
+   !xs1 zs.
       LIST_REL P zs (xs1 ++ xs2) <=>
-      ?ys1 ys2. (zs = ys1 ++ ys2) /\ LIST_REL P ys1 xs1 /\ LIST_REL P ys2 xs2’,
+      ?ys1 ys2. (zs = ys1 ++ ys2) /\ LIST_REL P ys1 xs1 /\ LIST_REL P ys2 xs2
+Proof
   Induct >> fs[APPEND] >> Cases_on ‘zs’ >> fs[] >> rpt strip_tac >>
-  simp[LIST_REL_CONS2, PULL_EXISTS] >> metis_tac[]);
+  simp[LIST_REL_CONS2, PULL_EXISTS] >> metis_tac[]
+QED
 
 (* example of LIST_REL in action :
 val (rules,ind,cases) = IndDefLib.Hol_reln`
@@ -1698,21 +1730,23 @@ val UNZIP = new_recursive_definition {
                (CONS (FST x) (FST (UNZIP l)),
                 CONS (SND x) (SND (UNZIP l))))”}
 
-val UNZIP_THM = Q.store_thm
-("UNZIP_THM",
- ‘(UNZIP [] = ([]:'a list,[]:'b list)) /\
-  (UNZIP ((x:'a,y:'b)::t) = let (L1,L2) = UNZIP t in (x::L1, y::L2))’,
+Theorem UNZIP_THM:
+  (UNZIP [] = ([]:'a list,[]:'b list)) /\
+  (UNZIP ((x:'a,y:'b)::t) = let (L1,L2) = UNZIP t in (x::L1, y::L2))
+Proof
  RW_TAC bool_ss [UNZIP]
    THEN Cases_on ‘UNZIP t’
    THEN RW_TAC bool_ss [LET_THM, pairTheory.UNCURRY_DEF,
-                        pairTheory.FST, pairTheory.SND]);
+                        pairTheory.FST, pairTheory.SND]
+QED
 
-val UNZIP_MAP = Q.store_thm
-("UNZIP_MAP",
- ‘!L. UNZIP L = (MAP FST L, MAP SND L)’,
+Theorem UNZIP_MAP:
+  !L. UNZIP L = (MAP FST L, MAP SND L)
+Proof
  LIST_INDUCT_TAC THEN
  ASM_SIMP_TAC arith_ss [UNZIP, MAP,
-    PAIR_EQ, pairTheory.FST, pairTheory.SND]);
+    PAIR_EQ, pairTheory.FST, pairTheory.SND]
+QED
 
 val SUC_NOT = arithmeticTheory.SUC_NOT
 Theorem LENGTH_ZIP:
@@ -1820,16 +1854,17 @@ val MAP2_ZIP = store_thm("MAP2_ZIP",
 
 val MAP2_MAP = save_thm("MAP2_MAP",MAP2_ZIP)
 
-val MAP_ZIP = Q.store_thm(
-  "MAP_ZIP",
-  ‘(LENGTH l1 = LENGTH l2) ==>
+Theorem MAP_ZIP:
+   (LENGTH l1 = LENGTH l2) ==>
      (MAP FST (ZIP (l1,l2)) = l1) /\
      (MAP SND (ZIP (l1,l2)) = l2) /\
      (MAP (f o FST) (ZIP (l1,l2)) = MAP f l1) /\
-     (MAP (g o SND) (ZIP (l1,l2)) = MAP g l2)’,
+     (MAP (g o SND) (ZIP (l1,l2)) = MAP g l2)
+Proof
   Q.ID_SPEC_TAC ‘l2’ THEN Induct_on ‘l1’ THEN
   SRW_TAC [] [] THEN TRY(Cases_on ‘l2’) THEN
-  FULL_SIMP_TAC (srw_ss()) [ZIP, MAP]);
+  FULL_SIMP_TAC (srw_ss()) [ZIP, MAP]
+QED
 
 Theorem MEM_EL:
    !(l:'a list) x. MEM x l = ?n. n < LENGTH l /\ (x = EL n l)
@@ -2506,9 +2541,9 @@ Definition LRC_def:
      x = h /\ ?z. R x z /\ LRC R t z y)
 End
 
-val NRC_LRC = Q.store_thm(
-"NRC_LRC",
-‘NRC R n x y <=> ?ls. LRC R ls x y /\ (LENGTH ls = n)’,
+Theorem NRC_LRC:
+ NRC R n x y <=> ?ls. LRC R ls x y /\ (LENGTH ls = n)
+Proof
 MAP_EVERY Q.ID_SPEC_TAC [‘y’,‘x’] THEN
 Induct_on ‘n’ THEN SRW_TAC [] [] THEN1 (
   SRW_TAC [] [EQ_IMP_THM] THEN1 (
@@ -2520,15 +2555,17 @@ SRW_TAC [] [arithmeticTheory.NRC, EQ_IMP_THM] THEN1 (
   SRW_TAC [] [LRC_def] THEN
   METIS_TAC [] ) THEN
 Cases_on ‘ls’ THEN FULL_SIMP_TAC (srw_ss()) [LRC_def] THEN
-SRW_TAC [] [] THEN METIS_TAC []);
+SRW_TAC [] [] THEN METIS_TAC []
+QED
 
-val LRC_MEM = Q.store_thm(
-"LRC_MEM",
-‘LRC R ls x y /\ MEM e ls ==> ?z t. R e z /\ LRC R t z y’,
+Theorem LRC_MEM:
+ LRC R ls x y /\ MEM e ls ==> ?z t. R e z /\ LRC R t z y
+Proof
 Q_TAC SUFF_TAC
 ‘!ls x y. LRC R ls x y ==> !e. MEM e ls ==> ?z t. R e z /\ LRC R t z y’
 THEN1 METIS_TAC [] THEN
-Induct THEN SRW_TAC [] [LRC_def] THEN METIS_TAC []);
+Induct THEN SRW_TAC [] [LRC_def] THEN METIS_TAC []
+QED
 
 Theorem LRC_MEM_right:
   LRC R (h::t) x y /\ MEM e t ==> ?z p. R z e /\ LRC R p x z
@@ -2556,10 +2593,11 @@ QED
     which is overloaded to "set".
    ---------------------------------------------------------------------- *)
 
-val LIST_TO_SET_APPEND = Q.store_thm
-("LIST_TO_SET_APPEND",
- ‘!l1 l2. set (l1 ++ l2) = set l1 UNION set l2’,
- Induct THEN SRW_TAC [] [INSERT_UNION_EQ]);
+Theorem LIST_TO_SET_APPEND:
+  !l1 l2. set (l1 ++ l2) = set l1 UNION set l2
+Proof
+ Induct THEN SRW_TAC [] [INSERT_UNION_EQ]
+QED
 val _ = export_rewrites ["LIST_TO_SET_APPEND"]
 
 val UNION_APPEND = save_thm ("UNION_APPEND", GSYM LIST_TO_SET_APPEND)
@@ -2571,10 +2609,11 @@ Proof
 QED
 val _ = export_rewrites ["LIST_TO_SET_EQ_EMPTY"]
 
-val FINITE_LIST_TO_SET = Q.store_thm
-("FINITE_LIST_TO_SET",
- ‘!l. FINITE (set l)’,
- Induct THEN SRW_TAC [] []);
+Theorem FINITE_LIST_TO_SET:
+  !l. FINITE (set l)
+Proof
+ Induct THEN SRW_TAC [] []
+QED
 val _ = export_rewrites ["FINITE_LIST_TO_SET"]
 
 Theorem SUM_IMAGE_LIST_TO_SET_upper_bound:
@@ -2623,18 +2662,20 @@ Induct_on ‘ls’ THEN SRW_TAC [] [] THEN
 DECIDE_TAC);
 end
 
-val ALL_DISTINCT_CARD_LIST_TO_SET = Q.store_thm(
-"ALL_DISTINCT_CARD_LIST_TO_SET",
-‘!ls. ALL_DISTINCT ls ==> (CARD (set ls) = LENGTH ls)’,
-Induct THEN SRW_TAC [] []);
+Theorem ALL_DISTINCT_CARD_LIST_TO_SET:
+ !ls. ALL_DISTINCT ls ==> (CARD (set ls) = LENGTH ls)
+Proof
+Induct THEN SRW_TAC [] []
+QED
 
 val th1 = MATCH_MP arithmeticTheory.LESS_EQ_IMP_LESS_SUC CARD_LIST_TO_SET ;
 val th2 = MATCH_MP prim_recTheory.LESS_NOT_EQ th1 ;
 
-val CARD_LIST_TO_SET_ALL_DISTINCT = Q.store_thm(
-"CARD_LIST_TO_SET_ALL_DISTINCT",
-‘!ls. (CARD (set ls) = LENGTH ls) ==> ALL_DISTINCT ls’,
-Induct THEN SRW_TAC [] [th2]);
+Theorem CARD_LIST_TO_SET_ALL_DISTINCT:
+ !ls. (CARD (set ls) = LENGTH ls) ==> ALL_DISTINCT ls
+Proof
+Induct THEN SRW_TAC [] [th2]
+QED
 
 Theorem LIST_TO_SET_REVERSE:
    !ls: 'a list. set (REVERSE ls) = set ls
@@ -2716,22 +2757,26 @@ Proof
   ho_match_mp_tac FINITE_INDUCT \\ rw[SET_TO_LIST_THM]
 QED
 
-val SET_TO_LIST_INV = Q.store_thm("SET_TO_LIST_INV",
-‘!s. FINITE s ==> (LIST_TO_SET(SET_TO_LIST s) = s)’,
+Theorem SET_TO_LIST_INV:
+ !s. FINITE s ==> (LIST_TO_SET(SET_TO_LIST s) = s)
+Proof
  Induction.recInduct SET_TO_LIST_IND
    THEN RW_TAC bool_ss []
    THEN ONCE_REWRITE_TAC [UNDISCH SET_TO_LIST_THM]
    THEN RW_TAC bool_ss [LIST_TO_SET_THM]
-   THEN PROVE_TAC [REST_DEF, FINITE_DELETE, CHOICE_INSERT_REST]);
+   THEN PROVE_TAC [REST_DEF, FINITE_DELETE, CHOICE_INSERT_REST]
+QED
 
-val SET_TO_LIST_CARD = Q.store_thm("SET_TO_LIST_CARD",
-‘!s. FINITE s ==> (LENGTH (SET_TO_LIST s) = CARD s)’,
+Theorem SET_TO_LIST_CARD:
+ !s. FINITE s ==> (LENGTH (SET_TO_LIST s) = CARD s)
+Proof
  Induction.recInduct SET_TO_LIST_IND
    THEN REPEAT STRIP_TAC
    THEN SRW_TAC [] [Once (UNDISCH SET_TO_LIST_THM)]
    THEN ‘FINITE (REST s)’ by METIS_TAC [REST_DEF, FINITE_DELETE]
    THEN ‘~(CARD s = 0)’ by METIS_TAC [CARD_EQ_0]
-   THEN SRW_TAC [numSimps.ARITH_ss] [REST_DEF, CHOICE_DEF]);
+   THEN SRW_TAC [numSimps.ARITH_ss] [REST_DEF, CHOICE_DEF]
+QED
 
 Theorem SET_TO_LIST_IN_MEM:
   !s. FINITE s ==> !x. x IN s <=> MEM x (SET_TO_LIST s)
@@ -2789,11 +2834,12 @@ Proof
 QED
 val _ = export_rewrites ["ALL_DISTINCT_SET_TO_LIST"];
 
-val ITSET_eq_FOLDL_SET_TO_LIST = Q.store_thm(
-"ITSET_eq_FOLDL_SET_TO_LIST",
-‘!s. FINITE s ==> !f a. ITSET f s a = FOLDL (combin$C f) a (SET_TO_LIST s)’,
+Theorem ITSET_eq_FOLDL_SET_TO_LIST:
+ !s. FINITE s ==> !f a. ITSET f s a = FOLDL (combin$C f) a (SET_TO_LIST s)
+Proof
 HO_MATCH_MP_TAC pred_setTheory.FINITE_COMPLETE_INDUCTION THEN
-SRW_TAC [] [pred_setTheory.ITSET_THM, SET_TO_LIST_THM, FOLDL]);
+SRW_TAC [] [pred_setTheory.ITSET_THM, SET_TO_LIST_THM, FOLDL]
+QED
 
 Theorem LIST_TO_SET_SING :
     !vs x. ALL_DISTINCT vs /\ set vs = {x} <=> vs = [x]
@@ -2870,15 +2916,17 @@ Proof
 QED
 val _ = export_rewrites ["isPREFIX_THM"]
 
-val isPREFIX_NILR = Q.store_thm(
-  "isPREFIX_NILR[simp]",
-  ‘x <<= [] <=> (x = [])’,
-  Cases_on ‘x’ >> simp[]);
+Theorem isPREFIX_NILR[simp]:
+   x <<= [] <=> (x = [])
+Proof
+  Cases_on ‘x’ >> simp[]
+QED
 
-val isPREFIX_CONSR = Q.store_thm(
-  "isPREFIX_CONSR",
-  ‘x <<= y::ys <=> (x = []) \/ ?xs. (x = y::xs) /\ xs <<= ys’,
-  Cases_on ‘x’ >> simp[]);
+Theorem isPREFIX_CONSR:
+   x <<= y::ys <=> (x = []) \/ ?xs. (x = y::xs) /\ xs <<= ys
+Proof
+  Cases_on ‘x’ >> simp[]
+QED
 
 (* ----------------------------------------------------------------------
     SNOC
@@ -2939,9 +2987,11 @@ QED
 Theorem SNOC_LAST_FRONT =
      REWRITE_RULE [GSYM SNOC_APPEND] APPEND_FRONT_LAST
 
-val LIST_TO_SET_SNOC = Q.store_thm("LIST_TO_SET_SNOC",
-    ‘set (SNOC x ls) = x INSERT set ls’,
-    Induct_on ‘ls’ THEN SRW_TAC [] [INSERT_COMM]);
+Theorem LIST_TO_SET_SNOC:
+     set (SNOC x ls) = x INSERT set ls
+Proof
+    Induct_on ‘ls’ THEN SRW_TAC [] [INSERT_COMM]
+QED
 
 val MAP_SNOC  = store_thm("MAP_SNOC",
     (“!(f:'a->'b) x (l:'a list). MAP f(SNOC x l) = SNOC(f x)(MAP f l)”),
@@ -3157,9 +3207,11 @@ val _ = export_rewrites ["EL_GENLIST"]
 val HD_GENLIST = save_thm("HD_GENLIST",
   (SIMP_RULE arith_ss [EL] o Q.SPECL [‘f’,‘SUC n’,‘0’]) EL_GENLIST);
 
-val HD_GENLIST_COR = Q.store_thm("HD_GENLIST_COR",
-  ‘!n f. 0 < n ==> (HD (GENLIST f n) = f 0)’,
-  Cases THEN REWRITE_TAC [prim_recTheory.LESS_REFL, HD_GENLIST]);
+Theorem HD_GENLIST_COR:
+   !n f. 0 < n ==> (HD (GENLIST f n) = f 0)
+Proof
+  Cases THEN REWRITE_TAC [prim_recTheory.LESS_REFL, HD_GENLIST]
+QED
 
 Theorem GENLIST_FUN_EQ:
    !n f g. (GENLIST f n = GENLIST g n) = (!x. x < n ==> (f x = g x))
@@ -3189,14 +3241,16 @@ Proof
     THEN metisLib.METIS_TAC [prim_recTheory.LESS_THM]
 QED
 
-val TL_GENLIST = Q.store_thm ("TL_GENLIST",
-  ‘!f n. TL (GENLIST f (SUC n)) = GENLIST (f o SUC) n’,
+Theorem TL_GENLIST:
+   !f n. TL (GENLIST f (SUC n)) = GENLIST (f o SUC) n
+Proof
   REPEAT STRIP_TAC THEN MATCH_MP_TAC LIST_EQ
     THEN SRW_TAC [] [EL_GENLIST, LENGTH_GENLIST, LENGTH_TL]
     THEN ONCE_REWRITE_TAC [EL |> CONJUNCT2 |> GSYM]
     THEN ‘SUC x < SUC n’ by numLib.DECIDE_TAC
     THEN IMP_RES_TAC EL_GENLIST
-    THEN ASM_SIMP_TAC arith_ss []);
+    THEN ASM_SIMP_TAC arith_ss []
+QED
 
 Theorem ZIP_GENLIST:
    !l f n. (LENGTH l = n) ==>
@@ -3221,20 +3275,24 @@ Proof
   Induct >> simp[GENLIST_CONS, GENLIST, combinTheory.o_ABS_L]
 QED
 
-val NULL_GENLIST = Q.store_thm("NULL_GENLIST",
-  ‘!n f. NULL (GENLIST f n) = (n = 0)’,
+Theorem NULL_GENLIST:
+   !n f. NULL (GENLIST f n) = (n = 0)
+Proof
   Cases THEN
-  REWRITE_TAC [numTheory.NOT_SUC, NULL_DEF, CONJUNCT1 GENLIST, GENLIST_CONS]);
+  REWRITE_TAC [numTheory.NOT_SUC, NULL_DEF, CONJUNCT1 GENLIST, GENLIST_CONS]
+QED
 
 val GENLIST_AUX_lem = Q.prove(
   ‘!n l1 l2. GENLIST_AUX f n l1 ++ l2 = GENLIST_AUX f n (l1 ++ l2)’,
   Induct_on ‘n’ THEN SRW_TAC [] [GENLIST_AUX]);
 
-val GENLIST_GENLIST_AUX = Q.store_thm("GENLIST_GENLIST_AUX",
-  ‘!n. GENLIST f n = GENLIST_AUX f n []’,
+Theorem GENLIST_GENLIST_AUX:
+   !n. GENLIST f n = GENLIST_AUX f n []
+Proof
   Induct_on ‘n’
   THEN RW_TAC bool_ss
-         [SNOC_APPEND, APPEND, GENLIST_AUX, GENLIST_AUX_lem, GENLIST]);
+         [SNOC_APPEND, APPEND, GENLIST_AUX, GENLIST_AUX_lem, GENLIST]
+QED
 
 Theorem GENLIST_NUMERALS:
    (GENLIST f 0 = []) /\
@@ -3264,11 +3322,12 @@ val GENLIST_1 = store_thm(
   ``!f. GENLIST f 1 = [f 0]``,
   rw[]);
 
-val MEM_GENLIST = Q.store_thm(
-"MEM_GENLIST",
-‘MEM x (GENLIST f n) <=> ?m. m < n /\ (x = f m)’,
+Theorem MEM_GENLIST:
+ MEM x (GENLIST f n) <=> ?m. m < n /\ (x = f m)
+Proof
 SRW_TAC [] [MEM_EL, EL_GENLIST, EQ_IMP_THM] THEN
-PROVE_TAC [EL_GENLIST] )
+PROVE_TAC [EL_GENLIST]
+QED
 
 Theorem ALL_DISTINCT_SNOC:
   !x l. ALL_DISTINCT (SNOC x l) <=> ~MEM x l /\ ALL_DISTINCT l
@@ -3519,19 +3578,21 @@ val SUM_APPEND = store_thm("SUM_APPEND",
     LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[SUM, APPEND, ADD, ADD_0, ADD_ASSOC]);
 end
 
-val SUM_MAP_FOLDL = Q.store_thm(
-"SUM_MAP_FOLDL",
-‘!ls. SUM (MAP f ls) = FOLDL (\a e. a + f e) 0 ls’,
+Theorem SUM_MAP_FOLDL:
+ !ls. SUM (MAP f ls) = FOLDL (\a e. a + f e) 0 ls
+Proof
 HO_MATCH_MP_TAC SNOC_INDUCT THEN
-SRW_TAC [] [FOLDL_SNOC, MAP_SNOC, SUM_SNOC, MAP, SUM, FOLDL]);
+SRW_TAC [] [FOLDL_SNOC, MAP_SNOC, SUM_SNOC, MAP, SUM, FOLDL]
+QED
 
-val SUM_IMAGE_eq_SUM_MAP_SET_TO_LIST = Q.store_thm(
-"SUM_IMAGE_eq_SUM_MAP_SET_TO_LIST",
-‘FINITE s ==> (SIGMA f s = SUM (MAP f (SET_TO_LIST s)))’,
+Theorem SUM_IMAGE_eq_SUM_MAP_SET_TO_LIST:
+ FINITE s ==> (SIGMA f s = SUM (MAP f (SET_TO_LIST s)))
+Proof
 SRW_TAC [] [SUM_IMAGE_DEF] THEN
 SRW_TAC [] [ITSET_eq_FOLDL_SET_TO_LIST, SUM_MAP_FOLDL] THEN
 AP_THM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN
-SRW_TAC [] [FUN_EQ_THM, arithmeticTheory.ADD_COMM]);
+SRW_TAC [] [FUN_EQ_THM, arithmeticTheory.ADD_COMM]
+QED
 
 val SNOC_INDUCT_TAC = INDUCT_THEN SNOC_INDUCT ASSUME_TAC;
 
@@ -3550,13 +3611,15 @@ val EL_REVERSE = store_thm("EL_REVERSE",
         THEN numLib.DECIDE_TAC]);
 end
 
-val REVERSE_GENLIST = Q.store_thm("REVERSE_GENLIST",
-‘REVERSE (GENLIST f n) = GENLIST (\m. f (PRE n - m)) n’,
+Theorem REVERSE_GENLIST:
+ REVERSE (GENLIST f n) = GENLIST (\m. f (PRE n - m)) n
+Proof
   MATCH_MP_TAC LIST_EQ THEN
   SRW_TAC [] [EL_REVERSE] THEN
   ‘PRE (n - x) < n’ by numLib.DECIDE_TAC THEN
   SRW_TAC [] [EL_GENLIST] THEN
-  AP_TERM_TAC THEN numLib.DECIDE_TAC)
+  AP_TERM_TAC THEN numLib.DECIDE_TAC
+QED
 
 Theorem FOLDL_UNION_BIGUNION:
  !f ls s. FOLDL (\s x. s UNION f x) s ls = s UNION BIGUNION (IMAGE f (set ls))
@@ -3617,27 +3680,31 @@ Definition REV_DEF:
   (REV (h::t) acc = REV t (h::acc))
 End
 
-val LEN_LENGTH_LEM = Q.store_thm
-("LEN_LENGTH_LEM",
- ‘!L n. LEN L n = LENGTH L + n’,
- Induct THEN RW_TAC arith_ss [LEN_DEF, LENGTH]);
+Theorem LEN_LENGTH_LEM:
+  !L n. LEN L n = LENGTH L + n
+Proof
+ Induct THEN RW_TAC arith_ss [LEN_DEF, LENGTH]
+QED
 
-val REV_REVERSE_LEM = Q.store_thm
-("REV_REVERSE_LEM",
- ‘!L1 L2. REV L1 L2 = (REVERSE L1) ++ L2’,
+Theorem REV_REVERSE_LEM:
+  !L1 L2. REV L1 L2 = (REVERSE L1) ++ L2
+Proof
  Induct THEN RW_TAC arith_ss [REV_DEF, REVERSE_DEF, APPEND]
         THEN REWRITE_TAC [GSYM APPEND_ASSOC]
-        THEN RW_TAC bool_ss [APPEND]);
+        THEN RW_TAC bool_ss [APPEND]
+QED
 
-val LENGTH_LEN = Q.store_thm
-("LENGTH_LEN",
- ‘!L. LENGTH L = LEN L 0’,
- RW_TAC arith_ss [LEN_LENGTH_LEM]);
+Theorem LENGTH_LEN:
+  !L. LENGTH L = LEN L 0
+Proof
+ RW_TAC arith_ss [LEN_LENGTH_LEM]
+QED
 
-val REVERSE_REV = Q.store_thm
-("REVERSE_REV",
- ‘!L. REVERSE L = REV L []’,
- PROVE_TAC [REV_REVERSE_LEM, APPEND_NIL]);
+Theorem REVERSE_REV:
+  !L. REVERSE L = REV L []
+Proof
+ PROVE_TAC [REV_REVERSE_LEM, APPEND_NIL]
+QED
 
 Definition SUM_ACC_DEF:
    (SUM_ACC [] acc = acc) /\
@@ -4133,16 +4200,18 @@ Proof
   METIS_TAC[arithmeticTheory.LESS_TRANS]
 QED
 
-val LENGTH_LT_SHORTLEX = Q.store_thm(
-  "LENGTH_LT_SHORTLEX",
-  ‘!l1 l2. LENGTH l1 < LENGTH l2 ==> SHORTLEX R l1 l2’,
-  Induct >> simp[SHORTLEX_def] >> rpt gen_tac >> Cases_on ‘l2’ >> simp[]);
+Theorem LENGTH_LT_SHORTLEX:
+   !l1 l2. LENGTH l1 < LENGTH l2 ==> SHORTLEX R l1 l2
+Proof
+  Induct >> simp[SHORTLEX_def] >> rpt gen_tac >> Cases_on ‘l2’ >> simp[]
+QED
 
-val SHORTLEX_LENGTH_LE = Q.store_thm(
-  "SHORTLEX_LENGTH_LE",
-  ‘!l1 l2. SHORTLEX R l1 l2 ==> LENGTH l1 <= LENGTH l2’,
+Theorem SHORTLEX_LENGTH_LE:
+   !l1 l2. SHORTLEX R l1 l2 ==> LENGTH l1 <= LENGTH l2
+Proof
   Induct >> simp[SHORTLEX_def] >> rpt gen_tac >> Cases_on ‘l2’ >> simp[] >>
-  rw[] >> simp[]);
+  rw[] >> simp[]
+QED
 
 Theorem SHORTLEX_total:
    total (RC R) ==> total (RC (SHORTLEX R))
@@ -4197,11 +4266,11 @@ Proof
  >> PROVE_TAC []
 QED
 
-val WF_SHORTLEX_same_lengths = Q.store_thm(
-  "WF_SHORTLEX_same_lengths",
-  ‘WF R ==>
+Theorem WF_SHORTLEX_same_lengths:
+   WF R ==>
    !l s. (!d. d IN s ==> (LENGTH d = l)) /\ (?a. a IN s) ==>
-         ?b. b IN s /\ !c. SHORTLEX R c b ==> c NOTIN s’,
+         ?b. b IN s /\ !c. SHORTLEX R c b ==> c NOTIN s
+Proof
   strip_tac >> ho_match_mp_tac (TypeBase.induction_of “:num”) >>
   simp[] >> rw[] >- (Q.EXISTS_TAC ‘[]’ >> simp[] >> metis_tac[]) >>
   Q.RENAME_TAC [‘LENGTH _ = SUC N’] >>
@@ -4244,11 +4313,12 @@ val WF_SHORTLEX_same_lengths = Q.store_thm(
   >- fs[Abbr‘mts’, Abbr‘ms’]
   >- fs[Abbr‘mts’, Abbr‘ms’]
   >- (fs[Abbr‘mts’, Abbr‘ms’] >> rw[]) >>
-  fs[Abbr‘mts’, Abbr‘ms’] >> rw[] >> metis_tac[IN_DEF]);
+  fs[Abbr‘mts’, Abbr‘ms’] >> rw[] >> metis_tac[IN_DEF]
+QED
 
-val WF_SHORTLEX = Q.store_thm(
-  "WF_SHORTLEX[simp]",
-  ‘WF R ==> WF (SHORTLEX R)’,
+Theorem WF_SHORTLEX[simp]:
+   WF R ==> WF (SHORTLEX R)
+Proof
   simp[relationTheory.WF_DEF] >> rpt strip_tac >>
   Q.ABBREV_TAC ‘minlen = (LEAST) (IMAGE LENGTH B)’ >>
   ‘?a. B a /\ (LENGTH a = minlen) /\ !b. B b ==> LENGTH a <= LENGTH b’
@@ -4269,7 +4339,8 @@ val WF_SHORTLEX = Q.store_thm(
   ‘LENGTH a < LENGTH bb’ by metis_tac[arithmeticTheory.LESS_OR_EQ] >>
   ‘LENGTH bb <= LENGTH a0’ by metis_tac[SHORTLEX_LENGTH_LE] >>
   ‘LENGTH a0 = LENGTH a’ by metis_tac[] >>
-  full_simp_tac (srw_ss() ++ numSimps.ARITH_ss) []);
+  full_simp_tac (srw_ss() ++ numSimps.ARITH_ss) []
+QED
 
 Theorem SHORTLEX_SNOC :
     !R l h1 h2. R h1 h2 ==> SHORTLEX R (SNOC h1 l) (SNOC h2 l)
@@ -4430,14 +4501,16 @@ val filter_helper = Q.prove (
    >> rw []
    >> metis_tac []);
 
-val nub_append = Q.store_thm ("nub_append",
-   ‘!l1 l2. nub (l1++l2) = nub (FILTER (\x. ~MEM x l2) l1) ++ nub l2’,
+Theorem nub_append:
+    !l1 l2. nub (l1++l2) = nub (FILTER (\x. ~MEM x l2) l1) ++ nub l2
+Proof
    Induct_on ‘l1’
    >> rw [nub_def]
    >> fs []
    >> BasicProvers.FULL_CASE_TAC
    >> rw []
-   >> metis_tac [filter_helper]);
+   >> metis_tac [filter_helper]
+QED
 
 Theorem nub_MAP_INJ:
   INJ f (set ls) UNIV ==>
@@ -4458,9 +4531,11 @@ Proof
   \\ metis_tac[]
 QED
 
-val list_to_set_diff = Q.store_thm ("list_to_set_diff",
-   ‘!l1 l2. set l2 DIFF set l1 = set (FILTER (\x. x NOTIN set l1) l2)’,
-   Induct_on ‘l2’ >> rw []);
+Theorem list_to_set_diff:
+    !l1 l2. set l2 DIFF set l1 = set (FILTER (\x. x NOTIN set l1) l2)
+Proof
+   Induct_on ‘l2’ >> rw []
+QED
 
 val card_eqn_help = Q.prove (
    ‘!l1 l2. CARD (set l2) - CARD (set l1 INTER set l2) =
@@ -4469,18 +4544,22 @@ val card_eqn_help = Q.prove (
    >> SIMP_TAC bool_ss [GSYM CARD_DIFF, FINITE_LIST_TO_SET]
    >> metis_tac [list_to_set_diff]);
 
-val length_nub_append = Q.store_thm ("length_nub_append",
-   ‘!l1 l2. LENGTH (nub (l1 ++ l2)) =
-            LENGTH (nub l1) + LENGTH (nub (FILTER (\x. ~MEM x l1) l2))’,
+Theorem length_nub_append:
+    !l1 l2. LENGTH (nub (l1 ++ l2)) =
+            LENGTH (nub l1) + LENGTH (nub (FILTER (\x. ~MEM x l1) l2))
+Proof
    rw [GSYM ALL_DISTINCT_CARD_LIST_TO_SET, all_distinct_nub]
    >> fs [FINITE_LIST_TO_SET, CARD_UNION_EQN]
    >> simp[GSYM card_eqn_help]
    >> ‘CARD (set l1 INTER set l2) <= CARD (set l2)’ suffices_by simp[]
-   >> metis_tac [CARD_INTER_LESS_EQ, FINITE_LIST_TO_SET, INTER_COMM]);
+   >> metis_tac [CARD_INTER_LESS_EQ, FINITE_LIST_TO_SET, INTER_COMM]
+QED
 
-val ALL_DISTINCT_DROP = Q.store_thm("ALL_DISTINCT_DROP",
-   ‘!ls n. ALL_DISTINCT ls ==> ALL_DISTINCT (DROP n ls)’,
-   Induct >> SIMP_TAC (srw_ss()) [] >> rw [DROP_def])
+Theorem ALL_DISTINCT_DROP:
+    !ls n. ALL_DISTINCT ls ==> ALL_DISTINCT (DROP n ls)
+Proof
+   Induct >> SIMP_TAC (srw_ss()) [] >> rw [DROP_def]
+QED
 
 Theorem ALL_DISTINCT_TAKE:
   !ls n. ALL_DISTINCT ls ==> ALL_DISTINCT (TAKE n ls)
@@ -4521,38 +4600,48 @@ Proof
   simp[CARD_SUBSET]
 QED
 
-val EXISTS_LIST_EQ_MAP = Q.store_thm("EXISTS_LIST_EQ_MAP",
-   ‘!ls f. EVERY (\x. ?y. x = f y) ls ==> ?l. ls = MAP f l’,
+Theorem EXISTS_LIST_EQ_MAP:
+    !ls f. EVERY (\x. ?y. x = f y) ls ==> ?l. ls = MAP f l
+Proof
    Induct
    >> ASM_SIMP_TAC (srw_ss()) []
    >> rw []
    >> RES_TAC
    >> Q.EXISTS_TAC‘y::l’
-   >> ASM_SIMP_TAC (srw_ss()) [])
+   >> ASM_SIMP_TAC (srw_ss()) []
+QED
 
-val LIST_TO_SET_FLAT = Q.store_thm("LIST_TO_SET_FLAT",
-   ‘!ls. set (FLAT ls) = BIGUNION (set (MAP set ls))’,
-   Induct >> ASM_SIMP_TAC (srw_ss()) [])
+Theorem LIST_TO_SET_FLAT:
+    !ls. set (FLAT ls) = BIGUNION (set (MAP set ls))
+Proof
+   Induct >> ASM_SIMP_TAC (srw_ss()) []
+QED
 
-val MEM_APPEND_lemma = Q.store_thm("MEM_APPEND_lemma",
-   ‘!a b c d x.
+Theorem MEM_APPEND_lemma:
+    !a b c d x.
       (a ++ [x] ++ b = c ++ [x] ++ d) /\ x NOTIN set b /\ x NOTIN set a ==>
-      (a = c) /\ (b = d)’,
+      (a = c) /\ (b = d)
+Proof
    rw [APPEND_EQ_APPEND_MID]
    >> fs []
-   >> fs [APPEND_EQ_SING])
+   >> fs [APPEND_EQ_SING]
+QED
 
-val EVERY2_REVERSE = Q.store_thm("EVERY2_REVERSE",
-   ‘!R l1 l2. EVERY2 R l1 l2 ==> EVERY2 R (REVERSE l1) (REVERSE l2)’,
+Theorem EVERY2_REVERSE:
+    !R l1 l2. EVERY2 R l1 l2 ==> EVERY2 R (REVERSE l1) (REVERSE l2)
+Proof
    rw [EVERY2_EVERY, EVERY_MEM, FORALL_PROD]
    >> REV_FULL_SIMP_TAC (srw_ss())
          [MEM_ZIP, GSYM LEFT_FORALL_IMP_THM, EL_REVERSE]
    >> FIRST_X_ASSUM MATCH_MP_TAC
-   >> ASM_SIMP_TAC (arith_ss) []);
+   >> ASM_SIMP_TAC (arith_ss) []
+QED
 
-val SUM_MAP_PLUS = Q.store_thm("SUM_MAP_PLUS",
-   ‘!f g ls. SUM (MAP (\x. f x + g x) ls) = SUM (MAP f ls) + SUM (MAP g ls)’,
-   NTAC 2 GEN_TAC >> Induct >> simp [SUM])
+Theorem SUM_MAP_PLUS:
+    !f g ls. SUM (MAP (\x. f x + g x) ls) = SUM (MAP f ls) + SUM (MAP g ls)
+Proof
+   NTAC 2 GEN_TAC >> Induct >> simp [SUM]
+QED
 
 Theorem TAKE_LENGTH_ID_rwt: !l m. (m = LENGTH l) ==> (TAKE m l = l)
 Proof rw [TAKE_LENGTH_ID]
@@ -4564,74 +4653,89 @@ Proof
   Induct >> simp[] >> Cases_on ‘m’ >> simp[]
 QED
 
-val ZIP_DROP = Q.store_thm("ZIP_DROP",
-   ‘!a b n. n <= LENGTH a /\ (LENGTH a = LENGTH b) ==>
-            (ZIP (DROP n a,DROP n b) = DROP n (ZIP (a,b)))’,
+Theorem ZIP_DROP:
+    !a b n. n <= LENGTH a /\ (LENGTH a = LENGTH b) ==>
+            (ZIP (DROP n a,DROP n b) = DROP n (ZIP (a,b)))
+Proof
    Induct
    THEN SRW_TAC [] [LENGTH_NIL_SYM, arithmeticTheory.ADD1]
    THEN Cases_on‘b’
    THEN FULL_SIMP_TAC (srw_ss()) [ZIP]
    THEN Cases_on‘0<n’ THEN FULL_SIMP_TAC (srw_ss()) [ZIP]
    THEN FIRST_X_ASSUM MATCH_MP_TAC
-   THEN FULL_SIMP_TAC arith_ss [])
+   THEN FULL_SIMP_TAC arith_ss []
+QED
 
-val GENLIST_EL = Q.store_thm("GENLIST_EL",
-   ‘!ls f n. (n = LENGTH ls) /\ (!i. i < n ==> (f i = EL i ls)) ==>
-             (GENLIST f n = ls)’,
-   rw [LIST_EQ_REWRITE])
+Theorem GENLIST_EL:
+    !ls f n. (n = LENGTH ls) /\ (!i. i < n ==> (f i = EL i ls)) ==>
+             (GENLIST f n = ls)
+Proof
+   rw [LIST_EQ_REWRITE]
+QED
 
-val EVERY2_trans = Q.store_thm("EVERY2_trans",
-   ‘(!x y z. R x y /\ R y z ==> R x z) ==>
-    !x y z. EVERY2 R x y /\ EVERY2 R y z ==> EVERY2 R x z’,
+Theorem EVERY2_trans:
+    (!x y z. R x y /\ R y z ==> R x z) ==>
+    !x y z. EVERY2 R x y /\ EVERY2 R y z ==> EVERY2 R x z
+Proof
    SRW_TAC [] [EVERY2_EVERY, EVERY_MEM, FORALL_PROD]
    THEN REPEAT (Q.PAT_X_ASSUM ‘LENGTH X = Y’ MP_TAC)
    THEN REPEAT STRIP_TAC
    THEN FULL_SIMP_TAC (srw_ss()++DNF_ss) [MEM_ZIP]
-   THEN METIS_TAC [])
+   THEN METIS_TAC []
+QED
 
-val EVERY2_sym = Q.store_thm("EVERY2_sym",
-   ‘(!x y. R1 x y ==> R2 y x) ==> !x y. EVERY2 R1 x y ==> EVERY2 R2 y x’,
+Theorem EVERY2_sym:
+    (!x y. R1 x y ==> R2 y x) ==> !x y. EVERY2 R1 x y ==> EVERY2 R2 y x
+Proof
    SRW_TAC [] [EVERY2_EVERY, EVERY_MEM, FORALL_PROD]
    THEN Q.PAT_X_ASSUM ‘LENGTH X = Y’ MP_TAC
    THEN STRIP_TAC
-   THEN FULL_SIMP_TAC (srw_ss()++DNF_ss) [MEM_ZIP])
+   THEN FULL_SIMP_TAC (srw_ss()++DNF_ss) [MEM_ZIP]
+QED
 
-val EVERY2_LUPDATE_same = Q.store_thm("EVERY2_LUPDATE_same",
-   ‘!P l1 l2 v1 v2 n.
+Theorem EVERY2_LUPDATE_same:
+    !P l1 l2 v1 v2 n.
        P v1 v2 /\ EVERY2 P l1 l2 ==>
-       EVERY2 P (LUPDATE v1 n l1) (LUPDATE v2 n l2)’,
+       EVERY2 P (LUPDATE v1 n l1) (LUPDATE v2 n l2)
+Proof
    GEN_TAC
    THEN Induct
    THEN SRW_TAC [] [LUPDATE_def]
    THEN Cases_on‘n’
    THEN SRW_TAC [] [LUPDATE_def]
    THEN Cases_on‘l2’
-   THEN FULL_SIMP_TAC (srw_ss()) [LUPDATE_def])
+   THEN FULL_SIMP_TAC (srw_ss()) [LUPDATE_def]
+QED
 
-val EVERY2_refl = Q.store_thm("EVERY2_refl",
-   ‘(!x. MEM x ls ==> R x x) ==> (EVERY2 R ls ls)’,
-   Induct_on‘ls’ >> rw [])
+Theorem EVERY2_refl:
+    (!x. MEM x ls ==> R x x) ==> (EVERY2 R ls ls)
+Proof
+   Induct_on‘ls’ >> rw []
+QED
 
-val EVERY2_THM = Q.store_thm("EVERY2_THM[simp]",
-   ‘(!P ys. EVERY2 P [] ys = (ys = [])) /\
+Theorem EVERY2_THM[simp]:
+    (!P ys. EVERY2 P [] ys = (ys = [])) /\
     (!P yys x xs. EVERY2 P (x::xs) yys =
        ?y ys. (yys = y::ys) /\ (P x y) /\ (EVERY2 P xs ys)) /\
     (!P xs. EVERY2 P xs [] = (xs = [])) /\
     (!P xxs y ys. EVERY2 P xxs (y::ys) =
-       ?x xs. (xxs = x::xs) /\ (P x y) /\ (EVERY2 P xs ys))’,
+       ?x xs. (xxs = x::xs) /\ (P x y) /\ (EVERY2 P xs ys))
+Proof
    REPEAT CONJ_TAC
    THEN GEN_TAC
    THEN TRY (SRW_TAC [] [EVERY2_EVERY, LENGTH_NIL]
              THEN SRW_TAC [] [EQ_IMP_THM]
              THEN NO_TAC)
    THEN Cases
-   THEN SRW_TAC [] [EVERY2_EVERY])
+   THEN SRW_TAC [] [EVERY2_EVERY]
+QED
 
-val LIST_REL_trans = Q.store_thm("LIST_REL_trans",
-   ‘!l1 l2 l3.
+Theorem LIST_REL_trans:
+    !l1 l2 l3.
       (!n. n < LENGTH l1 /\ R (EL n l1) (EL n l2) /\
        R (EL n l2) (EL n l3) ==> R (EL n l1) (EL n l3)) /\
-      LIST_REL R l1 l2 /\ LIST_REL R l2 l3 ==> LIST_REL R l1 l3’,
+      LIST_REL R l1 l2 /\ LIST_REL R l2 l3 ==> LIST_REL R l1 l3
+Proof
    Induct
    >> simp []
    >> rw [LIST_REL_CONS1]
@@ -4643,7 +4747,8 @@ val LIST_REL_trans = Q.store_thm("LIST_REL_trans",
    >> Q.EXISTS_TAC‘l2’
    >> rw []
    >> FIRST_X_ASSUM (Q.SPEC_THEN ‘SUC n’ MP_TAC)
-   >> simp []);
+   >> simp []
+QED
 
 Theorem LIST_REL_eq[simp,quotient_simp]:
   LIST_REL (=) = (=)
@@ -4708,54 +4813,71 @@ Proof
   rw[LIST_REL_EL_EQN, EQ_IMP_THM, EL_MAP, LENGTH_MAP] >> metis_tac[EL_MAP]
 QED
 
-val SWAP_REVERSE = Q.store_thm("SWAP_REVERSE",
-   ‘!l1 l2. (l1 = REVERSE l2) = (l2 = REVERSE l1)’,
-   SRW_TAC [] [EQ_IMP_THM])
+Theorem SWAP_REVERSE:
+    !l1 l2. (l1 = REVERSE l2) = (l2 = REVERSE l1)
+Proof
+   SRW_TAC [] [EQ_IMP_THM]
+QED
 
-val SWAP_REVERSE_SYM = Q.store_thm("SWAP_REVERSE_SYM",
-   ‘!l1 l2. (REVERSE l1 = l2) = (l1 = REVERSE l2)’,
-   metis_tac [SWAP_REVERSE])
+Theorem SWAP_REVERSE_SYM:
+    !l1 l2. (REVERSE l1 = l2) = (l1 = REVERSE l2)
+Proof
+   metis_tac [SWAP_REVERSE]
+QED
 
-val BIGUNION_IMAGE_set_SUBSET = Q.store_thm("BIGUNION_IMAGE_set_SUBSET",
-   ‘(BIGUNION (IMAGE f (set ls)) SUBSET s) = (!x. MEM x ls ==> f x SUBSET s)’,
-   SRW_TAC [DNF_ss] [SUBSET_DEF] THEN METIS_TAC [])
+Theorem BIGUNION_IMAGE_set_SUBSET:
+    (BIGUNION (IMAGE f (set ls)) SUBSET s) = (!x. MEM x ls ==> f x SUBSET s)
+Proof
+   SRW_TAC [DNF_ss] [SUBSET_DEF] THEN METIS_TAC []
+QED
 
-val IMAGE_EL_count_LENGTH = Q.store_thm("IMAGE_EL_count_LENGTH",
-   ‘!f ls. IMAGE (\n. f (EL n ls)) (count (LENGTH ls)) = IMAGE f (set ls)’,
-   rw [EXTENSION, MEM_EL] >> PROVE_TAC [])
+Theorem IMAGE_EL_count_LENGTH:
+    !f ls. IMAGE (\n. f (EL n ls)) (count (LENGTH ls)) = IMAGE f (set ls)
+Proof
+   rw [EXTENSION, MEM_EL] >> PROVE_TAC []
+QED
 
-val GENLIST_EL_MAP = Q.store_thm("GENLIST_EL_MAP",
-   ‘!f ls. GENLIST (\n. f (EL n ls)) (LENGTH ls) = MAP f ls’,
-   GEN_TAC >> Induct >> rw [GENLIST_CONS, o_DEF])
+Theorem GENLIST_EL_MAP:
+    !f ls. GENLIST (\n. f (EL n ls)) (LENGTH ls) = MAP f ls
+Proof
+   GEN_TAC >> Induct >> rw [GENLIST_CONS, o_DEF]
+QED
 
-val LENGTH_FILTER_LEQ_MONO = Q.store_thm("LENGTH_FILTER_LEQ_MONO",
-   ‘!P Q. (!x. P x ==> Q x) ==>
-          !ls. (LENGTH (FILTER P ls) <= LENGTH (FILTER Q ls))’,
+Theorem LENGTH_FILTER_LEQ_MONO:
+    !P Q. (!x. P x ==> Q x) ==>
+          !ls. (LENGTH (FILTER P ls) <= LENGTH (FILTER Q ls))
+Proof
    REPEAT GEN_TAC
    >> STRIP_TAC
    >> Induct
    >> rw []
    >> FULL_SIMP_TAC arith_ss []
-   >> PROVE_TAC [])
+   >> PROVE_TAC []
+QED
 
-val LIST_EQ_MAP_PAIR = Q.store_thm("LIST_EQ_MAP_PAIR",
-   ‘!l1 l2.
-     (MAP FST l1 = MAP FST l2) /\ (MAP SND l1 = MAP SND l2) ==> (l1 = l2)’,
+Theorem LIST_EQ_MAP_PAIR:
+    !l1 l2.
+     (MAP FST l1 = MAP FST l2) /\ (MAP SND l1 = MAP SND l2) ==> (l1 = l2)
+Proof
    SRW_TAC []
      [MAP_EQ_EVERY2, EVERY2_EVERY, EVERY_MEM, LIST_EQ_REWRITE, FORALL_PROD]
    THEN REV_FULL_SIMP_TAC (srw_ss()++DNF_ss) [MEM_ZIP]
-   THEN METIS_TAC [pair_CASES, PAIR_EQ])
+   THEN METIS_TAC [pair_CASES, PAIR_EQ]
+QED
 
-val TAKE_SUM = Q.store_thm("TAKE_SUM",
-   ‘!n m l. TAKE (n + m) l = TAKE n l ++ TAKE m (DROP n l)’,
+Theorem TAKE_SUM:
+    !n m l. TAKE (n + m) l = TAKE n l ++ TAKE m (DROP n l)
+Proof
    Induct_on ‘l’ >> simp[TAKE_def] >> rw[] >> simp[] >>
    ‘m + n - 1 = (n - 1) + m’ by simp[] >>
-   ASM_REWRITE_TAC[]);
+   ASM_REWRITE_TAC[]
+QED
 
-val ALL_DISTINCT_FILTER_EL_IMP = Q.store_thm("ALL_DISTINCT_FILTER_EL_IMP",
-   ‘!P l n1 n2.
+Theorem ALL_DISTINCT_FILTER_EL_IMP:
+    !P l n1 n2.
       ALL_DISTINCT (FILTER P l) /\ n1 < LENGTH l /\ n2 < LENGTH l /\
-      (P (EL n1 l)) /\ (EL n1 l = EL n2 l) ==> (n1 = n2)’,
+      (P (EL n1 l)) /\ (EL n1 l = EL n2 l) ==> (n1 = n2)
+Proof
    GEN_TAC
    THEN Induct
    THEN1 SRW_TAC [] []
@@ -4765,11 +4887,14 @@ val ALL_DISTINCT_FILTER_EL_IMP = Q.store_thm("ALL_DISTINCT_FILTER_EL_IMP",
    THEN Cases_on ‘n1’
    THEN Cases_on ‘n2’
    THEN FULL_SIMP_TAC (srw_ss()) [MEM_EL]
-   THEN PROVE_TAC [])
+   THEN PROVE_TAC []
+QED
 
-val FLAT_EQ_NIL = Q.store_thm("FLAT_EQ_NIL",
-   ‘!ls. (FLAT ls = []) = (EVERY ($= []) ls)’,
-   Induct >> SRW_TAC [] [EQ_IMP_THM] >> rw [APPEND]);
+Theorem FLAT_EQ_NIL:
+    !ls. (FLAT ls = []) = (EVERY ($= []) ls)
+Proof
+   Induct >> SRW_TAC [] [EQ_IMP_THM] >> rw [APPEND]
+QED
 
 Theorem FLAT_EQ_NIL' :
     FLAT l = [] <=> !e. MEM e l ==> e = []
@@ -4813,115 +4938,149 @@ Proof
   map_every qexists_tac [`ip`, `is`] >> rw []
 QED
 
-val ALL_DISTINCT_MAP_INJ = Q.store_thm("ALL_DISTINCT_MAP_INJ",
-   ‘!ls f. (!x y. MEM x ls /\ MEM y ls /\ (f x = f y) ==> (x = y)) /\
-           ALL_DISTINCT ls ==> ALL_DISTINCT (MAP f ls)’,
-   Induct THEN SRW_TAC [] [MEM_MAP] THEN PROVE_TAC [])
+Theorem ALL_DISTINCT_MAP_INJ:
+    !ls f. (!x y. MEM x ls /\ MEM y ls /\ (f x = f y) ==> (x = y)) /\
+           ALL_DISTINCT ls ==> ALL_DISTINCT (MAP f ls)
+Proof
+   Induct THEN SRW_TAC [] [MEM_MAP] THEN PROVE_TAC []
+QED
 
-val LENGTH_o_REVERSE = Q.store_thm("LENGTH_o_REVERSE",
-   ‘(LENGTH o REVERSE = LENGTH) /\
-    (LENGTH o REVERSE o f = LENGTH o f)’,
-   SRW_TAC [] [FUN_EQ_THM])
+Theorem LENGTH_o_REVERSE:
+    (LENGTH o REVERSE = LENGTH) /\
+    (LENGTH o REVERSE o f = LENGTH o f)
+Proof
+   SRW_TAC [] [FUN_EQ_THM]
+QED
 
-val REVERSE_o_REVERSE = Q.store_thm("REVERSE_o_REVERSE",
-   ‘(REVERSE o REVERSE o f = f)’,
-   SRW_TAC [] [FUN_EQ_THM])
+Theorem REVERSE_o_REVERSE:
+    (REVERSE o REVERSE o f = f)
+Proof
+   SRW_TAC [] [FUN_EQ_THM]
+QED
 
-val GENLIST_PLUS_APPEND = Q.store_thm("GENLIST_PLUS_APPEND",
-   ‘GENLIST ($+ a) n1 ++ GENLIST ($+ (n1 + a)) n2 = GENLIST ($+ a) (n1 + n2)’,
+Theorem GENLIST_PLUS_APPEND:
+    GENLIST ($+ a) n1 ++ GENLIST ($+ (n1 + a)) n2 = GENLIST ($+ a) (n1 + n2)
+Proof
    rw [Once arithmeticTheory.ADD_SYM, SimpRHS]
    >> RW_TAC arith_ss [GENLIST_APPEND]
-   >> SRW_TAC [ETA_ss] [arithmeticTheory.ADD_ASSOC])
+   >> SRW_TAC [ETA_ss] [arithmeticTheory.ADD_ASSOC]
+QED
 
-val LIST_TO_SET_GENLIST = Q.store_thm("LIST_TO_SET_GENLIST",
-   ‘!f n. LIST_TO_SET (GENLIST f n) = IMAGE f (count n)’,
-   SRW_TAC [] [EXTENSION, MEM_GENLIST] THEN PROVE_TAC [])
+Theorem LIST_TO_SET_GENLIST:
+    !f n. LIST_TO_SET (GENLIST f n) = IMAGE f (count n)
+Proof
+   SRW_TAC [] [EXTENSION, MEM_GENLIST] THEN PROVE_TAC []
+QED
 
-val MEM_ZIP_MEM_MAP = Q.store_thm("MEM_ZIP_MEM_MAP",
-   ‘(LENGTH (FST ps) = LENGTH (SND ps)) /\
-    MEM p (ZIP ps) ==> MEM (FST p) (FST ps) /\ MEM (SND p) (SND ps)’,
+Theorem MEM_ZIP_MEM_MAP:
+    (LENGTH (FST ps) = LENGTH (SND ps)) /\
+    MEM p (ZIP ps) ==> MEM (FST p) (FST ps) /\ MEM (SND p) (SND ps)
+Proof
    Cases_on ‘p’
    >> Cases_on ‘ps’
    >> SRW_TAC [] []
    >> REV_FULL_SIMP_TAC (srw_ss()) [MEM_ZIP, MEM_EL]
-   >> PROVE_TAC [])
+   >> PROVE_TAC []
+QED
 
-val DISJOINT_GENLIST_PLUS = Q.store_thm("DISJOINT_GENLIST_PLUS",
-   ‘DISJOINT x (set (GENLIST ($+ n) (a + b))) ==>
+Theorem DISJOINT_GENLIST_PLUS:
+    DISJOINT x (set (GENLIST ($+ n) (a + b))) ==>
     DISJOINT x (set (GENLIST ($+ n) a)) /\
-    DISJOINT x (set (GENLIST ($+ (n + a)) b))’,
+    DISJOINT x (set (GENLIST ($+ (n + a)) b))
+Proof
    rw [GSYM GENLIST_PLUS_APPEND]
-   >> metis_tac [DISJOINT_SYM, arithmeticTheory.ADD_SYM])
+   >> metis_tac [DISJOINT_SYM, arithmeticTheory.ADD_SYM]
+QED
 
-val EVERY2_MAP = Q.store_thm("EVERY2_MAP",
-   `(EVERY2 P (MAP f l1) l2 = EVERY2 (\x y. P (f x) y) l1 l2) /\
-    (EVERY2 Q l1 (MAP g l2) = EVERY2 (\x y. Q x (g y)) l1 l2)`,
+Theorem EVERY2_MAP:
+    (EVERY2 P (MAP f l1) l2 = EVERY2 (\x y. P (f x) y) l1 l2) /\
+    (EVERY2 Q l1 (MAP g l2) = EVERY2 (\x y. Q x (g y)) l1 l2)
+Proof
    rw [EVERY2_EVERY, LENGTH_MAP]
    >> Cases_on `LENGTH l1 = LENGTH l2`
    >> fs []
    >> rw [ZIP_MAP, EVERY_MEM, MEM_MAP]
-   >> SRW_TAC [DNF_ss] [pairTheory.FORALL_PROD, LENGTH_MAP, MEM_ZIP]);
+   >> SRW_TAC [DNF_ss] [pairTheory.FORALL_PROD, LENGTH_MAP, MEM_ZIP]
+QED
 
-val exists_list_GENLIST = Q.store_thm("exists_list_GENLIST",
-   ‘(?ls. P ls) = (?n f. P (GENLIST f n))’,
+Theorem exists_list_GENLIST:
+    (?ls. P ls) = (?n f. P (GENLIST f n))
+Proof
    rw [EQ_IMP_THM]
    THEN1 (MAP_EVERY Q.EXISTS_TAC [‘LENGTH ls’,‘combin$C EL ls’]
           >> Q.MATCH_ABBREV_TAC ‘P ls2’
           >> Q_TAC SUFF_TAC ‘ls2 = ls’
           THEN1 rw []
           >> rw [LIST_EQ_REWRITE, Abbr‘ls2’])
-   >> PROVE_TAC [])
+   >> PROVE_TAC []
+QED
 
-val EVERY_MEM_MONO = Q.store_thm("EVERY_MEM_MONO",
-   ‘!P Q l. (!x. MEM x l /\ P x ==> Q x) /\ EVERY P l ==> EVERY Q l’,
-   NTAC 2 GEN_TAC >> Induct >> rw [])
+Theorem EVERY_MEM_MONO:
+    !P Q l. (!x. MEM x l /\ P x ==> Q x) /\ EVERY P l ==> EVERY Q l
+Proof
+   NTAC 2 GEN_TAC >> Induct >> rw []
+QED
 
-val EVERY2_MEM_MONO = Q.store_thm("EVERY2_MEM_MONO",
-   ‘!P Q l1 l2. (!x. MEM x (ZIP (l1,l2)) /\ UNCURRY P x ==> UNCURRY Q x) /\
-                EVERY2 P l1 l2 ==> EVERY2 Q l1 l2’,
-   rw [EVERY2_EVERY] >> MATCH_MP_TAC EVERY_MEM_MONO >> PROVE_TAC [])
+Theorem EVERY2_MEM_MONO:
+    !P Q l1 l2. (!x. MEM x (ZIP (l1,l2)) /\ UNCURRY P x ==> UNCURRY Q x) /\
+                EVERY2 P l1 l2 ==> EVERY2 Q l1 l2
+Proof
+   rw [EVERY2_EVERY] >> MATCH_MP_TAC EVERY_MEM_MONO >> PROVE_TAC []
+QED
 
-val mem_exists_set = Q.store_thm ("mem_exists_set",
-   ‘!x y l. MEM (x,y) l ==> ?z. (x = FST z) /\ z IN set l’,
+Theorem mem_exists_set:
+    !x y l. MEM (x,y) l ==> ?z. (x = FST z) /\ z IN set l
+Proof
    Induct_on ‘l’
    >> rw []
-   >> metis_tac [FST]);
+   >> metis_tac [FST]
+QED
 
-val every_zip_snd = Q.store_thm ("every_zip_snd",
-   ‘!l1 l2 P.
+Theorem every_zip_snd:
+    !l1 l2 P.
      (LENGTH l1 = LENGTH l2) ==>
-     (EVERY (\x. P (SND x)) (ZIP (l1,l2)) = EVERY P l2)’,
+     (EVERY (\x. P (SND x)) (ZIP (l1,l2)) = EVERY P l2)
+Proof
    Induct_on ‘l1’
    >> rw []
    >> TRY(Cases_on ‘l2’)
-   >> fs [ZIP]);
+   >> fs [ZIP]
+QED
 
-val every_zip_fst = Q.store_thm ("every_zip_fst",
-   ‘!l1 l2 P. (LENGTH l1 = LENGTH l2) ==>
-              (EVERY (\x. P (FST x)) (ZIP (l1,l2)) = EVERY P l1)’,
+Theorem every_zip_fst:
+    !l1 l2 P. (LENGTH l1 = LENGTH l2) ==>
+              (EVERY (\x. P (FST x)) (ZIP (l1,l2)) = EVERY P l1)
+Proof
    Induct_on ‘l1’
    >> rw []
    >> TRY(Cases_on ‘l2’)
-   >> fs [ZIP]);
+   >> fs [ZIP]
+QED
 
-val el_append3 = Q.store_thm ("el_append3",
-   ‘!l1 x l2. EL (LENGTH l1) (l1++ [x] ++ l2) = x’,
+Theorem el_append3:
+    !l1 x l2. EL (LENGTH l1) (l1++ [x] ++ l2) = x
+Proof
    Induct_on ‘l1’
    >> rw []
-   >> rw []);
+   >> rw []
+QED
 
-val lupdate_append = Q.store_thm ("lupdate_append",
-   ‘!x n l1 l2.
-       n < LENGTH l1 ==> (LUPDATE x n (l1++l2) = LUPDATE x n l1 ++ l2)’,
+Theorem lupdate_append:
+    !x n l1 l2.
+       n < LENGTH l1 ==> (LUPDATE x n (l1++l2) = LUPDATE x n l1 ++ l2)
+Proof
    Induct_on ‘l1’
    >> rw []
    >> Cases_on ‘n’
    >> rw [LUPDATE_def]
-   >> fs []);
+   >> fs []
+QED
 
-val lupdate_append2 = Q.store_thm ("lupdate_append2",
-   ‘!v l1 x l2 l3. LUPDATE v (LENGTH l1) (l1++[x]++l2) = l1++[v]++l2’,
-   Induct_on ‘l1’ >> rw [LUPDATE_def])
+Theorem lupdate_append2:
+    !v l1 x l2 l3. LUPDATE v (LENGTH l1) (l1++[x]++l2) = l1++[v]++l2
+Proof
+   Induct_on ‘l1’ >> rw [LUPDATE_def]
+QED
 
 Theorem HD_REVERSE:
    !x. x <> [] ==> (HD (REVERSE x) = LAST x)
@@ -4933,9 +5092,11 @@ Proof
   fs[]
 QED
 
-val LAST_REVERSE = Q.store_thm("LAST_REVERSE",
-   ‘!ls. ls <> [] ==> (LAST (REVERSE ls) = HD ls)’,
-   Induct >> simp [])
+Theorem LAST_REVERSE:
+    !ls. ls <> [] ==> (LAST (REVERSE ls) = HD ls)
+Proof
+   Induct >> simp []
+QED
 
 Theorem NOT_NIL_EQ_LENGTH_NOT_0:
    x <> [] <=> (0 < LENGTH x)
@@ -4943,13 +5104,15 @@ Proof
   Cases_on ‘x’ >> rw[]
 QED
 
-val last_drop = Q.store_thm ("last_drop",
-  ‘!l n. n < LENGTH l ==> (LAST (DROP n l) = LAST l)’,
+Theorem last_drop:
+   !l n. n < LENGTH l ==> (LAST (DROP n l) = LAST l)
+Proof
   Induct >> rw [DROP_def] >>
   Q.SPEC_THEN‘l’FULL_STRUCT_CASES_TAC list_CASES >> fs [] >>
   FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss) [] >> SRW_TAC[] [] >>
   FIRST_X_ASSUM (Q.SPEC_THEN ‘n - 1’ MP_TAC) >>
-  simp[]);
+  simp[]
+QED
 
 Definition dropWhile_def:
    (dropWhile P [] = []) /\
@@ -4957,8 +5120,9 @@ Definition dropWhile_def:
 End
 val _ = export_rewrites ["dropWhile_def"]
 
-val dropWhile_splitAtPki = Q.store_thm("dropWhile_splitAtPki",
-  ‘!P. dropWhile P = splitAtPki (combin$C (K o $~ o P)) (K I)’,
+Theorem dropWhile_splitAtPki:
+   !P. dropWhile P = splitAtPki (combin$C (K o $~ o P)) (K I)
+Proof
    GEN_TAC
    >> simp [FUN_EQ_THM]
    >> Induct
@@ -4968,32 +5132,45 @@ val dropWhile_splitAtPki = Q.store_thm("dropWhile_splitAtPki",
    >> Q.MATCH_ABBREV_TAC ‘f a b = f a' b'’
    >> ‘b = b'’ by (markerLib.UNABBREV_ALL_TAC >> simp [FUN_EQ_THM])
    >> ‘a = a'’ by (markerLib.UNABBREV_ALL_TAC >> simp [FUN_EQ_THM])
-   >> REV_FULL_SIMP_TAC (srw_ss()) [])
+   >> REV_FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val dropWhile_eq_nil = Q.store_thm("dropWhile_eq_nil",
-   ‘!P ls. (dropWhile P ls = []) <=> EVERY P ls’,
-   GEN_TAC >> Induct >> simp [] >> rw [])
+Theorem dropWhile_eq_nil:
+    !P ls. (dropWhile P ls = []) <=> EVERY P ls
+Proof
+   GEN_TAC >> Induct >> simp [] >> rw []
+QED
 
-val MEM_dropWhile_IMP = Q.store_thm("MEM_dropWhile_IMP",
-   ‘!P ls x. MEM x (dropWhile P ls) ==> MEM x ls’,
-   GEN_TAC >> Induct >> simp [] >> rw [])
+Theorem MEM_dropWhile_IMP:
+    !P ls x. MEM x (dropWhile P ls) ==> MEM x ls
+Proof
+   GEN_TAC >> Induct >> simp [] >> rw []
+QED
 
-val HD_dropWhile = Q.store_thm("HD_dropWhile",
-   ‘!P ls. EXISTS ($~ o P) ls ==> ~ P (HD (dropWhile P ls))’,
-   GEN_TAC >> Induct >> simp [] >> rw [])
+Theorem HD_dropWhile:
+    !P ls. EXISTS ($~ o P) ls ==> ~ P (HD (dropWhile P ls))
+Proof
+   GEN_TAC >> Induct >> simp [] >> rw []
+QED
 
-val LENGTH_dropWhile_LESS_EQ = Q.store_thm("LENGTH_dropWhile_LESS_EQ",
-   ‘!P ls. LENGTH (dropWhile P ls) <= LENGTH ls’,
-   GEN_TAC >> Induct >> simp [] >> rw [] >> simp [])
+Theorem LENGTH_dropWhile_LESS_EQ:
+    !P ls. LENGTH (dropWhile P ls) <= LENGTH ls
+Proof
+   GEN_TAC >> Induct >> simp [] >> rw [] >> simp []
+QED
 
-val dropWhile_APPEND_EVERY = Q.store_thm("dropWhile_APPEND_EVERY",
-   ‘!P l1 l2. EVERY P l1 ==> (dropWhile P (l1 ++ l2) = dropWhile P l2)’,
-   GEN_TAC >> Induct >> simp [dropWhile_def])
+Theorem dropWhile_APPEND_EVERY:
+    !P l1 l2. EVERY P l1 ==> (dropWhile P (l1 ++ l2) = dropWhile P l2)
+Proof
+   GEN_TAC >> Induct >> simp [dropWhile_def]
+QED
 
-val dropWhile_APPEND_EXISTS = Q.store_thm("dropWhile_APPEND_EXISTS",
-   ‘!P l1 l2. EXISTS ($~ o P) l1 ==>
-              (dropWhile P (l1 ++ l2) = dropWhile P l1 ++ l2)’,
-   GEN_TAC >> Induct >> simp [dropWhile_def] >> rw [])
+Theorem dropWhile_APPEND_EXISTS:
+    !P l1 l2. EXISTS ($~ o P) l1 ==>
+              (dropWhile P (l1 ++ l2) = dropWhile P l1 ++ l2)
+Proof
+   GEN_TAC >> Induct >> simp [dropWhile_def] >> rw []
+QED
 
 local
   val fs = FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss)
@@ -5159,10 +5336,12 @@ Proof
   \\ Cases_on`OPT_MMAP f ls` \\ fs[]
 QED
 
-val LAST_compute = Q.store_thm("LAST_compute",
-   ‘(!x. LAST [x] = x) /\
-    (!h1 h2 t. LAST (h1::h2::t) = LAST (h2::t))’,
-   SRW_TAC [] [LAST_DEF]);
+Theorem LAST_compute:
+    (!x. LAST [x] = x) /\
+    (!h1 h2 t. LAST (h1::h2::t) = LAST (h2::t))
+Proof
+   SRW_TAC [] [LAST_DEF]
+QED
 
 val TAKE_compute = Q.prove(
    ‘(!l. TAKE 0 l = []) /\
@@ -5207,53 +5386,60 @@ QED
 
 Definition oHD_def:  oHD l = case l of [] => NONE | h::_ => SOME h
 End
-val oHD_thm = Q.store_thm("oHD_thm[simp]",
-  ‘(oHD [] = NONE) /\ (oHD (h::t) = SOME h)’,
-  rw[oHD_def]);
+Theorem oHD_thm[simp]:
+   (oHD [] = NONE) /\ (oHD (h::t) = SOME h)
+Proof
+  rw[oHD_def]
+QED
 
 Definition oEL_def:
   (oEL n [] = NONE) /\
   (oEL n (x::xs) = if n = 0 then SOME x else oEL (n - 1) xs)
 End
 
-val oEL_THM = Q.store_thm(
-  "oEL_THM",
-  ‘!xs n. oEL n xs = if n < LENGTH xs then SOME (EL n xs) else NONE’,
+Theorem oEL_THM:
+   !xs n. oEL n xs = if n < LENGTH xs then SOME (EL n xs) else NONE
+Proof
   Induct >> fs[oEL_def] >> rw[] >> fs[]
   >- (Q.RENAME_TAC [‘n < SUC (LENGTH xs)’] >> Cases_on ‘n’ >> fs[]) >>
   rw[] >> ASSUME_TAC (numLib.DECIDE “!x. 1 + x = SUC x”) >>
   fs[arithmeticTheory.NOT_ZERO_LT_ZERO] >>
-  METIS_TAC[ONE, arithmeticTheory.LESS_LESS_SUC]);
+  METIS_TAC[ONE, arithmeticTheory.LESS_LESS_SUC]
+QED
 
-val oEL_EQ_EL = Q.store_thm(
-  "oEL_EQ_EL",
-  ‘!xs n y. (oEL n xs = SOME y) <=> n < LENGTH xs /\ (y = EL n xs)’,
-  simp[oEL_THM] >> METIS_TAC[]);
+Theorem oEL_EQ_EL:
+   !xs n y. (oEL n xs = SOME y) <=> n < LENGTH xs /\ (y = EL n xs)
+Proof
+  simp[oEL_THM] >> METIS_TAC[]
+QED
 
-val oEL_DROP = Q.store_thm(
-  "oEL_DROP",
-  ‘oEL n (DROP m xs) = oEL (m + n) xs’,
+Theorem oEL_DROP:
+   oEL n (DROP m xs) = oEL (m + n) xs
+Proof
   MAP_EVERY Q.ID_SPEC_TAC [‘n’, ‘m’, ‘xs’] >> Induct_on ‘xs’ >>
   simp[DROP_def, oEL_def] >> rw[oEL_def] >> fs[] >>
   Q.RENAME_TAC [‘m - 1 + n’] >>
   ‘m - 1 + n = m + n - 1’ suffices_by simp[] >>
-  Q.UNDISCH_THEN ‘m <> 0’ MP_TAC >> numLib.ARITH_TAC);
+  Q.UNDISCH_THEN ‘m <> 0’ MP_TAC >> numLib.ARITH_TAC
+QED
 
-val oEL_TAKE_E = Q.store_thm(
-  "oEL_TAKE_E",
-  ‘(oEL n (TAKE m xs) = SOME x) ==> (oEL n xs = SOME x)’,
+Theorem oEL_TAKE_E:
+   (oEL n (TAKE m xs) = SOME x) ==> (oEL n xs = SOME x)
+Proof
   MAP_EVERY Q.ID_SPEC_TAC [‘n’, ‘m’, ‘xs’] >> Induct_on ‘xs’ >>
-  simp[TAKE_def, oEL_def] >> rw[oEL_def] >> RES_TAC);
+  simp[TAKE_def, oEL_def] >> rw[oEL_def] >> RES_TAC
+QED
 
-val oEL_LUPDATE = Q.store_thm(
-  "oEL_LUPDATE",
-  ‘!xs i n x. oEL n (LUPDATE x i xs) =
+Theorem oEL_LUPDATE:
+   !xs i n x. oEL n (LUPDATE x i xs) =
                if i <> n then oEL n xs else
-               if i < LENGTH xs then SOME x else NONE’,
+               if i < LENGTH xs then SOME x else NONE
+Proof
   Induct >> fs[oEL_def,LUPDATE_def] >>
   Cases_on ‘i’ >> rw[oEL_def,LUPDATE_def] >> fs[] >> rw[] >>
   fs[numLib.DECIDE “!x. SUC (x - 1) <> x <=> (x = 0)”,
-     numLib.DECIDE “!x. 1 + x = SUC x”]);
+     numLib.DECIDE “!x. 1 + x = SUC x”]
+QED
 
 (* ----------------------------------------------------------------------
     adjacent : 'a list -> 'a -> 'a -> bool

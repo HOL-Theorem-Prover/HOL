@@ -1744,8 +1744,9 @@ val _ = Parse.hide "the_value";
 val the_value_def = new_definition
   ("the_value_def", ``the_value = (ARB:'a prove_base_assums$itself)``);
 
-val itself_unique = Q.store_thm("itself_unique",
-  `!i. i = the_value`,
+Theorem itself_unique:
+   !i. i = the_value
+Proof
   CHOOSE_TAC itself_tydef
   \\ pop_assum mp_tac
   \\ PURE_REWRITE_TAC[TYPE_DEFINITION]
@@ -1757,7 +1758,8 @@ val itself_unique = Q.store_thm("itself_unique",
   \\ first_assum(qspec_then`rep i`(mp_tac o #2 o EQ_IMP_RULE))
   \\ impl_tac >- (qexists_tac`i` \\ REFL_TAC)
   \\ disch_then(fn th => PURE_REWRITE_TAC[th])
-  \\ first_x_assum MATCH_ACCEPT_TAC);
+  \\ first_x_assum MATCH_ACCEPT_TAC
+QED
 
 val itself_induction = store_thm("itself_induction",
   ``!P. P the_value ==> !i. P i``,

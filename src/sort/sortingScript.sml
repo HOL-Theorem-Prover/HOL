@@ -112,9 +112,9 @@ val FILTER_EQ_CONS_APPEND = Q.prove
 (‘!M N x. FILTER ($= x) M ++ x::N = x::FILTER ($= x) M ++ N’,
  Induct THEN SRW_TAC [][])
 
-val PERM_CONS_EQ_APPEND = Q.store_thm
-("PERM_CONS_EQ_APPEND",
- ‘!L h. PERM (h::t) L = ?M N. (L = M ++ h::N) /\ PERM t (M ++ N)’,
+Theorem PERM_CONS_EQ_APPEND:
+  !L h. PERM (h::t) L = ?M N. (L = M ++ h::N) /\ PERM t (M ++ N)
+Proof
  SRW_TAC [][PERM_DEF, FILTER_APPEND_DISTRIB, EQ_IMP_THM] THENL [
    ‘MEM h L’ by METIS_TAC [NOT_CONS_NIL, MEM_FILTER_EQ] THEN
    ‘?M N. L = M ++ h::N’ by METIS_TAC [MEM_APPEND_SPLIT] THEN
@@ -123,41 +123,47 @@ val PERM_CONS_EQ_APPEND = Q.store_thm
    FIRST_X_ASSUM (Q.SPEC_THEN ‘x’ MP_TAC) THEN
    SRW_TAC [][FILTER_APPEND_DISTRIB, FILTER_EQ_CONS_APPEND],
    SRW_TAC [][FILTER_APPEND_DISTRIB, FILTER_EQ_CONS_APPEND]
- ]);
+ ]
+QED
 
-val PERM_APPEND = Q.store_thm
-("PERM_APPEND",
- ‘!l1 l2. PERM (APPEND l1 l2) (APPEND l2 l1)’,
- Induct THEN SRW_TAC [][PERM_CONS_EQ_APPEND] THEN METIS_TAC [])
+Theorem PERM_APPEND:
+  !l1 l2. PERM (APPEND l1 l2) (APPEND l2 l1)
+Proof
+ Induct THEN SRW_TAC [][PERM_CONS_EQ_APPEND] THEN METIS_TAC []
+QED
 
-val CONS_PERM = Q.store_thm
-("CONS_PERM",
- ‘!x L M N. PERM L (APPEND M N)
+Theorem CONS_PERM:
+  !x L M N. PERM L (APPEND M N)
             ==>
-           PERM (x::L) (APPEND M (x::N))’,
-METIS_TAC [PERM_CONS_EQ_APPEND]);
+           PERM (x::L) (APPEND M (x::N))
+Proof
+METIS_TAC [PERM_CONS_EQ_APPEND]
+QED
 
 
-val APPEND_PERM_SYM = Q.store_thm
-("APPEND_PERM_SYM",
- ‘!A B C. PERM (APPEND A B) C ==> PERM (APPEND B A) C’,
-PROVE_TAC [PERM_TRANS, PERM_APPEND]);
+Theorem APPEND_PERM_SYM:
+  !A B C. PERM (APPEND A B) C ==> PERM (APPEND B A) C
+Proof
+PROVE_TAC [PERM_TRANS, PERM_APPEND]
+QED
 
-val PERM_SPLIT_IF = Q.store_thm
-("PERM_SPLIT_IF",
- ‘!P Q l. EVERY (\x. P x = ~ Q x) l ==>
-   PERM l (APPEND (FILTER P l) (FILTER Q l))’,
+Theorem PERM_SPLIT_IF:
+  !P Q l. EVERY (\x. P x = ~ Q x) l ==>
+   PERM l (APPEND (FILTER P l) (FILTER Q l))
+Proof
  Induct_on ‘l’
  THEN RW_TAC list_ss [FILTER,PERM_REFL]
  THEN RES_TAC
- THEN ASM_SIMP_TAC std_ss [PERM_MONO, CONS_PERM]) ;
+ THEN ASM_SIMP_TAC std_ss [PERM_MONO, CONS_PERM]
+QED
 
-val PERM_SPLIT = Q.store_thm
-("PERM_SPLIT",
- ‘!P l. PERM l (APPEND (FILTER P l) (FILTER ($~ o P) l))’,
+Theorem PERM_SPLIT:
+  !P l. PERM l (APPEND (FILTER P l) (FILTER ($~ o P) l))
+Proof
  REPEAT GEN_TAC
  THEN irule PERM_SPLIT_IF
- THEN SIMP_TAC list_ss []) ;
+ THEN SIMP_TAC list_ss []
+QED
 
 (* ----------------------------------------------------------------------
     Alternative definition of PERM
@@ -354,10 +360,11 @@ val PERM_STRONG_IND = save_thm(
     PERM_IND))
 val _ = IndDefLib.export_rule_induction "PERM_STRONG_IND"
 
-val PERM_LENGTH = Q.store_thm(
-  "PERM_LENGTH",
-  ‘!l1 l2. PERM l1 l2 ==> (LENGTH l1 = LENGTH l2)’,
-  HO_MATCH_MP_TAC PERM_IND THEN SRW_TAC [][]);
+Theorem PERM_LENGTH:
+   !l1 l2. PERM l1 l2 ==> (LENGTH l1 = LENGTH l2)
+Proof
+  HO_MATCH_MP_TAC PERM_IND THEN SRW_TAC [][]
+QED
 
 Theorem PERM_NULL_EQ:
   !l1 l2. PERM l1 l2 ==> NULL l1 = NULL l2
@@ -366,10 +373,11 @@ Proof
   \\ rw[NULL_EQ]
 QED
 
-val PERM_MEM_EQ = Q.store_thm(
-  "PERM_MEM_EQ",
-  ‘!l1 l2. PERM l1 l2 ==> !x. MEM x l1 = MEM x l2’,
-  HO_MATCH_MP_TAC PERM_IND THEN SRW_TAC [][AC DISJ_ASSOC DISJ_COMM]);
+Theorem PERM_MEM_EQ:
+   !l1 l2. PERM l1 l2 ==> !x. MEM x l1 = MEM x l2
+Proof
+  HO_MATCH_MP_TAC PERM_IND THEN SRW_TAC [][AC DISJ_ASSOC DISJ_COMM]
+QED
 
 Theorem PERM_LIST_TO_SET:
   !l1 l2. PERM l1 l2 ==> (set l1 = set l2)
@@ -623,26 +631,28 @@ End
               Theorems about "PART"
  ---------------------------------------------------------------------------*)
 
-val PART_LENGTH = Q.store_thm
-("PART_LENGTH",
- ‘!P L l1 l2 p q.
+Theorem PART_LENGTH:
+  !P L l1 l2 p q.
     ((p,q) = PART P L l1 l2)
-    ==> (LENGTH L + LENGTH l1 + LENGTH l2 = LENGTH p + LENGTH q)’,
+    ==> (LENGTH L + LENGTH l1 + LENGTH l2 = LENGTH p + LENGTH q)
+Proof
 Induct_on ‘L’
   THEN RW_TAC list_ss [PART_DEF]
   THEN RES_THEN MP_TAC
-  THEN RW_TAC list_ss []);
+  THEN RW_TAC list_ss []
+QED
 
 
-val PART_LENGTH_LEM = Q.store_thm
-("PART_LENGTH_LEM",
-‘!P L l1 l2 p q.
+Theorem PART_LENGTH_LEM:
+ !P L l1 l2 p q.
     ((p,q) = PART P L l1 l2)
     ==>  LENGTH p <= LENGTH L + LENGTH l1 + LENGTH l2 /\
-         LENGTH q <= LENGTH L + LENGTH l1 + LENGTH l2’,
+         LENGTH q <= LENGTH L + LENGTH l1 + LENGTH l2
+Proof
 RW_TAC bool_ss []
  THEN IMP_RES_THEN MP_TAC PART_LENGTH
- THEN RW_TAC list_ss []);
+ THEN RW_TAC list_ss []
+QED
 
 
 (*---------------------------------------------------------------------------
@@ -651,13 +661,13 @@ RW_TAC bool_ss []
        subgoals here, so we have to take round-about measures.
  ---------------------------------------------------------------------------*)
 
-val PARTs_HAVE_PROP = Q.store_thm
-("PARTs_HAVE_PROP",
- ‘!P L A B l1 l2.
+Theorem PARTs_HAVE_PROP:
+  !P L A B l1 l2.
    ((A,B) = PART P L l1 l2) /\
    (!x. MEM x l1 ==> P x) /\ (!x. MEM x l2 ==> ~P x)
     ==>
-      (!z. MEM z A ==>  P z) /\ (!z. MEM z B ==> ~P z)’,
+      (!z. MEM z A ==>  P z) /\ (!z. MEM z B ==> ~P z)
+Proof
 Induct_on ‘L’
  THEN REWRITE_TAC [PART_DEF,CLOSED_PAIR_EQ] THENL
  [PROVE_TAC[],
@@ -665,7 +675,8 @@ Induct_on ‘L’
      COND_CASES_TAC THEN STRIP_TAC THEN MATCH_MP_TAC th)
    THENL [MAP_EVERY Q.EXISTS_TAC [‘h::l1’, ‘l2’],
           MAP_EVERY Q.EXISTS_TAC [‘l1’, ‘h::l2’]]
-  THEN RW_TAC list_ss [MEM] THEN RW_TAC bool_ss []]);
+  THEN RW_TAC list_ss [MEM] THEN RW_TAC bool_ss []]
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -690,13 +701,14 @@ Induct_on ‘L’
      vice-versa. The goal has been generalized.
  ---------------------------------------------------------------------------*)
 
-val PART_MEM = Q.store_thm
-("PART_MEM",
- ‘!P L a1 a2 l1 l2.
+Theorem PART_MEM:
+  !P L a1 a2 l1 l2.
      ((a1,a2) = PART P L l1 l2)
        ==>
-      !x. MEM x (L ++ (l1 ++ l2)) = MEM x (a1 ++ a2)’,
-  METIS_TAC [PART_PERM, PERM_MEM_EQ]);
+      !x. MEM x (L ++ (l1 ++ l2)) = MEM x (a1 ++ a2)
+Proof
+  METIS_TAC [PART_PERM, PERM_MEM_EQ]
+QED
 
 (*---------------------------------------------------------------------------
      A packaged version of PART. Most theorems about PARTITION
@@ -727,23 +739,24 @@ End
  *           Properties of QSORT                                            *
  *---------------------------------------------------------------------------*)
 
-val QSORT_MEM = Q.store_thm
-("QSORT_MEM",
- ‘!R L x. MEM x (QSORT R L) = MEM x L’,
+Theorem QSORT_MEM:
+  !R L x. MEM x (QSORT R L) = MEM x L
+Proof
 recInduct QSORT_IND
  THEN RW_TAC bool_ss [QSORT_DEF,PARTITION_DEF]
  THEN RW_TAC list_ss []
  THEN Q.PAT_X_ASSUM ‘_ = _’ (MP_TAC o MATCH_MP PART_MEM o SYM)
- THEN RW_TAC list_ss [] THEN PROVE_TAC []);
+ THEN RW_TAC list_ss [] THEN PROVE_TAC []
+QED
 
 (*---------------------------------------------------------------------------*)
 (* The result list is a permutation of the input list.                       *)
 (*---------------------------------------------------------------------------*)
 
 
-val QSORT_PERM = Q.store_thm
-("QSORT_PERM",
- ‘!R L. PERM L (QSORT R L)’,
+Theorem QSORT_PERM:
+  !R L. PERM L (QSORT R L)
+Proof
  recInduct QSORT_IND
   THEN RW_TAC list_ss [QSORT_DEF,PERM_REFL,PARTITION_DEF]
   THEN REWRITE_TAC [GSYM APPEND_ASSOC, APPEND]
@@ -752,7 +765,8 @@ val QSORT_PERM = Q.store_thm
   THEN Q.EXISTS_TAC ‘l1 ++ l2’
   THEN RW_TAC std_ss [] THENL
   [METIS_TAC [APPEND,APPEND_NIL,PART_PERM],
-   METIS_TAC [PERM_CONG]]);
+   METIS_TAC [PERM_CONG]]
+QED
 
 
 Theorem LENGTH_QSORT[simp]:
@@ -788,10 +802,11 @@ QED
  * Bring everything together.
  *---------------------------------------------------------------------------*)
 
-val QSORT_SORTS = Q.store_thm
-("QSORT_SORTS",
- ‘!R. transitive R /\ total R ==> SORTS QSORT R’,
-  PROVE_TAC [SORTS_DEF, QSORT_PERM, QSORT_SORTED]);
+Theorem QSORT_SORTS:
+  !R. transitive R /\ total R ==> SORTS QSORT R
+Proof
+  PROVE_TAC [SORTS_DEF, QSORT_PERM, QSORT_SORTED]
+QED
 
 
 (*---------------------------------------------------------------------------
@@ -815,9 +830,11 @@ Proof
   PROVE_TAC[PERM_SINGLE_SWAP_DEF]
 QED
 
-val PERM_SINGLE_SWAP_I = Q.store_thm ("PERM_SINGLE_SWAP_I",
-  ‘PERM_SINGLE_SWAP (x1 ++ x2 ++ x3) (x1 ++ x3 ++ x2)’,
-  PROVE_TAC [PERM_SINGLE_SWAP_DEF]) ;
+Theorem PERM_SINGLE_SWAP_I:
+   PERM_SINGLE_SWAP (x1 ++ x2 ++ x3) (x1 ++ x3 ++ x2)
+Proof
+  PROVE_TAC [PERM_SINGLE_SWAP_DEF]
+QED
 
 val PERM_SINGLE_SWAP_APPEND = save_thm ("PERM_SINGLE_SWAP_APPEND",
   REWRITE_RULE [APPEND] (Q.INST [‘x1’ |-> ‘NIL’] PERM_SINGLE_SWAP_I)) ;
@@ -828,11 +845,13 @@ val PERM_SINGLE_SWAP_REFL = save_thm ("PERM_SINGLE_SWAP_REFL",
 
 val [_, TC_TRANS] = CONJUNCTS (SPEC_ALL TC_RULES) ;
 
-val PERM_SINGLE_SWAP_CONS = Q.store_thm ("PERM_SINGLE_SWAP_CONS",
-  ‘PERM_SINGLE_SWAP M N ==> PERM_SINGLE_SWAP (x :: M) (x :: N)’,
+Theorem PERM_SINGLE_SWAP_CONS:
+   PERM_SINGLE_SWAP M N ==> PERM_SINGLE_SWAP (x :: M) (x :: N)
+Proof
   SIMP_TAC list_ss [PERM_SINGLE_SWAP_DEF] >> REPEAT STRIP_TAC >>
     Q.EXISTS_TAC ‘x :: x1’ >> Q.EXISTS_TAC ‘x2’ >> Q.EXISTS_TAC ‘x3’ >>
-    ASM_SIMP_TAC list_ss [] ) ;
+    ASM_SIMP_TAC list_ss []
+QED
 
 Theorem PERM_SINGLE_SWAP_TC_CONS:
   !M N. TC PERM_SINGLE_SWAP M N ==> TC PERM_SINGLE_SWAP (x :: M) (x :: N)
@@ -866,11 +885,13 @@ val TC_PSS_is_PERM =
   REWRITE_RULE [MATCH_MP transitive_TC_identity PERM_transitive]
   (MATCH_MP TC_MONOTONE PSS_is_PERM) ;
 
-val PERM_TC = Q.store_thm ("PERM_TC",
-  ‘PERM = TC PERM_SINGLE_SWAP’,
+Theorem PERM_TC:
+   PERM = TC PERM_SINGLE_SWAP
+Proof
   SIMP_TAC std_ss [FUN_EQ_THM] >> REPEAT STRIP_TAC >> EQ_TAC
   THENL [ MATCH_ACCEPT_TAC PERM_is_TC_PSS,
-    MATCH_ACCEPT_TAC TC_PSS_is_PERM ]) ;
+    MATCH_ACCEPT_TAC TC_PSS_is_PERM ]
+QED
 
 Theorem PERM_RTC:
      PERM = RTC PERM_SINGLE_SWAP
@@ -1008,11 +1029,12 @@ Proof
    PROVE_TAC[]
 QED
 
-val PERM_SUM = Q.store_thm(
-"PERM_SUM",
-‘!l1 l2. PERM l1 l2 ==> (SUM l1 = SUM l2)’,
+Theorem PERM_SUM:
+ !l1 l2. PERM l1 l2 ==> (SUM l1 = SUM l2)
+Proof
 HO_MATCH_MP_TAC PERM_IND THEN
-SRW_TAC [][] THEN DECIDE_TAC);
+SRW_TAC [][] THEN DECIDE_TAC
+QED
 
 Theorem PERM_FILTER:
  !P l1 l2. PERM l1 l2 ==> (PERM (FILTER P l1) (FILTER P l2))
@@ -1023,10 +1045,11 @@ Proof
    PROVE_TAC []
 QED
 
-val PERM_REVERSE = Q.store_thm(
-  "PERM_REVERSE",
-  ‘PERM ls (REVERSE ls)’,
-  SIMP_TAC list_ss [PERM_alt, FILTER_REVERSE]) ;
+Theorem PERM_REVERSE:
+   PERM ls (REVERSE ls)
+Proof
+  SIMP_TAC list_ss [PERM_alt, FILTER_REVERSE]
+QED
 
 Theorem PERM_REVERSE_EQ:
    (PERM (REVERSE l1) l2 = PERM l1 l2) /\
@@ -1120,9 +1143,10 @@ Proof
 QED
 
 
-val SORTED_PERM_EQ = Q.store_thm ("SORTED_PERM_EQ",
-  ‘!R. transitive R /\ antisymmetric R ==>
-    !l1 l2. SORTED R l1 /\ SORTED R l2 /\ PERM l1 l2 ==> (l1 = l2)’,
+Theorem SORTED_PERM_EQ:
+   !R. transitive R /\ antisymmetric R ==>
+    !l1 l2. SORTED R l1 /\ SORTED R l2 /\ PERM l1 l2 ==> (l1 = l2)
+Proof
   GEN_TAC >> STRIP_TAC >>
     Induct THEN1 SIMP_TAC list_ss [PERM_NIL] >>
     REPEAT STRIP_TAC >>
@@ -1135,7 +1159,8 @@ val SORTED_PERM_EQ = Q.store_thm ("SORTED_PERM_EQ",
       FULL_SIMP_TAC list_ss [relationTheory.antisymmetric_def],
     FIRST_X_ASSUM MATCH_MP_TAC >>
       BasicProvers.VAR_EQ_TAC >> IMP_RES_TAC SORTED_TL >>
-      FULL_SIMP_TAC list_ss [PERM_CONS_IFF] ]) ;
+      FULL_SIMP_TAC list_ss [PERM_CONS_IFF] ]
+QED
 
 Theorem QSORT_eq_if_PERM:
  !R. total R /\ transitive R /\ antisymmetric R ==>
@@ -1158,13 +1183,15 @@ Proof
   Induct_on ‘ls’ >> csimp[SORTED_EQ] >> rw[SORTED_EQ] >> fs[MEM_FILTER]
 QED
 
-val ALL_DISTINCT_SORTED_WEAKEN = Q.store_thm("ALL_DISTINCT_SORTED_WEAKEN",
-  ‘!R R' ls. (!x y. MEM x ls /\ MEM y ls /\ x <> y ==> (R x y <=> R' x y)) /\
-        ALL_DISTINCT ls /\ SORTED R ls ==> SORTED R' ls’,
+Theorem ALL_DISTINCT_SORTED_WEAKEN:
+   !R R' ls. (!x y. MEM x ls /\ MEM y ls /\ x <> y ==> (R x y <=> R' x y)) /\
+        ALL_DISTINCT ls /\ SORTED R ls ==> SORTED R' ls
+Proof
   gen_tac \\ ho_match_mp_tac SORTED_IND \\ rw[]
   \\ pop_assum mp_tac
   \\ simp_tac(srw_ss())[SORTED_DEF]
-  \\ metis_tac[]);
+  \\ metis_tac[]
+QED
 
 (*Perm theorems for the simplication*)
 

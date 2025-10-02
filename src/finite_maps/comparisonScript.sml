@@ -25,16 +25,18 @@ good_cmp cmp <=>
   (!x y z. cmp x y = Less /\ cmp y z = Less ==> cmp x z = Less)
 End
 
-val good_cmp_thm = Q.store_thm ("good_cmp_thm",
-`!cmp.
+Theorem good_cmp_thm:
+ !cmp.
   good_cmp cmp <=>
   (!x. cmp x x = Equal) /\
   (!x y z.
     (cmp x y = Greater <=> cmp y x = Less) /\
     (cmp x y = Less /\ cmp y z = Equal ==> cmp x z = Less) /\
-    (cmp x y = Less /\ cmp y z = Less ==> cmp x z = Less))`,
+    (cmp x y = Less /\ cmp y z = Less ==> cmp x z = Less))
+Proof
  rw [good_cmp_def] >>
- metis_tac [comparison_distinct, comparison_nchotomy]);
+ metis_tac [comparison_distinct, comparison_nchotomy]
+QED
 
 val cmp_thms = save_thm ("cmp_thms", LIST_CONJ [comparison_distinct, comparison_case_def, comparison_nchotomy, good_cmp_def])
 
@@ -137,24 +139,29 @@ val string_cmp_stringto = store_thm("string_cmp_stringto",
 
 (* cmps are good *)
 
-val option_cmp_good = Q.store_thm ("option_cmp_good",
-`!cmp. good_cmp cmp ==> good_cmp (option_cmp cmp)`,
+Theorem option_cmp_good:
+ !cmp. good_cmp cmp ==> good_cmp (option_cmp cmp)
+Proof
  rw [good_cmp_def] >>
  Cases_on `x` >>
  TRY (Cases_on `y`) >>
  TRY (Cases_on `z`) >>
- metis_tac [option_cmp_def, comparison_distinct]);
+ metis_tac [option_cmp_def, comparison_distinct]
+QED
 
-val option_cmp2_good = Q.store_thm ("option_cmp2_good",
-`!cmp. good_cmp cmp ==> good_cmp (option_cmp2 cmp)`,
+Theorem option_cmp2_good:
+ !cmp. good_cmp cmp ==> good_cmp (option_cmp2 cmp)
+Proof
  rw [good_cmp_def] >>
  Cases_on `x` >>
  TRY (Cases_on `y`) >>
  TRY (Cases_on `z`) >>
- metis_tac [option_cmp2_def, comparison_distinct]);
+ metis_tac [option_cmp2_def, comparison_distinct]
+QED
 
-val list_cmp_good = Q.store_thm ("list_cmp_good",
-`!cmp. good_cmp cmp ==> good_cmp (list_cmp cmp)`,
+Theorem list_cmp_good:
+ !cmp. good_cmp cmp ==> good_cmp (list_cmp cmp)
+Proof
  simp [good_cmp_def] >>
  rpt gen_tac >>
  strip_tac >>
@@ -165,10 +172,12 @@ val list_cmp_good = Q.store_thm ("list_cmp_good",
  REWRITE_TAC [list_cmp_def] >>
  rpt strip_tac >>
  every_case_tac >>
- metis_tac [list_cmp_def, comparison_distinct, comparison_case_def, comparison_nchotomy]);
+ metis_tac [list_cmp_def, comparison_distinct, comparison_case_def, comparison_nchotomy]
+QED
 
-val pair_cmp_good = Q.store_thm ("pair_cmp_good",
-`!cmp1 cmp2. good_cmp cmp1 /\ good_cmp cmp2 ==> good_cmp (pair_cmp cmp1 cmp2)`,
+Theorem pair_cmp_good:
+ !cmp1 cmp2. good_cmp cmp1 /\ good_cmp cmp2 ==> good_cmp (pair_cmp cmp1 cmp2)
+Proof
  simp [good_cmp_def] >>
  rpt gen_tac >>
  strip_tac >>
@@ -179,10 +188,12 @@ val pair_cmp_good = Q.store_thm ("pair_cmp_good",
  REWRITE_TAC [pair_cmp_def] >>
  rpt strip_tac >>
  every_case_tac >>
- metis_tac [pair_cmp_def, comparison_distinct, comparison_case_def, comparison_nchotomy]);
+ metis_tac [pair_cmp_def, comparison_distinct, comparison_case_def, comparison_nchotomy]
+QED
 
-val bool_cmp_good = Q.store_thm ("bool_cmp_good[simp]",
-`good_cmp bool_cmp`,
+Theorem bool_cmp_good[simp]:
+ good_cmp bool_cmp
+Proof
  simp [good_cmp_def] >>
  rpt conj_tac >>
  TRY (Cases_on `x`) >>
@@ -190,10 +201,12 @@ val bool_cmp_good = Q.store_thm ("bool_cmp_good[simp]",
  TRY (Cases_on `z`) >>
  REWRITE_TAC [bool_cmp_def] >>
  every_case_tac >>
- fs []);
+ fs []
+QED
 
-val num_cmp_good = Q.store_thm ("num_cmp_good[simp]",
-`good_cmp num_cmp`,
+Theorem num_cmp_good[simp]:
+ good_cmp num_cmp
+Proof
  simp [good_cmp_def] >>
  rpt conj_tac >>
  TRY (Cases_on `x`) >>
@@ -201,10 +214,12 @@ val num_cmp_good = Q.store_thm ("num_cmp_good[simp]",
  TRY (Cases_on `z`) >>
  REWRITE_TAC [num_cmp_def] >>
  every_case_tac >>
- full_simp_tac (srw_ss()++ARITH_ss) []);
+ full_simp_tac (srw_ss()++ARITH_ss) []
+QED
 
-val char_cmp_good = Q.store_thm ("char_cmp_good[simp]",
-`good_cmp char_cmp`,
+Theorem char_cmp_good[simp]:
+ good_cmp char_cmp
+Proof
  simp [good_cmp_def] >>
  rpt conj_tac >>
  TRY (Cases_on `x`) >>
@@ -212,11 +227,14 @@ val char_cmp_good = Q.store_thm ("char_cmp_good[simp]",
  TRY (Cases_on `z`) >>
  REWRITE_TAC [char_cmp_def, num_cmp_def] >>
  every_case_tac >>
- full_simp_tac (srw_ss()++ARITH_ss) []);
+ full_simp_tac (srw_ss()++ARITH_ss) []
+QED
 
-val string_cmp_good = Q.store_thm ("string_cmp_good[simp]",
-`good_cmp string_cmp`,
- metis_tac [string_cmp_def, char_cmp_good, list_cmp_good]);
+Theorem string_cmp_good[simp]:
+ good_cmp string_cmp
+Proof
+ metis_tac [string_cmp_def, char_cmp_good, list_cmp_good]
+QED
 
 Theorem list_cmp_cong[defncong]:
   !cmp l1 l2 cmp' l1' l2'.
@@ -266,91 +284,113 @@ Theorem pair_cmp_cong[defncong]:
 Proof simp [pair_cmp_def, pairTheory.FORALL_PROD]
 QED
 
-val good_cmp_trans = Q.store_thm ("good_cmp_trans",
-`!cmp. good_cmp cmp ==> transitive (\ (k,v) (k',v'). cmp k k' = Less)`,
+Theorem good_cmp_trans:
+ !cmp. good_cmp cmp ==> transitive (\ (k,v) (k',v'). cmp k k' = Less)
+Proof
  rw [relationTheory.transitive_def] >>
  Cases_on `x` >>
  Cases_on `y` >>
  Cases_on `z` >>
  fs [] >>
- metis_tac [cmp_thms]);
+ metis_tac [cmp_thms]
+QED
 
-val good_cmp_Less_trans = Q.store_thm ("good_cmp_Less_trans",
-`!cmp. good_cmp cmp ==> transitive (\k k'. cmp k k' = Less)`,
+Theorem good_cmp_Less_trans:
+ !cmp. good_cmp cmp ==> transitive (\k k'. cmp k k' = Less)
+Proof
  rw [relationTheory.transitive_def] >>
  fs [] >>
- metis_tac [cmp_thms]);
+ metis_tac [cmp_thms]
+QED
 
-val good_cmp_Less_irrefl_trans = Q.store_thm ("good_cmp_Less_irrefl_trans",
-`!cmp. good_cmp cmp ==> (irreflexive (\k k'. cmp k k' = Less) /\
-    transitive (\k k'. cmp k k' = Less))`,
+Theorem good_cmp_Less_irrefl_trans:
+ !cmp. good_cmp cmp ==> (irreflexive (\k k'. cmp k k' = Less) /\
+    transitive (\k k'. cmp k k' = Less))
+Proof
  simp [good_cmp_Less_trans, relationTheory.irreflexive_def] >>
- simp [cmp_thms]);
+ simp [cmp_thms]
+QED
 
-val bool_cmp_antisym = Q.store_thm ("bool_cmp_antisym[simp]",
-`!x y. bool_cmp x y = Equal <=> x = y`,
+Theorem bool_cmp_antisym[simp]:
+ !x y. bool_cmp x y = Equal <=> x = y
+Proof
  rw [] >>
  Cases_on `x` >>
  Cases_on `y` >>
- rw [bool_cmp_def]);
+ rw [bool_cmp_def]
+QED
 
-val num_cmp_antisym = Q.store_thm ("num_cmp_antisym[simp]",
-`!x y. num_cmp x y = Equal <=> x = y`,
- rw [num_cmp_def]);
+Theorem num_cmp_antisym[simp]:
+ !x y. num_cmp x y = Equal <=> x = y
+Proof
+ rw [num_cmp_def]
+QED
 
-val char_cmp_antisym = Q.store_thm ("char_cmp_antisym[simp]",
-`!x y. char_cmp x y = Equal <=> x = y`,
+Theorem char_cmp_antisym[simp]:
+ !x y. char_cmp x y = Equal <=> x = y
+Proof
  rw [char_cmp_def, num_cmp_antisym] >>
- rw [ORD_11]);
+ rw [ORD_11]
+QED
 
-val list_cmp_antisym = Q.store_thm ("list_cmp_antisym",
-`!cmp x y. (!x y. cmp x y = Equal <=> x = y) ==> (list_cmp cmp x y = Equal <=> x = y)`,
+Theorem list_cmp_antisym:
+ !cmp x y. (!x y. cmp x y = Equal <=> x = y) ==> (list_cmp cmp x y = Equal <=> x = y)
+Proof
  ho_match_mp_tac list_cmp_ind >>
  rw [list_cmp_def] >>
  every_case_tac >>
  rw [] >>
- metis_tac [comparison_distinct]);
+ metis_tac [comparison_distinct]
+QED
 
-val string_cmp_antisym = Q.store_thm ("string_cmp_antisym[simp]",
-`!x y. string_cmp x y = Equal <=> x = y`,
- metis_tac [string_cmp_def, char_cmp_antisym, list_cmp_antisym]);
+Theorem string_cmp_antisym[simp]:
+ !x y. string_cmp x y = Equal <=> x = y
+Proof
+ metis_tac [string_cmp_def, char_cmp_antisym, list_cmp_antisym]
+QED
 
-val pair_cmp_antisym = Q.store_thm ("pair_cmp_antisym",
-`!cmp1 cmp2 x y.
+Theorem pair_cmp_antisym:
+ !cmp1 cmp2 x y.
   (!x y. cmp1 x y = Equal <=> x = y) /\
   (!x y. cmp2 x y = Equal <=> x = y)
   ==>
-  (pair_cmp cmp1 cmp2 x y = Equal <=> x = y)`,
+  (pair_cmp cmp1 cmp2 x y = Equal <=> x = y)
+Proof
  Cases_on `x` >>
  Cases_on `y` >>
  rw [pair_cmp_def] >>
  every_case_tac >>
  rw [] >>
- metis_tac [comparison_distinct]);
+ metis_tac [comparison_distinct]
+QED
 
-val option_cmp_antisym = Q.store_thm ("option_cmp_antisym",
-`!cmp x y.
+Theorem option_cmp_antisym:
+ !cmp x y.
   (!x y. cmp x y = Equal <=> x = y)
   ==>
-  (option_cmp cmp x y = Equal <=> x = y)`,
+  (option_cmp cmp x y = Equal <=> x = y)
+Proof
  Cases_on `x` >>
  Cases_on `y` >>
  rw [option_cmp_def] >>
  every_case_tac >>
  rw [] >>
- metis_tac [comparison_distinct]);
+ metis_tac [comparison_distinct]
+QED
 
-val option_cmp2_antisym = Q.store_thm ("option_cmp2_antisym",
-`!cmp x y.
+Theorem option_cmp2_antisym:
+ !cmp x y.
   (!x y. cmp x y = Equal <=> x = y)
   ==>
-  (option_cmp2 cmp x y = Equal <=> x = y)`,
+  (option_cmp2 cmp x y = Equal <=> x = y)
+Proof
  Cases_on `x` >>
  Cases_on `y` >>
  rw [option_cmp2_def] >>
  every_case_tac >>
  rw [] >>
- metis_tac [comparison_distinct]);
+ metis_tac [comparison_distinct]
+QED
 
 Definition resp_equiv_def:
 resp_equiv cmp f <=> !k1 k2 v. cmp k1 k2 = Equal ==> f k1 v = f k2 v
@@ -364,23 +404,27 @@ Definition equiv_inj_def:
 equiv_inj cmp cmp2 f <=> (!k1 k2. cmp2 (f k1) (f k2) = Equal ==> cmp k1 k2 = Equal)
 End
 
-val antisym_resp_equiv = Q.store_thm ("antisym_resp_equiv",
-`!cmp f.
+Theorem antisym_resp_equiv:
+ !cmp f.
   (!x y. cmp x y = Equal ==> x = y)
   ==>
-  resp_equiv cmp f /\ !cmp2. good_cmp cmp2 ==> resp_equiv2 cmp cmp2 f`,
+  resp_equiv cmp f /\ !cmp2. good_cmp cmp2 ==> resp_equiv2 cmp cmp2 f
+Proof
  rw [resp_equiv_def, resp_equiv2_def] >>
- metis_tac [cmp_thms]);
+ metis_tac [cmp_thms]
+QED
 
-val list_cmp_equal_list_rel = Q.store_thm ("list_cmp_equal_list_rel",
-`!cmp l1 l2.
-  list_cmp cmp l1 l2 = Equal <=> LIST_REL (\x y. cmp x y = Equal) l1 l2`,
+Theorem list_cmp_equal_list_rel:
+ !cmp l1 l2.
+  list_cmp cmp l1 l2 = Equal <=> LIST_REL (\x y. cmp x y = Equal) l1 l2
+Proof
  Induct_on `l1` >>
  rw [] >>
  Cases_on `l2` >>
  fs [list_cmp_def] >>
  every_case_tac >>
- fs []);
+ fs []
+QED
 
 val TO_of_LinearOrder_LLEX = store_thm("TO_of_LinearOrder_LLEX",
   ``!R. irreflexive R ==> (TO_of_LinearOrder (LLEX R) = list_cmp (TO_of_LinearOrder R))``,

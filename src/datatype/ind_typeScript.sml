@@ -333,10 +333,11 @@ val FNIL = new_definition("FNIL", ``FNIL (n:num) = (ARB:'a)``);
 (* Destructor-style FCONS equation                                           *)
 (*---------------------------------------------------------------------------*)
 
-val FCONS_DEST = Q.store_thm
-("FCONS_DEST",
- `FCONS a f n = if n = 0 then a else f (n-1)`,
- BasicProvers.Cases_on `n` THEN ASM_SIMP_TAC numLib.arith_ss [FCONS]);
+Theorem FCONS_DEST:
+  FCONS a f n = if n = 0 then a else f (n-1)
+Proof
+ BasicProvers.Cases_on `n` THEN ASM_SIMP_TAC numLib.arith_ss [FCONS]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Convenient definitions for type isomorphism.                              *)

@@ -80,21 +80,29 @@ val exp_lemma5 =
    METIS_PROVE [LESS_OR_EQ, exp_lemma4]
       ``!e a b. 1n < e ==> a <= b ==> e ** a <= e ** b``;
 
-val LT_EXP_ISO = Q.store_thm("LT_EXP_ISO",
-   `!e a b. 1n < e ==> (a < b <=> e ** a < e ** b)`,
-   PROVE_TAC [NOT_LESS, exp_lemma4, exp_lemma5]);
+Theorem LT_EXP_ISO:
+    !e a b. 1n < e ==> (a < b <=> e ** a < e ** b)
+Proof
+   PROVE_TAC [NOT_LESS, exp_lemma4, exp_lemma5]
+QED
 
-val LE_EXP_ISO = Q.store_thm("LE_EXP_ISO",
-   `!e a b. 1n < e ==> (a <= b <=> e ** a <= e ** b)`,
-   PROVE_TAC [exp_lemma4, exp_lemma5, LESS_OR_EQ, NOT_LESS]);
+Theorem LE_EXP_ISO:
+    !e a b. 1n < e ==> (a <= b <=> e ** a <= e ** b)
+Proof
+   PROVE_TAC [exp_lemma4, exp_lemma5, LESS_OR_EQ, NOT_LESS]
+QED
 
-val EXP_LT_ISO = Q.store_thm("EXP_LT_ISO",
-   `!a b r. 0 < r ==> (a < b <=> a ** r < b ** r)`,
-   PROVE_TAC [NOT_LESS, exp_lemma3, exp_lemma2, LESS_OR_EQ, NOT_LESS]);
+Theorem EXP_LT_ISO:
+    !a b r. 0 < r ==> (a < b <=> a ** r < b ** r)
+Proof
+   PROVE_TAC [NOT_LESS, exp_lemma3, exp_lemma2, LESS_OR_EQ, NOT_LESS]
+QED
 
-val EXP_LE_ISO = Q.store_thm("EXP_LE_ISO",
-   `!a b r. 0 < r ==> (a <= b <=> a ** r <= b ** r)`,
-   PROVE_TAC [NOT_LESS, exp_lemma3, exp_lemma2, LESS_OR_EQ, NOT_LESS]);
+Theorem EXP_LE_ISO:
+    !a b r. 0 < r ==> (a <= b <=> a ** r <= b ** r)
+Proof
+   PROVE_TAC [NOT_LESS, exp_lemma3, exp_lemma2, LESS_OR_EQ, NOT_LESS]
+QED
 
 (* Theorem: 0 < m ==> ((n ** m = n) <=> ((m = 1) \/ (n = 0) \/ (n = 1))) *)
 (* Proof:
@@ -193,8 +201,9 @@ val ONE_LE_EXP = store_thm(
 (* ROOT and LOG                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val ROOT_exists = Q.store_thm("ROOT_exists",
-   `!r n. 0 < r ==> ?rt. rt ** r <= n /\ n < SUC rt ** r`,
+Theorem ROOT_exists:
+    !r n. 0 < r ==> ?rt. rt ** r <= n /\ n < SUC rt ** r
+Proof
    Induct_on `n`
    THEN RW_TAC arith_ss []
    THEN REPEAT STRIP_TAC
@@ -206,13 +215,15 @@ val ROOT_exists = Q.store_thm("ROOT_exists",
    THEN Q.EXISTS_TAC `SUC rt`
    THEN SRW_TAC [][]
    THEN `SUC n = SUC rt ** r` by RW_TAC arith_ss []
-   THEN RW_TAC arith_ss [])
+   THEN RW_TAC arith_ss []
+QED
 
 val ROOT = new_specification("ROOT", ["ROOT"],
    SIMP_RULE (srw_ss()) [SKOLEM_THM, GSYM RIGHT_EXISTS_IMP_THM] ROOT_exists);
 
-val ROOT_UNIQUE = Q.store_thm("ROOT_UNIQUE",
-   `!r n p. (p ** r <= n /\ n < SUC p ** r) ==> (ROOT r n = p)`,
+Theorem ROOT_UNIQUE:
+    !r n p. (p ** r <= n /\ n < SUC p ** r) ==> (ROOT r n = p)
+Proof
    REPEAT STRIP_TAC
    THEN Cases_on `r = 0`
    THEN FULL_SIMP_TAC arith_ss [EXP, DECIDE ``~(r = 0n) <=> 0 < r``]
@@ -220,7 +231,8 @@ val ROOT_UNIQUE = Q.store_thm("ROOT_UNIQUE",
    THEN CCONTR_TAC
    THEN `ROOT r n < p \/ p < ROOT r n` by DECIDE_TAC
    THEN METIS_TAC [DECIDE ``a < b ==> SUC a <= b``, exp_lemma3, LESS_EQ_TRANS,
-                   DECIDE ``a <= b ==> ~(b < a:num)``, ROOT]);
+                   DECIDE ``a <= b ==> ~(b < a:num)``, ROOT]
+QED
 
 Theorem ROOT_EXP :
     !n r. 0 < r ==> ROOT r (n ** r) = n
@@ -261,8 +273,9 @@ val LOG_exists = save_thm( "LOG_exists",
 
 val LOG = new_specification("LOG", ["LOG"], LOG_exists);
 
-val LOG_UNIQUE = Q.store_thm("LOG_UNIQUE",
-   `!a n:num p. (a ** p <= n /\ n < a ** SUC p) ==> (LOG a n = p)`,
+Theorem LOG_UNIQUE:
+    !a n:num p. (a ** p <= n /\ n < a ** SUC p) ==> (LOG a n = p)
+Proof
    REPEAT STRIP_TAC
    THEN Cases_on `~(n = 0)`
    THEN Cases_on `~(a = 0)`
@@ -277,17 +290,21 @@ val LOG_UNIQUE = Q.store_thm("LOG_UNIQUE",
    THEN CCONTR_TAC
    THEN `LOG a n < p \/ p < LOG a n` by DECIDE_TAC
    THEN METIS_TAC [exp_lemma5, DECIDE ``a < b <=> SUC a <= b``, LESS_EQ_TRANS,
-                   NOT_LESS, LOG, EXP]);
+                   NOT_LESS, LOG, EXP]
+QED
 
-val LOG_POW = Q.store_thm("LOG_POW",
-  `!b n. 1n < b ==> (LOG b (b ** n) = n)`,
+Theorem LOG_POW:
+   !b n. 1n < b ==> (LOG b (b ** n) = n)
+Proof
   REPEAT STRIP_TAC
   THEN irule LOG_UNIQUE
-  THEN SRW_TAC [ARITH_ss] [EXP]);
+  THEN SRW_TAC [ARITH_ss] [EXP]
+QED
 
-val LOG_ADD1 = Q.store_thm("LOG_ADD1",
-   `!n a b. 0n < n /\ 1n < a /\ 0 < b ==>
-            (LOG a (a ** SUC n * b) = SUC (LOG a (a ** n * b)))`,
+Theorem LOG_ADD1:
+    !n a b. 0n < n /\ 1n < a /\ 0 < b ==>
+            (LOG a (a ** SUC n * b) = SUC (LOG a (a ** n * b)))
+Proof
    RW_TAC arith_ss []
    THEN MATCH_MP_TAC LOG_UNIQUE
    THEN `~(a = 0) /\ 0 < a /\ ~(b = 0)` by DECIDE_TAC
@@ -295,20 +312,24 @@ val LOG_ADD1 = Q.store_thm("LOG_ADD1",
    THEN ASM_REWRITE_TAC [GSYM MULT_ASSOC, LT_MULT_LCANCEL, LE_MULT_LCANCEL]
    THEN REWRITE_TAC [GSYM EXP]
    THEN MATCH_MP_TAC LOG
-   THEN ASM_SIMP_TAC arith_ss [DECIDE ``0 < x <=> ~(x = 0)``, EXP_EQ_0]);
+   THEN ASM_SIMP_TAC arith_ss [DECIDE ``0 < x <=> ~(x = 0)``, EXP_EQ_0]
+QED
 
 val square = Q.prove(`a:num ** 2 = a * a`, REWRITE_TAC [EXP, EXP_1, TWO]);
 
-val LOG_BASE = Q.store_thm("LOG_BASE",
-   `!a. 1n < a ==> (LOG a a = 1)`,
+Theorem LOG_BASE:
+    !a. 1n < a ==> (LOG a a = 1)
+Proof
    RW_TAC arith_ss []
    THEN MATCH_MP_TAC LOG_UNIQUE
    THEN Induct_on `a`
    THEN RW_TAC arith_ss [LEFT_ADD_DISTRIB, RIGHT_ADD_DISTRIB, EXP_ADD, ADD1,
-                         EXP_1, square]);
+                         EXP_1, square]
+QED
 
-val LOG_EXP = Q.store_thm("LOG_EXP",
-   `!n a b. 1n < a /\ 0 < b ==> (LOG a (a ** n * b) = n + LOG a b)`,
+Theorem LOG_EXP:
+    !n a b. 1n < a /\ 0 < b ==> (LOG a (a ** n * b) = n + LOG a b)
+Proof
    REPEAT STRIP_TAC
    THEN MATCH_MP_TAC LOG_UNIQUE
    THEN RW_TAC arith_ss [EXP, EXP_ADD, EXP_EQ_0]
@@ -316,27 +337,33 @@ val LOG_EXP = Q.store_thm("LOG_EXP",
    THEN Q_TAC SUFF_TAC `a ** n * b < a ** n * (a * a ** LOG a b)`
    THEN1 SIMP_TAC bool_ss [AC MULT_COMM MULT_ASSOC]
    THEN SRW_TAC [ARITH_ss][GSYM NOT_ZERO_LT_ZERO, EXP_EQ_0]
-   THEN METIS_TAC [EXP, LOG]);
+   THEN METIS_TAC [EXP, LOG]
+QED
 
-val LOG_1 = Q.store_thm("LOG_1",
-   `!a. 1n < a ==> (LOG a 1 = 0)`,
+Theorem LOG_1:
+    !a. 1n < a ==> (LOG a 1 = 0)
+Proof
    REPEAT STRIP_TAC
    THEN MATCH_MP_TAC LOG_UNIQUE
    THEN REWRITE_TAC [EXP]
-   THEN DECIDE_TAC);
+   THEN DECIDE_TAC
+QED
 
-val LOG_DIV = Q.store_thm("LOG_DIV",
-   `!a x. 1n < a /\ a <= x ==> (LOG a x = 1 + LOG a (x DIV a))`,
+Theorem LOG_DIV:
+    !a x. 1n < a /\ a <= x ==> (LOG a x = 1 + LOG a (x DIV a))
+Proof
    REPEAT STRIP_TAC
    THEN MATCH_MP_TAC LOG_UNIQUE
    THEN REWRITE_TAC [EXP_ADD, DECIDE ``SUC (1 + a) = 1 + SUC a``, EXP_1]
    THEN RW_TAC bool_ss [GSYM (SPEC ``a:num ** b`` MULT_COMM), GSYM X_LE_DIV,
                         GSYM DIV_LT_X, DECIDE ``1 < a ==> 0n < a``, LOG]
    THEN PROVE_TAC [X_LE_DIV, MULT_CLAUSES, DECIDE ``1 < a ==> 0n < a``,
-                   DECIDE ``1 <= a ==> 0n < a``, LOG]);
+                   DECIDE ``1 <= a ==> 0n < a``, LOG]
+QED
 
-val LOG_ADD = Q.store_thm("LOG_ADD",
-   `!a b c. 1 < a /\ b < a ** c ==> (LOG a (b + a ** c) = c)`,
+Theorem LOG_ADD:
+    !a b c. 1 < a /\ b < a ** c ==> (LOG a (b + a ** c) = c)
+Proof
    REPEAT STRIP_TAC
    THEN MATCH_MP_TAC LOG_UNIQUE
    THEN CONJ_TAC
@@ -347,10 +374,12 @@ val LOG_ADD = Q.store_thm("LOG_ADD",
    THEN CONJ_TAC
    THENL [REWRITE_TAC [TIMES2, LT_ADD_RCANCEL],
           REWRITE_TAC [LE_MULT_RCANCEL]]
-   THEN DECIDE_TAC);
+   THEN DECIDE_TAC
+QED
 
-val LOG_LE_MONO = Q.store_thm("LOG_LE_MONO",
-   `!a x y. 1 < a /\ 0 < x ==> x <= y ==> LOG a x <= LOG a y`,
+Theorem LOG_LE_MONO:
+    !a x y. 1 < a /\ 0 < x ==> x <= y ==> LOG a x <= LOG a y
+Proof
    REPEAT STRIP_TAC
    THEN REWRITE_TAC
           [UNDISCH (SPECL [``a:num``,``LOG a x``,``SUC (LOG a y)``] LT_EXP_ISO),
@@ -359,12 +388,15 @@ val LOG_LE_MONO = Q.store_thm("LOG_LE_MONO",
           (DECIDE ``!a b c d. a <= b /\ b <= c /\ c < d ==> a < d:num``)
    THEN Q.EXISTS_TAC `x`
    THEN Q.EXISTS_TAC `y`
-   THEN METIS_TAC [LOG, LESS_TRANS, LESS_OR_EQ]);
+   THEN METIS_TAC [LOG, LESS_TRANS, LESS_OR_EQ]
+QED
 
-val LOG_RWT = Q.store_thm("LOG_RWT",
-   `!m n. 1 < m /\ 0 < n ==>
-          (LOG m n = if n < m then 0 else SUC (LOG m (n DIV m)))`,
-   SRW_TAC [ARITH_ss] [LOG_DIV, ADD1, LOG_UNIQUE, EXP]);
+Theorem LOG_RWT:
+    !m n. 1 < m /\ 0 < n ==>
+          (LOG m n = if n < m then 0 else SUC (LOG m (n DIV m)))
+Proof
+   SRW_TAC [ARITH_ss] [LOG_DIV, ADD1, LOG_UNIQUE, EXP]
+QED
 
 val LOG_EQ_0 = store_thm("LOG_EQ_0",
   ``!a b. 1 < a /\ 0 < b ==> ((LOG a b = 0) <=> b < a)``,
@@ -505,8 +537,9 @@ val square_add_lemma = Q.prove(
    THEN RW_TAC arith_ss [EXP]
    THEN METIS_TAC [MULT_COMM, MULT_ASSOC]);
 
-val ROOT_DIV = Q.store_thm("ROOT_DIV",
-   `!r x y. 0 < r /\ 0 < y ==> (ROOT r x DIV y = ROOT r (x DIV (y ** r)))`,
+Theorem ROOT_DIV:
+    !r x y. 0 < r /\ 0 < y ==> (ROOT r x DIV y = ROOT r (x DIV (y ** r)))
+Proof
    REPEAT STRIP_TAC
    THEN MATCH_MP_TAC (GSYM ROOT_UNIQUE)
    THEN `0 < y ** r`
@@ -529,10 +562,12 @@ val ROOT_DIV = Q.store_thm("ROOT_DIV",
       THEN GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) bool_rewrites
               [SPEC ``ROOT r x`` (UNDISCH (SPEC ``y:num`` DIVISION))]
       THEN REWRITE_TAC [GSYM ADD_ASSOC, LE_ADD_LCANCEL]
-      THEN METIS_TAC [DECIDE ``a < b ==> a + 1n <= b``, DIVISION]])
+      THEN METIS_TAC [DECIDE ``a < b ==> a + 1n <= b``, DIVISION]]
+QED
 
-val ROOT_LE_MONO = Q.store_thm("ROOT_LE_MONO",
-   `!r x y. 0 < r ==> x <= y ==> ROOT r x <= ROOT r y`,
+Theorem ROOT_LE_MONO:
+    !r x y. 0 < r ==> x <= y ==> ROOT r x <= ROOT r y
+Proof
    REPEAT STRIP_TAC
    THEN REWRITE_TAC [DECIDE ``a <= b <=> a < SUC b``]
    THEN ONCE_REWRITE_TAC [UNDISCH (SPEC_ALL EXP_LT_ISO)]
@@ -540,16 +575,20 @@ val ROOT_LE_MONO = Q.store_thm("ROOT_LE_MONO",
           (DECIDE ``!a b c d. a <= b /\ b <= c /\ c < d ==> a < d:num``)
    THEN Q.EXISTS_TAC `x`
    THEN Q.EXISTS_TAC `y`
-   THEN RW_TAC bool_ss [ROOT]);
+   THEN RW_TAC bool_ss [ROOT]
+QED
 
-val EXP_MUL = Q.store_thm("EXP_MUL",
-   `!a b c. (a ** b) ** c = a ** (b * c)`,
+Theorem EXP_MUL:
+    !a b c. (a ** b) ** c = a ** (b * c)
+Proof
    Induct_on `c`
    THEN REWRITE_TAC [MULT_CLAUSES, EXP_ADD, ADD1, LEFT_ADD_DISTRIB, EXP, EXP_1]
-   THEN PROVE_TAC []);
+   THEN PROVE_TAC []
+QED
 
-val LOG_ROOT = Q.store_thm("LOG_ROOT",
-   `!a x r. 1 < a /\ 0 < x /\ 0 < r ==> (LOG a (ROOT r x) = (LOG a x) DIV r)`,
+Theorem LOG_ROOT:
+    !a x r. 1 < a /\ 0 < x /\ 0 < r ==> (LOG a (ROOT r x) = (LOG a x) DIV r)
+Proof
    REPEAT STRIP_TAC
    THEN MATCH_MP_TAC LOG_UNIQUE
    THEN CONJ_TAC
@@ -573,7 +612,8 @@ val LOG_ROOT = Q.store_thm("LOG_ROOT",
       THEN GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) bool_rewrites
               [SPEC ``LOG a x`` (UNDISCH (SPEC ``r:num`` DIVISION))]
       THEN REWRITE_TAC [LT_ADD_LCANCEL, DECIDE ``a + 1 <= b <=> a < b:num``]]
-   THEN METIS_TAC [DIVISION, DECIDE ``(a = b + c) ==> (b <= a:num)``]);
+   THEN METIS_TAC [DIVISION, DECIDE ``(a = b + c) ==> (b <= a:num)``]
+QED
 
 val zero_lt_twoexp = Q.prove(
    `!n. 0 < 2 ** n`,
@@ -582,8 +622,9 @@ val zero_lt_twoexp = Q.prove(
    THEN TRY (MATCH_MP_TAC LESS_MULT2)
    THEN DECIDE_TAC);
 
-val LOG_MOD = Q.store_thm("LOG_MOD",
-   `!n. 0 < n ==> (n = 2 ** LOG 2 n + n MOD 2 ** LOG 2 n)`,
+Theorem LOG_MOD:
+    !n. 0 < n ==> (n = 2 ** LOG 2 n + n MOD 2 ** LOG 2 n)
+Proof
   REPEAT STRIP_TAC
   THEN Cases_on `?b c. (n = b + 2 ** c) /\ b < 2 ** c`
   THEN RW_TAC bool_ss []
@@ -611,7 +652,8 @@ val LOG_MOD = Q.store_thm("LOG_MOD",
         THEN ASM_REWRITE_TAC [DECIDE ``SUC (a + b) = SUC a + b``]]]
   THEN Q.EXISTS_TAC `0`
   THEN Q.EXISTS_TAC `SUC c`
-  THEN RW_TAC arith_ss [EXP]);
+  THEN RW_TAC arith_ss [EXP]
+QED
 
 local
 val numtac = REWRITE_TAC[NUMERAL_DEF, BIT1, BIT2, ALT_ZERO, ADD_CLAUSES,
@@ -631,12 +673,13 @@ end (* local *)
 
 val lem = prove(``0 < r ==> (0 ** r = 0)``, RW_TAC arith_ss [EXP_EQ_0])
 
-val ROOT_COMPUTE = Q.store_thm("ROOT_COMPUTE",
-   `!r n.
+Theorem ROOT_COMPUTE:
+    !r n.
        0 < r ==>
        (ROOT r 0 = 0) /\
        (ROOT r n = let x = 2 * ROOT r (n DIV 2 ** r) in
-                      if n < SUC x ** r then x else SUC x)`,
+                      if n < SUC x ** r then x else SUC x)
+Proof
    RW_TAC (arith_ss ++ boolSimps.LET_ss) []
    THEN MATCH_MP_TAC ROOT_UNIQUE
    THEN CONJ_TAC
@@ -651,7 +694,8 @@ val ROOT_COMPUTE = Q.store_thm("ROOT_COMPUTE",
    THEN METIS_TAC
            [DIVISION, MULT_COMM, DECIDE ``0 < 2n``,
             DECIDE ``(a = b + c) ==> b <= a:num``, ADD1, LE_ADD_LCANCEL,
-            DECIDE ``a <= 1 <=> a < 2n``]);
+            DECIDE ``a <= 1 <=> a < 2n``]
+QED
 
 (* For evaluation of ROOT r n in HOL4 interactive session. *)
 Theorem ROOT_EVAL[compute]:

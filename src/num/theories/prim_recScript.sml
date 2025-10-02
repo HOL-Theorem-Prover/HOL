@@ -602,17 +602,18 @@ val WELLFOUNDED_IMP_WF = Q.prove(
               boolTheory.SELECT_AX)));
 
 
-val WF_IFF_WELLFOUNDED = Q.store_thm("WF_IFF_WELLFOUNDED",
-`!R. WF R = wellfounded R`,
+Theorem WF_IFF_WELLFOUNDED:
+ !R. WF R = wellfounded R
+Proof
 GEN_TAC THEN EQ_TAC THEN STRIP_TAC
   THENL [IMP_RES_TAC WF_IMP_WELLFOUNDED,
-         IMP_RES_TAC WELLFOUNDED_IMP_WF]);
+         IMP_RES_TAC WELLFOUNDED_IMP_WF]
+QED
 
 
-val WF_PRED =
-Q.store_thm
-("WF_PRED",
-  `WF \x y. y = SUC x`,
+Theorem WF_PRED:
+   WF \x y. y = SUC x
+Proof
  REWRITE_TAC[relationTheory.WF_DEF] THEN BETA_TAC THEN GEN_TAC
   THEN CONV_TAC CONTRAPOS_CONV
   THEN Ho_Rewrite.REWRITE_TAC
@@ -622,7 +623,8 @@ Q.store_thm
   THEN INDUCT_TAC THEN CCONTR_TAC THEN RULE_ASSUM_TAC (REWRITE_RULE[])
   THEN RES_TAC THEN RULE_ASSUM_TAC(REWRITE_RULE[INV_SUC_EQ, GSYM NOT_SUC])
   THENL (map FIRST_ASSUM [ACCEPT_TAC, MATCH_MP_TAC])
-  THEN FILTER_ASM_REWRITE_TAC is_eq [] THEN ASM_REWRITE_TAC[]);
+  THEN FILTER_ASM_REWRITE_TAC is_eq [] THEN ASM_REWRITE_TAC[]
+QED
 
 
 (*----------------------------------------------------------------------------
@@ -630,8 +632,10 @@ Q.store_thm
  * closure of predecessor.
  *---------------------------------------------------------------------------*)
 
-val WF_LESS = Q.store_thm("WF_LESS", `WF $<`,
-  REWRITE_TAC[LESS_ALT, relationTheory.WF_TC_EQN, WF_PRED]) ;
+Theorem WF_LESS:  WF $<
+Proof
+  REWRITE_TAC[LESS_ALT, relationTheory.WF_TC_EQN, WF_PRED]
+QED
 
 val _ = BasicProvers.export_rewrites ["WF_LESS"]
 
@@ -644,11 +648,12 @@ val _ = BasicProvers.export_rewrites ["WF_LESS"]
 val measure_def = Q.new_definition ("measure_def", `measure = inv_image $<`);
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="measure"},name=(["Relation"],"measure")}
 
-val WF_measure =
-Q.store_thm("WF_measure", `!m. WF (measure m)`,
+Theorem WF_measure:  !m. WF (measure m)
+Proof
 REWRITE_TAC[measure_def]
  THEN MATCH_MP_TAC relationTheory.WF_inv_image
- THEN ACCEPT_TAC WF_LESS);
+ THEN ACCEPT_TAC WF_LESS
+QED
 val _ = BasicProvers.export_rewrites ["WF_measure"]
 
 Theorem measure_thm[simp]:

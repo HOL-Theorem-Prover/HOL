@@ -2486,12 +2486,14 @@ Proof
    \\ rw [float_to_real_def, sign_not_zero, div_twopow]
 QED
 
-val diff_float_ULP = Q.store_thm("diff_float_ULP",
-   `!x: ('t, 'w) float y: ('t, 'w) float.
+Theorem diff_float_ULP:
+    !x: ('t, 'w) float y: ('t, 'w) float.
        float_to_real x <> float_to_real y /\ ~exponent_boundary y x ==>
-       ULP (x.Exponent, (:'t)) <= abs (float_to_real x - float_to_real y)`,
+       ULP (x.Exponent, (:'t)) <= abs (float_to_real x - float_to_real y)
+Proof
    rw [float_to_real_eq, float_component_equality]
-   \\ metis_tac [diff_sign_ULP, diff_exponent_ULP, diff_significand_ULP])
+   \\ metis_tac [diff_sign_ULP, diff_exponent_ULP, diff_significand_ULP]
+QED
 
 (* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  *)
 
@@ -2717,35 +2719,37 @@ Theorem diff_lt_ulp_eq0:
 Proof tac
 QED
 
-val diff_lt_ulp_even = Q.store_thm("diff_lt_ulp_even",
-   `!a: ('t, 'w) float b: ('t, 'w) float x.
+Theorem diff_lt_ulp_even:
+    !a: ('t, 'w) float b: ('t, 'w) float x.
        ~exponent_boundary b a /\
        2 * abs (float_to_real a - x) < ULP (a.Exponent, (:'t)) /\
        2 * abs (float_to_real b - x) < ULP (a.Exponent, (:'t)) /\
        ~float_is_zero a ==>
-       (b = a)`,
+       (b = a)
+Proof
    REPEAT strip_tac
    \\ spose_not_then assume_tac
    \\ `float_to_real a <> float_to_real b`
    by metis_tac [float_to_real_eq]
    \\ imp_res_tac diff_float_ULP
    \\ rlfs []
-   )
+QED
 
-val diff_lt_ulp_even4 = Q.store_thm("diff_lt_ulp_even4",
-   `!a: ('t, 'w) float b: ('t, 'w) float x.
+Theorem diff_lt_ulp_even4:
+    !a: ('t, 'w) float b: ('t, 'w) float x.
        ~exponent_boundary b a /\
        4 * abs (float_to_real a - x) <= ULP (a.Exponent, (:'t)) /\
        4 * abs (float_to_real b - x) <= ULP (a.Exponent, (:'t)) /\
        ~float_is_zero a ==>
-       (b = a)`,
+       (b = a)
+Proof
    REPEAT strip_tac
    \\ spose_not_then assume_tac
    \\ `float_to_real a <> float_to_real b`
    by metis_tac [float_to_real_eq]
    \\ imp_res_tac diff_float_ULP
    \\ rlfs []
-   )
+QED
 
 (*
 val diff_lt_ulp_eq_pos = Q.store_thm("diff_lt_ulp_eq_pos",
@@ -2818,12 +2822,13 @@ val abs_limits2 =
    Rounding to regular value
    ------------------------------------------------------------------------ *)
 
-val round_roundTowardZero = Q.store_thm("round_roundTowardZero",
-   `!y: ('t, 'w) float x r.
+Theorem round_roundTowardZero:
+    !y: ('t, 'w) float x r.
       (float_value y = Float r) /\
       abs (r - x) < ULP (y.Exponent, (:'t)) /\ abs r <= abs x /\
       ulp (:'t # 'w) <= abs x /\ abs x <= largest (:'t # 'w) ==>
-      (round roundTowardZero x = y)`,
+      (round roundTowardZero x = y)
+Proof
    lrw [round_def, closest_def, is_closest_def, closest_such_def]
    >- imp_res_tac abs_limits
    >- imp_res_tac abs_limits
@@ -2887,7 +2892,8 @@ val round_roundTowardZero = Q.store_thm("round_roundTowardZero",
       \\ match_mp_tac diff_lt_ulp_eq0
       \\ qexists_tac `x`
       \\ rsimp []
-   ])
+   ]
+QED
 
 (*
 val ULP01 = Q.store_thm("ULP01",
@@ -2935,15 +2941,16 @@ val tac =
    \\ rlfs []
    \\ rfs []
 
-val round_roundTiesToEven = Q.store_thm("round_roundTiesToEven",
-   `!y: ('t, 'w) float x r.
+Theorem round_roundTiesToEven:
+    !y: ('t, 'w) float x r.
       (float_value y = Float r) /\
       ((y.Significand = 0w) /\ y.Exponent <> 1w ==> abs r <= abs x) /\
       2 * abs (r - x) <= ULP (y.Exponent, (:'t)) /\
       ((2 * abs (r - x) = ULP (y.Exponent, (:'t))) ==>
        ~word_lsb (y.Significand)) /\
       ulp (:'t # 'w) < 2 * abs x /\ abs x < threshold (:'t # 'w) ==>
-      (round roundTiesToEven x = y)`,
+      (round roundTiesToEven x = y)
+Proof
    lrw [round_def, closest_def, is_closest_def, closest_such_def,
         SPECIFICATION]
    >- imp_res_tac abs_limits2
@@ -3063,7 +3070,8 @@ val round_roundTiesToEven = Q.store_thm("round_roundTiesToEven",
       by simp [word_lsb_plus_1, SIMP_RULE (srw_ss()) [] word_lsb_minus_1]
       \\ fs []
       \\ tac
-   ])
+   ]
+QED
 
 val not_one_lem = wordsLib.WORD_DECIDE ``(x:'a word) <> 1w ==> w2n x <> 1``
 val pow_add1 = REWRITE_RULE [arithmeticTheory.ADD1] pow
@@ -3075,13 +3083,14 @@ val exponent_boundary_ULPs = Q.prove(
    \\ fs [not_one_lem]
    )
 
-val round_roundTiesToEven0 = Q.store_thm("round_roundTiesToEven0",
-   `!y: ('t, 'w) float x r.
+Theorem round_roundTiesToEven0:
+    !y: ('t, 'w) float x r.
       (float_value y = Float r) /\
       ((y.Significand = 0w) /\ y.Exponent <> 1w /\ ~(abs r <= abs x)) /\
       4 * abs (r - x) <= ULP (y.Exponent, (:'t)) /\
       ulp (:'t # 'w) < 2 * abs x /\ abs x < threshold (:'t # 'w) ==>
-      (round roundTiesToEven x = y)`,
+      (round roundTiesToEven x = y)
+Proof
    lrw [round_def, closest_def, is_closest_def, closest_such_def,
         SPECIFICATION]
    >- imp_res_tac abs_limits2
@@ -3142,7 +3151,8 @@ val round_roundTiesToEven0 = Q.store_thm("round_roundTiesToEven0",
       \\ `~word_lsb y.Significand ==> ~word_lsb x'.Significand`
       by metis_tac []
       \\ rfs [exponent_boundary_def]
-   ])
+   ]
+QED
 
 (*
 
@@ -3234,10 +3244,11 @@ val float_round_roundTowardNegative = Q.store_thm(
    Rounding to +/- 0
    ------------------------------------------------------------------------ *)
 
-val round_roundTowardZero_is_zero = Q.store_thm("round_roundTowardZero_is_zero",
-   `!x. abs x < ulp (:'t # 'w) ==>
+Theorem round_roundTowardZero_is_zero:
+    !x. abs x < ulp (:'t # 'w) ==>
         (round roundTowardZero x = float_plus_zero (:'t # 'w)) \/
-        (round roundTowardZero x = float_minus_zero (:'t # 'w))`,
+        (round roundTowardZero x = float_minus_zero (:'t # 'w))
+Proof
    REPEAT strip_tac
    \\ qabbrev_tac `r: ('t, 'w) float = round roundTowardZero x`
    \\ pop_assum (mp_tac o SYM o REWRITE_RULE [markerTheory.Abbrev_def])
@@ -3262,7 +3273,8 @@ val round_roundTowardZero_is_zero = Q.store_thm("round_roundTowardZero_is_zero",
               float_component_equality]
       \\ wordsLib.Cases_on_word_value `c`
       \\ simp []
-   ])
+   ]
+QED
 
 Theorem is_closest_finite_AND:
   is_closest float_is_finite r f /\ Q f ==>
@@ -3356,10 +3368,11 @@ Theorem min_pos_odd[local]:
 Proof rw [float_plus_min_def, float_negate_def] \\ simp []
 QED
 
-val round_roundTiesToEven_is_zero = Q.store_thm("round_roundTiesToEven_is_zero",
-   `!x. 2 * abs x <= ulp (:'t # 'w) ==>
+Theorem round_roundTiesToEven_is_zero:
+    !x. 2 * abs x <= ulp (:'t # 'w) ==>
         (round roundTiesToEven x = float_plus_zero (:'t # 'w)) \/
-        (round roundTiesToEven x = float_minus_zero (:'t # 'w))`,
+        (round roundTiesToEven x = float_minus_zero (:'t # 'w))
+Proof
    REPEAT strip_tac
    \\ qabbrev_tac `r: ('t, 'w) float = round roundTiesToEven x`
    \\ pop_assum (mp_tac o SYM o REWRITE_RULE [markerTheory.Abbrev_def])
@@ -3407,40 +3420,41 @@ val round_roundTiesToEven_is_zero = Q.store_thm("round_roundTiesToEven_is_zero",
                   ``~((2 * abs x = u) /\ abs (-u - x) <= abs x /\
                       ~(abs x <= abs (b - x)) /\ abs (-u - x) <= abs (b - x))``]
       ]
-   ])
+   ]
+QED
 
 val tac =
    lrw [float_round_def]
    \\ metis_tac [round_roundTowardZero_is_zero, round_roundTiesToEven_is_zero,
                  zero_properties]
 
-val round_roundTowardZero_is_minus_zero = Q.store_thm(
-   "round_roundTowardZero_is_minus_zero",
-   `!x. abs x < ulp (:'t # 'w) ==>
-        (float_round roundTowardZero T x = float_minus_zero (:'t # 'w))`,
+Theorem round_roundTowardZero_is_minus_zero:
+    !x. abs x < ulp (:'t # 'w) ==>
+        (float_round roundTowardZero T x = float_minus_zero (:'t # 'w))
+Proof
    tac
-   )
+QED
 
-val round_roundTowardZero_is_plus_zero = Q.store_thm(
-   "round_roundTowardZero_is_plus_zero",
-   `!x. abs x < ulp (:'t # 'w) ==>
-        (float_round roundTowardZero F x = float_plus_zero (:'t # 'w))`,
+Theorem round_roundTowardZero_is_plus_zero:
+    !x. abs x < ulp (:'t # 'w) ==>
+        (float_round roundTowardZero F x = float_plus_zero (:'t # 'w))
+Proof
    tac
-   )
+QED
 
-val round_roundTiesToEven_is_minus_zero = Q.store_thm(
-   "round_roundTiesToEven_is_minus_zero",
-   `!x. 2 * abs x <= ulp (:'t # 'w) ==>
-        (float_round roundTiesToEven T x = float_minus_zero (:'t # 'w))`,
+Theorem round_roundTiesToEven_is_minus_zero:
+    !x. 2 * abs x <= ulp (:'t # 'w) ==>
+        (float_round roundTiesToEven T x = float_minus_zero (:'t # 'w))
+Proof
    tac
-   )
+QED
 
-val round_roundTiesToEven_is_plus_zero = Q.store_thm(
-   "round_roundTiesToEven_is_plus_zero",
-   `!x. 2 * abs x <= ulp (:'t # 'w) ==>
-        (float_round roundTiesToEven F x = float_plus_zero (:'t # 'w))`,
+Theorem round_roundTiesToEven_is_plus_zero:
+    !x. 2 * abs x <= ulp (:'t # 'w) ==>
+        (float_round roundTiesToEven F x = float_plus_zero (:'t # 'w))
+Proof
    tac
-   )
+QED
 
 (* ------------------------------------------------------------------------
    Rounding to limits
@@ -3472,21 +3486,21 @@ val tac =
                  REAL_ARITH “(0r < i /\ x <= -i ==> ~(i <= x)) /\
                                      (0r <= i /\ x < -i ==> ~(i < x))”]
 
-val round_roundTiesToEven_plus_infinity = Q.store_thm(
-   "round_roundTiesToEven_plus_infinity",
-   `!y: ('t, 'w) float x.
+Theorem round_roundTiesToEven_plus_infinity:
+    !y: ('t, 'w) float x.
       threshold (:'t # 'w) <= x ==>
-      (round roundTiesToEven x = float_plus_infinity (:'t # 'w))`,
+      (round roundTiesToEven x = float_plus_infinity (:'t # 'w))
+Proof
    tac
-   )
+QED
 
-val round_roundTiesToEven_minus_infinity = Q.store_thm(
-   "round_roundTiesToEven_minus_infinity",
-   `!y: ('t, 'w) float x.
+Theorem round_roundTiesToEven_minus_infinity:
+    !y: ('t, 'w) float x.
       x <= -threshold (:'t # 'w) ==>
-      (round roundTiesToEven x = float_minus_infinity (:'t # 'w))`,
+      (round roundTiesToEven x = float_minus_infinity (:'t # 'w))
+Proof
    tac
-   )
+QED
 
 Theorem round_roundTowardZero_top:
   !y: ('t, 'w) float x.
@@ -3494,36 +3508,37 @@ Theorem round_roundTowardZero_top:
 Proof tac
 QED
 
-val round_roundTowardZero_bottom = Q.store_thm("round_roundTowardZero_bottom",
-   `!y: ('t, 'w) float x.
+Theorem round_roundTowardZero_bottom:
+    !y: ('t, 'w) float x.
       x < -largest (:'t # 'w) ==>
-      (round roundTowardZero x = float_bottom (:'t # 'w))`,
+      (round roundTowardZero x = float_bottom (:'t # 'w))
+Proof
    tac
-   )
+QED
 
-val round_roundTowardPositive_plus_infinity = Q.store_thm(
-   "round_roundTowardPositive_plus_infinity",
-   `!y: ('t, 'w) float x.
+Theorem round_roundTowardPositive_plus_infinity:
+    !y: ('t, 'w) float x.
       largest (:'t # 'w) < x ==>
-      (round roundTowardPositive x = float_plus_infinity (:'t # 'w))`,
+      (round roundTowardPositive x = float_plus_infinity (:'t # 'w))
+Proof
    tac
-   )
+QED
 
-val round_roundTowardPositive_bottom = Q.store_thm(
-   "round_roundTowardPositive_bottom",
-   `!y: ('t, 'w) float x.
+Theorem round_roundTowardPositive_bottom:
+    !y: ('t, 'w) float x.
       x < -largest (:'t # 'w) ==>
-      (round roundTowardPositive x = float_bottom (:'t # 'w))`,
+      (round roundTowardPositive x = float_bottom (:'t # 'w))
+Proof
    tac
-   )
+QED
 
-val round_roundTowardNegative_top = Q.store_thm(
-   "round_roundTowardNegative_top",
-   `!y: ('t, 'w) float x.
+Theorem round_roundTowardNegative_top:
+    !y: ('t, 'w) float x.
       largest (:'t # 'w) < x ==>
-      (round roundTowardNegative x = float_top (:'t # 'w))`,
+      (round roundTowardNegative x = float_top (:'t # 'w))
+Proof
    tac
-   )
+QED
 
 Theorem round_roundTowardNegative_minus_infinity:
    !y: ('t, 'w) float x.
@@ -3539,137 +3554,147 @@ val tac =
         round_roundTowardNegative_minus_infinity,
         top_properties, bottom_properties, infinity_properties]
 
-val float_round_roundTowardZero_top = Q.store_thm(
-   "float_round_roundTowardZero_top",
-   `!b y: ('t, 'w) float x.
+Theorem float_round_roundTowardZero_top:
+    !b y: ('t, 'w) float x.
       largest (:'t # 'w) < x ==>
-      (float_round roundTowardZero b x = float_top (:'t # 'w))`,
+      (float_round roundTowardZero b x = float_top (:'t # 'w))
+Proof
    tac
-   )
+QED
 
-val float_round_roundTowardZero_bottom = Q.store_thm(
-   "float_round_roundTowardZero_bottom",
-   `!b y: ('t, 'w) float x.
+Theorem float_round_roundTowardZero_bottom:
+    !b y: ('t, 'w) float x.
       x < -largest (:'t # 'w) ==>
-      (float_round roundTowardZero b x = float_bottom (:'t # 'w))`,
+      (float_round roundTowardZero b x = float_bottom (:'t # 'w))
+Proof
    tac
-   )
+QED
 
-val float_round_roundTowardPositive_plus_infinity = Q.store_thm(
-   "float_round_roundTowardPositive_plus_infinity",
-   `!b y: ('t, 'w) float x.
+Theorem float_round_roundTowardPositive_plus_infinity:
+    !b y: ('t, 'w) float x.
       largest (:'t # 'w) < x ==>
-      (float_round roundTowardPositive b x = float_plus_infinity (:'t # 'w))`,
+      (float_round roundTowardPositive b x = float_plus_infinity (:'t # 'w))
+Proof
    tac
-   )
+QED
 
-val float_round_roundTowardPositive_bottom = Q.store_thm(
-   "float_round_roundTowardPositive_bottom",
-   `!b y: ('t, 'w) float x.
+Theorem float_round_roundTowardPositive_bottom:
+    !b y: ('t, 'w) float x.
       x < -largest (:'t # 'w) ==>
-      (float_round roundTowardPositive b x = float_bottom (:'t # 'w))`,
+      (float_round roundTowardPositive b x = float_bottom (:'t # 'w))
+Proof
    tac
-   )
+QED
 
-val float_round_roundTowardNegative_top = Q.store_thm(
-   "float_round_roundTowardNegative_top",
-   `!b y: ('t, 'w) float x.
+Theorem float_round_roundTowardNegative_top:
+    !b y: ('t, 'w) float x.
       largest (:'t # 'w) < x ==>
-      (float_round roundTowardNegative b x = float_top (:'t # 'w))`,
+      (float_round roundTowardNegative b x = float_top (:'t # 'w))
+Proof
    tac
-   )
+QED
 
-val float_round_roundTowardNegative_minus_infinity = Q.store_thm(
-   "float_round_roundTowardNegative_minus_infinity",
-   `!b y: ('t, 'w) float x.
+Theorem float_round_roundTowardNegative_minus_infinity:
+    !b y: ('t, 'w) float x.
       x < -largest (:'t # 'w) ==>
-      (float_round roundTowardNegative b x = float_minus_infinity (:'t # 'w))`,
+      (float_round roundTowardNegative b x = float_minus_infinity (:'t # 'w))
+Proof
    tac
-   )
+QED
 
 (* ------------------------------------------------------------------------
    Theorem support for evaluation
    ------------------------------------------------------------------------ *)
 
-val float_minus_zero = Q.store_thm("float_minus_zero",
-   `float_minus_zero (:'t # 'w) =
-       <| Sign := 1w; Exponent := 0w; Significand := 0w |>`,
+Theorem float_minus_zero:
+    float_minus_zero (:'t # 'w) =
+       <| Sign := 1w; Exponent := 0w; Significand := 0w |>
+Proof
    simp [float_minus_zero_def, float_plus_zero_def, float_negate_def]
-   )
+QED
 
-val float_minus_infinity = Q.store_thm("float_minus_infinity",
-   `float_minus_infinity (:'t # 'w) =
-       <| Sign := 1w; Exponent := UINT_MAXw; Significand := 0w |>`,
+Theorem float_minus_infinity:
+    float_minus_infinity (:'t # 'w) =
+       <| Sign := 1w; Exponent := UINT_MAXw; Significand := 0w |>
+Proof
    simp [float_minus_infinity_def, float_plus_infinity_def, float_negate_def]
-   )
+QED
 
-val float_round_non_zero = Q.store_thm("float_round_non_zero",
-    `!mode toneg r s e f.
+Theorem float_round_non_zero:
+     !mode toneg r s e f.
         (round mode r = <| Sign := s; Exponent := e; Significand := f |>) /\
         (e <> 0w \/ f <> 0w) ==>
         (float_round mode toneg r =
-         <| Sign := s; Exponent := e; Significand := f |>)`,
+         <| Sign := s; Exponent := e; Significand := f |>)
+Proof
     lrw [float_round_def, float_is_zero]
-    )
+QED
 
-val float_round_plus_infinity = Q.store_thm("float_round_plus_infinity",
-    `!mode toneg r.
+Theorem float_round_plus_infinity:
+     !mode toneg r.
         (round mode r = float_plus_infinity (:'t # 'w)) ==>
-        (float_round mode toneg r = float_plus_infinity (:'t # 'w))`,
+        (float_round mode toneg r = float_plus_infinity (:'t # 'w))
+Proof
     lrw [float_round_def, infinity_properties]
-    )
+QED
 
-val float_round_minus_infinity = Q.store_thm("float_round_minus_infinity",
-    `!mode toneg r.
+Theorem float_round_minus_infinity:
+     !mode toneg r.
         (round mode r = float_minus_infinity (:'t # 'w)) ==>
-        (float_round mode toneg r = float_minus_infinity (:'t # 'w))`,
+        (float_round mode toneg r = float_minus_infinity (:'t # 'w))
+Proof
     lrw [float_round_def, infinity_properties]
-    )
+QED
 
-val float_round_top = Q.store_thm("float_round_top",
-    `!mode toneg r.
+Theorem float_round_top:
+     !mode toneg r.
         (round mode r = float_top (:'t # 'w)) ==>
-        (float_round mode toneg r = float_top (:'t # 'w))`,
+        (float_round mode toneg r = float_top (:'t # 'w))
+Proof
     lrw [float_round_def, top_properties]
-    )
+QED
 
-val float_round_bottom = Q.store_thm("float_round_bottom",
-    `!mode toneg r.
+Theorem float_round_bottom:
+     !mode toneg r.
         (round mode r = float_bottom (:'t # 'w)) ==>
-        (float_round mode toneg r = float_bottom (:'t # 'w))`,
+        (float_round mode toneg r = float_bottom (:'t # 'w))
+Proof
     lrw [float_round_def, bottom_properties]
-    )
+QED
 
 fun tac thms =
    rrw ([largest_def, threshold_def, float_to_real_def, wordsTheory.dimword_def,
          GSYM REAL_NEG_MINUS1, REAL_OF_NUM_POW,
          wordsLib.WORD_DECIDE ``x <> 1w ==> (x = 0w: word1)``] @ thms)
 
-val float_to_real = Q.store_thm("float_to_real",
-   `!s e:'w word f:'t word.
+Theorem float_to_real:
+    !s e:'w word f:'t word.
       float_to_real <| Sign := s; Exponent := e; Significand := f |> =
          let r = if e = 0w
                     then 2r / &(2 EXP INT_MAX (:'w)) * (&w2n f / &dimword (:'t))
                  else &(2 EXP (w2n e)) / &(2 EXP INT_MAX (:'w)) *
                       (1r + &w2n f / &dimword (:'t))
          in
-            if s = 1w then -r else r`,
+            if s = 1w then -r else r
+Proof
    tac []
-   )
+QED
 
-val largest = Q.store_thm("largest",
-   `largest (:'t # 'w) =
+Theorem largest:
+    largest (:'t # 'w) =
        &(2 EXP (UINT_MAX (:'w) - 1)) * (2 - 1 / &dimword (:'t)) /
-       &(2 EXP INT_MAX (:'w))`,
+       &(2 EXP INT_MAX (:'w))
+Proof
    tac [REAL_INV_1OVER, mult_ratl]
-   )
+QED
 
-val threshold = Q.store_thm("threshold",
-   `threshold (:'t # 'w) =
+Theorem threshold:
+    threshold (:'t # 'w) =
        &(2 EXP (UINT_MAX (:'w) - 1)) * (2 - 1 / &(2 * dimword (:'t))) /
-       &(2 EXP INT_MAX (:'w))`,
+       &(2 EXP INT_MAX (:'w))
+Proof
    tac [REAL_INV_1OVER, mult_ratl, arithmeticTheory.EXP]
-   )
+QED
 
 val largest_top_lem = Q.prove(
   `w2n (n2w (UINT_MAX (:'w)) + -1w : 'w word) = UINT_MAX (:'w) - 1`,
@@ -3687,9 +3712,10 @@ val largest_top_lem2 = Q.prove(
   `&UINT_MAX (:'t) + 1 = &dimword (:'t) : real`,
   simp [wordsTheory.UINT_MAX_def, DECIDE ``1n < n ==> (n - 1 + 1 = n)``])
 
-val largest_is_top = Q.store_thm("largest_is_top",
-  `1 < dimindex(:'w) ==>
-   (largest (:'t # 'w) = float_to_real (float_top (:'t # 'w)))`,
+Theorem largest_is_top:
+   1 < dimindex(:'w) ==>
+   (largest (:'t # 'w) = float_to_real (float_top (:'t # 'w)))
+Proof
   strip_tac
   \\ `dimword(:'w) <> 2`
   by fs [wordsTheory.dimword_def,
@@ -3714,7 +3740,7 @@ val largest_is_top = Q.store_thm("largest_is_top",
         mul_cancel |> Q.SPECL [`a`, `&(n : num)`] |> SIMP_RULE (srw_ss()) [],
         wordsTheory.ZERO_LT_dimword, DECIDE ``0 < n ==> n <> 0n``,
         REAL_ARITH ``a * b + b = (a + 1r) * b``, REAL_DOUBLE]
-  )
+QED
 
 Theorem largest_lt_threshold:
   largest (:'t # 'w) < threshold (:'t # 'w)
@@ -3758,37 +3784,38 @@ Proof
    \\ simp []
 QED
 
-val float_infinity_negate_abs = Q.store_thm("float_infinity_negate_abs",
-   `(float_negate (float_plus_infinity (:'t # 'w)) =
+Theorem float_infinity_negate_abs:
+    (float_negate (float_plus_infinity (:'t # 'w)) =
      float_minus_infinity (:'t # 'w)) /\
     (float_negate (float_minus_infinity (:'t # 'w)) =
      float_plus_infinity (:'t # 'w)) /\
     (float_abs (float_plus_infinity (:'t # 'w)) =
      float_plus_infinity (:'t # 'w)) /\
     (float_abs (float_minus_infinity (:'t # 'w)) =
-     float_plus_infinity (:'t # 'w))`,
+     float_plus_infinity (:'t # 'w))
+Proof
     rw [float_plus_infinity_def, float_minus_infinity_def,
         float_negate_def, float_abs_def]
-    )
+QED
 
 (* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  *)
 
-val float_round_to_integral_compute = Q.store_thm(
-   "float_round_to_integral_compute",
-   `(!m. float_round_to_integral m (float_minus_infinity (:'t # 'w)) =
+Theorem float_round_to_integral_compute:
+    (!m. float_round_to_integral m (float_minus_infinity (:'t # 'w)) =
          float_minus_infinity (:'t # 'w)) /\
     (!m. float_round_to_integral m (float_plus_infinity (:'t # 'w)) =
          float_plus_infinity (:'t # 'w)) /\
     (!m fp_op.
          float_round_to_integral m (float_some_qnan fp_op) =
-         float_some_qnan fp_op)`,
+         float_some_qnan fp_op)
+Proof
    simp [float_round_to_integral_def, float_values]
-   )
+QED
 
 (* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  *)
 
-val float_add_compute = Q.store_thm("float_add_compute",
-   `(!mode x fp_op.
+Theorem float_add_compute:
+    (!mode x fp_op.
        float_add mode (float_some_qnan fp_op) x =
        (check_for_signalling [x],
         float_some_qnan (FP_Add mode (float_some_qnan fp_op) x)))
@@ -3818,78 +3845,80 @@ val float_add_compute = Q.store_thm("float_add_compute",
        (invalidop_flags,
         float_some_qnan (FP_Add mode (float_plus_infinity (:'t # 'w))
                                      (float_minus_infinity (:'t # 'w)))))
-   `,
+Proof
    simp [float_add_def, float_values, float_components, some_nan_properties,
          check_for_signalling_def]
    \\ strip_tac
    \\ strip_tac
    \\ Cases_on `float_value x`
    \\ simp [float_is_signalling_def, float_is_nan_def]
-   )
+QED
 
-val float_add_nan = Q.store_thm("float_add_nan",
-   `!mode x y.
+Theorem float_add_nan:
+    !mode x y.
        (float_value x = NaN) \/ (float_value y = NaN) ==>
        (float_add mode x y =
-        (check_for_signalling [x; y], float_some_qnan (FP_Add mode x y)))`,
+        (check_for_signalling [x; y], float_some_qnan (FP_Add mode x y)))
+Proof
    NTAC 3 strip_tac
    \\ Cases_on `float_value x`
    \\ Cases_on `float_value y`
    \\ simp [float_add_def, check_for_signalling_def,
             float_is_signalling_def, float_is_nan_def]
-   )
+QED
 
-val float_add_finite = Q.store_thm("float_add_finite",
-   `!mode x y r1 r2.
+Theorem float_add_finite:
+    !mode x y r1 r2.
        (float_value x = Float r1) /\ (float_value y = Float r2) ==>
        (float_add mode x y =
         float_round_with_flags mode
           (if (r1 = 0) /\ (r2 = 0) /\ (x.Sign = y.Sign) then
              x.Sign = 1w
-           else mode = roundTowardNegative) (r1 + r2))`,
+           else mode = roundTowardNegative) (r1 + r2))
+Proof
    simp [float_add_def]
-   )
+QED
 
-val float_add_finite_plus_infinity = Q.store_thm(
-   "float_add_finite_plus_infinity",
-   `!mode x r.
+Theorem float_add_finite_plus_infinity:
+    !mode x r.
        (float_value x = Float r) ==>
        (float_add mode x (float_plus_infinity (:'t # 'w)) =
-        (clear_flags, float_plus_infinity (:'t # 'w)))`,
+        (clear_flags, float_plus_infinity (:'t # 'w)))
+Proof
    simp [float_add_def, float_values]
-   )
+QED
 
-val float_add_plus_infinity_finite = Q.store_thm(
-   "float_add_plus_infinity_finite",
-   `!mode x r.
+Theorem float_add_plus_infinity_finite:
+    !mode x r.
        (float_value x = Float r) ==>
        (float_add mode (float_plus_infinity (:'t # 'w)) x =
-        (clear_flags, float_plus_infinity (:'t # 'w)))`,
+        (clear_flags, float_plus_infinity (:'t # 'w)))
+Proof
    simp [float_add_def, float_values]
-   )
+QED
 
-val float_add_finite_minus_infinity = Q.store_thm(
-   "float_add_finite_minus_infinity",
-   `!mode x r.
+Theorem float_add_finite_minus_infinity:
+    !mode x r.
        (float_value x = Float r) ==>
        (float_add mode x (float_minus_infinity (:'t # 'w)) =
-        (clear_flags, float_minus_infinity (:'t # 'w)))`,
+        (clear_flags, float_minus_infinity (:'t # 'w)))
+Proof
    simp [float_add_def, float_values]
-   )
+QED
 
-val float_add_minus_infinity_finite = Q.store_thm(
-   "float_add_minus_infinity_finite",
-   `!mode x r.
+Theorem float_add_minus_infinity_finite:
+    !mode x r.
        (float_value x = Float r) ==>
        (float_add mode (float_minus_infinity (:'t # 'w)) x =
-        (clear_flags, float_minus_infinity (:'t # 'w)))`,
+        (clear_flags, float_minus_infinity (:'t # 'w)))
+Proof
    simp [float_add_def, float_values]
-   )
+QED
 
 (* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  *)
 
-val float_sub_compute = Q.store_thm("float_sub_compute",
-   `(!mode x fp_op.
+Theorem float_sub_compute:
+    (!mode x fp_op.
        float_sub mode (float_some_qnan fp_op) x =
        (check_for_signalling [x],
         float_some_qnan (FP_Sub mode (float_some_qnan fp_op) x))) /\
@@ -3917,79 +3946,81 @@ val float_sub_compute = Q.store_thm("float_sub_compute",
        float_sub mode (float_plus_infinity (:'t # 'w))
                       (float_minus_infinity (:'t # 'w)) =
        (clear_flags, float_plus_infinity (:'t # 'w)))
-   `,
+Proof
    simp [float_sub_def, float_values, float_components, some_nan_properties,
          check_for_signalling_def]
    \\ strip_tac
    \\ strip_tac
    \\ Cases_on `float_value x`
    \\ simp [float_is_signalling_def, float_is_nan_def]
-   )
+QED
 
-val float_sub_nan = Q.store_thm("float_sub_nan",
-   `!mode x y.
+Theorem float_sub_nan:
+    !mode x y.
        (float_value x = NaN) \/ (float_value y = NaN) ==>
        (float_sub mode x y =
-        (check_for_signalling [x; y], float_some_qnan (FP_Sub mode x y)))`,
+        (check_for_signalling [x; y], float_some_qnan (FP_Sub mode x y)))
+Proof
    NTAC 3 strip_tac
    \\ Cases_on `float_value x`
    \\ Cases_on `float_value y`
    \\ simp [float_sub_def, check_for_signalling_def,
             float_is_signalling_def, float_is_nan_def]
-   )
+QED
 
-val float_sub_finite = Q.store_thm("float_sub_finite",
-   `!mode x y r1 r2.
+Theorem float_sub_finite:
+    !mode x y r1 r2.
        (float_value x = Float r1) /\ (float_value y = Float r2) ==>
        (float_sub mode x y =
         float_round_with_flags mode
            (if (r1 = 0) /\ (r2 = 0) /\ x.Sign <> y.Sign then
               x.Sign = 1w
-            else mode = roundTowardNegative) (r1 - r2))`,
+            else mode = roundTowardNegative) (r1 - r2))
+Proof
    simp [float_sub_def]
-   )
+QED
 
-val float_sub_finite_plus_infinity = Q.store_thm(
-   "float_sub_finite_plus_infinity",
-   `!mode x r.
+Theorem float_sub_finite_plus_infinity:
+    !mode x r.
        (float_value x = Float r) ==>
        (float_sub mode x (float_plus_infinity (:'t # 'w)) =
-        (clear_flags, float_minus_infinity (:'t # 'w)))`,
+        (clear_flags, float_minus_infinity (:'t # 'w)))
+Proof
    simp [float_sub_def, float_values, float_minus_infinity_def]
-   )
+QED
 
-val float_sub_plus_infinity_finite = Q.store_thm(
-   "float_sub_plus_infinity_finite",
-   `!mode x r.
+Theorem float_sub_plus_infinity_finite:
+    !mode x r.
        (float_value x = Float r) ==>
        (float_sub mode (float_plus_infinity (:'t # 'w)) x =
-        (clear_flags, float_plus_infinity (:'t # 'w)))`,
+        (clear_flags, float_plus_infinity (:'t # 'w)))
+Proof
    simp [float_sub_def, float_values]
-   )
+QED
 
-val float_sub_finite_minus_infinity = Q.store_thm(
-   "float_sub_finite_minus_infinity",
-   `!mode x r.
+Theorem float_sub_finite_minus_infinity:
+    !mode x r.
        (float_value x = Float r) ==>
        (float_sub mode x (float_minus_infinity (:'t # 'w)) =
-        (clear_flags, float_plus_infinity (:'t # 'w)))`,
+        (clear_flags, float_plus_infinity (:'t # 'w)))
+Proof
    simp [float_sub_def, float_values, float_negate_negate,
          float_minus_infinity_def]
-   )
+QED
 
-val float_sub_minus_infinity_finite = Q.store_thm(
-   "float_sub_minus_infinity_finite",
-   `!mode x r.
+Theorem float_sub_minus_infinity_finite:
+    !mode x r.
        (float_value x = Float r) ==>
        (float_sub mode (float_minus_infinity (:'t # 'w)) x =
-        (clear_flags, float_minus_infinity (:'t # 'w)))`,
+        (clear_flags, float_minus_infinity (:'t # 'w)))
+Proof
    simp [float_sub_def, float_values]
-   )
+QED
 
 (* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  *)
 
-val float_mul_compute = Q.store_thm("float_mul_compute",
-   `(!mode x fp_op.
+Theorem float_mul_compute:
+    (!mode x fp_op.
        float_mul mode (float_some_qnan fp_op) x =
        (check_for_signalling [x],
         float_some_qnan (FP_Mul mode (float_some_qnan fp_op) x))) /\
@@ -4013,38 +4044,39 @@ val float_mul_compute = Q.store_thm("float_mul_compute",
        float_mul mode (float_plus_infinity (:'t # 'w))
                       (float_minus_infinity (:'t # 'w)) =
        (clear_flags, float_minus_infinity (:'t # 'w)))
-   `,
+Proof
    simp [float_mul_def, float_values, float_components, some_nan_properties,
          check_for_signalling_def]
    \\ strip_tac
    \\ strip_tac
    \\ Cases_on `float_value x`
    \\ simp [float_is_signalling_def, float_is_nan_def]
-   )
+QED
 
-val float_mul_nan = Q.store_thm("float_mul_nan",
-   `!mode x y.
+Theorem float_mul_nan:
+    !mode x y.
        (float_value x = NaN) \/ (float_value y = NaN) ==>
        (float_mul mode x y =
-        (check_for_signalling [x; y], float_some_qnan (FP_Mul mode x y)))`,
+        (check_for_signalling [x; y], float_some_qnan (FP_Mul mode x y)))
+Proof
    NTAC 3 strip_tac
    \\ Cases_on `float_value x`
    \\ Cases_on `float_value y`
    \\ simp [float_mul_def, check_for_signalling_def,
             float_is_signalling_def, float_is_nan_def]
-   )
+QED
 
-val float_mul_finite = Q.store_thm("float_mul_finite",
-   `!mode x y r1 r2.
+Theorem float_mul_finite:
+    !mode x y r1 r2.
        (float_value x = Float r1) /\ (float_value y = Float r2) ==>
        (float_mul mode x y =
-        float_round_with_flags mode (x.Sign <> y.Sign) (r1 * r2))`,
+        float_round_with_flags mode (x.Sign <> y.Sign) (r1 * r2))
+Proof
    simp [float_mul_def]
-   )
+QED
 
-val float_mul_finite_plus_infinity = Q.store_thm(
-   "float_mul_finite_plus_infinity",
-   `!mode x r.
+Theorem float_mul_finite_plus_infinity:
+    !mode x r.
        (float_value x = Float r) ==>
        (float_mul mode x (float_plus_infinity (:'t # 'w)) =
         if r = 0 then
@@ -4053,14 +4085,14 @@ val float_mul_finite_plus_infinity = Q.store_thm(
         else (clear_flags,
               if x.Sign = 0w then
                 float_plus_infinity (:'t # 'w)
-              else float_minus_infinity (:'t # 'w)))`,
+              else float_minus_infinity (:'t # 'w)))
+Proof
    rw [float_mul_def, float_values]
    \\ fs [float_plus_infinity_def]
-   )
+QED
 
-val float_mul_plus_infinity_finite = Q.store_thm(
-   "float_mul_plus_infinity_finite",
-   `!mode x r.
+Theorem float_mul_plus_infinity_finite:
+    !mode x r.
        (float_value x = Float r) ==>
        (float_mul mode (float_plus_infinity (:'t # 'w)) x =
         if r = 0 then
@@ -4069,14 +4101,14 @@ val float_mul_plus_infinity_finite = Q.store_thm(
         else (clear_flags,
               if x.Sign = 0w
                  then float_plus_infinity (:'t # 'w)
-              else float_minus_infinity (:'t # 'w)))`,
+              else float_minus_infinity (:'t # 'w)))
+Proof
    rw [float_mul_def, float_values]
    \\ fs [float_plus_infinity_def]
-   )
+QED
 
-val float_mul_finite_minus_infinity = Q.store_thm(
-   "float_mul_finite_minus_infinity",
-   `!mode x r.
+Theorem float_mul_finite_minus_infinity:
+    !mode x r.
        (float_value x = Float r) ==>
        (float_mul mode x (float_minus_infinity (:'t # 'w)) =
         if r = 0 then
@@ -4085,15 +4117,15 @@ val float_mul_finite_minus_infinity = Q.store_thm(
         else (clear_flags,
               if x.Sign = 0w
                  then float_minus_infinity (:'t # 'w)
-              else float_plus_infinity (:'t # 'w)))`,
+              else float_plus_infinity (:'t # 'w)))
+Proof
    rw [float_mul_def, float_values]
    \\ fs [float_minus_infinity_def, float_plus_infinity_def, float_negate_def]
    \\ metis_tac [sign_inconsistent]
-   )
+QED
 
-val float_mul_minus_infinity_finite = Q.store_thm(
-   "float_mul_minus_infinity_finite",
-   `!mode x r.
+Theorem float_mul_minus_infinity_finite:
+    !mode x r.
        (float_value x = Float r) ==>
        (float_mul mode (float_minus_infinity (:'t # 'w)) x =
         if r = 0 then
@@ -4102,16 +4134,17 @@ val float_mul_minus_infinity_finite = Q.store_thm(
         else (clear_flags,
               if x.Sign = 0w
                  then float_minus_infinity (:'t # 'w)
-              else float_plus_infinity (:'t # 'w)))`,
+              else float_plus_infinity (:'t # 'w)))
+Proof
    rw [float_mul_def, float_values]
    \\ fs [float_minus_infinity_def, float_plus_infinity_def, float_negate_def]
    \\ metis_tac [sign_inconsistent]
-   )
+QED
 
 (* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  *)
 
-val float_div_compute = Q.store_thm("float_div_compute",
-   `(!mode x fp_op.
+Theorem float_div_compute:
+    (!mode x fp_op.
        float_div mode (float_some_qnan fp_op) x =
        (check_for_signalling [x],
         float_some_qnan (FP_Div mode (float_some_qnan fp_op) x))) /\
@@ -4143,29 +4176,30 @@ val float_div_compute = Q.store_thm("float_div_compute",
        (invalidop_flags,
         float_some_qnan (FP_Div mode (float_plus_infinity (:'t # 'w))
                                      (float_minus_infinity (:'t # 'w)))))
-   `,
+Proof
    simp [float_div_def, float_values, float_components, some_nan_properties,
          check_for_signalling_def]
    \\ strip_tac
    \\ strip_tac
    \\ Cases_on `float_value x`
    \\ simp [float_is_signalling_def, float_is_nan_def]
-   )
+QED
 
-val float_div_nan = Q.store_thm("float_div_nan",
-   `!mode x y.
+Theorem float_div_nan:
+    !mode x y.
        (float_value x = NaN) \/ (float_value y = NaN) ==>
        (float_div mode x y =
-        (check_for_signalling [x; y], float_some_qnan (FP_Div mode x y)))`,
+        (check_for_signalling [x; y], float_some_qnan (FP_Div mode x y)))
+Proof
    NTAC 3 strip_tac
    \\ Cases_on `float_value x`
    \\ Cases_on `float_value y`
    \\ simp [float_div_def, check_for_signalling_def,
             float_is_signalling_def, float_is_nan_def]
-   )
+QED
 
-val float_div_finite = Q.store_thm("float_div_finite",
-   `!mode x y r1 r2.
+Theorem float_div_finite:
+    !mode x y r1 r2.
        (float_value x = Float r1) /\ (float_value y = Float r2) ==>
        (float_div mode x y =
         if r2 = 0
@@ -4175,59 +4209,60 @@ val float_div_finite = Q.store_thm("float_div_finite",
                   (dividezero_flags,
                    if x.Sign = y.Sign then float_plus_infinity (:'t # 'w)
                    else float_minus_infinity (:'t # 'w))
-        else float_round_with_flags mode (x.Sign <> y.Sign) (r1 / r2))`,
+        else float_round_with_flags mode (x.Sign <> y.Sign) (r1 / r2))
+Proof
    simp [float_div_def]
-   )
+QED
 
-val float_div_finite_plus_infinity = Q.store_thm(
-   "float_div_finite_plus_infinity",
-   `!mode x r.
+Theorem float_div_finite_plus_infinity:
+    !mode x r.
        (float_value x = Float r) ==>
        (float_div mode x (float_plus_infinity (:'t # 'w)) =
         (clear_flags,
          if x.Sign = 0w then float_plus_zero (:'t # 'w)
-         else float_minus_zero (:'t # 'w)))`,
+         else float_minus_zero (:'t # 'w)))
+Proof
    rw [float_div_def, float_values]
    \\ fs [float_plus_infinity_def]
-   )
+QED
 
-val float_div_plus_infinity_finite = Q.store_thm(
-   "float_div_plus_infinity_finite",
-   `!mode x r.
+Theorem float_div_plus_infinity_finite:
+    !mode x r.
        (float_value x = Float r) ==>
        (float_div mode (float_plus_infinity (:'t # 'w)) x =
         (clear_flags,
          if x.Sign = 0w then float_plus_infinity (:'t # 'w)
-         else float_minus_infinity (:'t # 'w)))`,
+         else float_minus_infinity (:'t # 'w)))
+Proof
    rw [float_div_def, float_values]
    \\ fs [float_plus_infinity_def]
-   )
+QED
 
-val float_div_finite_minus_infinity = Q.store_thm(
-   "float_div_finite_minus_infinity",
-   `!mode x r.
+Theorem float_div_finite_minus_infinity:
+    !mode x r.
        (float_value x = Float r) ==>
        (float_div mode x (float_minus_infinity (:'t # 'w)) =
         (clear_flags,
          if x.Sign = 0w then float_minus_zero (:'t # 'w)
-         else float_plus_zero (:'t # 'w)))`,
+         else float_plus_zero (:'t # 'w)))
+Proof
    rw [float_div_def, float_values]
    \\ fs [float_minus_infinity_def, float_plus_infinity_def, float_negate_def]
    \\ metis_tac [sign_inconsistent]
-   )
+QED
 
-val float_div_minus_infinity_finite = Q.store_thm(
-   "float_div_minus_infinity_finite",
-   `!mode x r.
+Theorem float_div_minus_infinity_finite:
+    !mode x r.
        (float_value x = Float r) ==>
        (float_div mode (float_minus_infinity (:'t # 'w)) x =
         (clear_flags,
          if x.Sign = 0w then float_minus_infinity (:'t # 'w)
-         else float_plus_infinity (:'t # 'w)))`,
+         else float_plus_infinity (:'t # 'w)))
+Proof
    rw [float_div_def, float_values]
    \\ fs [float_minus_infinity_def, float_plus_infinity_def, float_negate_def]
    \\ metis_tac [sign_inconsistent]
-   )
+QED
 
 (* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  *)
 

@@ -122,9 +122,11 @@ val _ = export_rewrites ["UINT_MAX_32"]
 
 val ONE_LE_TWOEXP = save_thm("ONE_LE_TWOEXP", bitTheory.ONE_LE_TWOEXP)
 
-val w2i_w2n_pos = Q.store_thm("w2i_w2n_pos",
-  `!w n. ~word_msb w /\ w2i w < &n ==> w2n w < n`,
-  SRW_TAC [] [w2i_def])
+Theorem w2i_w2n_pos:
+   !w n. ~word_msb w /\ w2i w < &n ==> w2n w < n
+Proof
+  SRW_TAC [] [w2i_def]
+QED
 
 val w2i_n2w_pos = store_thm(
   "w2i_n2w_pos",
@@ -237,21 +239,26 @@ Proof
   rpt strip_tac >> eq_tac >> rw[w2i_def]
 QED
 
-val int_word_nchotomy = Q.store_thm("int_word_nchotomy",
-  `!w. ?i. w = i2w i`, PROVE_TAC [i2w_w2i])
+Theorem int_word_nchotomy:
+   !w. ?i. w = i2w i
+Proof PROVE_TAC [i2w_w2i]
+QED
 
-val w2i_le = Q.store_thm("w2i_le",
-  `!w:'a word. w2i w <= INT_MAX (:'a)`,
+Theorem w2i_le:
+   !w:'a word. w2i w <= INT_MAX (:'a)
+Proof
   SRW_TAC [] [w2i_def, INT_MAX_def, ZERO_LT_INT_MIN,
        intLib.ARITH_PROVE ``0n < i ==> 0 <= &i - 1``,
        intLib.ARITH_PROVE ``0i <= x ==> -&n <= x``]
   THEN FULL_SIMP_TAC arith_ss [dimword_def, wordsTheory.INT_MIN_def,
        WORD_LO, WORD_NOT_LOWER_EQUAL, WORD_MSB_INT_MIN_LS, word_L_def,
        w2n_n2w, LESS_MOD, EXP_BASE_LT_MONO, DIMINDEX_GT_0]
-  THEN intLib.ARITH_TAC)
+  THEN intLib.ARITH_TAC
+QED
 
-val w2i_ge = Q.store_thm("w2i_ge",
-  `!w:'a word. INT_MIN (:'a) <= w2i w`,
+Theorem w2i_ge:
+   !w:'a word. INT_MIN (:'a) <= w2i w
+Proof
   Tactical.REVERSE (SRW_TAC []
     [w2i_def, INT_MIN_def, INT_MAX_def, INT_SUB_LNEG, INT_LE_REDUCE])
   THEN1 intLib.ARITH_TAC
@@ -271,12 +278,15 @@ val w2i_ge = Q.store_thm("w2i_ge",
     THEN FULL_SIMP_TAC arith_ss [dimword_def, wordsTheory.INT_MIN_def,
          WORD_LO, WORD_NOT_LOWER_EQUAL, WORD_MSB_INT_MIN_LS, word_L_def,
          w2n_n2w, LESS_MOD, EXP_BASE_LT_MONO, DIMINDEX_GT_0]
-  ])
+  ]
+QED
 
-val ranged_int_word_nchotomy = Q.store_thm("ranged_int_word_nchotomy",
-  `!w:'a word. ?i. (w = i2w i) /\ INT_MIN (:'a) <= i /\ i <= INT_MAX (:'a)`,
+Theorem ranged_int_word_nchotomy:
+   !w:'a word. ?i. (w = i2w i) /\ INT_MIN (:'a) <= i /\ i <= INT_MAX (:'a)
+Proof
   STRIP_TAC THEN Q.EXISTS_TAC `w2i w`
-  THEN SRW_TAC [] [i2w_w2i, w2i_le, w2i_ge])
+  THEN SRW_TAC [] [i2w_w2i, w2i_le, w2i_ge]
+QED
 
 fun Cases_on_i2w t =
    Q.ISPEC_THEN t Tactic.FULL_STRUCT_CASES_TAC ranged_int_word_nchotomy
@@ -325,10 +335,11 @@ val NEG_INT_ELIM = Q.prove(
           |> REWRITE_RULE [arithmeticTheory.MULT_LEFT_1]]
   ])
 
-val sw2sw_i2w = Q.store_thm("sw2sw_i2w",
-  `!j. INT_MIN (:'b) <= j /\ j <= INT_MAX (:'b) /\
+Theorem sw2sw_i2w:
+   !j. INT_MIN (:'b) <= j /\ j <= INT_MAX (:'b) /\
        dimindex (:'b) <= dimindex (:'a) ==>
-       (sw2sw (i2w j : 'b word) = i2w j : 'a word)`,
+       (sw2sw (i2w j : 'b word) = i2w j : 'a word)
+Proof
   SRW_TAC [WORD_BIT_EQ_ss] [i2w_def]
   THENL [
     `?n. INT_MIN (:'b) <= n /\ n < dimword (:'b) /\
@@ -407,11 +418,12 @@ val sw2sw_i2w = Q.store_thm("sw2sw_i2w",
     \\ `Num j < 2n ** i` by METIS_TAC [arithmeticTheory.LESS_TRANS]
     \\ ASM_SIMP_TAC std_ss [bitTheory.NOT_BIT_GT_TWOEXP]
   ]
-)
+QED
 
-val w2w_i2w = Q.store_thm("w2w_i2w",
-  `!i. dimindex(:'a) <= dimindex(:'b) ==>
-       (w2w (i2w i : 'b word) = i2w i : 'a word)`,
+Theorem w2w_i2w:
+   !i. dimindex(:'a) <= dimindex(:'b) ==>
+       (w2w (i2w i : 'b word) = i2w i : 'a word)
+Proof
   SRW_TAC [] [i2w_def, wordsTheory.w2w_n2w, wordsTheory.word_2comp_def]
   \\ `?q. 0n < q /\ Num (-i) MOD (q * dimword (:'a)) < q * dimword (:'a) /\
       (dimword (:'b) = q * dimword (:'a))`
@@ -421,7 +433,7 @@ val w2w_i2w = Q.store_thm("w2w_i2w",
   \\ ASM_SIMP_TAC arith_ss [wordsTheory.MOD_COMPLEMENT,
        wordsTheory.ZERO_LT_dimword,
        ONCE_REWRITE_RULE [MULT_COMM] arithmeticTheory.MOD_MULT_MOD]
-  )
+QED
 
 Theorem WORD_LTi: !a b. a < b = w2i a < w2i b
 Proof
@@ -465,12 +477,15 @@ val word_literal_sub =
     ``(m < n ==> (-n2w (n - m) = n2w m + -n2w n)) /\
       (n <= m ==> (n2w (m - n) = n2w m + -n2w n))``
 
-val word_add_i2w_w2n = Q.store_thm("word_add_i2w_w2n",
-  `!a b. i2w (&w2n a + &w2n b) = a + b`,
-  SRW_TAC [] [i2w_def, word_add_def, sum_num])
+Theorem word_add_i2w_w2n:
+   !a b. i2w (&w2n a + &w2n b) = a + b
+Proof
+  SRW_TAC [] [i2w_def, word_add_def, sum_num]
+QED
 
-val word_add_i2w = Q.store_thm("word_add_i2w",
-  `!a b. i2w (w2i a + w2i b) = a + b`,
+Theorem word_add_i2w:
+   !a b. i2w (w2i a + w2i b) = a + b
+Proof
   SRW_TAC [] [i2w_def, w2i_def]
   THEN FULL_SIMP_TAC (srw_ss()++ARITH_ss)
          [WORD_LEFT_ADD_DISTRIB, GSYM word_add_def, sum_num, word_literal_sub,
@@ -478,35 +493,44 @@ val word_add_i2w = Q.store_thm("word_add_i2w",
               ``(&y < &x ==> (Num (-(-&x + &y)) = x - y)) /\
                 (&x < &y ==> (Num (-(&x + -&y)) = y - x)) /\
                 (~(&y < &x) ==> (Num (-&x + &y) = y - x)) /\
-                (~(&x < &y) ==> (Num (&x + -&y) = x - y))``])
+                (~(&x < &y) ==> (Num (&x + -&y) = x - y))``]
+QED
 
-val word_sub_i2w_w2n = Q.store_thm("word_sub_i2w_w2n",
-  `!a b. i2w (&w2n a - &w2n b) = a - b`,
+Theorem word_sub_i2w_w2n:
+   !a b. i2w (&w2n a - &w2n b) = a - b
+Proof
   SRW_TAC [] [i2w_def, intLib.COOPER_PROVE
           ``(&x - &y < 0i ==> (Num ((&y - &x)) = y - x)) /\
             (~(&x - &y < 0i) ==> (Num ((&x - &y)) = x - y))``]
-  THEN FULL_SIMP_TAC (srw_ss()) [sum_num, word_literal_sub])
+  THEN FULL_SIMP_TAC (srw_ss()) [sum_num, word_literal_sub]
+QED
 
-val word_sub_i2w = Q.store_thm("word_sub_i2w",
-  `!a b. i2w (w2i a - w2i b) = a - b`,
+Theorem word_sub_i2w:
+   !a b. i2w (w2i a - w2i b) = a - b
+Proof
   SRW_TAC [] [i2w_def, w2i_def]
   THEN FULL_SIMP_TAC (srw_ss()++ARITH_ss)
          [WORD_LEFT_ADD_DISTRIB, GSYM word_add_def, sum_num, word_literal_sub,
           intLib.COOPER_PROVE
               ``(&x < &y ==> (Num (&y - &x) = y - x)) /\
-                (~(&x < &y) ==> (Num (&x - &y) = x - y))``])
+                (~(&x < &y) ==> (Num (&x - &y) = x - y))``]
+QED
 
-val word_mul_i2w_w2n = Q.store_thm("word_mul_i2w_w2n",
-  `!a b. i2w (&w2n a * &w2n b) = a * b`,
+Theorem word_mul_i2w_w2n:
+   !a b. i2w (&w2n a * &w2n b) = a * b
+Proof
   SRW_TAC [] [i2w_def]
   THEN FULL_SIMP_TAC (srw_ss()++ARITH_ss)
-         [GSYM word_mul_def, INT_MUL_CALCULATE])
+         [GSYM word_mul_def, INT_MUL_CALCULATE]
+QED
 
-val word_mul_i2w = Q.store_thm("word_mul_i2w",
-  `!a b. i2w (w2i a * w2i b) = a * b`,
+Theorem word_mul_i2w:
+   !a b. i2w (w2i a * w2i b) = a * b
+Proof
   SRW_TAC [] [i2w_def, w2i_def]
   THEN FULL_SIMP_TAC (srw_ss()++ARITH_ss)
-         [GSYM word_mul_def, INT_MUL_CALCULATE])
+         [GSYM word_mul_def, INT_MUL_CALCULATE]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -523,8 +547,9 @@ val sum_num = intLib.ARITH_PROVE
     (0 <= a /\ b < 0 /\ a + b < 0 ==> (Num (-b) - Num a = Num (-(a + b)))) /\
     (b < 0 /\ 0 <= a + b ==> (Num a - Num (-b) = Num (a + b)))``
 
-val word_i2w_add = Q.store_thm("word_i2w_add",
-  `!a b. i2w a + i2w b = i2w (a + b)`,
+Theorem word_i2w_add:
+   !a b. i2w a + i2w b = i2w (a + b)
+Proof
   SRW_TAC [] [i2w_def, w2i_def]
   THEN FULL_SIMP_TAC (srw_ss()++INT_ARITH_ss)
         [integerTheory.INT_NOT_LT, word_add_n2w, word_literal_sub, sum_num,
@@ -535,7 +560,8 @@ val word_i2w_add = Q.store_thm("word_i2w_add",
     `Num (-a) <= Num b` by intLib.ARITH_TAC,
     `Num a < Num (-b)` by intLib.ARITH_TAC,
     `Num (-b) <= Num a` by intLib.ARITH_TAC]
-  THEN ASM_SIMP_TAC std_ss [word_literal_sub, sum_num])
+  THEN ASM_SIMP_TAC std_ss [word_literal_sub, sum_num]
+QED
 
 val mult_num = Q.prove(
   `(!i j. 0 <= i /\ 0 <= j ==> (Num i * Num j = Num (i * j))) /\
@@ -549,8 +575,9 @@ val mult_lt = Q.prove(
   STRIP_TAC THEN Cases_on `i` THEN Cases_on `j`
   THEN SRW_TAC [] [NUM_OF_INT, INT_MUL_CALCULATE])
 
-val word_i2w_mul = Q.store_thm("word_i2w_mul",
-  `!a b. i2w a * i2w b = i2w (a * b)`,
+Theorem word_i2w_mul:
+   !a b. i2w a * i2w b = i2w (a * b)
+Proof
   SRW_TAC [] [i2w_def, w2i_def]
   THEN FULL_SIMP_TAC (srw_ss()++INT_ARITH_ss)
         [integerTheory.INT_NOT_LT, word_mul_n2w, WORD_LITERAL_MULT, mult_num,
@@ -558,23 +585,30 @@ val word_i2w_mul = Q.store_thm("word_i2w_mul",
          AC INT_MUL_COMM INT_MUL_ASSOC]
   THEN IMP_RES_TAC mult_lt
   THEN `a * b = 0` by intLib.ARITH_TAC
-  THEN ASM_SIMP_TAC (srw_ss()) [])
+  THEN ASM_SIMP_TAC (srw_ss()) []
+QED
 
 (* ------------------------------------------------------------------------- *)
 
 val MINUS_ONE = Q.prove(`-1w = i2w (-1)`, SRW_TAC [] [i2w_def])
 
-val MULT_MINUS_ONE = Q.store_thm("MULT_MINUS_ONE",
-  `!i. -1w * i2w i = i2w (-i)`,
-  REWRITE_TAC [MINUS_ONE, word_i2w_mul, GSYM INT_NEG_MINUS1])
+Theorem MULT_MINUS_ONE:
+   !i. -1w * i2w i = i2w (-i)
+Proof
+  REWRITE_TAC [MINUS_ONE, word_i2w_mul, GSYM INT_NEG_MINUS1]
+QED
 
-val word_0_w2i = Q.store_thm("word_0_w2i",
-  `w2i 0w = 0`,
-  SRW_TAC [] [i2w_def, w2i_def])
+Theorem word_0_w2i:
+   w2i 0w = 0
+Proof
+  SRW_TAC [] [i2w_def, w2i_def]
+QED
 
-val w2i_eq_0 = Q.store_thm("w2i_eq_0",
-  `!w : 'a word. (w2i w = 0) = (w = 0w)`,
-  SRW_TAC [] [i2w_def, w2i_def])
+Theorem w2i_eq_0:
+   !w : 'a word. (w2i w = 0) = (w = 0w)
+Proof
+  SRW_TAC [] [i2w_def, w2i_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -643,10 +677,11 @@ val DIMINDEX_SUB1 = Q.prove(
   `2n ** (dimindex (:'a) - 1) < 2 ** dimindex (:'a)`,
   Cases_on `dimindex (:'a)` \\ FULL_SIMP_TAC arith_ss [DIMINDEX_GT_0])
 
-val i2w_DIV = Q.store_thm("i2w_DIV",
-  `!n i.
+Theorem i2w_DIV:
+   !n i.
      n < dimindex (:'a) /\ INT_MIN (:'a) <= i /\ i <= INT_MAX (:'a) ==>
-     (i2w (i / 2 ** n) : 'a word = i2w i >> n)`,
+     (i2w (i / 2 ** n) : 'a word = i2w i >> n)
+Proof
   SRW_TAC [wordsLib.WORD_BIT_EQ_ss]
           [i2w_def, DIV_POS, word_2comp_n2w, DIV_NEG, word_index]
   \\ FULL_SIMP_TAC std_ss
@@ -699,25 +734,30 @@ val i2w_DIV = Q.store_thm("i2w_DIV",
     \\ `Num i < 2n ** (i' + n)` by METIS_TAC [TWOEXP_MONO, LESS_TRANS]
     \\ SRW_TAC [] [bitTheory.NOT_BIT_GT_TWOEXP]
   ]
-)
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val INT_MIN_MONOTONIC = Q.store_thm("INT_MIN_MONOTONIC",
-  `dimindex (:'a) <= dimindex (:'b) ==> INT_MIN (:'b) <= INT_MIN (:'a) : int`,
+Theorem INT_MIN_MONOTONIC:
+   dimindex (:'a) <= dimindex (:'b) ==> INT_MIN (:'b) <= INT_MIN (:'a) : int
+Proof
   SRW_TAC [] [INT_MIN_def, INT_MAX_def, wordsTheory.INT_MIN_def]
-  \\ intLib.ARITH_TAC)
+  \\ intLib.ARITH_TAC
+QED
 
-val INT_MAX_MONOTONIC = Q.store_thm("INT_MAX_MONOTONIC",
-  `dimindex (:'a) <= dimindex (:'b) ==> INT_MAX (:'a) <= INT_MAX (:'b) : int`,
+Theorem INT_MAX_MONOTONIC:
+   dimindex (:'a) <= dimindex (:'b) ==> INT_MAX (:'a) <= INT_MAX (:'b) : int
+Proof
   SRW_TAC [] [INT_MAX_def, wordsTheory.INT_MIN_def,
               intLib.ARITH_PROVE ``x - 1 <= y - 1i = x <= y``]
-  \\ intLib.ARITH_TAC)
+  \\ intLib.ARITH_TAC
+QED
 
-val w2i_sw2sw_bounds = Q.store_thm("w2i_sw2sw_bounds",
-  `!w : 'a word.
+Theorem w2i_sw2sw_bounds:
+   !w : 'a word.
       INT_MIN (:'a) <= w2i (sw2sw w : 'b word) /\
-      w2i (sw2sw w : 'b word) <= INT_MAX (:'a)`,
+      w2i (sw2sw w : 'b word) <= INT_MAX (:'a)
+Proof
   STRIP_TAC \\ Cases_on `dimindex (:'b) <= dimindex (:'a)`
   THENL [
     IMP_RES_TAC INT_MIN_MONOTONIC
@@ -731,22 +771,26 @@ val w2i_sw2sw_bounds = Q.store_thm("w2i_sw2sw_bounds",
     \\ IMP_RES_TAC INT_MIN_MONOTONIC
     \\ IMP_RES_TAC INT_MAX_MONOTONIC
     \\ SRW_TAC [intLib.INT_ARITH_ss] [sw2sw_i2w, w2i_i2w]
-  ])
+  ]
+QED
 
-val w2i_i2w_id = Q.store_thm("w2i_i2w_id",
-  `!i. INT_MIN (:'a) <= i /\ i <= INT_MAX (:'a) /\
+Theorem w2i_i2w_id:
+   !i. INT_MIN (:'a) <= i /\ i <= INT_MAX (:'a) /\
        dimindex (:'b) <= dimindex (:'a) ==>
        ((i = w2i (i2w i : 'b word)) =
-        (i2w i = sw2sw (i2w i : 'b word) : 'a word))`,
+        (i2w i = sw2sw (i2w i : 'b word) : 'a word))
+Proof
   STRIP_TAC
   \\ Cases_on `INT_MIN (:'b) <= i /\ i <= INT_MAX (:'b)`
   \\ SRW_TAC [ARITH_ss] [sw2sw_i2w, w2i_i2w]
-  \\ METIS_TAC [w2i_le, w2i_ge, w2i_sw2sw_bounds, w2i_i2w])
+  \\ METIS_TAC [w2i_le, w2i_ge, w2i_sw2sw_bounds, w2i_i2w]
+QED
 
-val w2i_11_lift = Q.store_thm("w2i_11_lift",
-  `!a:'a word b:'b word.
+Theorem w2i_11_lift:
+   !a:'a word b:'b word.
     dimindex (:'a) <= dimindex (:'c) /\ dimindex (:'b) <= dimindex (:'c) ==>
-    ((w2i a = w2i b) = (sw2sw a = sw2sw b : 'c word))`,
+    ((w2i a = w2i b) = (sw2sw a = sw2sw b : 'c word))
+Proof
   REPEAT STRIP_TAC
   \\ IMP_RES_TAC INT_MIN_MONOTONIC
   \\ IMP_RES_TAC INT_MAX_MONOTONIC
@@ -755,11 +799,13 @@ val w2i_11_lift = Q.store_thm("w2i_11_lift",
   \\ SRW_TAC [] [dimindex_dimword_le_iso, w2i_i2w, sw2sw_i2w]
   \\ `INT_MIN (:'c) <= i /\ i <= INT_MAX (:'c)` by intLib.ARITH_TAC
   \\ `INT_MIN (:'c) <= i' /\ i' <= INT_MAX (:'c)` by intLib.ARITH_TAC
-  \\ METIS_TAC[w2i_11, w2i_i2w])
+  \\ METIS_TAC[w2i_11, w2i_i2w]
+QED
 
-val w2i_n2w_mod = Q.store_thm("w2i_n2w_mod",
-  `!n m. n < dimword (:'a) /\ m <= dimindex (:'a) ==>
-         (Num (w2i (n2w n : 'a word) % 2 ** m) = n MOD 2 ** m)`,
+Theorem w2i_n2w_mod:
+   !n m. n < dimword (:'a) /\ m <= dimindex (:'a) ==>
+         (Num (w2i (n2w n : 'a word) % 2 ** m) = n MOD 2 ** m)
+Proof
   REPEAT STRIP_TAC
   \\ `&(dimword (:'a) - n) = &dimword (:'a) - &n`
   by SRW_TAC [ARITH_ss] [integerTheory.INT_SUB]
@@ -780,100 +826,131 @@ val w2i_n2w_mod = Q.store_thm("w2i_n2w_mod",
         integerTheory.INT_MOD_ADD_MULTIPLES
         |> Q.INST [`q` |-> `1i`]
         |> REWRITE_RULE [integerTheory.INT_MUL_LID],
-        integerTheory.NUM_OF_INT])
+        integerTheory.NUM_OF_INT]
+QED
 
-val word_abs_w2i = Q.store_thm("word_abs_w2i",
-  `!w. word_abs w = n2w (Num (ABS (w2i w)))`,
+Theorem word_abs_w2i:
+   !w. word_abs w = n2w (Num (ABS (w2i w)))
+Proof
   STRIP_TAC \\ Cases_on_i2w `w : 'a word`
   \\ SRW_TAC [] [w2i_i2w, word_abs_def, WORD_LTi, word_0_w2i]
   \\ SRW_TAC [] [i2w_def, intLib.ARITH_PROVE ``~(i < 0) ==> (ABS i = i)``,
        intLib.ARITH_PROVE ``i < 0 ==> (ABS i = -i)``,
-       wordsTheory.WORD_LITERAL_MULT])
+       wordsTheory.WORD_LITERAL_MULT]
+QED
 
-val word_abs_i2w = Q.store_thm("word_abs_i2w",
-  `!i. INT_MIN (:'a) <= i /\ i <= INT_MAX (:'a) ==>
-       (word_abs (i2w i) = n2w (Num (ABS i)) : 'a word)`,
-  SRW_TAC [] [word_abs_w2i, w2i_i2w])
+Theorem word_abs_i2w:
+   !i. INT_MIN (:'a) <= i /\ i <= INT_MAX (:'a) ==>
+       (word_abs (i2w i) = n2w (Num (ABS i)) : 'a word)
+Proof
+  SRW_TAC [] [word_abs_w2i, w2i_i2w]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val INT_MIN = Q.store_thm("INT_MIN",
-  `INT_MIN (:'a) = -&words$INT_MIN (:'a)`,
-  SRW_TAC [] [INT_MIN_def, INT_MAX_def, wordsTheory.INT_MIN_def])
+Theorem INT_MIN:
+   INT_MIN (:'a) = -&words$INT_MIN (:'a)
+Proof
+  SRW_TAC [] [INT_MIN_def, INT_MAX_def, wordsTheory.INT_MIN_def]
+QED
 val _ = export_rewrites ["INT_MIN"]
 
-val INT_MAX = Q.store_thm("INT_MAX",
-  `INT_MAX (:'a) = &words$INT_MAX (:'a)`,
+Theorem INT_MAX:
+   INT_MAX (:'a) = &words$INT_MAX (:'a)
+Proof
   SRW_TAC [] [INT_MAX_def, wordsTheory.INT_MAX_def, int_arithTheory.INT_NUM_SUB]
-  \\ FULL_SIMP_TAC arith_ss [wordsTheory.ZERO_LT_INT_MIN])
+  \\ FULL_SIMP_TAC arith_ss [wordsTheory.ZERO_LT_INT_MIN]
+QED
 val _ = export_rewrites ["INT_MAX"]
 
-val UINT_MAX = Q.store_thm("UINT_MAX",
-  `UINT_MAX (:'a) = &words$UINT_MAX (:'a)`,
+Theorem UINT_MAX:
+   UINT_MAX (:'a) = &words$UINT_MAX (:'a)
+Proof
   SRW_TAC [] [UINT_MAX_def, wordsTheory.UINT_MAX_def,
               int_arithTheory.INT_NUM_SUB]
   \\ ASSUME_TAC wordsTheory.ZERO_LT_dimword
-  \\ DECIDE_TAC)
+  \\ DECIDE_TAC
+QED
 val _ = export_rewrites ["UINT_MAX"]
 
-val INT_BOUND_ORDER = Q.store_thm("INT_BOUND_ORDER",
-  `INT_MIN (:'a) < INT_MAX (:'a) : int /\
+Theorem INT_BOUND_ORDER:
+   INT_MIN (:'a) < INT_MAX (:'a) : int /\
    INT_MAX (:'a) < UINT_MAX (:'a) : int /\
-   UINT_MAX (:'a) < &dimword (:'a)`,
-  SRW_TAC [ARITH_ss] [BOUND_ORDER])
+   UINT_MAX (:'a) < &dimword (:'a)
+Proof
+  SRW_TAC [ARITH_ss] [BOUND_ORDER]
+QED
 
-val INT_ZERO_LT_INT_MIN = Q.store_thm("INT_ZERO_LT_INT_MIN",
-  `INT_MIN (:'a) < 0`,
-  SRW_TAC [ARITH_ss] [ZERO_LT_INT_MIN])
+Theorem INT_ZERO_LT_INT_MIN:
+   INT_MIN (:'a) < 0
+Proof
+  SRW_TAC [ARITH_ss] [ZERO_LT_INT_MIN]
+QED
 val _ = export_rewrites ["INT_ZERO_LT_INT_MIN"]
 
-val INT_ZERO_LT_INT_MAX = Q.store_thm("INT_ZERO_LT_INT_MAX",
-  `1 < dimindex(:'a) ==> 0i < INT_MAX (:'a)`,
-  SRW_TAC [ARITH_ss] [ZERO_LT_INT_MAX])
+Theorem INT_ZERO_LT_INT_MAX:
+   1 < dimindex(:'a) ==> 0i < INT_MAX (:'a)
+Proof
+  SRW_TAC [ARITH_ss] [ZERO_LT_INT_MAX]
+QED
 
-val INT_ZERO_LE_INT_MAX = Q.store_thm("INT_ZERO_LE_INT_MAX",
-  `0i <= INT_MAX (:'a)`,
-  SRW_TAC [ARITH_ss] [ZERO_LE_INT_MAX])
+Theorem INT_ZERO_LE_INT_MAX:
+   0i <= INT_MAX (:'a)
+Proof
+  SRW_TAC [ARITH_ss] [ZERO_LE_INT_MAX]
+QED
 
-val INT_ZERO_LT_UINT_MAX = Q.store_thm("INT_ZERO_LT_UINT_MAX",
-  `0i < UINT_MAX (:'a)`,
-  SRW_TAC [ARITH_ss] [ZERO_LT_UINT_MAX])
+Theorem INT_ZERO_LT_UINT_MAX:
+   0i < UINT_MAX (:'a)
+Proof
+  SRW_TAC [ARITH_ss] [ZERO_LT_UINT_MAX]
+QED
 val _ = export_rewrites ["INT_ZERO_LT_UINT_MAX"]
 
-val w2i_1 = Q.store_thm("w2i_1",
-  `w2i (1w:'a word) = if dimindex(:'a) = 1 then -1 else 1`,
+Theorem w2i_1:
+   w2i (1w:'a word) = if dimindex(:'a) = 1 then -1 else 1
+Proof
   srw_tac [ARITH_ss]
       [wordsTheory.word_2comp_dimindex_1, w2i_def, word_msb_def,
        wordsTheory.word_index]
   \\ full_simp_tac (srw_ss()) [DECIDE ``0n < n /\ n <> 1 ==> ~(n <= 1)``]
-)
+QED
 
-val w2i_INT_MINw = Q.store_thm("w2i_INT_MINw",
-  `w2i (INT_MINw: 'a word) = INT_MIN (:'a)`,
+Theorem w2i_INT_MINw:
+   w2i (INT_MINw: 'a word) = INT_MIN (:'a)
+Proof
   SRW_TAC [ARITH_ss] [w2i_n2w_neg, word_L_def, INT_MIN_LT_DIMWORD,
-     dimword_sub_int_min])
+     dimword_sub_int_min]
+QED
 
-val w2i_UINT_MAXw = Q.store_thm("w2i_UINT_MAXw",
-  `w2i (UINT_MAXw: 'a word) = -1i`,
+Theorem w2i_UINT_MAXw:
+   w2i (UINT_MAXw: 'a word) = -1i
+Proof
   SRW_TAC [ARITH_ss] [w2i_n2w_neg, word_T_def, BOUND_ORDER]
   \\ SRW_TAC [] [wordsTheory.UINT_MAX_def,
-       DECIDE ``0n < n ==> (n - (n - 1) = 1)``])
+       DECIDE ``0n < n ==> (n - (n - 1) = 1)``]
+QED
 
-val w2i_INT_MAXw = Q.store_thm("w2i_INT_MAXw",
-  `w2i (INT_MAXw: 'a word) = INT_MAX (:'a)`,
+Theorem w2i_INT_MAXw:
+   w2i (INT_MAXw: 'a word) = INT_MAX (:'a)
+Proof
   RW_TAC arith_ss [w2i_n2w_pos, word_H_def, BOUND_ORDER]
-  \\ SRW_TAC [] [])
+  \\ SRW_TAC [] []
+QED
 
 val w2i_minus_1 = Theory.save_thm("w2i_minus_1",
   SIMP_RULE (srw_ss()) [] w2i_UINT_MAXw)
 
-val w2i_lt_0 = Q.store_thm("w2i_lt_0",
-  `!w: 'a word. w2i w < 0 = w < 0w`,
+Theorem w2i_lt_0:
+   !w: 'a word. w2i w < 0 = w < 0w
+Proof
   STRIP_TAC \\ Cases_on_i2w `w: 'a word`
-  \\ SRW_TAC [] [w2i_i2w, word_0_w2i, WORD_LTi])
+  \\ SRW_TAC [] [w2i_i2w, word_0_w2i, WORD_LTi]
+QED
 
-val w2i_neg = Q.store_thm("w2i_neg",
-  `!w:'a word. w <> INT_MINw ==> (w2i (-w) = -w2i w)`,
+Theorem w2i_neg:
+   !w:'a word. w <> INT_MINw ==> (w2i (-w) = -w2i w)
+Proof
   SRW_TAC [] [w2i_def]
   \\ IMP_RES_TAC TWO_COMP_POS
   \\ IMP_RES_TAC TWO_COMP_NEG
@@ -885,39 +962,50 @@ val w2i_neg = Q.store_thm("w2i_neg",
                     wordsTheory.DIMINDEX_GT_0]
       \\ fs [wordsTheory.word_L_def, wordsTheory.INT_MIN_def,
              wordsTheory.dimword_def])
-  \\ FULL_SIMP_TAC (srw_ss()) [])
+  \\ FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val i2w_0 = Q.store_thm("i2w_0",
-  `i2w 0 = 0w`,
-  SRW_TAC [] [i2w_def])
+Theorem i2w_0:
+   i2w 0 = 0w
+Proof
+  SRW_TAC [] [i2w_def]
+QED
 
-val i2w_minus_1 = Q.store_thm("i2w_minus_1",
-  `i2w (-1) = -1w`,
-  SRW_TAC [] [i2w_def])
+Theorem i2w_minus_1:
+   i2w (-1) = -1w
+Proof
+  SRW_TAC [] [i2w_def]
+QED
 
-val i2w_INT_MIN = Q.store_thm("i2w_INT_MIN",
-  `i2w (INT_MIN (:'a)) = INT_MINw : 'a word`,
+Theorem i2w_INT_MIN:
+   i2w (INT_MIN (:'a)) = INT_MINw : 'a word
+Proof
   `INT_MIN (:'a) <= INT_MAX (:'a) : int`
   by SRW_TAC [intLib.INT_ARITH_ss] [INT_BOUND_ORDER]
-  \\ RW_TAC (std_ss++intLib.INT_ARITH_ss) [GSYM w2i_11, w2i_INT_MINw, w2i_i2w])
+  \\ RW_TAC (std_ss++intLib.INT_ARITH_ss) [GSYM w2i_11, w2i_INT_MINw, w2i_i2w]
+QED
 
-val i2w_INT_MAX = Q.store_thm("i2w_INT_MAX",
-  `i2w (INT_MAX (:'a)) = INT_MAXw : 'a word`,
+Theorem i2w_INT_MAX:
+   i2w (INT_MAX (:'a)) = INT_MAXw : 'a word
+Proof
   `INT_MIN (:'a) <= INT_MAX (:'a) : int`
   by SRW_TAC [intLib.INT_ARITH_ss] [INT_BOUND_ORDER]
-  \\ RW_TAC (std_ss++intLib.INT_ARITH_ss) [GSYM w2i_11, w2i_INT_MAXw, w2i_i2w])
+  \\ RW_TAC (std_ss++intLib.INT_ARITH_ss) [GSYM w2i_11, w2i_INT_MAXw, w2i_i2w]
+QED
 
-val i2w_UINT_MAX = Q.store_thm("i2w_UINT_MAX",
-  `i2w (UINT_MAX (:'a)) = UINT_MAXw : 'a word`,
+Theorem i2w_UINT_MAX:
+   i2w (UINT_MAX (:'a)) = UINT_MAXw : 'a word
+Proof
   rw_tac (std_ss++intLib.INT_ARITH_ss) [GSYM w2i_11, w2i_UINT_MAXw, i2w_def]
   \\ full_simp_tac std_ss [INT_ZERO_LT_UINT_MAX,
        intLib.ARITH_PROVE ``0i < n ==> ~(n < 0i)``]
   \\ fsrw_tac [] [GSYM wordsTheory.word_T_def, w2i_minus_1]
-)
+QED
 
-val word_msb_i2w_lt_0 = Q.store_thm("word_msb_i2w_lt_0",
-  `!i. INT_MIN (:'a) <= i /\ i <= INT_MAX (:'a) ==>
-       (word_msb (i2w i : 'a word) = i < 0)`,
+Theorem word_msb_i2w_lt_0:
+   !i. INT_MIN (:'a) <= i /\ i <= INT_MAX (:'a) ==>
+       (word_msb (i2w i : 'a word) = i < 0)
+Proof
   Cases
   \\ srw_tac [intSimps.INT_ARITH_ss]
        [i2w_def, wordsTheory.word_2comp_n2w, wordsTheory.word_msb_n2w_numeric,
@@ -932,7 +1020,7 @@ val word_msb_i2w_lt_0 = Q.store_thm("word_msb_i2w_lt_0",
       \\ simp [])
   \\ simp [arithmeticTheory.SUB_LEFT_LESS_EQ,
            wordsTheory.dimword_IS_TWICE_INT_MIN]
-  )
+QED
 
 val lem1 = Q.prove(
   `!n. n <= INT_MIN (:'a) ==> (w2n (i2w (&n) : 'a word) = n)`,
@@ -957,13 +1045,15 @@ val lem3 = Q.prove(
   srw_tac [wordsLib.WORD_CANCEL_ss] []
   )
 
-val i2w_pos = Q.store_thm("i2w_pos",
-  `!n. i2w (&n) = n2w n`,
+Theorem i2w_pos:
+   !n. i2w (&n) = n2w n
+Proof
   rw [i2w_def]
-  )
+QED
 
-val word_quot = Q.store_thm("word_quot",
-  `!a b. b <> 0w ==> (word_quot a b = i2w (w2i a quot w2i b))`,
+Theorem word_quot:
+   !a b. b <> 0w ==> (word_quot a b = i2w (w2i a quot w2i b))
+Proof
   rpt strip_tac
   \\ Cases_on_i2w `a`
   \\ Cases_on_i2w `b`
@@ -977,10 +1067,11 @@ val word_quot = Q.store_thm("word_quot",
   \\ fs [i2w_0, arithmeticTheory.ZERO_DIV, lem1, lem2, lem3,
          GSYM MULT_MINUS_ONE]
   \\ simp [i2w_pos]
-  )
+QED
 
-val word_rem = Q.store_thm("word_rem",
-  `!a b. b <> 0w ==> (word_rem a b = i2w (w2i a rem w2i b))`,
+Theorem word_rem:
+   !a b. b <> 0w ==> (word_rem a b = i2w (w2i a rem w2i b))
+Proof
   rpt strip_tac
   \\ Cases_on_i2w `a`
   \\ Cases_on_i2w `b`
@@ -994,14 +1085,17 @@ val word_rem = Q.store_thm("word_rem",
   \\ fs [i2w_0, arithmeticTheory.ZERO_DIV, lem1, lem2, lem3,
          GSYM MULT_MINUS_ONE]
   \\ simp [i2w_pos]
-  )
+QED
 
-val saturate_i2w_0 = Q.store_thm("saturate_i2w_0",
-  `saturate_i2w 0 = 0w`,
-  SRW_TAC [ARITH_ss] [saturate_i2w_def, wordsTheory.ZERO_LT_UINT_MAX])
+Theorem saturate_i2w_0:
+   saturate_i2w 0 = 0w
+Proof
+  SRW_TAC [ARITH_ss] [saturate_i2w_def, wordsTheory.ZERO_LT_UINT_MAX]
+QED
 
-val saturate_i2sw_0 = Q.store_thm("saturate_i2sw_0",
-  `saturate_i2sw 0 = 0w`,
+Theorem saturate_i2sw_0:
+   saturate_i2sw 0 = 0w
+Proof
   SRW_TAC [ARITH_ss] [i2w_0, saturate_i2sw_def]
   \\ FULL_SIMP_TAC arith_ss
        [wordsTheory.ZERO_LT_INT_MIN, DECIDE ``0n < n ==> n <> 0``]
@@ -1010,17 +1104,19 @@ val saturate_i2sw_0 = Q.store_thm("saturate_i2sw_0",
        [wordsTheory.ZERO_LT_INT_MAX, DECIDE ``0n < n ==> n <> 0``]
   \\ `dimindex (:'a) = 1`
   by SRW_TAC [] [DECIDE ``0n < n /\ ~(1 < n) ==> (n = 1)``]
-  \\ SRW_TAC [] [word_L_def, wordsTheory.INT_MIN_def])
+  \\ SRW_TAC [] [word_L_def, wordsTheory.INT_MIN_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val saturate_w2sw = Q.store_thm("saturate_w2sw",
-  `!w: 'a word.
+Theorem saturate_w2sw:
+   !w: 'a word.
     saturate_w2sw w : 'b word =
       if dimindex(:'b) <= dimindex(:'a) /\ w2w (word_H: 'b word) <=+ w then
         word_H
       else
-        w2w w`,
+        w2w w
+Proof
   Cases
   \\ SIMP_TAC (srw_ss()++ARITH_ss) [word_H_def, w2w_def, word_ls_n2w,
         wordsTheory.INT_MAX_def, wordsTheory.INT_MIN_LT_DIMWORD,
@@ -1041,10 +1137,11 @@ val saturate_w2sw = Q.store_thm("saturate_w2sw",
     \\ ASM_SIMP_TAC arith_ss [NOT_LESS_EQUAL, wordsTheory.ZERO_LT_INT_MIN]
   )
   \\ ASM_REWRITE_TAC []
-)
+QED
 
-val saturate_i2sw = Q.store_thm("saturate_i2sw",
-  `!i. saturate_i2w i = if i < 0 then 0w else saturate_n2w (Num i)`,
+Theorem saturate_i2sw:
+   !i. saturate_i2w i = if i < 0 then 0w else saturate_n2w (Num i)
+Proof
   Cases
   \\ ASM_SIMP_TAC (arith_ss++INT_ARITH_ss)
        [integerTheory.INT_LE, integerTheory.NUM_OF_INT,
@@ -1059,15 +1156,17 @@ val saturate_i2sw = Q.store_thm("saturate_i2sw",
   \\ `UINT_MAX (:'a) <= n /\ n <> UINT_MAX (:'a) = dimword (:'a) <= n`
   by SIMP_TAC (srw_ss()) [wordsTheory.UINT_MAX_def,
        DECIDE ``0n < m ==> (m <= 1 + n /\ n <> m - 1 = m <= n)``]
-  \\ METIS_TAC [])
+  \\ METIS_TAC []
+QED
 
-val saturate_sw2w = Q.store_thm("saturate_sw2w",
-  `!w: 'a word.
+Theorem saturate_sw2w:
+   !w: 'a word.
     saturate_sw2w w : 'b word =
       if w < 0w then
         0w
       else
-        saturate_w2w w`,
+        saturate_w2w w
+Proof
   STRIP_TAC
   \\ SIMP_TAC arith_ss
        [w2i_lt_0, saturate_w2w, saturate_sw2w_def, saturate_i2sw]
@@ -1093,10 +1192,10 @@ val saturate_sw2w = Q.store_thm("saturate_sw2w",
     \\ ASM_REWRITE_TAC [],
     FULL_SIMP_TAC arith_ss [NOT_LESS_EQUAL, wordsTheory.dimindex_dimword_lt_iso]
   ]
-)
+QED
 
-val saturate_sw2sw = Q.store_thm("saturate_sw2sw",
-  `!w: 'a word.
+Theorem saturate_sw2sw:
+   !w: 'a word.
     saturate_sw2sw w : 'b word =
       if dimindex(:'a) <= dimindex(:'b) then
         sw2sw w
@@ -1105,7 +1204,8 @@ val saturate_sw2sw = Q.store_thm("saturate_sw2sw",
       else if w <= sw2sw (word_L: 'b word) then
         word_L
       else
-        w2w w`,
+        w2w w
+Proof
   STRIP_TAC \\ Cases_on_i2w `w:'a word`
   \\ ASM_SIMP_TAC std_ss [saturate_sw2sw_def, saturate_i2sw_def, w2i_i2w]
   \\ Cases_on `dimindex (:'a) <= dimindex (:'b)`
@@ -1149,12 +1249,12 @@ val saturate_sw2sw = Q.store_thm("saturate_sw2sw",
          [word_H_def, word_L_def, sw2sw_i2w, WORD_LEi, w2i_i2w]
     \\ SIMP_TAC (srw_ss()) []
   ]
-)
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val signed_saturate_sub = Q.store_thm("signed_saturate_sub",
-  `!a b:'a word.
+Theorem signed_saturate_sub:
+   !a b:'a word.
      signed_saturate_sub a b =
        if b = INT_MINw then
          if 0w <= a then
@@ -1164,7 +1264,8 @@ val signed_saturate_sub = Q.store_thm("signed_saturate_sub",
        else if dimindex(:'a) = 1 then
          a && ~b
        else
-         signed_saturate_add a (-b)`,
+         signed_saturate_add a (-b)
+Proof
   srw_tac [] [signed_saturate_add_def, signed_saturate_sub_def]
   \\ rule_assum_tac
        (REWRITE_RULE  [GSYM w2i_11, word_0_w2i, WORD_LEi, w2i_INT_MINw])
@@ -1210,7 +1311,7 @@ val signed_saturate_sub = Q.store_thm("signed_saturate_sub",
     \\ imp_res_tac (REWRITE_RULE [w2i_INT_MINw] (REWRITE_RULE[GSYM w2i_11]w2i_neg))
     \\ fs[GSYM integerTheory.int_sub]
   ]
-)
+QED
 
 val add_min_overflow = Q.prove(
   `!i j.
@@ -1327,26 +1428,31 @@ QED
 
 (* ------------------------------------------------------------------------- *)
 
-val different_sign_then_no_overflow = Q.store_thm(
-  "different_sign_then_no_overflow",
-  `!x y. word_msb x <> word_msb y ==> (w2i (x + y) = w2i x + w2i y)`,
+Theorem different_sign_then_no_overflow:
+   !x y. word_msb x <> word_msb y ==> (w2i (x + y) = w2i x + w2i y)
+Proof
   rw [GSYM word_add_i2w, wordsTheory.word_msb_neg, GSYM w2i_lt_0]
   \\ match_mp_tac w2i_i2w
   \\ qspec_then `x` assume_tac w2i_ge
   \\ qspec_then `x` assume_tac w2i_le
   \\ qspec_then `y` assume_tac w2i_ge
   \\ qspec_then `y` assume_tac w2i_le
-  \\ intLib.ARITH_TAC)
+  \\ intLib.ARITH_TAC
+QED
 
-val w2i_i2w_pos = Q.store_thm("w2i_i2w_pos",
-   `!n. n <= INT_MAX (:'a) ==> (w2i (i2w (&n) : 'a word) = &n)`,
+Theorem w2i_i2w_pos:
+    !n. n <= INT_MAX (:'a) ==> (w2i (i2w (&n) : 'a word) = &n)
+Proof
    ntac 2 strip_tac \\ match_mp_tac w2i_i2w
-   \\ fsrw_tac [intLib.INT_ARITH_ss] [])
+   \\ fsrw_tac [intLib.INT_ARITH_ss] []
+QED
 
-val w2i_i2w_neg = Q.store_thm("w2i_i2w_neg",
-   `!n. n <= INT_MIN (:'a) ==> (w2i (i2w (-&n) : 'a word) = -&n)`,
+Theorem w2i_i2w_neg:
+    !n. n <= INT_MIN (:'a) ==> (w2i (i2w (-&n) : 'a word) = -&n)
+Proof
    ntac 2 strip_tac \\ match_mp_tac w2i_i2w
-   \\ fsrw_tac [intLib.INT_ARITH_ss] [])
+   \\ fsrw_tac [intLib.INT_ARITH_ss] []
+QED
 
 val lem_pos = Q.prove(
    `!n:num. n <= INT_MAX (:'a) ==> ~(INT_MIN (:'a) <= n)`,
@@ -1369,9 +1475,10 @@ val lem = Q.prove(
      intLib.ARITH_PROVE ``&(2n * a) - &a = &a : int``,
      wordsTheory.dimword_IS_TWICE_INT_MIN])
 
-val overflow = Q.store_thm("overflow",
-  `!x y. w2i (x + y) <> w2i x + w2i y =
-         ((word_msb x = word_msb y) /\ word_msb x <> word_msb (x + y))`,
+Theorem overflow:
+   !x y. w2i (x + y) <> w2i x + w2i y =
+         ((word_msb x = word_msb y) /\ word_msb x <> word_msb (x + y))
+Proof
   ntac 2 strip_tac
   \\ Cases_on `word_msb x = word_msb y`
   \\ simp [different_sign_then_no_overflow]
@@ -1417,12 +1524,14 @@ val overflow = Q.store_thm("overflow",
   \\ imp_res_tac arithmeticTheory.LESS_ADD
   \\ `p' < INT_MIN (:'a)` by lrw [wordsTheory.dimword_IS_TWICE_INT_MIN]
   \\ qpat_x_assum `a + b = dimword(:'a)` (SUBST1_TAC o SYM)
-  \\ lrw [w2i_def, wordsTheory.word_msb_n2w_numeric])
+  \\ lrw [w2i_def, wordsTheory.word_msb_n2w_numeric]
+QED
 
-val sub_overflow = Q.store_thm("sub_overflow",
-  `!x y : 'a word.
+Theorem sub_overflow:
+   !x y : 'a word.
       (w2i (x - y) <> w2i x - w2i y) =
-      ((word_msb x <> word_msb y) /\ word_msb x <> word_msb (x - y))`,
+      ((word_msb x <> word_msb y) /\ word_msb x <> word_msb (x - y))
+Proof
   REPEAT strip_tac
   \\ Cases_on `y = 0w`
   >- simp [word_0_w2i]
@@ -1461,19 +1570,21 @@ val sub_overflow = Q.store_thm("sub_overflow",
         |> SIMP_RULE arith_ss
              [GSYM wordsTheory.word_sub_def, w2i_neg,
               GSYM integerTheory.int_sub, GSYM wordsTheory.TWO_COMP_POS_NEG]]
-  )
+QED
 
 val n2w_add_dimword = Q.prove(
   `!n. n2w (dimword(:'a) + n) = n2w n : 'a word`,
   simp [])
 
-val overflow_add = Q.store_thm("overflow_add",
-  `!x y. w2i (x + y) <> w2i x + w2i y = OVERFLOW x y F`,
+Theorem overflow_add:
+   !x y. w2i (x + y) <> w2i x + w2i y = OVERFLOW x y F
+Proof
   simp [overflow, wordsTheory.add_with_carry_def, GSYM wordsTheory.word_add_def]
-  )
+QED
 
-val overflow_sub = Q.store_thm("overflow_sub",
-  `!x y. w2i (x - y) <> w2i x - w2i y = OVERFLOW x (~y) T`,
+Theorem overflow_sub:
+   !x y. w2i (x - y) <> w2i x - w2i y = OVERFLOW x (~y) T
+Proof
   rw [sub_overflow, wordsTheory.add_with_carry_def, wordsTheory.WORD_MSB_1COMP]
   \\ Cases_on `word_msb x`
   \\ Cases_on `word_msb y`
@@ -1481,13 +1592,15 @@ val overflow_sub = Q.store_thm("overflow_sub",
          METIS_PROVE [wordsTheory.WORD_NEG_1, wordsTheory.WORD_NOT_T,
                       wordsTheory.WORD_NOT_NOT] ``(~y = -1w) = (y = 0w)``]
   \\ simp [wordsTheory.WORD_NOT]
-  )
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val i2w_w2n_w2w = Q.store_thm("i2w_w2n_w2w[simp]",
-  `!w : 'a word. i2w (&w2n w) = w2w w : 'b word`,
-  fs [i2w_def, wordsTheory.w2w_def]);
+Theorem i2w_w2n_w2w[simp]:
+   !w : 'a word. i2w (&w2n w) = w2w w : 'b word
+Proof
+  fs [i2w_def, wordsTheory.w2w_def]
+QED
 
 val i2w_w2n = store_thm("i2w_w2n",
   ``i2w (&w2n w) = w``,

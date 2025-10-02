@@ -85,42 +85,49 @@ val BAG_TO_LIST_IND = save_thm("BAG_TO_LIST_IND",BAG_TO_LIST_IND);
        Some consequences.
  ---------------------------------------------------------------------------*)
 
-val BAG_TO_LIST_INV = Q.store_thm("BAG_TO_LIST_INV",
-`!b. FINITE_BAG b ==> (LIST_TO_BAG(BAG_TO_LIST b) = b)`,
+Theorem BAG_TO_LIST_INV:
+ !b. FINITE_BAG b ==> (LIST_TO_BAG(BAG_TO_LIST b) = b)
+Proof
  recInduct BAG_TO_LIST_IND
    THEN RW_TAC bool_ss []
    THEN ONCE_REWRITE_TAC [UNDISCH BAG_TO_LIST_THM]
    THEN RW_TAC bool_ss [LIST_TO_BAG_def]
-   THEN PROVE_TAC [BAG_INSERT_CHOICE_REST,FINITE_SUB_BAG,SUB_BAG_REST]);
+   THEN PROVE_TAC [BAG_INSERT_CHOICE_REST,FINITE_SUB_BAG,SUB_BAG_REST]
+QED
 
-val BAG_IN_MEM = Q.store_thm("BAG_IN_MEM",
-`!b. FINITE_BAG b ==> !x. BAG_IN x b = MEM x (BAG_TO_LIST b)`,
+Theorem BAG_IN_MEM:
+ !b. FINITE_BAG b ==> !x. BAG_IN x b = MEM x (BAG_TO_LIST b)
+Proof
  recInduct BAG_TO_LIST_IND
    THEN RW_TAC bool_ss []
    THEN ONCE_REWRITE_TAC [UNDISCH BAG_TO_LIST_THM]
    THEN RW_TAC bool_ss [listTheory.MEM,NOT_IN_EMPTY_BAG]
    THEN PROVE_TAC [FINITE_SUB_BAG,SUB_BAG_REST,
-                   BAG_INSERT_CHOICE_REST,BAG_IN_BAG_INSERT]);
+                   BAG_INSERT_CHOICE_REST,BAG_IN_BAG_INSERT]
+QED
 
 (* version with the equation the "rewrite" way round *)
-val MEM_BAG_TO_LIST = Q.store_thm
-("MEM_BAG_TO_LIST",
- `!b. FINITE_BAG b ==> !x. MEM x (BAG_TO_LIST b) = BAG_IN x b`,
-  PROVE_TAC [BAG_IN_MEM]);
+Theorem MEM_BAG_TO_LIST:
+  !b. FINITE_BAG b ==> !x. MEM x (BAG_TO_LIST b) = BAG_IN x b
+Proof
+  PROVE_TAC [BAG_IN_MEM]
+QED
 
 val _ = export_rewrites ["MEM_BAG_TO_LIST"];
 
-val FINITE_LIST_TO_BAG = Q.store_thm(
-"FINITE_LIST_TO_BAG",
-`FINITE_BAG (LIST_TO_BAG ls)`,
-Induct_on `ls` THEN SRW_TAC [][LIST_TO_BAG_def]);
+Theorem FINITE_LIST_TO_BAG:
+ FINITE_BAG (LIST_TO_BAG ls)
+Proof
+Induct_on `ls` THEN SRW_TAC [][LIST_TO_BAG_def]
+QED
 val _ = export_rewrites["FINITE_LIST_TO_BAG"];
 
 
-val EVERY_LIST_TO_BAG = Q.store_thm(
-"EVERY_LIST_TO_BAG",
-`BAG_EVERY P (LIST_TO_BAG ls) <=> EVERY P ls`,
-Induct_on `ls` THEN SRW_TAC [][LIST_TO_BAG_def]);
+Theorem EVERY_LIST_TO_BAG:
+ BAG_EVERY P (LIST_TO_BAG ls) <=> EVERY P ls
+Proof
+Induct_on `ls` THEN SRW_TAC [][LIST_TO_BAG_def]
+QED
 
 
 val LIST_TO_BAG_APPEND = store_thm ("LIST_TO_BAG_APPEND",

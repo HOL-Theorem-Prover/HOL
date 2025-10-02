@@ -315,15 +315,16 @@ val (LIST_RELi_rules, LIST_RELi_ind, LIST_RELi_cases) = Hol_reln`
      LIST_RELi R (l1 ++ [h1]) (l2 ++ [h2])
 `;
 
-val LIST_RELi_LENGTH = Q.store_thm(
-  "LIST_RELi_LENGTH",
-  `!l1 l2. LIST_RELi R l1 l2 ==> LENGTH l1 = LENGTH l2`,
-  Induct_on `LIST_RELi` >> simp[]);
+Theorem LIST_RELi_LENGTH:
+   !l1 l2. LIST_RELi R l1 l2 ==> LENGTH l1 = LENGTH l2
+Proof
+  Induct_on `LIST_RELi` >> simp[]
+QED
 
-val LIST_RELi_EL_EQN = Q.store_thm(
-  "LIST_RELi_EL_EQN",
-  `LIST_RELi R l1 l2 <=>
-    LENGTH l1 = LENGTH l2 /\ !i. i < LENGTH l1 ==> R i (EL i l1) (EL i l2)`,
+Theorem LIST_RELi_EL_EQN:
+   LIST_RELi R l1 l2 <=>
+    LENGTH l1 = LENGTH l2 /\ !i. i < LENGTH l1 ==> R i (EL i l1) (EL i l2)
+Proof
   eq_tac >> map_every qid_spec_tac [`l2`, `l1`]
   >- (Induct_on `LIST_RELi` >> csimp[] >> rpt strip_tac >>
       rename1 `i < LENGTH l2 + 1` >>
@@ -336,27 +337,30 @@ val LIST_RELi_EL_EQN = Q.store_thm(
   >- (rename1 `R (LENGTH l1) x y` >>
       first_x_assum (qspec_then `LENGTH l1` mp_tac) >> simp[EL_APPEND2]) >>
   reverse (first_x_assum irule >> conj_tac) >- simp[] >> Q.X_GEN_TAC `j` >>
-  strip_tac >> first_x_assum (qspec_then `j` mp_tac) >> simp[EL_APPEND1]);
+  strip_tac >> first_x_assum (qspec_then `j` mp_tac) >> simp[EL_APPEND1]
+QED
 
-val LIST_RELi_thm = Q.store_thm(
-  "LIST_RELi_thm",
-  `(LIST_RELi R [] x <=> (x = [])) /\
+Theorem LIST_RELi_thm:
+   (LIST_RELi R [] x <=> (x = [])) /\
    (LIST_RELi R (h::t) l <=>
-     ?h' t'. l = h'::t' /\ R 0 h h' /\ LIST_RELi (R o SUC) t t')`,
+     ?h' t'. l = h'::t' /\ R 0 h h' /\ LIST_RELi (R o SUC) t t')
+Proof
   simp[LIST_RELi_EL_EQN, LENGTH_NIL_SYM] >> eq_tac >> strip_tac
   >- (rename1 `l = _ :: _` >> Cases_on `l` >> fs[] >>
       fs[LT_SUC, DISJ_IMP_THM, FORALL_AND_THM, PULL_EXISTS]) >>
-  var_eq_tac >> dsimp[LT_SUC]);
+  var_eq_tac >> dsimp[LT_SUC]
+QED
 
-val LIST_RELi_APPEND_I = Q.store_thm(
-  "LIST_RELi_APPEND_I",
-  ‘LIST_RELi R l1 l2 /\ LIST_RELi (R o ((+) (LENGTH l1))) m1 m2 ==>
-   LIST_RELi R (l1 ++ m1) (l2 ++ m2)’,
+Theorem LIST_RELi_APPEND_I:
+   LIST_RELi R l1 l2 /\ LIST_RELi (R o ((+) (LENGTH l1))) m1 m2 ==>
+   LIST_RELi R (l1 ++ m1) (l2 ++ m2)
+Proof
   simp[LIST_RELi_EL_EQN] >> rpt strip_tac >>
   rename1 `i < LENGTH l2 + LENGTH m2` >> Cases_on `i < LENGTH l2`
   >- simp[EL_APPEND1]
   >- (simp[EL_APPEND2] >> first_x_assum (qspec_then `i - LENGTH l2` mp_tac) >>
-      simp[]));
+      simp[])
+QED
 
 (* ----------------------------------------------------------------------
     MAP2i
@@ -371,23 +375,27 @@ val _ = export_rewrites["MAP2i_def"];
 
 (* Define doesn't generate this case, though the second pattern looks as if
    it should *)
-val MAP2i_NIL2 = Q.store_thm(
-  "MAP2i_NIL2[simp]",
-  ‘MAP2i f l1 [] = []’,
-  Cases_on ‘l1’ >> simp[]);
+Theorem MAP2i_NIL2[simp]:
+   MAP2i f l1 [] = []
+Proof
+  Cases_on ‘l1’ >> simp[]
+QED
 
 val MAP2i_ind = theorem"MAP2i_ind";
 
-val LENGTH_MAP2i = Q.store_thm(
-  "LENGTH_MAP2i[simp]",
-  ‘!f l1 l2. LENGTH (MAP2i f l1 l2) = MIN (LENGTH l1) (LENGTH l2)’,
-  ho_match_mp_tac MAP2i_ind >> rw[arithmeticTheory.MIN_DEF]);
+Theorem LENGTH_MAP2i[simp]:
+   !f l1 l2. LENGTH (MAP2i f l1 l2) = MIN (LENGTH l1) (LENGTH l2)
+Proof
+  ho_match_mp_tac MAP2i_ind >> rw[arithmeticTheory.MIN_DEF]
+QED
 
-val EL_MAP2i = Q.store_thm("EL_MAP2i",
-  ‘!f l1 l2 n.
+Theorem EL_MAP2i:
+   !f l1 l2 n.
       n < LENGTH l1 /\ n < LENGTH l2 ==>
-      (EL n (MAP2i f l1 l2) = f n (EL n l1) (EL n l2))’,
-  HO_MATCH_MP_TAC MAP2i_ind >> rw[] >> Cases_on‘n’ >> fs[]);
+      (EL n (MAP2i f l1 l2) = f n (EL n l1) (EL n l2))
+Proof
+  HO_MATCH_MP_TAC MAP2i_ind >> rw[] >> Cases_on‘n’ >> fs[]
+QED
 
 Definition MAP2ia_def:
   (MAP2ia f i [] _ = []) /\
@@ -396,14 +404,15 @@ Definition MAP2ia_def:
 End
 val _= export_rewrites ["MAP2ia_def"]
 
-val MAP2ia_NIL2 = Q.store_thm(
-  "MAP2ia_NIL2[simp]",
-  ‘MAP2ia f i l1 [] = []’,
-  Cases_on ‘l1’ >> simp[]);
+Theorem MAP2ia_NIL2[simp]:
+   MAP2ia f i l1 [] = []
+Proof
+  Cases_on ‘l1’ >> simp[]
+QED
 
-val MAP2i_compute = Q.store_thm(
-  "MAP2i_compute",
-  ‘MAP2i f l1 l2 = MAP2ia (f:num -> 'a -> 'b -> 'c) 0 l1 l2’,
+Theorem MAP2i_compute:
+   MAP2i f l1 l2 = MAP2ia (f:num -> 'a -> 'b -> 'c) 0 l1 l2
+Proof
   ‘!l1 l2 n f: num -> 'a -> 'b -> 'c.
      MAP2ia f n l1 l2 = MAP2i (f o (+) n) l1 l2’
     suffices_by
@@ -411,6 +420,7 @@ val MAP2i_compute = Q.store_thm(
        simp[FUN_EQ_THM]) >>
   Induct >> simp[] >> Cases_on ‘l2’ >> simp[] >>
   rpt gen_tac >> rpt (AP_TERM_TAC ORELSE AP_THM_TAC) >>
-  simp[FUN_EQ_THM]);
+  simp[FUN_EQ_THM]
+QED
 val _ = computeLib.add_persistent_funs ["MAP2i_compute"]
 val _ = remove_ovl_mapping "MAP2ia" {Name = "MAP2ia", Thy = "indexedLists"}

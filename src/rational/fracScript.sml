@@ -648,9 +648,11 @@ val FRAC_AINV_LMUL = store_thm("FRAC_AINV_LMUL", ``!f1 f2. frac_ainv (frac_mul f
  *  |- frac_minv frac_1 = frac_1
  *--------------------------------------------------------------------------*)
 
-val FRAC_MINV_1 = Q.store_thm ("FRAC_MINV_1", `frac_minv frac_1 = frac_1`,
+Theorem FRAC_MINV_1:  frac_minv frac_1 = frac_1
+Proof
   SIMP_TAC intLib.int_ss
-    [FRAC_MINV_CALCULATE, intExtensionTheory.SGN_def, frac_1_def]) ;
+    [FRAC_MINV_CALCULATE, intExtensionTheory.SGN_def, frac_1_def]
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_SUB_ADD: thm

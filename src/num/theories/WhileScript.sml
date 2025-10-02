@@ -28,9 +28,9 @@ val cond_lemma = prove(
     Existence of WHILE
    ---------------------------------------------------------------------- *)
 
-val ITERATION = Q.store_thm
-("ITERATION",
-  `!P g. ?f. !x. f x = if P x then x else f (g x)`,
+Theorem ITERATION:
+   !P g. ?f. !x. f x = if P x then x else f (g x)
+Proof
   REPEAT GEN_TAC THEN
   Q.EXISTS_TAC `\x. if ?n. P (FUNPOW g n x) then
                       FUNPOW g (@n. P (FUNPOW g n x) /\
@@ -78,7 +78,8 @@ val ITERATION = Q.store_thm
     FIRST_ASSUM (ASSUME_TAC o SIMP_RULE bool_ss [FUNPOW] o
                  GEN_ALL o SPEC ``SUC n``) THEN
     ASM_REWRITE_TAC [] THEN METIS_TAC [FUNPOW]
-  ]);
+  ]
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -92,12 +93,13 @@ val WHILE = new_specification
    SPEC ``$~ o P : 'a -> bool``) ITERATION);
 val _ = ot0 "WHILE" "while"
 
-val WHILE_INDUCTION = Q.store_thm
-("WHILE_INDUCTION",
- `!B C R.
+Theorem WHILE_INDUCTION:
+  !B C R.
      WF R /\ (!s. B s ==> R (C s) s)
-     ==> !P. (!s. (B s ==> P (C s)) ==> P s) ==> !v. P v`,
- METIS_TAC [WF_INDUCTION_THM]);
+     ==> !P. (!s. (B s ==> P (C s)) ==> P s) ==> !v. P v
+Proof
+ METIS_TAC [WF_INDUCTION_THM]
+QED
 
 
 val HOARE_SPEC_DEF = new_definition
@@ -108,19 +110,20 @@ val HOARE_SPEC_DEF = new_definition
        The while rule from Hoare logic, total correctness version.
  ---------------------------------------------------------------------------*)
 
-val WHILE_RULE = Q.store_thm
-("WHILE_RULE",
- `!R B C.
+Theorem WHILE_RULE:
+  !R B C.
      WF R /\ (!s. B s ==> R (C s) s)
       ==>
         HOARE_SPEC (\s. P s /\ B s) C P
      (*------------------------------------------*) ==>
-        HOARE_SPEC P (WHILE B C) (\s. P s /\ ~B s)`,
+        HOARE_SPEC P (WHILE B C) (\s. P s /\ ~B s)
+Proof
  REPEAT GEN_TAC THEN STRIP_TAC
   THEN REWRITE_TAC [HOARE_SPEC_DEF] THEN BETA_TAC THEN DISCH_TAC
   THEN MP_TAC (SPEC_ALL WHILE_INDUCTION) THEN ASM_REWRITE_TAC[]
   THEN DISCH_THEN HO_MATCH_MP_TAC (* recInduct *)
-  THEN METIS_TAC [WHILE]);
+  THEN METIS_TAC [WHILE]
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -270,17 +273,19 @@ val OLEAST_EQNS = store_thm(
   METIS_TAC [NOT_ZERO_LT_ZERO]);
 val _ = export_rewrites ["OLEAST_EQNS"]
 
-val OLEAST_EQ_NONE = Q.store_thm(
-  "OLEAST_EQ_NONE[simp]",
-  ‘((OLEAST) P = NONE) <=> !n. ~P n’,
-  DEEP_INTRO_TAC OLEAST_INTRO >> SRW_TAC [][] >> METIS_TAC[]);
+Theorem OLEAST_EQ_NONE[simp]:
+   ((OLEAST) P = NONE) <=> !n. ~P n
+Proof
+  DEEP_INTRO_TAC OLEAST_INTRO >> SRW_TAC [][] >> METIS_TAC[]
+QED
 
-val OLEAST_EQ_SOME = Q.store_thm(
-  "OLEAST_EQ_SOME",
-  ‘((OLEAST) P = SOME n) <=> P n /\ !m. m < n ==> ~P m’,
+Theorem OLEAST_EQ_SOME:
+   ((OLEAST) P = SOME n) <=> P n /\ !m. m < n ==> ~P m
+Proof
   DEEP_INTRO_TAC OLEAST_INTRO >>
   SIMP_TAC (srw_ss() ++ DNF_ss) [EQ_IMP_THM] >> REPEAT STRIP_TAC >>
-  METIS_TAC[NOT_LESS, LESS_EQUAL_ANTISYM]);
+  METIS_TAC[NOT_LESS, LESS_EQUAL_ANTISYM]
+QED
 
 (* ----------------------------------------------------------------------
     OWHILE ("option while") which returns SOME result if the loop

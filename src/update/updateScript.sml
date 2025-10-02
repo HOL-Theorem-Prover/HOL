@@ -32,16 +32,18 @@ End
    Theorems
    ------------------------------------------------------------------------ *)
 
-val LIST_UPDATE_LOOKUP = Q.store_thm("LIST_UPDATE_LOOKUP",
-  `!l f i.
+Theorem LIST_UPDATE_LOOKUP:
+   !l f i.
      LIST_UPDATE l f i =
        case FIND (\x. FST x = i) l
        of SOME (_,e) => e
-        | NONE => f i`,
+        | NONE => f i
+Proof
   Induct
   THEN SRW_TAC [] [LIST_UPDATE_def, FIND_def, combinTheory.UPDATE_def]
   THEN Cases_on `h`
-  THEN SRW_TAC [] []);
+  THEN SRW_TAC [] []
+QED
 
 val FILTER_OVERRIDE_lem = Q.prove(
   `(((\y. x <> y) o FST) = (\y. x <> FST y)) /\
@@ -82,12 +84,14 @@ val FIND_OVERRIDE = Q.prove(
          FILTER_OVERRIDE
   THEN ASM_SIMP_TAC std_ss [FIND_FILTER]);
 
-val LIST_UPDATE_OVERRIDE = Q.store_thm("LIST_UPDATE_OVERRIDE",
-  `!l. LIST_UPDATE l = LIST_UPDATE (OVERRIDE l)`,
+Theorem LIST_UPDATE_OVERRIDE:
+   !l. LIST_UPDATE l = LIST_UPDATE (OVERRIDE l)
+Proof
   REWRITE_TAC [FUN_EQ_THM]
   THEN Induct_on `l`
   THEN SRW_TAC [] [OVERRIDE_def, LIST_UPDATE_def, combinTheory.UPDATE_def]
-  THEN SRW_TAC [] [LIST_UPDATE_LOOKUP, FIND_OVERRIDE]);
+  THEN SRW_TAC [] [LIST_UPDATE_LOOKUP, FIND_OVERRIDE]
+QED
 
 (* ------------------------------------------------------------------------ *)
 
@@ -122,12 +126,14 @@ val FIND_ALL_DISTINCT = Q.prove(
     THEN SRW_TAC [] [FIND_APPEND_lem2]
   ]);
 
-val LIST_UPDATE_ALL_DISTINCT = Q.store_thm("LIST_UPDATE_ALL_DISTINCT",
-  `!l1 l2.
+Theorem LIST_UPDATE_ALL_DISTINCT:
+   !l1 l2.
       ALL_DISTINCT (MAP FST l2) /\ PERM l1 l2 ==>
-      (LIST_UPDATE l1 = LIST_UPDATE l2)`,
+      (LIST_UPDATE l1 = LIST_UPDATE l2)
+Proof
   SRW_TAC [] [FUN_EQ_THM, LIST_UPDATE_LOOKUP]
-  THEN METIS_TAC [FIND_ALL_DISTINCT, sortingTheory.PERM_SYM]);
+  THEN METIS_TAC [FIND_ALL_DISTINCT, sortingTheory.PERM_SYM]
+QED
 
 val ALL_DISTINCT_OVERRIDE = Q.prove(
   `!l. ALL_DISTINCT (MAP FST (OVERRIDE l))`,
@@ -144,10 +150,12 @@ val ALL_DISTINCT_QSORT = Q.prove(
   METIS_TAC [sortingTheory.QSORT_PERM, sortingTheory.PERM_MAP,
     sortingTheory.ALL_DISTINCT_PERM]);
 
-val LIST_UPDATE_SORT_OVERRIDE = Q.store_thm("LIST_UPDATE_SORT_OVERRIDE",
-  `!R l. LIST_UPDATE l = LIST_UPDATE (QSORT R (OVERRIDE l))`,
+Theorem LIST_UPDATE_SORT_OVERRIDE:
+   !R l. LIST_UPDATE l = LIST_UPDATE (QSORT R (OVERRIDE l))
+Proof
   METIS_TAC [LIST_UPDATE_OVERRIDE, LIST_UPDATE_ALL_DISTINCT,
-    sortingTheory.QSORT_PERM, ALL_DISTINCT_OVERRIDE, ALL_DISTINCT_QSORT]);
+    sortingTheory.QSORT_PERM, ALL_DISTINCT_OVERRIDE, ALL_DISTINCT_QSORT]
+QED
 
 (* ------------------------------------------------------------------------ *)
 

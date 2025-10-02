@@ -267,9 +267,11 @@ val transitive_RC = store_thm(
   ``!R. transitive R ==> transitive (RC R)``,
   SRW_TAC [][transitive_def, RC_DEF] THEN PROVE_TAC []);
 
-val TC_SUBSET = Q.store_thm("TC_SUBSET",
-`!R x (y:'a). R x y ==> TC R x y`,
-REWRITE_TAC[TC_DEF] THEN MESON_TAC[]);
+Theorem TC_SUBSET:
+ !R x (y:'a). R x y ==> TC R x y
+Proof
+REWRITE_TAC[TC_DEF] THEN MESON_TAC[]
+QED
 
 val RTC_SUBSET = store_thm(
   "RTC_SUBSET",
@@ -332,12 +334,14 @@ val tc_right_twice = TAC_PROOF(
   GEN_TAC THEN HO_MATCH_MP_TAC tc_right_ind THEN MESON_TAC [tc_right_rules]);
 
 
-val TC_INDUCT = Q.store_thm("TC_INDUCT",
-`!(R:'a->'a->bool) P.
+Theorem TC_INDUCT:
+ !(R:'a->'a->bool) P.
    (!x y. R x y ==> P x y) /\
    (!x y z. P x y /\ P y z ==> P x z)
-   ==> !u v. (TC R) u v ==> P u v`,
-REWRITE_TAC[TC_DEF] THEN MESON_TAC[]);
+   ==> !u v. (TC R) u v ==> P u v
+Proof
+REWRITE_TAC[TC_DEF] THEN MESON_TAC[]
+QED
 
 val tc_left_TC = TAC_PROOF(
   ([tc_left_asm],
@@ -441,15 +445,19 @@ fun tc_ind_alt_tacs tc_ind_thm tq =
   FULL_SIMP_TAC bool_ss [TC_SUBSET] THEN
   RES_TAC THEN IMP_RES_TAC TC_RULES ;
 
-val TC_INDUCT_ALT_LEFT = Q.store_thm ("TC_INDUCT_ALT_LEFT",
-  `!R Q. (!x. R x b ==> Q x) /\ (!x y. R x y /\ Q y ==> Q x) ==>
-    !a. TC R a b ==> Q a`,
-  tc_ind_alt_tacs TC_INDUCT_LEFT1 `\x y. if y = b then Q x else TC R x y`) ;
+Theorem TC_INDUCT_ALT_LEFT:
+   !R Q. (!x. R x b ==> Q x) /\ (!x y. R x y /\ Q y ==> Q x) ==>
+    !a. TC R a b ==> Q a
+Proof
+  tc_ind_alt_tacs TC_INDUCT_LEFT1 `\x y. if y = b then Q x else TC R x y`
+QED
 
-val TC_INDUCT_ALT_RIGHT = Q.store_thm ("TC_INDUCT_ALT_RIGHT",
-  `!R Q. (!y. R a y ==> Q y) /\ (!x y. Q x /\ R x y ==> Q y) ==>
-    !b. TC R a b ==> Q b`,
-  tc_ind_alt_tacs TC_INDUCT_RIGHT1 `\x y. if x = a then Q y else TC R x y`) ;
+Theorem TC_INDUCT_ALT_RIGHT:
+   !R Q. (!y. R a y ==> Q y) /\ (!x y. Q x /\ R x y ==> Q y) ==>
+    !b. TC R a b ==> Q b
+Proof
+  tc_ind_alt_tacs TC_INDUCT_RIGHT1 `\x y. if x = a then Q y else TC R x y`
+QED
 
 val TC_lifts_monotonicities = store_thm(
   "TC_lifts_monotonicities",
@@ -477,13 +485,14 @@ val TC_lifts_transitive_relations = store_thm(
     (!x y. TC R x y ==> Q (f x) (f y))``,
   STRIP_TAC THEN HO_MATCH_MP_TAC TC_INDUCT THEN METIS_TAC [transitive_def]);
 
-val TC_implies_one_step = Q.store_thm(
-"TC_implies_one_step",
-`!x y . R^+ x y /\ x <> y ==> ?z. R x z /\ x <> z`,
+Theorem TC_implies_one_step:
+ !x y . R^+ x y /\ x <> y ==> ?z. R x z /\ x <> z
+Proof
 REWRITE_TAC [GSYM AND_IMP_INTRO] THEN
 HO_MATCH_MP_TAC TC_INDUCT THEN
 SRW_TAC [SatisfySimps.SATISFY_ss][] THEN
-PROVE_TAC []);
+PROVE_TAC []
+QED
 
 val TC_RTC = store_thm(
   "TC_RTC",
@@ -542,19 +551,25 @@ Proof
   METIS_TAC[RTC_RULES]
 QED
 
-val RTC_ALT_INDUCT = Q.store_thm ("RTC_ALT_INDUCT",
-  `!R Q b. Q b /\ (!x y. R x y /\ Q y ==> Q x) ==> !x. RTC R x b ==> Q x`,
-  REWRITE_TAC [RTC_ALT_DEF] THEN REPEAT STRIP_TAC THEN RES_TAC) ;
+Theorem RTC_ALT_INDUCT:
+   !R Q b. Q b /\ (!x y. R x y /\ Q y ==> Q x) ==> !x. RTC R x b ==> Q x
+Proof
+  REWRITE_TAC [RTC_ALT_DEF] THEN REPEAT STRIP_TAC THEN RES_TAC
+QED
 
-val RTC_ALT_RIGHT_DEF = Q.store_thm ("RTC_ALT_RIGHT_DEF",
-  `!R a b. RTC R a b = !Q. Q a /\ (!y z. Q y /\ R y z ==> Q z) ==> Q b`,
+Theorem RTC_ALT_RIGHT_DEF:
+   !R a b. RTC R a b = !Q. Q a /\ (!y z. Q y /\ R y z ==> Q z) ==> Q b
+Proof
   REWRITE_TAC [RTC_ALT_DEF] THEN REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN
   FIRST_X_ASSUM (ASSUME_TAC o Q.SPEC `$~ o Q`) THEN
-  REV_FULL_SIMP_TAC bool_ss [combinTheory.o_THM] THEN RES_TAC) ;
+  REV_FULL_SIMP_TAC bool_ss [combinTheory.o_THM] THEN RES_TAC
+QED
 
-val RTC_ALT_RIGHT_INDUCT = Q.store_thm ("RTC_ALT_RIGHT_INDUCT",
-  `!R Q a. Q a /\ (!y z. Q y /\ R y z ==> Q z) ==> !z. RTC R a z ==> Q z`,
-  REWRITE_TAC [RTC_ALT_RIGHT_DEF] THEN REPEAT STRIP_TAC THEN RES_TAC) ;
+Theorem RTC_ALT_RIGHT_INDUCT:
+   !R Q a. Q a /\ (!y z. Q y /\ R y z ==> Q z) ==> !z. RTC R a z ==> Q z
+Proof
+  REWRITE_TAC [RTC_ALT_RIGHT_DEF] THEN REPEAT STRIP_TAC THEN RES_TAC
+QED
 
 val RTC_INDUCT_RIGHT1 = store_thm(
   "RTC_INDUCT_RIGHT1",
@@ -731,26 +746,26 @@ val RTC_CASES_RTC_TWICE = store_thm(
     MESON_TAC [RTC_RULES, RTC_SUBSET, RTC_RTC]
   ]);
 
-val TC_CASES1_E =
-Q.store_thm
-("TC_CASES1_E",
-  `!R x z. TC R x z ==> R x z \/ ?y:'a. R x y /\ TC R y z`,
+Theorem TC_CASES1_E:
+   !R x z. TC R x z ==> R x z \/ ?y:'a. R x y /\ TC R y z
+Proof
 GEN_TAC
  THEN TC_INDUCT_TAC
- THEN MESON_TAC [REWRITE_RULE[transitive_def] TC_TRANSITIVE, TC_SUBSET]);
+ THEN MESON_TAC [REWRITE_RULE[transitive_def] TC_TRANSITIVE, TC_SUBSET]
+QED
 
 val TC_CASES1 = store_thm(
   "TC_CASES1",
   ``TC R x z <=> R x z \/ ?y:'a. R x y /\ TC R y z``,
   MESON_TAC[TC_RULES, TC_CASES1_E])
 
-val TC_CASES2_E =
-Q.store_thm
-("TC_CASES2_E",
-    `!R x z. TC R x z ==> R x z \/ ?y:'a. TC R x y /\ R y z`,
+Theorem TC_CASES2_E:
+     !R x z. TC R x z ==> R x z \/ ?y:'a. TC R x y /\ R y z
+Proof
 GEN_TAC
  THEN TC_INDUCT_TAC
- THEN MESON_TAC [REWRITE_RULE[transitive_def] TC_TRANSITIVE, TC_SUBSET]);
+ THEN MESON_TAC [REWRITE_RULE[transitive_def] TC_TRANSITIVE, TC_SUBSET]
+QED
 
 val TC_CASES2 = store_thm(
   "TC_CASES2",
@@ -811,20 +826,23 @@ val EQC_TRANS = store_thm(
   Q_TAC SUFF_TAC `transitive (EQC R)` THEN1 PROVE_TAC [transitive_def] THEN
   SRW_TAC [][EQC_DEF, transitive_RC, TC_TRANSITIVE])
 
-val transitive_EQC = Q.store_thm(
-"transitive_EQC",
-`transitive (EQC R)`,
-PROVE_TAC [transitive_def,EQC_TRANS]);
+Theorem transitive_EQC:
+ transitive (EQC R)
+Proof
+PROVE_TAC [transitive_def,EQC_TRANS]
+QED
 
-val symmetric_EQC = Q.store_thm(
-"symmetric_EQC",
-`symmetric (EQC R)`,
-PROVE_TAC [symmetric_def,EQC_SYM]);
+Theorem symmetric_EQC:
+ symmetric (EQC R)
+Proof
+PROVE_TAC [symmetric_def,EQC_SYM]
+QED
 
-val reflexive_EQC = Q.store_thm(
-"reflexive_EQC",
-`reflexive (EQC R)`,
-PROVE_TAC [reflexive_def,EQC_REFL]);
+Theorem reflexive_EQC:
+ reflexive (EQC R)
+Proof
+PROVE_TAC [reflexive_def,EQC_REFL]
+QED
 
 Theorem EQC_MOVES_IN[simp]:
   !R. (EQC (RC R) = EQC R) /\ (EQC (SC R) = EQC R) /\ (EQC (TC R) = EQC R)
@@ -887,30 +905,33 @@ val RTC_lifts_monotonicities = store_thm(
   STRIP_TAC THEN HO_MATCH_MP_TAC RTC_INDUCT THEN SRW_TAC [][] THEN
   METIS_TAC [RTC_RULES]);
 
-val RTC_lifts_reflexive_transitive_relations = Q.store_thm(
-  "RTC_lifts_reflexive_transitive_relations",
-  `(!x y. R x y ==> Q (f x) (f y)) /\ reflexive Q /\ transitive Q ==>
-   !x y. R^* x y ==> Q (f x) (f y)`,
+Theorem RTC_lifts_reflexive_transitive_relations:
+   (!x y. R x y ==> Q (f x) (f y)) /\ reflexive Q /\ transitive Q ==>
+   !x y. R^* x y ==> Q (f x) (f y)
+Proof
   STRIP_TAC THEN
   HO_MATCH_MP_TAC RTC_INDUCT THEN
   FULL_SIMP_TAC bool_ss [reflexive_def,transitive_def] THEN
-  METIS_TAC []);
+  METIS_TAC []
+QED
 
-val RTC_lifts_equalities = Q.store_thm(
-  "RTC_lifts_equalities",
-  `(!x y. R x y ==> (f x = f y)) ==> !x y. R^* x y ==> (f x = f y)`,
+Theorem RTC_lifts_equalities:
+   (!x y. R x y ==> (f x = f y)) ==> !x y. R^* x y ==> (f x = f y)
+Proof
   STRIP_TAC THEN
   HO_MATCH_MP_TAC RTC_lifts_reflexive_transitive_relations THEN
-  ASM_SIMP_TAC bool_ss [reflexive_def,transitive_def]);
+  ASM_SIMP_TAC bool_ss [reflexive_def,transitive_def]
+QED
 
-val RTC_lifts_invariants = Q.store_thm(
-  "RTC_lifts_invariants",
-  `(!x y. P x /\ R x y ==> P y) ==> !x y. P x /\ R^* x y ==> P y`,
+Theorem RTC_lifts_invariants:
+   (!x y. P x /\ R x y ==> P y) ==> !x y. P x /\ R^* x y ==> P y
+Proof
   STRIP_TAC THEN
   REWRITE_TAC [Once CONJ_COMM] THEN
   REWRITE_TAC [GSYM AND_IMP_INTRO] THEN
   HO_MATCH_MP_TAC RTC_INDUCT THEN
-  METIS_TAC []);
+  METIS_TAC []
+QED
 
 (*---------------------------------------------------------------------------*
  * Wellfounded relations. Wellfoundedness: Every non-empty set has an        *
@@ -955,32 +976,37 @@ val NNF_TAC = CONV_TAC NNF_CONV;
  *                                                                           *
  *---------------------------------------------------------------------------*)
 
-val WF_INDUCTION_THM =
-Q.store_thm("WF_INDUCTION_THM",
-`!(R:'a->'a->bool).
-   WF R ==> !P. (!x. (!y. R y x ==> P y) ==> P x) ==> !x. P x`,
+Theorem WF_INDUCTION_THM:
+ !(R:'a->'a->bool).
+   WF R ==> !P. (!x. (!y. R y x ==> P y) ==> P x) ==> !x. P x
+Proof
 GEN_TAC THEN REWRITE_TAC[WF_DEF]
  THEN DISCH_THEN (fn th => GEN_TAC THEN (MP_TAC (Q.SPEC `\x:'a. ~P x` th)))
  THEN BETA_TAC THEN REWRITE_TAC[] THEN STRIP_TAC THEN CONV_TAC CONTRAPOS_CONV
  THEN NNF_TAC THEN STRIP_TAC THEN RES_TAC
- THEN Q.EXISTS_TAC`min` THEN ASM_REWRITE_TAC[]);
+ THEN Q.EXISTS_TAC`min` THEN ASM_REWRITE_TAC[]
+QED
 
 
-val INDUCTION_WF_THM = Q.store_thm("INDUCTION_WF_THM",
-`!R:'a->'a->bool.
-     (!P. (!x. (!y. R y x ==> P y) ==> P x) ==> !x. P x) ==> WF R`,
+Theorem INDUCTION_WF_THM:
+ !R:'a->'a->bool.
+     (!P. (!x. (!y. R y x ==> P y) ==> P x) ==> !x. P x) ==> WF R
+Proof
 GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[WF_DEF] THEN GEN_TAC THEN
  CONV_TAC CONTRAPOS_CONV THEN NNF_TAC THEN
  DISCH_THEN (fn th => POP_ASSUM (MATCH_MP_TAC o BETA_RULE o Q.SPEC`\w. ~B w`)
                       THEN ASSUME_TAC th) THEN GEN_TAC THEN
  CONV_TAC CONTRAPOS_CONV THEN NNF_TAC
- THEN POP_ASSUM MATCH_ACCEPT_TAC);
+ THEN POP_ASSUM MATCH_ACCEPT_TAC
+QED
 
-val WF_EQ_INDUCTION_THM = Q.store_thm("WF_EQ_INDUCTION_THM",
- `!R:'a->'a->bool.
-     WF R = !P. (!x. (!y. R y x ==> P y) ==> P x) ==> !x. P x`,
+Theorem WF_EQ_INDUCTION_THM:
+  !R:'a->'a->bool.
+     WF R = !P. (!x. (!y. R y x ==> P y) ==> P x) ==> !x. P x
+Proof
 GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL
-   [IMP_RES_TAC WF_INDUCTION_THM, IMP_RES_TAC INDUCTION_WF_THM]);
+   [IMP_RES_TAC WF_INDUCTION_THM, IMP_RES_TAC INDUCTION_WF_THM]
+QED
 
 
 (*---------------------------------------------------------------------------
@@ -1015,15 +1041,17 @@ val WF_INDUCT_TAC =
 val ex_lem = Q.prove(`!x. (?y. y = x) /\ ?y. x=y`,
 GEN_TAC THEN CONJ_TAC THEN Q.EXISTS_TAC`x` THEN REFL_TAC);
 
-val WF_NOT_REFL = Q.store_thm("WF_NOT_REFL",
-`!R x y. WF R ==> R x y ==> ~(x=y)`,
+Theorem WF_NOT_REFL:
+ !R x y. WF R ==> R x y ==> ~(x=y)
+Proof
 REWRITE_TAC[WF_DEF]
   THEN REPEAT GEN_TAC
   THEN DISCH_THEN (MP_TAC o Q.SPEC`\x. x=y`)
   THEN BETA_TAC THEN REWRITE_TAC[ex_lem]
   THEN STRIP_TAC
   THEN Q.UNDISCH_THEN `min=y` SUBST_ALL_TAC
-  THEN DISCH_TAC THEN RES_TAC);
+  THEN DISCH_TAC THEN RES_TAC
+QED
 
 (* delete this or the previous if we abbreviate irreflexive *)
 val WF_irreflexive = store_thm(
@@ -1048,11 +1076,11 @@ val _ = Unicode.unicode_version {u = UnicodeChars.emptyset ^ UnicodeChars.sub_r,
                                  tmnm = "EMPTY_REL"}
 
 
-val WF_EMPTY_REL =
-Q.store_thm
-  ("WF_EMPTY_REL",
-   `WF (EMPTY_REL:'a->'a->bool)`,
-REWRITE_TAC[EMPTY_REL_DEF,WF_DEF]);
+Theorem WF_EMPTY_REL:
+    WF (EMPTY_REL:'a->'a->bool)
+Proof
+REWRITE_TAC[EMPTY_REL_DEF,WF_DEF]
+QED
 
 
 (*---------------------------------------------------------------------------
@@ -1060,9 +1088,10 @@ REWRITE_TAC[EMPTY_REL_DEF,WF_DEF]);
  * P is a wellfounded relation.
  *---------------------------------------------------------------------------*)
 
-val WF_SUBSET = Q.store_thm("WF_SUBSET",
-`!(R:'a->'a->bool) P.
-  WF R /\ (!x y. P x y ==> R x y) ==> WF P`,
+Theorem WF_SUBSET:
+ !(R:'a->'a->bool) P.
+  WF R /\ (!x y. P x y ==> R x y) ==> WF P
+Proof
 REWRITE_TAC[WF_DEF]
  THEN REPEAT STRIP_TAC
  THEN RES_TAC
@@ -1070,7 +1099,8 @@ REWRITE_TAC[WF_DEF]
  THEN ASM_REWRITE_TAC[]
  THEN GEN_TAC
  THEN DISCH_TAC
- THEN REPEAT RES_TAC);
+ THEN REPEAT RES_TAC
+QED
 
 
 (*---------------------------------------------------------------------------
@@ -1082,8 +1112,9 @@ REWRITE_TAC[WF_DEF]
  * specialize it later to an extension of B.
  *---------------------------------------------------------------------------*)
 
-val WF_TC = Q.store_thm("WF_TC",
-`!R:'a->'a->bool. WF R ==> WF(TC R)`,
+Theorem WF_TC:
+ !R:'a->'a->bool. WF R ==> WF(TC R)
+Proof
 GEN_TAC THEN CONV_TAC CONTRAPOS_CONV THEN REWRITE_TAC[WF_DEF]
  THEN NNF_TAC THEN DISCH_THEN (Q.X_CHOOSE_THEN `B` MP_TAC)
  THEN DISCH_THEN (fn th =>
@@ -1102,7 +1133,8 @@ GEN_TAC THEN CONV_TAC CONTRAPOS_CONV THEN REWRITE_TAC[WF_DEF]
      THEN MAP_EVERY Q.EXISTS_TAC[`a`,`z`] THEN ASM_REWRITE_TAC[]
      THEN IMP_RES_TAC TC_SUBSET]
    THEN
-   IMP_RES_TAC(REWRITE_RULE[transitive_def] TC_TRANSITIVE)]);
+   IMP_RES_TAC(REWRITE_RULE[transitive_def] TC_TRANSITIVE)]
+QED
 
 val WF_TC_EQN = store_thm(
   "WF_TC_EQN",
@@ -1173,8 +1205,9 @@ val inv_image_thm = save_thm(
   SIMP_RULE bool_ss [FUN_EQ_THM] inv_image_def)
 val _ = export_rewrites ["inv_image_thm"]
 
-val WF_inv_image = Q.store_thm("WF_inv_image",
-`!R (f:'a->'b). WF R ==> WF (inv_image R f)`,
+Theorem WF_inv_image:
+ !R (f:'a->'b). WF R ==> WF (inv_image R f)
+Proof
 REPEAT GEN_TAC
   THEN REWRITE_TAC[inv_image_def,WF_DEF] THEN BETA_TAC
   THEN DISCH_THEN (fn th => Q.X_GEN_TAC`Alpha` THEN STRIP_TAC THEN MP_TAC th)
@@ -1190,7 +1223,8 @@ REPEAT GEN_TAC
      THEN ASM_REWRITE_TAC[]
      THEN GEN_TAC
      THEN DISCH_THEN (ANTE_RES_THEN (MP_TAC o Q.SPEC`b`))
-     THEN REWRITE_TAC[]]);
+     THEN REWRITE_TAC[]]
+QED
 
 val total_inv_image = store_thm(
   "total_inv_image",
@@ -1241,11 +1275,13 @@ QED
  * be messy!
  *---------------------------------------------------------------------------*)
 
-val RESTRICT_LEMMA = Q.store_thm("RESTRICT_LEMMA",
-`!(f:'a->'b) R (y:'a) (z:'a).
-    R y z ==> (RESTRICT f R z y = f y)`,
+Theorem RESTRICT_LEMMA:
+ !(f:'a->'b) R (y:'a) (z:'a).
+    R y z ==> (RESTRICT f R z y = f y)
+Proof
 REWRITE_TAC [RESTRICT_DEF] THEN BETA_TAC THEN REPEAT GEN_TAC THEN STRIP_TAC
-THEN ASM_REWRITE_TAC[]);
+THEN ASM_REWRITE_TAC[]
+QED
 
 
 (*---------------------------------------------------------------------------
@@ -1481,10 +1517,10 @@ val the_fun_TC = REWRITE_RULE[TC_RESTRICT_LEMMA] the_fun_TC0;
  * WFREC R M behaves as a fixpoint operator should.
  *---------------------------------------------------------------------------*)
 
-val WFREC_THM = Q.store_thm
-("WFREC_THM",
-  `!R. !M:('a -> 'b) -> ('a -> 'b).
-      WF R ==> !x. WFREC R M x = M (RESTRICT (WFREC R M) R x) x`,
+Theorem WFREC_THM:
+   !R. !M:('a -> 'b) -> ('a -> 'b).
+      WF R ==> !x. WFREC R M x = M (RESTRICT (WFREC R M) R x) x
+Proof
 REPEAT STRIP_TAC THEN REWRITE_TAC[WFREC_DEF]
   THEN EXPOSE_CUTS_TAC THEN BETA_TAC
   THEN IMP_RES_TAC TC_SUBSET
@@ -1501,26 +1537,29 @@ REPEAT STRIP_TAC THEN REWRITE_TAC[WFREC_DEF]
           ALL_TAC,ALL_TAC]
   THEN MATCH_MP_TAC approx_the_fun1
   THEN MATCH_MP_TAC EXISTS_LEMMA
-  THEN ASM_REWRITE_TAC[]);
+  THEN ASM_REWRITE_TAC[]
+QED
 
 
 (*---------------------------------------------------------------------------*
  * This is what is used by TFL.                                              *
  *---------------------------------------------------------------------------*)
 
-val WFREC_COROLLARY =
- Q.store_thm("WFREC_COROLLARY",
-  `!M R (f:'a->'b).
-        (f = WFREC R M) ==> WF R ==> !x. f x = M (RESTRICT f R x) x`,
-REPEAT GEN_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[WFREC_THM]);
+Theorem WFREC_COROLLARY:
+   !M R (f:'a->'b).
+        (f = WFREC R M) ==> WF R ==> !x. f x = M (RESTRICT f R x) x
+Proof
+REPEAT GEN_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[WFREC_THM]
+QED
 
 
 (*---------------------------------------------------------------------------*
  * The usual phrasing of the wellfounded recursion theorem.                  *
  *---------------------------------------------------------------------------*)
 
-val WF_RECURSION_THM = Q.store_thm("WF_RECURSION_THM",
-`!R. WF R ==> !M. ?!f:'a->'b. !x. f x = M (RESTRICT f R x) x`,
+Theorem WF_RECURSION_THM:
+ !R. WF R ==> !M. ?!f:'a->'b. !x. f x = M (RESTRICT f R x) x
+Proof
 GEN_TAC THEN DISCH_TAC THEN GEN_TAC THEN CONV_TAC EXISTS_UNIQUE_CONV
 THEN CONJ_TAC THENL
 [Q.EXISTS_TAC`WFREC R M` THEN MATCH_MP_TAC WFREC_THM THEN POP_ASSUM ACCEPT_TAC,
@@ -1529,7 +1568,8 @@ THEN CONJ_TAC THENL
  [ FIRST_ASSUM ACCEPT_TAC,
    GEN_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[] THEN AP_THM_TAC THEN
    AP_TERM_TAC THEN REWRITE_TAC[CUTS_EQ] THEN GEN_TAC THEN
-   FIRST_ASSUM MATCH_ACCEPT_TAC]]);
+   FIRST_ASSUM MATCH_ACCEPT_TAC]]
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -1540,49 +1580,54 @@ val WFP_DEF = Q.new_definition
   ("WFP_DEF",
    `WFP R a = !P. (!x. (!y. R y x ==> P y) ==> P x) ==> P a`);
 
-val WFP_RULES = Q.store_thm
-   ("WFP_RULES",
-    `!R x. (!y. R y x ==> WFP R y) ==> WFP R x`,
-    REWRITE_TAC [WFP_DEF] THEN MESON_TAC []);
+Theorem WFP_RULES:
+     !R x. (!y. R y x ==> WFP R y) ==> WFP R x
+Proof
+    REWRITE_TAC [WFP_DEF] THEN MESON_TAC []
+QED
 
-val WFP_INDUCT = Q.store_thm
-   ("WFP_INDUCT",
-    `!R P. (!x. (!y. R y x ==> P y) ==> P x) ==> !x. WFP R x ==> P x`,
-    REWRITE_TAC [WFP_DEF] THEN MESON_TAC []);
+Theorem WFP_INDUCT:
+     !R P. (!x. (!y. R y x ==> P y) ==> P x) ==> !x. WFP R x ==> P x
+Proof
+    REWRITE_TAC [WFP_DEF] THEN MESON_TAC []
+QED
 
-val WFP_CASES = Q.store_thm
-  ("WFP_CASES",
-   `!R x. WFP R x = !y. R y x ==> WFP R y`,
+Theorem WFP_CASES:
+    !R x. WFP R x = !y. R y x ==> WFP R y
+Proof
    REPEAT STRIP_TAC THEN EQ_TAC
     THENL [Q.ID_SPEC_TAC `x` THEN HO_MATCH_MP_TAC WFP_INDUCT, ALL_TAC]
-    THEN MESON_TAC [WFP_RULES]);
+    THEN MESON_TAC [WFP_RULES]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Wellfounded part induction, strong version.                               *)
 (* ------------------------------------------------------------------------- *)
 
-val WFP_STRONG_INDUCT = Q.store_thm
-  ("WFP_STRONG_INDUCT",
-   `!R. (!x. WFP R x /\ (!y. R y x ==> P y) ==> P x)
+Theorem WFP_STRONG_INDUCT:
+    !R. (!x. WFP R x /\ (!y. R y x ==> P y) ==> P x)
           ==>
-        !x. WFP R x ==> P x`,
+        !x. WFP R x ==> P x
+Proof
  REPEAT GEN_TAC THEN STRIP_TAC
    THEN ONCE_REWRITE_TAC[TAUT `a ==> b <=> a ==> a /\ b`]
-   THEN HO_MATCH_MP_TAC WFP_INDUCT THEN ASM_MESON_TAC[WFP_RULES]);
+   THEN HO_MATCH_MP_TAC WFP_INDUCT THEN ASM_MESON_TAC[WFP_RULES]
+QED
 
 
 (* ------------------------------------------------------------------------- *)
 (* A relation is wellfounded iff WFP is the whole universe.                  *)
 (* ------------------------------------------------------------------------- *)
 
-val WF_EQ_WFP = Q.store_thm
-("WF_EQ_WFP",
- `!R. WF R = !x. WFP R x`,
+Theorem WF_EQ_WFP:
+  !R. WF R = !x. WFP R x
+Proof
  GEN_TAC THEN EQ_TAC THENL
  [REWRITE_TAC [WF_EQ_INDUCTION_THM] THEN MESON_TAC [WFP_RULES],
   DISCH_TAC THEN MATCH_MP_TAC (SPEC_ALL INDUCTION_WF_THM)
     THEN GEN_TAC THEN MP_TAC (SPEC_ALL WFP_STRONG_INDUCT)
-    THEN ASM_REWRITE_TAC []]);
+    THEN ASM_REWRITE_TAC []]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* A formalization of some of the results in                                 *)
@@ -1620,13 +1665,14 @@ val INDUCTIVE_INVARIANT_ON_DEF =
 (* The key theorem, corresponding to theorem 1 of the paper.                 *)
 (*---------------------------------------------------------------------------*)
 
-val INDUCTIVE_INVARIANT_WFREC = Q.store_thm
-("INDUCTIVE_INVARIANT_WFREC",
- `!R P M. WF R /\ INDUCTIVE_INVARIANT R P M ==> !x. P x (WFREC R M x)`,
+Theorem INDUCTIVE_INVARIANT_WFREC:
+  !R P M. WF R /\ INDUCTIVE_INVARIANT R P M ==> !x. P x (WFREC R M x)
+Proof
  REPEAT GEN_TAC THEN STRIP_TAC
    THEN IMP_RES_THEN HO_MATCH_MP_TAC WF_INDUCTION_THM
    THEN FULL_SIMP_TAC bool_ss [INDUCTIVE_INVARIANT_DEF]
-   THEN METIS_TAC [WFREC_THM,RESTRICT_DEF]);
+   THEN METIS_TAC [WFREC_THM,RESTRICT_DEF]
+QED
 
 Theorem TFL_INDUCTIVE_INVARIANT_WFREC:
   !f R P M x. (f = WFREC R M) /\ WF R /\ INDUCTIVE_INVARIANT R P M ==> P x (f x)
@@ -1941,17 +1987,19 @@ val RINTER_ASSOC = store_thm(
   ``R1 RINTER (R2 RINTER R3) = (R1 RINTER R2) RINTER R3``,
   SRW_TAC [][RINTER, FUN_EQ_THM] THEN PROVE_TAC []);
 
-val antisymmetric_RINTER = Q.store_thm(
-  "antisymmetric_RINTER",
-  `(antisymmetric R1 ==> antisymmetric (R1 RINTER R2)) /\
-   (antisymmetric R2 ==> antisymmetric (R1 RINTER R2))`,
-  SRW_TAC [][antisymmetric_def,RINTER]);
+Theorem antisymmetric_RINTER:
+   (antisymmetric R1 ==> antisymmetric (R1 RINTER R2)) /\
+   (antisymmetric R2 ==> antisymmetric (R1 RINTER R2))
+Proof
+  SRW_TAC [][antisymmetric_def,RINTER]
+QED
 val _ = export_rewrites ["antisymmetric_RINTER"]
 
-val transitive_RINTER = Q.store_thm(
-  "transitive_RINTER",
-  `transitive R1 /\ transitive R2 ==> transitive (R1 RINTER R2)`,
-  SRW_TAC [SatisfySimps.SATISFY_ss][transitive_def,RINTER]);
+Theorem transitive_RINTER:
+   transitive R1 /\ transitive R2 ==> transitive (R1 RINTER R2)
+Proof
+  SRW_TAC [SatisfySimps.SATISFY_ss][transitive_def,RINTER]
+QED
 val _ = export_rewrites ["transitive_RINTER"]
 
 Theorem RTC_RINTER:

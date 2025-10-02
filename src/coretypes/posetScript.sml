@@ -329,19 +329,23 @@ Proof
    RW_TAC bool_ss [gfp_def]
 QED
 
-val glb_unique = Q.store_thm("glb_unique",`
+Theorem glb_unique:
   poset (s,r) /\
   glb (s,r) P x /\ glb (s,r) P y
-  ==> x = y`,
+  ==> x = y
+Proof
   RW_TAC bool_ss [glb_def] >>
-  drule_then irule poset_antisym >> RW_TAC bool_ss[]);
+  drule_then irule poset_antisym >> RW_TAC bool_ss[]
+QED
 
-val lub_unique = Q.store_thm("lub_unique",`
+Theorem lub_unique:
   poset (s,r) /\
   lub (s,r) P x /\ lub (s,r) P y
-  ==> x = y`,
+  ==> x = y
+Proof
   RW_TAC bool_ss [lub_def] >>
-  drule_then irule poset_antisym >> RW_TAC bool_ss[]);
+  drule_then irule poset_antisym >> RW_TAC bool_ss[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* The Knaster-Tarski theorem                                                *)

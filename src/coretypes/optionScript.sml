@@ -196,12 +196,14 @@ val option_rws =
      NOT_NONE_SOME,NOT_SOME_NONE, SOME_11, option_case_def,
      OPTION_MAP_DEF, OPTION_JOIN_DEF];
 
-val OPTION_MAP2_THM = Q.store_thm("OPTION_MAP2_THM",
-  `(OPTION_MAP2 f (SOME x) (SOME y) = SOME (f x y)) /\
+Theorem OPTION_MAP2_THM:
+   (OPTION_MAP2 f (SOME x) (SOME y) = SOME (f x y)) /\
    (OPTION_MAP2 f (SOME x) NONE = NONE) /\
    (OPTION_MAP2 f NONE (SOME y) = NONE) /\
-   (OPTION_MAP2 f NONE NONE = NONE)`,
-  REWRITE_TAC (OPTION_MAP2_DEF::option_rws));
+   (OPTION_MAP2 f NONE NONE = NONE)
+Proof
+  REWRITE_TAC (OPTION_MAP2_DEF::option_rws)
+QED
 val _ = export_rewrites ["OPTION_MAP2_THM"];
 val _ = overload_on("lift2", ``OPTION_MAP2``)
 val _ = overload_on("OPTION_MAP2", ``OPTION_MAP2``)
@@ -304,12 +306,13 @@ val option_CLAUSES = save_thm("option_CLAUSES",
                  CONJUNCTS OPTION_MAP_DEF@
                  CONJUNCTS OPTION_JOIN_DEF));
 
-val option_case_compute = Q.store_thm
-("option_case_compute",
- `option_CASE (x:'a option) (e:'b) f =
-  if IS_SOME x then f (THE x) else e`,
+Theorem option_case_compute:
+  option_CASE (x:'a option) (e:'b) f =
+  if IS_SOME x then f (THE x) else e
+Proof
     OPTION_CASES_TAC “(x :'a option)”
-    THEN ASM_REWRITE_TAC option_rws);
+    THEN ASM_REWRITE_TAC option_rws
+QED
 
 val IF_EQUALS_OPTION = store_thm(
   "IF_EQUALS_OPTION",
@@ -348,29 +351,32 @@ val IF_NONE_EQUALS_OPTION = store_thm(
     OPTION_MAP theorems
    ---------------------------------------------------------------------- *)
 
-val OPTION_MAP_EQ_SOME = Q.store_thm(
-  "OPTION_MAP_EQ_SOME",
-  `!f (x:'a option) y.
-         (OPTION_MAP f x = SOME y) = ?z. (x = SOME z) /\ (y = f z)`,
+Theorem OPTION_MAP_EQ_SOME:
+   !f (x:'a option) y.
+         (OPTION_MAP f x = SOME y) = ?z. (x = SOME z) /\ (y = f z)
+Proof
   REPEAT GEN_TAC THEN OPTION_CASES_TAC “x:'a option” THEN
   simpLib.SIMP_TAC boolSimps.bool_ss
     [SOME_11, NOT_NONE_SOME, NOT_SOME_NONE, OPTION_MAP_DEF] THEN
-  mesonLib.MESON_TAC []);
+  mesonLib.MESON_TAC []
+QED
 val _ = export_rewrites ["OPTION_MAP_EQ_SOME"]
 
-val OPTION_MAP_EQ_NONE = Q.store_thm(
-  "OPTION_MAP_EQ_NONE",
-  `!f x.  (OPTION_MAP f x = NONE) = (x = NONE)`,
+Theorem OPTION_MAP_EQ_NONE:
+   !f x.  (OPTION_MAP f x = NONE) = (x = NONE)
+Proof
   REPEAT GEN_TAC THEN OPTION_CASES_TAC “x:'a option” THEN
-  REWRITE_TAC [option_CLAUSES]);
+  REWRITE_TAC [option_CLAUSES]
+QED
 
-val OPTION_MAP_EQ_NONE_both_ways = Q.store_thm(
-  "OPTION_MAP_EQ_NONE_both_ways",
-  `((OPTION_MAP f x = NONE) = (x = NONE)) /\
-   ((NONE = OPTION_MAP f x) = (x = NONE))`,
+Theorem OPTION_MAP_EQ_NONE_both_ways:
+   ((OPTION_MAP f x = NONE) = (x = NONE)) /\
+   ((NONE = OPTION_MAP f x) = (x = NONE))
+Proof
   REWRITE_TAC [OPTION_MAP_EQ_NONE] THEN
   CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])) THEN
-  REWRITE_TAC [OPTION_MAP_EQ_NONE]);
+  REWRITE_TAC [OPTION_MAP_EQ_NONE]
+QED
 val _ = export_rewrites ["OPTION_MAP_EQ_NONE_both_ways"]
 
 val OPTION_MAP_COMPOSE = store_thm(
@@ -389,10 +395,12 @@ Proof
   FIRST_X_ASSUM MATCH_MP_TAC THEN REWRITE_TAC [SOME_11]
 QED
 
-val IS_SOME_MAP = Q.store_thm ("IS_SOME_MAP",
-  `IS_SOME (OPTION_MAP f x) = IS_SOME (x : 'a option)`,
+Theorem IS_SOME_MAP:
+   IS_SOME (OPTION_MAP f x) = IS_SOME (x : 'a option)
+Proof
   OPTION_CASES_TAC “x:'a option” THEN
-  REWRITE_TAC [IS_SOME_DEF, OPTION_MAP_DEF]) ;
+  REWRITE_TAC [IS_SOME_DEF, OPTION_MAP_DEF]
+QED
 
 Theorem OPTION_MAP_id[simp]:
   OPTION_MAP I (x:'a option) = x /\ OPTION_MAP (\x. x) x = x
@@ -402,9 +410,9 @@ QED
 
 (* and one about OPTION_JOIN *)
 
-val OPTION_JOIN_EQ_SOME = Q.store_thm(
-  "OPTION_JOIN_EQ_SOME",
-  `!(x:'a option option) y. (OPTION_JOIN x = SOME y) = (x = SOME (SOME y))`,
+Theorem OPTION_JOIN_EQ_SOME:
+   !(x:'a option option) y. (OPTION_JOIN x = SOME y) = (x = SOME (SOME y))
+Proof
   GEN_TAC THEN
   Q.SUBGOAL_THEN `(x = NONE) \/ (?z. x = SOME z)` STRIP_ASSUME_TAC THENL [
     MATCH_ACCEPT_TAC option_nchotomy,
@@ -412,25 +420,28 @@ val OPTION_JOIN_EQ_SOME = Q.store_thm(
     ALL_TAC
   ] THEN ASM_REWRITE_TAC option_rws THEN
   OPTION_CASES_TAC “z:'a option” THEN
-  ASM_REWRITE_TAC option_rws);
+  ASM_REWRITE_TAC option_rws
+QED
 
 (* and some about OPTION_MAP2 *)
 
-val OPTION_MAP2_SOME = Q.store_thm(
-  "OPTION_MAP2_SOME",
-  `(OPTION_MAP2 f (o1:'a option) (o2:'b option) = SOME v) <=>
-   (?x1 x2. (o1 = SOME x1) /\ (o2 = SOME x2) /\ (v = f x1 x2))`,
+Theorem OPTION_MAP2_SOME:
+   (OPTION_MAP2 f (o1:'a option) (o2:'b option) = SOME v) <=>
+   (?x1 x2. (o1 = SOME x1) /\ (o2 = SOME x2) /\ (v = f x1 x2))
+Proof
   OPTION_CASES_TAC “o1:'a option” THEN
   OPTION_CASES_TAC “o2:'b option” THEN
-  SRW_TAC [][EQ_IMP_THM]);
+  SRW_TAC [][EQ_IMP_THM]
+QED
 val _ = export_rewrites["OPTION_MAP2_SOME"];
 
-val OPTION_MAP2_NONE = Q.store_thm(
-  "OPTION_MAP2_NONE",
-  `(OPTION_MAP2 f (o1:'a option) (o2:'b option) = NONE) <=> (o1 = NONE) \/ (o2 = NONE)`,
+Theorem OPTION_MAP2_NONE:
+   (OPTION_MAP2 f (o1:'a option) (o2:'b option) = NONE) <=> (o1 = NONE) \/ (o2 = NONE)
+Proof
   OPTION_CASES_TAC “o1:'a option” THEN
   OPTION_CASES_TAC “o2:'b option” THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 val _ = export_rewrites["OPTION_MAP2_NONE"];
 
 Theorem OPTION_MAP2_cong[defncong]:
@@ -506,10 +517,12 @@ Theorem OPTION_BIND_EQUALS_OPTION[simp]:
 Proof OPTION_CASES_TAC ``p:'a option`` THEN SRW_TAC [][]
 QED
 
-val IS_SOME_BIND = Q.store_thm ("IS_SOME_BIND",
-  `IS_SOME (OPTION_BIND x g) ==> IS_SOME (x : 'a option)`,
+Theorem IS_SOME_BIND:
+   IS_SOME (OPTION_BIND x g) ==> IS_SOME (x : 'a option)
+Proof
   OPTION_CASES_TAC “x:'a option” THEN
-  REWRITE_TAC [IS_SOME_DEF, OPTION_BIND_def]) ;
+  REWRITE_TAC [IS_SOME_DEF, OPTION_BIND_def]
+QED
 
 Theorem OPTION_BIND_SOME:
   !opt:'a option. OPTION_BIND opt SOME = opt
@@ -818,11 +831,12 @@ val OPTION_ALL_CONG = store_thm(
        (OPTION_ALL P opt <=> OPTION_ALL P' opt')``,
   simpLib.SIMP_TAC (srw_ss()) [FORALL_OPTION]);
 
-val option_case_eq = Q.store_thm(
-  "option_case_eq",
-  ‘(option_CASE (opt:'a option) nc sc = v) <=>
-   ((opt = NONE) /\ (nc = v) \/ ?x. (opt = SOME x) /\ (sc x = v))’,
-  OPTION_CASES_TAC “opt:'a option” THEN SRW_TAC[][EQ_SYM_EQ, option_case_def]);
+Theorem option_case_eq:
+   (option_CASE (opt:'a option) nc sc = v) <=>
+   ((opt = NONE) /\ (nc = v) \/ ?x. (opt = SOME x) /\ (sc x = v))
+Proof
+  OPTION_CASES_TAC “opt:'a option” THEN SRW_TAC[][EQ_SYM_EQ, option_case_def]
+QED
 
 (* OpenTheory fix: hol-set reports the following 1 unsatisfied assumption *)
 Theorem option_case_eq' :

@@ -2901,47 +2901,53 @@ val REAL_LT_RNEG = store_thm (* from real_topologyTheory *)
   ``!x y. x < -y <=> x + y < &0:real``,
     SIMP_TAC std_ss [real_lt, REAL_LE_LNEG, REAL_ADD_ASSOC, REAL_ADD_SYM]);
 
-val REAL_LE_RDIV_EQ = Q.store_thm
-("REAL_LE_RDIV_EQ",
- `!x y z. &0 < z ==> (x <= y / z <=> x * z <= y)`,
+Theorem REAL_LE_RDIV_EQ:
+  !x y z. &0 < z ==> (x <= y / z <=> x * z <= y)
+Proof
   REPEAT STRIP_TAC THEN
   FIRST_ASSUM(fn th =>
     GEN_REWRITE_TAC LAND_CONV empty_rewrites
                    [GSYM(MATCH_MP REAL_LE_RMUL th)]) THEN
   RW_TAC bool_ss [real_div, GSYM REAL_MUL_ASSOC, REAL_MUL_LINV,
-               REAL_MUL_RID, REAL_POS_NZ]);
+               REAL_MUL_RID, REAL_POS_NZ]
+QED
 
-val REAL_LE_LDIV_EQ = Q.store_thm
-("REAL_LE_LDIV_EQ",
- `!x y z. &0 < z ==> (x / z <= y <=> x <= y * z)`,
+Theorem REAL_LE_LDIV_EQ:
+  !x y z. &0 < z ==> (x / z <= y <=> x <= y * z)
+Proof
   REPEAT STRIP_TAC THEN
   FIRST_ASSUM(fn th =>
     GEN_REWRITE_TAC LAND_CONV empty_rewrites
              [GSYM(MATCH_MP REAL_LE_RMUL th)]) THEN
   RW_TAC bool_ss [real_div, GSYM REAL_MUL_ASSOC, REAL_MUL_LINV,
-               REAL_MUL_RID, REAL_POS_NZ]);
+               REAL_MUL_RID, REAL_POS_NZ]
+QED
 
-val REAL_LT_RDIV_EQ = Q.store_thm
-("REAL_LT_RDIV_EQ",
- `!x y z. &0 < z ==> (x < y / z <=> x * z < y)`,
- RW_TAC bool_ss [GSYM REAL_NOT_LE, REAL_LE_LDIV_EQ]);
+Theorem REAL_LT_RDIV_EQ:
+  !x y z. &0 < z ==> (x < y / z <=> x * z < y)
+Proof
+ RW_TAC bool_ss [GSYM REAL_NOT_LE, REAL_LE_LDIV_EQ]
+QED
 
-val REAL_LT_LDIV_EQ = Q.store_thm
-("REAL_LT_LDIV_EQ",
- `!x y z. &0 < z ==> (x / z < y <=> x < y * z)`,
-  RW_TAC bool_ss [GSYM REAL_NOT_LE, REAL_LE_RDIV_EQ]);
+Theorem REAL_LT_LDIV_EQ:
+  !x y z. &0 < z ==> (x / z < y <=> x < y * z)
+Proof
+  RW_TAC bool_ss [GSYM REAL_NOT_LE, REAL_LE_RDIV_EQ]
+QED
 
-val REAL_EQ_RDIV_EQ = Q.store_thm
-("REAL_EQ_RDIV_EQ",
- `!x y z. &0 < z ==> ((x = y / z) <=> (x * z = y))`,
+Theorem REAL_EQ_RDIV_EQ:
+  !x y z. &0 < z ==> ((x = y / z) <=> (x * z = y))
+Proof
  REWRITE_TAC[GSYM REAL_LE_ANTISYM] THEN
- RW_TAC bool_ss [REAL_LE_RDIV_EQ, REAL_LE_LDIV_EQ]);
+ RW_TAC bool_ss [REAL_LE_RDIV_EQ, REAL_LE_LDIV_EQ]
+QED
 
-val REAL_EQ_LDIV_EQ = Q.store_thm
-("REAL_EQ_LDIV_EQ",
- `!x y z. &0 < z ==> ((x / z = y) <=> (x = y * z))`,
+Theorem REAL_EQ_LDIV_EQ:
+  !x y z. &0 < z ==> ((x / z = y) <=> (x = y * z))
+Proof
   REWRITE_TAC[GSYM REAL_LE_ANTISYM] THEN
-  RW_TAC bool_ss [REAL_LE_RDIV_EQ, REAL_LE_LDIV_EQ]);
+  RW_TAC bool_ss [REAL_LE_RDIV_EQ, REAL_LE_LDIV_EQ]
+QED
 
 (* !x n. &x pow n = &(x ** n) *)
 val REAL_OF_NUM_POW = save_thm ("REAL_OF_NUM_POW", REAL_OF_NUM_POW);
@@ -4405,8 +4411,9 @@ val NUM_FLOOR_DIV_LOWERBOUND = store_thm
   SRW_TAC [][add1_gt_exists] THEN Cases_on `n` THEN
   POP_ASSUM MP_TAC THEN SRW_TAC [][real_gt, REAL_LT_LDIV_EQ]);
 
-val NUM_FLOOR_BASE = Q.store_thm("NUM_FLOOR_BASE",
-  `!r. r < 1 ==> (NUM_FLOOR r = 0)`,
+Theorem NUM_FLOOR_BASE:
+   !r. r < 1 ==> (NUM_FLOOR r = 0)
+Proof
   SRW_TAC [] [NUM_FLOOR_def]
   THEN numLib.LEAST_ELIM_TAC
   THEN SRW_TAC [] []
@@ -4416,7 +4423,7 @@ val NUM_FLOOR_BASE = Q.store_thm("NUM_FLOOR_BASE",
   THEN `0 < n` by DECIDE_TAC
   THEN RES_TAC
   THEN FULL_SIMP_TAC arith_ss [real_gt]
-  )
+QED
 
 val lem =
   metisLib.METIS_PROVE [REAL_LT_01, REAL_LET_TRANS]
@@ -4549,10 +4556,11 @@ Proof
  >> ASM_REWRITE_TAC []
 QED
 
-val NUM_CEILING_NUM_FLOOR = Q.store_thm("NUM_CEILING_NUM_FLOOR",
-  `!r. NUM_CEILING r =
+Theorem NUM_CEILING_NUM_FLOOR:
+   !r. NUM_CEILING r =
        let n = NUM_FLOOR r in
-       if r <= 0 \/ (r = real_of_num n) then n else n + 1`,
+       if r <= 0 \/ (r = real_of_num n) then n else n + 1
+Proof
   SRW_TAC [boolSimps.LET_ss] [NUM_CEILING_def, NUM_FLOOR_BASE]
   THEN1 (IMP_RES_TAC lem
          THEN ASM_SIMP_TAC std_ss [NUM_FLOOR_BASE]
@@ -4604,7 +4612,7 @@ val NUM_CEILING_NUM_FLOOR = Q.store_thm("NUM_CEILING_NUM_FLOOR",
   THEN `n' - 1 < n'` by DECIDE_TAC
   THEN RES_TAC
   THEN FULL_SIMP_TAC arith_ss []
-  )
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Ceiling function                                                          *)
