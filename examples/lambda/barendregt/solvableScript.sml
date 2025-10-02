@@ -1960,7 +1960,7 @@ Proof
   ho_match_mp_tac strong_bvc_term_ind >>
   qexists ‘λ(t1,t2). FV t1 ∪ FV t2’ >> simp[FORALL_PROD]
 
-
+*)
 val _ = html_theory "solvable";
 
 (* References:
