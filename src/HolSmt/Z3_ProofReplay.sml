@@ -1195,11 +1195,11 @@ local
 
   fun check_thm (name, thm, concl) =
     if Thm.concl thm !~ concl then
-      raise ERR "check_thm" (name ^ ": conclusion is " ^ Hol_pp.term_to_string
-        (Thm.concl thm) ^ ", expected: " ^ Hol_pp.term_to_string concl)
+      raise ERR "check_thm" (name ^ ": conclusion is " ^ Library.term_to_string
+        (Thm.concl thm) ^ ", expected: " ^ Library.term_to_string concl)
     else if !Library.trace > 2 then
       Feedback.HOL_MESG
-        ("HolSmtLib: " ^ name ^ " proved: " ^ Hol_pp.thm_to_string thm)
+        ("HolSmtLib: " ^ name ^ " proved: " ^ Library.thm_to_string thm)
     else ()
 
   fun zero_prems (state : state, proof : proof)
