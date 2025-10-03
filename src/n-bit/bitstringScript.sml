@@ -206,9 +206,9 @@ Proof
   lrw [fixwidth_def]
 QED
 
-val fixwidth_id_imp = Theory.save_thm ("fixwidth_id_imp",
+Theorem fixwidth_id_imp =
   metisLib.METIS_PROVE [fixwidth_id]
-    ``!n w. (n = LENGTH w) ==> (fixwidth n w = w)``)
+    ``!n w. (n = LENGTH w) ==> (fixwidth n w = w)``
 
 Theorem boolify_reverse_map:
     !v a. boolify a v = REVERSE (MAP (\n. n <> 0) v) ++ a

@@ -177,8 +177,8 @@ val LIST_UPDATE2 = Q.prove(
   REPEAT CONJ_TAC
   THEN Induct THEN SRW_TAC [] [LIST_UPDATE_def]);
 
-val LIST_UPDATE_THMS = Theory.save_thm("LIST_UPDATE_THMS",
-   CONJ LIST_UPDATE1 LIST_UPDATE2);
+Theorem LIST_UPDATE_THMS =
+   CONJ LIST_UPDATE1 LIST_UPDATE2;
 
 (* ------------------------------------------------------------------------
    Duplicate theorems about update from combinTheory

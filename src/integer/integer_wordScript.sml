@@ -949,8 +949,8 @@ Proof
   \\ SRW_TAC [] []
 QED
 
-val w2i_minus_1 = Theory.save_thm("w2i_minus_1",
-  SIMP_RULE (srw_ss()) [] w2i_UINT_MAXw)
+Theorem w2i_minus_1 =
+  SIMP_RULE (srw_ss()) [] w2i_UINT_MAXw
 
 Theorem w2i_lt_0:
    !w: 'a word. w2i w < 0 = w < 0w

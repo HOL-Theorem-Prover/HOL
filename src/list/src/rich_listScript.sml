@@ -335,9 +335,9 @@ Proof
 QED
 
 (* |- !x l. SNOC x l = REVERSE (x::REVERSE l) *)
-val SNOC_REVERSE_CONS = Theory.save_thm ("SNOC_REVERSE_CONS",
+Theorem SNOC_REVERSE_CONS =
    GEN_ALL (REWRITE_RULE [REVERSE_REVERSE]
-      (AP_TERM ``REVERSE`` (SPEC_ALL REVERSE_SNOC))));
+      (AP_TERM ``REVERSE`` (SPEC_ALL REVERSE_SNOC)));
 
 Theorem FOLDR_SNOC:
     !f e x l. FOLDR f e (SNOC x l) = FOLDR f (f x e) l

@@ -485,20 +485,20 @@ in
                       TINT_INJ, NUM_POSTINT_EX])}
 end;
 
-val _ = Theory.save_thm ("INT_10",INT_10)
-val _ = Theory.save_thm ("INT_ADD_SYM",INT_ADD_SYM)
-val INT_ADD_COMM = Theory.save_thm("INT_ADD_COMM", INT_ADD_SYM);
-val _ = Theory.save_thm ("INT_MUL_SYM",INT_MUL_SYM)
-val INT_MUL_COMM = Theory.save_thm("INT_MUL_COMM", INT_MUL_SYM);
-val _ = Theory.save_thm ("INT_ADD_ASSOC",INT_ADD_ASSOC)
-val _ = Theory.save_thm ("INT_MUL_ASSOC",INT_MUL_ASSOC)
-val _ = Theory.save_thm ("INT_LDISTRIB",INT_LDISTRIB)
-val _ = Theory.save_thm ("INT_LT_TOTAL",INT_LT_TOTAL)
-val _ = Theory.save_thm ("INT_LT_REFL",INT_LT_REFL)
-val _ = Theory.save_thm ("INT_LT_TRANS",INT_LT_TRANS)
-val _ = Theory.save_thm ("INT_LT_LADD_IMP",INT_LT_LADD_IMP)
-val _ = Theory.save_thm ("INT_LT_MUL",INT_LT_MUL)
-val _ = Theory.save_thm ("NUM_POSINT_EX",NUM_POSINT_EX)
+Theorem INT_10 = INT_10
+Theorem INT_ADD_SYM = INT_ADD_SYM
+Theorem INT_ADD_COMM = INT_ADD_SYM;
+Theorem INT_MUL_SYM = INT_MUL_SYM
+Theorem INT_MUL_COMM = INT_MUL_SYM;
+Theorem INT_ADD_ASSOC = INT_ADD_ASSOC
+Theorem INT_MUL_ASSOC = INT_MUL_ASSOC
+Theorem INT_LDISTRIB = INT_LDISTRIB
+Theorem INT_LT_TOTAL = INT_LT_TOTAL
+Theorem INT_LT_REFL = INT_LT_REFL
+Theorem INT_LT_TRANS = INT_LT_TRANS
+Theorem INT_LT_LADD_IMP = INT_LT_LADD_IMP
+Theorem INT_LT_MUL = INT_LT_MUL
+Theorem NUM_POSINT_EX = NUM_POSINT_EX
 ;
 
 val _ = overload_on ("+", Term`int_add`);

@@ -5361,11 +5361,9 @@ val DROP_compute = Q.prove(
     (!n h t. DROP (SUC n) (h::t) = DROP n t)’,
    SRW_TAC [] []);
 
-val TAKE_compute =
-   Theory.save_thm("TAKE_compute", numLib.SUC_RULE TAKE_compute);
+Theorem TAKE_compute = numLib.SUC_RULE TAKE_compute;
 
-val DROP_compute =
-   Theory.save_thm("DROP_compute", numLib.SUC_RULE DROP_compute);
+Theorem DROP_compute = numLib.SUC_RULE DROP_compute;
 
 Theorem DROP_TAKE:
   !xs n k. DROP n (TAKE k xs) = TAKE (k - n) (DROP n xs)

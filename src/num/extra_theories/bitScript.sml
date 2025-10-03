@@ -395,8 +395,8 @@ Proof
    ]
 QED
 
-val BIT_B_NEQ = Theory.save_thm("BIT_B_NEQ",
-   METIS_PROVE [BIT_TWO_POW] ``!a b. ~(a = b) ==> ~BIT a (2 ** b)``)
+Theorem BIT_B_NEQ =
+   METIS_PROVE [BIT_TWO_POW] ``!a b. ~(a = b) ==> ~BIT a (2 ** b)``
 
 (* ------------------------------------------------------------------------- *)
 
