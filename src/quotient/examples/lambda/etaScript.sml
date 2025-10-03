@@ -131,10 +131,10 @@ val ETA_R_inv_thms = prove_inversion_theorems
 val ETA_R_strong_ind = prove_strong_induction
     ETA_R_rules_sat ETA_R_ind_thm;
 
-val _ = save_thm ("ETA_R_rules_sat", ETA_R_rules_sat);
-val _ = save_thm ("ETA_R_ind_thm", ETA_R_ind_thm);
-val _ = save_thm ("ETA_R_inv_thms", LIST_CONJ ETA_R_inv_thms);
-val _ = save_thm ("ETA_R_strong_ind", ETA_R_strong_ind);
+Theorem ETA_R_rules_sat = ETA_R_rules_sat;
+Theorem ETA_R_ind_thm = ETA_R_ind_thm;
+Theorem ETA_R_inv_thms = LIST_CONJ ETA_R_inv_thms;
+Theorem ETA_R_strong_ind = ETA_R_strong_ind;
 
 
 

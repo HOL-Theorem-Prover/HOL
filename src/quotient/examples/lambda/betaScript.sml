@@ -160,10 +160,10 @@ val BETA_R_inv_thms = prove_inversion_theorems
 val BETA_R_strong_ind = prove_strong_induction
     BETA_R_rules_sat BETA_R_ind_thm;
 
-val _ = save_thm ("BETA_R_rules_sat", BETA_R_rules_sat);
-val _ = save_thm ("BETA_R_ind_thm", BETA_R_ind_thm);
-val _ = save_thm ("BETA_R_inv_thms", LIST_CONJ BETA_R_inv_thms);
-val _ = save_thm ("BETA_R_strong_ind", BETA_R_strong_ind);
+Theorem BETA_R_rules_sat = BETA_R_rules_sat;
+Theorem BETA_R_ind_thm = BETA_R_ind_thm;
+Theorem BETA_R_inv_thms = LIST_CONJ BETA_R_inv_thms;
+Theorem BETA_R_strong_ind = BETA_R_strong_ind;
 
 
 
@@ -405,10 +405,10 @@ val REDL_inv_thms = prove_inversion_theorems
 val REDL_strong_ind = prove_strong_induction
     REDL_rules_sat REDL_ind_thm;
 
-val _ = save_thm ("REDL_rules_sat", REDL_rules_sat);
-val _ = save_thm ("REDL_ind_thm", REDL_ind_thm);
-val _ = save_thm ("REDL_inv_thms", LIST_CONJ REDL_inv_thms);
-val _ = save_thm ("REDL_strong_ind", REDL_strong_ind);
+Theorem REDL_rules_sat = REDL_rules_sat;
+Theorem REDL_ind_thm = REDL_ind_thm;
+Theorem REDL_inv_thms = LIST_CONJ REDL_inv_thms;
+Theorem REDL_strong_ind = REDL_strong_ind;
 
 
 val [REDL_REFL, REDL_Lam, REDL_App, REDL_BETA]
@@ -1011,10 +1011,10 @@ val REDC_inv_thms = prove_inversion_theorems
 val REDC_strong_ind = prove_strong_induction
     REDC_rules_sat REDC_ind_thm;
 
-val _ = save_thm ("REDC_rules_sat", REDC_rules_sat);
-val _ = save_thm ("REDC_ind_thm", REDC_ind_thm);
-val _ = save_thm ("REDC_inv_thms", LIST_CONJ REDC_inv_thms);
-val _ = save_thm ("REDC_strong_ind", REDC_strong_ind);
+Theorem REDC_rules_sat = REDC_rules_sat;
+Theorem REDC_ind_thm = REDC_ind_thm;
+Theorem REDC_inv_thms = LIST_CONJ REDC_inv_thms;
+Theorem REDC_strong_ind = REDC_strong_ind;
 
 
 val [REDC_Con, REDC_Var, REDC_Lam, REDC_App, REDC_BETA]

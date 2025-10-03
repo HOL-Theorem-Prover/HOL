@@ -50,8 +50,8 @@ val term1_Axiom = theorem "term1_Axiom";
 
 Theorem term1_distinct2 =
                          CONJ term1_distinct (GSYM term1_distinct);
-val _ = save_thm("term1_one_one", term1_one_one);
-val _ = save_thm("term1_cases", term1_cases);
+Theorem term1_one_one = term1_one_one;
+Theorem term1_cases = term1_cases;
 
 
 

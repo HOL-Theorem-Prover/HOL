@@ -387,10 +387,10 @@ val RED1_inv_thms = prove_inversion_theorems
 val RED1_strong_ind = prove_strong_induction
     RED1_rules_sat RED1_ind_thm;
 
-val _ = save_thm ("RED1_rules_sat", RED1_rules_sat);
-val _ = save_thm ("RED1_ind_thm", RED1_ind_thm);
-val _ = save_thm ("RED1_inv_thms", LIST_CONJ RED1_inv_thms);
-val _ = save_thm ("RED1_strong_ind", RED1_strong_ind);
+Theorem RED1_rules_sat = RED1_rules_sat;
+Theorem RED1_ind_thm = RED1_ind_thm;
+Theorem RED1_inv_thms = LIST_CONJ RED1_inv_thms;
+Theorem RED1_strong_ind = RED1_strong_ind;
 
 
 val [RED1_R, RED1_App1, RED1_App2, RED1_Lam] = CONJUNCTS RED1_rules_sat;
@@ -713,10 +713,10 @@ val RED_inv_thms = prove_inversion_theorems
 val RED_strong_ind = prove_strong_induction
     RED_rules_sat RED_ind_thm;
 
-val _ = save_thm ("RED_rules_sat", RED_rules_sat);
-val _ = save_thm ("RED_ind_thm", RED_ind_thm);
-val _ = save_thm ("RED_inv_thms", LIST_CONJ RED_inv_thms);
-val _ = save_thm ("RED_strong_ind", RED_strong_ind);
+Theorem RED_rules_sat = RED_rules_sat;
+Theorem RED_ind_thm = RED_ind_thm;
+Theorem RED_inv_thms = LIST_CONJ RED_inv_thms;
+Theorem RED_strong_ind = RED_strong_ind;
 
 
 (* --------------------------------------------------------------------- *)
@@ -863,10 +863,10 @@ val REQUAL_inv_thms = prove_inversion_theorems
 val REQUAL_strong_ind = prove_strong_induction
     REQUAL_rules_sat REQUAL_ind_thm;
 
-val _ = save_thm ("REQUAL_rules_sat", REQUAL_rules_sat);
-val _ = save_thm ("REQUAL_ind_thm", REQUAL_ind_thm);
-val _ = save_thm ("REQUAL_inv_thms", LIST_CONJ REQUAL_inv_thms);
-val _ = save_thm ("REQUAL_strong_ind", REQUAL_strong_ind);
+Theorem REQUAL_rules_sat = REQUAL_rules_sat;
+Theorem REQUAL_ind_thm = REQUAL_ind_thm;
+Theorem REQUAL_inv_thms = LIST_CONJ REQUAL_inv_thms;
+Theorem REQUAL_strong_ind = REQUAL_strong_ind;
 
 
 (* --------------------------------------------------------------------- *)

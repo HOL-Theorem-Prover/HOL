@@ -90,10 +90,10 @@ val fsequiv_strong_ind = prove_strong_induction
 val _ = overload_on("==", ``fsequiv:'a list -> 'a list -> bool``);
 val _ = add_infix ("==", 425, HOLgrammars.NONASSOC);
 
-val _ = save_thm ("fsequiv_rules_sat", fsequiv_rules_sat);
-val _ = save_thm ("fsequiv_ind_thm", fsequiv_ind_thm);
-val _ = save_thm ("fsequiv_inv_thms", LIST_CONJ fsequiv_inv_thms);
-val _ = save_thm ("fsequiv_strong_ind", fsequiv_strong_ind);
+Theorem fsequiv_rules_sat = fsequiv_rules_sat;
+Theorem fsequiv_ind_thm = fsequiv_ind_thm;
+Theorem fsequiv_inv_thms = LIST_CONJ fsequiv_inv_thms;
+Theorem fsequiv_strong_ind = fsequiv_strong_ind;
 
 
 val [CONS_LEFT_COMM, CONS_LEFT_IDEM, NIL_RSP, CONS_RSP, fset_SYM', fset_TRANS']

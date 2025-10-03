@@ -58,8 +58,8 @@ val msg1_Axiom = theorem "msg1_Axiom";
 
 Theorem msg1_distinct2 =
                          CONJ msg1_distinct (GSYM msg1_distinct);
-val _ = save_thm("msg1_one_one", msg1_one_one);
-val _ = save_thm("msg1_cases", msg1_cases);
+Theorem msg1_one_one = msg1_one_one;
+Theorem msg1_cases = msg1_cases;
 
 
 
@@ -123,10 +123,10 @@ val msgrel_inv_thms = prove_inversion_theorems
 val msgrel_strong_ind = prove_strong_induction
     msgrel_rules_sat msgrel_ind_thm;
 
-val _ = save_thm ("msgrel_rules_sat", msgrel_rules_sat);
-val _ = save_thm ("msgrel_ind_thm", msgrel_ind_thm);
-val _ = save_thm ("msgrel_inv_thms", LIST_CONJ msgrel_inv_thms);
-val _ = save_thm ("msgrel_strong_ind", msgrel_strong_ind);
+Theorem msgrel_rules_sat = msgrel_rules_sat;
+Theorem msgrel_ind_thm = msgrel_ind_thm;
+Theorem msgrel_inv_thms = LIST_CONJ msgrel_inv_thms;
+Theorem msgrel_strong_ind = msgrel_strong_ind;
 
 
 val [CD, DC, NONCE, MPAIR, CRYPT, DECRYPT, msgSYM, msgTRANS]

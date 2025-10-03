@@ -393,10 +393,10 @@ val SIGMA_R_inv_thms = prove_inversion_theorems
 val SIGMA_R_strong_ind = prove_strong_induction
     SIGMA_R_rules_sat SIGMA_R_ind_thm;
 
-val _ = save_thm ("SIGMA_R_rules_sat", SIGMA_R_rules_sat);
-val _ = save_thm ("SIGMA_R_ind_thm", SIGMA_R_ind_thm);
-val _ = save_thm ("SIGMA_R_inv_thms", LIST_CONJ SIGMA_R_inv_thms);
-val _ = save_thm ("SIGMA_R_strong_ind", SIGMA_R_strong_ind);
+Theorem SIGMA_R_rules_sat = SIGMA_R_rules_sat;
+Theorem SIGMA_R_ind_thm = SIGMA_R_ind_thm;
+Theorem SIGMA_R_inv_thms = LIST_CONJ SIGMA_R_inv_thms;
+Theorem SIGMA_R_strong_ind = SIGMA_R_strong_ind;
 
 
 
@@ -599,10 +599,10 @@ val REDL_inv_thms = prove_inversion_theorems
 val REDL_strong_ind = prove_strong_induction
     REDL_rules_sat REDL_ind_thm;
 
-val _ = save_thm ("REDL_rules_sat", REDL_rules_sat);
-val _ = save_thm ("REDL_ind_thm", REDL_ind_thm);
-val _ = save_thm ("REDL_inv_thms", LIST_CONJ REDL_inv_thms);
-val _ = save_thm ("REDL_strong_ind", REDL_strong_ind);
+Theorem REDL_rules_sat = REDL_rules_sat;
+Theorem REDL_ind_thm = REDL_ind_thm;
+Theorem REDL_inv_thms = LIST_CONJ REDL_inv_thms;
+Theorem REDL_strong_ind = REDL_strong_ind;
 
 
 val [REDL_obj_REFL, REDL_OBJ, REDL_INVOKE, REDL_UPDATE,

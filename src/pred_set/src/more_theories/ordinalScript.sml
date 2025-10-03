@@ -34,16 +34,16 @@ val [ordlt_REFL, ordlt_TRANS, ordlt_WF0, ordlt_trichotomy] =
                  alphaise (REWRITE_RULE [relationTheory.WF_DEF] orderlt_WF),
                  alphaise orderlt_trichotomy]}
 
-val _ = save_thm ("ordlt_REFL", ordlt_REFL)
+Theorem ordlt_REFL = ordlt_REFL
 val _ = export_rewrites ["ordlt_REFL"]
-val _ = save_thm ("ordlt_TRANS", ordlt_TRANS)
+Theorem ordlt_TRANS = ordlt_TRANS
 Theorem ordlt_WF =
   REWRITE_RULE [GSYM relationTheory.WF_DEF] ordlt_WF0
 
 val _ = overload_on ("<", ``ordlt``)
 val _ = overload_on ("<=", ``\a b. ~(b < a)``)
 
-val _ = save_thm ("ordlt_trichotomy", ordlt_trichotomy)
+Theorem ordlt_trichotomy = ordlt_trichotomy
 
 val _ = overload_on ("mkOrdinal", ``ordinal_ABS``)
 

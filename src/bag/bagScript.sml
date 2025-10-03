@@ -1495,7 +1495,7 @@ val BAG_CARD_EMPTY =
            |> SIMP_RULE std_ss [FINITE_EMPTY_BAG]
            |> ONCE_REWRITE_RULE [BCARD_rwts]
            |> SIMP_RULE std_ss [BAG_INSERT_NOT_EMPTY]
-val _ = save_thm("BAG_CARD_EMPTY", BAG_CARD_EMPTY);
+Theorem BAG_CARD_EMPTY = BAG_CARD_EMPTY;
 val _ = export_rewrites ["BAG_CARD_EMPTY"];
 
 Theorem BCARD_0:
@@ -2200,8 +2200,8 @@ val ITBAG_THM =
     GENL [``b: 'a -> num``, ``f:'a -> 'b -> 'b``, ``acc:'b``]
          (DISCH_ALL (ASM_REWRITE_RULE [Q.ASSUME `FINITE_BAG b`] ITBAG_eqn0))
 
-val _ = save_thm("ITBAG_IND", ITBAG_IND);
-val _ = save_thm("ITBAG_THM", ITBAG_THM);
+Theorem ITBAG_IND = ITBAG_IND;
+Theorem ITBAG_THM = ITBAG_THM;
 
 val ITBAG_EMPTY = save_thm(
   "ITBAG_EMPTY",

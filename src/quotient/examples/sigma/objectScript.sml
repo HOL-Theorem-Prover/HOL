@@ -98,10 +98,10 @@ QED
 val [obj1_cases, dict1_cases, entry1_cases, method1_cases]
     = CONJUNCTS object1_cases;
 
-val _ = save_thm ("obj1_cases", obj1_cases);
-val _ = save_thm ("dict1_cases", dict1_cases);
-val _ = save_thm ("entry1_cases", entry1_cases);
-val _ = save_thm ("method1_cases", method1_cases);
+Theorem obj1_cases = obj1_cases;
+Theorem dict1_cases = dict1_cases;
+Theorem entry1_cases = entry1_cases;
+Theorem method1_cases = method1_cases;
 
 
 

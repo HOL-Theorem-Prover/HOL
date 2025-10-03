@@ -51,24 +51,24 @@ val [REAL_10, REAL_ADD_SYM, REAL_MUL_SYM, REAL_ADD_ASSOC,
  end;
 
 (* Export all 18 primitive theorems in total, without any changes (yet) *)
-val _ = save_thm ("REAL_10",        REAL_10);
-val _ = save_thm ("REAL_ADD_SYM",   REAL_ADD_SYM);
-val _ = save_thm ("REAL_MUL_SYM",   REAL_MUL_SYM);
-val _ = save_thm ("REAL_ADD_ASSOC", REAL_ADD_ASSOC);
-val _ = save_thm ("REAL_MUL_ASSOC", REAL_MUL_ASSOC);
-val _ = save_thm ("REAL_LDISTRIB",  REAL_LDISTRIB);
-val _ = save_thm ("REAL_ADD_LID",   REAL_ADD_LID);
-val _ = save_thm ("REAL_MUL_LID",   REAL_MUL_LID);
-val _ = save_thm ("REAL_ADD_LINV",  REAL_ADD_LINV);
-val _ = save_thm ("REAL_MUL_LINV",  REAL_MUL_LINV);
-val _ = save_thm ("REAL_LT_TOTAL",  REAL_LT_TOTAL);
-val _ = save_thm ("REAL_LT_REFL",   REAL_LT_REFL);
-val _ = save_thm ("REAL_LT_TRANS",  REAL_LT_TRANS);
-val _ = save_thm ("REAL_LT_IADD",   REAL_LT_IADD);
-val _ = save_thm ("REAL_LT_MUL",    REAL_LT_MUL);
-val _ = save_thm ("REAL_BIJ",       REAL_BIJ);
-val _ = save_thm ("REAL_ISO",       REAL_ISO);
-val _ = save_thm ("REAL_INV_0",     REAL_INV_0);
+Theorem REAL_10 = REAL_10;
+Theorem REAL_ADD_SYM = REAL_ADD_SYM;
+Theorem REAL_MUL_SYM = REAL_MUL_SYM;
+Theorem REAL_ADD_ASSOC = REAL_ADD_ASSOC;
+Theorem REAL_MUL_ASSOC = REAL_MUL_ASSOC;
+Theorem REAL_LDISTRIB = REAL_LDISTRIB;
+Theorem REAL_ADD_LID = REAL_ADD_LID;
+Theorem REAL_MUL_LID = REAL_MUL_LID;
+Theorem REAL_ADD_LINV = REAL_ADD_LINV;
+Theorem REAL_MUL_LINV = REAL_MUL_LINV;
+Theorem REAL_LT_TOTAL = REAL_LT_TOTAL;
+Theorem REAL_LT_REFL = REAL_LT_REFL;
+Theorem REAL_LT_TRANS = REAL_LT_TRANS;
+Theorem REAL_LT_IADD = REAL_LT_IADD;
+Theorem REAL_LT_MUL = REAL_LT_MUL;
+Theorem REAL_BIJ = REAL_BIJ;
+Theorem REAL_ISO = REAL_ISO;
+Theorem REAL_INV_0 = REAL_INV_0;
 
 (*---------------------------------------------------------------------------
        Overload arithmetic operations.

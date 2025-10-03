@@ -357,10 +357,10 @@ val ALPHA1_inv_thms = prove_inversion_theorems
 val ALPHA1_strong_ind = prove_strong_induction
     ALPHA1_rules_sat ALPHA1_ind_thm;
 
-val _ = save_thm ("ALPHA1_rules_sat", ALPHA1_rules_sat);
-val _ = save_thm ("ALPHA1_ind_thm", ALPHA1_ind_thm);
-val _ = save_thm ("ALPHA1_inv_thms", LIST_CONJ ALPHA1_inv_thms);
-val _ = save_thm ("ALPHA1_strong_ind", ALPHA1_strong_ind);
+Theorem ALPHA1_rules_sat = ALPHA1_rules_sat;
+Theorem ALPHA1_ind_thm = ALPHA1_ind_thm;
+Theorem ALPHA1_inv_thms = LIST_CONJ ALPHA1_inv_thms;
+Theorem ALPHA1_strong_ind = ALPHA1_strong_ind;
 
 
 val [ALPHA1_OVAR1, ALPHA1_OBJ1, ALPHA1_INVOKE1, ALPHA1_UPDATE1,
