@@ -20,16 +20,21 @@ Definition GSUM_def:
   (GSUM (n,SUC m) f = GSUM (n,m) f + f (n + m))
 End
 
-val GSUM_1 = store_thm("GSUM_1",
-  `!m f. GSUM (m,1) f = f m`, REWRITE_TAC [ONE,GSUM_def,ADD_CLAUSES]);
+Theorem GSUM_1:
+   !m f. GSUM (m,1) f = f m
+Proof REWRITE_TAC [ONE,GSUM_def,ADD_CLAUSES]
+QED
 
-val GSUM_ADD = store_thm("GSUM_ADD",
-  `!p m n f. GSUM (p,m + n) f = GSUM (p,m) f + GSUM (p + m,n) f`,
+Theorem GSUM_ADD:
+   !p m n f. GSUM (p,m + n) f = GSUM (p,m) f + GSUM (p + m,n) f
+Proof
    Induct_on `n` THEN1 REWRITE_TAC [GSUM_def,ADD_CLAUSES]
-     THEN ASM_SIMP_TAC arith_ss [GSYM ADD_SUC,GSUM_def]);
+     THEN ASM_SIMP_TAC arith_ss [GSYM ADD_SUC,GSUM_def]
+QED
 
-val GSUM_ZERO = store_thm("GSUM_ZERO",
-  `!p n f. (!m. p <= m /\ m < p + n ==> (f m = 0)) = (GSUM (p,n) f = 0)`,
+Theorem GSUM_ZERO:
+   !p n f. (!m. p <= m /\ m < p + n ==> (f m = 0)) = (GSUM (p,n) f = 0)
+Proof
   Induct_on `n`
     THEN ASM_SIMP_TAC arith_ss [GSUM_def] THEN NTAC 2 STRIP_TAC
     THEN POP_ASSUM (fn th => REWRITE_TAC [GSYM th])
@@ -37,13 +42,16 @@ val GSUM_ZERO = store_thm("GSUM_ZERO",
     THEN PAT_ASSUM `!m. P` (SPEC_THEN `m` IMP_RES_TAC)
     THEN Cases_on `m < p + n` THEN1 PROVE_TAC []
     THEN `m = n + p` by DECIDE_TAC
-    THEN ASM_REWRITE_TAC []);
+    THEN ASM_REWRITE_TAC []
+QED
 
-val GSUM_MONO = store_thm("GSUM_MONO",
-  `!p m n f. m <= n /\ ~(f (p + n) = 0) ==> GSUM (p,m) f < GSUM (p,SUC n) f`,
+Theorem GSUM_MONO:
+   !p m n f. m <= n /\ ~(f (p + n) = 0) ==> GSUM (p,m) f < GSUM (p,SUC n) f
+Proof
   RW_TAC arith_ss [GSUM_def]
     THEN IMP_RES_TAC LESS_EQUAL_ADD
-    THEN FULL_SIMP_TAC arith_ss [GSUM_ADD]);
+    THEN FULL_SIMP_TAC arith_ss [GSUM_ADD]
+QED
 
 val GSUM_MONO2 = prove(
   `!p m n f. GSUM (p,m) f < GSUM (p,n) f ==> m < n`,
@@ -106,19 +114,23 @@ val GSUM_EQUAL_LEM2 = prove(
     THEN SPOSE_NOT_THEN STRIP_ASSUME_TAC
     THEN IMP_RES_TAC GSUM_LESS THEN DECIDE_TAC);
 
-val GSUM_EQUAL = store_thm("GSUM_EQUAL",
-  `!p m n f. (GSUM (p,m) f = GSUM (p,n) f) =
+Theorem GSUM_EQUAL:
+   !p m n f. (GSUM (p,m) f = GSUM (p,n) f) =
            ((m <= n /\ (!q. p + m <= q /\ q < p + n ==> (f q = 0))) \/
-            (n < m /\ (!q. p + n <= q /\ q < p + m ==> (f q = 0))))`,
+            (n < m /\ (!q. p + n <= q /\ q < p + m ==> (f q = 0))))
+Proof
   RW_TAC arith_ss [GSUM_EQUAL_LEM2]
     THEN Cases_on `m = n` THEN1 ASM_SIMP_TAC arith_ss []
     THEN IMP_RES_TAC (DECIDE (Term `!(a:num) b. ~(a = b) ==> (a < b) \/ (b < a)`))
-    THEN ASM_SIMP_TAC arith_ss []);
+    THEN ASM_SIMP_TAC arith_ss []
+QED
 
-val GSUM_FUN_EQUAL = store_thm("GSUM_FUN_EQUAL",
-  `!p n f g. (!x. p <= x /\ x < p + n ==> (f x = g x)) ==>
-       (GSUM (p,n) f = GSUM (p,n) g)`,
-  Induct_on `n` THEN RW_TAC arith_ss [GSUM_def]);
+Theorem GSUM_FUN_EQUAL:
+   !p n f g. (!x. p <= x /\ x < p + n ==> (f x = g x)) ==>
+       (GSUM (p,n) f = GSUM (p,n) g)
+Proof
+  Induct_on `n` THEN RW_TAC arith_ss [GSUM_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -127,9 +139,11 @@ Definition SUM_def:
   (SUM (SUC m) f = SUM m f + f m)
 End
 
-val SUM = store_thm("SUM",
-  `!m f. SUM m f = GSUM (0,m) f`,
-  Induct THEN ASM_SIMP_TAC arith_ss [SUM_def,GSUM_def]);
+Theorem SUM:
+   !m f. SUM m f = GSUM (0,m) f
+Proof
+  Induct THEN ASM_SIMP_TAC arith_ss [SUM_def,GSUM_def]
+QED
 
 val SYM_SUM = GSYM SUM;
 
@@ -151,10 +165,12 @@ val SUM_FUN_EQUAL = save_thm("SUM_FUN_EQUAL",
 val SUM_ZERO = save_thm("SUM_ZERO",
   (SIMP_RULE arith_ss [SYM_SUM] o SPEC `0`) GSUM_ZERO);
 
-val SUM_FOLDL = Q.store_thm("SUM_FOLDL",
-   `!n f. SUM n f = FOLDL (\x n. f n + x) 0 (COUNT_LIST n)`,
+Theorem SUM_FOLDL:
+    !n f. SUM n f = FOLDL (\x n. f n + x) 0 (COUNT_LIST n)
+Proof
    Induct
    THEN SRW_TAC [ARITH_ss]
-          [SUM_def, rich_listTheory.COUNT_LIST_SNOC, listTheory.FOLDL_SNOC])
+          [SUM_def, rich_listTheory.COUNT_LIST_SNOC, listTheory.FOLDL_SNOC]
+QED
 
 (* ------------------------------------------------------------------------- *)

@@ -17,30 +17,28 @@ app load ["pairTheory", "listTheory",
 *)
 
 
-val IN_NOT_IN = store_thm
-   ("IN_NOT_IN",
-    “!s (x:'a) y. (x IN s) /\ ~(y IN s) ==> ~(x = y)”,
+Theorem IN_NOT_IN:
+     !s (x:'a) y. (x IN s) /\ ~(y IN s) ==> ~(x = y)
+Proof
     REPEAT STRIP_TAC
     THEN POP_ASSUM REWRITE_ALL_THM
     THEN RES_TAC
-   );
+QED
 
-val NOT_IN_SUBSET =
- store_thm
-  ("NOT_IN_SUBSET",
-   “!s t (x:'a). ~(x IN s) /\ (t SUBSET s) ==> ~(x IN t)”,
+Theorem NOT_IN_SUBSET:
+    !s t (x:'a). ~(x IN s) /\ (t SUBSET s) ==> ~(x IN t)
+Proof
    REPEAT STRIP_TAC
    THEN IMP_RES_TAC SUBSET_DEF
    THEN RES_TAC
-  );
+QED
 
 
-val IN_DISJOINT_IMP =
- store_thm
-  ("IN_DISJOINT_IMP",
-   “!s t (x:'a). DISJOINT s t ==>
+Theorem IN_DISJOINT_IMP:
+    !s t (x:'a). DISJOINT s t ==>
            ((x IN s ==> ~(x IN t)) /\
-            (x IN t ==> ~(x IN s)))”,
+            (x IN t ==> ~(x IN s)))
+Proof
    REWRITE_TAC[DISJOINT_DEF,EXTENSION,IN_INTER,NOT_IN_EMPTY]
    THEN REPEAT STRIP_TAC
    THENL
@@ -52,7 +50,7 @@ val IN_DISJOINT_IMP =
      ]
    THEN MATCH_MP_TAC F_IMP
    THEN ASM_REWRITE_TAC[]
-  );
+QED
 
 
 Theorem CONJ_11:
@@ -61,27 +59,25 @@ Proof REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[]
 QED
 
 
-val MAP_I =
- store_thm
-  ("MAP_I",
-   “!lst:('a)list. MAP I lst = lst”,
+Theorem MAP_I:
+    !lst:('a)list. MAP I lst = lst
+Proof
    LIST_INDUCT_TAC
    THEN ASM_REWRITE_TAC[MAP,I_THM]
-  );
+QED
 
 val APPEND_LENGTH_EQ = rich_listTheory.APPEND_LENGTH_EQ;
 
-val APPEND_11 =
- store_thm
-  ("APPEND_11",
-   “!l1 l2 l3 l4:('a)list.
+Theorem APPEND_11:
+    !l1 l2 l3 l4:('a)list.
       (LENGTH l3 = LENGTH l1) /\ (LENGTH l4 = LENGTH l2) ==>
-      ((APPEND l1 l2 = APPEND l3 l4) = ((l1 = l3) /\ (l2 = l4)))”,
+      ((APPEND l1 l2 = APPEND l3 l4) = ((l1 = l3) /\ (l2 = l4)))
+Proof
    PURE_ONCE_REWRITE_TAC[EQ_SYM_EQ]
    THEN REPEAT STRIP_TAC
    THEN PURE_ONCE_REWRITE_TAC[EQ_SYM_EQ]
    THEN IMP_RES_TAC APPEND_LENGTH_EQ
-  );
+QED
 
 
 Theorem NULL_APPEND:
@@ -90,12 +86,11 @@ Proof LIST_INDUCT_TAC THEN REWRITE_TAC[NULL,APPEND]
 QED
 
 
-val ONE_ONE =
- store_thm
-  ("ONE_ONE",
-   “!f:'a->'b.
+Theorem ONE_ONE:
+    !f:'a->'b.
       ONE_ONE f =
-      (!x1 x2. (f x1 = f x2) = (x1 = x2))”,
+      (!x1 x2. (f x1 = f x2) = (x1 = x2))
+Proof
    REWRITE_TAC[ONE_ONE_THM]
    THEN GEN_TAC
    THEN EQ_TAC
@@ -111,26 +106,24 @@ val ONE_ONE =
         DISCH_TAC
         THEN ASM_REWRITE_TAC[]
      ]
-  );
+QED
 
 
-val ONTO_INVERSE =
- store_thm
-  ("ONTO_INVERSE",
-   “!(ss:'a->'b) y.
-      ONTO ss  ==> (ss(@z. ss z = y) = y)”,
+Theorem ONTO_INVERSE:
+    !(ss:'a->'b) y.
+      ONTO ss  ==> (ss(@z. ss z = y) = y)
+Proof
    REWRITE_TAC[ONTO_THM]
    THEN REPEAT STRIP_TAC
    THEN CONV_TAC SELECT_CONV
    THEN ONCE_REWRITE_TAC[EQ_SYM_EQ]
    THEN ASM_REWRITE_TAC[]
-  );
+QED
 
-val o_ONTO_11 =
- store_thm
-  ("o_ONTO_11",
-   “!(ss:'a->'b) (s1:'b->'c) s2.
-      ONTO ss ==> ((s2 o ss = s1 o ss) = (s2 = s1))”,
+Theorem o_ONTO_11:
+    !(ss:'a->'b) (s1:'b->'c) s2.
+      ONTO ss ==> ((s2 o ss = s1 o ss) = (s2 = s1))
+Proof
    REPEAT STRIP_TAC
    THEN EQ_TAC
    THENL
@@ -145,25 +138,23 @@ val o_ONTO_11 =
 
         DISCH_THEN REWRITE_THM
      ]
-  );
+QED
 
 
-val o_ONTO_IMP_11 =
- store_thm
-  ("o_ONTO_IMP_11",
-   “!(ss:'a->'b) (s1:'b->'c) s2.
-      ONTO ss /\ (s2 o ss = s1 o ss) ==> (s2 = s1)”,
+Theorem o_ONTO_IMP_11:
+    !(ss:'a->'b) (s1:'b->'c) s2.
+      ONTO ss /\ (s2 o ss = s1 o ss) ==> (s2 = s1)
+Proof
    REPEAT STRIP_TAC
    THEN IMP_RES_TAC o_ONTO_11
-  );
+QED
 
-val o_INVERSE =
- store_thm
-  ("o_INVERSE",
-   “!(ss:'a->'b).
+Theorem o_INVERSE:
+    !(ss:'a->'b).
       ONE_ONE ss /\ ONTO ss ==>
       (ss o (\y. @z. ss z = y) = I) /\
-      ((\y. @z. ss z = y) o ss = I)”,
+      ((\y. @z. ss z = y) o ss = I)
+Proof
    REWRITE_TAC[ONE_ONE]
    THEN REPEAT STRIP_TAC
    THENL [ EXT_TAC “x:'b”, EXT_TAC “x:'a” ]
@@ -174,14 +165,13 @@ val o_INVERSE =
      [  IMP_RES_THEN REWRITE_THM ONTO_INVERSE,
         ASM_REWRITE_TAC[SELECT_REFL]
      ]
-  );
+QED
 
-val o_EQ_INVERSE =
- store_thm
-  ("o_EQ_INVERSE",
-   “!(ss:'a->'b) (s1:'b->'c) s2.
+Theorem o_EQ_INVERSE:
+    !(ss:'a->'b) (s1:'b->'c) s2.
       ONE_ONE ss /\ ONTO ss ==>
-      ((s1 o ss = s2) = (s1 = s2 o (\y. @z. ss z = y)))”,
+      ((s1 o ss = s2) = (s1 = s2 o (\y. @z. ss z = y)))
+Proof
    REPEAT STRIP_TAC
    THEN IMP_RES_TAC o_ONTO_11
    THEN EQ_TAC
@@ -190,14 +180,13 @@ val o_EQ_INVERSE =
    THEN REWRITE_TAC[SYM(SPEC_ALL o_ASSOC)]
    THEN IMP_RES2_THEN REWRITE_THM o_INVERSE
    THEN REWRITE_TAC[I_o_ID]
-  );
+QED
 
-val o_ONTO =
- store_thm
-  ("o_ONTO",
-   “!(ss1:'b->'c) (ss2:'a->'b).
+Theorem o_ONTO:
+    !(ss1:'b->'c) (ss2:'a->'b).
       ONTO ss1 /\ ONTO ss2 ==>
-      ONTO (ss1 o ss2)”,
+      ONTO (ss1 o ss2)
+Proof
    REWRITE_TAC[ONTO_THM]
    THEN REPEAT STRIP_TAC
    THEN UNDISCH_ALL_TAC
@@ -205,26 +194,24 @@ val o_ONTO =
    THEN DISCH_THEN (STRIP_ASSUME_TAC o SPEC “x:'b”)
    THEN EXISTS_TAC “x':'a”
    THEN ASM_REWRITE_TAC[o_THM]
-  );
+QED
 
-val o_ONE_ONE =
- store_thm
-  ("o_ONE_ONE",
-   “!(ss1:'b->'c) (ss2:'a->'b).
+Theorem o_ONE_ONE:
+    !(ss1:'b->'c) (ss2:'a->'b).
       ONE_ONE ss1 /\ ONE_ONE ss2 ==>
-      ONE_ONE (ss1 o ss2)”,
+      ONE_ONE (ss1 o ss2)
+Proof
    REWRITE_TAC[ONE_ONE]
    THEN REPEAT STRIP_TAC
    THEN ASM_REWRITE_TAC[o_THM]
-  );
+QED
 
 
-val biject_EQ_INVERSE =
- store_thm
-  ("biject_EQ_INVERSE",
-   “!y x (ss:'a->'b).
+Theorem biject_EQ_INVERSE:
+    !y x (ss:'a->'b).
       ONE_ONE ss /\ ONTO ss ==>
-      (((@z. ss z = y) = x) = (ss x = y))”,
+      (((@z. ss z = y) = x) = (ss x = y))
+Proof
    REWRITE_TAC[ONE_ONE]
    THEN REPEAT STRIP_TAC
    THEN EQ_TAC
@@ -234,15 +221,14 @@ val biject_EQ_INVERSE =
 
        ASM_REWRITE_TAC[SELECT_REFL]
      ]
-  );
+QED
 
 
-val biject_EQ_INVERSE1 =
- store_thm
-  ("biject_EQ_INVERSE1",
-   “!y x (ss:'a->'b).
+Theorem biject_EQ_INVERSE1:
+    !y x (ss:'a->'b).
       ONE_ONE ss /\ ONTO ss ==>
-      ((x = (@z. ss z = y)) = (ss x = y))”,
+      ((x = (@z. ss z = y)) = (ss x = y))
+Proof
    REWRITE_TAC[ONE_ONE]
    THEN REPEAT STRIP_TAC
    THEN EQ_TAC
@@ -253,15 +239,14 @@ val biject_EQ_INVERSE1 =
        DISCH_THEN (REWRITE_THM o SYM)
        THEN ASM_REWRITE_TAC[SELECT_REFL]
      ]
-  );
+QED
 
 
-val INVERSE_biject =
- store_thm
-  ("INVERSE_biject",
-   “!ss:'a->'b.
+Theorem INVERSE_biject:
+    !ss:'a->'b.
        ONE_ONE ss /\ ONTO ss ==>
-       ONE_ONE (\y. @z. ss z = y) /\ ONTO (\y. @z. ss z = y)”,
+       ONE_ONE (\y. @z. ss z = y) /\ ONTO (\y. @z. ss z = y)
+Proof
    REPEAT STRIP_TAC
    THENL
      [ REWRITE_TAC[ONE_ONE]
@@ -276,15 +261,14 @@ val INVERSE_biject =
        THEN EXISTS_TAC “(ss:'a->'b) y”
        THEN ASM_REWRITE_TAC[]
      ]
-  );
+QED
 
 
-val IN_IDENT_subst =
- store_thm
-  ("IN_IDENT_subst",
-   “!s ss (z:'a).
+Theorem IN_IDENT_subst:
+    !s ss (z:'a).
       (!x. (x IN s) ==> (ss x = x)) /\ ONE_ONE ss ==>
-      ((ss z IN s) = (z IN s))”,
+      ((ss z IN s) = (z IN s))
+Proof
    REWRITE_TAC[ONE_ONE]
    THEN REPEAT STRIP_TAC
    THEN EQ_TAC
@@ -298,12 +282,12 @@ val IN_IDENT_subst =
 
         ASM_REWRITE_TAC[]
      ]
-  );
+QED
 
 
-val MEMBER_IMP_POS_CARD = store_thm
-   ("MEMBER_IMP_POS_CARD",
-    “!s. FINITE s ==> !(x:'a). x IN s ==> (0 < CARD s)”,
+Theorem MEMBER_IMP_POS_CARD:
+     !s. FINITE s ==> !(x:'a). x IN s ==> (0 < CARD s)
+Proof
     REPEAT STRIP_TAC
     THEN MATCH_MP_TAC (DISJ_IMP (SPEC_ALL LESS_0_CASES))
     THEN PURE_ONCE_REWRITE_TAC[EQ_SYM_EQ]
@@ -311,71 +295,66 @@ val MEMBER_IMP_POS_CARD = store_thm
     THEN PURE_ONCE_REWRITE_TAC[SYM(SPEC_ALL MEMBER_NOT_EMPTY)]
     THEN EXISTS_TAC “x:'a”
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
-val SUB1_SUC = store_thm
-   ("SUB1_SUC",
-    “!m. (0 < m) ==> (SUC (m - 1) = m)”,
+Theorem SUB1_SUC:
+     !m. (0 < m) ==> (SUC (m - 1) = m)
+Proof
     INDUCT_TAC
     THENL [REWRITE_TAC[NOT_LESS_0],
            REWRITE_TAC[LESS_0,SUC_SUB1]
           ]
-   );
+QED
 
 
-val UNION_INTER =
- store_thm
-  ("UNION_INTER",
-   “!s1 s2 s3 :'a->bool.
+Theorem UNION_INTER:
+    !s1 s2 s3 :'a->bool.
      (s1 UNION s2) INTER s3 =
-     ((s1 INTER s3) UNION (s2 INTER s3))”,
+     ((s1 INTER s3) UNION (s2 INTER s3))
+Proof
    ONCE_REWRITE_TAC[INTER_COMM]
    THEN REWRITE_TAC[UNION_OVER_INTER]
-  );
+QED
 
-val UNION_THM =
- store_thm
-  ("UNION_THM",
-   “!s t (x:'a).
+Theorem UNION_THM:
+    !s t (x:'a).
       (EMPTY UNION t = t) /\
       (s UNION EMPTY = s) /\
       ((x INSERT s) UNION t = x INSERT (s UNION t)) /\
-      (s UNION (x INSERT t) = x INSERT (s UNION t))”,
+      (s UNION (x INSERT t) = x INSERT (s UNION t))
+Proof
    REWRITE_TAC[UNION_EMPTY,INSERT_UNION_EQ]
    THEN ONCE_REWRITE_TAC[UNION_COMM]
    THEN REWRITE_TAC[INSERT_UNION_EQ]
-  );
+QED
 
 
-val UNION_SUBSET =
- store_thm
-  ("UNION_SUBSET",
-   “!(s:'a->bool) t u.
-     ((s UNION t) SUBSET u) = ((s SUBSET u) /\ (t SUBSET u))”,
+Theorem UNION_SUBSET:
+    !(s:'a->bool) t u.
+     ((s UNION t) SUBSET u) = ((s SUBSET u) /\ (t SUBSET u))
+Proof
    REWRITE_TAC[SUBSET_DEF,IN_UNION]
    THEN REPEAT GEN_TAC
    THEN EQ_TAC
    THEN REPEAT STRIP_TAC
    THEN RES_TAC
-  );
+QED
 
 
-val UNION_DIFF =
- store_thm
-  ("UNION_DIFF",
-   “!s t r:'a->bool. (s UNION t) DIFF r = ((s DIFF r) UNION (t DIFF r))”,
+Theorem UNION_DIFF:
+    !s t r:'a->bool. (s UNION t) DIFF r = ((s DIFF r) UNION (t DIFF r))
+Proof
    REWRITE_TAC[EXTENSION,IN_UNION,IN_DIFF]
    THEN REPEAT GEN_TAC
    THEN EQ_TAC
    THEN STRIP_TAC
    THEN ASM_REWRITE_TAC[]
-  );
+QED
 
-val SUBSET_DIFF =
- store_thm
-  ("SUBSET_DIFF",
-   “!s t r:'a->bool. (s SUBSET t) ==> (s DIFF r SUBSET t DIFF r)”,
+Theorem SUBSET_DIFF:
+    !s t r:'a->bool. (s SUBSET t) ==> (s DIFF r SUBSET t DIFF r)
+Proof
    REWRITE_TAC[SUBSET_DEF,IN_DIFF]
    THEN REPEAT GEN_TAC
    THEN DISCH_TAC
@@ -383,42 +362,40 @@ val SUBSET_DIFF =
    THEN STRIP_TAC
    THEN RES_TAC
    THEN ASM_REWRITE_TAC[]
-  );
+QED
 
-val SUBSETS_UNION =
- store_thm
-  ("SUBSETS_UNION",
-    “!(s1:'a->bool) s2 t1 t2.
+Theorem SUBSETS_UNION:
+     !(s1:'a->bool) s2 t1 t2.
          s1 SUBSET t1 /\ s2 SUBSET t2 ==>
-         (s1 UNION s2) SUBSET (t1 UNION t2)”,
+         (s1 UNION s2) SUBSET (t1 UNION t2)
+Proof
     REWRITE_TAC[SUBSET_DEF]
     THEN REWRITE_TAC[IN_UNION]
     THEN REPEAT STRIP_TAC (* 2 subgoals *)
     THEN RES_TAC
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
 (* Theorems about DISJOINT: *)
 
-val DISJOINT_INSERT2 = store_thm
-   ("DISJOINT_INSERT2",
-    “!s t (x:'a). DISJOINT s (x INSERT t) = (DISJOINT s t /\ ~(x IN s))”,
+Theorem DISJOINT_INSERT2:
+     !s t (x:'a). DISJOINT s (x INSERT t) = (DISJOINT s t /\ ~(x IN s))
+Proof
     ONCE_REWRITE_TAC[DISJOINT_SYM]
     THEN REWRITE_TAC[DISJOINT_INSERT]
-   );
+QED
 
-val DISJOINT_UNION2 = store_thm
-   ("DISJOINT_UNION2",
-    “!s t r:'a->bool. DISJOINT s (t UNION r) = (DISJOINT s t /\ DISJOINT s r)”,
+Theorem DISJOINT_UNION2:
+     !s t r:'a->bool. DISJOINT s (t UNION r) = (DISJOINT s t /\ DISJOINT s r)
+Proof
     ONCE_REWRITE_TAC[DISJOINT_SYM]
     THEN REWRITE_TAC[DISJOINT_UNION]
-   );
+QED
 
-val DISJOINT_SUBSET =
- store_thm
-  ("DISJOINT_SUBSET",
-   “!s t r:'a->bool. s SUBSET t /\ DISJOINT t r ==> DISJOINT s r”,
+Theorem DISJOINT_SUBSET:
+    !s t r:'a->bool. s SUBSET t /\ DISJOINT t r ==> DISJOINT s r
+Proof
    REWRITE_TAC[SUBSET_DEF,IN_DISJOINT]
    THEN CONV_TAC (ONCE_DEPTH_CONV NOT_EXISTS_CONV)
    THEN REWRITE_TAC[DE_MORGAN_THM]
@@ -430,20 +407,19 @@ val DISJOINT_SUBSET =
 
       ASM_REWRITE_TAC[]
     ]
-  );
+QED
 
-val UNION_DELETE =
- store_thm
-  ("UNION_DELETE",
-   “!s t (e:'a).
-        s UNION t DELETE e = (s DELETE e) UNION (t DELETE e)”,
+Theorem UNION_DELETE:
+    !s t (e:'a).
+        s UNION t DELETE e = (s DELETE e) UNION (t DELETE e)
+Proof
    REWRITE_TAC[EXTENSION]
    THEN REPEAT GEN_TAC
    THEN REWRITE_TAC[IN_UNION,IN_DELETE]
    THEN EQ_TAC
    THEN STRIP_TAC
    THEN ASM_REWRITE_TAC[]
-  );
+QED
 
 
 val IN = save_thm("IN", CONJ NOT_IN_EMPTY IN_INSERT);
@@ -521,12 +497,11 @@ val UNION_SET = save_thm ("UNION_SET",
                           CONJ UNION_SET_EMPTY_LEMMA UNION_SET_INSERT_LEMMA);
 
 
-val UNION_SET_UNION =
- store_thm
-  ("UNION_SET_UNION",
-   “!s t : ('a->bool)->bool.
+Theorem UNION_SET_UNION:
+    !s t : ('a->bool)->bool.
       UNION_SET (s UNION t) =
-                     UNION_SET s UNION UNION_SET t”,
+                     UNION_SET s UNION UNION_SET t
+Proof
    REWRITE_TAC[EXTENSION,IN_UNION,IN_UNION_SET]
    THEN REPEAT GEN_TAC
    THEN EQ_TAC
@@ -534,13 +509,12 @@ val UNION_SET_UNION =
    THENL [ DISJ1_TAC, DISJ2_TAC, ALL_TAC, ALL_TAC ]
    THEN EXISTS_TAC “si:'a->bool”
    THEN ASM_REWRITE_TAC[]
-  );
+QED
 
 
-val EMPTY_UNION_SET =
- store_thm
-  ("EMPTY_UNION_SET",
-   “!s. (UNION_SET s = {}) = (!si:'a->bool. si IN s ==> (si = {}))”,
+Theorem EMPTY_UNION_SET:
+    !s. (UNION_SET s = {}) = (!si:'a->bool. si IN s ==> (si = {}))
+Proof
    REWRITE_TAC[EXTENSION,IN,IN_UNION_SET]
    THEN CONV_TAC (DEPTH_CONV NOT_EXISTS_CONV)
    THEN REWRITE_TAC[DE_MORGAN_THM,(SYM o SPEC_ALL)IMP_DISJ_THM]
@@ -548,13 +522,12 @@ val EMPTY_UNION_SET =
    THEN GEN_TAC
    THEN EQ_TAC
    THEN DISCH_THEN REWRITE_THM
-  );
+QED
 
 
-val UNION_SET_EMPTY =
- store_thm
-  ("UNION_SET_EMPTY",
-   “!s:('a->bool)->bool. (UNION_SET s = {}) = ((s = {}) \/ (s = {{}}))”,
+Theorem UNION_SET_EMPTY:
+    !s:('a->bool)->bool. (UNION_SET s = {}) = ((s = {}) \/ (s = {{}}))
+Proof
    GEN_TAC
    THEN ASM_CASES_TAC “s = ({}:('a->bool)->bool)”
    THEN ASM_REWRITE_TAC[UNION_SET]
@@ -593,21 +566,19 @@ val UNION_SET_EMPTY =
         THEN DISCH_THEN REWRITE_THM
         THEN REWRITE_TAC[IN]
       ]
-  );
+QED
 
 
-val UNION_SET_EMPTY_INSERT =
- store_thm
-  ("UNION_SET_EMPTY_INSERT",
-   “!s:('a->bool)->bool. UNION_SET ({} INSERT s) = UNION_SET s”,
+Theorem UNION_SET_EMPTY_INSERT:
+    !s:('a->bool)->bool. UNION_SET ({} INSERT s) = UNION_SET s
+Proof
    REWRITE_TAC[UNION_SET,UNION_EMPTY]
-  );
+QED
 
-val UNION_SET_DELETE =
- store_thm
-  ("UNION_SET_DELETE",
-   “!(s:('a->bool)->bool) e.
-        UNION_SET {si DELETE e | si IN s} = (UNION_SET s) DELETE e”,
+Theorem UNION_SET_DELETE:
+    !(s:('a->bool)->bool) e.
+        UNION_SET {si DELETE e | si IN s} = (UNION_SET s) DELETE e
+Proof
    REWRITE_TAC[EXTENSION]
    THEN REWRITE_TAC[IN_UNION_SET,IN_DELETE,GSPECIFICATION]
    THEN BETA_TAC
@@ -628,7 +599,7 @@ val UNION_SET_DELETE =
         THEN EXISTS_TAC “si:'a->bool”
         THEN ASM_REWRITE_TAC[]
       ]
-  );
+QED
 
 
 val FINITE_UNION_SET_IMP_LEMMA =
@@ -650,14 +621,13 @@ val FINITE_UNION_SET_IMP_LEMMA =
   );
 
 
-val FINITE_UNION_SET_IMP =
- store_thm
-  ("FINITE_UNION_SET_IMP",
-   “!s. FINITE s /\ (!si:'a->bool. si IN s ==> FINITE si) ==>
-           FINITE (UNION_SET s)”,
+Theorem FINITE_UNION_SET_IMP:
+    !s. FINITE s /\ (!si:'a->bool. si IN s ==> FINITE si) ==>
+           FINITE (UNION_SET s)
+Proof
    REPEAT STRIP_TAC
    THEN IMP_RES_TAC FINITE_UNION_SET_IMP_LEMMA
-  );
+QED
 
 
 val FINITE_UNION_SET_LEMMA1 =
@@ -677,11 +647,10 @@ val FINITE_UNION_SET_LEMMA1 =
   );
 
 
-val FINITE_UNION_SET =
- store_thm
-  ("FINITE_UNION_SET",
-   “!(s:('a->bool)->bool). FINITE s ==>
-        (FINITE (UNION_SET s) = (!si. si IN s ==> FINITE si))”,
+Theorem FINITE_UNION_SET:
+    !(s:('a->bool)->bool). FINITE s ==>
+        (FINITE (UNION_SET s) = (!si. si IN s ==> FINITE si))
+Proof
    GEN_TAC
    THEN STRIP_TAC
    THEN EQ_TAC
@@ -690,7 +659,7 @@ val FINITE_UNION_SET =
 
        IMP_RES_TAC FINITE_UNION_SET_IMP_LEMMA
      ]
-  );
+QED
 
 
 val GSPEC_EMPTY_LEMMA =

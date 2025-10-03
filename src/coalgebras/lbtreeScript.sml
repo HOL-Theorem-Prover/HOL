@@ -145,20 +145,22 @@ Definition Nd_def:
   Nd a t1 t2 = lbtree_abs (Ndrep a (lbtree_rep t1) (lbtree_rep t2))
 End
 
-val lbtree_cases = store_thm(
-  "lbtree_cases",
-  ``!t. (t = Lf) \/ (?a t1 t2. t = Nd a t1 t2)``,
+Theorem lbtree_cases:
+    !t. (t = Lf) \/ (?a t1 t2. t = Nd a t1 t2)
+Proof
   SIMP_TAC (srw_ss()) [Lf_def, Nd_def, forall_lbtree, lbtree_abs_11,
                        is_lbtree_rules] THEN
   ONCE_REWRITE_TAC [is_lbtree_cases] THEN SRW_TAC [][] THEN
-  METIS_TAC [lbtree_repabs']);
+  METIS_TAC [lbtree_repabs']
+QED
 
-val Lf_NOT_Nd = store_thm(
-  "Lf_NOT_Nd",
-  ``~(Lf = Nd a t1 t2)``,
+Theorem Lf_NOT_Nd:
+    ~(Lf = Nd a t1 t2)
+Proof
   SRW_TAC [][Lf_def, Nd_def, lbtree_abs_11, is_lbtree_rules] THEN
   SRW_TAC [][Lfrep_def, Ndrep_def, FUN_EQ_THM] THEN
-  Q.EXISTS_TAC `[]` THEN SRW_TAC [][]);
+  Q.EXISTS_TAC `[]` THEN SRW_TAC [][]
+QED
 val _ = export_rewrites ["Lf_NOT_Nd"]
 
 Theorem Nd_11[simp]:
@@ -171,13 +173,13 @@ QED
     co-recursion/finality axiom
    ---------------------------------------------------------------------- *)
 
-val lbtree_ue_Axiom = store_thm(
-  "lbtree_ue_Axiom",
-  ``!f : 'a -> ('b # 'a # 'a) option.
+Theorem lbtree_ue_Axiom:
+    !f : 'a -> ('b # 'a # 'a) option.
        ?!g : 'a -> 'b lbtree.
           !x. g x = case f x of
                       NONE => Lf
-                    | SOME(b,y,z) => Nd b (g y) (g z)``,
+                    | SOME(b,y,z) => Nd b (g y) (g z)
+Proof
   GEN_TAC THEN
   SRW_TAC [][EXISTS_UNIQUE_THM] THENL [
     Q.EXISTS_TAC `\x. lbtree_abs (path_follow f x)` THEN
@@ -227,7 +229,8 @@ val lbtree_ue_Axiom = store_thm(
         REPEAT (POP_ASSUM (K ALL_TAC)) THEN SRW_TAC [][]
       ]
     ]
-  ]);
+  ]
+QED
 
 (* ----------------------------------------------------------------------
     define a case constant - wouldn't it be nice if we could use nice case
@@ -241,11 +244,12 @@ Definition lbtree_case_def:
                              (@t2. ?a t1. t = Nd a t1 t2)
 End
 
-val lbtree_case_thm = store_thm(
-  "lbtree_case_thm",
-  ``(lbtree_case e f Lf = e) /\
-    (lbtree_case e f (Nd a t1 t2) = f a t1 t2)``,
-  SRW_TAC [][lbtree_case_def]);
+Theorem lbtree_case_thm:
+    (lbtree_case e f Lf = e) /\
+    (lbtree_case e f (Nd a t1 t2) = f a t1 t2)
+Proof
+  SRW_TAC [][lbtree_case_def]
+QED
 val _ = export_rewrites ["lbtree_case_thm"]
 
 (* ----------------------------------------------------------------------
@@ -255,15 +259,15 @@ val _ = export_rewrites ["lbtree_case_thm"]
     theorem.
    ---------------------------------------------------------------------- *)
 
-val lbtree_bisimulation = store_thm(
-  "lbtree_bisimulation",
-  ``!t u. (t = u) =
+Theorem lbtree_bisimulation:
+    !t u. (t = u) =
           ?R. R t u /\
               !t u. R t u ==>
                     (t = Lf) /\ (u = Lf) \/
                     ?a t1 u1 t2 u2.
                         R t1 u1 /\ R t2 u2 /\
-                        (t = Nd a t1 t2) /\ (u = Nd a u1 u2)``,
+                        (t = Nd a t1 t2) /\ (u = Nd a u1 u2)
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL [
     DISCH_THEN SUBST_ALL_TAC THEN Q.EXISTS_TAC `(=)` THEN SRW_TAC [][] THEN
     METIS_TAC [lbtree_cases],
@@ -307,18 +311,19 @@ val lbtree_bisimulation = store_thm(
         SRW_TAC [][]
       ]
     ]
-  ]);
+  ]
+QED
 
-val lbtree_strong_bisimulation = store_thm(
-  "lbtree_strong_bisimulation",
-  ``!t u.
+Theorem lbtree_strong_bisimulation:
+    !t u.
       (t = u) =
       ?R. R t u /\
           !t u.
              R t u ==> (t = u) \/
                        ?a t1 u1 t2 u2.
                           R t1 u1 /\ R t2 u2 /\
-                          (t = Nd a t1 t2) /\ (u = Nd a u1 u2)``,
+                          (t = Nd a t1 t2) /\ (u = Nd a u1 u2)
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL [
     DISCH_THEN SUBST_ALL_TAC THEN Q.EXISTS_TAC `(=)` THEN SRW_TAC [][],
     STRIP_TAC THEN ONCE_REWRITE_TAC [lbtree_bisimulation] THEN
@@ -336,7 +341,8 @@ val lbtree_strong_bisimulation = store_thm(
          by METIS_TAC [lbtree_cases] THEN
       SRW_TAC [][]
     ]
-  ]);
+  ]
+QED
 
 (* ----------------------------------------------------------------------
     mem : 'a -> 'a lbtree -> bool
@@ -380,20 +386,22 @@ val map_def = new_specification("map_def", ["map"],
     SRW_TAC [][]));
 val _ = export_rewrites ["map_def"]
 
-val map_eq_Lf = store_thm(
-  "map_eq_Lf",
-  ``((map f t = Lf) = (t = Lf)) /\ ((Lf = map f t) = (t = Lf))``,
+Theorem map_eq_Lf:
+    ((map f t = Lf) = (t = Lf)) /\ ((Lf = map f t) = (t = Lf))
+Proof
   `(t = Lf) \/ ?a t1 t2. t = Nd a t1 t2` by METIS_TAC [lbtree_cases] THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 val _ = export_rewrites ["map_eq_Lf"]
 
-val map_eq_Nd = store_thm(
-  "map_eq_Nd",
-  ``(map f t = Nd a t1 t2) =
+Theorem map_eq_Nd:
+    (map f t = Nd a t1 t2) =
        ?a' t1' t2'. (t = Nd a' t1' t2') /\ (a = f a') /\
-                    (t1 = map f t1') /\ (t2 = map f t2')``,
+                    (t1 = map f t1') /\ (t2 = map f t2')
+Proof
   `(t = Lf) \/ ?a' t1' t2'. t = Nd a' t1' t2'` by METIS_TAC [lbtree_cases] THEN
-  SRW_TAC [][] THEN METIS_TAC []);
+  SRW_TAC [][] THEN METIS_TAC []
+QED
 
 
 (* ----------------------------------------------------------------------
@@ -417,9 +425,9 @@ Proof
 QED
 
 
-val finite_map = store_thm(
-  "finite_map",
-  ``finite (map f t) = finite t``,
+Theorem finite_map:
+    finite (map f t) = finite t
+Proof
   Q_TAC SUFF_TAC `(!t. finite t ==> finite (map f t)) /\
                   !t. finite t ==> !t'. (t = map f t') ==> finite t'`
         THEN1 METIS_TAC [] THEN
@@ -427,7 +435,8 @@ val finite_map = store_thm(
     HO_MATCH_MP_TAC finite_ind THEN SRW_TAC [][],
     HO_MATCH_MP_TAC finite_ind THEN SRW_TAC [][map_eq_Nd] THEN
     SRW_TAC [][]
-  ]);
+  ]
+QED
 val _ = export_rewrites ["finite_map"]
 
 (* ----------------------------------------------------------------------
@@ -472,25 +481,27 @@ val bf_flatten_def = new_specification(
 val _ = delete_const "drop_while"
 
 (* simple properties of bf_flatten *)
-val bf_flatten_eq_lnil = store_thm(
-  "bf_flatten_eq_lnil",
-  ``!l. (bf_flatten l = [||]) = EVERY ((=)Lf) l``,
+Theorem bf_flatten_eq_lnil:
+    !l. (bf_flatten l = [||]) = EVERY ((=)Lf) l
+Proof
   Induct THEN SRW_TAC [][bf_flatten_def] THEN
   `(h = Lf) \/ (?a t1 t2. h = Nd a t1 t2)`
       by METIS_TAC [lbtree_cases] THEN
-  SRW_TAC [][bf_flatten_def]);
+  SRW_TAC [][bf_flatten_def]
+QED
 
-val bf_flatten_append = store_thm(
-  "bf_flatten_append",
-  ``!l1. EVERY ((=) Lf) l1 ==> (bf_flatten (l1 ++ l2) = bf_flatten l2)``,
-  Induct THEN SRW_TAC [][] THEN SRW_TAC [][bf_flatten_def]);
+Theorem bf_flatten_append:
+    !l1. EVERY ((=) Lf) l1 ==> (bf_flatten (l1 ++ l2) = bf_flatten l2)
+Proof
+  Induct THEN SRW_TAC [][] THEN SRW_TAC [][bf_flatten_def]
+QED
 
 (* a somewhat more complicated property, requiring one simple lemma about
    lists and EXISTS first *)
-val EXISTS_FIRST = store_thm(
-  "EXISTS_FIRST",
-  ``!l. EXISTS P l ==> ?l1 x l2. (l = l1 ++ (x::l2)) /\ EVERY ((~) o P) l1 /\
-                                 P x``,
+Theorem EXISTS_FIRST:
+    !l. EXISTS P l ==> ?l1 x l2. (l = l1 ++ (x::l2)) /\ EVERY ((~) o P) l1 /\
+                                 P x
+Proof
   Induct THEN SRW_TAC [][] THENL [
     MAP_EVERY Q.EXISTS_TAC [`[]`, `h`, `l`] THEN SRW_TAC [][],
     Cases_on `P h` THENL [
@@ -498,7 +509,8 @@ val EXISTS_FIRST = store_thm(
       RES_TAC THEN
       MAP_EVERY Q.EXISTS_TAC [`h::l1`, `x`, `l2`] THEN SRW_TAC [][]
     ]
-  ]);
+  ]
+QED
 
 Theorem exists_bf_flatten:
   exists ((=)x) (bf_flatten tlist) ==> EXISTS (mem x) tlist
@@ -594,16 +606,18 @@ val (depth_rules, depth_ind, depth_cases) = Hol_reln`
   (!m x a t1 t2. depth x t2 m ==> depth x (Nd a t1 t2) (SUC m))
 `;
 
-val mem_depth = store_thm(
-  "mem_depth",
-  ``!x t. mem x t ==> ?n. depth x t n``,
+Theorem mem_depth:
+    !x t. mem x t ==> ?n. depth x t n
+Proof
   HO_MATCH_MP_TAC mem_ind THEN SRW_TAC [][] THEN
-  METIS_TAC [depth_rules]);
+  METIS_TAC [depth_rules]
+QED
 
-val depth_mem = store_thm(
-  "depth_mem",
-  ``!x t n. depth x t n ==> mem x t``,
-  HO_MATCH_MP_TAC depth_ind THEN SRW_TAC [][]);
+Theorem depth_mem:
+    !x t n. depth x t n ==> mem x t
+Proof
+  HO_MATCH_MP_TAC depth_ind THEN SRW_TAC [][]
+QED
 
 (* mindepth x t returns SOME n if x occurs in t at minimum depth n,
    else NONE *)
@@ -653,12 +667,12 @@ Definition optmin_def:
 End
 
 (* recursive characterisation of mindepth *)
-val mindepth_thm = store_thm(
-  "mindepth_thm",
-  ``(mindepth x Lf = NONE) /\
+Theorem mindepth_thm:
+    (mindepth x Lf = NONE) /\
     (mindepth x (Nd a t1 t2) =
        if x = a then SOME 0
-       else OPTION_MAP SUC (optmin (mindepth x t1) (mindepth x t2)))``,
+       else OPTION_MAP SUC (optmin (mindepth x t1) (mindepth x t2)))
+Proof
   SRW_TAC [][mindepth_def] THEN FULL_SIMP_TAC (srw_ss()) [optmin_def] THENL [
     LEAST_ELIM_TAC THEN SRW_TAC [][] THEN1 METIS_TAC [depth_rules] THEN
     Cases_on `n` THEN SRW_TAC [][] THEN
@@ -688,18 +702,21 @@ val mindepth_thm = store_thm(
     Q_TAC SUFF_TAC `~(m < n) /\ ~(n < m)` THEN1 DECIDE_TAC THEN
     REPEAT STRIP_TAC THEN METIS_TAC [DECIDE ``SUC x < SUC y <=> x < y``,
                                      depth_rules]
-  ]);
+  ]
+QED
 
-val mem_mindepth = store_thm(
-  "mem_mindepth",
-  ``!x t. mem x t ==> (?n. mindepth x t = SOME n)``,
-  METIS_TAC [mindepth_def]);
+Theorem mem_mindepth:
+    !x t. mem x t ==> (?n. mindepth x t = SOME n)
+Proof
+  METIS_TAC [mindepth_def]
+QED
 
-val mindepth_depth = store_thm(
-  "mindepth_depth",
-  ``(mindepth x t = SOME n) ==> depth x t n``,
+Theorem mindepth_depth:
+    (mindepth x t = SOME n) ==> depth x t n
+Proof
   SRW_TAC [][mindepth_def] THEN LEAST_ELIM_TAC THEN SRW_TAC [][] THEN
-  METIS_TAC [mem_depth]);
+  METIS_TAC [mem_depth]
+QED
 
 (* is_mmindex f l n d says that n is the least index of the element with
    minimal weight (d), as defined by f : 'a -> num option
@@ -720,9 +737,9 @@ End
 
 (* the crucial fact about minimums -- two levels of LEAST-ness going on in
    here *)
-val mmindex_EXISTS = store_thm(
-  "mmindex_EXISTS",
-  ``EXISTS (\e. ?n. f e = SOME n) l ==> ?i m. is_mmindex f l i m``,
+Theorem mmindex_EXISTS:
+    EXISTS (\e. ?n. f e = SOME n) l ==> ?i m. is_mmindex f l i m
+Proof
   SRW_TAC [][is_mmindex_def] THEN
   Q.ABBREV_TAC `P = \n. ?i. i < LENGTH l /\ (f (EL i l) = SOME n)` THEN
   `?d. P d`
@@ -758,11 +775,12 @@ val mmindex_EXISTS = store_thm(
       Q_TAC SUFF_TAC `~(m = x)` THEN1 DECIDE_TAC THEN
       METIS_TAC []
     ]
-  ]);
+  ]
+QED
 
-val mmindex_unique = store_thm(
-  "mmindex_unique",
-  ``is_mmindex f l i m ==> !j n. is_mmindex f l j n <=> (j = i) /\ (n = m)``,
+Theorem mmindex_unique:
+    is_mmindex f l i m ==> !j n. is_mmindex f l j n <=> (j = i) /\ (n = m)
+Proof
   SIMP_TAC (srw_ss()) [EQ_IMP_THM] THEN
   SIMP_TAC (srw_ss()) [is_mmindex_def] THEN
   STRIP_TAC THEN REPEAT GEN_TAC THEN STRIP_TAC THEN
@@ -770,7 +788,8 @@ val mmindex_unique = store_thm(
         THEN1 DECIDE_TAC THEN
   REPEAT STRIP_TAC THEN
   METIS_TAC [DECIDE ``~(x < y /\ y <= x)``,
-             optionTheory.SOME_11, optionTheory.NOT_SOME_NONE]);
+             optionTheory.SOME_11, optionTheory.NOT_SOME_NONE]
+QED
 
 val mmindex_bump = prove(
   ``(f x = NONE) ==> (is_mmindex f (x::t) (SUC j) n = is_mmindex f t j n)``,
@@ -805,9 +824,9 @@ val optmin_EQ_NONE = prove(
   ``(optmin n m = NONE) <=> (n = NONE) /\ (m = NONE)``,
   Cases_on `n` THEN Cases_on `m` THEN SRW_TAC [][optmin_def]);
 
-val mem_bf_flatten = store_thm(
-  "mem_bf_flatten",
-  ``exists ((=)x) (bf_flatten tlist) = EXISTS (mem x) tlist``,
+Theorem mem_bf_flatten:
+    exists ((=)x) (bf_flatten tlist) = EXISTS (mem x) tlist
+Proof
   EQ_TAC THENL [
    METIS_TAC [exists_bf_flatten],
    Q_TAC SUFF_TAC
@@ -1027,7 +1046,8 @@ val mem_bf_flatten = store_thm(
         ]
       ]
     ]
-  ])
+  ]
+QED
 
 (* "delete" all the totally boring auxiliaries *)
 val _ = app (fn s => remove_ovl_mapping s {Name = s, Thy = "lbtree"})

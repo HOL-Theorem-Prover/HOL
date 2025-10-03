@@ -128,22 +128,29 @@ End
 
 (* ------------------------------------------------------------------------- *)
 
-val s2n_compute = Q.store_thm("s2n_compute",
-  `s2n b f s = l2n b (MAP f (REVERSE (EXPLODE s)))`,
-  SRW_TAC [] [stringTheory.IMPLODE_EXPLODE_I, s2n_def])
+Theorem s2n_compute:
+   s2n b f s = l2n b (MAP f (REVERSE (EXPLODE s)))
+Proof
+  SRW_TAC [] [stringTheory.IMPLODE_EXPLODE_I, s2n_def]
+QED
 
-val n2s_compute = Q.store_thm("n2s_compute",
-  `n2s b f n = IMPLODE (REVERSE (MAP f (n2l b n)))`,
-  SRW_TAC [] [stringTheory.IMPLODE_EXPLODE_I, n2s_def])
+Theorem n2s_compute:
+   n2s b f n = IMPLODE (REVERSE (MAP f (n2l b n)))
+Proof
+  SRW_TAC [] [stringTheory.IMPLODE_EXPLODE_I, n2s_def]
+QED
 
 val LESS_THM =
   CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM;
 
-val UNHEX_HEX = store_thm("UNHEX_HEX",
-  ``!n. n < 16 ==> (UNHEX (HEX n) = n)``, SRW_TAC [] [LESS_THM] \\ EVAL_TAC);
+Theorem UNHEX_HEX:
+    !n. n < 16 ==> (UNHEX (HEX n) = n)
+Proof SRW_TAC [] [LESS_THM] \\ EVAL_TAC
+QED
 
-val HEX_UNHEX = store_thm("HEX_UNHEX",
-  ``!c. isHexDigit c ==> (HEX (UNHEX c) = toUpper c)``,
+Theorem HEX_UNHEX:
+    !c. isHexDigit c ==> (HEX (UNHEX c) = toUpper c)
+Proof
   Cases
   \\ SRW_TAC [] [isHexDigit_def]
   \\ Q.PAT_ASSUM `n < 256` (K ALL_TAC)
@@ -151,25 +158,29 @@ val HEX_UNHEX = store_thm("HEX_UNHEX",
       `n < 71` by DECIDE_TAC]
   \\ FULL_SIMP_TAC std_ss [LESS_THM]
   \\ FULL_SIMP_TAC arith_ss []
-  \\ EVAL_TAC);
+  \\ EVAL_TAC
+QED
 
-val DEC_UNDEC = store_thm("DEC_UNDEC",
-  ``!c. isDigit c ==> (HEX (UNHEX c) = c)``,
+Theorem DEC_UNDEC:
+    !c. isDigit c ==> (HEX (UNHEX c) = c)
+Proof
   Cases
   \\ SRW_TAC [] [isDigit_def]
   \\ Q.PAT_ASSUM `n < 256` (K ALL_TAC)
   \\ `n < 58` by DECIDE_TAC
   \\ FULL_SIMP_TAC std_ss [LESS_THM]
   \\ FULL_SIMP_TAC arith_ss []
-  \\ EVAL_TAC);
+  \\ EVAL_TAC
+QED
 
 val MAP_ID = Q.prove(
   `!l. EVERY (\x. f x = x) l ==> (MAP f l = l)`,
   Induct \\ SRW_TAC [] []);
 
-val s2n_n2s = Q.store_thm("s2n_n2s",
-  `!c2n n2c b n. 1 < b /\ (!x. x < b ==> (c2n (n2c x) = x)) ==>
-      (s2n b c2n (n2s b n2c n) = n)`,
+Theorem s2n_n2s:
+   !c2n n2c b n. 1 < b /\ (!x. x < b ==> (c2n (n2c x) = x)) ==>
+      (s2n b c2n (n2s b n2c n) = n)
+Proof
   SRW_TAC [] [s2n_def, n2s_def, MAP_MAP_o]
   \\ `MAP (c2n o n2c) (n2l b n) = n2l b n`
         suffices_by SRW_TAC [ARITH_ss] [l2n_n2l]
@@ -177,7 +188,8 @@ val s2n_n2s = Q.store_thm("s2n_n2s",
   \\ `!x. ($> b) x ==> (\x. c2n (n2c x) = x) x` by METIS_TAC [GREATER_DEF]
   \\ IMP_RES_TAC EVERY_MONOTONIC
   \\ POP_ASSUM MATCH_MP_TAC
-  \\ METIS_TAC [n2l_BOUND, DECIDE ``1 < b ==> 0 < b``]);
+  \\ METIS_TAC [n2l_BOUND, DECIDE ``1 < b ==> 0 < b``]
+QED
 
 (* ......................................................................... *)
 
@@ -185,12 +197,13 @@ val REVERSE_LASTN = Q.prove(
   `!n l. n <= LENGTH l ==> (LASTN n l = REVERSE (TAKE n (REVERSE l)))`,
   SRW_TAC [] [FIRSTN_REVERSE]);
 
-val n2s_s2n = Q.store_thm("n2s_s2n",
-  `!c2n n2c b s.
+Theorem n2s_s2n:
+   !c2n n2c b s.
      1 < b /\ EVERY ($> b o c2n) s ==>
      (n2s b n2c (s2n b c2n s) =
        if s2n b c2n s = 0 then STRING (n2c 0) ""
-       else MAP (n2c o c2n) (LASTN (SUC (LOG b (s2n b c2n s))) s))`,
+       else MAP (n2c o c2n) (LASTN (SUC (LOG b (s2n b c2n s))) s))
+Proof
   SRW_TAC [] [s2n_def, n2s_def]
     >- SRW_TAC [ARITH_ss] [l2n_def, Once n2l_def]
     \\ Q.ABBREV_TAC `l = MAP c2n (REVERSE s)`
@@ -204,7 +217,8 @@ val n2s_s2n = Q.store_thm("n2s_s2n",
     \\ `SUC (LOG b (l2n b l)) <= LENGTH s`
     by METIS_TAC [LENGTH_MAP, LENGTH_REVERSE]
     \\ Q.UNABBREV_TAC `l`
-    \\ SRW_TAC [] [GSYM MAP_REVERSE, REVERSE_LASTN, GSYM MAP_TAKE, MAP_MAP_o]);
+    \\ SRW_TAC [] [GSYM MAP_REVERSE, REVERSE_LASTN, GSYM MAP_TAKE, MAP_MAP_o]
+QED
 
 (* ----------------------------------------------------------------------
     toString and toNum as overloads for the above (decimal notation)
@@ -232,16 +246,19 @@ Proof METIS_TAC [toNum_toString]
 QED
 Theorem toString_11 = toString_inj
 
-val STRCAT_toString_inj = store_thm("STRCAT_toString_inj",
-   ``!n m s. (STRCAT s (toString n) = STRCAT s (toString m)) = (n = m)``,
-   SRW_TAC [] []);
+Theorem STRCAT_toString_inj:
+     !n m s. (STRCAT s (toString n) = STRCAT s (toString m)) = (n = m)
+Proof
+   SRW_TAC [] []
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val BIT_num_from_bin_string = Q.store_thm("BIT_num_from_bin_string",
-   `!x s. EVERY ($> 2 o UNHEX) s /\ x < STRLEN s ==>
+Theorem BIT_num_from_bin_string:
+    !x s. EVERY ($> 2 o UNHEX) s /\ x < STRLEN s ==>
           (BIT x (num_from_bin_string s) =
-           (UNHEX (SUB (s, PRE (STRLEN s - x))) = 1))`,
+           (UNHEX (SUB (s, PRE (STRLEN s - x))) = 1))
+Proof
    SRW_TAC [ARITH_ss] [num_from_bin_string_def, s2n_def]
    \\ `x < LENGTH (MAP UNHEX (REVERSE s)) /\ x < LENGTH (REVERSE s)`
    by SRW_TAC [] [LENGTH_MAP, LENGTH_REVERSE]
@@ -250,18 +267,21 @@ val BIT_num_from_bin_string = Q.store_thm("BIT_num_from_bin_string",
                   simpLib.SIMP_PROVE std_ss [FUN_EQ_THM]
                      ``(\x. 2 > UNHEX x) = ($> 2 o UNHEX)``]
    \\ SRW_TAC [ARITH_ss]
-        [l2n_DIGIT, EL_MAP, EL_REVERSE, SUC_SUB, BIT_def, BITS_THM, SUB_def])
+        [l2n_DIGIT, EL_MAP, EL_REVERSE, SUC_SUB, BIT_def, BITS_THM, SUB_def]
+QED
 
-val SUB_num_to_bin_string = Q.store_thm("SUB_num_to_bin_string",
-   `!x n. x < STRLEN (num_to_bin_string n) ==>
+Theorem SUB_num_to_bin_string:
+    !x n. x < STRLEN (num_to_bin_string n) ==>
           (SUB (num_to_bin_string n, x) =
-           HEX (BITV n (PRE (STRLEN (num_to_bin_string n) - x))))`,
+           HEX (BITV n (PRE (STRLEN (num_to_bin_string n) - x))))
+Proof
    SRW_TAC [ARITH_ss]
        [num_to_bin_string_def, n2s_def, SUB_def, BITV_def, BIT_def, BITS_THM,
         LENGTH_REVERSE, LENGTH_MAP, SUC_SUB]
    \\ `PRE (LENGTH (n2l 2 n) - x) < LENGTH (n2l 2 n)`
    by (SIMP_TAC arith_ss [PRE_SUB1] \\ SIMP_TAC arith_ss [LENGTH_n2l])
-   \\ SRW_TAC [ARITH_ss] [EL_REVERSE, EL_MAP, EL_n2l, SUC_SUB])
+   \\ SRW_TAC [ARITH_ss] [EL_REVERSE, EL_MAP, EL_n2l, SUC_SUB]
+QED
 
 val tac =
    SRW_TAC [ARITH_ss]
@@ -270,14 +290,22 @@ val tac =
      num_from_hex_string_def, num_to_bin_string_def, num_to_oct_string_def,
      num_to_dec_string_def, num_to_hex_string_def]
 
-val num_bin_string = Q.store_thm("num_bin_string",
-  `num_from_bin_string o num_to_bin_string = I`, tac)
-val num_oct_string = Q.store_thm("num_oct_string",
-  `num_from_oct_string o num_to_oct_string = I`, tac)
-val num_dec_string = Q.store_thm("num_dec_string",
-  `num_from_dec_string o num_to_dec_string = I`, tac)
-val num_hex_string = Q.store_thm("num_hex_string",
-  `num_from_hex_string o num_to_hex_string = I`, tac)
+Theorem num_bin_string:
+   num_from_bin_string o num_to_bin_string = I
+Proof tac
+QED
+Theorem num_oct_string:
+   num_from_oct_string o num_to_oct_string = I
+Proof tac
+QED
+Theorem num_dec_string:
+   num_from_dec_string o num_to_dec_string = I
+Proof tac
+QED
+Theorem num_hex_string:
+   num_from_hex_string o num_to_hex_string = I
+Proof tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 

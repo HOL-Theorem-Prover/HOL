@@ -11,12 +11,12 @@ app load [
           "arithLib", "Psyntax" ];
 *)
 
-val MAP2_APPEND = store_thm
-   ("MAP2_APPEND",
-    “!s1 s2 t1 t2 (f:'a->'b->'c).
+Theorem MAP2_APPEND:
+     !s1 s2 t1 t2 (f:'a->'b->'c).
           (LENGTH s1 = LENGTH s2) ==>
           (MAP2 f (APPEND s1 t1) (APPEND s2 t2) =
-          APPEND (MAP2 f s1 s2) (MAP2 f t1 t2))”,
+          APPEND (MAP2 f s1 s2) (MAP2 f t1 t2))
+Proof
     LIST_INDUCT_TAC
     THENL
        [ LIST_INDUCT_TAC
@@ -32,25 +32,25 @@ val MAP2_APPEND = store_thm
          THEN RES_TAC
          THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
-val AND_EL = store_thm
-   ("AND_EL",
-    “(AND_EL [] = T) /\
-        (!x l. AND_EL (CONS x l) = (x /\ AND_EL l))”,
+Theorem AND_EL:
+     (AND_EL [] = T) /\
+        (!x l. AND_EL (CONS x l) = (x /\ AND_EL l))
+Proof
     REWRITE_TAC[AND_EL_DEF]
     THEN REWRITE_TAC[ALL_EL]
     THEN REWRITE_TAC[combinTheory.I_THM]
-   );
+QED
 
-val AND_EL_APPEND = store_thm
-   ("AND_EL_APPEND",
-    “!s t. AND_EL (APPEND s t) = (AND_EL s /\ AND_EL t)”,
+Theorem AND_EL_APPEND:
+     !s t. AND_EL (APPEND s t) = (AND_EL s /\ AND_EL t)
+Proof
     REWRITE_TAC[AND_EL_DEF]
     THEN LIST_INDUCT_TAC
     THEN REWRITE_TAC[APPEND,ALL_EL]
     THEN ASM_REWRITE_TAC[CONJ_ASSOC]
-   );
+QED
 
 (* =============================================================== *)
 (* LENGTH_FILTER says that if we filter a list into two using P    *)
@@ -58,10 +58,10 @@ val AND_EL_APPEND = store_thm
 (* must equal the length of the whole.                             *)
 (* =============================================================== *)
 
-val LENGTH_FILTER = store_thm
-   ("LENGTH_FILTER",
-    “!(l:'a list) P.
-          LENGTH (FILTER P l) + LENGTH (FILTER ($~ o P) l) = LENGTH l”,
+Theorem LENGTH_FILTER:
+     !(l:'a list) P.
+          LENGTH (FILTER P l) + LENGTH (FILTER ($~ o P) l) = LENGTH l
+Proof
     LIST_INDUCT_TAC
     THEN REWRITE_TAC[FILTER]
     THENL
@@ -72,7 +72,7 @@ val LENGTH_FILTER = store_thm
          THEN COND_CASES_TAC
          THEN ASM_REWRITE_TAC[LENGTH,ADD_CLAUSES]
       ]
-   );
+QED
 
 (* =============================================================== *)
 (* Applying LENGTH_FILTER to a specific filter, we can calculate   *)
@@ -112,37 +112,36 @@ val SL =
                        (SL (CONS (y:'a) l) = y INSERT (SL l))”};
 
 
-val SL_APPEND = store_thm
-  ("SL_APPEND",
- “!(l1: 'a list) l2. SL (APPEND l1 l2) = (SL l1 UNION SL l2)”,
+Theorem SL_APPEND:
+  !(l1: 'a list) l2. SL (APPEND l1 l2) = (SL l1 UNION SL l2)
+Proof
     LIST_INDUCT_TAC
     THEN ASM_REWRITE_TAC[APPEND,SL,UNION]
-   );
+QED
 
 
-val SL_FLAT = store_thm
-  ("SL_FLAT",
- “!(l: 'a list list). SL (FLAT l) = UNION_SET (SL (MAP SL l))”,
+Theorem SL_FLAT:
+  !(l: 'a list list). SL (FLAT l) = UNION_SET (SL (MAP SL l))
+Proof
     LIST_INDUCT_TAC
     THEN REWRITE_TAC[FLAT,MAP,SL,UNION_SET]
     THEN ASM_REWRITE_TAC[SL_APPEND]
-   );
+QED
 
-val SL_MAP = store_thm
-  ("SL_MAP",
- “!l (f: 'a->'b). SL (MAP f l) = IMAGE f (SL l)”,
+Theorem SL_MAP:
+  !l (f: 'a->'b). SL (MAP f l) = IMAGE f (SL l)
+Proof
     LIST_INDUCT_TAC
     THEN ASM_REWRITE_TAC[MAP,SL,IMAGE]
-   );
+QED
 
-val DELETE_DIFF_SL =
- store_thm
-  ("DELETE_DIFF_SL",
-   “!xs s (e:'a).
-        s DELETE e DIFF SL xs = s DIFF SL (e::xs)”,
+Theorem DELETE_DIFF_SL:
+    !xs s (e:'a).
+        s DELETE e DIFF SL xs = s DIFF SL (e::xs)
+Proof
    LIST_INDUCT_TAC
    THEN REWRITE_TAC[SL,DIFFF]
-  );
+QED
 
 
 val DL =

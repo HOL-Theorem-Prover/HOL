@@ -73,29 +73,29 @@ End
 (* Desired recursion equations, constrained by finiteness of graph.          *)
 (*---------------------------------------------------------------------------*)
 
-val BFT_def = Q.store_thm
-("BFT_def",
- `FINITE (Parents G) ==>
+Theorem BFT_def:
+  FINITE (Parents G) ==>
   (BFT G f seen [] acc = acc) /\
   (BFT G f seen (h :: t) acc =
     if MEM h seen
        then BFT G f seen t acc
        else BFT G f (h::seen)
                     (t ++ G h)
-                    (f h acc))`,
+                    (f h acc))
+Proof
  RW_TAC std_ss [] THENL
  [RW_TAC list_ss [BFT_def0],
   GEN_REWRITE_TAC LHS_CONV empty_rewrites [BFT_def0] THEN RW_TAC list_ss [],
   RW_TAC list_ss [BFT_def0],
-  GEN_REWRITE_TAC LHS_CONV empty_rewrites [BFT_def0] THEN RW_TAC list_ss []]);
+  GEN_REWRITE_TAC LHS_CONV empty_rewrites [BFT_def0] THEN RW_TAC list_ss []]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Desired induction theorem for BFT.                                        *)
 (*---------------------------------------------------------------------------*)
 
-val BFT_ind = Q.store_thm
-("BFT_ind",
- `!P.
+Theorem BFT_ind:
+  !P.
     (!G f seen h t acc.
        P G f seen [] acc /\
        ((FINITE (Parents G) /\ ~MEM h seen ==>
@@ -103,37 +103,41 @@ val BFT_ind = Q.store_thm
         (FINITE (Parents G) /\ MEM h seen ==> P G f seen t acc)
          ==> P G f seen (h :: t) acc))
    ==>
-   !v v1 v2 v3 v4. P v v1 v2 v3 v4`,
+   !v v1 v2 v3 v4. P v v1 v2 v3 v4
+Proof
  NTAC 2 STRIP_TAC
  THEN HO_MATCH_MP_TAC BFT_ind0
  THEN REPEAT GEN_TAC THEN Cases_on `fringe`
- THEN RW_TAC list_ss []);
+ THEN RW_TAC list_ss []
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Basic lemmas about BFT                                                    *)
 (*---------------------------------------------------------------------------*)
 
-val BFT_CONS = Q.store_thm
-("BFT_CONS",
- `!G f seen fringe acc a b.
+Theorem BFT_CONS:
+  !G f seen fringe acc a b.
     FINITE (Parents G) /\ (f = CONS) /\ (acc = APPEND a b)
       ==>
-    (BFT G f seen fringe acc = BFT G f seen fringe a ++ b)`,
+    (BFT G f seen fringe acc = BFT G f seen fringe a ++ b)
+Proof
  recInduct BFT_ind
-  THEN RW_TAC list_ss [BFT_def] THEN METIS_TAC [APPEND]);
+  THEN RW_TAC list_ss [BFT_def] THEN METIS_TAC [APPEND]
+QED
 
 val FOLDR_UNROLL = Q.prove
 (`!f x b l. FOLDR f (f x b) l = FOLDR f b (l ++ [x])`,
  Induct_on `l` THEN RW_TAC list_ss []);
 
-val BFT_FOLD = Q.store_thm
-("BFT_FOLD",
- `!G f seen fringe acc.
+Theorem BFT_FOLD:
+  !G f seen fringe acc.
     FINITE (Parents G)
        ==>
-   (BFT G f seen fringe acc = FOLDR f acc (BFT G CONS seen fringe []))`,
+   (BFT G f seen fringe acc = FOLDR f acc (BFT G CONS seen fringe []))
+Proof
  recInduct BFT_ind THEN
- RW_TAC list_ss [BFT_def] THEN METIS_TAC [FOLDR_UNROLL,BFT_CONS,APPEND]);
+ RW_TAC list_ss [BFT_def] THEN METIS_TAC [FOLDR_UNROLL,BFT_CONS,APPEND]
+QED
 
 val BFT_ALL_DISTINCT_LEM = Q.prove
 (`!G f seen fringe acc.
@@ -143,22 +147,23 @@ val BFT_ALL_DISTINCT_LEM = Q.prove
     ALL_DISTINCT (BFT G f seen fringe acc)`,
  recInduct BFT_ind THEN RW_TAC list_ss [BFT_def] THEN METIS_TAC []);
 
-val BFT_ALL_DISTINCT = Q.store_thm
-("BFT_ALL_DISTINCT",
- `!G seen fringe.
-    FINITE (Parents G) ==> ALL_DISTINCT (BFT G CONS seen fringe [])`,
- RW_TAC list_ss [BFT_ALL_DISTINCT_LEM]);
+Theorem BFT_ALL_DISTINCT:
+  !G seen fringe.
+    FINITE (Parents G) ==> ALL_DISTINCT (BFT G CONS seen fringe [])
+Proof
+ RW_TAC list_ss [BFT_ALL_DISTINCT_LEM]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* If BFT visits x, then x is reachable or is in the starting accumulator    *)
 (*---------------------------------------------------------------------------*)
 
-val BFT_REACH_1 = Q.store_thm
-("BFT_REACH_1",
- `!G f seen fringe acc.
+Theorem BFT_REACH_1:
+  !G f seen fringe acc.
     FINITE (Parents G) /\ (f = CONS) ==>
     !x. MEM x (BFT G f seen fringe acc) ==>
-      x IN (REACH_LIST G fringe) \/ MEM x acc`,
+      x IN (REACH_LIST G fringe) \/ MEM x acc
+Proof
  recInduct BFT_ind
  >> RW_TAC set_ss [BFT_def, REACH_LIST_def, REACH_def, IN_DEF]
     >- metis_tac []
@@ -169,21 +174,21 @@ val BFT_REACH_1 = Q.store_thm
            >- (IMP_RES_TAC RTC_RULES >> metis_tac[])
            >- metis_tac[RTC_RULES]
            >- metis_tac[])
-);
+QED
 
 (*---------------------------------------------------------------------------*)
 (* If x is reachable from fringe on a path that does not include the nodes   *)
 (* in seen, then BFT visits x.                                               *)
 (*---------------------------------------------------------------------------*)
 
-val BFT_REACH_2 = Q.store_thm
-("BFT_REACH_2",
- `!G f seen fringe acc x.
+Theorem BFT_REACH_2:
+  !G f seen fringe acc x.
     FINITE (Parents G) /\ (f = CONS) /\
     x IN (REACH_LIST (EXCLUDE G (LIST_TO_SET seen)) fringe) /\
     ~MEM x seen
      ==>
-      MEM x (BFT G f seen fringe acc)`,
+      MEM x (BFT G f seen fringe acc)
+Proof
  recInduct BFT_ind THEN RW_TAC set_ss [BFT_def] THENL
  [(* Base Case *)
   FULL_SIMP_TAC list_ss [IN_DEF, EXCLUDE_def, REACH_LIST_def],
@@ -208,7 +213,8 @@ val BFT_REACH_2 = Q.store_thm
          FULL_SIMP_TAC set_ss [SPECIFICATION,REACH_LIST_def,LIST_TO_SET_THM]
          THEN METIS_TAC [],
         FULL_SIMP_TAC set_ss [SPECIFICATION, REACH_LIST_def,LIST_TO_SET_THM]
-        THENL [METIS_TAC [], METIS_TAC [REACH_LEM2, EXCLUDE_LEM]]]]]);
+        THENL [METIS_TAC [], METIS_TAC [REACH_LEM2, EXCLUDE_LEM]]]]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* x is reachable iff BFT finds it.                                          *)

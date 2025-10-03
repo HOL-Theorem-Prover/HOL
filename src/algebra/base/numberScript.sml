@@ -46,18 +46,20 @@ val _ = overload_on("RMONO3",
    <=> F
    Similarly for DISJOINT t (s DIFF t)
 *)
-val DISJOINT_DIFF = store_thm(
-  "DISJOINT_DIFF",
-  ``!s t. (DISJOINT (s DIFF t) t) /\ (DISJOINT t (s DIFF t))``,
-  (rw[DISJOINT_DEF, EXTENSION] >> metis_tac[]));
+Theorem DISJOINT_DIFF:
+    !s t. (DISJOINT (s DIFF t) t) /\ (DISJOINT t (s DIFF t))
+Proof
+  (rw[DISJOINT_DEF, EXTENSION] >> metis_tac[])
+QED
 
 (* Theorem: DISJOINT s t <=> ((s DIFF t) = s) *)
 (* Proof: by DISJOINT_DEF, DIFF_DEF, EXTENSION *)
-val DISJOINT_DIFF_IFF = store_thm(
-  "DISJOINT_DIFF_IFF",
-  ``!s t. DISJOINT s t <=> ((s DIFF t) = s)``,
+Theorem DISJOINT_DIFF_IFF:
+    !s t. DISJOINT s t <=> ((s DIFF t) = s)
+Proof
   rw[DISJOINT_DEF, DIFF_DEF, EXTENSION] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: s UNION (t DIFF s) = s UNION t *)
 (* Proof:
@@ -69,18 +71,20 @@ val DISJOINT_DIFF_IFF = store_thm(
    = (x IN s \/ x IN t) /\ T                      by EXCLUDED_MIDDLE
    = x IN (s UNION t)                             by IN_UNION
 *)
-val UNION_DIFF_EQ_UNION = store_thm(
-  "UNION_DIFF_EQ_UNION",
-  ``!s t. s UNION (t DIFF s) = s UNION t``,
+Theorem UNION_DIFF_EQ_UNION:
+    !s t. s UNION (t DIFF s) = s UNION t
+Proof
   rw_tac std_ss[EXTENSION, IN_UNION, IN_DIFF] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: (s INTER (t DIFF s) = {}) /\ ((t DIFF s) INTER s = {}) *)
 (* Proof: by DISJOINT_DIFF, GSYM DISJOINT_DEF *)
-val INTER_DIFF = store_thm(
-  "INTER_DIFF",
-  ``!s t. (s INTER (t DIFF s) = {}) /\ ((t DIFF s) INTER s = {})``,
-  rw[DISJOINT_DIFF, GSYM DISJOINT_DEF]);
+Theorem INTER_DIFF:
+    !s t. (s INTER (t DIFF s) = {}) /\ ((t DIFF s) INTER s = {})
+Proof
+  rw[DISJOINT_DIFF, GSYM DISJOINT_DEF]
+QED
 
 (* Theorem: {x} SUBSET s /\ SING s <=> (s = {x}) *)
 (* Proof:
@@ -96,10 +100,11 @@ QED
 
 (* Theorem: x IN (if b then {y} else {}) ==> (x = y) *)
 (* Proof: by IN_SING, MEMBER_NOT_EMPTY *)
-val IN_SING_OR_EMPTY = store_thm(
-  "IN_SING_OR_EMPTY",
-  ``!b x y. x IN (if b then {y} else {}) ==> (x = y)``,
-  rw[]);
+Theorem IN_SING_OR_EMPTY:
+    !b x y. x IN (if b then {y} else {}) ==> (x = y)
+Proof
+  rw[]
+QED
 
 (* Theorem: FINITE s ==> ((CARD s = 1) <=> SING s) *)
 (* Proof:
@@ -127,9 +132,9 @@ val IN_SING_OR_EMPTY = store_thm(
         <=> ?x. s = {x}    by SING_DEF
         ==> CARD {x} = 1   by CARD_SING
 *)
-val CARD_EQ_1 = store_thm(
-  "CARD_EQ_1",
-  ``!s. FINITE s ==> ((CARD s = 1) <=> SING s)``,
+Theorem CARD_EQ_1:
+    !s. FINITE s ==> ((CARD s = 1) <=> SING s)
+Proof
   rw[SING_DEF, EQ_IMP_THM] >| [
     `1 <> 0` by decide_tac >>
     `s <> {} /\ ?x. x IN s` by metis_tac[CARD_EMPTY, MEMBER_NOT_EMPTY] >>
@@ -140,7 +145,8 @@ val CARD_EQ_1 = store_thm(
     `CARD {x} = 1` by rw[CARD_SING] >>
     decide_tac,
     rw[CARD_SING]
-  ]);
+  ]
+QED
 
 (* Theorem: x <> y ==> ((x INSERT s) DELETE y = x INSERT (s DELETE y)) *)
 (* Proof:
@@ -152,10 +158,11 @@ val CARD_EQ_1 = store_thm(
    <=> (z = x) \/ (z IN DELETE y)                 by IN_DELETE
    <=> z IN  x INSERT (s DELETE y)                by IN_INSERT
 *)
-val INSERT_DELETE_COMM = store_thm(
-  "INSERT_DELETE_COMM",
-  ``!s x y. x <> y ==> ((x INSERT s) DELETE y = x INSERT (s DELETE y))``,
-  (rw[EXTENSION] >> metis_tac[]));
+Theorem INSERT_DELETE_COMM:
+    !s x y. x <> y ==> ((x INSERT s) DELETE y = x INSERT (s DELETE y))
+Proof
+  (rw[EXTENSION] >> metis_tac[])
+QED
 
 (* Theorem: x NOTIN s ==> (x INSERT s) DELETE x = s *)
 (* Proof:
@@ -174,18 +181,20 @@ QED
    Note (s INTER t) SUBSET s     by INTER_SUBSET
     ==> (s INTER t) SUBSET u     by SUBSET_TRANS
 *)
-val SUBSET_INTER_SUBSET = store_thm(
-  "SUBSET_INTER_SUBSET",
-  ``!s t u. s SUBSET u ==> (s INTER t) SUBSET u``,
-  metis_tac[INTER_SUBSET, SUBSET_TRANS]);
+Theorem SUBSET_INTER_SUBSET:
+    !s t u. s SUBSET u ==> (s INTER t) SUBSET u
+Proof
+  metis_tac[INTER_SUBSET, SUBSET_TRANS]
+QED
 
 (* Theorem: s DIFF (s DIFF t) = s INTER t *)
 (* Proof: by IN_DIFF, IN_INTER *)
-val DIFF_DIFF_EQ_INTER = store_thm(
-  "DIFF_DIFF_EQ_INTER",
-  ``!s t. s DIFF (s DIFF t) = s INTER t``,
+Theorem DIFF_DIFF_EQ_INTER:
+    !s t. s DIFF (s DIFF t) = s INTER t
+Proof
   rw[EXTENSION] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: (s = t) <=> (s SUBSET t /\ (t DIFF s = {})) *)
 (* Proof:
@@ -193,10 +202,11 @@ val DIFF_DIFF_EQ_INTER = store_thm(
    <=> s SUBSET t /\ t SUBSET s       by SET_EQ_SUBSET
    <=> s SUBSET t /\ (t DIFF s = {})  by SUBSET_DIFF_EMPTY
 *)
-val SET_EQ_BY_DIFF = store_thm(
-  "SET_EQ_BY_DIFF",
-  ``!s t. (s = t) <=> (s SUBSET t /\ (t DIFF s = {}))``,
-  rw[SET_EQ_SUBSET, SUBSET_DIFF_EMPTY]);
+Theorem SET_EQ_BY_DIFF:
+    !s t. (s = t) <=> (s SUBSET t /\ (t DIFF s = {}))
+Proof
+  rw[SET_EQ_SUBSET, SUBSET_DIFF_EMPTY]
+QED
 
 (* in pred_setTheory:
 SUBSET_DELETE_BOTH |- !s1 s2 x. s1 SUBSET s2 ==> s1 DELETE x SUBSET s2 DELETE x
@@ -212,19 +222,21 @@ QED
 
 (* Theorem: x NOTIN s /\ (x INSERT s) SUBSET t ==> s SUBSET (t DELETE x) *)
 (* Proof: by SUBSET_DEF *)
-val INSERT_SUBSET_SUBSET = store_thm(
-  "INSERT_SUBSET_SUBSET",
-  ``!s t x. x NOTIN s /\ (x INSERT s) SUBSET t ==> s SUBSET (t DELETE x)``,
-  rw[SUBSET_DEF]);
+Theorem INSERT_SUBSET_SUBSET:
+    !s t x. x NOTIN s /\ (x INSERT s) SUBSET t ==> s SUBSET (t DELETE x)
+Proof
+  rw[SUBSET_DEF]
+QED
 
 (* DIFF_INSERT  |- !s t x. s DIFF (x INSERT t) = s DELETE x DIFF t *)
 
 (* Theorem: (s DIFF t) DELETE x = s DIFF (x INSERT t) *)
 (* Proof: by EXTENSION *)
-val DIFF_DELETE = store_thm(
-  "DIFF_DELETE",
-  ``!s t x. (s DIFF t) DELETE x = s DIFF (x INSERT t)``,
-  (rw[EXTENSION] >> metis_tac[]));
+Theorem DIFF_DELETE:
+    !s t x. (s DIFF t) DELETE x = s DIFF (x INSERT t)
+Proof
+  (rw[EXTENSION] >> metis_tac[])
+QED
 
 (* Theorem: FINITE a /\ b SUBSET a ==> (CARD (a DIFF b) = CARD a - CARD b) *)
 (* Proof:
@@ -287,10 +299,11 @@ QED
    ==> f x IN (IMAGE f s)        by IN_IMAGE
    ==> f x IN t                  by SUBSET_DEF
 *)
-val IMAGE_SUBSET_TARGET = store_thm(
-  "IMAGE_SUBSET_TARGET",
-  ``!f s t. (!x. x IN s ==> f x IN t) <=> (IMAGE f s) SUBSET t``,
-  metis_tac[IN_IMAGE, SUBSET_DEF]);
+Theorem IMAGE_SUBSET_TARGET:
+    !f s t. (!x. x IN s ==> f x IN t) <=> (IMAGE f s) SUBSET t
+Proof
+  metis_tac[IN_IMAGE, SUBSET_DEF]
+QED
 
 (* Theorem: SURJ f s t ==> CARD (IMAGE f s) = CARD t *)
 (* Proof:
@@ -313,17 +326,19 @@ QED
     and t SUBSET univ(:'b)                by SUBSET_UNIV
      so INJ f s t ==> INJ f s univ(:'b)   by INJ_SUBSET
 *)
-val INJ_UNIV = store_thm(
-  "INJ_UNIV",
-  ``!f s t. INJ f s t ==> INJ f s UNIV``,
-  metis_tac[INJ_SUBSET, SUBSET_REFL, SUBSET_UNIV]);
+Theorem INJ_UNIV:
+    !f s t. INJ f s t ==> INJ f s UNIV
+Proof
+  metis_tac[INJ_SUBSET, SUBSET_REFL, SUBSET_UNIV]
+QED
 
 (* Theorem: INJ f s UNIV ==> BIJ f s (IMAGE f s) *)
 (* Proof: by definitions. *)
-val INJ_IMAGE_BIJ_ALT = store_thm(
-  "INJ_IMAGE_BIJ_ALT",
-  ``!f s. INJ f s UNIV ==> BIJ f s (IMAGE f s)``,
-  rw[BIJ_DEF, INJ_DEF, SURJ_DEF]);
+Theorem INJ_IMAGE_BIJ_ALT:
+    !f s. INJ f s UNIV ==> BIJ f s (IMAGE f s)
+Proof
+  rw[BIJ_DEF, INJ_DEF, SURJ_DEF]
+QED
 
 (* Theorem: s <> {} ==> !e. IMAGE (K e) s = {e} *)
 (* Proof:
@@ -332,10 +347,11 @@ val INJ_IMAGE_BIJ_ALT = store_thm(
    <=> {e | x IN s}          by K_THM
    <=> {e}                   by EXTENSION, if s <> {}
 *)
-val IMAGE_K = store_thm(
-  "IMAGE_K",
-  ``!s. s <> {} ==> !e. IMAGE (K e) s = {e}``,
-  rw[EXTENSION, EQ_IMP_THM]);
+Theorem IMAGE_K:
+    !s. s <> {} ==> !e. IMAGE (K e) s = {e}
+Proof
+  rw[EXTENSION, EQ_IMP_THM]
+QED
 
 (* Theorem: (!x y. (f x = f y) ==> (x = y)) ==> (!s e. e IN s <=> f e IN IMAGE f s) *)
 (* Proof:
@@ -346,11 +362,12 @@ val IMAGE_K = store_thm(
      f e = f x ==> e = x         by given implication
      Hence x IN s
 *)
-val IMAGE_ELEMENT_CONDITION = store_thm(
-  "IMAGE_ELEMENT_CONDITION",
-  ``!f:'a -> 'b. (!x y. (f x = f y) ==> (x = y)) ==> (!s e. e IN s <=> f e IN IMAGE f s)``,
+Theorem IMAGE_ELEMENT_CONDITION:
+    !f:'a -> 'b. (!x y. (f x = f y) ==> (x = y)) ==> (!s e. e IN s <=> f e IN IMAGE f s)
+Proof
   rw[EQ_IMP_THM] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: BIGUNION (IMAGE (\x. {x}) s) = s *)
 (* Proof:
@@ -361,13 +378,14 @@ val IMAGE_ELEMENT_CONDITION = store_thm(
    <=> T /\ z IN s                              by picking y = z, IN_SING
    Hence  BIGUNION (IMAGE (\x. {x}) s) = s      by EXTENSION
 *)
-val BIGUNION_ELEMENTS_SING = store_thm(
-  "BIGUNION_ELEMENTS_SING",
-  ``!s. BIGUNION (IMAGE (\x. {x}) s) = s``,
+Theorem BIGUNION_ELEMENTS_SING:
+    !s. BIGUNION (IMAGE (\x. {x}) s) = s
+Proof
   rw[EXTENSION, EQ_IMP_THM] >-
   metis_tac[] >>
   qexists_tac `{x}` >>
-  metis_tac[IN_SING]);
+  metis_tac[IN_SING]
+QED
 
 (* Theorem: s SUBSET t /\ INJ f t UNIV ==> (IMAGE f (t DIFF s) = (IMAGE f t) DIFF (IMAGE f s)) *)
 (* Proof: by SUBSET_DEF, INJ_DEF, EXTENSION, IN_IMAGE, IN_DIFF *)
@@ -394,10 +412,11 @@ val _ = overload_on ("PPOW", ``\s. (POW s) DIFF {s}``);
    = (e SUBSET s) /\ e <> s        by IN_SING
    = e PSUBSET s                   by PSUBSET_DEF
 *)
-val IN_PPOW = store_thm(
-  "IN_PPOW",
-  ``!s e. e IN PPOW s ==> e PSUBSET s``,
-  rw[PSUBSET_DEF, IN_POW]);
+Theorem IN_PPOW:
+    !s e. e IN PPOW s ==> e PSUBSET s
+Proof
+  rw[PSUBSET_DEF, IN_POW]
+QED
 
 (* Theorem: FINITE (PPOW s) *)
 (* Proof:
@@ -407,10 +426,11 @@ val IN_PPOW = store_thm(
    ==> FINITE ((POW s) DIFF {s})  by FINITE_DIFF
    ==> FINITE (PPOW s)            by above
 *)
-val FINITE_PPOW = store_thm(
-  "FINITE_PPOW",
-  ``!s. FINITE s ==> FINITE (PPOW s)``,
-  rw[FINITE_POW]);
+Theorem FINITE_PPOW:
+    !s. FINITE s ==> FINITE (PPOW s)
+Proof
+  rw[FINITE_POW]
+QED
 
 (* Theorem: FINITE s ==> CARD (PPOW s) = PRE (2 ** CARD s) *)
 (* Proof:
@@ -422,9 +442,9 @@ val FINITE_PPOW = store_thm(
    = 2 ** CARD s  - 1             by CARD_SING
    = PRE (2 ** CARD s)            by PRE_SUB1
 *)
-val CARD_PPOW = store_thm(
-  "CARD_PPOW",
-  ``!s. FINITE s ==> (CARD (PPOW s) = PRE (2 ** CARD s))``,
+Theorem CARD_PPOW:
+    !s. FINITE s ==> (CARD (PPOW s) = PRE (2 ** CARD s))
+Proof
   rpt strip_tac >>
   `FINITE {s}` by rw[FINITE_SING] >>
   `FINITE (POW s)` by rw[FINITE_POW] >>
@@ -434,14 +454,16 @@ val CARD_PPOW = store_thm(
   `_ = 2 ** CARD s  - CARD {s}` by rw[CARD_POW] >>
   `_ = 2 ** CARD s  - 1` by rw[CARD_SING] >>
   `_ = PRE (2 ** CARD s)` by rw[PRE_SUB1] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: FINITE s ==> CARD (PPOW s) = PRE (2 ** CARD s) *)
 (* Proof: by CARD_PPOW *)
-val CARD_PPOW_EQN = store_thm(
-  "CARD_PPOW_EQN",
-  ``!s. FINITE s ==> (CARD (PPOW s) = (2 ** CARD s) - 1)``,
-  rw[CARD_PPOW]);
+Theorem CARD_PPOW_EQN:
+    !s. FINITE s ==> (CARD (PPOW s) = (2 ** CARD s) - 1)
+Proof
+  rw[CARD_PPOW]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Partition Property                                                        *)
@@ -485,9 +507,9 @@ val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT, 2)),
 
       Similarly for e IN v.
 *)
-val PROD_SET_PRODUCT_BY_PARTITION = store_thm(
-  "PROD_SET_PRODUCT_BY_PARTITION",
-  ``!s. FINITE s ==> !u v. s =|= u # v ==> (PROD_SET s = PROD_SET u * PROD_SET v)``,
+Theorem PROD_SET_PRODUCT_BY_PARTITION:
+    !s. FINITE s ==> !u v. s =|= u # v ==> (PROD_SET s = PROD_SET u * PROD_SET v)
+Proof
   Induct_on `FINITE` >>
   rpt strip_tac >-
   fs[PROD_SET_EMPTY] >>
@@ -520,7 +542,8 @@ val PROD_SET_PRODUCT_BY_PARTITION = store_thm(
     `_ = PROD_SET u * (e * PROD_SET w)` by rw[] >>
     `_ = PROD_SET u * PROD_SET v` by rw[PROD_SET_INSERT] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Arithmetic Theorems (from examples/algebra)                               *)
@@ -528,24 +551,27 @@ val PROD_SET_PRODUCT_BY_PARTITION = store_thm(
 
 (* Theorem: 3 = SUC 2 *)
 (* Proof: by arithmetic *)
-val THREE = store_thm(
-  "THREE",
-  ``3 = SUC 2``,
-  decide_tac);
+Theorem THREE:
+    3 = SUC 2
+Proof
+  decide_tac
+QED
 
 (* Theorem: 4 = SUC 3 *)
 (* Proof: by arithmetic *)
-val FOUR = store_thm(
-  "FOUR",
-  ``4 = SUC 3``,
-  decide_tac);
+Theorem FOUR:
+    4 = SUC 3
+Proof
+  decide_tac
+QED
 
 (* Theorem: 5 = SUC 4 *)
 (* Proof: by arithmetic *)
-val FIVE = store_thm(
-  "FIVE",
-  ``5 = SUC 4``,
-  decide_tac);
+Theorem FIVE:
+    5 = SUC 4
+Proof
+  decide_tac
+QED
 
 (* Overload squaring (temporalized by Chun Tian) *)
 val _ = temp_overload_on("SQ", ``\n. n * n``); (* not n ** 2 *)
@@ -569,69 +595,78 @@ Theorem ONE_NOT_0  = DECIDE``1 <> 0``;
 
 (* Theorem: !n. 1 < n ==> 0 < n *)
 (* Proof: by arithmetic. *)
-val ONE_LT_POS = store_thm(
-  "ONE_LT_POS",
-  ``!n. 1 < n ==> 0 < n``,
-  decide_tac);
+Theorem ONE_LT_POS:
+    !n. 1 < n ==> 0 < n
+Proof
+  decide_tac
+QED
 
 (* Theorem: !n. 1 < n ==> n <> 0 *)
 (* Proof: by arithmetic. *)
-val ONE_LT_NONZERO = store_thm(
-  "ONE_LT_NONZERO",
-  ``!n. 1 < n ==> n <> 0``,
-  decide_tac);
+Theorem ONE_LT_NONZERO:
+    !n. 1 < n ==> n <> 0
+Proof
+  decide_tac
+QED
 
 (* Theorem: ~(1 < n) <=> (n = 0) \/ (n = 1) *)
 (* Proof: by arithmetic. *)
-val NOT_LT_ONE = store_thm(
-  "NOT_LT_ONE",
-  ``!n. ~(1 < n) <=> (n = 0) \/ (n = 1)``,
-  decide_tac);
+Theorem NOT_LT_ONE:
+    !n. ~(1 < n) <=> (n = 0) \/ (n = 1)
+Proof
+  decide_tac
+QED
 
 (* Theorem: n <> 0 <=> 1 <= n *)
 (* Proof: by arithmetic. *)
-val NOT_ZERO_GE_ONE = store_thm(
-  "NOT_ZERO_GE_ONE",
-  ``!n. n <> 0 <=> 1 <= n``,
-  decide_tac);
+Theorem NOT_ZERO_GE_ONE:
+    !n. n <> 0 <=> 1 <= n
+Proof
+  decide_tac
+QED
 
 (* Theorem: n <= 1 <=> (n = 0) \/ (n = 1) *)
 (* Proof: by arithmetic *)
-val LE_ONE = store_thm(
-  "LE_ONE",
-  ``!n. n <= 1 <=> (n = 0) \/ (n = 1)``,
-  decide_tac);
+Theorem LE_ONE:
+    !n. n <= 1 <=> (n = 0) \/ (n = 1)
+Proof
+  decide_tac
+QED
 
 (* arithmeticTheory.LESS_EQ_SUC_REFL |- !m. m <= SUC m *)
 
 (* Theorem: n < SUC n *)
 (* Proof: by arithmetic. *)
-val LESS_SUC = store_thm(
-  "LESS_SUC",
-  ``!n. n < SUC n``,
-  decide_tac);
+Theorem LESS_SUC:
+    !n. n < SUC n
+Proof
+  decide_tac
+QED
 
 (* Theorem: 0 < n ==> PRE n < n *)
 (* Proof: by arithmetic. *)
-val PRE_LESS = store_thm(
-  "PRE_LESS",
-  ``!n. 0 < n ==> PRE n < n``,
-  decide_tac);
+Theorem PRE_LESS:
+    !n. 0 < n ==> PRE n < n
+Proof
+  decide_tac
+QED
 
 (* Theorem: 0 < n ==> ?m. n = SUC m *)
 (* Proof: by NOT_ZERO_LT_ZERO, num_CASES. *)
-val SUC_EXISTS = store_thm(
-  "SUC_EXISTS",
-  ``!n. 0 < n ==> ?m. n = SUC m``,
-  metis_tac[NOT_ZERO_LT_ZERO, num_CASES]);
+Theorem SUC_EXISTS:
+    !n. 0 < n ==> ?m. n = SUC m
+Proof
+  metis_tac[NOT_ZERO_LT_ZERO, num_CASES]
+QED
 
 
 (* Theorem: 1 <> 0 *)
 (* Proof: by ONE, SUC_ID *)
-val ONE_NOT_ZERO = store_thm(
-  "ONE_NOT_ZERO",
-  ``1 <> 0``,
-  decide_tac);
+Theorem ONE_NOT_ZERO:
+    1 <> 0
+Proof
+  decide_tac
+QED
 
 (* Theorem: (SUC m) + (SUC n) = m + n + 2 *)
 (* Proof:
@@ -639,10 +674,11 @@ val ONE_NOT_ZERO = store_thm(
    = (m + 1) + (n + 1)     by ADD1
    = m + n + 2             by arithmetic
 *)
-val SUC_ADD_SUC = store_thm(
-  "SUC_ADD_SUC",
-  ``!m n. (SUC m) + (SUC n) = m + n + 2``,
-  decide_tac);
+Theorem SUC_ADD_SUC:
+    !m n. (SUC m) + (SUC n) = m + n + 2
+Proof
+  decide_tac
+QED
 
 (* Theorem: (SUC m) * (SUC n) = m * n + m + n + 1 *)
 (* Proof:
@@ -652,52 +688,59 @@ val SUC_ADD_SUC = store_thm(
    = SUC m + (n + n * m)   by MULT_SUC
    = m * n + m + n + 1     by arithmetic
 *)
-val SUC_MULT_SUC = store_thm(
-  "SUC_MULT_SUC",
-  ``!m n. (SUC m) * (SUC n) = m * n + m + n + 1``,
-  rw[MULT_SUC]);
+Theorem SUC_MULT_SUC:
+    !m n. (SUC m) * (SUC n) = m * n + m + n + 1
+Proof
+  rw[MULT_SUC]
+QED
 
 (* Theorem: (SUC m = SUC n) <=> (m = n) *)
 (* Proof: by prim_recTheory.INV_SUC_EQ *)
-val SUC_EQ = store_thm(
-  "SUC_EQ",
-  ``!m n. (SUC m = SUC n) <=> (m = n)``,
-  rw[]);
+Theorem SUC_EQ:
+    !m n. (SUC m = SUC n) <=> (m = n)
+Proof
+  rw[]
+QED
 
 (* Theorem: (TWICE n = 0) <=> (n = 0) *)
 (* Proof: MULT_EQ_0 *)
-val TWICE_EQ_0 = store_thm(
-  "TWICE_EQ_0",
-  ``!n. (TWICE n = 0) <=> (n = 0)``,
-  rw[]);
+Theorem TWICE_EQ_0:
+    !n. (TWICE n = 0) <=> (n = 0)
+Proof
+  rw[]
+QED
 
 (* Theorem: (SQ n = 0) <=> (n = 0) *)
 (* Proof: MULT_EQ_0 *)
-val SQ_EQ_0 = store_thm(
-  "SQ_EQ_0",
-  ``!n. (SQ n = 0) <=> (n = 0)``,
-  rw[]);
+Theorem SQ_EQ_0:
+    !n. (SQ n = 0) <=> (n = 0)
+Proof
+  rw[]
+QED
 
 (* Theorem: (SQ n = 1) <=> (n = 1) *)
 (* Proof: MULT_EQ_1 *)
-val SQ_EQ_1 = store_thm(
-  "SQ_EQ_1",
-  ``!n. (SQ n = 1) <=> (n = 1)``,
-  rw[]);
+Theorem SQ_EQ_1:
+    !n. (SQ n = 1) <=> (n = 1)
+Proof
+  rw[]
+QED
 
 (* Theorem: (x * y * z = 0) <=> ((x = 0) \/ (y = 0) \/ (z = 0)) *)
 (* Proof: by MULT_EQ_0 *)
-val MULT3_EQ_0 = store_thm(
-  "MULT3_EQ_0",
-  ``!x y z. (x * y * z = 0) <=> ((x = 0) \/ (y = 0) \/ (z = 0))``,
-  metis_tac[MULT_EQ_0]);
+Theorem MULT3_EQ_0:
+    !x y z. (x * y * z = 0) <=> ((x = 0) \/ (y = 0) \/ (z = 0))
+Proof
+  metis_tac[MULT_EQ_0]
+QED
 
 (* Theorem: (x * y * z = 1) <=> ((x = 1) /\ (y = 1) /\ (z = 1)) *)
 (* Proof: by MULT_EQ_1 *)
-val MULT3_EQ_1 = store_thm(
-  "MULT3_EQ_1",
-  ``!x y z. (x * y * z = 1) <=> ((x = 1) /\ (y = 1) /\ (z = 1))``,
-  metis_tac[MULT_EQ_1]);
+Theorem MULT3_EQ_1:
+    !x y z. (x * y * z = 1) <=> ((x = 1) /\ (y = 1) /\ (z = 1))
+Proof
+  metis_tac[MULT_EQ_1]
+QED
 
 (* Theorem: 0 ** 2 = 0 *)
 (* Proof: by ZERO_EXP *)
@@ -734,23 +777,25 @@ QED
 
 (* Theorem: MAX m n = if m <= n then n else m *)
 (* Proof: by MAX_DEF *)
-val MAX_ALT = store_thm(
-  "MAX_ALT",
-  ``!m n. MAX m n = if m <= n then n else m``,
-  rw[MAX_DEF]);
+Theorem MAX_ALT:
+    !m n. MAX m n = if m <= n then n else m
+Proof
+  rw[MAX_DEF]
+QED
 
 (* Theorem: MIN m n = if m <= n then m else n *)
 (* Proof: by MIN_DEF *)
-val MIN_ALT = store_thm(
-  "MIN_ALT",
-  ``!m n. MIN m n = if m <= n then m else n``,
-  rw[MIN_DEF]);
+Theorem MIN_ALT:
+    !m n. MIN m n = if m <= n then m else n
+Proof
+  rw[MIN_DEF]
+QED
 
 (* Theorem: (!x y. x <= y ==> f x <= f y) ==> !x y. f (MAX x y) = MAX (f x) (f y) *)
 (* Proof: by MAX_DEF *)
-val MAX_SWAP = store_thm(
-  "MAX_SWAP",
-  ``!f. (!x y. x <= y ==> f x <= f y) ==> !x y. f (MAX x y) = MAX (f x) (f y)``,
+Theorem MAX_SWAP:
+    !f. (!x y. x <= y ==> f x <= f y) ==> !x y. f (MAX x y) = MAX (f x) (f y)
+Proof
   rw[MAX_DEF] >>
   Cases_on `x < y` >| [
     `f x <= f y` by rw[] >>
@@ -760,13 +805,14 @@ val MAX_SWAP = store_thm(
     `y <= x` by decide_tac >>
     `f y <= f x` by rw[] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: (!x y. x <= y ==> f x <= f y) ==> !x y. f (MIN x y) = MIN (f x) (f y) *)
 (* Proof: by MIN_DEF *)
-val MIN_SWAP = store_thm(
-  "MIN_SWAP",
-  ``!f. (!x y. x <= y ==> f x <= f y) ==> !x y. f (MIN x y) = MIN (f x) (f y)``,
+Theorem MIN_SWAP:
+    !f. (!x y. x <= y ==> f x <= f y) ==> !x y. f (MIN x y) = MIN (f x) (f y)
+Proof
   rw[MIN_DEF] >>
   Cases_on `x < y` >| [
     `f x <= f y` by rw[] >>
@@ -776,7 +822,8 @@ val MIN_SWAP = store_thm(
     `y <= x` by decide_tac >>
     `f y <= f x` by rw[] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: SUC (MAX m n) = MAX (SUC m) (SUC n) *)
 (* Proof:
@@ -785,17 +832,19 @@ val MIN_SWAP = store_thm(
    If m = n, then true by MAX_IDEM.
    If n < m, true by MAX_COMM of the case m < n.
 *)
-val SUC_MAX = store_thm(
-  "SUC_MAX",
-  ``!m n. SUC (MAX m n) = MAX (SUC m) (SUC n)``,
-  rw[MAX_DEF]);
+Theorem SUC_MAX:
+    !m n. SUC (MAX m n) = MAX (SUC m) (SUC n)
+Proof
+  rw[MAX_DEF]
+QED
 
 (* Theorem: SUC (MIN m n) = MIN (SUC m) (SUC n) *)
 (* Proof: by MIN_DEF *)
-val SUC_MIN = store_thm(
-  "SUC_MIN",
-  ``!m n. SUC (MIN m n) = MIN (SUC m) (SUC n)``,
-  rw[MIN_DEF]);
+Theorem SUC_MIN:
+    !m n. SUC (MIN m n) = MIN (SUC m) (SUC n)
+Proof
+  rw[MIN_DEF]
+QED
 
 (* Reverse theorems *)
 val MAX_SUC = save_thm("MAX_SUC", GSYM SUC_MAX);
@@ -810,100 +859,113 @@ val MIN_SUC = save_thm("MIN_SUC", GSYM SUC_MIN);
       = either x or y
       < n                         for either case
 *)
-val MAX_LESS = store_thm(
-  "MAX_LESS",
-  ``!x y n. x < n /\ y < n ==> MAX x y < n``,
-  rw[]);
+Theorem MAX_LESS:
+    !x y n. x < n /\ y < n ==> MAX x y < n
+Proof
+  rw[]
+QED
 
 (* Theorem: m <= MAX m n /\ n <= MAX m n *)
 (* Proof: by MAX_DEF *)
-val MAX_IS_MAX = store_thm(
-  "MAX_IS_MAX",
-  ``!m n. m <= MAX m n /\ n <= MAX m n``,
-  rw_tac std_ss[MAX_DEF]);
+Theorem MAX_IS_MAX:
+    !m n. m <= MAX m n /\ n <= MAX m n
+Proof
+  rw_tac std_ss[MAX_DEF]
+QED
 
 (* Theorem: MIN m n <= m /\ MIN m n <= n *)
 (* Proof: by MIN_DEF *)
-val MIN_IS_MIN = store_thm(
-  "MIN_IS_MIN",
-  ``!m n. MIN m n <= m /\ MIN m n <= n``,
-  rw_tac std_ss[MIN_DEF]);
+Theorem MIN_IS_MIN:
+    !m n. MIN m n <= m /\ MIN m n <= n
+Proof
+  rw_tac std_ss[MIN_DEF]
+QED
 
 (* Theorem: (MAX (MAX m n) n = MAX m n) /\ (MAX m (MAX m n) = MAX m n) *)
 (* Proof: by MAX_DEF *)
-val MAX_ID = store_thm(
-  "MAX_ID",
-  ``!m n. (MAX (MAX m n) n = MAX m n) /\ (MAX m (MAX m n) = MAX m n)``,
-  rw[MAX_DEF]);
+Theorem MAX_ID:
+    !m n. (MAX (MAX m n) n = MAX m n) /\ (MAX m (MAX m n) = MAX m n)
+Proof
+  rw[MAX_DEF]
+QED
 
 (* Theorem: (MIN (MIN m n) n = MIN m n) /\ (MIN m (MIN m n) = MIN m n) *)
 (* Proof: by MIN_DEF *)
-val MIN_ID = store_thm(
-  "MIN_ID",
-  ``!m n. (MIN (MIN m n) n = MIN m n) /\ (MIN m (MIN m n) = MIN m n)``,
-  rw[MIN_DEF]);
+Theorem MIN_ID:
+    !m n. (MIN (MIN m n) n = MIN m n) /\ (MIN m (MIN m n) = MIN m n)
+Proof
+  rw[MIN_DEF]
+QED
 
 (* Theorem: a <= b /\ c <= d ==> MAX a c <= MAX b d *)
 (* Proof: by MAX_DEF *)
-val MAX_LE_PAIR = store_thm(
-  "MAX_LE_PAIR",
-  ``!a b c d. a <= b /\ c <= d ==> MAX a c <= MAX b d``,
-  rw[]);
+Theorem MAX_LE_PAIR:
+    !a b c d. a <= b /\ c <= d ==> MAX a c <= MAX b d
+Proof
+  rw[]
+QED
 
 (* Theorem: a <= b /\ c <= d ==> MIN a c <= MIN b d *)
 (* Proof: by MIN_DEF *)
-val MIN_LE_PAIR = store_thm(
-  "MIN_LE_PAIR",
-  ``!a b c d. a <= b /\ c <= d ==> MIN a c <= MIN b d``,
-  rw[]);
+Theorem MIN_LE_PAIR:
+    !a b c d. a <= b /\ c <= d ==> MIN a c <= MIN b d
+Proof
+  rw[]
+QED
 
 (* Theorem: MAX a (b + c) <= MAX a b + MAX a c *)
 (* Proof: by MAX_DEF *)
-val MAX_ADD = store_thm(
-  "MAX_ADD",
-  ``!a b c. MAX a (b + c) <= MAX a b + MAX a c``,
-  rw[MAX_DEF]);
+Theorem MAX_ADD:
+    !a b c. MAX a (b + c) <= MAX a b + MAX a c
+Proof
+  rw[MAX_DEF]
+QED
 
 (* Theorem: MIN a (b + c) <= MIN a b + MIN a c *)
 (* Proof: by MIN_DEF *)
-val MIN_ADD = store_thm(
-  "MIN_ADD",
-  ``!a b c. MIN a (b + c) <= MIN a b + MIN a c``,
-  rw[MIN_DEF]);
+Theorem MIN_ADD:
+    !a b c. MIN a (b + c) <= MIN a b + MIN a c
+Proof
+  rw[MIN_DEF]
+QED
 
 (* Theorem: 0 < n ==> (MAX 1 n = n) *)
 (* Proof: by MAX_DEF *)
-val MAX_1_POS = store_thm(
-  "MAX_1_POS",
-  ``!n. 0 < n ==> (MAX 1 n = n)``,
-  rw[MAX_DEF]);
+Theorem MAX_1_POS:
+    !n. 0 < n ==> (MAX 1 n = n)
+Proof
+  rw[MAX_DEF]
+QED
 
 (* Theorem: 0 < n ==> (MIN 1 n = 1) *)
 (* Proof: by MIN_DEF *)
-val MIN_1_POS = store_thm(
-  "MIN_1_POS",
-  ``!n. 0 < n ==> (MIN 1 n = 1)``,
-  rw[MIN_DEF]);
+Theorem MIN_1_POS:
+    !n. 0 < n ==> (MIN 1 n = 1)
+Proof
+  rw[MIN_DEF]
+QED
 
 (* Theorem: MAX m n <= m + n *)
 (* Proof:
    If m < n,  MAX m n = n <= m + n  by arithmetic
    Otherwise, MAX m n = m <= m + n  by arithmetic
 *)
-val MAX_LE_SUM = store_thm(
-  "MAX_LE_SUM",
-  ``!m n. MAX m n <= m + n``,
-  rw[MAX_DEF]);
+Theorem MAX_LE_SUM:
+    !m n. MAX m n <= m + n
+Proof
+  rw[MAX_DEF]
+QED
 
 (* Theorem: MIN m n <= m + n *)
 (* Proof:
    If m < n,  MIN m n = m <= m + n  by arithmetic
    Otherwise, MIN m n = n <= m + n  by arithmetic
 *)
-val MIN_LE_SUM = store_thm(
-  "MIN_LE_SUM",
-  ``!m n. MIN m n <= m + n``,
-  rw[MIN_DEF]);
+Theorem MIN_LE_SUM:
+    !m n. MIN m n <= m + n
+Proof
+  rw[MIN_DEF]
+QED
 
 (* Theorem: MAX 1 (m ** n) = (MAX 1 m) ** n *)
 (* Proof:
@@ -916,16 +978,17 @@ val MIN_LE_SUM = store_thm(
         so MAX 1 (m ** n) = m ** n  by MAX_DEF
        and (MAX 1 m) ** n = m ** n  by MAX_DEF, 0 < m
 *)
-val MAX_1_EXP = store_thm(
-  "MAX_1_EXP",
-  ``!n m. MAX 1 (m ** n) = (MAX 1 m) ** n``,
+Theorem MAX_1_EXP:
+    !n m. MAX 1 (m ** n) = (MAX 1 m) ** n
+Proof
   rpt strip_tac >>
   Cases_on `m = 0` >-
   rw[ZERO_EXP, MAX_DEF] >>
   `0 < m /\ 0 < m ** n` by rw[] >>
   `MAX 1 (m ** n) = m ** n` by rw[MAX_DEF] >>
   `MAX 1 m = m` by rw[MAX_DEF] >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: MIN 1 (m ** n) = (MIN 1 m) ** n *)
 (* Proof:
@@ -938,16 +1001,17 @@ val MAX_1_EXP = store_thm(
         so MIN 1 (m ** n) = 1 ** n  by MIN_DEF
        and (MIN 1 m) ** n = 1 ** n  by MIN_DEF, 0 < m
 *)
-val MIN_1_EXP = store_thm(
-  "MIN_1_EXP",
-  ``!n m. MIN 1 (m ** n) = (MIN 1 m) ** n``,
+Theorem MIN_1_EXP:
+    !n m. MIN 1 (m ** n) = (MIN 1 m) ** n
+Proof
   rpt strip_tac >>
   Cases_on `m = 0` >-
   rw[ZERO_EXP, MIN_DEF] >>
   `0 < m ** n` by rw[] >>
   `MIN 1 (m ** n) = 1` by rw[MIN_DEF] >>
   `MIN 1 m = 1` by rw[MIN_DEF] >>
-  fs[]);
+  fs[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Arithmetic Manipulations                                                  *)
@@ -964,13 +1028,14 @@ val MIN_1_EXP = store_thm(
       That is, 0 * 0 = 0          by MULT
            and 1 * 1 = 1          by MULT_RIGHT_1
 *)
-val SQ_EQ_SELF = store_thm(
-  "SQ_EQ_SELF",
-  ``!n. (n * n = n) <=> ((n = 0) \/ (n = 1))``,
+Theorem SQ_EQ_SELF:
+    !n. (n * n = n) <=> ((n = 0) \/ (n = 1))
+Proof
   rw_tac bool_ss[EQ_IMP_THM] >-
   metis_tac[MULT_RIGHT_1, MULT_LEFT_CANCEL] >-
   rw[] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: m <= n /\ 0 < c ==> b ** c ** m <= b ** c ** n *)
 (* Proof:
@@ -983,23 +1048,25 @@ val SQ_EQ_SELF = store_thm(
       Then c ** m <= c ** n           by EXP_BASE_LEQ_MONO_IMP, 0 < c
         so b ** c ** m <= b ** c ** n by EXP_BASE_LEQ_MONO_IMP, 0 < b
 *)
-val EXP_EXP_BASE_LE = store_thm(
-  "EXP_EXP_BASE_LE",
-  ``!b c m n. m <= n /\ 0 < c ==> b ** c ** m <= b ** c ** n``,
+Theorem EXP_EXP_BASE_LE:
+    !b c m n. m <= n /\ 0 < c ==> b ** c ** m <= b ** c ** n
+Proof
   rpt strip_tac >>
   Cases_on `b = 0` >-
   rw[ZERO_EXP] >>
-  rw[EXP_BASE_LEQ_MONO_IMP]);
+  rw[EXP_BASE_LEQ_MONO_IMP]
+QED
 
 (* Theorem: a <= b ==> a ** n <= b ** n *)
 (* Proof:
    Note a ** n <= b ** n                 by EXP_EXP_LE_MONO
    Thus size (a ** n) <= size (b ** n)   by size_monotone_le
 *)
-val EXP_EXP_LE_MONO_IMP = store_thm(
-  "EXP_EXP_LE_MONO_IMP",
-  ``!a b n. a <= b ==> a ** n <= b ** n``,
-  rw[]);
+Theorem EXP_EXP_LE_MONO_IMP:
+    !a b n. a <= b ==> a ** n <= b ** n
+Proof
+  rw[]
+QED
 
 (* Theorem: m <= n ==> !p. p ** n = p ** m * p ** (n - m) *)
 (* Proof:
@@ -1008,19 +1075,21 @@ val EXP_EXP_LE_MONO_IMP = store_thm(
       = p ** (n - m) * p ** m    by EXP_ADD
       = p ** m * p ** (n - m)    by MULT_COMM
 *)
-val EXP_BY_ADD_SUB_LE = store_thm(
-  "EXP_BY_ADD_SUB_LE",
-  ``!m n. m <= n ==> !p. p ** n = p ** m * p ** (n - m)``,
+Theorem EXP_BY_ADD_SUB_LE:
+    !m n. m <= n ==> !p. p ** n = p ** m * p ** (n - m)
+Proof
   rpt strip_tac >>
   `n = (n - m) + m` by decide_tac >>
-  metis_tac[EXP_ADD, MULT_COMM]);
+  metis_tac[EXP_ADD, MULT_COMM]
+QED
 
 (* Theorem: m < n ==> (p ** n = p ** m * p ** (n - m)) *)
 (* Proof: by EXP_BY_ADD_SUB_LE, LESS_IMP_LESS_OR_EQ *)
-val EXP_BY_ADD_SUB_LT = store_thm(
-  "EXP_BY_ADD_SUB_LT",
-  ``!m n. m < n ==> !p. p ** n = p ** m * p ** (n - m)``,
-  rw[EXP_BY_ADD_SUB_LE]);
+Theorem EXP_BY_ADD_SUB_LT:
+    !m n. m < n ==> !p. p ** n = p ** m * p ** (n - m)
+Proof
+  rw[EXP_BY_ADD_SUB_LE]
+QED
 
 (* Theorem: 0 < m ==> m ** (SUC n) DIV m = m ** n *)
 (* Proof:
@@ -1028,10 +1097,11 @@ val EXP_BY_ADD_SUB_LT = store_thm(
    = (m * m ** n) DIV m    by EXP
    = m ** n                by MULT_TO_DIV, 0 < m
 *)
-val EXP_SUC_DIV = store_thm(
-  "EXP_SUC_DIV",
-  ``!m n. 0 < m ==> (m ** (SUC n) DIV m = m ** n)``,
-  simp[EXP, MULT_TO_DIV]);
+Theorem EXP_SUC_DIV:
+    !m n. 0 < m ==> (m ** (SUC n) DIV m = m ** n)
+Proof
+  simp[EXP, MULT_TO_DIV]
+QED
 
 (* Theorem: n <= n ** 2 *)
 (* Proof:
@@ -1041,14 +1111,15 @@ val EXP_SUC_DIV = store_thm(
       Hence n = n ** 1           by EXP_1
              <= n ** 2           by EXP_BASE_LEQ_MONO_IMP
 *)
-val SELF_LE_SQ = store_thm(
-  "SELF_LE_SQ",
-  ``!n. n <= n ** 2``,
+Theorem SELF_LE_SQ:
+    !n. n <= n ** 2
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[] >>
   `0 < n /\ 1 <= 2` by decide_tac >>
-  metis_tac[EXP_BASE_LEQ_MONO_IMP, EXP_1]);
+  metis_tac[EXP_BASE_LEQ_MONO_IMP, EXP_1]
+QED
 
 (* Theorem: a <= b /\ c <= d ==> a + c <= b + d *)
 (* Proof: by LESS_EQ_LESS_EQ_MONO, or
@@ -1056,10 +1127,11 @@ val SELF_LE_SQ = store_thm(
     and c <= d ==>  b + c <= b + d    by LE_ADD_LCANCEL
    Thus             a + c <= b + d    by LESS_EQ_TRANS
 *)
-val LE_MONO_ADD2 = store_thm(
-  "LE_MONO_ADD2",
-  ``!a b c d. a <= b /\ c <= d ==> a + c <= b + d``,
-  rw[LESS_EQ_LESS_EQ_MONO]);
+Theorem LE_MONO_ADD2:
+    !a b c d. a <= b /\ c <= d ==> a + c <= b + d
+Proof
+  rw[LESS_EQ_LESS_EQ_MONO]
+QED
 
 (* Theorem: a < b /\ c < d ==> a + c < b + d *)
 (* Proof:
@@ -1067,10 +1139,11 @@ val LE_MONO_ADD2 = store_thm(
     and c < d ==>  b + c < b + d    by LT_ADD_LCANCEL
    Thus            a + c < b + d    by LESS_TRANS
 *)
-val LT_MONO_ADD2 = store_thm(
-  "LT_MONO_ADD2",
-  ``!a b c d. a < b /\ c < d ==> a + c < b + d``,
-  rw[LT_ADD_RCANCEL, LT_ADD_LCANCEL]);
+Theorem LT_MONO_ADD2:
+    !a b c d. a < b /\ c < d ==> a + c < b + d
+Proof
+  rw[LT_ADD_RCANCEL, LT_ADD_LCANCEL]
+QED
 
 (* Theorem: a <= b /\ c <= d ==> a * c <= b * d *)
 (* Proof: by LESS_MONO_MULT2, or
@@ -1078,10 +1151,11 @@ val LT_MONO_ADD2 = store_thm(
     and c <= d ==> b * c <= b * d  by LE_MULT_LCANCEL
    Thus            a * c <= b * d  by LESS_EQ_TRANS
 *)
-val LE_MONO_MULT2 = store_thm(
-  "LE_MONO_MULT2",
-  ``!a b c d. a <= b /\ c <= d ==> a * c <= b * d``,
-  rw[LESS_MONO_MULT2]);
+Theorem LE_MONO_MULT2:
+    !a b c d. a <= b /\ c <= d ==> a * c <= b * d
+Proof
+  rw[LESS_MONO_MULT2]
+QED
 
 (* Theorem: a < b /\ c < d ==> a * c < b * d *)
 (* Proof:
@@ -1094,14 +1168,15 @@ val LE_MONO_MULT2 = store_thm(
       c < d ==> b * c < b * d  by LT_MULT_LCANCEL, 0 < b
    Thus         a * c < b * d  by LESS_TRANS
 *)
-val LT_MONO_MULT2 = store_thm(
-  "LT_MONO_MULT2",
-  ``!a b c d. a < b /\ c < d ==> a * c < b * d``,
+Theorem LT_MONO_MULT2:
+    !a b c d. a < b /\ c < d ==> a * c < b * d
+Proof
   rpt strip_tac >>
   `0 < b /\ 0 < d` by decide_tac >>
   Cases_on `c = 0` >-
   metis_tac[MULT_EQ_0, NOT_ZERO_LT_ZERO] >>
-  metis_tac[LT_MULT_RCANCEL, LT_MULT_LCANCEL, LESS_TRANS, NOT_ZERO_LT_ZERO]);
+  metis_tac[LT_MULT_RCANCEL, LT_MULT_LCANCEL, LESS_TRANS, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: 1 < m /\ 1 < n ==> (m + n <= m * n) *)
 (* Proof:
@@ -1115,9 +1190,9 @@ val LT_MONO_MULT2 = store_thm(
     >= 1 + m' + n' + 1             by 1 <= m' * n'
      = m + n
 *)
-val SUM_LE_PRODUCT = store_thm(
-  "SUM_LE_PRODUCT",
-  ``!m n. 1 < m /\ 1 < n ==> (m + n <= m * n)``,
+Theorem SUM_LE_PRODUCT:
+    !m n. 1 < m /\ 1 < n ==> (m + n <= m * n)
+Proof
   rpt strip_tac >>
   `m <> 0 /\ n <> 0` by decide_tac >>
   `?m' n'. (m = m' + 1) /\ (n = n' + 1)` by metis_tac[num_CASES, ADD1] >>
@@ -1125,7 +1200,8 @@ val SUM_LE_PRODUCT = store_thm(
   `_ = m' * n' + n' + (m' + 1)` by rw[RIGHT_ADD_DISTRIB] >>
   `_ = m + (n' + m' * n')` by decide_tac >>
   `m' * n' <> 0` by fs[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 0 < n ==> k * n + 1 <= (k + 1) * n *)
 (* Proof:
@@ -1133,10 +1209,11 @@ val SUM_LE_PRODUCT = store_thm(
      <= k * n + n          by 1 <= n
      <= (k + 1) * n        by RIGHT_ADD_DISTRIB
 *)
-val MULTIPLE_SUC_LE = store_thm(
-  "MULTIPLE_SUC_LE",
-  ``!n k. 0 < n ==> k * n + 1 <= (k + 1) * n``,
-  decide_tac);
+Theorem MULTIPLE_SUC_LE:
+    !n k. 0 < n ==> k * n + 1 <= (k + 1) * n
+Proof
+  decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Simple Theorems                                                           *)
@@ -1144,31 +1221,35 @@ val MULTIPLE_SUC_LE = store_thm(
 
 (* Theorem: 0 < m /\ 0 < n /\ (m + n = 2) ==> m = 1 /\ n = 1 *)
 (* Proof: by arithmetic. *)
-val ADD_EQ_2 = store_thm(
-  "ADD_EQ_2",
-  ``!m n. 0 < m /\ 0 < n /\ (m + n = 2) ==> (m = 1) /\ (n = 1)``,
-  rw_tac arith_ss[]);
+Theorem ADD_EQ_2:
+    !m n. 0 < m /\ 0 < n /\ (m + n = 2) ==> (m = 1) /\ (n = 1)
+Proof
+  rw_tac arith_ss[]
+QED
 
 (* Theorem: EVEN 0 *)
 (* Proof: by EVEN. *)
-val EVEN_0 = store_thm(
-  "EVEN_0",
-  ``EVEN 0``,
-  simp[]);
+Theorem EVEN_0:
+    EVEN 0
+Proof
+  simp[]
+QED
 
 (* Theorem: ODD 1 *)
 (* Proof: by ODD. *)
-val ODD_1 = store_thm(
-  "ODD_1",
-  ``ODD 1``,
-  simp[]);
+Theorem ODD_1:
+    ODD 1
+Proof
+  simp[]
+QED
 
 (* Theorem: EVEN 2 *)
 (* Proof: by EVEN_MOD2. *)
-val EVEN_2 = store_thm(
-  "EVEN_2",
-  ``EVEN 2``,
-  EVAL_TAC);
+Theorem EVEN_2:
+    EVEN 2
+Proof
+  EVAL_TAC
+QED
 
 (*
 EVEN_ADD  |- !m n. EVEN (m + n) <=> (EVEN m <=> EVEN n)
@@ -1212,25 +1293,28 @@ QED
        and x MOD 2 = 0        by EVEN_MOD2
       This contradicts x MOD 2 = 1.
 *)
-val ODD_MOD2 = store_thm(
-  "ODD_MOD2",
-  ``!x. ODD x <=> (x MOD 2 = 1)``,
+Theorem ODD_MOD2:
+    !x. ODD x <=> (x MOD 2 = 1)
+Proof
   metis_tac[EVEN_MOD2, ODD_EVEN, MOD_LESS,
-             DECIDE``0 <> 1 /\ 0 < 2 /\ !n. n < 2 /\ n <> 1 ==> (n = 0)``]);
+             DECIDE``0 <> 1 /\ 0 < 2 /\ !n. n < 2 /\ n <> 1 ==> (n = 0)``]
+QED
 
 (* Theorem: (EVEN n <=> ODD (SUC n)) /\ (ODD n <=> EVEN (SUC n)) *)
 (* Proof: by EVEN, ODD, EVEN_OR_ODD *)
-val EVEN_ODD_SUC = store_thm(
-  "EVEN_ODD_SUC",
-  ``!n. (EVEN n <=> ODD (SUC n)) /\ (ODD n <=> EVEN (SUC n))``,
-  metis_tac[EVEN, ODD, EVEN_OR_ODD]);
+Theorem EVEN_ODD_SUC:
+    !n. (EVEN n <=> ODD (SUC n)) /\ (ODD n <=> EVEN (SUC n))
+Proof
+  metis_tac[EVEN, ODD, EVEN_OR_ODD]
+QED
 
 (* Theorem: 0 < n ==> (EVEN n <=> ODD (PRE n)) /\ (ODD n <=> EVEN (PRE n)) *)
 (* Proof: by EVEN, ODD, EVEN_OR_ODD, PRE_SUC_EQ *)
-val EVEN_ODD_PRE = store_thm(
-  "EVEN_ODD_PRE",
-  ``!n. 0 < n ==> (EVEN n <=> ODD (PRE n)) /\ (ODD n <=> EVEN (PRE n))``,
-  metis_tac[EVEN, ODD, EVEN_OR_ODD, PRE_SUC_EQ]);
+Theorem EVEN_ODD_PRE:
+    !n. 0 < n ==> (EVEN n <=> ODD (PRE n)) /\ (ODD n <=> EVEN (PRE n))
+Proof
+  metis_tac[EVEN, ODD, EVEN_OR_ODD, PRE_SUC_EQ]
+QED
 
 (* Theorem: EVEN (n * (n + 1)) *)
 (* Proof:
@@ -1240,10 +1324,11 @@ val EVEN_ODD_PRE = store_thm(
         or EVEN (n + 1)   by ADD1
       Thus true           by EVEN_MULT
 *)
-val EVEN_PARTNERS = store_thm(
-  "EVEN_PARTNERS",
-  ``!n. EVEN (n * (n + 1))``,
-  metis_tac[EVEN, EVEN_MULT, ADD1]);
+Theorem EVEN_PARTNERS:
+    !n. EVEN (n * (n + 1))
+Proof
+  metis_tac[EVEN, EVEN_MULT, ADD1]
+QED
 
 (* Theorem: EVEN n ==> (n = 2 * HALF n) *)
 (* Proof:
@@ -1252,10 +1337,11 @@ val EVEN_PARTNERS = store_thm(
                = m                   by MULT_TO_DIV, 0 < 2
    Thus n = 2 * m = 2 * HALF n       by above
 *)
-val EVEN_HALF = store_thm(
-  "EVEN_HALF",
-  ``!n. EVEN n ==> (n = 2 * HALF n)``,
-  metis_tac[EVEN_EXISTS, MULT_TO_DIV, DECIDE``0 < 2``]);
+Theorem EVEN_HALF:
+    !n. EVEN n ==> (n = 2 * HALF n)
+Proof
+  metis_tac[EVEN_EXISTS, MULT_TO_DIV, DECIDE``0 < 2``]
+QED
 
 (* Theorem: ODD n ==> (n = 2 * HALF n + 1 *)
 (* Proof:
@@ -1263,10 +1349,11 @@ val EVEN_HALF = store_thm(
            = 2 * HALF n + n MOD 2  by MULT_COMM
            = 2 * HALF n + 1        by ODD_MOD2
 *)
-val ODD_HALF = store_thm(
-  "ODD_HALF",
-  ``!n. ODD n ==> (n = 2 * HALF n + 1)``,
-  metis_tac[DIVISION, MULT_COMM, ODD_MOD2, DECIDE``0 < 2``]);
+Theorem ODD_HALF:
+    !n. ODD n ==> (n = 2 * HALF n + 1)
+Proof
+  metis_tac[DIVISION, MULT_COMM, ODD_MOD2, DECIDE``0 < 2``]
+QED
 
 (* Theorem: EVEN n ==> (HALF (SUC n) = HALF n) *)
 (* Proof:
@@ -1279,14 +1366,15 @@ val ODD_HALF = store_thm(
       = ((HALF n) * 2 + 1) DIV 2       by above
       = HALF n                         by DIV_MULT, 1 < 2
 *)
-val EVEN_SUC_HALF = store_thm(
-  "EVEN_SUC_HALF",
-  ``!n. EVEN n ==> (HALF (SUC n) = HALF n)``,
+Theorem EVEN_SUC_HALF:
+    !n. EVEN n ==> (HALF (SUC n) = HALF n)
+Proof
   rpt strip_tac >>
   `n MOD 2 = 0` by rw[GSYM EVEN_MOD2] >>
   `n = HALF n * 2 + n MOD 2` by rw[DIVISION] >>
   `SUC n = HALF n * 2 + 1` by rw[] >>
-  metis_tac[DIV_MULT, DECIDE``1 < 2``]);
+  metis_tac[DIV_MULT, DECIDE``1 < 2``]
+QED
 
 (* Theorem: ODD n ==> (HALF (SUC n) = SUC (HALF n)) *)
 (* Proof:
@@ -1299,13 +1387,14 @@ val EVEN_SUC_HALF = store_thm(
    = SUC (HALF n) * 2 + 0              by MULT_COMM, ADD_0
    Hence HALF (SUC n) = SUC (HALF n)   by DIV_UNIQUE, 0 < 2
 *)
-val ODD_SUC_HALF = store_thm(
-  "ODD_SUC_HALF",
-  ``!n. ODD n ==> (HALF (SUC n) = SUC (HALF n))``,
+Theorem ODD_SUC_HALF:
+    !n. ODD n ==> (HALF (SUC n) = SUC (HALF n))
+Proof
   rpt strip_tac >>
   `SUC n = SUC (2 * HALF n + 1)` by rw[ODD_HALF] >>
   `_ = SUC (HALF n) * 2 + 0` by rw[] >>
-  metis_tac[DIV_UNIQUE, DECIDE``0 < 2``]);
+  metis_tac[DIV_UNIQUE, DECIDE``0 < 2``]
+QED
 
 (* Theorem: (HALF n = 0) <=> ((n = 0) \/ (n = 1)) *)
 (* Proof:
@@ -1317,13 +1406,14 @@ val ODD_SUC_HALF = store_thm(
    Only-if part: HALF 0 = 0, HALF 1 = 0.
       True since both 0 or 1 < 2           by LESS_DIV_EQ_ZERO, 0 < 2
 *)
-val HALF_EQ_0 = store_thm(
-  "HALF_EQ_0",
-  ``!n. (HALF n = 0) <=> ((n = 0) \/ (n = 1))``,
+Theorem HALF_EQ_0:
+    !n. (HALF n = 0) <=> ((n = 0) \/ (n = 1))
+Proof
   rw[LESS_DIV_EQ_ZERO, EQ_IMP_THM] >>
   `n = (HALF n) * 2 + (n MOD 2)` by rw[DIVISION] >>
   `n MOD 2 < 2` by rw[MOD_LESS] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (HALF n = n) <=> (n = 0) *)
 (* Proof:
@@ -1334,12 +1424,13 @@ val HALF_EQ_0 = store_thm(
       Thus n  = 0  and (n MOD 2 = 0)     by ADD_EQ_0
    Only-if part: HALF 0 = 0, true        by ZERO_DIV, 0 < 2
 *)
-val HALF_EQ_SELF = store_thm(
-  "HALF_EQ_SELF",
-  ``!n. (HALF n = n) <=> (n = 0)``,
+Theorem HALF_EQ_SELF:
+    !n. (HALF n = n) <=> (n = 0)
+Proof
   rw[EQ_IMP_THM] >>
   `n = 2 * HALF n + (n MOD 2)` by metis_tac[DIVISION, MULT_COMM, DECIDE``0 < 2``] >>
-  rw[ADD_EQ_0]);
+  rw[ADD_EQ_0]
+QED
 
 (* Theorem: 0 < n ==> HALF n < n *)
 (* Proof:
@@ -1347,13 +1438,14 @@ val HALF_EQ_SELF = store_thm(
     and HALF n <> n     by HALF_EQ_SELF, n <> 0
      so HALF n < n      by arithmetic
 *)
-val HALF_LT = store_thm(
-  "HALF_LT",
-  ``!n. 0 < n ==> HALF n < n``,
+Theorem HALF_LT:
+    !n. 0 < n ==> HALF n < n
+Proof
   rpt strip_tac >>
   `HALF n <= n` by rw[DIV_LESS_EQ] >>
   `HALF n <> n` by rw[HALF_EQ_SELF] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 2 < n ==> (1 + HALF n < n) *)
 (* Proof:
@@ -1427,9 +1519,9 @@ QED
         or n - 1 <= n <= n,
       Giving 2 * HALF n <= n /\ n <= SUC (2 * HALF n)
 *)
-val TWO_HALF_LE_THM = store_thm(
-  "TWO_HALF_LE_THM",
-  ``!n. 2 * HALF n <= n /\ n <= SUC (2 * HALF n)``,
+Theorem TWO_HALF_LE_THM:
+    !n. 2 * HALF n <= n /\ n <= SUC (2 * HALF n)
+Proof
   strip_tac >>
   Cases_on `EVEN n` >-
   rw[GSYM EVEN_HALF] >>
@@ -1437,7 +1529,8 @@ val TWO_HALF_LE_THM = store_thm(
   `n <> 0` by metis_tac[ODD] >>
   `n = SUC (2 * HALF n)` by rw[ODD_HALF, ADD1] >>
   `2 * HALF n = PRE n` by rw[] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: 2 * ((HALF n) * m) <= n * m *)
 (* Proof:
@@ -1447,13 +1540,14 @@ val TWO_HALF_LE_THM = store_thm(
    <= m * n                 by TWO_HALF_LE_THM
     = n * m                 by MULT_COMM
 *)
-val TWO_HALF_TIMES_LE = store_thm(
-  "TWO_HALF_TIMES_LE",
-  ``!m n. 2 * ((HALF n) * m) <= n * m``,
+Theorem TWO_HALF_TIMES_LE:
+    !m n. 2 * ((HALF n) * m) <= n * m
+Proof
   rpt strip_tac >>
   `2 * (m * HALF n) <= 2 * (HALF (m * n))` by rw[HALF_MULT] >>
   `2 * (HALF (m * n)) <= m * n` by rw[TWO_HALF_LE_THM] >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: 0 < n ==> 1 + HALF n <= n *)
 (* Proof:
@@ -1466,15 +1560,16 @@ val TWO_HALF_TIMES_LE = store_thm(
          = 2 * HALF n
         <= n                 by TWO_HALF_LE_THM
 *)
-val HALF_ADD1_LE = store_thm(
-  "HALF_ADD1_LE",
-  ``!n. 0 < n ==> 1 + HALF n <= n``,
+Theorem HALF_ADD1_LE:
+    !n. 0 < n ==> 1 + HALF n <= n
+Proof
   rpt strip_tac >>
   (Cases_on `n = 1` >> simp[]) >>
   `HALF n <> 0` by metis_tac[HALF_EQ_0, NOT_ZERO] >>
   `1 + HALF n <= 2 * HALF n` by decide_tac >>
   `2 * HALF n <= n` by rw[TWO_HALF_LE_THM] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (HALF n) ** 2 <= (n ** 2) DIV 4 *)
 (* Proof:
@@ -1487,9 +1582,9 @@ val HALF_ADD1_LE = store_thm(
       = k ** 2                    by MULT_TO_DIV, 0 < 4
    Thus k ** 2 <= n ** 2 DIV 4.
 *)
-val HALF_SQ_LE = store_thm(
-  "HALF_SQ_LE",
-  ``!n. (HALF n) ** 2 <= (n ** 2) DIV 4``,
+Theorem HALF_SQ_LE:
+    !n. (HALF n) ** 2 <= (n ** 2) DIV 4
+Proof
   rpt strip_tac >>
   qabbrev_tac `k = HALF n` >>
   `2 * k <= n` by rw[TWO_HALF_LE_THM, Abbr`k`] >>
@@ -1497,7 +1592,8 @@ val HALF_SQ_LE = store_thm(
   `(2 * k) ** 2 DIV 4 <= n ** 2 DIV 4` by rw[DIV_LE_MONOTONE] >>
   `(2 * k) ** 2 DIV 4 = 4 * k ** 2 DIV 4` by rw[EXP_BASE_MULT] >>
   `_ = k ** 2` by rw[MULT_TO_DIV] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Obtain theorems *)
 val HALF_LE = save_thm("HALF_LE",
@@ -1660,10 +1756,11 @@ QED
    = m * TWICE (HALF n)   by MULT_COMM, MULT_ASSOC
    = m * n                by EVEN_HALF
 *)
-val MULT_EVEN = store_thm(
-  "MULT_EVEN",
-  ``!n. EVEN n ==> !m. m * n = (TWICE m) * (HALF n)``,
-  metis_tac[MULT_COMM, MULT_ASSOC, EVEN_HALF]);
+Theorem MULT_EVEN:
+    !n. EVEN n ==> !m. m * n = (TWICE m) * (HALF n)
+Proof
+  metis_tac[MULT_COMM, MULT_ASSOC, EVEN_HALF]
+QED
 
 (* Theorem: ODD n ==> !m. m * n = m + (TWICE m) * (HALF n) *)
 (* Proof:
@@ -1674,10 +1771,11 @@ val MULT_EVEN = store_thm(
    = m * (TWICE (HALF n) + 1)   by ADD1
    = m * n                      by ODD_HALF
 *)
-val MULT_ODD = store_thm(
-  "MULT_ODD",
-  ``!n. ODD n ==> !m. m * n = m + (TWICE m) * (HALF n)``,
-  metis_tac[MULT_COMM, MULT_ASSOC, ODD_HALF, MULT_SUC, ADD1]);
+Theorem MULT_ODD:
+    !n. ODD n ==> !m. m * n = m + (TWICE m) * (HALF n)
+Proof
+  metis_tac[MULT_COMM, MULT_ASSOC, ODD_HALF, MULT_SUC, ADD1]
+QED
 
 (* Theorem: EVEN m /\ m <> 0 ==> !n. EVEN n <=> EVEN (n MOD m) *)
 (* Proof:
@@ -1686,20 +1784,22 @@ val MULT_ODD = store_thm(
     ==> (n MOD m) MOD 2 = n MOD 2    by MOD_MULT_MOD
    The result follows                by EVEN_MOD2
 *)
-val EVEN_MOD_EVEN = store_thm(
-  "EVEN_MOD_EVEN",
-  ``!m. EVEN m /\ m <> 0 ==> !n. EVEN n <=> EVEN (n MOD m)``,
+Theorem EVEN_MOD_EVEN:
+    !m. EVEN m /\ m <> 0 ==> !n. EVEN n <=> EVEN (n MOD m)
+Proof
   rpt strip_tac >>
   `?k. m = 2 * k` by rw[GSYM EVEN_EXISTS] >>
   `(n MOD m) MOD 2 = n MOD 2` by rw[MOD_MULT_MOD] >>
-  metis_tac[EVEN_MOD2]);
+  metis_tac[EVEN_MOD2]
+QED
 
 (* Theorem: EVEN m /\ m <> 0 ==> !n. ODD n <=> ODD (n MOD m) *)
 (* Proof: by EVEN_MOD_EVEN, ODD_EVEN *)
-val EVEN_MOD_ODD = store_thm(
-  "EVEN_MOD_ODD",
-  ``!m. EVEN m /\ m <> 0 ==> !n. ODD n <=> ODD (n MOD m)``,
-  rw_tac std_ss[EVEN_MOD_EVEN, ODD_EVEN]);
+Theorem EVEN_MOD_ODD:
+    !m. EVEN m /\ m <> 0 ==> !n. ODD n <=> ODD (n MOD m)
+Proof
+  rw_tac std_ss[EVEN_MOD_EVEN, ODD_EVEN]
+QED
 
 (* Theorem: c <= a ==> ((a - b) - (a - c) = c - b) *)
 (* Proof:
@@ -1713,10 +1813,11 @@ val EVEN_MOD_ODD = store_thm(
    = c + 0 - b             by SUB_EQUAL_0
    = c - b
 *)
-val SUB_SUB_SUB = store_thm(
-  "SUB_SUB_SUB",
-  ``!a b c. c <= a ==> ((a - b) - (a - c) = c - b)``,
-  decide_tac);
+Theorem SUB_SUB_SUB:
+    !a b c. c <= a ==> ((a - b) - (a - c) = c - b)
+Proof
+  decide_tac
+QED
 
 (* Theorem: c <= a ==> (a + b - (a - c) = c + b) *)
 (* Proof:
@@ -1728,10 +1829,11 @@ val SUB_SUB_SUB = store_thm(
    = b + c - 0          by SUB_EQUAL_0
    = b + c              by SUB_0
 *)
-val ADD_SUB_SUB = store_thm(
-  "ADD_SUB_SUB",
-  ``!a b c. c <= a ==> (a + b - (a - c) = c + b)``,
-  decide_tac);
+Theorem ADD_SUB_SUB:
+    !a b c. c <= a ==> (a + b - (a - c) = c + b)
+Proof
+  decide_tac
+QED
 
 (* Theorem: 0 < p ==> !m n. (m - n = p) <=> (m = n + p) *)
 (* Proof:
@@ -1747,10 +1849,11 @@ val ADD_SUB_SUB = store_thm(
       = p + n - n             by ADD_COMM
       = p                     by ADD_SUB
 *)
-val SUB_EQ_ADD = store_thm(
-  "SUB_EQ_ADD",
-  ``!p. 0 < p ==> !m n. (m - n = p) <=> (m = n + p)``,
-  decide_tac);
+Theorem SUB_EQ_ADD:
+    !p. 0 < p ==> !m n. (m - n = p) <=> (m = n + p)
+Proof
+  decide_tac
+QED
 
 (* Note: ADD_EQ_SUB |- !m n p. n <= p ==> ((m + n = p) <=> (m = p - n)) *)
 
@@ -1764,15 +1867,16 @@ val SUB_EQ_ADD = store_thm(
       so a * b < c * d      by LESS_EQ_LESS_TRANS
     This contradicts a * b = c * d.
 *)
-val MULT_EQ_LESS_TO_MORE = store_thm(
-  "MULT_EQ_LESS_TO_MORE",
-  ``!a b c d. 0 < a /\ 0 < b /\ a < c /\ (a * b = c * d) ==> (d < b)``,
+Theorem MULT_EQ_LESS_TO_MORE:
+    !a b c d. 0 < a /\ 0 < b /\ a < c /\ (a * b = c * d) ==> (d < b)
+Proof
   spose_not_then strip_assume_tac >>
   `b <= d` by decide_tac >>
   `0 < d` by decide_tac >>
   `a * b <= a * d` by rw[LE_MULT_LCANCEL] >>
   `a * d < c * d` by rw[LT_MULT_LCANCEL] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 0 < c /\ 0 < d /\ a * b <= c * d /\ d < b ==> a < c *)
 (* Proof:
@@ -1788,14 +1892,15 @@ MULT_EQ_LESS_TO_MORE
 |- !a b c d. 0 < a /\ 0 < b /\ a < c /\ a * b = c * d ==> d < b
              0 < d /\ 0 < c /\ d < b /\ d * c = b * a ==> a < c
 *)
-val LE_IMP_REVERSE_LT = store_thm(
-  "LE_IMP_REVERSE_LT",
-  ``!a b c d. 0 < c /\ 0 < d /\ a * b <= c * d /\ d < b ==> a < c``,
+Theorem LE_IMP_REVERSE_LT:
+    !a b c d. 0 < c /\ 0 < d /\ a * b <= c * d /\ d < b ==> a < c
+Proof
   spose_not_then strip_assume_tac >>
   `c <= a` by decide_tac >>
   `c * d <= a * b` by rw[LE_MONO_MULT2] >>
   `a * b = c * d` by decide_tac >>
-  `a < c` by metis_tac[MULT_EQ_LESS_TO_MORE, MULT_COMM]);
+  `a < c` by metis_tac[MULT_EQ_LESS_TO_MORE, MULT_COMM]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Exponential Theorems                                                      *)
@@ -1808,13 +1913,14 @@ val LE_IMP_REVERSE_LT = store_thm(
    = m ** (2 * HALF n)      by EXP_EXP_MULT
    = m ** n                 by EVEN_HALF
 *)
-val EXP_EVEN = store_thm(
-  "EXP_EVEN",
-  ``!n. EVEN n ==> !m. m ** n = (SQ m) ** (HALF n)``,
+Theorem EXP_EVEN:
+    !n. EVEN n ==> !m. m ** n = (SQ m) ** (HALF n)
+Proof
   rpt strip_tac >>
   `(SQ m) ** (HALF n) = m ** (2 * HALF n)` by rw[EXP_EXP_MULT] >>
   `_ = m ** n` by rw[GSYM EVEN_HALF] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: ODD n ==> !m. m ** n = m * (SQ m) ** (HALF n) *)
 (* Proof:
@@ -1825,14 +1931,15 @@ val EXP_EVEN = store_thm(
    = m ** (2 * HALF n + 1)      by ADD1
    = m ** n                     by ODD_HALF
 *)
-val EXP_ODD = store_thm(
-  "EXP_ODD",
-  ``!n. ODD n ==> !m. m ** n = m * (SQ m) ** (HALF n)``,
+Theorem EXP_ODD:
+    !n. ODD n ==> !m. m ** n = m * (SQ m) ** (HALF n)
+Proof
   rpt strip_tac >>
   `m * (SQ m) ** (HALF n) = m * m ** (2 * HALF n)` by rw[EXP_EXP_MULT] >>
   `_ = m ** (2 * HALF n + 1)` by rw[GSYM EXP, ADD1] >>
   `_ = m ** n` by rw[GSYM ODD_HALF] >>
-  rw[]);
+  rw[]
+QED
 
 (* An exponentiation identity *)
 (* val EXP_THM = save_thm("EXP_THM", CONJ EXP_EVEN EXP_ODD); *)
@@ -1864,31 +1971,34 @@ QED
    If ~EVEN n, ODD n, to show:              by EVEN_ODD
       m ** n = m * (m * m) ** HALF n, true  by EXP_ODD
 *)
-val EXP_EQN = store_thm(
-  "EXP_EQN",
-  ``!m n. m ** n =
+Theorem EXP_EQN:
+    !m n. m ** n =
          if n = 0 then 1
-         else if EVEN n then (m * m) ** (HALF n) else m * (m * m) ** (HALF n)``,
+         else if EVEN n then (m * m) ** (HALF n) else m * (m * m) ** (HALF n)
+Proof
   rw[] >-
   rw[Once EXP_EVEN] >>
   `ODD n` by metis_tac[EVEN_ODD] >>
-  rw[Once EXP_ODD]);
+  rw[Once EXP_ODD]
+QED
 
 (* Theorem: m ** n = if n = 0 then 1 else (if EVEN n then 1 else m) * (m * m) ** (HALF n) *)
 (* Proof: by EXP_EQN *)
-val EXP_EQN_ALT = store_thm(
-  "EXP_EQN_ALT",
-  ``!m n. m ** n =
+Theorem EXP_EQN_ALT:
+    !m n. m ** n =
          if n = 0 then 1
-         else (if EVEN n then 1 else m) * (m * m) ** (HALF n)``,
-  rw[Once EXP_EQN]);
+         else (if EVEN n then 1 else m) * (m * m) ** (HALF n)
+Proof
+  rw[Once EXP_EQN]
+QED
 
 (* Theorem: m ** n = (if n = 0 then 1 else (if EVEN n then 1 else m) * (m ** 2) ** HALF n) *)
 (* Proof: by EXP_EQN_ALT, EXP_2 *)
-val EXP_ALT_EQN = store_thm(
-  "EXP_ALT_EQN",
-  ``!m n. m ** n = (if n = 0 then 1 else (if EVEN n then 1 else m) * (m ** 2) ** HALF n)``,
-  metis_tac[EXP_EQN_ALT, EXP_2]);
+Theorem EXP_ALT_EQN:
+    !m n. m ** n = (if n = 0 then 1 else (if EVEN n then 1 else m) * (m ** 2) ** HALF n)
+Proof
+  metis_tac[EXP_EQN_ALT, EXP_2]
+QED
 
 (* Theorem: 1 < m ==>
       (b ** n) MOD m = if (n = 0) then 1
@@ -1927,15 +2037,16 @@ QED
            if n = 0 then 1 else
            ((if EVEN n then 1 else b) * ((SQ b ** HALF n) MOD m)) MOD m *)
 (* Proof: by EXP_MOD_EQN *)
-val EXP_MOD_ALT = store_thm(
-  "EXP_MOD_ALT",
-  ``!b n m. 1 < m ==> b ** n MOD m =
+Theorem EXP_MOD_ALT:
+    !b n m. 1 < m ==> b ** n MOD m =
            if n = 0 then 1 else
-           ((if EVEN n then 1 else b) * ((SQ b ** HALF n) MOD m)) MOD m``,
+           ((if EVEN n then 1 else b) * ((SQ b ** HALF n) MOD m)) MOD m
+Proof
   rpt strip_tac >>
   imp_res_tac EXP_MOD_EQN >>
   last_x_assum (qspecl_then [`n`, `b`] strip_assume_tac) >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: x ** (y ** SUC n) = (x ** y) ** y ** n *)
 (* Proof:
@@ -1943,10 +2054,11 @@ val EXP_MOD_ALT = store_thm(
     = x ** (y * y ** n)     by EXP
     = (x ** y) ** (y ** n)  by EXP_EXP_MULT
 *)
-val EXP_EXP_SUC = store_thm(
-  "EXP_EXP_SUC",
-  ``!x y n. x ** (y ** SUC n) = (x ** y) ** y ** n``,
-  rw[EXP, EXP_EXP_MULT]);
+Theorem EXP_EXP_SUC:
+    !x y n. x ** (y ** SUC n) = (x ** y) ** y ** n
+Proof
+  rw[EXP, EXP_EXP_MULT]
+QED
 
 (* Theorem: 1 + n * m <= (1 + m) ** n *)
 (* Proof:
@@ -1964,9 +2076,9 @@ val EXP_EXP_SUC = store_thm(
         <= (1 + m) * (1 + m) ** n           by RIGHT_ADD_DISTRIB
          = (1 + m) ** SUC n                 by EXP
 *)
-val EXP_LOWER_LE_LOW = store_thm(
-  "EXP_LOWER_LE_LOW",
-  ``!n m. 1 + n * m <= (1 + m) ** n``,
+Theorem EXP_LOWER_LE_LOW:
+    !n m. 1 + n * m <= (1 + m) ** n
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[EXP_0] >>
@@ -1977,7 +2089,8 @@ val EXP_LOWER_LE_LOW = store_thm(
   `1 + SUC n * m <= (1 + m) ** n + m * (1 + m) ** n` by decide_tac >>
   `(1 + m) ** n + m * (1 + m) ** n = (1 + m) * (1 + m) ** n` by decide_tac >>
   `_ = (1 + m) ** SUC n` by rw[EXP] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 0 < m /\ 1 < n ==> 1 + n * m < (1 + m) ** n *)
 (* Proof:
@@ -2002,9 +2115,9 @@ val EXP_LOWER_LE_LOW = store_thm(
         <= (1 + m) * (1 + m) ** n           by RIGHT_ADD_DISTRIB
          = (1 + m) ** SUC n                 by EXP
 *)
-val EXP_LOWER_LT_LOW = store_thm(
-  "EXP_LOWER_LT_LOW",
-  ``!n m. 0 < m /\ 1 < n ==> 1 + n * m < (1 + m) ** n``,
+Theorem EXP_LOWER_LT_LOW:
+    !n m. 0 < m /\ 1 < n ==> 1 + n * m < (1 + m) ** n
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
@@ -2025,7 +2138,8 @@ val EXP_LOWER_LT_LOW = store_thm(
     `(1 + m) ** n + m * (1 + m) ** n = (1 + m) * (1 + m) ** n` by decide_tac >>
     `_ = (1 + m) ** SUC n` by rw[EXP] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (*
 Note: EXP_LOWER_LE_LOW collects the first two terms of binomial expansion.
@@ -2060,9 +2174,9 @@ Note: EXP_LOWER_LE_LOW collects the first two terms of binomial expansion.
               <= (1 + m) * (1 + m) ** n                     by induction hypothesis
                = (1 + m) ** SUC n                           by EXP
 *)
-val EXP_LOWER_LE_HIGH = store_thm(
-  "EXP_LOWER_LE_HIGH",
-  ``!n m. n * m ** (n - 1) + m ** n <= (1 + m) ** n``,
+Theorem EXP_LOWER_LE_HIGH:
+    !n m. n * m ** (n - 1) + m ** n <= (1 + m) ** n
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   simp[] >>
@@ -2082,7 +2196,8 @@ val EXP_LOWER_LE_HIGH = store_thm(
   `(m + 1) * (n * m ** (n - 1)) + (m + 1) * m ** n = (m + 1) * t` by rw[LEFT_ADD_DISTRIB, Abbr`t`] >>
   `t <= (m + 1) ** n` by metis_tac[ADD_COMM] >>
   `(m + 1) * t <= (m + 1) * (m + 1) ** n` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 1 < n ==> SUC n < 2 ** n *)
 (* Proof:
@@ -2090,12 +2205,13 @@ val EXP_LOWER_LE_HIGH = store_thm(
      or SUC n < SUC 1 ** n      by ADD1
      or SUC n < 2 ** n          by TWO
 *)
-val SUC_X_LT_2_EXP_X = store_thm(
-  "SUC_X_LT_2_EXP_X",
-  ``!n. 1 < n ==> SUC n < 2 ** n``,
+Theorem SUC_X_LT_2_EXP_X:
+    !n. 1 < n ==> SUC n < 2 ** n
+Proof
   rpt strip_tac >>
   `1 + n * 1 < (1 + 1) ** n` by rw[EXP_LOWER_LT_LOW] >>
-  fs[]);
+  fs[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* DIVIDES Theorems                                                          *)
@@ -2110,36 +2226,39 @@ val SUC_X_LT_2_EXP_X = store_thm(
           = m * (n DIV m  + 1)           by LEFT_ADD_DISTRIB
           = m * SUC (n DIV m)            by ADD1
 *)
-val DIV_MULT_LESS_EQ = store_thm(
-  "DIV_MULT_LESS_EQ",
-  ``!m n. 0 < m ==> m * (n DIV m) <= n /\ n < m * SUC (n DIV m)``,
+Theorem DIV_MULT_LESS_EQ:
+    !m n. 0 < m ==> m * (n DIV m) <= n /\ n < m * SUC (n DIV m)
+Proof
   ntac 3 strip_tac >>
   `(n = n DIV m * m + n MOD m) /\ n MOD m < m` by rw[DIVISION] >>
   `n < m * (n DIV m) + m` by decide_tac >>
   `m * (n DIV m) + m = m * (SUC (n DIV m))` by rw[ADD1] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 0 < n ==> (m - n) DIV n = if m < n then 0 else (m DIV n - 1) *)
 (* Proof:
    If m < n, then m - n = 0, so (m - n) DIV n = 0     by ZERO_DIV
    Otherwise, n <= m, and (m - n) DIV n = m DIV n - 1 by SUB_DIV
 *)
-val SUB_DIV_EQN = store_thm(
-  "SUB_DIV_EQN",
-  ``!m n. 0 < n ==> ((m - n) DIV n = if m < n then 0 else (m DIV n - 1))``,
+Theorem SUB_DIV_EQN:
+    !m n. 0 < n ==> ((m - n) DIV n = if m < n then 0 else (m DIV n - 1))
+Proof
   rw[SUB_DIV] >>
   `m - n = 0` by decide_tac >>
-  rw[ZERO_DIV]);
+  rw[ZERO_DIV]
+QED
 
 (* Theorem: 0 < n ==> (m - n) MOD n = if m < n then 0 else m MOD n *)
 (* Proof:
    If m < n, then m - n = 0, so (m - n) MOD n = 0     by ZERO_MOD
    Otherwise, n <= m, and (m - n) MOD n = m MOD n     by SUB_MOD
 *)
-val SUB_MOD_EQN = store_thm(
-  "SUB_MOD_EQN",
-  ``!m n. 0 < n ==> ((m - n) MOD n = if m < n then 0 else m MOD n)``,
-  rw[SUB_MOD]);
+Theorem SUB_MOD_EQN:
+    !m n. 0 < n ==> ((m - n) MOD n = if m < n then 0 else m MOD n)
+Proof
+  rw[SUB_MOD]
+QED
 
 (* Theorem: 0 < m /\ 0 < n /\ (n MOD m = 0) ==> n DIV (SUC m) < n DIV m *)
 (* Proof:
@@ -2151,16 +2270,17 @@ val SUB_MOD_EQN = store_thm(
     and n DIV m <> 0, or 0 < n DIV m                  by DIV_MOD_EQ_0
    Thus n DIV (SUC m) < n DIV m                       by LE_IMP_REVERSE_LT
 *)
-val DIV_LT_SUC = store_thm(
-  "DIV_LT_SUC",
-  ``!m n. 0 < m /\ 0 < n /\ (n MOD m = 0) ==> n DIV (SUC m) < n DIV m``,
+Theorem DIV_LT_SUC:
+    !m n. 0 < m /\ 0 < n /\ (n MOD m = 0) ==> n DIV (SUC m) < n DIV m
+Proof
   rpt strip_tac >>
   `n DIV m * m = n` by metis_tac[DIVISION, ADD_0] >>
   `_ = n DIV (SUC m) * (SUC m) + n MOD (SUC m)` by metis_tac[DIVISION, SUC_POS] >>
   `n DIV SUC m * SUC m <= n DIV m * m` by decide_tac >>
   `m < SUC m` by decide_tac >>
   `0 < n DIV m` by metis_tac[DIV_MOD_EQ_0, NOT_ZERO_LT_ZERO] >>
-  metis_tac[LE_IMP_REVERSE_LT]);
+  metis_tac[LE_IMP_REVERSE_LT]
+QED
 
 (* Theorem: 0 < x /\ 0 < y /\ x < y ==> !n. 0 < n /\ (n MOD x = 0) ==> n DIV y < n DIV x *)
 (* Proof:
@@ -2170,14 +2290,15 @@ val DIV_LT_SUC = store_thm(
     ==> n DIV (SUC x) < n DIV x             by DIV_LT_SUC
    Hence n DIV y < n DIV x                  by inequalities
 *)
-val DIV_LT_MONOTONE_REVERSE = store_thm(
-  "DIV_LT_MONOTONE_REVERSE",
-  ``!x y. 0 < x /\ 0 < y /\ x < y ==> !n. 0 < n /\ (n MOD x = 0) ==> n DIV y < n DIV x``,
+Theorem DIV_LT_MONOTONE_REVERSE:
+    !x y. 0 < x /\ 0 < y /\ x < y ==> !n. 0 < n /\ (n MOD x = 0) ==> n DIV y < n DIV x
+Proof
   rpt strip_tac >>
   `SUC x <= y` by decide_tac >>
   `n DIV y <= n DIV (SUC x)` by rw[DIV_LE_MONOTONE_REVERSE] >>
   `n DIV (SUC x) < n DIV x` by rw[DIV_LT_SUC] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: k <> 0 ==> (m divides n <=> (k * m) divides (k * n)) *)
 (* Proof:
@@ -2187,13 +2308,14 @@ val DIV_LT_MONOTONE_REVERSE = store_thm(
    <=> ?q. k * n = q * (k * m)   by MULT_ASSOC, MULT_COMM
    <=> (k * m) divides (k * n)   by divides_def
 *)
-val DIVIDES_MULTIPLE_IFF = store_thm(
-  "DIVIDES_MULTIPLE_IFF",
-  ``!m n k. k <> 0 ==> (m divides n <=> (k * m) divides (k * n))``,
+Theorem DIVIDES_MULTIPLE_IFF:
+    !m n k. k <> 0 ==> (m divides n <=> (k * m) divides (k * n))
+Proof
   rpt strip_tac >>
   `m divides n <=> ?q. n = q * m` by rw[GSYM divides_def] >>
   `_ = ?q. (k * n = k * (q * m))` by rw[EQ_MULT_LCANCEL] >>
-  metis_tac[divides_def, MULT_COMM, MULT_ASSOC]);
+  metis_tac[divides_def, MULT_COMM, MULT_ASSOC]
+QED
 
 (* Theorem: 0 < n /\ n divides m ==> m = n * (m DIV n) *)
 (* Proof:
@@ -2202,20 +2324,22 @@ val DIVIDES_MULTIPLE_IFF = store_thm(
      = (m DIV n) * n              by above
      = n * (m DIV n)              by MULT_COMM
 *)
-val DIVIDES_FACTORS = store_thm(
-  "DIVIDES_FACTORS",
-  ``!m n. 0 < n /\ n divides m ==> (m = n * (m DIV n))``,
-  metis_tac[DIVISION, DIVIDES_MOD_0, ADD_0, MULT_COMM]);
+Theorem DIVIDES_FACTORS:
+    !m n. 0 < n /\ n divides m ==> (m = n * (m DIV n))
+Proof
+  metis_tac[DIVISION, DIVIDES_MOD_0, ADD_0, MULT_COMM]
+QED
 
 (* Theorem: 0 < n /\ n divides m ==> (m DIV n) divides m *)
 (* Proof:
    By DIVIDES_FACTORS: m = (m DIV n) * n
    Hence (m DIV n) | m    by divides_def
 *)
-val DIVIDES_COFACTOR = store_thm(
-  "DIVIDES_COFACTOR",
-  ``!m n. 0 < n /\ n divides m ==> (m DIV n) divides m``,
-  metis_tac[DIVIDES_FACTORS, divides_def]);
+Theorem DIVIDES_COFACTOR:
+    !m n. 0 < n /\ n divides m ==> (m DIV n) divides m
+Proof
+  metis_tac[DIVIDES_FACTORS, divides_def]
+QED
 
 (* Theorem: n divides q ==> p * (q DIV n) = (p * q) DIV n *)
 (* Proof:
@@ -2227,14 +2351,15 @@ val DIVIDES_COFACTOR = store_thm(
    Hence (p * q) DIV n = p * (q DIV n)       by DIV_UNIQUE, 0 < n:
    |- !n k q. (?r. (k = q * n + r) /\ r < n) ==> (k DIV n = q)
 *)
-val MULTIPLY_DIV = store_thm(
-  "MULTIPLY_DIV",
-  ``!n p q. 0 < n /\ n divides q ==> (p * (q DIV n) = (p * q) DIV n)``,
+Theorem MULTIPLY_DIV:
+    !n p q. 0 < n /\ n divides q ==> (p * (q DIV n) = (p * q) DIV n)
+Proof
   rpt strip_tac >>
   `q MOD n = 0` by rw[GSYM DIVIDES_MOD_0] >>
   `p * q = p * ((q DIV n) * n)` by metis_tac[DIVISION, ADD_0] >>
   `_ = p * (q DIV n) * n + 0` by rw[MULT_ASSOC] >>
-  metis_tac[DIV_UNIQUE]);
+  metis_tac[DIV_UNIQUE]
+QED
 
 (* Note: The condition: n divides q is important:
 > EVAL ``5 * (10 DIV 3)``;
@@ -2256,26 +2381,28 @@ val it = |- 5 * 10 DIV 3 = 16: thm
            = (0 + (x MOD n) MOD m) MOD m                           by MOD_EQ_0
            = (x MOD n) MOD m                                       by ADD, MOD_MOD
 *)
-val DIVIDES_MOD_MOD = store_thm(
-  "DIVIDES_MOD_MOD",
-  ``!m n. 0 < n /\ m divides n ==> !x. (x MOD n) MOD m = x MOD m``,
+Theorem DIVIDES_MOD_MOD:
+    !m n. 0 < n /\ m divides n ==> !x. (x MOD n) MOD m = x MOD m
+Proof
   rpt strip_tac >>
   `0 < m` by metis_tac[ZERO_DIVIDES, NOT_ZERO] >>
   `?q. n = q * m` by rw[GSYM divides_def] >>
   `x MOD m = ((x DIV n) * n + (x MOD n)) MOD m` by rw[GSYM DIVISION] >>
   `_ = (((x DIV n) * q) * m + (x MOD n)) MOD m` by rw[MULT_ASSOC] >>
   `_ = (((x DIV n) * q * m) MOD m + (x MOD n) MOD m) MOD m` by rw[MOD_PLUS] >>
-  rw[MOD_EQ_0, MOD_MOD]);
+  rw[MOD_EQ_0, MOD_MOD]
+QED
 
 (* Theorem: m divides n <=> (m * k) divides (n * k) *)
 (* Proof: by divides_def and EQ_MULT_LCANCEL. *)
-val DIVIDES_CANCEL = store_thm(
-  "DIVIDES_CANCEL",
-  ``!k. 0 < k ==> !m n. m divides n <=> (m * k) divides (n * k)``,
+Theorem DIVIDES_CANCEL:
+    !k. 0 < k ==> !m n. m divides n <=> (m * k) divides (n * k)
+Proof
   rw[divides_def] >>
   `k <> 0` by decide_tac >>
   `!q. (q * m) * k = q * (m * k)` by rw_tac arith_ss[] >>
-  metis_tac[EQ_MULT_LCANCEL, MULT_COMM]);
+  metis_tac[EQ_MULT_LCANCEL, MULT_COMM]
+QED
 
 (* Theorem: m divides n ==> (k * m) divides (k * n) *)
 (* Proof:
@@ -2287,10 +2414,11 @@ val DIVIDES_CANCEL = store_thm(
              = q * (k * m)        by MULT_ASSOC
    Hence (k * m) divides (k * n)  by divides_def
 *)
-val DIVIDES_CANCEL_COMM = store_thm(
-  "DIVIDES_CANCEL_COMM",
-  ``!m n k. m divides n ==> (k * m) divides (k * n)``,
-  metis_tac[MULT_ASSOC, MULT_COMM, divides_def]);
+Theorem DIVIDES_CANCEL_COMM:
+    !m n k. m divides n ==> (k * m) divides (k * n)
+Proof
+  metis_tac[MULT_ASSOC, MULT_COMM, divides_def]
+QED
 
 (* Theorem: 0 < n /\ 0 < m ==> !x. n divides x ==> ((m * x) DIV (m * n) = x DIV n) *)
 (* Proof:
@@ -2303,13 +2431,14 @@ val DIVIDES_CANCEL_COMM = store_thm(
        (m * n) * (x DIV n) = (m * n) * ((m * x) DIV (m * n))
    or              x DIV n = (m * x) DIV (m * n)   by MULT_LEFT_CANCEL
 *)
-val DIV_COMMON_FACTOR = store_thm(
-  "DIV_COMMON_FACTOR",
-  ``!m n. 0 < n /\ 0 < m ==> !x. n divides x ==> ((m * x) DIV (m * n) = x DIV n)``,
+Theorem DIV_COMMON_FACTOR:
+    !m n. 0 < n /\ 0 < m ==> !x. n divides x ==> ((m * x) DIV (m * n) = x DIV n)
+Proof
   rpt strip_tac >>
   `!n. n <> 0 <=> 0 < n` by decide_tac >>
   `0 < m * n` by metis_tac[MULT_EQ_0] >>
-  metis_tac[DIVIDES_CANCEL_COMM, DIVIDES_FACTORS, MULT_ASSOC, MULT_LEFT_CANCEL]);
+  metis_tac[DIVIDES_CANCEL_COMM, DIVIDES_FACTORS, MULT_ASSOC, MULT_LEFT_CANCEL]
+QED
 
 (* Theorem: 0 < n /\ 0 < m /\ 0 < m DIV n /\
            n divides m /\ m divides x /\ (m DIV n) divides x ==>
@@ -2320,12 +2449,13 @@ val DIV_COMMON_FACTOR = store_thm(
    = (n * x) DIV m                 by DIVIDES_FACTORS, n divides m, 0 < n.
    = n * (x DIV m)                 by MULTIPLY_DIV, m divides x, 0 < m.
 *)
-val DIV_DIV_MULT = store_thm(
-  "DIV_DIV_MULT",
-  ``!m n x. 0 < n /\ 0 < m /\ 0 < m DIV n /\
+Theorem DIV_DIV_MULT:
+    !m n x. 0 < n /\ 0 < m /\ 0 < m DIV n /\
            n divides m /\ m divides x /\ (m DIV n) divides x ==>
-           (x DIV (m DIV n) = n * (x DIV m))``,
-  metis_tac[DIV_COMMON_FACTOR, DIVIDES_FACTORS, MULTIPLY_DIV]);
+           (x DIV (m DIV n) = n * (x DIV m))
+Proof
+  metis_tac[DIV_COMMON_FACTOR, DIVIDES_FACTORS, MULTIPLY_DIV]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Basic Divisibility                                                        *)
@@ -2363,15 +2493,16 @@ QED
       so 0 < k                                by MULT, NOT_ZERO_LT_ZERO
    Hence k * n divides t * n <=> k divides t  by DIVIDES_CANCEL, 0 < k
 *)
-val dividend_divides_divisor_multiple = store_thm(
-  "dividend_divides_divisor_multiple",
-  ``!m n. 0 < m /\ n divides m ==> !t. m divides (t * n) <=> (m DIV n) divides t``,
+Theorem dividend_divides_divisor_multiple:
+    !m n. 0 < m /\ n divides m ==> !t. m divides (t * n) <=> (m DIV n) divides t
+Proof
   rpt strip_tac >>
   qabbrev_tac `k = m DIV n` >>
   `0 < n` by metis_tac[ZERO_DIVIDES, NOT_ZERO_LT_ZERO] >>
   `m = k * n` by rw[GSYM DIVIDES_EQN, Abbr`k`] >>
   `0 < k` by metis_tac[MULT, NOT_ZERO_LT_ZERO] >>
-  metis_tac[DIVIDES_CANCEL]);
+  metis_tac[DIVIDES_CANCEL]
+QED
 
 (* Theorem: 0 < n /\ m divides n ==> 0 < m *)
 (* Proof:
@@ -2400,9 +2531,9 @@ val dividend_divides_divisor_multiple = store_thm(
       Note p ** n = p ** m * p ** (n - m)     by EXP_BY_ADD_SUB_LE
       Thus p ** m divides p ** n              by divides_def, MULT_COMM
 *)
-val power_divides_iff = store_thm(
-  "power_divides_iff",
-  ``!p. 1 < p ==> !m n. p ** m divides p ** n <=> m <= n``,
+Theorem power_divides_iff:
+    !p. 1 < p ==> !m n. p ** m divides p ** n <=> m <= n
+Proof
   rpt strip_tac >>
   `p <> 0 /\ p <> 1` by decide_tac >>
   rw[EQ_IMP_THM] >| [
@@ -2418,14 +2549,16 @@ val power_divides_iff = store_thm(
     metis_tac[EXP_EQ_1],
     `p ** n = p ** m * p ** (n - m)` by rw[EXP_BY_ADD_SUB_LE] >>
     metis_tac[divides_def, MULT_COMM]
-  ]);
+  ]
+QED
 
 (* Theorem: prime p ==> !m n. p ** m divides p ** n <=> m <= n *)
 (* Proof: by power_divides_iff, ONE_LT_PRIME *)
-val prime_power_divides_iff = store_thm(
-  "prime_power_divides_iff",
-  ``!p. prime p ==> !m n. p ** m divides p ** n <=> m <= n``,
-  rw[power_divides_iff, ONE_LT_PRIME]);
+Theorem prime_power_divides_iff:
+    !p. prime p ==> !m n. p ** m divides p ** n <=> m <= n
+Proof
+  rw[power_divides_iff, ONE_LT_PRIME]
+QED
 
 (* Theorem: 0 < n /\ 1 < p ==> p divides p ** n *)
 (* Proof:
@@ -2433,10 +2566,11 @@ val prime_power_divides_iff = store_thm(
      so p ** 1 divides p ** n    by power_divides_iff
      or      p divides p ** n    by EXP_1
 *)
-val divides_self_power = store_thm(
-  "divides_self_power",
-  ``!n p. 0 < n /\ 1 < p ==> p divides p ** n``,
-  metis_tac[power_divides_iff, EXP_1, DECIDE``0 < n <=> 1 <= n``]);
+Theorem divides_self_power:
+    !n p. 0 < n /\ 1 < p ==> p divides p ** n
+Proof
+  metis_tac[power_divides_iff, EXP_1, DECIDE``0 < n <=> 1 <= n``]
+QED
 
 (* Theorem: a divides b /\ 0 < b /\ b < 2 * a ==> (b = a) *)
 (* Proof:
@@ -2734,12 +2868,13 @@ QED
    <=> 1 = 1                       by ONE_MOD, 1 < 2
    <=> T
 *)
-val ODD_EXP = store_thm(
-  "ODD_EXP",
-  ``!m n. 0 < n /\ ODD m ==> ODD (m ** n)``,
+Theorem ODD_EXP:
+    !m n. 0 < n /\ ODD m ==> ODD (m ** n)
+Proof
   rw[ODD_MOD2] >>
   `n <> 0 /\ 0 < 2` by decide_tac >>
-  metis_tac[EXP_MOD, EXP_1, ONE_MOD]);
+  metis_tac[EXP_MOD, EXP_1, ONE_MOD]
+QED
 
 (* Theorem: 0 < n ==> !m. (EVEN m <=> EVEN (m ** n)) /\ (ODD m <=> ODD (m ** n)) *)
 (* Proof:
@@ -2754,10 +2889,11 @@ val ODD_EXP = store_thm(
    Second goal: ODD m <=> ODD (m ** n)
      Just mirror the reasoning of first goal.
 *)
-val power_parity = store_thm(
-  "power_parity",
-  ``!n. 0 < n ==> !m. (EVEN m <=> EVEN (m ** n)) /\ (ODD m <=> ODD (m ** n))``,
-  metis_tac[EVEN_EXP, ODD_EXP, ODD_EVEN]);
+Theorem power_parity:
+    !n. 0 < n ==> !m. (EVEN m <=> EVEN (m ** n)) /\ (ODD m <=> ODD (m ** n))
+Proof
+  metis_tac[EVEN_EXP, ODD_EXP, ODD_EVEN]
+QED
 
 (* Theorem: 0 < n ==> EVEN (2 ** n) *)
 (* Proof:
@@ -2789,13 +2925,14 @@ val EXP_2_EVEN = store_thm(
      and EVEN (2 ** n)               by EXP_2_EVEN
    Hence ODD (2 ** n - 1)            by EVEN_ODD_SUC
 *)
-val EXP_2_PRE_ODD = store_thm(
-  "EXP_2_PRE_ODD",
-  ``!n. 0 < n ==> ODD (2 ** n - 1)``,
+Theorem EXP_2_PRE_ODD:
+    !n. 0 < n ==> ODD (2 ** n - 1)
+Proof
   rpt strip_tac >>
   `0 < 2 ** n` by rw[EXP_POS] >>
   `SUC (2 ** n - 1) = 2 ** n` by decide_tac >>
-  metis_tac[EXP_2_EVEN, EVEN_ODD_SUC]);
+  metis_tac[EXP_2_EVEN, EVEN_ODD_SUC]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Modulo Inverse                                                            *)
@@ -2857,9 +2994,9 @@ QED
                                         by EUCLID_LEMMA
    Hence take y = k MOD p, then 0 < y < p.
 *)
-val MOD_MULT_INV_EXISTS = store_thm(
-  "MOD_MULT_INV_EXISTS",
-  ``!p x. prime p /\ 0 < x /\ x < p ==> ?y. 0 < y /\ y < p /\ ((y * x) MOD p = 1)``,
+Theorem MOD_MULT_INV_EXISTS:
+    !p x. prime p /\ 0 < x /\ x < p ==> ?y. 0 < y /\ y < p /\ ((y * x) MOD p = 1)
+Proof
   rpt strip_tac >>
   `0 < p /\ 1 < p` by metis_tac[PRIME_POS, ONE_LT_PRIME] >>
   `gcd p x = 1` by metis_tac[PRIME_GCD, NOT_LT_DIVIDES] >>
@@ -2871,7 +3008,8 @@ val MOD_MULT_INV_EXISTS = store_thm(
   `x MOD p <> 0` by metis_tac[DIVIDES_MOD_0, NOT_LT_DIVIDES] >>
   `k MOD p <> 0` by metis_tac[EUCLID_LEMMA, MOD_MOD] >>
   decide_tac) >>
-  metis_tac[MOD_LESS, LESS_MOD]);
+  metis_tac[MOD_LESS, LESS_MOD]
+QED
 
 (* Convert this theorem into MUL_INV_DEF *)
 
@@ -2905,9 +3043,9 @@ val MOD_MULT_INV_DEF = new_specification(
 (* Proof: apply PRIME_FACTOR:
    !n. n <> 1 ==> ?p. prime p /\ p divides n : thm
 *)
-val PRIME_FACTOR_PROPER = store_thm(
-  "PRIME_FACTOR_PROPER",
-  ``!n. 1 < n /\ ~prime n ==> ?p. prime p /\ p < n /\ (p divides n)``,
+Theorem PRIME_FACTOR_PROPER:
+    !n. 1 < n /\ ~prime n ==> ?p. prime p /\ p < n /\ (p divides n)
+Proof
   rpt strip_tac >>
   `0 < n /\ n <> 1` by decide_tac >>
   `?p. prime p /\ p divides n` by metis_tac[PRIME_FACTOR] >>
@@ -2915,7 +3053,8 @@ val PRIME_FACTOR_PROPER = store_thm(
   Cases_on `n = p` >-
   full_simp_tac std_ss[] >>
   `p < n` by decide_tac >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: If p divides n, then there is a (p ** m) that maximally divides n. *)
 (* Proof:
@@ -2940,9 +3079,9 @@ val PRIME_FACTOR_PROPER = store_thm(
    Since m < SUC m                 by LESS_SUC
    This contradicts the maximal property of m.
 *)
-val FACTOR_OUT_POWER = store_thm(
-  "FACTOR_OUT_POWER",
-  ``!n p. 0 < n /\ 1 < p /\ p divides n ==> ?m. (p ** m) divides n /\ ~(p divides (n DIV (p ** m)))``,
+Theorem FACTOR_OUT_POWER:
+    !n p. 0 < n /\ 1 < p /\ p divides n ==> ?m. (p ** m) divides n /\ ~(p divides (n DIV (p ** m)))
+Proof
   rpt strip_tac >>
   `p <= n` by rw[DIVIDES_LE] >>
   `1 < n` by decide_tac >>
@@ -2966,7 +3105,8 @@ val FACTOR_OUT_POWER = store_thm(
   `?q. n DIV (p ** m) = q * p` by rw[GSYM divides_def] >>
   `n = q * p ** SUC m` by metis_tac[MULT_COMM, MULT_ASSOC, EXP] >>
   `SUC m <= m` by metis_tac[divides_def] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Useful Theorems.                                                          *)
@@ -3141,14 +3281,15 @@ QED
    = m * m + n * m + m * n + n * n     by LEFT_ADD_DISTRIB, RIGHT_ADD_DISTRIB
    = m ** 2 + n ** 2 + 2 * m * n       by EXP_2
 *)
-val binomial_2 = store_thm(
-  "binomial_2",
-  ``!m n. (m + n) ** 2 = m ** 2 + n ** 2 + 2 * m * n``,
+Theorem binomial_2:
+    !m n. (m + n) ** 2 = m ** 2 + n ** 2 + 2 * m * n
+Proof
   rpt strip_tac >>
   `(m + n) ** 2 = (m + n) * (m + n)` by rw[] >>
   `_ = m * m + n * m + m * n + n * n` by decide_tac >>
   `_ = m ** 2 + n ** 2 + 2 * m * n` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Obtain a corollary *)
 val SUC_SQ = save_thm("SUC_SQ",
@@ -3160,10 +3301,11 @@ val SUC_SQ = save_thm("SUC_SQ",
    Since m * m <= n * n    by LE_MONO_MULT2
       so  SQ m <= SQ n     by notation
 *)
-val SQ_LE = store_thm(
-  "SQ_LE",
-  ``!m n. m <= n ==> SQ m <= SQ n``,
-  rw[]);
+Theorem SQ_LE:
+    !m n. m <= n ==> SQ m <= SQ n
+Proof
+  rw[]
+QED
 
 (* Theorem: EVEN n /\ prime n <=> n = 2 *)
 (* Proof:
@@ -3196,17 +3338,19 @@ QED
     but EVEN n /\ prime n ==> n = 2   by EVEN_PRIME
    This contradicts n <> 2.
 *)
-val ODD_PRIME = store_thm(
-  "ODD_PRIME",
-  ``!n. prime n /\ n <> 2 ==> ODD n``,
-  metis_tac[EVEN_PRIME, EVEN_ODD]);
+Theorem ODD_PRIME:
+    !n. prime n /\ n <> 2 ==> ODD n
+Proof
+  metis_tac[EVEN_PRIME, EVEN_ODD]
+QED
 
 (* Theorem: prime p ==> 2 <= p *)
 (* Proof: by ONE_LT_PRIME *)
-val TWO_LE_PRIME = store_thm(
-  "TWO_LE_PRIME",
-  ``!p. prime p ==> 2 <= p``,
-  metis_tac[ONE_LT_PRIME, DECIDE``1 < n <=> 2 <= n``]);
+Theorem TWO_LE_PRIME:
+    !p. prime p ==> 2 <= p
+Proof
+  metis_tac[ONE_LT_PRIME, DECIDE``1 < n <=> 2 <= n``]
+QED
 
 (* Theorem: ~prime 4 *)
 (* Proof:
@@ -3234,12 +3378,13 @@ QED
    Only-if part; prime n /\ prime m /\ (n = m) ==> n divides m
       True as m divides m   by DIVIDES_REFL
 *)
-val prime_divides_prime = store_thm(
-  "prime_divides_prime",
-  ``!n m. prime n /\ prime m ==> (n divides m <=> (n = m))``,
+Theorem prime_divides_prime:
+    !n m. prime n /\ prime m ==> (n divides m <=> (n = m))
+Proof
   rw[EQ_IMP_THM] >>
   `n <> 1` by metis_tac[NOT_PRIME_1] >>
-  metis_tac[prime_def]);
+  metis_tac[prime_def]
+QED
 (* This is: dividesTheory.prime_divides_only_self;
 |- !m n. prime m /\ prime n /\ m divides n ==> (m = n)
 *)
@@ -3275,9 +3420,9 @@ val prime_divides_prime = store_thm(
           = (1 * 1) MOD n                 by above
           = 1                             by MULT_RIGHT_1, ONE_MOD
 *)
-val ALL_PRIME_FACTORS_MOD_EQ_1 = store_thm(
-  "ALL_PRIME_FACTORS_MOD_EQ_1",
-  ``!m n. 0 < m /\ 1 < n /\ (!p. prime p /\ p divides m ==> (p MOD n = 1)) ==> (m MOD n = 1)``,
+Theorem ALL_PRIME_FACTORS_MOD_EQ_1:
+    !m n. 0 < m /\ 1 < n /\ (!p. prime p /\ p divides m ==> (p MOD n = 1)) ==> (m MOD n = 1)
+Proof
   completeInduct_on `m` >>
   rpt strip_tac >>
   Cases_on `m = 1` >-
@@ -3296,7 +3441,8 @@ val ALL_PRIME_FACTORS_MOD_EQ_1 = store_thm(
   `q MOD n = 1` by rw[] >>
   `p MOD n = 1` by rw[] >>
   `0 < n` by decide_tac >>
-  metis_tac[MOD_TIMES2, MULT_RIGHT_1, ONE_MOD]);
+  metis_tac[MOD_TIMES2, MULT_RIGHT_1, ONE_MOD]
+QED
 
 (* Theorem: prime p /\ 0 < n ==> !b. p divides (b ** n) <=> p divides b *)
 (* Proof:
@@ -3326,9 +3472,9 @@ val ALL_PRIME_FACTORS_MOD_EQ_1 = store_thm(
           = b * b ** m                by EXP
        Thus p divides b ** n          by DIVIDES_MULTIPLE, MULT_COMM
 *)
-val prime_divides_power = store_thm(
-  "prime_divides_power",
-  ``!p n. prime p /\ 0 < n ==> !b. p divides (b ** n) <=> p divides b``,
+Theorem prime_divides_power:
+    !p n. prime p /\ 0 < n ==> !b. p divides (b ** n) <=> p divides b
+Proof
   rw[EQ_IMP_THM] >| [
     Induct_on `n` >-
     rw[] >>
@@ -3342,17 +3488,19 @@ val prime_divides_power = store_thm(
     `?m. n = SUC m` by metis_tac[num_CASES] >>
     `b ** SUC m = b * b ** m` by rw[EXP] >>
     metis_tac[DIVIDES_MULTIPLE, MULT_COMM]
-  ]);
+  ]
+QED
 
 (* Theorem: prime p ==> !n. 0 < n ==> p divides p ** n *)
 (* Proof:
    Since p divides p        by DIVIDES_REFL
       so p divides p ** n   by prime_divides_power, 0 < n
 *)
-val prime_divides_self_power = store_thm(
-  "prime_divides_self_power",
-  ``!p. prime p ==> !n. 0 < n ==> p divides p ** n``,
-  rw[prime_divides_power, DIVIDES_REFL]);
+Theorem prime_divides_self_power:
+    !p. prime p ==> !n. 0 < n ==> p divides p ** n
+Proof
+  rw[prime_divides_power, DIVIDES_REFL]
+QED
 
 (* Theorem: prime p ==> !b n m. 0 < m /\ (b ** n = p ** m) ==> ?k. (b = p ** k) /\ (k * n = m) *)
 (* Proof:
@@ -3471,10 +3619,11 @@ QED
    Only-if part: m = 1 ==> n ** m = n
       This is true              by EXP_1
 *)
-val POWER_EQ_SELF = store_thm(
-  "POWER_EQ_SELF",
-  ``!n. 1 < n ==> !m. (n ** m = n) <=> (m = 1)``,
-  metis_tac[EXP_BASE_INJECTIVE, EXP_1]);
+Theorem POWER_EQ_SELF:
+    !n. 1 < n ==> !m. (n ** m = n) <=> (m = 1)
+Proof
+  metis_tac[EXP_BASE_INJECTIVE, EXP_1]
+QED
 
 (* Theorem: k < HALF n <=> k + 1 < n - k *)
 (* Proof:
@@ -3506,9 +3655,9 @@ val POWER_EQ_SELF = store_thm(
        Thus 2 * k + 1 < 2 * HALF n + 1   by LESS_LESS_EQ_TRANS
          or         k < HALF             by LT_MULT_LCANCEL
 *)
-val LESS_HALF_IFF = store_thm(
-  "LESS_HALF_IFF",
-  ``!n k. k < HALF n <=> k + 1 < n - k``,
+Theorem LESS_HALF_IFF:
+    !n k. k < HALF n <=> k + 1 < n - k
+Proof
   rw[EQ_IMP_THM] >| [
     `1 < n - 2 * k` by
   (Cases_on `EVEN n` >| [
@@ -3531,7 +3680,8 @@ val LESS_HALF_IFF = store_thm(
     `n = 2 * HALF n + (n MOD 2)` by metis_tac[DIVISION, MULT_COMM, DECIDE``0 < 2``] >>
     `n MOD 2 < 2` by rw[] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: HALF n < k ==> n - k <= HALF n *)
 (* Proof:
@@ -3551,9 +3701,9 @@ val LESS_HALF_IFF = store_thm(
    If ~(k < n), then n <= k.
       Thus n - k = 0, hence n - k <= HALF n  by arithmetic
 *)
-val MORE_HALF_IMP = store_thm(
-  "MORE_HALF_IMP",
-  ``!n k. HALF n < k ==> n - k <= HALF n``,
+Theorem MORE_HALF_IMP:
+    !n k. HALF n < k ==> n - k <= HALF n
+Proof
   rpt strip_tac >>
   Cases_on `k < n` >| [
     Cases_on `EVEN n` >| [
@@ -3566,7 +3716,8 @@ val MORE_HALF_IMP = store_thm(
       decide_tac
     ],
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: (!k. k < m ==> f k < f (k + 1)) ==> !k. k < m ==> f k < f m *)
 (* Proof:
@@ -3588,9 +3739,9 @@ val MORE_HALF_IMP = store_thm(
           and f (k + 1) < f m   by induction hypothesis, put k = k + 1
            so f k < f m         by LESS_TRANS
 *)
-val MONOTONE_MAX = store_thm(
-  "MONOTONE_MAX",
-  ``!f m. (!k. k < m ==> f k < f (k + 1)) ==> !k. k < m ==> f k < f m``,
+Theorem MONOTONE_MAX:
+    !f m. (!k. k < m ==> f k < f (k + 1)) ==> !k. k < m ==> f k < f m
+Proof
   rpt strip_tac >>
   Induct_on `m - k` >| [
     rpt strip_tac >>
@@ -3606,7 +3757,8 @@ val MONOTONE_MAX = store_thm(
       `f (k + 1) < f m` by rw[] >>
       decide_tac
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: (multiple gap)
    If n divides m, n cannot divide any x: m - n < x < m, or m < x < m + n
@@ -3623,16 +3775,17 @@ val MONOTONE_MAX = store_thm(
      that is, h <= k, and k <= h
    Therefore  h = k, or m = h * n = k * n = x.
 *)
-val MULTIPLE_INTERVAL = store_thm(
-  "MULTIPLE_INTERVAL",
-  ``!n m. n divides m ==> !x. m - n < x /\ x < m + n /\ n divides x ==> (x = m)``,
+Theorem MULTIPLE_INTERVAL:
+    !n m. n divides m ==> !x. m - n < x /\ x < m + n /\ n divides x ==> (x = m)
+Proof
   rpt strip_tac >>
   `(?h. m = h*n) /\ (?k. x = k * n)` by metis_tac[divides_def] >>
   `(h-1) * n < k * n` by metis_tac[RIGHT_SUB_DISTRIB, MULT_LEFT_1] >>
   `k * n < (h+1) * n` by metis_tac[RIGHT_ADD_DISTRIB, MULT_LEFT_1] >>
   `0 < n /\ h-1 < k /\ k < h+1` by metis_tac[LT_MULT_RCANCEL] >>
   `h = k` by decide_tac >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: 0 < m ==> (SUC (n MOD m) = SUC n MOD m + (SUC n DIV m - n DIV m) * m) *)
 (* Proof:
@@ -3651,9 +3804,9 @@ val MULTIPLE_INTERVAL = store_thm(
    Thus a = b + (y * m - x * m)           by arithmetic
           = b + (y - x) * m               by RIGHT_SUB_DISTRIB
 *)
-val MOD_SUC_EQN = store_thm(
-  "MOD_SUC_EQN",
-  ``!m n. 0 < m ==> (SUC (n MOD m) = SUC n MOD m + (SUC n DIV m - n DIV m) * m)``,
+Theorem MOD_SUC_EQN:
+    !m n. 0 < m ==> (SUC (n MOD m) = SUC n MOD m + (SUC n DIV m - n DIV m) * m)
+Proof
   rpt strip_tac >>
   qabbrev_tac `x = n DIV m` >>
   qabbrev_tac `y = (SUC n) DIV m` >>
@@ -3667,7 +3820,8 @@ val MOD_SUC_EQN = store_thm(
   `x * m <= y * m` by rw[] >>
   `a = b + (y * m - x * m)` by decide_tac >>
   `_ = b + (y - x) * m` by rw[] >>
-  rw[]);
+  rw[]
+QED
 
 (* Note: Compare this result with these in arithmeticTheory:
 MOD_SUC      |- 0 < y /\ SUC x <> SUC (x DIV y) * y ==> (SUC x MOD y = SUC (x MOD y))
@@ -3683,15 +3837,16 @@ MOD_SUC_IFF  |- 0 < y ==> ((SUC x MOD y = SUC (x MOD y)) <=> SUC x <> SUC (x DIV
    ==> 2 <= (n ** 2) DIV 2               by arithmetic
    ==> 1 < (n ** 2) DIV 2                by arithmetic
 *)
-val ONE_LT_HALF_SQ = store_thm(
-  "ONE_LT_HALF_SQ",
-  ``!n. 1 < n ==> 1 < HALF (n ** 2)``,
+Theorem ONE_LT_HALF_SQ:
+    !n. 1 < n ==> 1 < HALF (n ** 2)
+Proof
   rpt strip_tac >>
   `2 <= n` by decide_tac >>
   `2 ** 2 <= n ** 2` by rw[] >>
   `(2 ** 2) DIV 2 <= (n ** 2) DIV 2` by rw[DIV_LE_MONOTONE] >>
   `(2 ** 2) DIV 2 = 2` by EVAL_TAC >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 0 < n ==> (HALF (2 ** n) = 2 ** (n - 1)) *)
 (* Proof
@@ -3726,10 +3881,11 @@ There is EVEN_DOUBLE  |- !n. EVEN (TWICE n)
    = m * k               by HALF_TWICE
    = m * HALF n          by notation
 *)
-val HALF_MULT_EVEN = store_thm(
-  "HALF_MULT_EVEN",
-  ``!m n. EVEN n ==> (HALF (m * n) = m * HALF n)``,
-  metis_tac[EVEN_HALF, MULT_COMM_ASSOC, HALF_TWICE]);
+Theorem HALF_MULT_EVEN:
+    !m n. EVEN n ==> (HALF (m * n) = m * HALF n)
+Proof
+  metis_tac[EVEN_HALF, MULT_COMM_ASSOC, HALF_TWICE]
+QED
 
 (* Theorem: 0 < k /\ k * m < n ==> m < n *)
 (* Proof:
@@ -3742,14 +3898,15 @@ val HALF_MULT_EVEN = store_thm(
    Since 0 <= h * m,
       so k * m < n ==> m < n.
 *)
-val MULT_LT_IMP_LT = store_thm(
-  "MULT_LT_IMP_LT",
-  ``!m n k. 0 < k /\ k * m < n ==> m < n``,
+Theorem MULT_LT_IMP_LT:
+    !m n k. 0 < k /\ k * m < n ==> m < n
+Proof
   rpt strip_tac >>
   `k <> 0` by decide_tac >>
   `?h. k = SUC h` by metis_tac[num_CASES] >>
   `k * m = h * m + m` by rw[ADD1] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 0 < k /\ k * m <= n ==> m <= n *)
 (* Proof:
@@ -3774,13 +3931,14 @@ QED
     = HALF (n * n ** 4)          by EXP_EXP_MULT
     = HALF (n ** 5)              by EXP
 *)
-val HALF_EXP_5 = store_thm(
-  "HALF_EXP_5",
-  ``!n. n * HALF ((SQ n) ** 2) <= HALF (n ** 5)``,
+Theorem HALF_EXP_5:
+    !n. n * HALF ((SQ n) ** 2) <= HALF (n ** 5)
+Proof
   rpt strip_tac >>
   `n * ((SQ n) ** 2) = n * n ** 4` by rw[EXP_2, EXP_EXP_MULT] >>
   `_ = n ** 5` by rw[EXP] >>
-  metis_tac[HALF_MULT]);
+  metis_tac[HALF_MULT]
+QED
 
 (* Theorem: n <= 2 * m <=> (n <> 0 ==> HALF (n - 1) < m) *)
 (* Proof:
@@ -3815,9 +3973,9 @@ val HALF_EXP_5 = store_thm(
               or              k < TWICE m     by EVEN_HALF
               or             n <= TWICE m     by n = k + 1
 *)
-val LE_TWICE_ALT = store_thm(
-  "LE_TWICE_ALT",
-  ``!m n. n <= 2 * m <=> (n <> 0 ==> HALF (n - 1) < m)``,
+Theorem LE_TWICE_ALT:
+    !m n. n <= 2 * m <=> (n <> 0 ==> HALF (n - 1) < m)
+Proof
   rw[EQ_IMP_THM] >| [
     `n = SUC (n - 1)` by decide_tac >>
     qabbrev_tac `k = n - 1` >>
@@ -3847,7 +4005,8 @@ val LE_TWICE_ALT = store_thm(
       `k < TWICE m` by metis_tac[LT_MULT_LCANCEL, EVEN_HALF, DECIDE``0 < 2``] >>
       rw[Abbr`k`]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: (HALF n) DIV 2 ** m = n DIV (2 ** SUC m) *)
 (* Proof:
@@ -3856,10 +4015,11 @@ val LE_TWICE_ALT = store_thm(
    = n DIV (2 * 2 ** m)        by DIV_DIV_DIV_MULT, 0 < 2, 0 < 2 ** m
    = n DIV (2 ** (SUC m))      by EXP
 *)
-val HALF_DIV_TWO_POWER = store_thm(
-  "HALF_DIV_TWO_POWER",
-  ``!m n. (HALF n) DIV 2 ** m = n DIV (2 ** SUC m)``,
-  rw[DIV_DIV_DIV_MULT, EXP]);
+Theorem HALF_DIV_TWO_POWER:
+    !m n. (HALF n) DIV 2 ** m = n DIV (2 ** SUC m)
+Proof
+  rw[DIV_DIV_DIV_MULT, EXP]
+QED
 
 (* Theorem: 1 + 2 + 3 + 4 = 10 *)
 (* Proof: by calculation. *)
@@ -3902,9 +4062,9 @@ QED
    or  pp * p ** m | n
        p * SUC m | n, making m not MAX_SET s.
 *)
-val FACTOR_OUT_PRIME = store_thm(
-  "FACTOR_OUT_PRIME",
-  ``!n p. 0 < n /\ prime p /\ p divides n ==> ?m. 0 < m /\ (p ** m) divides n /\ !k. gcd (p ** k) (n DIV (p ** m)) = 1``,
+Theorem FACTOR_OUT_PRIME:
+    !n p. 0 < n /\ prime p /\ p divides n ==> ?m. 0 < m /\ (p ** m) divides n /\ !k. gcd (p ** k) (n DIV (p ** m)) = 1
+Proof
   rpt strip_tac >>
   qabbrev_tac `s = {j | (p ** j) divides n }` >>
   `!j. j IN s <=> (p ** j) divides n` by rw[Abbr`s`] >>
@@ -3954,7 +4114,8 @@ val FACTOR_OUT_PRIME = store_thm(
     `(p ** SUC m) divides n` by metis_tac[divides_def] >>
     `SUC m <= m` by metis_tac[] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: For 1 < n /\ 0 < x /\ x < n /\ coprime n x ==>
             ?y. 0 < y /\ y < n /\ coprime n y /\ ((y * x) MOD n = 1) *)
@@ -3971,10 +4132,10 @@ val FACTOR_OUT_PRIME = store_thm(
    Hence take y = k MOD n, then 0 < y < n.
    and gcd n k = 1 ==> gcd n (k MOD n) = 1    by MOD_WITH_GCD_ONE.
 *)
-val GCD_MOD_MULT_INV = store_thm(
-  "GCD_MOD_MULT_INV",
-  ``!n x. 1 < n /\ 0 < x /\ x < n /\ coprime n x ==>
-      ?y. 0 < y /\ y < n /\ coprime n y /\ ((y * x) MOD n = 1)``,
+Theorem GCD_MOD_MULT_INV:
+    !n x. 1 < n /\ 0 < x /\ x < n /\ coprime n x ==>
+      ?y. 0 < y /\ y < n /\ coprime n y /\ ((y * x) MOD n = 1)
+Proof
   rpt strip_tac >>
   `?k. ((k * x) MOD n = 1) /\ coprime n k` by rw_tac std_ss[GCD_ONE_PROPERTY] >>
   `0 < n` by decide_tac >>
@@ -3984,7 +4145,8 @@ val GCD_MOD_MULT_INV = store_thm(
   `1 <> 0` by decide_tac >>
   `0 <> k MOD n` by metis_tac[MOD_MULTIPLE_ZERO] >>
   `0 < k MOD n` by decide_tac >>
-  metis_tac[MOD_WITH_GCD_ONE]);
+  metis_tac[MOD_WITH_GCD_ONE]
+QED
 
 (* Convert this into an existence definition *)
 val lemma = prove(
@@ -4047,9 +4209,9 @@ val GEN_MULT_INV_DEF = new_specification(
     = a * b DIV gcd a b                          by MULT_COMM, MULT_DIV
     = lcm a b                                    by lcm_def
 *)
-val LCM_EXCHANGE = store_thm(
-  "LCM_EXCHANGE",
-  ``!a b c. (a * b = c * (a - b)) ==> (lcm a b = lcm a c)``,
+Theorem LCM_EXCHANGE:
+    !a b c. (a * b = c * (a - b)) ==> (lcm a b = lcm a c)
+Proof
   rpt strip_tac >>
   Cases_on `a = 0` >-
   rw[] >>
@@ -4078,7 +4240,8 @@ val LCM_EXCHANGE = store_thm(
     `_ = a * b DIV gcd a b` by metis_tac[MULT_COMM, MULT_DIV] >>
     `_ = lcm a b` by rw[lcm_def] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: k * a <= b ==> gcd a b = gcd a (b - k * a) *)
 (* Proof:
@@ -4098,9 +4261,9 @@ val LCM_EXCHANGE = store_thm(
      = gcd a (b - k * a)            by SUB_ADD, a <= b - k * a [1]
      = gcd a b                      by induction hypothesis, k * a <= b [2]
 *)
-val GCD_SUB_MULTIPLE = store_thm(
-  "GCD_SUB_MULTIPLE",
-  ``!a b k. k * a <= b ==> (gcd a b = gcd a (b - k * a))``,
+Theorem GCD_SUB_MULTIPLE:
+    !a b k. k * a <= b ==> (gcd a b = gcd a (b - k * a))
+Proof
   rpt strip_tac >>
   Induct_on `k` >-
   rw[] >>
@@ -4111,14 +4274,16 @@ val GCD_SUB_MULTIPLE = store_thm(
   `gcd a (b - SUC k * a) = gcd a (b - (k * a + a))` by rw[MULT] >>
   `_ = gcd a (b - k * a - a)` by rw_tac arith_ss[] >>
   `_ = gcd a (b - k * a - a + a)` by rw[GCD_ADD_L, ADD_COMM] >>
-  rw_tac std_ss[SUB_ADD]);
+  rw_tac std_ss[SUB_ADD]
+QED
 
 (* Theorem: k * a <= b ==> (gcd b a = gcd a (b - k * a)) *)
 (* Proof: by GCD_SUB_MULTIPLE, GCD_SYM *)
-val GCD_SUB_MULTIPLE_COMM = store_thm(
-  "GCD_SUB_MULTIPLE_COMM",
-  ``!a b k. k * a <= b ==> (gcd b a = gcd a (b - k * a))``,
-  metis_tac[GCD_SUB_MULTIPLE, GCD_SYM]);
+Theorem GCD_SUB_MULTIPLE_COMM:
+    !a b k. k * a <= b ==> (gcd b a = gcd a (b - k * a))
+Proof
+  metis_tac[GCD_SUB_MULTIPLE, GCD_SYM]
+QED
 
 (* Idea: a crude upper bound for greatest common divisor.
          A better upper bound is: gcd m n <= MIN m n, by MIN_LE *)
@@ -4334,9 +4499,9 @@ QED
     Thus d = 1                             by DIVIDES_ONE
       or coprime a b                       by notation
 *)
-val coprime_iff_coprime_exp = store_thm(
-  "coprime_iff_coprime_exp",
-  ``!n. 0 < n ==> !a b. coprime a b <=> coprime a (b ** n)``,
+Theorem coprime_iff_coprime_exp:
+    !n. 0 < n ==> !a b. coprime a b <=> coprime a (b ** n)
+Proof
   rw[EQ_IMP_THM] >-
   rw[coprime_exp_comm] >>
   `n <> 0` by decide_tac >>
@@ -4347,7 +4512,8 @@ val coprime_iff_coprime_exp = store_thm(
   `d divides a /\ d divides b` by rw[GCD_IS_GREATEST_COMMON_DIVISOR, Abbr`d`] >>
   `d divides (b ** n)` by rw[divides_exp] >>
   `d divides 1` by metis_tac[divides_linear_sub] >>
-  rw[GSYM DIVIDES_ONE]);
+  rw[GSYM DIVIDES_ONE]
+QED
 
 (* Theorem: 1 < n /\ coprime n m ==> ~(n divides m) *)
 (* Proof:
@@ -4356,10 +4522,11 @@ val coprime_iff_coprime_exp = store_thm(
    ==> n MOD m <> 0      by MOD_NONZERO_WHEN_GCD_ONE, with 1 < n
    ==> ~(n divides m)    by DIVIDES_MOD_0, with 0 < n
 *)
-val coprime_not_divides = store_thm(
-  "coprime_not_divides",
-  ``!m n. 1 < n /\ coprime n m ==> ~(n divides m)``,
-  metis_tac[MOD_NONZERO_WHEN_GCD_ONE, DIVIDES_MOD_0, ONE_LT_POS, NOT_ZERO_LT_ZERO]);
+Theorem coprime_not_divides:
+    !m n. 1 < n /\ coprime n m ==> ~(n divides m)
+Proof
+  metis_tac[MOD_NONZERO_WHEN_GCD_ONE, DIVIDES_MOD_0, ONE_LT_POS, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: 1 < n ==> (!j. 0 < j /\ j <= m ==> coprime n j) ==> m < n *)
 (* Proof:
@@ -4370,13 +4537,14 @@ val coprime_not_divides = store_thm(
    But gcd n n = n             by GCD_REF
    This contradicts n <> 1.
 *)
-val coprime_all_le_imp_lt = store_thm(
-  "coprime_all_le_imp_lt",
-  ``!n. 1 < n ==> !m. (!j. 0 < j /\ j <= m ==> coprime n j) ==> m < n``,
+Theorem coprime_all_le_imp_lt:
+    !n. 1 < n ==> !m. (!j. 0 < j /\ j <= m ==> coprime n j) ==> m < n
+Proof
   spose_not_then strip_assume_tac >>
   `n <= m` by decide_tac >>
   `0 < n /\ n <> 1` by decide_tac >>
-  metis_tac[GCD_REF]);
+  metis_tac[GCD_REF]
+QED
 
 (* Theorem: (!j. 1 < j /\ j <= m ==> ~(j divides n)) <=> (!j. 1 < j /\ j <= m ==> coprime j n) *)
 (* Proof:
@@ -4394,9 +4562,9 @@ val coprime_all_le_imp_lt = store_thm(
       Since coprime j n                       by implication
          so ~(j divides n)                    by coprime_not_divides
 *)
-val coprime_condition = store_thm(
-  "coprime_condition",
-  ``!m n. (!j. 1 < j /\ j <= m ==> ~(j divides n)) <=> (!j. 1 < j /\ j <= m ==> coprime j n)``,
+Theorem coprime_condition:
+    !m n. (!j. 1 < j /\ j <= m ==> ~(j divides n)) <=> (!j. 1 < j /\ j <= m ==> coprime j n)
+Proof
   rw[EQ_IMP_THM] >| [
     spose_not_then strip_assume_tac >>
     qabbrev_tac `d = gcd j n` >>
@@ -4407,7 +4575,8 @@ val coprime_condition = store_thm(
     `1 < d /\ d <= m` by decide_tac >>
     metis_tac[],
     metis_tac[coprime_not_divides]
-  ]);
+  ]
+QED
 
 (* Note:
 The above is the generalization of this observation:
@@ -4418,10 +4587,11 @@ The above is the generalization of this observation:
 
 (* Theorem: 1 < m /\ (!j. 1 < j /\ j <= m ==> ~(j divides n)) ==> coprime m n *)
 (* Proof: by coprime_condition, taking j = m. *)
-val coprime_by_le_not_divides = store_thm(
-  "coprime_by_le_not_divides",
-  ``!m n. 1 < m /\ (!j. 1 < j /\ j <= m ==> ~(j divides n)) ==> coprime m n``,
-  rw[coprime_condition]);
+Theorem coprime_by_le_not_divides:
+    !m n. 1 < m /\ (!j. 1 < j /\ j <= m ==> ~(j divides n)) ==> coprime m n
+Proof
+  rw[coprime_condition]
+QED
 
 (* Idea: establish coprime (p * a + q * b) (a * b). *)
 (* Note: the key is to apply coprime_by_prime_factor. *)
@@ -4546,9 +4716,9 @@ QED
    ==>  n <= m                          by DIVIDES_LE
    which contradicts m < n.
 *)
-val prime_coprime_all_lt = store_thm(
-  "prime_coprime_all_lt",
-  ``!n. prime n ==> !m. 0 < m /\ m < n ==> coprime n m``,
+Theorem prime_coprime_all_lt:
+    !n. prime n ==> !m. 0 < m /\ m < n ==> coprime n m
+Proof
   rpt strip_tac >>
   spose_not_then strip_assume_tac >>
   qabbrev_tac `d = gcd n m` >>
@@ -4557,19 +4727,21 @@ val prime_coprime_all_lt = store_thm(
   `d divides n /\ d divides m` by rw[GCD_IS_GREATEST_COMMON_DIVISOR, Abbr`d`] >>
   `d = n` by metis_tac[prime_def] >>
   `n <= m` by rw[DIVIDES_LE] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: prime n /\ m < n ==> (!j. 0 < j /\ j <= m ==> coprime n j) *)
 (* Proof:
    Since m < n, all j < n.
    Hence true by prime_coprime_all_lt
 *)
-val prime_coprime_all_less = store_thm(
-  "prime_coprime_all_less",
-  ``!m n. prime n /\ m < n ==> (!j. 0 < j /\ j <= m ==> coprime n j)``,
+Theorem prime_coprime_all_less:
+    !m n. prime n /\ m < n ==> (!j. 0 < j /\ j <= m ==> coprime n j)
+Proof
   rpt strip_tac >>
   `j < n` by decide_tac >>
-  rw[prime_coprime_all_lt]);
+  rw[prime_coprime_all_lt]
+QED
 
 (* Theorem: prime n <=> 1 < n /\ (!j. 0 < j /\ j < n ==> coprime n j)) *)
 (* Proof:
@@ -4585,16 +4757,17 @@ val prime_coprime_all_less = store_thm(
       But 0 < p < n ==> coprime n p             by given implication
       This is a contradiction                   by coprime_sym
 *)
-val prime_iff_coprime_all_lt = store_thm(
-  "prime_iff_coprime_all_lt",
-  ``!n. prime n <=> 1 < n /\ (!j. 0 < j /\ j < n ==> coprime n j)``,
+Theorem prime_iff_coprime_all_lt:
+    !n. prime n <=> 1 < n /\ (!j. 0 < j /\ j < n ==> coprime n j)
+Proof
   rw[EQ_IMP_THM, ONE_LT_PRIME] >-
   rw[prime_coprime_all_lt] >>
   spose_not_then strip_assume_tac >>
   `?p. prime p /\ p < n /\ p divides n` by rw[PRIME_FACTOR_PROPER] >>
   `0 < p` by rw[PRIME_POS] >>
   `1 < p` by rw[ONE_LT_PRIME] >>
-  metis_tac[coprime_not_divides, coprime_sym]);
+  metis_tac[coprime_not_divides, coprime_sym]
+QED
 
 (* Theorem: prime n <=> (1 < n /\ (!j. 1 < j /\ j < n ==> ~(j divides n))) *)
 (* Proof:
@@ -4614,9 +4787,9 @@ val prime_iff_coprime_all_lt = store_thm(
       giving ~(b divides n)      by implication
       This contradicts with b divides n.
 *)
-val prime_iff_no_proper_factor = store_thm(
-  "prime_iff_no_proper_factor",
-  ``!n. prime n <=> (1 < n /\ (!j. 1 < j /\ j < n ==> ~(j divides n)))``,
+Theorem prime_iff_no_proper_factor:
+    !n. prime n <=> (1 < n /\ (!j. 1 < j /\ j < n ==> ~(j divides n)))
+Proof
   rw_tac std_ss[EQ_IMP_THM] >-
   rw[ONE_LT_PRIME] >-
   metis_tac[prime_def, LESS_NOT_EQ] >>
@@ -4626,7 +4799,8 @@ val prime_iff_no_proper_factor = store_thm(
   `b <> 0` by metis_tac[ZERO_DIVIDES] >>
   spose_not_then strip_assume_tac >>
   `1 < b /\ b < n` by decide_tac >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: FINITE s ==> !x. x NOTIN s /\ (!z. z IN s ==> coprime x z) ==> coprime x (PROD_SET s) *)
 (* Proof:
@@ -4642,14 +4816,15 @@ val prime_iff_no_proper_factor = store_thm(
       Thus coprime x (e * PROD_SET s)                by coprime_product_coprime_sym
         or coprime x PROD_SET (e INSERT s)           by PROD_SET_INSERT
 *)
-val every_coprime_prod_set_coprime = store_thm(
-  "every_coprime_prod_set_coprime",
-  ``!s. FINITE s ==> !x. x NOTIN s /\ (!z. z IN s ==> coprime x z) ==> coprime x (PROD_SET s)``,
+Theorem every_coprime_prod_set_coprime:
+    !s. FINITE s ==> !x. x NOTIN s /\ (!z. z IN s ==> coprime x z) ==> coprime x (PROD_SET s)
+Proof
   Induct_on `FINITE` >>
   rpt strip_tac >-
   rw[PROD_SET_EMPTY] >>
   fs[] >>
-  rw[PROD_SET_INSERT, coprime_product_coprime_sym]);
+  rw[PROD_SET_INSERT, coprime_product_coprime_sym]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* GCD divisibility condition of Power Predecessors                          *)
@@ -4676,10 +4851,10 @@ val every_coprime_prod_set_coprime = store_thm(
       = (t ** n - 1 - (t ** (n - m) - 1)) + t ** (n - m) - 1        by SUB_PLUS, no condition
       = t ** n - 1                                 by SUB_ADD, t ** (n - m) - 1 <= t ** n - 1
 *)
-val power_predecessor_division_eqn = store_thm(
-  "power_predecessor_division_eqn",
-  ``!t m n. 0 < t /\ m <= n ==>
-           (t ** n - 1 = t ** (n - m) * (t ** m - 1) + (t ** (n - m) - 1))``,
+Theorem power_predecessor_division_eqn:
+    !t m n. 0 < t /\ m <= n ==>
+           (t ** n - 1 = t ** (n - m) * (t ** m - 1) + (t ** (n - m) - 1))
+Proof
   rpt strip_tac >>
   `1 <= t ** n /\ 1 <= t ** (n - m)` by rw[ONE_LE_EXP] >>
   `n - m <= n` by decide_tac >>
@@ -4693,7 +4868,8 @@ val power_predecessor_division_eqn = store_thm(
   `_ = t ** n - (z + 1) + z` by rw_tac std_ss[SUB_ADD, Abbr`z`] >>
   `_ = t ** n + z - (z + 1)` by decide_tac >>
   `_ = t ** n - 1` by decide_tac >>
-  decide_tac);
+  decide_tac
+QED
 
 (* This shows the pattern:
                     1000000    so 9999999999 = 1000000 * 9999 + 999999
@@ -4707,13 +4883,14 @@ val power_predecessor_division_eqn = store_thm(
 (* Theorem: 0 < t /\ m <= n ==>
            (t ** n - 1 - t ** (n - m) * (t ** m - 1) = t ** (n - m) - 1) *)
 (* Proof: by power_predecessor_division_eqn *)
-val power_predecessor_division_alt = store_thm(
-  "power_predecessor_division_alt",
-  ``!t m n. 0 < t /\ m <= n ==>
-           (t ** n - 1 - t ** (n - m) * (t ** m - 1) = t ** (n - m) - 1)``,
+Theorem power_predecessor_division_alt:
+    !t m n. 0 < t /\ m <= n ==>
+           (t ** n - 1 - t ** (n - m) * (t ** m - 1) = t ** (n - m) - 1)
+Proof
   rpt strip_tac >>
   imp_res_tac power_predecessor_division_eqn >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: m < n ==> (gcd (t ** n - 1) (t ** m - 1) = gcd ((t ** m - 1)) (t ** (n - m) - 1)) *)
 (* Proof:
@@ -4736,9 +4913,9 @@ val power_predecessor_division_alt = store_thm(
                                                      by GCD_SUB_MULTIPLE, [1]
       = gcd (t ** m - 1)) (t ** (n - m) - 1)         by [2]
 *)
-val power_predecessor_gcd_reduction = store_thm(
-  "power_predecessor_gcd_reduction",
-  ``!t n m. m <= n ==> (gcd (t ** n - 1) (t ** m - 1) = gcd ((t ** m - 1)) (t ** (n - m) - 1))``,
+Theorem power_predecessor_gcd_reduction:
+    !t n m. m <= n ==> (gcd (t ** n - 1) (t ** m - 1) = gcd ((t ** m - 1)) (t ** (n - m) - 1))
+Proof
   rpt strip_tac >>
   Cases_on `t = 0` >-
   rw[ZERO_EXP] >>
@@ -4746,7 +4923,8 @@ val power_predecessor_gcd_reduction = store_thm(
   `t ** n - 1 - t ** (n - m) * (t ** m - 1) = t ** (n - m) - 1` by fs[] >>
   `gcd (t ** n - 1) (t ** m - 1) = gcd (t ** m - 1) (t ** n - 1)` by rw_tac std_ss[GCD_SYM] >>
   `_ = gcd (t ** m - 1) ((t ** n - 1) - t ** (n - m) * (t ** m - 1))` by rw_tac std_ss[GCD_SUB_MULTIPLE] >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* Theorem: gcd (t ** n - 1) (t ** m - 1) = t ** (gcd n m) - 1 *)
 (* Proof:
@@ -4800,9 +4978,9 @@ val power_predecessor_gcd_reduction = store_thm(
         = t ** gcd n (m - n) - 1                  by induction hypothesis, n + (m - n) = m
         = t ** gcd n m                            by GCD_SUB_R, n <= m
 *)
-val power_predecessor_gcd_identity = store_thm(
-  "power_predecessor_gcd_identity",
-  ``!t n m. gcd (t ** n - 1) (t ** m - 1) = t ** (gcd n m) - 1``,
+Theorem power_predecessor_gcd_identity:
+    !t n m. gcd (t ** n - 1) (t ** m - 1) = t ** (gcd n m) - 1
+Proof
   rpt strip_tac >>
   completeInduct_on `n + m` >>
   rpt strip_tac >>
@@ -4823,7 +5001,8 @@ val power_predecessor_gcd_identity = store_thm(
   `n + (m - n) = m` by metis_tac[SUB_ADD, ADD_COMM] >>
   `gcd (t ** n - 1) (t ** m - 1) = gcd ((t ** n - 1)) (t ** (m - n) - 1)` by rw[power_predecessor_gcd_reduction, GCD_SYM] >>
   `_ = t ** gcd n (m - n) - 1` by metis_tac[] >>
-  metis_tac[GCD_SUB_R]);
+  metis_tac[GCD_SUB_R]
+QED
 
 (* Above is the formal proof of the following pattern:
    For any base
@@ -4847,9 +5026,9 @@ Chapter 4: A number-theory thread -- Folding numbers, a number trick, and some t
    <=>       gcd n m = n                            by EXP_BASE_INJECTIVE, 1 < t
    <=>       n divides m                            by divides_iff_gcd_fix
 *)
-val power_predecessor_divisibility = store_thm(
-  "power_predecessor_divisibility",
-  ``!t n m. 1 < t ==> ((t ** n - 1) divides (t ** m - 1) <=> n divides m)``,
+Theorem power_predecessor_divisibility:
+    !t n m. 1 < t ==> ((t ** n - 1) divides (t ** m - 1) <=> n divides m)
+Proof
   rpt strip_tac >>
   `0 < t` by decide_tac >>
   `!n. 0 < t ** n` by rw[EXP_POS] >>
@@ -4858,7 +5037,8 @@ val power_predecessor_divisibility = store_thm(
   `_ = (t ** (gcd n m) - 1 = t ** n - 1)` by rw[power_predecessor_gcd_identity] >>
   `_ = (t ** (gcd n m) = t ** n)` by rw[] >>
   `_ = (gcd n m = n)` by rw[EXP_BASE_INJECTIVE] >>
-  rw[divides_iff_gcd_fix]);
+  rw[divides_iff_gcd_fix]
+QED
 
 (* Theorem: t - 1 divides t ** n - 1 *)
 (* Proof:
@@ -4951,9 +5131,9 @@ val nines_divisor = |- !n. 9 divides nines n: thm
          If m divides n, then m = n           by prime_divides_only_self
          If m divides n ** k, then m = n      by induction hypothesis
 *)
-val prime_divides_prime_power = store_thm(
-  "prime_divides_prime_power",
-  ``!m n k. prime m /\ prime n /\ m divides (n ** k) ==> (m = n)``,
+Theorem prime_divides_prime_power:
+    !m n k. prime m /\ prime n /\ m divides (n ** k) ==> (m = n)
+Proof
   rpt strip_tac >>
   Induct_on `k` >| [
     rpt strip_tac >>
@@ -4961,7 +5141,8 @@ val prime_divides_prime_power = store_thm(
     `m = 1` by metis_tac[EXP, DIVIDES_ONE] >>
     decide_tac,
     metis_tac[EXP, P_EUCLIDES, prime_divides_only_self]
-  ]);
+  ]
+QED
 
 (* This is better than FACTOR_OUT_PRIME *)
 
@@ -4983,9 +5164,9 @@ val prime_divides_prime_power = store_thm(
       Then n = 1 * q                             by EXP, MULT_LEFT_1
        and coprime p q.
 *)
-val prime_power_factor = store_thm(
-  "prime_power_factor",
-  ``!n p. 0 < n /\ prime p ==> ?q m. (n = (p ** m) * q) /\ coprime p q``,
+Theorem prime_power_factor:
+    !n p. 0 < n /\ prime p ==> ?q m. (n = (p ** m) * q) /\ coprime p q
+Proof
   rpt strip_tac >>
   Cases_on `p divides n` >| [
     `?m. 0 < m /\ p ** m divides n /\ !k. coprime (p ** k) (n DIV p ** m)` by rw[FACTOR_OUT_PRIME] >>
@@ -4995,7 +5176,8 @@ val prime_power_factor = store_thm(
     metis_tac[DIVIDES_EQN_COMM, EXP_1],
     `coprime p n` by rw[prime_not_divides_coprime] >>
     metis_tac[EXP, MULT_LEFT_1]
-  ]);
+  ]
+QED
 
 (* Even this simple theorem is quite difficult to prove, why? *)
 (* Because this needs a typical detective-style proof! *)
@@ -5024,9 +5206,9 @@ val prime_power_factor = store_thm(
     ==>      m <= n                  by EXP_BASE_LE_MONO, 1 < p
    Take j = m, and the result follows.
 *)
-val prime_power_divisor = store_thm(
-  "prime_power_divisor",
-  ``!p n a. prime p /\ a divides (p ** n) ==> ?j. j <= n /\ (a = p ** j)``,
+Theorem prime_power_divisor:
+    !p n a. prime p /\ a divides (p ** n) ==> ?j. j <= n /\ (a = p ** j)
+Proof
   rpt strip_tac >>
   `0 < p` by rw[PRIME_POS] >>
   `0 < p ** n` by rw[EXP_POS] >>
@@ -5041,7 +5223,8 @@ val prime_power_divisor = store_thm(
   `gcd t q = t` by rw[GSYM divides_iff_gcd_fix] >>
   metis_tac[NOT_PRIME_1]) >>
   `a = p ** m` by rw[] >>
-  metis_tac[DIVIDES_LE, EXP_BASE_LE_MONO, ONE_LT_PRIME]);
+  metis_tac[DIVIDES_LE, EXP_BASE_LE_MONO, ONE_LT_PRIME]
+QED
 
 (* Theorem: prime p /\ prime q ==>
             !m n. 0 < m /\ (p ** m = q ** n) ==> (p = q) /\ (m = n) *)
@@ -5056,14 +5239,15 @@ val prime_power_divisor = store_thm(
       Since 1 < p              by ONE_LT_PRIME
       Hence m = n              by EXP_BASE_INJECTIVE, 1 < p
 *)
-val prime_powers_eq = store_thm(
-  "prime_powers_eq",
-  ``!p q. prime p /\ prime q ==>
-   !m n. 0 < m /\ (p ** m = q ** n) ==> (p = q) /\ (m = n)``,
+Theorem prime_powers_eq:
+    !p q. prime p /\ prime q ==>
+   !m n. 0 < m /\ (p ** m = q ** n) ==> (p = q) /\ (m = n)
+Proof
   ntac 6 strip_tac >>
   conj_asm1_tac >-
   metis_tac[divides_exp, prime_divides_prime_power, DIVIDES_REFL] >>
-  metis_tac[EXP_BASE_INJECTIVE, ONE_LT_PRIME]);
+  metis_tac[EXP_BASE_INJECTIVE, ONE_LT_PRIME]
+QED
 
 (* Theorem: prime p /\ prime q /\ p <> q ==> !m n. coprime (p ** m) (q ** n) *)
 (* Proof:
@@ -5076,13 +5260,14 @@ val prime_powers_eq = store_thm(
      or 0 < j /\ 0 < k                             by arithmetic
     ==> p = q, which contradicts p <> q            by prime_powers_eq
 *)
-val prime_powers_coprime = store_thm(
-  "prime_powers_coprime",
-  ``!p q. prime p /\ prime q /\ p <> q ==> !m n. coprime (p ** m) (q ** n)``,
+Theorem prime_powers_coprime:
+    !p q. prime p /\ prime q /\ p <> q ==> !m n. coprime (p ** m) (q ** n)
+Proof
   spose_not_then strip_assume_tac >>
   qabbrev_tac `d = gcd (p ** m) (q ** n)` >>
   `d divides (p ** m) /\ d divides (q ** n)` by metis_tac[GCD_PROPERTY] >>
-  metis_tac[prime_power_divisor, prime_powers_eq, EXP_0, NOT_ZERO_LT_ZERO]);
+  metis_tac[prime_power_divisor, prime_powers_eq, EXP_0, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: prime p /\ prime q ==> !m n. 0 < m ==> ((p ** m divides q ** n) <=> (p = q) /\ (m <= n)) *)
 (* Proof:
@@ -5096,10 +5281,11 @@ val prime_powers_coprime = store_thm(
       Note 1 < p                      by ONE_LT_PRIME
       Thus p ** m divides q ** n      by power_divides_iff
 *)
-val prime_powers_divide = store_thm(
-  "prime_powers_divide",
-  ``!p q. prime p /\ prime q ==> !m n. 0 < m ==> ((p ** m divides q ** n) <=> (p = q) /\ (m <= n))``,
-  metis_tac[ONE_LT_PRIME, divides_self_power, prime_divides_prime_power, power_divides_iff, DIVIDES_TRANS]);
+Theorem prime_powers_divide:
+    !p q. prime p /\ prime q ==> !m n. 0 < m ==> ((p ** m divides q ** n) <=> (p = q) /\ (m <= n))
+Proof
+  metis_tac[ONE_LT_PRIME, divides_self_power, prime_divides_prime_power, power_divides_iff, DIVIDES_TRANS]
+QED
 
 (* Theorem: prime p /\ q divides (p ** n) ==> (q = 1) \/ (p divides q) *)
 (* Proof:
@@ -5135,9 +5321,9 @@ QED
    If ~(m < n), n < m.
       Similar argument as m < n, with m n exchanged, use GCD_SYM.
 *)
-val gcd_powers = store_thm(
-  "gcd_powers",
-  ``!b m n. gcd (b ** m) (b ** n) = b ** (MIN m n)``,
+Theorem gcd_powers:
+    !b m n. gcd (b ** m) (b ** n) = b ** (MIN m n)
+Proof
   rpt strip_tac >>
   Cases_on `m = n` >-
   rw[] >>
@@ -5151,7 +5337,8 @@ val gcd_powers = store_thm(
     `_ = b ** (m - n) * b ** n` by rw[EXP_ADD] >>
     `(b ** n) divides (b ** m)` by metis_tac[divides_def] >>
     metis_tac[divides_iff_gcd_fix, GCD_SYM, MIN_DEF]
-  ]);
+  ]
+QED
 
 (* Theorem: lcm (b ** m) (b ** n) = b ** (MAX m n) *)
 (* Proof:
@@ -5170,9 +5357,9 @@ val gcd_powers = store_thm(
    If ~(m < n), n < m.
       Similar argument as m < n, with m n exchanged, use LCM_COMM.
 *)
-val lcm_powers = store_thm(
-  "lcm_powers",
-  ``!b m n. lcm (b ** m) (b ** n) = b ** (MAX m n)``,
+Theorem lcm_powers:
+    !b m n. lcm (b ** m) (b ** n) = b ** (MAX m n)
+Proof
   rpt strip_tac >>
   Cases_on `m = n` >-
   rw[LCM_REF] >>
@@ -5186,7 +5373,8 @@ val lcm_powers = store_thm(
     `_ = b ** (m - n) * b ** n` by rw[EXP_ADD] >>
     `(b ** n) divides (b ** m)` by metis_tac[divides_def] >>
     metis_tac[divides_iff_lcm_fix, LCM_COMM, MAX_DEF]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < b /\ 0 < m ==> coprime (b ** n) (b ** m - 1) *)
 (* Proof:
@@ -5220,9 +5408,9 @@ val lcm_powers = store_thm(
     Now (n MOD m) < m                             by MOD_LESS
     so apply the claim to deduce the result.
 *)
-val coprime_power_and_power_predecessor = store_thm(
-  "coprime_power_and_power_predecessor",
-  ``!b m n. 0 < b /\ 0 < m ==> coprime (b ** n) (b ** m - 1)``,
+Theorem coprime_power_and_power_predecessor:
+    !b m n. 0 < b /\ 0 < m ==> coprime (b ** n) (b ** m - 1)
+Proof
   rpt strip_tac >>
   `0 < b ** n /\ 0 < b ** m` by rw[EXP_POS] >>
   Cases_on `m = n` >-
@@ -5240,7 +5428,8 @@ val coprime_power_and_power_predecessor = store_thm(
   qabbrev_tac `z = b ** m` >>
   `coprime z (z - 1)` by rw[coprime_PRE] >>
   `coprime (z ** (n DIV m)) (z - 1)` by rw[coprime_exp] >>
-  metis_tac[GCD_SYM, GCD_CANCEL_MULT, MOD_LESS]);
+  metis_tac[GCD_SYM, GCD_CANCEL_MULT, MOD_LESS]
+QED
 
 (* Any counter-example? Theorem proved, no counter-example! *)
 (* This is a most unexpected theorem.
@@ -5289,9 +5478,9 @@ val coprime_power_and_power_predecessor = store_thm(
     Now (n MOD m) < m                             by MOD_LESS
     so apply the claim to deduce the result.
 *)
-val coprime_power_and_power_successor = store_thm(
-  "coprime_power_and_power_successor",
-  ``!b m n. 0 < b /\ 0 < m ==> coprime (b ** n) (b ** m + 1)``,
+Theorem coprime_power_and_power_successor:
+    !b m n. 0 < b /\ 0 < m ==> coprime (b ** n) (b ** m + 1)
+Proof
   rpt strip_tac >>
   `0 < b ** n /\ 0 < b ** m` by rw[EXP_POS] >>
   Cases_on `m = n` >-
@@ -5309,7 +5498,8 @@ val coprime_power_and_power_successor = store_thm(
   qabbrev_tac `z = b ** m` >>
   `coprime z (z + 1)` by rw[coprime_SUC] >>
   `coprime (z ** (n DIV m)) (z + 1)` by rw[coprime_exp] >>
-  metis_tac[GCD_SYM, GCD_CANCEL_MULT, MOD_LESS]);
+  metis_tac[GCD_SYM, GCD_CANCEL_MULT, MOD_LESS]
+QED
 
 (* Note:
 > type_of ``prime``;
@@ -5320,10 +5510,11 @@ Thus prime is also a set, or prime = {p | prime p}
 
 (* Theorem: p IN prime <=> prime p *)
 (* Proof: by IN_DEF *)
-val in_prime = store_thm(
-  "in_prime",
-  ``!p. p IN prime <=> prime p``,
-  rw[IN_DEF]);
+Theorem in_prime:
+    !p. p IN prime <=> prime p
+Proof
+  rw[IN_DEF]
+QED
 
 (* Theorem: PROD_SET {x} = x *)
 (* Proof:
@@ -5333,10 +5524,11 @@ val in_prime = store_thm(
    = x * PROD_SET {}          by PROD_SET_THM
    = x                        by PROD_SET_EMPTY
 *)
-val PROD_SET_SING = store_thm(
-  "PROD_SET_SING",
-  ``!x. PROD_SET {x} = x``,
-  rw[PROD_SET_THM, FINITE_SING]);
+Theorem PROD_SET_SING:
+    !x. PROD_SET {x} = x
+Proof
+  rw[PROD_SET_THM, FINITE_SING]
+QED
 
 (* Theorem: FINITE s /\ 0 NOTIN s ==> 0 < PROD_SET s *)
 (* Proof:
@@ -5355,9 +5547,9 @@ val PROD_SET_SING = store_thm(
      Thus 0 < PROD_SET s                  by induction hypothesis
      Henec 0 < e * PROD_SET s             by ZERO_LESS_MULT
 *)
-val PROD_SET_NONZERO = store_thm(
-  "PROD_SET_NONZERO",
-  ``!s. FINITE s /\ 0 NOTIN s ==> 0 < PROD_SET s``,
+Theorem PROD_SET_NONZERO:
+    !s. FINITE s /\ 0 NOTIN s ==> 0 < PROD_SET s
+Proof
   `!s. FINITE s ==> 0 NOTIN s ==> 0 < PROD_SET s` suffices_by rw[] >>
   ho_match_mp_tac FINITE_INDUCT >>
   rpt strip_tac >-
@@ -5366,7 +5558,8 @@ val PROD_SET_NONZERO = store_thm(
   `0 < e` by decide_tac >>
   `PROD_SET (e INSERT s) = e * PROD_SET (s DELETE e)` by rw[PROD_SET_THM] >>
   `_ = e * PROD_SET s` by metis_tac[DELETE_NON_ELEMENT] >>
-  rw[ZERO_LESS_MULT]);
+  rw[ZERO_LESS_MULT]
+QED
 
 (* Theorem: FINITE s /\ s <> {} /\ 0 NOTIN s ==>
             !f. INJ f s univ(:num) /\ (!x. x < f x) ==> PROD_SET s < PROD_SET (IMAGE f s) *)
@@ -5404,10 +5597,10 @@ val PROD_SET_NONZERO = store_thm(
        so e * PROD_SET (IMAGE f s) < f e * PROD_SET (IMAGE f s) by LT_MULT_LCANCEL, e < f e
      Hence PROD_SET (e INSERT s) < PROD_SET (IMAGE f (e INSERT s))
 *)
-val PROD_SET_LESS = store_thm(
-  "PROD_SET_LESS",
-  ``!s. FINITE s /\ s <> {} /\ 0 NOTIN s ==>
-   !f. INJ f s univ(:num) /\ (!x. x < f x) ==> PROD_SET s < PROD_SET (IMAGE f s)``,
+Theorem PROD_SET_LESS:
+    !s. FINITE s /\ s <> {} /\ 0 NOTIN s ==>
+   !f. INJ f s univ(:num) /\ (!x. x < f x) ==> PROD_SET s < PROD_SET (IMAGE f s)
+Proof
   `!s. FINITE s ==> s <> {} /\ 0 NOTIN s ==>
     !f. INJ f s univ(:num) /\ (!x. x < f x) ==> PROD_SET s < PROD_SET (IMAGE f s)` suffices_by rw[] >>
   ho_match_mp_tac FINITE_INDUCT >>
@@ -5426,7 +5619,8 @@ val PROD_SET_LESS = store_thm(
   `e * PROD_SET s < e * PROD_SET (IMAGE f s)` by rw[] >>
   `e * PROD_SET (IMAGE f s) < (f e) * PROD_SET (IMAGE f s)` by rw[] >>
   `(IMAGE f (e INSERT s)) = (f e INSERT IMAGE f s)` by rw[] >>
-  metis_tac[LESS_TRANS]);
+  metis_tac[LESS_TRANS]
+QED
 
 (* Theorem: FINITE s /\ s <> {} /\ 0 NOTIN s ==> PROD_SET s < PROD_SET (IMAGE SUC s) *)
 (* Proof:
@@ -5434,12 +5628,13 @@ val PROD_SET_LESS = store_thm(
     thus INJ INJ SUC s univ(:num)           by INJ_DEF
    Hence the result follows                 by PROD_SET_LESS
 *)
-val PROD_SET_LESS_SUC = store_thm(
-  "PROD_SET_LESS_SUC",
-  ``!s. FINITE s /\ s <> {} /\ 0 NOTIN s ==> PROD_SET s < PROD_SET (IMAGE SUC s)``,
+Theorem PROD_SET_LESS_SUC:
+    !s. FINITE s /\ s <> {} /\ 0 NOTIN s ==> PROD_SET s < PROD_SET (IMAGE SUC s)
+Proof
   rpt strip_tac >>
   (irule PROD_SET_LESS >> simp[]) >>
-  rw[INJ_DEF]);
+  rw[INJ_DEF]
+QED
 
 (* Theorem: FINITE s ==> !n x. x IN s /\ n divides x ==> n divides (PROD_SET s) *)
 (* Proof:
@@ -5459,9 +5654,9 @@ val PROD_SET_LESS_SUC = store_thm(
         n divides (PROD_SET s)     by induction hypothesis
         hence n divides PROD_SET (e INSERT s)   by DIVIDES_MULTIPLE
 *)
-val PROD_SET_DIVISORS = store_thm(
-  "PROD_SET_DIVISORS",
-  ``!s. FINITE s ==> !n x. x IN s /\ n divides x ==> n divides (PROD_SET s)``,
+Theorem PROD_SET_DIVISORS:
+    !s. FINITE s ==> !n x. x IN s /\ n divides x ==> n divides (PROD_SET s)
+Proof
   ho_match_mp_tac FINITE_INDUCT >>
   rpt strip_tac >-
   metis_tac[NOT_IN_EMPTY] >>
@@ -5469,7 +5664,8 @@ val PROD_SET_DIVISORS = store_thm(
   `_ = e * PROD_SET s` by metis_tac[DELETE_NON_ELEMENT] >>
   `(x = e) \/ (x IN s)` by rw[GSYM IN_INSERT] >-
   metis_tac[DIVIDES_MULTIPLE, MULT_COMM] >>
-  metis_tac[DIVIDES_MULTIPLE]);
+  metis_tac[DIVIDES_MULTIPLE]
+QED
 
 (* Theorem: (Generalized Euclid's Lemma)
             If prime p divides a PROD_SET, it divides a member of the PROD_SET.
@@ -5493,9 +5689,9 @@ val PROD_SET_DIVISORS = store_thm(
      If p divides e, just take b = e.
      If p divides (PROD_SET s), there is such b    by induction hypothesis
 *)
-val PROD_SET_EUCLID = store_thm(
-  "PROD_SET_EUCLID",
-  ``!s. FINITE s ==> !p. prime p /\ p divides (PROD_SET s) ==> ?b. b IN s /\ p divides b``,
+Theorem PROD_SET_EUCLID:
+    !s. FINITE s ==> !p. prime p /\ p divides (PROD_SET s) ==> ?b. b IN s /\ p divides b
+Proof
   ho_match_mp_tac FINITE_INDUCT >>
   rw[] >-
   metis_tac[PROD_SET_EMPTY, DIVIDES_ONE, NOT_PRIME_1] >>
@@ -5503,7 +5699,8 @@ val PROD_SET_EUCLID = store_thm(
     by metis_tac[PROD_SET_THM, DELETE_NON_ELEMENT] >>
   Cases_on `p divides e` >-
   metis_tac[] >>
-  metis_tac[P_EUCLIDES]);
+  metis_tac[P_EUCLIDES]
+QED
 
 (* Theorem: FINITE s /\ x IN s ==> x divides PROD_SET s *)
 (* Proof:
@@ -5512,10 +5709,11 @@ val PROD_SET_EUCLID = store_thm(
     Put n = x, and x divides x = T     by DIVIDES_REFL
     and the result follows.
 *)
-val PROD_SET_ELEMENT_DIVIDES = store_thm(
-  "PROD_SET_ELEMENT_DIVIDES",
-  ``!s x. FINITE s /\ x IN s ==> x divides PROD_SET s``,
-  metis_tac[PROD_SET_DIVISORS, DIVIDES_REFL]);
+Theorem PROD_SET_ELEMENT_DIVIDES:
+    !s x. FINITE s /\ x IN s ==> x divides PROD_SET s
+Proof
+  metis_tac[PROD_SET_DIVISORS, DIVIDES_REFL]
+QED
 
 (* Theorem: FINITE s ==> !f g. INJ f s univ(:num) /\ INJ g s univ(:num) /\
             (!x. x IN s ==> f x <= g x) ==> PROD_SET (IMAGE f s) <= PROD_SET (IMAGE g s) *)
@@ -5542,10 +5740,10 @@ val PROD_SET_ELEMENT_DIVIDES = store_thm(
         = PROD_SET (g e INSERT IMAGE g s)  by PROD_SET_INSERT
         = PROD_SET (IMAGE g (e INSERT s))  by INSERT_IMAGE
 *)
-val PROD_SET_LESS_EQ = store_thm(
-  "PROD_SET_LESS_EQ",
-  ``!s. FINITE s ==> !f g. INJ f s univ(:num) /\ INJ g s univ(:num) /\
-       (!x. x IN s ==> f x <= g x) ==> PROD_SET (IMAGE f s) <= PROD_SET (IMAGE g s)``,
+Theorem PROD_SET_LESS_EQ:
+    !s. FINITE s ==> !f g. INJ f s univ(:num) /\ INJ g s univ(:num) /\
+       (!x. x IN s ==> f x <= g x) ==> PROD_SET (IMAGE f s) <= PROD_SET (IMAGE g s)
+Proof
   Induct_on `FINITE` >>
   rpt strip_tac >-
   rw[PROD_SET_EMPTY] >>
@@ -5554,7 +5752,8 @@ val PROD_SET_LESS_EQ = store_thm(
   `g e NOTIN (IMAGE g s)` by metis_tac[IN_IMAGE] >>
   `f e <= g e` by rw[] >>
   `PROD_SET (IMAGE f s) <= PROD_SET (IMAGE g s)` by rw[] >>
-  rw[PROD_SET_INSERT, LE_MONO_MULT2]);
+  rw[PROD_SET_INSERT, LE_MONO_MULT2]
+QED
 
 (* Theorem: FINITE s ==> !n. (!x. x IN s ==> x <= n) ==> PROD_SET s <= n ** CARD s *)
 (* Proof:
@@ -5574,15 +5773,16 @@ val PROD_SET_LESS_EQ = store_thm(
        = n ** (SUC (CARD s))     by EXP
        = n ** CARD (e INSERT s)  by CARD_INSERT, e NOTIN s
 *)
-val PROD_SET_LE_CONSTANT = store_thm(
-  "PROD_SET_LE_CONSTANT",
-  ``!s. FINITE s ==> !n. (!x. x IN s ==> x <= n) ==> PROD_SET s <= n ** CARD s``,
+Theorem PROD_SET_LE_CONSTANT:
+    !s. FINITE s ==> !n. (!x. x IN s ==> x <= n) ==> PROD_SET s <= n ** CARD s
+Proof
   Induct_on `FINITE` >>
   rpt strip_tac >-
   rw[PROD_SET_EMPTY, EXP_0] >>
   fs[] >>
   `e <= n /\ PROD_SET s <= n ** CARD s` by rw[] >>
-  rw[PROD_SET_INSERT, EXP, CARD_INSERT, LE_MONO_MULT2]);
+  rw[PROD_SET_INSERT, EXP, CARD_INSERT, LE_MONO_MULT2]
+QED
 
 (* Theorem: FINITE s ==> !n f g. INJ f s univ(:num) /\ INJ g s univ(:num) /\ (!x. x IN s ==> n <= f x * g x) ==>
             n ** CARD s <= PROD_SET (IMAGE f s) * PROD_SET (IMAGE g s) *)
@@ -5612,11 +5812,11 @@ val PROD_SET_LE_CONSTANT = store_thm(
         = n ** (SUC (CARD s))                               by EXP
         = n ** (CARD (e INSERT s))                          by CARD_INSERT
 *)
-val PROD_SET_PRODUCT_GE_CONSTANT = store_thm(
-  "PROD_SET_PRODUCT_GE_CONSTANT",
-  ``!s. FINITE s ==> !n f g. INJ f s univ(:num) /\ INJ g s univ(:num) /\
+Theorem PROD_SET_PRODUCT_GE_CONSTANT:
+    !s. FINITE s ==> !n f g. INJ f s univ(:num) /\ INJ g s univ(:num) /\
                     (!x. x IN s ==> n <= f x * g x) ==>
-       n ** CARD s <= PROD_SET (IMAGE f s) * PROD_SET (IMAGE g s)``,
+       n ** CARD s <= PROD_SET (IMAGE f s) * PROD_SET (IMAGE g s)
+Proof
   Induct_on `FINITE` >>
   rpt strip_tac >-
   rw[PROD_SET_EMPTY, EXP_0] >>
@@ -5626,7 +5826,8 @@ val PROD_SET_PRODUCT_GE_CONSTANT = store_thm(
   `PROD_SET (f e INSERT IMAGE f s) * PROD_SET (g e INSERT IMAGE g s) =
     (f e * PROD_SET (IMAGE f s)) * (g e * PROD_SET (IMAGE g s))` by rw[PROD_SET_INSERT] >>
   `_ = (f e * g e) * (PROD_SET (IMAGE f s) * PROD_SET (IMAGE g s))` by metis_tac[MULT_ASSOC, MULT_COMM] >>
-  metis_tac[EXP, CARD_INSERT, LE_MONO_MULT2]);
+  metis_tac[EXP, CARD_INSERT, LE_MONO_MULT2]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Pairwise Coprime Property                                                 *)
@@ -5638,11 +5839,12 @@ val _ = overload_on("PAIRWISE_COPRIME", ``\s. !x y. x IN s /\ y IN s /\ x <> y =
 (* Theorem: e NOTIN s /\ PAIRWISE_COPRIME (e INSERT s) ==>
             (!x. x IN s ==> coprime e x) /\ PAIRWISE_COPRIME s *)
 (* Proof: by IN_INSERT *)
-val pairwise_coprime_insert = store_thm(
-  "pairwise_coprime_insert",
-  ``!s e. e NOTIN s /\ PAIRWISE_COPRIME (e INSERT s) ==>
-        (!x. x IN s ==> coprime e x) /\ PAIRWISE_COPRIME s``,
-  metis_tac[IN_INSERT]);
+Theorem pairwise_coprime_insert:
+    !s e. e NOTIN s /\ PAIRWISE_COPRIME (e INSERT s) ==>
+        (!x. x IN s ==> coprime e x) /\ PAIRWISE_COPRIME s
+Proof
+  metis_tac[IN_INSERT]
+QED
 
 (* Theorem: FINITE s /\ PAIRWISE_COPRIME s ==>
             !t. t SUBSET s ==> (PROD_SET t) divides (PROD_SET s) *)
@@ -5662,10 +5864,10 @@ val pairwise_coprime_insert = store_thm(
       Note PROD_SET (e INSERT t) = e * PROD_SET t    by PROD_SET_INSERT
        ==> e * PROD_SET t divides m                  by coprime_product_divides
 *)
-val pairwise_coprime_prod_set_subset_divides = store_thm(
-  "pairwise_coprime_prod_set_subset_divides",
-  ``!s. FINITE s /\ PAIRWISE_COPRIME s ==>
-   !t. t SUBSET s ==> (PROD_SET t) divides (PROD_SET s)``,
+Theorem pairwise_coprime_prod_set_subset_divides:
+    !s. FINITE s /\ PAIRWISE_COPRIME s ==>
+   !t. t SUBSET s ==> (PROD_SET t) divides (PROD_SET s)
+Proof
   rpt strip_tac >>
   `FINITE t` by metis_tac[SUBSET_FINITE] >>
   qpat_x_assum `t SUBSET s` mp_tac >>
@@ -5677,7 +5879,8 @@ val pairwise_coprime_prod_set_subset_divides = store_thm(
   fs[] >>
   `e divides PROD_SET s` by rw[PROD_SET_ELEMENT_DIVIDES] >>
   `coprime e (PROD_SET t)` by prove_tac[every_coprime_prod_set_coprime, SUBSET_DEF] >>
-  rw[PROD_SET_INSERT, coprime_product_divides]);
+  rw[PROD_SET_INSERT, coprime_product_divides]
+QED
 
 (* Theorem: FINITE s /\ PAIRWISE_COPRIME s ==>
             !u v. (s = u UNION v) /\ DISJOINT u v ==> coprime (PROD_SET u) (PROD_SET v) *)
@@ -5712,10 +5915,10 @@ val pairwise_coprime_prod_set_subset_divides = store_thm(
 
       Similarly for e IN v.
 *)
-val pairwise_coprime_partition_coprime = store_thm(
-  "pairwise_coprime_partition_coprime",
-  ``!s. FINITE s /\ PAIRWISE_COPRIME s ==>
-   !u v. (s = u UNION v) /\ DISJOINT u v ==> coprime (PROD_SET u) (PROD_SET v)``,
+Theorem pairwise_coprime_partition_coprime:
+    !s. FINITE s /\ PAIRWISE_COPRIME s ==>
+   !u v. (s = u UNION v) /\ DISJOINT u v ==> coprime (PROD_SET u) (PROD_SET v)
+Proof
   ntac 2 strip_tac >>
   qpat_x_assum `PAIRWISE_COPRIME s` mp_tac >>
   qpat_x_assum `FINITE s` mp_tac >>
@@ -5753,16 +5956,18 @@ val pairwise_coprime_partition_coprime = store_thm(
     `FINITE u` by metis_tac[FINITE_UNION] >>
     `coprime (PROD_SET u) e` by rw[every_coprime_prod_set_coprime, coprime_sym] >>
     metis_tac[coprime_product_coprime_sym, PROD_SET_INSERT]
-  ]);
+  ]
+QED
 
 (* Theorem: FINITE s /\ PAIRWISE_COPRIME s ==> !u v. (s = u UNION v) /\ DISJOINT u v ==>
             (PROD_SET s = PROD_SET u * PROD_SET v) /\ (coprime (PROD_SET u) (PROD_SET v)) *)
 (* Proof: by PROD_SET_PRODUCT_BY_PARTITION, pairwise_coprime_partition_coprime *)
-val pairwise_coprime_prod_set_partition = store_thm(
-  "pairwise_coprime_prod_set_partition",
-  ``!s. FINITE s /\ PAIRWISE_COPRIME s ==> !u v. (s = u UNION v) /\ DISJOINT u v ==>
-       (PROD_SET s = PROD_SET u * PROD_SET v) /\ (coprime (PROD_SET u) (PROD_SET v))``,
-  metis_tac[PROD_SET_PRODUCT_BY_PARTITION, pairwise_coprime_partition_coprime]);
+Theorem pairwise_coprime_prod_set_partition:
+    !s. FINITE s /\ PAIRWISE_COPRIME s ==> !u v. (s = u UNION v) /\ DISJOINT u v ==>
+       (PROD_SET s = PROD_SET u * PROD_SET v) /\ (coprime (PROD_SET u) (PROD_SET v))
+Proof
+  metis_tac[PROD_SET_PRODUCT_BY_PARTITION, pairwise_coprime_partition_coprime]
+QED
 
 (* Theorem: n! = PROD_SET (count (n+1))  *)
 (* Proof: by induction on n.
@@ -5785,14 +5990,15 @@ val pairwise_coprime_prod_set_partition = store_thm(
          = PROD_SET (IMAGE SUC (count (SUC n)))          by COUNT_SUC
          = RHS
 *)
-val FACT_EQ_PROD = store_thm(
-  "FACT_EQ_PROD",
-  ``!n. FACT n = PROD_SET (IMAGE SUC (count n))``,
+Theorem FACT_EQ_PROD:
+    !n. FACT n = PROD_SET (IMAGE SUC (count n))
+Proof
   Induct_on `n` >-
   rw[PROD_SET_THM, FACT] >>
   rw[PROD_SET_THM, FACT, COUNT_SUC] >>
   `(SUC n) NOTIN (IMAGE SUC (count n))` by rw[] >>
-  metis_tac[DELETE_NON_ELEMENT]);
+  metis_tac[DELETE_NON_ELEMENT]
+QED
 
 (* Theorem: n!/m! = product of (m+1) to n.
             m < n ==> (FACT n = PROD_SET (IMAGE SUC ((count n) DIFF (count m))) * (FACT m)) *)
@@ -5824,9 +6030,9 @@ val FACT_EQ_PROD = store_thm(
          = (SUC n) * FACT n                                      by induction hypothesis
          = FACT (SUC n)                                          by FACT
 *)
-val FACT_REDUCTION = store_thm(
-  "FACT_REDUCTION",
-  ``!n m. m < n ==> (FACT n = PROD_SET (IMAGE SUC ((count n) DIFF (count m))) * (FACT m))``,
+Theorem FACT_REDUCTION:
+    !n m. m < n ==> (FACT n = PROD_SET (IMAGE SUC ((count n) DIFF (count m))) * (FACT m))
+Proof
   Induct_on `n` >-
   rw[] >>
   rw_tac std_ss[FACT] >>
@@ -5845,7 +6051,8 @@ val FACT_REDUCTION = store_thm(
     `(SUC n) NOTIN (IMAGE SUC ((count n) DIFF (count m)))` by rw[] >>
     `FINITE (IMAGE SUC ((count n) DIFF (count m)))` by rw[] >>
     metis_tac[PROD_SET_IMAGE_REDUCTION, MULT_ASSOC]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Logic Theorems.                                                           *)
@@ -5853,24 +6060,27 @@ val FACT_REDUCTION = store_thm(
 
 (* Theorem: (A <=> B) <=> (A ==> B) /\ ((A ==> B) ==> (B ==> A)) *)
 (* Proof: by logic. *)
-val EQ_IMP2_THM = store_thm(
-  "EQ_IMP2_THM",
-  ``!A B. (A <=> B) <=> (A ==> B) /\ ((A ==> B) ==> (B ==> A))``,
-  metis_tac[]);
+Theorem EQ_IMP2_THM:
+    !A B. (A <=> B) <=> (A ==> B) /\ ((A ==> B) ==> (B ==> A))
+Proof
+  metis_tac[]
+QED
 
 (* Theorem: (b1 = b2) ==> (f b1 = f b2) *)
 (* Proof: by substitution. *)
-val BOOL_EQ = store_thm(
-  "BOOL_EQ",
-  ``!b1:bool b2:bool f. (b1 = b2) ==> (f b1 = f b2)``,
-  simp[]);
+Theorem BOOL_EQ:
+    !b1:bool b2:bool f. (b1 = b2) ==> (f b1 = f b2)
+Proof
+  simp[]
+QED
 
 (* Theorem: b /\ (c ==> d) ==> ((b ==> c) ==> d) *)
 (* Proof: by logical implication. *)
-val AND_IMP_IMP = store_thm((* was: IMP_IMP *)
-  "AND_IMP_IMP",
-  ``!b c d. b /\ (c ==> d) ==> ((b ==> c) ==> d)``,
-  metis_tac[]);
+Theorem AND_IMP_IMP:
+    !b c d. b /\ (c ==> d) ==> ((b ==> c) ==> d)
+Proof
+  metis_tac[]
+QED
 
 (* Theorem: p /\ q ==> p \/ ~q *)
 (* Proof:
@@ -5878,10 +6088,11 @@ val AND_IMP_IMP = store_thm((* was: IMP_IMP *)
     and p ==> p \/ ~q         by OR_INTRO_THM1
    Thus p /\ q ==> p \/ ~q
 *)
-val AND_IMP_OR_NEG = store_thm(
-  "AND_IMP_OR_NEG",
-  ``!p q. p /\ q ==> p \/ ~q``,
-  metis_tac[]);
+Theorem AND_IMP_OR_NEG:
+    !p q. p /\ q ==> p \/ ~q
+Proof
+  metis_tac[]
+QED
 
 (* Theorem: (p \/ q ==> r) ==> (p /\ ~q ==> r) *)
 (* Proof:
@@ -5892,19 +6103,21 @@ val AND_IMP_OR_NEG = store_thm(
      = ~(p /\ ~q) \/ r     by DE_MORGAN_THM
      = (p /\ ~q) ==> r     by IMP_DISJ_THM
 *)
-val OR_IMP_IMP = store_thm(
-  "OR_IMP_IMP",
-  ``!p q r. ((p \/ q) ==> r) ==> ((p /\ ~q) ==> r)``,
-  metis_tac[]);
+Theorem OR_IMP_IMP:
+    !p q r. ((p \/ q) ==> r) ==> ((p /\ ~q) ==> r)
+Proof
+  metis_tac[]
+QED
 
 (* Theorem: x IN (if b then s else t) <=> if b then x IN s else x IN t *)
 (* Proof: by boolTheory.COND_RAND:
    |- !f b x y. f (if b then x else y) = if b then f x else f y
 *)
-val PUSH_IN_INTO_IF = store_thm(
-  "PUSH_IN_INTO_IF",
-  ``!b x s t. x IN (if b then s else t) <=> if b then x IN s else x IN t``,
-  rw_tac std_ss[]);
+Theorem PUSH_IN_INTO_IF:
+    !b x s t. x IN (if b then s else t) <=> if b then x IN s else x IN t
+Proof
+  rw_tac std_ss[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* More Theorems and Sets for Counting                                       *)
@@ -5919,24 +6132,27 @@ val COUNT_0 = save_thm("COUNT_0", COUNT_ZERO);
 
 (* Theorem: count 1 = {0} *)
 (* Proof: by count_def, EXTENSION *)
-val COUNT_1 = store_thm(
-  "COUNT_1",
-  ``count 1 = {0}``,
-  rw[count_def, EXTENSION]);
+Theorem COUNT_1:
+    count 1 = {0}
+Proof
+  rw[count_def, EXTENSION]
+QED
 
 (* Theorem: n NOTIN (count n) *)
 (* Proof: by IN_COUNT *)
-val COUNT_NOT_SELF = store_thm(
-  "COUNT_NOT_SELF",
-  ``!n. n NOTIN (count n)``,
-  rw[]);
+Theorem COUNT_NOT_SELF:
+    !n. n NOTIN (count n)
+Proof
+  rw[]
+QED
 
 (* Theorem: m <= n ==> count m SUBSET count n *)
 (* Proof: by LENGTH_TAKE_EQ *)
-val COUNT_SUBSET = store_thm(
-  "COUNT_SUBSET",
-  ``!m n. m <= n ==> count m SUBSET count n``,
-  rw[SUBSET_DEF]);
+Theorem COUNT_SUBSET:
+    !m n. m <= n ==> count m SUBSET count n
+Proof
+  rw[SUBSET_DEF]
+QED
 
 (* Theorem: count (SUC n) SUBSET t <=> count n SUBSET t /\ n IN t *)
 (* Proof:
@@ -5945,10 +6161,11 @@ val COUNT_SUBSET = store_thm(
    <=> n IN t /\ (count n) SUBSET t    by INSERT_SUBSET
    <=> (count n) SUBSET t /\ n IN t    by CONJ_COMM
 *)
-val COUNT_SUC_SUBSET = store_thm(
-  "COUNT_SUC_SUBSET",
-  ``!n t. count (SUC n) SUBSET t <=> count n SUBSET t /\ n IN t``,
-  metis_tac[COUNT_SUC, INSERT_SUBSET]);
+Theorem COUNT_SUC_SUBSET:
+    !n t. count (SUC n) SUBSET t <=> count n SUBSET t /\ n IN t
+Proof
+  metis_tac[COUNT_SUC, INSERT_SUBSET]
+QED
 
 (* Theorem: t DIFF (count (SUC n)) = t DIFF (count n) DELETE n *)
 (* Proof:
@@ -5956,20 +6173,22 @@ val COUNT_SUC_SUBSET = store_thm(
    = t DIFF (n INSERT count n)    by COUNT_SUC
    = t DIFF (count n) DELETE n    by EXTENSION
 *)
-val DIFF_COUNT_SUC = store_thm(
-  "DIFF_COUNT_SUC",
-  ``!n t. t DIFF (count (SUC n)) = t DIFF (count n) DELETE n``,
-  rw[EXTENSION, EQ_IMP_THM]);
+Theorem DIFF_COUNT_SUC:
+    !n t. t DIFF (count (SUC n)) = t DIFF (count n) DELETE n
+Proof
+  rw[EXTENSION, EQ_IMP_THM]
+QED
 
 (* COUNT_SUC  |- !n. count (SUC n) = n INSERT count n *)
 
 (* Theorem: count (SUC n) = 0 INSERT (IMAGE SUC (count n)) *)
 (* Proof: by EXTENSION *)
-val COUNT_SUC_BY_SUC = store_thm(
-  "COUNT_SUC_BY_SUC",
-  ``!n. count (SUC n) = 0 INSERT (IMAGE SUC (count n))``,
+Theorem COUNT_SUC_BY_SUC:
+    !n. count (SUC n) = 0 INSERT (IMAGE SUC (count n))
+Proof
   rw[EXTENSION, EQ_IMP_THM] >>
-  (Cases_on `x` >> simp[]));
+  (Cases_on `x` >> simp[])
+QED
 
 (* Theorem: IMAGE f (count (SUC n)) = (f n) INSERT IMAGE f (count n) *)
 (* Proof:
@@ -5977,10 +6196,11 @@ val COUNT_SUC_BY_SUC = store_thm(
    = IMAGE f (n INSERT (count n))    by COUNT_SUC
    = f n INSERT IMAGE f (count n)    by IMAGE_INSERT
 *)
-val IMAGE_COUNT_SUC = store_thm(
-  "IMAGE_COUNT_SUC",
-  ``!f n. IMAGE f (count (SUC n)) = (f n) INSERT IMAGE f (count n)``,
-  rw[COUNT_SUC]);
+Theorem IMAGE_COUNT_SUC:
+    !f n. IMAGE f (count (SUC n)) = (f n) INSERT IMAGE f (count n)
+Proof
+  rw[COUNT_SUC]
+QED
 
 (* Theorem: IMAGE f (count (SUC n)) = (f 0) INSERT IMAGE (f o SUC) (count n) *)
 (* Proof:
@@ -5989,10 +6209,11 @@ val IMAGE_COUNT_SUC = store_thm(
    = f 0 INSERT IMAGE f (IMAGE SUC (count n))    by IMAGE_INSERT
    = f 0 INSERT IMAGE (f o SUC) (count n)        by IMAGE_COMPOSE
 *)
-val IMAGE_COUNT_SUC_BY_SUC = store_thm(
-  "IMAGE_COUNT_SUC_BY_SUC",
-  ``!f n. IMAGE f (count (SUC n)) = (f 0) INSERT IMAGE (f o SUC) (count n)``,
-  rw[COUNT_SUC_BY_SUC, IMAGE_COMPOSE]);
+Theorem IMAGE_COUNT_SUC_BY_SUC:
+    !f n. IMAGE f (count (SUC n)) = (f 0) INSERT IMAGE (f o SUC) (count n)
+Proof
+  rw[COUNT_SUC_BY_SUC, IMAGE_COMPOSE]
+QED
 
 (* Introduce countFrom m n, the set {m, m + 1, m + 2, ...., m + n - 1} *)
 val _ = overload_on("countFrom", ``\m n. IMAGE ($+ m) (count n)``);
@@ -6004,41 +6225,46 @@ val _ = overload_on("countFrom", ``\m n. IMAGE ($+ m) (count n)``);
    = IMAGE ($+ m) {}            by COUNT_0
    = {}                         by IMAGE_EMPTY
 *)
-val countFrom_0 = store_thm(
-  "countFrom_0",
-  ``!m. countFrom m 0 = {}``,
-  rw[]);
+Theorem countFrom_0:
+    !m. countFrom m 0 = {}
+Proof
+  rw[]
+QED
 
 (* Theorem: countFrom m (SUC n) = m INSERT countFrom (m + 1) n *)
 (* Proof: by IMAGE_COUNT_SUC_BY_SUC *)
-val countFrom_SUC = store_thm(
-  "countFrom_SUC",
-  ``!m n. !m n. countFrom m (SUC n) = m INSERT countFrom (m + 1) n``,
+Theorem countFrom_SUC:
+    !m n. !m n. countFrom m (SUC n) = m INSERT countFrom (m + 1) n
+Proof
   rpt strip_tac >>
   `$+ m o SUC = $+ (m + 1)` by rw[FUN_EQ_THM] >>
-  rw[IMAGE_COUNT_SUC_BY_SUC]);
+  rw[IMAGE_COUNT_SUC_BY_SUC]
+QED
 
 (* Theorem: 0 < n ==> m IN countFrom m n *)
 (* Proof: by IN_COUNT *)
-val countFrom_first = store_thm(
-  "countFrom_first",
-  ``!m n. 0 < n ==> m IN countFrom m n``,
+Theorem countFrom_first:
+    !m n. 0 < n ==> m IN countFrom m n
+Proof
   rw[] >>
-  metis_tac[ADD_0]);
+  metis_tac[ADD_0]
+QED
 
 (* Theorem: x < m ==> x NOTIN countFrom m n *)
 (* Proof: by IN_COUNT *)
-val countFrom_less = store_thm(
-  "countFrom_less",
-  ``!m n x. x < m ==> x NOTIN countFrom m n``,
-  rw[]);
+Theorem countFrom_less:
+    !m n x. x < m ==> x NOTIN countFrom m n
+Proof
+  rw[]
+QED
 
 (* Theorem: count n = countFrom 0 n *)
 (* Proof: by EXTENSION *)
-val count_by_countFrom = store_thm(
-  "count_by_countFrom",
-  ``!n. count n = countFrom 0 n``,
-  rw[EXTENSION]);
+Theorem count_by_countFrom:
+    !n. count n = countFrom 0 n
+Proof
+  rw[EXTENSION]
+QED
 
 (* Theorem: count (SUC n) = 0 INSERT countFrom 1 n *)
 (* Proof:
@@ -6047,12 +6273,13 @@ val count_by_countFrom = store_thm(
    = 0 INSERT IMAGE ($+ 1) (count n)  by FUN_EQ_THM
    = 0 INSERT countFrom 1 n           by notation
 *)
-val count_SUC_by_countFrom = store_thm(
-  "count_SUC_by_countFrom",
-  ``!n. count (SUC n) = 0 INSERT countFrom 1 n``,
+Theorem count_SUC_by_countFrom:
+    !n. count (SUC n) = 0 INSERT countFrom 1 n
+Proof
   rpt strip_tac >>
   `SUC = $+ 1` by rw[FUN_EQ_THM] >>
-  rw[COUNT_SUC_BY_SUC]);
+  rw[COUNT_SUC_BY_SUC]
+QED
 
 (* Inclusion-Exclusion for two sets:
 
@@ -6167,9 +6394,9 @@ QED
           or y <= MAX_SET s      by MAX_SET_PROPERTY
    Hence MAX_SET s = MAX_SET t   by MAX_SET_TEST
 *)
-val MAX_SET_DELETE = store_thm(
-  "MAX_SET_DELETE",
-  ``!s. FINITE s /\ s <> {} /\ s <> {MIN_SET s} ==> (MAX_SET (s DELETE (MIN_SET s)) = MAX_SET s)``,
+Theorem MAX_SET_DELETE:
+    !s. FINITE s /\ s <> {} /\ s <> {MIN_SET s} ==> (MAX_SET (s DELETE (MIN_SET s)) = MAX_SET s)
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = MIN_SET s` >>
   qabbrev_tac `t = s DELETE m` >>
@@ -6182,7 +6409,8 @@ val MAX_SET_DELETE = store_thm(
   `x <= MAX_SET s` by rw[MAX_SET_PROPERTY] >>
   `MAX_SET s <> m` by decide_tac >>
   `MAX_SET s IN t` by rw[MAX_SET_IN_SET, Abbr`t`] >>
-  metis_tac[SUBSET_DEF, MAX_SET_PROPERTY, MAX_SET_TEST]);
+  metis_tac[SUBSET_DEF, MAX_SET_PROPERTY, MAX_SET_TEST]
+QED
 
 (* Theorem: MAX_SET (IMAGE SUC (count n)) = n *)
 (* Proof:
@@ -6230,9 +6458,9 @@ QED
     and f x IN s                                by HALF x <= c
    Thus f x <= MAX_SET s                        by MAX_SET_PROPERTY
 *)
-val MAX_SET_IMAGE_with_HALF = store_thm(
-  "MAX_SET_IMAGE_with_HALF",
-  ``!f c x. HALF x <= c ==> f x <= MAX_SET {f x | HALF x <= c}``,
+Theorem MAX_SET_IMAGE_with_HALF:
+    !f c x. HALF x <= c ==> f x <= MAX_SET {f x | HALF x <= c}
+Proof
   rpt strip_tac >>
   qabbrev_tac `s = {f x | HALF x <= c}` >>
   `s SUBSET (IMAGE f (count (2 * c + 2)))` by
@@ -6243,7 +6471,8 @@ val MAX_SET_IMAGE_with_HALF = store_thm(
   metis_tac[]) >>
   `FINITE s` by metis_tac[FINITE_COUNT, IMAGE_FINITE, SUBSET_FINITE] >>
   (`f x IN s` by (rw[Abbr`s`] >> metis_tac[])) >>
-  rw[MAX_SET_PROPERTY]);
+  rw[MAX_SET_PROPERTY]
+QED
 
 (*
 Note: A more general version, replacing HALF x by g x, would be desirable.
@@ -6263,9 +6492,9 @@ However, there is no way to show FINITE s for arbitrary g x.
     and f x IN s                                by HALF x <= c
    Thus f x <= MAX_SET s                        by MAX_SET_PROPERTY
 *)
-val MAX_SET_IMAGE_with_DIV = store_thm(
-  "MAX_SET_IMAGE_with_DIV",
-  ``!f b c x. 0 < b /\ x DIV b <= c ==> f x <= MAX_SET {f x | x DIV b <= c}``,
+Theorem MAX_SET_IMAGE_with_DIV:
+    !f b c x. 0 < b /\ x DIV b <= c ==> f x <= MAX_SET {f x | x DIV b <= c}
+Proof
   rpt strip_tac >>
   qabbrev_tac `s = {f x | x DIV b <= c}` >>
   `s SUBSET (IMAGE f (count (b * SUC c)))` by
@@ -6276,7 +6505,8 @@ val MAX_SET_IMAGE_with_DIV = store_thm(
   metis_tac[]) >>
   `FINITE s` by metis_tac[FINITE_COUNT, IMAGE_FINITE, SUBSET_FINITE] >>
   (`f x IN s` by (rw[Abbr`s`] >> metis_tac[])) >>
-  rw[MAX_SET_PROPERTY]);
+  rw[MAX_SET_PROPERTY]
+QED
 
 (* Theorem: x - b <= c ==> f x <= MAX_SET {f x | x - b <= c} *)
 (* Proof:
@@ -6289,9 +6519,9 @@ val MAX_SET_IMAGE_with_DIV = store_thm(
     and f x IN s                                by x - b <= c
    Thus f x <= MAX_SET s                        by MAX_SET_PROPERTY
 *)
-val MAX_SET_IMAGE_with_DEC = store_thm(
-  "MAX_SET_IMAGE_with_DEC",
-  ``!f b c x. x - b <= c ==> f x <= MAX_SET {f x | x - b <= c}``,
+Theorem MAX_SET_IMAGE_with_DEC:
+    !f b c x. x - b <= c ==> f x <= MAX_SET {f x | x - b <= c}
+Proof
   rpt strip_tac >>
   qabbrev_tac `s = {f x | x - b <= c}` >>
   `s SUBSET (IMAGE f (count (1 + b + c)))` by
@@ -6303,7 +6533,8 @@ val MAX_SET_IMAGE_with_DEC = store_thm(
     (rw[Abbr`s`] >>
   `x <= b + c` by decide_tac >>
   metis_tac[]) >>
-  rw[MAX_SET_PROPERTY]);
+  rw[MAX_SET_PROPERTY]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Finite and Cardinality Theorems                                           *)
@@ -6317,13 +6548,14 @@ val MAX_SET_IMAGE_with_DEC = store_thm(
    Therefore   BIJ f s (IMAGE f s)                by BIJ_DEF, INJ_DEF, SURJ_DEF
    Hence       CARD (IMAGE f s) = CARD s          by FINITE_BIJ_CARD_EQ
 *)
-val INJ_CARD_IMAGE_EQN = store_thm(
-  "INJ_CARD_IMAGE_EQN",
-  ``!f s. INJ f s UNIV /\ FINITE s ==> (CARD (IMAGE f s) = CARD s)``,
+Theorem INJ_CARD_IMAGE_EQN:
+    !f s. INJ f s UNIV /\ FINITE s ==> (CARD (IMAGE f s) = CARD s)
+Proof
   rw[INJ_DEF] >>
   `FINITE (IMAGE f s)` by rw[IMAGE_FINITE] >>
   `BIJ f s (IMAGE f s)` by rw[BIJ_DEF, INJ_DEF, SURJ_DEF] >>
-  metis_tac[FINITE_BIJ_CARD_EQ]);
+  metis_tac[FINITE_BIJ_CARD_EQ]
+QED
 
 
 (* Theorem: FINTIE s /\ FINITE t /\ CARD s = CARD t /\ INJ f s t ==> SURJ f s t *)
@@ -6336,14 +6568,15 @@ val INJ_CARD_IMAGE_EQN = store_thm(
    Hence (IMAGE f s) = t           by SUBSET_EQ_CARD, FINITE t
    or SURJ f s t                   by IMAGE_SURJ
 *)
-val FINITE_INJ_AS_SURJ = store_thm(
-  "FINITE_INJ_AS_SURJ",
-  ``!f s t. INJ f s t /\ FINITE s /\ FINITE t /\ (CARD s = CARD t) ==> SURJ f s t``,
+Theorem FINITE_INJ_AS_SURJ:
+    !f s t. INJ f s t /\ FINITE s /\ FINITE t /\ (CARD s = CARD t) ==> SURJ f s t
+Proof
   rw[INJ_DEF] >>
   `(IMAGE f s) SUBSET t` by rw[GSYM IMAGE_SUBSET_TARGET] >>
   `FINITE (IMAGE f s)` by rw[IMAGE_FINITE] >>
   `CARD (IMAGE f s) = CARD t` by metis_tac[INJ_DEF, INJ_CARD_IMAGE, INJ_SUBSET, SUBSET_REFL, SUBSET_UNIV] >>
-  rw[SUBSET_EQ_CARD, IMAGE_SURJ]);
+  rw[SUBSET_EQ_CARD, IMAGE_SURJ]
+QED
 
 (* Reformulate theorem *)
 
@@ -6377,12 +6610,13 @@ QED
    IMAGE_FINITE  |- !s. FINITE s ==> !f. FINITE (IMAGE f s) : thm
    FINITE_COUNT  |- !n. FINITE (count n) : thm
 *)
-val FINITE_COUNT_IMAGE = store_thm(
-  "FINITE_COUNT_IMAGE",
-  ``!P n. FINITE {P x | x < n }``,
+Theorem FINITE_COUNT_IMAGE:
+    !P n. FINITE {P x | x < n }
+Proof
   rpt strip_tac >>
   `IMAGE (\i. P i) (count n) = {P x | x < n}` by rw[IMAGE_DEF] >>
-  metis_tac[IMAGE_FINITE, FINITE_COUNT]);
+  metis_tac[IMAGE_FINITE, FINITE_COUNT]
+QED
 
 (* Idea: improve FINITE_BIJ_COUNT to include CARD information. *)
 
@@ -6404,11 +6638,12 @@ QED
 
 (* Theorem: !n. 0 < n ==> IMAGE (\x. x MOD n) s SUBSET (count n) *)
 (* Proof: by SUBSET_DEF, MOD_LESS. *)
-val image_mod_subset_count = store_thm(
-  "image_mod_subset_count",
-  ``!s n. 0 < n ==> IMAGE (\x. x MOD n) s SUBSET (count n)``,
+Theorem image_mod_subset_count:
+    !s n. 0 < n ==> IMAGE (\x. x MOD n) s SUBSET (count n)
+Proof
   rw[SUBSET_DEF] >>
-  rw[MOD_LESS]);
+  rw[MOD_LESS]
+QED
 
 (* Theorem: !n. 0 < n ==> CARD (IMAGE (\x. x MOD n) s) <= n *)
 (* Proof:
@@ -6418,13 +6653,14 @@ val image_mod_subset_count = store_thm(
      and   CARD (count n) = n        by CARD_COUNT
       So   CARD t <= n               by CARD_SUBSET
 *)
-val card_mod_image = store_thm(
-  "card_mod_image",
-  ``!s n. 0 < n ==> CARD (IMAGE (\x. x MOD n) s) <= n``,
+Theorem card_mod_image:
+    !s n. 0 < n ==> CARD (IMAGE (\x. x MOD n) s) <= n
+Proof
   rpt strip_tac >>
   qabbrev_tac `t = IMAGE (\x. x MOD n) s` >>
   (`t SUBSET count n` by (rw[SUBSET_DEF, Abbr`t`] >> metis_tac[MOD_LESS])) >>
-  metis_tac[CARD_SUBSET, FINITE_COUNT, CARD_COUNT]);
+  metis_tac[CARD_SUBSET, FINITE_COUNT, CARD_COUNT]
+QED
 (* not used *)
 
 (* Theorem: !n. 0 < n /\ 0 NOTIN (IMAGE (\x. x MOD n) s) ==> CARD (IMAGE (\x. x MOD n) s) < n *)
@@ -6441,9 +6677,9 @@ val card_mod_image = store_thm(
       So   CARD t <> n               by SUBSET_EQ_CARD
      Thus  CARD t < n
 *)
-val card_mod_image_nonzero = store_thm(
-  "card_mod_image_nonzero",
-  ``!s n. 0 < n /\ 0 NOTIN (IMAGE (\x. x MOD n) s) ==> CARD (IMAGE (\x. x MOD n) s) < n``,
+Theorem card_mod_image_nonzero:
+    !s n. 0 < n /\ 0 NOTIN (IMAGE (\x. x MOD n) s) ==> CARD (IMAGE (\x. x MOD n) s) < n
+Proof
   rpt strip_tac >>
   qabbrev_tac `t = IMAGE (\x. x MOD n) s` >>
   (`t SUBSET count n` by (rw[SUBSET_DEF, Abbr`t`] >> metis_tac[MOD_LESS])) >>
@@ -6452,7 +6688,8 @@ val card_mod_image_nonzero = store_thm(
   `0 IN (count n)` by rw[] >>
   `t <> (count n)` by metis_tac[NOT_EQUAL_SETS] >>
   `CARD t <> n` by metis_tac[SUBSET_EQ_CARD, SUBSET_FINITE] >>
-  decide_tac);
+  decide_tac
+QED
 (* not used *)
 
 (* ------------------------------------------------------------------------- *)
@@ -6470,15 +6707,16 @@ val card_mod_image_nonzero = store_thm(
        ==>      0 = CARD u            by arithmetic
       Thus u = {}                     by CARD_EQ_0
 *)
-val finite_partition_property = store_thm(
-  "finite_partition_property",
-  ``!s. FINITE s ==> !u v. s =|= u # v ==> ((u = {}) <=> (v = s))``,
+Theorem finite_partition_property:
+    !s. FINITE s ==> !u v. s =|= u # v ==> ((u = {}) <=> (v = s))
+Proof
   rw[EQ_IMP_THM] >>
   spose_not_then strip_assume_tac >>
   `FINITE u /\ FINITE v` by metis_tac[FINITE_UNION] >>
   `CARD v = CARD u + CARD v` by metis_tac[CARD_UNION_DISJOINT] >>
   `CARD u <> 0` by rw[CARD_EQ_0] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: FINITE s ==> !P. let u = {x | x IN s /\ P x} in let v = {x | x IN s /\ ~P x} in
             FINITE u /\ FINITE v /\ s =|= u # v *)
@@ -6513,10 +6751,11 @@ QED
    (1) u SUBSET s ==> s = u UNION (s DIFF u), true   by UNION_DIFF
    (2) u SUBSET s ==> DISJOINT u (s DIFF u), true    by DISJOINT_DIFF
 *)
-val partition_by_subset = store_thm(
-  "partition_by_subset",
-  ``!s u. u SUBSET s ==> let v = s DIFF u in s =|= u # v``,
-  rw[UNION_DIFF, DISJOINT_DIFF]);
+Theorem partition_by_subset:
+    !s u. u SUBSET s ==> let v = s DIFF u in s =|= u # v
+Proof
+  rw[UNION_DIFF, DISJOINT_DIFF]
+QED
 
 (* Theorem: x IN s ==> s =|= {x} # (s DELETE x) *)
 (* Proof:
@@ -6524,10 +6763,11 @@ val partition_by_subset = store_thm(
     and s DELETE x = s DIFF {x}    by DELETE_DEF
    Thus s =|= {x} # (s DELETE x)   by partition_by_subset
 *)
-val partition_by_element = store_thm(
-  "partition_by_element",
-  ``!s x. x IN s ==> s =|= {x} # (s DELETE x)``,
-  metis_tac[partition_by_subset, DELETE_DEF, SUBSET_DEF, IN_SING]);
+Theorem partition_by_element:
+    !s x. x IN s ==> s =|= {x} # (s DELETE x)
+Proof
+  metis_tac[partition_by_subset, DELETE_DEF, SUBSET_DEF, IN_SING]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Splitting of a set                                                        *)
@@ -6540,10 +6780,11 @@ val partition_by_element = store_thm(
    <=> (s = {} UNION t) /\ T                   by DISJOINT_EMPTY
    <=> s = t                                   by UNION_EMPTY
 *)
-val SPLIT_EMPTY = store_thm(
-  "SPLIT_EMPTY",
-  ``!s t. s =|= {} # t <=> (s = t)``,
-  rw[]);
+Theorem SPLIT_EMPTY:
+    !s t. s =|= {} # t <=> (s = t)
+Proof
+  rw[]
+QED
 
 (* Theorem: s =|= u # v /\ v =|= a # b ==> s =|= u UNION a # b /\ u UNION a =|= u # a *)
 (* Proof:
@@ -6569,10 +6810,11 @@ val SPLIT_EMPTY = store_thm(
          s =|= c # b       by s = c UNION b /\ DISJOINT c b
      and c =|= u # a       by c = u UNION a /\ DISJOINT u a
 *)
-val SPLIT_UNION = store_thm(
-  "SPLIT_UNION",
-  ``!s u v a b. s =|= u # v /\ v =|= a # b ==> s =|= u UNION a # b /\ u UNION a =|= u # a``,
-  metis_tac[DISJOINT_UNION, DISJOINT_SYM, UNION_ASSOC]);
+Theorem SPLIT_UNION:
+    !s u v a b. s =|= u # v /\ v =|= a # b ==> s =|= u UNION a # b /\ u UNION a =|= u # a
+Proof
+  metis_tac[DISJOINT_UNION, DISJOINT_SYM, UNION_ASSOC]
+QED
 
 (* Theorem: s =|= u # v <=> u SUBSET s /\ (v = s DIFF u) *)
 (* Proof:
@@ -6589,11 +6831,12 @@ val SPLIT_UNION = store_thm(
        and DISJOINT u (s DIFF u)        by DISJOINT_DIFF
       Thus s =|= u # v                  by notation
 *)
-val SPLIT_EQ = store_thm(
-  "SPLIT_EQ",
-  ``!s u v. s =|= u # v <=> u SUBSET s /\ (v = s DIFF u)``,
+Theorem SPLIT_EQ:
+    !s u v. s =|= u # v <=> u SUBSET s /\ (v = s DIFF u)
+Proof
   rw[DISJOINT_DEF, SUBSET_DEF, EXTENSION] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: (s =|= u # v) = (s =|= v # u) *)
 (* Proof:
@@ -6603,17 +6846,19 @@ val SPLIT_EQ = store_thm(
    = (s = v UNION u) /\ DISJOINT v u    by DISJOINT_SYM
    = s =|= v # u                        by notation
 *)
-val SPLIT_SYM = store_thm(
-  "SPLIT_SYM",
-  ``!s u v. (s =|= u # v) = (s =|= v # u)``,
-  rw_tac std_ss[UNION_COMM, DISJOINT_SYM]);
+Theorem SPLIT_SYM:
+    !s u v. (s =|= u # v) = (s =|= v # u)
+Proof
+  rw_tac std_ss[UNION_COMM, DISJOINT_SYM]
+QED
 
 (* Theorem: (s =|= u # v) ==> (s =|= v # u) *)
 (* Proof: by SPLIT_SYM *)
-val SPLIT_SYM_IMP = store_thm(
-  "SPLIT_SYM_IMP",
-  ``!s u v. (s =|= u # v) ==> (s =|= v # u)``,
-  rw_tac std_ss[SPLIT_SYM]);
+Theorem SPLIT_SYM_IMP:
+    !s u v. (s =|= u # v) ==> (s =|= v # u)
+Proof
+  rw_tac std_ss[SPLIT_SYM]
+QED
 
 (* Theorem: s =|= {x} # v <=> (x IN s /\ (v = s DELETE x)) *)
 (* Proof:
@@ -6622,10 +6867,11 @@ val SPLIT_SYM_IMP = store_thm(
    <=> x IN s       /\ (v = s DIFF {x})   by SUBSET_DEF
    <=> x IN s       /\ (v = s DELETE x)   by DELETE_DEF
 *)
-val SPLIT_SING = store_thm(
-  "SPLIT_SING",
-  ``!s v x. s =|= {x} # v <=> (x IN s /\ (v = s DELETE x))``,
-  rw[SPLIT_EQ, SUBSET_DEF, DELETE_DEF]);
+Theorem SPLIT_SING:
+    !s v x. s =|= {x} # v <=> (x IN s /\ (v = s DELETE x))
+Proof
+  rw[SPLIT_EQ, SUBSET_DEF, DELETE_DEF]
+QED
 
 (* Theorem: s =|= u # v ==> u SUBSET s /\ v SUBSET s *)
 (* Proof: by SUBSET_UNION *)
@@ -6663,9 +6909,9 @@ QED
    Only-if part: (u = s DIFF v) /\ (v = s DIFF u) ==> s =|= u # v
       True by EXTENSION, IN_UNION, IN_DISJOINT, IN_DIFF.
 *)
-val SPLIT_EQ_DIFF = store_thm(
-  "SPLIT_EQ_DIFF",
-  ``!s u v. s =|= u # v <=> (u = s DIFF v) /\ (v = s DIFF u)``,
+Theorem SPLIT_EQ_DIFF:
+    !s u v. s =|= u # v <=> (u = s DIFF v) /\ (v = s DIFF u)
+Proof
   rpt strip_tac >>
   eq_tac >| [
     rpt strip_tac >| [
@@ -6679,7 +6925,8 @@ val SPLIT_EQ_DIFF = store_thm(
       metis_tac[IN_UNION, IN_DIFF],
       metis_tac[IN_DISJOINT, IN_DIFF]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem alias *)
 val SPLIT_BY_SUBSET = save_thm("SPLIT_BY_SUBSET", partition_by_subset);
@@ -6698,10 +6945,11 @@ val SUBSET_DIFF_DIFF = save_thm("SUBSET_DIFF_DIFF", DIFF_DIFF_SUBSET);
            = t DIFF (t DIFF s2)   by notation
            = s2                   by SUBSET_DIFF_DIFF, s2 SUBSET t
 *)
-val SUBSET_DIFF_EQ = store_thm(
-  "SUBSET_DIFF_EQ",
-  ``!s1 s2 t. s1 SUBSET t /\ s2 SUBSET t /\ (t DIFF s1 = t DIFF s2) ==> (s1 = s2)``,
-  metis_tac[SPLIT_BY_SUBSET, SPLIT_EQ, SUBSET_DIFF_DIFF]);
+Theorem SUBSET_DIFF_EQ:
+    !s1 s2 t. s1 SUBSET t /\ s2 SUBSET t /\ (t DIFF s1 = t DIFF s2) ==> (s1 = s2)
+Proof
+  metis_tac[SPLIT_BY_SUBSET, SPLIT_EQ, SUBSET_DIFF_DIFF]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Bijective Inverses.                                                       *)
@@ -6722,10 +6970,11 @@ Must assume: !y. y IN t ==> RINV f s y IN s
    Since BIJ f s t ==> BIJ (LINV f s) t s   by BIJ_LINV_BIJ
       so x IN t ==> (LINV f s x) IN s       by BIJ_DEF, INJ_DEF
 *)
-val BIJ_LINV_ELEMENT = store_thm(
-  "BIJ_LINV_ELEMENT",
-  ``!f s t. BIJ f s t ==> !x. x IN t ==> (LINV f s x) IN s``,
-  metis_tac[BIJ_LINV_BIJ, BIJ_DEF, INJ_DEF]);
+Theorem BIJ_LINV_ELEMENT:
+    !f s t. BIJ f s t ==> !x. x IN t ==> (LINV f s x) IN s
+Proof
+  metis_tac[BIJ_LINV_BIJ, BIJ_DEF, INJ_DEF]
+QED
 
 (* Theorem: (!x. x IN s ==> (LINV f s (f x) = x)) /\ (!x. x IN t ==> (f (LINV f s x) = x)) *)
 (* Proof:
@@ -6733,11 +6982,12 @@ val BIJ_LINV_ELEMENT = store_thm(
      and INJ f s t ==> !x. x IN s ==> (LINV f s (f x) = x)    by LINV_DEF
     also BIJ f s t ==> !x. x IN t ==> (f (LINV f s x) = x)    by BIJ_LINV_INV
 *)
-val BIJ_LINV_THM = store_thm(
-  "BIJ_LINV_THM",
-  ``!(f:'a -> 'b) s t. BIJ f s t ==>
-    (!x. x IN s ==> (LINV f s (f x) = x)) /\ (!x. x IN t ==> (f (LINV f s x) = x))``,
-  metis_tac[BIJ_DEF, LINV_DEF, BIJ_LINV_INV]);
+Theorem BIJ_LINV_THM:
+    !(f:'a -> 'b) s t. BIJ f s t ==>
+    (!x. x IN s ==> (LINV f s (f x) = x)) /\ (!x. x IN t ==> (f (LINV f s x) = x))
+Proof
+  metis_tac[BIJ_DEF, LINV_DEF, BIJ_LINV_INV]
+QED
 
 (* Theorem: BIJ f s t /\ (!y. y IN t ==> RINV f s y IN s) ==>
             !x. x IN s ==> (RINV f s (f x) = x) *)
@@ -6747,14 +6997,15 @@ val BIJ_LINV_THM = store_thm(
                 ==> f (RINV f s (f x)) = f x   by RINV_DEF, SURJ f s t
                 ==> RINV f s (f x) = x         by INJ_DEF
 *)
-val BIJ_RINV_INV = store_thm(
-  "BIJ_RINV_INV",
-  ``!(f:'a -> 'b) s t. BIJ f s t /\ (!y. y IN t ==> RINV f s y IN s) ==>
-   !x. x IN s ==> (RINV f s (f x) = x)``,
+Theorem BIJ_RINV_INV:
+    !(f:'a -> 'b) s t. BIJ f s t /\ (!y. y IN t ==> RINV f s y IN s) ==>
+   !x. x IN s ==> (RINV f s (f x) = x)
+Proof
   rw[BIJ_DEF] >>
   `f x IN t` by metis_tac[INJ_DEF] >>
   `f (RINV f s (f x)) = f x` by metis_tac[RINV_DEF] >>
-  metis_tac[INJ_DEF]);
+  metis_tac[INJ_DEF]
+QED
 
 (* Theorem: BIJ f s t /\ (!y. y IN t ==> RINV f s y IN s) ==> BIJ (RINV f s) t s *)
 (* Proof:
@@ -6774,14 +7025,15 @@ val BIJ_RINV_INV = store_thm(
        and  RINV f s (f x) = x   by BIJ_RINV_INV
        Take y = f x to meet the criteria.
 *)
-val BIJ_RINV_BIJ = store_thm(
-  "BIJ_RINV_BIJ",
-  ``!(f:'a -> 'b) s t. BIJ f s t /\ (!y. y IN t ==> RINV f s y IN s) ==> BIJ (RINV f s) t s``,
+Theorem BIJ_RINV_BIJ:
+    !(f:'a -> 'b) s t. BIJ f s t /\ (!y. y IN t ==> RINV f s y IN s) ==> BIJ (RINV f s) t s
+Proof
   rpt strip_tac >>
   rw[BIJ_DEF] >-
   metis_tac[INJ_DEF, BIJ_DEF, RINV_DEF] >>
   rw[SURJ_DEF] >>
-  metis_tac[INJ_DEF, BIJ_DEF, BIJ_RINV_INV]);
+  metis_tac[INJ_DEF, BIJ_DEF, BIJ_RINV_INV]
+QED
 
 (* Theorem: INJ f t univ(:'b) /\ s SUBSET t ==> !x. x IN s ==> (LINV f t (f x) = x) *)
 (* Proof: by LINV_DEF, SUBSET_DEF *)
@@ -6814,14 +7066,15 @@ QED
       = f e + SUM_SET ((IMAGE f s) DELETE (f e))   by DELETE_NON_ELEMENT, f e NOTIN f s
       = SUM_SET (f e INSERT IMAGE f s)             by SUM_SET_THM
 *)
-val SUM_IMAGE_AS_SUM_SET = store_thm(
-  "SUM_IMAGE_AS_SUM_SET",
-  ``!s. FINITE s ==> !f. (!x y. (f x = f y) ==> (x = y)) ==> (SIGMA f s = SUM_SET (IMAGE f s))``,
+Theorem SUM_IMAGE_AS_SUM_SET:
+    !s. FINITE s ==> !f. (!x y. (f x = f y) ==> (x = y)) ==> (SIGMA f s = SUM_SET (IMAGE f s))
+Proof
   HO_MATCH_MP_TAC FINITE_INDUCT >>
   rw[SUM_SET_DEF] >-
   rw[SUM_IMAGE_THM] >>
   rw[SUM_IMAGE_THM, SUM_IMAGE_DELETE] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: x <> y ==> SIGMA f {x; y} = f x + f y *)
 (* Proof:
@@ -6926,9 +7179,9 @@ QED
     and f x <> 0                            by SUBSET_DEF, implication
    This contradicts f x = 0                 by SUM_IMAGE_ZERO
 *)
-val SUM_IMAGE_PSUBSET_LT = store_thm(
-  "SUM_IMAGE_PSUBSET_LT",
-  ``!f s t. FINITE s /\ t PSUBSET s /\ (!x. x IN s ==> f x <> 0) ==> SIGMA f t < SIGMA f s``,
+Theorem SUM_IMAGE_PSUBSET_LT:
+    !f s t. FINITE s /\ t PSUBSET s /\ (!x. x IN s ==> f x <> 0) ==> SIGMA f t < SIGMA f s
+Proof
   rw[PSUBSET_DEF] >>
   `SIGMA f t <= SIGMA f s` by rw[SUM_IMAGE_SUBSET_LE] >>
   spose_not_then strip_assume_tac >>
@@ -6941,7 +7194,8 @@ val SUM_IMAGE_PSUBSET_LT = store_thm(
   `SIGMA f u = 0` by decide_tac >>
   `u SUBSET s` by rw[] >>
   `u <> {}` by metis_tac[finite_partition_property] >>
-  metis_tac[SUM_IMAGE_ZERO, SUBSET_DEF, MEMBER_NOT_EMPTY]);
+  metis_tac[SUM_IMAGE_ZERO, SUBSET_DEF, MEMBER_NOT_EMPTY]
+QED
 
 (* Idea: Let s be a set of sets. If CARD s = SIGMA CARD s,
          and all elements in s are non-empty, then all elements in s are SING. *)
@@ -7053,15 +7307,16 @@ QED
        = f e * SIGMA f s                     by induction hypothesis
        = SIGMA f (e INSERT s)                by SUM_IMAGE_INSERT
 *)
-val SUM_SET_IMAGE_EQN = store_thm(
-  "SUM_SET_IMAGE_EQN",
-  ``!s. FINITE s ==> !f. INJ f s UNIV ==> (SUM_SET (IMAGE f s) = SIGMA f s)``,
+Theorem SUM_SET_IMAGE_EQN:
+    !s. FINITE s ==> !f. INJ f s UNIV ==> (SUM_SET (IMAGE f s) = SIGMA f s)
+Proof
   Induct_on `FINITE` >>
   rpt strip_tac >-
   rw[SUM_SET_EMPTY, SUM_IMAGE_EMPTY] >>
   fs[INJ_INSERT] >>
   `f e NOTIN (IMAGE f s)` by metis_tac[IN_IMAGE] >>
-  rw[SUM_SET_INSERT, SUM_IMAGE_INSERT]);
+  rw[SUM_SET_INSERT, SUM_IMAGE_INSERT]
+QED
 
 (* Theorem: SUM_SET (count n) = (n * (n - 1)) DIV 2*)
 (* Proof:
@@ -7092,9 +7347,9 @@ val SUM_SET_IMAGE_EQN = store_thm(
          = SUC n * (SUC n - 1) DIV 2       by MULT_COMM
          = RHS
 *)
-val SUM_SET_COUNT = store_thm(
-  "SUM_SET_COUNT",
-  ``!n. SUM_SET (count n) = (n * (n - 1)) DIV 2``,
+Theorem SUM_SET_COUNT:
+    !n. SUM_SET (count n) = (n * (n - 1)) DIV 2
+Proof
   Induct_on `n` >-
   rw[] >>
   Cases_on `n = 0` >| [
@@ -7113,7 +7368,8 @@ val SUM_SET_COUNT = store_thm(
     `_ = (SUC n - 1) * SUC n DIV 2` by rw[ADD1, SUC_SUB1] >>
     `_ = SUC n * (SUC n - 1) DIV 2 ` by rw[MULT_COMM] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -7136,15 +7392,16 @@ val SUM_SET_COUNT = store_thm(
        = f e * PI f s                        by induction hypothesis
        = PI f (e INSERT s)                   by PROD_IMAGE_INSERT
 *)
-val PROD_SET_IMAGE_EQN = store_thm(
-  "PROD_SET_IMAGE_EQN",
-  ``!s. FINITE s ==> !f. INJ f s UNIV ==> (PROD_SET (IMAGE f s) = PI f s)``,
+Theorem PROD_SET_IMAGE_EQN:
+    !s. FINITE s ==> !f. INJ f s UNIV ==> (PROD_SET (IMAGE f s) = PI f s)
+Proof
   Induct_on `FINITE` >>
   rpt strip_tac >-
   rw[PROD_SET_EMPTY, PROD_IMAGE_EMPTY] >>
   fs[INJ_INSERT] >>
   `f e NOTIN (IMAGE f s)` by metis_tac[IN_IMAGE] >>
-  rw[PROD_SET_INSERT, PROD_IMAGE_INSERT]);
+  rw[PROD_SET_INSERT, PROD_IMAGE_INSERT]
+QED
 
 (* Theorem: PROD_SET (IMAGE (\j. n ** j) (count m)) = n ** (SUM_SET (count m)) *)
 (* Proof:
@@ -7176,9 +7433,9 @@ val PROD_SET_IMAGE_EQN = store_thm(
          = n ** SUM_SET (count (SUC m))                      by COUNT_SUC
          = RHS
 *)
-val PROD_SET_IMAGE_EXP = store_thm(
-  "PROD_SET_IMAGE_EXP",
-  ``!n. 1 < n ==> !m. PROD_SET (IMAGE (\j. n ** j) (count m)) = n ** (SUM_SET (count m))``,
+Theorem PROD_SET_IMAGE_EXP:
+    !n. 1 < n ==> !m. PROD_SET (IMAGE (\j. n ** j) (count m)) = n ** (SUM_SET (count m))
+Proof
   rpt strip_tac >>
   Induct_on `m` >-
   rw[PROD_SET_THM] >>
@@ -7192,7 +7449,8 @@ val PROD_SET_IMAGE_EXP = store_thm(
   `_ = n ** (m + SUM_SET (count m))` by rw[EXP_ADD] >>
   `_ = n ** SUM_SET (m INSERT count m)` by rw[SUM_SET_INSERT] >>
   `_ = n ** SUM_SET (count (SUC m))` by rw[COUNT_SUC] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Partition and Equivalent Class                                            *)
@@ -7200,17 +7458,19 @@ val PROD_SET_IMAGE_EXP = store_thm(
 
 (* Theorem: y IN equiv_class R s x <=> y IN s /\ R x y *)
 (* Proof: by GSPECIFICATION *)
-val equiv_class_element = store_thm(
-  "equiv_class_element",
-  ``!R s x y. y IN equiv_class R s x <=> y IN s /\ R x y``,
-  rw[]);
+Theorem equiv_class_element:
+    !R s x y. y IN equiv_class R s x <=> y IN s /\ R x y
+Proof
+  rw[]
+QED
 
 (* Theorem: partition R {} = {} *)
 (* Proof: by partition_def *)
-val partition_on_empty = store_thm(
-  "partition_on_empty",
-  ``!R. partition R {} = {}``,
-  rw[partition_def]);
+Theorem partition_on_empty:
+    !R. partition R {} = {}
+Proof
+  rw[partition_def]
+QED
 
 (*
 > partition_def;
@@ -7232,11 +7492,12 @@ QED
    = {t | ?x. x IN s /\ (t = equiv_class R s x)}       by notation
    = IMAGE (equiv_class R s) s                         by IN_IMAGE
 *)
-val partition_elements = store_thm(
-  "partition_elements",
-  ``!R s. partition R s = IMAGE (equiv_class R s) s``,
+Theorem partition_elements:
+    !R s. partition R s = IMAGE (equiv_class R s) s
+Proof
   rw[partition_def, EXTENSION] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem alias *)
 val partition_as_image = save_thm("partition_as_image", partition_elements);
@@ -7245,10 +7506,11 @@ val partition_as_image = save_thm("partition_as_image", partition_elements);
 
 (* Theorem: (R1 = R2) /\ (s1 = s2) ==> (partition R1 s1 = partition R2 s2) *)
 (* Proof: by identity *)
-val partition_cong = store_thm(
-  "partition_cong",
-  ``!R1 R2 s1 s2. (R1 = R2) /\ (s1 = s2) ==> (partition R1 s1 = partition R2 s2)``,
-  rw[]);
+Theorem partition_cong:
+    !R1 R2 s1 s2. (R1 = R2) /\ (s1 = s2) ==> (partition R1 s1 = partition R2 s2)
+Proof
+  rw[]
+QED
 (* Just in case this is needed. *)
 
 (*
@@ -7297,11 +7559,12 @@ QED
      so CARD s = SIGMA CARD (partition R s)  by partition_CARD
                = n * CARD (partition R s)    by SIGMA_CARD_CONSTANT
 *)
-val equal_partition_card = store_thm(
-  "equal_partition_card",
-  ``!R s n. FINITE s /\ R equiv_on s /\ (!e. e IN partition R s ==> (CARD e = n)) ==>
-           (CARD s = n * CARD (partition R s))``,
-  rw_tac std_ss[partition_CARD, FINITE_partition, GSYM SIGMA_CARD_CONSTANT]);
+Theorem equal_partition_card:
+    !R s n. FINITE s /\ R equiv_on s /\ (!e. e IN partition R s ==> (CARD e = n)) ==>
+           (CARD s = n * CARD (partition R s))
+Proof
+  rw_tac std_ss[partition_CARD, FINITE_partition, GSYM SIGMA_CARD_CONSTANT]
+QED
 
 (* Theorem: When the partitions are equal size of n, CARD s = n * CARD (partition of s).
            FINITE s /\ R equiv_on s /\ (!e. e IN partition R s ==> (CARD e = n)) ==>
@@ -7324,11 +7587,12 @@ QED
     ==> n divides SIGMA CARD (partition R s)  by SIGMA_CARD_FACTOR
    Hence n divdes CARD s                      by above
 *)
-val factor_partition_card = store_thm(
-  "factor_partition_card",
-  ``!R s n. FINITE s /\ R equiv_on s /\
-   (!e. e IN partition R s ==> n divides (CARD e)) ==> n divides (CARD s)``,
-  metis_tac[FINITE_partition, partition_CARD, SIGMA_CARD_FACTOR]);
+Theorem factor_partition_card:
+    !R s n. FINITE s /\ R equiv_on s /\
+   (!e. e IN partition R s ==> n divides (CARD e)) ==> n divides (CARD s)
+Proof
+  metis_tac[FINITE_partition, partition_CARD, SIGMA_CARD_FACTOR]
+QED
 
 (* Note:
 When a set s is partitioned by an equivalence relation R,
@@ -7394,10 +7658,10 @@ val _ = overload_on("SET_ADDITIVE",
        = f e + SIGMA f (P DELETE e)        by DELETE_NON_ELEMENT
        = SIGMA f (e INSERT P)              by SUM_IMAGE_THM
 *)
-val disjoint_bigunion_add_fun = store_thm(
-  "disjoint_bigunion_add_fun",
-  ``!P. FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P ==>
-   !f. SET_ADDITIVE f ==> (f (BIGUNION P) = SIGMA f P)``,
+Theorem disjoint_bigunion_add_fun:
+    !P. FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P ==>
+   !f. SET_ADDITIVE f ==> (f (BIGUNION P) = SIGMA f P)
+Proof
   `!P. FINITE P ==> EVERY_FINITE P /\ PAIR_DISJOINT P ==>
    !f. SET_ADDITIVE f ==> (f (BIGUNION P) = SIGMA f P)` suffices_by rw[] >>
   ho_match_mp_tac FINITE_INDUCT >>
@@ -7411,7 +7675,8 @@ val disjoint_bigunion_add_fun = store_thm(
   `f (e UNION BIGUNION P) = f (e UNION BIGUNION P) + f (e INTER (BIGUNION P))` by decide_tac >>
   `_ = f e + f (BIGUNION P)` by metis_tac[] >>
   `_ = f e + SIGMA f P` by prove_tac[] >>
-  metis_tac[DELETE_NON_ELEMENT]);
+  metis_tac[DELETE_NON_ELEMENT]
+QED
 
 (* Theorem: SET_ADDITIVE CARD *)
 (* Proof:
@@ -7420,10 +7685,11 @@ val disjoint_bigunion_add_fun = store_thm(
      ==> CARD (s UNION t) + CARD (s INTER t) = CARD s + CARD t   by CARD_UNION
    Hence SET_ADDITIVE CARD              by notation
 *)
-val set_additive_card = store_thm(
-  "set_additive_card",
-  ``SET_ADDITIVE CARD``,
-  rw[FUN_EQ_THM, CARD_UNION]);
+Theorem set_additive_card:
+    SET_ADDITIVE CARD
+Proof
+  rw[FUN_EQ_THM, CARD_UNION]
+QED
 
 (* Note: DISJ_BIGUNION_CARD is only a prove_thm in pred_setTheoryScript.sml *)
 (*
@@ -7434,10 +7700,11 @@ Q. use of this changes P to s, s to s', how?
 
 (* Theorem: FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P ==> (CARD (BIGUNION P) = SIGMA CARD P) *)
 (* Proof: by disjoint_bigunion_add_fun, set_additive_card *)
-val disjoint_bigunion_card = store_thm(
-  "disjoint_bigunion_card",
-  ``!P. FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P ==> (CARD (BIGUNION P) = SIGMA CARD P)``,
-  rw[disjoint_bigunion_add_fun, set_additive_card]);
+Theorem disjoint_bigunion_card:
+    !P. FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P ==> (CARD (BIGUNION P) = SIGMA CARD P)
+Proof
+  rw[disjoint_bigunion_add_fun, set_additive_card]
+QED
 
 (* Theorem alias *)
 Theorem CARD_BIGUNION_PAIR_DISJOINT = disjoint_bigunion_card;
@@ -7454,17 +7721,19 @@ val CARD_BIGUNION_PAIR_DISJOINT =
      ==> SIGMA f (s UNION t) + SIGMA f (s INTER t) = SIGMA f s + SIGMA f t   by SUM_IMAGE_UNION_EQN
    Hence SET_ADDITIVE (SIGMA f)
 *)
-val set_additive_sigma = store_thm(
-  "set_additive_sigma",
-  ``!f. SET_ADDITIVE (SIGMA f)``,
-  rw[SUM_IMAGE_EMPTY, SUM_IMAGE_UNION_EQN]);
+Theorem set_additive_sigma:
+    !f. SET_ADDITIVE (SIGMA f)
+Proof
+  rw[SUM_IMAGE_EMPTY, SUM_IMAGE_UNION_EQN]
+QED
 
 (* Theorem: FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P ==> !f. SIGMA f (BIGUNION P) = SIGMA (SIGMA f) P *)
 (* Proof: by disjoint_bigunion_add_fun, set_additive_sigma *)
-val disjoint_bigunion_sigma = store_thm(
-  "disjoint_bigunion_sigma",
-  ``!P. FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P ==> !f. SIGMA f (BIGUNION P) = SIGMA (SIGMA f) P``,
-  rw[disjoint_bigunion_add_fun, set_additive_sigma]);
+Theorem disjoint_bigunion_sigma:
+    !P. FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P ==> !f. SIGMA f (BIGUNION P) = SIGMA (SIGMA f) P
+Proof
+  rw[disjoint_bigunion_add_fun, set_additive_sigma]
+QED
 
 (* Theorem: R equiv_on s /\ FINITE s ==> !f. SET_ADDITIVE f ==> (f s = SIGMA f (partition R s)) *)
 (* Proof:
@@ -7477,31 +7746,34 @@ val disjoint_bigunion_sigma = store_thm(
    Hence f (BIGUNION P) = SIGMA f P   by disjoint_bigunion_add_fun
       or f s = SIGMA f P              by above, BIGUNION_partition
 *)
-val set_add_fun_by_partition = store_thm(
-  "set_add_fun_by_partition",
-  ``!R s. R equiv_on s /\ FINITE s ==> !f. SET_ADDITIVE f ==> (f s = SIGMA f (partition R s))``,
+Theorem set_add_fun_by_partition:
+    !R s. R equiv_on s /\ FINITE s ==> !f. SET_ADDITIVE f ==> (f s = SIGMA f (partition R s))
+Proof
   rpt strip_tac >>
   qabbrev_tac `P = partition R s` >>
   `FINITE P /\ !t. t IN P ==> FINITE t` by metis_tac[FINITE_partition] >>
   `BIGUNION P = s` by rw[BIGUNION_partition, Abbr`P`] >>
   `PAIR_DISJOINT P` by metis_tac[partition_elements_disjoint] >>
-  rw[disjoint_bigunion_add_fun]);
+  rw[disjoint_bigunion_add_fun]
+QED
 
 (* Theorem: R equiv_on s /\ FINITE s ==> (CARD s = SIGMA CARD (partition R s)) *)
 (* Proof: by set_add_fun_by_partition, set_additive_card *)
-val set_card_by_partition = store_thm(
-  "set_card_by_partition",
-  ``!R s. R equiv_on s /\ FINITE s ==> (CARD s = SIGMA CARD (partition R s))``,
-  rw[set_add_fun_by_partition, set_additive_card]);
+Theorem set_card_by_partition:
+    !R s. R equiv_on s /\ FINITE s ==> (CARD s = SIGMA CARD (partition R s))
+Proof
+  rw[set_add_fun_by_partition, set_additive_card]
+QED
 
 (* This is pred_setTheory.partition_CARD *)
 
 (* Theorem: R equiv_on s /\ FINITE s ==> !f. SIGMA f s = SIGMA (SIGMA f) (partition R s) *)
 (* Proof: by set_add_fun_by_partition, set_additive_sigma *)
-val set_sigma_by_partition = store_thm(
-  "set_sigma_by_partition",
-  ``!R s. R equiv_on s /\ FINITE s ==> !f. SIGMA f s = SIGMA (SIGMA f) (partition R s)``,
-  rw[set_add_fun_by_partition, set_additive_sigma]);
+Theorem set_sigma_by_partition:
+    !R s. R equiv_on s /\ FINITE s ==> !f. SIGMA f s = SIGMA (SIGMA f) (partition R s)
+Proof
+  rw[set_add_fun_by_partition, set_additive_sigma]
+QED
 
 (* Overload a multiplicative set function *)
 val _ = overload_on("SET_MULTIPLICATIVE",
@@ -7535,10 +7807,10 @@ val _ = overload_on("SET_MULTIPLICATIVE",
        = f e * PI f (P DELETE e)           by DELETE_NON_ELEMENT
        = PI f (e INSERT P)                 by PROD_IMAGE_THM
 *)
-val disjoint_bigunion_mult_fun = store_thm(
-  "disjoint_bigunion_mult_fun",
-  ``!P. FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P ==>
-   !f. SET_MULTIPLICATIVE f ==> (f (BIGUNION P) = PI f P)``,
+Theorem disjoint_bigunion_mult_fun:
+    !P. FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P ==>
+   !f. SET_MULTIPLICATIVE f ==> (f (BIGUNION P) = PI f P)
+Proof
   `!P. FINITE P ==> EVERY_FINITE P /\ PAIR_DISJOINT P ==>
    !f. SET_MULTIPLICATIVE f ==> (f (BIGUNION P) = PI f P)` suffices_by rw[] >>
   ho_match_mp_tac FINITE_INDUCT >>
@@ -7552,7 +7824,8 @@ val disjoint_bigunion_mult_fun = store_thm(
   `f (e UNION BIGUNION P) = f (e UNION BIGUNION P) * f (e INTER (BIGUNION P))` by metis_tac[MULT_RIGHT_1] >>
   `_ = f e * f (BIGUNION P)` by metis_tac[] >>
   `_ = f e * PI f P` by prove_tac[] >>
-  metis_tac[DELETE_NON_ELEMENT]);
+  metis_tac[DELETE_NON_ELEMENT]
+QED
 
 (* Theorem: R equiv_on s /\ FINITE s ==> !f. SET_MULTIPLICATIVE f ==> (f s = PI f (partition R s)) *)
 (* Proof:
@@ -7565,15 +7838,16 @@ val disjoint_bigunion_mult_fun = store_thm(
    Hence f (BIGUNION P) = PI f P      by disjoint_bigunion_mult_fun
       or f s = PI f P                 by above, BIGUNION_partition
 *)
-val set_mult_fun_by_partition = store_thm(
-  "set_mult_fun_by_partition",
-  ``!R s. R equiv_on s /\ FINITE s ==> !f. SET_MULTIPLICATIVE f ==> (f s = PI f (partition R s))``,
+Theorem set_mult_fun_by_partition:
+    !R s. R equiv_on s /\ FINITE s ==> !f. SET_MULTIPLICATIVE f ==> (f s = PI f (partition R s))
+Proof
   rpt strip_tac >>
   qabbrev_tac `P = partition R s` >>
   `FINITE P /\ !t. t IN P ==> FINITE t` by metis_tac[FINITE_partition] >>
   `BIGUNION P = s` by rw[BIGUNION_partition, Abbr`P`] >>
   `PAIR_DISJOINT P` by metis_tac[partition_elements_disjoint] >>
-  rw[disjoint_bigunion_mult_fun]);
+  rw[disjoint_bigunion_mult_fun]
+QED
 
 (* Theorem: FINITE s ==> !g. INJ g s univ(:'a) ==> !f. SIGMA f (IMAGE g s) = SIGMA (f o g) s *)
 (* Proof:
@@ -7595,16 +7869,17 @@ val set_mult_fun_by_partition = store_thm(
       = (f o g) e + SIGMA (f o g) s       by composition
       = SIGMA (f o g) (e INSERT s)        by SUM_IMAGE_THM, e NOTIN s
 *)
-val sum_image_by_composition = store_thm(
-  "sum_image_by_composition",
-  ``!s. FINITE s ==> !g. INJ g s univ(:'a) ==> !f. SIGMA f (IMAGE g s) = SIGMA (f o g) s``,
+Theorem sum_image_by_composition:
+    !s. FINITE s ==> !g. INJ g s univ(:'a) ==> !f. SIGMA f (IMAGE g s) = SIGMA (f o g) s
+Proof
   ho_match_mp_tac FINITE_INDUCT >>
   rpt strip_tac >-
   rw[SUM_IMAGE_EMPTY] >>
   `INJ g s univ(:'a) /\ g e IN univ(:'a) /\ !y. y IN s /\ (g e = g y) ==> (e = y)` by metis_tac[INJ_INSERT] >>
   `g e NOTIN (IMAGE g s)` by metis_tac[IN_IMAGE] >>
   `(s DELETE e = s) /\ (IMAGE g s DELETE g e = IMAGE g s)` by metis_tac[DELETE_NON_ELEMENT] >>
-  rw[SUM_IMAGE_THM]);
+  rw[SUM_IMAGE_THM]
+QED
 
 (* Overload on permutation *)
 val _ = overload_on("PERMUTES", ``\f s. BIJ f s s``);
@@ -7623,16 +7898,17 @@ val _ = set_fixity "PERMUTES" (Infix(NONASSOC, 450)); (* same as relation *)
     = SIGMA f (IMAGE g s)                by sum_image_by_composition
     = SIGMA f s                          by above
 *)
-val sum_image_by_permutation = store_thm(
-  "sum_image_by_permutation",
-  ``!s. FINITE s ==> !g. g PERMUTES s ==> !f. SIGMA (f o g) s = SIGMA f s``,
+Theorem sum_image_by_permutation:
+    !s. FINITE s ==> !g. g PERMUTES s ==> !f. SIGMA (f o g) s = SIGMA f s
+Proof
   rpt strip_tac >>
   `INJ g s s /\ SURJ g s s` by metis_tac[BIJ_DEF] >>
   `IMAGE g s = s` by rw[GSYM IMAGE_SURJ] >>
   `s SUBSET univ(:'a)` by rw[SUBSET_UNIV] >>
   `INJ g s univ(:'a)` by metis_tac[INJ_SUBSET, SUBSET_REFL] >>
   `SIGMA (f o g) s = SIGMA f (IMAGE g s)` by rw[sum_image_by_composition] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: FINITE s ==> !f:('b -> bool) -> num. (f {} = 0) ==>
             !g. (!t. FINITE t /\ (!x. x IN t ==> g x <> {}) ==> INJ g t univ(:num -> bool)) ==>
@@ -7691,11 +7967,11 @@ val sum_image_by_permutation = store_thm(
 
    Result follows by combining all the claims and arithmetic.
 *)
-val sum_image_by_composition_with_partial_inj = store_thm(
-  "sum_image_by_composition_with_partial_inj",
-  ``!s. FINITE s ==> !f:('b -> bool) -> num. (f {} = 0) ==>
+Theorem sum_image_by_composition_with_partial_inj:
+    !s. FINITE s ==> !f:('b -> bool) -> num. (f {} = 0) ==>
    !g. (!t. FINITE t /\ (!x. x IN t ==> g x <> {}) ==> INJ g t univ(:'b -> bool)) ==>
-   (SIGMA f (IMAGE g s) = SIGMA (f o g) s)``,
+   (SIGMA f (IMAGE g s) = SIGMA (f o g) s)
+Proof
   rpt strip_tac >>
   qabbrev_tac `s1 = {x | x IN s /\ (g x = {})}` >>
   qabbrev_tac `s2 = {x | x IN s /\ (g x <> {})}` >>
@@ -7726,7 +8002,8 @@ val sum_image_by_composition_with_partial_inj = store_thm(
       (`!x. x IN s2 ==> g x <> {}` by rw[Abbr`s2`] >>
   `INJ g s2 univ(:'b -> bool)` by rw[] >>
   rw[sum_image_by_composition]) >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: FINITE s ==> !f g. (!x y. x IN s /\ y IN s /\ (g x = g y) ==> (x = y) \/ (f (g x) = 0)) ==>
             (SIGMA f (IMAGE g s) = SIGMA (f o g) s) *)
@@ -7759,10 +8036,10 @@ val sum_image_by_composition_with_partial_inj = store_thm(
          = (f o g) e + SIGMA (f o g) s          by o_THM
          = SIGMA (f o g) (e INSERT s)           by SUM_IMAGE_INSERT, e NOTIN s
 *)
-val sum_image_by_composition_without_inj = store_thm(
-  "sum_image_by_composition_without_inj",
-  ``!s. FINITE s ==> !f g. (!x y. x IN s /\ y IN s /\ (g x = g y) ==> (x = y) \/ (f (g x) = 0)) ==>
-       (SIGMA f (IMAGE g s) = SIGMA (f o g) s)``,
+Theorem sum_image_by_composition_without_inj:
+    !s. FINITE s ==> !f g. (!x y. x IN s /\ y IN s /\ (g x = g y) ==> (x = y) \/ (f (g x) = 0)) ==>
+       (SIGMA f (IMAGE g s) = SIGMA (f o g) s)
+Proof
   Induct_on `FINITE` >>
   rpt strip_tac >-
   rw[SUM_IMAGE_EMPTY] >>
@@ -7780,7 +8057,8 @@ val sum_image_by_composition_without_inj = store_thm(
     `_ = (f o g) e + SIGMA (f o g) s` by rw[] >>
     `_ = SIGMA (f o g) (e INSERT s)` by rw[SUM_IMAGE_INSERT] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Pre-image Theorems.                                                       *)
@@ -7792,17 +8070,19 @@ End
 
 (* Theorem: x IN (preimage f s y) <=> x IN s /\ (f x = y) *)
 (* Proof: by preimage_def *)
-val preimage_element = store_thm(
-  "preimage_element",
-  ``!f s x y. x IN (preimage f s y) <=> x IN s /\ (f x = y)``,
-  rw[preimage_def]);
+Theorem preimage_element:
+    !f s x y. x IN (preimage f s y) <=> x IN s /\ (f x = y)
+Proof
+  rw[preimage_def]
+QED
 
 (* Theorem: x IN preimage f s y <=> (x IN s /\ (f x = y)) *)
 (* Proof: by preimage_def *)
-val in_preimage = store_thm(
-  "in_preimage",
-  ``!f s x y. x IN preimage f s y <=> (x IN s /\ (f x = y))``,
-  rw[preimage_def]);
+Theorem in_preimage:
+    !f s x y. x IN preimage f s y <=> (x IN s /\ (f x = y))
+Proof
+  rw[preimage_def]
+QED
 (* same as theorem above. *)
 
 Theorem preimage_alt :
@@ -7837,20 +8117,22 @@ QED
 
 (* Theorem: !x. x IN preimage f s y ==> f x = y *)
 (* Proof: by definition. *)
-val preimage_property = store_thm(
-  "preimage_property",
-  ``!f s y. !x. x IN preimage f s y ==> (f x = y)``,
-  rw[preimage_def]);
+Theorem preimage_property:
+    !f s y. !x. x IN preimage f s y ==> (f x = y)
+Proof
+  rw[preimage_def]
+QED
 
 (* This is bad: every pattern of f x = y (i.e. practically every equality!) will invoke the check: x IN preimage f s y! *)
 (* val _ = export_rewrites ["preimage_property"]; *)
 
 (* Theorem: x IN s ==> x IN preimage f s (f x) *)
 (* Proof: by IN_IMAGE. preimage_def. *)
-val preimage_of_image = store_thm(
-  "preimage_of_image",
-  ``!f s x. x IN s ==> x IN preimage f s (f x)``,
-  rw[preimage_def]);
+Theorem preimage_of_image:
+    !f s x. x IN s ==> x IN preimage f s (f x)
+Proof
+  rw[preimage_def]
+QED
 
 (* Theorem: y IN (IMAGE f s) ==> CHOICE (preimage f s y) IN s /\ f (CHOICE (preimage f s y)) = y *)
 (* Proof:
@@ -7867,9 +8149,9 @@ val preimage_of_image = store_thm(
    thus  CHOICE (preimage f s (f x)) IN (preimage f s (f x))  by CHOICE_DEF
    hence f (CHOICE (preimage f s (f x))) = f x  by preimage_def
 *)
-val preimage_choice_property = store_thm(
-  "preimage_choice_property",
-  ``!f s y. y IN (IMAGE f s) ==> CHOICE (preimage f s y) IN s /\ (f (CHOICE (preimage f s y)) = y)``,
+Theorem preimage_choice_property:
+    !f s y. y IN (IMAGE f s) ==> CHOICE (preimage f s y) IN s /\ (f (CHOICE (preimage f s y)) = y)
+Proof
   rpt gen_tac >>
   strip_tac >>
   conj_asm1_tac >| [
@@ -7880,7 +8162,8 @@ val preimage_choice_property = store_thm(
     `x IN preimage f s (f x)` by rw_tac std_ss[preimage_of_image] >>
     `CHOICE (preimage f s (f x)) IN (preimage f s (f x))` by metis_tac[CHOICE_DEF, MEMBER_NOT_EMPTY] >>
     full_simp_tac std_ss [preimage_def, GSPECIFICATION]
-  ]);
+  ]
+QED
 
 (* Theorem: INJ f s univ(:'b) ==> !x. x IN s ==> (preimage f s (f x) = {x}) *)
 (* Proof:
@@ -7889,11 +8172,12 @@ val preimage_choice_property = store_thm(
    = {x' | x' IN s /\ (x' = x)}        by INJ_DEF
    = {x}                               by EXTENSION
 *)
-val preimage_inj = store_thm(
-  "preimage_inj",
-  ``!f s. INJ f s univ(:'b) ==> !x. x IN s ==> (preimage f s (f x) = {x})``,
+Theorem preimage_inj:
+    !f s. INJ f s univ(:'b) ==> !x. x IN s ==> (preimage f s (f x) = {x})
+Proof
   rw[preimage_def, EXTENSION] >>
-  metis_tac[INJ_DEF]);
+  metis_tac[INJ_DEF]
+QED
 
 (* Theorem: INJ f s univ(:'b) ==> !x. x IN s ==> (CHOICE (preimage f s (f x)) = x) *)
 (* Proof:
@@ -7901,10 +8185,11 @@ val preimage_inj = store_thm(
    = CHOICE {x}                     by preimage_inj, INJ f s univ(:'b)
    = x                              by CHOICE_SING
 *)
-val preimage_inj_choice = store_thm(
-  "preimage_inj_choice",
-  ``!f s. INJ f s univ(:'b) ==> !x. x IN s ==> (CHOICE (preimage f s (f x)) = x)``,
-  rw[preimage_inj]);
+Theorem preimage_inj_choice:
+    !f s. INJ f s univ(:'b) ==> !x. x IN s ==> (CHOICE (preimage f s (f x)) = x)
+Proof
+  rw[preimage_inj]
+QED
 
 (* Theorem: INJ (preimage f s) (IMAGE f s) (POW s) *)
 (* Proof:
@@ -7949,10 +8234,11 @@ QED
 (* Proof: by defintion,
    and f x = f y means the same as f y = f x.
 *)
-val fequiv_sym = store_thm(
-  "fequiv_sym",
-  ``!f x y. (x == y) f ==> (y == x) f``,
-  rw_tac std_ss[fequiv_def]);
+Theorem fequiv_sym:
+    !f x y. (x == y) f ==> (y == x) f
+Proof
+  rw_tac std_ss[fequiv_def]
+QED
 
 (* no export of commutativity *)
 
@@ -7962,17 +8248,19 @@ val fequiv_sym = store_thm(
    and f y = f z
    implies f x = f z.
 *)
-val fequiv_trans = store_thm(
-  "fequiv_trans",
-  ``!f x y z. (x == y) f /\ (y == z) f ==> (x == z) f``,
-  rw_tac std_ss[fequiv_def]);
+Theorem fequiv_trans:
+    !f x y z. (x == y) f /\ (y == z) f ==> (x == z) f
+Proof
+  rw_tac std_ss[fequiv_def]
+QED
 
 (* Theorem: fequiv (==) is an equivalence relation on the domain. *)
 (* Proof: by reflexive, symmetric and transitive. *)
-val fequiv_equiv_class = store_thm(
-  "fequiv_equiv_class",
-  ``!f. (\x y. (x == y) f) equiv_on univ(:'a)``,
-  rw_tac std_ss[equiv_on_def, fequiv_def, EQ_IMP_THM]);
+Theorem fequiv_equiv_class:
+    !f. (\x y. (x == y) f) equiv_on univ(:'a)
+Proof
+  rw_tac std_ss[equiv_on_def, fequiv_def, EQ_IMP_THM]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Function-based Equivalence                                                *)
@@ -7999,25 +8287,28 @@ Theorem feq_class_element = in_preimage
    = {y | y IN s /\ (feq f x y)}    by feq_def
    = equiv_class (feq f) s x        by notation
 *)
-val feq_class_property = store_thm(
-  "feq_class_property",
-  ``!f s x. feq_class f s (f x) = equiv_class (feq f) s x``,
-  rw[in_preimage, EXTENSION, fequiv_def] >> metis_tac[]);
+Theorem feq_class_property:
+    !f s x. feq_class f s (f x) = equiv_class (feq f) s x
+Proof
+  rw[in_preimage, EXTENSION, fequiv_def] >> metis_tac[]
+QED
 
 (* Theorem: (feq_class f s) o f = equiv_class (feq f) s *)
 (* Proof: by FUN_EQ_THM, feq_class_property *)
-val feq_class_fun = store_thm(
-  "feq_class_fun",
-  ``!f s. (feq_class f s) o f = equiv_class (feq f) s``,
-  rw[FUN_EQ_THM, feq_class_property]);
+Theorem feq_class_fun:
+    !f s. (feq_class f s) o f = equiv_class (feq f) s
+Proof
+  rw[FUN_EQ_THM, feq_class_property]
+QED
 
 (* Theorem: feq f equiv_on s *)
 (* Proof: by equiv_on_def, feq_def *)
-val feq_equiv = store_thm(
-  "feq_equiv",
-  ``!s f. feq f equiv_on s``,
+Theorem feq_equiv:
+    !s f. feq f equiv_on s
+Proof
   rw[equiv_on_def, fequiv_def] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: partition (feq f) s = IMAGE ((feq_class f s) o f) s *)
 (* Proof:
@@ -8031,11 +8322,12 @@ val feq_equiv = store_thm(
   = IMAGE (feq_class f s) (IMAGE f s)                       by IN_IMAGE
   = IMAGE ((feq_class f s) o f) s                           by IMAGE_COMPOSE
 *)
-val feq_partition = store_thm(
-  "feq_partition",
-  ``!s f. partition (feq f) s = IMAGE ((feq_class f s) o f) s``,
+Theorem feq_partition:
+    !s f. partition (feq f) s = IMAGE ((feq_class f s) o f) s
+Proof
   rw[partition_def, fequiv_def, in_preimage, EXTENSION, EQ_IMP_THM] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: t IN partition (feq f) s <=> ?z. z IN s /\ (!x. x IN t <=> x IN s /\ (f x = f z)) *)
 (* Proof: by feq_partition, feq_class_def, EXTENSION *)
@@ -8090,20 +8382,22 @@ val feq_partition_by_preimage = feq_partition
    Since (feq f) equiv_on s   by feq_equiv
    Hence !g. SIGMA g s = SIGMA (SIGMA g) (partition (feq f) s)  by set_sigma_by_partition
 *)
-val feq_sum_over_partition = store_thm(
-  "feq_sum_over_partition",
-  ``!s. FINITE s ==> !f g. SIGMA g s = SIGMA (SIGMA g) (partition (feq f) s)``,
-  rw[feq_equiv, set_sigma_by_partition]);
+Theorem feq_sum_over_partition:
+    !s. FINITE s ==> !f g. SIGMA g s = SIGMA (SIGMA g) (partition (feq f) s)
+Proof
+  rw[feq_equiv, set_sigma_by_partition]
+QED
 
 (* Theorem: FINITE s ==> !f. CARD s = SIGMA CARD (partition (feq f) s) *)
 (* Proof:
    Note feq equiv_on s   by feq_equiv
    The result follows    by partition_CARD
 *)
-val finite_card_by_feq_partition = store_thm(
-  "finite_card_by_feq_partition",
-  ``!s. FINITE s ==> !f. CARD s = SIGMA CARD (partition (feq f) s)``,
-  rw[feq_equiv, partition_CARD]);
+Theorem finite_card_by_feq_partition:
+    !s. FINITE s ==> !f. CARD s = SIGMA CARD (partition (feq f) s)
+Proof
+  rw[feq_equiv, partition_CARD]
+QED
 
 (* Theorem: FINITE s ==> !f. CARD s = SIGMA CARD (IMAGE ((preimage f s) o f) s) *)
 (* Proof:
@@ -8112,10 +8406,11 @@ val finite_card_by_feq_partition = store_thm(
       = SIGMA CARD (partition (feq f) s)         by partition_CARD
       = SIGMA CARD (IMAGE (preimage f s o f) s)  by feq_partition_by_preimage
 *)
-val finite_card_by_image_preimage = store_thm(
-  "finite_card_by_image_preimage",
-  ``!s. FINITE s ==> !f. CARD s = SIGMA CARD (IMAGE ((preimage f s) o f) s)``,
-  rw[feq_equiv, partition_CARD, GSYM feq_partition]);
+Theorem finite_card_by_image_preimage:
+    !s. FINITE s ==> !f. CARD s = SIGMA CARD (IMAGE ((preimage f s) o f) s)
+Proof
+  rw[feq_equiv, partition_CARD, GSYM feq_partition]
+QED
 
 (* Theorem: FINITE s /\ SURJ f s t ==>
             CARD s = SIGMA CARD (IMAGE (preimage f s) t) *)
@@ -8259,13 +8554,14 @@ QED
    = FUNPOW f k e                   by induction hypothesis
    = e                              by given
 *)
-val FUNPOW_MULTIPLE = store_thm(
-  "FUNPOW_MULTIPLE",
-  ``!f k e. 0 < k /\ (FUNPOW f k e = e)  ==> !n. FUNPOW f (n*k) e = e``,
+Theorem FUNPOW_MULTIPLE:
+    !f k e. 0 < k /\ (FUNPOW f k e = e)  ==> !n. FUNPOW f (n*k) e = e
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
-  metis_tac[MULT_COMM, MULT_SUC, FUNPOW_ADD]);
+  metis_tac[MULT_COMM, MULT_SUC, FUNPOW_ADD]
+QED
 
 (* Theorem: 0 < k /\ FUNPOW f k e = e  ==> !n. FUNPOW f n e = FUNPOW f (n MOD k) e *)
 (* Proof:
@@ -8275,12 +8571,13 @@ val FUNPOW_MULTIPLE = store_thm(
    = FUNPOW f (n MOD k) (FUNPOW (n DIV k) * k e)  by FUNPOW_ADD
    = FUNPOW f (n MOD k) e                         by FUNPOW_MULTIPLE
 *)
-val FUNPOW_MOD = store_thm(
-  "FUNPOW_MOD",
-  ``!f k e. 0 < k /\ (FUNPOW f k e = e)  ==> !n. FUNPOW f n e = FUNPOW f (n MOD k) e``,
+Theorem FUNPOW_MOD:
+    !f k e. 0 < k /\ (FUNPOW f k e = e)  ==> !n. FUNPOW f n e = FUNPOW f (n MOD k) e
+Proof
   rpt strip_tac >>
   `n = (n MOD k) + (n DIV k) * k` by metis_tac[DIVISION, ADD_COMM] >>
-  metis_tac[FUNPOW_ADD, FUNPOW_MULTIPLE]);
+  metis_tac[FUNPOW_ADD, FUNPOW_MULTIPLE]
+QED
 
 (* Overload a RISING function (temporalizaed by Chun Tian) *)
 val _ = temp_overload_on ("RISING", ``\f. !x:num. x <= f x``);
@@ -8303,9 +8600,9 @@ val _ = temp_overload_on ("FALLING", ``\f. !x:num. f x <= x``);
           <= f (FUNPOW f n x)        by RISING f
            = FUNPOW f (SUC n) x      by FUNPOW_SUC
 *)
-val FUNPOW_LE_RISING = store_thm(
-  "FUNPOW_LE_RISING",
-  ``!f m n. RISING f /\ m <= n ==> !x. FUNPOW f m x <= FUNPOW f n x``,
+Theorem FUNPOW_LE_RISING:
+    !f m n. RISING f /\ m <= n ==> !x. FUNPOW f m x <= FUNPOW f n x
+Proof
   strip_tac >>
   Induct_on `n` >-
   rw[] >>
@@ -8316,7 +8613,8 @@ val FUNPOW_LE_RISING = store_thm(
     `f (FUNPOW f n x) = FUNPOW f (SUC n) x` by rw[FUNPOW_SUC] >>
     decide_tac,
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: FALLING f /\ m <= n ==> !x. FUNPOW f n x <= FUNPOW f m x *)
 (* Proof:
@@ -8333,9 +8631,9 @@ val FUNPOW_LE_RISING = store_thm(
          <= FUNPOW f n x             by FALLING f
          <= FUNPOW f m x             by induction hypothesis
 *)
-val FUNPOW_LE_FALLING = store_thm(
-  "FUNPOW_LE_FALLING",
-  ``!f m n. FALLING f /\ m <= n ==> !x. FUNPOW f n x <= FUNPOW f m x``,
+Theorem FUNPOW_LE_FALLING:
+    !f m n. FALLING f /\ m <= n ==> !x. FUNPOW f n x <= FUNPOW f m x
+Proof
   strip_tac >>
   Induct_on `n` >-
   rw[] >>
@@ -8346,7 +8644,8 @@ val FUNPOW_LE_FALLING = store_thm(
     `FUNPOW f n x <= FUNPOW f m x` by rw[] >>
     decide_tac,
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: (!x. f x <= g x) /\ MONO g ==> !n x. FUNPOW f n x <= FUNPOW g n x *)
 (* Proof:
@@ -8362,16 +8661,17 @@ val FUNPOW_LE_FALLING = store_thm(
       <= g (FUNPOW g n x)      by induction hypothesis, MONO g
        = FUNPOW g (SUC n) x    by FUNPOW_SUC
 *)
-val FUNPOW_LE_MONO = store_thm(
-  "FUNPOW_LE_MONO",
-  ``!f g. (!x. f x <= g x) /\ MONO g ==> !n x. FUNPOW f n x <= FUNPOW g n x``,
+Theorem FUNPOW_LE_MONO:
+    !f g. (!x. f x <= g x) /\ MONO g ==> !n x. FUNPOW f n x <= FUNPOW g n x
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
   rw[FUNPOW_SUC] >>
   `f (FUNPOW f n x) <= g (FUNPOW f n x)` by rw[] >>
   `g (FUNPOW f n x) <= g (FUNPOW g n x)` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Note:
 There is no FUNPOW_LE_RMONO. FUNPOW_LE_MONO says:
@@ -8399,16 +8699,17 @@ For the third pair: f (f x) <= g (f x)   by g is cover,
       <= g (FUNPOW g n x)      by !x. f x <= g x
        = FUNPOW g (SUC n) x    by FUNPOW_SUC
 *)
-val FUNPOW_GE_MONO = store_thm(
-  "FUNPOW_GE_MONO",
-  ``!f g. (!x. f x <= g x) /\ MONO f ==> !n x. FUNPOW f n x <= FUNPOW g n x``,
+Theorem FUNPOW_GE_MONO:
+    !f g. (!x. f x <= g x) /\ MONO f ==> !n x. FUNPOW f n x <= FUNPOW g n x
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
   rw[FUNPOW_SUC] >>
   `f (FUNPOW f n x) <= f (FUNPOW g n x)` by rw[] >>
   `f (FUNPOW g n x) <= g (FUNPOW g n x)` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Note: the name FUNPOW_SUC is taken:
 FUNPOW_SUC  |- !f n x. FUNPOW f (SUC n) x = f (FUNPOW f n x)
@@ -8428,11 +8729,12 @@ FUNPOW_SUC  |- !f n x. FUNPOW f (SUC n) x = f (FUNPOW f n x)
      = (SUC m) + n             by induction hypothesis
      = m + SUC n               by arithmetic
 *)
-val FUNPOW_ADD1 = store_thm(
-  "FUNPOW_ADD1",
-  ``!m n. FUNPOW SUC n m = m + n``,
+Theorem FUNPOW_ADD1:
+    !m n. FUNPOW SUC n m = m + n
+Proof
   Induct_on `n` >>
-  rw[FUNPOW]);
+  rw[FUNPOW]
+QED
 
 (* Theorem: FUNPOW PRE n m = m - n *)
 (* Proof:
@@ -8448,12 +8750,13 @@ val FUNPOW_ADD1 = store_thm(
      = (PRE m) - n             by induction hypothesis
      = m - PRE n               by arithmetic
 *)
-val FUNPOW_SUB1 = store_thm(
-  "FUNPOW_SUB1",
-  ``!m n. FUNPOW PRE n m = m - n``,
+Theorem FUNPOW_SUB1:
+    !m n. FUNPOW PRE n m = m - n
+Proof
   Induct_on `n` >-
   rw[] >>
-  rw[FUNPOW]);
+  rw[FUNPOW]
+QED
 
 (* Theorem: FUNPOW ($* b) n m = m * b ** n *)
 (* Proof:
@@ -8471,13 +8774,14 @@ val FUNPOW_SUB1 = store_thm(
      = m * (b * b ** n)           by arithmetic
      = m * b ** SUC n             by EXP
 *)
-val FUNPOW_MUL = store_thm(
-  "FUNPOW_MUL",
-  ``!b m n. FUNPOW ($* b) n m = m * b ** n``,
+Theorem FUNPOW_MUL:
+    !b m n. FUNPOW ($* b) n m = m * b ** n
+Proof
   strip_tac >>
   Induct_on `n` >-
   rw[] >>
-  rw[FUNPOW, EXP]);
+  rw[FUNPOW, EXP]
+QED
 
 (* Theorem: 0 < b ==> (FUNPOW (combin$C $DIV b) n m = m DIV (b ** n)) *)
 (* Proof:
@@ -8497,9 +8801,9 @@ val FUNPOW_MUL = store_thm(
      = m DIV (b * b ** n)         by DIV_DIV_DIV_MULT, 0 < b, 0 < b ** n
      = m DIV b ** SUC n           by EXP
 *)
-val FUNPOW_DIV = store_thm(
-  "FUNPOW_DIV",
-  ``!b m n. 0 < b ==> (FUNPOW (combin$C $DIV b) n m = m DIV (b ** n))``,
+Theorem FUNPOW_DIV:
+    !b m n. 0 < b ==> (FUNPOW (combin$C $DIV b) n m = m DIV (b ** n))
+Proof
   strip_tac >>
   qabbrev_tac `f = combin$C $DIV b` >>
   Induct_on `n` >-
@@ -8509,7 +8813,8 @@ val FUNPOW_DIV = store_thm(
   `_ = (m DIV b) DIV (b ** n)` by rw[] >>
   `_ = m DIV (b * b ** n)` by rw[DIV_DIV_DIV_MULT] >>
   `_ = m DIV b ** SUC n` by rw[EXP] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: FUNPOW SQ n m = m ** (2 ** n) *)
 (* Proof:
@@ -8528,12 +8833,13 @@ val FUNPOW_DIV = store_thm(
       = m ** (2 * 2 ** n)             by EXP_EXP_MULT
       = m ** 2 ** SUC n               by EXP
 *)
-val FUNPOW_SQ = store_thm(
-  "FUNPOW_SQ",
-  ``!m n. FUNPOW SQ n m = m ** (2 ** n)``,
+Theorem FUNPOW_SQ:
+    !m n. FUNPOW SQ n m = m ** (2 ** n)
+Proof
   Induct_on `n` >-
   rw[] >>
-  rw[FUNPOW_SUC, GSYM EXP_EXP_MULT, EXP]);
+  rw[FUNPOW_SUC, GSYM EXP_EXP_MULT, EXP]
+QED
 
 (* Theorem: 0 < m /\ 0 < n ==> (FUNPOW (\n. (n * n) MOD m) n k = (k ** 2 ** n) MOD m) *)
 (* Proof:
@@ -8560,9 +8866,9 @@ val FUNPOW_SQ = store_thm(
      = (k ** (2 * 2 ** n)) MOD m               by arithmetic
      = (k ** 2 ** SUC n) MOD m                 by EXP
 *)
-val FUNPOW_SQ_MOD = store_thm(
-  "FUNPOW_SQ_MOD",
-  ``!m n k. 0 < m /\ 0 < n ==> (FUNPOW (\n. (n * n) MOD m) n k = (k ** 2 ** n) MOD m)``,
+Theorem FUNPOW_SQ_MOD:
+    !m n k. 0 < m /\ 0 < n ==> (FUNPOW (\n. (n * n) MOD m) n k = (k ** 2 ** n) MOD m)
+Proof
   strip_tac >>
   qabbrev_tac `f = \n. SQ n MOD m` >>
   Induct >>
@@ -8573,7 +8879,8 @@ val FUNPOW_SQ_MOD = store_thm(
   rw[FUNPOW_SUC, Abbr`f`] >>
   `(k ** 2 ** n) ** 2 = k ** (2 * 2 ** n)` by rw[GSYM EXP_EXP_MULT] >>
   `_ = k ** 2 ** SUC n` by rw[EXP] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: 0 < n ==> (FUNPOW (\x. MAX x m) n k = MAX k m) *)
 (* Proof:
@@ -8594,9 +8901,9 @@ val FUNPOW_SQ_MOD = store_thm(
          = MAX (MAX k m) m                   by function application
          = MAX k m                           by MAX_IS_MAX, m <= MAX k m
 *)
-val FUNPOW_MAX = store_thm(
-  "FUNPOW_MAX",
-  ``!m n k. 0 < n ==> (FUNPOW (\x. MAX x m) n k = MAX k m)``,
+Theorem FUNPOW_MAX:
+    !m n k. 0 < n ==> (FUNPOW (\x. MAX x m) n k = MAX k m)
+Proof
   Induct_on `n` >-
   simp[] >>
   rpt strip_tac >>
@@ -8604,7 +8911,8 @@ val FUNPOW_MAX = store_thm(
   rw[] >>
   rw[FUNPOW_SUC] >>
   `m <= MAX k m` by rw[] >>
-  rw[MAX_DEF]);
+  rw[MAX_DEF]
+QED
 
 (* Theorem: 0 < n ==> (FUNPOW (\x. MIN x m) n k = MIN k m) *)
 (* Proof:
@@ -8625,9 +8933,9 @@ val FUNPOW_MAX = store_thm(
          = MIN (MIN k m) m                   by function application
          = MIN k m                           by MIN_IS_MIN, MIN k m <= m
 *)
-val FUNPOW_MIN = store_thm(
-  "FUNPOW_MIN",
-  ``!m n k. 0 < n ==> (FUNPOW (\x. MIN x m) n k = MIN k m)``,
+Theorem FUNPOW_MIN:
+    !m n k. 0 < n ==> (FUNPOW (\x. MIN x m) n k = MIN k m)
+Proof
   Induct_on `n` >-
   simp[] >>
   rpt strip_tac >>
@@ -8635,7 +8943,8 @@ val FUNPOW_MIN = store_thm(
   rw[] >>
   rw[FUNPOW_SUC] >>
   `MIN k m <= m` by rw[] >>
-  rw[MIN_DEF]);
+  rw[MIN_DEF]
+QED
 
 (* Theorem: FUNPOW (\(x,y). (f x, g y)) n (x,y) = (FUNPOW f n x, FUNPOW g n y) *)
 (* Proof:
@@ -8652,12 +8961,13 @@ val FUNPOW_MIN = store_thm(
        = (f (FUNPOW f n x),g (FUNPOW g n y))                      by function application
        = (FUNPOW f (SUC n) x,FUNPOW g (SUC n) y)                  by FUNPOW_SUC
 *)
-val FUNPOW_PAIR = store_thm(
-  "FUNPOW_PAIR",
-  ``!f g n x y. FUNPOW (\(x,y). (f x, g y)) n (x,y) = (FUNPOW f n x, FUNPOW g n y)``,
+Theorem FUNPOW_PAIR:
+    !f g n x y. FUNPOW (\(x,y). (f x, g y)) n (x,y) = (FUNPOW f n x, FUNPOW g n y)
+Proof
   rpt strip_tac >>
   Induct_on `n` >>
-  rw[FUNPOW_SUC]);
+  rw[FUNPOW_SUC]
+QED
 
 (* Theorem: FUNPOW (\(x,y,z). (f x, g y, h z)) n (x,y,z) = (FUNPOW f n x, FUNPOW g n y, FUNPOW h n z) *)
 (* Proof:
@@ -8677,13 +8987,14 @@ val FUNPOW_PAIR = store_thm(
        = (f (FUNPOW f n x),g (FUNPOW g n y), h (FUNPOW h n z))        by function application
        = (FUNPOW f (SUC n) x,FUNPOW g (SUC n) y, FUNPOW h (SUC n) z)  by FUNPOW_SUC
 *)
-val FUNPOW_TRIPLE = store_thm(
-  "FUNPOW_TRIPLE",
-  ``!f g h n x y z. FUNPOW (\(x,y,z). (f x, g y, h z)) n (x,y,z) =
-                  (FUNPOW f n x, FUNPOW g n y, FUNPOW h n z)``,
+Theorem FUNPOW_TRIPLE:
+    !f g h n x y z. FUNPOW (\(x,y,z). (f x, g y, h z)) n (x,y,z) =
+                  (FUNPOW f n x, FUNPOW g n y, FUNPOW h n z)
+Proof
   rpt strip_tac >>
   Induct_on `n` >>
-  rw[FUNPOW_SUC]);
+  rw[FUNPOW_SUC]
+QED
 
 
 (* Theorem: f PERMUTES s ==> (LINV f s) PERMUTES s *)
@@ -9049,10 +9360,11 @@ End
 
 (* Theorem: j IN residue n ==> 0 < j /\ j < n *)
 (* Proof: by residue_def. *)
-val residue_element = store_thm(
-  "residue_element",
-  ``!n j. j IN residue n ==> 0 < j /\ j < n``,
-  rw[residue_def]);
+Theorem residue_element:
+    !n j. j IN residue n ==> 0 < j /\ j < n
+Proof
+  rw[residue_def]
+QED
 
 (* Theorem: residue 0 = EMPTY *)
 (* Proof: by residue_def *)
@@ -9075,11 +9387,12 @@ QED
    By residue_def, this is to show: 1 < n ==> ?x. x <> 0 /\ x < n
    Take x = 1, this is true.
 *)
-val residue_nonempty = store_thm(
-  "residue_nonempty",
-  ``!n. 1 < n ==> residue n <> {}``,
+Theorem residue_nonempty:
+    !n. 1 < n ==> residue n <> {}
+Proof
   rw[residue_def, EXTENSION] >>
-  metis_tac[DECIDE``1 <> 0``]);
+  metis_tac[DECIDE``1 <> 0``]
+QED
 
 (* Theorem: 0 NOTIN residue n *)
 (* Proof: by residue_def *)
@@ -9105,10 +9418,11 @@ QED
    = {i | i < n} DIFF {0}   by IN_DIFF
    = (count n) DIFF {0}     by count_def
 *)
-val residue_thm = store_thm(
-  "residue_thm[compute]",
-  ``!n. residue n = (count n) DIFF {0}``,
-  rw[residue_def, EXTENSION]);
+Theorem residue_thm[compute]:
+    !n. residue n = (count n) DIFF {0}
+Proof
+  rw[residue_def, EXTENSION]
+QED
 (* This is effective, put in computeLib. *)
 
 (*
@@ -9123,19 +9437,21 @@ val it = |- residue 10 = {9; 8; 7; 6; 5; 4; 3; 2; 1}: thm
    = n INSERT {1, 2, ..., (n-1) }
    = n INSERT residue n
 *)
-val residue_insert = store_thm(
-  "residue_insert",
-  ``!n. 0 < n ==> (residue (SUC n) = n INSERT residue n)``,
-  srw_tac[ARITH_ss][residue_def, EXTENSION]);
+Theorem residue_insert:
+    !n. 0 < n ==> (residue (SUC n) = n INSERT residue n)
+Proof
+  srw_tac[ARITH_ss][residue_def, EXTENSION]
+QED
 
 (* Theorem: (residue n) DELETE n = residue n *)
 (* Proof: Because n is not in (residue n). *)
-val residue_delete = store_thm(
-  "residue_delete",
-  ``!n. 0 < n ==> ((residue n) DELETE n = residue n)``,
+Theorem residue_delete:
+    !n. 0 < n ==> ((residue n) DELETE n = residue n)
+Proof
   rpt strip_tac >>
   `n NOTIN (residue n)` by rw[residue_def] >>
-  metis_tac[DELETE_NON_ELEMENT]);
+  metis_tac[DELETE_NON_ELEMENT]
+QED
 
 (* Theorem alias: rename *)
 val residue_suc = save_thm("residue_suc", residue_insert);
@@ -9143,10 +9459,11 @@ val residue_suc = save_thm("residue_suc", residue_insert);
 
 (* Theorem: count n = 0 INSERT (residue n) *)
 (* Proof: by definition. *)
-val residue_count = store_thm(
-  "residue_count",
-  ``!n. 0 < n ==> (count n = 0 INSERT (residue n))``,
-  srw_tac[ARITH_ss][residue_def, EXTENSION]);
+Theorem residue_count:
+    !n. 0 < n ==> (count n = 0 INSERT (residue n))
+Proof
+  srw_tac[ARITH_ss][residue_def, EXTENSION]
+QED
 
 (* Theorem: FINITE (residue n) *)
 (* Proof: by FINITE_COUNT.
@@ -9154,26 +9471,28 @@ val residue_count = store_thm(
    If n > 0, count n = 0 INSERT (residue n)  by residue_count
    hence true by FINITE_COUNT and FINITE_INSERT.
 *)
-val residue_finite = store_thm(
-  "residue_finite",
-  ``!n. FINITE (residue n)``,
+Theorem residue_finite:
+    !n. FINITE (residue n)
+Proof
   Cases >-
   rw[residue_def] >>
-  metis_tac[residue_count, FINITE_INSERT, count_def, FINITE_COUNT, DECIDE ``0 < SUC n``]);
+  metis_tac[residue_count, FINITE_INSERT, count_def, FINITE_COUNT, DECIDE ``0 < SUC n``]
+QED
 
 (* Theorem: For n > 0, CARD (residue n) = n-1 *)
 (* Proof:
    Since 0 INSERT (residue n) = count n by residue_count
    the result follows by CARD_COUNT.
 *)
-val residue_card = store_thm(
-  "residue_card",
-  ``!n. 0 < n ==> (CARD (residue n) = n-1)``,
+Theorem residue_card:
+    !n. 0 < n ==> (CARD (residue n) = n-1)
+Proof
   rpt strip_tac >>
   `0 NOTIN (residue n)` by rw[residue_def] >>
   `0 INSERT (residue n) = count n` by rw[residue_count] >>
   `SUC (CARD (residue n)) = n` by metis_tac[residue_finite, CARD_INSERT, CARD_COUNT] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: For prime m, a in residue m, n <= m, a*n MOD m <> a*x MOD m  for all x in residue n *)
 (* Proof:
@@ -9182,9 +9501,9 @@ val residue_card = store_thm(
    If n = m, n MOD m = 0, but x MOD m <> 0, hence contradiction.
    If n < m, then since x < n <= m, n = x, contradicting x < n.
 *)
-val residue_prime_neq = store_thm(
-  "residue_prime_neq",
-  ``!p a n. prime p /\ a IN (residue p) /\ n <= p ==> !x. x IN (residue n) ==> (a*n) MOD p <> (a*x) MOD p``,
+Theorem residue_prime_neq:
+    !p a n. prime p /\ a IN (residue p) /\ n <= p ==> !x. x IN (residue n) ==> (a*n) MOD p <> (a*x) MOD p
+Proof
   rw[residue_def] >>
   spose_not_then strip_assume_tac >>
   `0 < p` by rw[PRIME_POS] >>
@@ -9194,7 +9513,8 @@ val residue_prime_neq = store_thm(
   metis_tac [DIVMOD_ID] >>
   `n < p` by decide_tac >>
   `(n MOD p = n) /\ (x MOD p = x)` by rw_tac arith_ss[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Idea: the product of residues is a factorial. *)
 
@@ -9259,12 +9579,13 @@ QED
        = set (SNOC (SUC n) (GENLIST SUC n))     by LIST_TO_SET_SNOC
        = set (GENLIST SUC (SUC n))              by GENLIST
 *)
-val natural_thm = store_thm(
-  "natural_thm",
-  ``!n. natural n = set (GENLIST SUC n)``,
+Theorem natural_thm:
+    !n. natural n = set (GENLIST SUC n)
+Proof
   Induct >-
   rw[] >>
-  rw[natural_suc, LIST_TO_SET_SNOC, GENLIST]);
+  rw[natural_suc, LIST_TO_SET_SNOC, GENLIST]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Uptos -- counting from 0 and inclusive.                                   *)
@@ -9275,24 +9596,27 @@ val _ = overload_on("upto", ``\n. count (SUC n)``);
 
 (* Theorem: FINITE (upto n) *)
 (* Proof: by FINITE_COUNT *)
-val upto_finite = store_thm(
-  "upto_finite",
-  ``!n. FINITE (upto n)``,
-  rw[]);
+Theorem upto_finite:
+    !n. FINITE (upto n)
+Proof
+  rw[]
+QED
 
 (* Theorem: CARD (upto n) = SUC n *)
 (* Proof: by CARD_COUNT *)
-val upto_card = store_thm(
-  "upto_card",
-  ``!n. CARD (upto n) = SUC n``,
-  rw[]);
+Theorem upto_card:
+    !n. CARD (upto n) = SUC n
+Proof
+  rw[]
+QED
 
 (* Theorem: n IN (upto n) *)
 (* Proof: byLESS_SUC_REFL *)
-val upto_has_last = store_thm(
-  "upto_has_last",
-  ``!n. n IN (upto n)``,
-  rw[]);
+Theorem upto_has_last:
+    !n. n IN (upto n)
+Proof
+  rw[]
+QED
 
 (* Theorem: (upto n) DELETE n = count n *)
 (* Proof:
@@ -9321,13 +9645,14 @@ QED
        If ?x'. (x = SUC x') /\ x' < n,
           x' < n ==> SUC x' = x < SUC n      by LESS_MONO_EQ
 *)
-val upto_split_first = store_thm(
-  "upto_split_first",
-  ``!n. upto n = {0} UNION (natural n)``,
+Theorem upto_split_first:
+    !n. upto n = {0} UNION (natural n)
+Proof
   rw[EXTENSION, EQ_IMP_THM] >>
   Cases_on `x` >-
   rw[] >>
-  metis_tac[LESS_MONO_EQ]);
+  metis_tac[LESS_MONO_EQ]
+QED
 
 (* Theorem: upto n = (count n) UNION {n} *)
 (* Proof:
@@ -9337,10 +9662,11 @@ val upto_split_first = store_thm(
    (2) x < n \/ (x = n) ==> x < SUC n
        True by LESS_THM.
 *)
-val upto_split_last = store_thm(
-  "upto_split_last",
-  ``!n. upto n = (count n) UNION {n}``,
-  rw[EXTENSION, EQ_IMP_THM]);
+Theorem upto_split_last:
+    !n. upto n = (count n) UNION {n}
+Proof
+  rw[EXTENSION, EQ_IMP_THM]
+QED
 
 (* Theorem: upto n = n INSERT (count n) *)
 (* Proof:
@@ -9351,10 +9677,11 @@ val upto_split_last = store_thm(
    = x INSERT {x| x < n}       by INSERT_DEF
    = x INSERT (count n)        by count_def
 *)
-val upto_by_count = store_thm(
-  "upto_by_count",
-  ``!n. upto n = n INSERT (count n)``,
-  rw[EXTENSION]);
+Theorem upto_by_count:
+    !n. upto n = n INSERT (count n)
+Proof
+  rw[EXTENSION]
+QED
 
 (* Theorem: upto n = 0 INSERT (natural n) *)
 (* Proof:
@@ -9368,11 +9695,12 @@ val upto_by_count = store_thm(
    = 0 INSERT (IMAGE SUC (count n))     by IMAGE_DEF
    = 0 INSERT (natural n)               by notation
 *)
-val upto_by_natural = store_thm(
-  "upto_by_natural",
-  ``!n. upto n = 0 INSERT (natural n)``,
+Theorem upto_by_natural:
+    !n. upto n = 0 INSERT (natural n)
+Proof
   rw[EXTENSION] >>
-  metis_tac[num_CASES, LESS_MONO_EQ, SUC_POS]);
+  metis_tac[num_CASES, LESS_MONO_EQ, SUC_POS]
+QED
 
 (* Theorem: natural n = count (SUC n) DELETE 0 *)
 (* Proof:
@@ -9385,10 +9713,11 @@ val upto_by_natural = store_thm(
    = IMAGE SUC (count n)         by IMAGE_DEF
    = natural n                   by notation
 *)
-val natural_by_upto = store_thm(
-  "natural_by_upto",
-  ``!n. natural n = count (SUC n) DELETE 0``,
-  (rw[EXTENSION, EQ_IMP_THM] >> metis_tac[num_CASES, LESS_MONO_EQ]));
+Theorem natural_by_upto:
+    !n. natural n = count (SUC n) DELETE 0
+Proof
+  (rw[EXTENSION, EQ_IMP_THM] >> metis_tac[num_CASES, LESS_MONO_EQ])
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Euler Set and Totient Function                                            *)
@@ -9407,17 +9736,19 @@ End
 
 (* Theorem: x IN (Euler n) <=> 0 < x /\ x < n /\ coprime n x *)
 (* Proof: by Euler_def. *)
-val Euler_element = store_thm(
-  "Euler_element",
-  ``!n x. x IN (Euler n) <=> 0 < x /\ x < n /\ coprime n x``,
-  rw[Euler_def]);
+Theorem Euler_element:
+    !n x. x IN (Euler n) <=> 0 < x /\ x < n /\ coprime n x
+Proof
+  rw[Euler_def]
+QED
 
 (* Theorem: Euler n = (residue n) INTER {j | coprime j n} *)
 (* Proof: by Euler_def, residue_def, EXTENSION, IN_INTER *)
-val Euler_thm = store_thm(
-  "Euler_thm[compute]",
-  ``!n. Euler n = (residue n) INTER {j | coprime j n}``,
-  rw[Euler_def, residue_def, GCD_SYM, EXTENSION]);
+Theorem Euler_thm[compute]:
+    !n. Euler n = (residue n) INTER {j | coprime j n}
+Proof
+  rw[Euler_def, residue_def, GCD_SYM, EXTENSION]
+QED
 (* This is effective, put in computeLib. *)
 
 (*
@@ -9433,40 +9764,45 @@ val it = |- totient 10 = 4: thm
      and FINITE (count n)          by FINITE_COUNT
      ==> FINITE (Euler n)          by SUBSET_FINITE
 *)
-val Euler_finite = store_thm(
-  "Euler_finite",
-  ``!n. FINITE (Euler n)``,
+Theorem Euler_finite:
+    !n. FINITE (Euler n)
+Proof
   rpt strip_tac >>
   `(Euler n) SUBSET count n` by rw[Euler_def, SUBSET_DEF] >>
-  metis_tac[FINITE_COUNT, SUBSET_FINITE]);
+  metis_tac[FINITE_COUNT, SUBSET_FINITE]
+QED
 
 (* Theorem: Euler 0 = {} *)
 (* Proof: by Euler_def *)
-val Euler_0 = store_thm(
-  "Euler_0",
-  ``Euler 0 = {}``,
-  rw[Euler_def]);
+Theorem Euler_0:
+    Euler 0 = {}
+Proof
+  rw[Euler_def]
+QED
 
 (* Theorem: Euler 1 = {} *)
 (* Proof: by Euler_def *)
-val Euler_1 = store_thm(
-  "Euler_1",
-  ``Euler 1 = {}``,
-  rw[Euler_def]);
+Theorem Euler_1:
+    Euler 1 = {}
+Proof
+  rw[Euler_def]
+QED
 
 (* Theorem: 1 < n ==> 1 IN (Euler n) *)
 (* Proof: by Euler_def *)
-val Euler_has_1 = store_thm(
-  "Euler_has_1",
-  ``!n. 1 < n ==> 1 IN (Euler n)``,
-  rw[Euler_def]);
+Theorem Euler_has_1:
+    !n. 1 < n ==> 1 IN (Euler n)
+Proof
+  rw[Euler_def]
+QED
 
 (* Theorem: 1 < n ==> (Euler n) <> {} *)
 (* Proof: by Euler_has_1, MEMBER_NOT_EMPTY *)
-val Euler_nonempty = store_thm(
-  "Euler_nonempty",
-  ``!n. 1 < n ==> (Euler n) <> {}``,
-  metis_tac[Euler_has_1, MEMBER_NOT_EMPTY]);
+Theorem Euler_nonempty:
+    !n. 1 < n ==> (Euler n) <> {}
+Proof
+  metis_tac[Euler_has_1, MEMBER_NOT_EMPTY]
+QED
 
 (* Theorem: (Euler n = {}) <=> ((n = 0) \/ (n = 1)) *)
 (* Proof:
@@ -9478,16 +9814,17 @@ val Euler_nonempty = store_thm(
       Note Euler 0 = {}               by Euler_0
        and Euler 1 = {}               by Euler_1
 *)
-val Euler_empty = store_thm(
-  "Euler_empty",
-  ``!n. (Euler n = {}) <=> ((n = 0) \/ (n = 1))``,
+Theorem Euler_empty:
+    !n. (Euler n = {}) <=> ((n = 0) \/ (n = 1))
+Proof
   rw[EQ_IMP_THM] >| [
     spose_not_then strip_assume_tac >>
     `1 < n` by decide_tac >>
     metis_tac[Euler_nonempty],
     rw[Euler_0],
     rw[Euler_1]
-  ]);
+  ]
+QED
 
 (* Theorem: totient n <= n *)
 (* Proof:
@@ -9497,12 +9834,13 @@ val Euler_empty = store_thm(
    Hence CARD (Euler n) <= n       by CARD_SUBSET
       or totient n <= n            by totient_def
 *)
-val Euler_card_upper_le = store_thm(
-  "Euler_card_upper_le",
-  ``!n. totient n <= n``,
+Theorem Euler_card_upper_le:
+    !n. totient n <= n
+Proof
   rpt strip_tac >>
   `(Euler n) SUBSET count n` by rw[Euler_def, SUBSET_DEF] >>
-  metis_tac[totient_def, CARD_SUBSET, FINITE_COUNT, CARD_COUNT]);
+  metis_tac[totient_def, CARD_SUBSET, FINITE_COUNT, CARD_COUNT]
+QED
 
 (* Theorem: 1 < n ==> totient n < n *)
 (* Proof:
@@ -9517,9 +9855,9 @@ val Euler_card_upper_le = store_thm(
    Hence  CARD (Euler n) < n           by CARD_PSUBSET
       or  totient n < n                by totient_def
 *)
-val Euler_card_upper_lt = store_thm(
-  "Euler_card_upper_lt",
-  ``!n. 1 < n ==> totient n < n``,
+Theorem Euler_card_upper_lt:
+    !n. 1 < n ==> totient n < n
+Proof
   rpt strip_tac >>
   `(Euler n) SUBSET count n` by rw[Euler_def, SUBSET_DEF] >>
   `0 < n /\ n <> 1` by decide_tac >>
@@ -9528,7 +9866,8 @@ val Euler_card_upper_lt = store_thm(
   `0 IN (count n)` by rw[] >>
   `(Euler n) <> (count n)` by metis_tac[EXTENSION] >>
   `(Euler n) PSUBSET (count n)` by rw[PSUBSET_DEF] >>
-  metis_tac[totient_def, CARD_PSUBSET, FINITE_COUNT, CARD_COUNT]);
+  metis_tac[totient_def, CARD_PSUBSET, FINITE_COUNT, CARD_COUNT]
+QED
 
 (* Theorem: (totient n <= n) /\ (1 < n ==> 0 < totient n /\ totient n < n) *)
 (* Proof:
@@ -9543,16 +9882,17 @@ val Euler_card_upper_lt = store_thm(
    (3) 1 < n ==> totient n < n
        True by Euler_card_upper_lt.
 *)
-val Euler_card_bounds = store_thm(
-  "Euler_card_bounds",
-  ``!n. (totient n <= n) /\ (1 < n ==> 0 < totient n /\ totient n < n)``,
+Theorem Euler_card_bounds:
+    !n. (totient n <= n) /\ (1 < n ==> 0 < totient n /\ totient n < n)
+Proof
   rw[] >-
   rw[Euler_card_upper_le] >-
  (`(Euler n) <> {}` by rw[Euler_nonempty] >>
   `FINITE (Euler n)` by rw[Euler_finite] >>
   `totient n <> 0` by metis_tac[totient_def, CARD_EQ_0] >>
   decide_tac) >>
-  rw[Euler_card_upper_lt]);
+  rw[Euler_card_upper_lt]
+QED
 
 (* Theorem: For prime p, (Euler p = residue p) *)
 (* Proof:
@@ -9561,11 +9901,12 @@ val Euler_card_bounds = store_thm(
    Since x < p, x does not divide p, result follows by PRIME_GCD.
    or, this is true by prime_coprime_all_lt
 *)
-val Euler_prime = store_thm(
-  "Euler_prime",
-  ``!p. prime p ==> (Euler p = residue p)``,
+Theorem Euler_prime:
+    !p. prime p ==> (Euler p = residue p)
+Proof
   rw[Euler_def, residue_def, EXTENSION, EQ_IMP_THM] >>
-  rw[prime_coprime_all_lt]);
+  rw[prime_coprime_all_lt]
+QED
 
 (* Theorem: For prime p, totient p = p - 1 *)
 (* Proof:
@@ -9574,10 +9915,11 @@ val Euler_prime = store_thm(
     = CARD (residue p)  by Euler_prime
     = p - 1             by residue_card, and prime p > 0.
 *)
-val Euler_card_prime = store_thm(
-  "Euler_card_prime",
-  ``!p. prime p ==> (totient p = p - 1)``,
-  rw[totient_def, Euler_prime, residue_card, PRIME_POS]);
+Theorem Euler_card_prime:
+    !p. prime p ==> (totient p = p - 1)
+Proof
+  rw[totient_def, Euler_prime, residue_card, PRIME_POS]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Summation of Geometric Sequence                                           *)
@@ -9623,9 +9965,9 @@ val Euler_card_prime = store_thm(
       = p ** p ** SUC n - p                              by SUB_ADD, p ** (SUC n) <= p * p ** (SUC n)
       = p * (p ** SUC n - 1)                             by LEFT_SUB_DISTRIB
  *)
-val sigma_geometric_natural_eqn = store_thm(
-  "sigma_geometric_natural_eqn",
-  ``!p. 0 < p ==> !n. (p - 1) * SIGMA (\j. p ** j) (natural n) = p * (p ** n - 1)``,
+Theorem sigma_geometric_natural_eqn:
+    !p. 0 < p ==> !n. (p - 1) * SIGMA (\j. p ** j) (natural n) = p * (p ** n - 1)
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw_tac std_ss[natural_0, SUM_IMAGE_EMPTY, EXP, MULT_0] >>
@@ -9648,7 +9990,8 @@ val sigma_geometric_natural_eqn = store_thm(
   `_ = (p * q - q + q) - p` by rw[LESS_EQ_ADD_SUB] >>
   `_ = p * q - p` by rw[SUB_ADD] >>
   `_ = p * (q - 1)` by rw[LEFT_SUB_DISTRIB] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: 1 < p ==> !n. SIGMA (\j. p ** j) (natural n) = (p * (p ** n - 1)) DIV (p - 1) *)
 (* Proof:
@@ -9659,12 +10002,13 @@ val sigma_geometric_natural_eqn = store_thm(
          (p - 1) * t = p * (p ** n - 1)                by sigma_geometric_natural_eqn, 0 < p
    Hence           t = (p * (p ** n - 1)) DIV (p - 1)  by DIV_SOLVE, 0 < (p - 1)
 *)
-val sigma_geometric_natural = store_thm(
-  "sigma_geometric_natural",
-  ``!p. 1 < p ==> !n. SIGMA (\j. p ** j) (natural n) = (p * (p ** n - 1)) DIV (p - 1)``,
+Theorem sigma_geometric_natural:
+    !p. 1 < p ==> !n. SIGMA (\j. p ** j) (natural n) = (p * (p ** n - 1)) DIV (p - 1)
+Proof
   rpt strip_tac >>
   `0 < p - 1 /\ 0 < p` by decide_tac >>
-  rw[sigma_geometric_natural_eqn, DIV_SOLVE]);
+  rw[sigma_geometric_natural_eqn, DIV_SOLVE]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Chinese Remainder Theorem.                                                *)
@@ -9963,9 +10307,9 @@ val _ = temp_overload_on ("<=", ``sublist``);
            But [m; SUC n] <= [m; n; SUC n]            by sublist_def
            Thus [m; SUC n] <= [m .. SUC n]            by sublist_trans
 *)
-val listRangeINC_sublist = store_thm(
-  "listRangeINC_sublist",
-  ``!m n. m < n ==> [m; n] <= [m .. n]``,
+Theorem listRangeINC_sublist:
+    !m n. m < n ==> [m; n] <= [m .. n]
+Proof
   Induct_on `n` >-
   rw[] >>
   rpt strip_tac >>
@@ -9978,7 +10322,8 @@ val listRangeINC_sublist = store_thm(
     `SNOC (SUC n) [m .. n] = [m .. SUC n]` by rw[listRangeINC_SNOC, ADD1] >>
     `[m; SUC n] <= [m; n; SUC n]` by rw[sublist_def] >>
     metis_tac[sublist_trans]
-  ]);
+  ]
+QED
 
 (* Theorem: m + 1 < n ==> [m; (n - 1)] <= [m ..< n] *)
 (* Proof:
@@ -9996,9 +10341,9 @@ val listRangeINC_sublist = store_thm(
            But [m; SUC n - 1] <= [m; n] <= [m; n - 1; n]  by sublist_def
            Thus [m; SUC n - 1] <= [m ..< SUC n]           by sublist_trans
 *)
-val listRangeLHI_sublist = store_thm(
-  "listRangeLHI_sublist",
-  ``!m n. m + 1 < n ==> [m; (n - 1)] <= [m ..< n]``,
+Theorem listRangeLHI_sublist:
+    !m n. m + 1 < n ==> [m; (n - 1)] <= [m ..< n]
+Proof
   Induct_on `n` >-
   rw[] >>
   rpt strip_tac >>
@@ -10012,7 +10357,8 @@ val listRangeLHI_sublist = store_thm(
     `SNOC n [m ..< n] = [m ..< SUC n]` by rw[listRangeLHI_SNOC, ADD1] >>
     `[m; SUC n - 1] <= [m; n - 1; n]` by rw[sublist_def] >>
     metis_tac[sublist_trans]
-  ]);
+  ]
+QED
 
 (* Theorem: sl <= ls /\ ALL_DISTINCT ls /\ j < h /\ h < LENGTH sl ==>
             findi (EL j sl) ls < findi (EL h sl) ls *)

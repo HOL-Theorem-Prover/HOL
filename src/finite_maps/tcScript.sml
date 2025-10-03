@@ -42,11 +42,13 @@ Definition DRESTR:
   ((R:'a reln) ^| (s:'a set)) a b = a IN s /\ R a b
 End
 
-val DRESTR_IN = store_thm ("DRESTR_IN",
-``!R:'a reln s a. (R ^| s) a = if a IN s then R a else {}``,
+Theorem DRESTR_IN:
+  !R:'a reln s a. (R ^| s) a = if a IN s then R a else {}
+Proof
 REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN REWRITE_TAC [DRESTR] THEN
 GEN_TAC THEN Cases_on `a IN s` THEN AR THEN
-REWRITE_TAC [rrs NOT_IN_EMPTY]);
+REWRITE_TAC [rrs NOT_IN_EMPTY]
+QED
 
 Definition RRESTR:
   ((R:'a reln) |^ (s:'a set)) a b = b IN s /\ R a b
@@ -57,32 +59,40 @@ End
 Definition BRESTR: (R:'a reln) ^|^ s = R ^| s |^ s
 End
 
-val DRESTR_EMPTY = store_thm ("DRESTR_EMPTY",
-``!R:'a reln. R ^| {} = REMPTY``,
+Theorem DRESTR_EMPTY:
+  !R:'a reln. R ^| {} = REMPTY
+Proof
 GEN_TAC THEN REPEAT (CONV_TAC FUN_EQ_CONV THEN GEN_TAC) THEN
 REWRITE_TAC [DRESTR_IN, NOT_IN_EMPTY, EMPTY_REL_DEF] THEN
-REWRITE_TAC [rrs NOT_IN_EMPTY]);
+REWRITE_TAC [rrs NOT_IN_EMPTY]
+QED
 
-val DRESTR_RDOM = store_thm ("DRESTR_RDOM",
-``!R:'a reln. R ^| (RDOM R) = R``,
+Theorem DRESTR_RDOM:
+  !R:'a reln. R ^| (RDOM R) = R
+Proof
 GEN_TAC THEN REPEAT (CONV_TAC FUN_EQ_CONV THEN GEN_TAC) THEN
 REWRITE_TAC [DRESTR_IN, IN_RDOM] THEN
 COND_CASES_TAC THENL
 [REFL_TAC
 ,UNDISCH_THEN ``~?y. (R:'a reln) x y``
               (REWRITE_TAC o ulist o CONV_RULE NOT_EXISTS_CONV) THEN
- REWRITE_TAC [rrs NOT_IN_EMPTY]]);
+ REWRITE_TAC [rrs NOT_IN_EMPTY]]
+QED
 
-val REMPTY_RRESTR = store_thm ("REMPTY_RRESTR",
-``!s. REMPTY:'a reln |^ s = REMPTY``,
+Theorem REMPTY_RRESTR:
+  !s. REMPTY:'a reln |^ s = REMPTY
+Proof
 GEN_TAC THEN REPEAT (CONV_TAC FUN_EQ_CONV THEN GEN_TAC) THEN
-REWRITE_TAC [RRESTR, EMPTY_REL_DEF]);
+REWRITE_TAC [RRESTR, EMPTY_REL_DEF]
+QED
 
-val O_REMPTY_O = store_thm ("O_REMPTY_O",
-``(!R:'a reln. R O REMPTY = REMPTY) /\
-  (!R:'a reln. REMPTY O R = REMPTY)``,
+Theorem O_REMPTY_O:
+  (!R:'a reln. R O REMPTY = REMPTY) /\
+  (!R:'a reln. REMPTY O R = REMPTY)
+Proof
 CONJ_TAC THEN GEN_TAC THEN REPEAT (CONV_TAC FUN_EQ_CONV THEN GEN_TAC) THEN
-REWRITE_TAC [EMPTY_REL_DEF, O_DEF]);
+REWRITE_TAC [EMPTY_REL_DEF, O_DEF]
+QED
 
 (* Define subTC, the invariant for an arrayless form of the
    Floyd-Warshall algorithm, in as low-level and symmetrical a way as
@@ -103,21 +113,25 @@ REWRITE_TAC [BRESTR, DRESTR, RRESTR] THEN REPEAT STRIP_TAC THEN AR));
 
 (* RTC_trim_lem = |- !R s y y'. y' IN s /\ (R ^|^ s)^* y' y ==> y IN s *)
 
-val subTC_thm = store_thm ("subTC_thm",
-``!R:'a reln s. subTC R s = R RUNION (R O ((R ^|^ s)^* ^| s) O R)``,
+Theorem subTC_thm:
+  !R:'a reln s. subTC R s = R RUNION (R O ((R ^|^ s)^* ^| s) O R)
+Proof
 REPEAT GEN_TAC THEN REPEAT (CONV_TAC FUN_EQ_CONV THEN GEN_TAC) THEN
 REWRITE_TAC [subTC, O_DEF, RUNION, DRESTR] THEN
 EQ_TAC THEN STRIP_TAC THEN AR THEN DISJ2_TAC THENL
 [EXISTS_TAC ``b:'a`` THEN AR THEN
  EXISTS_TAC ``a:'a`` THEN AR
 ,EXISTS_TAC ``y':'a`` THEN EXISTS_TAC ``y:'a`` THEN AR THEN
- IMP_RES_TAC RTC_trim_lem]);
+ IMP_RES_TAC RTC_trim_lem]
+QED
 
-val subTC_EMPTY = store_thm ("subTC_EMPTY",
-``!R:'a reln. subTC R {} = R``,
+Theorem subTC_EMPTY:
+  !R:'a reln. subTC R {} = R
+Proof
 GEN_TAC THEN REPEAT (CONV_TAC FUN_EQ_CONV THEN GEN_TAC) THEN
 REWRITE_TAC [subTC_thm, BRESTR, DRESTR_EMPTY, O_REMPTY_O, REMPTY_RRESTR,
-             EMPTY_REL_DEF, RUNION]);
+             EMPTY_REL_DEF, RUNION]
+QED
 
 (* Dec 14 new departure: figure out what is bigger or equal (in fact equal)
    to (R ^|^ (a INSERT s))^* because that's the only way I know to use a
@@ -224,10 +238,11 @@ ASM_REWRITE_TAC [RTC_REFL] THENL
   ,DISJ2_TAC THEN DISJ2_TAC THEN Q.EXISTS_TAC `x'` THEN AR
  ]);
 
-val RTC_INSERT = store_thm ("RTC_INSERT",
-``!R:'a reln s a w z. (R ^|^ (a INSERT s))^* w z <=>
+Theorem RTC_INSERT:
+  !R:'a reln s a w z. (R ^|^ (a INSERT s))^* w z <=>
 (R ^|^ s)^* w z \/ ((a = w) \/ ?x. x IN s /\ (R ^|^ s)^* w x /\ R x a) /\
-                   ((a = z) \/ ?y. y IN s /\ R a y /\ (R ^|^ s)^* y z)``,
+                   ((a = z) \/ ?y. y IN s /\ R a y /\ (R ^|^ s)^* y z)
+Proof
 REPEAT GEN_TAC THEN EQ_TAC THENL
 [DISCH_TAC THEN CONV_TAC (REWR_CONV LEFT_OR_OVER_AND) THEN CONJ_TAC THENL
  [MATCH_MP_TAC RTC_INSERT_LEFT_IMP THEN AR
@@ -262,7 +277,8 @@ REPEAT GEN_TAC THEN EQ_TAC THENL
    DISJ2_TAC THEN Q.EXISTS_TAC `y` THEN CONJ_TAC THENL
    [ASM_REWRITE_TAC [BRESTR, RRESTR, DRESTR, IN_INSERT]
    ,IMP_RES_TAC RTC_INSERT_MONO THEN AR
-]]]]);
+]]]]
+QED
 
 val NOT_EQ_RTC_IN = prove (
 ``!R:'a reln s p q. p <> q \/ q <> p ==> (R ^|^ s)^* p q ==> p IN s /\ q IN s``,
@@ -321,9 +337,10 @@ REPEAT GEN_TAC THEN REWRITE_TAC [subTC, RTC_INSERT] THEN STRIP_TAC THENL
 
 (* The big lemma: what enlarging s by one does to subTC R x *)
 
-val subTC_INSERT = store_thm ("subTC_INSERT",
-``!R:'a reln s q x y. subTC R (q INSERT s) x y <=>
-   subTC R s x y \/ subTC R s x q /\ subTC R s q y``,
+Theorem subTC_INSERT:
+  !R:'a reln s q x y. subTC R (q INSERT s) x y <=>
+   subTC R s x y \/ subTC R s x q /\ subTC R s q y
+Proof
 REPEAT GEN_TAC THEN EQ_TAC THENL
 [CONV_TAC (LAND_CONV (REWRITE_CONV [subTC])) THEN
  REWRITE_TAC [DISJ_IMP_THM] THEN CONJ_TAC THENL
@@ -387,10 +404,12 @@ REPEAT GEN_TAC THEN EQ_TAC THENL
    ,ONCE_REWRITE_TAC [RTC_CASES1] THEN DISJ2_TAC THEN
     Q.EXISTS_TAC `a'` THEN IMP_RES_TAC RTC_INSERT_MONO THEN
     ASM_REWRITE_TAC [BRESTR, DRESTR, RRESTR, IN_INSERT]
-]]]]);
+]]]]
+QED
 
-val subTC_RDOM = store_thm ("subTC_RDOM",
-``!R:'a reln. subTC R (RDOM R) = R^+``,
+Theorem subTC_RDOM:
+  !R:'a reln. subTC R (RDOM R) = R^+
+Proof
 GEN_TAC THEN REPEAT (CONV_TAC FUN_EQ_CONV THEN GEN_TAC) THEN EQ_TAC THENL
 [REWRITE_TAC [subTC, DISJ_IMP_THM] THEN
  CONJ_TAC THEN1 MATCH_ACCEPT_TAC TC_SUBSET THEN
@@ -427,16 +446,19 @@ GEN_TAC THEN REPEAT (CONV_TAC FUN_EQ_CONV THEN GEN_TAC) THEN EQ_TAC THENL
   ,ONCE_REWRITE_TAC [RTC_CASES1] THEN DISJ2_TAC THEN Q.EXISTS_TAC `a'` THEN
    ASM_REWRITE_TAC [DRESTR, BRESTR, RRESTR, IN_RDOM] THEN
    Q.EXISTS_TAC `a'` THEN AR
-]]]);
+]]]
+QED
 
 (* following corollary suggests how we want to compute. *)
 
-val subTC_INSERT_COR = store_thm ("subTC_INSERT_COR",
-``!R:'a reln s x a. subTC R (x INSERT s) a =
-   if x IN subTC R s a then subTC R s a UNION subTC R s x else subTC R s a``,
+Theorem subTC_INSERT_COR:
+  !R:'a reln s x a. subTC R (x INSERT s) a =
+   if x IN subTC R s a then subTC R s a UNION subTC R s x else subTC R s a
+Proof
 REPEAT GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN
 REWRITE_TAC [SPECIFICATION, subTC_INSERT, COND_RATOR, rrs IN_UNION] THEN
-tautLib.TAUT_TAC);
+tautLib.TAUT_TAC
+QED
 
 val RDOM_EMPTY = prove (
 ``!R:'a reln. (RDOM R = {}) ==> (R = REMPTY) /\ (!s. subTC R s = REMPTY)``,
@@ -459,25 +481,32 @@ End
 Definition RELN_TO_FMAP:  RELN_TO_FMAP (R:'a reln) = FUN_FMAP R (RDOM R)
 End
 
-val RDOM_SUBSET_FDOM = store_thm ("RDOM_SUBSET_FDOM",
-``!f:'a |-> 'a set. RDOM (FMAP_TO_RELN f) SUBSET FDOM f``,
+Theorem RDOM_SUBSET_FDOM:
+  !f:'a |-> 'a set. RDOM (FMAP_TO_RELN f) SUBSET FDOM f
+Proof
 GEN_TAC THEN
 REWRITE_TAC [SUBSET_DEF, IN_RDOM, FMAP_TO_RELN] THEN
-Cases_on `x IN FDOM f` THEN ASM_REWRITE_TAC [rrs NOT_IN_EMPTY]);
+Cases_on `x IN FDOM f` THEN ASM_REWRITE_TAC [rrs NOT_IN_EMPTY]
+QED
 
-val FINITE_RDOM = store_thm ("FINITE_RDOM",
-``!f:'a |-> 'a set. FINITE (RDOM (FMAP_TO_RELN f))``,
+Theorem FINITE_RDOM:
+  !f:'a |-> 'a set. FINITE (RDOM (FMAP_TO_RELN f))
+Proof
 GEN_TAC THEN MP_TAC (SPEC_ALL RDOM_SUBSET_FDOM) THEN
-MATCH_MP_TAC SUBSET_FINITE THEN MATCH_ACCEPT_TAC FDOM_FINITE);
+MATCH_MP_TAC SUBSET_FINITE THEN MATCH_ACCEPT_TAC FDOM_FINITE
+QED
 
-val FDOM_RDOM = store_thm ("FDOM_RDOM",
-``!R:'a reln. FINITE (RDOM R) ==> (FDOM (RELN_TO_FMAP R) = RDOM R)``,
+Theorem FDOM_RDOM:
+  !R:'a reln. FINITE (RDOM R) ==> (FDOM (RELN_TO_FMAP R) = RDOM R)
+Proof
 REPEAT STRIP_TAC THEN
 IMP_RES_TAC (INST_TYPE [beta |-> ``:'a set``] FUN_FMAP_DEF) THEN
-ASM_REWRITE_TAC [RELN_TO_FMAP]);
+ASM_REWRITE_TAC [RELN_TO_FMAP]
+QED
 
-val RELN_TO_FMAP_TO_RELN_ID = store_thm ("RELN_TO_FMAP_TO_RELN_ID",
-``!R:'a reln. FINITE (RDOM R) ==> (FMAP_TO_RELN (RELN_TO_FMAP R) = R)``,
+Theorem RELN_TO_FMAP_TO_RELN_ID:
+  !R:'a reln. FINITE (RDOM R) ==> (FMAP_TO_RELN (RELN_TO_FMAP R) = R)
+Proof
 REPEAT STRIP_TAC THEN IMP_RES_TAC FDOM_RDOM THEN
 CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN
 REWRITE_TAC [FMAP_TO_RELN] THEN
@@ -491,7 +520,8 @@ COND_CASES_TAC THENL
  ASM_REWRITE_TAC [IN_RDOM, GSYM SUBSET_EMPTY, SUBSET_DEF, NOT_IN_EMPTY,
              IN_RDOM] THEN
  REWRITE_TAC [SPECIFICATION] THEN
- CONV_TAC (LAND_CONV NOT_EXISTS_CONV) THEN REWRITE_TAC []]);
+ CONV_TAC (LAND_CONV NOT_EXISTS_CONV) THEN REWRITE_TAC []]
+QED
 
 (* *** Now we may start to think about a conversion (actually two combined
   under one name, one relying on pred_set.UNION_CONV and linear lists, the
@@ -505,19 +535,23 @@ COND_CASES_TAC THENL
   fmaps to real instead of finite sets, we could imitate
   Floyd if there were any demand for it. *** *)
 
-val RDOM_subTC = store_thm ("RDOM_subTC",
-``!R:'a reln s. RDOM (subTC R s) = RDOM R``,
+Theorem RDOM_subTC:
+  !R:'a reln s. RDOM (subTC R s) = RDOM R
+Proof
 REPEAT GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN
 REWRITE_TAC [RDOM_DEF, subTC] THEN EQ_TAC THEN STRIP_TAC THENL
 [Q.EXISTS_TAC `y` THEN AR
 ,Q.EXISTS_TAC `a` THEN AR
-,Q.EXISTS_TAC `y` THEN AR]);
+,Q.EXISTS_TAC `y` THEN AR]
+QED
 
-val NOT_IN_RDOM = store_thm ("NOT_IN_RDOM",
-``!Q:'a reln x. (Q x = {}) <=> x NOTIN RDOM Q``,
+Theorem NOT_IN_RDOM:
+  !Q:'a reln x. (Q x = {}) <=> x NOTIN RDOM Q
+Proof
 REPEAT GEN_TAC THEN REWRITE_TAC [RDOM_DEF, SPECIFICATION] THEN
 CONV_TAC (LAND_CONV FUN_EQ_CONV) THEN REWRITE_TAC [rrs NOT_IN_EMPTY] THEN
-CONV_TAC (LAND_CONV FORALL_NOT_CONV) THEN AR);
+CONV_TAC (LAND_CONV FORALL_NOT_CONV) THEN AR
+QED
 
 (* Break out the function to be used by TC_ITER  *)
 
@@ -525,22 +559,29 @@ Definition TC_MOD:
  TC_MOD (x:'a) (rx:'a set) (ra:'a set) = if x IN ra then ra UNION rx else ra
 End
 
-val TC_MOD_EMPTY_ID = store_thm ("TC_MOD_EMPTY_ID",
-``!x:'a ra:'a set. TC_MOD x {} = I``,
-REPEAT GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN SRW_TAC [] [TC_MOD]);
+Theorem TC_MOD_EMPTY_ID:
+  !x:'a ra:'a set. TC_MOD x {} = I
+Proof
+REPEAT GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN SRW_TAC [] [TC_MOD]
+QED
 
-val I_o_f  = store_thm ("I_o_f", ``!f:'a |-> 'b. I o_f f = f``,
-SRW_TAC [] [fmap_EXT]);
+Theorem I_o_f:   !f:'a |-> 'b. I o_f f = f
+Proof
+SRW_TAC [] [fmap_EXT]
+QED
 
-val subTC_MAX_RDOM = store_thm ("subTC_MAX_RDOM",
-``!R:'a reln s x. x NOTIN RDOM R ==> (subTC R (x INSERT s) = subTC R s)``,
+Theorem subTC_MAX_RDOM:
+  !R:'a reln s x. x NOTIN RDOM R ==> (subTC R (x INSERT s) = subTC R s)
+Proof
 REPEAT STRIP_TAC THEN REPEAT (CONV_TAC FUN_EQ_CONV THEN GEN_TAC) THEN
 REWRITE_TAC [subTC_INSERT] THEN
 `x NOTIN RDOM (subTC R s)` by METIS_TAC [RDOM_subTC] THEN
-METIS_TAC [RDOM_DEF, SPECIFICATION]);
+METIS_TAC [RDOM_DEF, SPECIFICATION]
+QED
 
-val subTC_SUPERSET_RDOM = store_thm ("subTC_SUPERSET_RDOM",
-``!R:'a reln s. FINITE s ==>  (subTC R (RDOM R UNION s) = subTC R (RDOM R))``,
+Theorem subTC_SUPERSET_RDOM:
+  !R:'a reln s. FINITE s ==>  (subTC R (RDOM R UNION s) = subTC R (RDOM R))
+Proof
 GEN_TAC THEN CONV_TAC (TOP_DEPTH_CONV FUN_EQ_CONV) THEN
 HO_MATCH_MP_TAC FINITE_INDUCT THEN CONJ_TAC THENL
 [REWRITE_TAC [UNION_EMPTY]
@@ -551,10 +592,12 @@ HO_MATCH_MP_TAC FINITE_INDUCT THEN CONJ_TAC THENL
  AR THEN Cases_on `e IN RDOM R` THENL
  [IMP_RES_THEN (ASM_REWRITE_TAC o ulist) ABSORPTION_RWT
  ,IMP_RES_TAC subTC_MAX_RDOM THEN ASM_REWRITE_TAC [INSERT_UNION]
-]]);
+]]
+QED
 
-val subTC_FDOM = store_thm ("subTC_FDOM", ``!g R:'a reln.
-(subTC R (RDOM R) = FMAP_TO_RELN g) ==> (subTC R (FDOM g) = subTC R (RDOM R))``,
+Theorem subTC_FDOM:   !g R:'a reln.
+(subTC R (RDOM R) = FMAP_TO_RELN g) ==> (subTC R (FDOM g) = subTC R (RDOM R))
+Proof
 REPEAT STRIP_TAC THEN
 Q.SUBGOAL_THEN `RDOM R SUBSET FDOM g`
 (SUBST1_TAC o GSYM o REWRITE_RULE [SUBSET_UNION_ABSORPTION]) THENL
@@ -562,20 +605,24 @@ Q.SUBGOAL_THEN `RDOM R SUBSET FDOM g`
  THEN1 MATCH_ACCEPT_TAC RDOM_subTC THEN
  ASM_REWRITE_TAC [RDOM_SUBSET_FDOM]
 ,MATCH_MP_TAC subTC_SUPERSET_RDOM THEN MATCH_ACCEPT_TAC FDOM_FINITE
-]);
+]
+QED
 
-val SUBSET_FDOM_LEM = store_thm ("SUBSET_FDOM_LEM",
-``!R:'a reln s f. (subTC R s = FMAP_TO_RELN f) ==> RDOM R SUBSET FDOM f``,
+Theorem SUBSET_FDOM_LEM:
+  !R:'a reln s f. (subTC R s = FMAP_TO_RELN f) ==> RDOM R SUBSET FDOM f
+Proof
 REPEAT STRIP_TAC THEN
 Q.SUBGOAL_THEN `RDOM R = RDOM (subTC R s)` SUBST1_TAC
 THEN1 MATCH_ACCEPT_TAC (GSYM RDOM_subTC) THEN AR THEN
-MATCH_ACCEPT_TAC RDOM_SUBSET_FDOM);
+MATCH_ACCEPT_TAC RDOM_SUBSET_FDOM
+QED
 
 (* Following is what seems needed: and now it needs a name. *)
 
-val subTC_FDOM_RDOM = store_thm ("subTC_FDOM_RDOM",
-``!R:'a reln f. (subTC R (FDOM f) = FMAP_TO_RELN f) ==>
-                (subTC R (RDOM R) = FMAP_TO_RELN f)``,
+Theorem subTC_FDOM_RDOM:
+  !R:'a reln f. (subTC R (FDOM f) = FMAP_TO_RELN f) ==>
+                (subTC R (RDOM R) = FMAP_TO_RELN f)
+Proof
 REPEAT STRIP_TAC THEN
 Q.SUBGOAL_THEN `subTC R (FDOM f) = subTC R (RDOM R)`
 (ASM_REWRITE_TAC o ulist o SYM) THEN
@@ -585,14 +632,15 @@ Q.SUBGOAL_THEN `FDOM f = RDOM R UNION FDOM f`
 Q.SUBGOAL_THEN `RDOM R SUBSET FDOM f` MP_TAC
 THEN1 (MATCH_MP_TAC SUBSET_FDOM_LEM THEN Q.EXISTS_TAC `FDOM f` THEN AR) THEN
 RW_TAC bool_ss [SUBSET_DEF, IN_UNION, EXTENSION] THEN METIS_TAC []
-);
+QED
 
 (* We will use fmapalTheory.o_f_bt_map to compute the o_f in the following
    lemma, but proving the lemma is another story. *)
 
-val TC_MOD_LEM = store_thm ("TC_MOD_LEM",
-``!R:'a reln s x f. x IN FDOM f /\ (subTC R s = FMAP_TO_RELN f) ==>
-  (subTC R (x INSERT s) = FMAP_TO_RELN (TC_MOD x (f ' x) o_f f))``,
+Theorem TC_MOD_LEM:
+  !R:'a reln s x f. x IN FDOM f /\ (subTC R s = FMAP_TO_RELN f) ==>
+  (subTC R (x INSERT s) = FMAP_TO_RELN (TC_MOD x (f ' x) o_f f))
+Proof
 REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN
 ASM_REWRITE_TAC [FMAP_TO_RELN, GSYM o_f_FDOM, subTC_INSERT_COR] THEN
 Cases_on `x' IN FDOM f` THEN
@@ -603,7 +651,8 @@ ASM_REWRITE_TAC [EXTENSION] THENL
  GEN_TAC THEN CONV_TAC (RAND_CONV (REWR_CONV SPECIFICATION)) THEN
  RW_TAC bool_ss [TC_MOD, SPECIFICATION, UNION_EMPTY]
 ,SRW_TAC [] []
-]);
+]
+QED
 
 (* Define the recursion over RDOM R *)
 
@@ -612,10 +661,11 @@ Definition TC_ITER:
  (TC_ITER (x :: d) r = TC_ITER d (TC_MOD x (r ' x) o_f r))
 End
 
-val TC_ITER_THM = store_thm ("TC_ITER_THM",
-``!R:'a reln d f s. (s UNION set d = FDOM f) /\
+Theorem TC_ITER_THM:
+  !R:'a reln d f s. (s UNION set d = FDOM f) /\
                     (subTC R s = FMAP_TO_RELN f) ==>
-                    (TC R = FMAP_TO_RELN (TC_ITER d f))``,
+                    (TC R = FMAP_TO_RELN (TC_ITER d f))
+Proof
 GEN_TAC THEN Induct THENL
 [REPEAT GEN_TAC THEN REWRITE_TAC [LIST_TO_SET_THM, UNION_EMPTY] THEN
  CONV_TAC ANTE_CONJ_CONV THEN DISCH_THEN SUBST1_TAC THEN
@@ -634,4 +684,5 @@ GEN_TAC THEN Induct THENL
    `(h INSERT s) UNION set d = FDOM (TC_MOD h (f ' h) o_f f)` by
    ASM_REWRITE_TAC [FDOM_o_f] THEN
    RES_TAC THEN ASM_REWRITE_TAC [TC_ITER]
-]]]);
+]]]
+QED

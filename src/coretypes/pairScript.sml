@@ -91,9 +91,9 @@ val _ = add_rule {term_name = ",", fixity = Infixr 50,
      The constructor for pairs is one-to-one.
  ---------------------------------------------------------------------------*)
 
-val PAIR_EQ = Q.store_thm
-("PAIR_EQ",
- `((x,y) = (a,b)) <=> (x=a) /\ (y=b)`,
+Theorem PAIR_EQ:
+  ((x,y) = (a,b)) <=> (x=a) /\ (y=b)
+Proof
  EQ_TAC THENL
  [REWRITE_TAC[COMMA_DEF]
    THEN DISCH_THEN(MP_TAC o Q.AP_TERM `REP_prod`)
@@ -101,7 +101,8 @@ val PAIR_EQ = Q.store_thm
    THEN Ho_Rewrite.REWRITE_TAC [FUN_EQ_THM]
    THEN DISCH_THEN (MP_TAC o Q.SPECL [`x`,  `y`])
    THEN REWRITE_TAC[],
-  STRIP_TAC THEN ASM_REWRITE_TAC[]]);
+  STRIP_TAC THEN ASM_REWRITE_TAC[]]
+QED
 
 Theorem CLOSED_PAIR_EQ[simp,compute] = itlist Q.GEN [`x`, `y`, `a`, `b`] PAIR_EQ;
 
@@ -110,9 +111,9 @@ Theorem CLOSED_PAIR_EQ[simp,compute] = itlist Q.GEN [`x`, `y`, `a`, `b`] PAIR_EQ
      Case analysis for pairs.
  ---------------------------------------------------------------------------*)
 
-val ABS_PAIR_THM = Q.store_thm
-("ABS_PAIR_THM",
- `!x. ?q r. x = (q,r)`,
+Theorem ABS_PAIR_THM:
+  !x. ?q r. x = (q,r)
+Proof
  GEN_TAC THEN REWRITE_TAC[COMMA_DEF]
   THEN MP_TAC(Q.SPEC `REP_prod x` (CONJUNCT2 ABS_REP_prod))
   THEN REWRITE_TAC[CONJUNCT1 ABS_REP_prod] THEN BETA_TAC
@@ -121,7 +122,8 @@ val ABS_PAIR_THM = Q.store_thm
   THEN REWRITE_TAC[CONJUNCT1 ABS_REP_prod]
   THEN DISCH_THEN SUBST1_TAC
   THEN MAP_EVERY Q.EXISTS_TAC [`a`, `b`]
-  THEN REFL_TAC);
+  THEN REFL_TAC
+QED
 
 val pair_CASES = save_thm("pair_CASES", ABS_PAIR_THM)
 
@@ -148,15 +150,16 @@ end;
 val _ = ot0 "FST" "fst"
 val _ = ot0 "SND" "snd"
 
-val PAIR_FST_SND_EQ = store_thm(
-  "PAIR_FST_SND_EQ",
-  ``!(p:'a # 'b) q. (p = q) <=> (FST p = FST q) /\ (SND p = SND q)``,
+Theorem PAIR_FST_SND_EQ:
+    !(p:'a # 'b) q. (p = q) <=> (FST p = FST q) /\ (SND p = SND q)
+Proof
   REPEAT GEN_TAC THEN
   X_CHOOSE_THEN ``p1:'a`` (X_CHOOSE_THEN ``p2:'b`` SUBST_ALL_TAC)
                 (SPEC ``p:'a # 'b`` ABS_PAIR_THM) THEN
   X_CHOOSE_THEN ``q1:'a`` (X_CHOOSE_THEN ``q2:'b`` SUBST_ALL_TAC)
                 (SPEC ``q:'a # 'b`` ABS_PAIR_THM) THEN
-  REWRITE_TAC [PAIR_EQ, FST, SND]);
+  REWRITE_TAC [PAIR_EQ, FST, SND]
+QED
 
 val SWAP_def = new_definition ("SWAP_def", ``SWAP a = (SND a, FST a)``)
 
@@ -214,12 +217,13 @@ val _ = ot0 "UNCURRY" "uncurry"
 
 val UNCURRY_VAR = save_thm("UNCURRY_VAR", UNCURRY);  (* compatibility *)
 
-val ELIM_UNCURRY = Q.store_thm(
-  "ELIM_UNCURRY",
-  `!f:'a -> 'b -> 'c. UNCURRY f = \x. f (FST x) (SND x)`,
+Theorem ELIM_UNCURRY:
+   !f:'a -> 'b -> 'c. UNCURRY f = \x. f (FST x) (SND x)
+Proof
   GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN
   REWRITE_TAC [UNCURRY] THEN CONV_TAC (RAND_CONV BETA_CONV) THEN
-  REFL_TAC);
+  REFL_TAC
+QED
 
 Theorem UNCURRY_DEF[simp,compute]:
     !f x y. UNCURRY f (x,y) :'c = f x y
@@ -338,9 +342,11 @@ QED
 (* pair_Axiom = |- !f. ?fn. !x y. fn (x,y) = f x y                           *)
 (* ------------------------------------------------------------------------- *)
 
-val pair_Axiom = Q.store_thm("pair_Axiom",
- `!f:'a->'b->'c. ?fn. !x y. fn (x,y) = f x y`,
- GEN_TAC THEN Q.EXISTS_TAC`UNCURRY f` THEN REWRITE_TAC[UNCURRY_DEF]);
+Theorem pair_Axiom:
+  !f:'a->'b->'c. ?fn. !x y. fn (x,y) = f x y
+Proof
+ GEN_TAC THEN Q.EXISTS_TAC`UNCURRY f` THEN REWRITE_TAC[UNCURRY_DEF]
+QED
 
 (* -------------------------------------------------------------------------*)
 (*   UNCURRY_CONG =                                                         *)
@@ -351,49 +357,56 @@ val pair_Axiom = Q.store_thm("pair_Axiom",
 (*                (UNCURRY f M = UNCURRY f' M')                             *)
 (* -------------------------------------------------------------------------*)
 
-val UNCURRY_CONG = store_thm(
-  "UNCURRY_CONG",
-  ``!f' f M' M.
+Theorem UNCURRY_CONG:
+    !f' f M' M.
        (M = M') /\ (!x y. (M' = (x,y)) ==> (f x y = f' x y)) ==>
-       (UNCURRY f M = UNCURRY f' M')``,
+       (UNCURRY f M = UNCURRY f' M')
+Proof
   REPEAT STRIP_TAC THEN
   Q.SPEC_THEN `M` FULL_STRUCT_CASES_TAC pair_CASES THEN
   Q.SPEC_THEN `M'` FULL_STRUCT_CASES_TAC pair_CASES THEN
-  FULL_SIMP_TAC bool_ss [PAIR_EQ, UNCURRY_DEF])
+  FULL_SIMP_TAC bool_ss [PAIR_EQ, UNCURRY_DEF]
+QED
 
 (*---------------------------------------------------------------------------
          LAMBDA_PROD = |- !P. (\p. P p) = (\(p1,p2). P (p1,p2))
  ---------------------------------------------------------------------------*)
 
-val LAMBDA_PROD = Q.store_thm("LAMBDA_PROD",
-`!P:'a#'b->'c. (\p. P p) = \(p1,p2). P(p1,p2)`,
+Theorem LAMBDA_PROD:
+ !P:'a#'b->'c. (\p. P p) = \(p1,p2). P(p1,p2)
+Proof
  GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN GEN_TAC
    THEN STRUCT_CASES_TAC (Q.SPEC `p` ABS_PAIR_THM)
    THEN REWRITE_TAC [UNCURRY,FST,SND]
-   THEN BETA_TAC THEN REFL_TAC)
+   THEN BETA_TAC THEN REFL_TAC
+QED
 
 (*---------------------------------------------------------------------------
          EXISTS_PROD = |- (?p. P p) = ?p_1 p_2. P (p_1,p_2)
  ---------------------------------------------------------------------------*)
 
-val EXISTS_PROD = Q.store_thm("EXISTS_PROD",
- `(?p. P p) = ?p_1 p_2. P (p_1,p_2)`,
+Theorem EXISTS_PROD:
+  (?p. P p) = ?p_1 p_2. P (p_1,p_2)
+Proof
  EQ_TAC THEN STRIP_TAC
    THENL [MAP_EVERY Q.EXISTS_TAC [`FST p`, `SND p`], Q.EXISTS_TAC `p_1, p_2`]
-   THEN ASM_REWRITE_TAC[PAIR]);
+   THEN ASM_REWRITE_TAC[PAIR]
+QED
 
 (*---------------------------------------------------------------------------
          FORALL_PROD = |- (!p. P p) = !p_1 p_2. P (p_1,p_2)
  ---------------------------------------------------------------------------*)
 
-val FORALL_PROD = Q.store_thm("FORALL_PROD",
- `(!p. P p) = !p_1 p_2. P (p_1,p_2)`,
+Theorem FORALL_PROD:
+  (!p. P p) = !p_1 p_2. P (p_1,p_2)
+Proof
  EQ_TAC THENL
    [DISCH_THEN(fn th => REPEAT GEN_TAC THEN ASSUME_TAC (Q.SPEC `p_1, p_2` th)),
     REPEAT STRIP_TAC
       THEN REPEAT_TCL CHOOSE_THEN SUBST_ALL_TAC (Q.SPEC `p` ABS_PAIR_THM)
    ]
- THEN ASM_REWRITE_TAC[]);
+ THEN ASM_REWRITE_TAC[]
+QED
 
 
 Theorem pair_induction = #2(EQ_IMP_RULE FORALL_PROD) |> GEN_ALL
@@ -411,80 +424,88 @@ Theorem PROD_ALL_THM[simp,compute]:
 Proof REWRITE_TAC [PROD_ALL_def, FST, SND]
 QED
 
-val PROD_ALL_MONO = store_thm(
-  "PROD_ALL_MONO",
-  ``(!x:'a. P x ==> P' x) /\ (!y:'b. Q y ==> Q' y) ==>
-    PROD_ALL P Q p ==> PROD_ALL P' Q' p``,
+Theorem PROD_ALL_MONO:
+    (!x:'a. P x ==> P' x) /\ (!y:'b. Q y ==> Q' y) ==>
+    PROD_ALL P Q p ==> PROD_ALL P' Q' p
+Proof
   Q.SPEC_THEN `p` STRUCT_CASES_TAC ABS_PAIR_THM THEN
-  REWRITE_TAC [PROD_ALL_THM] THEN REPEAT STRIP_TAC THEN RES_TAC);
+  REWRITE_TAC [PROD_ALL_THM] THEN REPEAT STRIP_TAC THEN RES_TAC
+QED
 val _ = IndDefLib.export_mono "PROD_ALL_MONO"
 
-val PROD_ALL_CONG = store_thm(
-  "PROD_ALL_CONG",
-  ``!p p' P P' Q Q'.
+Theorem PROD_ALL_CONG:
+    !p p' P P' Q Q'.
       (p = p') /\ (!x:'a y:'b. (p' = (x,y)) ==> (P x <=> P' x)) /\
       (!x:'a y:'b. (p' = (x,y)) ==> (Q y <=> Q' y)) ==>
-      (PROD_ALL P Q p <=> PROD_ALL P' Q' p')``,
-  SIMP_TAC (BasicProvers.srw_ss()) [FORALL_PROD, PAIR_EQ]);
+      (PROD_ALL P Q p <=> PROD_ALL P' Q' p')
+Proof
+  SIMP_TAC (BasicProvers.srw_ss()) [FORALL_PROD, PAIR_EQ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* ELIM_PEXISTS = |- !P. (?p. P (FST p) (SND p)) = ?p1 p2. P p1 p2           *)
 (* ------------------------------------------------------------------------- *)
 
-val ELIM_PEXISTS = Q.store_thm
-("ELIM_PEXISTS",
- `(?p. P (FST p) (SND p)) = ?p1 p2. P p1 p2`,
+Theorem ELIM_PEXISTS:
+  (?p. P (FST p) (SND p)) = ?p1 p2. P p1 p2
+Proof
  EQ_TAC THEN STRIP_TAC THENL
  [MAP_EVERY Q.EXISTS_TAC [`FST p`, `SND p`] THEN ASM_REWRITE_TAC [],
-  Q.EXISTS_TAC `(p1,p2)` THEN ASM_REWRITE_TAC [FST,SND]]);
+  Q.EXISTS_TAC `(p1,p2)` THEN ASM_REWRITE_TAC [FST,SND]]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* ELIM_PFORALL = |- !P. (!p. P (FST p) (SND p)) = !p1 p2. P p1 p2           *)
 (* ------------------------------------------------------------------------- *)
 
-val ELIM_PFORALL = Q.store_thm
-("ELIM_PFORALL",
- `(!p. P (FST p) (SND p)) = !p1 p2. P p1 p2`,
+Theorem ELIM_PFORALL:
+  (!p. P (FST p) (SND p)) = !p1 p2. P p1 p2
+Proof
  EQ_TAC THEN REPEAT STRIP_TAC THENL
  [POP_ASSUM (MP_TAC o Q.SPEC `(p1,p2)`) THEN REWRITE_TAC [FST,SND],
-  ASM_REWRITE_TAC []]);
+  ASM_REWRITE_TAC []]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* PFORALL_THM = |- !P. (!x y. P x y) = (!(x,y). P x y)                      *)
 (* ------------------------------------------------------------------------- *)
 
-val PFORALL_THM = Q.store_thm
-("PFORALL_THM",
- `!P:'a -> 'b -> bool. (!x y. P x y) = !(x,y). P x y`,
+Theorem PFORALL_THM:
+  !P:'a -> 'b -> bool. (!x y. P x y) = !(x,y). P x y
+Proof
  REWRITE_TAC [ELIM_UNCURRY] THEN BETA_TAC THEN
- MATCH_ACCEPT_TAC (GSYM ELIM_PFORALL));
+ MATCH_ACCEPT_TAC (GSYM ELIM_PFORALL)
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* PEXISTS_THM = |- !P. (?x y. P x y) = (?(x,y). P x y)                      *)
 (* ------------------------------------------------------------------------- *)
 
-val PEXISTS_THM = Q.store_thm
-("PEXISTS_THM",
- `!P:'a -> 'b -> bool. (?x y. P x y) = ?(x,y). P x y`,
+Theorem PEXISTS_THM:
+  !P:'a -> 'b -> bool. (?x y. P x y) = ?(x,y). P x y
+Proof
  REWRITE_TAC [ELIM_UNCURRY] THEN BETA_TAC THEN
- MATCH_ACCEPT_TAC (GSYM ELIM_PEXISTS));
+ MATCH_ACCEPT_TAC (GSYM ELIM_PEXISTS)
+QED
 
 
 (* ------------------------------------------------------------------------- *)
 (* Rewrite versions of ELIM_PEXISTS and ELIM_PFORALL                         *)
 (* ------------------------------------------------------------------------- *)
 
-val ELIM_PEXISTS_EVAL = Q.store_thm
-("ELIM_PEXISTS_EVAL",
- `$? (UNCURRY (\x. P x)) = ?x. $? (P x)`,
+Theorem ELIM_PEXISTS_EVAL:
+  $? (UNCURRY (\x. P x)) = ?x. $? (P x)
+Proof
  Q.SUBGOAL_THEN `!x. P x = \y. P x y` (fn th => ONCE_REWRITE_TAC [th]) THEN
- REWRITE_TAC [ETA_THM, PEXISTS_THM]);
+ REWRITE_TAC [ETA_THM, PEXISTS_THM]
+QED
 
-val ELIM_PFORALL_EVAL = Q.store_thm
-("ELIM_PFORALL_EVAL",
- `$! (UNCURRY (\x. P x)) = !x. $! (P x)`,
+Theorem ELIM_PFORALL_EVAL:
+  $! (UNCURRY (\x. P x)) = !x. $! (P x)
+Proof
  Q.SUBGOAL_THEN `!x. P x = \y. P x y` (fn th => ONCE_REWRITE_TAC [th]) THEN
- REWRITE_TAC [ETA_THM, PFORALL_THM]);
+ REWRITE_TAC [ETA_THM, PFORALL_THM]
+QED
 
 (*---------------------------------------------------------------------------
         Map for pairs
@@ -540,20 +561,24 @@ QED
         exact form given. See also boolTheory.
  ---------------------------------------------------------------------------*)
 
-val LET2_RAND = Q.store_thm("LET2_RAND",
-`!(P:'c->'d) (M:'a#'b) N.
-    P (let (x,y) = M in N x y) = (let (x,y) = M in P (N x y))`,
+Theorem LET2_RAND:
+ !(P:'c->'d) (M:'a#'b) N.
+    P (let (x,y) = M in N x y) = (let (x,y) = M in P (N x y))
+Proof
 REWRITE_TAC[boolTheory.LET_DEF] THEN REPEAT GEN_TAC THEN BETA_TAC
  THEN REPEAT_TCL CHOOSE_THEN SUBST_ALL_TAC
        (SPEC (Term `M:'a#'b`) ABS_PAIR_THM)
- THEN REWRITE_TAC[UNCURRY_DEF] THEN BETA_TAC THEN REFL_TAC);
+ THEN REWRITE_TAC[UNCURRY_DEF] THEN BETA_TAC THEN REFL_TAC
+QED
 
-val LET2_RATOR = Q.store_thm("LET2_RATOR",
-`!(M:'a1#'a2) (N:'a1->'a2->'b->'c) (b:'b).
-      (let (x,y) = M in N x y) b = let (x,y) = M in N x y b`,
+Theorem LET2_RATOR:
+ !(M:'a1#'a2) (N:'a1->'a2->'b->'c) (b:'b).
+      (let (x,y) = M in N x y) b = let (x,y) = M in N x y b
+Proof
 REWRITE_TAC [boolTheory.LET_DEF] THEN BETA_TAC
   THEN REWRITE_TAC [UNCURRY_VAR] THEN BETA_TAC
-  THEN REWRITE_TAC[]);
+  THEN REWRITE_TAC[]
+QED
 
 Theorem UNCURRY_RAND:
   !f'. f' (UNCURRY f x) = UNCURRY ((o) f' o f) x
@@ -570,34 +595,38 @@ Proof
  THEN REWRITE_TAC[]
 QED
 
-val o_UNCURRY_R = store_thm(
-  "o_UNCURRY_R",
-  ``f o UNCURRY g = UNCURRY ((o) f o g)``,
-  SRW_TAC [][FUN_EQ_THM, UNCURRY]);
+Theorem o_UNCURRY_R:
+    f o UNCURRY g = UNCURRY ((o) f o g)
+Proof
+  SRW_TAC [][FUN_EQ_THM, UNCURRY]
+QED
 
-val C_UNCURRY_L = store_thm(
-  "C_UNCURRY_L",
-  ``combin$C (UNCURRY f) x = UNCURRY (combin$C (combin$C o f) x)``,
-  SRW_TAC [][FUN_EQ_THM, UNCURRY]);
+Theorem C_UNCURRY_L:
+    combin$C (UNCURRY f) x = UNCURRY (combin$C (combin$C o f) x)
+Proof
+  SRW_TAC [][FUN_EQ_THM, UNCURRY]
+QED
 
-val S_UNCURRY_R = store_thm(
-  "S_UNCURRY_R",
-  ``S f (UNCURRY g) = UNCURRY (S (S o ((o) f) o (,)) g)``,
-  SRW_TAC [][FUN_EQ_THM, UNCURRY, PAIR]);
+Theorem S_UNCURRY_R:
+    S f (UNCURRY g) = UNCURRY (S (S o ((o) f) o (,)) g)
+Proof
+  SRW_TAC [][FUN_EQ_THM, UNCURRY, PAIR]
+QED
 
 val UNCURRY' = prove(
   ``UNCURRY f = \p. f (FST p) (SND p)``,
   SRW_TAC [][FUN_EQ_THM, UNCURRY]);
 
-val FORALL_UNCURRY = store_thm(
-  "FORALL_UNCURRY",
-  ``(!) (UNCURRY f) = (!) ((!) o f)``,
+Theorem FORALL_UNCURRY:
+    (!) (UNCURRY f) = (!) ((!) o f)
+Proof
   SRW_TAC [][UNCURRY', combinTheory.o_DEF] THEN
   Q.SUBGOAL_THEN `!x. f x = \y. f x y` (fn th => ONCE_REWRITE_TAC [th]) THENL [
     REWRITE_TAC [FUN_EQ_THM] THEN BETA_TAC THEN REWRITE_TAC [],
     ALL_TAC
   ] THEN
-  SRW_TAC [][FORALL_PROD, FST, SND]);
+  SRW_TAC [][FORALL_PROD, FST, SND]
+QED
 
 (* --------------------------------------------------------------------- *)
 (* A nice theorem from Tom Melham, lifted from examples/lambda/ncScript  *)
@@ -611,10 +640,10 @@ val FORALL_UNCURRY = store_thm(
 (*                                                                       *)
 (* --------------------------------------------------------------------- *)
 
-val PAIR_FUN_THM = Q.store_thm
-("PAIR_FUN_THM",
- `!P. (?!f:'a->('b#'c). P f) =
-      (?!p:('a->'b)#('a->'c). P(\a.(FST p a, SND p a)))`,
+Theorem PAIR_FUN_THM:
+  !P. (?!f:'a->('b#'c). P f) =
+      (?!p:('a->'b)#('a->'c). P(\a.(FST p a, SND p a)))
+Proof
 RW_TAC bool_ss [EXISTS_UNIQUE_THM]
  THEN EQ_TAC THEN RW_TAC bool_ss []
  THENL
@@ -631,7 +660,8 @@ RW_TAC bool_ss [EXISTS_UNIQUE_THM]
       (MP_TAC o Q.SPECL [`(FST o f, SND o f)`, `(FST o y, SND o y)`])
      THEN RW_TAC bool_ss [FST,SND,combinTheory.o_THM,
                           PAIR,PAIR_EQ,FUN_EQ_THM,ETA_THM]
-     THEN PROVE_TAC [PAIR_EQ,PAIR]]);
+     THEN PROVE_TAC [PAIR_EQ,PAIR]]
+QED
 
 
 (*---------------------------------------------------------------------------
@@ -681,12 +711,13 @@ Proof
   simp[pair_CASE_UNCURRY]
 QED
 
-val pair_case_ho_elim = Q.store_thm(
-  "pair_case_ho_elim",
-  ‘!f'. f'(pair_CASE p f) = (?x y. p = (x,y) /\ f'(f x y))’,
+Theorem pair_case_ho_elim:
+   !f'. f'(pair_CASE p f) = (?x y. p = (x,y) /\ f'(f x y))
+Proof
   strip_tac THEN
   Q.ISPEC_THEN ‘p’ STRUCT_CASES_TAC pair_CASES THEN
-  SRW_TAC[][pair_CASE_def, FST, SND, PAIR_EQ]);
+  SRW_TAC[][pair_CASE_def, FST, SND, PAIR_EQ]
+QED
 
 val _ = TypeBase.export [
       TypeBasePure.mk_datatype_info_no_simpls {
@@ -722,10 +753,11 @@ val _ = TypeBase.export [
 
  ---------------------------------------------------------------------------*)
 
-val datatype_pair = store_thm(
-  "datatype_pair",
-  ``DATATYPE (pair ((,) : 'a -> 'b -> 'a # 'b))``,
-  REWRITE_TAC [DATATYPE_TAG_THM]);
+Theorem datatype_pair:
+    DATATYPE (pair ((,) : 'a -> 'b -> 'a # 'b))
+Proof
+  REWRITE_TAC [DATATYPE_TAG_THM]
+QED
 
 
 (*---------------------------------------------------------------------------
@@ -752,26 +784,30 @@ Q.new_infixr_definition
      =
    \(s,t) (u,v). R1 s u \/ (s=u) /\ R2 t v`, 490);
 
-val LEX_DEF_THM = Q.store_thm
-("LEX_DEF_THM",
- `(R1 LEX R2) (a,b) (c,d) <=> R1 a c \/ (a = c) /\ R2 b d`,
+Theorem LEX_DEF_THM:
+  (R1 LEX R2) (a,b) (c,d) <=> R1 a c \/ (a = c) /\ R2 b d
+Proof
   REWRITE_TAC [LEX_DEF,UNCURRY_DEF] THEN BETA_TAC THEN
-  REWRITE_TAC [UNCURRY_DEF] THEN BETA_TAC THEN REFL_TAC);
+  REWRITE_TAC [UNCURRY_DEF] THEN BETA_TAC THEN REFL_TAC
+QED
 
-val LEX_MONO = store_thm("LEX_MONO",
-  ``(!x y. R1 x y ==> R2 x y) /\
+Theorem LEX_MONO:
+    (!x y. R1 x y ==> R2 x y) /\
     (!x y. R3 x y ==> R4 x y)
     ==>
-    (R1 LEX R3) x y ==> (R2 LEX R4) x y``,
+    (R1 LEX R3) x y ==> (R2 LEX R4) x y
+Proof
   STRIP_TAC THEN
   Q.SPEC_THEN`x`FULL_STRUCT_CASES_TAC pair_CASES THEN
   Q.SPEC_THEN`y`FULL_STRUCT_CASES_TAC pair_CASES THEN
   SRW_TAC[][LEX_DEF_THM] THEN
-  PROVE_TAC[])
+  PROVE_TAC[]
+QED
 val () = IndDefLib.export_mono"LEX_MONO";
 
-val WF_LEX = Q.store_thm("WF_LEX",
- `!(R:'a->'a->bool) (Q:'b->'b->bool). WF R /\ WF Q ==> WF (R LEX Q)`,
+Theorem WF_LEX:
+  !(R:'a->'a->bool) (Q:'b->'b->bool). WF R /\ WF Q ==> WF (R LEX Q)
+Proof
 REWRITE_TAC [LEX_DEF, relationTheory.WF_DEF]
   THEN CONV_TAC (DEPTH_CONV LEFT_IMP_EXISTS_CONV)
   THEN REPEAT STRIP_TAC
@@ -797,7 +833,8 @@ REWRITE_TAC [LEX_DEF, relationTheory.WF_DEF]
        THEN GEN_TAC THEN SUBST_TAC [GSYM(Q.SPEC`b:'a#'b` PAIR)]
        THEN REWRITE_TAC [UNCURRY_DEF] THEN BETA_TAC
        THEN REWRITE_TAC [UNCURRY_DEF] THEN BETA_TAC
-       THEN ASM_MESON_TAC pair_rws]]]]);
+       THEN ASM_MESON_TAC pair_rws]]]]
+QED
 
 (*---------------------------------------------------------------------------
  * The relational product of two wellfounded relations is wellfounded. This
@@ -811,9 +848,9 @@ Q.new_definition
           (R2:'c->'d->bool) = \(s,t) (u,v). R1 s u /\ R2 t v`);
 
 
-val WF_RPROD =
-Q.store_thm("WF_RPROD",
- `!(R:'a->'a->bool) (Q:'b->'b->bool). WF R /\ WF Q  ==>  WF(RPROD R Q)`,
+Theorem WF_RPROD:
+  !(R:'a->'a->bool) (Q:'b->'b->bool). WF R /\ WF Q  ==>  WF(RPROD R Q)
+Proof
 REPEAT STRIP_TAC THEN MATCH_MP_TAC relationTheory.WF_SUBSET
  THEN Q.EXISTS_TAC`R LEX Q`
  THEN CONJ_TAC
@@ -823,48 +860,54 @@ REPEAT STRIP_TAC THEN MATCH_MP_TAC relationTheory.WF_SUBSET
          THEN GEN_TAC THEN SUBST_TAC [GSYM(Q.SPEC`y:'a#'b` PAIR)]
          THEN REWRITE_TAC [UNCURRY_DEF] THEN BETA_TAC
          THEN REWRITE_TAC [UNCURRY_DEF] THEN BETA_TAC
-         THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[]]);
+         THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[]]
+QED
 
 (* more relational properties of LEX *)
-val total_LEX = store_thm(
-  "total_LEX",
-  ``total R1 /\ total R2 ==> total (R1 LEX R2)``,
+Theorem total_LEX:
+    total R1 /\ total R2 ==> total (R1 LEX R2)
+Proof
   ASM_SIMP_TAC (srw_ss()) [total_def, FORALL_PROD, LEX_DEF, UNCURRY_DEF] THEN
-  METIS_TAC[]);
+  METIS_TAC[]
+QED
 val _ = export_rewrites ["total_LEX"]
 
-val transitive_LEX = store_thm(
-  "transitive_LEX",
-  ``transitive R1 /\ transitive R2 ==> transitive (R1 LEX R2)``,
+Theorem transitive_LEX:
+    transitive R1 /\ transitive R2 ==> transitive (R1 LEX R2)
+Proof
   SIMP_TAC (srw_ss()) [transitive_def, FORALL_PROD, LEX_DEF, UNCURRY_DEF] THEN
-  METIS_TAC[]);
+  METIS_TAC[]
+QED
 val _ = export_rewrites ["transitive_LEX"]
 
-val reflexive_LEX = store_thm(
-  "reflexive_LEX",
-  ``reflexive (R1 LEX R2) <=> reflexive R1 \/ reflexive R2``,
+Theorem reflexive_LEX:
+    reflexive (R1 LEX R2) <=> reflexive R1 \/ reflexive R2
+Proof
   SIMP_TAC (srw_ss()) [reflexive_def, LEX_DEF, FORALL_PROD, UNCURRY_DEF] THEN
-  METIS_TAC[])
+  METIS_TAC[]
+QED
 val _ = export_rewrites ["reflexive_LEX"]
 
-val symmetric_LEX = store_thm(
-  "symmetric_LEX",
-  ``symmetric R1 /\ symmetric R2 ==> symmetric (R1 LEX R2)``,
+Theorem symmetric_LEX:
+    symmetric R1 /\ symmetric R2 ==> symmetric (R1 LEX R2)
+Proof
   SIMP_TAC (srw_ss()) [symmetric_def, LEX_DEF, FORALL_PROD, UNCURRY_DEF] THEN
-  METIS_TAC[]);
+  METIS_TAC[]
+QED
 val _ = export_rewrites ["symmetric_LEX"]
 
-val LEX_CONG = Q.store_thm
-("LEX_CONG",
- `!R1 R2 v1 v2 R1' R2' v1' v2'.
+Theorem LEX_CONG:
+  !R1 R2 v1 v2 R1' R2' v1' v2'.
      (v1 = v1') /\ (v2 = v2') /\
      (!a b c d. (v1' = (a,b)) /\ (v2' = (c,d)) ==> (R1 a c = R1' a c)) /\
      (!a b c d. (v1' = (a,b)) /\ (v2' = (c,d)) /\ (a=c) ==> (R2 b d = R2' b d))
    ==>
-    ($LEX R1 R2 v1 v2 = $LEX R1' R2' v1' v2')`,
+    ($LEX R1 R2 v1 v2 = $LEX R1' R2' v1' v2')
+Proof
  Ho_Rewrite.REWRITE_TAC [LEX_DEF,FORALL_PROD,PAIR_EQ]
    THEN NTAC 2 (REWRITE_TAC [UNCURRY_VAR,FST,SND] THEN BETA_TAC)
-   THEN METIS_TAC[]);
+   THEN METIS_TAC[]
+QED
 
 (* ----------------------------------------------------------------------
     PAIR_REL : ('a -> 'c -> bool) -> ('b -> 'd -> bool) ->
@@ -1157,12 +1200,16 @@ fun stA s =
 *)
 val _ = app stA ["pair_case_thm", "SWAP_def", "CURRY_DEF"]
 
-val FST_EQ_EQUIV = Q.store_thm("FST_EQ_EQUIV",
-  `(FST p = x) <=> ?y. p = (x,y)`,
-  Q.ISPEC_THEN `p` STRUCT_CASES_TAC pair_CASES >> simp_tac(srw_ss())[]);
+Theorem FST_EQ_EQUIV:
+   (FST p = x) <=> ?y. p = (x,y)
+Proof
+  Q.ISPEC_THEN `p` STRUCT_CASES_TAC pair_CASES >> simp_tac(srw_ss())[]
+QED
 
-val SND_EQ_EQUIV = Q.store_thm("SND_EQ_EQUIV",
-  ‘(SND p = y) <=> ?x. p = (x,y)’,
-  Q.ISPEC_THEN `p` STRUCT_CASES_TAC pair_CASES >> simp_tac(srw_ss())[]);
+Theorem SND_EQ_EQUIV:
+   (SND p = y) <=> ?x. p = (x,y)
+Proof
+  Q.ISPEC_THEN `p` STRUCT_CASES_TAC pair_CASES >> simp_tac(srw_ss())[]
+QED
 
 val _ = export_theory_as_docfiles "pair-help/thms"

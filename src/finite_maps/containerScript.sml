@@ -56,12 +56,14 @@ Definition LIST_TO_BAG_def:
 End
 val _ = export_rewrites ["LIST_TO_BAG_def"]
 
-val LIST_TO_BAG_alt = store_thm ("LIST_TO_BAG_alt",
-  ``!l x. LIST_TO_BAG l x = LENGTH (FILTER ($= x) l)``,
+Theorem LIST_TO_BAG_alt:
+    !l x. LIST_TO_BAG l x = LENGTH (FILTER ($= x) l)
+Proof
   EVERY [ REPEAT GEN_TAC, Induct_on `l`,
     SIMP_TAC list_ss [LIST_TO_BAG_def, EMPTY_BAG_alt, BAG_INSERT],
     GEN_TAC, COND_CASES_TAC THENL [ BasicProvers.VAR_EQ_TAC, ALL_TAC],
-    ASM_SIMP_TAC arith_ss [LENGTH] ]) ;
+    ASM_SIMP_TAC arith_ss [LENGTH] ]
+QED
 
 val BAG_TO_LIST = Hol_defn "BAG_TO_LIST"
     `BAG_TO_LIST bag =
@@ -85,102 +87,125 @@ val BAG_TO_LIST_IND = save_thm("BAG_TO_LIST_IND",BAG_TO_LIST_IND);
        Some consequences.
  ---------------------------------------------------------------------------*)
 
-val BAG_TO_LIST_INV = Q.store_thm("BAG_TO_LIST_INV",
-`!b. FINITE_BAG b ==> (LIST_TO_BAG(BAG_TO_LIST b) = b)`,
+Theorem BAG_TO_LIST_INV:
+ !b. FINITE_BAG b ==> (LIST_TO_BAG(BAG_TO_LIST b) = b)
+Proof
  recInduct BAG_TO_LIST_IND
    THEN RW_TAC bool_ss []
    THEN ONCE_REWRITE_TAC [UNDISCH BAG_TO_LIST_THM]
    THEN RW_TAC bool_ss [LIST_TO_BAG_def]
-   THEN PROVE_TAC [BAG_INSERT_CHOICE_REST,FINITE_SUB_BAG,SUB_BAG_REST]);
+   THEN PROVE_TAC [BAG_INSERT_CHOICE_REST,FINITE_SUB_BAG,SUB_BAG_REST]
+QED
 
-val BAG_IN_MEM = Q.store_thm("BAG_IN_MEM",
-`!b. FINITE_BAG b ==> !x. BAG_IN x b = MEM x (BAG_TO_LIST b)`,
+Theorem BAG_IN_MEM:
+ !b. FINITE_BAG b ==> !x. BAG_IN x b = MEM x (BAG_TO_LIST b)
+Proof
  recInduct BAG_TO_LIST_IND
    THEN RW_TAC bool_ss []
    THEN ONCE_REWRITE_TAC [UNDISCH BAG_TO_LIST_THM]
    THEN RW_TAC bool_ss [listTheory.MEM,NOT_IN_EMPTY_BAG]
    THEN PROVE_TAC [FINITE_SUB_BAG,SUB_BAG_REST,
-                   BAG_INSERT_CHOICE_REST,BAG_IN_BAG_INSERT]);
+                   BAG_INSERT_CHOICE_REST,BAG_IN_BAG_INSERT]
+QED
 
 (* version with the equation the "rewrite" way round *)
-val MEM_BAG_TO_LIST = Q.store_thm
-("MEM_BAG_TO_LIST",
- `!b. FINITE_BAG b ==> !x. MEM x (BAG_TO_LIST b) = BAG_IN x b`,
-  PROVE_TAC [BAG_IN_MEM]);
+Theorem MEM_BAG_TO_LIST:
+  !b. FINITE_BAG b ==> !x. MEM x (BAG_TO_LIST b) = BAG_IN x b
+Proof
+  PROVE_TAC [BAG_IN_MEM]
+QED
 
 val _ = export_rewrites ["MEM_BAG_TO_LIST"];
 
-val FINITE_LIST_TO_BAG = Q.store_thm(
-"FINITE_LIST_TO_BAG",
-`FINITE_BAG (LIST_TO_BAG ls)`,
-Induct_on `ls` THEN SRW_TAC [][LIST_TO_BAG_def]);
+Theorem FINITE_LIST_TO_BAG:
+ FINITE_BAG (LIST_TO_BAG ls)
+Proof
+Induct_on `ls` THEN SRW_TAC [][LIST_TO_BAG_def]
+QED
 val _ = export_rewrites["FINITE_LIST_TO_BAG"];
 
 
-val EVERY_LIST_TO_BAG = Q.store_thm(
-"EVERY_LIST_TO_BAG",
-`BAG_EVERY P (LIST_TO_BAG ls) <=> EVERY P ls`,
-Induct_on `ls` THEN SRW_TAC [][LIST_TO_BAG_def]);
+Theorem EVERY_LIST_TO_BAG:
+ BAG_EVERY P (LIST_TO_BAG ls) <=> EVERY P ls
+Proof
+Induct_on `ls` THEN SRW_TAC [][LIST_TO_BAG_def]
+QED
 
 
-val LIST_TO_BAG_APPEND = store_thm ("LIST_TO_BAG_APPEND",
-``!l1 l2.
+Theorem LIST_TO_BAG_APPEND:
+  !l1 l2.
 LIST_TO_BAG (l1 ++ l2) =
-BAG_UNION (LIST_TO_BAG l1) (LIST_TO_BAG l2)``,
+BAG_UNION (LIST_TO_BAG l1) (LIST_TO_BAG l2)
+Proof
 Induct_on `l1` THENL [
   SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_UNION_EMPTY],
   ASM_SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_UNION_INSERT]
-]);
+]
+QED
 
-val LIST_TO_BAG_MAP = store_thm ("LIST_TO_BAG_MAP",
-  ``LIST_TO_BAG (MAP f b) = BAG_IMAGE f (LIST_TO_BAG b)``,
+Theorem LIST_TO_BAG_MAP:
+    LIST_TO_BAG (MAP f b) = BAG_IMAGE f (LIST_TO_BAG b)
+Proof
   EVERY [ Induct_on `b`,
     ASM_SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_IMAGE_EMPTY],
     GEN_TAC, irule (GSYM BAG_IMAGE_FINITE_INSERT),
-    irule FINITE_LIST_TO_BAG] ) ;
+    irule FINITE_LIST_TO_BAG]
+QED
 
-val LIST_TO_BAG_FILTER = store_thm ("LIST_TO_BAG_FILTER",
-  ``LIST_TO_BAG (FILTER f b) = BAG_FILTER f (LIST_TO_BAG b)``,
+Theorem LIST_TO_BAG_FILTER:
+    LIST_TO_BAG (FILTER f b) = BAG_FILTER f (LIST_TO_BAG b)
+Proof
   EVERY [ Induct_on `b`,
     ASM_SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_FILTER_EMPTY],
     GEN_TAC, COND_CASES_TAC,
-    ASM_SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_FILTER_BAG_INSERT] ] ) ;
+    ASM_SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_FILTER_BAG_INSERT] ]
+QED
 
 
-val INN_LIST_TO_BAG = store_thm ("INN_LIST_TO_BAG",
-``!n h l. BAG_INN h n (LIST_TO_BAG l) = (LENGTH (FILTER ($= h) l) >= n)``,
+Theorem INN_LIST_TO_BAG:
+  !n h l. BAG_INN h n (LIST_TO_BAG l) = (LENGTH (FILTER ($= h) l) >= n)
+Proof
 Induct_on `l` THENL [
   SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_INN_EMPTY_BAG],
   ASM_SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_INN_BAG_INSERT, COND_RAND, COND_RATOR]
-]);
+]
+QED
 
 
-val IN_LIST_TO_BAG = store_thm ("IN_LIST_TO_BAG",
-``!h l. BAG_IN h (LIST_TO_BAG l) = MEM h l``,
+Theorem IN_LIST_TO_BAG:
+  !h l. BAG_IN h (LIST_TO_BAG l) = MEM h l
+Proof
 Induct_on `l` THENL [
   SIMP_TAC list_ss [LIST_TO_BAG_def, NOT_IN_EMPTY_BAG],
   ASM_SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_IN_BAG_INSERT]
-]);
+]
+QED
 
-val LIST_TO_BAG_DISTINCT = store_thm ("LIST_TO_BAG_DISTINCT",
-  ``BAG_ALL_DISTINCT (LIST_TO_BAG b) = ALL_DISTINCT b``,
+Theorem LIST_TO_BAG_DISTINCT:
+    BAG_ALL_DISTINCT (LIST_TO_BAG b) = ALL_DISTINCT b
+Proof
   Induct_on `b` THEN
-    ASM_SIMP_TAC (srw_ss ()) [LIST_TO_BAG_def, IN_LIST_TO_BAG]) ;
+    ASM_SIMP_TAC (srw_ss ()) [LIST_TO_BAG_def, IN_LIST_TO_BAG]
+QED
 
-val LIST_TO_BAG_EQ_EMPTY = store_thm ("LIST_TO_BAG_EQ_EMPTY",
-``!l. (LIST_TO_BAG l = EMPTY_BAG) = (l = [])``,
+Theorem LIST_TO_BAG_EQ_EMPTY:
+  !l. (LIST_TO_BAG l = EMPTY_BAG) = (l = [])
+Proof
 Cases_on `l` THEN
-SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_INSERT_NOT_EMPTY]);
+SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_INSERT_NOT_EMPTY]
+QED
 
 
-val PERM_LIST_TO_BAG = store_thm ("PERM_LIST_TO_BAG",
-  ``!l1 l2. (LIST_TO_BAG l1 = LIST_TO_BAG l2) = PERM l1 l2``,
+Theorem PERM_LIST_TO_BAG:
+    !l1 l2. (LIST_TO_BAG l1 = LIST_TO_BAG l2) = PERM l1 l2
+Proof
   REPEAT GEN_TAC THEN SIMP_TAC std_ss [PERM_DEF] THEN EQ_TAC THENL [
     EVERY [ REPEAT STRIP_TAC,
       POP_ASSUM (fn th => ASSUME_TAC (Q.AP_THM th `x`)),
       FULL_SIMP_TAC std_ss [LIST_TO_BAG_alt],
       ONCE_REWRITE_TAC [FILTER_EQ_REP], ASM_SIMP_TAC std_ss [] ],
-    DISCH_TAC THEN irule EQ_EXT THEN ASM_SIMP_TAC std_ss [LIST_TO_BAG_alt] ]) ;
+    DISCH_TAC THEN irule EQ_EXT THEN ASM_SIMP_TAC std_ss [LIST_TO_BAG_alt] ]
+QED
 
 val CARD_LIST_TO_BAG = Q.store_thm(
 "CARD_LIST_TO_BAG",
@@ -191,10 +216,12 @@ before export_rewrites ["CARD_LIST_TO_BAG"];
 val EQ_TRANS' = REWRITE_RULE [GSYM AND_IMP_INTRO] EQ_TRANS ;
 val th = MATCH_MP EQ_TRANS' (SYM CARD_LIST_TO_BAG) ;
 
-val BAG_TO_LIST_CARD = store_thm ("BAG_TO_LIST_CARD",
-  ``!b. FINITE_BAG b ==> (LENGTH (BAG_TO_LIST b) = BAG_CARD b)``,
+Theorem BAG_TO_LIST_CARD:
+    !b. FINITE_BAG b ==> (LENGTH (BAG_TO_LIST b) = BAG_CARD b)
+Proof
   EVERY [REPEAT STRIP_TAC, irule th,
-    ASM_SIMP_TAC bool_ss [BAG_TO_LIST_INV] ]) ;
+    ASM_SIMP_TAC bool_ss [BAG_TO_LIST_INV] ]
+QED
 
 val BAG_TO_LIST_EQ_NIL = Q.store_thm(
 "BAG_TO_LIST_EQ_NIL",
@@ -284,10 +311,11 @@ Definition BAG_OF_FMAP:   BAG_OF_FMAP f b =
 End
 
 
-val BAG_OF_FMAP_THM = store_thm ("BAG_OF_FMAP_THM",
-``(!f. (BAG_OF_FMAP f FEMPTY = EMPTY_BAG)) /\
+Theorem BAG_OF_FMAP_THM:
+  (!f. (BAG_OF_FMAP f FEMPTY = EMPTY_BAG)) /\
   (!f b k v. (BAG_OF_FMAP f (b |+ (k, v)) =
-             BAG_INSERT (f k v) (BAG_OF_FMAP f (b \\ k))))``,
+             BAG_INSERT (f k v) (BAG_OF_FMAP f (b \\ k))))
+Proof
 SIMP_TAC std_ss [BAG_OF_FMAP, FDOM_FEMPTY, NOT_IN_EMPTY, EMPTY_BAG,
                  combinTheory.K_DEF,
                  BAG_INSERT, FDOM_FUPDATE, IN_INSERT,
@@ -332,7 +360,8 @@ Cases_on `x = f k v` THENL [
    Cases_on `x' = k` THEN (
       ASM_SIMP_TAC std_ss []
    )
-]);
+]
+QED
 
 Theorem BAG_IN_BAG_OF_FMAP:
   !x f b. BAG_IN x (BAG_OF_FMAP f b) <=>
@@ -355,11 +384,13 @@ Proof
   SRW_TAC[][CARD_EQ_0, EXTENSION] THEN METIS_TAC[]
 QED
 
-val FINITE_BAG_OF_FMAP = store_thm ("FINITE_BAG_OF_FMAP",
-``!f b. FINITE_BAG (BAG_OF_FMAP f b)``,
+Theorem FINITE_BAG_OF_FMAP:
+  !f b. FINITE_BAG (BAG_OF_FMAP f b)
+Proof
 GEN_TAC THEN HO_MATCH_MP_TAC fmap_INDUCT THEN
 SIMP_TAC std_ss [BAG_OF_FMAP_THM, FINITE_EMPTY_BAG,
-                 DOMSUB_NOT_IN_DOM, FINITE_BAG_INSERT]);
+                 DOMSUB_NOT_IN_DOM, FINITE_BAG_INSERT]
+QED
 
 
 

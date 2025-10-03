@@ -29,10 +29,11 @@ Definition f2_def:  f2 n = n + 1
 End
 val _ = export_rewrites ["f2_def"]
 
-val f2_SUC = store_thm(
-  "f2_SUC",
-  ``f2 = SUC``,
-  REWRITE_TAC [arithmeticTheory.ADD1, f2_def, FUN_EQ_THM])
+Theorem f2_SUC:
+    f2 = SUC
+Proof
+  REWRITE_TAC [arithmeticTheory.ADD1, f2_def, FUN_EQ_THM]
+QED
 
 val _ = delete_binding "f2_def"
 

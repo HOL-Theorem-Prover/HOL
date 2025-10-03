@@ -4,13 +4,14 @@ Ancestors
 
 (* Material from Brian Huffman's AFP entry on Ordinal arithmetic *)
 
-val better_induction = store_thm(
-  "better_induction",
-  ``!P. P 0 /\ (!a. P a ==> P a^+) /\
+Theorem better_induction:
+    !P. P 0 /\ (!a. P a ==> P a^+) /\
         (!a. 0 < a /\ (!b. b < a ==> P b) ==> P (sup (preds a))) ==>
-        !a. P a``,
+        !a. P a
+Proof
   gen_tac >> strip_tac >> match_mp_tac simple_ord_induction >> simp[] >>
-  qx_gen_tac `a` >> strip_tac >> fs[sup_preds_omax_NONE] >> metis_tac[]);
+  qx_gen_tac `a` >> strip_tac >> fs[sup_preds_omax_NONE] >> metis_tac[]
+QED
 
 Definition closed_def:
   closed A <=> !g. (!n:num. g n IN A) ==> sup { g n | n | T} IN A
@@ -35,18 +36,19 @@ End
 
 val dsimp = asm_simp_tac (srw_ss() ++ boolSimps.DNF_ss)
 
-val nrange_IN_Uinf = store_thm(
-  "nrange_IN_Uinf",
-  ``{ f n | n:num | T} <<= univ(:'a inf)``,
+Theorem nrange_IN_Uinf:
+    { f n | n:num | T} <<= univ(:'a inf)
+Proof
   qsuff_tac `countable { f n | n | T }`
   >- metis_tac[Unum_cle_Uinf, cardleq_TRANS, countable_thm] >>
   simp[countable_surj] >> disj2_tac >> qexists_tac `f` >>
-  simp[SURJ_DEF] >> metis_tac[]);
+  simp[SURJ_DEF] >> metis_tac[]
+QED
 val _ = export_rewrites ["nrange_IN_Uinf"]
 
-val increasing = store_thm(
-  "increasing",
-  ``!f x. strict_mono f /\ continuous f ==> x <= f x``,
+Theorem increasing:
+    !f x. strict_mono f /\ continuous f ==> x <= f x
+Proof
   ntac 3 strip_tac >> qid_spec_tac `x` >>
   ho_match_mp_tac better_induction >> simp[] >> conj_tac
   >- (qx_gen_tac `x` >> strip_tac >> simp[ordlt_SUC_DISCRETE] >>
@@ -57,12 +59,13 @@ val increasing = store_thm(
   qx_gen_tac `a` >> strip_tac >> fs[continuous_def, preds_inj_univ] >>
   simp[sup_thm,preds_inj_univ] >> qx_gen_tac `b` >> Cases_on `a <= b` >>
   simp[] >> fs[] >> match_mp_tac ordle_TRANS >> qexists_tac `f b` >>
-  simp[] >> match_mp_tac suple_thm >> simp[IMAGE_cardleq_rwt, preds_inj_univ]);
+  simp[] >> match_mp_tac suple_thm >> simp[IMAGE_cardleq_rwt, preds_inj_univ]
+QED
 
-val clubs_exist = store_thm(
-  "clubs_exist",
-  ``strict_mono (f:'a ordinal -> 'a ordinal) /\ continuous f ==>
-      club (IMAGE f univ(:'a ordinal))``,
+Theorem clubs_exist:
+    strict_mono (f:'a ordinal -> 'a ordinal) /\ continuous f ==>
+      club (IMAGE f univ(:'a ordinal))
+Proof
   simp[club_def, closed_def, unbounded_def] >> rpt strip_tac >| [
     qabbrev_tac `ss = { oleast x. g n = f x | n | T }` >>
     qexists_tac `sup ss` >> `ss <<= univ(:'a inf)` by simp[Abbr`ss`] >>
@@ -75,21 +78,23 @@ val clubs_exist = store_thm(
     DEEP_INTRO_TAC oleast_intro >> simp[],
     dsimp[] >> qexists_tac `a^+` >> match_mp_tac ordlet_TRANS >>
     qexists_tac `f a` >> fs[strict_mono_def, increasing]
-  ]);
+  ]
+QED
 
-val mono_natI = store_thm(
-  "mono_natI",
-  ``(!n. f n : 'a ordinal <= f (SUC n)) ==> !m n. m <= n ==> f m <= f n``,
+Theorem mono_natI:
+    (!n. f n : 'a ordinal <= f (SUC n)) ==> !m n. m <= n ==> f m <= f n
+Proof
   strip_tac >> Induct_on `n` >> simp[] >> qx_gen_tac `m` >> strip_tac >>
   Cases_on `m = SUC n` >- simp[] >>
   `m <= n` by decide_tac >>
-  metis_tac[ordle_TRANS]);
+  metis_tac[ordle_TRANS]
+QED
 
-val sup_mem_INTER = store_thm(
-  "sup_mem_INTER",
-  ``(!n. club (A n)) /\ (!n. A (SUC n) SUBSET A n) /\
+Theorem sup_mem_INTER:
+    (!n. club (A n)) /\ (!n. A (SUC n) SUBSET A n) /\
     (!n. f n IN A n) /\ (!m n. m <= n ==> f m <= f n) ==>
-    sup {f n | n | T} IN BIGINTER {A n | n | T}``,
+    sup {f n | n | T} IN BIGINTER {A n | n | T}
+Proof
   dsimp[] >> qx_gen_tac `k` >> strip_tac >>
   `sup { f n | n | T} = sup { f (n + k) | n | T }`
     by (match_mp_tac sup_eq_sup >> dsimp[] >> simp[] >> conj_tac
@@ -101,20 +106,22 @@ val sup_mem_INTER = store_thm(
   qx_gen_tac `n` >>
   qsuff_tac `A (n + k) SUBSET A k` >- metis_tac [SUBSET_DEF] >>
   Induct_on `n` >> simp[arithmeticTheory.ADD_CLAUSES] >>
-  metis_tac [SUBSET_TRANS, DECIDE ``x + y:num = y + x``]);
+  metis_tac [SUBSET_TRANS, DECIDE ``x + y:num = y + x``]
+QED
 
 val smem' = sup_mem_INTER |> SIMP_RULE (srw_ss() ++ boolSimps.DNF_ss) []
                           |> GEN_ALL
 
-val oleast_leq = store_thm(
-  "oleast_leq",
-  ``!P a. P a ==> (oleast) P <= a``,
-  ntac 3 strip_tac >> DEEP_INTRO_TAC oleast_intro >> metis_tac[]);
+Theorem oleast_leq:
+    !P a. P a ==> (oleast) P <= a
+Proof
+  ntac 3 strip_tac >> DEEP_INTRO_TAC oleast_intro >> metis_tac[]
+QED
 
-val club_INTER = store_thm(
-  "club_INTER",
-  ``(!n. club (A n)) /\ (!n. A (SUC n) SUBSET A n) ==>
-    club (BIGINTER {A n | n | T})``,
+Theorem club_INTER:
+    (!n. club (A n)) /\ (!n. A (SUC n) SUBSET A n) ==>
+    club (BIGINTER {A n | n | T})
+Proof
   strip_tac >> simp[club_def] >> conj_tac
   >- (fs[closed_def, club_def] >> dsimp[]) >>
   dsimp[club_def, closed_def, unbounded_def] >>
@@ -134,5 +141,6 @@ val club_INTER = store_thm(
       DEEP_INTRO_TAC oleast_intro >> conj_tac
       >- fs[club_def, unbounded_def] >> simp[]) >>
   simp[sup_thm] >> dsimp[] >> qexists_tac `n` >>
-  DEEP_INTRO_TAC oleast_intro >> simp[] >> fs[club_def, unbounded_def])
+  DEEP_INTRO_TAC oleast_intro >> simp[] >> fs[club_def, unbounded_def]
+QED
 

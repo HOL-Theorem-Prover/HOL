@@ -76,30 +76,30 @@ End
 (* Desired recursion equations, constrained by finiteness of graph.          *)
 (*---------------------------------------------------------------------------*)
 
-val DFT_def = Q.store_thm
-("DFT_def",
- `FINITE (Parents G) ==>
+Theorem DFT_def:
+  FINITE (Parents G) ==>
   (DFT G f seen [] acc = acc) /\
   (DFT G f seen (visit_now :: visit_later) acc =
     if MEM visit_now seen
        then DFT G f seen visit_later acc
        else DFT G f (visit_now :: seen)
                     (G visit_now ++ visit_later)
-                    (f visit_now acc))`,
+                    (f visit_now acc))
+Proof
  RW_TAC std_ss [] THENL
  [RW_TAC list_ss [def],
   GEN_REWRITE_TAC LHS_CONV empty_rewrites [def] THEN RW_TAC list_ss [],
   RW_TAC list_ss [def],
-  GEN_REWRITE_TAC LHS_CONV empty_rewrites [def] THEN RW_TAC list_ss []]);
+  GEN_REWRITE_TAC LHS_CONV empty_rewrites [def] THEN RW_TAC list_ss []]
+QED
 
 
 (*---------------------------------------------------------------------------*)
 (* Desired induction theorem for DFT.                                        *)
 (*---------------------------------------------------------------------------*)
 
-val DFT_ind = Q.store_thm
-("DFT_ind",
- `!P.
+Theorem DFT_ind:
+  !P.
     (!G f seen visit_now visit_later acc.
        P G f seen [] acc /\
        ((FINITE (Parents G) /\ ~MEM visit_now seen ==>
@@ -110,37 +110,41 @@ val DFT_ind = Q.store_thm
             P G f seen visit_later acc)
          ==> P G f seen (visit_now :: visit_later) acc))
    ==>
-   !v v1 v2 v3 v4. P v v1 v2 v3 v4`,
+   !v v1 v2 v3 v4. P v v1 v2 v3 v4
+Proof
  NTAC 2 STRIP_TAC
  THEN HO_MATCH_MP_TAC DFT_ind0
  THEN REPEAT GEN_TAC THEN Cases_on `to_visit`
- THEN RW_TAC list_ss []);
+ THEN RW_TAC list_ss []
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Basic lemmas about DFT                                                    *)
 (*---------------------------------------------------------------------------*)
 
-val DFT_CONS = Q.store_thm
-("DFT_CONS",
- `!G f seen to_visit acc a b.
+Theorem DFT_CONS:
+  !G f seen to_visit acc a b.
     FINITE (Parents G) /\ (f = CONS) /\ (acc = APPEND a b)
       ==>
-    (DFT G f seen to_visit acc = DFT G f seen to_visit a ++ b)`,
+    (DFT G f seen to_visit acc = DFT G f seen to_visit a ++ b)
+Proof
  recInduct DFT_ind
-  THEN RW_TAC list_ss [DFT_def] THEN METIS_TAC [APPEND]);
+  THEN RW_TAC list_ss [DFT_def] THEN METIS_TAC [APPEND]
+QED
 
 val FOLDR_UNROLL = Q.prove
 (`!f x b l. FOLDR f (f x b) l = FOLDR f b (l ++ [x])`,
  Induct_on `l` THEN RW_TAC list_ss []);
 
-val DFT_FOLD = Q.store_thm
-("DFT_FOLD",
- `!G f seen to_visit acc.
+Theorem DFT_FOLD:
+  !G f seen to_visit acc.
     FINITE (Parents G)
        ==>
-   (DFT G f seen to_visit acc = FOLDR f acc (DFT G CONS seen to_visit []))`,
+   (DFT G f seen to_visit acc = FOLDR f acc (DFT G CONS seen to_visit []))
+Proof
  recInduct DFT_ind THEN
- RW_TAC list_ss [DFT_def] THEN METIS_TAC [FOLDR_UNROLL,DFT_CONS,APPEND]);
+ RW_TAC list_ss [DFT_def] THEN METIS_TAC [FOLDR_UNROLL,DFT_CONS,APPEND]
+QED
 
 val DFT_ALL_DISTINCT_LEM = Q.prove
 (`!G f seen to_visit acc.
@@ -150,43 +154,45 @@ val DFT_ALL_DISTINCT_LEM = Q.prove
     ALL_DISTINCT (DFT G f seen to_visit acc)`,
  recInduct DFT_ind THEN RW_TAC list_ss [DFT_def] THEN METIS_TAC []);
 
-val DFT_ALL_DISTINCT = Q.store_thm
-("DFT_ALL_DISTINCT",
- `!G seen to_visit.
-    FINITE (Parents G) ==> ALL_DISTINCT (DFT G CONS seen to_visit [])`,
- RW_TAC list_ss [DFT_ALL_DISTINCT_LEM]);
+Theorem DFT_ALL_DISTINCT:
+  !G seen to_visit.
+    FINITE (Parents G) ==> ALL_DISTINCT (DFT G CONS seen to_visit [])
+Proof
+ RW_TAC list_ss [DFT_ALL_DISTINCT_LEM]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* If DFT visits x, then x is reachable or is in the starting accumulator    *)
 (*---------------------------------------------------------------------------*)
 
-val DFT_REACH_1 = Q.store_thm
-("DFT_REACH_1",
- `!G f seen to_visit acc.
+Theorem DFT_REACH_1:
+  !G f seen to_visit acc.
     FINITE (Parents G) /\ (f = CONS) ==>
     !x. MEM x (DFT G f seen to_visit acc) ==>
-      x IN (REACH_LIST G to_visit) \/ MEM x acc`,
+      x IN (REACH_LIST G to_visit) \/ MEM x acc
+Proof
  recInduct DFT_ind
    THEN RW_TAC set_ss [DFT_def, REACH_LIST_def, REACH_def, IN_DEF]
    THENL[METIS_TAC [], ALL_TAC]
    THEN POP_ASSUM MP_TAC THEN RW_TAC set_ss []
    THEN POP_ASSUM (MP_TAC o Q.SPEC `x`) THEN RW_TAC set_ss [] THENL
    [IMP_RES_TAC RTC_RULES THEN METIS_TAC[],
-    METIS_TAC[], METIS_TAC[RTC_RULES], METIS_TAC[]]);
+    METIS_TAC[], METIS_TAC[RTC_RULES], METIS_TAC[]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* If x is reachable from to_visit on a path that does not include the nodes *)
 (* in seen, then DFT visits x.                                               *)
 (*---------------------------------------------------------------------------*)
 
-val DFT_REACH_2 = Q.store_thm
-("DFT_REACH_2",
- `!G f seen to_visit acc x.
+Theorem DFT_REACH_2:
+  !G f seen to_visit acc x.
     FINITE (Parents G) /\ (f = CONS) /\
     x IN (REACH_LIST (EXCLUDE G (LIST_TO_SET seen)) to_visit) /\
     ~MEM x seen
      ==>
-      MEM x (DFT G f seen to_visit acc)`,
+      MEM x (DFT G f seen to_visit acc)
+Proof
  recInduct DFT_ind THEN RW_TAC set_ss [DFT_def] THENL
  [(* Base Case *)
   FULL_SIMP_TAC list_ss [IN_DEF, EXCLUDE_def, REACH_LIST_def],
@@ -211,7 +217,8 @@ val DFT_REACH_2 = Q.store_thm
          FULL_SIMP_TAC set_ss [SPECIFICATION,REACH_LIST_def,LIST_TO_SET_THM]
          THEN METIS_TAC [],
         FULL_SIMP_TAC set_ss [SPECIFICATION, REACH_LIST_def,LIST_TO_SET_THM]
-        THENL [METIS_TAC [], METIS_TAC [REACH_LEM2, EXCLUDE_LEM]]]]]);
+        THENL [METIS_TAC [], METIS_TAC [REACH_LEM2, EXCLUDE_LEM]]]]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* x is reachable iff DFT finds it.                                          *)

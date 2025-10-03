@@ -32,14 +32,16 @@ Definition tends_num_real :
 End
 Overload "-->" = “tends_num_real”
 
-val SEQ = store_thm("SEQ",
-  “!x x0.
+Theorem SEQ:
+   !x x0.
       (x --> x0) =
       !e. &0 < e
-          ==> ?N. !n. n >= N ==> abs(x(n) - x0) < e”,
+          ==> ?N. !n. n >= N ==> abs(x(n) - x0) < e
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[tends_num_real, SEQ_TENDS, MR1_DEF] THEN
   GEN_REWR_TAC (RAND_CONV o ONCE_DEPTH_CONV)  [ABS_SUB]
-  THEN REFL_TAC);
+  THEN REFL_TAC
+QED
 
 (* connection to real_topologyTheory *)
 Theorem LIM_SEQUENTIALLY_SEQ :
@@ -48,47 +50,63 @@ Proof
     REWRITE_TAC [LIM_SEQUENTIALLY, SEQ, GREATER_EQ, dist]
 QED
 
-val SEQ_CONST = store_thm("SEQ_CONST",
-  “!k. (\x. k) --> k”,
+Theorem SEQ_CONST:
+   !k. (\x. k) --> k
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[SEQ, REAL_SUB_REFL, ABS_0] THEN
-  GEN_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[]);
+  GEN_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[]
+QED
 
-val SEQ_ADD = store_thm("SEQ_ADD",
-  “!x x0 y y0. x --> x0 /\ y --> y0 ==> (\n. x(n) + y(n)) --> (x0 + y0)”,
+Theorem SEQ_ADD:
+   !x x0 y y0. x --> x0 /\ y --> y0 ==> (\n. x(n) + y(n)) --> (x0 + y0)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[tends_num_real] THEN
-  MATCH_MP_TAC NET_ADD THEN MATCH_ACCEPT_TAC DORDER_NGE);
+  MATCH_MP_TAC NET_ADD THEN MATCH_ACCEPT_TAC DORDER_NGE
+QED
 
-val SEQ_MUL = store_thm("SEQ_MUL",
-  “!x x0 y y0. x --> x0 /\ y --> y0 ==> (\n. x(n) * y(n)) --> (x0 * y0)”,
+Theorem SEQ_MUL:
+   !x x0 y y0. x --> x0 /\ y --> y0 ==> (\n. x(n) * y(n)) --> (x0 * y0)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[tends_num_real] THEN
-  MATCH_MP_TAC NET_MUL THEN MATCH_ACCEPT_TAC DORDER_NGE);
+  MATCH_MP_TAC NET_MUL THEN MATCH_ACCEPT_TAC DORDER_NGE
+QED
 
-val SEQ_NEG = store_thm("SEQ_NEG",
-  “!x x0. x --> x0 = (\n. ~(x n)) --> ~x0”,
+Theorem SEQ_NEG:
+   !x x0. x --> x0 = (\n. ~(x n)) --> ~x0
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[tends_num_real] THEN
-  MATCH_MP_TAC NET_NEG THEN MATCH_ACCEPT_TAC DORDER_NGE);
+  MATCH_MP_TAC NET_NEG THEN MATCH_ACCEPT_TAC DORDER_NGE
+QED
 
-val SEQ_INV = store_thm("SEQ_INV",
-  “!x x0. x --> x0 /\ ~(x0 = &0) ==> (\n. inv(x n)) --> inv x0”,
+Theorem SEQ_INV:
+   !x x0. x --> x0 /\ ~(x0 = &0) ==> (\n. inv(x n)) --> inv x0
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[tends_num_real] THEN
-  MATCH_MP_TAC NET_INV THEN MATCH_ACCEPT_TAC DORDER_NGE);
+  MATCH_MP_TAC NET_INV THEN MATCH_ACCEPT_TAC DORDER_NGE
+QED
 
-val SEQ_SUB = store_thm("SEQ_SUB",
-  “!x x0 y y0. x --> x0 /\ y --> y0 ==> (\n. x(n) - y(n)) --> (x0 - y0)”,
+Theorem SEQ_SUB:
+   !x x0 y y0. x --> x0 /\ y --> y0 ==> (\n. x(n) - y(n)) --> (x0 - y0)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[tends_num_real] THEN
-  MATCH_MP_TAC NET_SUB THEN MATCH_ACCEPT_TAC DORDER_NGE);
+  MATCH_MP_TAC NET_SUB THEN MATCH_ACCEPT_TAC DORDER_NGE
+QED
 
-val SEQ_DIV = store_thm("SEQ_DIV",
-  “!x x0 y y0. x --> x0 /\ y --> y0 /\ ~(y0 = &0) ==>
-                  (\n. x(n) / y(n)) --> (x0 / y0)”,
+Theorem SEQ_DIV:
+   !x x0 y y0. x --> x0 /\ y --> y0 /\ ~(y0 = &0) ==>
+                  (\n. x(n) / y(n)) --> (x0 / y0)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[tends_num_real] THEN
-  MATCH_MP_TAC NET_DIV THEN MATCH_ACCEPT_TAC DORDER_NGE);
+  MATCH_MP_TAC NET_DIV THEN MATCH_ACCEPT_TAC DORDER_NGE
+QED
 
-val SEQ_UNIQ = store_thm("SEQ_UNIQ",
-  “!x x1 x2. x --> x1 /\ x --> x2 ==> (x1 = x2)”,
+Theorem SEQ_UNIQ:
+   !x x1 x2. x --> x1 /\ x --> x2 ==> (x1 = x2)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[tends_num_real] THEN
   MATCH_MP_TAC MTOP_TENDS_UNIQ THEN
-  MATCH_ACCEPT_TAC DORDER_NGE);
+  MATCH_ACCEPT_TAC DORDER_NGE
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Define convergence and Cauchy-ness                                        *)
@@ -132,8 +150,9 @@ QED
 val subseq = new_definition("subseq",
   “subseq f = !m n:num. m < n ==> f m < (f n):num”);
 
-val SUBSEQ_SUC = store_thm("SUBSEQ_SUC",
-  “!f. subseq f = !n. f(n) < f(SUC n)”,
+Theorem SUBSEQ_SUC:
+   !f. subseq f = !n. f(n) < f(SUC n)
+Proof
   GEN_TAC THEN REWRITE_TAC[subseq] THEN EQ_TAC THEN DISCH_TAC THENL
    [X_GEN_TAC “n:num” THEN POP_ASSUM MATCH_MP_TAC THEN
     REWRITE_TAC[LESS_SUC_REFL],
@@ -143,7 +162,8 @@ val SUBSEQ_SUC = store_thm("SUBSEQ_SUC",
     SPEC_TAC(“p:num”,“p:num”) THEN INDUCT_TAC THENL
      [ALL_TAC,
       MATCH_MP_TAC LESS_TRANS THEN EXISTS_TAC “f(m + (SUC p)):num”] THEN
-    ASM_REWRITE_TAC[ADD_CLAUSES]]);
+    ASM_REWRITE_TAC[ADD_CLAUSES]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Define monotonicity                                                       *)
@@ -176,8 +196,9 @@ QED
 (* Simpler characterization of bounded sequence                              *)
 (*---------------------------------------------------------------------------*)
 
-val MAX_LEMMA = store_thm("MAX_LEMMA",
-  “!s N. ?k. !n:num. n < N ==> abs(s n) < k”,
+Theorem MAX_LEMMA:
+   !s N. ?k. !n:num. n < N ==> abs(s n) < k
+Proof
   GEN_TAC THEN INDUCT_TAC THEN REWRITE_TAC[NOT_LESS_0] THEN
   POP_ASSUM(X_CHOOSE_TAC “k:real”) THEN
   DISJ_CASES_TAC (SPECL [“k:real”, “abs(s(N:num))”] REAL_LET_TOTAL) THENL
@@ -189,10 +210,12 @@ val MAX_LEMMA = store_thm("MAX_LEMMA",
   MATCH_MP_TAC REAL_LT_ADD1 THEN
   MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC “k:real” THEN
   ASM_REWRITE_TAC[] THEN MATCH_MP_TAC REAL_LT_IMP_LE THEN
-  ASM_REWRITE_TAC[]);
+  ASM_REWRITE_TAC[]
+QED
 
-val SEQ_BOUNDED = store_thm("SEQ_BOUNDED",
-  “!s. bounded(mr1, ^geq) s = ?k. !n. abs(s n) < k”,
+Theorem SEQ_BOUNDED:
+   !s. bounded(mr1, ^geq) s = ?k. !n. abs(s n) < k
+Proof
   GEN_TAC THEN REWRITE_TAC[MR1_BOUNDED] THEN
   REWRITE_TAC[GREATER_EQ, LESS_EQ_REFL] THEN EQ_TAC THENL
    [DISCH_THEN(X_CHOOSE_THEN “k:real” (X_CHOOSE_TAC “N:num”)) THEN
@@ -207,10 +230,12 @@ val SEQ_BOUNDED = store_thm("SEQ_BOUNDED",
       ASM_REWRITE_TAC[] THEN NO_TAC),
     DISCH_THEN(X_CHOOSE_TAC “k:real”) THEN
     MAP_EVERY EXISTS_TAC [“k:real”, “0:num”] THEN
-    GEN_TAC THEN ASM_REWRITE_TAC[]]);
+    GEN_TAC THEN ASM_REWRITE_TAC[]]
+QED
 
-val SEQ_BOUNDED_2 = store_thm("SEQ_BOUNDED_2",
-  “!f k k'. (!n. k <= f(n) /\ f(n) <= k') ==> bounded(mr1, ^geq) f”,
+Theorem SEQ_BOUNDED_2:
+   !f k k'. (!n. k <= f(n) /\ f(n) <= k') ==> bounded(mr1, ^geq) f
+Proof
   REPEAT STRIP_TAC THEN REWRITE_TAC[SEQ_BOUNDED] THEN
   EXISTS_TAC “(abs(k) + abs(k')) + &1” THEN GEN_TAC THEN
   MATCH_MP_TAC REAL_LET_TRANS THEN EXISTS_TAC “abs(k) + abs(k')” THEN
@@ -228,29 +253,33 @@ val SEQ_BOUNDED_2 = store_thm("SEQ_BOUNDED_2",
     SUBGOAL_THEN “&0 <= f(n:num)” MP_TAC THENL
      [MATCH_MP_TAC REAL_LE_TRANS THEN
       EXISTS_TAC “k:real” THEN ASM_REWRITE_TAC[],
-      ASM_REWRITE_TAC[]]]);
+      ASM_REWRITE_TAC[]]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Show that every Cauchy sequence is bounded                                *)
 (*---------------------------------------------------------------------------*)
 
-val SEQ_CBOUNDED = store_thm("SEQ_CBOUNDED",
-  “!f. cauchy f ==> bounded(mr1, ^geq) f”,
+Theorem SEQ_CBOUNDED:
+   !f. cauchy f ==> bounded(mr1, ^geq) f
+Proof
   GEN_TAC THEN REWRITE_TAC[bounded, cauchy] THEN
   DISCH_THEN(MP_TAC o SPEC “&1”) THEN REWRITE_TAC[REAL_LT_01] THEN
   DISCH_THEN(X_CHOOSE_TAC “N:num”) THEN
   MAP_EVERY EXISTS_TAC [“&1”, “(f:num->real) N”, “N:num”] THEN
   REWRITE_TAC[GREATER_EQ, LESS_EQ_REFL] THEN
   POP_ASSUM(MP_TAC o SPEC “N:num”) THEN
-  REWRITE_TAC[GREATER_EQ, LESS_EQ_REFL, MR1_DEF]);
+  REWRITE_TAC[GREATER_EQ, LESS_EQ_REFL, MR1_DEF]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Show that a bounded and monotonic sequence converges                      *)
 (*---------------------------------------------------------------------------*)
 
-val SEQ_ICONV = store_thm("SEQ_ICONV",
- “!f. bounded(mr1, ^geq) f /\ (!m n:num. m >= n ==> f(m) >= f(n))
-           ==> convergent f”,
+Theorem SEQ_ICONV:
+  !f. bounded(mr1, ^geq) f /\ (!m n:num. m >= n ==> f(m) >= f(n))
+           ==> convergent f
+Proof
 GEN_TAC THEN DISCH_TAC THEN
   MP_TAC (SPEC “\x:real. ?n:num. x = f(n)” REAL_SUP) THEN BETA_TAC THEN
   W(C SUBGOAL_THEN MP_TAC o funpow 2 (fst o dest_imp) o snd) THENL
@@ -303,37 +332,45 @@ GEN_TAC THEN DISCH_TAC THEN
        “~(sup(\x. ?n:num. x = f(n)))”] THEN
     ASM_REWRITE_TAC[],
     REWRITE_TAC[REAL_LT_SUB_RADD] THEN ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN
-    REWRITE_TAC[GSYM REAL_LT_SUB_RADD] THEN ASM_REWRITE_TAC[]]);
+    REWRITE_TAC[GSYM REAL_LT_SUB_RADD] THEN ASM_REWRITE_TAC[]]
+QED
 
-val SEQ_NEG_CONV = store_thm("SEQ_NEG_CONV",
-  “!f. convergent f = convergent (\n. ~(f n))”,
+Theorem SEQ_NEG_CONV:
+   !f. convergent f = convergent (\n. ~(f n))
+Proof
   GEN_TAC THEN REWRITE_TAC[convergent] THEN EQ_TAC THEN
   DISCH_THEN(X_CHOOSE_TAC “l:real”) THEN
   Q.EXISTS_TAC ‘~l’ THEN POP_ASSUM MP_TAC THEN
   SUBST1_TAC(SYM(SPEC “l:real” REAL_NEGNEG)) THEN
-  REWRITE_TAC[GSYM SEQ_NEG] THEN REWRITE_TAC[REAL_NEGNEG]);
+  REWRITE_TAC[GSYM SEQ_NEG] THEN REWRITE_TAC[REAL_NEGNEG]
+QED
 
-val SEQ_NEG_BOUNDED = store_thm("SEQ_NEG_BOUNDED",
-  “!f. bounded(mr1, ^geq)(\n. ~(f n)) = bounded(mr1, ^geq) f”,
+Theorem SEQ_NEG_BOUNDED:
+   !f. bounded(mr1, ^geq)(\n. ~(f n)) = bounded(mr1, ^geq) f
+Proof
   GEN_TAC THEN REWRITE_TAC[SEQ_BOUNDED] THEN BETA_TAC THEN
-  REWRITE_TAC[ABS_NEG]);
+  REWRITE_TAC[ABS_NEG]
+QED
 
-val SEQ_BCONV = store_thm("SEQ_BCONV",
-  “!f. bounded(mr1, ^geq) f /\ mono f ==> convergent f”,
+Theorem SEQ_BCONV:
+   !f. bounded(mr1, ^geq) f /\ mono f ==> convergent f
+Proof
   GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
   REWRITE_TAC[mono] THEN DISCH_THEN DISJ_CASES_TAC THENL
    [MATCH_MP_TAC SEQ_ICONV THEN ASM_REWRITE_TAC[GREATER_EQ, real_ge],
     ONCE_REWRITE_TAC[SEQ_NEG_CONV] THEN MATCH_MP_TAC SEQ_ICONV THEN
     ASM_REWRITE_TAC[SEQ_NEG_BOUNDED] THEN BETA_TAC THEN
     REWRITE_TAC[GREATER_EQ, real_ge, REAL_LE_NEG] THEN
-    ONCE_REWRITE_TAC[GSYM real_ge] THEN ASM_REWRITE_TAC[]]);
+    ONCE_REWRITE_TAC[GSYM real_ge] THEN ASM_REWRITE_TAC[]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Show that every sequence contains a monotonic subsequence                 *)
 (*---------------------------------------------------------------------------*)
 
-val SEQ_MONOSUB = store_thm("SEQ_MONOSUB",
-  “!s:num->real. ?f. subseq f /\ mono(\n. s(f n))”,
+Theorem SEQ_MONOSUB:
+   !s:num->real. ?f. subseq f /\ mono(\n. s(f n))
+Proof
   GEN_TAC THEN
   ASM_CASES_TAC “!n. ?p:num. p>n /\ !m. m >= p ==> s(m) <= s(p)” THENL
   [(X_CHOOSE_THEN “f:num->num” MP_TAC o EXISTENCE o
@@ -412,33 +449,39 @@ val SEQ_MONOSUB = store_thm("SEQ_MONOSUB",
     EXISTS_TAC “f:num->num” THEN REWRITE_TAC[SUBSEQ_SUC, MONO_SUC] THEN
     ASM_REWRITE_TAC[GSYM GREATER_DEF] THEN DISJ1_TAC THEN BETA_TAC THEN
     GEN_TAC THEN REWRITE_TAC[real_ge] THEN
-    MATCH_MP_TAC REAL_LT_IMP_LE THEN ASM_REWRITE_TAC[]]);
+    MATCH_MP_TAC REAL_LT_IMP_LE THEN ASM_REWRITE_TAC[]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Show that a subsequence of a bounded sequence is bounded                  *)
 (*---------------------------------------------------------------------------*)
 
-val SEQ_SBOUNDED = store_thm("SEQ_SBOUNDED",
-  “!s f. bounded(mr1,^geq) s ==> bounded(mr1,^geq) (\n. s(f n))”,
+Theorem SEQ_SBOUNDED:
+   !s f. bounded(mr1,^geq) s ==> bounded(mr1,^geq) (\n. s(f n))
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[SEQ_BOUNDED] THEN
   DISCH_THEN(X_CHOOSE_TAC “k:real”) THEN EXISTS_TAC “k:real” THEN
-  GEN_TAC THEN BETA_TAC THEN ASM_REWRITE_TAC[]);
+  GEN_TAC THEN BETA_TAC THEN ASM_REWRITE_TAC[]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Show we can take subsequential terms arbitrarily far up a sequence        *)
 (*---------------------------------------------------------------------------*)
 
-val SEQ_SUBLE = store_thm("SEQ_SUBLE",
-  “!f. subseq f ==> !n. n <= f(n)”,
+Theorem SEQ_SUBLE:
+   !f. subseq f ==> !n. n <= f(n)
+Proof
   GEN_TAC THEN DISCH_TAC THEN INDUCT_TAC THENL
    [REWRITE_TAC[GSYM NOT_LESS, NOT_LESS_0],
     MATCH_MP_TAC LESS_EQ_TRANS THEN EXISTS_TAC “SUC(f(n:num))” THEN
     ASM_REWRITE_TAC[LESS_EQ_MONO] THEN REWRITE_TAC[GSYM LESS_EQ] THEN
     UNDISCH_TAC “subseq f” THEN REWRITE_TAC[SUBSEQ_SUC] THEN
-    DISCH_THEN MATCH_ACCEPT_TAC]);
+    DISCH_THEN MATCH_ACCEPT_TAC]
+QED
 
-val SEQ_DIRECT = store_thm("SEQ_DIRECT",
-  “!f. subseq f ==> !N1 N2. ?n. n >= N1 /\ f(n) >= N2”,
+Theorem SEQ_DIRECT:
+   !f. subseq f ==> !N1 N2. ?n. n >= N1 /\ f(n) >= N2
+Proof
   GEN_TAC THEN DISCH_TAC THEN REPEAT GEN_TAC THEN
   DISJ_CASES_TAC (SPECL [“N1:num”, “N2:num”] LESS_EQ_CASES) THENL
    [EXISTS_TAC “N2:num” THEN ASM_REWRITE_TAC[GREATER_EQ] THEN
@@ -446,14 +489,16 @@ val SEQ_DIRECT = store_thm("SEQ_DIRECT",
     EXISTS_TAC “N1:num” THEN REWRITE_TAC[GREATER_EQ, LESS_EQ_REFL] THEN
     REWRITE_TAC[GREATER_EQ] THEN MATCH_MP_TAC LESS_EQ_TRANS THEN
     EXISTS_TAC “N1:num” THEN ASM_REWRITE_TAC[] THEN
-    MATCH_MP_TAC SEQ_SUBLE THEN FIRST_ASSUM ACCEPT_TAC]);
+    MATCH_MP_TAC SEQ_SUBLE THEN FIRST_ASSUM ACCEPT_TAC]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Now show that every Cauchy sequence converges                             *)
 (*---------------------------------------------------------------------------*)
 
-val SEQ_CAUCHY = store_thm("SEQ_CAUCHY",
-  “!f. cauchy f = convergent f”,
+Theorem SEQ_CAUCHY:
+   !f. cauchy f = convergent f
+Proof
   GEN_TAC THEN EQ_TAC THENL
    [DISCH_TAC THEN FIRST_ASSUM(ASSUME_TAC o MATCH_MP SEQ_CBOUNDED) THEN
     MP_TAC(SPEC “f:num->real” SEQ_MONOSUB) THEN
@@ -508,26 +553,30 @@ val SEQ_CAUCHY = store_thm("SEQ_CAUCHY",
     REWRITE_TAC[ABS_TRIANGLE] THEN
     SUBST1_TAC(SYM(SPEC “e:real” REAL_HALF_DOUBLE)) THEN
     MATCH_MP_TAC REAL_LT_ADD2 THEN ASM_REWRITE_TAC[] THEN
-    ONCE_REWRITE_TAC[ABS_SUB] THEN ASM_REWRITE_TAC[]]);
+    ONCE_REWRITE_TAC[ABS_SUB] THEN ASM_REWRITE_TAC[]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* The limit comparison property for sequences                               *)
 (*---------------------------------------------------------------------------*)
 
-val SEQ_LE = store_thm("SEQ_LE",
-  “!f g l m. f --> l /\ g --> m /\ (?N. !n. n >= N ==> f(n) <= g(n))
-        ==> l <= m”,
+Theorem SEQ_LE:
+   !f g l m. f --> l /\ g --> m /\ (?N. !n. n >= N ==> f(n) <= g(n))
+        ==> l <= m
+Proof
   REPEAT GEN_TAC THEN
   MP_TAC(ISPEC geq NET_LE) THEN
   REWRITE_TAC[DORDER_NGE, tends_num_real, GREATER_EQ, LESS_EQ_REFL] THEN
-  DISCH_THEN MATCH_ACCEPT_TAC);
+  DISCH_THEN MATCH_ACCEPT_TAC
+QED
 
 (*---------------------------------------------------------------------------*)
 (* We can displace a convergent series by 1                                  *)
 (*---------------------------------------------------------------------------*)
 
-val SEQ_SUC = store_thm("SEQ_SUC",
-  “!f l. f --> l = (\n. f(SUC n)) --> l”,
+Theorem SEQ_SUC:
+   !f l. f --> l = (\n. f(SUC n)) --> l
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[SEQ, GREATER_EQ] THEN EQ_TAC THEN
   DISCH_THEN(fn th => X_GEN_TAC “e:real” THEN
     DISCH_THEN(MP_TAC o MATCH_MP th)) THEN BETA_TAC THEN
@@ -539,34 +588,40 @@ val SEQ_SUC = store_thm("SEQ_SUC",
     STRUCT_CASES_TAC (SPEC “n:num” num_CASES) THENL
      [REWRITE_TAC[GSYM NOT_LESS, LESS_0],
       REWRITE_TAC[LESS_EQ_MONO] THEN DISCH_TAC THEN
-      FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[]]]);
+      FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[]]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Prove a sequence tends to zero iff its abs does                           *)
 (*---------------------------------------------------------------------------*)
 
-val SEQ_ABS = store_thm("SEQ_ABS",
-  “!f. (\n. abs(f n)) --> &0 = f --> &0”,
+Theorem SEQ_ABS:
+   !f. (\n. abs(f n)) --> &0 = f --> &0
+Proof
   GEN_TAC THEN REWRITE_TAC[SEQ] THEN
-  BETA_TAC THEN REWRITE_TAC[REAL_SUB_RZERO, ABS_ABS]);
+  BETA_TAC THEN REWRITE_TAC[REAL_SUB_RZERO, ABS_ABS]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Half this is true for a general limit                                     *)
 (*---------------------------------------------------------------------------*)
 
-val SEQ_ABS_IMP = store_thm("SEQ_ABS_IMP",
-  “!f l. f --> l ==> (\n. abs(f n)) --> abs(l)”,
+Theorem SEQ_ABS_IMP:
+   !f l. f --> l ==> (\n. abs(f n)) --> abs(l)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[tends_num_real] THEN
-  MATCH_ACCEPT_TAC NET_ABS);
+  MATCH_ACCEPT_TAC NET_ABS
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Prove that an unbounded sequence's inverse tends to 0                     *)
 (*---------------------------------------------------------------------------*)
 
-val SEQ_INV0 = store_thm("SEQ_INV0",
-  “!f. (!y. ?N. !n. n >= N ==> f(n) > y)
+Theorem SEQ_INV0:
+   !f. (!y. ?N. !n. n >= N ==> f(n) > y)
                ==>
-          (\n. inv(f n)) --> &0”,
+          (\n. inv(f n)) --> &0
+Proof
   GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[SEQ, REAL_SUB_RZERO] THEN
   X_GEN_TAC “e:real” THEN DISCH_TAC THEN
   FIRST_ASSUM(X_CHOOSE_TAC “N:num” o SPEC “inv e”) THEN
@@ -589,14 +644,16 @@ val SEQ_INV0 = store_thm("SEQ_INV0",
     MATCH_MP_TAC REAL_LT_IMP_NE THEN ASM_REWRITE_TAC[], ALL_TAC] THEN
   MATCH_MP_TAC REAL_LT_INV THEN ASM_REWRITE_TAC[] THEN
   MATCH_MP_TAC REAL_LTE_TRANS THEN EXISTS_TAC “(f:num->real) n” THEN
-  ASM_REWRITE_TAC[ABS_LE]);
+  ASM_REWRITE_TAC[ABS_LE]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Important limit of c^n for |c| < 1                                        *)
 (*---------------------------------------------------------------------------*)
 
-val SEQ_POWER_ABS = store_thm("SEQ_POWER_ABS",
-  “!c. abs(c) < &1 ==> (\n. abs(c) pow n) --> &0”,
+Theorem SEQ_POWER_ABS:
+   !c. abs(c) < &1 ==> (\n. abs(c) pow n) --> &0
+Proof
   GEN_TAC THEN DISCH_TAC THEN MP_TAC(SPEC “c:real” ABS_POS) THEN
   REWRITE_TAC[REAL_LE_LT] THEN DISCH_THEN DISJ_CASES_TAC THENL
    [SUBGOAL_THEN “!n. abs(c) pow n = inv(inv(abs(c) pow n))”
@@ -638,29 +695,33 @@ val SEQ_POWER_ABS = store_thm("SEQ_POWER_ABS",
     STRUCT_CASES_TAC(SPEC “n:num” num_CASES) THENL
      [REWRITE_TAC[GSYM NOT_LESS, ONE, LESS_0],
       REWRITE_TAC[POW_0, REAL_SUB_RZERO, ABS_0] THEN
-      REWRITE_TAC[ASSUME “&0 < e”]]]);
+      REWRITE_TAC[ASSUME “&0 < e”]]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Similar version without the abs                                           *)
 (*---------------------------------------------------------------------------*)
 
-val SEQ_POWER = store_thm("SEQ_POWER",
-  “!c. abs(c) < &1 ==> (\n. c pow n) --> &0”,
+Theorem SEQ_POWER:
+   !c. abs(c) < &1 ==> (\n. c pow n) --> &0
+Proof
   GEN_TAC THEN DISCH_TAC THEN
   ONCE_REWRITE_TAC[GSYM SEQ_ABS] THEN BETA_TAC THEN
   REWRITE_TAC[GSYM POW_ABS] THEN
-  POP_ASSUM(ACCEPT_TAC o MATCH_MP SEQ_POWER_ABS));
+  POP_ASSUM(ACCEPT_TAC o MATCH_MP SEQ_POWER_ABS)
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Useful lemmas about nested intervals and proof by bisection               *)
 (*---------------------------------------------------------------------------*)
 
-val NEST_LEMMA = store_thm("NEST_LEMMA",
- “!f g. (!n. f(SUC n) >= f(n)) /\
+Theorem NEST_LEMMA:
+  !f g. (!n. f(SUC n) >= f(n)) /\
          (!n. g(SUC n) <= g(n)) /\
          (!n. f(n) <= g(n)) ==>
                 ?l m. l <= m /\ ((!n. f(n) <= l) /\ f --> l) /\
-                                ((!n. m <= g(n)) /\ g --> m)”,
+                                ((!n. m <= g(n)) /\ g --> m)
+Proof
   REPEAT STRIP_TAC THEN MP_TAC(SPEC “f:num->real” MONO_SUC) THEN
   ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
   MP_TAC(SPEC “g:num->real” MONO_SUC) THEN ASM_REWRITE_TAC[] THEN
@@ -735,15 +796,17 @@ val NEST_LEMMA = store_thm("NEST_LEMMA",
       SPEC_TAC(“p:num”,“p:num”) THEN INDUCT_TAC THEN
       REWRITE_TAC[REAL_LE_REFL, ADD_CLAUSES] THEN
       MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC “g(p + m:num):real” THEN
-      ASM_REWRITE_TAC[]]]);
+      ASM_REWRITE_TAC[]]]
+QED
 
-val NEST_LEMMA_UNIQ = store_thm("NEST_LEMMA_UNIQ",
-  “!f g. (!n. f(SUC n) >= f(n)) /\
+Theorem NEST_LEMMA_UNIQ:
+   !f g. (!n. f(SUC n) >= f(n)) /\
          (!n. g(SUC n) <= g(n)) /\
          (!n. f(n) <= g(n)) /\
          (\n. f(n) - g(n)) --> &0 ==>
                 ?l. ((!n. f(n) <= l) /\ f --> l) /\
-                    ((!n. l <= g(n)) /\ g --> l)”,
+                    ((!n. l <= g(n)) /\ g --> l)
+Proof
   REPEAT GEN_TAC THEN
   DISCH_THEN(fn th => STRIP_ASSUME_TAC th THEN MP_TAC th) THEN
   REWRITE_TAC[CONJ_ASSOC] THEN DISCH_THEN(MP_TAC o CONJUNCT1) THEN
@@ -758,13 +821,15 @@ val NEST_LEMMA_UNIQ = store_thm("NEST_LEMMA_UNIQ",
   DISCH_THEN(MP_TAC o CONJ(ASSUME “(\n. f(n) - g(n)) --> &0”)) THEN
   DISCH_THEN(MP_TAC o MATCH_MP SEQ_UNIQ) THEN
   CONV_TAC(LAND_CONV SYM_CONV) THEN
-  REWRITE_TAC[REAL_SUB_0]);
+  REWRITE_TAC[REAL_SUB_0]
+QED
 
 
-val BOLZANO_LEMMA = store_thm("BOLZANO_LEMMA",
-  “!P. (!a b c. a <= b /\ b <= c /\ P(a,b) /\ P(b,c) ==> P(a,c)) /\
+Theorem BOLZANO_LEMMA:
+   !P. (!a b c. a <= b /\ b <= c /\ P(a,b) /\ P(b,c) ==> P(a,c)) /\
        (!x. ?d. &0 < d /\ !a b. a <= x /\ x <= b /\ (b - a) < d ==> P(a,b))
-      ==> !a b. a <= b ==> P(a,b)”,
+      ==> !a b. a <= b ==> P(a,b)
+Proof
   REPEAT STRIP_TAC THEN
   GEN_REWR_TAC I  [TAUT_CONV “a = ~~a:bool”] THEN
   DISCH_TAC THEN
@@ -889,7 +954,8 @@ val BOLZANO_LEMMA = store_thm("BOLZANO_LEMMA",
       MATCH_MP_TAC REAL_LT_ADD2 THEN
       CONJ_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN
       REWRITE_TAC[GREATER_EQ, LESS_EQ_ADD] THEN
-      ONCE_REWRITE_TAC[ADD_SYM] THEN REWRITE_TAC[LESS_EQ_ADD]]]);
+      ONCE_REWRITE_TAC[ADD_SYM] THEN REWRITE_TAC[LESS_EQ_ADD]]]
+QED
 
 (* moved here from integralTheory *)
 Theorem BOLZANO_LEMMA_ALT :
@@ -957,38 +1023,45 @@ QED
 (* If summable then it sums to the sum (!)                                   *)
 (*---------------------------------------------------------------------------*)
 
-val SUM_SUMMABLE = store_thm("SUM_SUMMABLE",
-  “!f l. f sums l ==> summable f”,
+Theorem SUM_SUMMABLE:
+   !f l. f sums l ==> summable f
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[summable] THEN
-  EXISTS_TAC “l:real” THEN POP_ASSUM ACCEPT_TAC);
+  EXISTS_TAC “l:real” THEN POP_ASSUM ACCEPT_TAC
+QED
 
-val SUMMABLE_SUM = store_thm("SUMMABLE_SUM",
-  “!f. summable f ==> f sums (suminf f)”,
+Theorem SUMMABLE_SUM:
+   !f. summable f ==> f sums (suminf f)
+Proof
   GEN_TAC THEN REWRITE_TAC[summable, suminf] THEN
   DISCH_THEN(CHOOSE_THEN MP_TAC) THEN
   CONV_TAC(ONCE_DEPTH_CONV ETA_CONV) THEN
-  MATCH_ACCEPT_TAC SELECT_AX);
+  MATCH_ACCEPT_TAC SELECT_AX
+QED
 
 (*---------------------------------------------------------------------------*)
 (* And the sum is unique                                                     *)
 (*---------------------------------------------------------------------------*)
 
-val SUM_UNIQ = store_thm("SUM_UNIQ",
-  “!f x. f sums x ==> (x = suminf f)”,
+Theorem SUM_UNIQ:
+   !f x. f sums x ==> (x = suminf f)
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   SUBGOAL_THEN “summable f” MP_TAC THENL
    [REWRITE_TAC[summable] THEN EXISTS_TAC “x:real” THEN ASM_REWRITE_TAC[],
     DISCH_THEN(ASSUME_TAC o MATCH_MP SUMMABLE_SUM) THEN
     MATCH_MP_TAC SEQ_UNIQ THEN
-    EXISTS_TAC “\n. sum(0,n) f” THEN ASM_REWRITE_TAC[GSYM sums]]);
+    EXISTS_TAC “\n. sum(0,n) f” THEN ASM_REWRITE_TAC[GSYM sums]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Series which is zero beyond a certain point                               *)
 (*---------------------------------------------------------------------------*)
 
-val SER_0 = store_thm("SER_0",
-  “!f n. (!m. n <= m ==> (f(m) = &0)) ==>
-        f sums (sum(0,n) f)”,
+Theorem SER_0:
+   !f n. (!m. n <= m ==> (f(m) = &0)) ==>
+        f sums (sum(0,n) f)
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[sums, SEQ] THEN
   X_GEN_TAC “e:real” THEN DISCH_TAC THEN EXISTS_TAC “n:num” THEN
   X_GEN_TAC “m:num” THEN REWRITE_TAC[GREATER_EQ] THEN
@@ -997,15 +1070,17 @@ val SER_0 = store_thm("SER_0",
   ASM_REWRITE_TAC[] THEN REWRITE_TAC[ABS_ZERO, REAL_SUB_0] THEN
   BETA_TAC THEN REWRITE_TAC[GSYM SUM_TWO, REAL_ADD_RID_UNIQ] THEN
   FIRST_ASSUM(MATCH_MP_TAC o MATCH_MP(REWRITE_RULE[GREATER_EQ] SUM_ZERO)) THEN
-  MATCH_ACCEPT_TAC LESS_EQ_REFL);
+  MATCH_ACCEPT_TAC LESS_EQ_REFL
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Summable series of positive terms has limit >(=) any partial sum          *)
 (*---------------------------------------------------------------------------*)
 
-val SER_POS_LE = store_thm("SER_POS_LE",
-  “!f n. summable f /\ (!m. n <= m ==> &0 <= f(m))
-        ==> sum(0,n) f <= suminf f”,
+Theorem SER_POS_LE:
+   !f n. summable f /\ (!m. n <= m ==> &0 <= f(m))
+        ==> sum(0,n) f <= suminf f
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   FIRST_ASSUM(MP_TAC o MATCH_MP SUMMABLE_SUM) THEN REWRITE_TAC[sums] THEN
   MP_TAC(SPEC “sum(0,n) f” SEQ_CONST) THEN
@@ -1015,11 +1090,13 @@ val SER_POS_LE = store_thm("SER_POS_LE",
   EXISTS_TAC “n:num” THEN X_GEN_TAC “m:num” THEN REWRITE_TAC[GREATER_EQ] THEN
   DISCH_THEN(X_CHOOSE_THEN “d:num” SUBST1_TAC o MATCH_MP LESS_EQUAL_ADD) THEN
   REWRITE_TAC[GSYM SUM_TWO, REAL_LE_ADDR] THEN
-  MATCH_MP_TAC SUM_POS_GEN THEN FIRST_ASSUM MATCH_ACCEPT_TAC);
+  MATCH_MP_TAC SUM_POS_GEN THEN FIRST_ASSUM MATCH_ACCEPT_TAC
+QED
 
-val SER_POS_LT = store_thm("SER_POS_LT",
-  “!f n. summable f /\ (!m. n <= m ==> &0 < f(m))
-        ==> sum(0,n) f < suminf f”,
+Theorem SER_POS_LT:
+   !f n. summable f /\ (!m. n <= m ==> &0 < f(m))
+        ==> sum(0,n) f < suminf f
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   MATCH_MP_TAC REAL_LTE_TRANS THEN EXISTS_TAC “sum(0,n + 1) f” THEN
   CONJ_TAC THENL
@@ -1030,15 +1107,17 @@ val SER_POS_LT = store_thm("SER_POS_LT",
     GEN_TAC THEN DISCH_TAC THEN MATCH_MP_TAC REAL_LT_IMP_LE THEN
     FIRST_ASSUM MATCH_MP_TAC THEN
     MATCH_MP_TAC LESS_EQ_TRANS THEN EXISTS_TAC “SUC n” THEN
-    REWRITE_TAC[LESS_EQ_SUC_REFL] THEN ASM_REWRITE_TAC[ADD1]]);
+    REWRITE_TAC[LESS_EQ_SUC_REFL] THEN ASM_REWRITE_TAC[ADD1]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Theorems about grouping and offsetting (and *not* permuting) terms        *)
 (*---------------------------------------------------------------------------*)
 
-val SER_GROUP = store_thm("SER_GROUP",
-  “!f (k:num). summable f /\ 0 < k ==>
-          (\n. sum(n * k,k) f) sums (suminf f)”,
+Theorem SER_GROUP:
+   !f (k:num). summable f /\ 0 < k ==>
+          (\n. sum(n * k,k) f) sums (suminf f)
+Proof
   REPEAT GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 MP_TAC ASSUME_TAC) THEN
   DISCH_THEN(MP_TAC o MATCH_MP SUMMABLE_SUM) THEN
   REWRITE_TAC[sums, SEQ] THEN BETA_TAC THEN
@@ -1050,16 +1129,20 @@ val SER_GROUP = store_thm("SER_GROUP",
   ASM_REWRITE_TAC[] THEN UNDISCH_TAC “0 < k:num” THEN
   STRUCT_CASES_TAC(SPEC “k:num” num_CASES) THEN
   REWRITE_TAC[MULT_CLAUSES, LESS_EQ_ADD, LESS_EQ_0] THEN
-  REWRITE_TAC[LESS_REFL]);
+  REWRITE_TAC[LESS_REFL]
+QED
 
-val SER_PAIR = store_thm("SER_PAIR",
-  “!f. summable f ==> (\n. sum(2 * n,2) f) sums (suminf f)”,
+Theorem SER_PAIR:
+   !f. summable f ==> (\n. sum(2 * n,2) f) sums (suminf f)
+Proof
   GEN_TAC THEN DISCH_THEN(MP_TAC o C CONJ (SPEC “1:num” LESS_0)) THEN
   REWRITE_TAC[SYM(num_CONV “2:num”)] THEN ONCE_REWRITE_TAC[MULT_SYM] THEN
-  MATCH_ACCEPT_TAC SER_GROUP);
+  MATCH_ACCEPT_TAC SER_GROUP
+QED
 
-val SER_OFFSET = store_thm("SER_OFFSET",
-  “!f. summable f ==> !k. (\n. f(n + k)) sums (suminf f - sum(0,k) f)”,
+Theorem SER_OFFSET:
+   !f. summable f ==> !k. (\n. f(n + k)) sums (suminf f - sum(0,k) f)
+Proof
   GEN_TAC THEN DISCH_THEN(curry op THEN GEN_TAC o MP_TAC o MATCH_MP SUMMABLE_SUM) THEN
   REWRITE_TAC[sums, SEQ] THEN
   DISCH_THEN(fn th => GEN_TAC THEN DISCH_THEN(MP_TAC o MATCH_MP th)) THEN
@@ -1071,16 +1154,18 @@ val SER_OFFSET = store_thm("SER_OFFSET",
     “(a + b) + (c + d) = (b + d) + (a + c)”] THEN
   REWRITE_TAC[REAL_ADD_LINV, REAL_ADD_LID] THEN REWRITE_TAC[GSYM real_sub] THEN
   FIRST_ASSUM MATCH_MP_TAC THEN MATCH_MP_TAC LESS_EQ_TRANS THEN
-  EXISTS_TAC “n:num” THEN ASM_REWRITE_TAC[LESS_EQ_ADD]);
+  EXISTS_TAC “n:num” THEN ASM_REWRITE_TAC[LESS_EQ_ADD]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Similar version for pairing up terms                                      *)
 (*---------------------------------------------------------------------------*)
 
-val SER_POS_LT_PAIR = store_thm("SER_POS_LT_PAIR",
-  “!f n. summable f /\
+Theorem SER_POS_LT_PAIR:
+   !f n. summable f /\
          (!d. &0 < (f(n + (2 * d))) + f(n + ((2 * d) + 1)))
-        ==> sum(0,n) f < suminf f”,
+        ==> sum(0,n) f < suminf f
+Proof
   REPEAT GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 MP_TAC ASSUME_TAC) THEN
   DISCH_THEN(MP_TAC o MATCH_MP SUMMABLE_SUM) THEN
   REWRITE_TAC[sums, SEQ] THEN BETA_TAC THEN
@@ -1143,50 +1228,62 @@ val SER_POS_LT_PAIR = store_thm("SER_POS_LT_PAIR",
     ASM_REWRITE_TAC[abs, REAL_SUB_LE] THEN
     REWRITE_TAC[REAL_LT_SUB_RADD] THEN
     GEN_REWR_TAC (funpow 2 RAND_CONV) [REAL_ADD_SYM]
-    THEN ASM_REWRITE_TAC[REAL_NOT_LT]]);
+    THEN ASM_REWRITE_TAC[REAL_NOT_LT]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Prove a few composition formulas for series                               *)
 (*---------------------------------------------------------------------------*)
 
-val SER_ADD = store_thm("SER_ADD",
-  “!x x0 y y0. x sums x0 /\ y sums y0 ==> (\n. x(n) + y(n)) sums (x0 + y0)”,
+Theorem SER_ADD:
+   !x x0 y y0. x sums x0 /\ y sums y0 ==> (\n. x(n) + y(n)) sums (x0 + y0)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[sums, SUM_ADD] THEN
   CONV_TAC((RAND_CONV o EXACT_CONV)[X_BETA_CONV “n:num” “sum(0,n) x”]) THEN
   CONV_TAC((RAND_CONV o EXACT_CONV)[X_BETA_CONV “n:num” “sum(0,n) y”]) THEN
-  MATCH_ACCEPT_TAC SEQ_ADD);
+  MATCH_ACCEPT_TAC SEQ_ADD
+QED
 
-val SER_CMUL = store_thm("SER_CMUL",
-  “!x x0 c. x sums x0 ==> (\n. c * x(n)) sums (c * x0)”,
+Theorem SER_CMUL:
+   !x x0 c. x sums x0 ==> (\n. c * x(n)) sums (c * x0)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[sums, SUM_CMUL] THEN DISCH_TAC THEN
   CONV_TAC(EXACT_CONV[X_BETA_CONV “n:num” “sum(0,n) x”]) THEN
   CONV_TAC((RATOR_CONV o EXACT_CONV)[X_BETA_CONV “n:num” “c:real”]) THEN
-  MATCH_MP_TAC SEQ_MUL THEN ASM_REWRITE_TAC[SEQ_CONST]);
+  MATCH_MP_TAC SEQ_MUL THEN ASM_REWRITE_TAC[SEQ_CONST]
+QED
 
-val SER_NEG = store_thm("SER_NEG",
-  “!x x0. x sums x0 ==> (\n. ~(x n)) sums ~x0”,
+Theorem SER_NEG:
+   !x x0. x sums x0 ==> (\n. ~(x n)) sums ~x0
+Proof
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[REAL_NEG_MINUS1] THEN
-  MATCH_ACCEPT_TAC SER_CMUL);
+  MATCH_ACCEPT_TAC SER_CMUL
+QED
 
-val SER_SUB = store_thm("SER_SUB",
-  “!x x0 y y0. x sums x0 /\ y sums y0 ==> (\n. x(n) - y(n)) sums (x0 - y0)”,
+Theorem SER_SUB:
+   !x x0 y y0. x sums x0 /\ y sums y0 ==> (\n. x(n) - y(n)) sums (x0 - y0)
+Proof
   REPEAT GEN_TAC THEN DISCH_THEN(fn th => MP_TAC (MATCH_MP SER_ADD
       (CONJ (CONJUNCT1 th) (MATCH_MP SER_NEG (CONJUNCT2 th))))) THEN
-  BETA_TAC THEN REWRITE_TAC[real_sub]);
+  BETA_TAC THEN REWRITE_TAC[real_sub]
+QED
 
-val SER_CDIV = store_thm("SER_CDIV",
-  “!x x0 c. x sums x0 ==> (\n. x(n) / c) sums (x0 / c)”,
+Theorem SER_CDIV:
+   !x x0 c. x sums x0 ==> (\n. x(n) / c) sums (x0 / c)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[real_div] THEN
   ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN
-  MATCH_ACCEPT_TAC SER_CMUL);
+  MATCH_ACCEPT_TAC SER_CMUL
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Prove Cauchy-type criterion for convergence of series                     *)
 (*---------------------------------------------------------------------------*)
 
-val SER_CAUCHY = store_thm("SER_CAUCHY",
-  “!f. summable f =
-          !e. &0 < e ==> ?N. !m n. m >= N ==> abs(sum(m,n) f) < e”,
+Theorem SER_CAUCHY:
+   !f. summable f =
+          !e. &0 < e ==> ?N. !m n. m >= N ==> abs(sum(m,n) f) < e
+Proof
   GEN_TAC THEN REWRITE_TAC[summable, sums] THEN
   REWRITE_TAC[GSYM convergent] THEN
   REWRITE_TAC[GSYM SEQ_CAUCHY] THEN REWRITE_TAC[cauchy] THEN
@@ -1202,14 +1299,16 @@ val SER_CAUCHY = store_thm("SER_CAUCHY",
     DISCH_THEN(X_CHOOSE_THEN “p:num” SUBST1_TAC o MATCH_MP LESS_EQUAL_ADD) THENL
      [ONCE_REWRITE_TAC[ABS_SUB], ALL_TAC] THEN
     REWRITE_TAC[GSYM SUM_DIFF] THEN FIRST_ASSUM MATCH_MP_TAC THEN
-    ASM_REWRITE_TAC[]]);
+    ASM_REWRITE_TAC[]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Show that if a series converges, the terms tend to 0                      *)
 (*---------------------------------------------------------------------------*)
 
-val SER_ZERO = store_thm("SER_ZERO",
-  “!f. summable f ==> f --> &0”,
+Theorem SER_ZERO:
+   !f. summable f ==> f --> &0
+Proof
   GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[SEQ] THEN
   X_GEN_TAC “e:real” THEN DISCH_TAC THEN
   UNDISCH_TAC “summable f” THEN REWRITE_TAC[SER_CAUCHY] THEN
@@ -1217,15 +1316,17 @@ val SER_ZERO = store_thm("SER_ZERO",
   DISCH_THEN(X_CHOOSE_THEN “N:num” MP_TAC) THEN
   DISCH_THEN(curry op THEN (EXISTS_TAC “N:num” THEN X_GEN_TAC “n:num” THEN DISCH_TAC)
     o MP_TAC) THEN DISCH_THEN(MP_TAC o SPECL [“n:num”, “SUC 0”]) THEN
-  ASM_REWRITE_TAC[sum, REAL_SUB_RZERO, REAL_ADD_LID, ADD_CLAUSES]);
+  ASM_REWRITE_TAC[sum, REAL_SUB_RZERO, REAL_ADD_LID, ADD_CLAUSES]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Now prove the comparison test                                             *)
 (*---------------------------------------------------------------------------*)
 
-val SER_COMPAR = store_thm("SER_COMPAR",
-  “!f g. (?N. !n. n >= N ==> abs(f(n)) <= g(n)) /\ summable g ==>
-            summable f”,
+Theorem SER_COMPAR:
+   !f g. (?N. !n. n >= N ==> abs(f(n)) <= g(n)) /\ summable g ==>
+            summable f
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[SER_CAUCHY, GREATER_EQ] THEN
   DISCH_THEN(CONJUNCTS_THEN2 (X_CHOOSE_TAC “N1:num”) MP_TAC) THEN
   REWRITE_TAC[SER_CAUCHY, GREATER_EQ] THEN DISCH_TAC THEN
@@ -1243,27 +1344,31 @@ val SER_COMPAR = store_thm("SER_COMPAR",
   REWRITE_TAC[ABS_LE] THEN FIRST_ASSUM MATCH_MP_TAC THEN
   MATCH_MP_TAC LESS_EQ_TRANS THEN EXISTS_TAC “N1 + N2:num” THEN
   ASM_REWRITE_TAC[] THEN ONCE_REWRITE_TAC[ADD_SYM] THEN
-  REWRITE_TAC[LESS_EQ_ADD]);
+  REWRITE_TAC[LESS_EQ_ADD]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* And a similar version for absolute convergence                            *)
 (*---------------------------------------------------------------------------*)
 
-val SER_COMPARA = store_thm("SER_COMPARA",
-  “!f g. (?N. !n. n >= N ==> abs(f(n)) <= g(n)) /\ summable g ==>
-            summable (\k. abs(f k))”,
+Theorem SER_COMPARA:
+   !f g. (?N. !n. n >= N ==> abs(f(n)) <= g(n)) /\ summable g ==>
+            summable (\k. abs(f k))
+Proof
   REPEAT GEN_TAC THEN SUBGOAL_THEN “!n. abs(f(n)) = abs((\k:num. abs(f k)) n)”
   (fn th => GEN_REWR_TAC (RATOR_CONV o ONCE_DEPTH_CONV) [th]) THENL
    [GEN_TAC THEN BETA_TAC THEN REWRITE_TAC[ABS_ABS],
-    MATCH_ACCEPT_TAC SER_COMPAR]);
+    MATCH_ACCEPT_TAC SER_COMPAR]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Limit comparison property for series                                      *)
 (*---------------------------------------------------------------------------*)
 
-val SER_LE = store_thm("SER_LE",
-  “!f g. (!n. f(n) <= g(n)) /\ summable f /\ summable g
-        ==> suminf f <= suminf g”,
+Theorem SER_LE:
+   !f g. (!n. f(n) <= g(n)) /\ summable f /\ summable g
+        ==> suminf f <= suminf g
+Proof
   REPEAT GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
   DISCH_THEN(CONJUNCTS_THEN (fn th => ASSUME_TAC th THEN ASSUME_TAC
     (REWRITE_RULE[sums] (MATCH_MP SUMMABLE_SUM th)))) THEN
@@ -1273,38 +1378,44 @@ val SER_LE = store_thm("SER_LE",
     MATCH_MP_TAC SUMMABLE_SUM THEN FIRST_ASSUM ACCEPT_TAC,
     EXISTS_TAC “0:num” THEN REWRITE_TAC[GREATER_EQ, ZERO_LESS_EQ] THEN
     GEN_TAC THEN BETA_TAC THEN MATCH_MP_TAC SUM_LE THEN
-    GEN_TAC THEN ASM_REWRITE_TAC[ZERO_LESS_EQ]]);
+    GEN_TAC THEN ASM_REWRITE_TAC[ZERO_LESS_EQ]]
+QED
 
-val SER_LE2 = store_thm("SER_LE2",
-  “!f g. (!n. abs(f n) <= g(n)) /\ summable g ==>
-                summable f /\ suminf f <= suminf g”,
+Theorem SER_LE2:
+   !f g. (!n. abs(f n) <= g(n)) /\ summable g ==>
+                summable f /\ suminf f <= suminf g
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   SUBGOAL_THEN “summable f” ASSUME_TAC THENL
    [MATCH_MP_TAC SER_COMPAR THEN EXISTS_TAC “g:num->real” THEN
     ASM_REWRITE_TAC[], ASM_REWRITE_TAC[]] THEN
   MATCH_MP_TAC SER_LE THEN ASM_REWRITE_TAC[] THEN
   X_GEN_TAC “n:num” THEN MATCH_MP_TAC REAL_LE_TRANS THEN
-  EXISTS_TAC “abs(f(n:num))” THEN ASM_REWRITE_TAC[ABS_LE]);
+  EXISTS_TAC “abs(f(n:num))” THEN ASM_REWRITE_TAC[ABS_LE]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Show that absolute convergence implies normal convergence                 *)
 (*---------------------------------------------------------------------------*)
 
-val SER_ACONV = store_thm("SER_ACONV",
-  “!f. summable (\n. abs(f n)) ==> summable f”,
+Theorem SER_ACONV:
+   !f. summable (\n. abs(f n)) ==> summable f
+Proof
   GEN_TAC THEN REWRITE_TAC[SER_CAUCHY] THEN REWRITE_TAC[SUM_ABS] THEN
   DISCH_THEN(curry op THEN (X_GEN_TAC “e:real” THEN DISCH_TAC) o MP_TAC) THEN
   DISCH_THEN(IMP_RES_THEN (X_CHOOSE_TAC “N:num”)) THEN
   EXISTS_TAC “N:num” THEN REPEAT GEN_TAC THEN
   DISCH_THEN(ANTE_RES_THEN ASSUME_TAC) THEN MATCH_MP_TAC REAL_LET_TRANS THEN
-  EXISTS_TAC “sum(m,n)(\m. abs(f m))” THEN ASM_REWRITE_TAC[ABS_SUM]);
+  EXISTS_TAC “sum(m,n)(\m. abs(f m))” THEN ASM_REWRITE_TAC[ABS_SUM]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Absolute value of series                                                  *)
 (*---------------------------------------------------------------------------*)
 
-val SER_ABS = store_thm("SER_ABS",
-  “!f. summable(\n. abs(f n)) ==> abs(suminf f) <= suminf(\n. abs(f n))”,
+Theorem SER_ABS:
+   !f. summable(\n. abs(f n)) ==> abs(suminf f) <= suminf(\n. abs(f n))
+Proof
   GEN_TAC THEN DISCH_TAC THEN
   FIRST_ASSUM(MP_TAC o MATCH_MP SUMMABLE_SUM o MATCH_MP SER_ACONV) THEN
   POP_ASSUM(MP_TAC o MATCH_MP SUMMABLE_SUM) THEN
@@ -1313,15 +1424,17 @@ val SER_ABS = store_thm("SER_ABS",
   MATCH_MP_TAC SEQ_LE THEN MAP_EVERY EXISTS_TAC
    [“\n. abs(sum(0,n)f)”, “\n. sum(0,n)(\n. abs(f n))”] THEN
   ASM_REWRITE_TAC[] THEN EXISTS_TAC “0:num” THEN X_GEN_TAC “n:num” THEN
-  DISCH_THEN(K ALL_TAC) THEN BETA_TAC THEN MATCH_ACCEPT_TAC SUM_ABS_LE);
+  DISCH_THEN(K ALL_TAC) THEN BETA_TAC THEN MATCH_ACCEPT_TAC SUM_ABS_LE
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Prove sum of geometric progression (useful for comparison)                *)
 (*---------------------------------------------------------------------------*)
 
-val GP_FINITE = store_thm("GP_FINITE",
-  “!x. ~(x = &1) ==>
-        !n. (sum(0,n) (\n. x pow n) = ((x pow n) - &1) / (x - &1))”,
+Theorem GP_FINITE:
+   !x. ~(x = &1) ==>
+        !n. (sum(0,n) (\n. x pow n) = ((x pow n) - &1) / (x - &1))
+Proof
   GEN_TAC THEN DISCH_TAC THEN INDUCT_TAC THENL
    [REWRITE_TAC[sum, pow, REAL_SUB_REFL, REAL_DIV_LZERO],
     REWRITE_TAC[sum, pow] THEN BETA_TAC THEN
@@ -1338,10 +1451,12 @@ val GP_FINITE = store_thm("GP_FINITE",
     ONCE_REWRITE_TAC[AC(REAL_ADD_ASSOC,REAL_ADD_SYM)
       “(a + b) + (c + d) = (c + b) + (d + a)”] THEN
     REWRITE_TAC[REAL_MUL_RID, REAL_ADD_LINV, REAL_ADD_RID] THEN
-    AP_THM_TAC THEN AP_TERM_TAC THEN MATCH_ACCEPT_TAC REAL_MUL_SYM]);
+    AP_THM_TAC THEN AP_TERM_TAC THEN MATCH_ACCEPT_TAC REAL_MUL_SYM]
+QED
 
-val GP = store_thm("GP",
-  “!x. abs(x) < &1 ==> (\n. x pow n) sums inv(&1 - x)”,
+Theorem GP:
+   !x. abs(x) < &1 ==> (\n. x pow n) sums inv(&1 - x)
+Proof
   GEN_TAC THEN ASM_CASES_TAC “x = &1” THEN
   ASM_REWRITE_TAC[ABS_1, REAL_LT_REFL] THEN DISCH_TAC THEN
   REWRITE_TAC[sums] THEN
@@ -1360,26 +1475,30 @@ val GP = store_thm("GP",
   THEN CONV_TAC(EXACT_CONV[X_BETA_CONV “n:num” “x pow n”]) THEN
   CONV_TAC(EXACT_CONV[X_BETA_CONV “n:num” “&1”]) THEN
   MATCH_MP_TAC SEQ_SUB THEN BETA_TAC THEN REWRITE_TAC[SEQ_CONST] THEN
-  MATCH_MP_TAC SEQ_POWER THEN FIRST_ASSUM ACCEPT_TAC);
+  MATCH_MP_TAC SEQ_POWER THEN FIRST_ASSUM ACCEPT_TAC
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Now prove the ratio test                                                  *)
 (*---------------------------------------------------------------------------*)
 
-val ABS_NEG_LEMMA = store_thm("ABS_NEG_LEMMA",
-  “!c. c <= &0 ==> !x y. abs(x) <= c * abs(y) ==> (x = &0)”,
+Theorem ABS_NEG_LEMMA:
+   !c. c <= &0 ==> !x y. abs(x) <= c * abs(y) ==> (x = &0)
+Proof
   GEN_TAC THEN REWRITE_TAC[GSYM REAL_NEG_GE0] THEN DISCH_TAC THEN
   REPEAT GEN_TAC THEN MP_TAC(Q.SPECL [‘~c’, ‘abs(y)’] REAL_LE_MUL) THEN
   ASM_REWRITE_TAC[ABS_POS, GSYM REAL_NEG_LMUL, REAL_NEG_GE0] THEN
   DISCH_THEN(fn th => DISCH_THEN(MP_TAC o C CONJ th)) THEN
   DISCH_THEN(MP_TAC o MATCH_MP REAL_LE_TRANS) THEN CONV_TAC CONTRAPOS_CONV THEN
-  REWRITE_TAC[ABS_NZ, REAL_NOT_LE]);
+  REWRITE_TAC[ABS_NZ, REAL_NOT_LE]
+QED
 
-val SER_RATIO = store_thm("SER_RATIO",
-  “!f c (N:num).
+Theorem SER_RATIO:
+   !f c (N:num).
          c < &1 /\ (!n. n >= N ==> abs(f(SUC n)) <= c * abs(f(n)))
           ==>
-        summable f”,
+        summable f
+Proof
   REPEAT GEN_TAC THEN DISCH_THEN STRIP_ASSUME_TAC THEN
   DISJ_CASES_TAC (SPECL [“c:real”, “&0”] REAL_LET_TOTAL) THENL
    [REWRITE_TAC[SER_CAUCHY] THEN X_GEN_TAC “e:real” THEN DISCH_TAC THEN
@@ -1423,15 +1542,16 @@ val SER_RATIO = store_thm("SER_RATIO",
       MATCH_MP_TAC SER_CMUL THEN
       MATCH_MP_TAC(CONV_RULE(ONCE_DEPTH_CONV ETA_CONV) GP) THEN
       ASSUME_TAC(MATCH_MP REAL_LT_IMP_LE (ASSUME “&0 <  c”)) THEN
-      ASM_REWRITE_TAC[abs]]]);
+      ASM_REWRITE_TAC[abs]]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Useful lemmas for proving inequalities of limits                          *)
 (*---------------------------------------------------------------------------*)
 
-val LE_SEQ_IMP_LE_LIM = store_thm
-  ("LE_SEQ_IMP_LE_LIM",
-   ``!x y f. (!n. x <= f n) /\ f --> y ==> x <= y``,
+Theorem LE_SEQ_IMP_LE_LIM:
+     !x y f. (!n. x <= f n) /\ f --> y ==> x <= y
+Proof
    RW_TAC boolSimps.bool_ss [SEQ]
    THEN MATCH_MP_TAC REAL_LE_EPSILON
    THEN RW_TAC boolSimps.bool_ss []
@@ -1444,11 +1564,12 @@ val LE_SEQ_IMP_LE_LIM = store_thm
    THEN simpLib.FULL_SIMP_TAC boolSimps.bool_ss
         [REAL_NOT_LE, REAL_NEG_SUB, REAL_LT_SUB_RADD]
    THEN PROVE_TAC [REAL_LET_TRANS, REAL_LT_ADDR, REAL_LTE_TRANS, REAL_LE_TRANS,
-                   REAL_LT_LE, REAL_ADD_SYM]);
+                   REAL_LT_LE, REAL_ADD_SYM]
+QED
 
-val SEQ_LE_IMP_LIM_LE = store_thm
-  ("SEQ_LE_IMP_LIM_LE",
-   ``!x y f. (!n. f n <= x) /\ f --> y ==> y <= x``,
+Theorem SEQ_LE_IMP_LIM_LE:
+     !x y f. (!n. f n <= x) /\ f --> y ==> y <= x
+Proof
    RW_TAC boolSimps.bool_ss [SEQ]
    THEN MATCH_MP_TAC REAL_LE_EPSILON
    THEN RW_TAC boolSimps.bool_ss []
@@ -1467,11 +1588,12 @@ val SEQ_LE_IMP_LIM_LE = store_thm
           MATCH_MP_TAC REAL_LE_TRANS
           THEN Q.EXISTS_TAC `f N + e`
           THEN (CONJ_TAC THEN1 PROVE_TAC [REAL_LT_LE, REAL_ADD_SYM])
-          THEN PROVE_TAC [REAL_LE_ADD2, REAL_LE_REFL]]);
+          THEN PROVE_TAC [REAL_LE_ADD2, REAL_LE_REFL]]
+QED
 
-val SEQ_MONO_LE = store_thm
-  ("SEQ_MONO_LE",
-   ``!f x n. (!n. f n <= f (n + 1)) /\ f --> x ==> f n <= x``,
+Theorem SEQ_MONO_LE:
+     !f x n. (!n. f n <= f (n + 1)) /\ f --> x ==> f n <= x
+Proof
    RW_TAC boolSimps.bool_ss [SEQ]
    THEN MATCH_MP_TAC REAL_LE_EPSILON
    THEN RW_TAC boolSimps.bool_ss []
@@ -1500,14 +1622,16 @@ val SEQ_MONO_LE = store_thm
                [REAL_LT_LE, REAL_ADD_SYM, REAL_LE_TRANS, REAL_LE_ADDR],
           MP_TAC (numLib.ARITH_PROVE
                   ``(N - i = N - SUC i) \/ (N - i = (N - SUC i) + 1)``)
-          THEN PROVE_TAC [REAL_LE_REFL, REAL_LE_TRANS]]);
+          THEN PROVE_TAC [REAL_LE_REFL, REAL_LE_TRANS]]
+QED
 
-val SEQ_LE_MONO = store_thm
-  ("SEQ_LE_MONO",
-   ``!f x n. (!n. f (n + 1) <= f n) /\ f --> x ==> x <= f n``,
+Theorem SEQ_LE_MONO:
+     !f x n. (!n. f (n + 1) <= f n) /\ f --> x ==> x <= f n
+Proof
    REPEAT GEN_TAC
    THEN MP_TAC (Q.SPECL [`\n. ~f n`, `~x`, `n`] SEQ_MONO_LE)
-   THEN RW_TAC boolSimps.bool_ss [GSYM SEQ_NEG, REAL_LE_NEG]);
+   THEN RW_TAC boolSimps.bool_ss [GSYM SEQ_NEG, REAL_LE_NEG]
+QED
 
 (* ****************************************************** *)
 (* Useful Theorems on Real Sequences from util_probTheory *)
@@ -1517,8 +1641,8 @@ Definition mono_increasing_def:
     mono_increasing (f:num->real) = !m n. m <= n ==> f m <= f n
 End
 
-val mono_increasing_suc = store_thm
-  ("mono_increasing_suc", ``!(f:num->real). mono_increasing f <=> !n. f n <= f (SUC n)``,
+Theorem mono_increasing_suc:   !(f:num->real). mono_increasing f <=> !n. f n <= f (SUC n)
+Proof
     RW_TAC std_ss [mono_increasing_def]
     >> EQ_TAC
     >- RW_TAC real_ss []
@@ -1528,14 +1652,15 @@ val mono_increasing_suc = store_thm
     >> Induct_on `d` >- RW_TAC real_ss []
     >> RW_TAC std_ss []
     >> Q.PAT_X_ASSUM `!n. f n <= f (SUC n)` (MP_TAC o Q.SPEC `m + d`)
-    >> METIS_TAC [REAL_LE_TRANS, ADD_CLAUSES, LESS_EQ_ADD]);
+    >> METIS_TAC [REAL_LE_TRANS, ADD_CLAUSES, LESS_EQ_ADD]
+QED
 
 Definition mono_decreasing_def:
     mono_decreasing (f:num->real) = !m n. m <= n ==> f n <= f m
 End
 
-val mono_decreasing_suc = store_thm
-  ("mono_decreasing_suc", ``!(f:num->real). mono_decreasing f <=> !n. f (SUC n) <= f n``,
+Theorem mono_decreasing_suc:   !(f:num->real). mono_decreasing f <=> !n. f (SUC n) <= f n
+Proof
     RW_TAC std_ss [mono_decreasing_def]
     >> EQ_TAC
     >- RW_TAC real_ss []
@@ -1545,12 +1670,13 @@ val mono_decreasing_suc = store_thm
     >> Induct_on `d` >- RW_TAC real_ss []
     >> RW_TAC std_ss []
     >> Q.PAT_X_ASSUM `!n. f (SUC n) <= f n` (MP_TAC o Q.SPEC `m + d`)
-    >> METIS_TAC [REAL_LE_TRANS, ADD_CLAUSES, LESS_EQ_ADD]);
+    >> METIS_TAC [REAL_LE_TRANS, ADD_CLAUSES, LESS_EQ_ADD]
+QED
 
-val mono_increasing_converges_to_sup = store_thm
-  ("mono_increasing_converges_to_sup",
-   ``!f r. mono_increasing f /\ f --> r ==>
-           (r = sup (IMAGE f UNIV))``,
+Theorem mono_increasing_converges_to_sup:
+     !f r. mono_increasing f /\ f --> r ==>
+           (r = sup (IMAGE f UNIV))
+Proof
    RW_TAC std_ss [mono_increasing_def]
    >> Suff `f --> sup (IMAGE f UNIV)`
    >- METIS_TAC [SEQ_UNIQ]
@@ -1583,15 +1709,16 @@ val mono_increasing_converges_to_sup = store_thm
    >> Q.EXISTS_TAC `r`
    >> RW_TAC std_ss []
    >> MATCH_MP_TAC SEQ_MONO_LE
-   >> RW_TAC std_ss [DECIDE ``!n:num. n <= n + 1``]);
+   >> RW_TAC std_ss [DECIDE ``!n:num. n <= n + 1``]
+QED
 
-val INCREASING_SEQ = store_thm
-  ("INCREASING_SEQ",
-   ``!f l.
+Theorem INCREASING_SEQ:
+     !f l.
        (!n. f n <= f (SUC n)) /\
        (!n. f n <= l) /\
        (!e. 0 < e ==> ?n. l < f n + e) ==>
-       f --> l``,
+       f --> l
+Proof
    RW_TAC std_ss [SEQ, GREATER_EQ]
    >> Q.PAT_X_ASSUM `!e. P e` (MP_TAC o Q.SPEC `e`)
    >> RW_TAC std_ss []
@@ -1609,15 +1736,16 @@ val INCREASING_SEQ = store_thm
    >> RW_TAC std_ss [ADD_CLAUSES]
    >> Q.PAT_X_ASSUM `!n. f n <= f (SUC n)` (MP_TAC o Q.SPEC `n + d`)
    >> POP_ASSUM MP_TAC
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
 Theorem X_LE_MAX[local] = cj 1 MAX_LE
 Theorem MAX_LE_X[local] = cj 2 MAX_LE
 
-val SEQ_SANDWICH = store_thm
-  ("SEQ_SANDWICH",
-   ``!f g h l.
-       f --> l /\ h --> l /\ (!n. f n <= g n /\ g n <= h n) ==> g --> l``,
+Theorem SEQ_SANDWICH:
+     !f g h l.
+       f --> l /\ h --> l /\ (!n. f n <= g n /\ g n <= h n) ==> g --> l
+Proof
    RW_TAC std_ss [SEQ, GREATER_EQ]
    >> Q.PAT_X_ASSUM `!e. P e ==> Q e` (MP_TAC o Q.SPEC `e`)
    >> Q.PAT_X_ASSUM `!e. P e ==> Q e` (MP_TAC o Q.SPEC `e`)
@@ -1631,18 +1759,20 @@ val SEQ_SANDWICH = store_thm
    >> DISCH_THEN (MP_TAC o Q.SPEC `n`)
    >> RW_TAC std_ss [abs]
    >> REPEAT (POP_ASSUM MP_TAC)
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val SER_POS = store_thm
-  ("SER_POS",
-   ``!f. summable f /\ (!n. 0 <= f n) ==> 0 <= suminf f``,
+Theorem SER_POS:
+     !f. summable f /\ (!n. 0 <= f n) ==> 0 <= suminf f
+Proof
    RW_TAC std_ss []
    >> MP_TAC (Q.SPECL [`f`, `0`] SER_POS_LE)
-   >> RW_TAC std_ss [sum]);
+   >> RW_TAC std_ss [sum]
+QED
 
-val SER_POS_MONO = store_thm
-  ("SER_POS_MONO",
-   ``!f. (!n. 0 <= f n) ==> mono (\n. sum (0, n) f)``,
+Theorem SER_POS_MONO:
+     !f. (!n. 0 <= f n) ==> mono (\n. sum (0, n) f)
+Proof
    RW_TAC std_ss [mono]
    >> DISJ1_TAC
    >> HO_MATCH_MP_TAC TRIANGLE_2D_NUM
@@ -1652,11 +1782,12 @@ val SER_POS_MONO = store_thm
    >> Q.EXISTS_TAC `sum (0, d + n) f`
    >> RW_TAC real_ss [sum]
    >> Q.PAT_X_ASSUM `!n. 0 <= f n` (MP_TAC o Q.SPEC `d + n`)
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val POS_SUMMABLE = store_thm
-  ("POS_SUMMABLE",
-   ``!f. (!n. 0 <= f n) /\ (?x. !n. sum (0, n) f <= x) ==> summable f``,
+Theorem POS_SUMMABLE:
+     !f. (!n. 0 <= f n) /\ (?x. !n. sum (0, n) f <= x) ==> summable f
+Proof
    RW_TAC std_ss [summable, sums, GSYM convergent]
    >> MATCH_MP_TAC SEQ_BCONV
    >> RW_TAC std_ss [SER_POS_MONO, netsTheory.MR1_BOUNDED]
@@ -1665,11 +1796,12 @@ val POS_SUMMABLE = store_thm
    >> RW_TAC arith_ss []
    >> RW_TAC std_ss [abs, SUM_POS]
    >> Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `n`)
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val SUMMABLE_LE = store_thm
-  ("SUMMABLE_LE",
-   ``!f x. summable f /\ (!n. sum (0, n) f <= x) ==> suminf f <= x``,
+Theorem SUMMABLE_LE:
+     !f x. summable f /\ (!n. sum (0, n) f <= x) ==> suminf f <= x
+Proof
    Strip
    >> Suff `0 < suminf f - x ==> F` >- REAL_ARITH_TAC
    >> Strip
@@ -1687,55 +1819,61 @@ val SUMMABLE_LE = store_thm
        >> REAL_ARITH_TAC)
    >> RW_TAC std_ss [abs]
    >> rpt (POP_ASSUM MP_TAC)
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val SUMS_EQ = store_thm
-  ("SUMS_EQ",
-   ``!f x. f sums x = summable f /\ (suminf f = x)``,
-   PROVE_TAC [SUM_SUMMABLE, SUM_UNIQ, summable]);
+Theorem SUMS_EQ:
+     !f x. f sums x = summable f /\ (suminf f = x)
+Proof
+   PROVE_TAC [SUM_SUMMABLE, SUM_UNIQ, summable]
+QED
 
-val SUMINF_POS = store_thm
-  ("SUMINF_POS",
-   ``!f. (!n. 0 <= f n) /\ summable f ==> 0 <= suminf f``,
+Theorem SUMINF_POS:
+     !f. (!n. 0 <= f n) /\ summable f ==> 0 <= suminf f
+Proof
    RW_TAC std_ss []
    >> Know `0 = sum (0, 0) f` >- RW_TAC std_ss [sum]
    >> DISCH_THEN (ONCE_REWRITE_TAC o wrap)
    >> MATCH_MP_TAC SER_POS_LE
-   >> RW_TAC std_ss []);
+   >> RW_TAC std_ss []
+QED
 
-val SUM_CONST_R = store_thm
-  ("SUM_CONST_R",
-   ``!n r. sum (0,n) (K r) = &n * r``,
+Theorem SUM_CONST_R:
+     !n r. sum (0,n) (K r) = &n * r
+Proof
    Induct >- RW_TAC real_ss [sum]
    >> RW_TAC bool_ss [sum, ADD1, K_THM, GSYM REAL_ADD, REAL_ADD_RDISTRIB]
-   >> RW_TAC real_ss []);
+   >> RW_TAC real_ss []
+QED
 
-val SUMS_ZERO = store_thm
-  ("SUMS_ZERO",
-   ``(K 0) sums 0``,
-   RW_TAC real_ss [sums, SEQ, SUM_CONST_R, abs, REAL_SUB_REFL, REAL_LE_REFL]);
+Theorem SUMS_ZERO:
+     (K 0) sums 0
+Proof
+   RW_TAC real_ss [sums, SEQ, SUM_CONST_R, abs, REAL_SUB_REFL, REAL_LE_REFL]
+QED
 
 Theorem LT_SUC'[local] = DECIDE “!a b. a < SUC b = a < b \/ (a = b)”
 
-val SUMINF_ADD = store_thm
-  ("SUMINF_ADD",
-   ``!f g.
+Theorem SUMINF_ADD:
+     !f g.
        summable f /\ summable g ==>
        summable (\n. f n + g n) /\
-       (suminf f + suminf g = suminf (\n. f n + g n))``,
+       (suminf f + suminf g = suminf (\n. f n + g n))
+Proof
     RW_TAC std_ss []
  >> ( Know `f sums suminf f /\ g sums suminf g` >- PROVE_TAC [SUMMABLE_SUM]
    >> STRIP_TAC
    >> Know `(\n. f n + g n) sums (suminf f + suminf g)`
    >- RW_TAC std_ss [SER_ADD]
-   >> RW_TAC std_ss [SUMS_EQ] ));
+   >> RW_TAC std_ss [SUMS_EQ] )
+QED
 
-val SUMINF_2D = store_thm
-  ("SUMINF_2D",
-   ``!f g h.
+Theorem SUMINF_2D:
+     !f g h.
        (!m n. 0 <= f m n) /\ (!n. f n sums g n) /\ summable g /\
        BIJ h UNIV (UNIV CROSS UNIV) ==>
-       (UNCURRY f o h) sums suminf g``,
+       (UNCURRY f o h) sums suminf g
+Proof
    RW_TAC std_ss []
    >> RW_TAC std_ss [sums]
    >> Know `g sums suminf g` >- PROVE_TAC [SUMMABLE_SUM]
@@ -2013,11 +2151,12 @@ val SUMINF_2D = store_thm
        >> RW_TAC std_ss [UNCURRY_DEF])
    >> Q.PAT_X_ASSUM `BIJ h a b` MP_TAC
    >> RW_TAC std_ss [BIJ_DEF, INJ_DEF, IN_UNIV, IN_CROSS]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val POW_HALF_SER = store_thm
-  ("POW_HALF_SER",
-   ``(\n. (1 / 2) pow (n + 1)) sums 1``,
+Theorem POW_HALF_SER:
+     (\n. (1 / 2) pow (n + 1)) sums 1
+Proof
    Know `(\n. (1 / 2) pow n) sums inv (1 - (1 / 2))`
    >- (MATCH_MP_TAC GP
        >> RW_TAC std_ss [abs, HALF_POS, REAL_LT_IMP_LE, HALF_LT_1])
@@ -2027,20 +2166,22 @@ val POW_HALF_SER = store_thm
    >- RW_TAC arith_ss [REAL_MUL_LINV, REAL_INJ]
    >> DISCH_THEN (ONCE_REWRITE_TAC o wrap)
    >> HO_MATCH_MP_TAC SER_CMUL
-   >> RW_TAC std_ss []);
+   >> RW_TAC std_ss []
+QED
 
-val SER_POS_COMPARE = store_thm
-  ("SER_POS_COMPARE",
-   ``!f g.
+Theorem SER_POS_COMPARE:
+     !f g.
        (!n. 0 <= f n) /\ summable g /\ (!n. f n <= g n) ==>
-       summable f /\ suminf f <= suminf g``,
+       summable f /\ suminf f <= suminf g
+Proof
    REVERSE (rpt (STRONG_CONJ_TAC ORELSE STRIP_TAC))
    >- PROVE_TAC [SER_LE]
    >> MATCH_MP_TAC SER_COMPAR
    >> Q.EXISTS_TAC `g`
    >> RW_TAC std_ss []
    >> Q.EXISTS_TAC `0`
-   >> RW_TAC arith_ss [abs]);
+   >> RW_TAC arith_ss [abs]
+QED
 
 (* moved here from real_sigmaTheory *)
 Theorem SEQ_REAL_SUM_IMAGE :

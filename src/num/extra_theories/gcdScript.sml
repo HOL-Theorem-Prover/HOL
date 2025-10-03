@@ -89,13 +89,14 @@ val gcd_ind = GEN_ALL (DB.fetch "-" "gcd_ind");
 
 Overload coprime = “\x y. gcd x y = 1” (* from examples/algebra *)
 
-val GCD_IS_GCD =
-  store_thm("GCD_IS_GCD",
-     ``!a b. is_gcd a b (gcd a b)``,
+Theorem GCD_IS_GCD:
+       !a b. is_gcd a b (gcd a b)
+Proof
    recInduct gcd_ind THEN ARW [gcd_def] THEN
    PROVE_TAC [IS_GCD_0L,IS_GCD_0R,IS_GCD_MINUS_L,
               IS_GCD_MINUS_R, DECIDE(Term`~(y<=x) ==> SUC x <= SUC y`),
-              LESS_EQ_MONO,SUB_MONO_EQ]);
+              LESS_EQ_MONO,SUB_MONO_EQ]
+QED
 
 val GCD_THM = REWRITE_RULE [GCD_IS_GCD] (Q.SPECL [`m`,`n`,`gcd m n`] IS_GCD);
 
@@ -128,10 +129,11 @@ val _ = export_rewrites ["GCD_0L"]
 
 (* Theorem: (gcd 0 x = x) /\ (gcd x 0 = x) *)
 (* Proof: by GCD_0L, GCD_0R *)
-val GCD_0 = store_thm(
-  "GCD_0",
-  ``!x. (gcd 0 x = x) /\ (gcd x 0 = x)``,
-  rw_tac std_ss[GCD_0L, GCD_0R]);
+Theorem GCD_0:
+    !x. (gcd 0 x = x) /\ (gcd x 0 = x)
+Proof
+  rw_tac std_ss[GCD_0L, GCD_0R]
+QED
 
 val GCD_ADD_R = store_thm("GCD_ADD_R",
                         Term `!a b. gcd a (a+b) = gcd a b`,
@@ -159,12 +161,13 @@ Theorem GCD_EQ_0[simp]:
 Proof HO_MATCH_MP_TAC gcd_ind THEN SRW_TAC [][gcd_def]
 QED
 
-val GCD_1 = store_thm(
-  "GCD_1",
-  ``(gcd 1 x = 1) /\ (gcd x 1 = 1)``,
+Theorem GCD_1:
+    (gcd 1 x = 1) /\ (gcd x 1 = 1)
+Proof
   Q_TAC SUFF_TAC `!m n. (m = 1) ==> (gcd m n = 1)`
         THEN1 PROVE_TAC [GCD_SYM] THEN
-  HO_MATCH_MP_TAC gcd_ind THEN SRW_TAC [][gcd_def]);
+  HO_MATCH_MP_TAC gcd_ind THEN SRW_TAC [][gcd_def]
+QED
 val _ = export_rewrites ["GCD_1"]
 
 val PRIME_GCD = store_thm("PRIME_GCD",
@@ -208,11 +211,11 @@ val P_EUCLIDES = store_thm(
   `gcd p a = 1` by PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,PRIME_GCD] THEN
   PROVE_TAC[L_EUCLIDES,GCD_SYM]);
 
-val FACTOR_OUT_GCD = store_thm(
-  "FACTOR_OUT_GCD",
-  ``!n m. ~(n = 0) /\ ~(m = 0) ==>
+Theorem FACTOR_OUT_GCD:
+    !n m. ~(n = 0) /\ ~(m = 0) ==>
           ?p q. (n = p * gcd n m) /\ (m = q * gcd n m) /\
-                (gcd p q = 1)``,
+                (gcd p q = 1)
+Proof
   REPEAT STRIP_TAC THEN
   `divides (gcd n m) n` by PROVE_TAC [GCD_THM] THEN
   `divides (gcd n m) m` by PROVE_TAC [GCD_THM] THEN
@@ -232,7 +235,8 @@ val FACTOR_OUT_GCD = store_thm(
   `divides (gcd k j * gcd n m) (gcd n m)`
      by PROVE_TAC [GCD_IS_GCD, IS_GCD] THEN
   `gcd n m = 0` by PROVE_TAC [DIVIDES_MULT_LEFT] THEN
-  FULL_SIMP_TAC bool_ss [GCD_EQ_0]);
+  FULL_SIMP_TAC bool_ss [GCD_EQ_0]
+QED
 
 val lexnum_induct =
     (SIMP_RULE (srw_ss()) [pairTheory.FORALL_PROD, pairTheory.LEX_DEF] o
@@ -242,11 +246,11 @@ val lexnum_induct =
 
 (* an induction principle for GCD like situations without any SUCs and without
    any subtractions *)
-val GCD_SUCfree_ind = store_thm(
-  "GCD_SUCfree_ind",
-  ``!P. (!y. P 0 y) /\ (!x y. P x y ==> P y x) /\ (!x. P x x) /\
+Theorem GCD_SUCfree_ind:
+    !P. (!y. P 0 y) /\ (!x y. P x y ==> P y x) /\ (!x. P x x) /\
         (!x y. 0 < x /\ 0 < y /\ P x y ==> P x (x + y)) ==>
-        !m n. P m n``,
+        !m n. P m n
+Proof
   GEN_TAC THEN STRIP_TAC THEN
   HO_MATCH_MP_TAC lexnum_induct THEN
   REPEAT STRIP_TAC THEN Cases_on `m = 0` THEN1 SRW_TAC [][] THEN
@@ -257,7 +261,8 @@ val GCD_SUCfree_ind = store_thm(
           THEN1 metisLib.METIS_TAC [] THEN
     Q.EXISTS_TAC `n - m` THEN DECIDE_TAC,
     `n < m` by DECIDE_TAC THEN SRW_TAC [][]
-  ])
+  ]
+QED
 
 (* proof of LINEAR_GCD{_AUX} due to Laurent Thery *)
 val LINEAR_GCD_AUX = prove(
@@ -279,20 +284,22 @@ val LINEAR_GCD_AUX = prove(
   SIMP_TAC (bool_ss ++ numSimps.ARITH_ss) []);
 
 
-val LINEAR_GCD = store_thm(
-  "LINEAR_GCD",
-  ``!n m. ~(n = 0) ==> ?p q. p * n = q * m + gcd m n``,
+Theorem LINEAR_GCD:
+    !n m. ~(n = 0) ==> ?p q. p * n = q * m + gcd m n
+Proof
   REPEAT STRIP_TAC THEN Cases_on `m=0` THENL [
     Q.EXISTS_TAC `1` THEN ARW[GCD_0L],
     PROVE_TAC[LINEAR_GCD_AUX]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < j ==> ?p q. p * j = q * k + gcd j k *)
 (* Proof: by LINEAR_GCD, GCD_SYM *)
-val GCD_LINEAR = store_thm(
-  "GCD_LINEAR",
-  ``!j k. 0 < j ==> ?p q. p * j = q * k + gcd j k``,
-  metis_tac[LINEAR_GCD, GCD_SYM, NOT_ZERO]);
+Theorem GCD_LINEAR:
+    !j k. 0 < j ==> ?p q. p * j = q * k + gcd j k
+Proof
+  metis_tac[LINEAR_GCD, GCD_SYM, NOT_ZERO]
+QED
 
 val gcd_lemma0 = prove(
   ``!a b. gcd a b = if b <= a then gcd (a - b) b
@@ -312,11 +319,11 @@ val gcd_lemma = prove(
     ASM_SIMP_TAC arith_ss []
   ]);
 
-val GCD_EFFICIENTLY = store_thm(
-  "GCD_EFFICIENTLY",
-  ``!a b.
+Theorem GCD_EFFICIENTLY:
+    !a b.
        gcd a b = if a = 0 then b
-                 else gcd (b MOD a) a``,
+                 else gcd (b MOD a) a
+Proof
   REPEAT STRIP_TAC THEN Cases_on `a = 0` THEN1 SRW_TAC [][] THEN
   Cases_on `b = 0` THEN1 SRW_TAC [ARITH_ss][] THEN
   `(b = (b DIV a) * a + b MOD a) /\ b MOD a < a`
@@ -328,7 +335,8 @@ val GCD_EFFICIENTLY = store_thm(
   `gcd a (q * a + r) = gcd a (q * a + r - q * a)`
      by METIS_TAC [GCD_SYM, gcd_lemma] THEN
   ASM_SIMP_TAC bool_ss [DECIDE (Term`(x:num) + y - x = y`)] THEN
-  SIMP_TAC bool_ss [GCD_SYM]);
+  SIMP_TAC bool_ss [GCD_SYM]
+QED
 
 Definition lcm_def:
   lcm m n = if (m = 0) \/ (n = 0) then 0 else (m * n) DIV gcd m n
@@ -338,10 +346,10 @@ val _ = computeLib.add_persistent_funs
       ["GCD_EFFICIENTLY"
       ,"lcm_def"];
 
-val LCM_IS_LEAST_COMMON_MULTIPLE = store_thm(
-  "LCM_IS_LEAST_COMMON_MULTIPLE",
-  ``divides m (lcm m n) /\ divides n (lcm m n) /\
-    !p. divides m p /\ divides n p ==> divides (lcm m n) p``,
+Theorem LCM_IS_LEAST_COMMON_MULTIPLE:
+    divides m (lcm m n) /\ divides n (lcm m n) /\
+    !p. divides m p /\ divides n p ==> divides (lcm m n) p
+Proof
   SIMP_TAC (srw_ss()) [lcm_def] THEN
   Cases_on `m = 0` THEN1 SRW_TAC [][ALL_DIVIDES_0] THEN
   Cases_on `n = 0` THEN1 SRW_TAC [][ALL_DIVIDES_0] THEN
@@ -374,31 +382,35 @@ val LCM_IS_LEAST_COMMON_MULTIPLE = store_thm(
                  Q.EXISTS_TAC `q` THEN DECIDE_TAC) THEN
     `divides d (a * c)` by PROVE_TAC [divides_def] THEN
     PROVE_TAC [L_EUCLIDES, MULT_COMM]
-  ]);
+  ]
+QED
 
-val LCM_0 = store_thm(
-  "LCM_0",
-  ``(lcm 0 x = 0) /\ (lcm x 0 = 0)``,
-  SRW_TAC [][lcm_def]);
+Theorem LCM_0:
+    (lcm 0 x = 0) /\ (lcm x 0 = 0)
+Proof
+  SRW_TAC [][lcm_def]
+QED
 val _ = export_rewrites ["LCM_0"]
 
-val LCM_1 = store_thm(
-  "LCM_1",
-  ``(lcm 1 x = x) /\ (lcm x 1 = x)``,
-  SRW_TAC [][lcm_def])
+Theorem LCM_1:
+    (lcm 1 x = x) /\ (lcm x 1 = x)
+Proof
+  SRW_TAC [][lcm_def]
+QED
 val _ = export_rewrites ["LCM_1"]
 
-val LCM_COMM = store_thm(
-  "LCM_COMM",
-  ``lcm a b = lcm b a``,
-  SRW_TAC [][lcm_def, GCD_SYM, MULT_COMM]);
+Theorem LCM_COMM:
+    lcm a b = lcm b a
+Proof
+  SRW_TAC [][lcm_def, GCD_SYM, MULT_COMM]
+QED
 
 (* |- !a b. lcm a b = lcm b a *)
 val LCM_SYM = save_thm("LCM_SYM", LCM_COMM |> GEN ``b:num`` |> GEN ``a:num``);
 
-val LCM_LE = store_thm(
-  "LCM_LE",
-  ``0 < m /\ 0 < n ==> (m <= lcm m n) /\ (m <= lcm n m)``,
+Theorem LCM_LE:
+    0 < m /\ 0 < n ==> (m <= lcm m n) /\ (m <= lcm n m)
+Proof
   SIMP_TAC (srw_ss() ++ ARITH_ss) [lcm_def, GCD_SYM] THEN
   `divides (gcd m n) n` by METIS_TAC [GCD_IS_GCD, IS_GCD] THEN
   Q.ABBREV_TAC `g = gcd m n` THEN
@@ -407,27 +419,31 @@ val LCM_LE = store_thm(
   `0 < g` by FULL_SIMP_TAC (srw_ss()) [ZERO_LESS_MULT] THEN
   `m * (a * g) DIV g = m * a` by METIS_TAC [MULT_DIV, MULT_ASSOC] THEN
   Q_TAC SUFF_TAC `1 <= a` THEN1 METIS_TAC [LE_MULT_LCANCEL, MULT_CLAUSES] THEN
-  FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [ZERO_LESS_MULT]);
+  FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [ZERO_LESS_MULT]
+QED
 val _ = export_rewrites ["LCM_LE"]
 
-val LCM_LEAST = store_thm(
-  "LCM_LEAST",
-  ``0 < m /\ 0 < n ==>
-       !p. 0 < p /\ p < lcm m n ==> ~(divides m p) \/ ~(divides n p)``,
+Theorem LCM_LEAST:
+    0 < m /\ 0 < n ==>
+       !p. 0 < p /\ p < lcm m n ==> ~(divides m p) \/ ~(divides n p)
+Proof
   REPEAT STRIP_TAC THEN SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
   `divides (lcm m n) p` by METIS_TAC [LCM_IS_LEAST_COMMON_MULTIPLE] THEN
   `lcm m n <= p` by METIS_TAC [DIVIDES_LE] THEN
-  DECIDE_TAC);
+  DECIDE_TAC
+QED
 
 
-val GCD_COMMON_FACTOR = store_thm("GCD_COMMON_FACTOR",
-  ``!m n k. gcd (k * m) (k * n) = k * gcd m n``,
+Theorem GCD_COMMON_FACTOR:
+    !m n k. gcd (k * m) (k * n) = k * gcd m n
+Proof
   HO_MATCH_MP_TAC GCD_SUCfree_ind
   THEN REPEAT STRIP_TAC
   THEN1 REWRITE_TAC [gcd_def,MULT_CLAUSES]
   THEN1 METIS_TAC [GCD_SYM]
   THEN1 REWRITE_TAC [GCD_REF]
-  THEN ASM_REWRITE_TAC [LEFT_ADD_DISTRIB,GCD_ADD_R]);
+  THEN ASM_REWRITE_TAC [LEFT_ADD_DISTRIB,GCD_ADD_R]
+QED
 
 val GCD_EQ_IS_GCD = prove(
   ``!m n. (gcd m n = k) = is_gcd m n k``,
@@ -438,8 +454,9 @@ val divides_IMP = prove(
   REWRITE_TAC [divides_def] THEN REPEAT STRIP_TAC
   THEN ASM_REWRITE_TAC [MULT_ASSOC] THEN METIS_TAC []);
 
-val GCD_CANCEL_MULT = store_thm("GCD_CANCEL_MULT",
-  ``!m n k. (gcd m k = 1) ==> (gcd m (k * n) = gcd m n)``,
+Theorem GCD_CANCEL_MULT:
+    !m n k. (gcd m k = 1) ==> (gcd m (k * n) = gcd m n)
+Proof
   REPEAT STRIP_TAC
   THEN REWRITE_TAC [GCD_EQ_IS_GCD,IS_GCD,GCD_THM]
   THEN REPEAT STRIP_TAC
@@ -452,7 +469,8 @@ val GCD_CANCEL_MULT = store_thm("GCD_CANCEL_MULT",
   THEN REPEAT STRIP_TAC
   THEN Q.PAT_ASSUM `!d.bbb` MATCH_MP_TAC
   THEN IMP_RES_TAC DIVIDES_TRANS
-  THEN ASM_REWRITE_TAC []);
+  THEN ASM_REWRITE_TAC []
+QED
 
 val ODD_IMP_GCD_CANCEL_EVEN = prove(
   ``!n. ODD n ==> (gcd n (2 * m) = gcd n m)``,
@@ -468,15 +486,17 @@ val ODD_IMP_GCD_CANCEL_EVEN = prove(
   THEN REWRITE_TAC [GSYM EVEN_EXISTS]
   THEN FULL_SIMP_TAC bool_ss [ODD_EVEN]);
 
-val BINARY_GCD = store_thm("BINARY_GCD",
-  ``!m n.
+Theorem BINARY_GCD:
+    !m n.
       (EVEN m /\ EVEN n ==> (gcd m n = 2 * gcd (m DIV 2) (n DIV 2))) /\
-      (EVEN m /\ ODD n ==> (gcd m n = gcd (m DIV 2) n))``,
+      (EVEN m /\ ODD n ==> (gcd m n = gcd (m DIV 2) n))
+Proof
   SIMP_TAC bool_ss [EVEN_EXISTS] THEN REVERSE (REPEAT STRIP_TAC)
   THEN `0 < 2` by (MATCH_MP_TAC PRIME_POS THEN REWRITE_TAC [PRIME_2])
   THEN FULL_SIMP_TAC bool_ss [GCD_COMMON_FACTOR,
          ONCE_REWRITE_RULE [MULT_COMM] MULT_DIV,
-         ONCE_REWRITE_RULE [GCD_SYM] ODD_IMP_GCD_CANCEL_EVEN]);
+         ONCE_REWRITE_RULE [GCD_SYM] ODD_IMP_GCD_CANCEL_EVEN]
+QED
 
 Theorem gcd_LESS_EQ:
   !m n. n <> 0 ==> gcd m n <= n
@@ -502,13 +522,14 @@ QED
    g = gcd n m ==> (g divides n) /\ (g divides m)   by GCD_IS_GCD, is_gcd_def
                ==> (n MOD g = 0) /\ (m MOD g = 0)   by DIVIDES_MOD_0
 *)
-val GCD_DIVIDES = store_thm(
-  "GCD_DIVIDES",
-  ``!m n. 0 < n /\ 0 < m ==> 0 < gcd n m /\ (n MOD (gcd n m) = 0) /\ (m MOD (gcd n m) = 0)``,
+Theorem GCD_DIVIDES:
+    !m n. 0 < n /\ 0 < m ==> 0 < gcd n m /\ (n MOD (gcd n m) = 0) /\ (m MOD (gcd n m) = 0)
+Proof
   ntac 3 strip_tac >>
   conj_asm1_tac >-
   metis_tac[GCD_EQ_0, NOT_ZERO_LT_ZERO] >>
-  metis_tac[GCD_IS_GCD, is_gcd_def, DIVIDES_MOD_0]);
+  metis_tac[GCD_IS_GCD, is_gcd_def, DIVIDES_MOD_0]
+QED
 
 (* Theorem: gcd n (gcd n m) = gcd n m *)
 (* Proof:
@@ -526,14 +547,15 @@ val GCD_DIVIDES = store_thm(
    = gcd 0 d             by GCD_DIVIDES
    = d                   by GCD_0L
 *)
-val GCD_GCD = store_thm(
-  "GCD_GCD",
-  ``!m n. gcd n (gcd n m) = gcd n m``,
+Theorem GCD_GCD:
+    !m n. gcd n (gcd n m) = gcd n m
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >- rw[] >>
   Cases_on `m = 0` >- rw[] >>
   `0 < n /\ 0 < m` by decide_tac >>
-  metis_tac[GCD_SYM, GCD_EFFICIENTLY, GCD_DIVIDES, GCD_EQ_0, GCD_0L]);
+  metis_tac[GCD_SYM, GCD_EFFICIENTLY, GCD_DIVIDES, GCD_EQ_0, GCD_0L]
+QED
 
 (* Theorem: GCD m n * LCM m n = m * n *)
 (* Proof:
@@ -546,33 +568,36 @@ val GCD_GCD = store_thm(
    If m <> 0, n <> 0,
    gcd m n * lcm m n = gcd m n * (m * n DIV gcd m n) = m * n.
 *)
-val GCD_LCM = store_thm(
-  "GCD_LCM",
-  ``!m n. gcd m n * lcm m n = m * n``,
+Theorem GCD_LCM:
+    !m n. gcd m n * lcm m n = m * n
+Proof
   rw[lcm_def] >>
   `0 < m /\ 0 < n` by decide_tac >>
   `0 < gcd m n /\ (n MOD gcd m n = 0)` by rw[GCD_DIVIDES] >>
   qabbrev_tac `d = gcd m n` >>
   `m * n = (m * n) DIV d * d + (m * n) MOD d` by rw[DIVISION] >>
   `(m * n) MOD d = 0` by metis_tac[MOD_TIMES2, ZERO_MOD, MULT_0] >>
-  metis_tac[ADD_0, MULT_COMM]);
+  metis_tac[ADD_0, MULT_COMM]
+QED
 
 (* temporarily make divides an infix *)
 val _ = temp_set_fixity "divides" (Infixl 480); (* relation is 450, +/- is 500, * is 600. *)
 
 (* Theorem: m divides (lcm m n) /\ n divides (lcm m n) *)
 (* Proof: by LCM_IS_LEAST_COMMON_MULTIPLE *)
-val LCM_DIVISORS = store_thm(
-  "LCM_DIVISORS",
-  ``!m n. m divides (lcm m n) /\ n divides (lcm m n)``,
-  rw[LCM_IS_LEAST_COMMON_MULTIPLE]);
+Theorem LCM_DIVISORS:
+    !m n. m divides (lcm m n) /\ n divides (lcm m n)
+Proof
+  rw[LCM_IS_LEAST_COMMON_MULTIPLE]
+QED
 
 (* Theorem: m divides p /\ n divides p ==> (lcm m n) divides p *)
 (* Proof: by LCM_IS_LEAST_COMMON_MULTIPLE *)
-val LCM_IS_LCM = store_thm(
-  "LCM_IS_LCM",
-  ``!m n p. m divides p /\ n divides p ==> (lcm m n) divides p``,
-  rw[LCM_IS_LEAST_COMMON_MULTIPLE]);
+Theorem LCM_IS_LCM:
+    !m n p. m divides p /\ n divides p ==> (lcm m n) divides p
+Proof
+  rw[LCM_IS_LEAST_COMMON_MULTIPLE]
+QED
 
 (* Theorem: (lcm m n = 0) <=> ((m = 0) \/ (n = 0)) *)
 (* Proof:
@@ -586,9 +611,9 @@ val LCM_IS_LCM = store_thm(
    Only-if part: m = 0 \/ n = 0 ==> lcm m n = 0
       True by LCM_0
 *)
-val LCM_EQ_0 = store_thm(
-  "LCM_EQ_0",
-  ``!m n. (lcm m n = 0) <=> ((m = 0) \/ (n = 0))``,
+Theorem LCM_EQ_0:
+    !m n. (lcm m n = 0) <=> ((m = 0) \/ (n = 0))
+Proof
   rw[EQ_IMP_THM] >| [
     spose_not_then strip_assume_tac >>
     `(gcd m n) * (lcm m n) = m * n` by rw[GCD_LCM] >>
@@ -597,7 +622,8 @@ val LCM_EQ_0 = store_thm(
     metis_tac[MULT_0],
     rw[LCM_0],
     rw[LCM_0]
-  ]);
+  ]
+QED
 
 (* Theorem: lcm a a = a *)
 (* Proof:
@@ -608,17 +634,19 @@ val LCM_EQ_0 = store_thm(
              a * (lcm a a) = a * a    by GCD_REF
                    lcm a a = a        by MULT_LEFT_CANCEL, a <> 0
 *)
-val LCM_REF = store_thm(
-  "LCM_REF",
-  ``!a. lcm a a = a``,
-  metis_tac[num_CASES, LCM_0, GCD_LCM, GCD_REF, MULT_LEFT_CANCEL]);
+Theorem LCM_REF:
+    !a. lcm a a = a
+Proof
+  metis_tac[num_CASES, LCM_0, GCD_LCM, GCD_REF, MULT_LEFT_CANCEL]
+QED
 
 (* Theorem: a divides n /\ b divides n ==> (lcm a b) divides n *)
 (* Proof: same as LCM_IS_LCM *)
-val LCM_DIVIDES = store_thm(
-  "LCM_DIVIDES",
-  ``!n a b. a divides n /\ b divides n ==> (lcm a b) divides n``,
-  rw[LCM_IS_LCM]);
+Theorem LCM_DIVIDES:
+    !n a b. a divides n /\ b divides n ==> (lcm a b) divides n
+Proof
+  rw[LCM_IS_LCM]
+QED
 (*
 > LCM_IS_LCM |> ISPEC ``a:num`` |> ISPEC ``b:num`` |> ISPEC ``n:num`` |> GEN_ALL;
 val it = |- !n b a. a divides n /\ b divides n ==> lcm a b divides n: thm
@@ -626,17 +654,19 @@ val it = |- !n b a. a divides n /\ b divides n ==> lcm a b divides n: thm
 
 (* Theorem: 0 < m \/ 0 < n ==> 0 < gcd m n *)
 (* Proof: by GCD_EQ_0, NOT_ZERO_LT_ZERO *)
-val GCD_POS = store_thm(
-  "GCD_POS",
-  ``!m n. 0 < m \/ 0 < n ==> 0 < gcd m n``,
-  metis_tac[GCD_EQ_0, NOT_ZERO_LT_ZERO]);
+Theorem GCD_POS:
+    !m n. 0 < m \/ 0 < n ==> 0 < gcd m n
+Proof
+  metis_tac[GCD_EQ_0, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: 0 < m /\ 0 < n ==> 0 < lcm m n *)
 (* Proof: by LCM_EQ_0, NOT_ZERO_LT_ZERO *)
-val LCM_POS = store_thm(
-  "LCM_POS",
-  ``!m n. 0 < m /\ 0 < n ==> 0 < lcm m n``,
-  metis_tac[LCM_EQ_0, NOT_ZERO_LT_ZERO]);
+Theorem LCM_POS:
+    !m n. 0 < m /\ 0 < n ==> 0 < lcm m n
+Proof
+  metis_tac[LCM_EQ_0, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: n divides m <=> gcd n m = n *)
 (* Proof:
@@ -667,9 +697,9 @@ val LCM_POS = store_thm(
        or  m MOD n = 0                 by MOD_MOD
        contradicting (m MOD n) <> 0, hence true.
 *)
-val divides_iff_gcd_fix = store_thm(
-  "divides_iff_gcd_fix",
-  ``!m n. n divides m <=> (gcd n m = n)``,
+Theorem divides_iff_gcd_fix:
+    !m n. n divides m <=> (gcd n m = n)
+Proof
   rw[EQ_IMP_THM] >| [
     `?k. m = k * n` by rw[GSYM divides_def] >>
     `gcd n m = gcd (n * 1) (n * k)` by rw[MULT_COMM] >>
@@ -683,7 +713,8 @@ val divides_iff_gcd_fix = store_thm(
     metis_tac[DIVIDES_MOD_0] >>
     `0 < m MOD n` by decide_tac >>
     metis_tac[GCD_EFFICIENTLY, GCD_DIVIDES, MOD_MOD]
-  ]);
+  ]
+QED
 
 (* Theorem: !m n. n divides m <=> (lcm n m = m) *)
 (* Proof:
@@ -703,13 +734,14 @@ val divides_iff_gcd_fix = store_thm(
           or     gcd n m = n        by MULT_RIGHT_CANCEL, m <> 0
           so     n divides m        by divides_iff_gcd_fix
 *)
-val divides_iff_lcm_fix = store_thm(
-  "divides_iff_lcm_fix",
-  ``!m n. n divides m <=> (lcm n m = m)``,
+Theorem divides_iff_lcm_fix:
+    !m n. n divides m <=> (lcm n m = m)
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   metis_tac[ZERO_DIVIDES, LCM_0] >>
-  metis_tac[GCD_LCM, MULT_LEFT_CANCEL, MULT_RIGHT_CANCEL, divides_iff_gcd_fix, ALL_DIVIDES_0]);
+  metis_tac[GCD_LCM, MULT_LEFT_CANCEL, MULT_RIGHT_CANCEL, divides_iff_gcd_fix, ALL_DIVIDES_0]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Consequences of Coprime.                                                  *)
@@ -724,10 +756,11 @@ val divides_iff_lcm_fix = store_thm(
    gcd n (x * y) = gcd n y     by GCD_CANCEL_MULT, since coprime n x.
                  = 1           by given
 *)
-val PRODUCT_WITH_GCD_ONE = store_thm(
-  "PRODUCT_WITH_GCD_ONE",
-  ``!n x y. coprime n x /\ coprime n y ==> coprime n (x * y)``,
-  metis_tac[GCD_CANCEL_MULT]);
+Theorem PRODUCT_WITH_GCD_ONE:
+    !n x y. coprime n x /\ coprime n y ==> coprime n (x * y)
+Proof
+  metis_tac[GCD_CANCEL_MULT]
+QED
 
 (* Theorem: For 0 < n, coprime n x ==> coprime n (x MOD n) *)
 (* Proof:
@@ -736,12 +769,13 @@ val PRODUCT_WITH_GCD_ONE = store_thm(
      = gcd (x MOD n) n    by GCD_EFFICIENTLY
      = gcd n (x MOD n)    by GCD_SYM
 *)
-val MOD_WITH_GCD_ONE = store_thm(
-  "MOD_WITH_GCD_ONE",
-  ``!n x. 0 < n /\ coprime n x ==> coprime n (x MOD n)``,
+Theorem MOD_WITH_GCD_ONE:
+    !n x. 0 < n /\ coprime n x ==> coprime n (x MOD n)
+Proof
   rpt strip_tac >>
   `0 <> n` by decide_tac >>
-  metis_tac[GCD_EFFICIENTLY, GCD_SYM]);
+  metis_tac[GCD_EFFICIENTLY, GCD_SYM]
+QED
 
 (* Theorem: (c = gcd a b) <=>
             c divides a /\ c divides b /\ !x. x divides a /\ x divides b ==> x divides c *)
@@ -755,11 +789,12 @@ val MOD_WITH_GCD_ONE = store_thm(
        and (gcd a b) divides c   by [1], [2] and the given implication
    Therefore c = gcd a b         by DIVIDES_ANTISYM
 *)
-val GCD_PROPERTY = store_thm(
-  "GCD_PROPERTY",
-  ``!a b c. (c = gcd a b) <=>
-   c divides a /\ c divides b /\ !x. x divides a /\ x divides b ==> x divides c``,
-  rw[GCD_IS_GREATEST_COMMON_DIVISOR, DIVIDES_ANTISYM, EQ_IMP_THM]);
+Theorem GCD_PROPERTY:
+    !a b c. (c = gcd a b) <=>
+   c divides a /\ c divides b /\ !x. x divides a /\ x divides b ==> x divides c
+Proof
+  rw[GCD_IS_GREATEST_COMMON_DIVISOR, DIVIDES_ANTISYM, EQ_IMP_THM]
+QED
 
 (* Theorem: gcd a (gcd b c) = gcd (gcd a b) c *)
 (* Proof:
@@ -776,9 +811,9 @@ val GCD_PROPERTY = store_thm(
      and (gcd a (gcd b c)) divides (gcd (gcd a b) c)   by GCD_PROPERTY
    Therefore gcd a (gcd b c) = gcd (gcd a b) c         by DIVIDES_ANTISYM
 *)
-val GCD_ASSOC = store_thm(
-  "GCD_ASSOC",
-  ``!a b c. gcd a (gcd b c) = gcd (gcd a b) c``,
+Theorem GCD_ASSOC:
+    !a b c. gcd a (gcd b c) = gcd (gcd a b) c
+Proof
   rpt strip_tac >>
   `(gcd a (gcd b c)) divides a` by metis_tac[GCD_PROPERTY] >>
   `(gcd a (gcd b c)) divides b` by metis_tac[GCD_PROPERTY, DIVIDES_TRANS] >>
@@ -788,7 +823,8 @@ val GCD_ASSOC = store_thm(
   `(gcd (gcd a b) c) divides c` by metis_tac[GCD_PROPERTY] >>
   `(gcd (gcd a b) c) divides (gcd a (gcd b c))` by metis_tac[GCD_PROPERTY] >>
   `(gcd a (gcd b c)) divides (gcd (gcd a b) c)` by metis_tac[GCD_PROPERTY] >>
-  rw[DIVIDES_ANTISYM]);
+  rw[DIVIDES_ANTISYM]
+QED
 
 (* Note:
    With identity by GCD_1: (gcd 1 x = 1) /\ (gcd x 1 = 1)
@@ -802,10 +838,11 @@ val GCD_ASSOC = store_thm(
    = gcd (gcd b a) c    by GCD_SYM
    = gcd b (gcd a c)    by GCD_ASSOC
 *)
-val GCD_ASSOC_COMM = store_thm(
-  "GCD_ASSOC_COMM",
-  ``!a b c. gcd a (gcd b c) = gcd b (gcd a c)``,
-  metis_tac[GCD_ASSOC, GCD_SYM]);
+Theorem GCD_ASSOC_COMM:
+    !a b c. gcd a (gcd b c) = gcd b (gcd a c)
+Proof
+  metis_tac[GCD_ASSOC, GCD_SYM]
+QED
 
 (* Theorem: (c = lcm a b) <=>
             a divides c /\ b divides c /\ !x. a divides x /\ b divides x ==> c divides x *)
@@ -819,11 +856,12 @@ val GCD_ASSOC_COMM = store_thm(
        and (lcm a b) divides c   by [3]
    Therefore c = lcm a b         by DIVIDES_ANTISYM
 *)
-val LCM_PROPERTY = store_thm(
-  "LCM_PROPERTY",
-  ``!a b c. (c = lcm a b) <=>
-   a divides c /\ b divides c /\ !x. a divides x /\ b divides x ==> c divides x``,
-  rw[LCM_IS_LEAST_COMMON_MULTIPLE, DIVIDES_ANTISYM, EQ_IMP_THM]);
+Theorem LCM_PROPERTY:
+    !a b c. (c = lcm a b) <=>
+   a divides c /\ b divides c /\ !x. a divides x /\ b divides x ==> c divides x
+Proof
+  rw[LCM_IS_LEAST_COMMON_MULTIPLE, DIVIDES_ANTISYM, EQ_IMP_THM]
+QED
 
 (* Theorem: lcm a (lcm b c) = lcm (lcm a b) c *)
 (* Proof:
@@ -840,9 +878,9 @@ val LCM_PROPERTY = store_thm(
      and (lcm (lcm a b) c) divides (lcm a (lcm b c))   by LCM_PROPERTY
     Therefore lcm a (lcm b c) = lcm (lcm a b) c        by DIVIDES_ANTISYM
 *)
-val LCM_ASSOC = store_thm(
-  "LCM_ASSOC",
-  ``!a b c. lcm a (lcm b c) = lcm (lcm a b) c``,
+Theorem LCM_ASSOC:
+    !a b c. lcm a (lcm b c) = lcm (lcm a b) c
+Proof
   rpt strip_tac >>
   `a divides (lcm a (lcm b c))` by metis_tac[LCM_PROPERTY] >>
   `b divides (lcm a (lcm b c))` by metis_tac[LCM_PROPERTY, DIVIDES_TRANS] >>
@@ -852,7 +890,8 @@ val LCM_ASSOC = store_thm(
   `c divides (lcm (lcm a b) c)` by metis_tac[LCM_PROPERTY] >>
   `(lcm a (lcm b c)) divides (lcm (lcm a b) c)` by metis_tac[LCM_PROPERTY] >>
   `(lcm (lcm a b) c) divides (lcm a (lcm b c))` by metis_tac[LCM_PROPERTY] >>
-  rw[DIVIDES_ANTISYM]);
+  rw[DIVIDES_ANTISYM]
+QED
 
 (* Note:
    With the identity by LCM_0: (lcm 0 x = 0) /\ (lcm x 0 = 0)
@@ -866,10 +905,11 @@ val LCM_ASSOC = store_thm(
    = lcm (lcm b a) c   by LCM_COMM
    = lcm b (lcm a c)   by LCM_ASSOC
 *)
-val LCM_ASSOC_COMM = store_thm(
-  "LCM_ASSOC_COMM",
-  ``!a b c. lcm a (lcm b c) = lcm b (lcm a c)``,
-  metis_tac[LCM_ASSOC, LCM_COMM]);
+Theorem LCM_ASSOC_COMM:
+    !a b c. lcm a (lcm b c) = lcm b (lcm a c)
+Proof
+  metis_tac[LCM_ASSOC, LCM_COMM]
+QED
 
 (* Theorem: b <= a ==> gcd (a - b) b = gcd a b *)
 (* Proof:
@@ -881,10 +921,11 @@ val LCM_ASSOC_COMM = store_thm(
 
 Note: If a < b, a - b = 0  for num, hence gcd (a - b) b = gcd 0 b = b.
 *)
-val GCD_SUB_L = store_thm(
-  "GCD_SUB_L",
-  ``!a b. b <= a ==> (gcd (a - b) b = gcd a b)``,
-  metis_tac[GCD_SYM, GCD_ADD_L, ADD_COMM, SUB_ADD]);
+Theorem GCD_SUB_L:
+    !a b. b <= a ==> (gcd (a - b) b = gcd a b)
+Proof
+  metis_tac[GCD_SYM, GCD_ADD_L, ADD_COMM, SUB_ADD]
+QED
 
 (* Theorem: a <= b ==> gcd a (b - a) = gcd a b *)
 (* Proof:
@@ -893,10 +934,11 @@ val GCD_SUB_L = store_thm(
    = gcd b a               by GCD_SUB_L
    = gcd a b               by GCD_SYM
 *)
-val GCD_SUB_R = store_thm(
-  "GCD_SUB_R",
-  ``!a b. a <= b ==> (gcd a (b - a) = gcd a b)``,
-  metis_tac[GCD_SYM, GCD_SUB_L]);
+Theorem GCD_SUB_R:
+    !a b. a <= b ==> (gcd a (b - a) = gcd a b)
+Proof
+  metis_tac[GCD_SYM, GCD_SUB_L]
+QED
 
 (* Theorem: prime a ==> a divides b iff a divides b ** n for any n *)
 (* Proof:
@@ -916,9 +958,9 @@ val GCD_SUB_R = store_thm(
        Since prime a, a divides b, or a divides (b ** n)  by P_EUCLIDES
        Either case is true.
 *)
-val DIVIDES_EXP_BASE = store_thm(
-  "DIVIDES_EXP_BASE",
-  ``!a b n. prime a /\ 0 < n ==> (a divides b <=> a divides (b ** n))``,
+Theorem DIVIDES_EXP_BASE:
+    !a b n. prime a /\ 0 < n ==> (a divides b <=> a divides (b ** n))
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
@@ -929,16 +971,18 @@ val DIVIDES_EXP_BASE = store_thm(
   rw[EQ_IMP_THM] >-
   metis_tac[DIVIDES_MULT] >>
   `a divides b \/ a divides (b ** n)` by rw[P_EUCLIDES] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: coprime m n ==> LCM m n = m * n *)
 (* Proof:
    By GCD_LCM, with gcd m n = 1.
 *)
-val LCM_COPRIME = store_thm(
-  "LCM_COPRIME",
-  ``!m n. coprime m n ==> (lcm m n = m * n)``,
-  metis_tac[GCD_LCM, MULT_LEFT_1]);
+Theorem LCM_COPRIME:
+    !m n. coprime m n ==> (lcm m n = m * n)
+Proof
+  metis_tac[GCD_LCM, MULT_LEFT_1]
+QED
 
 (* Theorem: 0 < m ==> (gcd m n = gcd m (n MOD m)) *)
 (* Proof:
@@ -946,17 +990,19 @@ val LCM_COPRIME = store_thm(
    = gcd (n MOD m) m       by GCD_EFFICIENTLY, m <> 0
    = gcd m (n MOD m)       by GCD_SYM
 *)
-val GCD_MOD = store_thm(
-  "GCD_MOD",
-  ``!m n. 0 < m ==> (gcd m n = gcd m (n MOD m))``,
-  rw[Once GCD_EFFICIENTLY, GCD_SYM]);
+Theorem GCD_MOD:
+    !m n. 0 < m ==> (gcd m n = gcd m (n MOD m))
+Proof
+  rw[Once GCD_EFFICIENTLY, GCD_SYM]
+QED
 
 (* Theorem: 0 < m ==> (gcd n m = gcd (n MOD m) m) *)
 (* Proof: by GCD_MOD, GCD_COMM *)
-val GCD_MOD_COMM = store_thm(
-  "GCD_MOD_COMM",
-  ``!m n. 0 < m ==> (gcd n m = gcd (n MOD m) m)``,
-  metis_tac[GCD_MOD, GCD_COMM]);
+Theorem GCD_MOD_COMM:
+    !m n. 0 < m ==> (gcd n m = gcd (n MOD m) m)
+Proof
+  metis_tac[GCD_MOD, GCD_COMM]
+QED
 
 (* Theorem: gcd a (b * a + c) = gcd a c *)
 (* Proof:
@@ -969,20 +1015,22 @@ val GCD_MOD_COMM = store_thm(
     = gcd (c MOD a) a                by MOD_TIMES, 0 < a
     = gcd a c                        by GCD_EFFICIENTLY, 0 < a
 *)
-val GCD_EUCLID = store_thm(
-  "GCD_EUCLID",
-  ``!a b c. gcd a (b * a + c) = gcd a c``,
+Theorem GCD_EUCLID:
+    !a b c. gcd a (b * a + c) = gcd a c
+Proof
   rpt strip_tac >>
   Cases_on `a = 0` >-
   rw[] >>
-  metis_tac[GCD_EFFICIENTLY, MOD_TIMES, NOT_ZERO_LT_ZERO]);
+  metis_tac[GCD_EFFICIENTLY, MOD_TIMES, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: gcd (b * a + c) a = gcd a c *)
 (* Proof: by GCD_EUCLID, GCD_SYM *)
-val GCD_REDUCE = store_thm(
-  "GCD_REDUCE",
-  ``!a b c. gcd (b * a + c) a = gcd a c``,
-  rw[GCD_EUCLID, GCD_SYM]);
+Theorem GCD_REDUCE:
+    !a b c. gcd (b * a + c) a = gcd a c
+Proof
+  rw[GCD_EUCLID, GCD_SYM]
+QED
 
 (* Theorem alias *)
 Theorem GCD_REDUCE_BY_COPRIME = GCD_CANCEL_MULT;
@@ -1001,10 +1049,11 @@ Theorem GCD_REDUCE_BY_COPRIME = GCD_CANCEL_MULT;
    = gcd n 1                by arithmetic
    = 1                      by GCD_1
 *)
-val coprime_SUC = store_thm(
-  "coprime_SUC",
-  ``!n. coprime n (n + 1)``,
-  rw[GCD_SUB_R]);
+Theorem coprime_SUC:
+    !n. coprime n (n + 1)
+Proof
+  rw[GCD_SUB_R]
+QED
 
 (* Theorem: 0 < n ==> coprime n (n - 1) *)
 (* Proof:
@@ -1013,30 +1062,33 @@ val coprime_SUC = store_thm(
    = gcd (n - 1) (n - 1 + 1)   by SUB_ADD, 0 <= n
    = 1                         by coprime_SUC
 *)
-val coprime_PRE = store_thm(
-  "coprime_PRE",
-  ``!n. 0 < n ==> coprime n (n - 1)``,
-  metis_tac[GCD_SYM, coprime_SUC, DECIDE``!n. 0 < n ==> (n - 1 + 1 = n)``]);
+Theorem coprime_PRE:
+    !n. 0 < n ==> coprime n (n - 1)
+Proof
+  metis_tac[GCD_SYM, coprime_SUC, DECIDE``!n. 0 < n ==> (n - 1 + 1 = n)``]
+QED
 
 (* Theorem: coprime 0 n ==> n = 1 *)
 (* Proof:
    gcd 0 n = n    by GCD_0L
            = 1    by coprime 0 n
 *)
-val coprime_0L = store_thm(
-  "coprime_0L",
-  ``!n. coprime 0 n <=> (n = 1)``,
-  rw[GCD_0L]);
+Theorem coprime_0L:
+    !n. coprime 0 n <=> (n = 1)
+Proof
+  rw[GCD_0L]
+QED
 
 (* Theorem: coprime n 0 ==> n = 1 *)
 (* Proof:
    gcd n 0 = n    by GCD_0L
            = 1    by coprime n 0
 *)
-val coprime_0R = store_thm(
-  "coprime_0R",
-  ``!n. coprime n 0 <=> (n = 1)``,
-  rw[GCD_0R]);
+Theorem coprime_0R:
+    !n. coprime n 0 <=> (n = 1)
+Proof
+  rw[GCD_0R]
+QED
 
 (* Theorem: (coprime 0 n <=> n = 1) /\ (coprime n 0 <=> n = 1) *)
 (* Proof: by coprime_0L, coprime_0R *)
@@ -1053,24 +1105,27 @@ QED
       so gcd y x = 1   by GCD_SYM
     thus coprime y x
 *)
-val coprime_sym = store_thm(
-  "coprime_sym",
-  ``!x y. coprime x y = coprime y x``,
-  rw[GCD_SYM]);
+Theorem coprime_sym:
+    !x y. coprime x y = coprime y x
+Proof
+  rw[GCD_SYM]
+QED
 
 (* Theorem: coprime k n /\ n <> 1 ==> k <> 0 *)
 (* Proof: by coprime_0L *)
-val coprime_neq_1 = store_thm(
-  "coprime_neq_1",
-  ``!n k. coprime k n /\ n <> 1 ==> k <> 0``,
-  fs[coprime_0L]);
+Theorem coprime_neq_1:
+    !n k. coprime k n /\ n <> 1 ==> k <> 0
+Proof
+  fs[coprime_0L]
+QED
 
 (* Theorem: coprime k n /\ 1 < n ==> 0 < k *)
 (* Proof: by coprime_neq_1 *)
-val coprime_gt_1 = store_thm(
-  "coprime_gt_1",
-  ``!n k. coprime k n /\ 1 < n ==> 0 < k``,
-  metis_tac[coprime_neq_1, NOT_ZERO_LT_ZERO, DECIDE``~(1 < 1)``]);
+Theorem coprime_gt_1:
+    !n k. coprime k n /\ 1 < n ==> 0 < k
+Proof
+  metis_tac[coprime_neq_1, NOT_ZERO_LT_ZERO, DECIDE``~(1 < 1)``]
+QED
 
 (* Note:  gcd (c ** n) m = gcd c m  is false when n = 0, where c ** 0 = 1. *)
 
@@ -1090,20 +1145,22 @@ val coprime_gt_1 = store_thm(
      Hence coprime m (c ** SUC n)
      or coprime (c ** SUC n) m  by GCD_SYM
 *)
-val coprime_exp = store_thm(
-  "coprime_exp",
-  ``!c m. coprime c m ==> !n. coprime (c ** n) m``,
+Theorem coprime_exp:
+    !c m. coprime c m ==> !n. coprime (c ** n) m
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[EXP, GCD_1] >>
-  metis_tac[EXP, GCD_CANCEL_MULT, GCD_SYM]);
+  metis_tac[EXP, GCD_CANCEL_MULT, GCD_SYM]
+QED
 
 (* Theorem: coprime a b ==> !n. coprime a (b ** n) *)
 (* Proof: by coprime_exp, GCD_SYM *)
-val coprime_exp_comm = store_thm(
-  "coprime_exp_comm",
-  ``!a b. coprime a b ==> !n. coprime a (b ** n)``,
-  metis_tac[coprime_exp, GCD_SYM]);
+Theorem coprime_exp_comm:
+    !a b. coprime a b ==> !n. coprime a (b ** n)
+Proof
+  metis_tac[coprime_exp, GCD_SYM]
+QED
 
 (* Theorem: coprime x z /\ coprime y z ==> coprime (x * y) z *)
 (* Proof:
@@ -1111,10 +1168,11 @@ val coprime_exp_comm = store_thm(
    |- !m n k. coprime m k ==> (gcd m (k * n) = gcd m n)
    Hence follows by coprime_sym.
 *)
-val coprime_product_coprime = store_thm(
-  "coprime_product_coprime",
-  ``!x y z. coprime x z /\ coprime y z ==> coprime (x * y) z``,
-  metis_tac[GCD_CANCEL_MULT, GCD_SYM]);
+Theorem coprime_product_coprime:
+    !x y z. coprime x z /\ coprime y z ==> coprime (x * y) z
+Proof
+  metis_tac[GCD_CANCEL_MULT, GCD_SYM]
+QED
 
 (* Theorem: coprime z x /\ coprime z y ==> coprime z (x * y) *)
 (* Proof:
@@ -1123,10 +1181,11 @@ val coprime_product_coprime = store_thm(
       = gcd z y             by GCD_CANCEL_MULT
       = 1                   by given
 *)
-val coprime_product_coprime_sym = store_thm(
-  "coprime_product_coprime_sym",
-  ``!x y z. coprime z x /\ coprime z y ==> coprime z (x * y)``,
-  rw[GCD_CANCEL_MULT]);
+Theorem coprime_product_coprime_sym:
+    !x y z. coprime z x /\ coprime z y ==> coprime z (x * y)
+Proof
+  rw[GCD_CANCEL_MULT]
+QED
 (* This is the same as PRODUCT_WITH_GCD_ONE *)
 
 (* Theorem: coprime x z ==> (coprime y z <=> coprime (x * y) z) *)
@@ -1142,20 +1201,22 @@ val coprime_product_coprime_sym = store_thm(
        ==> d = 1                          by DIVIDES_ONE
         or coprime y z                    by notation
 *)
-val coprime_product_coprime_iff = store_thm(
-  "coprime_product_coprime_iff",
-  ``!x y z. coprime x z ==> (coprime y z <=> coprime (x * y) z)``,
+Theorem coprime_product_coprime_iff:
+    !x y z. coprime x z ==> (coprime y z <=> coprime (x * y) z)
+Proof
   rw[EQ_IMP_THM] >-
   rw[coprime_product_coprime] >>
   qabbrev_tac `d = gcd y z` >>
-  metis_tac[GCD_PROPERTY, DIVIDES_MULT, MULT_COMM, DIVIDES_ONE]);
+  metis_tac[GCD_PROPERTY, DIVIDES_MULT, MULT_COMM, DIVIDES_ONE]
+QED
 
 (* Theorem: a divides n /\ b divides n /\ coprime a b ==> (a * b) divides n *)
 (* Proof: by LCM_COPRIME, LCM_DIVIDES *)
-val coprime_product_divides = store_thm(
-  "coprime_product_divides",
-  ``!n a b. a divides n /\ b divides n /\ coprime a b ==> (a * b) divides n``,
-  metis_tac[LCM_COPRIME, LCM_DIVIDES]);
+Theorem coprime_product_divides:
+    !n a b. a divides n /\ b divides n /\ coprime a b ==> (a * b) divides n
+Proof
+  metis_tac[LCM_COPRIME, LCM_DIVIDES]
+QED
 
 (* Theorem: 0 < m /\ coprime m n ==> coprime m (n MOD m) *)
 (* Proof:
@@ -1165,17 +1226,19 @@ val coprime_product_divides = store_thm(
    = gcd m (n MOD m)                         by GCD_SYM
    Hence true since coprime m n <=> gcd m n = 1.
 *)
-val coprime_mod = store_thm(
-  "coprime_mod",
-  ``!m n. 0 < m /\ coprime m n ==> coprime m (n MOD m)``,
-  metis_tac[GCD_EFFICIENTLY, GCD_SYM, NOT_ZERO_LT_ZERO]);
+Theorem coprime_mod:
+    !m n. 0 < m /\ coprime m n ==> coprime m (n MOD m)
+Proof
+  metis_tac[GCD_EFFICIENTLY, GCD_SYM, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: 0 < m ==> (coprime m n = coprime m (n MOD m)) *)
 (* Proof: by GCD_MOD *)
-val coprime_mod_iff = store_thm(
-  "coprime_mod_iff",
-  ``!m n. 0 < m ==> (coprime m n = coprime m (n MOD m))``,
-  rw[Once GCD_MOD]);
+Theorem coprime_mod_iff:
+    !m n. 0 < m ==> (coprime m n = coprime m (n MOD m))
+Proof
+  rw[Once GCD_MOD]
+QED
 
 (* Theorem: 1 < n /\ coprime n k /\ 1 < p /\ p divides n ==> ~(p divides k) *)
 (* Proof:
@@ -1188,12 +1251,13 @@ val coprime_mod_iff = store_thm(
    or   p = 1                   by DIVIDES_ONE
    which contradicts 1 < p.
 *)
-val coprime_factor_not_divides = store_thm(
-  "coprime_factor_not_divides",
-  ``!n k. 1 < n /\ coprime n k ==> !p. 1 < p /\ p divides n ==> ~(p divides k)``,
+Theorem coprime_factor_not_divides:
+    !n k. 1 < n /\ coprime n k ==> !p. 1 < p /\ p divides n ==> ~(p divides k)
+Proof
   rpt strip_tac >>
   `n <> 0 /\ n <> 1 /\ p <> 1` by decide_tac >>
-  metis_tac[GCD_IS_GREATEST_COMMON_DIVISOR, DIVIDES_ONE, GCD_0R]);
+  metis_tac[GCD_IS_GREATEST_COMMON_DIVISOR, DIVIDES_ONE, GCD_0R]
+QED
 
 (* Theorem: m divides n ==> !k. coprime n k ==> coprime m k *)
 (* Proof:
@@ -1203,15 +1267,16 @@ val coprime_factor_not_divides = store_thm(
      so d divides 1                   by GCD_IS_GREATEST_COMMON_DIVISOR, coprime n k
     ==> d = 1                         by DIVIDES_ONE
 *)
-val coprime_factor_coprime = store_thm(
-  "coprime_factor_coprime",
-  ``!m n. m divides n ==> !k. coprime n k ==> coprime m k``,
+Theorem coprime_factor_coprime:
+    !m n. m divides n ==> !k. coprime n k ==> coprime m k
+Proof
   rpt strip_tac >>
   qabbrev_tac `d = gcd m k` >>
   `d divides m /\ d divides k` by rw[GCD_IS_GREATEST_COMMON_DIVISOR, Abbr`d`] >>
   `d divides n` by metis_tac[DIVIDES_TRANS] >>
   `d divides 1` by metis_tac[GCD_IS_GREATEST_COMMON_DIVISOR] >>
-  rw[GSYM DIVIDES_ONE]);
+  rw[GSYM DIVIDES_ONE]
+QED
 
 (* Idea: common factor of two coprime numbers. *)
 
@@ -1239,16 +1304,17 @@ QED
      but d <> p                     by divides_iff_gcd_fix
    Hence d = 1, or coprime p n.
 *)
-val prime_not_divides_coprime = store_thm(
-  "prime_not_divides_coprime",
-  ``!n p. prime p /\ ~(p divides n) ==> coprime p n``,
+Theorem prime_not_divides_coprime:
+    !n p. prime p /\ ~(p divides n) ==> coprime p n
+Proof
   rpt strip_tac >>
   `n <> 0` by metis_tac[ALL_DIVIDES_0] >>
   Cases_on `n = 1` >-
   rw[] >>
   `0 < p` by rw[PRIME_POS] >>
   `p <> 0` by decide_tac >>
-  metis_tac[prime_def, divides_iff_gcd_fix, GCD_IS_GREATEST_COMMON_DIVISOR]);
+  metis_tac[prime_def, divides_iff_gcd_fix, GCD_IS_GREATEST_COMMON_DIVISOR]
+QED
 
 (* Theorem: prime p /\ ~(coprime p n) ==> p divides n *)
 (* Proof:
@@ -1259,10 +1325,11 @@ val prime_not_divides_coprime = store_thm(
 
    Or: this is just the inverse of prime_not_divides_coprime.
 *)
-val prime_not_coprime_divides = store_thm(
-  "prime_not_coprime_divides",
-  ``!n p. prime p /\ ~(coprime p n) ==> p divides n``,
-  metis_tac[prime_not_divides_coprime]);
+Theorem prime_not_coprime_divides:
+    !n p. prime p /\ ~(coprime p n) ==> p divides n
+Proof
+  metis_tac[prime_not_divides_coprime]
+QED
 
 (* Theorem: 1 < n /\ prime p /\ p divides n ==> !k. coprime n k ==> coprime p k *)
 (* Proof:
@@ -1271,10 +1338,11 @@ val prime_not_coprime_divides = store_thm(
     Then prime p /\ ~(p divides k)
      ==> coprime p k                  by prime_not_divides_coprime
 *)
-val coprime_prime_factor_coprime = store_thm(
-  "coprime_prime_factor_coprime",
-  ``!n p. 1 < n /\ prime p /\ p divides n ==> !k. coprime n k ==> coprime p k``,
-  metis_tac[coprime_factor_not_divides, prime_not_divides_coprime, ONE_LT_PRIME]);
+Theorem coprime_prime_factor_coprime:
+    !n p. 1 < n /\ prime p /\ p divides n ==> !k. coprime n k ==> coprime p k
+Proof
+  metis_tac[coprime_factor_not_divides, prime_not_divides_coprime, ONE_LT_PRIME]
+QED
 
 (* This is better:
 coprime_factor_coprime
@@ -1360,9 +1428,9 @@ QED
       or d divides 1                    by m - k = 1
      ==> d = 1                          by DIVIDES_ONE
 *)
-val divides_imp_coprime_with_predecessor = store_thm(
-  "divides_imp_coprime_with_predecessor",
-  ``!m n. 0 < m /\ n divides m ==> coprime n (PRE m)``,
+Theorem divides_imp_coprime_with_predecessor:
+    !m n. 0 < m /\ n divides m ==> coprime n (PRE m)
+Proof
   rpt strip_tac >>
   `?q. m = q * n` by rw[GSYM divides_def] >>
   `m <> 0` by decide_tac >>
@@ -1372,7 +1440,8 @@ val divides_imp_coprime_with_predecessor = store_thm(
   `d divides n /\ d divides k` by rw[GCD_IS_GREATEST_COMMON_DIVISOR, Abbr`d`] >>
   `d divides m` by rw[DIVIDES_MULTIPLE] >>
   `d divides (m - k)` by rw[DIVIDES_SUB] >>
-  metis_tac[DIVIDES_ONE]);
+  metis_tac[DIVIDES_ONE]
+QED
 
 (* Theorem: coprime p n ==> (gcd (p * m) n = gcd m n) *)
 (* Proof:
@@ -1381,10 +1450,11 @@ val divides_imp_coprime_with_predecessor = store_thm(
    = gcd n (p * m)                        by GCD_SYM
    = gcd n p                              by GCD_CANCEL_MULT
 *)
-val gcd_coprime_cancel = store_thm(
-  "gcd_coprime_cancel",
-  ``!m n p. coprime p n ==> (gcd (p * m) n = gcd m n)``,
-  rw[GCD_CANCEL_MULT, GCD_SYM]);
+Theorem gcd_coprime_cancel:
+    !m n p. coprime p n ==> (gcd (p * m) n = gcd m n)
+Proof
+  rw[GCD_CANCEL_MULT, GCD_SYM]
+QED
 
 (* The following is a direct, but tricky, proof of the above result *)
 
@@ -1423,13 +1493,14 @@ QED
     But p <> q                       by given
      so d = 1, contradicts d <> 1.
 *)
-val primes_coprime = store_thm(
-  "primes_coprime",
-  ``!p q. prime p /\ prime q /\ p <> q ==> coprime p q``,
+Theorem primes_coprime:
+    !p q. prime p /\ prime q /\ p <> q ==> coprime p q
+Proof
   spose_not_then strip_assume_tac >>
   qabbrev_tac `d = gcd p q` >>
   `d divides p /\ d divides q` by metis_tac[GCD_PROPERTY] >>
-  metis_tac[prime_def]);
+  metis_tac[prime_def]
+QED
 
 (* Theorem: prime p ==> p cannot divide k! for p > k.
             prime p /\ k < p ==> ~(p divides (FACT k)) *)
@@ -1450,9 +1521,9 @@ val primes_coprime = store_thm(
      But SUC k < p, so ~(p divides (SUC k)) by NOT_LT_DIVIDES
      Hence p divides (FACT k) ==> F         by induction hypothesis
 *)
-val PRIME_BIG_NOT_DIVIDES_FACT = store_thm(
-  "PRIME_BIG_NOT_DIVIDES_FACT",
-  ``!p k. prime p /\ k < p ==> ~(p divides (FACT k))``,
+Theorem PRIME_BIG_NOT_DIVIDES_FACT:
+    !p k. prime p /\ k < p ==> ~(p divides (FACT k))
+Proof
   (spose_not_then strip_assume_tac) >>
   Induct_on `k` >| [
     rw[FACT] >>
@@ -1461,7 +1532,8 @@ val PRIME_BIG_NOT_DIVIDES_FACT = store_thm(
     (spose_not_then strip_assume_tac) >>
     `k < p /\ 0 < SUC k` by decide_tac >>
     metis_tac[P_EUCLIDES, NOT_LT_DIVIDES]
-  ]);
+  ]
+QED
 
 (* Theorem: n divides m ==> coprime n (SUC m) *)
 (* Proof:
@@ -1478,9 +1550,9 @@ val PRIME_BIG_NOT_DIVIDES_FACT = store_thm(
    = gcd 1 n                 by n divides m
    = 1                       by GCD_1
 *)
-val divides_imp_coprime_with_successor = store_thm(
-  "divides_imp_coprime_with_successor",
-  ``!m n. n divides m ==> coprime n (SUC m)``,
+Theorem divides_imp_coprime_with_successor:
+    !m n. n divides m ==> coprime n (SUC m)
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[GSYM ZERO_DIVIDES] >>
@@ -1492,7 +1564,8 @@ val divides_imp_coprime_with_successor = store_thm(
   `_ = (m MOD n + 1 MOD n) MOD n` by rw[MOD_PLUS] >>
   `_ = (0 + 1) MOD n` by rw[ONE_MOD] >>
   `_ = 1` by rw[ONE_MOD] >>
-  metis_tac[GCD_EFFICIENTLY, GCD_1]);
+  metis_tac[GCD_EFFICIENTLY, GCD_1]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Consequences of Coprime.                                                  *)
@@ -1504,9 +1577,9 @@ val divides_imp_coprime_with_successor = store_thm(
    x MOD n = 0 ==> x a multiple of n ==> gcd n x = n <> 1  if n <> 1.
    Hence if 1 < n, coprime n x ==> x MOD n <> 0, or 0 < x MOD n.
 *)
-val MOD_NONZERO_WHEN_GCD_ONE = store_thm(
-  "MOD_NONZERO_WHEN_GCD_ONE",
-  ``!n. 1 < n ==> !x. coprime n x ==> 0 < x /\ 0 < x MOD n``,
+Theorem MOD_NONZERO_WHEN_GCD_ONE:
+    !n. 1 < n ==> !x. coprime n x ==> 0 < x /\ 0 < x MOD n
+Proof
   ntac 4 strip_tac >>
   conj_asm1_tac >| [
     `1 <> n` by decide_tac >>
@@ -1518,7 +1591,8 @@ val MOD_NONZERO_WHEN_GCD_ONE = store_thm(
     spose_not_then strip_assume_tac >>
     `(x MOD n = 0) /\ 0 < n /\ 1 <> 0` by decide_tac >>
     metis_tac[MOD_MULTIPLE_ZERO, MULT_COMM]
-  ]);
+  ]
+QED
 
 (* Theorem: If 1 < n, coprime n x ==> ?k. ((k * x) MOD n = 1) /\ coprime n k *)
 (* Proof:
@@ -1539,9 +1613,9 @@ val MOD_NONZERO_WHEN_GCD_ONE = store_thm(
         (b * x) * g = (q * a) * g + 1      by arithmetic
    Hence g divides 1, or g = 1     since 0 < g.
 *)
-val GCD_ONE_PROPERTY = store_thm(
-  "GCD_ONE_PROPERTY",
-  ``!n x. 1 < n /\ coprime n x ==> ?k. ((k * x) MOD n = 1) /\ coprime n k``,
+Theorem GCD_ONE_PROPERTY:
+    !n x. 1 < n /\ coprime n x ==> ?k. ((k * x) MOD n = 1) /\ coprime n k
+Proof
   rpt strip_tac >>
   `n <> 1` by decide_tac >>
   `x <> 0` by metis_tac[GCD_0R] >>
@@ -1555,7 +1629,8 @@ val GCD_ONE_PROPERTY = store_thm(
   `g divides (n * q) /\ g divides (k*x)` by rw[DIVIDES_MULT] >>
   `g divides (n * q + 1)` by metis_tac [MULT_COMM] >>
   `g divides 1` by metis_tac[DIVIDES_ADD_2] >>
-  metis_tac[DIVIDES_ONE]);
+  metis_tac[DIVIDES_ONE]
+QED
 
 (* Theorem: LCM (k * m) (k * n) = k * LCM m n *)
 (* Proof:
@@ -1567,9 +1642,9 @@ val GCD_ONE_PROPERTY = store_thm(
    = k * m * n / (gcd m n)
    = k * LCM m n                                by GCD_LCM
 *)
-val LCM_COMMON_FACTOR = store_thm(
-  "LCM_COMMON_FACTOR",
-  ``!m n k. lcm (k * m) (k * n) = k * lcm m n``,
+Theorem LCM_COMMON_FACTOR:
+    !m n k. lcm (k * m) (k * n) = k * lcm m n
+Proof
   rpt strip_tac >>
   `k * (k * (m * n)) = (k * m) * (k * n)` by rw_tac arith_ss[] >>
   `_ = gcd (k * m) (k * n) * lcm (k * m) (k * n) ` by rw[GCD_LCM] >>
@@ -1582,7 +1657,8 @@ val LCM_COMMON_FACTOR = store_thm(
   `_ = (gcd m n) * (k * (lcm m n))` by rw_tac arith_ss[] >>
   Cases_on `n = 0` >-
   rw[] >>
-  metis_tac[MULT_LEFT_CANCEL, GCD_EQ_0]);
+  metis_tac[MULT_LEFT_CANCEL, GCD_EQ_0]
+QED
 
 (* Theorem: coprime a b ==> !c. lcm (a * c) (b * c) = a * b * c *)
 (* Proof:
@@ -1592,10 +1668,11 @@ val LCM_COMMON_FACTOR = store_thm(
    = (lcm a b) * c           by MULT_COMM
    = a * b * c               by LCM_COPRIME
 *)
-val LCM_COMMON_COPRIME = store_thm(
-  "LCM_COMMON_COPRIME",
-  ``!a b. coprime a b ==> !c. lcm (a * c) (b * c) = a * b * c``,
-  metis_tac[LCM_COMMON_FACTOR, LCM_COPRIME, MULT_COMM]);
+Theorem LCM_COMMON_COPRIME:
+    !a b. coprime a b ==> !c. lcm (a * c) (b * c) = a * b * c
+Proof
+  metis_tac[LCM_COMMON_FACTOR, LCM_COPRIME, MULT_COMM]
+QED
 
 (* Theorem: 0 < n /\ m MOD n = 0 ==> gcd m n = n *)
 (* Proof:
@@ -1604,10 +1681,11 @@ val LCM_COMMON_COPRIME = store_thm(
    Hence gcd m n = gcd n m   by GCD_SYM
                  = n         by divides_iff_gcd_fix
 *)
-val GCD_MULTIPLE = store_thm(
-  "GCD_MULTIPLE",
-  ``!m n. 0 < n /\ (m MOD n = 0) ==> (gcd m n = n)``,
-  metis_tac[DIVIDES_MOD_0, divides_iff_gcd_fix, GCD_SYM]);
+Theorem GCD_MULTIPLE:
+    !m n. 0 < n /\ (m MOD n = 0) ==> (gcd m n = n)
+Proof
+  metis_tac[DIVIDES_MOD_0, divides_iff_gcd_fix, GCD_SYM]
+QED
 
 (* Theorem: gcd (m * n) n = n *)
 (* Proof:
@@ -1618,13 +1696,14 @@ val GCD_MULTIPLE = store_thm(
    = n * 1                  by GCD_1
    = n                      by MULT_RIGHT_1
 *)
-val GCD_MULTIPLE_ALT = store_thm(
-  "GCD_MULTIPLE_ALT",
-  ``!m n. gcd (m * n) n = n``,
+Theorem GCD_MULTIPLE_ALT:
+    !m n. gcd (m * n) n = n
+Proof
   rpt strip_tac >>
   `gcd (m * n) n = gcd (n * m) n` by rw[MULT_COMM] >>
   `_ = gcd (n * m) (n * 1)` by rw[] >>
-  rw[GCD_COMMON_FACTOR]);
+  rw[GCD_COMMON_FACTOR]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Modulo Theorems                                                           *)
@@ -1689,14 +1768,15 @@ QED
                 = a multiple of n
    Therefore (a - b) MOD n = 0.
 *)
-val MOD_EQ_DIFF = store_thm(
-  "MOD_EQ_DIFF",
-  ``!n a b. 0 < n /\ (a MOD n = b MOD n) ==> ((a - b) MOD n = 0)``,
+Theorem MOD_EQ_DIFF:
+    !n a b. 0 < n /\ (a MOD n = b MOD n) ==> ((a - b) MOD n = 0)
+Proof
   rpt strip_tac >>
   `a = a DIV n * n + a MOD n` by metis_tac[DIVISION] >>
   `b = b DIV n * n + b MOD n` by metis_tac[DIVISION] >>
   `a - b = (a DIV n - b DIV n) * n` by rw_tac arith_ss[] >>
-  metis_tac[MOD_EQ_0]);
+  metis_tac[MOD_EQ_0]
+QED
 (* Note: The reverse is true only when a >= b:
          (a-b) MOD n = 0 cannot imply a MOD n = b MOD n *)
 
@@ -1710,15 +1790,16 @@ val MOD_EQ_DIFF = store_thm(
 
    The converse is given by MOD_EQ_DIFF.
 *)
-val MOD_EQ = store_thm(
-  "MOD_EQ",
-  ``!n a b. 0 < n /\ b <= a ==> (((a - b) MOD n = 0) <=> (a MOD n = b MOD n))``,
+Theorem MOD_EQ:
+    !n a b. 0 < n /\ b <= a ==> (((a - b) MOD n = 0) <=> (a MOD n = b MOD n))
+Proof
   rw[EQ_IMP_THM] >| [
     `?k. a - b = k * n` by metis_tac[DIVIDES_MOD_0, divides_def] >>
     `a = k*n + b` by rw_tac arith_ss[] >>
     metis_tac[MOD_TIMES],
     metis_tac[MOD_EQ_DIFF]
-  ]);
+  ]
+QED
 
 (* Theorem: [Euclid's Lemma] A prime a divides product iff the prime a divides factor.
             [in MOD notation] For prime p, x*y MOD p = 0 <=> x MOD p = 0 or y MOD p = 0 *)
@@ -1732,13 +1813,14 @@ val MOD_EQ = store_thm(
    Both are true by DIVIDES_MULT: !a b c. a divides b ==> a divides (b * c).
    The symmetry of x and y can be taken care of by MULT_COMM.
 *)
-val EUCLID_LEMMA = store_thm(
-  "EUCLID_LEMMA",
-  ``!p x y. prime p ==> (((x * y) MOD p = 0) <=> (x MOD p = 0) \/ (y MOD p = 0))``,
+Theorem EUCLID_LEMMA:
+    !p x y. prime p ==> (((x * y) MOD p = 0) <=> (x MOD p = 0) \/ (y MOD p = 0))
+Proof
   rpt strip_tac >>
   `0 < p` by rw[PRIME_POS] >>
   rw[GSYM DIVIDES_MOD_0, EQ_IMP_THM] >>
-  metis_tac[P_EUCLIDES, DIVIDES_MULT, MULT_COMM]);
+  metis_tac[P_EUCLIDES, DIVIDES_MULT, MULT_COMM]
+QED
 
 (* Idea: For prime p, FACT (p-1) MOD p <> 0 *)
 

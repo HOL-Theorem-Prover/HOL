@@ -1382,11 +1382,12 @@ val less_lesseq  = hd(amatch``Number_Natural_less m (Number_Natural_suc n) <=>
 val trichotomy   = hd(amatch``_ \/ _ \/ (_ = _)``);
 
 (* |- !A. A ==> ~A ==> F *)
-val F_IMP2 = store_thm
-  ("F_IMP2", “!A. A ==> ~A ==> F”,
+Theorem F_IMP2:  !A. A ==> ~A ==> F
+Proof
   PURE_REWRITE_TAC[GSYM imp_F]
   \\ gen_tac
-  \\ disch_then(fn th => disch_then(ACCEPT_TAC o C MP th)));
+  \\ disch_then(fn th => disch_then(ACCEPT_TAC o C MP th))
+QED
 
 (* |- Number_Natural_less =
       (\m n. ?P. (!n. P (Number_Natural_suc n) ==> P n) /\ P m /\ ~P n)
@@ -1743,8 +1744,9 @@ val _ = Parse.hide "the_value";
 val the_value_def = new_definition
   ("the_value_def", ``the_value = (ARB:'a prove_base_assums$itself)``);
 
-val itself_unique = Q.store_thm("itself_unique",
-  `!i. i = the_value`,
+Theorem itself_unique:
+   !i. i = the_value
+Proof
   CHOOSE_TAC itself_tydef
   \\ pop_assum mp_tac
   \\ PURE_REWRITE_TAC[TYPE_DEFINITION]
@@ -1756,23 +1758,27 @@ val itself_unique = Q.store_thm("itself_unique",
   \\ first_assum(qspec_then`rep i`(mp_tac o #2 o EQ_IMP_RULE))
   \\ impl_tac >- (qexists_tac`i` \\ REFL_TAC)
   \\ disch_then(fn th => PURE_REWRITE_TAC[th])
-  \\ first_x_assum MATCH_ACCEPT_TAC);
+  \\ first_x_assum MATCH_ACCEPT_TAC
+QED
 
-val itself_induction = store_thm("itself_induction",
-  ``!P. P the_value ==> !i. P i``,
+Theorem itself_induction:
+    !P. P the_value ==> !i. P i
+Proof
   rpt strip_tac
   \\ PURE_ONCE_REWRITE_TAC[itself_unique]
-  \\ first_assum ACCEPT_TAC);
+  \\ first_assum ACCEPT_TAC
+QED
 
 (* |- !(e :'b). ?(f :'a prove_base_assums$itself -> 'b).
         f (the_value :'a prove_base_assums$itself) = e
  *)
-val itself_Axiom = store_thm
-  ("itself_Axiom", ``!(e :'b). ?f. f the_value = e``,
+Theorem itself_Axiom:   !(e :'b). ?f. f the_value = e
+Proof
   gen_tac
   \\ qexists_tac`\x. e`
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
-  \\ REFL_TAC);
+  \\ REFL_TAC
+QED
 
 (* |- RES_FORALL = (\p m. !x. x IN p ==> m x) *)
 val RES_FORALL_DEF = new_definition("RES_FORALL_DEF",concl boolTheory.RES_FORALL_DEF);

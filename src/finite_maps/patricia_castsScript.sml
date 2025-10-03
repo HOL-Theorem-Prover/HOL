@@ -188,30 +188,38 @@ val PTREE_OF_STRINGSET_INSERT = store_thm("PTREE_OF_STRINGSET_INSERT",
 );
 *)
 
-val EVERY_MAP_ORD = store_thm("EVERY_MAP_ORD",
-  `!l. EVERY ($> 256) (MAP ORD l)`,
-  Induct \\ SRW_TAC [] [GREATER_DEF, stringTheory.ORD_BOUND]);
+Theorem EVERY_MAP_ORD:
+   !l. EVERY ($> 256) (MAP ORD l)
+Proof
+  Induct \\ SRW_TAC [] [GREATER_DEF, stringTheory.ORD_BOUND]
+QED
 
-val MAP_11 = store_thm("MAP_11",
-  `!f l1 l2.
+Theorem MAP_11:
+   !f l1 l2.
        (!x y. (f x = f y) = (x = y)) ==>
-       ((MAP f l1 = MAP f l2) = (l1 = l2))`,
-  Induct_on `l1` \\ Induct_on `l2` \\ SRW_TAC [] []);
+       ((MAP f l1 = MAP f l2) = (l1 = l2))
+Proof
+  Induct_on `l1` \\ Induct_on `l2` \\ SRW_TAC [] []
+QED
 
-val REVERSE_11 = store_thm("REVERSE_11",
-  `!l1 l2. ((REVERSE l1 = REVERSE l2) = (l1 = l2))`,
+Theorem REVERSE_11:
+   !l1 l2. ((REVERSE l1 = REVERSE l2) = (l1 = l2))
+Proof
   Induct_on `l1` \\ Induct_on `l2`
-     \\ SRW_TAC [] [] \\ PROVE_TAC []);
+     \\ SRW_TAC [] [] \\ PROVE_TAC []
+QED
 
-val string_to_num_11 = store_thm("string_to_num_11",
-  `!s t. (string_to_num s = string_to_num t) = (s = t)`,
+Theorem string_to_num_11:
+   !s t. (string_to_num s = string_to_num t) = (s = t)
+Proof
   REPEAT STRIP_TAC \\ EQ_TAC
     \\ SRW_TAC [] [string_to_num_def, s2n_def]
     \\ SPECL_THEN [`256`, `MAP ORD (REVERSE s)`,
                           `MAP ORD (REVERSE t)`]
          (IMP_RES_TAC o SIMP_RULE (srw_ss()) [EVERY_MAP_ORD]) l2n_11
     \\ FULL_SIMP_TAC (srw_ss()) [REVERSE_11,
-         (SIMP_RULE (srw_ss()) [stringTheory.ORD_11] o ISPEC `ORD`) MAP_11]);
+         (SIMP_RULE (srw_ss()) [stringTheory.ORD_11] o ISPEC `ORD`) MAP_11]
+QED
 
 val n2l_NOT_NULL = prove( `!b n. ~(n2l b n = [])`, SRW_TAC [] [Once n2l_def]);
 
@@ -281,9 +289,10 @@ val s2n_STRING_STRING1 =
  (SIMP_RULE (srw_ss()) [EVAL ``ORD (CHR 1)``] o
   SPECL [`ORD`,`256`,`CHR 1`]) s2n_STRING_STRING;
 
-val IMAGE_string_to_num = store_thm("IMAGE_string_to_num",
-  `!n. (n = 1) \/ (256 <= n) /\ (n DIV 256 ** LOG 256 n = 1) =
-       n IN IMAGE string_to_num UNIV`,
+Theorem IMAGE_string_to_num:
+   !n. (n = 1) \/ (256 <= n) /\ (n DIV 256 ** LOG 256 n = 1) =
+       n IN IMAGE string_to_num UNIV
+Proof
   SRW_TAC [] [IN_IMAGE] \\ EQ_TAC \\ SRW_TAC [] []
     >| [
        EXISTS_TAC `""` \\ EVAL_TAC,
@@ -299,14 +308,17 @@ val IMAGE_string_to_num = store_thm("IMAGE_string_to_num",
        by METIS_TAC [l2n_lt, DECIDE ``0 < 256``]
        \\ SRW_TAC [ARITH_ss] [s2n_def, LOG_ADD_COMM, DIV_MULT_1,
                               SPECL [`256`, `a ++ b`] l2n_APPEND]
-    ]);
+    ]
+QED
 
 val string_to_num_num_to_string = save_thm("string_to_num_num_to_string",
   REWRITE_RULE [IMAGE_string_to_num] string_to_num_num_to_string);
 
-val num_to_string_string_to_num = store_thm("num_to_string_string_to_num",
-  `!s. num_to_string (string_to_num s) = s`,
-  SRW_TAC [] [GSYM string_to_num_11, string_to_num_num_to_string, IMAGE_IN]);
+Theorem num_to_string_string_to_num:
+   !s. num_to_string (string_to_num s) = s
+Proof
+  SRW_TAC [] [GSYM string_to_num_11, string_to_num_num_to_string, IMAGE_IN]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -314,9 +326,11 @@ val ADD_INSERT_WORD = save_thm("ADD_INSERT_WORD",
   (GEN_ALL o SIMP_CONV (srw_ss()) [GSYM INSERT_PTREEw_def, oneTheory.one])
   ``ADDw t (w,v:unit)``);
 
-val THE_PTREE_SOME_PTREE = store_thm("THE_PTREE_SOME_PTREE",
-  `!t. THE_PTREE (SOME_PTREE t) = t`,
-  SRW_TAC [] [SOME_PTREE_def]);
+Theorem THE_PTREE_SOME_PTREE:
+   !t. THE_PTREE (SOME_PTREE t) = t
+Proof
+  SRW_TAC [] [SOME_PTREE_def]
+QED
 
 val _ = export_rewrites ["THE_PTREE_SOME_PTREE"];
 
