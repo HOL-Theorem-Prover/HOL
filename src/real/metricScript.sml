@@ -604,7 +604,7 @@ Theorem MR1_ADD_LT:
    !x d. &0 < d ==> ((dist mr1)(x,x + d) = d)
 Proof
   REPEAT GEN_TAC THEN DISCH_THEN(MP_TAC o MATCH_MP REAL_LT_IMP_LE) THEN
-  MATCH_ACCEPT_TAC MR1_ADD_LE
+  MATCH_ACCEPT_TAC MR1_ADD_POS
 QED
 
 Theorem MR1_SUB_LT:
