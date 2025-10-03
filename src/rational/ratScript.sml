@@ -484,7 +484,7 @@ Proof
         REWRITE_TAC[RAT_ADD_CONG1]
 QED
 
-val RAT_ADD_CONG = save_thm("RAT_ADD_CONG", CONJ RAT_ADD_CONG1 RAT_ADD_CONG2);
+Theorem RAT_ADD_CONG = CONJ RAT_ADD_CONG1 RAT_ADD_CONG2;
 
 (*--------------------------------------------------------------------------
  *  RAT_MUL_CONG1: thm
@@ -509,8 +509,8 @@ Proof
   CONJ_TAC THEN CONV_TAC (AC_CONV (INT_MUL_ASSOC,INT_MUL_SYM))
 QED
 
-val FRAC_MUL_EQUIV2 = save_thm ("FRAC_MUL_EQUIV2",
-  ONCE_REWRITE_RULE [FRAC_MUL_COMM] FRAC_MUL_EQUIV1) ;
+Theorem FRAC_MUL_EQUIV2 =
+  ONCE_REWRITE_RULE [FRAC_MUL_COMM] FRAC_MUL_EQUIV1 ;
 
 Theorem RAT_MUL_CONG1:
     !x y. abs_rat (frac_mul (rep_rat (abs_rat x)) y) = abs_rat (frac_mul x y)
@@ -526,7 +526,7 @@ Proof
         RW_TAC int_ss[RAT_MUL_CONG1]
 QED
 
-val RAT_MUL_CONG = save_thm("RAT_MUL_CONG", CONJ RAT_MUL_CONG1 RAT_MUL_CONG2);
+Theorem RAT_MUL_CONG = CONJ RAT_MUL_CONG1 RAT_MUL_CONG2;
 
 (*--------------------------------------------------------------------------
  *  RAT_SUB_CONG1: thm
@@ -553,7 +553,7 @@ Proof
         REWRITE_TAC[RAT_SUB_CONG1]
 QED
 
-val RAT_SUB_CONG = save_thm("RAT_SUB_CONG", CONJ RAT_SUB_CONG1 RAT_SUB_CONG2);
+Theorem RAT_SUB_CONG = CONJ RAT_SUB_CONG1 RAT_SUB_CONG2;
 
 (*--------------------------------------------------------------------------
  *  RAT_DIV_CONG1: thm
@@ -591,7 +591,7 @@ Proof
         irule rat_equiv_rep_abs
 QED
 
-val RAT_DIV_CONG = save_thm("RAT_DIV_CONG", CONJ RAT_DIV_CONG1 RAT_DIV_CONG2 );
+Theorem RAT_DIV_CONG = CONJ RAT_DIV_CONG1 RAT_DIV_CONG2;
 
 (*==========================================================================
  *  numerator and denominator
@@ -2693,7 +2693,7 @@ val RAT_ADD_NUM3 = prove(``!n m.  &n + ~&m = if m<=n then &(n-m) else ~&(m-n)``,
 val RAT_ADD_NUM4 = prove(``!n m. ~&n + ~&m = ~&(n+m)``,
         PROVE_TAC[RAT_ADD_NUM1, RAT_EQ_AINV, RAT_AINV_ADD] );
 
-val RAT_ADD_NUM_CALCULATE = save_thm("RAT_ADD_NUM_CALCULATE", LIST_CONJ[RAT_ADD_NUM1, RAT_ADD_NUM2, RAT_ADD_NUM3, RAT_ADD_NUM4] );
+Theorem RAT_ADD_NUM_CALCULATE = LIST_CONJ[RAT_ADD_NUM1, RAT_ADD_NUM2, RAT_ADD_NUM3, RAT_ADD_NUM4];
 
 Theorem RAT_TIMES2:
   2 * (x:rat) = x + x
@@ -2729,7 +2729,7 @@ val RAT_MUL_NUM3 = prove(``!n m.  &n * ~&m = ~&(n*m)``,
 val RAT_MUL_NUM4 = prove(``!n m. ~&n * ~&m =  &(n*m)``,
         PROVE_TAC[GSYM RAT_AINV_RMUL, GSYM RAT_AINV_LMUL, RAT_AINV_AINV, RAT_MUL_NUM1] );
 
-val RAT_MUL_NUM_CALCULATE = save_thm("RAT_MUL_NUM_CALCULATE", LIST_CONJ[RAT_MUL_NUM1, RAT_MUL_NUM2, RAT_MUL_NUM3, RAT_MUL_NUM4] );
+Theorem RAT_MUL_NUM_CALCULATE = LIST_CONJ[RAT_MUL_NUM1, RAT_MUL_NUM2, RAT_MUL_NUM3, RAT_MUL_NUM4];
 
 (*--------------------------------------------------------------------------
    RAT_EQ_NUM: thm
@@ -2843,9 +2843,8 @@ val RAT_LT_NUM4 = Q.prove(
   ‘-&m < -&n <=> n < m’,
   simp[RAT_LES_AINV]);
 
-val RAT_LT_NUM_CALCULATE = save_thm(
-  "RAT_LT_NUM_CALCULATE[simp]",
-  LIST_CONJ [RAT_LT_NUM1, RAT_LT_NUM2, RAT_LT_NUM3, RAT_LT_NUM4]);
+Theorem RAT_LT_NUM_CALCULATE[simp] =
+  LIST_CONJ [RAT_LT_NUM1, RAT_LT_NUM2, RAT_LT_NUM3, RAT_LT_NUM4];
 
 (* ----------------------------------------------------------------------
     RAT_LE_NUM
@@ -2863,9 +2862,8 @@ val RAT_LE_NUM4 = Q.prove(
   ‘-&m <= -&n <=> n <= m’,
   simp[rat_leq_def]);
 
-val RAT_LE_NUM_CALCULATE = save_thm(
-  "RAT_LE_NUM_CALCULATE[simp]",
-  LIST_CONJ [RAT_OF_NUM_LEQ, RAT_LE_NUM2, RAT_LE_NUM3, RAT_LE_NUM4]);
+Theorem RAT_LE_NUM_CALCULATE[simp] =
+  LIST_CONJ [RAT_OF_NUM_LEQ, RAT_LE_NUM2, RAT_LE_NUM3, RAT_LE_NUM4];
 
 (* ----------------------------------------------------------------------
     rat_of_int
@@ -3069,26 +3067,22 @@ QED
 val RATND_THM = new_specification("RATND_THM", ["RATN", "RATD"],
   CONV_RULE (SKOLEM_CONV THENC BINDER_CONV SKOLEM_CONV) numdenom_exists)
 
-val RATD_NZERO = save_thm(
-  "RATD_NZERO[simp]",
+Theorem RATD_NZERO[simp] =
   let val th = List.nth(RATND_THM |> SPEC_ALL |> CONJUNCTS, 1)
   in
     CONJ th (CONV_RULE (REWR_CONV (GSYM NOT_ZERO_LT_ZERO)) th)
-  end);
+  end;
 
-val RATN_LEAST = save_thm(
-  "RATN_LEAST",
-  List.nth(RATND_THM |> SPEC_ALL |> CONJUNCTS, 3))
+Theorem RATN_LEAST =
+  List.nth(RATND_THM |> SPEC_ALL |> CONJUNCTS, 3)
 
-val RATN_RATD_EQ_THM = save_thm(
-  "RATN_RATD_EQ_THM",
-  RATND_THM |> SPEC_ALL |> CONJUNCTS |> hd);
+Theorem RATN_RATD_EQ_THM =
+  RATND_THM |> SPEC_ALL |> CONJUNCTS |> hd;
 
-val RATN_RATD_MULT = save_thm(
-  "RATN_RATD_MULT",
+Theorem RATN_RATD_MULT =
   RATN_RATD_EQ_THM |> Q.AP_TERM ‘\x. x * &RATD r’ |> BETA_RULE
                    |> SIMP_RULE (srw_ss()) [RAT_DIV_MULMINV, GSYM RAT_MUL_ASSOC,
-                                            RAT_MUL_LINV]);
+                                            RAT_MUL_LINV];
 
 Theorem RATND_RAT_OF_NUM[simp]:
    (RATN (&n) = &n) /\ (RATD (&n) = 1)

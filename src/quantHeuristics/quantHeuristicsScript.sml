@@ -58,9 +58,9 @@ Definition GUESS_FORALL_GAP_def:
 End
 
 
-val GUESS_REWRITES = save_thm ("GUESS_REWRITES",
+Theorem GUESS_REWRITES =
    LIST_CONJ [GUESS_EXISTS_FORALL_REWRITES, GUESS_EXISTS_POINT_def, GUESS_FORALL_POINT_def,
-      GUESS_EXISTS_GAP_def, GUESS_FORALL_GAP_def]);
+      GUESS_EXISTS_GAP_def, GUESS_FORALL_GAP_def];
 
 
 
@@ -154,9 +154,9 @@ SIMP_TAC std_ss [GUESS_REWRITES, combinTheory.o_DEF]
 QED
 
 
-val GUESSES_NEG_REWRITE = save_thm ("GUESSES_NEG_REWRITE",
+Theorem GUESSES_NEG_REWRITE =
 SIMP_RULE std_ss [combinTheory.o_DEF]
-  (INST [``P:'b -> bool`` |-> ``\x:'b. (P x):bool``] GUESSES_NEG_DUALITY));
+  (INST [``P:'b -> bool`` |-> ``\x:'b. (P x):bool``] GUESSES_NEG_DUALITY);
 
 
 Theorem GUESSES_WEAKEN_THM:
@@ -349,7 +349,7 @@ QED
 
 
 
-val GUESS_RULES_CONJ = save_thm ("GUESS_RULES_CONJ",
+Theorem GUESS_RULES_CONJ =
 let
    val thm0 = INST [
       ``P:'b->bool`` |-> ``$~ o (P:'b->bool)``,
@@ -361,11 +361,11 @@ let
    val thm3 = SIMP_RULE std_ss [GUESSES_NEG_REWRITE] thm2
 in
    thm3
-end);
+end;
 
 
 
-val GUESS_RULES_IMP = save_thm ("GUESS_RULES_IMP",
+Theorem GUESS_RULES_IMP =
 let
    val thm0 = INST [
       ``P:'b->bool`` |-> ``$~ o (P:'b->bool)``,
@@ -374,7 +374,7 @@ let
    val thm2 = REWRITE_RULE [GSYM IMP_DISJ_THM] thm1
 in
    thm2
-end);
+end;
 
 
 (*
@@ -1122,8 +1122,8 @@ SIMP_TAC list_ss [arithmeticTheory.LESS_EQ_EXISTS, LENGTH_EQ_NUM, GSYM LEFT_EXIS
 QED
 
 
-val LENGTH_NIL_SYM = save_thm ("LENGTH_NIL_SYM",
-  CONV_RULE (LHS_CONV SYM_CONV) (SPEC_ALL listTheory.LENGTH_NIL))
+Theorem LENGTH_NIL_SYM =
+  CONV_RULE (LHS_CONV SYM_CONV) (SPEC_ALL listTheory.LENGTH_NIL)
 
 Theorem LIST_LENGTH_COMPARE_1:
     ((LENGTH l < 1) <=> (l = [])) /\
@@ -1229,8 +1229,8 @@ fun mk_length_upto_n_thms 0 = LIST_LENGTH_THMS_0
 
 end
 
-val LIST_LENGTH_0  = save_thm ("LIST_LENGTH_0",  LIST_CONJ (mk_length_upto_n_thms 0));
-val LIST_LENGTH_1  = save_thm ("LIST_LENGTH_1",  LIST_CONJ (mk_length_upto_n_thms 1));
+Theorem LIST_LENGTH_0 = LIST_CONJ (mk_length_upto_n_thms 0);
+Theorem LIST_LENGTH_1 = LIST_CONJ (mk_length_upto_n_thms 1);
 Theorem LIST_LENGTH_2[unlisted]  = LIST_CONJ (mk_length_upto_n_thms 2)
 Theorem LIST_LENGTH_3[unlisted] = LIST_CONJ (mk_length_upto_n_thms 3)
 Theorem LIST_LENGTH_4[unlisted] = LIST_CONJ (mk_length_upto_n_thms 4)

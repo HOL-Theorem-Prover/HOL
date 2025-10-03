@@ -105,8 +105,8 @@ REWRITE_TAC [PAIR_EQ]);
 
 (* cpn_distinct |- LESS <> EQUAL /\ LESS <> GREATER /\ EQUAL <> GREATER *)
 
-val all_cpn_distinct = save_thm ("all_cpn_distinct",
-CONJ cpn_distinct (GSYM cpn_distinct));
+Theorem all_cpn_distinct =
+CONJ cpn_distinct (GSYM cpn_distinct);
 
 (* We now follow boilerplate from S-K Chin, aclFoundationScript *)
 
@@ -133,16 +133,16 @@ val [TO_apto_ID, TO_apto_TO_ID] = map2 (curry save_thm)
 (* TO_apto_ID = |- !(a :'x toto). TO (apto a) = a : thm
    TO_apto_TO_ID = |- !(r :'x comp). TotOrd r <=> (apto (TO r) = r) *)
 
-val TO_11 = save_thm ("TO_11", prove_abs_fn_one_one to_bij);
+Theorem TO_11 = prove_abs_fn_one_one to_bij;
 
 (* TO_11 = |- !(r :'x comp) (r' :'x comp).
               TotOrd r ==> TotOrd r' ==> ((TO r = TO r') <=> (r = r')) *)
 
-val onto_apto = save_thm ("onto_apto", prove_rep_fn_onto to_bij);
+Theorem onto_apto = prove_rep_fn_onto to_bij;
 
 (* onto_apto = |- !(r :'x comp). TotOrd r <=> ?(a :'x toto). r = apto a *)
 
-val TO_onto = save_thm ("TO_onto", prove_abs_fn_onto to_bij);
+Theorem TO_onto = prove_abs_fn_onto to_bij;
 
 (* TO_onto = |- !(a :'x toto). ?(r :'x comp). (a = TO r) /\ TotOrd r *)
 
@@ -154,8 +154,8 @@ GEN_TAC THEN MATCH_MP_TAC (CONJUNCT2 (ISPEC (Term`apto (c:'a toto)`)
                       (REWRITE_RULE [EQ_IMP_THM] onto_apto))) THEN
 EXISTS_TAC (Term`c:'a toto`) THEN REFL_TAC);
 
-val TO_apto_TO_IMP = save_thm ("TO_apto_TO_IMP",
-GEN_ALL (fst (EQ_IMP_RULE (SPEC_ALL TO_apto_TO_ID))));
+Theorem TO_apto_TO_IMP =
+GEN_ALL (fst (EQ_IMP_RULE (SPEC_ALL TO_apto_TO_ID)));
 
 (* TO_apto_TO_IMP = |- !r. TotOrd r ==> (apto (TO r) = r) *)
 
@@ -221,7 +221,7 @@ CONJ_TAC THEN REPEAT GEN_TAC THEN
 SUBST1_TAC (SYM (SPEC_ALL toto_equal_eq)) THEN
 DISCH_TAC THEN ASM_REWRITE_TAC [all_cpn_distinct]);
 
-val toto_cpn_eqn = save_thm ("toto_cpn_eqn",CONJ toto_equal_imp_eq toto_glneq);
+Theorem toto_cpn_eqn = CONJ toto_equal_imp_eq toto_glneq;
 
 (* toto_cpn_eqn = |- (!c x y. (apto c x y = EQUAL) ==> (x = y)) /\
                      (!c x y. (apto c x y = LESS) ==> x <> y) /\
@@ -273,9 +273,9 @@ val totoELtrans = store_thm ("totoELtrans", Term`!c:'a toto x y z.
  (apto c x y = EQUAL) /\ (apto c y z = LESS) ==> (apto c x z = LESS)`,
 REWRITE_TAC [toto_equal_eq] THEN REPEAT STRIP_TAC THEN AR);
 
-val toto_trans_less = save_thm ("toto_trans_less",
+Theorem toto_trans_less =
               CONJ totoLLtrans (CONJ totoLGtrans (CONJ totoGGtrans
-                (CONJ totoGLtrans (CONJ totoLEtrans totoELtrans)))));
+                (CONJ totoGLtrans (CONJ totoLEtrans totoELtrans))));
 
 Definition WeakLinearOrder_of_TO:
  WeakLinearOrder_of_TO (c:'a comp) x y =

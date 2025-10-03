@@ -488,9 +488,9 @@ fun f p =
       [th1, th2]
    end
 
-val aligned_add_sub_123 = save_thm ("aligned_add_sub_123",
+Theorem aligned_add_sub_123 =
    LIST_CONJ (List.concat (List.map f [`1`, `2`, `3`]))
-   )
+
 
 local
    val bit_lem = Q.prove(

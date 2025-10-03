@@ -37,9 +37,8 @@ Proof
 QED
 
 
-val PERM_trans1 = save_thm
-("PERM_trans1",
- REWRITE_RULE [relationTheory.transitive_def] PERM_trans);
+Theorem PERM_trans1 =
+ REWRITE_RULE [relationTheory.transitive_def] PERM_trans;
 
 
 Theorem PERM_sym:

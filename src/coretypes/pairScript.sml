@@ -125,7 +125,7 @@ Proof
   THEN REFL_TAC
 QED
 
-val pair_CASES = save_thm("pair_CASES", ABS_PAIR_THM)
+Theorem pair_CASES = ABS_PAIR_THM
 
 
 (*---------------------------------------------------------------------------*
@@ -215,7 +215,7 @@ val UNCURRY = Q.new_definition
    `UNCURRY f (v:'a#'b) = f (FST v) (SND v)`);
 val _ = ot0 "UNCURRY" "uncurry"
 
-val UNCURRY_VAR = save_thm("UNCURRY_VAR", UNCURRY);  (* compatibility *)
+Theorem UNCURRY_VAR = UNCURRY;  (* compatibility *)
 
 Theorem ELIM_UNCURRY:
    !f:'a -> 'b -> 'c. UNCURRY f = \x. f (FST x) (SND x)
@@ -695,8 +695,8 @@ Proof
 QED
 
 
-val pair_case_cong = save_thm("pair_case_cong",
-  Prim_rec.case_cong_thm pair_CASES pair_case_thm);
+Theorem pair_case_cong =
+  Prim_rec.case_cong_thm pair_CASES pair_case_thm;
 val pair_rws = [PAIR, FST, SND];
 
 Theorem pair_case_eq:

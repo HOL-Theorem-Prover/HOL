@@ -250,16 +250,16 @@ val group_clauses = Group_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> GEN_ALL;
 
 (* Theorem: A Group is a Monoid. *)
 (* Proof: by definition. *)
-val group_is_monoid = save_thm("group_is_monoid",
-  Group_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL);
+Theorem group_is_monoid =
+  Group_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val group_is_monoid = |- !g. Group g ==> Monoid g : thm *)
 
 val _ = export_rewrites ["group_is_monoid"];
 
 (* Theorem: Group Invertibles is the whole carrier set. *)
 (* Proof: by definition. *)
-val group_all_invertible = save_thm("group_all_invertible",
-  Group_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH |> CONJUNCT2 |> DISCH_ALL |> GEN_ALL);
+Theorem group_all_invertible =
+  Group_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH |> CONJUNCT2 |> DISCH_ALL |> GEN_ALL;
 (* > val group_all_invertible = |- !g. Group g ==> (G* = G) : thm *)
 
 val _ = export_rewrites ["group_all_invertible"];
@@ -426,7 +426,7 @@ val group_exp_element = lift_monoid_thm "exp_element";
 (* > val group_exp_element = |- !g. Group g ==> !x. x IN G ==> !n. x ** n IN G : thm *)
 
 (* Theorem: x ** SUC n = x * x ** n *)
-val group_exp_SUC = save_thm("group_exp_SUC", monoid_exp_SUC);
+Theorem group_exp_SUC = monoid_exp_SUC;
 (* > val group_exp_SUC = |- !g x. x ** SUC n = x * x ** n : thm *)
 
 (* Theorem: x ** SUC n = x ** n * x *)
@@ -434,7 +434,7 @@ val group_exp_suc = lift_monoid_thm "exp_suc";
 (* val group_exp_suc = |- !g. Group g ==> !x. x IN G ==> !n. x ** SUC n = x ** n * x : thm *)
 
 (* Theorem: x ** 0 = #e *)
-val group_exp_0 = save_thm("group_exp_0", monoid_exp_0);
+Theorem group_exp_0 = monoid_exp_0;
 (* > val group_exp_0 = |- !g x. x ** 0 = #e : thm *)
 
 (* Theorem: x ** 1 = x *)
@@ -491,18 +491,18 @@ Theorem group_linv[simp] =
 
 (* Theorem: [Group right inverse] x * |/ x = #e *)
 (* Proof: by Group_def and monoid_inv_def. *)
-val group_rinv = save_thm("group_rinv",
+Theorem group_rinv =
   monoid_inv_def |> SPEC_ALL |> REWRITE_RULE [gim, ginv] |> SPEC_ALL |> UNDISCH_ALL
-                 |> CONJUNCT2 |> CONJUNCT1 |> DISCH ``x IN G`` |> GEN ``x`` |> DISCH ``Group g`` |> GEN_ALL);
+                 |> CONJUNCT2 |> CONJUNCT1 |> DISCH ``x IN G`` |> GEN ``x`` |> DISCH ``Group g`` |> GEN_ALL;
 (* > val group_rinv = |- !g. Group g ==> !x. x IN G ==> (x * |/ x = #e) : thm *)
 
 (* Maybe good to export ? *)
 val _ = export_rewrites ["group_inv_element", "group_linv", "group_rinv"];
 
 (* Theorem: [Group inverses] x * |/ x = #e /\ |/x * x = #e *)
-val group_inv_thm = save_thm("group_inv_thm",
+Theorem group_inv_thm =
   monoid_inv_def |> SPEC_ALL |> REWRITE_RULE [gim, ginv] |> SPEC_ALL |> UNDISCH_ALL
-                 |> CONJUNCT2 |> DISCH ``x IN G`` |> GEN ``x`` |> DISCH ``Group g`` |> GEN_ALL);
+                 |> CONJUNCT2 |> DISCH ``x IN G`` |> GEN ``x`` |> DISCH ``Group g`` |> GEN_ALL;
 (* > val group_inv_thm = |- !g. Group g ==> !x. x IN G ==> (x * |/ x = #e) /\ ( |/ x * x = #e) : thm *)
 
 (* Theorem: [Group carrier nonempty] G <> {} *)
@@ -3143,16 +3143,16 @@ val _ = overload_on ("*", ``coset g``);
 val _ = overload_on ("*", ``right_coset g``);
 
 (* Derive theorems. *)
-val coset_alt = save_thm("coset_alt",
-    coset_def |> SIMP_RULE bool_ss [IMAGE_DEF]);
+Theorem coset_alt =
+    coset_def |> SIMP_RULE bool_ss [IMAGE_DEF];
 (* val coset_alt = |- !g a X. a * X = {a * z | z IN X}: thm *)
 
-val left_coset_alt = save_thm("left_coset_alt",
-    left_coset_def |> REWRITE_RULE [coset_alt]);
+Theorem left_coset_alt =
+    left_coset_def |> REWRITE_RULE [coset_alt];
 (* val left_coset_alt = |- !g X a. left_coset g X a = {a * z | z IN X}: thm *)
 
-val right_coset_alt = save_thm("right_coset_alt",
-    right_coset_def |> SIMP_RULE bool_ss [IMAGE_DEF]);
+Theorem right_coset_alt =
+    right_coset_def |> SIMP_RULE bool_ss [IMAGE_DEF];
 (* val right_coset_alt = |- !g X a. X * a = {z * a | z IN X}: thm *)
 
 (* Theorem: a * X SUBSET G *)
@@ -3186,7 +3186,7 @@ Proof
 QED
 
 (* Theorem alias *)
-val in_coset = save_thm("in_coset", coset_element);
+Theorem in_coset = coset_element;
 (*
 val in_coset = |- !g X a. a IN G ==> !x. x IN a * X <=> ?y. y IN X /\ (x = a * y): thm
 *)
@@ -4515,13 +4515,13 @@ val _ = overload_on ("<<", ``normal_subgroup``);
 val _ = set_fixity "<<" (Infixl 650); (* higher than * or / *)
 
 (* Theorem: Normal subgroup is a subgroup. *)
-val normal_subgroup_subgroup = save_thm("normal_subgroup_subgroup",
-    normal_subgroup_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL);
+Theorem normal_subgroup_subgroup =
+    normal_subgroup_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val normal_subgroup_subgroup = |- !h g. h << g ==> h <= g : thm *)
 
 (* Theorem: Normal subgroup is invariant under conjugation. *)
-val normal_subgroup_property = save_thm("normal_subgroup_property",
-    normal_subgroup_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCT2 |> DISCH_ALL |> GEN_ALL);
+Theorem normal_subgroup_property =
+    normal_subgroup_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCT2 |> DISCH_ALL |> GEN_ALL;
 (* > val normal_subgroup_property = |- !h g. h << g ==> !a z. a IN G /\ z IN H ==> a * z / a IN H : thm *)
 
 (* Theorem: h << g ==> h <= g /\ Group h /\ Group g *)
@@ -4779,13 +4779,13 @@ val cogen_def = new_specification(
 (* > val cogen_def = |- !g h e. h <= g /\ e IN CosetPartition g h ==> cogen g h e IN G /\ (e = (cogen g h e) * H) : thm *)
 
 (* Theorem: h <= g /\ e IN CosetPartition g h ==> cogen g h e IN G *)
-val cogen_element = save_thm("cogen_element",
-    cogen_def |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL);
+Theorem cogen_element =
+    cogen_def |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val cogen_element = |- !h g e. h <= g /\ e IN CosetPartition g h ==> cogen g h e IN G : thm *)
 
 (* Theorem: h <= g /\ e IN CosetPartition g h ==> (cogen g h e) * H = e *)
-val coset_cogen_property = save_thm("coset_cogen_property",
-    cogen_def |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT2 |> DISCH_ALL |> GEN_ALL);
+Theorem coset_cogen_property =
+    cogen_def |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT2 |> DISCH_ALL |> GEN_ALL;
 (* > val coset_cogen_property = |- !h g e. h <= g /\ e IN CosetPartition g h ==> (e = (cogen g h e) * H) : thm *)
 
 (* Define coset multiplication *)
@@ -5192,7 +5192,7 @@ QED
 val _ = export_rewrites ["kernel_property"];
 
 (* Theorem alias *)
-val kernel_element = save_thm("kernel_element", kernel_property);
+Theorem kernel_element = kernel_property;
 (*
 val kernel_element = |- !g h f x. x IN kernel f g h <=> x IN G /\ (f x = h.id): thm
 *)

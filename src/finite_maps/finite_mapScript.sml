@@ -353,9 +353,8 @@ Proof
   SRW_TAC [][FDOM_FUPDATE, EXTENSION] THEN PROVE_TAC []
 QED
 
-val FDOM_EQ_EMPTY_SYM = save_thm(
-"FDOM_EQ_EMPTY_SYM",
-CONV_RULE (QUANT_CONV (LAND_CONV SYM_CONV)) FDOM_EQ_EMPTY)
+Theorem FDOM_EQ_EMPTY_SYM =
+CONV_RULE (QUANT_CONV (LAND_CONV SYM_CONV)) FDOM_EQ_EMPTY
 
 val FUPDATE_ABSORB_THM = Q.prove (
   `!(f:'a |-> 'b) x y.
@@ -592,7 +591,7 @@ Proof
 QED
 
 (* and it's more useful still if the main equality is the other way 'round *)
-val fmap_EXT = save_thm("fmap_EXT", GSYM fmap_EQ_THM)
+Theorem fmap_EXT = GSYM fmap_EQ_THM
 
 (*---------------------------------------------------------------------------
            Submaps
@@ -1095,9 +1094,8 @@ Proof
  PROVE_TAC [optionTheory.SOME_11,optionTheory.NOT_SOME_NONE]
 QED
 
-val fmap_eq_flookup = save_thm(
-  "fmap_eq_flookup",
-  FLOOKUP_EXT |> REWRITE_RULE[FUN_EQ_THM]);
+Theorem fmap_eq_flookup =
+  FLOOKUP_EXT |> REWRITE_RULE[FUN_EQ_THM];
 
 Theorem FLOOKUP_DRESTRICT:
     !fm s k. FLOOKUP (DRESTRICT fm s) k = if k IN s then FLOOKUP fm k else NONE
@@ -1359,7 +1357,7 @@ Proof
 REWRITE_TAC [o_f_DEF]
 QED
 
-val FDOM_o_f = save_thm("FDOM_o_f", GSYM o_f_FDOM);
+Theorem FDOM_o_f = GSYM o_f_FDOM;
 val _ = export_rewrites ["FDOM_o_f"]
 
 Theorem o_f_FAPPLY:

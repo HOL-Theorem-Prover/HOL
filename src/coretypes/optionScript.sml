@@ -293,7 +293,7 @@ val IS_NONE_option_case = Q.prove(
 );
 
 
-val option_CLAUSES = save_thm("option_CLAUSES",
+Theorem option_CLAUSES =
      LIST_CONJ ([SOME_11,THE_DEF,NOT_NONE_SOME,NOT_SOME_NONE]@
                 (CONJUNCTS IS_SOME_DEF)@
                 [IS_NONE_EQ_NONE,
@@ -306,7 +306,7 @@ val option_CLAUSES = save_thm("option_CLAUSES",
                  IS_SOME_option_case_SOME]@
                  CONJUNCTS option_case_def@
                  CONJUNCTS OPTION_MAP_DEF@
-                 CONJUNCTS OPTION_JOIN_DEF));
+                 CONJUNCTS OPTION_JOIN_DEF);
 
 Theorem option_case_compute:
   option_CASE (x:'a option) (e:'b) f =
@@ -824,9 +824,8 @@ val _ = export_rewrites ["some_EQ"]
         M = M' /\ (M' = NONE ==> v = v') /\ (!x. M' = SOME x ==> f x = f' x) ==>
         option_CASE M v f = option_CASE M' v' f'
  *)
-val option_case_cong =
-  save_thm("option_case_cong",
-      Prim_rec.case_cong_thm option_nchotomy option_case_def);
+Theorem option_case_cong =
+      Prim_rec.case_cong_thm option_nchotomy option_case_def;
 
 (* another similar theorem, moved here from cardinalTheory:
    |- option_CASE x v f <=> (x = NONE ==> v) /\ !x'. x = SOME x' ==> f x'
@@ -875,10 +874,10 @@ QED
 
 val S = PP.add_string and NL = PP.NL and B = PP.block PP.CONSISTENT 0
 
-val option_Induct = save_thm("option_Induct",
-  ONCE_REWRITE_RULE [boolTheory.CONJ_SYM] option_induction);
-val option_CASES = save_thm("option_CASES",
-  ONCE_REWRITE_RULE [boolTheory.DISJ_SYM] option_nchotomy);
+Theorem option_Induct =
+  ONCE_REWRITE_RULE [boolTheory.CONJ_SYM] option_induction;
+Theorem option_CASES =
+  ONCE_REWRITE_RULE [boolTheory.DISJ_SYM] option_nchotomy;
 
 val _ = TypeBase.general_update “:'a option” (
           TypeBasePure.put_recognizers [IS_NONE_DEF, IS_SOME_DEF] o

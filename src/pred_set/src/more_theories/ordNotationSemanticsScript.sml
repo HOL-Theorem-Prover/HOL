@@ -163,15 +163,14 @@ val neqend0_lemma = prove(
   ``x < <[e]> ==> e <> End 0``,
   rpt strip_tac >> fs[]);
 
-val tail_dominated = save_thm(
-  "tail_dominated",
+Theorem tail_dominated =
   ord_less_models_ordlt
     |> Q.SPEC `Plus e 1 t`
     |> SIMP_RULE (srw_ss() ++ boolSimps.CONJ_ss)
                  [oless_modelled, is_ord_expt]
     |> REWRITE_RULE [neqend0_lemma |> Q.INST [`x` |-> `<[expt t]>`] |> UNDISCH]
     |> REWRITE_RULE [ASSUME ``<[expt t]> < <[e]> :'a ordinal``]
-    |> DISCH_ALL |> REWRITE_RULE [AND_IMP_INTRO]);
+    |> DISCH_ALL |> REWRITE_RULE [AND_IMP_INTRO];
 
 Theorem addL_disappears:
     !e a. a < omega ** e ==> (a + omega ** e = omega ** e)

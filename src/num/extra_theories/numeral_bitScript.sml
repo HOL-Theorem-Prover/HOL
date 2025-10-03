@@ -91,10 +91,10 @@ Proof
   \\ SIMP_TAC bool_ss [NUMERAL_MOD_2EXP, SUC_SUB1, GSYM BIT1n]
 QED
 
-val MOD_2EXP = save_thm("MOD_2EXP",
+Theorem MOD_2EXP =
   CONJ (REWRITE_RULE [ALT_ZERO] (hd (tl (CONJUNCTS NUMERAL_MOD_2EXP))))
        (METIS_PROVE [NUMERAL_DEF, iMOD_2EXP]
-         ``!x n. MOD_2EXP x (NUMERAL n) = NUMERAL (iMOD_2EXP x n)``))
+         ``!x n. MOD_2EXP x (NUMERAL n) = NUMERAL (iMOD_2EXP x n)``)
 
 Theorem DIV_2EXP:
    !n x. DIV_2EXP n x = FUNPOW DIV2 n x
@@ -165,8 +165,8 @@ val BIT_REVERSE_REV = Q.prove(
    >- SIMP_TAC std_ss [BIT_REVERSE_def, FUNPOW]
    \\ ASM_SIMP_TAC arith_ss [BIT_REVERSE_def, BIT_R_FUNPOW])
 
-val BIT_REVERSE_EVAL = save_thm("BIT_REVERSE_EVAL",
-   REWRITE_RULE [BIT_R_BIT_REV] BIT_REVERSE_REV)
+Theorem BIT_REVERSE_EVAL =
+   REWRITE_RULE [BIT_R_BIT_REV] BIT_REVERSE_REV
 
 (* ------------------------------------------------------------------------- *)
 
@@ -210,8 +210,8 @@ val BIT_MODIFY_MODF = Q.prove(
    >- SIMP_TAC std_ss [BIT_MODIFY_def, FUNPOW]
    \\ RW_TAC arith_ss [SBIT_def, BIT_MODIFY_def, BIT_M_FUNPOW])
 
-val BIT_MODIFY_EVAL = save_thm("BIT_MODIFY_EVAL",
-   REWRITE_RULE [BIT_M_BIT_MODF] BIT_MODIFY_MODF)
+Theorem BIT_MODIFY_EVAL =
+   REWRITE_RULE [BIT_M_BIT_MODF] BIT_MODIFY_MODF
 
 (* ------------------------------------------------------------------------- *)
 
@@ -232,7 +232,7 @@ val iBITWISE = Q.prove(
                     BIT0_ODD, GSYM DIV2_def, BITWISE_EVAL, LET_THM]
    \\ REWRITE_TAC [BITWISE_def, ALT_ZERO])
 
-val iBITWISE = save_thm("iBITWISE", SUC_RULE iBITWISE)
+Theorem iBITWISE = SUC_RULE iBITWISE
 
 Theorem NUMERAL_BITWISE:
     (!x f a. BITWISE x f 0 0 = NUMERAL (iBITWISE x f 0 0)) /\
@@ -256,7 +256,7 @@ val NUMERAL_BIT_REV = Q.prove(
                    ADD, ADD_0, BIT2, BIT1, iDUB, ALT_ZERO]
    \\ FULL_SIMP_TAC arith_ss [])
 
-val NUMERAL_BIT_REV = save_thm("NUMERAL_BIT_REV", SUC_RULE NUMERAL_BIT_REV)
+Theorem NUMERAL_BIT_REV = SUC_RULE NUMERAL_BIT_REV
 
 Theorem NUMERAL_BIT_REVERSE:
     (!m. BIT_REVERSE (NUMERAL m) 0 = NUMERAL (BIT_REV (NUMERAL m) 0 ZERO)) /\
@@ -280,7 +280,7 @@ val NUMERAL_BIT_MODF = Q.prove(
                    ADD, ADD_0, BIT2, BIT1, iDUB, ALT_ZERO]
    \\ FULL_SIMP_TAC arith_ss [])
 
-val NUMERAL_BIT_MODF = save_thm("NUMERAL_BIT_MODF", SUC_RULE NUMERAL_BIT_MODF)
+Theorem NUMERAL_BIT_MODF = SUC_RULE NUMERAL_BIT_MODF
 
 Theorem NUMERAL_BIT_MODIFY:
    (!m f. BIT_MODIFY (NUMERAL m) f 0 = BIT_MODF (NUMERAL m) f 0 0 1 0) /\
@@ -410,17 +410,17 @@ Proof
           DIV2_def]
 QED
 
-val NUMERAL_SFUNPOW_iDIV2 = save_thm("NUMERAL_SFUNPOW_iDIV2",
+Theorem NUMERAL_SFUNPOW_iDIV2 =
    MATCH_MP (SPEC_ALL NUMERAL_SFUNPOW)
-      (Q.prove(`iDIV2 0 = 0`, RW_TAC arith_ss [iDIV2_def, DIV2_def])))
+      (Q.prove(`iDIV2 0 = 0`, RW_TAC arith_ss [iDIV2_def, DIV2_def]))
 
-val NUMERAL_SFUNPOW_iDUB = save_thm("NUMERAL_SFUNPOW_iDUB",
+Theorem NUMERAL_SFUNPOW_iDUB =
    MATCH_MP (SPEC_ALL NUMERAL_SFUNPOW)
-      (Q.prove(`numeral$iDUB 0 = 0`, RW_TAC arith_ss [iDUB])))
+      (Q.prove(`numeral$iDUB 0 = 0`, RW_TAC arith_ss [iDUB]))
 
-val NUMERAL_SFUNPOW_FDUB = save_thm("NUMERAL_SFUNPOW_FDUB",
+Theorem NUMERAL_SFUNPOW_FDUB =
    GEN_ALL (MATCH_MP (SPEC_ALL NUMERAL_SFUNPOW)
-                     (SPEC_ALL (CONJUNCT1 FDUB_def))))
+                     (SPEC_ALL (CONJUNCT1 FDUB_def)))
 
 Theorem FDUB_iDIV2:
     !x. FDUB iDIV2 x = iDIV2 (iDIV2 x)
@@ -576,7 +576,7 @@ Proof
    ]
 QED
 
-val LOWEST_SET_BIT_compute = save_thm("LOWEST_SET_BIT_compute",
+Theorem LOWEST_SET_BIT_compute =
    let
       open numeralTheory
       val rule = (GEN_ALL o SIMP_RULE (srw_ss())
@@ -585,7 +585,7 @@ val LOWEST_SET_BIT_compute = save_thm("LOWEST_SET_BIT_compute",
    in
       CONJ ((rule o Q.SPEC `NUMERAL (BIT2 n)`) LOWEST_SET_BIT)
            ((rule o Q.SPEC `NUMERAL (BIT1 n)`) LOWEST_SET_BIT)
-   end)
+   end
 
 (* ------------------------------------------------------------------------- *)
 

@@ -70,4 +70,4 @@ QED
 
 val _ = Parse.hide "ARB";
 val ARB_def = gen_new_specification("ARB_def",ADD_ASSUM``ARB = @x. F`` TRUTH);
-val ARB_thm = save_thm("ARB_thm",REFL``bool_defs$ARB``);
+Theorem ARB_thm = REFL``bool_defs$ARB``;

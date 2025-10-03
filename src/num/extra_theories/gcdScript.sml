@@ -100,9 +100,8 @@ QED
 
 val GCD_THM = REWRITE_RULE [GCD_IS_GCD] (Q.SPECL [`m`,`n`,`gcd m n`] IS_GCD);
 
-val GCD_IS_GREATEST_COMMON_DIVISOR = save_thm(
-  "GCD_IS_GREATEST_COMMON_DIVISOR",
-  REWRITE_RULE [IS_GCD] GCD_IS_GCD)
+Theorem GCD_IS_GREATEST_COMMON_DIVISOR =
+  REWRITE_RULE [IS_GCD] GCD_IS_GCD
 
 
 val GCD_REF = store_thm("GCD_REF",
@@ -115,7 +114,7 @@ val GCD_SYM = store_thm("GCD_SYM",
                         PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,IS_GCD_SYM]);
 
 (* |- gcd a b = gcd b a *)
-val GCD_COMM = save_thm("GCD_COMM", GCD_SYM |> SPEC_ALL);
+Theorem GCD_COMM = GCD_SYM |> SPEC_ALL;
 
 val GCD_0R = store_thm("GCD_0R",
                         Term `!a. gcd a 0 = a`,
@@ -141,9 +140,8 @@ val GCD_ADD_R = store_thm("GCD_ADD_R",
                         THEN ARW[GCD_IS_GCD,SPECL [Term `a:num`, Term `a+b`] IS_GCD_MINUS_R]
                 );
 
-val GCD_ADD_R_THM = save_thm(
-  "GCD_ADD_R_THM",
-  CONJ GCD_ADD_R (ONCE_REWRITE_RULE [ADD_COMM] GCD_ADD_R))
+Theorem GCD_ADD_R_THM =
+  CONJ GCD_ADD_R (ONCE_REWRITE_RULE [ADD_COMM] GCD_ADD_R)
 val _ = export_rewrites ["GCD_ADD_R_THM"]
 
 val GCD_ADD_L = store_thm("GCD_ADD_L",
@@ -151,9 +149,8 @@ val GCD_ADD_L = store_thm("GCD_ADD_L",
                         PROVE_TAC[GCD_SYM,GCD_ADD_R]
                 );
 
-val GCD_ADD_L_THM = save_thm(
- "GCD_ADD_L_THM",
- CONJ GCD_ADD_L (ONCE_REWRITE_RULE [ADD_COMM] GCD_ADD_L))
+Theorem GCD_ADD_L_THM =
+ CONJ GCD_ADD_L (ONCE_REWRITE_RULE [ADD_COMM] GCD_ADD_L)
 val _ = export_rewrites ["GCD_ADD_L_THM"]
 
 Theorem GCD_EQ_0[simp]:
@@ -406,7 +403,7 @@ Proof
 QED
 
 (* |- !a b. lcm a b = lcm b a *)
-val LCM_SYM = save_thm("LCM_SYM", LCM_COMM |> GEN ``b:num`` |> GEN ``a:num``);
+Theorem LCM_SYM = LCM_COMM |> GEN ``b:num`` |> GEN ``a:num``;
 
 Theorem LCM_LE:
     0 < m /\ 0 < n ==> (m <= lcm m n) /\ (m <= lcm n m)

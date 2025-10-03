@@ -324,7 +324,7 @@ in
             (GEN “perm : 'a list -> 'a list -> bool” th0)
 end
 
-val PERM_IND = save_thm("PERM_IND", remove_eq_asm perm_ind)
+Theorem PERM_IND = remove_eq_asm perm_ind
 
 val PERM_MONO' = PERM_MONO |> SPEC_ALL |> Q.GENL [‘x’, ‘l1’, ‘l2’]
 
@@ -353,11 +353,10 @@ val PERM_SWAP = PERM_SWAP_AT_FRONT |> EQ_IMP_RULE |> #2
 
 val PERM_NILNIL = prove(“PERM [][]”, SRW_TAC[][])
 
-val PERM_STRONG_IND = save_thm(
-  "PERM_STRONG_IND",
+Theorem PERM_STRONG_IND =
   IndDefLib.derive_strong_induction(
     LIST_CONJ [PERM_NILNIL, PERM_MONO', PERM_SWAP, PERM_TRANS],
-    PERM_IND))
+    PERM_IND)
 val _ = IndDefLib.export_rule_induction "PERM_STRONG_IND"
 
 Theorem PERM_LENGTH:
@@ -836,12 +835,12 @@ Proof
   PROVE_TAC [PERM_SINGLE_SWAP_DEF]
 QED
 
-val PERM_SINGLE_SWAP_APPEND = save_thm ("PERM_SINGLE_SWAP_APPEND",
-  REWRITE_RULE [APPEND] (Q.INST [‘x1’ |-> ‘NIL’] PERM_SINGLE_SWAP_I)) ;
+Theorem PERM_SINGLE_SWAP_APPEND =
+  REWRITE_RULE [APPEND] (Q.INST [‘x1’ |-> ‘NIL’] PERM_SINGLE_SWAP_I) ;
 
-val PERM_SINGLE_SWAP_REFL = save_thm ("PERM_SINGLE_SWAP_REFL",
+Theorem PERM_SINGLE_SWAP_REFL =
   GEN_ALL (REWRITE_RULE [APPEND, APPEND_NIL]
-    (Q.INST [‘x2’ |-> ‘NIL’, ‘x3’ |-> ‘l’] PERM_SINGLE_SWAP_APPEND))) ;
+    (Q.INST [‘x2’ |-> ‘NIL’, ‘x3’ |-> ‘l’] PERM_SINGLE_SWAP_APPEND)) ;
 
 val [_, TC_TRANS] = CONJUNCTS (SPEC_ALL TC_RULES) ;
 
@@ -928,17 +927,14 @@ val PERM_lift_TC_RULE =
    Q.GEN ‘R’);
 
 
-val PERM_lifts_transitive_relations = save_thm (
-"PERM_lifts_transitive_relations",
-PERM_lift_TC_RULE TC_lifts_transitive_relations);
+Theorem PERM_lifts_transitive_relations =
+PERM_lift_TC_RULE TC_lifts_transitive_relations;
 
-val PERM_lifts_equalities = save_thm (
-"PERM_lifts_equalities",
-PERM_lift_TC_RULE TC_lifts_equalities);
+Theorem PERM_lifts_equalities =
+PERM_lift_TC_RULE TC_lifts_equalities;
 
-val PERM_lifts_invariants = save_thm (
-"PERM_lifts_invariants",
-PERM_lift_TC_RULE TC_lifts_invariants);
+Theorem PERM_lifts_invariants =
+PERM_lift_TC_RULE TC_lifts_invariants;
 
 
 Theorem PERM_lifts_monotonicities:

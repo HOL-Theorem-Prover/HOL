@@ -536,13 +536,13 @@ QED
 (* Explicit numeric value for threshold, to save repeated recalculation.     *)
 (* ------------------------------------------------------------------------- *)
 
-val FLOAT_THRESHOLD_EXPLICIT = save_thm ("FLOAT_THRESHOLD_EXPLICIT",
+Theorem FLOAT_THRESHOLD_EXPLICIT =
   EVAL' [threshold, float_format, emax, bias, fracwidth, expwidth]
-    ``threshold float_format``)
+    ``threshold float_format``
 
-val FLOAT_LARGEST_EXPLICIT = save_thm ("FLOAT_LARGEST_EXPLICIT",
+Theorem FLOAT_LARGEST_EXPLICIT =
   EVAL' [largest, float_format, emax, bias, fracwidth, expwidth]
-    ``largest float_format``)
+    ``largest float_format``
 
 Theorem VAL_THRESHOLD:
    !a. Finite a ==> abs (Val a) < threshold float_format
@@ -1364,9 +1364,9 @@ val finite_rule =
    MATCH_MP (DECIDE ``(a /\ b /\ c ==> d /\ e) ==> (a /\ b /\ c ==> d)``) o
    Drule.SPEC_ALL
 
-val FLOAT_ADD_FINITE = save_thm ("FLOAT_ADD_FINITE", finite_rule FLOAT_ADD)
-val FLOAT_SUB_FINITE = save_thm ("FLOAT_SUB_FINITE", finite_rule FLOAT_SUB)
-val FLOAT_MUL_FINITE = save_thm ("FLOAT_MUL_FINITE", finite_rule FLOAT_MUL)
+Theorem FLOAT_ADD_FINITE = finite_rule FLOAT_ADD
+Theorem FLOAT_SUB_FINITE = finite_rule FLOAT_SUB
+Theorem FLOAT_MUL_FINITE = finite_rule FLOAT_MUL
 
 (*-----------------------*)
 

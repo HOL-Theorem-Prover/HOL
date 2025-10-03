@@ -56,8 +56,8 @@ val msg1_case_cong = theorem "msg1_case_cong";
 val msg1_induction = theorem "msg1_induction";
 val msg1_Axiom = theorem "msg1_Axiom";
 
-val msg1_distinct2 = save_thm("msg1_distinct2",
-                         CONJ msg1_distinct (GSYM msg1_distinct));
+Theorem msg1_distinct2 =
+                         CONJ msg1_distinct (GSYM msg1_distinct);
 val _ = save_thm("msg1_one_one", msg1_one_one);
 val _ = save_thm("msg1_cases", msg1_cases);
 
@@ -258,8 +258,8 @@ QED
 (* --------------------------------------------------------------------- *)
 
 
-val msgrel_EQUIV = save_thm("msgrel_EQUIV",
-    refl_sym_trans_equiv msgrel_REFL msgrel_SYM msgrel_TRANS);
+Theorem msgrel_EQUIV =
+    refl_sym_trans_equiv msgrel_REFL msgrel_SYM msgrel_TRANS;
 
 val equivs = [msgrel_EQUIV];
 

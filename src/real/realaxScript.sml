@@ -463,13 +463,13 @@ Proof
 QED
 
 (* |- !x y z. y <= z ==> x + y <= x + z *)
-val REAL_LE_LADD_IMP = save_thm("REAL_LE_LADD_IMP",
+Theorem REAL_LE_LADD_IMP =
   let
     val th1 = GSYM (SPEC_ALL REAL_LE_LADD)
     val th2 = TAUT_PROVE ``(x:bool = y) ==> (x ==> y)``
   in
     Q.GENL [‘x’, ‘y’, ‘z’] (MATCH_MP th2 th1)
-  end);
+  end;
 
 Theorem REAL_LE_LNEG:
   !x y. ~x <= y <=> 0r <= x + y

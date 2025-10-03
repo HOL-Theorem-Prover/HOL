@@ -950,15 +950,13 @@ val [RED_obj_RED1, RED_obj_REFL, RED_obj_TRANS,
      RED_method_RED1, RED_method_REFL, RED_method_TRANS]
     = CONJUNCTS (CONV_RULE (DEPTH_CONV LEFT_IMP_EXISTS_CONV) RED_rules_sat);
 
-val RED_RED1 = save_thm
-  ("RED_RED1",
+Theorem RED_RED1 =
         LIST_CONJ [RED_obj_RED1, RED_dict_RED1,
-                   RED_entry_RED1, RED_method_RED1]);
+                   RED_entry_RED1, RED_method_RED1];
 
-val RED_REFL = save_thm
-  ("RED_REFL",
+Theorem RED_REFL =
         LIST_CONJ [RED_obj_REFL, RED_dict_REFL,
-                   RED_entry_REFL, RED_method_REFL]);
+                   RED_entry_REFL, RED_method_REFL];
 
 
 val [RED_obj_inv, RED_dict_inv, RED_entry_inv, RED_method_inv]
@@ -982,9 +980,9 @@ Proof
                                RED_rules_sat]
 QED
 
-val RED_TRANS = save_thm("RED_TRANS",
+Theorem RED_TRANS =
                    CONV_RULE (TOP_DEPTH_CONV FORALL_AND_CONV)
-                    (REWRITE_RULE[transitive] RED_transitive));
+                    (REWRITE_RULE[transitive] RED_transitive);
 
 Theorem RED_compatible:
      !R. compatible
@@ -1002,9 +1000,9 @@ Proof
     THEN IMP_RES_TAC RED_RED1 (* finishes the last 8 *)
 QED
 
-val RED_COMPAT = save_thm("RED_COMPAT",
+Theorem RED_COMPAT =
                    CONV_RULE (TOP_DEPTH_CONV FORALL_AND_CONV)
-                    (REWRITE_RULE[compatible] RED_compatible));
+                    (REWRITE_RULE[compatible] RED_compatible);
 
 val [RED_obj_COMPAT, RED_dict_COMPAT, RED_entry_COMPAT, RED_method_COMPAT]
     = CONJUNCTS RED_COMPAT;
@@ -1212,15 +1210,13 @@ val [REQUAL_obj_RED, REQUAL_obj_SYM, REQUAL_obj_TRANS,
      REQUAL_method_RED, REQUAL_method_SYM, REQUAL_method_TRANS]
     = CONJUNCTS (CONV_RULE (DEPTH_CONV LEFT_IMP_EXISTS_CONV) REQUAL_rules_sat);
 
-val REQUAL_RED = save_thm
-  ("REQUAL_RED",
+Theorem REQUAL_RED =
         LIST_CONJ [REQUAL_obj_RED, REQUAL_dict_RED,
-                   REQUAL_entry_RED, REQUAL_method_RED]);
+                   REQUAL_entry_RED, REQUAL_method_RED];
 
-val REQUAL_SYM = save_thm
-  ("REQUAL_SYM",
+Theorem REQUAL_SYM =
         LIST_CONJ [REQUAL_obj_SYM, REQUAL_dict_SYM,
-                   REQUAL_entry_SYM, REQUAL_method_SYM]);
+                   REQUAL_entry_SYM, REQUAL_method_SYM];
 
 
 val [REQUAL_obj_inv, REQUAL_dict_inv, REQUAL_entry_inv, REQUAL_method_inv]
@@ -1263,9 +1259,9 @@ Proof
                                REQUAL_rules_sat]
 QED
 
-val REQUAL_TRANS = save_thm("REQUAL_TRANS",
+Theorem REQUAL_TRANS =
                    CONV_RULE (TOP_DEPTH_CONV FORALL_AND_CONV)
-                    (REWRITE_RULE[transitive] REQUAL_transitive));
+                    (REWRITE_RULE[transitive] REQUAL_transitive);
 
 Theorem REQUAL_compatible:
      !R. compatible
@@ -1286,9 +1282,9 @@ Proof
     THEN IMP_RES_TAC REQUAL_RED (* finishes the last 8 *)
 QED
 
-val REQUAL_COMPAT = save_thm("REQUAL_COMPAT",
+Theorem REQUAL_COMPAT =
                    CONV_RULE (TOP_DEPTH_CONV FORALL_AND_CONV)
-                    (REWRITE_RULE[compatible] REQUAL_compatible));
+                    (REWRITE_RULE[compatible] REQUAL_compatible);
 
 val [REQUAL_obj_COMPAT, REQUAL_dict_COMPAT,
      REQUAL_entry_COMPAT, REQUAL_method_COMPAT]
@@ -1345,10 +1341,9 @@ val NORMAL_FORM_method =
     ("NORMAL_FORM_method",
      “NORMAL_FORM_method R a = (!a'. ~(RED1_method R a a'))”);
 
-val NORMAL_FORM = save_thm
-  ("NORMAL_FORM",
+Theorem NORMAL_FORM =
         LIST_CONJ [NORMAL_FORM_obj, NORMAL_FORM_dict,
-                   NORMAL_FORM_entry, NORMAL_FORM_method]);
+                   NORMAL_FORM_entry, NORMAL_FORM_method];
 
 
 val NORMAL_FORM_OF_obj =
@@ -1375,10 +1370,9 @@ val NORMAL_FORM_OF_method =
      “NORMAL_FORM_OF_method R a b =
          (NORMAL_FORM_method R a /\ REQUAL_method R b a)”);
 
-val NORMAL_FORM_OF = save_thm
-  ("NORMAL_FORM_OF",
+Theorem NORMAL_FORM_OF =
         LIST_CONJ [NORMAL_FORM_OF_obj, NORMAL_FORM_OF_dict,
-                   NORMAL_FORM_OF_entry, NORMAL_FORM_OF_method]);
+                   NORMAL_FORM_OF_entry, NORMAL_FORM_OF_method];
 
 
 Theorem NORMAL_FORM_IDENT_LEMMA:
@@ -1637,10 +1631,9 @@ val SUBSTITUTIVE_method =
            (!(M:method) (N:method) L x.
              R M N ==> R (M <[ [x,L]) (N <[ [x,L]))”);
 
-val SUBSTITUTIVE = save_thm
-  ("SUBSTITUTIVE",
+Theorem SUBSTITUTIVE =
         LIST_CONJ [SUBSTITUTIVE_obj, SUBSTITUTIVE_dict,
-                   SUBSTITUTIVE_entry, SUBSTITUTIVE_method]);
+                   SUBSTITUTIVE_entry, SUBSTITUTIVE_method];
 
 
 val RED1_SUBSTITUTIVE_LEMMA = TAC_PROOF(([],

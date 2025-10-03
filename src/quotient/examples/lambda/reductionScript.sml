@@ -752,8 +752,8 @@ Proof
                                RED_rules_sat]
 QED
 
-val RED_TRANS = save_thm("RED_TRANS",
-                    REWRITE_RULE[transitive] RED_transitive);
+Theorem RED_TRANS =
+                    REWRITE_RULE[transitive] RED_transitive;
 
 Theorem RED_compatible:
      !R:^term_rel. compatible (RED R)
@@ -769,8 +769,8 @@ Proof
     THEN IMP_RES_TAC RED_RED1 (* finishes the last 3 *)
 QED
 
-val RED_COMPAT = save_thm("RED_COMPAT",
-                    (REWRITE_RULE[compatible] RED_compatible));
+Theorem RED_COMPAT =
+                    (REWRITE_RULE[compatible] RED_compatible);
 
 
 
@@ -911,8 +911,8 @@ Proof
                                REQUAL_rules_sat]
 QED
 
-val REQUAL_TRANS = save_thm("REQUAL_TRANS",
-                   REWRITE_RULE[transitive_def] REQUAL_transitive);
+Theorem REQUAL_TRANS =
+                   REWRITE_RULE[transitive_def] REQUAL_transitive;
 
 Theorem REQUAL_compatible:
      !R:^term_rel. compatible (REQUAL R)
@@ -929,8 +929,8 @@ Proof
     THEN IMP_RES_TAC REQUAL_RED (* finishes the last 3 *)
 QED
 
-val REQUAL_COMPAT = save_thm("REQUAL_COMPAT",
-                    REWRITE_RULE[compatible] REQUAL_compatible);
+Theorem REQUAL_COMPAT =
+                    REWRITE_RULE[compatible] REQUAL_compatible;
 
 
 Theorem REQUAL_reduction:

@@ -226,37 +226,37 @@ val monoid_clauses = Monoid_def |> SPEC_ALL |> #1 o EQ_IMP_RULE;
 (* No need to export as definition is already exported. *)
 
 (* Theorem: [Closure] x * y in carrier. *)
-val monoid_op_element = save_thm("monoid_op_element",
-  monoid_clauses |> UNDISCH_ALL |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL);
+Theorem monoid_op_element =
+  monoid_clauses |> UNDISCH_ALL |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val monoid_op_element = |- !g. Monoid g ==> !x y. x IN G /\ y IN G ==> x * y IN G : thm*)
 
 (* Theorem: [Associativity] (x * y) * z = x * (y * z) *)
-val monoid_assoc = save_thm("monoid_assoc",
-  monoid_clauses |> UNDISCH_ALL |> CONJUNCT2|> CONJUNCT1 |> DISCH_ALL |> GEN_ALL);
+Theorem monoid_assoc =
+  monoid_clauses |> UNDISCH_ALL |> CONJUNCT2|> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val monoid_assoc = |- !g. Monoid g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> (x * y * z = x * (y * z)) : thm *)
 
 (* Theorem: [Identity exists] #e in carrier. *)
-val monoid_id_element = save_thm("monoid_id_element",
-  monoid_clauses |> UNDISCH_ALL |> CONJUNCT2|> CONJUNCT2 |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL);
+Theorem monoid_id_element =
+  monoid_clauses |> UNDISCH_ALL |> CONJUNCT2|> CONJUNCT2 |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val monoid_id_element = |- !g. Monoid g ==> #e IN G : thm *)
 
 (* Theorem: [Identity property] #e * x = x  and x * #e = x *)
-val monoid_id = save_thm("monoid_id",
-  monoid_clauses |> UNDISCH_ALL |> CONJUNCT2|> CONJUNCT2 |> CONJUNCT2 |> DISCH_ALL |> GEN_ALL);
+Theorem monoid_id =
+  monoid_clauses |> UNDISCH_ALL |> CONJUNCT2|> CONJUNCT2 |> CONJUNCT2 |> DISCH_ALL |> GEN_ALL;
 (* > val monoid_id = |- !g. Monoid g ==> !x. x IN G ==> (#e * x = x) /\ (x * #e = x) : thm *)
 
 (* Theorem: [Left identity] #e * x = x *)
 (* Proof: from monoid_id. *)
-val monoid_lid = save_thm("monoid_lid",
+Theorem monoid_lid =
   monoid_id |> SPEC_ALL |> UNDISCH_ALL |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT1
-            |> DISCH ``x IN G`` |> GEN_ALL |> DISCH_ALL |> GEN_ALL);
+            |> DISCH ``x IN G`` |> GEN_ALL |> DISCH_ALL |> GEN_ALL;
 (* > val monoid_lid = |- !g. Monoid g ==> !x. x IN G ==> (#e * x = x) : thm *)
 
 (* Theorem: [Right identity] x * #e = x *)
 (* Proof: from monoid_id. *)
-val monoid_rid = save_thm("monoid_rid",
+Theorem monoid_rid =
   monoid_id |> SPEC_ALL |> UNDISCH_ALL |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT2
-            |> DISCH ``x IN G`` |> GEN_ALL |> DISCH_ALL |> GEN_ALL);
+            |> DISCH ``x IN G`` |> GEN_ALL |> DISCH_ALL |> GEN_ALL;
 (* > val monoid_rid = |- !g. Monoid g ==> !x. x IN G ==> (x * #e = x) : thm *)
 
 (* export simple statements (no complicated and's) *)
@@ -700,22 +700,21 @@ fun gINST th = th |> SPEC_ALL |> INST_TYPE [beta |-> alpha]
                   |> Q.INST [`f` |-> `g.op`] |> GEN_ALL;
 (* val gINST = fn: thm -> thm *)
 
-val GITSET_THM = save_thm("GITSET_THM", gINST ITSET_THM);
+Theorem GITSET_THM = gINST ITSET_THM;
 (* > val GITSET_THM =
   |- !s g b. FINITE s ==> (GITSET g s b = if s = {} then b else GITSET g (REST s) (CHOICE s * b)) : thm
 *)
 
 (* Theorem: GITSET {} b = b *)
-val GITSET_EMPTY = save_thm("GITSET_EMPTY", gINST ITSET_EMPTY);
+Theorem GITSET_EMPTY = gINST ITSET_EMPTY;
 (* > val GITSET_EMPTY = |- !g b. GITSET g {} b = b : thm *)
 
 (* Theorem: GITSET g (x INSERT s) b = GITSET g (REST (x INSERT s)) ((CHOICE (x INSERT s)) * b) *)
 (* Proof:
    By GITSET_THM, since x INSERT s is non-empty.
 *)
-val GITSET_INSERT = save_thm(
-  "GITSET_INSERT",
-  gINST (ITSET_INSERT |> SPEC_ALL |> UNDISCH) |> DISCH_ALL |> GEN_ALL);
+Theorem GITSET_INSERT =
+  gINST (ITSET_INSERT |> SPEC_ALL |> UNDISCH) |> DISCH_ALL |> GEN_ALL;
 (* > val GITSET_INSERT =
   |- !s. FINITE s ==> !x g b. (GITSET g (x INSERT s) b = GITSET g (REST (x INSERT s)) (CHOICE (x INSERT s) * b)) : thm
 *)
@@ -1040,8 +1039,7 @@ End
 (* use zDefine here since these are not computationally effective. *)
 
 (* Expand order_def with period_def. *)
-val order_alt = save_thm(
-  "order_alt", REWRITE_RULE [period_def] order_def);
+Theorem order_alt = REWRITE_RULE [period_def] order_def;
 (* val order_alt =
    |- !g x. order g x =
             case OLEAST k. 0 < k /\ x ** k = #e of NONE => 0 | SOME k => k: thm *)

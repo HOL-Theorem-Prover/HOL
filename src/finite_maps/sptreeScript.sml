@@ -636,9 +636,8 @@ Proof
   rw [] >> Cases_on `lookup x t1` >> fs[] >> Cases_on `lookup x t2` >> rw[]
 QED
 
-val domain_sing = save_thm(
-  "domain_sing",
-  domain_insert |> Q.INST [`t` |-> `LN`] |> SIMP_RULE bool_ss [domain_def]);
+Theorem domain_sing =
+  domain_insert |> Q.INST [`t` |-> `LN`] |> SIMP_RULE bool_ss [domain_def];
 
 Theorem domain_fromList:
     domain (fromList l) = count (LENGTH l)
@@ -813,11 +812,10 @@ Proof
   Cases_on `x IN a'` >> simp[lrlemma1, lrlemma2, LEFT_ADD_DISTRIB]
 QED
 
-val domain_foldi = save_thm(
-  "domain_foldi",
+Theorem domain_foldi =
   set_foldi_keys |> SPEC_ALL |> Q.INST [`i` |-> `0`, `a` |-> `{}`]
                  |> SIMP_RULE (srw_ss()) [lrnext_thm]
-                 |> SYM);
+                 |> SYM;
 val _ = computeLib.add_persistent_funs ["domain_foldi"]
 
 Definition mapi0_def[simp]:
@@ -1382,35 +1380,32 @@ fun computerule th q =
                                        EVEN]) THENC
                             SIMP_CONV bool_ss [ALT_ZERO])))
 
-val lookup_compute = save_thm(
-  "lookup_compute",
+Theorem lookup_compute =
     LIST_CONJ (prove (``lookup (NUMERAL n) t = lookup n t``,
                       REWRITE_TAC [NUMERAL_DEF]) ::
                computerule lookup_def `0` @
                computerule lookup_def `ZERO` @
                computerule lookup_def `BIT1 n` @
-               computerule lookup_def `BIT2 n`))
+               computerule lookup_def `BIT2 n`)
 val _ = computeLib.add_persistent_funs ["lookup_compute"]
 
-val insert_compute = save_thm(
-  "insert_compute",
+Theorem insert_compute =
     LIST_CONJ (prove (``insert (NUMERAL n) a t = insert n a t``,
                       REWRITE_TAC [NUMERAL_DEF]) ::
                computerule insert_def `0` @
                computerule insert_def `ZERO` @
                computerule insert_def `BIT1 n` @
-               computerule insert_def `BIT2 n`))
+               computerule insert_def `BIT2 n`)
 val _ = computeLib.add_persistent_funs ["insert_compute"]
 
-val delete_compute = save_thm(
-  "delete_compute",
+Theorem delete_compute =
     LIST_CONJ (
       prove(``delete (NUMERAL n) t = delete n t``,
             REWRITE_TAC [NUMERAL_DEF]) ::
       computerule delete_def `0` @
       computerule delete_def `ZERO` @
       computerule delete_def `BIT1 n` @
-      computerule delete_def `BIT2 n`))
+      computerule delete_def `BIT2 n`)
 val _ = computeLib.add_persistent_funs ["delete_compute"]
 
 Definition fromAList_def[simp]:

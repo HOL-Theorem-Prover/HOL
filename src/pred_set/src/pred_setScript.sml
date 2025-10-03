@@ -180,9 +180,8 @@ val _ = ot0 "GSPEC" "specification"
 val _ = add_user_printer ("pred_set.GSPEC", ``GSPEC f``)
 
 
-val GSPECIFICATION_applied = save_thm(
-  "GSPECIFICATION_applied[simp]",
-  REWRITE_RULE [SPECIFICATION] GSPECIFICATION);
+Theorem GSPECIFICATION_applied[simp] =
+  REWRITE_RULE [SPECIFICATION] GSPECIFICATION;
 
 (* --------------------------------------------------------------------- *)
 (* load generalized specification code.                                  *)
@@ -420,8 +419,7 @@ Proof
     RW_TAC std_ss [SUBSET_DEF]
 QED
 
-val SUBSET_applied = save_thm
-  ("SUBSET_applied", SIMP_RULE bool_ss [IN_DEF] SUBSET_DEF);
+Theorem SUBSET_applied = SIMP_RULE bool_ss [IN_DEF] SUBSET_DEF;
 
 Theorem SUBSET_TRANS:
   !(s:'a set) t u. s SUBSET t /\ t SUBSET u ==> s SUBSET u
@@ -872,9 +870,8 @@ val DISJOINT_EMPTY_REFL =
     ("DISJOINT_EMPTY_REFL",
      (“!s:'a set. (s = EMPTY) = (DISJOINT s s)”),
      REWRITE_TAC [DISJOINT_DEF,INTER_IDEMPOT]);
-val DISJOINT_EMPTY_REFL_RWT = save_thm(
-  "DISJOINT_EMPTY_REFL_RWT",
-  ONCE_REWRITE_RULE [EQ_SYM_EQ] DISJOINT_EMPTY_REFL)
+Theorem DISJOINT_EMPTY_REFL_RWT =
+  ONCE_REWRITE_RULE [EQ_SYM_EQ] DISJOINT_EMPTY_REFL
 
 (* --------------------------------------------------------------------- *)
 (* A theorem from homeier@org.aero.uniblab (Peter Homeier)               *)
@@ -1415,8 +1412,8 @@ Proof
       ASM_REWRITE_TAC[] THEN RES_TAC]
 QED
 
-val SUBSET_OF_INSERT = save_thm ("SUBSET_OF_INSERT",
-  REWRITE_RULE [GSYM SUBSET_INSERT_DELETE] DELETE_SUBSET) ;
+Theorem SUBSET_OF_INSERT =
+  REWRITE_RULE [GSYM SUBSET_INSERT_DELETE] DELETE_SUBSET ;
 
 val DIFF_INSERT =
     store_thm
@@ -3410,10 +3407,10 @@ val CARD_DEF = new_specification ("CARD_DEF", ["CARD"], CARD_EXISTS);
 (* Various cardinality results.                                         *)
 (* ---------------------------------------------------------------------*)
 
-val CARD_EMPTY = save_thm("CARD_EMPTY",CONJUNCT1 CARD_DEF);
+Theorem CARD_EMPTY = CONJUNCT1 CARD_DEF;
 val _ = export_rewrites ["CARD_EMPTY"]
 
-val CARD_INSERT = save_thm("CARD_INSERT",CONJUNCT2 CARD_DEF);
+Theorem CARD_INSERT = CONJUNCT2 CARD_DEF;
 val _ = export_rewrites ["CARD_INSERT"]
 
 (* |- CARD {} = 0 /\
@@ -4809,10 +4806,9 @@ val DISJOINT_BIGUNION_lemma = Q.prove
                     NOT_IN_EMPTY] THEN MESON_TAC []);
 
 (* above with DISJOINT x y both ways round *)
-val DISJOINT_BIGUNION = save_thm(
-  "DISJOINT_BIGUNION",
+Theorem DISJOINT_BIGUNION =
   CONJ DISJOINT_BIGUNION_lemma
-       (ONCE_REWRITE_RULE [DISJOINT_SYM] DISJOINT_BIGUNION_lemma));
+       (ONCE_REWRITE_RULE [DISJOINT_SYM] DISJOINT_BIGUNION_lemma);
 
 Theorem BIGUNION_INSERT:
   !s P. BIGUNION (s INSERT P) = s UNION (BIGUNION P)
@@ -6690,7 +6686,7 @@ Proof
   SRW_TAC [][PROD_SET_DEF, PROD_IMAGE_THM]
 QED
 
-val PROD_SET_EMPTY = save_thm("PROD_SET_EMPTY", CONJUNCT1 PROD_SET_THM);
+Theorem PROD_SET_EMPTY = CONJUNCT1 PROD_SET_THM;
 
 (* Theorem: PROD_SET (IMAGE f (x INSERT s)) = (f x) * PROD_SET (IMAGE f s) *)
 (* Proof:
@@ -7059,12 +7055,12 @@ QED
 
 (* Theorem: MAX_SET {} = 0 *)
 (* Proof: by MAX_SET_REWRITES *)
-val MAX_SET_EMPTY = save_thm("MAX_SET_EMPTY", MAX_SET_REWRITES |> CONJUNCT1);
+Theorem MAX_SET_EMPTY = MAX_SET_REWRITES |> CONJUNCT1;
 (* val MAX_SET_EMPTY = |- MAX_SET {} = 0: thm *)
 
 (* Theorem: MAX_SET {e} = e *)
 (* Proof: by MAX_SET_REWRITES *)
-val MAX_SET_SING = save_thm("MAX_SET_SING", MAX_SET_REWRITES |> CONJUNCT2 |> GEN_ALL);
+Theorem MAX_SET_SING = MAX_SET_REWRITES |> CONJUNCT2 |> GEN_ALL;
 (* val MAX_SET_SING = |- !e. MAX_SET {e} = e: thm *)
 
 (* Theorem: FINITE s /\ s <> {} ==> MAX_SET s IN s *)
@@ -7077,26 +7073,26 @@ QED
 
 (* Theorem: FINITE s ==> !x. x IN s ==> x <= MAX_SET s *)
 (* Proof: by in_max_set *)
-val MAX_SET_PROPERTY = save_thm("MAX_SET_PROPERTY", in_max_set);
+Theorem MAX_SET_PROPERTY = in_max_set;
 (* val MAX_SET_PROPERTY = |- !s. FINITE s ==> !x. x IN s ==> x <= MAX_SET s: thm *)
 
 (* Note: MIN_SET {} is undefined. *)
 
 (* Theorem: MIN_SET {e} = e *)
 (* Proof: by MIN_SET_THM *)
-val MIN_SET_SING = save_thm("MIN_SET_SING", MIN_SET_THM |> CONJUNCT1);
+Theorem MIN_SET_SING = MIN_SET_THM |> CONJUNCT1;
 (* val MIN_SET_SING = |- !e. MIN_SET {e} = e: thm *)
 
 (* Theorem: s <> {} ==> MIN_SET s IN s *)
 (* Proof: by MIN_SET_LEM *)
-val MIN_SET_IN_SET = save_thm("MIN_SET_IN_SET",
-    MIN_SET_LEM |> SPEC_ALL |> UNDISCH |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL);
+Theorem MIN_SET_IN_SET =
+    MIN_SET_LEM |> SPEC_ALL |> UNDISCH |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* val MIN_SET_IN_SET = |- !s. s <> {} ==> MIN_SET s IN s: thm *)
 
 (* Theorem: s <> {} ==> !x. x IN s ==> MIN_SET s <= x *)
 (* Proof: by MIN_SET_LEM *)
-val MIN_SET_PROPERTY = save_thm("MIN_SET_PROPERTY",
-    MIN_SET_LEM |> SPEC_ALL |> UNDISCH |> CONJUNCT2 |> DISCH_ALL |> GEN_ALL);
+Theorem MIN_SET_PROPERTY =
+    MIN_SET_LEM |> SPEC_ALL |> UNDISCH |> CONJUNCT2 |> DISCH_ALL |> GEN_ALL;
 (* val MIN_SET_PROPERTY =|- !s. s <> {} ==> !x. x IN s ==> MIN_SET s <= x: thm *)
 
 (* Theorem: FINITE s ==> ((MAX_SET s = 0) <=> (s = {}) \/ (s = {0})) *)

@@ -509,9 +509,8 @@ val add_eq_conv_ex = prove(
     ]
   ]);
 
-val BAG_INSERT_EQUAL = save_thm(
-  "BAG_INSERT_EQUAL",
-  SIMP_RULE (srw_ss()) [BAG_UNION_INSERT] add_eq_conv_ex)
+Theorem BAG_INSERT_EQUAL =
+  SIMP_RULE (srw_ss()) [BAG_UNION_INSERT] add_eq_conv_ex
 
 Theorem BAG_DELETE_TWICE:
     !b0 e1 e2 b1 b2.
@@ -683,9 +682,8 @@ Proof
   SRW_TAC [][SUB_BAG_LEQ, BAG_DIFF, EMPTY_BAG, FUN_EQ_THM]
 QED
 
-val BAG_DIFF_EMPTY_simple = save_thm(
-  "BAG_DIFF_EMPTY_simple",
-  LIST_CONJ (List.take(CONJUNCTS BAG_DIFF_EMPTY, 3)))
+Theorem BAG_DIFF_EMPTY_simple =
+  LIST_CONJ (List.take(CONJUNCTS BAG_DIFF_EMPTY, 3))
 val _ = export_rewrites ["BAG_DIFF_EMPTY_simple"];
 
 Theorem BAG_DIFF_EQ_EMPTY[simp]:
@@ -897,10 +895,9 @@ val union2_union_assocr =
 
 val union2_union_assoc = union2_union_assocl @ union2_union_assocr;
 
-val SUB_BAG_UNION = save_thm(
-  "SUB_BAG_UNION",
+Theorem SUB_BAG_UNION =
   LIST_CONJ (simplest_cases @ one_from_assoc @ union_from_union @
-             union_union2_assoc @ union2_union_assoc));
+             union_union2_assoc @ union2_union_assoc);
 
 Theorem SUB_BAG_EL_BAG:
    !e b. SUB_BAG (EL_BAG e) b = BAG_IN e b
@@ -1283,12 +1280,11 @@ Proof
   SIMP_TAC std_ss [FINITE_BAG]
 QED
 
-val STRONG_FINITE_BAG_INDUCT = save_thm(
-  "STRONG_FINITE_BAG_INDUCT",
+Theorem STRONG_FINITE_BAG_INDUCT =
   FINITE_BAG_INDUCT
       |> Q.SPEC `\b. FINITE_BAG b /\ P b`
       |> SIMP_RULE std_ss [FINITE_EMPTY_BAG, FINITE_BAG_INSERT]
-      |> GEN_ALL)
+      |> GEN_ALL
 
 val _ = IndDefLib.export_rule_induction "STRONG_FINITE_BAG_INDUCT";
 
@@ -1528,9 +1524,8 @@ val BAG_CARD_INSERT = prove(
   IMP_RES_TAC BAG_CARD THEN
   FULL_SIMP_TAC std_ss [BCARD_RWT] THEN IMP_RES_TAC BCARD_R_det);
 
-val BAG_CARD_THM = save_thm(
-  "BAG_CARD_THM",
-  CONJ BAG_CARD_EMPTY BAG_CARD_INSERT);
+Theorem BAG_CARD_THM =
+  CONJ BAG_CARD_EMPTY BAG_CARD_INSERT;
 
 val BAG_CARD_UNION = store_thm (
   "BAG_CARD_UNION",
@@ -2115,10 +2110,9 @@ val BAG_UNION_STABLE = Q.prove
 val SUB_BAG_UNION_MONO_0 = prove(
   ``!x y. SUB_BAG x (BAG_UNION x y)``,
   RW_TAC arith_ss [SUB_BAG,BAG_UNION,BAG_INN]);
-val SUB_BAG_UNION_MONO = save_thm(
-  "SUB_BAG_UNION_MONO",
+Theorem SUB_BAG_UNION_MONO =
   CONJ SUB_BAG_UNION_MONO_0
-       (ONCE_REWRITE_RULE [COMM_BAG_UNION] SUB_BAG_UNION_MONO_0))
+       (ONCE_REWRITE_RULE [COMM_BAG_UNION] SUB_BAG_UNION_MONO_0)
 val _ = export_rewrites ["SUB_BAG_UNION_MONO"]
 
 Theorem PSUB_BAG_CARD:
@@ -2215,9 +2209,8 @@ val ITBAG_EMPTY = save_thm(
  before
  export_rewrites ["ITBAG_EMPTY"];
 
-val ITBAG_INSERT = save_thm(
-  "ITBAG_INSERT",
-  SIMP_RULE (srw_ss())[] (Q.SPEC `BAG_INSERT x b` ITBAG_THM))
+Theorem ITBAG_INSERT =
+  SIMP_RULE (srw_ss())[] (Q.SPEC `BAG_INSERT x b` ITBAG_THM)
 
 Theorem COMMUTING_ITBAG_INSERT:
     !f b. (!x y z. f x (f y z) = f y (f x z)) /\ FINITE_BAG b ==>
@@ -3306,13 +3299,11 @@ Proof
   simp[BAG_UNION_INSERT, mlt_INSERT_CANCEL]
 QED
 
-val mlt_UNION_LCANCEL_I = save_thm(
-  "mlt_UNION_LCANCEL_I",
-  ONCE_REWRITE_RULE [COMM_BAG_UNION] mlt_UNION_RCANCEL_I);
+Theorem mlt_UNION_LCANCEL_I =
+  ONCE_REWRITE_RULE [COMM_BAG_UNION] mlt_UNION_RCANCEL_I;
 
-val mlt_UNION_LCANCEL = save_thm(
-  "mlt_UNION_LCANCEL[simp]",
-  ONCE_REWRITE_RULE [COMM_BAG_UNION] mlt_UNION_RCANCEL)
+Theorem mlt_UNION_LCANCEL[simp] =
+  ONCE_REWRITE_RULE [COMM_BAG_UNION] mlt_UNION_RCANCEL
 
 val mlt_UNION_lemma = prove(
   ``WF R ==>
@@ -3333,10 +3324,9 @@ Proof
   metis_tac[COMM_BAG_UNION, mlt_UNION_lemma]
 QED
 
-val mlt_UNION_EMPTY_EQN = save_thm(
-  "mlt_UNION_EMPTY_EQN",
+Theorem mlt_UNION_EMPTY_EQN =
   mlt_UNION_CANCEL_EQN |> Q.INST [`b1` |-> `{||}`]
-                       |> SIMP_RULE (srw_ss()) []);
+                       |> SIMP_RULE (srw_ss()) [];
 
 Theorem SUB_BAG_SING[simp]:
     b <= {|e|} <=> (b = {||}) \/ (b = {|e|})
@@ -3398,8 +3388,7 @@ QED
 (*   bag_size eltsize (BAG_INSERT e b) = 1 + eltsize e + bag_size eltsize b  *)
 (*---------------------------------------------------------------------------*)
 
-val BAG_SIZE_INSERT = save_thm
-("BAG_SIZE_INSERT",
+Theorem BAG_SIZE_INSERT =
  let val f = ``\(e:'a) acc. 1 + eltsize e + acc``
      val LCOMM_INCR = Q.prove
      (`!x y z. ^f x (^f y z) = ^f y (^f x z)`, RW_TAC arith_ss [])
@@ -3408,13 +3397,13 @@ val BAG_SIZE_INSERT = save_thm
     |> SIMP_RULE bool_ss [LCOMM_INCR]
     |> (ISPEC``0n`` o Q.ID_SPEC o Q.ID_SPEC)
     |> SIMP_RULE bool_ss [GSYM bag_size_def]
- end);
+ end;
 
 val _ = print "Unibags (bags made all distinct)\n"
 
 val _ = overload_on ("unibag", ``\b. BAG_OF_SET (SET_OF_BAG b)``);
 
-val unibag_thm = save_thm("unibag_thm", CONJ BAG_OF_SET SET_OF_BAG);
+Theorem unibag_thm = CONJ BAG_OF_SET SET_OF_BAG;
 
 Theorem unibag_INSERT:
   !a b. (unibag (BAG_INSERT a b)) = BAG_MERGE {|a|} (unibag b)

@@ -32,17 +32,17 @@ val [ALPHA_obj_SYM, ALPHA_dict_SYM, ALPHA_entry_SYM, ALPHA_method_SYM]
 val [ALPHA_obj_TRANS, ALPHA_dict_TRANS, ALPHA_entry_TRANS, ALPHA_method_TRANS]
     = CONJUNCTS ALPHA_TRANS;
 
-val ALPHA_obj_EQUIV = save_thm("ALPHA_obj_EQUIV",
-    refl_sym_trans_equiv ALPHA_obj_REFL ALPHA_obj_SYM ALPHA_obj_TRANS);
+Theorem ALPHA_obj_EQUIV =
+    refl_sym_trans_equiv ALPHA_obj_REFL ALPHA_obj_SYM ALPHA_obj_TRANS;
 
-val ALPHA_dict_EQUIV = save_thm("ALPHA_dict_EQUIV",
-    refl_sym_trans_equiv ALPHA_dict_REFL ALPHA_dict_SYM ALPHA_dict_TRANS);
+Theorem ALPHA_dict_EQUIV =
+    refl_sym_trans_equiv ALPHA_dict_REFL ALPHA_dict_SYM ALPHA_dict_TRANS;
 
-val ALPHA_entry_EQUIV = save_thm("ALPHA_entry_EQUIV",
-    refl_sym_trans_equiv ALPHA_entry_REFL ALPHA_entry_SYM ALPHA_entry_TRANS);
+Theorem ALPHA_entry_EQUIV =
+    refl_sym_trans_equiv ALPHA_entry_REFL ALPHA_entry_SYM ALPHA_entry_TRANS;
 
-val ALPHA_method_EQUIV = save_thm("ALPHA_method_EQUIV",
-    refl_sym_trans_equiv ALPHA_method_REFL ALPHA_method_SYM ALPHA_method_TRANS);
+Theorem ALPHA_method_EQUIV =
+    refl_sym_trans_equiv ALPHA_method_REFL ALPHA_method_SYM ALPHA_method_TRANS;
 
 val ALPHA_EQUIV = LIST_CONJ
     [ALPHA_obj_EQUIV, ALPHA_dict_EQUIV, ALPHA_entry_EQUIV, ALPHA_method_EQUIV];

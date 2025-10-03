@@ -795,9 +795,9 @@ QED
    Apply DIV_SUB |> GEN_ALL |> SPEC ``1`` |> REWRITE_RULE[MULT_RIGHT_1];
    val it = |- !n m. 0 < n /\ n <= m ==> ((m - n) DIV n = m DIV n - 1): thm
 *)
-val SUB_DIV = save_thm("SUB_DIV",
+Theorem SUB_DIV =
     DIV_SUB |> GEN ``n:num`` |> GEN ``m:num`` |> GEN ``q:num`` |> SPEC ``1``
-            |> REWRITE_RULE[MULT_RIGHT_1]);
+            |> REWRITE_RULE[MULT_RIGHT_1];
 (* val SUB_DIV = |- !m n. 0 < n /\ n <= m ==> ((m - n) DIV n = m DIV n - 1): thm *)
 
 (* Theorem: 0 < n ==> !k m. (m MOD n = 0) ==> ((k * n = m) <=> (k = m DIV n)) *)

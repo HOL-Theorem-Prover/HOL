@@ -16,24 +16,19 @@ val path_absrep_bijections =
                                  name = "path_absrep_bijections",
                                  tyax = path_TY_DEF};
 
-val path_rep_bijections_thm = save_thm(
-  "path_rep_bijections_thm",
-  REWRITE_RULE [] (BETA_RULE path_absrep_bijections));
+Theorem path_rep_bijections_thm =
+  REWRITE_RULE [] (BETA_RULE path_absrep_bijections);
 
-val toPath_11 = save_thm(
-  "toPath_11",
-  REWRITE_RULE [] (BETA_RULE (prove_abs_fn_one_one path_absrep_bijections)));
-val fromPath_11 = save_thm(
-  "fromPath_11",
-  prove_rep_fn_one_one path_absrep_bijections);
+Theorem toPath_11 =
+  REWRITE_RULE [] (BETA_RULE (prove_abs_fn_one_one path_absrep_bijections));
+Theorem fromPath_11 =
+  prove_rep_fn_one_one path_absrep_bijections;
 
 
-val fromPath_onto = save_thm(
-  "fromPath_onto",
-  REWRITE_RULE [] (BETA_RULE (prove_rep_fn_onto path_absrep_bijections)));
-val toPath_onto = save_thm(
-  "toPath_onto",
-  SIMP_RULE std_ss [] (prove_abs_fn_onto path_absrep_bijections));
+Theorem fromPath_onto =
+  REWRITE_RULE [] (BETA_RULE (prove_rep_fn_onto path_absrep_bijections));
+Theorem toPath_onto =
+  SIMP_RULE std_ss [] (prove_abs_fn_onto path_absrep_bijections);
 
 val _ = augment_srw_ss [rewrites [path_rep_bijections_thm,
                                   toPath_11, fromPath_11]]
@@ -543,7 +538,7 @@ Proof
   SRW_TAC [ARITH_ss][pred_setTheory.EXTENSION, PL_def, length_thm]
 QED
 
-val PL_thm = save_thm("PL_thm", CONJ PL_stopped_at PL_pcons);
+Theorem PL_thm = CONJ PL_stopped_at PL_pcons;
 val _ = export_rewrites ["PL_thm"]
 
 Theorem PL_0:
@@ -611,9 +606,8 @@ val firstP_at_pcons = prove(
    ]
  ]);
 
-val firstP_at_thm = save_thm(
-  "firstP_at_thm",
-  CONJ firstP_at_stopped firstP_at_pcons);
+Theorem firstP_at_thm =
+  CONJ firstP_at_stopped firstP_at_pcons;
 
 
 
@@ -694,8 +688,7 @@ QED
 val double_neg_lemma = prove(``$~ o $~ o P = P``,
                              SRW_TAC [][FUN_EQ_THM, combinTheory.o_THM])
 
-val exists_induction = save_thm(
-  "exists_induction",
+Theorem exists_induction =
   (SIMP_RULE (srw_ss()) [double_neg_lemma] o
    Q.SPECL [`(~) o P`, `(~) o Q`] o
    CONV_RULE (STRIP_QUANT_CONV
@@ -703,7 +696,7 @@ val exists_induction = save_thm(
                               (STRIP_QUANT_CONV CONTRAPOS_CONV),
                             STRIP_QUANT_CONV CONTRAPOS_CONV)) THENC
               SIMP_CONV (srw_ss()) [DISJ_IMP_THM, FORALL_AND_THM]))
-  every_coinduction);
+  every_coinduction;
 
 Definition mem_def:  mem s p = ?i. i IN PL p /\ (s = el i p)
 End
@@ -725,9 +718,8 @@ Definition drop_def:
   (drop 0 p = p) /\
   (drop (SUC n) p = drop n (tail p))
 End
-val numeral_drop = save_thm(
-  "numeral_drop",
-  CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV (CONJUNCT2 drop_def));
+Theorem numeral_drop =
+  CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV (CONJUNCT2 drop_def);
 val _ = export_rewrites ["drop_def", "numeral_drop"]
 
 
@@ -1211,8 +1203,7 @@ QED
 Definition okpath_def:  okpath R = gfp (okpath_f R)
 End
 
-val okpath_co_ind = save_thm(
-  "okpath_co_ind",
+Theorem okpath_co_ind =
   okpath_monotone |> SPEC_ALL
                   |> MATCH_MP fixedPointTheory.gfp_coinduction
                   |> SIMP_RULE (srw_ss()) [pred_setTheory.SUBSET_DEF,
@@ -1227,7 +1218,7 @@ val okpath_co_ind = save_thm(
                   |> CONV_RULE
                        (STRIP_QUANT_CONV
                           (LAND_CONV (RENAME_VARS_CONV ["x", "r", "p"]) THENC
-                           RAND_CONV (RENAME_VARS_CONV ["p"]))))
+                           RAND_CONV (RENAME_VARS_CONV ["p"])))
 
 Theorem okpath_cases =
   MATCH_MP fixedPointTheory.gfp_greatest_fixedpoint (SPEC_ALL okpath_monotone)

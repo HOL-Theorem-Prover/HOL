@@ -10,8 +10,8 @@ val thms =
     (INST_TYPE[Type.alpha |-> ``:ordering``] REFL_CLAUSE
      :: tl (type_rws ``:ordering``));
 
-val ordering_eq_dec = save_thm("ordering_eq_dec",
-  PURE_REWRITE_RULE[GSYM (hd (rev (CONJUNCTS (SPEC_ALL EQ_CLAUSES))))] thms);
+Theorem ordering_eq_dec =
+  PURE_REWRITE_RULE[GSYM (hd (rev (CONJUNCTS (SPEC_ALL EQ_CLAUSES))))] thms;
 
 Definition bool_compare_def:
   (bool_compare T T = EQUAL) /\

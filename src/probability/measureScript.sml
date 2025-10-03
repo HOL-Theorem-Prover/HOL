@@ -1575,8 +1575,7 @@ Proof
                sigma_algebra_def, SUBSET_DEF, ALGEBRA_EMPTY, subsets_def, positive_def]
 QED
 
-val MEASURE_COMPL_SUBSET = save_thm (* old name for compatibility purposes *)
-  ("MEASURE_COMPL_SUBSET", MEASURE_DIFF_SUBSET);
+Theorem MEASURE_COMPL_SUBSET = MEASURE_DIFF_SUBSET;
 
 (* cf. MEASURE_SPACE_RESTRICTION *)
 Theorem MEASURE_SPACE_RESTRICTED :
@@ -1970,9 +1969,8 @@ QED
 (* |- !m. algebra (m_space m,measurable_sets m) /\ positive m /\
          countably_additive m ==> additive m
   old name: COUNTABLY_ADDITIVE_ADDITIVE *)
-val ALGEBRA_COUNTABLY_ADDITIVE_ADDITIVE = save_thm
-  ("ALGEBRA_COUNTABLY_ADDITIVE_ADDITIVE",
-    REWRITE_RULE [premeasure_def] ALGEBRA_PREMEASURE_ADDITIVE);
+Theorem ALGEBRA_COUNTABLY_ADDITIVE_ADDITIVE =
+    REWRITE_RULE [premeasure_def] ALGEBRA_PREMEASURE_ADDITIVE;
 
 Theorem ALGEBRA_PREMEASURE_FINITE_ADDITIVE:
     !m. algebra (m_space m, measurable_sets m) /\ premeasure m ==> finite_additive m

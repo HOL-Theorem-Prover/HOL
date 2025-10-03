@@ -1017,14 +1017,12 @@ Proof
   fs[]
 QED
 
-val LFINITE_INDUCTION = save_thm(
-  "LFINITE_INDUCTION",
-  CONV_RULE (RENAME_VARS_CONV ["P"]) LFINITE_ind);
+Theorem LFINITE_INDUCTION =
+  CONV_RULE (RENAME_VARS_CONV ["P"]) LFINITE_ind;
 
-val LFINITE_STRONG_INDUCTION = save_thm(
-  "LFINITE_STRONG_INDUCTION",
+Theorem LFINITE_STRONG_INDUCTION =
   SIMP_RULE (srw_ss()) [LFINITE_THM]
-  (Q.SPEC `\ll. LFINITE ll /\ P ll` LFINITE_INDUCTION))
+  (Q.SPEC `\ll. LFINITE ll /\ P ll` LFINITE_INDUCTION)
 
 Theorem LFINITE_MAP[simp]:
   !f (ll:'a llist). LFINITE (LMAP f ll) = LFINITE ll
@@ -1525,11 +1523,10 @@ Proof
 QED
 val _ = IndDefLib.export_mono "MONO_exists"
 
-val exists_strong_ind = save_thm(
-  "exists_strong_ind",
+Theorem exists_strong_ind =
   exists_ind |> Q.SPECL [`P`, `\ll. Q ll /\ exists P ll`]
              |> SIMP_RULE (srw_ss()) []
-             |> Q.GEN `Q` |> Q.GEN `P`);
+             |> Q.GEN `Q` |> Q.GEN `P`;
 
 Theorem exists_LDROP:
     exists P ll <=> ?n a t. (LDROP n ll = SOME (a:::t)) /\ P a
@@ -1606,7 +1603,7 @@ Theorem every_thm[simp]:
     (every P (h:::t) <=> P h /\ every P t)
 Proof SRW_TAC [][every_def]
 QED
-val LL_ALL_THM = save_thm("LL_ALL_THM", every_thm)
+Theorem LL_ALL_THM = every_thm
 
 Theorem MONO_every:
     (!x. P x ==> Q x) ==> (every P l ==> every Q l)
@@ -1616,12 +1613,11 @@ Proof
 QED
 val _ = export_mono "MONO_every"
 
-val every_strong_coind = save_thm(
-  "every_strong_coind",
+Theorem every_strong_coind =
   every_coind |> Q.SPECL [`P`, `\ll. Q ll \/ every P ll`]
               |> SIMP_RULE (srw_ss()) [DISJ_IMP_THM, IMP_CONJ_THM,
                                        FORALL_AND_THM]
-              |> Q.GEN `Q` |> Q.GEN `P`);
+              |> Q.GEN `Q` |> Q.GEN `P`;
 
 Theorem every_LNTH:
   !P ll. every P ll <=> !n e. LNTH n ll = SOME e ==> P e
@@ -2765,7 +2761,7 @@ val LDROP_EQ_LNIL' = Q.prove (
   ASM_SIMP_TAC std_ss [LTL_THM, LLENGTH_THM, FUNPOW_BIND_NONE,
     SUC_NOT]) ;
 
-val LDROP_EQ_LNIL = save_thm("LDROP_EQ_LNIL", SPEC_ALL LDROP_EQ_LNIL') ;
+Theorem LDROP_EQ_LNIL = SPEC_ALL LDROP_EQ_LNIL' ;
 
 Theorem LPREFIX_APPEND:
    LPREFIX l1 l2 <=> ?ll. l2 = LAPPEND l1 ll
@@ -2972,10 +2968,9 @@ Proof
   simp[LTL_HD_LTL_LHD, Excl "LTL_HD_11"]
 QED
 
-val LGENLIST_SOME_compute = save_thm(
-  "LGENLIST_SOME_compute[compute]",
+Theorem LGENLIST_SOME_compute[compute] =
   CONJ (CONJUNCT1 LGENLIST_SOME)
-       (CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV (CONJUNCT2 LGENLIST_SOME)))
+       (CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV (CONJUNCT2 LGENLIST_SOME))
 
 Theorem LNTH_LGENLIST:
    !n f lim.

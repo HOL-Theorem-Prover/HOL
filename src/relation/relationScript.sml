@@ -376,12 +376,10 @@ val tc_right_TC = TAC_PROOF(
 val tc_left_exists = SIMP_PROVE bool_ss [] ``?tc. ^tc_left_asm``;
 val tc_right_exists = SIMP_PROVE bool_ss [] ``?tc. ^tc_right_asm``;
 
-val TC_INDUCT_LEFT1 = save_thm(
-  "TC_INDUCT_LEFT1",
-  CHOOSE(tc, tc_left_exists) (REWRITE_RULE [tc_left_TC] tc_left_ind));
-val TC_INDUCT_RIGHT1 = save_thm(
-  "TC_INDUCT_RIGHT1",
-  CHOOSE(tc, tc_right_exists) (REWRITE_RULE [tc_right_TC] tc_right_ind));
+Theorem TC_INDUCT_LEFT1 =
+  CHOOSE(tc, tc_left_exists) (REWRITE_RULE [tc_left_TC] tc_left_ind);
+Theorem TC_INDUCT_RIGHT1 =
+  CHOOSE(tc, tc_right_exists) (REWRITE_RULE [tc_right_TC] tc_right_ind);
 
 val TC_INDUCT_TAC =
  let val tc_thm = TC_INDUCT
@@ -1260,9 +1258,8 @@ Q.new_definition
 ("inv_image_def",
    `inv_image R (f:'a->'b) = \x y. R (f x) (f y):bool`);
 
-val inv_image_thm = save_thm(
-  "inv_image_thm",
-  SIMP_RULE bool_ss [FUN_EQ_THM] inv_image_def)
+Theorem inv_image_thm =
+  SIMP_RULE bool_ss [FUN_EQ_THM] inv_image_def
 val _ = export_rewrites ["inv_image_thm"]
 
 Theorem WF_inv_image:
@@ -2194,9 +2191,8 @@ Proof
   PROVE_TAC []
 QED
 
-val EqIsBothRSUBSET = save_thm(
-  "EqIsBothRSUBSET",
-  MATCH_MP WeakOrder_EQ RSUBSET_WeakOrder)
+Theorem EqIsBothRSUBSET =
+  MATCH_MP WeakOrder_EQ RSUBSET_WeakOrder
 (* |- !y z. (y = z) = y RSUBSET z /\ z RSUBSET y *)
 
 (* ----------------------------------------------------------------------

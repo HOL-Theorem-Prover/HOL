@@ -48,8 +48,8 @@ val term1_case_cong = theorem "term1_case_cong";
 val term1_induct = theorem "term1_induction";
 val term1_Axiom = theorem "term1_Axiom";
 
-val term1_distinct2 = save_thm("term1_distinct2",
-                         CONJ term1_distinct (GSYM term1_distinct));
+Theorem term1_distinct2 =
+                         CONJ term1_distinct (GSYM term1_distinct);
 val _ = save_thm("term1_one_one", term1_one_one);
 val _ = save_thm("term1_cases", term1_cases);
 

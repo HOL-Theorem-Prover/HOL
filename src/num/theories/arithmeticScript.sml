@@ -269,16 +269,16 @@ QED
 (* SUC_NOT = |- !n. ~(0 = SUC n)                                         *)
 (* --------------------------------------------------------------------- *)
 
-val SUC_NOT = save_thm ("SUC_NOT",
-    GEN (“n:num”) (NOT_EQ_SYM (SPEC (“n:num”) NOT_SUC)));
+Theorem SUC_NOT =
+    GEN (“n:num”) (NOT_EQ_SYM (SPEC (“n:num”) NOT_SUC));
 
 (* Theorem: 0 < SUC n *)
 (* Proof: by arithmetic. *)
-val SUC_POS = save_thm("SUC_POS", LESS_0);
+Theorem SUC_POS = LESS_0;
 
 (* Theorem: 0 < SUC n *)
 (* Proof: by arithmetic. *)
-val SUC_NOT_ZERO = save_thm("SUC_NOT_ZERO", NOT_SUC);
+Theorem SUC_NOT_ZERO = NOT_SUC;
 
 Theorem ADD_0:
     !m. m + 0 = m
@@ -307,7 +307,7 @@ Proof
   INDUCT_TAC THEN ASM_REWRITE_TAC[ADD_0, ADD, ADD_SUC]
 QED
 
-val ADD_COMM = save_thm ("ADD_COMM", ADD_SYM);
+Theorem ADD_COMM = ADD_SYM;
 
 Theorem ADD_ASSOC:
     !m n p. m + (n + p) = (m + n) + p
@@ -414,8 +414,8 @@ QED
  *  |- !m n. SUC m < SUC n = m < n
  *---------------------------------------------------------------------------*)
 
-val LESS_MONO_REV = save_thm ("LESS_MONO_REV", prim_recTheory.LESS_MONO_REV) ;
-val LESS_MONO_EQ = save_thm ("LESS_MONO_EQ", prim_recTheory.LESS_MONO_EQ) ;
+Theorem LESS_MONO_REV = prim_recTheory.LESS_MONO_REV ;
+Theorem LESS_MONO_EQ = prim_recTheory.LESS_MONO_EQ ;
 
 Theorem LESS_EQ_MONO:
       !n m. (SUC n <= SUC m) = (n <= m)
@@ -785,7 +785,7 @@ Proof
    THEN ASM_REWRITE_TAC[MULT_CLAUSES,SPECL[“m*n”,“n:num”]ADD_SYM]
 QED
 
-val MULT_COMM = save_thm ("MULT_COMM", MULT_SYM);
+Theorem MULT_COMM = MULT_SYM;
 
 Theorem RIGHT_ADD_DISTRIB:
     !m n p. (m + n) * p = (m * p) + (n * p)
@@ -931,9 +931,9 @@ Proof
     THEN REWRITE_TAC[LESS_MONO_ADD,LESS_MONO_ADD_INV]
 QED
 
-val LT_ADD_RCANCEL = save_thm ("LT_ADD_RCANCEL", LESS_MONO_ADD_EQ)
-val LT_ADD_LCANCEL = save_thm ("LT_ADD_LCANCEL",
-                               ONCE_REWRITE_RULE [ADD_COMM] LT_ADD_RCANCEL)
+Theorem LT_ADD_RCANCEL = LESS_MONO_ADD_EQ
+Theorem LT_ADD_LCANCEL =
+                               ONCE_REWRITE_RULE [ADD_COMM] LT_ADD_RCANCEL
 
 Theorem EQ_MONO_ADD_EQ:
     !m n p. ((m + p) = (n + p)) = (m = n)
@@ -1468,8 +1468,8 @@ QED
 
 val _ = print "More properties of subtraction...\n"
 
-val SUB_EQUAL_0 = save_thm ("SUB_EQUAL_0",
-   REWRITE_RULE [ADD_CLAUSES] (SPEC (“0”) ADD_SUB));
+Theorem SUB_EQUAL_0 =
+   REWRITE_RULE [ADD_CLAUSES] (SPEC (“0”) ADD_SUB);
 
 Theorem LESS_EQ_SUB_LESS:
   !a b. (b <= a) ==> !c. ((a - b) < c) = (a < (b + c))
@@ -1665,7 +1665,7 @@ Proof
   REWRITE_TAC[NOT_LESS, LESS_EQ_0, DE_MORGAN_THM, MULT_EQ_0]
 QED
 
-val MULT_POS = save_thm("MULT_POS", LESS_MULT2);
+Theorem MULT_POS = LESS_MULT2;
 
 Theorem ZERO_LESS_MULT[simp]:
   !m n. 0 < m * n <=> 0 < m /\ 0 < n
@@ -2353,7 +2353,7 @@ Proof
 QED
 
 (* |- x MOD 1 = 0 *)
-val MOD_1 = save_thm ("MOD_1", REWRITE_RULE [SYM ONE] MOD_ONE);
+Theorem MOD_1 = REWRITE_RULE [SYM ONE] MOD_ONE;
 
 Theorem DIV_LESS_EQ:
   !n. 0<n ==> !k. (k DIV n) <= k
@@ -2617,16 +2617,16 @@ QED
 
 (* LESS_DIV_EQ_ZERO = |- !r n. r < n ==> (r DIV n = 0) *)
 
-val LESS_DIV_EQ_ZERO = save_thm ("LESS_DIV_EQ_ZERO",
+Theorem LESS_DIV_EQ_ZERO =
     GENL [(“r:num”),(“n:num”)] (DISCH_ALL (PURE_REWRITE_RULE[MULT,ADD]
-    (SPEC (“0”)(UNDISCH_ALL (SPEC_ALL  DIV_MULT))))));
+    (SPEC (“0”)(UNDISCH_ALL (SPEC_ALL  DIV_MULT)))));
 
 (* MULT_DIV = |- !n q. 0 < n ==> ((q * n) DIV n = q) *)
 
-val MULT_DIV = save_thm ("MULT_DIV",
+Theorem MULT_DIV =
     GEN_ALL (PURE_REWRITE_RULE[ADD_0]
     (CONV_RULE RIGHT_IMP_FORALL_CONV
-               (SPECL[(“n:num”),(“0”)] DIV_MULT))));
+               (SPECL[(“n:num”),(“0”)] DIV_MULT)));
 
 Theorem ADD_DIV_ADD_DIV:
  !n. 0 < n ==> !x r. ((((x * n) + r) DIV n) = x + (r DIV n))
@@ -2693,12 +2693,12 @@ REPEAT GEN_TAC THEN DISCH_TAC
 QED
 
 (* |- !q. q DIV (SUC 0) = q *)
-val DIV_ONE = save_thm ("DIV_ONE",
+Theorem DIV_ONE =
     GEN_ALL (REWRITE_RULE[REWRITE_RULE[ONE] MULT_RIGHT_1]
     (MP (SPECL [(“SUC 0”), (“q:num”)] MULT_DIV)
-        (SPEC (“0”) LESS_0))));
+        (SPEC (“0”) LESS_0)));
 
-val DIV_1 = save_thm ("DIV_1", REWRITE_RULE [SYM ONE] DIV_ONE);
+Theorem DIV_1 = REWRITE_RULE [SYM ONE] DIV_ONE;
 
 Theorem DIVMOD_ID:
    !n. 0 < n ==> (n DIV n = 1) /\ (n MOD n = 0)
@@ -2834,8 +2834,8 @@ Proof
  METIS_TAC [ADD_SYM,MOD_PLUS,DIVMOD_ID,MOD_MOD,ADD_CLAUSES]
 QED
 
-val ADD_MODULUS_LEFT = save_thm ("ADD_MODULUS_LEFT",CONJUNCT1 ADD_MODULUS);
-val ADD_MODULUS_RIGHT = save_thm ("ADD_MODULUS_RIGHT",CONJUNCT2 ADD_MODULUS);
+Theorem ADD_MODULUS_LEFT = CONJUNCT1 ADD_MODULUS;
+Theorem ADD_MODULUS_RIGHT = CONJUNCT2 ADD_MODULUS;
 
 Theorem DIV_P:
    !P p q. 0 < q ==>
@@ -3383,8 +3383,7 @@ QED
     Some additional theorems (nothing to do with DIV and MOD)
    ---------------------------------------------------------------------- *)
 
-val num_case_cong =
-  save_thm ("num_case_cong", Prim_rec.case_cong_thm num_CASES num_case_def);
+Theorem num_case_cong = Prim_rec.case_cong_thm num_CASES num_case_def;
 
 val SUC_ELIM_THM = store_thm ("SUC_ELIM_THM",
   (“!P. (!n. P (SUC n) n) = (!n. (0 < n ==> P n (n-1)))”),
@@ -3708,10 +3707,9 @@ Proof
 QED
 
 (*  |- m <= n ==> SUC b ** m <= SUC b ** n *)
-val EXP_BASE_LEQ_MONO_SUC_IMP = save_thm (
-  "EXP_BASE_LEQ_MONO_SUC_IMP",
+Theorem EXP_BASE_LEQ_MONO_SUC_IMP =
   (REWRITE_RULE [LESS_0] o Q.INST [`b` |-> `SUC b`] o SPEC_ALL)
-  EXP_BASE_LEQ_MONO_IMP);
+  EXP_BASE_LEQ_MONO_IMP;
 
 Theorem EXP_BASE_LE_IFF:
    b ** m <= b ** n <=>
@@ -4197,12 +4195,12 @@ Proof
    METIS_TAC [LESS_THM,relationTheory.transitive_def]
 QED
 
-val STRICTLY_INCREASING_TC = save_thm ("STRICTLY_INCREASING_TC",
+Theorem STRICTLY_INCREASING_TC =
    (* !f. (!n. f n < f (SUC n)) ==> !m n. m < n ==> f m < f n *)
    transitive_monotone |> Q.ISPEC `$<` |>
    SIMP_RULE bool_ss [
      Q.prove(`transitive $<`,
-       METIS_TAC [relationTheory.transitive_def,LESS_TRANS])])
+       METIS_TAC [relationTheory.transitive_def,LESS_TRANS])]
 
 Theorem STRICTLY_INCREASING_ONE_ONE:
     !f. (!n. f n < f (SUC n)) ==> ONE_ONE f
@@ -4296,7 +4294,7 @@ Proof
    METIS_TAC [LESS_ANTISYM,NOT_LESS,LESS_OR_EQ]
 QED
 
-val ABS_DIFF_COMM = save_thm ("ABS_DIFF_COMM",ABS_DIFF_SYM)
+Theorem ABS_DIFF_COMM = ABS_DIFF_SYM
 
 Theorem ABS_DIFF_EQS:
     !n. ABS_DIFF n n = 0
@@ -4554,7 +4552,7 @@ Proof
   metis_tac[FUNPOW_ADD, ADD_COMM]
 QED
 
-val NRC_0 = save_thm ("NRC_0", CONJUNCT1 NRC);
+Theorem NRC_0 = CONJUNCT1 NRC;
 val _ = export_rewrites ["NRC_0"]
 
 Theorem NRC_1:
@@ -5111,14 +5109,13 @@ Proof
   irule MODEQ_MULT_CONG >> SRW_TAC[][]
 QED
 
-val EXP_MOD = save_thm(
-  "EXP_MOD",
+Theorem EXP_MOD =
   MODEQ_EXP_CONG |> SIMP_RULE bool_ss [GSYM NOT_LT_ZERO_EQ_ZERO,
                                        ASSUME “0 < n”, MODEQ_THM]
                  |> INST [“y:num” |-> “x MOD n”, “e1:num” |-> “e:num”,
                           “e2:num” |-> “e:num”]
                  |> SIMP_RULE bool_ss [MATCH_MP MOD_MOD (ASSUME “0 < n”)]
-                 |> SYM |> DISCH_ALL)
+                 |> SYM |> DISCH_ALL
 
 Theorem MODEQ_SYM:
    MODEQ n x y <=> MODEQ n y x

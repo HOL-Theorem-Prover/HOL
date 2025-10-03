@@ -486,8 +486,8 @@ QED
 (* --------------------------------------------------------------------- *)
 
 
-val fset_EQUIV = save_thm("fset_EQUIV",
-    refl_sym_trans_equiv fset_REFL fset_SYM fset_TRANS);
+Theorem fset_EQUIV =
+    refl_sym_trans_equiv fset_REFL fset_SYM fset_TRANS;
 
 val equivs = [fset_EQUIV];
 

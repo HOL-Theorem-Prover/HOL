@@ -295,8 +295,8 @@ Proof
 QED
 
 (* do the quotient *)
-val leq_equiv = save_thm("leq_equiv",
-    refl_sym_trans_equiv leq_refl leq_sym leq_trans);
+Theorem leq_equiv =
+    refl_sym_trans_equiv leq_refl leq_sym leq_trans;
 
 val equivs = [leq_equiv];
 

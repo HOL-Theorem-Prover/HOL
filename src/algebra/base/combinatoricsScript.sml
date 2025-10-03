@@ -126,9 +126,9 @@ LENGTH_LUPDATE  |- !x n ys. LENGTH (LUPDATE x n ys) = LENGTH ys
 *)
 
 (* Extract useful theorem from LUPDATE semantics *)
-val LUPDATE_LEN = save_thm("LUPDATE_LEN", LUPDATE_SEM |> CONJUNCT1);
+Theorem LUPDATE_LEN = LUPDATE_SEM |> CONJUNCT1;
 (* val LUPDATE_LEN = |- !e n l. LENGTH (LUPDATE e n l) = LENGTH l: thm *)
-val LUPDATE_EL = save_thm("LUPDATE_EL", LUPDATE_SEM |> CONJUNCT2);
+Theorem LUPDATE_EL = LUPDATE_SEM |> CONJUNCT2;
 (* val LUPDATE_EL = |- !e n l p. p < LENGTH l ==> EL p (LUPDATE e n l) = if p = n then e else EL p l: thm *)
 
 (* Theorem: LUPDATE q n (LUPDATE p n ls) = LUPDATE q n ls *)
@@ -755,12 +755,12 @@ QED
 
 (* Theorem: SUM [] = 0 *)
 (* Proof: by definition. *)
-val SUM_NIL = save_thm("SUM_NIL", SUM |> CONJUNCT1);
+Theorem SUM_NIL = SUM |> CONJUNCT1;
 (* > val SUM_NIL = |- SUM [] = 0 : thm *)
 
 (* Theorem: SUM h::t = h + SUM t *)
 (* Proof: by definition. *)
-val SUM_CONS = save_thm("SUM_CONS", SUM |> CONJUNCT2);
+Theorem SUM_CONS = SUM |> CONJUNCT2;
 (* val SUM_CONS = |- !h t. SUM (h::t) = h + SUM t: thm *)
 
 (* Theorem: SUM [n] = n *)
@@ -1410,12 +1410,12 @@ QED
 
 (* Theorem: nub [] = [] *)
 (* Proof: by nub_def *)
-val nub_nil = save_thm("nub_nil", nub_def |> CONJUNCT1);
+Theorem nub_nil = nub_def |> CONJUNCT1;
 (* val nub_nil = |- nub [] = []: thm *)
 
 (* Theorem: nub (x::l) = if MEM x l then nub l else x::nub l *)
 (* Proof: by nub_def *)
-val nub_cons = save_thm("nub_cons", nub_def |> CONJUNCT2);
+Theorem nub_cons = nub_def |> CONJUNCT2;
 (* val nub_cons = |- !x l. nub (x::l) = if MEM x l then nub l else x::nub l: thm *)
 
 (* Theorem: nub [x] = [x] *)
@@ -1868,10 +1868,10 @@ val PROD = new_recursive_definition
 val _ = export_rewrites["PROD"];
 
 (* Extract theorems from definition *)
-val PROD_NIL = save_thm("PROD_NIL", PROD |> CONJUNCT1);
+Theorem PROD_NIL = PROD |> CONJUNCT1;
 (* val PROD_NIL = |- PROD [] = 1: thm *)
 
-val PROD_CONS = save_thm("PROD_CONS", PROD |> CONJUNCT2);
+Theorem PROD_CONS = PROD |> CONJUNCT2;
 (* val PROD_CONS = |- !h t. PROD (h::t) = h * PROD t: thm *)
 
 (* Theorem: PROD [n] = n *)
@@ -2482,7 +2482,7 @@ Proof
 QED
 
 (* Theorem alias *)
-val arithmetic_sum_eqn_alt = save_thm("arithmetic_sum_eqn_alt", sum_1_to_n_eqn);
+Theorem arithmetic_sum_eqn_alt = sum_1_to_n_eqn;
 (* val arithmetic_sum_eqn_alt = |- !n. SUM [1 .. n] = HALF (n * (n + 1)): thm *)
 
 (* Theorem: SUM (GENLIST (\j. f (n - j)) n) = SUM (MAP f [1 .. n]) *)
@@ -3970,7 +3970,7 @@ val it = |- DILATE 1 1 3 [1; 2; 3] = [1; 2; 1; 1; 1; 3]: thm
 
 (* Theorem: DILATE e n m [] = [] *)
 (* Proof: by DILATE_def *)
-val DILATE_NIL = save_thm("DILATE_NIL", DILATE_def |> CONJUNCT1);
+Theorem DILATE_NIL = DILATE_def |> CONJUNCT1;
 (* val DILATE_NIL = |- !n m e. DILATE e n m [] = []: thm *)
 
 (* export simple result *)
@@ -3978,7 +3978,7 @@ val _ = export_rewrites["DILATE_NIL"];
 
 (* Theorem: DILATE e n m [h] = [h] *)
 (* Proof: by DILATE_def *)
-val DILATE_SING = save_thm("DILATE_SING", DILATE_def |> CONJUNCT2 |> CONJUNCT1);
+Theorem DILATE_SING = DILATE_def |> CONJUNCT2 |> CONJUNCT1;
 (* val DILATE_SING = |- !n m h e. DILATE e n m [h] = [h]: thm *)
 
 (* export simple result *)
@@ -4812,7 +4812,7 @@ Proof
 QED
 
 (* Theorem alias. *)
-val binomial_fact = save_thm("binomial_fact", binomial_formula3);
+Theorem binomial_fact = binomial_formula3;
 (* val binomial_fact = |- !n k. k <= n ==> (binomial n k = FACT n DIV (FACT k * FACT (n - k))): thm *)
 
 (* Theorem: k <= n ==> binomial n k = (FACT n) DIV (FACT k) DIV (FACT (n - k)) *)
@@ -5499,8 +5499,8 @@ QED
 (* This is a milestone theorem. *)
 
 (* Derive an alternative form. *)
-val binomial_thm_alt = save_thm("binomial_thm_alt",
-    binomial_thm |> SIMP_RULE bool_ss [ADD1]);
+Theorem binomial_thm_alt =
+    binomial_thm |> SIMP_RULE bool_ss [ADD1];
 (* val binomial_thm_alt =
    |- !n x y. (x + y) ** n =
               SUM (GENLIST (\k. binomial n k * x ** (n - k) * y ** k) (n + 1)): thm *)
@@ -5525,8 +5525,8 @@ Proof
 QED
 
 (* Derive an alternative form. *)
-val binomial_sum_alt = save_thm("binomial_sum_alt",
-    binomial_sum |> SIMP_RULE bool_ss [ADD1]);
+Theorem binomial_sum_alt =
+    binomial_sum |> SIMP_RULE bool_ss [ADD1];
 (* val binomial_sum_alt = |- !n. SUM (GENLIST (binomial n) (n + 1)) = 2 ** n: thm *)
 
 (* ------------------------------------------------------------------------- *)
@@ -7614,8 +7614,8 @@ Proof
 QED
 
 (* Another version to eliminate EVERY by MEM. *)
-val list_lcm_lower_bound_alt = save_thm("list_lcm_lower_bound_alt",
-    list_lcm_lower_bound |> SIMP_RULE (srw_ss()) [EVERY_MEM]);
+Theorem list_lcm_lower_bound_alt =
+    list_lcm_lower_bound |> SIMP_RULE (srw_ss()) [EVERY_MEM];
 (* > list_lcm_lower_bound_alt;
 val it = |- !l. POSITIVE l ==> SUM l <= LENGTH l * list_lcm l: thm
 *)
@@ -10184,7 +10184,7 @@ Proof
 QED
 
 (* Theorem alias *)
-val lcm_run_suc = save_thm("lcm_run_suc", list_lcm_suc);
+Theorem lcm_run_suc = list_lcm_suc;
 (* val lcm_run_suc = |- !n. lcm_run (n + 1) = lcm (n + 1) (lcm_run n): thm *)
 
 (* Theorem: 0 < lcm_run n *)
@@ -10253,14 +10253,14 @@ QED
    = list_lcm [1 .. (n + 1)]   by notation
    >= 2 ** n                   by lcm_lower_bound
 *)
-val lcm_run_lower = save_thm("lcm_run_lower", lcm_lower_bound);
+Theorem lcm_run_lower = lcm_lower_bound;
 (*
 val lcm_run_lower = |- !n. 2 ** n <= lcm_run (n + 1): thm
 *)
 
 (* Theorem: !n k. k <= n ==> leibniz n k divides lcm_run (n + 1) *)
 (* Proof: by notation, leibniz_vertical_divisor *)
-val lcm_run_leibniz_divisor = save_thm("lcm_run_leibniz_divisor", leibniz_vertical_divisor);
+Theorem lcm_run_leibniz_divisor = leibniz_vertical_divisor;
 (*
 val lcm_run_leibniz_divisor = |- !n k. k <= n ==> leibniz n k divides lcm_run (n + 1): thm
 *)
@@ -10837,10 +10837,10 @@ Definition lcm_upto_def:
 End
 
 (* Extract theorems from definition *)
-val lcm_upto_0 = save_thm("lcm_upto_0", lcm_upto_def |> CONJUNCT1);
+Theorem lcm_upto_0 = lcm_upto_def |> CONJUNCT1;
 (* val lcm_upto_0 = |- lcm_upto 0 = 1: thm *)
 
-val lcm_upto_SUC = save_thm("lcm_upto_SUC", lcm_upto_def |> CONJUNCT2);
+Theorem lcm_upto_SUC = lcm_upto_def |> CONJUNCT2;
 (* val lcm_upto_SUC = |- !n. lcm_upto (SUC n) = lcm (SUC n) (lcm_upto n): thm *)
 
 (* Theorem: (lcm_upto 0 = 1) /\ (!n. lcm_upto (n+1) = lcm (n+1) (lcm_upto n)) *)

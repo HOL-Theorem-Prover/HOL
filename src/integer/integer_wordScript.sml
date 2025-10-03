@@ -120,7 +120,7 @@ val UINT_MAX_32 = store_thm(
 val _ = export_rewrites ["UINT_MAX_32"]
 *)
 
-val ONE_LE_TWOEXP = save_thm("ONE_LE_TWOEXP", bitTheory.ONE_LE_TWOEXP)
+Theorem ONE_LE_TWOEXP = bitTheory.ONE_LE_TWOEXP
 
 Theorem w2i_w2n_pos:
    !w n. ~word_msb w /\ w2i w < &n ==> w2n w < n

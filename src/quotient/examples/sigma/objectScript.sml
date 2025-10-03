@@ -62,11 +62,11 @@ val object1_induct = theorem "obj1_induction";
 val object1_Axiom = theorem "obj1_Axiom";
 
 val object1_distinct = LIST_CONJ[obj1_distinct,list_distinct];
-val object1_distinct = save_thm("object1_distinct",
-                         CONJ object1_distinct (GSYM object1_distinct));
-val object1_one_one  = save_thm("object1_one_one",
+Theorem object1_distinct =
+                         CONJ object1_distinct (GSYM object1_distinct);
+Theorem object1_one_one =
                          LIST_CONJ[obj1_one_one,list_11,CLOSED_PAIR_EQ,
-                                   method1_one_one]);
+                                   method1_one_one];
 
 
 

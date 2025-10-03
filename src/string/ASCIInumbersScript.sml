@@ -239,7 +239,7 @@ Proof
   SRW_TAC [][HEX_def, UNHEX_def]
 QED
 
-val toString_toNum_cancel = save_thm("toString_toNum_cancel", toNum_toString)
+Theorem toString_toNum_cancel = toNum_toString
 
 Theorem toString_inj[simp]: !n m. toString n = toString m <=> n = m
 Proof METIS_TAC [toNum_toString]
