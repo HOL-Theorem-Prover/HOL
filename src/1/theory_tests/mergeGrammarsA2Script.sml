@@ -6,10 +6,9 @@ Libs
    being tested
 *)
 
-Theorem a_theorem:
-    (x:bool = x) /\ (y = y)
-Proof
-  REWRITE_TAC[]
-QED
+val a_theorem = store_thm(
+  "a_theorem",
+  ``(x:bool = x) /\ (y = y)``,
+  REWRITE_TAC[]);
 
 

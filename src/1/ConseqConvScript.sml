@@ -4,25 +4,17 @@ Ancestors
 Libs
   HolKernel Parse Drule Tactical Tactic Conv Rewrite
 
-Theorem forall_eq_thm:
-     (!s:'a. (P s = Q s)) ==> ((!s. P s) = (!s. Q s))
-Proof
-     STRIP_TAC THEN ASM_REWRITE_TAC[]
-QED
+val forall_eq_thm = store_thm ("forall_eq_thm",
+   ``(!s:'a. (P s = Q s)) ==> ((!s. P s) = (!s. Q s))``,
+     STRIP_TAC THEN ASM_REWRITE_TAC[]);
 
-Theorem exists_eq_thm:
-     (!s:'a. (P s = Q s)) ==> ((?s. P s) = (?s. Q s))
-Proof
-     STRIP_TAC THEN ASM_REWRITE_TAC[]
-QED
+val exists_eq_thm = store_thm ("exists_eq_thm",
+   ``(!s:'a. (P s = Q s)) ==> ((?s. P s) = (?s. Q s))``,
+     STRIP_TAC THEN ASM_REWRITE_TAC[]);
 
 
-Theorem true_imp:   !t. t ==> T
-Proof REWRITE_TAC[]
-QED
-Theorem false_imp:   !t. F ==> t
-Proof REWRITE_TAC[]
-QED
+val true_imp = store_thm ("true_imp", ``!t. t ==> T``, REWRITE_TAC[]);
+val false_imp = store_thm ("false_imp", ``!t. F ==> t``, REWRITE_TAC[]);
 
 
 val NOT_CLAUSES_THML = CONJUNCTS NOT_CLAUSES
@@ -30,21 +22,17 @@ Theorem NOT_CLAUSES_X = el 1 NOT_CLAUSES_THML
 Theorem NOT_CLAUSES_T = el 2 NOT_CLAUSES_THML
 Theorem NOT_CLAUSES_F = el 3 NOT_CLAUSES_THML
 
-Theorem IMP_CONG_conj_strengthen:
-  !x x' y y'.
+val IMP_CONG_conj_strengthen = store_thm ("IMP_CONG_conj_strengthen",
+``!x x' y y'.
   ((y ==> (x' ==> x)) /\ (x' ==> (y' ==> y))) ==>
-  ((x' /\ y') ==> (x /\ y))
-Proof
-Ho_Rewrite.REWRITE_TAC [FORALL_BOOL]
-QED
+  ((x' /\ y') ==> (x /\ y))``,
+Ho_Rewrite.REWRITE_TAC [FORALL_BOOL]);
 
-Theorem IMP_CONG_conj_weaken:
-  !x x' y y'.
+val IMP_CONG_conj_weaken = store_thm("IMP_CONG_conj_weaken",
+``!x x' y y'.
   ((y ==> (x ==> x')) /\ (x' ==> (y ==> y'))) ==>
-  ((x /\ y) ==> (x' /\ y'))
-Proof
-Ho_Rewrite.REWRITE_TAC [FORALL_BOOL]
-QED
+  ((x /\ y) ==> (x' /\ y'))``,
+Ho_Rewrite.REWRITE_TAC [FORALL_BOOL]);
 
 
 val AND_CLAUSES_THML =
@@ -57,22 +45,18 @@ Theorem AND_CLAUSES_XF = el 4 AND_CLAUSES_THML;
 Theorem AND_CLAUSES_XX = el 5 AND_CLAUSES_THML;
 
 
-Theorem IMP_CONG_disj_strengthen:
-  !x x' y y'.
+val IMP_CONG_disj_strengthen = store_thm ("IMP_CONG_disj_strengthen",
+``!x x' y y'.
   ((~y ==> (x' ==> x)) /\ (~x' ==> (y' ==> y))) ==>
-  ((x' \/ y') ==> (x \/ y))
-Proof
-Ho_Rewrite.REWRITE_TAC [FORALL_BOOL]
-QED
+  ((x' \/ y') ==> (x \/ y))``,
+Ho_Rewrite.REWRITE_TAC [FORALL_BOOL]);
 
 
-Theorem IMP_CONG_disj_weaken:
-  !x x' y y'.
+val IMP_CONG_disj_weaken = store_thm ("IMP_CONG_disj_weaken",
+``!x x' y y'.
   ((~y ==> (x ==> x')) /\ (~x' ==> (y ==> y'))) ==>
-  ((x \/ y) ==> (x' \/ y'))
-Proof
-Ho_Rewrite.REWRITE_TAC [FORALL_BOOL]
-QED
+  ((x \/ y) ==> (x' \/ y'))``,
+Ho_Rewrite.REWRITE_TAC [FORALL_BOOL]);
 
 
 val OR_CLAUSES_THML =
@@ -87,38 +71,30 @@ val OR_CLAUSES_XX = save_thm ("OR_CLAUSES_XX", el 5 OR_CLAUSES_THML)
 
 
 
-Theorem IMP_CONG_imp_strengthen:
-  !x x' y y'.
+val IMP_CONG_imp_strengthen = store_thm ("IMP_CONG_imp_strengthen",
+``!x x' y y'.
   ((x ==> (y' ==> y)) /\ (~y' ==> (x ==> x'))) ==>
-  ((x' ==> y') ==> (x ==> y))
-Proof
-  Ho_Rewrite.REWRITE_TAC [FORALL_BOOL]
-QED
+  ((x' ==> y') ==> (x ==> y))``,
+  Ho_Rewrite.REWRITE_TAC [FORALL_BOOL]);
 
-Theorem IMP_CONG_imp_weaken:
-  !x x' y y'.
+val IMP_CONG_imp_weaken = store_thm ("IMP_CONG_imp_weaken",
+``!x x' y y'.
   ((x ==> (y ==> y')) /\ (~y' ==> (x' ==> x))) ==>
-  ((x ==> y) ==> (x' ==> y'))
-Proof
-  Ho_Rewrite.REWRITE_TAC [FORALL_BOOL]
-QED
+  ((x ==> y) ==> (x' ==> y'))``,
+  Ho_Rewrite.REWRITE_TAC [FORALL_BOOL]);
 
 
-Theorem IMP_CONG_simple_imp_strengthen:
-  !x x' y y'.
+val IMP_CONG_simple_imp_strengthen = store_thm ("IMP_CONG_simple_imp_strengthen",
+``!x x' y y'.
   ((x ==> x') /\ (x' ==> (y' ==> y))) ==>
-  ((x' ==> y') ==> (x ==> y))
-Proof
-  Ho_Rewrite.REWRITE_TAC [FORALL_BOOL]
-QED
+  ((x' ==> y') ==> (x ==> y))``,
+  Ho_Rewrite.REWRITE_TAC [FORALL_BOOL]);
 
-Theorem IMP_CONG_simple_imp_weaken:
-  !x x' y y'.
+val IMP_CONG_simple_imp_weaken = store_thm ("IMP_CONG_simple_imp_weaken",
+``!x x' y y'.
   ((x' ==> x) /\ (x' ==> (y ==> y'))) ==>
-  ((x ==> y) ==> (x' ==> y'))
-Proof
-  Ho_Rewrite.REWRITE_TAC [FORALL_BOOL]
-QED
+  ((x ==> y) ==> (x' ==> y'))``,
+  Ho_Rewrite.REWRITE_TAC [FORALL_BOOL]);
 
 
 val IMP_CLAUSES_THML =
@@ -132,21 +108,17 @@ val IMP_CLAUSES_XF = save_thm ("IMP_CLAUSES_XF", el 5 IMP_CLAUSES_THML)
 
 
 
-Theorem IMP_CONG_cond_simple:
-  !c x x' y y'.
+val IMP_CONG_cond_simple = store_thm ("IMP_CONG_cond_simple",
+``!c x x' y y'.
   ((x' ==> x) /\ (y' ==> y)) ==>
-  ((if c then x' else y') ==> (if c then x else y))
-Proof
-Ho_Rewrite.REWRITE_TAC [FORALL_BOOL]
-QED
+  ((if c then x' else y') ==> (if c then x else y))``,
+Ho_Rewrite.REWRITE_TAC [FORALL_BOOL]);
 
-Theorem IMP_CONG_cond:
-  !c x x' y y'.
+val IMP_CONG_cond = store_thm ("IMP_CONG_cond",
+``!c x x' y y'.
   ((c ==> (x' ==> x)) /\ (~c ==> (y' ==> y))) ==>
-  ((if c then x' else y') ==> (if c then x else y))
-Proof
-Ho_Rewrite.REWRITE_TAC [FORALL_BOOL]
-QED
+  ((if c then x' else y') ==> (if c then x else y))``,
+Ho_Rewrite.REWRITE_TAC [FORALL_BOOL]);
 
 
 
@@ -171,11 +143,9 @@ val ASM_MARKER_DEF =
  Definition.new_definition
    ("ASM_MARKER_DEF", Term `ASM_MARKER = (\ (y:bool) x:bool. x)`);
 
-Theorem ASM_MARKER_THM:
-  !y x. ASM_MARKER y x = x
-Proof
+val ASM_MARKER_THM = store_thm ("ASM_MARKER_THM",
+``!y x. ASM_MARKER y x = x``,
 REWRITE_TAC[ASM_MARKER_DEF] THEN
-BETA_TAC THEN REWRITE_TAC []
-QED
+BETA_TAC THEN REWRITE_TAC [])
 
 

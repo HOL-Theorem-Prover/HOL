@@ -15,45 +15,41 @@ val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="stmarker"}
 
 (* the following move_<dir>_<op> theorems will loop if more than one term
    is marked at the same level *)
-Theorem move_left_conj:
-    !p q m. (p /\ stmarker m <=> stmarker m /\ p) /\
+val move_left_conj = store_thm(
+  "move_left_conj",
+  ``!p q m. (p /\ stmarker m <=> stmarker m /\ p) /\
             ((stmarker m /\ p) /\ q <=> stmarker m /\ (p /\ q)) /\
-            (p /\ (stmarker m /\ q) <=> stmarker m /\ (p /\ q))
-Proof
+            (p /\ (stmarker m /\ q) <=> stmarker m /\ (p /\ q))``,
   REWRITE_TAC [stmarker_def, CONJ_ASSOC] THEN
   REPEAT STRIP_TAC THEN REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) THEN
-  MATCH_ACCEPT_TAC CONJ_COMM
-QED
+  MATCH_ACCEPT_TAC CONJ_COMM);
 
-Theorem move_right_conj:
-    !p q m. (stmarker m /\ p <=> p /\ stmarker m) /\
+val move_right_conj = store_thm(
+  "move_right_conj",
+  ``!p q m. (stmarker m /\ p <=> p /\ stmarker m) /\
             (p /\ (q /\ stmarker m) <=> (p /\ q) /\ stmarker m) /\
-            ((p /\ stmarker m) /\ q <=> (p /\ q) /\ stmarker m)
-Proof
+            ((p /\ stmarker m) /\ q <=> (p /\ q) /\ stmarker m)``,
   REWRITE_TAC [stmarker_def, GSYM CONJ_ASSOC] THEN
   REPEAT STRIP_TAC THEN REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) THEN
-  MATCH_ACCEPT_TAC CONJ_COMM
-QED
+  MATCH_ACCEPT_TAC CONJ_COMM);
 
-Theorem move_left_disj:
-    !p q m. (p \/ stmarker m <=> stmarker m \/ p) /\
+val move_left_disj = store_thm(
+  "move_left_disj",
+  ``!p q m. (p \/ stmarker m <=> stmarker m \/ p) /\
             ((stmarker m \/ p) \/ q <=> stmarker m \/ (p \/ q)) /\
-            (p \/ (stmarker m \/ q) <=> stmarker m \/ (p \/ q))
-Proof
+            (p \/ (stmarker m \/ q) <=> stmarker m \/ (p \/ q))``,
   REWRITE_TAC [stmarker_def, DISJ_ASSOC] THEN
   REPEAT STRIP_TAC THEN REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) THEN
-  MATCH_ACCEPT_TAC DISJ_COMM
-QED
+  MATCH_ACCEPT_TAC DISJ_COMM);
 
-Theorem move_right_disj:
-    !p q m. (stmarker m \/ p <=> p \/ stmarker m) /\
+val move_right_disj = store_thm(
+  "move_right_disj",
+  ``!p q m. (stmarker m \/ p <=> p \/ stmarker m) /\
             (p \/ (q \/ stmarker m) <=> (p \/ q) \/ stmarker m) /\
-            ((p \/ stmarker m) \/ q <=> (p \/ q) \/ stmarker m)
-Proof
+            ((p \/ stmarker m) \/ q <=> (p \/ q) \/ stmarker m)``,
   REWRITE_TAC [stmarker_def, GSYM DISJ_ASSOC] THEN
   REPEAT STRIP_TAC THEN REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) THEN
-  MATCH_ACCEPT_TAC DISJ_COMM
-QED
+  MATCH_ACCEPT_TAC DISJ_COMM);
 
 (* Note, if you want to move a pair of things to the edge of a term,
    you can move one of them, and then the second in two successive
@@ -94,11 +90,10 @@ val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="unint"},na
 val Abbrev_def = new_definition("Abbrev_def", ``Abbrev (x:bool) = x``)
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="Abbrev"},name=(["Unwanted"],"id")}
 
-Theorem Abbrev_CONG:
-   r1 = r2 ==> Abbrev(v = r1) = Abbrev (v = r2)
-Proof
-  STRIP_TAC THEN ASM_REWRITE_TAC[]
-QED
+val Abbrev_CONG = store_thm(
+  "Abbrev_CONG",
+  “r1 = r2 ==> Abbrev(v = r1) = Abbrev (v = r2)”,
+  STRIP_TAC THEN ASM_REWRITE_TAC[]);
 
 
 (* ----------------------------------------------------------------------
@@ -162,19 +157,18 @@ val Case_def = new_definition(
   "Case_def",
   ``Case X = T``);
 
-Theorem add_Case:
-    !X. P <=> (Case X ==> P)
-Proof
-  REWRITE_TAC [Case_def]
-QED
+val add_Case = store_thm (
+  "add_Case",
+  ``!X. P <=> (Case X ==> P)``,
+  REWRITE_TAC [Case_def]);
 
-Theorem elim_Case:
-    (Case X /\ Y) = Y /\
+val elim_Case = store_thm (
+  "elim_Case",
+  ``(Case X /\ Y) = Y /\
     (Y /\ Case X) = Y /\
-    (Case X ==> Y) = Y
-Proof
+    (Case X ==> Y) = Y``,
   REWRITE_TAC [Case_def]
-QED
+  );
 
 (* ----------------------------------------------------------------------
     hide
@@ -186,11 +180,10 @@ val hide_def = new_definition(
   "hide_def",
   “hide (nm:bool) (x:bool) = x”);
 
-Theorem hideCONG:
-   hide nm x = hide nm x
-Proof
-  REWRITE_TAC[]
-QED
+val hideCONG = store_thm(
+  "hideCONG",
+  “hide nm x = hide nm x”,
+  REWRITE_TAC[]);
 
 val NoAsms = new_definition("NoAsms", “NoAsms = T”)
 val IgnAsm_def = new_definition("IgnAsm_def", “IgnAsm (v:'a) = T”)
