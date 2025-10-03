@@ -6,6 +6,7 @@ Libs
    what is being tested here
 *)
 
-Theorem my_theorem =
-  CONJ mergeGrammarsA1Theory.a_theorem mergeGrammarsA2Theory.a_theorem;
+val my_theorem = save_thm(
+  "my_theorem",
+  CONJ mergeGrammarsA1Theory.a_theorem mergeGrammarsA2Theory.a_theorem);
 

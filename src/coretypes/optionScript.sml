@@ -136,17 +136,13 @@ val SOME_11 = store_thm("SOME_11",
 val _ = export_rewrites ["SOME_11"]
 val _ = computeLib.add_persistent_funs ["SOME_11"]
 
-val (NOT_NONE_SOME,NOT_SOME_NONE) =
- let val thm = TAC_PROOF(([], Term`!x:'a. ~(NONE = SOME x)`),
-                  REWRITE_TAC [SOME_DEF,NONE_DEF,
-                               option_ABS_ONE_ONE,sumTheory.INR_neq_INL])
- in
-   (save_thm("NOT_NONE_SOME", thm),
-    save_thm("NOT_SOME_NONE", GSYM thm))
-  end;
-val _ = export_rewrites ["NOT_NONE_SOME"]
-        (* only need one because simplifier automatically flips the equality
-           for us *)
+Theorem NOT_NONE_SOME[simp]:
+  !x:'a. ~(NONE = SOME x)
+Proof
+  REWRITE_TAC [SOME_DEF,NONE_DEF,option_ABS_ONE_ONE,sumTheory.INR_neq_INL]
+QED
+(* [simp] not needed, as the simplifier automatically flips the equality for us *)
+Theorem NOT_SOME_NONE = GSYM NOT_NONE_SOME
 val _ = computeLib.add_persistent_funs ["NOT_NONE_SOME", "NOT_SOME_NONE"]
 
 

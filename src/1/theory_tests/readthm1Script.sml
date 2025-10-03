@@ -2,6 +2,6 @@ Theory readthm1[bare]
 Libs
   HolKernel Parse boolLib
 
-Theorem read = TRUTH;
+val read = save_thm("read", TRUTH);
 
 

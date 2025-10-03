@@ -316,12 +316,10 @@ val [msg_cases,
 (* Save the theorems lifted by the quotient operations.             *)
 (* ---------------------------------------------------------------- *)
 
-val _ = map save_thm
-    [("msg_cases",msg_cases),
-     ("msgCD",msgCD),
-     ("msgDC",msgDC),
-     ("msg_induction",msg_induction)
-    ];
+Theorem msg_cases = msg_cases
+Theorem msgCD = msgCD
+Theorem msgDC = msgDC
+Theorem msg_induction = msg_induction
 
 (* Notice the important induction theorem for the lifted msg type:
 

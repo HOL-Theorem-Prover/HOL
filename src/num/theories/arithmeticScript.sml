@@ -4836,7 +4836,7 @@ val findq_lemma = prove(
     PROVE_TAC [NOT_LESS_EQUAL]
   ]);
 
-val findq_thm = let
+Theorem findq_thm = (let
   open pairTheory relationTheory
   val M = “\f (a,m,n). if n = 0 then a
                         else let d = 2 * n
@@ -4853,11 +4853,9 @@ val findq_thm = let
     LET_ELIM_TAC THEN Q.ASM_CASES_TAC `m < d` THEN ASM_REWRITE_TAC [] THEN
     Q.UNABBREV_TAC `d` THEN SRW_TAC [][findq_lemma])
 in
-  save_thm ("findq_thm",
-           SIMP_RULE (srw_ss()) [RESTRICT_DEF, prim_recTheory.measure_thm,
-                                 lemma]
-                     (Q.SPEC `(a,m,n)` th0))
-end
+  SIMP_RULE (srw_ss()) [RESTRICT_DEF, prim_recTheory.measure_thm, lemma]
+            (Q.SPEC `(a,m,n)` th0)
+end)
 
 Theorem findq_eq_0:
    !a m n. (findq (a, m, n) = 0) = (a = 0)
@@ -4910,7 +4908,7 @@ val divmod_lemma = prove(
 (*                  in DIVMOD (a + q, m - n * q, n)                          *)
 (*---------------------------------------------------------------------------*)
 
-val DIVMOD_THM = let
+Theorem DIVMOD_THM = (let
   open relationTheory pairTheory
   val M = “\f (a,m,n). if n = 0 then (0,0)
                         else if m < n then (a, m)
@@ -4929,8 +4927,8 @@ val DIVMOD_THM = let
        (let q = findq (1,m,n) in f q))”,
     SRW_TAC [][LET_THM, divmod_lemma])
 in
-  save_thm ("DIVMOD_THM", SIMP_RULE (srw_ss()) [lemma] th1)
-end
+  SIMP_RULE (srw_ss()) [lemma] th1
+end)
 
 (*---------------------------------------------------------------------------*)
 (* Correctness of DIVMOD                                                     *)
@@ -5668,4 +5666,3 @@ Proof
   \\ irule ONE_MOD
   \\ rw[ONE, TWO, LESS_MONO, LESS_0]
 QED
-

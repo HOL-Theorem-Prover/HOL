@@ -180,13 +180,14 @@ val INT_SUB_SUB3 = store_thm(
   PROVE_TAC [INT_ADD_COMM, INT_ADD_ASSOC]);
 
 (* |- !a b c:int. a - b + c = a + c - b *)
-val move_sub = let
-  val thm0 = SYM (SPEC_ALL INT_ADD2_SUB2)
-  val thm1 = Thm.INST [(mk_var("d", int_ty) |-> zero_tm)] thm0
-  val thm2 = REWRITE_RULE [INT_ADD_RID, INT_SUB_RZERO] thm1
-in
-  save_thm("move_sub", GEN_ALL thm2)
-end
+Theorem move_sub = (
+  let
+    val thm0 = SYM (SPEC_ALL INT_ADD2_SUB2)
+    val thm1 = Thm.INST [(mk_var("d", int_ty) |-> zero_tm)] thm0
+    val thm2 = REWRITE_RULE [INT_ADD_RID, INT_SUB_RZERO] thm1
+  in
+    GEN_ALL thm2
+  end)
 
 val can_get_small = store_thm(
   "can_get_small",
@@ -1166,4 +1167,3 @@ Proof
 QED
 
 val _ = hide "bmarker";
-

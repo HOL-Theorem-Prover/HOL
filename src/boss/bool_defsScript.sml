@@ -18,14 +18,14 @@ val TYPE_DEFINITION_def = new_definition
     mk_eq(mk_var("TYPE_DEFINITION",type_of(lhs(concl TYPE_DEFINITION))),
           rhs(concl TYPE_DEFINITION)));
 
-val LET_thm = PURE_REWRITE_RULE[FUN_EQ_THM]LET_def
- |> BETA_RULE |> curry save_thm "LET_thm";
+Theorem LET_thm =
+  PURE_REWRITE_RULE[FUN_EQ_THM]LET_def |> BETA_RULE
 
-val literal_case_thm = PURE_REWRITE_RULE[FUN_EQ_THM]literal_case_def
- |> BETA_RULE |> curry save_thm "literal_case_thm";
+Theorem literal_case_thm =
+  PURE_REWRITE_RULE[FUN_EQ_THM]literal_case_def |> BETA_RULE
 
-val IN_thm = PURE_REWRITE_RULE[FUN_EQ_THM]IN_def
- |> BETA_RULE |> curry save_thm "IN_thm";
+Theorem IN_thm =
+  PURE_REWRITE_RULE[FUN_EQ_THM]IN_def |> BETA_RULE
 
 val T_iff = mk_thm([],``!t. (T <=> t) <=> t``);
 val F_iff = mk_thm([],``!t. (F <=> t) <=> ~t``);

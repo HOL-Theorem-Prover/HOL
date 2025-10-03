@@ -126,9 +126,10 @@ val toto_type_definition = new_type_definition ("toto", TO_exists);
 val to_bij = define_new_type_bijections
      {name="to_bij", ABS="TO", REP="apto", tyax=toto_type_definition};
 
-val [TO_apto_ID, TO_apto_TO_ID] = map2 (curry save_thm)
-    ["TO_apto_ID", "TO_apto_TO_ID"]
-    (CONJUNCTS to_bij);
+local val [TO_apto_ID, TO_apto_TO_ID] = CONJUNCTS to_bij in
+Theorem TO_apto_ID = TO_apto_ID
+Theorem TO_apto_TO_ID = TO_apto_TO_ID;
+end
 
 (* TO_apto_ID = |- !(a :'x toto). TO (apto a) = a : thm
    TO_apto_TO_ID = |- !(r :'x comp). TotOrd r <=> (apto (TO r) = r) *)

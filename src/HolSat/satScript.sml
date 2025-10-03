@@ -62,8 +62,10 @@ val [pth_ni1, pth_ni2, pth_no1, pth_no2, pth_an1, pth_an2, pth_nn] =
             /\ (~(p \/ q)  ==> ~p) /\ (~(p \/ q)  ==> ~q)
             /\ ((p /\ q)   ==> p)  /\ ((p /\ q)   ==> q)
             /\ ((~ ~p)     ==> p)``
-val _ = List.map save_thm (
-  ListPair.zip(["pth_ni1", "pth_ni2", "pth_no1", "pth_no2", "pth_an1",
-                "pth_an2", "pth_nn"],
-               [pth_ni1, pth_ni2, pth_no1, pth_no2, pth_an1, pth_an2, pth_nn]));
-
+Theorem pth_ni1 = pth_ni1
+Theorem pth_ni2 = pth_ni2
+Theorem pth_no1 = pth_no1
+Theorem pth_no2 = pth_no2
+Theorem pth_an1 = pth_an1
+Theorem pth_an2 = pth_an2
+Theorem pth_nn = pth_nn

@@ -1529,64 +1529,63 @@ val [HEIGHT,
      old_thms = old_thms};
 
 
-val _ = map (Feedback.trace ("Theory.allow_rebinds", 1) save_thm)
-    [("HEIGHT",HEIGHT),
-     ("HEIGHT_LESS_EQ_ZERO",HEIGHT_LESS_EQ_ZERO),
-     ("FV_object",FV_object), (* AXIOM 1 of Gordon and Melham *)
-     ("FINITE_FV_object",FINITE_FV_object),
-     ("SUB",SUB),
-     ("SUB_def",SUB_def),
-     ("SUB_vsubst_OVAR",SUB_vsubst_OVAR),
-     ("IN_FV_SUB_vsubst",IN_FV_SUB_vsubst),
-     ("SUB_APPEND_vsubst",SUB_APPEND_vsubst),
-     ("SUB_FREE_vsubst",SUB_FREE_vsubst),
-     ("FV_subst",FV_subst),
-     ("FINITE_FV_subst",FINITE_FV_subst),
-     ("FV_subst_EQ",FV_subst_EQ),
-     ("FV_subst_IDENT",FV_subst_IDENT),
-     ("FV_subst_NIL",FV_subst_NIL),
-     ("SUB_object",SUB_object),
-     ("SIGMA_EQ",SIGMA_EQ),
-     ("subst_SAME_ONE",subst_SAME_ONE),
-     (* ("subst_SAME_TWO",subst_SAME_TWO), *)
-     ("subst_EQ",subst_EQ),
-     ("FREE_SUB",FREE_SUB),
-     ("BV_subst_IDENT",BV_subst_IDENT),
-     ("BV_vsubst",BV_vsubst),
-     ("FREE_FV_SUB",FREE_FV_SUB),
-     ("FREE_IDENT_SUBST",FREE_IDENT_SUBST),
-     ("subst_IDENT",subst_IDENT),
-     ("subst_NIL",subst_NIL),
-     ("HEIGHT_SUB_var",HEIGHT_SUB_var),
-     ("HEIGHT_var_list_subst",HEIGHT_var_list_subst),
-     ("HEIGHT_var_subst",HEIGHT_var_subst),
-     ("object_distinct",object_distinct),
-     ("object_cases",object_cases),
-     ("object_one_one",object_one_one),
-     ("SIGMA_one_one",SIGMA_one_one),
-     ("vsubst_def",vsubst_def),
-     ("vsubst",vsubst),
-     ("SUB_APPEND_FREE_vsubst",SUB_APPEND_FREE_vsubst),
-     ("SUB_CONTEXT",SUB_CONTEXT),
-     ("SIGMA_CHANGE_VAR",SIGMA_CHANGE_VAR),
-     ("SIGMA_CHANGE_ONE_VAR",SIGMA_CHANGE_ONE_VAR),
-     ("CHANGE_ONE_VAR",CHANGE_ONE_VAR),
-     ("SIGMA_subst",SIGMA_subst),
-     ("obj_0",obj_0),
-     ("method_0",method_0),
-     ("invoke_method_def",invoke_method_def),
-     ("invoke_dict_def",invoke_dict_def),
-     ("invoke_dict",invoke_dict),
-     ("invoke_def",invoke_def),
-     ("invoke",invoke),
-     ("update_dict_def",update_dict_def),
-     ("update_dict",update_dict),
-     ("update_def",update_def),
-     ("update",update),
-     ("SIGMA_ABS",SIGMA_ABS),
-     ("object_induct",object_induct),
-     ("object_Axiom",object_Axiom)
-    ];
+Theorem HEIGHT = HEIGHT
+Theorem HEIGHT_LESS_EQ_ZERO[allow_rebind] = HEIGHT_LESS_EQ_ZERO
+Theorem FV_object = FV_object (* AXIOM 1 of Gordon and Melham *)
+Theorem FINITE_FV_object = FINITE_FV_object
+Theorem SUB = SUB
+Theorem SUB_def = SUB_def
+Theorem SUB_vsubst_OVAR = SUB_vsubst_OVAR
+Theorem IN_FV_SUB_vsubst = IN_FV_SUB_vsubst
+Theorem SUB_APPEND_vsubst = SUB_APPEND_vsubst
+Theorem SUB_FREE_vsubst = SUB_FREE_vsubst
+Theorem FV_subst = FV_subst
+Theorem FINITE_FV_subst = FINITE_FV_subst
+Theorem FV_subst_EQ = FV_subst_EQ
+Theorem FV_subst_IDENT = FV_subst_IDENT
+Theorem FV_subst_NIL = FV_subst_NIL
+Theorem SUB_object = SUB_object
+Theorem SIGMA_EQ = SIGMA_EQ
+Theorem subst_SAME_ONE = subst_SAME_ONE
+(* Theorem subst_SAME_TWO = subst_SAME_TWO *)
+Theorem subst_EQ = subst_EQ
+Theorem FREE_SUB = FREE_SUB
+Theorem BV_subst_IDENT = BV_subst_IDENT
+Theorem BV_vsubst = BV_vsubst
+Theorem FREE_FV_SUB = FREE_FV_SUB
+Theorem FREE_IDENT_SUBST = FREE_IDENT_SUBST
+Theorem subst_IDENT = subst_IDENT
+Theorem subst_NIL = subst_NIL
+Theorem HEIGHT_SUB_var = HEIGHT_SUB_var
+Theorem HEIGHT_var_list_subst = HEIGHT_var_list_subst
+Theorem HEIGHT_var_subst = HEIGHT_var_subst
+Theorem object_distinct = object_distinct
+Theorem object_cases = object_cases
+Theorem object_one_one = object_one_one
+Theorem SIGMA_one_one = SIGMA_one_one
+Theorem vsubst_def = vsubst_def
+Theorem vsubst = vsubst
+Theorem SUB_APPEND_FREE_vsubst = SUB_APPEND_FREE_vsubst
+Theorem SUB_CONTEXT = SUB_CONTEXT
+Theorem SIGMA_CHANGE_VAR = SIGMA_CHANGE_VAR
+Theorem SIGMA_CHANGE_ONE_VAR = SIGMA_CHANGE_ONE_VAR
+Theorem CHANGE_ONE_VAR = CHANGE_ONE_VAR
+Theorem SIGMA_subst = SIGMA_subst
+Theorem obj_0 = obj_0
+Theorem method_0 = method_0
+Theorem invoke_method_def = invoke_method_def
+Theorem invoke_dict_def = invoke_dict_def
+Theorem invoke_dict = invoke_dict
+Theorem invoke_def = invoke_def
+Theorem invoke = invoke
+Theorem update_dict_def = update_dict_def
+Theorem update_dict = update_dict
+Theorem update_def = update_def
+Theorem update = update
+Theorem SIGMA_ABS = SIGMA_ABS
+Theorem object_induct = object_induct
+Theorem object_Axiom = object_Axiom
+
 
 
 
@@ -1610,7 +1609,7 @@ val method = ty_antiq( ==`:method`== );
 
 (* Now test the lifted induction principle: *)
 
-Theorem HEIGHT_LESS_EQ_ZERO[allow_rebind]:
+Theorem HEIGHT_LESS_EQ_ZERO:
   (!o'. (HEIGHT_obj o' <= 0) = (?x. o' = OVAR x)) /\
   (!d. (HEIGHT_dict d <= 0) = (d = NIL)) /\
   (!e. (HEIGHT_entry e <= 0) = F) /\

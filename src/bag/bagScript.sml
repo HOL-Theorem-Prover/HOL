@@ -1310,11 +1310,8 @@ val FINITE_BAG_INSERT = Q.prove(
 `!e b. FINITE_BAG (BAG_INSERT e b) = FINITE_BAG b`,
   MESON_TAC [FINITE_BAG_INSERT, FINITE_BAG_INSERT_down'])
 
-val FINITE_BAG_THM = save_thm(
-  "FINITE_BAG_THM",
-  CONJ FINITE_EMPTY_BAG FINITE_BAG_INSERT)
- before
- export_rewrites ["FINITE_BAG_THM"];
+Theorem FINITE_BAG_THM[simp] =
+  CONJ FINITE_EMPTY_BAG FINITE_BAG_INSERT
 
 Theorem FINITE_BAG_DIFF:
    !b1. FINITE_BAG b1 ==> !b2. FINITE_BAG (BAG_DIFF b1 b2)
@@ -2203,11 +2200,8 @@ val ITBAG_THM =
 Theorem ITBAG_IND = ITBAG_IND;
 Theorem ITBAG_THM = ITBAG_THM;
 
-val ITBAG_EMPTY = save_thm(
-  "ITBAG_EMPTY",
-  REWRITE_RULE [] (MATCH_MP (Q.SPEC `{||}` ITBAG_THM) FINITE_EMPTY_BAG))
- before
- export_rewrites ["ITBAG_EMPTY"];
+Theorem ITBAG_EMPTY[simp] =
+  REWRITE_RULE [] (MATCH_MP (Q.SPEC `{||}` ITBAG_THM) FINITE_EMPTY_BAG)
 
 Theorem ITBAG_INSERT =
   SIMP_RULE (srw_ss())[] (Q.SPEC `BAG_INSERT x b` ITBAG_THM)
@@ -3388,7 +3382,7 @@ QED
 (*   bag_size eltsize (BAG_INSERT e b) = 1 + eltsize e + bag_size eltsize b  *)
 (*---------------------------------------------------------------------------*)
 
-Theorem BAG_SIZE_INSERT =
+Theorem BAG_SIZE_INSERT = (
  let val f = ``\(e:'a) acc. 1 + eltsize e + acc``
      val LCOMM_INCR = Q.prove
      (`!x y z. ^f x (^f y z) = ^f y (^f x z)`, RW_TAC arith_ss [])
@@ -3397,7 +3391,7 @@ Theorem BAG_SIZE_INSERT =
     |> SIMP_RULE bool_ss [LCOMM_INCR]
     |> (ISPEC``0n`` o Q.ID_SPEC o Q.ID_SPEC)
     |> SIMP_RULE bool_ss [GSYM bag_size_def]
- end;
+ end)
 
 val _ = print "Unibags (bags made all distinct)\n"
 
@@ -3565,4 +3559,3 @@ val _ = TypeBase.export [
           size = NONE,
           encode=NONE})
     ]
-

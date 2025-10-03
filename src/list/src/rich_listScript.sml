@@ -695,7 +695,7 @@ QED
    |- (!l. [] <<= l <=> T) /\ (!x l. x::l <<= [] <=> F) /\
       !x1 l1 x2 l2. x2::l2 <<= x1::l1 <=> (x1 = x2) /\ l2 <<= l1``
 *)
-Theorem IS_PREFIX =
+Theorem IS_PREFIX = (
    let
       val [c1, c2, c3] = CONJUNCTS isPREFIX_THM
    in
@@ -706,7 +706,7 @@ Theorem IS_PREFIX =
                   GENL [``h2:'a``, ``t2:'a list``, ``h1:'a``, ``t1:'a list``] o
                   CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])))
                  c3]
-   end
+   end)
 
 Theorem IS_PREFIX_APPEND:
     !l1 l2. isPREFIX l2 l1 = ?l. l1 = APPEND l2 l
@@ -1552,12 +1552,12 @@ Proof
 QED
 
 (* |- !l x. BUTLASTN (LENGTH l) (CONS x l) = [x] *)
-Theorem BUTLASTN_LENGTH_CONS =
+Theorem BUTLASTN_LENGTH_CONS = (
    let
       val thm1 = SPECL [``LENGTH (l:'a list)``,``l:'a list``] BUTLASTN_CONS
    in
       GEN_ALL (REWRITE_RULE [LESS_EQ_REFL, BUTLASTN_LENGTH_NIL] thm1)
-   end;
+   end)
 
 Theorem LAST_LASTN_LAST:
     !n l. n <= LENGTH l ==> 0 < n ==> (LAST (LASTN n l) = LAST l)
@@ -4009,11 +4009,9 @@ val LENGTH_FILTER_LESS = Q.store_thm("LENGTH_FILTER_LESS",
    THEN MATCH_MP_TAC LESS_EQ_IMP_LESS_SUC
    THEN MATCH_ACCEPT_TAC LENGTH_FILTER_LEQ)
 
-val EVERY2_APPEND = save_thm(
-  "EVERY2_APPEND", LIST_REL_APPEND);
+Theorem EVERY2_APPEND = LIST_REL_APPEND
 
-val EVERY2_APPEND_suff = save_thm(
-  "EVERY2_APPEND_suff", LIST_REL_APPEND_suff);
+Theorem EVERY2_APPEND_suff = LIST_REL_APPEND_suff
 
 Theorem EVERY2_DROP:
   !R l1 l2 n.

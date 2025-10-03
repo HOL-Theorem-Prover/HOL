@@ -3067,11 +3067,11 @@ QED
 val RATND_THM = new_specification("RATND_THM", ["RATN", "RATD"],
   CONV_RULE (SKOLEM_CONV THENC BINDER_CONV SKOLEM_CONV) numdenom_exists)
 
-Theorem RATD_NZERO[simp] =
+Theorem RATD_NZERO[simp] = (
   let val th = List.nth(RATND_THM |> SPEC_ALL |> CONJUNCTS, 1)
   in
     CONJ th (CONV_RULE (REWR_CONV (GSYM NOT_ZERO_LT_ZERO)) th)
-  end;
+  end)
 
 Theorem RATN_LEAST =
   List.nth(RATND_THM |> SPEC_ALL |> CONJUNCTS, 3)
@@ -4084,4 +4084,3 @@ QED
 (*==========================================================================
  * end of theory
  *==========================================================================*)
-

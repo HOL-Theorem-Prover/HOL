@@ -1110,19 +1110,17 @@ Proof
   \\ lrw [genlist_fixwidth]
 QED
 
-val reduce_and_v2w =
+Theorem reduce_and_v2w =
    wordsTheory.reduce_and_def
      |> Rewrite.REWRITE_RULE [boolTheory.FUN_EQ_THM]
      |> Q.SPEC `v2w v`
      |> Drule.GEN_ALL
-     |> Lib.curry Theory.save_thm "reduce_and_v2w"
 
-val reduce_or_v2w =
+Theorem reduce_or_v2w =
    wordsTheory.reduce_or_def
      |> Rewrite.REWRITE_RULE [boolTheory.FUN_EQ_THM]
      |> Q.SPEC `v2w v`
      |> Drule.GEN_ALL
-     |> Lib.curry Theory.save_thm "reduce_or_v2w"
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1379,4 +1377,3 @@ time (List.map EVAL)
 *)
 
 (* ------------------------------------------------------------------------- *)
-

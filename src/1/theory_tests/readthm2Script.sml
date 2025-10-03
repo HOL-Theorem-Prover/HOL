@@ -4,6 +4,6 @@ Ancestors
 Libs
   HolKernel Parse boolLib
 
-Theorem next_thm = CONJ read read
+val next_thm = save_thm("next_thm", CONJ read read)
 
 

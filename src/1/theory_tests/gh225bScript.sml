@@ -4,5 +4,5 @@ Ancestors
 Libs
   HolKernel Parse boolLib
 
-Theorem TRUTH = TRUTH;
+val _ = save_thm("TRUTH", TRUTH);
 

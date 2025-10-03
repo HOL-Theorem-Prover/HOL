@@ -4,6 +4,6 @@ Libs
 
 val _ = add_ML_dependency "MLdepLib"
 
-Theorem thm = TRUTH;
+val thm = save_thm("thm", TRUTH);
 
 

@@ -1790,8 +1790,8 @@ Proof
   \\ eq_tac \\ rpt strip_tac \\ res_tac \\ decide_tac
 QED
 
-val less_sorted_eq = MATCH_MP SORTED_EQ arithmeticTheory.transitive_LESS
-  |> curry save_thm"less_sorted_eq";
+Theorem less_sorted_eq =
+  MATCH_MP SORTED_EQ arithmeticTheory.transitive_LESS
 
 val SORTED_GENLIST_PLUS = store_thm("SORTED_GENLIST_PLUS",
   “!n k. SORTED $< (GENLIST ($+ k) n)”,

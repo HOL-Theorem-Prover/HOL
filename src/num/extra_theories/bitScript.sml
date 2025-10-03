@@ -147,11 +147,11 @@ local
    val th =
       (SPEC_ALL o REWRITE_RULE [ZERO_LT_TWOEXP] o Q.SPEC `2 ** n`) DIVISION
 in
-   (* |- !n k. k MOD 2 ** n < 2 ** n *)
-   val MOD_2EXP_LT = save_thm("MOD_2EXP_LT", (GEN_ALL o CONJUNCT2) th)
+(* |- !n k. k MOD 2 ** n < 2 ** n *)
+Theorem MOD_2EXP_LT = (GEN_ALL o CONJUNCT2) th
 
-   (* |- !n k. k = k DIV 2 ** n * 2 ** n + k MOD 2 ** n *)
-   val TWOEXP_DIVISION = save_thm("TWOEXP_DIVISION", (GEN_ALL o CONJUNCT1) th)
+(* |- !n k. k = k DIV 2 ** n * 2 ** n + k MOD 2 ** n *)
+Theorem TWOEXP_DIVISION = (GEN_ALL o CONJUNCT1) th;
 end
 
 Theorem TWOEXP_MONO:

@@ -8,4 +8,4 @@ val _ = set_grammar_ancestry ["bool"]
 
 val t = ``λi. P i``;
 
-Theorem made_it = TRUTH;
+val th = save_thm("made_it", TRUTH);

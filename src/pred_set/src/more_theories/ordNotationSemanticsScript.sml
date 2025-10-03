@@ -265,7 +265,7 @@ Proof
 QED
 
 (* |- e1 < e2 ==> &k * omega ** e1 < omega ** e2 *)
-val kexp_lt = let
+Theorem kexp_lt = (let
   val zero_ltk_or_eqzero = DECIDE ``0n < k \/ (k = 0)``
   val zero_ltk =
     is_polyform_head_dominates_tail
@@ -276,9 +276,8 @@ val kexp_lt = let
                      simp[ASSUME ``k = 0n``] >> spose_not_then assume_tac >>
                      fs[ordEXP_EQ_0])
 in
-  save_thm("kexp_lt",
-           DISJ_CASES zero_ltk_or_eqzero zero_ltk eqzero |> DISCH_ALL)
-end
+  DISJ_CASES zero_ltk_or_eqzero zero_ltk eqzero |> DISCH_ALL
+end)
 
 Theorem ord_add_correct:
     !x y. is_ord x /\ is_ord y ==> (<[ord_add x y]> = <[x]> + <[y]>)
@@ -636,4 +635,3 @@ Proof
   simp[Abbr`LHS`, Once better_ord_mult_def, ord_add_correct] >>
   simp[ord_mult_correct, ord_add_correct, is_ord_expt]
 QED
-

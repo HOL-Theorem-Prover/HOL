@@ -3662,11 +3662,14 @@ Inductive llist_upto:
   (llist_upto R x y ==> llist_upto R (LAPPEND z x) (LAPPEND z y))
 End
 
-val [llist_upto_eq,llist_upto_rel,llist_upto_trans,llist_upto_context] =
+local val [llist_upto_eq,llist_upto_rel,llist_upto_trans,llist_upto_context] =
   llist_upto_rules |> SPEC_ALL |> CONJUNCTS |> map GEN_ALL
-  |> curry (ListPair.map save_thm)
-    ["llist_upto_eq","llist_upto_rel",
-     "llist_upto_trans","llist_upto_context"]
+in
+Theorem llist_upto_eq = llist_upto_eq
+Theorem llist_upto_rel = llist_upto_rel
+Theorem llist_upto_trans = llist_upto_trans
+Theorem llist_upto_context = llist_upto_context;
+end
 
 Theorem LLIST_BISIM_UPTO:
   !ll1 ll2 R.
@@ -4186,4 +4189,3 @@ Proof
   fs[Once LAPPEND_ASSOC]>>
   fs[LFINITE_fromList,LAPPEND11_FINITE1]>>metis_tac[]
 QED
-

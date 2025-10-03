@@ -576,7 +576,7 @@ Proof
    ]
 QED
 
-Theorem LOWEST_SET_BIT_compute =
+Theorem LOWEST_SET_BIT_compute = (
    let
       open numeralTheory
       val rule = (GEN_ALL o SIMP_RULE (srw_ss())
@@ -585,11 +585,10 @@ Theorem LOWEST_SET_BIT_compute =
    in
       CONJ ((rule o Q.SPEC `NUMERAL (BIT2 n)`) LOWEST_SET_BIT)
            ((rule o Q.SPEC `NUMERAL (BIT1 n)`) LOWEST_SET_BIT)
-   end
+   end)
 
 (* ------------------------------------------------------------------------- *)
 
 val () =
    List.app (fn s => remove_ovl_mapping s {Name = s, Thy = "numeral_bit"})
             ["iBITWISE", "iSUC", "iDIV2", "iLOG2", "iMOD_2EXP"]
-

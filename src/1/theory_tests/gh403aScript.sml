@@ -2,5 +2,5 @@ Theory gh403a[bare]
 Libs
   HolKernel boolLib
 
-Theorem print = TRUTH;
+val _ = save_thm("print",TRUTH);
 

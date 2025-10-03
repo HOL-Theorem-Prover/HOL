@@ -349,7 +349,7 @@ QED
 
 
 
-Theorem GUESS_RULES_CONJ =
+Theorem GUESS_RULES_CONJ = (
 let
    val thm0 = INST [
       ``P:'b->bool`` |-> ``$~ o (P:'b->bool)``,
@@ -361,11 +361,11 @@ let
    val thm3 = SIMP_RULE std_ss [GUESSES_NEG_REWRITE] thm2
 in
    thm3
-end;
+end)
 
 
 
-Theorem GUESS_RULES_IMP =
+Theorem GUESS_RULES_IMP = (
 let
    val thm0 = INST [
       ``P:'b->bool`` |-> ``$~ o (P:'b->bool)``,
@@ -374,7 +374,7 @@ let
    val thm2 = REWRITE_RULE [GSYM IMP_DISJ_THM] thm1
 in
    thm2
-end;
+end)
 
 
 (*
@@ -668,14 +668,14 @@ end;
 
 in
 
-val GUESS_RULES_EXISTS___NEW_FV = save_thm ("GUESS_RULES_EXISTS___NEW_FV",
-    mk_exists_thm GUESS_RULES_FORALL___NEW_FV);
+Theorem GUESS_RULES_EXISTS___NEW_FV =
+    mk_exists_thm GUESS_RULES_FORALL___NEW_FV
 
-val GUESS_RULES_EXISTS___NEW_FV_1= save_thm ("GUESS_RULES_EXISTS___NEW_FV_1",
-    mk_exists_thm GUESS_RULES_FORALL___NEW_FV_1);
+Theorem GUESS_RULES_EXISTS___NEW_FV_1 =
+    mk_exists_thm GUESS_RULES_FORALL___NEW_FV_1
 
-val GUESS_RULES_EXISTS = save_thm ("GUESS_RULES_EXISTS",
-    mk_exists_thm GUESS_RULES_FORALL);
+Theorem GUESS_RULES_EXISTS =
+    mk_exists_thm GUESS_RULES_FORALL;
 
 end
 

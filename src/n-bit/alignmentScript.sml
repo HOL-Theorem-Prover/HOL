@@ -421,8 +421,8 @@ local
     \\ pop_assum (qspec_then `w + n2w (2 ** k)` mp_tac)
     \\ fs [aligned_add_mult_lemma]) |> GEN_ALL
 in
-  val aligned_add_pow = save_thm("aligned_add_pow[simp]",
-    CONJ aligned_add_mult_lemma aligned_add_mult_any)
+Theorem aligned_add_pow[simp] =
+  CONJ aligned_add_mult_lemma aligned_add_mult_any;
 end
 
 Theorem align_add_aligned_gen:
