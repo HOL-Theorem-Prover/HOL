@@ -477,7 +477,7 @@ val ALPHA1_TRANS1 = TAC_PROOF(([],
     THEN REPEAT CONJ_TAC
     THEN REPEAT GEN_TAC
     THEN STRIP_TAC
-    THEN ONCE_REWRITE_TAC ALPHA1_inv_thms
+    THEN ONCE_REWRITE_TAC[ALPHA1_inv_thms]
     THEN REWRITE_TAC[object1_one_one,object1_distinct]
     THEN REPEAT CONJ_TAC
     THEN REPEAT GEN_TAC
@@ -629,7 +629,7 @@ Theorem ALPHA1_object_similar:
         (!x1 o1 m xs ys. ALPHA1_method (SIGMA1 x1 o1) m xs ys ==>
                    (?x2 o2. m = SIGMA1 x2 o2))
 Proof
-    PURE_ONCE_REWRITE_TAC ALPHA1_inv_thms
+    PURE_ONCE_REWRITE_TAC[ALPHA1_inv_thms]
     THEN REWRITE_TAC[object1_one_one,object1_distinct]
     THEN REPEAT STRIP_TAC
     THENL (* 7 subgoals *)
@@ -688,7 +688,7 @@ Proof
     THEN (EQ_TAC
           THENL [ DISCH_THEN (STRIP_ASSUME_TAC
                               o REWRITE_RULE[object1_one_one,object1_distinct]
-                              o ONCE_REWRITE_RULE ALPHA1_inv_thms)
+                              o ONCE_REWRITE_RULE[ALPHA1_inv_thms])
                   THEN ASM_REWRITE_TAC[],
 
                   REWRITE_TAC[]
@@ -722,7 +722,7 @@ Theorem ALPHA1_object_neg:
         (!e d xs ys. ALPHA1_dict (CONS e d) NIL xs ys = F) /\
         (!e d xs ys. ALPHA1_dict NIL (CONS e d) xs ys = F)
 Proof
-    PURE_ONCE_REWRITE_TAC ALPHA1_inv_thms
+    PURE_ONCE_REWRITE_TAC[ALPHA1_inv_thms]
     THEN REWRITE_TAC[object1_one_one,object1_distinct]
 QED
 

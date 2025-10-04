@@ -422,7 +422,7 @@ Proof
         THEN ASM_REWRITE_TAC[]
         THEN FIRST_ASSUM MATCH_MP_TAC
         THEN UNDISCH_TAC “RED1 R (t1:^term) t2”
-        THEN ONCE_REWRITE_TAC RED1_inv_thms
+        THEN ONCE_REWRITE_TAC[RED1_inv_thms]
         THEN ASM_REWRITE_TAC[term_distinct],
 
         UNDISCH_ALL_TAC
@@ -517,7 +517,7 @@ Proof
         THEN ASM_REWRITE_TAC[]
         THEN FIRST_ASSUM MATCH_MP_TAC
         THEN UNDISCH_TAC “RED1 R (t1:^term) t2”
-        THEN ONCE_REWRITE_TAC RED1_inv_thms
+        THEN ONCE_REWRITE_TAC[RED1_inv_thms]
         THEN ASM_REWRITE_TAC[term_distinct],
 
         UNDISCH_ALL_TAC
@@ -709,6 +709,7 @@ val (RED_rules_sat,RED_ind_thm) =
 
 val RED_inv_thms = prove_inversion_theorems
     RED_rules_sat RED_ind_thm;
+val [RED_inv] = RED_inv_thms;
 
 val RED_strong_ind = prove_strong_induction
     RED_rules_sat RED_ind_thm;
@@ -733,8 +734,6 @@ val [RED_RED1, RED_REFL, RED_TRANS]
     = CONJUNCTS (CONV_RULE (DEPTH_CONV LEFT_IMP_EXISTS_CONV) RED_rules_sat);
 
 
-val [RED_inv]
-    = RED_inv_thms;
 
 
 Theorem RED_reflexive:
@@ -859,6 +858,7 @@ val (REQUAL_rules_sat,REQUAL_ind_thm) =
 
 val REQUAL_inv_thms = prove_inversion_theorems
     REQUAL_rules_sat REQUAL_ind_thm;
+val [REQUAL_inv] = REQUAL_inv_thms;
 
 val REQUAL_strong_ind = prove_strong_induction
     REQUAL_rules_sat REQUAL_ind_thm;
@@ -884,7 +884,6 @@ val [REQUAL_RED, REQUAL_SYM, REQUAL_TRANS]
     = CONJUNCTS (CONV_RULE (DEPTH_CONV LEFT_IMP_EXISTS_CONV) REQUAL_rules_sat);
 
 
-val [REQUAL_inv] = REQUAL_inv_thms;
 
 
 Theorem REQUAL_reflexive:
@@ -1180,7 +1179,7 @@ Proof
         THEN ASM_REWRITE_TAC[]
         THEN FIRST_ASSUM MATCH_MP_TAC
         THEN UNDISCH_TAC “RED1 R (t1:^term) t2”
-        THEN ONCE_REWRITE_TAC RED1_inv_thms
+        THEN ONCE_REWRITE_TAC[RED1_inv_thms]
         THEN ASM_REWRITE_TAC[term_distinct],
 
         UNDISCH_ALL_TAC

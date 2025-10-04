@@ -499,11 +499,11 @@ Proof
         THENL
           [ FIRST_ASSUM MATCH_MP_TAC
             THEN UNDISCH_TAC “RED1_obj R o1 o2”
-            THEN ONCE_REWRITE_TAC RED1_inv_thms
+            THEN ONCE_REWRITE_TAC[RED1_inv_thms]
             THEN ASM_REWRITE_TAC[object_distinct],
 
             UNDISCH_TAC “RED1_dict R d1 d2”
-            THEN ONCE_REWRITE_TAC RED1_inv_thms
+            THEN ONCE_REWRITE_TAC[RED1_inv_thms]
             THEN ASM_REWRITE_TAC[object_distinct,NOT_NIL_CONS]
           ],
 
@@ -669,11 +669,11 @@ Proof
         THENL
           [ FIRST_ASSUM MATCH_MP_TAC
             THEN UNDISCH_TAC “RED1_obj R o1 o2”
-            THEN ONCE_REWRITE_TAC RED1_inv_thms
+            THEN ONCE_REWRITE_TAC[RED1_inv_thms]
             THEN ASM_REWRITE_TAC[object_distinct],
 
             UNDISCH_TAC “RED1_dict R d1 d2”
-            THEN ONCE_REWRITE_TAC RED1_inv_thms
+            THEN ONCE_REWRITE_TAC[RED1_inv_thms]
             THEN ASM_REWRITE_TAC[object_distinct,NOT_NIL_CONS]
           ],
 
@@ -923,6 +923,8 @@ val (RED_rules_sat,RED_ind_thm) =
 
 val RED_inv_thms = prove_inversion_theorems
     RED_rules_sat RED_ind_thm;
+val [RED_obj_inv, RED_dict_inv, RED_entry_inv, RED_method_inv]
+    = RED_inv_thms;
 
 val RED_strong_ind = prove_strong_induction
     RED_rules_sat RED_ind_thm;
@@ -958,9 +960,6 @@ Theorem RED_REFL =
         LIST_CONJ [RED_obj_REFL, RED_dict_REFL,
                    RED_entry_REFL, RED_method_REFL];
 
-
-val [RED_obj_inv, RED_dict_inv, RED_entry_inv, RED_method_inv]
-    = RED_inv_thms;
 
 
 Theorem RED_reflexive:
@@ -1182,6 +1181,8 @@ val (REQUAL_rules_sat,REQUAL_ind_thm) =
 
 val REQUAL_inv_thms = prove_inversion_theorems
     REQUAL_rules_sat REQUAL_ind_thm;
+val [REQUAL_obj_inv, REQUAL_dict_inv, REQUAL_entry_inv, REQUAL_method_inv]
+    = REQUAL_inv_thms;
 
 val REQUAL_strong_ind = prove_strong_induction
     REQUAL_rules_sat REQUAL_ind_thm;
@@ -1218,9 +1219,6 @@ Theorem REQUAL_SYM =
         LIST_CONJ [REQUAL_obj_SYM, REQUAL_dict_SYM,
                    REQUAL_entry_SYM, REQUAL_method_SYM];
 
-
-val [REQUAL_obj_inv, REQUAL_dict_inv, REQUAL_entry_inv, REQUAL_method_inv]
-    = REQUAL_inv_thms;
 
 
 Theorem REQUAL_reflexive:
@@ -1783,11 +1781,11 @@ Proof
         THENL
           [ FIRST_ASSUM MATCH_MP_TAC
             THEN UNDISCH_TAC “RED1_obj R o1 o2”
-            THEN ONCE_REWRITE_TAC RED1_inv_thms
+            THEN ONCE_REWRITE_TAC[RED1_inv_thms]
             THEN ASM_REWRITE_TAC[object_distinct,NOT_NIL_CONS],
 
             UNDISCH_TAC “RED1_dict R d1 d2”
-            THEN ONCE_REWRITE_TAC RED1_inv_thms
+            THEN ONCE_REWRITE_TAC[RED1_inv_thms]
             THEN ASM_REWRITE_TAC[object_distinct,NOT_NIL_CONS]
           ],
 

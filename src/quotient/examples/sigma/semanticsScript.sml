@@ -420,7 +420,7 @@ Proof
     rule_induct SIGMA_R_strong_ind
     THEN REPEAT CONJ_TAC
     THEN REPEAT GEN_TAC
-    THEN REWRITE_TAC SIGMA_R_inv_thms
+    THEN REWRITE_TAC[SIGMA_R_inv_thms]
     THEN REWRITE_TAC[object_distinct,object_one_one]
     THEN RW_TAC std_ss []
 QED
@@ -447,7 +447,7 @@ Theorem SIGMA_R_equals:
         (!x o2. SIGMA_R (OVAR x) o2 = F) /\
         (!d o2. SIGMA_R (OBJ d) o2 = F)
 Proof
-    REWRITE_TAC SIGMA_R_inv_thms
+    REWRITE_TAC[SIGMA_R_inv_thms]
     THEN REWRITE_TAC[object_distinct,object_one_one]
     THEN REPEAT STRIP_TAC
     THEN EQ_TAC
@@ -657,13 +657,13 @@ Proof
         THEN ASM_REWRITE_TAC[]
         THENL
           [ UNDISCH_TAC “REDL_obj o1 o2”
-            THEN ONCE_REWRITE_TAC REDL_inv_thms
+            THEN ONCE_REWRITE_TAC[REDL_inv_thms]
             THEN ASM_REWRITE_TAC[object_distinct,NOT_NIL_CONS,object_one_one]
             THEN DISCH_TAC
             THEN ASM_REWRITE_TAC[],
 
             UNDISCH_TAC “REDL_dict d1 d2”
-            THEN ONCE_REWRITE_TAC REDL_inv_thms
+            THEN ONCE_REWRITE_TAC[REDL_inv_thms]
             THEN ASM_REWRITE_TAC[object_distinct,NOT_NIL_CONS,object_one_one]
             THEN DISCH_TAC
             THEN ASM_REWRITE_TAC[]
@@ -822,13 +822,13 @@ Proof
         THEN ASM_REWRITE_TAC[]
         THENL
           [ UNDISCH_TAC “REDL_obj o1 o2”
-            THEN ONCE_REWRITE_TAC REDL_inv_thms
+            THEN ONCE_REWRITE_TAC[REDL_inv_thms]
             THEN ASM_REWRITE_TAC[object_distinct,NOT_NIL_CONS]
             THEN DISCH_TAC
             THEN ASM_REWRITE_TAC[],
 
             UNDISCH_TAC “REDL_dict d1 d2”
-            THEN ONCE_REWRITE_TAC REDL_inv_thms
+            THEN ONCE_REWRITE_TAC[REDL_inv_thms]
             THEN ASM_REWRITE_TAC[object_distinct,NOT_NIL_CONS]
             THEN DISCH_TAC
             THEN ASM_REWRITE_TAC[]
@@ -1406,7 +1406,7 @@ Theorem REDL_OBJ_IMP:
      !o1 d.
           REDL_obj (OBJ d) o1 ==> (?d2. o1 = OBJ d2)
 Proof
-    ONCE_REWRITE_TAC REDL_inv_thms
+    ONCE_REWRITE_TAC[REDL_inv_thms]
     THEN REWRITE_TAC[object_distinct,NOT_NIL_CONS, object_one_one]
     THEN REPEAT STRIP_TAC
     THENL (* 2 subgoals *)
@@ -1426,7 +1426,7 @@ Proof
     REPEAT GEN_TAC
     THEN DISCH_THEN (STRIP_ASSUME_TAC o
                 REWRITE_RULE[object_distinct,NOT_NIL_CONS, object_one_one] o
-                ONCE_REWRITE_RULE REDL_inv_thms)
+                ONCE_REWRITE_RULE[REDL_inv_thms])
     THENL (* 2 subgoals *)
       [ ASM_REWRITE_TAC[REDL_dict_REFL],
 
@@ -1475,7 +1475,7 @@ Proof
     REPEAT CONJ_TAC
     THEN REPEAT GEN_TAC THEN DISCH_THEN (STRIP_ASSUME_TAC o
             REWRITE_RULE[object_distinct,NOT_NIL_CONS,object_one_one] o
-            ONCE_REWRITE_RULE REDL_inv_thms)
+            ONCE_REWRITE_RULE[REDL_inv_thms])
     THENL (* 8 subgoals *)
       [ POP_ASSUM REWRITE_THM
         THEN EXISTS_TAC “d1:^dict”
@@ -1529,7 +1529,7 @@ Proof
     CONJ_TAC
     THEN REPEAT GEN_TAC THEN DISCH_THEN (STRIP_ASSUME_TAC o
             REWRITE_RULE[object_distinct,NOT_NIL_CONS,object_one_one] o
-            ONCE_REWRITE_RULE REDL_inv_thms)
+            ONCE_REWRITE_RULE[REDL_inv_thms])
     THENL
       [ POP_ASSUM REWRITE_THM
         THEN EXISTS_TAC “e1:^entry”
@@ -1550,7 +1550,7 @@ Theorem REDL_entry_cases:
 Proof
     REPEAT GEN_TAC THEN DISCH_THEN (STRIP_ASSUME_TAC o
             REWRITE_RULE[object_distinct,NOT_NIL_CONS,object_one_one] o
-            ONCE_REWRITE_RULE REDL_inv_thms)
+            ONCE_REWRITE_RULE[REDL_inv_thms])
     THENL
       [ POP_ASSUM REWRITE_THM
         THEN EXISTS_TAC “m1:method”
@@ -1568,7 +1568,7 @@ Theorem REDL_method_cases:
           (?o2. (m2 = SIGMA x o2) /\ REDL_obj o1 o2)
 Proof
     REPEAT GEN_TAC THEN DISCH_THEN (STRIP_ASSUME_TAC o
-            ONCE_REWRITE_RULE REDL_inv_thms)
+            ONCE_REWRITE_RULE[REDL_inv_thms])
     THENL
       [ POP_ASSUM REWRITE_THM
         THEN EXISTS_TAC “o1:obj”
@@ -1817,7 +1817,7 @@ Proof
     THEN REPEAT STRIP_TAC
     THEN POP_ASSUM REWRITE_ALL_THM
     THENL
-      [ POP_ASSUM (STRIP_ASSUME_TAC o ONCE_REWRITE_RULE SIGMA_R_inv_thms)
+      [ POP_ASSUM (STRIP_ASSUME_TAC o ONCE_REWRITE_RULE[SIGMA_R_inv_thms])
         THEN DEP_ASM_REWRITE_TAC[REDL_rules_sat],
 
         DEP_ASM_REWRITE_TAC[REDL_rules_sat],

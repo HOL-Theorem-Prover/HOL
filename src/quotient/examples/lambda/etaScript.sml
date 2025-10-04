@@ -154,7 +154,7 @@ Theorem ETA_R_deterministic:
      !t:^term u1 u2.
          ETA_R t u1 /\ ETA_R t u2 ==> (u1 = u2)
 Proof
-    REWRITE_TAC ETA_R_inv_thms
+    REWRITE_TAC[ETA_R_inv_thms]
     THEN REPEAT STRIP_TAC
     THEN UNDISCH_TAC ``(t:^term) = Lam x' (App u2 (Var x'))``
     THEN ASM_REWRITE_TAC[]
@@ -241,7 +241,7 @@ Theorem ETA_R_equals :
    (!t u t':^term. ETA_R (App t u) t' = F) /\
    (!x u t:^term. ETA_R (Lam x u) t <=> ~(x IN FV t) /\ (u = App t (Var x)))
 Proof
-    REWRITE_TAC ETA_R_inv_thms
+    REWRITE_TAC[ETA_R_inv_thms]
     THEN REWRITE_TAC[term_distinct,term_one_one]
     THEN REPEAT STRIP_TAC
     THEN EQ_TAC
@@ -285,7 +285,7 @@ Theorem ETA_R_SUBSTITUTIVE:
 Proof
     REWRITE_TAC[SUBSTITUTIVE]
     THEN REPEAT GEN_TAC
-    THEN DISCH_THEN (STRIP_ASSUME_TAC o REWRITE_RULE ETA_R_inv_thms)
+    THEN DISCH_THEN (STRIP_ASSUME_TAC o REWRITE_RULE[ETA_R_inv_thms])
     THEN ASM_REWRITE_TAC[]
     THEN DEFINE_NEW_VAR “(Nx:^term) = App N (Var x')”
     THEN FIRST_ASSUM (REWRITE_THM o SYM)
@@ -819,15 +819,15 @@ Proof
             ONCE_REWRITE_RULE[RED1_inv_thms])
     THENL (* 7 subgoals *)
       [ UNDISCH_LAST_TAC
-        THEN REWRITE_TAC ETA_R_inv_thms
+        THEN REWRITE_TAC[ETA_R_inv_thms]
         THEN REWRITE_TAC[term_distinct],
 
         UNDISCH_LAST_TAC
-        THEN REWRITE_TAC ETA_R_inv_thms
+        THEN REWRITE_TAC[ETA_R_inv_thms]
         THEN REWRITE_TAC[term_distinct],
 
         UNDISCH_LAST_TAC
-        THEN REWRITE_TAC ETA_R_inv_thms
+        THEN REWRITE_TAC[ETA_R_inv_thms]
         THEN REWRITE_TAC[term_distinct],
 
         DISJ1_TAC
@@ -896,7 +896,7 @@ Proof
     THEN POP_ASSUM REWRITE_ALL_THM
     THENL
       [ (* Case 1: M --> M1 is \x.Px --> P, and M=t1, M1 = P = t2. *)
-        IMP_RES_TAC (hd ETA_R_inv_thms)
+        IMP_RES_TAC ETA_R_inv_thms
         THEN UNDISCH_LAST_TAC
         THEN POP_ASSUM REWRITE_ALL_THM
         THEN IMP_RES_TAC RED1_ETA_Lam_case
@@ -1121,7 +1121,7 @@ Proof
     THENL
       [ (* Case 1: ETA M M1, BETA M M2, impossible. *)
         UNDISCH_ALL_TAC
-        THEN REWRITE_TAC (BETA_R_inv_thms :: ETA_R_inv_thms)
+        THEN REWRITE_TAC[BETA_R_inv_thms,ETA_R_inv_thms]
         THEN STRIP_TAC
         THEN ASM_REWRITE_TAC[term_distinct],
 
