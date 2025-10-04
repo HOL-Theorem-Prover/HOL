@@ -641,7 +641,7 @@ val imp_disj_thm = store_thm
  >> REFL_TAC);
 
 (* |- !A B. A \/ B <=> ~A ==> B (DISJ_EQ_IMP) *)
-Theorem th21 = (* this forward proof comes from boolScript.sml *)
+Theorem th21 = ((* this forward proof comes from boolScript.sml *)
   let
     val lemma = not_not |> SPEC ``A:bool``
   in
@@ -652,7 +652,7 @@ Theorem th21 = (* this forward proof comes from boolScript.sml *)
       ((RATOR_CONV o RAND_CONV o RATOR_CONV o RAND_CONV)
          (fn tm => lemma))
     |> GENL [``A:bool``,``B:bool``]
-  end;
+  end)
 
 val _ = if concl th21 ~~ concl (el 21 goals) then ()
         else raise ERR "th21" "assumptions changed";
@@ -1657,7 +1657,7 @@ val cond_expand = hd(amatch ``(if b then t1 else t2) <=> _``);
 
 (* |- !b t1 t2. (if b then t1 else t2) <=> (b ==> t1) /\ (~b ==> t2)
  *)
-Theorem COND_EXPAND_IMP = (* this proof is from boolScript.sml *)
+Theorem COND_EXPAND_IMP = ((* this proof is from boolScript.sml *)
  let val b    = “b:bool”
      val t1   = “t1:bool”
      val t2   = “t2:bool”
@@ -1675,7 +1675,7 @@ Theorem COND_EXPAND_IMP = (* this proof is from boolScript.sml *)
      val th2 = TRANS (SPECL [b,t1,t2] cond_expand) (SYM th1)
  in
     GENL [b,t1,t2] th2
- end;
+ end)
 
 fun IMP_ANTISYM_RULE th1 th2 =
   let val (ant,conseq) = dest_imp(concl th1)
@@ -1685,7 +1685,7 @@ fun IMP_ANTISYM_RULE th1 th2 =
 
 (* |- !P P' Q Q'. (~Q ==> (P <=> P')) /\ (~P' ==> (Q <=> Q')) ==>
                   (P \/ Q <=> P' \/ Q') *)
-Theorem OR_CONG = (* this proof is from boolScript.sml *)
+Theorem OR_CONG = ((* this proof is from boolScript.sml *)
  let val P = mk_var("P",Type.bool)
      val P' = mk_var("P'",Type.bool)
      val Q = mk_var("Q",Type.bool)
@@ -1728,7 +1728,7 @@ Theorem OR_CONG = (* this proof is from boolScript.sml *)
                      (DISCH ctm1 (DISCH ctm2 th24))
  in
    GENL [P,P',Q,Q'] th25
- end;
+ end)
 (* NOTE: COND_EXPAND_IMP and OR_CONG were reported by hol-bag *)
 
 val exists_refl = hd(amatch ``?x. x = a``)
@@ -1940,7 +1940,7 @@ val RES_ABSTRACT_DEF = new_specification
    input theorems: NOT_CLAUSES, EQ_CLAUSES, OR_CLAUSES, AND_CLAUSES,
                    BOOL_CASES_AX
  *)
-Theorem EQ_EXPAND =
+Theorem EQ_EXPAND = (
 let val t1 = “t1:bool” and t2 = “t2:bool”
     val conj = “$/\”   and disj = “$\/”
     val [NOT1,NOT2] = tl (CONJUNCTS NOT_CLAUSES)
@@ -1966,4 +1966,4 @@ let val t1 = “t1:bool” and t2 = “t2:bool”
     and thF3 = EQ_MP (SYM thF2) thF1
  in
    GENL [t1,t2] (DISJ_CASES (SPEC t1 BOOL_CASES_AX) thT3 thF3)
- end;
+ end)
