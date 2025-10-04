@@ -1,6 +1,6 @@
 Theory l3_equivalence_lemmas
 Ancestors
-  arm8_step arm8 armv86a_termination armv86a armv86a_types words
+  armv86a armv86a_termination armv86a_types arm8_step arm8 words
   bitstring list rich_list integer int_arith arithmetic
   l3_equivalence_misc
 Libs
@@ -841,6 +841,8 @@ Definition create_wmask_def[nocompute]:
           (1 :int) :word64)
   in wmask
 End
+
+val _ = monadsyntax.enable_monad "sail2_state_monad"
 
 Theorem DecodeBitMasks_64_lemma[local]:
   armv86a$DecodeBitMasks 64 immN imms immr immediate : (word64 # word64) M =
