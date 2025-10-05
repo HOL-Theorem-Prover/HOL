@@ -474,6 +474,12 @@ in
      that we have accumulated a contradictory context. *)
 end;
 
+(*
+   th |-  R t0 t     c generates |- t = t'
+  ----------------------------------------- CONV_RULE (RAND_CONV c) th
+         |- R t0 t'
+*)
+
 fun ARITH_REDUCER fil = let
   exception CTXT of thm list;
   fun get_ctxt e = (raise e) handle CTXT c => c
@@ -484,10 +490,12 @@ fun ARITH_REDUCER fil = let
     CTXT (addthese @ get_ctxt ctxt)
   end
 in
-  REDUCER {name=SOME"NUM_ARITH_DP",
-           addcontext = add_ctxt,
-           apply = fn args => CACHED_ARITH (get_ctxt (#context args)),
-           initial = CTXT []}
+  REDUCER {
+    name=SOME"NUM_ARITH_DP",
+    addcontext = add_ctxt,
+    apply = fn args => CONV_RULE (RAND_CONV $ CACHED_ARITH (get_ctxt (#context args))),
+    initial = CTXT []
+  }
 end;
 
 (*---------------------------------------------------------------------------*)

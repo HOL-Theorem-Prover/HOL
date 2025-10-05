@@ -74,7 +74,7 @@ signature Opening = sig
    type congproc = {relation: term,
                     solver : conv,
                     freevars: term list,
-                    depther : (thm list * term) -> bbconv} -> bbconv
+                    depther : (thm list * term) -> conv} -> bbconv
    val samerel            : term -> term -> bool
    val CONGPROC           : ({Rinst:term,arg:term} -> thm) ->
                             (thm -> thm -> thm) -> thm -> congproc

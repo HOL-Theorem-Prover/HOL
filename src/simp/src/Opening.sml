@@ -6,10 +6,12 @@ open HolKernel boolLib liteLib Trace BBConv;
 
 fun samerel t1 t2 = can (match_term t1) t2
 
+fun randc th = rand (concl th)
+
 type congproc  = {relation:term,
                   solver : conv,
                   freevars: term list,
-                  depther : thm list * term -> bbconv} -> bbconv
+                  depther : thm list * term -> conv} -> bbconv
 
 
 fun WRAP_ERR x = STRUCT_WRAP "Opening" x;
@@ -157,16 +159,17 @@ let
 
 in fn {relation,solver,depther,freevars} =>
   if not (samerel rel relation) andalso not (same_const rel relation) then (
+    (*
     trace(
       5,
       Trace.LZ_TEXT(fn () =>
          "rejecting CONGPROC theorem " ^ thm_to_string congrule ^
          " as existing relation = " ^ term_to_string relation)
-    );
+    ); *)
     failwith "not applicable"
   ) else fn th0 =>
   let
-    val depther : thm list * term -> bbconv = depther
+    val depther : thm list * term -> conv = depther
     val tm0 = rand (concl th0)
     val theta = match_type (#1 (dom_rng (type_of relation))) (type_of tm0)
     val relation' = Term.inst theta relation
@@ -208,7 +211,7 @@ in fn {relation,solver,depther,freevars} =>
               val assum_thms = map ASSUME assums
               fun reprocess thm flag =
                   if flag then
-                    BBCONV_RULE (depther ([],equality)) thm
+                    CONV_RULE (depther ([],equality)) thm
                     handle HOL_ERR _ =>
                            (trace(5,PRODUCE(concl thm,"UNCHANGED",thm));thm)
                   else thm
@@ -221,7 +224,7 @@ in fn {relation,solver,depther,freevars} =>
                     String.concatWith ", "
                                       (map thm_to_string reprocessed_assum_thms) ^
                     "] origth: " ^ thm_to_string origth));
-                (depther (reprocessed_assum_thms,oper) origth,true)
+                (depther (reprocessed_assum_thms,oper) orig,true)
               ) handle e as HOL_ERR _ => (
                     trace(5,PRODUCE(orig,"UNCHANGED",origth));
                     trace(7, LZ_TEXT(fn () => "exn: " ^ General.exnMessage e));
@@ -276,7 +279,16 @@ in fn {relation,solver,depther,freevars} =>
          Traverse.FIRSTCQC_CONV *)
       raise mk_HOL_ERR "Opening" "CONGPROC" "Congruence gives no change"
     else (trace(3,PRODUCE(tm0,"congruence rule",final_thm));
-          trans th0 final_thm)
+          trans th0 final_thm
+            handle e => (trace(7, LZ_TEXT (fn () =>
+                                              "opening trans fails on " ^
+                                              thm_to_string th0 ^ " and " ^
+                                              thm_to_string final_thm ^
+                                              " with relation' = " ^
+                                              term_to_string relation')
+                              );
+                         raise e)
+         )
   end
 end;
 
@@ -304,13 +316,13 @@ fun EQ_CONGPROC {relation,depther,solver,freevars} th =
           COMB _ =>
           let val (fth0, xth0, mk_comb_fn) = Mk_comb th
           in
-            let val fth = depther ([],equality) fth0
-                val xth = depther ([],equality) xth0 handle HOL_ERR _ => xth0
+            let val fth = depther ([],equality) (randc fth0)
+                val xth = depther ([],equality) (randc xth0) handle HOL_ERR _ => xth0
             in
               mk_comb_fn fth xth
             end
             handle (* should only get an exn if fth failed to change *)
-            HOL_ERR _ => mk_comb_fn fth0 (depther ([],equality) xth0)
+            HOL_ERR _ => mk_comb_fn fth0 (depther ([],equality) (randc xth0))
           end
         | LAMB(Bvar,Body) =>
           if op_mem aconv Bvar freevars then
@@ -321,7 +333,7 @@ fun EQ_CONGPROC {relation,depther,solver,freevars} th =
                                      trace(0,REDUCE("trying to alpha convert to",v));
                                      Raise e)
                 val (bv, bodyth0, mk_abs_fn) = Mk_abs (TRANS th th1)
-                val bodyth = depther ([],equality) bodyth0
+                val bodyth = depther ([],equality) (randc bodyth0)
             in
               mk_abs_fn bodyth
             end
@@ -329,7 +341,7 @@ fun EQ_CONGPROC {relation,depther,solver,freevars} th =
             let val _ = trace(4,TEXT "no alpha conversion")
                 val (bv,bodyth0,mk_abs_fn) = Mk_abs th
             in
-              mk_abs_fn (depther ([],equality) bodyth0)
+              mk_abs_fn (depther ([],equality) (randc bodyth0))
             end
         | _ => failwith "unchanged"
     end

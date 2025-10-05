@@ -64,6 +64,14 @@ datatype trav_state =
              contexts2 : context list,
              freevars : term list};
 
+fun tstate_refl (TSTATE{relation_info,relation,...}) t =
+    let
+      val PREORDER(_, _, irefl) = relation_info
+    in
+      irefl {Rinst = relation, arg = t}
+    end
+
+
 fun initial_context {rewriters:reducer list,
                      dprocs:reducer list,
                      travrules=TRAVRULES tsdata,
@@ -267,8 +275,12 @@ fun TRAVERSE_IN_CONTEXT limit rewriters dprocs travrules stack ctxt (tm:term) = 
     fun low_priority th =
         (check lim_r ;
          FIRST_BBCONV (mapfilter2 apply_reducer dprocs contexts2) th)
-    fun depther (thms,relation) =
-        trav stack (change_relation' (add_context' (context,thms), relation))
+    fun depther (thms,relation) tm =
+        let
+          val tstate = change_relation' (add_context' (context,thms), relation)
+        in
+          trav stack tstate (tstate_refl tstate tm)
+        end
     val congproc_args =
         {relation=relname,
          solver=(fn tm => ctxt_solver stack tm), (* do not eta-convert! *)

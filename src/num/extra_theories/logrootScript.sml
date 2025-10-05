@@ -725,6 +725,8 @@ val iSQRT_lemma = Q.prove(
             METIS_PROVE [DECIDE ``SUC 1 = 2``, EXP, EXP_1]
                ``a ** 2 = a * a:num``]));
 
+SIMP_CONV std_ss [] “(7 * x) MOD 4 ”
+
 Theorem numeral_sqrt0[local]:
   (SQRTd ZERO = (0,0)) /\
   (SQRTd (BIT1 ZERO)= (1,0)) /\
@@ -739,7 +741,7 @@ Theorem numeral_sqrt0[local]:
   (SQRTd (SUC (BIT2 (BIT2 n))) = iSQRTd (3,SUC n))
 Proof
   REWRITE_TAC [BIT1, BIT2, ALT_ZERO, ADD_CLAUSES, NUMERAL_DEF]
-  THEN RW_TAC arith_ss [iSQRT_lemma, ADD1]
+  THEN RW_TAC std_ss [iSQRT_lemma, ADD1]
   THEN RW_TAC (arith_ss ++ boolSimps.LET_ss) [iSQRTd_def, SQRTd_def, sqrt_zero]
 QED
 
