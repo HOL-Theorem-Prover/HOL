@@ -144,23 +144,22 @@ val efl_def =
 (******************************************************************************
 * Translate booleans from extended syntax into core syntax
 ******************************************************************************)
-val B_DESUGAR_def =
- Define
-  `(B_DESUGAR(EB_PROP p)     = B_PROP p)                          /\
+Definition B_DESUGAR_def:
+   (B_DESUGAR(EB_PROP p)     = B_PROP p)                          /\
    (B_DESUGAR EB_TRUE        = B_TRUE)                            /\
    (B_DESUGAR EB_FALSE       = B_FALSE)                           /\
    (B_DESUGAR(EB_NOT b)      = B_NOT(B_DESUGAR b))                /\
    (B_DESUGAR(EB_AND(b1,b2)) = B_AND(B_DESUGAR b1, B_DESUGAR b2)) /\
    (B_DESUGAR(EB_OR(b1,b2))  = B_OR(B_DESUGAR b1, B_DESUGAR b2))  /\
    (B_DESUGAR(EB_IMP(b1,b2)) = B_IMP(B_DESUGAR b1, B_DESUGAR b2)) /\
-   (B_DESUGAR(EB_IFF(b1,b2)) = B_IFF(B_DESUGAR b1, B_DESUGAR b2))`;
+   (B_DESUGAR(EB_IFF(b1,b2)) = B_IFF(B_DESUGAR b1, B_DESUGAR b2))
+End
 
 (******************************************************************************
 * Translate extended SEREs into core syntax
 ******************************************************************************)
-val S_DESUGAR_def =
- Define
-  `(S_DESUGAR(ES_BOOL b) =
+Definition S_DESUGAR_def:
+   (S_DESUGAR(ES_BOOL b) =
      S_BOOL(B_DESUGAR b))
    /\
    (S_DESUGAR(ES_CAT(r1,r2)) =
@@ -197,23 +196,26 @@ val S_DESUGAR_def =
      S_RANGE_EQ_REPEAT(B_DESUGAR b, cnt))
    /\
    (S_DESUGAR(ES_RANGE_GOTO_REPEAT(b,cnt)) =
-     S_RANGE_GOTO_REPEAT(B_DESUGAR b, cnt))`;
+     S_RANGE_GOTO_REPEAT(B_DESUGAR b, cnt))
+End
 
 (******************************************************************************
 * Definitions connecting syntax-oriented names with semantic constants
 ******************************************************************************)
-val F_STRONG_X_def = Define `F_STRONG_X = F_NEXT`;
+Definition F_STRONG_X_def:   F_STRONG_X = F_NEXT
+End
 
-val F_U_def = Define `F_U = F_UNTIL`;
+Definition F_U_def:   F_U = F_UNTIL
+End
 
-val F_IMP_def = Define `F_IMP = F_IMPLIES`;
+Definition F_IMP_def:   F_IMP = F_IMPLIES
+End
 
 (******************************************************************************
 * Translate extended formulas into core syntax
 ******************************************************************************)
-val F_DESUGAR_def =
- Define
-  `(F_DESUGAR(EF_STRONG_BOOL b) =
+Definition F_DESUGAR_def:
+   (F_DESUGAR(EF_STRONG_BOOL b) =
      F_STRONG_BOOL(B_DESUGAR b))
    /\
    (F_DESUGAR(EF_WEAK_BOOL b) =
@@ -355,4 +357,5 @@ val F_DESUGAR_def =
      F_NUM_WEAK_NEXT_EVENT_E(B_DESUGAR b, rng, F_DESUGAR f))
    /\
    (F_DESUGAR(EF_SKIP_SUFFIX_IMP(r,f)) =
-     F_SKIP_SUFFIX_IMP(S_DESUGAR r, F_DESUGAR f))`;
+     F_SKIP_SUFFIX_IMP(S_DESUGAR r, F_DESUGAR f))
+End

@@ -24,9 +24,10 @@ Libs
 val bcarry_def = new_definition ("bcarry_def",
   ``bcarry x y c <=> x /\ y \/ (x \/ y) /\ c``)
 
-val BCARRY_def = Define`
+Definition BCARRY_def:
   (BCARRY 0 x y c = c) /\
-  (BCARRY (SUC i) x y c = bcarry (x i) (y i) (BCARRY i x y c))`
+  (BCARRY (SUC i) x y c = bcarry (x i) (y i) (BCARRY i x y c))
+End
 
 (* --------------------------------------------------------
    "BSUM i x y c" is the i-th bit for the summuation of
@@ -73,11 +74,12 @@ val lem2 =
   |> SIMP_RULE std_ss [lem]
   |> GEN_ALL
 
-val BCARRY_LEM = Q.store_thm("BCARRY_LEM",
-  `!i x y c.
+Theorem BCARRY_LEM:
+   !i x y c.
      0 < i ==>
      (BCARRY i (\i. BIT i x) (\i. BIT i y) c =
-      BIT i (BITS (i - 1) 0 x + BITS (i - 1) 0 y + (if c then 1 else 0)))`,
+      BIT i (BITS (i - 1) 0 x + BITS (i - 1) 0 y + (if c then 1 else 0)))
+Proof
   Induct
   \\ SRW_TAC [] [BCARRY_def, bcarry_def]
   \\ Cases_on `i`
@@ -159,28 +161,32 @@ val BCARRY_LEM = Q.store_thm("BCARRY_LEM",
           \\ FULL_SIMP_TAC std_ss [GSYM EXP, NOT_BIT_GT_TWOEXP]
       ])
   ]
-)
+QED
 
 (* ------------------------------------------------------------------------ *)
 
-val BCARRY_EQ = Q.store_thm("BCARRY_EQ",
-  `!n c x1 x2 y1 y2.
+Theorem BCARRY_EQ:
+   !n c x1 x2 y1 y2.
      (!i. i < n ==> (x1 i = x2 i) /\ (y1 i = y2 i)) ==>
-     (BCARRY n x1 y1 c = BCARRY n x2 y2 c)`,
+     (BCARRY n x1 y1 c = BCARRY n x2 y2 c)
+Proof
   Induct \\ SRW_TAC [] [BCARRY_def]
   \\ `!i. i < n ==> (x1 i = x2 i) /\ (y1 i = y2 i)`
   by ASM_SIMP_TAC arith_ss []
-  \\ RES_TAC \\ ASM_REWRITE_TAC [])
+  \\ RES_TAC \\ ASM_REWRITE_TAC []
+QED
 
-val BSUM_EQ = Q.store_thm("BSUM_EQ",
-  `!n c x1 x2 y1 y2.
+Theorem BSUM_EQ:
+   !n c x1 x2 y1 y2.
      (!i. i <= n ==> (x1 i = x2 i) /\ (y1 i = y2 i)) ==>
-     (BSUM n x1 y1 c = BSUM n x2 y2 c)`,
+     (BSUM n x1 y1 c = BSUM n x2 y2 c)
+Proof
   SRW_TAC [] [BSUM_def]
   \\ `!i. i < n ==> (x1 i = x2 i) /\ (y1 i = y2 i)`
   by ASM_SIMP_TAC arith_ss []
   \\ IMP_RES_TAC BCARRY_EQ
-  \\ ASM_REWRITE_TAC [])
+  \\ ASM_REWRITE_TAC []
+QED
 
 val word_1comp =
   word_1comp_def |> SIMP_RULE (std_ss++fcpLib.FCP_ss) [] |> GSYM
@@ -247,35 +253,41 @@ val ADD_BIT_SUC_CIN = Q.prove(
     \\ Cases_on `BITS (SUC n) (SUC n) b = 1`
     \\ FULL_SIMP_TAC std_ss [NOT_BITS2])
 
-val BSUM_LEM = Q.store_thm("BSUM_LEM",
-  `!i x y c.
+Theorem BSUM_LEM:
+   !i x y c.
       BSUM i (\i. BIT i x) (\i. BIT i y) c =
-      BIT i (x + y + if c then 1 else 0)`,
+      BIT i (x + y + if c then 1 else 0)
+Proof
   Induct
   >| [SRW_TAC [] [ADD_BIT0, BSUM_def, BCARRY_def, bsum_def, bcarry_def,
                   BIT_def, BITS_THM2]
       \\ DECIDE_TAC,
       SRW_TAC [] [BSUM_def, BCARRY_LEM]
       \\ FULL_SIMP_TAC std_ss [BITS_COMP_THM2, BIT_OF_BITS_THM2, bsum_def]
-      \\ METIS_TAC [ADD_BIT_SUC,ADD_BIT_SUC_CIN]])
+      \\ METIS_TAC [ADD_BIT_SUC,ADD_BIT_SUC_CIN]]
+QED
 
 (* ------------------------------------------------------------------------ *)
 
-val BITWISE_ADD = Q.store_thm("BITWISE_ADD",
-  `!x y. x + y = FCP i. BSUM i ($' x) ($' y) F`,
+Theorem BITWISE_ADD:
+   !x y. x + y = FCP i. BSUM i ($' x) ($' y) F
+Proof
   Cases \\ Cases
-  \\ SRW_TAC [fcpLib.FCP_ss] [word_add_n2w, word_index, BSUM_LEM, BSUM_BIT_EQ])
+  \\ SRW_TAC [fcpLib.FCP_ss] [word_add_n2w, word_index, BSUM_LEM, BSUM_BIT_EQ]
+QED
 
 val BSUM_LEM_COR =
   BSUM_LEM |> SPEC_ALL |> SYM |> Q.INST [`c` |-> `T`] |> SIMP_RULE std_ss []
 
-val BITWISE_SUB = Q.store_thm("BITWISE_SUB",
-  `!x y. x - y = FCP i. BSUM i ($' x) ((~) o ($' y)) T`,
+Theorem BITWISE_SUB:
+   !x y. x - y = FCP i. BSUM i ($' x) ((~) o ($' y)) T
+Proof
   Cases \\ Cases
   \\ REWRITE_TAC [word_sub_def, word_add_n2w, word_1comp_n2w, WORD_NEG]
   \\ SRW_TAC [fcpLib.FCP_ss] [word_index, ADD_ASSOC, BSUM_LEM_COR]
   \\ MATCH_MP_TAC BSUM_EQ
-  \\ SRW_TAC [numSimps.ARITH_ss] [word_index, word_1comp, word_1comp_n2w])
+  \\ SRW_TAC [numSimps.ARITH_ss] [word_index, word_1comp, word_1comp_n2w]
+QED
 
 (* ------------------------------------------------------------------------ *)
 
@@ -350,15 +362,17 @@ val BITWISE_MUL_lem2 = Q.prove(
   SRW_TAC [wordsLib.WORD_EXTRACT_ss] [BITWISE_MUL_lem]
   \\ SRW_TAC [] [GSYM wordsTheory.WORD_w2w_EXTRACT, w2w_id])
 
-val BITWISE_MUL = Q.store_thm("BITWISE_MUL",
-  `!w m : 'a word.
+Theorem BITWISE_MUL:
+   !w m : 'a word.
      w * m =
      FOLDL (\a j. a + FCP i. w ' j /\ j <= i /\ m ' (i - j)) 0w
-           (COUNT_LIST (dimindex(:'a)))`,
+           (COUNT_LIST (dimindex(:'a)))
+Proof
   SRW_TAC [] [BITWISE_MUL_lem2]
   \\ MATCH_MP_TAC listTheory.FOLDL_CONG
   \\ SRW_TAC [] [FUN_EQ_THM, rich_listTheory.MEM_COUNT_LIST]
-  \\ SRW_TAC [fcpLib.FCP_ss] [word_lsl_def])
+  \\ SRW_TAC [fcpLib.FCP_ss] [word_lsl_def]
+QED
 
 (* ------------------------------------------------------------------------ *)
 
@@ -477,8 +491,8 @@ val word_lsl_bv_expand = Q.prove(
     \\ ASM_SIMP_TAC arith_ss [word_0, word_bv_fold_zero]
   ])
 
-val word_lsl_bv_expand = Q.store_thm("word_lsl_bv_expand",
-  `!w m.
+Theorem word_lsl_bv_expand:
+   !w m.
       word_lsl_bv (w:'a word) m =
         if dimindex(:'a) = 1 then
           $FCP (K (~m ' 0 /\ w ' 0))
@@ -487,13 +501,15 @@ val word_lsl_bv_expand = Q.store_thm("word_lsl_bv_expand",
              FOLDL (\a j. a \/ ((LOG2 (dimindex(:'a) - 1) -- 0) m = n2w j) /\
                           ((j <= k) /\ w ' (k - j))) F
                    (COUNT_LIST (dimindex(:'a))) /\
-             ((dimindex(:'a) - 1 -- LOG2 (dimindex(:'a) - 1) + 1) m = 0w)`,
+             ((dimindex(:'a) - 1 -- LOG2 (dimindex(:'a) - 1) + 1) m = 0w)
+Proof
   SRW_TAC [] [word_lsl_bv_expand]
   THEN1 SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [COUNT_LIST_compute]
   \\ `1 < dimindex(:'a)` by SRW_TAC [] [DECIDE ``0n < n /\ n <> 1 ==> 1 < n``]
   \\ ONCE_REWRITE_TAC [fcpTheory.CART_EQ]
   \\ SRW_TAC [] [fcpTheory.FCP_BETA]
-  \\ METIS_TAC [arithmeticTheory.LESS_EQ_REFL, FOLDL_LOG2_INTRO])
+  \\ METIS_TAC [arithmeticTheory.LESS_EQ_REFL, FOLDL_LOG2_INTRO]
+QED
 
 val word_lsr_bv_expand = Q.prove(
   `!w m. word_lsr_bv (w:'a word) m =
@@ -517,8 +533,8 @@ val word_lsr_bv_expand = Q.prove(
     \\ ASM_SIMP_TAC arith_ss [word_bv_fold_zero]
   ])
 
-val word_lsr_bv_expand = Q.store_thm("word_lsr_bv_expand",
-  `!w m.
+Theorem word_lsr_bv_expand:
+   !w m.
       word_lsr_bv (w:'a word) m =
         if dimindex(:'a) = 1 then
           $FCP (K (~m ' 0 /\ w ' 0))
@@ -527,13 +543,15 @@ val word_lsr_bv_expand = Q.store_thm("word_lsr_bv_expand",
             FOLDL (\a j. a \/ ((LOG2 (dimindex(:'a) - 1) -- 0) m = n2w j) /\
                          k + j < dimindex(:'a) /\ w ' (k + j)) F
                   (COUNT_LIST (dimindex(:'a))) /\
-            ((dimindex(:'a) - 1 -- LOG2 (dimindex(:'a) - 1) + 1) m = 0w)`,
+            ((dimindex(:'a) - 1 -- LOG2 (dimindex(:'a) - 1) + 1) m = 0w)
+Proof
   SRW_TAC [] [word_lsr_bv_expand]
   THEN1 SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [COUNT_LIST_compute]
   \\ `1 < dimindex(:'a)` by SRW_TAC [] [DECIDE ``0n < n /\ n <> 1 ==> 1 < n``]
   \\ ONCE_REWRITE_TAC [fcpTheory.CART_EQ]
   \\ SRW_TAC [] [fcpTheory.FCP_BETA]
-  \\ METIS_TAC [arithmeticTheory.LESS_EQ_REFL, FOLDL_LOG2_INTRO])
+  \\ METIS_TAC [arithmeticTheory.LESS_EQ_REFL, FOLDL_LOG2_INTRO]
+QED
 
 val word_asr_bv_expand = Q.prove(
   `!w m. word_asr_bv (w:'a word) m =
@@ -591,12 +609,13 @@ val word_asr_bv_expand = Q.prove(
 val word_asr_bv_expand = Theory.save_thm("word_asr_bv_expand",
   SIMP_RULE std_ss [fcp_or, word_msb_def] word_asr_bv_expand)
 
-val word_ror_bv_expand = Q.store_thm("word_ror_bv_expand",
-  `!w m.
+Theorem word_ror_bv_expand:
+   !w m.
      word_ror_bv (w:'a word) m =
      FCP k.
        FOLDL (\a j. a \/ (word_mod m (n2w (dimindex(:'a))) = n2w j) /\
-              w ' ((j + k) MOD dimindex(:'a))) F (COUNT_LIST (dimindex(:'a)))`,
+              w ' ((j + k) MOD dimindex(:'a))) F (COUNT_LIST (dimindex(:'a)))
+Proof
   Cases_on `m`
   \\ SRW_TAC [ARITH_ss] [word_mod_def, mod_dimindex, dimindex_lt_dimword]
   \\ SRW_TAC [fcpLib.FCP_ss] [word_ror_bv_def, word_ror_def]
@@ -612,16 +631,17 @@ val word_ror_bv_expand = Q.store_thm("word_ror_bv_expand",
   \\ DROPN_TAC 2
   \\ FULL_SIMP_TAC std_ss [Abbr `P`, AC ADD_COMM ADD_ASSOC,
        MOD_PLUS_RIGHT, DIMINDEX_GT_0]
-  )
+QED
 
-val word_rol_bv_expand = Q.store_thm("word_rol_bv_expand",
-  `!w m.
+Theorem word_rol_bv_expand:
+   !w m.
      word_rol_bv (w:'a word) m =
      FCP k.
        FOLDL
          (\a j. a \/ (word_mod m (n2w (dimindex(:'a))) = n2w j) /\
            w ' ((k + (dimindex(:'a) - j) MOD dimindex(:'a)) MOD dimindex(:'a)))
-           F (COUNT_LIST (dimindex(:'a)))`,
+           F (COUNT_LIST (dimindex(:'a)))
+Proof
   Cases_on `m`
   \\ SRW_TAC [ARITH_ss] [word_mod_def, mod_dimindex, dimindex_lt_dimword]
   \\ SRW_TAC [fcpLib.FCP_ss] [word_rol_bv_def, word_rol_def, word_ror_def]
@@ -637,7 +657,7 @@ val word_rol_bv_expand = Q.store_thm("word_rol_bv_expand",
                `dimindex(:'a)`] IMP_RES_TAC word_bv_lem
   \\ DROPN_TAC 2
   \\ FULL_SIMP_TAC std_ss [Abbr `P`, MOD_PLUS_RIGHT, DIMINDEX_GT_0]
-  )
+QED
 
 (* ------------------------------------------------------------------------- *)
 

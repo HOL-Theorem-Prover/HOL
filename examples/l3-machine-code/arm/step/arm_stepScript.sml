@@ -16,9 +16,10 @@ val _ = List.app (fn f => f ())
 
 (* ------------------------------------------------------------------------ *)
 
-val NextStateARM_def = Define`
+Definition NextStateARM_def:
    NextStateARM s0 =
-     let s1 = Next s0 in if s1.exception = NoException then SOME s1 else NONE`
+     let s1 = Next s0 in if s1.exception = NoException then SOME s1 else NONE
+End
 
 val NextStateARM_arm = ustore_thm("NextStateARM_arm",
   `(s.exception = NoException) ==>
@@ -73,7 +74,7 @@ val NextStateARM_thumb = ustore_thm("NextStateARM_thumb",
 
 (* ------------------------------------------------------------------------ *)
 
-val LDM1_def = Define`
+Definition LDM1_def:
    LDM1 (f: word4 -> RName) b (registers: word16) s r j =
     (if word_bit j registers then
        f (n2w j) =+
@@ -84,14 +85,16 @@ val LDM1_def = Define`
           else
              s.MEM (a + 3w) @@ s.MEM (a + 2w) @@ s.MEM (a + 1w) @@ s.MEM a
      else
-        I) r`
+        I) r
+End
 
-val LDM_UPTO_def = Define`
+Definition LDM_UPTO_def:
    LDM_UPTO f i (registers: word16) (b: word32, s) =
      (b + 4w * n2w (bit_count_upto (i + 1) registers),
-      s with REG := FOLDL (LDM1 f b registers s) s.REG (COUNT_LIST (i + 1)))`
+      s with REG := FOLDL (LDM1 f b registers s) s.REG (COUNT_LIST (i + 1)))
+End
 
-val STM1_def = Define`
+Definition STM1_def:
    STM1 f (b: word32) (registers: word16) s m j =
     (if word_bit j registers then
        let a = b + if j = 0 then 0w else 4w * n2w (bit_count_upto j registers)
@@ -102,16 +105,18 @@ val STM1_def = Define`
           (a + 1w =+ if s.CPSR.E then (23 >< 16) r else (15 >< 8) r) o
           (a =+ if s.CPSR.E then (31 >< 24) r else (7 >< 0) r)
      else
-        I) m`
+        I) m
+End
 
-val STM_UPTO_def = Define`
+Definition STM_UPTO_def:
    STM_UPTO f i (registers: word16) (b: word32, s) =
      (b + 4w * n2w (bit_count_upto (i + 1) registers),
-      s with MEM := FOLDL (STM1 f b registers s) s.MEM (COUNT_LIST (i + 1)))`
+      s with MEM := FOLDL (STM1 f b registers s) s.MEM (COUNT_LIST (i + 1)))
+End
 
 (* ------------------------------------------------------------------------ *)
 
-val DecodeRoundingMode_def = Define`
+Definition DecodeRoundingMode_def:
    DecodeRoundingMode (m: word2) =
      if m = 0w
         then roundTiesToEven
@@ -119,32 +124,37 @@ val DecodeRoundingMode_def = Define`
         then roundTowardPositive
      else if m = 2w
         then roundTowardNegative
-     else roundTowardZero`;
+     else roundTowardZero
+End
 
 (* For floating-point single precision access *)
 
-val SingleOfDouble_def = Define`
-   SingleOfDouble b (w:word64) = if b then (63 >< 32) w else (31 >< 0) w`
+Definition SingleOfDouble_def:
+   SingleOfDouble b (w:word64) = if b then (63 >< 32) w else (31 >< 0) w
+End
 
-val UpdateSingleOfDouble_def = Define`
+Definition UpdateSingleOfDouble_def:
    UpdateSingleOfDouble b (v:word32) (w:word64) =
       if b then
          bit_field_insert 63 32 v w
       else
-         bit_field_insert 31 0 v w`;
+         bit_field_insert 31 0 v w
+End
 
 (* ------------------------------------------------------------------------ *)
 
-val reverse_endian_def = Define`
+Definition reverse_endian_def:
    reverse_endian (w: word32) =
-   (7 >< 0) w @@ (15 >< 8) w @@ (23 >< 16) w @@ (31 >< 24) w`
+   (7 >< 0) w @@ (15 >< 8) w @@ (23 >< 16) w @@ (31 >< 24) w
+End
 
 (* ------------------------------------------------------------------------ *)
 
-val GoodMode_def = Define`
-   GoodMode (m: word5) = m IN {16w;17w;18w;19w;23w;27w;31w}`
+Definition GoodMode_def:
+   GoodMode (m: word5) = m IN {16w;17w;18w;19w;23w;27w;31w}
+End
 
-val R_mode_def = Define`
+Definition R_mode_def:
    R_mode (m: word5) (n: word4) =
      case m, n of
        _,   0w  => RName_0usr
@@ -180,7 +190,8 @@ val R_mode_def = Define`
      | 23w, 14w => RName_LRabt
      | 27w, 14w => RName_LRund
      | _,   14w => RName_LRusr
-     | _        => RName_PC`
+     | _        => RName_PC
+End
 
 (* ------------------------------------------------------------------------ *)
 

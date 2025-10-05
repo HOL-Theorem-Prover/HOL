@@ -420,7 +420,8 @@ Proof
   simp[Gexprs_def, subexprs_included]
 QED
 
-val wfG_def = Define`wfG G ⇔ ∀e. e ∈ Gexprs G ⇒ wfpeg G e`;
+Definition wfG_def:  wfG G ⇔ ∀e. e ∈ Gexprs G ⇒ wfpeg G e
+End
 
 Theorem IN_subexprs_TRANS:
   ∀a b c. a ∈ subexprs b ∧ b ∈ subexprs c ⇒ a ∈ subexprs c
@@ -521,26 +522,26 @@ QED
 Definition pegf_def:  pegf sym f = seq sym (empty ARB) (λl1 l2. f l1)
 End
 
-val ignoreL_def = Define`
+Definition ignoreL_def:
   ignoreL s1 s2 = seq s1 s2 (λa b. b)
-`;
+End
 val _ = set_mapped_fixity{fixity = Infixl 500, term_name = "ignoreL",
                           tok = "~>"}
 
-val ignoreR_def = Define`
+Definition ignoreR_def:
   ignoreR s1 s2 = seq s1 s2 (λa b. a)
-`;
+End
 val _ = set_mapped_fixity{fixity = Infixl 500, term_name = "ignoreR",
                           tok = "<~"}
 
-val choicel_def = Define`
+Definition choicel_def:
   (choicel [] = not (empty ARB) ARB) ∧
   (choicel (h::t) = choice h (choicel t) (λs. sum_CASE s I I))
-`;
+End
 
-val checkAhead_def = Define`
+Definition checkAhead_def:
   checkAhead P s = not (not (tok P ARB) ARB) ARB ~> s
-`;
+End
 
 Theorem peg_eval_seq_SOME:
   peg_eval G (i0, seq s1 s2 f) (Success i r eo) ⇔

@@ -221,9 +221,10 @@ val INT_LE_EQ_LT_ADD1 = store_thm
                 ++ FULL_SIMP_TAC int_ss [])
     ++ METIS_TAC []);
 
-val posreal_pow_def = Define
-   `(posreal_pow (e:posreal) 0 = 1) /\
-    (posreal_pow (e:posreal) (SUC n) = e * (posreal_pow e n))`;
+Definition posreal_pow_def:
+    (posreal_pow (e:posreal) 0 = 1) /\
+    (posreal_pow (e:posreal) (SUC n) = e * (posreal_pow e n))
+End
 
 val posreal_pow_1bounded_base_1bounded = store_thm
   ("posreal_pow_1bounded_base_1bounded",

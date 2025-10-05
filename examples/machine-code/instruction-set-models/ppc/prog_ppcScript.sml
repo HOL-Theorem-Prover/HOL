@@ -31,14 +31,17 @@ val _ = Parse.type_abbrev("ppc_set",``:ppc_el set``);
 (* Converting from PPC-state tuple to ppc_set                                    *)
 (* ----------------------------------------------------------------------------- *)
 
-val ppc2set'_def = Define `
+Definition ppc2set'_def:
   ppc2set' (rs,ms,st) s =
     IMAGE (\a. pReg a (PREAD_R a s)) rs UNION
     IMAGE (\a. pMem a (PREAD_M a s)) ms UNION
-    IMAGE (\a. pStatus a (PREAD_S a s)) st`;
+    IMAGE (\a. pStatus a (PREAD_S a s)) st
+End
 
-val ppc2set_def   = Define `ppc2set s = ppc2set' (UNIV,UNIV,UNIV) s`;
-val ppc2set''_def = Define `ppc2set'' x s = ppc2set s DIFF ppc2set' x s`;
+Definition ppc2set_def:     ppc2set s = ppc2set' (UNIV,UNIV,UNIV) s
+End
+Definition ppc2set''_def:   ppc2set'' x s = ppc2set s DIFF ppc2set' x s
+End
 
 (* theorems *)
 
@@ -132,33 +135,45 @@ val EMPTY_ppc2set = prove(``
 (* Defining the PPC_MODEL                                                        *)
 (* ----------------------------------------------------------------------------- *)
 
-val pR1_def = Define `pR1 a x = SEP_EQ {pReg a x}`;
-val pM1_def = Define `pM1 a x = SEP_EQ {pMem a x}`;
-val pS1_def = Define `pS1 a x = SEP_EQ {pStatus a x}`;
+Definition pR1_def:   pR1 a x = SEP_EQ {pReg a x}
+End
+Definition pM1_def:   pM1 a x = SEP_EQ {pMem a x}
+End
+Definition pS1_def:   pS1 a x = SEP_EQ {pStatus a x}
+End
 
-val pR_def   = Define `pR a x = pR1 (PPC_IR a) x`;
-val pPC_def  = Define `pPC x  = pR1 (PPC_PC) x * cond (ALIGNED x)`;
-val pLR_def  = Define `pLR x  = pR1 (PPC_LR) x`;
-val pCTR_def = Define `pCTR x = pR1 (PPC_CTR) x`;
+Definition pR_def:     pR a x = pR1 (PPC_IR a) x
+End
+Definition pPC_def:    pPC x  = pR1 (PPC_PC) x * cond (ALIGNED x)
+End
+Definition pLR_def:    pLR x  = pR1 (PPC_LR) x
+End
+Definition pCTR_def:   pCTR x = pR1 (PPC_CTR) x
+End
 
-val pS_def = Define `
+Definition pS_def:
   pS (x0,x1,x2,x3,c) =
     pS1 (PPC_CR0 0w) x0 * pS1 (PPC_CR0 1w) x1 *
-    pS1 (PPC_CR0 2w) x2 * pS1 (PPC_CR0 3w) x3 * pS1 PPC_CARRY c`;
+    pS1 (PPC_CR0 2w) x2 * pS1 (PPC_CR0 3w) x3 * pS1 PPC_CARRY c
+End
 
-val PPC_NEXT_REL_def = Define `PPC_NEXT_REL s s' = (PPC_NEXT s = SOME s')`;
+Definition PPC_NEXT_REL_def:   PPC_NEXT_REL s s' = (PPC_NEXT s = SOME s')
+End
 
-val PPC_INSTR_def    = Define `PPC_INSTR (a,w:word32) =
+Definition PPC_INSTR_def:      PPC_INSTR (a,w:word32) =
   { pMem a      (SOME ((31 >< 24) w)) ;
     pMem (a+1w) (SOME ((23 >< 16) w)) ;
     pMem (a+2w) (SOME ((15 ><  8) w)) ;
-    pMem (a+3w) (SOME (( 7 ><  0) w)) }`;
+    pMem (a+3w) (SOME (( 7 ><  0) w)) }
+End
 
-val PPC_MODEL_def = Define `
+Definition PPC_MODEL_def:
   PPC_MODEL = (ppc2set, PPC_NEXT_REL, PPC_INSTR, (\x y. (x = (y:ppc_state))),
-               (K F):ppc_state -> bool)`;
+               (K F):ppc_state -> bool)
+End
 
-val pLINK_REGISTER_def = Define `pLINK_REGISTER x  = pLR x * cond (ALIGNED x)`;
+Definition pLINK_REGISTER_def:   pLINK_REGISTER x  = pLR x * cond (ALIGNED x)
+End
 
 (* theorems *)
 
@@ -259,17 +274,20 @@ val pS_HIDE = store_thm("pS_HIDE",
 (* Improved memory predicates                                                    *)
 (* ----------------------------------------------------------------------------- *)
 
-val pMEMORY_WORD_def = Define `
+Definition pMEMORY_WORD_def:
   pMEMORY_WORD (a:word32) (w:word32) =
     { pMem a      (SOME ((7 >< 0) (w >> 24))) ;
       pMem (a+1w) (SOME ((7 >< 0) (w >> 16))) ;
       pMem (a+2w) (SOME ((7 >< 0) (w >> 8))) ;
-      pMem (a+3w) (SOME ((7 >< 0) w)) }`;
+      pMem (a+3w) (SOME ((7 >< 0) w)) }
+End
 
-val pMEMORY_SET_def = Define `
-  pMEMORY_SET df f = BIGUNION { pMEMORY_WORD a (f a) | a | a IN df /\ ALIGNED a  }`;
+Definition pMEMORY_SET_def:
+  pMEMORY_SET df f = BIGUNION { pMEMORY_WORD a (f a) | a | a IN df /\ ALIGNED a  }
+End
 
-val pMEMORY_def = Define `pMEMORY df f = SEP_EQ (pMEMORY_SET df f)`;
+Definition pMEMORY_def:   pMEMORY df f = SEP_EQ (pMEMORY_SET df f)
+End
 
 val pMEMORY_SET_SING = prove(
   ``!a f. ALIGNED a ==> (pMEMORY_SET {a} f = pMEMORY_WORD a (f a))``,
@@ -354,10 +372,12 @@ val pMEMORY_INTRO = store_thm("pMEMORY_INTRO",
 (* Improved memory predicates (byte addressed memory)                            *)
 (* ----------------------------------------------------------------------------- *)
 
-val pBYTE_MEMORY_SET_def = Define `
-  pBYTE_MEMORY_SET df f = { pMem a (SOME (f a)) | a | a IN df }`;
+Definition pBYTE_MEMORY_SET_def:
+  pBYTE_MEMORY_SET df f = { pMem a (SOME (f a)) | a | a IN df }
+End
 
-val pBYTE_MEMORY_def = Define `pBYTE_MEMORY df f = SEP_EQ (pBYTE_MEMORY_SET df f)`;
+Definition pBYTE_MEMORY_def:   pBYTE_MEMORY df f = SEP_EQ (pBYTE_MEMORY_SET df f)
+End
 
 val IN_pBYTE_MEMORY_SET = prove(
   ``a IN df ==>

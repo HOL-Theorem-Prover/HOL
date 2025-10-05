@@ -156,38 +156,49 @@ val () = Hol_datatype
 
 val field_accessors = fetch "-" "field_accessors";
 
-val field_zero_def = Define `field_zero (f : 'a field) = f.sum.id`;
+Definition field_zero_def:   field_zero (f : 'a field) = f.sum.id
+End
 
-val field_one_def = Define `field_one (f : 'a field) = f.prod.id`;
+Definition field_one_def:   field_one (f : 'a field) = f.prod.id
+End
 
-val field_neg_def = Define `field_neg (f : 'a field) = f.sum.inv`;
+Definition field_neg_def:   field_neg (f : 'a field) = f.sum.inv
+End
 
-val field_inv_def = Define `field_inv (f : 'a field) = f.prod.inv`;
+Definition field_inv_def:   field_inv (f : 'a field) = f.prod.inv
+End
 
-val field_add_def = Define `field_add (f : 'a field) = f.sum.mult`;
+Definition field_add_def:   field_add (f : 'a field) = f.sum.mult
+End
 
-val field_sub_def = Define
-  `field_sub (f : 'a field) x y = field_add f x (field_neg f y)`;
+Definition field_sub_def:
+   field_sub (f : 'a field) x y = field_add f x (field_neg f y)
+End
 
-val field_mult_def = Define `field_mult (f : 'a field) = f.prod.mult`;
+Definition field_mult_def:   field_mult (f : 'a field) = f.prod.mult
+End
 
-val field_div_def = Define
-  `field_div (f : 'a field) x y = field_mult f x (field_inv f y)`;
+Definition field_div_def:
+   field_div (f : 'a field) x y = field_mult f x (field_inv f y)
+End
 
-val field_nonzero_def = Define
-  `field_nonzero f = f.carrier DIFF {field_zero f}`;
+Definition field_nonzero_def:
+   field_nonzero f = f.carrier DIFF {field_zero f}
+End
 
-val field_num_def = Define
-  `(field_num (f : 'a field) 0 = field_zero f) /\
+Definition field_num_def:
+   (field_num (f : 'a field) 0 = field_zero f) /\
    (field_num (f : 'a field) (SUC n) =
-    field_add f (field_num f n) (field_one f))`;
+    field_add f (field_num f n) (field_one f))
+End
 
-val field_exp_def = Define
-  `(field_exp (f : 'a field) x 0 = field_one f) /\
-   (field_exp (f : 'a field) x (SUC n) = field_mult f x (field_exp f x n))`;
+Definition field_exp_def:
+   (field_exp (f : 'a field) x 0 = field_one f) /\
+   (field_exp (f : 'a field) x (SUC n) = field_mult f x (field_exp f x n))
+End
 
-val Field_def = Define
-  `Field =
+Definition Field_def:
+   Field =
    { (f : 'a field) |
      f.sum IN AbelianGroup /\
      f.prod IN AbelianGroup /\
@@ -196,10 +207,12 @@ val Field_def = Define
      (!x :: (f.carrier). field_mult f (field_zero f) x = field_zero f) /\
      (!x y z :: (f.carrier).
         field_mult f x (field_add f y z) =
-        field_add f (field_mult f x y) (field_mult f x z)) }`;
+        field_add f (field_mult f x y) (field_mult f x z)) }
+End
 
-val FiniteField_def = Define
-  `FiniteField = { (f : 'a field) | f IN Field /\ FINITE f.carrier }`;
+Definition FiniteField_def:
+   FiniteField = { (f : 'a field) | f IN Field /\ FINITE f.carrier }
+End
 
 val context = subtypeTools.add_rewrite2'' field_sub_def context;
 (*val context = subtypeTools.add_rewrite2'' field_div_def context;*)
@@ -2394,24 +2407,29 @@ val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 (* Homomorphisms, isomorphisms, endomorphisms, automorphisms and subfields.  *)
 (* ------------------------------------------------------------------------- *)
 
-val FieldHom_def = Define
-  `FieldHom g h =
+Definition FieldHom_def:
+   FieldHom g h =
    { f |
      (!x :: (g.carrier). f x IN h.carrier) /\
      f IN GroupHom (g.sum) (h.sum) /\
-     f IN GroupHom (g.prod) (h.prod) }`;
+     f IN GroupHom (g.prod) (h.prod) }
+End
 
-val FieldIso_def = Define
-  `FieldIso g h =
+Definition FieldIso_def:
+   FieldIso g h =
    { f |
      f IN FieldHom g h /\
-     (!y :: (h.carrier). ?!x :: (g.carrier). f x = y) }`;
+     (!y :: (h.carrier). ?!x :: (g.carrier). f x = y) }
+End
 
-val FieldEndo_def = Define `FieldEndo g = FieldHom g g`;
+Definition FieldEndo_def:   FieldEndo g = FieldHom g g
+End
 
-val FieldAuto_def = Define `FieldAuto g = FieldIso g g`;
+Definition FieldAuto_def:   FieldAuto g = FieldIso g g
+End
 
-val subfield_def = Define `subfield g h = I IN FieldHom g h`;
+Definition subfield_def:   subfield g h = I IN FieldHom g h
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomials over fields.                                                  *)
@@ -2419,36 +2437,41 @@ val subfield_def = Define `subfield g h = I IN FieldHom g h`;
 
 val () = type_abbrev ("poly", Type `:'a list`);
 
-val poly_zero_def = Define `poly_zero = ([] : 'a poly)`;
+Definition poly_zero_def:   poly_zero = ([] : 'a poly)
+End
 
-val Poly_def = Define
-  `Poly (f : 'a field) =
+Definition Poly_def:
+   Poly (f : 'a field) =
    { (p : 'a poly) |
      (p = poly_zero) \/
-     (EVERY (\c. c IN f.carrier) p /\ ~(LAST p = field_zero f)) }`;
+     (EVERY (\c. c IN f.carrier) p /\ ~(LAST p = field_zero f)) }
+End
 
-val poly_degree_def = Define
-  `poly_degree (p : 'a poly) = if (p = poly_zero) then 0 else LENGTH p - 1`;
+Definition poly_degree_def:
+   poly_degree (p : 'a poly) = if (p = poly_zero) then 0 else LENGTH p - 1
+End
 
-val poly_eval_def = Define
-  `(poly_eval (f : 'a field) [] x = field_zero f) /\
+Definition poly_eval_def:
+   (poly_eval (f : 'a field) [] x = field_zero f) /\
    (poly_eval (f : 'a field) (c :: cs) x =
-    field_add f c (field_mult f x (poly_eval f cs x)))`;
+    field_add f c (field_mult f x (poly_eval f cs x)))
+End
 
-val AlgebraicallyClosedField_def = Define
-  `AlgebraicallyClosedField =
+Definition AlgebraicallyClosedField_def:
+   AlgebraicallyClosedField =
    { (f : 'a field) |
      f IN Field /\
      !p :: Poly f.
        (poly_degree p = 0) \/
-       ?z :: (f.carrier). poly_eval f p z = field_zero f }`;
+       ?z :: (f.carrier). poly_eval f p z = field_zero f }
+End
 
 (* ------------------------------------------------------------------------- *)
 (* The trivial field.                                                        *)
 (* ------------------------------------------------------------------------- *)
 
-val trivial_field_def = Define
-  `(trivial_field zero_elt one_elt) : 'a field =
+Definition trivial_field_def:
+   (trivial_field zero_elt one_elt) : 'a field =
    <| carrier := {zero_elt; one_elt};
       sum := <| carrier := {zero_elt; one_elt};
                 id := zero_elt;
@@ -2461,7 +2484,8 @@ val trivial_field_def = Define
                  inv := (\x. x);
                  mult := (\x y. if x = zero_elt then zero_elt
                                 else if y = zero_elt then zero_elt
-                                else one_elt) |> |>`;
+                                else one_elt) |> |>
+End
 
 val trivial_field = store_thm
   ("trivial_field",
@@ -2480,19 +2504,21 @@ val trivial_field = store_thm
 (* GF(p).                                                                    *)
 (* ------------------------------------------------------------------------- *)
 
-val modexp_def = Define
-   `modexp a n m =
+Definition modexp_def:
+    modexp a n m =
     if n = 0 then 1
     else if n MOD 2 = 0 then modexp ((a * a) MOD m) (n DIV 2) m
-    else (a * modexp ((a * a) MOD m) (n DIV 2) m) MOD m`;
+    else (a * modexp ((a * a) MOD m) (n DIV 2) m) MOD m
+End
 
 val modexp_ind = fetch "-" "modexp_ind";
 
-val GF_def = Define
-  `GF p =
+Definition GF_def:
+   GF p =
    <| carrier := { n | n < p };
       sum := add_mod p;
-      prod := mult_mod p |>`;
+      prod := mult_mod p |>
+End
 
 val modexp = store_thm
   ("modexp",

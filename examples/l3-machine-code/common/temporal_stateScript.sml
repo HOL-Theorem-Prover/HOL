@@ -4,10 +4,11 @@ Ancestors
 
 (* ------------------------------------------------------------------------ *)
 
-val TEMPORAL_NEXT_def = Define`
+Definition TEMPORAL_NEXT_def:
    TEMPORAL_NEXT
       ((to_set,next,instr,less,avoid): ('a, 'b, 'c) processor) p c q =
-   TEMPORAL (to_set,next,instr,$=,K F) c (T_IMPLIES (NOW p) (NEXT (NOW q)))`
+   TEMPORAL (to_set,next,instr,$=,K F) c (T_IMPLIES (NOW p) (NEXT (NOW q)))
+End
 
 (* ------------------------------------------------------------------------ *)
 

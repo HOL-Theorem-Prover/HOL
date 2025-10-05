@@ -24,20 +24,26 @@ val (R_TAC, AR_TAC, R_TAC', AR_TAC') = SIMPLIFY_TACS std_c;
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val IMAGE2_def = Define `IMAGE2 f s t = {f x y | x IN s /\ y IN t}`;
+Definition IMAGE2_def:   IMAGE2 f s t = {f x y | x IN s /\ y IN t}
+End
 
-val UNIONL_def = Define `(UNIONL [] = {})
-  /\ (UNIONL (s::ss) = (s:'a->bool) UNION UNIONL ss)`;
+Definition UNIONL_def:   (UNIONL [] = {})
+  /\ (UNIONL (s::ss) = (s:'a->bool) UNION UNIONL ss)
+End
 
-val DISJOINTL_def = Define
-  `(DISJOINTL [] = T) /\
-   (DISJOINTL (s::ss) = (DISJOINT (s:'a->bool) (UNIONL ss) /\ DISJOINTL ss))`;
+Definition DISJOINTL_def:
+   (DISJOINTL [] = T) /\
+   (DISJOINTL (s::ss) = (DISJOINT (s:'a->bool) (UNIONL ss) /\ DISJOINTL ss))
+End
 
-val set_def = Define `set p s = (s SUBSET p)`;
+Definition set_def:   set p s = (s SUBSET p)
+End
 
-val nonempty_def = Define `nonempty s = ~(s = {})`;
+Definition nonempty_def:   nonempty s = ~(s = {})
+End
 
-val range_def = Define `range f = IMAGE f UNIV`;
+Definition range_def:   range f = IMAGE f UNIV
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)

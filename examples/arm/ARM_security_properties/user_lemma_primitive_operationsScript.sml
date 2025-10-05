@@ -52,7 +52,8 @@ val take_irq_exception_comb_thm =
 (******************* A.1. effects of reading   *********************)
 
 
-val const_comp_def = Define `const_comp G = (!s s' x. ((G s = ValueState x s') ==> (s=s')))`;
+Definition const_comp_def:   const_comp G = (!s s' x. ((G s = ValueState x s') ==> (s=s')))
+End
 
 val read_reg_constlem = store_thm(
     "read_reg_constlem",
@@ -1886,7 +1887,7 @@ val cpsr_write_by_instr_components_complete = `` (cpsr with
                   M := 16w|>)``;
 
 
-val cpsr_write_by_instr_unpriv_def = Define `cpsr_write_by_instr_unpriv (value:word32, bytemask:word4, affect_execstate:bool) = ((current_mode_is_priviledged <|proc := 0|>
+Definition cpsr_write_by_instr_unpriv_def:   cpsr_write_by_instr_unpriv (value:word32, bytemask:word4, affect_execstate:bool) = ((current_mode_is_priviledged <|proc := 0|>
           ||| is_secure <|proc := 0|> ||| read_nsacr <|proc := 0|>
           ||| bad_mode <|proc := 0|> ((4 >< 0) value)) >>=
        (λ(p,s,n,b).
@@ -1926,7 +1927,8 @@ val cpsr_write_by_instr_unpriv_def = Define `cpsr_write_by_instr_unpriv (value:w
                     if bytemask ' 0 ∧ affect_execstate then
                       value ' 5
                     else
-                      cpsr.T; M := cpsr.M|>))))`;
+                      cpsr.T; M := cpsr.M|>))))
+End
 
 
 

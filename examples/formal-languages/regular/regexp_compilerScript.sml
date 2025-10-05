@@ -205,7 +205,7 @@ Definition Empty_arcs_def :
    (246,Empty); (247,Empty); (248,Empty); (249,Empty);
    (250,Empty); (251,Empty); (252,Empty); (253,Empty);
    (254,Empty); (255,Empty)]
-End;
+End
 
 Theorem Empty_arcs_thm :
   MAP (\c. (c,smart_deriv c Empty)) ALPHABET = Empty_arcs

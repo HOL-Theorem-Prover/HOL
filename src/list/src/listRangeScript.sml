@@ -27,10 +27,11 @@ val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
 
 (* Theorem: a <= j /\ j <= a <=> (j = a) *)
 (* Proof: trivial by arithmetic. *)
-val every_range_sing = store_thm(
-  "every_range_sing",
-  ``!a j. a <= j /\ j <= a <=> (j = a)``,
-  decide_tac);
+Theorem every_range_sing:
+    !a j. a <= j /\ j <= a <=> (j = a)
+Proof
+  decide_tac
+QED
 
 (* Theorem: a <= b ==>
     ((!j. a <= j /\ j <= b ==> f j) <=> (f a /\ !j. a + 1 <= j /\ j <= b ==> f j)) *)
@@ -44,14 +45,15 @@ val every_range_sing = store_thm(
       If a = j, this is trivial.
       If a < j, then a + 1 <= j, also trivial.
 *)
-val every_range_cons = store_thm(
-  "every_range_cons",
-  ``!f a b. a <= b ==>
-    ((!j. a <= j /\ j <= b ==> f j) <=> (f a /\ !j. a + 1 <= j /\ j <= b ==> f j))``,
+Theorem every_range_cons:
+    !f a b. a <= b ==>
+    ((!j. a <= j /\ j <= b ==> f j) <=> (f a /\ !j. a + 1 <= j /\ j <= b ==> f j))
+Proof
   rw[EQ_IMP_THM] >>
   `(a = j) \/ (a < j)` by decide_tac >-
   fs[] >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: a <= b ==> ((!j. PRE a <= j /\ j <= b ==> f j) <=> (f (PRE a) /\ !j. a <= j /\ j <= b ==> f j)) *)
 (* Proof:
@@ -186,10 +188,11 @@ QED
 
 (* Theorem: ?j. a <= j /\ j <= a <=> (j = a) *)
 (* Proof: trivial by arithmetic. *)
-val exists_range_sing = store_thm(
-  "exists_range_sing",
-  ``!a. ?j. a <= j /\ j <= a <=> (j = a)``,
-  metis_tac[LESS_EQ_REFL]);
+Theorem exists_range_sing:
+    !a. ?j. a <= j /\ j <= a <=> (j = a)
+Proof
+  metis_tac[LESS_EQ_REFL]
+QED
 
 (* Theorem: a <= b ==>
     ((?j. a <= j /\ j <= b /\ f j) <=> (f a \/ ?j. a + 1 <= j /\ j <= b /\ f j)) *)
@@ -203,10 +206,10 @@ val exists_range_sing = store_thm(
       If a = j, this is trivial.
       If a < j, then a + 1 <= j, also trivial.
 *)
-val exists_range_cons = store_thm(
-  "exists_range_cons",
-  ``!f a b. a <= b ==>
-    ((?j. a <= j /\ j <= b /\ f j) <=> (f a \/ ?j. a + 1 <= j /\ j <= b /\ f j))``,
+Theorem exists_range_cons:
+    !f a b. a <= b ==>
+    ((?j. a <= j /\ j <= b /\ f j) <=> (f a \/ ?j. a + 1 <= j /\ j <= b /\ f j))
+Proof
   rw[EQ_IMP_THM] >| [
     `(a = j) \/ (a < j)` by decide_tac >-
     fs[] >>
@@ -215,15 +218,16 @@ val exists_range_cons = store_thm(
     metis_tac[LESS_EQ_REFL],
     `a <= j` by decide_tac >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* List Range                                                                *)
 (* ------------------------------------------------------------------------- *)
 
-val listRangeINC_def = Define`
+Definition listRangeINC_def:
   listRangeINC m n = GENLIST (\i. m + i) (n + 1 - m)
-`;
+End
 
 val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                    fixity = Closefix,
@@ -233,36 +237,40 @@ val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                                   TOK "]"],
                    term_name = "listRangeINC" }
 
-val listRangeINC_SING = store_thm(
-  "listRangeINC_SING",
-  ``[m .. m] = [m]``,
-  SIMP_TAC (srw_ss()) [listRangeINC_def]);
+Theorem listRangeINC_SING:
+    [m .. m] = [m]
+Proof
+  SIMP_TAC (srw_ss()) [listRangeINC_def]
+QED
 val _ = export_rewrites ["listRangeINC_SING"]
 
-val MEM_listRangeINC = store_thm(
-  "MEM_listRangeINC",
-  ``MEM x [m .. n] <=> m <= x /\ x <= n``,
+Theorem MEM_listRangeINC:
+    MEM x [m .. n] <=> m <= x /\ x <= n
+Proof
   SIMP_TAC (srw_ss() ++ ARITH_ss)
            [listRangeINC_def, MEM_GENLIST, EQ_IMP_THM] THEN
-  STRIP_TAC THEN Q.EXISTS_TAC `x - m` THEN DECIDE_TAC);
+  STRIP_TAC THEN Q.EXISTS_TAC `x - m` THEN DECIDE_TAC
+QED
 val _ = export_rewrites ["MEM_listRangeINC"]
 
-val listRangeINC_CONS = store_thm(
-  "listRangeINC_CONS",
-  ``m <= n ==> ([m .. n] = m :: [m+1 .. n])``,
+Theorem listRangeINC_CONS:
+    m <= n ==> ([m .. n] = m :: [m+1 .. n])
+Proof
   SIMP_TAC (srw_ss()) [listRangeINC_def] THEN STRIP_TAC THEN
   `(n + 1 - m = SUC (n - m)) /\ (n + 1 - (m + 1) = n - m)` by DECIDE_TAC THEN
-  ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [GENLIST_CONS, GENLIST_FUN_EQ]);
+  ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [GENLIST_CONS, GENLIST_FUN_EQ]
+QED
 
-val listRangeINC_EMPTY = store_thm(
-  "listRangeINC_EMPTY",
-  ``n < m ==> ([m .. n] = [])``,
+Theorem listRangeINC_EMPTY:
+    n < m ==> ([m .. n] = [])
+Proof
   SRW_TAC [][listRangeINC_def] THEN
-  `n + 1 - m = 0` by DECIDE_TAC THEN SRW_TAC[][]);
+  `n + 1 - m = 0` by DECIDE_TAC THEN SRW_TAC[][]
+QED
 
-val listRangeLHI_def = Define`
+Definition listRangeLHI_def:
   listRangeLHI m n = GENLIST (\i. m + i) (n - m)
-`;
+End
 
 val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                    fixity = Closefix,
@@ -272,56 +280,63 @@ val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                                   TOK "]"],
                    term_name = "listRangeLHI" }
 
-val listRangeLHI_EQ = store_thm(
-  "listRangeLHI_EQ",
-  ``[m ..< m] = []``,
-  SRW_TAC[][listRangeLHI_def]);
+Theorem listRangeLHI_EQ:
+    [m ..< m] = []
+Proof
+  SRW_TAC[][listRangeLHI_def]
+QED
 val _ = export_rewrites ["listRangeLHI_EQ"]
 
-val MEM_listRangeLHI = store_thm(
-  "MEM_listRangeLHI",
-  ``MEM x [m ..< n] <=> m <= x /\ x < n``,
+Theorem MEM_listRangeLHI:
+    MEM x [m ..< n] <=> m <= x /\ x < n
+Proof
   SRW_TAC[ARITH_ss][listRangeLHI_def, MEM_GENLIST, EQ_IMP_THM] THEN
-  Q.EXISTS_TAC `x - m` THEN DECIDE_TAC);
+  Q.EXISTS_TAC `x - m` THEN DECIDE_TAC
+QED
 val _ = export_rewrites ["MEM_listRangeLHI"]
 
-val listRangeLHI_EMPTY = store_thm(
-  "listRangeLHI_EMPTY",
-  ``hi <= lo ==> ([lo ..< hi] = [])``,
+Theorem listRangeLHI_EMPTY:
+    hi <= lo ==> ([lo ..< hi] = [])
+Proof
   SRW_TAC[][listRangeLHI_def] THEN
   `hi - lo = 0` by DECIDE_TAC THEN
-  SRW_TAC[][]);
+  SRW_TAC[][]
+QED
 
-val listRangeLHI_CONS = store_thm(
-  "listRangeLHI_CONS",
-  ``lo < hi ==> ([lo ..< hi] = lo :: [lo + 1 ..< hi])``,
+Theorem listRangeLHI_CONS:
+    lo < hi ==> ([lo ..< hi] = lo :: [lo + 1 ..< hi])
+Proof
   SRW_TAC[][listRangeLHI_def] THEN
   `hi - lo = SUC (hi - (lo + 1))` by DECIDE_TAC THEN
-  SRW_TAC[ARITH_ss][listTheory.GENLIST_CONS, listTheory.GENLIST_FUN_EQ]);
+  SRW_TAC[ARITH_ss][listTheory.GENLIST_CONS, listTheory.GENLIST_FUN_EQ]
+QED
 
-val listRangeLHI_ALL_DISTINCT = store_thm(
-  "listRangeLHI_ALL_DISTINCT",
-  ``ALL_DISTINCT [lo ..< hi]``,
+Theorem listRangeLHI_ALL_DISTINCT:
+    ALL_DISTINCT [lo ..< hi]
+Proof
   Induct_on `hi - lo` THEN SRW_TAC[][listRangeLHI_EMPTY] THEN
   `lo < hi` by DECIDE_TAC THEN
-  SRW_TAC[ARITH_ss][listRangeLHI_CONS]);
+  SRW_TAC[ARITH_ss][listRangeLHI_CONS]
+QED
 val _ = export_rewrites ["listRangeLHI_ALL_DISTINCT"]
 
-val LENGTH_listRangeLHI = store_thm(
-  "LENGTH_listRangeLHI",
-  ``LENGTH [lo ..< hi] = hi - lo``,
-  SRW_TAC[][listRangeLHI_def]);
+Theorem LENGTH_listRangeLHI:
+    LENGTH [lo ..< hi] = hi - lo
+Proof
+  SRW_TAC[][listRangeLHI_def]
+QED
 val _ = export_rewrites ["LENGTH_listRangeLHI"]
 
-val EL_listRangeLHI = store_thm(
-  "EL_listRangeLHI",
-  ``lo + i < hi ==> (EL i [lo ..< hi] = lo + i)``,
+Theorem EL_listRangeLHI:
+    lo + i < hi ==> (EL i [lo ..< hi] = lo + i)
+Proof
   Q.ID_SPEC_TAC `i` THEN Induct_on `hi - lo` THEN
   SRW_TAC[ARITH_ss][listRangeLHI_EMPTY] THEN
   `lo < hi` by DECIDE_TAC THEN
   SRW_TAC[ARITH_ss][listRangeLHI_CONS] THEN
   Cases_on `i` THEN
-  SRW_TAC[ARITH_ss][]);
+  SRW_TAC[ARITH_ss][]
+QED
 
 (* Theorem: [m .. n] = [m ..< SUC n] *)
 (* Proof:
@@ -358,10 +373,11 @@ QED
    = LENGTH (GENLIST (\i. m + i) (n + 1 - m))  by listRangeINC_def
    = n + 1 - m                                 by LENGTH_GENLIST
 *)
-val listRangeINC_LEN = store_thm(
-  "listRangeINC_LEN",
-  ``!m n. LENGTH [m .. n] = n + 1 - m``,
-  rw[listRangeINC_def]);
+Theorem listRangeINC_LEN:
+    !m n. LENGTH [m .. n] = n + 1 - m
+Proof
+  rw[listRangeINC_def]
+QED
 
 (* Theorem: ([m .. n] = []) <=> (n + 1 <= m) *)
 (* Proof:
@@ -370,10 +386,11 @@ val listRangeINC_LEN = store_thm(
    <=>       n + 1 - m = 0         by listRangeINC_LEN
    <=>          n + 1 <= m         by arithmetic
 *)
-val listRangeINC_NIL = store_thm(
-  "listRangeINC_NIL",
-  ``!m n. ([m .. n] = []) <=> (n + 1 <= m)``,
-  metis_tac[listRangeINC_LEN, LENGTH_NIL, DECIDE``(n + 1 - m = 0) <=> (n + 1 <= m)``]);
+Theorem listRangeINC_NIL:
+    !m n. ([m .. n] = []) <=> (n + 1 <= m)
+Proof
+  metis_tac[listRangeINC_LEN, LENGTH_NIL, DECIDE``(n + 1 - m = 0) <=> (n + 1 <= m)``]
+QED
 
 (* Rename a theorem *)
 val listRangeINC_MEM = save_thm("listRangeINC_MEM",
@@ -389,10 +406,11 @@ EL_listRangeLHI
 
 (* Theorem: m + i <= n ==> (EL i [m .. n] = m + i) *)
 (* Proof: by listRangeINC_def *)
-val listRangeINC_EL = store_thm(
-  "listRangeINC_EL",
-  ``!m n i. m + i <= n ==> (EL i [m .. n] = m + i)``,
-  rw[listRangeINC_def]);
+Theorem listRangeINC_EL:
+    !m n i. m + i <= n ==> (EL i [m .. n] = m + i)
+Proof
+  rw[listRangeINC_def]
+QED
 
 (* Theorem: EVERY P [m .. n] <=> !x. m <= x /\ x <= n ==> P x *)
 (* Proof:
@@ -400,10 +418,11 @@ val listRangeINC_EL = store_thm(
    <=> !x. MEM x [m .. n] ==> P x      by EVERY_MEM
    <=> !x. m <= x /\ x <= n ==> P x    by MEM_listRangeINC
 *)
-val listRangeINC_EVERY = store_thm(
-  "listRangeINC_EVERY",
-  ``!P m n. EVERY P [m .. n] <=> !x. m <= x /\ x <= n ==> P x``,
-  rw[EVERY_MEM, MEM_listRangeINC]);
+Theorem listRangeINC_EVERY:
+    !P m n. EVERY P [m .. n] <=> !x. m <= x /\ x <= n ==> P x
+Proof
+  rw[EVERY_MEM, MEM_listRangeINC]
+QED
 
 
 (* Theorem: EXISTS P [m .. n] <=> ?x. m <= x /\ x <= n /\ P x *)
@@ -412,10 +431,11 @@ val listRangeINC_EVERY = store_thm(
    <=> ?x. MEM x [m .. n] /\ P x      by EXISTS_MEM
    <=> ?x. m <= x /\ x <= n /\ P e    by MEM_listRangeINC
 *)
-val listRangeINC_EXISTS = store_thm(
-  "listRangeINC_EXISTS",
-  ``!P m n. EXISTS P [m .. n] <=> ?x. m <= x /\ x <= n /\ P x``,
-  metis_tac[EXISTS_MEM, MEM_listRangeINC]);
+Theorem listRangeINC_EXISTS:
+    !P m n. EXISTS P [m .. n] <=> ?x. m <= x /\ x <= n /\ P x
+Proof
+  metis_tac[EXISTS_MEM, MEM_listRangeINC]
+QED
 
 (* Theorem: EVERY P [m .. n] <=> ~(EXISTS ($~ o P) [m .. n]) *)
 (* Proof:
@@ -424,10 +444,11 @@ val listRangeINC_EXISTS = store_thm(
    <=> ~(?x. m <= x /\ x <= n /\ ~(P x))   by negation
    <=> ~(EXISTS ($~ o P) [m .. m])         by listRangeINC_EXISTS
 *)
-val listRangeINC_EVERY_EXISTS = store_thm(
-  "listRangeINC_EVERY_EXISTS",
-  ``!P m n. EVERY P [m .. n] <=> ~(EXISTS ($~ o P) [m .. n])``,
-  rw[listRangeINC_EVERY, listRangeINC_EXISTS]);
+Theorem listRangeINC_EVERY_EXISTS:
+    !P m n. EVERY P [m .. n] <=> ~(EXISTS ($~ o P) [m .. n])
+Proof
+  rw[listRangeINC_EVERY, listRangeINC_EXISTS]
+QED
 
 (* Theorem: EXISTS P [m .. n] <=> ~(EVERY ($~ o P) [m .. n]) *)
 (* Proof:
@@ -436,10 +457,11 @@ val listRangeINC_EVERY_EXISTS = store_thm(
    <=> ~(!x. m <= x /\ x <= n ==> ~(P x))    by negation
    <=> ~(EVERY ($~ o P) [m .. n])            by listRangeINC_EVERY
 *)
-val listRangeINC_EXISTS_EVERY = store_thm(
-  "listRangeINC_EXISTS_EVERY",
-  ``!P m n. EXISTS P [m .. n] <=> ~(EVERY ($~ o P) [m .. n])``,
-  rw[listRangeINC_EXISTS, listRangeINC_EVERY]);
+Theorem listRangeINC_EXISTS_EVERY:
+    !P m n. EXISTS P [m .. n] <=> ~(EVERY ($~ o P) [m .. n])
+Proof
+  rw[listRangeINC_EXISTS, listRangeINC_EVERY]
+QED
 
 (* Theorem: m <= n + 1 ==> ([m .. (n + 1)] = SNOC (n + 1) [m .. n]) *)
 (* Proof:
@@ -453,12 +475,13 @@ val listRangeINC_EXISTS_EVERY = store_thm(
    = [m .. n] ++ [n + 1]                                        by arithmetic
    = SNOC (n + 1) [m .. n]                                      by SNOC_APPEND
 *)
-val listRangeINC_SNOC = store_thm(
-  "listRangeINC_SNOC",
-  ``!m n. m <= n + 1 ==> ([m .. (n + 1)] = SNOC (n + 1) [m .. n])``,
+Theorem listRangeINC_SNOC:
+    !m n. m <= n + 1 ==> ([m .. (n + 1)] = SNOC (n + 1) [m .. n])
+Proof
   rw[listRangeINC_def, SNOC_APPEND] >>
   `(n + 2 - m = 1 + (n + 1 - m)) /\ (n + 1 - m + m = n + 1)` by decide_tac >>
-  rw_tac std_ss [GENLIST_APPEND, GENLIST_1]);
+  rw_tac std_ss [GENLIST_APPEND, GENLIST_1]
+QED
 
 (* Theorem: m <= n + 1 ==> (FRONT [m .. (n + 1)] = [m .. n]) *)
 (* Proof:
@@ -520,13 +543,14 @@ QED
    = GENLIST (\i. n - (m + i) + m) (n + 1 - m)              by function composition
    = GENLIST (\i. n - i) (n + 1 - m)                        by arithmetic
 *)
-val listRangeINC_REVERSE = store_thm(
-  "listRangeINC_REVERSE",
-  ``!m n. REVERSE [m .. n] = MAP (\x. n - x + m) [m .. n]``,
+Theorem listRangeINC_REVERSE:
+    !m n. REVERSE [m .. n] = MAP (\x. n - x + m) [m .. n]
+Proof
   rpt strip_tac >>
   `(\m'. PRE (n + 1 - m) - m' + m) = ((\x. n - x + m) o (\i. i + m))`
       by rw[FUN_EQ_THM, combinTheory.o_THM] >>
-  rw[listRangeINC_def, REVERSE_GENLIST, MAP_GENLIST]);
+  rw[listRangeINC_def, REVERSE_GENLIST, MAP_GENLIST]
+QED
 
 (* Theorem: REVERSE (MAP f [m .. n]) = MAP (f o (\x. n - x + m)) [m .. n] *)
 (* Proof:
@@ -535,10 +559,11 @@ val listRangeINC_REVERSE = store_thm(
   = MAP f (MAP (\x. n - x + m) [m .. n])    by listRangeINC_REVERSE
   = MAP (f o (\x. n - x + m)) [m .. n]      by MAP_MAP_o
 *)
-val listRangeINC_REVERSE_MAP = store_thm(
-  "listRangeINC_REVERSE_MAP",
-  ``!f m n. REVERSE (MAP f [m .. n]) = MAP (f o (\x. n - x + m)) [m .. n]``,
-  metis_tac[MAP_REVERSE, listRangeINC_REVERSE, MAP_MAP_o]);
+Theorem listRangeINC_REVERSE_MAP:
+    !f m n. REVERSE (MAP f [m .. n]) = MAP (f o (\x. n - x + m)) [m .. n]
+Proof
+  metis_tac[MAP_REVERSE, listRangeINC_REVERSE, MAP_MAP_o]
+QED
 
 (* Theorem: MAP f [(m + 1) .. (n + 1)] = MAP (f o SUC) [m .. n] *)
 (* Proof:
@@ -550,12 +575,13 @@ val listRangeINC_REVERSE_MAP = store_thm(
    = MAP (f o SUC) (GENLIST (\i. (m + i)) (n + 1 - m))          by MAP_GENLIST
    = MAP (f o SUC) [m .. n]                                     by listRangeINC_def
 *)
-val listRangeINC_MAP_SUC = store_thm(
-  "listRangeINC_MAP_SUC",
-  ``!f m n. MAP f [(m + 1) .. (n + 1)] = MAP (f o SUC) [m .. n]``,
+Theorem listRangeINC_MAP_SUC:
+    !f m n. MAP f [(m + 1) .. (n + 1)] = MAP (f o SUC) [m .. n]
+Proof
   rpt strip_tac >>
   `(\i. (m + 1) + i) = SUC o (\i. (m + i))` by rw[FUN_EQ_THM] >>
-  rw[listRangeINC_def, MAP_GENLIST]);
+  rw[listRangeINC_def, MAP_GENLIST]
+QED
 
 (* Theorem: a <= b /\ b <= c ==> ([a .. b] ++ [(b + 1) .. c] = [a .. c]) *)
 (* Proof:
@@ -567,15 +593,16 @@ val listRangeINC_MAP_SUC = store_thm(
    Now (c - b) + (b + 1 - a) = c + 1 - a                   by a <= b /\ b <= c
    The result follows                                      by GENLIST_APPEND
 *)
-val listRangeINC_APPEND = store_thm(
-  "listRangeINC_APPEND",
-  ``!a b c. a <= b /\ b <= c ==> ([a .. b] ++ [(b + 1) .. c] = [a .. c])``,
+Theorem listRangeINC_APPEND:
+    !a b c. a <= b /\ b <= c ==> ([a .. b] ++ [(b + 1) .. c] = [a .. c])
+Proof
   rw[listRangeINC_def] >>
   qabbrev_tac `f = \i. a + i` >>
   `(\t. f (t + (b + 1 - a))) = (\i. b + (i + 1))` by rw[FUN_EQ_THM, Abbr`f`] >>
   `GENLIST (\i. b + (i + 1)) (c - b) = GENLIST (\t. f (t + (b + 1 - a))) (c - b)` by rw[GSYM GENLIST_FUN_EQ] >>
   `(c - b) + (b + 1 - a) = c + 1 - a` by decide_tac >>
-  metis_tac[GENLIST_APPEND]);
+  metis_tac[GENLIST_APPEND]
+QED
 
 (* Theorem: SUM [m .. n] = SUM [1 .. n] - SUM [1 .. (m - 1)] *)
 (* Proof:
@@ -611,9 +638,9 @@ val listRangeINC_APPEND = store_thm(
          = SUM [1 .. (m - 1)] + SUM [m .. n]           by SUM_APPEND
       The result follows                               by subtraction
 *)
-val listRangeINC_SUM = store_thm(
-  "listRangeINC_SUM",
-  ``!m n. SUM [m .. n] = SUM [1 .. n] - SUM [1 .. (m - 1)]``,
+Theorem listRangeINC_SUM:
+    !m n. SUM [m .. n] = SUM [1 .. n] - SUM [1 .. (m - 1)]
+Proof
   rpt strip_tac >>
   Cases_on `m = 0` >-
   rw[listRangeINC_EMPTY, listRangeINC_CONS] >>
@@ -631,16 +658,18 @@ val listRangeINC_SUM = store_thm(
     `[1 .. n] = [1 .. (m - 1)] ++ [m .. n]` by metis_tac[listRangeINC_APPEND] >>
     `SUM [1 .. n] = SUM [1 .. (m - 1)] + SUM [m .. n]` by rw[GSYM SUM_APPEND] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: [1 .. n] = GENLIST SUC n *)
 (* Proof: by listRangeINC_def *)
-val listRangeINC_1_n = store_thm(
-  "listRangeINC_1_n",
-  ``!n. [1 .. n] = GENLIST SUC n``,
+Theorem listRangeINC_1_n:
+    !n. [1 .. n] = GENLIST SUC n
+Proof
   rpt strip_tac >>
   `(\i. i + 1) = SUC` by rw[FUN_EQ_THM] >>
-  rw[listRangeINC_def]);
+  rw[listRangeINC_def]
+QED
 
 (* Theorem: MAP f [1 .. n] = GENLIST (f o SUC) n *)
 (* Proof:
@@ -648,10 +677,11 @@ val listRangeINC_1_n = store_thm(
    = MAP f (GENLIST SUC n)     by listRangeINC_1_n
    = GENLIST (f o SUC) n       by MAP_GENLIST
 *)
-val listRangeINC_MAP = store_thm(
-  "listRangeINC_MAP",
-  ``!f n. MAP f [1 .. n] = GENLIST (f o SUC) n``,
-  rw[listRangeINC_1_n, MAP_GENLIST]);
+Theorem listRangeINC_MAP:
+    !f n. MAP f [1 .. n] = GENLIST (f o SUC) n
+Proof
+  rw[listRangeINC_1_n, MAP_GENLIST]
+QED
 
 (* Theorem: SUM (MAP f [1 .. (SUC n)]) = f (SUC n) + SUM (MAP f [1 .. n]) *)
 (* Proof:
@@ -660,10 +690,11 @@ val listRangeINC_MAP = store_thm(
     = SUM (SNOC (f (SUC n)) (MAP f [1 .. n]))   by MAP_SNOC
     = f (SUC n) + SUM (MAP f [1 .. n])          by SUM_SNOC
 *)
-val listRangeINC_SUM_MAP = store_thm(
-  "listRangeINC_SUM_MAP",
-  ``!f n. SUM (MAP f [1 .. (SUC n)]) = f (SUC n) + SUM (MAP f [1 .. n])``,
-  rw[listRangeINC_SNOC, MAP_SNOC, SUM_SNOC, ADD1]);
+Theorem listRangeINC_SUM_MAP:
+    !f n. SUM (MAP f [1 .. (SUC n)]) = f (SUC n) + SUM (MAP f [1 .. n])
+Proof
+  rw[listRangeINC_SNOC, MAP_SNOC, SUM_SNOC, ADD1]
+QED
 
 (* Theorem: m < j /\ j <= n ==> [m .. n] = [m .. j-1] ++ j::[j+1 .. n] *)
 (* Proof:
@@ -720,27 +751,30 @@ Theorem  listRangeLHI_LEN = LENGTH_listRangeLHI |> GEN_ALL |> SPEC ``m:num`` |> 
    <=> k + 1 <= m                by listRangeINC_NIL
    <=>     n <= m                by ADD1
 *)
-val listRangeLHI_NIL = store_thm(
-  "listRangeLHI_NIL",
-  ``!m n. ([m ..< n] = []) <=> n <= m``,
+Theorem listRangeLHI_NIL:
+    !m n. ([m ..< n] = []) <=> n <= m
+Proof
   rpt strip_tac >>
   Cases_on `n` >-
   rw[listRangeLHI_def] >>
-  rw[listRangeLHI_to_INC, listRangeINC_NIL, ADD1]);
+  rw[listRangeLHI_to_INC, listRangeINC_NIL, ADD1]
+QED
 
 (* Theorem: MEM x [m ..< n] <=> m <= x /\ x < n *)
 (* Proof: by MEM_listRangeLHI *)
-val listRangeLHI_MEM = store_thm(
-  "listRangeLHI_MEM",
-  ``!m n x. MEM x [m ..< n] <=> m <= x /\ x < n``,
-  rw[MEM_listRangeLHI]);
+Theorem listRangeLHI_MEM:
+    !m n x. MEM x [m ..< n] <=> m <= x /\ x < n
+Proof
+  rw[MEM_listRangeLHI]
+QED
 
 (* Theorem: m + i < n ==> EL i [m ..< n] = m + i *)
 (* Proof: EL_listRangeLHI *)
-val listRangeLHI_EL = store_thm(
-  "listRangeLHI_EL",
-  ``!m n i. m + i < n ==> (EL i [m ..< n] = m + i)``,
-  rw[EL_listRangeLHI]);
+Theorem listRangeLHI_EL:
+    !m n i. m + i < n ==> (EL i [m ..< n] = m + i)
+Proof
+  rw[EL_listRangeLHI]
+QED
 
 (* Theorem: EVERY P [m ..< n] <=> !x. m <= x /\ x < n ==> P x *)
 (* Proof:
@@ -748,10 +782,11 @@ val listRangeLHI_EL = store_thm(
    <=> !x. MEM x [m ..< n] ==> P e      by EVERY_MEM
    <=> !x. m <= x /\ x < n ==> P e    by MEM_listRangeLHI
 *)
-val listRangeLHI_EVERY = store_thm(
-  "listRangeLHI_EVERY",
-  ``!P m n. EVERY P [m ..< n] <=> !x. m <= x /\ x < n ==> P x``,
-  rw[EVERY_MEM, MEM_listRangeLHI]);
+Theorem listRangeLHI_EVERY:
+    !P m n. EVERY P [m ..< n] <=> !x. m <= x /\ x < n ==> P x
+Proof
+  rw[EVERY_MEM, MEM_listRangeLHI]
+QED
 
 (* Theorem: m <= n ==> ([m ..< n + 1] = SNOC n [m ..< n]) *)
 (* Proof:
@@ -768,9 +803,9 @@ val listRangeLHI_EVERY = store_thm(
      = SNOC n [m .. n - 1]     by listRangeINC_SNOC, m <= (n - 1) + 1
      = SNOC n [m ..< n]        by listRangeLHI_to_INC
 *)
-val listRangeLHI_SNOC = store_thm(
-  "listRangeLHI_SNOC",
-  ``!m n. m <= n ==> ([m ..< n + 1] = SNOC n [m ..< n])``,
+Theorem listRangeLHI_SNOC:
+    !m n. m <= n ==> ([m ..< n + 1] = SNOC n [m ..< n])
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >| [
     `m = 0` by decide_tac >>
@@ -780,7 +815,8 @@ val listRangeLHI_SNOC = store_thm(
     `_ = SNOC n [m .. n - 1]` by metis_tac[listRangeINC_SNOC] >>
     `_ = SNOC n [m ..< n]` by rw[GSYM listRangeLHI_to_INC] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: m <= n ==> (FRONT [m .. < n + 1] = [m .. <n]) *)
 (* Proof:
@@ -819,16 +855,17 @@ QED
       = MAP (\x. k - x + m) [m .. k]       by listRangeINC_REVERSE
       = MAP (\x. n - 1 - x + m) [m ..< n]  by listRangeLHI_to_INC
 *)
-val listRangeLHI_REVERSE = store_thm(
-  "listRangeLHI_REVERSE",
-  ``!m n. REVERSE [m ..< n] = MAP (\x. n - 1 - x + m) [m ..< n]``,
+Theorem listRangeLHI_REVERSE:
+    !m n. REVERSE [m ..< n] = MAP (\x. n - 1 - x + m) [m ..< n]
+Proof
   rpt strip_tac >>
   Cases_on `n` >-
   rw[listRangeLHI_def] >>
   `REVERSE [m ..< SUC n'] = REVERSE [m .. n']` by rw[listRangeLHI_to_INC, ADD1] >>
   `_ = MAP (\x. n' - x + m) [m .. n']` by rw[listRangeINC_REVERSE] >>
   `_ = MAP (\x. n' - x + m) [m ..< (SUC n')]` by rw[GSYM listRangeLHI_to_INC, ADD1] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: REVERSE (MAP f [m ..< n]) = MAP (f o (\x. n - 1 - x + m)) [m ..< n] *)
 (* Proof:
@@ -837,10 +874,11 @@ val listRangeLHI_REVERSE = store_thm(
   = MAP f (MAP (\x. n - 1 - x + m) [m ..< n])    by listRangeLHI_REVERSE
   = MAP (f o (\x. n - 1 - x + m)) [m ..< n]      by MAP_MAP_o
 *)
-val listRangeLHI_REVERSE_MAP = store_thm(
-  "listRangeLHI_REVERSE_MAP",
-  ``!f m n. REVERSE (MAP f [m ..< n]) = MAP (f o (\x. n - 1 - x + m)) [m ..< n]``,
-  metis_tac[MAP_REVERSE, listRangeLHI_REVERSE, MAP_MAP_o]);
+Theorem listRangeLHI_REVERSE_MAP:
+    !f m n. REVERSE (MAP f [m ..< n]) = MAP (f o (\x. n - 1 - x + m)) [m ..< n]
+Proof
+  metis_tac[MAP_REVERSE, listRangeLHI_REVERSE, MAP_MAP_o]
+QED
 
 (* Theorem: MAP f [(m + 1) ..< (n + 1)] = MAP (f o SUC) [m ..< n] *)
 (* Proof:
@@ -852,12 +890,13 @@ val listRangeLHI_REVERSE_MAP = store_thm(
    = MAP (f o SUC) (GENLIST (\i. (m + i)) (n - m))          by MAP_GENLIST
    = MAP (f o SUC) [m ..< n]                                by listRangeLHI_def
 *)
-val listRangeLHI_MAP_SUC = store_thm(
-  "listRangeLHI_MAP_SUC",
-  ``!f m n. MAP f [(m + 1) ..< (n + 1)] = MAP (f o SUC) [m ..< n]``,
+Theorem listRangeLHI_MAP_SUC:
+    !f m n. MAP f [(m + 1) ..< (n + 1)] = MAP (f o SUC) [m ..< n]
+Proof
   rpt strip_tac >>
   `(\i. (m + 1) + i) = SUC o (\i. (m + i))` by rw[FUN_EQ_THM] >>
-  rw[listRangeLHI_def, MAP_GENLIST]);
+  rw[listRangeLHI_def, MAP_GENLIST]
+QED
 
 (* Theorem: a <= b /\ b <= c ==> [a ..< b] ++ [b ..< c] = [a ..< c] *)
 (* Proof:
@@ -875,9 +914,9 @@ val listRangeLHI_MAP_SUC = store_thm(
       = [a .. c']                     by listRangeINC_APPEND
       = [a ..< c]                     by listRangeLHI_to_INC
 *)
-val listRangeLHI_APPEND = store_thm(
-  "listRangeLHI_APPEND",
-  ``!a b c. a <= b /\ b <= c ==> ([a ..< b] ++ [b ..< c] = [a ..< c])``,
+Theorem listRangeLHI_APPEND:
+    !a b c. a <= b /\ b <= c ==> ([a ..< b] ++ [b ..< c] = [a ..< c])
+Proof
   rpt strip_tac >>
   `(a = b) \/ (a < b)` by decide_tac >-
   rw[listRangeLHI_def] >>
@@ -887,7 +926,8 @@ val listRangeLHI_APPEND = store_thm(
   `[a ..< b] ++ [b ..< c] = [a .. b'] ++ [b' + 1 .. c']` by rw[listRangeLHI_to_INC] >>
   `_ = [a .. c']` by rw[listRangeINC_APPEND] >>
   `_ = [a ..< c]` by rw[GSYM listRangeLHI_to_INC] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: SUM [m ..< n] = SUM [1 ..< n] - SUM [1 ..< m] *)
 (* Proof:
@@ -914,9 +954,9 @@ val listRangeLHI_APPEND = store_thm(
        = SUM [1 .. n'] - SUM [1 .. m']        by m' = m - 1
        = SUM [1 ..< n] - SUM [1 ..< m]        by listRangeLHI_to_INC
 *)
-val listRangeLHI_SUM = store_thm(
-  "listRangeLHI_SUM",
-  ``!m n. SUM [m ..< n] = SUM [1 ..< n] - SUM [1 ..< m]``,
+Theorem listRangeLHI_SUM:
+    !m n. SUM [m ..< n] = SUM [1 ..< n] - SUM [1 ..< m]
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[listRangeLHI_EMPTY] >>
@@ -927,16 +967,18 @@ val listRangeLHI_SUM = store_thm(
   `_ = SUM [1 .. n'] - SUM [1 .. m - 1]` by rw[GSYM listRangeINC_SUM] >>
   `_ = SUM [1 .. n'] - SUM [1 .. m']` by rw[] >>
   `_ = SUM [1 ..< n] - SUM [1 ..< m]` by rw[GSYM listRangeLHI_to_INC] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: [0 ..< n] = GENLIST I n *)
 (* Proof: by listRangeINC_def *)
-val listRangeLHI_0_n = store_thm(
-  "listRangeLHI_0_n",
-  ``!n. [0 ..< n] = GENLIST I n``,
+Theorem listRangeLHI_0_n:
+    !n. [0 ..< n] = GENLIST I n
+Proof
   rpt strip_tac >>
   `(\i:num. i) = I` by rw[FUN_EQ_THM] >>
-  rw[listRangeLHI_def]);
+  rw[listRangeLHI_def]
+QED
 
 (* Theorem: MAP f [0 ..< n] = GENLIST f n *)
 (* Proof:
@@ -945,10 +987,11 @@ val listRangeLHI_0_n = store_thm(
    = GENLIST (f o I) n       by MAP_GENLIST
    = GENLIST f n             by I_THM
 *)
-val listRangeLHI_MAP = store_thm(
-  "listRangeLHI_MAP",
-  ``!f n. MAP f [0 ..< n] = GENLIST f n``,
-  rw[listRangeLHI_0_n, MAP_GENLIST]);
+Theorem listRangeLHI_MAP:
+    !f n. MAP f [0 ..< n] = GENLIST f n
+Proof
+  rw[listRangeLHI_0_n, MAP_GENLIST]
+QED
 
 (* Theorem: SUM (MAP f [0 ..< (SUC n)]) = f n + SUM (MAP f [0 ..< n]) *)
 (* Proof:
@@ -957,10 +1000,11 @@ val listRangeLHI_MAP = store_thm(
     = SUM (SNOC (f n) (MAP f [0 ..< n]))   by MAP_SNOC
     = f n + SUM (MAP f [0 ..< n])          by SUM_SNOC
 *)
-val listRangeLHI_SUM_MAP = store_thm(
-  "listRangeLHI_SUM_MAP",
-  ``!f n. SUM (MAP f [0 ..< (SUC n)]) = f n + SUM (MAP f [0 ..< n])``,
-  rw[listRangeLHI_SNOC, MAP_SNOC, SUM_SNOC, ADD1]);
+Theorem listRangeLHI_SUM_MAP:
+    !f n. SUM (MAP f [0 ..< (SUC n)]) = f n + SUM (MAP f [0 ..< n])
+Proof
+  rw[listRangeLHI_SNOC, MAP_SNOC, SUM_SNOC, ADD1]
+QED
 
 (* Theorem: m <= j /\ j < n ==> [m ..< n] = [m ..< j] ++ j::[j+1 ..< n] *)
 (* Proof:
@@ -1080,10 +1124,11 @@ val _ = temp_set_fixity "divides" (Infixl 480);
    Note x divdes n ==> x <= n     by DIVIDES_LE, 0 < n
      so MEM x [m .. n]            by listRangeINC_MEM
 *)
-val listRangeINC_has_divisors = store_thm(
-  "listRangeINC_has_divisors",
-  ``!m n x. 0 < n /\ m <= x /\ x divides n ==> MEM x [m .. n]``,
-  rw[listRangeINC_MEM, DIVIDES_LE]);
+Theorem listRangeINC_has_divisors:
+    !m n x. 0 < n /\ m <= x /\ x divides n ==> MEM x [m .. n]
+Proof
+  rw[listRangeINC_MEM, DIVIDES_LE]
+QED
 
 (* Theorem: 0 < n /\ m <= x /\ x divides n ==> MEM x [m ..< n + 1] *)
 (* Proof:
@@ -1091,10 +1136,11 @@ val listRangeINC_has_divisors = store_thm(
         MEM x [m .. n]         by listRangeINC_has_divisors
       = MEM x [m ..< n + 1]    by listRangeLHI_to_INC
 *)
-val listRangeLHI_has_divisors = store_thm(
-  "listRangeLHI_has_divisors",
-  ``!m n x. 0 < n /\ m <= x /\ x divides n ==> MEM x [m ..< n + 1]``,
-  metis_tac[listRangeINC_has_divisors, listRangeLHI_to_INC]);
+Theorem listRangeLHI_has_divisors:
+    !m n x. 0 < n /\ m <= x /\ x divides n ==> MEM x [m ..< n + 1]
+Proof
+  metis_tac[listRangeINC_has_divisors, listRangeLHI_to_INC]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*  isPREFIX-related theorems (by Chun Tian)                                 *)

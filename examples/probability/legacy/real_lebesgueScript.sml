@@ -57,85 +57,104 @@ Definition psfs_def :
     psfs m f = {(s,a,x) | pos_simple_fn m f s a x}
 End
 
-val psfis_def = Define
-   `psfis m f = IMAGE (\(s,a,x). pos_simple_fn_integral m s a x) (psfs m f)`;
+Definition psfis_def:
+    psfis m f = IMAGE (\(s,a,x). pos_simple_fn_integral m s a x) (psfs m f)
+End
 
-val nonneg_def = Define
-   `nonneg f = !x. 0 <= f x`;
+Definition nonneg_def:
+    nonneg f = !x. 0 <= f x
+End
 
-val fn_plus_def = Define
-   `fn_plus f = (\x. if 0 <= f x then f x else 0)`;
+Definition fn_plus_def:
+    fn_plus f = (\x. if 0 <= f x then f x else 0)
+End
 
-val fn_minus_def = Define
-   `fn_minus f = (\x. if 0 <= f x then 0 else ~ f x)`;
+Definition fn_minus_def:
+    fn_minus f = (\x. if 0 <= f x then 0 else ~ f x)
+End
 
-val pos_fn_integral_def = Define
-   `pos_fn_integral m f = sup {r:real | ?g. r IN psfis m g /\ !x. g x <= f x}`;
+Definition pos_fn_integral_def:
+    pos_fn_integral m f = sup {r:real | ?g. r IN psfis m g /\ !x. g x <= f x}
+End
 
 (* c.f. "pos_fn_integral_def" in (new) lebesgueScript.sml *)
-val nnfis_def = Define
-   `nnfis m f = {y | ?u x. mono_convergent u f (m_space m) /\
-                           (!n. x n IN psfis m (u n)) /\ x --> y}`;
+Definition nnfis_def:
+    nnfis m f = {y | ?u x. mono_convergent u f (m_space m) /\
+                           (!n. x n IN psfis m (u n)) /\ x --> y}
+End
 
-val upclose_def = Define
-   `upclose f g = (\t. max (f t) (g t))`;
+Definition upclose_def:
+    upclose f g = (\t. max (f t) (g t))
+End
 
-val mon_upclose_help_def = Define
-  `(mon_upclose_help 0 u m = u m 0) /\
-   (mon_upclose_help (SUC n) u m = upclose (u m (SUC n)) (mon_upclose_help n u m))`;
+Definition mon_upclose_help_def:
+   (mon_upclose_help 0 u m = u m 0) /\
+   (mon_upclose_help (SUC n) u m = upclose (u m (SUC n)) (mon_upclose_help n u m))
+End
 
-val mon_upclose_def = Define
-   `mon_upclose u m = mon_upclose_help m u m`;
+Definition mon_upclose_def:
+    mon_upclose u m = mon_upclose_help m u m
+End
 
-val integrable_def = Define
-   `integrable m f <=> measure_space m /\
+Definition integrable_def:
+    integrable m f <=> measure_space m /\
                       (?x. x IN nnfis m (fn_plus f)) /\
-                      (?y. y IN nnfis m (fn_minus f))`;
+                      (?y. y IN nnfis m (fn_minus f))
+End
 
-val integral_def = Define
-   `integral m f = (@i. i IN nnfis m (fn_plus f)) - (@j. j IN nnfis m (fn_minus f))`;
+Definition integral_def:
+    integral m f = (@i. i IN nnfis m (fn_plus f)) - (@j. j IN nnfis m (fn_minus f))
+End
 
-val finite_space_integral_def = Define
-   `finite_space_integral m f =
-        SIGMA (\r. r * measure m (PREIMAGE f {r} INTER m_space m)) (IMAGE f (m_space m))`;
+Definition finite_space_integral_def:
+    finite_space_integral m f =
+        SIGMA (\r. r * measure m (PREIMAGE f {r} INTER m_space m)) (IMAGE f (m_space m))
+End
 
-val countable_space_integral_def = Define
-   `countable_space_integral m f =
+Definition countable_space_integral_def:
+    countable_space_integral m f =
         let e = enumerate (IMAGE f (m_space m))
-        in suminf ((\r. r * measure m (PREIMAGE f {r} INTER m_space m)) o e)`;
+        in suminf ((\r. r * measure m (PREIMAGE f {r} INTER m_space m)) o e)
+End
 
-val prod_measure_def = Define
-   `prod_measure m0 m1 =
-        (\a. integral m0 (\s0. (measure m1) (PREIMAGE (\s1. (s0,s1)) a)))`;
+Definition prod_measure_def:
+    prod_measure m0 m1 =
+        (\a. integral m0 (\s0. (measure m1) (PREIMAGE (\s1. (s0,s1)) a)))
+End
 
 (* cf. martingaleTheory.prod_measure_def for the extreal-based version *)
-val prod_measure_space_def = Define
-   `prod_measure_space m0 m1 =
+Definition prod_measure_space_def:
+    prod_measure_space m0 m1 =
         ((m_space m0) CROSS (m_space m1),
          subsets (sigma ((m_space m0) CROSS (m_space m1))
                         (prod_sets (measurable_sets m0) (measurable_sets m1))),
-         prod_measure m0 m1)`;
+         prod_measure m0 m1)
+End
 
-val prod_sets3_def = Define
-   `prod_sets3 (a :'a set set) (b :'b set set) (c :'c set set) =
-       {s CROSS (t CROSS u) | s IN a /\ t IN b /\ u IN c}`;
+Definition prod_sets3_def:
+    prod_sets3 (a :'a set set) (b :'b set set) (c :'c set set) =
+       {s CROSS (t CROSS u) | s IN a /\ t IN b /\ u IN c}
+End
 
-val prod_measure3_def = Define
-   `prod_measure3 m0 m1 m2 = prod_measure m0 (prod_measure_space m1 m2)`;
+Definition prod_measure3_def:
+    prod_measure3 m0 m1 m2 = prod_measure m0 (prod_measure_space m1 m2)
+End
 
-val prod_measure_space3_def = Define
-   `prod_measure_space3 m0 m1 m2 =
+Definition prod_measure_space3_def:
+    prod_measure_space3 m0 m1 m2 =
       (m_space m0 CROSS (m_space m1 CROSS m_space m2),
        subsets (sigma (m_space m0 CROSS (m_space m1 CROSS m_space m2))
                       (prod_sets3 (measurable_sets m0) (measurable_sets m1) (measurable_sets m2))),
-       prod_measure3 m0 m1 m2)`;
+       prod_measure3 m0 m1 m2)
+End
 
-val RN_deriv_def = Define
-   `RN_deriv m v =
+Definition RN_deriv_def:
+    RN_deriv m v =
         @f. measure_space m /\ measure_space (m_space m, measurable_sets m, v) /\
             f IN borel_measurable (m_space m, measurable_sets m) /\
             (!a. a IN measurable_sets m ==>
-                        (integral m (\x. f x * indicator_fn a x) = v a))`;
+                        (integral m (\x. f x * indicator_fn a x) = v a))
+End
 
 (* ************************************************************************* *)
 (* Proofs                                                                    *)

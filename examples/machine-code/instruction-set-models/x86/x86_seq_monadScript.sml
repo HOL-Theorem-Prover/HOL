@@ -19,45 +19,58 @@ val _ = type_abbrev("x86_state",   (*  state = tuple consisting of:       *)
 
 (* functions for reading/writing state *)
 
-val XREAD_REG_def   = Define `XREAD_REG     x ((r,p,s,m,i):x86_state) = r x `;
-val XREAD_EIP_def   = Define `XREAD_EIP       ((r,p,s,m,i):x86_state) = p `;
-val XREAD_EFLAG_def = Define `XREAD_EFLAG   x ((r,p,s,m,i):x86_state) = s x `;
+Definition XREAD_REG_def:     XREAD_REG     x ((r,p,s,m,i):x86_state) = r x
+End
+Definition XREAD_EIP_def:     XREAD_EIP       ((r,p,s,m,i):x86_state) = p
+End
+Definition XREAD_EFLAG_def:   XREAD_EFLAG   x ((r,p,s,m,i):x86_state) = s x
+End
 
-val XREAD_MEM_def = Define `
+Definition XREAD_MEM_def:
   XREAD_MEM x ((r,p,s,m,i):x86_state) =
     case m x of
       NONE => NONE
-    | SOME (w,perms) => if Xread IN perms then SOME w else NONE`;
+    | SOME (w,perms) => if Xread IN perms then SOME w else NONE
+End
 
-val XREAD_INSTR_def = Define `
+Definition XREAD_INSTR_def:
   XREAD_INSTR x ((r,p,s,m,i):x86_state) =
     case (i x, m x) of
       (NONE, NONE) => NONE
     | (NONE, SOME (w,perms)) => if {Xread;Xexecute} SUBSET perms then SOME w else NONE
-    | (SOME (w,perms), _) => if {Xread;Xexecute} SUBSET perms then SOME w else NONE`;
+    | (SOME (w,perms), _) => if {Xread;Xexecute} SUBSET perms then SOME w else NONE
+End
 
-val X86_ICACHE_EMPTY_def = Define `X86_ICACHE_EMPTY = (\addr. NONE):x86_memory`;
+Definition X86_ICACHE_EMPTY_def:   X86_ICACHE_EMPTY = (\addr. NONE):x86_memory
+End
 
-val XCLEAR_ICACHE_def = Define `
-  XCLEAR_ICACHE ((r,p,s,m,i):x86_state) = (r,p,s,m,X86_ICACHE_EMPTY):x86_state`;
+Definition XCLEAR_ICACHE_def:
+  XCLEAR_ICACHE ((r,p,s,m,i):x86_state) = (r,p,s,m,X86_ICACHE_EMPTY):x86_state
+End
 
-val XWRITE_REG_def   = Define `XWRITE_REG   x y ((r,p,s,m,i):x86_state) = ((x =+ y) r,p,s,m,i):x86_state `;
-val XWRITE_EIP_def   = Define `XWRITE_EIP     y ((r,p,s,m,i):x86_state) = (r,y,s,m,i):x86_state `;
-val XWRITE_EFLAG_def = Define `XWRITE_EFLAG x y ((r,p,s,m,i):x86_state) = (r,p,(x =+ y) s,m,i):x86_state `;
+Definition XWRITE_REG_def:     XWRITE_REG   x y ((r,p,s,m,i):x86_state) = ((x =+ y) r,p,s,m,i):x86_state
+End
+Definition XWRITE_EIP_def:     XWRITE_EIP     y ((r,p,s,m,i):x86_state) = (r,y,s,m,i):x86_state
+End
+Definition XWRITE_EFLAG_def:   XWRITE_EFLAG x y ((r,p,s,m,i):x86_state) = (r,p,(x =+ y) s,m,i):x86_state
+End
 
-val XWRITE_MEM_def   = Define `
+Definition XWRITE_MEM_def:
   XWRITE_MEM x y ((r,p,s,m,i):x86_state) =
     case m x of
       NONE => NONE
-    | SOME (w,perms) => if Xwrite IN perms then SOME ((r,p,s,(x =+ SOME (y,perms)) m,i):x86_state) else NONE`;
+    | SOME (w,perms) => if Xwrite IN perms then SOME ((r,p,s,(x =+ SOME (y,perms)) m,i):x86_state) else NONE
+End
 
-val XREAD_MEM_BYTES_def = Define `
+Definition XREAD_MEM_BYTES_def:
   XREAD_MEM_BYTES n a s =
-    if n = 0 then [] else XREAD_MEM a s :: XREAD_MEM_BYTES (n-1) (a+1w) s`;
+    if n = 0 then [] else XREAD_MEM a s :: XREAD_MEM_BYTES (n-1) (a+1w) s
+End
 
-val XREAD_INSTR_BYTES_def = Define `
+Definition XREAD_INSTR_BYTES_def:
   XREAD_INSTR_BYTES n a s =
-    if n = 0 then [] else XREAD_INSTR a s :: XREAD_INSTR_BYTES (n-1) (a+1w) s`;
+    if n = 0 then [] else XREAD_INSTR a s :: XREAD_INSTR_BYTES (n-1) (a+1w) s
+End
 
 val w2bits_EL = store_thm("w2bits_EL",
   ``(w2bits (w:word8) ++ ys = x1::x2::x3::x4::x5::x6::x7::x8::xs) =
@@ -111,89 +124,109 @@ val _ = type_abbrev("x86_M",``:x86_state -> ('a # x86_state) option``);
 
 (* sequential monads for an option state *)
 
-val constT_seq_def = Define `
-  (constT_seq: 'a -> 'a x86_M) x = \y. SOME (x,y)`;
+Definition constT_seq_def:
+  (constT_seq: 'a -> 'a x86_M) x = \y. SOME (x,y)
+End
 
-val addT_seq_def = Define `
+Definition addT_seq_def:
   (addT_seq: 'a -> 'b x86_M -> ('a # 'b) x86_M) x s =
-    \y. case s y of NONE => NONE | SOME (z,t) => SOME ((x,z),t)`;
+    \y. case s y of NONE => NONE | SOME (z,t) => SOME ((x,z),t)
+End
 
-val lockT_seq_def = Define `
-  (lockT_seq: 'a x86_M -> 'a x86_M) s = s`;
+Definition lockT_seq_def:
+  (lockT_seq: 'a x86_M -> 'a x86_M) s = s
+End
 
-val failureT_seq_def = Define `
-  (failureT_seq: 'a x86_M) = \y. NONE`;
+Definition failureT_seq_def:
+  (failureT_seq: 'a x86_M) = \y. NONE
+End
 
-val seqT_seq_def = Define `
+Definition seqT_seq_def:
   (seqT_seq: 'a x86_M -> ('a -> 'b x86_M) -> 'b x86_M) s f =
-    \y. case s y of NONE => NONE | SOME (z,t) => f z t`;
+    \y. case s y of NONE => NONE | SOME (z,t) => f z t
+End
 
-val parT_seq_def = Define `
+Definition parT_seq_def:
   (parT_seq: 'a x86_M -> 'b x86_M -> ('a # 'b) x86_M) s t =
     \y. case s y of NONE => NONE | SOME (a,z) =>
-        case t z of NONE => NONE | SOME (b,x) => SOME ((a,b),x)`;
+        case t z of NONE => NONE | SOME (b,x) => SOME ((a,b),x)
+End
 
-val parT_unit_seq_def = Define `
+Definition parT_unit_seq_def:
   (parT_unit_seq: unit x86_M -> unit x86_M -> unit x86_M) s t =
     \y. case s y of NONE => NONE | SOME (a,z) =>
-        case t z of NONE => NONE | SOME (b,x) => SOME ((),x)`;
+        case t z of NONE => NONE | SOME (b,x) => SOME ((),x)
+End
 
 (* register reads/writes always succeed. *)
 
-val write_reg_seq_def = Define `(write_reg_seq ii r x):unit x86_M =
-  \s. SOME ((),XWRITE_REG r x s)`;
+Definition write_reg_seq_def:   (write_reg_seq ii r x):unit x86_M =
+  \s. SOME ((),XWRITE_REG r x s)
+End
 
-val read_reg_seq_def = Define `(read_reg_seq ii r):Ximm x86_M =
-  \s. SOME (XREAD_REG r s,s)`;
+Definition read_reg_seq_def:   (read_reg_seq ii r):Ximm x86_M =
+  \s. SOME (XREAD_REG r s,s)
+End
 
 (* eflags can always be written, but reading a NONE eflag causes a failure *)
 
-val write_eflag_seq_def = Define `(write_eflag_seq ii f x):unit x86_M =
-  (\s. SOME ((),XWRITE_EFLAG f x s))`;
+Definition write_eflag_seq_def:   (write_eflag_seq ii f x):unit x86_M =
+  (\s. SOME ((),XWRITE_EFLAG f x s))
+End
 
-val read_eflag_seq_def  = Define `(read_eflag_seq ii f):bool x86_M =
-  (\s. case XREAD_EFLAG f s of NONE => NONE | SOME b => SOME (b,s))`;
+Definition read_eflag_seq_def:    (read_eflag_seq ii f):bool x86_M =
+  (\s. case XREAD_EFLAG f s of NONE => NONE | SOME b => SOME (b,s))
+End
 
 (* eip reads/writes always succeed. *)
 
-val write_eip_seq_def = Define `(write_eip_seq ii x):unit x86_M =
-  \s. SOME ((),XWRITE_EIP x s)`;
+Definition write_eip_seq_def:   (write_eip_seq ii x):unit x86_M =
+  \s. SOME ((),XWRITE_EIP x s)
+End
 
-val read_eip_seq_def = Define `(read_eip_seq ii):Ximm x86_M =
-  \s. SOME (XREAD_EIP s,s)`;
+Definition read_eip_seq_def:   (read_eip_seq ii):Ximm x86_M =
+  \s. SOME (XREAD_EIP s,s)
+End
 
 (* memory writes are only allowed to modelled memory, i.e. locations containing SOME ... *)
 
-val write_mem_seq_def   = Define `(write_mem_seq ii a x):unit x86_M =
-  (\s. case XWRITE_MEM a x s of NONE => NONE | SOME s2 => SOME ((),s2))`;
+Definition write_mem_seq_def:     (write_mem_seq ii a x):unit x86_M =
+  (\s. case XWRITE_MEM a x s of NONE => NONE | SOME s2 => SOME ((),s2))
+End
 
 (* a memory read to an unmodelled memory location causes a failure *)
 
-val read_mem_seq_def  = Define `(read_mem_seq ii a):word8 x86_M =
-  (\s. case XREAD_MEM a s of NONE => NONE | SOME x => SOME (x,s))`;
+Definition read_mem_seq_def:    (read_mem_seq ii a):word8 x86_M =
+  (\s. case XREAD_MEM a s of NONE => NONE | SOME x => SOME (x,s))
+End
 
 (* reading and writing 32-bit entities *)
 
-val read_m32_seq_def = Define `(read_m32_seq ii a):Ximm x86_M =
+Definition read_m32_seq_def:   (read_m32_seq ii a):Ximm x86_M =
   seqT_seq (parT_seq (read_mem_seq ii (a+0w)) (parT_seq (read_mem_seq ii (a+1w))
            (parT_seq (read_mem_seq ii (a+2w)) (read_mem_seq ii (a+3w)))))
-       (\(x0,x1,x2,x3). constT_seq (bytes2word [x0;x1;x2;x3]))`;
+       (\(x0,x1,x2,x3). constT_seq (bytes2word [x0;x1;x2;x3]))
+End
 
-val write_m32_seq_def = Define `(write_m32_seq ii a w):unit x86_M =
+Definition write_m32_seq_def:   (write_m32_seq ii a w):unit x86_M =
     (let bs = word2bytes 4 w in
        parT_unit_seq (write_mem_seq ii (a+0w) (EL 0 bs)) (parT_unit_seq (write_mem_seq ii (a+1w) (EL 1 bs))
-      (parT_unit_seq (write_mem_seq ii (a+2w) (EL 2 bs)) (write_mem_seq ii (a+3w) (EL 3 bs)))))`;
+      (parT_unit_seq (write_mem_seq ii (a+2w) (EL 2 bs)) (write_mem_seq ii (a+3w) (EL 3 bs)))))
+End
 
-val read_m8_seq_def = Define `(read_m8_seq ii a):word8 x86_M =
-  read_mem_seq ii a`;
+Definition read_m8_seq_def:   (read_m8_seq ii a):word8 x86_M =
+  read_mem_seq ii a
+End
 
-val write_m8_seq_def = Define `(write_m8_seq ii a w):unit x86_M =
-    write_mem_seq ii a (w:word8)`;
+Definition write_m8_seq_def:   (write_m8_seq ii a w):unit x86_M =
+    write_mem_seq ii a (w:word8)
+End
 
 (* clear the icache *)
 
-val clear_icache_seq_def = Define `(clear_icache_seq ii):unit x86_M =
-  \s. SOME ((),XCLEAR_ICACHE s)`;
+Definition clear_icache_seq_def:   (clear_icache_seq ii):unit x86_M =
+  \s. SOME ((),XCLEAR_ICACHE s)
+End
 
 
 (* export *)
@@ -221,35 +254,42 @@ val _ = Define `(clear_icache: iiid -> unit x86_M)                           = c
 
 (* some rewriter-friendly theorems *)
 
-val option_apply_def = Define `
-  option_apply x f = if x = NONE then NONE else f (THE x)`;
+Definition option_apply_def:
+  option_apply x f = if x = NONE then NONE else f (THE x)
+End
 
 val option_apply_SOME = prove(
   ``!x f. option_apply (SOME x) f = f x``,SRW_TAC [] [option_apply_def]);
 
-val XWRITE_MEM2_def = Define `
-  XWRITE_MEM2 a w ((r,e,t,m,i):x86_state) = (r,e,t,(a =+ SOME (w, SND (THE (m a)))) m,i)`;
+Definition XWRITE_MEM2_def:
+  XWRITE_MEM2 a w ((r,e,t,m,i):x86_state) = (r,e,t,(a =+ SOME (w, SND (THE (m a)))) m,i)
+End
 
-val XREAD_MEM2_def = Define `
-  XREAD_MEM2 a ((r,e,t,m,i):x86_state) = FST (THE (m a))`;
+Definition XREAD_MEM2_def:
+  XREAD_MEM2 a ((r,e,t,m,i):x86_state) = FST (THE (m a))
+End
 
-val XREAD_MEM2_WORD_def = Define `
+Definition XREAD_MEM2_WORD_def:
   XREAD_MEM2_WORD a (s:x86_state) = (bytes2word
     [XREAD_MEM2 (a + 0x0w) s; XREAD_MEM2 (a + 0x1w) s;
-     XREAD_MEM2 (a + 0x2w) s; XREAD_MEM2 (a + 0x3w) s]) :word32`;
+     XREAD_MEM2 (a + 0x2w) s; XREAD_MEM2 (a + 0x3w) s]) :word32
+End
 
-val XWRITE_MEM2_WORD_def = Define `
+Definition XWRITE_MEM2_WORD_def:
   XWRITE_MEM2_WORD a (w:word32) (s:x86_state) =
     XWRITE_MEM2 (a + 3w) (EL 3 (word2bytes 4 w))
    (XWRITE_MEM2 (a + 2w) (EL 2 (word2bytes 4 w))
    (XWRITE_MEM2 (a + 1w) (EL 1 (word2bytes 4 w))
-   (XWRITE_MEM2 (a + 0w) (EL 0 (word2bytes 4 w)) s)))`;
+   (XWRITE_MEM2 (a + 0w) (EL 0 (word2bytes 4 w)) s)))
+End
 
-val CAN_XWRITE_MEM_def = Define `
-  CAN_XWRITE_MEM a s = !w. ~(XWRITE_MEM a w s = NONE)`;
+Definition CAN_XWRITE_MEM_def:
+  CAN_XWRITE_MEM a s = !w. ~(XWRITE_MEM a w s = NONE)
+End
 
-val CAN_XREAD_MEM_def = Define `
-  CAN_XREAD_MEM a s = ~(XREAD_MEM a s = NONE)`;
+Definition CAN_XREAD_MEM_def:
+  CAN_XREAD_MEM a s = ~(XREAD_MEM a s = NONE)
+End
 
 val mem_seq_lemma = prove(
   ``(read_mem_seq ii a s = option_apply (XREAD_MEM a s) (\x. SOME (x,s))) /\

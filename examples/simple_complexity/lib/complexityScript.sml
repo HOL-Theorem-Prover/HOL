@@ -146,10 +146,10 @@ val _ = ParseExtras.tight_equality();
 (* ------------------------------------------------------------------------- *)
 
 (* Define big_O as a set *)
-val big_O_def = Define`
+Definition big_O_def:
     big_O (g:num -> num) =
       { f:num -> num | ?k c. !n. k < n ==> f n <= c * (g n) }
-`;
+End
 (* As n exceeds k, f(n) is bounded from above by some multiple of g(n) *)
 
 (* Theorem: f IN big_O g <=> ?k c. !n. k < n ==> f n <= c * (g n) *)
@@ -214,18 +214,18 @@ val big_O_nonempty = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the sum of functions *)
-val fun_sum_def = Define`
+Definition fun_sum_def:
     fun_sum (f1:num -> num) (f2:num -> num) = (\n. f1 n + f2 n)
-`;
+End
 
 (* Overload the sum of two functions *)
 val _ = overload_on(".+.", ``\f1:num -> num f2:num -> num. fun_sum f1 f2``);
 val _ = set_fixity ".+." (Infixl 500); (* same as addition *)
 
 (* Define the product of functions *)
-val fun_prod_def = Define`
+Definition fun_prod_def:
     fun_prod (f1:num -> num) (f2:num -> num) = (\n. f1 n * f2 n)
-`;
+End
 
 (* Overload the product of two functions *)
 val _ = overload_on(".*.", ``\f1:num -> num f2:num -> num. fun_prod f1 f2``);
@@ -235,10 +235,10 @@ val _ = set_fixity ".*." (Infixl 600); (* same as multiplication *)
 (* val _ = export_rewrites ["fun_sum_def", "fun_prod_def"]; *)
 
 (* Define sum of two numeric function sets *)
-val set_sum_def = Define`
+Definition set_sum_def:
     set_sum (s1:(num -> num) -> bool) (s2:(num -> num) -> bool) =
        {(f1 .+. f2) | f1 IN s1 /\ f2 IN s2}
-`;
+End
 (* Overload on set_sum *)
 val _ = overload_on("|+|", ``set_sum``);
 val _ = set_fixity "|+|" (Infixl 500); (* same as numeric addition *)
@@ -265,10 +265,10 @@ val set_sum_eqn = store_thm(
   metis_tac[]);
 
 (* Define product of two numeric function sets *)
-val set_prod_def = Define`
+Definition set_prod_def:
     set_prod (s1:(num -> num) -> bool) (s2:(num -> num) -> bool) =
        {(f1 .*. f2) | f1 IN s1 /\ f2 IN s2}
-`;
+End
 (* Overload on set_prod *)
 val _ = overload_on("|*|", ``set_prod``);
 val _ = set_fixity "|*|" (Infixl 600); (* same as numeric multiplication *)
@@ -511,9 +511,9 @@ val big_O_sum_self = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the standard polynomial functions *)
-val POLY_def = Define`
+Definition POLY_def:
     POLY m = (\n:num. n ** m)
-`;
+End
 (* Overload the polynomial class *)
 val _ = overload_on("poly_O", ``\m. big_O (POLY m)``);
 

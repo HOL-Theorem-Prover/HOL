@@ -713,8 +713,8 @@ structure ToSML = struct
     fun finish () = (
       finishThmVal ();
       if not (!isTheory) then ()
-      else if !noSigDocs then aux " val _ = Feedback.set_trace \"TheoryPP.include_docs\" 0 before export_theory();\n"
-      else aux " val _ = export_theory();\n"
+      else if !noSigDocs then aux " val _ = Feedback.set_trace \"TheoryPP.include_docs\" 0 before Theory.export_theory();\n"
+      else aux " val _ = Theory.export_theory();\n"
     )
     in {
       feed = feed,

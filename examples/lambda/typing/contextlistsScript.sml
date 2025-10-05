@@ -113,9 +113,9 @@ val valid_ctxt_FILTER = store_thm(
   Induct_on ‘G’ THEN
   SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, NOT_IN_supp_listpm] THEN
   SRW_TAC [][IN_supp_listpm, pairTheory.EXISTS_PROD, listTheory.MEM_FILTER]);
-val domfilter_def = Define‘
+Definition domfilter_def:
   domfilter (G:'a ctxt) P = FILTER (λ(x,ty). x ∈ P) G
-’;
+End
 val _ = overload_on ("INTER", “domfilter”)
 
 val domfilter_thm = store_thm(

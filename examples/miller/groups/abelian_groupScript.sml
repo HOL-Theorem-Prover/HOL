@@ -58,8 +58,9 @@ val (G_TAC, AG_TAC, G_TAC', AG_TAC') = SIMPLIFY_TACS finite_group_c;
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val abelian_def = Define
-  `abelian G = !g h :: gset G. gop G g h = gop G h g`;
+Definition abelian_def:
+   abelian G = !g h :: gset G. gop G g h = gop G h g
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)

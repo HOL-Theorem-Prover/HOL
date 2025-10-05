@@ -87,7 +87,7 @@ val _ = Hol_datatype `coproc =
 (* Add a new coprocessor (cp1) to an existing specification (cp2)             *)
 (* -------------------------------------------------------------------------- *)
 
-val ADD_COPROC = Define`
+Definition ADD_COPROC:
   ADD_COPROC (cp1:'a coproc) (cp2:'b coproc) =
     <| absent := \is_usr ireg. cp1.absent is_usr ireg /\ cp2.absent is_usr ireg;
        f_cdp := \state is_usr ireg.
@@ -132,7 +132,8 @@ val ADD_COPROC = Define`
                      cp2.n_ldc (SND state) is_usr ireg
                    else
                      cp1.n_ldc (FST state) is_usr ireg
-    |>`;
+    |>
+End
 
 (* -------------------------------------------------------------------------- *)
 (* CPN                                                                        *)
@@ -141,27 +142,29 @@ val ADD_COPROC = Define`
 
 val _ = wordsLib.guess_lengths();
 
-val DECODE_CPN_def = Define `DECODE_CPN (w:word32) = (11 >< 8) w`;
+Definition DECODE_CPN_def:   DECODE_CPN (w:word32) = (11 >< 8) w
+End
 
 (* -------------------------------------------------------------------------- *)
 (* DECODE_CDP                                                                 *)
 (* -------------------------------------------------------------------------- *)
 
-val DECODE_CDP_def = Define`
+Definition DECODE_CDP_def:
   DECODE_CDP (w:word32) =
     ((23 >< 20) w, (* Cop1 *)
      (19 >< 16) w, (* CRn  *)
      (15 >< 12) w, (* CRd  *)
      (11 >< 8) w,  (* CPN  *)
      (7 >< 5) w,   (* Cop2 *)
-     (3 >< 0) w)`; (* CRm  *)
+     (3 >< 0) w)
+End(* CRm  *)
 
 (* -------------------------------------------------------------------------- *)
 (* DECODE_CP                                                                  *)
 (* Determines the instruction class ** for a coprocessor instruction **       *)
 (* -------------------------------------------------------------------------- *)
 
-val DECODE_CP_def = Define`
+Definition DECODE_CP_def:
   DECODE_CP (w:word32) =
     if w ' 25 then
       if w ' 4 /\ w ' 27 then
@@ -172,7 +175,8 @@ val DECODE_CP_def = Define`
       else
         cdp_und
     else
-      ldc_stc`;
+      ldc_stc
+End
 
 (* -------------------------------------------------------------------------- *)
 (* OUT_CP                                                                     *)
@@ -180,7 +184,7 @@ val DECODE_CP_def = Define`
 (* instruction but in general this need not be the case                       *)
 (* -------------------------------------------------------------------------- *)
 
-val OUT_CP_def = Define`
+Definition OUT_CP_def:
   OUT_CP cp state ireg arm_out =
     let is_usr = arm_out.user in
       if arm_out.cpi /\ ireg ' 27 /\ ~cp.absent is_usr ireg then
@@ -194,14 +198,15 @@ val OUT_CP_def = Define`
                  GENLIST (K NONE) (cp.n_ldc state is_usr ireg);
            absent := F |>
       else
-        <| data := []; absent := T |>`;
+        <| data := []; absent := T |>
+End
 
 (* -------------------------------------------------------------------------- *)
 (* RUN_CP                                                                     *)
 (* Takes a CP state and the input (word32 list) and returns the next state    *)
 (* -------------------------------------------------------------------------- *)
 
-val RUN_CP_def = Define`
+Definition RUN_CP_def:
   RUN_CP cp state absent is_usr ireg data =
     if ~absent then
       let ic = DECODE_CP ireg in
@@ -214,7 +219,8 @@ val RUN_CP_def = Define`
         else
           state
     else
-      state`;
+      state
+End
 
 (* -------------------------------------------------------------------------- *)
 (* NEXT_ARM_SYS and STATE_ARM_SYS                                             *)
@@ -222,9 +228,10 @@ val RUN_CP_def = Define`
 (*     interrupts (fiq, irq)                                                  *)
 (* -------------------------------------------------------------------------- *)
 
-val addr30_def  = Define `addr30 (x:word32) = (31 >< 2) x`;
+Definition addr30_def:    addr30 (x:word32) = (31 >< 2) x
+End
 
-val NEXT_ARM_SYS_def = Define`
+Definition NEXT_ARM_SYS_def:
   NEXT_ARM_SYS bus_op (cp:'a coproc) (state:'a arm_sys_state) =
     let ireg = state.memory (addr30 (FETCH_PC state.registers)) in
     let s = <| regs := <| reg := state.registers; psr := state.psrs |>;
@@ -246,52 +253,60 @@ val NEXT_ARM_SYS_def = Define`
     in
       <| registers := r.reg; psrs := r.psr; memory := b.memory;
          undefined := (~state.undefined /\ arm_out.cpi /\ cp_out.absent);
-         cp_state := p |>`;
+         cp_state := p |>
+End
 
-val STATE_ARM_SYS_def = Define`
+Definition STATE_ARM_SYS_def:
   (STATE_ARM_SYS bus_op cp 0 s = s) /\
   (STATE_ARM_SYS bus_op cp (SUC t) s =
-    NEXT_ARM_SYS bus_op cp (STATE_ARM_SYS bus_op cp t s))`;
+    NEXT_ARM_SYS bus_op cp (STATE_ARM_SYS bus_op cp t s))
+End
 
 (* -------------------------------------------------------------------------- *)
 (* An Idealistic Memory Model                                                 *)
 (* -------------------------------------------------------------------------- *)
 
-val SET_BYTE_def = Define`
+Definition SET_BYTE_def:
   SET_BYTE (oareg:word2) (b:word8) (w:word32) =
     word_modify (\i x.
                   (i < 8) /\ (if oareg = 0w then b ' i else x) \/
        (8 <= i /\ i < 16) /\ (if oareg = 1w then b ' (i - 8) else x) \/
       (16 <= i /\ i < 24) /\ (if oareg = 2w then b ' (i - 16) else x) \/
-      (24 <= i /\ i < 32) /\ (if oareg = 3w then b ' (i - 24) else x)) w`;
+      (24 <= i /\ i < 32) /\ (if oareg = 3w then b ' (i - 24) else x)) w
+End
 
-val SET_HALF_def = Define`
+Definition SET_HALF_def:
   SET_HALF (oareg:bool) (hw:word16) (w:word32) =
     word_modify (\i x.
                  (i < 16) /\ (if ~oareg then hw ' i else x) \/
-      (16 <= i /\ i < 32) /\ (if oareg then hw ' (i - 16) else x)) w`;
+      (16 <= i /\ i < 32) /\ (if oareg then hw ' (i - 16) else x)) w
+End
 
-val MEM_WRITE_BYTE_def = Define`
+Definition MEM_WRITE_BYTE_def:
   MEM_WRITE_BYTE (mem:mem) addr (word:word8) =
     let a30 = addr30 addr in
-      (a30 =+ SET_BYTE ((1 >< 0) addr) word (mem a30)) mem`;
+      (a30 =+ SET_BYTE ((1 >< 0) addr) word (mem a30)) mem
+End
 
-val MEM_WRITE_HALF_def = Define`
+Definition MEM_WRITE_HALF_def:
   MEM_WRITE_HALF (mem:mem) addr (word:word16) =
     let a30 = addr30 addr in
-      (a30 =+ SET_HALF (addr ' 1) word (mem a30)) mem`;
+      (a30 =+ SET_HALF (addr ' 1) word (mem a30)) mem
+End
 
-val MEM_WRITE_WORD_def = Define`
-  MEM_WRITE_WORD (mem:mem) addr word = (addr30 addr =+ word) mem`;
+Definition MEM_WRITE_WORD_def:
+  MEM_WRITE_WORD (mem:mem) addr word = (addr30 addr =+ word) mem
+End
 
-val MEM_WRITE_def = Define`
+Definition MEM_WRITE_def:
   MEM_WRITE mem addr d =
     case d of
       Byte b  => MEM_WRITE_BYTE mem addr b
     | Half hw => MEM_WRITE_HALF mem addr hw
-    | Word w  => MEM_WRITE_WORD mem addr w`;
+    | Word w  => MEM_WRITE_WORD mem addr w
+End
 
-val TRANSFER_def = Define`
+Definition TRANSFER_def:
   TRANSFER cpi (cp_data,data,mem) t =
     case t of
       MemRead a =>
@@ -310,9 +325,10 @@ val TRANSFER_def = Define`
          else
             (cp_data, data, MEM_WRITE mem a d)
     | CPWrite w =>
-         (cp_data, if cpi then data ++ [w] else data, mem)`;
+         (cp_data, if cpi then data ++ [w] else data, mem)
+End
 
-val TRANSFERS_def = Define`
+Definition TRANSFERS_def:
   TRANSFERS arm_out cp_state cp_data mem =
     let (data, mem) =
       if arm_out.cpi /\ NULL arm_out.transfers then
@@ -321,13 +337,15 @@ val TRANSFERS_def = Define`
         SND (FOLDL (TRANSFER arm_out.cpi) (cp_data, [], mem) arm_out.transfers)
     in
       <| data := data; memory := mem;
-         abort := NONE; cp_state := cp_state |>`;
+         abort := NONE; cp_state := cp_state |>
+End
 
 (* -------------------------------------------------------------------------- *)
 (* NEXT_ARM_MMU                                                               *)
 (* -------------------------------------------------------------------------- *)
 
-val NEXT_ARM_MMU_def = Define `NEXT_ARM_MMU = NEXT_ARM_SYS TRANSFERS`;
+Definition NEXT_ARM_MMU_def:   NEXT_ARM_MMU = NEXT_ARM_SYS TRANSFERS
+End
 
 infix \\ << >>
 
@@ -363,15 +381,17 @@ val NEXT_ARM_MMU = store_thm("NEXT_ARM_MMU",
          cp_state := p |>`,
   SRW_TAC [boolSimps.LET_ss] [NEXT_ARM_SYS_def,NEXT_ARM_MMU_def,TRANSFERS]);
 
-val STATE_ARM_MMU_def = Define`
+Definition STATE_ARM_MMU_def:
   (STATE_ARM_MMU cp 0 s = s) /\
-  (STATE_ARM_MMU cp (SUC t) s = NEXT_ARM_MMU cp (STATE_ARM_MMU cp t s))`;
+  (STATE_ARM_MMU cp (SUC t) s = NEXT_ARM_MMU cp (STATE_ARM_MMU cp t s))
+End
 
 (* -------------------------------------------------------------------------- *)
 (* NEXT_ARM_MEM and STATE_ARM_MEM                                             *)
 (* -------------------------------------------------------------------------- *)
 
-val NO_CP_def = Define `NO_CP = <| absent := \u i. T |> : 'a coproc`;
+Definition NO_CP_def:   NO_CP = <| absent := \u i. T |> : 'a coproc
+End
 
 val OUT_CP_NO_CPS =
   SIMP_CONV (srw_ss()++boolSimps.LET_ss) [OUT_CP_def,NO_CP_def]
@@ -381,8 +401,10 @@ val RUN_CP_NO_CPS =
   SIMP_CONV (srw_ss()++boolSimps.LET_ss) [RUN_CP_def,NO_CP_def]
   ``RUN_CP NO_CP state T is_usr ireg data``;
 
-val NEXT_ARM_MEM_def  = Define `NEXT_ARM_MEM = NEXT_ARM_MMU NO_CP`;
-val STATE_ARM_MEM_def = Define `STATE_ARM_MEM = STATE_ARM_MMU NO_CP`;
+Definition NEXT_ARM_MEM_def:    NEXT_ARM_MEM = NEXT_ARM_MMU NO_CP
+End
+Definition STATE_ARM_MEM_def:   STATE_ARM_MEM = STATE_ARM_MMU NO_CP
+End
 
 val NEXT_ARM_MEM = store_thm("NEXT_ARM_MEM",
   `NEXT_ARM_MEM state =
@@ -406,13 +428,20 @@ val NEXT_ARM_MEM = store_thm("NEXT_ARM_MEM",
 (* Export ML versions of functions                                           *)
 (*---------------------------------------------------------------------------*)
 
-val mem_read_def        = Define`mem_read (m: mem, a) = m a`;
-val mem_write_def       = Define`mem_write (m:mem) a d = (a =+ d) m`;
-val mem_write_block_def = Define`mem_write_block (m:mem) a cr = (a |: cr) m`;
-val mem_items_def       = Define`mem_items (m:mem) = []:(word30 # word32) list`;
-val empty_memory_def    = Define`empty_memory = (\a. 0xE6000010w):mem`;
-val empty_registers_def = Define`empty_registers = (\n. 0w):registers`;
-val empty_psrs_def      = Define`empty_psrs = (\x. SET_IFMODE F F usr 0w):psrs`;
+Definition mem_read_def:         mem_read (m: mem, a) = m a
+End
+Definition mem_write_def:        mem_write (m:mem) a d = (a =+ d) m
+End
+Definition mem_write_block_def:  mem_write_block (m:mem) a cr = (a |: cr) m
+End
+Definition mem_items_def:        mem_items (m:mem) = []:(word30 # word32) list
+End
+Definition empty_memory_def:     empty_memory = (\a. 0xE6000010w):mem
+End
+Definition empty_registers_def:  empty_registers = (\n. 0w):registers
+End
+Definition empty_psrs_def:       empty_psrs = (\x. SET_IFMODE F F usr 0w):psrs
+End
 
 (* ------------------------------------------------------------------------- *)
 

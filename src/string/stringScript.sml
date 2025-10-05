@@ -43,10 +43,11 @@ val CHR_ONTO = save_thm("CHR_ONTO",
 Theorem CHR_ORD[simp] = CONJUNCT1 CHAR_TYPE_FACTS
 val ORD_CHR  = save_thm("ORD_CHR",BETA_RULE (CONJUNCT2 CHAR_TYPE_FACTS));
 
-val ORD_CHR_RWT = Q.store_thm
-("ORD_CHR_RWT",
- `!r. r < 256 ==> (ORD (CHR r) = r)`,
- PROVE_TAC [ORD_CHR]);
+Theorem ORD_CHR_RWT:
+  !r. r < 256 ==> (ORD (CHR r) = r)
+Proof
+ PROVE_TAC [ORD_CHR]
+QED
 val _ = export_rewrites ["ORD_CHR_RWT"]
 
 Theorem ORD_CHR_COMPUTE[compute]:
@@ -55,41 +56,53 @@ Theorem ORD_CHR_COMPUTE[compute]:
 Proof SRW_TAC [] [combinTheory.FAIL_THM]
 QED
 
-val ORD_BOUND = Q.store_thm
-("ORD_BOUND",
- `!c. ORD c < 256`,
- PROVE_TAC [ORD_ONTO]);
+Theorem ORD_BOUND:
+  !c. ORD c < 256
+Proof
+ PROVE_TAC [ORD_ONTO]
+QED
 
-val char_nchotomy = Q.store_thm("char_nchotomy",
-  `!c. ?n. c = CHR n`,
-  STRIP_TAC THEN Q.EXISTS_TAC `ORD c` THEN REWRITE_TAC [CHR_ORD]);
+Theorem char_nchotomy:
+   !c. ?n. c = CHR n
+Proof
+  STRIP_TAC THEN Q.EXISTS_TAC `ORD c` THEN REWRITE_TAC [CHR_ORD]
+QED
 
-val ranged_char_nchotomy = Q.store_thm("ranged_char_nchotomy",
-  `!c. ?n. (c = CHR n) /\ n < 256`,
-  STRIP_TAC THEN Q.EXISTS_TAC `ORD c` THEN REWRITE_TAC [CHR_ORD, ORD_BOUND]);
+Theorem ranged_char_nchotomy:
+   !c. ?n. (c = CHR n) /\ n < 256
+Proof
+  STRIP_TAC THEN Q.EXISTS_TAC `ORD c` THEN REWRITE_TAC [CHR_ORD, ORD_BOUND]
+QED
 
 val ordn = term_of_int o Char.ord;
 
-val isLower_def = Define`
-  isLower c <=> ^(ordn #"a") <= ORD c /\ ORD c <= ^(ordn #"z")`;
+Definition isLower_def:
+  isLower c <=> ^(ordn #"a") <= ORD c /\ ORD c <= ^(ordn #"z")
+End
 
-val isUpper_def = Define`
-  isUpper c <=> ^(ordn #"A") <= ORD c /\ ORD c <= ^(ordn #"Z")`;
+Definition isUpper_def:
+  isUpper c <=> ^(ordn #"A") <= ORD c /\ ORD c <= ^(ordn #"Z")
+End
 
-val isDigit_def = Define`
-  isDigit c <=> ^(ordn #"0") <= ORD c /\ ORD c <= ^(ordn #"9")`;
+Definition isDigit_def:
+  isDigit c <=> ^(ordn #"0") <= ORD c /\ ORD c <= ^(ordn #"9")
+End
 
-val isAlpha_def = Define `isAlpha c <=> isLower c \/ isUpper c`;
+Definition isAlpha_def:   isAlpha c <=> isLower c \/ isUpper c
+End
 
-val isHexDigit_def = Define`
+Definition isHexDigit_def:
   isHexDigit c <=> ^(ordn #"0") <= ORD c /\ ORD c <= ^(ordn #"9") \/
                    ^(ordn #"a") <= ORD c /\ ORD c <= ^(ordn #"f") \/
-                   ^(ordn #"A") <= ORD c /\ ORD c <= ^(ordn #"F")`;
+                   ^(ordn #"A") <= ORD c /\ ORD c <= ^(ordn #"F")
+End
 
-val isAlphaNum_def = Define `isAlphaNum c <=> isAlpha c \/ isDigit c`;
+Definition isAlphaNum_def:   isAlphaNum c <=> isAlpha c \/ isDigit c
+End
 
-val isPrint_def = Define`
-  isPrint c <=> ^(ordn #" ") <= ORD c /\ ORD c < 127`;
+Definition isPrint_def:
+  isPrint c <=> ^(ordn #" ") <= ORD c /\ ORD c < 127
+End
 
 Theorem isAlphaNum_isPrint:
   !x. isAlphaNum x ==> isPrint x
@@ -106,28 +119,39 @@ Theorem isHexDigit_isPrint:
 Proof metis_tac[isAlphaNum_isPrint, isHexDigit_isAlphaNum]
 QED
 
-val isSpace_def = Define`
-  isSpace c <=> (ORD c = ^(ordn #" ")) \/ 9 <= ORD c /\ ORD c <= 13`;
+Definition isSpace_def:
+  isSpace c <=> (ORD c = ^(ordn #" ")) \/ 9 <= ORD c /\ ORD c <= 13
+End
 
-val isGraph_def = Define `isGraph c <=> isPrint c /\ ~isSpace c`;
+Definition isGraph_def:   isGraph c <=> isPrint c /\ ~isSpace c
+End
 
-val isPunct_def = Define `isPunct c <=> isGraph c /\ ~isAlphaNum c`;
+Definition isPunct_def:   isPunct c <=> isGraph c /\ ~isAlphaNum c
+End
 
-val isAscii_def = Define `isAscii c <=> ORD c <= 127`;
+Definition isAscii_def:   isAscii c <=> ORD c <= 127
+End
 
-val isCntrl_def = Define`
-  isCntrl c <=> ORD c < ^(ordn #" ") \/ 127 <= ORD c`;
+Definition isCntrl_def:
+  isCntrl c <=> ORD c < ^(ordn #" ") \/ 127 <= ORD c
+End
 
-val toLower_def = Define`
-  toLower c = if isUpper c then CHR (ORD c + 32) else c`;
+Definition toLower_def:
+  toLower c = if isUpper c then CHR (ORD c + 32) else c
+End
 
-val toUpper_def = Define`
-  toUpper c = if isLower c then CHR (ORD c - 32) else c`;
+Definition toUpper_def:
+  toUpper c = if isLower c then CHR (ORD c - 32) else c
+End
 
-val char_lt_def = Define `char_lt a b <=> ORD a < ORD b`;
-val char_le_def = Define `char_le a b <=> ORD a <= ORD b`;
-val char_gt_def = Define `char_gt a b <=> ORD a > ORD b`;
-val char_ge_def = Define `char_ge a b <=> ORD a >= ORD b`;
+Definition char_lt_def:   char_lt a b <=> ORD a < ORD b
+End
+Definition char_le_def:   char_le a b <=> ORD a <= ORD b
+End
+Definition char_gt_def:   char_gt a b <=> ORD a > ORD b
+End
+Definition char_ge_def:   char_ge a b <=> ORD a >= ORD b
+End
 
 Definition char_compare_def:
   char_compare c1 c2 = num_compare (ORD c1) (ORD c2)
@@ -149,14 +173,16 @@ Theorem CHAR_EQ_THM[compute]:
 Proof REPEAT GEN_TAC THEN EQ_TAC THEN RW_TAC bool_ss [ORD_11]
 QED
 
-val CHAR_INDUCT_THM = Q.store_thm
-("CHAR_INDUCT_THM",
- `!P. (!n. n < 256 ==> P (CHR n)) ==> !c. P c`,
+Theorem CHAR_INDUCT_THM:
+  !P. (!n. n < 256 ==> P (CHR n)) ==> !c. P c
+Proof
 REPEAT STRIP_TAC
   THEN STRIP_ASSUME_TAC (Q.SPEC `c` CHR_ONTO)
-  THEN RW_TAC bool_ss []);
+  THEN RW_TAC bool_ss []
+QED
 
-val char_size_def = Define `char_size (c:char) = 0`;
+Definition char_size_def:   char_size (c:char) = 0
+End
 
 val _ = TypeBase.export [
     TypeBasePure.mk_nondatatype_info (
@@ -229,13 +255,18 @@ val _ = overload_on(GrammarSpecials.std_stringinjn_name,
                     mk_const(GrammarSpecials.string_elim_term,
                              “:string -> string”))
 
-val SUB_def = Define `SUB (s:string, n) = EL n s`;
-val STR_def = Define `STR (c:char) = [c]`;
-val TOCHAR_def = Define `TOCHAR [c] = c: char`;
+Definition SUB_def:   SUB (s:string, n) = EL n s
+End
+Definition STR_def:   STR (c:char) = [c]
+End
+Definition TOCHAR_def:   TOCHAR [c] = c: char
+End
 
-val SUBSTRING_def = Define `SUBSTRING (s:string,i,n) = SEG n i s`;
+Definition SUBSTRING_def:   SUBSTRING (s:string,i,n) = SEG n i s
+End
 
-val TRANSLATE_def = Define `TRANSLATE f (s:string) = CONCAT (MAP f s)`;
+Definition TRANSLATE_def:   TRANSLATE f (s:string) = CONCAT (MAP f s)
+End
 
 val SPLITP_MONO = Q.prove(
   `!P l. LENGTH (SND (SPLITP P l)) <= LENGTH l`,
@@ -278,10 +309,10 @@ Definition IMPLODE_def[simp]:
   (IMPLODE (c::cs) = STRING c (IMPLODE cs))
 End
 
-val EXPLODE_def = Define`
+Definition EXPLODE_def:
   (EXPLODE "" = []) /\
   (EXPLODE (STRING c s) = c :: EXPLODE s)
-`;
+End
 val _ = export_rewrites ["EXPLODE_def"]
 
 Theorem IMPLODE_EXPLODE_I[compute]:
@@ -290,15 +321,17 @@ Proof
   Induct_on `s` THEN SRW_TAC [][]
 QED
 
-val IMPLODE_EXPLODE = store_thm(
-  "IMPLODE_EXPLODE",
-  ``IMPLODE (EXPLODE s) = s``,
-  Induct_on `s` THEN SRW_TAC [][]);
+Theorem IMPLODE_EXPLODE:
+    IMPLODE (EXPLODE s) = s
+Proof
+  Induct_on `s` THEN SRW_TAC [][]
+QED
 
-val EXPLODE_IMPLODE = store_thm(
-  "EXPLODE_IMPLODE",
-  ``EXPLODE (IMPLODE cs) = cs``,
-  Induct_on `cs` THEN SRW_TAC [][]);
+Theorem EXPLODE_IMPLODE:
+    EXPLODE (IMPLODE cs) = cs
+Proof
+  Induct_on `cs` THEN SRW_TAC [][]
+QED
 
 fun stac(n,t) = store_thm(n,t,METIS_TAC [EXPLODE_IMPLODE, IMPLODE_EXPLODE])
 val EXPLODE_ONTO = stac("EXPLODE_ONTO", ``!cs. ?s. cs = EXPLODE s``);
@@ -386,10 +419,11 @@ REPEAT GEN_TAC
    THEN RW_TAC bool_ss [combinTheory.o_DEF,list_case_def,EXPLODE_IMPLODE]);
 
 
-val STRING_ACYCLIC = Q.store_thm
-("STRING_ACYCLIC",
- `!s c. ~(STRING c s = s) /\ ~(s = STRING c s)`,
- Induct THEN SRW_TAC [][]);
+Theorem STRING_ACYCLIC:
+  !s c. ~(STRING c s = s) /\ ~(s = STRING c s)
+Proof
+ Induct THEN SRW_TAC [][]
+QED
 
 (*---------------------------------------------------------------------------
       Size of a string.
@@ -398,31 +432,34 @@ val STRING_ACYCLIC = Q.store_thm
 Overload STRLEN[inferior] = “LENGTH : string -> num”
 val STRLEN_DEF = listTheory.LENGTH
 
-val EXTRACT_def = Define`
+Definition EXTRACT_def:
   (EXTRACT (s,i,NONE) = SUBSTRING(s,i,STRLEN s - i)) /\
-  (EXTRACT (s,i,SOME n) = SUBSTRING(s,i,n))`;
+  (EXTRACT (s,i,SOME n) = SUBSTRING(s,i,n))
+End
 
-val STRLEN_EXPLODE_THM = store_thm(
-  "STRLEN_EXPLODE_THM",
-  ``STRLEN s = LENGTH (EXPLODE s)``,
-  SRW_TAC [][IMPLODE_EXPLODE_I]);
+Theorem STRLEN_EXPLODE_THM:
+    STRLEN s = LENGTH (EXPLODE s)
+Proof
+  SRW_TAC [][IMPLODE_EXPLODE_I]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Destruct a string. This will be used to re-phrase the HOL development     *)
 (* with an ML definition of DEST_STRING in terms of the Basis String struct. *)
 (*---------------------------------------------------------------------------*)
 
-val DEST_STRING_def = Define`
+Definition DEST_STRING_def:
    (DEST_STRING "" = NONE) /\
    (DEST_STRING (STRING c rst) = SOME(c,rst))
-`;
+End
 val _ = export_rewrites ["DEST_STRING_def"]
 
-val DEST_STRING_LEMS = Q.store_thm
-("DEST_STRING_LEMS",
- `!s. ((DEST_STRING s = NONE) = (s = "")) /\
-      ((DEST_STRING s = SOME(c,t)) = (s = STRING c t))`,
- Cases THEN SRW_TAC [][]);
+Theorem DEST_STRING_LEMS:
+  !s. ((DEST_STRING s = NONE) = (s = "")) /\
+      ((DEST_STRING s = SOME(c,t)) = (s = STRING c t))
+Proof
+ Cases THEN SRW_TAC [][]
+QED
 
 val EXPLODE_EQNS = save_thm("EXPLODE_EQNS", EXPLODE_def)
 val IMPLODE_EQNS = save_thm("IMPLODE_EQNS", IMPLODE_def)
@@ -431,47 +468,53 @@ val IMPLODE_EQNS = save_thm("IMPLODE_EQNS", IMPLODE_def)
     More rewrites for IMPLODE and EXPLODE
    ---------------------------------------------------------------------- *)
 
-val IMPLODE_EQ_EMPTYSTRING = Q.store_thm(
-  "IMPLODE_EQ_EMPTYSTRING",
-  `((IMPLODE l = "") = (l = [])) /\
-   (("" = IMPLODE l) = (l = []))`,
-  Cases_on `l` THEN SRW_TAC [][]);
+Theorem IMPLODE_EQ_EMPTYSTRING:
+   ((IMPLODE l = "") = (l = [])) /\
+   (("" = IMPLODE l) = (l = []))
+Proof
+  Cases_on `l` THEN SRW_TAC [][]
+QED
 val _ = export_rewrites ["IMPLODE_EQ_EMPTYSTRING"]
 
-val EXPLODE_EQ_NIL = Q.store_thm(
-  "EXPLODE_EQ_NIL",
-  `((EXPLODE s = []) = (s = "")) /\
-   (([] = EXPLODE s) = (s = ""))`,
-  Cases_on `s` THEN SRW_TAC [][]);
+Theorem EXPLODE_EQ_NIL:
+   ((EXPLODE s = []) = (s = "")) /\
+   (([] = EXPLODE s) = (s = ""))
+Proof
+  Cases_on `s` THEN SRW_TAC [][]
+QED
 val _ = export_rewrites ["EXPLODE_EQ_NIL"]
 
-val EXPLODE_EQ_THM = Q.store_thm
-("EXPLODE_EQ_THM",
- `!s h t. ((h::t = EXPLODE s) = (s = STRING h (IMPLODE t))) /\
-          ((EXPLODE s = h::t) = (s = STRING h (IMPLODE t)))`,
-  Cases THEN SRW_TAC [][EQ_IMP_THM] THEN SRW_TAC [][]);
+Theorem EXPLODE_EQ_THM:
+  !s h t. ((h::t = EXPLODE s) = (s = STRING h (IMPLODE t))) /\
+          ((EXPLODE s = h::t) = (s = STRING h (IMPLODE t)))
+Proof
+  Cases THEN SRW_TAC [][EQ_IMP_THM] THEN SRW_TAC [][]
+QED
 
-val IMPLODE_EQ_THM = Q.store_thm
-("IMPLODE_EQ_THM",
- `!c s l. ((STRING c s = IMPLODE l) = (l = c::EXPLODE s)) /\
-          ((IMPLODE l = STRING c s) = (l = c::EXPLODE s))`,
- Cases_on `l` THEN SRW_TAC [][EQ_IMP_THM] THEN SRW_TAC [][]);
+Theorem IMPLODE_EQ_THM:
+  !c s l. ((STRING c s = IMPLODE l) = (l = c::EXPLODE s)) /\
+          ((IMPLODE l = STRING c s) = (l = c::EXPLODE s))
+Proof
+ Cases_on `l` THEN SRW_TAC [][EQ_IMP_THM] THEN SRW_TAC [][]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* ML-style recursion equations for EXPLODE and IMPLODE                      *)
 (*---------------------------------------------------------------------------*)
 
-val EXPLODE_DEST_STRING = Q.store_thm
-("EXPLODE_DEST_STRING",
- `!s. EXPLODE s = case DEST_STRING s
+Theorem EXPLODE_DEST_STRING:
+  !s. EXPLODE s = case DEST_STRING s
                    of NONE => []
-                    | SOME(c,t) => c::EXPLODE t`,
- Cases THEN SRW_TAC [][])
+                    | SOME(c,t) => c::EXPLODE t
+Proof
+ Cases THEN SRW_TAC [][]
+QED
 
-val IMPLODE_STRING = Q.store_thm
-("IMPLODE_STRING",
- `!clist.IMPLODE clist = FOLDR STRING "" clist`,
- Induct THEN SRW_TAC [][]);
+Theorem IMPLODE_STRING:
+  !clist.IMPLODE clist = FOLDR STRING "" clist
+Proof
+ Induct THEN SRW_TAC [][]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Main fact about STRLEN                                                    *)
@@ -492,32 +535,36 @@ Overload STRCAT[inferior] = “list$APPEND : string -> string -> string”
 
 val STRCAT_def = save_thm("STRCAT_def", stringinst APPEND)
 
-val STRCAT = store_thm(
-  "STRCAT",
-  ``STRCAT s1 s2 = STRCAT s1 s2``,
-  SRW_TAC [][]);
+Theorem STRCAT:
+    STRCAT s1 s2 = STRCAT s1 s2
+Proof
+  SRW_TAC [][]
+QED
 
-val STRCAT_EQNS = Q.store_thm
-("STRCAT_EQNS",
- `(STRCAT "" s = s) /\
+Theorem STRCAT_EQNS:
+  (STRCAT "" s = s) /\
   (STRCAT s "" = s) /\
-  (STRCAT (STRING c s1) s2 = STRING c (STRCAT s1 s2))`,
- SRW_TAC [][STRCAT_def]);
+  (STRCAT (STRING c s1) s2 = STRING c (STRCAT s1 s2))
+Proof
+ SRW_TAC [][STRCAT_def]
+QED
 
 val STRCAT_ASSOC = save_thm("STRCAT_ASSOC", stringinst APPEND_ASSOC)
 
 val STRCAT_11 = save_thm("STRCAT_11", stringinst APPEND_11)
 
-val STRCAT_ACYCLIC = Q.store_thm
-("STRCAT_ACYCLIC",
- `!s s1. ((s = STRCAT s s1) = (s1 = "")) /\
-         ((s = STRCAT s1 s) = (s1 = ""))`,
- PROVE_TAC [STRCAT_EQNS,STRCAT_11]);
+Theorem STRCAT_ACYCLIC:
+  !s s1. ((s = STRCAT s s1) = (s1 = "")) /\
+         ((s = STRCAT s1 s) = (s1 = ""))
+Proof
+ PROVE_TAC [STRCAT_EQNS,STRCAT_11]
+QED
 
-val STRCAT_EXPLODE = Q.store_thm
-("STRCAT_EXPLODE",
- `!s1 s2. STRCAT s1 s2 = FOLDR STRING s2 (EXPLODE s1)`,
-  Induct THEN SRW_TAC [][])
+Theorem STRCAT_EXPLODE:
+  !s1 s2. STRCAT s1 s2 = FOLDR STRING s2 (EXPLODE s1)
+Proof
+  Induct THEN SRW_TAC [][]
+QED
 
 val STRCAT_EQ_EMPTY = save_thm("STRCAT_EQ_EMPTY",
                                CONJUNCT2 (stringinst APPEND_eq_NIL))
@@ -531,75 +578,90 @@ val STRLEN_CAT = save_thm("STRLEN_CAT", stringinst LENGTH_APPEND)
        Is one string a prefix of another?
  ---------------------------------------------------------------------------*)
 
-val isPREFIX_DEF = store_thm(
-  "isPREFIX_DEF",
-  ``!s1 s2.
+Theorem isPREFIX_DEF:
+    !s1 s2.
        isPREFIX s1 s2 =
        case (DEST_STRING s1, DEST_STRING s2)
         of (NONE, _) => T
          | (SOME __, NONE) => F
-         | (SOME(c1,t1),SOME(c2,t2)) => (c1=c2) /\ isPREFIX t1 t2``,
-  Cases_on `s1` THEN Cases_on `s2` THEN SRW_TAC [][]);
+         | (SOME(c1,t1),SOME(c2,t2)) => (c1=c2) /\ isPREFIX t1 t2
+Proof
+  Cases_on `s1` THEN Cases_on `s2` THEN SRW_TAC [][]
+QED
 
-val isPREFIX_IND = Q.store_thm
-("isPREFIX_IND",
- `!P. (!s1 s2.
+Theorem isPREFIX_IND:
+  !P. (!s1 s2.
          (!c t1 t2.
            (DEST_STRING s1 = SOME (c,t1)) /\
            (DEST_STRING s2 = SOME (c,t2)) ==> P t1 t2) ==> P s1 s2)
-       ==> !v v1. P v v1`,
- GEN_TAC THEN STRIP_TAC THEN Induct THEN SRW_TAC [][]);
+       ==> !v v1. P v v1
+Proof
+ GEN_TAC THEN STRIP_TAC THEN Induct THEN SRW_TAC [][]
+QED
 
-val isPREFIX_STRCAT = Q.store_thm
-("isPREFIX_STRCAT",
- `!s1 s2. isPREFIX s1 s2 = ?s3. s2 = STRCAT s1 s3`,
+Theorem isPREFIX_STRCAT:
+  !s1 s2. isPREFIX s1 s2 = ?s3. s2 = STRCAT s1 s3
+Proof
  Induct THEN SRW_TAC [][] THEN Cases_on `s2` THEN SRW_TAC [][] THEN
- PROVE_TAC []);
+ PROVE_TAC []
+QED
 
 (*---------------------------------------------------------------------------
        Orderings
  ---------------------------------------------------------------------------*)
 
-val string_lt_def = Define`
+Definition string_lt_def:
   (string_lt s EMPTYSTRING <=> F) /\
   (string_lt EMPTYSTRING (STRING c s) <=> T) /\
   (string_lt (STRING c1 s1) (STRING c2 s2) <=>
-     c1 < c2 \/ (c1 = c2) /\ string_lt s1 s2)`;
+     c1 < c2 \/ (c1 = c2) /\ string_lt s1 s2)
+End
 
-val string_le_def = Define `string_le s1 s2 <=> (s1 = s2) \/ string_lt s1 s2`;
-val string_gt_def = Define `string_gt s1 s2 <=> string_lt s2 s1`;
-val string_ge_def = Define `string_ge s1 s2 <=> string_le s2 s1`;
+Definition string_le_def:   string_le s1 s2 <=> (s1 = s2) \/ string_lt s1 s2
+End
+Definition string_gt_def:   string_gt s1 s2 <=> string_lt s2 s1
+End
+Definition string_ge_def:   string_ge s1 s2 <=> string_le s2 s1
+End
 
 Overload "<"[inferior]  = “string_lt”
 Overload ">"[inferior]  = “string_gt”
 Overload "<="[inferior] = “string_le”
 Overload ">="[inferior] = “string_ge”
 
-val string_lt_nonrefl = store_thm("string_lt_nonrefl",
-  ``!s:string. ~(s < s)``,
-  Induct THEN ASM_SIMP_TAC std_ss [string_lt_def,char_lt_def]);
+Theorem string_lt_nonrefl:
+    !s:string. ~(s < s)
+Proof
+  Induct THEN ASM_SIMP_TAC std_ss [string_lt_def,char_lt_def]
+QED
 
-val string_lt_antisym = store_thm("string_lt_antisym",
-  ``!s t:string. ~(s < t /\ t < s)``,
+Theorem string_lt_antisym:
+    !s t:string. ~(s < t /\ t < s)
+Proof
   SIMP_TAC std_ss []
   THEN Induct THEN Cases_on `t` THEN SIMP_TAC std_ss [string_lt_def,char_lt_def]
   THEN REPEAT STRIP_TAC THEN Cases_on `h = h'` THEN ASM_SIMP_TAC std_ss []
-  THEN FULL_SIMP_TAC std_ss [GSYM ORD_11] THEN DECIDE_TAC);
+  THEN FULL_SIMP_TAC std_ss [GSYM ORD_11] THEN DECIDE_TAC
+QED
 
-val string_lt_cases = store_thm("string_lt_cases",
-  ``!s t:string. (s = t) \/ s < t \/ t < s``,
+Theorem string_lt_cases:
+    !s t:string. (s = t) \/ s < t \/ t < s
+Proof
   Induct THEN Cases_on `t` THEN SIMP_TAC std_ss [string_lt_def,char_lt_def]
   THEN SIMP_TAC std_ss [CONS_11,GSYM ORD_11] THEN STRIP_TAC
-  THEN Cases_on `ORD h = ORD h'` THEN ASM_SIMP_TAC std_ss [] THEN DECIDE_TAC);
+  THEN Cases_on `ORD h = ORD h'` THEN ASM_SIMP_TAC std_ss [] THEN DECIDE_TAC
+QED
 
-val string_lt_trans = store_thm("string_lt_trans",
-  ``!s1 s2 s3:string. s1 < s2 /\ s2 < s3 ==> s1 < s3``,
+Theorem string_lt_trans:
+    !s1 s2 s3:string. s1 < s2 /\ s2 < s3 ==> s1 < s3
+Proof
   Induct THEN Cases_on `s2` THEN Cases_on `s3`
   THEN SIMP_TAC std_ss [string_lt_def,char_lt_def,GSYM ORD_11] THEN STRIP_TAC
   THEN Cases_on `ORD h'' < ORD h'` THEN ASM_SIMP_TAC std_ss [IMP_CONJ_THM]
   THEN STRIP_TAC THEN1 (REPEAT STRIP_TAC THEN DECIDE_TAC)
   THEN REPEAT STRIP_TAC THEN IMP_RES_TAC arithmeticTheory.LESS_TRANS
-  THEN METIS_TAC []);
+  THEN METIS_TAC []
+QED
 
 val string_lt_ind = theorem"string_lt_ind";
 

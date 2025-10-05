@@ -14,7 +14,7 @@ Libs
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-(* val _ = load "whileTheory"; *)
+(* val _ = load "WhileTheory"; *)
 val _ = temp_overload_on("SQ", ``\n. n * n``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
 val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
@@ -247,11 +247,11 @@ Question: Can (countdivs n) be expressed in a WHILE loop?
 *)
 
 (* Compute LOG2 by counting the number of divisions down to 1 *)
-val log_compute_def = Define `
+Definition log_compute_def:
    log_compute n = if n = 0 then LOG2 0
                    else if n = 1 then 0
                    else 1 + log_compute (HALF n)
-`;
+End
 
 (*
 > EVAL ``log_compute 4``; --> 2
@@ -314,9 +314,9 @@ val ulog_step_eq_count_up = store_thm(
   metis_tac[count_up_def]);
 
 (* Define upper LOG2 n by ulog_step *)
-val ulog_compute_def = Define`
+Definition ulog_compute_def:
     ulog_compute n = ulog_step n 1 0
-`;
+End
 
 (*
 > EVAL ``ulog_compute 4``; --> 2
@@ -369,13 +369,13 @@ else (* precompute *) r <- (m * m) ** (HALF n)
 *)
 
 (* Define exponentiation by repeated squaring. *)
-val exp_binary_def = Define`
+Definition exp_binary_def:
    exp_binary (m:num) n =
       if (n = 0) then 1  (* m ** 0 = 1 *)
       (* either n or (n - 1) is EVEN, precompute the repeated square *)
       else let r = exp_binary (m * m) (HALF n) in
       if EVEN n then r else m * r (* if EVEN, return reuslt, otherwise multiply by base for ODD *)
-`;
+End
 
 (*
 > EVAL ``exp_binary 3 2``; --> 9
@@ -516,14 +516,14 @@ val exp_binary_of_0 = store_thm(
 *)
 
 (* Define fast exponentiation *)
-val exp_step_def = Define`
+Definition exp_step_def:
     exp_step m n r = (* r = m ** n *)
        if n = 0 then r else
        exp_step (SQ m) (HALF n) (if EVEN n then r else r * m)
-`;
-val exp_compute_def = Define`
+End
+Definition exp_compute_def:
     exp_compute m n = exp_step m n 1
-`;
+End
 
 (*
 EVAL ``exp_compute 2 10``; --> 1024
@@ -728,7 +728,7 @@ val exp_mod_binary_def = Define`
      else (a * exp_mod_binary ((a * a) MOD m) (HALF n) m) MOD m
 `;
 *)
-val exp_mod_binary_def = Define`
+Definition exp_mod_binary_def:
    exp_mod_binary a n m =
           if m = 0 then (a ** n) MOD 0   (* whatever that is! *)
      else if m = 1 then 0                (* all MOD 1 = 0 *)
@@ -737,7 +737,7 @@ val exp_mod_binary_def = Define`
      (* if ODD n then a ** n (mod m) = a * ((a * a MOD m) ** (HALF n)) MOD m *)
      else (let b = exp_mod_binary ((a * a) MOD m) (HALF n) m
             in if EVEN n then b else (a * b) MOD m)
-`;
+End
 (* Note the for-all order: n m a, which is good.
 val it =
    |- !n m a. exp_mod_binary a n m =
@@ -930,15 +930,15 @@ val exp_mod_binary_0_n = store_thm(
 *)
 
 (* Define fast modulo exponentiation *)
-val exp_mod_step_def = Define`
+Definition exp_mod_step_def:
     exp_mod_step m n k r =
        if k = 0 then (r * m ** n) MOD k
        else if n = 0 then (r MOD k) else
        exp_mod_step ((SQ m) MOD k) (HALF n) k (if EVEN n then r else (r * m) MOD k)
-`;
-val exp_mod_compute_def = Define`
+End
+Definition exp_mod_compute_def:
     exp_mod_compute m n k = exp_mod_step m n k 1
-`;
+End
 
 (*
 EVAL ``exp_mod_compute 2 10 3``; --> 1024 MOD 3 = 1
@@ -1348,12 +1348,12 @@ perfect_power_bound_ulog;
 *)
 
 (* Define power-index computation, search downwards from k = LOG2 n *)
-val power_index_compute_def = Define`
+Definition power_index_compute_def:
     power_index_compute n k =
        if k <= 1 then 1
        else if exp_compute (root_compute k n) k = n then k
        else power_index_compute n (k - 1)
-`;
+End
 
 (*
 > EVAL ``power_index_compute 8 (log_compute 8)``; --> 3
@@ -1398,9 +1398,9 @@ val power_index_compute_eqn = store_thm(
   rw[power_index_not_exact_root]);
 
 (* Define power-free check *)
-val power_free_check_def = Define`
+Definition power_free_check_def:
     power_free_check n <=> (1 < n) /\ (power_index_compute n (ulog_compute n) = 1)
-`;
+End
 
 (*
 > EVAL ``power_free_check 6``; --> T
@@ -1643,7 +1643,7 @@ val BINARY_GCD = store_thm(
 *)
 
 (* Convert BINARY_GCD into an algorithm *)
-val gcd_compute_def = Define`
+Definition gcd_compute_def:
     gcd_compute n m =
        if n = 0 then m
      else if m = 0 then n
@@ -1654,7 +1654,7 @@ val gcd_compute_def = Define`
      else (* ODD n *) if EVEN m then gcd_compute n (HALF m)
                  else (* ODD m *)
                    if n < m then gcd_compute n (m - n) else gcd_compute (n - m) m
-`;
+End
 (* Techniques for recursive definition:
 (1) Keep the parameter order for recursive calls (no swapping of parameter).
 (2) Provide exit conditions for small enough parameters.
@@ -1908,17 +1908,17 @@ val count_coprime_def = Define `
 *)
 
 (* Count the number of coprimes, linear stack version *)
-val count_coprime_def = Define `
+Definition count_coprime_def:
     count_coprime n j =
            if j = 0 then 0
       else if j = 1 then 1
       else count_coprime n (j - 1) + (if (gcd_compute j n = 1) then 1 else 0)
-`;
+End
 
 (* Compute phi function *)
-val phi_compute_def = Define`
+Definition phi_compute_def:
     phi_compute n = count_coprime n n
-`;
+End
 
 (*
 > EVAL ``phi_compute 0``; --> 0

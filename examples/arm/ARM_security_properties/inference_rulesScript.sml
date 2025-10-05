@@ -8,14 +8,16 @@ val _ = ParseExtras.temp_loose_equality()
 
 
 val let_ss = simpLib.mk_simpset [boolSimps.LET_ss] ;
-val comb_def = Define `comb invr1 invr2 invr3 = (!s. invr3 s = (invr1 s \/ invr2 s))`;
-val assert_mode_def = Define `assert_mode k s = (ARM_MODE s = k)`;
+Definition comb_def:   comb invr1 invr2 invr3 = (!s. invr3 s = (invr1 s \/ invr2 s))
+End
+Definition assert_mode_def:   assert_mode k s = (ARM_MODE s = k)
+End
 
 
 (* =============     Untouched   ==========================*)
 (* smc mode is not involved yet, also RName_LRmon,RName_SPmon*)
 
-val untouched_def = Define `untouched id state1 state2 =
+Definition untouched_def:   untouched id state1 state2 =
 (state1.coprocessors  = state2.coprocessors)
 
 /\
@@ -126,7 +128,7 @@ let und_regs = {RName_0usr; RName_1usr; RName_2usr; RName_3usr; RName_4usr; RNam
           ==> (state1.registers (0, reg) = state2.registers (0, reg)))
 /\
 (!psr . ((psr <> CPSR)  /\ (psr <> SPSR_und)) ==> (state1.psrs (0, psr) = state2.psrs (0, psr)))))
-`;
+End
 
 (* only for arm_next
 val priv_mode_similar_def =
@@ -148,8 +150,8 @@ val priv_mode_similar_def =
         `;*)
 
 
-val get_spsr_by_mode_def =
-    Define `get_spsr_by_mode (mode:bool[5]) =
+Definition get_spsr_by_mode_def:
+     get_spsr_by_mode (mode:bool[5]) =
         case (mode) of
                17w => SPSR_fiq
              | 18w => SPSR_irq
@@ -157,10 +159,11 @@ val get_spsr_by_mode_def =
              | 22w => SPSR_mon
              | 23w => SPSR_abt
              | 27w => SPSR_und
-             |  _  => CPSR`;
+             |  _  => CPSR
+End
 
-val get_lr_by_mode_def =
-    Define `get_lr_by_mode (mode:bool[5]) =
+Definition get_lr_by_mode_def:
+     get_lr_by_mode (mode:bool[5]) =
         case (mode) of
                17w => RName_LRfiq
              | 18w => RName_LRirq
@@ -168,10 +171,11 @@ val get_lr_by_mode_def =
              | 22w => RName_LRmon
              | 23w => RName_LRabt
              | 27w => RName_LRund
-             |  _  => RName_LRusr `;
+             |  _  => RName_LRusr
+End
 
-val priv_mode_similar_def =
-    Define `priv_mode_similar (g:bool[32]) state1 state2 =
+Definition priv_mode_similar_def:
+     priv_mode_similar (g:bool[32]) state1 state2 =
     (ARM_MODE state2 <> 16w) ==>
     (let (lr_reg,spsr) = (get_lr_by_mode(ARM_MODE state2) ,
 get_spsr_by_mode(ARM_MODE state2))
@@ -180,7 +184,7 @@ get_spsr_by_mode(ARM_MODE state2))
                 /\
          (state1.psrs(0,spsr) = state2.psrs(0,spsr)))
 
-        `;
+End
 
 
 val untouched_trans = store_thm (
@@ -320,15 +324,16 @@ val trivially_untouched_av_lem2 = store_thm(
 
 (* =============   Similar    ==========================*)
 
-val equal_user_register_def = Define `equal_user_register s t  =
+Definition equal_user_register_def:   equal_user_register s t  =
 (! reg.  reg IN  {RName_0usr; RName_1usr; RName_2usr; RName_3usr; RName_4usr; RName_5usr;
                        RName_6usr; RName_7usr; RName_8usr; RName_9usr; RName_10usr; RName_11usr;
                        RName_12usr; RName_SPusr; RName_LRusr; RName_PC}
-             ==> (s.registers (0, reg) = t.registers (0, reg)))`;
+             ==> (s.registers (0, reg) = t.registers (0, reg)))
+End
 
 
 
-val similar_def = Define `similar  gst s1 s2 =
+Definition similar_def:   similar  gst s1 s2 =
 (! addr.
  (((addr <=+ (*UNSIGNED*)  guest1_max_adr) /\ (addr >=+ (*UNSIGNED*) guest1_min_adr) /\ (gst = guest1)) ==>
         ((s1.memory addr) = (s2.memory addr)))
@@ -349,7 +354,7 @@ val similar_def = Define `similar  gst s1 s2 =
                                     /\
 (s1.event_register = s2.event_register)
 
-`;
+End
 
 
 val similar_refl = store_thm(
@@ -360,15 +365,16 @@ val similar_refl = store_thm(
 
 (*********************** preserve ****************************)
 
-val trans_fun_def = Define `trans_fun uf =
+Definition trans_fun_def:   trans_fun uf =
 !g st1 st2 st3 .
       (uf g st1 st2) ==>
       (uf g st2 st3)
-      ==>  (uf g st1 st3)`;
+      ==>  (uf g st1 st3)
+End
 
 
-val preserve_relation_mmu_def =
-Define `preserve_relation_mmu comp invr1 invr2 f y =
+Definition preserve_relation_mmu_def:
+ preserve_relation_mmu comp invr1 invr2 f y =
     !g s1 s2 .
     mmu_requirements s1 g    ==>
     mmu_requirements s2 g    ==>
@@ -385,11 +391,12 @@ Define `preserve_relation_mmu comp invr1 invr2 f y =
                   (invr2 s1') /\
                   (invr2 s2') /\
                   (similar  g s1' s2')))
-\/   (? e. (comp s1 = Error e) /\ (comp s2 = Error e)))`;
+\/   (? e. (comp s1 = Error e) /\ (comp s2 = Error e)))
+End
 
 
 
-val preserve_relation_mmu_abs_def = Define `preserve_relation_mmu_abs  comp invr1 invr2 f y =
+Definition preserve_relation_mmu_abs_def:   preserve_relation_mmu_abs  comp invr1 invr2 f y =
     !c g s1 s2 .
     mmu_requirements s1 g    ==>
     mmu_requirements s2 g    ==>
@@ -406,7 +413,8 @@ val preserve_relation_mmu_abs_def = Define `preserve_relation_mmu_abs  comp invr
                      (invr2 s1') /\
                      (invr2 s2') /\
                      (similar  g s1' s2')))
-\/   (? e. (comp c s1 = Error e) /\ (comp c s2 = Error e)))`;
+\/   (? e. (comp c s1 = Error e) /\ (comp c s2 = Error e)))
+End
 
 val comb_rel_lem = store_thm (
     "comb_rel_lem",
@@ -644,8 +652,9 @@ THEN FULL_SIMP_TAC (srw_ss()) []
 THEN FULL_SIMP_TAC (srw_ss()) []]);
 
 
-val reflexive_comp_def = Define `reflexive_comp  f invr =
-                       ! s g. (invr s) ==> f g s s`;
+Definition reflexive_comp_def:   reflexive_comp  f invr =
+                       ! s g. (invr s) ==> f g s s
+End
 
 
 val condT_preserves_relation_thm = store_thm("condT_preserves_relation_thm",
@@ -857,7 +866,8 @@ val preserve_relation_comb_abs_thm =
          THEN RW_TAC (srw_ss()) []);
 
 
-val comb_mode_def = Define `comb_mode m n s = (assert_mode m s \/ assert_mode n s)`;
+Definition comb_mode_def:   comb_mode m n s = (assert_mode m s \/ assert_mode n s)
+End
 
 val comb_mode_thm =
     store_thm ("comb_mode_thm",
@@ -868,10 +878,11 @@ RW_TAC (srw_ss()) [ assert_mode_def,comb_mode_def,comb_def]);
 
 (*********    3-parts-lem   *********)
 
-val keep_mode_relation_def = Define `keep_mode_relation comp i1 i2 =
-  (!g s s' x. (mmu_requirements s g) ==> (i1 s) ==> (comp s = ValueState x s') ==> (i2 s'))`;
+Definition keep_mode_relation_def:   keep_mode_relation comp i1 i2 =
+  (!g s s' x. (mmu_requirements s g) ==> (i1 s) ==> (comp s = ValueState x s') ==> (i2 s'))
+End
 
-val keep_similar_relation_def = Define `keep_similar_relation comp invr1 y =
+Definition keep_similar_relation_def:   keep_similar_relation comp invr1 y =
     !g s1 s2.
     mmu_requirements s1 g    ==>
     mmu_requirements s2 g    ==>
@@ -881,17 +892,20 @@ val keep_similar_relation_def = Define `keep_similar_relation comp invr1 y =
     invr1 s2                 ==>
     ((?a s1' s2'.((comp s1 = ValueState a s1') /\  (comp s2 = ValueState a s2') /\
            (y  g s1' s2') /\        (similar g s1' s2')))
-\/   (? e. (comp s1 = Error e) /\ (comp s2 = Error e)))`;
+\/   (? e. (comp s1 = Error e) /\ (comp s2 = Error e)))
+End
 
-val keep_untouched_relation_def = Define `keep_untouched_relation comp invr1 f =
-    !g s s' a. (mmu_requirements s g) ==> (invr1 s) ==> (comp s = ValueState a s') ==> ((untouched g s s') /\  (f g s s'))`;
+Definition keep_untouched_relation_def:   keep_untouched_relation comp invr1 f =
+    !g s s' a. (mmu_requirements s g) ==> (invr1 s) ==> (comp s = ValueState a s') ==> ((untouched g s s') /\  (f g s s'))
+End
 
 val three_parts_thm = store_thm(
     "three_parts_thm",
     ``!comp i1 i2 f y. (keep_mode_relation comp i1 i2) ==> (keep_similar_relation comp i1 y) ==> (keep_untouched_relation comp i1 f) ==> (preserve_relation_mmu comp i1 i2 f y)``,
     RW_TAC (srw_ss()) [preserve_relation_mmu_def, keep_mode_relation_def, keep_similar_relation_def, keep_untouched_relation_def] THEN METIS_TAC []);
 
-val refl_rel_def = Define `refl_rel y = (!gg ss. y gg ss ss)`;
+Definition refl_rel_def:   refl_rel y = (!gg ss. y gg ss ss)
+End
 
 
 

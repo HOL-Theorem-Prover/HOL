@@ -14,8 +14,9 @@ Libs
 
 
 (* definition from p30 *)
-val beta_def = Define`beta M N = ?x body arg. (M = LAM x body @@ arg) /\
-                                              (N = [arg/x]body)`;
+Definition beta_def:  beta M N = ?x body arg. (M = LAM x body @@ arg) /\
+                                              (N = [arg/x]body)
+End
 val _ = Unicode.unicode_version {u = UnicodeChars.beta, tmnm = "beta"}
 
 val beta_alt = store_thm(
@@ -232,7 +233,8 @@ val beta_normal_form_bnf = store_thm(
     SRW_TAC [][]
   ]);
 
-val nf_of_def = Define`nf_of R M N <=> normal_form R N /\ conversion R M N`;
+Definition nf_of_def:  nf_of R M N <=> normal_form R N /\ conversion R M N
+End
 
 val prop3_10 = store_thm(
   "prop3_10",
@@ -291,7 +293,8 @@ val _ = overload_on("diamond_property", ``relation$diamond``)
    rather than having to write
      CR (compat_closure beta)
 *)
-val CR_def = Define`CR R = diamond_property (reduction R)`;
+Definition CR_def:  CR R = diamond_property (reduction R)
+End
 
 val theorem3_13 = store_thm(
   "theorem3_13",
@@ -827,11 +830,12 @@ val _ = overload_on("weak_diamond", ``relation$WCR``)
 (* likewise, these definitions of WCR and SN, differ from those in
    relation by wrapping the argument in a call to compat_closure
 *)
-val WCR_def = (* definition 3.20, p39 *) Define`
+Definition WCR_def:  (* definition 3.20, p39 *)
   WCR R = weak_diamond (compat_closure R)
-`;
+End
 
-val SN_def = Define`SN R = relation$SN (compat_closure R)`;
+Definition SN_def:  SN R = relation$SN (compat_closure R)
+End
 
 val newmans_lemma = store_thm( (* lemma3_22, p39 *)
   "newmans_lemma",
@@ -841,9 +845,10 @@ val newmans_lemma = store_thm( (* lemma3_22, p39 *)
                        GSYM relationTheory.diamond_def,
                        GSYM relationTheory.CR_def]);
 
-val commute_def =  (* p43 *)
-    Define`commute R1 R2 = !x x1 x2. R1 x x1 /\ R2 x x2 ==>
-                                     ?x3. R2 x1 x3 /\ R1 x2 x3`;
+Definition commute_def:   (* p43 *)
+    commute R1 R2 = !x x1 x2. R1 x x1 /\ R2 x x2 ==>
+                                     ?x3. R2 x1 x3 /\ R1 x2 x3
+End
 
 val commute_COMM = store_thm(
   "commute_COMM",
@@ -907,8 +912,9 @@ val hindley_rosen_lemma = store_thm( (* p43 *)
     FULL_SIMP_TAC (srw_ss()) [RTC_RUNION, CC_RUNION_DISTRIB]
   ]);
 
-val eta_def =
-    Define`eta M N <=> ∃v. M = LAM v (N @@ VAR v) ∧ v ∉ FV N`;
+Definition eta_def:
+    eta M N <=> ∃v. M = LAM v (N @@ VAR v) ∧ v ∉ FV N
+End
 
 val _ = Unicode.unicode_version {u = UnicodeChars.eta, tmnm = "eta"}
 

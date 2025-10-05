@@ -24,9 +24,10 @@ val _ = Hol_datatype `
 
 (* check whether rm requires a lock, i.e. specifies a memory access *)
 
-val rm_is_memory_access_def = Define `
+Definition rm_is_memory_access_def:
   (rm_is_memory_access (Xm i b d) = T) /\
-  (rm_is_memory_access (Xr r) = F)`;
+  (rm_is_memory_access (Xr r) = F)
+End
 
 val _ = Hol_datatype `
   Xdest_src = Xrm_i of Xrm  => Ximm  (* mnemonic r/m32, imm32 or mnemonic r/m32, imm8 (sign-extended) *)

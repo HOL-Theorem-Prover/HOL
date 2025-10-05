@@ -1332,13 +1332,13 @@ QED
 (*end of example*)
 
 
-val subforms_def = Define`
+Definition subforms_def:
   subforms (VAR a) = {VAR a} /\
   subforms (FALSE) = {FALSE} /\
   subforms (NOT f) = NOT f INSERT subforms f /\
   subforms (DISJ f1 f2) = DISJ f1 f2 INSERT subforms f1 UNION subforms f2 /\
   subforms (DIAM f) = DIAM f INSERT subforms f
-  `;
+End
 
 val subforms_phi_phi = store_thm(
 "subforms_phi_phi",
@@ -1380,25 +1380,30 @@ Induct_on `phi` >> fs[subforms_def]);
 
 
 
-val CUS_def = Define`
+Definition CUS_def:
 CUS Σ <=> !f f'. ((DISJ f f') IN Σ ==> f IN Σ /\ f' IN Σ) /\
                  ((NOT f) IN Σ ==> f IN Σ) /\
-                 ((DIAM f) IN Σ ==> f IN Σ)`;
+                 ((DIAM f) IN Σ ==> f IN Σ)
+End
 
 
-val REL_CUS_def = Define`
+Definition REL_CUS_def:
 REL_CUS Σ M = λw v. w IN M.frame.world /\
                     v IN M.frame.world /\
-                    (!phi. phi IN Σ ==> (satis M w phi <=> satis M v phi))`;
+                    (!phi. phi IN Σ ==> (satis M w phi <=> satis M v phi))
+End
 
-val EC_CUS_def = Define`
-EC_CUS Σ M w = {v | (REL_CUS Σ M) w v}`;
+Definition EC_CUS_def:
+EC_CUS Σ M w = {v | (REL_CUS Σ M) w v}
+End
 
-val EC_REP_def = Define`
-EC_REP Σ M w = CHOICE (EC_CUS Σ M w)`;
+Definition EC_REP_def:
+EC_REP Σ M w = CHOICE (EC_CUS Σ M w)
+End
 
-val EC_REP_SET_def = Define`
-EC_REP_SET Σ M = {n | ?w. w IN M.frame.world /\ n = EC_REP Σ M w}`;
+Definition EC_REP_SET_def:
+EC_REP_SET Σ M = {n | ?w. w IN M.frame.world /\ n = EC_REP Σ M w}
+End
 
 val IN_EC_CUS_IN_world = store_thm(
 "IN_EC_CUS_IN_world",
@@ -1470,8 +1475,9 @@ val REP_IN_EC = store_thm(
   rw[] >> `EC_CUS Σ M w <> {}` by metis_tac[EC_NOT_EMPTY] >> metis_tac[EC_REP_def,CHOICE_DEF]);
 
 
-val RESTRICT_tau_theory = Define`
-RESTRICT_tau_theory Σ M w = {phi | phi IN Σ /\ satis M w phi}`;
+Definition RESTRICT_tau_theory:
+RESTRICT_tau_theory Σ M w = {phi | phi IN Σ /\ satis M w phi}
+End
 
 val ELEM_IN_EC = store_thm(
 "ELEM_IN_EC",
@@ -1549,13 +1555,14 @@ rw[] >>
 (fs[RESTRICT_tau_theory] >> simp[EXTENSION] >> rw[] >> eq_tac >> rw[] >> metis_tac[]) >>
 metis_tac[tau_EC]);
 
-val filtration_def = Define`
+Definition filtration_def:
 filtration M Σ FL <=>
 CUS Σ /\
 (FL.frame.world = EC_REP_SET Σ M) /\
 (!w v. w IN M.frame.world /\ v IN M.frame.world /\ M.frame.rel w v ==> FL.frame.rel (EC_REP Σ M w) (EC_REP Σ M v)) /\
 (!w v. w IN M.frame.world /\ v IN M.frame.world /\ FL.frame.rel (EC_REP Σ M w) (EC_REP Σ M v) ==> (!phi psi. (phi IN Σ /\ phi = DIAM psi) ==> (satis M v psi ==> satis M w phi))) /\
-(!p s. FL.valt p s <=> (?w. s = EC_REP Σ M w /\ satis M w (VAR p)))`;
+(!p s. FL.valt p s <=> (?w. s = EC_REP Σ M w /\ satis M w (VAR p)))
+End
 
 val FLT_M_world = store_thm(
 "FLT_M_world",
@@ -1657,7 +1664,7 @@ gen_tac >> strip_tac >> Induct_on `phi`
      `satis M w (DIAM phi)` suffices_by metis_tac[satis_def] >>
      `FL.frame.rel (EC_REP Σ M w) (EC_REP Σ M w')` by fs[IN_DEF] >> metis_tac[filtration_def])));
 
-val FLT_def = Define`
+Definition FLT_def:
 FLT M Σ = <| frame := <| world := EC_REP_SET Σ M ;
                          rel := λn1 n2.
                          ?w1 w2.
@@ -1665,7 +1672,8 @@ FLT M Σ = <| frame := <| world := EC_REP_SET Σ M ;
                          n1 = EC_REP Σ M w1 /\ n2 = EC_REP Σ M w2 /\
                          ?w' v'. w' IN M.frame.world /\ v' IN M.frame.world /\
                          w' IN EC_CUS Σ M w1 /\ v' IN EC_CUS Σ M w2 /\ M.frame.rel w' v') |>;
-             valt := λp s. ∃w. s = EC_REP Σ M w ∧ satis M w (VAR p) |>`;
+             valt := λp s. ∃w. s = EC_REP Σ M w ∧ satis M w (VAR p) |>
+End
 
 
 val FLT_EXISTS = store_thm(
@@ -1727,10 +1735,11 @@ rw[] >> qexists_tac `FLT M (subforms phi)` >> qexists_tac `EC_REP (subforms phi)
    imp_res_tac FINITE_INJ >> rfs[FINITE_POW]));
 
 
-val REL_2_42_def = Define`
+Definition REL_2_42_def:
     REL_2_42 Σ M = \a b. ?w. w IN M.frame.world /\ a = EC_CUS Σ M w /\
                          ?v. v IN M.frame.world /\ b = EC_CUS Σ M v /\
-                         (!phi. (DIAM phi) IN Σ /\ satis M v (DISJ phi (DIAM phi)) ==> satis M w (DIAM phi))`;
+                         (!phi. (DIAM phi) IN Σ /\ satis M v (DISJ phi (DIAM phi)) ==> satis M w (DIAM phi))
+End
 
 
 val thm_2_42_ii = store_thm(
@@ -1804,16 +1813,19 @@ val thm_2_42_i = store_thm(
      metis_tac[SAME_EC_SAME_tau]));
 
 
-val cluster_def = Define`
+Definition cluster_def:
   cluster C FRM <=> C SUBSET FRM.world /\
                     (RESTRICT FRM.rel C) equiv_on FRM.world /\
-                    (!D. C SUBSET D /\ C <> D ==> ¬((RESTRICT FRM.rel D) equiv_on FRM.world))`;
+                    (!D. C SUBSET D /\ C <> D ==> ¬((RESTRICT FRM.rel D) equiv_on FRM.world))
+End
 
-val simple_cluster_def = Define`
-  simple_cluster C FRM <=> cluster C FRM /\ ?x. x IN FRM.world /\ C = {x}`;
+Definition simple_cluster_def:
+  simple_cluster C FRM <=> cluster C FRM /\ ?x. x IN FRM.world /\ C = {x}
+End
 
-val proper_cluster_def = Define`
-  proper_cluster C FRM <=> cluster C FRM /\ ?x y. x IN C /\ y IN C /\ x <> y`;
+Definition proper_cluster_def:
+  proper_cluster C FRM <=> cluster C FRM /\ ?x y. x IN C /\ y IN C /\ x <> y
+End
 
 (*end of FMP via filtration *)
 

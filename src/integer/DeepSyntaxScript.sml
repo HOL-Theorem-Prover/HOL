@@ -14,72 +14,78 @@ val _ = Hol_datatype `deep_form = Conjn of deep_form => deep_form
                                 | xEQ of int
                                 | xDivided of int => int`;
 
-val eval_form_def = Define
-  `(eval_form (Conjn f1 f2) x = eval_form f1 x /\ eval_form f2 x) /\
+Definition eval_form_def:
+   (eval_form (Conjn f1 f2) x = eval_form f1 x /\ eval_form f2 x) /\
    (eval_form (Disjn f1 f2) x = eval_form f1 x \/ eval_form f2 x) /\
    (eval_form (Negn f) x = ~eval_form f x) /\
    (eval_form (UnrelatedBool b) x = b) /\
    (eval_form (xLT i) x = x < i) /\
    (eval_form (LTx i) x = i < x) /\
    (eval_form (xEQ i) x = (x = i)) /\
-   (eval_form (xDivided i1 i2) x = i1 int_divides x + i2)`;
+   (eval_form (xDivided i1 i2) x = i1 int_divides x + i2)
+End
 
-val neginf_def = Define
-  `(neginf (Conjn f1 f2) = Conjn (neginf f1) (neginf f2)) /\
+Definition neginf_def:
+   (neginf (Conjn f1 f2) = Conjn (neginf f1) (neginf f2)) /\
    (neginf (Disjn f1 f2) = Disjn (neginf f1) (neginf f2)) /\
    (neginf (Negn f) = Negn (neginf f)) /\
    (neginf (UnrelatedBool b) = UnrelatedBool b) /\
    (neginf (xLT i) = UnrelatedBool T) /\
    (neginf (LTx i) = UnrelatedBool F) /\
    (neginf (xEQ i) = UnrelatedBool F) /\
-   (neginf (xDivided i1 i2) = xDivided i1 i2)`;
+   (neginf (xDivided i1 i2) = xDivided i1 i2)
+End
 
-val posinf_def = Define
-  `(posinf (Conjn f1 f2) = Conjn (posinf f1) (posinf f2)) /\
+Definition posinf_def:
+   (posinf (Conjn f1 f2) = Conjn (posinf f1) (posinf f2)) /\
    (posinf (Disjn f1 f2) = Disjn (posinf f1) (posinf f2)) /\
    (posinf (Negn f) = Negn (posinf f)) /\
    (posinf (UnrelatedBool b) = UnrelatedBool b) /\
    (posinf (xLT i) = UnrelatedBool F) /\
    (posinf (LTx i) = UnrelatedBool T) /\
    (posinf (xEQ i) = UnrelatedBool F) /\
-   (posinf (xDivided i1 i2) = xDivided i1 i2)`;
+   (posinf (xDivided i1 i2) = xDivided i1 i2)
+End
 
-val neginf_ok = store_thm(
-  "neginf_ok",
-  ``!f. ?y. !x. x < y ==> (eval_form f x = eval_form (neginf f) x)``,
+Theorem neginf_ok:
+    !f. ?y. !x. x < y ==> (eval_form f x = eval_form (neginf f) x)
+Proof
   Induct THEN SRW_TAC [][eval_form_def, neginf_def] THENL [
     Q.EXISTS_TAC `int_min y y'` THEN PROVE_TAC [INT_MIN_LT],
     Q.EXISTS_TAC `int_min y y'` THEN PROVE_TAC [INT_MIN_LT],
     PROVE_TAC [],
     PROVE_TAC [INT_LT_GT],
     PROVE_TAC [INT_LT_REFL]
-  ]);
+  ]
+QED
 
-val posinf_ok = store_thm(
-  "posinf_ok",
-  ``!f. ?y. !x. y < x ==> (eval_form f x = eval_form (posinf f) x)``,
+Theorem posinf_ok:
+    !f. ?y. !x. y < x ==> (eval_form f x = eval_form (posinf f) x)
+Proof
   Induct THEN SRW_TAC [][eval_form_def, posinf_def] THENL [
     Q.EXISTS_TAC `int_max y y'` THEN PROVE_TAC [INT_MAX_LT],
     Q.EXISTS_TAC `int_max y y'` THEN PROVE_TAC [INT_MAX_LT],
     PROVE_TAC [INT_LT_GT],
     PROVE_TAC [],
     PROVE_TAC [INT_LT_REFL]
-  ]);
+  ]
+QED
 
-val alldivide_def = Define
-  `(alldivide (Conjn f1 f2) d = alldivide f1 d /\ alldivide f2 d) /\
+Definition alldivide_def:
+   (alldivide (Conjn f1 f2) d = alldivide f1 d /\ alldivide f2 d) /\
    (alldivide (Disjn f1 f2) d = alldivide f1 d /\ alldivide f2 d) /\
    (alldivide (Negn f) d = alldivide f d) /\
    (alldivide (UnrelatedBool b) d = T) /\
    (alldivide (xLT i) d = T) /\
    (alldivide (LTx i) d = T) /\
    (alldivide (xEQ i) d = T) /\
-   (alldivide (xDivided i1 i2) d = i1 int_divides d)`;
+   (alldivide (xDivided i1 i2) d = i1 int_divides d)
+End
 
-val add_d_neginf = store_thm(
-  "add_d_neginf",
-  ``!f x y d. alldivide f d ==>
-              (eval_form (neginf f) x = eval_form (neginf f) (x + y * d))``,
+Theorem add_d_neginf:
+    !f x y d. alldivide f d ==>
+              (eval_form (neginf f) x = eval_form (neginf f) (x + y * d))
+Proof
   Induct THEN SRW_TAC [][eval_form_def, neginf_def, alldivide_def] THENL [
     PROVE_TAC [],
     PROVE_TAC [],
@@ -87,12 +93,13 @@ val add_d_neginf = store_thm(
     `x + y * d + i0 = y * d + (x + i0)` by
         CONV_TAC (AC_CONV(INT_ADD_ASSOC, INT_ADD_COMM)) THEN
     PROVE_TAC [INT_DIVIDES_LADD]
-  ]);
+  ]
+QED
 
-val add_d_posinf = store_thm(
-  "add_d_posinf",
-  ``!f x y d. alldivide f d ==>
-              (eval_form (posinf f) x = eval_form (posinf f) (x + y * d))``,
+Theorem add_d_posinf:
+    !f x y d. alldivide f d ==>
+              (eval_form (posinf f) x = eval_form (posinf f) (x + y * d))
+Proof
   Induct THEN SRW_TAC [][eval_form_def, posinf_def, alldivide_def] THENL [
     PROVE_TAC [],
     PROVE_TAC [],
@@ -100,50 +107,55 @@ val add_d_posinf = store_thm(
     `x + y * d + i0 = y * d + (x + i0)` by
         CONV_TAC (AC_CONV(INT_ADD_ASSOC, INT_ADD_COMM)) THEN
     PROVE_TAC [INT_DIVIDES_LADD]
-  ]);
+  ]
+QED
 
-val neginf_disj1_implies_exoriginal = store_thm(
-  "neginf_disj1_implies_exoriginal",
-  ``!f d i.
+Theorem neginf_disj1_implies_exoriginal:
+    !f d i.
       alldivide f d ==> 0 < i /\ i <= d /\ eval_form (neginf f) i ==>
-      ?x. eval_form f x``,
+      ?x. eval_form f x
+Proof
   SRW_TAC [][] THEN
   STRIP_ASSUME_TAC (Q.SPEC `f` neginf_ok) THEN
   `0 < d` by PROVE_TAC [INT_LTE_TRANS] THEN
   `?c. i - c * d < y` by PROVE_TAC [can_get_small] THEN
   FULL_SIMP_TAC std_ss [int_sub, INT_NEG_LMUL] THEN
-  PROVE_TAC [add_d_neginf]);
+  PROVE_TAC [add_d_neginf]
+QED
 
-val posinf_disj1_implies_exoriginal = store_thm(
-  "posinf_disj1_implies_exoriginal",
-  ``!f d i.
+Theorem posinf_disj1_implies_exoriginal:
+    !f d i.
       alldivide f d ==> 0 < i /\ i <= d /\ eval_form (posinf f) i ==>
-      ?x. eval_form f x``,
+      ?x. eval_form f x
+Proof
   SRW_TAC [][] THEN
   STRIP_ASSUME_TAC (Q.SPEC `f` posinf_ok) THEN
   `0 < d` by PROVE_TAC [INT_LTE_TRANS] THEN
   `?c. y < i + c * d` by PROVE_TAC [can_get_big] THEN
-  PROVE_TAC [add_d_posinf]);
+  PROVE_TAC [add_d_posinf]
+QED
 
-val Aset_def = Define
-  `(Aset pos (Conjn f1 f2) = Aset pos f1 UNION Aset pos f2) /\
+Definition Aset_def:
+   (Aset pos (Conjn f1 f2) = Aset pos f1 UNION Aset pos f2) /\
    (Aset pos (Disjn f1 f2) = Aset pos f1 UNION Aset pos f2) /\
    (Aset pos (Negn f) = Aset (~pos) f) /\
    (Aset pos (UnrelatedBool b) = {}) /\
    (Aset pos (xLT i) = if pos then {i} else {}) /\
    (Aset pos (LTx i) = if pos then {} else {i + 1}) /\
    (Aset pos (xEQ i) = if pos then {i + 1} else {i}) /\
-   (Aset pos (xDivided i1 i2) = {})`;
+   (Aset pos (xDivided i1 i2) = {})
+End
 
-val Bset_def = Define
-  `(Bset pos (Conjn f1 f2) = Bset pos f1 UNION Bset pos f2) /\
+Definition Bset_def:
+   (Bset pos (Conjn f1 f2) = Bset pos f1 UNION Bset pos f2) /\
    (Bset pos (Disjn f1 f2) = Bset pos f1 UNION Bset pos f2) /\
    (Bset pos (Negn f) = Bset (~pos) f) /\
    (Bset pos (UnrelatedBool b) = {}) /\
    (Bset pos (xLT i) = if pos then {} else {i + ~1}) /\
    (Bset pos (LTx i) = if pos then {i} else {}) /\
    (Bset pos (xEQ i) = if pos then {i + ~1} else {i}) /\
-   (Bset pos (xDivided i1 i2) = {})`;
+   (Bset pos (xDivided i1 i2) = {})
+End
 
 val predset_lemma = prove(
   ``!P Q R. P UNION Q SUBSET R = P SUBSET R /\ Q SUBSET R``,
@@ -276,13 +288,13 @@ val posinf_lemma =
            (Q.INST [`g` |-> `f`, `pos` |-> `T`]
                    (SPEC_ALL posinf_inductive_case)))
 
-val neginf_exoriginal_implies_rhs = store_thm(
-  "neginf_exoriginal_implies_rhs",
-  ``!f d x.
+Theorem neginf_exoriginal_implies_rhs:
+    !f d x.
        alldivide f d /\ 0 < d ==>
        eval_form f x ==>
        (?i. 0 < i /\ i <= d /\ eval_form (neginf f) i) \/
-       (?j b. 0 < j /\ j <= d /\ b IN Bset T f /\ eval_form f (b + j))``,
+       (?j b. 0 < j /\ j <= d /\ b IN Bset T f /\ eval_form f (b + j))
+Proof
   REPEAT STRIP_TAC THEN
   Cases_on
     `?j b. 0 < j /\ j <= d /\ b IN Bset T f /\ eval_form f (b + j)`
@@ -306,15 +318,16 @@ val neginf_exoriginal_implies_rhs = store_thm(
       FULL_SIMP_TAC std_ss [int_sub, INT_NEG_LMUL] THEN
       PROVE_TAC [add_d_neginf]
     ]
-  ]);
+  ]
+QED
 
-val posinf_exoriginal_implies_rhs = store_thm(
-  "posinf_exoriginal_implies_rhs",
-  ``!f d x.
+Theorem posinf_exoriginal_implies_rhs:
+    !f d x.
        alldivide f d /\ 0 < d ==>
        eval_form f x ==>
        (?i. 0 < i /\ i <= d /\ eval_form (posinf f) i) \/
-       (?j b. 0 < j /\ j <= d /\ b IN Aset T f /\ eval_form f (b + ~j))``,
+       (?j b. 0 < j /\ j <= d /\ b IN Aset T f /\ eval_form f (b + ~j))
+Proof
   REPEAT STRIP_TAC THEN
   Cases_on
     `?j b. 0 < j /\ j <= d /\ b IN Aset T f /\ eval_form f (b + ~j)`
@@ -338,46 +351,48 @@ val posinf_exoriginal_implies_rhs = store_thm(
       FULL_SIMP_TAC std_ss [int_sub, INT_NEG_LMUL] THEN
       PROVE_TAC [add_d_posinf]
     ]
-  ]);
+  ]
+QED
 
 
 
-val neginf_exoriginal_eq_rhs = store_thm(
-  "neginf_exoriginal_eq_rhs",
-  ``!f d.
+Theorem neginf_exoriginal_eq_rhs:
+    !f d.
        alldivide f d /\ 0 < d ==>
        ((?x. eval_form f x) =
            (?i. K (0 < i /\ i <= d) i /\ eval_form (neginf f) i) \/
            (?b j. (b IN Bset T f /\ K (0 < j /\ j <= d) j)  /\
-                  eval_form f (b + j)))``,
+                  eval_form f (b + j)))
+Proof
   REPEAT STRIP_TAC THEN EQ_TAC THEN
   REWRITE_TAC [combinTheory.K_THM, GSYM INT_NEG_MINUS1] THEN
   REPEAT STRIP_TAC THENL [
     IMP_RES_TAC neginf_exoriginal_implies_rhs THEN PROVE_TAC [],
     PROVE_TAC [neginf_disj1_implies_exoriginal],
     PROVE_TAC []
-  ]);
+  ]
+QED
 
-val posinf_exoriginal_eq_rhs = store_thm(
-  "posinf_exoriginal_eq_rhs",
-  ``!f d.
+Theorem posinf_exoriginal_eq_rhs:
+    !f d.
        alldivide f d /\ 0 < d ==>
        ((?x. eval_form f x) =
            (?i. K (0 < i /\ i <= d) i /\ eval_form (posinf f) i) \/
            (?b j. (b IN Aset T f /\ K (0 < j /\ j <= d) j) /\
-                  eval_form f (b + ~1 * j)))``,
+                  eval_form f (b + ~1 * j)))
+Proof
   REPEAT STRIP_TAC THEN EQ_TAC THEN
   REWRITE_TAC [combinTheory.K_THM, GSYM INT_NEG_MINUS1] THEN
   REPEAT STRIP_TAC THENL [
     IMP_RES_TAC posinf_exoriginal_implies_rhs THEN PROVE_TAC [],
     PROVE_TAC [posinf_disj1_implies_exoriginal],
     PROVE_TAC []
-  ]);
+  ]
+QED
 
 (* useful additional rewrites for the d.p. *)
-val in_bset = store_thm(
-  "in_bset",
-  ``((?b. b IN Bset pos (Conjn f1 f2) /\ P b) =
+Theorem in_bset:
+    ((?b. b IN Bset pos (Conjn f1 f2) /\ P b) =
           (?b. b IN Bset pos f1 /\ P b) \/ (?b. b IN Bset pos f2 /\ P b)) /\
     ((?b. b IN Bset pos (Disjn f1 f2) /\ P b) =
           (?b. b IN Bset pos f1 /\ P b) \/ (?b. b IN Bset pos f2 /\ P b)) /\
@@ -390,13 +405,14 @@ val in_bset = store_thm(
     ((?b. b IN Bset F (LTx i) /\ P b) = F) /\
     ((?b. b IN Bset T (xEQ i) /\ P b) = P (i + ~1)) /\
     ((?b. b IN Bset F (xEQ i) /\ P b) = P i) /\
-    ((?b. b IN Bset pos (xDivided i1 i2) /\ P b) = F)``,
+    ((?b. b IN Bset pos (xDivided i1 i2) /\ P b) = F)
+Proof
   SIMP_TAC std_ss [IN_UNION, NOT_IN_EMPTY, IN_SING, Bset_def] THEN
-  PROVE_TAC []);
+  PROVE_TAC []
+QED
 
-val in_aset = store_thm(
-  "in_aset",
-  ``((?a. a IN Aset pos (Conjn f1 f2) /\ P a) =
+Theorem in_aset:
+    ((?a. a IN Aset pos (Conjn f1 f2) /\ P a) =
           (?a. a IN Aset pos f1 /\ P a) \/ (?a. a IN Aset pos f2 /\ P a)) /\
     ((?a. a IN Aset pos (Disjn f1 f2) /\ P a) =
           (?a. a IN Aset pos f1 /\ P a) \/ (?a. a IN Aset pos f2 /\ P a)) /\
@@ -409,9 +425,11 @@ val in_aset = store_thm(
     ((?a. a IN Aset F (LTx i) /\ P a) = P (i + 1)) /\
     ((?a. a IN Aset T (xEQ i) /\ P a) = P (i + 1)) /\
     ((?a. a IN Aset F (xEQ i) /\ P a) = P i) /\
-    ((?a. a IN Aset pos (xDivided i1 i2) /\ P a) = F)``,
+    ((?a. a IN Aset pos (xDivided i1 i2) /\ P a) = F)
+Proof
   SIMP_TAC std_ss [IN_UNION, NOT_IN_EMPTY, IN_SING, Aset_def] THEN
-  PROVE_TAC []);
+  PROVE_TAC []
+QED
 
 
 

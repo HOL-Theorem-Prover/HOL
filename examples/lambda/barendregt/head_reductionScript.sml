@@ -597,7 +597,8 @@ QED
     Head normal form (hnf)
    ---------------------------------------------------------------------- *)
 
-val hnf_def = Define`hnf M = ∀N. ¬(M -h-> N)`;
+Definition hnf_def:  hnf M = ∀N. ¬(M -h-> N)
+End
 
 Theorem hnf_thm[simp] :
     (hnf (VAR s) ⇔ T) ∧
@@ -769,9 +770,9 @@ val wh_unique = store_thm(
   ``M -w-> N₁ ∧ M -w-> N₂ ⇒ (N₁ = N₂)``,
   METIS_TAC [hreduce1_unique, wh_head]);
 
-val whnf_def = Define`
+Definition whnf_def:
   whnf M = ∀N. ¬(M -w-> N)
-`;
+End
 
 val hnf_whnf = store_thm(
   "hnf_whnf",
@@ -892,9 +893,9 @@ QED
    as the relation on the RHS.  This means that has_bnf automatically implies
    has_hnf, but makes the corollary to the standardisation theorem interesting
    to prove... *)
-val has_whnf_def = Define`
+Definition has_whnf_def:
   has_whnf M = ∃N. M -w->* N ∧ whnf N
-`;
+End
 
 val has_whnf_APP_E = store_thm(
   "has_whnf_APP_E",
@@ -1149,9 +1150,9 @@ val head_reduces_TRANS = store_thm(
   METIS_TAC [relationTheory.RTC_RTC, head_reduces_RTC_hreduce1]);
 
 (* moved here from standardisationScript.sml *)
-val has_hnf_def = Define`
+Definition has_hnf_def:
   has_hnf M = ?N. M == N /\ hnf N
-`;
+End
 
 Theorem hnf_has_hnf :
     !M. hnf M ==> has_hnf M
@@ -1196,11 +1197,11 @@ val has_bnf_hnf = store_thm(
   SRW_TAC [][has_hnf_def, chap2Theory.has_bnf_def] THEN
   METIS_TAC [bnf_hnf]);
 
-val head_reduct_def = Define`
+Definition head_reduct_def:
   head_reduct M = if ?r. r is_head_redex M then
                     SOME (@N. M -h-> N)
                   else NONE
-`;
+End
 
 val head_reduct_unique = store_thm(
   "head_reduct_unique",

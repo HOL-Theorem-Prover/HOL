@@ -12,13 +12,13 @@ Libs
 (* Term programs is translated to equivalent A-Combinator Forms (ACF)        *)
 (*---------------------------------------------------------------------------*)
 
-val sc_def =
-  Define
-   `sc (f1:'a->'b) (f2:'b->'c) = \x. f2(f1 x)`;
+Definition sc_def:
+    sc (f1:'a->'b) (f2:'b->'c) = \x. f2(f1 x)
+End
 
-val cj_def =
- Define
-   `cj f1 f2 f3 = \x. if f1 x then f2 x else f3 x`;
+Definition cj_def:
+    cj f1 f2 f3 = \x. if f1 x then f2 x else f3 x
+End
 
 val tr_def =
  TotalDefn.DefineSchema

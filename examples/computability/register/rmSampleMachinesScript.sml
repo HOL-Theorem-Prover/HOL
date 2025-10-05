@@ -71,7 +71,7 @@ val identity_def = Define `
 `;
 *)
 
-val identity'_def = Define `
+Definition identity'_def:
   identity' = <|
   Q := {0;1};
   tf := (λs. case s of
@@ -82,9 +82,9 @@ val identity'_def = Define `
   In := [1;0;2];
   Out := 0;
   |>
-`;
+End
 
-val identity2_def = Define `
+Definition identity2_def:
   identity2 = <|
   Q := {10;11};
   tf := (λs. case s of
@@ -95,9 +95,9 @@ val identity2_def = Define `
   In := [10];
   Out := 10;
   |>
-`;
+End
 
-val empty_def = Define `
+Definition empty_def:
   empty = <|
       Q := {1} ;
       tf := (λn. Dec 0 (SOME 1) NONE) ;
@@ -105,9 +105,9 @@ val empty_def = Define `
       In := [0] ;
       Out := 0 ;
   |>
-`;
+End
 
-val empty'_def = Define `
+Definition empty'_def:
   empty' m = <|
       Q := {0} ;
       tf := (λn. Dec m (SOME 0) NONE) ;
@@ -115,9 +115,9 @@ val empty'_def = Define `
       In := [m] ;
       Out := m ;
   |>
-`;
+End
 
-val transfer_def = Define `
+Definition transfer_def:
   transfer = <|
       Q := {1;2} ;
       tf := (λn. case n of
@@ -128,9 +128,9 @@ val transfer_def = Define `
       In := [0] ;
       Out := 1 ;
   |>
-`;
+End
 
-val double_def = Define `
+Definition double_def:
   double = <|
     Q := {1;2;3};
     tf := (λs. case s of
@@ -142,7 +142,7 @@ val double_def = Define `
     In := [0];
     Out := 1;
     |>
-  `;
+End
 
 
 
@@ -228,7 +228,7 @@ Proof
 QED
 
 
-val addition_def = Define `
+Definition addition_def:
   addition = <|
       Q := {1;2;3;4;5} ;
       tf := (λn. case n of
@@ -242,7 +242,7 @@ val addition_def = Define `
       In := [1;2] ;
       Out := 1 ;
   |>
-`;
+End
 
 Theorem addition_facts[simp] = generate_machine_rwts addition_def
 
@@ -300,7 +300,7 @@ Proof
 QED
 
 
-val multiplication_def = Define `
+Definition multiplication_def:
    multiplication = <|
       Q := {1;2;3;4;5;6} ;
       tf := (λn. case n of
@@ -315,7 +315,7 @@ val multiplication_def = Define `
       In := [0;1] ;
       Out := 2 ;
   |>
-`;
+End
 
 
 Theorem multi_facts[simp] = generate_machine_rwts multiplication_def

@@ -38,10 +38,10 @@ and com_1_def = Define `com_1 = com rat_1 rat_0`;
 (*****************************************************************************)
 (* Define complex addition                                                   *)
 (*****************************************************************************)
-val COMPLEX_ADD_def =
- Define
-  `COMPLEX_ADD (com a1 b1) (com a2 b2) =
-    com (a1+a2) (b1+b2)`;
+Definition COMPLEX_ADD_def:
+   COMPLEX_ADD (com a1 b1) (com a2 b2) =
+    com (a1+a2) (b1+b2)
+End
 
 (*****************************************************************************)
 (* Overload "+" onto complex addition                                        *)
@@ -51,10 +51,10 @@ val _ = overload_on("+", ``COMPLEX_ADD``);
 (*****************************************************************************)
 (* Define complex subtraction                                                *)
 (*****************************************************************************)
-val COMPLEX_SUB_def =
- Define
-  `COMPLEX_SUB (com a1 b1) (com a2 b2) =
-    com (a1-a2) (b1-b2)`;
+Definition COMPLEX_SUB_def:
+   COMPLEX_SUB (com a1 b1) (com a2 b2) =
+    com (a1-a2) (b1-b2)
+End
 
 (*****************************************************************************)
 (* Overload "-" onto complex subtraction                                     *)
@@ -64,10 +64,10 @@ val _ = overload_on("-", ``COMPLEX_SUB``);
 (*****************************************************************************)
 (* Complex multiplication                                                    *)
 (*****************************************************************************)
-val COMPLEX_MULT_def =
- Define
-  `COMPLEX_MULT (com a1 b1) (com a2 b2) =
-    com ((a1*a2)-(b1*b2)) ((b1*a2)+(a1*b2))`;
+Definition COMPLEX_MULT_def:
+   COMPLEX_MULT (com a1 b1) (com a2 b2) =
+    com ((a1*a2)-(b1*b2)) ((b1*a2)+(a1*b2))
+End
 
 (*****************************************************************************)
 (* Overload "*" onto complex multiplication                                  *)
@@ -77,33 +77,33 @@ val _ = overload_on("*", ``COMPLEX_MULT``);
 (*****************************************************************************)
 (* Complex reciprocal (1/x)                                                  *)
 (*****************************************************************************)
-val COMPLEX_RECIPROCAL_def =
- Define
-  `COMPLEX_RECIPROCAL (com a b) = com (a/(a*a + b*b)) ((~b)/(a*a + b*b))`;
+Definition COMPLEX_RECIPROCAL_def:
+   COMPLEX_RECIPROCAL (com a b) = com (a/(a*a + b*b)) ((~b)/(a*a + b*b))
+End
 
 (*****************************************************************************)
 (* Complex comparisions                                                      *)
 (*****************************************************************************)
 
-val COMPLEX_LT_def =
- Define
-  `COMPLEX_LT (com ra ia) (com rb ib) =
-    (ra < rb) \/ ((ra = rb) /\ (ia < ib))`;
+Definition COMPLEX_LT_def:
+   COMPLEX_LT (com ra ia) (com rb ib) =
+    (ra < rb) \/ ((ra = rb) /\ (ia < ib))
+End
 
-val COMPLEX_LE_def =
- Define
-  `COMPLEX_LE (com ra ia) (com rb ib) =
-    (ra < rb) \/ ((ra = rb) /\ (ia <= ib))`;
+Definition COMPLEX_LE_def:
+   COMPLEX_LE (com ra ia) (com rb ib) =
+    (ra < rb) \/ ((ra = rb) /\ (ia <= ib))
+End
 
-val COMPLEX_GT_def =
- Define
-  `COMPLEX_GT (com ra ia) (com rb ib) =
-    (ra > rb) \/ ((ra = rb) /\ (ia > ib))`;
+Definition COMPLEX_GT_def:
+   COMPLEX_GT (com ra ia) (com rb ib) =
+    (ra > rb) \/ ((ra = rb) /\ (ia > ib))
+End
 
-val COMPLEX_GE_def =
- Define
-  `COMPLEX_GE (com ra ia) (com rb ib) =
-    (ra > rb) \/ ((ra = rb) /\ (ia >= ib))`;
+Definition COMPLEX_GE_def:
+   COMPLEX_GE (com ra ia) (com rb ib) =
+    (ra > rb) \/ ((ra = rb) /\ (ia >= ib))
+End
 
 (*****************************************************************************)
 (* Overload "<", ">", "<=",">=" onto complex comparisons                     *)
@@ -118,7 +118,8 @@ val _ = overload_on(">=",``COMPLEX_GE``);
 (* Complex negation                                                          *)
 (*****************************************************************************)
 
-val COMPLEX_NEG_def = Define `COMPLEX_NEG a = com_0 - a`;
+Definition COMPLEX_NEG_def:   COMPLEX_NEG a = com_0 - a
+End
 
 (*****************************************************************************)
 (* Overload "~" onto complex negation                                        *)
@@ -130,7 +131,8 @@ val _ = overload_on("~",``COMPLEX_NEG``);
 (* Complex division                                                          *)
 (*****************************************************************************)
 
-val COMPLEX_DIV_def = Define `COMPLEX_DIV a b = a * (COMPLEX_RECIPROCAL b)`;
+Definition COMPLEX_DIV_def:   COMPLEX_DIV a b = a * (COMPLEX_RECIPROCAL b)
+End
 
 (*****************************************************************************)
 (* Overload "/" onto complex division                                        *)
@@ -147,7 +149,8 @@ val _ = overload_on("/",``COMPLEX_DIV``);
 (*  MOD     : num -> num -> num   compute remainder (curried infix)          *)
 (*                                                                           *)
 (*****************************************************************************)
-val DIVIDES_def = Define `DIVIDES m n = (Num(ABS n) MOD Num(ABS m) = 0)`;
+Definition DIVIDES_def:   DIVIDES m n = (Num(ABS n) MOD Num(ABS m) = 0)
+End
 
 (*****************************************************************************)
 (* Test if a complex rational is an integer                                  *)
@@ -158,9 +161,9 @@ val DIVIDES_def = Define `DIVIDES m n = (Num(ABS n) MOD Num(ABS m) = 0)`;
 (*  rat_dnm : rat->int          get denominator                              *)
 (*                                                                           *)
 (*****************************************************************************)
-val IS_INT_def =
- Define
-  `IS_INT(com a b) = DIVIDES (rat_dnm a) (rat_nmr a) /\ (b = rat_0)`;
+Definition IS_INT_def:
+   IS_INT(com a b) = DIVIDES (rat_dnm a) (rat_nmr a) /\ (b = rat_0)
+End
 
 (*****************************************************************************)
 (* Need GCD to put a fraction in lowest terms for computing numerator and    *)
@@ -174,24 +177,24 @@ val IS_INT_def =
 (* Divide each component of a pair of integers by their gcd and return       *)
 (* the reduced pair: (x,y) |--> (x/(gcd x y), y/(gcd x y))                   *)
 (*****************************************************************************)
-val reduce_def =
- Define
-  `reduce(x,y) =
-    let n = &(gcd (Num(ABS x)) (Num(ABS y))) in (x/n, y/n)`;
+Definition reduce_def:
+   reduce(x,y) =
+    let n = &(gcd (Num(ABS x)) (Num(ABS y))) in (x/n, y/n)
+End
 
 (*****************************************************************************)
 (* Reduce a rational to lowest terms and return numerator as an integer      *)
 (*****************************************************************************)
-val reduced_nmr_def =
- Define
-  `reduced_nmr r = FST(reduce(rep_frac(rep_rat r)))`;
+Definition reduced_nmr_def:
+   reduced_nmr r = FST(reduce(rep_frac(rep_rat r)))
+End
 
 (*****************************************************************************)
 (* Reduce a rational to lowest terms and return denominator as an integer    *)
 (*****************************************************************************)
-val reduced_dnm_def =
- Define
-  `reduced_dnm r = SND(reduce(rep_frac(rep_rat r)))`;
+Definition reduced_dnm_def:
+   reduced_dnm r = SND(reduce(rep_frac(rep_rat r)))
+End
 
 (*****************************************************************************)
 (* Multiplication theorems for use in translation                            *)

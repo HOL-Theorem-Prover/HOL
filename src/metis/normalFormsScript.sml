@@ -54,13 +54,14 @@ val EXT_POINT_DEF =
 
 val _ = add_const "EXT_POINT";
 
-val EXT_POINT = store_thm
-  ("EXT_POINT",
-   ``!(f : 'a -> 'b) g. (f (EXT_POINT f g) = g (EXT_POINT f g)) = (f = g)``,
+Theorem EXT_POINT:
+     !(f : 'a -> 'b) g. (f (EXT_POINT f g) = g (EXT_POINT f g)) = (f = g)
+Proof
    REPEAT GEN_TAC THEN
    EQ_TAC THENL
    [MATCH_ACCEPT_TAC EXT_POINT_DEF,
-    DISCH_THEN (fn th => REWRITE_TAC [th])]);
+    DISCH_THEN (fn th => REWRITE_TAC [th])]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* UNIV_POINT                                                                *)
@@ -85,11 +86,12 @@ val UNIV_POINT_DEF =
 
 val _ = add_const "UNIV_POINT";
 
-val UNIV_POINT = store_thm
-  ("UNIV_POINT",
-   ``!p. p (UNIV_POINT p) = !x : 'a. p x``,
+Theorem UNIV_POINT:
+     !p. p (UNIV_POINT p) = !x : 'a. p x
+Proof
    GEN_TAC THEN
    EQ_TAC THENL
    [MATCH_ACCEPT_TAC UNIV_POINT_DEF,
-    DISCH_THEN MATCH_ACCEPT_TAC]);
+    DISCH_THEN MATCH_ACCEPT_TAC]
+QED
 

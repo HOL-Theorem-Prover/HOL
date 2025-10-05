@@ -61,11 +61,13 @@ val Simplify = R_TAC;
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val mult_group_def = Define
-  `mult_group n =
-   ((\x. x IN gset (add_group n) /\ (gcd n x = 1)), (\x y. (x * y) MOD n))`;
+Definition mult_group_def:
+   mult_group n =
+   ((\x. x IN gset (add_group n) /\ (gcd n x = 1)), (\x y. (x * y) MOD n))
+End
 
-val totient_def = Define `totient n = CARD (gset (mult_group n))`;
+Definition totient_def:   totient n = CARD (gset (mult_group n))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)

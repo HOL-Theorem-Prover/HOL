@@ -94,8 +94,9 @@ val UU_def =
 (* Definition of set inclusion.                                              *)
 (*****************************************************************************)
 val _ = set_fixity "Subset" (Infix(NONASSOC, 540));
-val Subset_def =
- Define `s Subset t = !x. x In s ==> x In t`;
+Definition Subset_def:
+  s Subset t = !x. x In s ==> x In t
+End
 
 (*****************************************************************************)
 (* Axiom of power-sets.                                                      *)
@@ -243,8 +244,9 @@ val PairingFun_def =
    ["PairingFun"] ,
    (CONV_RULE SKOLEM_CONV Pairing));
 
-val Upair_def =
- Define `Upair x y = Spec (PairingFun x y) (\z. (z = x) \/ (z = y))`;
+Definition Upair_def:
+  Upair x y = Spec (PairingFun x y) (\z. (z = x) \/ (z = y))
+End
 
 val InUpair =
  store_thm
@@ -269,9 +271,9 @@ val U_def =
 (*****************************************************************************)
 (* Successor of a set.                                                       *)
 (*****************************************************************************)
-val Suc_def =
- Define
-  `Suc x = x U (Singleton x)`;
+Definition Suc_def:
+   Suc x = x U (Singleton x)
+End
 
 (*****************************************************************************)
 (* Axiom of Infinity.                                                        *)

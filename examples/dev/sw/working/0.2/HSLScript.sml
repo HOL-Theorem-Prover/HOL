@@ -4,17 +4,17 @@
 (*
 quietdec := true;
 
-app load ["arithmeticTheory", "wordsTheory", "wordsLib", "pairTheory", "listTheory", "whileTheory", "finite_mapTheory",
+app load ["arithmeticTheory", "wordsTheory", "wordsLib", "pairTheory", "listTheory", "WhileTheory", "finite_mapTheory",
           "CFLTheory", "ACFTheory"];
 
-open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLib pairTheory listTheory whileTheory
+open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLib pairTheory listTheory WhileTheory
      finite_mapTheory CFLTheory ACFTheory;
 
 quietdec := false;
 *)
 Theory HSL
 Ancestors
-  arithmetic words pair list while finite_map CFL ACF
+  arithmetic words pair list While finite_map CFL ACF
 Libs
   numLib wordsLib
 

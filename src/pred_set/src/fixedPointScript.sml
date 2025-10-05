@@ -176,62 +176,71 @@ val fnsum_def = new_definition(
 val _ = set_fixity "++" (Infixl 480)
 val _ = inferior_overload_on ("++", “fnsum”);
 
-val fnsum_monotone = store_thm(
-  "fnsum_monotone",
-  “!f1 f2. monotone f1 /\ monotone f2 ==> monotone (fnsum f1 f2)”,
+Theorem fnsum_monotone:
+   !f1 f2. monotone f1 /\ monotone f2 ==> monotone (fnsum f1 f2)
+Proof
   ASM_SIMP_TAC bool_ss [fnsum_def, monotone_def] THEN
   REPEAT STRIP_TAC THEN
   ‘f1 X SUBSET f1 Y’ by PROVE_TAC [] THEN
   ‘f2 X SUBSET f2 Y’ by PROVE_TAC [] THEN
-  PROVE_TAC [SUBSET_DEF, IN_UNION]);
+  PROVE_TAC [SUBSET_DEF, IN_UNION]
+QED
 
 val empty_def = new_definition("empty_def", “empty = \X. {}”);
 
-val empty_monotone = store_thm(
-  "empty_monotone",
-  “monotone empty”,
-  SRW_TAC [][monotone_def, empty_def]);
+Theorem empty_monotone:
+   monotone empty
+Proof
+  SRW_TAC [][monotone_def, empty_def]
+QED
 
-val fnsum_empty = store_thm(
-  "fnsum_empty",
-  “!f. (f ++ empty = f) /\ (empty ++ f = f)”,
-  SRW_TAC [][empty_def, fnsum_def, FUN_EQ_THM]);
+Theorem fnsum_empty:
+   !f. (f ++ empty = f) /\ (empty ++ f = f)
+Proof
+  SRW_TAC [][empty_def, fnsum_def, FUN_EQ_THM]
+QED
 
-val fnsum_ASSOC = store_thm(
-  "fnsum_ASSOC",
-  “!f g h. fnsum f (fnsum g h) = fnsum (fnsum f g) h”,
+Theorem fnsum_ASSOC:
+   !f g h. fnsum f (fnsum g h) = fnsum (fnsum f g) h
+Proof
   REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN
-  SIMP_TAC bool_ss [fnsum_def, UNION_ASSOC]);
+  SIMP_TAC bool_ss [fnsum_def, UNION_ASSOC]
+QED
 
-val fnsum_COMM = store_thm(
-  "fnsum_COMM",
-  “!f g. fnsum f g = fnsum g f”,
+Theorem fnsum_COMM:
+   !f g. fnsum f g = fnsum g f
+Proof
   REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN
-  SIMP_TAC bool_ss [fnsum_def, UNION_COMM]);
+  SIMP_TAC bool_ss [fnsum_def, UNION_COMM]
+QED
 
 
-val fnsum_SUBSET = store_thm(
-  "fnsum_SUBSET",
-  “!f g X. f X SUBSET fnsum f g X /\ g X SUBSET fnsum f g X”,
-  SIMP_TAC bool_ss [fnsum_def, SUBSET_DEF, IN_UNION]);
+Theorem fnsum_SUBSET:
+   !f g X. f X SUBSET fnsum f g X /\ g X SUBSET fnsum f g X
+Proof
+  SIMP_TAC bool_ss [fnsum_def, SUBSET_DEF, IN_UNION]
+QED
 
-val lfp_fnsum = store_thm(
-  "lfp_fnsum",
-  “!f1 f2. monotone f1 /\ monotone f2 ==>
+Theorem lfp_fnsum:
+   !f1 f2. monotone f1 /\ monotone f2 ==>
             lfp f1 SUBSET lfp (fnsum f1 f2) /\
-            lfp f2 SUBSET lfp (fnsum f1 f2)”,
+            lfp f2 SUBSET lfp (fnsum f1 f2)
+Proof
   PROVE_TAC [lfp_least_closed, closed_def, fnsum_monotone,
-             fnsum_SUBSET, SUBSET_TRANS, lfp_induction]);
+             fnsum_SUBSET, SUBSET_TRANS, lfp_induction]
+QED
 
-val lfp_rule_applied = store_thm(
-  "lfp_rule_applied",
-  “!f X y. monotone f /\ X SUBSET lfp f /\ y IN f X ==> y IN lfp f”,
+Theorem lfp_rule_applied:
+   !f X y. monotone f /\ X SUBSET lfp f /\ y IN f X ==> y IN lfp f
+Proof
   REPEAT STRIP_TAC THEN
   ‘f X SUBSET f (lfp f)’ by PROVE_TAC [monotone_def] THEN
-  PROVE_TAC [lfp_fixedpoint, SUBSET_DEF]);
+  PROVE_TAC [lfp_fixedpoint, SUBSET_DEF]
+QED
 
-val lfp_empty = store_thm(
-  "lfp_empty",
-  “!f x. monotone f /\ x IN f {} ==> x IN lfp f”,
-  PROVE_TAC [EMPTY_SUBSET, lfp_rule_applied]);
+Theorem lfp_empty:
+   !f x. monotone f /\ x IN f {} ==> x IN lfp f
+Proof
+  PROVE_TAC [EMPTY_SUBSET, lfp_rule_applied]
+QED
 

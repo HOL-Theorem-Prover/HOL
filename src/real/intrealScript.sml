@@ -61,9 +61,11 @@ End
    Theorems
    ------------------------------------------------------------------------- *)
 
-val real_of_int_monotonic = Q.store_thm("real_of_int_monotonic",
-  `!i j. i < j ==> real_of_int i < real_of_int j`,
-  Cases \\ Cases \\ srw_tac[][real_of_int] \\ ARITH_TAC)
+Theorem real_of_int_monotonic:
+   !i j. i < j ==> real_of_int i < real_of_int j
+Proof
+  Cases \\ Cases \\ srw_tac[][real_of_int] \\ ARITH_TAC
+QED
 
 val real_arch_least1 =
   REAL_ARCH_LEAST
@@ -351,9 +353,10 @@ val INT_CEILING_IMP = Q.prove (
   \\ ARITH_TAC
   )
 
-val INT_CEILING_INT_FLOOR = Q.store_thm("INT_CEILING_INT_FLOOR",
-  `!r. INT_CEILING r =
-       let i = INT_FLOOR r in if real_of_int i = r then i else i + 1`,
+Theorem INT_CEILING_INT_FLOOR:
+   !r. INT_CEILING r =
+       let i = INT_FLOOR r in if real_of_int i = r then i else i + 1
+Proof
   lrw []
   \\ match_mp_tac INT_CEILING_IMP
   >- (`INT_FLOOR r - 1 < INT_FLOOR r` by ARITH_TAC
@@ -363,7 +366,7 @@ val INT_CEILING_INT_FLOOR = Q.store_thm("INT_CEILING_INT_FLOOR",
   \\ simp [ARITH_PROVE ``a + 1 -1i = a``,
            REAL_ARITH ``a <= b /\ a <> b ==> a < b: real``,
            INT_FLOOR_BOUNDS, REAL_LT_IMP_LE]
-  )
+QED
 
 (* cf. INT_CEILING_BOUNDS' for another form where ‘real_of_int (INT_CEILING r)’
        stays in the middle.
@@ -423,38 +426,52 @@ Theorem INT_CEILING_COMPUTE[compute,simp] =
 val () = () (* makes Theorem syntax work *)
 end (* local *)
 
-val real_of_int_add = store_thm("real_of_int_add[simp]",
-  ``real_of_int (m + n) = real_of_int m + real_of_int n``,
+Theorem real_of_int_add[simp]:
+    real_of_int (m + n) = real_of_int m + real_of_int n
+Proof
   Cases_on `m` \\ Cases_on `n` \\ fs [real_of_int_def] \\ rw []
   \\ fs [INT_ADD_CALCULATE]
-  \\ rw [] \\ fs [] \\ fs [GSYM NOT_LESS,add_ints]);
+  \\ rw [] \\ fs [] \\ fs [GSYM NOT_LESS,add_ints]
+QED
 
-val real_of_int_neg = store_thm("real_of_int_neg[simp]",
-  ``real_of_int (-m) = -real_of_int m``,
-  Cases_on `m` \\ fs [real_of_int_def]);
+Theorem real_of_int_neg[simp]:
+    real_of_int (-m) = -real_of_int m
+Proof
+  Cases_on `m` \\ fs [real_of_int_def]
+QED
 
-val real_of_int_sub = store_thm("real_of_int_sub[simp]",
-  ``real_of_int (m - n) = real_of_int m - real_of_int n``,
-  fs [int_sub,real_sub]);
+Theorem real_of_int_sub[simp]:
+    real_of_int (m - n) = real_of_int m - real_of_int n
+Proof
+  fs [int_sub,real_sub]
+QED
 
-val real_of_int_mul = store_thm("real_of_int_mul[simp]",
-  ``real_of_int (m * n) = real_of_int m * real_of_int n``,
+Theorem real_of_int_mul[simp]:
+    real_of_int (m * n) = real_of_int m * real_of_int n
+Proof
   Cases_on `m` \\ Cases_on `n` \\ fs [real_of_int_def] \\ rw []
-  \\ fs [INT_MUL_CALCULATE]);
+  \\ fs [INT_MUL_CALCULATE]
+QED
 
-val real_of_int_lt = store_thm("real_of_int_lt[simp]",
-  “real_of_int m < real_of_int n <=> m < n”,
+Theorem real_of_int_lt[simp]:
+   real_of_int m < real_of_int n <=> m < n
+Proof
   simp[real_of_int_def] >> map_every Cases_on [‘m’, ‘n’] >>
-  simp[]);
+  simp[]
+QED
 
-val real_of_int_11 = store_thm("real_of_int_11[simp]",
-  “(real_of_int m = real_of_int n) <=> (m = n)”,
+Theorem real_of_int_11[simp]:
+   (real_of_int m = real_of_int n) <=> (m = n)
+Proof
   simp[real_of_int_def] >> map_every Cases_on [‘m’, ‘n’] >>
-  simp[]);
+  simp[]
+QED
 
-val real_of_int_le = store_thm("real_of_int_le[simp]",
-  “real_of_int m <= real_of_int n <=> m <= n”,
-  simp[REAL_LE_LT, INT_LE_LT]);
+Theorem real_of_int_le[simp]:
+   real_of_int m <= real_of_int n <=> m <= n
+Proof
+  simp[REAL_LE_LT, INT_LE_LT]
+QED
 
 Theorem INT_FLOOR_MONO:
   x < y ==> INT_FLOOR x <= INT_FLOOR y

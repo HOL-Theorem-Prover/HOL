@@ -172,7 +172,8 @@ val _ = intLib.deprecate_int ();
 (* ------------------------------------------------------------------------- *)
 
 (* Linear factor (x - c) *)
-val poly_factor_def = Define `poly_factor (r:'a ring) (c:'a) = -c :: |1|`;
+Definition poly_factor_def:   poly_factor (r:'a ring) (c:'a) = -c :: |1|
+End
 
 val _ = overload_on ("factor", ``poly_factor r``);
 

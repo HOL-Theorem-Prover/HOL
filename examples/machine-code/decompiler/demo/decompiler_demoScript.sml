@@ -21,11 +21,12 @@ val (arm_th,arm_defs) = decompile_arm "arm_length" `
 
 (* formalising notion of linked-list *)
 
-val llist_def = Define `
+Definition llist_def:
   (llist [] (a:word32,dm,m:word32->word32) <=> (a = 0w)) /\
   (llist (x::xs) (a,dm,m) <=>
      ~(a = 0w) /\ (a && 3w = 0w) /\ {a;a+4w} SUBSET dm /\
-     ?a'. (m a = a') /\ (m (a+4w) = x) /\ llist xs (a',dm,m))`;
+     ?a'. (m a = a') /\ (m (a+4w) = x) /\ llist xs (a',dm,m))
+End
 
 (* verification proof *)
 

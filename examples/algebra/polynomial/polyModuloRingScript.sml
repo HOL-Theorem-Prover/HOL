@@ -182,10 +182,10 @@ val _ = hide "Z";
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of polynomial remainders modulo z *)
-val poly_remainders_def = Define`
+Definition poly_remainders_def:
     poly_remainders (r:'a  ring) (z:'a poly) =
        {p | poly p /\ (if deg z = 0 then p = |0| else deg p < deg z) }
-`;
+End
 
 (* Theorem: properties of poly_remainders r z *)
 (* Proof: by poly_remainders_def. *)
@@ -196,7 +196,7 @@ val poly_remainders_property = store_thm(
   rw[poly_remainders_def]);
 
 (* Modulo Ring by division of a polynomial *)
-val poly_mod_ring_def = Define`
+Definition poly_mod_ring_def:
   poly_mod_ring (r:'a ring) (z:'a poly) =
     <| carrier := poly_remainders r z;
            sum := <| carrier := poly_remainders r z;
@@ -206,7 +206,7 @@ val poly_mod_ring_def = Define`
                           op := (\(x:'a poly) (y:'a poly). (x * y) % z);
                           id := if deg z = 0 then |0| else |1| |>
      |>
-`;
+End
 (* Note: need to use (r:'a ring) due to x % y = poly_mod r x y *)
 (* Note: when deg z = 0, poly_remainders r z = {|0|}, so prod.id = |0| to be an element. *)
 

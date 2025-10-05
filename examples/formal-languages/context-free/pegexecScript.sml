@@ -23,17 +23,17 @@ Datatype:
   | failed
 End
 
-val poplist_aux_def = Define`
+Definition poplist_aux_def:
   poplist_aux acc (SOME h::t) = poplist_aux (h::acc) t ∧
   poplist_aux acc (NONE::t) = (acc,t) ∧
   poplist_aux acc [] = (acc,[]) (* should never happen *)
-`;
+End
 
-val poplistval_def = Define`
+Definition poplistval_def:
   poplistval f l = let (values,rest) = poplist_aux [] l
                    in
                      SOME(f values) :: rest
-`;
+End
 
 Datatype:
   evalcase = EV (('atok,'bnt,'cvalue,'err) pegsym)

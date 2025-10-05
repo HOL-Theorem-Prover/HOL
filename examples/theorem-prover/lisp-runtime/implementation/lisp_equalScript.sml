@@ -78,23 +78,26 @@ val REST = LISP |> cdr |> cdr |> cdr |> cdr |> cdr |> cdr |> cdr |> cdr |> cdr;
 val STAT = LISP |> car |> car |> cdr;
 val VAR_REST = LISP |> car |> cdr |> cdr |> cdr |> cdr |> cdr |> cdr |> cdr;
 
-val lisp_equal_stack_def = Define `
+Definition lisp_equal_stack_def:
   (lisp_equal_stack [] xx yy zz = T) /\
   (lisp_equal_stack ((w0,x0,w1,x1)::ys) ^STAT (x2,x3,x4,x5,^VAR_REST) (w2,w3,w4,w5,df,f,^REST) =
      LDEPTH x0 + LENGTH ys <= e /\ LDEPTH x1 + LENGTH ys <= e /\
      lisp_inv ^STAT (x0,x1,x2,x3,x4,x5,^VAR_REST) (w0,w1,w2,w3,w4,w5,df,f,^REST) /\
-     lisp_equal_stack ys ^STAT (x2,x3,x4,x5,^VAR_REST) (w2,w3,w4,w5,df,f,^REST))`;
+     lisp_equal_stack ys ^STAT (x2,x3,x4,x5,^VAR_REST) (w2,w3,w4,w5,df,f,^REST))
+End
 
-val one_eq_stack_def = Define `
+Definition one_eq_stack_def:
   (one_eq_stack bp [] = emp) /\
   (one_eq_stack bp ((w0,x0,w1,x1)::ys) =
      one (bp + n2w (8 * LENGTH ys), w0) *
      one (bp + n2w (8 * LENGTH ys + 4), w1) *
-     one_eq_stack bp ys)`;
+     one_eq_stack bp ys)
+End
 
-val lisp_eq_measure_def = Define `
+Definition lisp_eq_measure_def:
   (lisp_eq_measure [] = 0) /\
-  (lisp_eq_measure ((w0:word32,x0,w1:word32,x1)::ys) = 3*LSIZE x0 + 3*LSIZE x1 + lisp_eq_measure ys)`;
+  (lisp_eq_measure ((w0:word32,x0,w1:word32,x1)::ys) = 3*LSIZE x0 + 3*LSIZE x1 + lisp_eq_measure ys)
+End
 
 val w2w_lemma = prove(
   ``!w v. ((w2w w = (w2w v):word64) = (w = v:word32)) /\

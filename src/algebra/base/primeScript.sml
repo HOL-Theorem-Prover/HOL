@@ -207,14 +207,15 @@ else (* precompute *) let x = 2 * r-th root of (n DIV (2 ** r))
    = if (m + 1) ** k <= n then (m + 1) else m          by ADD1
    = m + if (m + 1) ** k <= n then 1 else 0            by arithmetic
 *)
-val ROOT_EQN = store_thm(
-  "ROOT_EQN",
-  ``!r n. 0 < r ==> (ROOT r n =
-         let m = 2 * ROOT r (n DIV 2 ** r) in m + if (m + 1) ** r <= n then 1 else 0)``,
+Theorem ROOT_EQN:
+    !r n. 0 < r ==> (ROOT r n =
+         let m = 2 * ROOT r (n DIV 2 ** r) in m + if (m + 1) ** r <= n then 1 else 0)
+Proof
   rw_tac std_ss[] >>
   Cases_on `(m + 1) ** r <= n` >-
   rw[ROOT_COMPUTE, ADD1] >>
-  rw[ROOT_COMPUTE, ADD1]);
+  rw[ROOT_COMPUTE, ADD1]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Square Root                                                               *)
@@ -279,10 +280,11 @@ LOG        |- !a n. 1 < a /\ 0 < n ==> a ** LOG a n <= n /\ n < a ** SUC (LOG a 
 
 (* Theorem: SQ (SQRT n) <= n *)
 (* Proof: by SQRT_PROPERTY, EXP_2 *)
-val SQ_SQRT_LE = store_thm(
-  "SQ_SQRT_LE",
-  ``!n. SQ (SQRT n) <= n``,
-  metis_tac[SQRT_PROPERTY, EXP_2]);
+Theorem SQ_SQRT_LE:
+    !n. SQ (SQRT n) <= n
+Proof
+  metis_tac[SQRT_PROPERTY, EXP_2]
+QED
 
 (* Extract theorem *)
 Theorem SQ_SQRT_LE_alt = SQRT_PROPERTY |> SPEC_ALL |> CONJUNCT1 |> GEN_ALL;
@@ -294,10 +296,11 @@ Theorem SQ_SQRT_LE_alt = SQRT_PROPERTY |> SPEC_ALL |> CONJUNCT1 |> GEN_ALL;
    = SQRT (n ** 2)     by EXP_2
    = n                 by SQRT_EXP_2
 *)
-val SQRT_SQ = store_thm(
-  "SQRT_SQ",
-  ``!n. SQRT (SQ n) = n``,
-  metis_tac[SQRT_EXP_2, EXP_2]);
+Theorem SQRT_SQ:
+    !n. SQRT (SQ n) = n
+Proof
+  metis_tac[SQRT_EXP_2, EXP_2]
+QED
 
 (* Theorem: SQRT n <= n *)
 (* Proof:
@@ -305,10 +308,11 @@ val SQRT_SQ = store_thm(
    Thus SQRT n <= SQRT (n ** 2)   by SQRT_LE
      or SQRT n <= n               by SQRT_EXP_2
 *)
-val SQRT_LE_SELF = store_thm(
-  "SQRT_LE_SELF",
-  ``!n. SQRT n <= n``,
-  metis_tac[SELF_LE_SQ, SQRT_LE, SQRT_EXP_2]);
+Theorem SQRT_LE_SELF:
+    !n. SQRT n <= n
+Proof
+  metis_tac[SELF_LE_SQ, SQRT_LE, SQRT_EXP_2]
+QED
 
 (* Theorem: SQRT n <= m ==> n <= 3 * (m ** 2) *)
 (* Proof:
@@ -318,9 +322,9 @@ val SQRT_LE_SELF = store_thm(
           <= m ** 2 + 2 * m ** 2               by arithmetic
            = 3 * m ** 2
 *)
-val SQRT_LE_IMP = store_thm(
-  "SQRT_LE_IMP",
-  ``!n m. SQRT n <= m ==> n <= 3 * (m ** 2)``,
+Theorem SQRT_LE_IMP:
+    !n m. SQRT n <= m ==> n <= 3 * (m ** 2)
+Proof
   rpt strip_tac >>
   `n < (SUC (SQRT n)) ** 2` by rw[SQRT_PROPERTY] >>
   `SUC (SQRT n) ** 2 = SUC ((SQRT n) ** 2) + 2 * SQRT n` by rw[SUC_SQ] >>
@@ -328,7 +332,8 @@ val SQRT_LE_IMP = store_thm(
   `2 * SQRT n <= 2 * m` by rw[] >>
   `2 * m <= 2 * m * m` by rw[] >>
   `2 * m * m = 2 * m ** 2` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (SQRT n) * (SQRT m) <= SQRT (n * m) *)
 (* Proof:
@@ -492,13 +497,14 @@ QED
      and           0 < 0 < SUC (LOG2 n)         by prim_recTheory.LESS_0
    Therefore 0 < SUC (LOG2 n) * (m ** 2 DIV 2)  by ZERO_LESS_MULT
 *)
-val LOG2_SUC_TIMES_SQ_DIV_2_POS = store_thm(
-  "LOG2_SUC_TIMES_SQ_DIV_2_POS",
-  ``!n m. 1 < m ==> 0 < SUC (LOG2 n) * (m ** 2 DIV 2)``,
+Theorem LOG2_SUC_TIMES_SQ_DIV_2_POS:
+    !n m. 1 < m ==> 0 < SUC (LOG2 n) * (m ** 2 DIV 2)
+Proof
   rpt strip_tac >>
   `1 < m ** 2 DIV 2` by rw[ONE_LT_HALF_SQ] >>
   `0 < m ** 2 DIV 2 /\ 0 < SUC (LOG2 n)` by decide_tac >>
-  rw[ZERO_LESS_MULT]);
+  rw[ZERO_LESS_MULT]
+QED
 
 (* Theorem: 1 < n ==> LOG2 (HALF n) = (LOG2 n) - 1 *)
 (* Proof:
@@ -506,22 +512,24 @@ val LOG2_SUC_TIMES_SQ_DIV_2_POS = store_thm(
    val it = |- 1 < 2 /\ 2 <= n ==> LOG2 n = 1 + LOG2 (HALF n): thm
    Hence the result.
 *)
-val LOG2_HALF = store_thm(
-  "LOG2_HALF",
-  ``!n. 1 < n ==> (LOG2 (HALF n) = (LOG2 n) - 1)``,
+Theorem LOG2_HALF:
+    !n. 1 < n ==> (LOG2 (HALF n) = (LOG2 n) - 1)
+Proof
   rpt strip_tac >>
   `LOG2 n = 1 + LOG2 (HALF n)` by rw[LOG_DIV] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 1 < n ==> (LOG2 n = 1 + LOG2 (HALF n)) *)
 (* Proof: by LOG_DIV:
 > LOG_DIV |> SPEC ``2``;
 val it = |- !x. 1 < 2 /\ 2 <= x ==> (LOG2 x = 1 + LOG2 (HALF x)): thm
 *)
-val LOG2_BY_HALF = store_thm(
-  "LOG2_BY_HALF",
-  ``!n. 1 < n ==> (LOG2 n = 1 + LOG2 (HALF n))``,
-  rw[LOG_DIV]);
+Theorem LOG2_BY_HALF:
+    !n. 1 < n ==> (LOG2 n = 1 + LOG2 (HALF n))
+Proof
+  rw[LOG_DIV]
+QED
 
 (* Theorem: 2 ** m < n ==> LOG2 (n DIV 2 ** m) = (LOG2 n) - m *)
 (* Proof:
@@ -585,16 +593,17 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define halves n = count of HALFs of n to 0, recursively. *)
-val halves_def = Define`
+Definition halves_def:
     halves n = if n = 0 then 0 else SUC (halves (HALF n))
-`;
+End
 
 (* Theorem: halves n = if n = 0 then 0 else 1 + (halves (HALF n)) *)
 (* Proof: by halves_def, ADD1 *)
-val halves_alt = store_thm(
-  "halves_alt",
-  ``!n. halves n = if n = 0 then 0 else 1 + (halves (HALF n))``,
-  rw[Once halves_def, ADD1]);
+Theorem halves_alt:
+    !n. halves n = if n = 0 then 0 else 1 + (halves (HALF n))
+Proof
+  rw[Once halves_def, ADD1]
+QED
 
 (* Extract theorems from definition *)
 val halves_0 = save_thm("halves_0[simp]", halves_def |> SPEC ``0`` |> SIMP_RULE arith_ss[]);
@@ -606,10 +615,11 @@ val halves_2 = save_thm("halves_2[simp]", halves_def |> SPEC ``2`` |> SIMP_RULE 
 
 (* Theorem: 0 < n ==> 0 < halves n *)
 (* Proof: by halves_def *)
-val halves_pos = store_thm(
-  "halves_pos[simp]",
-  ``!n. 0 < n ==> 0 < halves n``,
-  rw[Once halves_def]);
+Theorem halves_pos[simp]:
+    !n. 0 < n ==> 0 < halves n
+Proof
+  rw[Once halves_def]
+QED
 
 (* Theorem: 0 < n ==> (halves n = 1 + LOG2 n) *)
 (* Proof:
@@ -633,9 +643,9 @@ val halves_pos = store_thm(
          = SUC (LOG2 n)            by LOG2_BY_HALF
          = 1 + LOG2 n              by ADD1
 *)
-val halves_by_LOG2 = store_thm(
-  "halves_by_LOG2",
-  ``!n. 0 < n ==> (halves n = 1 + LOG2 n)``,
+Theorem halves_by_LOG2:
+    !n. 0 < n ==> (halves n = 1 + LOG2 n)
+Proof
   completeInduct_on `n` >>
   strip_tac >>
   rw[Once halves_def] >>
@@ -643,7 +653,8 @@ val halves_by_LOG2 = store_thm(
   simp[Once halves_def] >>
   `HALF n < n` by rw[HALF_LT] >>
   `HALF n <> 0` by fs[HALF_EQ_0] >>
-  simp[LOG2_BY_HALF]);
+  simp[LOG2_BY_HALF]
+QED
 
 (* Theorem: LOG2 n = if n = 0 then LOG2 0 else (halves n - 1) *)
 (* Proof:
@@ -653,14 +664,15 @@ val halves_by_LOG2 = store_thm(
         or LOG2 n = halves - 1.
    If n = 0, make it an infinite loop.
 *)
-val LOG2_compute = store_thm(
-  "LOG2_compute[compute]",
-  ``!n. LOG2 n = if n = 0 then LOG2 0 else (halves n - 1)``,
+Theorem LOG2_compute[compute]:
+    !n. LOG2 n = if n = 0 then LOG2 0 else (halves n - 1)
+Proof
   rpt strip_tac >>
   (Cases_on `n = 0` >> simp[]) >>
   `0 < halves n` by rw[] >>
   `halves n = 1 + LOG2 n` by rw[halves_by_LOG2] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Put this to computeLib *)
 (* val _ = computeLib.add_persistent_funs ["LOG2_compute"]; *)
@@ -751,22 +763,24 @@ val LOG2_compute = store_thm(
        and LOG2 m <= LOG2 n        by LOG2_LE
        ==> halves m <= halves n    by arithmetic
 *)
-val halves_le = store_thm(
-  "halves_le",
-  ``!m n. m <= n ==> halves m <= halves n``,
+Theorem halves_le:
+    !m n. m <= n ==> halves m <= halves n
+Proof
   rpt strip_tac >>
   Cases_on `m = 0` >-
   rw[] >>
   `0 < m /\ 0 < n` by decide_tac >>
   `LOG2 m <= LOG2 n` by rw[LOG2_LE] >>
-  rw[halves_by_LOG2]);
+  rw[halves_by_LOG2]
+QED
 
 (* Theorem: (halves n = 0) <=> (n = 0) *)
 (* Proof: by halves_pos, halves_0 *)
-val halves_eq_0 = store_thm(
-  "halves_eq_0",
-  ``!n. (halves n = 0) <=> (n = 0)``,
-  metis_tac[halves_pos, halves_0, NOT_ZERO_LT_ZERO]);
+Theorem halves_eq_0:
+    !n. (halves n = 0) <=> (n = 0)
+Proof
+  metis_tac[halves_pos, halves_0, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: (halves n = 1) <=> (n = 1) *)
 (* Proof:
@@ -779,24 +793,25 @@ val halves_eq_0 = store_thm(
       This gives 2 <= 1, a contradiction.
    Only-if part: halves 1 = 1, true by halves_1
 *)
-val halves_eq_1 = store_thm(
-  "halves_eq_1",
-  ``!n. (halves n = 1) <=> (n = 1)``,
+Theorem halves_eq_1:
+    !n. (halves n = 1) <=> (n = 1)
+Proof
   rw[EQ_IMP_THM] >>
   spose_not_then strip_assume_tac >>
   `n <> 0` by metis_tac[halves_eq_0, DECIDE``1 <> 0``] >>
   `2 <= n` by decide_tac >>
   `halves 2 <= halves n` by rw[halves_le] >>
-  fs[]);
+  fs[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Perfect Power                                                             *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define a PerfectPower number *)
-val perfect_power_def = Define`
+Definition perfect_power_def:
   perfect_power (n:num) (m:num) <=> ?e. (n = m ** e)
-`;
+End
 
 (* Overload perfect_power *)
 val _ = overload_on("power_of", ``perfect_power``);
@@ -807,40 +822,45 @@ val _ = set_fixity "power_of" (Infix(NONASSOC, 450)); (* same as relation *)
 (* Proof:
    True since n = n ** 1   by EXP_1
 *)
-val perfect_power_self = store_thm(
-  "perfect_power_self",
-  ``!n. perfect_power n n``,
-  metis_tac[perfect_power_def, EXP_1]);
+Theorem perfect_power_self:
+    !n. perfect_power n n
+Proof
+  metis_tac[perfect_power_def, EXP_1]
+QED
 
 (* Theorem: perfect_power 0 m <=> (m = 0) *)
 (* Proof: by perfect_power_def, EXP_EQ_0 *)
-val perfect_power_0_m = store_thm(
-  "perfect_power_0_m",
-  ``!m. perfect_power 0 m <=> (m = 0)``,
-  rw[perfect_power_def, EQ_IMP_THM]);
+Theorem perfect_power_0_m:
+    !m. perfect_power 0 m <=> (m = 0)
+Proof
+  rw[perfect_power_def, EQ_IMP_THM]
+QED
 
 (* Theorem: perfect_power 1 m *)
 (* Proof: by perfect_power_def, take e = 0 *)
-val perfect_power_1_m = store_thm(
-  "perfect_power_1_m",
-  ``!m. perfect_power 1 m``,
+Theorem perfect_power_1_m:
+    !m. perfect_power 1 m
+Proof
   rw[perfect_power_def] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: perfect_power n 0 <=> ((n = 0) \/ (n = 1)) *)
 (* Proof: by perfect_power_def, ZERO_EXP. *)
-val perfect_power_n_0 = store_thm(
-  "perfect_power_n_0",
-  ``!n. perfect_power n 0 <=> ((n = 0) \/ (n = 1))``,
+Theorem perfect_power_n_0:
+    !n. perfect_power n 0 <=> ((n = 0) \/ (n = 1))
+Proof
   rw[perfect_power_def] >>
-  metis_tac[ZERO_EXP]);
+  metis_tac[ZERO_EXP]
+QED
 
 (* Theorem: perfect_power n 1 <=> (n = 1) *)
 (* Proof: by perfect_power_def, EXP_1 *)
-val perfect_power_n_1 = store_thm(
-  "perfect_power_n_1",
-  ``!n. perfect_power n 1 <=> (n = 1)``,
-  rw[perfect_power_def]);
+Theorem perfect_power_n_1:
+    !n. perfect_power n 1 <=> (n = 1)
+Proof
+  rw[perfect_power_def]
+QED
 
 (* Theorem: 0 < m /\ 1 < n /\ (n MOD m = 0) ==>
             (perfect_power n m) <=> (perfect_power (n DIV m) m) *)
@@ -860,10 +880,10 @@ val perfect_power_n_1 = store_thm(
              = m ** (SUC e)            by EXP
       Thus perfect_power n m           by perfect_power_def
 *)
-val perfect_power_mod_eq_0 = store_thm(
-  "perfect_power_mod_eq_0",
-  ``!n m. 0 < m /\ 1 < n /\ (n MOD m = 0) ==>
-     ((perfect_power n m) <=> (perfect_power (n DIV m) m))``,
+Theorem perfect_power_mod_eq_0:
+    !n m. 0 < m /\ 1 < n /\ (n MOD m = 0) ==>
+     ((perfect_power n m) <=> (perfect_power (n DIV m) m))
+Proof
   rw[perfect_power_def] >>
   rw[EQ_IMP_THM] >| [
     `m ** e <> 1` by decide_tac >>
@@ -874,7 +894,8 @@ val perfect_power_mod_eq_0 = store_thm(
     `m divides n` by rw[DIVIDES_MOD_0] >>
     `n = m * (n DIV m)` by rw[GSYM DIVIDES_EQN_COMM] >>
     metis_tac[EXP]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < m /\ 1 < n /\ (n MOD m <> 0) ==> ~(perfect_power n m) *)
 (* Proof:
@@ -889,9 +910,9 @@ val perfect_power_mod_eq_0 = store_thm(
     ==> n MOD m = 0         by DIVIDES_MOD_0
    This contradicts n MOD m <> 0.
 *)
-val perfect_power_mod_ne_0 = store_thm(
-  "perfect_power_mod_ne_0",
-  ``!n m. 0 < m /\ 1 < n /\ (n MOD m <> 0) ==> ~(perfect_power n m)``,
+Theorem perfect_power_mod_ne_0:
+    !n m. 0 < m /\ 1 < n /\ (n MOD m <> 0) ==> ~(perfect_power n m)
+Proof
   rpt strip_tac >>
   fs[perfect_power_def] >>
   `n <> 1` by decide_tac >>
@@ -899,7 +920,8 @@ val perfect_power_mod_ne_0 = store_thm(
   `?k. e = SUC k` by metis_tac[num_CASES] >>
   `n = m * m ** k` by fs[EXP] >>
   `m divides n` by metis_tac[divides_def, MULT_COMM] >>
-  metis_tac[DIVIDES_MOD_0]);
+  metis_tac[DIVIDES_MOD_0]
+QED
 
 (* Theorem: perfect_power n m =
          if n = 0 then (m = 0)
@@ -923,14 +945,14 @@ val perfect_power_mod_ne_0 = store_thm(
       If n MOD m <> 0, to show:
       ~perfect_power n m, true              by perfect_power_mod_ne_0
 *)
-val perfect_power_test = store_thm(
-  "perfect_power_test",
-  ``!n m. perfect_power n m =
+Theorem perfect_power_test:
+    !n m. perfect_power n m =
          if n = 0 then (m = 0)
          else if n = 1 then T
          else if m = 0 then (n <= 1)
          else if m = 1 then (n = 1)
-         else if n MOD m = 0 then perfect_power (n DIV m) m else F``,
+         else if n MOD m = 0 then perfect_power (n DIV m) m else F
+Proof
   rpt strip_tac >>
   (Cases_on `n = 0` >> simp[perfect_power_0_m]) >>
   (Cases_on `n = 1` >> simp[perfect_power_1_m]) >>
@@ -940,7 +962,8 @@ val perfect_power_test = store_thm(
   (Cases_on `m = 1` >> simp[perfect_power_n_1]) >>
   (Cases_on `n MOD m = 0` >> simp[]) >-
   rw[perfect_power_mod_eq_0] >>
-  rw[perfect_power_mod_ne_0]);
+  rw[perfect_power_mod_ne_0]
+QED
 
 (* Theorem: 1 < m /\ perfect_power n m /\ perfect_power (SUC n) m ==> (m = 2) /\ (n = 1) *)
 (* Proof:
@@ -1009,12 +1032,13 @@ QED
    Then n = 1        by perfect_power_suc
    This contradicts 1 < n.
 *)
-val perfect_power_not_suc = store_thm(
-  "perfect_power_not_suc",
-  ``!m n. 1 < m /\ 1 < n /\ perfect_power n m ==> ~perfect_power (SUC n) m``,
+Theorem perfect_power_not_suc:
+    !m n. 1 < m /\ 1 < n /\ perfect_power n m ==> ~perfect_power (SUC n) m
+Proof
   spose_not_then strip_assume_tac >>
   `n = 1` by metis_tac[perfect_power_suc] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 1 < b /\ 0 < n ==>
            (LOG b (SUC n) = LOG b n + if perfect_power (SUC n) b then 1 else 0) *)
@@ -1112,9 +1136,9 @@ val it = |- MAP (LOG 2) [1 .. 20] =
    Only-if part: ?k. k <= LOG2 n /\ (n = m ** k) ==> perfect_power n m
       True by perfect_power_def.
 *)
-val perfect_power_bound_LOG2 = store_thm(
-  "perfect_power_bound_LOG2",
-  ``!n. 0 < n ==> !m. perfect_power n m <=> ?k. k <= LOG2 n /\ (n = m ** k)``,
+Theorem perfect_power_bound_LOG2:
+    !n. 0 < n ==> !m. perfect_power n m <=> ?k. k <= LOG2 n /\ (n = m ** k)
+Proof
   rw[EQ_IMP_THM] >| [
     Cases_on `n = 1` >-
     simp[] >>
@@ -1130,17 +1154,19 @@ val perfect_power_bound_LOG2 = store_thm(
     `e <= LOG2 n` by decide_tac >>
     metis_tac[],
     metis_tac[perfect_power_def]
-  ]);
+  ]
+QED
 
 (* Theorem: prime p /\ (?x y. 0 < x /\ (p ** x = q ** y)) ==> perfect_power q p *)
 (* Proof:
    Note ?k. (q = p ** k)     by power_eq_prime_power, prime p, 0 < x
    Thus perfect_power q p    by perfect_power_def
 *)
-val perfect_power_condition = store_thm(
-  "perfect_power_condition",
-  ``!p q. prime p /\ (?x y. 0 < x /\ (p ** x = q ** y)) ==> perfect_power q p``,
-  metis_tac[power_eq_prime_power, perfect_power_def]);
+Theorem perfect_power_condition:
+    !p q. prime p /\ (?x y. 0 < x /\ (p ** x = q ** y)) ==> perfect_power q p
+Proof
+  metis_tac[power_eq_prime_power, perfect_power_def]
+QED
 
 (* Theorem: 0 < p /\ p divides n ==> (perfect_power n p <=> perfect_power (n DIV p) p) *)
 (* Proof:
@@ -1163,9 +1189,9 @@ val perfect_power_condition = store_thm(
          so n = p * q = p ** SUC k  by EXP
        thus perfect_power n p       by perfect_power_def
 *)
-val perfect_power_cofactor = store_thm(
-  "perfect_power_cofactor",
-  ``!n p. 0 < p /\ p divides n ==> (perfect_power n p <=> perfect_power (n DIV p) p)``,
+Theorem perfect_power_cofactor:
+    !n p. 0 < p /\ p divides n ==> (perfect_power n p <=> perfect_power (n DIV p) p)
+Proof
   rpt strip_tac >>
   qabbrev_tac `q = n DIV p` >>
   `n = p * q` by rw[GSYM DIVIDES_EQN_COMM, Abbr`q`] >>
@@ -1181,20 +1207,22 @@ val perfect_power_cofactor = store_thm(
     `?k. q = p ** k` by rw[GSYM perfect_power_def] >>
     `p * q = p ** SUC k` by rw[EXP] >>
     metis_tac[perfect_power_def]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < n /\ p divides n ==> (perfect_power n p <=> perfect_power (n DIV p) p) *)
 (* Proof:
    Note 0 < p           by ZERO_DIVIDES, 0 < n
    The result follows   by perfect_power_cofactor
 *)
-val perfect_power_cofactor_alt = store_thm(
-  "perfect_power_cofactor_alt",
-  ``!n p. 0 < n /\ p divides n ==> (perfect_power n p <=> perfect_power (n DIV p) p)``,
+Theorem perfect_power_cofactor_alt:
+    !n p. 0 < n /\ p divides n ==> (perfect_power n p <=> perfect_power (n DIV p) p)
+Proof
   rpt strip_tac >>
   `0 < p` by metis_tac[ZERO_DIVIDES, NOT_ZERO] >>
   qabbrev_tac `q = n DIV p` >>
-  rw[perfect_power_cofactor]);
+  rw[perfect_power_cofactor]
+QED
 
 (* Theorem: perfect_power n 2 ==> (ODD n <=> (n = 1)) *)
 (* Proof:
@@ -1210,25 +1238,26 @@ val perfect_power_cofactor_alt = store_thm(
    Only-if part: perfect_power n 2 /\ n = 1 ==> ODD n
       This is true              by ODD_1
 *)
-val perfect_power_2_odd = store_thm(
-  "perfect_power_2_odd",
-  ``!n. perfect_power n 2 ==> (ODD n <=> (n = 1))``,
+Theorem perfect_power_2_odd:
+    !n. perfect_power n 2 ==> (ODD n <=> (n = 1))
+Proof
   rw[EQ_IMP_THM] >>
   spose_not_then strip_assume_tac >>
   `?k. n = 2 ** k` by rw[GSYM perfect_power_def] >>
   `k <> 0` by metis_tac[EXP] >>
   `?h. k = SUC h` by metis_tac[num_CASES] >>
   `n = 2 * 2 ** h` by rw[EXP] >>
-  metis_tac[EVEN_DOUBLE, EVEN_ODD]);
+  metis_tac[EVEN_DOUBLE, EVEN_ODD]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Power Free                                                                *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define a PowerFree number: a trivial perfect power *)
-val power_free_def = zDefine`
+Definition power_free_def[nocompute]:
    power_free (n:num) <=> !m e. (n = m ** e) ==> (m = n) /\ (e = 1)
-`;
+End
 (* Use zDefine as this is not computationally effective. *)
 
 (* Theorem: power_free 0 = F *)
@@ -1236,20 +1265,22 @@ val power_free_def = zDefine`
    Note 0 ** 2 = 0         by ZERO_EXP
    Thus power_free 0 = F   by power_free_def
 *)
-val power_free_0 = store_thm(
-  "power_free_0",
-  ``power_free 0 = F``,
-  rw[power_free_def]);
+Theorem power_free_0:
+    power_free 0 = F
+Proof
+  rw[power_free_def]
+QED
 
 (* Theorem: power_free 1 = F *)
 (* Proof:
    Note 0 ** 0 = 1         by ZERO_EXP
    Thus power_free 1 = F   by power_free_def
 *)
-val power_free_1 = store_thm(
-  "power_free_1",
-  ``power_free 1 = F``,
-  rw[power_free_def]);
+Theorem power_free_1:
+    power_free 1 = F
+Proof
+  rw[power_free_def]
+QED
 
 (* Theorem: power_free n ==> 1 < n *)
 (* Proof:
@@ -1257,10 +1288,11 @@ val power_free_1 = store_thm(
    Then power_free 0 = F     by power_free_0
     and power_free 1 = F     by power_free_1
 *)
-val power_free_gt_1 = store_thm(
-  "power_free_gt_1",
-  ``!n. power_free n ==> 1 < n``,
-  metis_tac[power_free_0, power_free_1, DECIDE``1 < n <=> (n <> 0 /\ n <> 1)``]);
+Theorem power_free_gt_1:
+    !n. power_free n ==> 1 < n
+Proof
+  metis_tac[power_free_0, power_free_1, DECIDE``1 < n <=> (n <> 0 /\ n <> 1)``]
+QED
 
 (* Theorem: power_free n <=> 1 < n /\ (!m. perfect_power n m ==> (n = m)) *)
 (* Proof:
@@ -1314,9 +1346,9 @@ QED
    Thus n = n ** 1 = m ** e              by EXP_1
     ==> e = 1                            by prime_powers_eq, 0 < e.
 *)
-val prime_is_power_free = store_thm(
-  "prime_is_power_free",
-  ``!n. prime n ==> power_free n``,
+Theorem prime_is_power_free:
+    !n. prime n ==> power_free n
+Proof
   rpt strip_tac >>
   `n <> 1` by metis_tac[NOT_PRIME_1] >>
   `!m e. (n = m ** e) ==> (m = n)` by
@@ -1324,17 +1356,19 @@ val prime_is_power_free = store_thm(
   `m <> 1` by metis_tac[EXP_1] >>
   metis_tac[EXP, num_CASES, MULT_COMM, divides_def, prime_def]) >>
   `!m e. (n = m ** e) ==> (e = 1)` by metis_tac[EXP, EXP_1, prime_powers_eq, NOT_ZERO_LT_ZERO] >>
-  metis_tac[power_free_def]);
+  metis_tac[power_free_def]
+QED
 
 (* Theorem: power_free n /\ perfect_power n m ==> (n = m) *)
 (* Proof:
    Note ?e. n = m ** e        by perfect_power_def
     ==> n = m                 by power_free_def
 *)
-val power_free_perfect_power = store_thm(
-  "power_free_perfect_power",
-  ``!m n. power_free n /\ perfect_power n m ==> (n = m)``,
-  metis_tac[perfect_power_def, power_free_def]);
+Theorem power_free_perfect_power:
+    !m n. power_free n /\ perfect_power n m ==> (n = m)
+Proof
+  metis_tac[perfect_power_def, power_free_def]
+QED
 
 (* Theorem: power_free n ==> (!j. 1 < j ==> (ROOT j n) ** j <> n) *)
 (* Proof:
@@ -1342,12 +1376,13 @@ val power_free_perfect_power = store_thm(
    Then j = 1                 by power_free_def
    This contradicts 1 < j.
 *)
-val power_free_property = store_thm(
-  "power_free_property",
-  ``!n. power_free n ==> (!j. 1 < j ==> (ROOT j n) ** j <> n)``,
+Theorem power_free_property:
+    !n. power_free n ==> (!j. 1 < j ==> (ROOT j n) ** j <> n)
+Proof
   spose_not_then strip_assume_tac >>
   `j = 1` by metis_tac[power_free_def] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* We have:
 power_free_0   |- power_free 0 <=> F
@@ -1370,9 +1405,9 @@ So, given 1 < n, how to check power_free n ?
       Then m = m ** e                 by EXP_1
       This gives e <> 1, a contradiction.
 *)
-val power_free_check_all = store_thm(
-  "power_free_check_all",
-  ``!n. power_free n <=> 1 < n /\ (!j. 1 < j ==> (ROOT j n) ** j <> n)``,
+Theorem power_free_check_all:
+    !n. power_free n <=> 1 < n /\ (!j. 1 < j ==> (ROOT j n) ** j <> n)
+Proof
   rw[EQ_IMP_THM] >-
   rw[power_free_gt_1] >-
   rw[power_free_property] >>
@@ -1382,7 +1417,8 @@ val power_free_check_all = store_thm(
   `ROOT e n = m` by rw[ROOT_POWER] >>
   `~(1 < e)` by metis_tac[] >>
   `e = 1` by decide_tac >>
-  rw[]);
+  rw[]
+QED
 
 (* However, there is no need to check all the exponents:
   just up to (LOG2 n) or (ulog n) is sufficient.
@@ -1401,9 +1437,9 @@ Termination WF_REL_TAC `measure (λ(n, m, k). n - m)`
 End
 
 (* Define upper LOG2 n by count_up *)
-val ulog_def = Define`
+Definition ulog_def:
     ulog n = count_up n 1 0
-`;
+End
 
 (*
 > EVAL ``ulog 1``; --> 0
@@ -1423,10 +1459,11 @@ val ulog_def = Define`
    = count_up 0 1 0    by ulog_def
    = 0                 by count_up_def, 0 <= 1
 *)
-val ulog_0 = store_thm(
-  "ulog_0[simp]",
-  ``ulog 0 = 0``,
-  rw[ulog_def, Once count_up_def]);
+Theorem ulog_0[simp]:
+    ulog 0 = 0
+Proof
+  rw[ulog_def, Once count_up_def]
+QED
 
 (* Theorem: ulog 1 = 0 *)
 (* Proof:
@@ -1434,10 +1471,11 @@ val ulog_0 = store_thm(
    = count_up 1 1 0    by ulog_def
    = 0                 by count_up_def, 1 <= 1
 *)
-val ulog_1 = store_thm(
-  "ulog_1[simp]",
-  ``ulog 1 = 0``,
-  rw[ulog_def, Once count_up_def]);
+Theorem ulog_1[simp]:
+    ulog 1 = 0
+Proof
+  rw[ulog_def, Once count_up_def]
+QED
 
 (* Theorem: ulog 2 = 1 *)
 (* Proof:
@@ -1446,25 +1484,28 @@ val ulog_1 = store_thm(
    = count_up 2 2 1    by count_up_def, ~(1 < 2)
    = 1                 by count_up_def, 2 <= 2
 *)
-val ulog_2 = store_thm(
-  "ulog_2[simp]",
-  ``ulog 2 = 1``,
+Theorem ulog_2[simp]:
+    ulog 2 = 1
+Proof
   rw[ulog_def, Once count_up_def] >>
-  rw[Once count_up_def]);
+  rw[Once count_up_def]
+QED
 
 (* Theorem: m <> 0 /\ n <= m ==> !k. count_up n m k = k *)
 (* Proof: by count_up_def *)
-val count_up_exit = store_thm(
-  "count_up_exit",
-  ``!m n. m <> 0 /\ n <= m ==> !k. count_up n m k = k``,
-  rw[Once count_up_def]);
+Theorem count_up_exit:
+    !m n. m <> 0 /\ n <= m ==> !k. count_up n m k = k
+Proof
+  rw[Once count_up_def]
+QED
 
 (* Theorem: m <> 0 /\ m < n ==> !k. count_up n m k = count_up n (2 * m) (SUC k) *)
 (* Proof: by count_up_def *)
-val count_up_suc = store_thm(
-  "count_up_suc",
-  ``!m n. m <> 0 /\ m < n ==> !k. count_up n m k = count_up n (2 * m) (SUC k)``,
-  rw[Once count_up_def]);
+Theorem count_up_suc:
+    !m n. m <> 0 /\ m < n ==> !k. count_up n m k = count_up n (2 * m) (SUC k)
+Proof
+  rw[Once count_up_def]
+QED
 
 (* Theorem: m <> 0 ==>
             !t. 2 ** t * m < n ==> !k. count_up n m k = count_up n (2 ** (SUC t) * m) ((SUC k) + t) *)
@@ -1487,10 +1528,10 @@ val count_up_suc = store_thm(
        = count_up n (2 * (2 ** SUC t * m)) (SUC (SUC k + t)) by count_up_suc
        = count_up n (2 ** SUC (SUC t) * m) (SUC k + SUC t)   by EXP, ADD1
 *)
-val count_up_suc_eqn = store_thm(
-  "count_up_suc_eqn",
-  ``!m. m <> 0 ==>
-   !n t. 2 ** t * m < n ==> !k. count_up n m k = count_up n (2 ** (SUC t) * m) ((SUC k) + t)``,
+Theorem count_up_suc_eqn:
+    !m. m <> 0 ==>
+   !n t. 2 ** t * m < n ==> !k. count_up n m k = count_up n (2 ** (SUC t) * m) ((SUC k) + t)
+Proof
   ntac 3 strip_tac >>
   Induct >-
   rw[count_up_suc] >>
@@ -1500,7 +1541,8 @@ val count_up_suc_eqn = store_thm(
   `2 ** SUC t * m <> 0` by metis_tac[MULT_EQ_0] >>
   `2 ** SUC t * m = 2 * q` by rw_tac std_ss[EXP, MULT_ASSOC, Abbr`q`] >>
   `q < n` by rw[MULT_LT_IMP_LT] >>
-  rw[count_up_suc, EXP, ADD1]);
+  rw[count_up_suc, EXP, ADD1]
+QED
 
 (* Theorem: m <> 0 ==> !n t. 2 ** t * m < 2 * n /\ n <= 2 ** t * m ==> !k. count_up n m k = k + t *)
 (* Proof:
@@ -1522,9 +1564,9 @@ val count_up_suc_eqn = store_thm(
       = count_up n (2 ** t * m) ((SUC k) + t)   by count_up_suc_eqn
       = (SUC k) + t                             by count_up_exit
 *)
-val count_up_exit_eqn = store_thm(
-  "count_up_exit_eqn",
-  ``!m. m <> 0 ==> !n t. 2 ** t * m < 2 * n /\ n <= 2 ** t * m ==> !k. count_up n m k = k + t``,
+Theorem count_up_exit_eqn:
+    !m. m <> 0 ==> !n t. 2 ** t * m < 2 * n /\ n <= 2 ** t * m ==> !k. count_up n m k = k + t
+Proof
   rpt strip_tac >>
   Cases_on `t` >-
   fs[count_up_exit] >>
@@ -1533,7 +1575,8 @@ val count_up_exit_eqn = store_thm(
   `q < n` by decide_tac >>
   `count_up n m k = count_up n (2 ** (SUC n') * m) ((SUC k) + n')` by rw[count_up_suc_eqn, Abbr`q`] >>
   `_ = (SUC k) + n'` by rw[count_up_exit] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: 2 ** m < 2 * n /\ n <= 2 ** m ==> (ulog n = m) *)
 (* Proof:
@@ -1543,10 +1586,11 @@ val count_up_exit_eqn = store_thm(
        2 ** t * 1 < 2 * n /\ n <= 2 ** t * 1 ==> count_up n 1 0 = t
    Then apply ulog_def to get the result, and rename t by m.
 *)
-val ulog_unique = store_thm(
-  "ulog_unique",
-  ``!m n. 2 ** m < 2 * n /\ n <= 2 ** m ==> (ulog n = m)``,
-  metis_tac[ulog_def, count_up_exit_eqn, MULT_RIGHT_1, ADD, DECIDE``1 <> 0``]);
+Theorem ulog_unique:
+    !m n. 2 ** m < 2 * n /\ n <= 2 ** m ==> (ulog n = m)
+Proof
+  metis_tac[ulog_def, count_up_exit_eqn, MULT_RIGHT_1, ADD, DECIDE``1 <> 0``]
+QED
 
 (* Theorem: ulog n = if 1 < n then SUC (LOG2 (n - 1)) else 0 *)
 (* Proof:
@@ -1565,16 +1609,17 @@ val ulog_unique = store_thm(
       If n = 0, ulog n = 0                        by ulog_0
       If n = 1, ulog n = 0                        by ulog_1
 *)
-val ulog_eqn = store_thm(
-  "ulog_eqn",
-  ``!n. ulog n = if 1 < n then SUC (LOG2 (n - 1)) else 0``,
+Theorem ulog_eqn:
+    !n. ulog n = if 1 < n then SUC (LOG2 (n - 1)) else 0
+Proof
   rw[] >| [
     `0 < n - 1` by decide_tac >>
     `2 ** LOG2 (n - 1) <= (n - 1) /\ (n - 1) < 2 ** SUC (LOG2 (n - 1))` by metis_tac[LOG2_PROPERTY] >>
     `2 * 2 ** LOG2 (n - 1) < 2 * n /\ n <= 2 ** SUC (LOG2 (n - 1))` by decide_tac >>
     rw[EXP, ulog_unique],
     metis_tac[ulog_0, ulog_1, DECIDE``~(1 < n) <=> (n = 0) \/ (n = 1)``]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < n ==> (ulog (SUC n) = SUC (LOG2 n)) *)
 (* Proof:
@@ -1583,12 +1628,13 @@ val ulog_eqn = store_thm(
       = SUC (LOG2 (SUC n - 1))   by ulog_eqn
       = SUC (LOG2 n)             by SUC_SUB1
 *)
-val ulog_suc = store_thm(
-  "ulog_suc",
-  ``!n. 0 < n ==> (ulog (SUC n) = SUC (LOG2 n))``,
+Theorem ulog_suc:
+    !n. 0 < n ==> (ulog (SUC n) = SUC (LOG2 n))
+Proof
   rpt strip_tac >>
   `1 < SUC n` by decide_tac >>
-  rw[ulog_eqn]);
+  rw[ulog_eqn]
+QED
 
 (* Theorem: 0 < n ==> 2 ** (ulog n) < 2 * n /\ n <= 2 ** (ulog n) *)
 (* Proof:
@@ -1610,9 +1656,9 @@ val ulog_suc = store_thm(
             n <= 2 ** SUC (LOG2 m)         by inequality [2]
          or n <= 2 ** SUC (LOG2 (n - 1))   by notation
 *)
-val ulog_property = store_thm(
-  "ulog_property",
-  ``!n. 0 < n ==> 2 ** (ulog n) < 2 * n /\ n <= 2 ** (ulog n)``,
+Theorem ulog_property:
+    !n. 0 < n ==> 2 ** (ulog n) < 2 * n /\ n <= 2 ** (ulog n)
+Proof
   rw[ulog_eqn] >| [
     `0 < n - 1` by decide_tac >>
     qabbrev_tac `m = n - 1` >>
@@ -1624,7 +1670,8 @@ val ulog_property = store_thm(
     `2 ** SUC (LOG2 m) = 2 * 2 ** (LOG2 m)` by rw[EXP] >>
     `n - 1 < 2 ** SUC (LOG2 m)` by metis_tac[LOG2_PROPERTY] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < n ==> !m. (ulog n = m) <=> 2 ** m < 2 * n /\ n <= 2 ** m *)
 (* Proof:
@@ -1633,10 +1680,11 @@ val ulog_property = store_thm(
    Only-if part: 2 ** m < 2 * n /\ n <= 2 ** m ==> ulog n = m
       True by ulog_unique
 *)
-val ulog_thm = store_thm(
-  "ulog_thm",
-  ``!n. 0 < n ==> !m. (ulog n = m) <=> (2 ** m < 2 * n /\ n <= 2 ** m)``,
-  metis_tac[ulog_property, ulog_unique]);
+Theorem ulog_thm:
+    !n. 0 < n ==> !m. (ulog n = m) <=> (2 ** m < 2 * n /\ n <= 2 ** m)
+Proof
+  metis_tac[ulog_property, ulog_unique]
+QED
 
 (* Theorem: (ulog 0 = 0) /\ !n. 0 < n ==> !m. (ulog n = m) <=> (n <= 2 ** m /\ 2 ** m < 2 * n) *)
 (* Proof: by ulog_0 ulog_thm *)
@@ -1654,10 +1702,11 @@ QED
      or            <=> n <= 1            by negation
      or            <=> n = 0 or n = 1    by range
 *)
-val ulog_eq_0 = store_thm(
-  "ulog_eq_0",
-  ``!n. (ulog n = 0) <=> ((n = 0) \/ (n = 1))``,
-  rw[ulog_eqn]);
+Theorem ulog_eq_0:
+    !n. (ulog n = 0) <=> ((n = 0) \/ (n = 1))
+Proof
+  rw[ulog_eqn]
+QED
 
 (* Theorem: (ulog n = 1) <=> (n = 2) *)
 (* Proof:
@@ -1676,16 +1725,17 @@ val ulog_eq_0 = store_thm(
        = SUC 0                           by LOG_1, 0 < 2
        = 1                               by ONE
 *)
-val ulog_eq_1 = store_thm(
-  "ulog_eq_1",
-  ``!n. (ulog n = 1) <=> (n = 2)``,
+Theorem ulog_eq_1:
+    !n. (ulog n = 1) <=> (n = 2)
+Proof
   rw[EQ_IMP_THM] >>
   `n <> 0 /\ n <> 1` by metis_tac[ulog_eq_0, DECIDE``1 <> 0``] >>
   `1 < n /\ 0 < n - 1` by decide_tac >>
   `SUC (LOG2 (n - 1)) = 1` by metis_tac[ulog_eqn] >>
   `LOG2 (n - 1) = 0` by decide_tac >>
   `n - 1 < 2` by metis_tac[LOG_EQ_0, DECIDE``1 < 2``] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: ulog n <= 1 <=> n <= 2 *)
 (* Proof:
@@ -1695,12 +1745,13 @@ val ulog_eq_1 = store_thm(
    <=> n <= 2                     by arithmetic
 
 *)
-val ulog_le_1 = store_thm(
-  "ulog_le_1",
-  ``!n. ulog n <= 1 <=> n <= 2``,
+Theorem ulog_le_1:
+    !n. ulog n <= 1 <=> n <= 2
+Proof
   rpt strip_tac >>
   `ulog n <= 1 <=> ((ulog n = 0) \/ (ulog n = 1))` by decide_tac >>
-  rw[ulog_eq_0, ulog_eq_1]);
+  rw[ulog_eq_0, ulog_eq_1]
+QED
 
 (* Theorem: n <= m ==> ulog n <= ulog m *)
 (* Proof:
@@ -1718,22 +1769,24 @@ val ulog_le_1 = store_thm(
        ==> SUC (LOG2 (n - 1)) <= SUC (LOG2 (m - 1))  by LESS_EQ_MONO
         or          ulog n <= ulog m                 by ulog_eqn, 1 < n, 1 < m
 *)
-val ulog_le = store_thm(
-  "ulog_le",
-  ``!m n. n <= m ==> ulog n <= ulog m``,
+Theorem ulog_le:
+    !m n. n <= m ==> ulog n <= ulog m
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[] >>
   Cases_on `n = 1` >-
   rw[] >>
-  rw[ulog_eqn, LOG2_LE]);
+  rw[ulog_eqn, LOG2_LE]
+QED
 
 (* Theorem: n < m ==> ulog n <= ulog m *)
 (* Proof: by ulog_le *)
-val ulog_lt = store_thm(
-  "ulog_lt",
-  ``!m n. n < m ==> ulog n <= ulog m``,
-  rw[ulog_le]);
+Theorem ulog_lt:
+    !m n. n < m ==> ulog n <= ulog m
+Proof
+  rw[ulog_le]
+QED
 
 (* Theorem: ulog (2 ** n) = n *)
 (* Proof:
@@ -1743,14 +1796,15 @@ val ulog_lt = store_thm(
     Now 2 ** n <= 2 ** n       by LESS_EQ_REFL
    Thus ulog (2 ** n) = n      by ulog_unique
 *)
-val ulog_2_exp = store_thm(
-  "ulog_2_exp",
-  ``!n. ulog (2 ** n) = n``,
+Theorem ulog_2_exp:
+    !n. ulog (2 ** n) = n
+Proof
   rpt strip_tac >>
   `0 < 2 ** n` by rw[EXP_POS] >>
   `2 ** n < 2 * 2 ** n` by decide_tac >>
   `2 ** n <= 2 ** n` by decide_tac >>
-  rw[ulog_unique]);
+  rw[ulog_unique]
+QED
 
 (* Theorem: ulog n <= n *)
 (* Proof:
@@ -1758,10 +1812,11 @@ val ulog_2_exp = store_thm(
    Thus ulog n <= ulog (2 ** n)  by ulog_lt
      or ulog n <= n              by ulog_2_exp
 *)
-val ulog_le_self = store_thm(
-  "ulog_le_self",
-  ``!n. ulog n <= n``,
-  metis_tac[X_LT_EXP_X, ulog_lt, ulog_2_exp, DECIDE``1 < 2n``]);
+Theorem ulog_le_self:
+    !n. ulog n <= n
+Proof
+  metis_tac[X_LT_EXP_X, ulog_lt, ulog_2_exp, DECIDE``1 < 2n``]
+QED
 
 (* Theorem: ulog n = n <=> n = 0 *)
 (* Proof:
@@ -1776,9 +1831,9 @@ val ulog_le_self = store_thm(
    Only-if part: ulog 0 = 0
       This is true                  by ulog_0
 *)
-val ulog_eq_self = store_thm(
-  "ulog_eq_self",
-  ``!n. (ulog n = n) <=> (n = 0)``,
+Theorem ulog_eq_self:
+    !n. (ulog n = n) <=> (n = 0)
+Proof
   rw[EQ_IMP_THM] >>
   spose_not_then strip_assume_tac >>
   `?k. n = SUC k` by metis_tac[num_CASES] >>
@@ -1787,7 +1842,8 @@ val ulog_eq_self = store_thm(
   `2 ** SUC k < 2 * SUC k` by metis_tac[ulog_property] >>
   `2 ** k <= k` by decide_tac >>
   `k < 2 ** k` by rw[X_LT_EXP_X] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 0 < n ==> ulog n < n *)
 (* Proof:
@@ -1798,15 +1854,16 @@ val ulog_eq_self = store_thm(
      so n = 0            by ulog_eq_self
    This contradicts 0 < n.
 *)
-val ulog_lt_self = store_thm(
-  "ulog_lt_self",
-  ``!n. 0 < n ==> ulog n < n``,
+Theorem ulog_lt_self:
+    !n. 0 < n ==> ulog n < n
+Proof
   rpt strip_tac >>
   spose_not_then strip_assume_tac >>
   `ulog n <= n` by rw[ulog_le_self] >>
   `ulog n = n` by decide_tac >>
   `n = 0` by rw[GSYM ulog_eq_self] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (2 ** (ulog n) = n) <=> perfect_power n 2 *)
 (* Proof:
@@ -1816,19 +1873,21 @@ val ulog_lt_self = store_thm(
    Only-if part: 2 ** ulog (2 ** e) = 2 ** e
       This is true by ulog_2_exp
 *)
-val ulog_exp_exact = store_thm(
-  "ulog_exp_exact",
-  ``!n. (2 ** (ulog n) = n) <=> perfect_power n 2``,
+Theorem ulog_exp_exact:
+    !n. (2 ** (ulog n) = n) <=> perfect_power n 2
+Proof
   rw[perfect_power_def, EQ_IMP_THM] >-
   metis_tac[] >>
-  rw[ulog_2_exp]);
+  rw[ulog_2_exp]
+QED
 
 (* Theorem: ~(perfect_power n 2) ==> 2 ** ulog n <> n *)
 (* Proof: by ulog_exp_exact. *)
-val ulog_exp_not_exact = store_thm(
-  "ulog_exp_not_exact",
-  ``!n. ~(perfect_power n 2) ==> 2 ** ulog n <> n``,
-  rw[ulog_exp_exact]);
+Theorem ulog_exp_not_exact:
+    !n. ~(perfect_power n 2) ==> 2 ** ulog n <> n
+Proof
+  rw[ulog_exp_exact]
+QED
 
 (* Theorem: 0 < n /\ ~(perfect_power n 2) ==> n < 2 ** ulog n *)
 (* Proof:
@@ -1836,10 +1895,11 @@ val ulog_exp_not_exact = store_thm(
     But n <> 2 ** ulog n    by ulog_exp_not_exact, ~(perfect_power n 2)
    Thus  n < 2 ** ulog n    by LESS_OR_EQ
 *)
-val ulog_property_not_exact = store_thm(
-  "ulog_property_not_exact",
-  ``!n. 0 < n /\ ~(perfect_power n 2) ==> n < 2 ** ulog n``,
-  metis_tac[ulog_property, ulog_exp_not_exact, LESS_OR_EQ]);
+Theorem ulog_property_not_exact:
+    !n. 0 < n /\ ~(perfect_power n 2) ==> n < 2 ** ulog n
+Proof
+  metis_tac[ulog_property, ulog_exp_not_exact, LESS_OR_EQ]
+QED
 
 (* Theorem: 1 < n /\ ODD n ==> n < 2 ** ulog n *)
 (* Proof:
@@ -1849,15 +1909,16 @@ val ulog_property_not_exact = store_thm(
     ==> n <> 2 ** ulog n       by ulog_exp_not_exact, ~(perfect_power n 2)
    Thus n < 2 ** ulog n        by LESS_OR_EQ
 *)
-val ulog_property_odd = store_thm(
-  "ulog_property_odd",
-  ``!n. 1 < n /\ ODD n ==> n < 2 ** ulog n``,
+Theorem ulog_property_odd:
+    !n. 1 < n /\ ODD n ==> n < 2 ** ulog n
+Proof
   rpt strip_tac >>
   `0 < n /\ n <> 1` by decide_tac >>
   `n <= 2 ** ulog n` by metis_tac[ulog_property] >>
   `~(perfect_power n 2)` by metis_tac[perfect_power_2_odd] >>
   `2 ** ulog n <> n` by rw[ulog_exp_not_exact] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: n <= 2 ** m ==> ulog n <= m *)
 (* Proof:
@@ -1865,10 +1926,11 @@ val ulog_property_odd = store_thm(
    ==> ulog n <= ulog (2 ** m)    by ulog_le
    ==> ulog n <= m                by ulog_2_exp
 *)
-val exp_to_ulog = store_thm(
-  "exp_to_ulog",
-  ``!m n. n <= 2 ** m ==> ulog n <= m``,
-  metis_tac[ulog_le, ulog_2_exp]);
+Theorem exp_to_ulog:
+    !m n. n <= 2 ** m ==> ulog n <= m
+Proof
+  metis_tac[ulog_le, ulog_2_exp]
+QED
 
 (* Theorem: 1 < n ==> 0 < ulog n *)
 (* Proof:
@@ -1876,20 +1938,22 @@ val exp_to_ulog = store_thm(
      so ulog n <> 0                    by ulog_eq_0
      or 0 < ulog n                     by NOT_ZERO_LT_ZERO
 *)
-val ulog_pos = store_thm(
-  "ulog_pos[simp]",
-  ``!n. 1 < n ==> 0 < ulog n``,
-  metis_tac[ulog_eq_0, NOT_ZERO, DECIDE``1 < n <=> n <> 0 /\ n <> 1``]);
+Theorem ulog_pos[simp]:
+    !n. 1 < n ==> 0 < ulog n
+Proof
+  metis_tac[ulog_eq_0, NOT_ZERO, DECIDE``1 < n <=> n <> 0 /\ n <> 1``]
+QED
 
 (* Theorem: 1 < n ==> 1 <= ulog n *)
 (* Proof:
    Note  0 < ulog n      by ulog_pos
    Thus  1 <= ulog n     by arithmetic
 *)
-val ulog_ge_1 = store_thm(
-  "ulog_ge_1",
-  ``!n. 1 < n ==> 1 <= ulog n``,
-  metis_tac[ulog_pos, DECIDE``0 < n ==> 1 <= n``]);
+Theorem ulog_ge_1:
+    !n. 1 < n ==> 1 <= ulog n
+Proof
+  metis_tac[ulog_pos, DECIDE``0 < n ==> 1 <= n``]
+QED
 
 (* Theorem: 2 < n ==> 1 < (ulog n) ** 2 *)
 (* Proof:
@@ -1899,15 +1963,16 @@ val ulog_ge_1 = store_thm(
    Thus 1 < ulog n           by ulog n <> 0, ulog n <> 1
      so 1 < (ulog n) ** 2    by ONE_LT_EXP, 0 < 2
 *)
-val ulog_sq_gt_1 = store_thm(
-  "ulog_sq_gt_1",
-  ``!n. 2 < n ==> 1 < (ulog n) ** 2``,
+Theorem ulog_sq_gt_1:
+    !n. 2 < n ==> 1 < (ulog n) ** 2
+Proof
   rpt strip_tac >>
   `1 < n /\ n <> 2` by decide_tac >>
   `0 < ulog n` by rw[] >>
   `ulog n <> 1` by rw[ulog_eq_1] >>
   `1 < ulog n` by decide_tac >>
-  rw[ONE_LT_EXP]);
+  rw[ONE_LT_EXP]
+QED
 
 (* Theorem: 1 < n ==> 4 <= (2 * ulog n) ** 2 *)
 (* Proof:
@@ -1915,15 +1980,16 @@ val ulog_sq_gt_1 = store_thm(
    Thus  2 <= 2 * ulog n          by arithmetic
      or  4 <= (2 * ulog n) ** 2   by EXP_BASE_LE_MONO
 *)
-val ulog_twice_sq = store_thm(
-  "ulog_twice_sq",
-  ``!n. 1 < n ==> 4 <= (2 * ulog n) ** 2``,
+Theorem ulog_twice_sq:
+    !n. 1 < n ==> 4 <= (2 * ulog n) ** 2
+Proof
   rpt strip_tac >>
   `0 < ulog n` by rw[ulog_pos] >>
   `2 <= 2 * ulog n` by decide_tac >>
   `2 ** 2 <= (2 * ulog n) ** 2` by rw[EXP_BASE_LE_MONO] >>
   `2 ** 2 = 4` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: ulog n = if n = 0 then 0
                 else if (perfect_power n 2) then (LOG2 n) else SUC (LOG2 n) *)
@@ -1946,10 +2012,10 @@ val ulog_twice_sq = store_thm(
        Thus n <= 2 ** m,           [2]
        giving ulog n = m           by ulog_unique, [1] [2]
 *)
-val ulog_alt = store_thm(
-  "ulog_alt",
-  ``!n. ulog n = if n = 0 then 0
-                else if (perfect_power n 2) then (LOG2 n) else SUC (LOG2 n)``,
+Theorem ulog_alt:
+    !n. ulog n = if n = 0 then 0
+                else if (perfect_power n 2) then (LOG2 n) else SUC (LOG2 n)
+Proof
   rw[] >-
   metis_tac[perfect_power_def, ulog_exp_exact, LOG_EXACT_EXP, DECIDE``1 < 2``] >>
   qabbrev_tac `m = SUC (LOG2 n)` >>
@@ -1960,7 +2026,8 @@ val ulog_alt = store_thm(
     decide_tac,
     `n < 2 ** m` by rw[LOG2_PROPERTY, Abbr`m`] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (*
 Thus, for 0 < n, (ulog n) and SUC (LOG2 n) differ only for (perfect_power n 2).
@@ -1972,21 +2039,23 @@ However, in display, (ulog n) is better, while SUC (LOG2 n) is a bit ugly.
 
 (* Theorem: 0 < n ==> (LOG2 n <= ulog n /\ ulog n <= 1 + LOG2 n) *)
 (* Proof: by ulog_alt *)
-val ulog_LOG2 = store_thm(
-  "ulog_LOG2",
-  ``!n. 0 < n ==> (LOG2 n <= ulog n /\ ulog n <= 1 + LOG2 n)``,
-  rw[ulog_alt]);
+Theorem ulog_LOG2:
+    !n. 0 < n ==> (LOG2 n <= ulog n /\ ulog n <= 1 + LOG2 n)
+Proof
+  rw[ulog_alt]
+QED
 
 (* Theorem: 0 < n ==> !m. perfect_power n m <=> ?k. k <= ulog n /\ (n = m ** k) *)
 (* Proof: by perfect_power_bound_LOG2, ulog_LOG2 *)
-val perfect_power_bound_ulog = store_thm(
-  "perfect_power_bound_ulog",
-  ``!n. 0 < n ==> !m. perfect_power n m <=> ?k. k <= ulog n /\ (n = m ** k)``,
+Theorem perfect_power_bound_ulog:
+    !n. 0 < n ==> !m. perfect_power n m <=> ?k. k <= ulog n /\ (n = m ** k)
+Proof
   rw[EQ_IMP_THM] >| [
     `LOG2 n <= ulog n` by rw[ulog_LOG2] >>
     metis_tac[perfect_power_bound_LOG2, LESS_EQ_TRANS],
     metis_tac[perfect_power_def]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Upper Log Theorems                                                        *)
@@ -2014,9 +2083,9 @@ val perfect_power_bound_ulog = store_thm(
       or         x < y                     by EXP_BASE_LT_MONO
     Combining these two cases: x <= y.
 *)
-val ulog_mult = store_thm(
-  "ulog_mult",
-  ``!m n. ulog (m * n) <= ulog m + ulog n``,
+Theorem ulog_mult:
+    !m n. ulog (m * n) <= ulog m + ulog n
+Proof
   rpt strip_tac >>
   Cases_on `(m = 0) \/ (n = 0)` >-
   fs[] >>
@@ -2032,7 +2101,8 @@ val ulog_mult = store_thm(
     `2 ** x < 2 ** y /\ 1 < 2` by decide_tac >>
     `x < y` by metis_tac[EXP_BASE_LT_MONO] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: ulog (m ** n) <= n * ulog m *)
 (* Proof:
@@ -2052,16 +2122,17 @@ val ulog_mult = store_thm(
            = SUC n * ulog m            by ADD1, ADD_COMM
            = RHS
 *)
-val ulog_exp = store_thm(
-  "ulog_exp",
-  ``!m n. ulog (m ** n) <= n * ulog m``,
+Theorem ulog_exp:
+    !m n. ulog (m ** n) <= n * ulog m
+Proof
   rpt strip_tac >>
   Induct_on `n` >>
   rw[EXP_0] >>
   `ulog (m ** SUC n) <= ulog m + ulog (m ** n)` by rw[EXP, ulog_mult] >>
   `ulog m + ulog (m ** n) <= ulog m + n * ulog m` by rw[] >>
   `ulog m + n * ulog m = SUC n * ulog m` by rw[ADD1] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 0 < n /\ EVEN n ==> (ulog n = 1 + ulog (HALF n)) *)
 (* Proof:
@@ -2074,9 +2145,9 @@ val ulog_exp = store_thm(
     or         n <= 2 ** (1 + ulog k) < 2 * n      by EXP
   Thus     ulog n = 1 + ulog k                     by ulog_unique
 *)
-val ulog_even = store_thm(
-  "ulog_even",
-  ``!n. 0 < n /\ EVEN n ==> (ulog n = 1 + ulog (HALF n))``,
+Theorem ulog_even:
+    !n. 0 < n /\ EVEN n ==> (ulog n = 1 + ulog (HALF n))
+Proof
   rpt strip_tac >>
   qabbrev_tac `k = HALF n` >>
   `n = TWICE k` by rw[EVEN_HALF, Abbr`k`] >>
@@ -2087,7 +2158,8 @@ val ulog_even = store_thm(
   `n <= 2 * 2 ** ulog k` by rw[LE_MULT_LCANCEL] >>
   `2 * 2 ** ulog k < 2 * n` by rw[LT_MULT_LCANCEL] >>
   `2 * 2 ** ulog k = 2 ** (1 + ulog k)` by metis_tac[EXP, ADD1, ADD_COMM] >>
-  metis_tac[ulog_unique]);
+  metis_tac[ulog_unique]
+QED
 
 (* Theorem: 1 < n /\ ODD n ==> ulog (HALF n) + 1 <= ulog n *)
 (* Proof:
@@ -2108,9 +2180,9 @@ val ulog_even = store_thm(
          so         1 + ulog k < ulog n            by EXP_BASE_LT_MONO, 1 < 2
   Combining, 1 + ulog k <= ulog n.
 *)
-val ulog_odd = store_thm(
-  "ulog_odd",
-  ``!n. 1 < n /\ ODD n ==> ulog (HALF n) + 1 <= ulog n``,
+Theorem ulog_odd:
+    !n. 1 < n /\ ODD n ==> ulog (HALF n) + 1 <= ulog n
+Proof
   rpt strip_tac >>
   qabbrev_tac `k = HALF n` >>
   `(n <> 0) /\ (n <> 1)` by decide_tac >>
@@ -2131,7 +2203,8 @@ val ulog_odd = store_thm(
     `2 ** (1 + ulog k) < 2 ** ulog n` by decide_tac >>
     `1 + ulog k < ulog n` by metis_tac[EXP_BASE_LT_MONO] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (*
 EVAL ``let n = 13 in [ulog (HALF n) + 1; ulog n]``;
@@ -2145,13 +2218,14 @@ EVAL ``let n = 13 in [ulog (HALF n) + 1; ulog n]``;
    If EVEN n, true        by ulog_even, 0 < n
    If ODD n, true         by ulog_odd, 1 < n, ODD_EVEN.
 *)
-val ulog_half = store_thm(
-  "ulog_half",
-  ``!n. 1 < n ==> ulog (HALF n) + 1 <= ulog n``,
+Theorem ulog_half:
+    !n. 1 < n ==> ulog (HALF n) + 1 <= ulog n
+Proof
   rpt strip_tac >>
   Cases_on `EVEN n` >-
   rw[ulog_even] >>
-  rw[ODD_EVEN, ulog_odd]);
+  rw[ODD_EVEN, ulog_odd]
+QED
 
 (* Theorem: SQRT n <= 2 ** (ulog n) *)
 (* Proof:
@@ -2160,51 +2234,55 @@ val ulog_half = store_thm(
    Thus SQRT n <= 2 ** ulog n     by LESS_EQ_TRANS
      or SQRT n <=
 *)
-val sqrt_upper = store_thm(
-  "sqrt_upper",
-  ``!n. SQRT n <= 2 ** (ulog n)``,
+Theorem sqrt_upper:
+    !n. SQRT n <= 2 ** (ulog n)
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[] >>
   `n <= 2 ** ulog n` by rw[ulog_property] >>
   `SQRT n <= n` by rw[SQRT_LE_SELF] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Power Free up to a limit                                                  *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define a power free property of a number *)
-val power_free_upto_def = Define`
+Definition power_free_upto_def:
     power_free_upto n k <=> !j. 1 < j /\ j <= k ==> (ROOT j n) ** j <> n
-`;
+End
 (* make this an infix relation. *)
 val _ = set_fixity "power_free_upto" (Infix(NONASSOC, 450)); (* same as relation *)
 
 (* Theorem: (n power_free_upto 0) = T *)
 (* Proof: by power_free_upto_def, no counter-example. *)
-val power_free_upto_0 = store_thm(
-  "power_free_upto_0",
-  ``!n. (n power_free_upto 0) = T``,
-  rw[power_free_upto_def]);
+Theorem power_free_upto_0:
+    !n. (n power_free_upto 0) = T
+Proof
+  rw[power_free_upto_def]
+QED
 
 (* Theorem: (n power_free_upto 1) = T *)
 (* Proof: by power_free_upto_def, no counter-example. *)
-val power_free_upto_1 = store_thm(
-  "power_free_upto_1",
-  ``!n. (n power_free_upto 1) = T``,
-  rw[power_free_upto_def]);
+Theorem power_free_upto_1:
+    !n. (n power_free_upto 1) = T
+Proof
+  rw[power_free_upto_def]
+QED
 
 (* Theorem: 0 < k /\ (n power_free_upto k) ==>
             ((n power_free_upto (k + 1)) <=> ROOT (k + 1) n ** (k + 1) <> n) *)
 (* Proof: by power_free_upto_def *)
-val power_free_upto_suc = store_thm(
-  "power_free_upto_suc",
-  ``!n k. 0 < k /\ (n power_free_upto k) ==>
-         ((n power_free_upto (k + 1)) <=> ROOT (k + 1) n ** (k + 1) <> n)``,
+Theorem power_free_upto_suc:
+    !n k. 0 < k /\ (n power_free_upto k) ==>
+         ((n power_free_upto (k + 1)) <=> ROOT (k + 1) n ** (k + 1) <> n)
+Proof
   rw[power_free_upto_def] >>
   rw[EQ_IMP_THM] >>
-  metis_tac[LESS_OR_EQ, DECIDE``k < n + 1 ==> k <= n``]);
+  metis_tac[LESS_OR_EQ, DECIDE``k < n + 1 ==> k <= n``]
+QED
 
 (* Theorem: LOG2 n <= b ==> (power_free n <=> (1 < n /\ n power_free_upto b)) *)
 (* Proof:
@@ -2243,9 +2321,9 @@ val power_free_upto_suc = store_thm(
       With 1 < k /\ k <= b /\ m = ROOT k n /\ m ** k = n,
       These will give a contradiction           by power_free_upto_def
 *)
-val power_free_check_upto = store_thm(
-  "power_free_check_upto",
-  ``!n b. LOG2 n <= b ==> (power_free n <=> (1 < n /\ n power_free_upto b))``,
+Theorem power_free_check_upto:
+    !n b. LOG2 n <= b ==> (power_free n <=> (1 < n /\ n power_free_upto b))
+Proof
   rw[EQ_IMP_THM] >| [
     spose_not_then strip_assume_tac >>
     `(n = 0) \/ (n = 1)` by decide_tac >-
@@ -2270,14 +2348,16 @@ val power_free_check_upto = store_thm(
     `1 < k` by decide_tac >>
     `k <= b` by decide_tac >>
     metis_tac[power_free_upto_def]
-  ]);
+  ]
+QED
 
 (* Theorem: power_free n <=> (1 < n /\ n power_free_upto LOG2 n) *)
 (* Proof: by power_free_check_upto, LOG2 n <= LOG2 n *)
-val power_free_check_upto_LOG2 = store_thm(
-  "power_free_check_upto_LOG2",
-  ``!n. power_free n <=> (1 < n /\ n power_free_upto LOG2 n)``,
-  rw[power_free_check_upto]);
+Theorem power_free_check_upto_LOG2:
+    !n. power_free n <=> (1 < n /\ n power_free_upto LOG2 n)
+Proof
+  rw[power_free_check_upto]
+QED
 
 (* Theorem: power_free n <=> (1 < n /\ n power_free_upto ulog n) *)
 (* Proof:
@@ -2288,13 +2368,14 @@ val power_free_check_upto_LOG2 = store_thm(
       Then LOG2 n <= ulog n         by ulog_LOG2, 0 < n
       The result follows            by power_free_check_upto
 *)
-val power_free_check_upto_ulog = store_thm(
-  "power_free_check_upto_ulog",
-  ``!n. power_free n <=> (1 < n /\ n power_free_upto ulog n)``,
+Theorem power_free_check_upto_ulog:
+    !n. power_free n <=> (1 < n /\ n power_free_upto ulog n)
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[power_free_0] >>
-  rw[power_free_check_upto, ulog_LOG2]);
+  rw[power_free_check_upto, ulog_LOG2]
+QED
 
 (* Theorem: power_free 2 *)
 (* Proof:
@@ -2303,10 +2384,11 @@ val power_free_check_upto_ulog = store_thm(
    <=> 2 power_free_upto 1          by LOG2_2
    <=> T                            by power_free_upto_1
 *)
-val power_free_2 = store_thm(
-  "power_free_2",
-  ``power_free 2``,
-  rw[power_free_check_upto_LOG2, power_free_upto_1]);
+Theorem power_free_2:
+    power_free 2
+Proof
+  rw[power_free_check_upto_LOG2, power_free_upto_1]
+QED
 
 (* Theorem: power_free 3 *)
 (* Proof:
@@ -2317,70 +2399,76 @@ val power_free_2 = store_thm(
    <=> ROOT 2 3 ** 2 <> 3           by power_free_upto_suc, 0 < 1
    <=> T                            by evaluation
 *)
-val power_free_3 = store_thm(
-  "power_free_3",
-  ``power_free 3``,
+Theorem power_free_3:
+    power_free 3
+Proof
   `3 power_free_upto 1` by rw[power_free_upto_1] >>
   `ulog 3 = 2` by EVAL_TAC >>
   `ROOT 2 3 ** 2 <> 3` by EVAL_TAC >>
   `power_free 3 <=> 3 power_free_upto 2` by rw[power_free_check_upto_ulog] >>
-  metis_tac[power_free_upto_suc, DECIDE``0 < 1 /\ (1 + 1 = 2)``]);
+  metis_tac[power_free_upto_suc, DECIDE``0 < 1 /\ (1 + 1 = 2)``]
+QED
 
 (* Define a power free test, based on (ulog n), for computation. *)
-val power_free_test_def = Define`
+Definition power_free_test_def:
     power_free_test n <=>(1 < n /\ n power_free_upto (ulog n))
-`;
+End
 
 (* Theorem: power_free_test n = power_free n *)
 (* Proof: by power_free_test_def, power_free_check_upto_ulog *)
-val power_free_test_eqn = store_thm(
-  "power_free_test_eqn",
-  ``!n. power_free_test n = power_free n``,
-  rw[power_free_test_def, power_free_check_upto_ulog]);
+Theorem power_free_test_eqn:
+    !n. power_free_test n = power_free n
+Proof
+  rw[power_free_test_def, power_free_check_upto_ulog]
+QED
 
 (* Theorem: power_free n <=>
        (1 < n /\ !j. 1 < j /\ j <= (LOG2 n) ==> ROOT j n ** j <> n) *)
 (* Proof: by power_free_check_upto_ulog, power_free_upto_def *)
-val power_free_test_upto_LOG2 = store_thm(
-  "power_free_test_upto_LOG2",
-  ``!n. power_free n <=>
-       (1 < n /\ !j. 1 < j /\ j <= (LOG2 n) ==> ROOT j n ** j <> n)``,
-  rw[power_free_check_upto_LOG2, power_free_upto_def]);
+Theorem power_free_test_upto_LOG2:
+    !n. power_free n <=>
+       (1 < n /\ !j. 1 < j /\ j <= (LOG2 n) ==> ROOT j n ** j <> n)
+Proof
+  rw[power_free_check_upto_LOG2, power_free_upto_def]
+QED
 
 (* Theorem: power_free n <=>
        (1 < n /\ !j. 1 < j /\ j <= (ulog n) ==> ROOT j n ** j <> n) *)
 (* Proof: by power_free_check_upto_ulog, power_free_upto_def *)
-val power_free_test_upto_ulog = store_thm(
-  "power_free_test_upto_ulog",
-  ``!n. power_free n <=>
-       (1 < n /\ !j. 1 < j /\ j <= (ulog n) ==> ROOT j n ** j <> n)``,
-  rw[power_free_check_upto_ulog, power_free_upto_def]);
+Theorem power_free_test_upto_ulog:
+    !n. power_free n <=>
+       (1 < n /\ !j. 1 < j /\ j <= (ulog n) ==> ROOT j n ** j <> n)
+Proof
+  rw[power_free_check_upto_ulog, power_free_upto_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Another Characterisation of Power Free                                    *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define power index of n, the highest index of n in power form by descending from k *)
-val power_index_def = Define `
+Definition power_index_def:
     power_index n k <=>
         if k <= 1 then 1
         else if (ROOT k n) ** k = n then k
         else power_index n (k - 1)
-`;
+End
 
 (* Theorem: power_index n 0 = 1 *)
 (* Proof: by power_index_def *)
-val power_index_0 = store_thm(
-  "power_index_0",
-  ``!n. power_index n 0 = 1``,
-  rw[Once power_index_def]);
+Theorem power_index_0:
+    !n. power_index n 0 = 1
+Proof
+  rw[Once power_index_def]
+QED
 
 (* Theorem: power_index n 1 = 1 *)
 (* Proof: by power_index_def *)
-val power_index_1 = store_thm(
-  "power_index_1",
-  ``!n. power_index n 1 = 1``,
-  rw[Once power_index_def]);
+Theorem power_index_1:
+    !n. power_index n 1 = 1
+Proof
+  rw[Once power_index_def]
+QED
 
 (* Theorem: (ROOT (power_index n k) n) ** (power_index n k) = n *)
 (* Proof:
@@ -2411,9 +2499,9 @@ val power_index_1 = store_thm(
                = ROOT (power_index n k) n ** power_index n k    by above
                = n                                              by induction hypothesis
 *)
-val power_index_eqn = store_thm(
-  "power_index_eqn",
-  ``!n k. (ROOT (power_index n k) n) ** (power_index n k) = n``,
+Theorem power_index_eqn:
+    !n k. (ROOT (power_index n k) n) ** (power_index n k) = n
+Proof
   rpt strip_tac >>
   Induct_on `k` >-
   rw[power_index_0] >>
@@ -2423,7 +2511,8 @@ val power_index_eqn = store_thm(
   rw_tac std_ss[Once power_index_def] >-
   rw[Once power_index_def] >>
   `power_index n (SUC k) = power_index n k` by rw[Once power_index_def] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: perfect_power n (ROOT (power_index n k) n) *)
 (* Proof:
@@ -2435,10 +2524,11 @@ val power_index_eqn = store_thm(
    = (ROOT (power_index n k) n) ** (power_index n k)     by root_compute_eqn
    = n                                                   by power_index_eqn
 *)
-val power_index_root = store_thm(
-  "power_index_root",
-  ``!n k. perfect_power n (ROOT (power_index n k) n)``,
-  metis_tac[perfect_power_def, power_index_eqn]);
+Theorem power_index_root:
+    !n k. perfect_power n (ROOT (power_index n k) n)
+Proof
+  metis_tac[perfect_power_def, power_index_eqn]
+QED
 
 (* Theorem: power_index 1 k = if k = 0 then 1 else k *)
 (* Proof:
@@ -2451,10 +2541,11 @@ val power_index_root = store_thm(
          Note ROOT k 1 = 1              by ROOT_OF_1, 0 < k.
            so power_index 1 k = k       by power_index_def
 *)
-val power_index_of_1 = store_thm(
-  "power_index_of_1",
-  ``!k. power_index 1 k = if k = 0 then 1 else k``,
-  rw[Once power_index_def]);
+Theorem power_index_of_1:
+    !k. power_index 1 k = if k = 0 then 1 else k
+Proof
+  rw[Once power_index_def]
+QED
 
 (* Theorem: 0 < k /\ ((ROOT k n) ** k = n) ==> (power_index n k = k) *)
 (* Proof:
@@ -2463,14 +2554,15 @@ val power_index_of_1 = store_thm(
    If k <> 1, then 1 < k                  by 0 < k
       True                                by power_index_def
 *)
-val power_index_exact_root = store_thm(
-  "power_index_exact_root",
-  ``!n k. 0 < k /\ ((ROOT k n) ** k = n) ==> (power_index n k = k)``,
+Theorem power_index_exact_root:
+    !n k. 0 < k /\ ((ROOT k n) ** k = n) ==> (power_index n k = k)
+Proof
   rpt strip_tac >>
   Cases_on `k = 1` >-
   rw[power_index_1] >>
   `1 < k` by decide_tac >>
-  rw[Once power_index_def]);
+  rw[Once power_index_def]
+QED
 
 (* Theorem: (ROOT k n) ** k <> n ==> (power_index n k = power_index n (k - 1)) *)
 (* Proof:
@@ -2484,9 +2576,9 @@ val power_index_exact_root = store_thm(
    If k <> 0 /\ k <> 1, then 1 < k    by arithmetic
       True                            by power_index_def
 *)
-val power_index_not_exact_root = store_thm(
-  "power_index_not_exact_root",
-  ``!n k. (ROOT k n) ** k <> n ==> (power_index n k = power_index n (k - 1))``,
+Theorem power_index_not_exact_root:
+    !n k. (ROOT k n) ** k <> n ==> (power_index n k = power_index n (k - 1))
+Proof
   rpt strip_tac >>
   Cases_on `k = 0` >| [
     `k = k - 1` by decide_tac >>
@@ -2495,7 +2587,8 @@ val power_index_not_exact_root = store_thm(
     rw[power_index_0, power_index_1] >>
     `1 < k` by decide_tac >>
     rw[Once power_index_def]
-  ]);
+  ]
+QED
 
 (* Theorem: k <= m /\ (!j. k < j /\ j <= m ==> (ROOT j n) ** j <> n) ==> (power_index n m = power_index n k) *)
 (* Proof:
@@ -2514,9 +2607,9 @@ val power_index_not_exact_root = store_thm(
             = power_index n (m - 1)       by power_index_not_exact_root
             = power_index n k             by induction hypothesis, m' = m - 1.
 *)
-val power_index_no_exact_roots = store_thm(
-  "power_index_no_exact_roots",
-  ``!m n k. k <= m /\ (!j. k < j /\ j <= m ==> (ROOT j n) ** j <> n) ==> (power_index n m = power_index n k)``,
+Theorem power_index_no_exact_roots:
+    !m n k. k <= m /\ (!j. k < j /\ j <= m ==> (ROOT j n) ** j <> n) ==> (power_index n m = power_index n k)
+Proof
   rpt strip_tac >>
   Induct_on `m - k` >| [
     rpt strip_tac >>
@@ -2529,7 +2622,8 @@ val power_index_no_exact_roots = store_thm(
     `k <= m - 1` by decide_tac >>
     `power_index n (m - 1) = power_index n k` by rw[] >>
     rw[power_index_not_exact_root]
-  ]);
+  ]
+QED
 
 (* The theorem power_index_equal requires a detective-style proof, based on these lemma. *)
 
@@ -2565,9 +2659,9 @@ val power_index_no_exact_roots = store_thm(
        But k <= t                              by MAX_SET_PROPERTY
       Thus k <= t = power_index n m
 *)
-val power_index_lower = store_thm(
-  "power_index_lower",
-  ``!m n k. k <= m /\ ((ROOT k n) ** k = n) ==> k <= power_index n m``,
+Theorem power_index_lower:
+    !m n k. k <= m /\ ((ROOT k n) ** k = n) ==> k <= power_index n m
+Proof
   rpt strip_tac >>
   Cases_on `k = 0` >| [
     `n = 1` by fs[EXP] >>
@@ -2591,7 +2685,8 @@ val power_index_lower = store_thm(
     `(ROOT t n) ** t = n` by metis_tac[] >>
     `power_index n t = t` by rw[power_index_exact_root] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < power_index n k *)
 (* Proof:
@@ -2603,14 +2698,15 @@ val power_index_lower = store_thm(
       Thus 1 <= power_index n k              by power_index_lower
         or 0 < power_index n k
 *)
-val power_index_pos = store_thm(
-  "power_index_pos",
-  ``!n k. 0 < power_index n k``,
+Theorem power_index_pos:
+    !n k. 0 < power_index n k
+Proof
   rpt strip_tac >>
   Cases_on `k = 0` >-
   rw[power_index_0] >>
   `1 <= power_index n k` by rw[power_index_lower, EXP_1] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 0 < k ==> power_index n k <= k *)
 (* Proof:
@@ -2637,9 +2733,9 @@ val power_index_pos = store_thm(
             Thus power_index n m < m      by LESS_EQ_LESS_TRANS
               or power_index n m <= m     by LESS_IMP_LESS_OR_EQ
 *)
-val power_index_upper = store_thm(
-  "power_index_upper",
-  ``!n k. 0 < k ==> power_index n k <= k``,
+Theorem power_index_upper:
+    !n k. 0 < k ==> power_index n k <= k
+Proof
   strip_tac >>
   Induct >-
   rw[] >>
@@ -2650,7 +2746,8 @@ val power_index_upper = store_thm(
   qabbrev_tac `m = SUC k` >>
   Cases_on `(ROOT m n) ** m = n` >-
   rw[power_index_exact_root] >>
-  rw[power_index_not_exact_root, Abbr`m`]);
+  rw[power_index_not_exact_root, Abbr`m`]
+QED
 
 (* Theorem: 0 < k /\ k <= m ==>
             ((power_index n m = power_index n k) <=> (!j. k < j /\ j <= m ==> (ROOT j n) ** j <> n)) *)
@@ -2665,10 +2762,10 @@ val power_index_upper = store_thm(
                  power_index n m = power_index n k
       True by power_index_no_exact_roots
 *)
-val power_index_equal = store_thm(
-  "power_index_equal",
-  ``!m n k. 0 < k /\ k <= m ==>
-    ((power_index n m = power_index n k) <=> (!j. k < j /\ j <= m ==> (ROOT j n) ** j <> n))``,
+Theorem power_index_equal:
+    !m n k. 0 < k /\ k <= m ==>
+    ((power_index n m = power_index n k) <=> (!j. k < j /\ j <= m ==> (ROOT j n) ** j <> n))
+Proof
   rpt strip_tac >>
   rw[EQ_IMP_THM] >| [
     spose_not_then strip_assume_tac >>
@@ -2676,7 +2773,8 @@ val power_index_equal = store_thm(
     `power_index n k <= k` by rw[power_index_upper] >>
     decide_tac,
     rw[power_index_no_exact_roots]
-  ]);
+  ]
+QED
 
 (* Theorem: (power_index n m = k) ==> !j. k < j /\ j <= m ==> (ROOT j n) ** j <> n *)
 (* Proof:
@@ -2684,12 +2782,13 @@ val power_index_equal = store_thm(
    Then j <= power_index n m                   by power_index_lower
    This contradicts power_index n m = k < j    by given
 *)
-val power_index_property = store_thm(
-  "power_index_property",
-  ``!m n k. (power_index n m = k) ==> !j. k < j /\ j <= m ==> (ROOT j n) ** j <> n``,
+Theorem power_index_property:
+    !m n k. (power_index n m = k) ==> !j. k < j /\ j <= m ==> (ROOT j n) ** j <> n
+Proof
   spose_not_then strip_assume_tac >>
   `j <= power_index n m` by rw[power_index_lower] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: power_free n <=> (1 < n) /\ (power_index n (LOG2 n) = 1) *)
 (* Proof:
@@ -2703,9 +2802,9 @@ val power_index_property = store_thm(
          = 1                       by power_index_1
    Only-if part, true              by power_index_property
 *)
-val power_free_by_power_index_LOG2 = store_thm(
-  "power_free_by_power_index_LOG2",
-  ``!n. power_free n <=> (1 < n) /\ (power_index n (LOG2 n) = 1)``,
+Theorem power_free_by_power_index_LOG2:
+    !n. power_free n <=> (1 < n) /\ (power_index n (LOG2 n) = 1)
+Proof
   rw[power_free_check_upto_LOG2, power_free_upto_def] >>
   rw[EQ_IMP_THM] >| [
     `0 < LOG2 n` by rw[] >>
@@ -2713,7 +2812,8 @@ val power_free_by_power_index_LOG2 = store_thm(
     `power_index n (LOG2 n) = power_index n 1` by rw[power_index_no_exact_roots] >>
     rw[power_index_1],
     metis_tac[power_index_property]
-  ]);
+  ]
+QED
 
 (* Theorem: power_free n <=> (1 < n) /\ (power_index n (ulog n) = 1) *)
 (* Proof:
@@ -2727,9 +2827,9 @@ val power_free_by_power_index_LOG2 = store_thm(
          = 1                       by power_index_1
    Only-if part, true              by power_index_property
 *)
-val power_free_by_power_index_ulog = store_thm(
-  "power_free_by_power_index_ulog",
-  ``!n. power_free n <=> (1 < n) /\ (power_index n (ulog n) = 1)``,
+Theorem power_free_by_power_index_ulog:
+    !n. power_free n <=> (1 < n) /\ (power_index n (ulog n) = 1)
+Proof
   rw[power_free_check_upto_ulog, power_free_upto_def] >>
   rw[EQ_IMP_THM] >| [
     `0 < ulog n` by rw[] >>
@@ -2737,7 +2837,8 @@ val power_free_by_power_index_ulog = store_thm(
     `power_index n (ulog n) = power_index n 1` by rw[power_index_no_exact_roots] >>
     rw[power_index_1],
     metis_tac[power_index_property]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Prime Power Documentation                                                 *)
@@ -3095,10 +3196,10 @@ The concept of a prime power number goes like this:
        Thus 1 < a /\ 1 < b /\ a < n /\ b < n  by arithmetic
       Take a, b for the second assertion.
 *)
-val prime_power_or_coprime_factors = store_thm(
-  "prime_power_or_coprime_factors",
-  ``!n. 1 < n ==> (?p k. 0 < k /\ prime p /\ (n = p ** k)) \/
-                 (?a b. (n = a * b) /\ coprime a b /\ 1 < a /\ 1 < b /\ a < n /\ b < n)``,
+Theorem prime_power_or_coprime_factors:
+    !n. 1 < n ==> (?p k. 0 < k /\ prime p /\ (n = p ** k)) \/
+                 (?a b. (n = a * b) /\ coprime a b /\ 1 < a /\ 1 < b /\ a < n /\ b < n)
+Proof
   rpt strip_tac >>
   `0 < n /\ n <> 0 /\ n <> 1` by decide_tac >>
   `?p. prime p /\ p divides n` by rw[PRIME_FACTOR] >>
@@ -3116,7 +3217,8 @@ val prime_power_or_coprime_factors = store_thm(
   `a <= n /\ b <= n` by rw[DIVIDES_LE] >>
   `a <> n /\ b <> n` by metis_tac[MULT_LEFT_ID, MULT_RIGHT_ID] >>
   `1 < a /\ 1 < b /\ a < n /\ b < n` by decide_tac >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* The following is the more powerful version of this:
    Simple theorem: If n is not a prime, then ?a b. (n = a * b) /\ 1 < a /\ a < n /\ 1 < b /\ b < n
@@ -3147,10 +3249,10 @@ val prime_power_or_coprime_factors = store_thm(
      ==> a < n                                  by arithmetic
     Take these a and b, the result follows.
 *)
-val non_prime_power_coprime_factors = store_thm(
-  "non_prime_power_coprime_factors",
-  ``!n. 1 < n /\ ~(?p k. 0 < k /\ prime p /\ (n = p ** k)) ==>
-   ?a b. (n = a * b) /\ coprime a b /\ 1 < a /\ a < n /\ 1 < b /\ b < n``,
+Theorem non_prime_power_coprime_factors:
+    !n. 1 < n /\ ~(?p k. 0 < k /\ prime p /\ (n = p ** k)) ==>
+   ?a b. (n = a * b) /\ coprime a b /\ 1 < a /\ a < n /\ 1 < b /\ b < n
+Proof
   rpt strip_tac >>
   `0 < n` by decide_tac >>
   `?p. prime p /\ p divides n` by rw[PRIME_FACTOR] >>
@@ -3167,7 +3269,8 @@ val non_prime_power_coprime_factors = store_thm(
   `a <= n` by rw[DIVIDES_LE] >>
   `a <> n` by metis_tac[MULT_RIGHT_1] >>
   `a < n` by decide_tac >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: s SUBSET prime ==> PAIRWISE_COPRIME (IMAGE (\p. p ** f p) s) *)
 (* Proof:
@@ -3177,12 +3280,13 @@ val non_prime_power_coprime_factors = store_thm(
     and p <> p'                      by p ** f <> p' ** f
    Thus coprime (p ** f) (p' ** f)   by prime_powers_coprime
 *)
-val pairwise_coprime_for_prime_powers = store_thm(
-  "pairwise_coprime_for_prime_powers",
-  ``!s f. s SUBSET prime ==> PAIRWISE_COPRIME (IMAGE (\p. p ** f p) s)``,
+Theorem pairwise_coprime_for_prime_powers:
+    !s f. s SUBSET prime ==> PAIRWISE_COPRIME (IMAGE (\p. p ** f p) s)
+Proof
   rw[SUBSET_DEF] >>
   `prime p /\ prime p' /\ p <> p'` by metis_tac[in_prime] >>
-  rw[prime_powers_coprime]);
+  rw[prime_powers_coprime]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Prime Power Index                                                         *)
@@ -3199,15 +3303,16 @@ val pairwise_coprime_for_prime_powers = store_thm(
    Thus q = n DIV t                                 by MULT_LEFT_CANCEL
    Take this m, and the result follows.
 *)
-val prime_power_index_exists = store_thm(
-  "prime_power_index_exists",
-  ``!n p. 0 < n /\ prime p ==> ?m. (p ** m) divides n /\ coprime p (n DIV (p ** m))``,
+Theorem prime_power_index_exists:
+    !n p. 0 < n /\ prime p ==> ?m. (p ** m) divides n /\ coprime p (n DIV (p ** m))
+Proof
   rpt strip_tac >>
   `?q m. (n = (p ** m) * q) /\ coprime p q` by rw[prime_power_factor] >>
   qabbrev_tac `t = p ** m` >>
   `t divides n` by metis_tac[divides_def, MULT_COMM] >>
   `0 < t` by rw[PRIME_POS, EXP_POS, Abbr`t`] >>
-  metis_tac[DIVIDES_EQN_COMM, MULT_LEFT_CANCEL, NOT_ZERO_LT_ZERO]);
+  metis_tac[DIVIDES_EQN_COMM, MULT_LEFT_CANCEL, NOT_ZERO_LT_ZERO]
+QED
 
 (* Apply Skolemization *)
 val lemma = prove(
@@ -3242,20 +3347,22 @@ val it = |- !p n. 0 < n /\ prime p ==> p ** ppidx n divides n /\ coprime p (n DI
 
 (* Theorem: prime p ==> (p ** (ppidx n)) divides n *)
 (* Proof: by prime_power_index_def, and ALL_DIVIDES_0 *)
-val prime_power_factor_divides = store_thm(
-  "prime_power_factor_divides",
-  ``!n p. prime p ==> (p ** (ppidx n)) divides n``,
+Theorem prime_power_factor_divides:
+    !n p. prime p ==> (p ** (ppidx n)) divides n
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[] >>
-  rw[prime_power_index_def]);
+  rw[prime_power_index_def]
+QED
 
 (* Theorem: 0 < n /\ prime p ==> coprime p (n DIV p ** ppidx n) *)
 (* Proof: by prime_power_index_def *)
-val prime_power_cofactor_coprime = store_thm(
-  "prime_power_cofactor_coprime",
-  ``!n p. 0 < n /\ prime p ==> coprime p (n DIV p ** ppidx n)``,
-  rw[prime_power_index_def]);
+Theorem prime_power_cofactor_coprime:
+    !n p. 0 < n /\ prime p ==> coprime p (n DIV p ** ppidx n)
+Proof
+  rw[prime_power_index_def]
+QED
 
 (* Theorem: 0 < n /\ prime p ==> (n = p ** (ppidx n) * (n DIV p ** (ppidx n))) *)
 (* Proof:
@@ -3265,14 +3372,15 @@ val prime_power_cofactor_coprime = store_thm(
      so q <> 0, or 0 < q        by ZERO_DIVIDES
    Thus n = q * (n DIV q)       by DIVIDES_EQN_COMM, 0 < q
 *)
-val prime_power_eqn = store_thm(
-  "prime_power_eqn",
-  ``!n p. 0 < n /\ prime p ==> (n = p ** (ppidx n) * (n DIV p ** (ppidx n)))``,
+Theorem prime_power_eqn:
+    !n p. 0 < n /\ prime p ==> (n = p ** (ppidx n) * (n DIV p ** (ppidx n)))
+Proof
   rpt strip_tac >>
   qabbrev_tac `q = p ** (ppidx n)` >>
   `q divides n` by rw[prime_power_factor_divides, Abbr`q`] >>
   `0 < q` by metis_tac[ZERO_DIVIDES, NOT_ZERO_LT_ZERO] >>
-  rw[GSYM DIVIDES_EQN_COMM]);
+  rw[GSYM DIVIDES_EQN_COMM]
+QED
 
 (* Theorem: 0 < n /\ prime p ==> !k. (p ** k) divides n <=> k <= (ppidx n) *)
 (* Proof:
@@ -3332,10 +3440,11 @@ QED
 
 (* Theorem: 0 < n /\ prime p ==> !k. k > ppidx n ==> ~(p ** k divides n) *)
 (* Proof: by prime_power_divisibility *)
-val prime_power_index_maximal = store_thm(
-  "prime_power_index_maximal",
-  ``!n p. 0 < n /\ prime p ==> !k. k > ppidx n ==> ~(p ** k divides n)``,
-  rw[prime_power_divisibility]);
+Theorem prime_power_index_maximal:
+    !n p. 0 < n /\ prime p ==> !k. k > ppidx n ==> ~(p ** k divides n)
+Proof
+  rw[prime_power_divisibility]
+QED
 
 (* Theorem: 0 < n /\ m divides n ==> !p. prime p ==> ppidx m <= ppidx n *)
 (* Proof:
@@ -3344,14 +3453,15 @@ val prime_power_index_maximal = store_thm(
     ==> p ** ppidx m divides n     by DIVIDES_TRANS
      or ppidx m <= ppidx n         by prime_power_divisibility, 0 < n
 *)
-val prime_power_index_of_divisor = store_thm(
-  "prime_power_index_of_divisor",
-  ``!m n. 0 < n /\ m divides n ==> !p. prime p ==> ppidx m <= ppidx n``,
+Theorem prime_power_index_of_divisor:
+    !m n. 0 < n /\ m divides n ==> !p. prime p ==> ppidx m <= ppidx n
+Proof
   rpt strip_tac >>
   `0 < m` by metis_tac[ZERO_DIVIDES, NOT_ZERO_LT_ZERO] >>
   `p ** ppidx m divides m` by rw[prime_power_factor_divides] >>
   `p ** ppidx m divides n` by metis_tac[DIVIDES_TRANS] >>
-  rw[GSYM prime_power_divisibility]);
+  rw[GSYM prime_power_divisibility]
+QED
 
 (* Theorem: 0 < n /\ prime p ==> !k. (k = ppidx n) <=> (?q. (n = p ** k * q) /\ coprime p q) *)
 (* Proof:
@@ -3381,9 +3491,9 @@ val prime_power_index_of_divisor = store_thm(
 
       With k <= ppidx n and ppidx n <= k, k = ppidx n  by LESS_EQUAL_ANTISYM
 *)
-val prime_power_index_test = store_thm(
-  "prime_power_index_test",
-  ``!n p. 0 < n /\ prime p ==> !k. (k = ppidx n) <=> (?q. (n = p ** k * q) /\ coprime p q)``,
+Theorem prime_power_index_test:
+    !n p. 0 < n /\ prime p ==> !k. (k = ppidx n) <=> (?q. (n = p ** k * q) /\ coprime p q)
+Proof
   rw_tac std_ss[EQ_IMP_THM] >-
   metis_tac[prime_power_eqn, prime_power_cofactor_coprime] >>
   qabbrev_tac `n = p ** k * q` >>
@@ -3403,7 +3513,8 @@ val prime_power_index_test = store_thm(
   `p divides q` by metis_tac[DIVIDES_TRANS] >>
   `gcd p q = p` by rw[GSYM divides_iff_gcd_fix] >>
   metis_tac[NOT_PRIME_1]) >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: prime p ==> (ppidx 1 = 0) *)
 (* Proof:
@@ -3411,13 +3522,14 @@ val prime_power_index_test = store_thm(
     and coprime p 1         by GCD_1
      so ppidx 1 = 0         by prime_power_index_test, 0 < 1
 *)
-val prime_power_index_1 = store_thm(
-  "prime_power_index_1",
-  ``!p. prime p ==> (ppidx 1 = 0)``,
+Theorem prime_power_index_1:
+    !p. prime p ==> (ppidx 1 = 0)
+Proof
   rpt strip_tac >>
   `1 = p ** 0 * 1` by rw[] >>
   `coprime p 1` by rw[GCD_1] >>
-  metis_tac[prime_power_index_test, DECIDE``0 < 1``]);
+  metis_tac[prime_power_index_test, DECIDE``0 < 1``]
+QED
 
 (* Theorem: 0 < n /\ prime p /\ ~(p divides n) ==> (ppidx n = 0) *)
 (* Proof:
@@ -3429,13 +3541,14 @@ val prime_power_index_1 = store_thm(
     ==> p divides n              by DIVIDES_TRANS
    This contradicts ~(p divides n).
 *)
-val prime_power_index_eq_0 = store_thm(
-  "prime_power_index_eq_0",
-  ``!n p. 0 < n /\ prime p /\ ~(p divides n) ==> (ppidx n = 0)``,
+Theorem prime_power_index_eq_0:
+    !n p. 0 < n /\ prime p /\ ~(p divides n) ==> (ppidx n = 0)
+Proof
   spose_not_then strip_assume_tac >>
   `p ** ppidx n divides n` by rw[prime_power_index_def] >>
   `p divides p ** ppidx n` by rw[divides_self_power, ONE_LT_PRIME] >>
-  metis_tac[DIVIDES_TRANS]);
+  metis_tac[DIVIDES_TRANS]
+QED
 
 (* Theorem: prime p ==> (ppidx (p ** k) = k) *)
 (* Proof:
@@ -3444,14 +3557,15 @@ val prime_power_index_eq_0 = store_thm(
     Now 0 < p ** k            by PRIME_POS, EXP_POS
      so ppidx (p ** k) = k    by prime_power_index_test, 0 < p ** k
 *)
-val prime_power_index_prime_power = store_thm(
-  "prime_power_index_prime_power",
-  ``!p. prime p ==> !k. ppidx (p ** k) = k``,
+Theorem prime_power_index_prime_power:
+    !p. prime p ==> !k. ppidx (p ** k) = k
+Proof
   rpt strip_tac >>
   `p ** k = p ** k * 1` by rw[] >>
   `coprime p 1` by rw[GCD_1] >>
   `0 < p ** k` by rw[PRIME_POS, EXP_POS] >>
-  metis_tac[prime_power_index_test]);
+  metis_tac[prime_power_index_test]
+QED
 
 (* Theorem: prime p ==> (ppidx p = 1) *)
 (* Proof:
@@ -3460,13 +3574,14 @@ val prime_power_index_prime_power = store_thm(
     and coprime p 1       by GCD_1
      so ppidx p = 1       by prime_power_index_test
 *)
-val prime_power_index_prime = store_thm(
-  "prime_power_index_prime",
-  ``!p. prime p ==> (ppidx p = 1)``,
+Theorem prime_power_index_prime:
+    !p. prime p ==> (ppidx p = 1)
+Proof
   rpt strip_tac >>
   `0 < p` by rw[PRIME_POS] >>
   `p = p ** 1 * 1` by rw[] >>
-  metis_tac[prime_power_index_test, GCD_1]);
+  metis_tac[prime_power_index_test, GCD_1]
+QED
 
 (* Theorem: 0 < n /\ prime p ==> let q = n DIV (p ** ppidx n) in (n = p ** ppidx n * q) /\ (coprime p q) *)
 (* Proof:
@@ -3478,10 +3593,11 @@ val prime_power_index_prime = store_thm(
         ==> n = p ** ppidx n * q        by DIVIDES_EQN_COMM, 0 < p ** ppidx n
    (2) coprime p q, true                by prime_power_index_def
 *)
-val prime_power_index_eqn = store_thm(
-  "prime_power_index_eqn",
-  ``!n p. 0 < n /\ prime p ==> let q = n DIV (p ** ppidx n) in (n = p ** ppidx n * q) /\ (coprime p q)``,
-  metis_tac[prime_power_index_def, PRIME_POS, EXP_POS, DIVIDES_EQN_COMM]);
+Theorem prime_power_index_eqn:
+    !n p. 0 < n /\ prime p ==> let q = n DIV (p ** ppidx n) in (n = p ** ppidx n * q) /\ (coprime p q)
+Proof
+  metis_tac[prime_power_index_def, PRIME_POS, EXP_POS, DIVIDES_EQN_COMM]
+QED
 
 (* Theorem: 0 < n /\ prime p /\ p divides n ==> 0 < ppidx n *)
 (* Proof:
@@ -3496,14 +3612,15 @@ val prime_power_index_eqn = store_thm(
     and coprime p q ==> ~(p divides q)    by coprime_not_divides
     This contradicts p divides q          by p divides n, n = q
 *)
-val prime_power_index_pos = store_thm(
-  "prime_power_index_pos",
-  ``!n p. 0 < n /\ prime p /\ p divides n ==> 0 < ppidx n``,
+Theorem prime_power_index_pos:
+    !n p. 0 < n /\ prime p /\ p divides n ==> 0 < ppidx n
+Proof
   spose_not_then strip_assume_tac >>
   `ppidx n = 0` by decide_tac >>
   `?q. coprime p q /\ (n = p ** ppidx n * q)` by metis_tac[prime_power_index_eqn] >>
   `_ = q` by rw[] >>
-  metis_tac[coprime_not_divides, ONE_LT_PRIME]);
+  metis_tac[coprime_not_divides, ONE_LT_PRIME]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Prime Power and GCD, LCM                                                  *)
@@ -3535,10 +3652,10 @@ val prime_power_index_pos = store_thm(
          = p ** mb * gcd qa qb             by gcd_coprime_cancel, coprime (p ** d) qb
          = p ** (MIN ma mb) * gcd qa qb    by MIN_DEF
 *)
-val gcd_prime_power_factor = store_thm(
-  "gcd_prime_power_factor",
-  ``!a b p. 0 < a /\ 0 < b /\ prime p ==>
-    (gcd a b = p ** MIN (ppidx a) (ppidx b) * gcd (a DIV p ** (ppidx a)) (b DIV p ** (ppidx b)))``,
+Theorem gcd_prime_power_factor:
+    !a b p. 0 < a /\ 0 < b /\ prime p ==>
+    (gcd a b = p ** MIN (ppidx a) (ppidx b) * gcd (a DIV p ** (ppidx a)) (b DIV p ** (ppidx b)))
+Proof
   rpt strip_tac >>
   qabbrev_tac `ma = ppidx a` >>
   qabbrev_tac `qa = a DIV p ** ma` >>
@@ -3561,14 +3678,16 @@ val gcd_prime_power_factor = store_thm(
     `gcd a b = p ** mb * gcd (p ** d * qa) qb` by metis_tac[GCD_COMMON_FACTOR, MULT_ASSOC] >>
     `_ = p ** mb * gcd qa qb` by rw[gcd_coprime_cancel] >>
     rw[MIN_DEF]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < a /\ 0 < b /\ prime p ==> (p ** MIN (ppidx a) (ppidx b)) divides (gcd a b) *)
 (* Proof: by gcd_prime_power_factor, divides_def *)
-val gcd_prime_power_factor_divides_gcd = store_thm(
-  "gcd_prime_power_factor_divides_gcd",
-  ``!a b p. 0 < a /\ 0 < b /\ prime p ==> (p ** MIN (ppidx a) (ppidx b)) divides (gcd a b)``,
-  prove_tac[gcd_prime_power_factor, divides_def, MULT_COMM]);
+Theorem gcd_prime_power_factor_divides_gcd:
+    !a b p. 0 < a /\ 0 < b /\ prime p ==> (p ** MIN (ppidx a) (ppidx b)) divides (gcd a b)
+Proof
+  prove_tac[gcd_prime_power_factor, divides_def, MULT_COMM]
+QED
 
 (* Theorem: 0 < a /\ 0 < b /\ prime p ==> coprime p (gcd (a DIV p ** (ppidx a)) (b DIV p ** (ppidx b))) *)
 (* Proof:
@@ -3580,10 +3699,11 @@ val gcd_prime_power_factor_divides_gcd = store_thm(
      = gcd 1 qb                  by coprime p qa
      = 1                         by GCD_1
 *)
-val gcd_prime_power_cofactor_coprime = store_thm(
-  "gcd_prime_power_cofactor_coprime",
-  ``!a b p. 0 < a /\ 0 < b /\ prime p ==> coprime p (gcd (a DIV p ** (ppidx a)) (b DIV p ** (ppidx b)))``,
-  rw[prime_power_cofactor_coprime, GCD_ASSOC, GCD_1]);
+Theorem gcd_prime_power_cofactor_coprime:
+    !a b p. 0 < a /\ 0 < b /\ prime p ==> coprime p (gcd (a DIV p ** (ppidx a)) (b DIV p ** (ppidx b)))
+Proof
+  rw[prime_power_cofactor_coprime, GCD_ASSOC, GCD_1]
+QED
 
 (* Theorem: 0 < a /\ 0 < b /\ prime p ==> (ppidx (gcd a b) = MIN (ppidx a) (ppidx b)) *)
 (* Proof:
@@ -3595,10 +3715,11 @@ val gcd_prime_power_cofactor_coprime = store_thm(
     and coprime p (gcd qa qb)              by gcd_prime_power_cofactor_coprime
    Thus ppidx (gcd a b) = m                by prime_power_index_test
 *)
-val gcd_prime_power_index = store_thm(
-  "gcd_prime_power_index",
-  ``!a b p. 0 < a /\ 0 < b /\ prime p ==> (ppidx (gcd a b) = MIN (ppidx a) (ppidx b))``,
-  metis_tac[gcd_prime_power_factor, GCD_POS, prime_power_index_test, gcd_prime_power_cofactor_coprime]);
+Theorem gcd_prime_power_index:
+    !a b p. 0 < a /\ 0 < b /\ prime p ==> (ppidx (gcd a b) = MIN (ppidx a) (ppidx b))
+Proof
+  metis_tac[gcd_prime_power_factor, GCD_POS, prime_power_index_test, gcd_prime_power_cofactor_coprime]
+QED
 
 (* Theorem: 0 < a /\ 0 < b /\ prime p ==> !k. p ** k divides gcd a b ==> k <= MIN (ppidx a) (ppidx b) *)
 (* Proof:
@@ -3606,10 +3727,11 @@ val gcd_prime_power_index = store_thm(
    Thus k <= ppidx (gcd a b)            by prime_power_divisibility
      or k <= MIN (ppidx a) (ppidx b)    by gcd_prime_power_index
 *)
-val gcd_prime_power_divisibility = store_thm(
-  "gcd_prime_power_divisibility",
-  ``!a b p. 0 < a /\ 0 < b /\ prime p ==> !k. p ** k divides gcd a b ==> k <= MIN (ppidx a) (ppidx b)``,
-  metis_tac[GCD_POS, prime_power_divisibility, gcd_prime_power_index]);
+Theorem gcd_prime_power_divisibility:
+    !a b p. 0 < a /\ 0 < b /\ prime p ==> !k. p ** k divides gcd a b ==> k <= MIN (ppidx a) (ppidx b)
+Proof
+  metis_tac[GCD_POS, prime_power_divisibility, gcd_prime_power_index]
+QED
 
 (* Theorem: 0 < a /\ 0 < b /\ prime p ==>
             (lcm a b = p ** MAX (ppidx a) (ppidx b) * lcm (a DIV p ** (ppidx a)) (b DIV p ** (ppidx b))) *)
@@ -3647,10 +3769,10 @@ val gcd_prime_power_divisibility = store_thm(
                    = p ** ma * lcm qa qb              by MULT_COMM
                    = p ** (MAX ma mb) * lcm qa qb     by MAX_DEF
 *)
-val lcm_prime_power_factor = store_thm(
-  "lcm_prime_power_factor",
-  ``!a b p. 0 < a /\ 0 < b /\ prime p ==>
-    (lcm a b = p ** MAX (ppidx a) (ppidx b) * lcm (a DIV p ** (ppidx a)) (b DIV p ** (ppidx b)))``,
+Theorem lcm_prime_power_factor:
+    !a b p. 0 < a /\ 0 < b /\ prime p ==>
+    (lcm a b = p ** MAX (ppidx a) (ppidx b) * lcm (a DIV p ** (ppidx a)) (b DIV p ** (ppidx b)))
+Proof
   rpt strip_tac >>
   qabbrev_tac `ma = ppidx a` >>
   qabbrev_tac `qa = a DIV p ** ma` >>
@@ -3679,16 +3801,18 @@ val lcm_prime_power_factor = store_thm(
     `_ = gcd qa qb * lcm qa qb * (p ** ma)` by metis_tac[GCD_LCM] >>
     `lcm a b = lcm qa qb * p ** ma` by metis_tac[MULT_LEFT_CANCEL, MULT_ASSOC] >>
     rw[MAX_DEF, Once MULT_COMM]
-  ]);
+  ]
+QED
 
 (* The following is the two-number version of prime_power_factor_divides *)
 
 (* Theorem: 0 < a /\ 0 < b /\ prime p ==> (p ** MAX (ppidx a) (ppidx b)) divides (lcm a b) *)
 (* Proof: by lcm_prime_power_factor, divides_def *)
-val lcm_prime_power_factor_divides_lcm = store_thm(
-  "lcm_prime_power_factor_divides_lcm",
-  ``!a b p. 0 < a /\ 0 < b /\ prime p ==> (p ** MAX (ppidx a) (ppidx b)) divides (lcm a b)``,
-  prove_tac[lcm_prime_power_factor, divides_def, MULT_COMM]);
+Theorem lcm_prime_power_factor_divides_lcm:
+    !a b p. 0 < a /\ 0 < b /\ prime p ==> (p ** MAX (ppidx a) (ppidx b)) divides (lcm a b)
+Proof
+  prove_tac[lcm_prime_power_factor, divides_def, MULT_COMM]
+QED
 
 (* Theorem: 0 < a /\ 0 < b /\ prime p ==> coprime p (lcm (a DIV p ** ppidx a) (b DIV p ** ppidx b)) *)
 (* Proof:
@@ -3712,9 +3836,9 @@ val lcm_prime_power_factor_divides_lcm = store_thm(
     This contradicts coprime p qa
                  and coprime p qb      by coprime_not_divides, 1 < p
 *)
-val lcm_prime_power_cofactor_coprime = store_thm(
-  "lcm_prime_power_cofactor_coprime",
-  ``!a b p. 0 < a /\ 0 < b /\ prime p ==> coprime p (lcm (a DIV p ** ppidx a) (b DIV p ** ppidx b))``,
+Theorem lcm_prime_power_cofactor_coprime:
+    !a b p. 0 < a /\ 0 < b /\ prime p ==> coprime p (lcm (a DIV p ** ppidx a) (b DIV p ** ppidx b))
+Proof
   rpt strip_tac >>
   qabbrev_tac `ma = ppidx a` >>
   qabbrev_tac `mb = ppidx b` >>
@@ -3730,7 +3854,8 @@ val lcm_prime_power_cofactor_coprime = store_thm(
   `(lcm qa qb) divides (qa * qb)` by metis_tac[GCD_LCM, divides_def] >>
   `p divides qa * qb` by metis_tac[DIVIDES_TRANS] >>
   `1 < p` by rw[ONE_LT_PRIME] >>
-  metis_tac[P_EUCLIDES, coprime_not_divides]);
+  metis_tac[P_EUCLIDES, coprime_not_divides]
+QED
 
 (* Theorem: 0 < a /\ 0 < b /\ prime p ==> (ppidx (lcm a b) = MAX (ppidx a) (ppidx b)) *)
 (* Proof:
@@ -3742,10 +3867,11 @@ val lcm_prime_power_cofactor_coprime = store_thm(
     and coprime p (lcm qa qb)              by lcm_prime_power_cofactor_coprime
      so ppidx (lcm a b) = m                by prime_power_index_test
 *)
-val lcm_prime_power_index = store_thm(
-  "lcm_prime_power_index",
-  ``!a b p. 0 < a /\ 0 < b /\ prime p ==> (ppidx (lcm a b) = MAX (ppidx a) (ppidx b))``,
-  metis_tac[lcm_prime_power_factor, LCM_POS, lcm_prime_power_cofactor_coprime, prime_power_index_test]);
+Theorem lcm_prime_power_index:
+    !a b p. 0 < a /\ 0 < b /\ prime p ==> (ppidx (lcm a b) = MAX (ppidx a) (ppidx b))
+Proof
+  metis_tac[lcm_prime_power_factor, LCM_POS, lcm_prime_power_cofactor_coprime, prime_power_index_test]
+QED
 
 (* Theorem: 0 < a /\ 0 < b /\ prime p ==> !k. p ** k divides lcm a b ==> k <= MAX (ppidx a) (ppidx b) *)
 (* Proof:
@@ -3753,10 +3879,11 @@ val lcm_prime_power_index = store_thm(
      so k <= ppidx (lcm a b)            by prime_power_divisibility
      or k <= MAX (ppidx a) (ppidx b)    by lcm_prime_power_index
 *)
-val lcm_prime_power_divisibility = store_thm(
-  "lcm_prime_power_divisibility",
-  ``!a b p. 0 < a /\ 0 < b /\ prime p ==> !k. p ** k divides lcm a b ==> k <= MAX (ppidx a) (ppidx b)``,
-  metis_tac[LCM_POS, prime_power_divisibility, lcm_prime_power_index]);
+Theorem lcm_prime_power_divisibility:
+    !a b p. 0 < a /\ 0 < b /\ prime p ==> !k. p ** k divides lcm a b ==> k <= MAX (ppidx a) (ppidx b)
+Proof
+  metis_tac[LCM_POS, prime_power_divisibility, lcm_prime_power_index]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Prime Powers and List LCM                                                 *)
@@ -3786,9 +3913,9 @@ Note: this is not true for non-prime-power.
         so p ** (ppidx x)
          = p ** (MAX_LIST ml) divides list_lcm l    by DIVIDES_TRANS
 *)
-val list_lcm_prime_power_factor_divides = store_thm(
-  "list_lcm_prime_power_factor_divides",
-  ``!l p. prime p ==> p ** (MAX_LIST (MAP (ppidx) l)) divides list_lcm l``,
+Theorem list_lcm_prime_power_factor_divides:
+    !l p. prime p ==> p ** (MAX_LIST (MAP (ppidx) l)) divides list_lcm l
+Proof
   rpt strip_tac >>
   Cases_on `l = []` >-
   rw[MAX_LIST_NIL] >>
@@ -3798,7 +3925,8 @@ val list_lcm_prime_power_factor_divides = store_thm(
   `?x. (MAX_LIST ml = ppidx x) /\ MEM x l` by metis_tac[MEM_MAP] >>
   `p ** ppidx x divides x` by rw[prime_power_factor_divides] >>
   `x divides list_lcm l` by rw[list_lcm_is_common_multiple] >>
-  metis_tac[DIVIDES_TRANS]);
+  metis_tac[DIVIDES_TRANS]
+QED
 
 (* Theorem: prime p /\ POSITIVE l ==> (ppidx (list_lcm l) = MAX_LIST (MAP ppidx l)) *)
 (* Proof:
@@ -3820,9 +3948,9 @@ val list_lcm_prime_power_factor_divides = store_thm(
        = MAX_LIST (ppidx h :: MAP ppidx l)           by MAX_LIST_CONS
        = MAX_LIST (MAP ppidx (h::l))                 by MAP
 *)
-val list_lcm_prime_power_index = store_thm(
-  "list_lcm_prime_power_index",
-  ``!l p. prime p /\ POSITIVE l ==> (ppidx (list_lcm l) = MAX_LIST (MAP ppidx l))``,
+Theorem list_lcm_prime_power_index:
+    !l p. prime p /\ POSITIVE l ==> (ppidx (list_lcm l) = MAX_LIST (MAP ppidx l))
+Proof
   Induct >-
   rw[prime_power_index_1] >>
   rpt strip_tac >>
@@ -3832,7 +3960,8 @@ val list_lcm_prime_power_index = store_thm(
   `_ = MAX (ppidx h) (MAX_LIST (MAP ppidx l))` by rw[] >>
   `_ = MAX_LIST (ppidx h :: MAP ppidx l)` by rw[MAX_LIST_CONS] >>
   `_ = MAX_LIST (MAP ppidx (h::l))` by rw[] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: prime p /\ POSITIVE l ==>
             !k. p ** k divides list_lcm l ==> k <= MAX_LIST (MAP ppidx l) *)
@@ -3841,13 +3970,14 @@ val list_lcm_prime_power_index = store_thm(
      so k <= ppidx (list_lcm l)       by prime_power_divisibility
      or k <= MAX_LIST (MAP ppidx l)   by list_lcm_prime_power_index
 *)
-val list_lcm_prime_power_divisibility = store_thm(
-  "list_lcm_prime_power_divisibility",
-  ``!l p. prime p /\ POSITIVE l ==>
-   !k. p ** k divides list_lcm l ==> k <= MAX_LIST (MAP ppidx l)``,
+Theorem list_lcm_prime_power_divisibility:
+    !l p. prime p /\ POSITIVE l ==>
+   !k. p ** k divides list_lcm l ==> k <= MAX_LIST (MAP ppidx l)
+Proof
   rpt strip_tac >>
   `0 < list_lcm l` by rw[list_lcm_pos, EVERY_MEM] >>
-  metis_tac[prime_power_divisibility, list_lcm_prime_power_index]);
+  metis_tac[prime_power_divisibility, list_lcm_prime_power_index]
+QED
 
 (* Theorem: prime p /\ l <> [] /\ POSITIVE l ==>
             !k. p ** k divides list_lcm l ==> ?x. MEM x l /\ p ** k divides x *)
@@ -3869,10 +3999,10 @@ val list_lcm_prime_power_divisibility = store_thm(
 
    Take this x, and the result follows.
 *)
-val list_lcm_prime_power_factor_member = store_thm(
-  "list_lcm_prime_power_factor_member",
-  ``!l p. prime p /\ l <> [] /\ POSITIVE l ==>
-   !k. p ** k divides list_lcm l ==> ?x. MEM x l /\ p ** k divides x``,
+Theorem list_lcm_prime_power_factor_member:
+    !l p. prime p /\ l <> [] /\ POSITIVE l ==>
+   !k. p ** k divides list_lcm l ==> ?x. MEM x l /\ p ** k divides x
+Proof
   rpt strip_tac >>
   qabbrev_tac `ml = MAP ppidx l` >>
   `ml <> []` by rw[Abbr`ml`] >>
@@ -3882,7 +4012,8 @@ val list_lcm_prime_power_factor_member = store_thm(
   `1 < p` by rw[ONE_LT_PRIME] >>
   `p ** k divides p ** (MAX_LIST ml)` by rw[power_divides_iff] >>
   `p ** (ppidx x) divides x` by rw[prime_power_factor_divides] >>
-  metis_tac[DIVIDES_TRANS]);
+  metis_tac[DIVIDES_TRANS]
+QED
 
 (* Theorem: prime p ==> !m n. (n = p ** SUC (ppidx m)) ==> (lcm n m = p * m) *)
 (* Proof:
@@ -3907,9 +4038,9 @@ val list_lcm_prime_power_factor_member = store_thm(
          = p * (p ** k * mq)                             by MULT_ASSOC
          = p * m                                         by prime_power_eqn
 *)
-val lcm_special_for_prime_power = store_thm(
-  "lcm_special_for_prime_power",
-  ``!p. prime p ==> !m n. (n = p ** SUC (ppidx m)) ==> (lcm n m = p * m)``,
+Theorem lcm_special_for_prime_power:
+    !p. prime p ==> !m n. (n = p ** SUC (ppidx m)) ==> (lcm n m = p * m)
+Proof
   rpt strip_tac >>
   Cases_on `m = 0` >-
   rw[] >>
@@ -3922,7 +4053,8 @@ val lcm_special_for_prime_power = store_thm(
   qabbrev_tac `nq = n DIV p ** (ppidx n)` >>
   `nq = 1` by rw[DIVMOD_ID, Abbr`nq`] >>
   `lcm n m = p ** (SUC k) * (lcm nq mq)` by metis_tac[lcm_prime_power_factor] >>
-  metis_tac[LCM_1, EXP, MULT_ASSOC, prime_power_eqn]);
+  metis_tac[LCM_1, EXP, MULT_ASSOC, prime_power_eqn]
+QED
 
 (* Theorem: (n = a * b) /\ coprime a b ==> !m. a divides m /\ b divides m ==> (lcm n m = m) *)
 (* Proof:
@@ -3953,17 +4085,18 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define the prime divisors of a number *)
-val prime_divisors_def = zDefine`
+Definition prime_divisors_def[nocompute]:
     prime_divisors n = {p | prime p /\ p divides n}
-`;
+End
 (* use zDefine as this is not effective. *)
 
 (* Theorem: p IN prime_divisors n <=> prime p /\ p divides n *)
 (* Proof: by prime_divisors_def *)
-val prime_divisors_element = store_thm(
-  "prime_divisors_element",
-  ``!n p. p IN prime_divisors n <=> prime p /\ p divides n``,
-  rw[prime_divisors_def]);
+Theorem prime_divisors_element:
+    !n p. p IN prime_divisors n <=> prime p /\ p divides n
+Proof
+  rw[prime_divisors_def]
+QED
 
 (* Theorem: 0 < n ==> (prime_divisors n) SUBSET (natural n) *)
 (* Proof:
@@ -3975,14 +4108,15 @@ val prime_divisors_element = store_thm(
    Take x' = PRE x,
    Then SUC x' = SUC (PRE x) = x   by SUC_PRE, 0 < x
 *)
-val prime_divisors_subset_natural = store_thm(
-  "prime_divisors_subset_natural",
-  ``!n. 0 < n ==> (prime_divisors n) SUBSET (natural n)``,
+Theorem prime_divisors_subset_natural:
+    !n. 0 < n ==> (prime_divisors n) SUBSET (natural n)
+Proof
   rw[prime_divisors_element, SUBSET_DEF] >>
   `x <= n` by rw[DIVIDES_LE] >>
   `PRE x < n` by decide_tac >>
   `0 < x` by rw[PRIME_POS] >>
-  metis_tac[SUC_PRE]);
+  metis_tac[SUC_PRE]
+QED
 
 (* Theorem: 0 < n ==> FINITE (prime_divisors n) *)
 (* Proof:
@@ -3990,10 +4124,11 @@ val prime_divisors_subset_natural = store_thm(
     and FINITE (natural n)                     by natural_finite
      so FINITE (prime_divisors n)              by SUBSET_FINITE
 *)
-val prime_divisors_finite = store_thm(
-  "prime_divisors_finite",
-  ``!n. 0 < n ==> FINITE (prime_divisors n)``,
-  metis_tac[prime_divisors_subset_natural, natural_finite, SUBSET_FINITE]);
+Theorem prime_divisors_finite:
+    !n. 0 < n ==> FINITE (prime_divisors n)
+Proof
+  metis_tac[prime_divisors_subset_natural, natural_finite, SUBSET_FINITE]
+QED
 
 (* Theorem: prime_divisors 0 = {p | prime p} *)
 (* Proof: by prime_divisors_def, ALL_DIVIDES_0 *)
@@ -4005,17 +4140,19 @@ QED
 
 (* Theorem: prime_divisors n = {} *)
 (* Proof: by prime_divisors_def, DIVIDES_ONE, NOT_PRIME_1 *)
-val prime_divisors_1 = store_thm(
-  "prime_divisors_1",
-  ``prime_divisors 1 = {}``,
-  rw[prime_divisors_def, EXTENSION]);
+Theorem prime_divisors_1:
+    prime_divisors 1 = {}
+Proof
+  rw[prime_divisors_def, EXTENSION]
+QED
 
 (* Theorem: (prime_divisors n) SUBSET prime *)
 (* Proof: by prime_divisors_element, SUBSET_DEF, IN_DEF *)
-val prime_divisors_subset_prime = store_thm(
-  "prime_divisors_subset_prime",
-  ``!n. (prime_divisors n) SUBSET prime``,
-  rw[prime_divisors_element, SUBSET_DEF, IN_DEF]);
+Theorem prime_divisors_subset_prime:
+    !n. (prime_divisors n) SUBSET prime
+Proof
+  rw[prime_divisors_element, SUBSET_DEF, IN_DEF]
+QED
 
 (* Theorem: 1 < n ==> prime_divisors n <> {} *)
 (* Proof:
@@ -4024,18 +4161,20 @@ val prime_divisors_subset_prime = store_thm(
      or p IN prime_divisors n        by prime_divisors_element
     ==> prime_divisors n <> {}       by MEMBER_NOT_EMPTY
 *)
-val prime_divisors_nonempty = store_thm(
-  "prime_divisors_nonempty",
-  ``!n. 1 < n ==> prime_divisors n <> {}``,
-  metis_tac[PRIME_FACTOR, prime_divisors_element, MEMBER_NOT_EMPTY, DECIDE``1 < n ==> n <> 1``]);
+Theorem prime_divisors_nonempty:
+    !n. 1 < n ==> prime_divisors n <> {}
+Proof
+  metis_tac[PRIME_FACTOR, prime_divisors_element, MEMBER_NOT_EMPTY, DECIDE``1 < n ==> n <> 1``]
+QED
 
 (* Theorem: (prime_divisors n = {}) <=> (n = 1) *)
 (* Proof: by prime_divisors_def, DIVIDES_ONE, NOT_PRIME_1, PRIME_FACTOR *)
-val prime_divisors_empty_iff = store_thm(
-  "prime_divisors_empty_iff",
-  ``!n. (prime_divisors n = {}) <=> (n = 1)``,
+Theorem prime_divisors_empty_iff:
+    !n. (prime_divisors n = {}) <=> (n = 1)
+Proof
   rw[prime_divisors_def, EXTENSION] >>
-  metis_tac[DIVIDES_ONE, NOT_PRIME_1, PRIME_FACTOR]);
+  metis_tac[DIVIDES_ONE, NOT_PRIME_1, PRIME_FACTOR]
+QED
 
 (* Theorem: ~ SING (prime_divisors 0) *)
 (* Proof:
@@ -4046,13 +4185,14 @@ val prime_divisors_empty_iff = store_thm(
      so 2 IN s /\ 3 IN s         by prime_divisors_0
    This contradicts SING s       by SING_ELEMENT
 *)
-val prime_divisors_0_not_sing = store_thm(
-  "prime_divisors_0_not_sing",
-  ``~ SING (prime_divisors 0)``,
+Theorem prime_divisors_0_not_sing:
+    ~ SING (prime_divisors 0)
+Proof
   rpt strip_tac >>
   qabbrev_tac `s = prime_divisors 0` >>
   `2 IN s /\ 3 IN s` by rw[PRIME_2, PRIME_3, prime_divisors_0, Abbr`s`] >>
-  metis_tac[SING_ELEMENT, DECIDE``2 <> 3``]);
+  metis_tac[SING_ELEMENT, DECIDE``2 <> 3``]
+QED
 
 (* Theorem: prime n ==> (prime_divisors n = {n}) *)
 (* Proof:
@@ -4060,11 +4200,12 @@ val prime_divisors_0_not_sing = store_thm(
       prime x /\ x divides n <=> (x = n)
    This is true                      by prime_divides_prime
 *)
-val prime_divisors_prime = store_thm(
-  "prime_divisors_prime",
-  ``!n. prime n ==> (prime_divisors n = {n})``,
+Theorem prime_divisors_prime:
+    !n. prime n ==> (prime_divisors n = {n})
+Proof
   rw[prime_divisors_def, EXTENSION] >>
-  metis_tac[prime_divides_prime]);
+  metis_tac[prime_divides_prime]
+QED
 
 (* Theorem: prime n ==> (prime_divisors n = {n}) *)
 (* Proof:
@@ -4075,13 +4216,14 @@ val prime_divisors_prime = store_thm(
    Only-if part: prime n /\ 0 < k ==> n divides n ** k
       This is true                   by prime_divides_power, DIVIDES_REFL
 *)
-val prime_divisors_prime_power = store_thm(
-  "prime_divisors_prime_power",
-  ``!n. prime n ==> !k. 0 < k ==> (prime_divisors (n ** k) = {n})``,
+Theorem prime_divisors_prime_power:
+    !n. prime n ==> !k. 0 < k ==> (prime_divisors (n ** k) = {n})
+Proof
   rw[prime_divisors_def, EXTENSION] >>
   rw[EQ_IMP_THM] >-
   metis_tac[prime_divides_prime_power] >>
-  metis_tac[prime_divides_power, DIVIDES_REFL]);
+  metis_tac[prime_divides_power, DIVIDES_REFL]
+QED
 
 (* Theorem: SING (prime_divisors n) <=> ?p k. prime p /\ 0 < k /\ (n = p ** k) *)
 (* Proof:
@@ -4118,9 +4260,9 @@ val prime_divisors_prime_power = store_thm(
       Note (prime_divisors p ** k) = {p}                by prime_divisors_prime_power
         so SING (prime_divisors n)                      by SING_DEF
 *)
-val prime_divisors_sing = store_thm(
-  "prime_divisors_sing",
-  ``!n. SING (prime_divisors n) <=> ?p k. prime p /\ 0 < k /\ (n = p ** k)``,
+Theorem prime_divisors_sing:
+    !n. SING (prime_divisors n) <=> ?p k. prime p /\ 0 < k /\ (n = p ** k)
+Proof
   rw[EQ_IMP_THM] >| [
     `n <> 0` by metis_tac[prime_divisors_0_not_sing] >>
     `n <> 1` by metis_tac[prime_divisors_1, SING_EMPTY] >>
@@ -4136,7 +4278,8 @@ val prime_divisors_sing = store_thm(
     `z divides n` by metis_tac[divides_def, DIVIDES_TRANS] >>
     metis_tac[prime_divisors_element, SING_ELEMENT],
     metis_tac[prime_divisors_prime_power, SING_DEF]
-  ]);
+  ]
+QED
 
 (* Theorem: (prime_divisors n = {p}) <=> ?k. prime p /\ 0 < k /\ (n = p ** k) *)
 (* Proof:
@@ -4148,10 +4291,11 @@ val prime_divisors_sing = store_thm(
    Only-if part: prime p ==> prime_divisors (p ** k) = {p}
       This is true                                     by prime_divisors_prime_power
 *)
-val prime_divisors_sing_alt = store_thm(
-  "prime_divisors_sing_alt",
-  ``!n p. (prime_divisors n = {p}) <=> ?k. prime p /\ 0 < k /\ (n = p ** k)``,
-  metis_tac[prime_divisors_sing, SING_DEF, IN_SING, prime_divisors_element, prime_divisors_prime_power]);
+Theorem prime_divisors_sing_alt:
+    !n p. (prime_divisors n = {p}) <=> ?k. prime p /\ 0 < k /\ (n = p ** k)
+Proof
+  metis_tac[prime_divisors_sing, SING_DEF, IN_SING, prime_divisors_element, prime_divisors_prime_power]
+QED
 
 (* Theorem: SING (prime_divisors n) ==>
             let p = CHOICE (prime_divisors n) in prime p /\ (n = p ** ppidx n) *)
@@ -4179,10 +4323,10 @@ val prime_divisors_sing_alt = store_thm(
 
    Thus q = 1, and n = p ** ppidx n         by MULT_RIGHT_1
 *)
-val prime_divisors_sing_property = store_thm(
-  "prime_divisors_sing_property",
-  ``!n. SING (prime_divisors n) ==>
-       let p = CHOICE (prime_divisors n) in prime p /\ (n = p ** ppidx n)``,
+Theorem prime_divisors_sing_property:
+    !n. SING (prime_divisors n) ==>
+       let p = CHOICE (prime_divisors n) in prime p /\ (n = p ** ppidx n)
+Proof
   ntac 2 strip_tac >>
   qabbrev_tac `s = prime_divisors n` >>
   `n <> 0` by metis_tac[prime_divisors_0_not_sing] >>
@@ -4200,7 +4344,8 @@ val prime_divisors_sing_property = store_thm(
     `z divides n` by metis_tac[divides_def, DIVIDES_TRANS] >>
     metis_tac[prime_divisors_element, SING_ELEMENT],
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: m divides n ==> (prime_divisors m) SUBSET (prime_divisors n) *)
 (* Proof:
@@ -4210,11 +4355,12 @@ val prime_divisors_sing_property = store_thm(
     ==>     x IN prime_divisors n     by prime_divisors_element
      or (prime_divisors m) SUBSET (prime_divisors n)   by SUBSET_DEF
 *)
-val prime_divisors_divisor_subset = store_thm(
-  "prime_divisors_divisor_subset",
-  ``!m n. m divides n ==> (prime_divisors m) SUBSET (prime_divisors n)``,
+Theorem prime_divisors_divisor_subset:
+    !m n. m divides n ==> (prime_divisors m) SUBSET (prime_divisors n)
+Proof
   rw[prime_divisors_element, SUBSET_DEF] >>
-  metis_tac[DIVIDES_TRANS]);
+  metis_tac[DIVIDES_TRANS]
+QED
 
 (* Theorem: x divides m /\ x divides n ==>
             (prime_divisors x SUBSET (prime_divisors m) INTER (prime_divisors n)) *)
@@ -4223,12 +4369,13 @@ val prime_divisors_divisor_subset = store_thm(
    (1) x' divides x /\ x divides m ==> x' divides m, true   by DIVIDES_TRANS
    (2) x' divides x /\ x divides n ==> x' divides n, true   by DIVIDES_TRANS
 *)
-val prime_divisors_common_divisor = store_thm(
-  "prime_divisors_common_divisor",
-  ``!n m x. x divides m /\ x divides n ==>
-           (prime_divisors x SUBSET (prime_divisors m) INTER (prime_divisors n))``,
+Theorem prime_divisors_common_divisor:
+    !n m x. x divides m /\ x divides n ==>
+           (prime_divisors x SUBSET (prime_divisors m) INTER (prime_divisors n))
+Proof
   rw[prime_divisors_element, SUBSET_DEF] >>
-  metis_tac[DIVIDES_TRANS]);
+  metis_tac[DIVIDES_TRANS]
+QED
 
 (* Theorem: m divides x /\ n divides x ==>
             (prime_divisors m UNION prime_divisors n) SUBSET prime_divisors x *)
@@ -4237,12 +4384,13 @@ val prime_divisors_common_divisor = store_thm(
    (1) x' divides m /\ m divides x ==> x' divides x, true   by DIVIDES_TRANS
    (2) x' divides n /\ n divides x ==> x' divides x, true   by DIVIDES_TRANS
 *)
-val prime_divisors_common_multiple = store_thm(
-  "prime_divisors_common_multiple",
-  ``!n m x. m divides x /\ n divides x ==>
-           (prime_divisors m UNION prime_divisors n) SUBSET prime_divisors x``,
+Theorem prime_divisors_common_multiple:
+    !n m x. m divides x /\ n divides x ==>
+           (prime_divisors m UNION prime_divisors n) SUBSET prime_divisors x
+Proof
   rw[prime_divisors_element, SUBSET_DEF] >>
-  metis_tac[DIVIDES_TRANS]);
+  metis_tac[DIVIDES_TRANS]
+QED
 
 (* Theorem: 0 < m /\ 0 < n /\ x divides m /\ x divides n ==>
             !p. prime p ==> ppidx x <= MIN (ppidx m) (ppidx n) *)
@@ -4251,11 +4399,12 @@ val prime_divisors_common_multiple = store_thm(
     and ppidx x <= ppidx n                    by prime_power_index_of_divisor, 0 < n
     ==> ppidx x <= MIN (ppidx m) (ppidx n)    by MIN_LE
 *)
-val prime_power_index_common_divisor = store_thm(
-  "prime_power_index_common_divisor",
-  ``!n m x. 0 < m /\ 0 < n /\ x divides m /\ x divides n ==>
-   !p. prime p ==> ppidx x <= MIN (ppidx m) (ppidx n)``,
-  rw[MIN_LE, prime_power_index_of_divisor]);
+Theorem prime_power_index_common_divisor:
+    !n m x. 0 < m /\ 0 < n /\ x divides m /\ x divides n ==>
+   !p. prime p ==> ppidx x <= MIN (ppidx m) (ppidx n)
+Proof
+  rw[MIN_LE, prime_power_index_of_divisor]
+QED
 
 (* Theorem: 0 < x /\ m divides x /\ n divides x ==>
             !p. prime p ==> MAX (ppidx m) (ppidx n) <= ppidx x *)
@@ -4264,11 +4413,12 @@ val prime_power_index_common_divisor = store_thm(
     and ppidx n <= ppidx x                    by prime_power_index_of_divisor, 0 < x
     ==> MAX (ppidx m) (ppidx n) <= ppidx x    by MAX_LE
 *)
-val prime_power_index_common_multiple = store_thm(
-  "prime_power_index_common_multiple",
-  ``!n m x. 0 < x /\ m divides x /\ n divides x ==>
-   !p. prime p ==> MAX (ppidx m) (ppidx n) <= ppidx x``,
-  rw[MAX_LE, prime_power_index_of_divisor]);
+Theorem prime_power_index_common_multiple:
+    !n m x. 0 < x /\ m divides x /\ n divides x ==>
+   !p. prime p ==> MAX (ppidx m) (ppidx n) <= ppidx x
+Proof
+  rw[MAX_LE, prime_power_index_of_divisor]
+QED
 
 (*
 prime p = 2,    n = 10,   LOG 2 10 = 3, but ppidx 10 = 1, since 4 cannot divide 10.
@@ -4286,9 +4436,9 @@ prime p = 2,    n = 10,   LOG 2 10 = 3, but ppidx 10 = 1, since 4 cannot divide 
      or p ** SUC (LOG p n) <= n                     by DIVIDES_LE, 0 < n
    This contradicts n < p ** SUC (LOG p n)          by LOG, 0 < n, 1 < p
 *)
-val prime_power_index_le_log_index = store_thm(
-  "prime_power_index_le_log_index",
-  ``!n p. 0 < n /\ prime p ==> ppidx n <= LOG p n``,
+Theorem prime_power_index_le_log_index:
+    !n p. 0 < n /\ prime p ==> ppidx n <= LOG p n
+Proof
   spose_not_then strip_assume_tac >>
   `SUC (LOG p n) <= ppidx n` by decide_tac >>
   `1 < p` by rw[ONE_LT_PRIME] >>
@@ -4297,7 +4447,8 @@ val prime_power_index_le_log_index = store_thm(
   `p ** SUC (LOG p n) divides n` by metis_tac[DIVIDES_TRANS] >>
   `p ** SUC (LOG p n) <= n` by rw[DIVIDES_LE] >>
   `n < p ** SUC (LOG p n)` by rw[LOG] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Prime-related Sets                                                        *)
@@ -4327,29 +4478,30 @@ val it = |- !p n. 0 < n /\ prime p ==> p ** ppidx n divides n /\ coprime p (n DI
 *)
 
 (* Define the set of primes up to n *)
-val primes_upto_def = Define`
+Definition primes_upto_def:
     primes_upto n = {p | prime p /\ p <= n}
-`;
+End
 
 (* Overload the counts of primes up to n *)
 val _ = overload_on("primes_count", ``\n. CARD (primes_upto n)``);
 
 (* Define the prime powers up to n *)
-val prime_powers_upto_def = Define`
+Definition prime_powers_upto_def:
     prime_powers_upto n = IMAGE (\p. p ** LOG p n) (primes_upto n)
-`;
+End
 
 (* Define the prime power divisors of n *)
-val prime_power_divisors_def = Define`
+Definition prime_power_divisors_def:
     prime_power_divisors n = IMAGE (\p. p ** ppidx n) (prime_divisors n)
-`;
+End
 
 (* Theorem: p IN primes_upto n <=> prime p /\ p <= n *)
 (* Proof: by primes_upto_def *)
-val primes_upto_element = store_thm(
-  "primes_upto_element",
-  ``!n p. p IN primes_upto n <=> prime p /\ p <= n``,
-  rw[primes_upto_def]);
+Theorem primes_upto_element:
+    !n p. p IN primes_upto n <=> prime p /\ p <= n
+Proof
+  rw[primes_upto_def]
+QED
 
 (* Theorem: (primes_upto n) SUBSET (natural n) *)
 (* Proof:
@@ -4360,13 +4512,14 @@ val primes_upto_element = store_thm(
     and SUC (PRE x) = x  by SUC_PRE, 0 < x
    Take x' = PRE x, and the result follows.
 *)
-val primes_upto_subset_natural = store_thm(
-  "primes_upto_subset_natural",
-  ``!n. (primes_upto n) SUBSET (natural n)``,
+Theorem primes_upto_subset_natural:
+    !n. (primes_upto n) SUBSET (natural n)
+Proof
   rw[primes_upto_def, SUBSET_DEF] >>
   `0 < x` by rw[PRIME_POS] >>
   `PRE x < n` by decide_tac >>
-  metis_tac[SUC_PRE]);
+  metis_tac[SUC_PRE]
+QED
 
 (* Theorem: FINITE (primes_upto n) *)
 (* Proof:
@@ -4374,10 +4527,11 @@ val primes_upto_subset_natural = store_thm(
     and FINITE (natural n)                   by natural_finite
     ==> FINITE (primes_upto n)               by SUBSET_FINITE
 *)
-val primes_upto_finite = store_thm(
-  "primes_upto_finite",
-  ``!n. FINITE (primes_upto n)``,
-  metis_tac[primes_upto_subset_natural, natural_finite, SUBSET_FINITE]);
+Theorem primes_upto_finite:
+    !n. FINITE (primes_upto n)
+Proof
+  metis_tac[primes_upto_subset_natural, natural_finite, SUBSET_FINITE]
+QED
 
 (* Theorem: PAIRWISE_COPRIME (primes_upto n) *)
 (* Proof:
@@ -4385,10 +4539,11 @@ val primes_upto_finite = store_thm(
    This is to show: prime x /\ prime y /\ x <> y ==> coprime x y
    This is true                by primes_coprime
 *)
-val primes_upto_pairwise_coprime = store_thm(
-  "primes_upto_pairwise_coprime",
-  ``!n. PAIRWISE_COPRIME (primes_upto n)``,
-  metis_tac[primes_upto_element, primes_coprime]);
+Theorem primes_upto_pairwise_coprime:
+    !n. PAIRWISE_COPRIME (primes_upto n)
+Proof
+  metis_tac[primes_upto_element, primes_coprime]
+QED
 
 (* Theorem: primes_upto 0 = {} *)
 (* Proof:
@@ -4397,10 +4552,11 @@ val primes_upto_pairwise_coprime = store_thm(
    <=> prime 0               by p <= 0
    <=> F                     by NOT_PRIME_0
 *)
-val primes_upto_0 = store_thm(
-  "primes_upto_0",
-  ``primes_upto 0 = {}``,
-  rw[primes_upto_element, EXTENSION]);
+Theorem primes_upto_0:
+    primes_upto 0 = {}
+Proof
+  rw[primes_upto_element, EXTENSION]
+QED
 
 (* Theorem: primes_count 0 = 0 *)
 (* Proof:
@@ -4409,10 +4565,11 @@ val primes_upto_0 = store_thm(
    = CARD {}                  by primes_upto_0
    = 0                        by CARD_EMPTY
 *)
-val primes_count_0 = store_thm(
-  "primes_count_0",
-  ``primes_count 0 = 0``,
-  rw[primes_upto_0]);
+Theorem primes_count_0:
+    primes_count 0 = 0
+Proof
+  rw[primes_upto_0]
+QED
 
 (* Theorem: primes_upto 1 = {} *)
 (* Proof:
@@ -4421,11 +4578,12 @@ val primes_count_0 = store_thm(
    <=> prime 0 or prime 1    by p <= 1
    <=> F                     by NOT_PRIME_0, NOT_PRIME_1
 *)
-val primes_upto_1 = store_thm(
-  "primes_upto_1",
-  ``primes_upto 1 = {}``,
+Theorem primes_upto_1:
+    primes_upto 1 = {}
+Proof
   rw[primes_upto_element, EXTENSION, DECIDE``x <= 1 <=> (x = 0) \/ (x = 1)``] >>
-  metis_tac[NOT_PRIME_0, NOT_PRIME_1]);
+  metis_tac[NOT_PRIME_0, NOT_PRIME_1]
+QED
 
 (* Theorem: primes_count 1 = 0 *)
 (* Proof:
@@ -4434,24 +4592,27 @@ val primes_upto_1 = store_thm(
    = CARD {}                  by primes_upto_1
    = 0                        by CARD_EMPTY
 *)
-val primes_count_1 = store_thm(
-  "primes_count_1",
-  ``primes_count 1 = 0``,
-  rw[primes_upto_1]);
+Theorem primes_count_1:
+    primes_count 1 = 0
+Proof
+  rw[primes_upto_1]
+QED
 
 (* Theorem: x IN prime_powers_upto n <=> ?p. (x = p ** LOG p n) /\ prime p /\ p <= n *)
 (* Proof: by prime_powers_upto_def, primes_upto_element *)
-val prime_powers_upto_element = store_thm(
-  "prime_powers_upto_element",
-  ``!n x. x IN prime_powers_upto n <=> ?p. (x = p ** LOG p n) /\ prime p /\ p <= n``,
-  rw[prime_powers_upto_def, primes_upto_element]);
+Theorem prime_powers_upto_element:
+    !n x. x IN prime_powers_upto n <=> ?p. (x = p ** LOG p n) /\ prime p /\ p <= n
+Proof
+  rw[prime_powers_upto_def, primes_upto_element]
+QED
 
 (* Theorem: prime p /\ p <= n ==> (p ** LOG p n) IN (prime_powers_upto n) *)
 (* Proof: by prime_powers_upto_element *)
-val prime_powers_upto_element_alt = store_thm(
-  "prime_powers_upto_element_alt",
-  ``!p n. prime p /\ p <= n ==> (p ** LOG p n) IN (prime_powers_upto n)``,
-  metis_tac[prime_powers_upto_element]);
+Theorem prime_powers_upto_element_alt:
+    !p n. prime p /\ p <= n ==> (p ** LOG p n) IN (prime_powers_upto n)
+Proof
+  metis_tac[prime_powers_upto_element]
+QED
 
 (* Theorem: FINITE (prime_powers_upto n) *)
 (* Proof:
@@ -4460,10 +4621,11 @@ val prime_powers_upto_element_alt = store_thm(
     and FINITE (primes_upto n)                     by primes_upto_finite
     ==> FINITE (prime_powers_upto n)               by IMAGE_FINITE
 *)
-val prime_powers_upto_finite = store_thm(
-  "prime_powers_upto_finite",
-  ``!n. FINITE (prime_powers_upto n)``,
-  rw[prime_powers_upto_def, primes_upto_finite]);
+Theorem prime_powers_upto_finite:
+    !n. FINITE (prime_powers_upto n)
+Proof
+  rw[prime_powers_upto_def, primes_upto_finite]
+QED
 
 (* Theorem: PAIRWISE_COPRIME (prime_powers_upto n) *)
 (* Proof:
@@ -4474,10 +4636,11 @@ val prime_powers_upto_finite = store_thm(
     and p1 <> p2                                           by prime_powers_eq
    Thus coprime x y                                        by prime_powers_coprime
 *)
-val prime_powers_upto_pairwise_coprime = store_thm(
-  "prime_powers_upto_pairwise_coprime",
-  ``!n. PAIRWISE_COPRIME (prime_powers_upto n)``,
-  metis_tac[prime_powers_upto_element, prime_powers_eq, prime_powers_coprime]);
+Theorem prime_powers_upto_pairwise_coprime:
+    !n. PAIRWISE_COPRIME (prime_powers_upto n)
+Proof
+  metis_tac[prime_powers_upto_element, prime_powers_eq, prime_powers_coprime]
+QED
 
 (* Theorem: prime_powers_upto 0 = {} *)
 (* Proof:
@@ -4486,10 +4649,11 @@ val prime_powers_upto_pairwise_coprime = store_thm(
    <=> ?p. (x = p ** LOG p n) /\ prime 0               by p <= 0
    <=> F                                               by NOT_PRIME_0
 *)
-val prime_powers_upto_0 = store_thm(
-  "prime_powers_upto_0",
-  ``prime_powers_upto 0 = {}``,
-  rw[prime_powers_upto_element, EXTENSION]);
+Theorem prime_powers_upto_0:
+    prime_powers_upto 0 = {}
+Proof
+  rw[prime_powers_upto_element, EXTENSION]
+QED
 
 (* Theorem: prime_powers_upto 1 = {} *)
 (* Proof:
@@ -4498,25 +4662,28 @@ val prime_powers_upto_0 = store_thm(
    <=> ?p. (x = p ** LOG p n) /\ prime 0 or prime 1    by p <= 0
    <=> F                                               by NOT_PRIME_0, NOT_PRIME_1
 *)
-val prime_powers_upto_1 = store_thm(
-  "prime_powers_upto_1",
-  ``prime_powers_upto 1 = {}``,
+Theorem prime_powers_upto_1:
+    prime_powers_upto 1 = {}
+Proof
   rw[prime_powers_upto_element, EXTENSION, DECIDE``x <= 1 <=> (x = 0) \/ (x = 1)``] >>
-  metis_tac[NOT_PRIME_0, NOT_PRIME_1]);
+  metis_tac[NOT_PRIME_0, NOT_PRIME_1]
+QED
 
 (* Theorem: x IN prime_power_divisors n <=> ?p. (x = p ** ppidx n) /\ prime p /\ p divides n *)
 (* Proof: by prime_power_divisors_def, prime_divisors_element *)
-val prime_power_divisors_element = store_thm(
-  "prime_power_divisors_element",
-  ``!n x. x IN prime_power_divisors n <=> ?p. (x = p ** ppidx n) /\ prime p /\ p divides n``,
-  rw[prime_power_divisors_def, prime_divisors_element]);
+Theorem prime_power_divisors_element:
+    !n x. x IN prime_power_divisors n <=> ?p. (x = p ** ppidx n) /\ prime p /\ p divides n
+Proof
+  rw[prime_power_divisors_def, prime_divisors_element]
+QED
 
 (* Theorem: prime p /\ p divides n ==> (p ** ppidx n) IN (prime_power_divisors n) *)
 (* Proof: by prime_power_divisors_element *)
-val prime_power_divisors_element_alt = store_thm(
-  "prime_power_divisors_element_alt",
-  ``!p n. prime p /\ p divides n ==> (p ** ppidx n) IN (prime_power_divisors n)``,
-  metis_tac[prime_power_divisors_element]);
+Theorem prime_power_divisors_element_alt:
+    !p n. prime p /\ p divides n ==> (p ** ppidx n) IN (prime_power_divisors n)
+Proof
+  metis_tac[prime_power_divisors_element]
+QED
 
 (* Theorem: 0 < n ==> FINITE (prime_power_divisors n) *)
 (* Proof:
@@ -4525,10 +4692,11 @@ val prime_power_divisors_element_alt = store_thm(
     and FINITE (prime_divisors n)                     by prime_divisors_finite, 0 < n
     ==> FINITE (prime_power_divisors n)               by IMAGE_FINITE
 *)
-val prime_power_divisors_finite = store_thm(
-  "prime_power_divisors_finite",
-  ``!n. 0 < n ==> FINITE (prime_power_divisors n)``,
-  rw[prime_power_divisors_def, prime_divisors_finite]);
+Theorem prime_power_divisors_finite:
+    !n. 0 < n ==> FINITE (prime_power_divisors n)
+Proof
+  rw[prime_power_divisors_def, prime_divisors_finite]
+QED
 
 (* Theorem: PAIRWISE_COPRIME (prime_power_divisors n) *)
 (* Proof:
@@ -4541,10 +4709,11 @@ val prime_power_divisors_finite = store_thm(
     and p1 <> p2                                                  by prime_powers_eq
    Thus coprime x y                                               by prime_powers_coprime
 *)
-val prime_power_divisors_pairwise_coprime = store_thm(
-  "prime_power_divisors_pairwise_coprime",
-  ``!n. PAIRWISE_COPRIME (prime_power_divisors n)``,
-  metis_tac[prime_power_divisors_element, prime_powers_eq, prime_powers_coprime]);
+Theorem prime_power_divisors_pairwise_coprime:
+    !n. PAIRWISE_COPRIME (prime_power_divisors n)
+Proof
+  metis_tac[prime_power_divisors_element, prime_powers_eq, prime_powers_coprime]
+QED
 
 (* Theorem: prime_power_divisors 1 = {} *)
 (* Proof:
@@ -4553,10 +4722,11 @@ val prime_power_divisors_pairwise_coprime = store_thm(
    <=> ?p. (x = p ** ppidx n) /\ prime 1                    by DIVIDES_ONE
    <=> F                                                    by NOT_PRIME_1
 *)
-val prime_power_divisors_1 = store_thm(
-  "prime_power_divisors_1",
-  ``prime_power_divisors 1 = {}``,
-  rw[prime_power_divisors_element, EXTENSION]);
+Theorem prime_power_divisors_1:
+    prime_power_divisors 1 = {}
+Proof
+  rw[prime_power_divisors_element, EXTENSION]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Factorisations                                                            *)
@@ -4608,9 +4778,9 @@ val prime_power_divisors_1 = store_thm(
    Thus n = q * PROD_SET s, and q = 1           by Claim
      or n = PROD_SET s                          by MULT_LEFT_1
 *)
-val prime_factorisation = store_thm(
-  "prime_factorisation",
-  ``!n. 0 < n ==> (n = PROD_SET (prime_power_divisors n))``,
+Theorem prime_factorisation:
+    !n. 0 < n ==> (n = PROD_SET (prime_power_divisors n))
+Proof
   rpt strip_tac >>
   qabbrev_tac `s = prime_power_divisors n` >>
   `FINITE s` by rw[prime_power_divisors_finite, Abbr`s`] >>
@@ -4637,16 +4807,18 @@ val prime_factorisation = store_thm(
   `p divides v` by rw[DIVIDES_MULT] >>
   `1 < p` by rw[ONE_LT_PRIME] >>
   metis_tac[coprime_not_divides]) >>
-  rw[]);
+  rw[]
+QED
 
 (* This is a little milestone theorem. *)
 
 (* Theorem: 0 < n ==> (n = PROD_SET (IMAGE (\p. p ** ppidx n) (prime_divisors n))) *)
 (* Proof: by prime_factorisation, prime_power_divisors_def *)
-val basic_prime_factorisation = store_thm(
-  "basic_prime_factorisation",
-  ``!n. 0 < n ==> (n = PROD_SET (IMAGE (\p. p ** ppidx n) (prime_divisors n)))``,
-  rw[prime_factorisation, GSYM prime_power_divisors_def]);
+Theorem basic_prime_factorisation:
+    !n. 0 < n ==> (n = PROD_SET (IMAGE (\p. p ** ppidx n) (prime_divisors n)))
+Proof
+  rw[prime_factorisation, GSYM prime_power_divisors_def]
+QED
 
 (* Theorem: 0 < n /\ m divides n ==> (m = PROD_SET (IMAGE (\p. p ** ppidx m) (prime_divisors n))) *)
 (* Proof:
@@ -4674,9 +4846,9 @@ val basic_prime_factorisation = store_thm(
                 or x divides m                         by above
        Hence PROD_SET t divides m                      by pairwise_coprime_prod_set_divides
 *)
-val divisor_prime_factorisation = store_thm(
-  "divisor_prime_factorisation",
-  ``!m n. 0 < n /\ m divides n ==> (m = PROD_SET (IMAGE (\p. p ** ppidx m) (prime_divisors n)))``,
+Theorem divisor_prime_factorisation:
+    !m n. 0 < n /\ m divides n ==> (m = PROD_SET (IMAGE (\p. p ** ppidx m) (prime_divisors n)))
+Proof
   rpt strip_tac >>
   `0 < m` by metis_tac[ZERO_DIVIDES, NOT_ZERO_LT_ZERO] >>
   qabbrev_tac `s = prime_divisors n` >>
@@ -4699,7 +4871,8 @@ val divisor_prime_factorisation = store_thm(
     `prime p` by metis_tac[prime_divisors_element] >>
     rw[prime_power_factor_divides]) >>
     rw[pairwise_coprime_prod_set_divides]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < m /\ 0 < n ==>
            (gcd m n = PROD_SET (IMAGE (\p. p ** (MIN (ppidx m) (ppidx n)))
@@ -4758,11 +4931,11 @@ val divisor_prime_factorisation = store_thm(
 
        Therefore, PROD_SET tx divides k                    by pairwise_coprime_prod_set_divides
 *)
-val gcd_prime_factorisation = store_thm(
-  "gcd_prime_factorisation",
-  ``!m n. 0 < m /\ 0 < n ==>
+Theorem gcd_prime_factorisation:
+    !m n. 0 < m /\ 0 < n ==>
          (gcd m n = PROD_SET (IMAGE (\p. p ** (MIN (ppidx m) (ppidx n)))
-                             ((prime_divisors m) INTER (prime_divisors n))))``,
+                             ((prime_divisors m) INTER (prime_divisors n))))
+Proof
   rpt strip_tac >>
   qabbrev_tac `sm = prime_divisors m` >>
   qabbrev_tac `sn = prime_divisors n` >>
@@ -4808,7 +4981,8 @@ val gcd_prime_factorisation = store_thm(
   qabbrev_tac `f = \p:num. p ** MIN (ppidx m) (ppidx n)` >>
   `p ** MIN (ppidx m) (ppidx n) IN t` by metis_tac[IN_IMAGE] >>
   metis_tac[PROD_SET_ELEMENT_DIVIDES, DIVIDES_TRANS]) >>
-  rw[pairwise_coprime_prod_set_divides]);
+  rw[pairwise_coprime_prod_set_divides]
+QED
 
 (* This is a major milestone theorem. *)
 
@@ -4859,11 +5033,11 @@ val gcd_prime_factorisation = store_thm(
               Thus z divides x                           by DIVIDES_TRANS
        Hence PROD_SET t divides x                        by pairwise_coprime_prod_set_divides
 *)
-val lcm_prime_factorisation = store_thm(
-  "lcm_prime_factorisation",
-  ``!m n. 0 < m /\ 0 < n ==>
+Theorem lcm_prime_factorisation:
+    !m n. 0 < m /\ 0 < n ==>
          (lcm m n = PROD_SET (IMAGE (\p. p ** (MAX (ppidx m) (ppidx n)))
-                             ((prime_divisors m) UNION (prime_divisors n))))``,
+                             ((prime_divisors m) UNION (prime_divisors n))))
+Proof
   rpt strip_tac >>
   qabbrev_tac `sm = prime_divisors m` >>
   qabbrev_tac `sn = prime_divisors n` >>
@@ -4921,7 +5095,8 @@ val lcm_prime_factorisation = store_thm(
     `p ** ppidx x divides x` by rw[prime_power_factor_divides] >>
     metis_tac[DIVIDES_TRANS]) >>
     rw[pairwise_coprime_prod_set_divides]
-  ]);
+  ]
+QED
 
 (* Another major milestone theorem. *)
 
@@ -5011,17 +5186,19 @@ The basic one is park_on m n, defined only for 0 < m and 0 < n.
 
 (* Theorem: p IN common_prime_divisors m n <=> p IN prime_divisors m /\ p IN prime_divisors n *)
 (* Proof: by IN_INTER *)
-val common_prime_divisors_element = store_thm(
-  "common_prime_divisors_element",
-  ``!m n p. p IN common_prime_divisors m n <=> p IN prime_divisors m /\ p IN prime_divisors n``,
-  rw[]);
+Theorem common_prime_divisors_element:
+    !m n p. p IN common_prime_divisors m n <=> p IN prime_divisors m /\ p IN prime_divisors n
+Proof
+  rw[]
+QED
 
 (* Theorem: 0 < m /\ 0 < n ==> FINITE (common_prime_divisors m n) *)
 (* Proof: by prime_divisors_finite, FINITE_INTER *)
-val common_prime_divisors_finite = store_thm(
-  "common_prime_divisors_finite",
-  ``!m n. 0 < m /\ 0 < n ==> FINITE (common_prime_divisors m n)``,
-  rw[prime_divisors_finite]);
+Theorem common_prime_divisors_finite:
+    !m n. 0 < m /\ 0 < n ==> FINITE (common_prime_divisors m n)
+Proof
+  rw[prime_divisors_finite]
+QED
 
 (* Theorem: PAIRWISE_COPRIME (common_prime_divisors m n) *)
 (* Proof:
@@ -5029,10 +5206,11 @@ val common_prime_divisors_finite = store_thm(
     and y IN prime_divisors n ==> prime y    by prime_divisors_element
     and x <> y ==> coprime x y               by primes_coprime
 *)
-val common_prime_divisors_pairwise_coprime = store_thm(
-  "common_prime_divisors_pairwise_coprime",
-  ``!m n. PAIRWISE_COPRIME (common_prime_divisors m n)``,
-  metis_tac[prime_divisors_element, primes_coprime, IN_INTER]);
+Theorem common_prime_divisors_pairwise_coprime:
+    !m n. PAIRWISE_COPRIME (common_prime_divisors m n)
+Proof
+  metis_tac[prime_divisors_element, primes_coprime, IN_INTER]
+QED
 
 (* Theorem: PAIRWISE_COPRIME (IMAGE (\p. p ** MIN (ppidx m) (ppidx n)) (common_prime_divisors m n)) *)
 (* Proof:
@@ -5040,24 +5218,27 @@ val common_prime_divisors_pairwise_coprime = store_thm(
      so (common_prime_divisors m n) SUBSET prime   by SUBSET_INTER_SUBSET
    Thus true                                       by pairwise_coprime_for_prime_powers
 *)
-val common_prime_divisors_min_image_pairwise_coprime = store_thm(
-  "common_prime_divisors_min_image_pairwise_coprime",
-  ``!m n. PAIRWISE_COPRIME (IMAGE (\p. p ** MIN (ppidx m) (ppidx n)) (common_prime_divisors m n))``,
-  metis_tac[prime_divisors_subset_prime, SUBSET_INTER_SUBSET, pairwise_coprime_for_prime_powers]);
+Theorem common_prime_divisors_min_image_pairwise_coprime:
+    !m n. PAIRWISE_COPRIME (IMAGE (\p. p ** MIN (ppidx m) (ppidx n)) (common_prime_divisors m n))
+Proof
+  metis_tac[prime_divisors_subset_prime, SUBSET_INTER_SUBSET, pairwise_coprime_for_prime_powers]
+QED
 
 (* Theorem: p IN total_prime_divisors m n <=> p IN prime_divisors m \/ p IN prime_divisors n *)
 (* Proof: by IN_UNION *)
-val total_prime_divisors_element = store_thm(
-  "total_prime_divisors_element",
-  ``!m n p. p IN total_prime_divisors m n <=> p IN prime_divisors m \/ p IN prime_divisors n``,
-  rw[]);
+Theorem total_prime_divisors_element:
+    !m n p. p IN total_prime_divisors m n <=> p IN prime_divisors m \/ p IN prime_divisors n
+Proof
+  rw[]
+QED
 
 (* Theorem: 0 < m /\ 0 < n ==> FINITE (total_prime_divisors m n) *)
 (* Proof: by prime_divisors_finite, FINITE_UNION *)
-val total_prime_divisors_finite = store_thm(
-  "total_prime_divisors_finite",
-  ``!m n. 0 < m /\ 0 < n ==> FINITE (total_prime_divisors m n)``,
-  rw[prime_divisors_finite]);
+Theorem total_prime_divisors_finite:
+    !m n. 0 < m /\ 0 < n ==> FINITE (total_prime_divisors m n)
+Proof
+  rw[prime_divisors_finite]
+QED
 
 (* Theorem: PAIRWISE_COPRIME (total_prime_divisors m n) *)
 (* Proof:
@@ -5065,10 +5246,11 @@ val total_prime_divisors_finite = store_thm(
     and y IN prime_divisors n ==> prime y    by prime_divisors_element
     and x <> y ==> coprime x y               by primes_coprime
 *)
-val total_prime_divisors_pairwise_coprime = store_thm(
-  "total_prime_divisors_pairwise_coprime",
-  ``!m n. PAIRWISE_COPRIME (total_prime_divisors m n)``,
-  metis_tac[prime_divisors_element, primes_coprime, IN_UNION]);
+Theorem total_prime_divisors_pairwise_coprime:
+    !m n. PAIRWISE_COPRIME (total_prime_divisors m n)
+Proof
+  metis_tac[prime_divisors_element, primes_coprime, IN_UNION]
+QED
 
 (* Theorem: PAIRWISE_COPRIME (IMAGE (\p. p ** MAX (ppidx m) (ppidx n)) (total_prime_divisors m n)) *)
 (* Proof:
@@ -5077,62 +5259,70 @@ val total_prime_divisors_pairwise_coprime = store_thm(
      so (total_prime_divisors m n) SUBSET prime    by UNION_SUBSET
    Thus true                                       by pairwise_coprime_for_prime_powers
 *)
-val total_prime_divisors_max_image_pairwise_coprime = store_thm(
-  "total_prime_divisors_max_image_pairwise_coprime",
-  ``!m n. PAIRWISE_COPRIME (IMAGE (\p. p ** MAX (ppidx m) (ppidx n)) (total_prime_divisors m n))``,
-  metis_tac[prime_divisors_subset_prime, UNION_SUBSET, pairwise_coprime_for_prime_powers]);
+Theorem total_prime_divisors_max_image_pairwise_coprime:
+    !m n. PAIRWISE_COPRIME (IMAGE (\p. p ** MAX (ppidx m) (ppidx n)) (total_prime_divisors m n))
+Proof
+  metis_tac[prime_divisors_subset_prime, UNION_SUBSET, pairwise_coprime_for_prime_powers]
+QED
 
 (* Theorem: p IN park_on m n <=> p IN prime_divisors m /\ p IN prime_divisors n /\ ppidx m <= ppidx n *)
 (* Proof: by IN_INTER *)
-val park_on_element = store_thm(
-  "park_on_element",
-  ``!m n p. p IN park_on m n <=> p IN prime_divisors m /\ p IN prime_divisors n /\ ppidx m <= ppidx n``,
+Theorem park_on_element:
+    !m n p. p IN park_on m n <=> p IN prime_divisors m /\ p IN prime_divisors n /\ ppidx m <= ppidx n
+Proof
   rw[] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: p IN park_off m n <=> p IN prime_divisors m /\ p IN prime_divisors n /\ ppidx n < ppidx m *)
 (* Proof: by IN_INTER *)
-val park_off_element = store_thm(
-  "park_off_element",
-  ``!m n p. p IN park_off m n <=> p IN prime_divisors m /\ p IN prime_divisors n /\ ppidx n < ppidx m``,
+Theorem park_off_element:
+    !m n p. p IN park_off m n <=> p IN prime_divisors m /\ p IN prime_divisors n /\ ppidx n < ppidx m
+Proof
   rw[] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: park_off m n = (common_prime_divisors m n) DIFF (park_on m n) *)
 (* Proof: by EXTENSION, NOT_LESS_EQUAL *)
-val park_off_alt = store_thm(
-  "park_off_alt",
-  ``!m n. park_off m n = (common_prime_divisors m n) DIFF (park_on m n)``,
+Theorem park_off_alt:
+    !m n. park_off m n = (common_prime_divisors m n) DIFF (park_on m n)
+Proof
   rw[EXTENSION] >>
-  metis_tac[NOT_LESS_EQUAL]);
+  metis_tac[NOT_LESS_EQUAL]
+QED
 
 (* Theorem: park_on m n SUBSET common_prime_divisors m n *)
 (* Proof: by SUBSET_DEF *)
-val park_on_subset_common = store_thm(
-  "park_on_subset_common",
-  ``!m n. park_on m n SUBSET common_prime_divisors m n``,
-  rw[SUBSET_DEF]);
+Theorem park_on_subset_common:
+    !m n. park_on m n SUBSET common_prime_divisors m n
+Proof
+  rw[SUBSET_DEF]
+QED
 
 (* Theorem: park_off m n SUBSET common_prime_divisors m n *)
 (* Proof: by SUBSET_DEF *)
-val park_off_subset_common = store_thm(
-  "park_off_subset_common",
-  ``!m n. park_off m n SUBSET common_prime_divisors m n``,
-  rw[SUBSET_DEF]);
+Theorem park_off_subset_common:
+    !m n. park_off m n SUBSET common_prime_divisors m n
+Proof
+  rw[SUBSET_DEF]
+QED
 
 (* Theorem: park_on m n SUBSET total_prime_divisors m n *)
 (* Proof: by SUBSET_DEF *)
-val park_on_subset_total = store_thm(
-  "park_on_subset_total",
-  ``!m n. park_on m n SUBSET total_prime_divisors m n``,
-  rw[SUBSET_DEF]);
+Theorem park_on_subset_total:
+    !m n. park_on m n SUBSET total_prime_divisors m n
+Proof
+  rw[SUBSET_DEF]
+QED
 
 (* Theorem: park_off m n SUBSET total_prime_divisors m n *)
 (* Proof: by SUBSET_DEF *)
-val park_off_subset_total = store_thm(
-  "park_off_subset_total",
-  ``!m n. park_off m n SUBSET total_prime_divisors m n``,
-  rw[SUBSET_DEF]);
+Theorem park_off_subset_total:
+    !m n. park_off m n SUBSET total_prime_divisors m n
+Proof
+  rw[SUBSET_DEF]
+QED
 
 (* Theorem: common_prime_divisors m n =|= park_on m n # park_off m n *)
 (* Proof:
@@ -5142,10 +5332,11 @@ val park_off_subset_total = store_thm(
      so s = park_on m n UNION park_off m n /\
         DISJOINT (park_on m n) (park_off m n)    by partition_by_subset
 *)
-val park_on_off_partition = store_thm(
-  "park_on_off_partition",
-  ``!m n. common_prime_divisors m n =|= park_on m n # park_off m n``,
-  metis_tac[partition_by_subset, park_on_subset_common, park_off_alt]);
+Theorem park_on_off_partition:
+    !m n. common_prime_divisors m n =|= park_on m n # park_off m n
+Proof
+  metis_tac[partition_by_subset, park_on_subset_common, park_off_alt]
+QED
 
 (* Theorem: 1 NOTIN (IMAGE (\p. p ** ppidx m) (park_off m n)) *)
 (* Proof:
@@ -5158,14 +5349,15 @@ val park_on_off_partition = store_thm(
    Thus ppidx m = 0                 by EXP_EQ_1
      or ppidx n < 0, which is F     by NOT_LESS_0
 *)
-val park_off_image_has_not_1 = store_thm(
-  "park_off_image_has_not_1",
-  ``!m n. 1 NOTIN (IMAGE (\p. p ** ppidx m) (park_off m n))``,
+Theorem park_off_image_has_not_1:
+    !m n. 1 NOTIN (IMAGE (\p. p ** ppidx m) (park_off m n))
+Proof
   rw[] >>
   spose_not_then strip_assume_tac >>
   `prime p` by metis_tac[prime_divisors_element] >>
   `p <> 1` by metis_tac[NOT_PRIME_1] >>
-  decide_tac);
+  decide_tac
+QED
 
 (*
 For the example,
@@ -5245,12 +5437,12 @@ park_off_element
         But DISJOINT (park_on m n) (park_off m n)     by park_on_off_partition
          so there is a contradiction                  by IN_DISJOINT
 *)
-val park_on_off_common_image_partition = store_thm(
-  "park_on_off_common_image_partition",
-  ``!m n. let s = IMAGE (\p. p ** MIN (ppidx m) (ppidx n)) (common_prime_divisors m n) in
+Theorem park_on_off_common_image_partition:
+    !m n. let s = IMAGE (\p. p ** MIN (ppidx m) (ppidx n)) (common_prime_divisors m n) in
          let u = IMAGE (\p. p ** ppidx m) (park_on m n) in
          let v = IMAGE (\p. p ** ppidx n) (park_off m n) in
-         0 < m ==> s =|= u # v``,
+         0 < m ==> s =|= u # v
+Proof
   rpt strip_tac >>
   qabbrev_tac `f = \p:num. p ** MIN (ppidx m) (ppidx n)` >>
   qabbrev_tac `f1 = \p:num. p ** ppidx m` >>
@@ -5286,7 +5478,8 @@ val park_on_off_common_image_partition = store_thm(
     `0 < ppidx m` by rw[prime_power_index_pos] >>
     `p = q` by metis_tac[prime_powers_eq] >>
     metis_tac[park_on_off_partition, IN_DISJOINT]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < m /\ 0 < n ==> let a = park m n in let b = gcd m n DIV a in
            (b = PROD_SET (IMAGE (\p. p ** ppidx n) (park_off m n))) /\ (gcd m n = a * b) /\ coprime a b *)
@@ -5334,11 +5527,12 @@ QED
 (* Theorem: 0 < m /\ 0 < n ==> let a = park m n in let b = gcd m n DIV a in
             (gcd m n = a * b) /\ coprime a b *)
 (* Proof: by gcd_park_decomposition *)
-val gcd_park_decompose = store_thm(
-  "gcd_park_decompose",
-  ``!m n. 0 < m /\ 0 < n ==> let a = park m n in let b = gcd m n DIV a in
-         (gcd m n = a * b) /\ coprime a b``,
-  metis_tac[gcd_park_decomposition]);
+Theorem gcd_park_decompose:
+    !m n. 0 < m /\ 0 < n ==> let a = park m n in let b = gcd m n DIV a in
+         (gcd m n = a * b) /\ coprime a b
+Proof
+  metis_tac[gcd_park_decomposition]
+QED
 
 (*
 For the example:
@@ -5452,12 +5646,12 @@ sn = (prime_divisors n) DIFF (park_off m n) = {3; 5; 11}, v = IMAGE (\p. p ** pp
         ==> p IN park_on m n \/ p IN park_off m n by park_on_off_partition, IN_UNION
        This is a contradiction with [1].
 *)
-val park_on_off_total_image_partition = store_thm(
-  "park_on_off_total_image_partition",
-  ``!m n. let s = IMAGE (\p. p ** MAX (ppidx m) (ppidx n)) (total_prime_divisors m n) in
+Theorem park_on_off_total_image_partition:
+    !m n. let s = IMAGE (\p. p ** MAX (ppidx m) (ppidx n)) (total_prime_divisors m n) in
          let u = IMAGE (\p. p ** ppidx m) ((prime_divisors m) DIFF (park_on m n)) in
          let v = IMAGE (\p. p ** ppidx n) ((prime_divisors n) DIFF (park_off m n)) in
-         0 < m /\ 0 < n ==> s =|= u # v``,
+         0 < m /\ 0 < n ==> s =|= u # v
+Proof
   rpt strip_tac >>
   qabbrev_tac `f = \p:num. p ** MAX (ppidx m) (ppidx n)` >>
   qabbrev_tac `f1 = \p:num. p ** ppidx m` >>
@@ -5532,7 +5726,8 @@ val park_on_off_total_image_partition = store_thm(
     `p = q` by metis_tac[prime_powers_eq] >>
     `p IN common_prime_divisors m n` by rw[common_prime_divisors_element] >>
     metis_tac[park_on_off_partition, IN_UNION]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < m /\ 0 < n ==>
            let a = park m n in let b = gcd m n DIV a in
@@ -5714,24 +5909,26 @@ QED
 (* Theorem: 0 < m /\ 0 < n ==> let a = park m n in let p = m DIV a in let q = (a * n) DIV (gcd m n) in
             (lcm m n = p * q) /\ coprime p q *)
 (* Proof: by lcm_park_decomposition *)
-val lcm_park_decompose = store_thm(
-  "lcm_park_decompose",
-  ``!m n. 0 < m /\ 0 < n ==> let a = park m n in let p = m DIV a in let q = (a * n) DIV (gcd m n) in
-         (lcm m n = p * q) /\ coprime p q``,
-  metis_tac[lcm_park_decomposition]);
+Theorem lcm_park_decompose:
+    !m n. 0 < m /\ 0 < n ==> let a = park m n in let p = m DIV a in let q = (a * n) DIV (gcd m n) in
+         (lcm m n = p * q) /\ coprime p q
+Proof
+  metis_tac[lcm_park_decomposition]
+QED
 
 (* Theorem: 0 < m /\ 0 < n ==>
             let a = park m n in let b = gcd m n DIV a in
             let p = m DIV a in let q = (a * n) DIV (gcd m n) in
             (lcm m n = p * q) /\ coprime p q /\ (gcd m n = a * b) /\ (m = a * p) /\ (n = b * q) *)
 (* Proof: by lcm_park_decomposition *)
-val lcm_gcd_park_decompose = store_thm(
-  "lcm_gcd_park_decompose",
-  ``!m n. 0 < m /\ 0 < n ==>
+Theorem lcm_gcd_park_decompose:
+    !m n. 0 < m /\ 0 < n ==>
         let a = park m n in let b = gcd m n DIV a in
         let p = m DIV a in let q = (a * n) DIV (gcd m n) in
-         (lcm m n = p * q) /\ coprime p q /\ (gcd m n = a * b) /\ (m = a * p) /\ (n = b * q)``,
-  metis_tac[lcm_park_decomposition]);
+         (lcm m n = p * q) /\ coprime p q /\ (gcd m n = a * b) /\ (m = a * p) /\ (n = b * q)
+Proof
+  metis_tac[lcm_park_decomposition]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Consecutive LCM Recurrence                                                *)
@@ -5778,13 +5975,13 @@ e (rpt strip_tac);
 *)
 
 (* Define the Consecutive LCM Function *)
-val lcm_fun_def = Define`
+Definition lcm_fun_def:
   (lcm_fun 0 = 1) /\
   (lcm_fun (SUC n) = if n = 0 then 1 else
       case some p. ?k. 0 < k /\ prime p /\ (SUC n = p ** k) of
         SOME p => p * (lcm_fun n)
       | NONE   => lcm_fun n)
-`;
+End
 
 (* Another possible definition -- but need to work with pairs:
 
@@ -5813,10 +6010,11 @@ val lcm_fun_SUC = save_thm("lcm_fun_SUC", lcm_fun_def |> CONJUNCT2);
    = lcm_fun (SUC 0)   by ONE
    = 1                 by lcm_fun_def
 *)
-val lcm_fun_1 = store_thm(
-  "lcm_fun_1",
-  ``lcm_fun 1 = 1``,
-  rw_tac bool_ss[lcm_fun_def, ONE]);
+Theorem lcm_fun_1:
+    lcm_fun 1 = 1
+Proof
+  rw_tac bool_ss[lcm_fun_def, ONE]
+QED
 
 (* Theorem: lcm_fun 2 = 2 *)
 (* Proof:
@@ -5860,14 +6058,15 @@ QED
 
 (* Theorem: ~(?p k. 0 < k /\ prime p /\ (SUC n = p ** k)) ==> (lcm_fun (SUC n) = lcm_fun n) *)
 (* Proof: by lcm_fun_def *)
-val lcm_fun_suc_none = store_thm(
-  "lcm_fun_suc_none",
-  ``!n. ~(?p k. 0 < k /\ prime p /\ (SUC n = p ** k)) ==> (lcm_fun (SUC n) = lcm_fun n)``,
+Theorem lcm_fun_suc_none:
+    !n. ~(?p k. 0 < k /\ prime p /\ (SUC n = p ** k)) ==> (lcm_fun (SUC n) = lcm_fun n)
+Proof
   rw[lcm_fun_def] >>
   DEEP_INTRO_TAC some_intro >>
   rw_tac std_ss[] >>
   `k <> 0` by decide_tac >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: prime p /\ l <> [] /\ POSITIVE l ==> !x. MEM x l ==> ppidx x <= ppidx (list_lcm l) *)
 (* Proof:
@@ -5875,13 +6074,14 @@ val lcm_fun_suc_none = store_thm(
     and MEM (ppidx x) (MAP ppidx l)                   by MEM_MAP, MEM x l
    Thus ppidx x <= ppidx (list_lcm l)                 by MAX_LIST_PROPERTY
 *)
-val list_lcm_prime_power_index_lower = store_thm(
-  "list_lcm_prime_power_index_lower",
-  ``!l p. prime p /\ l <> [] /\ POSITIVE l ==> !x. MEM x l ==> ppidx x <= ppidx (list_lcm l)``,
+Theorem list_lcm_prime_power_index_lower:
+    !l p. prime p /\ l <> [] /\ POSITIVE l ==> !x. MEM x l ==> ppidx x <= ppidx (list_lcm l)
+Proof
   rpt strip_tac >>
   `ppidx (list_lcm l) = MAX_LIST (MAP ppidx l)` by rw[list_lcm_prime_power_index] >>
   `MEM (ppidx x) (MAP ppidx l)` by metis_tac[MEM_MAP] >>
-  rw[MAX_LIST_PROPERTY]);
+  rw[MAX_LIST_PROPERTY]
+QED
 
 (*
 The keys to show list_lcm_eq_lcm_fun are:
@@ -5941,9 +6141,9 @@ If q = 1, then n is a pure prime p power: n = p ** k, with k > 0.
      = lcm (n + 2) m                               by list_lcm_snoc
      = p * m                                       by lcm_special_for_prime_power
 *)
-val list_lcm_with_last_prime_power = store_thm(
-  "list_lcm_with_last_prime_power",
-  ``!n p k. prime p /\ (n + 2 = p ** k) ==> (list_lcm [1 .. (n + 2)] = p * list_lcm [1 .. (n + 1)])``,
+Theorem list_lcm_with_last_prime_power:
+    !n p k. prime p /\ (n + 2 = p ** k) ==> (list_lcm [1 .. (n + 2)] = p * list_lcm [1 .. (n + 1)])
+Proof
   rpt strip_tac >>
   `n + 2 <> 1` by decide_tac >>
   `0 <> k` by metis_tac[EXP_EQ_1] >>
@@ -5974,7 +6174,8 @@ val list_lcm_with_last_prime_power = store_thm(
   `list_lcm [1 .. (n + 2)] = list_lcm (SNOC (n + 2) l)` by rw[GSYM leibniz_vertical_snoc, Abbr`l`] >>
   `_ = lcm (n + 2) m` by rw[list_lcm_snoc, Abbr`m`] >>
   `_ = p * m` by rw[lcm_special_for_prime_power] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: (!p k. (k = 0) \/ ~prime p \/ n + 2 <> p ** k) ==>
             (list_lcm [1 .. (n + 2)] = list_lcm [1 .. (n + 1)]) *)
@@ -5993,10 +6194,10 @@ val list_lcm_with_last_prime_power = store_thm(
     = lcm (n + 2) m                                       by list_lcm_snoc
     = m                                                   by divides_iff_lcm_fix
 *)
-val list_lcm_with_last_non_prime_power = store_thm(
-  "list_lcm_with_last_non_prime_power",
-  ``!n. (!p k. (k = 0) \/ ~prime p \/ n + 2 <> p ** k) ==>
-       (list_lcm [1 .. (n + 2)] = list_lcm [1 .. (n + 1)])``,
+Theorem list_lcm_with_last_non_prime_power:
+    !n. (!p k. (k = 0) \/ ~prime p \/ n + 2 <> p ** k) ==>
+       (list_lcm [1 .. (n + 2)] = list_lcm [1 .. (n + 1)])
+Proof
   rpt strip_tac >>
   `1 < n + 2` by decide_tac >>
   `!k. ~(0 < k) = (k = 0)` by decide_tac >>
@@ -6010,7 +6211,8 @@ val list_lcm_with_last_non_prime_power = store_thm(
   `list_lcm [1 .. (n + 2)] = list_lcm (SNOC (n + 2) l)` by rw[GSYM leibniz_vertical_snoc, Abbr`l`] >>
   `_ = lcm (n + 2) m` by rw[list_lcm_snoc, Abbr`m`] >>
   `_ = m` by rw[GSYM divides_iff_lcm_fix] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: list_lcm [1 .. (n + 1)] = lcm_fun (n + 1) *)
 (* Proof:
@@ -6046,9 +6248,9 @@ val list_lcm_with_last_non_prime_power = store_thm(
            = list_lcm (leibniz_vertical n)         by list_lcm_with_last_non_prime_power
            = lcm_fun (SUC n)                       by induction hypothesis
 *)
-val list_lcm_eq_lcm_fun = store_thm(
-  "list_lcm_eq_lcm_fun",
-  ``!n. list_lcm [1 .. (n + 1)] = lcm_fun (n + 1)``,
+Theorem list_lcm_eq_lcm_fun:
+    !n. list_lcm [1 .. (n + 1)] = lcm_fun (n + 1)
+Proof
   Induct >-
   rw[leibniz_vertical_0, list_lcm_sing, lcm_fun_1] >>
   `(SUC n) + 1 = SUC (SUC n)` by rw[] >>
@@ -6059,7 +6261,8 @@ val list_lcm_eq_lcm_fun = store_thm(
   DEEP_INTRO_TAC some_intro >>
   rw[] >-
   metis_tac[list_lcm_with_last_prime_power, ADD1] >>
-  metis_tac[list_lcm_with_last_non_prime_power, ADD1]);
+  metis_tac[list_lcm_with_last_non_prime_power, ADD1]
+QED
 
 (* This is a major milestone theorem! *)
 
@@ -6069,10 +6272,11 @@ val list_lcm_eq_lcm_fun = store_thm(
     and list_lcm (leibniz_vertical n) = lcm_fun (SUC n)  by list_lcm_eq_lcm_fun\
      so 2 ** n <= lcm_fun (SUC n)
 *)
-val lcm_fun_lower_bound = store_thm(
-  "lcm_fun_lower_bound",
-  ``!n. 2 ** n <= lcm_fun (n + 1)``,
-  rw[GSYM list_lcm_eq_lcm_fun, lcm_lower_bound]);
+Theorem lcm_fun_lower_bound:
+    !n. 2 ** n <= lcm_fun (n + 1)
+Proof
+  rw[GSYM list_lcm_eq_lcm_fun, lcm_lower_bound]
+QED
 
 (* Theorem: 0 < n ==> 2 ** (n - 1) <= lcm_fun n *)
 (* Proof:
@@ -6081,14 +6285,15 @@ val lcm_fun_lower_bound = store_thm(
    Apply lcm_fun_lower_bound,
      put n = SUC m, and the result follows.
 *)
-val lcm_fun_lower_bound_alt = store_thm(
-  "lcm_fun_lower_bound_alt",
-  ``!n. 0 < n ==> 2 ** (n - 1) <= lcm_fun n``,
+Theorem lcm_fun_lower_bound_alt:
+    !n. 0 < n ==> 2 ** (n - 1) <= lcm_fun n
+Proof
   rpt strip_tac >>
   `n <> 0` by decide_tac >>
   `?m. n = SUC m` by metis_tac[num_CASES] >>
   `(n - 1 = m) /\ (n = m + 1)` by decide_tac >>
-  metis_tac[lcm_fun_lower_bound]);
+  metis_tac[lcm_fun_lower_bound]
+QED
 
 (* Theorem: 0 < n /\ prime p /\ (SUC n = p ** ppidx (SUC n)) ==>
             (ppidx (SUC n) = SUC (ppidx (list_lcm [1 .. n]))) *)
@@ -6131,10 +6336,10 @@ val lcm_fun_lower_bound_alt = store_thm(
 
    By these two claims, h = j.
 *)
-val prime_power_index_suc_special = store_thm(
-  "prime_power_index_suc_special",
-  ``!n p. 0 < n /\ prime p /\ (SUC n = p ** ppidx (SUC n)) ==>
-         (ppidx (SUC n) = SUC (ppidx (list_lcm [1 .. n])))``,
+Theorem prime_power_index_suc_special:
+    !n p. 0 < n /\ prime p /\ (SUC n = p ** ppidx (SUC n)) ==>
+         (ppidx (SUC n) = SUC (ppidx (list_lcm [1 .. n])))
+Proof
   rpt strip_tac >>
   qabbrev_tac `z = SUC n` >>
   `n <> 0 /\ z <> 1` by rw[Abbr`z`] >>
@@ -6162,16 +6367,18 @@ val prime_power_index_suc_special = store_thm(
     `SUC n <= y` by rw[DIVIDES_LE, Abbr`z`] >>
     `y <= n` by metis_tac[listRangeINC_MEM] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < n /\ prime p /\ (n + 1 = p ** ppidx (n + 1)) ==>
             (ppidx (n + 1) = 1 + (ppidx (list_lcm [1 .. n]))) *)
 (* Proof: by prime_power_index_suc_special, ADD1, ADD_COMM *)
-val prime_power_index_suc_property = store_thm(
-  "prime_power_index_suc_property",
-  ``!n p. 0 < n /\ prime p /\ (n + 1 = p ** ppidx (n + 1)) ==>
-         (ppidx (n + 1) = 1 + (ppidx (list_lcm [1 .. n])))``,
-  metis_tac[prime_power_index_suc_special, ADD1, ADD_COMM]);
+Theorem prime_power_index_suc_property:
+    !n p. 0 < n /\ prime p /\ (n + 1 = p ** ppidx (n + 1)) ==>
+         (ppidx (n + 1) = 1 + (ppidx (list_lcm [1 .. n])))
+Proof
+  metis_tac[prime_power_index_suc_special, ADD1, ADD_COMM]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Consecutive LCM Recurrence - Rework                                        *)
@@ -6304,25 +6511,28 @@ QED
 (* Theorem: list_lcm [1 .. (n + 1)] = let s = prime_divisors (n + 1) in
             if SING s then CHOICE s * list_lcm [1 .. n] else list_lcm [1 .. n] *)
 (* Proof: by list_lcm_with_last_prime_power, list_lcm_with_last_non_prime_power *)
-val list_lcm_recurrence = store_thm(
-  "list_lcm_recurrence",
-  ``!n. list_lcm [1 .. (n + 1)] = let s = prime_divisors (n + 1) in
-       if SING s then CHOICE s * list_lcm [1 .. n] else list_lcm [1 .. n]``,
-  rw[list_lcm_by_last_prime_power, list_lcm_by_last_non_prime_power]);
+Theorem list_lcm_recurrence:
+    !n. list_lcm [1 .. (n + 1)] = let s = prime_divisors (n + 1) in
+       if SING s then CHOICE s * list_lcm [1 .. n] else list_lcm [1 .. n]
+Proof
+  rw[list_lcm_by_last_prime_power, list_lcm_by_last_non_prime_power]
+QED
 
 (* Theorem: (prime_divisors (n + 1) = {p}) ==> (list_lcm [1 .. (n + 1)] = p * list_lcm [1 .. n]) *)
 (* Proof: by list_lcm_by_last_prime_power, SING_DEF *)
-val list_lcm_option_last_prime_power = store_thm(
-  "list_lcm_option_last_prime_power",
-  ``!n p. (prime_divisors (n + 1) = {p}) ==> (list_lcm [1 .. (n + 1)] = p * list_lcm [1 .. n])``,
-  rw[list_lcm_by_last_prime_power, SING_DEF]);
+Theorem list_lcm_option_last_prime_power:
+    !n p. (prime_divisors (n + 1) = {p}) ==> (list_lcm [1 .. (n + 1)] = p * list_lcm [1 .. n])
+Proof
+  rw[list_lcm_by_last_prime_power, SING_DEF]
+QED
 
 (* Theorem:  (!p. prime_divisors (n + 1) <> {p}) ==> (list_lcm [1 .. (n + 1)] = list_lcm [1 .. n]) *)
 (* Proof: by ist_lcm_by_last_non_prime_power, SING_DEF *)
-val list_lcm_option_last_non_prime_power = store_thm(
-  "list_lcm_option_last_non_prime_power",
-  ``!n. (!p. prime_divisors (n + 1) <> {p}) ==> (list_lcm [1 .. (n + 1)] = list_lcm [1 .. n])``,
-  rw[list_lcm_by_last_non_prime_power, SING_DEF]);
+Theorem list_lcm_option_last_non_prime_power:
+    !n. (!p. prime_divisors (n + 1) <> {p}) ==> (list_lcm [1 .. (n + 1)] = list_lcm [1 .. n])
+Proof
+  rw[list_lcm_by_last_non_prime_power, SING_DEF]
+QED
 
 (* Theorem: list_lcm [1 .. (n + 1)] = case some p. (prime_divisors (n + 1)) = {p} of
               NONE => list_lcm [1 .. n]
@@ -6331,14 +6541,15 @@ val list_lcm_option_last_non_prime_power = store_thm(
    For SOME p, true by list_lcm_option_last_prime_power
    For NONE, true   by list_lcm_option_last_non_prime_power
 *)
-val list_lcm_option_recurrence = store_thm(
-  "list_lcm_option_recurrence",
-  ``!n. list_lcm [1 .. (n + 1)] = case some p. (prime_divisors (n + 1)) = {p} of
+Theorem list_lcm_option_recurrence:
+    !n. list_lcm [1 .. (n + 1)] = case some p. (prime_divisors (n + 1)) = {p} of
               NONE => list_lcm [1 .. n]
-            | SOME p => p * list_lcm [1 .. n]``,
+            | SOME p => p * list_lcm [1 .. n]
+Proof
   rpt strip_tac >>
   DEEP_INTRO_TAC optionTheory.some_intro >>
-  rw[list_lcm_option_last_prime_power, list_lcm_option_last_non_prime_power]);
+  rw[list_lcm_option_last_prime_power, list_lcm_option_last_non_prime_power]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Relating Consecutive LCM to Prime Functions                               *)
@@ -6351,10 +6562,11 @@ val list_lcm_option_recurrence = store_thm(
     and !x. x IN s <=> MEM x (SET_TO_LIST s) by MEM_SET_TO_LIST
     The result follows                       by prime_powers_upto_element
 *)
-val prime_powers_upto_list_mem = store_thm(
-  "prime_powers_upto_list_mem",
-  ``!n x. MEM x (SET_TO_LIST (prime_powers_upto n)) <=> ?p. (x = p ** LOG p n) /\ prime p /\ p <= n``,
-  rw[MEM_SET_TO_LIST, prime_powers_upto_element, prime_powers_upto_finite]);
+Theorem prime_powers_upto_list_mem:
+    !n x. MEM x (SET_TO_LIST (prime_powers_upto n)) <=> ?p. (x = p ** LOG p n) /\ prime p /\ p <= n
+Proof
+  rw[MEM_SET_TO_LIST, prime_powers_upto_element, prime_powers_upto_finite]
+QED
 
 (*
 LOG_EQ_0  |- !a b. 1 < a /\ 0 < b ==> ((LOG a b = 0) <=> b < a)
@@ -6367,13 +6579,14 @@ LOG_EQ_0  |- !a b. 1 < a /\ 0 < b ==> ((LOG a b = 0) <=> b < a)
     and p ** LOG p n IN s               by prime_powers_upto_element_alt
     ==> p ** LOG p n divides set_lcm s  by set_lcm_is_common_multiple
 *)
-val prime_powers_upto_lcm_prime_to_log_divisor = store_thm(
-  "prime_powers_upto_lcm_prime_to_log_divisor",
-  ``!n p. prime p /\ p <= n ==> p ** LOG p n divides set_lcm (prime_powers_upto n)``,
+Theorem prime_powers_upto_lcm_prime_to_log_divisor:
+    !n p. prime p /\ p <= n ==> p ** LOG p n divides set_lcm (prime_powers_upto n)
+Proof
   rpt strip_tac >>
   `FINITE (prime_powers_upto n)` by rw[prime_powers_upto_finite] >>
   `p ** LOG p n IN prime_powers_upto n` by rw[prime_powers_upto_element_alt] >>
-  rw[set_lcm_is_common_multiple]);
+  rw[set_lcm_is_common_multiple]
+QED
 
 (* Theorem: prime p /\ p <= n ==> p divides set_lcm (prime_powers_upto n) *)
 (* Proof:
@@ -6384,15 +6597,16 @@ val prime_powers_upto_lcm_prime_to_log_divisor = store_thm(
    Note p ** LOG p n divides set_lcm s  by prime_powers_upto_lcm_prime_to_log_divisor
    Thus p divides set_lcm s             by DIVIDES_TRANS
 *)
-val prime_powers_upto_lcm_prime_divisor = store_thm(
-  "prime_powers_upto_lcm_prime_divisor",
-  ``!n p. prime p /\ p <= n ==> p divides set_lcm (prime_powers_upto n)``,
+Theorem prime_powers_upto_lcm_prime_divisor:
+    !n p. prime p /\ p <= n ==> p divides set_lcm (prime_powers_upto n)
+Proof
   rpt strip_tac >>
   `1 < p` by rw[ONE_LT_PRIME] >>
   `LOG p n <> 0` by rw[LOG_EQ_0] >>
   `p divides p ** LOG p n` by rw[divides_self_power] >>
   `p ** LOG p n divides set_lcm (prime_powers_upto n)` by rw[prime_powers_upto_lcm_prime_to_log_divisor] >>
-  metis_tac[DIVIDES_TRANS]);
+  metis_tac[DIVIDES_TRANS]
+QED
 
 (* Theorem: prime p /\ p <= n ==> p ** ppidx n divides set_lcm (prime_powers_upto n) *)
 (* Proof:
@@ -6403,16 +6617,17 @@ val prime_powers_upto_lcm_prime_divisor = store_thm(
     and p ** LOG p n divides set_lcm (prime_powers_upto n)  by prime_powers_upto_lcm_prime_to_log_divisor
      or p ** ppidx n divides set_lcm (prime_powers_upto n)  by DIVIDES_TRANS
 *)
-val prime_powers_upto_lcm_prime_to_power_divisor = store_thm(
-  "prime_powers_upto_lcm_prime_to_power_divisor",
-  ``!n p. prime p /\ p <= n ==> p ** ppidx n divides set_lcm (prime_powers_upto n)``,
+Theorem prime_powers_upto_lcm_prime_to_power_divisor:
+    !n p. prime p /\ p <= n ==> p ** ppidx n divides set_lcm (prime_powers_upto n)
+Proof
   rpt strip_tac >>
   `1 < p` by rw[ONE_LT_PRIME] >>
   `0 < n` by decide_tac >>
   `ppidx n <= LOG p n` by rw[prime_power_index_le_log_index] >>
   `p ** ppidx n divides p ** LOG p n` by rw[power_divides_iff] >>
   `p ** LOG p n divides set_lcm (prime_powers_upto n)` by rw[prime_powers_upto_lcm_prime_to_log_divisor] >>
-  metis_tac[DIVIDES_TRANS]);
+  metis_tac[DIVIDES_TRANS]
+QED
 
 (* The next theorem is based on this example:
 Take n = 10,
@@ -6478,9 +6693,9 @@ Hence x divides set_lcm (prime_powers_upto 10)
     ==> PROD_SET s = set_lcm s  by pairwise_coprime_prod_set_eq_set_lcm
    Thus x divides m             by set_lcm s divides m
 *)
-val prime_powers_upto_lcm_divisor = store_thm(
-  "prime_powers_upto_lcm_divisor",
-  ``!n x. 0 < x /\ x <= n ==> x divides set_lcm (prime_powers_upto n)``,
+Theorem prime_powers_upto_lcm_divisor:
+    !n x. 0 < x /\ x <= n ==> x divides set_lcm (prime_powers_upto n)
+Proof
   rpt strip_tac >>
   `0 < n` by decide_tac >>
   qabbrev_tac `m = set_lcm (prime_powers_upto n)` >>
@@ -6500,7 +6715,8 @@ val prime_powers_upto_lcm_divisor = store_thm(
   metis_tac[DIVIDES_TRANS]) >>
   `FINITE s` by rw[prime_power_divisors_finite, Abbr`s`] >>
   `set_lcm s divides m` by rw[set_lcm_is_least_common_multiple] >>
-  metis_tac[prime_power_divisors_pairwise_coprime, pairwise_coprime_prod_set_eq_set_lcm]);
+  metis_tac[prime_power_divisors_pairwise_coprime, pairwise_coprime_prod_set_eq_set_lcm]
+QED
 
 (* This is a key result. *)
 
@@ -6537,9 +6753,9 @@ prime_power_index_pos        |- !n p. 0 < n /\ prime p /\ p divides n ==> 0 < pp
        Note FINITE s                   by prime_powers_upto_finite
        Thus set_lcm s divides m        by set_lcm_is_least_common_multiple, Claim
 *)
-val lcm_run_eq_set_lcm_prime_powers = store_thm(
-  "lcm_run_eq_set_lcm_prime_powers",
-  ``!n. lcm_run n = set_lcm (prime_powers_upto n)``,
+Theorem lcm_run_eq_set_lcm_prime_powers:
+    !n. lcm_run n = set_lcm (prime_powers_upto n)
+Proof
   rpt strip_tac >>
   (irule DIVIDES_ANTISYM >> rpt conj_tac) >| [
     `!x. MEM x [1 .. n] <=> 0 < x /\ x <= n` by rw[listRangeINC_MEM] >>
@@ -6555,7 +6771,8 @@ val lcm_run_eq_set_lcm_prime_powers = store_thm(
     rw[list_lcm_is_common_multiple, Abbr`m`]) >>
     `FINITE s` by rw[prime_powers_upto_finite, Abbr`s`] >>
     rw[set_lcm_is_least_common_multiple]
-  ]);
+  ]
+QED
 
 (* Theorem: set_lcm (prime_powers_upto n) = PROD_SET (prime_powers_upto n) *)
 (* Proof:
@@ -6564,10 +6781,11 @@ val lcm_run_eq_set_lcm_prime_powers = store_thm(
     and PAIRWISE_COPRIME s        by prime_powers_upto_pairwise_coprime
    Thus set_lcm s = PROD_SET s    by pairwise_coprime_prod_set_eq_set_lcm
 *)
-val set_lcm_prime_powers_upto_eqn = store_thm(
-  "set_lcm_prime_powers_upto_eqn",
-  ``!n. set_lcm (prime_powers_upto n) = PROD_SET (prime_powers_upto n)``,
-  metis_tac[prime_powers_upto_finite, prime_powers_upto_pairwise_coprime, pairwise_coprime_prod_set_eq_set_lcm]);
+Theorem set_lcm_prime_powers_upto_eqn:
+    !n. set_lcm (prime_powers_upto n) = PROD_SET (prime_powers_upto n)
+Proof
+  metis_tac[prime_powers_upto_finite, prime_powers_upto_pairwise_coprime, pairwise_coprime_prod_set_eq_set_lcm]
+QED
 
 (* Theorem: lcm_run n = PROD_SET (prime_powers_upto n) *)
 (* Proof:
@@ -6575,10 +6793,11 @@ val set_lcm_prime_powers_upto_eqn = store_thm(
    = set_lcm (prime_powers_upto n)
    = PROD_SET (prime_powers_upto n)
 *)
-val lcm_run_eq_prod_set_prime_powers = store_thm(
-  "lcm_run_eq_prod_set_prime_powers",
-  ``!n. lcm_run n = PROD_SET (prime_powers_upto n)``,
-  rw[lcm_run_eq_set_lcm_prime_powers, set_lcm_prime_powers_upto_eqn]);
+Theorem lcm_run_eq_prod_set_prime_powers:
+    !n. lcm_run n = PROD_SET (prime_powers_upto n)
+Proof
+  rw[lcm_run_eq_set_lcm_prime_powers, set_lcm_prime_powers_upto_eqn]
+QED
 
 (* Theorem: PROD_SET (prime_powers_upto n) <= n ** (primes_count n) *)
 (* Proof:
@@ -6641,10 +6860,11 @@ QED
     = PROD_SET (prime_powers_upto n)   by lcm_run_eq_prod_set_prime_powers
    <= n ** (primes_count n)            by prime_powers_upto_prod_set_le
 *)
-val lcm_run_upper_by_primes_count = store_thm(
-  "lcm_run_upper_by_primes_count",
-  ``!n. lcm_run n <= n ** (primes_count n)``,
-  rw[lcm_run_eq_prod_set_prime_powers, prime_powers_upto_prod_set_le]);
+Theorem lcm_run_upper_by_primes_count:
+    !n. lcm_run n <= n ** (primes_count n)
+Proof
+  rw[lcm_run_eq_prod_set_prime_powers, prime_powers_upto_prod_set_le]
+QED
 
 (* This is a significant result. *)
 
@@ -6679,9 +6899,9 @@ val lcm_run_upper_by_primes_count = store_thm(
 
    Hence PROD_SET s <= PROD_SET t       by PROD_SET_LESS_EQ
 *)
-val prime_powers_upto_prod_set_ge = store_thm(
-  "prime_powers_upto_prod_set_ge",
-  ``!n. PROD_SET (primes_upto n) <= PROD_SET (prime_powers_upto n)``,
+Theorem prime_powers_upto_prod_set_ge:
+    !n. PROD_SET (primes_upto n) <= PROD_SET (prime_powers_upto n)
+Proof
   rpt strip_tac >>
   qabbrev_tac `s = primes_upto n` >>
   qabbrev_tac `f = \p. p ** LOG p n` >>
@@ -6701,7 +6921,8 @@ val prime_powers_upto_prod_set_ge = store_thm(
   `LOG x n <> 0` by rw[LOG_EQ_0] >>
   `1 <= LOG x n` by decide_tac >>
   metis_tac[EXP_BASE_LE_MONO, EXP_1]) >>
-  metis_tac[PROD_SET_LESS_EQ]);
+  metis_tac[PROD_SET_LESS_EQ]
+QED
 
 (* Theorem: PROD_SET (primes_upto n) <= lcm_run n *)
 (* Proof:
@@ -6710,13 +6931,14 @@ val prime_powers_upto_prod_set_ge = store_thm(
     = PROD_SET (prime_powers_upto n)   by set_lcm_prime_powers_upto_eqn
    >= PROD_SET (primes_upto n)         by prime_powers_upto_prod_set_ge
 *)
-val lcm_run_lower_by_primes_product = store_thm(
-  "lcm_run_lower_by_primes_product",
-  ``!n. PROD_SET (primes_upto n) <= lcm_run n``,
+Theorem lcm_run_lower_by_primes_product:
+    !n. PROD_SET (primes_upto n) <= lcm_run n
+Proof
   rpt strip_tac >>
   `lcm_run n = set_lcm (prime_powers_upto n)` by rw[lcm_run_eq_set_lcm_prime_powers] >>
   `_ = PROD_SET (prime_powers_upto n)` by rw[set_lcm_prime_powers_upto_eqn] >>
-  rw[prime_powers_upto_prod_set_ge]);
+  rw[prime_powers_upto_prod_set_ge]
+QED
 
 (* This is another significant result. *)
 
@@ -6791,10 +7013,11 @@ QED
    <= PROD_SET (primes_upto n) * (PROD_SET (prime_powers_upto n))  by prime_powers_upto_prod_set_mix_ge
     = PROD_SET (primes_upto n) * lcm_run n                         by lcm_run_eq_prod_set_prime_powers
 *)
-val primes_count_upper_by_product = store_thm(
-  "primes_count_upper_by_product",
-  ``!n. n ** primes_count n <= PROD_SET (primes_upto n) * lcm_run n``,
-  metis_tac[prime_powers_upto_prod_set_mix_ge, lcm_run_eq_prod_set_prime_powers]);
+Theorem primes_count_upper_by_product:
+    !n. n ** primes_count n <= PROD_SET (primes_upto n) * lcm_run n
+Proof
+  metis_tac[prime_powers_upto_prod_set_mix_ge, lcm_run_eq_prod_set_prime_powers]
+QED
 
 (* Theorem: n ** primes_count n <= (lcm_run n) ** 2 *)
 (* Proof:
@@ -6803,13 +7026,14 @@ val primes_count_upper_by_product = store_thm(
    <= lcm_run n * lcm_run n                    by lcm_run_lower_by_primes_product
     = (lcm_run n) ** 2                         by EXP_2
 *)
-val primes_count_upper_by_lcm_run = store_thm(
-  "primes_count_upper_by_lcm_run",
-  ``!n. n ** primes_count n <= (lcm_run n) ** 2``,
+Theorem primes_count_upper_by_lcm_run:
+    !n. n ** primes_count n <= (lcm_run n) ** 2
+Proof
   rpt strip_tac >>
   `n ** primes_count n <= PROD_SET (primes_upto n) * lcm_run n` by rw[primes_count_upper_by_product] >>
   `PROD_SET (primes_upto n) <= lcm_run n` by rw[lcm_run_lower_by_primes_product] >>
-  metis_tac[LESS_MONO_MULT, LESS_EQ_TRANS, EXP_2]);
+  metis_tac[LESS_MONO_MULT, LESS_EQ_TRANS, EXP_2]
+QED
 
 (* Theorem: SQRT (n ** (primes_count n)) <= lcm_run n *)
 (* Proof:
@@ -6818,14 +7042,15 @@ val primes_count_upper_by_lcm_run = store_thm(
     But   SQRT ((lcm_run n) ** 2) = lcm_run n                    by ROOT_UNIQUE
    Thus SQRT (n ** (primes_count n)) <= lcm_run n
 *)
-val lcm_run_lower_by_primes_count = store_thm(
-  "lcm_run_lower_by_primes_count",
-  ``!n. SQRT (n ** (primes_count n)) <= lcm_run n``,
+Theorem lcm_run_lower_by_primes_count:
+    !n. SQRT (n ** (primes_count n)) <= lcm_run n
+Proof
   rpt strip_tac >>
   `n ** primes_count n <= (lcm_run n) ** 2` by rw[primes_count_upper_by_lcm_run] >>
   `SQRT (n ** primes_count n) <= SQRT ((lcm_run n) ** 2)` by rw[ROOT_LE_MONO] >>
   `SQRT ((lcm_run n) ** 2) = lcm_run n` by rw[ROOT_UNIQUE] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Therefore:
    L(n) <= n ** pi(n)            by lcm_run_upper_by_primes_count
@@ -6888,9 +7113,9 @@ val lcm_run_lower_by_primes_count = store_thm(
    making  n < (SQRT n) ** 2              by LESS_TRANS, EXP_2
    This contradicts (SQRT n) ** 2 <= n    by SQRT_PROPERTY
 *)
-val two_factors_property_1 = store_thm(
-  "two_factors_property_1",
-  ``!n a b. (n = a * b) /\ a < SQRT n ==> SQRT n <= b``,
+Theorem two_factors_property_1:
+    !n a b. (n = a * b) /\ a < SQRT n ==> SQRT n <= b
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >| [
     `a <> 0 /\ (b = 0) /\ (SQRT n = 0)` by metis_tac[MULT_EQ_0, SQRT_0, DECIDE``~(0 < 0)``] >>
@@ -6904,7 +7129,8 @@ val two_factors_property_1 = store_thm(
     `n < (SQRT n) ** 2` by metis_tac[LESS_TRANS, EXP_2] >>
     `(SQRT n) ** 2 <= n` by rw[SQRT_PROPERTY] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: (n = a * b) /\ SQRT n < a ==> b <= SQRT n *)
 (* Proof:
@@ -6922,9 +7148,9 @@ val two_factors_property_1 = store_thm(
    or       SUC (SQRT n) <= SQRT n           by SQRT_OF_SQ
    which is a contradiction to !m. SUC m > m by LESS_SUC_REFL
  *)
-val two_factors_property_2 = store_thm(
-  "two_factors_property_2",
-  ``!n a b. (n = a * b) /\ SQRT n < a ==> b <= SQRT n``,
+Theorem two_factors_property_2:
+    !n a b. (n = a * b) /\ SQRT n < a ==> b <= SQRT n
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >| [
     `a <> 0 /\ (b = 0) /\ (SQRT 0 = 0)` by metis_tac[MULT_EQ_0, SQRT_0, DECIDE``~(0 < 0)``] >>
@@ -6938,7 +7164,8 @@ val two_factors_property_2 = store_thm(
     `SUC (SQRT n) ** 2  <= n` by metis_tac[LESS_EQ_TRANS, EXP_2] >>
     `SUC (SQRT n) <= SQRT n` by metis_tac[SQRT_LE, SQRT_OF_SQ] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: (n = a * b) ==> a <= SQRT n \/ b <= SQRT n *)
 (* Proof:
@@ -6946,13 +7173,14 @@ val two_factors_property_2 = store_thm(
    Then (n = a * b) /\ SQRT n < a ==> b <= SQRT n  by two_factors_property_2
    which contradicts SQRT n < b.
  *)
-val two_factors_property = store_thm(
-  "two_factors_property",
-  ``!n a b. (n = a * b) ==> a <= SQRT n \/ b <= SQRT n``,
+Theorem two_factors_property:
+    !n a b. (n = a * b) ==> a <= SQRT n \/ b <= SQRT n
+Proof
   rpt strip_tac >>
   spose_not_then strip_assume_tac >>
   `SQRT n < a` by decide_tac >>
-  metis_tac[two_factors_property_2]);
+  metis_tac[two_factors_property_2]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Primality or Compositeness based on SQRT                                  *)
@@ -6984,9 +7212,9 @@ val two_factors_property = store_thm(
          also b <> 1, so 1 < b, and b divides p.
          The implication gives ~(b divides p), a contradiction.
  *)
-val prime_by_sqrt_factors = store_thm(
-  "prime_by_sqrt_factors",
-  ``!p. prime p <=> 1 < p /\ !q. 1 < q /\ q <= SQRT p ==> ~(q divides p)``,
+Theorem prime_by_sqrt_factors:
+    !p. prime p <=> 1 < p /\ !q. 1 < q /\ q <= SQRT p ==> ~(q divides p)
+Proof
   rw[EQ_IMP_THM] >-
   rw[ONE_LT_PRIME] >-
  (spose_not_then strip_assume_tac >>
@@ -7007,7 +7235,8 @@ val prime_by_sqrt_factors = store_thm(
     `b <> 0` by metis_tac[MULT_0] >>
     `1 < b` by decide_tac >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Theorem: 1 < n ==> (~prime n <=> ?p. prime p /\ p divides n /\ p <= SQRT n) *)
 (* Proof:
@@ -7031,9 +7260,9 @@ val prime_by_sqrt_factors = store_thm(
       thus forcing p = 0 or p = 1            by SQRT_GE_SELF
       Both are impossible for prime p.
 *)
-val prime_factor_estimate = store_thm(
-  "prime_factor_estimate",
-  ``!n. 1 < n ==> (~prime n <=> ?p. prime p /\ p divides n /\ p <= SQRT n)``,
+Theorem prime_factor_estimate:
+    !n. 1 < n ==> (~prime n <=> ?p. prime p /\ p divides n /\ p <= SQRT n)
+Proof
   rpt strip_tac >>
   `n <> 1` by decide_tac >>
   rw[EQ_IMP_THM] >| [
@@ -7057,7 +7286,8 @@ val prime_factor_estimate = store_thm(
     `p <> 1 /\ p <> 0` by decide_tac >>
     `p = n` by metis_tac[prime_def] >>
     metis_tac[SQRT_GE_SELF]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Primality Testing Algorithm                                               *)
@@ -7075,11 +7305,11 @@ End
 (* Use 1 < q so that, for prime n, it gives a result n for any initial q, including q = 1. *)
 
 (* Primality test by seeking a factor exceeding (SQRT n). *)
-val prime_test_def = Define`
+Definition prime_test_def:
     prime_test n =
        if n <= 1 then F
        else factor_seek n (1 + SQRT n) 2 = n
-`;
+End
 
 (*
 EVAL ``MAP prime_test [1 .. 15]``; = [F; T; T; F; T; F; T; F; F; F; T; F; T; F; F]: thm
@@ -7101,14 +7331,15 @@ EVAL ``MAP prime_test [1 .. 15]``; = [F; T; T; F; T; F; T; F; F; F; T; F; T; F; 
        = factor_seek n c (q + 1)                by factor_seek_def
       <= n                                      by induction hypothesis
 *)
-val factor_seek_bound = store_thm(
-  "factor_seek_bound",
-  ``!n c q. 0 < n ==> factor_seek n c q <= n``,
+Theorem factor_seek_bound:
+    !n c q. 0 < n ==> factor_seek n c q <= n
+Proof
   ho_match_mp_tac (theorem "factor_seek_ind") >>
   rw[] >>
   rw[Once factor_seek_def] >>
   `q divides n` by rw[DIVIDES_MOD_0] >>
-  rw[DIVIDES_LE]);
+  rw[DIVIDES_LE]
+QED
 
 (* Theorem: 1 < q /\ q <= c /\ c <= n ==>
    ((factor_seek n c q = n) <=> (!p. q <= p /\ p < c ==> ~(p divides n))) *)
@@ -7124,10 +7355,10 @@ val factor_seek_bound = store_thm(
         But n MOD q <> 0 gives ~(q divides n)             by DIVIDES_MOD_0, 0 < q
        Thus !p.     q <= p /\ p < c ==> ~(p divides n))
 *)
-val factor_seek_thm = store_thm(
-  "factor_seek_thm",
-  ``!n c q. 1 < q /\ q <= c /\ c <= n ==>
-   ((factor_seek n c q = n) <=> (!p. q <= p /\ p < c ==> ~(p divides n)))``,
+Theorem factor_seek_thm:
+    !n c q. 1 < q /\ q <= c /\ c <= n ==>
+   ((factor_seek n c q = n) <=> (!p. q <= p /\ p < c ==> ~(p divides n)))
+Proof
   ho_match_mp_tac (theorem "factor_seek_ind") >>
   rw[] >>
   rw[Once factor_seek_def] >| [
@@ -7139,7 +7370,8 @@ val factor_seek_thm = store_thm(
     `p <> q` by metis_tac[DIVIDES_MOD_0] >>
     `q + 1 <= p` by decide_tac >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Theorem: prime n = prime_test n *)
 (* Proof:
@@ -7156,9 +7388,9 @@ val factor_seek_thm = store_thm(
     <=> factor_seek n c q = n                              by factor_seek_thm
     <=> prime_test n                                       by prime_test_def
 *)
-val prime_test_thm = store_thm(
-  "prime_test_thm",
-  ``!n. prime n = prime_test n``,
+Theorem prime_test_thm:
+    !n. prime n = prime_test n
+Proof
   rw[prime_test_def, prime_by_sqrt_factors] >>
   rw[EQ_IMP_THM] >| [
     qabbrev_tac `c = SQRT n + 1` >>
@@ -7180,7 +7412,8 @@ val prime_test_thm = store_thm(
     fs[factor_seek_thm] >>
     `!p. 1 < p /\ p <= SQRT n ==> ~(p divides n)` by fs[Abbr`c`] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Gauss' Little Theorem                                                     *)
@@ -7405,10 +7638,11 @@ Hence CARD {{1, 5}, {2, 4}, {3}, {6}} = CARD (partition)
    = {j | coprime j n} INTER (set (GENLIST SUC n))   by INTER_COMM
    = set (FILTER (\j. coprime j n) (GENLIST SUC n))  by LIST_TO_SET_FILTER
 *)
-val coprimes_thm = store_thm(
-  "coprimes_thm",
-  ``!n. coprimes n = set (FILTER (\j. coprime j n) (GENLIST SUC n))``,
-  rw[coprimes_alt, natural_thm, INTER_COMM, LIST_TO_SET_FILTER]);
+Theorem coprimes_thm:
+    !n. coprimes n = set (FILTER (\j. coprime j n) (GENLIST SUC n))
+Proof
+  rw[coprimes_alt, natural_thm, INTER_COMM, LIST_TO_SET_FILTER]
+QED
 
 (* Relate coprimes to Euler totient *)
 
@@ -7423,14 +7657,15 @@ val coprimes_thm = store_thm(
        Since x < n ==> x <= n   by LESS_IMP_LESS_OR_EQ
        Hence true by GCD_SYM
 *)
-val coprimes_eq_Euler = store_thm(
-  "coprimes_eq_Euler",
-  ``!n. 1 < n ==> (coprimes n = Euler n)``,
+Theorem coprimes_eq_Euler:
+    !n. 1 < n ==> (coprimes n = Euler n)
+Proof
   rw[Euler_def, EXTENSION, EQ_IMP_THM] >-
   metis_tac[coprimes_element] >-
   rw[coprimes_element_less] >-
   metis_tac[coprimes_element, GCD_SYM] >>
-  metis_tac[coprimes_element, GCD_SYM, LESS_IMP_LESS_OR_EQ]);
+  metis_tac[coprimes_element, GCD_SYM, LESS_IMP_LESS_OR_EQ]
+QED
 
 (* Theorem: prime n ==> (coprimes n = residue n) *)
 (* Proof:
@@ -7439,19 +7674,20 @@ val coprimes_eq_Euler = store_thm(
          = Euler n             by coprimes_eq_Euler
          = residue n           by Euler_prime
 *)
-val coprimes_prime = store_thm(
-  "coprimes_prime",
-  ``!n. prime n ==> (coprimes n = residue n)``,
-  rw[ONE_LT_PRIME, coprimes_eq_Euler, Euler_prime]);
+Theorem coprimes_prime:
+    !n. prime n ==> (coprimes n = residue n)
+Proof
+  rw[ONE_LT_PRIME, coprimes_eq_Euler, Euler_prime]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Coprimes by a divisor                                                     *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of coprimes by a divisor of n *)
-val coprimes_by_def = Define `
+Definition coprimes_by_def:
     coprimes_by n d = if (0 < n /\ d divides n) then coprimes (n DIV d) else {}
-`;
+End
 
 (*
 EVAL ``coprimes_by 10 2``; = {4; 3; 2; 1}
@@ -7460,10 +7696,11 @@ EVAL ``coprimes_by 10 5``; = {1}
 
 (* Theorem: j IN (coprimes_by n d) <=> (0 < n /\ d divides n /\ j IN coprimes (n DIV d)) *)
 (* Proof: by coprimes_by_def, MEMBER_NOT_EMPTY *)
-val coprimes_by_element = store_thm(
-  "coprimes_by_element",
-  ``!n d j. j IN (coprimes_by n d) <=> (0 < n /\ d divides n /\ j IN coprimes (n DIV d))``,
-  metis_tac[coprimes_by_def, MEMBER_NOT_EMPTY]);
+Theorem coprimes_by_element:
+    !n d j. j IN (coprimes_by n d) <=> (0 < n /\ d divides n /\ j IN coprimes (n DIV d))
+Proof
+  metis_tac[coprimes_by_def, MEMBER_NOT_EMPTY]
+QED
 
 (* Theorem: FINITE (coprimes_by n d) *)
 (* Proof:
@@ -7471,17 +7708,19 @@ val coprimes_by_element = store_thm(
    (1) !k. FINITE (coprimes k)  by coprimes_finite
    (2) FINITE {}                by FINITE_EMPTY
 *)
-val coprimes_by_finite = store_thm(
-  "coprimes_by_finite",
-  ``!n d. FINITE (coprimes_by n d)``,
-  rw[coprimes_by_def, coprimes_finite]);
+Theorem coprimes_by_finite:
+    !n d. FINITE (coprimes_by n d)
+Proof
+  rw[coprimes_by_def, coprimes_finite]
+QED
 
 (* Theorem: coprimes_by 0 d = {} *)
 (* Proof: by coprimes_by_def *)
-val coprimes_by_0 = store_thm(
-  "coprimes_by_0",
-  ``!d. coprimes_by 0 d = {}``,
-  rw[coprimes_by_def]);
+Theorem coprimes_by_0:
+    !d. coprimes_by 0 d = {}
+Proof
+  rw[coprimes_by_def]
+QED
 
 (* Theorem: coprimes_by n 0 = {} *)
 (* Proof:
@@ -7490,10 +7729,11 @@ val coprimes_by_0 = store_thm(
    = 0 < 0 then coprimes (n DIV 0) else {}    by ZERO_DIVIDES
    = {}                                       by prim_recTheory.LESS_REFL
 *)
-val coprimes_by_by_0 = store_thm(
-  "coprimes_by_by_0",
-  ``!n. coprimes_by n 0 = {}``,
-  rw[coprimes_by_def]);
+Theorem coprimes_by_by_0:
+    !n. coprimes_by n 0 = {}
+Proof
+  rw[coprimes_by_def]
+QED
 
 (* Theorem: 0 < n ==> (coprimes_by n 1 = coprimes n) *)
 (* Proof:
@@ -7502,10 +7742,11 @@ val coprimes_by_by_0 = store_thm(
      = coprimes (n DIV 1)  by coprimes_by_def
      = coprimes n          by DIV_ONE, ONE
 *)
-val coprimes_by_by_1 = store_thm(
-  "coprimes_by_by_1",
-  ``!n. 0 < n ==> (coprimes_by n 1 = coprimes n)``,
-  rw[coprimes_by_def]);
+Theorem coprimes_by_by_1:
+    !n. 0 < n ==> (coprimes_by n 1 = coprimes n)
+Proof
+  rw[coprimes_by_def]
+QED
 
 (* Theorem: 0 < n ==> (coprimes_by n n = {1}) *)
 (* Proof:
@@ -7515,17 +7756,19 @@ val coprimes_by_by_1 = store_thm(
      = coprimes 1          by DIVMOD_ID, 0 < n
      = {1}                 by coprimes_1
 *)
-val coprimes_by_by_last = store_thm(
-  "coprimes_by_by_last",
-  ``!n. 0 < n ==> (coprimes_by n n = {1})``,
-  rw[coprimes_by_def, coprimes_1]);
+Theorem coprimes_by_by_last:
+    !n. 0 < n ==> (coprimes_by n n = {1})
+Proof
+  rw[coprimes_by_def, coprimes_1]
+QED
 
 (* Theorem: 0 < n /\ d divides n ==> (coprimes_by n d = coprimes (n DIV d)) *)
 (* Proof: by coprimes_by_def *)
-val coprimes_by_by_divisor = store_thm(
-  "coprimes_by_by_divisor",
-  ``!n d. 0 < n /\ d divides n ==> (coprimes_by n d = coprimes (n DIV d))``,
-  rw[coprimes_by_def]);
+Theorem coprimes_by_by_divisor:
+    !n d. 0 < n /\ d divides n ==> (coprimes_by n d = coprimes (n DIV d))
+Proof
+  rw[coprimes_by_def]
+QED
 
 (* Theorem: 0 < n ==> ((coprimes_by n d = {}) <=> ~(d divides n)) *)
 (* Proof:
@@ -7540,9 +7783,9 @@ val coprimes_by_by_divisor = store_thm(
    Only-if part: 0 < n /\ ~(d divides n) ==> coprimes n d = {}
       This follows by coprimes_by_def
 *)
-val coprimes_by_eq_empty = store_thm(
-  "coprimes_by_eq_empty",
-  ``!n d. 0 < n ==> ((coprimes_by n d = {}) <=> ~(d divides n))``,
+Theorem coprimes_by_eq_empty:
+    !n d. 0 < n ==> ((coprimes_by n d = {}) <=> ~(d divides n))
+Proof
   rw[EQ_IMP_THM] >| [
     spose_not_then strip_assume_tac >>
     `0 < d /\ d <= n` by metis_tac[divides_pos] >>
@@ -7550,16 +7793,17 @@ val coprimes_by_eq_empty = store_thm(
     `n < d` by rw[GSYM DIV_EQUAL_0] >>
     decide_tac,
     rw[coprimes_by_def]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* GCD Equivalence Class                                                     *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of values with the same gcd *)
-val gcd_matches_def = zDefine `
+Definition gcd_matches_def[nocompute]:
     gcd_matches n d = {j| j IN (natural n) /\ (gcd j n = d)}
-`;
+End
 (* use zDefine as this is not computationally effective. *)
 
 (* Theorem: gcd_matches n d = (natural n) INTER {j | gcd j n = d} *)
@@ -7577,17 +7821,19 @@ EVAL ``gcd_matches 10 5``; = {5}
 
 (* Theorem: j IN gcd_matches n d <=> 0 < j /\ j <= n /\ (gcd j n = d) *)
 (* Proof: by gcd_matches_def *)
-val gcd_matches_element = store_thm(
-  "gcd_matches_element",
-  ``!n d j. j IN gcd_matches n d <=> 0 < j /\ j <= n /\ (gcd j n = d)``,
-  rw[gcd_matches_def, natural_element]);
+Theorem gcd_matches_element:
+    !n d j. j IN gcd_matches n d <=> 0 < j /\ j <= n /\ (gcd j n = d)
+Proof
+  rw[gcd_matches_def, natural_element]
+QED
 
 (* Theorem: (gcd_matches n d) SUBSET (natural n) *)
 (* Proof: by gcd_matches_def, SUBSET_DEF *)
-val gcd_matches_subset = store_thm(
-  "gcd_matches_subset",
-  ``!n d. (gcd_matches n d) SUBSET (natural n)``,
-  rw[gcd_matches_def, SUBSET_DEF]);
+Theorem gcd_matches_subset:
+    !n d. (gcd_matches n d) SUBSET (natural n)
+Proof
+  rw[gcd_matches_def, SUBSET_DEF]
+QED
 
 (* Theorem: FINITE (gcd_matches n d) *)
 (* Proof:
@@ -7595,10 +7841,11 @@ val gcd_matches_subset = store_thm(
      and !n. FINITE (natural n)                 by natural_finite
       so FINITE (gcd_matches n d)               by SUBSET_FINITE
 *)
-val gcd_matches_finite = store_thm(
-  "gcd_matches_finite",
-  ``!n d. FINITE (gcd_matches n d)``,
-  metis_tac[gcd_matches_subset, natural_finite, SUBSET_FINITE]);
+Theorem gcd_matches_finite:
+    !n d. FINITE (gcd_matches n d)
+Proof
+  metis_tac[gcd_matches_subset, natural_finite, SUBSET_FINITE]
+QED
 
 (* Theorem: gcd_matches 0 d = {} *)
 (* Proof:
@@ -7606,10 +7853,11 @@ val gcd_matches_finite = store_thm(
    <=> 0 < j /\ j <= 0 /\ (gcd j 0 = d)   by gcd_matches_element
    Since no j can satisfy this, the set is empty.
 *)
-val gcd_matches_0 = store_thm(
-  "gcd_matches_0",
-  ``!d. gcd_matches 0 d = {}``,
-  rw[gcd_matches_element, EXTENSION]);
+Theorem gcd_matches_0:
+    !d. gcd_matches 0 d = {}
+Proof
+  rw[gcd_matches_element, EXTENSION]
+QED
 
 (* Theorem: gcd_matches n 0 = {} *)
 (* Proof:
@@ -7619,10 +7867,11 @@ val gcd_matches_0 = store_thm(
    <=> F                                       by 0 < x, x = 0
    Hence gcd_matches n 0 = {}                  by EXTENSION
 *)
-val gcd_matches_with_0 = store_thm(
-  "gcd_matches_with_0",
-  ``!n. gcd_matches n 0 = {}``,
-  rw[EXTENSION, gcd_matches_element]);
+Theorem gcd_matches_with_0:
+    !n. gcd_matches n 0 = {}
+Proof
+  rw[EXTENSION, gcd_matches_element]
+QED
 
 (* Theorem: gcd_matches 1 d = if d = 1 then {1} else {} *)
 (* Proof:
@@ -7633,10 +7882,11 @@ val gcd_matches_with_0 = store_thm(
    If d = 1, j = 1 is the only element.
    If d <> 1, the only element is taken out, set is empty.
 *)
-val gcd_matches_1 = store_thm(
-  "gcd_matches_1",
-  ``!d. gcd_matches 1 d = if d = 1 then {1} else {}``,
-  rw[gcd_matches_element, EXTENSION]);
+Theorem gcd_matches_1:
+    !d. gcd_matches 1 d = if d = 1 then {1} else {}
+Proof
+  rw[gcd_matches_element, EXTENSION]
+QED
 
 (* Theorem: 0 < n /\ d divides n ==> d IN (gcd_matches n d) *)
 (* Proof:
@@ -7645,23 +7895,25 @@ val gcd_matches_1 = store_thm(
      and gcd d n = d                 by divides_iff_gcd_fix
    Hence d IN (gcd_matches n d)      by gcd_matches_element
 *)
-val gcd_matches_has_divisor = store_thm(
-  "gcd_matches_has_divisor",
-  ``!n d. 0 < n /\ d divides n ==> d IN (gcd_matches n d)``,
+Theorem gcd_matches_has_divisor:
+    !n d. 0 < n /\ d divides n ==> d IN (gcd_matches n d)
+Proof
   rw[gcd_matches_element] >-
   metis_tac[divisor_pos] >-
   rw[DIVIDES_LE] >>
-  rw[GSYM divides_iff_gcd_fix]);
+  rw[GSYM divides_iff_gcd_fix]
+QED
 
 (* Theorem: j IN (gcd_matches n d) ==> d divides j /\ d divides n *)
 (* Proof:
    If j IN (gcd_matches n d), gcd j n = d    by gcd_matches_element
    This means d divides j /\ d divides n     by GCD_IS_GREATEST_COMMON_DIVISOR
 *)
-val gcd_matches_element_divides = store_thm(
-  "gcd_matches_element_divides",
-  ``!n d j. j IN (gcd_matches n d) ==> d divides j /\ d divides n``,
-  metis_tac[gcd_matches_element, GCD_IS_GREATEST_COMMON_DIVISOR]);
+Theorem gcd_matches_element_divides:
+    !n d j. j IN (gcd_matches n d) ==> d divides j /\ d divides n
+Proof
+  metis_tac[gcd_matches_element, GCD_IS_GREATEST_COMMON_DIVISOR]
+QED
 
 (* Theorem: 0 < n ==> ((gcd_matches n d = {}) <=> ~(d divides n)) *)
 (* Proof:
@@ -7675,21 +7927,22 @@ val gcd_matches_element_divides = store_thm(
       Giving d divides j /\ d divides n       by gcd_matches_element_divides
       This contradicts ~(d divides n).
 *)
-val gcd_matches_eq_empty = store_thm(
-  "gcd_matches_eq_empty",
-  ``!n d. 0 < n ==> ((gcd_matches n d = {}) <=> ~(d divides n))``,
+Theorem gcd_matches_eq_empty:
+    !n d. 0 < n ==> ((gcd_matches n d = {}) <=> ~(d divides n))
+Proof
   rw[EQ_IMP_THM] >-
   metis_tac[gcd_matches_has_divisor, MEMBER_NOT_EMPTY] >>
-  metis_tac[gcd_matches_element_divides, MEMBER_NOT_EMPTY]);
+  metis_tac[gcd_matches_element_divides, MEMBER_NOT_EMPTY]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Phi Function                                                              *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define the Euler phi function from coprime set *)
-val phi_def = Define `
+Definition phi_def:
    phi n = CARD (coprimes n)
-`;
+End
 (* Since (coprimes n) is computable, phi n is now computable *)
 
 (*
@@ -7706,23 +7959,25 @@ val it = |- phi 10 = 4: thm
            = CARD (set ls)                 by coprimes_thm
            = LENGTH ls                     by ALL_DISTINCT_CARD_LIST_TO_SET
 *)
-val phi_thm = store_thm(
-  "phi_thm",
-  ``!n. phi n = LENGTH (FILTER (\j. coprime j n) (GENLIST SUC n))``,
+Theorem phi_thm:
+    !n. phi n = LENGTH (FILTER (\j. coprime j n) (GENLIST SUC n))
+Proof
   rpt strip_tac >>
   qabbrev_tac `ls = FILTER (\j. coprime j n) (GENLIST SUC n)` >>
   `ALL_DISTINCT ls` by rw[ALL_DISTINCT_GENLIST, FILTER_ALL_DISTINCT, Abbr`ls`] >>
   `phi n = CARD (coprimes n)` by rw[phi_def] >>
   `_ = CARD (set ls)` by rw[coprimes_thm, Abbr`ls`] >>
   `_ = LENGTH ls` by rw[ALL_DISTINCT_CARD_LIST_TO_SET] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: phi = CARD o coprimes *)
 (* Proof: by phi_def, FUN_EQ_THM *)
-val phi_fun = store_thm(
-  "phi_fun",
-  ``phi = CARD o coprimes``,
-  rw[phi_def, FUN_EQ_THM]);
+Theorem phi_fun:
+    phi = CARD o coprimes
+Proof
+  rw[phi_def, FUN_EQ_THM]
+QED
 
 (* Theorem: 0 < n ==> 0 < phi n *)
 (* Proof:
@@ -7732,14 +7987,15 @@ val phi_fun = store_thm(
    hence phi n <> 0            by CARD_EQ_0
       or 0 < phi n
 *)
-val phi_pos = store_thm(
-  "phi_pos",
-  ``!n. 0 < n ==> 0 < phi n``,
+Theorem phi_pos:
+    !n. 0 < n ==> 0 < phi n
+Proof
   rpt strip_tac >>
   `coprimes n <> {}` by metis_tac[coprimes_has_1, MEMBER_NOT_EMPTY] >>
   `FINITE (coprimes n)` by rw[coprimes_finite] >>
   `phi n <> 0` by rw[phi_def, CARD_EQ_0] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: phi 0 = 0 *)
 (* Proof:
@@ -7748,20 +8004,22 @@ val phi_pos = store_thm(
    = CARD {}             by coprimes_0
    = 0                   by CARD_EMPTY
 *)
-val phi_0 = store_thm(
-  "phi_0",
-  ``phi 0 = 0``,
-  rw[phi_def, coprimes_0]);
+Theorem phi_0:
+    phi 0 = 0
+Proof
+  rw[phi_def, coprimes_0]
+QED
 
 (* Theorem: (phi n = 0) <=> (n = 0) *)
 (* Proof:
    If part: (phi n = 0) ==> (n = 0)    by phi_pos, NOT_ZERO_LT_ZERO
    Only-if part: phi 0 = 0             by phi_0
 *)
-val phi_eq_0 = store_thm(
-  "phi_eq_0",
-  ``!n. (phi n = 0) <=> (n = 0)``,
-  metis_tac[phi_0, phi_pos, NOT_ZERO_LT_ZERO]);
+Theorem phi_eq_0:
+    !n. (phi n = 0) <=> (n = 0)
+Proof
+  metis_tac[phi_0, phi_pos, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: phi 1 = 1 *)
 (* Proof:
@@ -7770,10 +8028,11 @@ val phi_eq_0 = store_thm(
    = CARD {1}             by coprimes_1
    = 1                    by CARD_SING
 *)
-val phi_1 = store_thm(
-  "phi_1",
-  ``phi 1 = 1``,
-  rw[phi_def, coprimes_1]);
+Theorem phi_1:
+    phi 1 = 1
+Proof
+  rw[phi_def, coprimes_1]
+QED
 
 (* Theorem: 1 < n ==> (phi n = totient n) *)
 (* Proof:
@@ -7782,10 +8041,11 @@ val phi_1 = store_thm(
     = CARD (Euler n )       by coprimes_eq_Euler
     = totient n             by totient_def
 *)
-val phi_eq_totient = store_thm(
-  "phi_eq_totient",
-  ``!n. 1 < n ==> (phi n = totient n)``,
-  rw[phi_def, totient_def, coprimes_eq_Euler]);
+Theorem phi_eq_totient:
+    !n. 1 < n ==> (phi n = totient n)
+Proof
+  rw[phi_def, totient_def, coprimes_eq_Euler]
+QED
 
 (* Theorem: prime n ==> (phi n = n - 1) *)
 (* Proof:
@@ -7794,20 +8054,22 @@ val phi_eq_totient = store_thm(
          = totient n         by phi_eq_totient
          = n - 1             by Euler_card_prime
 *)
-val phi_prime = store_thm(
-  "phi_prime",
-  ``!n. prime n ==> (phi n = n - 1)``,
-  rw[ONE_LT_PRIME, phi_eq_totient, Euler_card_prime]);
+Theorem phi_prime:
+    !n. prime n ==> (phi n = n - 1)
+Proof
+  rw[ONE_LT_PRIME, phi_eq_totient, Euler_card_prime]
+QED
 
 (* Theorem: phi 2 = 1 *)
 (* Proof:
    Since prime 2               by PRIME_2
       so phi 2 = 2 - 1 = 1     by phi_prime
 *)
-val phi_2 = store_thm(
-  "phi_2",
-  ``phi 2 = 1``,
-  rw[phi_prime, PRIME_2]);
+Theorem phi_2:
+    phi 2 = 1
+Proof
+  rw[phi_prime, PRIME_2]
+QED
 
 (* Theorem: 2 < n ==> 1 < phi n *)
 (* Proof:
@@ -7820,9 +8082,9 @@ val phi_2 = store_thm(
    thus 2 <= CARD (coprimes n)   by CARD_SUBSET
      or 1 < phi n                by phi_def
 *)
-val phi_gt_1 = store_thm(
-  "phi_gt_1",
-  ``!n. 2 < n ==> 1 < phi n``,
+Theorem phi_gt_1:
+    !n. 2 < n ==> 1 < phi n
+Proof
   rw[phi_def] >>
   `0 < n /\ 1 < n /\ n - 1 <> 1` by decide_tac >>
   `1 IN (coprimes n)` by rw[coprimes_has_1] >>
@@ -7831,7 +8093,8 @@ val phi_gt_1 = store_thm(
   `{1; (n-1)} SUBSET (coprimes n)` by rw[SUBSET_DEF] >>
   `CARD {1; (n-1)} = 2` by rw[] >>
   `2 <= CARD (coprimes n)` by metis_tac[CARD_SUBSET] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: phi n <= n *)
 (* Proof:
@@ -7841,10 +8104,11 @@ val phi_gt_1 = store_thm(
     and CARD (natural n) = n         by natural_card
      so CARD (coprimes n) <= n       by CARD_SUBSET
 *)
-val phi_le = store_thm(
-  "phi_le",
-  ``!n. phi n <= n``,
-  metis_tac[phi_def, coprimes_subset, natural_finite, natural_card, CARD_SUBSET]);
+Theorem phi_le:
+    !n. phi n <= n
+Proof
+  metis_tac[phi_def, coprimes_subset, natural_finite, natural_card, CARD_SUBSET]
+QED
 
 (* Theorem: 1 < n ==> phi n < n *)
 (* Proof:
@@ -7860,9 +8124,9 @@ val phi_le = store_thm(
      so CARD (coprimes n) <= n - 1   by CARD_SUBSET
      or phi n < n                    by arithmetic
 *)
-val phi_lt = store_thm(
-  "phi_lt",
-  ``!n. 1 < n ==> phi n < n``,
+Theorem phi_lt:
+    !n. 1 < n ==> phi n < n
+Proof
   rw[phi_def] >>
   `!j. j IN coprimes n ==> j < n` by rw[coprimes_element_less] >>
   `!j. j IN coprimes n ==> j <> 0` by metis_tac[coprimes_no_0] >>
@@ -7873,7 +8137,8 @@ val phi_lt = store_thm(
   `FINITE s` by rw[Abbr`s`] >>
   `CARD s = n - 1` by rw[Abbr`s`] >>
   `CARD (coprimes n) <= n - 1` by metis_tac[CARD_SUBSET] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Divisors                                                                  *)
@@ -8421,9 +8686,9 @@ e.g.  P = {{1, 5} {2, 4} {3} {6}}
   Hence 0 < j DIV d /\ j DIV d <= n DIV d      by natural_cofactor_natural_reduced
      or j DIV d IN coprimes (n DIV d)          by coprimes_element
 *)
-val gcd_matches_divisor_element = store_thm(
-  "gcd_matches_divisor_element",
-  ``!n d. d divides n ==> !j. j IN gcd_matches n d ==> j DIV d IN coprimes_by n d``,
+Theorem gcd_matches_divisor_element:
+    !n d. d divides n ==> !j. j IN gcd_matches n d ==> j DIV d IN coprimes_by n d
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   metis_tac[gcd_matches_0, NOT_IN_EMPTY] >>
@@ -8435,7 +8700,8 @@ val gcd_matches_divisor_element = store_thm(
   `(j = d * (j DIV d)) /\ (n = d * (n DIV d))` by metis_tac[DIVIDES_EQN, MULT_COMM] >>
   `coprime (n DIV d) (j DIV d)` by metis_tac[GCD_COMMON_FACTOR, MULT_RIGHT_1, EQ_MULT_LCANCEL] >>
   `0 < j DIV d /\ j DIV d <= n DIV d` by metis_tac[natural_cofactor_natural_reduced, natural_element] >>
-  metis_tac[coprimes_element, GCD_SYM]);
+  metis_tac[coprimes_element, GCD_SYM]
+QED
 
 (* Theorem: d divides n ==> BIJ (\j. j DIV d) (gcd_matches n d) (coprimes_by n d) *)
 (* Proof:
@@ -8478,9 +8744,9 @@ val gcd_matches_divisor_element = store_thm(
           or             j <= n                    by above
       Hence j IN gcd_matches n d                   by gcd_matches_element
 *)
-val gcd_matches_bij_coprimes_by = store_thm(
-  "gcd_matches_bij_coprimes_by",
-  ``!n d. d divides n ==> BIJ (\j. j DIV d) (gcd_matches n d) (coprimes_by n d)``,
+Theorem gcd_matches_bij_coprimes_by:
+    !n d. d divides n ==> BIJ (\j. j DIV d) (gcd_matches n d) (coprimes_by n d)
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >| [
     `gcd_matches n d = {}` by rw[gcd_matches_0] >>
@@ -8501,14 +8767,16 @@ val gcd_matches_bij_coprimes_by = store_thm(
     `0 < j` by metis_tac[MULT_EQ_0, NOT_ZERO] >>
     `j <= n` by metis_tac[LE_MULT_RCANCEL] >>
     metis_tac[gcd_matches_element]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < n /\ d divides n ==> BIJ (\j. j DIV d) (gcd_matches n d) (coprimes (n DIV d)) *)
 (* Proof: by gcd_matches_bij_coprimes_by, coprimes_by_by_divisor *)
-val gcd_matches_bij_coprimes = store_thm(
-  "gcd_matches_bij_coprimes",
-  ``!n d. 0 < n /\ d divides n ==> BIJ (\j. j DIV d) (gcd_matches n d) (coprimes (n DIV d))``,
-  metis_tac[gcd_matches_bij_coprimes_by, coprimes_by_by_divisor]);
+Theorem gcd_matches_bij_coprimes:
+    !n d. 0 < n /\ d divides n ==> BIJ (\j. j DIV d) (gcd_matches n d) (coprimes (n DIV d))
+Proof
+  metis_tac[gcd_matches_bij_coprimes_by, coprimes_by_by_divisor]
+QED
 
 (* Note: it is not useful to show:
          CARD o (gcd_matches n) = CARD o coprimes,
@@ -8561,18 +8829,20 @@ QED
    = {j | j IN natural n /\ (gcd j n = d)}   by GCD_SYM
    = gcd_matches n d                         by gcd_matches_def
 *)
-val gcd_eq_equiv_class = store_thm(
-  "gcd_eq_equiv_class",
-  ``!n d. feq_class (gcd n) (natural n) d = gcd_matches n d``,
+Theorem gcd_eq_equiv_class:
+    !n d. feq_class (gcd n) (natural n) d = gcd_matches n d
+Proof
   rewrite_tac[gcd_matches_def] >>
-  rw[EXTENSION, GCD_SYM, in_preimage]);
+  rw[EXTENSION, GCD_SYM, in_preimage]
+QED
 
 (* Theorem: feq_class (gcd n) (natural n) = gcd_matches n *)
 (* Proof: by FUN_EQ_THM, gcd_eq_equiv_class *)
-val gcd_eq_equiv_class_fun = store_thm(
-  "gcd_eq_equiv_class_fun",
-  ``!n. feq_class (gcd n) (natural n) = gcd_matches n``,
-  rw[FUN_EQ_THM, gcd_eq_equiv_class]);
+Theorem gcd_eq_equiv_class_fun:
+    !n. feq_class (gcd n) (natural n) = gcd_matches n
+Proof
+  rw[FUN_EQ_THM, gcd_eq_equiv_class]
+QED
 
 (* Theorem: partition (feq (gcd n)) (natural n) = IMAGE (gcd_matches n) (divisors n) *)
 (* Proof:
@@ -8602,10 +8872,11 @@ QED
    By feq_equiv |- !s f. feq f equiv_on s
    Taking s = upto n, f = natural n.
 *)
-val gcd_eq_equiv_on_natural = store_thm(
-  "gcd_eq_equiv_on_natural",
-  ``!n. (feq (gcd n)) equiv_on (natural n)``,
-  rw[feq_equiv]);
+Theorem gcd_eq_equiv_on_natural:
+    !n. (feq (gcd n)) equiv_on (natural n)
+Proof
+  rw[feq_equiv]
+QED
 
 (* Theorem: SIGMA f (natural n) = SIGMA (SIGMA f) (partition (feq (gcd n)) (natural n)) *)
 (* Proof:
@@ -8614,10 +8885,11 @@ val gcd_eq_equiv_on_natural = store_thm(
      and (feq g) equiv_on s     by feq_equiv
    The result follows           by set_sigma_by_partition
 *)
-val sum_over_natural_by_gcd_partition = store_thm(
-  "sum_over_natural_by_gcd_partition",
-  ``!f n. SIGMA f (natural n) = SIGMA (SIGMA f) (partition (feq (gcd n)) (natural n))``,
-  rw[feq_equiv, natural_finite, set_sigma_by_partition]);
+Theorem sum_over_natural_by_gcd_partition:
+    !f n. SIGMA f (natural n) = SIGMA (SIGMA f) (partition (feq (gcd n)) (natural n))
+Proof
+  rw[feq_equiv, natural_finite, set_sigma_by_partition]
+QED
 
 (* Theorem: SIGMA f (natural n) = SIGMA (SIGMA f) (IMAGE (gcd_matches n) (divisors n)) *)
 (* Proof:
@@ -8671,9 +8943,9 @@ QED
           and coprimes_by n x = {}      by coprimes_by_eq_empty, 0 < n
          Hence CARD {} = CARD {}.
 *)
-val gcd_matches_and_coprimes_by_same_size = store_thm(
-  "gcd_matches_and_coprimes_by_same_size",
-  ``!n. CARD o (gcd_matches n) = CARD o (coprimes_by n)``,
+Theorem gcd_matches_and_coprimes_by_same_size:
+    !n. CARD o (gcd_matches n) = CARD o (coprimes_by n)
+Proof
   rw[FUN_EQ_THM] >>
   Cases_on `x divides n` >| [
     `BIJ (\j. j DIV x) (gcd_matches n x) (coprimes_by n x)` by rw[gcd_matches_bij_coprimes_by] >>
@@ -8685,7 +8957,8 @@ val gcd_matches_and_coprimes_by_same_size = store_thm(
     `gcd_matches n x = {}` by rw[gcd_matches_eq_empty] >>
     `coprimes_by n x = {}` by rw[coprimes_by_eq_empty] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < n ==> (CARD o (coprimes_by n) = \d. phi (if d IN (divisors n) then n DIV d else 0)) *)
 (* Proof:
@@ -9097,9 +9370,9 @@ EVAL ``IMAGE (\x. 3 * x) (natural 9)``; = {27; 24; 21; 18; 15; 12; 9; 6; 3}
 (* Idea: develop a special set in anticipation for counting. *)
 
 (* Define the set of positive multiples of m, up to n *)
-val multiples_upto_def = zDefine`
+Definition multiples_upto_def[nocompute]:
     multiples_upto m n = {x | m divides x /\ 0 < x /\ x <= n}
-`;
+End
 (* use zDefine as this is not effective for evalutaion. *)
 (* make this an infix operator *)
 val _ = set_fixity "multiples_upto" (Infix(NONASSOC, 550)); (* higher than arithmetic op 500. *)
@@ -9454,17 +9727,19 @@ which gives the tDefine solution.
 
 (* Theorem: rec_phi 0 = 0 *)
 (* Proof: by rec_phi_def *)
-val rec_phi_0 = store_thm(
-  "rec_phi_0",
-  ``rec_phi 0 = 0``,
-  rw[rec_phi_def]);
+Theorem rec_phi_0:
+    rec_phi 0 = 0
+Proof
+  rw[rec_phi_def]
+QED
 
 (* Theorem: rec_phi 1 = 1 *)
 (* Proof: by rec_phi_def *)
-val rec_phi_1 = store_thm(
-  "rec_phi_1",
-  ``rec_phi 1 = 1``,
-  rw[Once rec_phi_def]);
+Theorem rec_phi_1:
+    rec_phi 1 = 1
+Proof
+  rw[Once rec_phi_def]
+QED
 
 (* Theorem: rec_phi n = phi n *)
 (* Proof:
@@ -9541,9 +9816,9 @@ QED
                  x - 1 = y - 1       by above
       Hence          x = y           by CANCEL_SUB
 *)
-val coprimes_from_not_1_inj = store_thm(
-  "coprimes_from_not_1_inj",
-  ``INJ (coprimes) (univ(:num) DIFF {1}) univ(:num -> bool)``,
+Theorem coprimes_from_not_1_inj:
+    INJ (coprimes) (univ(:num) DIFF {1}) univ(:num -> bool)
+Proof
   rw[INJ_DEF] >>
   Cases_on `x = 0` >-
   metis_tac[coprimes_eq_empty] >>
@@ -9551,7 +9826,8 @@ val coprimes_from_not_1_inj = store_thm(
   metis_tac[coprimes_eq_empty] >>
   `1 < x /\ 1 < y` by decide_tac >>
   `x - 1 = y - 1` by metis_tac[coprimes_max] >>
-  decide_tac);
+  decide_tac
+QED
 (* Not very useful. *)
 
 (* Here is group of related theorems for (divisors n):
@@ -9590,10 +9866,11 @@ QED
    By feq_equiv |- !s f. feq f equiv_on s
    Taking s = upto n, f = gcd n.
 *)
-val gcd_eq_equiv_on_upto = store_thm(
-  "gcd_eq_equiv_on_upto",
-  ``!n. (feq (gcd n)) equiv_on (upto n)``,
-  rw[feq_equiv]);
+Theorem gcd_eq_equiv_on_upto:
+    !n. (feq (gcd n)) equiv_on (upto n)
+Proof
+  rw[feq_equiv]
+QED
 
 (* Theorem: 0 < n ==> partition (feq (gcd n)) (upto n) = IMAGE (preimage (gcd n) (upto n)) (divisors n) *)
 (* Proof:
@@ -9604,15 +9881,16 @@ val gcd_eq_equiv_on_upto = store_thm(
    = IMAGE (preimage f s) (IMAGE (gcd n) (upto n))   by expansion
    = IMAGE (preimage f s) (divisors n)               by divisors_eq_image_gcd_upto, 0 < n
 *)
-val gcd_eq_upto_partition_by_divisors = store_thm(
-  "gcd_eq_upto_partition_by_divisors",
-  ``!n. 0 < n ==> partition (feq (gcd n)) (upto n) = IMAGE (preimage (gcd n) (upto n)) (divisors n)``,
+Theorem gcd_eq_upto_partition_by_divisors:
+    !n. 0 < n ==> partition (feq (gcd n)) (upto n) = IMAGE (preimage (gcd n) (upto n)) (divisors n)
+Proof
   rpt strip_tac >>
   qabbrev_tac `f = gcd n` >>
   qabbrev_tac `s = upto n` >>
   `partition (feq f) s = IMAGE (preimage f s o f) s` by rw[feq_partition] >>
   `_ = IMAGE (preimage f s) (IMAGE f s)` by rw[IMAGE_COMPOSE] >>
-  rw[divisors_eq_image_gcd_upto, Abbr`f`, Abbr`s`]);
+  rw[divisors_eq_image_gcd_upto, Abbr`f`, Abbr`s`]
+QED
 
 (* Theorem: SIGMA f (upto n) = SIGMA (SIGMA f) (partition (feq (gcd n)) (upto n)) *)
 (* Proof:
@@ -9621,10 +9899,11 @@ val gcd_eq_upto_partition_by_divisors = store_thm(
      and (feq g) equiv_on s     by feq_equiv
    The result follows           by set_sigma_by_partition
 *)
-val sum_over_upto_by_gcd_partition = store_thm(
-  "sum_over_upto_by_gcd_partition",
-  ``!f n. SIGMA f (upto n) = SIGMA (SIGMA f) (partition (feq (gcd n)) (upto n))``,
-  rw[feq_equiv, set_sigma_by_partition]);
+Theorem sum_over_upto_by_gcd_partition:
+    !f n. SIGMA f (upto n) = SIGMA (SIGMA f) (partition (feq (gcd n)) (upto n))
+Proof
+  rw[feq_equiv, set_sigma_by_partition]
+QED
 
 (* Theorem: 0 < n ==> SIGMA f (upto n) = SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (upto n)) (divisors n)) *)
 (* Proof:
@@ -9632,10 +9911,11 @@ val sum_over_upto_by_gcd_partition = store_thm(
    = SIGMA (SIGMA f) (partition (feq (gcd n)) (upto n))                by sum_over_upto_by_gcd_partition
    = SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (upto n)) (divisors n))  by gcd_eq_upto_partition_by_divisors, 0 < n
 *)
-val sum_over_upto_by_divisors = store_thm(
-  "sum_over_upto_by_divisors",
-  ``!f n. 0 < n ==> SIGMA f (upto n) = SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (upto n)) (divisors n))``,
-  rw[sum_over_upto_by_gcd_partition, gcd_eq_upto_partition_by_divisors]);
+Theorem sum_over_upto_by_divisors:
+    !f n. 0 < n ==> SIGMA f (upto n) = SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (upto n)) (divisors n))
+Proof
+  rw[sum_over_upto_by_gcd_partition, gcd_eq_upto_partition_by_divisors]
+QED
 
 (* Similar results based on count *)
 
@@ -9676,10 +9956,11 @@ QED
    By feq_equiv |- !s f. feq f equiv_on s
    Taking s = upto n, f = count n.
 *)
-val gcd_eq_equiv_on_count = store_thm(
-  "gcd_eq_equiv_on_count",
-  ``!n. (feq (gcd n)) equiv_on (count n)``,
-  rw[feq_equiv]);
+Theorem gcd_eq_equiv_on_count:
+    !n. (feq (gcd n)) equiv_on (count n)
+Proof
+  rw[feq_equiv]
+QED
 
 (* Theorem: partition (feq (gcd n)) (count n) = IMAGE (preimage (gcd n) (count n)) (divisors n) *)
 (* Proof:
@@ -9708,10 +9989,11 @@ QED
      and (feq g) equiv_on s     by feq_equiv
    The result follows           by set_sigma_by_partition
 *)
-val sum_over_count_by_gcd_partition = store_thm(
-  "sum_over_count_by_gcd_partition",
-  ``!f n. SIGMA f (count n) = SIGMA (SIGMA f) (partition (feq (gcd n)) (count n))``,
-  rw[feq_equiv, set_sigma_by_partition]);
+Theorem sum_over_count_by_gcd_partition:
+    !f n. SIGMA f (count n) = SIGMA (SIGMA f) (partition (feq (gcd n)) (count n))
+Proof
+  rw[feq_equiv, set_sigma_by_partition]
+QED
 
 (* Theorem: SIGMA f (count n) = SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (count n)) (divisors n)) *)
 (* Proof:
@@ -9949,9 +10231,9 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define square-free number *)
-val square_free_def = Define`
+Definition square_free_def:
     square_free n = !p. prime p /\ p divides n ==> ~(p * p divides n)
-`;
+End
 
 (* Theorem: square_free 1 *)
 (* Proof:
@@ -9961,10 +10243,11 @@ val square_free_def = Define`
    <=> F ==> ~(1 * 1 divides 1)                             by NOT_PRIME_1
    <=> T                                                    by false assumption
 *)
-val square_free_1 = store_thm(
-  "square_free_1",
-  ``square_free 1``,
-  rw[square_free_def]);
+Theorem square_free_1:
+    square_free 1
+Proof
+  rw[square_free_def]
+QED
 
 (* Theorem: prime n ==> square_free n *)
 (* Proof:
@@ -9981,13 +10264,14 @@ val square_free_1 = store_thm(
      and p <> 1                  by NOT_PRIME_1
     Thus there is a contradiction.
 *)
-val square_free_prime = store_thm(
-  "square_free_prime",
-  ``!n. prime n ==> square_free n``,
+Theorem square_free_prime:
+    !n. prime n ==> square_free n
+Proof
   rw_tac std_ss[square_free_def] >>
   spose_not_then strip_assume_tac >>
   `p * p = p` by metis_tac[prime_def, MULT_EQ_1] >>
-  metis_tac[SQ_EQ_SELF, NOT_PRIME_0, NOT_PRIME_1]);
+  metis_tac[SQ_EQ_SELF, NOT_PRIME_0, NOT_PRIME_1]
+QED
 
 (* Overload square-free filter of a set *)
 val _ = overload_on("sq_free", ``\s. {n | n IN s /\ square_free n}``);
@@ -9997,45 +10281,51 @@ val _ = overload_on("non_sq_free", ``\s. {n | n IN s /\ ~(square_free n)}``);
 
 (* Theorem: n IN sq_free s <=> n IN s /\ square_free n *)
 (* Proof: by notation. *)
-val sq_free_element = store_thm(
-  "sq_free_element",
-  ``!s n. n IN sq_free s <=> n IN s /\ square_free n``,
-  rw[]);
+Theorem sq_free_element:
+    !s n. n IN sq_free s <=> n IN s /\ square_free n
+Proof
+  rw[]
+QED
 
 (* Theorem: sq_free s SUBSET s *)
 (* Proof: by SUBSET_DEF *)
-val sq_free_subset = store_thm(
-  "sq_free_subset",
-  ``!s. sq_free s SUBSET s``,
-  rw[SUBSET_DEF]);
+Theorem sq_free_subset:
+    !s. sq_free s SUBSET s
+Proof
+  rw[SUBSET_DEF]
+QED
 
 (* Theorem: FINITE s ==> FINITE (sq_free s) *)
 (* Proof: by sq_free_subset, SUBSET_FINITE *)
-val sq_free_finite = store_thm(
-  "sq_free_finite",
-  ``!s. FINITE s ==> FINITE (sq_free s)``,
-  metis_tac[sq_free_subset, SUBSET_FINITE]);
+Theorem sq_free_finite:
+    !s. FINITE s ==> FINITE (sq_free s)
+Proof
+  metis_tac[sq_free_subset, SUBSET_FINITE]
+QED
 
 (* Theorem: n IN non_sq_free s <=> n IN s /\ ~(square_free n) *)
 (* Proof: by notation. *)
-val non_sq_free_element = store_thm(
-  "non_sq_free_element",
-  ``!s n. n IN non_sq_free s <=> n IN s /\ ~(square_free n)``,
-  rw[]);
+Theorem non_sq_free_element:
+    !s n. n IN non_sq_free s <=> n IN s /\ ~(square_free n)
+Proof
+  rw[]
+QED
 
 (* Theorem: non_sq_free s SUBSET s *)
 (* Proof: by SUBSET_DEF *)
-val non_sq_free_subset = store_thm(
-  "non_sq_free_subset",
-  ``!s. non_sq_free s SUBSET s``,
-  rw[SUBSET_DEF]);
+Theorem non_sq_free_subset:
+    !s. non_sq_free s SUBSET s
+Proof
+  rw[SUBSET_DEF]
+QED
 
 (* Theorem: FINITE s ==> FINITE (non_sq_free s) *)
 (* Proof: by non_sq_free_subset, SUBSET_FINITE *)
-val non_sq_free_finite = store_thm(
-  "non_sq_free_finite",
-  ``!s. FINITE s ==> FINITE (non_sq_free s)``,
-  metis_tac[non_sq_free_subset, SUBSET_FINITE]);
+Theorem non_sq_free_finite:
+    !s. FINITE s ==> FINITE (non_sq_free s)
+Proof
+  metis_tac[non_sq_free_subset, SUBSET_FINITE]
+QED
 
 (* Theorem: (s = (sq_free s) UNION (non_sq_free s)) /\ ((sq_free s) INTER (non_sq_free s) = {}) *)
 (* Proof:
@@ -10045,10 +10335,11 @@ val non_sq_free_finite = store_thm(
    (2) (sq_free s) INTER (non_sq_free s) = {}
        True by EXTENSION, IN_INTER
 *)
-val sq_free_split = store_thm(
-  "sq_free_split",
-  ``!s. (s = (sq_free s) UNION (non_sq_free s)) /\ ((sq_free s) INTER (non_sq_free s) = {})``,
-  (rw[EXTENSION] >> metis_tac[]));
+Theorem sq_free_split:
+    !s. (s = (sq_free s) UNION (non_sq_free s)) /\ ((sq_free s) INTER (non_sq_free s) = {})
+Proof
+  (rw[EXTENSION] >> metis_tac[])
+QED
 
 (* Theorem: s = (sq_free s) UNION (non_sq_free s) *)
 (* Proof: extract from sq_free_split. *)
@@ -10062,19 +10353,20 @@ val sq_free_inter = save_thm("sq_free_inter", sq_free_split |> SPEC_ALL |> CONJU
 
 (* Theorem: DISJOINT (sq_free s) (non_sq_free s) *)
 (* Proof: by DISJOINT_DEF, sq_free_inter. *)
-val sq_free_disjoint = store_thm(
-  "sq_free_disjoint",
-  ``!s. DISJOINT (sq_free s) (non_sq_free s)``,
-  rw_tac std_ss[DISJOINT_DEF, sq_free_inter]);
+Theorem sq_free_disjoint:
+    !s. DISJOINT (sq_free s) (non_sq_free s)
+Proof
+  rw_tac std_ss[DISJOINT_DEF, sq_free_inter]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Prime Divisors of a Number and Partitions of Square-free Set              *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define the prime divisors of a number *)
-val prime_factors_def = zDefine`
+Definition prime_factors_def[nocompute]:
     prime_factors n = {p | prime p /\ p IN (divisors n)}
-`;
+End
 (* use zDefine as this cannot be computed. *)
 (* prime_divisors is used in triangle.hol *)
 
@@ -10098,10 +10390,11 @@ QED
    ==> p IN (divisors n)                         by prime_factors_def
    Hence (prime_factors n) SUBSET (divisors n)   by SUBSET_DEF
 *)
-val prime_factors_subset = store_thm(
-  "prime_factors_subset",
-  ``!n. (prime_factors n) SUBSET (divisors n)``,
-  rw[prime_factors_def, SUBSET_DEF]);
+Theorem prime_factors_subset:
+    !n. (prime_factors n) SUBSET (divisors n)
+Proof
+  rw[prime_factors_def, SUBSET_DEF]
+QED
 
 (* Theorem: FINITE (prime_factors n) *)
 (* Proof:
@@ -10109,10 +10402,11 @@ val prime_factors_subset = store_thm(
      and FINITE (divisors n)                     by divisors_finite
     Thus FINITE (prime_factors n)                by SUBSET_FINITE
 *)
-val prime_factors_finite = store_thm(
-  "prime_factors_finite",
-  ``!n. FINITE (prime_factors n)``,
-  metis_tac[prime_factors_subset, divisors_finite, SUBSET_FINITE]);
+Theorem prime_factors_finite:
+    !n. FINITE (prime_factors n)
+Proof
+  metis_tac[prime_factors_subset, divisors_finite, SUBSET_FINITE]
+QED
 
 (* Overload even square-free filter of a set *)
 val _ = overload_on("even_sq_free", ``\s. {n | n IN (sq_free s) /\ EVEN (CARD (prime_factors n))}``);
@@ -10122,45 +10416,51 @@ val _ = overload_on("odd_sq_free", ``\s. {n | n IN (sq_free s) /\ ODD (CARD (pri
 
 (* Theorem: n IN even_sq_free s <=> n IN s /\ square_free n /\ EVEN (CARD (prime_factors n)) *)
 (* Proof: by notation. *)
-val even_sq_free_element = store_thm(
-  "even_sq_free_element",
-  ``!s n. n IN even_sq_free s <=> n IN s /\ square_free n /\ EVEN (CARD (prime_factors n))``,
-  (rw[] >> metis_tac[]));
+Theorem even_sq_free_element:
+    !s n. n IN even_sq_free s <=> n IN s /\ square_free n /\ EVEN (CARD (prime_factors n))
+Proof
+  (rw[] >> metis_tac[])
+QED
 
 (* Theorem: even_sq_free s SUBSET s *)
 (* Proof: by SUBSET_DEF *)
-val even_sq_free_subset = store_thm(
-  "even_sq_free_subset",
-  ``!s. even_sq_free s SUBSET s``,
-  rw[SUBSET_DEF]);
+Theorem even_sq_free_subset:
+    !s. even_sq_free s SUBSET s
+Proof
+  rw[SUBSET_DEF]
+QED
 
 (* Theorem: FINITE s ==> FINITE (even_sq_free s) *)
 (* Proof: by even_sq_free_subset, SUBSET_FINITE *)
-val even_sq_free_finite = store_thm(
-  "even_sq_free_finite",
-  ``!s. FINITE s ==> FINITE (even_sq_free s)``,
-  metis_tac[even_sq_free_subset, SUBSET_FINITE]);
+Theorem even_sq_free_finite:
+    !s. FINITE s ==> FINITE (even_sq_free s)
+Proof
+  metis_tac[even_sq_free_subset, SUBSET_FINITE]
+QED
 
 (* Theorem: n IN odd_sq_free s <=> n IN s /\ square_free n /\ ODD (CARD (prime_factors n)) *)
 (* Proof: by notation. *)
-val odd_sq_free_element = store_thm(
-  "odd_sq_free_element",
-  ``!s n. n IN odd_sq_free s <=> n IN s /\ square_free n /\ ODD (CARD (prime_factors n))``,
-  (rw[] >> metis_tac[]));
+Theorem odd_sq_free_element:
+    !s n. n IN odd_sq_free s <=> n IN s /\ square_free n /\ ODD (CARD (prime_factors n))
+Proof
+  (rw[] >> metis_tac[])
+QED
 
 (* Theorem: odd_sq_free s SUBSET s *)
 (* Proof: by SUBSET_DEF *)
-val odd_sq_free_subset = store_thm(
-  "odd_sq_free_subset",
-  ``!s. odd_sq_free s SUBSET s``,
-  rw[SUBSET_DEF]);
+Theorem odd_sq_free_subset:
+    !s. odd_sq_free s SUBSET s
+Proof
+  rw[SUBSET_DEF]
+QED
 
 (* Theorem: FINITE s ==> FINITE (odd_sq_free s) *)
 (* Proof: by odd_sq_free_subset, SUBSET_FINITE *)
-val odd_sq_free_finite = store_thm(
-  "odd_sq_free_finite",
-  ``!s. FINITE s ==> FINITE (odd_sq_free s)``,
-  metis_tac[odd_sq_free_subset, SUBSET_FINITE]);
+Theorem odd_sq_free_finite:
+    !s. FINITE s ==> FINITE (odd_sq_free s)
+Proof
+  metis_tac[odd_sq_free_subset, SUBSET_FINITE]
+QED
 
 (* Theorem: (sq_free s = (even_sq_free s) UNION (odd_sq_free s)) /\
             ((even_sq_free s) INTER (odd_sq_free s) = {}) *)
@@ -10171,11 +10471,12 @@ val odd_sq_free_finite = store_thm(
    (2) even_sq_free s INTER odd_sq_free s = {}
        True by EXTENSION, IN_INTER, EVEN_ODD.
 *)
-val sq_free_split_even_odd = store_thm(
-  "sq_free_split_even_odd",
-  ``!s. (sq_free s = (even_sq_free s) UNION (odd_sq_free s)) /\
-       ((even_sq_free s) INTER (odd_sq_free s) = {})``,
-  (rw[EXTENSION] >> metis_tac[EVEN_ODD]));
+Theorem sq_free_split_even_odd:
+    !s. (sq_free s = (even_sq_free s) UNION (odd_sq_free s)) /\
+       ((even_sq_free s) INTER (odd_sq_free s) = {})
+Proof
+  (rw[EXTENSION] >> metis_tac[EVEN_ODD])
+QED
 
 (* Theorem: sq_free s = (even_sq_free s) UNION (odd_sq_free s) *)
 (* Proof: extract from sq_free_split_even_odd. *)
@@ -10193,10 +10494,11 @@ val sq_free_inter_even_odd =
 
 (* Theorem: DISJOINT (even_sq_free s) (odd_sq_free s) *)
 (* Proof: by DISJOINT_DEF, sq_free_inter_even_odd. *)
-val sq_free_disjoint_even_odd = store_thm(
-  "sq_free_disjoint_even_odd",
-  ``!s. DISJOINT (even_sq_free s) (odd_sq_free s)``,
-  rw_tac std_ss[DISJOINT_DEF, sq_free_inter_even_odd]);
+Theorem sq_free_disjoint_even_odd:
+    !s. DISJOINT (even_sq_free s) (odd_sq_free s)
+Proof
+  rw_tac std_ss[DISJOINT_DEF, sq_free_inter_even_odd]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Less Divisors of a number.                                                *)
@@ -10207,31 +10509,35 @@ val _ = overload_on("less_divisors", ``\n. {x | x IN (divisors n) /\ x <> n}``);
 
 (* Theorem: x IN (less_divisors n) <=> (0 < x /\ x < n /\ x divides n) *)
 (* Proof: by divisors_element. *)
-val less_divisors_element = store_thm(
-  "less_divisors_element",
-  ``!n x. x IN (less_divisors n) <=> (0 < x /\ x < n /\ x divides n)``,
-  rw[divisors_element, EQ_IMP_THM]);
+Theorem less_divisors_element:
+    !n x. x IN (less_divisors n) <=> (0 < x /\ x < n /\ x divides n)
+Proof
+  rw[divisors_element, EQ_IMP_THM]
+QED
 
 (* Theorem: less_divisors 0 = {} *)
 (* Proof: by divisors_element. *)
-val less_divisors_0 = store_thm(
-  "less_divisors_0",
-  ``less_divisors 0 = {}``,
-  rw[divisors_element]);
+Theorem less_divisors_0:
+    less_divisors 0 = {}
+Proof
+  rw[divisors_element]
+QED
 
 (* Theorem: less_divisors 1 = {} *)
 (* Proof: by divisors_element. *)
-val less_divisors_1 = store_thm(
-  "less_divisors_1",
-  ``less_divisors 1 = {}``,
-  rw[divisors_element]);
+Theorem less_divisors_1:
+    less_divisors 1 = {}
+Proof
+  rw[divisors_element]
+QED
 
 (* Theorem: (less_divisors n) SUBSET (divisors n) *)
 (* Proof: by SUBSET_DEF *)
-val less_divisors_subset_divisors = store_thm(
-  "less_divisors_subset_divisors",
-  ``!n. (less_divisors n) SUBSET (divisors n)``,
-  rw[SUBSET_DEF]);
+Theorem less_divisors_subset_divisors:
+    !n. (less_divisors n) SUBSET (divisors n)
+Proof
+  rw[SUBSET_DEF]
+QED
 
 (* Theorem: FINITE (less_divisors n) *)
 (* Proof:
@@ -10239,10 +10545,11 @@ val less_divisors_subset_divisors = store_thm(
      and FINITE (divisors n)                     by divisors_finite
       so FINITE (proper_divisors n)              by SUBSET_FINITE
 *)
-val less_divisors_finite = store_thm(
-  "less_divisors_finite",
-  ``!n. FINITE (less_divisors n)``,
-  metis_tac[divisors_finite, less_divisors_subset_divisors, SUBSET_FINITE]);
+Theorem less_divisors_finite:
+    !n. FINITE (less_divisors n)
+Proof
+  metis_tac[divisors_finite, less_divisors_subset_divisors, SUBSET_FINITE]
+QED
 
 (* Theorem: prime n ==> (less_divisors n = {1}) *)
 (* Proof:
@@ -10252,16 +10559,17 @@ val less_divisors_finite = store_thm(
    and 1 < n                                      by ONE_LT_PRIME
    Hence less_divisors n = {1}
 *)
-val less_divisors_prime = store_thm(
-  "less_divisors_prime",
-  ``!n. prime n ==> (less_divisors n = {1})``,
+Theorem less_divisors_prime:
+    !n. prime n ==> (less_divisors n = {1})
+Proof
   rpt strip_tac >>
   `!b. b divides n ==> (b = n) \/ (b = 1)` by metis_tac[prime_def] >>
   rw[less_divisors_element, EXTENSION, EQ_IMP_THM] >| [
     `x <> n` by decide_tac >>
     metis_tac[],
     rw[ONE_LT_PRIME]
-  ]);
+  ]
+QED
 
 (* Theorem: 1 < n ==> 1 IN (less_divisors n) *)
 (* Proof:
@@ -10269,17 +10577,19 @@ val less_divisors_prime = store_thm(
    <=> 1 < n /\ 1 divides n     by less_divisors_element
    <=> T                        by ONE_DIVIDES_ALL
 *)
-val less_divisors_has_1 = store_thm(
-  "less_divisors_has_1",
-  ``!n. 1 < n ==> 1 IN (less_divisors n)``,
-  rw[less_divisors_element]);
+Theorem less_divisors_has_1:
+    !n. 1 < n ==> 1 IN (less_divisors n)
+Proof
+  rw[less_divisors_element]
+QED
 
 (* Theorem: x IN (less_divisors n) ==> 0 < x *)
 (* Proof: by less_divisors_element. *)
-val less_divisors_nonzero = store_thm(
-  "less_divisors_nonzero",
-  ``!n x. x IN (less_divisors n) ==> 0 < x``,
-  rw[less_divisors_element]);
+Theorem less_divisors_nonzero:
+    !n x. x IN (less_divisors n) ==> 0 < x
+Proof
+  rw[less_divisors_element]
+QED
 
 (* Theorem: 1 < d /\ d IN (less_divisors n) ==> (n DIV d) IN (less_divisors n) *)
 (* Proof:
@@ -10291,10 +10601,11 @@ val less_divisors_nonzero = store_thm(
    thus n DIV d <> n                      by LESS_NOT_EQ
   Hence (n DIV d) IN (less_divisors n)    by notation
 *)
-val less_divisors_has_cofactor = store_thm(
-  "less_divisors_has_cofactor",
-  ``!n d. 1 < d /\ d IN (less_divisors n) ==> (n DIV d) IN (less_divisors n)``,
-  rw[divisors_has_cofactor, divisors_element, DIV_LESS, LESS_NOT_EQ]);
+Theorem less_divisors_has_cofactor:
+    !n d. 1 < d /\ d IN (less_divisors n) ==> (n DIV d) IN (less_divisors n)
+Proof
+  rw[divisors_has_cofactor, divisors_element, DIV_LESS, LESS_NOT_EQ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Proper Divisors of a number.                                              *)
@@ -10310,31 +10621,35 @@ val _ = overload_on("proper_divisors", ``\n. {x | x IN (divisors n) /\ x <> 1 /\
    Since x <= n but x <> n, x < n.
    With x <> 0 /\ x <> 1 ==> 1 < x.
 *)
-val proper_divisors_element = store_thm(
-  "proper_divisors_element",
-  ``!n x. x IN (proper_divisors n) <=> (1 < x /\ x < n /\ x divides n)``,
-  rw[divisors_element, EQ_IMP_THM]);
+Theorem proper_divisors_element:
+    !n x. x IN (proper_divisors n) <=> (1 < x /\ x < n /\ x divides n)
+Proof
+  rw[divisors_element, EQ_IMP_THM]
+QED
 
 (* Theorem: proper_divisors 0 = {} *)
 (* Proof: by proper_divisors_element. *)
-val proper_divisors_0 = store_thm(
-  "proper_divisors_0",
-  ``proper_divisors 0 = {}``,
-  rw[proper_divisors_element, EXTENSION]);
+Theorem proper_divisors_0:
+    proper_divisors 0 = {}
+Proof
+  rw[proper_divisors_element, EXTENSION]
+QED
 
 (* Theorem: proper_divisors 1 = {} *)
 (* Proof: by proper_divisors_element. *)
-val proper_divisors_1 = store_thm(
-  "proper_divisors_1",
-  ``proper_divisors 1 = {}``,
-  rw[proper_divisors_element, EXTENSION]);
+Theorem proper_divisors_1:
+    proper_divisors 1 = {}
+Proof
+  rw[proper_divisors_element, EXTENSION]
+QED
 
 (* Theorem: (proper_divisors n) SUBSET (less_divisors n) *)
 (* Proof: by SUBSET_DEF *)
-val proper_divisors_subset = store_thm(
-  "proper_divisors_subset",
-  ``!n. (proper_divisors n) SUBSET (less_divisors n)``,
-  rw[SUBSET_DEF]);
+Theorem proper_divisors_subset:
+    !n. (proper_divisors n) SUBSET (less_divisors n)
+Proof
+  rw[SUBSET_DEF]
+QED
 
 (* Theorem: FINITE (proper_divisors n) *)
 (* Proof:
@@ -10342,17 +10657,19 @@ val proper_divisors_subset = store_thm(
      and FINITE (less_divisors n)                     by less_divisors_finite
       so FINITE (proper_divisors n)                   by SUBSET_FINITE
 *)
-val proper_divisors_finite = store_thm(
-  "proper_divisors_finite",
-  ``!n. FINITE (proper_divisors n)``,
-  metis_tac[less_divisors_finite, proper_divisors_subset, SUBSET_FINITE]);
+Theorem proper_divisors_finite:
+    !n. FINITE (proper_divisors n)
+Proof
+  metis_tac[less_divisors_finite, proper_divisors_subset, SUBSET_FINITE]
+QED
 
 (* Theorem: 1 NOTIN (proper_divisors n) *)
 (* Proof: proper_divisors_element *)
-val proper_divisors_not_1 = store_thm(
-  "proper_divisors_not_1",
-  ``!n. 1 NOTIN (proper_divisors n)``,
-  rw[proper_divisors_element]);
+Theorem proper_divisors_not_1:
+    !n. 1 NOTIN (proper_divisors n)
+Proof
+  rw[proper_divisors_element]
+QED
 
 (* Theorem: proper_divisors n = (less_divisors n) DELETE 1 *)
 (* Proof:
@@ -10361,10 +10678,11 @@ val proper_divisors_not_1 = store_thm(
     = {x | x IN (divisors n) /\ x <> n} DELETE 1    by IN_DELETE
     = (less_divisors n) DELETE 1
 *)
-val proper_divisors_by_less_divisors = store_thm(
-  "proper_divisors_by_less_divisors",
-  ``!n. proper_divisors n = (less_divisors n) DELETE 1``,
-  rw[divisors_element, EXTENSION, EQ_IMP_THM]);
+Theorem proper_divisors_by_less_divisors:
+    !n. proper_divisors n = (less_divisors n) DELETE 1
+Proof
+  rw[divisors_element, EXTENSION, EQ_IMP_THM]
+QED
 
 (* Theorem: prime n ==> (proper_divisors n = {}) *)
 (* Proof:
@@ -10373,10 +10691,11 @@ val proper_divisors_by_less_divisors = store_thm(
     = {1} DELETE 1                by less_divisors_prime, prime n
     = {}                          by SING_DELETE
 *)
-val proper_divisors_prime = store_thm(
-  "proper_divisors_prime",
-  ``!n. prime n ==> (proper_divisors n = {})``,
-  rw[proper_divisors_by_less_divisors, less_divisors_prime]);
+Theorem proper_divisors_prime:
+    !n. prime n ==> (proper_divisors n = {})
+Proof
+  rw[proper_divisors_by_less_divisors, less_divisors_prime]
+QED
 
 (* Theorem: d IN (proper_divisors n) ==> (n DIV d) IN (proper_divisors n) *)
 (* Proof:
@@ -10392,9 +10711,9 @@ val proper_divisors_prime = store_thm(
     With 0 < e /\ e <> 1
      ==> e IN (proper_divisors n)         by proper_divisors_by_less_divisors, IN_DELETE
 *)
-val proper_divisors_has_cofactor = store_thm(
-  "proper_divisors_has_cofactor",
-  ``!n d. d IN (proper_divisors n) ==> (n DIV d) IN (proper_divisors n)``,
+Theorem proper_divisors_has_cofactor:
+    !n d. d IN (proper_divisors n) ==> (n DIV d) IN (proper_divisors n)
+Proof
   rpt strip_tac >>
   qabbrev_tac `e = n DIV d` >>
   `1 < d /\ d < n` by metis_tac[proper_divisors_element] >>
@@ -10403,7 +10722,8 @@ val proper_divisors_has_cofactor = store_thm(
   `0 < e` by metis_tac[less_divisors_nonzero] >>
   `0 < d /\ n <> d` by decide_tac >>
   `e <> 1` by metis_tac[less_divisors_element, DIV_MULT_EQ, MULT_LEFT_1] >>
-  metis_tac[proper_divisors_by_less_divisors, IN_DELETE]);
+  metis_tac[proper_divisors_by_less_divisors, IN_DELETE]
+QED
 
 (* Theorem: (proper_divisors n) <> {} ==> 1 < MIN_SET (proper_divisors n) *)
 (* Proof:
@@ -10412,10 +10732,11 @@ val proper_divisors_has_cofactor = store_thm(
      But MIN_SET s IN s              by MIN_SET_IN_SET
    Hence 1 < MIN_SET s               by above
 *)
-val proper_divisors_min_gt_1 = store_thm(
-  "proper_divisors_min_gt_1",
-  ``!n. (proper_divisors n) <> {} ==> 1 < MIN_SET (proper_divisors n)``,
-  metis_tac[MIN_SET_IN_SET, proper_divisors_element]);
+Theorem proper_divisors_min_gt_1:
+    !n. (proper_divisors n) <> {} ==> 1 < MIN_SET (proper_divisors n)
+Proof
+  metis_tac[MIN_SET_IN_SET, proper_divisors_element]
+QED
 
 (* Theorem: (proper_divisors n) <> {} ==>
             (MAX_SET (proper_divisors n) = n DIV (MIN_SET (proper_divisors n))) /\
@@ -10442,11 +10763,11 @@ val proper_divisors_min_gt_1 = store_thm(
       Hence m = n DIV b
               = n DIV (n DIV x) = x       by divide_by_cofactor, x divides n (gives first subgoal)
 *)
-val proper_divisors_max_min = store_thm(
-  "proper_divisors_max_min",
-  ``!n. (proper_divisors n) <> {} ==>
+Theorem proper_divisors_max_min:
+    !n. (proper_divisors n) <> {} ==>
        (MAX_SET (proper_divisors n) = n DIV (MIN_SET (proper_divisors n))) /\
-       (MIN_SET (proper_divisors n) = n DIV (MAX_SET (proper_divisors n)))``,
+       (MIN_SET (proper_divisors n) = n DIV (MAX_SET (proper_divisors n)))
+Proof
   ntac 2 strip_tac >>
   qabbrev_tac `s = proper_divisors n` >>
   qabbrev_tac `b = MIN_SET s` >>
@@ -10468,7 +10789,8 @@ val proper_divisors_max_min = store_thm(
   `b <= n DIV x` by rw[MIN_SET_PROPERTY, Abbr`b`] >>
   `b = n DIV x` by rw[LESS_EQUAL_ANTISYM] >>
   `m = x` by rw[divide_by_cofactor, Abbr`m`] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* This is a milestone theorem. *)
 
@@ -10485,11 +10807,12 @@ val proper_divisors_max_min = store_thm(
       or !y. y IN s ==> 1 <= y    by LESS_EQ
    Hence 1 = MIN_SET s            by MIN_SET_TEST
 *)
-val less_divisors_min = store_thm(
-  "less_divisors_min",
-  ``!n. 1 < n ==> (MIN_SET (less_divisors n) = 1)``,
+Theorem less_divisors_min:
+    !n. 1 < n ==> (MIN_SET (less_divisors n) = 1)
+Proof
   metis_tac[less_divisors_has_1, MEMBER_NOT_EMPTY,
-             MIN_SET_TEST, less_divisors_nonzero, LESS_EQ, ONE]);
+             MIN_SET_TEST, less_divisors_nonzero, LESS_EQ, ONE]
+QED
 
 (* Theorem: MAX_SET (less_divisors n) <= n DIV 2 *)
 (* Proof:
@@ -10569,9 +10892,9 @@ QED
    Thus 0 < x <= n DIV 2              by LESS_EQ
      or x IN (natural (n DIV 2))      by natural_element
 *)
-val less_divisors_subset_natural = store_thm(
-  "less_divisors_subset_natural",
-  ``!n. (less_divisors n) SUBSET (natural (n DIV 2))``,
+Theorem less_divisors_subset_natural:
+    !n. (less_divisors n) SUBSET (natural (n DIV 2))
+Proof
   rpt strip_tac >>
   qabbrev_tac `s = less_divisors n` >>
   qabbrev_tac `m = n DIV 2` >>
@@ -10586,7 +10909,8 @@ val less_divisors_subset_natural = store_thm(
   `MAX_SET s <= m` by rw[less_divisors_max, Abbr`s`, Abbr`m`] >>
   `MIN_SET s = 1` by rw[less_divisors_min, Abbr`s`] >>
   `0 < x /\ x <= m` by decide_tac >>
-  rw[natural_element]);
+  rw[natural_element]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Properties of Summation equals Perfect Power                              *)
@@ -10624,9 +10948,9 @@ val less_divisors_subset_natural = store_thm(
       and 0 <= (p - 2) * q           by 2 <= p
     Hence LHS < RHS                  by discarding positive terms
 *)
-val perfect_power_special_inequality = store_thm(
-  "perfect_power_special_inequality",
-  ``!p. 1 < p ==> !n. p * (p ** n - 1) < (p - 1) * (2 * p ** n)``,
+Theorem perfect_power_special_inequality:
+    !p. 1 < p ==> !n. p * (p ** n - 1) < (p - 1) * (2 * p ** n)
+Proof
   rpt strip_tac >>
   qabbrev_tac `q = p ** n` >>
   `p <> 0 /\ 2 <= p` by decide_tac >>
@@ -10643,7 +10967,8 @@ val perfect_power_special_inequality = store_thm(
   `_ = l + p + p * q - 2 * q` by rw[] >>
   `_ = l + p + (p * q - 2 * q)` by rw[] >>
   `_ = l + p + (p - 2) * q` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 1 < p /\ 1 < n ==>
             p ** (n DIV 2) * p ** (n DIV 2) <= p ** n /\
@@ -10707,9 +11032,9 @@ val perfect_power_half_inequality_lemma = prove(
            2 * q <= q * q           by perfect_power_half_inequality_lemma
      Hence 2 * q <= p ** n          by LESS_EQ_TRANS
 *)
-val perfect_power_half_inequality_1 = store_thm(
-  "perfect_power_half_inequality_1",
-  ``!p n. 1 < p /\ 0 < n ==> 2 * p ** (n DIV 2) <= p ** n``,
+Theorem perfect_power_half_inequality_1:
+    !p n. 1 < p /\ 0 < n ==> 2 * p ** (n DIV 2) <= p ** n
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = n DIV 2` >>
   qabbrev_tac `q = p ** m` >>
@@ -10721,7 +11046,8 @@ val perfect_power_half_inequality_1 = store_thm(
     `1 < n` by decide_tac >>
     `q * q <= p ** n /\ 2 * q <= q * q` by rw[perfect_power_half_inequality_lemma, Abbr`q`, Abbr`m`] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: 1 < p /\ 0 < n ==> (p ** (n DIV 2) - 2) * p ** (n DIV 2) <= p ** n - 2 * p ** (n DIV 2) *)
 (* Proof:
@@ -10739,9 +11065,9 @@ val perfect_power_half_inequality_1 = store_thm(
       Thus q * q - 2 * q <= p ** n - 2 * q     by LE_SUB_RCANCEL, 2 * q <= q * q
         or   (q - 2) * q <= p ** n - 2 * q     by RIGHT_SUB_DISTRIB
 *)
-val perfect_power_half_inequality_2 = store_thm(
-  "perfect_power_half_inequality_2",
-  ``!p n. 1 < p /\ 0 < n ==> (p ** (n DIV 2) - 2) * p ** (n DIV 2) <= p ** n - 2 * p ** (n DIV 2)``,
+Theorem perfect_power_half_inequality_2:
+    !p n. 1 < p /\ 0 < n ==> (p ** (n DIV 2) - 2) * p ** (n DIV 2) <= p ** n - 2 * p ** (n DIV 2)
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = n DIV 2` >>
   qabbrev_tac `q = p ** m` >>
@@ -10753,7 +11079,8 @@ val perfect_power_half_inequality_2 = store_thm(
     `1 < n` by decide_tac >>
     `q * q <= p ** n /\ 2 * q <= q * q` by rw[perfect_power_half_inequality_lemma, Abbr`q`, Abbr`m`] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Already in pred_setTheory:
 SUM_IMAGE_SUBSET_LE;
@@ -10900,17 +11227,18 @@ QED
         and (p ** m - 2) * p ** m <= p ** n - 2 * p ** m        by perfect_power_half_inequality_2
       Hence (p ** (n DIV 2) - 2) * p ** (n DIV 2) < n * (f n)   by LESS_EQ_LESS_TRANS
 *)
-val sigma_eq_perfect_power_bounds_2 = store_thm(
-  "sigma_eq_perfect_power_bounds_2",
-  ``!p. 1 < p ==> !f. (!n. 0 < n ==> (p ** n = SIGMA (\d. d * f d) (divisors n))) ==>
+Theorem sigma_eq_perfect_power_bounds_2:
+    !p. 1 < p ==> !f. (!n. 0 < n ==> (p ** n = SIGMA (\d. d * f d) (divisors n))) ==>
    (!n. 0 < n ==> n * (f n) <= p ** n) /\
-   (!n. 0 < n ==> (p ** (n DIV 2) - 2) * p ** (n DIV 2) < n * (f n))``,
+   (!n. 0 < n ==> (p ** (n DIV 2) - 2) * p ** (n DIV 2) < n * (f n))
+Proof
   rpt strip_tac >-
   rw[sigma_eq_perfect_power_bounds_1] >>
   qabbrev_tac `m = n DIV 2` >>
   `p ** n - 2 * p ** m < n * (f n)` by rw[sigma_eq_perfect_power_bounds_1, Abbr`m`] >>
   `(p ** m - 2) * p ** m <= p ** n - 2 * p ** m` by rw[perfect_power_half_inequality_2, Abbr`m`] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* This is a milestone theorem. *)
 

@@ -149,18 +149,27 @@ SRW_TAC [][] THENL [
   METIS_TAC [nterm_rec_unique,nterm_rec_rules]
 ]);
 
-val is_Nom_def = Define`is_Nom t = ?a. (t = Nom a)`;
-val is_Sus_def = Define`is_Sus t = ?p v. (t = Sus p v)`;
-val is_Tie_def = Define`is_Tie t = ?t' a. (t = Tie a t')`;
-val is_nPair_def = Define`is_nPair t = ?t1 t2. (t = nPair t1 t2)`;
+Definition is_Nom_def:  is_Nom t = ?a. (t = Nom a)
+End
+Definition is_Sus_def:  is_Sus t = ?p v. (t = Sus p v)
+End
+Definition is_Tie_def:  is_Tie t = ?t' a. (t = Tie a t')
+End
+Definition is_nPair_def:  is_nPair t = ?t1 t2. (t = nPair t1 t2)
+End
 val _ = export_rewrites["is_Nom_def","is_Sus_def","is_Tie_def","is_nPair_def"];
 
-val dest_Nom_def = Define `dest_Nom t = @a. t = Nom a`;
-val dest_Sus_def = Define `dest_Sus t = ((@p.∃v. t = Sus p v),(@v.∃p.t = Sus
-p v))`;
-val dest_Tie_def = Define `dest_Tie t = @p. Tie (FST p) (SND p) = t`;
-val dest_nPair_def = Define `dest_nPair t = @p. nPair (FST p) (SND p) = t`;
-val dest_nConst_def = Define `dest_nConst t = @c. nConst c = t`;
+Definition dest_Nom_def:   dest_Nom t = @a. t = Nom a
+End
+Definition dest_Sus_def:   dest_Sus t = ((@p.∃v. t = Sus p v),(@v.∃p.t = Sus
+p v))
+End
+Definition dest_Tie_def:   dest_Tie t = @p. Tie (FST p) (SND p) = t
+End
+Definition dest_nPair_def:   dest_nPair t = @p. nPair (FST p) (SND p) = t
+End
+Definition dest_nConst_def:   dest_nConst t = @c. nConst c = t
+End
 val dest_Nom_thm =
 RWstore_thm("dest_Nom_thm", `dest_Nom (Nom a) = a`,
 SRW_TAC [][dest_Nom_def]);
@@ -181,12 +190,13 @@ val dest_nConst_thm =
 RWstore_thm("dest_nConst_thm", `dest_nConst (nConst a) = a`,
 SRW_TAC [][dest_nConst_def]);
 
-val nterm_case_def = Define`
+Definition nterm_case_def:
   nterm_CASE t Nf Sf Tf Pf Cf =
   if is_Nom t then Nf (dest_Nom t) else
   if is_Sus t then UNCURRY Sf (dest_Sus t) else
   if is_Tie t then UNCURRY Tf (dest_Tie t) else
-  if is_nPair t then UNCURRY Pf (dest_nPair t) else Cf (dest_nConst t)`;
+  if is_nPair t then UNCURRY Pf (dest_nPair t) else Cf (dest_nConst t)
+End
 
 val nterm_case_cong = Q.store_thm(
 "nterm_case_cong",

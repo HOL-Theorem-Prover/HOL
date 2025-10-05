@@ -8,22 +8,26 @@ val _ = ParseExtras.temp_loose_equality()
 
 (* instruction cache definitions *)
 
-val X86_ICACHE_def = Define `
+Definition X86_ICACHE_def:
   X86_ICACHE ((r,e,s,m,i):x86_state) ((r2,e2,s2,m2,i2):x86_state) =
     ?insert delete.
       (r = r2) /\ (e = e2) /\ (s = s2) /\ (m = m2) /\
       (i2 = \addr. if addr IN insert then m addr else
-                   if addr IN delete then NONE else i addr)`;
+                   if addr IN delete then NONE else i addr)
+End
 
-val X86_ACCURATE_def = Define `
-  X86_ACCURATE a ((r,e,s,m,i):x86_state) = (i a = NONE) \/ (i a = m a)`;
+Definition X86_ACCURATE_def:
+  X86_ACCURATE a ((r,e,s,m,i):x86_state) = (i a = NONE) \/ (i a = m a)
+End
 
-val icache_def = Define `
+Definition icache_def:
   icache (insert,delete) m i addr =
-    if addr IN insert then m addr else if addr IN delete then NONE else i addr`;
+    if addr IN insert then m addr else if addr IN delete then NONE else i addr
+End
 
-val X86_ICACHE_UPDATE_def = Define `
-  X86_ICACHE_UPDATE x ((r1,e1,s1,m1,i1):x86_state) = (r1,e1,s1,m1,icache x m1 i1)`;
+Definition X86_ICACHE_UPDATE_def:
+  X86_ICACHE_UPDATE x ((r1,e1,s1,m1,i1):x86_state) = (r1,e1,s1,m1,icache x m1 i1)
+End
 
 
 (* theorems *)

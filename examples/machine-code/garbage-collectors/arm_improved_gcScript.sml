@@ -97,29 +97,35 @@ val SET_TAC =
 
 val RANGE_TAC = FULL_SIMP_TAC std_ss [RANGE_def,IN_DEF,gc_inv_def] \\ DECIDE_TAC
 
-val ref_addr_def = Define `ref_addr n = n2w (4 * n):word32`;
+Definition ref_addr_def:   ref_addr n = n2w (4 * n):word32
+End
 
-val ref_heap_addr_def = Define `
+Definition ref_heap_addr_def:
   (ref_heap_addr (H_DATA w) = n2w (w2n (w:31 word) * 2 + 1)) /\
-  (ref_heap_addr (H_ADDR a) = ref_addr a)`;
+  (ref_heap_addr (H_ADDR a) = ref_addr a)
+End
 
-val one_list_def = Define `
+Definition one_list_def:
   (one_list a [] = emp) /\
-  (one_list a (x::xs) = one (a,x) * one_list (a + 4w) xs)`;
+  (one_list a (x::xs) = one (a,x) * one_list (a + 4w) xs)
+End
 
-val one_list_roots_def = Define `
+Definition one_list_roots_def:
   (one_list_roots a [] = one (a,2w)) /\
-  (one_list_roots a (x::xs) = one_list_roots (a - 4w) xs * one (a,ref_heap_addr x))`;
+  (one_list_roots a (x::xs) = one_list_roots (a - 4w) xs * one (a,ref_heap_addr x))
+End
 
-val ref_tag_def = Define `
-  ref_tag (n,b,t:word8) = n2w (n * 1024 + w2n t * 4 + 2 + (if b then 1 else 0)) :word32`;
+Definition ref_tag_def:
+  ref_tag (n,b,t:word8) = n2w (n * 1024 + w2n t * 4 + 2 + (if b then 1 else 0)) :word32
+End
 
-val ref_aux_def = Define `
+Definition ref_aux_def:
   (ref_aux a H_EMP = SEP_EXISTS x. one (a:word32,x)) /\
   (ref_aux a (H_REF n) = one (a,ref_addr n)) /\
   (ref_aux a (H_BLOCK (xs,l,(b,d,ys))) =
      let zs = (if d then MAP ref_heap_addr xs else ys) in
-       one (a,ref_tag (LENGTH zs,d,b)) * one_list (a+4w) zs)`;
+       one (a,ref_tag (LENGTH zs,d,b)) * one_list (a+4w) zs)
+End
 
 val ref_mem_def = tDefine "ref_mem" `
   (ref_mem m a e =
@@ -169,12 +175,13 @@ val ref_heap_addr_NEQ_2 = prove(
   \\ SIMP_TAC bool_ss [MATCH_MP MOD_MULT_MOD (DECIDE ``0<2 /\ 0<2``)]
   \\ SIMP_TAC std_ss [MATCH_MP MOD_MULT (DECIDE ``1 < 2``)] \\ EVAL_TAC);
 
-val ok_memory_def = Define `
+Definition ok_memory_def:
   ok_memory m =
     !(a:num) l (xs:(31 word) heap_address list) b:word8 t:bool ys:word32 list.
       (m a = H_BLOCK (xs,l,(b,t,ys))) ==>
         LENGTH xs < 2 ** 22 /\ LENGTH ys < 2 ** 22 /\
-        if t then l = LENGTH xs else (l = LENGTH ys) /\ (xs = [])`;
+        if t then l = LENGTH xs else (l = LENGTH ys) /\ (xs = [])
+End
 
 val ref_addr_ADD1 = prove(
   ``!i j. (ref_addr (i + 1) = ref_addr i + 4w) /\
@@ -733,10 +740,11 @@ val arm_loop_thm = prove(
   \\ Q.LIST_EXISTS_TAC [`b`,`j`] \\ `i <= j` by RANGE_TAC \\ ASM_SIMP_TAC std_ss []
   \\ MATCH_MP_TAC EQ_RANGE_THM \\ IMP_RES_TAC move_list_thm);
 
-val one_scratch_def = Define `
+Definition one_scratch_def:
   one_scratch a (b,e,b2,e2) =
     one (a + 40w,ref_addr b) * one (a + 44w,ref_addr e) *
-    one (a + 48w,ref_addr b2) * one (a + 52w,ref_addr e2)`;
+    one (a + 48w,ref_addr b2) * one (a + 52w,ref_addr e2)
+End
 
 val ref_mem_LESS_EQ = prove(
   ``!p x. (ref_mem m b e * p) x ==> b <= e``,
@@ -816,12 +824,13 @@ val ref_mem_IMP_H_EMP = prove(
   \\ IMP_RES_TAC ref_mem_H_EMP_SPLIT \\ ONCE_ASM_REWRITE_TAC []
   \\ SIMP_TAC (std_ss++star_ss) []);
 
-val arm_heap_ok_def = Define `
+Definition arm_heap_ok_def:
   arm_heap_ok (h,xs) (b,i,j,e,b2,e2,m) (r1,r6,df,f,p,l) =
     ok_full_heap (h,xs) (b,i,e,b2,e2,m) /\
     ALIGNED r1 /\ ALIGNED r6 /\ e2 < 2 ** 30 /\ e < 2 ** 30 /\ ok_memory m /\
     (ref_mem m b e * ref_mem m b2 l * one_list_roots r1 xs *
-     one_scratch r6 (b,e,b2,e2) * p) (fun2set (f,df))`;
+     one_scratch r6 (b,e,b2,e2) * p) (fun2set (f,df))
+End
 
 val arm_gc_lemma = store_thm("arm_gc_lemma",
   ``arm_heap_ok (h,xs) (b,i,j11,e,b2,e2,m) (r1,r6,df,f,p,i2) ==>

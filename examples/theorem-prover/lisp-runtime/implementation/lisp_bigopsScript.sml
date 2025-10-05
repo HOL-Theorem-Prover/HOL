@@ -267,23 +267,26 @@ L_RETURN -- Val 0
 
 *)
 
-val parse_task_def = Define `
+Definition parse_task_def:
   (parse_task L_READ = Sym "NIL") /\
   (parse_task (L_COLLECT x) = Sym "T") /\
-  (parse_task (L_RETURN x) = Val 0)`;
+  (parse_task (L_RETURN x) = Val 0)
+End
 
-val parse_task2_def = Define `
+Definition parse_task2_def:
   (parse_task2 L_READ y = y) /\
   (parse_task2 (L_COLLECT x) y = x) /\
-  (parse_task2 (L_RETURN x) y = x)`;
+  (parse_task2 (L_RETURN x) y = x)
+End
 
-val parse_stack_def = Define `
+Definition parse_stack_def:
   (parse_stack [] = [Sym "NIL"]) /\
   (parse_stack (L_CONS a::xs) = [Sym "CONS";a] ++ parse_stack xs) /\
   (parse_stack (L_STORE n::xs) = [Val n] ++ parse_stack xs) /\
   (parse_stack (L_STOP::xs) = [Sym "CAR"] ++ parse_stack xs) /\
   (parse_stack (L_DOT::xs) = [Sym "CDR"] ++ parse_stack xs) /\
-  (parse_stack (L_QUOTE::xs) = [Sym "QUOTE"] ++ parse_stack xs)`;
+  (parse_stack (L_QUOTE::xs) = [Sym "QUOTE"] ++ parse_stack xs)
+End
 
 val remove_parse_stack_thm = prove(
   ``!xs ys. (remove_parse_stack (parse_stack xs ++ ys) = ys)``,
@@ -496,12 +499,14 @@ val next_token_cases = prove(
   \\ Cases_on `space_char c` \\ FULL_SIMP_TAC std_ss []
   \\ SIMP_TAC std_ss [Once EQ_SYM_EQ] \\ SRW_TAC [] [isVal_def]);
 
-val mem_list2sexp_def = Define `
+Definition mem_list2sexp_def:
   (mem_list2sexp [] = Sym "NIL") /\
-  (mem_list2sexp ((n,x)::xs) = Dot (Val n) (Dot x (mem_list2sexp xs)))`;
+  (mem_list2sexp ((n,x)::xs) = Dot (Val n) (Dot x (mem_list2sexp xs)))
+End
 
-val ok_mem_sexp_def = Define `
-  ok_mem_sexp s = ?xs. s = mem_list2sexp xs`;
+Definition ok_mem_sexp_def:
+  ok_mem_sexp s = ?xs. s = mem_list2sexp xs
+End
 
 val EXISTS_IMP_RWT = METIS_PROVE [] ``((?x. P x) ==> Q) = !x. P x ==> Q``
 
@@ -520,11 +525,12 @@ val lisp_parse_lookup_thm = prove(
   \\ REPEAT STRIP_TAC \\ Cases_on `a = q`
   \\ ASM_SIMP_TAC std_ss [APPLY_UPDATE_THM,markerTheory.Abbrev_def]);
 
-val lisp_parse_mem_inv_def = Define `
+Definition lisp_parse_mem_inv_def:
   lisp_parse_mem_inv x5 mem xbp amnt xs ys =
     (mem = \a. if a < amnt then EL a xs else lisp_mem x5 a) /\
     ok_mem_sexp x5 /\ (xbp = LENGTH (xs ++ ys)) /\
-    (amnt = LENGTH xs)`;
+    (amnt = LENGTH xs)
+End
 
 val UPDATE_NTH_APPEND = prove(
   ``!xs ys n x.
@@ -535,9 +541,10 @@ val UPDATE_NTH_APPEND = prove(
   \\ Cases_on `n` \\ ASM_SIMP_TAC std_ss [UPDATE_NTH_def,CONS_11,APPEND]
   \\ METIS_TAC []);
 
-val LIST_UPDATE_NTH_def = Define `
+Definition LIST_UPDATE_NTH_def:
   (LIST_UPDATE_NTH [] xs = xs) /\
-  (LIST_UPDATE_NTH ((n,x)::ys) xs = LIST_UPDATE_NTH ys (UPDATE_NTH n x xs))`;
+  (LIST_UPDATE_NTH ((n,x)::ys) xs = LIST_UPDATE_NTH ys (UPDATE_NTH n x xs))
+End
 
 val lisp_parse_thm = prove(
   ``!cs s task mem.
@@ -747,11 +754,13 @@ val lisp_pushes_thm = prove(
   Induct \\ ONCE_REWRITE_TAC [lisp_pushes_def,lisp_pushes_pre_def]
   \\ ASM_SIMP_TAC (srw_ss()) [GENLIST,APPEND,LET_DEF,LISP_SUB_def,getVal_def,isVal_def]);
 
-val read_sexp_def = Define `
-  read_sexp io = FST (sexp_parse_stream (getINPUT io))`;
+Definition read_sexp_def:
+  read_sexp io = FST (sexp_parse_stream (getINPUT io))
+End
 
-val next_sexp_def = Define `
-  next_sexp io = IO_INPUT_APPLY (SND o sexp_parse_stream) io`;
+Definition next_sexp_def:
+  next_sexp io = IO_INPUT_APPLY (SND o sexp_parse_stream) io
+End
 
 val LENGTH_LIST_UPDATE_NTH = prove(
   ``!xs ys. LENGTH (LIST_UPDATE_NTH xs ys) = LENGTH ys``,

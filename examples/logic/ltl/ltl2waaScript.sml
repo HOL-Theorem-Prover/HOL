@@ -7,23 +7,26 @@ Ancestors
   Defining the translation from LTL to WAA
  *)
 
-val initForms_def = Define `(initForms f = tempDNF f)`;
+Definition initForms_def:   (initForms f = tempDNF f)
+End
 
-val finalForms_def = Define
-  `finalForms f = {U f1 f2 | (U f1 f2) ∈ tempSubForms f}`;
+Definition finalForms_def:
+   finalForms f = {U f1 f2 | (U f1 f2) ∈ tempSubForms f}
+End
 
 (*
   transition function of the automaton
 *)
 
-val trans_def = Define
-   `(trans Σ (VAR a) = {((char Σ a), {})})
+Definition trans_def:
+    (trans Σ (VAR a) = {((char Σ a), {})})
  /\ (trans Σ (N_VAR a) = {Σ DIFF (char Σ a), {}})
  /\ (trans Σ (CONJ f1 f2) = d_conj (trans Σ f1) (trans Σ f2))
  /\ (trans Σ (DISJ f1 f2) = (trans Σ f1) ∪ (trans Σ f2))
  /\ (trans Σ (X f) = \s. ?e. (s = (Σ, e)) /\ (e ∈ tempDNF f))
  /\ (trans Σ (U f1 f2) = (trans Σ f2) ∪ (d_conj (trans Σ f1) {(Σ,{U f1 f2})}))
- /\ (trans Σ (R f1 f2) = d_conj (trans Σ f2) ((trans Σ f1) ∪ {(Σ,{R f1 f2})}))`;
+ /\ (trans Σ (R f1 f2) = d_conj (trans Σ f2) ((trans Σ f1) ∪ {(Σ,{R f1 f2})}))
+End
 
 val TRANS_ALPH_LEMM = store_thm
   ("TRANS_ALPH_LEMM",
@@ -178,16 +181,18 @@ val TRANS_REACHES_SUBFORMS = store_thm
   Defining the automaton
 *)
 
-val ltl2vwaa_free_alph_def = Define
-  `ltl2vwaa_free_alph Σ f =
+Definition ltl2vwaa_free_alph_def:
+   ltl2vwaa_free_alph Σ f =
         ALTER_A
            (tempSubForms f)
            Σ
            (trans Σ)
            (initForms f)
-           (finalForms f)`;
+           (finalForms f)
+End
 
-val ltl2vwaa_def = Define `ltl2vwaa f = ltl2vwaa_free_alph (POW (props f)) f`;
+Definition ltl2vwaa_def:   ltl2vwaa f = ltl2vwaa_free_alph (POW (props f)) f
+End
 
 val LTL2WAA_ISVALID = store_thm
   ("LTL2WAA_ISVALID",
@@ -1916,28 +1921,32 @@ val EVTL_F2_RUN_LEMM = store_thm
   >> metis_tac[RUN_FOR_CONJ_LEMM2_UNION]
   );
 
-val always_run_cond_def = Define `
+Definition always_run_cond_def:
   always_run_cond f1 f2 rs s i q =
      if q ∈ s
      then (if q = R f1 f2
            then {R f1 f2} ∪ ((rs i).V 1)
            else let j = (LEAST j. q ∈ (rs j).V (i-j)) in
                     (rs j).E (i-j,q))
-     else {}`
+     else {}
+End
 
-val always_run_V_def = Define `
+Definition always_run_V_def:
    (always_run_V f1 f2 rs 0 = {R f1 f2})
  ∧ (always_run_V f1 f2 rs (SUC i) =
        {R f1 f2} ∪ {q | ?q'. q' ∈ always_run_V f1 f2 rs i
                          ∧ q ∈ always_run_cond f1 f2 rs (always_run_V f1 f2 rs i) i q'}
-   )`
+   )
+End
 
-val always_run_E_def = Define `
+Definition always_run_E_def:
   always_run_E f1 f2 rs (i,q) =
-          always_run_cond f1 f2 rs (always_run_V f1 f2 rs i) i q`
+          always_run_cond f1 f2 rs (always_run_V f1 f2 rs i) i q
+End
 
-val always_run_def = Define `
-  always_run f1 f2 rs = ALTERA_RUN (always_run_V f1 f2 rs) (always_run_E f1 f2 rs)`
+Definition always_run_def:
+  always_run f1 f2 rs = ALTERA_RUN (always_run_V f1 f2 rs) (always_run_E f1 f2 rs)
+End
 
 val ALWAYS_RUN_LEMM1 = store_thm
   ("ALWAYS_RUN_LEMM1",

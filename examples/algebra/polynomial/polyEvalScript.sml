@@ -81,10 +81,10 @@ Libs
 (* ------------------------------------------------------------------------- *)
 
 (* Similar to evaluation of a polynomial, but results in a polynomial. *)
-val poly_peval_def = Define`
+Definition poly_peval_def:
   (poly_peval (r:'a ring) [] x = |0|) /\
   (poly_peval (r:'a ring) (h:'a :: t:'a poly) x = h * |1| + (poly_peval r t x) * x)
-`;
+End
 val _ = overload_on ("peval", ``poly_peval r``);
 
 (* export simple case definition *)

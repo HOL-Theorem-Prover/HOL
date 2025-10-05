@@ -180,37 +180,45 @@ val (x86_codegen_th,x86_codegen_def,x86_codegen_pre_def) = compile "x86" ``
     let (r4,df,f,dg,g) = x86_codegen_loop (r1,r2,r3,r4,df,f,dg,g) in
       (r4,df,f,dg,g)``;
 
-val SEP_BYTES_IN_MEM_def = Define `
+Definition SEP_BYTES_IN_MEM_def:
   (SEP_BYTES_IN_MEM a [] = emp) /\
-  (SEP_BYTES_IN_MEM a (x::xs) = one (a,x) * SEP_BYTES_IN_MEM (a+1w) xs)`;
+  (SEP_BYTES_IN_MEM a (x::xs) = one (a,x) * SEP_BYTES_IN_MEM (a+1w) xs)
+End
 
-val SEP_CODE_IN_MEM_LOOP_def = Define `
+Definition SEP_CODE_IN_MEM_LOOP_def:
   (SEP_CODE_IN_MEM_LOOP a [] (a1,ns1) = emp) /\
   (SEP_CODE_IN_MEM_LOOP a (n::ns) (a1,ns1) =
      let branch j = ADDR ns1 a1 j - a in
      let xs = X86_ENCODE branch n in
-       SEP_BYTES_IN_MEM a xs * SEP_CODE_IN_MEM_LOOP (a + n2w (LENGTH xs)) ns (a1,ns1))`;
+       SEP_BYTES_IN_MEM a xs * SEP_CODE_IN_MEM_LOOP (a + n2w (LENGTH xs)) ns (a1,ns1))
+End
 
-val SEP_CODE_IN_MEM_def = Define `
-  SEP_CODE_IN_MEM a ns = SEP_CODE_IN_MEM_LOOP a ns (a,ns)`;
+Definition SEP_CODE_IN_MEM_def:
+  SEP_CODE_IN_MEM a ns = SEP_CODE_IN_MEM_LOOP a ns (a,ns)
+End
 
-val CODE_LENGTH_def = Define `
+Definition CODE_LENGTH_def:
   (CODE_LENGTH [] = 0) /\
-  (CODE_LENGTH (n::ns) = LENGTH (X86_ENCODE (\x.0w) n) + CODE_LENGTH ns)`;
+  (CODE_LENGTH (n::ns) = LENGTH (X86_ENCODE (\x.0w) n) + CODE_LENGTH ns)
+End
 
-val one_list_def = Define `
+Definition one_list_def:
   (one_list a [] b = cond (b = a)) /\
-  (one_list a (x::xs) b = one (a,x) * one_list (a + 1w) xs b)`;
+  (one_list a (x::xs) b = one (a,x) * one_list (a + 1w) xs b)
+End
 
-val one_space_def = Define `
+Definition one_space_def:
   (one_space a 0 b = cond (b = a)) /\
-  (one_space a (SUC n) b = SEP_EXISTS y. one (a,y) * one_space (a + 1w) n b)`;
+  (one_space a (SUC n) b = SEP_EXISTS y. one (a,y) * one_space (a + 1w) n b)
+End
 
-val one_string_def = Define `
-  one_string a (s:string) b = one_list a (MAP (n2w o ORD) s) b`;
+Definition one_string_def:
+  one_string a (s:string) b = one_list a (MAP (n2w o ORD) s) b
+End
 
-val one_string_0_def = Define `
-  one_string_0 a (s:string) b = one_string a (s ++ [CHR 0]) b`;
+Definition one_string_0_def:
+  one_string_0 a (s:string) b = one_string a (s ++ [CHR 0]) b
+End
 
 val one_string_STRCAT = store_thm("one_string_STRCAT",
   ``!s t a c.

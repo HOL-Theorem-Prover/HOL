@@ -707,9 +707,10 @@ Proof
     SIMP_TAC std_ss [INJ_DEF, IN_UNIV]
 QED
 
-val POS_START_def = Define `
+Definition POS_START_def:
    (POS_START n [] h = 0) /\
-   (POS_START n (h'::l) h = (if (h = h') then (SUC n) else (POS_START (SUC n) l h)))`;
+   (POS_START n (h'::l) h = (if (h = h') then (SUC n) else (POS_START (SUC n) l h)))
+End
 
 Theorem POS_START_NOT_FOUND :
     !n l h. ((POS_START n l h = 0) = ~(MEM h l))

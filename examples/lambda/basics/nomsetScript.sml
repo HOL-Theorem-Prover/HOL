@@ -25,9 +25,9 @@ val perm_of_swapstr = store_thm(
     swapstr (perm_of p x) (perm_of p y) (perm_of p s)``,
   Induct_on `p` THEN SRW_TAC [][]);
 
-val permeq_def = Define`
+Definition permeq_def:
   permeq l1 l2 = (perm_of l1 = perm_of l2)
-`;
+End
 val _ = set_fixity "==" (Infix(NONASSOC, 450));
 val _ = overload_on ("==", ``permeq``)
 
@@ -171,11 +171,12 @@ val _ = add_rule {fixity = Suffix 2100,
 val _ = overload_on ("⁻¹", ``REVERSE : pm -> pm``)
 val _ = TeX_notation {hol="⁻¹", TeX= ("\\HOLTokenInverse{}", 1)}
 
-val is_pmact_def = Define`
+Definition is_pmact_def:
   is_pmact (f:pm -> 'a -> 'a) <=>
       (!x. f [] x = x) /\
       (!p1 p2 x. f (p1 ++ p2) x = f p1 (f p2 x)) /\
-      (!p1 p2. (p1 == p2) ==> (f p1 = f p2))`;
+      (!p1 p2. (p1 == p2) ==> (f p1 = f p2))
+End
 
 val existence = prove(
 ``?p. is_pmact p``,
@@ -475,9 +476,9 @@ QED
  *  Permutation of a function call (fnpm)
  *---------------------------------------------------------------------------*)
 
-val raw_fnpm_def = Define`
+Definition raw_fnpm_def:
   raw_fnpm (dpm: α pmact) (rpm: β pmact) p f x = pmact rpm p (f (pmact dpm p⁻¹ x))
-`;
+End
 val _ = export_rewrites["raw_fnpm_def"];
 
 val _ = overload_on ("fn_pmact", ``λdpm rpm. mk_pmact (raw_fnpm dpm rpm)``);
@@ -592,9 +593,10 @@ QED
  *  Permutation of optional values (optpm)
  *---------------------------------------------------------------------------*)
 
-val raw_optpm_def = Define`
+Definition raw_optpm_def:
   (raw_optpm pm pi NONE = NONE) /\
-  (raw_optpm pm pi (SOME x) = SOME (pmact pm pi x))`;
+  (raw_optpm pm pi (SOME x) = SOME (pmact pm pi x))
+End
 val _ = export_rewrites ["raw_optpm_def"];
 
 val _ = overload_on("opt_pmact",``λpm. mk_pmact (raw_optpm pm)``);
@@ -621,9 +623,9 @@ Theorem optpm_thm[simp] =
  *  Permutation of a pair of values (pairpm)
  *---------------------------------------------------------------------------*)
 
-val raw_pairpm_def = Define`
+Definition raw_pairpm_def:
   raw_pairpm apm bpm pi (a,b) = (pmact apm pi a, pmact bpm pi b)
-`;
+End
 val _ = export_rewrites ["raw_pairpm_def"]
 
 val _ = overload_on("pair_pmact",``λapm bpm. mk_pmact (raw_pairpm apm bpm)``);
@@ -660,10 +662,10 @@ QED
  *  Permutation of values of sum types (sumpm)
  *---------------------------------------------------------------------------*)
 
-val raw_sumpm_def = Define`
+Definition raw_sumpm_def:
   (raw_sumpm pm1 pm2 pi (INL x) = INL (pmact pm1 pi x)) /\
   (raw_sumpm pm1 pm2 pi (INR y) = INR (pmact pm2 pi y))
-`;
+End
 val _ = export_rewrites ["raw_sumpm_def"]
 
 val _ = overload_on("sum_pmact",``λpm1 pm2. mk_pmact (raw_sumpm pm1 pm2)``);
@@ -690,10 +692,10 @@ Theorem sumpm_thm[simp] =
  *  Permutation of list of values (listpm)
  *---------------------------------------------------------------------------*)
 
-val raw_listpm_def = Define`
+Definition raw_listpm_def:
   (raw_listpm apm pi [] = []) /\
   (raw_listpm apm pi (h::t) = pmact apm pi h :: raw_listpm apm pi t)
-`;
+End
 val _ = export_rewrites ["raw_listpm_def"]
 
 val _ = overload_on("list_pmact",``λapm. mk_pmact (raw_listpm apm)``);
@@ -793,10 +795,10 @@ QED
     Notion of support, and calculating the smallest set of support
    ---------------------------------------------------------------------- *)
 
-val support_def = Define`
+Definition support_def:
   support (pm : α pmact) (a:α) (supp:string set) =
      ∀x y. x ∉ supp /\ y ∉ supp ⇒ (pmact pm [(x,y)] a = a)
-`;
+End
 
 val pmact_support = store_thm(
   "pmact_support",
@@ -851,9 +853,9 @@ val support_dwards_directed = store_thm(
      by METIS_TAC [pmact_decompose, APPEND] THEN
   METIS_TAC [IN_INTER]);
 
-val supp_def = Define`
+Definition supp_def:
   supp pm x = { (a:string) | INFINITE { (b:string) | pmact pm [(a,b)] x ≠ x}}
-`;
+End
 
 val supp_supports = store_thm(
   "supp_supports",
@@ -1267,10 +1269,10 @@ val notinsupp_fnapp = store_thm(
     v ∉ supp rpm (f x)``,
   prove_tac [supp_fnapp, SUBSET_DEF, IN_UNION]);
 
-val raw_fmpm_def = Define`
+Definition raw_fmpm_def:
   raw_fmpm (dpm : 'd pmact) (rpm : 'r pmact) pi fmap =
     pmact rpm pi o_f fmap f_o pmact dpm (REVERSE pi)
-`;
+End
 val _ = export_rewrites["raw_fmpm_def"];
 
 val _ = overload_on("fm_pmact",``λdpm rpm. mk_pmact (raw_fmpm dpm rpm)``);
@@ -1460,11 +1462,11 @@ val fmpm_DOMSUB = store_thm(
   POP_ASSUM MP_TAC THEN SRW_TAC [][pmact_inverse] )
 val _ = export_rewrites ["fmpm_DOMSUB"];
 
-val fcond_def = Define`
+Definition fcond_def:
   fcond pm f ⇔
      FINITE (supp (fn_pmact string_pmact pm) f) ∧
      (∃a. a ∉ supp (fn_pmact string_pmact pm) f /\ a ∉ supp pm (f a))
-`;
+End
 
 Theorem fcond_equivariant[simp] :
     fcond pm (fnpm string_pmact pm pi f) = fcond pm f
@@ -1474,11 +1476,11 @@ Proof
   METIS_TAC [pmact_inverse]
 QED
 
-val fresh_def = Define`
+Definition fresh_def:
   fresh apm f = let z = NEW (supp (fn_pmact string_pmact apm) f)
                 in
                   f z
-`;
+End
 
 val fresh_thm = store_thm(
   "fresh_thm",

@@ -8,10 +8,11 @@ val _ = ParseExtras.temp_loose_equality()
   Reducing the amount of transitions
 *)
 
-val trans_implies_def = Define`
+Definition trans_implies_def:
   trans_implies accTrans q (a1,q1) (a2,q2)
       = (q1 = q2) ∧ a2 ⊆ a1
-      ∧ !t. t ∈ accTrans ==> ((q,a2,q2) ∈ t ==> (q,a1,q1) ∈ t)`;
+      ∧ !t. t ∈ accTrans ==> ((q,a2,q2) ∈ t ==> (q,a1,q1) ∈ t)
+End
 
 val TRANS_IMPLIES_PO = store_thm
   ("TRANS_IMPLIES_PO",
@@ -66,18 +67,20 @@ val TRANS_IMPLIES_MIN = store_thm
       )
   );
 
-val removeImplied_def = Define`
+Definition removeImplied_def:
   removeImplied accTrans trans q =
     (trans q) DIFF {t | ?t'. ~(t = t') ∧ t' ∈ (trans q)
-                             ∧ trans_implies accTrans q t' t}`;
+                             ∧ trans_implies accTrans q t' t}
+End
 
-val reduceTransSimpl_def = Define`
+Definition reduceTransSimpl_def:
   reduceTransSimpl (GBA s i t aT a) =
    GBA s i (removeImplied aT t)
     (IMAGE
          (\s. {(e,a,e') | (e,a,e') ∈ s ∧ (a,e') ∈ (removeImplied aT t) e })
          aT)
-    a`;
+    a
+End
 
 val REDUCE_IS_VALID = store_thm
  ("REDUCE_IS_VALID",
@@ -198,7 +201,7 @@ val REDUCE_IS_CORRECT = store_thm
   Remove unreachable states
 *)
 
-val removeStatesSimpl_def = Define`
+Definition removeStatesSimpl_def:
   removeStatesSimpl (GBA s i t aT alph) =
   GBA
       (s ∩ reachableFromSetGBA (GBA s i t aT alph) i)
@@ -211,7 +214,8 @@ val removeStatesSimpl_def = Define`
            (\T. {(e,a,e') | (e,a,e') ∈ T
                           ∧  e ∈ (reachableFromSetGBA (GBA s i t aT alph) i)})
            aT)
-      alph`;
+      alph
+End
 
 val REDUCE_STATE_VALID = store_thm
   ("REDUCE_STATE_VALID",
@@ -353,20 +357,23 @@ val REDUCE_STATE_CORRECT = store_thm
   Merge equivalent states
 *)
 
-val replaceState_def = Define`
+Definition replaceState_def:
   replaceState x_old x_new s =
-    if s = x_old then x_new else s`;
+    if s = x_old then x_new else s
+End
 
-val replaceStateSet_def = Define`
+Definition replaceStateSet_def:
   replaceStateSet x_old x_new set =
     if x_old ∈ set
     then (set DIFF {x_old}) ∪ {x_new}
-    else set`;
+    else set
+End
 
-val replaceAccTrans_def = Define`
+Definition replaceAccTrans_def:
   replaceAccTrans x_old x_new aT =
     IMAGE (\s. {(replaceState x_old x_new q1, a, replaceState x_old x_new q2) |
-                (q1,a,q2) ∈ s}) aT`;
+                (q1,a,q2) ∈ s}) aT
+End
 
 val REPL_AT_LEMM = store_thm
   ("REPL_AT_LEMM",
@@ -391,13 +398,14 @@ val REPL_AT_LEMM2 = store_thm
   >> rpt strip_tac >> fs[] >> metis_tac[]
   );
 
-val equivalentStates_def = Define`
+Definition equivalentStates_def:
   equivalentStates aT trans q1 q2 =
      (trans q1 = trans q2)
    ∧ !a q3 T. ((a,q3) ∈ trans q1) ∧ T ∈ aT
-                   ==> ((q1,a,q3) ∈ T = (q2,a,q3) ∈ T)`;
+                   ==> ((q1,a,q3) ∈ T = (q2,a,q3) ∈ T)
+End
 
-val mergeState_def = Define`
+Definition mergeState_def:
   mergeState x y (GBA s i t aT alph) =
       if equivalentStates aT t x y
       then GBA
@@ -406,7 +414,8 @@ val mergeState_def = Define`
               (\m. {(a,replaceState x y n) | (a,n) ∈ t m})
               (replaceAccTrans x y aT)
               alph
-      else (GBA s i t aT alph)`;
+      else (GBA s i t aT alph)
+End
 
 (* (* val un_merged_run_def = Define` *) *)
 (* (*   (un_merged_run word aT x_old x_new init trans f switch 0 = *) *)

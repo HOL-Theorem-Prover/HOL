@@ -47,9 +47,8 @@ Induct_on `l` >> rw []
     )
 );
 
-val lexer_get_token_def =
- Define
-  `(lexer_get_token
+Definition lexer_get_token_def:
+   (lexer_get_token
       transition finals cur_state cur_lexeme prev_answer [] = prev_answer) /\
    (lexer_get_token
       transition finals cur_state cur_lexeme prev_answer (c::s) =
@@ -61,11 +60,11 @@ val lexer_get_token_def =
                    (case finals next_state
                      of | NONE => prev_answer
                         | SOME tokfn => SOME (tokfn, c::cur_lexeme, s))
-                   s)`;
+                   s)
+End
 
-val lexer_get_token_invariant_def =
- Define
-  `lexer_get_token_invariant transition finals start state lexeme answer s =
+Definition lexer_get_token_invariant_def:
+   lexer_get_token_invariant transition finals start state lexeme answer s =
     case answer of
      | NONE =>
         ?path.
@@ -81,7 +80,8 @@ val lexer_get_token_invariant_def =
            (REVERSE answer_lexeme ++ answer_rest = REVERSE lexeme ++ s) /\
            (REVERSE lexeme = MAP FST (answer_path ++ path_extension)) /\
            EVERY (\extra_state. finals extra_state = NONE)
-                 (MAP SND path_extension)`;
+                 (MAP SND path_extension)
+End
 
 val lexer_get_token_preserves_invariant = Q.prove
 (`!transition finals start state lexeme answer s c next_state.
@@ -439,9 +439,8 @@ Induct_on `s1`
   >> rw []
 );
 
-val dfa_correct_def =
- Define
-  `dfa_correct lexer_spec trans finals start =
+Definition dfa_correct_def:
+   dfa_correct lexer_spec trans finals start =
     !l tokfn.
       (?p s.
         (l = MAP FST p) /\ dfa_path trans start s p /\ (finals s = SOME tokfn))
@@ -449,7 +448,8 @@ val dfa_correct_def =
        ?n. n < LENGTH lexer_spec /\
            (SND (EL n lexer_spec) = tokfn) /\
            (regexp_lang (FST (EL n lexer_spec)) l) /\
-           (!n'. n' < n ==> ~regexp_lang (FST (EL n' lexer_spec)) l)`;
+           (!n'. n' < n ==> ~regexp_lang (FST (EL n' lexer_spec)) l)
+End
 
 val lexer_partial_correctness = Q.prove
 (`!trans finals start s acc lexer_spec toks.
@@ -676,10 +676,10 @@ rw [lexer_versions]
   >> rw []
 );
 
-val eval_option_case_def =
- Define
-  `(eval_option_case NONE = \f1 f2. f1) /\
-   (eval_option_case (SOME x) = \f1 f2. f2 x)`;
+Definition eval_option_case_def:
+   (eval_option_case NONE = \f1 f2. f1) /\
+   (eval_option_case (SOME x) = \f1 f2. f2 x)
+End
 
 val eval_option_case_thm = Q.store_thm
 ("eval_option_case_thm",
@@ -698,18 +698,17 @@ metis_tac [optionTheory.option_case_cong, eval_option_case_thm]);
 
 DefnBase.add_cong eval_option_case_cong;
 
-val eval_let_def =
- Define
-  `eval_let x = \f. f x`;
+Definition eval_let_def:
+   eval_let x = \f. f x
+End
 
 val eval_let_thm = Q.store_thm
 ("eval_let_thm",
  `!f x. LET f x = eval_let x f`,
  metis_tac [eval_let_def]);
 
-val lexer_get_token_eval_def =
- Define
-  `(lexer_get_token_eval transition finals cur_state cur_lexeme prev_answer [] =
+Definition lexer_get_token_eval_def:
+   (lexer_get_token_eval transition finals cur_state cur_lexeme prev_answer [] =
       prev_answer) /\
    (lexer_get_token_eval transition finals cur_state cur_lexeme prev_answer (c::s) =
      eval_option_case
@@ -719,7 +718,8 @@ val lexer_get_token_eval_def =
          lexer_get_token_eval transition finals next_state (c::cur_lexeme)
            (eval_option_case (finals next_state)
               prev_answer
-              (\tokfn. SOME (tokfn,c::cur_lexeme,s))) s))`;
+              (\tokfn. SOME (tokfn,c::cur_lexeme,s))) s))
+End
 
 val lexer_get_token_eval_thm = Q.store_thm
 ("lexer_get_token_eval_thm",

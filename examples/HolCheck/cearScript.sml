@@ -6,21 +6,27 @@ infix &&; infix 8 by;
 val _ = intLib.deprecate_int();
 fun tsimps ty = let val {convs,rewrs} = TypeBase.simpls_of ty in rewrs end;
 
-val Next_def = Define `Next R s s' = R(s,s')`;
+Definition Next_def:   Next R s s' = R(s,s')
+End
 
-val Prev_def = Define `Prev R s s' = R(s',s)`;
+Definition Prev_def:   Prev R s s' = R(s',s)
+End
 
-val ReachFromRec_def = Define `
+Definition ReachFromRec_def:
     (ReachFromRec R s 0 = {s}) /\
-    (ReachFromRec R s (SUC n) = {s' | s' IN ReachFromRec R s n \/ ?s''. Next R s'' s'  /\ s'' IN ReachFromRec R s n})`;
+    (ReachFromRec R s (SUC n) = {s' | s' IN ReachFromRec R s n \/ ?s''. Next R s'' s'  /\ s'' IN ReachFromRec R s n})
+End
 
-val ReachFrom_def = Define `ReachFrom R s = BIGUNION {P | ?n. P = ReachFromRec R s n}`;
+Definition ReachFrom_def:   ReachFrom R s = BIGUNION {P | ?n. P = ReachFromRec R s n}
+End
 
-val ReachToRec_def = Define `
+Definition ReachToRec_def:
     (ReachToRec R s 0 = {s}) /\
-    (ReachToRec R s (SUC n) = {s' | s' IN ReachToRec R s n \/ ?s''. Prev R s'' s'  /\ s'' IN ReachToRec R s n})`;
+    (ReachToRec R s (SUC n) = {s' | s' IN ReachToRec R s n \/ ?s''. Prev R s'' s'  /\ s'' IN ReachToRec R s n})
+End
 
-val ReachTo_def = Define `ReachTo R s = BIGUNION {P | ?n. P = ReachToRec R s n}`;
+Definition ReachTo_def:   ReachTo R s = BIGUNION {P | ?n. P = ReachToRec R s n}
+End
 
 val ReachFromChain = prove(``!R s n. ReachFromRec R s n SUBSET ReachFromRec R s (SUC n)``,
 Induct_on `n` THENL [
@@ -203,10 +209,14 @@ THEN SPEC_TAC (``ReachToRec R s``,``P:num -> 'a -> bool``)
 THEN REWRITE_TAC [GSYM BIGUNION_SPLIT]
 THEN ASSUM_LIST PROVE_TAC));
 
-val R_REFL_def = Define `R_REFL R = !x. R(x,x)`;
-val R_SYM_def = Define `R_SYM R = !x y. R(x,y) = R(y,x)`;
-val R_TRANS_def = Define `R_TRANS R = !x y z. R(x,y) /\ R(y,z) ==> R(x,z)`;
-val R_EQR_def = Define `R_EQR R = R_REFL R /\ R_SYM R /\ R_TRANS R`;
+Definition R_REFL_def:   R_REFL R = !x. R(x,x)
+End
+Definition R_SYM_def:   R_SYM R = !x y. R(x,y) = R(y,x)
+End
+Definition R_TRANS_def:   R_TRANS R = !x y z. R(x,y) /\ R(y,z) ==> R(x,z)
+End
+Definition R_EQR_def:   R_EQR R = R_REFL R /\ R_SYM R /\ R_TRANS R
+End
 
 val ReachToClosed = save_thm("ReachToClosed",prove(``!si R s. R_EQR R ==> (s IN ReachTo R si = R(s,si))``,
 REPEAT STRIP_TAC
@@ -284,8 +294,10 @@ val ABS_KS_def =  save_thm("ABS_KS_def",Define `ABS_KS M (h:('a#'b)->bool) =
 val wf_absKS = save_thm("wf_absKS",prove(``!ks h. wfKS ks ==> wfKS (ABS_KS ks h)``,
 FULL_SIMP_TAC std_ss [wfKS_def,ABS_KS_def,KS_accfupds,combinTheory.K_DEF,SUBSET_UNIV]));
 
-val def1 = Define `QP2 h q q' = h(q,q')`;
-val def2 = Define `QP3(h,q) q' = QP2 h q q'`;
+Definition def1:   QP2 h q q' = h(q,q')
+End
+Definition def2:   QP3(h,q) q' = QP2 h q q'
+End
 
 val lem1 = prove(``!h q. h(q,@qh. h(q,qh)) = ?qh. h(q,qh)``,
  REWRITE_TAC [GSYM def1]
@@ -611,7 +623,8 @@ THEN CONJ_TAC THENL [
  ]
 ]));
 
-val IS_ABS_FUN_def = Define `IS_ABS_FUN (ks:('prop,'state) KS) e h = (!s. ?(sh:'astate). h(s,sh)) /\ (!s1 s2 (sh:'astate). h(s1,sh) /\ h(s2,sh) ==> !p. p IN ks.ap ==> (s1 IN STATES (AP p) ks e = s2 IN STATES (AP p) ks e))`;
+Definition IS_ABS_FUN_def:   IS_ABS_FUN (ks:('prop,'state) KS) e h = (!s. ?(sh:'astate). h(s,sh)) /\ (!s1 s2 (sh:'astate). h(s1,sh) /\ h(s2,sh) ==> !p. p IN ks.ap ==> (s1 IN STATES (AP p) ks e = s2 IN STATES (AP p) ks e))
+End
 
 val ABS_CONS_MODEL = save_thm("ABS_CONS_MODEL",prove(``!f h (ks:('prop,'state) KS) (e:string -> 'state -> bool) (eh:string -> 'astate -> bool). wfKS ks ==> (!Q. ~SUBFORMULA (~RV Q) (NNF f)) ==> (!a g. ~SUBFORMULA (<<a>> g) (NNF f)) ==> (!p. SUBFORMULA (AP p) f ==> p IN ks.ap) ==> IS_ABS_FUN (ks:('prop,'state) KS) e h ==> (!Q s sh. h(s,sh) ==> (sh IN eh Q ==> s IN e Q)) ==> MU_MODEL_SAT f (ABS_KS ks h) eh ==> MU_MODEL_SAT f ks e``,
 REPEAT STRIP_TAC

@@ -48,11 +48,11 @@ EXDIRS = algebra/aat \
          formal-languages/contig formal-languages/json \
          formal-languages/lambek formal-languages/regular/regular-play \
          formal-languages/pi-calculus \
-         fun-op-sem/coimp fun-op-sem/lprefix_lub fun-op-sem/for \
+         pl-semantics/coimp pl-semantics/lprefix_lub pl-semantics/for \
          hardware hfs \
          imperative ind_def \
          l3-machine-code/common \
-         lambda \
+         lambda latex-generation/paper \
          logic logic/folcompactness logic/modal-models logic/modal-tableaux \
          logic/ncfolproofs logic/propositional_logic logic/relevant-logic \
          logic/temporal/src \
@@ -97,7 +97,7 @@ EX2DIRS = AKS algebra algorithms/boyer_moore \
             computability/recdegrees \
             computability/register computability/turing Crypto \
           decidable_separationLogic/src \
-          formal-languages/regular fun-op-sem \
+          formal-languages/regular pl-semantics \
           generic_graphs \
           lambda/other-models lambda/typing \
             logic/ltl logic/temporal_deep \

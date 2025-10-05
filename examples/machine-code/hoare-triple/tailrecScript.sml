@@ -5,21 +5,25 @@ Ancestors
 
 (* ---- definitions ----- *)
 
-val TAILREC_PRE_def = Define `
+Definition TAILREC_PRE_def:
   TAILREC_PRE f1 guard precondition (x:'a) ⇔
     (!k. (!m. m < k ==> guard (FUNPOW f1 m x)) ⇒precondition (FUNPOW f1 k x)) ∧
-    ∃n. ~guard (FUNPOW f1 n x)`;
+    ∃n. ~guard (FUNPOW f1 n x)
+End
 
-val TAILREC_def = Define `
-  TAILREC f1 (f2:'a->'b) g x = f2 (WHILE g f1 x)`;
+Definition TAILREC_def:
+  TAILREC f1 (f2:'a->'b) g x = f2 (WHILE g f1 x)
+End
 
-val SHORT_TAILREC_def = Define `
+Definition SHORT_TAILREC_def:
   SHORT_TAILREC (f:'a -> ('a + 'b) # bool) =
-    TAILREC (OUTL o FST o f) (OUTR o FST o f) (ISL o FST o f)`;
+    TAILREC (OUTL o FST o f) (OUTR o FST o f) (ISL o FST o f)
+End
 
-val SHORT_TAILREC_PRE_def = Define `
+Definition SHORT_TAILREC_PRE_def:
   SHORT_TAILREC_PRE (f:'a -> ('a + 'b) # bool) =
-    TAILREC_PRE (OUTL o FST o f) (ISL o FST o f) (SND o f)`;
+    TAILREC_PRE (OUTL o FST o f) (ISL o FST o f) (SND o f)
+End
 
 
 (* ---- theorems ---- *)

@@ -62,11 +62,13 @@ val FORALL_KEYS = Q.prove
 (*      Rotation operators                                                   *)
 (* --------------------------------------------------------------------------*)
 
-val LeftShift_def = Define
-   `LeftShift (x:word32) (n:word32) = x #<< (w2n n)`;
+Definition LeftShift_def:
+    LeftShift (x:word32) (n:word32) = x #<< (w2n n)
+End
 
-val RightShift_def = Define
-   `RightShift (x:word32) (n:word32) = x #>> (w2n n)`;
+Definition RightShift_def:
+    RightShift (x:word32) (n:word32) = x #>> (w2n n)
+End
 
 val _ = augment_srw_ss [rewrites [LeftShift_def, RightShift_def]];
 
@@ -96,24 +98,28 @@ val EX_Shift_Inversion = Q.store_thm
 (*  r is the number of rounds                                                *)
 (*---------------------------------------------------------------------------*)
 
-val r_def = Define `r = 20`;
+Definition r_def:   r = 20
+End
 
-val CompUT_def = Define
-   `CompUT (x:word32) = (x * (x + x + 1w)) #<< 5`;
+Definition CompUT_def:
+    CompUT (x:word32) = (x * (x + x + 1w)) #<< 5
+End
 
-val FwdRound_def = Define
-  `FwdRound ((a,b,c,d):block) ((k0,k1):key)  =
+Definition FwdRound_def:
+   FwdRound ((a,b,c,d):block) ((k0,k1):key)  =
         (b,
          ((c ?? CompUT d) <<< CompUT b) + k1,  (*c = (c xor u <<< t) + k1*)
          d,
-         ((a ?? CompUT b) <<< CompUT d) + k0)`;
+         ((a ?? CompUT b) <<< CompUT d) + k0)
+End
 
-val BwdRound_def = Define
-  `BwdRound ((a,b,c,d):block) ((k0,k1):key)  =  (* NB: (a,b,c,d) = (d,a,b,c) *)
+Definition BwdRound_def:
+   BwdRound ((a,b,c,d):block) ((k0,k1):key)  =  (* NB: (a,b,c,d) = (d,a,b,c) *)
         (((d - k0) >>> CompUT c) ?? CompUT a,   (* a = ((a-k0) >>> u) xor t  *)
          a,
          ((b - k1) >>> CompUT a) ?? CompUT c,   (* c = ((c-k1) >>> t) xor u  *)
-         c)`;
+         c)
+End
 
 val OneRound_Inversion = Q.store_thm
   ("OneRound_Inversion",
@@ -125,22 +131,22 @@ val OneRound_Inversion = Q.store_thm
 (* Rotate keys and get a pair of keys from the head of the key schedule      *)
 (*---------------------------------------------------------------------------*)
 
-val ROTKEYS_def =
- Define
-   `ROTKEYS (k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,
+Definition ROTKEYS_def:
+    ROTKEYS (k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,
       k13,k14,k15,k16,k17,k18,k19,k20,k21,k22,k23,k24,k25,k26,k27,
       k28,k29,k30,k31,k32,k33,k34,k35,k36,k37,k38,k39,k40,k41,k42,k43)
     =
      (k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,
       k19,k20,k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,k31,k32,k33,
-      k34,k35,k36,k37,k38,k39,k40,k41,k42,k43,k0,k1) : keysched`;
+      k34,k35,k36,k37,k38,k39,k40,k41,k42,k43,k0,k1) : keysched
+End
 
-val GETKEYS_def =
- Define
-   `GETKEYS ((k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,
+Definition GETKEYS_def:
+    GETKEYS ((k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,
       k16,k17,k18,k19,k20,k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,
       k31,k32,k33,k34,k35,k36,k37,k38,k39,k40,k41,k42,k43) : keysched)
-    = (k0,k1):key`;
+    = (k0,k1):key
+End
 
 (*---------------------------------------------------------------------------*)
 (* Pre-Whitening and post-whitening in the encryption and the decryption     *)
@@ -148,21 +154,25 @@ val GETKEYS_def =
 (* should make sure that corresponding Round and InvRound use the same keys  *)
 (*---------------------------------------------------------------------------*)
 
-val PreWhitening_def = Define
- `PreWhitening (k:keysched) ((a,b,c,d):block)  =
-            (a, b + FST(GETKEYS(k)), c, d + SND(GETKEYS(k))) : block`;
+Definition PreWhitening_def:
+  PreWhitening (k:keysched) ((a,b,c,d):block)  =
+            (a, b + FST(GETKEYS(k)), c, d + SND(GETKEYS(k))) : block
+End
 
-val PostWhitening_def = Define
- `PostWhitening  (k:keysched) ((a,b,c,d):block)  =
-            (a + SND(GETKEYS(k)), b, c + SND(GETKEYS(k)), d) : block`;
+Definition PostWhitening_def:
+  PostWhitening  (k:keysched) ((a,b,c,d):block)  =
+            (a + SND(GETKEYS(k)), b, c + SND(GETKEYS(k)), d) : block
+End
 
-val InvPreWhitening_def = Define
- `InvPreWhitening (k:keysched) ((a,b,c,d):block)  =
-            (a - SND(GETKEYS(k)), b, c - SND(GETKEYS(k)), d) : block`;
+Definition InvPreWhitening_def:
+  InvPreWhitening (k:keysched) ((a,b,c,d):block)  =
+            (a - SND(GETKEYS(k)), b, c - SND(GETKEYS(k)), d) : block
+End
 
-val InvPostWhitening_def = Define
- `InvPostWhitening (k:keysched) ((a,b,c,d):block)  =
-            (a, b - FST(GETKEYS(k)), c, d - SND(GETKEYS(k))) : block`;
+Definition InvPostWhitening_def:
+  InvPostWhitening (k:keysched) ((a,b,c,d):block)  =
+            (a, b - FST(GETKEYS(k)), c, d - SND(GETKEYS(k))) : block
+End
 
 val Whitening_Inversion = Q.store_thm
   ("Whitening_Inversion",
@@ -208,13 +218,13 @@ val InvRound_def =
 (* in this case you should redefine the type keysched                        *)
 (*---------------------------------------------------------------------------*)
 
-val RC6_FWD_def =
- Define
-   `RC6_FWD keys = Round r keys o PreWhitening keys`;
+Definition RC6_FWD_def:
+    RC6_FWD keys = Round r keys o PreWhitening keys
+End
 
-val RC6_BWD_def =
- Define
-   `RC6_BWD keys = InvPostWhitening keys o InvRound r keys`;
+Definition RC6_BWD_def:
+    RC6_BWD keys = InvPostWhitening keys o InvRound r keys
+End
 
 (*---------------------------------------------------------------------------*)
 (* Main lemma                                                                *)
@@ -235,9 +245,8 @@ val RC6_LEMMA = Q.store_thm
 (* works fine for 128 bit blocks.                                            *)
 (*---------------------------------------------------------------------------*)
 
-val LIST_TO_KEYS_def =
- Define
-  `(LIST_TO_KEYS [] acc = acc : keysched) /\
+Definition LIST_TO_KEYS_def:
+   (LIST_TO_KEYS [] acc = acc : keysched) /\
    (LIST_TO_KEYS (h::t)
       (k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,k19,
        k20,k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,k31,k32,k33,k34,k35,k36,k37,
@@ -246,36 +255,42 @@ val LIST_TO_KEYS_def =
       LIST_TO_KEYS t
        (h,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,k19,
         k20,k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,k31,k32,k33,k34,k35,k36,
-        k37,k38,k39,k40,k41,k42,k43))`;
+        k37,k38,k39,k40,k41,k42,k43))
+End
 
-val DUMMY_KEYS_def =
- Define
-  `DUMMY_KEYS =
+Definition DUMMY_KEYS_def:
+   DUMMY_KEYS =
      (0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,
       0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,
       0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,
       0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,
-      0w,0w,0w,0w) : keysched`;
+      0w,0w,0w,0w) : keysched
+End
 
-val Pw_def = Define `
-    Pw = 0xB7E15163w:word32`;
+Definition Pw_def:
+    Pw = 0xB7E15163w:word32
+End
 
-val Qw_def = Define `
-    Qw = 0x9E3779B9w:word32`;
+Definition Qw_def:
+    Qw = 0x9E3779B9w:word32
+End
 
-val init_S_def = Define `
+Definition init_S_def:
    (init_S 0 = [Pw]) /\
-   (init_S (SUC n) = (HD (init_S n) + Qw) :: (init_S n))`;
+   (init_S (SUC n) = (HD (init_S n) + Qw) :: (init_S n))
+End
 
-val setKeys_def = Define `
+Definition setKeys_def:
    (setKeys 0 S1 L a b = []) /\
    (setKeys (SUC n) S1 L a b =
      let a = (HD S1 + a + b) #<< 3 in
      let b = (HD L + a + b) <<< (a+b) in
-         a::setKeys n (TL S1 ++ [a]) (TL L ++ [b]) a b)`;
+         a::setKeys n (TL S1 ++ [a]) (TL L ++ [b]) a b)
+End
 
-val mk_keysched_def = Define
-   `mk_keysched(L) = setKeys (r*2+4) (REVERSE(init_S (2*r-3))) L 0w 0w`;
+Definition mk_keysched_def:
+    mk_keysched(L) = setKeys (r*2+4) (REVERSE(init_S (2*r-3))) L 0w 0w
+End
 
 val setKeys_length = Q.prove
  (`!i S1 L a b. i>0 ==>
@@ -311,10 +326,11 @@ val keysched_length = Q.prove
 (* Basic theorem about encryption/decryption                                 *)
 (*---------------------------------------------------------------------------*)
 
-val RC6_def = Define
- `RC6 key =
+Definition RC6_def:
+  RC6 key =
    let keys = LIST_TO_KEYS (mk_keysched key) DUMMY_KEYS
-   in (RC6_FWD keys, RC6_BWD keys)`;
+   in (RC6_FWD keys, RC6_BWD keys)
+End
 
 val RC6_CORRECT = Q.store_thm
   ("RC6_CORRECT",

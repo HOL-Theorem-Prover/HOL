@@ -14,7 +14,7 @@ val _ = Hol_datatype`
                    word32 set => (word32 -> word8) => (* memory       *)
                    word32                             (* pc           *)`
 
-val M0_ASSERT_def = Define`
+Definition M0_ASSERT_def:
    M0_ASSERT (M0_ASSERTION n z c v count dreg reg dmem mem pc) =
      m0_PSR_N n *
      m0_PSR_Z z *
@@ -23,7 +23,9 @@ val M0_ASSERT_def = Define`
      m0_COUNT count *
      m0_REGISTERS dreg reg *
      m0_MEMORY dmem mem *
-     m0_PC pc`
+     m0_PC pc
+End
 
-val L3_M0_def = Define `L3_M0 = (M0_ASSERT, M0_MODEL)`
+Definition L3_M0_def:   L3_M0 = (M0_ASSERT, M0_MODEL)
+End
 

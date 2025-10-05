@@ -24,10 +24,10 @@ val _ = numLib.temp_prefer_num();
 (* Iterative multiplication on nums                                          *)
 (*---------------------------------------------------------------------------*)
 
-val MultIter_def =
- Define
-   `MultIter (m:num,n:num,acc:num) =
-       if m = 0 then (0,n,acc) else MultIter(m-1,n,n + acc)`;
+Definition MultIter_def:
+    MultIter (m:num,n:num,acc:num) =
+       if m = 0 then (0,n,acc) else MultIter(m-1,n,n + acc)
+End
 
 val MultIter_ind = fetch "-" "MultIter_ind";
 
@@ -48,9 +48,9 @@ val MultIterThm =                 (* proof adapted from similar one from KXS *)
 (* Create an implementation of a multiplier from MultIter                    *)
 (*****************************************************************************)
 
-val Mult_def =
- Define
-  `Mult(m,n) = SND(SND(MultIter(m,n,0)))`;
+Definition Mult_def:
+   Mult(m,n) = SND(SND(MultIter(m,n,0)))
+End
 
 (*****************************************************************************)
 (* Verify Mult is actually multiplication                                    *)
@@ -67,10 +67,10 @@ val MultThm =
 (* Iterative multiplication on word32s                                       *)
 (*---------------------------------------------------------------------------*)
 
-val Mult32Iter_def =
- Define
-   `Mult32Iter (m:word32,n:word32,acc) =
-       if m = 0w then (0w:word32,n,acc) else Mult32Iter(m-1w,n,n + acc)`;
+Definition Mult32Iter_def:
+    Mult32Iter (m:word32,n:word32,acc) =
+       if m = 0w then (0w:word32,n,acc) else Mult32Iter(m-1w,n,n + acc)
+End
 
 val Mult32Iter_ind = fetch "-" "Mult32Iter_ind";
 
@@ -78,7 +78,8 @@ val Mult32Iter_ind = fetch "-" "Mult32Iter_ind";
 (* Create an implementation of a multiplier from Mult32Iter                  *)
 (*****************************************************************************)
 
-val Mult32_def = Define `Mult32(m,n) = SND(SND(Mult32Iter(m,n,0w)))`;
+Definition Mult32_def:   Mult32(m,n) = SND(SND(Mult32Iter(m,n,0w)))
+End
 
 (*---------------------------------------------------------------------------*)
 (* Equivalence of MultIter and Mult32Iter                                    *)
@@ -185,10 +186,10 @@ val MultAbsCor2 =
 (* Iterative factorial on nums                                               *)
 (*---------------------------------------------------------------------------*)
 
-val FactIter_def =
- Define
-   `FactIter (n,acc) =
-       if n = 0 then (n,acc) else FactIter (n - 1,n * acc)`;
+Definition FactIter_def:
+    FactIter (n,acc) =
+       if n = 0 then (n,acc) else FactIter (n - 1,n * acc)
+End
 
 val FactIter_ind = fetch "-" "FactIter_ind";
 
@@ -209,10 +210,10 @@ val FactIterThm =                                       (* proof from KXS *)
 (* Iterative factorial on word32                                             *)
 (*****************************************************************************)
 
-val Fact32Iter_def =
- Define
-   `Fact32Iter (n,acc) =
-       if n = 0w then (n,acc) else Fact32Iter(n-1w, Mult32(n,acc))`;
+Definition Fact32Iter_def:
+    Fact32Iter (n,acc) =
+       if n = 0w then (n,acc) else Fact32Iter(n-1w, Mult32(n,acc))
+End
 
 val FACT_0 =
  Q.store_thm
@@ -327,9 +328,9 @@ val FactIterAbsCor =
 (* Implement a function Fact32 to compute SND(Fact32Iter (n,1))              *)
 (*****************************************************************************)
 
-val Fact32_def =
- Define
-  `Fact32 n = SND(Fact32Iter (n,1w))`;
+Definition Fact32_def:
+   Fact32 n = SND(Fact32Iter (n,1w))
+End
 
 val FactAbs =
  Q.store_thm

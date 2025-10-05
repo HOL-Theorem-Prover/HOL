@@ -22,14 +22,16 @@ Type device[pp] =
 
 (* Devices can be composed *)
 
-val ACCESS_ADDRESS_def = Define `
+Definition ACCESS_ADDRESS_def:
   (ACCESS_ADDRESS (MEM_READ w) = w) /\
-  (ACCESS_ADDRESS (MEM_WRITE w v) = w)`;
+  (ACCESS_ADDRESS (MEM_WRITE w v) = w)
+End
 
-val FILTER_ACCESSES_def = Define `
-  FILTER_ACCESSES d = FILTER (\x. (ACCESS_ADDRESS x) IN d)`;
+Definition FILTER_ACCESSES_def:
+  FILTER_ACCESSES d = FILTER (\x. (ACCESS_ADDRESS x) IN d)
+End
 
-val COMPOSE_DEVICES_def = Define `
+Definition COMPOSE_DEVICES_def:
   COMPOSE_DEVICES ((a1,m1,n1,i1):'a device) ((a2,m2,n2,i2):'b device) =
      (* the combined addresses are the UNION of the two address sets *)
     ((\(x,y). a1 x UNION a2 y),
@@ -41,80 +43,94 @@ val COMPOSE_DEVICES_def = Define `
                             n2 t (FILTER_ACCESSES (a2 y1) l) y1 y2),
      (* the invariant is the conjunction of part invariants and the condition
         that the space used by these devices does not overlap. *)
-     (\(t,(x,y)). DISJOINT (a1 x) (a2 y) /\ i1 (t,x) /\ i2 (t,y))):('a # 'b) device`
+     (\(t,(x,y)). DISJOINT (a1 x) (a2 y) /\ i1 (t,x) /\ i2 (t,y))):('a # 'b) device
+End
 
 
 (* The most basic device: the EMPTY_DEVICE *)
 
-val EMPTY_DEVICE_def = Define `
-  (EMPTY_DEVICE:unit device) = ((\x. {}),(\x y. ARB),(\n l x y. T),(\x. T))`;
+Definition EMPTY_DEVICE_def:
+  (EMPTY_DEVICE:unit device) = ((\x. {}),(\x y. ARB),(\n l x y. T),(\x. T))
+End
 
 
 (* RAM device *)
 
-val domain_def = Define `domain r = { a | ~(r a = NONE) }`;
+Definition domain_def:   domain r = { a | ~(r a = NONE) }
+End
 
-val UPDATE_RAM_def = Define `
+Definition UPDATE_RAM_def:
   (UPDATE_RAM [] ram = ram) /\
   (UPDATE_RAM ((MEM_READ w)::xs) ram = UPDATE_RAM xs ram) /\
-  (UPDATE_RAM ((MEM_WRITE w v)::xs) ram = UPDATE_RAM xs (\a. if a = w then SOME v else ram a))`;
+  (UPDATE_RAM ((MEM_WRITE w v)::xs) ram = UPDATE_RAM xs (\a. if a = w then SOME v else ram a))
+End
 
-val RAM_NEXT_def = Define `
-  RAM_NEXT (t:num) l (r1:word32 -> word8 option) r2 = (r2 = UPDATE_RAM l r1)`;
+Definition RAM_NEXT_def:
+  RAM_NEXT (t:num) l (r1:word32 -> word8 option) r2 = (r2 = UPDATE_RAM l r1)
+End
 
-val RAM_DEVICE_def = Define `
+Definition RAM_DEVICE_def:
   (RAM_DEVICE:(word32 -> word8 option) device) =
-    (domain, (\m addr. THE (m addr)), RAM_NEXT, (\x. T))`;
+    (domain, (\m addr. THE (m addr)), RAM_NEXT, (\x. T))
+End
 
 
 (* ROM device - disallows write accesses *)
 
-val IS_WRITE_def = Define `
+Definition IS_WRITE_def:
   (IS_WRITE (MEM_READ w) = F) /\
-  (IS_WRITE (MEM_WRITE w v) = T)`;
+  (IS_WRITE (MEM_WRITE w v) = T)
+End
 
 Definition ROM_NEXT_def:
   ROM_NEXT (t:num) l r1 r2 <=> (r2 = r1) /\ (FILTER IS_WRITE l = [])
 End
 
-val ROM_DEVICE_def = Define `
+Definition ROM_DEVICE_def:
   (ROM_DEVICE:(word32 -> word8 option) device) =
-    (domain, (\m addr. THE (m addr)), ROM_NEXT, (\x. T))`;
+    (domain, (\m addr. THE (m addr)), ROM_NEXT, (\x. T))
+End
 
 
 (* UART0 device *)
 
-val UART0_DEVICE_def = Define `
+Definition UART0_DEVICE_def:
   (UART0_DEVICE:uart0_state device) =
-    ((\x. UART0_addresses), UART0_read, UART0_NEXT, \(x,y). uart0_ok x y)`;
+    ((\x. UART0_addresses), UART0_read, UART0_NEXT, \(x,y). uart0_ok x y)
+End
 
 
 (* The collection of all peripherals *)
 
-val ALL_PERIPHERALS_def = Define `
+Definition ALL_PERIPHERALS_def:
   ALL_PERIPHERALS =
    (COMPOSE_DEVICES (ROM_DEVICE)
    (COMPOSE_DEVICES (RAM_DEVICE)
    (COMPOSE_DEVICES (UART0_DEVICE)
-                    (EMPTY_DEVICE))))`;
+                    (EMPTY_DEVICE))))
+End
 
-val PERIPHERALS_NEXT_def = Define `
+Definition PERIPHERALS_NEXT_def:
   PERIPHERALS_NEXT =
     let (addresses,mem,next,inv) = ALL_PERIPHERALS in
       \l (t1,x) (t2,y).
         next t1 l x y /\ (t2 = t1 + 1) /\
-        (FILTER_ACCESSES (UNIV DIFF addresses x) l = [])`;
+        (FILTER_ACCESSES (UNIV DIFF addresses x) l = [])
+End
 
-val PERIPHERALS_OK_def = Define `
+Definition PERIPHERALS_OK_def:
   PERIPHERALS_OK =
-    let (addresses,mem,next,inv) = ALL_PERIPHERALS in inv`;
+    let (addresses,mem,next,inv) = ALL_PERIPHERALS in inv
+End
 
-val MEMORY_IMAGE_def = Define `
+Definition MEMORY_IMAGE_def:
   MEMORY_IMAGE (t:num,s) =
-    let (addresses,mem,next,inv) = ALL_PERIPHERALS in mem s`;
+    let (addresses,mem,next,inv) = ALL_PERIPHERALS in mem s
+End
 
-val PENDING_INTERRUPT_def = Define `
-  PENDING_INTERRUPT p1 = NoInterrupt`;
+Definition PENDING_INTERRUPT_def:
+  PENDING_INTERRUPT p1 = NoInterrupt
+End
 
 val peripherals_type =
   ``PERIPHERALS_NEXT`` |> type_of |> dest_type |> snd |> el 2
@@ -122,15 +138,19 @@ val peripherals_type =
 
 val _ = type_abbrev ("peripherals", peripherals_type)
 
-val PER_READ_ROM_def = Define `PER_READ_ROM ((t,x,y):peripherals) a = THE (x a)`;
-val PER_READ_RAM_def = Define `PER_READ_RAM ((t,x,y,z):peripherals) a = THE (y a)`;
-val PER_READ_UART_def = Define `PER_READ_UART ((t,x,y,u,z):peripherals) a = u`;
+Definition PER_READ_ROM_def:   PER_READ_ROM ((t,x,y):peripherals) a = THE (x a)
+End
+Definition PER_READ_RAM_def:   PER_READ_RAM ((t,x,y,z):peripherals) a = THE (y a)
+End
+Definition PER_READ_UART_def:   PER_READ_UART ((t,x,y,u,z):peripherals) a = u
+End
 
 
 (* The overall next-state relation *)
 
-val LOAD_IMAGE_def = Define `
-  LOAD_IMAGE (s:arm_state) m = s with <|memory := m; accesses := []|>`;
+Definition LOAD_IMAGE_def:
+  LOAD_IMAGE (s:arm_state) m = s with <|memory := m; accesses := []|>
+End
 
 Definition LPC_NEXT_def:
   LPC_NEXT (s1,p1) (s2,p2) <=>

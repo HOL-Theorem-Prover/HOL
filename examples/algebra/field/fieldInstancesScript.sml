@@ -130,7 +130,7 @@ val trivial_field_def = Define`
 `;
 -- Why? *)
 
-val trivial_field_def = Define`
+Definition trivial_field_def:
   (trivial_field zero_elt one_elt) : 'a field =
    <| carrier := {zero_elt; one_elt};
       sum := <| carrier := {zero_elt; one_elt};
@@ -146,7 +146,7 @@ val trivial_field_def = Define`
                                 else if y = zero_elt then zero_elt
                                 else one_elt) |>
     |>
-`;
+End
 
 (* Theorem: {|0|, |1|} is indeed a field. *)
 (* Proof: by definition, the field tables are:
@@ -181,13 +181,13 @@ val trivial_field = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Galois Field *)
-val GF_def = zDefine`
+Definition GF_def[nocompute]:
   GF p :num field =
    <| carrier := { n | n < p };
           sum := add_mod p;
          prod := (mult_mod p including 0)
     |>
-`;
+End
 (* Use of zDefine to avoid incorporating into computeLib, by default. *)
 
 (*

@@ -10,7 +10,8 @@ Theory SAL
 
 val _ = Hol_datatype `LABEL = L of num`;
 
-val inc_def = Define `inc (L i) = L (i + 1)`;
+Definition inc_def:   inc (L i) = L (i + 1)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Tail Recursion                                                            *)

@@ -57,54 +57,66 @@ val _ = temp_overload_on
 
 (* ------------------------------------------------------------------------ *)
 
-val unaligned_support_def = Define`
+Definition unaligned_support_def:
   unaligned_support ii =
-    read_info ii >>= (\info. constT (info.unaligned_support))`;
+    read_info ii >>= (\info. constT (info.unaligned_support))
+End
 
-val dsp_support_def    = Define`
-  dsp_support = COMPL {ARMv4; ARMv4T; ARMv5T}`;
+Definition dsp_support_def:
+  dsp_support = COMPL {ARMv4; ARMv4T; ARMv5T}
+End
 
-val kernel_support_def = Define`
-  kernel_support = {a | (a = ARMv6K) \/ version_number a >= 7}`;
+Definition kernel_support_def:
+  kernel_support = {a | (a = ARMv6K) \/ version_number a >= 7}
+End
 
-val arch_version_def = Define`
-  arch_version ii = seqT (read_arch ii) (constT o version_number)`;
+Definition arch_version_def:
+  arch_version ii = seqT (read_arch ii) (constT o version_number)
+End
 
-val read_reg_literal_def = Define`
+Definition read_reg_literal_def:
   read_reg_literal ii n =
     if n = 15w then
       read_reg ii 15w >>= (\pc. constT (align(pc,4)))
     else
-      read_reg ii n`;
+      read_reg ii n
+End
 
-val read_flags_def = Define`
+Definition read_flags_def:
   read_flags ii =
-    read_cpsr ii >>= (\cpsr. constT (cpsr.N,cpsr.Z,cpsr.C,cpsr.V))`;
+    read_cpsr ii >>= (\cpsr. constT (cpsr.N,cpsr.Z,cpsr.C,cpsr.V))
+End
 
-val write_flags_def = Define`
+Definition write_flags_def:
   write_flags ii (n,z,c,v) =
     read_cpsr ii >>=
-    (\cpsr. write_cpsr ii (cpsr with <| N := n; Z := z; C := c; V := v |>))`;
+    (\cpsr. write_cpsr ii (cpsr with <| N := n; Z := z; C := c; V := v |>))
+End
 
-val read_cflag_def = Define`
-  read_cflag ii = read_flags ii >>= (\(n,z,c,v). constT c)`;
+Definition read_cflag_def:
+  read_cflag ii = read_flags ii >>= (\(n,z,c,v). constT c)
+End
 
-val set_q_def = Define`
+Definition set_q_def:
   set_q ii =
-    read_cpsr ii >>= (\cpsr. write_cpsr ii (cpsr with Q := T))`;
+    read_cpsr ii >>= (\cpsr. write_cpsr ii (cpsr with Q := T))
+End
 
-val read_ge_def = Define`
-  read_ge ii = read_cpsr ii >>= (\cpsr. constT (cpsr.GE))`;
+Definition read_ge_def:
+  read_ge ii = read_cpsr ii >>= (\cpsr. constT (cpsr.GE))
+End
 
-val write_ge_def = Define`
+Definition write_ge_def:
   write_ge ii ge =
-    read_cpsr ii >>= (\cpsr. write_cpsr ii (cpsr with GE := ge))`;
+    read_cpsr ii >>= (\cpsr. write_cpsr ii (cpsr with GE := ge))
+End
 
-val write_e_def = Define`
+Definition write_e_def:
   write_e ii e =
-    read_cpsr ii >>= (\cpsr. write_cpsr ii (cpsr with E := e))`;
+    read_cpsr ii >>= (\cpsr. write_cpsr ii (cpsr with E := e))
+End
 
-val IT_advance_def = Define`
+Definition IT_advance_def:
   IT_advance ii =
     read_arch ii >>=
     (\arch.
@@ -114,9 +126,10 @@ val IT_advance_def = Define`
            if (cpsr.IT = 0w) \/ cpsr.T then
              write_cpsr ii (cpsr with IT := ITAdvance cpsr.IT)
            else
-             errorT "IT_advance: unpredictable")))`;
+             errorT "IT_advance: unpredictable")))
+End
 
-val cpsr_write_by_instr_def = zDefine`
+Definition cpsr_write_by_instr_def[nocompute]:
   cpsr_write_by_instr ii (value:word32, bytemask:word4, affect_execstate:bool) =
     let value_mode = (4 >< 0) value in
       (current_mode_is_priviledged ii ||| is_secure ii ||| read_nsacr ii |||
@@ -153,9 +166,10 @@ val cpsr_write_by_instr_def = zDefine`
                                           priviledged
                  then value ' i else b) (encode_psr cpsr)
               in
-                write_cpsr ii (decode_psr cpsr)))`;
+                write_cpsr ii (decode_psr cpsr)))
+End
 
-val spsr_write_by_instr_def = zDefine`
+Definition spsr_write_by_instr_def[nocompute]:
   spsr_write_by_instr ii (value:word32, bytemask:word4) =
     (current_mode_is_user_or_system ii ||| bad_mode ii ((4 >< 0) value)) >>=
     (\(user_or_system,badmode).
@@ -171,15 +185,17 @@ val spsr_write_by_instr_def = zDefine`
                                  i <= 7  /\ bytemask ' 0
                    then value ' i else b) (encode_psr spsr)
               in
-                write_spsr ii (decode_psr spsr)))`;
+                write_spsr ii (decode_psr spsr)))
+End
 
-val integer_zero_divide_trapping_enabled_def = Define`
+Definition integer_zero_divide_trapping_enabled_def:
   integer_zero_divide_trapping_enabled ii =
-    read_sctlr ii >>= (\sctlr. constT sctlr.DZ)`;
+    read_sctlr ii >>= (\sctlr. constT sctlr.DZ)
+End
 
 (* ------------------------------------------------------------------------ *)
 
-val branch_write_pc_def = Define`
+Definition branch_write_pc_def:
   branch_write_pc ii (address:word32) =
     current_instr_set ii >>=
     (\iset.
@@ -192,9 +208,10 @@ val branch_write_pc_def = Define`
            else
              branch_to ii ((31 '' 2) address))
        else
-         branch_to ii ((31 '' 1) address))`;
+         branch_to ii ((31 '' 1) address))
+End
 
-val bx_write_pc_def = Define`
+Definition bx_write_pc_def:
   bx_write_pc ii (address:word32) =
     current_instr_set ii >>=
     (\iset.
@@ -211,29 +228,32 @@ val bx_write_pc_def = Define`
           select_instr_set ii InstrSet_ARM >>=
           (\u. branch_to ii address)
         else (* address<1:0> = '10' *)
-          errorT "bx_write_pc: unpredictable")`;
+          errorT "bx_write_pc: unpredictable")
+End
 
-val load_write_pc_def = Define`
+Definition load_write_pc_def:
   load_write_pc ii (address:word32) =
     arch_version ii >>=
     (\version.
        if version >= 5 then
          bx_write_pc ii address
        else
-         branch_write_pc ii address)`;
+         branch_write_pc ii address)
+End
 
-val alu_write_pc_def = Define`
+Definition alu_write_pc_def:
   alu_write_pc ii (address:word32) =
     (arch_version ii ||| current_instr_set ii) >>=
     (\(version,iset).
        if version >= 7 /\ (iset = InstrSet_ARM) then
          bx_write_pc ii address
        else
-         branch_write_pc ii address)`;
+         branch_write_pc ii address)
+End
 
 (* ------------------------------------------------------------------------ *)
 
-val decode_imm_shift_def = Define`
+Definition decode_imm_shift_def:
   decode_imm_shift (type:word2, imm5:word5) =
     case type
     of 0b00w => (SRType_LSL, w2n imm5)
@@ -242,17 +262,19 @@ val decode_imm_shift_def = Define`
      | 0b11w => if imm5 = 0w then
                   (SRType_RRX, 1)
                 else
-                  (SRType_ROR, w2n imm5)`;
+                  (SRType_ROR, w2n imm5)
+End
 
-val decode_reg_shift_def = Define`
+Definition decode_reg_shift_def:
   decode_reg_shift (type:word2) =
     case type
     of 0b00w => SRType_LSL
      | 0b01w => SRType_LSR
      | 0b10w => SRType_ASR
-     | 0b11w => SRType_ROR`;
+     | 0b11w => SRType_ROR
+End
 
-val shift_c_def = Define`
+Definition shift_c_def:
   shift_c (value:'a word, type:SRType, amount:num, carry_in:bool) =
     if (type = SRType_RRX) /\ (amount <> 1) then
       errorT "shift_c: RRX amount not 1"
@@ -266,27 +288,31 @@ val shift_c_def = Define`
             | SRType_LSR => LSR_C (value, amount)
             | SRType_ASR => ASR_C (value, amount)
             | SRType_ROR => ROR_C (value, amount)
-            | SRType_RRX => RRX_C (value, carry_in)))`;
+            | SRType_RRX => RRX_C (value, carry_in)))
+End
 
-val shift_def = Define`
+Definition shift_def:
   shift (value:'a word, type:SRType, amount:num, carry_in:bool) =
     (shift_c (value, type, amount, carry_in)) >>=
-    (\r. constT (FST r))`;
+    (\r. constT (FST r))
+End
 
-val arm_expand_imm_c_def = Define`
+Definition arm_expand_imm_c_def:
   arm_expand_imm_c (imm12:word12, carry_in:bool) =
     shift_c
       ((7 >< 0) imm12 : word32, SRType_ROR,
-       2 * w2n ((11 -- 8) imm12), carry_in)`;
+       2 * w2n ((11 -- 8) imm12), carry_in)
+End
 
-val arm_expand_imm_def = Define`
+Definition arm_expand_imm_def:
   arm_expand_imm ii (imm12:word12) =
     read_cflag ii >>=
     (\c.
       arm_expand_imm_c (imm12,c) >>=
-      (\(imm32,c). constT imm32))`;
+      (\(imm32,c). constT imm32))
+End
 
-val thumb_expand_imm_c_def = Define`
+Definition thumb_expand_imm_c_def:
   thumb_expand_imm_c (imm12:word12, carry_in:bool) : (word32 # bool) M =
     if (11 -- 10) imm12 = 0b00w then
       let imm8 = (7 >< 0) imm12 : word8 in
@@ -310,7 +336,8 @@ val thumb_expand_imm_c_def = Define`
                constT (word32 [imm8; imm8; imm8; imm8], carry_in)
     else
       let unrotated_value = (7 :+ T) ((6 >< 0) imm12) in
-        constT (ROR_C (unrotated_value, w2n ((11 -- 7) imm12)))`;
+        constT (ROR_C (unrotated_value, w2n ((11 -- 7) imm12)))
+End
 
 (*
 val thumb_expand_imm_def = Define`
@@ -323,7 +350,7 @@ val thumb_expand_imm_def = Define`
 
 (* ------------------------------------------------------------------------ *)
 
-val address_mode1_def = Define`
+Definition address_mode1_def:
   (address_mode1 ii thumb2 (Mode1_immediate imm12) =
      read_cflag ii >>=
      (\c.
@@ -341,9 +368,10 @@ val address_mode1_def = Define`
      (\(rm,rs,c).
         let shift_t = decode_reg_shift type
         and shift_n = w2n ((7 -- 0) rs) in
-          shift_c (rm, shift_t, shift_n, c)))`;
+          shift_c (rm, shift_t, shift_n, c)))
+End
 
-val address_mode2_def = Define`
+Definition address_mode2_def:
   (address_mode2 ii indx add rn (Mode2_immediate imm12) =
      let imm32 = w2w imm12 in
      let offset_addr = if add then rn + imm32 else rn - imm32 in
@@ -355,9 +383,10 @@ val address_mode2_def = Define`
         shift (rm, shift_t, shift_n, c) >>=
         (\imm32.
            let offset_addr = if add then rn + imm32 else rn - imm32 in
-             constT (offset_addr, if indx then offset_addr else rn))))`;
+             constT (offset_addr, if indx then offset_addr else rn))))
+End
 
-val address_mode3_def = Define`
+Definition address_mode3_def:
   (address_mode3 ii indx add rn (Mode3_immediate imm12) =
     let imm32 = w2w imm12 in
     let offset_addr = if add then rn + imm32 else rn - imm32 in
@@ -368,17 +397,19 @@ val address_mode3_def = Define`
         shift (rm, SRType_LSL, w2n imm2, c) >>=
         (\imm32.
            let offset_addr = if add then rn + imm32 else rn - imm32 in
-             constT (offset_addr, if indx then offset_addr else rn))))`;
+             constT (offset_addr, if indx then offset_addr else rn))))
+End
 
-val address_mode5_def = Define`
+Definition address_mode5_def:
   address_mode5 indx add rn (imm8:word8) =
     let imm32 : word32 = (w2w imm8) << 2 in
     let offset_addr = if add then rn + imm32 else rn - imm32 in
-      constT (offset_addr, if indx then offset_addr else rn)`;
+      constT (offset_addr, if indx then offset_addr else rn)
+End
 
 (* ------------------------------------------------------------------------ *)
 
-val data_processing_alu_def = Define`
+Definition data_processing_alu_def:
   data_processing_alu (opc:word4) (a:word32) b c =
     case opc
     of 0b0000w => ( a && b ,  ARB, ARB)     (* AND *)
@@ -396,9 +427,10 @@ val data_processing_alu_def = Define`
      | 0b1100w => ( a || b ,  ARB , ARB)    (* ORR *)
      | 0b1101w => (      b ,  ARB , ARB)    (* MOV *)
      | 0b1110w => ( a && ~b , ARB , ARB)    (* BIC *)
-     | _       => ( a || ~b , ARB , ARB)`;  (* MVN/ORN *)
+     | _       => ( a || ~b , ARB , ARB)
+End(* MVN/ORN *)
 
-val data_processing_thumb2_unpredictable_def = Define`
+Definition data_processing_thumb2_unpredictable_def:
   (data_processing_thumb2_unpredictable
      (Data_Processing opc setflags n d (Mode1_immediate imm12)) =
    case opc
@@ -460,12 +492,13 @@ val data_processing_thumb2_unpredictable_def = Define`
   (data_processing_thumb2_unpredictable
      (Data_Processing opc setflags n d
         (Mode1_register_shifted_register s typ m)) =
-     opc <> 0b1101w \/ BadReg d \/ BadReg s \/ BadReg m)`;
+     opc <> 0b1101w \/ BadReg d \/ BadReg s \/ BadReg m)
+End
 
 val _ = temp_overload_on ("top_half", ``( 31 >< 16 ) : word32 -> word16``);
 val _ = temp_overload_on ("bot_half", ``( 15 >< 0  ) : word32 -> word16``);
 
-val signed_parallel_add_sub_16_def = Define`
+Definition signed_parallel_add_sub_16_def:
   signed_parallel_add_sub_16 op2 rn rm =
     let bn = SInt (bot_half rn) and bm = SInt (bot_half rm)
     and tn = SInt (top_half rn) and tm = SInt (top_half rm)
@@ -474,51 +507,59 @@ val signed_parallel_add_sub_16_def = Define`
       of Parallel_add_16           => (bn + bm, tn + tm)
        | Parallel_add_sub_exchange => (bn - tm, tn + bm)
        | Parallel_sub_add_exchange => (bn + tm, tn - bm)
-       | Parallel_sub_16           => (bn - bm, tn - tm)`;
+       | Parallel_sub_16           => (bn - bm, tn - tm)
+End
 
-val signed_normal_add_sub_16_def = Define`
+Definition signed_normal_add_sub_16_def:
   signed_normal_add_sub_16 op2 rn rm : word32 # word4 option =
     let (r1,r2) = signed_parallel_add_sub_16 op2 rn rm in
     let ge1 = if r1 >= 0i then 0b11w else 0b00w : word2
     and ge2 = if r2 >= 0i then 0b11w else 0b00w : word2
     in
-      ((i2w r2 : word16) @@ (i2w r1 : word16), SOME (ge2 @@ ge1))`;
+      ((i2w r2 : word16) @@ (i2w r1 : word16), SOME (ge2 @@ ge1))
+End
 
-val signed_saturating_add_sub_16_def = Define`
+Definition signed_saturating_add_sub_16_def:
   signed_saturating_add_sub_16 op2 rn rm : word32 # word4 option =
     let (r1,r2) = signed_parallel_add_sub_16 op2 rn rm in
-      ((signed_sat (r2,16) : word16) @@ (signed_sat (r1,16) : word16), NONE)`;
+      ((signed_sat (r2,16) : word16) @@ (signed_sat (r1,16) : word16), NONE)
+End
 
-val signed_halving_add_sub_16_def = Define`
+Definition signed_halving_add_sub_16_def:
   signed_halving_add_sub_16 op2 rn rm : word32 # word4 option =
     let (r1,r2) = signed_parallel_add_sub_16 op2 rn rm in
-      ((i2w (r2 / 2) : word16) @@ (i2w (r1 / 2) : word16), NONE)`;
+      ((i2w (r2 / 2) : word16) @@ (i2w (r1 / 2) : word16), NONE)
+End
 
-val signed_parallel_add_sub_8_def = Define`
+Definition signed_parallel_add_sub_8_def:
   signed_parallel_add_sub_8 op2 rn rm =
     let n = MAP SInt (bytes (rn,4))
     and m = MAP SInt (bytes (rm,4))
     in
       case op2 of Parallel_add_8 => MAP (UNCURRY $+) (ZIP (n,m))
-                | Parallel_sub_8 => MAP (UNCURRY $-) (ZIP (n,m))`;
+                | Parallel_sub_8 => MAP (UNCURRY $-) (ZIP (n,m))
+End
 
-val signed_normal_add_sub_8_def = Define`
+Definition signed_normal_add_sub_8_def:
   signed_normal_add_sub_8 op2 rn rm : word32 # word4 option =
     let r = signed_parallel_add_sub_8 op2 rn rm in
     let ge = FCP i. EL i r >= 0i in
-      (word32 (MAP i2w r), SOME ge)`;
+      (word32 (MAP i2w r), SOME ge)
+End
 
-val signed_saturating_add_sub_8_def = Define`
+Definition signed_saturating_add_sub_8_def:
   signed_saturating_add_sub_8 op2 rn rm : word32 # word4 option =
     (word32 (MAP (\i. signed_sat (i,8)) (signed_parallel_add_sub_8 op2 rn rm)),
-     NONE)`;
+     NONE)
+End
 
-val signed_halving_add_sub_8_def = Define`
+Definition signed_halving_add_sub_8_def:
   signed_halving_add_sub_8 op2 rn rm : word32 # word4 option =
    (word32 (MAP (\i. i2w (i / 2))
-      (signed_parallel_add_sub_8 op2 rn rm)), NONE)`;
+      (signed_parallel_add_sub_8 op2 rn rm)), NONE)
+End
 
-val unsigned_parallel_add_sub_16_def = Define`
+Definition unsigned_parallel_add_sub_16_def:
   unsigned_parallel_add_sub_16 op2 rn rm =
     let bn = UInt (bot_half rn) and bm = UInt (bot_half rm)
     and tn = UInt (top_half rn) and tm = UInt (top_half rm)
@@ -527,9 +568,10 @@ val unsigned_parallel_add_sub_16_def = Define`
       of Parallel_add_16           => (bn + bm, tn + tm)
        | Parallel_add_sub_exchange => (bn - tm, tn + bm)
        | Parallel_sub_add_exchange => (bn + tm, tn - bm)
-       | Parallel_sub_16           => (bn - bm, tn - tm)`;
+       | Parallel_sub_16           => (bn - bm, tn - tm)
+End
 
-val unsigned_normal_add_sub_16_def = Define`
+Definition unsigned_normal_add_sub_16_def:
   unsigned_normal_add_sub_16 op2 rn rm : word32 # word4 option  =
     let (r1,r2) = unsigned_parallel_add_sub_16 op2 rn rm in
     let (ge1:word2,ge2:word2) =
@@ -547,48 +589,55 @@ val unsigned_normal_add_sub_16_def = Define`
               (if r1 >= 0i       then 0b11w else 0b00w,
                if r2 >= 0i       then 0b11w else 0b00w)
     in
-      ((i2w r2 : word16) @@ (i2w r1 : word16), SOME (ge2 @@ ge1))`;
+      ((i2w r2 : word16) @@ (i2w r1 : word16), SOME (ge2 @@ ge1))
+End
 
-val unsigned_saturating_add_sub_16_def = Define`
+Definition unsigned_saturating_add_sub_16_def:
   unsigned_saturating_add_sub_16 op2 rn rm : word32 # word4 option =
     let (r1,r2) = unsigned_parallel_add_sub_16 op2 rn rm in
       ((unsigned_sat (r2,16) : word16) @@ (unsigned_sat (r1,16) : word16),
-       NONE)`;
+       NONE)
+End
 
-val unsigned_halving_add_sub_16_def = Define`
+Definition unsigned_halving_add_sub_16_def:
   unsigned_halving_add_sub_16 op2 rn rm : word32 # word4 option =
     let (r1,r2) = unsigned_parallel_add_sub_16 op2 rn rm in
-      ((i2w (r2 / 2) : word16) @@ (i2w (r1 / 2) : word16), NONE)`;
+      ((i2w (r2 / 2) : word16) @@ (i2w (r1 / 2) : word16), NONE)
+End
 
-val unsigned_parallel_add_sub_8_def = Define`
+Definition unsigned_parallel_add_sub_8_def:
   unsigned_parallel_add_sub_8 op2 rn rm =
     let n = MAP UInt (bytes (rn,4))
     and m = MAP UInt (bytes (rm,4))
     in
       case op2 of Parallel_add_8 => MAP (UNCURRY $+) (ZIP (n,m))
-                | Parallel_sub_8 => MAP (UNCURRY $-) (ZIP (n,m))`;
+                | Parallel_sub_8 => MAP (UNCURRY $-) (ZIP (n,m))
+End
 
-val unsigned_normal_add_sub_8_def = Define`
+Definition unsigned_normal_add_sub_8_def:
   unsigned_normal_add_sub_8 op2 rn rm : word32 # word4 option =
     let r = unsigned_parallel_add_sub_8 op2 rn rm
     and ge_lim = case op2 of Parallel_add_8 => 0x100i
                            | Parallel_sub_8 => 0i
     in
     let ge:word4 = FCP i. EL i r >= ge_lim in
-      (word32 (MAP i2w r), SOME ge)`;
+      (word32 (MAP i2w r), SOME ge)
+End
 
-val unsigned_saturating_add_sub_8_def = Define`
+Definition unsigned_saturating_add_sub_8_def:
   unsigned_saturating_add_sub_8 op2 rn rm : word32 # word4 option =
     (word32
        (MAP (\i. unsigned_sat (i,8))
-          (unsigned_parallel_add_sub_8 op2 rn rm)), NONE)`;
+          (unsigned_parallel_add_sub_8 op2 rn rm)), NONE)
+End
 
-val unsigned_halving_add_sub_8_def = Define`
+Definition unsigned_halving_add_sub_8_def:
   unsigned_halving_add_sub_8 op2 rn rm : word32 # word4 option =
     (word32 (MAP (\i. i2w (i / 2)) (unsigned_parallel_add_sub_8 op2 rn rm)),
-     NONE)`;
+     NONE)
+End
 
-val parallel_add_sub_def = Define`
+Definition parallel_add_sub_def:
   parallel_add_sub u (op1,op2) rn rm =
     case (u,op1,op2)
     of (F,Parallel_normal,Parallel_add_8) =>
@@ -626,11 +675,12 @@ val parallel_add_sub_def = Define`
      | (T,Parallel_halving,Parallel_sub_8) =>
          unsigned_halving_add_sub_8 op2 rn rm
      | (T,Parallel_halving,_) =>
-         unsigned_halving_add_sub_16 op2 rn rm`;
+         unsigned_halving_add_sub_16 op2 rn rm
+End
 
 (* ------------------------------------------------------------------------ *)
 
-val barrier_option_def = Define`
+Definition barrier_option_def:
   barrier_option (option:word4) =
     case option
     of 0b0010w => (MBReqDomain_OuterShareable, MBReqTypes_Writes)
@@ -640,11 +690,12 @@ val barrier_option_def = Define`
      | 0b1010w => (MBReqDomain_InnerShareable, MBReqTypes_Writes)
      | 0b1011w => (MBReqDomain_InnerShareable, MBReqTypes_All)
      | 0b1110w => (MBReqDomain_FullSystem,     MBReqTypes_Writes)
-     | _       => (MBReqDomain_FullSystem,     MBReqTypes_All)`;
+     | _       => (MBReqDomain_FullSystem,     MBReqTypes_All)
+End
 
 (* ------------------------------------------------------------------------ *)
 
-val exc_vector_base_def = Define`
+Definition exc_vector_base_def:
   exc_vector_base ii : word32 M =
     read_sctlr ii >>=
     (\sctlr.
@@ -656,9 +707,10 @@ val exc_vector_base_def = Define`
             if have_security_ext then
               read_vbar ii
             else
-              constT 0w)))`;
+              constT 0w)))
+End
 
-val take_reset_def = Define`
+Definition take_reset_def:
   take_reset ii =
     (exc_vector_base ii ||| have_security_ext ii |||
      read_cpsr ii ||| read_scr ii ||| read_sctlr ii) >>=
@@ -674,9 +726,10 @@ val take_reset_def = Define`
                   IT := 0b00000000w;
                   J := F; T := sctlr.TE;
                   E := sctlr.EE |>))) |||
-          branch_to ii (ExcVectorBase + 0w)) >>= unit2))`;
+          branch_to ii (ExcVectorBase + 0w)) >>= unit2))
+End
 
-val take_undef_instr_exception_def = Define`
+Definition take_undef_instr_exception_def:
   take_undef_instr_exception ii =
     (read_reg ii 15w ||| exc_vector_base ii |||
      read_cpsr ii ||| read_scr ii ||| read_sctlr ii) >>=
@@ -694,9 +747,10 @@ val take_undef_instr_exception_def = Define`
                    IT := 0b00000000w;
                    J := F; T := sctlr.TE;
                    E := sctlr.EE |>))) |||
-          branch_to ii (ExcVectorBase + 4w)) >>= unit4))`;
+          branch_to ii (ExcVectorBase + 4w)) >>= unit4))
+End
 
-val take_svc_exception_def = Define`
+Definition take_svc_exception_def:
   take_svc_exception ii =
     IT_advance ii >>=
     (\u:unit.
@@ -716,9 +770,10 @@ val take_svc_exception_def = Define`
                      IT := 0b00000000w;
                      J := F; T := sctlr.TE;
                      E := sctlr.EE |>))) |||
-            branch_to ii (ExcVectorBase + 8w)) >>= unit4)))`;
+            branch_to ii (ExcVectorBase + 8w)) >>= unit4)))
+End
 
-val take_smc_exception_def = Define`
+Definition take_smc_exception_def:
   take_smc_exception ii =
     IT_advance ii >>=
     (\u:unit.
@@ -738,10 +793,11 @@ val take_smc_exception_def = Define`
                      IT := 0b00000000w;
                      J := F; T := sctlr.TE;
                      E := sctlr.EE |>))) |||
-            branch_to ii (mvbar + 8w)) >>= unit4)))`;
+            branch_to ii (mvbar + 8w)) >>= unit4)))
+End
 
 (* For now assume trap_to_monitor is false, i.e. no external aborts *)
-val take_prefetch_abort_exception_def = Define`
+Definition take_prefetch_abort_exception_def:
   take_prefetch_abort_exception ii =
     (read_reg ii 15w ||| exc_vector_base ii ||| have_security_ext ii |||
      read_cpsr ii ||| read_scr ii ||| read_sctlr ii) >>=
@@ -760,9 +816,10 @@ val take_prefetch_abort_exception_def = Define`
                    IT := 0b00000000w;
                    J := F; T := sctlr.TE;
                    E := sctlr.EE |>))) |||
-          branch_to ii (ExcVectorBase + 12w)) >>= unit4))`;
+          branch_to ii (ExcVectorBase + 12w)) >>= unit4))
+End
 
-val take_irq_exception_def = Define`
+Definition take_irq_exception_def:
   take_irq_exception ii =
     (read_reg ii 15w ||| exc_vector_base ii ||| have_security_ext ii |||
      read_cpsr ii ||| read_scr ii ||| read_sctlr ii) >>=
@@ -781,9 +838,10 @@ val take_irq_exception_def = Define`
                    IT := 0b00000000w;
                    J := F; T := sctlr.TE;
                    E := sctlr.EE |>))) |||
-          branch_to ii (ExcVectorBase + 24w)) >>= unit4))`;
+          branch_to ii (ExcVectorBase + 24w)) >>= unit4))
+End
 
-val take_fiq_exception_def = Define`
+Definition take_fiq_exception_def:
   take_fiq_exception ii =
     (read_reg ii 15w ||| exc_vector_base ii ||| have_security_ext ii |||
      read_cpsr ii ||| read_scr ii ||| read_sctlr ii) >>=
@@ -803,11 +861,12 @@ val take_fiq_exception_def = Define`
                    IT := 0b00000000w;
                    J := F; T := sctlr.TE;
                    E := sctlr.EE |>))) |||
-          branch_to ii (ExcVectorBase + 28w)) >>= unit4))`;
+          branch_to ii (ExcVectorBase + 28w)) >>= unit4))
+End
 
 (* ------------------------------------------------------------------------ *)
 
-val null_check_if_thumbee_def = Define`
+Definition null_check_if_thumbEE_def:
   null_check_if_thumbEE ii n (f:unit M) =
     current_instr_set ii >>=
     (\iset.
@@ -834,9 +893,10 @@ val null_check_if_thumbee_def = Define`
           else
             f)
       else
-        f)`;
+        f)
+End
 
-val run_instruction_def = Define`
+Definition run_instruction_def:
   run_instruction ii s n defined unpredictable c =
     read_info ii >>=
     (\info.
@@ -847,15 +907,18 @@ val run_instruction_def = Define`
        else if IS_SOME n then
          null_check_if_thumbEE ii (THE n) c
        else
-         c)`;
+         c)
+End
 
-val null_check_instruction_def = Define`
+Definition null_check_instruction_def:
   null_check_instruction ii s n defined unpredictable c =
-    run_instruction ii s (SOME n) defined unpredictable c`;
+    run_instruction ii s (SOME n) defined unpredictable c
+End
 
-val instruction_def = Define`
+Definition instruction_def:
   instruction ii s defined unpredictable c =
-    run_instruction ii s NONE defined unpredictable c`;
+    run_instruction ii s NONE defined unpredictable c
+End
 
 val {getDB = get_instructions,...} = ThmSetData.export_alist{
   settype = "instruction",
@@ -3460,7 +3523,7 @@ End
 
 (* ------------------------------------------------------------------------ *)
 
-val condition_passed_def = Define`
+Definition condition_passed_def:
   condition_passed ii (cond:word4) =
     read_flags ii >>=
     (\(n,z,c,v).
@@ -3478,9 +3541,10 @@ val condition_passed_def = Define`
        if cond ' 0 /\ (cond <> 15w) then
          constT (~result)
        else
-         constT result)`;
+         constT result)
+End
 
-val branch_instruction_def = Define`
+Definition branch_instruction_def:
   branch_instruction ii (enc,inst) =
     case inst
     of Branch_Target imm24 =>
@@ -3502,9 +3566,10 @@ val branch_instruction_def = Define`
      | Handler_Branch_Link_Parameter imm5 handler =>
          handler_branch_link_parameter_instr ii inst
      | Handler_Branch_Parameter imm3 handler =>
-         handler_branch_parameter_instr ii inst`;
+         handler_branch_parameter_instr ii inst
+End
 
-val data_processing_instruction_def = Define`
+Definition data_processing_instruction_def:
   data_processing_instruction ii (enc,inst) =
     case inst
     of Data_Processing opc s rn rd mode1 =>
@@ -3574,9 +3639,10 @@ val data_processing_instruction_def = Define`
      | Parallel_Add_Subtract u op rn rd rm =>
          parallel_add_subtract_instr ii enc inst
      | Divide u rn rd rm =>
-         divide_instr ii inst`;
+         divide_instr ii inst
+End
 
-val status_access_instruction_def = Define`
+Definition status_access_instruction_def:
   status_access_instruction ii (enc,inst) =
     case inst
     of Status_to_Register r rd =>
@@ -3588,9 +3654,10 @@ val status_access_instruction_def = Define`
      | Change_Processor_State imod affectA affectI affectF mode =>
          change_processor_state_instr ii enc inst
      | Set_Endianness set_bigend =>
-         set_endianness_instr ii enc inst`;
+         set_endianness_instr ii enc inst
+End
 
-val load_store_instruction_def = Define`
+Definition load_store_instruction_def:
   load_store_instruction ii (enc,inst) =
     case inst
     of Load p u b w unpriv rn rt mode2 =>
@@ -3628,9 +3695,10 @@ val load_store_instruction_def = Define`
      | Store_Return_State p u w mode =>
          store_return_state_instr ii enc inst
      | Return_From_Exception p u w rn =>
-         return_from_exception_instr ii enc inst`;
+         return_from_exception_instr ii enc inst
+End
 
-val miscellaneous_instruction_def = Define`
+Definition miscellaneous_instruction_def:
   miscellaneous_instruction ii (enc,inst) =
     case inst
     of Hint Hint_nop =>
@@ -3668,9 +3736,10 @@ val miscellaneous_instruction_def = Define`
      | Clear_Exclusive =>
          clear_exclusive_instr ii enc
      | If_Then firstcond mask =>
-         if_then_instr ii inst`;
+         if_then_instr ii inst
+End
 
-val coprocessor_instruction_def = Define`
+Definition coprocessor_instruction_def:
   coprocessor_instruction ii (enc,cond,inst) =
     case inst
     of Coprocessor_Load p u d w rn crd coproc mode5 =>
@@ -3686,9 +3755,10 @@ val coprocessor_instruction_def = Define`
      | Coprocessor_Transfer_Two F rt2 rt coproc opc1 crm =>
          arm_register_to_coprocessor_two_instr ii enc cond inst
      | Coprocessor_Transfer_Two T rt2 rt coproc opc1 crm =>
-         coprocessor_register_to_arm_two_instr ii enc cond inst`;
+         coprocessor_register_to_arm_two_instr ii enc cond inst
+End
 
-val arm_instr_def = Define`
+Definition arm_instr_def:
   arm_instr ii (enc,cond,inst) =
     (condition_passed ii cond >>=
     (\pass.
@@ -3716,7 +3786,8 @@ val arm_instr_def = Define`
        condT (case inst
                 of Miscellaneous (If_Then _ _) => F
                  | _ => T)
-         (IT_advance ii))`;
+         (IT_advance ii))
+End
 
 (* ======================================================================== *)
 
@@ -3932,4 +4003,3 @@ val _ = List.app
             (map fst (List.drop (instructions,2)))
 
 (* ------------------------------------------------------------------------ *)
-

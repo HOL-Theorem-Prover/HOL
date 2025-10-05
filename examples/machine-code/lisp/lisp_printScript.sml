@@ -73,16 +73,19 @@ val (thms,arm_str_reverse_def,arm_str_reverse_pre_def) = compile_all ``
     let (r7,df,f) = arm_string_rev(r3,r6,r7,df,f) in
       (r7,df,f)``
 
-val one_list_def = Define `
+Definition one_list_def:
   (one_list a [] b = cond (b = a)) /\
-  (one_list a (x::xs) b = one (a,x) * one_list (a + 1w) xs b)`;
+  (one_list a (x::xs) b = one (a,x) * one_list (a + 1w) xs b)
+End
 
-val one_space_def = Define `
+Definition one_space_def:
   (one_space a 0 b = cond (b = a)) /\
-  (one_space a (SUC n) b = SEP_EXISTS y. one (a,y) * one_space (a + 1w) n b)`;
+  (one_space a (SUC n) b = SEP_EXISTS y. one (a,y) * one_space (a + 1w) n b)
+End
 
-val one_string_def = Define `
-  one_string a (s:string) b = one_list a (MAP (n2w o ORD) s) b`;
+Definition one_string_def:
+  one_string a (s:string) b = one_list a (MAP (n2w o ORD) s) b
+End
 
 val one_list_SNOC = prove(
   ``!a xs x b. one_list a (xs ++ [x]) b =
@@ -437,11 +440,12 @@ val arm_copy_symbol_lemma = prove(
 
 (* lisp_inv ==> lisp_tree *)
 
-val lisp_tree_def = Define `
+Definition lisp_tree_def:
   (lisp_tree (Val k) (a,dm,m) sym = (a = n2w (k * 4 + 2)) /\ k < 2 ** 30) /\
   (lisp_tree (Sym s) (a,dm,m) sym = ALIGNED (a - 3w) /\ (a - 3w,s) IN sym) /\
   (lisp_tree (Dot x y) (a,dm,m) sym = a IN dm /\ (a + 4w) IN dm /\ ALIGNED a /\
-    lisp_tree x (m a,dm,m) sym /\ lisp_tree y (m (a+4w),dm,m) sym)`;
+    lisp_tree x (m a,dm,m) sym /\ lisp_tree y (m (a+4w),dm,m) sym)
+End
 
 val lisp_x_IMP_lisp_tree = prove(
   ``!t w a i n sym.
@@ -680,17 +684,20 @@ val (thms,arm_print_loop_def,arm_print_loop_pre_def) = compile_all ``
 
 
 
-val arm_print_loop1_def = Define `arm_print_loop1 = arm_print_loop`;
-val arm_print_loop1_pre_def = Define `arm_print_loop1_pre = arm_print_loop_pre`;
+Definition arm_print_loop1_def:   arm_print_loop1 = arm_print_loop
+End
+Definition arm_print_loop1_pre_def:   arm_print_loop1_pre = arm_print_loop_pre
+End
 
 val lisp_tree_SUBSET = prove(
   ``!t w. lisp_tree t (w,d,h) sym /\ d SUBSET dh ==>
           lisp_tree t (w,dh,h) sym``,
   Induct \\ SIMP_TAC std_ss [lisp_tree_def] \\ METIS_TAC [SUBSET_DEF]);
 
-val stack_slots_def = Define `
+Definition stack_slots_def:
   (stack_slots (a:word32) 0 = emp) /\
-  (stack_slots a (SUC n) = SEP_EXISTS u1 u2. one (a,u1:word32) * one (a+4w,u2) * stack_slots (a+8w) n)`;
+  (stack_slots a (SUC n) = SEP_EXISTS u1 u2. one (a,u1:word32) * one (a+4w,u2) * stack_slots (a+8w) n)
+End
 
 val stack_slots_ADD = prove(
   ``!n a m. ?fr. stack_slots a (n + m) = stack_slots a n * fr``,
@@ -745,7 +752,8 @@ val stack_slots_MAX = prove(
   \\ SIMP_TAC std_ss [stack_slots_ADD]
   \\ METIS_TAC [stack_slots_ADD]);
 
-val fun_eq_def = Define `fun_eq d h1 h2 = !w. w IN d ==> (h1 w = h2 w)`;
+Definition fun_eq_def:   fun_eq d h1 h2 = !w. w IN d ==> (h1 w = h2 w)
+End
 
 val fun_eq_lisp_tree = prove(
   ``!d h hi.

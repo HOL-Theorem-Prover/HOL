@@ -209,8 +209,10 @@ by METIS_TAC [INT_ADD_ASSOC] THEN ARW [] THEN
 ARW [] THEN
 METIS_TAC [INT_ADD_RID]);
 
-val piu1_def = Define `piu1 x = (iu1 x) % 65537`;
-val piu2_def = Define `piu2 x = (iu2 x) % 65537`;
+Definition piu1_def:   piu1 x = (iu1 x) % 65537
+End
+Definition piu2_def:   piu2 x = (iu2 x) % 65537
+End
 
 val minv_Lemma10 = Q.store_thm
 ("minv_Lemma10",
@@ -222,13 +224,14 @@ val minv_Lemma10 = Q.store_thm
  ASSUME_TAC minv_Lemma9 THEN
  METIS_TAC [mode_Lemma2]);
 
-val minv_def =
-  Define `minv x =
+Definition minv_def:
+   minv x =
     if ((int_of_num x) * (piu1 x)) % 65537 = 1
         then piu1 x
         else if ((int_of_num x) * (piu2 x)) % 65537 = 1
           then piu2 x
-          else 0`;
+          else 0
+End
 
 val minv_Theorem = Q.store_thm
 ("minv_Theorem",
@@ -283,8 +286,10 @@ val minv_Corollary3 = Q.store_thm
  `(0 < (minv x)) \/ (0 = (minv x))` by METIS_TAC [INT_LE_LT] THEN
  `minv x = 0` by METIS_TAC []);
 
-val encode_def = Define `encode x:num = if x = 0n then 65536n else x`;
-val decode_def = Define `decode x:num = if x = 65536n then 0n else x`;
+Definition encode_def:   encode x:num = if x = 0n then 65536n else x
+End
+Definition decode_def:   decode x:num = if x = 65536n then 0n else x
+End
 
 val encode_Lemma1 = Q.store_thm
 ("encode_Lemma1",
@@ -331,15 +336,15 @@ val wmul_Lemma1 = Q.store_thm
  `w2n w < 65536n` by WORD_DECIDE_TAC THEN
  METIS_TAC [encode_Lemma2]);
 
-val winv_def =
- Define
-   `winv (w:word16) = n2w (decode (Num (minv (encode (w2n w))))) : word16`;
+Definition winv_def:
+    winv (w:word16) = n2w (decode (Num (minv (encode (w2n w))))) : word16
+End
 
-val wmul_def =
- Define
-   `wmul (x:word16) (y:word16) =
+Definition wmul_def:
+    wmul (x:word16) (y:word16) =
       n2w (decode (Num (((int_of_num (encode (w2n x))) *
-                       (int_of_num (encode (w2n y)))) % 65537))) : word16`;
+                       (int_of_num (encode (w2n y)))) % 65537))) : word16
+End
 
 val _ = set_fixity "wmul"  (Infixl 600);
 

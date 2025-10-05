@@ -54,8 +54,8 @@ val ddg_ss = std_ss ++ simpLib.SSFRAG {
 (* The definition of Knuth's dice.                                           *)
 (* ------------------------------------------------------------------------- *)
 
-val dice_def = Define
-  `dice : (num -> bool) -> num # (num -> bool) =
+Definition dice_def:
+   dice : (num -> bool) -> num # (num -> bool) =
    coin_flip
    (prob_repeat
     (coin_flip
@@ -74,13 +74,15 @@ val dice_def = Define
        (UNIT 5)))
      (coin_flip
       (UNIT (SOME 6))
-      (UNIT NONE))))`;
+      (UNIT NONE))))
+End
 
-val two_dice_def = Define
-  `two_dice = BIND dice (\a. BIND dice (\b. UNIT (a + b)))`;
+Definition two_dice_def:
+   two_dice = BIND dice (\a. BIND dice (\b. UNIT (a + b)))
+End
 
-val optimal_two_dice_def = Define
-  `optimal_two_dice : (num -> bool) -> num # (num -> bool) =
+Definition optimal_two_dice_def:
+   optimal_two_dice : (num -> bool) -> num # (num -> bool) =
    coin_flip
    (prob_repeat
     (coin_flip
@@ -156,7 +158,8 @@ val optimal_two_dice_def = Define
          (coin_flip
           (UNIT (SOME 12))
           (UNIT NONE))
-         (UNIT (SOME 12))))))))`;
+         (UNIT (SOME 12))))))))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems leading to:                                                      *)

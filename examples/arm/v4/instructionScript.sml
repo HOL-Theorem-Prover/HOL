@@ -97,66 +97,76 @@ val _ = Hol_datatype
 
 (* ------------------------------------------------------------------------- *)
 
-val condition_encode_def = Define`
+Definition condition_encode_def:
   condition_encode cond =
-    (w2w (n2w (condition2num cond):word4 #<< 1) << 28):word32`;
+    (w2w (n2w (condition2num cond):word4 #<< 1) << 28):word32
+End
 
-val shift_encode_def = Define`
+Definition shift_encode_def:
   (shift_encode (LSL Rm) = (w2w Rm):word32) /\
   (shift_encode (LSR Rm) = 0x20w || w2w Rm) /\
   (shift_encode (ASR Rm) = 0x40w || w2w Rm) /\
-  (shift_encode (ROR Rm) = 0x60w || w2w Rm)`;
+  (shift_encode (ROR Rm) = 0x60w || w2w Rm)
+End
 
-val addr_mode1_encode_def = Define`
+Definition addr_mode1_encode_def:
   addr_mode1_encode op2 =
    case op2 of
      Dp_immediate rot imm => (0x2000000w || w2w rot << 8 || w2w imm):word32
    | Dp_shift_immediate shift amount => w2w amount << 7 || shift_encode shift
-   | Dp_shift_register shift Rs => 0x10w || w2w Rs << 8 || shift_encode shift`;
+   | Dp_shift_register shift Rs => 0x10w || w2w Rs << 8 || shift_encode shift
+End
 
-val addr_mode2_encode_def = Define`
+Definition addr_mode2_encode_def:
   addr_mode2_encode op2 =
    case op2 of
      Dt_immediate imm => (w2w imm):word32
    | Dt_shift_immediate shift amount =>
-        0x2000000w || w2w amount << 7 || shift_encode shift`;
+        0x2000000w || w2w amount << 7 || shift_encode shift
+End
 
-val addr_mode3_encode_def = Define`
+Definition addr_mode3_encode_def:
   addr_mode3_encode op2 =
    case op2 of
      Dth_immediate imm => 0x400000w || ((7 >< 4) imm) << 8 || ((3 >< 0) imm)
-   | Dth_register Rm => (w2w Rm):word32`;
+   | Dth_register Rm => (w2w Rm):word32
+End
 
-val msr_mode_encode_def = Define`
+Definition msr_mode_encode_def:
   msr_mode_encode op =
    case op of
      Msr_immediate rot imm => (0x2000000w || w2w rot << 8 || w2w imm):word32
-   | Msr_register Rm => w2w Rm`;
+   | Msr_register Rm => w2w Rm
+End
 
-val msr_psr_encode_def = Define`
+Definition msr_psr_encode_def:
   (msr_psr_encode CPSR_c = 0x10000w:word32) /\
   (msr_psr_encode CPSR_f = 0x80000w) /\
   (msr_psr_encode CPSR_a = 0x90000w) /\
   (msr_psr_encode SPSR_c = 0x410000w) /\
   (msr_psr_encode SPSR_f = 0x480000w) /\
-  (msr_psr_encode SPSR_a = 0x490000w)`;
+  (msr_psr_encode SPSR_a = 0x490000w)
+End
 
-val options_encode_def = Define`
+Definition options_encode_def:
   options_encode x opt =
     word_modify (\i b. (i = 24) /\ opt.Pre \/ (i = 23) /\ opt.Up \/
-                       (i = 22) /\ x \/ (i = 21) /\ opt.Wb) (0w:word32)`;
+                       (i = 22) /\ x \/ (i = 21) /\ opt.Wb) (0w:word32)
+End
 
-val options_encode2_def = Define`
+Definition options_encode2_def:
   options_encode2 h opt =
     word_modify (\i b. (i = 24) /\ opt.Pre \/ (i = 23) /\ opt.Up \/
-                       (i = 21) /\ opt.Wb \/ (i = 5) /\ h) (0w:word32)`;
+                       (i = 21) /\ opt.Wb \/ (i = 5) /\ h) (0w:word32)
+End
 
-val data_proc_encode_def = Define`
+Definition data_proc_encode_def:
   data_proc_encode cond (op:word4) s (Rn:word4) (Rd:word4) Op2 =
     condition_encode cond || w2w op << 21 || (if s then 0x100000w else 0w) ||
-       w2w Rn << 16 || w2w Rd << 12 || addr_mode1_encode Op2`;
+       w2w Rn << 16 || w2w Rd << 12 || addr_mode1_encode Op2
+End
 
-val instruction_encode_def = Define`
+Definition instruction_encode_def:
   instruction_encode i =
     case i of
       B  cond offset24 => condition_encode cond || 0xA000000w || w2w offset24
@@ -242,7 +252,8 @@ val instruction_encode_def = Define`
          condition_encode cond || 0xE000010w || w2w Cop1b << 21 ||
          w2w CRn << 16 || w2w Rd << 12 || w2w CPn << 8 ||
          w2w Cop2 << 5 || w2w CRm
-    | UND cond => condition_encode cond || 0x6000010w`;
+    | UND cond => condition_encode cond || 0x6000010w
+End
 
 val _ = overload_on("enc", ``instruction_encode``);
 

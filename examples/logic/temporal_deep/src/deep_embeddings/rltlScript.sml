@@ -61,9 +61,8 @@ val rltl_induct =
          (TypeBase.induction_of ``:'a rltl``)))));
 
 
-val RLTL_SEM_TIME_def =
- Define
-   `(RLTL_SEM_TIME t v a r (RLTL_PROP b) =
+Definition RLTL_SEM_TIME_def:
+    (RLTL_SEM_TIME t v a r (RLTL_PROP b) =
       ((P_SEM (v t) a) \/ ((P_SEM (v t) b) /\ ~(P_SEM (v t) r))))
     /\
     (RLTL_SEM_TIME t v a r (RLTL_NOT f) =
@@ -79,103 +78,106 @@ val RLTL_SEM_TIME_def =
       ?k. (k >= t) /\ (RLTL_SEM_TIME k v a r f2) /\ (!j. (t <= j /\ j < k) ==> (RLTL_SEM_TIME j v a r f1)))
     /\
     (RLTL_SEM_TIME t v a r (RLTL_ACCEPT (f, b)) =
-     RLTL_SEM_TIME t v (P_OR(a, P_AND(b, P_NOT(r)))) r f)`;
+     RLTL_SEM_TIME t v (P_OR(a, P_AND(b, P_NOT(r)))) r f)
+End
 
 
-val RLTL_SEM_def =
- Define
-   `RLTL_SEM v f = RLTL_SEM_TIME 0 v P_FALSE P_FALSE f`;
+Definition RLTL_SEM_def:
+    RLTL_SEM v f = RLTL_SEM_TIME 0 v P_FALSE P_FALSE f
+End
 
 
-val RLTL_KS_SEM_def =
- Define
-   `RLTL_KS_SEM M f =
-      !p. IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p ==> RLTL_SEM p f`;
+Definition RLTL_KS_SEM_def:
+    RLTL_KS_SEM M f =
+      !p. IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p ==> RLTL_SEM p f
+End
 
 
 (******************************************************************************
 * Syntactic Sugar
 ******************************************************************************)
-val RLTL_TRUE_def =
- Define
-   `RLTL_TRUE = RLTL_PROP P_TRUE`;
+Definition RLTL_TRUE_def:
+    RLTL_TRUE = RLTL_PROP P_TRUE
+End
 
-val RLTL_FALSE_def =
- Define
-   `RLTL_FALSE = RLTL_PROP P_FALSE`;
-
-
-
-val RLTL_OR_def =
- Define
-   `RLTL_OR(f1,f2) = RLTL_NOT (RLTL_AND((RLTL_NOT f1),(RLTL_NOT f2)))`;
+Definition RLTL_FALSE_def:
+    RLTL_FALSE = RLTL_PROP P_FALSE
+End
 
 
-val RLTL_IMPL_def =
- Define
-   `RLTL_IMPL(f1, f2) = RLTL_OR(RLTL_NOT f1, f2)`;
+
+Definition RLTL_OR_def:
+    RLTL_OR(f1,f2) = RLTL_NOT (RLTL_AND((RLTL_NOT f1),(RLTL_NOT f2)))
+End
 
 
-val RLTL_COND_def =
- Define
-   `RLTL_COND(c, f1, f2) = RLTL_AND(RLTL_IMPL(c, f1), RLTL_IMPL(RLTL_NOT c, f2))`;
+Definition RLTL_IMPL_def:
+    RLTL_IMPL(f1, f2) = RLTL_OR(RLTL_NOT f1, f2)
+End
 
 
-val RLTL_EQUIV_def =
- Define
-   `RLTL_EQUIV(b1, b2) = RLTL_AND(RLTL_IMPL(b1, b2),RLTL_IMPL(b2, b1))`;
+Definition RLTL_COND_def:
+    RLTL_COND(c, f1, f2) = RLTL_AND(RLTL_IMPL(c, f1), RLTL_IMPL(RLTL_NOT c, f2))
+End
 
 
-val RLTL_REJECT_def =
- Define
-   `RLTL_REJECT(f,b) = RLTL_NOT (RLTL_ACCEPT((RLTL_NOT f),b))`;
+Definition RLTL_EQUIV_def:
+    RLTL_EQUIV(b1, b2) = RLTL_AND(RLTL_IMPL(b1, b2),RLTL_IMPL(b2, b1))
+End
 
 
-val RLTL_EVENTUAL_def =
- Define
-   `RLTL_EVENTUAL f = RLTL_SUNTIL (RLTL_PROP(P_TRUE),f)`;
+Definition RLTL_REJECT_def:
+    RLTL_REJECT(f,b) = RLTL_NOT (RLTL_ACCEPT((RLTL_NOT f),b))
+End
 
 
-val RLTL_ALWAYS_def =
- Define
-   `RLTL_ALWAYS f = RLTL_NOT (RLTL_EVENTUAL (RLTL_NOT f))`;
+Definition RLTL_EVENTUAL_def:
+    RLTL_EVENTUAL f = RLTL_SUNTIL (RLTL_PROP(P_TRUE),f)
+End
 
 
-val RLTL_UNTIL_def =
- Define
-   `RLTL_UNTIL(f1,f2) = RLTL_OR(RLTL_SUNTIL(f1,f2),RLTL_ALWAYS f1)`;
+Definition RLTL_ALWAYS_def:
+    RLTL_ALWAYS f = RLTL_NOT (RLTL_EVENTUAL (RLTL_NOT f))
+End
 
 
-val RLTL_BEFORE_def =
- Define
-   `RLTL_BEFORE(f1,f2) = RLTL_NOT(RLTL_SUNTIL(RLTL_NOT f1,f2))`;
+Definition RLTL_UNTIL_def:
+    RLTL_UNTIL(f1,f2) = RLTL_OR(RLTL_SUNTIL(f1,f2),RLTL_ALWAYS f1)
+End
 
 
-val RLTL_SBEFORE_def =
- Define
-   `RLTL_SBEFORE(f1,f2) = RLTL_SUNTIL(RLTL_NOT f2,RLTL_AND(f1, RLTL_NOT f2))`;
+Definition RLTL_BEFORE_def:
+    RLTL_BEFORE(f1,f2) = RLTL_NOT(RLTL_SUNTIL(RLTL_NOT f1,f2))
+End
 
 
-val RLTL_WHILE_def =
- Define
-   `RLTL_WHILE(f1,f2) = RLTL_NOT(RLTL_SUNTIL(RLTL_OR(RLTL_NOT f1, RLTL_NOT f2),RLTL_AND(f2, RLTL_NOT f1)))`;
+Definition RLTL_SBEFORE_def:
+    RLTL_SBEFORE(f1,f2) = RLTL_SUNTIL(RLTL_NOT f2,RLTL_AND(f1, RLTL_NOT f2))
+End
 
 
-val RLTL_SWHILE_def =
- Define
-   `RLTL_SWHILE(f1,f2) = RLTL_SUNTIL(RLTL_NOT f2,RLTL_AND(f1, f2))`;
+Definition RLTL_WHILE_def:
+    RLTL_WHILE(f1,f2) = RLTL_NOT(RLTL_SUNTIL(RLTL_OR(RLTL_NOT f1, RLTL_NOT f2),RLTL_AND(f2, RLTL_NOT f1)))
+End
 
 
-val RLTL_EQUIV_PATH_STRONG_def =
-  Define `RLTL_EQUIV_PATH_STRONG (t:num) v1 v2 a r =
+Definition RLTL_SWHILE_def:
+    RLTL_SWHILE(f1,f2) = RLTL_SUNTIL(RLTL_NOT f2,RLTL_AND(f1, f2))
+End
+
+
+Definition RLTL_EQUIV_PATH_STRONG_def:
+   RLTL_EQUIV_PATH_STRONG (t:num) v1 v2 a r =
       ?k. (k >= t) /\
      (((P_SEM (v1 k) a) /\ (P_SEM (v2 k) a) /\ ~(P_SEM (v1 k) r) /\ ~(P_SEM (v2 k) r)) \/
       ((P_SEM (v1 k) r) /\ (P_SEM (v2 k) r) /\ ~(P_SEM (v1 k) a) /\ ~(P_SEM (v2 k) a))) /\
-     (!l. (t <= l /\ l < k ==> ((v1 l) = (v2 l))))`;
+     (!l. (t <= l /\ l < k ==> ((v1 l) = (v2 l))))
+End
 
-val RLTL_EQUIV_PATH_def =
-  Define `RLTL_EQUIV_PATH t v1 v2 a r =
-      (EQUIV_PATH_RESTN t v1 v2) \/ (RLTL_EQUIV_PATH_STRONG t v1 v2 a r)`;
+Definition RLTL_EQUIV_PATH_def:
+   RLTL_EQUIV_PATH t v1 v2 a r =
+      (EQUIV_PATH_RESTN t v1 v2) \/ (RLTL_EQUIV_PATH_STRONG t v1 v2 a r)
+End
 
 
 
@@ -186,9 +188,8 @@ val RLTL_EQUIV_PATH_def =
 * Classes of RLTL
 ******************************************************************************)
 
-val IS_RLTL_G_def =
- Define
-   `(IS_RLTL_G (RLTL_PROP p) = T) /\
+Definition IS_RLTL_G_def:
+    (IS_RLTL_G (RLTL_PROP p) = T) /\
     (IS_RLTL_G (RLTL_NOT f) = IS_RLTL_F f) /\
     (IS_RLTL_G (RLTL_AND (f,g)) = (IS_RLTL_G f /\ IS_RLTL_G g)) /\
     (IS_RLTL_G (RLTL_NEXT f) = IS_RLTL_G f) /\
@@ -200,20 +201,20 @@ val IS_RLTL_G_def =
     (IS_RLTL_F (RLTL_AND (f,g)) = (IS_RLTL_F f /\ IS_RLTL_F g)) /\
     (IS_RLTL_F (RLTL_NEXT f) = IS_RLTL_F f) /\
     (IS_RLTL_F (RLTL_SUNTIL(f,g)) = (IS_RLTL_F f /\ IS_RLTL_F g)) /\
-    (IS_RLTL_F (RLTL_ACCEPT (f,p)) = IS_RLTL_F f)`;
+    (IS_RLTL_F (RLTL_ACCEPT (f,p)) = IS_RLTL_F f)
+End
 
 
-val IS_RLTL_PREFIX_def =
-  Define
-   `(IS_RLTL_PREFIX (RLTL_NOT f) = IS_RLTL_PREFIX f) /\
+Definition IS_RLTL_PREFIX_def:
+    (IS_RLTL_PREFIX (RLTL_NOT f) = IS_RLTL_PREFIX f) /\
     (IS_RLTL_PREFIX (RLTL_AND (f,g)) = (IS_RLTL_PREFIX f /\ IS_RLTL_PREFIX g)) /\
     (IS_RLTL_PREFIX (RLTL_ACCEPT (f, p)) = (IS_RLTL_PREFIX f)) /\
-    (IS_RLTL_PREFIX f = (IS_RLTL_G f \/ IS_RLTL_F f))`;
+    (IS_RLTL_PREFIX f = (IS_RLTL_G f \/ IS_RLTL_F f))
+End
 
 
-val IS_RLTL_GF_def=
- Define
-   `(IS_RLTL_GF (RLTL_PROP p) = T) /\
+Definition IS_RLTL_GF_def:
+    (IS_RLTL_GF (RLTL_PROP p) = T) /\
     (IS_RLTL_GF (RLTL_NOT f) = IS_RLTL_FG f) /\
     (IS_RLTL_GF (RLTL_AND (f,g)) = (IS_RLTL_GF f /\ IS_RLTL_GF g)) /\
     (IS_RLTL_GF (RLTL_NEXT f) = IS_RLTL_GF f) /\
@@ -225,15 +226,16 @@ val IS_RLTL_GF_def=
     (IS_RLTL_FG (RLTL_AND (f,g)) = (IS_RLTL_FG f /\ IS_RLTL_FG g)) /\
     (IS_RLTL_FG (RLTL_NEXT f) = IS_RLTL_FG f) /\
     (IS_RLTL_FG (RLTL_SUNTIL(f,g)) = (IS_RLTL_FG f /\ IS_RLTL_FG g)) /\
-    (IS_RLTL_FG (RLTL_ACCEPT (f,p)) = IS_RLTL_FG f)`;
+    (IS_RLTL_FG (RLTL_ACCEPT (f,p)) = IS_RLTL_FG f)
+End
 
 
-val IS_RLTL_STREET_def =
-  Define
-   `(IS_RLTL_STREET (RLTL_NOT f) = IS_RLTL_STREET f) /\
+Definition IS_RLTL_STREET_def:
+    (IS_RLTL_STREET (RLTL_NOT f) = IS_RLTL_STREET f) /\
     (IS_RLTL_STREET (RLTL_AND (f,g)) = (IS_RLTL_STREET f /\ IS_RLTL_STREET g)) /\
     (IS_RLTL_STREET (RLTL_ACCEPT (f, p)) = (IS_RLTL_STREET f)) /\
-    (IS_RLTL_STREET f = (IS_RLTL_GF f \/ IS_RLTL_FG f))`;
+    (IS_RLTL_STREET f = (IS_RLTL_GF f \/ IS_RLTL_FG f))
+End
 
 
 val IS_RLTL_THM = save_thm("IS_RLTL_THM",
@@ -246,21 +248,21 @@ val IS_RLTL_THM = save_thm("IS_RLTL_THM",
 (******************************************************************************
  * Tautologies und Contradictions
  ******************************************************************************)
-val RLTL_EQUIVALENT_def =
- Define
-   `RLTL_EQUIVALENT l1 l2 = !w t a r. (RLTL_SEM_TIME t w a r l1) = (RLTL_SEM_TIME t w a r l2)`;
+Definition RLTL_EQUIVALENT_def:
+    RLTL_EQUIVALENT l1 l2 = !w t a r. (RLTL_SEM_TIME t w a r l1) = (RLTL_SEM_TIME t w a r l2)
+End
 
-val RLTL_EQUIVALENT_INITIAL_def =
- Define
-   `RLTL_EQUIVALENT_INITIAL l1 l2 = !w. (RLTL_SEM w l1) = (RLTL_SEM w l2)`;
+Definition RLTL_EQUIVALENT_INITIAL_def:
+    RLTL_EQUIVALENT_INITIAL l1 l2 = !w. (RLTL_SEM w l1) = (RLTL_SEM w l2)
+End
 
-val RLTL_IS_CONTRADICTION_def =
- Define
-   `RLTL_IS_CONTRADICTION l = (!v. ~(RLTL_SEM v l))`;
+Definition RLTL_IS_CONTRADICTION_def:
+    RLTL_IS_CONTRADICTION l = (!v. ~(RLTL_SEM v l))
+End
 
-val RLTL_IS_TAUTOLOGY_def =
- Define
-   `RLTL_IS_TAUTOLOGY l = (!v. RLTL_SEM v l)`;
+Definition RLTL_IS_TAUTOLOGY_def:
+    RLTL_IS_TAUTOLOGY l = (!v. RLTL_SEM v l)
+End
 
 
 val RLTL_TAUTOLOGY_CONTRADICTION_DUAL =
@@ -319,14 +321,14 @@ val RLTL_SEM_PROP_RLTL_OPERATOR_EQUIV =
    PROVE_TAC[])
 
 
-val RLTL_USED_VARS_def=
- Define
-   `(RLTL_USED_VARS (RLTL_PROP p) = P_USED_VARS p) /\
+Definition RLTL_USED_VARS_def:
+    (RLTL_USED_VARS (RLTL_PROP p) = P_USED_VARS p) /\
     (RLTL_USED_VARS (RLTL_NOT f) = RLTL_USED_VARS f) /\
     (RLTL_USED_VARS (RLTL_AND (f,g)) = (RLTL_USED_VARS f UNION RLTL_USED_VARS g)) /\
     (RLTL_USED_VARS (RLTL_NEXT f) = RLTL_USED_VARS f) /\
     (RLTL_USED_VARS (RLTL_SUNTIL(f,g)) = (RLTL_USED_VARS f UNION RLTL_USED_VARS g)) /\
-    (RLTL_USED_VARS (RLTL_ACCEPT (f, p)) = (RLTL_USED_VARS f UNION P_USED_VARS p))`;
+    (RLTL_USED_VARS (RLTL_ACCEPT (f, p)) = (RLTL_USED_VARS f UNION P_USED_VARS p))
+End
 
 
 val RLTL_USED_VARS_INTER_SUBSET_THM =
@@ -1148,14 +1150,14 @@ val IS_RLTL_RELATIONS =
 
 
 
-val RLTL_VAR_RENAMING_def=
- Define
-   `(RLTL_VAR_RENAMING f (RLTL_PROP p) = RLTL_PROP (P_VAR_RENAMING f p)) /\
+Definition RLTL_VAR_RENAMING_def:
+    (RLTL_VAR_RENAMING f (RLTL_PROP p) = RLTL_PROP (P_VAR_RENAMING f p)) /\
     (RLTL_VAR_RENAMING f (RLTL_NOT r) = RLTL_NOT (RLTL_VAR_RENAMING f r)) /\
     (RLTL_VAR_RENAMING f (RLTL_AND (r1,r2)) = RLTL_AND(RLTL_VAR_RENAMING f r1, RLTL_VAR_RENAMING f r2)) /\
     (RLTL_VAR_RENAMING f (RLTL_NEXT r) = RLTL_NEXT (RLTL_VAR_RENAMING f r)) /\
     (RLTL_VAR_RENAMING f (RLTL_SUNTIL(r1,r2)) = RLTL_SUNTIL(RLTL_VAR_RENAMING f r1, RLTL_VAR_RENAMING f r2)) /\
-    (RLTL_VAR_RENAMING f (RLTL_ACCEPT (r, p)) = RLTL_ACCEPT(RLTL_VAR_RENAMING f r, P_VAR_RENAMING f p))`;
+    (RLTL_VAR_RENAMING f (RLTL_ACCEPT (r, p)) = RLTL_ACCEPT(RLTL_VAR_RENAMING f r, P_VAR_RENAMING f p))
+End
 
 
 

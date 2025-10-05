@@ -1,13 +1,14 @@
 Theory Yoneda
 Ancestors
-  pred_set category functor_ nat_trans hom_functor ens_cat
+  pred_set category category_functor nat_trans hom_functor ens_cat
 Libs
   SatisfySimps
 
-val YfunctorNT_def = Define`
+Definition YfunctorNT_def:
   YfunctorNT c f = mk_nt <|
     dom := c|_→f.dom|; cod := c|_→f.cod|;
-    map := λx. (c|x→_|##f) |>`
+    map := λx. (c|x→_|##f) |>
+End
 
 val YfunctorNT_dom_cod = Q.store_thm(
 "YfunctorNT_dom_cod",
@@ -126,10 +127,11 @@ val is_category_presheaf_cat = Q.store_thm(
 metis_tac [is_category_functor_cat,is_category_ens_cat,is_category_op_cat])
 val _ = export_rewrites["is_category_presheaf_cat"];
 
-val pre_Yfunctor_def = Define`
+Definition pre_Yfunctor_def:
   pre_Yfunctor c = <|
     dom := c; cod := [(c°)→ens_cat (homs c)];
-    map := λf. YfunctorNT c f |>`;
+    map := λf. YfunctorNT c f |>
+End
 
 val pre_Yfunctor_components = Q.store_thm(
 "pre_Yfunctor_components",
@@ -231,8 +233,9 @@ srw_tac [][Yfunctor_def,morf_def]);
 
 val _ = export_rewrites["Yfunctor_dom","Yfunctor_cod","Yfunctor_objf","Yfunctor_morf"];
 
-val YMap_def = Define`
-  YMap c x n = (n@+x).map (id x-:c)`;
+Definition YMap_def:
+  YMap c x n = (n@+x).map (id x-:c)
+End
 
 val YMapImage = Q.store_thm(
 "YMapImage",
@@ -250,12 +253,13 @@ fsrw_tac [][HasFunType_def] >>
 first_x_assum match_mp_tac >>
 srw_tac [][hom_def,id_maps_to]);
 
-val YMapInv_def = Define`
+Definition YMapInv_def:
   YMapInv c x f y = mk_nt <|
     dom := (Yfunctor c)@@x;
     cod := f;
     map := λz. TypedGraphFun ((c|z→x|), f@@z)
-               (λg. (f##(g°)).map y) |>`;
+               (λg. (f##(g°)).map y) |>
+End
 
 val YMapInv_at = Q.store_thm(
 "YMapInv_at",

@@ -33,27 +33,27 @@ fun prove_thm(_:string,tm,tac) = prove(tm,tac);
 (* a state satisfying B in one R-step                                        *)
 (*****************************************************************************)
 
-val Next_def =
- Define
-  `Next R B state =
-    ?state_. B state_ /\  R(state_,state)`;
+Definition Next_def:
+   Next R B state =
+    ?state_. B state_ /\  R(state_,state)
+End
 
 (*****************************************************************************)
 (* ``Prev R Q state'' is the set of states from which Q can be reached       *)
 (* in one transition                                                         *)
 (*****************************************************************************)
 
-val Prev_def =
- Define
-  `Prev R Q state = ?state'. R(state,state') /\ Q state'`;
+Definition Prev_def:
+   Prev R Q state = ?state'. R(state,state') /\ Q state'
+End
 
 (*****************************************************************************)
 (* Characteristic function of a set with just one state                      *)
 (*****************************************************************************)
 
-val Eq_def =
- Define
-  `Eq state0 state = (state0 = state)`;
+Definition Eq_def:
+   Eq state0 state = (state0 = state)
+End
 
 val Prev_Next_Eq =
  prove_thm
@@ -66,11 +66,11 @@ val Prev_Next_Eq =
 (* a state satisfying B in exactly n R-steps                                 *)
 (*****************************************************************************)
 
-val ReachIn_def =
- Define
-  `(ReachIn R B 0 = B)
+Definition ReachIn_def:
+   (ReachIn R B 0 = B)
    /\
-   (ReachIn R B (SUC n) = Next R (ReachIn R B n))`;
+   (ReachIn R B (SUC n) = Next R (ReachIn R B n))
+End
 
 val ReachIn_rec =
  store_thm
@@ -108,9 +108,9 @@ val Next_ReachIn =
 (* state satisfying B in some finite number of R-steps                       *)
 (*****************************************************************************)
 
-val Reachable_def =
- Define
-  `Reachable R B state = ?n. ReachIn R B n state`;
+Definition Reachable_def:
+   Reachable R B state = ?n. ReachIn R B n state
+End
 
 val Reachable_eqn =
  prove_thm
@@ -127,10 +127,10 @@ val Reachable_eqn =
            THEN ASM_REWRITE_TAC[ReachIn_def],
           PROVE_TAC[ReachIn_Next]]);
 
-val ReachBy_def =
- Define
-  `ReachBy R B n state =
-    ?m. (m <= n) /\ ReachIn R B m state`;
+Definition ReachBy_def:
+   ReachBy R B n state =
+    ?m. (m <= n) /\ ReachIn R B m state
+End
 
 val ReachIn_IMPLIES_ReachBy =
  prove_thm
@@ -410,14 +410,14 @@ val COND_SIMP =
 (* In addition [s0;...;sn] is of minimal length to get from B to Q.          *)
 (*****************************************************************************)
 
-val IsTrace_def =
- Define
-  `(IsTrace R B Q [] = F)
+Definition IsTrace_def:
+   (IsTrace R B Q [] = F)
    /\
    (IsTrace R B Q [s] = B s /\ Q s)
    /\
    (IsTrace R B Q (s0 :: (s1 :: tr)) =
-     B s0 /\ R(s0,s1) /\ IsTrace R (Eq s1) Q (s1 :: tr))`;
+     B s0 /\ R(s0,s1) /\ IsTrace R (Eq s1) Q (s1 :: tr))
+End
 
 
 (*****************************************************************************)
@@ -425,13 +425,13 @@ val IsTrace_def =
 (* are equal to state -- i.e. an R-step doesn't change the state             *)
 (*****************************************************************************)
 
-val Stable_def =
- Define
-  `Stable R state = !state'. R(state,state') ==> (state' = state)`;
+Definition Stable_def:
+   Stable R state = !state'. R(state,state') ==> (state' = state)
+End
 
-val Live_def =
- Define
-  `Live R = !state. ?state'. R(state,state')`;
+Definition Live_def:
+   Live R = !state. ?state'. R(state,state')
+End
 
 val ReachIn_Stable_SUC =
  prove_thm
@@ -552,7 +552,8 @@ val ModelCheckAlwaysCor2 =
     THEN PROVE_TAC[]);
 
 
-val FnPair_def = Define `FnPair f g x = (f x, g x)`;
+Definition FnPair_def:   FnPair f g x = (f x, g x)
+End
 
 val FnPairAbs =
  store_thm
@@ -663,9 +664,9 @@ val ABS_ONE_ONE =
 (* Theorems relating paths and transition relations                          *)
 (*****************************************************************************)
 
-val Path_def =
- Define
-  `Path(R,s)f = (f 0 = s) /\ !n. R(f n, f(n+1))`;
+Definition Path_def:
+   Path(R,s)f = (f 0 = s) /\ !n. R(f n, f(n+1))
+End
 
 val ReachInPath1 =
  prove_thm
@@ -675,11 +676,11 @@ val ReachInPath1 =
     THEN REPEAT STRIP_TAC
     THEN PROVE_TAC[TraceReachIn]);
 
-val FinPath_def =
- Define
-  `(FinPath(R,s) f 0 = (f 0 = s))
+Definition FinPath_def:
+   (FinPath(R,s) f 0 = (f 0 = s))
    /\
-   (FinPath(R,s) f (SUC n) = FinPath(R,s) f n /\ R(f n, f(n+1)))`;
+   (FinPath(R,s) f (SUC n) = FinPath(R,s) f n /\ R(f n, f(n+1)))
+End
 
 val FinFunEq =
  store_thm
@@ -789,13 +790,14 @@ val ReachIn_revrec =
        THEN FIRST_X_ASSUM (Q.SPEC_THEN `m - 1` MP_TAC)
        THEN RW_TAC arith_ss []]);
 
-val Total_def = Define `Total R = !s.?s'. R(s,s')`;
+Definition Total_def:   Total R = !s.?s'. R(s,s')
+End
 
-val ChoosePath_def =
- Define
-  `(ChoosePath R s 0 = s)
+Definition ChoosePath_def:
+   (ChoosePath R s 0 = s)
    /\
-   (ChoosePath R s (SUC n) = @s'. R(ChoosePath R s n, s'))`;
+   (ChoosePath R s (SUC n) = @s'. R(ChoosePath R s n, s'))
+End
 
 val TotalPathExists =
  store_thm
@@ -873,9 +875,9 @@ val ReachablePath =
              (Reachable R B s = ?f s0. B s0 /\ Path(R,s0)f /\ ?n. (s = f n))``,
    PROVE_TAC[ReachInPath,Reachable_def]);
 
-val Totalise_def =
- Define
-  `Totalise R (s,s') = R(s,s') \/ (~(?s''. R(s,s'')) /\ (s = s'))`;
+Definition Totalise_def:
+   Totalise R (s,s') = R(s,s') \/ (~(?s''. R(s,s'')) /\ (s = s'))
+End
 
 val TotalTotalise =
  store_thm
@@ -935,15 +937,15 @@ val ReachablePathThm =
     (REWRITE_RULE[ReachableTotalise,TotalTotalise]
                  (SPEC ``Totalise R`` ReachablePath)));
 
-val Moore_def =
- Define
-  `Moore nextfn ((inputs:num->'a),(states:num->'b)) =
-    !t. states(t+1) = nextfn(inputs t,states t)`;
+Definition Moore_def:
+   Moore nextfn ((inputs:num->'a),(states:num->'b)) =
+    !t. states(t+1) = nextfn(inputs t,states t)
+End
 
-val MooreTrans_def =
- Define
-  `MooreTrans nextfn (((input:'a),(state:'b)),((input':'a),(state':'b))) =
-    (state' = nextfn(input,state))`;
+Definition MooreTrans_def:
+   MooreTrans nextfn (((input:'a),(state:'b)),((input':'a),(state':'b))) =
+    (state' = nextfn(input,state))
+End
 
 (*****************************************************************************)
 (*   val MooreTransEq =                                                      *)

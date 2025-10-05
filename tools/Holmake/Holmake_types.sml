@@ -381,6 +381,7 @@ val base_environment0 = let
        ("DEFAULT_TARGETS",
         [VREF ("patsubst %.sml,%.uo,$(patsubst %Theory.sml,,"^
                "$(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml)))")]),
+       ("HAVE_WORD64", if Systeml.haveWord64 then [LIT "1"] else []),
        ("HOLDIR", [LIT HOLDIR]),
        ("HOL_LNSIGOBJ", [LIT (HOLDIR ^ "/bin/" ^ "linkToSigobj")]),
        ("HOLOBJDIR", [LIT HFS_NameMunge.HOLOBJDIR]),

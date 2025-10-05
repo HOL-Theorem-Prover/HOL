@@ -39,39 +39,54 @@ val frac_bij = save_thm("frac_bij", define_new_type_bijections{
  *--------------------------------------------------------------------------*)
 
 (* numerator, denominator, sign of a fraction *)
-val frac_nmr_def = Define `frac_nmr f = FST(rep_frac f)`;
-val frac_dnm_def = Define `frac_dnm f = SND(rep_frac f)`;
-val frac_sgn_def = Define `frac_sgn f1 = SGN (frac_nmr f1)`;
+Definition frac_nmr_def:   frac_nmr f = FST(rep_frac f)
+End
+Definition frac_dnm_def:   frac_dnm f = SND(rep_frac f)
+End
+Definition frac_sgn_def:   frac_sgn f1 = SGN (frac_nmr f1)
+End
 
 (* additive, multiplicative inverse of a fraction *)
-val frac_ainv_def = Define `frac_ainv f1 = abs_frac(~frac_nmr f1, frac_dnm f1)`;
-val frac_minv_def = Define `frac_minv f1 = abs_frac(frac_sgn f1 * frac_dnm f1, ABS(frac_nmr f1) )`;
+Definition frac_ainv_def:   frac_ainv f1 = abs_frac(~frac_nmr f1, frac_dnm f1)
+End
+Definition frac_minv_def:   frac_minv f1 = abs_frac(frac_sgn f1 * frac_dnm f1, ABS(frac_nmr f1) )
+End
 
 (* neutral elements *)
-val frac_0_def = Define `frac_0 = abs_frac(0i,1i)`;
-val frac_1_def = Define `frac_1 = abs_frac(1i,1i)`;
+Definition frac_0_def:   frac_0 = abs_frac(0i,1i)
+End
+Definition frac_1_def:   frac_1 = abs_frac(1i,1i)
+End
 
 (* less (absolute value) *)
-val les_abs_def = Define`les_abs f1 f2 = frac_nmr f1 * frac_dnm f2 < frac_nmr f2 * frac_dnm f1`;
+Definition les_abs_def:  les_abs f1 f2 = frac_nmr f1 * frac_dnm f2 < frac_nmr f2 * frac_dnm f1
+End
 
 (* basic arithmetics *)
-val frac_add_def = Define `frac_add f1 f2 = abs_frac(frac_nmr f1 * frac_dnm f2 + frac_nmr f2 * frac_dnm f1, frac_dnm f1*frac_dnm f2)`;
-val frac_sub_def = Define `frac_sub f1 f2 = frac_add f1 (frac_ainv f2)`;
-val frac_mul_def = Define `frac_mul f1 f2 = abs_frac(frac_nmr f1 * frac_nmr f2, frac_dnm f1*frac_dnm f2)`;
-val frac_div_def = Define `frac_div f1 f2 = frac_mul f1 (frac_minv f2)`;
+Definition frac_add_def:   frac_add f1 f2 = abs_frac(frac_nmr f1 * frac_dnm f2 + frac_nmr f2 * frac_dnm f1, frac_dnm f1*frac_dnm f2)
+End
+Definition frac_sub_def:   frac_sub f1 f2 = frac_add f1 (frac_ainv f2)
+End
+Definition frac_mul_def:   frac_mul f1 f2 = abs_frac(frac_nmr f1 * frac_nmr f2, frac_dnm f1*frac_dnm f2)
+End
+Definition frac_div_def:   frac_div f1 f2 = frac_mul f1 (frac_minv f2)
+End
 
 (*  frac_save terms are always defined (encode the definition of a fraction in the syntax) *)
-val frac_save_def = Define `frac_save (nmr:int) (dnm:num) = abs_frac(nmr,&dnm + 1)`;
+Definition frac_save_def:   frac_save (nmr:int) (dnm:num) = abs_frac(nmr,&dnm + 1)
+End
 
 (*--------------------------------------------------------------------------
  *  FRAC: thm
  *  |- !f. abs_frac (frac_nmr f,frac_dnm f) = f
  *--------------------------------------------------------------------------*)
 
-val FRAC = store_thm("FRAC", ``!f. abs_frac (frac_nmr f,frac_dnm f) = f``,
+Theorem FRAC:   !f. abs_frac (frac_nmr f,frac_dnm f) = f
+Proof
         STRIP_TAC THEN
         REWRITE_TAC[frac_nmr_def,frac_dnm_def]
-        THEN RW_TAC int_ss [CONJUNCT1 frac_bij]);
+        THEN RW_TAC int_ss [CONJUNCT1 frac_bij]
+QED
 
 (*==========================================================================
  *  equivalence of fractions
@@ -86,21 +101,24 @@ val FRAC = store_thm("FRAC", ``!f. abs_frac (frac_nmr f,frac_dnm f) = f``,
 val [abs_rep_frac, rep_abs_frac] = CONJUNCTS frac_bij ;
 val (raf_eqI, raf_eqD) = EQ_IMP_RULE (SPEC_ALL rep_abs_frac) ;
 
-val FRAC_EQ = store_thm("FRAC_EQ",
-  ``!a1 b1 a2 b2. 0i < b1 ==> 0i < b2 ==>
-    ((abs_frac(a1,b1)=abs_frac(a2,b2)) = (a1=a2) /\ (b1=b2) )``,
+Theorem FRAC_EQ:
+    !a1 b1 a2 b2. 0i < b1 ==> 0i < b2 ==>
+    ((abs_frac(a1,b1)=abs_frac(a2,b2)) = (a1=a2) /\ (b1=b2) )
+Proof
   REPEAT STRIP_TAC THEN EQ_TAC THEN DISCH_TAC THENL [
     POP_ASSUM (MP_TAC o AP_TERM ``rep_frac``) THEN
       VALIDATE (CONV_TAC (DEPTH_CONV (REWR_CONV_A (UNDISCH raf_eqI)))),
     ALL_TAC] THEN
-  ASM_SIMP_TAC std_ss []) ;
+  ASM_SIMP_TAC std_ss []
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_EQ_ALT : thm
  *  |- !f1 f2. (f1=f2) = (frac_nmr f1 = frac_nmr f2) /\ (frac_dnm f1 = frac_dnm f2)
  *--------------------------------------------------------------------------*)
 
-val FRAC_EQ_ALT = store_thm("FRAC_EQ_ALT", ``!f1 f2. (f1=f2) = (frac_nmr f1 = frac_nmr f2) /\ (frac_dnm f1 = frac_dnm f2)``,
+Theorem FRAC_EQ_ALT:   !f1 f2. (f1=f2) = (frac_nmr f1 = frac_nmr f2) /\ (frac_dnm f1 = frac_dnm f2)
+Proof
         REPEAT GEN_TAC THEN
         EQ_TAC THEN
         STRIP_TAC THENL
@@ -109,7 +127,8 @@ val FRAC_EQ_ALT = store_thm("FRAC_EQ_ALT", ``!f1 f2. (f1=f2) = (frac_nmr f1 = fr
         ,
                 ONCE_REWRITE_TAC[GSYM FRAC]
         ] THEN
-        ASM_REWRITE_TAC[] );
+        ASM_REWRITE_TAC[]
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_NOT_EQ : thm
@@ -117,10 +136,12 @@ val FRAC_EQ_ALT = store_thm("FRAC_EQ_ALT", ``!f1 f2. (f1=f2) = (frac_nmr f1 = fr
  *      (~(abs_frac(a1,b1) = abs_frac(a2,b2)) = ~(a1=a2) \/ ~(b1=b2))
  *--------------------------------------------------------------------------*)
 
-val FRAC_NOT_EQ = store_thm("FRAC_NOT_EQ", ``!a1 b1 a2 b2. 0i<b1 ==> 0i<b2 ==> (~(abs_frac(a1,b1) = abs_frac(a2,b2)) = ~(a1=a2) \/ ~(b1=b2))``,
+Theorem FRAC_NOT_EQ:   !a1 b1 a2 b2. 0i<b1 ==> 0i<b2 ==> (~(abs_frac(a1,b1) = abs_frac(a2,b2)) = ~(a1=a2) \/ ~(b1=b2))
+Proof
         REPEAT STRIP_TAC THEN
         RW_TAC int_ss [] THEN
-        PROVE_TAC[FRAC_EQ] );
+        PROVE_TAC[FRAC_EQ]
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_NOT_EQ_IMP : thm
@@ -130,11 +151,13 @@ val FRAC_NOT_EQ = store_thm("FRAC_NOT_EQ", ``!a1 b1 a2 b2. 0i<b1 ==> 0i<b2 ==> (
 
 (* following theorem (with longer proof)
   was previously stored as "FRAC_NOT_EQ", must be an error JED 16.9.15 *)
-val FRAC_NOT_EQ_IMP = store_thm("FRAC_NOT_EQ_IMP",
-  ``!a1 b1 a2 b2. 0i < b1 ==> 0i < b2 ==>
-    ~((a1,b1) = (a2,b2)) ==> ~(abs_frac (a1,b1) = abs_frac (a2,b2))``,
+Theorem FRAC_NOT_EQ_IMP:
+    !a1 b1 a2 b2. 0i < b1 ==> 0i < b2 ==>
+    ~((a1,b1) = (a2,b2)) ==> ~(abs_frac (a1,b1) = abs_frac (a2,b2))
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN STRIP_TAC THEN
-  ASM_SIMP_TAC std_ss [FRAC_EQ]) ;
+  ASM_SIMP_TAC std_ss [FRAC_EQ]
+QED
 
 
 (*--------------------------------------------------------------------------
@@ -161,9 +184,11 @@ val FRAC_EQ_TAC:tactic = fn (asm_list,goal) =>
  *  |- !f. 0 < frac_dnm f
  *--------------------------------------------------------------------------*)
 
-val FRAC_DNMPOS = store_thm("FRAC_DNMPOS",``!f. 0 < frac_dnm f``,
+Theorem FRAC_DNMPOS:  !f. 0 < frac_dnm f
+Proof
         REWRITE_TAC[frac_dnm_def] THEN
-        RW_TAC int_ss [REWRITE_RULE [CONJUNCT1 frac_bij] (SPEC ``rep_frac(f)`` (BETA_RULE (ONCE_REWRITE_RULE [EQ_SYM_EQ] (CONJUNCT2 frac_bij)))) ]);
+        RW_TAC int_ss [REWRITE_RULE [CONJUNCT1 frac_bij] (SPEC ``rep_frac(f)`` (BETA_RULE (ONCE_REWRITE_RULE [EQ_SYM_EQ] (CONJUNCT2 frac_bij)))) ]
+QED
 
 (*--------------------------------------------------------------------------
  *  frac_pos_conv : term list -> conv
@@ -252,20 +277,24 @@ end;
  *  |- !a b. 0 < b ==> (frac_nmr (abs_frac (a,b)) = a)
  *--------------------------------------------------------------------------*)
 
-val NMR = store_thm("NMR", ``!a b. 0 < b ==> (frac_nmr (abs_frac (a,b)) = a)``,
+Theorem NMR:   !a b. 0 < b ==> (frac_nmr (abs_frac (a,b)) = a)
+Proof
         REPEAT STRIP_TAC THEN
         REWRITE_TAC[frac_nmr_def] THEN
-        REWRITE_TAC[FRAC_REP_ABS_SUBST] );
+        REWRITE_TAC[FRAC_REP_ABS_SUBST]
+QED
 
 (*--------------------------------------------------------------------------
  *  DNM: thm
  *  |- !a b. 0 < b ==> (frac_dnm (abs_frac (a,b)) = b)
  *--------------------------------------------------------------------------*)
 
-val DNM = store_thm("DNM", ``!a b. 0 < b ==> (frac_dnm (abs_frac (a,b)) = b)``,
+Theorem DNM:   !a b. 0 < b ==> (frac_dnm (abs_frac (a,b)) = b)
+Proof
         REPEAT STRIP_TAC THEN
         REWRITE_TAC[frac_dnm_def] THEN
-        REWRITE_TAC[FRAC_REP_ABS_SUBST] );
+        REWRITE_TAC[FRAC_REP_ABS_SUBST]
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_NMR_CONV: conv
@@ -396,11 +425,13 @@ handle HOL_ERR _ => raise ERR "FRAC_NMRDNM_TAC" "";
  *      frac_ainv (abs_frac(a1,b1)) = abs_frac(~a1,b1)
  *--------------------------------------------------------------------------*)
 
-val FRAC_AINV_CALCULATE = store_thm("FRAC_AINV_CALCULATE", ``!a1 b1. 0i<b1 ==> (frac_ainv (abs_frac(a1,b1)) = abs_frac(~a1,b1))``,
+Theorem FRAC_AINV_CALCULATE:   !a1 b1. 0i<b1 ==> (frac_ainv (abs_frac(a1,b1)) = abs_frac(~a1,b1))
+Proof
         REPEAT STRIP_TAC THEN
         REWRITE_TAC[frac_ainv_def] THEN
         SUBST_TAC[FRAC_NMR_CONV ``frac_nmr (abs_frac (a1,b1))``,FRAC_DNM_CONV ``frac_dnm (abs_frac (a1,b1))``] THEN
-        RW_TAC int_ss [] );
+        RW_TAC int_ss []
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_MINV_CALCULATE : thm
@@ -408,11 +439,13 @@ val FRAC_AINV_CALCULATE = store_thm("FRAC_AINV_CALCULATE", ``!a1 b1. 0i<b1 ==> (
  *      frac_minv (abs_frac(a1,b1)) = if 0 < a1 then abs_frac(b1,a1) else abs_frac(~b1, ~a1) )
  *--------------------------------------------------------------------------*)
 
-val FRAC_MINV_CALCULATE = store_thm("FRAC_MINV_CALCULATE", ``!a1 b1. (0i < b1) ==> ~(a1 = 0i) ==> (frac_minv (abs_frac(a1,b1)) = abs_frac(SGN(a1)*b1,ABS(a1)) )``,
+Theorem FRAC_MINV_CALCULATE:   !a1 b1. (0i < b1) ==> ~(a1 = 0i) ==> (frac_minv (abs_frac(a1,b1)) = abs_frac(SGN(a1)*b1,ABS(a1)) )
+Proof
         REPEAT STRIP_TAC THEN
         REWRITE_TAC[frac_minv_def, frac_sgn_def] THEN
         SUBST_TAC[FRAC_NMR_CONV ``frac_nmr (abs_frac (a1,b1))``,FRAC_DNM_CONV ``frac_dnm (abs_frac (a1,b1))``] THEN
-        PROVE_TAC[] );
+        PROVE_TAC[]
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_SGN_CALCULATE : thm
@@ -420,11 +453,13 @@ val FRAC_MINV_CALCULATE = store_thm("FRAC_MINV_CALCULATE", ``!a1 b1. (0i < b1) =
  *      (frac_sgn (abs_frac(a1,b1)) = SGN a1)
  *--------------------------------------------------------------------------*)
 
-val FRAC_SGN_CALCULATE = store_thm("FRAC_SGN_CALCULATE", ``!a1 b1. (0i < b1) ==> (frac_sgn (abs_frac(a1,b1)) = SGN a1)``,
+Theorem FRAC_SGN_CALCULATE:   !a1 b1. (0i < b1) ==> (frac_sgn (abs_frac(a1,b1)) = SGN a1)
+Proof
         REPEAT STRIP_TAC THEN
         REWRITE_TAC[frac_sgn_def] THEN
         SUBST_TAC[FRAC_NMR_CONV ``frac_nmr (abs_frac (a1,b1))``,FRAC_DNM_CONV ``frac_dnm (abs_frac (a1,b1))``] THEN
-        RW_TAC int_ss []);
+        RW_TAC int_ss []
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_ADD_CALCULATE : thm
@@ -432,13 +467,15 @@ val FRAC_SGN_CALCULATE = store_thm("FRAC_SGN_CALCULATE", ``!a1 b1. (0i < b1) ==>
  *      frac_add (abs_frac(a1,b1)) (abs_frac(a2,b2)) = abs_frac( a1*b2+a2*b1 , b1*b2 )
  *--------------------------------------------------------------------------*)
 
-val FRAC_ADD_CALCULATE = store_thm("FRAC_ADD_CALCULATE", ``!a1 b1 a2 b2. 0<b1 ==> 0<b2 ==> (frac_add (abs_frac(a1,b1)) (abs_frac(a2,b2)) = abs_frac( a1*b2+a2*b1 , b1*b2 ))``,
+Theorem FRAC_ADD_CALCULATE:   !a1 b1 a2 b2. 0<b1 ==> 0<b2 ==> (frac_add (abs_frac(a1,b1)) (abs_frac(a2,b2)) = abs_frac( a1*b2+a2*b1 , b1*b2 ))
+Proof
         REPEAT STRIP_TAC THEN
         REWRITE_TAC[frac_add_def] THEN
         SUBST_TAC[
                 FRAC_NMR_CONV ``frac_nmr (abs_frac (a1,b1))``,FRAC_DNM_CONV ``frac_dnm (abs_frac (a1,b1))``,
                 FRAC_NMR_CONV ``frac_nmr (abs_frac (a2,b2))``,FRAC_DNM_CONV ``frac_dnm (abs_frac (a2,b2))``] THEN
-        RW_TAC int_ss [] );
+        RW_TAC int_ss []
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_SUB_CALCULATE : thm
@@ -446,14 +483,16 @@ val FRAC_ADD_CALCULATE = store_thm("FRAC_ADD_CALCULATE", ``!a1 b1 a2 b2. 0<b1 ==
  *      frac_sub (abs_frac(a1,b1)) (abs_frac(a2,b2)) = abs_frac( a1*b2-a2*b1 , b1*b2 )
  *--------------------------------------------------------------------------*)
 
-val FRAC_SUB_CALCULATE = store_thm("FRAC_SUB_CALCULATE", ``!a1 b1 a2 b2. 0<b1 ==> 0<b2 ==> (frac_sub (abs_frac(a1,b1)) (abs_frac(a2,b2)) = abs_frac( a1*b2-a2*b1 , b1*b2 ))``,
+Theorem FRAC_SUB_CALCULATE:   !a1 b1 a2 b2. 0<b1 ==> 0<b2 ==> (frac_sub (abs_frac(a1,b1)) (abs_frac(a2,b2)) = abs_frac( a1*b2-a2*b1 , b1*b2 ))
+Proof
         REPEAT STRIP_TAC THEN
         REWRITE_TAC[frac_sub_def,frac_add_def,frac_ainv_def] THEN
         SUBST_TAC[
                 FRAC_NMR_CONV ``frac_nmr (abs_frac (a1,b1))``,FRAC_DNM_CONV ``frac_dnm (abs_frac (a1,b1))``,
                 FRAC_NMR_CONV ``frac_nmr (abs_frac (a2,b2))``,FRAC_DNM_CONV ``frac_dnm (abs_frac (a2,b2))``] THEN
         SUBST_TAC[FRAC_NMR_CONV ``frac_nmr (abs_frac (~a2,b2))``,FRAC_DNM_CONV ``frac_dnm (abs_frac (~a2,b2))``] THEN
-        RW_TAC int_ss [INT_SUB_CALCULATE, INT_MUL_CALCULATE] );
+        RW_TAC int_ss [INT_SUB_CALCULATE, INT_MUL_CALCULATE]
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_MULT_CALCULATE : thm
@@ -461,13 +500,15 @@ val FRAC_SUB_CALCULATE = store_thm("FRAC_SUB_CALCULATE", ``!a1 b1 a2 b2. 0<b1 ==
  *      frac_mul (abs_frac(a1,b1)) (abs_frac(a2,b2)) = abs_frac( a1*a2 , b1*b2 )
  *--------------------------------------------------------------------------*)
 
-val FRAC_MULT_CALCULATE = store_thm("FRAC_MULT_CALCULATE", ``!a1 b1 a2 b2. 0<b1 ==> 0<b2 ==> (frac_mul (abs_frac(a1,b1)) (abs_frac(a2,b2)) = abs_frac( a1*a2 , b1*b2 ))``,
+Theorem FRAC_MULT_CALCULATE:   !a1 b1 a2 b2. 0<b1 ==> 0<b2 ==> (frac_mul (abs_frac(a1,b1)) (abs_frac(a2,b2)) = abs_frac( a1*a2 , b1*b2 ))
+Proof
         REPEAT STRIP_TAC THEN
         REWRITE_TAC[frac_mul_def] THEN
         SUBST_TAC[
                 FRAC_NMR_CONV ``frac_nmr (abs_frac (a1,b1))``,FRAC_DNM_CONV ``frac_dnm (abs_frac (a1,b1))``,
                 FRAC_NMR_CONV ``frac_nmr (abs_frac (a2,b2))``,FRAC_DNM_CONV ``frac_dnm (abs_frac (a2,b2))``] THEN
-        RW_TAC int_ss [] );
+        RW_TAC int_ss []
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_DIV_CALCULATE : thm
@@ -475,7 +516,8 @@ val FRAC_MULT_CALCULATE = store_thm("FRAC_MULT_CALCULATE", ``!a1 b1 a2 b2. 0<b1 
  *      frac_div (abs_frac(a1,b1)) (abs_frac(a2,b2)) = abs_frac( a1*SGN(a2)*b2 , b1*ABS(a2) )
  *--------------------------------------------------------------------------*)
 
-val FRAC_DIV_CALCULATE = store_thm("FRAC_DIV_CALCULATE", ``!a1 b1 a2 b2. 0i<b1 ==> 0i<b2 ==> ~(a2=0i) ==> (frac_div (abs_frac(a1,b1)) (abs_frac(a2,b2)) = abs_frac( a1*SGN(a2)*b2 , b1*ABS(a2) ) )``,
+Theorem FRAC_DIV_CALCULATE:   !a1 b1 a2 b2. 0i<b1 ==> 0i<b2 ==> ~(a2=0i) ==> (frac_div (abs_frac(a1,b1)) (abs_frac(a2,b2)) = abs_frac( a1*SGN(a2)*b2 , b1*ABS(a2) ) )
+Proof
         REPEAT STRIP_TAC THEN
         REWRITE_TAC[frac_div_def,frac_mul_def,frac_minv_def, frac_sgn_def] THEN
         SUBST_TAC[
@@ -483,7 +525,8 @@ val FRAC_DIV_CALCULATE = store_thm("FRAC_DIV_CALCULATE", ``!a1 b1 a2 b2. 0i<b1 =
                 FRAC_NMR_CONV ``frac_nmr (abs_frac (a2,b2))``,FRAC_DNM_CONV ``frac_dnm (abs_frac (a2,b2))``] THEN
         ASSUME_TAC (UNDISCH_ALL (SPEC ``a2:int`` INT_ABS_NOT0POS)) THEN
         SUBST_TAC[FRAC_NMR_CONV ``frac_nmr (abs_frac (SGN a2 * b2,ABS a2))``,FRAC_DNM_CONV ``frac_dnm (abs_frac (SGN a2 * b2,ABS a2))``] THEN
-        RW_TAC (int_ss ++ (simpLib.ac_ss [(INT_MUL_ASSOC, INT_MUL_COMM)])) [] );
+        RW_TAC (int_ss ++ (simpLib.ac_ss [(INT_MUL_ASSOC, INT_MUL_COMM)])) []
+QED
 
 (*==========================================================================
  *  basic theorems (associativity, commutativity, identity elements, ...)
@@ -497,19 +540,23 @@ val FRAC_DIV_CALCULATE = store_thm("FRAC_DIV_CALCULATE", ``!a1 b1 a2 b2. 0i<b1 =
  *  |- !a b c. frac_mul a (frac_mul b c) = frac_mul (frac_mul a b) c
  *--------------------------------------------------------------------------*)
 
-val FRAC_ADD_ASSOC = store_thm("FRAC_ADD_ASSOC", ``!a b c. frac_add a (frac_add b c) = frac_add (frac_add a b) c``,
+Theorem FRAC_ADD_ASSOC:   !a b c. frac_add a (frac_add b c) = frac_add (frac_add a b) c
+Proof
         REPEAT STRIP_TAC THEN REWRITE_TAC[frac_add_def]
         THEN FRAC_POS_TAC ``frac_dnm a * frac_dnm b``
         THEN FRAC_POS_TAC ``frac_dnm b * frac_dnm c``
         THEN RW_TAC int_ss [NMR,DNM]
-        THEN FRAC_EQ_TAC THEN INT_RING_TAC );
+        THEN FRAC_EQ_TAC THEN INT_RING_TAC
+QED
 
-val FRAC_MUL_ASSOC = store_thm("FRAC_MUL_ASSOC", ``!a b c. frac_mul a (frac_mul b c) = frac_mul (frac_mul a b) c``,
+Theorem FRAC_MUL_ASSOC:   !a b c. frac_mul a (frac_mul b c) = frac_mul (frac_mul a b) c
+Proof
         REPEAT STRIP_TAC THEN REWRITE_TAC[frac_mul_def]
         THEN FRAC_POS_TAC ``frac_dnm a * frac_dnm b``
         THEN FRAC_POS_TAC ``frac_dnm b * frac_dnm c``
         THEN RW_TAC int_ss [NMR,DNM]
-        THEN FRAC_EQ_TAC THEN INT_RING_TAC);
+        THEN FRAC_EQ_TAC THEN INT_RING_TAC
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_ADD_COMM: thm
@@ -519,17 +566,21 @@ val FRAC_MUL_ASSOC = store_thm("FRAC_MUL_ASSOC", ``!a b c. frac_mul a (frac_mul 
  *  |- !a b c. frac_mul a b = frac_mul b a
  *--------------------------------------------------------------------------*)
 
-val FRAC_ADD_COMM = store_thm("FRAC_ADD_COMM",``!a b. frac_add a b = frac_add b a``,
+Theorem FRAC_ADD_COMM:  !a b. frac_add a b = frac_add b a
+Proof
         REPEAT STRIP_TAC THEN
         REWRITE_TAC[frac_add_def]
         THEN FRAC_EQ_TAC
-        THEN INT_RING_TAC );
+        THEN INT_RING_TAC
+QED
 
-val FRAC_MUL_COMM = store_thm("FRAC_MUL_COMM",``!a b. frac_mul a b = frac_mul b a``,
+Theorem FRAC_MUL_COMM:  !a b. frac_mul a b = frac_mul b a
+Proof
         REPEAT STRIP_TAC THEN
         REWRITE_TAC[frac_mul_def]
         THEN FRAC_EQ_TAC THEN
-        INT_RING_TAC );
+        INT_RING_TAC
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_ADD_RID: thm
@@ -539,28 +590,34 @@ val FRAC_MUL_COMM = store_thm("FRAC_MUL_COMM",``!a b. frac_mul a b = frac_mul b 
  *  |- !a. frac_mul a frac_1 = a
  *--------------------------------------------------------------------------*)
 
-val FRAC_ADD_RID = store_thm("FRAC_ADD_RID",``!a. frac_add a frac_0 = a``,
+Theorem FRAC_ADD_RID:  !a. frac_add a frac_0 = a
+Proof
         STRIP_TAC THEN
         REWRITE_TAC[frac_add_def, frac_0_def] THEN
         RW_TAC int_ss [NMR,DNM] THEN
-        RW_TAC int_ss [FRAC] );
+        RW_TAC int_ss [FRAC]
+QED
 
-val FRAC_MUL_RID = store_thm("FRAC_MUL_RID",``!a. frac_mul a frac_1 = a``,
+Theorem FRAC_MUL_RID:  !a. frac_mul a frac_1 = a
+Proof
         STRIP_TAC THEN
         REWRITE_TAC[frac_mul_def, frac_1_def] THEN
         RW_TAC int_ss [NMR,DNM] THEN
-        RW_TAC int_ss [FRAC] );
+        RW_TAC int_ss [FRAC]
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_1_0: thm
  *  |- ~ (frac_1=frac_0)
  *--------------------------------------------------------------------------*)
 
-val FRAC_1_0 = store_thm("FRAC_1_0", ``~ (frac_1=frac_0)``,
+Theorem FRAC_1_0:   ~ (frac_1=frac_0)
+Proof
         REWRITE_TAC[frac_0_def, frac_1_def] THEN
         FRAC_POS_TAC ``1i`` THEN
         MATCH_MP_TAC (UNDISCH (UNDISCH (SPEC ``1i`` (SPEC ``0i`` (SPEC ``1i`` (SPEC ``1i`` FRAC_NOT_EQ_IMP)))))) THEN
-        RW_TAC int_ss [] );
+        RW_TAC int_ss []
+QED
 
 (*==========================================================================
  *  calculation rules of basic arithmetics
@@ -586,19 +643,24 @@ val FRAC_1_0 = store_thm("FRAC_1_0", ``~ (frac_1=frac_0)``,
  *  |- !f1 f2. frac_ainv (frac_mul f1 f2) = frac_mul (frac_ainv f1) f2
  *--------------------------------------------------------------------------*)
 
-val FRAC_AINV_0 = store_thm("FRAC_AINV_0", ``frac_ainv frac_0 = frac_0``,
+Theorem FRAC_AINV_0:   frac_ainv frac_0 = frac_0
+Proof
         REWRITE_TAC[frac_0_def,frac_ainv_def] THEN
         FRAC_POS_TAC ``1i`` THEN
         RW_TAC int_ss [NMR,DNM] THEN
-        RW_TAC int_ss [INT_NEG_0] );
+        RW_TAC int_ss [INT_NEG_0]
+QED
 
-val FRAC_AINV_AINV = store_thm("FRAC_AINV_AINV", ``!f1. frac_ainv (frac_ainv f1) = f1``,
+Theorem FRAC_AINV_AINV:   !f1. frac_ainv (frac_ainv f1) = f1
+Proof
         GEN_TAC THEN
         REWRITE_TAC[frac_ainv_def] THEN
         FRAC_POS_TAC ``frac_dnm f1`` THEN
-        RW_TAC int_ss [NMR, DNM, INT_NEGNEG, FRAC] );
+        RW_TAC int_ss [NMR, DNM, INT_NEGNEG, FRAC]
+QED
 
-val FRAC_AINV_ADD = store_thm( "FRAC_AINV_ADD", ``! f1 f2. frac_ainv (frac_add f1 f2) = frac_add (frac_ainv f1) (frac_ainv f2)``,
+Theorem FRAC_AINV_ADD:   ! f1 f2. frac_ainv (frac_add f1 f2) = frac_add (frac_ainv f1) (frac_ainv f2)
+Proof
         REPEAT GEN_TAC THEN
         REWRITE_TAC[frac_add_def, frac_ainv_def] THEN
         FRAC_POS_TAC ``frac_dnm f1`` THEN
@@ -606,9 +668,11 @@ val FRAC_AINV_ADD = store_thm( "FRAC_AINV_ADD", ``! f1 f2. frac_ainv (frac_add f
         FRAC_POS_TAC ``frac_dnm f1 * frac_dnm f2`` THEN
         RW_TAC int_ss [NMR,DNM] THEN
         FRAC_EQ_TAC THENL
-        [INT_RING_TAC,RW_TAC int_ss []] );
+        [INT_RING_TAC,RW_TAC int_ss []]
+QED
 
-val FRAC_AINV_SUB = store_thm("FRAC_AINV_SUB", ``!f1 f2. frac_ainv (frac_sub f2 f1) = frac_sub f1 f2``,
+Theorem FRAC_AINV_SUB:   !f1 f2. frac_ainv (frac_sub f2 f1) = frac_sub f1 f2
+Proof
         REPEAT GEN_TAC THEN
         REWRITE_TAC[frac_ainv_def, frac_add_def, frac_sub_def] THEN
         FRAC_POS_TAC ``frac_dnm f1`` THEN
@@ -616,28 +680,35 @@ val FRAC_AINV_SUB = store_thm("FRAC_AINV_SUB", ``!f1 f2. frac_ainv (frac_sub f2 
         FRAC_POS_TAC ``frac_dnm f2 * frac_dnm f1`` THEN
         RW_TAC int_ss [NMR,DNM] THEN
         FRAC_EQ_TAC THEN
-        INT_RING_TAC );
+        INT_RING_TAC
+QED
 
-val FRAC_AINV_RMUL = store_thm("FRAC_AINV_RMUL", ``!f1 f2. frac_ainv (frac_mul f1 f2) = frac_mul f1 (frac_ainv f2)``,
+Theorem FRAC_AINV_RMUL:   !f1 f2. frac_ainv (frac_mul f1 f2) = frac_mul f1 (frac_ainv f2)
+Proof
         REPEAT GEN_TAC THEN
         REWRITE_TAC[frac_mul_def, frac_ainv_def] THEN
         FRAC_POS_TAC ``frac_dnm f2`` THEN
         FRAC_POS_TAC ``frac_dnm f1 * frac_dnm f2`` THEN
         RW_TAC int_ss [NMR,DNM] THEN
         FRAC_EQ_TAC THENL
-        [ INT_RING_TAC, PROVE_TAC[] ]);
+        [ INT_RING_TAC, PROVE_TAC[] ]
+QED
 
-val FRAC_AINV_LMUL = store_thm("FRAC_AINV_LMUL", ``!f1 f2. frac_ainv (frac_mul f1 f2) = frac_mul (frac_ainv f1) f2``,
-        PROVE_TAC[FRAC_MUL_COMM, FRAC_AINV_RMUL] );
+Theorem FRAC_AINV_LMUL:   !f1 f2. frac_ainv (frac_mul f1 f2) = frac_mul (frac_ainv f1) f2
+Proof
+        PROVE_TAC[FRAC_MUL_COMM, FRAC_AINV_RMUL]
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_MINV_1: thm
  *  |- frac_minv frac_1 = frac_1
  *--------------------------------------------------------------------------*)
 
-val FRAC_MINV_1 = Q.store_thm ("FRAC_MINV_1", `frac_minv frac_1 = frac_1`,
+Theorem FRAC_MINV_1:  frac_minv frac_1 = frac_1
+Proof
   SIMP_TAC intLib.int_ss
-    [FRAC_MINV_CALCULATE, intExtensionTheory.SGN_def, frac_1_def]) ;
+    [FRAC_MINV_CALCULATE, intExtensionTheory.SGN_def, frac_1_def]
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_SUB_ADD: thm
@@ -647,7 +718,8 @@ val FRAC_MINV_1 = Q.store_thm ("FRAC_MINV_1", `frac_minv frac_1 = frac_1`,
  *  |- !a b c. frac_sub a (frac_sub b c) = frac_add (frac_sub a b) c
  *--------------------------------------------------------------------------*)
 
-val FRAC_SUB_ADD = store_thm("FRAC_SUB_ADD", ``!a b c. frac_sub a (frac_add b c) = frac_sub (frac_sub a b) c``,
+Theorem FRAC_SUB_ADD:   !a b c. frac_sub a (frac_add b c) = frac_sub (frac_sub a b) c
+Proof
         REPEAT STRIP_TAC THEN REWRITE_TAC[frac_add_def,frac_sub_def,frac_ainv_def] THEN
         FRAC_POS_TAC ``frac_dnm a * frac_dnm b`` THEN
         FRAC_POS_TAC ``frac_dnm b * frac_dnm c`` THEN
@@ -655,9 +727,11 @@ val FRAC_SUB_ADD = store_thm("FRAC_SUB_ADD", ``!a b c. frac_sub a (frac_add b c)
         FRAC_POS_TAC ``frac_dnm c`` THEN
         RW_TAC int_ss [NMR,DNM] THEN
         FRAC_EQ_TAC THEN
-        INT_RING_TAC );
+        INT_RING_TAC
+QED
 
-val FRAC_SUB_SUB = store_thm("FRAC_SUB_SUB", ``!a b c. frac_sub a (frac_sub b c) = frac_add (frac_sub a b) c``,
+Theorem FRAC_SUB_SUB:   !a b c. frac_sub a (frac_sub b c) = frac_add (frac_sub a b) c
+Proof
         REPEAT STRIP_TAC THEN REWRITE_TAC[frac_add_def,frac_sub_def,frac_ainv_def] THEN
         FRAC_POS_TAC ``frac_dnm a * frac_dnm b`` THEN
         FRAC_POS_TAC ``frac_dnm b * frac_dnm c`` THEN
@@ -665,7 +739,8 @@ val FRAC_SUB_SUB = store_thm("FRAC_SUB_SUB", ``!a b c. frac_sub a (frac_sub b c)
         FRAC_POS_TAC ``frac_dnm c`` THEN
         RW_TAC int_ss [NMR,DNM] THEN
         FRAC_EQ_TAC THEN
-        INT_RING_TAC );
+        INT_RING_TAC
+QED
 
 (*==========================================================================
  *  signum, absolute value
@@ -676,7 +751,8 @@ val FRAC_SUB_SUB = store_thm("FRAC_SUB_SUB", ``!a b c. frac_sub a (frac_sub b c)
  *  |- !f. (frac_sgn f1 = ~1) \/ (frac_sgn f1 = 0) \/ (frac_sgn f1 = 1)
  *--------------------------------------------------------------------------*)
 
-val FRAC_SGN_TOTAL = store_thm("FRAC_SGN_TOTAL", ``!f1. (frac_sgn f1 = ~1) \/ (frac_sgn f1 = 0) \/ (frac_sgn f1 = 1)``,
+Theorem FRAC_SGN_TOTAL:   !f1. (frac_sgn f1 = ~1) \/ (frac_sgn f1 = 0) \/ (frac_sgn f1 = 1)
+Proof
         REPEAT GEN_TAC THEN
         REWRITE_TAC[frac_sgn_def, SGN_def] THEN
         ASM_CASES_TAC ``frac_nmr f1 = 0`` THENL
@@ -685,14 +761,16 @@ val FRAC_SGN_TOTAL = store_thm("FRAC_SGN_TOTAL", ``!f1. (frac_sgn f1 = ~1) \/ (f
         ,
                 ASM_CASES_TAC ``frac_nmr f1 < 0`` THEN
                 PROVE_TAC[]
-        ] );
+        ]
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_SGN_POS: thm
  *  |- !f1. (frac_sgn f1 = 1) = 0 < nmr f1
  *--------------------------------------------------------------------------*)
 
-val FRAC_SGN_POS = store_thm("FRAC_SGN_POS", ``!f1. (frac_sgn f1 = 1) = 0 < frac_nmr f1``,
+Theorem FRAC_SGN_POS:   !f1. (frac_sgn f1 = 1) = 0 < frac_nmr f1
+Proof
         GEN_TAC THEN
         REWRITE_TAC[frac_sgn_def, SGN_def] THEN
         RW_TAC int_ss [] THENL
@@ -700,14 +778,16 @@ val FRAC_SGN_POS = store_thm("FRAC_SGN_POS", ``!f1. (frac_sgn f1 = 1) = 0 < frac
                 PROVE_TAC[INT_LT_GT]
         ,
                 PROVE_TAC[INT_LT_TOTAL]
-        ] );
+        ]
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_SGN_NOT_NEG: thm
  *  |- !f1. ~(frac_sgn f1 = ~1) = (0 = frac_nmr f1) \/ (0 < frac_nmr f1)
  *--------------------------------------------------------------------------*)
 
-val FRAC_SGN_NOT_NEG = store_thm("FRAC_SGN_NOT_NEG", ``!f1. ~(frac_sgn f1 = ~1) = (0 = frac_nmr f1) \/ (0 < frac_nmr f1)``,
+Theorem FRAC_SGN_NOT_NEG:   !f1. ~(frac_sgn f1 = ~1) = (0 = frac_nmr f1) \/ (0 < frac_nmr f1)
+Proof
         GEN_TAC THEN
         REWRITE_TAC[frac_sgn_def, SGN_def] THEN
         RW_TAC int_ss [] THENL
@@ -715,14 +795,16 @@ val FRAC_SGN_NOT_NEG = store_thm("FRAC_SGN_NOT_NEG", ``!f1. ~(frac_sgn f1 = ~1) 
                 PROVE_TAC[INT_LT_GT]
         ,
                 PROVE_TAC[INT_LT_TOTAL]
-        ] );
+        ]
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_SGN_NEG: thm
  *  |- ! f. ~frac_sgn (frac_ainv f) = frac_sgn f
  *--------------------------------------------------------------------------*)
 
-val FRAC_SGN_NEG = store_thm("FRAC_SGN_NEG", ``! f. ~frac_sgn (frac_ainv f) = frac_sgn f``,
+Theorem FRAC_SGN_NEG:   ! f. ~frac_sgn (frac_ainv f) = frac_sgn f
+Proof
         GEN_TAC THEN
         ONCE_REWRITE_TAC[EQ_SYM_EQ] THEN
         REWRITE_TAC[frac_ainv_def] THEN
@@ -748,24 +830,28 @@ val FRAC_SGN_NEG = store_thm("FRAC_SGN_NEG", ``! f. ~frac_sgn (frac_ainv f) = fr
                 UNDISCH_TAC ``~(frac_nmr f < 0) = (0 = frac_nmr f) \/ 0 < frac_nmr f`` THEN
                 RW_TAC int_ss []
                 ]
-        ] );
+        ]
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_SGN_IMP_EQGT: thm
  *  |- !f1 f2. frac_sub f1 f2 = frac_ainv (frac_sub f2 f1)
  *--------------------------------------------------------------------------*)
 
-val FRAC_SGN_IMP_EQGT = store_thm("FRAC_SGN_IMP_EQGT",``!f1. ~(frac_sgn f1 = ~1) = (frac_sgn f1 = 0i) \/ (frac_sgn f1 = 1i)``,
+Theorem FRAC_SGN_IMP_EQGT:  !f1. ~(frac_sgn f1 = ~1) = (frac_sgn f1 = 0i) \/ (frac_sgn f1 = 1i)
+Proof
         GEN_TAC THEN
         ASSUME_TAC (SPEC_ALL FRAC_SGN_TOTAL) THEN
-        REPEAT (RW_TAC int_ss []) );
+        REPEAT (RW_TAC int_ss [])
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_SGN_MUL: thm
  *  |- !f1 f2. frac_sgn (frac_mul f1 f2) = frac_sgn f1 * frac_sgn f2
  *--------------------------------------------------------------------------*)
 
-val FRAC_SGN_MUL = store_thm("FRAC_SGN_MUL", ``!f1 f2. frac_sgn (frac_mul f1 f2) = frac_sgn f1 * frac_sgn f2``,
+Theorem FRAC_SGN_MUL:   !f1 f2. frac_sgn (frac_mul f1 f2) = frac_sgn f1 * frac_sgn f2
+Proof
         REPEAT GEN_TAC THEN
         REWRITE_TAC[frac_mul_def, frac_sgn_def, SGN_def] THEN
         FRAC_POS_TAC ``frac_dnm f1 * frac_dnm f2`` THEN
@@ -775,7 +861,8 @@ val FRAC_SGN_MUL = store_thm("FRAC_SGN_MUL", ``!f1 f2. frac_sgn (frac_mul f1 f2)
         ASM_CASES_TAC ``frac_nmr f2=0i`` THEN
         ASM_CASES_TAC ``frac_nmr f2 < 0i`` THEN
         RW_TAC int_ss [INT_MUL_LZERO, INT_MUL_RZERO] THEN
-        PROVE_TAC[INT_ENTIRE,INT_MUL_SIGN_CASES,INT_LT_GT,INT_LT_TOTAL] );
+        PROVE_TAC[INT_ENTIRE,INT_MUL_SIGN_CASES,INT_LT_GT,INT_LT_TOTAL]
+QED
 
 
 (*--------------------------------------------------------------------------
@@ -783,11 +870,13 @@ val FRAC_SGN_MUL = store_thm("FRAC_SGN_MUL", ``!f1 f2. frac_sgn (frac_mul f1 f2)
  *  |- !f1. ~(frac_nmr f1 = 0i) ==> (ABS (frac_sgn f1) = 1)
  *--------------------------------------------------------------------------*)
 
-val FRAC_ABS_SGN = store_thm("FRAC_ABS_SGN", ``!f1. ~(frac_nmr f1 = 0i) ==> (ABS (frac_sgn f1) = 1i)``,
+Theorem FRAC_ABS_SGN:   !f1. ~(frac_nmr f1 = 0i) ==> (ABS (frac_sgn f1) = 1i)
+Proof
         GEN_TAC THEN
         REWRITE_TAC[frac_sgn_def, SGN_def] THEN
         RW_TAC int_ss [] THEN
-        RW_TAC int_ss [INT_ABS] );
+        RW_TAC int_ss [INT_ABS]
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_SGN_MUL : thm
@@ -795,11 +884,13 @@ val FRAC_ABS_SGN = store_thm("FRAC_ABS_SGN", ``!f1. ~(frac_nmr f1 = 0i) ==> (ABS
  * TODO: was FRAC_SGN_MUL2
  *--------------------------------------------------------------------------*)
 
-val FRAC_SGN_MUL2 = store_thm("FRAC_SGN_MUL2", ``!f1 f2. frac_sgn (frac_mul f1 f2) = frac_sgn f1 * frac_sgn f2``,
+Theorem FRAC_SGN_MUL2:   !f1 f2. frac_sgn (frac_mul f1 f2) = frac_sgn f1 * frac_sgn f2
+Proof
         REPEAT GEN_TAC THEN
         REWRITE_TAC[frac_sgn_def, frac_mul_def] THEN
         FRAC_NMRDNM_TAC THEN
-        PROVE_TAC[INT_SGN_MUL2] );
+        PROVE_TAC[INT_SGN_MUL2]
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_SGN_CASES : thm
@@ -809,20 +900,23 @@ val FRAC_SGN_MUL2 = store_thm("FRAC_SGN_MUL2", ``!f1 f2. frac_sgn (frac_mul f1 f
  *      ((frac_sgn f1 = 1i) ==> P) ==> P
  *--------------------------------------------------------------------------*)
 
-val FRAC_SGN_CASES = store_thm("FRAC_SGN_CASES", ``!f1 P. ((frac_sgn f1 = ~1) ==> P) /\ ((frac_sgn f1 = 0i) ==> P) /\ ((frac_sgn f1 = 1i) ==> P) ==> P``,
+Theorem FRAC_SGN_CASES:   !f1 P. ((frac_sgn f1 = ~1) ==> P) /\ ((frac_sgn f1 = 0i) ==> P) /\ ((frac_sgn f1 = 1i) ==> P) ==> P
+Proof
         REPEAT GEN_TAC THEN
         ASM_CASES_TAC ``frac_sgn f1 = ~1`` THEN
         ASM_CASES_TAC ``frac_sgn f1 = 0i`` THEN
         ASM_CASES_TAC ``frac_sgn f1 = 1i`` THEN
         UNDISCH_ALL_TAC THEN
-        PROVE_TAC[FRAC_SGN_TOTAL] );
+        PROVE_TAC[FRAC_SGN_TOTAL]
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_SGN_AINV : thm
  *  |- !f1. ~frac_sgn (frac_ainv f1) = frac_sgn f1
  *--------------------------------------------------------------------------*)
 
-val FRAC_SGN_AINV = store_thm("FRAC_SGN_AINV", ``!f1. ~frac_sgn (frac_ainv f1) = frac_sgn f1``,
+Theorem FRAC_SGN_AINV:   !f1. ~frac_sgn (frac_ainv f1) = frac_sgn f1
+Proof
         GEN_TAC THEN
         REWRITE_TAC[frac_sgn_def, frac_ainv_def] THEN
         FRAC_NMRDNM_TAC THEN
@@ -837,7 +931,8 @@ val FRAC_SGN_AINV = store_thm("FRAC_SGN_AINV", ``!f1. ~frac_sgn (frac_ainv f1) =
         ,
                 RW_TAC int_ss [] THEN
                 PROVE_TAC[INT_LT_ANTISYM, INT_LT_TOTAL]
-        ] );
+        ]
+QED
 
 
 
@@ -850,7 +945,8 @@ val FRAC_SGN_AINV = store_thm("FRAC_SGN_AINV", ``!f1. ~frac_sgn (frac_ainv f1) =
  *  |- ONE_ONE frac_ainv
  *--------------------------------------------------------------------------*)
 
-val FRAC_AINV_ONEONE = store_thm("FRAC_AINV_ONEONE", ``ONE_ONE frac_ainv``,
+Theorem FRAC_AINV_ONEONE:   ONE_ONE frac_ainv
+Proof
         REWRITE_TAC[ONE_ONE_DEF] THEN
         BETA_TAC THEN
         REPEAT GEN_TAC THEN
@@ -860,19 +956,22 @@ val FRAC_AINV_ONEONE = store_thm("FRAC_AINV_ONEONE", ``ONE_ONE frac_ainv``,
         REWRITE_TAC[UNDISCH_ALL (SPECL[``~frac_nmr x1``,``frac_dnm x1``,``~frac_nmr x2``,``frac_dnm x2``] FRAC_EQ)] THEN
         REWRITE_TAC[INT_EQ_NEG] THEN
         SUBST_TAC[SPEC ``x1:frac`` (GSYM FRAC), SPEC ``x2:frac`` (GSYM FRAC)] THEN
-        RW_TAC bool_ss [NMR,DNM] );
+        RW_TAC bool_ss [NMR,DNM]
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_AINV_ONTO : thm
  *  |- ONTO frac_ainv
  *--------------------------------------------------------------------------*)
 
-val FRAC_AINV_ONTO = store_thm("FRAC_AINV_ONTO", ``ONTO frac_ainv``,
+Theorem FRAC_AINV_ONTO:   ONTO frac_ainv
+Proof
         REWRITE_TAC[ONTO_DEF] THEN
         BETA_TAC THEN
         GEN_TAC THEN
         EXISTS_TAC ``frac_ainv y`` THEN
-        PROVE_TAC[FRAC_AINV_AINV] );
+        PROVE_TAC[FRAC_AINV_AINV]
+QED
 
 
 
@@ -893,17 +992,21 @@ val FRAC_AINV_ONTO = store_thm("FRAC_AINV_ONTO", ``ONTO frac_ainv``,
  *  |- !a1 b1. frac_dnm( frac_save a1 b1 ) = &b1 + 1i
  *--------------------------------------------------------------------------*)
 
-val FRAC_NMR_SAVE = store_thm("FRAC_NMR_SAVE", ``!a1 b1. frac_nmr( frac_save a1 b1 ) = a1``,
+Theorem FRAC_NMR_SAVE:   !a1 b1. frac_nmr( frac_save a1 b1 ) = a1
+Proof
         REPEAT GEN_TAC THEN
         REWRITE_TAC[frac_save_def] THEN
         ASSUME_TAC (ARITH_PROVE ``0i < &b1 + 1``) THEN
-        PROVE_TAC[NMR] );
+        PROVE_TAC[NMR]
+QED
 
-val FRAC_DNM_SAVE = store_thm("FRAC_DNM_SAVE", ``!a1 b1. frac_dnm( frac_save a1 b1 ) = &b1 + 1i``,
+Theorem FRAC_DNM_SAVE:   !a1 b1. frac_dnm( frac_save a1 b1 ) = &b1 + 1i
+Proof
         REPEAT GEN_TAC THEN
         REWRITE_TAC[frac_save_def] THEN
         ASSUME_TAC (ARITH_PROVE ``0i < &b1 + 1``) THEN
-        PROVE_TAC[DNM] );
+        PROVE_TAC[DNM]
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_0_SAVE: thm
@@ -913,19 +1016,23 @@ val FRAC_DNM_SAVE = store_thm("FRAC_DNM_SAVE", ``!a1 b1. frac_dnm( frac_save a1 
  *  |- frac_1 = frac_save 1 0
  *--------------------------------------------------------------------------*)
 
-val FRAC_0_SAVE = store_thm("FRAC_0_SAVE", ``frac_0 = frac_save 0 0``,
+Theorem FRAC_0_SAVE:   frac_0 = frac_save 0 0
+Proof
         REPEAT GEN_TAC THEN
         REWRITE_TAC[frac_0_def, frac_save_def] THEN
         ASSUME_TAC (ARITH_PROVE ``0i < &b1 + 1``) THEN
         FRAC_EQ_TAC THEN
-        ARITH_TAC );
+        ARITH_TAC
+QED
 
-val FRAC_1_SAVE = store_thm("FRAC_1_SAVE", ``frac_1 = frac_save 1 0``,
+Theorem FRAC_1_SAVE:   frac_1 = frac_save 1 0
+Proof
         REPEAT GEN_TAC THEN
         REWRITE_TAC[frac_1_def, frac_save_def] THEN
         ASSUME_TAC (ARITH_PROVE ``0i < &b1 + 1``) THEN
         FRAC_EQ_TAC THEN
-        ARITH_TAC );
+        ARITH_TAC
+QED
 
 (*--------------------------------------------------------------------------
  *  FRAC_AINV_SAVE: thm
@@ -937,15 +1044,18 @@ val FRAC_1_SAVE = store_thm("FRAC_1_SAVE", ``frac_1 = frac_save 1 0``,
  *               abs_rat( frac_save (SGN a1 * (& b1 + 1)) (Num (ABS a1 - 1))) )
  *--------------------------------------------------------------------------*)
 
-val FRAC_AINV_SAVE = store_thm("FRAC_AINV_SAVE", ``!a1 b1. frac_ainv (frac_save a1 b1) = frac_save (~a1) b1``,
+Theorem FRAC_AINV_SAVE:   !a1 b1. frac_ainv (frac_save a1 b1) = frac_save (~a1) b1
+Proof
         REPEAT GEN_TAC THEN
         REWRITE_TAC[frac_ainv_def, frac_save_def] THEN
         ASSUME_TAC (ARITH_PROVE ``0i < &b1 + 1``) THEN
         FRAC_NMRDNM_TAC THEN
-        FRAC_EQ_TAC );
+        FRAC_EQ_TAC
+QED
 
 
-val FRAC_MINV_SAVE = store_thm("FRAC_MINV_SAVE",``!a1 b1. ~(a1=0) ==> (frac_minv (frac_save a1 b1) = frac_save (SGN a1 * (&b1 + 1)) (Num (ABS a1 - 1)))``,
+Theorem FRAC_MINV_SAVE:  !a1 b1. ~(a1=0) ==> (frac_minv (frac_save a1 b1) = frac_save (SGN a1 * (&b1 + 1)) (Num (ABS a1 - 1)))
+Proof
         REPEAT STRIP_TAC THEN
         REWRITE_TAC[frac_minv_def, frac_sgn_def, frac_save_def] THEN
         ASSUME_TAC (ARITH_PROVE ``0i < &b1 + 1``) THEN
@@ -955,7 +1065,8 @@ val FRAC_MINV_SAVE = store_thm("FRAC_MINV_SAVE",``!a1 b1. ~(a1=0) ==> (frac_minv
         RW_TAC int_ss [SGN_def, GSYM INT_EQ_SUB_RADD] THEN
         ONCE_REWRITE_TAC[EQ_SYM_EQ] THEN
         REWRITE_TAC[INT_OF_NUM] THEN
-        ARITH_TAC );
+        ARITH_TAC
+QED
 
 
 (*--------------------------------------------------------------------------
@@ -970,11 +1081,11 @@ val FRAC_MINV_SAVE = store_thm("FRAC_MINV_SAVE",``!a1 b1. ~(a1=0) ==> (frac_minv
  *      frac_save (a1 * a2) (b1 * b2 + b1 + b2)
  *--------------------------------------------------------------------------*)
 
-val FRAC_ADD_SAVE = store_thm(
-  "FRAC_ADD_SAVE",
-  ``!a1 b1 a2 b2.
+Theorem FRAC_ADD_SAVE:
+    !a1 b1 a2 b2.
          frac_add (frac_save a1 b1) (frac_save a2 b2) =
-         frac_save (a1 * &b2 + a2 * &b1 + a1 + a2) (b1 * b2 + b1 + b2)``,
+         frac_save (a1 * &b2 + a2 * &b1 + a1 + a2) (b1 * b2 + b1 + b2)
+Proof
   REPEAT GEN_TAC THEN
   REWRITE_TAC[frac_add_def, frac_save_def] THEN
   ASSUME_TAC (ARITH_PROVE ``0i < &b1 + 1``) THEN
@@ -982,12 +1093,13 @@ val FRAC_ADD_SAVE = store_thm(
   FRAC_NMRDNM_TAC THEN
   FRAC_EQ_TAC THEN
   SIMP_TAC (srw_ss()) [INT_LDISTRIB, INT_RDISTRIB, GSYM INT_ADD,
-                       AC INT_ADD_COMM INT_ADD_ASSOC]);
+                       AC INT_ADD_COMM INT_ADD_ASSOC]
+QED
 
-val FRAC_MUL_SAVE = store_thm(
-  "FRAC_MUL_SAVE",
-  ``!a1 b1 a2 b2. frac_mul (frac_save a1 b1) (frac_save a2 b2) =
-                  frac_save (a1 * a2) (b1 * b2 + b1 + b2)``,
+Theorem FRAC_MUL_SAVE:
+    !a1 b1 a2 b2. frac_mul (frac_save a1 b1) (frac_save a2 b2) =
+                  frac_save (a1 * a2) (b1 * b2 + b1 + b2)
+Proof
   REPEAT GEN_TAC THEN
   REWRITE_TAC[frac_mul_def, frac_save_def] THEN
   ASSUME_TAC (ARITH_PROVE ``0i < &b1 + 1``) THEN
@@ -997,7 +1109,8 @@ val FRAC_MUL_SAVE = store_thm(
   REWRITE_TAC[INT_ADD_CALCULATE, INT_MUL_CALCULATE, INT_EQ_CALCULATE] THEN
   RW_TAC arith_ss [arithmeticTheory.LEFT_ADD_DISTRIB,
                    arithmeticTheory.RIGHT_ADD_DISTRIB] THEN
-  ARITH_TAC);
+  ARITH_TAC
+QED
 
 (*==========================================================================
  * end of theory

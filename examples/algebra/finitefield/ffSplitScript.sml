@@ -384,9 +384,9 @@ val poly_root_multiplicity_nonzero_const_empty = store_thm(
 (* Note: multiplicity p x gives a number, so (multiplicity p) is a bag with members x. *)
 
 (* Define bag splitting field *)
-val splitting_def = Define`
+Definition splitting_def:
     splitting (r:'a field) (p:'a poly) <=> (deg p = BAG_CARD (multiplicity p))
-`;
+End
 
 (* Theorem: Ring r ==> !c. c IN R /\ c <> #0 ==> splitting r [c] *)
 (* Proof:
@@ -743,10 +743,10 @@ val finite_field_is_master_splitting_field = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define another polynomial splitting field, counting root multiplicity. *)
-val splits_in_def = Define`
+Definition splits_in_def:
     splits_in (p:'a poly) (r:'a field) <=>
     ?c. c IN R /\ c <> #0 /\ (p = c * PPIMAGE (\x. (factor x) ** (multiplicity p x)) (roots p))
-`;
+End
 (* Note: c is just a nonzero constant, no requirement for invertible, i.e. upoly [c] is not required. *)
 
 (* put splits_in as infix *)
@@ -954,9 +954,9 @@ val splits_in_factor_exp = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* A polynomial splits in a field when its root count equals its degree. *)
-val poly_splits_def = Define`
+Definition poly_splits_def:
   poly_splits (r:'a field) (p:'a poly) <=> (CARD (roots p) = deg p)
-`;
+End
 (* overload on poly_splits r *)
 val _ = overload_on("splits", ``poly_splits r``);
 (*
@@ -2396,9 +2396,9 @@ val poly_minimal_root_order = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the minimal polynomial from an element of order n *)
-val poly_mini_def = Define`
+Definition poly_mini_def:
     poly_mini (r:'a ring) (s:'a ring) n = poly_minimal r s (CHOICE (orders f* n))
-`;
+End
 
 (* Overload on poly_mini *)
 val _ = overload_on("mini", ``poly_mini r s``);

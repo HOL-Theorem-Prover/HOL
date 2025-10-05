@@ -6,10 +6,10 @@ Libs
 
 fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
-val steps_def = Define`
+Definition steps_def:
   (steps 0 t = t) ∧
   (steps (SUC n) t = if bnf t then t else steps n (THE (noreduct t)))
-`;
+End
 val _ = export_rewrites ["steps_def"]
 
 val bnf_steps = store_thm(

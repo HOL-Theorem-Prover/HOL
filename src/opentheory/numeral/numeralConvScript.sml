@@ -2,9 +2,10 @@ Theory numeralConv
 Ancestors
   arithmetic
 
-val BIT0_def = Define`
+Definition BIT0_def:
   (BIT0 0 = 0) /\
-  (!n. BIT0 (SUC n) = SUC (SUC (BIT0 n)))`;
+  (!n. BIT0 (SUC n) = SUC (SUC (BIT0 n)))
+End
 
 val (BIT0_0,BIT0_SUC) = CONJ_PAIR BIT0_def
 val _ = save_thm("BIT0_0",BIT0_0);
@@ -15,10 +16,12 @@ val SUC_0 =
   |> CONJUNCTS |> el 1
   |> REWRITE_RULE[ALT_ZERO]
 
-val BIT1_def = Q.store_thm("BIT1_def",
-  `!n. BIT1 n = SUC (BIT0 n)`,
+Theorem BIT1_def:
+   !n. BIT1 n = SUC (BIT0 n)
+Proof
   Induct
   \\ REWRITE_TAC[BIT0_def,SUC_0]
   \\ pop_assum(SUBST1_TAC o SYM)
-  \\ REWRITE_TAC[BIT1,ADD,ADD_SUC]);
+  \\ REWRITE_TAC[BIT1,ADD,ADD_SUC]
+QED
 

@@ -22,191 +22,248 @@ val hrat_lt = new_definition("hrat_lt",
   “$hrat_lt x y = ?d. y = x hrat_add d”);
 val _ = temp_set_fixity "hrat_lt" (Infix(NONASSOC, 450))
 
-val HRAT_LT_REFL = store_thm("HRAT_LT_REFL",
-  “!x. ~(x hrat_lt x)”,
+Theorem HRAT_LT_REFL:
+   !x. ~(x hrat_lt x)
+Proof
   GEN_TAC THEN REWRITE_TAC[hrat_lt] THEN
   CONV_TAC(ONCE_DEPTH_CONV SYM_CONV) THEN
-  REWRITE_TAC[HRAT_NOZERO]);
+  REWRITE_TAC[HRAT_NOZERO]
+QED
 
-val HRAT_LT_TRANS = store_thm("HRAT_LT_TRANS",
-  “!x y z. x hrat_lt y /\ y hrat_lt z ==> x hrat_lt z”,
+Theorem HRAT_LT_TRANS:
+   !x y z. x hrat_lt y /\ y hrat_lt z ==> x hrat_lt z
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[hrat_lt] THEN
   DISCH_THEN(CONJUNCTS_THEN2 CHOOSE_TAC (CHOOSE_THEN SUBST1_TAC)) THEN
   POP_ASSUM SUBST1_TAC THEN REWRITE_TAC[GSYM HRAT_ADD_ASSOC] THEN
-  W(EXISTS_TAC o rand o lhs o body o rand o snd) THEN REFL_TAC);
+  W(EXISTS_TAC o rand o lhs o body o rand o snd) THEN REFL_TAC
+QED
 
-val HRAT_LT_ANTISYM = store_thm("HRAT_LT_ANTISYM",
-  “!x y. ~(x hrat_lt y /\ y hrat_lt x)”,
+Theorem HRAT_LT_ANTISYM:
+   !x y. ~(x hrat_lt y /\ y hrat_lt x)
+Proof
   REPEAT GEN_TAC THEN
   DISCH_THEN(MP_TAC o MATCH_MP HRAT_LT_TRANS) THEN
-  REWRITE_TAC[HRAT_LT_REFL]);
+  REWRITE_TAC[HRAT_LT_REFL]
+QED
 
-val HRAT_LT_TOTAL = store_thm("HRAT_LT_TOTAL",
-  “!x y. (x = y) \/ x hrat_lt y \/ y hrat_lt x”,
+Theorem HRAT_LT_TOTAL:
+   !x y. (x = y) \/ x hrat_lt y \/ y hrat_lt x
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[hrat_lt] THEN
   REPEAT_TCL DISJ_CASES_THEN (SUBST1_TAC o EQT_INTRO)
    (SPECL [“x:hrat”, “y:hrat”] HRAT_ADD_TOTAL) THEN
-  REWRITE_TAC[]);
+  REWRITE_TAC[]
+QED
 
-val HRAT_MUL_RID = store_thm("HRAT_MUL_RID",
-  “!x. x hrat_mul hrat_1 = x”,
+Theorem HRAT_MUL_RID:
+   !x. x hrat_mul hrat_1 = x
+Proof
   GEN_TAC THEN ONCE_REWRITE_TAC[HRAT_MUL_SYM] THEN
-  MATCH_ACCEPT_TAC HRAT_MUL_LID);
+  MATCH_ACCEPT_TAC HRAT_MUL_LID
+QED
 
-val HRAT_MUL_RINV = store_thm("HRAT_MUL_RINV",
-  “!x. x hrat_mul (hrat_inv x) = hrat_1”,
+Theorem HRAT_MUL_RINV:
+   !x. x hrat_mul (hrat_inv x) = hrat_1
+Proof
   GEN_TAC THEN ONCE_REWRITE_TAC[HRAT_MUL_SYM] THEN
-  MATCH_ACCEPT_TAC HRAT_MUL_LINV);
+  MATCH_ACCEPT_TAC HRAT_MUL_LINV
+QED
 
-val HRAT_RDISTRIB = store_thm("HRAT_RDISTRIB",
-  “!x y z. (x hrat_add y) hrat_mul z =
-     (x hrat_mul z) hrat_add (y hrat_mul z)”,
+Theorem HRAT_RDISTRIB:
+   !x y z. (x hrat_add y) hrat_mul z =
+     (x hrat_mul z) hrat_add (y hrat_mul z)
+Proof
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[HRAT_MUL_SYM] THEN
-  MATCH_ACCEPT_TAC HRAT_LDISTRIB);
+  MATCH_ACCEPT_TAC HRAT_LDISTRIB
+QED
 
-val HRAT_LT_ADDL = store_thm("HRAT_LT_ADDL",
-  “!x y. x hrat_lt (x hrat_add y)”,
+Theorem HRAT_LT_ADDL:
+   !x y. x hrat_lt (x hrat_add y)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[hrat_lt] THEN
-  EXISTS_TAC “y:hrat” THEN REFL_TAC);
+  EXISTS_TAC “y:hrat” THEN REFL_TAC
+QED
 
-val HRAT_LT_ADDR = store_thm("HRAT_LT_ADDR",
-  “!x y. y hrat_lt (x hrat_add y)”,
+Theorem HRAT_LT_ADDR:
+   !x y. y hrat_lt (x hrat_add y)
+Proof
   ONCE_REWRITE_TAC[HRAT_ADD_SYM] THEN
-  MATCH_ACCEPT_TAC HRAT_LT_ADDL);
+  MATCH_ACCEPT_TAC HRAT_LT_ADDL
+QED
 
-val HRAT_LT_GT = store_thm("HRAT_LT_GT",
-  “!x y. x hrat_lt y ==> ~(y hrat_lt x)”,
+Theorem HRAT_LT_GT:
+   !x y. x hrat_lt y ==> ~(y hrat_lt x)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[hrat_lt] THEN
   DISCH_THEN(CHOOSE_THEN SUBST1_TAC) THEN
   REWRITE_TAC[GSYM HRAT_ADD_ASSOC] THEN
   CONV_TAC(ONCE_DEPTH_CONV SYM_CONV) THEN
-  REWRITE_TAC[HRAT_NOZERO]);
+  REWRITE_TAC[HRAT_NOZERO]
+QED
 
-val HRAT_LT_NE = store_thm("HRAT_LT_NE",
-  “!x y. x hrat_lt y ==> ~(x = y)”,
+Theorem HRAT_LT_NE:
+   !x y. x hrat_lt y ==> ~(x = y)
+Proof
   REPEAT GEN_TAC THEN CONV_TAC CONTRAPOS_CONV THEN
   REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
-  MATCH_ACCEPT_TAC HRAT_LT_REFL);
+  MATCH_ACCEPT_TAC HRAT_LT_REFL
+QED
 
-val HRAT_EQ_LADD = store_thm("HRAT_EQ_LADD",
-  “!x y z. (x hrat_add y = x hrat_add z) = (y = z)”,
+Theorem HRAT_EQ_LADD:
+   !x y z. (x hrat_add y = x hrat_add z) = (y = z)
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL
    [REPEAT_TCL DISJ_CASES_THEN ASSUME_TAC
       (SPECL [“y:hrat”, “z:hrat”] HRAT_ADD_TOTAL) THEN
     ASM_REWRITE_TAC[] THEN POP_ASSUM(CHOOSE_THEN SUBST1_TAC) THEN
     REWRITE_TAC[HRAT_ADD_ASSOC, HRAT_NOZERO, GSYM HRAT_NOZERO],
-    DISCH_THEN SUBST1_TAC THEN REFL_TAC]);
+    DISCH_THEN SUBST1_TAC THEN REFL_TAC]
+QED
 
-val HRAT_EQ_LMUL = store_thm("HRAT_EQ_LMUL",
-  “!x y z. (x hrat_mul y = x hrat_mul z) = (y = z)”,
+Theorem HRAT_EQ_LMUL:
+   !x y z. (x hrat_mul y = x hrat_mul z) = (y = z)
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL
    [DISCH_THEN(MP_TAC o AP_TERM “$hrat_mul (hrat_inv x)”) THEN
     REWRITE_TAC[HRAT_MUL_ASSOC, HRAT_MUL_LINV, HRAT_MUL_LID],
-    DISCH_THEN SUBST1_TAC THEN REFL_TAC]);
+    DISCH_THEN SUBST1_TAC THEN REFL_TAC]
+QED
 
-val HRAT_LT_ADD2 = store_thm("HRAT_LT_ADD2",
-  “!u v x y. u hrat_lt x /\ v hrat_lt y ==>
-     (u hrat_add v) hrat_lt (x hrat_add y)”,
+Theorem HRAT_LT_ADD2:
+   !u v x y. u hrat_lt x /\ v hrat_lt y ==>
+     (u hrat_add v) hrat_lt (x hrat_add y)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[hrat_lt] THEN
   DISCH_THEN(CONJUNCTS_THEN2 (X_CHOOSE_THEN “d1:hrat” SUBST1_TAC)
     (X_CHOOSE_THEN “d2:hrat” SUBST1_TAC)) THEN
   EXISTS_TAC “d1 hrat_add d2” THEN
-  CONV_TAC(AC_CONV(HRAT_ADD_ASSOC,HRAT_ADD_SYM)));
+  CONV_TAC(AC_CONV(HRAT_ADD_ASSOC,HRAT_ADD_SYM))
+QED
 
-val HRAT_LT_LADD = store_thm("HRAT_LT_LADD",
-  “!x y z. (z hrat_add x) hrat_lt (z hrat_add y) = x hrat_lt y”,
+Theorem HRAT_LT_LADD:
+   !x y z. (z hrat_add x) hrat_lt (z hrat_add y) = x hrat_lt y
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[hrat_lt] THEN EQ_TAC THEN
   DISCH_THEN(X_CHOOSE_THEN “d:hrat” (curry op THEN (EXISTS_TAC “d:hrat”) o MP_TAC))
-  THEN REWRITE_TAC[GSYM HRAT_ADD_ASSOC, HRAT_EQ_LADD]);
+  THEN REWRITE_TAC[GSYM HRAT_ADD_ASSOC, HRAT_EQ_LADD]
+QED
 
-val HRAT_LT_RADD = store_thm("HRAT_LT_RADD",
-  “!x y z. (x hrat_add z) hrat_lt (y hrat_add z) = x hrat_lt y”,
+Theorem HRAT_LT_RADD:
+   !x y z. (x hrat_add z) hrat_lt (y hrat_add z) = x hrat_lt y
+Proof
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[HRAT_ADD_SYM] THEN
-  MATCH_ACCEPT_TAC HRAT_LT_LADD);
+  MATCH_ACCEPT_TAC HRAT_LT_LADD
+QED
 
-val HRAT_LT_MUL2 = store_thm("HRAT_LT_MUL2",
-  “!u v x y. u hrat_lt x /\ v hrat_lt y ==>
-     (u hrat_mul v) hrat_lt (x hrat_mul y)”,
+Theorem HRAT_LT_MUL2:
+   !u v x y. u hrat_lt x /\ v hrat_lt y ==>
+     (u hrat_mul v) hrat_lt (x hrat_mul y)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[hrat_lt] THEN
   DISCH_THEN(CONJUNCTS_THEN2 (X_CHOOSE_THEN “d1:hrat” SUBST1_TAC)
     (X_CHOOSE_THEN “d2:hrat” SUBST1_TAC)) THEN
   REWRITE_TAC[HRAT_LDISTRIB, HRAT_RDISTRIB, GSYM HRAT_ADD_ASSOC] THEN
   REWRITE_TAC[HRAT_EQ_LADD] THEN
-  W(EXISTS_TAC o lhs o body o rand o snd) THEN REFL_TAC);
+  W(EXISTS_TAC o lhs o body o rand o snd) THEN REFL_TAC
+QED
 
-val HRAT_LT_LMUL = store_thm("HRAT_LT_LMUL",
-  “!x y z. (z hrat_mul x) hrat_lt (z hrat_mul y) = x hrat_lt y”,
+Theorem HRAT_LT_LMUL:
+   !x y z. (z hrat_mul x) hrat_lt (z hrat_mul y) = x hrat_lt y
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[hrat_lt] THEN EQ_TAC THEN
   DISCH_THEN(X_CHOOSE_TAC “d:hrat”) THENL
    [EXISTS_TAC “(hrat_inv z) hrat_mul d”,
     EXISTS_TAC “z hrat_mul d”] THEN POP_ASSUM MP_TAC THEN
   REWRITE_TAC[GSYM HRAT_LDISTRIB, GSYM HRAT_MUL_ASSOC, HRAT_EQ_LMUL] THEN
   DISCH_THEN(MP_TAC o AP_TERM “$hrat_mul (hrat_inv z)”) THEN
-  REWRITE_TAC[HRAT_MUL_ASSOC, HRAT_MUL_LINV, HRAT_MUL_LID, HRAT_LDISTRIB]);
+  REWRITE_TAC[HRAT_MUL_ASSOC, HRAT_MUL_LINV, HRAT_MUL_LID, HRAT_LDISTRIB]
+QED
 
-val HRAT_LT_RMUL = store_thm("HRAT_LT_RMUL",
-  “!x y z. (x hrat_mul z) hrat_lt (y hrat_mul z) = x hrat_lt y”,
+Theorem HRAT_LT_RMUL:
+   !x y z. (x hrat_mul z) hrat_lt (y hrat_mul z) = x hrat_lt y
+Proof
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[HRAT_MUL_SYM] THEN
-  MATCH_ACCEPT_TAC HRAT_LT_LMUL);
+  MATCH_ACCEPT_TAC HRAT_LT_LMUL
+QED
 
-val HRAT_LT_LMUL1 = store_thm("HRAT_LT_LMUL1",
-  “!x y. (x hrat_mul y) hrat_lt y = x hrat_lt hrat_1”,
+Theorem HRAT_LT_LMUL1:
+   !x y. (x hrat_mul y) hrat_lt y = x hrat_lt hrat_1
+Proof
   REPEAT GEN_TAC THEN
   GEN_REWR_TAC (LAND_CONV o RAND_CONV) [GSYM HRAT_MUL_LID] THEN
-  MATCH_ACCEPT_TAC HRAT_LT_RMUL);
+  MATCH_ACCEPT_TAC HRAT_LT_RMUL
+QED
 
-val HRAT_LT_RMUL1 = store_thm("HRAT_LT_RMUL1",
-  “!x y. (x hrat_mul y) hrat_lt x = y hrat_lt hrat_1”,
+Theorem HRAT_LT_RMUL1:
+   !x y. (x hrat_mul y) hrat_lt x = y hrat_lt hrat_1
+Proof
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[HRAT_MUL_SYM] THEN
-  MATCH_ACCEPT_TAC HRAT_LT_LMUL1);
+  MATCH_ACCEPT_TAC HRAT_LT_LMUL1
+QED
 
-val HRAT_GT_LMUL1 = store_thm("HRAT_GT_LMUL1",
-  “!x y. y hrat_lt (x hrat_mul y) = hrat_1 hrat_lt x”,
+Theorem HRAT_GT_LMUL1:
+   !x y. y hrat_lt (x hrat_mul y) = hrat_1 hrat_lt x
+Proof
   REPEAT GEN_TAC THEN
   GEN_REWR_TAC (funpow 2 LAND_CONV) [GSYM HRAT_MUL_LID]
-  THEN MATCH_ACCEPT_TAC HRAT_LT_RMUL);
+  THEN MATCH_ACCEPT_TAC HRAT_LT_RMUL
+QED
 
-val HRAT_LT_L1 = store_thm("HRAT_LT_L1",
-  “!x y. ((hrat_inv x) hrat_mul y) hrat_lt hrat_1 = y hrat_lt x”,
+Theorem HRAT_LT_L1:
+   !x y. ((hrat_inv x) hrat_mul y) hrat_lt hrat_1 = y hrat_lt x
+Proof
   REPEAT GEN_TAC THEN SUBST1_TAC(SYM(SPEC “x:hrat” HRAT_MUL_LINV)) THEN
-  MATCH_ACCEPT_TAC HRAT_LT_LMUL);
+  MATCH_ACCEPT_TAC HRAT_LT_LMUL
+QED
 
-val HRAT_LT_R1 = store_thm("HRAT_LT_R1",
-  “!x y. (x hrat_mul (hrat_inv y)) hrat_lt hrat_1 = x hrat_lt y”,
+Theorem HRAT_LT_R1:
+   !x y. (x hrat_mul (hrat_inv y)) hrat_lt hrat_1 = x hrat_lt y
+Proof
   REPEAT GEN_TAC THEN SUBST1_TAC(SYM(SPEC “y:hrat” HRAT_MUL_RINV)) THEN
-  MATCH_ACCEPT_TAC HRAT_LT_RMUL);
+  MATCH_ACCEPT_TAC HRAT_LT_RMUL
+QED
 
-val HRAT_GT_L1 = store_thm("HRAT_GT_L1",
-  “!x y. hrat_1 hrat_lt ((hrat_inv x) hrat_mul y) = x hrat_lt y”,
+Theorem HRAT_GT_L1:
+   !x y. hrat_1 hrat_lt ((hrat_inv x) hrat_mul y) = x hrat_lt y
+Proof
   REPEAT GEN_TAC THEN SUBST1_TAC(SYM(SPEC “x:hrat” HRAT_MUL_LINV)) THEN
-  MATCH_ACCEPT_TAC HRAT_LT_LMUL);
+  MATCH_ACCEPT_TAC HRAT_LT_LMUL
+QED
 
-val HRAT_INV_MUL = store_thm("HRAT_INV_MUL",
-  “!x y. hrat_inv (x hrat_mul y) = (hrat_inv x) hrat_mul (hrat_inv y)”,
+Theorem HRAT_INV_MUL:
+   !x y. hrat_inv (x hrat_mul y) = (hrat_inv x) hrat_mul (hrat_inv y)
+Proof
   REPEAT GEN_TAC THEN SUBST1_TAC
     (SYM(SPECL [“x hrat_mul y”, “hrat_inv (x hrat_mul y)”,
                 “(hrat_inv x) hrat_mul (hrat_inv y)”] HRAT_EQ_LMUL)) THEN
   ONCE_REWRITE_TAC[AC(HRAT_MUL_ASSOC,HRAT_MUL_SYM)
     “(a hrat_mul b) hrat_mul (c hrat_mul d) =
      (a hrat_mul c) hrat_mul (b hrat_mul d)”] THEN
-  REWRITE_TAC[HRAT_MUL_RINV, HRAT_MUL_LID]);
+  REWRITE_TAC[HRAT_MUL_RINV, HRAT_MUL_LID]
+QED
 
-val HRAT_UP = store_thm("HRAT_UP",
-  “!x. ?y. x hrat_lt y”,
+Theorem HRAT_UP:
+   !x. ?y. x hrat_lt y
+Proof
   GEN_TAC THEN EXISTS_TAC “x hrat_add x” THEN
-  REWRITE_TAC[hrat_lt] THEN EXISTS_TAC “x:hrat” THEN REFL_TAC);
+  REWRITE_TAC[hrat_lt] THEN EXISTS_TAC “x:hrat” THEN REFL_TAC
+QED
 
-val HRAT_DOWN = store_thm("HRAT_DOWN",
-  “!x. ?y. y hrat_lt x”,
+Theorem HRAT_DOWN:
+   !x. ?y. y hrat_lt x
+Proof
   GEN_TAC THEN
   EXISTS_TAC “x hrat_mul (hrat_inv (hrat_1 hrat_add hrat_1))” THEN
   REWRITE_TAC[HRAT_LT_RMUL1] THEN
   GEN_REWR_TAC LAND_CONV [GSYM HRAT_MUL_LID] THEN
   REWRITE_TAC[HRAT_LT_R1] THEN REWRITE_TAC[hrat_lt] THEN
-  EXISTS_TAC “hrat_1” THEN REFL_TAC);
+  EXISTS_TAC “hrat_1” THEN REFL_TAC
+QED
 
-val HRAT_DOWN2 = store_thm("HRAT_DOWN2",
-  “!x y. ?z. z hrat_lt x /\ z hrat_lt y”,
+Theorem HRAT_DOWN2:
+   !x y. ?z. z hrat_lt x /\ z hrat_lt y
+Proof
   REPEAT GEN_TAC THEN
   REPEAT_TCL DISJ_CASES_THEN ASSUME_TAC
    (SPECL [“x:hrat”, “y:hrat”] HRAT_ADD_TOTAL) THEN
@@ -216,17 +273,20 @@ val HRAT_DOWN2 = store_thm("HRAT_DOWN2",
     X_CHOOSE_TAC “z:hrat” (SPEC “x:hrat” HRAT_DOWN)] THEN
   EXISTS_TAC “z:hrat” THEN RULE_ASSUM_TAC(REWRITE_RULE[hrat_lt]) THEN
   POP_ASSUM(CHOOSE_THEN SUBST1_TAC) THEN
-  REWRITE_TAC[GSYM HRAT_ADD_ASSOC, HRAT_LT_ADDL]);
+  REWRITE_TAC[GSYM HRAT_ADD_ASSOC, HRAT_LT_ADDL]
+QED
 
-val HRAT_MEAN = store_thm("HRAT_MEAN",
-  “!x y. x hrat_lt y ==> (?z. x hrat_lt z /\ z hrat_lt y)”,
+Theorem HRAT_MEAN:
+   !x y. x hrat_lt y ==> (?z. x hrat_lt z /\ z hrat_lt y)
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   EXISTS_TAC “(x hrat_add y) hrat_mul (hrat_inv(hrat_1 hrat_add hrat_1))” THEN
   FREEZE_THEN (fn th => ONCE_REWRITE_TAC[th]) ((GENL [“x:hrat”, “y:hrat”] o SYM o
     SPECL [“x:hrat”, “y:hrat”, “hrat_1 hrat_add hrat_1”]) HRAT_LT_RMUL) THEN
   REWRITE_TAC[GSYM HRAT_MUL_ASSOC, HRAT_MUL_LINV, HRAT_MUL_RID] THEN
   REWRITE_TAC[HRAT_LDISTRIB, HRAT_MUL_RID] THEN
-  ASM_REWRITE_TAC[HRAT_LT_LADD, HRAT_LT_RADD]);
+  ASM_REWRITE_TAC[HRAT_LT_LADD, HRAT_LT_RADD]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Define cuts and the type ":hreal"                                         *)
@@ -244,15 +304,17 @@ val isacut = new_definition("isacut",
 val cut_of_hrat = new_definition("cut_of_hrat",
   “cut_of_hrat x = \y. y hrat_lt x”);
 
-val ISACUT_HRAT = store_thm("ISACUT_HRAT",
-  “!h. isacut(cut_of_hrat h)”,
+Theorem ISACUT_HRAT:
+   !h. isacut(cut_of_hrat h)
+Proof
   let val th = TAUT_CONV “!x y. ~(x /\ y) ==> (x ==> ~y)” in
   GEN_TAC THEN REWRITE_TAC[cut_of_hrat, isacut] THEN BETA_TAC THEN
   REPEAT CONJ_TAC THEN ONCE_REWRITE_TAC[CONJ_SYM] THEN
   REWRITE_TAC[HRAT_DOWN, HRAT_MEAN, HRAT_LT_TRANS] THEN
   X_CHOOSE_TAC “x:hrat” (SPEC “h:hrat” HRAT_UP) THEN
   EXISTS_TAC “x:hrat” THEN POP_ASSUM MP_TAC THEN
-  MATCH_MP_TAC th THEN MATCH_ACCEPT_TAC HRAT_LT_ANTISYM end);
+  MATCH_MP_TAC th THEN MATCH_ACCEPT_TAC HRAT_LT_ANTISYM end
+QED
 
 val hreal_tydef = new_type_definition
   ("hreal",
@@ -264,45 +326,60 @@ val hreal_tybij =
  define_new_type_bijections
    {name="hreal_tybij",ABS="hreal",REP="cut",tyax=hreal_tydef};
 
-val EQUAL_CUTS = store_thm("EQUAL_CUTS",
-  “!X Y. (cut X = cut Y) ==> (X = Y)”,
+Theorem EQUAL_CUTS:
+   !X Y. (cut X = cut Y) ==> (X = Y)
+Proof
   REPEAT GEN_TAC THEN DISCH_THEN(MP_TAC o AP_TERM “hreal”) THEN
-  REWRITE_TAC[hreal_tybij]);
+  REWRITE_TAC[hreal_tybij]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Required lemmas about cuts                                                *)
 (*---------------------------------------------------------------------------*)
 
-val CUT_ISACUT = store_thm("CUT_ISACUT",
-  “!X. isacut (cut X)”,
-  REWRITE_TAC[hreal_tybij]);
+Theorem CUT_ISACUT:
+   !X. isacut (cut X)
+Proof
+  REWRITE_TAC[hreal_tybij]
+QED
 
 val CUT_PROPERTIES = EQ_MP (SPEC “cut X” isacut)
                            (SPEC “X:hreal” CUT_ISACUT);
 
-val CUT_NONEMPTY = store_thm("CUT_NONEMPTY",
-  “!X. ?x. (cut X) x”,
-  REWRITE_TAC[CUT_PROPERTIES]);
+Theorem CUT_NONEMPTY:
+   !X. ?x. (cut X) x
+Proof
+  REWRITE_TAC[CUT_PROPERTIES]
+QED
 
-val CUT_BOUNDED = store_thm("CUT_BOUNDED",
-  “!X. ?x. ~((cut X) x)”,
-  REWRITE_TAC[CUT_PROPERTIES]);
+Theorem CUT_BOUNDED:
+   !X. ?x. ~((cut X) x)
+Proof
+  REWRITE_TAC[CUT_PROPERTIES]
+QED
 
-val CUT_DOWN = store_thm("CUT_DOWN",
-  “!X x y. cut X x /\ y hrat_lt x ==> cut X y”,
-  REWRITE_TAC[CUT_PROPERTIES]);
+Theorem CUT_DOWN:
+   !X x y. cut X x /\ y hrat_lt x ==> cut X y
+Proof
+  REWRITE_TAC[CUT_PROPERTIES]
+QED
 
-val CUT_UP = store_thm("CUT_UP",
-  “!X x. cut X x ==> (?y. cut X y /\ x hrat_lt y)”,
-  REWRITE_TAC[CUT_PROPERTIES]);
+Theorem CUT_UP:
+   !X x. cut X x ==> (?y. cut X y /\ x hrat_lt y)
+Proof
+  REWRITE_TAC[CUT_PROPERTIES]
+QED
 
-val CUT_UBOUND = store_thm("CUT_UBOUND",
-  “!X x y. ~((cut X) x) /\ x hrat_lt y ==> ~((cut X) y)”,
+Theorem CUT_UBOUND:
+   !X x y. ~((cut X) x) /\ x hrat_lt y ==> ~((cut X) y)
+Proof
   let val lemma = TAUT_CONV “(~a /\ b ==> ~c) = (c /\ b ==> a)” in
-  REWRITE_TAC[lemma, CUT_DOWN] end);
+  REWRITE_TAC[lemma, CUT_DOWN] end
+QED
 
-val CUT_STRADDLE = store_thm("CUT_STRADDLE",
-  “!X x y. (cut X) x /\ ~((cut X) y) ==> x hrat_lt y”,
+Theorem CUT_STRADDLE:
+   !X x y. (cut X) x /\ ~((cut X) y) ==> x hrat_lt y
+Proof
   let val lemma = TAUT_CONV “~(a /\ ~a)” in
   REPEAT GEN_TAC THEN
   REPEAT_TCL DISJ_CASES_THEN ASSUME_TAC
@@ -311,10 +388,12 @@ val CUT_STRADDLE = store_thm("CUT_STRADDLE",
   DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
   CONV_TAC CONTRAPOS_CONV THEN DISCH_THEN(K ALL_TAC) THEN
   REWRITE_TAC[] THEN MATCH_MP_TAC CUT_DOWN THEN
-  EXISTS_TAC “x:hrat” THEN ASM_REWRITE_TAC[] end);
+  EXISTS_TAC “x:hrat” THEN ASM_REWRITE_TAC[] end
+QED
 
-val CUT_NEARTOP_ADD = store_thm("CUT_NEARTOP_ADD",
-  “!X e. ?x. (cut X) x /\ ~((cut X) (x hrat_add e))”,
+Theorem CUT_NEARTOP_ADD:
+   !X e. ?x. (cut X) x /\ ~((cut X) (x hrat_add e))
+Proof
   REPEAT GEN_TAC THEN X_CHOOSE_TAC “x1:hrat”
                                    (SPEC “X:hreal” CUT_BOUNDED) THEN
   EVERY_TCL (map X_CHOOSE_THEN [“n:num”, “d:hrat”])
@@ -341,10 +420,12 @@ val CUT_NEARTOP_ADD = store_thm("CUT_NEARTOP_ADD",
     REWRITE_TAC[HRAT_LDISTRIB, HRAT_MUL_RID] THEN
     DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC
      (ASSUME_TAC o REWRITE_RULE[LESS_SUC_REFL] o SPEC “n:num”)) THEN
-    EXISTS_TAC “e hrat_mul (hrat_sucint n)” THEN ASM_REWRITE_TAC[]]);
+    EXISTS_TAC “e hrat_mul (hrat_sucint n)” THEN ASM_REWRITE_TAC[]]
+QED
 
-val CUT_NEARTOP_MUL = store_thm("CUT_NEARTOP_MUL",
-  “!X u. hrat_1 hrat_lt u ==> ?x. (cut X) x /\ ~((cut X)(u hrat_mul x))”,
+Theorem CUT_NEARTOP_MUL:
+   !X u. hrat_1 hrat_lt u ==> ?x. (cut X) x /\ ~((cut X)(u hrat_mul x))
+Proof
   REPEAT GEN_TAC THEN
   X_CHOOSE_TAC “x0:hrat”
                (SPEC “X:hreal” CUT_NONEMPTY) THEN
@@ -365,7 +446,8 @@ val CUT_NEARTOP_MUL = store_thm("CUT_NEARTOP_MUL",
                 o CONJUNCT2) THEN
     REWRITE_TAC[HRAT_LT_RADD, HRAT_LT_LADD, HRAT_LT_LMUL],
     DISCH_THEN(K ALL_TAC) THEN EXISTS_TAC “x0:hrat” THEN
-    ASM_REWRITE_TAC[]]);
+    ASM_REWRITE_TAC[]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Define the operations. "hreal_lt" and "hreal_sub are convenient later     *)
@@ -398,9 +480,10 @@ val _ = set_fixity "hreal_lt" (Infix(NONASSOC, 450))
 (* Prove the appropriate closure properties of the basic operations          *)
 (*---------------------------------------------------------------------------*)
 
-val HREAL_INV_ISACUT = store_thm("HREAL_INV_ISACUT",
-  “!X. isacut (\w.
-      ?d. d hrat_lt hrat_1 /\ (!x. cut X x ==> (w hrat_mul x) hrat_lt d))”,
+Theorem HREAL_INV_ISACUT:
+   !X. isacut (\w.
+      ?d. d hrat_lt hrat_1 /\ (!x. cut X x ==> (w hrat_mul x) hrat_lt d))
+Proof
   GEN_TAC THEN REWRITE_TAC[isacut] THEN REPEAT CONJ_TAC THEN BETA_TAC THENL
    [X_CHOOSE_TAC “d:hrat” (SPEC “hrat_1” HRAT_DOWN) THEN
     X_CHOOSE_TAC “z:hrat” (SPEC “X:hreal” CUT_BOUNDED) THEN
@@ -437,10 +520,12 @@ val HREAL_INV_ISACUT = store_thm("HREAL_INV_ISACUT",
         “a hrat_mul (b hrat_mul c) = b hrat_mul (a hrat_mul c)”] THEN
       REWRITE_TAC[HRAT_LT_L1],
       ONCE_REWRITE_TAC[HRAT_MUL_SYM] THEN
-      ASM_REWRITE_TAC[HRAT_MUL_ASSOC, HRAT_GT_LMUL1, HRAT_GT_L1]]]);
+      ASM_REWRITE_TAC[HRAT_MUL_ASSOC, HRAT_GT_LMUL1, HRAT_GT_L1]]]
+QED
 
-val HREAL_ADD_ISACUT = store_thm("HREAL_ADD_ISACUT",
-  “!X Y. isacut (\w. ?x y. (w = x hrat_add y) /\ cut X x /\ cut Y y)”,
+Theorem HREAL_ADD_ISACUT:
+   !X Y. isacut (\w. ?x y. (w = x hrat_add y) /\ cut X x /\ cut Y y)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[isacut] THEN REPEAT CONJ_TAC THENL
    [X_CHOOSE_TAC “x:hrat” (SPEC “X:hreal” CUT_NONEMPTY) THEN
     X_CHOOSE_TAC “y:hrat” (SPEC “Y:hreal” CUT_NONEMPTY) THEN
@@ -480,10 +565,12 @@ val HREAL_ADD_ISACUT = store_thm("HREAL_ADD_ISACUT",
                                                      “x:hrat”] CUT_UP))
     THEN EXISTS_TAC “u hrat_add y” THEN CONJ_TAC THENL
      [MAP_EVERY EXISTS_TAC [“u:hrat”, “y:hrat”], ALL_TAC] THEN
-    ASM_REWRITE_TAC[HRAT_LT_RADD]]);
+    ASM_REWRITE_TAC[HRAT_LT_RADD]]
+QED
 
-val HREAL_MUL_ISACUT = store_thm("HREAL_MUL_ISACUT",
-  “!X Y. isacut (\w. ?x y. (w = x hrat_mul y) /\ cut X x /\ cut Y y)”,
+Theorem HREAL_MUL_ISACUT:
+   !X Y. isacut (\w. ?x y. (w = x hrat_mul y) /\ cut X x /\ cut Y y)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[isacut] THEN REPEAT CONJ_TAC THENL
    [X_CHOOSE_TAC “x:hrat” (SPEC “X:hreal” CUT_NONEMPTY) THEN
     X_CHOOSE_TAC “y:hrat” (SPEC “Y:hreal” CUT_NONEMPTY) THEN
@@ -525,32 +612,38 @@ val HREAL_MUL_ISACUT = store_thm("HREAL_MUL_ISACUT",
                  (UNDISCH_ALL (SPECL [“X:hreal”, “x:hrat”] CUT_UP))
     THEN EXISTS_TAC “u hrat_mul y” THEN CONJ_TAC THENL
      [MAP_EVERY EXISTS_TAC [“u:hrat”, “y:hrat”], ALL_TAC] THEN
-    ASM_REWRITE_TAC[HRAT_LT_RMUL]]);
+    ASM_REWRITE_TAC[HRAT_LT_RMUL]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Now prove the various theorems about the new type                         *)
 (*---------------------------------------------------------------------------*)
 
-val HREAL_ADD_SYM = store_thm("HREAL_ADD_SYM",
-  “!X Y. X hreal_add Y = Y hreal_add X”,
+Theorem HREAL_ADD_SYM:
+   !X Y. X hreal_add Y = Y hreal_add X
+Proof
   let val vars = [“a:hrat”, “b:hrat”] in
   REPEAT GEN_TAC THEN REWRITE_TAC[hreal_add] THEN AP_TERM_TAC THEN
   CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN BETA_TAC THEN EQ_TAC THEN
   DISCH_THEN((EVERY_TCL o map X_CHOOSE_THEN) vars ASSUME_TAC) THEN
   MAP_EVERY EXISTS_TAC (rev vars) THEN ONCE_REWRITE_TAC[HRAT_ADD_SYM]
-  THEN ASM_REWRITE_TAC[] end);
+  THEN ASM_REWRITE_TAC[] end
+QED
 
-val HREAL_MUL_SYM = store_thm("HREAL_MUL_SYM",
-  “!X Y. X hreal_mul Y = Y hreal_mul X”,
+Theorem HREAL_MUL_SYM:
+   !X Y. X hreal_mul Y = Y hreal_mul X
+Proof
   let val vars = [“a:hrat”, “b:hrat”] in
   REPEAT GEN_TAC THEN REWRITE_TAC[hreal_mul] THEN AP_TERM_TAC THEN
   CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN BETA_TAC THEN EQ_TAC THEN
   DISCH_THEN((EVERY_TCL o map X_CHOOSE_THEN) vars ASSUME_TAC) THEN
   MAP_EVERY EXISTS_TAC (rev vars) THEN ONCE_REWRITE_TAC[HRAT_MUL_SYM]
-  THEN ASM_REWRITE_TAC[] end);
+  THEN ASM_REWRITE_TAC[] end
+QED
 
-val HREAL_ADD_ASSOC = store_thm("HREAL_ADD_ASSOC",
-  “!X Y Z. X hreal_add (Y hreal_add Z) = (X hreal_add Y) hreal_add Z”,
+Theorem HREAL_ADD_ASSOC:
+   !X Y Z. X hreal_add (Y hreal_add Z) = (X hreal_add Y) hreal_add Z
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[hreal_add] THEN AP_TERM_TAC THEN
   CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN BETA_TAC THEN
   REWRITE_TAC[REWRITE_RULE[hreal_tybij] HREAL_ADD_ISACUT] THEN BETA_TAC THEN
@@ -562,10 +655,12 @@ val HREAL_ADD_ASSOC = store_thm("HREAL_ADD_ASSOC",
                           “u:hrat”, “x:hrat”],
     MAP_EVERY EXISTS_TAC [“x:hrat”, “y hrat_add v”,
                           “y:hrat”, “v:hrat”]]
-  THEN ASM_REWRITE_TAC[HRAT_ADD_ASSOC]);
+  THEN ASM_REWRITE_TAC[HRAT_ADD_ASSOC]
+QED
 
-val HREAL_MUL_ASSOC = store_thm("HREAL_MUL_ASSOC",
-  “!X Y Z. X hreal_mul (Y hreal_mul Z) = (X hreal_mul Y) hreal_mul Z”,
+Theorem HREAL_MUL_ASSOC:
+   !X Y Z. X hreal_mul (Y hreal_mul Z) = (X hreal_mul Y) hreal_mul Z
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[hreal_mul] THEN AP_TERM_TAC THEN
   CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN BETA_TAC THEN
   REWRITE_TAC[REWRITE_RULE[hreal_tybij] HREAL_MUL_ISACUT] THEN BETA_TAC THEN
@@ -577,11 +672,13 @@ val HREAL_MUL_ASSOC = store_thm("HREAL_MUL_ASSOC",
                           “u:hrat”, “x:hrat”],
     MAP_EVERY EXISTS_TAC [“x:hrat”, “y hrat_mul v”,
                           “y:hrat”, “v:hrat”]]
-  THEN ASM_REWRITE_TAC[HRAT_MUL_ASSOC]);
+  THEN ASM_REWRITE_TAC[HRAT_MUL_ASSOC]
+QED
 
-val HREAL_LDISTRIB = store_thm("HREAL_LDISTRIB",
-  “!X Y Z. X hreal_mul (Y hreal_add Z) =
-              (X hreal_mul Y) hreal_add (X hreal_mul Z)”,
+Theorem HREAL_LDISTRIB:
+   !X Y Z. X hreal_mul (Y hreal_add Z) =
+              (X hreal_mul Y) hreal_add (X hreal_mul Z)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[hreal_mul, hreal_add] THEN AP_TERM_TAC THEN
   CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN BETA_TAC THEN
   (REWRITE_TAC o map (REWRITE_RULE[hreal_tybij]))
@@ -615,10 +712,12 @@ val HREAL_LDISTRIB = store_thm("HREAL_LDISTRIB",
       ASM_REWRITE_TAC
        [HRAT_LDISTRIB, HRAT_MUL_ASSOC, HRAT_MUL_RINV, HRAT_MUL_LID] THEN
       MATCH_MP_TAC CUT_DOWN THEN EXISTS_TAC “f:hrat” THEN
-      ASM_REWRITE_TAC[HRAT_LT_LMUL1, HRAT_LT_L1]]]);
+      ASM_REWRITE_TAC[HRAT_LT_LMUL1, HRAT_LT_L1]]]
+QED
 
-val HREAL_MUL_LID = store_thm("HREAL_MUL_LID",
-  “!X. hreal_1 hreal_mul X = X”,
+Theorem HREAL_MUL_LID:
+   !X. hreal_1 hreal_mul X = X
+Proof
   GEN_TAC THEN REWRITE_TAC[hreal_1, hreal_mul] THEN
   MATCH_MP_TAC EQUAL_CUTS THEN
   REWRITE_TAC[REWRITE_RULE[hreal_tybij] HREAL_MUL_ISACUT] THEN
@@ -633,10 +732,12 @@ val HREAL_MUL_LID = store_thm("HREAL_MUL_LID",
     DISCH_THEN(X_CHOOSE_THEN “v:hrat” STRIP_ASSUME_TAC o MATCH_MP CUT_UP)
     THEN MAP_EVERY EXISTS_TAC [“w hrat_mul (hrat_inv v)”,“v:hrat”]
     THEN ASM_REWRITE_TAC[GSYM HRAT_MUL_ASSOC, HRAT_MUL_LINV, HRAT_MUL_RID]
-    THEN ONCE_REWRITE_TAC[HRAT_MUL_SYM] THEN ASM_REWRITE_TAC[HRAT_LT_L1]]);
+    THEN ONCE_REWRITE_TAC[HRAT_MUL_SYM] THEN ASM_REWRITE_TAC[HRAT_LT_L1]]
+QED
 
-val HREAL_MUL_LINV = store_thm("HREAL_MUL_LINV",
-  “!X. (hreal_inv X) hreal_mul X = hreal_1”,
+Theorem HREAL_MUL_LINV:
+   !X. (hreal_inv X) hreal_mul X = hreal_1
+Proof
   GEN_TAC THEN REWRITE_TAC[hreal_inv, hreal_mul, hreal_1] THEN
   REWRITE_TAC[REWRITE_RULE[hreal_tybij] HREAL_INV_ISACUT] THEN
   AP_TERM_TAC THEN REWRITE_TAC[cut_of_hrat] THEN
@@ -670,10 +771,12 @@ val HREAL_MUL_LINV = store_thm("HREAL_MUL_LINV",
     ONCE_REWRITE_TAC[AC(HRAT_MUL_ASSOC,HRAT_MUL_SYM)
                      “(a hrat_mul b) hrat_mul ((c hrat_mul d) hrat_mul e) =
                       ((c hrat_mul a) hrat_mul (b hrat_mul e)) hrat_mul d”]
-    THEN REWRITE_TAC[HRAT_MUL_LINV, HRAT_MUL_LID]]);
+    THEN REWRITE_TAC[HRAT_MUL_LINV, HRAT_MUL_LID]]
+QED
 
-val HREAL_NOZERO = store_thm("HREAL_NOZERO",
-  “!X Y. ~(X hreal_add Y = X)”,
+Theorem HREAL_NOZERO:
+   !X Y. ~(X hreal_add Y = X)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[hreal_add] THEN
   DISCH_THEN(MP_TAC o AP_TERM “cut”) THEN
   REWRITE_TAC[REWRITE_RULE[hreal_tybij] HREAL_ADD_ISACUT] THEN
@@ -684,7 +787,8 @@ val HREAL_NOZERO = store_thm("HREAL_NOZERO",
                (SPECL [“X:hreal”, “y:hrat”] CUT_NEARTOP_ADD) THEN
   EXISTS_TAC “x hrat_add y” THEN ASM_REWRITE_TAC[] THEN
   MAP_EVERY EXISTS_TAC [“x:hrat”, “y:hrat”] THEN
-  ASM_REWRITE_TAC[]);
+  ASM_REWRITE_TAC[]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Need a sequence of lemmas for totality of addition; it's convenient       *)
@@ -695,8 +799,9 @@ val hreal_sub = new_infixl_definition("hreal_sub",
 “hreal_sub Y X = hreal (\w. ?x. ~((cut X) x) /\ (cut Y) ($hrat_add x w))”,
   500);
 
-val HREAL_LT_LEMMA = store_thm("HREAL_LT_LEMMA",
-  “!X Y. X hreal_lt Y ==> ?x. ~(cut X x) /\ (cut Y x)”,
+Theorem HREAL_LT_LEMMA:
+   !X Y. X hreal_lt Y ==> ?x. ~(cut X x) /\ (cut Y x)
+Proof
   let val lemma1 = TAUT_CONV “~(~a /\ b) = b ==> a”
       val lemma2 = TAUT_CONV “(a ==> b) /\ (b ==> a) = (a = b)”
   in
@@ -707,10 +812,12 @@ val HREAL_LT_LEMMA = store_thm("HREAL_LT_LEMMA",
   CONV_TAC(LAND_CONV AND_FORALL_CONV) THEN
   REWRITE_TAC[lemma2] THEN CONV_TAC(LAND_CONV EXT_CONV) THEN
   DISCH_THEN(MP_TAC o AP_TERM “hreal”) THEN REWRITE_TAC[hreal_tybij]
-  end);
+  end
+QED
 
-val HREAL_SUB_ISACUT = store_thm("HREAL_SUB_ISACUT",
-“!X Y. X hreal_lt Y ==> isacut(\w. ?x. ~cut X x /\ cut Y(x hrat_add w))”,
+Theorem HREAL_SUB_ISACUT:
+ !X Y. X hreal_lt Y ==> isacut(\w. ?x. ~cut X x /\ cut Y(x hrat_add w))
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[isacut] THEN
   BETA_TAC THEN REPEAT CONJ_TAC THENL
    [FIRST_ASSUM(X_CHOOSE_TAC “y:hrat” o MATCH_MP HREAL_LT_LEMMA) THEN
@@ -740,10 +847,12 @@ val HREAL_SUB_ISACUT = store_thm("HREAL_SUB_ISACUT",
     DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC
      (X_CHOOSE_THEN “d:hrat” SUBST_ALL_TAC) o REWRITE_RULE[hrat_lt]) THEN
     EXISTS_TAC “x hrat_add d” THEN REWRITE_TAC[HRAT_LT_ADDL] THEN
-    EXISTS_TAC “z:hrat” THEN ASM_REWRITE_TAC[HRAT_ADD_ASSOC]]);
+    EXISTS_TAC “z:hrat” THEN ASM_REWRITE_TAC[HRAT_ADD_ASSOC]]
+QED
 
-val HREAL_SUB_ADD = store_thm("HREAL_SUB_ADD",
-  “!X Y. X hreal_lt Y ==> ((Y hreal_sub X) hreal_add X = Y)”,
+Theorem HREAL_SUB_ADD:
+   !X Y. X hreal_lt Y ==> ((Y hreal_sub X) hreal_add X = Y)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[hreal_add, hreal_sub] THEN
   DISCH_TAC THEN MATCH_MP_TAC EQUAL_CUTS THEN
   REWRITE_TAC[REWRITE_RULE[hreal_tybij] HREAL_ADD_ISACUT] THEN
@@ -803,10 +912,12 @@ val HREAL_SUB_ADD = store_thm("HREAL_SUB_ADD",
         EXISTS_TAC “w:hrat” THEN ASM_REWRITE_TAC[] THEN
         SUBST1_TAC(SYM(SPECL [“w:hrat”, “y:hrat”, “e:hrat”] HRAT_LT_RADD)) THEN
         MATCH_MP_TAC CUT_STRADDLE THEN EXISTS_TAC “Y:hreal” THEN
-        ASM_REWRITE_TAC[]]]]);
+        ASM_REWRITE_TAC[]]]]
+QED
 
-val HREAL_LT_TOTAL = store_thm("HREAL_LT_TOTAL",
-  “!X Y. (X = Y) \/ (X hreal_lt Y) \/ (Y hreal_lt X)”,
+Theorem HREAL_LT_TOTAL:
+   !X Y. (X = Y) \/ (X hreal_lt Y) \/ (Y hreal_lt X)
+Proof
   let val lemma = TAUT_CONV “a \/ (~a /\ b) \/ (~a /\ c) = ~b /\ ~c ==> a”
       val negneg = TAUT_CONV “a = ~(~a)” in
   REPEAT GEN_TAC THEN REWRITE_TAC[hreal_lt] THEN
@@ -821,10 +932,12 @@ val HREAL_LT_TOTAL = store_thm("HREAL_LT_TOTAL",
   DISCH_THEN(X_CHOOSE_THEN “w:hrat” MP_TAC o CONV_RULE NOT_FORALL_CONV) THEN
   REWRITE_TAC[] THEN DISCH_THEN(fn th =>
     FIRST_ASSUM(ASSUME_TAC o MATCH_MP CUT_STRADDLE o CONJ th)) THEN
-  MATCH_MP_TAC CUT_DOWN THEN EXISTS_TAC “z:hrat” THEN ASM_REWRITE_TAC[] end);
+  MATCH_MP_TAC CUT_DOWN THEN EXISTS_TAC “z:hrat” THEN ASM_REWRITE_TAC[] end
+QED
 
-val HREAL_LT = store_thm("HREAL_LT",
-  “!X Y. X hreal_lt Y = ?D. Y = X hreal_add D”,
+Theorem HREAL_LT:
+   !X Y. X hreal_lt Y = ?D. Y = X hreal_add D
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL
    [DISCH_THEN(curry op THEN (EXISTS_TAC “Y hreal_sub X”) o MP_TAC) THEN
     DISCH_THEN(CONV_TAC o (LAND_CONV o REWR_CONV) o
@@ -841,20 +954,24 @@ val HREAL_LT = store_thm("HREAL_LT",
     ASM_REWRITE_TAC[] THEN CONJ_TAC THENL
      [MATCH_ACCEPT_TAC HRAT_ADD_SYM,
       MATCH_MP_TAC CUT_DOWN THEN EXISTS_TAC “x:hrat” THEN
-      ASM_REWRITE_TAC[HRAT_LT_ADDR]]]);
+      ASM_REWRITE_TAC[HRAT_LT_ADDR]]]
+QED
 
-val HREAL_ADD_TOTAL = store_thm("HREAL_ADD_TOTAL",
-  “!X Y. (X = Y) \/ (?D. Y = X hreal_add D) \/ (?D. X = Y hreal_add D)”,
+Theorem HREAL_ADD_TOTAL:
+   !X Y. (X = Y) \/ (?D. Y = X hreal_add D) \/ (?D. X = Y hreal_add D)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[SYM(SPEC_ALL HREAL_LT)] THEN
-  MATCH_ACCEPT_TAC HREAL_LT_TOTAL);
+  MATCH_ACCEPT_TAC HREAL_LT_TOTAL
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Now prove the supremum property                                           *)
 (*---------------------------------------------------------------------------*)
 
-val HREAL_SUP_ISACUT = store_thm("HREAL_SUP_ISACUT",
-  “!P. (?X:hreal. P X) /\ (?Y. (!X. P X ==> X hreal_lt Y))
-        ==> isacut (\w. ?X. P X /\ cut X w)”,
+Theorem HREAL_SUP_ISACUT:
+   !P. (?X:hreal. P X) /\ (?Y. (!X. P X ==> X hreal_lt Y))
+        ==> isacut (\w. ?X. P X /\ cut X w)
+Proof
   let val lemma = TAUT_CONV “~(a /\ b) = (a ==> ~b)” in
   GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN CHOOSE_TAC) THEN
   REWRITE_TAC[isacut] THEN BETA_TAC THEN REPEAT CONJ_TAC THENL
@@ -877,11 +994,13 @@ val HREAL_SUP_ISACUT = store_thm("HREAL_SUP_ISACUT",
     FIRST_ASSUM(X_CHOOSE_TAC “y:hrat” o MATCH_MP
       (SPECL [“Z:hreal”, “x:hrat”] CUT_UP)) THEN
     EXISTS_TAC “y:hrat” THEN ASM_REWRITE_TAC[] THEN
-    EXISTS_TAC “Z:hreal” THEN ASM_REWRITE_TAC[]] end);
+    EXISTS_TAC “Z:hreal” THEN ASM_REWRITE_TAC[]] end
+QED
 
-val HREAL_SUP = store_thm("HREAL_SUP",
-  “!P. (?X. P X) /\ (?Y. (!X. P X ==> X hreal_lt Y)) ==>
-         (!Y. (?X. P X /\ Y hreal_lt X) = Y hreal_lt (hreal_sup P))”,
+Theorem HREAL_SUP:
+   !P. (?X. P X) /\ (?Y. (!X. P X ==> X hreal_lt Y)) ==>
+         (!Y. (?X. P X /\ Y hreal_lt X) = Y hreal_lt (hreal_sup P))
+Proof
   let val stac = FIRST_ASSUM(SUBST1_TAC o MATCH_MP
     (REWRITE_RULE[hreal_tybij] HREAL_SUP_ISACUT)) in
   GEN_TAC THEN DISCH_TAC THEN GEN_TAC THEN EQ_TAC THENL
@@ -910,78 +1029,101 @@ val HREAL_SUP = store_thm("HREAL_SUP",
       MP_TAC (CONJUNCT2 (REWRITE_RULE[hreal_lt] (ASSUME “X hreal_lt Y”))) THEN
       CONV_TAC CONTRAPOS_CONV THEN DISCH_THEN(K ALL_TAC) THEN
       CONV_TAC NOT_FORALL_CONV THEN EXISTS_TAC “x:hrat” THEN
-      ASM_REWRITE_TAC[]]] end);
+      ASM_REWRITE_TAC[]]] end
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Required lemmas about the halfreals - mostly to drive CANCEL_TAC          *)
 (*---------------------------------------------------------------------------*)
 
-val HREAL_RDISTRIB = store_thm("HREAL_RDISTRIB",
-  “!x y z. (x hreal_add y) hreal_mul z =
-              (x hreal_mul z) hreal_add (y hreal_mul z)”,
+Theorem HREAL_RDISTRIB:
+   !x y z. (x hreal_add y) hreal_mul z =
+              (x hreal_mul z) hreal_add (y hreal_mul z)
+Proof
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[HREAL_MUL_SYM] THEN
-  MATCH_ACCEPT_TAC HREAL_LDISTRIB);
+  MATCH_ACCEPT_TAC HREAL_LDISTRIB
+QED
 
-val HREAL_EQ_ADDR = store_thm("HREAL_EQ_ADDR",
-  “!x y. ~(x hreal_add y = x)”,
-  REPEAT GEN_TAC THEN MATCH_ACCEPT_TAC HREAL_NOZERO);
+Theorem HREAL_EQ_ADDR:
+   !x y. ~(x hreal_add y = x)
+Proof
+  REPEAT GEN_TAC THEN MATCH_ACCEPT_TAC HREAL_NOZERO
+QED
 
-val HREAL_EQ_ADDL = store_thm("HREAL_EQ_ADDL",
-  “!x y. ~(x = x hreal_add y)”,
+Theorem HREAL_EQ_ADDL:
+   !x y. ~(x = x hreal_add y)
+Proof
   REPEAT GEN_TAC THEN CONV_TAC(RAND_CONV SYM_CONV) THEN
-  MATCH_ACCEPT_TAC HREAL_EQ_ADDR);
+  MATCH_ACCEPT_TAC HREAL_EQ_ADDR
+QED
 
-val HREAL_EQ_LADD = store_thm("HREAL_EQ_LADD",
-  “!x y z. (x hreal_add y = x hreal_add z) = (y = z)”,
+Theorem HREAL_EQ_LADD:
+   !x y z. (x hreal_add y = x hreal_add z) = (y = z)
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL
    [REPEAT_TCL DISJ_CASES_THEN ASSUME_TAC
         (SPECL [“y:hreal”, “z:hreal”] HREAL_ADD_TOTAL) THENL
      [DISCH_THEN(K ALL_TAC) THEN POP_ASSUM ACCEPT_TAC, ALL_TAC, ALL_TAC] THEN
     POP_ASSUM(X_CHOOSE_THEN “d:hreal” SUBST1_TAC) THEN
     REWRITE_TAC[HREAL_ADD_ASSOC, HREAL_EQ_ADDR, HREAL_EQ_ADDL],
-    DISCH_THEN SUBST1_TAC THEN REFL_TAC]);
+    DISCH_THEN SUBST1_TAC THEN REFL_TAC]
+QED
 
-val HREAL_LT_REFL = store_thm("HREAL_LT_REFL",
-  “!x. ~(x hreal_lt x)”,
+Theorem HREAL_LT_REFL:
+   !x. ~(x hreal_lt x)
+Proof
   GEN_TAC THEN REWRITE_TAC[HREAL_LT] THEN
-  REWRITE_TAC[HREAL_EQ_ADDL]);
+  REWRITE_TAC[HREAL_EQ_ADDL]
+QED
 
-val HREAL_LT_ADDL = store_thm("HREAL_LT_ADDL",
-  “!x y. x hreal_lt (x hreal_add y)”,
+Theorem HREAL_LT_ADDL:
+   !x y. x hreal_lt (x hreal_add y)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[HREAL_LT] THEN
-  EXISTS_TAC “y:hreal” THEN REFL_TAC);
+  EXISTS_TAC “y:hreal” THEN REFL_TAC
+QED
 
-val HREAL_LT_NE = store_thm("HREAL_LT_NE",
-  “!x y. x hreal_lt y  ==> ~(x = y)”,
-  REPEAT GEN_TAC THEN REWRITE_TAC[HREAL_LT] THEN
-  DISCH_THEN(CHOOSE_THEN SUBST1_TAC) THEN
-  MATCH_ACCEPT_TAC HREAL_EQ_ADDL);
-
-val HREAL_LT_ADDR = store_thm("HREAL_LT_ADDR",
-  “!x y. ~((x hreal_add y) hreal_lt x)”,
-  REPEAT GEN_TAC THEN REWRITE_TAC[HREAL_LT] THEN
-  REWRITE_TAC[GSYM HREAL_ADD_ASSOC, HREAL_EQ_ADDL]);
-
-val HREAL_LT_GT = store_thm("HREAL_LT_GT",
-  “!x y. x hreal_lt y  ==> ~(y hreal_lt x)”,
+Theorem HREAL_LT_NE:
+   !x y. x hreal_lt y  ==> ~(x = y)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[HREAL_LT] THEN
   DISCH_THEN(CHOOSE_THEN SUBST1_TAC) THEN
-  REWRITE_TAC[GSYM HREAL_ADD_ASSOC, HREAL_EQ_ADDL]);
+  MATCH_ACCEPT_TAC HREAL_EQ_ADDL
+QED
 
-val HREAL_LT_ADD2 = store_thm("HREAL_LT_ADD2",
-  “!x1 x2 y1 y2. x1 hreal_lt y1 /\ x2 hreal_lt y2 ==>
-     (x1 hreal_add x2) hreal_lt (y1 hreal_add y2)”,
+Theorem HREAL_LT_ADDR:
+   !x y. ~((x hreal_add y) hreal_lt x)
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC[HREAL_LT] THEN
+  REWRITE_TAC[GSYM HREAL_ADD_ASSOC, HREAL_EQ_ADDL]
+QED
+
+Theorem HREAL_LT_GT:
+   !x y. x hreal_lt y  ==> ~(y hreal_lt x)
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC[HREAL_LT] THEN
+  DISCH_THEN(CHOOSE_THEN SUBST1_TAC) THEN
+  REWRITE_TAC[GSYM HREAL_ADD_ASSOC, HREAL_EQ_ADDL]
+QED
+
+Theorem HREAL_LT_ADD2:
+   !x1 x2 y1 y2. x1 hreal_lt y1 /\ x2 hreal_lt y2 ==>
+     (x1 hreal_add x2) hreal_lt (y1 hreal_add y2)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[HREAL_LT] THEN
   DISCH_THEN(CONJUNCTS_THEN2 (X_CHOOSE_THEN “d1:hreal” SUBST1_TAC)
     (X_CHOOSE_THEN “d2:hreal” SUBST1_TAC)) THEN
   EXISTS_TAC “d1 hreal_add d2” THEN
-  CONV_TAC(AC_CONV(HREAL_ADD_ASSOC,HREAL_ADD_SYM)));
+  CONV_TAC(AC_CONV(HREAL_ADD_ASSOC,HREAL_ADD_SYM))
+QED
 
-val HREAL_LT_LADD = store_thm("HREAL_LT_LADD",
-  “!x y z. (x hreal_add y) hreal_lt (x hreal_add z) = y hreal_lt z”,
+Theorem HREAL_LT_LADD:
+   !x y z. (x hreal_add y) hreal_lt (x hreal_add z) = y hreal_lt z
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[HREAL_LT] THEN EQ_TAC THEN
   DISCH_THEN(X_CHOOSE_THEN “d:hreal” (curry op THEN (EXISTS_TAC “d:hreal”) o MP_TAC))
-  THEN REWRITE_TAC[GSYM HREAL_ADD_ASSOC, HREAL_EQ_LADD]);
+  THEN REWRITE_TAC[GSYM HREAL_ADD_ASSOC, HREAL_EQ_LADD]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* CANCEL_CONV - Try to cancel, rearranging using AC laws as needed          *)
@@ -1127,23 +1269,30 @@ val treal_eq = new_definition("treal_eq",
   “treal_eq (x1,y1) (x2,y2) = (x1 hreal_add y2 = x2 hreal_add y1)”);
 val _ = temp_set_fixity "treal_eq" (Infix(NONASSOC, 450))
 
-val TREAL_EQ_REFL = store_thm("TREAL_EQ_REFL",
-  “!x. x treal_eq x”,
-  GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_eq] THEN REFL_TAC);
+Theorem TREAL_EQ_REFL:
+   !x. x treal_eq x
+Proof
+  GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_eq] THEN REFL_TAC
+QED
 
-val TREAL_EQ_SYM = store_thm("TREAL_EQ_SYM",
-  “!x y. x treal_eq y = y treal_eq x”,
+Theorem TREAL_EQ_SYM:
+   !x y. x treal_eq y = y treal_eq x
+Proof
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_eq] THEN
-  CONV_TAC(RAND_CONV SYM_CONV) THEN REFL_TAC);
+  CONV_TAC(RAND_CONV SYM_CONV) THEN REFL_TAC
+QED
 
-val TREAL_EQ_TRANS = store_thm("TREAL_EQ_TRANS",
-  “!x y z. x treal_eq y /\ y treal_eq z ==> x treal_eq z”,
+Theorem TREAL_EQ_TRANS:
+   !x y z. x treal_eq y /\ y treal_eq z ==> x treal_eq z
+Proof
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_eq] THEN
   DISCH_THEN(MP_TAC o MK_COMB o (AP_TERM “$hreal_add” ## I) o CONJ_PAIR)
-  THEN CANCEL_TAC THEN DISCH_THEN SUBST1_TAC THEN CANCEL_TAC);
+  THEN CANCEL_TAC THEN DISCH_THEN SUBST1_TAC THEN CANCEL_TAC
+QED
 
-val TREAL_EQ_EQUIV = store_thm("TREAL_EQ_EQUIV",
-  “!p q. p treal_eq q = ($treal_eq p = $treal_eq q)”,
+Theorem TREAL_EQ_EQUIV:
+   !p q. p treal_eq q = ($treal_eq p = $treal_eq q)
+Proof
   REPEAT GEN_TAC THEN CONV_TAC SYM_CONV THEN
   CONV_TAC (ONCE_DEPTH_CONV (X_FUN_EQ_CONV “r:hreal#hreal”)) THEN
   EQ_TAC THENL
@@ -1152,76 +1301,98 @@ val TREAL_EQ_EQUIV = store_thm("TREAL_EQ_EQUIV",
       DISCH_TAC THEN GEN_TAC THEN EQ_TAC THENL
        [RULE_ASSUM_TAC(ONCE_REWRITE_RULE[TREAL_EQ_SYM]), ALL_TAC] THEN
       POP_ASSUM(fn th => DISCH_THEN(MP_TAC o CONJ th)) THEN
-      MATCH_ACCEPT_TAC TREAL_EQ_TRANS]);
+      MATCH_ACCEPT_TAC TREAL_EQ_TRANS]
+QED
 
-val TREAL_EQ_AP = store_thm("TREAL_EQ_AP",
-  “!p q. (p = q) ==> p treal_eq q”,
+Theorem TREAL_EQ_AP:
+   !p q. (p = q) ==> p treal_eq q
+Proof
   REPEAT GEN_TAC THEN DISCH_THEN SUBST1_TAC THEN
-  MATCH_ACCEPT_TAC TREAL_EQ_REFL);
+  MATCH_ACCEPT_TAC TREAL_EQ_REFL
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Prove the properties of representatives                                   *)
 (*---------------------------------------------------------------------------*)
 
-val TREAL_10 = store_thm("TREAL_10",
-  “~(treal_1 treal_eq treal_0)”,
-  REWRITE_TAC[treal_1, treal_0, treal_eq, HREAL_NOZERO]);
+Theorem TREAL_10:
+   ~(treal_1 treal_eq treal_0)
+Proof
+  REWRITE_TAC[treal_1, treal_0, treal_eq, HREAL_NOZERO]
+QED
 
-val TREAL_ADD_SYM = store_thm("TREAL_ADD_SYM",
-  “!x y. x treal_add y = y treal_add x”,
+Theorem TREAL_ADD_SYM:
+   !x y. x treal_add y = y treal_add x
+Proof
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_add] THEN
   GEN_REWR_TAC (RAND_CONV o ONCE_DEPTH_CONV)
                   [HREAL_ADD_SYM] THEN
-  REFL_TAC);
+  REFL_TAC
+QED
 
-val TREAL_MUL_SYM = store_thm("TREAL_MUL_SYM",
-  “!x y. x treal_mul y = y treal_mul x”,
+Theorem TREAL_MUL_SYM:
+   !x y. x treal_mul y = y treal_mul x
+Proof
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_mul] THEN
   GEN_REWR_TAC (RAND_CONV o ONCE_DEPTH_CONV)
                   [HREAL_MUL_SYM] THEN
-  REWRITE_TAC[PAIR_EQ] THEN MATCH_ACCEPT_TAC HREAL_ADD_SYM);
+  REWRITE_TAC[PAIR_EQ] THEN MATCH_ACCEPT_TAC HREAL_ADD_SYM
+QED
 
-val TREAL_ADD_ASSOC = store_thm("TREAL_ADD_ASSOC",
-  “!x y z. x treal_add (y treal_add z) = (x treal_add y) treal_add z”,
+Theorem TREAL_ADD_ASSOC:
+   !x y z. x treal_add (y treal_add z) = (x treal_add y) treal_add z
+Proof
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_add] THEN
-  REWRITE_TAC[HREAL_ADD_ASSOC]);
+  REWRITE_TAC[HREAL_ADD_ASSOC]
+QED
 
-val TREAL_MUL_ASSOC = store_thm("TREAL_MUL_ASSOC",
-  “!x y z. x treal_mul (y treal_mul z) = (x treal_mul y) treal_mul z”,
+Theorem TREAL_MUL_ASSOC:
+   !x y z. x treal_mul (y treal_mul z) = (x treal_mul y) treal_mul z
+Proof
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_mul] THEN
   REWRITE_TAC[HREAL_LDISTRIB, HREAL_RDISTRIB, PAIR_EQ, GSYM HREAL_MUL_ASSOC]
-  THEN CONJ_TAC THEN CANCEL_TAC);
+  THEN CONJ_TAC THEN CANCEL_TAC
+QED
 
-val TREAL_LDISTRIB = store_thm("TREAL_LDISTRIB",
-  “!x y z. x treal_mul (y treal_add z) =
-       (x treal_mul y) treal_add (x treal_mul z)”,
+Theorem TREAL_LDISTRIB:
+   !x y z. x treal_mul (y treal_add z) =
+       (x treal_mul y) treal_add (x treal_mul z)
+Proof
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_mul, treal_add] THEN
   REWRITE_TAC[HREAL_LDISTRIB, PAIR_EQ] THEN
-  CONJ_TAC THEN CANCEL_TAC);
+  CONJ_TAC THEN CANCEL_TAC
+QED
 
-val TREAL_ADD_LID = store_thm("TREAL_ADD_LID",
-  “!x. (treal_0 treal_add x) treal_eq x”,
+Theorem TREAL_ADD_LID:
+   !x. (treal_0 treal_add x) treal_eq x
+Proof
   GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_0, treal_add, treal_eq] THEN
-  CANCEL_TAC);
+  CANCEL_TAC
+QED
 
-val TREAL_MUL_LID = store_thm("TREAL_MUL_LID",
-  “!x. (treal_1 treal_mul x) treal_eq x”,
+Theorem TREAL_MUL_LID:
+   !x. (treal_1 treal_mul x) treal_eq x
+Proof
   GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_1, treal_mul, treal_eq] THEN
   REWRITE_TAC[HREAL_MUL_LID, HREAL_LDISTRIB, HREAL_RDISTRIB] THEN
-  CANCEL_TAC THEN CANCEL_TAC);
+  CANCEL_TAC THEN CANCEL_TAC
+QED
 
-val TREAL_ADD_LINV = store_thm("TREAL_ADD_LINV",
-  “!x. ((treal_neg x) treal_add x) treal_eq treal_0”,
+Theorem TREAL_ADD_LINV:
+   !x. ((treal_neg x) treal_add x) treal_eq treal_0
+Proof
   GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_neg, treal_add, treal_eq, treal_0]
-  THEN CANCEL_TAC);
+  THEN CANCEL_TAC
+QED
 
 val TREAL_INV_0 = store_thm("TREAL_INV_0",
  Term`treal_inv (treal_0) treal_eq (treal_0)`,
   REWRITE_TAC[treal_inv, treal_eq, treal_0]);
 
-val TREAL_MUL_LINV = store_thm("TREAL_MUL_LINV",
-  “!x. ~(x treal_eq treal_0) ==>
-              (((treal_inv x) treal_mul x) treal_eq treal_1)”,
+Theorem TREAL_MUL_LINV:
+   !x. ~(x treal_eq treal_0) ==>
+              (((treal_inv x) treal_mul x) treal_eq treal_1)
+Proof
   GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_0, treal_eq, treal_inv] THEN
   CANCEL_TAC THEN DISCH_TAC THEN DISJ_CASES_THEN2
     (fn th => MP_TAC th THEN ASM_REWRITE_TAC[]) (DISJ_CASES_THEN ASSUME_TAC)
@@ -1233,37 +1404,48 @@ val TREAL_MUL_LINV = store_thm("TREAL_MUL_LINV",
     find_term(fn tm => rator(rator tm) ~~ “$hreal_sub” handle _ => false) o snd)
   THEN
   REWRITE_TAC[GSYM HREAL_LDISTRIB] THEN AP_TERM_TAC THEN
-  FIRST_ASSUM(SUBST1_TAC o MATCH_MP HREAL_SUB_ADD) THEN REFL_TAC);
+  FIRST_ASSUM(SUBST1_TAC o MATCH_MP HREAL_SUB_ADD) THEN REFL_TAC
+QED
 
-val TREAL_LT_TOTAL = store_thm("TREAL_LT_TOTAL",
-  “!x y. x treal_eq y \/ x treal_lt y \/ y treal_lt x”,
+Theorem TREAL_LT_TOTAL:
+   !x y. x treal_eq y \/ x treal_lt y \/ y treal_lt x
+Proof
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_lt, treal_eq] THEN
-  MATCH_ACCEPT_TAC HREAL_LT_TOTAL);
+  MATCH_ACCEPT_TAC HREAL_LT_TOTAL
+QED
 
-val TREAL_LT_REFL = store_thm("TREAL_LT_REFL",
-  “!x. ~(x treal_lt x)”,
+Theorem TREAL_LT_REFL:
+   !x. ~(x treal_lt x)
+Proof
   GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_lt] THEN
-  MATCH_ACCEPT_TAC HREAL_LT_REFL);
+  MATCH_ACCEPT_TAC HREAL_LT_REFL
+QED
 
-val TREAL_LT_TRANS = store_thm("TREAL_LT_TRANS",
-  “!x y z. x treal_lt y /\ y treal_lt z ==> x treal_lt z”,
+Theorem TREAL_LT_TRANS:
+   !x y z. x treal_lt y /\ y treal_lt z ==> x treal_lt z
+Proof
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_lt] THEN
   DISCH_THEN(MP_TAC o MATCH_MP HREAL_LT_ADD2) THEN CANCEL_TAC THEN
   DISCH_TAC THEN GEN_REWR_TAC RAND_CONV  [HREAL_ADD_SYM]
-  THEN POP_ASSUM ACCEPT_TAC);
+  THEN POP_ASSUM ACCEPT_TAC
+QED
 
-val TREAL_LT_ADD = store_thm("TREAL_LT_ADD",
-  “!x y z. (y treal_lt z) ==> (x treal_add y) treal_lt (x treal_add z)”,
+Theorem TREAL_LT_ADD:
+   !x y z. (y treal_lt z) ==> (x treal_add y) treal_lt (x treal_add z)
+Proof
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_lt, treal_add] THEN
-  CANCEL_TAC);
+  CANCEL_TAC
+QED
 
-val TREAL_LT_MUL = store_thm("TREAL_LT_MUL",
-  “!x y. treal_0 treal_lt x /\ treal_0 treal_lt y ==>
-           treal_0 treal_lt (x treal_mul y)”,
+Theorem TREAL_LT_MUL:
+   !x y. treal_0 treal_lt x /\ treal_0 treal_lt y ==>
+           treal_0 treal_lt (x treal_mul y)
+Proof
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_0, treal_lt, treal_mul] THEN
   CANCEL_TAC THEN DISCH_THEN(CONJUNCTS_THEN
    (CHOOSE_THEN SUBST1_TAC o REWRITE_RULE[HREAL_LT])) THEN
-  REWRITE_TAC[HREAL_LDISTRIB, HREAL_RDISTRIB] THEN CANCEL_TAC THEN CANCEL_TAC);
+  REWRITE_TAC[HREAL_LDISTRIB, HREAL_RDISTRIB] THEN CANCEL_TAC THEN CANCEL_TAC
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Rather than grub round proving the supremum property for representatives, *)
@@ -1276,9 +1458,10 @@ val treal_of_hreal = new_definition("treal_of_hreal",
 val hreal_of_treal = new_definition("hreal_of_treal",
   “hreal_of_treal (x,y) = @d. x = y hreal_add d”);
 
-val TREAL_BIJ = store_thm("TREAL_BIJ",
-  “(!h. (hreal_of_treal(treal_of_hreal h)) = h) /\
-   (!r. treal_0 treal_lt r = (treal_of_hreal(hreal_of_treal r)) treal_eq r)”,
+Theorem TREAL_BIJ:
+   (!h. (hreal_of_treal(treal_of_hreal h)) = h) /\
+   (!r. treal_0 treal_lt r = (treal_of_hreal(hreal_of_treal r)) treal_eq r)
+Proof
   CONJ_TAC THENL
    [GEN_TAC THEN REWRITE_TAC[treal_of_hreal, hreal_of_treal] THEN
     CANCEL_TAC THEN CONV_TAC SYM_CONV THEN
@@ -1293,15 +1476,19 @@ val TREAL_BIJ = store_thm("TREAL_BIJ",
       GEN_REWR_TAC (RAND_CONV o ONCE_DEPTH_CONV)
                       [HREAL_ADD_SYM] THEN
       CONV_TAC(RAND_CONV(ONCE_DEPTH_CONV SYM_CONV)) THEN REFL_TAC,
-      DISCH_THEN(SUBST1_TAC o SYM) THEN CANCEL_TAC]]);
+      DISCH_THEN(SUBST1_TAC o SYM) THEN CANCEL_TAC]]
+QED
 
-val TREAL_ISO = store_thm("TREAL_ISO",
-  “!h i. h hreal_lt i ==> (treal_of_hreal h) treal_lt (treal_of_hreal i)”,
+Theorem TREAL_ISO:
+   !h i. h hreal_lt i ==> (treal_of_hreal h) treal_lt (treal_of_hreal i)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[treal_of_hreal, treal_lt] THEN CANCEL_TAC THEN
-  CANCEL_TAC);
+  CANCEL_TAC
+QED
 
-val TREAL_BIJ_WELLDEF = store_thm("TREAL_BIJ_WELLDEF",
-  “!h i. h treal_eq i ==> (hreal_of_treal h = hreal_of_treal i)”,
+Theorem TREAL_BIJ_WELLDEF:
+   !h i. h treal_eq i ==> (hreal_of_treal h = hreal_of_treal i)
+Proof
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_eq, hreal_of_treal] THEN
   DISCH_TAC THEN AP_TERM_TAC THEN CONV_TAC(X_FUN_EQ_CONV “d:hreal”) THEN
   GEN_TAC THEN BETA_TAC THEN EQ_TAC THENL
@@ -1309,79 +1496,97 @@ val TREAL_BIJ_WELLDEF = store_thm("TREAL_BIJ_WELLDEF",
     THEN POP_ASSUM SUBST1_TAC,
     DISCH_THEN(MP_TAC o C AP_THM “SND(h:hreal#hreal)” o AP_TERM “$hreal_add”)
     THEN POP_ASSUM(SUBST1_TAC o SYM)] THEN
-  CANCEL_TAC THEN DISCH_THEN SUBST1_TAC THEN MATCH_ACCEPT_TAC HREAL_ADD_SYM);
+  CANCEL_TAC THEN DISCH_THEN SUBST1_TAC THEN MATCH_ACCEPT_TAC HREAL_ADD_SYM
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Prove that the operations on representatives are well-defined             *)
 (*---------------------------------------------------------------------------*)
 
-val TREAL_NEG_WELLDEF = store_thm("TREAL_NEG_WELLDEF",
-  “!x1 x2. x1 treal_eq x2 ==> (treal_neg x1) treal_eq (treal_neg x2)”,
+Theorem TREAL_NEG_WELLDEF:
+   !x1 x2. x1 treal_eq x2 ==> (treal_neg x1) treal_eq (treal_neg x2)
+Proof
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_neg, treal_eq] THEN
   DISCH_THEN(curry op THEN (ONCE_REWRITE_TAC[HREAL_ADD_SYM]) o SUBST1_TAC) THEN
-  REFL_TAC);
+  REFL_TAC
+QED
 
-val TREAL_ADD_WELLDEFR = store_thm("TREAL_ADD_WELLDEFR",
-  “!x1 x2 y. x1 treal_eq x2 ==> (x1 treal_add y) treal_eq (x2 treal_add y)”,
+Theorem TREAL_ADD_WELLDEFR:
+   !x1 x2 y. x1 treal_eq x2 ==> (x1 treal_add y) treal_eq (x2 treal_add y)
+Proof
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_add, treal_eq] THEN
-  CANCEL_TAC);
+  CANCEL_TAC
+QED
 
-val TREAL_ADD_WELLDEF = store_thm("TREAL_ADD_WELLDEF",
-  “!x1 x2 y1 y2. x1 treal_eq x2 /\ y1 treal_eq y2 ==>
-     (x1 treal_add y1) treal_eq (x2 treal_add y2)”,
+Theorem TREAL_ADD_WELLDEF:
+   !x1 x2 y1 y2. x1 treal_eq x2 /\ y1 treal_eq y2 ==>
+     (x1 treal_add y1) treal_eq (x2 treal_add y2)
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   MATCH_MP_TAC TREAL_EQ_TRANS THEN EXISTS_TAC “x1 treal_add y2” THEN
   CONJ_TAC THENL [ONCE_REWRITE_TAC[TREAL_ADD_SYM], ALL_TAC] THEN
-  MATCH_MP_TAC TREAL_ADD_WELLDEFR THEN ASM_REWRITE_TAC[]);
+  MATCH_MP_TAC TREAL_ADD_WELLDEFR THEN ASM_REWRITE_TAC[]
+QED
 
-val TREAL_MUL_WELLDEFR = store_thm("TREAL_MUL_WELLDEFR",
-  “!x1 x2 y. x1 treal_eq x2 ==> (x1 treal_mul y) treal_eq (x2 treal_mul y)”,
+Theorem TREAL_MUL_WELLDEFR:
+   !x1 x2 y. x1 treal_eq x2 ==> (x1 treal_mul y) treal_eq (x2 treal_mul y)
+Proof
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_mul, treal_eq] THEN
   ONCE_REWRITE_TAC[AC(HREAL_ADD_ASSOC,HREAL_ADD_SYM)
     “(a hreal_add b) hreal_add (c hreal_add d) =
      (a hreal_add d) hreal_add (b hreal_add c)”] THEN
   REWRITE_TAC[GSYM HREAL_RDISTRIB] THEN DISCH_TAC THEN
   ASM_REWRITE_TAC[] THEN AP_TERM_TAC THEN
-  ONCE_REWRITE_TAC[HREAL_ADD_SYM] THEN POP_ASSUM SUBST1_TAC THEN REFL_TAC);
+  ONCE_REWRITE_TAC[HREAL_ADD_SYM] THEN POP_ASSUM SUBST1_TAC THEN REFL_TAC
+QED
 
-val TREAL_MUL_WELLDEF = store_thm("TREAL_MUL_WELLDEF",
-  “!x1 x2 y1 y2. x1 treal_eq x2 /\ y1 treal_eq y2 ==>
-     (x1 treal_mul y1) treal_eq (x2 treal_mul y2)”,
+Theorem TREAL_MUL_WELLDEF:
+   !x1 x2 y1 y2. x1 treal_eq x2 /\ y1 treal_eq y2 ==>
+     (x1 treal_mul y1) treal_eq (x2 treal_mul y2)
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   MATCH_MP_TAC TREAL_EQ_TRANS THEN EXISTS_TAC “x1 treal_mul y2” THEN
   CONJ_TAC THENL [ONCE_REWRITE_TAC[TREAL_MUL_SYM], ALL_TAC] THEN
-  MATCH_MP_TAC TREAL_MUL_WELLDEFR THEN ASM_REWRITE_TAC[]);
+  MATCH_MP_TAC TREAL_MUL_WELLDEFR THEN ASM_REWRITE_TAC[]
+QED
 
-val TREAL_LT_WELLDEFR = store_thm("TREAL_LT_WELLDEFR",
-  “!x1 x2 y. x1 treal_eq x2 ==> (x1 treal_lt y = x2 treal_lt y)”,
+Theorem TREAL_LT_WELLDEFR:
+   !x1 x2 y. x1 treal_eq x2 ==> (x1 treal_lt y = x2 treal_lt y)
+Proof
   let fun mkc v tm = SYM(SPECL (v::snd(strip_comb tm)) HREAL_LT_LADD) in
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_lt, treal_eq] THEN
   DISCH_TAC THEN CONV_TAC(RAND_CONV(mkc “SND (x1:hreal#hreal)”)) THEN
   CONV_TAC(LAND_CONV(mkc “SND (x2:hreal#hreal)”)) THEN
   ONCE_REWRITE_TAC[AC(HREAL_ADD_ASSOC,HREAL_ADD_SYM)
     “a hreal_add (b hreal_add c) = (b hreal_add a) hreal_add c”] THEN
-  POP_ASSUM SUBST1_TAC THEN CANCEL_TAC end);
+  POP_ASSUM SUBST1_TAC THEN CANCEL_TAC end
+QED
 
-val TREAL_LT_WELLDEFL = store_thm("TREAL_LT_WELLDEFL",
-  “!x y1 y2. y1 treal_eq y2 ==> (x treal_lt y1 = x treal_lt y2)”,
+Theorem TREAL_LT_WELLDEFL:
+   !x y1 y2. y1 treal_eq y2 ==> (x treal_lt y1 = x treal_lt y2)
+Proof
   let fun mkc v tm = SYM(SPECL (v::snd(strip_comb tm)) HREAL_LT_LADD) in
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_lt, treal_eq] THEN
   DISCH_TAC THEN CONV_TAC(RAND_CONV(mkc “FST (y1:hreal#hreal)”)) THEN
   CONV_TAC(LAND_CONV(mkc “FST (y2:hreal#hreal)”)) THEN
   ONCE_REWRITE_TAC[AC(HREAL_ADD_ASSOC,HREAL_ADD_SYM)
     “a hreal_add (b hreal_add c) = (a hreal_add c) hreal_add b”] THEN
-  POP_ASSUM SUBST1_TAC THEN CANCEL_TAC THEN AP_TERM_TAC THEN CANCEL_TAC end);
+  POP_ASSUM SUBST1_TAC THEN CANCEL_TAC THEN AP_TERM_TAC THEN CANCEL_TAC end
+QED
 
-val TREAL_LT_WELLDEF = store_thm("TREAL_LT_WELLDEF",
-  “!x1 x2 y1 y2. x1 treal_eq x2 /\ y1 treal_eq y2 ==>
-     (x1 treal_lt y1 = x2 treal_lt y2)”,
+Theorem TREAL_LT_WELLDEF:
+   !x1 x2 y1 y2. x1 treal_eq x2 /\ y1 treal_eq y2 ==>
+     (x1 treal_lt y1 = x2 treal_lt y2)
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN MATCH_MP_TAC EQ_TRANS THEN
   EXISTS_TAC “x1 treal_lt y2” THEN CONJ_TAC THENL
    [MATCH_MP_TAC TREAL_LT_WELLDEFL, MATCH_MP_TAC TREAL_LT_WELLDEFR] THEN
-  ASM_REWRITE_TAC[]);
+  ASM_REWRITE_TAC[]
+QED
 
-val TREAL_INV_WELLDEF = store_thm("TREAL_INV_WELLDEF",
-  “!x1 x2. x1 treal_eq x2 ==> (treal_inv x1) treal_eq (treal_inv x2)”,
+Theorem TREAL_INV_WELLDEF:
+   !x1 x2. x1 treal_eq x2 ==> (treal_inv x1) treal_eq (treal_inv x2)
+Proof
   let val lemma1 = prove
    (“(a hreal_add b' = b hreal_add a') ==>
         (a' hreal_lt a = b' hreal_lt b)”,
@@ -1411,5 +1616,6 @@ val TREAL_INV_WELLDEF = store_thm("TREAL_INV_WELLDEF",
   FIRST_ASSUM(fn th => FIRST_ASSUM(MP_TAC o EQ_MP (MATCH_MP lemma1 th))) THEN
   FIRST_ASSUM(UNDISCH_TAC o assert(aconv “$hreal_lt” o rator o rator) o concl)
   THEN REPEAT(DISCH_THEN(SUBST1_TAC o MATCH_MP HREAL_SUB_ADD)) THEN
-  FIRST_ASSUM SUBST1_TAC THEN REFL_TAC end);
+  FIRST_ASSUM SUBST1_TAC THEN REFL_TAC end
+QED
 

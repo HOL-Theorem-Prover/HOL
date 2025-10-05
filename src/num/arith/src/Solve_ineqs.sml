@@ -50,21 +50,20 @@ fun CONST_TIMES_ARITH_CONV tm =
  (let fun CONST_TIMES_VARS_CONV tm =
          if (is_mult (arg2 tm))
          then (MULT_ASSOC_CONV THENC
-               (RATOR_CONV (RAND_CONV FAST_MULT_CONV))) tm
+               (LAND_CONV FAST_MULT_CONV)) tm
          else (LEFT_ADD_DISTRIB_CONV THENC
-               (RATOR_CONV
-                 (RAND_CONV
-                   (MULT_ASSOC_CONV THENC
-                    (RATOR_CONV (RAND_CONV FAST_MULT_CONV))))) THENC
+               (LAND_CONV
+                 (MULT_ASSOC_CONV THENC
+                    (LAND_CONV FAST_MULT_CONV))) THENC
                (RAND_CONV CONST_TIMES_VARS_CONV)) tm
       val tm' = arg2 tm
   in  if (is_num_const tm') then FAST_MULT_CONV tm
       else if (is_mult tm') then
          (MULT_ASSOC_CONV THENC
-          (RATOR_CONV (RAND_CONV FAST_MULT_CONV))) tm
+          (LAND_CONV FAST_MULT_CONV)) tm
       else if (is_num_const (arg1 tm')) then
          (LEFT_ADD_DISTRIB_CONV THENC
-          (RATOR_CONV (RAND_CONV FAST_MULT_CONV)) THENC
+          (LAND_CONV FAST_MULT_CONV) THENC
           (RAND_CONV CONST_TIMES_VARS_CONV)) tm
       else CONST_TIMES_VARS_CONV tm
   end
@@ -183,18 +182,17 @@ fun WEIGHTED_SUM name (coeffs1,coeffs2) =
                  (if (adds2 = (zero,[]))
                   then ALL_CONV
                   else (ADD_COEFFS_TO_LEQ_CONV adds2) THENC
-                       (RATOR_CONV
-                         (RAND_CONV (SORT_AND_GATHER_CONV THENC
-                                      NORM_ZERO_AND_ONE_CONV)))))
+                       (LAND_CONV
+                         (SORT_AND_GATHER_CONV THENC
+                           NORM_ZERO_AND_ONE_CONV))))
                 (build_leq coeffs2)
              val th = CONJ (UNDISCH (fst (EQ_IMP_RULE th1)))
                            (UNDISCH (fst (EQ_IMP_RULE th2)))
              val th1conv =
                 if (adds1 = (zero,[]))
                 then ALL_CONV
-                else RATOR_CONV
-                      (RAND_CONV
-                        (SORT_AND_GATHER_CONV THENC NORM_ZERO_AND_ONE_CONV))
+                else (LAND_CONV
+                       (SORT_AND_GATHER_CONV THENC NORM_ZERO_AND_ONE_CONV))
              and th2conv =
                 if (adds2 = (zero,[]))
                 then ALL_CONV

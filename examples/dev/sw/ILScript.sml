@@ -4,14 +4,14 @@ quietdec := true;
 loadPath := (concat Globals.HOLDIR "/examples/dev/sw") :: !loadPath;
 
 app load ["pred_setSimps", "pred_setTheory",
-     "arithmeticTheory", "wordsTheory", "wordsLib", "pairTheory", "listTheory", "whileTheory", "finite_mapTheory", "preARMTheory", "ARMCompositionTheory",
+     "arithmeticTheory", "wordsTheory", "wordsLib", "pairTheory", "listTheory", "WhileTheory", "finite_mapTheory", "preARMTheory", "ARMCompositionTheory",
           "relationTheory"];
 
 quietdec := false;
 *)
 Theory IL
 Ancestors
-  pred_set arithmetic words pair list while finite_map preARM
+  pred_set arithmetic words pair list While finite_map preARM
   ARMComposition relation
 Libs
   numLib pred_setSimps wordsLib

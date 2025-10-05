@@ -24,8 +24,9 @@ End
 
 
 
-val bisim_model_def = Define`
-bisim_model M M' <=> ?Z. bisim Z M M'`;
+Definition bisim_model_def:
+bisim_model M M' <=> ?Z. bisim Z M M'
+End
 
 
 

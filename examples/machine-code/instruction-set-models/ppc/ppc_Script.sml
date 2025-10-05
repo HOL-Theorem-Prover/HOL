@@ -10,9 +10,10 @@ Ancestors
 
 <* ---------------------------------------------------------------------------------- *)
 
-val iiid_dummy_def = Define `iiid_dummy = <| proc:=0; program_order_index:=0 |>`;
+Definition iiid_dummy_def:   iiid_dummy = <| proc:=0; program_order_index:=0 |>
+End
 
-val PPC_NEXT_def = Define `
+Definition PPC_NEXT_def:
   PPC_NEXT s =
     let pc = PREAD_R PPC_PC s in
     let w0 = PREAD_M (pc + 0w) s in
@@ -23,7 +24,8 @@ val PPC_NEXT_def = Define `
     let i = ppc_decode raw_instruction in
     let s' = ppc_exec_instr iiid_dummy (THE i) s in
       if ~(pc && 3w = 0w) \/ MEM NONE [w0;w1;w2;w3] \/ (i = NONE) \/ (s' = NONE) then NONE
-      else SOME (SND (THE s'))`;
+      else SOME (SND (THE s'))
+End
 
 val PPC_NEXT_THM = store_thm("PPC_NEXT_THM",
   ``(ppc_decode xs = SOME i) ==>

@@ -48,38 +48,46 @@ Definition v2s_def:
   v2s = MAP (\b. if b then #"1" else #"0")
 End
 
-val zero_extend_def = zDefine`
-  zero_extend n v = PAD_LEFT F n v`
+Definition zero_extend_def[nocompute]:
+  zero_extend n v = PAD_LEFT F n v
+End
 
-val sign_extend_def = zDefine`
-  sign_extend n v = PAD_LEFT (HD v) n v`
+Definition sign_extend_def[nocompute]:
+  sign_extend n v = PAD_LEFT (HD v) n v
+End
 
-val fixwidth_def = zDefine`
+Definition fixwidth_def[nocompute]:
   fixwidth n v =
      let l = LENGTH v in
        if l < n then
           zero_extend n v
        else
-          DROP (l - n) v`
+          DROP (l - n) v
+End
 
-val shiftl_def = Define`
-  shiftl v m = PAD_RIGHT F (LENGTH v + m) v`
+Definition shiftl_def:
+  shiftl v m = PAD_RIGHT F (LENGTH v + m) v
+End
 
-val shiftr_def = Define`
-  shiftr (v: bitstring) m = TAKE (LENGTH v - m) v`
+Definition shiftr_def:
+  shiftr (v: bitstring) m = TAKE (LENGTH v - m) v
+End
 
-val field_def = Define`
-  field h l v = fixwidth (SUC h - l) (shiftr v l)`
+Definition field_def:
+  field h l v = fixwidth (SUC h - l) (shiftr v l)
+End
 
-val rotate_def = Define`
+Definition rotate_def:
   rotate v m =
     let l = LENGTH v in
     let x = m MOD l
     in
-      if (l = 0) \/ (x = 0) then v else field (x - 1) 0 v ++ field (l - 1) x v`
+      if (l = 0) \/ (x = 0) then v else field (x - 1) 0 v ++ field (l - 1) x v
+End
 
-val testbit_def = zDefine`
-  testbit b v = (field b b v = [T])`
+Definition testbit_def[nocompute]:
+  testbit b v = (field b b v = [T])
+End
 
 Definition w2v_def:
   w2v (w : 'a word) =
@@ -90,49 +98,65 @@ Definition v2w_def[nocompute]:
   v2w v : 'a word = FCP i. testbit i v
 End
 
-val rev_count_list_def = Define`
-  rev_count_list n = GENLIST (\i. n - 1 - i) n`
+Definition rev_count_list_def:
+  rev_count_list n = GENLIST (\i. n - 1 - i) n
+End
 
-val modify_def = Define`
+Definition modify_def:
   modify f (v : bitstring) =
-    MAP (UNCURRY f) (ZIP (rev_count_list (LENGTH v), v)) : bitstring`
+    MAP (UNCURRY f) (ZIP (rev_count_list (LENGTH v), v)) : bitstring
+End
 
-val field_insert_def = Define`
+Definition field_insert_def:
   field_insert h l s =
-    modify (\i. COND (l <= i /\ i <= h) (testbit (i - l) s))`
+    modify (\i. COND (l <= i /\ i <= h) (testbit (i - l) s))
+End
 
-val add_def = Define`
+Definition add_def:
    add a b =
      let m = MAX (LENGTH a) (LENGTH b) in
-       zero_extend m (n2v (v2n a + v2n b))`
+       zero_extend m (n2v (v2n a + v2n b))
+End
 
-val bitwise_def = Define`
+Definition bitwise_def:
    bitwise f v1 v2 =
      let m = MAX (LENGTH v1) (LENGTH v2) in
-        MAP (UNCURRY f) (ZIP (fixwidth m v1, fixwidth m v2)) : bitstring`
+        MAP (UNCURRY f) (ZIP (fixwidth m v1, fixwidth m v2)) : bitstring
+End
 
-val bnot_def = Define `bnot = MAP (bool$~)`
-val bor_def  = Define `bor  = bitwise (\/)`
-val band_def = Define `band = bitwise (/\)`
-val bxor_def = Define `bxor = bitwise (<>)`
+Definition bnot_def:   bnot = MAP (bool$~)
+End
+Definition bor_def:    bor  = bitwise (\/)
+End
+Definition band_def:   band = bitwise (/\)
+End
+Definition bxor_def:   bxor = bitwise (<>)
+End
 
-val bnor_def = Define `bnor = bitwise (\x y. ~(x \/ y))`
-val bxnor_def = Define `bxnor = bitwise (=)`
-val bnand_def = Define `bnand = bitwise (\x y. ~(x /\ y))`
+Definition bnor_def:   bnor = bitwise (\x y. ~(x \/ y))
+End
+Definition bxnor_def:   bxnor = bitwise (=)
+End
+Definition bnand_def:   bnand = bitwise (\x y. ~(x /\ y))
+End
 
-val replicate_def = Define`
-  replicate v n = FLAT (GENLIST (K v) n) : bitstring`
+Definition replicate_def:
+  replicate v n = FLAT (GENLIST (K v) n) : bitstring
+End
 
 (* ------------------------------------------------------------------------- *)
 
 val wrw = srw_tac [boolSimps.LET_ss, fcpLib.FCP_ss, ARITH_ss]
 
-val extend_cons = Q.store_thm("extend_cons",
-  `!n c l. extend c (SUC n) l = c :: extend c n l`,
-   Induct \\ metis_tac [extend_def])
+Theorem extend_cons:
+   !n c l. extend c (SUC n) l = c :: extend c n l
+Proof
+   Induct \\ metis_tac [extend_def]
+QED
 
-val pad_left_extend = Q.store_thm("pad_left_extend",
-   `!n l c. PAD_LEFT c n l = extend c (n - LENGTH l) l`,
+Theorem pad_left_extend:
+    !n l c. PAD_LEFT c n l = extend c (n - LENGTH l) l
+Proof
    ntac 2 strip_tac
    \\ Cases_on `n <= LENGTH l`
    >- lrw [listTheory.PAD_LEFT, DECIDE ``n <= l ==> (n - l = 0)``,
@@ -144,22 +168,27 @@ val pad_left_extend = Q.store_thm("pad_left_extend",
            extend_cons |> Q.SPEC `0`
                        |> SIMP_RULE std_ss [Thm.CONJUNCT1 extend_def]]
    \\ `SUC n - LENGTH l = SUC (n - LENGTH l)` by decide_tac
-   \\ simp [extend_cons, listTheory.GENLIST_CONS])
+   \\ simp [extend_cons, listTheory.GENLIST_CONS]
+QED
 
-val extend = Q.store_thm("extend",
-  `(!n v. zero_extend n v = extend F (n - LENGTH v) v) /\
-   (!n v. sign_extend n v = extend (HD v) (n - LENGTH v) v)`,
-  simp [zero_extend_def, sign_extend_def, pad_left_extend])
+Theorem extend:
+   (!n v. zero_extend n v = extend F (n - LENGTH v) v) /\
+   (!n v. sign_extend n v = extend (HD v) (n - LENGTH v) v)
+Proof
+  simp [zero_extend_def, sign_extend_def, pad_left_extend]
+QED
 
-val fixwidth = Q.store_thm("fixwidth",
-   `!n v.
+Theorem fixwidth:
+    !n v.
       fixwidth n v =
         let l = LENGTH v in
            if l < n then
               extend F (n - l) v
            else
-              DROP (l - n) v`,
-   lrw [fixwidth_def, extend])
+              DROP (l - n) v
+Proof
+   lrw [fixwidth_def, extend]
+QED
 
 Theorem fixwidth_REPLICATE:
   !len l. fixwidth len l =
@@ -171,74 +200,105 @@ Proof
   `len = LENGTH l` by gvs[] >> pop_assum SUBST_ALL_TAC >> gvs[]
 QED
 
-val fixwidth_id = Q.store_thm("fixwidth_id",
-  `!w. fixwidth (LENGTH w) w = w`,
-  lrw [fixwidth_def])
+Theorem fixwidth_id:
+   !w. fixwidth (LENGTH w) w = w
+Proof
+  lrw [fixwidth_def]
+QED
 
 val fixwidth_id_imp = Theory.save_thm ("fixwidth_id_imp",
   metisLib.METIS_PROVE [fixwidth_id]
     ``!n w. (n = LENGTH w) ==> (fixwidth n w = w)``)
 
-val boolify_reverse_map = Q.store_thm("boolify_reverse_map",
-   `!v a. boolify a v = REVERSE (MAP (\n. n <> 0) v) ++ a`,
-   Induct \\ lrw [boolify_def])
+Theorem boolify_reverse_map:
+    !v a. boolify a v = REVERSE (MAP (\n. n <> 0) v) ++ a
+Proof
+   Induct \\ lrw [boolify_def]
+QED
 
-val bitify_reverse_map = Q.store_thm("bitify_reverse_map",
-   `!v a. bitify a v = REVERSE (MAP (\b. if b then 1 else 0) v) ++ a`,
-   Induct \\ lrw [bitify_def])
+Theorem bitify_reverse_map:
+    !v a. bitify a v = REVERSE (MAP (\b. if b then 1 else 0) v) ++ a
+Proof
+   Induct \\ lrw [bitify_def]
+QED
 
-val every_bit_bitify = Q.store_thm("every_bit_bitify",
-   `!v. EVERY ($> 2) (bitify [] v)`,
+Theorem every_bit_bitify:
+    !v. EVERY ($> 2) (bitify [] v)
+Proof
    lrw [bitify_reverse_map, rich_listTheory.ALL_EL_REVERSE,
         listTheory.EVERY_MAP]
-   \\ rw [listTheory.EVERY_EL] \\ rw [])
+   \\ rw [listTheory.EVERY_EL] \\ rw []
+QED
 
-val length_pad_left = Q.store_thm("length_pad_left",
-   `!x n a. LENGTH (PAD_LEFT x n a) = if LENGTH a < n then n else LENGTH a`,
-   lrw [listTheory.PAD_LEFT])
+Theorem length_pad_left:
+    !x n a. LENGTH (PAD_LEFT x n a) = if LENGTH a < n then n else LENGTH a
+Proof
+   lrw [listTheory.PAD_LEFT]
+QED
 
-val length_pad_right = Q.store_thm("length_pad_right",
-   `!x n a. LENGTH (PAD_RIGHT x n a) = if LENGTH a < n then n else LENGTH a`,
-   lrw [listTheory.PAD_RIGHT])
+Theorem length_pad_right:
+    !x n a. LENGTH (PAD_RIGHT x n a) = if LENGTH a < n then n else LENGTH a
+Proof
+   lrw [listTheory.PAD_RIGHT]
+QED
 
-val length_zero_extend = Q.store_thm("length_zero_extend",
-  `!n v. LENGTH v <= n ==> (LENGTH (zero_extend n v) = n)`,
-  lrw [zero_extend_def, length_pad_left])
+Theorem length_zero_extend:
+   !n v. LENGTH v <= n ==> (LENGTH (zero_extend n v) = n)
+Proof
+  lrw [zero_extend_def, length_pad_left]
+QED
 
-val length_sign_extend = Q.store_thm("length_sign_extend",
-  `!n v. LENGTH v <= n ==> (LENGTH (sign_extend n v) = n)`,
-  lrw [sign_extend_def, length_pad_left])
+Theorem length_sign_extend:
+   !n v. LENGTH v <= n ==> (LENGTH (sign_extend n v) = n)
+Proof
+  lrw [sign_extend_def, length_pad_left]
+QED
 
-val length_fixwidth = Q.store_thm("length_fixwidth",
-  `!n v. LENGTH (fixwidth n v) = n`,
-  lrw [fixwidth_def, length_zero_extend])
+Theorem length_fixwidth:
+   !n v. LENGTH (fixwidth n v) = n
+Proof
+  lrw [fixwidth_def, length_zero_extend]
+QED
 
-val length_field = Q.store_thm("length_field",
-  `!h l v. LENGTH (field h l v) = SUC h - l`,
-  rw [field_def, length_fixwidth])
+Theorem length_field:
+   !h l v. LENGTH (field h l v) = SUC h - l
+Proof
+  rw [field_def, length_fixwidth]
+QED
 
-val length_bitify = Q.store_thm("length_bitify",
-  `!v l. LENGTH (bitify l v) = LENGTH l + LENGTH v`,
-  lrw [bitify_reverse_map])
+Theorem length_bitify:
+   !v l. LENGTH (bitify l v) = LENGTH l + LENGTH v
+Proof
+  lrw [bitify_reverse_map]
+QED
 
-val length_bitify_null = Q.store_thm("length_bitify_null",
-  `!v l. LENGTH (bitify [] v) = LENGTH v`,
-  rw [length_bitify])
+Theorem length_bitify_null:
+   !v l. LENGTH (bitify [] v) = LENGTH v
+Proof
+  rw [length_bitify]
+QED
 
-val length_shiftr = Q.store_thm("length_shiftr",
-   `!v n. LENGTH (shiftr v n) = LENGTH v - n`,
-   lrw [shiftr_def])
+Theorem length_shiftr:
+    !v n. LENGTH (shiftr v n) = LENGTH v - n
+Proof
+   lrw [shiftr_def]
+QED
 
-val length_rev_count_list = Q.store_thm("length_rev_count_list",
-  `!n. LENGTH (rev_count_list n) = n`,
-  Induct \\ lrw [rev_count_list_def])
+Theorem length_rev_count_list:
+   !n. LENGTH (rev_count_list n) = n
+Proof
+  Induct \\ lrw [rev_count_list_def]
+QED
 
-val length_w2v = Q.store_thm("length_w2v",
-  `!w:'a word. LENGTH (w2v w) = dimindex(:'a)`,
-  lrw [w2v_def])
+Theorem length_w2v:
+   !w:'a word. LENGTH (w2v w) = dimindex(:'a)
+Proof
+  lrw [w2v_def]
+QED
 
-val length_rotate = Q.store_thm("length_rotate",
-  `!v n. LENGTH (rotate v n) = LENGTH v`,
+Theorem length_rotate:
+   !v n. LENGTH (rotate v n) = LENGTH v
+Proof
   simp [rotate_def, LET_THM]
   \\ srw_tac[][length_field]
   \\ full_simp_tac (std_ss++ARITH_ss)
@@ -246,11 +306,14 @@ val length_rotate = Q.store_thm("length_rotate",
         DECIDE ``n:num < l ==> (n + (l - n) = l)``,
         GSYM listTheory.LENGTH_NIL,
         arithmeticTheory.NOT_ZERO_LT_ZERO,
-        arithmeticTheory.MOD_LESS])
+        arithmeticTheory.MOD_LESS]
+QED
 
-val el_rev_count_list = Q.store_thm("el_rev_count_list",
-  `!n i. i < n ==> (EL i (rev_count_list n) = n - 1 - i)`,
-  Induct \\ lrw [rev_count_list_def])
+Theorem el_rev_count_list:
+   !n i. i < n ==> (EL i (rev_count_list n) = n - 1 - i)
+Proof
+  Induct \\ lrw [rev_count_list_def]
+QED
 
 val el_bitify = Q.prove(
    `!v i a. i < LENGTH v ==>
@@ -267,23 +330,27 @@ Proof
   \\ lrw [rich_listTheory.EL_APPEND1, rich_listTheory.EL_APPEND2]
 QED
 
-val el_sign_extend = Q.store_thm("el_sign_extend",
-  `!n i v. EL i (sign_extend n v) =
+Theorem el_sign_extend:
+   !n i v. EL i (sign_extend n v) =
            if i < n - LENGTH v then
               EL 0 v
            else
-              EL (i - (n - LENGTH v)) v`,
+              EL (i - (n - LENGTH v)) v
+Proof
   lrw [sign_extend_def, listTheory.PAD_LEFT,
-       rich_listTheory.EL_APPEND1, rich_listTheory.EL_APPEND2])
+       rich_listTheory.EL_APPEND1, rich_listTheory.EL_APPEND2]
+QED
 
-val el_fixwidth = Q.store_thm("el_fixwidth",
-  `!i n w. i < n ==>
+Theorem el_fixwidth:
+   !i n w. i < n ==>
            (EL i (fixwidth n w) =
               if LENGTH w < n then
                  n - LENGTH w <= i /\ EL (i - (n - LENGTH w)) w
               else
-                 EL (i + (LENGTH w - n)) w)`,
-  lrw [fixwidth_def, el_zero_extend, rich_listTheory.EL_DROP])
+                 EL (i + (LENGTH w - n)) w)
+Proof
+  lrw [fixwidth_def, el_zero_extend, rich_listTheory.EL_DROP]
+QED
 
 Theorem el_field:
   !v h l i. i < SUC h - l ==>
@@ -303,10 +370,12 @@ val shiftr_field = Q.prove(
    by (rw [length_shiftr] \\ decide_tac)
    \\ lrw [field_def, fixwidth_id])
 
-val el_w2v = Q.store_thm("el_w2v",
-   `!w: 'a word n.
-      n < dimindex (:'a) ==> (EL n (w2v w) = w ' (dimindex (:'a) - 1 - n))`,
-      lrw [w2v_def])
+Theorem el_w2v:
+    !w: 'a word n.
+      n < dimindex (:'a) ==> (EL n (w2v w) = w ' (dimindex (:'a) - 1 - n))
+Proof
+      lrw [w2v_def]
+QED
 
 Theorem el_shiftr:
   !i v n d.
@@ -319,14 +388,19 @@ Proof
      arithmeticTheory.ADD1] \\ rw[]
 QED
 
-val shiftr_0 = Q.store_thm("shiftr_0", `!v. shiftr v 0 = v`, lrw [shiftr_def])
+Theorem shiftr_0:  !v. shiftr v 0 = v
+Proof lrw [shiftr_def]
+QED
 
-val field_fixwidth = Q.store_thm("field_fixwidth",
-  `!h v. field h 0 v = fixwidth (SUC h) v`,
-  rw [field_def, shiftr_0])
+Theorem field_fixwidth:
+   !h v. field h 0 v = fixwidth (SUC h) v
+Proof
+  rw [field_def, shiftr_0]
+QED
 
-val testbit = Q.store_thm("testbit",
-  `!b v. testbit b v = let n = LENGTH v in b < n /\ EL (n - 1 - b) v`,
+Theorem testbit:
+   !b v. testbit b v = let n = LENGTH v in b < n /\ EL (n - 1 - b) v
+Proof
   lrw [zero_extend_def, testbit_def, field_def, fixwidth_def, shiftr_def,
        listTheory.PAD_LEFT, arithmeticTheory.SUB_LEFT_SUB, bitTheory.SUC_SUB]
   \\ Induct_on `v`
@@ -335,15 +409,20 @@ val testbit = Q.store_thm("testbit",
           arithmeticTheory.ADD1]
   >- (`b = LENGTH v` by decide_tac \\ lrw [])
   \\ imp_res_tac arithmeticTheory.LESS_ADD_1
-  \\ lfs [REWRITE_RULE [arithmeticTheory.ADD1] listTheory.EL_restricted])
+  \\ lfs [REWRITE_RULE [arithmeticTheory.ADD1] listTheory.EL_restricted]
+QED
 
-val testbit_geq_len = Q.store_thm("testbit_geq_len",
-   `!v i. LENGTH v <= i ==> ~testbit i v`,
-   simp [testbit, LET_THM])
+Theorem testbit_geq_len:
+    !v i. LENGTH v <= i ==> ~testbit i v
+Proof
+   simp [testbit, LET_THM]
+QED
 
-val testbit_el = Q.store_thm("testbit_el",
-   `!v i. i < LENGTH v ==> (testbit i v = EL (LENGTH v - 1 - i) v)`,
-   simp [testbit, LET_THM])
+Theorem testbit_el:
+    !v i. i < LENGTH v ==> (testbit i v = EL (LENGTH v - 1 - i) v)
+Proof
+   simp [testbit, LET_THM]
+QED
 
 Theorem bit_v2w:
   !n v. word_bit n (v2w v : 'a word) <=> n < dimindex(:'a) /\ testbit n v
@@ -356,23 +435,27 @@ Proof
   \\ asm_rewrite_tac []
 QED
 
-val word_index_v2w = Q.store_thm("word_index_v2w",
-  `!v i. (v2w v : 'a word) ' i =
+Theorem word_index_v2w:
+   !v i. (v2w v : 'a word) ' i =
          if i < dimindex(:'a) then
             testbit i v
          else
             FAIL $' ^(Term.mk_var ("index too large", Type.bool))
-                 (v2w v : 'a word) i`,
-  rw [wordsTheory.word_bit, bit_v2w, combinTheory.FAIL_THM])
+                 (v2w v : 'a word) i
+Proof
+  rw [wordsTheory.word_bit, bit_v2w, combinTheory.FAIL_THM]
+QED
 
-val testbit_w2v = Q.store_thm("testbit_w2v",
-  `!n w. testbit n (w2v (w : 'a word)) = word_bit n w`,
+Theorem testbit_w2v:
+   !n w. testbit n (w2v (w : 'a word)) = word_bit n w
+Proof
   lrw [w2v_def, testbit, wordsTheory.word_bit_def]
   \\ Cases_on `n < dimindex(:'a)`
   \\ lrw []
   \\ assume_tac wordsTheory.DIMINDEX_GT_0
   \\ `~(n <= dimindex(:'a) - 1)` by decide_tac
-  \\ asm_rewrite_tac [])
+  \\ asm_rewrite_tac []
+QED
 
 val word_bit_lem =
   wordsTheory.word_bit
@@ -433,25 +516,33 @@ Proof
   >> rw[v2w_T,v2w_F]
 QED
 
-val v2w_fixwidth = Q.store_thm("v2w_fixwidth",
-  `!v. v2w (fixwidth (dimindex(:'a)) v) = v2w v : 'a word`,
+Theorem v2w_fixwidth:
+   !v. v2w (fixwidth (dimindex(:'a)) v) = v2w v : 'a word
+Proof
   wrw [v2w_def, testbit, length_fixwidth, el_fixwidth]
   \\ Cases_on `i < LENGTH v`
-  \\ lrw [])
+  \\ lrw []
+QED
 
-val fixwidth_fixwidth = Q.store_thm("fixwidth_fixwidth",
-  `!n v. fixwidth n (fixwidth n v) = fixwidth n v`,
-  lrw [fixwidth_def] \\ lfs [length_zero_extend])
+Theorem fixwidth_fixwidth:
+   !n v. fixwidth n (fixwidth n v) = fixwidth n v
+Proof
+  lrw [fixwidth_def] \\ lfs [length_zero_extend]
+QED
 
-val bitstring_nchotomy = Q.store_thm("bitstring_nchotomy",
-  `!w:'a word. ?v. (w = v2w v)`, metis_tac [v2w_w2v])
+Theorem bitstring_nchotomy:
+   !w:'a word. ?v. (w = v2w v)
+Proof metis_tac [v2w_w2v]
+QED
 
-val ranged_bitstring_nchotomy = Q.store_thm("ranged_bitstring_nchotomy",
-  `!w:'a word. ?v. (w = v2w v) /\ (Abbrev (LENGTH v = dimindex(:'a)))`,
+Theorem ranged_bitstring_nchotomy:
+   !w:'a word. ?v. (w = v2w v) /\ (Abbrev (LENGTH v = dimindex(:'a)))
+Proof
   strip_tac
   \\ qspec_then `w` STRUCT_CASES_TAC bitstring_nchotomy
   \\ qexists_tac `fixwidth (dimindex(:'a)) v`
-  \\ rw [markerTheory.Abbrev_def, length_fixwidth, v2w_fixwidth]);
+  \\ rw [markerTheory.Abbrev_def, length_fixwidth, v2w_fixwidth]
+QED
 
 val BACKWARD_LIST_EQ_REWRITE = Q.prove(
   `!l1 l2. (l1 = l2) <=>
@@ -474,10 +565,12 @@ Proof
   \\ lfs [DECIDE ``v < n ==> (n <= n + v - (i + 1) <=> i < v)``]
 QED
 
-val v2w_11 = Q.store_thm("v2w_11",
-  `!v w. (v2w v = v2w w : 'a word) =
-         (fixwidth (dimindex(:'a)) v = fixwidth (dimindex(:'a)) w)`,
-  wrw [wordsTheory.word_bit, bit_v2w, fixwidth_eq])
+Theorem v2w_11:
+   !v w. (v2w v = v2w w : 'a word) =
+         (fixwidth (dimindex(:'a)) v = fixwidth (dimindex(:'a)) w)
+Proof
+  wrw [wordsTheory.word_bit, bit_v2w, fixwidth_eq]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -485,33 +578,41 @@ val take_id_imp =
    metisLib.METIS_PROVE [listTheory.TAKE_LENGTH_ID]
      ``!n w: 'a list. (n = LENGTH w) ==> (TAKE n w = w)``
 
-val field_concat_right = Q.store_thm("field_concat_right",
-   `!h a b. (LENGTH b = SUC h) ==> (field h 0 (a ++ b) = b)`,
+Theorem field_concat_right:
+    !h a b. (LENGTH b = SUC h) ==> (field h 0 (a ++ b) = b)
+Proof
    lrw [field_def, shiftr_def, take_id_imp]
-   \\ lrw [fixwidth_def, rich_listTheory.DROP_LENGTH_APPEND])
+   \\ lrw [fixwidth_def, rich_listTheory.DROP_LENGTH_APPEND]
+QED
 
-val field_concat_left = Q.store_thm("field_concat_left",
-   `!h l a b.
+Theorem field_concat_left:
+    !h l a b.
        l <= h /\ LENGTH b <= l ==>
-       (field h l (a ++ b) = field (h - LENGTH b) (l - LENGTH b) a)`,
+       (field h l (a ++ b) = field (h - LENGTH b) (l - LENGTH b) a)
+Proof
    srw_tac [][field_def, shiftr_def]
    \\ imp_res_tac arithmeticTheory.LESS_EQUAL_ADD
    \\ pop_assum kall_tac
    \\ pop_assum SUBST_ALL_TAC
    \\ lfs [listTheory.TAKE_APPEND1]
-   \\ simp [DECIDE ``p + l <= h ==> (SUC h - (p + l) = SUC (h - l) - p)``])
+   \\ simp [DECIDE ``p + l <= h ==> (SUC h - (p + l) = SUC (h - l) - p)``]
+QED
 
-val field_id_imp = Q.store_thm("field_id_imp",
-   `!n v. (SUC n = LENGTH v) ==> (field n 0 v = v)`,
-   metis_tac [fixwidth_id_imp, field_fixwidth])
+Theorem field_id_imp:
+    !n v. (SUC n = LENGTH v) ==> (field n 0 v = v)
+Proof
+   metis_tac [fixwidth_id_imp, field_fixwidth]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val shiftl_replicate_F = Q.store_thm("shiftl_replicate_F",
-   `!v n. shiftl v n = v ++ replicate [F] n`,
+Theorem shiftl_replicate_F:
+    !v n. shiftl v n = v ++ replicate [F] n
+Proof
    lrw [shiftl_def, replicate_def, listTheory.PAD_RIGHT]
    \\ Induct_on `n`
-   \\ lrw [listTheory.GENLIST_CONS])
+   \\ lrw [listTheory.GENLIST_CONS]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -524,9 +625,11 @@ Proof
   \\ rw [GSYM rich_listTheory.EL_PRE_LENGTH, arithmeticTheory.PRE_SUB1]
 QED
 
-val word_msb_v2w = Q.store_thm("word_msb_v2w",
-  `!v. word_msb (v2w v : 'a word) = testbit (dimindex(:'a) - 1) v`,
-  lrw [wordsTheory.word_msb_def, wordsTheory.word_bit, bit_v2w]);
+Theorem word_msb_v2w:
+   !v. word_msb (v2w v : 'a word) = testbit (dimindex(:'a) - 1) v
+Proof
+  lrw [wordsTheory.word_msb_def, wordsTheory.word_bit, bit_v2w]
+QED
 
 Theorem w2w_v2w:
   !v. w2w (v2w v : 'a word) : 'b word =
@@ -548,12 +651,13 @@ Proof
   THEN simp []
 QED
 
-val sw2sw_v2w = Q.store_thm("sw2sw_v2w",
-  `!v. sw2sw (v2w v : 'a word) : 'b word =
+Theorem sw2sw_v2w:
+   !v. sw2sw (v2w v : 'a word) : 'b word =
        if dimindex (:'a) < dimindex (:'b) then
           v2w (sign_extend (dimindex(:'b)) (fixwidth (dimindex(:'a)) v))
        else
-          v2w (fixwidth (dimindex(:'b)) v)`,
+          v2w (fixwidth (dimindex(:'b)) v)
+Proof
   wrw [wordsTheory.sw2sw]
   \\ lrw [wordsTheory.word_bit, bit_v2w, testbit, word_msb_v2w,
           length_sign_extend, length_fixwidth, el_sign_extend, el_fixwidth]
@@ -562,7 +666,8 @@ val sw2sw_v2w = Q.store_thm("sw2sw_v2w",
   >- (Cases_on `i < LENGTH v` \\ lrw [])
   >- (Cases_on `LENGTH v = 0`
       \\ lrw [DECIDE ``0n < d ==> ~(d < 1)``, arithmeticTheory.LE_LT1])
-  \\ Cases_on `i < LENGTH v` \\ lrw [])
+  \\ Cases_on `i < LENGTH v` \\ lrw []
+QED
 
 Theorem n2w_v2n:
   !v. n2w (v2n v) = v2w v
@@ -590,25 +695,33 @@ val v2n_n2v_lem = Q.prove(
        (MAP ((\b. if b then 1 else 0) o (\n. n <> 0)) l = l)`,
   Induct \\ lrw [])
 
-val v2n_n2v = Q.store_thm("v2n_n2v",
-  `!n. v2n (n2v n) = n`,
+Theorem v2n_n2v:
+   !n. v2n (n2v n) = n
+Proof
   lrw [n2v_def, v2n_def, bitify_def, num_from_bin_list_def, l2n_def,
        num_to_bin_list_def, bitify_reverse_map, boolify_reverse_map,
        rich_listTheory.MAP_REVERSE, listTheory.MAP_MAP_o, v2n_n2v_lem,
-       numposrepTheory.n2l_BOUND, numposrepTheory.l2n_n2l])
+       numposrepTheory.n2l_BOUND, numposrepTheory.l2n_n2l]
+QED
 
-val v2w_n2v = Q.store_thm("v2w_n2v",
-  `!n. v2w (n2v n) = n2w n`,
-  rewrite_tac [GSYM n2w_v2n, v2n_n2v])
+Theorem v2w_n2v:
+   !n. v2w (n2v n) = n2w n
+Proof
+  rewrite_tac [GSYM n2w_v2n, v2n_n2v]
+QED
 
-val w2n_v2w = Q.store_thm("w2n_v2w",
-  `!v. w2n (v2w v : 'a word) = MOD_2EXP (dimindex(:'a)) (v2n v)`,
-  rw [Once (GSYM n2w_v2n), wordsTheory.MOD_2EXP_DIMINDEX])
+Theorem w2n_v2w:
+   !v. w2n (v2w v : 'a word) = MOD_2EXP (dimindex(:'a)) (v2n v)
+Proof
+  rw [Once (GSYM n2w_v2n), wordsTheory.MOD_2EXP_DIMINDEX]
+QED
 
-val v2n_lt = Q.store_thm("v2n_lt",
-  `!v. v2n v < 2 ** LENGTH v`,
+Theorem v2n_lt:
+   !v. v2n v < 2 ** LENGTH v
+Proof
     metis_tac [v2n_def, length_bitify_null, num_from_bin_list_def,
-               l2n_lt, DECIDE ``0 < 2n``])
+               l2n_lt, DECIDE ``0 < 2n``]
+QED
 
 Theorem v2n_APPEND:
   !a b. v2n (a ++ b) = v2n b + (2 ** LENGTH b * v2n a)
@@ -664,14 +777,20 @@ val bitwise_tac =
   \\ lrw [listTheory.LENGTH_ZIP, listTheory.EL_MAP, listTheory.EL_ZIP]
   \\ decide_tac
 
-val word_and_v2w = Q.store_thm("word_and_v2w",
-  `!v w. v2w v && v2w w = v2w (band v w)`, bitwise_tac)
+Theorem word_and_v2w:
+   !v w. v2w v && v2w w = v2w (band v w)
+Proof bitwise_tac
+QED
 
-val word_or_v2w = Q.store_thm("word_or_v2w",
-  `!v w. v2w v || v2w w = v2w (bor v w)`, bitwise_tac)
+Theorem word_or_v2w:
+   !v w. v2w v || v2w w = v2w (bor v w)
+Proof bitwise_tac
+QED
 
-val word_xor_v2w = Q.store_thm("word_xor_v2w",
-  `!v w. v2w v ?? v2w w = v2w (bxor v w)`, bitwise_tac)
+Theorem word_xor_v2w:
+   !v w. v2w v ?? v2w w = v2w (bxor v w)
+Proof bitwise_tac
+QED
 
 fun bitwise_tac x y =
   qabbrev_tac `l = ZIP (fixwidth (dimindex(:'a)) v,fixwidth (dimindex(:'a)) w)`
@@ -697,37 +816,47 @@ val bitwise_tac =
         listTheory.LENGTH_ZIP, listTheory.EL_MAP, listTheory.EL_ZIP]
   \\ lrw [el_fixwidth, DECIDE ``0 < d ==> (d <= v + d - (i + 1) <=> i < v)``];
 
-val word_nand_v2w = Q.store_thm("word_nand_v2w",
-  `!v w. v2w v ~&& (v2w w) : 'a word =
+Theorem word_nand_v2w:
+   !v w. v2w v ~&& (v2w w) : 'a word =
          v2w (bnand (fixwidth (dimindex(:'a)) v)
-                    (fixwidth (dimindex(:'a)) w))`, bitwise_tac);
+                    (fixwidth (dimindex(:'a)) w))
+Proof bitwise_tac
+QED
 
-val word_nor_v2w = Q.store_thm("word_nor_v2w",
-  `!v w. v2w v ~|| (v2w w) : 'a word =
+Theorem word_nor_v2w:
+   !v w. v2w v ~|| (v2w w) : 'a word =
          v2w (bnor (fixwidth (dimindex(:'a)) v)
-                   (fixwidth (dimindex(:'a)) w))`, bitwise_tac);
+                   (fixwidth (dimindex(:'a)) w))
+Proof bitwise_tac
+QED
 
-val word_xnor_v2w = Q.store_thm("word_xnor_v2w",
-  `!v w. v2w v ~?? (v2w w) : 'a word =
+Theorem word_xnor_v2w:
+   !v w. v2w v ~?? (v2w w) : 'a word =
          v2w (bxnor (fixwidth (dimindex(:'a)) v)
-                    (fixwidth (dimindex(:'a)) w))`, bitwise_tac);
+                    (fixwidth (dimindex(:'a)) w))
+Proof bitwise_tac
+QED
 
-val word_1comp_v2w = Q.store_thm("word_1comp_v2w",
-  `!v. word_1comp (v2w v : 'a word) = v2w (bnot (fixwidth (dimindex(:'a)) v))`,
+Theorem word_1comp_v2w:
+   !v. word_1comp (v2w v : 'a word) = v2w (bnot (fixwidth (dimindex(:'a)) v))
+Proof
   wrw [v2w_def, bnot_def, wordsTheory.word_1comp_def, testbit, el_fixwidth,
        length_fixwidth, listTheory.EL_MAP]
   \\ Cases_on `i < LENGTH v`
-  \\ lrw [])
+  \\ lrw []
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val word_lsl_v2w = Q.store_thm("word_lsl_v2w",
-  `!n v. word_lsl (v2w v : 'a word) n = v2w (shiftl v n)`,
+Theorem word_lsl_v2w:
+   !n v. word_lsl (v2w v : 'a word) n = v2w (shiftl v n)
+Proof
   wrw [wordsTheory.word_lsl_def, shiftl_def, listTheory.PAD_RIGHT]
   \\ Cases_on `n <= i`
   \\ lrw [wordsTheory.word_bit, bit_v2w, testbit, length_pad_right]
   >- (Cases_on `LENGTH v = 0` \\ lrw [rich_listTheory.EL_APPEND1])
-  \\ lrw [rich_listTheory.EL_APPEND2])
+  \\ lrw [rich_listTheory.EL_APPEND2]
+QED
 
 Theorem word_lsr_v2w:
   !n v. word_lsr (v2w v : 'a word) n =
@@ -773,15 +902,19 @@ Proof
           DECIDE ``0 < d ==> (d <= v + d - (i + (l + 1)) <=> i + l < v)``]
 QED
 
-val word_extract_v2w = Q.store_thm("word_extract_v2w",
-  `!h l v. word_extract h l (v2w v : 'a word) =
-           w2w (word_bits h l (v2w v : 'a word))`,
-  rw [wordsTheory.word_extract_def])
+Theorem word_extract_v2w:
+   !h l v. word_extract h l (v2w v : 'a word) =
+           w2w (word_bits h l (v2w v : 'a word))
+Proof
+  rw [wordsTheory.word_extract_def]
+QED
 
-val word_slice_v2w = Q.store_thm("word_slice_v2w",
-  `!h l v. word_slice h l (v2w v : 'a word) =
-           v2w (shiftl (field h l (fixwidth (dimindex(:'a)) v)) l)`,
-  rw [wordsTheory.WORD_SLICE_THM, word_bits_v2w, word_lsl_v2w])
+Theorem word_slice_v2w:
+   !h l v. word_slice h l (v2w v : 'a word) =
+           v2w (shiftl (field h l (fixwidth (dimindex(:'a)) v)) l)
+Proof
+  rw [wordsTheory.WORD_SLICE_THM, word_bits_v2w, word_lsl_v2w]
+QED
 
 val pad_left_T_or_F = Q.prove(
    `(v2w (PAD_LEFT F (dimindex (:'a)) [F]) = 0w : 'a word) /\
@@ -923,33 +1056,39 @@ Proof
   \\ Cases_on `LENGTH v1 = 0` \\ lrw [rich_listTheory.EL_APPEND1]
 QED
 
-val word_concat_v2w = Q.store_thm("word_concat_v2w",
-  `!v1 v2. FINITE univ(:'a) /\ FINITE univ(:'b) ==>
+Theorem word_concat_v2w:
+   !v1 v2. FINITE univ(:'a) /\ FINITE univ(:'b) ==>
            (word_concat (v2w v1 : 'a word) (v2w v2 : 'b word) : 'c word =
             v2w (fixwidth (MIN (dimindex(:'c)) (dimindex(:'a) + dimindex(:'b)))
-                          (v1 ++ fixwidth (dimindex(:'b)) v2)))`,
+                          (v1 ++ fixwidth (dimindex(:'b)) v2)))
+Proof
   lrw [wordsTheory.word_concat_def, word_join_v2w, w2w_v2w,
-       arithmeticTheory.MIN_DEF, fcpTheory.index_sum])
+       arithmeticTheory.MIN_DEF, fcpTheory.index_sum]
+QED
 
-val word_join_v2w_rwt = Q.store_thm("word_join_v2w_rwt",
-  `!v1 v2. word_join (v2w v1 : 'a word) (v2w v2 : 'b word) =
+Theorem word_join_v2w_rwt:
+   !v1 v2. word_join (v2w v1 : 'a word) (v2w v2 : 'b word) =
            if FINITE univ(:'a) /\ FINITE univ(:'b) then
               v2w (v1 ++ fixwidth (dimindex(:'b)) v2)
            else
               FAIL $word_join ^(Term.mk_var("bad domain", Type.bool))
-                (v2w v1 : 'a word) (v2w v2 : 'b word)`,
-  rw [word_join_v2w, combinTheory.FAIL_THM])
+                (v2w v1 : 'a word) (v2w v2 : 'b word)
+Proof
+  rw [word_join_v2w, combinTheory.FAIL_THM]
+QED
 
-val word_concat_v2w_rwt = Q.store_thm("word_concat_v2w_rwt",
-  `!v1 v2.
+Theorem word_concat_v2w_rwt:
+   !v1 v2.
       word_concat (v2w v1 : 'a word) (v2w v2 : 'b word) : 'c word =
         if FINITE univ(:'a) /\ FINITE univ(:'b) then
            v2w (fixwidth (MIN (dimindex(:'c)) (dimindex(:'a) + dimindex(:'b)))
                          (v1 ++ fixwidth (dimindex(:'b)) v2))
         else
            FAIL $word_concat ^(Term.mk_var("bad domain", Type.bool))
-             (v2w v1 : 'a word) (v2w v2 : 'b word)`,
-  rw [word_concat_v2w, combinTheory.FAIL_THM]);
+             (v2w v1 : 'a word) (v2w v2 : 'b word)
+Proof
+  rw [word_concat_v2w, combinTheory.FAIL_THM]
+QED
 
 val genlist_fixwidth = Q.prove(
    `!d v. 0 < d ==>
@@ -960,14 +1099,16 @@ val genlist_fixwidth = Q.prove(
    \\ Cases_on `LENGTH v = 0`
    \\ lrw [DECIDE ``0 < d ==> (d <= x + v <=> d < x + (v + 1))``]);
 
-val word_reduce_v2w = Q.store_thm("word_reduce_v2w",
-  `!f v. word_reduce f (v2w v : 'a word) =
+Theorem word_reduce_v2w:
+   !f v. word_reduce f (v2w v : 'a word) =
          let l = fixwidth (dimindex(:'a)) v in
-            v2w [FOLDL f (HD l) (TL l)] : 1 word`,
+            v2w [FOLDL f (HD l) (TL l)] : 1 word
+Proof
   wrw [word_reduce_def]
   \\ lrw [wordsTheory.word_bit, bit_v2w, testbit]
   \\ match_mp_tac listTheory.FOLDL_CONG
-  \\ lrw [genlist_fixwidth])
+  \\ lrw [genlist_fixwidth]
+QED
 
 val reduce_and_v2w =
    wordsTheory.reduce_and_def
@@ -985,11 +1126,12 @@ val reduce_or_v2w =
 
 (* ------------------------------------------------------------------------- *)
 
-val extract_v2w = Q.store_thm("extract_v2w",
-  `!h l v.
+Theorem extract_v2w:
+   !h l v.
      (LENGTH v <= dimindex(:'a)) /\ (dimindex(:'b) = SUC h - l) /\
      dimindex(:'b) <= dimindex(:'a) ==>
-     ((h >< l) (v2w v : 'a word) : 'b word = v2w (field h l v))`,
+     ((h >< l) (v2w v : 'a word) : 'b word = v2w (field h l v))
+Proof
   lrw [word_extract_v2w, word_bits_v2w, fixwidth_fixwidth, fixwidth_eq,
        testbit, w2w_v2w, length_shiftr, length_fixwidth, length_field, v2w_11]
   \\ `(SUC h - (i + (l + 1))) < (SUC h - l)` by decide_tac
@@ -1000,7 +1142,8 @@ val extract_v2w = Q.store_thm("extract_v2w",
         SUBST1_TAC)
   \\ simp [length_field, el_field, length_fixwidth, el_fixwidth]
   \\ Cases_on `EL (LENGTH v - (i + (l + 1))) v`
-  \\ lrw [])
+  \\ lrw []
+QED
 
 val DROP_LAST = Q.prove(
    `!l. ~NULL l ==> (DROP (LENGTH l - 1) l = [LAST l])`,
@@ -1022,8 +1165,8 @@ QED
 
 (* ------------------------------------------------------------------------- *)
 
-val ops_to_v2w = Q.store_thm("ops_to_v2w",
-   `(!v n. v2w v || n2w n = v2w v || v2w (n2v n)) /\
+Theorem ops_to_v2w:
+    (!v n. v2w v || n2w n = v2w v || v2w (n2v n)) /\
     (!v n. n2w n || v2w v = v2w (n2v n) || v2w v) /\
     (!v n. v2w v && n2w n = v2w v && v2w (n2v n)) /\
     (!v n. n2w n && v2w v = v2w (n2v n) && v2w v) /\
@@ -1040,11 +1183,13 @@ val ops_to_v2w = Q.store_thm("ops_to_v2w",
     (!v n. (n2w n : 'a word) @@ (v2w v : 'b word) =
            (v2w (n2v n) : 'a word) @@ (v2w v : 'b word)) /\
     (!v n. word_join (v2w v) (n2w n) = word_join (v2w v) (v2w (n2v n))) /\
-    (!v n. word_join (n2w n) (v2w v) = word_join (v2w (n2v n)) (v2w v))`,
-   rewrite_tac [v2w_n2v])
+    (!v n. word_join (n2w n) (v2w v) = word_join (v2w (n2v n)) (v2w v))
+Proof
+   rewrite_tac [v2w_n2v]
+QED
 
-val ops_to_n2w = Q.store_thm("ops_to_n2w",
-  `(!v. word_2comp (v2w v) = word_2comp (n2w (v2n v))) /\
+Theorem ops_to_n2w:
+   (!v. word_2comp (v2w v) = word_2comp (n2w (v2n v))) /\
    (!v. word_log2 (v2w v) = word_log2 (n2w (v2n v))) /\
    (!v n. (v2w v = n2w n : 'a word) = (n2w (v2n v) = n2w n : 'a word)) /\
    (!v n. (n2w n = v2w v : 'a word) = (n2w n = n2w (v2n v) : 'a word)) /\
@@ -1075,8 +1220,10 @@ val ops_to_n2w = Q.store_thm("ops_to_n2w",
    (!v w. (v2w v <=+ w : 'a word) = (n2w (v2n v) <=+ w : 'a word)) /\
    (!v w. (w <=+ v2w v : 'a word) = (w <=+ n2w (v2n v) : 'a word)) /\
    (!v w. (v2w v >=+ w : 'a word) = (n2w (v2n v) >=+ w : 'a word)) /\
-   (!v w. (w >=+ v2w v : 'a word) = (w >=+ n2w (v2n v) : 'a word))`,
-   rewrite_tac [n2w_v2n])
+   (!v w. (w >=+ v2w v : 'a word) = (w >=+ n2w (v2n v) : 'a word))
+Proof
+   rewrite_tac [n2w_v2n]
+QED
 
 (* ------------------------------------------------------------------------- *)
 

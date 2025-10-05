@@ -21,10 +21,11 @@ val _ = set_trace "pp_cases" 0
 
 (* simple example from decideable_separation_logic *)
 
-val DELETE_ELEMENT_def = Define
-  `(DELETE_ELEMENT n [] = []) /\
+Definition DELETE_ELEMENT_def:
+   (DELETE_ELEMENT n [] = []) /\
    (DELETE_ELEMENT 0 (x::l) = l) /\
-   (DELETE_ELEMENT (SUC n) (x::l) = x::DELETE_ELEMENT n l)`;
+   (DELETE_ELEMENT (SUC n) (x::l) = x::DELETE_ELEMENT n l)
+End
 
 (* old (classic result)
 
@@ -43,12 +44,13 @@ with Define, Define_q, Define_f
 
 
 (* Slightly more complex example form decidebale separation logic *)
-val SWAP_ELEMENTS_def = Define `
+Definition SWAP_ELEMENTS_def:
    (SWAP_ELEMENTS _ 0 l = l) /\
    (SWAP_ELEMENTS _ _ [] = []) /\
    (SWAP_ELEMENTS _ _ [e] = [e]) /\
    (SWAP_ELEMENTS 0 (SUC n) (e1::e2::l) = ARB (* Something clever *) ) /\
-   (SWAP_ELEMENTS (SUC m) (SUC n) (e::l) = e:: (SWAP_ELEMENTS m n l))`;
+   (SWAP_ELEMENTS (SUC m) (SUC n) (e::l) = e:: (SWAP_ELEMENTS m n l))
+End
 
 val sz = term_size (concl SWAP_ELEMENTS_def)
 
@@ -93,12 +95,13 @@ with Define_q
 *)
 
 
-val test_list_def = Define `
+Definition test_list_def:
  test_list l = (case l of
        [_;     _; T; _;  _;    _] => 1
      | [_;     _; _;    _; F; _] => 2
      | [F; _; _;    _;     _; _] => 3
-   )`;
+   )
+End
 
 val test_list_org_def = Define_classic `
  test_list_org l = (case l of
@@ -107,12 +110,13 @@ val test_list_org_def = Define_classic `
      | [F; _; _;    _;     _; _] => 3
    )`;
 
-val test_pair_def = Define `
+Definition test_pair_def:
  (test_pair p = (case p of
        (_, _,      T, _,  _,   _) => 1
      | (_, _:bool, _, _:bool, F, _) => 2
      | (F, _, _,   _, _, _:bool) => 3
-   ))`;
+   ))
+End
 
 
 val test_pair_org_def = Define_classic `

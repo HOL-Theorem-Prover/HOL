@@ -122,7 +122,7 @@ Proof
   simp[]
 QED
 
-val WFM_def = Define‘
+Definition WFM_def:
   WFM M = Cn (pr2 nel) [
                 proj 0;
                 Pr1 (ncons (M (K 0) 0) 0)
@@ -135,10 +135,11 @@ val WFM_def = Define‘
                         ]
                       ])
               ]
-’;
+End
 
 
-val restr_def = Define‘restr n r i = if i ≤ n then nel i r else 0’
+Definition restr_def:  restr n r i = if i ≤ n then nel i r else 0
+End
 
 val primrec_WFM = Q.store_thm(
   "primrec_WFM",

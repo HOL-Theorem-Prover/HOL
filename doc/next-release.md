@@ -43,7 +43,7 @@ Incompatibilities
 -   `Preterm.eq` has been replaced with `Preterm.veq` which returns `true` if and only if the two arguments are variables with the same names and types.
 
 -   We have implemented a new policy forbidding theory names from being SML or HOL keywords (*e.g.,* `case`, `while`, `of`, …, `Theorem`, `Theory`, `Definition`, …).
-    The theory `while` has been renamed to `While`, in accordance with this.
+    The theories `while` and `functor` have been renamed to `While` and `category_functor`, respectively, in accordance with this.
 
 * * * * *
 

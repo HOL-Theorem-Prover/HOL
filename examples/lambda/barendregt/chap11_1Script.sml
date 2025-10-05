@@ -207,12 +207,14 @@ val (lcompat_closure_rules, lcompat_closure_ind, lcompat_closure_cases) =
                       lcompat_closure R (LAMi n v z x) (LAMi n v z y))`;
 
 (* reduction on lterms *)
-val beta0_def =
-    Define`beta0 M N = ?n v t u. (M = LAMi n v t u) /\ (N = [u/v]t)`;
+Definition beta0_def:
+    beta0 M N = ?n v t u. (M = LAMi n v t u) /\ (N = [u/v]t)
+End
 
-val beta1_def =
-    Define`beta1 (M: lterm) N =
-              ?v t u. (M = (LAM v t) @@ u) /\ (N = [u/v]t)`;
+Definition beta1_def:
+    beta1 (M: lterm) N =
+              ?v t u. (M = (LAM v t) @@ u) /\ (N = [u/v]t)
+End
 
 val lcc_beta_bvc_ind = store_thm(
   "lcc_beta_bvc_ind",

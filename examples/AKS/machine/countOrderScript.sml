@@ -244,7 +244,7 @@ val ordzM_def = Define`
 `;
 *)
 (* Version with n MOD m, better for complexity analysis. *)
-val ordzM_def = Define`
+Definition ordzM_def:
     ordzM m n =
        do
           m0 <- zeroM m;
@@ -256,7 +256,7 @@ val ordzM_def = Define`
                  ordz_seekM m n' m 1;
                od
        od
-`;
+End
 
 (*
 > EVAL ``MAP (ordzM 7) [1 .. 10]``; =

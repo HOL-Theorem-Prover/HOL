@@ -17,8 +17,8 @@ Libs
 val row_conv =
   REPEATC (numLib.BOUNDED_FORALL_CONV EVAL) THENC REWRITE_CONV [];
 
-val LTTable_def = Define
-`LTTable =
+Definition LTTable_def:
+ LTTable =
 [
 [16;52;56;70;83;94;105];
 [72;114;125];
@@ -148,12 +148,13 @@ val LTTable_def = Define
 [68;110;121];
 [5;11;26;80;122;126];
 [32;86;99]
-]`;
+]
+End
 
 (* linear transformation table used in decryption *)
 
-val InvLTTable_def = Define
-`InvLTTable =
+Definition InvLTTable_def:
+ InvLTTable =
 [
 [53;55;72];
 [1;5;20;90];
@@ -283,11 +284,14 @@ val InvLTTable_def = Define
 [1;16;86;97;125];
 [11;98];
 [4;27;86;97;113;115;127]
-]`;
+]
+End
 
-val LTFun_def = Define `LTFun x = EL x LTTable`;
+Definition LTFun_def:   LTFun x = EL x LTTable
+End
 
-val invLTFun_def = Define `invLTFun x = EL x InvLTTable`;
+Definition invLTFun_def:   invLTFun x = EL x InvLTTable
+End
 
 val LTFunVal = Q.store_thm(
 "LTFunVal",
@@ -560,9 +564,10 @@ REPEAT STRIP_TAC THEN EVAL_TAC);
 
 (* compute the parity on select bits *)
 
-val selParity_def = Define
-`(selParity (w:word128) [] = F) /\
- (selParity w (pos::t) = boolXor (w ' pos) (selParity w t))`;
+Definition selParity_def:
+ (selParity (w:word128) [] = F) /\
+ (selParity w (pos::t) = boolXor (w ' pos) (selParity w t))
+End
 
 val selParityAppend = Q.store_thm(
  "selParityAppend",
@@ -573,8 +578,8 @@ val selParityAppend = Q.store_thm(
 
 (*linear transform*)
 
-val transform_def = Define
-`(transform transFun 0 (w:word128)
+Definition transform_def:
+ (transform transFun 0 (w:word128)
   = let newBit = selParity w (transFun 0)
     in
     if newBit
@@ -588,7 +593,8 @@ val transform_def = Define
                   then ((1w:word128)<<(SUC i))
           else (0w:word128)
    in
-   newWord || transform transFun i w)`;
+   newWord || transform transFun i w)
+End
 
 val transformEval = Q.store_thm(
  "transformEval",
@@ -612,9 +618,11 @@ val transformEval = Q.store_thm(
      METIS_TAC [],
      FULL_SIMP_TAC arith_ss [transform_def,LET_THM]]));
 
-val LT_def = Define `LT w =  transform LTFun 127 w`;
+Definition LT_def:   LT w =  transform LTFun 127 w
+End
 
-val invLT_def = Define `invLT w =  transform invLTFun 127 w`;
+Definition invLT_def:   invLT w =  transform invLTFun 127 w
+End
 
 (*desired properties of transform*)
 
@@ -647,13 +655,15 @@ val transform_inv2_w128 = Q.store_thm(
 
 (* the composite of two linear transformations *)
 
-val transCompose_def = Define `transCompose f1 f2 = \x. FLAT (MAP f1 (f2 x))`;
+Definition transCompose_def:   transCompose f1 f2 = \x. FLAT (MAP f1 (f2 x))
+End
 
 (* a transform function is legal *)
 
-val transInRange_def = Define
- `transInRange transFun =
-    !i. i < 128 ==> ALL_EL (\x. x < 128) (transFun i)`;
+Definition transInRange_def:
+  transInRange transFun =
+    !i. i < 128 ==> ALL_EL (\x. x < 128) (transFun i)
+End
 
 val LTFunInRange = Q.store_thm(
  "LTFunInRange",
@@ -707,7 +717,8 @@ val TL128_eq_makeTL128 = save_thm(
 (* the intermediate values of the composite of the two given linear
    transformation functions, used to speed up the verification *)
 
-val Res_def = Define `Res i = FLAT (MAP LTFun (invLTFun i))`;
+Definition Res_def:   Res i = FLAT (MAP LTFun (invLTFun i))
+End
 
 (*load "numSyntax";
 quietdec := true;
@@ -723,15 +734,16 @@ val _ = computeLib.add_thms [ResTable] computeLib.the_compset;
    countEvenL and countEven is the two equivalent description,
    while countEvenL reduce a layer of loop *)
 
-val countL_def = Define
-`(countL l []= l) /\
+Definition countL_def:
+ (countL l []= l) /\
  (countL l (h::t) = let x = makeL h
                   in
                   let tmp = zipXor x l
           in
-                  countL tmp t)`;
+                  countL tmp t)
+End
 
-val countEvenL_def = Define`
+Definition countEvenL_def:
  countEvenL tl =
    countL
      [T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T;
@@ -739,7 +751,8 @@ val countEvenL_def = Define`
        T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T;
        T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T;
        T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T;
-       T; T; T; T; T; T; T; T; T; T; T; T; T] tl`;
+       T; T; T; T; T; T; T; T; T; T; T; T; T] tl
+End
 
 val countEvenL_LT_facts = Q.store_thm(
  "countEvenL_LT_facts",
@@ -749,9 +762,10 @@ val countEvenL_LT_facts = Q.store_thm(
         (countEvenL (Res i) = countEvenL [i]) `,
  SIMP_TAC std_ss [] THEN CONV_TAC (time row_conv) THEN REWRITE_TAC []);
 
-val countEven_def = Define`
+Definition countEven_def:
  (countEven x [] = T) /\
- (countEven x (h::t) = boolXor (x = h) (countEven x t))`;
+ (countEven x (h::t) = boolXor (x = h) (countEven x t))
+End
 
 val countL_fact = Q.store_thm(
  "countL_fact",

@@ -53,12 +53,13 @@ val (xor_lemma,call_lemma) = let
 
 (* invariant definition *)
 
-val ENCODES_JUMP_def = Define `
+Definition ENCODES_JUMP_def:
   ENCODES_JUMP a (p:num) j (bs:word8 list) =
     (bs = [0x83w; 0xF1w; n2w p; 0xFFw; 0xD3w:word8]) \/
-    ?w. (j p = SOME w) /\ (bs = [0xE9w] ++ X86_IMMEDIATE (w - a - 5w))`;
+    ?w. (j p = SOME w) /\ (bs = [0xE9w] ++ X86_IMMEDIATE (w - a - 5w))
+End
 
-val X86_ENCODE_def = Define `
+Definition X86_ENCODE_def:
   (X86_ENCODE (iSUB)    a p j bs = (bs = [0x2Bw; 0x07w])) /\
   (X86_ENCODE (iSWAP)   a p j bs = (bs = [0x87w; 0x07w])) /\
   (X86_ENCODE (iSTOP)   a p j bs = (bs = [0xFFw; 0xE2w])) /\
@@ -70,9 +71,10 @@ val X86_ENCODE_def = Define `
      ENCODES_JUMP (a + 8w) (p+1) j bs1 /\ ENCODES_JUMP (a + 13w) (w2n i) j bs2) /\
   (X86_ENCODE (iJLT i)  a p j bs = ?bs0 bs1 bs2. (bs = bs0 ++ bs1 ++ bs2) /\
      (bs0 = [0x3Bw;0x07w;0x0Fw;0x82w;0x5w;0w;0w;0w]) /\
-     ENCODES_JUMP (a + 8w) (p+1) j bs1 /\ ENCODES_JUMP (a + 13w) (w2n i) j bs2)`;
+     ENCODES_JUMP (a + 8w) (p+1) j bs1 /\ ENCODES_JUMP (a + 13w) (w2n i) j bs2)
+End
 
-val INSTR_LENGTH_def = Define `
+Definition INSTR_LENGTH_def:
   (INSTR_LENGTH (iSUB) = 2) /\
   (INSTR_LENGTH (iSWAP) = 2) /\
   (INSTR_LENGTH (iSTOP) = 2) /\
@@ -80,7 +82,8 @@ val INSTR_LENGTH_def = Define `
   (INSTR_LENGTH (iPUSH i) = 10) /\
   (INSTR_LENGTH (iJUMP i) = 5) /\
   (INSTR_LENGTH (iJEQ i) = 18) /\
-  (INSTR_LENGTH (iJLT i) = 18)`;
+  (INSTR_LENGTH (iJLT i) = 18)
+End
 
 val INSTR_LENGTH_THM = prove(
   ``!i a p j bs. X86_ENCODE i a p j bs ==> (INSTR_LENGTH i = LENGTH bs)``,
@@ -88,76 +91,89 @@ val INSTR_LENGTH_THM = prove(
     INSTR_LENGTH_def,ENCODES_JUMP_def,X86_IMMEDIATE_def,APPEND]
   THEN REPEAT STRIP_TAC THEN ASM_SIMP_TAC std_ss [LENGTH,APPEND]);
 
-val SEP_BYTES_IN_MEM_def = Define `
+Definition SEP_BYTES_IN_MEM_def:
   (SEP_BYTES_IN_MEM a [] = emp) /\
-  (SEP_BYTES_IN_MEM a (x::xs) = one (a,x) * SEP_BYTES_IN_MEM (a+1w) xs)`;
+  (SEP_BYTES_IN_MEM a (x::xs) = one (a,x) * SEP_BYTES_IN_MEM (a+1w) xs)
+End
 
-val INSTR_IN_MEM_def = Define `
+Definition INSTR_IN_MEM_def:
   (INSTR_IN_MEM NONE c p j = emp) /\
   (INSTR_IN_MEM (SOME a) c p j =
      SEP_EXISTS bs. cond (X86_ENCODE c a p j bs) *
-                    SEP_BYTES_IN_MEM a bs)`;
+                    SEP_BYTES_IN_MEM a bs)
+End
 
-val CODE_LOOP_def = Define `
+Definition CODE_LOOP_def:
   (CODE_LOOP i j [] = emp) /\
-  (CODE_LOOP i j (c::cs) = INSTR_IN_MEM (j i) c i j * CODE_LOOP (i + 1) j cs)`;
+  (CODE_LOOP i j (c::cs) = INSTR_IN_MEM (j i) c i j * CODE_LOOP (i + 1) j cs)
+End
 
-val SPACE_LENGTH_def = Define `
+Definition SPACE_LENGTH_def:
   (SPACE_LENGTH i j [] = 0) /\
   (SPACE_LENGTH i (j:num->word32 option) (c::cs) =
      if ~(j i = NONE) then SPACE_LENGTH (i + 1) j cs else
-          INSTR_LENGTH c + SPACE_LENGTH (i + 1) j cs)`;
+          INSTR_LENGTH c + SPACE_LENGTH (i + 1) j cs)
+End
 
-val CODE_SPACE_def = Define `
+Definition CODE_SPACE_def:
   (CODE_SPACE a 0 = emp) /\
-  (CODE_SPACE a (SUC n) = SEP_EXISTS x. one (a,x) * CODE_SPACE (a+1w) n)`;
+  (CODE_SPACE a (SUC n) = SEP_EXISTS x. one (a,x) * CODE_SPACE (a+1w) n)
+End
 
-val CODE_INV_def = Define `
-  CODE_INV a cs j = CODE_LOOP 0 j cs * CODE_SPACE a (SPACE_LENGTH 0 j cs)`;
+Definition CODE_INV_def:
+  CODE_INV a cs j = CODE_LOOP 0 j cs * CODE_SPACE a (SPACE_LENGTH 0 j cs)
+End
 
-val MAP_ROW_def = Define `
+Definition MAP_ROW_def:
   (MAP_ROW a NONE = one (a,0w) * one ((a:word32)+4w,0w:word32)) /\
-  (MAP_ROW a (SOME w) = one (a,1w) * one (a+4w,w))`;
+  (MAP_ROW a (SOME w) = one (a,1w) * one (a+4w,w))
+End
 
-val MAP_INV_def = Define `
+Definition MAP_INV_def:
   (MAP_INV a i j [] = emp) /\
-  (MAP_INV a i j (c::cs) = MAP_ROW a (j i) * MAP_INV (a + 8w) (i + 1) j cs)`;
+  (MAP_INV a i j (c::cs) = MAP_ROW a (j i) * MAP_INV (a + 8w) (i + 1) j cs)
+End
 
-val TEMP_INV_def = Define `
+Definition TEMP_INV_def:
   (TEMP_INV a 0 = emp) /\
-  (TEMP_INV a (SUC n) = SEP_EXISTS w. one (a - 4w:word32,w:word32) * TEMP_INV (a-4w) n)`;
+  (TEMP_INV a (SUC n) = SEP_EXISTS w. one (a - 4w:word32,w:word32) * TEMP_INV (a-4w) n)
+End
 
 val TEMP_INV_UNROLL = prove(
   ``0 < n ==> (TEMP_INV a n =
       SEP_EXISTS w. one (a - 4w:word32,w:word32) * TEMP_INV (a-4w) (n - 1))``,
   Cases_on `n` \\ SIMP_TAC std_ss [TEMP_INV_def] \\ SIMP_TAC std_ss [ADD1]);
 
-val MAP_TEMP_INV_def = Define `
+Definition MAP_TEMP_INV_def:
   MAP_TEMP_INV a x y j cs =
-    TEMP_INV (a - 8w) 7 * one (a-8w, x) * one (a-4w, y) * MAP_INV a 0 j cs * SEP_T`;
+    TEMP_INV (a - 8w) 7 * one (a-8w, x) * one (a-4w, y) * MAP_INV a 0 j cs * SEP_T
+End
 
-val IS_JUMP_def = Define `
+Definition IS_JUMP_def:
   (IS_JUMP (iJUMP i) = T) /\
   (IS_JUMP (iJEQ i) = T) /\
   (IS_JUMP (iJLT i) = T) /\
   (IS_JUMP (iSTOP) = T) /\
-  (IS_JUMP x = F)`;
+  (IS_JUMP x = F)
+End
 
-val ON_OFF_def = Define `
+Definition ON_OFF_def:
   ON_OFF cs j p =
     !i.
       (iFETCH p cs = SOME i) /\ ~(iFETCH (p+1) cs = NONE) /\ ~(IS_JUMP i) ==>
       ((j p = NONE) = (j (p + 1) = NONE)) /\
-      !w. (j p = SOME w) ==> (j (p + 1) = SOME (w + n2w (INSTR_LENGTH i)))`;
+      !w. (j p = SOME w) ==> (j (p + 1) = SOME (w + n2w (INSTR_LENGTH i)))
+End
 
-val state_inv_def = Define `
+Definition state_inv_def:
   state_inv cs dh h dg (g:word32->word8) df f jw j =
     ?a b b1.
       (one_string_0 b (iENCODE cs) b1) (fun2set (g,dg)) /\
       (MAP_TEMP_INV jw a b j cs) (fun2set (h,dh)) /\
       (CODE_INV a cs j) (fun2set (f,df)) /\ ALIGNED jw /\
       (!p. ON_OFF cs j p) /\ LENGTH cs < 128 /\
-      !i. LENGTH cs <= i ==> (j i = NONE)`;
+      !i. LENGTH cs <= i ==> (j i = NONE)
+End
 
 (* code generator *)
 
@@ -461,13 +477,14 @@ val CODE_LOOP_IMP_BYTES_IN_MEM = prove(
    \\ Q.PAT_X_ASSUM `!rr. bb` MATCH_MP_TAC \\ Q.EXISTS_TAC `one (a,h) * rr`
    \\ FULL_SIMP_TAC (std_ss++star_ss) []);
 
-val cont_jump_def = Define `
+Definition cont_jump_def:
   cont_jump j p cs a (t:word7) =
     (iFETCH p cs = SOME (iJUMP t)) /\ (j p = SOME a) \/
     (iFETCH p cs = SOME (iJLT t)) /\ (j p = SOME (a - 13w)) \/
     (iFETCH p cs = SOME (iJEQ t)) /\ (j p = SOME (a - 13w)) \/
     (?r. (iFETCH p cs = SOME (iJLT r)) /\ (j p = SOME (a - 8w)) /\ (p + 1 = w2n t)) \/
-    (?r. (iFETCH p cs = SOME (iJEQ r)) /\ (j p = SOME (a - 8w)) /\ (p + 1 = w2n t))`;
+    (?r. (iFETCH p cs = SOME (iJEQ r)) /\ (j p = SOME (a - 8w)) /\ (p + 1 = w2n t))
+End
 
 val x86_write_jump_thm = prove(
   ``(CODE_LOOP 0 j cs * r) (fun2set (f,df)) /\
@@ -621,9 +638,10 @@ val iFETCH_IMP = prove(
   Induct \\ SIMP_TAC std_ss [LENGTH,iFETCH_def] \\ NTAC 2 STRIP_TAC
   \\ Cases_on `p` \\ FULL_SIMP_TAC std_ss [EL,HD,TL] \\ SIMP_TAC std_ss [ADD1]);
 
-val prev_jump_def = Define `
+Definition prev_jump_def:
   (prev_jump cs 0 = 0) /\
-  (prev_jump cs (SUC i) = if IS_JUMP (EL i cs) then i + 1 else prev_jump cs i)`;
+  (prev_jump cs (SUC i) = if IS_JUMP (EL i cs) then i + 1 else prev_jump cs i)
+End
 
 val x86_findbyte_thm = (SIMP_RULE std_ss [prev_jump_def,DROP_0] o Q.SPECL [`p`,`0`,`p`,`r2`,`r2`,`q`,`q`] o prove)(
   ``!k i j r2 r6 r q.
@@ -1687,9 +1705,10 @@ val SPEC_PUSH_COND = prove(
   ``SPEC m (p * cond b) c q ==> SPEC m (p * cond b) c (q * cond b)``,
   SIMP_TAC std_ss [SPEC_MOVE_COND,SEP_CLAUSES]);
 
-val X86_STACK_def = Define `
+Definition X86_STACK_def:
   X86_STACK (esp,xs,l) = xR ESP esp * xLIST esp xs *
-    xSPACE esp l * cond (ALIGNED esp)`;
+    xSPACE esp l * cond (ALIGNED esp)
+End
 
 val pop_esi = let
   val ((th,_,_),_) = prog_x86Lib.x86_spec (x86_encodeLib.x86_encode "pop esi")
@@ -1746,24 +1765,26 @@ val (codege_code_def,x86_inc_lemma) = let
 
 (* main invariant definition: xINC_def *)
 
-val xINC_def = Define `
+Definition xINC_def:
   xINC (xs,l,p,cs:input_type list) (pw,r,esp) =
     SEP_EXISTS dh dg df jw g h f j eip.
       xR EBX pw * xCODE (codegen_code pw) * ~xR ESI * xR ECX 0w *
       xSTACK (xs,l,p,cs) * xMEMORY dh h * xBYTE_MEMORY dg g * xR EDX r *
       xR EBP jw * ~xS * xPC eip * xCODE (xCODE_SET df f) * X86_STACK (esp,[],1) *
-      cond (state_inv cs dh h dg g df f jw j /\ (j p = SOME eip))`;
+      cond (state_inv cs dh h dg g df f jw j /\ (j p = SOME eip))
+End
 
-val xINC_CODEGEN_def = Define `
+Definition xINC_CODEGEN_def:
   xINC_CODEGEN (xs,l,p,cs:input_type list) (pw,r,esp) t =
     SEP_EXISTS dh h dg g df f jw j cp.
       xR EBX pw * xCODE (codegen_code pw) * ~xR ESI * xR ECX (n2w t) *
       xSTACK (xs,l,p,cs) * xMEMORY dh h * xBYTE_MEMORY dg g * xR EDX r *
       xR EBP jw * ~xS * xPC pw * xBYTE_MEMORY_X df f * X86_STACK (esp-4w,[cp+5w],0) *
       cond (state_inv cs dh h dg g df f jw j /\ p < LENGTH cs /\ t < LENGTH cs /\
-         ((h (jw - 0x24w) = 0x0w) ==> cont_jump j p cs cp (n2w t)))`;
+         ((h (jw - 0x24w) = 0x0w) ==> cont_jump j p cs cp (n2w t)))
+End
 
-val xINC_JUMP_def = Define `
+Definition xINC_JUMP_def:
   xINC_JUMP (xs,l,p,cs:input_type list) (pw,r,esp) t =
     SEP_EXISTS dh dg df jw g h f j eip bs.
       xR EBX pw * xCODE (codegen_code pw) * ~xR ESI * xR ECX 0w *
@@ -1771,14 +1792,16 @@ val xINC_JUMP_def = Define `
       xR EBP jw * ~xS * xPC eip * xCODE (xCODE_SET df f) * X86_STACK (esp,[],1) *
       cond (state_inv cs dh h dg g df f jw j /\ t < LENGTH cs /\
             ENCODES_JUMP eip t j bs /\ BYTES_IN_MEM eip df f bs /\
-            cont_jump j p cs eip (n2w t))`;
+            cont_jump j p cs eip (n2w t))
+End
 
-val xINC_STOP_def = Define `
+Definition xINC_STOP_def:
   xINC_STOP (xs,l,p,cs:input_type list) (pw,r,esp) =
     SEP_EXISTS dh dg df jw g h f.
       xR EBX pw * xCODE (codegen_code pw) * ~xR ESI * xR ECX 0w *
       xSTACK (xs,l,p,cs) * xMEMORY dh h * xBYTE_MEMORY dg g * xR EDX r *
-      xR EBP jw * ~xS * xPC r * xCODE (xCODE_SET df f) * X86_STACK (esp,[],1)`;
+      xR EBP jw * ~xS * xPC r * xCODE (xCODE_SET df f) * X86_STACK (esp,[],1)
+End
 
 fun QGENL [] th = th
   | QGENL (x::xs) th = Q.GEN x (QGENL xs th)
@@ -2244,11 +2267,12 @@ val SEP_IMP_xINC_STOP = prove(
   \\ REPEAT (MATCH_MP_TAC SEP_IMP_STAR \\ SIMP_TAC std_ss [SEP_IMP_REFL])
   \\ SIMP_TAC std_ss [SEP_IMP_def,SEP_T_def]);
 
-val xINC_SETUP_def = Define `
+Definition xINC_SETUP_def:
   xINC_SETUP cs =
     SEP_EXISTS dh h dg g df f jw.
       xBYTE_MEMORY_X df f * xMEMORY dh h * xBYTE_MEMORY dg g * xR EBP jw *
-      cond (state_inv cs dh h dg g df f jw (\x.NONE) /\ ~(h (jw - 0x24w) = 0x0w))`;
+      cond (state_inv cs dh h dg g df f jw (\x.NONE) /\ ~(h (jw - 0x24w) = 0x0w))
+End
 
 val PRE_LEMMA = prove(
   ``SEP_IMP (SEP_EXISTS cp.
@@ -2343,9 +2367,10 @@ val (x86_inc_init_th,x86_inc_init_def,x86_inc_init_pre_def) = compile "x86" ``
     let (dh,h) = zero_loop (r5,r2,r4,dh,h) in
       (r7,dh,h)``
 
-val TEMP_SPACE_def = Define `
+Definition TEMP_SPACE_def:
   (TEMP_SPACE a 0 = emp) /\
-  (TEMP_SPACE a (SUC n) = SEP_EXISTS w. one (a:word32,w:word32) * TEMP_SPACE (a+4w) n)`;
+  (TEMP_SPACE a (SUC n) = SEP_EXISTS w. one (a:word32,w:word32) * TEMP_SPACE (a+4w) n)
+End
 
 val zero_loop_thm = prove(
   ``!n h dh r2 p.

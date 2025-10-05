@@ -5,20 +5,20 @@ Ancestors
 val _ = ParseExtras.temp_loose_equality()
 
 (* Exercise 1 *)
-val RESET_REG_def = Define`
+Definition RESET_REG_def:
   RESET_REG(reset,inp,out) =
     (!t. reset t ==> (out t = T)) /\
     (!t. out (t + 1) = if reset t \/ reset (t + 1) then T else inp t)
-`
+End
 
-val RESET_REG_IMP_def = Define`
+Definition RESET_REG_IMP_def:
   RESET_REG_IMP (reset,inp,out) =
    ?ro1 ro2 mo.
       MUX(reset,reset,ro1,mo) /\
       REG(reset,ro1) /\
       REG(inp,ro2) /\
       MUX(mo,mo,ro2,out)
-`;
+End
 
 (* there are no loops in the implementation so simple rewriting is enough to prove the goal.
    PROVE_TAC is used to prove the final goal, which is of the form
@@ -39,16 +39,16 @@ val EX1_CORRECTNESS = store_thm(
      number of Ts input at inp since the last time that T was input at
      reset.
 *)
-val RESET_PARITY_def = Define`
+Definition RESET_PARITY_def:
   RESET_PARITY (reset,inp,out) <=>
     (out 0 <=> T) /\
     !t. out(t + 1) <=>
           if reset (t + 1) then T
           else if inp(t + 1) then ~out t
           else out t
-`
+End
 
-val RESET_PARITY_IMP_def = Define`
+Definition RESET_PARITY_IMP_def:
   RESET_PARITY_IMP (reset,inp,out) <=>
     ?mo1 mo2 no oo ro1 ro2.
        MUX(inp,no,ro1,mo1) /\
@@ -58,7 +58,7 @@ val RESET_PARITY_IMP_def = Define`
        REG(oo,ro2) /\
        MUX(ro2,mo2,oo,out) /\
        REG(out,ro1)
-`
+End
 
 (* express out(t + 1) in terms of mo2, and then remove the rewrite for
    out(t) entirely.  This breaks the rewriting loop allowing for easy

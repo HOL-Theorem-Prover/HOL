@@ -36,23 +36,29 @@ val _ = Parse.type_abbrev("lpc_set",``:lpc_el set``);
 val ty = (type_of o snd o dest_comb) ``LPC_NEXT s1 s2``
 val _ = Parse.type_abbrev("lpc_state",ty);
 
-val LPC_READ_REG_def = Define `
-  LPC_READ_REG a ((s,p):lpc_state) = ARM_READ_REG a s`;
+Definition LPC_READ_REG_def:
+  LPC_READ_REG a ((s,p):lpc_state) = ARM_READ_REG a s
+End
 
-val LPC_READ_STATUS_def = Define `
-  LPC_READ_STATUS a ((s,p):lpc_state) = ARM_READ_STATUS a s`;
+Definition LPC_READ_STATUS_def:
+  LPC_READ_STATUS a ((s,p):lpc_state) = ARM_READ_STATUS a s
+End
 
-val LPC_READ_TIME_def = Define `
-  LPC_READ_TIME ((s,(time,rom,ram,p)):lpc_state) = time`;
+Definition LPC_READ_TIME_def:
+  LPC_READ_TIME ((s,(time,rom,ram,p)):lpc_state) = time
+End
 
-val LPC_READ_ROM_def = Define `
-  LPC_READ_ROM a ((s,(time,rom,ram,p)):lpc_state) = rom a`;
+Definition LPC_READ_ROM_def:
+  LPC_READ_ROM a ((s,(time,rom,ram,p)):lpc_state) = rom a
+End
 
-val LPC_READ_RAM_def = Define `
-  LPC_READ_RAM a ((s,(time,rom,ram,p)):lpc_state) = ram a`;
+Definition LPC_READ_RAM_def:
+  LPC_READ_RAM a ((s,(time,rom,ram,p)):lpc_state) = ram a
+End
 
-val LPC_READ_UART0_def = Define `
-  LPC_READ_UART0 ((s,(time,rom,ram,uart0,p)):lpc_state) = UART0_READ uart0`;
+Definition LPC_READ_UART0_def:
+  LPC_READ_UART0 ((s,(time,rom,ram,uart0,p)):lpc_state) = UART0_READ uart0
+End
 
 Definition ARM_OK_def:
   ARM_OK state <=>
@@ -65,15 +71,16 @@ Definition ARM_OK_def:
     (ARM_MODE state = 16w)
 End
 
-val LPC_READ_UNDEF_def = Define `
-  LPC_READ_UNDEF ((s,p):lpc_state) <=> ~ARM_OK s /\ ~PERIPHERALS_OK p`;
+Definition LPC_READ_UNDEF_def:
+  LPC_READ_UNDEF ((s,p):lpc_state) <=> ~ARM_OK s /\ ~PERIPHERALS_OK p
+End
 
 
 (* ----------------------------------------------------------------------
     Converting from lpc_state to lpc_set
    ---------------------------------------------------------------------- *)
 
-val lpc2set'_def = Define `
+Definition lpc2set'_def:
   lpc2set' (rs,st:arm_bit set,is,ms,tt:unit set,ua:unit set,ud:unit set) (s:lpc_state) =
     IMAGE (\a. tReg a (LPC_READ_REG a s)) rs UNION
     IMAGE (\a. tStatus a (LPC_READ_STATUS a s)) st UNION
@@ -81,10 +88,13 @@ val lpc2set'_def = Define `
     IMAGE (\a. tRam a (LPC_READ_RAM a s)) ms UNION
     IMAGE (\a. tTime (LPC_READ_TIME s)) tt UNION
     IMAGE (\a. tUart0 (LPC_READ_UART0 s)) ua UNION
-    IMAGE (\a. tUndef (LPC_READ_UNDEF s)) ud`;
+    IMAGE (\a. tUndef (LPC_READ_UNDEF s)) ud
+End
 
-val lpc2set_def   = Define `lpc2set s = lpc2set' (UNIV,UNIV,UNIV,UNIV,UNIV,UNIV,UNIV) s`;
-val lpc2set''_def = Define `lpc2set'' x s = lpc2set s DIFF lpc2set' x s`;
+Definition lpc2set_def:     lpc2set s = lpc2set' (UNIV,UNIV,UNIV,UNIV,UNIV,UNIV,UNIV) s
+End
+Definition lpc2set''_def:   lpc2set'' x s = lpc2set s DIFF lpc2set' x s
+End
 
 (* theorems *)
 
@@ -236,24 +246,33 @@ val EMPTY_lpc2set = prove(``
     Defining the LPC_MODEL
    ---------------------------------------------------------------------- *)
 
-val tR_def = Define `tR a x = SEP_EQ {tReg a x}`;
-val tM_def = Define `tM a x = SEP_EQ {tRam a x}`;
-val tS_def = Define `tS a x = SEP_EQ {tStatus a x}`;
-val tU_def = Define `tU x = SEP_EQ {tUndef x}`;
-val tT_def = Define `tT x = SEP_EQ {tTime x}`;
-val tUART0_def = Define `tUART0 x = SEP_EQ {tUart0 x}`;
+Definition tR_def:   tR a x = SEP_EQ {tReg a x}
+End
+Definition tM_def:   tM a x = SEP_EQ {tRam a x}
+End
+Definition tS_def:   tS a x = SEP_EQ {tStatus a x}
+End
+Definition tU_def:   tU x = SEP_EQ {tUndef x}
+End
+Definition tT_def:   tT x = SEP_EQ {tTime x}
+End
+Definition tUART0_def:   tUART0 x = SEP_EQ {tUart0 x}
+End
 
-val tPC_def = Define `tPC x = tR 15w x * tU F * cond (ALIGNED x)`;
+Definition tPC_def:   tPC x = tR 15w x * tU F * cond (ALIGNED x)
+End
 
-val LPC_ROM_def = Define `LPC_ROM (a,w:word32) =
+Definition LPC_ROM_def:   LPC_ROM (a,w:word32) =
   { tRom (a+3w) (SOME ((31 >< 24) w)) ;
     tRom (a+2w) (SOME ((23 >< 16) w)) ;
     tRom (a+1w) (SOME ((15 ><  8) w)) ;
-    tRom (a+0w) (SOME (( 7 ><  0) w)) }`;
+    tRom (a+0w) (SOME (( 7 ><  0) w)) }
+End
 
-val LPC_MODEL_def = Define `
+Definition LPC_MODEL_def:
   LPC_MODEL = (lpc2set, LPC_NEXT, LPC_ROM, (\x y. (x:lpc_state) = y),
-               {} : ^(ty_antiq (#1 (dom_rng (type_of “lpc2set”)))) set)`;
+               {} : ^(ty_antiq (#1 (dom_rng (type_of “lpc2set”)))) set)
+End
 
 
 (* theorems *)

@@ -15,8 +15,9 @@ val _ = ParseExtras.temp_loose_equality()
 
 (* assertion *)
 
-val assertT_def = Define `
-  assertT b = if b then constT () else failureT`;
+Definition assertT_def:
+  assertT b = if b then constT () else failureT
+End
 
 val option_apply_assertT = store_thm("option_apply_assertT",
   ``!b s f. b ==> (option_apply (assertT b s) f = f ((),s))``,
@@ -24,53 +25,64 @@ val option_apply_assertT = store_thm("option_apply_assertT",
 
 (* calculate effective address *)
 
-val ea_Xr_def = Define `ea_Xr (r:Xreg) = constT (Xea_r r)`;
-val ea_Xi_def = Define `ea_Xi (i:Ximm) = constT (Xea_i i)`;
+Definition ea_Xr_def:   ea_Xr (r:Xreg) = constT (Xea_r r)
+End
+Definition ea_Xi_def:   ea_Xi (i:Ximm) = constT (Xea_i i)
+End
 
-val ea_Xrm_base_def = Define `
+Definition ea_Xrm_base_def:
   (ea_Xrm_base ii NONE = constT 0w) /\
-  (ea_Xrm_base ii (SOME r) = read_reg ii r)`;
+  (ea_Xrm_base ii (SOME r) = read_reg ii r)
+End
 
-val ea_Xrm_index_def = Define `
+Definition ea_Xrm_index_def:
   (ea_Xrm_index ii NONE = constT (0w:Ximm)) /\
   (ea_Xrm_index ii (SOME (s:word2,r)) =
-     seqT (read_reg ii r) (\idx. constT (n2w (2 ** w2n s) * idx)))`;
+     seqT (read_reg ii r) (\idx. constT (n2w (2 ** w2n s) * idx)))
+End
 
-val ea_Xrm_def = Define `
+Definition ea_Xrm_def:
   (ea_Xrm ii (Xr r) = ea_Xr r) /\
   (ea_Xrm ii (Xm i b d) =
      seqT
         (parT (ea_Xrm_index ii i) (ea_Xrm_base ii b))
-          (\(idx,b). constT (Xea_m (idx + b + d))))`;
+          (\(idx,b). constT (Xea_m (idx + b + d))))
+End
 
-val ea_Xdest_def = Define `
+Definition ea_Xdest_def:
   (ea_Xdest ii (Xrm_i rm i) = ea_Xrm ii rm) /\
   (ea_Xdest ii (Xrm_r rm r) = ea_Xrm ii rm) /\
-  (ea_Xdest ii (Xr_rm r rm) = ea_Xr r)`;
+  (ea_Xdest ii (Xr_rm r rm) = ea_Xr r)
+End
 
-val ea_Xsrc_def = Define `
+Definition ea_Xsrc_def:
   (ea_Xsrc ii (Xrm_i rm i) = ea_Xi i) /\
   (ea_Xsrc ii (Xrm_r rm r) = ea_Xr r) /\
-  (ea_Xsrc ii (Xr_rm r rm) = ea_Xrm ii rm)`;
+  (ea_Xsrc ii (Xr_rm r rm) = ea_Xrm ii rm)
+End
 
-val ea_Ximm_rm_def = Define `
+Definition ea_Ximm_rm_def:
   (ea_Ximm_rm ii (Xi_rm rm) = ea_Xrm ii rm) /\
-  (ea_Ximm_rm ii (Xi i)     = ea_Xi i)`;
+  (ea_Ximm_rm ii (Xi i)     = ea_Xi i)
+End
 
 (* eval_ea calculates the value of an effective address *)
 
-val read_ea_def = Define `
+Definition read_ea_def:
   (read_ea ii (Xea_i i) = constT i) /\
   (read_ea ii (Xea_r r) = read_reg ii r) /\
-  (read_ea ii (Xea_m a) = read_m32 ii a)`;
+  (read_ea ii (Xea_m a) = read_m32 ii a)
+End
 
-val read_src_ea_def = Define `
-  read_src_ea ii ds = seqT (ea_Xsrc ii ds) (\ea. addT ea (read_ea ii ea))`;
+Definition read_src_ea_def:
+  read_src_ea ii ds = seqT (ea_Xsrc ii ds) (\ea. addT ea (read_ea ii ea))
+End
 
-val read_dest_ea_def = Define `
-  read_dest_ea ii ds = seqT (ea_Xdest ii ds) (\ea. addT ea (read_ea ii ea))`;
+Definition read_dest_ea_def:
+  read_dest_ea ii ds = seqT (ea_Xdest ii ds) (\ea. addT ea (read_ea ii ea))
+End
 
-val read_reg_byte_def = Define `
+Definition read_reg_byte_def:
   (read_reg_byte ii EAX = seqT (read_reg ii EAX) (\w. constT ((w2w w):word8))) /\
   (read_reg_byte ii EBX = seqT (read_reg ii EBX) (\w. constT (w2w w))) /\
   (read_reg_byte ii ECX = seqT (read_reg ii ECX) (\w. constT (w2w w))) /\
@@ -78,136 +90,165 @@ val read_reg_byte_def = Define `
   (read_reg_byte ii EBP = seqT (read_reg ii EAX) (\w. constT (w2w (w >>> 8)))) /\
   (read_reg_byte ii ESI = seqT (read_reg ii EBX) (\w. constT (w2w (w >>> 8)))) /\
   (read_reg_byte ii EDI = seqT (read_reg ii ECX) (\w. constT (w2w (w >>> 8)))) /\
-  (read_reg_byte ii ESP = seqT (read_reg ii EDX) (\w. constT (w2w (w >>> 8))))`;
+  (read_reg_byte ii ESP = seqT (read_reg ii EDX) (\w. constT (w2w (w >>> 8))))
+End
 
-val read_ea_byte_def = Define `
+Definition read_ea_byte_def:
   (read_ea_byte ii (Xea_i i) = constT (w2w i)) /\
   (read_ea_byte ii (Xea_r r) = read_reg_byte ii r) /\
-  (read_ea_byte ii (Xea_m a) = read_m8 ii a)`;
+  (read_ea_byte ii (Xea_m a) = read_m8 ii a)
+End
 
-val read_src_ea_byte_def = Define `
-  read_src_ea_byte ii ds = seqT (ea_Xsrc ii ds) (\ea. addT ea (read_ea_byte ii ea))`;
+Definition read_src_ea_byte_def:
+  read_src_ea_byte ii ds = seqT (ea_Xsrc ii ds) (\ea. addT ea (read_ea_byte ii ea))
+End
 
-val read_dest_ea_byte_def = Define `
-  read_dest_ea_byte ii ds = seqT (ea_Xdest ii ds) (\ea. addT ea (read_ea_byte ii ea))`;
+Definition read_dest_ea_byte_def:
+  read_dest_ea_byte ii ds = seqT (ea_Xdest ii ds) (\ea. addT ea (read_ea_byte ii ea))
+End
 
 (* write_ea write a value to the supplied effective address *)
 
-val write_ea_def = Define `
+Definition write_ea_def:
   (write_ea ii (Xea_i i) x = failureT) /\  (* one cannot store into a constant *)
   (write_ea ii (Xea_r r) x = write_reg ii r x) /\
-  (write_ea ii (Xea_m a) x = write_m32 ii a x)`;
+  (write_ea ii (Xea_m a) x = write_m32 ii a x)
+End
 
-val write_ea_byte_def = Define `
+Definition write_ea_byte_def:
   (write_ea_byte ii (Xea_i i) x = failureT) /\  (* one cannot store into a constant *)
   (write_ea_byte ii (Xea_r r) x = failureT) /\  (* not supported yet *)
-  (write_ea_byte ii (Xea_m a) x = write_m8 ii a x)`;
+  (write_ea_byte ii (Xea_m a) x = write_m8 ii a x)
+End
 
 (* jump_to_ea updates eip according to procedure call *)
 
-val jump_to_ea_def = Define `
+Definition jump_to_ea_def:
   (jump_to_ea ii eip (Xea_i i) = write_eip ii (eip + i)) /\
   (jump_to_ea ii eip (Xea_r r) = seqT (read_reg ii r) (write_eip ii)) /\
-  (jump_to_ea ii eip (Xea_m a) = seqT (read_m32 ii a) (write_eip ii))`;
+  (jump_to_ea ii eip (Xea_m a) = seqT (read_m32 ii a) (write_eip ii))
+End
 
 (* call_dest_from_ea finds the destination according to procedure call semantics *)
 
-val call_dest_from_ea_def = Define `
+Definition call_dest_from_ea_def:
   (call_dest_from_ea ii eip (Xea_i i) = constT (eip + i)) /\
   (call_dest_from_ea ii eip (Xea_r r) = read_reg ii r) /\
-  (call_dest_from_ea ii eip (Xea_m a) = read_m32 ii a)`;
+  (call_dest_from_ea ii eip (Xea_m a) = read_m32 ii a)
+End
 
-val get_ea_address_def = Define `
+Definition get_ea_address_def:
   (get_ea_address (Xea_i i) = 0w) /\
   (get_ea_address (Xea_r r) = 0w) /\
-  (get_ea_address (Xea_m a) = a)`;
+  (get_ea_address (Xea_m a) = a)
+End
 
 (* eip modifiers *)
 
-val bump_eip_def = Define `
+Definition bump_eip_def:
   bump_eip ii len rest =
-    parT_unit rest (seqT (read_eip ii) (\x. write_eip ii (x + len)))`;
+    parT_unit rest (seqT (read_eip ii) (\x. write_eip ii (x + len)))
+End
 
 (* eflag updates *)
 
-val byte_parity_def = Define `
-  byte_parity = EVEN o LENGTH o FILTER I o n2bits 8 o w2n`;
+Definition byte_parity_def:
+  byte_parity = EVEN o LENGTH o FILTER I o n2bits 8 o w2n
+End
 
-val write_PF_def = Define `write_PF ii w = write_eflag ii X_PF (SOME (byte_parity w))`;
-val write_ZF_def = Define `write_ZF ii w = write_eflag ii X_ZF (SOME (w = 0w))`;
-val write_SF_def = Define `write_SF ii w = write_eflag ii X_SF (SOME (word_msb w))`;
+Definition write_PF_def:   write_PF ii w = write_eflag ii X_PF (SOME (byte_parity w))
+End
+Definition write_ZF_def:   write_ZF ii w = write_eflag ii X_ZF (SOME (w = 0w))
+End
+Definition write_SF_def:   write_SF ii w = write_eflag ii X_SF (SOME (word_msb w))
+End
 
-val write_logical_eflags_def = Define `
+Definition write_logical_eflags_def:
   write_logical_eflags ii w =
      parT_unit (write_PF ii w)
     (parT_unit (write_ZF ii w)
     (parT_unit (write_SF ii w)
     (parT_unit (write_eflag ii X_OF (SOME F))
     (parT_unit (write_eflag ii X_CF (SOME F))
-               (write_eflag ii X_AF NONE)))))`;  (* not modelled *)
+               (write_eflag ii X_AF NONE)))))
+End(* not modelled *)
 
-val write_arith_eflags_except_CF_OF_def = Define `
+Definition write_arith_eflags_except_CF_OF_def:
   write_arith_eflags_except_CF_OF ii w =
      parT_unit (write_PF ii w)
     (parT_unit (write_ZF ii w)
     (parT_unit (write_SF ii w)
-               (write_eflag ii X_AF NONE)))`;
+               (write_eflag ii X_AF NONE)))
+End
 
-val write_arith_eflags_def = Define `
+Definition write_arith_eflags_def:
   write_arith_eflags ii (w,c,x) =
     parT_unit (write_eflag ii X_CF (SOME c))
    (parT_unit (write_eflag ii X_OF (SOME x))
-              (write_arith_eflags_except_CF_OF ii w))`;
+              (write_arith_eflags_except_CF_OF ii w))
+End
 
-val erase_eflags_def = Define `
+Definition erase_eflags_def:
   erase_eflags ii =
      parT_unit (write_eflag ii X_PF NONE)
     (parT_unit (write_eflag ii X_ZF NONE)
     (parT_unit (write_eflag ii X_SF NONE)
     (parT_unit (write_eflag ii X_OF NONE)
     (parT_unit (write_eflag ii X_CF NONE)
-               (write_eflag ii X_AF NONE)))))`;
+               (write_eflag ii X_AF NONE)))))
+End
 
 (* binops *)
 
-val bool2num_def = Define `bool2num b = if b then 1 else 0`;
+Definition bool2num_def:   bool2num b = if b then 1 else 0
+End
 
-val word_signed_overflow_add_def = Define `
+Definition word_signed_overflow_add_def:
   word_signed_overflow_add a b =
-    (word_msb a = word_msb b) /\ ~(word_msb (a + b) = word_msb a)`;
+    (word_msb a = word_msb b) /\ ~(word_msb (a + b) = word_msb a)
+End
 
-val word_signed_overflow_sub_def = Define `
+Definition word_signed_overflow_sub_def:
   word_signed_overflow_sub a b =
-    ~(word_msb a = word_msb b) /\ ~(word_msb (a - b) = word_msb a)`;
+    ~(word_msb a = word_msb b) /\ ~(word_msb (a - b) = word_msb a)
+End
 
-val add_with_carry_out_def = Define `
+Definition add_with_carry_out_def:
   add_with_carry_out (x:Ximm) y =
-    (x + y, 2**32 <= w2n x + w2n y, word_signed_overflow_add x y)`;
+    (x + y, 2**32 <= w2n x + w2n y, word_signed_overflow_add x y)
+End
 
-val sub_with_borrow_out_def = Define `
+Definition sub_with_borrow_out_def:
   sub_with_borrow_out (x:Ximm) y =
-     (x - y, x <+ y, word_signed_overflow_sub x y)`;
+     (x - y, x <+ y, word_signed_overflow_sub x y)
+End
 
-val write_arith_result_def = Define `
-  write_arith_result ii (w,c,x) ea = parT_unit (write_arith_eflags ii (w,c,x)) (write_ea ii ea w)`;
+Definition write_arith_result_def:
+  write_arith_result ii (w,c,x) ea = parT_unit (write_arith_eflags ii (w,c,x)) (write_ea ii ea w)
+End
 
-val write_arith_result_no_CF_OF_def = Define `
+Definition write_arith_result_no_CF_OF_def:
   write_arith_result_no_CF_OF ii w ea =
-    (parT_unit (write_arith_eflags_except_CF_OF ii w) (write_ea ii ea w))`;
+    (parT_unit (write_arith_eflags_except_CF_OF ii w) (write_ea ii ea w))
+End
 
-val write_arith_result_no_write_def = Define `
-  write_arith_result_no_write ii (w,c,x) = (write_arith_eflags ii (w,c,x))`;
+Definition write_arith_result_no_write_def:
+  write_arith_result_no_write ii (w,c,x) = (write_arith_eflags ii (w,c,x))
+End
 
-val write_logical_result_def = Define `
-  write_logical_result ii w ea = (parT_unit (write_logical_eflags ii w) (write_ea ii ea w))`;
+Definition write_logical_result_def:
+  write_logical_result ii w ea = (parT_unit (write_logical_eflags ii w) (write_ea ii ea w))
+End
 
-val write_logical_result_no_write_def = Define `
-  write_logical_result_no_write ii w = (write_logical_eflags ii w)`;
+Definition write_logical_result_no_write_def:
+  write_logical_result_no_write ii w = (write_logical_eflags ii w)
+End
 
-val write_result_erase_eflags_def = Define `
-  write_result_erase_eflags ii w ea = (parT_unit (erase_eflags ii) (write_ea ii ea w))`;
+Definition write_result_erase_eflags_def:
+  write_result_erase_eflags ii w ea = (parT_unit (erase_eflags ii) (write_ea ii ea w))
+End
 
-val write_binop_def = Define `
+Definition write_binop_def:
   (write_binop ii Xadd  x y ea = (write_arith_result ii (add_with_carry_out x y) ea)) /\
   (write_binop ii Xsub  x y ea = (write_arith_result ii (sub_with_borrow_out x y) ea)) /\
   (write_binop ii Xcmp  x y ea = (write_arith_result_no_write ii (sub_with_borrow_out x y))) /\
@@ -218,9 +259,10 @@ val write_binop_def = Define `
   (write_binop ii Xshl  x y ea = (write_result_erase_eflags ii (x << w2n y) ea)) /\
   (write_binop ii Xshr  x y ea = (write_result_erase_eflags ii (x >>> w2n y) ea)) /\
   (write_binop ii Xsar  x y ea = (write_result_erase_eflags ii (x >> w2n y) ea)) /\
-  (write_binop ii _     x y ea = failureT)`;
+  (write_binop ii _     x y ea = failureT)
+End
 
-val write_binop_with_carry_def = Define `
+Definition write_binop_with_carry_def:
   (write_binop_with_carry ii Xadc x y cf ea =
        parT_unit (write_eflag ii X_CF (SOME (2**32 <= w2n x + w2n y + bool2num cf)))
       (parT_unit (write_eflag ii X_OF NONE)
@@ -229,21 +271,23 @@ val write_binop_with_carry_def = Define `
        parT_unit (write_eflag ii X_CF (SOME (w2n x < w2n y + bool2num cf)))
       (parT_unit (write_eflag ii X_OF NONE)
                  (write_arith_result_no_CF_OF ii (x - (y + n2w (bool2num cf))) ea))) /\
-  (write_binop_with_carry ii _    x y cf ea = failureT)`;
+  (write_binop_with_carry ii _    x y cf ea = failureT)
+End
 
 (* monops *)
 
-val write_monop_def = Define `
+Definition write_monop_def:
   (write_monop ii Xnot x ea = write_ea ii ea (~x)) /\
   (write_monop ii Xdec x ea = write_arith_result_no_CF_OF ii (x - 1w) ea) /\
   (write_monop ii Xinc x ea = write_arith_result_no_CF_OF ii (x + 1w) ea) /\
   (write_monop ii Xneg x ea =
     parT_unit (write_arith_result_no_CF_OF ii (0w - x) ea)
-                (write_eflag ii X_CF NONE))`;
+                (write_eflag ii X_CF NONE))
+End
 
 (* evaluating conditions of eflags *)
 
-val read_cond_def = Define `
+Definition read_cond_def:
   (read_cond ii X_ALWAYS = constT T) /\
   (read_cond ii X_E      = read_eflag ii X_ZF) /\
   (read_cond ii X_S      = read_eflag ii X_SF) /\
@@ -254,43 +298,48 @@ val read_cond_def = Define `
   (read_cond ii X_A      = seqT
      (parT (read_eflag ii X_CF) (read_eflag ii X_ZF)) (\(c,z). constT (~c /\ ~z))) /\
   (read_cond ii X_NA     = seqT
-     (parT (read_eflag ii X_CF) (read_eflag ii X_ZF)) (\(c,z). constT (c \/ z)))`;
+     (parT (read_eflag ii X_CF) (read_eflag ii X_ZF)) (\(c,z). constT (c \/ z)))
+End
 
 (* execute stack operations for non-EIP registers *)
 
-val x86_exec_pop_def = Define `
+Definition x86_exec_pop_def:
   x86_exec_pop ii rm =
      seqT (seqT (read_reg ii ESP) (\esp. addT esp (write_reg ii ESP (esp + 4w))))
           (\(old_esp,x). seqT (parT (ea_Xrm ii rm) (read_m32 ii old_esp))
-                              (\(ea,w). write_ea ii ea w))`;
+                              (\(ea,w). write_ea ii ea w))
+End
 
-val x86_exec_push_def = Define `
+Definition x86_exec_push_def:
   x86_exec_push ii imm_rm =
      (seqT
         (parT (seqT (ea_Ximm_rm ii imm_rm) (\ea. read_ea ii ea))
               (seqT (read_reg ii ESP) (\w. constT (w - 4w))))
-        (\(w,esp). parT_unit (write_m32 ii esp w) (write_reg ii ESP esp)))`;
+        (\(w,esp). parT_unit (write_m32 ii esp w) (write_reg ii ESP esp)))
+End
 
 (* execute stack operations for EIP register *)
 
-val x86_exec_pop_eip_def = Define `
+Definition x86_exec_pop_eip_def:
   x86_exec_pop_eip ii =
      seqT (seqT (read_reg ii ESP) (\esp. addT esp (write_reg ii ESP (esp + 4w))))
           (\(old_esp,x). seqT (read_m32 ii old_esp)
-                              (\w. write_eip ii w))`;
+                              (\w. write_eip ii w))
+End
 
-val x86_exec_push_eip_def = Define `
+Definition x86_exec_push_eip_def:
   x86_exec_push_eip ii =
      (seqT
         (parT (read_eip ii)
               (seqT (read_reg ii ESP) (\w. constT (w - 4w))))
-        (\(w,esp). parT_unit (write_m32 ii esp w) (write_reg ii ESP esp)))`;
+        (\(w,esp). parT_unit (write_m32 ii esp w) (write_reg ii ESP esp)))
+End
 
 (* check whether rm requires a lock, i.e. specifies a memory access *)
 
 (* execution of one instruction *)
 
-val x86_exec_def = Define `
+Definition x86_exec_def:
   (x86_exec ii (Xbinop binop_name ds) len = bump_eip ii len
        (if (binop_name = Xadc) \/ (binop_name = Xsbb) then
           seqT
@@ -434,10 +483,12 @@ val x86_exec_def = Define `
      seqT (x86_exec_pop ii (Xr EBX)) (\x.
      seqT (x86_exec_pop ii (Xr EDX)) (\x.
      seqT (x86_exec_pop ii (Xr ECX)) (\x.
-     seqT (x86_exec_pop ii (Xr EAX)) (\x. constT ()))))))))))`;
+     seqT (x86_exec_pop ii (Xr EAX)) (\x. constT ()))))))))))
+End
 
-val x86_execute_def = Define `
+Definition x86_execute_def:
   (x86_execute ii (Xprefix Xg1_none g2 i) len = x86_exec ii i len) /\
-  (x86_execute ii (Xprefix Xlock g2 i) len    = lockT (x86_exec ii i len))`;
+  (x86_execute ii (Xprefix Xlock g2 i) len    = lockT (x86_exec ii i len))
+End
 
 

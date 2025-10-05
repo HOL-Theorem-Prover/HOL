@@ -37,26 +37,34 @@ val (R_TAC, AR_TAC, R_TAC', AR_TAC') = SIMPLIFY_TACS list_c;
 (* Definitions.                                                             *)
 (* ------------------------------------------------------------------------- *)
 
-val reflexive_def = Define `reflexive f = !x. f x x`;
+Definition reflexive_def:   reflexive f = !x. f x x
+End
 
-val antisym_def = Define `antisym f = !x y. f x y /\ f y x ==> (x = y)`;
+Definition antisym_def:   antisym f = !x y. f x y /\ f y x ==> (x = y)
+End
 
-val total_def = Define `total f = !x y. f x y \/ f y x`;
+Definition total_def:   total f = !x y. f x y \/ f y x
+End
 
-val preorder_def = Define `preorder f = reflexive f /\ transitive f`;
+Definition preorder_def:   preorder f = reflexive f /\ transitive f
+End
 
-val partialorder_def = Define `partialorder f = preorder f /\ antisym f`;
+Definition partialorder_def:   partialorder f = preorder f /\ antisym f
+End
 
-val totalorder_def = Define `totalorder f = partialorder f /\ total f`;
+Definition totalorder_def:   totalorder f = partialorder f /\ total f
+End
 
-val sorted_def = Define
-  `(sorted f [] = T) /\
+Definition sorted_def:
+   (sorted f [] = T) /\
    (sorted f [h] = T) /\
-   (sorted f (h1 :: h2 :: t) = f h1 h2 /\ sorted f (h2 :: t))`;
+   (sorted f (h1 :: h2 :: t) = f h1 h2 /\ sorted f (h2 :: t))
+End
 
-val insert_def = Define
-  `(insert f a [] = [a]) /\
-   (insert f a (h :: t) = if f a h then a :: h :: t else h :: insert f a t)`;
+Definition insert_def:
+   (insert f a [] = [a]) /\
+   (insert f a (h :: t) = if f a h then a :: h :: t else h :: insert f a t)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)

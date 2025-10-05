@@ -714,9 +714,9 @@ val field_orders_disjoint = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of elements with specified order *)
-val field_order_equal_def = Define `
+Definition field_order_equal_def:
    field_order_equal (r:'a ring) (n: num) = {x | x IN R /\ (forder x = n)}
-`;
+End
 (* This is more general then orders f* n:
 field_orders_def  |- !r n. orders f* n = {x | x IN F* /\ (forder x = n)}
 *)

@@ -35,51 +35,54 @@ val BAG_INN_EQN = Q.prove
 (`BAG_INN e n b <=> BAG_VAL b e >= n`,
  RW_TAC arith_ss [BAG_VAL_DEF, BAG_INN]);
 
-val BAG_DIFF_EQNS = Q.store_thm
-("BAG_DIFF_EQNS",
- `(!b:'a bag. BAG_DIFF b {||} = b) /\
+Theorem BAG_DIFF_EQNS:
+  (!b:'a bag. BAG_DIFF b {||} = b) /\
   (!b:'a bag. BAG_DIFF {||} b = {||}) /\
   (!(x:'a) b (y:'a). BAG_DIFF (BAG_INSERT x b) {|y|} =
             if x = y then b else BAG_INSERT x (BAG_DIFF b {|y|})) /\
   (!(b1:'a bag) y (b2:'a bag).
-      BAG_DIFF b1 (BAG_INSERT y b2) = BAG_DIFF (BAG_DIFF b1 {|y|}) b2)`,
+      BAG_DIFF b1 (BAG_INSERT y b2) = BAG_DIFF (BAG_DIFF b1 {|y|}) b2)
+Proof
  RW_TAC arith_ss [BAG_DIFF,FUN_EQ_THM,BAG_INSERT,EMPTY_BAG] THEN
- RW_TAC arith_ss []);
+ RW_TAC arith_ss []
+QED
 
-val BAG_INTER_EQNS = Q.store_thm
-("BAG_INTER_EQNS",
- `(!b:'a bag. BAG_INTER {||} b = {||}) /\
+Theorem BAG_INTER_EQNS:
+  (!b:'a bag. BAG_INTER {||} b = {||}) /\
   (!b: 'a bag. BAG_INTER b {||} = {||}) /\
   (!(x:'a) b1 (b2:'a bag).
      BAG_INTER (BAG_INSERT x b1) b2 =
         if BAG_IN x b2
            then BAG_INSERT x (BAG_INTER b1 (BAG_DIFF b2 {|x|}))
-           else BAG_INTER b1 b2)`,
+           else BAG_INTER b1 b2)
+Proof
  RW_TAC arith_ss [BAG_INTER, EMPTY_BAG,FUN_EQ_THM,BAG_INSERT,BAG_DIFF]
  THEN RW_TAC arith_ss []
  THEN FULL_SIMP_TAC arith_ss []
  THEN RW_TAC arith_ss []
  THEN FULL_SIMP_TAC arith_ss [BAG_IN, BAG_INN]
  THEN REPEAT (POP_ASSUM MP_TAC)
- THEN RW_TAC arith_ss []);
+ THEN RW_TAC arith_ss []
+QED
 
-val BAG_MERGE_EQNS = Q.store_thm
-("BAG_MERGE_EQNS",
- `(!b:'a bag. BAG_MERGE {||} b = b) /\
+Theorem BAG_MERGE_EQNS:
+  (!b:'a bag. BAG_MERGE {||} b = b) /\
   (!b:'a bag. BAG_MERGE b {||} = b) /\
   (!x:'a. !b1 b2:'a bag.
          BAG_MERGE (BAG_INSERT x b1) b2 =
-             BAG_INSERT x (BAG_MERGE b1 (BAG_DIFF b2 {|x|})))`,
+             BAG_INSERT x (BAG_MERGE b1 (BAG_DIFF b2 {|x|})))
+Proof
  RW_TAC arith_ss [BAG_MERGE, EMPTY_BAG,FUN_EQ_THM,BAG_INSERT,BAG_DIFF]
  THEN RW_TAC arith_ss []
- THEN FULL_SIMP_TAC arith_ss []);
+ THEN FULL_SIMP_TAC arith_ss []
+QED
 
-val SUB_BAG_EQNS = Q.store_thm
-("SUB_BAG_EQNS",
- `(!b:'a bag. SUB_BAG {||} b <=> T) /\
+Theorem SUB_BAG_EQNS:
+  (!b:'a bag. SUB_BAG {||} b <=> T) /\
   (!x:'a. !b1 b2:'a bag.
       SUB_BAG (BAG_INSERT x b1) b2 <=>
-             BAG_IN x b2 /\ SUB_BAG b1 (BAG_DIFF b2 {|x|}))`,
+             BAG_IN x b2 /\ SUB_BAG b1 (BAG_DIFF b2 {|x|}))
+Proof
  RW_TAC arith_ss [SUB_BAG_EMPTY,SUB_BAG, BAG_INSERT, BAG_INN,
           BAG_IN, BAG_DIFF,EMPTY_BAG, ARITH`!m. 0 >= m <=> m=0n`]
   THEN REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN RW_TAC arith_ss []
@@ -89,7 +92,8 @@ val SUB_BAG_EQNS = Q.store_thm
    THENL [RES_TAC THEN FULL_SIMP_TAC arith_ss [],
          `b1(x) >= n-1` by DECIDE_TAC THEN
          RES_THEN MP_TAC THEN REWRITE_TAC [] THEN DECIDE_TAC],
-  RES_THEN MP_TAC THEN ASM_REWRITE_TAC [] THEN DECIDE_TAC]);
+  RES_THEN MP_TAC THEN ASM_REWRITE_TAC [] THEN DECIDE_TAC]
+QED
 
 val PSUB_BAG_LEM = Q.prove
 (`!b1 b2.PSUB_BAG b1 b2 <=> SUB_BAG b1 b2 /\ ~SUB_BAG b2 b1`,
@@ -225,8 +229,9 @@ val llcases_LNIL = llcases_def |> SPEC_ALL |> Q.INST [`l` |-> `LNIL`]
 val llcases_LCONS = llcases_def |> SPEC_ALL |> Q.INST [`l` |-> `h:::t`]
                                |> SIMP_RULE (srw_ss()) []
 
-val LLCONS_def = Define`
-  LLCONS h t = LCONS h (t ())`;
+Definition LLCONS_def:
+  LLCONS h t = LCONS h (t ())
+End
 
 val LAPPEND_llcases = prove(
   ``LAPPEND l1 l2 = llcases l2 (λ(h,t). LLCONS h (λ(). LAPPEND t l2)) l1``,

@@ -61,9 +61,9 @@ val _ = intLib.deprecate_int ();
 (* ------------------------------------------------------------------------- *)
 
 (* Define cyclotomic polynomials *)
-val poly_cyclo_def = Define `
+Definition poly_cyclo_def:
     poly_cyclo (r:'a ring) (n:num) = PIFACTOR (orders f* n)
-`;
+End
 (* Overload on cyclotomic polynomial *)
 val _ = overload_on("cyclo", ``poly_cyclo r``);
 (*

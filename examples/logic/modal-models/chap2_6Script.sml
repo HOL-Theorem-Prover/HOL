@@ -19,11 +19,12 @@ Induct_on `phi` (* 5 *) >>
 fs[L1tau_def,fDISJ_def,fNOT_def,fAND_def]
 QED
 
-val folm2mm_def = Define`
+Definition folm2mm_def:
 folm2mm FM = <| frame := <| world := FM.Dom ;
                               rel := \w1 w2. (FM.Pred 0 [w1;w2] /\
                                               w1 IN FM.Dom /\ w2 IN FM.Dom) |>;
-                 valt := \v w. (FM.Pred v [w] /\ w IN FM.Dom) |>`;
+                 valt := \v w. (FM.Pred v [w] /\ w IN FM.Dom) |>
+End
 
 
 Theorem MAP_LIST_EQ :
@@ -1106,7 +1107,7 @@ fs[Abbr`MS`,Abbr`MS'`] >>
 fs[models2worlds_def,folm2mm_def,mm2folm_def]
 QED
 
-val invar4bisim_def = Define`
+Definition invar4bisim_def:
   invar4bisim x (t1: μ itself) (t2: ν itself) phi <=>
      (FV phi ⊆ {x} /\ L1tau phi /\
      !(M:μ modalBasics$model) (N:ν modalBasics$model) v w.
@@ -1114,7 +1115,8 @@ val invar4bisim_def = Define`
            (!(σm: num -> μ) (σn: num -> ν).
              (valuation (mm2folm M) σm /\ valuation (mm2folm N) σn) ==>
                     (fsatis (mm2folm M) σm(|x |-> w|) phi <=>
-                    fsatis (mm2folm N) σn(|x |-> v|) phi )))`
+                    fsatis (mm2folm N) σn(|x |-> v|) phi )))
+End
 
 Theorem invar4bisim_def':
  ∀x phi.

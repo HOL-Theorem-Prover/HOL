@@ -57,11 +57,12 @@ val maxNatL = store_thm ("maxNatL",
 val maxNatR = store_thm ("maxNatR",
   ``(MAX n m = 0) ==> (m = 0)``, RW_TAC std_ss [MAX_EQ_0]);
 
-val degreeFormula_def = Define `
+Definition degreeFormula_def:
    (degreeFormula (At C) = 1) /\
    (degreeFormula (Slash F1 F2) = SUC (MAX (degreeFormula F1) (degreeFormula F2))) /\
    (degreeFormula (Backslash F1 F2) = SUC (MAX (degreeFormula F1) (degreeFormula F2))) /\
-   (degreeFormula (Dot F1 F2) = SUC (MAX (degreeFormula F1) (degreeFormula F2)))`;
+   (degreeFormula (Dot F1 F2) = SUC (MAX (degreeFormula F1) (degreeFormula F2)))
+End
 
 val degreeForm_0 = store_thm ("degreeForm_0", ``!F0. 1 <= (degreeFormula F0)``,
     Induct >> rw [degreeFormula_def]);
@@ -74,10 +75,11 @@ val _ = Datatype `Rule = SeqAxiom
                        | LeftSlash  | LeftBackslash  | LeftDot
                        | CutRule    | SeqExt`;
 
-val all_rules_def = Define `
+Definition all_rules_def:
     all_rules =
         { SeqAxiom; RightSlash; RightBackslash; RightDot;
-          LeftSlash; LeftBackslash; LeftDot; SeqExt; CutRule }`;
+          LeftSlash; LeftBackslash; LeftDot; SeqExt; CutRule }
+End
 
 (* Note: (Dertree list) never has more than 2 elements in Lambek's Sequent Calculus *)
 val _ = Datatype `Dertree = Der ('a Sequent) Rule (Dertree list)
@@ -90,37 +92,43 @@ val Dertree_distinct' = save_thm ("Dertree_distinct'", GSYM Dertree_distinct);
 val Dertree_11        = TypeBase.one_one_of ``:'a Dertree``;
 
 (* not used *)
-val Is_Unfinished_def = Define `
+Definition Is_Unfinished_def:
    (Is_Unfinished (Der _ _ []) = F) /\
    (Is_Unfinished (Der _ _ [D]) = Is_Unfinished D) /\
    (Is_Unfinished (Der _ _ [D1; D2]) = (Is_Unfinished D1 /\ Is_Unfinished D2)) /\
-   (Is_Unfinished (Unf _) = T)`;
+   (Is_Unfinished (Unf _) = T)
+End
 
 (* not used *)
-val Is_Finished_def = Define `
+Definition Is_Finished_def:
    (Is_Finished (Der _ _ []) = T) /\
    (Is_Finished (Der _ _ [D]) = Is_Finished D) /\
    (Is_Finished (Der _ _ [D1; D2]) = (Is_Finished D1 /\ Is_Finished D2)) /\
-   (Is_Finished (Unf _) = F)`;
+   (Is_Finished (Unf _) = F)
+End
 
 (* structure accessors *)
-val head_def = Define `
+Definition head_def:
    (head (Der seq _ _) = seq) /\
-   (head (Unf seq) = seq)`;
+   (head (Unf seq) = seq)
+End
 
-val concl_def = Define `
+Definition concl_def:
    (concl (Unf (Sequent E Delta A))     = A) /\
-   (concl (Der (Sequent E Delta A) _ _) = A)`;
+   (concl (Der (Sequent E Delta A) _ _) = A)
+End
 
-val prems_def = Define `
+Definition prems_def:
    (prems (Unf (Sequent E Delta A))     = Delta) /\
-   (prems (Der (Sequent E Delta A) _ _) = Delta)`;
+   (prems (Der (Sequent E Delta A) _ _) = Delta)
+End
 
-val exten_def = Define `
+Definition exten_def:
    (exten (Unf (Sequent E Delta A))     = E) /\
-   (exten (Der (Sequent E Delta A) _ _) = E)`;
+   (exten (Der (Sequent E Delta A) _ _) = E)
+End
 
-val degreeRule_def = Define `
+Definition degreeRule_def:
    (degreeRule (Der S SeqAxiom [])              = 0) /\
    (degreeRule (Der S RightSlash [H])           = 0) /\
    (degreeRule (Der S RightBackslash [H])       = 0) /\
@@ -131,10 +139,11 @@ val degreeRule_def = Define `
    (degreeRule (Der S SeqExt [H])               = 0) /\
    (* The degree of a cut is the degree of the cut formula which disappears after
       application of the rule. *)
-   (degreeRule (Der S CutRule [H1; H2])         = degreeFormula (concl H1))`;
+   (degreeRule (Der S CutRule [H1; H2])         = degreeFormula (concl H1))
+End
 
 (* degreeProof, one way to check if CutRule gets used *)
-val degreeProof_def = Define `
+Definition degreeProof_def:
    (degreeProof (Der S SeqAxiom [])             = 0) /\
    (degreeProof (Der S RightSlash [H])          = degreeProof H) /\
    (degreeProof (Der S RightBackslash [H])      = degreeProof H) /\
@@ -146,7 +155,8 @@ val degreeProof_def = Define `
    (* CutRule is special *)
    (degreeProof (Der S CutRule [H1; H2])        =
         MAX (degreeFormula (concl H1))
-            (MAX (degreeProof H1) (degreeProof H2)))`;
+            (MAX (degreeProof H1) (degreeProof H2)))
+End
 
 (* subFormula and their theorems *)
 val (subFormula_rules, subFormula_ind, subFormula_cases) = Hol_reln `
@@ -280,8 +290,9 @@ val subReplace3 = store_thm ("subReplace3",
         `subFormTerm X T2 \/ subFormTerm X T3` by PROVE_TAC [] \\
         PROVE_TAC [comR] ] ]);
 
-val CutFreeProof_def = Define `
-    CutFreeProof p = (degreeProof p = 0)`;
+Definition CutFreeProof_def:
+    CutFreeProof p = (degreeProof p = 0)
+End
 
 val notCutFree = store_thm ("notCutFree",
   ``!E T1 T2 D A C p p1 p2.
@@ -382,7 +393,8 @@ val [rs, rbs, rd1, rd2, ls1, ls2, lbs1, lbs2, ld, cr1, cr2, se] =
                   CONJUNCTS subProofOne_rules));
 
 (* (subProof :'a Dertree -> 'a Dertree -> bool) *)
-val subProof_def = Define `subProof = RTC subProofOne`;
+Definition subProof_def:   subProof = RTC subProofOne
+End
 
 val sameProof = store_thm (
    "sameProof", ``!p. subProof p p``,
@@ -447,8 +459,9 @@ val CutFreeSubProof = store_thm ("CutFreeSubProof",
  >> HO_MATCH_MP_TAC RTC_INDUCT
  >> PROVE_TAC [CutFreeSubProofOne]);
 
-val extensionSub_def = Define `
-    extensionSub E = !Form T1 T2. E T1 T2 ==> subFormTerm Form T1 ==> subFormTerm Form T2`;
+Definition extensionSub_def:
+    extensionSub E = !Form T1 T2. E T1 T2 ==> subFormTerm Form T1 ==> subFormTerm Form T2
+End
 
 val subProofOne_extension = store_thm (
    "subProofOne_extension",
@@ -535,7 +548,8 @@ val [derivDerivOne, derivOne, derivLeft, derivRight, derivBoth] =
                   CONJUNCTS deriv_rules));
 
 (* closure rules, in this way we can finish a proof *)
-val Deriv_def = Define `Deriv = RTC deriv`;
+Definition Deriv_def:   Deriv = RTC deriv
+End
 
 (* |- ∀x. Deriv x x *)
 val Deriv_refl  = save_thm (

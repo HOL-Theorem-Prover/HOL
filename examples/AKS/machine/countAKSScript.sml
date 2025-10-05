@@ -277,14 +277,14 @@ val it =
 (* Make (X ** m + c) (MOD n, (unity k)) of length k. *)
 (* This is X ** (m MOD k) + c *)
 (* e.g. X ** 7 + |1| (MOD 7, (unity 4)) = X ** (7 MOD 4) + 1 = X ** 3 + 1 = [1; 0; 0; 1] *)
-val poly_X_exp_addM_def = Define`
+Definition poly_X_exp_addM_def:
     poly_X_exp_addM n k m c =
       do
         p0 <- poly_X_expM n k m;
         p1 <- poly_constM n k c;
         poly_addM n p0 p1;
       od
-`;
+End
 
 (* (X ** m + 13)  (mod 10, (unity 7)), m = 1 ... 10
 > EVAL ``poly_X_exp_addM 10 7 1 13``; = ([3; 1; 0; 0; 0; 0; 0],Count 201): thm
@@ -320,9 +320,9 @@ val poly_X_exp_addM_def = Define`
 > unity_mod_monomial_alt
 |- !r k c. unity_mod_monomial r k c = unity_mod_special r k 1 c
 *)
-val poly_X_addM_def = Define`
+Definition poly_X_addM_def:
     poly_X_addM n k c = poly_X_exp_addM n k 1 c
-`;
+End
 
 (*  (x + 13)  (mod 10, (unity 7))
 > EVAL ``poly_X_addM 10 7 13``; = ([3; 1; 0; 0; 0; 0; 0],Count 201): thm
@@ -585,7 +585,7 @@ val poly_X_addM_steps_bound = store_thm(
 *)
 
 (* Introspective check for (X + c) in (MOD n, unity k) *)
-val poly_introM_def = Define`
+Definition poly_introM_def:
     poly_introM n k c =
       do
          p <- poly_X_addM n k c;       (* p <- X + c *)
@@ -593,7 +593,7 @@ val poly_introM_def = Define`
          r <- poly_X_exp_addM n k n c; (* r <- X ** n + c *)
          poly_eqM q r;                 (* return q = r *)
       od
-`;
+End
 
 (*
 > EVAL ``poly_introM 7 4 1``; = (T,Count 3299): thm
@@ -1049,7 +1049,7 @@ val it = |- !n. aks n <=>
 *)
 
 (* The full AKS in monadic style *)
-val aksM_def = Define`
+Definition aksM_def:
     aksM n =
       do
         b0 <- power_freeM n;
@@ -1062,7 +1062,7 @@ val aksM_def = Define`
                    od
         else return F
       od
-`;
+End
 
 (*
 > EVAL ``aksM 0``; = (F,Count 2): thm

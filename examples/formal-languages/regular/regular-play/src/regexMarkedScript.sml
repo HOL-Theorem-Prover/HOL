@@ -12,53 +12,53 @@ val MReg_rw  = LIST_CONJ MReg_rws;
 val MReg_ss  = rewrites MReg_rws;
 
 
-val MARK_REG_def = Define `
+Definition MARK_REG_def:
          (MARK_REG (Eps)     = MEps                          ) /\
          (MARK_REG (Sym c)   = MSym F c                      ) /\
          (MARK_REG (Alt p q) = MAlt (MARK_REG p) (MARK_REG q)) /\
          (MARK_REG (Seq p q) = MSeq (MARK_REG p) (MARK_REG q)) /\
          (MARK_REG (Rep r)   = MRep (MARK_REG r)             )
-`;
-val UNMARK_REG_def = Define `
+End
+Definition UNMARK_REG_def:
          (UNMARK_REG (MEps)     = Eps                              ) /\
          (UNMARK_REG (MSym _ c) = Sym c                            ) /\
          (UNMARK_REG (MAlt p q) = Alt (UNMARK_REG p) (UNMARK_REG q)) /\
          (UNMARK_REG (MSeq p q) = Seq (UNMARK_REG p) (UNMARK_REG q)) /\
          (UNMARK_REG (MRep r)   = Rep (UNMARK_REG r)               )
-`;
+End
 
 
 
-val empty_def = Define `
+Definition empty_def:
          (empty (MEps)     <=> T                     ) /\
          (empty (MSym _ _) <=> F                     ) /\
          (empty (MAlt p q) <=> (empty p) \/ (empty q)) /\
          (empty (MSeq p q) <=> (empty p) /\ (empty q)) /\
          (empty (MRep r)   <=> T                     )
-`;
+End
 
-val final_def = Define `
+Definition final_def:
          (final (MEps)     <=> F                                    ) /\
          (final (MSym b _) <=> b                                    ) /\
          (final (MAlt p q) <=>  (final p) \/ (final q)              ) /\
          (final (MSeq p q) <=> ((final p) /\ (empty q)) \/ (final q)) /\
          (final (MRep r)   <=> final r                              )
-`;
+End
 
-val shift_def = Define `
+Definition shift_def:
          (shift _ (MEps)     _ = MEps                                                        ) /\
          (shift m (MSym _ x) c = MSym (m /\ (x = c)) x                                       ) /\
          (shift m (MAlt p q) c = MAlt (shift m p c) (shift m q c)                            ) /\
          (shift m (MSeq p q) c = MSeq (shift m p c) (shift ((m /\ (empty p)) \/ final p) q c)) /\
          (shift m (MRep r)   c = MRep (shift (m \/ (final r)) r c)                           )
-`;
+End
 
 
 
-val acceptM_def = Define `
+Definition acceptM_def:
          (acceptM r []      = empty r                                 ) /\
          (acceptM r (c::cs) = final (FOLDL (shift F) (shift T r c) cs))
-`;
+End
 
 
 
@@ -152,17 +152,17 @@ val acceptM_DEFs = store_thm ("acceptM_DEFs", ``
 (* ----------------------------------------------------------------------------- *)
 (* --------------------- MARK_REG and UNMARK_REG *)
 (* generate nodelist helper definition *)
-val EXP_NODELIST_def = Define `
+Definition EXP_NODELIST_def:
          (EXP_NODELIST (MEps) = [MEps]) /\
          (EXP_NODELIST (MSym b x) = [MSym b x]) /\
          (EXP_NODELIST (MAlt p q) = (EXP_NODELIST p) ++ (EXP_NODELIST q)) /\
          (EXP_NODELIST (MSeq p q) = (EXP_NODELIST p) ++ (EXP_NODELIST q)) /\
          (EXP_NODELIST (MRep r) = (EXP_NODELIST r))
-`;
+End
 
-val HAS_MARKS_def = Define `
+Definition HAS_MARKS_def:
          HAS_MARKS mr = ?x. MEM (MSym T x) (EXP_NODELIST mr)
-`;
+End
 
 val HAS_MARKS_ALT_DEF = store_thm ("HAS_MARKS_ALT_DEF", ``
          (       HAS_MARKS (MEps)     <=> F                              ) /\
@@ -229,17 +229,17 @@ val empty_sem_thm = store_thm ("empty_sem_thm", ``
 (* restregexes helper definition *)
 (* represents a set of regular expressions without marking *)
 (* each of the regular expressions stands for how to finish matching the input MReg, starting from a T mark *)
-val lang_of_MF_def = Define `
+Definition lang_of_MF_def:
          (lang_of_MF (MEps)     = {}                                                                          ) /\
          (lang_of_MF (MSym b _) = if b then {[]} else {}                                                      ) /\
          (lang_of_MF (MAlt p q) = (lang_of_MF p) UNION (lang_of_MF q)                                             ) /\
          (lang_of_MF (MSeq p q) = { u ++ v | u IN (lang_of_MF p) /\ v IN (language_of (UNMARK_REG q))} UNION (lang_of_MF q)) /\
          (lang_of_MF (MRep r)   = { FLAT (u::l) | u IN (lang_of_MF r) /\ EVERY (\w. w IN (language_of (UNMARK_REG r))) l })
-`;
+End
 
-val lang_of_M_def  = Define `
+Definition lang_of_M_def:
          lang_of_M m mr = (if m then (language_of (UNMARK_REG mr)) else {}) UNION (lang_of_MF mr)
-`;
+End
 
 (* this rewrite lemma helps to simplify and clarify the proof of lang_of_M_shift_m_thm *)
 val lang_of_M_REWRS = store_thm ("lang_of_M_REWRS", ``

@@ -53,38 +53,39 @@ val FORALL_STATE = Q.store_thm
 (* Basic constants and operations.                                           *)
 (*---------------------------------------------------------------------------*)
 
-val DELTA_def = Define `DELTA = 0x9e3779b9w : word32`;
+Definition DELTA_def:   DELTA = 0x9e3779b9w : word32
+End
 
 (*---------------------------------------------------------------------------*)
 (* ?? = xor  (infix) and >>> is LSR                                          *)
 (*---------------------------------------------------------------------------*)
 
-val ShiftXor_def =
- Define
-   `ShiftXor (x:word32,s,k0,k1) =
-          ((x << 4) + k0) ?? (x + s) ?? ((x >>> 5) + k1)`;
+Definition ShiftXor_def:
+    ShiftXor (x:word32,s,k0,k1) =
+          ((x << 4) + k0) ?? (x + s) ?? ((x >>> 5) + k1)
+End
 
 (* --------------------------------------------------------------------------*)
 (*      One round forward computation                                        *)
 (* --------------------------------------------------------------------------*)
 
-val Round_def =
- Define
-   `Round ((y,z),(k0,k1,k2,k3),s):state =
+Definition Round_def:
+    Round ((y,z),(k0,k1,k2,k3),s):state =
       let s' = s + DELTA in let
           y' = y + ShiftXor(z, s', k0, k1) in let
           z' = z + ShiftXor(y', s', k2, k3)
       in
-        ((y',z'), (k0,k1,k2,k3), s')`;
+        ((y',z'), (k0,k1,k2,k3), s')
+End
 
 (*---------------------------------------------------------------------------*)
 (* Arbitrary number of cipher rounds                                         *)
 (*---------------------------------------------------------------------------*)
 
-val Rounds_def =
- Define
-   `Rounds (n:word32,s:state) =
-      if n=0w then s else Rounds (n-1w, Round s)`;
+Definition Rounds_def:
+    Rounds (n:word32,s:state) =
+      if n=0w then s else Rounds (n-1w, Round s)
+End
 
 val Rounds_ind = fetch "-" "Rounds_ind";   (* induction *)
 
@@ -92,11 +93,11 @@ val Rounds_ind = fetch "-" "Rounds_ind";   (* induction *)
 (* Encrypt  (32 rounds)                                                      *)
 (*---------------------------------------------------------------------------*)
 
-val teaEncrypt_def =
- Define
-   `teaEncrypt (keys,txt) =
+Definition teaEncrypt_def:
+    teaEncrypt (keys,txt) =
       let (cipheredtxt,keys,sum) = Rounds(32w,(txt,keys,0w)) in
-      cipheredtxt`;
+      cipheredtxt
+End
 
 (*===========================================================================*)
 (*      Decryption                                                           *)
@@ -107,34 +108,34 @@ val teaEncrypt_def =
 (*     One round backward computation                                        *)
 (*---------------------------------------------------------------------------*)
 
-val InvRound_def =
- Define
-   `InvRound((y,z),(k0,k1,k2,k3),sum) =
+Definition InvRound_def:
+    InvRound((y,z),(k0,k1,k2,k3),sum) =
       let z' = z - ShiftXor(y, sum, k2, k3) in
       let y' = y - ShiftXor(z',sum, k0, k1) in
       let sum' = sum-DELTA
       in
-         ((y',z'), (k0,k1,k2,k3), sum')`;
+         ((y',z'), (k0,k1,k2,k3), sum')
+End
 
 (*---------------------------------------------------------------------------*)
 (* Arbitrary number of decipher rounds                                       *)
 (*---------------------------------------------------------------------------*)
 
-val InvRounds_def =
- Define
-   `InvRounds (n:word32,s:state) =
-     if n=0w then s else InvRounds (n-1w, InvRound s)`;
+Definition InvRounds_def:
+    InvRounds (n:word32,s:state) =
+     if n=0w then s else InvRounds (n-1w, InvRound s)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Decrypt (32 rounds)                                                       *)
 (*---------------------------------------------------------------------------*)
 
-val teaDecrypt_def =
- Define
-   `teaDecrypt (keys,txt) =
+Definition teaDecrypt_def:
+    teaDecrypt (keys,txt) =
       let (plaintxt,keys,sum) = InvRounds(32w,(txt,keys,DELTA << 5))
       in
-        plaintxt`;
+        plaintxt
+End
 
 (*===========================================================================*)
 (* Correctness                                                               *)

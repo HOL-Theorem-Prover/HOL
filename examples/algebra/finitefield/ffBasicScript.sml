@@ -105,13 +105,13 @@ Therefore, keep this file clean by not loading any polynomials.
 (* ------------------------------------------------------------------------- *)
 
 (* Prime Field *)
-val PF_def = zDefine`
+Definition PF_def[nocompute]:
   PF (r:'a field) =
    <| carrier := IMAGE (r.sum.exp #1) univ(:num);
           sum := <| carrier := IMAGE (r.sum.exp #1) univ(:num); op := r.sum.op; id := #0 |>;
          prod := <| carrier := IMAGE (r.sum.exp #1) univ(:num); op := r.prod.op; id := #1 |>
     |>
-`;
+End
 
 (* Theorem: Properties of Prime Field *)
 (* Proof: by definition.

@@ -21,9 +21,10 @@ val _ = Hol_datatype `
 
 (* check whether rm requires a lock, i.e. specifies a memory access *)
 
-val Zrm_is_memory_access_def = Define `
+Definition Zrm_is_memory_access_def:
   (Zrm_is_memory_access (Zm i b d) = T) /\
-  (Zrm_is_memory_access (Zr r) = F)`;
+  (Zrm_is_memory_access (Zr r) = F)
+End
 
 val _ = Hol_datatype `                 (* Here XX is one of 8, 16, 32, 64. *)
   Zdest_src = Zrm_i of Zrm  => word64  (* mnemonic r/mXX, immXX (sign-extended) *)
@@ -70,11 +71,12 @@ val _ = Hol_datatype `Zprefix = Zlock
                               | Zbranch_not_taken
                               | Zoperand_size_override `;
 
-val Zprefix_group_def = Define `
+Definition Zprefix_group_def:
   (Zprefix_group Zlock = 1) /\
   (Zprefix_group Zbranch_taken = 2) /\
   (Zprefix_group Zbranch_not_taken = 2) /\
-  (Zprefix_group Zoperand_size_override = 3)`;
+  (Zprefix_group Zoperand_size_override = 3)
+End
 
 val _ = Hol_datatype `Zinst = Zfull_inst of Zprefix list => Zinstruction`;
 

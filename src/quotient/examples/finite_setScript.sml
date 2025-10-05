@@ -102,35 +102,35 @@ val [CONS_LEFT_COMM, CONS_LEFT_IDEM, NIL_RSP, CONS_RSP, fset_SYM', fset_TRANS']
 
 (* The finite set equivalence relation is reflexive, symmetric and transitive.*)
 
-val fset_REFL = store_thm
-   ("fset_REFL",
-    ``!X:'a list. X == X``,
+Theorem fset_REFL:
+      !X:'a list. X == X
+Proof
     Induct
     THEN RW_TAC std_ss [fsequiv_rules_sat]
-   );
+QED
 
-val fset_SYM = store_thm
-   ("fset_SYM",
-    ``!X Y:'a list.
-           X == Y ==> Y == X``,
+Theorem fset_SYM:
+      !X Y:'a list.
+           X == Y ==> Y == X
+Proof
     REWRITE_TAC [fset_SYM']
-   );
+QED
 
-val fset_TRANS = store_thm
-   ("fset_TRANS",
-    ``!X Y Z:'a list.
-           X == Y /\ Y == Z ==> X == Z``,
+Theorem fset_TRANS:
+      !X Y Z:'a list.
+           X == Y /\ Y == Z ==> X == Z
+Proof
     PROVE_TAC [fset_TRANS']
-   );
+QED
 
-val fset_NIL = store_thm
-   ("fset_NIL",
-    ``!A B:'a list.
-           A == B ==> ((A = []) = (B = []))``,
+Theorem fset_NIL:
+      !A B:'a list.
+           A == B ==> ((A = []) = (B = []))
+Proof
     rule_induct fsequiv_ind_thm
     THEN REPEAT STRIP_TAC
     THEN RW_TAC list_ss []
-   );
+QED
 
 
 
@@ -161,87 +161,88 @@ val fset_NIL = store_thm
 
 val _ = overload_on("MEM", ``MEM :'a -> 'a list -> bool``);
 
-val MEM_RSP1 = store_thm
-   ("MEM_RSP1",
-    ``!X Y. X == Y ==> (!x:'a. MEM x X = MEM x Y)``,
+Theorem MEM_RSP1:
+      !X Y. X == Y ==> (!x:'a. MEM x X = MEM x Y)
+Proof
     rule_induct fsequiv_ind_thm
     THEN REPEAT STRIP_TAC
     THEN RW_TAC std_ss [MEM]
     THEN PROVE_TAC []
-   );
+QED
 
-val MEM_RSP = store_thm
-   ("MEM_RSP",
-    ``!X Y (x:'a). X == Y ==> (MEM x X = MEM x Y)``,
+Theorem MEM_RSP:
+      !X Y (x:'a). X == Y ==> (MEM x X = MEM x Y)
+Proof
     PROVE_TAC [MEM_RSP1]
-   );
+QED
 
-val NO_MEM_NIL = store_thm
-   ("NO_MEM_NIL",
-    ``!A. (!a:'a. ~(MEM a A)) = (A = [])``,
+Theorem NO_MEM_NIL:
+      !A. (!a:'a. ~(MEM a A)) = (A = [])
+Proof
     Induct
     THEN RW_TAC std_ss [MEM]
     THEN PROVE_TAC [fsequiv_rules_sat]
-   );
+QED
 
-val NONE_MEM_NIL = store_thm
-   ("NONE_MEM_NIL",
-    ``!A. (!a:'a. ~(MEM a A)) = (A == [])``,
+Theorem NONE_MEM_NIL:
+      !A. (!a:'a. ~(MEM a A)) = (A == [])
+Proof
     REWRITE_TAC [NO_MEM_NIL]
     THEN PROVE_TAC [fsequiv_rules_sat,fset_NIL]
-   );
+QED
 
-val MEM_CONS = store_thm
-   ("MEM_CONS",
-    ``!A (a:'a). MEM a A ==> (a :: A) == A``,
+Theorem MEM_CONS:
+      !A (a:'a). MEM a A ==> (a :: A) == A
+Proof
     Induct
     THEN RW_TAC std_ss [MEM]
     THEN PROVE_TAC [fsequiv_rules_sat]
-   );
+QED
 
-val finite_set1_strong_cases = store_thm
-   ("finite_set1_strong_cases",
-    ``!X. (X = []) \/ ?(a:'a) Y. ~(MEM a Y) /\ X == (a :: Y)``,
+Theorem finite_set1_strong_cases:
+      !X. (X = []) \/ ?(a:'a) Y. ~(MEM a Y) /\ X == (a :: Y)
+Proof
     Induct
     THEN PROVE_TAC [MEM,MEM_CONS,fsequiv_rules_sat]
-   );
+QED
 
 (* --------------------------------------------------------------------- *)
 (* Definition of Card function to measure the size of a finite set.      *)
 (* --------------------------------------------------------------------- *)
 
-val Card1_def = Define
-   `(Card1 ([]) = 0)  /\
-    (Card1 ((a:'a) :: A) = if MEM a A then Card1 A else SUC (Card1 A))`;
+Definition Card1_def:
+    (Card1 ([]) = 0)  /\
+    (Card1 ((a:'a) :: A) = if MEM a A then Card1 A else SUC (Card1 A))
+End
 
-val Card1_RSP = store_thm
-   ("Card1_RSP",
-    ``!A B:'a list. A == B ==> (Card1 A = Card1 B)``,
+Theorem Card1_RSP:
+      !A B:'a list. A == B ==> (Card1 A = Card1 B)
+Proof
     rule_induct fsequiv_strong_ind
     THEN REPEAT STRIP_TAC
     THEN RW_TAC arith_ss [Card1_def,MEM]
     THEN PROVE_TAC [MEM_RSP]
-   );
+QED
 
-val Card1_0 = store_thm
-   ("Card1_0",
-    ``!A:'a list. (Card1 A = 0) = (A = [])``,
+Theorem Card1_0:
+      !A:'a list. (Card1 A = 0) = (A = [])
+Proof
     Induct
     THEN RW_TAC std_ss [Card1_def]
     THEN PROVE_TAC[NO_MEM_NIL]
-   );
+QED
 
-val NOT_MEM_Card1 = store_thm
-   ("NOT_MEM_Card1",
-    ``!A:'a list a. ~(MEM a A) ==>
-             (Card1 (a :: A) = SUC (Card1 A))``,
+Theorem NOT_MEM_Card1:
+      !A:'a list a. ~(MEM a A) ==>
+             (Card1 (a :: A) = SUC (Card1 A))
+Proof
     RW_TAC std_ss [Card1_def]
-   );
+QED
 
-val Card1_SUC = store_thm
-   ("Card1_SUC",
-    ``!A n. (Card1 A = SUC n) ==>
-          (?(a:'a) B. ~(MEM a B) /\ A == (a :: B))``,
+Theorem Card1_SUC:
+      !A n. (Card1 A = SUC n) ==>
+          (?(a:'a) B. ~(MEM a B) /\ A == (a :: B))
+Proof
     Induct
     THEN RW_TAC std_ss [Card1_def]
     THENL
@@ -249,121 +250,122 @@ val Card1_SUC = store_thm
 
         PROVE_TAC[fset_REFL]
       ]
-   );
+QED
 
-val Card1_CONS_GT_0 = store_thm
-   ("Card1_CONS_GT_0",
-    ``!A (a:'a).
-          0 < Card1 (a :: A)``,
+Theorem Card1_CONS_GT_0:
+      !A (a:'a).
+          0 < Card1 (a :: A)
+Proof
     Induct
     THEN RW_TAC arith_ss [MEM,Card1_def]
     THEN PROVE_TAC[MEM_CONS,Card1_RSP]
-   );
+QED
 
-val MEM_Card1_NOT_0 = store_thm
-   ("MEM_Card1_NOT_0",
-    ``!A (a:'a).
-         MEM a A ==> ~(Card1 A = 0)``,
+Theorem MEM_Card1_NOT_0:
+      !A (a:'a).
+         MEM a A ==> ~(Card1 A = 0)
+Proof
     REPEAT GEN_TAC THEN DISCH_TAC
     THEN IMP_RES_TAC MEM_CONS
     THEN IMP_RES_TAC Card1_RSP
     THEN PROVE_TAC [Card1_CONS_GT_0,prim_recTheory.LESS_NOT_EQ]
-   );
+QED
 
-val Card1_SUC_MEM = store_thm
-   ("Card1_SUC_MEM",
-    ``!A. (Card1 A = SUC n) ==> ?a:'a. MEM a A``,
+Theorem Card1_SUC_MEM:
+      !A. (Card1 A = SUC n) ==> ?a:'a. MEM a A
+Proof
     Cases
     THEN PROVE_TAC [Card1_def,MEM,numTheory.NOT_SUC]
-   );
+QED
 
-val NOT_NIL_EQUIV_CONS = store_thm
-   ("NOT_NIL_EQUIV_CONS",
-    ``!A (a:'a).
-           ~([] == a :: A)``,
+Theorem NOT_NIL_EQUIV_CONS:
+      !A (a:'a).
+           ~([] == a :: A)
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_THEN MP_TAC Card1_RSP
     THEN RW_TAC arith_ss [Card1_def]
     THEN IMP_RES_THEN (ACCEPT_TAC o GSYM) MEM_Card1_NOT_0
-   );
+QED
 
 (* --------------------------------------------------------------------- *)
 (* Definition of function to delete an element from a finite set;        *)
 (* if the element is not a member then the set is unchanged.             *)
 (* --------------------------------------------------------------------- *)
 
-val Delete1_def = Define
-   `($Delete1 ([]) x = [])  /\
+Definition Delete1_def:
+    ($Delete1 ([]) x = [])  /\
     ($Delete1 ((a:'a) :: A) x = if a = x then $Delete1 A x
-                                     else a :: ($Delete1 A x))`;
+                                     else a :: ($Delete1 A x))
+End
 
 val _ = add_infix ("Delete1", 500, HOLgrammars.LEFT);
 
-val MEM_Delete1 = store_thm
-   ("MEM_Delete1",
-    ``!A (a:'a) x.
-         (MEM x (A Delete1 a)) = ((MEM x A) /\ ~(x = a))``,
+Theorem MEM_Delete1:
+      !A (a:'a) x.
+         (MEM x (A Delete1 a)) = ((MEM x A) /\ ~(x = a))
+Proof
     Induct
     THEN RW_TAC std_ss [MEM,Delete1_def]
     THEN PROVE_TAC []
-   );
+QED
 
-val MEM_Delete1_IDENT = store_thm
-   ("MEM_Delete1_IDENT",
-    ``!A (a:'a).
-         ~(MEM a (A Delete1 a))``,
+Theorem MEM_Delete1_IDENT:
+      !A (a:'a).
+         ~(MEM a (A Delete1 a))
+Proof
     REWRITE_TAC [MEM_Delete1]
-   );
+QED
 
-val Card1_Delete1 = store_thm
-   ("Card1_Delete1",
-    ``!A (a:'a).
-         (Card1 (A Delete1 a) = if MEM a A then Card1 A - 1 else Card1 A)``,
+Theorem Card1_Delete1:
+      !A (a:'a).
+         (Card1 (A Delete1 a) = if MEM a A then Card1 A - 1 else Card1 A)
+Proof
     Induct
     THEN RW_TAC arith_ss [MEM, Card1_def, Delete1_def, MEM_Delete1]
     THEN PROVE_TAC [MEM_Card1_NOT_0,
                     numLib.ARITH_PROVE ``~(n = 0) ==> (SUC (n - 1) = n)``]
-   );
+QED
 
-val CONS_Delete1 = store_thm
-   ("CONS_Delete1",
-    ``!A (a:'a).
+Theorem CONS_Delete1:
+      !A (a:'a).
          (a :: (A Delete1 a)) ==
-                  (if MEM a A then A else a :: A)``,
+                  (if MEM a A then A else a :: A)
+Proof
     Induct
     THEN RW_TAC std_ss [MEM, Delete1_def]
     THEN PROVE_TAC [MEM, Delete1_def, fsequiv_rules_sat]
-   );
+QED
 
-val MEM_CONS_Delete1 = store_thm
-   ("MEM_CONS_Delete1",
-    ``!A (a:'a). MEM a A ==>
-         (a :: (A Delete1 a)) == A``,
+Theorem MEM_CONS_Delete1:
+      !A (a:'a). MEM a A ==>
+         (a :: (A Delete1 a)) == A
+Proof
     PROVE_TAC [CONS_Delete1]
-   );
+QED
 
-val finite_set1_Delete1_cases1 = store_thm
-   ("finite_set1_Delete1_cases1",
-    ``!X. (X = []) \/ ?a:'a. X == a :: (X Delete1 a)``,
+Theorem finite_set1_Delete1_cases1:
+      !X. (X = []) \/ ?a:'a. X == a :: (X Delete1 a)
+Proof
     Induct
     THEN PROVE_TAC [Delete1_def,CONS_Delete1,fsequiv_rules_sat]
-   );
+QED
 
-val finite_set1_Delete1_cases = store_thm
-   ("finite_set1_Delete1_cases",
-    ``!X. (X = []) \/
-            ?a:'a. MEM a X /\ X == a :: (X Delete1 a)``,
+Theorem finite_set1_Delete1_cases:
+      !X. (X = []) \/
+            ?a:'a. MEM a X /\ X == a :: (X Delete1 a)
+Proof
     PROVE_TAC[finite_set1_Delete1_cases1,MEM,MEM_RSP]
-   );
+QED
 
 (* The following theorem is the most critical and difficult theorem. *)
 
-val list_EXTENSION1 = store_thm
-   ("list_EXTENSION1",
-    ``!n A B.
+Theorem list_EXTENSION1:
+      !n A B.
          (Card1 A = n) /\
          (!x:'a. MEM x A = MEM x B) ==>
-         A == B``,
+         A == B
+Proof
     Induct
     THEN REPEAT GEN_TAC
     THENL
@@ -377,36 +379,37 @@ val list_EXTENSION1 = store_thm
         THEN POP_ASSUM (ASSUME_TAC o SPEC ``a:'a`` o MATCH_MP CONS_RSP)
         THEN PROVE_TAC[MEM_CONS_Delete1,fset_SYM,fset_TRANS]
       ]
-   );
+QED
 
 Theorem list_EXTENSION:
   !A B. A == B <=> (!a:'a. MEM a A = MEM a B)
 Proof PROVE_TAC[MEM_RSP,list_EXTENSION1]
 QED
 
-val Delete1_RSP = store_thm
-   ("Delete1_RSP",
-    ``!A B (a:'a). A == B ==>
-                     A Delete1 a == B Delete1 a``,
+Theorem Delete1_RSP:
+      !A B (a:'a). A == B ==>
+                     A Delete1 a == B Delete1 a
+Proof
     REWRITE_TAC [list_EXTENSION]
     THEN REPEAT STRIP_TAC
     THEN ASM_REWRITE_TAC [MEM_Delete1]
-   );
+QED
 
-val APPEND_RSP = store_thm
-   ("APPEND_RSP",
-    ``!A1 A2 B1 B2:'a list.
+Theorem APPEND_RSP:
+      !A1 A2 B1 B2:'a list.
            A1 == A2 /\ B1 == B2 ==>
-           APPEND A1 B1 == APPEND A2 B2``,
+           APPEND A1 B1 == APPEND A2 B2
+Proof
     REWRITE_TAC[list_EXTENSION]
     THEN REPEAT STRIP_TAC
     THEN RW_TAC list_ss []
-   );
+QED
 
-val Inter1_def = Define
-   `($Inter1 ([]) B = [])  /\
+Definition Inter1_def:
+    ($Inter1 ([]) B = [])  /\
     ($Inter1 ((a:'a) :: A) B = if MEM a B then a :: ($Inter1 A B)
-                                          else $Inter1 A B)`;
+                                          else $Inter1 A B)
+End
 
 val _ = add_infix ("Inter1", 600, HOLgrammars.LEFT);
 
@@ -419,43 +422,44 @@ Proof
     THEN PROVE_TAC []
 QED
 
-val Inter1_RSP = store_thm
-   ("Inter1_RSP",
-    ``!A1 A2 B1 B2:'a list.
+Theorem Inter1_RSP:
+      !A1 A2 B1 B2:'a list.
            A1 == A2 /\ B1 == B2 ==>
-           A1 Inter1 B1 == A2 Inter1 B2``,
+           A1 Inter1 B1 == A2 Inter1 B2
+Proof
     REWRITE_TAC[list_EXTENSION]
     THEN REPEAT STRIP_TAC
     THEN RW_TAC list_ss [Inter1_def,MEM_Inter1]
-   );
+QED
 
 (* --------------------------------------------------------------------- *)
 (* Definition of Fold1 function to fold a function over a finite set.    *)
 (* --------------------------------------------------------------------- *)
 
-val Fold1_def = Define
-   `(Fold1 f (g:'a->'b) (z:'b) ([]) = z)  /\
+Definition Fold1_def:
+    (Fold1 f (g:'a->'b) (z:'b) ([]) = z)  /\
     (Fold1 f g z (a :: A) =
         if (!u v. f u v = f v u) /\
            (!u v w. f u (f v w) = f (f u v) w)
         then
            if MEM a A then Fold1 f g z A
                       else f (g a) (Fold1 f g z A)
-        else z)`;
+        else z)
+End
 
 (* Respectfulness theorem for the Fold1 function. *)
 
-val Fold1_RSP = store_thm
-   ("Fold1_RSP",
-    ``!f (g:'a->'b) z A B. A == B ==>
-          (Fold1 f g z A = Fold1 f g z B)``,
+Theorem Fold1_RSP:
+      !f (g:'a->'b) z A B. A == B ==>
+          (Fold1 f g z A = Fold1 f g z B)
+Proof
     GEN_TAC THEN GEN_TAC THEN GEN_TAC
     THEN rule_induct fsequiv_strong_ind
     THEN REPEAT STRIP_TAC
     THEN REWRITE_TAC [Fold1_def]
     THEN TRY COND_CASES_TAC
     THEN PROVE_TAC[MEM,list_EXTENSION]
-   );
+QED
 
 (* --------------------------------------------------------------------- *)
 (* Definition of list2set function to convert a list to a set.           *)
@@ -463,14 +467,14 @@ val Fold1_RSP = store_thm
 
 (* Respectfulness theorem for the list2set function. *)
 val _ = temp_overload_on("list2set", ``LIST_TO_SET``)
-val list2set_RSP = store_thm
-   ("list2set_RSP",
-    ``!X Y:'a list. X == Y ==>
-          (list2set X = list2set Y)``,
+Theorem list2set_RSP:
+      !X Y:'a list. X == Y ==>
+          (list2set X = list2set Y)
+Proof
     rule_induct fsequiv_ind_thm
     THEN REPEAT STRIP_TAC
     THEN SRW_TAC [] [INSERT_COMM,INSERT_INSERT]
-   );
+QED
 
 
 (* --------------------------------------------------------------------- *)
@@ -637,14 +641,14 @@ an inductive type which was not defined inductively.
 
 (* Prove that the cardinality of a set may be expressed using Fold.      *)
 
-val Card_Fold = store_thm
-   ("Card_Fold",
-    ``Card = Fold $+ ((K 1):'a->num) 0``,
+Theorem Card_Fold:
+      Card = Fold $+ ((K 1):'a->num) 0
+Proof
     CONV_TAC FUN_EQ_CONV
     THEN HO_MATCH_MP_TAC finite_set_INDUCT
     THEN REPEAT STRIP_TAC
     THEN RW_TAC arith_ss [Fold,Card]
-   );
+QED
 
 val _ = overload_on("In", ``\e s. e IN fset2set s``);
 val _ = set_fixity "In" (Infix(NONASSOC, 425))
@@ -653,39 +657,39 @@ val _ = set_fixity "In" (Infix(NONASSOC, 425))
 (* Proof of stronger finite set induction principle.                     *)
 (* --------------------------------------------------------------------- *)
 
-val finite_set_strong_induction = store_thm
-   ("finite_set_strong_induction",
-    ``!P. P Empty /\
+Theorem finite_set_strong_induction:
+      !P. P Empty /\
             (!A. P A ==> !a:'a. ~(a In A) ==> P (a Insert A))
-            ==> !A. P A``,
+            ==> !A. P A
+Proof
     GEN_TAC THEN STRIP_TAC
     THEN HO_MATCH_MP_TAC finite_set_INDUCT
     THEN PROVE_TAC [In_Insert]
-   );
+QED
 
-val fset2set_11 = store_thm
-   ("fset2set_11",
-    ``!A B:'a finite_set. (fset2set A = fset2set B) = (A = B)``,
+Theorem fset2set_11:
+      !A B:'a finite_set. (fset2set A = fset2set B) = (A = B)
+Proof
     REWRITE_TAC[finite_set_EXTENSION,EXTENSION]
-   );
+QED
 
-val fset2set_FINITE = store_thm
-   ("fset2set_FINITE",
-    ``!A:'a finite_set. FINITE (fset2set A)``,
+Theorem fset2set_FINITE:
+      !A:'a finite_set. FINITE (fset2set A)
+Proof
     HO_MATCH_MP_TAC finite_set_INDUCT
     THEN REPEAT STRIP_TAC
     THEN RW_TAC (std_ss ++ pred_setLib.PRED_SET_ss) [fset2set]
-   );
+QED
 
-val fset2set_ONTO_FINITE = store_thm
-   ("fset2set_ONTO_FINITE",
-    ``!s. FINITE s ==> ?A:'a finite_set. fset2set A = s``,
+Theorem fset2set_ONTO_FINITE:
+      !s. FINITE s ==> ?A:'a finite_set. fset2set A = s
+Proof
     REWRITE_TAC[FINITE_DEF]
     THEN GEN_TAC
     THEN DISCH_THEN HO_MATCH_MP_TAC
     THEN REPEAT STRIP_TAC
     THEN PROVE_TAC[fset2set]
-   );
+QED
 
 (* So fset2set is a bijection between finite_set and finite pred_sets. *)
 
@@ -696,13 +700,13 @@ val set2fset_def =
 
 (*  |- !s. FINITE s ==> (fset2set (set2fset s) = s)      *)
 
-val set2fset_fset2set = store_thm
-   ("set2fset_fset2set",
-    ``!A:'a finite_set. set2fset (fset2set A) = A``,
+Theorem set2fset_fset2set:
+      !A:'a finite_set. set2fset (fset2set A) = A
+Proof
     GEN_TAC
     THEN MP_TAC (MATCH_MP set2fset_def (SPEC_ALL fset2set_FINITE))
     THEN REWRITE_TAC[fset2set_11]
-   );
+QED
 
 
 

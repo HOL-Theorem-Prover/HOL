@@ -10,50 +10,63 @@ val _ = ParseExtras.temp_loose_equality()
 (* Definition of the canonicalisation of algebra elements.                   *)
 (* ------------------------------------------------------------------------- *)
 
-val prob_twin_def = Define
-  `prob_twin x y = ?l. (x = SNOC T l) /\ (y = SNOC F l)`;
+Definition prob_twin_def:
+   prob_twin x y = ?l. (x = SNOC T l) /\ (y = SNOC F l)
+End
 
-val prob_order_def = Define
-  `(prob_order [] _ = T) /\
+Definition prob_order_def:
+   (prob_order [] _ = T) /\
    (prob_order _ [] = F) /\
    (prob_order (h :: t) (h' :: t') =
-    ((h = T) /\ (h' = F)) \/ ((h = h') /\ prob_order t t'))`;
+    ((h = T) /\ (h' = F)) \/ ((h = h') /\ prob_order t t'))
+End
 
-val prob_sorted_def = Define `(prob_sorted (x :: y :: z)
+Definition prob_sorted_def:   (prob_sorted (x :: y :: z)
       = prob_order x y /\ prob_sorted (y :: z))
-  /\ (prob_sorted l = T)`;
+  /\ (prob_sorted l = T)
+End
 
-val prob_prefixfree_def = Define `(prob_prefixfree ((x:bool list)::y::z)
+Definition prob_prefixfree_def:   (prob_prefixfree ((x:bool list)::y::z)
       = ~IS_PREFIX y x /\ prob_prefixfree (y::z))
-  /\ (prob_prefixfree l = T)`;
+  /\ (prob_prefixfree l = T)
+End
 
-val prob_twinfree_def = Define `(prob_twinfree (x::y::z)
+Definition prob_twinfree_def:   (prob_twinfree (x::y::z)
       = ~(prob_twin x y) /\ prob_twinfree (y::z))
-  /\ (prob_twinfree l = T)`;
+  /\ (prob_twinfree l = T)
+End
 
-val prob_longest_def = Define `prob_longest
-  = FOLDR (\h t. if t <= LENGTH (h:bool list) then LENGTH h else t) 0`
+Definition prob_longest_def:   prob_longest
+  = FOLDR (\h t. if t <= LENGTH (h:bool list) then LENGTH h else t) 0
+End
 
-val prob_canon_prefs_def = Define `(prob_canon_prefs (l:bool list) [] = [l])
+Definition prob_canon_prefs_def:   (prob_canon_prefs (l:bool list) [] = [l])
   /\ (prob_canon_prefs l (h::t) = if IS_PREFIX h l then prob_canon_prefs l t
-                                 else l::h::t)`;
+                                 else l::h::t)
+End
 
-val prob_canon_find_def = Define `(prob_canon_find l [] = [l])
+Definition prob_canon_find_def:   (prob_canon_find l [] = [l])
   /\ (prob_canon_find l (h::t) = if prob_order h l then
           if IS_PREFIX l h then (h::t) else h::(prob_canon_find l t)
-        else prob_canon_prefs l (h::t))`;
+        else prob_canon_prefs l (h::t))
+End
 
-val prob_canon1_def = Define `prob_canon1 = FOLDR prob_canon_find []`;
+Definition prob_canon1_def:   prob_canon1 = FOLDR prob_canon_find []
+End
 
-val prob_canon_merge_def = Define `(prob_canon_merge l [] = [l])
+Definition prob_canon_merge_def:   (prob_canon_merge l [] = [l])
   /\ (prob_canon_merge l (h::t)
-      = if prob_twin l h then prob_canon_merge (BUTLAST h) t else l::h::t)`;
+      = if prob_twin l h then prob_canon_merge (BUTLAST h) t else l::h::t)
+End
 
-val prob_canon2_def = Define `prob_canon2 = FOLDR prob_canon_merge []`;
+Definition prob_canon2_def:   prob_canon2 = FOLDR prob_canon_merge []
+End
 
-val prob_canon_def = Define `prob_canon l = prob_canon2 (prob_canon1 l)`;
+Definition prob_canon_def:   prob_canon l = prob_canon2 (prob_canon1 l)
+End
 
-val prob_canonical_def = Define `prob_canonical l = (prob_canon l = l)`;
+Definition prob_canonical_def:   prob_canonical l = (prob_canon l = l)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems leading to:                                                      *)

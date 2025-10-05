@@ -68,21 +68,27 @@ val Suff = Q_TAC SUFF_TAC;
 (* First define the parameters for the example using HOL types.              *)
 (* ------------------------------------------------------------------------- *)
 
-val example1_prime_def = Define `example1_prime = 751`;
+Definition example1_prime_def:   example1_prime = 751
+End
 
-val example1_field_def = Define `example1_field = GF example1_prime`;
+Definition example1_field_def:   example1_field = GF example1_prime
+End
 
-val example1_curve_def = Define
-  `example1_curve = curve example1_field 0 0 1 (example1_prime - 1) 0`;
+Definition example1_curve_def:
+   example1_curve = curve example1_field 0 0 1 (example1_prime - 1) 0
+End
 
-val example1_elgamal_g_def = Define
-  `example1_elgamal_g = affine example1_field [361; 383]`;
+Definition example1_elgamal_g_def:
+   example1_elgamal_g = affine example1_field [361; 383]
+End
 
-val example1_elgamal_x_def = Define `example1_elgamal_x = 91`;
+Definition example1_elgamal_x_def:   example1_elgamal_x = 91
+End
 
-val example1_elgamal_h_def = Define
-  `example1_elgamal_h =
-   curve_mult example1_curve example1_elgamal_g example1_elgamal_x`;
+Definition example1_elgamal_h_def:
+   example1_elgamal_h =
+   curve_mult example1_curve example1_elgamal_g example1_elgamal_x
+End
 
 val example1_prime = Count.apply prove
   (``example1_prime IN Prime``,
@@ -131,96 +137,114 @@ val example1_elgamal_h_alt =
 (* Converting HOL types to words.                                            *)
 (* ------------------------------------------------------------------------- *)
 
-val ex1_prime_def = Define `ex1_prime : word32 = n2w example1_prime`;
+Definition ex1_prime_def:   ex1_prime : word32 = n2w example1_prime
+End
 
-val ex1_field_elt_def = Define
-  `ex1_field_elt (n : num) : word32 = n2w n`;
+Definition ex1_field_elt_def:
+   ex1_field_elt (n : num) : word32 = n2w n
+End
 
-val ex1_field_num_def = Define
-  `ex1_field_num (n : num) : word32 = ex1_field_elt (n MOD example1_prime)`;
+Definition ex1_field_num_def:
+   ex1_field_num (n : num) : word32 = ex1_field_elt (n MOD example1_prime)
+End
 
-val ex1_curve_point_def = Define
-  `ex1_curve_point =
+Definition ex1_curve_point_def:
+   ex1_curve_point =
    affine_case example1_curve
-     (0w,0w) (\x y. (ex1_field_elt x, ex1_field_elt y))`;
+     (0w,0w) (\x y. (ex1_field_elt x, ex1_field_elt y))
+End
 
-val ex1_elgamal_g_x = Define
-  `ex1_elgamal_g_x = FST (ex1_curve_point example1_elgamal_g)`;
+Definition ex1_elgamal_g_x:
+   ex1_elgamal_g_x = FST (ex1_curve_point example1_elgamal_g)
+End
 
-val ex1_elgamal_g_y = Define
-  `ex1_elgamal_g_y = SND (ex1_curve_point example1_elgamal_g)`;
+Definition ex1_elgamal_g_y:
+   ex1_elgamal_g_y = SND (ex1_curve_point example1_elgamal_g)
+End
 
-val ex1_elgamal_h_x = Define
-  `ex1_elgamal_h_x = FST (ex1_curve_point example1_elgamal_h)`;
+Definition ex1_elgamal_h_x:
+   ex1_elgamal_h_x = FST (ex1_curve_point example1_elgamal_h)
+End
 
-val ex1_elgamal_h_y = Define
-  `ex1_elgamal_h_y = SND (ex1_curve_point example1_elgamal_h)`;
+Definition ex1_elgamal_h_y:
+   ex1_elgamal_h_y = SND (ex1_curve_point example1_elgamal_h)
+End
 
-val ex1_elgamal_x = Define `ex1_elgamal_x = n2w example1_elgamal_x`;
+Definition ex1_elgamal_x:   ex1_elgamal_x = n2w example1_elgamal_x
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Representing GF(p) field elements with words.                             *)
 (* ------------------------------------------------------------------------- *)
 
-val ex1_field_zero_def = Define
-  `ex1_field_zero = ex1_field_num 0`;
+Definition ex1_field_zero_def:
+   ex1_field_zero = ex1_field_num 0
+End
 
-val ex1_field_neg_def = Define
-  `ex1_field_neg (x : word32) =
-   if x = 0w then 0w else ex1_prime - x`;
+Definition ex1_field_neg_def:
+   ex1_field_neg (x : word32) =
+   if x = 0w then 0w else ex1_prime - x
+End
 
-val ex1_field_add_def = Define
-  `ex1_field_add (x : word32, y : word32) =
+Definition ex1_field_add_def:
+   ex1_field_add (x : word32, y : word32) =
    let z = x + y in
-   if z < ex1_prime then z else z - ex1_prime`;
+   if z < ex1_prime then z else z - ex1_prime
+End
 
-val ex1_field_sub_def = Define
-  `ex1_field_sub (x : word32, y : word32) =
-   ex1_field_add (x, ex1_field_neg y)`;
+Definition ex1_field_sub_def:
+   ex1_field_sub (x : word32, y : word32) =
+   ex1_field_add (x, ex1_field_neg y)
+End
 
-val ex1_field_mult_aux_def =
- Define
-   `ex1_field_mult_aux (x : word32, y : word32, acc : word32) =
+Definition ex1_field_mult_aux_def:
+    ex1_field_mult_aux (x : word32, y : word32, acc : word32) =
      if y = 0w then acc
      else
        let x' = ex1_field_add (x,x) in
        let y' = y >>> 1 in
        let acc' = if y && 1w = 0w then acc else ex1_field_add (acc,x)
        in
-         ex1_field_mult_aux (x',y',acc')`;
+         ex1_field_mult_aux (x',y',acc')
+End
 
 
-val ex1_field_mult_def = Define
-   `ex1_field_mult (x : word32, y : word32) = ex1_field_mult_aux (x,y,0w)`;
+Definition ex1_field_mult_def:
+    ex1_field_mult (x : word32, y : word32) = ex1_field_mult_aux (x,y,0w)
+End
 
-val ex1_field_exp_aux_def =
- Define
-   `ex1_field_exp_aux (x : word32, n : word32, acc : word32) =
+Definition ex1_field_exp_aux_def:
+    ex1_field_exp_aux (x : word32, n : word32, acc : word32) =
       if n = 0w then acc
       else
         let x' = ex1_field_mult (x,x) in
         let n' = n >>> 1 in
         let acc' = if n && 1w = 0w then acc else ex1_field_mult (acc,x)
-        in ex1_field_exp_aux (x',n',acc')`;
+        in ex1_field_exp_aux (x',n',acc')
+End
 
-val ex1_field_exp_def = Define
-   `ex1_field_exp (x : word32, n : word32) = ex1_field_exp_aux (x,n,1w)`;
+Definition ex1_field_exp_def:
+    ex1_field_exp (x : word32, n : word32) = ex1_field_exp_aux (x,n,1w)
+End
 
-val ex1_field_inv_def = Define
-   `ex1_field_inv (x : word32) = ex1_field_exp (x, n2w (example1_prime - 2))`;
+Definition ex1_field_inv_def:
+    ex1_field_inv (x : word32) = ex1_field_exp (x, n2w (example1_prime - 2))
+End
 
-val ex1_field_div_def = Define
-   `ex1_field_div (x:word32, y:word32) = ex1_field_mult (x, ex1_field_inv y)`;
+Definition ex1_field_div_def:
+    ex1_field_div (x:word32, y:word32) = ex1_field_mult (x, ex1_field_inv y)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Elliptic curve operations in terms of the above field operations.         *)
 (* ------------------------------------------------------------------------- *)
 
-val ex1_curve_zero_def = Define
-  `ex1_curve_zero = ex1_curve_point (curve_zero example1_curve)`;
+Definition ex1_curve_zero_def:
+   ex1_curve_zero = ex1_curve_point (curve_zero example1_curve)
+End
 
-val ex1_curve_neg_def = Define
-  `ex1_curve_neg (x1,y1) =
+Definition ex1_curve_neg_def:
+   ex1_curve_neg (x1,y1) =
    let $~ = ex1_field_neg in
    let $- = CURRY ex1_field_sub in
    let $* = CURRY ex1_field_mult in
@@ -231,10 +255,11 @@ val ex1_curve_neg_def = Define
        then ex1_curve_zero
        else let x = x1 in
             let y = ~y1 - a1 * x1 - a3
-            in (x,y)`;
+            in (x,y)
+End
 
-val ex1_curve_double_def = Define
-  `ex1_curve_double (x1,y1) =
+Definition ex1_curve_double_def:
+   ex1_curve_double (x1,y1) =
    let $& = ex1_field_num in
    let $~ = ex1_field_neg in
    let $+ = CURRY ex1_field_add in
@@ -257,10 +282,11 @@ val ex1_curve_double_def = Define
             let m = (~(x1 ** 3w) + a4 * x1 + & 2 * a6 - a3 * y1) / d in
             let x = l ** 2w + a1 * l - a2 - &2 * x1 in
             let y = ~(l + a1) * x - m - a3
-            in (x,y)`;
+            in (x,y)
+End
 
-val ex1_curve_add_def = Define
-  `ex1_curve_add (x1,y1,x2,y2) =
+Definition ex1_curve_add_def:
+   ex1_curve_add (x1,y1,x2,y2) =
    if (x1 = x2) /\ (y1 = y2) then ex1_curve_double (x1,y1)
    else
      let $& = ex1_field_num in
@@ -284,7 +310,8 @@ val ex1_curve_add_def = Define
        let m = (y1 * x2 - y2 * x1) / d in
        let x = l ** 2w + a1 * l - a2 - x1 - x2 in
        let y = ~(l + a1) * x - m - a3 in
-       (x,y)`;
+       (x,y)
+End
 
 val ex1_curve_mult_aux_def =
  tDefine "ex1_curve_mult_aux"
@@ -304,27 +331,29 @@ val ex1_curve_mult_aux_def =
    THEN pairLib.GEN_BETA_TAC
    THEN SRW_TAC [] [wordsTheory.LSR_LESS]);
 
-val ex1_curve_mult_def =
- Define
-   `ex1_curve_mult (x:word32, y:word32, n:word32)
-     = ex1_curve_mult_aux (x,y,n,0w,0w)`;
+Definition ex1_curve_mult_def:
+    ex1_curve_mult (x:word32, y:word32, n:word32)
+     = ex1_curve_mult_aux (x,y,n,0w,0w)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Elliptic curve encryption and decryption functions.                       *)
 (* These form the API, and need to be compiled.                              *)
 (* ------------------------------------------------------------------------- *)
 
-val ex1_elgamal_encrypt_def = Define
-  `ex1_elgamal_encrypt (m_x : word32, m_y : word32, k : word32) =
+Definition ex1_elgamal_encrypt_def:
+   ex1_elgamal_encrypt (m_x : word32, m_y : word32, k : word32) =
    let (a_x,a_y) = ex1_curve_mult (ex1_elgamal_g_x,ex1_elgamal_g_y,k) in
    let (t_x,t_y) = ex1_curve_mult (ex1_elgamal_h_x,ex1_elgamal_h_y,k) in
    let (b_x,b_y) = ex1_curve_add (t_x,t_y,m_x,m_y) in
-   (a_x,a_y,b_x,b_y)`;
+   (a_x,a_y,b_x,b_y)
+End
 
-val ex1_elgamal_decrypt_def = Define
-  `ex1_elgamal_decrypt (a_x,a_y,b_x,b_y) =
+Definition ex1_elgamal_decrypt_def:
+   ex1_elgamal_decrypt (a_x,a_y,b_x,b_y) =
    let (t_x,t_y) = ex1_curve_neg (ex1_curve_mult (a_x,b_x,ex1_elgamal_x)) in
-   ex1_curve_add (t_x,t_y,b_x,b_y)`;
+   ex1_curve_add (t_x,t_y,b_x,b_y)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* The first stage of compiling is to propagate all constants, especially to *)
@@ -474,28 +503,33 @@ val ex1_elgamal_decrypt_alt = save_thm
 (* First define the parameters for the example using HOL types.              *)
 (* ------------------------------------------------------------------------- *)
 
-val example2_prime_def = Define `example2_prime = 751`;
+Definition example2_prime_def:   example2_prime = 751
+End
 
-val example2_field_def = Define `example2_field = GF example2_prime`;
+Definition example2_field_def:   example2_field = GF example2_prime
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Converting HOL types to words.                                            *)
 (* ------------------------------------------------------------------------- *)
 
-val ex2_prime0 = Define
-  `ex2_prime0 : word32 = n2w example2_prime`;
+Definition ex2_prime0:
+   ex2_prime0 : word32 = n2w example2_prime
+End
 
-val ex2_prime1 = Define
-  `ex2_prime1 : word32 = n2w (example2_prime DIV 2 ** 32)`;
+Definition ex2_prime1:
+   ex2_prime1 : word32 = n2w (example2_prime DIV 2 ** 32)
+End
 
-val ex2_field_neg_def = Define
-  `ex2_field_neg (x0 : word32, x1 : word32) =
+Definition ex2_field_neg_def:
+   ex2_field_neg (x0 : word32, x1 : word32) =
    if (x0 = 0w) /\ (x1 = 0w) then (0w,0w)
    else
      let y0 = ex2_prime0 - x0 in
      let y1 = if y0 <= ex2_prime0 then ex2_prime1 - x1
               else ex2_prime1 - (x1 + 1w) in
-     (y0,y1)`;
+     (y0,y1)
+End
 
 val _ = html_theory "elliptic_example";
 

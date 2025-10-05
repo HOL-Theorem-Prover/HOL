@@ -575,11 +575,13 @@ Proof
 QED
 
 (* Building (pre)congruence closure from any relation on CCS *)
-val CC_def = Define `
-    CC R = (\g h. !c. CONTEXT c ==> R (c g) (c h))`;
+Definition CC_def:
+    CC R = (\g h. !c. CONTEXT c ==> R (c g) (c h))
+End
 
-val GCC_def = Define `
-    GCC R = (\g h. !c. GCONTEXT c ==> R (c g) (c h))`;
+Definition GCC_def:
+    GCC R = (\g h. !c. GCONTEXT c ==> R (c g) (c h))
+End
 
 val CC_precongruence = store_thm (
    "CC_precongruence", ``!R. PreOrder R ==> precongruence (CC R)``,

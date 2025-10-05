@@ -847,7 +847,7 @@ val condition_passed_similar_lem = store_thm(
       THEN EVAL_TAC THEN RW_TAC (srw_ss()) [] THEN RW_TAC (srw_ss()) []);
 
 
-val arm_instr_core_def = Define `arm_instr_core ii (pass:bool) (enc:Encoding) (cond:word4) (inst:ARMinstruction) =
+Definition arm_instr_core_def:   arm_instr_core ii (pass:bool) (enc:Encoding) (cond:word4) (inst:ARMinstruction) =
    if pass then
            case inst of
               Unpredictable => errorT "decode: unpredictable"
@@ -859,7 +859,8 @@ val arm_instr_core_def = Define `arm_instr_core ii (pass:bool) (enc:Encoding) (c
            | Miscellaneous m => miscellaneous_instruction ii (enc,m)
            | Coprocessor c => coprocessor_instruction ii (enc,cond,c)
          else
-           increment_pc ii enc`;
+           increment_pc ii enc
+End
 
 
 

@@ -20,8 +20,10 @@ val _ = temp_delsimps ["TAKE1_DROP"];
 
 (* general *)
 
-val b2n_def = Define `(b2n T = 1) /\ (b2n F = 0:num)`;
-val b2w_def = Define `b2w c = n2w (b2n c)`;
+Definition b2n_def:   (b2n T = 1) /\ (b2n F = 0:num)
+End
+Definition b2w_def:   b2w c = n2w (b2n c)
+End
 
 val MULT_ADD_LESS_MULT = prove(
   ``!m n k l j. m < l /\ n < k /\ j <= k ==> m * j + n < l * k:num``,
@@ -46,19 +48,23 @@ val SPLIT_LET2 = prove(
 
 (* multiword related general *)
 
-val dimwords_def = Define `dimwords k n = (2:num) ** (k * dimindex n)`;
+Definition dimwords_def:   dimwords k n = (2:num) ** (k * dimindex n)
+End
 
-val k2mw_def = Define `
+Definition k2mw_def:
   (k2mw 0 n = []:('a word) list) /\
-  (k2mw (SUC l) n = n2w n :: k2mw l (n DIV dimword(:'a)))`;
+  (k2mw (SUC l) n = n2w n :: k2mw l (n DIV dimword(:'a)))
+End
 
-val mw2n_def = Define `
+Definition mw2n_def:
   (mw2n [] = 0) /\
-  (mw2n (x::xs) = w2n (x:'a word) + dimword (:'a) * mw2n xs)`;
+  (mw2n (x::xs) = w2n (x:'a word) + dimword (:'a) * mw2n xs)
+End
 
-val mw2i_def = Define `
+Definition mw2i_def:
   (mw2i (F,xs) = (& (mw2n xs)):int) /\
-  (mw2i (T,xs) = - & (mw2n xs))`;
+  (mw2i (T,xs) = - & (mw2n xs))
+End
 
 val n2mw_def = tDefine "n2mw" `
   n2mw n = if n = 0 then []:'a word list else
@@ -69,9 +75,11 @@ val n2mw_def = tDefine "n2mw" `
 
 val n2mw_ind = fetch "-" "n2mw_ind"
 
-val i2mw_def = Define `i2mw i = (i < 0,n2mw (Num (ABS i)))`;
+Definition i2mw_def:   i2mw i = (i < 0,n2mw (Num (ABS i)))
+End
 
-val mw_ok_def = Define `mw_ok xs = ~(xs = []) ==> ~(LAST xs = 0w)`;
+Definition mw_ok_def:   mw_ok xs = ~(xs = []) ==> ~(LAST xs = 0w)
+End
 
 val n2mw_0 = prove(``(n2mw 0 = [])``,METIS_TAC [n2mw_def]);
 val n2mw_thm = prove(
@@ -127,7 +135,7 @@ val k2mw_mod = prove(
   \\ ONCE_REWRITE_TAC [GSYM n2w_mod]
   \\ ASM_SIMP_TAC bool_ss [MOD_MULT_MOD,ZERO_LT_dimword,ZERO_LT_dimwords]);
 
-val mw2n_APPEND = prove(
+val mw2n_APPEND = store_thm("mw2n_APPEND",
   ``!xs ys. mw2n (xs ++ ys) = mw2n xs + dimwords (LENGTH xs) (:'a) * mw2n (ys:'a word list)``,
   Induct \\ ASM_SIMP_TAC std_ss [dimwords_thm,LENGTH,APPEND,mw2n_def] \\ DECIDE_TAC);
 
@@ -365,8 +373,9 @@ val mw_fix_def = tDefine "mw_fix" `
 
 val mw_fix_ind = fetch "-" "mw_fix_ind"
 
-val mw_zerofix_def = Define `
-  mw_zerofix x = if x = (T,[]) then (F,[]) else x`;
+Definition mw_zerofix_def:
+  mw_zerofix x = if x = (T,[]) then (F,[]) else x
+End
 
 val mw_ok_fix = store_thm("mw_ok_fix",
   ``!xs. mw_ok (mw_fix xs)``,
@@ -466,27 +475,31 @@ val mw2n_REPLICATE = prove(
 
 (* add/sub *)
 
-val single_add_def = Define `
+Definition single_add_def:
   single_add (x:'a word) (y:'a word) c =
-    (x + y + b2w c, dimword (:'a) <= w2n x + w2n y + b2n c)`;
+    (x + y + b2w c, dimword (:'a) <= w2n x + w2n y + b2n c)
+End
 
-val mw_add_def = Define `
+Definition mw_add_def:
   (mw_add [] ys c = ([],c)) /\
   (mw_add (x::xs) ys c =
     let (z,c1) = single_add x (HD ys) c in
-    let (zs,c2) = mw_add xs (TL ys) c1 in (z::zs,c2))`;
+    let (zs,c2) = mw_add xs (TL ys) c1 in (z::zs,c2))
+End
 
-val single_sub_def = Define `
-  single_sub (x:'a word) (y:'a word) c = single_add x (~y) c`;
+Definition single_sub_def:
+  single_sub (x:'a word) (y:'a word) c = single_add x (~y) c
+End
 
-val mw_sub_def = Define `
+Definition mw_sub_def:
   (mw_sub [] ys c = ([],c)) /\
   (mw_sub (x::xs) [] c =
     let (z,c1) = single_sub x 0w c in
     let (zs,c2) = mw_sub xs [] c1 in (z::zs,c2)) /\
   (mw_sub (x::xs) (y::ys) c =
     let (z,c1) = single_sub x y c in
-    let (zs,c2) = mw_sub xs ys c1 in (z::zs,c2))`;
+    let (zs,c2) = mw_sub xs ys c1 in (z::zs,c2))
+End
 
 val single_add_thm = store_thm("single_add_thm",
   ``!(x:'a word) y z c d.
@@ -583,12 +596,13 @@ val mw_sub_thm = prove(
   \\ `mw2n ys < dimwords (LENGTH xs) (:'a)` by METIS_TAC [mw2n_lt]
   \\ `F` by DECIDE_TAC);
 
-val mw_addv_def = Define `
+Definition mw_addv_def:
   (mw_addv [] ys c = if c then [1w] else []) /\
   (mw_addv (x::xs) ys c =
     let (y,ys2) = if ys = [] then (0w,ys) else (HD ys, TL ys) in
     let (z,c1) = single_add x y c in
-      z :: mw_addv xs ys2 c1)`;
+      z :: mw_addv xs ys2 c1)
+End
 
 val WORD_NOT_ZERO_ONE = prove(
   ``~(0w = 1w)``,
@@ -667,8 +681,9 @@ val mw_sub_APPEND = store_thm("mw_sub_APPEND",
   \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
   \\ ASM_SIMP_TAC std_ss [CONS_11,APPEND]);
 
-val mw_subv_def = Define `
-  mw_subv xs ys = mw_fix (FST (mw_sub xs ys T))`;
+Definition mw_subv_def:
+  mw_subv xs ys = mw_fix (FST (mw_sub xs ys T))
+End
 
 val mw_sub_SNOC_0 = prove(
   ``!xs ys c. mw_sub xs (SNOC 0w ys) c = mw_sub xs ys c``,
@@ -702,16 +717,18 @@ val mw_subv_thm = prove(
   \\ ASM_SIMP_TAC std_ss [GSYM mw2n_APPEND_REPLICATE,LENGTH_APPEND,LENGTH_REPLICATE]
   \\ DECIDE_TAC);
 
-val mwi_add_def = Define `
+Definition mwi_add_def:
   mwi_add (s,xs) (t,ys) =
     if s = t then
       if LENGTH ys <= LENGTH xs then (s, mw_addv xs ys F) else (s, mw_addv ys xs F)
     else
       if mw2n ys = mw2n xs then (F,[]) else
-      if mw2n ys <= mw2n xs then (s,mw_subv xs ys) else (~s,mw_subv ys xs)`;
+      if mw2n ys <= mw2n xs then (s,mw_subv xs ys) else (~s,mw_subv ys xs)
+End
 
-val mwi_sub_def = Define `
-  mwi_sub (s,xs) (t,ys) = mwi_add (s,xs) (~t,ys)`;
+Definition mwi_sub_def:
+  mwi_sub (s,xs) (t,ys) = mwi_add (s,xs) (~t,ys)
+End
 
 val mwi_add_lemma = prove(
   ``!s t xs ys.
@@ -800,32 +817,37 @@ val mwi_sub_thm = store_thm("mwi_sub_thm",
 
 (* mul *)
 
-val single_mul_def = Define `
+Definition single_mul_def:
   single_mul (x:'a word) (y:'a word) (c:'a word) =
-    (x * y + c, n2w ((w2n x * w2n y + w2n c) DIV dimword (:'a)):'a word)`;
+    (x * y + c, n2w ((w2n x * w2n y + w2n c) DIV dimword (:'a)):'a word)
+End
 
-val single_mul_add_def = Define `
+Definition single_mul_add_def:
   single_mul_add p q k s =
     let (x,kc) = single_mul p q k in
     let (zs,c) = mw_add [x;kc] [s;0w] F in
-      (HD zs, HD (TL zs))`;
+      (HD zs, HD (TL zs))
+End
 
-val mw_mul_pass_def = Define `
+Definition mw_mul_pass_def:
   (mw_mul_pass x [] zs k = [k]) /\
   (mw_mul_pass x (y::ys) zs k =
     let (y1,k1) = single_mul_add x y k (HD zs) in
-      y1 :: mw_mul_pass x ys (TL zs) k1)`;
+      y1 :: mw_mul_pass x ys (TL zs) k1)
+End
 
-val mw_mul_def = Define `
+Definition mw_mul_def:
   (mw_mul [] ys zs = zs) /\
   (mw_mul (x::xs) ys zs =
     let zs2 = mw_mul_pass x ys zs 0w in
-      HD zs2 :: mw_mul xs ys (TL zs2))`;
+      HD zs2 :: mw_mul xs ys (TL zs2))
+End
 
-val mwi_mul_def = Define `
+Definition mwi_mul_def:
   mwi_mul (s,xs) (t,ys) =
     if (xs = []) \/ (ys = []) then (F,[]) else
-      (~(s = t), mw_fix (mw_mul xs ys (MAP (\x.0w) ys)))`;
+      (~(s = t), mw_fix (mw_mul xs ys (MAP (\x.0w) ys)))
+End
 
 val single_mul_thm = prove(
   ``!(x:'a word) y k z l.
@@ -845,7 +867,7 @@ val ADD_LESS_MULT = prove(
   \\ Cases_on `1<n` \\ RES_TAC THEN1 DECIDE_TAC
   \\ `n = 1` by DECIDE_TAC \\ ASM_SIMP_TAC std_ss []);
 
-val single_mul_add_thm = prove(
+val single_mul_add_thm = store_thm("single_mul_add_thm",
   ``!(p:'a word) q k1 k2 x1 x2.
       (single_mul_add p q k1 k2 = (x1,x2)) ==>
       (w2n x1 + dimword (:'a) * w2n x2 = w2n p * w2n q + w2n k1 + w2n k2)``,
@@ -926,11 +948,12 @@ val mwi_mul_thm = store_thm("mwi_mul_thm",
 
 (* div by 2 *)
 
-val mw_shift_def = Define `
+Definition mw_shift_def:
   (mw_shift [] = []) /\
   (mw_shift [w] = [w >>> 1]) /\
   (mw_shift ((w:'a word)::x::xs) =
-     (w >>> 1 !! x << (dimindex (:'a) - 1)) :: mw_shift (x::xs))`;
+     (w >>> 1 !! x << (dimindex (:'a) - 1)) :: mw_shift (x::xs))
+End
 
 val w2n_add = prove(
   ``!x y. w2n (x + y) = (w2n x + w2n (y:'a word)) MOD dimword (:'a)``,
@@ -989,24 +1012,29 @@ val mw_cmp_def = tDefine "mw_cmp" `
   (WF_REL_TAC `measure (LENGTH o FST)` \\ Cases \\ Cases
    \\ SIMP_TAC std_ss [LENGTH_BUTLAST,NOT_NIL_CONS,LENGTH])
 
-val mw_compare_def = Define `
+Definition mw_compare_def:
   mw_compare xs ys =
     if LENGTH xs < LENGTH ys then SOME (0 < 1) else
-    if LENGTH ys < LENGTH xs then SOME (1 < 0) else mw_cmp xs ys`;
+    if LENGTH ys < LENGTH xs then SOME (1 < 0) else mw_cmp xs ys
+End
 
-val option_eq_def = Define `
+Definition option_eq_def:
   (option_eq b NONE = NONE) /\
-  (option_eq b (SOME x) = SOME (~(b = x)))`;
+  (option_eq b (SOME x) = SOME (~(b = x)))
+End
 
-val mwi_compare_def = Define `
+Definition mwi_compare_def:
   mwi_compare (s,xs) (t,ys) =
-    if s = t then option_eq s (mw_compare xs ys) else SOME s`;
+    if s = t then option_eq s (mw_compare xs ys) else SOME s
+End
 
-val mwi_lt_def = Define `
-  mwi_lt s_xs t_ys = (mwi_compare s_xs t_ys = SOME T)`;
+Definition mwi_lt_def:
+  mwi_lt s_xs t_ys = (mwi_compare s_xs t_ys = SOME T)
+End
 
-val mwi_eq_def = Define `
-  mwi_eq s_xs t_ys = (mwi_compare s_xs t_ys = NONE)`;
+Definition mwi_eq_def:
+  mwi_eq s_xs t_ys = (mwi_compare s_xs t_ys = NONE)
+End
 
 val LAST_IMP_mw2n_LESS_mw2n = prove(
   ``!xs ys. (LENGTH xs = LENGTH ys) /\ (LAST xs <+ LAST ys) /\ ~(xs = []) ==>
@@ -1085,11 +1113,12 @@ val mw_subv_NOT_NIL = store_thm("mw_subv_NOT_NIL",
 
 (* alternative compare *)
 
-val mw_cmp_alt_def = Define `
+Definition mw_cmp_alt_def:
   (mw_cmp_alt [] ys b = b) /\
   (mw_cmp_alt (x::xs) ys b =
      mw_cmp_alt xs (TL ys) (if x = HD ys then b else
-                            if x <+ HD ys then SOME T else SOME F))`
+                            if x <+ HD ys then SOME T else SOME F))
+End
 
 val mw_cmp_CONS = prove(
   ``!xs ys.
@@ -1145,9 +1174,10 @@ val mw_cmp_alt_thm = store_thm("mw_cmp_alt_thm",
 
 (* General Definitions *)
 
-val mw_mul_by_single_def = Define `
+Definition mw_mul_by_single_def:
   mw_mul_by_single (x:'a word) (ys:'a word list) =
-    mw_mul_pass x ys (k2mw (LENGTH ys) 0) 0w`;
+    mw_mul_pass x ys (k2mw (LENGTH ys) 0) 0w
+End
 
 val LENGTH_mw_mul_pass = store_thm("LENGTH_mw_mul_pass",
   ``!ys zs (x:'a word) k.
@@ -1304,10 +1334,11 @@ val calc_d_ind = fetch "-" "calc_d_ind"
 
 (* Definition *)
 
-val single_div_def = Define `
+Definition single_div_def:
   (single_div (x1:'a word) (x2:'a word) (y:'a word) =
   (n2w ((w2n x1 * dimword (:'a) + w2n x2) DIV w2n y): 'a word,
-   n2w ((w2n x1 * dimword (:'a) + w2n x2) MOD w2n y): 'a word))`;
+   n2w ((w2n x1 * dimword (:'a) + w2n x2) MOD w2n y): 'a word))
+End
 
 val mw_div_by_single_def = tDefine "mw_div_by_single" `
 
@@ -1334,13 +1365,14 @@ val mw_div_by_single_def = tDefine "mw_div_by_single" `
 
 val mw_div_by_single_ind = fetch "-" "mw_div_by_single_ind"
 
-val mw_simple_div_def = Define `
+Definition mw_simple_div_def:
   (mw_simple_div x [] y = ([],x,T)) /\
   (mw_simple_div x (x1::xs) y =
      let c1 = x <+ y in
      let (q,r) = single_div x x1 y in
      let (qs,r,c) = mw_simple_div r xs y in
-       (q::qs,r,c /\ c1))`;
+       (q::qs,r,c /\ c1))
+End
 
 val mw_div_test_def = tDefine "mw_div_test" `
 
@@ -2615,18 +2647,20 @@ Proof
         tac_div_loop_bis_2]
 QED
 
-val mw_div_guess_def = Define `
+Definition mw_div_guess_def:
   mw_div_guess us (ys:'a word list) =
     let q = if w2n (HD us) < w2n (HD ys) then
               FST (single_div (HD us) (HD (TL us)) (HD ys))
             else n2w (dimword (:'a) - 1) in
     let q2 = mw_div_test q (HD us) (HD (TL us)) (HD (TL (TL us)))
                          (HD ys) (HD (TL ys)) in
-      q2`;
+      q2
+End
 
-val mw_div_adjust_def = Define `
+Definition mw_div_adjust_def:
   mw_div_adjust q zs ys =
-    if mw_cmp zs (mw_mul_by_single q ys) = SOME T then n2w (w2n q - 1) else q`;
+    if mw_cmp zs (mw_mul_by_single q ys) = SOME T then n2w (w2n q - 1) else q
+End
 
 val mw_div_aux_def = tDefine "mw_div_aux" `
   mw_div_aux zs1 zs2 ys =
@@ -2752,7 +2786,7 @@ val mw_div_aux_lemma = prove(
   \\ STRIP_TAC \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
   \\ ASM_SIMP_TAC (srw_ss()) []);
 
-val mw_div_def = Define `
+Definition mw_div_def:
   mw_div xs ys =
     let xs = mw_fix xs in
     let ys = mw_fix ys in
@@ -2769,9 +2803,10 @@ val mw_div_def = Define `
         let ys = FRONT (mw_mul_by_single d ys) in
         let (qs,rs) = mw_div_aux xs1 xs2 ys in
         let (rs,r,c) = mw_simple_div 0w (REVERSE rs) d in
-          (REVERSE qs,REVERSE rs,c)`
+          (REVERSE qs,REVERSE rs,c)
+End
 
-val mwi_divmod_def = Define `
+Definition mwi_divmod_def:
   mwi_divmod (s,xs) (t,ys) =
     let (res,mod,c) = mw_div xs ys in
     let res = mw_fix res in
@@ -2782,13 +2817,16 @@ val mwi_divmod_def = Define `
     let mod = if s = t then mod else
               if mod = [] then mod else mw_subv ys mod in
     let mod_sign = (if mod = [] then F else t) in
-      (c,(res_sign,res),(mod_sign,mod))`;
+      (c,(res_sign,res),(mod_sign,mod))
+End
 
-val mwi_div_def = Define `
-  mwi_div s_xs t_ys = FST (SND (mwi_divmod s_xs t_ys))`;
+Definition mwi_div_def:
+  mwi_div s_xs t_ys = FST (SND (mwi_divmod s_xs t_ys))
+End
 
-val mwi_mod_def = Define `
-  mwi_mod s_xs t_ys = SND (SND (mwi_divmod s_xs t_ys))`;
+Definition mwi_mod_def:
+  mwi_mod s_xs t_ys = SND (SND (mwi_divmod s_xs t_ys))
+End
 
 val MULT_DIV_MULT_EQ_MULT = prove(
   ``!n k m. 0 < n /\ 0 < k ==> ((m * n) DIV (k * n) = m DIV k)``,
@@ -3064,9 +3102,10 @@ val mwi_divmod_thm = store_thm("mwi_divmod_thm",
 
 (* converting into decimal form *)
 
-val int_to_str_def = Define `
+Definition int_to_str_def:
   int_to_str i =
-    (if i < 0 then "~" else "") ++ num_to_dec_string (Num (ABS i))`;
+    (if i < 0 then "~" else "") ++ num_to_dec_string (Num (ABS i))
+End
 
 val num_to_dec_string_unroll = prove(
   ``!n. num_to_dec_string n =
@@ -3105,11 +3144,12 @@ val mw_to_dec_def = tDefine "mw_to_dec" `
   \\ FULL_SIMP_TAC std_ss [DIV_EQ_X,NOT_LESS]
   \\ DECIDE_TAC);
 
-val mwi_to_dec_def = Define `
+Definition mwi_to_dec_def:
   mwi_to_dec (s,xs) =
     let sign = (if s then [126w] else []) in
     let (rest,c) = mw_to_dec xs in
-      (sign ++ rest,c)`
+      (sign ++ rest,c)
+End
 
 val mw_to_dec_thm = store_thm("mw_to_dec_thm",
   ``!(xs:'a word list).
@@ -3181,7 +3221,7 @@ val mwi_to_dec_thm = store_thm("mwi_to_dec_thm",
 
 val _ = Hol_datatype `mw_op = Add | Sub | Mul | Div | Mod | Lt | Eq | Dec`;
 
-val int_op_def = Define `
+Definition int_op_def:
   (int_op Add i j = i + j) /\
   (int_op Sub i j = i - j) /\
   (int_op Mul i j = i * j) /\
@@ -3189,9 +3229,10 @@ val int_op_def = Define `
   (int_op Mod i j = i % j) /\
   (int_op Lt i j = if i < j then 1 else 0) /\
   (int_op Eq i j = if i = j then 1 else 0:int) /\
-  (int_op Dec i j = 0)`; (* decimal representation returned separately *)
+  (int_op Dec i j = 0)
+End(* decimal representation returned separately *)
 
-val mwi_op_def = Define `
+Definition mwi_op_def:
   (mwi_op Add s_xs t_ys = mwi_add s_xs t_ys) /\
   (mwi_op Sub s_xs t_ys = mwi_sub s_xs t_ys) /\
   (mwi_op Mul s_xs t_ys = mwi_mul s_xs t_ys) /\
@@ -3199,7 +3240,8 @@ val mwi_op_def = Define `
   (mwi_op Mod s_xs t_ys = mwi_mod s_xs t_ys) /\
   (mwi_op Lt s_xs t_ys = i2mw (if mwi_lt s_xs t_ys then 1 else 0)) /\
   (mwi_op Eq s_xs t_ys = i2mw (if mwi_eq s_xs t_ys then 1 else 0)) /\
-  (mwi_op Dec s_xs t_ys = (F,[]))`;
+  (mwi_op Dec s_xs t_ys = (F,[]))
+End
 
 val mwi_op_thm = store_thm("mwi_op_thm",
   ``!op i j.
@@ -3307,12 +3349,13 @@ val LENGTH_mw_div_aux = store_thm("LENGTH_mw_div_aux",
 
 (* combined mul_by_single *)
 
-val mw_mul_by_single2_def = Define `
+Definition mw_mul_by_single2_def:
   (mw_mul_by_single2 x1 x2 [] k1 k2 = [k2]) /\
   (mw_mul_by_single2 x1 x2 (y::ys) k1 k2 =
      let (y1,k1) = single_mul_add x1 y k1 0w in
      let (y2,k2) = single_mul_add x2 y1 k2 0w in
-       y2 :: mw_mul_by_single2 x1 x2 ys k1 k2)`;
+       y2 :: mw_mul_by_single2 x1 x2 ys k1 k2)
+End
 
 val k2mw_SUC_0 = prove(
   ``k2mw (SUC n) 0 = 0w :: k2mw n 0``,
@@ -3345,11 +3388,12 @@ val _ = save_thm("mw_mul_by_single2_thm",mw_mul_by_single2_thm);
 
 (* calc only top three results of mw_mul_pass *)
 
-val mw_mul_pass_top_def = Define `
+Definition mw_mul_pass_top_def:
   (mw_mul_pass_top x [] (k,k1,k2) = (k,k1,k2)) /\
   (mw_mul_pass_top x (y::ys) (k,k1,k2) =
      let (y1,k) = single_mul_add x y k 0w in
-       mw_mul_pass_top x ys (k,y1,k1))`;
+       mw_mul_pass_top x ys (k,y1,k1))
+End
 
 val k2mw_LENGTH_0 = store_thm("k2mw_LENGTH_0",
   ``!ys. (k2mw (LENGTH ys) 0) = MAP (K 0w) ys``,
@@ -3426,7 +3470,7 @@ val mw_addv_NIL = save_thm("mw_addv_NIL",LIST_CONJ
 
 (* verify implementation for single_div (to be used on arch without div) *)
 
-val num_div_loop_def = Define `
+Definition num_div_loop_def:
   num_div_loop (k:num,n:num,m:num,i:num) =
     if k = 0 then (m,i) else
       let n = n DIV 2 in
@@ -3434,7 +3478,8 @@ val num_div_loop_def = Define `
         if i < n then
           num_div_loop (k-1,n,m,i)
         else
-          num_div_loop (k-1,n,m+1,i-n)`
+          num_div_loop (k-1,n,m+1,i-n)
+End
 
 val num_div_loop_lemma = prove(
   ``!k i n m.
@@ -3451,7 +3496,7 @@ val num_div_loop_thm = save_thm("num_div_loop_thm",
   num_div_loop_lemma
   |> Q.SPECL [`k`,`i`,`n`,`0`] |> SIMP_RULE std_ss []);
 
-val single_div_loop_def = Define `
+Definition single_div_loop_def:
   single_div_loop (k:'a word,ns:'a word list,m:'a word,is:'a word list) =
     if k = 0w then (m,is) else
       let ns = mw_shift ns in
@@ -3461,12 +3506,14 @@ val single_div_loop_def = Define `
         else
           let m = m + 1w in
           let (is,_) = mw_sub is ns T in
-            single_div_loop (k-1w,ns,m,is)`
+            single_div_loop (k-1w,ns,m,is)
+End
 
-val single_div_full_def = Define `
+Definition single_div_full_def:
   single_div_full m2 (m1:'a word) n =
     let (m,is) = single_div_loop (n2w (dimindex (:'a)),[0w;n],0w,[m1;m2]) in
-      (m, HD is)`;
+      (m, HD is)
+End
 
 fun drule th =
   first_assum(mp_tac o MATCH_MP (ONCE_REWRITE_RULE[GSYM AND_IMP_INTRO] th))
@@ -3578,4 +3625,3 @@ Proof
   \\ rename1 `k < 2 ** dimindex (:'a)`
   \\ qexists_tac `k` \\ fs []
 QED
-

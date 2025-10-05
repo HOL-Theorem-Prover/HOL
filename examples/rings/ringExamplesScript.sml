@@ -30,8 +30,9 @@ val _ = if rhs (concl res6) !~ boolSyntax.T then raise Fail "res6 test failed"
       An example: sum of squares
  ---------------------------------------------------------------------------*)
 
-val sum_def =
- Define `(sum f 0 = 0n) /\ (sum f (SUC n) = sum f n + f (SUC n))`;
+Definition sum_def:
+  (sum f 0 = 0n) /\ (sum f (SUC n) = sum f n + f (SUC n))
+End
 
 val lemma = Q.prove
 (`!n:num. sum (\m. m * m) n * 6 = n * (n+1) * (2 * n + 1)`,

@@ -18,12 +18,18 @@ val Strip = S_TAC;
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val zreal_def = Define `zreal (x : real) = (x = 0)`;
-val nzreal_def = Define `nzreal (x : real) = ~(x = 0)`;
-val posreal_def = Define `posreal (x : real) = (0 < x)`;
-val nnegreal_def = Define `nnegreal (x : real) = (0 <= x)`;
-val negreal_def = Define `negreal (x : real) = (0 < ~x)`;
-val nposreal_def = Define `nposreal (x : real) = (0 <= ~x)`;
+Definition zreal_def:   zreal (x : real) = (x = 0)
+End
+Definition nzreal_def:   nzreal (x : real) = ~(x = 0)
+End
+Definition posreal_def:   posreal (x : real) = (0 < x)
+End
+Definition nnegreal_def:   nnegreal (x : real) = (0 <= x)
+End
+Definition negreal_def:   negreal (x : real) = (0 < ~x)
+End
+Definition nposreal_def:   nposreal (x : real) = (0 <= ~x)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)

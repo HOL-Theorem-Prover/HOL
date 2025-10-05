@@ -110,8 +110,9 @@ val subset_thm = add_prove(
   \\ FS [LIST_TO_SET_THM,EMPTY_SUBSET,INSERT_SUBSET] \\ REPEAT STRIP_TAC
   \\ Cases_on `MEM h ys` \\ FS []);
 
-val list_exists_def = Define `
-  list_exists n x = ?xs. (LENGTH xs = n) /\ (x = list2sexp xs)`;
+Definition list_exists_def:
+  list_exists n x = ?xs. (LENGTH xs = n) /\ (x = list2sexp xs)
+End
 
 val tuplep_thm = add_prove(
   ``!x n. tuplep n x = LISP_TEST (list_exists (getVal n) x)``,
@@ -169,11 +170,12 @@ val strip_seconds_thm = add_prove(
   ``!xs. strip_seconds (list2sexp xs) = list2sexp (MAP (CAR o CDR) xs)``,
   Induct \\ ONCE_REWRITE_TAC [strip_seconds_def] \\ FS [MAP]);
 
-val CONS_ZIP_def = Define `
+Definition CONS_ZIP_def:
   (CONS_ZIP [] [] = []) /\
   (CONS_ZIP [] (y::ys) = []) /\
   (CONS_ZIP (x::xs) [] = (LISP_CONS x (Sym "NIL")) :: CONS_ZIP xs []) /\
-  (CONS_ZIP (x::xs) (y::ys) = (LISP_CONS x y) :: CONS_ZIP xs ys)`;
+  (CONS_ZIP (x::xs) (y::ys) = (LISP_CONS x y) :: CONS_ZIP xs ys)
+End
 
 val pair_lists_thm = add_prove(
   ``!xs ys. pair_lists (list2sexp xs) (list2sexp ys) = list2sexp (CONS_ZIP xs ys)``,
@@ -210,9 +212,10 @@ val sort_symbols_thm = add_prove(
          list2sexp (ISORT (\x y. getSym x <= getSym y) xs)``,
   Induct \\ ONCE_REWRITE_TAC [sort_symbols_def] \\ FS [ISORT_def]);
 
-val LOOKUP_DOT_def = Define `
+Definition LOOKUP_DOT_def:
   (LOOKUP_DOT a [] = Sym "NIL") /\
-  (LOOKUP_DOT a ((x,y)::xs) = if a = x then Dot x y else LOOKUP_DOT a xs)`;
+  (LOOKUP_DOT a ((x,y)::xs) = if a = x then Dot x y else LOOKUP_DOT a xs)
+End
 
 val lookup_thm = add_prove(
   ``!xs a. lookup a (alist2sexp xs) = LOOKUP_DOT a xs``,
@@ -258,16 +261,18 @@ val logic_func2sexp_11 = add_prove(
   \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss []);
 
-val func_syntax_ok_def = Define `
+Definition func_syntax_ok_def:
   (func_syntax_ok (mPrimitiveFun p) = T) /\
   (func_syntax_ok (mFun f) = ~(MEM f ["NIL"; "QUOTE"; "PEQUAL*";
         "PNOT*"; "POR*"; "FIRST"; "SECOND"; "THIRD"; "FOURTH";
         "FIFTH"; "AND"; "OR"; "LIST"; "COND"; "LET"; "LET*"; "CONS";
         "EQUAL"; "<"; "SYMBOL-<"; "+"; "-"; "CONSP"; "NATP"; "SYMBOLP";
-        "CAR"; "CDR"; "NOT"; "RANK"; "IF"; "ORDP"; "ORD<" ]))`;
+        "CAR"; "CDR"; "NOT"; "RANK"; "IF"; "ORDP"; "ORD<" ]))
+End
 
-val var_ok_def = Define `
-  var_ok x = ~(x = "NIL") /\ ~(x = "T")`;
+Definition var_ok_def:
+  var_ok x = ~(x = "NIL") /\ ~(x = "T")
+End
 
 Definition term_syntax_ok_def:
   (term_syntax_ok (mConst s) = T) /\
@@ -279,10 +284,11 @@ Definition term_syntax_ok_def:
      EVERY (term_syntax_ok) zs /\ term_syntax_ok y /\ (LENGTH xs = LENGTH zs))
 End
 
-val formula_syntax_ok_def = Define `
+Definition formula_syntax_ok_def:
   (formula_syntax_ok (Not x) = formula_syntax_ok x) /\
   (formula_syntax_ok (Or x y) = formula_syntax_ok x /\ formula_syntax_ok y) /\
-  (formula_syntax_ok (Equal t1 t2) = term_syntax_ok t1 /\ term_syntax_ok t2)`;
+  (formula_syntax_ok (Equal t1 t2) = term_syntax_ok t1 /\ term_syntax_ok t2)
+End
 
 val logic_flag_term_vars_Dot =
   ``logic_flag_term_vars (Sym "LIST") (Dot x y) acc``
@@ -449,9 +455,10 @@ val logic_term_vars_thm = add_prove(
         (logic_term_vars (t2sexp x) = list2sexp (MAP Sym (free_vars x)))``,
   SIMP_TAC std_ss [logic_term_vars_raw_thm,syntax_ok_IMP_vars_ok]);
 
-val LIST_LSIZE_def = Define `
+Definition LIST_LSIZE_def:
   (LIST_LSIZE [] = 0) /\
-  (LIST_LSIZE (x::xs) = 1 + LSIZE x + LIST_LSIZE xs)`;
+  (LIST_LSIZE (x::xs) = 1 + LSIZE x + LIST_LSIZE xs)
+End
 
 val lisp2sexp_11 = add_prove(
   ``!xs ys. (list2sexp xs = list2sexp ys) = (xs = ys)``,
@@ -608,12 +615,13 @@ val logic_flag_term_atblp_TERM = prove(
   \\ SIMP_TAC std_ss [Once logic_flag_term_atblp_def] \\ FS [MAP]);
 
 (* informally domain atbl = primitives UNION domain ctxt, they agree on content *)
-val atbl_ok_def = Define `
+Definition atbl_ok_def:
   atbl_ok (ctxt:context_type) atbl =
     !f. func_syntax_ok f ==>
           (CDR (lookup (logic_func2sexp f) atbl) =
            if func_arity ctxt f = NONE then Sym "NIL" else
-             Val (THE (func_arity ctxt f)))`
+             Val (THE (func_arity ctxt f)))
+End
 
 val logic_flag_term_atblp_thm = prove(
   ``!ts.
@@ -706,11 +714,13 @@ val logic_appeal_size_def = fetch "-" "logic_appeal_size_def"
 
 val _ = computeLib.add_funs [logic_appeal_size_def];
 
-val CONCL_def = Define `CONCL (Appeal name concl x) = concl`;
+Definition CONCL_def:   CONCL (Appeal name concl x) = concl
+End
 
-val HYPS_def = Define `
+Definition HYPS_def:
   (HYPS (Appeal name concl NONE) = []) /\
-  (HYPS (Appeal name concl (SOME(x,y))) = x)`;
+  (HYPS (Appeal name concl (SOME(x,y))) = x)
+End
 
 Triviality logic_appeal3_size_lemma:
   !q a. MEM a q ==> logic_appeal_size a < list_size logic_appeal_size q
@@ -916,9 +926,10 @@ val appeal_assum_def = (add_rw o Define) `
     appeal_syntax_ok a /\ atbl_ok ctxt atbl /\
     EVERY (MilawaTrue ctxt) (MAP CONCL (HYPS a))`;
 
-val thms_inv_def = Define `
+Definition thms_inv_def:
   thms_inv ctxt xs = EVERY (MilawaTrue ctxt) xs /\
-                     EVERY formula_syntax_ok xs`;
+                     EVERY formula_syntax_ok xs
+End
 
 val a2sexp_CONCL = add_prove(
   ``CAR (CDR (a2sexp a)) = f2sexp (CONCL a)``,
@@ -1594,10 +1605,11 @@ val logic_proofp_thm = prove(
   \\ ONCE_REWRITE_TAC [logic_flag_proofp_def] \\ FS []
   \\ FULL_SIMP_TAC (srw_ss()) [] \\ FS []);
 
-val callmap2sexp_def = Define `
+Definition callmap2sexp_def:
   callmap2sexp ts =
     list2sexp (MAP (\(xs,ys). Dot (list2sexp (MAP t2sexp xs))
-                                  (list2sexp (MAP t2sexp ys))) ts)`;
+                                  (list2sexp (MAP t2sexp ys))) ts)
+End
 
 val app_EQ_list2sexp = prove(
   ``!y ys. (app y (Sym "NIL") = list2sexp ys) /\ isTrue (true_listp y) ==>
@@ -1969,8 +1981,9 @@ val sexp3term_def = tDefine "sexp3term" `
   \\ REPEAT (MATCH_MP_TAC LSIZE_CDR_LESS) \\ REPEAT DECIDE_TAC
   \\ Cases_on `b` \\ FULL_SIMP_TAC std_ss [CAR_def,LSIZE_def] \\ DECIDE_TAC);
 
-val sexp2sexp_def = Define `
-  sexp2sexp x = t2sexp (term2t (sexp3term x))`;
+Definition sexp2sexp_def:
+  sexp2sexp x = t2sexp (term2t (sexp3term x))
+End
 
 val list_exists3 = prove(
   ``!x. list_exists 3 x ==> ?x1 x2 x3. x = list2sexp [x1;x2;x3]``,
@@ -2564,7 +2577,7 @@ val appeal_syntax_ok_thm = prove(
 
 val _ = add_rws [core_checker_def,core_axioms_def,core_thms_def,core_atbl_def,core_ftbl_def]
 
-val core_check_proof_inv_def = Define `
+Definition core_check_proof_inv_def:
   core_check_proof_inv checker k =
     ?name.
       (checker = Sym name) /\
@@ -2577,7 +2590,8 @@ val core_check_proof_inv_def = Define `
             isTrue res /\ (x1 = a2sexp proof) /\
             (x2 = list2sexp (MAP f2sexp axioms)) /\
             (x3 = list2sexp (MAP f2sexp thms)) /\ (x4 = atbl) /\ ok2 ==>
-            MilawaTrue ctxt (CONCL proof)`;
+            MilawaTrue ctxt (CONCL proof)
+End
 
 val core_check_proof_inv_init = prove(
   ``core_check_proof_inv (Sym "LOGIC.PROOFP") core_funs``,
@@ -2614,10 +2628,11 @@ val R_ev_OK = prove(
     (!x y. R_ev x y ==> SND (SND (SND y)) ==> (SND (SND (SND (SND (x))))))``,
   HO_MATCH_MP_TAC R_ev_ind \\ SIMP_TAC std_ss [FORALL_PROD,LET_DEF]);
 
-val PREFIX_def = Define `
+Definition PREFIX_def:
   (PREFIX [] _ = T) /\
   (PREFIX (x::xs) (y::ys) = (x = y) /\ PREFIX xs ys) /\
-  (PREFIX (x::xs) [] = F)`;
+  (PREFIX (x::xs) [] = F)
+End
 
 val PREFIX_REFL = prove(
   ``!xs. PREFIX xs xs``,
@@ -2860,7 +2875,7 @@ val core_check_proof_list_inv_IMP_OK = prove(
         (SND (SND (SND (core_check_proof_list checker t axioms thms atbl k io ok))) ==> ok)``,
   METIS_TAC [core_check_proof_list_IMP_OK]);
 
-val ftbl_inv_def = Define `
+Definition ftbl_inv_def:
   ftbl_inv k ftbl =
     (* every proper ftbl entry exists in the runtime *)
     EVERY (\x. if isTrue (CDR x) then
@@ -2878,44 +2893,50 @@ val ftbl_inv_def = Define `
     (* all entries are conses and the keys are distinct *)
     EVERY isDot (sexp2list ftbl) /\ ALL_DISTINCT (MAP CAR (sexp2list ftbl)) /\
     (* the initial ftbl is at the bottom of the list *)
-    ?old. FUNPOW CDR old ftbl = init_ftbl`;
+    ?old. FUNPOW CDR old ftbl = init_ftbl
+End
 
-val str2func_def = Define `
+Definition str2func_def:
   str2func str = if str = "RANK" then mPrimitiveFun logic_RANK else
                  if str = "NOT" then mPrimitiveFun logic_NOT else
                  if str = "ORDP" then mPrimitiveFun logic_ORDP else
-                 if str = "ORD<" then mPrimitiveFun logic_ORD_LESS else mFun str`;
+                 if str = "ORD<" then mPrimitiveFun logic_ORD_LESS else mFun str
+End
 
-val def_axiom_def = Define `
+Definition def_axiom_def:
   (def_axiom name (params,BODY_FUN body,sem) =
      (Equal (mApp (str2func name) (MAP mVar params)) body)) /\
   (def_axiom name (params,WITNESS_FUN exp var_name,sem) =
      (Or (Equal exp (mConst (Sym "NIL")))
          (Not (Equal (mLamApp (var_name::params) exp
                               (mApp (str2func name) (MAP mVar params)::MAP mVar params))
-                     (mConst (Sym "NIL"))))))`;
+                     (mConst (Sym "NIL"))))))
+End
 
-val func_definition_exists_def = Define `
+Definition func_definition_exists_def:
   func_definition_exists ctxt name params body sem =
     name IN FDOM ctxt /\ (ctxt ' name = (params,body,sem)) \/
     ?raw_body.
       MEM name ["NOT";"RANK";"ORD<";"ORDP"] /\
       (list2sexp [Sym name; list2sexp (MAP Sym params); raw_body] =
          lookup_safe (Sym name) init_ftbl) /\
-      (body = BODY_FUN (term2t (sexp3term raw_body)))`;
+      (body = BODY_FUN (term2t (sexp3term raw_body)))
+End
 
-val logic_func_inv_def = Define `
+Definition logic_func_inv_def:
   logic_func_inv name ctxt raw_body =
     (MEM name ["NOT";"RANK";"ORD<";"ORDP"] \/
      let logic_body = term2t (sexp3term raw_body) in
-       !a. M_ev name (logic_body,a,ctxt) (EvalTerm (a,ctxt) logic_body))`;
+       !a. M_ev name (logic_body,a,ctxt) (EvalTerm (a,ctxt) logic_body))
+End
 
-val witness_body_def = Define `
+Definition witness_body_def:
   witness_body name var_name params raw_body =
     list2sexp [Sym "ERROR"; list2sexp [Sym "QUOTE";
-      list2sexp [Sym name; Sym var_name; list2sexp (MAP Sym params); raw_body]]]`;
+      list2sexp [Sym name; Sym var_name; list2sexp (MAP Sym params); raw_body]]]
+End
 
-val axioms_aux_def = Define `
+Definition axioms_aux_def:
   (axioms_aux name ctxt axioms ftbl params sem (BODY_FUN body) =
      ?raw_body.
         (MEM (list2sexp [Sym name; list2sexp (MAP Sym params); raw_body]) (sexp2list ftbl)) /\
@@ -2928,24 +2949,28 @@ val axioms_aux_def = Define `
                          witness_body name var_name params raw_body]) (sexp2list ftbl)) /\
         (body = (term2t (sexp3term raw_body))) /\
         (MEM (def_axiom name (params,WITNESS_FUN body var_name,sem)) axioms)) /\
-  (axioms_aux name ctxt axioms ftbl params sem NO_FUN = F)`;
+  (axioms_aux name ctxt axioms ftbl params sem NO_FUN = F)
+End
 
-val axioms_inv_def = Define `
+Definition axioms_inv_def:
   axioms_inv ctxt ftbl axioms =
     EVERY (\x. ~(x IN FDOM ctxt)) ["NOT";"RANK";"ORDP";"ORD<"] /\
     !name params body sem.
       func_definition_exists ctxt name params body sem ==>
-      axioms_aux name ctxt axioms ftbl params sem body`;
+      axioms_aux name ctxt axioms ftbl params sem body
+End
 
-val atbl_ftbl_inv_def = Define `
+Definition atbl_ftbl_inv_def:
   atbl_ftbl_inv atbl ftbl =
     !fname. isTrue (lookup (Sym fname) atbl) ==>
-            MEM (Sym fname) (MAP CAR (sexp2list ftbl)) /\ ~(fname = "ERROR")`;
+            MEM (Sym fname) (MAP CAR (sexp2list ftbl)) /\ ~(fname = "ERROR")
+End
 
-val atbl_inv_def = Define `
-  atbl_inv atbl = EVERY (\x. isVal (CDR x)) (sexp2list atbl)`;
+Definition atbl_inv_def:
+  atbl_inv atbl = EVERY (\x. isVal (CDR x)) (sexp2list atbl)
+End
 
-val context_inv_def = Define `
+Definition context_inv_def:
   context_inv ctxt =
     (!fname params body sem.
        fname IN FDOM ctxt /\ (ctxt ' fname = (params,BODY_FUN body,sem)) ==>
@@ -2953,21 +2978,23 @@ val context_inv_def = Define `
     (!fname params var body sem.
        fname IN FDOM ctxt /\ (ctxt ' fname = (params,WITNESS_FUN body var,sem)) ==>
        (sem = \args.
-         @v. isTrue (EvalTerm (FunVarBind (var::params) (v::args),ctxt) body)))`;
+         @v. isTrue (EvalTerm (FunVarBind (var::params) (v::args),ctxt) body)))
+End
 
-val context_syntax_same_def = Define `
+Definition context_syntax_same_def:
   context_syntax_same ctxt simple_ctxt =
     (FDOM simple_ctxt = FDOM ctxt) /\
     FEVERY (\(name,formals,body,interp).
                name IN FDOM ctxt /\
-               ?sem. ctxt ' name = (formals,body,sem)) simple_ctxt`;
+               ?sem. ctxt ' name = (formals,body,sem)) simple_ctxt
+End
 
 val similar_context_def = Define `
   similar_context ctxt simple_ctxt =
     context_ok simple_ctxt /\ context_syntax_same ctxt simple_ctxt`
   |> REWRITE_RULE [context_syntax_same_def,GSYM CONJ_ASSOC];
 
-val milawa_inv_def = Define `
+Definition milawa_inv_def:
   milawa_inv ctxt simple_ctxt k (axioms,thms,atbl,checker,ftbl) =
     context_ok ctxt /\ context_inv ctxt /\
     similar_context ctxt simple_ctxt /\
@@ -2975,12 +3002,14 @@ val milawa_inv_def = Define `
     thms_inv ctxt thms /\ thms_inv ctxt axioms /\
     core_check_proof_inv checker k /\ ftbl_inv k ftbl /\
     axioms_inv ctxt ftbl axioms /\ atbl_ftbl_inv atbl ftbl /\
-    runtime_inv ctxt k /\ core_assum k`;
+    runtime_inv ctxt k /\ core_assum k
+End
 
-val milawa_state_def = Define `
+Definition milawa_state_def:
   milawa_state (axioms,thms,atbl,checker,ftbl) =
     core_state (list2sexp (MAP f2sexp axioms))
-               (list2sexp (MAP f2sexp thms)) atbl checker ftbl`;
+               (list2sexp (MAP f2sexp thms)) atbl checker ftbl
+End
 
 val DISJ_EQ_IMP = METIS_PROVE [] ``x \/ y = ~x ==> y``;
 
@@ -3060,13 +3089,15 @@ val core_admit_theorem_thm = prove(
 
 (* admit defun *)
 
-val if_memberp_def = Define `
+Definition if_memberp_def:
   if_memberp new_axiom axioms =
-    if isTrue (memberp new_axiom axioms) then axioms else LISP_CONS new_axiom axioms`
+    if isTrue (memberp new_axiom axioms) then axioms else LISP_CONS new_axiom axioms
+End
 
-val if_lookup_def = Define `
+Definition if_lookup_def:
   if_lookup name atbl new_atbl =
-    if isTrue (lookup name atbl) then atbl else new_atbl`;
+    if isTrue (lookup name atbl) then atbl else new_atbl
+End
 
 val core_admit_defun_lemma = core_admit_defun_def
   |> SIMP_RULE std_ss [GSYM if_memberp_def,GSYM if_lookup_def]
@@ -3607,11 +3638,12 @@ val MEM_sexp2list_IMP = prove(
   Induct \\ FULL_SIMP_TAC std_ss [LSIZE_def,sexp2list_def,MEM]
   \\ REPEAT STRIP_TAC \\ RES_TAC \\ FS [] \\ DECIDE_TAC);
 
-val string2func_def = Define `
+Definition string2func_def:
   string2func name =
     case logic_sym2prim name of
       SOME op => mPrimitiveFun op
-    | NONE => mFun name`;
+    | NONE => mFun name
+End
 
 val sexp2t_def = tDefine "sexp2t" `
   sexp2t x = if isSym x then mVar (getSym x) else
@@ -3633,14 +3665,15 @@ val sexp2t_def = tDefine "sexp2t" `
          \\ MATCH_MP_TAC IMP_LSIZE_CAR \\ MATCH_MP_TAC IMP_LSIZE_CDR \\ DECIDE_TAC)
   THEN1 (IMP_RES_TAC MEM_sexp2list_IMP \\ DECIDE_TAC));
 
-val defun_ctxt_def = Define `
+Definition defun_ctxt_def:
   defun_ctxt ctxt cmd =
     let name = getSym (CAR (CDR cmd)) in
     let formals = MAP getSym (sexp2list (CAR (CDR (CDR cmd)))) in
     let body = BODY_FUN (sexp2t (sexp2sexp (CAR (CDR (CDR (CDR cmd)))))) in
     let interp = @interp. context_ok (ctxt |+ (name,formals,body,interp)) in
       if name IN FDOM ctxt UNION {"NOT";"RANK";"ORDP";"ORD<"} then ctxt
-      else ctxt |+ (name,formals,body,interp)`;
+      else ctxt |+ (name,formals,body,interp)
+End
 
 val sexp2t_t2sexp_thm = prove(
   ``!b. term_syntax_ok b ==> (sexp2t (t2sexp b) = b)``,
@@ -4281,7 +4314,7 @@ val logic_variable_listp_NOT_NIL = prove(
   \\ FS [logic_variablep_def] \\ Cases_on `h` \\ FS [getSym_def,var_ok_def]
   \\ FULL_SIMP_TAC (srw_ss()) [] \\ REPEAT STRIP_TAC \\ FS [CONS_11]);
 
-val witness_ctxt_def = Define `
+Definition witness_ctxt_def:
   witness_ctxt ctxt cmd =
     let name = getSym (CAR (CDR cmd)) in
     let var = getSym (CAR (CDR (CDR cmd))) in
@@ -4290,7 +4323,8 @@ val witness_ctxt_def = Define `
     let body = WITNESS_FUN prop var in
     let interp = @interp. context_ok (ctxt |+ (name,formals,body,interp)) in
       if name IN FDOM ctxt UNION {"NOT";"RANK";"ORDP";"ORD<"} then ctxt
-      else ctxt |+ (name,formals,body,interp)`;
+      else ctxt |+ (name,formals,body,interp)
+End
 
 val core_admit_witness_thm = prove(
   ``milawa_inv ctxt simple_ctxt k (axioms,thms,atbl,checker,ftbl) ==>
@@ -4638,8 +4672,9 @@ val lookup_provablep =
 val lookup_provablep_body = lookup_provablep |> concl |> dest_comb |> snd
   |> dest_comb |> snd |> dest_comb |> snd |> dest_comb |> fst |> dest_comb |> snd
 
-val lookup_provablep_body_def = Define `
-  lookup_provablep_body = ^lookup_provablep_body`;
+Definition lookup_provablep_body_def:
+  lookup_provablep_body = ^lookup_provablep_body
+End
 
 val lookup_provablep_thm =
   REWRITE_RULE [GSYM lookup_provablep_body_def] lookup_provablep
@@ -4656,8 +4691,9 @@ val lookup_provable_witness_body = lookup_provable_witness |> concl
   |> dest_comb |> fst |> dest_comb |> snd
   |> dest_comb |> snd |> dest_comb |> fst |> dest_comb |> snd
 
-val lookup_provable_witness_body_def = Define `
-  lookup_provable_witness_body = ^lookup_provable_witness_body`;
+Definition lookup_provable_witness_body_def:
+  lookup_provable_witness_body = ^lookup_provable_witness_body
+End
 
 val lookup_provable_witness_thm =
   REWRITE_RULE [GSYM lookup_provable_witness_body_def] lookup_provable_witness
@@ -5051,16 +5087,18 @@ val core_admit_eval_thm = prove(
 
 (* admit print *)
 
-val line_ok_def = Define `
+Definition line_ok_def:
   line_ok (ctxt,line) =
     (line = "") \/ (line = "NIL") \/
     (?p. context_ok ctxt /\ MilawaValid ctxt p /\
          (line = sexp2string (list2sexp [Sym "PRINT"; list2sexp [Sym "THEOREM"; f2sexp p]]))) \/
-    (?n x y. line = sexp2string (list2sexp [Sym "PRINT"; list2sexp [Val n; x; y]]))`;
+    (?n x y. line = sexp2string (list2sexp [Sym "PRINT"; list2sexp [Val n; x; y]]))
+End
 
-val output_to_string_def = Define `
+Definition output_to_string_def:
   (output_to_string [] = "") /\
-  (output_to_string (x::xs) = SND x ++ "\n" ++ output_to_string xs)`;
+  (output_to_string (x::xs) = SND x ++ "\n" ++ output_to_string xs)
+End
 
 (*
 val milawa_io_inv_def = Define `
@@ -5078,10 +5116,11 @@ val milawa_io_inv_UNFOLD = prove(
   \\ FULL_SIMP_TAC std_ss [GSYM SNOC_APPEND,FOLDL_SNOC]);
 *)
 
-val print_thm_def = Define `
+Definition print_thm_def:
   print_thm ctxt cmd =
     (ctxt,sexp2string
-      (list2sexp [Sym "PRINT"; list2sexp [Sym "THEOREM"; CAR (CDR cmd)]]))`;
+      (list2sexp [Sym "PRINT"; list2sexp [Sym "THEOREM"; CAR (CDR cmd)]]))
+End
 
 val core_admit_print_thm = prove(
   ``milawa_inv ctxt simple_ctxt k (axioms,thms,atbl,checker,ftbl) ==>
@@ -5151,19 +5190,21 @@ val core_accept_command_thm = prove(
 
 (* loop -- accept commands *)
 
-val print_event_number_def = Define `
+Definition print_event_number_def:
   print_event_number n cmd =
     (sexp2string (list2sexp    [Sym "PRINT";
                                 LISP_CONS (Val n)
                                   (LISP_CONS (FIRST cmd)
                                      (LISP_CONS (SECOND cmd)
-                                        (Sym "NIL")))]))`;
+                                        (Sym "NIL")))]))
+End
 
-val milawa_command_def = Define `
+Definition milawa_command_def:
   milawa_command ctxt cmd =
     if CAR cmd = Sym "DEFINE" then (defun_ctxt ctxt cmd,[]) else
     if CAR cmd = Sym "SKOLEM" then (witness_ctxt ctxt cmd,[]) else
-    if CAR cmd = Sym "PRINT" then (ctxt,[print_thm ctxt cmd]) else (ctxt,[])`
+    if CAR cmd = Sym "PRINT" then (ctxt,[print_thm ctxt cmd]) else (ctxt,[])
+End
 
 val milawa_commands_def = tDefine "milawa_commands" `
   milawa_commands ctxt n cmds =
@@ -5248,7 +5289,7 @@ val lookup_safe_lemma3 = lookup_safe_lemma1
    |> Q.INST [`x`|->`Dot (Dot (Sym s) y) z`,`a`|->`Sym t`]
    |> SR [isDot_def,CAR_def,CDR_def,SExp_11]
 
-val ftbl_prop_def = Define `
+Definition ftbl_prop_def:
   ftbl_prop ftbl k =
    (EVERY
      (\x.
@@ -5258,7 +5299,8 @@ val ftbl_prop_def = Define `
          let body = sexp2term (CAR (CDR (CDR x)))
          in name IN FDOM k /\ (k ' name = (formals,body))))
        (sexp2list ftbl) /\ EVERY isDot (sexp2list ftbl)) /\
-   ALL_DISTINCT (MAP CAR (sexp2list ftbl))`;
+   ALL_DISTINCT (MAP CAR (sexp2list ftbl))
+End
 
 val define_safe_list =
   milawa_initTheory.define_safe_list_def
@@ -5426,10 +5468,11 @@ val milawa_init_side_thm = prove(
   SIMP_TAC std_ss [milawa_initTheory.milawa_init_side_def]
   \\ SIMP_TAC std_ss [define_safe_list_side_thm]);
 
-val compute_output_def = Define `
+Definition compute_output_def:
   compute_output cmds =
     [(FEMPTY,"NIL");(FEMPTY,"NIL");(FEMPTY,"NIL");(FEMPTY,"NIL");(FEMPTY,"NIL")] ++
-    milawa_commands FEMPTY 1 cmds`;
+    milawa_commands FEMPTY 1 cmds
+End
 
 val milawa_main_thm = prove(
   ``?ans k io ok.
