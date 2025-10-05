@@ -7,7 +7,7 @@
 \usepackage{proof}
 \usepackage{alltt}
 \usepackage{xcolor}
-\include{macros.tex}
+\usepackage{macros}
 
 \definecolor{keycolor}{RGB}{172, 42, 42}
 \definecolor{vimvert}{RGB}{46, 139, 87}
@@ -48,7 +48,7 @@ The following summarises the contents of the \texttt{papers} directory, with mor
 \begin{description}
 \item[\texttt{.gitignore}] Specification of names of generated files that \texttt{git} should ignore so that generated files don't end up being committed to repositories.
 \item[\hmfile{}] This file specifies the standard build instructions, and includes a pointer to the directory where the \HOL{} sources are to be found in the \texttt{INCLUDES =} line.
-\item[\texttt{macros.tex}] A file of macros supporting our paper; this file can be (and is) perfectly standard \LaTeX, and is \texttt{\bs{}include}-d into the \texttt{paper.htex} file as one might do normally.
+\item[\texttt{macros.sty}] A file of macros supporting our paper; this file can be (and is) perfectly standard \LaTeX, and is \texttt{\bs{}usepackage}-d into the \texttt{paper.htex} file as one might do normally.
 \item[\texttt{overrides}] This files includes custom replacements for \HOL{} symbols (ours, or from the core libraries) to give them prettier \LaTeX{} renderings.
 \item[\texttt{paper.htex}] The sources for this paper.
 \item[\texttt{ppLib.sml}] A small \HOL{} ``library'' that refers to the \HOL{} theories where the desired results are present, or which have ancestors where those results are present.
@@ -198,7 +198,60 @@ Lines 7, 11, 14 and 17 begin with TAB characters (indicated by the long underlin
 \label{fig:holmakefile}
 \end{figure}
 
-
+\newpage
 \subsection{The \texttt{overrides} File}
+
+\section{Tips and Tricks}
+
+\subsection{Inference Rules}
+
+One can present implicational theorems as natural deduction style rules, using the \texttt{rule} and \texttt{stackedrule} directives.
+This feature relies on the \texttt{proof.sty} package, which is part of standard \TeX{} distributions.
+As an exception to the general rule, theorems using the \texttt{rule} modifier must be presented inside a ``display-math'' environment, not \texttt{alltt}.
+The following
+
+\begin{alltt}
+   \bs{}frenchspacing
+   \bs{}[
+     \bs{}\holthm{}[stackedrule]\args{bst.sorted_dict_Nd}
+   \bs{}]
+   \bs{}nonfrenchspacing
+\end{alltt}
+generates
+\frenchspacing
+\[
+  \HOLthm[stackedrule]{bst.sorted_dict_Nd}
+\]
+\nonfrenchspacing
+The use of \texttt{stackedrule} stacks the premises above each other.
+The use of the toggle in and out of ``French spacing'' reduces the width of the spacing after the quantifier (strictly, after the full-stop).
+Without it, one would get:
+\[
+\HOLthm[stackedrule]{bst.sorted_dict_Nd}
+\]
+Of course, if there are no quantifiers, this is not required.
+
+When the premises are not so voluminous, the \texttt{rule} modifier can be used instead.
+In addition, rules can be given names; the argument to \texttt{rulename=} is passed to the \texttt{\bs{}HOLRuleName} macro, which is an alias for \texttt{\bs{}textsf} by default.
+Thus,
+\begin{alltt}
+   \bs{}[
+     \bs{}\holthm{}[rule,rulename=existsL]\args{sampleTree.exists_atLeft}
+   \bs{}]
+\end{alltt}
+generates
+\[
+  \HOLthm[rule,rulename=existsL]{sampleTree.exists_atLeft}
+\]
+and (to illustrate multiple (short) premises)
+\begin{alltt}
+   \bs{}[
+     \bs{}\holthm{}[rule,rulename=conjL,P/t1,Q/t2]\args{bool.AND2_THM}
+   \bs{}]
+\end{alltt}
+generates
+\[
+  \HOLthm[rule,rulename=conjR,P/t1,Q/t2]{bool.AND2_THM}
+\]
 
 \end{document}
