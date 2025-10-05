@@ -16,5 +16,5 @@ munge: ppLib.uo
 holtexbasic.sty: $(HOLDIR)/src/TeX/holtexbasic.sty
 	$(CP) $< $@
 
-EXTRA_CLEANS = holtexbasic.sty paper.pdf paper.tex paper.fls paper.aux \
-               paper.fdb_latexmk paper.log munge
+EXTRA_CLEANS = holtexbasic.sty paper.pdf paper.tex paper.fls \
+               paper.aux paper.fdb_latexmk paper.log munge
