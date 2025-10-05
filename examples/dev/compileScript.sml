@@ -22,30 +22,26 @@ quietdec := false;
 (******************************************************************************
 * Boilerplate needed for compilation
 ******************************************************************************)
-open HolKernel Parse boolLib bossLib;
+Theory compile
+Ancestors
+  arithmetic pair combin compose dff tempabs dev
+Libs
+  metisLib pairLib PairRules
 
-(******************************************************************************
-* Open theories
-******************************************************************************)
-open metisLib arithmeticTheory pairLib pairTheory PairRules combinTheory
-     composeTheory dffTheory tempabsTheory devTheory;
 val op by = BasicProvers.byA
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* Start new theory "compile"                                                *)
-(*****************************************************************************)
-val _ = new_theory "compile";
 val _ = ParseExtras.temp_loose_equality()
 
 (*****************************************************************************)
 (* |- f ===> g = !x. f x ==> g x                                             *)
 (*****************************************************************************)
-val DEV_IMP_def =
- Define `DEV_IMP f g = !x. f x ==> g x`;
+Definition DEV_IMP_def:
+  DEV_IMP f g = !x. f x ==> g x
+End
 
 val _ = set_fixity "===>" (Infixr 451);
 val _ = overload_on("===>", ``$DEV_IMP``);
@@ -90,9 +86,9 @@ val DEV_QUANT_NORM =
 (* Abstract on rising edge ("s at clk" analogous to PSL's "s@clk")           *)
 (*****************************************************************************)
 val _ = set_fixity "at" (Infixl 650);
-val at_def =
- Define
-  `$at s clk = s when Rise clk`;
+Definition at_def:
+   $at s clk = s when Rise clk
+End
 
 (*****************************************************************************)
 (* First the operators:                                                      *)
@@ -103,16 +99,20 @@ val at_def =
 (*  Rec f1 f2 f3   tail recursion with test f1, base f2 and step f3          *)
 (*****************************************************************************)
 
-val Seq_def =
- Define `Seq f1 f2 = \x. f2(f1 x)`;
+Definition Seq_def:
+  Seq f1 f2 = \x. f2(f1 x)
+End
 
-val Par_def =
- Define `Par f1 f2 = \x. (f1 x, f2 x)`;
+Definition Par_def:
+  Par f1 f2 = \x. (f1 x, f2 x)
+End
 
-val Ite_def =
- Define `Ite f1 f2 f3 = \x. if f1 x then f2 x else f3 x`;
+Definition Ite_def:
+  Ite f1 f2 f3 = \x. if f1 x then f2 x else f3 x
+End
 
-val Rec_def = Define `Rec = TAILREC`;
+Definition Rec_def:   Rec = TAILREC
+End
 
 (*****************************************************************************)
 (* Seq is just reverse order function composition                            *)
@@ -126,10 +126,10 @@ val Seq_o =
 (*****************************************************************************)
 (* Precede a device with a function                                          *)
 (*****************************************************************************)
-val PRECEDE_def =
- Define
-  `PRECEDE f d =
-    \(load,inp,done,out). ?v. COMB f (inp,v) /\ d(load,v,done,out)`;
+Definition PRECEDE_def:
+   PRECEDE f d =
+    \(load,inp,done,out). ?v. COMB f (inp,v) /\ d(load,v,done,out)
+End
 
 val PRECEDE_ID =
  store_thm
@@ -171,10 +171,10 @@ val PRECEDE_DEV =
 (*****************************************************************************)
 (* Follow a device with a function                                          *)
 (*****************************************************************************)
-val FOLLOW_def =
- Define
-  `FOLLOW d f =
-    \(load,inp,done,out). ?v. d(load,inp,done,v) /\ COMB f (v,out)`;
+Definition FOLLOW_def:
+   FOLLOW d f =
+    \(load,inp,done,out). ?v. d(load,inp,done,v) /\ COMB f (v,out)
+End
 
 val FOLLOW_ID =
  store_thm
@@ -434,9 +434,9 @@ val _ = add_infix ("measuring", 90, NONASSOC);
 (*****************************************************************************)
 (* f <> g = \t. (f t, g t)                                                   *)
 (*****************************************************************************)
-val BUS_CONCAT_def =
- Define
-  `BUS_CONCAT f g = \t. (f t, g t)`;
+Definition BUS_CONCAT_def:
+   BUS_CONCAT f g = \t. (f t, g t)
+End
 
 val _ = set_fixity "<>" (Infixr 375);
 val _ = overload_on ("<>", ``BUS_CONCAT``);
@@ -620,9 +620,9 @@ val ID_CONST =
 (*****************************************************************************)
 (* Constant combinational device                                             *)
 (*****************************************************************************)
-val CONSTANT_def =
- Define
-  `CONSTANT c out = !t. out t = c`;
+Definition CONSTANT_def:
+   CONSTANT c out = !t. out t = c
+End
 
 val COMB_CONSTANT_1 =
  store_thm
@@ -853,9 +853,9 @@ val DEL_Del =
                  q
 *)
 
-val LATCH_def =
- Define
-  `LATCH(sw,d,q) = ?c. MUX(sw,d,c,q) /\ DEL(q,c)`;
+Definition LATCH_def:
+   LATCH(sw,d,q) = ?c. MUX(sw,d,c,q) /\ DEL(q,c)
+End
 
 val LATCH_THM =
  store_thm
@@ -898,9 +898,9 @@ val LATCH_IMP =
                       q
 *)
 
-val DFF_IMP_def =
- Define
-  `DFF_IMP(d,clk,q) = ?sw. POSEDGE_IMP(clk,sw) /\ LATCH(sw,d,q)`;
+Definition DFF_IMP_def:
+   DFF_IMP(d,clk,q) = ?sw. POSEDGE_IMP(clk,sw) /\ LATCH(sw,d,q)
+End
 
 val DFF_IMP_THM =
  store_thm
@@ -929,29 +929,32 @@ val Inf_Rise_POSEDGE =
 (*****************************************************************************)
 (* Flip-flop that powers up outputting T                                     *)
 (*****************************************************************************)
-val DtypeT_def =
- Define `DtypeT(ck,d,q) = (q 0 = T) /\ Dtype(ck,d,q)`;
+Definition DtypeT_def:
+  DtypeT(ck,d,q) = (q 0 = T) /\ Dtype(ck,d,q)
+End
 
 (*****************************************************************************)
 (* Flip-flop that powers up outputting F                                     *)
 (*****************************************************************************)
-val DtypeF_def =
- Define `DtypeF(ck,d,q) = (q 0 = F) /\ Dtype(ck,d,q)`;
+Definition DtypeF_def:
+  DtypeF(ck,d,q) = (q 0 = F) /\ Dtype(ck,d,q)
+End
 
 (*****************************************************************************)
 (* General Dtype parameterised on initial state                              *)
 (*****************************************************************************)
-val DTYPE_def =
- Define `DTYPE v (ck,d,q) = (q 0 = v) /\ Dtype(ck,d,q)`;
+Definition DTYPE_def:
+  DTYPE v (ck,d,q) = (q 0 = v) /\ Dtype(ck,d,q)
+End
 
 (*****************************************************************************)
 (* Compute output signal of DTYPE                                            *)
 (*****************************************************************************)
-val DTYPE_FUN_def =
- Define
-  `(DTYPE_FUN v ck d 0 = v)
+Definition DTYPE_FUN_def:
+   (DTYPE_FUN v ck d 0 = v)
    /\
-   (DTYPE_FUN v ck d (SUC t) = if Rise ck t then d t else DTYPE_FUN v ck d t)`;
+   (DTYPE_FUN v ck d (SUC t) = if Rise ck t then d t else DTYPE_FUN v ck d t)
+End
 
 (*****************************************************************************)
 (* Delete a DTYPE if its output isn't connected to anything                  *)
@@ -973,8 +976,9 @@ val at_CONCAT =
 (*****************************************************************************)
 (* Clock has an infinite number of rising edges                              *)
 (*****************************************************************************)
-val InfRise_def =
- Define `InfRise clk = Inf(Rise clk)`;
+Definition InfRise_def:
+  InfRise clk = Inf(Rise clk)
+End
 
 (* Old version
 val DEL_IMP =
@@ -1142,12 +1146,11 @@ val BUS_CONCAT_LIFTERS1 = Q.store_thm
    RW_TAC std_ss [FUN_EQ_THM,BUS_CONCAT_def]);
 
 
-val Let_def = Define `Let f1 f2 = \x:'a. let v:'c = f1(x) in f2(x,v):'b`;
+Definition Let_def:   Let f1 f2 = \x:'a. let v:'c = f1(x) in f2(x,v):'b
+End
 
 val Let =
  store_thm
   ("Let",
    ``Let f1 f2 = Seq (Par (\x.x) f1) f2``,
    RW_TAC std_ss [Let_def,Seq_def,Par_def,LET_DEF]);
-
-val _ = export_theory();

@@ -1,14 +1,12 @@
 (* ------------------------------------------------------------------------
    Support for x86 step evaluator
    ------------------------------------------------------------------------ *)
+Theory x64_step
+Ancestors
+  x64
+Libs
+  bitstringLib wordsLib blastLib utilsLib
 
-open HolKernel boolLib bossLib
-
-open bitstringLib wordsLib blastLib
-open x64Theory
-open utilsLib
-
-val _ = new_theory "x64_step"
 
 (* ------------------------------------------------------------------------ *)
 
@@ -18,9 +16,10 @@ val () =
 
 (* ------------------------------------------------------------------------ *)
 
-val NextStateX64_def = Define`
+Definition NextStateX64_def:
    NextStateX64 s0 =
-   let s1 = x64_next s0 in if s1.exception = NoException then SOME s1 else NONE`
+   let s1 = x64_next s0 in if s1.exception = NoException then SOME s1 else NONE
+End
 
 val NextStateX64_0 = utilsLib.ustore_thm("NextStateX64_0",
   `(s.exception = NoException) ==>
@@ -44,38 +43,44 @@ val NextStateX64 = utilsLib.ustore_thm("NextStateX64",
 
 (* ------------------------------------------------------------------------ *)
 
-val read_mem16_def = Lib.with_flag (Feedback.emit_MESG, false) Define`
-   read_mem16 (m: word64 -> word8) a = m (a + 1w) @@ m a`
+Definition read_mem16_def:
+   read_mem16 (m: word64 -> word8) a = m (a + 1w) @@ m a
+End
 
-val read_mem32_def = Lib.with_flag (Feedback.emit_MESG, false) Define`
+Definition read_mem32_def:
    read_mem32 (m: word64 -> word8) a =
-   m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m a`
+   m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m a
+End
 
-val read_mem64_def = Lib.with_flag (Feedback.emit_MESG, false) Define`
+Definition read_mem64_def:
    read_mem64 (m: word64 -> word8) a =
    m (a + 7w) @@ m (a + 6w) @@ m (a + 5w) @@ m (a + 4w) @@
-   m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m a`
+   m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m a
+End
 
-val read_mem128_def = Lib.with_flag (Feedback.emit_MESG, false) Define`
+Definition read_mem128_def:
    read_mem128 (m: word64 -> word8) a =
    m (a + 15w) @@ m (a + 14w) @@ m (a + 13w) @@ m (a + 12w) @@
    m (a + 11w) @@ m (a + 10w) @@ m (a + 9w) @@ m (a + 8w) @@
    m (a + 7w) @@ m (a + 6w) @@ m (a + 5w) @@ m (a + 4w) @@
-   m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m a`
+   m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m a
+End
 
-val write_mem16_def = Define`
+Definition write_mem16_def:
    write_mem16 (m: word64 -> word8) a (v: word16) =
      (a + 1w =+ (15 >< 8) v)
-        ((a =+ (7 >< 0) v) m)`;
+        ((a =+ (7 >< 0) v) m)
+End
 
-val write_mem32_def = Define`
+Definition write_mem32_def:
    write_mem32 (m: word64 -> word8) a (v: word32) =
      (a + 3w =+ (31 >< 24) v)
         ((a + 2w =+ (23 >< 16) v)
            ((a + 1w =+ (15 >< 8) v)
-              ((a =+ (7 >< 0) v) m)))`;
+              ((a =+ (7 >< 0) v) m)))
+End
 
-val write_mem64_def = Define`
+Definition write_mem64_def:
    write_mem64 (m: word64 -> word8) a (v: word64) =
      (a + 7w =+ (63 >< 56) v)
         ((a + 6w =+ (55 >< 48) v)
@@ -84,9 +89,10 @@ val write_mem64_def = Define`
                  ((a + 3w =+ (31 >< 24) v)
                     ((a + 2w =+ (23 >< 16) v)
                        ((a + 1w =+ (15 >< 8) v)
-                          ((a =+ (7 >< 0) v) m)))))))`;
+                          ((a =+ (7 >< 0) v) m)))))))
+End
 
-val write_mem128_def = Define`
+Definition write_mem128_def:
    write_mem128 (m: word64 -> word8) a (v: word128) =
      (a + 15w =+ (127 >< 120) v)
         ((a + 14w =+ (119 >< 112) v)
@@ -103,7 +109,8 @@ val write_mem128_def = Define`
                  ((a + 3w =+ (31 >< 24) v)
                     ((a + 2w =+ (23 >< 16) v)
                        ((a + 1w =+ (15 >< 8) v)
-                          ((a =+ (7 >< 0) v) m)))))))))))))))`;
+                          ((a =+ (7 >< 0) v) m)))))))))))))))
+End
 
 val mem16_rwt = ustore_thm("mem16_rwt",
    `(read_mem16 s.MEM a = v) ==> (mem16 a s = v)`,
@@ -361,13 +368,14 @@ val immediate64 = Q.store_thm("immediate64",
 
 (* ------------------------------------------------------------------------ *)
 
-val rounding_mode_def = Define`
+Definition rounding_mode_def:
   rounding_mode rc =
   case rc : word2 of
     0w => roundTiesToEven
   | 1w => roundTowardNegative
   | 2w => roundTowardPositive
-  | _ => roundTowardZero`
+  | _ => roundTowardZero
+End
 
 val rounding_mode = Q.store_thm ("rounding_mode",
   `!rc.
@@ -729,15 +737,17 @@ val RexReg2 = Q.prove(
    \\ EVAL_TAC
    )
 
-val RegNot4_def = Define`
-   RegNot4 (r: word4) = if (2 >< 0) r = (4w: word3) then 0w else r`
+Definition RegNot4_def:
+   RegNot4 (r: word4) = if (2 >< 0) r = (4w: word3) then 0w else r
+End
 
-val RegNot4or5_def = Define`
+Definition RegNot4or5_def:
    RegNot4or5 (r: word4) =
       if ((2 >< 0) r = (4w: word3)) \/ ((2 >< 0) r = (5w: word3)) then
          0w
       else
-         r`
+         r
+End
 
 val RegNot = Q.prove(
    `(2 >< 0) (RegNot4 r) <> (4w: word3) /\
@@ -826,5 +836,3 @@ val rbp = Q.store_thm("rbp",
    )
 
 (* ------------------------------------------------------------------------ *)
-
-val () = export_theory ()

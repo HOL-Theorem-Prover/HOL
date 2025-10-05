@@ -1,15 +1,7 @@
-open HolKernel boolLib bossLib Parse;
-
-open listTheory;
-open rich_listTheory;
-open prim_recTheory;
-open arithmeticTheory;
-open pred_setTheory;
-open pairTheory;
-open boolTheory;
-open set_lemmasTheory;
-
-val _ = new_theory"boyer_moore_spec";
+Theory boyer_moore_spec
+Ancestors
+  list rich_list prim_rec arithmetic pred_set pair bool
+  set_lemmas
 
 (*
     SOLUTION DEFINITION AND BEHAVIOUR
@@ -185,13 +177,12 @@ val SOL_SHF_THM = store_thm(
 
 (* -- CHARACTER MISMATCH SHIFTS -- *)
 (* Formal Definition of Valid Character Shifts *)
-val valid_cha_shifts_def =
-   Define
-   `
+Definition valid_cha_shifts_def:
+
    valid_cha_shifts pat all_chars j a =
         (j+1) INSERT {d | 1 <= d /\ d <= j
                           /\ (EL (j-d) pat = EL a all_chars)}
-   `;
+End
 
 (* Confirmation that a valid character shift exists *)
 val CHA_SHIFT_EXISTS_THM = store_thm(
@@ -229,16 +220,15 @@ QED
 
 (* -- SUFFIX MATCH SHIFTS -- *)
 (* Formal Definition of Valid Suffix Shifts *)
-val valid_suf_shifts_def =
-    Define
-    `
+Definition valid_suf_shifts_def:
+
     valid_suf_shifts pat j  =
         {d | 1 <= d /\ d <= LENGTH pat
             /\ (!i. (MAX (j+1) d <= i) /\ (i <= LENGTH pat - 1)
                     ==> (EL (i-d) pat = EL i pat))
             /\ ((d >= j+1) \/ (EL (j-d) pat <> EL j pat))
         }
-    `;
+End
 
 (* Confirmation that a valid suffix shift exists in correct circumstances *)
 val SUF_SHIFT_EXISTS_THM = store_thm(
@@ -310,4 +300,3 @@ val SUF_SKIP_NOT_SOL = store_thm(
         )
     );
 
-val _ = export_theory();

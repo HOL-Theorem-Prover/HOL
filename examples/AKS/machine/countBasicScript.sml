@@ -4,31 +4,20 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "countBasic";
-
 (* ------------------------------------------------------------------------- *)
+Theory countBasic
+Ancestors
+  pred_set list arithmetic number combinatorics divides gcd
+  logroot pair option listRange prime countMonad countMacro
+  bitsize complexity loopIncrease loopDecrease loopDivide
+  loopMultiply  (* for loop2_mul_rise_steps_le *)
+Libs
+  jcLib monadsyntax
 
 (* val _ = load "jcLib"; *)
-open jcLib;
 
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory logrootTheory pairTheory optionTheory
-     listRangeTheory primeTheory;
-
-open countMonadTheory countMacroTheory;
-
-open bitsizeTheory complexityTheory;
-open loopIncreaseTheory loopDecreaseTheory;
-open loopDivideTheory;
-open loopMultiplyTheory; (* for loop2_mul_rise_steps_le *)
 
 (* val _ = load "monadsyntax"; *)
-open monadsyntax;
-
 val _ = monadsyntax.enable_monadsyntax();
 val _ = monadsyntax.enable_monad "Count";
 
@@ -730,7 +719,8 @@ val power_ofM_thm = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the power_of_two monad *)
-val power_twoM_def = Define `power_twoM = power_ofM 2`;
+Definition power_twoM_def:   power_twoM = power_ofM 2
+End
 
 (*
 > EVAL ``power_twoM 63``; = (F,Count 29): thm
@@ -831,7 +821,7 @@ val power_twoM_steps_bound = store_thm(
 *)
 
 (* Define the ulog monad *)
-val ulogM_def = Define`
+Definition ulogM_def:
     ulogM n =
       do
          gd <- zeroM n;
@@ -843,7 +833,7 @@ val ulogM_def = Define`
                  subM x y;
               od
       od
-`;
+End
 
 (*
 > EVAL ``MAP ulogM [0 .. 5]``; =
@@ -988,8 +978,4 @@ val ulogM_thm = store_thm(
   metis_tac[ulogM_value, ulogM_steps_big_O]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

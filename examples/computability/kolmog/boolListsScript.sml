@@ -1,15 +1,14 @@
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory listTheory pred_setTheory
-open primrecfnsTheory unary_recfnsTheory recursivefnsTheory
-     prtermTheory recfunsTheory
-open reductionEval
-val _ = new_theory "boolLists";
-
-val _ = intLib.deprecate_int()
+Theory boolLists
+Ancestors
+  arithmetic list pred_set primrecfns unary_recfns recursivefns
+  prterm recfuns
+Libs
+  reductionEval
 
 val _ = ParseExtras.tight_equality()
 
-val prefix_def = Define`prefix a b <=> a≼b ∧ a <> b`
+Definition prefix_def:  prefix a b <=> a≼b ∧ a <> b
+End
 
 val _ = set_mapped_fixity{fixity = Infix(NONASSOC,450),term_name = "prefix",tok="≺"}
 
@@ -108,7 +107,8 @@ Induct_on `xs` >> simp[bool_list_to_num_def] >> simp[LEFT_ADD_DISTRIB,EXP]
 QED
 
 
-val Tpow_def = Define`Tpow n = GENLIST (K T) n`
+Definition Tpow_def:  Tpow n = GENLIST (K T) n
+End
 
 Theorem LENGTH_Tpow[simp]:
   LENGTH (Tpow n) = n
@@ -132,7 +132,8 @@ val prefix_refl = Q.store_thm("prefix_refl[simp]",
 `~(l ≺ l)`,
 simp[prefix_def])
 
-val prefix_free_def = Define`prefix_free (s:'a list set) = ∀a b. a ∈ s /\ b ∈ s ==> ¬(a ≺ b) `
+Definition prefix_free_def:  prefix_free (s:'a list set) = ∀a b. a ∈ s /\ b ∈ s ==> ¬(a ≺ b)
+End
 
 val prefix_free_empty = Q.store_thm("prefix_free_empty[simp]",
 `prefix_free EMPTY `,
@@ -177,9 +178,10 @@ fs[prefix_append] >>
       full_simp_tac bool_ss[GSYM APPEND_ASSOC,APPEND_11,tpow_append] >> Cases_on`i` >> fs[tpow_suc]))>>full_simp_tac bool_ss[GSYM APPEND_ASSOC,APPEND_11] >>
 first_x_assum(mp_tac o AP_TERM``LENGTH:bool list -> num``) >> simp[] >> Cases_on`s'` >> fs[]  )
 
-val unbar_def = Define`unbar [] = [] ∧
+Definition unbar_def:  unbar [] = [] ∧
                        unbar (T::x) = unbar x ∧
-                       unbar (F::x) = x `;
+                       unbar (F::x) = x
+End
 
 
 val unbar_tpow = Q.store_thm("unbar_tpow",
@@ -202,11 +204,14 @@ val prefix_free_subset = Q.store_thm("prefix_free_subset",
 `prefix_free s ∧ t ⊆ s ==> prefix_free t`,
 rw[prefix_free_def,SUBSET_DEF] )
 
-val barred_def = Define`barred x = ∃y. x=bar y`
+Definition barred_def:  barred x = ∃y. x=bar y
+End
 
-val bar2_def = Define`bar2 (x,y) = (bar x) ++ (bar y)`
+Definition bar2_def:  bar2 (x,y) = (bar x) ++ (bar y)
+End
 
-val bar2ed_def = Define`bar2ed x = ∃y z. x = (bar y)++(bar z)`
+Definition bar2ed_def:  bar2ed x = ∃y z. x = (bar y)++(bar z)
+End
 
 Theorem bar2ed_bar2[simp]:
   bar2ed (bar2 p)
@@ -214,8 +219,9 @@ Proof
   Cases_on`p` >> simp[bar2ed_def,bar2_def] >> metis_tac[]
 QED
 
-val unbar2_def = Define`unbar2 i (T::rest) = unbar2 (i+1) rest ∧
-                        unbar2 i (F::rest) = (TAKE i rest,unbar (DROP i rest))`
+Definition unbar2_def:  unbar2 i (T::rest) = unbar2 (i+1) rest ∧
+                        unbar2 i (F::rest) = (TAKE i rest,unbar (DROP i rest))
+End
 
 val unbar2_induct_bar2 = Q.store_thm("unbar2_induct_bar2",
 `∀i. unbar2 i (Tpow j ++ F::rest) = (TAKE (i+j) rest,unbar (DROP (i+j) rest))`,
@@ -260,13 +266,16 @@ val bar2_one_to_one = Q.store_thm("bar2_one_to_one[simp]",
 `bar2 (x,y) = bar2 (a,b) <=> x = a ∧ y = b`,
 eq_tac  >> fs[bar2_def] >> rw[APPEND_EQ_APPEND] >> fs[] )
 
-val bar2ed_plus_def = Define`bar2ed_plus x <=> ∃y i q. x=(bar y)++(bar i)++q`
+Definition bar2ed_plus_def:  bar2ed_plus x <=> ∃y i q. x=(bar y)++(bar i)++q
+End
 
-val unbar2p_def = Define`unbar2p i (T::rest) = unbar2p (i+1) rest ∧
-                         unbar2p i (F::rest) = (TAKE i rest, (DROP i rest))`
+Definition unbar2p_def:  unbar2p i (T::rest) = unbar2p (i+1) rest ∧
+                         unbar2p i (F::rest) = (TAKE i rest, (DROP i rest))
+End
 
-val unbar2_plus_def = Define`unbar2_plus x =
-  (FST (unbar2 0 x), FST (unbar2p 0 (SND (unbar2p 0 x))), SND (unbar2p 0 (SND (unbar2p 0 x))) )`
+Definition unbar2_plus_def:  unbar2_plus x =
+  (FST (unbar2 0 x), FST (unbar2p 0 (SND (unbar2p 0 x))), SND (unbar2p 0 (SND (unbar2p 0 x))) )
+End
 
 Theorem unbar2p_induct:
   ∀i. unbar2p i (Tpow j ++ F::rest) =
@@ -317,7 +326,8 @@ Proof
   Cases_on`b-a`>>fs[tpow_suc]
 QED
 
-val bar2ped_def = Define`bar2ped x <=> ∃i q. x = (bar i) ++ q`
+Definition bar2ped_def:  bar2ped x <=> ∃i q. x = (bar i) ++ q
+End
 
 
 Theorem unbar2p_bar[simp]:
@@ -1263,5 +1273,3 @@ QED
 Theorem checkpair_i_def[simp,allow_rebind] = new_specification(
   "checkpair_i_def", ["checkpair_i"],
   MATCH_MP unary_rec_fns_phi recfn_checkpair)
-
-val _ = export_theory();

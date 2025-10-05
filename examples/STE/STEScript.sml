@@ -8,17 +8,12 @@
    val _ = load "stringLib";
    val _ = load "mesonLib";
  *)
+Theory STE
+Ancestors
+  arithmetic list pair string
+Libs
+  stringLib mesonLib
 
-local
-open boolLib Parse bossLib HolKernel;
-open arithmeticTheory stringLib;
-open listTheory mesonLib pairTheory;
-
-in
-
-(* Creating a new theory that will be called STE *)
-
-val _ = new_theory "STE";
 val _ = ParseExtras.temp_loose_equality()
 infix THEN THENL;
 
@@ -30,20 +25,26 @@ val ARW_TAC = RW_TAC std_ss;
 
 (* Dual Rail Encoding of Lattice Values *)
 
-val Top_def  = Define `Top  = (F, F)`;
-val One_def  = Define `One  = (T, F)`;
-val Zero_def = Define `Zero = (F, T)`;
-val X_def    = Define `X    = (T, T)`;
+Definition Top_def:    Top  = (F, F)
+End
+Definition One_def:    One  = (T, F)
+End
+Definition Zero_def:   Zero = (F, T)
+End
+Definition X_def:      X    = (T, T)
+End
 
 (* Definition of least upper bound *)
 val _ = set_fixity "lub" (Infixl 510);
-val lub_def = Define `(a, b) lub (c, d) = (a /\ c, b /\ d)`;
+Definition lub_def:   (a, b) lub (c, d) = (a /\ c, b /\ d)
+End
 
 
 (* Definition of lub on states *)
 
-val lub_state_def = Define `lub_state state1 state2 node =
-                             (state1 node) lub (state2 node)`;
+Definition lub_state_def:   lub_state state1 state2 node =
+                             (state1 node) lub (state2 node)
+End
 
 (* Defintion of ordering *)
  (*              ---
@@ -52,56 +53,65 @@ val lub_state_def = Define `lub_state state1 state2 node =
                  ---  *)
 
 val _ = set_fixity "leq" (Infixl 510);
-val leq_def = Define `(a leq b  = (b = a lub b))`;
+Definition leq_def:   (a leq b  = (b = a lub b))
+End
 
 (* Ordering lifted over states *)
 
 val _ = set_fixity "leq_state" (Infixl 510);
-val leq_state_def = Define `state1 leq_state state2
-    = !node:string. (state1 node) leq (state2 node)`;
+Definition leq_state_def:   state1 leq_state state2
+    = !node:string. (state1 node) leq (state2 node)
+End
 
 (* Ordering lifted over sequences *)
 
 val _ = set_fixity "leq_seq" (Infixl 510);
-val leq_seq_def = Define `sigma1 leq_seq sigma2
-    = !node:string t:num. (sigma1 t node) leq (sigma2 t node)`;
+Definition leq_seq_def:   sigma1 leq_seq sigma2
+    = !node:string t:num. (sigma1 t node) leq (sigma2 t node)
+End
 
 (* Definition of suffix *)
 
-val Suffix_def = Define
-    `Suffix i (sigma: num->string->(bool # bool))
-    = \t node.(sigma (t+i) node)`;
+Definition Suffix_def:
+     Suffix i (sigma: num->string->(bool # bool))
+    = \t node.(sigma (t+i) node)
+End
 
 
 (* Dropping from Boolean to Lattice Values *)
 
-val drop_def = Define `(drop T = One) /\ (drop F = Zero)`;
+Definition drop_def:   (drop T = One) /\ (drop F = Zero)
+End
 
 (* Drop operation lifted over states *)
 
-val extended_drop_state_def = Define
-    `extended_drop_state (s_b:string->bool) = \node. drop (s_b node)`;
+Definition extended_drop_state_def:
+     extended_drop_state (s_b:string->bool) = \node. drop (s_b node)
+End
 
 
 (* Drop operation lifted over sequences *)
 
-val extended_drop_seq_def = Define
-    `extended_drop_seq (sigma_b:num->string->bool) = \t.
-    (extended_drop_state (sigma_b t))`;
+Definition extended_drop_seq_def:
+     extended_drop_seq (sigma_b:num->string->bool) = \t.
+    (extended_drop_state (sigma_b t))
+End
 
 (* Next state function is monotonic *)
 
-val Monotonic_def = Define `Monotonic Y_ckt =
+Definition Monotonic_def:   Monotonic Y_ckt =
     !s s'.
     s leq_state s' ==>
-        (Y_ckt s) leq_state (Y_ckt s')`;
+        (Y_ckt s) leq_state (Y_ckt s')
+End
 
 
 (* Sequence is in the STE language of a circuit  *)
 
-val in_STE_lang_def = Define `
+Definition in_STE_lang_def:
     in_STE_lang sigma Y_ckt =
-    !t. (Y_ckt (sigma t)) leq_state (sigma (t+1))`;
+    !t. (Y_ckt (sigma t)) leq_state (sigma (t+1))
+End
 
 
 (* Defining the abstract type of Trajectory formulas *)
@@ -120,7 +130,7 @@ val _ = set_fixity "AND" (Infixl 510);
 
 (* Semantics of trajectory formula - defined wrt a sequence *)
 
-val SAT_STE_def = Define `(SAT_STE (Is_0 n) = \sigma.
+Definition SAT_STE_def:   (SAT_STE (Is_0 n) = \sigma.
                            Zero leq (sigma 0 n))
 
     /\ (SAT_STE (Is_1 n) = \sigma.
@@ -133,7 +143,8 @@ val SAT_STE_def = Define `(SAT_STE (Is_0 n) = \sigma.
         (P ==> (SAT_STE tf sigma)))
 
     /\ (SAT_STE (NEXT tf) = \sigma.
-        (SAT_STE tf (Suffix 1 sigma)))`;
+        (SAT_STE tf (Suffix 1 sigma)))
+End
 
 (* Datatype of Assertions - leadsto operator *)
 
@@ -146,7 +157,7 @@ val _ = set_fixity "==>>" (Infixl 470);
 
 (* Defining Sequence of a trajectory formula *)
 
-val DefSeq_def = Define `(DefSeq (Is_0 m) = \t n.
+Definition DefSeq_def:   (DefSeq (Is_0 m) = \t n.
                           (if ((n = m) /\ (t = 0)) then Zero else X))
 
     /\ (DefSeq (Is_1 m) = \t n.
@@ -159,17 +170,19 @@ val DefSeq_def = Define `(DefSeq (Is_0 m) = \t n.
         (P ==> FST(DefSeq tf t n),  P ==> SND(DefSeq tf t n)))
 
     /\ (DefSeq (NEXT tf) = \t n.
-        (if ~(t = 0) then (DefSeq tf (t-1) n) else X))`;
+        (if ~(t = 0) then (DefSeq tf (t-1) n) else X))
+End
 
 
 (* Collecting the nodes in the trajectory formula *)
 
-val Nodes_def = Define `(Nodes (Is_0 n) Acc =
+Definition Nodes_def:   (Nodes (Is_0 n) Acc =
                             if MEM n Acc then Acc else (n::Acc))
     /\ (Nodes (Is_1 n) Acc = if MEM n Acc then Acc else (n::Acc))
     /\ (Nodes (tf1 AND tf2) Acc =  Nodes tf2 (Nodes tf1 Acc))
     /\ (Nodes (tf WHEN P) Acc = Nodes tf Acc)
-    /\ (Nodes (NEXT tf) Acc = Nodes tf Acc)`;
+    /\ (Nodes (NEXT tf) Acc = Nodes tf Acc)
+End
 
 
 (* Useful properties about node membership *)
@@ -192,55 +205,62 @@ val MEM_NODES2 = store_thm("MEM_NODES2", ``!tf tf'.
                               PROVE_TAC [MEM_NODES1]);
 
 
-val MAX_def = Define `MAX t1 t2 = (if t1 >= t2 then t1 else t2)`;;
+Definition MAX_def:   MAX t1 t2 = (if t1 >= t2 then t1 else t2)
+End
 
 (* Depth of a trajectory formula *)
 
-val Depth_def = Define `(Depth (Is_0 n) = 0)
+Definition Depth_def:   (Depth (Is_0 n) = 0)
     /\ (Depth (Is_1 n) = 0)
     /\ (Depth (tf1 AND tf2) = MAX (Depth tf1)(Depth tf2))
     /\ (Depth (tf WHEN P) = Depth tf)
-    /\ (Depth (NEXT tf) = SUC (Depth tf))`;
+    /\ (Depth (NEXT tf) = SUC (Depth tf))
+End
 
 
 (* Defining Trajectory *)
 
-val DefTraj_def = Define `(DefTraj tf Model 0 node = DefSeq tf 0 node)
+Definition DefTraj_def:   (DefTraj tf Model 0 node = DefSeq tf 0 node)
     /\ (DefTraj tf Model (SUC t) node
-        = (DefSeq tf (SUC t) node) lub (Model (DefTraj tf Model t) node))`;
+        = (DefSeq tf (SUC t) node) lub (Model (DefTraj tf Model t) node))
+End
 
 (* The STE implementation *)
 
-val STE_Impl_def = Define `STE_Impl (Ant ==>> Cons) Y_ckt =
+Definition STE_Impl_def:   STE_Impl (Ant ==>> Cons) Y_ckt =
     !t. (t <= Depth Cons ==>
          !n. MEM n
          (APPEND(Nodes Ant [])(Nodes Cons [])) ==>
-             (DefSeq Cons t n) leq (DefTraj Ant Y_ckt t n))`;
+             (DefSeq Cons t n) leq (DefTraj Ant Y_ckt t n))
+End
 
 (* Satisfiability of a Trajectory Assertion *)
 
-val SAT_CKT_def = Define `SAT_CKT (Ant ==>> Cons) Y_ckt
+Definition SAT_CKT_def:   SAT_CKT (Ant ==>> Cons) Y_ckt
     = !sigma. (in_STE_lang sigma Y_ckt )
     ==>  (SAT_STE Ant sigma)
-    ==> (SAT_STE Cons sigma)`;
+    ==> (SAT_STE Cons sigma)
+End
 
 (* Boolean valued world starts here *)
 
 (* Definition of suffix of a Boolean valued sequence *)
 
-val Suffix_b_def = Define
-    `Suffix_b i (sigma_b:num->string->bool)
-    = \t node.(sigma_b (t+i) node)`;
+Definition Suffix_b_def:
+     Suffix_b i (sigma_b:num->string->bool)
+    = \t node.(sigma_b (t+i) node)
+End
 
 (* Boolean Valued Sequence is in the relational model of a circuit  *)
 
-val in_BOOL_lang_def = Define `
+Definition in_BOOL_lang_def:
     in_BOOL_lang (sigma_b:num->string->bool) Yb_ckt
-    = !t. Yb_ckt (sigma_b t) (sigma_b (t+1))`;
+    = !t. Yb_ckt (sigma_b t) (sigma_b (t+1))
+End
 
 (* Boolean sequence satisfies a trajectory formula *)
 
-val SAT_BOOL_def = Define `(SAT_BOOL (Is_0 n) = \sigma_b.
+Definition SAT_BOOL_def:   (SAT_BOOL (Is_0 n) = \sigma_b.
                             ((sigma_b 0 n) = F))
 
     /\ (SAT_BOOL (Is_1 n)  = \sigma_b.
@@ -253,16 +273,18 @@ val SAT_BOOL_def = Define `(SAT_BOOL (Is_0 n) = \sigma_b.
         (P ==> (SAT_BOOL tf  sigma_b)))
 
     /\ (SAT_BOOL (NEXT(tf))  =  \sigma_b.
-        (SAT_BOOL tf (Suffix_b 1 sigma_b)))`;
+        (SAT_BOOL tf (Suffix_b 1 sigma_b)))
+End
 
 
 
 (* Linking the lattice and the Boolean Models *)
 
-val Okay_def = Define `Okay (Y_ckt, Yb_ckt) =
+Definition Okay_def:   Okay (Y_ckt, Yb_ckt) =
     !s_b:string->bool s_b':string->bool.
     (Yb_ckt s_b s_b') ==> ((Y_ckt (extended_drop_state s_b)) leq_state
-                         (extended_drop_state s_b'))`;
+                         (extended_drop_state s_b'))
+End
 
  (* Lemmas and Theorems *)
 
@@ -1651,7 +1673,3 @@ val BRIDGETHEOREM2 = store_thm ("BRIDGETHEOREM2",
                                                      [(SYM o SPEC_ALL)
                                                       STE_Impl_def])
                                                     BridgeTheorem));
-
-
-val _ = export_theory();
-end;

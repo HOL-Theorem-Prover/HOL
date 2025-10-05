@@ -29,36 +29,40 @@ val TOP_CASE_TAC = BasicProvers.TOP_CASE_TAC;
      dual of well-formed encoders.
  ---------------------------------------------------------------------------*)
 
-val wf_decoder_def = Define
-  `wf_decoder p (d : bool list -> ('a # bool list) option) =
+Definition wf_decoder_def:
+   wf_decoder p (d : bool list -> ('a # bool list) option) =
    !x.
      if p x then (?a. !b c. (d b = SOME (x, c)) = (b = APPEND a c))
-     else !a b. ~(d a = SOME (x, b))`;
+     else !a b. ~(d a = SOME (x, b))
+End
 
 (*---------------------------------------------------------------------------
      Functions to transform well-formed encoders to well-formed decoders,
      and vice versa.
  ---------------------------------------------------------------------------*)
 
-val enc2dec_def = Define
-  `enc2dec p e (l : bool list) =
+Definition enc2dec_def:
+   enc2dec p e (l : bool list) =
    if ?x t. p (x : 'a) /\ (l = APPEND (e x) t)
    then SOME (@(x, t). p x /\ (l = APPEND (e x) t))
-   else NONE`;
+   else NONE
+End
 
-val dec2enc_def = Define
-  `dec2enc (d : bool list -> ('a # bool list) option) x =
-   @l. d l = SOME (x, [])`;
+Definition dec2enc_def:
+   dec2enc (d : bool list -> ('a # bool list) option) x =
+   @l. d l = SOME (x, [])
+End
 
 (*---------------------------------------------------------------------------
      Proofs that the transformation functions are mutually inverse.
  ---------------------------------------------------------------------------*)
 
-val enc2dec_none = store_thm
-  ("enc2dec_none",
-   ``!p e l. (enc2dec p e l = NONE) = (!x t. p x ==> ~(l = APPEND (e x) t))``,
+Theorem enc2dec_none:
+     !p e l. (enc2dec p e l = NONE) = (!x t. p x ==> ~(l = APPEND (e x) t))
+Proof
    RW_TAC std_ss [enc2dec_def] >>
-   PROVE_TAC []);
+   PROVE_TAC []
+QED
 
 Theorem enc2dec_some:
    !p e l x t.
@@ -81,22 +85,24 @@ Proof
    ]
 QED
 
-val enc2dec_some_alt = store_thm
-  ("enc2dec_some_alt",
-   ``!p e l x.
+Theorem enc2dec_some_alt:
+     !p e l x.
        wf_encoder p e ==>
        ((enc2dec p e l = SOME x) <=>
-        p (FST x) /\ (l = APPEND (e (FST x)) (SND x)))``,
+        p (FST x) /\ (l = APPEND (e (FST x)) (SND x)))
+Proof
    RW_TAC std_ss []
    >> Cases_on `x`
    >> RW_TAC std_ss [FST, SND]
-   >> METIS_TAC [enc2dec_some]);
+   >> METIS_TAC [enc2dec_some]
+QED
 
-val wf_enc2dec = store_thm
-  ("wf_enc2dec",
-   ``!p e. wf_encoder p e ==> wf_decoder p (enc2dec p e)``,
+Theorem wf_enc2dec:
+     !p e. wf_encoder p e ==> wf_decoder p (enc2dec p e)
+Proof
    RW_TAC std_ss [wf_decoder_def, enc2dec_some] >>
-   PROVE_TAC [APPEND_NIL]);
+   PROVE_TAC [APPEND_NIL]
+QED
 
 Theorem dec2enc_some:
    !p d x l.
@@ -124,17 +130,18 @@ Proof
    RW_TAC std_ss []
 QED
 
-val decode_dec2enc = store_thm
-  ("decode_dec2enc",
-   ``!p d x.
-       wf_decoder p d /\ p x ==> (d (dec2enc d x) = SOME (x, []))``,
-   PROVE_TAC [dec2enc_some]);
+Theorem decode_dec2enc:
+     !p d x.
+       wf_decoder p d /\ p x ==> (d (dec2enc d x) = SOME (x, []))
+Proof
+   PROVE_TAC [dec2enc_some]
+QED
 
-val decode_dec2enc_append = store_thm
-  ("decode_dec2enc_append",
-   ``!p d x t.
+Theorem decode_dec2enc_append:
+     !p d x t.
        wf_decoder p d /\ p x ==>
-       (d (APPEND (dec2enc d x) t) = SOME (x, t))``,
+       (d (APPEND (dec2enc d x) t) = SOME (x, t))
+Proof
    RW_TAC std_ss [] >>
    MP_TAC (Q.SPECL [`p`, `d`, `x`] decode_dec2enc) >>
    RW_TAC std_ss [] >>
@@ -143,11 +150,12 @@ val decode_dec2enc_append = store_thm
    RW_TAC std_ss [] >>
    RW_TAC std_ss [] >>
    RES_TAC >>
-   RW_TAC std_ss [APPEND_NIL]);
+   RW_TAC std_ss [APPEND_NIL]
+QED
 
-val wf_dec2enc = store_thm
-  ("wf_dec2enc",
-   ``!p d. wf_decoder p d ==> wf_encoder p (dec2enc d)``,
+Theorem wf_dec2enc:
+     !p d. wf_decoder p d ==> wf_encoder p (dec2enc d)
+Proof
    RW_TAC std_ss [wf_encoder_def] >>
    MP_TAC (Q.SPECL [`p`, `d`] wf_decoder_def) >>
    ASM_REWRITE_TAC [] >>
@@ -162,20 +170,22 @@ val wf_dec2enc = store_thm
    RW_TAC std_ss [GSYM APPEND_ASSOC] >>
    POP_ASSUM (MP_TAC o Q.SPECL [`APPEND (dec2enc d y) l`, `[]`]) >>
    POP_ASSUM (MP_TAC o Q.SPECL [`APPEND (dec2enc d y) l`, `l`]) >>
-   RW_TAC std_ss [APPEND_NIL]);
+   RW_TAC std_ss [APPEND_NIL]
+QED
 
-val dec2enc_enc2dec = store_thm
-  ("dec2enc_enc2dec",
-   ``!p e x. wf_encoder p e /\ p x ==> (dec2enc (enc2dec p e) x = e x)``,
+Theorem dec2enc_enc2dec:
+     !p e x. wf_encoder p e /\ p x ==> (dec2enc (enc2dec p e) x = e x)
+Proof
    RW_TAC std_ss [] >>
    MP_TAC (Q.SPECL [`p`, `e`] wf_enc2dec) >>
    RW_TAC std_ss [dec2enc_some] >>
    MP_TAC (Q.SPECL [`p`, `enc2dec p e`, `x`, `e x`] dec2enc_some) >>
-   RW_TAC std_ss [enc2dec_some, APPEND_NIL]);
+   RW_TAC std_ss [enc2dec_some, APPEND_NIL]
+QED
 
-val enc2dec_dec2enc = store_thm
-  ("enc2dec_dec2enc",
-   ``!p d. wf_decoder p d ==> (enc2dec p (dec2enc d) = d)``,
+Theorem enc2dec_dec2enc:
+     !p d. wf_decoder p d ==> (enc2dec p (dec2enc d) = d)
+Proof
    RW_TAC std_ss [] >>
    MATCH_MP_TAC EQ_EXT >>
    Q.X_GEN_TAC `l` >>
@@ -198,7 +208,8 @@ val enc2dec_dec2enc = store_thm
     RES_TAC >>
     RW_TAC std_ss [APPEND_11] >>
     Suff `d a = SOME (q, [])` >- PROVE_TAC [dec2enc_some] >>
-    RW_TAC std_ss [APPEND_NIL]]);
+    RW_TAC std_ss [APPEND_NIL]]
+QED
 
 (*---------------------------------------------------------------------------
      Units
@@ -208,22 +219,25 @@ val decode_unit_def = Q.new_definition
   ("decode_unit_def",
    `decode_unit p = enc2dec p encode_unit`);
 
-val wf_decode_unit = store_thm
-  ("wf_decode_unit",
-   ``wf_decoder p (decode_unit p)``,
-   RW_TAC std_ss [decode_unit_def, wf_enc2dec, wf_encode_unit]);
+Theorem wf_decode_unit:
+     wf_decoder p (decode_unit p)
+Proof
+   RW_TAC std_ss [decode_unit_def, wf_enc2dec, wf_encode_unit]
+QED
 
-val dec2enc_decode_unit = store_thm
-  ("dec2enc_decode_unit",
-   ``!p x. p x ==> (dec2enc (decode_unit p) x = encode_unit x)``,
-   RW_TAC std_ss [decode_unit_def, dec2enc_enc2dec, wf_encode_unit]);
+Theorem dec2enc_decode_unit:
+     !p x. p x ==> (dec2enc (decode_unit p) x = encode_unit x)
+Proof
+   RW_TAC std_ss [decode_unit_def, dec2enc_enc2dec, wf_encode_unit]
+QED
 
-val decode_unit = store_thm
-  ("decode_unit",
-   ``decode_unit p l = if p () then SOME ((), l) else NONE``,
+Theorem decode_unit:
+     decode_unit p l = if p () then SOME ((), l) else NONE
+Proof
    RW_TAC std_ss
    [decode_unit_def, enc2dec_none, enc2dec_some, encode_unit_def,
-    APPEND, wf_encode_unit, oneTheory.one]);
+    APPEND, wf_encode_unit, oneTheory.one]
+QED
 
 (*---------------------------------------------------------------------------
      Booleans
@@ -233,24 +247,27 @@ val decode_bool_def = Q.new_definition
    ("decode_bool_def",
     `decode_bool p = enc2dec p encode_bool`);
 
-val wf_decode_bool = store_thm
-  ("wf_decode_bool",
-   ``!p. wf_decoder p (decode_bool p)``,
-   RW_TAC std_ss [decode_bool_def, wf_enc2dec, wf_encode_bool]);
+Theorem wf_decode_bool:
+     !p. wf_decoder p (decode_bool p)
+Proof
+   RW_TAC std_ss [decode_bool_def, wf_enc2dec, wf_encode_bool]
+QED
 
-val dec2enc_decode_bool = store_thm
-  ("dec2enc_decode_bool",
-   ``!p x. p x ==> (dec2enc (decode_bool p) x = encode_bool x)``,
-   RW_TAC std_ss [decode_bool_def, dec2enc_enc2dec, wf_encode_bool]);
+Theorem dec2enc_decode_bool:
+     !p x. p x ==> (dec2enc (decode_bool p) x = encode_bool x)
+Proof
+   RW_TAC std_ss [decode_bool_def, dec2enc_enc2dec, wf_encode_bool]
+QED
 
-val decode_bool = store_thm
-  ("decode_bool",
-   ``decode_bool p l =
-     case l of [] => NONE | (h :: t) => if p h then SOME (h, t) else NONE``,
+Theorem decode_bool:
+     decode_bool p l =
+     case l of [] => NONE | (h :: t) => if p h then SOME (h, t) else NONE
+Proof
    TOP_CASE_TAC >>
    RW_TAC std_ss
    [decode_bool_def, enc2dec_none, enc2dec_some, encode_bool_def,
-    APPEND, wf_encode_bool]);
+    APPEND, wf_encode_bool]
+QED
 
 (*---------------------------------------------------------------------------
      Pairs
@@ -260,29 +277,31 @@ val decode_prod_def = Q.new_definition
   ("decode_prod_def",
    `decode_prod p d1 d2 = enc2dec p (encode_prod (dec2enc d1) (dec2enc d2))`);
 
-val wf_decode_prod = store_thm
-  ("wf_decode_prod",
-   ``!p1 p2 d1 d2.
+Theorem wf_decode_prod:
+     !p1 p2 d1 d2.
        wf_decoder p1 d1 /\ wf_decoder p2 d2 ==>
-       wf_decoder (lift_prod p1 p2) (decode_prod (lift_prod p1 p2) d1 d2)``,
+       wf_decoder (lift_prod p1 p2) (decode_prod (lift_prod p1 p2) d1 d2)
+Proof
    RW_TAC std_ss [decode_prod_def] >>
-   PROVE_TAC [wf_dec2enc, wf_enc2dec, wf_encode_prod]);
+   PROVE_TAC [wf_dec2enc, wf_enc2dec, wf_encode_prod]
+QED
 
-val dec2enc_decode_prod = store_thm
-  ("dec2enc_decode_prod",
-   ``!p1 p2 d1 d2 x.
+Theorem dec2enc_decode_prod:
+     !p1 p2 d1 d2 x.
        wf_decoder p1 d1 /\ wf_decoder p2 d2 /\ lift_prod p1 p2 x ==>
        (dec2enc (decode_prod (lift_prod p1 p2) d1 d2) x =
-        encode_prod (dec2enc d1) (dec2enc d2) x)``,
+        encode_prod (dec2enc d1) (dec2enc d2) x)
+Proof
    RW_TAC std_ss
-   [decode_prod_def, dec2enc_enc2dec, wf_encode_prod, wf_dec2enc]);
+   [decode_prod_def, dec2enc_enc2dec, wf_encode_prod, wf_dec2enc]
+QED
 
-val encode_then_decode_prod = store_thm
-  ("encode_then_decode_prod",
-   ``!p1 p2 e1 e2 l t.
+Theorem encode_then_decode_prod:
+     !p1 p2 e1 e2 l t.
        wf_encoder p1 e1 /\ wf_encoder p2 e2 /\ lift_prod p1 p2 l ==>
        (decode_prod (lift_prod p1 p2) (enc2dec p1 e1) (enc2dec p2 e2)
-        (APPEND (encode_prod e1 e2 l) t) = SOME (l, t))``,
+        (APPEND (encode_prod e1 e2 l) t) = SOME (l, t))
+Proof
    RW_TAC std_ss [decode_prod_def] >>
    MP_TAC
    (Q.SPECL
@@ -296,16 +315,17 @@ val encode_then_decode_prod = store_thm
    POP_ASSUM (K ALL_TAC) >>
    Cases_on `l` >>
    FULL_SIMP_TAC std_ss [lift_prod_def, encode_prod_def, APPEND_11] >>
-   PROVE_TAC [dec2enc_enc2dec]);
+   PROVE_TAC [dec2enc_enc2dec]
+QED
 
-val decode_prod = store_thm
-  ("decode_prod",
-   ``wf_decoder p1 d1 /\ wf_decoder p2 d2 ==>
+Theorem decode_prod:
+     wf_decoder p1 d1 /\ wf_decoder p2 d2 ==>
      (decode_prod (lift_prod p1 p2) d1 d2 l =
       case d1 l of NONE => NONE
       | SOME (x, t) =>
          (case d2 t of NONE => NONE
-          | SOME (y, t') => SOME ((x, y), t')))``,
+          | SOME (y, t') => SOME ((x, y), t')))
+Proof
    (REPEAT TOP_CASE_TAC >>
     RW_TAC std_ss
     [decode_prod_def, enc2dec_none, GSYM APPEND_ASSOC, encode_prod_alt]) >|
@@ -361,7 +381,8 @@ val decode_prod = store_thm
     >> RES_TAC
     >> RW_TAC std_ss [GSYM APPEND_ASSOC]
     >> Know `dec2enc d2 q' = a` >- PROVE_TAC [APPEND_NIL, dec2enc_some]
-    >> RW_TAC std_ss [APPEND_11]]);
+    >> RW_TAC std_ss [APPEND_11]]
+QED
 
 (*---------------------------------------------------------------------------
      Sums
@@ -371,29 +392,31 @@ val decode_sum_def = Q.new_definition
   ("decode_sum_def",
    `decode_sum p d1 d2 = enc2dec p (encode_sum (dec2enc d1) (dec2enc d2))`);
 
-val wf_decode_sum = store_thm
-  ("wf_decode_sum",
-   ``!p1 p2 d1 d2.
+Theorem wf_decode_sum:
+     !p1 p2 d1 d2.
        wf_decoder p1 d1 /\ wf_decoder p2 d2 ==>
-       wf_decoder (lift_sum p1 p2) (decode_sum (lift_sum p1 p2) d1 d2)``,
+       wf_decoder (lift_sum p1 p2) (decode_sum (lift_sum p1 p2) d1 d2)
+Proof
    RW_TAC std_ss [decode_sum_def] >>
-   PROVE_TAC [wf_dec2enc, wf_enc2dec, wf_encode_sum]);
+   PROVE_TAC [wf_dec2enc, wf_enc2dec, wf_encode_sum]
+QED
 
-val dec2enc_decode_sum = store_thm
-  ("dec2enc_decode_sum",
-   ``!p1 p2 d1 d2 x.
+Theorem dec2enc_decode_sum:
+     !p1 p2 d1 d2 x.
        wf_decoder p1 d1 /\ wf_decoder p2 d2 /\ lift_sum p1 p2 x ==>
        (dec2enc (decode_sum (lift_sum p1 p2) d1 d2) x =
-        encode_sum (dec2enc d1) (dec2enc d2) x)``,
+        encode_sum (dec2enc d1) (dec2enc d2) x)
+Proof
    RW_TAC std_ss
-   [decode_sum_def, dec2enc_enc2dec, wf_encode_sum, wf_dec2enc]);
+   [decode_sum_def, dec2enc_enc2dec, wf_encode_sum, wf_dec2enc]
+QED
 
-val encode_then_decode_sum = store_thm
-  ("encode_then_decode_sum",
-   ``!p1 p2 e1 e2 l t.
+Theorem encode_then_decode_sum:
+     !p1 p2 e1 e2 l t.
        wf_encoder p1 e1 /\ wf_encoder p2 e2 /\ lift_sum p1 p2 l ==>
        (decode_sum (lift_sum p1 p2) (enc2dec p1 e1) (enc2dec p2 e2)
-        (APPEND (encode_sum e1 e2 l) t) = SOME (l, t))``,
+        (APPEND (encode_sum e1 e2 l) t) = SOME (l, t))
+Proof
    RW_TAC std_ss [decode_sum_def] >>
    MP_TAC
    (Q.SPECL
@@ -407,11 +430,11 @@ val encode_then_decode_sum = store_thm
    POP_ASSUM (K ALL_TAC) >>
    Cases_on `l` >>
    FULL_SIMP_TAC std_ss [lift_sum_def, encode_sum_def, APPEND_11] >>
-   PROVE_TAC [dec2enc_enc2dec]);
+   PROVE_TAC [dec2enc_enc2dec]
+QED
 
-val decode_sum = store_thm
-  ("decode_sum",
-   ``wf_decoder p1 d1 /\ wf_decoder p2 d2 ==>
+Theorem decode_sum:
+     wf_decoder p1 d1 /\ wf_decoder p2 d2 ==>
      (decode_sum (lift_sum p1 p2) d1 d2 l =
       case l of [] => NONE
       | (T :: t) =>
@@ -419,7 +442,8 @@ val decode_sum = store_thm
           | SOME (x, t') => SOME (INL x, t'))
       | (F :: t) =>
          (case d2 t of NONE => NONE
-          | SOME (x, t') => SOME (INR x, t')))``,
+          | SOME (x, t') => SOME (INR x, t')))
+Proof
    (REPEAT TOP_CASE_TAC >>
     RW_TAC std_ss [decode_sum_def, enc2dec_none, GSYM APPEND_ASSOC]) >|
    [Cases_on `x`
@@ -483,7 +507,8 @@ val decode_sum = store_thm
     >> RES_TAC
     >> RW_TAC std_ss [GSYM APPEND_ASSOC]
     >> Know `dec2enc d2 q = a` >- PROVE_TAC [APPEND_NIL, dec2enc_some]
-    >> RW_TAC std_ss [APPEND_11]]);
+    >> RW_TAC std_ss [APPEND_11]]
+QED
 
 (*---------------------------------------------------------------------------
      Options
@@ -493,29 +518,31 @@ val decode_option_def = Q.new_definition
   ("decode_option_def",
    `decode_option p d = enc2dec p (encode_option (dec2enc d))`);
 
-val wf_decode_option = store_thm
-  ("wf_decode_option",
-   ``!p d.
+Theorem wf_decode_option:
+     !p d.
        wf_decoder p d ==>
-       wf_decoder (lift_option p) (decode_option (lift_option p) d)``,
+       wf_decoder (lift_option p) (decode_option (lift_option p) d)
+Proof
    RW_TAC std_ss [decode_option_def] >>
-   PROVE_TAC [wf_dec2enc, wf_enc2dec, wf_encode_option]);
+   PROVE_TAC [wf_dec2enc, wf_enc2dec, wf_encode_option]
+QED
 
-val dec2enc_decode_option = store_thm
-  ("dec2enc_decode_option",
-   ``!p d x.
+Theorem dec2enc_decode_option:
+     !p d x.
        wf_decoder p d /\ lift_option p x ==>
        (dec2enc (decode_option (lift_option p) d) x =
-        encode_option (dec2enc d) x)``,
+        encode_option (dec2enc d) x)
+Proof
    RW_TAC std_ss
-   [decode_option_def, dec2enc_enc2dec, wf_encode_option, wf_dec2enc]);
+   [decode_option_def, dec2enc_enc2dec, wf_encode_option, wf_dec2enc]
+QED
 
-val encode_then_decode_option = store_thm
-  ("encode_then_decode_option",
-   ``!p e l t.
+Theorem encode_then_decode_option:
+     !p e l t.
        wf_encoder p e /\ lift_option p l ==>
        (decode_option (lift_option p) (enc2dec p e)
-        (APPEND (encode_option e l) t) = SOME (l, t))``,
+        (APPEND (encode_option e l) t) = SOME (l, t))
+Proof
    RW_TAC std_ss [decode_option_def] >>
    MP_TAC
    (Q.SPECL [`lift_option p`, `encode_option (dec2enc (enc2dec p e))`,
@@ -528,17 +555,18 @@ val encode_then_decode_option = store_thm
    Cases_on `l` >>
    FULL_SIMP_TAC std_ss [lift_option_def, encode_option_def, APPEND_11] >>
    RW_TAC std_ss [] >>
-   PROVE_TAC [dec2enc_enc2dec]);
+   PROVE_TAC [dec2enc_enc2dec]
+QED
 
-val decode_option = store_thm
-  ("decode_option",
-   ``wf_decoder p d ==>
+Theorem decode_option:
+     wf_decoder p d ==>
      (decode_option (lift_option p) d l =
       case l of [] => NONE
       | (T :: t) =>
          (case d t of NONE => NONE
           | SOME (x, t') => SOME (SOME x, t'))
-      | (F :: t) => SOME (NONE, t))``,
+      | (F :: t) => SOME (NONE, t))
+Proof
    (REPEAT TOP_CASE_TAC >>
     RW_TAC std_ss [decode_option_def, enc2dec_none]) >|
    [Cases_on `x`
@@ -581,7 +609,8 @@ val decode_option = store_thm
     >- PROVE_TAC [wf_encode_option]
     >> STRIP_TAC
     >> ASM_SIMP_TAC std_ss
-       [enc2dec_some, encode_option_def, APPEND, lift_option_def]]);
+       [enc2dec_some, encode_option_def, APPEND, lift_option_def]]
+QED
 
 (*---------------------------------------------------------------------------
      Lists
@@ -591,27 +620,29 @@ val decode_list_def = Q.new_definition
   ("decode_list_def",
    `decode_list p d = enc2dec p (encode_list (dec2enc d))`);
 
-val wf_decode_list = store_thm
-  ("wf_decode_list",
-   ``!p d.
-       wf_decoder p d ==> wf_decoder (EVERY p) (decode_list (EVERY p) d)``,
+Theorem wf_decode_list:
+     !p d.
+       wf_decoder p d ==> wf_decoder (EVERY p) (decode_list (EVERY p) d)
+Proof
    RW_TAC std_ss [decode_list_def] >>
-   PROVE_TAC [wf_dec2enc, wf_enc2dec, wf_encode_list]);
+   PROVE_TAC [wf_dec2enc, wf_enc2dec, wf_encode_list]
+QED
 
-val dec2enc_decode_list = store_thm
-  ("dec2enc_decode_list",
-   ``!p d x.
+Theorem dec2enc_decode_list:
+     !p d x.
        wf_decoder p d /\ EVERY p x ==>
-       (dec2enc (decode_list (EVERY p) d) x = encode_list (dec2enc d) x)``,
+       (dec2enc (decode_list (EVERY p) d) x = encode_list (dec2enc d) x)
+Proof
    RW_TAC std_ss
-   [decode_list_def, dec2enc_enc2dec, wf_encode_list, wf_dec2enc]);
+   [decode_list_def, dec2enc_enc2dec, wf_encode_list, wf_dec2enc]
+QED
 
-val encode_then_decode_list = store_thm
-  ("encode_then_decode_list",
-   ``!p e l t.
+Theorem encode_then_decode_list:
+     !p e l t.
        wf_encoder p e /\ EVERY p l ==>
        (decode_list (EVERY p) (enc2dec p e) (APPEND (encode_list e l) t) =
-        SOME (l, t))``,
+        SOME (l, t))
+Proof
    RW_TAC std_ss [decode_list_def] >>
    MP_TAC
    (Q.SPECL [`EVERY p`, `encode_list (dec2enc (enc2dec p e))`,
@@ -623,11 +654,11 @@ val encode_then_decode_list = store_thm
    POP_ASSUM (K ALL_TAC) >>
    Induct_on `l` >>
    RW_TAC std_ss [EVERY_DEF, encode_list_def, APPEND_11] >>
-   PROVE_TAC [dec2enc_enc2dec]);
+   PROVE_TAC [dec2enc_enc2dec]
+QED
 
-val decode_list = store_thm
-  ("decode_list",
-   ``wf_decoder p d ==>
+Theorem decode_list:
+     wf_decoder p d ==>
      (decode_list (EVERY p) d l =
       case l of [] => NONE
       | (T :: t) =>
@@ -635,7 +666,8 @@ val decode_list = store_thm
           | SOME (x, t') =>
              (case decode_list (EVERY p) d t' of NONE => NONE
               | SOME (xs, t'') => SOME (x :: xs, t'')))
-      | (F :: t) => SOME ([], t))``,
+      | (F :: t) => SOME ([], t))
+Proof
    (REPEAT TOP_CASE_TAC >>
     RW_TAC std_ss [decode_list_def, enc2dec_none]) >|
    [Cases_on `x` >>
@@ -707,7 +739,8 @@ val decode_list = store_thm
     Know `wf_encoder (EVERY p) (encode_list (dec2enc d))` >-
     PROVE_TAC [wf_encode_list] >>
     STRIP_TAC >>
-    ASM_SIMP_TAC std_ss [enc2dec_some, encode_list_def, APPEND, EVERY_DEF]]);
+    ASM_SIMP_TAC std_ss [enc2dec_some, encode_list_def, APPEND, EVERY_DEF]]
+QED
 
 (*---------------------------------------------------------------------------
      Bounded lists
@@ -717,29 +750,31 @@ val decode_blist_def = Q.new_definition
   ("decode_blist_def",
    `decode_blist p m d = enc2dec p (encode_blist m (dec2enc d))`);
 
-val wf_decode_blist = store_thm
-  ("wf_decode_blist",
-   ``!m p d.
+Theorem wf_decode_blist:
+     !m p d.
        wf_decoder p d ==>
-       wf_decoder (lift_blist m p) (decode_blist (lift_blist m p) m d)``,
+       wf_decoder (lift_blist m p) (decode_blist (lift_blist m p) m d)
+Proof
    RW_TAC std_ss [decode_blist_def]
-   >> PROVE_TAC [wf_dec2enc, wf_enc2dec, wf_encode_blist]);
+   >> PROVE_TAC [wf_dec2enc, wf_enc2dec, wf_encode_blist]
+QED
 
-val dec2enc_decode_blist = store_thm
-  ("dec2enc_decode_blist",
-   ``!m p d l.
+Theorem dec2enc_decode_blist:
+     !m p d l.
        wf_decoder p d /\ lift_blist m p l ==>
        (dec2enc (decode_blist (lift_blist m p) m d) l =
-        encode_blist m (dec2enc d) l)``,
+        encode_blist m (dec2enc d) l)
+Proof
    RW_TAC std_ss [decode_blist_def]
-   >> PROVE_TAC [dec2enc_enc2dec, wf_encode_blist, wf_dec2enc]);
+   >> PROVE_TAC [dec2enc_enc2dec, wf_encode_blist, wf_dec2enc]
+QED
 
-val encode_then_decode_blist = store_thm
-  ("encode_then_decode_blist",
-   ``!m p e l t.
+Theorem encode_then_decode_blist:
+     !m p e l t.
        wf_encoder p e /\ lift_blist m p l ==>
        (decode_blist (lift_blist m p) m (enc2dec p e)
-        (APPEND (encode_blist m e l) t) = SOME (l, t))``,
+        (APPEND (encode_blist m e l) t) = SOME (l, t))
+Proof
    RW_TAC std_ss [decode_blist_def]
    >> MP_TAC
       (Q.SPECL [`lift_blist m p`, `encode_blist m (dec2enc (enc2dec p e))`,
@@ -757,18 +792,19 @@ val encode_then_decode_blist = store_thm
    >> FULL_SIMP_TAC std_ss [HD, TL, EVERY_DEF, LENGTH]
    >> RW_TAC std_ss [dec2enc_enc2dec, APPEND_11]
    >> Q.PAT_X_ASSUM `!l. P l` MATCH_MP_TAC
-   >> RW_TAC std_ss [lift_blist_def]);
+   >> RW_TAC std_ss [lift_blist_def]
+QED
 
-val decode_blist = store_thm
-  ("decode_blist",
-   ``wf_decoder (p : 'a -> bool) d ==>
+Theorem decode_blist:
+     wf_decoder (p : 'a -> bool) d ==>
      (decode_blist (lift_blist m p) m d l =
       case m of 0 => SOME ([], l)
       | SUC n =>
          (case d l of NONE => NONE
           | SOME (x, t) =>
           (case decode_blist (lift_blist n p) n d t of NONE => NONE
-           | SOME (xs, t') => SOME (x :: xs, t'))))``,
+           | SOME (xs, t') => SOME (x :: xs, t'))))
+Proof
    (REPEAT TOP_CASE_TAC >>
     RW_TAC std_ss [decode_blist_def, enc2dec_none, lift_blist_def, LENGTH_NIL])
    >| [MP_TAC
@@ -827,7 +863,8 @@ val decode_blist = store_thm
        >> RW_TAC std_ss [APPEND_11]
        >> POP_ASSUM (K ALL_TAC)
        >> Q.PAT_X_ASSUM `X = Y` MP_TAC
-       >> RW_TAC std_ss [decode_blist_def, enc2dec_some, wf_encode_blist]]);
+       >> RW_TAC std_ss [decode_blist_def, enc2dec_some, wf_encode_blist]]
+QED
 
 (*---------------------------------------------------------------------------
      Nums
@@ -837,19 +874,20 @@ val decode_num_def = Q.new_definition
   ("decode_num_def",
    `decode_num p = enc2dec p encode_num`);
 
-val wf_decode_num = store_thm
-  ("wf_decode_num",
-   ``!p. wf_decoder p (decode_num p)``,
-   RW_TAC std_ss [decode_num_def, wf_enc2dec, wf_encode_num]);
+Theorem wf_decode_num:
+     !p. wf_decoder p (decode_num p)
+Proof
+   RW_TAC std_ss [decode_num_def, wf_enc2dec, wf_encode_num]
+QED
 
-val dec2enc_decode_num = store_thm
-  ("dec2enc_decode_num",
-   ``!p x. p x ==> (dec2enc (decode_num p) x = encode_num x)``,
-   RW_TAC std_ss [decode_num_def, dec2enc_enc2dec, wf_encode_num]);
+Theorem dec2enc_decode_num:
+     !p x. p x ==> (dec2enc (decode_num p) x = encode_num x)
+Proof
+   RW_TAC std_ss [decode_num_def, dec2enc_enc2dec, wf_encode_num]
+QED
 
-val decode_num_total = store_thm
-  ("decode_num_total",
-   ``decode_num (K T) l =
+Theorem decode_num_total:
+     decode_num (K T) l =
      case l of
        (T :: T :: t) => SOME (0, t)
      | (T :: F :: t) =>
@@ -858,7 +896,8 @@ val decode_num_total = store_thm
      | (F :: t) =>
         (case decode_num (K T) t of NONE => NONE
          | SOME (v, t') => SOME (2 * v + 2, t'))
-     | _ => NONE``,
+     | _ => NONE
+Proof
    (REPEAT TOP_CASE_TAC
     >> REPEAT (POP_ASSUM MP_TAC)
     >> RW_TAC std_ss
@@ -882,11 +921,11 @@ val decode_num_total = store_thm
     >> RW_TAC arith_ss [APPEND, MULT_DIV, Q.SPECL [`2`, `q`] MULT_COMM]
     >> POP_ASSUM MP_TAC
     >> RW_TAC arith_ss [APPEND, GSYM MULT, Q.SPECL [`q`, `2`] MULT_COMM]
-    >> PROVE_TAC [EVEN_DOUBLE]]);
+    >> PROVE_TAC [EVEN_DOUBLE]]
+QED
 
-val decode_num = store_thm
-  ("decode_num",
-   ``decode_num p l =
+Theorem decode_num:
+     decode_num p l =
      case l of
        (T :: T :: t) => if p 0 then SOME (0, t) else NONE
      | (T :: F :: t) =>
@@ -897,7 +936,8 @@ val decode_num = store_thm
         (case decode_num (K T) t of NONE => NONE
          | SOME (v, t') =>
             if p (2 * v + 2) then SOME (2 * v + 2, t') else NONE)
-     | _ => NONE``,
+     | _ => NONE
+Proof
    (MP_TAC decode_num_total
     >> STRIP_TAC
     >> REPEAT TOP_CASE_TAC
@@ -954,7 +994,8 @@ val decode_num = store_thm
     >> Q.PAT_X_ASSUM `~p X` MP_TAC
     >> RW_TAC arith_ss [ADD1]
     >> Q.PAT_X_ASSUM `p X` MP_TAC
-    >> RW_TAC arith_ss [MULT_DIV, Q.SPECL [`2`, `m`] MULT_COMM, ADD1]]);
+    >> RW_TAC arith_ss [MULT_DIV, Q.SPECL [`2`, `m`] MULT_COMM, ADD1]]
+QED
 
 (*---------------------------------------------------------------------------
      Bounded numbers
@@ -964,13 +1005,14 @@ val decode_bnum_def = Q.new_definition
    ("decode_bnum_def",
     `decode_bnum m p = enc2dec p (encode_bnum m)`);
 
-val dec_bnum_def = Define
-  `(dec_bnum 0 l = SOME (0, l)) /\
+Definition dec_bnum_def:
+   (dec_bnum 0 l = SOME (0, l)) /\
    (dec_bnum (SUC m) l =
     case l of [] => NONE
     | (h :: t) =>
        (case dec_bnum m t of NONE => NONE
-        | SOME (n, t') => SOME (2 * n + (if h then 1 else 0), t')))`;
+        | SOME (n, t') => SOME (2 * n + (if h then 1 else 0), t')))
+End
 
 Theorem dec_bnum_lt:
   !m l n t. (dec_bnum m l = SOME (n, t)) ==> n < 2 ** m
@@ -979,10 +1021,10 @@ Proof
    rw[EXP]
 QED
 
-val dec_bnum_inj = store_thm
-  ("dec_bnum_inj",
-   ``!m l n t.
-       (dec_bnum m l = SOME (n, t)) ==> (l = APPEND (encode_bnum m n) t)``,
+Theorem dec_bnum_inj:
+     !m l n t.
+       (dec_bnum m l = SOME (n, t)) ==> (l = APPEND (encode_bnum m n) t)
+Proof
    Induct
    >> RW_TAC std_ss [dec_bnum_def, encode_bnum_def, APPEND]
    >> POP_ASSUM MP_TAC
@@ -999,19 +1041,22 @@ val dec_bnum_inj = store_thm
        >- RW_TAC arith_ss [EQ_MULT_LCANCEL])
    >> DISCH_THEN (fn th => FULL_SIMP_TAC std_ss [th])
    >> RW_TAC std_ss []
-   >> PROVE_TAC [ODD_DOUBLE, EVEN_DOUBLE, ODD_EVEN]);
+   >> PROVE_TAC [ODD_DOUBLE, EVEN_DOUBLE, ODD_EVEN]
+QED
 
-val wf_decode_bnum = store_thm
-  ("wf_decode_bnum",
-   ``!m p. wf_pred_bnum m p ==> wf_decoder p (decode_bnum m p)``,
-   RW_TAC std_ss [decode_bnum_def, wf_enc2dec, wf_encode_bnum]);
+Theorem wf_decode_bnum:
+     !m p. wf_pred_bnum m p ==> wf_decoder p (decode_bnum m p)
+Proof
+   RW_TAC std_ss [decode_bnum_def, wf_enc2dec, wf_encode_bnum]
+QED
 
-val dec2enc_decode_bnum = store_thm
-  ("dec2enc_decode_bnum",
-   ``!m p x.
+Theorem dec2enc_decode_bnum:
+     !m p x.
        wf_pred_bnum m p /\ p x ==>
-       (dec2enc (decode_bnum m p) x = encode_bnum m x)``,
-   RW_TAC std_ss [decode_bnum_def, dec2enc_enc2dec, wf_encode_bnum]);
+       (dec2enc (decode_bnum m p) x = encode_bnum m x)
+Proof
+   RW_TAC std_ss [decode_bnum_def, dec2enc_enc2dec, wf_encode_bnum]
+QED
 
 Theorem decode_bnum:
   wf_pred_bnum m p ==>
@@ -1073,24 +1118,25 @@ val decode_tree_def = Q.new_definition
   ("decode_tree_def",
    `decode_tree p d = enc2dec p (encode_tree (dec2enc d))`);
 
-val wf_decode_tree = store_thm
-  ("wf_decode_tree",
-   ``!p d.
+Theorem wf_decode_tree:
+     !p d.
        wf_decoder p d ==>
-       wf_decoder (lift_tree p) (decode_tree (lift_tree p) d)``,
+       wf_decoder (lift_tree p) (decode_tree (lift_tree p) d)
+Proof
    RW_TAC std_ss [decode_tree_def] >>
-   PROVE_TAC [wf_dec2enc, wf_enc2dec, wf_encode_tree]);
+   PROVE_TAC [wf_dec2enc, wf_enc2dec, wf_encode_tree]
+QED
 
-val decode_tree = store_thm
-  ("decode_tree",
-   ``wf_decoder p d ==>
+Theorem decode_tree:
+     wf_decoder p d ==>
      (decode_tree (lift_tree p) d l =
       case d l of NONE => NONE
       | SOME (a, t) =>
          (case decode_list (EVERY (lift_tree p))
                (decode_tree (lift_tree p) d) t
           of NONE => NONE
-          | SOME (ts, t') => SOME (Node a ts, t')))``,
+          | SOME (ts, t') => SOME (Node a ts, t')))
+Proof
    STRIP_TAC >>
    Know `wf_decoder (lift_tree p) (decode_tree (lift_tree p) d)` >-
    PROVE_TAC [wf_decode_tree] >>
@@ -1158,7 +1204,8 @@ val decode_tree = store_thm
      Induct_on `q'` >>
      RW_TAC std_ss [EVERY_DEF, encode_list_def, APPEND_11] >>
      RW_TAC std_ss
-     [decode_tree_def, dec2enc_enc2dec, wf_dec2enc, wf_encode_tree]]]);
+     [decode_tree_def, dec2enc_enc2dec, wf_dec2enc, wf_encode_tree]]]
+QED
 
 val _ = computeLib.add_persistent_funs
          ["decode_unit",

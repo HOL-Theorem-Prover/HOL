@@ -1,7 +1,13 @@
 (* non-interactive mode
 *)
-open HolKernel Parse boolLib;
-val _ = new_theory "abelian_group";
+Theory abelian_group
+Ancestors
+  list pred_set extra_pred_set relation extra_list subtype
+  res_quan arithmetic group extra_num gcd divides extra_arith
+  finite_group
+Libs
+  hurdUtils subtypeTools res_quanTools arithContext
+  ho_proverTools listContext groupContext finite_groupContext
 
 (* interactive mode
 show_assums := true;
@@ -16,13 +22,6 @@ app load
 "gcdTheory", "dividesTheory", "primeTheory", "extra_arithTheory",
 "finite_groupTheory", "finite_groupContext"];
 *)
-
-open bossLib listTheory hurdUtils subtypeTools res_quanTools
-     pred_setTheory extra_pred_setTheory arithContext relationTheory
-     ho_proverTools extra_listTheory
-     subtypeTheory res_quanTheory listContext arithmeticTheory groupTheory
-     groupContext extra_numTheory gcdTheory dividesTheory
-     extra_arithTheory finite_groupTheory finite_groupContext;
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
 
@@ -59,8 +58,9 @@ val (G_TAC, AG_TAC, G_TAC', AG_TAC') = SIMPLIFY_TACS finite_group_c;
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val abelian_def = Define
-  `abelian G = !g h :: gset G. gop G g h = gop G h g`;
+Definition abelian_def:
+   abelian G = !g h :: gset G. gop G g h = gop G h g
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)
@@ -257,4 +257,3 @@ val STRUCTURE_THM = store_thm
 
 (* non-interactive mode
 *)
-val _ = export_theory ();

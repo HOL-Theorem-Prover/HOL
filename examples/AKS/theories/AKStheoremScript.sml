@@ -4,51 +4,17 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "AKStheorem";
-
 (* ------------------------------------------------------------------------- *)
-
-open jcLib;
-
-(* open dependent theories *)
-open prim_recTheory pred_setTheory listTheory arithmeticTheory logrootTheory
-     dividesTheory gcdTheory numberTheory listRangeTheory combinatoricsTheory
-     primeTheory;
-
-(* Get dependent theories local *)
-open AKSmapsTheory;
-open AKSsetsTheory;
-open AKSintroTheory;
-open AKSshiftTheory;
-
-open computeRingTheory;
-open computeParamTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
-(* Get polynomial theory of Ring *)
-open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory
-     polyBinomialTheory;
-
-open polyMonicTheory;
-
-open polyFieldTheory;
-open polyFieldDivisionTheory;
-open polyFieldModuloTheory;
-open polyIrreducibleTheory;
-open polyCyclicTheory;
-
-open fieldInstancesTheory;
-
-open ffBasicTheory;
-open ffAdvancedTheory;
-open ffPolyTheory;
-open ffUnityTheory;
-open ffExistTheory;
+Theory AKStheorem
+Ancestors
+  prim_rec pred_set list arithmetic logroot divides gcd number
+  listRange combinatorics prime AKSmaps AKSsets AKSintro AKSshift
+  computeRing computeParam monoid group ring field polynomial
+  polyWeak polyRing polyDivision polyBinomial polyMonic polyField
+  polyFieldDivision polyFieldModulo polyIrreducible polyCyclic
+  fieldInstances ffBasic ffAdvanced ffPoly ffUnity ffExist
+Libs
+  jcLib
 
 val _ = intLib.deprecate_int ();
 
@@ -1617,8 +1583,4 @@ val aks_main_ulog_8 = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

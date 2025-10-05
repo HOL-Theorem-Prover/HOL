@@ -4,33 +4,18 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "computeAKS";
+Theory computeAKS
+Ancestors
+  pred_set list arithmetic number combinatorics divides gcd prime
+  ring computeParam computeOrder computeBasic computeRing
+  computePoly polyWeak polyRing polyMonic polyDivision
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory primeTheory;
-
-open ringTheory;
-
-(* Get dependent theories local *)
-open computeParamTheory computeOrderTheory;
-open computeBasicTheory;
-
 (* val _ = load "computeRingTheory"; *)
-open computeRingTheory computePolyTheory;
-
-open polyWeakTheory polyRingTheory;
-open polyMonicTheory polyDivisionTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* AKS Computations Documentation                                            *)
 (* ------------------------------------------------------------------------- *)
@@ -93,10 +78,10 @@ open polyMonicTheory polyDivisionTheory;
 (* ------------------------------------------------------------------------- *)
 
 (* Define polynomial introspective check for (X + c), MOD (unity k) *)
-val unity_mod_intro_def = Define`
+Definition unity_mod_intro_def:
     unity_mod_intro (r:'a ring) k n (c:num) <=>
       (unity_mod_exp r (unity_mod_monomial r k c) n = unity_mod_special r k n c)
-`;
+End
 
 (*
 > EVAL ``unity_mod_intro (ZN 5) 3 5 1``; --> T
@@ -138,11 +123,11 @@ val unity_mod_intro_range_def = Define`
         (unity_mod_intro_range r k n m) /\ (unity_mod_intro r k n (SUC m)))
 `;
 *)
-val unity_mod_intro_range_def = Define`
+Definition unity_mod_intro_range_def:
     (unity_mod_intro_range (r:'a ring) k n 0 <=> T) /\
     (unity_mod_intro_range (r:'a ring) k n (SUC m) <=>
         (unity_mod_intro r k n (SUC m)) /\ (unity_mod_intro_range r k n m))
-`;
+End
 
 (*
 > EVAL ``unity_mod_intro_range (ZN 7) 3 7 5``; --> T
@@ -216,10 +201,10 @@ val ZN_poly_intro_def = Define`
       (ZN_poly_exp n k (ZN_poly_monomial n k c) m = ZN_poly_special n k n c)
 `;
 *)
-val ZN_poly_intro_def = Define`
+Definition ZN_poly_intro_def:
     ZN_poly_intro (n:num) (k:num) (c:num) <=>
       ((ZN_poly_monomial n k c) **z n = ZN_poly_special n k n c)
-`;
+End
 
 (*
 > EVAL ``ZN_poly_intro 5 3 1``; --> T
@@ -255,11 +240,11 @@ val it = |- unity_mod_intro (ZN 91) 59 91 1 <=> F: thm
 *)
 
 (* Define polynomial introspective check for a range of constants c *)
-val ZN_poly_intro_range_def = Define`
+Definition ZN_poly_intro_range_def:
     (ZN_poly_intro_range (n:num) (k:num) 0 <=> T) /\
     (ZN_poly_intro_range (n:num) (k:num) (SUC m) <=>
      ZN_poly_intro n k (SUC m) /\ ZN_poly_intro_range n k m)
-`;
+End
 
 (*
 > EVAL ``ZN_poly_intro_range 5 3 4``;
@@ -362,7 +347,7 @@ val ZN_poly_intro_range_thm = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Express AKS algorithm in terms of possible results of AKS parameter. *)
-val aks_compute_def = Define`
+Definition aks_compute_def:
     aks_compute n <=> power_free_check n /\
        case aks_param n of     (* search for AKS parameter given n *)
          nice j => (j = n)     (* found j that will show n prime or composite directly *)
@@ -370,7 +355,7 @@ val aks_compute_def = Define`
                                (* found k with m <= ordz k n, where m = (ulog n) ** 2 *)
          (* !c. 0 < c /\ c <= SQRT (phi k) * (ulog n) ==> (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k)) *)
        | bad => F              (* impossible *)
-`;
+End
 (* Note: power_free_check is computable. *)
 
 (*
@@ -422,7 +407,7 @@ val aks_compute_alt_weak = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Express AKS algorithm in terms of possible results of AKS parameter. *)
-val aks0_def = Define`
+Definition aks0_def:
     aks0 n <=> power_free_test n /\
        case param n of         (* search for AKS parameter given n *)
          nice j => (j = n)     (* found j that will show n prime or composite directly *)
@@ -430,7 +415,7 @@ val aks0_def = Define`
                                (* found k with m <= ordz k n, where m = (ulog n) ** 2 *)
           (* !c. 0 < c /\ c <= k ==> (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k)) *)
        | bad => F              (* impossible *)
-`;
+End
 (* Note: power_free_test is not computable. *)
 
 (* Theorem: aks0 n <=>
@@ -455,8 +440,4 @@ val aks0_alt = store_thm(
 *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

@@ -27,36 +27,21 @@ open FinitePSLPathTheory PSLPathTheory SyntaxTheory SyntacticSugarTheory
      UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
      arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
      ClockedSemanticsTheory;
-val _ = intLib.deprecate_int();
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories
-******************************************************************************)
-open FinitePSLPathTheory PSLPathTheory SyntaxTheory SyntacticSugarTheory
-     UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
-     arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
-     ClockedSemanticsTheory;
-
-(******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
-val _ = intLib.deprecate_int();
+Theory Lemmas
+Ancestors
+  FinitePSLPath PSLPath Syntax SyntacticSugar UnclockedSemantics
+  ClockedSemantics Rewrites arithmetic list rich_list res_quan
+  ClockedSemantics FinitePSLPath
+Libs
+  res_quanLib
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
 
-(******************************************************************************
-* Start a new theory called Lemmas
-******************************************************************************)
-val _ = new_theory "Lemmas";
 val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************
@@ -69,11 +54,6 @@ val resq_SS =
     [IN_DEF,LESS_def,LENGTH_def]];
 
 (******************************************************************************
-* Set default path theory to FinitePSLPathTheory
-******************************************************************************)
-open FinitePSLPathTheory;
-
-(******************************************************************************
 * Make SEL executable. (Why doesn't this happen automatically?)
 ******************************************************************************)
 val _ = computeLib.add_funs[SEL_REC_AUX];
@@ -81,9 +61,10 @@ val _ = computeLib.add_funs[SEL_REC_AUX];
 (******************************************************************************
 * \top^k
 ******************************************************************************)
-val TOP_ITER_def =
- Define `(TOP_ITER 0 = []) /\
-         (TOP_ITER (SUC k) = [TOP] <> TOP_ITER k)`;
+Definition TOP_ITER_def:
+  (TOP_ITER 0 = []) /\
+         (TOP_ITER (SUC k) = [TOP] <> TOP_ITER k)
+End
 
 val LENGTH_TOP_ITER =
  store_thm
@@ -201,9 +182,8 @@ val Lemma1 =
 (******************************************************************************
 * S_CLOCK_FREE r means r contains no clocking statements
 ******************************************************************************)
-val S_CLOCK_FREE_def =
- Define
-  `(S_CLOCK_FREE (S_BOOL b)          = T)
+Definition S_CLOCK_FREE_def:
+   (S_CLOCK_FREE (S_BOOL b)          = T)
    /\
    (S_CLOCK_FREE (S_CAT(r1,r2))      =  S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2)
    /\
@@ -217,7 +197,8 @@ val S_CLOCK_FREE_def =
    /\
    (S_CLOCK_FREE (S_REPEAT r)        = S_CLOCK_FREE r)
    /\
-   (S_CLOCK_FREE (S_CLOCK v)         = F)`;
+   (S_CLOCK_FREE (S_CLOCK v)         = F)
+End
 
 
 (******************************************************************************
@@ -343,12 +324,12 @@ val Proposition1 =
        THEN Induct_on `vlist`
        THEN RW_TAC list_ss [CONCAT_def]]);
 
-val IS_STATE_WORD_def =
- Define
-  `(IS_STATE_WORD[]             = T) /\
+Definition IS_STATE_WORD_def:
+   (IS_STATE_WORD[]             = T) /\
    (IS_STATE_WORD(TOP::v)       = F) /\
    (IS_STATE_WORD(BOTTOM::v)    = F) /\
-   (IS_STATE_WORD((STATE s)::v) = IS_STATE_WORD v)`;
+   (IS_STATE_WORD((STATE s)::v) = IS_STATE_WORD v)
+End
 
 val IS_STATE_WORD_CLOCK_TICK_TRUE =
  store_thm
@@ -438,12 +419,12 @@ val Lemma4 =
           THEN Cases_on `vlist`
           THEN FULL_SIMP_TAC list_ss [CONCAT_def,ALL_EL]]]);
 
-val BOTTOM_FREE_def =
- Define
-  `(BOTTOM_FREE[]             = T) /\
+Definition BOTTOM_FREE_def:
+   (BOTTOM_FREE[]             = T) /\
    (BOTTOM_FREE(TOP::v)       = BOTTOM_FREE v) /\
    (BOTTOM_FREE(BOTTOM::v)    = F) /\
-   (BOTTOM_FREE((STATE s)::v) = BOTTOM_FREE v)`;
+   (BOTTOM_FREE((STATE s)::v) = BOTTOM_FREE v)
+End
 
 val BOTTOM_FREE_APPEND =
  store_thm
@@ -689,15 +670,15 @@ SEL_CONCAT vlist k = [[....];[....];[..TT];[TTTT]; ... ;[TTTT]]
 
 *)
 
-val SEL_CONCAT_def =
- Define
-  `(SEL_CONCAT [] k = [SEL [] (0,k)]) (* Yuk! Simplifies SEL_CONCAT_LEMMA *)
+Definition SEL_CONCAT_def:
+   (SEL_CONCAT [] k = [SEL [] (0,k)]) (* Yuk! Simplifies SEL_CONCAT_LEMMA *)
    /\
    (SEL_CONCAT (x::xl) k =
      if k < LENGTH x
       then
        (SEL x (0,k) <> TOP_ITER(LENGTH x - (k+1))) :: MAP (\v. TOP_ITER (LENGTH v)) xl
-      else x :: SEL_CONCAT xl (k - LENGTH x))`;
+      else x :: SEL_CONCAT xl (k - LENGTH x))
+End
 
 val SEL_CONCAT_LEMMA =
  store_thm
@@ -857,5 +838,3 @@ Proof
 QED
 
 val Lemmas1_7 =  [Lemma1,Lemma2,Lemma3,Lemma4,Lemma5,Lemma6,Lemma7];
-
-val _ = export_theory();

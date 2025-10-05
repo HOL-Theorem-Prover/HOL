@@ -19,9 +19,11 @@ Libs
    ------------------------------------------------------------------------- *)
 
 (* hh ([],``a <= b ==> (g ** (b - a) * g ** a = g ** b)``); *)
-val th = store_thm ("EXP_NEG",
-  ``a <= b ==> (g ** (b - a) * g ** a = g ** b)``,
-  METIS_TAC [SUB_ADD, EXP_ADD]);
+Theorem EXP_NEG:
+    a <= b ==> (g ** (b - a) * g ** a = g ** b)
+Proof
+  METIS_TAC [SUB_ADD, EXP_ADD]
+QED
 
 (* -------------------------------------------------------------------------
    Example 2: inversion
@@ -29,9 +31,11 @@ val th = store_thm ("EXP_NEG",
 
 (* load "realTheory"; open realTheory; *)
 (* hh ([], ``a = b * 2 ==> b = a / 2``); *)
-val th = store_thm ("INV_DIV2",
-  ``a = b * 2 ==> b = a / 2``,
-  METIS_TAC [REAL_DOUBLE, REAL_HALF_DOUBLE, REAL_MUL_ASSOC, real_div])
+Theorem INV_DIV2:
+    a = b * 2 ==> b = a / 2
+Proof
+  METIS_TAC [REAL_DOUBLE, REAL_HALF_DOUBLE, REAL_MUL_ASSOC, real_div]
+QED
 
 (* -------------------------------------------------------------------------
    Example 3: Euler's formula
@@ -39,10 +43,12 @@ val th = store_thm ("INV_DIV2",
 
 (* load "complexTheory"; open complexTheory; *)
 (* hh ([], ``exp (i * (2 * pi)) = 1``); set_timeout 60; *)
-val th = store_thm ("EXP_2PI",
-  ``exp (i * (2 * pi)) = 1``,
+Theorem EXP_2PI:
+    exp (i * (2 * pi)) = 1
+Proof
   METIS_TAC [EXP_IMAGINARY, complex_of_num, complex_of_real, REAL_ADD_LID,
     REAL_DOUBLE, REAL_NEGNEG, transcTheory.COS_0, transcTheory.COS_PERIODIC_PI,
-    transcTheory.SIN_0, transcTheory.SIN_PERIODIC_PI])
+    transcTheory.SIN_0, transcTheory.SIN_PERIODIC_PI]
+QED
 
 

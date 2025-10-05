@@ -1,7 +1,6 @@
-open HolKernel boolLib bossLib
-open set_sepTheory progTheory
-
-val _ = new_theory "state"
+Theory state
+Ancestors
+  set_sep prog
 
 val _ = ParseExtras.temp_loose_equality()
 
@@ -65,9 +64,10 @@ val _ = ParseExtras.temp_loose_equality()
    ad infinitum.
    ------------------------------------------------------------------------ *)
 
-val NEXT_REL_def = Define`
+Definition NEXT_REL_def:
    NEXT_REL (r: 's -> 's -> bool) (next: 's -> 's option) s t =
-   ?u. r s u /\ (next u = SOME t)`
+   ?u. r s u /\ (next u = SOME t)
+End
 
 val NEXT_REL_EQ = Q.store_thm ("NEXT_REL_EQ",
    `!next. NEXT_REL (=) next = \s t. next s = SOME t`,
@@ -114,15 +114,18 @@ val NEXT_REL_EQ = Q.store_thm ("NEXT_REL_EQ",
 
    ------------------------------------------------------------------------ *)
 
-val SELECT_STATE_def = Define `SELECT_STATE m d s = fun2set (m s, d)`
+Definition SELECT_STATE_def:   SELECT_STATE m d s = fun2set (m s, d)
+End
 
 (* The "universal" to-set map *)
 
-val STATE_def = Define `STATE m = SELECT_STATE m UNIV`
+Definition STATE_def:   STATE m = SELECT_STATE m UNIV
+End
 
 (* The "complement" to-set map *)
 
-val FRAME_STATE_def = Define `FRAME_STATE m d = SELECT_STATE m (COMPL d)`
+Definition FRAME_STATE_def:   FRAME_STATE m d = SELECT_STATE m (COMPL d)
+End
 
 (* ------------------------------------------------------------------------
    We now show that
@@ -551,4 +554,3 @@ val SEP_ARRAY_FRAME = Q.store_thm("SEP_ARRAY_FRAME",
 
 (* ------------------------------------------------------------------------ *)
 
-val () = export_theory ()

@@ -1,14 +1,13 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "milawa_init";
+Theory milawa_init
+Ancestors
+  lisp_extract string finite_map pred_set list sum option
+  arithmetic relation lisp_sexp lisp_semantics lisp_parse
+  milawa_core
+Libs
+  lisp_extractLib
+
 val _ = ParseExtras.temp_loose_equality()
 
-open lisp_extractLib lisp_extractTheory;
-
-open stringTheory finite_mapTheory pred_setTheory listTheory sumTheory;
-open optionTheory arithmeticTheory relationTheory;
-
-open lisp_sexpTheory lisp_semanticsTheory lisp_parseTheory;
-
-open milawa_coreTheory;
 val _ = max_print_depth := 20;
 
 val RW = REWRITE_RULE;
@@ -186,7 +185,8 @@ val xs = concl init_fns_def
          |> find_terms (can (match_term ``add_def x (y:'a # 'b)``))
          |> map rand |> (fn tms => listSyntax.mk_list(tms,type_of (hd tms)))
 
-val init_assum_def = Define `init_assum k = fns_assum k ^xs`
+Definition init_assum_def:   init_assum k = fns_assum k ^xs
+End
 val init_assum_thm = store_thm("init_assum_thm",
   ``init_assum init_fns``,
   EVAL_TAC \\ SRW_TAC [] [FUNION_DEF]);
@@ -361,7 +361,8 @@ val (list_of_defs_tm,core_fun_names) = let
   val list_of_defs_tm = listSyntax.mk_list(xs,type_of (hd xs))
   in (list_of_defs_tm,core_fun_names) end
 
-val core_assum_def = Define `core_assum k = fns_assum k ^list_of_defs_tm`;
+Definition core_assum_def:   core_assum k = fns_assum k ^list_of_defs_tm
+End
 val core_assum_thm = store_thm("core_assum_thm",
   ``core_assum core_funs``,
   REWRITE_TAC [init_fns_def,core_funs_def,core_assum_def]
@@ -374,4 +375,3 @@ val core_assum_thm = store_thm("core_assum_thm",
   \\ SIMP_TAC std_ss [fns_assum_def,EVERY_DEF]);
 
 
-val _ = export_theory();

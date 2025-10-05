@@ -4,32 +4,17 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polyMultiplicity";
+Theory polyMultiplicity
+Ancestors
+  prim_rec pred_set list arithmetic number combinatorics divides
+  gcd gcdset polynomial polyWeak polyRing polyField polyBinomial
+  polyDivision polyEval polyMonic polyRoot polyDivides
+  polyProduct polyIrreducible polyDerivative polyGCD monoid group
+  ring field
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
-
-open jcLib;
-
-(* open dependent theories *)
-open prim_recTheory pred_setTheory listTheory arithmeticTheory numberTheory
-     combinatoricsTheory dividesTheory gcdTheory gcdsetTheory;
-
-(* Get dependent theories local *)
-open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
-open polyBinomialTheory polyDivisionTheory polyEvalTheory;
-open polyMonicTheory;
-open polyRootTheory;
-open polyDividesTheory;
-open polyProductTheory;
-open polyIrreducibleTheory;
-open polyDerivativeTheory;
-open polyGCDTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
 
 val _ = intLib.deprecate_int ();
 
@@ -151,14 +136,14 @@ val _ = intLib.deprecate_int ();
 (* ------------------------------------------------------------------------- *)
 
 (* Define root multiplicity *)
-val poly_root_multiplicity_set_def = Define `
+Definition poly_root_multiplicity_set_def:
   poly_root_multiplicity_set (r:'a ring) (p:'a poly) (c:'a) =
     if c IN R then {m | (factor c) ** m pdivides p} else {}
-`;
-val poly_root_multiplicity_def = Define `
+End
+Definition poly_root_multiplicity_def:
   poly_root_multiplicity (r:'a ring) (p:'a poly) (c:'a) =
     MAX_SET (poly_root_multiplicity_set r p c)
-`;
+End
 
 (* Overload on root multiplicity *)
 val _ = overload_on("multiplicity_set", ``poly_root_multiplicity_set r``);
@@ -1335,10 +1320,10 @@ val poly_root_factor_multiplicity_poly = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define separable polynomial *)
-val poly_separable_def = Define`
+Definition poly_separable_def:
   poly_separable (r:'a ring) (p:'a poly) <=>
     p <> |0| /\ !c. c IN roots p ==> (multiplicity p c = 1)
-`;
+End
 (* Note: roots |0| = R, and multiplicity_set |0| c = univ(:num), with multiplicity |0| c undefined. *)
 
 (* overload on separable polynomial *)
@@ -1514,8 +1499,4 @@ val poly_separable_factor_roots_disjoint = store_thm(
   decide_tac);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

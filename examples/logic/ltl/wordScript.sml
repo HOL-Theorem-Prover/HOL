@@ -1,14 +1,17 @@
-open HolKernel Parse bossLib boolLib pred_setTheory
-
-val _ = new_theory "word"
+Theory word
+Ancestors
+  pred_set
 
 val _ = Datatype` word = WORD (num -> 'a set)`;
 
-val suff_def = Define `suff (WORD f) n = WORD (\x. f (n+x))`;
+Definition suff_def:   suff (WORD f) n = WORD (\x. f (n+x))
+End
 
-val at_def = Define `at (WORD f) n = f n`;
+Definition at_def:   at (WORD f) n = f n
+End
 
-val word_range_def = Define `word_range w = {x | ?i. at w i = x }`;
+Definition word_range_def:   word_range w = {x | ?i. at w i = x }
+End
 
 val AT_SUFF_LEMM = store_thm
   ("AT_SUFF_LEMM",
@@ -39,4 +42,3 @@ val AT_WORD_RANGE = store_thm
   rw[word_range_def] >> metis_tac[word_range_def]
   );
 
-val _ = export_theory();

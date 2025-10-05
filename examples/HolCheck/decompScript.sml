@@ -1,12 +1,11 @@
-open HolKernel Parse boolLib bossLib
-
-val _ = new_theory("decomp");
+Theory decomp
+Ancestors
+  env mu muSyntax setLemmas pred_set ks
+Libs
+  pairSyntax metisLib commonTools
 
 (* app load ["envTheory","muTheory","muSyntaxTheory","setLemmasTheory","pred_setTheory","ksTheory",
              "pairSyntax","metisLib","commonTools"] *)
-
-open pairSyntax metisLib
-open envTheory muTheory muSyntaxTheory setLemmasTheory pred_setTheory ksTheory commonTools
 
 infix &&; infix 8 by;
 
@@ -15,7 +14,7 @@ infix &&; infix 8 by;
 
 (*take f:('state1->bool) mu and return f:('state2->bool) mu*)
 (*lesson: we _can_ muck around with types within the object logic, using choice and extensionality*)
-val AP_EXT_def = Define `
+Definition AP_EXT_def:
 (AP_EXT (T:('state1->bool) mu) = (T:(('state1#'state2)->bool) mu)) /\
 (AP_EXT F = F) /\
 (AP_EXT (~f) = ~(AP_EXT f)) /\
@@ -26,7 +25,8 @@ val AP_EXT_def = Define `
 (AP_EXT (<<a>> f) = <<a>> (AP_EXT f)) /\
 (AP_EXT ([[a]] f) = [[a]] (AP_EXT f)) /\
 (AP_EXT (mu Q.. f) = (mu Q.. (AP_EXT f)))  /\
-(AP_EXT (nu Q.. f) =  (nu Q.. (AP_EXT f)))`;
+(AP_EXT (nu Q.. f) =  (nu Q.. (AP_EXT f)))
+End
 
 
 val APEXT_RV = prove(``!f Q. (RV Q = AP_EXT f) = (f = RV Q)``,
@@ -378,4 +378,3 @@ val DECOMP3 = save_thm("PAR_SYNC_DECOMP", prove(``!s e ks1 ks2 f.
          s IN STATES f ks1 e ==>
          s IN STATES f ks2 e``, METIS_TAC [IMF_MU_EXT,DECOMP2]))
 
-val _ = export_theory();

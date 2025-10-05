@@ -3,69 +3,72 @@
 (*    Translation from Property Specification Language (PSL) to Reset LTL     *)
 (*                                                                            *)
 (******************************************************************************)
+Theory psl_to_rltl
+Ancestors
+  FinitePSLPath PSLPath UnclockedSemantics SyntacticSugar Lemmas
+  Rewrites Model rltl_to_ltl RewritesProperties Projection
+  SyntacticSugar arithmetic psl_lemmata list rich_list pred_set
+  prop_logic infinite_path temporal_deep_mixed rltl full_ltl
+Libs
+  numLib intLib tuerk_tacticsLib res_quanTools Sanity
 
-open HolKernel Parse boolLib bossLib;
 
-open FinitePSLPathTheory PSLPathTheory UnclockedSemanticsTheory SyntacticSugarTheory
-     LemmasTheory RewritesTheory ModelTheory rltl_to_ltlTheory
-     RewritesPropertiesTheory ProjectionTheory SyntacticSugarTheory
-     arithmeticTheory psl_lemmataTheory
-     listTheory numLib intLib rich_listTheory pred_setTheory prop_logicTheory
-     infinite_pathTheory temporal_deep_mixedTheory
-     rltlTheory full_ltlTheory tuerk_tacticsLib res_quanTools;
-
-open Sanity;
-
-val _ = intLib.deprecate_int();
-
-val _ = new_theory "psl_to_rltl";
-
-val TRANSLATE_TOP_BOTTOM_def = Define
-  `(TRANSLATE_TOP_BOTTOM (t:'prop) (b:'prop) TOP   = (\x.x = t)) /\
+Definition TRANSLATE_TOP_BOTTOM_def:
+   (TRANSLATE_TOP_BOTTOM (t:'prop) (b:'prop) TOP   = (\x.x = t)) /\
    (TRANSLATE_TOP_BOTTOM (t:'prop) (b:'prop) BOTTOM   = (\x.x = b)) /\
-   (TRANSLATE_TOP_BOTTOM (t:'prop) (b:'prop) (STATE s) = s)`;
+   (TRANSLATE_TOP_BOTTOM (t:'prop) (b:'prop) (STATE s) = s)
+End
 
-val TRANSLATE_STATE_def = Define
-   `TRANSLATE_STATE (STATE s) = s`;
+Definition TRANSLATE_STATE_def:
+    TRANSLATE_STATE (STATE s) = s
+End
 
-val CONVERT_PATH_PSL_LTL_def = Define
-   `CONVERT_PATH_PSL_LTL (t:'prop) (b:'prop) =
-     (\p.\n. if (n < LENGTH p) then ((TRANSLATE_TOP_BOTTOM t b) (ELEM p n)) else EMPTY)`;
+Definition CONVERT_PATH_PSL_LTL_def:
+    CONVERT_PATH_PSL_LTL (t:'prop) (b:'prop) =
+     (\p.\n. if (n < LENGTH p) then ((TRANSLATE_TOP_BOTTOM t b) (ELEM p n)) else EMPTY)
+End
 
-val CONVERT_PATH_PSL_LTL___NO_TOP_BOT_def = Define
-   `CONVERT_PATH_PSL_LTL___NO_TOP_BOT =
-     (\p.\n. if (n < LENGTH p) then (TRANSLATE_STATE (ELEM p n)) else EMPTY)`;
+Definition CONVERT_PATH_PSL_LTL___NO_TOP_BOT_def:
+    CONVERT_PATH_PSL_LTL___NO_TOP_BOT =
+     (\p.\n. if (n < LENGTH p) then (TRANSLATE_STATE (ELEM p n)) else EMPTY)
+End
 
-val CONVERT_PATH_LTL_PSL_def = Define
-   `CONVERT_PATH_LTL_PSL = (\p. INFINITE (\n. STATE (p n)))`;
+Definition CONVERT_PATH_LTL_PSL_def:
+    CONVERT_PATH_LTL_PSL = (\p. INFINITE (\n. STATE (p n)))
+End
 
-val BEXP_TO_PROP_LOGIC_def = Define
-  `(BEXP_TO_PROP_LOGIC (B_PROP b) = P_PROP b) /\
+Definition BEXP_TO_PROP_LOGIC_def:
+   (BEXP_TO_PROP_LOGIC (B_PROP b) = P_PROP b) /\
    (BEXP_TO_PROP_LOGIC (B_TRUE) = P_TRUE) /\
    (BEXP_TO_PROP_LOGIC (B_FALSE) = P_FALSE) /\
    (BEXP_TO_PROP_LOGIC (B_NOT p) = P_NOT (BEXP_TO_PROP_LOGIC p)) /\
-   (BEXP_TO_PROP_LOGIC (B_AND (p1, p2)) = P_AND(BEXP_TO_PROP_LOGIC p1,BEXP_TO_PROP_LOGIC p2))`;
+   (BEXP_TO_PROP_LOGIC (B_AND (p1, p2)) = P_AND(BEXP_TO_PROP_LOGIC p1,BEXP_TO_PROP_LOGIC p2))
+End
 
-val PROP_LOGIC_TO_BEXP_def = Define
-  `(PROP_LOGIC_TO_BEXP (P_PROP b) = B_PROP b) /\
+Definition PROP_LOGIC_TO_BEXP_def:
+   (PROP_LOGIC_TO_BEXP (P_PROP b) = B_PROP b) /\
    (PROP_LOGIC_TO_BEXP (P_TRUE) = B_TRUE) /\
    (PROP_LOGIC_TO_BEXP (P_NOT p) = B_NOT (PROP_LOGIC_TO_BEXP p)) /\
-   (PROP_LOGIC_TO_BEXP (P_AND (p1, p2)) = B_AND(PROP_LOGIC_TO_BEXP p1,PROP_LOGIC_TO_BEXP p2))`;
+   (PROP_LOGIC_TO_BEXP (P_AND (p1, p2)) = B_AND(PROP_LOGIC_TO_BEXP p1,PROP_LOGIC_TO_BEXP p2))
+End
 
-val PSL_TO_RLTL_def = Define (* see [1, p.31] *)
-  `(PSL_TO_RLTL (F_STRONG_BOOL b) = RLTL_PROP (BEXP_TO_PROP_LOGIC b)) /\
+Definition PSL_TO_RLTL_def:   (* see [1, p.31] *)
+   (PSL_TO_RLTL (F_STRONG_BOOL b) = RLTL_PROP (BEXP_TO_PROP_LOGIC b)) /\
    (PSL_TO_RLTL (F_WEAK_BOOL b)   = RLTL_PROP (BEXP_TO_PROP_LOGIC b)) /\
    (PSL_TO_RLTL (F_NOT f)         = RLTL_NOT (PSL_TO_RLTL f)) /\
    (PSL_TO_RLTL (F_AND(f1,f2))    = RLTL_AND(PSL_TO_RLTL f1,PSL_TO_RLTL f2)) /\
    (PSL_TO_RLTL (F_NEXT f)        = RLTL_NEXT(PSL_TO_RLTL f)) /\
    (PSL_TO_RLTL (F_UNTIL(f1,f2))  = RLTL_SUNTIL(PSL_TO_RLTL f1,PSL_TO_RLTL f2)) /\
-   (PSL_TO_RLTL (F_ABORT (f,b))   = RLTL_ACCEPT(PSL_TO_RLTL f, BEXP_TO_PROP_LOGIC b))`;
+   (PSL_TO_RLTL (F_ABORT (f,b))   = RLTL_ACCEPT(PSL_TO_RLTL f, BEXP_TO_PROP_LOGIC b))
+End
 
-val PSL_TO_LTL_def = Define
-   `PSL_TO_LTL f = (RLTL_TO_LTL P_FALSE P_FALSE (PSL_TO_RLTL f))`;
+Definition PSL_TO_LTL_def:
+    PSL_TO_LTL f = (RLTL_TO_LTL P_FALSE P_FALSE (PSL_TO_RLTL f))
+End
 
-val PSL_TO_LTL_CLOCK_def = Define
-   `PSL_TO_LTL_CLOCK c f = (RLTL_TO_LTL P_FALSE P_FALSE (PSL_TO_RLTL (F_CLOCK_COMP c f)))`;
+Definition PSL_TO_LTL_CLOCK_def:
+    PSL_TO_LTL_CLOCK c f = (RLTL_TO_LTL P_FALSE P_FALSE (PSL_TO_RLTL (F_CLOCK_COMP c f)))
+End
 
 val CONVERT_PATH_PSL_LTL___NO_TOP_BOT_LEMMA =
  store_thm
@@ -786,17 +789,17 @@ val PSL_TO_RLTL___NO_TOP_BOT_THM =
 
 
 
-val UF_KS_SEM_def =
- Define
-   `UF_KS_SEM M f =
+Definition UF_KS_SEM_def:
+    UF_KS_SEM M f =
           (!p. IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p ==>
-                UF_SEM (CONVERT_PATH_LTL_PSL p) f)`;
+                UF_SEM (CONVERT_PATH_LTL_PSL p) f)
+End
 
-val F_KS_SEM_def =
- Define
-   `F_KS_SEM M c f =
+Definition F_KS_SEM_def:
+    F_KS_SEM M c f =
           (!p. IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p ==>
-                F_SEM (CONVERT_PATH_LTL_PSL p) c f)`;
+                F_SEM (CONVERT_PATH_LTL_PSL p) c f)
+End
 
 
 val PSL_TO_RLTL___UF_KS_SEM =
@@ -1023,13 +1026,13 @@ val IS_PSL_LTL_THM =
 
 
 
-val FUTURE_LTL_TO_PSL_def =
- Define
-   `(FUTURE_LTL_TO_PSL (LTL_PROP b) = (F_STRONG_BOOL (PROP_LOGIC_TO_BEXP b))) /\
+Definition FUTURE_LTL_TO_PSL_def:
+    (FUTURE_LTL_TO_PSL (LTL_PROP b) = (F_STRONG_BOOL (PROP_LOGIC_TO_BEXP b))) /\
     (FUTURE_LTL_TO_PSL (LTL_NOT f) = (F_NOT (FUTURE_LTL_TO_PSL f))) /\
     (FUTURE_LTL_TO_PSL (LTL_AND(f1,f2)) = (F_AND(FUTURE_LTL_TO_PSL f1, FUTURE_LTL_TO_PSL f2))) /\
     (FUTURE_LTL_TO_PSL (LTL_NEXT f) = (F_NEXT (FUTURE_LTL_TO_PSL f))) /\
-    (FUTURE_LTL_TO_PSL (LTL_SUNTIL(f1,f2)) = (F_UNTIL(FUTURE_LTL_TO_PSL f1, FUTURE_LTL_TO_PSL f2)))`;
+    (FUTURE_LTL_TO_PSL (LTL_SUNTIL(f1,f2)) = (F_UNTIL(FUTURE_LTL_TO_PSL f1, FUTURE_LTL_TO_PSL f2)))
+End
 
 
 
@@ -1104,8 +1107,6 @@ val IS_LTL_PSL_THM =
 
       INDUCT_THEN ltl_induct STRIP_ASSUME_TAC THEN
       FULL_SIMP_TAC std_ss[IS_PSL_THM, IS_LTL_THM, IS_FUTURE_LTL_def, FUTURE_LTL_TO_PSL_def, LTL_OR_def]);
-
-val _ = export_theory();
 
 (* References:
 

@@ -2,14 +2,12 @@
 (* FILE    : chap4Script.sml                                                  *)
 (* TITLE   : Lambda Theories (general setup)                                  *)
 (* ========================================================================== *)
+Theory chap4
+Ancestors
+  pred_set relation term horeduction chap2 chap3
+Libs
+  hurdUtils binderLib
 
-open HolKernel Parse boolLib bossLib;
-
-open pred_setTheory relationTheory hurdUtils;
-
-open binderLib termTheory horeductionTheory chap2Theory chap3Theory;
-
-val _ = new_theory "chap4";
 
 val _ = hide "B"
 
@@ -355,7 +353,6 @@ End
  *)
 Overload HP_complete' = “\thy. HP_complete thy (K T)”
 
-val _ = export_theory ();
 val _ = html_theory "chap4";
 
 (* References:

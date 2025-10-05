@@ -1,14 +1,13 @@
 (* ------------------------------------------------------------------------
    Definitions and theorems used by CHERI/MIPS step evaluator (cheri_stepLib)
    ------------------------------------------------------------------------ *)
+Theory cheri_step
+Ancestors
+  alignment update cheri
+Libs
+  utilsLib wordsLib blastLib
 
-open HolKernel boolLib bossLib
 
-open utilsLib
-open wordsLib blastLib alignmentTheory
-open updateTheory cheriTheory
-
-val _ = new_theory "cheri_step"
 val _ = ParseExtras.temp_loose_equality()
 val _ = List.app (fn f => f ())
    [numLib.temp_prefer_num, wordsLib.prefer_word, wordsLib.guess_lengths]
@@ -17,9 +16,10 @@ val _ = List.app (fn f => f ())
 
 (* Next state theorems *)
 
-val NextStateCHERI_def = Define`
+Definition NextStateCHERI_def:
    NextStateCHERI s0 =
-   let s1 = Next s0 in if s1.exception = NoException then SOME s1 else NONE`
+   let s1 = Next s0 in if s1.exception = NoException then SOME s1 else NONE
+End
 
 val exceptionSignalled_id = Q.prove(
    `!s. ~exceptionSignalled s ==>
@@ -662,7 +662,7 @@ val SCD = sev "SCD"
 
 val () = utilsLib.setStepConv (utilsLib.WGROUND_CONV THENC extract_conv)
 
-val ReadWord_def = Define`
+Definition ReadWord_def:
   ReadWord m (addr : 40 word) =
   case m ((39 >< 5) addr : 35 word) of
      Raw w256 =>
@@ -677,7 +677,8 @@ val ReadWord_def = Define`
           else if v = 5w then (159 >< 128) w256
           else if v = 6w then (255 >< 224) w256
           else                (223 >< 192) w256 : word32)
-   | _ => NONE`
+   | _ => NONE
+End
 
 val ReadInst = Q.prove(
   `(ReadWord s.mem addr = SOME w) ==> (ReadInst addr s = w)`,
@@ -717,4 +718,3 @@ val Fetch_default = Theory.save_thm("Fetch_default",
 
 (* ------------------------------------------------------------------------ *)
 
-val () = export_theory ()

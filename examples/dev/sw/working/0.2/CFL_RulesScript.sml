@@ -4,18 +4,19 @@ quietdec := true;
 loadPath := (concat Globals.HOLDIR "/examples/dev/sw") :: !loadPath;
 
 app load ["numLib", "relationTheory", "arithmeticTheory", "preARMTheory", "pairTheory",
-     "pred_setSimps", "pred_setTheory", "listTheory", "rich_listTheory", "whileTheory", "ARMCompositionTheory",
+     "pred_setSimps", "pred_setTheory", "listTheory", "rich_listTheory", "WhileTheory", "ARMCompositionTheory",
       "CFLTheory"];
 
 quietdec := false;
 *)
+Theory CFL_Rules
+Ancestors
+  relation arithmetic preARM pair pred_set list rich_list While
+  ARMComposition CFL
+Libs
+  numLib pred_setSimps
 
 
-open HolKernel Parse boolLib bossLib numLib relationTheory arithmeticTheory preARMTheory pairTheory
-     pred_setSimps pred_setTheory listTheory rich_listTheory whileTheory ARMCompositionTheory CFLTheory;
-
-
-val _ = new_theory "CFL_Rules";
 
 (*---------------------------------------------------------------------------------*)
 (*      Simplifier on finite maps                                                  *)
@@ -616,4 +617,3 @@ val WELL_FORMED_TR_RULE = Q.store_thm (
     METIS_TAC [CFL_TR_IS_WELL_FORMED, WF_TR_LEM_1]
    );
 
-val _ = export_theory();

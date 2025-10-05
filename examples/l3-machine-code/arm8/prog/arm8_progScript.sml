@@ -1,8 +1,9 @@
-open HolKernel boolLib bossLib
-open blastLib stateLib
-open set_sepTheory progTheory temporal_stateTheory arm8_stepTheory
+Theory arm8_prog
+Ancestors
+  set_sep prog temporal_state arm8_step
+Libs
+  blastLib stateLib
 
-val () = new_theory "arm8_prog"
 val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------ *)
 
@@ -12,17 +13,19 @@ val _ =
       [["undefined"], ["branch_hint"]]
       arm8_stepTheory.NextStateARM8_def
 
-val arm8_instr_def = Define`
+Definition arm8_instr_def:
    arm8_instr (a, i: word32) =
    { (arm8_c_MEM a, arm8_d_word8 ((7 >< 0) i));
      (arm8_c_MEM (a + 1w), arm8_d_word8 ((15 >< 8) i));
      (arm8_c_MEM (a + 2w), arm8_d_word8 ((23 >< 16) i));
-     (arm8_c_MEM (a + 3w), arm8_d_word8 ((31 >< 24) i)) }`
+     (arm8_c_MEM (a + 3w), arm8_d_word8 ((31 >< 24) i)) }
+End
 
-val ARM8_MODEL_def = Define`
+Definition ARM8_MODEL_def:
    ARM8_MODEL =
    (STATE arm8_proj, NEXT_REL (=) NextStateARM8, arm8_instr,
-    ($= :arm8_state -> arm8_state -> bool), (K F: arm8_state -> bool))`
+    ($= :arm8_state -> arm8_state -> bool), (K F: arm8_state -> bool))
+End
 
 val ARM8_IMP_SPEC = Theory.save_thm ("ARM8_IMP_SPEC",
    stateTheory.IMP_SPEC
@@ -51,18 +54,20 @@ val (arm8_REGISTERS_def, arm8_REGISTERS_INSERT) =
 val (arm8_MEMORY_def, arm8_MEMORY_INSERT) =
    stateLib.define_map_component ("arm8_MEMORY", "mem", arm8_MEM_def)
 
-val arm8_WORD_def = Define`
+Definition arm8_WORD_def:
    arm8_WORD a (i: word32) =
    arm8_MEM a ((7 >< 0) i) *
    arm8_MEM (a + 1w) ((15 >< 8) i) *
    arm8_MEM (a + 2w) ((23 >< 16) i) *
-   arm8_MEM (a + 3w) ((31 >< 24) i)`;
+   arm8_MEM (a + 3w) ((31 >< 24) i)
+End
 
-val arm8_WORD_MEMORY_def = Define`
+Definition arm8_WORD_MEMORY_def:
   arm8_WORD_MEMORY dmem mem =
-  {BIGUNION { BIGUNION (arm8_WORD a (mem a)) | a IN dmem /\ aligned 2 a}}`
+  {BIGUNION { BIGUNION (arm8_WORD a (mem a)) | a IN dmem /\ aligned 2 a}}
+End
 
-val arm8_DWORD_def = Define`
+Definition arm8_DWORD_def:
    arm8_DWORD a (i: word64) =
    arm8_MEM a ((7 >< 0) i) *
    arm8_MEM (a + 1w) ((15 >< 8) i) *
@@ -71,21 +76,25 @@ val arm8_DWORD_def = Define`
    arm8_MEM (a + 4w) ((39 >< 32) i) *
    arm8_MEM (a + 5w) ((47 >< 40) i) *
    arm8_MEM (a + 6w) ((55 >< 48) i) *
-   arm8_MEM (a + 7w) ((63 >< 56) i)`;
+   arm8_MEM (a + 7w) ((63 >< 56) i)
+End
 
-val arm8_DWORD_MEMORY_def = Define`
+Definition arm8_DWORD_MEMORY_def:
   arm8_DWORD_MEMORY dmem mem =
-  {BIGUNION { BIGUNION (arm8_DWORD a (mem a)) | a IN dmem /\ aligned 3 a}}`
+  {BIGUNION { BIGUNION (arm8_DWORD a (mem a)) | a IN dmem /\ aligned 3 a}}
+End
 
-val arm8_pc_def = Define`
+Definition arm8_pc_def:
    arm8_pc pc =
    arm8_PC pc * arm8_exception NoException * arm8_PSTATE_EL 0w *
    arm8_SCTLR_EL1_E0E F * arm8_TCR_EL1_TBI0 F * arm8_TCR_EL1_TBI1 F *
-   arm8_SCTLR_EL1_SA0 F * set_sep$cond (aligned 2 pc)`;
+   arm8_SCTLR_EL1_SA0 F * set_sep$cond (aligned 2 pc)
+End
 
-val aS_def = Define `
+Definition aS_def:
    aS (n,z,c,v) =
-   arm8_PSTATE_N n * arm8_PSTATE_Z z * arm8_PSTATE_C c * arm8_PSTATE_V v`;
+   arm8_PSTATE_N n * arm8_PSTATE_Z z * arm8_PSTATE_C c * arm8_PSTATE_V v
+End
 
 (* ------------------------------------------------------------------------ *)
 
@@ -401,4 +410,3 @@ val disjoint_arm_instr_thms = Theory.save_thm("disjoint_arm_instr_thms",
 
 (* ------------------------------------------------------------------------ *)
 
-val () = export_theory()

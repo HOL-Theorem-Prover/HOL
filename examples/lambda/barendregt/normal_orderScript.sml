@@ -1,12 +1,9 @@
-open HolKernel Parse boolLib bossLib
-
-open boolSimps pred_setTheory pathTheory;
-
-open chap3Theory standardisationTheory term_posnsTheory termTheory binderLib
-     finite_developmentsTheory appFOLDLTheory nomsetTheory head_reductionTheory
-     horeductionTheory;
-
-val _ = new_theory "normal_order";
+Theory normal_order
+Ancestors
+  pred_set path chap3 standardisation term_posns term
+  finite_developments appFOLDL nomset head_reduction horeduction
+Libs
+  boolSimps binderLib
 
 val _ = set_trace "Unicode" 1;
 
@@ -235,10 +232,10 @@ val noposn_least = store_thm(
     SRW_TAC [][]
   ]);
 
-val normorder_reduction_def = Define`
+Definition normorder_reduction_def:
   normorder_reduction p =
     okpath (λM r N. (noposn M = SOME r) ∧ labelled_redn beta M r N) p
-`
+End
 val normorder_is_standard = store_thm(
   "normorder_is_standard",
   ``∀p. normorder_reduction p ⇒ standard_reduction p``,
@@ -413,9 +410,9 @@ val normstar_APPr_I = store_thm(
     Calculating normal order reducts
    ---------------------------------------------------------------------- *)
 
-val noreduct_def = Define`
+Definition noreduct_def:
   noreduct t = if bnf t then NONE else SOME (@t'. t -n-> t')
-`;
+End
 
 val noreduct_thm = store_thm(
   "noreduct_thm",
@@ -730,17 +727,17 @@ val last_of_finite_nopath = store_thm(
     loop.
    ---------------------------------------------------------------------- *)
 
-val bnf_of_def = Define`
+Definition bnf_of_def:
   bnf_of M = OWHILE ((~) o bnf) (THE o noreduct) M
-`;
+End
 
 val lemma1 = prove(
   ``∀p. okpath (λM u N. M -n-> N) p ∧ finite p ⇒
         bnf (last p) ⇒ (bnf_of (first p) = SOME (last p))``,
   HO_MATCH_MP_TAC finite_okpath_ind THEN SRW_TAC [][] THENL [
-    SRW_TAC [][Once whileTheory.OWHILE_THM, bnf_of_def],
+    SRW_TAC [][Once WhileTheory.OWHILE_THM, bnf_of_def],
     FULL_SIMP_TAC (srw_ss()) [] THEN
-    SRW_TAC [][Once whileTheory.OWHILE_THM, bnf_of_def] THENL [
+    SRW_TAC [][Once WhileTheory.OWHILE_THM, bnf_of_def] THENL [
       SRW_TAC [][GSYM bnf_of_def] THEN
       METIS_TAC [noreduct_characterisation, optionTheory.THE_DEF],
       METIS_TAC [normorder_bnf]
@@ -750,7 +747,7 @@ val lemma1 = prove(
 val lemma2 = prove(
   ``∀N. (OWHILE ($~ o bnf) (THE o noreduct) M = SOME N) ⇒
         M -n->* N``,
-  HO_MATCH_MP_TAC whileTheory.OWHILE_INV_IND THEN SRW_TAC [][] THEN
+  HO_MATCH_MP_TAC WhileTheory.OWHILE_INV_IND THEN SRW_TAC [][] THEN
   Cases_on `noreduct N` THENL [
     FULL_SIMP_TAC (srw_ss()) [noreduct_bnf],
     METIS_TAC [noreduct_characterisation, relationTheory.RTC_RULES_RIGHT1,
@@ -761,7 +758,7 @@ val bnf_of_SOME = store_thm(
   "bnf_of_SOME",
   ``(bnf_of M = SOME N) ⇒ M -n->* N ∧ bnf N``,
   SRW_TAC [][bnf_of_def] THEN
-  IMP_RES_TAC whileTheory.OWHILE_ENDCOND THEN
+  IMP_RES_TAC WhileTheory.OWHILE_ENDCOND THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN
   METIS_TAC [lemma2]);
 
@@ -786,8 +783,8 @@ val bnf_of_thm = store_thm(
   "bnf_of_thm",
   ``bnf_of M = if bnf M then SOME M else bnf_of (THE (noreduct M))``,
   SRW_TAC [][bnf_of_def] THEN1
-    SRW_TAC [][Once whileTheory.OWHILE_THM] THEN
-  SRW_TAC [][SimpLHS, Once whileTheory.OWHILE_THM]);
+    SRW_TAC [][Once WhileTheory.OWHILE_THM] THEN
+  SRW_TAC [][SimpLHS, Once WhileTheory.OWHILE_THM]);
 
 val nstar_bnf_of_SOME_I = store_thm(
   "nstar_bnf_of_SOME_I",
@@ -1043,5 +1040,4 @@ val normstar_to_vheadbinary_wstar = save_thm(
     |> SIMP_RULE (srw_ss() ++ DNF_ss)
                  [leneq2, DECIDE ``x < 2 ⇔ (x = 0) ∨ (x = 1)``]);
 
-val _ = export_theory()
 val _ = html_theory "normal_order";

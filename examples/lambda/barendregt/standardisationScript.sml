@@ -5,23 +5,16 @@
 (* AUTHORS : 2005-2011 Michael Norrish                                        *)
 (*         : 2023-2024 Michael Norrish and Chun Tian                          *)
 (* ========================================================================== *)
+Theory standardisation
+Ancestors
+  relation list llist path pred_set finite_map nomset basic_swap
+  finite_developments labelledTerms term chap2 horeduction chap3
+  appFOLDL term_posns chap11_1 head_reduction
+  container[qualified]
+Libs
+  BasicProvers metisLib boolSimps hurdUtils binderLib
 
-open HolKernel Parse boolLib bossLib BasicProvers;
 
-open metisLib boolSimps relationTheory listTheory llistTheory pathTheory
-     pred_setTheory finite_mapTheory hurdUtils;
-
-open nomsetTheory binderLib basic_swapTheory;
-open finite_developmentsTheory
-open labelledTermsTheory
-open termTheory chap2Theory horeductionTheory chap3Theory appFOLDLTheory
-open term_posnsTheory
-open chap11_1Theory
-open head_reductionTheory
-
-local open containerTheory in end
-
-val _ = new_theory "standardisation"
 val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
 structure NewQ = Q
@@ -32,13 +25,13 @@ val _ = ParseExtras.temp_loose_equality()
 val RUNION_def = relationTheory.RUNION
 val ADD1 = arithmeticTheory.ADD1
 
-val standard_reduction_def = Define`
+Definition standard_reduction_def:
   standard_reduction s =
     okpath (labelled_redn beta) s /\
     !i j. j < i /\ (i + 1) IN PL s ==>
           !p. p < nth_label j s ==>
               ~(nth_label i s IN residuals (seg j i s) {p})
-`;
+End
 
 val better_standard_reduction = store_thm(
   "better_standard_reduction",
@@ -63,9 +56,9 @@ val better_standard_reduction = store_thm(
 
 val _ = add_infix("is_internal_redex", 760, NONASSOC)
 (* definition 11.4.2 (i) *)
-val is_internal_redex_def = Define`
+Definition is_internal_redex_def:
   p is_internal_redex t = ~(p is_head_redex t) /\ p IN redex_posns t
-`;
+End
 
 Theorem NIL_never_internal_redex[simp] :
     !t. ~([] is_internal_redex t)
@@ -77,18 +70,18 @@ QED
 
 val _ = add_infix("i_reduces", 760, NONASSOC)
 (* definition 11.4.2 (ii) *)
-val i_reduces_def = Define`
+Definition i_reduces_def:
   M i_reduces N = ?s. okpath (labelled_redn beta) s /\ (first s = M) /\
                       finite s /\ (last s = N) /\
                       !i. i + 1 IN PL s ==>
                           (nth_label i s) is_internal_redex (el i s)
-`;
+End
 
 (* single step version of the same *)
 val _ = add_infix("i_reduce1", 760, NONASSOC)
-val i_reduce1_def = Define`
+Definition i_reduce1_def:
   M i_reduce1 N = ?r. labelled_redn beta M r N /\ r is_internal_redex M
-`;
+End
 
 val i_reduces_RTC_i_reduce1 = store_thm(
   "i_reduces_RTC_i_reduce1",
@@ -125,13 +118,13 @@ val i_reduces_RTC_i_reduce1 = store_thm(
 
 val _ = add_infix("i1_reduces", 760, NONASSOC)
 (* definition 11.4.3 (iii) *)
-val i1_reduces_def = Define`
+Definition i1_reduces_def:
   M i1_reduces N = ?s. okpath (labelled_redn beta) s /\ (first s = M) /\
                        finite s /\ (last s = N) /\
                        (!i. i + 1 IN PL s ==>
                             (nth_label i s) is_internal_redex (el i s)) /\
                        ?FS. s IN complete_development M FS
-`;
+End
 
 (* NOTE: the antecedent ‘delta is_internal_redex M’ is unnecessary *)
 val lemma11_4_3i = store_thm(
@@ -537,9 +530,9 @@ val n_posns_are_redex_posns = store_thm(
      by PROVE_TAC [lrcc_labelled_redn] THEN
   PROVE_TAC [is_redex_occurrence_def, IN_term_IN_redex_posns]);
 
-val zero_def = Define`
+Definition zero_def:
   zero n M = nlabel 0 (strip_label M) (n_posns n M)
-`;
+End
 
 val zero_thm = store_thm(
   "zero_thm",
@@ -2172,7 +2165,6 @@ Proof
       rw [EL_TAKE, Abbr ‘l0’, EL_MAP] ]
 QED
 
-val _ = export_theory()
 val _ = html_theory "standardisation";
 
 (* References:

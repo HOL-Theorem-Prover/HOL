@@ -7,10 +7,10 @@
   app load ["tablesTheory"];
   open word8Theory pairTheory;
 *)
+Theory Mult
+Ancestors
+  word8 tables
 
-open HolKernel Parse boolLib bossLib word8Theory tablesTheory;
-
-val _ = new_theory "Mult";
 
 val [a,c] = CONJUNCTS XOR8_AC;
 
@@ -18,12 +18,18 @@ val [a,c] = CONJUNCTS XOR8_AC;
 (*  Name some more constants                                                 *)
 (*---------------------------------------------------------------------------*)
 
-val NINE_def   = Define   `NINE = BYTE F F F F T F F T`;
-val ONE_B_def  = Define  `ONE_B = BYTE F F F T T F T T`;
-val EIGHTY_def = Define `EIGHTY = BYTE T F F F F F F F`;
-val B_HEX_def  = Define  `B_HEX = BYTE F F F F T F T T`;
-val D_HEX_def  = Define  `D_HEX = BYTE F F F F T T F T`;
-val E_HEX_def  = Define  `E_HEX = BYTE F F F F T T T F`;
+Definition NINE_def:       NINE = BYTE F F F F T F F T
+End
+Definition ONE_B_def:     ONE_B = BYTE F F F T T F T T
+End
+Definition EIGHTY_def:   EIGHTY = BYTE T F F F F F F F
+End
+Definition B_HEX_def:     B_HEX = BYTE F F F F T F T T
+End
+Definition D_HEX_def:     D_HEX = BYTE F F F F T T F T
+End
+Definition E_HEX_def:     E_HEX = BYTE F F F F T T T F
+End
 
 
 (*---------------------------------------------------------------------------
@@ -37,11 +43,12 @@ val E_HEX_def  = Define  `E_HEX = BYTE F F F F T T T F`;
 
  ---------------------------------------------------------------------------*)
 
-val xtime_def = Define
-  `xtime (BYTE b7 b6 b5 b4 b3 b2 b1 b0)
+Definition xtime_def:
+   xtime (BYTE b7 b6 b5 b4 b3 b2 b1 b0)
      =
    if b7 then (BYTE b6 b5 b4 (~b3) (~b2) b1 (~b0) T)
-         else (BYTE b6 b5 b4 b3 b2 b1 b0 F)`;
+         else (BYTE b6 b5 b4 b3 b2 b1 b0 F)
+End
 
 val xtime_distrib = Q.store_thm
 ("xtime_distrib",
@@ -123,15 +130,15 @@ val ConstMultEq = Q.store_thm
 (* from tablesTheory.                                                        *)
 (*---------------------------------------------------------------------------*)
 
-val TableConstMult_def =
- Define
-  `tcm x = if x = TWO then GF256_by_2
+Definition TableConstMult_def:
+   tcm x = if x = TWO then GF256_by_2
             else if x = THREE then GF256_by_3
             else if x = NINE then GF256_by_9
             else if x = B_HEX then GF256_by_11
             else if x = D_HEX then GF256_by_13
             else if x = E_HEX then GF256_by_14
-            else ARB`;
+            else ARB
+End
 
 val tcm_thm = Q.store_thm
  ("tcm_thm",
@@ -162,9 +169,8 @@ val MultEquiv = Count.apply Q.store_thm
 (* Exponentiation                                                            *)
 (*---------------------------------------------------------------------------*)
 
-val PolyExp_def =
- Define
-   `PolyExp x n = if n=0 then ONE else x ** PolyExp x (n-1)`;
+Definition PolyExp_def:
+    PolyExp x n = if n=0 then ONE else x ** PolyExp x (n-1)
+End
 
 
-val _ = export_theory();

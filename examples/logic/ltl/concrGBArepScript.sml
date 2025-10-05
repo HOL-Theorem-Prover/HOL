@@ -1,8 +1,7 @@
-open HolKernel Parse bossLib boolLib gfgTheory listTheory optionTheory pred_setTheory rich_listTheory arithmeticTheory sortingTheory relationTheory
-
-open sptreeTheory ltlTheory generalHelpersTheory concrRepTheory concrltl2waaTheory buechiATheory
-
-val _ = new_theory "concrGBArep"
+Theory concrGBArep
+Ancestors
+  gfg list option pred_set rich_list arithmetic sorting relation
+  sptree ltl generalHelpers concrRep concrltl2waa buechiA
 
 val _ = set_trace "BasicProvers.var_eq_old" 1
 val _ = diminish_srw_ss ["ABBREV"]
@@ -25,9 +24,10 @@ val _ = Datatype`
                 atomicProp : α list
              |>`;
 
-val gba_trans_concr_def = Define`
+Definition gba_trans_concr_def:
   gba_trans_concr ts_lists =
-                FOLDR d_conj_concr [(concrEdge [] [] [])] ts_lists `;
+                FOLDR d_conj_concr [(concrEdge [] [] [])] ts_lists
+End
 
 Theorem GBA_TRANS_LEMM1 :
     !x s. MEM x (gba_trans_concr s)
@@ -795,8 +795,9 @@ val GBA_TRANS_LEMM = store_thm
    )
   );
 
-val trns_is_empty_def = Define`
-  trns_is_empty cE = EXISTS (λp. MEM p cE.neg) cE.pos`;
+Definition trns_is_empty_def:
+  trns_is_empty cE = EXISTS (λp. MEM p cE.neg) cE.pos
+End
 
 val TRNS_IS_EMPTY_LEMM = store_thm
   ("TRNS_IS_EMPTY_LEMM",
@@ -837,14 +838,15 @@ val TRANSFORMLABEL_LEMM = store_thm
    >> metis_tac[SET_EQ_SUBSET,MEM_SUBSET_SET_TO_LIST]
   );
 
-val tlg_concr_def = Define`
+Definition tlg_concr_def:
   tlg_concr (t1,acc_t1) (t2,acc_t2) =
     (((MEM_SUBSET t1.pos t2.pos)
   ∧ (MEM_SUBSET t1.neg t2.neg) \/ trns_is_empty t2)
   ∧ (MEM_SUBSET t1.sucs t2.sucs)
-  ∧ (MEM_SUBSET acc_t2 acc_t1))`;
+  ∧ (MEM_SUBSET acc_t2 acc_t1))
+End
 
-val acc_cond_concr_def = Define`
+Definition acc_cond_concr_def:
   acc_cond_concr cE f f_trans =
      (~(MEM f cE.sucs)
    \/ (if trns_is_empty cE
@@ -855,9 +857,10 @@ val acc_cond_concr_def = Define`
                          MEM_SUBSET cE1.pos cE.pos
                          ∧ MEM_SUBSET cE1.neg cE.neg
                          ∧ MEM_SUBSET cE1.sucs cE.sucs
-                         ∧ ~(MEM f cE1.sucs)) f_trans)))`;
+                         ∧ ~(MEM f cE1.sucs)) f_trans)))
+End
 
-val concr_extrTrans_def = Define`
+Definition concr_extrTrans_def:
   concr_extrTrans g_AA aa_id =
     case lookup aa_id g_AA.followers of
       | NONE => NONE
@@ -890,7 +893,8 @@ val concr_extrTrans_def = Define`
                        (λeL. (concrEdge eL.pos_lab eL.neg_lab []))
                        node.true_labels) ;
               SOME (concr_edges ++ true_edges)
-                   od`;
+                   od
+End
 
 val CONCR_EXTRTRANS_NODES = store_thm
   ("CONCR_EXTRTRANS_NODES",
@@ -1452,8 +1456,9 @@ val CONCR_EXTRTRANS_LEMM = store_thm
       )
   );
 
-val suff_wfg_def = Define
-`suff_wfg g = !n. (g.next <= n) ==> ~(n ∈ domain g.nodeInfo)`;
+Definition suff_wfg_def:
+ suff_wfg g = !n. (g.next <= n) ==> ~(n ∈ domain g.nodeInfo)
+End
 
 val WF_IMP_SUFFWFG = store_thm
   ("WF_IMP_SUFFWFG",
@@ -1461,10 +1466,11 @@ val WF_IMP_SUFFWFG = store_thm
        rpt strip_tac >> fs[suff_wfg_def,wfg_def]
   )
 
-val inGBA_def = Define`
+Definition inGBA_def:
   inGBA g qs =
     let gbaNodes = MAP SND (toAList g.nodeInfo)
-    in EXISTS (λn. MEM_EQUAL n.frmls qs) gbaNodes`;
+    in EXISTS (λn. MEM_EQUAL n.frmls qs) gbaNodes
+End
 
 val IN_GBA_MEM_EQUAL = store_thm
   ("IN_GBA_MEM_EQUAL",
@@ -1484,11 +1490,12 @@ val IN_GBA_MEM_EQUAL = store_thm
   >> fs[]
   );
 
-val addNodeToGBA_def = Define`
+Definition addNodeToGBA_def:
   addNodeToGBA g qs =
     if inGBA g qs
     then g
-    else addNode (nodeLabelGBA qs) g`;
+    else addNode (nodeLabelGBA qs) g
+End
 
 
 val ADDNODE_GBA_WFG = store_thm
@@ -1586,10 +1593,11 @@ val ADDNODE_GBA_LEMM = store_thm
       )
   );
 
-val frml_ad_def = Define`
+Definition frml_ad_def:
   frml_ad g =
        !i n. i ∈ (domain g.nodeInfo) ∧ (lookup i g.nodeInfo = SOME n)
-          ==> ALL_DISTINCT n.frmls`;
+          ==> ALL_DISTINCT n.frmls
+End
 
 val FRML_AD_NODEINFO = store_thm
   ("FRML_AD_NODEINFO",
@@ -1761,11 +1769,12 @@ val ADDNODE_GBA_FOLDR = store_thm
       )
   );
 
-val addEdgeToGBA_def = Define`
+Definition addEdgeToGBA_def:
   addEdgeToGBA g id eL suc =
     case findNode (λ(i,q). MEM_EQUAL q.frmls suc) g of
       | SOME (i,q) =>  addEdge id (eL,i) g
-      | NONE => NONE`;
+      | NONE => NONE
+End
 
 val ADDEDGE_GBA_LEMM = store_thm
   ("ADDEDGE_GBA_LEMM",
@@ -1811,7 +1820,7 @@ val ADDEDGE_GBA_FOLDR_LEMM = store_thm
       )
   );
 
-val extractGBATrans_def = Define`
+Definition extractGBATrans_def:
   extractGBATrans aP g q =
      (set o OPTION_TO_LIST)
       (do (id,n) <- findNode (λ(i,n). ((set n.frmls) = q)) g ;
@@ -1829,9 +1838,10 @@ val extractGBATrans_def = Define`
                 )
               )
           )
-       od) `;
+       od)
+End
 
-val concr2AbstrGBA_final_def = Define`
+Definition concr2AbstrGBA_final_def:
   concr2AbstrGBA_final final_forms graph aP =
     { {(set q1.frmls, transformLabel aP eL.pos_lab eL.neg_lab, set q2.frmls) |
          ?id1 id2 fls.
@@ -1840,27 +1850,30 @@ val concr2AbstrGBA_final_def = Define`
         ∧ (MEM (eL,id2) fls) ∧ (MEM f eL.acc_set)
         ∧ (lookup id2 graph.nodeInfo = SOME q2)
       } | f | (f ∈ final_forms)
-    }`;
+    }
+End
 
-val concr2AbstrGBA_states_def = Define`
+Definition concr2AbstrGBA_states_def:
   concr2AbstrGBA_states graph =
     { set x.frmls | SOME x ∈
                    (IMAGE (\n. lookup n graph.nodeInfo)
-                          (domain graph.nodeInfo))}`;
+                          (domain graph.nodeInfo))}
+End
 
-val concr2AbstrGBA_init_def = Define`
+Definition concr2AbstrGBA_init_def:
   concr2AbstrGBA_init concrInit graph =
     set (CAT_OPTIONS (MAP (\i. do n <- lookup i graph.nodeInfo ;
                                   SOME (set n.frmls)
-                               od ) concrInit))`;
+                               od ) concrInit))
+End
 
-val concr2AbstrGBA_def = Define `
+Definition concr2AbstrGBA_def:
      concr2AbstrGBA (concrGBA graph init all_acc_frmls aP) =
        GBA
          (concr2AbstrGBA_states graph)
          (concr2AbstrGBA_init init graph)
          (extractGBATrans (set aP) graph)
          (concr2AbstrGBA_final (set all_acc_frmls) graph (set aP))
-         (POW (set aP))`;
+         (POW (set aP))
+End
 
-val _ = export_theory();

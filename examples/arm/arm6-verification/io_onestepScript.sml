@@ -9,12 +9,13 @@
 (* interactive use:
   app load ["rich_listTheory", "onestepTheory"];
 *)
+Theory io_onestep
+Ancestors
+  combin pair arithmetic prim_rec pred_set rich_list onestep
+Libs
+  Q simpLib numLib
 
-open HolKernel boolLib bossLib Q;
-open simpLib numLib combinTheory pairTheory arithmeticTheory;
-open prim_recTheory pred_setTheory rich_listTheory onestepTheory;
 
-val _ = new_theory "io_onestep";
 val _ = ParseExtras.temp_loose_equality();
 
 (* vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv *)
@@ -32,85 +33,105 @@ val _ = Hol_datatype `state_out = <| state : 'a; out : 'b |>`;
   - Paired Iterated Maps ----------------------------------------------------
   ---------------------------------------------------------------------------*)
 
-val ADVANCE_def = Define `ADVANCE t1 s t2 = s (t1 + t2)`;
+Definition ADVANCE_def:   ADVANCE t1 s t2 = s (t1 + t2)
+End
 
-val PINIT_def = Define`
+Definition PINIT_def:
   PINIT init out =
     \x. let s = init x.state in
-        <| state := <| state := s; out := out s |>; inp := x.inp|>`;
+        <| state := <| state := s; out := out s |>; inp := x.inp|>
+End
 
-val PNEXT_def = Define`
+Definition PNEXT_def:
   PNEXT next out =
     \x. let s = next (x.state).state (x.inp 0) in
-      <| state := <| state := s; out := out s |>; inp := ADVANCE 1 x.inp |>`;
+      <| state := <| state := s; out := out s |>; inp := ADVANCE 1 x.inp |>
+End
 
-val PMAP_def = Define `
+Definition PMAP_def:
   PMAP f init next out =
     (!x. f 0 x = PINIT init out x) /\
-    (!t x. f (SUC t) x = (PNEXT next out) (f t x))`;
+    (!t x. f (SUC t) x = (PNEXT next out) (f t x))
+End
 
-val IS_PMAP_INIT_def = Define`
-  IS_PMAP_INIT f init out = ?next. PMAP f init next out`;
+Definition IS_PMAP_INIT_def:
+  IS_PMAP_INIT f init out = ?next. PMAP f init next out
+End
 
-val IS_PMAP_def = Define`
-  IS_PMAP f = ?init next out. PMAP f init next out`;
+Definition IS_PMAP_def:
+  IS_PMAP f = ?init next out. PMAP f init next out
+End
 
-val THE_PMAP_def = Define`
+Definition THE_PMAP_def:
   (THE_PMAP init next out 0 x = PINIT init out x) /\
   (THE_PMAP init next out (SUC t) x =
-     (PNEXT next out) (THE_PMAP init next out t x))`;
+     (PNEXT next out) (THE_PMAP init next out t x))
+End
 
-val Pstate_out_state = Define`
-  Pstate_out_state x = <| state := (x.state).state; inp := x.inp |>`;
+Definition Pstate_out_state:
+  Pstate_out_state x = <| state := (x.state).state; inp := x.inp |>
+End
 
 (*---------------------------------------------------------------------------
   - Output ------------------------------------------------------------------
   ---------------------------------------------------------------------------*)
 
-val POUTPUT_def = Define`
-  POUTPUT g x (t:num) = (state_inp_state (g t x)).out`;
+Definition POUTPUT_def:
+  POUTPUT g x (t:num) = (state_inp_state (g t x)).out
+End
 
-val OUTPUT_def = Define`
-  OUTPUT g x (t:num) = (g t x).out`;
+Definition OUTPUT_def:
+  OUTPUT g x (t:num) = (g t x).out
+End
 
-val IMM_LEN_def = Define`
-  IMM_LEN imm t = imm (t + 1) - imm t`;
+Definition IMM_LEN_def:
+  IMM_LEN imm t = imm (t + 1) - imm t
+End
 
-val IMM_RET_def = Define`
-  IMM_RET imm s = LEAST t. s < imm (t + 1)`;
+Definition IMM_RET_def:
+  IMM_RET imm s = LEAST t. s < imm (t + 1)
+End
 
-val IMM_START_def = Define`
-  IMM_START imm = imm o (IMM_RET imm)`;
+Definition IMM_START_def:
+  IMM_START imm = imm o (IMM_RET imm)
+End
 
-val SERIALIZE_def = Define`
-  SERIALIZE imm strm s = EL (s - IMM_START imm s) (strm (IMM_RET imm s))`;
+Definition SERIALIZE_def:
+  SERIALIZE imm strm s = EL (s - IMM_START imm s) (strm (IMM_RET imm s))
+End
 
-val PACK_def = Define`
-  PACK imm strm t = GENLIST (\s. strm (imm t + s)) (IMM_LEN imm t)`;
+Definition PACK_def:
+  PACK imm strm t = GENLIST (\s. strm (imm t + s)) (IMM_LEN imm t)
+End
 
-val COMBINE_def = Define`
-  COMBINE f astrm bstrm (t:num) = f (astrm t) (bstrm t)`;
+Definition COMBINE_def:
+  COMBINE f astrm bstrm (t:num) = f (astrm t) (bstrm t)
+End
 
-val MAP_STRM_def = Define`
-  MAP_STRM f strm (t:num) = f (strm t)`;
+Definition MAP_STRM_def:
+  MAP_STRM f strm (t:num) = f (strm t)
+End
 
-val EVERY_STRM_def = Define`
-  EVERY_STRM p strm = !(t:num). p (strm t)`;
+Definition EVERY_STRM_def:
+  EVERY_STRM p strm = !(t:num). p (strm t)
+End
 
-val PACKED_STRM_def = Define`
-  PACKED_STRM imm strm = !t. LENGTH (strm t) = IMM_LEN imm t`;
+Definition PACKED_STRM_def:
+  PACKED_STRM imm strm = !t. LENGTH (strm t) = IMM_LEN imm t
+End
 
-val OSMPL_def = Define`
+Definition OSMPL_def:
   OSMPL f impl imm (x,i) t =
     f <| state := (impl (imm x t) x).state; inp := ADVANCE (imm x t) x.inp|>
-      (PACK (imm x) i t)`;
+      (PACK (imm x) i t)
+End
 
 (* ---- *)
 
 val LEAST_THM = store_thm("LEAST_THM",
   `!n. (!m. m < n ==> ~P m) /\ P n ==> ($LEAST P = n)`,
   REPEAT STRIP_TAC
-    \\ IMP_RES_TAC whileTheory.FULL_LEAST_INTRO
+    \\ IMP_RES_TAC WhileTheory.FULL_LEAST_INTRO
     \\ Cases_on `$LEAST P = n` >- ASM_REWRITE_TAC []
     \\ `$LEAST P < n` by DECIDE_TAC
     \\ PROVE_TAC []);
@@ -190,7 +211,7 @@ val lem2 = prove(
          (SPECL_THEN [`x`,`x + 1`] (ASSUME_TAC o SIMP_RULE arith_ss []))
     \\ IMP_RES_TAC LESS_EQ_LESS_TRANS
     \\ METIS_TAC [(SIMP_RULE std_ss [] o SPECL
-         [`\t. x < imm (t + 1)`,`\t. x < imm (t + 1)`]) whileTheory.LEAST_ELIM]
+         [`\t. x < imm (t + 1)`,`\t. x < imm (t + 1)`]) WhileTheory.LEAST_ELIM]
 );
 
 val lem3 = prove(
@@ -275,33 +296,37 @@ val STREAM_ABSTRACTION_def = Define `
 (* This weaker condition ensures that the stream space is non-empty
    and that the sampled stream is of the right type *)
 
-val STREAM_ABSTRACTION_def = Define `
+Definition STREAM_ABSTRACTION_def:
   STREAM_ABSTRACTION smpl sstrm istrm =
-    (?i. i IN istrm) /\ !x. x.inp IN istrm ==> smpl x IN sstrm`;
+    (?i. i IN istrm) /\ !x. x.inp IN istrm ==> smpl x IN sstrm
+End
 
 (*---------------------------------------------------------------------------
   - Immersions : General and Uniform ----------------------------------------
   ---------------------------------------------------------------------------*)
 
-val IMMERSION_def = Define `
-  IMMERSION imm = !x:(('a,'b) state_inp). FREE_IMMERSION (imm x)`;
+Definition IMMERSION_def:
+  IMMERSION imm = !x:(('a,'b) state_inp). FREE_IMMERSION (imm x)
+End
 
 val IMMERSION = REWRITE_RULE [FREE_IMMERSION_def] IMMERSION_def;
 
-val PUIMMERSION_def = Define `
+Definition PUIMMERSION_def:
   PUIMMERSION imm f dur =
     ((!x:(('a,'b) state_inp). 0 < dur x) /\
      (!x. imm x 0 = 0) /\
-     (!x t. imm x (SUC t) = dur (Pstate_out_state (f (imm x t) x)) + imm x t))`;
+     (!x t. imm x (SUC t) = dur (Pstate_out_state (f (imm x t) x)) + imm x t))
+End
 
-val PUNIFORM_def = Define`
-  PUNIFORM imm f = ?dur. PUIMMERSION imm f dur`;
+Definition PUNIFORM_def:
+  PUNIFORM imm f = ?dur. PUIMMERSION imm f dur
+End
 
 (*---------------------------------------------------------------------------
   - Correctness Definitions -------------------------------------------------
   ---------------------------------------------------------------------------*)
 
-val PCORRECT_def = Define `
+Definition PCORRECT_def:
   PCORRECT spec impl imm abs osmpl ismpl sstrm istrm =
     IMMERSION imm /\
     DATA_ABSTRACTION abs (state_out_state o state_inp_state o (impl 0))
@@ -310,20 +335,22 @@ val PCORRECT_def = Define `
     (!x. x.inp IN istrm ==>
        let y = <| state := abs x.state; inp:= ismpl x|> in
        (!t. ((spec t y).state).state = abs ((impl (imm x t) x).state).state) /\
-       (POUTPUT spec y = osmpl (x,POUTPUT impl x)))`;
+       (POUTPUT spec y = osmpl (x,POUTPUT impl x)))
+End
 
 (*---------------------------------------------------------------------------
   - Time-Consistent State Functions -----------------------------------------
   ---------------------------------------------------------------------------*)
 
-val PTCON_def = Define `
+Definition PTCON_def:
   PTCON f strm = !t1 t2 x:('a,'b) state_inp.
      x.inp IN strm ==>
      (f t2 x).inp IN strm /\
      (Pstate_out_state (f (t1 + t2) x) =
-        Pstate_out_state (f t1 (Pstate_out_state (f t2 x))))`;
+        Pstate_out_state (f t1 (Pstate_out_state (f t2 x))))
+End
 
-val PTCON_IMMERSION_def = Define `
+Definition PTCON_IMMERSION_def:
   PTCON_IMMERSION f imm strm =
     !t1:num t2 x:('a,'b) state_inp.
       x.inp IN strm ==>
@@ -331,7 +358,8 @@ val PTCON_IMMERSION_def = Define `
       let x2 = Pstate_out_state (f s2 x) in
       let s1 = imm x2 t1 in
         x2.inp IN strm /\
-        (Pstate_out_state (f (s1 + s2) x) = Pstate_out_state (f s1 x2))`;
+        (Pstate_out_state (f (s1 + s2) x) = Pstate_out_state (f s1 x2))
+End
 
 val FST_Pstate_out_state = prove(
   `!x. (Pstate_out_state x).state = (state_inp_state x).state`,
@@ -349,10 +377,11 @@ val PTCON_IMMERSION =
   - Time-Consistent Sampling ------------------------------------------------
   ---------------------------------------------------------------------------*)
 
-val PTCON_SMPL_def = Define `
+Definition PTCON_SMPL_def:
   PTCON_SMPL smpl imm f strm =
     !t x. x.inp IN strm ==>
-           (smpl (Pstate_out_state (f (imm x t) x)) = ADVANCE t (smpl x))`;
+           (smpl (Pstate_out_state (f (imm x t) x)) = ADVANCE t (smpl x))
+End
 
 (*---------------------------------------------------------------------------
   - Uniform Immersions are Immersions ---------------------------------------
@@ -892,24 +921,29 @@ val PONE_STEP_THM = prove(
   - Iterated Maps -----------------------------------------------------------
   ---------------------------------------------------------------------------*)
 
-val IMAP_def = Define `
+Definition IMAP_def:
   IMAP f init next out =
     (!x. (f 0 x).state = init x.state) /\
     (!t x. (f (SUC t) x).state = next (f t x).state (x.inp t)) /\
-    (!t x. (f t x).out = out (f t x).state)`;
+    (!t x. (f t x).out = out (f t x).state)
+End
 
-val IS_IMAP_INIT_def = Define`
-  IS_IMAP_INIT f init = ?next out. IMAP f init next out`;
+Definition IS_IMAP_INIT_def:
+  IS_IMAP_INIT f init = ?next out. IMAP f init next out
+End
 
-val IS_IMAP_def = Define`
-  IS_IMAP f = ?init next out. IMAP f init next out`;
+Definition IS_IMAP_def:
+  IS_IMAP f = ?init next out. IMAP f init next out
+End
 
-val SINIT_def = Define`
-  SINIT init = \x. <| state := init x.state; inp := x.inp |>`;
+Definition SINIT_def:
+  SINIT init = \x. <| state := init x.state; inp := x.inp |>
+End
 
-val SNEXT_def = Define`
+Definition SNEXT_def:
   SNEXT next =
-    \x. <| state := next x.state (x.inp 0); inp := ADVANCE 1 x.inp |>`;
+    \x. <| state := next x.state (x.inp 0); inp := ADVANCE 1 x.inp |>
+End
 
 val SNEXT = store_thm("SNEXT",
   `!f s i. SNEXT f <|state := s; inp := i |> =
@@ -920,47 +954,52 @@ val SNEXT = store_thm("SNEXT",
   - Uniform Immersions ------------------------------------------------------
   ---------------------------------------------------------------------------*)
 
-val UIMMERSION_def = Define `
+Definition UIMMERSION_def:
   UIMMERSION imm f dur =
     ((!x:('a,'b) state_inp. 0 < dur x) /\
      (!x. imm x 0 = 0) /\
      (!x t. imm x (SUC t) =
              dur <| state := (f (imm x t) x).state;
-                     inp := ADVANCE (imm x t) x.inp |> + imm x t))`;
+                     inp := ADVANCE (imm x t) x.inp |> + imm x t))
+End
 
-val UNIFORM_def = Define`
-  UNIFORM imm f = ?dur. UIMMERSION imm f dur`;
+Definition UNIFORM_def:
+  UNIFORM imm f = ?dur. UIMMERSION imm f dur
+End
 
 (*---------------------------------------------------------------------------
   - Correctness Definitions -------------------------------------------------
   ---------------------------------------------------------------------------*)
 
-val CORRECT_def = Define `
+Definition CORRECT_def:
  CORRECT spec impl imm abs osmpl ismpl sstrm istrm =
   IMMERSION imm /\
   DATA_ABSTRACTION abs (state_out_state o impl 0) (state_out_state o spec 0) /\
   STREAM_ABSTRACTION ismpl sstrm istrm /\
   (!x. x.inp IN istrm ==> let y = <| state := abs x.state; inp := ismpl x |> in
      (!t. (spec t y).state = abs (impl (imm x t) x).state) /\
-     (OUTPUT spec y = osmpl (x,OUTPUT impl x)))`;
+     (OUTPUT spec y = osmpl (x,OUTPUT impl x)))
+End
 
-val IS_CORRECT_def = Define`
+Definition IS_CORRECT_def:
   IS_CORRECT spec impl =
     ?imm abs osmpl ismpl sstrm istrm.
-      CORRECT spec impl imm abs osmpl ismpl sstrm istrm`;
+      CORRECT spec impl imm abs osmpl ismpl sstrm istrm
+End
 
 (*---------------------------------------------------------------------------
   - Time-Consistent State Functions -----------------------------------------
   ---------------------------------------------------------------------------*)
 
-val TCON_def = Define `
+Definition TCON_def:
   TCON f sstrm = !t1 t2 x:('a,'b) state_inp.
      x.inp IN sstrm ==>
      (ADVANCE t2 x.inp) IN sstrm /\
      ((f (t1 + t2) x).state =
-      (f t1 <| state := (f t2 x).state; inp := ADVANCE t2 x.inp|>).state)`;
+      (f t1 <| state := (f t2 x).state; inp := ADVANCE t2 x.inp|>).state)
+End
 
-val TCON_IMMERSION_def = Define `
+Definition TCON_IMMERSION_def:
   TCON_IMMERSION f imm strm =
     !t1:num t2 x:('a,'b) state_inp.
       x.inp IN strm ==>
@@ -968,7 +1007,8 @@ val TCON_IMMERSION_def = Define `
       let x2 = <| state := (f s2 x).state; inp := ADVANCE s2 x.inp |> in
       let s1 = imm x2 t1 in
         (ADVANCE s2 x.inp) IN strm /\
-        ((f (s1 + s2) x).state = (f s1 x2).state)`;
+        ((f (s1 + s2) x).state = (f s1 x2).state)
+End
 
 val TCON_IMMERSION = save_thm("TCON_IMMERSION",
   SIMP_RULE (bool_ss++boolSimps.LET_ss) [] TCON_IMMERSION_def);
@@ -977,11 +1017,12 @@ val TCON_IMMERSION = save_thm("TCON_IMMERSION",
   - Time-Consistent Sampling ------------------------------------------------
   ---------------------------------------------------------------------------*)
 
-val TCON_SMPL_def = Define `
+Definition TCON_SMPL_def:
   TCON_SMPL smpl imm f strm =
     !t x. x.inp IN strm ==>
           (smpl <| state := (f (imm x t) x).state;
-                   inp := ADVANCE (imm x t) x.inp |> = ADVANCE t (smpl x))`;
+                   inp := ADVANCE (imm x t) x.inp |> = ADVANCE t (smpl x))
+End
 
 (*---------------------------------------------------------------------------
   - Transfer over one-step results ------------------------------------------
@@ -1409,17 +1450,21 @@ val STREAM_ABSTRACTIONa = prove(
   `STREAM_ABSTRACTION smpl UNIV UNIV`,
   SIMP_TAC std_ss [STREAM_ABSTRACTION_def,IN_UNIV]);
 
-val TCONa_def = Define `TCONa f = TCON f UNIV`;
+Definition TCONa_def:   TCONa f = TCON f UNIV
+End
 
-val TCON_IMMERSIONa_def = Define`
-  TCON_IMMERSIONa f imm = TCON_IMMERSION f imm UNIV`;
+Definition TCON_IMMERSIONa_def:
+  TCON_IMMERSIONa f imm = TCON_IMMERSION f imm UNIV
+End
 
-val TCON_SMPLa_def = Define`
-  TCON_SMPLa smpl imm f = TCON_SMPL smpl imm f UNIV`;
+Definition TCON_SMPLa_def:
+  TCON_SMPLa smpl imm f = TCON_SMPL smpl imm f UNIV
+End
 
-val CORRECTa_def = Define `
+Definition CORRECTa_def:
   CORRECTa spec impl imm abs osmpl ismpl =
-   CORRECT spec impl imm abs osmpl ismpl UNIV UNIV`;
+   CORRECT spec impl imm abs osmpl ismpl UNIV UNIV
+End
 
 (* - Simplifications ------------------------------------------------------- *)
 
@@ -1526,4 +1571,3 @@ val SELF_CORRECT = prove(
 
 (* ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *)
 
-val _ = export_theory();

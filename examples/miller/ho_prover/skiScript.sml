@@ -1,7 +1,10 @@
 (* non-interactive mode
 *)
-open HolKernel Parse boolLib;
-val _ = new_theory "ski";
+Theory ski
+Ancestors
+  combin
+Libs
+  hurdUtils
 
 (* interactive mode
 val () = loadPath := union ["..", "../finished"] (!loadPath);
@@ -19,8 +22,6 @@ val () = app load
    "hoTools"];
 val () = show_assums := true;
 *)
-
-open bossLib combinTheory hurdUtils;
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ## |->;
 infix 1 >>;
@@ -81,4 +82,3 @@ val LIFT_K_THRU_S = store_thm
 
 (* non-interactive mode
 *)
-val _ = export_theory ();

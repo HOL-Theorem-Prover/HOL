@@ -1,12 +1,13 @@
-open HolKernel Parse boolLib bossLib listTheory rich_listTheory bitTheory
-     markerTheory pairTheory arithmeticTheory
-     wordsTheory Serpent_Reference_UtilityTheory wordsLib;
-
-val _ = new_theory "Serpent_Reference_Permutation";
+Theory Serpent_Reference_Permutation
+Ancestors
+  list rich_list bit marker pair arithmetic words
+  Serpent_Reference_Utility
+Libs
+  wordsLib
 
 (*initial/inverse final permutation table*)
-val IPTable_def = Define
-`IPTable =
+Definition IPTable_def:
+ IPTable =
  [  0; 32; 64; 96;  1; 33; 65; 97;  2; 34; 66; 98;  3; 35; 67; 99;
     4; 36; 68;100;  5; 37; 69;101;  6; 38; 70;102;  7; 39; 71;103;
     8; 40; 72;104;  9; 41; 73;105; 10; 42; 74;106; 11; 43; 75;107;
@@ -14,11 +15,12 @@ val IPTable_def = Define
    16; 48; 80;112; 17; 49; 81;113; 18; 50; 82;114; 19; 51; 83;115;
    20; 52; 84;116; 21; 53; 85;117; 22; 54; 86;118; 23; 55; 87;119;
    24; 56; 88;120; 25; 57; 89;121; 26; 58; 90;122; 27; 59; 91;123;
-   28; 60; 92;124; 29; 61; 93;125; 30; 62; 94;126; 31; 63; 95;127]`;
+   28; 60; 92;124; 29; 61; 93;125; 30; 62; 94;126; 31; 63; 95;127]
+End
 
 (*final/inverse initial permutation table*)
-val FPTable_def = Define
-`FPTable =
+Definition FPTable_def:
+ FPTable =
  [  0;  4;  8; 12; 16; 20; 24; 28; 32; 36; 40; 44; 48; 52; 56; 60;
    64; 68; 72; 76; 80; 84; 88; 92; 96;100;104;108;112;116;120;124;
     1;  5;  9; 13; 17; 21; 25; 29; 33; 37; 41; 45; 49; 53; 57; 61;
@@ -26,13 +28,16 @@ val FPTable_def = Define
     2;  6; 10; 14; 18; 22; 26; 30; 34; 38; 42; 46; 50; 54; 58; 62;
    66; 70; 74; 78; 82; 86; 90; 94; 98;102;106;110;114;118;122;126;
     3;  7; 11; 15; 19; 23; 27; 31; 35; 39; 43; 47; 51; 55; 59; 63;
-   67; 71; 75; 79; 83; 87; 91; 95; 99;103;107;111;115;119;123;127]`;
+   67; 71; 75; 79; 83; 87; 91; 95; 99;103;107;111;115;119;123;127]
+End
 
-val IPFun_def = Define
-`IPFun x = EL x IPTable`;
+Definition IPFun_def:
+ IPFun x = EL x IPTable
+End
 
-val FPFun_def = Define
-`FPFun x = EL x FPTable`;
+Definition FPFun_def:
+ FPFun x = EL x FPTable
+End
 
 (*precomputed to speed things up*)
 
@@ -47,8 +52,8 @@ val FPFunVal = save_thm(
    (map EVAL (for 0 127 (fn i => ``FPFun ^(numSyntax.term_of_int i)``))));
 
 (*permutation *)
-val permu_def = Define
-`(permu 0 permFun (block:word128)
+Definition permu_def:
+ (permu 0 permFun (block:word128)
   = let sourceBit = block ' (permFun 0)
     in
     if sourceBit
@@ -62,7 +67,8 @@ val permu_def = Define
                        then (1w:word128) << (SUC i)
                       else (0w:word128)
    in
-   maskedWord || (permu i permFun  block))`;
+   maskedWord || (permu i permFun  block))
+End
 
 (*for evaluation*)
 val permuEval = Q.store_thm(
@@ -156,11 +162,15 @@ val permu_comp_reverse_w128 = Q.store_thm(
   SRW_TAC [] [] THEN
     SRW_TAC [WORD_BIT_EQ_ss] [permu_compose_w128, perm_recur_inv2_w128]);
 
-val IP_def = Define `IP w128 = permu 127 IPFun w128`;
-val FP_def = Define `FP w128 = permu 127 FPFun w128`;
+Definition IP_def:   IP w128 = permu 127 IPFun w128
+End
+Definition FP_def:   FP w128 = permu 127 FPFun w128
+End
 
-val invIP_def = Define `invIP w128 = FP w128`;
-val invFP_def = Define `invFP w128 = IP w128`;
+Definition invIP_def:   invIP w128 = FP w128
+End
+Definition invFP_def:   invFP w128 = IP w128
+End
 
 val IP_FP_fact = Q.store_thm(
 "IP_FP_fact",
@@ -184,4 +194,3 @@ val invIP_IP_cancel = Q.store_thm(
     invIP (IP block)= block`,
  SIMP_TAC std_ss [invIP_def,IP_def,FP_def,permu_comp_reverse_w128,IP_FP_fact]);
 
-val _ = export_theory();

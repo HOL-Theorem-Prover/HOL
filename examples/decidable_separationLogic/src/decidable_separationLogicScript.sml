@@ -1,4 +1,8 @@
-open HolKernel Parse boolLib bossLib;
+Theory decidable_separationLogic
+Ancestors
+  finite_map relation pred_set sorting list rich_list
+Libs
+  congLib
 
 (*
 quietdec := true;
@@ -11,9 +15,6 @@ map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
 show_assums := true;
 *)
 
-open finite_mapTheory relationTheory pred_setTheory congLib sortingTheory
-   listTheory rich_listTheory;
-
 (*
 load "decidable_separationLogicTheory";
 open decidable_separationLogicTheory;
@@ -21,7 +22,6 @@ open decidable_separationLogicTheory;
 quietdec := false;
 *)
 
-val _ = new_theory "decidable_separationLogic";
 val _ = ParseExtras.temp_loose_equality()
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"]
@@ -172,10 +172,11 @@ Induct_on ‘hL’ THENL [
    METIS_TAC[]
 ]);
 
-val REPLACE_ELEMENT_def = Define ‘
+Definition REPLACE_ELEMENT_def:
    (REPLACE_ELEMENT e n [] = []) /\
    (REPLACE_ELEMENT e 0 (x::l) = e::l) /\
-   (REPLACE_ELEMENT e (SUC n) (x::l) = x::REPLACE_ELEMENT e n l)’
+   (REPLACE_ELEMENT e (SUC n) (x::l) = x::REPLACE_ELEMENT e n l)
+End
 
 
 val REPLACE_ELEMENT_SEM = store_thm ("REPLACE_ELEMENT_SEM",
@@ -530,9 +531,10 @@ val BUTFIRSTN___CONCAT_EL = store_thm ("BUTFIRSTN___CONCAT_EL",
    ])
 
 
-val ALL_DISJOINT_def = Define ‘
+Definition ALL_DISJOINT_def:
    (ALL_DISJOINT [] = T) /\
-   (ALL_DISJOINT (e1::l) = (EVERY (\e2. DISJOINT e1 e2) l) /\ ALL_DISJOINT l)’
+   (ALL_DISJOINT (e1::l) = (EVERY (\e2. DISJOINT e1 e2) l) /\ ALL_DISJOINT l)
+End
 
 
 
@@ -660,9 +662,10 @@ val ds_value_distinct = DB.fetch "-" "ds_value_distinct";
 
 val _ = type_abbrev("heap", Type ‘:'a |-> 'b |-> 'a ds_value’)
 
-val IS_DSV_NIL_def = Define ‘
+Definition IS_DSV_NIL_def:
    (IS_DSV_NIL dsv_nil = T) /\
-   (IS_DSV_NIL _ = F)’;
+   (IS_DSV_NIL _ = F)
+End
 
 val IS_DSV_NIL_THM = store_thm ("IS_DSV_NIL_THM",
    “!x. IS_DSV_NIL x = (x = dsv_nil)”,
@@ -682,8 +685,9 @@ val NOT_IS_DSV_NIL_THM = store_thm ("NOT_IS_DSV_NIL_THM",
    ])
 
 
-val GET_DSV_VALUE_def = Define ‘
-   (GET_DSV_VALUE (dsv_const v) = v)’;
+Definition GET_DSV_VALUE_def:
+   (GET_DSV_VALUE (dsv_const v) = v)
+End
 
 val GET_DSV_VALUE_11 = store_thm ("GET_DSV_VALUE_11",
    “!v1 v2. (~(IS_DSV_NIL v1) /\ ~(IS_DSV_NIL v2)) ==>
@@ -704,7 +708,8 @@ val _ = Hol_datatype ‘ds_expression =
    | dse_var of 'vars’;
 
 
-val dse_nil_def = Define ‘dse_nil = dse_const dsv_nil’
+Definition dse_nil_def:   dse_nil = dse_const dsv_nil
+End
 
 val _ = Hol_datatype ‘ds_pure_formula =
      pf_true
@@ -734,36 +739,42 @@ val _ = TypeBase.write [TypeBasePure.put_nchotomy nchotomy_thm (valOf (TypeBase.
 
 
 
-val SF_IS_SIMPLE_def = Define ‘
+Definition SF_IS_SIMPLE_def:
    (SF_IS_SIMPLE sf_emp = F) /\
    (SF_IS_SIMPLE (sf_star sf1 sf2) = F) /\
-   (SF_IS_SIMPLE X = T)’
+   (SF_IS_SIMPLE X = T)
+End
 
-val DS_EXPRESSION_EVAL_def = Define
-   ‘(DS_EXPRESSION_EVAL s (dse_var v) = (s v)) /\
-    (DS_EXPRESSION_EVAL s (dse_const c) = c)’
+Definition DS_EXPRESSION_EVAL_def:
+    (DS_EXPRESSION_EVAL s (dse_var v) = (s v)) /\
+    (DS_EXPRESSION_EVAL s (dse_const c) = c)
+End
 
 
-val DS_EXPRESSION_EQUAL_def = Define
-‘DS_EXPRESSION_EQUAL s e1 e2 <=>
-          (DS_EXPRESSION_EVAL s e1 = DS_EXPRESSION_EVAL s e2)’;
+Definition DS_EXPRESSION_EQUAL_def:
+ DS_EXPRESSION_EQUAL s e1 e2 <=>
+          (DS_EXPRESSION_EVAL s e1 = DS_EXPRESSION_EVAL s e2)
+End
 
-val DS_EXPRESSION_EVAL_VALUE_def = Define
-   ‘DS_EXPRESSION_EVAL_VALUE s e = GET_DSV_VALUE (DS_EXPRESSION_EVAL s e)’;
+Definition DS_EXPRESSION_EVAL_VALUE_def:
+    DS_EXPRESSION_EVAL_VALUE s e = GET_DSV_VALUE (DS_EXPRESSION_EVAL s e)
+End
 
-val PF_SEM_def = Define
-   ‘(PF_SEM s pf_true = T) /\
+Definition PF_SEM_def:
+    (PF_SEM s pf_true = T) /\
     (PF_SEM s (pf_equal e1 e2) = (DS_EXPRESSION_EQUAL s e1 e2)) /\
     (PF_SEM s (pf_unequal e1 e2) = ~(DS_EXPRESSION_EQUAL s e1 e2)) /\
-    (PF_SEM s (pf_and pf1 pf2) = ((PF_SEM s pf1) /\ (PF_SEM s pf2)))’;
+    (PF_SEM s (pf_and pf1 pf2) = ((PF_SEM s pf1) /\ (PF_SEM s pf2)))
+End
 
 
-val HEAP_READ_ENTRY_def = Define
-   ‘HEAP_READ_ENTRY s (h:('a, 'b) heap) e f =
+Definition HEAP_READ_ENTRY_def:
+    HEAP_READ_ENTRY s (h:('a, 'b) heap) e f =
       if (IS_DSV_NIL (DS_EXPRESSION_EVAL s e)) then NONE else
       if (~(GET_DSV_VALUE (DS_EXPRESSION_EVAL s e) IN (FDOM h))) then NONE else
       if (~(f IN (FDOM (h ' (GET_DSV_VALUE (DS_EXPRESSION_EVAL s e)))))) then NONE else
-      SOME ((h ' (GET_DSV_VALUE (DS_EXPRESSION_EVAL s e))) ' f)’;
+      SOME ((h ' (GET_DSV_VALUE (DS_EXPRESSION_EVAL s e))) ' f)
+End
 
 
 val HEAP_READ_ENTRY_THM = store_thm ("HEAP_READ_ENTRY_THM",
@@ -792,13 +803,14 @@ val HEAP_READ_ENTRY_THM = store_thm ("HEAP_READ_ENTRY_THM",
    METIS_TAC[optionTheory.option_CLAUSES]);
 
 
-val DS_POINTS_TO_def = Define ‘
+Definition DS_POINTS_TO_def:
    DS_POINTS_TO s h e1 a =
       ~(IS_DSV_NIL (DS_EXPRESSION_EVAL s e1)) /\
        (GET_DSV_VALUE (DS_EXPRESSION_EVAL s e1) IN FDOM h) /\
         EVERY (\(f, e).
             ((f IN FDOM (h ' (GET_DSV_VALUE (DS_EXPRESSION_EVAL s e1)))) /\
-            ((DS_EXPRESSION_EVAL s e) = (h ' (GET_DSV_VALUE (DS_EXPRESSION_EVAL s e1))) ' f))) a’;
+            ((DS_EXPRESSION_EVAL s e) = (h ' (GET_DSV_VALUE (DS_EXPRESSION_EVAL s e1))) ' f))) a
+End
 
 
 val DS_POINTS_TO___DOMSUB = store_thm ("DS_POINTS_TO___DOMSUB",
@@ -871,7 +883,7 @@ SIMP_TAC list_ss [HEAP_READ_ENTRY_THM, DS_POINTS_TO_def, DS_EXPRESSION_EVAL_def]
 
 
 
-val SF_SEM___sf_tree_len_def = Define ‘
+Definition SF_SEM___sf_tree_len_def:
   (SF_SEM___sf_tree_len s h fL 0 e1 e2 = ((h = FEMPTY) /\ (PF_SEM s (pf_equal e2 e1)))) /\
   (SF_SEM___sf_tree_len s h fL (SUC n) e1 e2 = (
       (SF_SEM___sf_tree_len s h fL 0 e1 e2) \/
@@ -886,16 +898,18 @@ val SF_SEM___sf_tree_len_def = Define ‘
             ALL_DISJOINT (MAP FDOM hL) /\
             (FOLDR FUNION FEMPTY hL = h \\ GET_DSV_VALUE (DS_EXPRESSION_EVAL s e2)) /\
             EVERY (\(c , h'). SF_SEM___sf_tree_len s h' fL n e1 (dse_const (THE c))) (ZIP (cL, hL)))
-   ))’;
+   ))
+End
 
 
 
-val SF_SEM___sf_tree_def = Define ‘
+Definition SF_SEM___sf_tree_def:
   SF_SEM___sf_tree s h fL e1 e2 =
-   ?n.  SF_SEM___sf_tree_len s h fL n e1 e2’
+   ?n.  SF_SEM___sf_tree_len s h fL n e1 e2
+End
 
 
-val WEAK_SF_SEM___sf_tree_len_def = Define ‘
+Definition WEAK_SF_SEM___sf_tree_len_def:
   (WEAK_SF_SEM___sf_tree_len s h fL fL' 0 e1 e2 = ((h = FEMPTY) /\ (PF_SEM s (pf_equal e2 e1)))) /\
   (WEAK_SF_SEM___sf_tree_len s h fL fL' (SUC n) e1 e2 = (
       (SF_SEM___sf_tree_len s h fL 0 e1 e2) \/
@@ -910,7 +924,8 @@ val WEAK_SF_SEM___sf_tree_len_def = Define ‘
             ALL_DISJOINT (MAP FDOM hL) /\
             (FOLDR FUNION FEMPTY hL = h \\ GET_DSV_VALUE (DS_EXPRESSION_EVAL s e2)) /\
             EVERY (\(c , h'). SF_SEM___sf_tree_len s h' fL' n e1 (dse_const (THE c))) (ZIP (cL, hL)))
-   ))’;
+   ))
+End
 
 
 val WEAK_SF_SEM___sf_tree_len_THM = store_thm ("WEAK_SF_SEM___sf_tree_len_THM",
@@ -924,7 +939,7 @@ val WEAK_SF_SEM___sf_tree_len_THM = store_thm ("WEAK_SF_SEM___sf_tree_len_THM",
 
 
 
-val BALANCED_SF_SEM___sf_tree_len_def = Define ‘
+Definition BALANCED_SF_SEM___sf_tree_len_def:
   (BALANCED_SF_SEM___sf_tree_len s h fL 0 e1 e2 = ((h = FEMPTY) /\ (PF_SEM s (pf_equal e2 e1)))) /\
   (BALANCED_SF_SEM___sf_tree_len s h fL (SUC n) e1 e2 = (
       (PF_SEM s (pf_unequal e2 e1)) /\
@@ -937,7 +952,8 @@ val BALANCED_SF_SEM___sf_tree_len_def = Define ‘
             ALL_DISJOINT (MAP FDOM hL) /\
             (FOLDR FUNION FEMPTY hL = h \\ GET_DSV_VALUE (DS_EXPRESSION_EVAL s e2)) /\
             EVERY (\(c , h'). BALANCED_SF_SEM___sf_tree_len s h' fL n e1 (dse_const (THE c))) (ZIP (cL, hL)))
-   ))’;
+   ))
+End
 
 
 val BALANCED_SF_SEM___sf_tree_len_THM = store_thm ("BALANCED_SF_SEM___sf_tree_len_THM",
@@ -1661,45 +1677,53 @@ Induct_on ‘n’ THENL [
 ]);
 
 
-val SF_SEM_def = Define
-   ‘(SF_SEM s (h:('b, 'c) heap) sf_emp = (h = FEMPTY)) /\
+Definition SF_SEM_def:
+    (SF_SEM s (h:('b, 'c) heap) sf_emp = (h = FEMPTY)) /\
     (SF_SEM s h (sf_points_to e a) =
       ((FDOM h = {DS_EXPRESSION_EVAL_VALUE s e}) /\
       DS_POINTS_TO s h e a)) /\
     (SF_SEM s h (sf_star sf1 sf2) =
       ?h1 h2. (h = FUNION h1 h2) /\ (DISJOINT (FDOM h1) (FDOM h2)) /\
               (SF_SEM s h1 sf1 /\ SF_SEM s h2 sf2)) /\
-    (SF_SEM s h (sf_tree fL es e) = SF_SEM___sf_tree s h fL es e)’;
+    (SF_SEM s h (sf_tree fL es e) = SF_SEM___sf_tree s h fL es e)
+End
 
 
 
-val DS_SEM_def = Define
-   ‘DS_SEM s h (pf, sf) =
-         PF_SEM s pf /\ SF_SEM s h sf’
+Definition DS_SEM_def:
+    DS_SEM s h (pf, sf) =
+         PF_SEM s pf /\ SF_SEM s h sf
+End
 
-val PF_ENTAILS_def = Define
-   ‘PF_ENTAILS pf1 pf2 =
-      !s. PF_SEM s pf1 ==> PF_SEM s pf2’
+Definition PF_ENTAILS_def:
+    PF_ENTAILS pf1 pf2 =
+      !s. PF_SEM s pf1 ==> PF_SEM s pf2
+End
 
-val PF_EQUIV_def = Define
-   ‘PF_EQUIV pf1 pf2 =
-      !s. PF_SEM s pf1 = PF_SEM s pf2’
+Definition PF_EQUIV_def:
+    PF_EQUIV pf1 pf2 =
+      !s. PF_SEM s pf1 = PF_SEM s pf2
+End
 
-val SF_ENTAILS_def = Define
-   ‘SF_ENTAILS sf1 sf2 =
-      !s h. (SF_SEM s h sf1 ==> SF_SEM s h sf2)’
+Definition SF_ENTAILS_def:
+    SF_ENTAILS sf1 sf2 =
+      !s h. (SF_SEM s h sf1 ==> SF_SEM s h sf2)
+End
 
-val SF_EQUIV_def = Define
-   ‘SF_EQUIV sf1 sf2 =
-      !s h. (SF_SEM s h sf1 = SF_SEM s h sf2)’
+Definition SF_EQUIV_def:
+    SF_EQUIV sf1 sf2 =
+      !s h. (SF_SEM s h sf1 = SF_SEM s h sf2)
+End
 
-val DS_ENTAILS_def = Define
-   ‘DS_ENTAILS f1 f2 =
-      !s h. (DS_SEM s h f1 ==> DS_SEM s h f2)’
+Definition DS_ENTAILS_def:
+    DS_ENTAILS f1 f2 =
+      !s h. (DS_SEM s h f1 ==> DS_SEM s h f2)
+End
 
-val DS_EQUIV_def = Define
-   ‘DS_EQUIV f1 f2 =
-      !s h. (DS_SEM s h f1 = DS_SEM s h f2)’
+Definition DS_EQUIV_def:
+    DS_EQUIV f1 f2 =
+      !s h. (DS_SEM s h f1 = DS_SEM s h f2)
+End
 
 val DS_EQUIV___ENTAILS = store_thm ("DS_EQUIV___ENTAILS",
 “!f1 f2. DS_EQUIV f1 f2 = (DS_ENTAILS f1 f2 /\ DS_ENTAILS f2 f1)”,
@@ -2258,11 +2282,13 @@ val SF_SEM___sf_tree_THM = store_thm ("SF_SEM___sf_tree_THM",
 
 
 
-val sf_ls_def = Define ‘
-   sf_ls f e1 e2 = sf_tree [f] e2 e1’;
+Definition sf_ls_def:
+   sf_ls f e1 e2 = sf_tree [f] e2 e1
+End
 
-val sf_list_def = Define ‘
-   sf_list f e = sf_ls f e dse_nil’;
+Definition sf_list_def:
+   sf_list f e = sf_ls f e dse_nil
+End
 
 
 
@@ -2314,7 +2340,7 @@ SIMP_TAC list_ss [sf_ls_def, SF_SEM___sf_tree_THM, LET_THM] THEN
 SIMP_TAC std_ss [SF_SEM_def, FDOM_FEMPTY, DISJOINT_EMPTY, FUNION_FEMPTY_2])
 
 
-val SF_SEM___sf_ls_len_def = Define ‘
+Definition SF_SEM___sf_ls_len_def:
   (SF_SEM___sf_ls_len s h f 0 e1 e2 = ((h = FEMPTY) /\ (PF_SEM s (pf_equal e1 e2)))) /\
   (SF_SEM___sf_ls_len s h f (SUC n) e1 e2 = (
       (PF_SEM s (pf_unequal e1 e2)) /\
@@ -2322,12 +2348,14 @@ val SF_SEM___sf_ls_len_def = Define ‘
        (let e1_eval =  GET_DSV_VALUE (DS_EXPRESSION_EVAL s e1) in (
           (e1_eval IN (FDOM h)) /\
           (f IN FDOM (h ' e1_eval)) /\
-          (SF_SEM___sf_ls_len s (h \\ (e1_eval)) f n (dse_const (h ' e1_eval ' f)) e2)))))’
+          (SF_SEM___sf_ls_len s (h \\ (e1_eval)) f n (dse_const (h ' e1_eval ' f)) e2)))))
+End
 
 
 
-val SF_SEM___sf_ls_def = Define ‘
-  (SF_SEM___sf_ls s h f e1 e2 = ?n. SF_SEM___sf_ls_len s h f n e1 e2)’
+Definition SF_SEM___sf_ls_def:
+  (SF_SEM___sf_ls s h f e1 e2 = ?n. SF_SEM___sf_ls_len s h f n e1 e2)
+End
 
 
 val SF_SEM___sf_ls_SEM = store_thm ("SF_SEM___sf_ls_SEM",
@@ -2411,8 +2439,9 @@ val BALANCED_SF_SEM___sf_ls_len = store_thm ("BALANCED_SF_SEM___sf_ls_len",
 
 
 
-val sf_bin_tree_def = Define ‘
-   sf_bin_tree (f1, f2) e = sf_tree [f1;f2] dse_nil e’;
+Definition sf_bin_tree_def:
+   sf_bin_tree (f1, f2) e = sf_tree [f1;f2] dse_nil e
+End
 
 
 
@@ -3049,15 +3078,18 @@ val SF_SEM_EVAL = save_thm ("SF_SEM_EVAL",
 
 
 
-val LIST_PF_SEM_def = Define ‘
-   LIST_PF_SEM s pfL = PF_SEM s (FOLDR pf_and pf_true pfL)’
+Definition LIST_PF_SEM_def:
+   LIST_PF_SEM s pfL = PF_SEM s (FOLDR pf_and pf_true pfL)
+End
 
-val LIST_SF_SEM_def = Define ‘
+Definition LIST_SF_SEM_def:
    LIST_SF_SEM s h sfL =
-      SF_SEM s h (FOLDR sf_star sf_emp sfL)’;
+      SF_SEM s h (FOLDR sf_star sf_emp sfL)
+End
 
-val LIST_DS_SEM_def = Define ‘
-   LIST_DS_SEM s h (pfL, sfL) = LIST_PF_SEM s pfL /\ LIST_SF_SEM s h sfL’;
+Definition LIST_DS_SEM_def:
+   LIST_DS_SEM s h (pfL, sfL) = LIST_PF_SEM s pfL /\ LIST_SF_SEM s h sfL
+End
 
 
 val LIST_SEM_INTRO_THM = store_thm ("LIST_SEM_INTRO_THM",
@@ -3098,9 +3130,10 @@ val MEM_LIST_PF_SEM = store_thm ("MEM_LIST_PF_SEM",
    ])
 
 
-val MEM_UNEQ_PF_LIST_def = Define ‘
+Definition MEM_UNEQ_PF_LIST_def:
    MEM_UNEQ_PF_LIST e1 e2 pfL =
-   MEM (pf_unequal e1 e2) pfL \/ MEM (pf_unequal e2 e1) pfL’
+   MEM (pf_unequal e1 e2) pfL \/ MEM (pf_unequal e2 e1) pfL
+End
 
 val MEM_UNEQ_PF_LIST_SEM = store_thm ("MEM_UNEQ_PF_LIST_SEM",
 “ !e1 e2 pfL s.
@@ -3127,10 +3160,11 @@ PROVE_TAC[]);
 
 
 
-val DS_FLAT_PF_def = Define
-   ‘(DS_FLAT_PF pf_true = []) /\
+Definition DS_FLAT_PF_def:
+    (DS_FLAT_PF pf_true = []) /\
     (DS_FLAT_PF (pf_and pf1 pf2) = APPEND (DS_FLAT_PF pf1) (DS_FLAT_PF pf2)) /\
-    (DS_FLAT_PF x = [x])’
+    (DS_FLAT_PF x = [x])
+End
 
 
 val LIST_PF_SEM_FLAT_INTRO = store_thm ("LIST_PF_SEM_FLAT_INTRO",
@@ -3234,10 +3268,11 @@ METIS_TAC[])
 
 
 
-val DS_FLAT_SF_def = Define
-   ‘(DS_FLAT_SF sf_emp = []) /\
+Definition DS_FLAT_SF_def:
+    (DS_FLAT_SF sf_emp = []) /\
     (DS_FLAT_SF (sf_star sf1 sf2) = APPEND (DS_FLAT_SF sf1) (DS_FLAT_SF sf2)) /\
-    (DS_FLAT_SF x = [x])’
+    (DS_FLAT_SF x = [x])
+End
 
 
 val LIST_SF_SEM_FLAT_INTRO = store_thm ("LIST_SF_SEM_FLAT_INTRO",
@@ -3490,15 +3525,17 @@ val LIST_DS_SEM_PERM = store_thm ("LIST_DS_SEM_PERM",
 
 
 
-val DS_POINTER_DANGLES_def = Define ‘
+Definition DS_POINTER_DANGLES_def:
    DS_POINTER_DANGLES s h e =
-   !a. ~(DS_POINTS_TO s h e a)’
+   !a. ~(DS_POINTS_TO s h e a)
+End
 
-val SF_SEM___EXTEND_def = Define ‘
+Definition SF_SEM___EXTEND_def:
    SF_SEM___EXTEND s h sf1 sf2 =
       (!h'. (DISJOINT (FDOM h) (FDOM h') /\
             SF_SEM s h' sf1) ==>
-           SF_SEM s (FUNION h h') sf2)’
+           SF_SEM s (FUNION h h') sf2)
+End
 
 
 val NOT_DS_POINTER_DANGLES = store_thm ("NOT_DS_POINTER_DANGLES",
@@ -3521,9 +3558,10 @@ val DS_POINTER_DANGLES = store_thm ("DS_POINTER_DANGLES",
 
 
 
-val DS_VAR_SUBST_def = Define ‘
+Definition DS_VAR_SUBST_def:
    (DS_VAR_SUBST v e (dse_const c) = dse_const c) /\
-   (DS_VAR_SUBST v e (dse_var v') = if (v = v') then e else (dse_var v'))’
+   (DS_VAR_SUBST v e (dse_var v') = if (v = v') then e else (dse_var v'))
+End
 
 val DS_VAR_SUBST_NIL = store_thm ("DS_VAR_SUBST_NIL",
    “!v e. DS_VAR_SUBST v e dse_nil = dse_nil”,
@@ -3541,12 +3579,13 @@ val DS_VAR_SUBST_SEM = store_thm ("DS_VAR_SUBST_SEM",
    ])
 
 
-val PF_SUBST_def = Define ‘
+Definition PF_SUBST_def:
    (PF_SUBST v e pf_true = pf_true) /\
    (PF_SUBST v e (pf_equal e1 e2) = pf_equal (DS_VAR_SUBST v e e1) (DS_VAR_SUBST v e e2)) /\
    (PF_SUBST v e (pf_unequal e1 e2) = pf_unequal (DS_VAR_SUBST v e e1) (DS_VAR_SUBST v e e2)) /\
    (PF_SUBST v e (pf_and pf1 pf2) =
-      pf_and (PF_SUBST v e pf1) (PF_SUBST v e pf2))’
+      pf_and (PF_SUBST v e pf1) (PF_SUBST v e pf2))
+End
 
 
 val PF_SUBST_SEM = store_thm ("PF_SUBST_SEM",
@@ -3578,11 +3617,12 @@ val LIST_PF_SUBST_SEM = store_thm ("LIST_PF_SUBST_SEM",
    ]);
 
 
-val SF_SUBST_def = Define ‘
+Definition SF_SUBST_def:
    (SF_SUBST v e sf_emp = sf_emp) /\
    (SF_SUBST v e (sf_points_to e1 a) = sf_points_to (DS_VAR_SUBST v e e1) (MAP (\x. (FST x, DS_VAR_SUBST v e (SND x))) a)) /\
    (SF_SUBST v e (sf_tree fL e1 e2) = sf_tree fL (DS_VAR_SUBST v e e1) (DS_VAR_SUBST v e e2)) /\
-   (SF_SUBST v e (sf_star sf1 sf2) = sf_star (SF_SUBST v e sf1) (SF_SUBST v e sf2))’
+   (SF_SUBST v e (sf_star sf1 sf2) = sf_star (SF_SUBST v e sf1) (SF_SUBST v e sf2))
+End
 
 
 val SF_SUBST_THM = store_thm ("SF_SUBST_THM",
@@ -3797,10 +3837,11 @@ val LIST_SF_SUBST_SEM = store_thm ("LIST_SF_SUBST_SEM",
 
 
 
-val SF_IS_PRECISE_def = Define ‘
+Definition SF_IS_PRECISE_def:
    SF_IS_PRECISE sf =
          (!s h h1 h2. (h1 SUBMAP h /\ h2 SUBMAP h /\
-                       SF_SEM s h1 sf /\ SF_SEM s h2 sf) ==> (h1 = h2))’
+                       SF_SEM s h1 sf /\ SF_SEM s h2 sf) ==> (h1 = h2))
+End
 
 val SF_IS_PRECISE___sf_emp = store_thm ("SF_IS_PRECISE___sf_emp",
    “SF_IS_PRECISE sf_emp”,
@@ -4027,12 +4068,13 @@ val SF_IS_SIMPLE___MEM_DS_FLAT_SF = store_thm ("SF_IS_SIMPLE___MEM_DS_FLAT_SF",
 
 
 
-val PF_EXPRESSION_SET_def = Define ‘
+Definition PF_EXPRESSION_SET_def:
    (PF_EXPRESSION_SET pf_true = {}) /\
    (PF_EXPRESSION_SET (pf_equal e1 e2) = {e1; e2}) /\
    (PF_EXPRESSION_SET (pf_unequal e1 e2) = {e1; e2}) /\
    (PF_EXPRESSION_SET (pf_and pf1 pf2) =
-      PF_EXPRESSION_SET pf1 UNION PF_EXPRESSION_SET pf2)’
+      PF_EXPRESSION_SET pf1 UNION PF_EXPRESSION_SET pf2)
+End
 
 val PF_EXPRESSION_SET___FINITE = store_thm ("PF_EXPRESSION_SET___FINITE",
    “!pf. FINITE (PF_EXPRESSION_SET pf)”,
@@ -4042,12 +4084,13 @@ val PF_EXPRESSION_SET___FINITE = store_thm ("PF_EXPRESSION_SET___FINITE",
          FINITE_UNION]
    ))
 
-val SF_EXPRESSION_SET_def = Define ‘
+Definition SF_EXPRESSION_SET_def:
    (SF_EXPRESSION_SET sf_emp = {}) /\
    (SF_EXPRESSION_SET (sf_points_to e a) = e INSERT LIST_TO_SET (MAP SND a)) /\
    (SF_EXPRESSION_SET (sf_tree fL e1 e2) = {e1; e2}) /\
    (SF_EXPRESSION_SET (sf_star sf1 sf2) =
-      SF_EXPRESSION_SET sf1 UNION SF_EXPRESSION_SET sf2)’
+      SF_EXPRESSION_SET sf1 UNION SF_EXPRESSION_SET sf2)
+End
 
 val SF_EXPRESSION_SET___FINITE = store_thm ("SF_EXPRESSION_SET___FINITE",
    “!sf. FINITE (SF_EXPRESSION_SET sf)”,
@@ -4119,12 +4162,13 @@ Induct_on ‘sf’ THENL [
 
 
 
-val DS_POINTS_TO___IN_DISTANCE_def = Define ‘
+Definition DS_POINTS_TO___IN_DISTANCE_def:
    (DS_POINTS_TO___IN_DISTANCE s h fL e1 e2 0 = (DS_EXPRESSION_EQUAL s e1 e2)) /\
    (DS_POINTS_TO___IN_DISTANCE s h fL e1 e2 (SUC n) =
       ?y f. (DS_POINTS_TO___IN_DISTANCE s h fL e1 y n) /\
             (MEM f fL) /\
-            (DS_POINTS_TO s h y [(f, e2)]))’
+            (DS_POINTS_TO s h y [(f, e2)]))
+End
 
 
 val DS_POINTS_TO___IN_DISTANCE___RIGHT = save_thm (
@@ -4250,9 +4294,10 @@ val DS_POINTS_TO___IN_DISTANCE___SUBMAP = store_thm ("DS_POINTS_TO___IN_DISTANCE
    ])
 
 
-val DS_POINTS_TO___RTC_def = Define ‘
+Definition DS_POINTS_TO___RTC_def:
    DS_POINTS_TO___RTC s h fL e1 e2 =
-   (?n. (DS_POINTS_TO___IN_DISTANCE s h fL e1 e2 n))’
+   (?n. (DS_POINTS_TO___IN_DISTANCE s h fL e1 e2 n))
+End
 
 
 val DS_POINTS_TO___RTC___SUBMAP = store_thm ("DS_POINTS_TO___RTC___SUBMAP",
@@ -8771,9 +8816,10 @@ val HEAP_DISTINCT___UNEQUAL = store_thm ("HEAP_DISTINCT___UNEQUAL",
 
 
 
-val LIST_DS_ENTAILS_def = Define
-   ‘LIST_DS_ENTAILS c l1 l2 =
-      !s h. (HEAP_DISTINCT s h (FST c) (SND c) /\ LIST_DS_SEM s h l1) ==> LIST_DS_SEM s h l2’
+Definition LIST_DS_ENTAILS_def:
+    LIST_DS_ENTAILS c l1 l2 =
+      !s h. (HEAP_DISTINCT s h (FST c) (SND c) /\ LIST_DS_SEM s h l1) ==> LIST_DS_SEM s h l2
+End
 
 
 
@@ -10304,4 +10350,3 @@ BINOP_TAC THENL [
    METIS_TAC[]
 ])
 
-val _ = export_theory();

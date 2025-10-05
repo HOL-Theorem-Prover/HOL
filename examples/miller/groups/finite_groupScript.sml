@@ -1,13 +1,11 @@
-open HolKernel Parse boolLib bossLib;
+Theory finite_group
+Ancestors
+  list res_quan pred_set extra_pred_set relation extra_list
+  arithmetic group subtype extra_num gcd divides extra_arith
+Libs
+  hurdUtils subtypeTools res_quanTools arithContext
+  ho_proverTools listContext pred_setContext groupContext
 
-open listTheory hurdUtils subtypeTools res_quanTools
-     res_quanTheory pred_setTheory extra_pred_setTheory arithContext
-     relationTheory ho_proverTools extra_listTheory listContext
-     arithmeticTheory groupTheory pred_setContext groupContext
-     subtypeTheory extra_numTheory gcdTheory dividesTheory
-     extra_arithTheory;
-
-val _ = new_theory "finite_group";
 val _ = ParseExtras.temp_loose_equality()
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
@@ -30,25 +28,29 @@ val Simplify = R_TAC;
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val finite_group_def = Define
-  `finite_group G = group G /\ FINITE (gset G)`;
+Definition finite_group_def:
+   finite_group G = group G /\ FINITE (gset G)
+End
 
-val add_group_def = Define
-  `add_group (n : num) = ((\x. x < n), (\x y. (x + y) MOD n))`;
+Definition add_group_def:
+   add_group (n : num) = ((\x. x < n), (\x y. (x + y) MOD n))
+End
 
 Definition gord_def:
   gord G g = LEAST n. 0 < n /\ (gpow G g n = gid G)
 End
 
-val elt_subgroup_def = Define
-  `elt_subgroup G g = ((\x. ?i. x = gpow G g i), gop G)`;
+Definition elt_subgroup_def:
+   elt_subgroup G g = ((\x. ?i. x = gpow G g i), gop G)
+End
 
 Definition lcoset_list_def:
   lcoset_list G H = nub (MAP (\g. lcoset G g H) (SET_TO_LIST (gset G)))
 End
 
-val cyclic_def = Define
-  `cyclic G = ?g :: gset G. elt_subgroup G g = G`;
+Definition cyclic_def:
+   cyclic G = ?g :: gset G. elt_subgroup G g = G
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)
@@ -899,4 +901,3 @@ val FINITE_SET_SUBGROUP = store_thm
 
 (* non-interactive mode
 *)
-val _ = export_theory ();

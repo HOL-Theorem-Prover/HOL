@@ -51,6 +51,12 @@ Proof
     RW_TAC std_ss [real_def]
 QED
 
+Theorem real_infty[simp] :
+    real PosInf = 0 /\ real NegInf = 0
+Proof
+    SIMP_TAC std_ss [real_def]
+QED
+
 Theorem normal_real :
     !x. x <> NegInf /\ x <> PosInf ==> (Normal (real x) = x)
 Proof
@@ -3648,6 +3654,19 @@ QED
 Definition real_set_def :
     real_set s = {real x | x <> PosInf /\ x <> NegInf /\ x IN s}
 End
+
+Theorem real_set_empty[simp] :
+    real_set {} = {}
+Proof
+    simp [real_set_def]
+QED
+
+Theorem real_set_infty[simp] :
+    real_set {PosInf} = {} /\ real_set {NegInf} = {}
+Proof
+    simp [real_set_def]
+ >> rw [Once EXTENSION, NOT_IN_EMPTY]
+QED
 
 Theorem normal_real_set :
     !(s :extreal set). s INTER (IMAGE Normal UNIV) = IMAGE Normal (real_set s)

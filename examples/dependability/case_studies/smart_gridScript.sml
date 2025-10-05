@@ -9,18 +9,15 @@
 (*          School of Electrical Engineering and Computer Sciences (SEECS)   *)
 (*          National University of Sciences and Technology (NUST), PAKISTAN  *)
 (* ========================================================================= *)
+Theory smart_grid
+Ancestors
+  lim arithmetic real prim_rec real_probability seq pred_set
+  res_quan sorting list transc rich_list pair combin option
+  extreal real_measure real_lebesgue real_sigma sat num RBD
+  FT_deep VDC ASN_gateway
+Libs
+  res_quanTools realLib dep_rewrite extra_pred_setTools
 
-open HolKernel boolLib bossLib Parse;
-
-open limTheory arithmeticTheory realTheory prim_recTheory real_probabilityTheory
-     seqTheory pred_setTheory res_quanTheory sortingTheory res_quanTools
-     listTheory transcTheory rich_listTheory pairTheory combinTheory realLib
-     optionTheory dep_rewrite extra_pred_setTools extrealTheory
-     real_measureTheory real_lebesgueTheory real_sigmaTheory satTheory numTheory;
-
-open RBDTheory FT_deepTheory VDCTheory ASN_gatewayTheory;
-
-val _ = new_theory "smart_grid";
 
 val op by = BasicProvers.byA;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
@@ -929,4 +926,3 @@ RW_TAC std_ss[]
 QED
 
 (*----------------------------------------------*)
-val _ = export_theory();

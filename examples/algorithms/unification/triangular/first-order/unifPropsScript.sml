@@ -1,10 +1,10 @@
-open HolKernel boolLib bossLib ramanaLib Parse
+Theory unifProps
+Ancestors
+  string arithmetic finite_map pred_set bag pair term relation
+  prim_rec unifDef subst walk walkstar
+Libs
+  ramanaLib
 
-open stringTheory arithmeticTheory finite_mapTheory pred_setTheory bagTheory
-     pairTheory termTheory relationTheory prim_recTheory unifDefTheory
-     substTheory walkTheory walkstarTheory
-
-val _ = new_theory "unifProps"
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 }
 
 val vwalk_irrelevant_FUPDATE = Q.store_thm(
@@ -324,9 +324,10 @@ THEN1 (
   Cases_on `vwalk s2 n` THEN FULL_SIMP_TAC (srw_ss()) [] ))
 
 val _ = set_fixity "COMPAT" (Infix(NONASSOC,450))
-val COMPAT_def = Define`
+Definition COMPAT_def:
   s COMPAT s0 <=> wfs s /\ wfs s0 /\
-                  (!t.walkstar s (walkstar s0 t) = walkstar s t)`
+                  (!t.walkstar s (walkstar s0 t) = walkstar s t)
+End
 val _ = TeX_notation {hol = "COMPAT", TeX = ("\\ensuremath{\\Supset}",1)}
 
 val SUBMAP_COMPAT = Q.store_thm(
@@ -382,4 +383,3 @@ SRW_TAC [][COMPAT_def,EQ_IMP_THM] THEN1 (
 FIRST_X_ASSUM (Q.SPECL_THEN [`walk* s0 t`,`t`] MP_TAC) THEN
 SRW_TAC [][walkstar_idempotent]);
 
-val _ = export_theory ();

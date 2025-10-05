@@ -1,4 +1,9 @@
-open HolKernel Parse boolLib bossLib;
+Theory decidable_separationLogicLib
+Ancestors
+  finite_map relation pred_set sorting list rich_list
+  decidable_separationLogic string
+Libs
+  congLib listLib
 
 (*
 quietdec := true;
@@ -11,15 +16,10 @@ map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
 show_assums := true;
 *)
 
-open finite_mapTheory relationTheory pred_setTheory congLib sortingTheory
-   listTheory rich_listTheory decidable_separationLogicTheory listLib stringTheory;
-
-
 (*
 quietdec := false;
 *)
 
-val _ = new_theory "decidable_separationLogicLib";
 val _ = ParseExtras.temp_loose_equality()
 
 val nchotomy_thm = prove (``!x.
@@ -55,10 +55,11 @@ SIMP_TAC list_ss []);
 
 
 
-val SAFE_EL_def = Define `
+Definition SAFE_EL_def:
    (SAFE_EL e n [] = e) /\
    (SAFE_EL e 0 (x::l) = x) /\
-   (SAFE_EL e (SUC n) (x::l) = SAFE_EL e n l)`
+   (SAFE_EL e (SUC n) (x::l) = SAFE_EL e n l)
+End
 
 
 val SAFE_EL_SEM = store_thm ("SAFE_EL_SEM",
@@ -71,10 +72,11 @@ val SAFE_EL_SEM = store_thm ("SAFE_EL_SEM",
    ])
 
 
-val SAFE_DEL_EL_def = Define `
+Definition SAFE_DEL_EL_def:
    (SAFE_DEL_EL n [] = []) /\
    (SAFE_DEL_EL 0 (x::l) = [x]) /\
-   (SAFE_DEL_EL (SUC n) (x::l) = SAFE_DEL_EL n l)`
+   (SAFE_DEL_EL (SUC n) (x::l) = SAFE_DEL_EL n l)
+End
 
 val SAFE_DEL_EL_THM = store_thm ("SAFE_DEL_EL_THM",
  ``(!n. (SAFE_DEL_EL n [] = [])) /\
@@ -96,10 +98,11 @@ val SAFE_DEL_EL_SEM = store_thm ("SAFE_DEL_EL_SEM",
    ])
 
 
-val DELETE_ELEMENT_def = Define `
+Definition DELETE_ELEMENT_def:
    (DELETE_ELEMENT n [] = []) /\
    (DELETE_ELEMENT 0 (x::l) = l) /\
-   (DELETE_ELEMENT (SUC n) (x::l) = x::DELETE_ELEMENT n l)`
+   (DELETE_ELEMENT (SUC n) (x::l) = x::DELETE_ELEMENT n l)
+End
 
 val DELETE_ELEMENT_THM = store_thm ("DELETE_ELEMENT_THM",
    ``(!n. DELETE_ELEMENT n [] = []) /\
@@ -190,13 +193,14 @@ val DELETE_ELEMENT_DELETE_ELEMENT = store_thm ("DELETE_ELEMENT_DELETE_ELEMENT",
    ]);
 
 
-val SWAP_ELEMENTS_def = Define `
+Definition SWAP_ELEMENTS_def:
    (SWAP_ELEMENTS 0 0 l = l) /\
    (SWAP_ELEMENTS (SUC n) 0 l = l) /\
    (SWAP_ELEMENTS x y [] = []) /\
    (SWAP_ELEMENTS x y [e] = [e]) /\
    (SWAP_ELEMENTS 0 (SUC n) (e1::e2::l) = (SAFE_EL e1 n (e2::l)) :: REPLACE_ELEMENT e1 n (e2::l)) /\
-   (SWAP_ELEMENTS (SUC m) (SUC n) (e::l) = e:: (SWAP_ELEMENTS m n l))`
+   (SWAP_ELEMENTS (SUC m) (SUC n) (e::l) = e:: (SWAP_ELEMENTS m n l))
+End
 
 val SWAP_ELEMENTS_THM = store_thm ("SWAP_ELEMENTS_THM",
    ``(!x y (l:'a list). y <= x ==> (SWAP_ELEMENTS x y l = l)) /\
@@ -295,12 +299,13 @@ val SWAP_ELEMENTS_SEM___MP = save_thm ("SWAP_ELEMENTS_SEM___MP",
                   GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO] SWAP_ELEMENTS_SEM));
 
 
-val SWAP_TO_POS_def = Define `
+Definition SWAP_TO_POS_def:
    (SWAP_TO_POS x y [] = []) /\
    (SWAP_TO_POS 0 0 (e::l) = (e::l)) /\
    (SWAP_TO_POS (SUC m) 0 (e::l) = e::l) /\
    (SWAP_TO_POS 0 (SUC n) (e::l) = (SAFE_DEL_EL n l) ++ e::(DELETE_ELEMENT n l))/\
-   (SWAP_TO_POS (SUC m) (SUC n) (e::l) = e::SWAP_TO_POS m n l)`
+   (SWAP_TO_POS (SUC m) (SUC n) (e::l) = e::SWAP_TO_POS m n l)
+End
 
 val SWAP_TO_POS_THM = store_thm ("SWAP_TO_POS_THM",
    ``(!x y (l:'a list). y <= x ==> (SWAP_TO_POS x y l = l)) /\
@@ -516,10 +521,11 @@ METIS_TAC [PERM___SWAP_TO_POS, PERM_SYM]);
 
 
 
-val PF_TURN_EQ_def = Define `
+Definition PF_TURN_EQ_def:
   (PF_TURN_EQ (pf_equal e1 e2) = (pf_equal e2 e1)) /\
   (PF_TURN_EQ (pf_unequal e1 e2) = (pf_unequal e2 e1)) /\
-  (PF_TURN_EQ x = x)`
+  (PF_TURN_EQ x = x)
+End
 
 
 val PF_TURN_EQ___SEM = store_thm ("PF_TURN_EQ___SEM",
@@ -533,12 +539,13 @@ val PF_TURN_EQ___SEM = store_thm ("PF_TURN_EQ___SEM",
 
 
 
-val SAFE_MAP_def = Define `
+Definition SAFE_MAP_def:
    (SAFE_MAP x f g [] = []) /\
    (SAFE_MAP T [] g l = MAP g l) /\
    (SAFE_MAP F [] g l = l) /\
    (SAFE_MAP x (T::f) g (e::l) = (g e)::(SAFE_MAP x f g l)) /\
-   (SAFE_MAP x (F::f) g (e::l) = e::(SAFE_MAP x f g l))`
+   (SAFE_MAP x (F::f) g (e::l) = e::(SAFE_MAP x f g l))
+End
 
 val SAFE_MAP_THM = store_thm ("SAFE_MAP_THM",
 ``(SAFE_MAP x f g [] = []) /\
@@ -580,10 +587,11 @@ val LIST_DS_ENTAILS___PF_TURN_EQ = store_thm ("LIST_DS_ENTAILS___PF_TURN_EQ",
 
 
 
-val SAFE_BUTFIRSTN_def = Define `
+Definition SAFE_BUTFIRSTN_def:
    (SAFE_BUTFIRSTN 0 l = l) /\
    (SAFE_BUTFIRSTN n [] = []) /\
-   (SAFE_BUTFIRSTN (SUC n) (e::l) = SAFE_BUTFIRSTN n l)`;
+   (SAFE_BUTFIRSTN (SUC n) (e::l) = SAFE_BUTFIRSTN n l)
+End
 
 
 
@@ -599,11 +607,12 @@ val SAFE_BUTFIRSTN___REWRITE = save_thm ("SAFE_BUTFIRSTN___REWRITE",
 SUC_RULE (SIMP_RULE std_ss [FORALL_AND_THM] (GEN_ALL SAFE_BUTFIRSTN_THM)));
 
 
-val POS_FILTER_def = Define `
+Definition POS_FILTER_def:
    (POS_FILTER [] p l = l) /\
    (POS_FILTER f p [] = []) /\
    (POS_FILTER (T::f) p (e::l) = let (l' = POS_FILTER f p l) in if p e then l' else (e::l')) /\
-   (POS_FILTER (F::f) p (e::l) = e::(POS_FILTER f p l))`
+   (POS_FILTER (F::f) p (e::l) = e::(POS_FILTER f p l))
+End
 
 
 val POS_FILTER_THM = store_thm ("POS_FILTER_THM",
@@ -644,12 +653,13 @@ val MEM_POS_FILTER_2 = store_thm ("MEM_POS_FILTER_2",
    ])
 
 
-val SAFE_FILTER_def = Define `
+Definition SAFE_FILTER_def:
    (SAFE_FILTER T [] l = l) /\
    (SAFE_FILTER F [] l = []) /\
    (SAFE_FILTER x f [] = []) /\
    (SAFE_FILTER x (T::f) (e::l) = e::SAFE_FILTER x f l) /\
-   (SAFE_FILTER x (F::f) (e::l) = SAFE_FILTER x f l)`;
+   (SAFE_FILTER x (F::f) (e::l) = SAFE_FILTER x f l)
+End
 
 
 val SAFE_FILTER_THM = store_thm ("SAFE_FILTER_THM",
@@ -806,12 +816,13 @@ FULL_SIMP_TAC std_ss [SWAP_TO_POS___DELETE_ELEMENT,
 
 
 
-val PF_TRIVIAL_FILTER_PRED_def = Define
-   `(PF_TRIVIAL_FILTER_PRED pf_true = T) /\
+Definition PF_TRIVIAL_FILTER_PRED_def:
+    (PF_TRIVIAL_FILTER_PRED pf_true = T) /\
     (PF_TRIVIAL_FILTER_PRED (pf_unequal e1 e2) = F) /\
     (PF_TRIVIAL_FILTER_PRED (pf_equal e1 e2) = (e1 = e2)) /\
     (PF_TRIVIAL_FILTER_PRED (pf_and pf1 pf2) =
-     PF_TRIVIAL_FILTER_PRED pf1 /\ PF_TRIVIAL_FILTER_PRED pf2)`
+     PF_TRIVIAL_FILTER_PRED pf1 /\ PF_TRIVIAL_FILTER_PRED pf2)
+End
 
 
 val PF_TRIVIAL_FILTER_PRED_SEM = store_thm ("PF_TRIVIAL_FILTER_PRED_SEM",
@@ -849,12 +860,13 @@ Induct_on `pfL` THENL [
 
 
 
-val SF_TRIVIAL_FILTER_PRED_def = Define
-   `(SF_TRIVIAL_FILTER_PRED sf_emp = T) /\
+Definition SF_TRIVIAL_FILTER_PRED_def:
+    (SF_TRIVIAL_FILTER_PRED sf_emp = T) /\
     (SF_TRIVIAL_FILTER_PRED (sf_points_to e a) = F) /\
     (SF_TRIVIAL_FILTER_PRED (sf_tree fL es e) = (es = e)) /\
     (SF_TRIVIAL_FILTER_PRED (sf_star sf1 sf2) =
-     SF_TRIVIAL_FILTER_PRED sf1 /\ SF_TRIVIAL_FILTER_PRED sf2)`
+     SF_TRIVIAL_FILTER_PRED sf1 /\ SF_TRIVIAL_FILTER_PRED sf2)
+End
 
 
 val SF_TRIVIAL_FILTER_PRED_THM = store_thm ("SF_TRIVIAL_FILTER_PRED_THM",
@@ -1078,7 +1090,7 @@ val _ = Hol_datatype `hypothesis_rule_cases =
    | hyp_in_self of bool => num`
 
 
-val HYPOTHESIS_RULE_COND_def = Define `
+Definition HYPOTHESIS_RULE_COND_def:
    (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n h hyp_keep = F) /\
 
    (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n (pf_unequal e1 e2) (hyp_c_dse_nil F m)  =
@@ -1100,7 +1112,8 @@ val HYPOTHESIS_RULE_COND_def = Define `
    (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n h (hyp_in_self F m)  =
       ((m < n) /\ (SAFE_DEL_EL m pfL2 = [h]))) /\
    (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n h (hyp_in_self T m)  =
-      ((m < n) /\ (SAFE_DEL_EL m pfL2 = [PF_TURN_EQ h])))`
+      ((m < n) /\ (SAFE_DEL_EL m pfL2 = [PF_TURN_EQ h])))
+End
 
 
 
@@ -1169,7 +1182,7 @@ Cases_on `hyp_cond` THENL [
 
 
 
-val HYPOTHESIS_RULE_MAP_def = Define `
+Definition HYPOTHESIS_RULE_MAP_def:
    (HYPOTHESIS_RULE_MAP cL pfL1 pfL2 n f [] = []) /\
    (HYPOTHESIS_RULE_MAP cL pfL1 pfL2 n [] l = l) /\
    (HYPOTHESIS_RULE_MAP cL pfL1 pfL2 n (hyp_case::f) (h::l) =
@@ -1177,7 +1190,8 @@ val HYPOTHESIS_RULE_MAP_def = Define `
          HYPOTHESIS_RULE_MAP cL pfL1 pfL2 (SUC n) f l
       else
          h::(HYPOTHESIS_RULE_MAP cL pfL1 pfL2 (SUC n) f l)
-   )`
+   )
+End
 
 
 val HYPOTHESIS_RULE_MAP_THM = store_thm ("HYPOTHESIS_RULE_MAP_THM",
@@ -1389,10 +1403,11 @@ METIS_TAC[INFERENCE_STAR_INTRODUCTION___IMPL]);
 
 
 
-val SF_POINTS_TO_LIST_def = Define `
+Definition SF_POINTS_TO_LIST_def:
    (SF_POINTS_TO_LIST [] = []) /\
    (SF_POINTS_TO_LIST ((sf_points_to e1 e2)::l) = e1::SF_POINTS_TO_LIST l) /\
-   (SF_POINTS_TO_LIST (sf::l) = SF_POINTS_TO_LIST l)`
+   (SF_POINTS_TO_LIST (sf::l) = SF_POINTS_TO_LIST l)
+End
 
 
 
@@ -1499,13 +1514,14 @@ val _ = Hol_datatype `pointsto_cases =
    | pointsto_pointsto
    | pointsto_tree of bool => num`
 
-val SF_POINTS_TO_LIST_COND_def = Define `
+Definition SF_POINTS_TO_LIST_COND_def:
    (SF_POINTS_TO_LIST_COND pfL pointsto_skip h = []) /\
    (SF_POINTS_TO_LIST_COND pfL pointsto_pointsto (sf_points_to e a) = [e]) /\
    (SF_POINTS_TO_LIST_COND pfL pointsto_pointsto (_) = []) /\
    (SF_POINTS_TO_LIST_COND pfL (pointsto_tree turn n) (sf_tree fL es e) =
    if (SAFE_DEL_EL n pfL = [if turn then pf_unequal es e else pf_unequal e es]) then [e] else []) /\
-   (SF_POINTS_TO_LIST_COND pfL (pointsto_tree turn n) _ = [])`
+   (SF_POINTS_TO_LIST_COND pfL (pointsto_tree turn n) _ = [])
+End
 
 val SF_POINTS_TO_LIST_COND_THM = store_thm ("SF_POINTS_TO_LIST_COND_THM",
 ``(SF_POINTS_TO_LIST_COND pfL pointsto_skip h = []) /\
@@ -1529,24 +1545,26 @@ SIMP_TAC std_ss [SF_POINTS_TO_LIST_COND_def, sf_ls_def, sf_bin_tree_def])
 
 
 
-val SF_POINTS_TO_LIST_COND_FILTER_def = Define `
+Definition SF_POINTS_TO_LIST_COND_FILTER_def:
    (SF_POINTS_TO_LIST_COND_FILTER pfL f [] = []) /\
    (SF_POINTS_TO_LIST_COND_FILTER pfL [] l = []) /\
    (SF_POINTS_TO_LIST_COND_FILTER pfL (pointsto_case::f) (h::l) =
       (SF_POINTS_TO_LIST_COND pfL pointsto_case h)++
-      (SF_POINTS_TO_LIST_COND_FILTER pfL f l))`
+      (SF_POINTS_TO_LIST_COND_FILTER pfL f l))
+End
 
 
 
 
 
-val SF_POINTS_TO_LIST_COND___PRED_def = Define `
+Definition SF_POINTS_TO_LIST_COND___PRED_def:
    SF_POINTS_TO_LIST_COND___PRED pfL e1 e2 =
 ((?a. (e2 = sf_points_to e1 a)) \/
  ((?es b fL m.
       (m < LENGTH pfL) /\
       (EL m pfL = (if b then (pf_unequal es e1) else (pf_unequal e1 es))) /\
-      (e2 = sf_tree fL es e1))))`;
+      (e2 = sf_tree fL es e1))))
+End
 
 
 
@@ -1749,10 +1767,11 @@ METIS_TAC[EL___SF_POINTS_TO_LIST_COND_FILTER]);
 
 
 
-val DISJOINT_LIST_PRODUCT_def = Define `
+Definition DISJOINT_LIST_PRODUCT_def:
    (DISJOINT_LIST_PRODUCT [] = []) /\
    (DISJOINT_LIST_PRODUCT (e::l) =
-      (MAP (\x. (e, x)) l)++(DISJOINT_LIST_PRODUCT l))`;
+      (MAP (\x. (e, x)) l)++(DISJOINT_LIST_PRODUCT l))
+End
 
 val MEM___DISJOINT_LIST_PRODUCT = store_thm ("MEM___DISJOINT_LIST_PRODUCT",
    ``!e1 e2. (MEM (e1, e2) (DISJOINT_LIST_PRODUCT l) =
@@ -1791,10 +1810,11 @@ Induct_on `l` THENL [
 
 
 
-val LIST_PRODUCT_def = Define `
+Definition LIST_PRODUCT_def:
    (LIST_PRODUCT [] l2 = []) /\
    (LIST_PRODUCT (e::l1) l2 =
-      (MAP (\x. (e, x)) l2)++(LIST_PRODUCT l1 l2))`;
+      (MAP (\x. (e, x)) l2)++(LIST_PRODUCT l1 l2))
+End
 
 val MEM___LIST_PRODUCT = store_thm ("MEM___LIST_PRODUCT",
    ``!l1 l2 e1 e2. (MEM (e1, e2) (LIST_PRODUCT l1 l2) =
@@ -2830,4 +2850,3 @@ DB.find "SF_POINTS_TO_LIST_def"
 
 *)
 
-val _ = export_theory();

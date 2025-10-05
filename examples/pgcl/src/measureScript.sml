@@ -11,10 +11,12 @@ val () = app load
   ["bossLib", "realLib", "metisLib", "res_quanTools", "posrealLib"]
 val () = quietdec := true;
 *)
+Theory measure
+Ancestors
+  combin pred_set posreal
+Libs
+  metisLib res_quanTools posrealLib
 
-open HolKernel Parse boolLib bossLib metisLib res_quanTools
-     combinTheory pred_setTheory;
-open posrealTheory posrealLib;
 
 (*
 val () = quietdec := false;
@@ -23,8 +25,6 @@ val () = quietdec := false;
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "measure"                                       *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = new_theory "measure";
 
 (* ------------------------------------------------------------------------- *)
 (* Helpful proof tools                                                       *)
@@ -60,20 +60,25 @@ fun match_tac th =
 (* Helper theorems.                                                          *)
 (* ------------------------------------------------------------------------- *)
 
-val preimage_def = Define
-  `preimage (f : 'a -> 'b) s = { x | f x IN s}`;
+Definition preimage_def:
+   preimage (f : 'a -> 'b) s = { x | f x IN s}
+End
 
-val Function_def = Define
-  `Function s t = { f : 'a -> 'b | !x :: s. f x IN t }`;
+Definition Function_def:
+   Function s t = { f : 'a -> 'b | !x :: s. f x IN t }
+End
 
-val countable_def = Define
-  `countable s = ?f. !x : 'a. x IN s ==> ?n : num. f n = x`;
+Definition countable_def:
+   countable s = ?f. !x : 'a. x IN s ==> ?n : num. f n = x
+End
 
-val finiteSum_def = Define
-  `(finiteSum (f : num -> posreal) 0 = 0) /\
-   (finiteSum f (SUC n) = finiteSum f n + f n)`;
+Definition finiteSum_def:
+   (finiteSum (f : num -> posreal) 0 = 0) /\
+   (finiteSum f (SUC n) = finiteSum f n + f n)
+End
 
-val sum_def = Define `sum f = sup (\x. ?n. finiteSum f n = x)`;
+Definition sum_def:   sum f = sup (\x. ?n. finiteSum f n = x)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Set systems.                                                              *)
@@ -83,57 +88,66 @@ val () = Hol_datatype
   `set_system = <| carrier : 'a -> bool;
                    sets : ('a -> bool) -> bool |>`;
 
-val SetSystem_def = Define
-  `SetSystem = { a : 'a set_system | !s :: (a.sets). s SUBSET a.carrier }`;
+Definition SetSystem_def:
+   SetSystem = { a : 'a set_system | !s :: (a.sets). s SUBSET a.carrier }
+End
 
-val BigInter_def = Define
-  `BigInter (s : 'a set_system -> bool) =
+Definition BigInter_def:
+   BigInter (s : 'a set_system -> bool) =
    <| carrier := BIGINTER { a.carrier | a IN s };
-      sets := BIGINTER { a.sets | a IN s } |>`;
+      sets := BIGINTER { a.sets | a IN s } |>
+End
 
-val IntersectionClosed_def = Define
-  `IntersectionClosed =
+Definition IntersectionClosed_def:
+   IntersectionClosed =
    { p : 'a set_system -> bool |
-     !s. ~(s = {}) /\ (!a :: s. a IN SetSystem /\ p a) ==> p (BigInter s) }`;
+     !s. ~(s = {}) /\ (!a :: s. a IN SetSystem /\ p a) ==> p (BigInter s) }
+End
 
-val smallest_closed_def = Define
-  `smallest_closed p (a : 'a set_system) =
+Definition smallest_closed_def:
+   smallest_closed p (a : 'a set_system) =
    <| carrier := a.carrier;
       sets :=
         BIGINTER
           { b |
             a.sets SUBSET b /\
             (!s :: b. s SUBSET a.carrier) /\
-            p <| carrier := a.carrier; sets := b |> } |>`;
+            p <| carrier := a.carrier; sets := b |> } |>
+End
 
-val algebra_def = Define
-  `algebra (a : 'a set_system) =
+Definition algebra_def:
+   algebra (a : 'a set_system) =
      a IN SetSystem /\
      {} IN a.sets /\
      (!s :: (a.sets). a.carrier DIFF s IN a.sets) /\
-     (!s t :: (a.sets). s UNION t IN a.sets)`;
+     (!s t :: (a.sets). s UNION t IN a.sets)
+End
 
-val sigma_algebra_def = Define
-  `sigma_algebra (a : 'a set_system) =
+Definition sigma_algebra_def:
+   sigma_algebra (a : 'a set_system) =
      algebra a /\
-     !c. countable c /\ c SUBSET a.sets ==> BIGUNION c IN a.sets`;
+     !c. countable c /\ c SUBSET a.sets ==> BIGUNION c IN a.sets
+End
 
-val smallest_sigma_algebra_def = Define
-  `smallest_sigma_algebra (a : 'a set_system) =
-   smallest_closed sigma_algebra a`;
+Definition smallest_sigma_algebra_def:
+   smallest_sigma_algebra (a : 'a set_system) =
+   smallest_closed sigma_algebra a
+End
 
-val closed_cdi_def = Define
-  `closed_cdi (a : 'a set_system) =
+Definition closed_cdi_def:
+   closed_cdi (a : 'a set_system) =
    (!s :: (a.sets). a.carrier DIFF s IN a.sets) /\
    (!f :: Function UNIV (a.sets).
       (f 0 = {}) /\ (!n : num. f n SUBSET f (SUC n)) ==>
       BIGUNION (IMAGE f UNIV) IN a.sets) /\
    (!f :: Function UNIV (a.sets).
       (!m n : num. ~(m = n) ==> DISJOINT (f m) (f n)) ==>
-      BIGUNION (IMAGE f UNIV) IN a.sets)`;
+      BIGUNION (IMAGE f UNIV) IN a.sets)
+End
 
-val smallest_closed_cdi_def = Define
-  `smallest_closed_cdi (a : 'a set_system) = smallest_closed closed_cdi a`;
+Definition smallest_closed_cdi_def:
+   smallest_closed_cdi (a : 'a set_system) = smallest_closed closed_cdi a
+End
 
 val smallest_closed_carrier = prove
   (``!p a. (smallest_closed p a).carrier = a.carrier``,
@@ -253,68 +267,79 @@ val () = Hol_datatype
                 sets : ('a -> bool) -> bool;
                 mu : ('a -> bool) -> posreal |>`;
 
-val zero_empty_def = Define
-  `zero_empty (m : 'a measure) = (m.mu {} = 0)`;
+Definition zero_empty_def:
+   zero_empty (m : 'a measure) = (m.mu {} = 0)
+End
 
-val additive_def = Define
-  `additive (m : 'a measure) =
-   !s t :: (m.sets). DISJOINT s t ==> (m.mu (s UNION t) = m.mu s + m.mu t)`;
+Definition additive_def:
+   additive (m : 'a measure) =
+   !s t :: (m.sets). DISJOINT s t ==> (m.mu (s UNION t) = m.mu s + m.mu t)
+End
 
-val countably_additive_def = Define
-  `countably_additive (m : 'a measure) =
+Definition countably_additive_def:
+   countably_additive (m : 'a measure) =
    !f : num -> ('a -> bool).
      f IN Function UNIV m.sets /\
      (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) /\
      BIGUNION (IMAGE f UNIV) IN m.sets ==>
-     (sum (m.mu o f) = m.mu (BIGUNION (IMAGE f UNIV)))`;
+     (sum (m.mu o f) = m.mu (BIGUNION (IMAGE f UNIV)))
+End
 
-val subadditive_def = Define
-  `subadditive (m : 'a measure) =
-   !s t :: (m.sets). m.mu (s UNION t) <= m.mu s + m.mu t`;
+Definition subadditive_def:
+   subadditive (m : 'a measure) =
+   !s t :: (m.sets). m.mu (s UNION t) <= m.mu s + m.mu t
+End
 
-val countably_subadditive_def = Define
-  `countably_subadditive (m : 'a measure) =
+Definition countably_subadditive_def:
+   countably_subadditive (m : 'a measure) =
    !f : num -> ('a -> bool).
      f IN Function UNIV m.sets /\
      BIGUNION (IMAGE f UNIV) IN m.sets ==>
-     m.mu (BIGUNION (IMAGE f UNIV)) <= sum (m.mu o f)`;
+     m.mu (BIGUNION (IMAGE f UNIV)) <= sum (m.mu o f)
+End
 
-val increasing_def = Define
-  `increasing (m : 'a measure) =
-   !s t :: (m.sets). s SUBSET t ==> m.mu s <= m.mu t`;
+Definition increasing_def:
+   increasing (m : 'a measure) =
+   !s t :: (m.sets). s SUBSET t ==> m.mu s <= m.mu t
+End
 
-val MeasureSpace_def = Define
-  `MeasureSpace =
+Definition MeasureSpace_def:
+   MeasureSpace =
    { m : 'a measure |
      sigma_algebra <| carrier := m.carrier; sets := m.sets |> /\
      m.carrier IN m.sets /\
      zero_empty m /\
-     countably_additive m }`;
+     countably_additive m }
+End
 
-val ProbabilitySpace_def = Define
-  `ProbabilitySpace =
+Definition ProbabilitySpace_def:
+   ProbabilitySpace =
    { m : 'a measure |
      m IN MeasureSpace /\
-     (m.mu m.carrier = 1) }`;
+     (m.mu m.carrier = 1) }
+End
 
-val lambda_system_def = Define
-  `lambda_system (m : 'a measure) =
+Definition lambda_system_def:
+   lambda_system (m : 'a measure) =
    { l |
      l IN m.sets /\
-     !s :: (m.sets). m.mu (l INTER s) + m.mu (COMPL l INTER s) = m.mu s }`;
+     !s :: (m.sets). m.mu (l INTER s) + m.mu (COMPL l INTER s) = m.mu s }
+End
 
-val outer_measure_space_def = Define
-  `outer_measure_space (m : 'a measure) =
-   zero_empty m /\ increasing m /\ countably_subadditive m`;
+Definition outer_measure_space_def:
+   outer_measure_space (m : 'a measure) =
+   zero_empty m /\ increasing m /\ countably_subadditive m
+End
 
-val inf_measure_def = Define
-  `inf_measure (m : 'a measure) s =
+Definition inf_measure_def:
+   inf_measure (m : 'a measure) s =
    inf
    { r |
      ?f :: Function UNIV (m.sets).
        (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) /\
        s SUBSET BIGUNION (IMAGE f UNIV) /\
-       (sum (m.mu o f) = r) }`;
+       (sum (m.mu o f) = r) }
+End
 
 (***
 val LAMBDA_SYSTEM_COMPL = store_thm
@@ -1472,14 +1497,16 @@ val CARATHEODORY = store_thm
 (* Measurable functions.                                                     *)
 (* ------------------------------------------------------------------------- *)
 
-val Measurable_def = Define
-  `Measurable m1 m2 = { f | !s :: (m2.sets). preimage f s IN m1.sets }`;
+Definition Measurable_def:
+   Measurable m1 m2 = { f | !s :: (m2.sets). preimage f s IN m1.sets }
+End
 
-val MeasurePreserving_def = Define
-  `MeasurePreserving m1 m2 =
+Definition MeasurePreserving_def:
+   MeasurePreserving m1 m2 =
    { f |
      f IN Measurable m1 m2 /\
-     !s :: (m2.sets). m1.mu (preimage f s) = m2.mu s }`;
+     !s :: (m2.sets). m1.mu (preimage f s) = m2.mu s }
+End
 
 (***
 val SIGMA_SUBSET = store_thm
@@ -2327,23 +2354,26 @@ val MONOTONE_CONVERGENCE = store_thm
 val () = type_abbrev ("simple_function",
                       Type `:(posreal # ('a -> bool)) list`);
 
-val range_simple_def = Define
-  `(range_simple ([] : 'a simple_function) = {}) /\
-   (range_simple ((a,s) :: l) = s UNION range_simple l)`;
+Definition range_simple_def:
+   (range_simple ([] : 'a simple_function) = {}) /\
+   (range_simple ((a,s) :: l) = s UNION range_simple l)
+End
 
-val evaluate_simple_def = Define
-  `(evaluate_simple ([] : 'a simple_function) x = 0) /\
+Definition evaluate_simple_def:
+   (evaluate_simple ([] : 'a simple_function) x = 0) /\
    (evaluate_simple ((a,s) :: l) x =
-    (if x IN s then a else 0) + evaluate_simple l x)`;
+    (if x IN s then a else 0) + evaluate_simple l x)
+End
 
-val integrate_simple_def = Define
-  `(integrate_simple (m : 'a measure) [] = 0) /\
-   (integrate_simple m ((a,s) :: l) = a * m.mu s + integrate_simple m l)`;
+Definition integrate_simple_def:
+   (integrate_simple (m : 'a measure) [] = 0) /\
+   (integrate_simple m ((a,s) :: l) = a * m.mu s + integrate_simple m l)
+End
 
-val integrate_def = Define
-  `integrate m s f =
+Definition integrate_def:
+   integrate m s f =
    sup { integrate_simple m g |
          range_simple g SUBSET s /\
-         !x :: s. evaluate_simple g x <= f x }`;
+         !x :: s. evaluate_simple g x <= f x }
+End
 
-val _ = export_theory ();

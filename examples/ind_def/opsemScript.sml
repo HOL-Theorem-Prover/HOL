@@ -7,11 +7,12 @@
 (* Interactive use:
   app load ["stringLib", "finite_mapTheory"];
 *)
+Theory opsem
+Ancestors
+  finite_map string
+Libs
+  stringLib IndDefLib IndDefRules
 
-open HolKernel Parse boolLib bossLib
-     stringLib IndDefLib IndDefRules finite_mapTheory;
-
-val _ = new_theory "opsem";
 
 (*---------------------------------------------------------------------------*)
 (* Syntax of the programming language.                                       *)
@@ -42,19 +43,19 @@ val _ =
             | Less nexp nexp
             | Not bexp`;
 
-val neval_def =
- Define
-  `(neval (Var s) sigma = (sigma ' s)) /\
+Definition neval_def:
+   (neval (Var s) sigma = (sigma ' s)) /\
    (neval (Const c) sigma = c) /\
    (neval (Plus e1 e2) sigma = neval e1 sigma + neval e2 sigma) /\
    (neval (Times e1 e2) sigma = neval e1 sigma * neval e2 sigma) /\
-   (neval (Sub e1 e2) sigma = neval e1 sigma - neval e2 sigma)`;
+   (neval (Sub e1 e2) sigma = neval e1 sigma - neval e2 sigma)
+End
 
-val beval_def =
- Define
-  `(beval (Equal e1 e2) sigma = (neval e1 sigma = neval e2 sigma)) /\
+Definition beval_def:
+   (beval (Equal e1 e2) sigma = (neval e1 sigma = neval e2 sigma)) /\
    (beval (Less e1 e2) sigma = (neval e1 sigma < neval e2 sigma)) /\
-   (beval (Not e) sigma = ~(beval e sigma))`;
+   (beval (Not e) sigma = ~(beval e sigma))
+End
 
 
 (*---------------------------------------------------------------------------*)
@@ -175,9 +176,9 @@ val EVAL_DETERMINISTIC = store_thm
 (* derivation of proof rules.                                                *)
 (*---------------------------------------------------------------------------*)
 
-val SPEC_def =
- Define
-   `SPEC P c Q = !s1 s2. P s1 /\ EVAL c s1 s2 ==> Q s2`;
+Definition SPEC_def:
+    SPEC P c Q = !s1 s2. P s1 /\ EVAL c s1 s2 ==> Q s2
+End
 
 
 (*---------------------------------------------------------------------------*)
@@ -276,5 +277,3 @@ val DISJ_TRIPLE = store_thm
  ``!P1 P2 c Q1 Q2. SPEC P1 c Q1 /\ SPEC P2 c Q2
                    ==> SPEC (\s. P1 s \/ P2 s) c (\s. Q1 s \/ Q2 s)``,
  RW_TAC std_ss [SPEC_def] THEN METIS_TAC[]);
-
-val _ = export_theory();

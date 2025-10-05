@@ -1,11 +1,13 @@
-open HolKernel Parse boolLib bossLib listTheory rich_listTheory bitTheory
-     markerTheory pairTheory arithmeticTheory wordsTheory wordsLib;
-
-val _ = new_theory "Serpent_Reference_Utility";
+Theory Serpent_Reference_Utility
+Ancestors
+  list rich_list bit marker pair arithmetic words
+Libs
+  wordsLib
 
 (* XOR *)
 
-val boolXor_def = Define `boolXor (x:bool) y = ~(x= y)`;
+Definition boolXor_def:   boolXor (x:bool) y = ~(x= y)
+End
 
 val boolXorComm = Q.store_thm(
  "boolXorComm",
@@ -55,9 +57,10 @@ val LENGTH_FILTER = Q.store_thm(
 
 (* make a list of "T" of length n*)
 
-val makeTL_def = Define`
+Definition makeTL_def:
  (makeTL 0 =  []) /\
- (makeTL (SUC n) = T::(makeTL n))`;
+ (makeTL (SUC n) = T::(makeTL n))
+End
 
 val LENGTH_makeTL = Q.store_thm(
  "LENGTH_makeTL",
@@ -77,10 +80,11 @@ val makeTL_fact = Q.store_thm(
 
 (* XOR on bool lists in ZIP fashion *)
 
-val zipXor_def = Define`
+Definition zipXor_def:
  (zipXor [] l = l) /\
  (zipXor (xh::xt) (ah::at) = (boolXor xh ah)::zipXor xt at)   /\
- (zipXor (xh::xt) [] = [])`;
+ (zipXor (xh::xt) [] = [])
+End
 
 val zipXor_fact = Q.store_thm(
  "zipXor_fact",
@@ -97,9 +101,10 @@ val LENGTH_zipXor = Q.store_thm(
    Cases_on `l1` THEN
    RW_TAC list_ss [zipXor_def]]);
 
-val makeL_def = Define`
+Definition makeL_def:
  (makeL 0 = [T]) /\
- (makeL (SUC n) = F::makeL n)`;
+ (makeL (SUC n) = F::makeL n)
+End
 
 val zipXor_makeL_COMM = Q.store_thm(
  "zipXor_makeL_COMM",
@@ -153,10 +158,11 @@ val (myFIRSTN_def,myFIRSTN_termi) = Defn.tstore_defn(
    FULL_SIMP_TAC list_ss [],
    RW_TAC list_ss []]);
 
-val myBUTLASTN_def = Define`
+Definition myBUTLASTN_def:
  myBUTLASTN n l = let len = LENGTH l in
    if len>= n then myFIRSTN (LENGTH l-n) l
-   else []`;
+   else []
+End
 
 val LENGTH_myFIRSTN = Q.store_thm(
  "LENGTH_myFIRSTN",
@@ -193,47 +199,58 @@ val _ = wordsLib.guess_lengths();
 val _ = wordsLib.mk_word_size 128;
 val _ = wordsLib.mk_word_size 256;
 
-val word128to32l_def = Define`
+Definition word128to32l_def:
  word128to32l (w:word128) =
- [(127 >< 96) w; (95 >< 64) w; (63 >< 32) w; (31 >< 0) w]`;
+ [(127 >< 96) w; (95 >< 64) w; (63 >< 32) w; (31 >< 0) w]
+End
 
-val word32to8l_def = Define`
+Definition word32to8l_def:
  word32to8l (w:word32) =
- [(31 >< 24) w; (23 >< 16) w; (15 >< 8) w; (7 >< 0) w]`;
+ [(31 >< 24) w; (23 >< 16) w; (15 >< 8) w; (7 >< 0) w]
+End
 
-val word8to4l_def = Define`
+Definition word8to4l_def:
  word8to4l(w:word8) =
- [(7 >< 4) w; (3 >< 0) w]`;
+ [(7 >< 4) w; (3 >< 0) w]
+End
 
-val word32to4l_def = Define`
- word32to4l w = FLAT (MAP word8to4l (word32to8l w))`;
+Definition word32to4l_def:
+ word32to4l w = FLAT (MAP word8to4l (word32to8l w))
+End
 
-val word4to32_def = Define `word4to32 = w2w:word4->word32`;
-val word4to128_def = Define `word4to128 = w2w:word4->word128`;
-val word32to128_def = Define `word32to128 = w2w:word32->word128`;
+Definition word4to32_def:   word4to32 = w2w:word4->word32
+End
+Definition word4to128_def:   word4to128 = w2w:word4->word128
+End
+Definition word32to128_def:   word32to128 = w2w:word32->word128
+End
 
-val word256to128l = Define`
+Definition word256to128l:
  word256to128l (w:word256) =
- [(255 >< 128) w; (127 >< 0) w]`;
+ [(255 >< 128) w; (127 >< 0) w]
+End
 
-val word256to32l_def = Define`
- word256to32l (w:word256) = FLAT (MAP word128to32l (word256to128l w))`;
+Definition word256to32l_def:
+ word256to32l (w:word256) = FLAT (MAP word128to32l (word256to128l w))
+End
 
 (* input is in MSNibble....LSNibble in each Nibble, MSBit..LSBit input is
    of 32 nibbles *)
 
 (* convert a word4 list to a num LSW,,,,,MSW *)
 
-val revWord4ltoNum_def = Define`
+Definition revWord4ltoNum_def:
  (revWord4ltoNum ([]:word4 list) = 0) /\
- (revWord4ltoNum (h::t) = (w2n h + (revWord4ltoNum t) * 16))`;
+ (revWord4ltoNum (h::t) = (w2n h + (revWord4ltoNum t) * 16))
+End
 
 (* convert a num to a word4 list, the length of list is controled by a
    parameter, the length provides a MOD LSW,,,,,MSW *)
 
-val numtoRevWord4l_def = Define`
+Definition numtoRevWord4l_def:
  (numtoRevWord4l 0 n = [] : word4 list) /\
- (numtoRevWord4l (SUC m) n = n2w (n MOD 16)::(numtoRevWord4l m (n DIV 16)))`;
+ (numtoRevWord4l (SUC m) n = n2w (n MOD 16)::(numtoRevWord4l m (n DIV 16)))
+End
 
 val numtoRevWord4lEval = Q.store_thm(
  "numtoRevWord4lEval",
@@ -313,11 +330,13 @@ val revWord4ltoNum_conversion = Q.store_thm(
 
 (* the conversions between a word128 and word4 list*)
 
-val word4ltow128_def = Define`
- word4ltow128 w4l = n2w (revWord4ltoNum (REVERSE w4l)) : word128`;
+Definition word4ltow128_def:
+ word4ltow128 w4l = n2w (revWord4ltoNum (REVERSE w4l)) : word128
+End
 
-val word128tow4l_def = Define`
- word128tow4l (w:word128) = REVERSE (numtoRevWord4l 32 (w2n w))`;
+Definition word128tow4l_def:
+ word128tow4l (w:word128) = REVERSE (numtoRevWord4l 32 (w2n w))
+End
 
 val LENGTH_word128tow4l = Q.store_thm(
  "LENGTH_word128tow4l",
@@ -442,4 +461,3 @@ val listInstEq33 = Q.store_thm(
  REWRITE_TAC [LENGTH_CONS, LENGTH_NIL, REDEPTH_CONV numLib.num_CONV ``33``] THEN
  METIS_TAC []);
 
-val _ = export_theory();

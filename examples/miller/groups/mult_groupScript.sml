@@ -13,22 +13,21 @@ app load
    "pred_setContext"];
 quietdec := true;
 *)
+Theory mult_group
+Ancestors
+  list res_quan pred_set extra_pred_set extra_list subtype
+  arithmetic group extra_num gcd divides extra_arith finite_group
+  abelian_group num_poly extra_binomial binomial summation
+Libs
+  subtypeTools res_quanTools arithContext ho_proverTools
+  listContext hurdUtils groupContext finite_groupContext
+  pred_setContext
 
-open HolKernel Parse boolLib;
-open bossLib listTheory subtypeTools res_quanTools res_quanTheory
-     pred_setTheory extra_pred_setTheory arithContext
-     ho_proverTools extra_listTheory subtypeTheory
-     listContext arithmeticTheory groupTheory hurdUtils
-     groupContext extra_numTheory gcdTheory dividesTheory
-     extra_arithTheory finite_groupTheory finite_groupContext
-     abelian_groupTheory num_polyTheory extra_binomialTheory
-     binomialTheory summationTheory pred_setContext;
 
 (* interactive mode
 quietdec := false;
 *)
 
-val _ = new_theory "mult_group";
 val _ = ParseExtras.temp_loose_equality()
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
@@ -62,11 +61,13 @@ val Simplify = R_TAC;
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val mult_group_def = Define
-  `mult_group n =
-   ((\x. x IN gset (add_group n) /\ (gcd n x = 1)), (\x y. (x * y) MOD n))`;
+Definition mult_group_def:
+   mult_group n =
+   ((\x. x IN gset (add_group n) /\ (gcd n x = 1)), (\x y. (x * y) MOD n))
+End
 
-val totient_def = Define `totient n = CARD (gset (mult_group n))`;
+Definition totient_def:   totient n = CARD (gset (mult_group n))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)
@@ -982,4 +983,3 @@ val SQUARE_1_MOD_PRIME = store_thm
        ++ Simplify [])
    ++ Simplify [GSYM TWO]);
 
-val _ = export_theory ();

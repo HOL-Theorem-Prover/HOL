@@ -1,10 +1,10 @@
-open HolKernel boolLib bossLib ramanaLib Parse
+Theory unifDef
+Ancestors
+  string arithmetic finite_map pred_set bag relation prim_rec
+  pair term subst walk walkstar
+Libs
+  ramanaLib
 
-open stringTheory arithmeticTheory finite_mapTheory pred_setTheory bagTheory
-     relationTheory prim_recTheory pairTheory termTheory substTheory walkTheory
-     walkstarTheory
-
-val _ = new_theory "unifDef";
 val _ = delsimps ["NORMEQ_CONV"]
 val _ = monadsyntax.temp_add_monadsyntax()
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 };
@@ -93,8 +93,9 @@ Cases_on `s ' v` THENL [
   `vwalk s v = x` by SRW_TAC [][Once vwalk_def,FLOOKUP_DEF] THEN METIS_TAC []
 ]);
 
-val allvars_def = Define`
-  allvars s (t1:'a term) (t2:'a term) = vars t1 ∪ vars t2 ∪ substvars s`;
+Definition allvars_def:
+  allvars s (t1:'a term) (t2:'a term) = vars t1 ∪ vars t2 ∪ substvars s
+End
 
 val FINITE_allvars = RWstore_thm(
 "FINITE_allvars",
@@ -406,8 +407,9 @@ Theorem uR_ind =
                    |> Q.SPEC `λ(a,b,c).P a b c`
                    |> SIMP_RULE std_ss [FORALL_PROD] |> Q.GEN`P`
 
-val uP_def = Define`
-  uP sx s t1 t2 <=> wfs sx ∧ s SUBMAP sx ∧ substvars sx ⊆ allvars s t1 t2`;
+Definition uP_def:
+  uP sx s t1 t2 <=> wfs sx ∧ s SUBMAP sx ∧ substvars sx ⊆ allvars s t1 t2
+End
 
 val uP_sym = Q.store_thm(
 "uP_sym",
@@ -650,4 +652,3 @@ val unify_uP = Q.store_thm(
    uP sx s t1 t2`,
 METIS_TAC [unify_eq_tunify,aux_eq_tunify,aux_uP])
 
-val _ = export_theory ()

@@ -19,6 +19,8 @@ Contents
 
 New features
 ------------
+- `Theory` syntax now supports disabling the generation of documentation in `<thyname>Theory.sig` by following the theory name with the `[no_sig_docs]` annotation.
+Files that use this feature do not need to mention `Feedback.set_trace "TheoryPP.include_docs" 0` anymore.
 
 Bugs fixed
 ----------
@@ -35,10 +37,13 @@ New examples
 Incompatibilities
 -----------------
 
--   The return types of `parse_term.mk_prec_matrix`, `type_grammar.parse_map`, `type_grammar.privileged_abbrevs` 
+-   The return types of `parse_term.mk_prec_matrix`, `type_grammar.parse_map`, `type_grammar.privileged_abbrevs`
     have been changed to return maps of type HOLdict instead of Binarymap.
 
 -   `Preterm.eq` has been replaced with `Preterm.veq` which returns `true` if and only if the two arguments are variables with the same names and types.
+
+-   We have implemented a new policy forbidding theory names from being SML or HOL keywords (*e.g.,* `case`, `while`, `of`, …, `Theorem`, `Theory`, `Definition`, …).
+    The theories `while` and `functor` have been renamed to `While` and `category_functor`, respectively, in accordance with this.
 
 * * * * *
 

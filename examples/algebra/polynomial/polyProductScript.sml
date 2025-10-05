@@ -4,31 +4,18 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polyProduct";
+Theory polyProduct
+Ancestors
+  pred_set list arithmetic number combinatorics divides gcd
+  gcdset monoid group ring field polyDivides polyDivision
+  polynomial polyWeak polyRing polyMonic polyField
+  polyFieldDivision polyEval polyRoot
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory gcdsetTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
-open polyDividesTheory polyDivisionTheory;
-open polynomialTheory polyWeakTheory polyRingTheory;
-
-open polyMonicTheory;
-open polyFieldTheory;
-open polyFieldDivisionTheory;
-open polyEvalTheory;
-open polyRootTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -306,9 +293,9 @@ val it = |- IMAGE (\s. poly_prod (IMAGE (\c. Y + SUC c) s)) (POW (count 2)) =
 *)
 
 (* Define Polynomial Product of a set of Polynomials. *)
-val poly_prod_set_def = Define`
+Definition poly_prod_set_def:
    poly_prod_set (r:'a ring) (s:'a poly -> bool) = GPROD_SET (PolyRing r).prod s
-`;
+End
 
 (* overload for poly_prod_set *)
 val _ = overload_on ("PPROD", ``poly_prod_set r``);
@@ -1734,12 +1721,12 @@ val poly_monic_divides_poly_prod_factors_property = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define a multiplicative function for poly_set *)
-val poly_set_multiplicative_fun_def = Define`
+Definition poly_set_multiplicative_fun_def:
    poly_set_multiplicative_fun (r:'a ring) f <=>
        (f {} = |1|) /\
        (!s. FINITE s /\ pset s ==> poly (f s)) /\
        (!s t. FINITE s /\ FINITE t /\ pset s /\ pset t ==> (f (s UNION t) * f (s INTER t) = f s * f t))
-`;
+End
 
 (* Theorem: Ring r ==> poly_set_multiplicative_fun r PPROD *)
 (* Proof:
@@ -1862,12 +1849,12 @@ val poly_prod_set_mult_fun_by_partition = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define a multiplicative polynomial function for set of ring elements *)
-val ring_set_multiplicative_fun_def = Define`
+Definition ring_set_multiplicative_fun_def:
    ring_set_multiplicative_fun (r:'a ring) f <=>
        (f {} = |1|) /\
        (!s. FINITE s /\ s SUBSET R ==> poly (f s)) /\
        (!s t. FINITE s /\ FINITE t /\ s SUBSET R /\ t SUBSET R ==> (f (s UNION t) * f (s INTER t) = f s * f t))
-`;
+End
 
 (* Theorem: s SUBSET R /\ t SUBSET R <=> (s UNION t) SUBSET R *)
 (* Proof: by IN_UNION, SUBSET_DEF *)
@@ -1981,8 +1968,4 @@ val ring_prod_set_mult_fun_by_partition = store_thm(
   rw[ring_disjoint_bigunion_mult_fun]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

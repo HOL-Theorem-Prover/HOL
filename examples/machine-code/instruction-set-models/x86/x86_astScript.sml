@@ -1,10 +1,7 @@
 
-open HolKernel boolLib bossLib Parse;
-
-open x86_coretypesTheory;
-
-val _ = new_theory "x86_ast";
-
+Theory x86_ast
+Ancestors
+  x86_coretypes
 
 (* ---------------------------------------------------------------------------------- *>
 
@@ -27,9 +24,10 @@ val _ = Hol_datatype `
 
 (* check whether rm requires a lock, i.e. specifies a memory access *)
 
-val rm_is_memory_access_def = Define `
+Definition rm_is_memory_access_def:
   (rm_is_memory_access (Xm i b d) = T) /\
-  (rm_is_memory_access (Xr r) = F)`;
+  (rm_is_memory_access (Xr r) = F)
+End
 
 val _ = Hol_datatype `
   Xdest_src = Xrm_i of Xrm  => Ximm  (* mnemonic r/m32, imm32 or mnemonic r/m32, imm8 (sign-extended) *)
@@ -80,4 +78,3 @@ val _ = Hol_datatype `Xpre_g2 = Xbranch_taken | Xbranch_not_taken | Xg2_none `;
 val _ = Hol_datatype `Xinst = Xprefix of Xpre_g1 => Xpre_g2 => Xinstruction`;
 
 
-val _ = export_theory ();

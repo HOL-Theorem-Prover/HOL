@@ -4,31 +4,19 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polyEval";
+Theory polyEval
+Ancestors
+  pred_set list arithmetic number combinatorics divides gcd
+  monoid group ring polynomial polyWeak polyRing polyField
+  polyMonic polyRoot
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory;
-
-open monoidTheory groupTheory ringTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
-
 (* val _ = load "polyMonicTheory"; *)
-open polyMonicTheory;
-
 (* val _ = load "polyRootTheory"; *)
-open polyRootTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Evaluation giving Polynomial Documentation                     *)
 (* ------------------------------------------------------------------------- *)
@@ -93,10 +81,10 @@ open polyRootTheory;
 (* ------------------------------------------------------------------------- *)
 
 (* Similar to evaluation of a polynomial, but results in a polynomial. *)
-val poly_peval_def = Define`
+Definition poly_peval_def:
   (poly_peval (r:'a ring) [] x = |0|) /\
   (poly_peval (r:'a ring) (h:'a :: t:'a poly) x = h * |1| + (poly_peval r t x) * x)
-`;
+End
 val _ = overload_on ("peval", ``poly_peval r``);
 
 (* export simple case definition *)
@@ -1018,8 +1006,4 @@ val poly_peval_by_one = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

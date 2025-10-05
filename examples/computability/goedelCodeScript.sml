@@ -9,11 +9,10 @@ app load ["primeFactorTheory", "bagTheory"];
 open arithmeticTheory dividesTheory primeFactorTheory bagTheory;
 quietdec := false;
 *)
+Theory goedelCode
+Ancestors
+  arithmetic divides primeFactor bag
 
-open HolKernel Parse boolLib bossLib
-     arithmeticTheory dividesTheory primeFactorTheory bagTheory;
-
-val _ = new_theory "goedelCode";
 
 val P_EUCLIDES = gcdTheory.P_EUCLIDES;
 
@@ -21,12 +20,13 @@ val P_EUCLIDES = gcdTheory.P_EUCLIDES;
 (* Goedel coding                                                             *)
 (*---------------------------------------------------------------------------*)
 
-val GCODE_def =
- Define
-  `(GCODE i [] = 1) /\
-   (GCODE i (h::t) = (PRIMES(i) ** (h+1)) * GCODE (i+1) t)`;
+Definition GCODE_def:
+   (GCODE i [] = 1) /\
+   (GCODE i (h::t) = (PRIMES(i) ** (h+1)) * GCODE (i+1) t)
+End
 
-val ENCODE_def = Define `ENCODE list = GCODE 0 list`;
+Definition ENCODE_def:   ENCODE list = GCODE 0 list
+End
 
 val GCODE_EMPTY = Q.store_thm
 ("GCODE_EMPTY",
@@ -213,7 +213,8 @@ val GDECODE_GCODE = Q.store_thm
  `!nl i. GDECODE i (GCODE i nl) = SOME nl`,
  METIS_TAC [lem10]);
 
-val DECODE_def = Define `DECODE gn = THE (GDECODE 0 gn)`;
+Definition DECODE_def:   DECODE gn = THE (GDECODE 0 gn)
+End
 
 val DECODE_ENCODE = Q.store_thm
 ("DECODE_ENCODE",
@@ -225,15 +226,24 @@ val DECODE_ENCODE = Q.store_thm
 (* Standard list operators lifted to gnums                                   *)
 (*---------------------------------------------------------------------------*)
 
-val gNIL_def  = Define `gNIL = ENCODE []`;
-val gCONS_def = Define `gCONS n gn = ENCODE (n::DECODE gn)`;
-val gHD_def   = Define `gHD gn = HD (DECODE gn)`;
-val gTL_def   = Define `gTL gn = ENCODE (TL (DECODE gn))`;
-val gLEN_def  = Define `gLEN gn = LENGTH (DECODE gn)`;
-val gAPPEND_def = Define`gAPPEND gn1 gn2 = ENCODE (DECODE gn1 ++ DECODE gn2)`;
-val gMAP_def   = Define `gMAP f gn = ENCODE (MAP f (DECODE gn))`;
-val gFOLDL_def = Define `gFOLDL f a gn = FOLDL f a (DECODE gn)`;
-val gFOLDR_def = Define `gFOLDR f a gn = FOLDR f a (DECODE gn)`;
+Definition gNIL_def:    gNIL = ENCODE []
+End
+Definition gCONS_def:   gCONS n gn = ENCODE (n::DECODE gn)
+End
+Definition gHD_def:     gHD gn = HD (DECODE gn)
+End
+Definition gTL_def:     gTL gn = ENCODE (TL (DECODE gn))
+End
+Definition gLEN_def:    gLEN gn = LENGTH (DECODE gn)
+End
+Definition gAPPEND_def:  gAPPEND gn1 gn2 = ENCODE (DECODE gn1 ++ DECODE gn2)
+End
+Definition gMAP_def:     gMAP f gn = ENCODE (MAP f (DECODE gn))
+End
+Definition gFOLDL_def:   gFOLDL f a gn = FOLDL f a (DECODE gn)
+End
+Definition gFOLDR_def:   gFOLDR f a gn = FOLDR f a (DECODE gn)
+End
 
 val gCONS_ENCODE = Q.store_thm
 ("gCONS_ENCODE",
@@ -265,4 +275,3 @@ val gFOLDR_ENCODE = Q.store_thm
  `gFOLDR f a (ENCODE nl) = FOLDR f a nl`,
  RW_TAC arith_ss [gFOLDR_def, DECODE_ENCODE]);
 
-val _ = export_theory();

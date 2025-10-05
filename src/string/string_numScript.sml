@@ -13,14 +13,14 @@ Definition n2s_def:
                  STRING (CHR (r - 1)) s0
 End
 
-val s2n_def = Define`
+Definition s2n_def:
   (s2n "" = 0) /\
   (s2n (STRING c s) = s2n s * 256 + ORD c + 1)
-`;
+End
 
-val s2n_n2s = store_thm(
-  "s2n_n2s",
-  ``!n. s2n (n2s n) = n``,
+Theorem s2n_n2s:
+    !n. s2n (n2s n) = n
+Proof
   completeInduct_on `n` THEN ONCE_REWRITE_TAC [n2s_def] THEN
   SRW_TAC [][] THEN SRW_TAC [][s2n_def] THEN
   `n MOD 256 < 256` by SRW_TAC [][DIVISION] THEN
@@ -54,11 +54,12 @@ val s2n_n2s = store_thm(
            METIS_TAC [DECIDE ``0 < 256``, DIVISION, ADD_COMM]) THEN
     SRW_TAC [ARITH_ss][MULT_DIV, Abbr`r0`] THEN
     METIS_TAC [DECIDE ``0 < 256``, DIVISION, MULT_COMM]
-  ]);
+  ]
+QED
 
-val n2s_s2n = store_thm(
-  "n2s_s2n",
-  ``n2s (s2n s) = s``,
+Theorem n2s_s2n:
+    n2s (s2n s) = s
+Proof
   Induct_on `s` THEN ASM_SIMP_TAC (srw_ss()) [s2n_def, Once n2s_def] THEN
   Q.X_GEN_TAC `c` THEN SRW_TAC [][] THEN
   `r0 = (ORD c + 1) MOD 256`
@@ -84,38 +85,43 @@ val n2s_s2n = store_thm(
             FULL_SIMP_TAC (srw_ss()) []) THEN
     FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [DIVISION, CHR_ORD] THEN
     METIS_TAC [MULT_COMM, MULT_DIV, DECIDE ``0 < 256``]
-  ])
+  ]
+QED
 
-val n2s_11 = store_thm(
-  "n2s_11",
-  ``(n2s x = n2s y) = (x = y)``,
-  METIS_TAC [s2n_n2s]);
-val s2n_11 = store_thm(
-  "s2n_11",
-  ``(s2n x = s2n y) = (x = y)``,
-  METIS_TAC [n2s_s2n]);
+Theorem n2s_11:
+    (n2s x = n2s y) = (x = y)
+Proof
+  METIS_TAC [s2n_n2s]
+QED
+Theorem s2n_11:
+    (s2n x = s2n y) = (x = y)
+Proof
+  METIS_TAC [n2s_s2n]
+QED
 
-val n2s_onto = store_thm(
-  "n2s_onto",
-  ``!s. ?n. s = n2s n``,
-  METIS_TAC [n2s_s2n]);
+Theorem n2s_onto:
+    !s. ?n. s = n2s n
+Proof
+  METIS_TAC [n2s_s2n]
+QED
 
-val s2n_onto = store_thm(
-  "s2n_onto",
-  ``!n. ?s. n = s2n s``,
-  METIS_TAC [s2n_n2s]);
+Theorem s2n_onto:
+    !n. ?s. n = s2n s
+Proof
+  METIS_TAC [s2n_n2s]
+QED
 
 
 val _ = export_rewrites ["n2s_s2n", "s2n_n2s", "n2s_11", "s2n_11"]
 
-val n2nsum_def = Define`
+Definition n2nsum_def:
   n2nsum n = if ODD n then INL (n DIV 2) else INR (n DIV 2)
-`;
+End
 
-val nsum2n_def = Define`
+Definition nsum2n_def:
   (nsum2n (INL n) = 2 * n + 1) /\
   (nsum2n (INR n) = 2 * n)
-`;
+End
 val _ = export_rewrites ["nsum2n_def"]
 
 val div_lemma = prove(
@@ -130,23 +136,25 @@ val odd_lemma = prove(
   >- dsimp[ODD_EXISTS, ADD1, div_lemma]
   >- dsimp[GSYM EVEN_ODD, EVEN_EXISTS, div_lemma])
 
-val n2nsum_nsum2n = store_thm(
-  "n2nsum_nsum2n[simp]",
-  ``n2nsum (nsum2n ns) = ns``,
-  Cases_on `ns` >> simp[n2nsum_def, div_lemma, ODD_ADD, ODD_MULT]);
+Theorem n2nsum_nsum2n[simp]:
+    n2nsum (nsum2n ns) = ns
+Proof
+  Cases_on `ns` >> simp[n2nsum_def, div_lemma, ODD_ADD, ODD_MULT]
+QED
 
-val nsum2n_n2nsum = store_thm(
-  "nsum2n_n2nsum[simp]",
-  ``nsum2n (n2nsum n) = n``,
-  rw[n2nsum_def, odd_lemma]);
+Theorem nsum2n_n2nsum[simp]:
+    nsum2n (n2nsum n) = n
+Proof
+  rw[n2nsum_def, odd_lemma]
+QED
 
-val s2ssum_def = Define`
+Definition s2ssum_def:
   s2ssum s = SUM_MAP n2s n2s (n2nsum (s2n s))
-`;
+End
 
-val ssum2s_def = Define`
+Definition ssum2s_def:
   ssum2s sm = n2s (nsum2n (SUM_MAP s2n s2n sm))
-`;
+End
 
 val sumpp_compose = prove(
   ``SUM_MAP f g (SUM_MAP a b x) = SUM_MAP (f o a) (g o b) x``,
@@ -156,12 +164,14 @@ val sumpp_I = prove(
   ``SUM_MAP (\x. x) (\x. x) y = y``,
   Cases_on `y` >> simp[]);
 
-val s2ssum_ssum2s = store_thm(
-  "s2ssum_ssum2s[simp]",
-  ``s2ssum (ssum2s sm) = sm``,
-  simp[s2ssum_def, ssum2s_def, sumpp_compose, combinTheory.o_DEF, sumpp_I]);
+Theorem s2ssum_ssum2s[simp]:
+    s2ssum (ssum2s sm) = sm
+Proof
+  simp[s2ssum_def, ssum2s_def, sumpp_compose, combinTheory.o_DEF, sumpp_I]
+QED
 
-val ssum2s_s2ssum = store_thm(
-  "ssum2s_s2ssum[simp]",
-  ``ssum2s (s2ssum s) = s``,
-  simp[s2ssum_def, ssum2s_def, sumpp_compose, combinTheory.o_DEF, sumpp_I]);
+Theorem ssum2s_s2ssum[simp]:
+    ssum2s (s2ssum s) = s
+Proof
+  simp[s2ssum_def, ssum2s_def, sumpp_compose, combinTheory.o_DEF, sumpp_I]
+QED

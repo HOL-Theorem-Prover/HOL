@@ -1,14 +1,12 @@
 (* ------------------------------------------------------------------------
    Definitions and theorems used by MIPS step evaluator (mips_stepLib)
    ------------------------------------------------------------------------ *)
+Theory mips_step
+Ancestors
+  alignment mips
+Libs
+  utilsLib wordsLib blastLib
 
-open HolKernel boolLib bossLib
-
-open utilsLib
-open wordsLib blastLib
-open alignmentTheory mipsTheory
-
-val _ = new_theory "mips_step"
 
 (* ------------------------------------------------------------------------ *)
 
@@ -18,9 +16,10 @@ val _ = List.app (fn f => f ())
 
 (* ------------------------------------------------------------------------ *)
 
-val NextStateMIPS_def = Define`
+Definition NextStateMIPS_def:
    NextStateMIPS s0 =
-   let s1 = Next s0 in if s1.exception = NoException then SOME s1 else NONE`
+   let s1 = Next s0 in if s1.exception = NoException then SOME s1 else NONE
+End
 
 val exceptionSignalled_id = Q.prove(
    `!s. ~s.exceptionSignalled ==> (s with exceptionSignalled := F = s)`,
@@ -689,4 +688,3 @@ val cond_word3 = Q.store_thm("cond_word3",
     else h)`,
   wordsLib.Cases_on_word_value `w` \\ simp [])
 
-val () = export_theory ()

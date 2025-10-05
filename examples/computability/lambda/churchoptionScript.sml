@@ -1,14 +1,12 @@
-open HolKernel boolLib bossLib Parse binderLib
+Theory churchoption
+Ancestors
+  churchnum churchbool pure_dB pred_set term chap3 normal_order
+  head_reduction
+Libs
+  binderLib reductionEval
 
-open churchnumTheory churchboolTheory pure_dBTheory
-open reductionEval pred_setTheory termTheory chap3Theory
-open normal_orderTheory
-open head_reductionTheory
-
-val _ = new_theory "churchoption"
-
-
-val cnone_def = Define`cnone = K`;
+Definition cnone_def:  cnone = K
+End
 Theorem FV_cnone[simp]: FV cnone = ∅
 Proof SRW_TAC [][cnone_def]
 QED
@@ -22,13 +20,13 @@ Proof
   SRW_TAC [][EXTENSION, csome_def] >> metis_tac[]
 QED
 
-val cvsome_def = Define‘
+Definition cvsome_def:
   cvsome x =
     let n = NEW (FV x) in
     let s = NEW (FV x ∪ {n})
     in
         LAM n (LAM s (VAR s @@ x))
-’;
+End
 
 Theorem FV_cvsome[simp]:
   FV (cvsome h) = FV h
@@ -90,4 +88,3 @@ Proof
 QED
 
 
-val _ = export_theory()

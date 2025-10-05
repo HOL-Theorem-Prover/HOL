@@ -2,10 +2,11 @@
   app load ["bossLib", "numLib", "pairTheory", "schneiderUtils",
             "Past_Temporal_LogicTheory"];
 *)
-open HolKernel Parse boolLib Rsyntax schneiderUtils
-     numLib numTheory prim_recTheory arithmeticTheory pairTheory
-     Temporal_LogicTheory Past_Temporal_LogicTheory;
-open tautLib bossLib
+Theory Omega_Automata
+Ancestors
+  num prim_rec arithmetic pair Temporal_Logic Past_Temporal_Logic
+Libs
+  Rsyntax schneiderUtils numLib tautLib
 
 val _ = Rewrite.add_implicit_rewrites pairLib.pair_rws;
 
@@ -13,7 +14,6 @@ val ZERO_LEMMA = ARITH_PROVE“~(x<x) /\ (0<SUC x) /\ ~(SUC x=0)”;
 
 
 
-val _ = new_theory "Omega_Automata";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -4804,4 +4804,3 @@ val _ = save_thm("ELGOT1_THM",ELGOT1_THM);
 val _ = save_thm("ELGOT2_THM",ELGOT2_THM);
 
 
-val _ = export_theory();

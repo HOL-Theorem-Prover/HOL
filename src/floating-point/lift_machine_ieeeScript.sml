@@ -6,7 +6,8 @@ Libs
 
 (* --------------------------------------------------------------------- *)
 
-val interval_def = Define `interval a b = {x : real | a <= x /\ x < b}`
+Definition interval_def:   interval a b = {x : real | a <= x /\ x < b}
+End
 
 val lb = UTF8.chr 0x298B
   (* square bracket with underbar, reminiscent of the way < gets an underbar

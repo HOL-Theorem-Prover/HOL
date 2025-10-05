@@ -10,25 +10,22 @@
 (*                                                                           *)
 (*   Enriched by Chun Tian (Australian National University, 2024 - 2025)     *)
 (* ========================================================================= *)
+Theory distribution  (* was: "normal_rv" *)
+Ancestors
+  combin arithmetic logroot pred_set topology pair cardinal real
+  seq transc real_sigma iterate real_topology derivative metric
+  nets sigma_algebra extreal_base extreal real_borel measure
+  borel lebesgue martingale probability
+Libs
+  numLib hurdUtils pred_setLib tautLib jrhUtils realLib
 
-open HolKernel Parse boolLib bossLib;
 
-open combinTheory arithmeticTheory numLib logrootTheory hurdUtils pred_setLib
-     pred_setTheory topologyTheory pairTheory tautLib jrhUtils cardinalTheory;
-
-open realTheory realLib seqTheory transcTheory real_sigmaTheory iterateTheory
-     real_topologyTheory derivativeTheory metricTheory netsTheory;
-
-open sigma_algebraTheory extreal_baseTheory extrealTheory real_borelTheory
-     measureTheory borelTheory lebesgueTheory martingaleTheory
-     probabilityTheory;
-
-val _ = new_theory "distribution"; (* was: "normal_rv" *)
 
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 val T_TAC = rpt (Q.PAT_X_ASSUM ‘T’ K_TAC);
 
 val _ = hide "equiv_class"; (* in pred_setTheory *)
+val _ = hide "top"; (* defined in posetTheory *)
 
 val set_ss = std_ss ++ PRED_SET_ss;
 
@@ -41,25 +38,6 @@ val _ = set_trace "Goalstack.print_goal_at_top" 0;
 (* ------------------------------------------------------------------------- *)
 (*  Properties of distribution_functions                                     *)
 (* ------------------------------------------------------------------------- *)
-
-(* A function is "right-continuous" if it's right-continuous at all points
-
-   NOTE: the requirement of mono-increasing is included since this version of
-  "right-continuous" definition only works on mono-increasing functions.
-
-   NOTE: The concept of "right-continuous" at points PosInf/NegInf is tricky,
-   and (may) not be true for all distribution functions, thus is excluded.
- *)
-Definition right_continuous :
-    right_continuous (f :extreal -> extreal) <=>
-      (!x y. x <= y ==> f x <= f y) /\ !x. f right_continuous_at (Normal x)
-End
-
-(* |- !f. right_continuous f <=>
-         (!x y. x <= y ==> f x <= f y) /\ !x. inf {f x' | x < x'} = f (Normal x)
- *)
-Theorem right_continuous_def =
-        right_continuous |> REWRITE_RULE [right_continuous_at]
 
 (* NOTE: There's no supporting theorem for “distribution_function” in
    probabilityTheory. The present lemma seems the first one.
@@ -742,113 +720,9 @@ Theorem lebesgue_pos_integral_real_affine' :
             Normal (abs c) * pos_fn_integral lborel (\x. f (t + c * x))
 Proof
     rpt STRIP_TAC
- >> ‘f = \x. max 0 (f x)’ by rw [FUN_EQ_THM, max_0_reduce]
- >> POP_ORW
+ >> ‘f = \x. max 0 (f x)’ by rw [FUN_EQ_THM, max_0_reduce] >> POP_ORW
  >> simp []
  >> MATCH_MP_TAC lebesgue_pos_integral_real_affine >> art []
-QED
-
-(* See, e.g., [3, p.117] or [4, p.375]
-
-   NOTE: In some textbooks, g is said to be in "C_B" (the class of bounded
-   continuous functions).
- *)
-Definition weak_converge_def :
-    weak_converge (fi :num -> extreal measure) (f :extreal measure) =
-    !(g :real -> real).
-        bounded (IMAGE g UNIV) /\ g continuous_on UNIV ==>
-        ((\n. integral (space Borel,subsets Borel,fi n) (Normal o g o real)) -->
-          integral (space Borel,subsets Borel,f) (Normal o g o real)) sequentially
-End
-
-Overload "-->" = “weak_converge”
-
-(* some shared tactics for the next two theorems *)
-val converge_in_dist_tactic1 =
-    qabbrev_tac ‘f = Normal o g o real’ \\
-    Know ‘!n. integral (space Borel,subsets Borel,distr p (X n)) f =
-              integral p (f o X n)’
-    >- (Q.X_GEN_TAC ‘n’ \\
-        MATCH_MP_TAC (cj 1 integral_distr) \\
-        simp [SIGMA_ALGEBRA_BOREL, Abbr ‘f’] \\
-        MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
-        simp [SIGMA_ALGEBRA_BOREL] \\
-       ‘g IN borel_measurable borel’
-          by PROVE_TAC [in_borel_measurable_continuous_on] \\
-        MATCH_MP_TAC MEASURABLE_COMP \\
-        Q.EXISTS_TAC ‘borel’ >> rw [real_in_borel_measurable]) >> Rewr' \\
-    Know ‘!n. integral (space Borel,subsets Borel,distr p Y) f = integral p (f o Y)’
-    >- (MATCH_MP_TAC (cj 1 integral_distr) \\
-        simp [SIGMA_ALGEBRA_BOREL, Abbr ‘f’] \\
-        MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
-        simp [SIGMA_ALGEBRA_BOREL] \\
-       ‘g IN borel_measurable borel’
-          by PROVE_TAC [in_borel_measurable_continuous_on] \\
-        MATCH_MP_TAC MEASURABLE_COMP \\
-        Q.EXISTS_TAC ‘borel’ >> rw [real_in_borel_measurable]) >> Rewr' \\
-    simp [Abbr ‘f’];
-
-val converge_in_dist_tactic2 =
-    qabbrev_tac ‘g = Normal o f o real’ \\
-   ‘!n. Normal o f o real o X n = g o X n’ by METIS_TAC [o_ASSOC] >> POP_ORW \\
-   ‘Normal o f o real o Y = g o Y’ by METIS_TAC [o_ASSOC] >> POP_ORW \\
-    Q.PAT_X_ASSUM ‘!g. bounded (IMAGE g UNIV) /\ _ ==> _’ (MP_TAC o Q.SPEC ‘f’) \\
-    simp [] \\
-    Know ‘!n. integral (space Borel,subsets Borel,distr p (X n)) g =
-              integral p (g o X n)’
-    >- (Q.X_GEN_TAC ‘n’ \\
-        MATCH_MP_TAC (cj 1 integral_distr) \\
-        simp [SIGMA_ALGEBRA_BOREL, Abbr ‘g’] \\
-        MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
-        simp [SIGMA_ALGEBRA_BOREL] \\
-       ‘f IN borel_measurable borel’
-          by PROVE_TAC [in_borel_measurable_continuous_on] \\
-        MATCH_MP_TAC MEASURABLE_COMP \\
-        Q.EXISTS_TAC ‘borel’ >> rw [real_in_borel_measurable]) >> Rewr' \\
-    Know ‘!n. integral (space Borel,subsets Borel,distr p Y) g = integral p (g o Y)’
-    >- (MATCH_MP_TAC (cj 1 integral_distr) \\
-        simp [SIGMA_ALGEBRA_BOREL, Abbr ‘g’] \\
-        MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
-        simp [SIGMA_ALGEBRA_BOREL] \\
-       ‘f IN borel_measurable borel’
-          by PROVE_TAC [in_borel_measurable_continuous_on] \\
-        MATCH_MP_TAC MEASURABLE_COMP \\
-        Q.EXISTS_TAC ‘borel’ >> rw [real_in_borel_measurable]) >> Rewr;
-
-(* NOTE: "convergence of r.v. in distribution" is equivalent to "weak convergence
-   of their distribution functions".
- *)
-Theorem converge_in_dist_alt :
-    !p X Y. prob_space p /\
-           (!n. real_random_variable (X n) p) /\ real_random_variable Y p ==>
-           ((X --> Y) (in_distribution p) <=>
-            (\n. distribution p (X n)) --> distribution p Y)
-Proof
-    rw [converge_in_dist_def, weak_converge_def, expectation_def, distribution_distr,
-        real_random_variable, prob_space_def, p_space_def, events_def]
- >> EQ_TAC >> rw []
- >| [ (* goal 1 (of 2) *)
-      converge_in_dist_tactic1,
-      (* goal 2 (of 2) *)
-      converge_in_dist_tactic2 ]
-QED
-
-(* Theorem 4.4.2 [2, p.93] *)
-Theorem converge_in_dist_alt' :
-    !p X Y. prob_space p /\
-           (!n. real_random_variable (X n) p) /\ real_random_variable Y p ==>
-           ((X --> Y) (in_distribution p) <=>
-            !f. bounded (IMAGE f UNIV) /\ f continuous_on univ(:real) ==>
-               ((\n. expectation p (Normal o f o real o (X n))) -->
-                expectation p (Normal o f o real o Y)) sequentially)
-Proof
-    rw [converge_in_dist_alt, weak_converge_def, distribution_distr, expectation_def,
-        real_random_variable, prob_space_def, p_space_def, events_def]
- >> EQ_TAC >> rw []
- >| [ (* goal 1 (of 2) *)
-      converge_in_dist_tactic2,
-      (* goal 2 (of 2) *)
-      converge_in_dist_tactic1 ]
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -3111,37 +2985,11 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
-(*  Alternative definitions of convergence in distribution                   *)
+(*  Weak convergence and its relation with convergence in distribution       *)
 (* ------------------------------------------------------------------------- *)
 
 Overload B[local] = “general_borel”
 Overload B[local] = “\E. general_borel (mtop E)”
-
-Definition bounded_continuous_def :
-    bounded_continuous top (f :'a -> real) <=>
-    continuous_map (top,euclidean) f /\ bounded (IMAGE f UNIV)
-End
-Overload C_b[local] = “bounded_continuous”
-
-Definition BL_def :
-    BL E = {f :'a -> real | f IN bounded_continuous (mtop E) /\
-                            Lipschitz_continuous_map (E,mr1) f}
-End
-
-Theorem Lipschitz_continuous_map_rewrite[local] :
-    !E f. f IN C_b (mtop E) /\ Lipschitz_continuous_map (E,mr1) f <=>
-          bounded (IMAGE f UNIV) /\ Lipschitz_continuous_map (E,mr1) f
-Proof
-    rw [IN_APP, bounded_continuous_def, euclidean_def]
- >> METIS_TAC [Lipschitz_continuous_map_imp_continuous_map]
-QED
-
-(* NOTE: “Lipschitz_continuous_map” implies the part “continuous_map” in “C_b” *)
-Theorem BL_alt :
-    !E. BL E = {f | bounded (IMAGE f UNIV) /\ Lipschitz_continuous_map (E,mr1) f}
-Proof
-    rw [Once EXTENSION, BL_def, Lipschitz_continuous_map_rewrite]
-QED
 
 Definition weak_convergence_condition_def :
     weak_convergence_condition (top :'a topology) X Y f <=>
@@ -3164,6 +3012,155 @@ End
  *)
 Theorem weak_converge_in_topology = weak_converge_in_topology_def
      |> REWRITE_RULE [weak_convergence_condition_def]
+
+Definition weak_converge :
+    weak_converge X Y = weak_converge_in_topology ext_euclidean X Y
+End
+Overload "-->" = “weak_converge”
+
+(* |- !X Y.
+        weak_converge X Y <=>
+        !f. f IN C_b ext_euclidean ==>
+            ((\n. integral (space Borel,subsets Borel,X n) (Normal o f)) -->
+             integral (space Borel,subsets Borel,Y) (Normal o f))
+              sequentially
+ *)
+Theorem weak_converge_def =
+        weak_converge
+     |> REWRITE_RULE [weak_converge_in_topology, GSYM Borel_alt_general]
+
+(* NOTE: "convergence of r.v. in distribution" is equivalent to "weak convergence
+   of their distribution functions".
+ *)
+Theorem converge_in_dist_alt_weak_converge :
+    !p X Y. prob_space p /\
+           (!n. random_variable (X n) p Borel) /\ random_variable Y p Borel ==>
+           ((X --> Y) (in_distribution p) <=>
+            (\n. distribution p (X n)) --> distribution p Y)
+Proof
+    rw [converge_in_dist_def, weak_converge_def, expectation_def, distribution_distr,
+        random_variable_def, prob_space_def, p_space_def, events_def]
+ >> EQ_TAC >> rw []
+ >| [ (* goal 1 (of 2) *)
+      qabbrev_tac ‘g = Normal o f’ \\
+      Know ‘!n. integral (space Borel,subsets Borel,distr p (X n)) g =
+                integral p (g o X n)’
+      >- (Q.X_GEN_TAC ‘n’ \\
+          MATCH_MP_TAC (cj 1 integral_distr) \\
+          simp [SIGMA_ALGEBRA_BOREL, Abbr ‘g’] \\
+          MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+          simp [SIGMA_ALGEBRA_BOREL] \\
+          fs [IN_bounded_continuous] \\
+          simp [borel_alt_general, Borel_alt_general] \\
+          MATCH_MP_TAC IN_MEASURABLE_CONTINUOUS_MAP >> art []) >> Rewr' \\
+     Know ‘!n. integral (space Borel,subsets Borel,distr p Y) g = integral p (g o Y)’
+     >- (MATCH_MP_TAC (cj 1 integral_distr) \\
+         simp [SIGMA_ALGEBRA_BOREL, Abbr ‘g’] \\
+         MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+         simp [SIGMA_ALGEBRA_BOREL] \\
+         fs [IN_bounded_continuous] \\
+         simp [borel_alt_general, Borel_alt_general] \\
+         MATCH_MP_TAC IN_MEASURABLE_CONTINUOUS_MAP >> art []) >> Rewr' \\
+     simp [Abbr ‘g’],
+     (* goal 2 (of 2) *)
+     qabbrev_tac ‘g = Normal o f’ \\
+    ‘!n. Normal o f o X n = g o X n’ by METIS_TAC [o_ASSOC] >> POP_ORW \\
+    ‘Normal o f o Y = g o Y’ by METIS_TAC [o_ASSOC] >> POP_ORW \\
+     Q.PAT_X_ASSUM ‘!g. g IN C_b ext_euclidean ==> _’ (MP_TAC o Q.SPEC ‘f’) \\
+     simp [] \\
+     Know ‘!n. integral (space Borel,subsets Borel,distr p (X n)) g =
+               integral p (g o X n)’
+     >- (Q.X_GEN_TAC ‘n’ \\
+         MATCH_MP_TAC (cj 1 integral_distr) \\
+         simp [SIGMA_ALGEBRA_BOREL, Abbr ‘g’] \\
+         MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+         simp [SIGMA_ALGEBRA_BOREL] \\
+         fs [IN_bounded_continuous] \\
+         simp [borel_alt_general, Borel_alt_general] \\
+         MATCH_MP_TAC IN_MEASURABLE_CONTINUOUS_MAP >> art []) >> Rewr' \\
+     Know ‘integral (space Borel,subsets Borel,distr p Y) g = integral p (g o Y)’
+     >- (MATCH_MP_TAC (cj 1 integral_distr) \\
+         simp [SIGMA_ALGEBRA_BOREL, Abbr ‘g’] \\
+         MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+         simp [SIGMA_ALGEBRA_BOREL] \\
+         fs [IN_bounded_continuous] \\
+         simp [borel_alt_general, Borel_alt_general] \\
+         MATCH_MP_TAC IN_MEASURABLE_CONTINUOUS_MAP >> art []) >> Rewr ]
+QED
+
+Theorem converge_in_dist_alt_continuous_on :
+    !X Y p. prob_space p /\ (!n. real_random_variable (X n) p) /\
+            real_random_variable Y p ==>
+           ((X --> Y) (in_distribution p) <=>
+            !f. bounded (IMAGE f UNIV) /\ f continuous_on UNIV ==>
+               ((\n. expectation p (Normal o f o real o X n)) -->
+                expectation p (Normal o f o real o Y)) sequentially)
+Proof
+    rw [real_random_variable_def, converge_in_dist_def, FORALL_AND_THM]
+ >> reverse EQ_TAC >> rpt STRIP_TAC
+ (* old to new *)
+ >- (FULL_SIMP_TAC std_ss [IN_bounded_continuous] \\
+     qabbrev_tac ‘g = f o Normal’ \\
+     Know ‘!n. expectation p (Normal o f o X n) =
+               expectation p (Normal o g o real o X n)’
+     >- (Q.X_GEN_TAC ‘n’ \\
+         MATCH_MP_TAC expectation_cong >> rw [o_DEF, Abbr ‘g’] \\
+         AP_TERM_TAC >> simp [normal_real]) >> Rewr' \\
+     Know ‘expectation p (Normal o f o Y) =
+           expectation p (Normal o g o real o Y)’
+     >- (MATCH_MP_TAC expectation_cong >> rw [o_DEF, Abbr ‘g’] \\
+         AP_TERM_TAC >> simp [normal_real]) >> Rewr' \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     CONJ_TAC
+     >- (fs [bounded_def, Abbr ‘g’] \\
+         Q.EXISTS_TAC ‘a’ \\
+         Q.X_GEN_TAC ‘z’ \\
+         DISCH_THEN (Q.X_CHOOSE_THEN ‘x’ STRIP_ASSUME_TAC) \\
+         FIRST_X_ASSUM MATCH_MP_TAC >> art [] \\
+         Q.EXISTS_TAC ‘Normal x’ >> simp []) \\
+     simp [continuous_on_univ_alt_continuous_map, Abbr ‘g’] \\
+     MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE \\
+     Q.EXISTS_TAC ‘ext_euclidean’ >> simp [continuous_map_normal])
+ (* new to old *)
+ >> qabbrev_tac ‘g = f o real’
+ >> ‘!n. Normal o f o real o X n = Normal o g o X n’
+       by rw [Abbr ‘g’, GSYM o_ASSOC] >> POP_ORW
+ >> ‘Normal o f o real o Y = Normal o g o Y’
+       by rw [Abbr ‘g’, GSYM o_ASSOC] >> POP_ORW
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> simp [Abbr ‘g’, IN_bounded_continuous, o_DEF]
+ >> reverse CONJ_TAC
+ >- (fs [bounded_def] \\
+     Q.EXISTS_TAC ‘a’ \\
+     Q.X_GEN_TAC ‘z’ \\
+     DISCH_THEN (Q.X_CHOOSE_THEN ‘x’ MP_TAC) >> rw [] \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     Q.EXISTS_TAC ‘real x’ >> REWRITE_TAC [])
+ >> ‘(\x. f (real x)) = f o real’ by rw [o_DEF, FUN_EQ_THM] >> POP_ORW
+ >> MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE
+ >> Q.EXISTS_TAC ‘euclidean’
+ >> fs [continuous_on_univ_alt_continuous_map, continuous_map_real]
+QED
+
+Definition BL_def :
+    BL E = {f :'a -> real | f IN bounded_continuous (mtop E) /\
+                            Lipschitz_continuous_map (E,mr1) f}
+End
+
+Theorem Lipschitz_continuous_map_rewrite[local] :
+    !E f. f IN C_b (mtop E) /\ Lipschitz_continuous_map (E,mr1) f <=>
+          bounded (IMAGE f UNIV) /\ Lipschitz_continuous_map (E,mr1) f
+Proof
+    rw [IN_APP, bounded_continuous_def, euclidean_def]
+ >> METIS_TAC [Lipschitz_continuous_map_imp_continuous_map]
+QED
+
+(* NOTE: “Lipschitz_continuous_map” implies the part “continuous_map” in “C_b” *)
+Theorem BL_alt :
+    !E. BL E = {f | bounded (IMAGE f UNIV) /\ Lipschitz_continuous_map (E,mr1) f}
+Proof
+    rw [Once EXTENSION, BL_def, Lipschitz_continuous_map_rewrite]
+QED
 
 Definition subprobability_measure_def : (* aka s.p.m. *)
     subprobability_measure m <=> measure_space m /\ measure m (m_space m) <= 1
@@ -4788,18 +4785,694 @@ QED
         (!n. prob_space (space (B E),subsets (B E),X n)) /\
         prob_space (space (B E),subsets (B E),Y) ==>
         (weak_converge_in_topology (mtop E) X Y <=>
-         !f. bounded (IMAGE f univ(:'a)) /\
-             Lipschitz_continuous_map (E,mr1) f ==>
+         !f. f IN BL E ==>
              ((\n. integral (mspace E,subsets (B E),X n) (Normal o f)) -->
               integral (mspace E,subsets (B E),Y) (Normal o f)) sequentially)
  *)
 Theorem weak_converge_in_topology_alt_Lipschitz =
         Portemanteau_i_eq_ii
-     |> SRULE [Portemanteau_antecedents_alt_def, GSYM mspace, BL_alt,
+     |> SRULE [Portemanteau_antecedents_alt_def, GSYM mspace,
                Portemanteau_i_def, Portemanteau_ii_def,
                weak_convergence_condition_def]
 
-val _ = export_theory ();
+(* |- !X Y.
+        (!n. prob_space (space Borel,subsets Borel,X n)) /\
+        prob_space (space Borel,subsets Borel,Y) ==>
+        (X --> Y <=>
+         !f. f IN BL extreal_mr1 ==>
+             ((\n. expectation (space Borel,subsets Borel,X n) (Normal o f)) -->
+              expectation (space Borel,subsets Borel,Y) (Normal o f))
+               sequentially)
+ *)
+Theorem converge_in_dist_alt_Lipschitz_lemma[local] =
+        weak_converge_in_topology_alt_Lipschitz
+     |> ISPEC “extreal_mr1”
+     |> REWRITE_RULE [GSYM ext_euclidean_def, GSYM Borel_alt_general]
+     |> REWRITE_RULE [GSYM weak_converge, GSYM expectation_def]
+
+Theorem converge_in_dist_alt_Lipschitz :
+    !X Y p. prob_space p /\ (!n. random_variable (X n) p Borel) /\
+            random_variable Y p Borel ==>
+           ((X --> Y) (in_distribution p) <=>
+             !f. f IN BL extreal_mr1 ==>
+                ((\n. expectation p (Normal o f o X n)) -->
+                 expectation p (Normal o f o Y)) sequentially)
+Proof
+    rw [converge_in_dist_alt_weak_converge]
+ >> qabbrev_tac ‘fi = \n. distribution p (X n)’
+ >> qabbrev_tac ‘f = distribution p Y’
+ >> REWRITE_TAC [ext_euclidean_def]
+ >> qabbrev_tac ‘E = extreal_mr1’
+ >> Know ‘!n. prob_space (space Borel,subsets Borel,fi n)’
+ >- (rw [Abbr ‘fi’] \\
+     MATCH_MP_TAC distribution_prob_space >> simp [SIGMA_ALGEBRA_BOREL])
+ >> DISCH_TAC
+ >> Know ‘prob_space (space Borel,subsets Borel,f)’
+ >- (rw [Abbr ‘f’] \\
+     MATCH_MP_TAC distribution_prob_space >> simp [SIGMA_ALGEBRA_BOREL])
+ >> DISCH_TAC
+ >> simp [converge_in_dist_alt_Lipschitz_lemma, expectation_def]
+ >> NTAC 2 (POP_ASSUM K_TAC)
+ >> fs [Abbr ‘fi’, Abbr ‘f’, distribution_distr, random_variable_def,
+        p_space_def, events_def, prob_space_def]
+ >> EQ_TAC
+ >| [ (* goal 1 (of 2) *)
+      rpt STRIP_TAC \\
+      Q.PAT_X_ASSUM ‘!f. f IN BL E ==> _’ (MP_TAC o Q.SPEC ‘f’) >> rw [] \\
+      fs [BL_alt, Abbr ‘E’] \\
+      Know ‘continuous_map (ext_euclidean,euclidean) f’
+      >- (REWRITE_TAC [ext_euclidean_def, euclidean_def] \\
+          MATCH_MP_TAC Lipschitz_continuous_map_imp_continuous_map >> art []) \\
+      DISCH_TAC \\
+      REWRITE_TAC [o_ASSOC] \\
+      qabbrev_tac ‘g = Normal o f’ \\
+      Know ‘!n. integral p (g o X n) =
+                integral (space Borel,subsets Borel,distr p (X n)) g’
+      >- (Q.X_GEN_TAC ‘n’ \\
+          SYM_TAC >> MATCH_MP_TAC (cj 1 integral_distr) \\
+          simp [SIGMA_ALGEBRA_BOREL, Abbr ‘g’] \\
+          MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+          simp [SIGMA_ALGEBRA_BOREL, borel_alt_general, Borel_alt_general] \\
+          MATCH_MP_TAC IN_MEASURABLE_CONTINUOUS_MAP >> art []) >> Rewr' \\
+      Know ‘integral p (g o Y) = integral (space Borel,subsets Borel,distr p Y) g’
+      >- (SYM_TAC >> MATCH_MP_TAC (cj 1 integral_distr) \\
+          simp [SIGMA_ALGEBRA_BOREL, Abbr ‘g’] \\
+          MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+          simp [SIGMA_ALGEBRA_BOREL, borel_alt_general, Borel_alt_general] \\
+          MATCH_MP_TAC IN_MEASURABLE_CONTINUOUS_MAP >> art []) >> Rewr' \\
+      simp [],
+      (* goal 2 (of 2) *)
+      DISCH_TAC \\
+      Q.X_GEN_TAC ‘f’ >> DISCH_TAC \\
+      Q.PAT_X_ASSUM ‘!f. f IN BL E ==> _’ (MP_TAC o Q.SPEC ‘f’) >> rw [] \\
+      fs [BL_alt, Abbr ‘E’] \\
+      Know ‘continuous_map (ext_euclidean,euclidean) f’
+      >- (REWRITE_TAC [ext_euclidean_def, euclidean_def] \\
+          MATCH_MP_TAC Lipschitz_continuous_map_imp_continuous_map >> art []) \\
+      DISCH_TAC \\
+      qabbrev_tac ‘g = Normal o f’ \\
+      Know ‘!n. integral (space Borel,subsets Borel,distr p (X n)) g =
+                integral p (g o X n)’
+      >- (Q.X_GEN_TAC ‘n’ \\
+          MATCH_MP_TAC (cj 1 integral_distr) \\
+          simp [SIGMA_ALGEBRA_BOREL, Abbr ‘g’] \\
+          MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+          simp [SIGMA_ALGEBRA_BOREL, borel_alt_general, Borel_alt_general] \\
+          MATCH_MP_TAC IN_MEASURABLE_CONTINUOUS_MAP >> art []) >> Rewr' \\
+      Know ‘integral (space Borel,subsets Borel,distr p Y) g = integral p (g o Y)’
+      >- (MATCH_MP_TAC (cj 1 integral_distr) \\
+          simp [SIGMA_ALGEBRA_BOREL, Abbr ‘g’] \\
+          MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+          simp [SIGMA_ALGEBRA_BOREL, borel_alt_general, Borel_alt_general] \\
+          MATCH_MP_TAC IN_MEASURABLE_CONTINUOUS_MAP >> art []) >> Rewr' \\
+      simp [Abbr ‘g’] ]
+QED
+
+(* weak convergence of real-typed measures *)
+Definition real_weak_converge :
+    real_weak_converge X Y = weak_converge_in_topology euclidean X Y
+End
+Overload "-->" = “real_weak_converge”
+
+(* |- !X (Y :num -> real measure).
+        X --> Y <=>
+        !f. f IN C_b euclidean ==>
+            ((\n. integral (space borel,subsets borel,X n) (Normal o f)) -->
+             integral (space borel,subsets borel,Y) (Normal o f))
+              sequentially
+ *)
+Theorem real_weak_converge_def =
+        real_weak_converge
+     |> REWRITE_RULE [weak_converge_in_topology, GSYM borel_alt_general]
+
+Theorem real_weak_converge_cong :
+    !X Y X' Y'. (!n. measure_space (space borel,subsets borel,X n)) /\
+                measure_space (space borel,subsets borel,Y) /\
+                (!n s. s IN subsets borel ==> X n s = X' n s) /\
+                (!s. s IN subsets borel ==> Y s = Y' s) ==>
+                (X --> Y <=> X' --> Y')
+Proof
+    rw [real_weak_converge_def]
+ >> Know ‘!f n. integral (space borel,subsets borel,X n) (Normal o f) =
+                integral (space borel,subsets borel,X' n) (Normal o f)’
+ >- (rpt GEN_TAC \\
+     MATCH_MP_TAC integral_cong_measure >> art [])
+ >> Rewr'
+ >> Know ‘!f. integral (space borel,subsets borel,Y) (Normal o f) =
+              integral (space borel,subsets borel,Y') (Normal o f)’
+ >- (Q.X_GEN_TAC ‘f’ \\
+     MATCH_MP_TAC integral_cong_measure >> art [])
+ >> Rewr
+QED
+
+(* NOTE: When ‘X’ represent a distribution of another r.v., the antecedents
+  ‘X {PosInf} = 0 /\ X {NegInf} = 0’ actually mean that the r.v. only takes
+   finite values, i.e. a real_random_variable.
+ *)
+Theorem prob_space_normal :
+    !X. prob_space (space Borel,subsets Borel,X) /\
+        X {PosInf} = 0 /\ X {NegInf} = 0 ==>
+        prob_space (space borel,subsets borel,X o IMAGE Normal)
+Proof
+    reverse (rw [prob_space_def])
+ >- (Know ‘IMAGE Normal (space borel) = UNIV DIFF {PosInf; NegInf}’
+     >- (rw [Once EXTENSION, space_borel] \\
+         METIS_TAC [extreal_cases, extreal_not_infty]) >> Rewr' \\
+         qabbrev_tac ‘M = (space Borel,subsets Borel,X)’ \\
+        ‘X = measure M’ by simp [Abbr ‘M’] >> POP_ORW \\
+         qmatch_abbrev_tac ‘measure M (UNIV DIFF s) = 1’ \\
+         REWRITE_TAC [GSYM SPACE_BOREL] \\
+        ‘space Borel = m_space M’ by simp [Abbr ‘M’] >> POP_ORW \\
+         Know ‘measure M (m_space M DIFF s) =
+               measure M (m_space M) - measure M s’
+         >- (MATCH_MP_TAC MEASURE_DIFF_SUBSET \\
+             simp [MEASURE_SPACE_SPACE] \\
+             CONJ_ASM1_TAC
+             >- (simp [Abbr ‘s’, Abbr ‘M’] \\
+                ‘{PosInf; NegInf} = {PosInf} UNION {NegInf}’ by SET_TAC [] \\
+                 POP_ORW >> MATCH_MP_TAC SIGMA_ALGEBRA_UNION \\
+                 simp [SIGMA_ALGEBRA_BOREL, BOREL_MEASURABLE_SETS]) \\
+             CONJ_TAC >- simp [Abbr ‘M’, SPACE_BOREL] \\
+             Q_TAC (TRANS_TAC let_trans) ‘measure M (space Borel)’ \\
+             reverse CONJ_TAC >- simp [GSYM lt_infty, Abbr ‘M’] \\
+             MATCH_MP_TAC INCREASING >> art [] \\
+            ‘space Borel = m_space M’ by simp [Abbr ‘M’] >> POP_ORW \\
+             simp [MEASURE_SPACE_SPACE, MEASURE_SPACE_INCREASING] \\
+             simp [Abbr ‘M’, SPACE_BOREL]) >> Rewr' \\
+     Know ‘measure M s = 0’
+     >- (qunabbrev_tac ‘s’ \\
+        ‘{PosInf; NegInf} = {PosInf} UNION {NegInf}’ by SET_TAC [] >> POP_ORW \\
+         Know ‘measure M ({PosInf} UNION {NegInf}) =
+               measure M {PosInf} + measure M {NegInf}’
+         >- (MATCH_MP_TAC ADDITIVE >> simp [MEASURE_SPACE_ADDITIVE] \\
+             CONJ_ASM1_TAC >- simp [Abbr ‘M’, BOREL_MEASURABLE_SETS] \\
+             CONJ_ASM1_TAC >- simp [Abbr ‘M’, BOREL_MEASURABLE_SETS] \\
+             MATCH_MP_TAC MEASURE_SPACE_UNION >> art []) >> Rewr' \\
+         simp [Abbr ‘M’]) >> Rewr' \\
+     simp [Abbr ‘M’])
+ >> qabbrev_tac ‘M = (space Borel,subsets Borel,X)’
+ >> rw [measure_space_def, sigma_algebra_borel]
+ >- (rw [positive_def, o_DEF]
+     >- (‘X = measure M’ by simp [Abbr ‘M’] >> POP_ORW \\
+         MATCH_MP_TAC MEASURE_EMPTY >> art []) \\
+    ‘X = measure M’ by simp [Abbr ‘M’] >> POP_ORW \\
+     MATCH_MP_TAC MEASURE_POSITIVE >> art [] \\
+     simp [Abbr ‘M’, BOREL_MEASURABLE_SETS_NORMAL])
+ >> rw [countably_additive_def, IMAGE_BIGUNION, IMAGE_IMAGE, IN_FUNSET]
+ >> qabbrev_tac ‘g = IMAGE Normal o f’
+ >> ‘X = measure M’ by simp [Abbr ‘M’] >> POP_ORW
+ >> SYM_TAC
+ >> MATCH_MP_TAC COUNTABLY_ADDITIVE
+ >> simp [MEASURE_SPACE_COUNTABLY_ADDITIVE, IN_FUNSET]
+ >> CONJ_ASM1_TAC
+ >- (rw [Abbr ‘g’, Abbr ‘M’] \\
+     MATCH_MP_TAC BOREL_MEASURABLE_SETS_NORMAL >> art [])
+ >> reverse CONJ_TAC
+ >- (MATCH_MP_TAC MEASURE_SPACE_BIGUNION >> art [])
+ >> rw [Abbr ‘g’, DISJOINT_ALT]
+ >> rename1 ‘y NOTIN f j’
+ >> Q.PAT_X_ASSUM ‘!i j. i <> j ==> _’ (MP_TAC o Q.SPECL [‘i’, ‘j’])
+ >> rw [DISJOINT_ALT]
+QED
+
+Theorem prob_space_real_set[local] :
+    !X. prob_space (space borel,subsets borel,X) ==>
+        prob_space (space Borel,subsets Borel,X o real_set)
+Proof
+    reverse (rw [prob_space_def])
+ >- (Know ‘real_set (space Borel) = UNIV’
+     >- (rw [Once EXTENSION, SPACE_BOREL, real_set_def] \\
+         Q.EXISTS_TAC ‘Normal x’ >> simp []) >> Rewr' \\
+     fs [space_borel])
+ >> qabbrev_tac ‘M = (space borel,subsets borel,X)’
+ >> rw [measure_space_def, SIGMA_ALGEBRA_BOREL]
+ >- (rw [positive_def, o_DEF]
+     >- (‘X = measure M’ by simp [Abbr ‘M’] >> POP_ORW \\
+         MATCH_MP_TAC MEASURE_EMPTY >> art []) \\
+    ‘X = measure M’ by simp [Abbr ‘M’] >> POP_ORW \\
+     MATCH_MP_TAC MEASURE_POSITIVE >> art [] \\
+     simp [Abbr ‘M’, borel_measurable_real_set])
+ >> rw [countably_additive_def, IMAGE_BIGUNION, IMAGE_IMAGE, IN_FUNSET]
+ >> qabbrev_tac ‘g = real_set o f’
+ >> ‘X = measure M’ by simp [Abbr ‘M’] >> POP_ORW
+ >> SYM_TAC
+ >> MATCH_MP_TAC COUNTABLY_ADDITIVE
+ >> simp [MEASURE_SPACE_COUNTABLY_ADDITIVE, IN_FUNSET]
+ >> CONJ_ASM1_TAC
+ >- (Q.X_GEN_TAC ‘n’ \\
+     rw [Abbr ‘M’, Abbr ‘g’] \\
+     MATCH_MP_TAC borel_measurable_real_set >> art [])
+ >> CONJ_TAC
+ >- (rw [DISJOINT_ALT, Abbr ‘g’, real_set_def] \\
+     rename1 ‘real y = real z’ \\
+     Cases_on ‘y = PosInf’ >> simp [] \\
+     Cases_on ‘y = NegInf’ >> simp [] \\
+     gs [real_11] \\
+     Q.PAT_X_ASSUM ‘!i j. i <> j ==> _’ (MP_TAC o Q.SPECL [‘i’, ‘j’]) \\
+     rw [DISJOINT_ALT])
+ >> CONJ_ASM1_TAC
+ >- (rw [Once EXTENSION, real_set_def, IN_BIGUNION_IMAGE] \\
+     EQ_TAC >> rw [GSPECIFICATION, Abbr ‘g’, real_set_def] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       rename1 ‘y IN f n’ \\
+       qexistsl_tac [‘n’, ‘y’] >> art [],
+       (* goal 2 (of 2) *)
+       rename1 ‘y IN f n’ \\
+       Q.EXISTS_TAC ‘y’ >> art [] \\
+       Q.EXISTS_TAC ‘n’ >> art [] ])
+ >> POP_ORW
+ >> MATCH_MP_TAC MEASURE_SPACE_BIGUNION >> art []
+QED
+
+Theorem prob_space_real_set_eq :
+    !X. prob_space (space borel,subsets borel,X) <=>
+        prob_space (space Borel,subsets Borel,X o real_set)
+Proof
+    Q.X_GEN_TAC ‘X’
+ >> EQ_TAC >- REWRITE_TAC [prob_space_real_set]
+ >> DISCH_TAC
+ >> qabbrev_tac ‘Y = X o real_set’
+ >> Know ‘X = Y o IMAGE Normal’
+ >- (rw [FUN_EQ_THM, Abbr ‘Y’, o_DEF] \\
+     Suff ‘real_set (IMAGE Normal x) = x’ >- rw [] \\
+     rw [Once EXTENSION, real_set_def] \\
+     EQ_TAC >> rw [] >> simp [] \\
+     rename1 ‘y IN s’ \\
+     Q.EXISTS_TAC ‘Normal y’ >> simp [])
+ >> Rewr'
+ >> MATCH_MP_TAC prob_space_normal >> art []
+ >> simp [Abbr ‘Y’, o_DEF]
+ >> qabbrev_tac ‘p = (space Borel,subsets Borel,X o real_set)’
+ >> Know ‘prob p {} = 0’ >- PROVE_TAC [PROB_EMPTY]
+ >> simp [Abbr ‘p’, o_DEF, prob_def]
+QED
+
+(* NOTE: This theorem is inspired by [prob_space_normal] and is based on
+   integral_distr, when "change of variables" is not yet available for
+   our Lebesgue integration.
+ *)
+Theorem converge_in_dist_alt_real_weak_converge_lemma[local] :
+    !p X Y. prob_space p /\ (!n. real_random_variable (X n) p) /\
+            real_random_variable Y p ==>
+           ((X --> Y) (in_distribution p) <=>
+            (\n. distribution p (X n) o IMAGE Normal) -->
+                 distribution p Y o IMAGE Normal)
+Proof
+    RW_TAC std_ss [real_random_variable_def, FORALL_AND_THM,
+                   converge_in_dist_alt_weak_converge]
+ >> Know ‘!n. prob_space (space Borel,subsets Borel,distribution p (X n))’
+ >- (Q.X_GEN_TAC ‘n’ \\
+     MATCH_MP_TAC distribution_prob_space >> rw [SIGMA_ALGEBRA_BOREL])
+ >> DISCH_TAC
+ >> Know ‘prob_space (space Borel,subsets Borel,distribution p Y)’
+ >- (MATCH_MP_TAC distribution_prob_space >> rw [SIGMA_ALGEBRA_BOREL])
+ >> DISCH_TAC
+ >> rw [weak_converge_def, real_weak_converge_def, IN_bounded_continuous]
+ >> qabbrev_tac ‘M = \n. space Borel,subsets Borel,distribution p (X n)’
+ >> qabbrev_tac ‘N = (space Borel,subsets Borel,distribution p Y)’
+ >> qabbrev_tac ‘M' = \n. (space borel,subsets borel,
+                           distribution p (X n) o IMAGE Normal)’
+ >> qabbrev_tac ‘N' = (space borel,subsets borel,
+                       distribution p Y o IMAGE Normal)’
+ >> fs []
+ >> Know ‘!n. prob_space (M' n)’
+ >- (rw [Abbr ‘M'’] \\
+     MATCH_MP_TAC prob_space_normal >> simp [] \\
+     simp [distribution_def, PREIMAGE_def] \\
+     Know ‘{x | X n x = PosInf} INTER p_space p = {}’
+     >- (rw [Once EXTENSION, NOT_IN_EMPTY] >> PROVE_TAC []) >> Rewr' \\
+     Know ‘{x | X n x = NegInf} INTER p_space p = {}’
+     >- (rw [Once EXTENSION, NOT_IN_EMPTY] >> PROVE_TAC []) >> Rewr \\
+     simp [PROB_EMPTY])
+ >> DISCH_TAC
+ >> Know ‘prob_space N'’
+ >- (qunabbrev_tac ‘N'’ \\
+     MATCH_MP_TAC prob_space_normal >> simp [] \\
+     simp [distribution_def, PREIMAGE_def] \\
+     Know ‘{x | Y x = PosInf} INTER p_space p = {}’
+     >- (rw [Once EXTENSION, NOT_IN_EMPTY] >> PROVE_TAC []) >> Rewr' \\
+     Know ‘{x | Y x = NegInf} INTER p_space p = {}’
+     >- (rw [Once EXTENSION, NOT_IN_EMPTY] >> PROVE_TAC []) >> Rewr \\
+     simp [PROB_EMPTY])
+ >> DISCH_TAC
+ >> Know ‘!n s. s IN subsets borel ==>
+               (distribution p (X n) o IMAGE Normal) s =
+                distribution p (real o X n) s’
+ >- (rw [o_DEF, distribution_def, PREIMAGE_def] \\
+     Suff ‘{x | ?x'. X n x = Normal x' /\ x' IN s} INTER p_space p =
+           {x | real (X n x) IN s} INTER p_space p’ >- rw [] \\
+     rw [Once EXTENSION] \\
+     Cases_on ‘x IN p_space p’ >> simp [] \\
+    ‘?r. X n x = Normal r’ by METIS_TAC [extreal_cases] \\
+     simp [])
+ >> DISCH_TAC
+ (* Y :'a -> extreal, “(real o Y) :'a -> real *)
+ >> Know ‘!n f. integral (M' n) (Normal o f) =
+                integral (space borel,subsets borel,distribution p (real o X n))
+                         (Normal o f)’
+ >- (rpt GEN_TAC \\
+     fs [Abbr ‘M'’, prob_space_def, FORALL_AND_THM] \\
+     MATCH_MP_TAC integral_cong_measure >> simp [])
+ >> Rewr'
+ >> Know ‘!s. s IN subsets borel ==>
+             (distribution p Y o IMAGE Normal) s =
+              distribution p (real o Y) s’
+ >- (rw [o_DEF, distribution_def, PREIMAGE_def] \\
+     Suff ‘{x | ?x'. Y x = Normal x' /\ x' IN s} INTER p_space p =
+           {x | real (Y x) IN s} INTER p_space p’ >- rw [] \\
+     rw [Once EXTENSION] \\
+     Cases_on ‘x IN p_space p’ >> simp [] \\
+    ‘?r. Y x = Normal r’ by METIS_TAC [extreal_cases] \\
+     simp [])
+ >> DISCH_TAC
+ >> Know ‘!f. integral N' (Normal o f) =
+              integral (space borel,subsets borel,distribution p (real o Y))
+                       (Normal o f)’
+ >- (Q.X_GEN_TAC ‘f’ \\
+     fs [Abbr ‘N'’, prob_space_def, FORALL_AND_THM] \\
+     MATCH_MP_TAC integral_cong_measure >> simp [])
+ >> Rewr'
+ (* preparing for integral_distr *)
+ >> FULL_SIMP_TAC std_ss [distribution_distr]
+ >> Q.PAT_X_ASSUM ‘!n. prob_space (M' n)’ K_TAC
+ >> Q.PAT_X_ASSUM ‘prob_space N'’         K_TAC
+ >> qunabbrevl_tac [‘M'’, ‘N'’]
+ >> NTAC 2 (POP_ASSUM K_TAC)
+ >> qabbrev_tac ‘X' = \n. real o X n’ >> simp []
+ >> qabbrev_tac ‘Y' = real o Y’
+ >> EQ_TAC >> rpt STRIP_TAC
+ >- (Know ‘f IN measurable borel borel’
+     >- (REWRITE_TAC [borel_alt_general] \\
+         MATCH_MP_TAC IN_MEASURABLE_CONTINUOUS_MAP >> art []) >> DISCH_TAC \\
+     qabbrev_tac ‘g = Normal o f’ \\
+     Know ‘g IN measurable borel Borel’
+     >- (qunabbrev_tac ‘g’ \\
+         MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+         simp [sigma_algebra_borel]) >> DISCH_TAC \\
+     Know ‘!n. integral (space borel,subsets borel,distr p (X' n)) g =
+               integral p (g o X' n)’
+     >- (Q.X_GEN_TAC ‘n’ \\
+         MATCH_MP_TAC (cj 1 integral_distr) \\
+         fs [Abbr ‘X'’, prob_space_def, FORALL_AND_THM, sigma_algebra_borel] \\
+         MATCH_MP_TAC in_borel_measurable_from_Borel \\
+         fs [measure_space_def, random_variable_def, p_space_def, events_def]) \\
+     Rewr' \\
+     Know ‘integral (space borel,subsets borel,distr p Y') g = integral p (g o Y')’
+     >- (MATCH_MP_TAC (cj 1 integral_distr) \\
+         fs [Abbr ‘Y'’, prob_space_def, FORALL_AND_THM, sigma_algebra_borel] \\
+         MATCH_MP_TAC in_borel_measurable_from_Borel \\
+         fs [measure_space_def, random_variable_def, p_space_def, events_def]) \\
+     Rewr' \\
+     simp [Abbr ‘X'’, Abbr ‘Y'’, Abbr ‘g’] \\
+     qabbrev_tac ‘h = f o real’ \\
+    ‘!n. Normal o f o real o X n = Normal o h o X n’ by METIS_TAC [o_ASSOC] \\
+     POP_ORW \\
+    ‘Normal o f o real o Y = Normal o h o Y’
+       by METIS_TAC [o_ASSOC] >> POP_ORW \\
+     Q.PAT_X_ASSUM ‘!f. continuous_map (ext_euclidean,euclidean) f /\ _ ==> _’
+       (MP_TAC o Q.SPEC ‘h’) \\
+     Know ‘continuous_map (ext_euclidean,euclidean) h’
+     >- (qunabbrev_tac ‘h’ \\
+         MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE \\
+         Q.EXISTS_TAC ‘euclidean’ >> art [] \\
+         REWRITE_TAC [continuous_map_real]) >> DISCH_TAC \\
+     impl_tac
+     >- (fs [Abbr ‘h’, o_DEF, bounded_def] \\
+         Q.EXISTS_TAC ‘a’ >> Q.X_GEN_TAC ‘x’ \\
+         DISCH_THEN (Q.X_CHOOSE_THEN ‘y’ STRIP_ASSUME_TAC) \\
+         FIRST_X_ASSUM MATCH_MP_TAC >> art [] \\
+         Q.EXISTS_TAC ‘real y’ >> REFL_TAC) \\
+     simp [Abbr ‘M’, Abbr ‘N’] \\
+     qabbrev_tac ‘g = Normal o h’ \\
+     Know ‘g IN Borel_measurable Borel’
+     >- (qunabbrev_tac ‘g’ \\
+         MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+         simp [Abbr ‘h’, SIGMA_ALGEBRA_BOREL] \\
+         MATCH_MP_TAC MEASURABLE_COMP \\
+         Q.EXISTS_TAC ‘borel’ >> simp [real_in_borel_measurable]) >> DISCH_TAC \\
+     Know ‘!n. integral (space Borel,subsets Borel,distr p (X n)) g =
+               integral p (g o X n)’
+     >- (Q.X_GEN_TAC ‘n’ \\
+         MATCH_MP_TAC (cj 1 integral_distr) \\
+         fs [prob_space_def, FORALL_AND_THM, SIGMA_ALGEBRA_BOREL] \\
+         fs [random_variable_def, p_space_def, events_def]) >> Rewr' \\
+     Know ‘integral (space Borel,subsets Borel,distr p Y) g = integral p (g o Y)’
+     >- (MATCH_MP_TAC (cj 1 integral_distr) \\
+         fs [prob_space_def, FORALL_AND_THM, SIGMA_ALGEBRA_BOREL] \\
+         fs [random_variable_def, p_space_def, events_def]) >> Rewr' \\
+     simp [Abbr ‘g’])
+ (* stage work (the other direction) *)
+ >> Know ‘f IN measurable Borel borel’
+ >- (REWRITE_TAC [Borel_alt_general, borel_alt_general] \\
+     MATCH_MP_TAC IN_MEASURABLE_CONTINUOUS_MAP >> art [])
+ >> DISCH_TAC
+ >> qabbrev_tac ‘g = Normal o f’
+ >> Know ‘g IN measurable Borel Borel’
+ >- (qunabbrev_tac ‘g’ \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+     simp [SIGMA_ALGEBRA_BOREL])
+ >> DISCH_TAC
+ >> simp [Abbr ‘M’, Abbr ‘N’]
+ >> Know ‘!n. integral (space Borel,subsets Borel,distr p (X n)) g =
+              integral p (g o X n)’
+ >- (Q.X_GEN_TAC ‘n’ \\
+     MATCH_MP_TAC (cj 1 integral_distr) \\
+     fs [prob_space_def, FORALL_AND_THM, SIGMA_ALGEBRA_BOREL] \\
+     fs [random_variable_def, p_space_def, events_def])
+ >> Rewr'
+ >> Know ‘integral (space Borel,subsets Borel,distr p Y) g = integral p (g o Y)’
+ >- (MATCH_MP_TAC (cj 1 integral_distr) \\
+     fs [prob_space_def, FORALL_AND_THM, SIGMA_ALGEBRA_BOREL] \\
+     fs [random_variable_def, p_space_def, events_def])
+ >> Rewr'
+ >> qabbrev_tac ‘h = f o Normal’
+ >> Q.PAT_X_ASSUM ‘!f. continuous_map (euclidean,euclidean) f /\ _ ==> _’
+      (MP_TAC o Q.SPEC ‘h’)
+ >> Know ‘continuous_map (euclidean,euclidean) h’
+ >- (qunabbrev_tac ‘h’ \\
+     MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE \\
+     Q.EXISTS_TAC ‘ext_euclidean’ >> art [] \\
+     REWRITE_TAC [continuous_map_normal])
+ >> DISCH_TAC
+ >> impl_tac
+ >- (fs [Abbr ‘h’, bounded_def] \\
+     Q.EXISTS_TAC ‘a’ >> Q.X_GEN_TAC ‘x’ \\
+     DISCH_THEN (Q.X_CHOOSE_THEN ‘y’ STRIP_ASSUME_TAC) \\
+     FIRST_X_ASSUM MATCH_MP_TAC >> art [] \\
+     Q.EXISTS_TAC ‘Normal y’ >> REFL_TAC)
+ >> qunabbrev_tac ‘g’
+ >> qabbrev_tac ‘g = Normal o h’
+ >> Know ‘g IN measurable borel Borel’
+ >- (qunabbrev_tac ‘g’ \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+     simp [Abbr ‘h’, sigma_algebra_borel] \\
+     MATCH_MP_TAC MEASURABLE_COMP \\
+     Q.EXISTS_TAC ‘Borel’ >> art [] \\
+     REWRITE_TAC [IN_MEASURABLE_BOREL_NORMAL])
+ >> DISCH_TAC
+ >> Know ‘!n. integral (space borel,subsets borel,distr p (X' n)) g =
+              integral p (g o X' n)’
+ >- (Q.X_GEN_TAC ‘n’ \\
+     MATCH_MP_TAC (cj 1 integral_distr) \\
+     fs [Abbr ‘X'’, prob_space_def, FORALL_AND_THM, sigma_algebra_borel] \\
+     MATCH_MP_TAC in_borel_measurable_from_Borel \\
+     fs [measure_space_def, random_variable_def, p_space_def, events_def])
+ >> Rewr'
+ >> Know ‘integral (space borel,subsets borel,distr p Y') g = integral p (g o Y')’
+ >- (MATCH_MP_TAC (cj 1 integral_distr) \\
+     fs [Abbr ‘Y'’, prob_space_def, FORALL_AND_THM, sigma_algebra_borel] \\
+     MATCH_MP_TAC in_borel_measurable_from_Borel \\
+     fs [measure_space_def, random_variable_def, p_space_def, events_def])
+ >> Rewr'
+ >> simp [Abbr ‘g’, Abbr ‘X'’, Abbr ‘Y'’, Abbr ‘h’]
+ (* stage work *)
+ >> Know ‘!n. integral p (Normal o f o Normal o real o X n) =
+              integral p (Normal o f o X n)’
+ >- (Q.X_GEN_TAC ‘n’ \\
+     MATCH_MP_TAC integral_cong \\
+     CONJ_ASM1_TAC >- fs [prob_space_def] \\
+     rw [o_DEF, GSYM p_space_def] \\
+     AP_TERM_TAC \\
+     MATCH_MP_TAC normal_real >> simp [])
+ >> Rewr'
+ >> Know ‘integral p (Normal o f o Normal o real o Y) = integral p (Normal o f o Y)’
+ >- (MATCH_MP_TAC integral_cong \\
+     CONJ_ASM1_TAC >- fs [prob_space_def] \\
+     rw [o_DEF, GSYM p_space_def] \\
+     AP_TERM_TAC \\
+     MATCH_MP_TAC normal_real >> simp [])
+ >> Rewr
+QED
+
+Theorem converge_in_dist_alt_real_weak_converge :
+    !p X Y. prob_space p /\ (!n. real_random_variable (X n) p) /\
+            real_random_variable Y p ==>
+           ((X --> Y) (in_distribution p) <=>
+            (\n. distribution p (real o X n)) --> distribution p (real o Y))
+Proof
+    RW_TAC std_ss [converge_in_dist_alt_real_weak_converge_lemma]
+ >> MATCH_MP_TAC real_weak_converge_cong
+ >> fs [real_random_variable_def, FORALL_AND_THM]
+ >> Know ‘!n. prob_space (space Borel,subsets Borel,distribution p (X n))’
+ >- (Q.X_GEN_TAC ‘n’ \\
+     MATCH_MP_TAC distribution_prob_space >> rw [SIGMA_ALGEBRA_BOREL])
+ >> DISCH_TAC
+ >> Know ‘prob_space (space Borel,subsets Borel,distribution p Y)’
+ >- (MATCH_MP_TAC distribution_prob_space >> rw [SIGMA_ALGEBRA_BOREL])
+ >> DISCH_TAC
+ >> qabbrev_tac ‘M = \n. space Borel,subsets Borel,distribution p (X n)’
+ >> qabbrev_tac ‘N = (space Borel,subsets Borel,distribution p Y)’
+ >> qabbrev_tac ‘M' = \n. (space borel,subsets borel,
+                           distribution p (X n) o IMAGE Normal)’
+ >> qabbrev_tac ‘N' = (space borel,subsets borel,
+                       distribution p Y o IMAGE Normal)’
+ >> fs []
+ >> Know ‘!n. prob_space (M' n)’
+ >- (rw [Abbr ‘M'’] \\
+     MATCH_MP_TAC prob_space_normal >> simp [] \\
+     simp [distribution_def, PREIMAGE_def] \\
+     Know ‘{x | X n x = PosInf} INTER p_space p = {}’
+     >- (rw [Once EXTENSION, NOT_IN_EMPTY] >> PROVE_TAC []) >> Rewr' \\
+     Know ‘{x | X n x = NegInf} INTER p_space p = {}’
+     >- (rw [Once EXTENSION, NOT_IN_EMPTY] >> PROVE_TAC []) >> Rewr \\
+     simp [PROB_EMPTY])
+ >> DISCH_TAC
+ >> Know ‘prob_space N'’
+ >- (qunabbrev_tac ‘N'’ \\
+     MATCH_MP_TAC prob_space_normal >> simp [] \\
+     simp [distribution_def, PREIMAGE_def] \\
+     Know ‘{x | Y x = PosInf} INTER p_space p = {}’
+     >- (rw [Once EXTENSION, NOT_IN_EMPTY] >> PROVE_TAC []) >> Rewr' \\
+     Know ‘{x | Y x = NegInf} INTER p_space p = {}’
+     >- (rw [Once EXTENSION, NOT_IN_EMPTY] >> PROVE_TAC []) >> Rewr \\
+     simp [PROB_EMPTY])
+ >> DISCH_TAC
+ >> CONJ_TAC >- fs [prob_space_def]
+ >> CONJ_TAC >- fs [prob_space_def]
+ >> CONJ_TAC
+ >- (rw [o_DEF, distribution_def, PREIMAGE_def] \\
+     Suff ‘{x | ?x'. X n x = Normal x' /\ x' IN s} INTER p_space p =
+           {x | real (X n x) IN s} INTER p_space p’ >- rw [] \\
+     rw [Once EXTENSION] \\
+     Cases_on ‘x IN p_space p’ >> simp [] \\
+    ‘?r. X n x = Normal r’ by METIS_TAC [extreal_cases] \\
+     simp [])
+ >> rw [o_DEF, distribution_def, PREIMAGE_def]
+ >> Suff ‘{x | ?x'. Y x = Normal x' /\ x' IN s} INTER p_space p =
+          {x | real (Y x) IN s} INTER p_space p’ >- rw []
+ >> rw [Once EXTENSION]
+ >> Cases_on ‘x IN p_space p’ >> simp []
+ >> ‘?r. Y x = Normal r’ by METIS_TAC [extreal_cases]
+ >> simp []
+QED
+
+(* |- !X Y.
+        (!n. prob_space (space borel,subsets borel,X n)) /\
+        prob_space (space borel,subsets borel,Y) ==>
+        (X --> Y <=>
+         !f. f IN BL mr1 ==>
+             ((\n. integral (space borel,subsets borel,X n) (Normal o f)) -->
+              integral (space borel,subsets borel,Y) (Normal o f))
+               sequentially)
+ *)
+Theorem real_weak_converge_alt_Lipschitz_lemma[local] =
+        weak_converge_in_topology_alt_Lipschitz
+     |> ISPEC “mr1”
+     |> REWRITE_RULE [GSYM euclidean_def, GSYM borel_alt_general]
+     |> REWRITE_RULE [GSYM real_weak_converge]
+
+(* cf. converge_in_dist_alt_continuous_on *)
+Theorem converge_in_dist_alt_Lipschitz_real :
+    !X Y p. prob_space p /\ (!n. real_random_variable (X n) p) /\
+            real_random_variable Y p ==>
+           ((X --> Y) (in_distribution p) <=>
+             !f. f IN BL mr1 ==>
+                ((\n. expectation p (Normal o f o real o X n)) -->
+                 expectation p (Normal o f o real o Y)) sequentially)
+Proof
+    RW_TAC std_ss [converge_in_dist_alt_real_weak_converge]
+ >> qabbrev_tac ‘X' = \n. distribution p (real o X n)’
+ >> qabbrev_tac ‘Y' = distribution p (real o Y)’
+ >> Know ‘!n. prob_space (space borel,subsets borel,X' n)’
+ >- (rw [Abbr ‘X'’] \\
+     MATCH_MP_TAC distribution_prob_space \\
+     rw [random_variable_def, sigma_algebra_borel] \\
+     MATCH_MP_TAC in_borel_measurable_from_Borel \\
+     fs [prob_space_def, real_random_variable] \\
+     fs [measure_space_def, p_space_def, events_def])
+ >> DISCH_TAC
+ >> Know ‘prob_space (space borel,subsets borel,Y')’
+ >- (rw [Abbr ‘Y'’] \\
+     MATCH_MP_TAC distribution_prob_space \\
+     rw [random_variable_def, sigma_algebra_borel] \\
+     MATCH_MP_TAC in_borel_measurable_from_Borel \\
+     fs [prob_space_def, real_random_variable] \\
+     fs [measure_space_def, p_space_def, events_def])
+ >> DISCH_TAC
+ >> RW_TAC std_ss [real_weak_converge_alt_Lipschitz_lemma]
+ >> simp [expectation_def, Abbr ‘X'’, Abbr ‘Y'’, distribution_distr]
+ >> EQ_TAC >> rw [BL_alt]
+ >- (Q.PAT_X_ASSUM ‘!f. bounded (IMAGE f univ(:real)) /\ _ ==> _’
+       (MP_TAC o Q.SPEC ‘f’) >> simp [] \\
+     qabbrev_tac ‘g = Normal o f’ \\
+     Know ‘g IN Borel_measurable borel’
+     >- (qunabbrev_tac ‘g’ \\
+         MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+         REWRITE_TAC [sigma_algebra_borel] \\
+         REWRITE_TAC [borel_alt_general] \\
+         MATCH_MP_TAC IN_MEASURABLE_CONTINUOUS_MAP \\
+         REWRITE_TAC [euclidean_def] \\
+         MATCH_MP_TAC Lipschitz_continuous_map_imp_continuous_map >> art []) \\
+     DISCH_TAC \\
+     Know ‘!n. integral (space borel,subsets borel,distr p (real o X n)) g =
+               integral p (g o (real o X n))’
+     >- (Q.X_GEN_TAC ‘n’ \\
+         MATCH_MP_TAC (cj 1 integral_distr) \\
+         fs [prob_space_def, sigma_algebra_borel] \\
+         MATCH_MP_TAC in_borel_measurable_from_Borel \\
+         fs [measure_space_def, real_random_variable, p_space_def, events_def,
+             FORALL_AND_THM]) >> Rewr' \\
+     Know ‘integral (space borel,subsets borel,distr p (real o Y)) g =
+           integral p (g o (real o Y))’
+     >- (MATCH_MP_TAC (cj 1 integral_distr) \\
+         fs [prob_space_def, sigma_algebra_borel] \\
+         MATCH_MP_TAC in_borel_measurable_from_Borel \\
+         fs [measure_space_def, real_random_variable, p_space_def, events_def,
+             FORALL_AND_THM]) >> Rewr' \\
+     simp [Abbr ‘g’])
+ (* stage work *)
+ >> Q.PAT_X_ASSUM ‘!f. bounded (IMAGE f univ(:real)) /\ _ ==> _’
+       (MP_TAC o Q.SPEC ‘f’) >> simp []
+ >> qabbrev_tac ‘g = Normal o f’
+ >> Know ‘g IN Borel_measurable borel’
+ >- (qunabbrev_tac ‘g’ \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+     REWRITE_TAC [sigma_algebra_borel] \\
+     REWRITE_TAC [borel_alt_general] \\
+     MATCH_MP_TAC IN_MEASURABLE_CONTINUOUS_MAP \\
+     REWRITE_TAC [euclidean_def] \\
+     MATCH_MP_TAC Lipschitz_continuous_map_imp_continuous_map >> art [])
+ >> DISCH_TAC
+ >> Know ‘!n. integral (space borel,subsets borel,distr p (real o X n)) g =
+              integral p (g o (real o X n))’
+ >- (Q.X_GEN_TAC ‘n’ \\
+     MATCH_MP_TAC (cj 1 integral_distr) \\
+     fs [prob_space_def, sigma_algebra_borel] \\
+     MATCH_MP_TAC in_borel_measurable_from_Borel \\
+     fs [measure_space_def, real_random_variable, p_space_def, events_def,
+         FORALL_AND_THM])
+ >> Rewr'
+ >> Know ‘integral (space borel,subsets borel,distr p (real o Y)) g =
+          integral p (g o (real o Y))’
+ >- (MATCH_MP_TAC (cj 1 integral_distr) \\
+     fs [prob_space_def, sigma_algebra_borel] \\
+     MATCH_MP_TAC in_borel_measurable_from_Borel \\
+     fs [measure_space_def, real_random_variable, p_space_def, events_def,
+         FORALL_AND_THM])
+ >> Rewr'
+ >> simp [Abbr ‘g’]
+QED
+
 val _ = html_theory "distribution";
 
 (* References:
@@ -4816,4 +5489,6 @@ val _ = html_theory "distribution";
   [6] math.stackexchange.com:
       https://math.stackexchange.com/questions/1400327/existence-of-a-random-variable
   [7] Resnick, S.: A Probability Path. Springer (2019).
+  [8] Klenke, A.: Probability Theory: A Comprehensive Course. Third Edition.
+      Springer Science & Business Media, London (2020).
  *)

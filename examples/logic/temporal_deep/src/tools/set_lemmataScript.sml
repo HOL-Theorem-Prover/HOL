@@ -1,12 +1,13 @@
-open HolKernel Parse boolLib bossLib
+Theory set_lemmata
+Ancestors
+  pred_set
+Libs
+  Sanity
 
 (*
 quietdec := true;
 map load ["pred_setTheory"];
 *)
-
-open pred_setTheory;
-open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
@@ -20,7 +21,6 @@ quietdec := false;
 *)
 
 
-val _ = new_theory "set_lemmata";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -374,4 +374,3 @@ val SUBSET_POW_IFF =
    PROVE_TAC[]);
 
 
-val _ = export_theory();

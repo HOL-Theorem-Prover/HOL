@@ -1,9 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open core_decompilerLib
-open arm_core_decompLib
-
-val () = new_theory "arm_decomp_demo";
+Theory arm_decomp_demo
+Ancestors
+  words arm_core_decomp
+Libs
+  core_decompilerLib arm_core_decompLib wordsLib
 
 (* the first PID exmaple *)
 
@@ -51,34 +50,38 @@ val _ = save_thm("PID_ADA_cert",PID_ADA_cert);
 
 (* an attempt at proving them equivalent *)
 
-open wordsTheory;
-open wordsLib;
 val _ = (guessing_word_lengths := true);
 
-val word_read_def = Define `
+Definition word_read_def:
   word_read (m:word32 -> word8) a =
-    (m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m (a))`;
+    (m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m (a))
+End
 
-val word_write_def = Define `
+Definition word_write_def:
   word_write (m:word32 -> word8) (a:word32) (w:word32) =
            (a + 3w =+ (31 >< 24) w)
              ((a + 2w =+ (23 >< 16) w)
                 ((a + 1w =+ (15 >< 8) w)
-                   ((a =+ (7 >< 0) w) m)))`;
+                   ((a =+ (7 >< 0) w) m)))
+End
 
-val put_upper_def = Define `
+Definition put_upper_def:
   ((put_upper (w:word32) (d:word64)):word64) =
-     bit_field_insert 63 32 w d`;
+     bit_field_insert 63 32 w d
+End
 
-val put_lower_def = Define `
+Definition put_lower_def:
   ((put_lower (w:word32) (d:word64)):word64) =
-     bit_field_insert 31 0 w d`;
+     bit_field_insert 31 0 w d
+End
 
-val get_upper_def = Define `
-  ((get_upper (d:word64)):word32) = (63 >< 32) d`;
+Definition get_upper_def:
+  ((get_upper (d:word64)):word32) = (63 >< 32) d
+End
 
-val get_lower_def = Define `
-  ((get_lower (d:word64)):word32) = (31 >< 0) d`;
+Definition get_lower_def:
+  ((get_lower (d:word64)):word32) = (31 >< 0) d
+End
 
 val word_write_lower = prove(
   ``((a + 3w =+ (31 >< 24) d7)
@@ -284,5 +287,3 @@ val (PID_C2_cert, PID_C2_def) = core_decompilerLib.core_decompile "PID_C2" `
     e8bd0010             (* pop        {r4}                     *)`;
 
 val _ = save_thm("PID_C2_cert",PID_C2_cert);
-
-val () = export_theory()

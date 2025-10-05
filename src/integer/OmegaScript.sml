@@ -15,37 +15,41 @@ val ARITH_ss = numSimps.ARITH_ss
 
 val FORALL_PROD = pairTheory.FORALL_PROD;
 
-val MAP2_def = Define
-  `(MAP2 pad f [] [] = []) /\
+Definition MAP2_def:
+   (MAP2 pad f [] [] = []) /\
    (MAP2 pad f [] (y::ys) = (f pad y) :: MAP2 pad f [] ys) /\
    (MAP2 pad f (x::xs) [] = (f x pad) :: MAP2 pad f xs []) /\
-   (MAP2 pad f (x::xs) (y::ys) = f x y :: MAP2 pad f xs ys)`;
+   (MAP2 pad f (x::xs) (y::ys) = f x y :: MAP2 pad f xs ys)
+End
 
-val MAP2_zero_ADD = store_thm(
-  "MAP2_zero_ADD",
-  ``!xs. (MAP2 0i $+ [] xs = xs) /\
-         (MAP2 0 $+ xs [] = xs)``,
-  Induct THEN ASM_SIMP_TAC bool_ss [MAP2_def, INT_ADD_LID, INT_ADD_RID]);
+Theorem MAP2_zero_ADD:
+    !xs. (MAP2 0i $+ [] xs = xs) /\
+         (MAP2 0 $+ xs [] = xs)
+Proof
+  Induct THEN ASM_SIMP_TAC bool_ss [MAP2_def, INT_ADD_LID, INT_ADD_RID]
+QED
 
-val sumc_def = Define
-  `(sumc _ [] = 0i) /\
+Definition sumc_def:
+   (sumc _ [] = 0i) /\
    (sumc [] _ = 0) /\
-   (sumc (c::cs) (v::vs) = c * v + sumc cs vs)`;
+   (sumc (c::cs) (v::vs) = c * v + sumc cs vs)
+End
 
 val sumc_ind = DB.fetch "-" "sumc_ind";
 
-val sumc_thm = store_thm(
-  "sumc_thm",
-  ``!cs vs c v.
+Theorem sumc_thm:
+    !cs vs c v.
        (sumc [] vs = 0) /\
        (sumc cs [] = 0) /\
-       (sumc (c::cs) (v::vs) = c * v + sumc cs vs)``,
-  HO_MATCH_MP_TAC sumc_ind THEN SIMP_TAC bool_ss [sumc_def]);
+       (sumc (c::cs) (v::vs) = c * v + sumc cs vs)
+Proof
+  HO_MATCH_MP_TAC sumc_ind THEN SIMP_TAC bool_ss [sumc_def]
+QED
 
-val sumc_ADD = store_thm(
-  "sumc_ADD",
-  ``!cs vs ds. sumc cs vs + sumc ds vs =
-               sumc (MAP2 0 $+ cs ds) vs``,
+Theorem sumc_ADD:
+    !cs vs ds. sumc cs vs + sumc ds vs =
+               sumc (MAP2 0 $+ cs ds) vs
+Proof
   HO_MATCH_MP_TAC sumc_ind THEN REPEAT STRIP_TAC THENL [
     SIMP_TAC bool_ss [sumc_thm, MAP2_def, INT_ADD_LID],
     SIMP_TAC bool_ss [sumc_thm, MAP2_def, INT_ADD_LID,
@@ -55,30 +59,35 @@ val sumc_ADD = store_thm(
                       INT_RDISTRIB] THEN
     POP_ASSUM (fn th => REWRITE_TAC [GSYM th]) THEN
     CONV_TAC (AC_CONV(INT_ADD_ASSOC, INT_ADD_COMM))
-  ]);
+  ]
+QED
 
 val MULT_AC = AC INT_MUL_COMM INT_MUL_ASSOC
 val ADD_AC = AC INT_ADD_COMM INT_ADD_ASSOC
-val sumc_MULT = store_thm(
-  "sumc_MULT",
-  ``!cs vs f. f * sumc cs vs = sumc (MAP (\x. f * x) cs) vs``,
+Theorem sumc_MULT:
+    !cs vs f. f * sumc cs vs = sumc (MAP (\x. f * x) cs) vs
+Proof
   Induct THEN SRW_TAC [][sumc_thm] THEN
   Cases_on `vs` THEN
-  SRW_TAC [][sumc_thm, INT_LDISTRIB, MULT_AC]);
+  SRW_TAC [][sumc_thm, INT_LDISTRIB, MULT_AC]
+QED
 
-val sumc_singleton = store_thm(
-  "sumc_singleton",
-  ``!f (c:int). sumc (MAP f [c]) [1] = f c``,
+Theorem sumc_singleton:
+    !f (c:int). sumc (MAP f [c]) [1] = f c
+Proof
   REWRITE_TAC [INT_ADD_RID, sumc_def, listTheory.MAP,
-               INT_MUL_RID]);
-val sumc_nonsingle = store_thm(
-  "sumc_nonsingle",
-  ``!f cs (c:int) v vs. sumc (MAP f (c::cs)) (v::vs) =
-                  f c * v + sumc (MAP f cs) vs``,
-  REWRITE_TAC [sumc_def, listTheory.MAP])
+               INT_MUL_RID]
+QED
+Theorem sumc_nonsingle:
+    !f cs (c:int) v vs. sumc (MAP f (c::cs)) (v::vs) =
+                  f c * v + sumc (MAP f cs) vs
+Proof
+  REWRITE_TAC [sumc_def, listTheory.MAP]
+QED
 
-val modhat_def = Define
-  `modhat x y = x - y * ((2 * x + y) / (2 * y))`;
+Definition modhat_def:
+   modhat x y = x - y * ((2 * x + y) / (2 * y))
+End
 
 val MAP_MAP = prove(
   ``!l f g. MAP f (MAP g l) = MAP (f o g) l``,
@@ -153,23 +162,26 @@ val equality_removal0 = prove(
     PROVE_TAC [INT_DIVIDES_LADD, INT_DIVIDES_MUL] THEN
   PROVE_TAC [INT_DIVIDES, INT_MUL_COMM, INT_DIVIDES_NEG, INT_NEG_LMUL]);
 
-val equality_removal = store_thm(
-  "equality_removal",
-  ``!c x cs vs.
+Theorem equality_removal:
+    !c x cs vs.
        0 < c ==>
        ((0 = c * x + sumc cs vs) =
         ?s. (x = ~(c + 1) * s + sumc (MAP (\x. modhat x (c + 1)) cs) vs) /\
-            (0 = c * x + sumc cs vs))``,
+            (0 = c * x + sumc cs vs))
+Proof
   REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THEN SRW_TAC [][] THEN
-  MATCH_MP_TAC equality_removal0 THEN SRW_TAC [][]);
+  MATCH_MP_TAC equality_removal0 THEN SRW_TAC [][]
+QED
 
 val _ = print "Proving eliminability of quantifiers\n"
-val evalupper_def = Define
-  `(evalupper (x:int) [] = T) /\
-   (evalupper x ((c,y) :: cs) = &c * x <= y /\ evalupper x cs)`
-val evallower_def = Define
-  `(evallower (x:int) [] = T) /\
-   (evallower x ((c,y) :: cs) = y <= &c * x /\ evallower x cs)`
+Definition evalupper_def:
+   (evalupper (x:int) [] = T) /\
+   (evalupper x ((c,y) :: cs) = &c * x <= y /\ evalupper x cs)
+End
+Definition evallower_def:
+   (evallower (x:int) [] = T) /\
+   (evallower x ((c,y) :: cs) = y <= &c * x /\ evallower x cs)
+End
 
 val lt_mono = prove(
   ``!n (x:int) y. 0 < n ==> (&n * x < & n * y = x < y)``,
@@ -224,24 +236,26 @@ val div_le = prove(
     SRW_TAC [][ile_mono, MULT_AC]
   ]);
 
-val smaller_satisfies_uppers = store_thm(
-  "smaller_satisfies_uppers",
-  ``!uppers x y. evalupper x uppers /\ y < x ==> evalupper y uppers``,
+Theorem smaller_satisfies_uppers:
+    !uppers x y. evalupper x uppers /\ y < x ==> evalupper y uppers
+Proof
   Induct THEN ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, evalupper_def] THEN
   REVERSE (REPEAT STRIP_TAC) THEN1 PROVE_TAC [] THEN
   `(p_1 = 0) \/ 0 < p_1` by SRW_TAC [ARITH_ss][] THEN1
      (POP_ASSUM SUBST_ALL_TAC THEN FULL_SIMP_TAC (srw_ss())[]) THEN
-  PROVE_TAC [INT_LET_TRANS, lt_mono, INT_LE_LT]);
+  PROVE_TAC [INT_LET_TRANS, lt_mono, INT_LE_LT]
+QED
 
-val bigger_satisfies_lowers = store_thm(
-  "bigger_satisfies_lowers",
-  ``!lowers x y. evallower x lowers /\ x < y ==> evallower y lowers``,
+Theorem bigger_satisfies_lowers:
+    !lowers x y. evallower x lowers /\ x < y ==> evallower y lowers
+Proof
   Induct THEN SRW_TAC [][evallower_def] THEN
   Cases_on `h` THEN FULL_SIMP_TAC (srw_ss()) [evallower_def] THEN
   Q_TAC SUFF_TAC `r <= &q * y` THEN1 PROVE_TAC [] THEN
   `(q = 0) \/ 0 < q` by SRW_TAC [ARITH_ss][]
      THEN1 FULL_SIMP_TAC (srw_ss())[] THEN
-  PROVE_TAC [INT_LET_TRANS, lt_mono, INT_LE_LT]);
+  PROVE_TAC [INT_LET_TRANS, lt_mono, INT_LE_LT]
+QED
 
 val LE_SIGN_CASES = prove(
   ``!x y:int. 0 <= x * y   =   0 <= x /\ 0 <= y \/ x <= 0 /\ y <= 0``,
@@ -268,14 +282,16 @@ val M_LE_XM = prove(
   EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [] THEN
   FULL_SIMP_TAC (srw_ss()) [LE_LT1]);
 
-val fst_nzero_def = Define `fst_nzero x = 0n < FST x`
-val fst1_def = Define`fst1 x = (FST x = 1n)`
+Definition fst_nzero_def:   fst_nzero x = 0n < FST x
+End
+Definition fst1_def:  fst1 x = (FST x = 1n)
+End
 
 val _ = augment_srw_ss [rewrites [fst1_def, fst_nzero_def]]
 
-val onlylowers_satisfiable = store_thm(
-  "onlylowers_satisfiable",
-  ``!lowers. EVERY fst_nzero lowers ==> ?x. evallower x lowers``,
+Theorem onlylowers_satisfiable:
+    !lowers. EVERY fst_nzero lowers ==> ?x. evallower x lowers
+Proof
   Induct THEN SRW_TAC [][evallower_def] THEN
   Cases_on `h` THEN
   FULL_SIMP_TAC (srw_ss()) [evallower_def] THEN
@@ -294,29 +310,33 @@ val onlylowers_satisfiable = store_thm(
     `&q * (rdivq + 1) <= &q * x` by PROVE_TAC [le_mono] THEN
     POP_ASSUM MP_TAC THEN
     SIMP_TAC (srw_ss() ++ ARITH_ss) [INT_LDISTRIB, INT_MUL_COMM]
-  ]);
+  ]
+QED
 
-val onlyuppers_satisfiable = store_thm(
-  "onlyuppers_satisfiable",
-  ``!uppers. EVERY fst_nzero uppers ==> ?x. evalupper x uppers``,
+Theorem onlyuppers_satisfiable:
+    !uppers. EVERY fst_nzero uppers ==> ?x. evalupper x uppers
+Proof
   Induct THEN ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, evalupper_def] THEN
   CONV_TAC (RENAME_VARS_CONV ["c", "L"]) THEN REPEAT STRIP_TAC THEN
   `?y. evalupper y uppers` by PROVE_TAC [] THEN
   ASM_SIMP_TAC (srw_ss()) [div_le] THEN
   Q.EXISTS_TAC `if y < L / &c then y else L / &c` THEN COND_CASES_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [INT_NOT_LT, INT_LE_LT] THEN
-  PROVE_TAC [smaller_satisfies_uppers]);
+  PROVE_TAC [smaller_satisfies_uppers]
+QED
 
-val rshadow_row_def = Define
-  `(rshadow_row (upperc, (uppery:int)) [] = T) /\
+Definition rshadow_row_def:
+   (rshadow_row (upperc, (uppery:int)) [] = T) /\
    (rshadow_row (upperc, uppery) ((lowerc, lowery) :: rs) =
       (&upperc * lowery <= &lowerc * uppery) /\
-      rshadow_row (upperc, uppery) rs)`;
+      rshadow_row (upperc, uppery) rs)
+End
 
-val real_shadow_def = Define
-  `(real_shadow [] lowers = T) /\
+Definition real_shadow_def:
+   (real_shadow [] lowers = T) /\
    (real_shadow (upper::ls) lowers =
-      rshadow_row upper lowers /\ real_shadow ls lowers)`;
+      rshadow_row upper lowers /\ real_shadow ls lowers)
+End
 
 val rshadow_row_FOLDL = prove(
   ``!lowers lc ly.
@@ -328,13 +348,13 @@ val rshadow_row_FOLDL = prove(
   Induct THEN SIMP_TAC (srw_ss())[rshadow_row_def, FORALL_PROD] THEN
   POP_ASSUM (fn th => REWRITE_TAC [GSYM th]) THEN PROVE_TAC []);
 
-val singleton_real_shadow = store_thm(
-  "singleton_real_shadow",
-  ``!c L x.
+Theorem singleton_real_shadow:
+    !c L x.
        &c * x <= L /\ 0 < c ==>
        !lowers.
           EVERY fst_nzero lowers /\ evallower x lowers ==>
-          rshadow_row (c,L) lowers``,
+          rshadow_row (c,L) lowers
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Induct THEN ASM_SIMP_TAC (srw_ss()) [evallower_def, rshadow_row_def,
                                        FORALL_PROD] THEN
@@ -343,15 +363,16 @@ val singleton_real_shadow = store_thm(
   `&c * ry <= &c * (&rc * x)` by PROVE_TAC [le_mono] THEN
   `&rc * (&c * x) <= &rc * L` by PROVE_TAC [le_mono] THEN
   `&c * (&rc * x) <= &rc * L` by PROVE_TAC [INT_MUL_COMM, INT_MUL_ASSOC] THEN
-  PROVE_TAC [INT_LE_TRANS]);
+  PROVE_TAC [INT_LE_TRANS]
+QED
 
-val real_shadow_revimp_uppers1 = store_thm(
-  "real_shadow_revimp_uppers1",
-  ``!uppers lowers L x.
+Theorem real_shadow_revimp_uppers1:
+    !uppers lowers L x.
         rshadow_row (1, L) lowers /\ evallower x lowers /\
         evalupper x uppers /\ EVERY fst_nzero lowers /\
         EVERY fst1 uppers ==>
-        ?x. x <= L /\ evalupper x uppers /\ evallower x lowers``,
+        ?x. x <= L /\ evalupper x uppers /\ evallower x lowers
+Proof
   Induct THENL [
     SIMP_TAC (srw_ss())[evalupper_def] THEN
     Induct THENL [
@@ -368,15 +389,16 @@ val real_shadow_revimp_uppers1 = store_thm(
       PROVE_TAC [INT_LTE_TRANS, INT_LE_LT],
       PROVE_TAC [INT_NOT_LT, INT_LE_TRANS]
     ]
-  ]);
+  ]
+QED
 
-val real_shadow_revimp_lowers1 = store_thm(
-  "real_shadow_revimp_lowers1",
-  ``!uppers lowers c L x.
+Theorem real_shadow_revimp_lowers1:
+    !uppers lowers c L x.
        0 < c /\ rshadow_row (c, L) lowers /\ evalupper x uppers /\
        evallower x lowers /\ EVERY fst_nzero uppers /\
        EVERY fst1 lowers ==>
-       ?x. &c * x <= L /\ evalupper x uppers /\ evallower x lowers``,
+       ?x. &c * x <= L /\ evalupper x uppers /\ evallower x lowers
+Proof
   Induct THENL [
     SIMP_TAC (srw_ss())[evalupper_def] THEN
     Induct THENL [
@@ -410,33 +432,35 @@ val real_shadow_revimp_lowers1 = store_thm(
       `&c1 * y <= &c1 * x` by PROVE_TAC [le_mono, INT_NOT_LT] THEN
       PROVE_TAC [INT_LE_TRANS]
     ]
-  ]);
+  ]
+QED
 
 val lemma =
     SIMP_RULE bool_ss [AND_IMP_INTRO, GSYM RIGHT_FORALL_IMP_THM]
               singleton_real_shadow
 
-val real_shadow_always_implied = store_thm(
-  "real_shadow_always_implied",
-  ``!uppers lowers x.
+Theorem real_shadow_always_implied:
+    !uppers lowers x.
         evalupper x uppers /\ evallower x lowers /\
         EVERY fst_nzero uppers /\ EVERY fst_nzero lowers ==>
-        real_shadow uppers lowers``,
+        real_shadow uppers lowers
+Proof
   Induct THEN ASM_SIMP_TAC (srw_ss())[evalupper_def, real_shadow_def,
                                       FORALL_PROD] THEN
-  PROVE_TAC [lemma]);
+  PROVE_TAC [lemma]
+QED
 
 val IMP_AND_THM =
     tautLib.TAUT_PROVE ``!p q r. p ==> q /\ r = (p ==> q) /\ (p ==> r)``
 
 val _ = print "Proving exact shadow case\n"
-val exact_shadow_case = store_thm(
-  "exact_shadow_case",
-  ``!uppers lowers.
+Theorem exact_shadow_case:
+    !uppers lowers.
       EVERY fst_nzero uppers /\ EVERY fst_nzero lowers ==>
       (EVERY fst1 uppers \/ EVERY fst1 lowers) ==>
       ((?x. evalupper x uppers /\ evallower x lowers) =
-       real_shadow uppers lowers)``,
+       real_shadow uppers lowers)
+Proof
   SIMP_TAC (srw_ss()) [EQ_IMP_THM, IMP_AND_THM, FORALL_AND_THM] THEN
   REPEAT CONJ_TAC THENL [
     PROVE_TAC [real_shadow_always_implied],
@@ -464,19 +488,22 @@ val exact_shadow_case = store_thm(
         PROVE_TAC [real_shadow_revimp_lowers1]
       ]
     ]
-  ]);
+  ]
+QED
 
-val dark_shadow_cond_row_def =
-  Define`(dark_shadow_cond_row (c,L:int) [] = T) /\
+Definition dark_shadow_cond_row_def:
+  (dark_shadow_cond_row (c,L:int) [] = T) /\
          (dark_shadow_cond_row (c,L) ((d,R)::t) =
               ~(?i. &c * &d * i < &c * R /\ &c * R <= &d * L /\
-                    &d * L < &c * &d * (i + 1)) /\ dark_shadow_cond_row (c,L) t)`;
+                    &d * L < &c * &d * (i + 1)) /\ dark_shadow_cond_row (c,L) t)
+End
 
-val dark_shadow_condition_def =
-  Define`(dark_shadow_condition [] lowers = T) /\
+Definition dark_shadow_condition_def:
+  (dark_shadow_condition [] lowers = T) /\
          (dark_shadow_condition ((c,L)::uppers) lowers =
             dark_shadow_cond_row (c,L) lowers /\
-            dark_shadow_condition uppers lowers)`;
+            dark_shadow_condition uppers lowers)
+End
 
 val constraint_mid_existence = prove(
   ``!x i j.  0 < x ==>
@@ -623,27 +650,30 @@ val real_darkcond_implies_evals = prove(
   ]);
 
 
-val basic_shadow_equivalence = store_thm(
-  "basic_shadow_equivalence",
-  ``!uppers lowers.
+Theorem basic_shadow_equivalence:
+    !uppers lowers.
        EVERY fst_nzero uppers /\ EVERY fst_nzero lowers ==>
        ((?x. evalupper x uppers /\ evallower x lowers) =
-        real_shadow uppers lowers /\ dark_shadow_condition uppers lowers)``,
+        real_shadow uppers lowers /\ dark_shadow_condition uppers lowers)
+Proof
   REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
     CONJ_TAC THEN1
       (MATCH_MP_TAC real_shadow_always_implied THEN PROVE_TAC []) THEN
     PROVE_TAC [dark_shadow_constraint_implied],
     PROVE_TAC [real_darkcond_implies_evals]
-  ]);
+  ]
+QED
 
-val dark_shadow_row_def = Define
-  `(dark_shadow_row c L [] = T) /\
+Definition dark_shadow_row_def:
+   (dark_shadow_row c L [] = T) /\
    (dark_shadow_row c (L:int) ((d,R)::rs) =
-      &d * L - &c * R >= (&c - 1) * (&d - 1) /\ dark_shadow_row c L rs)`;
-val dark_shadow_def = Define
-  `(dark_shadow [] lowers = T) /\
+      &d * L - &c * R >= (&c - 1) * (&d - 1) /\ dark_shadow_row c L rs)
+End
+Definition dark_shadow_def:
+   (dark_shadow [] lowers = T) /\
    (dark_shadow ((c,L)::uppers) lowers =
-      dark_shadow_row c L lowers /\ dark_shadow uppers lowers)`;
+      dark_shadow_row c L lowers /\ dark_shadow uppers lowers)
+End
 
 val move_subs_out = prove(
   ``!x:int y z. (x - y + z = x + z - y) /\ (x - y - z = x - (y + z)) /\
@@ -843,28 +873,30 @@ val div_lemma = prove(
   SRW_TAC [][div_lemma0]);
 
 val _ = print "Now proving properties of nightmare function\n"
-val nightmare_def = Define
-  `(nightmare x c uppers lowers [] = F) /\
+Definition nightmare_def:
+   (nightmare x c uppers lowers [] = F) /\
    (nightmare x c uppers lowers ((d,R)::rs) =
       (?i. (0 <= i /\ i <= (&c * &d - &c - &d) / &c) /\ (&d * x = R + i) /\
            evalupper x uppers /\ evallower x lowers) \/
-      nightmare x c uppers lowers rs)`;
+      nightmare x c uppers lowers rs)
+End
 
-val nightmare_implies_LHS = store_thm(
-  "nightmare_implies_LHS",
-  ``!rs x uppers lowers c.
+Theorem nightmare_implies_LHS:
+    !rs x uppers lowers c.
        nightmare x c uppers lowers rs ==>
-       evalupper x uppers /\ evallower x lowers``,
+       evalupper x uppers /\ evallower x lowers
+Proof
   Induct THEN1 SRW_TAC [][nightmare_def] THEN
   ASM_SIMP_TAC (srw_ss()) [nightmare_def, FORALL_PROD] THEN
-  PROVE_TAC []);
+  PROVE_TAC []
+QED
 
-val dark_shadow_FORALL = store_thm(
-  "dark_shadow_FORALL",
-  ``!uppers lowers.
+Theorem dark_shadow_FORALL:
+    !uppers lowers.
        dark_shadow uppers lowers =
        !c d L R. MEM (c,L) uppers /\ MEM (d,R) lowers ==>
-                 &d * L - &c * R >= (&c - 1) * (&d - 1)``,
+                 &d * L - &c * R >= (&c - 1) * (&d - 1)
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
     Induct_on `uppers` THEN1 SRW_TAC [][] THEN
     ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, dark_shadow_def] THEN
@@ -881,13 +913,14 @@ val dark_shadow_FORALL = store_thm(
     POP_ASSUM (K ALL_TAC) THEN
     Induct_on `lowers` THEN
     ASM_SIMP_TAC (srw_ss())[dark_shadow_row_def, FORALL_PROD]
-  ]);
+  ]
+QED
 
-val real_shadow_FORALL = store_thm(
-  "real_shadow_FORALL",
-  ``!uppers lowers.
+Theorem real_shadow_FORALL:
+    !uppers lowers.
        real_shadow uppers lowers =
-       !c d L R. MEM (c,L) uppers /\ MEM (d,R) lowers ==> &c * R <= &d * L``,
+       !c d L R. MEM (c,L) uppers /\ MEM (d,R) lowers ==> &c * R <= &d * L
+Proof
   Induct THEN
   ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, real_shadow_def] THEN
   POP_ASSUM (K ALL_TAC) THEN REPEAT STRIP_TAC THEN EQ_TAC THEN
@@ -896,44 +929,48 @@ val real_shadow_FORALL = store_thm(
                             FORALL_AND_THM] THEN
   POP_ASSUM (K ALL_TAC) THEN Induct_on `lowers` THEN
   ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, rshadow_row_def,
-                           DISJ_IMP_THM, FORALL_AND_THM]);
+                           DISJ_IMP_THM, FORALL_AND_THM]
+QED
 
-val evalupper_FORALL = store_thm(
-  "evalupper_FORALL",
-  ``!uppers x. evalupper x uppers = !c L. MEM (c,L) uppers ==> &c * x <= L``,
+Theorem evalupper_FORALL:
+    !uppers x. evalupper x uppers = !c L. MEM (c,L) uppers ==> &c * x <= L
+Proof
   Induct THEN
   ASM_SIMP_TAC (srw_ss())[evalupper_def, FORALL_PROD, DISJ_IMP_THM,
-                          FORALL_AND_THM]);
+                          FORALL_AND_THM]
+QED
 
-val evallower_FORALL = store_thm(
-  "evallower_FORALL",
-  ``!lowers x. evallower x lowers = !d R. MEM (d,R) lowers ==> R <= &d * x``,
+Theorem evallower_FORALL:
+    !lowers x. evallower x lowers = !d R. MEM (d,R) lowers ==> R <= &d * x
+Proof
   Induct THEN
   ASM_SIMP_TAC (srw_ss())[evallower_def, FORALL_PROD, DISJ_IMP_THM,
-                          FORALL_AND_THM]);
+                          FORALL_AND_THM]
+QED
 
-val nightmare_EXISTS = store_thm(
-  "nightmare_EXISTS",
-  ``!rs x c uppers lowers.
+Theorem nightmare_EXISTS:
+    !rs x c uppers lowers.
       nightmare x c uppers lowers rs =
       ?i d R.
          0 <= i /\ i <= (&d * &c - &c - &d) / &c /\ MEM (d,R) rs /\
          evalupper x uppers /\ evallower x lowers /\
-         (&d * x = R + i)``,
+         (&d * x = R + i)
+Proof
   Induct THEN
   ASM_SIMP_TAC (srw_ss()) [nightmare_def, FORALL_PROD] THEN
   POP_ASSUM (K ALL_TAC) THEN REPEAT STRIP_TAC THEN EQ_TAC THEN
-  SRW_TAC [][] THEN PROVE_TAC [arithmeticTheory.MULT_COMM]);
+  SRW_TAC [][] THEN PROVE_TAC [arithmeticTheory.MULT_COMM]
+QED
 
-val final_equivalence = store_thm(
-  "final_equivalence",
-  ``!uppers lowers m.
+Theorem final_equivalence:
+    !uppers lowers m.
        EVERY fst_nzero uppers /\ EVERY fst_nzero lowers /\
        EVERY (\p. FST p <= m) uppers ==>
        ((?x. evalupper x uppers /\ evallower x lowers) =
         real_shadow uppers lowers /\
         (dark_shadow uppers lowers \/
-         ?x. nightmare x m uppers lowers lowers))``,
+         ?x. nightmare x m uppers lowers lowers))
+Proof
   REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
     CONJ_TAC THEN1 PROVE_TAC [basic_shadow_equivalence] THEN
     Q_TAC SUFF_TAC
@@ -973,12 +1010,13 @@ val final_equivalence = store_thm(
     PROVE_TAC [arithmeticTheory.LESS_LESS_EQ_TRANS],
     PROVE_TAC [dark_shadow_implies_dark_condition, basic_shadow_equivalence],
     PROVE_TAC [nightmare_implies_LHS]
-  ]);
+  ]
+QED
 
-val darkrow_implies_realrow = store_thm(
-  "darkrow_implies_realrow",
-  ``!lowers c L. 0 < c /\ EVERY fst_nzero lowers /\
-                 dark_shadow_row c L lowers ==> rshadow_row (c,L) lowers``,
+Theorem darkrow_implies_realrow:
+    !lowers c L. 0 < c /\ EVERY fst_nzero lowers /\
+                 dark_shadow_row c L lowers ==> rshadow_row (c,L) lowers
+Proof
   Induct THEN1 SRW_TAC [][dark_shadow_row_def, rshadow_row_def] THEN
   ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, dark_shadow_row_def, rshadow_row_def,
                            int_ge, INT_LE_SUB_LADD] THEN
@@ -986,97 +1024,111 @@ val darkrow_implies_realrow = store_thm(
   Q_TAC SUFF_TAC `0 <= (&c - 1) * (&p_1 - 1)` THEN1
     PROVE_TAC [INT_LE_TRANS, INT_LE_ADDL] THEN
   MATCH_MP_TAC INT_LE_MUL THEN
-  ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [INT_LE_SUB_LADD]);
+  ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [INT_LE_SUB_LADD]
+QED
 
-val dark_implies_real = store_thm(
-  "dark_implies_real",
-  ``!uppers lowers. EVERY fst_nzero uppers /\ EVERY fst_nzero lowers /\
-                   dark_shadow uppers lowers ==> real_shadow uppers lowers``,
+Theorem dark_implies_real:
+    !uppers lowers. EVERY fst_nzero uppers /\ EVERY fst_nzero lowers /\
+                   dark_shadow uppers lowers ==> real_shadow uppers lowers
+Proof
   Induct THEN
   ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, dark_shadow_def, real_shadow_def,
-                           darkrow_implies_realrow]);
+                           darkrow_implies_realrow]
+QED
 
 (* theorems specially designed for use in the decision procedure *)
 
-val alternative_equivalence = store_thm(
-  "alternative_equivalence",
-  ``!uppers lowers m.
+Theorem alternative_equivalence:
+    !uppers lowers m.
        EVERY fst_nzero uppers /\ EVERY fst_nzero lowers /\
        EVERY (\p. FST p <= m) uppers ==>
        ((?x. evalupper x uppers /\ evallower x lowers) =
-        dark_shadow uppers lowers \/ ?x. nightmare x m uppers lowers lowers)``,
+        dark_shadow uppers lowers \/ ?x. nightmare x m uppers lowers lowers)
+Proof
   REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
     Q.SPECL_THEN [`uppers`, `lowers`, `m`] MP_TAC final_equivalence THEN
     ASM_REWRITE_TAC [] THEN PROVE_TAC [],
     Q.SPECL_THEN [`uppers`, `lowers`, `m`] MP_TAC final_equivalence THEN
     ASM_REWRITE_TAC [] THEN PROVE_TAC [dark_implies_real],
     PROVE_TAC [nightmare_implies_LHS]
-  ]);
+  ]
+QED
 
-val eval_base = store_thm(
-  "eval_base",
-  ``p = ((evalupper x [] /\ evallower x []) /\ T) /\ p``,
-  REWRITE_TAC [evalupper_def, evallower_def]);
+Theorem eval_base:
+    p = ((evalupper x [] /\ evallower x []) /\ T) /\ p
+Proof
+  REWRITE_TAC [evalupper_def, evallower_def]
+QED
 
-val eval_step_upper1 = store_thm(
-  "eval_step_upper1",
-  ``((evalupper x ups /\ evallower x lows) /\ ex) /\ &c * x <= r =
-    (evalupper x ((c,r)::ups) /\ evallower x lows) /\ ex``,
+Theorem eval_step_upper1:
+    ((evalupper x ups /\ evallower x lows) /\ ex) /\ &c * x <= r =
+    (evalupper x ((c,r)::ups) /\ evallower x lows) /\ ex
+Proof
   REWRITE_TAC [evalupper_def, evallower_def] THEN
-  CONV_TAC (AC_CONV (CONJ_ASSOC, CONJ_COMM)));
-val eval_step_upper2 = store_thm(
-  "eval_step_upper2",
-  ``((evalupper x ups /\ evallower x lows) /\ ex) /\ (&c * x <= r /\ p) =
-    ((evalupper x ((c,r)::ups) /\ evallower x lows) /\ ex) /\ p``,
+  CONV_TAC (AC_CONV (CONJ_ASSOC, CONJ_COMM))
+QED
+Theorem eval_step_upper2:
+    ((evalupper x ups /\ evallower x lows) /\ ex) /\ (&c * x <= r /\ p) =
+    ((evalupper x ((c,r)::ups) /\ evallower x lows) /\ ex) /\ p
+Proof
   REWRITE_TAC [evalupper_def, evallower_def] THEN
-  CONV_TAC (AC_CONV (CONJ_ASSOC, CONJ_COMM)));
-val eval_step_lower1 = store_thm(
-  "eval_step_lower1",
-  ``((evalupper x ups /\ evallower x lows) /\ ex) /\ r <= &c * x =
-    (evalupper x ups /\ evallower x ((c,r)::lows)) /\ ex``,
+  CONV_TAC (AC_CONV (CONJ_ASSOC, CONJ_COMM))
+QED
+Theorem eval_step_lower1:
+    ((evalupper x ups /\ evallower x lows) /\ ex) /\ r <= &c * x =
+    (evalupper x ups /\ evallower x ((c,r)::lows)) /\ ex
+Proof
   REWRITE_TAC [evalupper_def, evallower_def] THEN
-  CONV_TAC (AC_CONV (CONJ_ASSOC, CONJ_COMM)));
-val eval_step_lower2 = store_thm(
-  "eval_step_lower2",
-  ``((evalupper x ups /\ evallower x lows) /\ ex) /\ (r <= &c * x /\ p) =
-    ((evalupper x ups /\ evallower x ((c,r)::lows)) /\ ex) /\ p``,
+  CONV_TAC (AC_CONV (CONJ_ASSOC, CONJ_COMM))
+QED
+Theorem eval_step_lower2:
+    ((evalupper x ups /\ evallower x lows) /\ ex) /\ (r <= &c * x /\ p) =
+    ((evalupper x ups /\ evallower x ((c,r)::lows)) /\ ex) /\ p
+Proof
   REWRITE_TAC [evalupper_def, evallower_def] THEN
-  CONV_TAC (AC_CONV (CONJ_ASSOC, CONJ_COMM)));
-val eval_step_extra1 = store_thm(
-  "eval_step_extra1",
-  ``((evalupper x ups /\ evallower x lows) /\ T) /\ ex' =
-    (evalupper x ups /\ evallower x lows) /\ ex'``,
-  REWRITE_TAC [CONJ_ASSOC]);
-val eval_step_extra2 = store_thm(
-  "eval_step_extra2",
-  ``((evalupper x ups /\ evallower x lows) /\ ex) /\ ex' =
-    (evalupper x ups /\ evallower x lows) /\ (ex /\ ex')``,
-  REWRITE_TAC [CONJ_ASSOC]);
-val eval_step_extra3 = store_thm(
-  "eval_step_extra3",
-  ``((evalupper x ups /\ evallower x lows) /\ T) /\ (ex' /\ p) =
-    ((evalupper x ups /\ evallower x lows) /\ ex') /\ p``,
-  REWRITE_TAC [CONJ_ASSOC]);
-val eval_step_extra4 = store_thm(
-  "eval_step_extra4",
-  ``((evalupper x ups /\ evallower x lows) /\ ex) /\ (ex' /\ p) =
-    ((evalupper x ups /\ evallower x lows) /\ (ex /\ ex')) /\ p``,
-  REWRITE_TAC [CONJ_ASSOC]);
+  CONV_TAC (AC_CONV (CONJ_ASSOC, CONJ_COMM))
+QED
+Theorem eval_step_extra1:
+    ((evalupper x ups /\ evallower x lows) /\ T) /\ ex' =
+    (evalupper x ups /\ evallower x lows) /\ ex'
+Proof
+  REWRITE_TAC [CONJ_ASSOC]
+QED
+Theorem eval_step_extra2:
+    ((evalupper x ups /\ evallower x lows) /\ ex) /\ ex' =
+    (evalupper x ups /\ evallower x lows) /\ (ex /\ ex')
+Proof
+  REWRITE_TAC [CONJ_ASSOC]
+QED
+Theorem eval_step_extra3:
+    ((evalupper x ups /\ evallower x lows) /\ T) /\ (ex' /\ p) =
+    ((evalupper x ups /\ evallower x lows) /\ ex') /\ p
+Proof
+  REWRITE_TAC [CONJ_ASSOC]
+QED
+Theorem eval_step_extra4:
+    ((evalupper x ups /\ evallower x lows) /\ ex) /\ (ex' /\ p) =
+    ((evalupper x ups /\ evallower x lows) /\ (ex /\ ex')) /\ p
+Proof
+  REWRITE_TAC [CONJ_ASSOC]
+QED
 
-val calc_nightmare_def =
-    Define`(calc_nightmare x c [] = F) /\
+Definition calc_nightmare_def:
+    (calc_nightmare x c [] = F) /\
            (calc_nightmare x c ((d,R)::rs) =
                 (?i. (0 <= i /\ i <= (&c * &d - &c - &d) / &c) /\
                      (&d * x = R + i)) \/
-                calc_nightmare x c rs)`;
+                calc_nightmare x c rs)
+End
 
-val calculational_nightmare = store_thm(
-  "calculational_nightmare",
-  ``!rs. nightmare x c uppers lowers rs =
-         calc_nightmare x c rs /\ evalupper x uppers /\ evallower x lowers``,
+Theorem calculational_nightmare:
+    !rs. nightmare x c uppers lowers rs =
+         calc_nightmare x c rs /\ evalupper x uppers /\ evallower x lowers
+Proof
   Induct THEN SRW_TAC [][nightmare_def, calc_nightmare_def] THEN
   Cases_on `h` THEN SRW_TAC [][nightmare_def, calc_nightmare_def] THEN
-  PROVE_TAC []);
+  PROVE_TAC []
+QED
 
 Theorem SYM_RDISTRIB[unlisted] = GSYM INT_RDISTRIB;
 Theorem SYM_ADD_ASSOC[unlisted] = GSYM INT_ADD_ASSOC;

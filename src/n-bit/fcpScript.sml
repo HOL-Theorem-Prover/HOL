@@ -30,8 +30,6 @@ Libs
 (*  to some FCP-related theorems.       -- Chun Tian (binghe), May 12, 2022  *)
 (* ------------------------------------------------------------------------- *)
 
-val qDefine = Feedback.trace ("Definition.storage_message", 0) zDefine
-
 (* ------------------------------------------------------------------------- *
  * An isomorphic image of any finite type, 1-element for infinite ones.      *
  * ------------------------------------------------------------------------- *)
@@ -61,12 +59,15 @@ val FINITE_IMAGE_IMAGE = Q.prove(
  * Dimension of such a type, and indexing over it.                           *
  * ------------------------------------------------------------------------- *)
 
-val dimindex_def = zDefine`
-   dimindex(:'a) = if FINITE (UNIV:'a->bool) then CARD (UNIV:'a->bool) else 1`
+Definition dimindex_def[nocompute]:
+   dimindex(:'a) = if FINITE (UNIV:'a->bool) then CARD (UNIV:'a->bool) else 1
+End
 
-val NOT_FINITE_IMP_dimindex_1 = Q.store_thm("NOT_FINITE_IMP_dimindex_1",
-   `~FINITE univ(:'a) ==> (dimindex(:'a) = 1)`,
-   METIS_TAC [dimindex_def])
+Theorem NOT_FINITE_IMP_dimindex_1:
+    ~FINITE univ(:'a) ==> (dimindex(:'a) = 1)
+Proof
+   METIS_TAC [dimindex_def]
+QED
 
 val HAS_SIZE_FINITE_IMAGE = Q.prove(
    `(UNIV:'a finite_image->bool) HAS_SIZE dimindex(:'a)`,
@@ -110,8 +111,9 @@ val DIMINDEX_FINITE_IMAGE = Q.prove(
    THEN SIMP_TAC std_ss [FINITE_FINITE_IMAGE, HAS_SIZE]
    )
 
-val finite_index = zDefine`
-   finite_index = @f:num->'a. !x:'a. ?!n. n < dimindex(:'a) /\ (f n = x)`
+Definition finite_index[nocompute]:
+   finite_index = @f:num->'a. !x:'a. ?!n. n < dimindex(:'a) /\ (f n = x)
+End
 
 val FINITE_INDEX_WORKS_FINITE = Q.prove(
    `FINITE (UNIV:'n->bool) ==>
@@ -180,17 +182,20 @@ val () = overload_on ("'", Term`$fcp_index`)
  *  that recurse through arrays.                                          *
  * ---------------------------------------------------------------------- *)
 
-val fcp_Axiom = Q.store_thm("fcp_Axiom",
-   `!f : ('b finite_image -> 'a) -> 'c.
-      ?g : 'a ** 'b -> 'c.  !h. g (mk_cart h) = f h`,
-   STRIP_TAC THEN Q.EXISTS_TAC `f o dest_cart` THEN SRW_TAC [] [cart_tybij])
+Theorem fcp_Axiom:
+    !f : ('b finite_image -> 'a) -> 'c.
+      ?g : 'a ** 'b -> 'c.  !h. g (mk_cart h) = f h
+Proof
+   STRIP_TAC THEN Q.EXISTS_TAC `f o dest_cart` THEN SRW_TAC [] [cart_tybij]
+QED
 
-val fcp_ind = Q.store_thm("fcp_ind",
-   `!P. (!f. P (mk_cart f)) ==> !a. P a`,
+Theorem fcp_ind:
+    !P. (!f. P (mk_cart f)) ==> !a. P a
+Proof
    SRW_TAC [] []
    THEN Q.SPEC_THEN `a` (SUBST1_TAC o SYM) (CONJUNCT1 cart_tybij)
    THEN SRW_TAC [] []
-   )
+QED
 
 (* could just call
 
@@ -214,13 +219,14 @@ val fcp_tyinfo =
 
 val _ = TypeBase.write fcp_tyinfo
 
-val CART_EQ = Q.store_thm("CART_EQ",
-   `!(x:'a ** 'b) y. (x = y) = (!i. i < dimindex(:'b) ==> (x ' i = y ' i))`,
+Theorem CART_EQ:
+    !(x:'a ** 'b) y. (x = y) = (!i. i < dimindex(:'b) ==> (x ' i = y ' i))
+Proof
    REPEAT GEN_TAC
    THEN SIMP_TAC std_ss [fcp_index_def, GSYM FORALL_FINITE_INDEX]
    THEN REWRITE_TAC [GSYM FUN_EQ_THM, ETA_AX]
    THEN PROVE_TAC [cart_tybij]
-   )
+QED
 
 val FCP = new_binder_definition("FCP",
    ``($FCP) = \g.  @(f:'a ** 'b). (!i. i < dimindex(:'b) ==> (f ' i = g i))``)
@@ -242,13 +248,17 @@ Proof
  >> PROVE_TAC [FINITE_INDEX_INJ, DIMINDEX_FINITE_IMAGE]
 QED
 
-val FCP_UNIQUE = Q.store_thm("FCP_UNIQUE",
-   `!(f:'a ** 'b) g. (!i. i < dimindex(:'b) ==> (f ' i = g i)) = ((FCP) g = f)`,
-   SIMP_TAC std_ss [CART_EQ, FCP_BETA] THEN PROVE_TAC[])
+Theorem FCP_UNIQUE:
+    !(f:'a ** 'b) g. (!i. i < dimindex(:'b) ==> (f ' i = g i)) = ((FCP) g = f)
+Proof
+   SIMP_TAC std_ss [CART_EQ, FCP_BETA] THEN PROVE_TAC[]
+QED
 
-val FCP_ETA = Q.store_thm("FCP_ETA",
-   `!g. (FCP i. g ' i) = g`,
-   SIMP_TAC std_ss [CART_EQ, FCP_BETA])
+Theorem FCP_ETA:
+    !g. (FCP i. g ' i) = g
+Proof
+   SIMP_TAC std_ss [CART_EQ, FCP_BETA]
+QED
 
 Theorem card_dimindex :
     FINITE (UNIV:'a->bool) ==> (CARD (UNIV:'a->bool) = dimindex(:'a))
@@ -319,21 +329,24 @@ val isl_isr_union = Q.prove(
    METIS_TAC [CARD_UNION, arithmeticTheory.ADD_0, CARD_EMPTY,
               isl_isr_inter, isl_isr_finite])
 
-val index_sum = Q.store_thm("index_sum",
-   `dimindex(:('a+'b)) =
+Theorem index_sum:
+    dimindex(:('a+'b)) =
       if FINITE (UNIV:'a->bool) /\ FINITE (UNIV:'b->bool) then
         dimindex(:'a) + dimindex(:'b)
       else
-        1`,
+        1
+Proof
    RW_TAC std_ss [dimindex_def, sum_union, isl_isr_union, isl_isr_univ,
                   FINITE_UNION]
    THEN METIS_TAC [isl_isr_finite]
-   )
+QED
 
-val finite_sum = Q.store_thm("finite_sum",
-   `FINITE (UNIV:('a+'b)->bool) <=>
-    FINITE (UNIV:'a->bool) /\ FINITE (UNIV:'b->bool)`,
-   SIMP_TAC std_ss [FINITE_UNION, sum_union, isl_isr_finite])
+Theorem finite_sum:
+    FINITE (UNIV:('a+'b)->bool) <=>
+    FINITE (UNIV:'a->bool) /\ FINITE (UNIV:'b->bool)
+Proof
+   SIMP_TAC std_ss [FINITE_UNION, sum_union, isl_isr_finite]
+QED
 
 (* ------------------------------------------------------------------------- *
  * bit0                                                                      *
@@ -341,11 +354,13 @@ val finite_sum = Q.store_thm("finite_sum",
 
 val () = Hol_datatype `bit0 = BIT0A of 'a | BIT0B of 'a`
 
-val IS_BIT0A_def = qDefine`
-   (IS_BIT0A (BIT0A x) = T) /\ (IS_BIT0A (BIT0B x) = F)`
+Definition IS_BIT0A_def[nocompute]:
+   (IS_BIT0A (BIT0A x) = T) /\ (IS_BIT0A (BIT0B x) = F)
+End
 
-val IS_BIT0B_def = qDefine`
-   (IS_BIT0B (BIT0A x) = F) /\ (IS_BIT0B (BIT0B x) = T)`
+Definition IS_BIT0B_def[nocompute]:
+   (IS_BIT0B (BIT0A x) = F) /\ (IS_BIT0B (BIT0B x) = T)
+End
 
 val IS_BIT0A_OR_IS_BIT0B = Q.prove(
    `!x. IS_BIT0A x \/ IS_BIT0B x`,
@@ -433,18 +448,21 @@ val is_bit0a_is_bit0b_union = Q.prove(
    THEN FULL_SIMP_TAC std_ss [is_bit0a_is_bit0b_inter, CARD_EMPTY]
    )
 
-val index_bit0 = Q.store_thm("index_bit0",
-   `dimindex(:('a bit0)) =
-    if FINITE (UNIV:'a->bool) then 2 * dimindex(:'a) else 1`,
+Theorem index_bit0:
+    dimindex(:('a bit0)) =
+    if FINITE (UNIV:'a->bool) then 2 * dimindex(:'a) else 1
+Proof
    RW_TAC std_ss [dimindex_def, bit0_union, is_bit0a_is_bit0b_union,
                   FINITE_UNION]
    THEN METIS_TAC [is_bit0a_finite, is_bit0a_card, is_bit0b_finite,
                    is_bit0b_card, arithmeticTheory.TIMES2]
-   )
+QED
 
-val finite_bit0 = Q.store_thm("finite_bit0",
-   `FINITE (UNIV:'a bit0->bool) = FINITE (UNIV:'a->bool)`,
-   SIMP_TAC std_ss [FINITE_UNION, is_bit0a_finite, is_bit0b_finite, bit0_union])
+Theorem finite_bit0:
+    FINITE (UNIV:'a bit0->bool) = FINITE (UNIV:'a->bool)
+Proof
+   SIMP_TAC std_ss [FINITE_UNION, is_bit0a_finite, is_bit0b_finite, bit0_union]
+QED
 
 (* ------------------------------------------------------------------------- *
  * bit1                                                                      *
@@ -452,17 +470,20 @@ val finite_bit0 = Q.store_thm("finite_bit0",
 
 val () = Hol_datatype `bit1 = BIT1A of 'a | BIT1B of 'a | BIT1C`
 
-val IS_BIT1A_def = qDefine`
+Definition IS_BIT1A_def[nocompute]:
    (IS_BIT1A (BIT1A x) = T) /\ (IS_BIT1A (BIT1B x) = F) /\
-   (IS_BIT1A (BIT1C) = F)`
+   (IS_BIT1A (BIT1C) = F)
+End
 
-val IS_BIT1B_def = qDefine`
+Definition IS_BIT1B_def[nocompute]:
    (IS_BIT1B (BIT1A x) = F) /\ (IS_BIT1B (BIT1B x) = T) /\
-   (IS_BIT1B (BIT1C) = F)`
+   (IS_BIT1B (BIT1C) = F)
+End
 
-val IS_BIT1C_def = qDefine`
+Definition IS_BIT1C_def[nocompute]:
    (IS_BIT1C (BIT1A x) = F) /\ (IS_BIT1C (BIT1B x) = F) /\
-   (IS_BIT1C (BIT1C) = T)`
+   (IS_BIT1C (BIT1C) = T)
+End
 
 val IS_BIT1A_OR_IS_BIT1B_OR_IS_BIT1C = Q.prove(
    `!x. IS_BIT1A x \/ IS_BIT1B x \/ IS_BIT1C x`,
@@ -578,19 +599,22 @@ val is_bit1a_is_bit1b_is_bit1c_union = Q.prove(
    THEN FULL_SIMP_TAC std_ss [is_bit1a_is_bit1b_inter, CARD_EMPTY]
    )
 
-val index_bit1 = Q.store_thm("index_bit1",
-   `dimindex(:('a bit1)) =
-    if FINITE (UNIV:'a->bool) then 2 * dimindex(:'a) + 1 else 1`,
+Theorem index_bit1:
+    dimindex(:('a bit1)) =
+    if FINITE (UNIV:'a->bool) then 2 * dimindex(:'a) + 1 else 1
+Proof
    RW_TAC std_ss [dimindex_def, bit1_union, is_bit1a_is_bit1b_is_bit1c_union,
                   FINITE_UNION]
    THEN METIS_TAC [is_bit1a_finite, is_bit1a_card, is_bit1c_finite_card,
                    is_bit1b_finite, is_bit1b_card, arithmeticTheory.TIMES2]
-   )
+QED
 
-val finite_bit1 = Q.store_thm("finite_bit1",
-   `FINITE (UNIV:'a bit1->bool) = FINITE (UNIV:'a->bool)`,
+Theorem finite_bit1:
+    FINITE (UNIV:'a bit1->bool) = FINITE (UNIV:'a->bool)
+Proof
    SIMP_TAC std_ss [FINITE_UNION, is_bit1a_finite, is_bit1b_finite,
-                    is_bit1c_finite_card, bit1_union])
+                    is_bit1c_finite_card, bit1_union]
+QED
 
 (* Delete temporary constants *)
 
@@ -612,8 +636,10 @@ val one_sing = Q.prove(
 
 val one_finite_card = REWRITE_RULE [SING_IFF_CARD1] one_sing
 
-val index_one = Q.store_thm("index_one",
-   `dimindex(:one) = 1`, METIS_TAC [dimindex_def, one_finite_card])
+Theorem index_one:
+    dimindex(:one) = 1
+Proof METIS_TAC [dimindex_def, one_finite_card]
+QED
 
 val finite_one = save_thm("finite_one", CONJUNCT2 one_finite_card)
 
@@ -629,58 +655,71 @@ Definition FCP_UPDATE_def[nocompute]:
   $:+ a b = \m:'a ** 'b. (FCP c. if a = c then b else m ' c):'a ** 'b
 End
 
-val FCP_UPDATE_COMMUTES = Q.store_thm ("FCP_UPDATE_COMMUTES",
-   `!m a b c d. ~(a = b) ==> ((a :+ c) ((b :+ d) m) = (b :+ d) ((a :+ c) m))`,
+Theorem FCP_UPDATE_COMMUTES:
+    !m a b c d. ~(a = b) ==> ((a :+ c) ((b :+ d) m) = (b :+ d) ((a :+ c) m))
+Proof
    REPEAT strip_tac
    \\ rewrite_tac [FUN_EQ_THM]
    \\ srw_tac [FCP_ss] [FCP_UPDATE_def]
    \\ rw_tac std_ss []
-   )
+QED
 
-val FCP_UPDATE_EQ = Q.store_thm("FCP_UPDATE_EQ",
-   `!m a b c. (a :+ c) ((a :+ b) m) = (a :+ c) m`,
+Theorem FCP_UPDATE_EQ:
+    !m a b c. (a :+ c) ((a :+ b) m) = (a :+ c) m
+Proof
    REPEAT strip_tac
    \\ rewrite_tac [FUN_EQ_THM]
    \\ srw_tac [FCP_ss] [FCP_UPDATE_def]
-   )
+QED
 
-val FCP_UPDATE_IMP_ID = Q.store_thm("FCP_UPDATE_IMP_ID",
-   `!m a v. (m ' a = v) ==> ((a :+ v) m = m)`,
+Theorem FCP_UPDATE_IMP_ID:
+    !m a v. (m ' a = v) ==> ((a :+ v) m = m)
+Proof
    srw_tac [FCP_ss] [FCP_UPDATE_def]
    \\ rw_tac std_ss []
-   )
+QED
 
-val APPLY_FCP_UPDATE_ID = Q.store_thm("APPLY_FCP_UPDATE_ID",
-   `!m a. (a :+ (m ' a)) m = m`,
-   srw_tac [FCP_ss] [FCP_UPDATE_def])
+Theorem APPLY_FCP_UPDATE_ID:
+    !m a. (a :+ (m ' a)) m = m
+Proof
+   srw_tac [FCP_ss] [FCP_UPDATE_def]
+QED
 
-val FCP_APPLY_UPDATE_THM = Q.store_thm("FCP_APPLY_UPDATE_THM",
-  `!(m:'a ** 'b) a w b. ((a :+ w) m) ' b =
+Theorem FCP_APPLY_UPDATE_THM:
+   !(m:'a ** 'b) a w b. ((a :+ w) m) ' b =
        if b < dimindex(:'b) then
          if a = b then w else m ' b
        else
-         FAIL (fcp_index) ^(mk_var("index out of range", bool)) ((a :+ w) m) b`,
-  srw_tac [FCP_ss] [FCP_UPDATE_def, combinTheory.FAIL_THM])
+         FAIL (fcp_index) ^(mk_var("index out of range", bool)) ((a :+ w) m) b
+Proof
+  srw_tac [FCP_ss] [FCP_UPDATE_def, combinTheory.FAIL_THM]
+QED
 
 (* ------------------------------------------------------------------------ *
  * A collection of list related operations                                  *
  * ------------------------------------------------------------------------ *)
 
-val FCP_HD_def = Define `FCP_HD v = v ' 0`
+Definition FCP_HD_def:   FCP_HD v = v ' 0
+End
 
-val FCP_TL_def = Define `FCP_TL v = FCP i. v ' (SUC i)`
+Definition FCP_TL_def:   FCP_TL v = FCP i. v ' (SUC i)
+End
 
-val FCP_CONS_def = Define`
-   FCP_CONS h (v:'a ** 'b) = (0 :+ h) (FCP i. v ' (PRE i))`
+Definition FCP_CONS_def:
+   FCP_CONS h (v:'a ** 'b) = (0 :+ h) (FCP i. v ' (PRE i))
+End
 
-val FCP_MAP_def = Define`
-   FCP_MAP f (v:'a ** 'c) = (FCP i. f (v ' i)):'b ** 'c`
+Definition FCP_MAP_def:
+   FCP_MAP f (v:'a ** 'c) = (FCP i. f (v ' i)):'b ** 'c
+End
 
-val FCP_EXISTS_def = zDefine`
-   FCP_EXISTS P (v:'b ** 'a) = ?i. i < dimindex (:'a) /\ P (v ' i)`
+Definition FCP_EXISTS_def[nocompute]:
+   FCP_EXISTS P (v:'b ** 'a) = ?i. i < dimindex (:'a) /\ P (v ' i)
+End
 
-val FCP_EVERY_def = zDefine`
-   FCP_EVERY P (v:'b ** 'a) = !i. dimindex (:'a) <= i \/ P (v ' i)`
+Definition FCP_EVERY_def[nocompute]:
+   FCP_EVERY P (v:'b ** 'a) = !i. dimindex (:'a) <= i \/ P (v ' i)
+End
 
 Definition FCP_CONCAT_def :
    FCP_CONCAT (a:'a ** 'b) (b:'a ** 'c) =
@@ -700,92 +739,121 @@ Definition FCP_SND_def :
    FCP_SND (v :'a ** ('b + 'c)) = (FCP i. v ' i) :'a ** 'c
 End
 
-val FCP_ZIP_def = Define`
-   FCP_ZIP (a:'a ** 'b) (b:'c ** 'b) = (FCP i. (a ' i, b ' i)): ('a # 'c) ** 'b`
+Definition FCP_ZIP_def:
+   FCP_ZIP (a:'a ** 'b) (b:'c ** 'b) = (FCP i. (a ' i, b ' i)): ('a # 'c) ** 'b
+End
 
-val V2L_def = Define `V2L (v:'a ** 'b) = GENLIST ($' v) (dimindex(:'b))`
+Definition V2L_def:   V2L (v:'a ** 'b) = GENLIST ($' v) (dimindex(:'b))
+End
 
-val L2V_def = Define `L2V L = FCP i. EL i L`
+Definition L2V_def:   L2V L = FCP i. EL i L
+End
 
-val FCP_FOLD_def = Define `FCP_FOLD (f:'b -> 'a -> 'b) i v = FOLDL f i (V2L v)`
+Definition FCP_FOLD_def:   FCP_FOLD (f:'b -> 'a -> 'b) i v = FOLDL f i (V2L v)
+End
 
 (* Some theorems about these operations *)
 
-val LENGTH_V2L = Q.store_thm("LENGTH_V2L",
-   `!v. LENGTH (V2L (v:'a ** 'b)) = dimindex (:'b)`,
-   rw [V2L_def])
+Theorem LENGTH_V2L:
+    !v. LENGTH (V2L (v:'a ** 'b)) = dimindex (:'b)
+Proof
+   rw [V2L_def]
+QED
 
-val EL_V2L = Q.store_thm("EL_V2L",
-   `!i v. i < dimindex (:'b) ==> (EL i (V2L v) = (v:'a ** 'b)  ' i)`,
-   rw [V2L_def])
+Theorem EL_V2L:
+    !i v. i < dimindex (:'b) ==> (EL i (V2L v) = (v:'a ** 'b)  ' i)
+Proof
+   rw [V2L_def]
+QED
 
-val FCP_MAP = Q.store_thm("FCP_MAP",
-   `!f v. FCP_MAP f v = L2V (MAP f (V2L v))`,
-   srw_tac [FCP_ss] [FCP_MAP_def, V2L_def, L2V_def, listTheory.MAP_GENLIST])
+Theorem FCP_MAP:
+    !f v. FCP_MAP f v = L2V (MAP f (V2L v))
+Proof
+   srw_tac [FCP_ss] [FCP_MAP_def, V2L_def, L2V_def, listTheory.MAP_GENLIST]
+QED
 
-val FCP_TL = Q.store_thm("FCP_TL",
-   `!v. 1 < dimindex (:'b) /\ (dimindex(:'c) = dimindex(:'b) - 1) ==>
-        (FCP_TL (v:'a ** 'b) = L2V (TL (V2L v)):'a ** 'c)`,
+Theorem FCP_TL:
+    !v. 1 < dimindex (:'b) /\ (dimindex(:'c) = dimindex(:'b) - 1) ==>
+        (FCP_TL (v:'a ** 'b) = L2V (TL (V2L v)):'a ** 'c)
+Proof
    REPEAT strip_tac
    \\ Cases_on `dimindex(:'b)`
    >- prove_tac [DECIDE ``1n < n ==> n <> 0``]
    \\ srw_tac [FCP_ss] [FCP_TL_def, V2L_def, L2V_def, listTheory.TL_GENLIST]
-   )
+QED
 
-val FCP_EXISTS = Q.store_thm("FCP_EXISTS",
-   `!P v. FCP_EXISTS P v = EXISTS P (V2L v)`,
-   rw [FCP_EXISTS_def, V2L_def, listTheory.EXISTS_GENLIST])
+Theorem FCP_EXISTS:
+    !P v. FCP_EXISTS P v = EXISTS P (V2L v)
+Proof
+   rw [FCP_EXISTS_def, V2L_def, listTheory.EXISTS_GENLIST]
+QED
 
-val FCP_EVERY = Q.store_thm("FCP_EVERY",
-   `!P v. FCP_EVERY P v = EVERY P (V2L v)`,
+Theorem FCP_EVERY:
+    !P v. FCP_EVERY P v = EVERY P (V2L v)
+Proof
    rw [FCP_EVERY_def, V2L_def, listTheory.EVERY_GENLIST]
    \\ metis_tac [arithmeticTheory.NOT_LESS]
-   )
+QED
 
-val FCP_HD = Q.store_thm("FCP_HD",
-   `!v. FCP_HD v = HD (V2L v)`,
+Theorem FCP_HD:
+    !v. FCP_HD v = HD (V2L v)
+Proof
    rw [FCP_HD_def, V2L_def, DIMINDEX_GE_1, listTheory.HD_GENLIST_COR,
-       DIMINDEX_GT_0])
+       DIMINDEX_GT_0]
+QED
 
-val FCP_CONS = Q.store_thm("FCP_CONS",
-  `!a v. FCP_CONS a (v:'a ** 'b) = L2V (a::V2L v):'a ** 'b + 1`,
+Theorem FCP_CONS:
+   !a v. FCP_CONS a (v:'a ** 'b) = L2V (a::V2L v):'a ** 'b + 1
+Proof
   srw_tac [FCP_ss] [FCP_CONS_def, V2L_def, L2V_def, FCP_UPDATE_def]
   \\ pop_assum mp_tac
   \\ Cases_on `i`
   \\ lrw [index_sum, index_one, listTheory.EL_GENLIST]
-  )
+QED
 
-val V2L_L2V = Q.store_thm("V2L_L2V",
-   `!x. (dimindex (:'b) = LENGTH x) ==> (V2L (L2V x:'a ** 'b) = x)`,
-   rw [V2L_def, L2V_def, listTheory.LIST_EQ_REWRITE, FCP_BETA])
+Theorem V2L_L2V:
+    !x. (dimindex (:'b) = LENGTH x) ==> (V2L (L2V x:'a ** 'b) = x)
+Proof
+   rw [V2L_def, L2V_def, listTheory.LIST_EQ_REWRITE, FCP_BETA]
+QED
 
-val NULL_V2L = Q.store_thm("NULL_V2L",
-   `!v. ~NULL (V2L v)`,
-   rw [V2L_def, listTheory.NULL_GENLIST, DIMINDEX_NONZERO])
+Theorem NULL_V2L:
+    !v. ~NULL (V2L v)
+Proof
+   rw [V2L_def, listTheory.NULL_GENLIST, DIMINDEX_NONZERO]
+QED
 
-val READ_TL = Q.store_thm("READ_TL",
-  `!i a. i < dimindex (:'b) ==>
-         (((FCP_TL a):'a ** 'b) ' i = (a:'a ** 'c) ' (SUC i))`,
-  rw [FCP_TL_def, FCP_BETA])
+Theorem READ_TL:
+   !i a. i < dimindex (:'b) ==>
+         (((FCP_TL a):'a ** 'b) ' i = (a:'a ** 'c) ' (SUC i))
+Proof
+  rw [FCP_TL_def, FCP_BETA]
+QED
 
-val READ_L2V = Q.store_thm("READ_L2V",
-  `!i a. i < dimindex (:'b) ==> ((L2V a:'a ** 'b) ' i = EL i a)`,
-  rw [L2V_def, FCP_BETA])
+Theorem READ_L2V:
+   !i a. i < dimindex (:'b) ==> ((L2V a:'a ** 'b) ' i = EL i a)
+Proof
+  rw [L2V_def, FCP_BETA]
+QED
 
-val index_comp = Q.store_thm("index_comp",
-  `!f n.
+Theorem index_comp:
+   !f n.
       (($FCP f):'a ** 'b) ' n =
       if n < dimindex (:'b) then
         f n
       else
         FAIL $' ^(mk_var("FCP out of bounds", bool))
-             (($FCP f):'a ** 'b) n`,
-  srw_tac [FCP_ss] [combinTheory.FAIL_THM])
+             (($FCP f):'a ** 'b) n
+Proof
+  srw_tac [FCP_ss] [combinTheory.FAIL_THM]
+QED
 
-val fcp_subst_comp = Q.store_thm("fcp_subst_comp",
-  `!a b f. (x :+ y) ($FCP f):'a ** 'b =
-         ($FCP (\c. if x = c then y else f c)):'a ** 'b`,
-  srw_tac [FCP_ss] [FCP_UPDATE_def])
+Theorem fcp_subst_comp:
+   !a b f. (x :+ y) ($FCP f):'a ** 'b =
+         ($FCP (\c. if x = c then y else f c)):'a ** 'b
+Proof
+  srw_tac [FCP_ss] [FCP_UPDATE_def]
+QED
 
 val () = computeLib.add_persistent_funs ["FCP_EXISTS", "FCP_EVERY"]
 
@@ -961,4 +1029,3 @@ Theorem FINITE_CART_UNIV :
 Proof
   MESON_TAC[HAS_SIZE_CART_UNIV, HAS_SIZE]
 QED
-

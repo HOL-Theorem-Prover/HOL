@@ -5,23 +5,21 @@
  please refer to
  http://www.cl.cam.ac.uk/~rja14/serpent.html
 *)
+Theory Serpent_Reference
+Ancestors
+  list arithmetic words Serpent_Reference_Utility
+  Serpent_Reference_Permutation Serpent_Reference_Transformation
+  Serpent_Reference_SBox Serpent_Reference_KeySchedule
+Libs
+  wordsLib
 
 
-open HolKernel Parse boolLib bossLib listTheory arithmeticTheory
-     wordsTheory wordsLib
-     Serpent_Reference_UtilityTheory
-     Serpent_Reference_PermutationTheory
-     Serpent_Reference_TransformationTheory
-     Serpent_Reference_SBoxTheory
-     Serpent_Reference_KeyScheduleTheory;
-
-val _ = new_theory "Serpent_Reference";
 
 (****************************ENCRYPTION*******************************)
 (*each normal encryption round*)
 
-val enRound_def = Define
-`enRound pt round (revSubKeyHat::kt) =
+Definition enRound_def:
+ enRound pt round (revSubKeyHat::kt) =
   if round=0
      then let afterKeying= pt ?? revSubKeyHat
           in
@@ -35,43 +33,48 @@ val enRound_def = Define
       in
       let afterS = sBlock round afterKeying
       in
-      LT afterS`;
+      LT afterS
+End
 
 (*special encryption round 31*)
-val enRound31_def=Define
-`enRound31 pt (revSubKeyHat32::revSubKeyHat31::kt)
+Definition enRound31_def:
+ enRound31 pt (revSubKeyHat32::revSubKeyHat31::kt)
  =let afterEnRound30= enRound pt 30 kt
   in
   let afterKeying= afterEnRound30 ?? revSubKeyHat31
   in
   let afterS = sBlock 31 afterKeying
   in
-  afterS ?? revSubKeyHat32`;
+  afterS ?? revSubKeyHat32
+End
 
 (*encryption*)
-val doAllEnRound_def = Define
-`doAllEnRound pt subKeyHat
+Definition doAllEnRound_def:
+ doAllEnRound pt subKeyHat
  =let revSubKeyHat = REVERSE subKeyHat
   in
-  enRound31 pt revSubKeyHat`;
+  enRound31 pt revSubKeyHat
+End
 
 
-val encryptwithKeyHat_def= Define
-`encryptwithKeyHat pt subKeyHat = FP (doAllEnRound (IP pt) subKeyHat)`;
+Definition encryptwithKeyHat_def:
+ encryptwithKeyHat pt subKeyHat = FP (doAllEnRound (IP pt) subKeyHat)
+End
 
 
-val serpentBlockEncrypt_def = Define
-`serpentBlockEncrypt pt userKey kl
+Definition serpentBlockEncrypt_def:
+ serpentBlockEncrypt pt userKey kl
  = let subKeyHat =makeKeyHat userKey kl
    in
-   encryptwithKeyHat pt subKeyHat`;
+   encryptwithKeyHat pt subKeyHat
+End
 
 (**********************************DECRYPTION***********************)
 
 
 (*each normal decryption round*)
-val deRound_def = Define
-`deRound (BHat:word128) round (revSubKeyHat::kt)
+Definition deRound_def:
+ deRound (BHat:word128) round (revSubKeyHat::kt)
  = let afterInvLT =invLT BHat
    in
    let afterInvS= invSBlock (31-round) afterInvLT
@@ -80,43 +83,48 @@ val deRound_def = Define
    in
    if round <(R-1)
       then deRound nextBHat (SUC round) kt
-      else nextBHat`;
+      else nextBHat
+End
 
 (*special decryption round 0*)
-val deRound0_def=Define
-`deRound0 BHat0 revSubKeyHat_1 revSubKeyHat0
+Definition deRound0_def:
+ deRound0 BHat0 revSubKeyHat_1 revSubKeyHat0
  = let afterRevKeying_1=BHat0 ?? revSubKeyHat_1
    in
    let afterInvS= invSBlock 31 afterRevKeying_1
    in
-   afterInvS ?? revSubKeyHat0`;
+   afterInvS ?? revSubKeyHat0
+End
 
 
 (*decryption,
 in reverse order as encryption*)
-val doAllDeRound_def=Define
-`doAllDeRound et (revSubKeyHat_1::revSubKeyHat0::kt)
+Definition doAllDeRound_def:
+ doAllDeRound et (revSubKeyHat_1::revSubKeyHat0::kt)
  = let afterDeRound0=deRound0 et revSubKeyHat_1 revSubKeyHat0
    in
-   deRound afterDeRound0 1 kt`;
+   deRound afterDeRound0 1 kt
+End
 
 
-val decryptwithKeyHat_def= Define
-`decryptwithKeyHat et subKeyHat
+Definition decryptwithKeyHat_def:
+ decryptwithKeyHat et subKeyHat
  = let revSubKeyHat=REVERSE subKeyHat
    in
    let afterInvFP=invFP et
    in
    let afterDeRound = doAllDeRound afterInvFP revSubKeyHat
    in
-   invIP afterDeRound`;
+   invIP afterDeRound
+End
 
 
-val serpentBlockDecrypt_def = Define
-`serpentBlockDecrypt et userKey kl
+Definition serpentBlockDecrypt_def:
+ serpentBlockDecrypt et userKey kl
  = let subKeyHat = makeKeyHat userKey kl
    in
-   decryptwithKeyHat et subKeyHat`;
+   decryptwithKeyHat et subKeyHat
+End
 
 
 (********* FUNCTIONAL CORRECTNESS*********************************)
@@ -200,4 +208,3 @@ val serpentBlockDecrypt_serpentBlockEncrypt_cancel_whole=Q.store_thm(
               invIP_IP_cancel,invSBlock_sBlock_cancel,invLT_LT_cancel,
               LET_THM,R_def]);
 
-val _ = export_theory();

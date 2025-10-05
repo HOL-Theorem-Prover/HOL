@@ -13,11 +13,13 @@ app load
    "metisLib","posrealLib","expectationTheory","intLib"];
 quietdec := true;
 *)
+Theory wp
+Ancestors
+  combin list rich_list string integer real poset posreal
+  expectation syntax
+Libs
+  intLib realLib metisLib posrealLib
 
-open HolKernel Parse boolLib bossLib intLib realLib metisLib;
-open combinTheory listTheory rich_listTheory stringTheory integerTheory
-     realTheory posetTheory;
-open posrealTheory posrealLib expectationTheory syntaxTheory;
 
 (*
 quietdec := false;
@@ -26,8 +28,6 @@ quietdec := false;
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "wp"                                            *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = new_theory "wp";
 
 (* ------------------------------------------------------------------------- *)
 (* Helpful proof tools                                                       *)
@@ -49,14 +49,15 @@ val lemma = I prove;
 (* Weakest precondition semantics.                                           *)
 (* ------------------------------------------------------------------------- *)
 
-val wp_def = Define
-  `(wp Abort = \r. Zero) /\
+Definition wp_def:
+   (wp Abort = \r. Zero) /\
    (wp (Consume k) = \r. r) /\
    (wp (Assign v e) = \r s. r (assign v e s)) /\
    (wp (Seq a b) = \r. wp a (wp b r)) /\
    (wp (Nondet a b) = \r. Min (wp a r) (wp b r)) /\
    (wp (Prob p a b) = \r. Lin p (wp a r) (wp b r)) /\
-   (wp (While c b) = \r. expect_lfp (\e. Cond c (wp b e) r))`;
+   (wp (While c b) = \r. expect_lfp (\e. Cond c (wp b e) r))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Showing the need for SUB-linearity                                        *)
@@ -1007,14 +1008,15 @@ val prob_assign_terminates = store_thm
 (* wlp is the partial-correctness analogue of wp.                            *)
 (* ------------------------------------------------------------------------- *)
 
-val wlp_def = Define
-  `(wlp Abort = \r. Magic) /\
+Definition wlp_def:
+   (wlp Abort = \r. Magic) /\
    (wlp (Consume k) = \r. r) /\
    (wlp (Assign v e) = \r s. r (assign v e s)) /\
    (wlp (Seq a b) = \r. wlp a (wlp b r)) /\
    (wlp (Nondet a b) = \r. Min (wlp a r) (wlp b r)) /\
    (wlp (Prob p a b) = \r. Lin p (wlp a r) (wlp b r)) /\
-   (wlp (While c b) = \r. expect_gfp (\e. Cond c (wlp b e) r))`;
+   (wlp (While c b) = \r. expect_gfp (\e. Cond c (wlp b e) r))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* wlp is not healthy, but it does satisfy some nice properties.             *)
@@ -1256,4 +1258,3 @@ val wp_eq_wlp_plus_termination_counterexample = store_thm
        ++ markerLib.UNABBREV_ALL_TAC
        ++ RW_TAC posreal_reduce_ss []]);
 
-val _ = export_theory();

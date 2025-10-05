@@ -1,16 +1,12 @@
-open HolKernel Parse boolLib bossLib;
+Theory prob_walk
+Ancestors
+  arithmetic pred_set list sequence state_transformer extra_num
+  combin pair real extra_bool extra_pred_set extra_real num seq
+  subtype res_quan real_measure real_probability prob_algebra
+  prob
+Libs
+  hurdUtils realLib extra_pred_setTools simpLib sequenceTools
 
-open arithmeticTheory pred_setTheory
-     listTheory sequenceTheory state_transformerTheory
-     hurdUtils extra_numTheory combinTheory
-     pairTheory realTheory realLib extra_boolTheory
-     extra_pred_setTheory extra_realTheory extra_pred_setTools numTheory
-     simpLib seqTheory sequenceTools subtypeTheory res_quanTheory;
-
-open real_measureTheory real_probabilityTheory;
-open prob_algebraTheory probTheory;
-
-val _ = new_theory "prob_walk";
 val _ = ParseExtras.temp_loose_equality()
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
@@ -31,12 +27,14 @@ val Cond =
 (* The definition of a simple random walk.                                   *)
 (* ------------------------------------------------------------------------- *)
 
-val random_lurch_def = Define
-  `random_lurch (n:num) = BIND sdest (\b. UNIT (if b then n + 1 else n - 1))`;
+Definition random_lurch_def:
+   random_lurch (n:num) = BIND sdest (\b. UNIT (if b then n + 1 else n - 1))
+End
 
-val random_walk_def = Define
-  `random_walk n k =
-   BIND (prob_while_cost ($< 0) random_lurch (n, k)) (\x. UNIT (SND x))`;
+Definition random_walk_def:
+   random_walk n k =
+   BIND (prob_while_cost ($< 0) random_lurch (n, k)) (\x. UNIT (SND x))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems leading to:                                                      *)
@@ -453,4 +451,3 @@ val RANDOM_WALK_PARITY = store_thm
    >- RW_TAC std_ss [RANDOM_LURCHES_PARITY]
    >> RW_TAC std_ss [BIND_DEF, UNIT_DEF, UNCURRY, o_THM]);
 
-val _ = export_theory ();

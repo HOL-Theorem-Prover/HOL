@@ -1,29 +1,24 @@
-open HolKernel Parse boolLib bossLib finite_mapTheory
-
-open recursivefnsTheory
-open prnlistTheory
-open primrecfnsTheory
-open listTheory
-open arithmeticTheory
-open numpairTheory
-open pred_setTheory
-
-val _ = new_theory "register_machine";
-
+Theory register_machine
+Ancestors
+  finite_map recursivefns prnlist primrecfns list arithmetic
+  numpair pred_set
 
 val _ = Datatype `instruction = Inc num | Dec num | JZ num num bool`;
 
 val _ = Datatype `RegMachine = <| insts : instruction list; regs : num |-> num; pc : num |>`;
 
-val is_halted_def = Define`is_halted rm <=> LENGTH rm.insts <= rm.pc `;
+Definition is_halted_def:  is_halted rm <=> LENGTH rm.insts <= rm.pc
+End
 
 
 
-val reg_val_def = Define`reg_val regs n = case FLOOKUP regs n of NONE => 0n | SOME x => x `;
+Definition reg_val_def:  reg_val regs n = case FLOOKUP regs n of NONE => 0n | SOME x => x
+End
 
-val upd_reg_def = Define`upd_reg f n regs = regs |+ (n,f (reg_val regs n))`;
+Definition upd_reg_def:  upd_reg f n regs = regs |+ (n,f (reg_val regs n))
+End
 
-val step_def = Define`
+Definition step_def:
   step rm = if is_halted rm then rm
             else case EL rm.pc rm.insts of
               Inc n => rm with <|regs updated_by upd_reg SUC n;pc updated_by SUC |>
@@ -31,21 +26,26 @@ val step_def = Define`
            | JZ n i b => if reg_val rm.regs n = 0 then rm with
                            <|pc := (if b then rm.pc + i else rm.pc-i);
                              regs updated_by upd_reg (λx. x) n|>
-                         else rm with pc updated_by SUC`
+                         else rm with pc updated_by SUC
+End
 
-val run_reg_def = Define`run_reg t reg = FUNPOW step t reg`
+Definition run_reg_def:  run_reg t reg = FUNPOW step t reg
+End
 
-val init_regs_def = Define`(init_regs k [] = FEMPTY) ∧
-                           (init_regs k (h::t) = (init_regs (k+1) t) |+ (k,h))`
+Definition init_regs_def:  (init_regs k [] = FEMPTY) ∧
+                           (init_regs k (h::t) = (init_regs (k+1) t) |+ (k,h))
+End
 val _ = export_rewrites["init_regs_def"]
 
-val initial_reg_def = Define`
+Definition initial_reg_def:
 initial_reg inst input_list = <|insts:= inst;
-                  regs :=init_regs 2 input_list; pc := 0 |>`
+                  regs :=init_regs 2 input_list; pc := 0 |>
+End
 
-val reg_fun_def = Define`
+Definition reg_fun_def:
 reg_fun inst input = let reg0 =  initial_reg inst input in
-                       OPTION_MAP (λt. (run_reg t reg0)) (OLEAST n. is_halted (run_reg n reg0))`
+                       OPTION_MAP (λt. (run_reg t reg0)) (OLEAST n. is_halted (run_reg n reg0))
+End
 
 val FUNPOW_TWO = Q.store_thm("FUNPOW_TWO",
 `FUNPOW f 2 a = f (f a)`,
@@ -55,9 +55,11 @@ val FUNPOW_THREE = Q.store_thm("FUNPOW_THREE",
 `FUNPOW f 3 a = f (f (f a))`,
 `FUNPOW f 3 a = FUNPOW f (SUC (SUC (SUC 0))) a` by fs[] >> rw[FUNPOW_SUC])
 
-val Jump_def = Define`Jump i = JZ 0 i T`
+Definition Jump_def:  Jump i = JZ 0 i T
+End
 
-val Clear_def = Define`Clear n = [JZ n 3 T;Dec n;JZ 0 2 F]`
+Definition Clear_def:  Clear n = [JZ n 3 T;Dec n;JZ 0 2 F]
+End
 (*
 val Clear_corr = Q.store_thm("Clear_corr",
 `(rm.insts = pre ++ (Clear n) ++ suff) ∧ (rm.pc = LENGTH pre)
@@ -161,4 +163,3 @@ Then we need to show Turing Machine can simulate the original 3 instruction set
 
 *)
 
-val _ = export_theory();

@@ -1,10 +1,11 @@
-open HolKernel boolLib bossLib Parse stringTheory arithmeticTheory
-     finite_mapTheory pred_setTheory bagTheory pairTheory relationTheory
-     prim_recTheory apply_piTheory ntermTheory nsubstTheory nwalkTheory
-     nwalkstarTheory nomsetTheory listTheory dis_setTheory ramanaLib
-     ntermLib
+Theory nunifDef
+Ancestors
+  string arithmetic finite_map pred_set bag pair relation
+  prim_rec apply_pi nterm nsubst nwalk nwalkstar nomset list
+  dis_set
+Libs
+  ramanaLib ntermLib
 
-val _ = new_theory "nunifDef"
 val _ = monadsyntax.temp_add_monadsyntax()
 val _ = monadsyntax.enable_monad "option";
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 }
@@ -560,10 +561,10 @@ val uR_subtie = Q.prove(
 SRW_TAC [][uR_def,SUBMAP_REFL] THEN
 METIS_TAC [sysvars_SUBSET_ties,nwalkstar_subtie])
 
-val uP_def = Define`
+Definition uP_def:
   uP sx s t1 t2 <=> nwfs sx ∧ s SUBMAP sx ∧
                     FDOM sx ∪ BIGUNION (FRANGE (nvars o_f sx)) ⊆ sysvars s t1 t2
-`;
+End
 
 val lem5 = Q.prove(
 `nwfs s ∧ (nvwalk s l n = Sus p v ) ⇒
@@ -926,14 +927,14 @@ ntunify_ind |>
 SIMP_RULE (srw_ss()) [GSYM nunify_eq_ntunify,GSYM AND_IMP_INTRO] |>
 Q.SPEC `UNCURRY P` |> SIMP_RULE (srw_ss()) [AND_IMP_INTRO] |> Q.GEN `P`);
 
-val verify_fcs = Define`
-  verify_fcs fcs s = ITSET (fcs_acc s) fcs (SOME {})`;
+Definition verify_fcs_def:
+  verify_fcs fcs s = ITSET (fcs_acc s) fcs (SOME {})
+End
 
-val nomunify_def = Define`
+Definition nomunify_def:
   nomunify (s,fe) t1 t2 =
   do (sx,feu) <- nunify (s,fe) t1 t2;
      fex <- verify_fcs feu sx;
      SOME (sx,fex)
-  od`;
-
-val _ = export_theory ();
+  od
+End

@@ -1,9 +1,9 @@
-open HolKernel boolLib bossLib BasicProvers;
-open optionTheory pairTheory stringTheory;
-open arithmeticTheory pred_setTheory listTheory finite_mapTheory alistTheory sortingTheory;
-open comparisonTheory;
-
-val _ = new_theory "balanced_map";
+Theory balanced_map
+Ancestors
+  option pair string arithmetic pred_set list finite_map alist
+  sorting comparison
+Libs
+  BasicProvers
 
 val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
@@ -4166,4 +4166,3 @@ Proof
   simp [filter_def, filterWithKey_thm]
 QED
 
-val _ = export_theory ();

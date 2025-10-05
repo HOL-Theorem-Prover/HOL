@@ -24,26 +24,16 @@ app load
 open SyntaxTheory PSLPathTheory KripkeTheory
      UnclockedSemanticsTheory        (* Needed for S_SEM w c (S_CLOCK(r,c1)) *)
      listTheory rich_listTheory;
-val _ = intLib.deprecate_int();
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories of paths and lists
-******************************************************************************)
-open SyntaxTheory PSLPathTheory KripkeTheory
-     UnclockedSemanticsTheory        (* Needed for S_SEM w c (S_CLOCK(r,c1)) *)
-     listTheory rich_listTheory res_quanLib;
-
-(******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
-val _ = intLib.deprecate_int();
+Theory ClockedSemantics
+Ancestors
+  Syntax PSLPath Kripke
+  UnclockedSemantics (* Needed for S_SEM w c (S_CLOCK(r,c1)) *)
+  list rich_list
+Libs
+  res_quanLib
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -58,19 +48,14 @@ val resq_SS =
    rewrites
     [num_to_def,xnum_to_def,IN_DEF,num_to_def,xnum_to_def,LENGTH_def]];
 
-(******************************************************************************
-* Start a new theory called ClockedSemantics
-******************************************************************************)
-val _ = new_theory "ClockedSemantics";
 val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************
 * Clocked semantics of SEREs
 * S_SEM w c r means "w is in the language of r in context of clock c"
 ******************************************************************************)
-val S_SEM_def =
- Define
-  `(S_SEM w c (S_BOOL b) =
+Definition S_SEM_def:
+   (S_SEM w c (S_BOOL b) =
      LENGTH w >= 1
      /\
      (!i :: (0 to (LENGTH w - 1)). B_SEM (ELEM w i) (B_NOT c))
@@ -97,15 +82,15 @@ val S_SEM_def =
      ?i :: (0 to LENGTH w).
        US_SEM (SEL w (0,i)) (S_CAT(S_REPEAT(S_BOOL(B_NOT c1)),S_BOOL c1))
        /\
-       S_SEM (RESTN w i) c1 r)`;
+       S_SEM (RESTN w i) c1 r)
+End
 
 (******************************************************************************
 * Original clocked "SEM 1" semantics of Sugar formulas, partly unfolded
 * (see commented out stuff) to avoid need for TFL hacks to prove termination.
 ******************************************************************************)
-val OLD_F_SEM_def =
-  Define
-  `(OLD_F_SEM w c (F_BOOL b) = B_SEM (ELEM w 0) b)
+Definition OLD_F_SEM_def:
+   (OLD_F_SEM w c (F_BOOL b) = B_SEM (ELEM w 0) b)
     /\
     (OLD_F_SEM w c (F_NOT f) =
       ~(OLD_F_SEM w  c  f))
@@ -167,7 +152,8 @@ val OLD_F_SEM_def =
       ?i :: (0 to LENGTH w).
         S_SEM (SEL w (0,i)) B_TRUE (S_CAT(S_REPEAT(S_BOOL(B_NOT c1)),S_BOOL c1))
         /\
-        OLD_F_SEM (RESTN w i) c1 f)`;
+        OLD_F_SEM (RESTN w i) c1 f)
+End
 
 (******************************************************************************
 * Derivation of "golden" form of clocked "SEM 1" semantics of Sugar formulas
@@ -241,9 +227,8 @@ val OLD_F_SEM =
 * with additional |w|>0 for boolean formulas
 * (see commented out stuff) to avoid need for TFL hacks to prove termination.
 ******************************************************************************)
-val F_SEM_def =
-  Define
-  `(F_SEM w c (F_BOOL b) =
+Definition F_SEM_def:
+   (F_SEM w c (F_BOOL b) =
      LENGTH w > 0 /\ B_SEM (ELEM w 0) b)
     /\
     (F_SEM w c (F_NOT f) =
@@ -306,7 +291,8 @@ val F_SEM_def =
       ?i :: (0 to LENGTH w).
         S_SEM (SEL w (0,i)) B_TRUE (S_CAT(S_REPEAT(S_BOOL(B_NOT c1)),S_BOOL c1))
         /\
-        F_SEM (RESTN w i) c1 f)`;
+        F_SEM (RESTN w i) c1 f)
+End
 
 (******************************************************************************
 * Derivation of "golden" form of clocked "SEM 1" semantics of Sugar formulas
@@ -395,5 +381,3 @@ val F_SEM =
           THEN Q.EXISTS_TAC `i`
           THEN RW_TAC arith_ss [FinitePSLPathTheory.LENGTH_RESTN]
           THEN PROVE_TAC[]]);
-
-val _ = export_theory();

@@ -5,13 +5,10 @@
    for inspiration
 
 *)
+Theory tableauKT
+Ancestors
+  pair pred_set list relation modalBasics tableauBasics
 
-open HolKernel Parse boolLib bossLib;
-
-open pairTheory pred_setTheory listTheory relationTheory;
-open modalBasicsTheory tableauBasicsTheory
-
-val _ = new_theory "tableauKT";
 
 Definition trule_def[simp]:
   trule Σ (Box f :: rest) = (Box f::Σ, f::rest) ∧
@@ -748,4 +745,3 @@ Theorem tableau_KT_satisfies =
         tableau_KT_sound |> Q.SPEC ‘[]’
                          |> SRULE [reflexive_sequent_def]
 
-val _ = export_theory();

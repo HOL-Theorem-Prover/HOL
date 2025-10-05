@@ -1,14 +1,12 @@
 
-open HolKernel Parse boolLib bossLib;
+Theory straightline
+Ancestors
+  words pair list relation pred_set arithmetic combin arm_decomp
+  set_sep prog address triple GraphLang
+Libs
+  wordsLib
 
-val _ = new_theory "straightline";
-
-open wordsTheory wordsLib pairTheory listTheory relationTheory;
-open pred_setTheory arithmeticTheory combinTheory;
-open arm_decompTheory set_sepTheory progTheory addressTheory;
-open tripleTheory GraphLangTheory;
-
-val arm_assert_def = Define `
+Definition arm_assert_def:
   arm_assert (p,r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,r13,r14,n,z,c,v,
               mode,dmem,memory,dom_stack,stack) =
     arm_PC p *
@@ -33,7 +31,8 @@ val arm_assert_def = Define `
     arm_CPSR_V v *
     arm_OK mode *
     arm_MEMORY dmem memory *
-    arm_STACK_MEMORY dom_stack stack`
+    arm_STACK_MEMORY dom_stack stack
+End
 
 val TRIPLE_INTRO = store_thm("TRIPLE_INTRO",
   ``(c_post ==> SPEC model (assert p) code (assert post)) ==>
@@ -68,6 +67,6 @@ val COMBINE3 = store_thm("COMBINE3",
 val COMBINE4 = store_thm("COMBINE4",
   ``(t1 = t2) /\ (u1 = u2) ==> ((t1,u1) = (t2,u2))``,fs [])
 
-val DO_NOTHING_def = Define `DO_NOTHING x = x`;
+Definition DO_NOTHING_def:   DO_NOTHING x = x
+End
 
-val _ = export_theory();

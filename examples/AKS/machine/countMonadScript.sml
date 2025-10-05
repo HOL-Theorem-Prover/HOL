@@ -4,25 +4,14 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "countMonad";
-
 (* ------------------------------------------------------------------------- *)
+Theory countMonad
+Ancestors
+  pair option arithmetic pred_set list errorStateMonad
+Libs
+  jcLib monadsyntax
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory listTheory arithmeticTheory pairTheory optionTheory;
-
-open errorStateMonadTheory;
-
-open monadsyntax;
-
-val _ = set_grammar_ancestry ["pair", "option", "arithmetic"];
-
 val _ = monadsyntax.enable_monadsyntax();
 val _ = monadsyntax.enable_monad "errorState";
 
@@ -95,15 +84,17 @@ val _ = Datatype`counter = Count num`;
 val _ = temp_type_abbrev("ecm", ``:('a # counter)``);
 
 (* unit of an elementary count monad *)
-val unit_def = Define`unit (x:'a) : 'a ecm = (x, Count 0)`;
+Definition unit_def:  unit (x:'a) : 'a ecm = (x, Count 0)
+End
 
 (* tick of an elementary count monad *)
-val tick_def = Define`tick c : unit ecm = ((), Count c)`;
+Definition tick_def:  tick c : unit ecm = ((), Count c)
+End
 
 (* value of an accumulating monad *)
-val valueOf_def = Define`
+Definition valueOf_def:
     valueOf (ac :('a # counter)) = FST ac
-`;
+End
 
 (* count of steps in an accumulating monad *)
 (*
@@ -111,20 +102,20 @@ val stepsOf_def = Define`
     stepsOf (ac :('a # counter)) = counter_size (SND (THE ac))
 `;
 *)
-val stepsOf_def = Define`
+Definition stepsOf_def:
     stepsOf (ac :('a # counter)) =
       case ac of
       | (a, Count n) => n
-`;
+End
 
 (* binding an executing function with an accumulating monad *)
-val bind_def = Define`
+Definition bind_def:
   bind (ac : 'a ecm) (f : 'a -> 'b ecm) =
     case ac of
       | (a,Count c1) =>
           (case f a of
              | (b,Count c2) => (b, Count (c1 + c2)))
-`;
+End
 
 (* count cases and tactic *)
 val count_CASES = TypeBase.nchotomy_of ``:counter``;
@@ -286,19 +277,22 @@ val _ = add_numeral_form(#"c", SOME "cnum");
 *)
 
 (* unary application monad *)
-val app1_def = Define`app1 f xM = bind xM f`;
+Definition app1_def:  app1 f xM = bind xM f
+End
 
 (* binary application monad *)
-val app2_def = Define`app2 f xM yM = bind xM (\x. bind yM (\y. f x y))`;
+Definition app2_def:  app2 f xM yM = bind xM (\x. bind yM (\y. f x y))
+End
 
 (* Map monad *)
-val map_def = Define`map (f:'a -> 'b) m : 'b ecm = (f ## I) m`;
+Definition map_def:  map (f:'a -> 'b) m : 'b ecm = (f ## I) m
+End
 
 
 (* IF monad *)
-val ifM_def = Define`
+Definition ifM_def:
   ifM (gM : bool ecm) (tM : 'a ecm) eM = bind gM (\b. if b then tM else eM)
-`;
+End
 (* for EVAL ifM *)
 val _ = computeLib.set_skip computeLib.the_compset ``ifM`` (SOME 1);
 
@@ -323,8 +317,4 @@ val _ = computeLib.set_skip computeLib.the_compset ``ifM`` (SOME 1);
 (* This EVAL IFm is not stored in the theory file! *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

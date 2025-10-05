@@ -1,11 +1,10 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory stringTheory stringLib listTheory stringSimps listLib simpLib;
-open decoderTheory bit_listTheory opmonTheory;
+Theory x86_decoder
+Ancestors
+  words string list decoder bit_list opmon x86_ast
+Libs
+  stringLib stringSimps listLib simpLib
 
-open x86_astTheory;
-
-val _ = new_theory "x86_decoder";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -18,32 +17,36 @@ val _ = ParseExtras.temp_loose_equality()
 
 (* reading hex strings to bit lists *)
 
-val STR_SPACE_AUX_def = Define `
+Definition STR_SPACE_AUX_def:
   (STR_SPACE_AUX n "" = "") /\
   (STR_SPACE_AUX n (STRING c s) =
      if n = 0 then STRING #" " (STRING c (STR_SPACE_AUX 1 s))
-              else STRING c (STR_SPACE_AUX (n-1) s))`;
+              else STRING c (STR_SPACE_AUX (n-1) s))
+End
 
-val bytebits_def = Define `
-  bytebits = hex2bits o STR_SPACE_AUX 2`;
+Definition bytebits_def:
+  bytebits = hex2bits o STR_SPACE_AUX 2
+End
 
 (* interprete the IA-32 manuals' syntax *)
 
-val check_opcode_def = Define `
+Definition check_opcode_def:
   check_opcode s =
     let y = (n2bits 3 o char2num o HD o TL o EXPLODE) s in
-      assert (\g. g "Reg/Opcode" = y)`;
+      assert (\g. g "Reg/Opcode" = y)
+End
 
-val read_SIB_def = Define `
+Definition read_SIB_def:
   read_SIB =
     assign_drop "Base" 3 >> assign_drop "Index" 3 >> assign_drop "Scale" 2 >>
     option_try [
       assert (\g. (g "Mod" = [F;F]) /\  (g "Base" = [T;F;T])) >> assign_drop "disp32" 32;
       assert (\g. (g "Mod" = [F;F]) /\ ~(g "Base" = [T;F;T]));
       assert (\g. (g "Mod" = [T;F])) >> assign_drop "disp8" 8;
-      assert (\g. (g "Mod" = [F;T])) >> assign_drop "disp32" 32]`;
+      assert (\g. (g "Mod" = [F;T])) >> assign_drop "disp32" 32]
+End
 
-val read_ModRM_def = Define `
+Definition read_ModRM_def:
   read_ModRM =
     assign_drop "R/M" 3 >> assign_drop "Reg/Opcode" 3 >> assign_drop "Mod" 2 >>
     option_try [
@@ -52,12 +55,14 @@ val read_ModRM_def = Define `
       assert (\g.  (g "Mod" = [F;F]) /\  (g "R/M" = [T;F;T])) >> assign_drop "disp32" 32;
       assert (\g.  (g "Mod" = [T;F]) /\ ~(g "R/M" = [F;F;T])) >> assign_drop "disp8" 8;
       assert (\g.  (g "Mod" = [F;T]) /\ ~(g "R/M" = [F;F;T])) >> assign_drop "disp32" 32;
-      assert (\g. ~(g "Mod" = [T;T]) /\  (g "R/M" = [F;F;T])) >> read_SIB]`;
+      assert (\g. ~(g "Mod" = [T;T]) /\  (g "R/M" = [F;F;T])) >> read_SIB]
+End
 
-val is_hex_add_def = Define `
-  is_hex_add x = ((IMPLODE o DROP 2 o EXPLODE) x = "+rd")`;
+Definition is_hex_add_def:
+  is_hex_add x = ((IMPLODE o DROP 2 o EXPLODE) x = "+rd")
+End
 
-val process_hex_add_def = Define `
+Definition process_hex_add_def:
   process_hex_add name =
     let n = (hex2num o IMPLODE o TAKE 2 o EXPLODE) name in
       option_try [drop_eq (n2bits 8 (n+0)) >> assign "reg" (n2bits 3 0);
@@ -67,9 +72,10 @@ val process_hex_add_def = Define `
                   drop_eq (n2bits 8 (n+4)) >> assign "reg" (n2bits 3 4);
                   drop_eq (n2bits 8 (n+5)) >> assign "reg" (n2bits 3 5);
                   drop_eq (n2bits 8 (n+6)) >> assign "reg" (n2bits 3 6);
-                  drop_eq (n2bits 8 (n+7)) >> assign "reg" (n2bits 3 7)]`;
+                  drop_eq (n2bits 8 (n+7)) >> assign "reg" (n2bits 3 7)]
+End
 
-val x86_match_step_def = Define `
+Definition x86_match_step_def:
   x86_match_step name =
     if is_hex name /\ (STRLEN name = 2) then     (* opcode e.g. FE, 83 and 04 *)
       drop_eq (n2bits 8 (hex2num name))
@@ -88,29 +94,34 @@ val x86_match_step_def = Define `
     else if MEM name ["/0";"/1";"/2";"/3";"/4";"/5";"/6";"/7"] then (* opcode extension in ModRM *)
       read_ModRM >> check_opcode name
     else
-      option_fail`;
+      option_fail
+End
 
 (* syntax classes *)
 
-val x86_binop_def = Define `x86_binop =
+Definition x86_binop_def:   x86_binop =
   [("ADC",Xadc); ("ADD",Xadd); ("AND",Xand); ("CMP",Xcmp);
    ("OR",Xor); ("SAR",Xsar); ("SHR",Xshr); ("SHL",Xshl);
-   ("SBB",Xsbb); ("SUB",Xsub); ("TEST",Xtest); ("XOR",Xxor)]`;
+   ("SBB",Xsbb); ("SUB",Xsub); ("TEST",Xtest); ("XOR",Xxor)]
+End
 
-val x86_monop_def = Define `x86_monop =
-  [("DEC",Xdec); ("INC",Xinc); ("NOT",Xnot); ("NEG",Xneg)]`;
+Definition x86_monop_def:   x86_monop =
+  [("DEC",Xdec); ("INC",Xinc); ("NOT",Xnot); ("NEG",Xneg)]
+End
 
 (* x86 - decoder *)
 
-val b2reg_def = Define `
-  b2reg g name = (EL (bits2num (g name)) [EAX;ECX;EDX;EBX;ESP;EBP;ESI;EDI]):Xreg`;
+Definition b2reg_def:
+  b2reg g name = (EL (bits2num (g name)) [EAX;ECX;EDX;EBX;ESP;EBP;ESI;EDI]):Xreg
+End
 
-val decode_Xr32_def = Define `
+Definition decode_Xr32_def:
   decode_Xr32 g name =
     if name = "EAX" then EAX else
-      if g "reg" = [] then b2reg g "Reg/Opcode" else b2reg g "reg"`;
+      if g "reg" = [] then b2reg g "Reg/Opcode" else b2reg g "reg"
+End
 
-val decode_SIB_def = Define `
+Definition decode_SIB_def:
   decode_SIB g =
     let scaled_index = (if g "Index" = [F;F;T] then NONE else SOME (b2w g "Scale",b2reg g "Index")) in
       if g "Base" = [T;F;T] then (* the special case indicated by "[*]" *)
@@ -120,9 +131,10 @@ val decode_SIB_def = Define `
       else (* normal cases, just need to read off the correct displacement *)
         let disp = (if (g "Mod" = [T;F]) then sw2sw ((b2w g "disp8"):word8) else b2w g "disp32") in
         let disp = (if (g "Mod" = [F;F]) then 0w else disp) in
-          Xm scaled_index (SOME (b2reg g "Base")) disp`;
+          Xm scaled_index (SOME (b2reg g "Base")) disp
+End
 
-val decode_Xrm32_def = Define `  (* sw2sw = sign-extension *)
+Definition decode_Xrm32_def:     (* sw2sw = sign-extension *)
   decode_Xrm32 g name =
     if name = "EAX" then Xr EAX else
       if  (g "Mod" = [F;F]) /\ (g "R/M" = [T;F;T]) then Xm NONE NONE (b2w g "disp32") else
@@ -130,18 +142,20 @@ val decode_Xrm32_def = Define `  (* sw2sw = sign-extension *)
       if  (g "Mod" = [F;F]) then Xm NONE (SOME (b2reg g "R/M")) 0w else
       if  (g "Mod" = [T;F]) then Xm NONE (SOME (b2reg g "R/M")) (sw2sw:word8->word32 (b2w g "disp8")) else
       if  (g "Mod" = [F;T]) then Xm NONE (SOME (b2reg g "R/M")) (b2w g "disp32") else
-      if  (g "Mod" = [T;T]) then Xr (b2reg g "R/M") else Xr (b2reg g "reg") `;
+      if  (g "Mod" = [T;T]) then Xr (b2reg g "R/M") else Xr (b2reg g "reg")
+End
 
-val decode_Xconst_def = Define `
+Definition decode_Xconst_def:
   decode_Xconst name g =
    if name = "imm8"  then sw2sw:word8 ->word32 (b2w g "ib") else
    if name = "rel8"  then sw2sw:word8 ->word32 (b2w g "cb") else
    if name = "imm16" then sw2sw:word16->word32 (b2w g "iw") else
    if name = "imm32" then b2w g "id" else
    if name = "rel32" then b2w g "cd" else
-   if name = "1"     then 1w else 0w`;
+   if name = "1"     then 1w else 0w
+End
 
-val decode_Xdest_src_def = Define `
+Definition decode_Xdest_src_def:
   decode_Xdest_src g dest src =
     if MEM src ["r32";"r8"] then
       Xrm_r (decode_Xrm32 g dest) (decode_Xr32 g src)
@@ -150,20 +164,24 @@ val decode_Xdest_src_def = Define `
     else if src = "m" then
       Xr_rm (decode_Xr32 g dest)  (decode_Xrm32 g src)
     else
-      Xrm_i (decode_Xrm32 g dest) (decode_Xconst src g)`;
+      Xrm_i (decode_Xrm32 g dest) (decode_Xconst src g)
+End
 
-val decode_Xconst_or_zero_def = Define `
+Definition decode_Xconst_or_zero_def:
   decode_Xconst_or_zero ts g =
-    if LENGTH ts < 2 then 0w else decode_Xconst (EL 1 ts) g`;
+    if LENGTH ts < 2 then 0w else decode_Xconst (EL 1 ts) g
+End
 
-val decode_Ximm_rm_def = Define `
+Definition decode_Ximm_rm_def:
   decode_Ximm_rm ts g =
     if MEM (EL 1 ts) ["r/m32";"r32";"r/m8";"r8"]
     then Xi_rm (decode_Xrm32 g (EL 1 ts))
-    else Xi (decode_Xconst (EL 1 ts) g)`;
+    else Xi (decode_Xconst (EL 1 ts) g)
+End
 
-val x86_select_op_def = Define `
-  x86_select_op name list = SND (HD (FILTER (\x. FST x = name) list))`;
+Definition x86_select_op_def:
+  x86_select_op name list = SND (HD (FILTER (\x. FST x = name) list))
+End
 
 val x86_syntax_binop = ``
   Xbinop (x86_select_op (HD ts) x86_binop) (decode_Xdest_src g (EL 1 ts) (EL 2 ts))``;
@@ -171,9 +189,10 @@ val x86_syntax_binop = ``
 val x86_syntax_monop = ``
   Xmonop (x86_select_op (HD ts) x86_monop) (decode_Xrm32 g (EL 1 ts))``;
 
-val X_SOME_def = Define `X_SOME f = SOME o (\(g,w). (f g,w))`;
+Definition X_SOME_def:   X_SOME f = SOME o (\(g,w). (f g,w))
+End
 
-val x86_syntax_def = Define `
+Definition x86_syntax_def:
   x86_syntax ts =
     if LENGTH ts = 0 then option_fail else
     if (HD ts = "CMP") /\ MEM "r/m8" ts then X_SOME (\g. Xcmp_byte (decode_Xdest_src g (EL 1 ts) (EL 2 ts))) else
@@ -215,7 +234,8 @@ val x86_syntax_def = Define `
     if HD ts = "MUL"     then X_SOME (\g. Xmul  (decode_Xrm32 g (EL 1 ts))) else
     if HD ts = "DIV"     then X_SOME (\g. Xdiv  (decode_Xrm32 g (EL 1 ts))) else
     if HD ts = "CALL"    then X_SOME (\g. Xcall (decode_Ximm_rm ts g)) else
-    if HD ts = "RET"     then X_SOME (\g. Xret (decode_Xconst_or_zero ts g)) else option_fail`;
+    if HD ts = "RET"     then X_SOME (\g. Xret (decode_Xconst_or_zero ts g)) else option_fail
+End
 
 
 (* a list of x86 instructions, ordered by the combination of addressing modes they support *)
@@ -348,11 +368,12 @@ val x86_syntax_list = `` [
 
   ] ``;
 
-val x86_decode_aux_def = zDefine `
+Definition x86_decode_aux_def[nocompute]:
   x86_decode_aux = (match_list x86_match_step tokenise (x86_syntax o tokenise) o
-                     MAP (\s. let x = STR_SPLIT [#"|"] s in (EL 0 x, EL 1 x))) ^x86_syntax_list`;
+                     MAP (\s. let x = STR_SPLIT [#"|"] s in (EL 0 x, EL 1 x))) ^x86_syntax_list
+End
 
-val x86_decode_prefixes_def = Define `
+Definition x86_decode_prefixes_def:
   x86_decode_prefixes w =
     if LENGTH w < 16 then (Xg1_none,Xg2_none,w) else
       let bt1  = (TAKE 8 w = n2bits 8 (hex2num "2E")) in
@@ -365,14 +386,16 @@ val x86_decode_prefixes_def = Define `
       let g2   = if bt1 \/ bt2 then Xbranch_taken else Xg2_none in
       let g2   = if bnt1 \/ bnt2 then Xbranch_not_taken else g2 in
       let n    = if bt1 \/ bnt1 \/ l1 then (if bt2 \/ bnt2 \/ l2 then 16 else 8) else 0 in
-        (g1,g2,DROP n w)`;
+        (g1,g2,DROP n w)
+End
 
-val dest_accesses_memory_def = Define `
+Definition dest_accesses_memory_def:
   (dest_accesses_memory (Xrm_i rm i) = rm_is_memory_access rm) /\
   (dest_accesses_memory (Xrm_r rm r) = rm_is_memory_access rm) /\
-  (dest_accesses_memory (Xr_rm r rm) = F)`;
+  (dest_accesses_memory (Xr_rm r rm) = F)
+End
 
-val x86_lock_ok_def = Define `
+Definition x86_lock_ok_def:
   (x86_lock_ok (Xbinop binop_name ds) =
     MEM binop_name [Xadd;Xand;Xor;Xsub;Xxor] /\
     dest_accesses_memory ds) /\
@@ -392,36 +415,42 @@ val x86_lock_ok_def = Define `
   (x86_lock_ok (Xjmp rm) = F) /\
   (x86_lock_ok (Xloop c imm) = F) /\
   (x86_lock_ok (Xpushad) = F) /\
-  (x86_lock_ok (Xpopad) = F)`;
+  (x86_lock_ok (Xpopad) = F)
+End
 
-val x86_decode_def = Define `
+Definition x86_decode_def:
   x86_decode w =
     let (g1,g2,w) = x86_decode_prefixes w in
     let result = x86_decode_aux w in
       if result = NONE then NONE else
         let (i,w) = THE result in
-          if ~(g1 = Xlock) \/ x86_lock_ok i then SOME (Xprefix g1 g2 i, w) else NONE`;
+          if ~(g1 = Xlock) \/ x86_lock_ok i then SOME (Xprefix g1 g2 i, w) else NONE
+End
 
-val x86_decode_bytes_def = Define `
-  x86_decode_bytes b = x86_decode (FOLDR APPEND [] (MAP w2bits b))`;
+Definition x86_decode_bytes_def:
+  x86_decode_bytes b = x86_decode (FOLDR APPEND [] (MAP w2bits b))
+End
 
-val rm_args_ok_def = Define `
+Definition rm_args_ok_def:
   (rm_args_ok (Xr r) = T) /\
   (rm_args_ok (Xm NONE NONE t3) = T) /\
   (rm_args_ok (Xm NONE (SOME br) t3) = T) /\
   (rm_args_ok (Xm (SOME (s,ir)) NONE t3) = ~(ir = ESP)) /\
-  (rm_args_ok (Xm (SOME (s,ir)) (SOME br) t3) = ~(ir = ESP))`;
+  (rm_args_ok (Xm (SOME (s,ir)) (SOME br) t3) = ~(ir = ESP))
+End
 
-val dest_src_args_ok_def = Define `
+Definition dest_src_args_ok_def:
   (dest_src_args_ok (Xrm_i rm i) = rm_args_ok rm) /\
   (dest_src_args_ok (Xrm_r rm r) = rm_args_ok rm ) /\
-  (dest_src_args_ok (Xr_rm r rm) = rm_args_ok rm )`;
+  (dest_src_args_ok (Xr_rm r rm) = rm_args_ok rm )
+End
 
-val imm_rm_args_ok_def = Define `
+Definition imm_rm_args_ok_def:
   (imm_rm_args_ok (Xi_rm rm) = rm_args_ok rm) /\
-  (imm_rm_args_ok (Xi i) = T)`;
+  (imm_rm_args_ok (Xi i) = T)
+End
 
-val x86_args_ok_def = Define `
+Definition x86_args_ok_def:
   (x86_args_ok (Xbinop binop_name ds) = dest_src_args_ok ds) /\
   (x86_args_ok (Xmonop monop_name rm) = rm_args_ok rm) /\
   (x86_args_ok (Xxadd rm r) = rm_args_ok rm ) /\
@@ -436,11 +465,13 @@ val x86_args_ok_def = Define `
   (x86_args_ok (Xjmp rm) = T) /\
   (x86_args_ok (Xloop c imm) = MEM c [X_NE;X_E;X_ALWAYS]) /\
   (x86_args_ok (Xpushad) = T) /\
-  (x86_args_ok (Xpopad) = T)`;
+  (x86_args_ok (Xpopad) = T)
+End
 
-val x86_well_formed_instruction_def = Define `
+Definition x86_well_formed_instruction_def:
   (x86_well_formed_instruction (Xprefix Xlock g2 i) = x86_lock_ok i /\ x86_args_ok i) /\
-  (x86_well_formed_instruction (Xprefix Xg1_none g2 i) = x86_args_ok i)`;
+  (x86_well_formed_instruction (Xprefix Xg1_none g2 i) = x86_args_ok i)
+End
 
 
 
@@ -582,4 +613,3 @@ val _ = elapsed_time < 5.0 orelse failwith("Decoding failed to use compset prope
 (* The time difference should really be under a second, but 5 seconds
    gives a bit of a margin. *)
 
-val _ = export_theory ();

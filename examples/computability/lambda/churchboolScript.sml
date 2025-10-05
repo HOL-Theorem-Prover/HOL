@@ -1,14 +1,8 @@
-open HolKernel boolLib bossLib Parse binderLib
-
-open chap3Theory
-open pred_setTheory
-open termTheory
-open boolSimps
-open normal_orderTheory
-open reductionEval
-open head_reductionTheory
-
-val _ = new_theory "churchbool"
+Theory churchbool
+Ancestors
+  chap3 pred_set term normal_order head_reduction
+Libs
+  binderLib boolSimps reductionEval
 
 val _ = set_trace "Unicode" 1
 
@@ -20,7 +14,8 @@ val _ = remove_ovl_mapping "APP"  {Name="APP", Thy="labelledTerms"}
 
 fun Store_thm(n,t,tac) = store_thm(n,t,tac) before export_rewrites [n]
 
-val cB_def = Define`cB p = LAM "x" (LAM "y" (VAR (if p then "x" else "y")))`;
+Definition cB_def:  cB p = LAM "x" (LAM "y" (VAR (if p then "x" else "y")))
+End
 val FV_cB = Store_thm(
   "FV_cB",
   ``FV (cB p) = {}``,
@@ -57,9 +52,9 @@ val wh_cB = store_thm(
   ASM_SIMP_TAC (whfy (srw_ss())) []);
 val _ = export_betarwt "wh_cB"
 
-val cnot_def = Define`
+Definition cnot_def:
   cnot = LAM "b" (VAR "b" @@ cB F @@ cB T)
-`;
+End
 val FV_cnot = Store_thm(
   "FV_cnot",
   ``FV cnot = {}``,
@@ -75,9 +70,9 @@ val cnot_behaviour = store_thm(
   SIMP_TAC (bsrw_ss()) [cnot_def]);
 val _ = export_betarwt "cnot_behaviour"
 
-val cand_def = Define`
+Definition cand_def:
   cand = LAM "p" (LAM "q" (VAR "p" @@ VAR "q" @@ cB F))
-`;
+End
 val FV_cand = Store_thm(
   "FV_cand",
   ``FV cand = {}``,
@@ -115,9 +110,9 @@ val cand_T1 = store_thm(
   unvarify_tac whstar_substitutive THEN
   SIMP_TAC (whfy(srw_ss())) [wh_cand, wh_cB]);
 
-val cor_def = Define`
+Definition cor_def:
   cor = LAM "p" (LAM "q" (VAR "p" @@ cB T @@ VAR "q"))
-`;
+End
 val FV_cor = Store_thm(
   "FV_cor",
   ``FV cor = {}``,
@@ -208,4 +203,3 @@ val wh_B = store_thm(
   unvarify_tac whstar_substitutive THEN
   SIMP_TAC (whfy(srw_ss())) [chap2Theory.B_def, wh_S, wh_K]);
 
-val _ = export_theory()

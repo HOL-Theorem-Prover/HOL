@@ -1,15 +1,11 @@
-open HolKernel Parse boolLib bossLib;
+Theory prob_uniform
+Ancestors
+  arithmetic pred_set list sequence state_transformer extra_num
+  combin pair real extra_bool extra_pred_set extra_real num
+  sigma_algebra real_measure real_probability prob_algebra prob
+Libs
+  hurdUtils realLib extra_pred_setTools simpLib
 
-open arithmeticTheory pred_setTheory
-     listTheory sequenceTheory state_transformerTheory
-     hurdUtils extra_numTheory combinTheory
-     pairTheory realTheory realLib extra_boolTheory
-     extra_pred_setTheory extra_realTheory extra_pred_setTools numTheory simpLib;
-
-open sigma_algebraTheory real_measureTheory real_probabilityTheory;
-open prob_algebraTheory probTheory;
-
-val _ = new_theory "prob_uniform";
 val _ = ParseExtras.temp_loose_equality()
 
 val std_ss' = std_ss ++ boolSimps.ETA_ss;
@@ -30,14 +26,16 @@ val (prob_unif_def, prob_unif_ind) = Defn.tprove
 val _ = save_thm ("prob_unif_def", prob_unif_def);
 val _ = save_thm ("prob_unif_ind", prob_unif_ind);
 
-val prob_uniform_cut_def = Define
-  `(prob_uniform_cut 0 (SUC n) s = (0, s)) /\
+Definition prob_uniform_cut_def:
+   (prob_uniform_cut 0 (SUC n) s = (0, s)) /\
    (prob_uniform_cut (SUC t) (SUC n) s =
     let (res, s') = prob_unif n s
-    in if res < SUC n then (res, s') else prob_uniform_cut t (SUC n) s')`;
+    in if res < SUC n then (res, s') else prob_uniform_cut t (SUC n) s')
+End
 
-val prob_uniform_def = Define
-  `prob_uniform (SUC n) = prob_until (prob_unif n) (\x. x < SUC n)`;
+Definition prob_uniform_def:
+   prob_uniform (SUC n) = prob_until (prob_unif n) (\x. x < SUC n)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems leading to:                                                      *)
@@ -727,4 +725,3 @@ val PROB_UNIFORM_RANGE = store_thm
    >> MP_TAC (Q.ISPECL [`prob_unif n`, `\x. x < SUC n`] PROB_UNTIL_POST)
    >> RW_TAC bool_ss [PROB_UNIFORM_TERMINATES, INDEP_FN_PROB_UNIF]);
 
-val _ = export_theory ();

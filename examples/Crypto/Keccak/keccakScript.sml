@@ -1,14 +1,13 @@
-open HolKernel Parse boolLib bossLib dep_rewrite blastLib
-     bitLib reduceLib combinLib optionLib sptreeLib wordsLib computeLib;
-open optionTheory pairTheory arithmeticTheory combinTheory listTheory
-     rich_listTheory whileTheory bitTheory dividesTheory wordsTheory
-     indexedListsTheory numposrepTheory numeral_bitTheory
-     bitstringTheory logrootTheory byteTheory sptreeTheory;
-open cv_transLib cvTheory cv_stdTheory;
+Theory keccak
+Ancestors
+  option pair arithmetic combin list rich_list While bit divides
+  words indexedLists numposrep numeral_bit bitstring logroot byte
+  sptree cv cv_std
+Libs
+  dep_rewrite blastLib bitLib reduceLib combinLib optionLib
+  sptreeLib wordsLib computeLib cv_transLib
 
 (* The SHA-3 Standard: https://doi.org/10.6028/NIST.FIPS.202 *)
-
-val _ = new_theory "keccak";
 
 Overload Num[local] = “cv$Num”
 Overload Pair[local] = “cv$Pair”
@@ -3951,7 +3950,7 @@ Triviality while1_thm:
     while1 a tt ww x y w z a'
 Proof
   ho_match_mp_tac while1_ind \\ rw []
-  \\ simp [Once whileTheory.WHILE]
+  \\ simp [Once WHILE]
   \\ simp [Once while1_def]
   \\ IF_CASES_TAC \\ gvs []
 QED
@@ -3980,7 +3979,7 @@ Theorem while2_thm:
     while2 a w ww x y t a'
 Proof
   ho_match_mp_tac while2_ind \\ rw []
-  \\ simp [Once whileTheory.WHILE]
+  \\ simp [Once WHILE]
   \\ simp [Once while2_def]
   \\ IF_CASES_TAC \\ gvs []
 QED
@@ -4206,7 +4205,7 @@ Definition Keccak_spt_def:
       Z = while3 1600 (1600 − c) x' [] S
     in
       TAKE x' Z
-End;
+End
 
 Triviality sponge_foldl_NOT_NIL:
   ∀xs S0 Pis.
@@ -4564,4 +4563,3 @@ CBV_CONV cs ``bools_to_hex_string
 
 *)
 
-val _ = export_theory();

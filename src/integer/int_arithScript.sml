@@ -41,51 +41,59 @@ val less_to_leq_samer = store_thm(
   Term`!x y:int. x < y = x + 1 <= y`,
   REWRITE_TAC [int_le, not_less, INT_LT_RADD]);
 
-val lt_move_all_right = store_thm(
-  "lt_move_all_right",
-  ``!x y. x < y = 0 < y + ~x``,
-  REWRITE_TAC [INT_LT_ADDNEG, INT_ADD_LID]);
-val lt_move_all_left = store_thm(
-  "lt_move_all_left",
-  ``!x y. x < y = x + ~y < 0``,
-  REWRITE_TAC [INT_LT_ADDNEG2, INT_ADD_LID]);
-val lt_move_left_left = store_thm(
-  "lt_move_left_left",
-  ``!x y z. x < y + z = x + ~y < z``,
+Theorem lt_move_all_right:
+    !x y. x < y = 0 < y + ~x
+Proof
+  REWRITE_TAC [INT_LT_ADDNEG, INT_ADD_LID]
+QED
+Theorem lt_move_all_left:
+    !x y. x < y = x + ~y < 0
+Proof
+  REWRITE_TAC [INT_LT_ADDNEG2, INT_ADD_LID]
+QED
+Theorem lt_move_left_left:
+    !x y z. x < y + z = x + ~y < z
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC [INT_LT_ADDNEG2] THEN
-  CONV_TAC (LHS_CONV (RAND_CONV (REWR_CONV INT_ADD_COMM))) THEN REFL_TAC);
-val lt_move_left_right = store_thm(
-  "lt_move_left_right",
-  ``!x y z. x + y < z = y < z + ~x``,
+  CONV_TAC (LHS_CONV (RAND_CONV (REWR_CONV INT_ADD_COMM))) THEN REFL_TAC
+QED
+Theorem lt_move_left_right:
+    !x y z. x + y < z = y < z + ~x
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC [INT_LT_ADDNEG] THEN
   CONV_TAC (LHS_CONV (RATOR_CONV (RAND_CONV (REWR_CONV INT_ADD_COMM)))) THEN
-  REFL_TAC);
+  REFL_TAC
+QED
 
-val le_move_right_left = store_thm(
-  "le_move_right_left",
-  ``!x y z. x <= y + z = x + ~z <= y``,
-  REWRITE_TAC [INT_LE_SUB_RADD, GSYM int_sub]);
+Theorem le_move_right_left:
+    !x y z. x <= y + z = x + ~z <= y
+Proof
+  REWRITE_TAC [INT_LE_SUB_RADD, GSYM int_sub]
+QED
 
-val le_move_all_right = store_thm(
-  "le_move_all_right",
-  ``!x y. x <= y = 0 <= y + ~x``,
-  REWRITE_TAC [GSYM int_sub, INT_LE_SUB_LADD, INT_ADD_LID]);
+Theorem le_move_all_right:
+    !x y. x <= y = 0 <= y + ~x
+Proof
+  REWRITE_TAC [GSYM int_sub, INT_LE_SUB_LADD, INT_ADD_LID]
+QED
 
 
-val eq_move_all_right = store_thm(
-  "eq_move_all_right",
-  ``!x y. (x = y) = (0 = y + ~x)``,
+Theorem eq_move_all_right:
+    !x y. (x = y) = (0 = y + ~x)
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL [
     SIMP_TAC bool_ss [INT_ADD_RINV],
     SIMP_TAC bool_ss [GSYM int_sub, INT_EQ_SUB_LADD, INT_ADD_LID]
-  ]);
-val eq_move_all_left = store_thm(
-  "eq_move_all_left",
-  ``!x y. (x = y) = (x + ~y = 0)``,
-  PROVE_TAC [INT_ADD_COMM, eq_move_all_right]);
-val eq_move_left_left = store_thm(
-  "eq_move_left_left",
-  ``!x y z. (x = y + z) = (x + ~y = z)``,
+  ]
+QED
+Theorem eq_move_all_left:
+    !x y. (x = y) = (x + ~y = 0)
+Proof
+  PROVE_TAC [INT_ADD_COMM, eq_move_all_right]
+QED
+Theorem eq_move_left_left:
+    !x y z. (x = y + z) = (x + ~y = z)
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL [
     DISCH_THEN SUBST1_TAC THEN
     ONCE_REWRITE_TAC [INT_ADD_COMM] THEN
@@ -93,50 +101,57 @@ val eq_move_left_left = store_thm(
     DISCH_THEN (SUBST1_TAC o SYM) THEN
     ONCE_REWRITE_TAC [INT_ADD_COMM] THEN
     REWRITE_TAC [GSYM INT_ADD_ASSOC, INT_ADD_LINV, INT_ADD_RID]
-  ]);
-val eq_move_left_right = store_thm(
-  "eq_move_left_right",
-  ``!x y z. (x + y = z) = (y = z + ~x)``,
-  PROVE_TAC [INT_ADD_COMM, eq_move_left_left]);
+  ]
+QED
+Theorem eq_move_left_right:
+    !x y z. (x + y = z) = (y = z + ~x)
+Proof
+  PROVE_TAC [INT_ADD_COMM, eq_move_left_left]
+QED
 
-val eq_move_right_left = store_thm(
-  "eq_move_right_left",
-  ``!x y z. (x = y + z) = (x + ~z = y)``,
-  PROVE_TAC [INT_ADD_COMM, eq_move_left_left]);
+Theorem eq_move_right_left:
+    !x y z. (x = y + z) = (x + ~z = y)
+Proof
+  PROVE_TAC [INT_ADD_COMM, eq_move_left_left]
+QED
 
-val lcm_eliminate = store_thm(
-  "lcm_eliminate",
-  ``!P c. (?x. P (c * x)) = (?x. P x /\ c int_divides x)``,
+Theorem lcm_eliminate:
+    !P c. (?x. P (c * x)) = (?x. P x /\ c int_divides x)
+Proof
   REPEAT GEN_TAC THEN SIMP_TAC bool_ss [INT_DIVIDES] THEN
-  PROVE_TAC [INT_MUL_SYM]);
+  PROVE_TAC [INT_MUL_SYM]
+QED
 
 
-val lt_justify_multiplication = store_thm(
-  "lt_justify_multiplication",
-  “!n x y:int. 0 < n ==> (x < y = n * x < n * y)”,
+Theorem lt_justify_multiplication:
+   !n x y:int. 0 < n ==> (x < y = n * x < n * y)
+Proof
   REPEAT STRIP_TAC THEN
   `n * x < n * y = 0 < n * y - n * x`
      by PROVE_TAC [INT_LT_ADD_SUB, INT_ADD_LID] THEN
   POP_ASSUM SUBST_ALL_TAC THEN
   ASM_REWRITE_TAC [GSYM INT_SUB_LDISTRIB, INT_MUL_SIGN_CASES] THEN
   `~(n < 0)` by PROVE_TAC [INT_LT_TRANS, INT_LT_REFL] THEN
-  ASM_REWRITE_TAC [INT_ADD_LID, GSYM INT_LT_ADD_SUB]);
+  ASM_REWRITE_TAC [INT_ADD_LID, GSYM INT_LT_ADD_SUB]
+QED
 
-val eq_justify_multiplication = store_thm(
-  "eq_justify_multiplication",
-  “!n x y:int. 0 < n ==> ((x = y) = (n * x = n * y))”,
-  PROVE_TAC [INT_EQ_RMUL, INT_LT_REFL, INT_MUL_COMM]);
+Theorem eq_justify_multiplication:
+   !n x y:int. 0 < n ==> ((x = y) = (n * x = n * y))
+Proof
+  PROVE_TAC [INT_EQ_RMUL, INT_LT_REFL, INT_MUL_COMM]
+QED
 
-val justify_divides = store_thm(
-  "justify_divides",
-  “!n x y:int. 0 < n ==> (x int_divides y = n * x int_divides n * y)”,
-  PROVE_TAC [INT_DIVIDES_MUL_BOTH, INT_LT_REFL]);
+Theorem justify_divides:
+   !n x y:int. 0 < n ==> (x int_divides y = n * x int_divides n * y)
+Proof
+  PROVE_TAC [INT_DIVIDES_MUL_BOTH, INT_LT_REFL]
+QED
 
-val justify_divides2 = store_thm(
-  "justify_divides2",
-  “!n c x y:int.
+Theorem justify_divides2:
+   !n c x y:int.
         n * x int_divides n * y + c =
-        n * x int_divides n * y + c /\ n int_divides c”,
+        n * x int_divides n * y + c /\ n int_divides c
+Proof
   REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THEN
   ASM_REWRITE_TAC [] THEN POP_ASSUM MP_TAC THEN
   REWRITE_TAC [INT_DIVIDES] THEN
@@ -147,13 +162,15 @@ val justify_divides2 = store_thm(
   `m * (n * x) = n * (m * x)` by PROVE_TAC [INT_MUL_COMM, INT_MUL_ASSOC] THEN
   POP_ASSUM SUBST_ALL_TAC THEN
   REWRITE_TAC [GSYM INT_LDISTRIB] THEN
-  PROVE_TAC [INT_MUL_COMM]);
+  PROVE_TAC [INT_MUL_COMM]
+QED
 
-val justify_divides3 = store_thm(
-  "justify_divides3",
-  ``!n x c. n int_divides n * x + c = n int_divides c``,
+Theorem justify_divides3:
+    !n x c. n int_divides n * x + c = n int_divides c
+Proof
   REPEAT STRIP_TAC THEN MATCH_MP_TAC INT_DIVIDES_LADD THEN
-  MATCH_MP_TAC INT_DIVIDES_LMUL THEN MATCH_ACCEPT_TAC INT_DIVIDES_REFL);
+  MATCH_MP_TAC INT_DIVIDES_LMUL THEN MATCH_ACCEPT_TAC INT_DIVIDES_REFL
+QED
 
 
 val INT_SUB_SUB3 = store_thm(
@@ -203,11 +220,12 @@ val can_get_small = store_thm(
     FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) []
   ]);
 
-val can_get_big = store_thm(
-  "can_get_big",
-  ``!x:int y d. 0 < d ==> ?c. 0 < c /\ x < y + c * d``,
+Theorem can_get_big:
+    !x:int y d. 0 < d ==> ?c. 0 < c /\ x < y + c * d
+Proof
   REPEAT STRIP_TAC THEN REWRITE_TAC [GSYM INT_LT_SUB_RADD] THEN
-  PROVE_TAC [can_get_small]);
+  PROVE_TAC [can_get_small]
+QED
 
 val positive_product_implication = store_thm(
   "positive_product_implication",
@@ -439,9 +457,9 @@ val elim_minus_ones = store_thm(
   Term`!x:int. (x + 1) - 1 = x`,
   REWRITE_TAC [int_sub, GSYM INT_ADD_ASSOC, INT_ADD_RINV, INT_ADD_RID]);
 
-val INT_NUM_DIVIDES = store_thm(
-  "INT_NUM_DIVIDES",
-  ``!n m. &n int_divides &m = divides n m``,
+Theorem INT_NUM_DIVIDES:
+    !n m. &n int_divides &m = divides n m
+Proof
   SIMP_TAC bool_ss [INT_DIVIDES, dividesTheory.divides_def, EQ_IMP_THM,
                     FORALL_AND_THM, GSYM LEFT_FORALL_IMP_THM] THEN
   REPEAT STRIP_TAC THENL [
@@ -453,11 +471,12 @@ val INT_NUM_DIVIDES = store_thm(
       PROVE_TAC [MULT_CLAUSES]
     ],
     Q.EXISTS_TAC `&q` THEN SIMP_TAC bool_ss [INT_MUL]
-  ]);
+  ]
+QED
 
-val INT_LINEAR_GCD = store_thm(
-  "INT_LINEAR_GCD",
-  ``!n m. ?p:int q. p * &n + q * &m = &(gcd n m)``,
+Theorem INT_LINEAR_GCD:
+    !n m. ?p:int q. p * &n + q * &m = &(gcd n m)
+Proof
   REPEAT GEN_TAC THEN
   Cases_on `n = 0` THENL [
     POP_ASSUM SUBST1_TAC THEN
@@ -473,24 +492,26 @@ val INT_LINEAR_GCD = store_thm(
   `?i j. i * n = j * m + gcd m n` by PROVE_TAC [LINEAR_GCD] THEN
   MAP_EVERY Q.EXISTS_TAC [`&i`, `~&j`] THEN
   ASM_SIMP_TAC bool_ss [INT_MUL_CALCULATE, GSYM eq_move_left_left,
-                        GCD_SYM, INT_ADD]);
+                        GCD_SYM, INT_ADD]
+QED
 
-val INT_DIVIDES_LRMUL = store_thm(
-  "INT_DIVIDES_LRMUL",
-  ``!p q r. ~(q = 0) ==> ((p * q) int_divides (r * q) = p int_divides r)``,
+Theorem INT_DIVIDES_LRMUL:
+    !p q r. ~(q = 0) ==> ((p * q) int_divides (r * q) = p int_divides r)
+Proof
   REPEAT GEN_TAC THEN SIMP_TAC bool_ss [INT_DIVIDES] THEN
   STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
     `(m * p) * q = r * q` by PROVE_TAC [INT_MUL_ASSOC] THEN
     PROVE_TAC [INT_EQ_RMUL],
     PROVE_TAC [INT_MUL_ASSOC]
-  ]);
+  ]
+QED
 
 
-val INT_DIVIDES_RELPRIME_MUL = store_thm(
-  "INT_DIVIDES_RELPRIME_MUL",
-  ``!p q r.
+Theorem INT_DIVIDES_RELPRIME_MUL:
+    !p q r.
       (gcd p q = 1) ==>
-      (&p int_divides &q * r = &p int_divides r)``,
+      (&p int_divides &q * r = &p int_divides r)
+Proof
   REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
     STRIP_ASSUME_TAC (Q.SPEC `r` INT_NUM_CASES) THEN
     FIRST_X_ASSUM SUBST_ALL_TAC THEN
@@ -498,7 +519,8 @@ val INT_DIVIDES_RELPRIME_MUL = store_thm(
                            INT_DIVIDES_NEG] THEN
     PROVE_TAC [L_EUCLIDES, GCD_SYM],
     PROVE_TAC [INT_DIVIDES_RMUL]
-  ]);
+  ]
+QED
 
 val INT_MUL_DIV' = prove(
   ``!p q k.
@@ -518,14 +540,14 @@ val fractions = prove(
   POP_ASSUM SUBST1_TAC THEN
   ASM_SIMP_TAC bool_ss [INT_MUL_DIV, INT_MOD_ID, INT_DIV_ID, INT_MUL_RID]);
 
-val gcdthm2 = store_thm(
-  "gcdthm2",
-  ``!m:num a:num x b d p q.
+Theorem gcdthm2:
+    !m:num a:num x b d p q.
        (d = gcd a m) /\ (&d = p * &a + q * &m) /\ ~(d = 0) /\
        ~(m = 0) /\ ~(a = 0) ==>
        (&m int_divides (&a * x) + b =
         &d int_divides b /\
-        ?t. x = ~p * (b / &d) + t * (&m / &d))``,
+        ?t. x = ~p * (b / &d) + t * (&m / &d))
+Proof
   REPEAT STRIP_TAC THEN EQ_TAC THENL [
     STRIP_TAC THEN
     `&d int_divides &a /\ &d int_divides &m` by
@@ -647,11 +669,12 @@ val gcdthm2 = store_thm(
                           INT_INJ] THEN
     REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) THEN
     CONV_TAC (AC_CONV(INT_MUL_ASSOC, INT_MUL_COMM))
-  ]);
+  ]
+QED
 
-val gcd1thm = store_thm(
-  "gcd1thm",
-  ``!m n p q. (p * &m + q * &n = 1i) ==> (gcd m n = 1n)``,
+Theorem gcd1thm:
+    !m n p q. (p * &m + q * &n = 1i) ==> (gcd m n = 1n)
+Proof
   REPEAT STRIP_TAC THEN
   Q.SUBGOAL_THEN `&(gcd m n) int_divides (p * &m + q * &n)` ASSUME_TAC
   THENL [
@@ -676,25 +699,27 @@ val gcd1thm = store_thm(
 
     FIRST_X_ASSUM SUBST_ALL_TAC THEN
     FULL_SIMP_TAC bool_ss [INT_DIVIDES_1, INT_EQ_CALCULATE]
-  ]);
+  ]
+QED
 
-val gcd21_thm = store_thm(
-  "gcd21_thm",
-  ``!m a x b p q.
+Theorem gcd21_thm:
+    !m a x b p q.
       (p * &a + q * &m = 1i) /\ ~(m = 0) /\ ~(a = 0) ==>
-      (&m int_divides &a * x + b = ?t. x = ~p * b + t * &m)``,
+      (&m int_divides &a * x + b = ?t. x = ~p * b + t * &m)
+Proof
   REPEAT STRIP_TAC THEN
   `1 = gcd a m` by PROVE_TAC [gcd1thm] THEN
   `~(1n = 0)` by ASM_SIMP_TAC arith_ss []  THEN
   Q.PAT_X_ASSUM `_ = 1i` (ASSUME_TAC o SYM) THEN
   Q.SPECL_THEN [`m`, `a`, `x`, `b`, `1`, `p`, `q`] MP_TAC gcdthm2 THEN
   REPEAT (FIRST_X_ASSUM (MP_TAC o SYM)) THEN
-  ASM_SIMP_TAC bool_ss [INT_DIV_1, INT_DIVIDES_1]);
+  ASM_SIMP_TAC bool_ss [INT_DIV_1, INT_DIVIDES_1]
+QED
 
 
-val elim_lt_coeffs1 = store_thm(
-  "elim_lt_coeffs1",
-  ``!n m x:int.  ~(m = 0) ==> (&n < &m * x = &n / &m < x)``,
+Theorem elim_lt_coeffs1:
+    !n m x:int.  ~(m = 0) ==> (&n < &m * x = &n / &m < x)
+Proof
   REPEAT STRIP_TAC THEN
   ASM_SIMP_TAC bool_ss [INT_DIV] THEN
   `0 < m` by ASM_SIMP_TAC arith_ss [] THEN
@@ -728,13 +753,14 @@ val elim_lt_coeffs1 = store_thm(
     MP_TAC (Q.ASSUME `r:num < m`) THEN
     SIMP_TAC bool_ss [LEFT_ADD_DISTRIB, MULT_CLAUSES] THEN
     numLib.ARITH_TAC
-  ]);
+  ]
+QED
 
-val elim_lt_coeffs2 = store_thm(
-  "elim_lt_coeffs2",
-  ``!n m x:int. ~(m = 0) ==>
+Theorem elim_lt_coeffs2:
+    !n m x:int. ~(m = 0) ==>
                  (&m * x < &n = x < if &m int_divides &n then &n / &m
-                                    else &n / &m + 1)``,
+                                    else &n / &m + 1)
+Proof
   REPEAT STRIP_TAC THEN
   ASM_SIMP_TAC bool_ss [INT_DIV, INT_DIVIDES_MOD0, INT_INJ,
                         INT_MOD] THEN
@@ -764,11 +790,12 @@ val elim_lt_coeffs2 = store_thm(
     `&m * &i < &(m * i + r)` by
        ASM_SIMP_TAC arith_ss [INT_LT, INT_MUL] THEN
     PROVE_TAC [INT_LET_TRANS]
-  ]);
+  ]
+QED
 
-val elim_le_coeffs = store_thm(
-  "elim_le_coeffs",
-  ``!m n x.  0 < m ==> (0 <= m * x + n = 0 <= x + n/m)``,
+Theorem elim_le_coeffs:
+    !m n x.  0 < m ==> (0 <= m * x + n = 0 <= x + n/m)
+Proof
   REPEAT STRIP_TAC THEN
   `~(m = 0) /\ ~(m < 0)` by PROVE_TAC [INT_LT_REFL, INT_LT_ANTISYM] THEN
   Q.SPEC_THEN `m` MP_TAC INT_DIVISION THEN
@@ -788,12 +815,13 @@ val elim_le_coeffs = store_thm(
     PROVE_TAC [elim_minus_ones, int_sub, less_to_leq_samel],
     MATCH_MP_TAC INT_LE_TRANS THEN Q.EXISTS_TAC `m * (x + q)` THEN
     PROVE_TAC [INT_LE_MONO, INT_MUL_RZERO, INT_LE_ADDR]
-  ]);
+  ]
+QED
 
-val elim_eq_coeffs = store_thm(
-  "elim_eq_coeffs",
-  ``!m x y.  ~(m = 0) ==>
-             ((&m * x = y) = &m int_divides y /\ (x = y / &m))``,
+Theorem elim_eq_coeffs:
+    !m x y.  ~(m = 0) ==>
+             ((&m * x = y) = &m int_divides y /\ (x = y / &m))
+Proof
   REPEAT STRIP_TAC THEN
   ASM_SIMP_TAC bool_ss [INT_DIVIDES] THEN EQ_TAC THEN STRIP_TAC THENL [
     POP_ASSUM (SUBST_ALL_TAC o SYM) THEN CONJ_TAC THENL [
@@ -806,7 +834,8 @@ val elim_eq_coeffs = store_thm(
     ASM_SIMP_TAC bool_ss [INT_MUL_DIV, INT_INJ, INT_MOD_ID, INT_DIV_ID,
                           INT_MUL_RID] THEN
     PROVE_TAC [INT_MUL_COMM]
-  ]);
+  ]
+QED
 
 
 val int_acnorm_ss = SSFRAG{
@@ -830,15 +859,15 @@ val adhoc_lemma2 = prove(
   SIMP_TAC (bool_ss ++ int_acnorm_ss) [INT_SUB_CALCULATE]);
 
 
-val cooper_lemma_1 = store_thm(
-  "cooper_lemma_1",
-  ``!m n a b u v p q x d.
+Theorem cooper_lemma_1:
+    !m n a b u v p q x d.
        (d = gcd (u * m) (a * n)) /\
        (&d = p * &u * &m + q * &a * &n) /\
        ~(m = 0) /\ ~(n = 0) /\ ~(a = 0) /\ ~(u = 0) ==>
        (&m int_divides &a * x + b /\ &n int_divides &u * x + v =
         &m * &n int_divides &d * x + v * &m * p + b * &n * q /\
-        &d int_divides &a * v - &u * b)``,
+        &d int_divides &a * v - &u * b)
+Proof
   REPEAT STRIP_TAC THEN
   EQ_TAC THEN REPEAT STRIP_TAC THENL [
     (* m | ax + b /\ n | ux + v ==> mn | dx + vmp + bnq *)
@@ -1004,18 +1033,20 @@ val cooper_lemma_1 = store_thm(
     `&n int_divides k * &n * q` by
         PROVE_TAC [INT_DIVIDES_MUL, INT_MUL_COMM, INT_MUL_ASSOC] THEN
     PROVE_TAC [INT_DIVIDES_LADD]
-  ]);
+  ]
+QED
 
 val bmarker_def = new_definition(
   "bmarker_def",
   ``bmarker (b:bool) = b``);
 
-val bmarker_rewrites = store_thm(
-  "bmarker_rewrites",
-  ``!p q r. (q /\ bmarker p = bmarker p /\ q) /\
+Theorem bmarker_rewrites:
+    !p q r. (q /\ bmarker p = bmarker p /\ q) /\
             (q /\ (bmarker p /\ r) = bmarker p /\ (q /\ r)) /\
-            ((bmarker p /\ q) /\ r = bmarker p /\ (q /\ r))``,
-  REWRITE_TAC [bmarker_def] THEN tautLib.TAUT_TAC);
+            ((bmarker p /\ q) /\ r = bmarker p /\ (q /\ r))
+Proof
+  REWRITE_TAC [bmarker_def] THEN tautLib.TAUT_TAC
+QED
 
 val positive_mod_part = prove(
   ``!p q r. 0 < q /\ 0 <= r /\ r < q ==>
@@ -1043,11 +1074,11 @@ val tac2 =
     ASM_SIMP_TAC bool_ss [positive_mod_part] THEN
     STRIP_TAC THEN VAR_EQ_TAC THEN FULL_SIMP_TAC int_ss []
 
-val NOT_INT_DIVIDES = store_thm(
-  "NOT_INT_DIVIDES",
-  ``!c d. ~(c = 0) ==>
+Theorem NOT_INT_DIVIDES:
+    !c d. ~(c = 0) ==>
           (~(c int_divides d) =
-           ?i. 1 <= i /\ i <= ABS c - 1 /\ c int_divides d + i)``,
+           ?i. 1 <= i /\ i <= ABS c - 1 /\ c int_divides d + i)
+Proof
   REPEAT GEN_TAC THEN
   Q.SPEC_THEN `c` STRIP_ASSUME_TAC INT_NUM_CASES THEN
   ASM_SIMP_TAC bool_ss [INT_DIVIDES_NEG, INT_ABS_NUM, INT_ABS_NEG,
@@ -1058,49 +1089,55 @@ val NOT_INT_DIVIDES = store_thm(
   ASM_SIMP_TAC int_ss [INT_LT] THEN STRIP_TAC THEN
   Q.ABBREV_TAC `q = d / &n` THEN POP_ASSUM (K ALL_TAC) THEN
   Q.ABBREV_TAC `r = d % &n` THEN POP_ASSUM (K ALL_TAC) THEN
-  EQ_TAC THEN STRIP_TAC THENL [tac1,tac2,tac1,tac2]);
+  EQ_TAC THEN STRIP_TAC THENL [tac1,tac2,tac1,tac2]
+QED
 
-val NOT_INT_DIVIDES_POS = store_thm(
-  "NOT_INT_DIVIDES_POS",
-  ``!n d. ~(n = 0) ==>
+Theorem NOT_INT_DIVIDES_POS:
+    !n d. ~(n = 0) ==>
           (~(&n int_divides d) =
-           ?i. (1 <= i /\ i <= &n - 1) /\ &n int_divides d + i)``,
+           ?i. (1 <= i /\ i <= &n - 1) /\ &n int_divides d + i)
+Proof
   REPEAT STRIP_TAC THEN
   `~(&n = 0)` by ASM_SIMP_TAC bool_ss [INT_INJ] THEN
-  ASM_SIMP_TAC bool_ss [NOT_INT_DIVIDES, INT_ABS_NUM, CONJ_ASSOC]);
+  ASM_SIMP_TAC bool_ss [NOT_INT_DIVIDES, INT_ABS_NUM, CONJ_ASSOC]
+QED
 
-val le_context_rwt1 = store_thm(
-  "le_context_rwt1",
-  ``0 <= c + x ==> x <= y ==> (0 <= c + y = T)``,
+Theorem le_context_rwt1:
+    0 <= c + x ==> x <= y ==> (0 <= c + y = T)
+Proof
   PROVE_TAC [INT_LE_LADD, INT_ADD_COMM, INT_ADD_ASSOC, INT_LE_ADD2,
-             INT_ADD_LID]);
+             INT_ADD_LID]
+QED
 
-val le_context_rwt2 = store_thm(
-  "le_context_rwt2",
-  ``0 <= c + x ==> y < ~x ==> (0 <= ~c + y = F)``,
+Theorem le_context_rwt2:
+    0 <= c + x ==> y < ~x ==> (0 <= ~c + y = F)
+Proof
   REWRITE_TAC [] THEN REPEAT STRIP_TAC THEN
   `c <= y` by PROVE_TAC [le_move_all_right, INT_ADD_COMM] THEN
   `~x <= c` by PROVE_TAC [INT_NEGNEG, le_move_all_right, INT_ADD_COMM] THEN
-  PROVE_TAC [INT_LE_TRANS, INT_NOT_LE]);
+  PROVE_TAC [INT_LE_TRANS, INT_NOT_LE]
+QED
 
-val le_context_rwt3 = store_thm(
-  "le_context_rwt3",
-  ``0 <= c + x ==> x < y ==> ((0 = c + y) = F)``,
+Theorem le_context_rwt3:
+    0 <= c + x ==> x < y ==> ((0 = c + y) = F)
+Proof
   REWRITE_TAC [] THEN REPEAT STRIP_TAC THEN
-  PROVE_TAC [INT_LE_LADD, INT_LET_TRANS, INT_LT_REFL]);
+  PROVE_TAC [INT_LE_LADD, INT_LET_TRANS, INT_LT_REFL]
+QED
 
-val le_context_rwt4 = store_thm(
-  "le_context_rwt4",
-  ``0 <= c + x ==> x < ~y  ==> ((0 = ~c + y) = F)``,
+Theorem le_context_rwt4:
+    0 <= c + x ==> x < ~y  ==> ((0 = ~c + y) = F)
+Proof
   REWRITE_TAC [] THEN REPEAT STRIP_TAC THEN
   POP_ASSUM (SUBST_ALL_TAC o
              REWRITE_RULE [INT_NEG_0, INT_NEG_ADD, INT_NEGNEG] o
              AP_TERM ``$~ : int -> int``) THEN
-  PROVE_TAC [INT_LE_LADD, INT_LET_TRANS, INT_LT_REFL]);
+  PROVE_TAC [INT_LE_LADD, INT_LET_TRANS, INT_LT_REFL]
+QED
 
-val le_context_rwt5 = store_thm(
-  "le_context_rwt5",
-  ``0 <= c + x ==> (0 <= ~c + ~x = (0 = c + x))``,
+Theorem le_context_rwt5:
+    0 <= c + x ==> (0 <= ~c + ~x = (0 = c + x))
+Proof
   STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
     POP_ASSUM (ASSUME_TAC o REWRITE_RULE [INT_NEG_0, INT_NEG_ADD, INT_NEGNEG] o
                CONV_RULE (REWR_CONV (GSYM INT_LE_NEG))) THEN
@@ -1109,21 +1146,24 @@ val le_context_rwt5 = store_thm(
                REWRITE_RULE [INT_NEG_0, INT_NEG_ADD, INT_NEGNEG] o
                AP_TERM ``$~ : int -> int``) THEN
     REWRITE_TAC [INT_LE_REFL]
-  ]);
+  ]
+QED
 
 
-val eq_context_rwt1 = store_thm(
-  "eq_context_rwt1",
-  ``(0i = c + x) ==> (0 <= c + y = x <= y)``,
-  STRIP_TAC THEN ASM_REWRITE_TAC [INT_LE_LADD]);
+Theorem eq_context_rwt1:
+    (0i = c + x) ==> (0 <= c + y = x <= y)
+Proof
+  STRIP_TAC THEN ASM_REWRITE_TAC [INT_LE_LADD]
+QED
 
-val eq_context_rwt2 = store_thm(
-  "eq_context_rwt2",
-  ``(0 = c + x) ==> (0 <= ~c + y = ~x <= y)``,
+Theorem eq_context_rwt2:
+    (0 = c + x) ==> (0 <= ~c + y = ~x <= y)
+Proof
   STRIP_TAC THEN
   POP_ASSUM (ASSUME_TAC o REWRITE_RULE [INT_NEG_0, INT_NEG_ADD] o
              AP_TERM ``$~ : int -> int``) THEN
-  ASM_REWRITE_TAC [INT_LE_LADD]);
+  ASM_REWRITE_TAC [INT_LE_LADD]
+QED
 
 val _ = hide "bmarker";
 

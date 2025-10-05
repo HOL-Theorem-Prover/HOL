@@ -3,21 +3,18 @@
 (*       Symbolic representation of non-deterministic semi-automata           *)
 (*                                                                            *)
 (******************************************************************************)
+Theory symbolic_semi_automaton
+Ancestors
+  infinite_path pred_set list pair xprop_logic container
+  prop_logic set_lemmata prim_rec temporal_deep_mixed
+Libs
+  term_grammar tuerk_tacticsLib Sanity
 
-open HolKernel Parse boolLib bossLib;
-
-open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory
-     containerTheory prop_logicTheory set_lemmataTheory prim_recTheory;
-
-open term_grammar tuerk_tacticsLib temporal_deep_mixedTheory;
-
-open Sanity;
 
 val _ = hide "S";
 val _ = hide "K";
 val _ = hide "I";
 
-val _ = new_theory "symbolic_semi_automaton";
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val _ = ParseExtras.temp_loose_equality()
 
@@ -38,11 +35,13 @@ Datatype :
 End
 
 (* used input vars = all used vars in (S0,R) - all state vars (S) *)
-val SEMI_AUTOMATON_USED_INPUT_VARS_def = Define
-   `SEMI_AUTOMATON_USED_INPUT_VARS A = (P_USED_VARS A.S0 UNION XP_USED_VARS A.R) DIFF A.S`;
+Definition SEMI_AUTOMATON_USED_INPUT_VARS_def:
+    SEMI_AUTOMATON_USED_INPUT_VARS A = (P_USED_VARS A.S0 UNION XP_USED_VARS A.R) DIFF A.S
+End
 
-val SEMI_AUTOMATON_USED_VARS_def = Define
-   `SEMI_AUTOMATON_USED_VARS A = (SEMI_AUTOMATON_USED_INPUT_VARS A) UNION A.S`;
+Definition SEMI_AUTOMATON_USED_VARS_def:
+    SEMI_AUTOMATON_USED_VARS A = (SEMI_AUTOMATON_USED_INPUT_VARS A) UNION A.S
+End
 
 (* all used vars = all used vars in (S0,R) + all state vars (S) *)
 Theorem SEMI_AUTOMATON_USED_VARS___DIRECT_DEF :
@@ -53,9 +52,10 @@ Proof
  >> PROVE_TAC []
 QED
 
-val SEMI_AUTOMATON_VAR_RENAMING_def = Define
-   `SEMI_AUTOMATON_VAR_RENAMING (f:'a->'b) (symbolic_semi_automaton S S0 R) =
-      (symbolic_semi_automaton (IMAGE f S) (P_VAR_RENAMING f S0) (XP_VAR_RENAMING f R))`;
+Definition SEMI_AUTOMATON_VAR_RENAMING_def:
+    SEMI_AUTOMATON_VAR_RENAMING (f:'a->'b) (symbolic_semi_automaton S S0 R) =
+      (symbolic_semi_automaton (IMAGE f S) (P_VAR_RENAMING f S0) (XP_VAR_RENAMING f R))
+End
 
 Theorem SEMI_AUTOMATON_VAR_RENAMING_REWRITES :
     !A f. ((SEMI_AUTOMATON_VAR_RENAMING f A).S = IMAGE f A.S) /\
@@ -79,54 +79,62 @@ Theorem symbolic_semi_automaton_REWRITES =
 (*****************************************************************************)
 
 (* `A` is used only to filter out all state variables in `i` *)
-val INPUT_RUN_STATE_UNION_def = Define
-   `INPUT_RUN_STATE_UNION A i s = s UNION (i DIFF A.S)`;
+Definition INPUT_RUN_STATE_UNION_def:
+    INPUT_RUN_STATE_UNION A i s = s UNION (i DIFF A.S)
+End
 
-val INPUT_RUN_PATH_UNION_def = Define
-   `INPUT_RUN_PATH_UNION A i w = \n. INPUT_RUN_STATE_UNION A (i n) (w n)`;
+Definition INPUT_RUN_PATH_UNION_def:
+    INPUT_RUN_PATH_UNION A i w = \n. INPUT_RUN_STATE_UNION A (i n) (w n)
+End
 
 (* (s1,i1) is the current state, (s2,i2) is the next state *)
-val IS_TRANSITION_def = Define
-   `IS_TRANSITION A s1 i1 s2 i2 =
-       XP_SEM A.R (INPUT_RUN_STATE_UNION A i1 s1, INPUT_RUN_STATE_UNION A i2 s2)`;
+Definition IS_TRANSITION_def:
+    IS_TRANSITION A s1 i1 s2 i2 =
+       XP_SEM A.R (INPUT_RUN_STATE_UNION A i1 s1, INPUT_RUN_STATE_UNION A i2 s2)
+End
 
 (*****************************************************************************)
 (* RUN A i w is true iff w is a run of i through A                           *)
 (*****************************************************************************)
-val IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def = Define
-   `IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w =
+Definition IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def:
+    IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w =
       (PATH_SUBSET w A.S /\
        P_SEM (INPUT_RUN_PATH_UNION A i w 0) A.S0 /\
-       !n. IS_TRANSITION A (w n) (i n) (w (SUC n)) (i (SUC n)))`;
+       !n. IS_TRANSITION A (w n) (i n) (w (SUC n)) (i (SUC n)))
+End
 
 (*=============================================================================
 = Syntactic Sugar and elementary lemmata
 =============================================================================*)
 
 (* cf. boolTheory.EXISTS_DEF (at least one), EXISTS_UNIQUE_DEF (exactly one) *)
-val EXISTS_AT_MOST_ONE_def = Define
-   `EXISTS_AT_MOST_ONE = \P:'a->bool. !x y. P x /\ P y ==> (x=y)`;
+Definition EXISTS_AT_MOST_ONE_def:
+    EXISTS_AT_MOST_ONE = \P:'a->bool. !x y. P x /\ P y ==> (x=y)
+End
 val _ = set_fixity "EXISTS_AT_MOST_ONE" Binder;
 
 (* Deterministric: for each input trace there's at most one "compatible" trace
    satisfying initial state and transition relation.
  *)
-val IS_DET_SYMBOLIC_SEMI_AUTOMATON_def = Define
-   `IS_DET_SYMBOLIC_SEMI_AUTOMATON A =
+Definition IS_DET_SYMBOLIC_SEMI_AUTOMATON_def:
+    IS_DET_SYMBOLIC_SEMI_AUTOMATON A =
       (!i. EXISTS_AT_MOST_ONE s. ((s SUBSET A.S) /\ (P_SEM (INPUT_RUN_STATE_UNION A i s) A.S0))) /\
-      (!s1 i1 i2. EXISTS_AT_MOST_ONE s2. ((s2 SUBSET A.S) /\ IS_TRANSITION A s1 i1 s2 i2))`;
+      (!s1 i1 i2. EXISTS_AT_MOST_ONE s2. ((s2 SUBSET A.S) /\ IS_TRANSITION A s1 i1 s2 i2))
+End
 
 (* Total: for each input trace there's at least one "compatible" trace, i.e.
    no deadlock for whatever inputs.
  *)
-val IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON_def = Define
-   `IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON A =
+Definition IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON_def:
+    IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON A =
       (!i. ?s. ((s SUBSET A.S) /\ (P_SEM (INPUT_RUN_STATE_UNION A i s) A.S0))) /\
-      (!s1 i1 i2. ?s2. ((s2 SUBSET A.S) /\ IS_TRANSITION A s1 i1 s2 i2))`;
+      (!s1 i1 i2. ?s2. ((s2 SUBSET A.S) /\ IS_TRANSITION A s1 i1 s2 i2))
+End
 
-val IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_def = Define
-   `IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON A =
-    IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON A /\ IS_DET_SYMBOLIC_SEMI_AUTOMATON A`;
+Definition IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_def:
+    IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON A =
+    IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON A /\ IS_DET_SYMBOLIC_SEMI_AUTOMATON A
+End
 
 (* Total+deterministric: for each input trace there's exactly one "compatible" trace
    satisfying initial state and transition relation.
@@ -144,17 +152,19 @@ Proof
 QED
 
 (* A semi-automaton without some syntactic sugar, i.e. w/o input variables *)
-val IS_SIMPLE_SYMBOLIC_SEMI_AUTOMATON_def = Define
-   `IS_SIMPLE_SYMBOLIC_SEMI_AUTOMATON A =
-      (P_USED_VARS A.S0 SUBSET A.S /\ XP_USED_X_VARS A.R SUBSET A.S)`;
+Definition IS_SIMPLE_SYMBOLIC_SEMI_AUTOMATON_def:
+    IS_SIMPLE_SYMBOLIC_SEMI_AUTOMATON A =
+      (P_USED_VARS A.S0 SUBSET A.S /\ XP_USED_X_VARS A.R SUBSET A.S)
+End
 
 (* In "simple" symbolic runs of semi-automaton, the input state (i n) is only
    used in the current part of relation.
  *)
-val IS_SYMBOLIC_RUN_THROUGH_SIMPLE_SEMI_AUTOMATON_def = Define
-   `IS_SYMBOLIC_RUN_THROUGH_SIMPLE_SEMI_AUTOMATON A i w =
+Definition IS_SYMBOLIC_RUN_THROUGH_SIMPLE_SEMI_AUTOMATON_def:
+    IS_SYMBOLIC_RUN_THROUGH_SIMPLE_SEMI_AUTOMATON A i w =
       (PATH_SUBSET w A.S /\ P_SEM (w 0) A.S0 /\
-       !n. XP_SEM A.R ((w n) UNION (i n DIFF A.S), (w (SUC n))))`;
+       !n. XP_SEM A.R ((w n) UNION (i n DIFF A.S), (w (SUC n))))
+End
 
 (* In case of simple symbolic semi-automaton, the normal symbolic run is
    also the "simple" symbolic run.
@@ -180,8 +190,8 @@ Proof
 QED
 
 (* A = f(A'), a simplification of A' (mostly the input variables) *)
-val IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON_def = Define
-   `IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON A A' f =
+Definition IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON_def:
+    IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON A A' f =
      (!i. i IN SEMI_AUTOMATON_USED_INPUT_VARS A' ==>
           f i NOTIN (A'.S UNION SEMI_AUTOMATON_USED_INPUT_VARS A' UNION
                      IMAGE f (SEMI_AUTOMATON_USED_INPUT_VARS A' DIFF {i}))) /\
@@ -190,12 +200,14 @@ val IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON_def = Define
             (P_VAR_RENAMING (\x. if (x IN A'.S) then x else f x) A'.S0)
             (XP_AND((XP_VAR_RENAMING (\x. if (x IN A'.S) then x else f x) A'.R),
                     XP_BIGAND (SET_TO_LIST (IMAGE (\i. XP_EQUIV(XP_PROP (f i), XP_PROP i))
-                                            (SEMI_AUTOMATON_USED_INPUT_VARS A'))))))`;
+                                            (SEMI_AUTOMATON_USED_INPUT_VARS A'))))))
+End
 (* product = synchoronous composition *)
-val PRODUCT_SEMI_AUTOMATON_def = Define
-   `PRODUCT_SEMI_AUTOMATON (symbolic_semi_automaton S_1 S0_1 R_1)
+Definition PRODUCT_SEMI_AUTOMATON_def:
+    PRODUCT_SEMI_AUTOMATON (symbolic_semi_automaton S_1 S0_1 R_1)
                            (symbolic_semi_automaton S_2 S0_2 R_2) =
-      symbolic_semi_automaton (S_1 UNION S_2) (P_AND(S0_1, S0_2)) (XP_AND(R_1, R_2))`;
+      symbolic_semi_automaton (S_1 UNION S_2) (P_AND(S0_1, S0_2)) (XP_AND(R_1, R_2))
+End
 
 Theorem PRODUCT_SEMI_AUTOMATON_THM :
     !A B C. (PRODUCT_SEMI_AUTOMATON A B = C) <=> (C.S  = (A.S UNION B.S)) /\
@@ -215,8 +227,9 @@ Proof
 QED
 
 (* empty semi automaton (accepting all input traces) *)
-val ID_SEMI_AUTOMATON_def = Define
-   `ID_SEMI_AUTOMATON = symbolic_semi_automaton EMPTY P_TRUE XP_TRUE`;
+Definition ID_SEMI_AUTOMATON_def:
+    ID_SEMI_AUTOMATON = symbolic_semi_automaton EMPTY P_TRUE XP_TRUE
+End
 
 Theorem ID_SEMI_AUTOMATON_RUN :
     !i w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON ID_SEMI_AUTOMATON i w <=> (w = EMPTY_PATH)
@@ -1014,4 +1027,3 @@ Proof
                TRANSITION_NEXT_STATE_CLEANING]
 QED
 
-val _ = export_theory ();

@@ -13,23 +13,16 @@ GF(p) -- Galois Field of order prime p.
 *)
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-open pred_setTheory arithmeticTheory dividesTheory gcdTheory numberTheory
-     combinatoricsTheory;
-
-(* declare new theory at start *)
-val _ = new_theory "fieldInstances";
+Theory fieldInstances
+Ancestors
+  pred_set arithmetic divides gcd number combinatorics monoid
+  group ring field fieldMap
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-open fieldMapTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -137,7 +130,7 @@ val trivial_field_def = Define`
 `;
 -- Why? *)
 
-val trivial_field_def = Define`
+Definition trivial_field_def:
   (trivial_field zero_elt one_elt) : 'a field =
    <| carrier := {zero_elt; one_elt};
       sum := <| carrier := {zero_elt; one_elt};
@@ -153,7 +146,7 @@ val trivial_field_def = Define`
                                 else if y = zero_elt then zero_elt
                                 else one_elt) |>
     |>
-`;
+End
 
 (* Theorem: {|0|, |1|} is indeed a field. *)
 (* Proof: by definition, the field tables are:
@@ -188,13 +181,13 @@ val trivial_field = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Galois Field *)
-val GF_def = zDefine`
+Definition GF_def[nocompute]:
   GF p :num field =
    <| carrier := { n | n < p };
           sum := add_mod p;
          prod := (mult_mod p including 0)
     |>
-`;
+End
 (* Use of zDefine to avoid incorporating into computeLib, by default. *)
 
 (*
@@ -827,8 +820,4 @@ val _ = computeLib.add_persistent_funs["GF_prod_nonzero_inv"];
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

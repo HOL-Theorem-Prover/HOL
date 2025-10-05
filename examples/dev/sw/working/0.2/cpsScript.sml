@@ -1,26 +1,26 @@
 (*===========================================================================*)
 (* Applying CPS to semantics-based ASTs for a simple WHILE language          *)
 (*===========================================================================*)
+Theory cps
+Ancestors
+  relation
 
-open HolKernel Parse boolLib bossLib relationTheory;
-
-val _ = new_theory "cps";
 
 (*---------------------------------------------------------------------------*)
 (* Combinator-based pseudo-ASTs for simple programs                          *)
 (*---------------------------------------------------------------------------*)
 
-val Seq_def =
-  Define
-   `Seq (f1:'a->'b) (f2:'b->'c) = \x. f2(f1 x)`;
+Definition Seq_def:
+    Seq (f1:'a->'b) (f2:'b->'c) = \x. f2(f1 x)
+End
 
-val Par_def =
- Define
-   `Par f1 f2 = \x. (f1 x, f2 x)`;
+Definition Par_def:
+    Par f1 f2 = \x. (f1 x, f2 x)
+End
 
-val Ite_def =
- Define
-   `Ite f1 f2 f3 = \x. if f1 x then f2 x else f3 x`;
+Definition Ite_def:
+    Ite f1 f2 f3 = \x. if f1 x then f2 x else f3 x
+End
 
 val Rec_def =
  TotalDefn.DefineSchema
@@ -35,9 +35,9 @@ val Rec_ind = fetch "-" "Rec_ind";
 (* representatives for lower-level implementations.                          *)
 (*---------------------------------------------------------------------------*)
 
-val CPS_def =
-  Define
-   `CPS f = \k arg. k (f arg)`;
+Definition CPS_def:
+    CPS f = \k arg. k (f arg)
+End
 
 val CPS_ID = store_thm
 ("CPS_ID",
@@ -71,9 +71,9 @@ val CPS_INV = Q.store_thm
 (* Used in the test expression of an if-then-else                            *)
 (*---------------------------------------------------------------------------*)
 
-val CPS2_def =
-  Define
-   `CPS2 f = \k1 k2 arg. if f arg then k1 T else k2 F`;
+Definition CPS2_def:
+    CPS2 f = \k1 k2 arg. if f arg then k1 T else k2 F
+End
 
 val CPS2_INV = Q.store_thm
 ("CPS2_INV",
@@ -86,9 +86,9 @@ val CPS2_INV = Q.store_thm
 (* CPSing sequential composition                                             *)
 (*---------------------------------------------------------------------------*)
 
-val CPS_SEQ_def =
-  Define
-   `CPS_SEQ f g = \k arg. f (\ret. g k ret) arg`;
+Definition CPS_SEQ_def:
+    CPS_SEQ f g = \k arg. f (\ret. g k ret) arg
+End
 
 val CPS_SEQ_INTRO = Q.store_thm
 ("CPS_SEQ_INTRO",
@@ -100,9 +100,9 @@ val CPS_SEQ_INTRO = Q.store_thm
 (* CSPing parallel composition                                               *)
 (*---------------------------------------------------------------------------*)
 
-val CPS_PAR_def =
-  Define
-   `CPS_PAR f g = \k arg. f (\ret2. g (\ret. k (ret2, ret)) arg) arg`;
+Definition CPS_PAR_def:
+    CPS_PAR f g = \k arg. f (\ret2. g (\ret. k (ret2, ret)) arg) arg
+End
 
 val CPS_PAR_INTRO = Q.store_thm
 ("CPS_PAR_INTRO",
@@ -134,9 +134,9 @@ val CPS2_INTRO = Q.store_thm
  RW_TAC std_ss [CPS_def, CPS2_def, CPS_TEST_def, FUN_EQ_THM]);
 *)
 
-val CPS_ITE_def =
-  Define
-   `CPS_ITE e f g = \k arg. e (\ret. let k2 = k in if ret then f k2 arg else g k2 arg) arg`;
+Definition CPS_ITE_def:
+    CPS_ITE e f g = \k arg. e (\ret. let k2 = k in if ret then f k2 arg else g k2 arg) arg
+End
 
 val CPS_ITE_INTRO = Q.store_thm
 ("CPS_ITE_INTRO",
@@ -286,8 +286,9 @@ val CPS_REC_INTRO = Q.store_thm
   THEN FULL_SIMP_TAC std_ss [CPS_def, CPS2_def]);
 *)
 
-val CPS_REC_def = Define
-`CPS_REC e f g = \k arg. k (Rec (e (\x.x)) (f (\x.x)) (g (\x.x)) arg)`
+Definition CPS_REC_def:
+ CPS_REC e f g = \k arg. k (Rec (e (\x.x)) (f (\x.x)) (g (\x.x)) arg)
+End
 
 val CPS_REC_INTRO = Q.store_thm
 ("CPS_REC_INTRO",
@@ -329,4 +330,3 @@ val UNLET =
    METIS_PROVE [] ``!f M. (let f2 = f in f2 M) = f M``);
 
 
-val _ = export_theory();

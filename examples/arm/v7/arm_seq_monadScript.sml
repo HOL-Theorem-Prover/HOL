@@ -7,13 +7,12 @@
 (* interactive use:
   app load ["arm_astTheory", "wordsLib"];
 *)
+Theory arm_seq_monad
+Ancestors
+  arm_ast
+Libs
+  wordsLib
 
-open HolKernel boolLib bossLib Parse;
-open wordsLib;
-
-open arm_astTheory;
-
-val _ = new_theory "arm_seq_monad";
 
 (* ------------------------------------------------------------------------ *)
 
@@ -29,12 +28,14 @@ val _ = type_abbrev("exclusive_state",
 val _ = type_abbrev("ExclusiveM",
   ``: exclusive_state -> ('a # exclusive_state)``);
 
-val constE_def = Define`
-  (constE: 'a -> 'a ExclusiveM) x = \y. (x,y)`;
+Definition constE_def:
+  (constE: 'a -> 'a ExclusiveM) x = \y. (x,y)
+End
 
-val seqE_def = Define`
+Definition seqE_def:
   (seqE: 'a ExclusiveM -> ('a -> 'b ExclusiveM) -> 'b ExclusiveM) s f =
-  \y. let (v,x) = s y in f v x`;
+  \y. let (v,x) = s y in f v x
+End
 
 val _ = Hol_datatype `ExclusiveMonitors =
   <| state                   : exclusive_state;
@@ -56,12 +57,14 @@ val _ = Hol_datatype `coproc_state =
 
 val _ = type_abbrev("CoprocessorM", ``:coproc_state -> ('a # coproc_state)``);
 
-val constC_def = Define`
-  (constC: 'a -> 'a CoprocessorM) x = \y. (x,y)`;
+Definition constC_def:
+  (constC: 'a -> 'a CoprocessorM) x = \y. (x,y)
+End
 
-val seqC_def = Define`
+Definition seqC_def:
   (seqC: 'a CoprocessorM -> ('a -> 'b CoprocessorM) -> 'b CoprocessorM) s f =
-  \y. let (v,x) = s y in f v x`;
+  \y. let (v,x) = s y in f v x
+End
 
 val _ = Hol_datatype `Coprocessors =
   <| state        : coproc_state;
@@ -98,27 +101,33 @@ val _ = Hol_datatype `error_option = ValueState of 'a => 'b | Error of string`;
 
 val _ = type_abbrev("M",``:arm_state -> ('a, arm_state) error_option``);
 
-val constT_def = Define`
-  (constT: 'a -> 'a M) x = \y. ValueState x y`;
+Definition constT_def:
+  (constT: 'a -> 'a M) x = \y. ValueState x y
+End
 
-val errorT_def = Define`
-  (errorT : string -> 'a M) e = K (Error e)`;
+Definition errorT_def:
+  (errorT : string -> 'a M) e = K (Error e)
+End
 
-val seqT_def = Define`
+Definition seqT_def:
   (seqT: 'a M -> ('a -> 'b M) -> 'b M) s f =
    \y. case s y of Error e => Error e
-                 | ValueState z t => f z t`;
+                 | ValueState z t => f z t
+End
 
-val parT_def = Define`
+Definition parT_def:
   (parT: 'a M -> 'b M -> ('a # 'b) M) s t =
-    seqT s (\x. seqT t (\y. constT (x,y)))`;
+    seqT s (\x. seqT t (\y. constT (x,y)))
+End
 
-val lockT_def = Define`
-  (lockT: 'a M -> 'a M) s = s`;
+Definition lockT_def:
+  (lockT: 'a M -> 'a M) s = s
+End
 
-val condT_def = Define`
+Definition condT_def:
   (condT: bool -> unit M -> unit M) =
-    \b s. if b then s else constT ()`;
+    \b s. if b then s else constT ()
+End
 
 val forT_def = tDefine "forT"
  `forT (l : num) (h : num) (f : num -> 'a M) : ('a list) M =
@@ -129,69 +138,87 @@ val forT_def = tDefine "forT"
       constT []`
  (WF_REL_TAC `measure (\(l,h,f). h + 1 - l)`);
 
-val readT_def  = Define `(readT f  : 'a M)   = \y. ValueState (f y) y`;
-val writeT_def = Define `(writeT f : unit M) = \y. ValueState () (f y)`;
+Definition readT_def:    (readT f  : 'a M)   = \y. ValueState (f y) y
+End
+Definition writeT_def:   (writeT f : unit M) = \y. ValueState () (f y)
+End
 
 (* ARM specific operations *)
 
-val read_info_def = Define`
-  read_info (ii:iiid) = readT arm_state_information`;
+Definition read_info_def:
+  read_info (ii:iiid) = readT arm_state_information
+End
 
-val read_arch_def = Define`
-  read_arch (ii:iiid) = readT (ARMinfo_arch o arm_state_information)`;
+Definition read_arch_def:
+  read_arch (ii:iiid) = readT (ARMinfo_arch o arm_state_information)
+End
 
-val read_extensions_def = Define`
+Definition read_extensions_def:
   read_extensions (ii:iiid) =
-    readT (ARMinfo_extensions o arm_state_information)`;
+    readT (ARMinfo_extensions o arm_state_information)
+End
 
-val read__reg_def = Define`
-  read__reg (ii:iiid) rname = readT (\s. s.registers (ii.proc,rname))`;
+Definition read__reg_def:
+  read__reg (ii:iiid) rname = readT (\s. s.registers (ii.proc,rname))
+End
 
-val write__reg_def = Define`
+Definition write__reg_def:
   write__reg (ii:iiid) rname value =
-    writeT (arm_state_registers_fupd ((ii.proc,rname) =+ value))`;
+    writeT (arm_state_registers_fupd ((ii.proc,rname) =+ value))
+End
 
-val read__psr_def = Define`
-  read__psr (ii:iiid) i = readT (\s. s.psrs (ii.proc,i))`;
+Definition read__psr_def:
+  read__psr (ii:iiid) i = readT (\s. s.psrs (ii.proc,i))
+End
 
-val write__psr_def = Define`
+Definition write__psr_def:
   (write__psr (ii:iiid) psrname value):unit M =
-    writeT (arm_state_psrs_fupd ((ii.proc,psrname) =+ value))`;
+    writeT (arm_state_psrs_fupd ((ii.proc,psrname) =+ value))
+End
 
-val read_scr_def = Define`
-  read_scr (ii:iiid) = readT (\s. s.coprocessors.state.cp15.SCR)`;
+Definition read_scr_def:
+  read_scr (ii:iiid) = readT (\s. s.coprocessors.state.cp15.SCR)
+End
 
-val write_scr_def = Define`
+Definition write_scr_def:
   write_scr (ii:iiid) value =
     writeT (arm_state_coprocessors_fupd (Coprocessors_state_fupd
-           (coproc_state_cp15_fupd (\cp15. cp15 with <| SCR := value |>))))`;
+           (coproc_state_cp15_fupd (\cp15. cp15 with <| SCR := value |>))))
+End
 
-val read_nsacr_def = Define`
-  read_nsacr (ii:iiid) = readT (\s. s.coprocessors.state.cp15.NSACR)`;
+Definition read_nsacr_def:
+  read_nsacr (ii:iiid) = readT (\s. s.coprocessors.state.cp15.NSACR)
+End
 
-val read_sctlr_def = Define`
-  read_sctlr (ii:iiid) = readT (\s. s.coprocessors.state.cp15.SCTLR)`;
+Definition read_sctlr_def:
+  read_sctlr (ii:iiid) = readT (\s. s.coprocessors.state.cp15.SCTLR)
+End
 
-val read_teehbr_def = Define`
-  read_teehbr (ii:iiid) = readT (\s. s.coprocessors.state.cp14.TEEHBR)`;
+Definition read_teehbr_def:
+  read_teehbr (ii:iiid) = readT (\s. s.coprocessors.state.cp14.TEEHBR)
+End
 
-val read_cpsr_def  = Define `read_cpsr ii = read__psr ii CPSR`;
+Definition read_cpsr_def:    read_cpsr ii = read__psr ii CPSR
+End
 
-val write_cpsr_def = Define`
-  write_cpsr ii value = write__psr ii CPSR value`;
+Definition write_cpsr_def:
+  write_cpsr ii value = write__psr ii CPSR value
+End
 
-val read_isetstate_def = Define`
+Definition read_isetstate_def:
   read_isetstate (ii:iiid) =
     seqT (read_cpsr ii)
     (\cpsr.
-       constT ((FCP i. (i = 1) /\ cpsr.J \/ (i = 0) /\ cpsr.T):word2))`;
+       constT ((FCP i. (i = 1) /\ cpsr.J \/ (i = 0) /\ cpsr.T):word2))
+End
 
-val write_isetstate_def = Define`
+Definition write_isetstate_def:
   write_isetstate ii (isetstate:word2) =
     seqT (read_cpsr ii)
     (\cpsr.
        write_cpsr ii
-         (cpsr with <| J := isetstate ' 1; T := isetstate ' 0 |>))`;
+         (cpsr with <| J := isetstate ' 1; T := isetstate ' 0 |>))
+End
 
 val have_extension_def = new_definition("have_extension_def",
   ``have_extension P (ii:iiid) : bool M =
@@ -226,7 +253,7 @@ val have_thumbEE = save_thm("have_thumbEE",
 val have_jazelle = save_thm("have_jazelle",
   rule have_jazelle_def);
 
-val bad_mode_def = Define`
+Definition bad_mode_def:
   bad_mode (ii:iiid) (mode:word5) =
     if mode = 0b10110w then
       seqT (have_security_ext ii)
@@ -238,9 +265,10 @@ val bad_mode_def = Define`
                           0b10011w;
                           0b10111w;
                           0b11011w;
-                          0b11111w})`;
+                          0b11111w})
+End
 
-val read_spsr_def = Define`
+Definition read_spsr_def:
   read_spsr (ii:iiid) =
     seqT (read_cpsr ii)
     (\cpsr.
@@ -256,9 +284,10 @@ val read_spsr_def = Define`
             | 0b10110w => read__psr ii SPSR_mon  (* Monitor mode *)
             | 0b10111w => read__psr ii SPSR_abt  (* Abort mode *)
             | 0b11011w => read__psr ii SPSR_und  (* Undefined mode *)
-            | _ => errorT "read_spsr: unpredictable"))`;
+            | _ => errorT "read_spsr: unpredictable"))
+End
 
-val write_spsr_def = Define`
+Definition write_spsr_def:
   write_spsr (ii:iiid) value =
     seqT (read_cpsr ii)
     (\cpsr.
@@ -274,9 +303,10 @@ val write_spsr_def = Define`
             | 0b10110w => write__psr ii SPSR_mon value (* Monitor mode *)
             | 0b10111w => write__psr ii SPSR_abt value (* Abort mode *)
             | 0b11011w => write__psr ii SPSR_und value (* Undefined mode *)
-            | _ => errorT "write_spsr: unpredictable"))`;
+            | _ => errorT "write_spsr: unpredictable"))
+End
 
-val current_mode_is_priviledged_def = Define`
+Definition current_mode_is_priviledged_def:
   current_mode_is_priviledged (ii:iiid) =
     seqT (read_cpsr ii)
     (\cpsr.
@@ -285,9 +315,10 @@ val current_mode_is_priviledged_def = Define`
          if bad_mode then
            errorT "current_mode_is_priviledged: unpredictable"
          else
-           constT (cpsr.M <> 0b10000w)))`;
+           constT (cpsr.M <> 0b10000w)))
+End
 
-val current_mode_is_user_or_system_def = Define`
+Definition current_mode_is_user_or_system_def:
   current_mode_is_user_or_system (ii:iiid) =
     seqT (read_cpsr ii)
     (\cpsr.
@@ -296,23 +327,27 @@ val current_mode_is_user_or_system_def = Define`
          if bad_mode then
            errorT "current_mode_is_user_or_system: unpredictable"
          else
-           constT (cpsr.M IN {0b10000w; 0b11111w})))`;
+           constT (cpsr.M IN {0b10000w; 0b11111w})))
+End
 
-val is_secure_def = Define`
+Definition is_secure_def:
   is_secure (ii:iiid) =
     seqT
       (parT (have_security_ext ii)
          (parT (read_scr ii) (read_cpsr ii)))
       (\(have_security_ext,scr,cpsr).
-         constT (~have_security_ext \/ ~scr.NS \/ (cpsr.M = 0b10110w)))`;
+         constT (~have_security_ext \/ ~scr.NS \/ (cpsr.M = 0b10110w)))
+End
 
-val read_vbar_def = Define`
-  read_vbar ii = readT (\s. s.coprocessors.state.cp15.VBAR)`;
+Definition read_vbar_def:
+  read_vbar ii = readT (\s. s.coprocessors.state.cp15.VBAR)
+End
 
-val read_mvbar_def = Define`
-  read_mvbar (ii:iiid) = readT (\s. s.coprocessors.state.cp15.MVBAR)`;
+Definition read_mvbar_def:
+  read_mvbar (ii:iiid) = readT (\s. s.coprocessors.state.cp15.MVBAR)
+End
 
-val current_instr_set_def = Define`
+Definition current_instr_set_def:
   current_instr_set ii =
     seqT (read_isetstate ii)
     (\isetstate.
@@ -321,9 +356,10 @@ val current_instr_set_def = Define`
         of 0b00w => InstrSet_ARM
          | 0b01w => InstrSet_Thumb
          | 0b10w => InstrSet_Jazelle
-         | 0b11w => InstrSet_ThumbEE))`;
+         | 0b11w => InstrSet_ThumbEE))
+End
 
-val select_instr_set_def = Define`
+Definition select_instr_set_def:
   select_instr_set ii (iset:InstrSet) =
     case iset
     of InstrSet_ARM =>
@@ -338,9 +374,10 @@ val select_instr_set_def = Define`
      | InstrSet_Jazelle =>
          write_isetstate ii 0b10w
      | InstrSet_ThumbEE =>
-         write_isetstate ii 0b11w`;
+         write_isetstate ii 0b11w
+End
 
-val RBankSelect_def = Define`
+Definition RBankSelect_def:
   RBankSelect (ii:iiid) (mode, usr, fiq, irq, svc, abt, und, mon) : RName M =
     seqT (bad_mode ii mode)
     (\bad_mode.
@@ -356,13 +393,15 @@ val RBankSelect_def = Define`
               | 0b10110w => mon  (* Monitor mode *)
               | 0b10111w => abt  (* Abort mode *)
               | 0b11011w => und  (* Undefined mode *)
-              | 0b11111w => usr  (* System mode uses User mode registers *))))`;
+              | 0b11111w => usr  (* System mode uses User mode registers *))))
+End
 
-val RfiqBankSelect_def = Define`
+Definition RfiqBankSelect_def:
   RfiqBankSelect ii (mode, usr, fiq) =
-    RBankSelect ii (mode, usr, fiq, usr, usr, usr, usr, usr)`;
+    RBankSelect ii (mode, usr, fiq, usr, usr, usr, usr, usr)
+End
 
-val LookUpRName_def = Define`
+Definition LookUpRName_def:
   LookUpRName (ii:iiid) (n:word4, mode) =
      case n
      of 0w  => constT RName_0usr
@@ -384,9 +423,10 @@ val LookUpRName_def = Define`
       | 14w => RBankSelect ii
                  (mode, RName_LRusr, RName_LRfiq, RName_LRirq,
                   RName_LRsvc, RName_LRabt, RName_LRund, RName_LRmon)
-      | _ => errorT "LookUpRName: n = 15w"`;
+      | _ => errorT "LookUpRName: n = 15w"
+End
 
-val read_reg_mode_def = Define`
+Definition read_reg_mode_def:
   read_reg_mode ii (n, mode) =
     seqT (parT (is_secure ii) (read_nsacr ii))
     (\(is_secure,nsacr).
@@ -397,9 +437,10 @@ val read_reg_mode_def = Define`
         else
           seqT
             (LookUpRName ii (n, mode))
-            (\rname. read__reg ii rname))`;
+            (\rname. read__reg ii rname))
+End
 
-val write_reg_mode_def = Define`
+Definition write_reg_mode_def:
   write_reg_mode ii (n, mode) value =
     seqT (parT (is_secure ii)
              (parT (read_nsacr ii)
@@ -414,16 +455,19 @@ val write_reg_mode_def = Define`
           errorT "write_reg_mode: unpredictable"
         else
           seqT (LookUpRName ii (n, mode))
-          (\rname. write__reg ii rname value))`;
+          (\rname. write__reg ii rname value))
+End
 
-val read_pc_def = Define `read_pc ii = read__reg ii RName_PC`;
+Definition read_pc_def:   read_pc ii = read__reg ii RName_PC
+End
 
-val pc_store_value_def = Define`
+Definition pc_store_value_def:
   pc_store_value ii =
     seqT (read_pc ii)
-    (\pc. constT (pc + 8w))`;
+    (\pc. constT (pc + 8w))
+End
 
-val read_reg_def = Define`
+Definition read_reg_def:
   read_reg (ii:iiid) n =
     if n = 15w then
       seqT (parT (read_pc ii) (current_instr_set ii))
@@ -435,36 +479,41 @@ val read_reg_def = Define`
               pc + 4w))
      else
        seqT (read_cpsr ii)
-       (\cpsr. read_reg_mode ii (n,cpsr.M))`;
+       (\cpsr. read_reg_mode ii (n,cpsr.M))
+End
 
-val write_reg_def = Define`
+Definition write_reg_def:
   write_reg (ii:iiid) n value =
     if n = 15w then
       errorT "write_reg: assert"
     else
       seqT (read_cpsr ii)
-       (\cpsr. write_reg_mode ii (n,cpsr.M) value)`;
+       (\cpsr. write_reg_mode ii (n,cpsr.M) value)
+End
 
-val branch_to_def = Define`
+Definition branch_to_def:
   branch_to ii (address:word32) =
-    write__reg ii RName_PC address`;
+    write__reg ii RName_PC address
+End
 
-val increment_pc_def = Define`
+Definition increment_pc_def:
   increment_pc ii enc =
     seqT (read_pc ii)
     (\pc. branch_to ii
             (pc + if (enc = Encoding_Thumb) \/ (enc = Encoding_ThumbEE) then
                     2w
                   else
-                    4w))`;
+                    4w))
+End
 
-val big_endian_def = Define`
+Definition big_endian_def:
   big_endian (ii:iiid) =
-    seqT (read_cpsr ii) (\cpsr. constT (cpsr.E))`;
+    seqT (read_cpsr ii) (\cpsr. constT (cpsr.E))
+End
 
 (* A basic memory address translation *)
 
-val translate_address_def = Define`
+Definition translate_address_def:
   translate_address
      (address : word32, ispriv : bool, iswrite : bool) : AddressDescriptor M =
     constT
@@ -474,38 +523,44 @@ val translate_address_def = Define`
            outerattrs     := 0w; (* Non-cacheable *)
            shareable      := T;
            outershareable := T |>;
-          paddress := address |>)`;
+          paddress := address |>)
+End
 
-val read_monitor_def = Define`
-  read_monitor (ii:iiid) = readT arm_state_monitors`;
+Definition read_monitor_def:
+  read_monitor (ii:iiid) = readT arm_state_monitors
+End
 
-val write_monitor_def = Define`
-  write_monitor (ii:iiid) d = writeT (\s. s with monitors := d)`;
+Definition write_monitor_def:
+  write_monitor (ii:iiid) d = writeT (\s. s with monitors := d)
+End
 
-val read_mem1_def = Define`
+Definition read_mem1_def:
   read_mem1 (ii:iiid) (address:FullAddress) : word8 M =
     seqT (writeT (arm_state_accesses_fupd (CONS (MEM_READ address))))
-         (\u:unit. readT (\s. s.memory address))`;
+         (\u:unit. readT (\s. s.memory address))
+End
 
-val write_mem1_def = Define`
+Definition write_mem1_def:
   write_mem1 (ii:iiid) (address:FullAddress) (byte:word8) =
     seqT (writeT (arm_state_accesses_fupd (CONS (MEM_WRITE address byte))))
-         (\u:unit. writeT (arm_state_memory_fupd (address =+ byte)))`;
+         (\u:unit. writeT (arm_state_memory_fupd (address =+ byte)))
+End
 
 (* aligned, atomic, little-endian memory access - read *)
 
-val read_mem_def = Define`
+Definition read_mem_def:
   read_mem (ii:iiid)
     (memaddrdesc:AddressDescriptor, size:num) : (word8 list) M =
    if size NOTIN {1; 2; 4; 8} then
      errorT "read_mem: size is not 1, 2, 4 or 8"
    else let address = memaddrdesc.paddress in
      forT 0 (size - 1)
-       (\i. read_mem1 ii (address + n2w i))`;
+       (\i. read_mem1 ii (address + n2w i))
+End
 
 (* aligned, atomic, little-endian memory access - write *)
 
-val write_mem_def = Define`
+Definition write_mem_def:
   write_mem (ii:iiid)
     (memaddrdesc:AddressDescriptor, size:num) (value:word8 list) : unit M =
    if  size NOTIN {1; 2; 4; 8} then
@@ -516,9 +571,10 @@ val write_mem_def = Define`
      seqT
        (forT 0 (size - 1)
           (\i. write_mem1 ii (address + n2w i) (EL i value)))
-       (\l. constT ())`;
+       (\l. constT ())
+End
 
-val read_memA_with_priv_def = Define`
+Definition read_memA_with_priv_def:
   read_memA_with_priv (ii:iiid) (address:word32, size:num, privileged:bool) =
     seqT
       (if aligned(address,size) then
@@ -537,9 +593,10 @@ val read_memA_with_priv_def = Define`
           (\value.
              seqT
                 (big_endian ii)
-                (\E. constT (if E then REVERSE value else value)))))`;
+                (\E. constT (if E then REVERSE value else value)))))
+End
 
-val write_memA_with_priv_def = Define`
+Definition write_memA_with_priv_def:
   write_memA_with_priv (ii:iiid)
      (address:word32, size:num, privileged:bool) (value:word8 list) =
     seqT
@@ -570,9 +627,10 @@ val write_memA_with_priv_def = Define`
              seqT
                (seqT (big_endian ii)
                   (\E. constT (if E then REVERSE value else value)))
-               (\value. write_mem ii (memaddrdesc,size) value))))`;
+               (\value. write_mem ii (memaddrdesc,size) value))))
+End
 
-val read_memU_with_priv_def = Define`
+Definition read_memU_with_priv_def:
   read_memU_with_priv (ii:iiid) (address:word32, size:num, privileged:bool) =
     seqT (read_sctlr ii)
     (\sctlr.
@@ -593,9 +651,10 @@ val read_memU_with_priv_def = Define`
               (\values. let value = FLAT values in
                 seqT
                   (big_endian ii)
-                  (\E. constT (if E then REVERSE value else value)))))`;
+                  (\E. constT (if E then REVERSE value else value)))))
+End
 
-val write_memU_with_priv_def = Define`
+Definition write_memU_with_priv_def:
   write_memU_with_priv (ii:iiid)
     (address:word32, size:num, privileged:bool) (value:word8 list) =
     seqT (read_sctlr ii)
@@ -619,107 +678,131 @@ val write_memU_with_priv_def = Define`
                    (forT 0 (size - 1)
                       (\i. write_memA_with_priv ii
                              (address + n2w i,1,privileged) [EL i value]))
-                   (\u. constT ()))))`;
+                   (\u. constT ()))))
+End
 
-val read_memA_def = Define`
+Definition read_memA_def:
   read_memA ii (address:word32, size:num) =
     seqT (current_mode_is_priviledged ii)
-      (\priviledged. read_memA_with_priv ii (address,size,priviledged))`;
+      (\priviledged. read_memA_with_priv ii (address,size,priviledged))
+End
 
-val write_memA_def = Define`
+Definition write_memA_def:
   write_memA ii (address:word32, size:num) (value:word8 list) =
     seqT (current_mode_is_priviledged ii)
-      (\priviledged. write_memA_with_priv ii (address,size,priviledged) value)`;
+      (\priviledged. write_memA_with_priv ii (address,size,priviledged) value)
+End
 
-val read_memA_unpriv_def = Define`
+Definition read_memA_unpriv_def:
   read_memA_unpriv ii (address:word32, size:num) =
-    read_memA_with_priv ii (address,size,F)`;
+    read_memA_with_priv ii (address,size,F)
+End
 
-val write_memA_unpriv_def = Define`
+Definition write_memA_unpriv_def:
   write_memA_unpriv ii (address:word32, size:num) (value:word8 list) =
-    write_memA_with_priv ii (address,size,F) value`;
+    write_memA_with_priv ii (address,size,F) value
+End
 
-val read_memU_def = Define`
+Definition read_memU_def:
   read_memU ii (address:word32, size:num) =
     seqT (current_mode_is_priviledged ii)
-      (\priviledged. read_memU_with_priv ii (address,size,priviledged))`;
+      (\priviledged. read_memU_with_priv ii (address,size,priviledged))
+End
 
-val write_memU_def = Define`
+Definition write_memU_def:
   write_memU ii (address:word32, size:num) (value:word8 list) =
     seqT (current_mode_is_priviledged ii)
-      (\priviledged. write_memU_with_priv ii (address,size,priviledged) value)`;
+      (\priviledged. write_memU_with_priv ii (address,size,priviledged) value)
+End
 
-val read_memU_unpriv_def = Define`
+Definition read_memU_unpriv_def:
   read_memU_unpriv ii (address:word32, size:num) =
-    read_memU_with_priv ii (address,size,F)`;
+    read_memU_with_priv ii (address,size,F)
+End
 
-val write_memU_unpriv_def = Define`
+Definition write_memU_unpriv_def:
   write_memU_unpriv ii (address:word32, size:num) (value:word8 list) =
-    write_memU_with_priv ii (address,size,F) value`;
+    write_memU_with_priv ii (address,size,F) value
+End
 
 (* hints and event operations *)
 
-val data_memory_barrier_def = Define`
+Definition data_memory_barrier_def:
   (data_memory_barrier : iiid -> MBReqDomain # MBReqTypes -> unit M) ii x =
-    constT ()`;
+    constT ()
+End
 
-val data_synchronization_barrier_def = Define`
+Definition data_synchronization_barrier_def:
   (data_synchronization_barrier :
       iiid -> MBReqDomain # MBReqTypes -> unit M) ii x =
-    constT ()`;
+    constT ()
+End
 
-val instruction_synchronization_barrier_def = Define`
+Definition instruction_synchronization_barrier_def:
   (instruction_synchronization_barrier : iiid -> unit M) ii =
-    constT ()`;
+    constT ()
+End
 
-val hint_yield_def = Define`
-  (hint_yield : iiid -> unit M) ii = constT ()`;
+Definition hint_yield_def:
+  (hint_yield : iiid -> unit M) ii = constT ()
+End
 
-val hint_preload_data_for_write_def = Define`
+Definition hint_preload_data_for_write_def:
   (hint_preload_data_for_write : iiid -> FullAddress -> unit M) ii x =
-    constT ()`;
+    constT ()
+End
 
-val hint_preload_data_def = Define`
+Definition hint_preload_data_def:
   (hint_preload_data : iiid -> FullAddress -> unit M) ii x =
-    constT ()`;
+    constT ()
+End
 
-val hint_preload_instr_def = Define`
+Definition hint_preload_instr_def:
   (hint_preload_instr : iiid -> FullAddress -> unit M) ii x =
-    constT ()`;
+    constT ()
+End
 
-val hint_debug_def = Define`
-  (hint_debug : iiid -> word4 -> unit M) ii option = constT ()`;
+Definition hint_debug_def:
+  (hint_debug : iiid -> word4 -> unit M) ii option = constT ()
+End
 
-val clear_event_register_def = Define`
+Definition clear_event_register_def:
   (clear_event_register : iiid -> unit M) ii =
-    writeT (arm_state_event_register_fupd (ii.proc =+ F))`;
+    writeT (arm_state_event_register_fupd (ii.proc =+ F))
+End
 
-val event_registered_def = Define`
+Definition event_registered_def:
   (event_registered : iiid -> bool M) ii =
-    readT (\s. s.event_register ii.proc)`;
+    readT (\s. s.event_register ii.proc)
+End
 
-val send_event_def = Define`
+Definition send_event_def:
   (send_event : iiid -> unit M) ii =
-    writeT (\s. s with event_register := K T)`;
+    writeT (\s. s with event_register := K T)
+End
 
-val wait_for_event_def = Define`
-  (wait_for_event : iiid -> unit M) ii = constT ()`;
+Definition wait_for_event_def:
+  (wait_for_event : iiid -> unit M) ii = constT ()
+End
 
-val waiting_for_interrupt_def = Define`
+Definition waiting_for_interrupt_def:
   (waiting_for_interrupt : iiid -> bool M) ii =
-    readT (\s. s.interrupt_wait ii.proc)`;
+    readT (\s. s.interrupt_wait ii.proc)
+End
 
-val clear_wait_for_interrupt_def = Define`
+Definition clear_wait_for_interrupt_def:
   (clear_wait_for_interrupt : iiid -> unit M) ii =
-    writeT (arm_state_interrupt_wait_fupd (ii.proc =+ F))`;
+    writeT (arm_state_interrupt_wait_fupd (ii.proc =+ F))
+End
 
-val wait_for_interrupt_def = Define`
+Definition wait_for_interrupt_def:
   (wait_for_interrupt : iiid -> unit M) ii =
-    writeT (arm_state_interrupt_wait_fupd (ii.proc =+ T))`;
+    writeT (arm_state_interrupt_wait_fupd (ii.proc =+ T))
+End
 
 (* exclusive monitor operations. *)
 
-val set_exclusive_monitors_def = Define`
+Definition set_exclusive_monitors_def:
   (set_exclusive_monitors ii (address:word32,size:num)) : unit M =
   seqT
     (parT (read_cpsr ii) (read_monitor ii))
@@ -735,9 +818,10 @@ val set_exclusive_monitors_def = Define`
                        (\u. monitor.MarkExclusiveLocal triple)
                     else
                       monitor.MarkExclusiveLocal triple)
-                   monitor.state))))`;
+                   monitor.state))))
+End
 
-val exclusive_monitors_pass_def = Define`
+Definition exclusive_monitors_pass_def:
   (exclusive_monitors_pass ii (address:word32,size:num)) : bool M =
   seqT
     (parT (read_cpsr ii) (read_monitor ii))
@@ -767,39 +851,45 @@ val exclusive_monitors_pass_def = Define`
             in
               seqT
                 (write_monitor ii (monitor with state := state'))
-                (\u. constT passed)))`;
+                (\u. constT passed)))
+End
 
-val clear_exclusive_local_def = Define`
+Definition clear_exclusive_local_def:
   (clear_exclusive_local (ii:iiid)) : unit M =
      seqT (read_monitor ii)
      (\monitor.
         let state' = SND (monitor.ClearExclusiveLocal ii.proc monitor.state)
         in
-          write_monitor ii (monitor with state := state'))`;
+          write_monitor ii (monitor with state := state'))
+End
 
 (* coprocessor operations. *)
 
-val read_coprocessors_def = Define`
-  read_coprocessors (ii:iiid) = readT arm_state_coprocessors`;
+Definition read_coprocessors_def:
+  read_coprocessors (ii:iiid) = readT arm_state_coprocessors
+End
 
-val write_coprocessors_def = Define`
-  write_coprocessors (ii:iiid) d = writeT (\s. s with coprocessors := d)`;
+Definition write_coprocessors_def:
+  write_coprocessors (ii:iiid) d = writeT (\s. s with coprocessors := d)
+End
 
-val coproc_accepted_def = Define`
+Definition coproc_accepted_def:
   coproc_accepted (ii:iiid) (inst:CPinstruction) : bool M =
     seqT (read_coprocessors ii)
     (\coprocessors.
        let accept = FST (coprocessors.accept inst coprocessors.state) in
-         constT accept)`;
+         constT accept)
+End
 
-val coproc_internal_operation_def = Define`
+Definition coproc_internal_operation_def:
   coproc_internal_operation (ii:iiid) (inst:CPinstruction) : unit M =
     seqT (read_coprocessors ii)
     (\coprocessors.
        let cp_state = SND (coprocessors.internal_op inst coprocessors.state) in
-         write_coprocessors ii (coprocessors with state := cp_state))`;
+         write_coprocessors ii (coprocessors with state := cp_state))
+End
 
-val coproc_send_loaded_words_def = Define`
+Definition coproc_send_loaded_words_def:
   coproc_send_loaded_words (ii:iiid)
       (readm:num->word32 M, inst:CPinstruction) : unit M =
     seqT (read_coprocessors ii)
@@ -812,51 +902,56 @@ val coproc_send_loaded_words_def = Define`
              let cp_state = SND (coprocessors.load inst data coprocessors.state)
              in
                write_coprocessors ii
-                 (coprocessors with state := cp_state)))`;
+                 (coprocessors with state := cp_state)))
+End
 
-val coproc_get_words_to_store_def = Define`
+Definition coproc_get_words_to_store_def:
   coproc_get_words_to_store (ii:iiid)
       (inst:CPinstruction) : (word32 list) M =
     seqT (read_coprocessors ii)
     (\coprocessors.
        let data = FST (coprocessors.store inst coprocessors.state) in
-          constT data)`;
+          constT data)
+End
 
-val coproc_send_one_word_def = Define`
+Definition coproc_send_one_word_def:
   coproc_send_one_word (ii:iiid)
       (data:word32, inst:CPinstruction) : unit M =
     seqT (read_coprocessors ii)
     (\coprocessors.
        let cp_state = SND (coprocessors.send_one inst data coprocessors.state)
        in
-         write_coprocessors ii (coprocessors with state := cp_state))`;
+         write_coprocessors ii (coprocessors with state := cp_state))
+End
 
-val coproc_get_one_word_def = Define`
+Definition coproc_get_one_word_def:
   coproc_get_one_word (ii:iiid) (inst:CPinstruction) : word32 M =
     seqT (read_coprocessors ii)
     (\coprocessors.
        let data = FST (coprocessors.get_one inst coprocessors.state) in
-         constT data)`;
+         constT data)
+End
 
-val coproc_send_two_words_def = Define`
+Definition coproc_send_two_words_def:
   coproc_send_two_words (ii:iiid)
       (data:word32 # word32, inst:CPinstruction) : unit M =
     seqT (read_coprocessors ii)
     (\coprocessors.
        let cp_state = SND (coprocessors.send_two inst data coprocessors.state)
        in
-         write_coprocessors ii (coprocessors with state := cp_state))`;
+         write_coprocessors ii (coprocessors with state := cp_state))
+End
 
-val coproc_get_two_words_def = Define`
+Definition coproc_get_two_words_def:
   coproc_get_two_words (ii:iiid) (inst:CPinstruction) : (word32#word32) M =
     seqT (read_coprocessors ii)
     (\coprocessors.
        let data = FST (coprocessors.get_two inst coprocessors.state) in
-         constT data)`;
+         constT data)
+End
 
 val _ = computeLib.add_persistent_funs
   ["have_security_ext",
    "have_thumbEE",
    "have_jazelle"];
 
-val _ = export_theory ();

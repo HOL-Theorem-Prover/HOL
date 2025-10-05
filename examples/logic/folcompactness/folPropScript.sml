@@ -1,9 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open pred_setTheory set_relationTheory
-open folPrenexTheory folModelsTheory folLangTheory
-
-val _ = new_theory "folProp";
+Theory folProp
+Ancestors
+  pred_set set_relation folPrenex folModels folLang
 
 (* ========================================================================= *)
 (* Propositional logic as subsystem of FOL, leading to compactness.          *)
@@ -270,4 +267,3 @@ Proof
   qexists_tac ‘λp. p ∈ b’ >> fs[SUBSET_DEF]
 QED
 
-val _ = export_theory()

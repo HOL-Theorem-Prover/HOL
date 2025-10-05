@@ -1,11 +1,9 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory wordsLib listTheory;
-
-open armTheory arm_coretypesTheory;
-
-val _ = new_theory "lpc_uart";
-
+Theory lpc_uart
+Ancestors
+  words list arm arm_coretypes
+Libs
+  wordsLib
 
 (* We define the state of a UART interface *)
 
@@ -57,62 +55,71 @@ End
 
 (* We define what addresses are owned by UART0, and whether they can be read and written *)
 
-val UART0_addresses_def = Define `
+Definition UART0_addresses_def:
   UART0_addresses =
-    { x | 0xE000C000w <=+ x /\ x <+ 0xE000C034w } : word32 set`;
+    { x | 0xE000C000w <=+ x /\ x <+ 0xE000C034w } : word32 set
+End
 
 
 (* We define what value the core sees if it reads one of UART0's addresses *)
 
-val mm_byte_reader_def = Define `
-  mm_byte_reader (a:word32) (b:word8) = (a =+ b)`;
+Definition mm_byte_reader_def:
+  mm_byte_reader (a:word32) (b:word8) = (a =+ b)
+End
 
-val mm_word_reader_def = Define `
+Definition mm_word_reader_def:
   mm_word_reader (a:word32) (w:word32) =
     (a+0w =+ ( 7 ><  0) w) o
     (a+1w =+ (15 ><  8) w) o
     (a+2w =+ (23 >< 16) w) o
-    (a+3w =+ (31 >< 24) w)`;
+    (a+3w =+ (31 >< 24) w)
+End
 
-val UART0_read_def = Define `
+Definition UART0_read_def:
   UART0_read (uart0:uart0_state) =
    (mm_byte_reader 0xE000C000w (uart0.U0RBR) o
     mm_word_reader 0xE000C00Cw (uart0.U0LCR) o
-    mm_word_reader 0xE000C014w (uart0.U0LSR)) (\a. ARB)`;
+    mm_word_reader 0xE000C014w (uart0.U0LSR)) (\a. ARB)
+End
 
 
 (* We define the possible next states (some s2) after a clock tick (starting from s1) *)
 
-val BYTE_WRITTEN_TO_MEM_def = Define `
+Definition BYTE_WRITTEN_TO_MEM_def:
   (BYTE_WRITTEN_TO_MEM a [] = ARB) /\
   (BYTE_WRITTEN_TO_MEM a ((MEM_READ w)::xs) = BYTE_WRITTEN_TO_MEM a xs) /\
-  (BYTE_WRITTEN_TO_MEM a ((MEM_WRITE w v)::xs) = if a = w then v else BYTE_WRITTEN_TO_MEM a xs)`;
+  (BYTE_WRITTEN_TO_MEM a ((MEM_WRITE w v)::xs) = if a = w then v else BYTE_WRITTEN_TO_MEM a xs)
+End
 
 val _ = wordsLib.guess_lengths();
-val WORD_WRITTEN_TO_MEM_def = Define `
+Definition WORD_WRITTEN_TO_MEM_def:
   WORD_WRITTEN_TO_MEM a accesses =
     BYTE_WRITTEN_TO_MEM (a+3w) accesses @@
     BYTE_WRITTEN_TO_MEM (a+2w) accesses @@
     BYTE_WRITTEN_TO_MEM (a+1w) accesses @@
-    BYTE_WRITTEN_TO_MEM (a+0w) accesses`;
+    BYTE_WRITTEN_TO_MEM (a+0w) accesses
+End
 
-val ADDR_SET_def = Define `
+Definition ADDR_SET_def:
   (ADDR_SET [] = {}) /\
   (ADDR_SET ((MEM_READ a)::xs) = a INSERT ADDR_SET xs) /\
-  (ADDR_SET ((MEM_WRITE a b)::xs) = a INSERT ADDR_SET xs)`;
+  (ADDR_SET ((MEM_WRITE a b)::xs) = a INSERT ADDR_SET xs)
+End
 
 Definition ALL_OR_NOTHING_def:
   ALL_OR_NOTHING x a <=> (x INTER a = a) \/ (x INTER a = {})
 End
 
-val IS_MEM_READ_def = Define `
-  (IS_MEM_READ (MEM_READ a) = T) /\ (IS_MEM_READ _ = F)`;
+Definition IS_MEM_READ_def:
+  (IS_MEM_READ (MEM_READ a) = T) /\ (IS_MEM_READ _ = F)
+End
 
-val IS_MEM_WRITE_def = Define `
-  (IS_MEM_WRITE (MEM_WRITE a w) = T) /\ (IS_MEM_WRITE _ = F)`;
+Definition IS_MEM_WRITE_def:
+  (IS_MEM_WRITE (MEM_WRITE a w) = T) /\ (IS_MEM_WRITE _ = F)
+End
 
 (* read-write enabled *)
-val REG32_RW_NEXT_def = Define `
+Definition REG32_RW_NEXT_def:
   REG32_RW_NEXT addr pre_value accesses post_value =
     let a = {addr; addr+1w; addr+2w; addr+3w} in
     let reads = ADDR_SET (FILTER IS_MEM_READ accesses) in
@@ -121,17 +128,19 @@ val REG32_RW_NEXT_def = Define `
       ALL_OR_NOTHING writes a /\
       (post_value = if addr IN writes
                     then WORD_WRITTEN_TO_MEM addr accesses
-                    else pre_value)`;
+                    else pre_value)
+End
 
 
 (* read only version *)
-val REG32_RO_NEXT_def = Define `
+Definition REG32_RO_NEXT_def:
   REG32_RO_NEXT addr accesses =
     let a = {addr; addr+1w; addr+2w; addr+3w} in
     let reads = ADDR_SET (FILTER IS_MEM_READ accesses) in
     let writes = ADDR_SET (FILTER IS_MEM_WRITE accesses) in
       ALL_OR_NOTHING reads a /\
-      (a INTER writes = {})`;
+      (a INTER writes = {})
+End
 
 
 Definition UART0_NEXT_def:
@@ -184,8 +193,9 @@ val REG32_NEXT_NIL = prove(
      pred_setTheory.NOT_IN_EMPTY,ALL_OR_NOTHING_def,pred_setTheory.INTER_EMPTY]
   THEN METIS_TAC []);
 
-val BIT_UPDATE_def = Define `
-  BIT_UPDATE i b (w:'a word) = (FCP j. if i = j then b else w ' j):'a word`;
+Definition BIT_UPDATE_def:
+  BIT_UPDATE i b (w:'a word) = (FCP j. if i = j then b else w ' j):'a word
+End
 
 val APPLY_BIT_UPDATE_THM = store_thm("APPLY_BIT_UPDATE_THM",
   ``!i j b w.
@@ -209,9 +219,10 @@ val UART0_NEXT_EXISTS = store_thm("UART0_NEXT_EXISTS",
        output_time := s1.output_time |>``
   THEN SRW_TAC [] [APPLY_BIT_UPDATE_THM]);
 
-val UART0_READ_def = Define `
+Definition UART0_READ_def:
   UART0_READ (uart0:uart0_state) =
-    (uart0.input_list,uart0.input_time,uart0.output_list,uart0.output_time)`;
+    (uart0.input_list,uart0.input_time,uart0.output_list,uart0.output_time)
+End
 
 
 (* -- old part of script commented out, but might be used in the future
@@ -295,4 +306,3 @@ val UART0_WRITE = store_thm("UART0_WRITE",
 
 *)
 
-val _ = export_theory();

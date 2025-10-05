@@ -1,10 +1,11 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_parse";
+Theory lisp_parse
+Ancestors
+  words arithmetic list pred_set pair combin finite_map string
+  relation lisp_sexp
+Libs
+  wordsLib
+
 val _ = ParseExtras.temp_loose_equality()
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory stringTheory relationTheory;
-
-open lisp_sexpTheory;
 
 (* file structure:
      1. we first define how to print s-expressions, then
@@ -44,11 +45,13 @@ val SExp_print_induct = store_thm("SExp_print_induct",
 
 (* Part 1 - section 1: print s-expressions *)
 
-val LIST_STRCAT_def = Define `
+Definition LIST_STRCAT_def:
   (LIST_STRCAT [] = "") /\
-  (LIST_STRCAT (x::xs) = STRCAT x (LIST_STRCAT xs))`;
+  (LIST_STRCAT (x::xs) = STRCAT x (LIST_STRCAT xs))
+End
 
-val dec2str_def = Define `dec2str n = STRING (CHR (n + 48)) ""`;
+Definition dec2str_def:   dec2str n = STRING (CHR (n + 48)) ""
+End
 
 val num2str_def = tDefine "num2str" `
   num2str n =
@@ -62,36 +65,44 @@ val num2str_def = tDefine "num2str" `
    \\ ASM_SIMP_TAC std_ss [DIV_MULT]
    \\ DECIDE_TAC);
 
-val number_char_def = Define `
-  number_char c = 48 <= ORD c /\ ORD c < 58`;
+Definition number_char_def:
+  number_char c = 48 <= ORD c /\ ORD c < 58
+End
 
-val space_char_def = Define `
-  space_char c = ORD c <= 32`;
+Definition space_char_def:
+  space_char c = ORD c <= 32
+End
 
-val identifier_char_def = Define `
-  identifier_char c = 42 <= ORD c /\ ~(ORD c = 46) /\ ~(ORD c = 59) /\ ~(ORD c = 124)`;
+Definition identifier_char_def:
+  identifier_char c = 42 <= ORD c /\ ~(ORD c = 46) /\ ~(ORD c = 59) /\ ~(ORD c = 124)
+End
 
-val identifier_string_def = Define `
+Definition identifier_string_def:
   identifier_string s =
-    ~(s = "") /\ EVERY identifier_char s /\ ~number_char (HD s)`;
+    ~(s = "") /\ EVERY identifier_char s /\ ~number_char (HD s)
+End
 
-val sym2str_aux_def = Define `
+Definition sym2str_aux_def:
   (sym2str_aux [] = []) /\
   (sym2str_aux (x::xs) =
      if (ORD x = 0) then (#"\\")::(#"0")::sym2str_aux xs else
      if MEM x [#"|";#"\\"]
-     then #"\\"::x::sym2str_aux xs else x::sym2str_aux xs)`;
+     then #"\\"::x::sym2str_aux xs else x::sym2str_aux xs)
+End
 
-val is_lower_case_def = Define `
-  is_lower_case c = #"a" <= c /\ c <= #"z"`;
+Definition is_lower_case_def:
+  is_lower_case c = #"a" <= c /\ c <= #"z"
+End
 
-val upper_case_def = Define `
-  upper_case c = if is_lower_case c then CHR (ORD c - 32) else c`;
+Definition upper_case_def:
+  upper_case c = if is_lower_case c then CHR (ORD c - 32) else c
+End
 
-val sym2str_def = Define `
+Definition sym2str_def:
   sym2str s =
     if identifier_string s /\ EVERY (\c. ~(is_lower_case c)) s
-    then s else "|" ++ sym2str_aux s ++ "|"`;
+    then s else "|" ++ sym2str_aux s ++ "|"
+End
 
 val sexp2string_aux_def = tDefine "sexp2string_aux" `
   (sexp2string_aux (Val n, b) = num2str n) /\
@@ -108,13 +119,15 @@ val sexp2string_aux_def = tDefine "sexp2string_aux" `
   \\ FULL_SIMP_TAC std_ss [isQuote_thm,SExp_11,CAR_def,LSIZE_def]
   \\ DECIDE_TAC);
 
-val sexp2string_def = Define `sexp2string x = sexp2string_aux (x, T)`;
+Definition sexp2string_def:   sexp2string x = sexp2string_aux (x, T)
+End
 
 
 (* Part 1 - section 2: printing s-expressions with abbreviations *)
 
-val isAtom_def = Define `
-  isAtom abbrevs s = ~isDot s \/ isQuote s \/ s IN FDOM abbrevs`;
+Definition isAtom_def:
+  isAtom abbrevs s = ~isDot s \/ isQuote s \/ s IN FDOM abbrevs
+End
 
 val sexp2abbrev_aux_def = tDefine "sexp2abbrev_aux" `
   sexp2abbrev_aux s b abbrevs ps =
@@ -147,12 +160,14 @@ val sexp2abbrev_aux_def = tDefine "sexp2abbrev_aux" `
   \\ FULL_SIMP_TAC std_ss [SExp_11,LSIZE_def,CAR_def,CDR_def]
   \\ DECIDE_TAC);
 
-val sexp_abbrev_fmap_def = Define `
+Definition sexp_abbrev_fmap_def:
   (sexp_abbrev_fmap [] n = FEMPTY) /\
-  (sexp_abbrev_fmap (x::xs) n = sexp_abbrev_fmap xs (n+1) |+ (x:SExp,n))`;
+  (sexp_abbrev_fmap (x::xs) n = sexp_abbrev_fmap xs (n+1) |+ (x:SExp,n))
+End
 
-val sexp2abbrev_def = Define `
-  sexp2abbrev s abbrevs = FST (sexp2abbrev_aux s T (sexp_abbrev_fmap abbrevs 0) {})`;
+Definition sexp2abbrev_def:
+  sexp2abbrev s abbrevs = FST (sexp2abbrev_aux s T (sexp_abbrev_fmap abbrevs 0) {})
+End
 
 val sexp2abbrev_aux_EQ_sexp2string_aux = prove(
   ``!s b. sexp2abbrev_aux s b FEMPTY {} = (sexp2string_aux (s,b),{})``,
@@ -225,11 +240,12 @@ val sexp2abbrevt_aux_def = tDefine "sexp2abbrevt_aux" `
 
 (* Part 2 - section 1: reading tokens from a string, i.e. lexing or scanning *)
 
-val read_while_def = Define `
+Definition read_while_def:
   (read_while P "" s = (s,"")) /\
   (read_while P (STRING c cs) s =
      if P c then read_while P cs (STRCAT s (STRING c ""))
-            else (s,STRING c cs))`;
+            else (s,STRING c cs))
+End
 
 val read_while_thm = prove(
   ``!cs s cs' s'.
@@ -241,9 +257,10 @@ val read_while_thm = prove(
   \\ REPEAT (Q.PAT_X_ASSUM `STRING c cs = cs'` (ASSUME_TAC o GSYM))
   \\ FULL_SIMP_TAC std_ss [LENGTH,LENGTH_APPEND] \\ DECIDE_TAC);
 
-val str2num_def = Define `
+Definition str2num_def:
   (str2num "" = 0) /\
-  (str2num (STRING c s) = (ORD c - 48) * 10 ** (LENGTH s) + str2num s)`;
+  (str2num (STRING c s) = (ORD c - 48) * 10 ** (LENGTH s) + str2num s)
+End
 
 val str2num_dec2str = prove(
   ``!n. n < 10 ==> (str2num (dec2str n) = n) /\ ~(dec2str n = "") /\
@@ -279,16 +296,17 @@ val str2num_num2str = store_thm("str2num_num2str",
   \\ ASM_SIMP_TAC std_ss [str2num_STRCAT]
   \\ METIS_TAC [str2num_dec2str]);
 
-val str2sym_aux_def = Define `
+Definition str2sym_aux_def:
   (str2sym_aux [] b = ("",[])) /\
   (str2sym_aux (c::cs) T =
      let (x1,x2) = str2sym_aux cs F in ((if c = #"0" then CHR 0 else c)::x1,x2)) /\
   (str2sym_aux (c::cs) F =
      if c = #"\\" then str2sym_aux cs T else
      if c = #"|" then ("",cs) else
-       let (x1,x2) = str2sym_aux cs F in (c::x1,x2))`;
+       let (x1,x2) = str2sym_aux cs F in (c::x1,x2))
+End
 
-val str2sym_def = Define `
+Definition str2sym_def:
   (str2sym "" = ("","")) /\
   (str2sym (c::cs) =
     if c = #"|" then
@@ -299,7 +317,8 @@ val str2sym_def = Define `
        (let (ident,cs1) = read_while identifier_char cs "" in
         let ident = MAP upper_case (c :: ident)
         in
-          ((ident,cs1))))`;
+          ((ident,cs1))))
+End
 
 val str2sym_aux_sym2str_aux = prove(
   ``!s. str2sym_aux (sym2str_aux s ++ "|" ++ ts) F = (s,ts)``,
@@ -759,13 +778,15 @@ val (R_parse_rules,R_parse_ind,R_parse_cases) = Hol_reln `
      R_parse (ts,s,L_RETURN exp,mem)
              (ts,L_CONS exp::s,L_READ,mem))`
 
-val READ_L_STORE_def = Define `
+Definition READ_L_STORE_def:
   (READ_L_STORE (L_STORE n) = SOME n) /\
-  (READ_L_STORE _ = NONE)`;
+  (READ_L_STORE _ = NONE)
+End
 
-val READ_L_CONS_def = Define `
+Definition READ_L_CONS_def:
   (READ_L_CONS (L_CONS exp) = SOME exp) /\
-  (READ_L_CONS _ = NONE)`;
+  (READ_L_CONS _ = NONE)
+End
 
 val NOT_NIL_IMP = prove(
   ``!x. ~(x = []) ==> ?x1 x2. x = x1::x2``,
@@ -830,12 +851,14 @@ val RTC_UNROLL2 = prove(
   ``!x y z. RTC R x y /\ R y z ==> RTC R x z``,
   METIS_TAC [RTC_RULES_RIGHT1]);
 
-val R_parse_abbrev_def = Define `
+Definition R_parse_abbrev_def:
   R_parse_abbrev abbrevs ps (mem:num->SExp) =
-    !s. s IN ps ==> s IN FDOM abbrevs /\ (mem (abbrevs ' s) = s)`;
+    !s. s IN ps ==> s IN FDOM abbrevs /\ (mem (abbrevs ' s) = s)
+End
 
-val FMAP_11_def = Define `
-  FMAP_11 f = !x y. x IN FDOM f /\ y IN FDOM f ==> ((f ' x = f ' y) = (x = y))`;
+Definition FMAP_11_def:
+  FMAP_11 f = !x y. x IN FDOM f /\ y IN FDOM f ==> ((f ' x = f ' y) = (x = y))
+End
 
 val cons_atoms_def = tDefine "cons_atoms" `
   cons_atoms abbrevs exp s =
@@ -1261,8 +1284,9 @@ val R_parse_thm = prove(
   \\ MP_TAC (Q.SPECL [`exp`,`T`,`ts`,`s`,`mem`,`{}`] R_parse_lemma)
   \\ ASM_SIMP_TAC std_ss [R_parse_abbrev_def,NOT_IN_EMPTY] \\ METIS_TAC []);
 
-val sexp_parse_def = Define `
-  sexp_parse ts = sexp_parse_aux (ts,[],L_READ,\x.Sym "NIL")`;
+Definition sexp_parse_def:
+  sexp_parse ts = sexp_parse_aux (ts,[],L_READ,\x.Sym "NIL")
+End
 
 val sexp_parse_aux_sexp2abbrevt = prove(
   ``!exp ts abbrevs.
@@ -1270,8 +1294,9 @@ val sexp_parse_aux_sexp2abbrevt = prove(
       (sexp_parse (FST (sexp2abbrevt_aux exp T abbrevs {}) ++ ts) = exp)``,
   METIS_TAC [R_parse_thm,RTC_parse_IMP_sexp_parse_aux,FST,SND,sexp_parse_def]);
 
-val string2sexp_def = Define `
-  string2sexp str = (sexp_parse (FST (sexp_lex str)))`;
+Definition string2sexp_def:
+  string2sexp str = (sexp_parse (FST (sexp_lex str)))
+End
 
 val FDOM_sexp_abbrev_fmap_IMP = prove(
   ``!xs x k. x IN FDOM (sexp_abbrev_fmap xs k) ==>
@@ -1337,8 +1362,9 @@ val sexp_lex_parse_def = tDefine "sexp_lex_parse" `
    \\ REPEAT STRIP_TAC \\ IMP_RES_TAC NOT_NIL_IMP
    \\ IMP_RES_TAC next_token_IMP \\ FULL_SIMP_TAC (srw_ss()) [] \\ DECIDE_TAC);
 
-val sexp_parse_stream_def = Define `
-  sexp_parse_stream cs = sexp_lex_parse (cs,[],L_READ,\x.Sym "NIL")`;
+Definition sexp_parse_stream_def:
+  sexp_parse_stream cs = sexp_lex_parse (cs,[],L_READ,\x.Sym "NIL")
+End
 
 
 (*
@@ -1370,4 +1396,3 @@ val sexp_parse_stream_thm = store_thm("sexp_parse_stream_thm",
 
 *)
 
-val _ = export_theory();

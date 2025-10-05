@@ -1,18 +1,13 @@
-open HolKernel Parse boolLib bossLib;
+Theory prob
+Ancestors
+  arithmetic pred_set res_quan list rich_list pair combin real
+  seq state_transformer extra_list extra_real extra_bool
+  extra_num sigma_algebra real_measure real_probability subtype
+  extra_pred_set prob_algebra prob_canon sequence
+Libs
+  simpLib realLib numSyntax hurdUtils ho_proverTools
+  extra_pred_setTools prob_canonTools sequenceTools
 
-open arithmeticTheory pred_setTheory simpLib res_quanTheory
-     listTheory rich_listTheory pairTheory combinTheory
-     realTheory realLib seqTheory state_transformerTheory numSyntax;
-
-open extra_listTheory hurdUtils extra_realTheory extra_boolTheory
-     ho_proverTools extra_numTheory;
-
-open sigma_algebraTheory real_measureTheory real_probabilityTheory;
-open subtypeTheory extra_pred_setTheory extra_pred_setTools;
-open prob_algebraTheory prob_canonTools prob_canonTheory;
-open sequenceTheory sequenceTools;
-
-val _ = new_theory "prob";
 val _ = ParseExtras.temp_loose_equality()
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
@@ -50,20 +45,23 @@ in
   val bern_def = new_specification ("bern_def", ["bern"], thm);
 end;
 
-val prob_while_cut_def = Define
-  `(prob_while_cut c b 0 a = UNIT a) /\
+Definition prob_while_cut_def:
+   (prob_while_cut c b 0 a = UNIT a) /\
    (prob_while_cut c b (SUC n) a =
-    if c a then BIND (b a) (prob_while_cut c b n) else UNIT a)`;
+    if c a then BIND (b a) (prob_while_cut c b n) else UNIT a)
+End
 
-val many_def = Define `many f n = prob_while_cut I (K f) n T`;
+Definition many_def:   many f n = prob_while_cut I (K f) n T
+End
 
-val prefix_cover_def = Define
-  `prefix_cover c =
+Definition prefix_cover_def:
+   prefix_cover c =
    (!l1 l2. l1 IN c /\ l2 IN c /\ ~(l1 = l2) ==> ~IS_PREFIX l1 l2) /\
-   (prob bern (BIGUNION (IMAGE prefix_set c)) = 1)`;
+   (prob bern (BIGUNION (IMAGE prefix_set c)) = 1)
+End
 
-val indep_fn_def = Define
-  `indep_fn =
+Definition indep_fn_def:
+   indep_fn =
    {f |
     countable (range (FST o f)) /\
     (FST o f) IN measurable (p_space bern, events bern) (UNIV, UNIV) /\
@@ -72,7 +70,8 @@ val indep_fn_def = Define
       prefix_cover c /\
       !l s.
         l IN c /\ s IN prefix_set l ==>
-        (f s = (FST (f (prefix_seq l)), sdrop (LENGTH l) s))}`;
+        (f s = (FST (f (prefix_seq l)), sdrop (LENGTH l) s))}
+End
 
 val probably_bern_def = new_binder_definition
   ("probably_bern_def",
@@ -82,22 +81,26 @@ val possibly_bern_def = new_binder_definition
   ("possibly_bern_def",
    ``!e. $?* e = possibly bern {s | e s}``);
 
-val append_sets_fn_def = Define
-  `append_sets_fn a b = {l | ?x y. x IN a /\ y IN b x /\ (l = APPEND x y)}`;
+Definition append_sets_fn_def:
+   append_sets_fn a b = {l | ?x y. x IN a /\ y IN b x /\ (l = APPEND x y)}
+End
 
-val prefix_cover_level_def = Define
-  `(prefix_cover_level c b ca a 0 = if c a then {} else {[]}) /\
+Definition prefix_cover_level_def:
+   (prefix_cover_level c b ca a 0 = if c a then {} else {[]}) /\
    (prefix_cover_level c b ca a (SUC n) =
     if c a then append_sets_fn (ca a) (\l. prefix_cover_level c b ca (b a l) n)
-    else {})`;
+    else {})
+End
 
-val prefix_cover_star_def = Define
-  `prefix_cover_star c b ca a =
-   BIGUNION (IMAGE (prefix_cover_level c b ca a) UNIV)`;
+Definition prefix_cover_star_def:
+   prefix_cover_star c b ca a =
+   BIGUNION (IMAGE (prefix_cover_level c b ca a) UNIV)
+End
 
-val prob_while_terminates_def = Define
-  `prob_while_terminates c b =
-   !a. !* s. ?n. ~c (FST (FUNPOW (UNCURRY b) n (a, s)))`;
+Definition prob_while_terminates_def:
+   prob_while_terminates c b =
+   !a. !* s. ?n. ~c (FST (FUNPOW (UNCURRY b) n (a, s)))
+End
 
 Definition prob_while_witness_def:
   prob_while_witness c b a s = case OWHILE (c o FST) (UNCURRY b) (a,s) of
@@ -105,19 +108,23 @@ Definition prob_while_witness_def:
                                | SOME x => x
 End
 
-val nonevent_def = Define
-   `nonevent = IMAGE (\x. @y. eventually (x :num->'a) (y :num->'a)) UNIV`;
+Definition nonevent_def:
+    nonevent = IMAGE (\x. @y. eventually (x :num->'a) (y :num->'a)) UNIV
+End
 
-val nonevent_seq_def = Define
-  `(nonevent_seq 0 = nonevent) /\
+Definition nonevent_seq_def:
+   (nonevent_seq 0 = nonevent) /\
    (nonevent_seq (SUC n) =
-    IMAGE stl (nonevent_seq n UNION (nonevent_seq n o mirror)))`;
+    IMAGE stl (nonevent_seq n UNION (nonevent_seq n o mirror)))
+End
 
-val coin_flip_def = Define
-  `coin_flip a b = BIND sdest (\x. if x then a else b)`;
+Definition coin_flip_def:
+   coin_flip a b = BIND sdest (\x. if x then a else b)
+End
 
-val prob_cost_def = Define
-  `prob_cost f b (a, n) = BIND (b a) (\a'. UNIT (a', f n : num))`;
+Definition prob_cost_def:
+   prob_cost f b (a, n) = BIND (b a) (\a'. UNIT (a', f n : num))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems leading to:                                                      *)
@@ -2733,7 +2740,7 @@ Theorem PROB_WHILE_WITNESS_BIND:
     if c a then BIND (b a) (prob_while_witness c b) else UNIT a
 Proof
   simp[FUN_EQ_THM, prob_while_witness_def, UNIT_DEF, BIND_DEF] >>
-  simp[Once whileTheory.OWHILE_THM] >> rw[] >>
+  simp[Once WhileTheory.OWHILE_THM] >> rw[] >>
   rename [‘_ = _ _ (b a s)’] >>
   Cases_on ‘b a s’ >> simp[prob_while_witness_def]
 QED
@@ -2812,7 +2819,7 @@ Proof
            UNIT_DEF, PULL_EXISTS]
    >> qx_gen_tac ‘y’ >> Cases_on ‘OWHILE (c o FST) (UNCURRY b) (a,y)’
    >> simp[]
-   >> gvs[whileTheory.OWHILE_def, AllCaseEqs()]
+   >> gvs[WhileTheory.OWHILE_def, AllCaseEqs()]
    >> PROVE_TAC []
 QED
 
@@ -2848,8 +2855,8 @@ Proof
           (* 2 sub-goals here *)
        >> rename [‘OWHILE _ _ (a,x)’]
        >> Cases_on ‘OWHILE (c o FST) (UNCURRY b) (a,x)’
-       >> gs[whileTheory.OWHILE_EQ_NONE, PULL_EXISTS]
-       >> gvs[whileTheory.OWHILE_def, AllCaseEqs()]
+       >> gs[WhileTheory.OWHILE_EQ_NONE, PULL_EXISTS]
+       >> gvs[WhileTheory.OWHILE_def, AllCaseEqs()]
        >> numLib.LEAST_ELIM_TAC
        >> simp[SF SFY_ss]
        >> metis_tac[])
@@ -2950,8 +2957,8 @@ Proof
                          (* 2 sub-goals here *)
        >> rename [‘OWHILE _ _ (a,x)’]
        >> Cases_on ‘OWHILE (c o FST) (UNCURRY b) (a,x)’
-       >> gs[whileTheory.OWHILE_EQ_NONE, PULL_EXISTS]
-       >> gvs[whileTheory.OWHILE_def, AllCaseEqs()]
+       >> gs[WhileTheory.OWHILE_EQ_NONE, PULL_EXISTS]
+       >> gvs[WhileTheory.OWHILE_def, AllCaseEqs()]
        >> numLib.LEAST_ELIM_TAC
        >> simp[SF SFY_ss]
        >> metis_tac[])
@@ -3079,14 +3086,17 @@ in
       new_specification ("prob_while_def", ["prob_while"], thm);
 end;
 
-val prob_until_def = Define
-  `prob_until b c = BIND b (prob_while ($~ o c) (K b))`;
+Definition prob_until_def:
+   prob_until b c = BIND b (prob_while ($~ o c) (K b))
+End
 
-val prob_repeat_def = Define
-  `prob_repeat a = MMAP THE (prob_until a IS_SOME)`;
+Definition prob_repeat_def:
+   prob_repeat a = MMAP THE (prob_until a IS_SOME)
+End
 
-val prob_while_cost_def = Define
-  `prob_while_cost c b = prob_while (c o FST) (prob_cost SUC b)`;
+Definition prob_while_cost_def:
+   prob_while_cost c b = prob_while (c o FST) (prob_cost SUC b)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems leading to:                                                      *)
@@ -3846,7 +3856,7 @@ Proof
        >> RW_TAC std_ss [IN_INSERT, DISJ_IMP_THM, FORALL_AND_THM]
        >> Know `?n'. c' n = c n'` >- PROVE_TAC []
        >> DISCH_THEN (MP_TAC o
-                      Ho_Rewrite.ONCE_REWRITE_RULE [whileTheory.LEAST_EXISTS])
+                      Ho_Rewrite.ONCE_REWRITE_RULE [WhileTheory.LEAST_EXISTS])
        >> Q.SPEC_TAC (`LEAST n'. c' n = c n'`, `k`)
        >> Q.PAT_X_ASSUM `X = Y` K_TAC
        >> RW_TAC std_ss []
@@ -3916,7 +3926,7 @@ Proof
    >- (STRIP_TAC
        >> Suff `?h. c h = j m`
        >- (DISCH_THEN (MP_TAC o
-                       Ho_Rewrite.REWRITE_RULE [whileTheory.LEAST_EXISTS])
+                       Ho_Rewrite.REWRITE_RULE [WhileTheory.LEAST_EXISTS])
            >> PROVE_TAC [])
        >> Suff `j m IN range (FST o f)`
        >- PROVE_TAC []
@@ -5190,4 +5200,3 @@ val PROB_TERMINATES_MORGAN = store_thm
    >> Q.EXISTS_TAC `SUC (f a')`
    >> RW_TAC arith_ss []);
 
-val _ = export_theory ();

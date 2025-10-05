@@ -4,23 +4,18 @@
 (*                                                                            *)
 (* AUTHORS : 2005-2011 Michael Norrish                                        *)
 (* ========================================================================== *)
+Theory generic_terms
+Ancestors
+  pred_set list relation basic_swap nomset
+Libs
+  BasicProvers boolSimps quotientLib binderLib
 
-open HolKernel Parse boolLib bossLib;
-
-open BasicProvers boolSimps pred_setTheory listTheory quotientLib;
-open relationTheory;
-
-open binderLib basic_swapTheory nomsetTheory;
-
-val _ = new_theory "generic_terms";
-
-val _ = computeLib.auto_import_definitions := false;
 
 Datatype:
   pregterm = lam string (string list) 'b (pregterm list) (pregterm list)
 End
 
-Definition fv_def:
+Definition fv_def[nocompute]:
   fv (lam v fvs bv bndts unbndts) =
    (fvl bndts DELETE v) ∪ fvl unbndts ∪ set fvs ∧
   fvl [] = ∅ ∧
@@ -55,7 +50,7 @@ Proof
 QED
 val _ = augment_srw_ss [rewrites [finite_fv]]
 
-Definition raw_ptpm_def:
+Definition raw_ptpm_def[nocompute]:
   raw_ptpm p (lam v fvs bv bndts unbndts) =
    lam (lswapstr p v) (listpm string_pmact p fvs) bv
        (raw_ptpml p bndts) (raw_ptpml p unbndts) ∧
@@ -133,7 +128,7 @@ Proof
 QED
 val _ = augment_srw_ss [rewrites [ptpm_fv]]
 
-Definition allatoms_def:
+Definition allatoms_def[nocompute]:
   (allatoms (lam v fvs bv bndts unbndts) =
      v INSERT allatomsl bndts ∪ allatomsl unbndts ∪ set fvs) ∧
   (allatomsl [] = ∅) ∧
@@ -526,7 +521,7 @@ Proof srw_tac [][]
 QED
 
 val pregterm_size_thm = TypeBase.size_of “:'a pregterm”
-Definition psize_def:
+Definition psize_def[nocompute]:
   (psize (lam s fvs bv ts us) =
    SUM (MAP psize ts) + SUM (MAP psize us) + LENGTH fvs + 1)
 End
@@ -878,7 +873,7 @@ val lf = mk_var ("lf", “: string -> string list -> α ->
 
 val trec = “tmrec (A: string set) (ppm: ρ pmact) ^lf : α gterm -> ρ -> γ”
 
-Definition tmrec_def:
+Definition tmrec_def[nocompute]:
   ^trec t = λp.
     case some(v,fvs,bv,ts,us).
            t = GLAM v fvs bv ts us ∧ v ∉ supp ppm p ∧ v ∉ GFVl us ∧ v ∉ A ∧
@@ -907,12 +902,12 @@ val lp = ``lp: num -> num -> α -> num list -> num list -> bool``
 Overload "→"[local] = ``fnpm``
 val _ = temp_set_fixity "→" (Infixr 700)
 
-val relsupp_def = Define`
+Definition relsupp_def[nocompute]:
   relsupp A dpm ppm t r <=>
     ∀x. x ∉ A ∧ x ∉ GFV t ==> x ∉ supp (fn_pmact ppm dpm) r
-`;
+End
 
-Definition sidecond_def:
+Definition sidecond_def[nocompute]:
   sidecond dpm ppm A ^lp ^lf ⇔
   FINITE A ∧ (∀p. FINITE (supp ppm p)) ∧
     (∀x y n v fvs bv r1 r2 ts us p.
@@ -932,7 +927,7 @@ Definition sidecond_def:
             (pmact ppm [(x,y)] p)))
 End
 
-val FCB_def = Define`
+Definition FCB_def[nocompute]:
   FCB dpm ppm A ^lp ^lf ⇔
   ∀a n v fvs bv r1 r2 ts us p.
      a ∉ A ∧ a ∉ GFVl us ∧ a ∉ supp ppm p ∧
@@ -940,7 +935,8 @@ val FCB_def = Define`
      LIST_REL (relsupp A dpm ppm) ts r1 ∧
      LIST_REL (relsupp A dpm ppm) us r2 ∧
      genind lp n (GLAM v fvs bv ts us) ⇒
-     a ∉ supp dpm (^lf a fvs bv r1 r2 ts us p)`
+     a ∉ supp dpm (^lf a fvs bv r1 r2 ts us p)
+End
 
 val some_2_EQ = prove(
   ``(some (x,y). (x' = x) /\ (y' = y)) = SOME(x',y')``,
@@ -1276,7 +1272,7 @@ Proof
   metis_tac [tmrec_equivariant, supp_fresh, pmact_sing_inv]
 QED
 
-Definition NEWFCB_def:
+Definition NEWFCB_def[nocompute]:
   NEWFCB dpm ppm A lp lf ⇔
   ∀a1 a2 n fvs bv r1 r2 ts us p.
      a1 ∉ A ∧ a1 ∉ supp ppm p ∧ a2 ∉ A ∧ a2 ∉ GFVl ts ∧ a2 ∉ supp ppm p ∧
@@ -1403,5 +1399,4 @@ Proof
   metis_tac [genind_GLAM_subterm]
 QED
 
-val _ = export_theory()
 val _ = html_theory "generic_terms";

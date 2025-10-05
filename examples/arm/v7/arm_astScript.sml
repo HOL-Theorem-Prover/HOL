@@ -3,11 +3,10 @@
 (*     ==========================                                           *)
 (*     Abstract syntax tree (AST) for ARM instructions                      *)
 (* ------------------------------------------------------------------------ *)
+Theory arm_ast
+Ancestors
+  arm_coretypes
 
-open HolKernel boolLib bossLib Parse;
-open arm_coretypesTheory;
-
-val _ = new_theory "arm_ast";
 
 (* ------------------------------------------------------------------------ *)
 
@@ -176,13 +175,15 @@ val _ = Hol_datatype `ARMinstruction =
 
 val _ = type_abbrev("CPinstruction",``:cpid # word4 # coprocessor_instruction``)
 
-val is_mode1_immediate_def = Define`
-  is_mode1_immediate x = case x of Mode1_immediate imm12 => T | _ => F`;
+Definition is_mode1_immediate_def:
+  is_mode1_immediate x = case x of Mode1_immediate imm12 => T | _ => F
+End
 
-val is_mode2_immediate_def = Define`
-  is_mode2_immediate x = case x of Mode2_immediate imm12 => T | _ => F`;
+Definition is_mode2_immediate_def:
+  is_mode2_immediate x = case x of Mode2_immediate imm12 => T | _ => F
+End
 
-val is_mode3_immediate_def = Define`
-  is_mode3_immediate x = case x of Mode3_immediate imm8 => T | _ => F`;
+Definition is_mode3_immediate_def:
+  is_mode3_immediate x = case x of Mode3_immediate imm8 => T | _ => F
+End
 
-val _ = export_theory ();

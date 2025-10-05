@@ -1,4 +1,9 @@
-open HolKernel Parse boolLib bossLib;
+Theory kripke_structure
+Ancestors
+  infinite_path pred_set list pair xprop_logic container
+  prop_logic set_lemmata prim_rec temporal_deep_mixed arithmetic
+Libs
+  tuerk_tacticsLib Sanity
 
 (*
 quietdec := true;
@@ -11,10 +16,6 @@ map load
  ["xprop_logicTheory", "prop_logicTheory", "infinite_pathTheory", "pred_setTheory", "listTheory", "pairTheory", "set_lemmataTheory",
    "containerTheory", "prim_recTheory", "tuerk_tacticsLib", "temporal_deep_mixedTheory", "arithmeticTheory"];
 *)
-
-open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
-     tuerk_tacticsLib temporal_deep_mixedTheory arithmeticTheory;
-open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
@@ -29,7 +30,6 @@ quietdec := false;
 *)
 
 
-val _ = new_theory "kripke_structure";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -47,49 +47,49 @@ Theorem kripke_structure_REWRITES =
                    TypeBase.accessors_of “:(α,β)kripke_structure”)
 
 
-val IS_WELL_FORMED_KRIPKE_STRUCTURE_def =
- Define
-  `IS_WELL_FORMED_KRIPKE_STRUCTURE K =
+Definition IS_WELL_FORMED_KRIPKE_STRUCTURE_def:
+   IS_WELL_FORMED_KRIPKE_STRUCTURE K =
     (FINITE K.S /\ FINITE K.P /\ K.S0 SUBSET K.S /\
      K.R SUBSET (K.S CROSS K.S) /\
-     (!s. (s IN K.S) ==> (K.L s) SUBSET K.P))`
+     (!s. (s IN K.S) ==> (K.L s) SUBSET K.P))
+End
 
 
-val simple_kripke_structure_def =
- Define
-  `simple_kripke_structure S B R =
-   kripke_structure S B R (POW S) (\s. {p | p SUBSET S /\ s IN p})`;
+Definition simple_kripke_structure_def:
+   simple_kripke_structure S B R =
+   kripke_structure S B R (POW S) (\s. {p | p SUBSET S /\ s IN p})
+End
 
 
 
-val universal_kripke_structure_def =
- Define
-  `universal_kripke_structure S P L =
-   kripke_structure S S (S CROSS S) P L`;
+Definition universal_kripke_structure_def:
+   universal_kripke_structure S P L =
+   kripke_structure S S (S CROSS S) P L
+End
 
 
-val IS_PATH_THROUGH_KRIPKE_STRUCTURE_def =
- Define
-  `IS_PATH_THROUGH_KRIPKE_STRUCTURE K p =
-     (!n. (p n, p (SUC n)) IN K.R)`;
+Definition IS_PATH_THROUGH_KRIPKE_STRUCTURE_def:
+   IS_PATH_THROUGH_KRIPKE_STRUCTURE K p =
+     (!n. (p n, p (SUC n)) IN K.R)
+End
 
-val IS_FAIR_PATH_THROUGH_KRIPKE_STRUCTURE_def =
- Define
-  `IS_FAIR_PATH_THROUGH_KRIPKE_STRUCTURE K FC p =
+Definition IS_FAIR_PATH_THROUGH_KRIPKE_STRUCTURE_def:
+   IS_FAIR_PATH_THROUGH_KRIPKE_STRUCTURE K FC p =
      (IS_PATH_THROUGH_KRIPKE_STRUCTURE K p /\
-      (!b. MEM b FC ==> (!t0. ?t. t > t0 /\ (P_SEM (K.L (p t)) b))))`;
+      (!b. MEM b FC ==> (!t0. ?t. t > t0 /\ (P_SEM (K.L (p t)) b))))
+End
 
 
-val IS_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE_def =
- Define
-  `IS_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE K p =
-     (IS_PATH_THROUGH_KRIPKE_STRUCTURE K p /\ p 0 IN K.S0)`;
+Definition IS_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE_def:
+   IS_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE K p =
+     (IS_PATH_THROUGH_KRIPKE_STRUCTURE K p /\ p 0 IN K.S0)
+End
 
-val IS_FAIR_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE_def =
- Define
-  `IS_FAIR_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE K FC p =
+Definition IS_FAIR_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE_def:
+   IS_FAIR_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE K FC p =
      (IS_FAIR_PATH_THROUGH_KRIPKE_STRUCTURE K FC p /\
-      p 0 IN K.S0)`;
+      p 0 IN K.S0)
+End
 
 
 val IS_FAIR_PATH_THROUGH_KRIPKE_STRUCTURE___EMPTY_FAIRNESS =
@@ -105,23 +105,23 @@ val IS_FAIR_PATH_THROUGH_KRIPKE_STRUCTURE___EMPTY_FAIRNESS =
         IS_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE_def]);
 
 
-val TRACE_OF_PATH_THROUGH_KRIPKE_STRUCTURE_def =
- Define
-  `TRACE_OF_PATH_THROUGH_KRIPKE_STRUCTURE K p =
-     (\n:num. K.L (p n))`;
+Definition TRACE_OF_PATH_THROUGH_KRIPKE_STRUCTURE_def:
+   TRACE_OF_PATH_THROUGH_KRIPKE_STRUCTURE K p =
+     (\n:num. K.L (p n))
+End
 
-val IS_TRACE_OF_PATH_THROUGH_KRIPKE_STRUCTURE_def =
- Define
-  `IS_TRACE_OF_PATH_THROUGH_KRIPKE_STRUCTURE K p =
+Definition IS_TRACE_OF_PATH_THROUGH_KRIPKE_STRUCTURE_def:
+   IS_TRACE_OF_PATH_THROUGH_KRIPKE_STRUCTURE K p =
     (?p'. IS_PATH_THROUGH_KRIPKE_STRUCTURE K p' /\
-          (p = TRACE_OF_PATH_THROUGH_KRIPKE_STRUCTURE K p'))`;
+          (p = TRACE_OF_PATH_THROUGH_KRIPKE_STRUCTURE K p'))
+End
 
 
-val IS_TRACE_OF_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE_def =
- Define
-  `IS_TRACE_OF_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE K p =
+Definition IS_TRACE_OF_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE_def:
+   IS_TRACE_OF_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE K p =
     (?p'. IS_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE K p' /\
-          (p = TRACE_OF_PATH_THROUGH_KRIPKE_STRUCTURE K p'))`;
+          (p = TRACE_OF_PATH_THROUGH_KRIPKE_STRUCTURE K p'))
+End
 
 
 val PATH_THROUGH_KRIPKE_STRUCTURE___RESTN =
@@ -160,11 +160,11 @@ val PATH_THROUGH_KRIPKE_STRUCTURE___RESTN =
   ]);
 
 
-val IS_REACHABLE_STATE_OF_KRIPKE_STRUCTURE_def =
- Define
-  `IS_REACHABLE_STATE_OF_KRIPKE_STRUCTURE K s =
+Definition IS_REACHABLE_STATE_OF_KRIPKE_STRUCTURE_def:
+   IS_REACHABLE_STATE_OF_KRIPKE_STRUCTURE K s =
     (?p n. (p 0 IN K.S0) /\ ((p n) = s) /\
-         (!m. m < n ==> (p m, p (SUC m)) IN K.R))`;
+         (!m. m < n ==> (p m, p (SUC m)) IN K.R))
+End
 
 val IS_REACHABLE_STATE_OF_KRIPKE_STRUCTURE___RECURSIVE_DEF =
   store_thm ("IS_REACHABLE_STATE_OF_KRIPKE_STRUCTURE___RECURSIVE_DEF",
@@ -223,12 +223,12 @@ val IS_REACHABLE_STATE_OF_KRIPKE_STRUCTURE___RECURSIVE_DEF =
     ]);
 
 
-val IS_TOTAL_KRIPKE_STRUCTURE_def =
- Define
-  `IS_TOTAL_KRIPKE_STRUCTURE K =
+Definition IS_TOTAL_KRIPKE_STRUCTURE_def:
+   IS_TOTAL_KRIPKE_STRUCTURE K =
     (~(K.S0 = EMPTY) /\
     (!s. (IS_REACHABLE_STATE_OF_KRIPKE_STRUCTURE K s) ==>
-        (?s'. (s, s') IN K.R)))`;
+        (?s'. (s, s') IN K.R)))
+End
 
 
 val IS_TOTAL_KRIPKE_STRUCTURE___PATH_EXISTS =
@@ -301,11 +301,11 @@ val IS_TOTAL_KRIPKE_STRUCTURE___INITIAL_PATH_EXISTS =
   ]);
 
 
-val IS_TOTAL_COMPLETELY_REACHABLE_KRIPKE_STRUCTURE_def =
- Define
-  `IS_TOTAL_COMPLETELY_REACHABLE_KRIPKE_STRUCTURE K =
+Definition IS_TOTAL_COMPLETELY_REACHABLE_KRIPKE_STRUCTURE_def:
+   IS_TOTAL_COMPLETELY_REACHABLE_KRIPKE_STRUCTURE K =
     (IS_TOTAL_KRIPKE_STRUCTURE K /\
-     (!s. s IN K.S ==> IS_REACHABLE_STATE_OF_KRIPKE_STRUCTURE K s))`;
+     (!s. s IN K.S ==> IS_REACHABLE_STATE_OF_KRIPKE_STRUCTURE K s))
+End
 
 
 val IS_TOTAL_COMPLETELY_REACHABLE_KRIPKE_STRUCTURE___ALTERNATIVE_DEF =
@@ -357,10 +357,10 @@ val IS_TOTAL_COMPLETELY_REACHABLE_KRIPKE_STRUCTURE___ALTERNATIVE_DEF =
   ]);
 
 
-val LANGUAGE_OF_KRIPKE_STRUCTURE_def =
- Define
-  `LANGUAGE_OF_KRIPKE_STRUCTURE K  =
-    {p | IS_TRACE_OF_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE K p}`;
+Definition LANGUAGE_OF_KRIPKE_STRUCTURE_def:
+   LANGUAGE_OF_KRIPKE_STRUCTURE K  =
+    {p | IS_TRACE_OF_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE K p}
+End
 
 
 val KRIPKE_STRUCTURE___PATHS_AND_TRACES_PATH_SUBSET =
@@ -645,9 +645,8 @@ QED
 
 
 
-val PRODUCT_KRIPKE_STRUCTURE_def =
- Define
-  `PRODUCT_KRIPKE_STRUCTURE K1 K2  =
+Definition PRODUCT_KRIPKE_STRUCTURE_def:
+   PRODUCT_KRIPKE_STRUCTURE K1 K2  =
       kripke_structure {(s1, s2) | s1 IN K1.S /\ s2 IN K2.S /\
                                    (K1.L s1 INTER K1.P INTER K2.P =
                                     K2.L s2 INTER K1.P INTER K2.P)}
@@ -661,7 +660,8 @@ val PRODUCT_KRIPKE_STRUCTURE_def =
                                    (K1.L s1' INTER K1.P INTER K2.P =
                                     K2.L s2' INTER K1.P INTER K2.P)}
                        (K1.P UNION K2.P)
-                       (\(s1,s2). K1.L s1 UNION K2.L s2)`;
+                       (\(s1,s2). K1.L s1 UNION K2.L s2)
+End
 
 
 val PRODUCT_KRIPKE_STRUCTURE___REWRITES =
@@ -738,11 +738,11 @@ QED
 
 
 (*open model*)
-val UNIVERSAL_KRIPKE_STRUCTURE_def =
- Define
-  `UNIVERSAL_KRIPKE_STRUCTURE P =
+Definition UNIVERSAL_KRIPKE_STRUCTURE_def:
+   UNIVERSAL_KRIPKE_STRUCTURE P =
     kripke_structure (POW P) (POW P)
-      (POW P CROSS POW P) P (\s. s)`
+      (POW P CROSS POW P) P (\s. s)
+End
 
 
 val UNIVERSAL_KRIPKE_STRUCTURE___IS_WELL_FORMED =
@@ -782,15 +782,15 @@ val UNIVERSAL_KRIPKE_STRUCTURE___PATHS_AND_TRACES =
 
 
 
-val IS_SIMULATION_RELATION_def =
- Define
-  `IS_SIMULATION_RELATION K1 K2 P =
+Definition IS_SIMULATION_RELATION_def:
+   IS_SIMULATION_RELATION K1 K2 P =
     (K1.P SUBSET K2.P /\
      (!s1 s2. P s1 s2 ==> (s1 IN K1.S /\ s2 IN K2.S)) /\
      (!s1 s2. P s1 s2 ==> (K1.L s1 = (K2.L s2 INTER K1.P))) /\
      (!s1 s1' s2. (P s1 s2 /\ (s1, s1') IN K1.R) ==>
             ?s2'. (P s1' s2' /\ (s2, s2') IN K2.R)) /\
-     (!s1. s1 IN K1.S0 ==> ?s2. s2 IN K2.S0 /\ P s1 s2))`;
+     (!s1. s1 IN K1.S0 ==> ?s2. s2 IN K2.S0 /\ P s1 s2))
+End
 
 
 
@@ -821,12 +821,12 @@ val IS_SIMULATION_RELATION___TRANS =
 
 
 
-val IS_BISIMULATION_RELATION_def =
- Define
-  `IS_BISIMULATION_RELATION K1 K2 P =
+Definition IS_BISIMULATION_RELATION_def:
+   IS_BISIMULATION_RELATION K1 K2 P =
     (IS_SIMULATION_RELATION K1 K2 P /\
      IS_SIMULATION_RELATION K2 K1
-      (\s1 s2. P s2 s1))`;
+      (\s1 s2. P s2 s1))
+End
 
 
 Theorem IS_BISIMULATION_RELATION___DIRECT_DEF:
@@ -988,10 +988,10 @@ val SIMULATION_RELATION___INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE =
 
 
 
-val LABEL_RESTRICTED_KRIPKE_STRUCTURE_def =
- Define
-  `LABEL_RESTRICTED_KRIPKE_STRUCTURE K L =
-    (kripke_structure K.S K.S0 K.R (K.P INTER L) (\s. K.L s INTER L))`;
+Definition LABEL_RESTRICTED_KRIPKE_STRUCTURE_def:
+   LABEL_RESTRICTED_KRIPKE_STRUCTURE K L =
+    (kripke_structure K.S K.S0 K.R (K.P INTER L) (\s. K.L s INTER L))
+End
 
 
 val LABEL_RESTRICTED_KRIPKE_STRUCTURE___PATHS =
@@ -1102,4 +1102,3 @@ val UNIVERSAL_KRIPKE_STRUCTURE___IS_MOST_GENERAL =
     METIS_TAC[FST, SND]);
 
 
-val _ = export_theory();

@@ -18,26 +18,17 @@ open zfsetTheory pred_setLib pred_setTheory pairLib pairTheory combinTheory;
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-open zfset_axiomsTheory pred_setLib pred_setTheory pairLib
-     pairTheory combinTheory;
-
-(******************************************************************************
-* Open theories
-******************************************************************************)
+Theory zfset
+Ancestors
+  zfset_axioms pred_set pair combin
+Libs
+  pred_setLib pairLib
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
 
 
-(*****************************************************************************)
-(* Create zfset_extras_theory.                                               *)
-(*****************************************************************************)
-val _ = new_theory "zfset";
 val _ = ParseExtras.temp_loose_equality()
 
 (*---------------------------------------------------------------------------*)
@@ -68,16 +59,16 @@ val Choice =
 (*---------------------------------------------------------------------------*)
 (* Definition of an inhabited (i.e. non-empty) set.                          *)
 (*---------------------------------------------------------------------------*)
-val Inhab_def =
- Define
-  `Inhab X = ?x. x In X`;
+Definition Inhab_def:
+   Inhab X = ?x. x In X
+End
 
 (*---------------------------------------------------------------------------*)
 (* Singleton = |- !x y. y In (Sing x) = (y = x)                              *)
 (*---------------------------------------------------------------------------*)
-val SetCons_def =
- Define
-  `SetCons x s = Singleton x U s`;
+Definition SetCons_def:
+   SetCons x s = Singleton x U s
+End
 
 val _ = overload_on("EMPTY", ``Empty``);
 val _ = overload_on("INSERT",``SetCons``);
@@ -148,9 +139,9 @@ val DoubleCancel =
    ``!x x1 x2. ({x;x1} = {x;x2}) = (x1 = x2)``,
    METIS_TAC[Extension_ax,InDouble]);
 
-val Pair_def =
- Define
-  `Pair x y = {{x}; {x;y}}`;
+Definition Pair_def:
+   Pair x y = {{x}; {x;y}}
+End
 
 val PairEqLemma1 =
  store_thm
@@ -184,13 +175,13 @@ val PairEq =
       THEN ASSUM_LIST(fn thl =>(ASSUME_TAC(SIMP_RULE std_ss [] (Q.SPEC `{x2;x1}` (el 2 thl)))))
       THEN METIS_TAC[DoubleRefl,SingDoubleEq,SingEq,InSing,InDouble]]);
 
-val Fst_def =
- Define
-  `Fst p = @x. ?y. p = Pair x y`;
+Definition Fst_def:
+   Fst p = @x. ?y. p = Pair x y
+End
 
-val Snd_def =
- Define
-  `Snd p = @y. ?x. p = Pair x y`;
+Definition Snd_def:
+   Snd p = @y. ?x. p = Pair x y
+End
 
 val FstLemma =
  prove
@@ -243,9 +234,9 @@ val InfSet_def = new_specification("InfSet_def", ["InfSet"], Infinity_ax);
 (*                                                                           *)
 (* If s is in bijection with ty.                                             *)
 (*---------------------------------------------------------------------------*)
-val SET_TYPE_def =
- Define
-  `SET_TYPE s (rep:'a->zfset) = TYPE_DEFINITION (\x. x In s) rep`;
+Definition SET_TYPE_def:
+   SET_TYPE s (rep:'a->zfset) = TYPE_DEFINITION (\x. x In s) rep
+End
 
 val SET_TYPE_In =
  store_thm
@@ -259,17 +250,17 @@ val SET_TYPE_In =
 (* Truth values.                                                             *)
 (*---------------------------------------------------------------------------*)
 
-val False_def =
- Define
-  `False = {}`;
+Definition False_def:
+   False = {}
+End
 
-val True_def =
- Define
-  `True = {{}}`;
+Definition True_def:
+   True = {{}}
+End
 
-val Bool_def =
- Define
-  `Bool = {False;True}`;
+Definition Bool_def:
+   Bool = {False;True}
+End
 
 val Bool_CLAUSES =
  store_thm
@@ -283,9 +274,9 @@ val InhabBool =
    ``Inhab Bool``,
    METIS_TAC[Inhab_def,Bool_def,InDouble]);
 
-val bool2Bool_def =
- Define
-  `bool2Bool b = if b then True else False`;
+Definition bool2Bool_def:
+   bool2Bool b = if b then True else False
+End
 
 val bool2BoolEqTrue =
  store_thm
@@ -327,10 +318,10 @@ val boolBool =
 (*---------------------------------------------------------------------------*)
 (* Proof that Von Neumann numbers are isomorphic to HOL's numbers.           *)
 (*---------------------------------------------------------------------------*)
-val num2Num_def =
- Define
-  `(num2Num 0 = {}) /\
-   (num2Num(SUC n) = Suc(num2Num n))`;
+Definition num2Num_def:
+   (num2Num 0 = {}) /\
+   (num2Num(SUC n) = Suc(num2Num n))
+End
 
 val num2NumInf =
  store_thm
@@ -343,9 +334,9 @@ val num2NumInf =
 (* Von Neumann numbers.                                                      *)
 (*---------------------------------------------------------------------------*)
 
-val Num_def =
- Define
-  `Num = Spec InfSet (\s. ?n. s = num2Num n)`;
+Definition Num_def:
+   Num = Spec InfSet (\s. ?n. s = num2Num n)
+End
 
 val InhabNum =
  store_thm
@@ -386,9 +377,9 @@ val numNum =
 (* Representation of product types.                                          *)
 (*---------------------------------------------------------------------------*)
 
-val PROD_def =
- Define
-  `$PROD (rep1:'a->zfset) (rep2:'b->zfset) = \(x1,x2). Pair(rep1 x1)(rep2 x2)`;
+Definition PROD_def:
+   $PROD (rep1:'a->zfset) (rep2:'b->zfset) = \(x1,x2). Pair(rep1 x1)(rep2 x2)
+End
 
 val _ = set_fixity "PROD" (Infixr 400); (* Precedence may need adjusting *)
 
@@ -403,12 +394,12 @@ val PairPROD =
 (* Cartesian product of sets.                                                *)
 (*---------------------------------------------------------------------------*)
 
-val Prod_def =
- Define
-  `$Prod s1 s2 =
+Definition Prod_def:
+   $Prod s1 s2 =
      Spec
       (Pow(Pow(s1 U s2)))
-      (\s. ?x1 x2. (s = Pair x1 x2) /\ x1 In s1 /\ x2 In s2)`;
+      (\s. ?x1 x2. (s = Pair x1 x2) /\ x1 In s1 /\ x2 In s2)
+End
 
 val _ = set_fixity "#" (Infixr 400); (* Precedence may need adjusting *)
 
@@ -513,10 +504,10 @@ val ABS_THM =
       (?abs. (!a. abs(rep a) = a) /\ (!r. P r = (rep(abs r) = r)))``,
    METIS_TAC[TYPE_DEFINITION_THM]);
 
-val Abs_def =
- Define
-  `Abs s (rep:'a->zfset) =
-    @abs. (!a. abs(rep a) = a) /\ !r. r In s = (rep(abs r) = r)`;
+Definition Abs_def:
+   Abs s (rep:'a->zfset) =
+    @abs. (!a. abs(rep a) = a) /\ !r. r In s = (rep(abs r) = r)
+End
 
 val Abs =
  store_thm
@@ -542,9 +533,9 @@ val AbsOneOne =
        x1 In s /\ x2 In s ==> ((Abs s rep x1 = Abs s rep x2) = (x1 = x2))``,
    METIS_TAC[Abs]);
 
-val Num2num_def =
- Define
-  `Num2num = Abs Num num2Num`;
+Definition Num2num_def:
+   Num2num = Abs Num num2Num
+End
 
 val Num2num_CLAUSES =
  store_thm
@@ -558,9 +549,9 @@ val Num2num_CLAUSES =
 (*---------------------------------------------------------------------------*)
 val _ = new_binder("Us",``:(num -> zfset) -> zfset``);
 
-val Us_def =
- Define
-  `$Us s = UU(Image (s o Num2num) Num)`;
+Definition Us_def:
+   $Us s = UU(Image (s o Num2num) Num)
+End
 
 val InUs =
  store_thm
@@ -608,22 +599,22 @@ val PROD_REP =
 (*---------------------------------------------------------------------------*)
 (* Set of partial functions (single valued relations) from X to Y            *)
 (*---------------------------------------------------------------------------*)
-val Pfn_def =
- Define
-  `Pfn X Y =
+Definition Pfn_def:
+   Pfn X Y =
     Spec
      (Pow(X # Y))
-     (\r. !x y1 y2. Pair x y1 In r /\ Pair x y2 In r ==> (y1=y2))`;
+     (\r. !x y1 y2. Pair x y1 In r /\ Pair x y2 In r ==> (y1=y2))
+End
 
 (*---------------------------------------------------------------------------*)
 (* Set of functions from X to Y                                              *)
 (*---------------------------------------------------------------------------*)
-val Fn_def =
- Define
-  `$Fn X Y =
+Definition Fn_def:
+   $Fn X Y =
     Spec
      (Pfn X Y)
-     (\f. !x. x In X ==> ?y. y In Y /\ Pair x y In f)`;
+     (\f. !x. x In X ==> ?y. y In Y /\ Pair x y In f)
+End
 
 val _ = set_fixity "->" (Infixr 400); (* Precedence may need adjusting *)
 val _ = overload_on("->",``Fn``);
@@ -631,9 +622,9 @@ val _ = overload_on("->",``Fn``);
 (*---------------------------------------------------------------------------*)
 (* Application of a set-funtion to an argument.                              *)
 (*---------------------------------------------------------------------------*)
-val Apply_def =
- Define
-  `Apply s x = @y. Pair x y In s`;
+Definition Apply_def:
+   Apply s x = @y. Pair x y In s
+End
 
 val _ = set_fixity "'" (Infixl 600); (* Precedence may need adjusting *)
 val _ = overload_on("'",``Apply``);
@@ -701,9 +692,9 @@ metis_tac [ExtFn])
 (* RepSet(f:'a->zfset) =  the image of f as a set in zfset                   *)
 (*---------------------------------------------------------------------------*)
 
-val RepSet_def =
- Define
-  `RepSet(f:'a->zfset) = @s. !y. y In s = ?x. y = f x`;
+Definition RepSet_def:
+   RepSet(f:'a->zfset) = @s. !y. y In s = ?x. y = f x
+End
 
 val RepSetThm =
  store_thm
@@ -740,15 +731,15 @@ val SET_TYPE_PROD =
 (*---------------------------------------------------------------------------*)
 (* Representation of function types.                                         *)
 (*---------------------------------------------------------------------------*)
-val FUN_def =
- Define
-  `$FUN (rep1:'a->zfset) (rep2:'b->zfset) =
+Definition FUN_def:
+   $FUN (rep1:'a->zfset) (rep2:'b->zfset) =
     \f. Spec
          (RepSet rep1 # RepSet rep2)
          (\s. ?x' y'.
                (s = Pair x' y')
                /\
-               ?x y. (x' = rep1 x) /\ (y' = rep2 y) /\ (f x = y))`;
+               ?x y. (x' = rep1 x) /\ (y' = rep2 y) /\ (f x = y))
+End
 
 val _ = set_fixity "FUN" (Infixr 700); (* Precedence may need adjusting *)
 
@@ -867,9 +858,9 @@ val ApRep =
     THEN RW_TAC std_ss [Apply_def]
     THEN METIS_TAC[SET_TYPE_ONE_ONE,FUNSingleValued,FUNIn]);
 
-val IsRep_def =
- Define
-  `IsRep(rep:'a->zfset) = ?s. SET_TYPE s rep`;
+Definition IsRep_def:
+   IsRep(rep:'a->zfset) = ?s. SET_TYPE s rep
+End
 
 val IsRepThm =
  store_thm
@@ -925,20 +916,20 @@ val ApRepCor =
 (* Functional composition of set functions.                                  *)
 (*---------------------------------------------------------------------------*)
 
-val ComposeFn_def =
- Define
-  `ComposeFn(X,Y,Z) f g =
+Definition ComposeFn_def:
+   ComposeFn(X,Y,Z) f g =
     Spec
      (X # Z)
      (\s.
-       ?x z. (s = Pair x z) /\ ?y. y In Y /\ Pair x y In g /\ Pair y z In f)`;
+       ?x z. (s = Pair x z) /\ ?y. y In Y /\ Pair x y In g /\ Pair y z In f)
+End
 
-val Compose_def =
- Define
-  `Compose(X,Y,Z) =
+Definition Compose_def:
+   Compose(X,Y,Z) =
     Spec
      (((Y -> Z) # (X -> Y)) # (X -> Z))
-     (\s. ?f g h. (s = Pair (Pair f g) h) /\  (h = ComposeFn(X,Y,Z) f g))`;
+     (\s. ?f g h. (s = Pair (Pair f g) h) /\  (h = ComposeFn(X,Y,Z) f g))
+End
 
 val ComposeFnType =
  store_thm
@@ -1043,13 +1034,13 @@ val FnType =
 (* Correspondence between logical functions and their graphs.                *)
 (*---------------------------------------------------------------------------*)
 
-val Graph_def =
- Define
-  `Graph (X,Y) f = Spec (X # Y) (\s. ?x. (s = Pair x (f x)))`;
+Definition Graph_def:
+   Graph (X,Y) f = Spec (X # Y) (\s. ?x. (s = Pair x (f x)))
+End
 
-val HasFnType_def =
- Define
-  `HasFnType f X Y = !x. x In X ==> (f x In Y)`;
+Definition HasFnType_def:
+   HasFnType f X Y = !x. x In X ==> (f x In Y)
+End
 
 val GraphAp =
  store_thm
@@ -1106,9 +1097,9 @@ val ComposeComposeFn =
 (* Identity set function.                                                    *)
 (*---------------------------------------------------------------------------*)
 
-val IdFn_def =
- Define
-  `IdFn X = Spec (X # X) (\s. ?x. s = Pair x x)`;
+Definition IdFn_def:
+   IdFn X = Spec (X # X) (\s. ?x. s = Pair x x)
+End
 
 val IdFnPfnType =
  store_thm
@@ -1160,9 +1151,9 @@ match_mp_tac IdFnAp >>
 match_mp_tac InFn >>
 qexists_tac `X` >> srw_tac [][])
 
-val GraphFn_def =
- Define
-  `GraphFn X f = Spec (X # Image f X) (\s. ?x. s = Pair x (f x))`;
+Definition GraphFn_def:
+   GraphFn X f = Spec (X # Image f X) (\s. ?x. s = Pair x (f x))
+End
 
 val GraphFnImageType =
  store_thm
@@ -1258,17 +1249,17 @@ fsrw_tac [][HasFnType_def]);
 (*---------------------------------------------------------------------------*)
 (* Restrictions of functions and binary operators to subtypes.               *)
 (*---------------------------------------------------------------------------*)
-val Rs_def =
- Define
-  `Rs f X = GraphFn X (Apply f)`;
+Definition Rs_def:
+   Rs f X = GraphFn X (Apply f)
+End
 
-val Rs2_def =
- Define
-  `Rs2 binop X = GraphFn X (\x. GraphFn X (Apply (Apply binop x)))`;
+Definition Rs2_def:
+   Rs2 binop X = GraphFn X (\x. GraphFn X (Apply (Apply binop x)))
+End
 
-val SubType_def =
- Define
-  `SubType X pred = Spec X (\s. pred ' s = True)`;
+Definition SubType_def:
+   SubType X pred = Spec X (\s. pred ' s = True)
+End
 
 val SubType1Lemma =
  store_thm
@@ -1361,9 +1352,9 @@ val SubType2 =
 (*---------------------------------------------------------------------------*)
 (* The equality function on a set.                                           *)
 (*---------------------------------------------------------------------------*)
-val Eq_def =
- Define
-  `Eq X = GraphFn X (\x. GraphFn X (\y. bool2Bool(x = y)))`;
+Definition Eq_def:
+   Eq X = GraphFn X (\x. GraphFn X (\y. bool2Bool(x = y)))
+End
 
 val EqAp =
  store_thm
@@ -1380,11 +1371,11 @@ val ApEq =
 (*---------------------------------------------------------------------------*)
 (* Boolean operations as sets.                                               *)
 (*---------------------------------------------------------------------------*)
-val Imp_def =
- Define
-  `Imp = GraphFn
+Definition Imp_def:
+   Imp = GraphFn
           Bool
-          (\x. GraphFn Bool (\y. bool2Bool((x = True) ==> (y = True))))`;
+          (\x. GraphFn Bool (\y. bool2Bool((x = True) ==> (y = True))))
+End
 
 val ImpAp =
  store_thm
@@ -1406,11 +1397,11 @@ val ApImp =
            (((x=True) ==> (y=True)) = (((Imp ' x) ' y) = True))``,
    RW_TAC std_ss [Imp_def,GraphFnAp,bool2Bool_def,Bool_CLAUSES]);
 
-val And_def =
- Define
-  `And = GraphFn
+Definition And_def:
+   And = GraphFn
           Bool
-          (\x. GraphFn Bool (\y. bool2Bool((x = True) /\ (y = True))))`;
+          (\x. GraphFn Bool (\y. bool2Bool((x = True) /\ (y = True))))
+End
 
 val AndAp =
  store_thm
@@ -1432,11 +1423,11 @@ val ApAnd =
            (((x=True) /\ (y=True)) = (((And ' x) ' y) = True))``,
    RW_TAC std_ss [And_def,GraphFnAp,bool2Bool_def,Bool_CLAUSES]);
 
-val Or_def =
- Define
-  `Or = GraphFn
+Definition Or_def:
+   Or = GraphFn
          Bool
-         (\x. GraphFn Bool (\y. bool2Bool((x = True) \/ (y = True))))`;
+         (\x. GraphFn Bool (\y. bool2Bool((x = True) \/ (y = True))))
+End
 
 val OrAp =
  store_thm
@@ -1458,9 +1449,9 @@ val ApOr =
            (((x=True) \/ (y=True)) = (((Or ' x) ' y) = True))``,
    RW_TAC std_ss [Or_def,GraphFnAp,bool2Bool_def,Bool_CLAUSES]);
 
-val Not_def =
- Define
-  `Not = GraphFn Bool (\x. bool2Bool(~(x = True)))`;
+Definition Not_def:
+   Not = GraphFn Bool (\x. bool2Bool(~(x = True)))
+End
 
 val NotAp =
  store_thm
@@ -1478,10 +1469,10 @@ val ApNot =
 (*---------------------------------------------------------------------------*)
 (* Quantifiers as sets.                                                      *)
 (*---------------------------------------------------------------------------*)
-val Forall_def =
- Define
-  `Forall X =
-    GraphFn (X -> Bool) (\f. bool2Bool(!x. x In X ==> (f ' x = True)))`;
+Definition Forall_def:
+   Forall X =
+    GraphFn (X -> Bool) (\f. bool2Bool(!x. x In X ==> (f ' x = True)))
+End
 
 val ForallAp =
  store_thm
@@ -1499,10 +1490,10 @@ val ApForall =
            ((!x. x In X ==> (f ' x = True)) = ((Forall X ' f) = True))``,
    RW_TAC std_ss [Forall_def,GraphFnAp,bool2Bool_def,Bool_CLAUSES]);
 
-val Exists_def =
- Define
-  `Exists X =
-    GraphFn (X -> Bool) (\f. bool2Bool(?x. x In X /\ (f ' x = True)))`;
+Definition Exists_def:
+   Exists X =
+    GraphFn (X -> Bool) (\f. bool2Bool(?x. x In X /\ (f ' x = True)))
+End
 
 val ExistsAp =
  store_thm
@@ -1520,9 +1511,9 @@ val ApExists =
            ((?x. x In X /\ (f ' x = True)) = ((Exists X ' f) = True))``,
    RW_TAC std_ss [Exists_def,GraphFnAp,bool2Bool_def,Bool_CLAUSES]);
 
-val Choose_def =
- Define
-  `Choose X = GraphFn (X -> Bool) (\f. @x. x In X /\ (f ' x = True))`;
+Definition Choose_def:
+   Choose X = GraphFn (X -> Bool) (\f. @x. x In X /\ (f ' x = True))
+End
 
 val ChooseAp =
  store_thm
@@ -1539,5 +1530,3 @@ val ApChoose =
            ==>
            ((@x. x In X /\ (f ' x = True)) = Choose X ' f)``,
    RW_TAC std_ss [Choose_def,GraphFnAp,bool2Bool_def,Bool_CLAUSES]);
-
-val _ = export_theory();

@@ -1,9 +1,10 @@
-open HolKernel boolLib bossLib Parse
+Theory walk
+Ancestors
+  finite_map relation term subst alist arithmetic pred_set
+  rich_list list
+Libs
+  ramanaLib
 
-open finite_mapTheory relationTheory termTheory substTheory alistTheory
-     arithmeticTheory pred_setTheory rich_listTheory listTheory ramanaLib
-
-val _ = new_theory "walk"
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 1 }
 
 val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
@@ -58,8 +59,9 @@ val vwalk_to_var = Q.store_thm(
                           FULL_SIMP_TAC (srw_ss()) []) THEN
   FIRST_X_ASSUM (Q.SPEC_THEN `u` MP_TAC) THEN SRW_TAC [][]);
 
-val walk_def = Define`
-  walk s t = case t of Var v => vwalk s v | t => t`;
+Definition walk_def:
+  walk s t = case t of Var v => vwalk s v | t => t
+End
 
 val walk_thm = RWstore_thm(
 "walk_thm",
@@ -212,9 +214,10 @@ val vwalk_rhs_q = `
    if x = v then y
    else vwalk_rhs s t v)`;
 
-val ELENGTH_def = Define`
+Definition ELENGTH_def:
   (ELENGTH (v, []) = 0) ∧
-  (ELENGTH (v, (h::t)) = if SND h = Var v then 0 else 1 + ELENGTH (v, t))`;
+  (ELENGTH (v, (h::t)) = if SND h = Var v then 0 else 1 + ELENGTH (v, t))
+End
 val _ = export_rewrites ["ELENGTH_def"];
 
 val vwalk_rhsR_q = `
@@ -311,4 +314,3 @@ val vwalk_rhs_eq_vwalk_al = Q.store_thm(
 `wfs (alist_to_fmap al) ∧ submaps al ⇒ (vwalk_rhs al al v = vwalk_al al v)`
 *)
 
-val _ = export_theory ();

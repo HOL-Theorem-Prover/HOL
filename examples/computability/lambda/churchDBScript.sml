@@ -1,16 +1,13 @@
 (* Church style encoding of de Bruijn terms, giving us
     "The Power of Reflection"
 *)
+Theory churchDB
+Ancestors
+  churchnum churchbool pure_dB pred_set term chap3 normal_order
+  head_reduction churchpair dnoreduct enumerations
+Libs
+  binderLib reductionEval brackabs
 
-open HolKernel boolLib bossLib Parse binderLib
-
-open churchnumTheory churchboolTheory pure_dBTheory
-open reductionEval pred_setTheory termTheory chap3Theory
-open normal_orderTheory
-open head_reductionTheory
-open brackabs
-
-val _ = new_theory "churchDB"
 
 Theorem DISJ_IMP_EQ:
   ((x = y) ∨ P ⇔ (x ≠ y ⇒ P)) ∧
@@ -480,7 +477,7 @@ val wh_cis_abs = store_thm(
     cbnf - is a term in β-nf?
    ---------------------------------------------------------------------- *)
 
-val cbnf_def = Define`
+Definition cbnf_def:
   cbnf =
   termrec @@ (LAM "i" (cB T))
           @@ (LAM "t1" (LAM "t2" (LAM "r1" (LAM "r2"
@@ -488,7 +485,7 @@ val cbnf_def = Define`
                       @@ (cand @@ VAR "r2"
                                @@ (cnot @@ (cis_abs @@ VAR "t1"))))))))
           @@ (LAM "t" (LAM "r" (VAR "r")))
-`;
+End
 
 val FV_cbnf = store_thm(
   "FV_cbnf[simp]",
@@ -525,8 +522,6 @@ val wh_cdABS = store_thm(
   ASM_SIMP_TAC (whfy(srw_ss())) []);
 
 
-
-open churchpairTheory
 
 val wh_termrec_comb = store_thm(
   "wh_termrec_comb",
@@ -636,7 +631,7 @@ QED
        (nsub s k (dABS t) = dABS (nsub (lift s 0) (k + 1) t))
    ---------------------------------------------------------------------- *)
 
-val cnsub_def = Define`
+Definition cnsub_def:
   cnsub =
   LAM "s" (LAM "k" (LAM "t"
    (VAR "t"
@@ -654,7 +649,7 @@ val cnsub_def = Define`
                              @@ (clift @@ VAR "s" @@ church 0)
                              @@ (cplus @@ VAR "k" @@ church 1))))))
         @@ VAR "s" @@ VAR "k")))
-`;
+End
 
 val FV_cnsub = store_thm(
   "FV_cnsub[simp]",
@@ -702,7 +697,7 @@ val cnsub_behaviour = store_thm(
     We can ignore all the option_map cruft.
    ---------------------------------------------------------------------- *)
 
-val cnoreduct_def = Define`
+Definition cnoreduct_def:
   cnoreduct =
   termrec
     @@ (LAM "i" (cdV @@ VAR "i"))
@@ -715,7 +710,7 @@ val cnoreduct_def = Define`
                             @@ (cdAPP @@ VAR "t0" @@ VAR "r1")
                             @@ (cdAPP @@ VAR "r0" @@ VAR "t1")))))))
     @@ (LAM "t0" (LAM "r" (cdABS @@ VAR "r")))
-`;
+End
 
 val FV_cnoreduct = store_thm(
   "FV_cnoreduct[simp]",
@@ -724,7 +719,6 @@ val FV_cnoreduct = store_thm(
 
 val cnoreduct_equiv = brackabs_equiv [] cnoreduct_def
 
-open dnoreductTheory
 val cnoreduct_correct = store_thm(
   "cnoreduct_correct",
   ``∀d. cnoreduct @@ cDB d -n->* if dbnf d then cDB d
@@ -782,13 +776,13 @@ val cnoreduct_behaviour' =
     FUNPOW in the HOL world)
    ---------------------------------------------------------------------- *)
 
-val cichurch_def = Define`
+Definition cichurch_def:
   cichurch =
   LAM "n"
     (VAR "n"
        @@ (cdV @@ church 1)
        @@ (LAM "r" (cdAPP @@ (cdV @@ church 0) @@ VAR "r")))
-`;
+End
 
 val FV_cichurch = store_thm(
   "FV_cichurch[simp]",
@@ -813,9 +807,9 @@ val cichurch_behaviour = store_thm(
     encoded church numeral
    ---------------------------------------------------------------------- *)
 
-val cchurch_def = Define`
+Definition cchurch_def:
   cchurch = LAM "n" (cdABS @@ (cdABS @@ (cichurch @@ VAR "n")))
-`;
+End
 
 val FV_cchurch = store_thm(
   "FV_cchurch[simp]",
@@ -852,7 +846,7 @@ val cchurch_behaviour = bstore_thm(
     computes the size of a term
    ---------------------------------------------------------------------- *)
 
-val cdbsize_def = Define`
+Definition cdbsize_def:
   cdbsize =
   LAM "t"
   (VAR "t"
@@ -860,7 +854,7 @@ val cdbsize_def = Define`
        @@ (LAM "r1" (LAM "r2"
               (cplus @@ (cplus @@ VAR "r1" @@ VAR "r2") @@ church 1)))
        @@ (cplus @@ church 1))
-`;
+End
 val FV_cdbsize = store_thm(
   "FV_cdbsize[simp]",
   ``FV cdbsize = {}``,
@@ -881,12 +875,12 @@ val cdbsize_behaviour = store_thm(
    ---------------------------------------------------------------------- *)
 
 (* cis_varn checks to see if a term is a variable of the given index *)
-val cis_varn_def = Define`
+Definition cis_varn_def:
   cis_varn = LAM "n" (LAM "t" (VAR "t"
                                    @@ (ceqnat @@ VAR "n")
                                    @@ (K @@ (K @@ cB F))
                                    @@ (K @@ cB F)))
-`;
+End
 
 val FV_cis_varn = store_thm(
   "FV_cis_varn[simp]",
@@ -904,14 +898,14 @@ val cis_varn_behaviour = store_thm(
 
 (* cis_ichurch determines if a term is the application of some number of
    dV 0 terms to a dV 1 *)
-val cis_ichurch_def = Define`
+Definition cis_ichurch_def:
   cis_ichurch =
   termrec @@ (ceqnat @@ church 1)
           @@ (LAM "t1" (LAM "t2" (LAM "r1" (LAM "r2"
                 (cand @@ (cis_varn @@ church 0 @@ VAR "t1")
                       @@ VAR "r2")))))
           @@ (K @@ (K @@ cB F))
-`;
+End
 
 val FV_cis_ichurch = store_thm(
   "FV_cis_ichurch[simp]",
@@ -942,7 +936,7 @@ val cis_ichurch_behaviour = store_thm(
     Cases_on `n` THEN SRW_TAC [][FUNPOW_SUC]
   ]);
 
-val cis_church_def = Define`
+Definition cis_church_def:
   cis_church =
   termrec @@ (K @@ cB F)
           @@ (K @@ (K @@ (K @@ (K @@ cB F))))
@@ -951,7 +945,7 @@ val cis_church_def = Define`
                          @@ (K @@ (K @@ (K @@ (K @@ cB F))))
                          @@ (LAM "t" (LAM "r" (cis_ichurch @@ VAR "t")))
                          @@ VAR "t")))
-`;
+End
 
 val FV_cis_church = store_thm(
   "FV_cis_church[simp]",
@@ -1006,13 +1000,13 @@ val cis_church_behaviour = store_thm(
     cforceNum
    ---------------------------------------------------------------------- *)
 
-val cforce_num_def = Define`
+Definition cforce_num_def:
   cforce_num =
   LAM "t" (cis_church @@ VAR "t"
                       @@ (cminus @@ (cdiv @@ (cdbsize @@ VAR "t") @@ church 2)
                                  @@ church 1)
                       @@ church 0)
-`;
+End
 
 val FV_cforce_num = store_thm(
   "FV_cforce_num[simp]",
@@ -1043,7 +1037,7 @@ val cforce_num_behaviour = store_thm(
     cciDB : the encoded/computing version of ciDB
    ---------------------------------------------------------------------- *)
 
-val cciDB_def = Define`
+Definition cciDB_def:
   cciDB = LAM "t"
            (VAR "t"
              @@ (LAM "i"
@@ -1054,7 +1048,7 @@ val cciDB_def = Define`
                        @@ VAR "r2")))
              @@ (LAM "r"
                     (cdAPP @@ (cdV @@ church (s2n "a")) @@ VAR "r")))
-`;
+End
 
 val FV_cciDB = store_thm(
   "FV_cciDB[simp]",
@@ -1074,11 +1068,11 @@ val cciDB_behaviour = store_thm(
     ccDB : the encoded version of cDB
    ---------------------------------------------------------------------- *)
 
-val ccDB_def = Define`
+Definition ccDB_def:
   ccDB = LAM "t" (cdLAM @@ church (s2n "v") @@
                     (cdLAM @@ church (s2n "c") @@
                        (cdLAM @@ church (s2n "a") @@ (cciDB @@ VAR "t"))))
-`;
+End
 val FV_ccDB = store_thm(
   "FV_ccDB[simp]",
   ``FV ccDB = {}``,
@@ -1095,12 +1089,7 @@ val ccDB_behaviour = store_thm(
     enumerations are computable
    ---------------------------------------------------------------------- *)
 
-open enumerationsTheory
-
-
-
-
-val cdBnum_def = Define`
+Definition cdBnum_def:
   cdBnum =
   LAM "t"
     (VAR "t"
@@ -1110,7 +1099,7 @@ val cdBnum_def = Define`
                   @@ (B @@ (cmult @@ church 3)
                         @@ (cnpair @@ VAR "r1"))))
          @@ (B @@ (cplus @@ church 2) @@ (cmult @@ church 3)))
-`;
+End
 
 Theorem FV_cdBnum[simp]:
   FV cdBnum = {}
@@ -1126,7 +1115,7 @@ val cdBnum_behaviour = store_thm(
                 cnpair_behaviour, csuc_behaviour,
                 arithmeticTheory.ADD1, cplus_behaviour]);
 
-val cndbsuc_def = Define`
+Definition cndbsuc_def:
   cndbsuc =
   LAM "r" (LAM "n" (LAM "m3" (LAM "d3"
              (cis_zero @@ VAR "m3"
@@ -1137,7 +1126,7 @@ val cndbsuc_def = Define`
                          @@ (cdABS @@ (VAR "r" @@ VAR "d3")))))
             @@ (cmod @@ VAR "n" @@ church 3)
             @@ (cdiv @@ VAR "n" @@ church 3)))
-`;
+End
 val FV_cndbsuc = store_thm(
   "FV_cndbsuc[simp]",
   ``FV cndbsuc = {}``,
@@ -1177,7 +1166,7 @@ val cndbsuc_dABS_behaviour = store_thm(
   ASM_SIMP_TAC (bsrw_ss()) [cndbsuc_eqn, cmod_behaviour, cis_zero_behaviour,
                             ceqnat_behaviour, cB_behaviour, cdiv_behaviour]);
 
-val cnumdB0_def = Define`
+Definition cnumdB0_def:
   cnumdB0 =
   natrec
    @@ (LAM "n" (cDB (dV 0)))
@@ -1185,7 +1174,7 @@ val cnumdB0_def = Define`
        (ceqnat @@ (csuc @@ VAR "c0") @@ (VAR "n")
         @@ (cndbsuc @@ VAR "r" @@ VAR "n")
         @@ (VAR "r" @@ VAR "n")))))
-`;
+End
 
 val FV_cnumdB0 = store_thm(
   "FV_cnumdB0[simp]",
@@ -1234,9 +1223,9 @@ val cnumdB0_behaviour = store_thm(
     ASM_SIMP_TAC (bsrw_ss()) []
   ]);
 
-val cnumdB_def = Define`
+Definition cnumdB_def:
   cnumdB = LAM "n" (cnumdB0 @@ VAR "n" @@ VAR "n")
-`;
+End
 
 val FV_cnumdB = store_thm(
   "FV_cnumdB[simp]",
@@ -1252,7 +1241,7 @@ val cnumdB_behaviour = bstore_thm(
     computable steps function, csteps
    ---------------------------------------------------------------------- *)
 
-val csteps_def = Define`
+Definition csteps_def:
   csteps =
   LAM "n" (LAM "t"
     (VAR "n" @@ (LAM "u" (VAR "u"))
@@ -1261,7 +1250,7 @@ val csteps_def = Define`
                          @@ VAR "u"
                          @@ (VAR "f" @@ (cnoreduct @@ VAR "u")))))
              @@ VAR "t"))
-`;
+End
 
 val FV_csteps = store_thm(
   "FV_csteps[simp]",
@@ -1290,12 +1279,12 @@ val csteps_behaviour = store_thm(
     a universal machine
    ---------------------------------------------------------------------- *)
 
-val cbnf_ofk_def = Define`
+Definition cbnf_ofk_def:
   cbnf_ofk =
   LAM "k" (LAM "t" (
     cfindleast @@ (LAM "n" (cbnf @@ (csteps @@ VAR "n" @@ VAR "t")))
                @@ (B @@ VAR "k" @@ (C @@ csteps @@ VAR "t"))))
-`;
+End
 
 val cbnf_ofk_eqn = brackabs_equiv [] cbnf_ofk_def
 
@@ -1389,4 +1378,3 @@ val bnf_of_cbnf = store_thm(
     FULL_SIMP_TAC (bsrw_ss()) [bnf_bnf_of]
   ]);
 
-val _ = export_theory()

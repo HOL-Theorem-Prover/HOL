@@ -4,22 +4,15 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polynomial";
+Theory polynomial
+Ancestors
+  pred_set list arithmetic monoid group ring
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
-
-open monoidTheory groupTheory ringTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* Basic Polynomials Documentation                                           *)
 (* ------------------------------------------------------------------------- *)
@@ -534,8 +527,4 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

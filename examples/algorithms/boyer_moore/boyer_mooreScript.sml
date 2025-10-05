@@ -1,33 +1,15 @@
-open HolKernel boolLib bossLib Parse;
-
-open boolTheory;
-open pred_setTheory;
-open pairTheory;
-
-open arithmeticTheory;
-open numTheory;
-
-open prim_recTheory;
-
-open listTheory;
-open rich_listTheory;
-
-open stringTheory;
-
-open set_lemmasTheory;
-open helper_funcsTheory;
-open boyer_moore_specTheory;
-
-val _ = new_theory"boyer_moore";
+Theory boyer_moore
+Ancestors
+  bool pred_set pair arithmetic num prim_rec list rich_list
+  string set_lemmas helper_funcs boyer_moore_spec
 
 (* -- IMPLICIT CHARACTER MISMATCH TABLE CONSTRUCTION -- *)
 (* Assess potential shift based on character mismatch rule *)
-val checkDeltaC_def =
-    Define
-    `
+Definition checkDeltaC_def:
+
     checkDeltaC pat all_chars j a d =
         ((d = j+1) \/ (EL (j-d) pat = EL a all_chars))
-    `;
+End
 
 (* Relationship between checkDeltaC function
    and valid_cha_shift specification *)
@@ -146,11 +128,10 @@ val CMRECUR_COR_THM = store_thm(
     );
 
 (* initiate recursion *)
-val cmVal_def =
-    Define
-    `
+Definition cmVal_def:
+
     cmVal pat all_chars j a = cmRecur pat all_chars j a 1
-    `;
+End
 
 (* Relationship between cmVal function and valid_cha_shift specification *)
 val CMVAL_THM = store_thm(
@@ -190,14 +171,13 @@ val CMVAL_BND = store_thm(
 
 (* -- IMPLICIT SUFFIX MATCH TABLE CONSTRUCTION -- *)
 (* Assess potential shift based on suffix mismatch rule *)
-val checkDeltaS_def =
-    Define
-    `
+Definition checkDeltaS_def:
+
     checkDeltaS pat j d <=>
         ((d >= SUC j) \/ ~(EL (j-d) pat = EL j pat)) /\
         (extract (MAX (SUC j) d,LENGTH pat) pat
             = extract ((MAX (SUC j) d) - d,LENGTH pat - d) pat)
-    `;
+End
 
 (* Relationship between checkDeltaS function
    and valid_suf_shift specification *)
@@ -261,11 +241,10 @@ Termination
 End
 
 (* Find minimum valid suffix mismatch based shift *)
-val smVal_def =
-    Define
-    `
+Definition smVal_def:
+
     smVal pat j = smRecur pat j 1
-    `;
+End
 
 (* Intermediate lemmas to reason about recursive function bounds *)
 val SMRECUR_LEM = store_thm(
@@ -414,28 +393,25 @@ val SMVAL_BND = store_thm(
 (* Find mismatch table value at particular point based
    on best shift available between suffix mismatch table
    and character mismatch table *)
-val mVal_def =
-    Define
-    `
+Definition mVal_def:
+
     mVal calc_smVal pat all_chars j a =
         MAX calc_smVal (cmVal pat all_chars j a)
-    `;
+End
 
 (* Generate a row of mismatch table *)
-val mSubTab_def =
-    Define
-    `
+Definition mSubTab_def:
+
     mSubTab pat all_chars j =
         GENLIST (mVal (smVal pat j) pat all_chars j) (LENGTH all_chars)
-    `;
+End
 
 (* Generate mismatch table *)
-val mTab_def =
-    Define
-    `
+Definition mTab_def:
+
     mTab pat all_chars =
         GENLIST (mSubTab pat all_chars) (LENGTH pat)
-    `;
+End
 
 (* Dimensional properties of mTab *)
 val MTAB_DIM = store_thm(
@@ -663,15 +639,14 @@ val BMRECUR_THM = store_thm(
 (* Calculates lookup table and all_chars to call bmRecur for the first time.
    That is: this implements the boyer-moore substring search algorithm to look
    for the first appearance of a substring in a string *)
-val bmSearch_def =
-    Define
-    `
+Definition bmSearch_def:
+
     bmSearch pat search =
         let
             all_chars = uniqueElems search
         in
             bmRecur pat (mTab pat all_chars) all_chars search
-    `;
+End
 
 (* Final proof that the bmSearch function correctly searches
    for the first substring *)
@@ -691,11 +666,10 @@ val BMSEARCH_THM = store_thm(
 (* STRING SPECIALISATION *)
 
 (* Generate an alphabet with all the characters *)
-val alphabet_def =
-    Define
-    `
+Definition alphabet_def:
+
     alphabet = GENLIST CHR 256
-    `;
+End
 
 val ALPHABET_THM = store_thm(
     "ALPHABET_THM",
@@ -809,12 +783,11 @@ val BMRECUR_STRING_THM = store_thm(
    That is: this implements the boyer-moore substring search algorithm to look
    for the first appearance of a substring in a string - but in ACTUAL string
    types *)
-val bmSearchString_def =
-    Define
-    `
+Definition bmSearchString_def:
+
     bmSearchString (pat : string) (search : string) =
         bmRecurString pat (mTab pat alphabet) search
-    `;
+End
 
 (* Final proof that the bmSearchString function correctly searches
    for the first substring *)
@@ -833,4 +806,3 @@ val BMSEARCH_STRING_THM = store_thm(
     >- rw[MTAB_DIM]
     );
 
-val _ = export_theory();

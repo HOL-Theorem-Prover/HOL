@@ -75,27 +75,32 @@ End
 
 (* ------------------------------------------------------------------------- *)
 
-val LENGTH_n2l = Q.store_thm("LENGTH_n2l",
-  `!b n. 1 < b ==> (LENGTH (n2l b n) = if n = 0 then 1 else SUC (LOG b n))`,
+Theorem LENGTH_n2l:
+   !b n. 1 < b ==> (LENGTH (n2l b n) = if n = 0 then 1 else SUC (LOG b n))
+Proof
   completeInduct_on `LOG b n`
     \\ SRW_TAC [ARITH_ss] [Once n2l_def, LOG_RWT]
     \\ SRW_TAC [ARITH_ss] [LOG_RWT]
     \\ `0 < n DIV b` by SRW_TAC [ARITH_ss] [X_LT_DIV]
-    \\ DECIDE_TAC);
+    \\ DECIDE_TAC
+QED
 
 val LOG_DIV_LESS = Q.prove(
   `!b n. b <= n /\ 1 < b ==> LOG b (n DIV b) < LOG b n`,
   SRW_TAC [] [] \\ IMP_RES_TAC LOG_DIV \\ DECIDE_TAC);
 
-val l2n_n2l = Q.store_thm("l2n_n2l",
-  `!b n. 1 < b ==> (l2n b (n2l b n) = n)`,
+Theorem l2n_n2l:
+   !b n. 1 < b ==> (l2n b (n2l b n) = n)
+Proof
   completeInduct_on `LOG b n`
     \\ SRW_TAC [ARITH_ss] [Once n2l_def, l2n_def]
     \\ `LOG b (n DIV b) < LOG b n` by SRW_TAC [ARITH_ss] [LOG_DIV_LESS]
-    \\ SRW_TAC [ARITH_ss] [(GSYM o ONCE_REWRITE_RULE [MULT_COMM]) DIVISION]);
+    \\ SRW_TAC [ARITH_ss] [(GSYM o ONCE_REWRITE_RULE [MULT_COMM]) DIVISION]
+QED
 
-val l2n_lt = Q.store_thm("l2n_lt",
-  `!l b. 0 < b ==> l2n b l < b ** LENGTH l`,
+Theorem l2n_lt:
+   !l b. 0 < b ==> l2n b l < b ** LENGTH l
+Proof
   Induct \\ SRW_TAC [] [l2n_def, arithmeticTheory.EXP]
   \\ RES_TAC
   \\ IMP_RES_TAC arithmeticTheory.LESS_ADD_1
@@ -103,7 +108,8 @@ val l2n_lt = Q.store_thm("l2n_lt",
   \\ POP_ASSUM SUBST1_TAC
   \\ SRW_TAC [] [arithmeticTheory.LEFT_ADD_DISTRIB]
   \\ SRW_TAC [ARITH_ss]
-       [arithmeticTheory.MOD_LESS, DECIDE ``a < b:num ==> (a < b + c)``])
+       [arithmeticTheory.MOD_LESS, DECIDE ``a < b:num ==> (a < b + c)``]
+QED
 
 (* ......................................................................... *)
 
@@ -126,14 +132,16 @@ Proof
   SRW_TAC[][]
 QED
 
-val l2n_DIGIT = Q.store_thm("l2n_DIGIT",
-  `!b l x. 1 < b /\ EVERY ($> b) l /\ x < LENGTH l ==>
-      ((l2n b l DIV b ** x) MOD b = EL x l)`,
+Theorem l2n_DIGIT:
+   !b l x. 1 < b /\ EVERY ($> b) l /\ x < LENGTH l ==>
+      ((l2n b l DIV b ** x) MOD b = EL x l)
+Proof
   Induct_on `l` \\ SRW_TAC [ARITH_ss] [l2n_def, GREATER_DEF]
     \\ Cases_on `x`
     \\ SRW_TAC [ARITH_ss]
         [EXP, GSYM DIV_DIV_DIV_MULT, ZERO_LT_EXP, LESS_DIV_EQ_ZERO,
-         SIMP_RULE arith_ss [] (CONJ MOD_TIMES ADD_DIV_ADD_DIV)]);
+         SIMP_RULE arith_ss [] (CONJ MOD_TIMES ADD_DIV_ADD_DIV)]
+QED
 
 val lem = Q.prove(
   `!b n. 1 < b ==> PRE (LENGTH (n2l b n)) <= LENGTH (n2l b (n DIV b))`,
@@ -146,9 +154,10 @@ val lem = Q.prove(
          ``!b n. 1 < b /\ ~(n DIV b = 0) ==> b <= n``)
         \\ SRW_TAC [ARITH_ss] [LOG_DIV]]);
 
-val EL_n2l = Q.store_thm("EL_n2l",
-  `!b x n. 1 < b /\ x < LENGTH (n2l b n) ==>
-     (EL x (n2l b n) = (n DIV (b ** x)) MOD b)`,
+Theorem EL_n2l:
+   !b x n. 1 < b /\ x < LENGTH (n2l b n) ==>
+     (EL x (n2l b n) = (n DIV (b ** x)) MOD b)
+Proof
   completeInduct_on `LOG b n`
     \\ SRW_TAC [] []
     \\ ONCE_REWRITE_TAC [n2l_def]
@@ -170,7 +179,8 @@ val EL_n2l = Q.store_thm("EL_n2l",
              (ASSUME_TAC o SIMP_RULE std_ss []))
         \\ POP_ASSUM (Q.SPEC_THEN `PRE x` IMP_RES_TAC)
         \\ SRW_TAC [ARITH_ss] [GSYM EXP, DIV_DIV_DIV_MULT,
-             DECIDE ``!n. 0 < n ==> (SUC (PRE n) = n)``]]);
+             DECIDE ``!n. 0 < n ==> (SUC (PRE n) = n)``]]
+QED
 
 Theorem LIST_EQ[local] = iffRL LIST_EQ_REWRITE
 
@@ -195,17 +205,20 @@ Proof
   Q.X_GEN_TAC`z` THEN Cases_on`0=z MOD b` THEN simp[]
 QED
 
-val l2n_SNOC_0 = store_thm("l2n_SNOC_0",
-  ``!b ls. 0 < b ==> (l2n b (SNOC 0 ls) = l2n b ls)``,
-  GEN_TAC THEN Induct THEN simp[l2n_def])
+Theorem l2n_SNOC_0:
+    !b ls. 0 < b ==> (l2n b (SNOC 0 ls) = l2n b ls)
+Proof
+  GEN_TAC THEN Induct THEN simp[l2n_def]
+QED
 
 val MOD_EQ_0_0 = prove(
   ``!n b. 0 < b ==> (n MOD b = 0) ==> n < b ==> (n = 0)``,
   SRW_TAC[][MOD_EQ_0_DIVISOR] THEN Cases_on`d` THEN FULL_SIMP_TAC(srw_ss())[])
 
-val LOG_l2n = store_thm("LOG_l2n",
-  ``!b. 1 < b ==> !l. l <> [] /\ 0 < LAST l /\ EVERY ($> b) l ==>
-        (LOG b (l2n b l) = PRE (LENGTH l))``,
+Theorem LOG_l2n:
+    !b. 1 < b ==> !l. l <> [] /\ 0 < LAST l /\ EVERY ($> b) l ==>
+        (LOG b (l2n b l) = PRE (LENGTH l))
+Proof
   NTAC 2 STRIP_TAC THEN Induct THEN simp[l2n_def] THEN
   rw[] THEN fs[LAST_DEF] THEN
   Cases_on`l=[]` THEN fs[l2n_def] THEN1 (
@@ -227,18 +240,22 @@ val LOG_l2n = store_thm("LOG_l2n",
   fs[EVERY_MEM] THEN
   RES_TAC THEN
   `z = 0` by METIS_TAC[MOD_EQ_0_0,GREATER_DEF] THEN
-  fs[])
+  fs[]
+QED
 
-val l2n_dropWhile_0 = store_thm("l2n_dropWhile_0",
-  ``!b ls.
-      0 < b ==> (l2n b (REVERSE (dropWhile ($= 0) (REVERSE ls))) = l2n b ls)``,
+Theorem l2n_dropWhile_0:
+    !b ls.
+      0 < b ==> (l2n b (REVERSE (dropWhile ($= 0) (REVERSE ls))) = l2n b ls)
+Proof
   GEN_TAC >> HO_MATCH_MP_TAC SNOC_INDUCT >>
   simp[dropWhile_def,REVERSE_SNOC] >> rw[] >>
-  rw[] >> rw[l2n_SNOC_0] >> rw[SNOC_APPEND])
+  rw[] >> rw[l2n_SNOC_0] >> rw[SNOC_APPEND]
+QED
 
-val LOG_l2n_dropWhile = store_thm("LOG_l2n_dropWhile",
-  ``!b l. 1 < b /\ EXISTS ($<> 0) l /\ EVERY ($>b) l ==>
-          (LOG b (l2n b l) = PRE (LENGTH (dropWhile ($= 0) (REVERSE l))))``,
+Theorem LOG_l2n_dropWhile:
+    !b l. 1 < b /\ EXISTS ($<> 0) l /\ EVERY ($>b) l ==>
+          (LOG b (l2n b l) = PRE (LENGTH (dropWhile ($= 0) (REVERSE l))))
+Proof
   Tactical.REPEAT STRIP_TAC >>
   `0 < b` by simp[] >>
   simp[Once(GSYM l2n_dropWhile_0)] >>
@@ -258,24 +275,29 @@ val LOG_l2n_dropWhile = store_thm("LOG_l2n_dropWhile",
   Q_TAC SUFF_TAC`~ (($= 0) (HD ls))` >- simp[] >>
   Q.UNABBREV_TAC`ls` >>
   MATCH_MP_TAC HD_dropWhile >>
-  fs[EXISTS_MEM] >> METIS_TAC[])
+  fs[EXISTS_MEM] >> METIS_TAC[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val n2l_BOUND = Q.store_thm("n2l_BOUND",
-  `!b n. 0 < b ==> EVERY ($> b) (n2l b n)`,
+Theorem n2l_BOUND:
+   !b n. 0 < b ==> EVERY ($> b) (n2l b n)
+Proof
   NTAC 2 STRIP_TAC \\ completeInduct_on `LOG b n`
     \\ SRW_TAC [ARITH_ss] [Once n2l_def, GREATER_DEF]
     \\ `LOG b (n DIV b) < LOG b n` by SRW_TAC [ARITH_ss] [LOG_DIV_LESS]
-    \\ SRW_TAC [ARITH_ss] []);
+    \\ SRW_TAC [ARITH_ss] []
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val l2n_pow2_compute = Q.store_thm("l2n_pow2_compute",
-   `(!p. l2n (2 ** p) [] = 0) /\
+Theorem l2n_pow2_compute:
+    (!p. l2n (2 ** p) [] = 0) /\
     (!p h t. l2n (2 ** p) (h::t) =
-             MOD_2EXP p h + TIMES_2EXP p (l2n (2 ** p) t))`,
-   SRW_TAC [ARITH_ss] [l2n_def, TIMES_2EXP_def, MOD_2EXP_def])
+             MOD_2EXP p h + TIMES_2EXP p (l2n (2 ** p) t))
+Proof
+   SRW_TAC [ARITH_ss] [l2n_def, TIMES_2EXP_def, MOD_2EXP_def]
+QED
 
 val lem = (GEN_ALL o REWRITE_RULE [EXP] o Q.SPECL [`n`,`0`] o
            REWRITE_RULE [DECIDE ``1 < 2``] o Q.SPEC `2`) EXP_BASE_LT_MONO
@@ -366,20 +388,30 @@ val tac =
      num_from_hex_list_def, num_to_bin_list_def, num_to_oct_list_def,
      num_to_dec_list_def, num_to_hex_list_def]
 
-val num_bin_list = Q.store_thm("num_bin_list",
-  `num_from_bin_list o num_to_bin_list = I`, tac)
-val num_oct_list = Q.store_thm("num_oct_list",
-  `num_from_oct_list o num_to_oct_list = I`, tac)
-val num_dec_list = Q.store_thm("num_dec_list",
-  `num_from_dec_list o num_to_dec_list = I`, tac)
-val num_hex_list = Q.store_thm("num_hex_list",
-  `num_from_hex_list o num_to_hex_list = I`, tac)
+Theorem num_bin_list:
+   num_from_bin_list o num_to_bin_list = I
+Proof tac
+QED
+Theorem num_oct_list:
+   num_from_oct_list o num_to_oct_list = I
+Proof tac
+QED
+Theorem num_dec_list:
+   num_from_dec_list o num_to_dec_list = I
+Proof tac
+QED
+Theorem num_hex_list:
+   num_from_hex_list o num_to_hex_list = I
+Proof tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val l2n_APPEND = Q.store_thm("l2n_APPEND",
-  `!b l1 l2. l2n b (l1 ++ l2) = l2n b l1 + b ** (LENGTH l1) * l2n b l2`,
-  Induct_on `l1` \\ SRW_TAC [ARITH_ss] [EXP, l2n_def]);
+Theorem l2n_APPEND:
+   !b l1 l2. l2n b (l1 ++ l2) = l2n b l1 + b ** (LENGTH l1) * l2n b l2
+Proof
+  Induct_on `l1` \\ SRW_TAC [ARITH_ss] [EXP, l2n_def]
+QED
 
 val EXP_MONO = Q.prove(
   `!b m n x. 1 < b /\ m < n /\ x < b ** m ==> (b ** m + x < b ** n)`,
@@ -399,10 +431,11 @@ val l2n_b_1 = Q.prove(
   `!b. 1 < b ==> (l2n b [1] = 1)`,
   SRW_TAC [] [l2n_def]);
 
-val l2n_11 = Q.store_thm("l2n_11",
-  `!b l1 l2.
+Theorem l2n_11:
+   !b l1 l2.
       1 < b /\ EVERY ($> b) l1 /\ EVERY ($> b) l2 ==>
-      ((l2n b (l1 ++ [1]) = l2n b (l2 ++ [1])) = (l1 = l2))`,
+      ((l2n b (l1 ++ [1]) = l2n b (l2 ++ [1])) = (l1 = l2))
+Proof
   REPEAT STRIP_TAC \\ EQ_TAC \\ SRW_TAC [] []
     \\ MATCH_MP_TAC LIST_EQ
     \\ sg `LENGTH l1 = LENGTH l2`
@@ -420,7 +453,8 @@ val l2n_11 = Q.store_thm("l2n_11",
       `x < LENGTH l1` by DECIDE_TAC
         \\ IMP_RES_TAC (GSYM l2n_DIGIT)
         \\ NTAC 2 (POP_ASSUM SUBST1_TAC)
-        \\ FULL_SIMP_TAC (srw_ss()) [l2n_APPEND]]);
+        \\ FULL_SIMP_TAC (srw_ss()) [l2n_APPEND]]
+QED
 
 Theorem BITWISE_l2n_2:
   LENGTH l1 = LENGTH l2 ==>

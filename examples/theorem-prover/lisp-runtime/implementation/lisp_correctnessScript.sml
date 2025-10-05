@@ -1,15 +1,13 @@
-open HolKernel Parse boolLib bossLib; val _ = new_theory "lisp_correctness";
-
-open lisp_sexpTheory lisp_invTheory lisp_opsTheory lisp_bigopsTheory;
-open lisp_codegenTheory lisp_initTheory lisp_symbolsTheory;
-open lisp_sexpTheory lisp_invTheory lisp_parseTheory;
-open lisp_semanticsTheory lisp_compilerTheory lisp_compiler_opTheory progTheory;
-open compilerLib decompilerLib codegenLib prog_x64Lib lisp_bytecode_stepTheory;
-open lisp_compiler_opTheory;
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory helperLib sumTheory;
-open set_sepTheory bitTheory fcpTheory stringTheory optionTheory relationTheory;
+Theory lisp_correctness
+Ancestors
+  lisp_sexp lisp_inv lisp_ops lisp_bigops lisp_codegen lisp_init
+  lisp_symbols lisp_sexp lisp_inv lisp_parse lisp_semantics
+  lisp_compiler lisp_compiler_op prog lisp_bytecode_step
+  lisp_compiler_op words arithmetic list pred_set pair combin
+  finite_map address sum set_sep bit fcp string option relation
+Libs
+  compilerLib decompilerLib codegenLib prog_x64Lib wordsLib
+  helperLib
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -41,25 +39,29 @@ val (R_exec_rules,R_exec_ind,R_exec_cases) = Hol_reln `
     R_exec (input,fns,io,ok) (io3,ok3))`;
 *)
 
-val zERROR_MESSAGE_def = Define `
+Definition zERROR_MESSAGE_def:
   zERROR_MESSAGE ex =
     SEP_EXISTS a1 a2 sl sl1 e cs rbp ddd cu.
-      zLISP_FAIL (a1,a2,sl,sl1,e,ex,cs,rbp,ddd,cu)`;
+      zLISP_FAIL (a1,a2,sl,sl1,e,ex,cs,rbp,ddd,cu)
+End
 
-val zLISP_OUTPUT_def = Define `
+Definition zLISP_OUTPUT_def:
   zLISP_OUTPUT (io,ok) =
     SEP_EXISTS a1 a2 sl sl1 e ex cs rbp ddd cu x0 x1 x2 x3 x4 x5 xs xs1 xbp qs code amnt.
-      zLISP (a1,a2,sl,sl1,e,ex,cs,rbp,ddd,cu) (x0,x1,x2,x3,x4,x5,xs,xs1,io,xbp,qs,code,amnt,ok)`;
+      zLISP (a1,a2,sl,sl1,e,ex,cs,rbp,ddd,cu) (x0,x1,x2,x3,x4,x5,xs,xs1,io,xbp,qs,code,amnt,ok)
+End
 
-val R_exec_TERMINATES_def = Define `
-  R_exec_TERMINATES input = ?y. R_exec (input,FEMPTY,"") y`;
+Definition R_exec_TERMINATES_def:
+  R_exec_TERMINATES input = ?y. R_exec (input,FEMPTY,"") y
+End
 
 (*  *)
 
 val c = READ_EVAL_PRINT_LOOP_BASE |> concl |> rator |> rand
 val pc = READ_EVAL_PRINT_LOOP_BASE |> concl |> rand |> find_term (can (match_term ``p + n2w n``))
 
-val getOUTPUT_def = Define `getOUTPUT (IO_STREAMS xs ys) = ys`;
+Definition getOUTPUT_def:   getOUTPUT (IO_STREAMS xs ys) = ys
+End
 
 val PULL_FORALL_IMP = METIS_PROVE [] ``(Q ==> !x. P x) = !x. Q ==> P x``
 val IMP_IMP = METIS_PROVE [] ``b /\ (c ==> d) ==> ((b ==> c) ==> d)``
@@ -88,7 +90,8 @@ val is_eof_T_IMP = prove(
   \\ MATCH_MP_TAC LESS_EQ_LESS_TRANS \\ Q.EXISTS_TAC `STRLEN t`
   \\ ASM_SIMP_TAC std_ss [LENGTH_SND_read_while] \\ SIMP_TAC std_ss [LENGTH]);
 
-val hide_code_def = Define `hide_code p cs = ^c`;
+Definition hide_code_def:   hide_code p cs = ^c
+End
 
 val STAR_LEMMA = prove(
   ``(STAR p1 p2) * p3 = p3 * p2 * p1``,
@@ -475,4 +478,3 @@ val _ = print "done.\n"
 in val _ = export_codeLib.write_code_to_file filename th end
 
 
-val _ = export_theory();

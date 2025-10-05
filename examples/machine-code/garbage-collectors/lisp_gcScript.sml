@@ -1,14 +1,14 @@
 
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_gc";
+Theory lisp_gc
+Ancestors
+  words arithmetic list pred_set pair combin finite_map address
+  tailrec
+  cheney_gc cheney_alloc  (* an abstract implementation is imported *)
+  prog_x86 prog_ppc prog_arm
+Libs
+  decompilerLib compilerLib prog_armLib wordsLib mc_tailrecLib
+
 val _ = ParseExtras.temp_loose_equality()
-
-open decompilerLib compilerLib prog_armLib;
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory;
-
-open mc_tailrecLib tailrecTheory;
-open cheney_gcTheory cheney_allocTheory; (* an abstract implementation is imported *)
 
 
 val _ = map Parse.hide ["r0","r1","r2","r3","r4","r5","r6","r7","r8","r9","r10","r11","r12","r13"];
@@ -128,32 +128,38 @@ val _ = save_thm("arm_alloc_thm",arm_alloc_thm);
 
 (* proof *)
 
-val ref_addr_def = Define `
-  ref_addr a n = a + n2w (8 * n):word32`;
+Definition ref_addr_def:
+  ref_addr a n = a + n2w (8 * n):word32
+End
 
-val ref_field_def = Define `
+Definition ref_field_def:
   ref_field a (n,x) = if n = 0 then
-    ADDR32 (FST x) + (if SND x then 3w else 2w) else ref_addr a n`;
+    ADDR32 (FST x) + (if SND x then 3w else 2w) else ref_addr a n
+End
 
-val ref_mem_def = Define `
+Definition ref_mem_def:
   (ref_mem i EMP (a,xs) = T) /\
   (ref_mem i (REF j) (a,xs) =
     (xs (ref_addr a i) = ref_addr a j + 1w)) /\
   (ref_mem i (DATA (x,y,z,q)) (a,xs) =
     (xs (ref_addr a i) = ref_field a (x,z)) /\
-    (xs (ref_addr a i + 4w) = ref_field a (y,q)))`;
+    (xs (ref_addr a i + 4w) = ref_field a (y,q)))
+End
 
-val valid_address_def = Define `
-  valid_address a i = w2n a + 8 * i + 8 < 2**32`;
+Definition valid_address_def:
+  valid_address a i = w2n a + 8 * i + 8 < 2**32
+End
 
-val ref_set_def = Define `
-  ref_set a f = { a + n2w (4 * i) | i < 2 * f + 4 } UNION { a - n2w (4 * i) | i <= 8 }`;
+Definition ref_set_def:
+  ref_set a f = { a + n2w (4 * i) | i < 2 * f + 4 } UNION { a - n2w (4 * i) | i <= 8 }
+End
 
-val ref_cheney_def = Define `
+Definition ref_cheney_def:
   ref_cheney (m,e) (a,d,xs,ys) =
     ~(a = 0w) /\ (a && 3w = 0w) /\ (!i. i <= e ==> ref_mem i (m i) (a,xs)) /\
     (m 0 = EMP) /\ valid_address a e /\ (!i. i <+ ref_addr a 1 ==> (xs i = ys i)) /\
-    (ref_set a e = d)`;
+    (ref_set a e = d)
+End
 
 val ref_addr_NOT_ZERO = prove(
   ``!a. ref_cheney (m,e) (a,d,xs,ys) /\ x <= e /\ ~(x = 0) ==> ~(ref_addr a x = 0w)``,
@@ -360,10 +366,11 @@ val arm_move2_thm = prove(
   ``(arm_move2 = arm_move) /\ (arm_move2_pre = arm_move_pre)``,
   TAILREC_TAC \\ SIMP_TAC std_ss [LET_DEF]);
 
-val ref_cheney_inv_def = Define `
+Definition ref_cheney_inv_def:
   ref_cheney_inv (b,i,j,k,e,f,m,w,ww,r) (a,r3,r4,d,xs,ys) =
     cheney_inv (b,b,i,j,k,e,f,m,w,ww,r) /\ ref_cheney (m,f) (a,d,xs,ys) /\
-    valid_address a e /\ (r4 = ref_addr a j) /\ (r3 = ref_addr a i)`;
+    valid_address a e /\ (r4 = ref_addr a j) /\ (r3 = ref_addr a i)
+End
 
 val ref_cheney_step_thm = prove(
   ``ref_cheney_inv (b,i,j,j,e,f,m,x,xx,r) (a,r3,r4,d,xs,ys) /\ ~(i = j) /\
@@ -491,11 +498,12 @@ val SING_IN_SUBSET0 = prove(
   ``x IN t /\ t SUBSET0 s ==> {x} SUBSET0 s``,
   SIMP_TAC bool_ss [SUBSET0_DEF,SUBSET_DEF,IN_INSERT,NOT_IN_EMPTY]);
 
-val roots_in_mem_def = Define `
+Definition roots_in_mem_def:
   (roots_in_mem [] (a,r12,m) = T) /\
   (roots_in_mem (x::xs) (a,r12,m) =
       (m r12 = ref_field a x) /\ r12 <+ ref_addr a 1 /\ r12 <+ r12 + 4w /\
-      roots_in_mem xs (a,r12+4w,m))`;
+      roots_in_mem xs (a,r12+4w,m))
+End
 
 val NOT_ref_addr = prove(
   ``!x a. valid_address a i /\ x <+ ref_addr a 1 /\ ~(i = 0) ==>
@@ -528,9 +536,10 @@ val roots_lemma = prove(
   \\ SIMP_TAC std_ss [APPLY_UPDATE_THM,WORD_LOWER_NOT_EQ,GSYM WORD_ADD_ASSOC]
   \\ REPEAT STRIP_TAC \\ METIS_TAC [ref_cheney_def,WORD_LOWER_TRANS]);
 
-val root_address_ok_def = Define `
+Definition root_address_ok_def:
   (root_address_ok a 0 x = T) /\
-  (root_address_ok a (SUC n) x = ALIGNED a /\ a IN x /\ root_address_ok (a+4w) n x)`;
+  (root_address_ok a (SUC n) x = ALIGNED a /\ a IN x /\ root_address_ok (a+4w) n x)
+End
 
 val ref_cheney_move_roots = prove(
   ``!rs zs ds j m r4 r5 r7 r8 xs r12 ys jn mn.
@@ -597,7 +606,7 @@ val arm_c_init_lemma = prove(
   Cases_on `u` \\ SIMP_TAC std_ss [SIMP_RULE std_ss [LET_DEF] def6,
     WORD_ADD_0,PAIR_EQ,WORD_XOR_CLAUSES,EVAL ``0w = 1w:word32``]);
 
-val arm_coll_inv_def = Define `
+Definition arm_coll_inv_def:
   arm_coll_inv (a,x,xs) (i,e,rs,rs',l,u,m) =
     ?x1 x2 x3 x4 x5 x6 y1 y2 y3 y4 y5 y6.
       roots_in_mem (ZIP (rs,rs') ++ [(i,(0w,F));(e,(0w,F))]) (a,a-24w,xs) /\
@@ -605,7 +614,8 @@ val arm_coll_inv_def = Define `
       valid_address a (l + l + 1) /\
       ref_cheney (m,l+l+1) (a,x,xs,xs) /\
       (xs (a-28w) = if u then 0w else 1w) /\ a - 28w <+ ref_addr a 1 /\ a - 28w <+ a - 24w /\
-      (xs (a-32w) = n2w (8 * l)) /\ a - 32w <+ ref_addr a 1 /\ a - 32w <+ a - 24w`;
+      (xs (a-32w) = n2w (8 * l)) /\ a - 32w <+ ref_addr a 1 /\ a - 32w <+ a - 24w
+End
 
 val roots_in_mem_carry_over = prove(
   ``!p r xs ys. ref_cheney (m,f) (a,x,xs,ys) /\ roots_in_mem p (a,r,ys) ==> roots_in_mem p (a,r,xs)``,
@@ -908,10 +918,11 @@ val arm_alloc_aux2_lemma = prove(
   \\ REPEAT (MATCH_MP_TAC ALIGNED_ADD) \\ ASM_SIMP_TAC bool_ss [] \\ REPEAT STRIP_TAC
   \\ REPEAT (MATCH_MP_TAC ALIGNED_ref_addr) \\ ASM_SIMP_TAC bool_ss [] \\ EVAL_TAC);
 
-val not_full_heap_def = Define `
+Definition not_full_heap_def:
   not_full_heap (i,e,root,l,u,m) =
     ~(FST (cheney_alloc_gc (i,e,root,l,u,m)) =
-      FST (SND (cheney_alloc_gc (i,e,root,l,u,m))))`;
+      FST (SND (cheney_alloc_gc (i,e,root,l,u,m))))
+End
 
 val arm_alloc_lemma = prove(
   ``ok_state (i,e,rs,l,u,m) ==>
@@ -951,15 +962,16 @@ val arm_alloc_lemma = prove(
   \\ IMP_RES_TAC arm_alloc_aux2_lemma \\ ASM_SIMP_TAC std_ss []
   \\ REVERSE (REPEAT STRIP_TAC) \\ METIS_TAC []);
 
-val field_list_def = Define `
+Definition field_list_def:
   (field_list [] (a,r12,m) = T) /\
-  (field_list (x::xs) (a,r12,m) = (m r12 = ref_field a x) /\ field_list xs (a,r12 + 4w,m))`;
+  (field_list (x::xs) (a,r12,m) = (m r12 = ref_field a x) /\ field_list xs (a,r12 + 4w,m))
+End
 
 val roots_in_mem_IMP_addr_list = prove(
   ``!p a b xs. roots_in_mem p (a,b,xs) ==> field_list p (a,b,xs)``,
   Induct \\ ASM_SIMP_TAC std_ss [field_list_def,roots_in_mem_def]);
 
-val ch_mem_def = Define `
+Definition ch_mem_def:
   ch_mem (i,e,rs,rs',l,u,m) (a,x,xs) =
     ?x1 x2 x3 x4 x5 x6:num y1 y2 y3 y4 y5 y6:(word30 # bool).
       32 <= w2n a /\ w2n a + 2 * 8 * l + 20 < 2**32 /\
@@ -968,9 +980,10 @@ val ch_mem_def = Define `
       (rs = [x1;x2;x3;x4;x5;x6]) /\ (rs' = [y1;y2;y3;y4;y5;y6]) /\
       ref_cheney (m,l+l+1) (a,x,xs,xs) /\
       (xs (a-28w) = if u then 0w else 1w) /\
-      (xs (a-32w) = n2w (8 * l)) /\ ~(l = 0)`;
+      (xs (a-32w) = n2w (8 * l)) /\ ~(l = 0)
+End
 
-val ch_word_def = Define `
+Definition ch_word_def:
   ch_word (i,e,rs,rs',l,u,m) (v1,v2,v3,v4,v5,v6,a,x,xs) =
     ?x1 x2 x3 x4 x5 x6:num y1 y2 y3 y4 y5 y6:(word30 # bool).
       32 <= w2n a /\ w2n a + 2 * 8 * l + 20 < 2**32 /\
@@ -979,7 +992,8 @@ val ch_word_def = Define `
       (v1 = ref_field a (x1,y1)) /\ (v2 = ref_field a (x2,y2)) /\ (v3 = ref_field a (x3,y3)) /\
       (v4 = ref_field a (x4,y4)) /\ (v5 = ref_field a (x5,y5)) /\ (v6 = ref_field a (x6,y6)) /\
       (xs a = ref_addr a i) /\ (xs (a+4w) = ref_addr a e) /\
-      (xs (a-28w) = if u then 0w else 1w) /\ (xs (a-32w) = n2w (8 * l)) /\ ~(l = 0)`;
+      (xs (a-28w) = if u then 0w else 1w) /\ (xs (a-32w) = n2w (8 * l)) /\ ~(l = 0)
+End
 
 val ch_mem_lemma1 = prove(
   ``!a. n < 2**32 /\ k < 2**32 /\ n <= w2n a /\
@@ -1107,9 +1121,10 @@ val ch_word_alloc = prove(
     \\ ASM_SIMP_TAC bool_ss [ref_field_def]
     \\ METIS_TAC []]);
 
-val ch_arm_def = Define `
+Definition ch_arm_def:
   ch_arm (r,h,l) c =
-    ?i e rs l' u m. ch_inv (MAP FST r,h,l) (i,e,rs,l',u,m) /\ ch_word (i,e,rs,MAP SND r,l',u,m) c`;
+    ?i e rs l' u m. ch_inv (MAP FST r,h,l) (i,e,rs,l',u,m) /\ ch_word (i,e,rs,MAP SND r,l',u,m) c
+End
 
 val ch_arm_alloc = store_thm("ch_arm_alloc",
   ``(arm_alloc (v1,v2,v3,v4,v5,v6,a,x,xs) = (w1,w2,w3,w4,w5,w6,a',x',xs')) ==>
@@ -1140,19 +1155,22 @@ val _ = Hol_datatype `XExp = XDot of XExp => XExp | XVal of word30 | XSym of wor
 val XExp_11 = fetch "-" "XExp_11";
 val XExp_distinct = fetch "-" "XExp_distinct";
 
-val word_tree_def = Define `
+Definition word_tree_def:
   (word_tree (XVal w) (a,m) d = (a = ADDR32 w + 2w)) /\
   (word_tree (XSym w) (a,m) d = (a = ADDR32 w + 3w)) /\
   (word_tree (XDot x y) (a,m) d = a IN d /\ ALIGNED a /\
-     word_tree x (m a,m) d /\ word_tree y (m (a + 4w),m) d)`;
+     word_tree x (m a,m) d /\ word_tree y (m (a + 4w),m) d)
+End
 
-val ch_active_set_def = Define `
-  ch_active_set (a:word32,i,e) = { a + 8w * n2w j | i <= j /\ j < e }`;
+Definition ch_active_set_def:
+  ch_active_set (a:word32,i,e) = { a + 8w * n2w j | i <= j /\ j < e }
+End
 
-val ok_data_def = Define `
-  ok_data w d = if ALIGNED w then w IN d else ~(ALIGNED (w - 1w))`;
+Definition ok_data_def:
+  ok_data w d = if ALIGNED w then w IN d else ~(ALIGNED (w - 1w))
+End
 
-val ch_tree_def = Define `
+Definition ch_tree_def:
   ch_tree (t1,t2,t3,t4,t5,t6,l) (w1,w2,w3,w4,w5,w6,a,dm,m,b,k) =
     ?i u.
       let v = (if u then 1 + l else 1) in
@@ -1170,27 +1188,31 @@ val ch_tree_def = Define `
         word_tree t4 (w4,m) d /\
         word_tree t5 (w5,m) d /\
         word_tree t6 (w6,m) d /\
-        !w. w IN d ==> ok_data (m w) d /\ ok_data (m (w + 4w)) d`;
+        !w. w IN d ==> ok_data (m w) d /\ ok_data (m (w + 4w)) d
+End
 
-val heap_el_def = Define `
+Definition heap_el_def:
   heap_el a w =
     if ALIGNED w then (w2n (w - a) DIV 8, (0w, F)) else
-      (0, (ADDR30 w, ALIGNED (w - 3w)))`;
+      (0, (ADDR30 w, ALIGNED (w - 3w)))
+End
 
-val build_heap_def = Define `
+Definition build_heap_def:
   (build_heap (0,i,a,m) = FEMPTY) /\
   (build_heap (SUC n,i,a,m) =
      let (x1,x2) = heap_el a (m i) in
      let (y1,y2) = heap_el a (m (i + 4w)) in
-       build_heap (n,i + 8w,a,m) |+ (w2n (i - a) DIV 8,x1,y1,x2,y2))`;
+       build_heap (n,i + 8w,a,m) |+ (w2n (i - a) DIV 8,x1,y1,x2,y2))
+End
 
-val build_map_def = Define `
+Definition build_map_def:
   (build_map (0,i,a,m) = \x. EMP) /\
   (build_map (SUC n,i,a,m) =
      let (x1,x2) = heap_el a (m i) in
      let (y1,y2) = heap_el a (m (i + 4w)) in
        ((w2n (i - a) DIV 8) =+ DATA (x1,y1,(x2,y2)))
-       (build_map (n,i + 8w,a,m)))`;
+       (build_map (n,i + 8w,a,m)))
+End
 
 val abstract_build_heap = prove(
   ``!k a b m.
@@ -1583,15 +1605,17 @@ val ch_tree_IMP_ch_arm = prove(
     \\ MATCH_MP_TAC ok_data_IMP_ref_field_heap_el
     \\ SIMP_TAC std_ss [] \\ METIS_TAC []));
 
-val XSIZE_def = Define `
+Definition XSIZE_def:
   (XSIZE (XDot x y) = SUC (XSIZE x + XSIZE y)) /\
   (XSIZE (XVal w) = 0) /\
-  (XSIZE (XSym s) = 0)`;
+  (XSIZE (XSym s) = 0)
+End
 
-val XDEPTH_def = Define `
+Definition XDEPTH_def:
   (XDEPTH (XDot x y) = SUC (MAX (XDEPTH x) (XDEPTH y))) /\
   (XDEPTH (XVal w) = 0) /\
-  (XDEPTH (XSym s) = 0)`;
+  (XDEPTH (XSym s) = 0)
+End
 
 val CARD_LESS_EQ_XSIZE = prove(
   ``!t1 v1 a m. ch_tree (t1,t2,t3,t4,t5,t6,l) (v1,v2,v3,v4,v5,v6,a,dm,m,b,k) ==>
@@ -1735,9 +1759,10 @@ val ch_arm_setup = let
   val th = MATCH_MP imp (RW [MAP] th)
   in th end
 
-val ch_arm2_def = Define `
+Definition ch_arm2_def:
   ch_arm2 (r,h,l,i,u) c =
-    ?e rs m. ch_inv (MAP FST r,h,l) (i,e,rs,l,u,m) /\ ch_word (i,e,rs,MAP SND r,l,u,m) c`;
+    ?e rs m. ch_inv (MAP FST r,h,l) (i,e,rs,l,u,m) /\ ch_word (i,e,rs,MAP SND r,l,u,m) c
+End
 
 val ch_arm_IMP_ch_arm2 = prove(
   ``ch_arm (r,h,l) c ==> ?i u. ch_arm2 (r,h,l,i,u) c``,
@@ -2542,6 +2567,3 @@ val lB = prove_eq "ppc_alloc" "arm_alloc" [l1,l2,l3,l4,l5,l6,l7,l8,l9,lA]
   ``(ppc_alloc = arm_alloc) /\ (ppc_alloc_pre = arm_alloc_pre)``;
 
 val ppc_alloc_EQ = save_thm("ppc_alloc_EQ",lB)
-
-
-val _ = export_theory();

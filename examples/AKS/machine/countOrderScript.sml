@@ -4,34 +4,19 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "countOrder";
-
 (* ------------------------------------------------------------------------- *)
+Theory countOrder
+Ancestors
+  pred_set list arithmetic divides gcd number combinatorics
+  logroot pair option listRange ring countMonad countMacro
+  countModulo bitsize complexity loopIncrease loopDecrease
+  computeOrder  (* for ordz_seek and ordz_simple *)
+Libs
+  jcLib monadsyntax
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory listTheory arithmeticTheory dividesTheory gcdTheory
-     numberTheory combinatoricsTheory logrootTheory pairTheory optionTheory
-     listRangeTheory;
-
-open ringTheory;
-
-open countMonadTheory countMacroTheory;
-open countModuloTheory;
-
-open bitsizeTheory complexityTheory;
-open loopIncreaseTheory loopDecreaseTheory;
-
-open computeOrderTheory; (* for ordz_seek and ordz_simple *)
 
 (* (* val _ = load "monadsyntax"; *) *)
-open monadsyntax;
-
 val _ = monadsyntax.enable_monadsyntax();
 val _ = monadsyntax.enable_monad "Count";
 
@@ -259,7 +244,7 @@ val ordzM_def = Define`
 `;
 *)
 (* Version with n MOD m, better for complexity analysis. *)
-val ordzM_def = Define`
+Definition ordzM_def:
     ordzM m n =
        do
           m0 <- zeroM m;
@@ -271,7 +256,7 @@ val ordzM_def = Define`
                  ordz_seekM m n' m 1;
                od
        od
-`;
+End
 
 (*
 > EVAL ``MAP (ordzM 7) [1 .. 10]``; =
@@ -795,8 +780,4 @@ val ordzM_thm = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

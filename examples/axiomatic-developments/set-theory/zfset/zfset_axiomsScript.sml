@@ -23,24 +23,13 @@ map load [];
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories
-******************************************************************************)
+Theory zfset_axioms
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
 
 
-(*****************************************************************************)
-(* Create zfset_axiomsTheory                                                 *)
-(*****************************************************************************)
-val _ = new_theory "zfset_axioms";
 val _ = ParseExtras.temp_loose_equality()
 (*****************************************************************************)
 (* The Universe ``:zfset``.                                                  *)
@@ -105,8 +94,9 @@ val UU_def =
 (* Definition of set inclusion.                                              *)
 (*****************************************************************************)
 val _ = set_fixity "Subset" (Infix(NONASSOC, 540));
-val Subset_def =
- Define `s Subset t = !x. x In s ==> x In t`;
+Definition Subset_def:
+  s Subset t = !x. x In s ==> x In t
+End
 
 (*****************************************************************************)
 (* Axiom of power-sets.                                                      *)
@@ -254,8 +244,9 @@ val PairingFun_def =
    ["PairingFun"] ,
    (CONV_RULE SKOLEM_CONV Pairing));
 
-val Upair_def =
- Define `Upair x y = Spec (PairingFun x y) (\z. (z = x) \/ (z = y))`;
+Definition Upair_def:
+  Upair x y = Spec (PairingFun x y) (\z. (z = x) \/ (z = y))
+End
 
 val InUpair =
  store_thm
@@ -280,9 +271,9 @@ val U_def =
 (*****************************************************************************)
 (* Successor of a set.                                                       *)
 (*****************************************************************************)
-val Suc_def =
- Define
-  `Suc x = x U (Singleton x)`;
+Definition Suc_def:
+   Suc x = x U (Singleton x)
+End
 
 (*****************************************************************************)
 (* Axiom of Infinity.                                                        *)
@@ -296,5 +287,3 @@ val InfiniteSet_def =
 (*****************************************************************************)
 (* End of the ZF axioms.                                                     *)
 (*****************************************************************************)
-
-val _ = export_theory();

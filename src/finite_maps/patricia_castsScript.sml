@@ -22,40 +22,54 @@ val _ = set_fixity "INSERT_PTREEs" (Infixr 490);
 val _ = set_fixity "UNION_PTREEw" (Infixl 500);
 val _ = set_fixity "UNION_PTREEs" (Infixl 500);
 
-val SKIP1_def = Define `SKIP1 (STRING c s) = s`;
+Definition SKIP1_def:   SKIP1 (STRING c s) = s
+End
 
-val string_to_num_def = Define`
-  string_to_num s = s2n 256 ORD (STRING (CHR 1) s)`;
+Definition string_to_num_def:
+  string_to_num s = s2n 256 ORD (STRING (CHR 1) s)
+End
 
-val num_to_string_def = Define `num_to_string n = SKIP1 (n2s 256 CHR n)`;
+Definition num_to_string_def:   num_to_string n = SKIP1 (n2s 256 CHR n)
+End
 
-val PEEKs_def     = Define `PEEKs t w = PEEK t (string_to_num w)`;
-val FINDs_def     = Define `FINDs t w = THE (PEEKs t w)`;
-val ADDs_def      = Define `ADDs t (w,d) = ADD t (string_to_num w,d)`;
-val ADD_LISTs_def = Define `ADD_LISTs = FOLDL ADDs`;
-val REMOVEs_def   = Define `REMOVEs t w = REMOVE t (string_to_num w)`;
+Definition PEEKs_def:       PEEKs t w = PEEK t (string_to_num w)
+End
+Definition FINDs_def:       FINDs t w = THE (PEEKs t w)
+End
+Definition ADDs_def:        ADDs t (w,d) = ADD t (string_to_num w,d)
+End
+Definition ADD_LISTs_def:   ADD_LISTs = FOLDL ADDs
+End
+Definition REMOVEs_def:     REMOVEs t w = REMOVE t (string_to_num w)
+End
 
 val _ = overload_on ("'", Term`$PEEKs`);
 val _ = overload_on ("|+", Term`$ADDs`);
 val _ = overload_on ("|++", Term`$ADD_LISTs`);
 val _ = overload_on ("\\\\", Term`$REMOVEs`);
 
-val TRAVERSEs_def = Define
-  `TRAVERSEs t = MAP num_to_string (TRAVERSE t)`;
+Definition TRAVERSEs_def:
+   TRAVERSEs t = MAP num_to_string (TRAVERSE t)
+End
 
-val KEYSs_def = Define `KEYSs t = QSORT $< (TRAVERSEs t)`;
+Definition KEYSs_def:   KEYSs t = QSORT $< (TRAVERSEs t)
+End
 
-val IN_PTREEs_def = Define
-  `$IN_PTREEs w t = (string_to_num w) IN_PTREE t`
+Definition IN_PTREEs_def:
+   $IN_PTREEs w t = (string_to_num w) IN_PTREE t
+End
 
-val INSERT_PTREEs_def = Define
-  `$INSERT_PTREEs w t = (string_to_num w) INSERT_PTREE t`;
+Definition INSERT_PTREEs_def:
+   $INSERT_PTREEs w t = (string_to_num w) INSERT_PTREE t
+End
 
-val STRINGSET_OF_PTREE_def = Define`
-  STRINGSET_OF_PTREE (t:unit ptree) = LIST_TO_SET (TRAVERSEs t)`;
+Definition STRINGSET_OF_PTREE_def:
+  STRINGSET_OF_PTREE (t:unit ptree) = LIST_TO_SET (TRAVERSEs t)
+End
 
-val PTREE_OF_STRINGSET_def = Define`
-  PTREE_OF_STRINGSET t s = PTREE_OF_NUMSET t (IMAGE string_to_num s)`;
+Definition PTREE_OF_STRINGSET_def:
+  PTREE_OF_STRINGSET t s = PTREE_OF_NUMSET t (IMAGE string_to_num s)
+End
 
 (* ......................................................................... *)
 
@@ -63,74 +77,94 @@ val _ = Datatype `word_ptree = Word_ptree ('a -> unit) ('b ptree)`;
 
 val _ = type_abbrev("word_ptreeset", ``:('a, unit) word_ptree``);
 
-val THE_PTREE_def  = Define `THE_PTREE (Word_ptree a t) = t`;
+Definition THE_PTREE_def:    THE_PTREE (Word_ptree a t) = t
+End
 
-val SOME_PTREE_def = zDefine `SOME_PTREE t = Word_ptree (K ()) t`;
+Definition SOME_PTREE_def[nocompute]:   SOME_PTREE t = Word_ptree (K ()) t
+End
 
-val WordEmpty_def  = Define `WordEmpty = SOME_PTREE Empty`;
+Definition WordEmpty_def:    WordEmpty = SOME_PTREE Empty
+End
 
 val _ = export_rewrites ["THE_PTREE_def"];
 
-val PEEKw_def = Define`
-  PEEKw (t:('a,'b) word_ptree) (w:'a word) = PEEK (THE_PTREE t) (w2n w)`;
+Definition PEEKw_def:
+  PEEKw (t:('a,'b) word_ptree) (w:'a word) = PEEK (THE_PTREE t) (w2n w)
+End
 
-val FINDw_def = Define `FINDw t w = THE (PEEKw t w)`;
+Definition FINDw_def:   FINDw t w = THE (PEEKw t w)
+End
 
-val ADDw_def = Define`
+Definition ADDw_def:
   ADDw (t:('a,'b) word_ptree) (w:'a word,d) =
-  SOME_PTREE (ADD (THE_PTREE t) (w2n w,d)) : ('a,'b) word_ptree`;
+  SOME_PTREE (ADD (THE_PTREE t) (w2n w,d)) : ('a,'b) word_ptree
+End
 
-val ADD_LISTw_def = Define `ADD_LISTw = FOLDL ADDw`;
+Definition ADD_LISTw_def:   ADD_LISTw = FOLDL ADDw
+End
 
-val REMOVEw_def = Define`
+Definition REMOVEw_def:
   REMOVEw (t:('a,'b) word_ptree) (w:'a word) =
-  SOME_PTREE (REMOVE (THE_PTREE t) (w2n w)) : ('a,'b) word_ptree`;
+  SOME_PTREE (REMOVE (THE_PTREE t) (w2n w)) : ('a,'b) word_ptree
+End
 
 val _ = overload_on ("'", Term`$PEEKw`);
 val _ = overload_on ("|+", Term`$ADDw`);
 val _ = overload_on ("|++", Term`$ADD_LISTw`);
 val _ = overload_on ("\\\\", Term`$REMOVEw`);
 
-val TRAVERSEw_def = Define`
+Definition TRAVERSEw_def:
   TRAVERSEw (t:('a, 'b) word_ptree) =
-  MAP (n2w:num->'a word) (TRAVERSE (THE_PTREE t))`;
+  MAP (n2w:num->'a word) (TRAVERSE (THE_PTREE t))
+End
 
-val KEYSw_def = Define `KEYSw t = QSORT $<+ (TRAVERSEw t)`;
+Definition KEYSw_def:   KEYSw t = QSORT $<+ (TRAVERSEw t)
+End
 
-val TRANSFORMw_def = Define`
+Definition TRANSFORMw_def:
   TRANSFORMw (f:'a->'b) (t:('c,'a) word_ptree) =
-  SOME_PTREE (TRANSFORM f (THE_PTREE t)) : ('c,'b) word_ptree`;
+  SOME_PTREE (TRANSFORM f (THE_PTREE t)) : ('c,'b) word_ptree
+End
 
-val EVERY_LEAFw_def = Define`
+Definition EVERY_LEAFw_def:
   EVERY_LEAFw P (t:('a, 'b) word_ptree) =
-  EVERY_LEAF (\k d. P (n2w k : 'a word) d) (THE_PTREE t)`;
+  EVERY_LEAF (\k d. P (n2w k : 'a word) d) (THE_PTREE t)
+End
 
-val EXISTS_LEAFw_def = Define`
+Definition EXISTS_LEAFw_def:
   EXISTS_LEAFw P (t:('a, 'b) word_ptree) =
-  EXISTS_LEAF (\k d. P (n2w k : 'a word) d) (THE_PTREE t)`;
+  EXISTS_LEAF (\k d. P (n2w k : 'a word) d) (THE_PTREE t)
+End
 
-val SIZEw_def  = Define `SIZEw t = SIZE (THE_PTREE t)`;
-val DEPTHw_def = Define `DEPTHw t = DEPTH (THE_PTREE t)`;
+Definition SIZEw_def:    SIZEw t = SIZE (THE_PTREE t)
+End
+Definition DEPTHw_def:   DEPTHw t = DEPTH (THE_PTREE t)
+End
 
-val IN_PTREEw_def = Define
-  `$IN_PTREEw (w:'a word) (t:('a,unit) word_ptree) =
-   (w2n w) IN_PTREE (THE_PTREE t)`;
+Definition IN_PTREEw_def:
+   $IN_PTREEw (w:'a word) (t:('a,unit) word_ptree) =
+   (w2n w) IN_PTREE (THE_PTREE t)
+End
 
-val INSERT_PTREEw_def = Define
-  `$INSERT_PTREEw (w:'a word) (t:('a,unit) word_ptree) =
-   SOME_PTREE ((w2n w) INSERT_PTREE (THE_PTREE t)) : ('a,unit) word_ptree`;
+Definition INSERT_PTREEw_def:
+   $INSERT_PTREEw (w:'a word) (t:('a,unit) word_ptree) =
+   SOME_PTREE ((w2n w) INSERT_PTREE (THE_PTREE t)) : ('a,unit) word_ptree
+End
 
-val WORDSET_OF_PTREE_def = Define`
-  WORDSET_OF_PTREE (t:('a,unit) word_ptree) = LIST_TO_SET (TRAVERSEw t)`;
+Definition WORDSET_OF_PTREE_def:
+  WORDSET_OF_PTREE (t:('a,unit) word_ptree) = LIST_TO_SET (TRAVERSEw t)
+End
 
-val UNION_PTREEw_def = Define`
+Definition UNION_PTREEw_def:
   $UNION_PTREEw t1 t2 =
-  SOME_PTREE ($UNION_PTREE (THE_PTREE t1) (THE_PTREE t2))`;
+  SOME_PTREE ($UNION_PTREE (THE_PTREE t1) (THE_PTREE t2))
+End
 
-val PTREE_OF_WORDSET_def = Define`
+Definition PTREE_OF_WORDSET_def:
   PTREE_OF_WORDSET (t:('a, unit) word_ptree) (s:'a word set) =
   SOME_PTREE (PTREE_OF_NUMSET (THE_PTREE t) (IMAGE w2n s))
-  : ('a, unit) word_ptree`;
+  : ('a, unit) word_ptree
+End
 
 val _ = overload_on ("|++", Term`$PTREE_OF_WORDSET`);
 val _ = overload_on ("|++", Term`$PTREE_OF_STRINGSET`);
@@ -154,30 +188,38 @@ val PTREE_OF_STRINGSET_INSERT = store_thm("PTREE_OF_STRINGSET_INSERT",
 );
 *)
 
-val EVERY_MAP_ORD = store_thm("EVERY_MAP_ORD",
-  `!l. EVERY ($> 256) (MAP ORD l)`,
-  Induct \\ SRW_TAC [] [GREATER_DEF, stringTheory.ORD_BOUND]);
+Theorem EVERY_MAP_ORD:
+   !l. EVERY ($> 256) (MAP ORD l)
+Proof
+  Induct \\ SRW_TAC [] [GREATER_DEF, stringTheory.ORD_BOUND]
+QED
 
-val MAP_11 = store_thm("MAP_11",
-  `!f l1 l2.
+Theorem MAP_11:
+   !f l1 l2.
        (!x y. (f x = f y) = (x = y)) ==>
-       ((MAP f l1 = MAP f l2) = (l1 = l2))`,
-  Induct_on `l1` \\ Induct_on `l2` \\ SRW_TAC [] []);
+       ((MAP f l1 = MAP f l2) = (l1 = l2))
+Proof
+  Induct_on `l1` \\ Induct_on `l2` \\ SRW_TAC [] []
+QED
 
-val REVERSE_11 = store_thm("REVERSE_11",
-  `!l1 l2. ((REVERSE l1 = REVERSE l2) = (l1 = l2))`,
+Theorem REVERSE_11:
+   !l1 l2. ((REVERSE l1 = REVERSE l2) = (l1 = l2))
+Proof
   Induct_on `l1` \\ Induct_on `l2`
-     \\ SRW_TAC [] [] \\ PROVE_TAC []);
+     \\ SRW_TAC [] [] \\ PROVE_TAC []
+QED
 
-val string_to_num_11 = store_thm("string_to_num_11",
-  `!s t. (string_to_num s = string_to_num t) = (s = t)`,
+Theorem string_to_num_11:
+   !s t. (string_to_num s = string_to_num t) = (s = t)
+Proof
   REPEAT STRIP_TAC \\ EQ_TAC
     \\ SRW_TAC [] [string_to_num_def, s2n_def]
     \\ SPECL_THEN [`256`, `MAP ORD (REVERSE s)`,
                           `MAP ORD (REVERSE t)`]
          (IMP_RES_TAC o SIMP_RULE (srw_ss()) [EVERY_MAP_ORD]) l2n_11
     \\ FULL_SIMP_TAC (srw_ss()) [REVERSE_11,
-         (SIMP_RULE (srw_ss()) [stringTheory.ORD_11] o ISPEC `ORD`) MAP_11]);
+         (SIMP_RULE (srw_ss()) [stringTheory.ORD_11] o ISPEC `ORD`) MAP_11]
+QED
 
 val n2l_NOT_NULL = prove( `!b n. ~(n2l b n = [])`, SRW_TAC [] [Once n2l_def]);
 
@@ -247,9 +289,10 @@ val s2n_STRING_STRING1 =
  (SIMP_RULE (srw_ss()) [EVAL ``ORD (CHR 1)``] o
   SPECL [`ORD`,`256`,`CHR 1`]) s2n_STRING_STRING;
 
-val IMAGE_string_to_num = store_thm("IMAGE_string_to_num",
-  `!n. (n = 1) \/ (256 <= n) /\ (n DIV 256 ** LOG 256 n = 1) =
-       n IN IMAGE string_to_num UNIV`,
+Theorem IMAGE_string_to_num:
+   !n. (n = 1) \/ (256 <= n) /\ (n DIV 256 ** LOG 256 n = 1) =
+       n IN IMAGE string_to_num UNIV
+Proof
   SRW_TAC [] [IN_IMAGE] \\ EQ_TAC \\ SRW_TAC [] []
     >| [
        EXISTS_TAC `""` \\ EVAL_TAC,
@@ -265,14 +308,17 @@ val IMAGE_string_to_num = store_thm("IMAGE_string_to_num",
        by METIS_TAC [l2n_lt, DECIDE ``0 < 256``]
        \\ SRW_TAC [ARITH_ss] [s2n_def, LOG_ADD_COMM, DIV_MULT_1,
                               SPECL [`256`, `a ++ b`] l2n_APPEND]
-    ]);
+    ]
+QED
 
 val string_to_num_num_to_string = save_thm("string_to_num_num_to_string",
   REWRITE_RULE [IMAGE_string_to_num] string_to_num_num_to_string);
 
-val num_to_string_string_to_num = store_thm("num_to_string_string_to_num",
-  `!s. num_to_string (string_to_num s) = s`,
-  SRW_TAC [] [GSYM string_to_num_11, string_to_num_num_to_string, IMAGE_IN]);
+Theorem num_to_string_string_to_num:
+   !s. num_to_string (string_to_num s) = s
+Proof
+  SRW_TAC [] [GSYM string_to_num_11, string_to_num_num_to_string, IMAGE_IN]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -280,9 +326,11 @@ val ADD_INSERT_WORD = save_thm("ADD_INSERT_WORD",
   (GEN_ALL o SIMP_CONV (srw_ss()) [GSYM INSERT_PTREEw_def, oneTheory.one])
   ``ADDw t (w,v:unit)``);
 
-val THE_PTREE_SOME_PTREE = store_thm("THE_PTREE_SOME_PTREE",
-  `!t. THE_PTREE (SOME_PTREE t) = t`,
-  SRW_TAC [] [SOME_PTREE_def]);
+Theorem THE_PTREE_SOME_PTREE:
+   !t. THE_PTREE (SOME_PTREE t) = t
+Proof
+  SRW_TAC [] [SOME_PTREE_def]
+QED
 
 val _ = export_rewrites ["THE_PTREE_SOME_PTREE"];
 

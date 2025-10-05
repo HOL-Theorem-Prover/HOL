@@ -4,49 +4,21 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "ffExtend";
+Theory ffExtend
+Ancestors
+  pred_set list arithmetic divides gcd gcdset number
+  combinatorics cardinal ffBasic ffAdvanced ffPoly ffMinimal
+  ffConjugate ffExist monoid group ring field fieldMap
+  fieldInstances polynomial polyWeak polyRing polyDivision
+  polyBinomial polyMonic polyDivides polyProduct polyRoot
+  polyIrreducible polyField polyFieldDivision polyFieldModulo
+  polyRingModulo polyModuloRing polyMap
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory dividesTheory gcdTheory
-     gcdsetTheory numberTheory combinatoricsTheory cardinalTheory;
-
-(* Get dependent theories local *)
-open ffBasicTheory;
-open ffAdvancedTheory;
-open ffPolyTheory;
-open ffMinimalTheory;
-open ffConjugateTheory;
-open ffExistTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-open fieldMapTheory;
-
-open fieldInstancesTheory;
-
-(* Get polynomial theory of Ring *)
-open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory polyBinomialTheory;
-open polyMonicTheory;
-open polyDividesTheory;
-open polyProductTheory;
-open polyRootTheory;
-open polyIrreducibleTheory;
-
-open polyFieldTheory;
-open polyFieldDivisionTheory;
-open polyFieldModuloTheory;
-open polyRingModuloTheory;
-open polyModuloRingTheory;
-open polyMapTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* Field Extension Documentation                                             *)
 (* ------------------------------------------------------------------------- *)
@@ -904,16 +876,16 @@ val poly_extension_field_exists_alt = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define generator of a field, relative to a subfield *)
-val field_generator_def = Define`
+Definition field_generator_def:
     field_generator (r:'a field) (s:'a field) (z:'a) =
        (IMAGE (\p. eval p z) (PolyRing s).carrier = R)
-`;
+End
 (* Note: p is a subfield polynomial, with coefficients in subfield s. *)
 
 (* Define generator set of a field, relative to a subfield *)
-val field_generators_def = Define`
+Definition field_generators_def:
     field_generators (r:'a field) (s:'a field) = {z | z IN R /\ field_generator r s z}
-`;
+End
 
 (* Overload field generator and generators set *)
 val _ = overload_on("generator", ``field_generator r``);
@@ -1452,8 +1424,4 @@ val finite_field_eq_card_field_iso = store_thm(
 (* Another proof of the milestone: uniqueness of finite fields up to isomorphism. *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

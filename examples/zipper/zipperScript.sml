@@ -1,6 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open listTheory
+Theory zipper
+Ancestors
+  list
 
 (* a simple theory of zippers: lists coupled with a privileged index *)
 
@@ -8,8 +8,6 @@ open listTheory
    that they form an applicative functor; given that lists already do this
    the "trick" is figuring out what the index of the result zipper should
    be when you apply a zipper of functions to a zipper of arguments.  *)
-
-val _ = new_theory "zipper";
 
 Datatype: zipper = Z ('a list) 'a  ('a list)
 End
@@ -101,10 +99,10 @@ val moveRight_index = store_thm(
   ``index z < size z - 1 ⇒ index (moveRight z) = index z + 1``,
   simp[moveRight_index_lemma]);
 
-val moveToI_def = Define`
+Definition moveToI_def:
   moveToI i z = if index z < i then FUNPOW moveRight (i - index z) z
                 else FUNPOW moveLeft (index z - i) z
-`;
+End
 
 val moveToI_lemma = prove(
   ``size (moveToI i z) = size z ∧ toList (moveToI i z) = toList z ∧
@@ -185,8 +183,10 @@ val MAP_toList = store_thm(
   ``MAP f (toList z) = toList (zmap f z)``,
   Cases_on `z` >> simp[zmap_def, rich_listTheory.MAP_REVERSE]);
 
-val zpure_def = Define`zpure a = Z [] a []`
-val fromList_def = Define`fromList (h::t) = Z [] h t`
+Definition zpure_def:  zpure a = Z [] a []
+End
+Definition fromList_def:  fromList (h::t) = Z [] h t
+End
 val _ = export_rewrites ["fromList_def"]
 
 val size_fromList = store_thm(
@@ -210,10 +210,10 @@ val fromList_toList = store_thm(
   simp[zipper_EQ] >> `0 < size z` by simp[] >>
   simp[toList_fromList, index_fromList, moveToI_index]);
 
-val zapply_def = Define`
+Definition zapply_def:
   zapply fz xz = moveToI (MAX (index fz) (index xz))
                          (fromList (toList fz <*> toList xz))
-`
+End
 val _ = overload_on("APPLICATIVE_FAPPLY", ``zapply``)
 
 val zmap_pure = store_thm(
@@ -265,4 +265,3 @@ val apply_pure_o = store_thm(
   simp[GSYM LIST_APPLY_o, SINGL_APPLY_MAP, MAP_toList,
        arithmeticTheory.MAX_ASSOC]);
 
-val _ = export_theory();

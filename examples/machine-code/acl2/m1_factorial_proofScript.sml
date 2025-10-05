@@ -1,10 +1,8 @@
 
-open HolKernel Parse boolLib bossLib; val _ = new_theory "m1_factorial_proof";
-
-open m1_progTheory m1_factorialTheory;
-open combinTheory addressTheory sexpTheory imported_acl2Theory;
-open complex_rationalTheory hol_defaxiomsTheory;
-open arithmeticTheory;
+Theory m1_factorial_proof
+Ancestors
+  m1_prog m1_factorial combin address sexp imported_acl2
+  complex_rational hol_defaxioms arithmetic
 
 infix \\
 val op \\ = op THEN;
@@ -13,13 +11,15 @@ val sexp_fact_def = acl2_fact_definition
   |> SIMP_RULE bool_ss [top_defun,pop_defun,push_defun,nth_lemma,
        LET_DEF,nth_1,cdr_def,car_def,ite_def,not_eq_nil]
 
-val FACT_def = Define `
+Definition FACT_def:
   (FACT (0,m) = m) /\
-  (FACT (SUC n,m) = FACT (n,m * SUC n))`;
+  (FACT (SUC n,m) = FACT (n,m * SUC n))
+End
 
-val FACTORIAL_def = Define `
+Definition FACTORIAL_def:
   (FACTORIAL 0 = 1) /\
-  (FACTORIAL (SUC n) = SUC n * FACTORIAL n)`;
+  (FACTORIAL (SUC n) = SUC n * FACTORIAL n)
+End
 
 val FACT_EQ_FACTORIAL = prove(
   ``!n m. FACT (n,m) = FACTORIAL n * m``,
@@ -56,6 +56,4 @@ val m1_factorial_thm = acl2_fact_certificate
 val _ = save_thm("m1_factorial_thm",m1_factorial_thm);
 
 *)
-
-val _ = export_theory();
 

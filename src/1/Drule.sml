@@ -618,14 +618,21 @@ fun NOT_EQ_SYM th =
  *                                                                           *
  * [TFM 90.05.08]                                                            *
  * --------------------------------------------------------------------------*)
-
 local
-   val Fth = ASSUME F
+   val eqF_thm =
+      let
+         val (Bvar, _) = dest_forall (concl boolTheory.EQ_CLAUSES)
+         val thm = el 4 $ CONJUNCTS (SPEC Bvar boolTheory.EQ_CLAUSES)
+      in
+         GEN Bvar (SYM thm)
+      end
 in
    fun EQF_INTRO th =
-      IMP_ANTISYM_RULE (NOT_ELIM th)
-                       (DISCH F (CONTR (dest_neg (concl th)) Fth))
-      handle HOL_ERR _ => raise ERR "EQF_INTRO" ""
+     let val t' = dest_neg (concl th)
+     in
+     EQ_MP (SPEC t' eqF_thm) th
+     end
+     handle HOL_ERR _ => raise ERR "EQF_INTRO" ""
 end
 
 (* --------------------------------------------------------------------------*
@@ -1799,67 +1806,99 @@ in
          val sth = SPEC_ALL th
          val bod = concl sth
          val pbod = partfn bod
-         val possbetas =
-            mapfilter (fn v => (v, BETA_VAR v bod))
-                      (filter (can dom_rng o type_of) (free_vars bod))
-         fun finish_fn tyin ivs =
-            let
-               val npossbetas =
-                  if null tyin
-                     then possbetas
-                  else map (inst tyin ## I) possbetas
-            in
-               if null npossbetas then Lib.I
-               else
-                 CONV_RULE
-                   (EVERY_CONV
-                      (mapfilter (TRY_CONV o C(op_assoc aconv) npossbetas) ivs))
-            end
-          val lconsts =
+         val lconsts =
              HOLset.intersection (FVL [pbod] empty_tmset, hyp_frees th)
-          val ltyconsts = HOLset.listItems (hyp_tyvars th)
+         val ltyconsts = HOLset.listItems (hyp_tyvars th)
+         val flex_candidates_vlist = filter (can dom_rng o type_of) (free_vars bod)
       in
-         fn tm =>
+         if (null flex_candidates_vlist) then
+            (fn tm =>
+                let
+                   val (tmin,tyin) = match_terml ltyconsts lconsts pbod tm
+                   val sth0 = INST_TYPE tyin sth
+                   val sth0c = concl sth0
+                   val (sth1, tmin') =
+                        case match_bvs tm (partfn sth0c) [] of
+                            [] => (sth0, tmin)
+                          | bvms =>
+                            let
+                               val avoids = look_for_avoids bvms sth0c empty_tmset
+                               fun f (v, acc) = (v |-> genvar (type_of v)) :: acc
+                               val newinst = HOLset.foldl f [] avoids
+                               val newthm = INST newinst sth0
+                               val tmin' = map (fn {residue, redex} =>
+                                                   {residue = residue,
+                                                    redex = Term.subst newinst redex})
+                                           tmin
+                               val thmc = concl newthm
+                            in
+                               (EQ_MP (ALPHA thmc (deep_alpha bvms thmc)) newthm,
+                               tmin')
+                            end
+                   val th0 = INST tmin' sth1
+                in
+                  th0
+                end)
+         else
             let
-               val (tmin, tyin) = ho_match_term ltyconsts lconsts pbod tm
-               val tmbvs = bound_vars tm
-               fun foldthis ({redex, residue}, acc) =
-                  if is_abs residue
-                     andalso all (fn v => HOLset.member (tmbvs, v))
-                                 (fst (strip_abs residue))
-                    then Map.insert (acc, redex, residue) else acc
-               val bound_to_abs =
-                  List.foldl foldthis (Map.mkDict Term.compare) tmin
-               val sth0 = INST_TYPE tyin sth
-               val sth0c = concl sth0
-               val (sth1, tmin') =
-                    case match_bvs tm (partfn sth0c) [] of
-                       [] => (sth0, tmin)
-                     | bvms =>
-                       let
-                          val avoids = look_for_avoids bvms sth0c empty_tmset
-                          fun f (v, acc) = (v |-> genvar (type_of v)) :: acc
-                          val newinst = HOLset.foldl f [] avoids
-                          val newthm = INST newinst sth0
-                          val tmin' = map (fn {residue, redex} =>
-                                             {residue = residue,
-                                              redex = Term.subst newinst redex})
-                                          tmin
-                          val thmc = concl newthm
-                       in
-                          (EQ_MP (ALPHA thmc (deep_alpha bvms thmc)) newthm,
-                           tmin')
-                       end
-               val sth2 =
-                    if Map.numItems bound_to_abs = 0
-                       then sth1
-                    else CONV_RULE
-                           (EVERY_CONV (#2 (munge_bvars bound_to_abs sth1)))
-                           sth1
-               val th0 = INST tmin' sth2
-               val th1 = finish_fn tyin (map #redex tmin) th0
+               val possbetas =
+                  mapfilter (fn v => (v, BETA_VAR v bod)) flex_candidates_vlist
+               fun finish_fn tyin ivs =
+                  let
+                     val npossbetas =
+                        if null tyin
+                           then possbetas
+                        else map (inst tyin ## I) possbetas
+                  in
+                     if null npossbetas then Lib.I
+                     else
+                       CONV_RULE
+                         (EVERY_CONV
+                            (mapfilter (TRY_CONV o C(op_assoc aconv) npossbetas) ivs))
+                  end
             in
-               th1
+               fn tm =>
+                  let
+                     val (tmin, tyin) = ho_match_term ltyconsts lconsts pbod tm
+                     val tmbvs = bound_vars tm
+                     fun foldthis ({redex, residue}, acc) =
+                        if is_abs residue
+                           andalso all (fn v => HOLset.member (tmbvs, v))
+                                       (fst (strip_abs residue))
+                          then Map.insert (acc, redex, residue) else acc
+                     val bound_to_abs =
+                        List.foldl foldthis (Map.mkDict Term.compare) tmin
+                     val sth0 = INST_TYPE tyin sth
+                     val sth0c = concl sth0
+                     val (sth1, tmin') =
+                          case match_bvs tm (partfn sth0c) [] of
+                             [] => (sth0, tmin)
+                           | bvms =>
+                             let
+                                val avoids = look_for_avoids bvms sth0c empty_tmset
+                                fun f (v, acc) = (v |-> genvar (type_of v)) :: acc
+                                val newinst = HOLset.foldl f [] avoids
+                                val newthm = INST newinst sth0
+                                val tmin' = map (fn {residue, redex} =>
+                                                   {residue = residue,
+                                                    redex = Term.subst newinst redex})
+                                                tmin
+                                val thmc = concl newthm
+                             in
+                                (EQ_MP (ALPHA thmc (deep_alpha bvms thmc)) newthm,
+                                 tmin')
+                             end
+                     val sth2 =
+                          if Map.numItems bound_to_abs = 0
+                             then sth1
+                          else CONV_RULE
+                                 (EVERY_CONV (#2 (munge_bvars bound_to_abs sth1)))
+                                 sth1
+                     val th0 = INST tmin' sth2
+                     val th1 = finish_fn tyin (map #redex tmin) th0
+                  in
+                     th1
+                  end
             end
       end
 end

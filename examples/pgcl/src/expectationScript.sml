@@ -11,10 +11,12 @@ val () = app load
   ["bossLib", "realLib", "metisLib", "posetTheory", "posrealLib"]
 val () = quietdec := true;
 *)
+Theory expectation
+Ancestors
+  combin arithmetic real seq poset posreal
+Libs
+  metisLib realLib posrealLib
 
-open HolKernel Parse boolLib bossLib metisLib realLib;
-open combinTheory arithmeticTheory realTheory seqTheory;
-open posetTheory posrealTheory posrealLib;
 
 (*
 val () = quietdec := false;
@@ -23,8 +25,6 @@ val () = quietdec := false;
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "expectation"                                   *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = new_theory "expectation";
 
 (* ------------------------------------------------------------------------- *)
 (* Helpful proof tools                                                       *)
@@ -53,33 +53,45 @@ val () = type_abbrev ("trans", Type `:'a expect -> 'a expect`);
 (* Expectations bounded by 1 are useful enough to justify defining expect1   *)
 (* ------------------------------------------------------------------------- *)
 
-val expect_def = Define `expect e = T`;
+Definition expect_def:   expect e = T
+End
 
-val expect1_def = Define `expect1 (e : 'a expect) = !s. e s <= 1`;
+Definition expect1_def:   expect1 (e : 'a expect) = !s. e s <= 1
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Lifting boolean operators to expectations                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val Zero_def = Define `(Zero : 'a expect) = \s. 0`;
+Definition Zero_def:   (Zero : 'a expect) = \s. 0
+End
 
-val One_def = Define `(One : 'a expect) = \s. 1`;
+Definition One_def:   (One : 'a expect) = \s. 1
+End
 
-val Magic_def = Define `(Magic : 'a expect) = \s. infty`;
+Definition Magic_def:   (Magic : 'a expect) = \s. infty
+End
 
-val Compl_def = Define `Compl (e : 'a expect) = \s. 1 - e s`;
+Definition Compl_def:   Compl (e : 'a expect) = \s. 1 - e s
+End
 
-val Min_def = Define `Min (e : 'a expect) f = \s. min (e s) (f s)`;
+Definition Min_def:   Min (e : 'a expect) f = \s. min (e s) (f s)
+End
 
-val Max_def = Define `Max (e : 'a expect) f = \s. max (e s) (f s)`;
+Definition Max_def:   Max (e : 'a expect) f = \s. max (e s) (f s)
+End
 
-val Conj_def = Define `Conj (e : 'a expect) f = \s. (e s + f s) - 1`;
+Definition Conj_def:   Conj (e : 'a expect) f = \s. (e s + f s) - 1
+End
 
-val Implies_def = Define `Implies (e : 'a expect) f = \s. 1 - (e s - f s)`;
+Definition Implies_def:   Implies (e : 'a expect) f = \s. 1 - (e s - f s)
+End
 
-val Leq_def = Define `Leq (e : 'a expect) f = !s. e s <= f s`;
+Definition Leq_def:   Leq (e : 'a expect) f = !s. e s <= f s
+End
 
-val Geq_def = Define `Geq (e : 'a expect) f = Leq f e`;
+Definition Geq_def:   Geq (e : 'a expect) f = Leq f e
+End
 
 val expect1_compl = store_thm
   ("expect1_compl",
@@ -235,12 +247,14 @@ val expect1_max = store_thm
 (* More complicated operations on expectations                               *)
 (* ------------------------------------------------------------------------- *)
 
-val Lin_def = Define
-  `Lin p (a : 'a expect) b s =
-   let x = bound1 (p s) in x * a s + (1 - x) * b s`;
+Definition Lin_def:
+   Lin p (a : 'a expect) b s =
+   let x = bound1 (p s) in x * a s + (1 - x) * b s
+End
 
-val Cond_def = Define
-  `Cond c (a : 'a expect) b s = if c s then a s else b s`;
+Definition Cond_def:
+   Cond c (a : 'a expect) b s = if c s then a s else b s
+End
 
 val lin_eta = store_thm
   ("lin_eta",
@@ -279,16 +293,18 @@ val leq_cond_imp = store_thm
 (* Feasibility is sometimes called strictness. It's related to strictness *)
 (* in functional programming, where a language is strict if whenever an   *)
 (* argument to a function diverges, then so does the function.            *)
-val feasible_def = Define
-  `feasible (trans : 'a trans) = (trans Zero = Zero)`;
+Definition feasible_def:
+   feasible (trans : 'a trans) = (trans Zero = Zero)
+End
 
 (* Sublinearity ensures the range of expectations is convex *)
-val sublinear_def = Define
-  `sublinear (trans : 'a trans) =
+Definition sublinear_def:
+   sublinear (trans : 'a trans) =
    !r1 r2 c1 c2 c s.
      ~(c = infty) ==>
      c1 * trans r1 s + c2 * trans r2 s - c <=
-     trans (\s'. c1 * r1 s' + c2 * r2 s' - c) s`;
+     trans (\s'. c1 * r1 s' + c2 * r2 s' - c) s
+End
 
 (* We also study up-continuity, which we write directly as *)
 (*   up_continuous (expect,Leq)                            *)
@@ -651,7 +667,8 @@ val expect_gfp_eq = store_thm
 (* Refinement                                                                *)
 (* ------------------------------------------------------------------------- *)
 
-val refines_def = Define `refines t1 t2 = !r. Leq (t1 r) (t2 r)`;
+Definition refines_def:   refines t1 t2 = !r. Leq (t1 r) (t2 r)
+End
 
 val refines_refl = store_thm
   ("refines_refl",
@@ -708,9 +725,10 @@ val refines_gfp = store_thm
 (* transformers that arise from relations in the operational model.          *)
 (* ------------------------------------------------------------------------- *)
 
-val healthy_def = Define
-  `healthy trans =
-   feasible trans /\ sublinear trans /\ up_continuous (expect,Leq) trans`;
+Definition healthy_def:
+   healthy trans =
+   feasible trans /\ sublinear trans /\ up_continuous (expect,Leq) trans
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Continuity does not follow from feasibility and sublinearity.             *)
@@ -882,28 +900,36 @@ val healthy_sub = store_thm
 val () = type_abbrev
   ("measure_space", Type `:(('a -> bool) -> bool) # (('a -> bool) -> posreal)`);
 
-val measure_space_def = Define `measure_space (m : 'a measure_space) = T`;
+Definition measure_space_def:   measure_space (m : 'a measure_space) = T
+End
 
-val measurable_def = Define `measurable ((e,_) : 'a measure_space) = e`;
+Definition measurable_def:   measurable ((e,_) : 'a measure_space) = e
+End
 
-val measure_def = Define `measure ((_,mu) : 'a measure_space) = mu`;
+Definition measure_def:   measure ((_,mu) : 'a measure_space) = mu
+End
 
-val integrate_def = Define
-  `integrate (m : 'a measure_space) (e : 'a expect) = 0p`;
+Definition integrate_def:
+   integrate (m : 'a measure_space) (e : 'a expect) = 0p
+End
 
-val subprobability_def = Define
-  `subprobability p = measure_space p /\ measure p UNIV <= 1`;
+Definition subprobability_def:
+   subprobability p = measure_space p /\ measure p UNIV <= 1
+End
 
 (* Relational semantics in terms of the measure theory above *)
 
-val rel_def = Define
-  `rel (r : 'a -> 'a measure_space -> bool) = !s p. r s p ==> subprobability p`;
+Definition rel_def:
+   rel (r : 'a -> 'a measure_space -> bool) = !s p. r s p ==> subprobability p
+End
 
-val wp_rel_def = Define
-  `wp_rel (r : 'a -> 'a measure_space -> bool) =
-   \e s. inf {x | ?p. r s p /\ (integrate p e = x)}`;
+Definition wp_rel_def:
+   wp_rel (r : 'a -> 'a measure_space -> bool) =
+   \e s. inf {x | ?p. r s p /\ (integrate p e = x)}
+End
 
-val healthy_rel_def = Define `healthy_rel t = ?r. rel r /\ (t = wp_rel r)`;
+Definition healthy_rel_def:   healthy_rel t = ?r. rel r /\ (t = wp_rel r)
+End
 
 (* What we'd really like to prove is that this definition of a healthy *)
 (* transformer in terms of relations is the same as the previous *)
@@ -917,9 +943,9 @@ val healthy_rel = prove
 
 (* ----- Creates a standard expectation from a condition ------------------- *)
 
-val bool_exp_def = Define
-   `bool_exp g = (\s. if g s then (1:posreal) else 0)`;
+Definition bool_exp_def:
+    bool_exp g = (\s. if g s then (1:posreal) else 0)
+End
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory();

@@ -1,14 +1,11 @@
-open HolKernel boolLib bossLib Parse BasicProvers dep_rewrite
-open armv86aTheory armv86a_terminationTheory armv86a_typesTheory
-open arm8Theory arm8Lib arm8_stepTheory arm8_stepLib
-open wordsTheory bitstringTheory listTheory rich_listTheory
-open integerTheory int_arithTheory arithmeticTheory
-open wordsLib bitstringLib intLib
-open l3_equivalence_miscTheory
-
-
-val _ = new_theory "l3_equivalence_lemmas";
-val _ = set_grammar_ancestry ["arm8_step", "arm8", "armv86a_termination"];
+Theory l3_equivalence_lemmas
+Ancestors
+  armv86a armv86a_termination armv86a_types arm8_step arm8 words
+  bitstring list rich_list integer int_arith arithmetic
+  l3_equivalence_misc
+Libs
+  BasicProvers dep_rewrite arm8Lib arm8_stepLib wordsLib
+  bitstringLib intLib
 
 val _ = wordsLib.output_words_as_bin();
 val _ = wordsLib.guess_lengths();
@@ -845,6 +842,8 @@ Definition create_wmask_def[nocompute]:
   in wmask
 End
 
+val _ = monadsyntax.enable_monad "sail2_state_monad"
+
 Theorem DecodeBitMasks_64_lemma[local]:
   armv86a$DecodeBitMasks 64 immN imms immr immediate : (word64 # word64) M =
   do
@@ -1449,4 +1448,3 @@ QED
 
 (****************************************)
 
-val _ = export_theory ();

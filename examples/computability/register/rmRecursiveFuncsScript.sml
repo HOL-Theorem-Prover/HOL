@@ -1,20 +1,10 @@
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory;
-open combinTheory;
-open whileTheory;
-open indexedListsTheory;
-open numeralTheory;
-open primrecfnsTheory;
-open listTheory;
-open mp_then;
-open boolTheory;
-open numpairTheory;
-open pred_setTheory;
-open rmModelTheory;
-open rmToolsTheory;
-open rmToPairTheory;
+Theory rmRecursiveFuncs
+Ancestors
+  arithmetic combin While indexedLists numeral primrecfns list
+  bool numpair pred_set rmModel rmTools rmToPair
+Libs
+  mp_then
 
-val _ = new_theory "rmRecursiveFuncs";
 (*
    ----------------------------------
    ------      Projection      ------
@@ -58,7 +48,7 @@ Definition Cn_def:
 End
 
 
-val Old_Cn_def = Define `
+Definition Old_Cn_def:
   Old_Cn m ms =
     let isz = LENGTH (HD ms).In;
         mms = MAPi (λi mm. mrInst (i+2) mm) (m::ms);
@@ -70,7 +60,7 @@ val Old_Cn_def = Define `
         mix' = MAPi msInst mix;
     in
       link_all mix' with In := MAP (npair 0) (GENLIST I isz)
-`;
+End
 
 
 
@@ -456,4 +446,3 @@ Proof
   metis_tac[]
 QED
 
-val _ = export_theory ()

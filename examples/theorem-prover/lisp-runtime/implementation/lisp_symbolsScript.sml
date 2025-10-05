@@ -1,18 +1,15 @@
-open HolKernel Parse boolLib bossLib; val _ = new_theory "lisp_symbols";
-val _ = ParseExtras.temp_loose_equality()
-open lisp_sexpTheory lisp_consTheory lisp_invTheory;
+Theory lisp_symbols
+Ancestors
+  lisp_sexp lisp_cons lisp_inv words arithmetic list pred_set
+  pair combin finite_map address set_sep bit fcp string
+  stop_and_copy prog_x64 prog lisp_parse
+Libs
+  wordsLib helperLib codegenLib decompilerLib prog_x64Lib
 
+val _ = ParseExtras.temp_loose_equality()
 (* --- *)
 
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory helperLib;
-open set_sepTheory bitTheory fcpTheory stringTheory;
-
 val wstd_ss = std_ss ++ SIZES_ss ++ rewrites [DECIDE ``n<256 ==> (n:num)<18446744073709551616``,ORD_BOUND];
-
-open stop_and_copyTheory;
-open codegenLib decompilerLib prog_x64Lib prog_x64Theory progTheory;
-open lisp_parseTheory;
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -140,8 +137,9 @@ val (thm,mc_string_lt_def) = basic_decompile x64_tools "mc_string_lt"
   B80B000000    (* TRUE:  mov r0d,11                *)
                 (* EXIT:                            *)`;
 
-val one_string_def = Define `
-  one_string a s = one_byte_list a (MAP (n2w o ORD) s)`;
+Definition one_string_def:
+  one_string a s = one_byte_list a (MAP (n2w o ORD) s)
+End
 
 val one_string_CONS = ``one_string a (x::xs)``
   |> (SIMP_CONV std_ss [one_string_def,MAP,one_byte_list_def] THENC
@@ -370,28 +368,35 @@ fun make_code_set code = let
 
 (* reading and writing io *)
 
-val IO_READ_def = Define `
+Definition IO_READ_def:
   (IO_READ (IO_STREAMS [] ys) = ~0w:word64) /\
-  (IO_READ (IO_STREAMS (x::xs) ys) = n2w (ORD x))`;
+  (IO_READ (IO_STREAMS (x::xs) ys) = n2w (ORD x))
+End
 
-val IO_NEXT_def = Define `
+Definition IO_NEXT_def:
   (IO_NEXT (IO_STREAMS  [] ys) = IO_STREAMS [] ys) /\
-  (IO_NEXT (IO_STREAMS (x::xs) ys) = IO_STREAMS xs ys)`;
+  (IO_NEXT (IO_STREAMS (x::xs) ys) = IO_STREAMS xs ys)
+End
 
-val IO_WRITE_def = Define `
-  IO_WRITE (IO_STREAMS xs ys) zs = IO_STREAMS xs (ys ++ zs)`;
+Definition IO_WRITE_def:
+  IO_WRITE (IO_STREAMS xs ys) zs = IO_STREAMS xs (ys ++ zs)
+End
 
-val IO_STATS_def = Define `
-  IO_STATS (n:num) (IO_STREAMS xs ys) = (IO_STREAMS xs ys)`;
+Definition IO_STATS_def:
+  IO_STATS (n:num) (IO_STREAMS xs ys) = (IO_STREAMS xs ys)
+End
 
-val REPLACE_INPUT_IO_def = Define `
-  REPLACE_INPUT_IO x (IO_STREAMS xs ys) = IO_STREAMS x ys`;
+Definition REPLACE_INPUT_IO_def:
+  REPLACE_INPUT_IO x (IO_STREAMS xs ys) = IO_STREAMS x ys
+End
 
-val getINPUT_def = Define `
-  getINPUT (IO_STREAMS xs ys) = xs`;
+Definition getINPUT_def:
+  getINPUT (IO_STREAMS xs ys) = xs
+End
 
-val IO_INPUT_APPLY_def = Define `
-  IO_INPUT_APPLY f io = REPLACE_INPUT_IO (f (getINPUT io)) io`;
+Definition IO_INPUT_APPLY_def:
+  IO_INPUT_APPLY f io = REPLACE_INPUT_IO (f (getINPUT io)) io
+End
 
 val IO_INPUT_LEMMA = store_thm("IO_INPUT_LEMMA",
   ``(IO_READ (REPLACE_INPUT_IO (w::ws) io) = n2w (ORD w)) /\
@@ -404,16 +409,19 @@ val IO_WRITE_APPEND = store_thm("IO_WRITE_APPEND",
   ``!io x1 x2. IO_WRITE (IO_WRITE io x1) x2 = IO_WRITE io (x1 ++ x2)``,
   Cases \\ ASM_SIMP_TAC std_ss [IO_WRITE_def,APPEND_ASSOC,MAP_APPEND]);
 
-val null_term_str_def = Define `
+Definition null_term_str_def:
   null_term_str a df f str =
     ?p. (one_string a (str ++ [CHR 0]) * p) (fun2set (f,df)) /\
-        EVERY (\x. ~(x = CHR 0)) str`;
+        EVERY (\x. ~(x = CHR 0)) str
+End
 
-val exists_null_term_str_def = Define `
-  exists_null_term_str a df f = ?str. null_term_str a df f str`;
+Definition exists_null_term_str_def:
+  exists_null_term_str a df f = ?str. null_term_str a df f str
+End
 
-val mem2string_def = Define `
-  mem2string a df f = @str. null_term_str a df f str`;
+Definition mem2string_def:
+  mem2string a df f = @str. null_term_str a df f str
+End
 
 
 (* IO assumpiptions *)
@@ -490,19 +498,22 @@ val io_stats_tm =
 fun genall tm v =
     foldr mk_forall tm (filter (fn x => x !~ v) (free_vars tm));
 
-val io_assums_def = Define `
+Definition io_assums_def:
   io_assums ^IO = ^(genall io_stats_tm IO) /\
                   ^(genall io_write_tm IO) /\
                   ^(genall io_read_tm IO) /\
-                  ^(genall io_next_tm IO)`;
+                  ^(genall io_next_tm IO)
+End
 
-val zIO_def = Define `
+Definition zIO_def:
   zIO (iow,ior,iod,ioi) io =
-    SEP_EXISTS IO. ^IO (iow,ior,iod,ioi) io * cond (io_assums ^IO)`;
+    SEP_EXISTS IO. ^IO (iow,ior,iod,ioi) io * cond (io_assums ^IO)
+End
 
-val zIO_R_def = Define `
+Definition zIO_R_def:
   zIO_R (iow,ior,iod) io =
-     SEP_EXISTS ioi. zR 0x1w ioi * zIO (iow,ior,iod,ioi) io`;
+     SEP_EXISTS ioi. zR 0x1w ioi * zIO (iow,ior,iod,ioi) io
+End
 
 val SPEC_EXISTS_EXISTS = store_thm("SPEC_EXISTS_EXISTS",
   ``(!x. SPEC m (P x) c (Q x)) ==> SPEC m (SEP_EXISTS x. P x) c (SEP_EXISTS x. Q x)``,
@@ -2692,8 +2703,9 @@ val (thm,mc_sym2str_def) = basic_decompile_strings x64_tools "mc_sym2str"
      insert mc_sym2str_main
   `)
 
-val upper_identifier_char_def = Define `
-  upper_identifier_char c = identifier_char c /\ ~(is_lower_case c)`;
+Definition upper_identifier_char_def:
+  upper_identifier_char c = identifier_char c /\ ~(is_lower_case c)
+End
 
 val mc_sym2str_ok_loop_thm = prove(
   ``!s n p a.
@@ -3655,4 +3667,3 @@ val mc_print_stats2_thm = store_thm("mc_print_stats2_thm",
   \\ FULL_SIMP_TAC std_ss [lisp_inv_def,GSYM word_mul_n2w]
   \\ Q.SPEC_TAC (`(n2w i):word64`,`w`) \\ blastLib.BBLAST_TAC);
 
-val _ = export_theory();

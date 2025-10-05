@@ -35,7 +35,7 @@ src\rational\ratRingScript.sml
 Theory ring
 Ancestors
   prim_rec arithmetic divides gcd gcdset pred_set list bag
-  container while sorting integer number combinatorics prime
+  container While sorting integer number combinatorics prime
   monoid group
 Libs
   jcLib dep_rewrite
@@ -361,19 +361,19 @@ val _ = overload_on ("#1", ``r.prod.id``); (* define one *)
    . #0 multiplies to #0 (on the left) (no need, can be deduced from distributive law)
    . multiplication distributes over addition (on the left)
 *)
-val Ring_def = Define`
+Definition Ring_def:
     Ring (r:'a ring) <=>
        AbelianGroup r.sum  /\
        AbelianMonoid r.prod /\
        (r.sum.carrier = R) /\
        (r.prod.carrier = R) /\
        (!x y z. x IN R /\ y IN R /\ z IN R ==> (x * (y + z) = (x * y) + (x * z)))
-`;
+End
 
 (* A finite ring *)
-val FiniteRing_def = Define`
+Definition FiniteRing_def:
     FiniteRing (r:'a ring) <=> Ring r /\ FINITE R
-`;
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Simple Theorems                                                           *)
@@ -381,20 +381,22 @@ val FiniteRing_def = Define`
 
 (* Theorem: Ring r ==> (r.sum.carrier = R) /\ (r.prod.carrier = R) *)
 (* Proof: by Ring_def. *)
-val ring_carriers = store_thm(
-  "ring_carriers",
-  ``!r:'a ring. Ring r ==> (r.sum.carrier = R) /\ (r.prod.carrier = R)``,
-  rw_tac std_ss[Ring_def]);
+Theorem ring_carriers:
+    !r:'a ring. Ring r ==> (r.sum.carrier = R) /\ (r.prod.carrier = R)
+Proof
+  rw_tac std_ss[Ring_def]
+QED
 
 (* export simple result *)
 val _ = export_rewrites ["ring_carriers"];
 
 (* Theorem: Ring additions form an Abelian group. *)
 (* Proof: by definition. *)
-val ring_add_group = store_thm(
-  "ring_add_group",
-  ``!r:'a ring. Ring r ==> Group r.sum /\ (r.sum.carrier = R) /\ !x y. x IN R /\ y IN R ==> (x + y = y + x)``,
-  rw_tac std_ss[Ring_def, AbelianGroup_def]);
+Theorem ring_add_group:
+    !r:'a ring. Ring r ==> Group r.sum /\ (r.sum.carrier = R) /\ !x y. x IN R /\ y IN R ==> (x + y = y + x)
+Proof
+  rw_tac std_ss[Ring_def, AbelianGroup_def]
+QED
 
 (* export this will introduce commutativity in rewrite, no good. *)
 (* val _ = export_rewrites ["ring_add_group"]; *)
@@ -410,18 +412,20 @@ val _ = export_rewrites ["ring_add_group_rwt"];
 
 (* Theorem: Ring r ==> AbelianGroup r.sum *)
 (* Proof: By AbelianGroup_def, ring_add_group. *)
-val ring_add_abelian_group = store_thm(
-  "ring_add_abelian_group",
-  ``!r:'a ring. Ring r ==> AbelianGroup r.sum``,
-  rw[AbelianGroup_def, ring_add_group]);
+Theorem ring_add_abelian_group:
+    !r:'a ring. Ring r ==> AbelianGroup r.sum
+Proof
+  rw[AbelianGroup_def, ring_add_group]
+QED
 val _ = export_rewrites ["ring_add_abelian_group"];
 
 (* Theorem: Ring multiplications form an Abelian monoid. *)
 (* Proof: by definition. *)
-val ring_mult_monoid = store_thm(
-  "ring_mult_monoid",
-  ``!r:'a ring. Ring r ==> Monoid r.prod /\ (r.prod.carrier = R) /\ !x y. x IN R /\ y IN R ==> (x * y = y * x)``,
-  rw_tac std_ss[Ring_def, AbelianMonoid_def]);
+Theorem ring_mult_monoid:
+    !r:'a ring. Ring r ==> Monoid r.prod /\ (r.prod.carrier = R) /\ !x y. x IN R /\ y IN R ==> (x * y = y * x)
+Proof
+  rw_tac std_ss[Ring_def, AbelianMonoid_def]
+QED
 
 (* export this will introduce commutativity in rewrite, no good. *)
 (* val _ = export_rewrites ["ring_mult_monoid"]; *)
@@ -437,38 +441,43 @@ val _ = export_rewrites ["ring_mult_monoid_rwt"];
 
 (* Theorem: Ring r ==> AbelianMonoid r.prod *)
 (* Proof: By AbelianMonoid_def, ring_mult_monoid. *)
-val ring_mult_abelian_monoid = store_thm(
-  "ring_mult_abelian_monoid",
-  ``!r:'a ring. Ring r ==> AbelianMonoid r.prod``,
-  rw[AbelianMonoid_def, ring_mult_monoid]);
+Theorem ring_mult_abelian_monoid:
+    !r:'a ring. Ring r ==> AbelianMonoid r.prod
+Proof
+  rw[AbelianMonoid_def, ring_mult_monoid]
+QED
 
 (* Theorem: FiniteRing r ==> FiniteGroup r.sum *)
 (* Proof: by definitions. *)
-val finite_ring_add_finite_group = store_thm(
-  "finite_ring_add_finite_group",
-  ``!r:'a ring. FiniteRing r ==> FiniteGroup r.sum /\ (r.sum.carrier = R)``,
-  metis_tac[FiniteRing_def, FiniteGroup_def, ring_add_group]);
+Theorem finite_ring_add_finite_group:
+    !r:'a ring. FiniteRing r ==> FiniteGroup r.sum /\ (r.sum.carrier = R)
+Proof
+  metis_tac[FiniteRing_def, FiniteGroup_def, ring_add_group]
+QED
 
 (* Theorem: FiniteRing r ==> FiniteAbelianGroup r.sum *)
 (* Proof: by definitions. *)
-val finite_ring_add_finite_abelian_group = store_thm(
-  "finite_ring_add_finite_abelian_group",
-  ``!r:'a ring. FiniteRing r ==> FiniteAbelianGroup r.sum /\ (r.sum.carrier = R)``,
-  metis_tac[FiniteRing_def, FiniteAbelianGroup_def, AbelianGroup_def, ring_add_group]);
+Theorem finite_ring_add_finite_abelian_group:
+    !r:'a ring. FiniteRing r ==> FiniteAbelianGroup r.sum /\ (r.sum.carrier = R)
+Proof
+  metis_tac[FiniteRing_def, FiniteAbelianGroup_def, AbelianGroup_def, ring_add_group]
+QED
 
 (* Theorem: FiniteRing r ==> FiniteMonoid r.prod *)
 (* Proof: by definitions. *)
-val finite_ring_mult_finite_monoid = store_thm(
-  "finite_ring_mult_finite_monoid",
-  ``!r:'a ring. FiniteRing r ==> FiniteMonoid r.prod``,
-  metis_tac[FiniteRing_def, FiniteMonoid_def, ring_mult_monoid]);
+Theorem finite_ring_mult_finite_monoid:
+    !r:'a ring. FiniteRing r ==> FiniteMonoid r.prod
+Proof
+  metis_tac[FiniteRing_def, FiniteMonoid_def, ring_mult_monoid]
+QED
 
 (* Theorem: FiniteRing r ==> FiniteAbelianMonoid r.prod *)
 (* Proof: by definitions. *)
-val finite_ring_mult_finite_abelian_monoid = store_thm(
-  "finite_ring_mult_finite_abelian_monoid",
-  ``!r:'a ring. FiniteRing r ==> FiniteAbelianMonoid r.prod``,
-  metis_tac[FiniteRing_def, FiniteAbelianMonoid_def, AbelianMonoid_def, ring_mult_monoid]);
+Theorem finite_ring_mult_finite_abelian_monoid:
+    !r:'a ring. FiniteRing r ==> FiniteAbelianMonoid r.prod
+Proof
+  metis_tac[FiniteRing_def, FiniteAbelianMonoid_def, AbelianMonoid_def, ring_mult_monoid]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Lifting Theorems                                                          *)
@@ -557,10 +566,11 @@ val _ = export_rewrites ["ring_zero_element", "ring_one_element"];
 
 (* Theorem: Ring r ==> R <> {} *)
 (* Proof: by ring_zero_element, MEMBER_NOT_EMPTY *)
-val ring_carrier_nonempty = store_thm(
-  "ring_carrier_nonempty",
-  ``!r:'a ring. Ring r ==> R <> {}``,
-  metis_tac[ring_zero_element, MEMBER_NOT_EMPTY]);
+Theorem ring_carrier_nonempty:
+    !r:'a ring. Ring r ==> R <> {}
+Proof
+  metis_tac[ring_zero_element, MEMBER_NOT_EMPTY]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems from Group and Monoid Theory (for addition and multiplication)   *)
@@ -587,10 +597,11 @@ val ring_add_assoc = lift_group_thm "assoc" "add_assoc";
 
 (* Theorem: Ring addition is commutative *)
 (* Proof: by commutativity of Abelian Group (r.sum). *)
-val ring_add_comm = store_thm(
-  "ring_add_comm",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (x + y = y + x)``,
-  rw_tac std_ss[ring_add_group]);
+Theorem ring_add_comm:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (x + y = y + x)
+Proof
+  rw_tac std_ss[ring_add_group]
+QED
 
 (* no export of commutativity *)
 (* val _ = export_rewrites ["ring_add_comm"]; *)
@@ -602,10 +613,11 @@ val ring_add_comm = store_thm(
     = (y + x) + z   by ring_add_comm
     = y + (x + z)   by ring_add_assoc
 *)
-val ring_add_assoc_comm = store_thm(
-  "ring_add_assoc_comm",
-  ``!r:'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> (x + (y + z) = y + (x + z))``,
-  rw_tac std_ss[GSYM ring_add_assoc, ring_add_comm]);
+Theorem ring_add_assoc_comm:
+    !r:'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> (x + (y + z) = y + (x + z))
+Proof
+  rw_tac std_ss[GSYM ring_add_assoc, ring_add_comm]
+QED
 
 (* Theorem: #0 + #0 = #0 *)
 (* Proof: by group_id_id of Group (r.sum). *)
@@ -654,20 +666,22 @@ val ring_mult_assoc = lift_monoid_thm "assoc" "mult_assoc";
 
 (* Theorem: x * y = y * x *)
 (* Proof: by commutativity of Abelian Monoid (r.prod). *)
-val ring_mult_comm = store_thm(
-  "ring_mult_comm",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (x * y = y * x)``,
-  rw_tac std_ss[ring_mult_monoid]);
+Theorem ring_mult_comm:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (x * y = y * x)
+Proof
+  rw_tac std_ss[ring_mult_monoid]
+QED
 
 (* no export of commutativity *)
 (* val _ = export_rewrites ["ring_mult_comm"]; *)
 
 (* Theorem: x * (y * z) = y * (x * z) *)
 (* Proof: by ring_mult_assoc and ring_mult_comm. *)
-val ring_mult_assoc_comm = store_thm(
-  "ring_mult_assoc_comm",
-  ``!r:'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> (x * (y * z) = y * (x * z))``,
-  rw_tac std_ss[GSYM ring_mult_assoc, ring_mult_comm]);
+Theorem ring_mult_assoc_comm:
+    !r:'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> (x * (y * z) = y * (x * z))
+Proof
+  rw_tac std_ss[GSYM ring_mult_assoc, ring_mult_comm]
+QED
 
 (* Theorem: x * #0 = #0 *)
 (* Proof: by distribution and group_id_fix.
@@ -676,12 +690,13 @@ val ring_mult_assoc_comm = store_thm(
    = x * #0 + x * #0     by distribution in Ring_def
    hence x * #0 = #0     by group_id_fix
 *)
-val ring_mult_rzero = store_thm(
-  "ring_mult_rzero",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> (x * #0 = #0)``,
+Theorem ring_mult_rzero:
+    !r:'a ring. Ring r ==> !x. x IN R ==> (x * #0 = #0)
+Proof
   rpt strip_tac >>
   `#0 IN R /\ x * #0 IN R` by rw_tac std_ss[ring_zero_element, ring_mult_element] >>
-  metis_tac[ring_add_zero_zero, ring_add_group, group_id_fix, Ring_def]);
+  metis_tac[ring_add_zero_zero, ring_add_group, group_id_fix, Ring_def]
+QED
 
 val _ = export_rewrites ["ring_mult_rzero"];
 
@@ -689,19 +704,21 @@ val _ = export_rewrites ["ring_mult_rzero"];
 (* Proof: by ring_mult_rzero and Ring_def implicit x * y = y * x.
    or by ring_mult_lzero and ring_mult_comm.
 *)
-val ring_mult_lzero = store_thm(
-  "ring_mult_lzero",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> (#0 * x = #0)``,
-  rw[ring_mult_comm]);
+Theorem ring_mult_lzero:
+    !r:'a ring. Ring r ==> !x. x IN R ==> (#0 * x = #0)
+Proof
+  rw[ring_mult_comm]
+QED
 
 val _ = export_rewrites ["ring_mult_lzero"];
 
 (* Theorem: #0 * #0 = #0 *)
 (* Proof: by ring_mult_lzero, ring_zero_element. *)
-val ring_mult_zero_zero = store_thm(
-  "ring_mult_zero_zero",
-  ``!r:'a ring. Ring r ==> (#0 * #0 = #0)``,
-  rw[]);
+Theorem ring_mult_zero_zero:
+    !r:'a ring. Ring r ==> (#0 * #0 = #0)
+Proof
+  rw[]
+QED
 
 val _ = export_rewrites ["ring_mult_zero_zero"];
 
@@ -727,10 +744,11 @@ val _ = export_rewrites ["ring_mult_one_one", "ring_mult_lone", "ring_mult_rone"
    Note this is: if there is a y that looks like #1 (i.e. !x. y * x = x or x * y = x)
    then it must be y = #1. This is NOT: !x y. y * x = x ==> y = #1.
 *)
-val ring_one_unique = store_thm(
-  "ring_one_unique",
-  ``!r:'a ring. Ring r ==> !y. y IN R ==> ((!x. x IN R ==> (y * x = x) \/ (x * y = x)) = (y = #1))``,
-  metis_tac[monoid_id_unique, ring_mult_monoid]);
+Theorem ring_one_unique:
+    !r:'a ring. Ring r ==> !y. y IN R ==> ((!x. x IN R ==> (y * x = x) \/ (x * y = x)) = (y = #1))
+Proof
+  metis_tac[monoid_id_unique, ring_mult_monoid]
+QED
 
 (* Theorem: For a Ring, #1 = #0 iff R = {#0} *)
 (* Proof:
@@ -745,13 +763,14 @@ val ring_one_unique = store_thm(
       #1 IN R                      by ring_one_element
       thus R = {#0} ==> #1 = #0    by IN_SING
 *)
-val ring_one_eq_zero = store_thm(
-  "ring_one_eq_zero",
-  ``!r:'a ring. Ring r ==> ((#1 = #0) <=> (R = {#0}))``,
+Theorem ring_one_eq_zero:
+    !r:'a ring. Ring r ==> ((#1 = #0) <=> (R = {#0}))
+Proof
   rw_tac std_ss[EQ_IMP_THM] >| [
     metis_tac[ring_zero_element, ring_mult_lone, ring_mult_lzero, UNIQUE_MEMBER_SING],
     metis_tac[ring_zero_element, ring_one_element, IN_SING]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems inherit from Group or Monoid Theory (for ring_num and ring_exp)  *)
@@ -876,10 +895,11 @@ val _ = export_rewrites ["ring_num_element"];
 
 (* Theorem: ##n * x IN R *)
 (* Proof: by ring_num_element and ring_mult_element. *)
-val ring_num_mult_element = store_thm(
-  "ring_num_mult_element",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> !n. ##n * x IN R``,
-  rw[]);
+Theorem ring_num_mult_element:
+    !r:'a ring. Ring r ==> !x. x IN R ==> !n. ##n * x IN R
+Proof
+  rw[]
+QED
 
 val _ = export_rewrites ["ring_num_mult_element"];
 
@@ -892,10 +912,11 @@ val _ = export_rewrites ["ring_num_SUC"];
 
 (* Theorem: ##(SUC n) = ##n + #1 *)
 (* Proof: by group_exp_SUC and ring_add_comm. *)
-val ring_num_suc = store_thm(
-  "ring_num_suc",
-  ``!r:'a ring. Ring r ==> !n. ##(SUC n) = ##n + #1``,
-  rw[ring_add_comm]);
+Theorem ring_num_suc:
+    !r:'a ring. Ring r ==> !n. ##(SUC n) = ##n + #1
+Proof
+  rw[ring_add_comm]
+QED
 
 (*
 ringTheory.ring_num_0   has Ring r ==> ##0 = #0   by lifting.
@@ -934,10 +955,11 @@ val _ = export_rewrites ["ring_num_1"];
        = #1 + ##1     by ring_num_SUC
        = #1 + #1      by ring_num_1
 *)
-val ring_num_2 = store_thm(
-  "ring_num_2",
-  ``!r:'a ring. Ring r ==> (##2 = #1 + #1)``,
-  metis_tac[TWO, ring_num_SUC, ring_num_1]);
+Theorem ring_num_2:
+    !r:'a ring. Ring r ==> (##2 = #1 + #1)
+Proof
+  metis_tac[TWO, ring_num_SUC, ring_num_1]
+QED
 
 local
 val rag = ring_add_group |> SPEC_ALL |> UNDISCH_ALL
@@ -967,10 +989,11 @@ val ring_sum_zero = lift_group_id_exp "id_exp" "sum_zero";
    since ##c IN R         by ring_num_element
    ##c = #0               by IN_SING
 *)
-val ring_num_all_zero = store_thm(
-  "ring_num_all_zero",
-  ``!r:'a ring. Ring r ==> ((#1 = #0) ==> (!c. ##c = #0))``,
-  metis_tac [IN_SING, ring_one_eq_zero, ring_num_element]);
+Theorem ring_num_all_zero:
+    !r:'a ring. Ring r ==> ((#1 = #0) ==> (!c. ##c = #0))
+Proof
+  metis_tac [IN_SING, ring_one_eq_zero, ring_num_element]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Ring Exponent Theorems (from monoid_exp of ring_mult_monoid).             *)
@@ -1016,10 +1039,11 @@ QED
 
 (* Theorem: x ** SUC n = x ** n * x *)
 (* Proof: by ring_exp_SUC and ring_mult_comm. *)
-val ring_exp_suc = store_thm(
-  "ring_exp_suc",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> !n. x ** (SUC n) = (x ** n) * x``,
-  rw[ring_mult_comm]);
+Theorem ring_exp_suc:
+    !r:'a ring. Ring r ==> !x. x IN R ==> !n. x ** (SUC n) = (x ** n) * x
+Proof
+  rw[ring_mult_comm]
+QED
 
 (* Theorem: x ** 1 = x *)
 (* Proof: by monoid_exp_1. *)
@@ -1035,18 +1059,18 @@ val ring_exp_comm = lift_monoid_thm "exp_comm" "exp_comm";
 
 (* Theorem: (x * y) ** n = x ** n * y ** n *)
 (* Proof: by monoid_comm_op_exp. *)
-val ring_mult_exp = store_thm(
-  "ring_mult_exp",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> !n. (x * y) ** n = x ** n * y ** n``,
-  rw_tac std_ss[monoid_comm_op_exp, ring_mult_monoid]);
+Theorem ring_mult_exp:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> !n. (x * y) ** n = x ** n * y ** n
+Proof
+  rw_tac std_ss[monoid_comm_op_exp, ring_mult_monoid]
+QED
 
 val _ = export_rewrites ["ring_mult_exp"];
 
 (* Theorem: computation of small values of ring_exp *)
 (* Proof: apply ring_exp_SUC. *)
-val ring_exp_small = store_thm(
-  "ring_exp_small",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==>
+Theorem ring_exp_small:
+    !r:'a ring. Ring r ==> !x. x IN R ==>
        (x ** 0 = #1) /\
        (x ** 1 = x) /\
        (x ** 2 = x * x) /\
@@ -1056,11 +1080,13 @@ val ring_exp_small = store_thm(
        (x ** 6 = x * (x ** 5)) /\
        (x ** 7 = x * (x ** 6)) /\
        (x ** 8 = x * (x ** 7)) /\
-       (x ** 9 = x * (x ** 8))``,
+       (x ** 9 = x * (x ** 8))
+Proof
   rpt strip_tac >>
   `(2 = SUC 1) /\ (3 = SUC 2) /\ (4 = SUC 3) /\ (5 = SUC 4) /\
    (6 = SUC 5) /\ (7 = SUC 6) /\ (8 = SUC 7) /\ (9 = SUC 8)` by decide_tac >>
-  metis_tac[ring_exp_SUC, ring_exp_1, ring_exp_0]);
+  metis_tac[ring_exp_SUC, ring_exp_1, ring_exp_0]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Ring Distribution Theorems.                                               *)
@@ -1076,10 +1102,11 @@ val _ = export_rewrites ["ring_mult_radd"];
 
 (* Theorem: (y + z) * x = y * x + z * x *)
 (* Proof: by ring_mult_radd and ring_mult_comm. *)
-val ring_mult_ladd = store_thm(
-  "ring_mult_ladd",
-  ``!r:'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((y + z) * x = y * x + z * x)``,
-  rw[ring_mult_comm]);
+Theorem ring_mult_ladd:
+    !r:'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((y + z) * x = y * x + z * x)
+Proof
+  rw[ring_mult_comm]
+QED
 
 val _ = export_rewrites ["ring_mult_ladd"];
 
@@ -1122,25 +1149,27 @@ val ring_mult_add = save_thm("ring_mult_add",
    = ##n * x + #1 * x          by ring_mult_ladd
    = ##n * x + x               by ring_mult_lone
 *)
-val ring_num_mult_suc = store_thm(
-  "ring_num_mult_suc",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> !n. ##(SUC n) * x = ##n * x + x``,
-  rw[ring_add_comm]);
+Theorem ring_num_mult_suc:
+    !r:'a ring. Ring r ==> !x. x IN R ==> !n. ##(SUC n) * x = ##n * x + x
+Proof
+  rw[ring_add_comm]
+QED
 
 (* Theorem: computation of small values of ring multiplication with ##n. *)
 (* Proof: apply ring_num_mult_suc. *)
-val ring_num_mult_small = store_thm(
-  "ring_num_mult_small",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==>
+Theorem ring_num_mult_small:
+    !r:'a ring. Ring r ==> !x. x IN R ==>
        (#0 * x = #0) /\
        (#1 * x = x) /\
        (##2 * x = x + x) /\
-       (##3 * x = ##2 * x + x)``,
+       (##3 * x = ##2 * x + x)
+Proof
   rw_tac std_ss[RES_FORALL_THM] >-
   rw[] >-
   rw[] >-
   (`2 = SUC 1` by decide_tac >> metis_tac[ring_num_mult_suc, ring_mult_lone, ring_num_1]) >>
-  (`3 = SUC 2` by decide_tac >> metis_tac[ring_num_mult_suc]));
+  (`3 = SUC 2` by decide_tac >> metis_tac[ring_num_mult_suc])
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Ring Negation Theorems                                                    *)
@@ -1237,10 +1266,11 @@ val ring_neg_add_comm = lift_group_thm "inv_op" "neg_add_comm";
 
 (* Theorem: For ring, - (x + y) = -x + -y *)
 (* Proof: by ring_neg_add_comm and ring_add_comm. *)
-val ring_neg_add = store_thm(
-  "ring_neg_add",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (- (x + y) = -x + -y)``,
-  rw[ring_neg_add_comm, ring_add_comm]);
+Theorem ring_neg_add:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (- (x + y) = -x + -y)
+Proof
+  rw[ring_neg_add_comm, ring_add_comm]
+QED
 
 val _ = export_rewrites ["ring_neg_add"];
 
@@ -1256,29 +1286,32 @@ val _ = export_rewrites ["ring_neg_add"];
    = #0                     by ring_mult_lzero
    Hence -x * y = - (x*y)   by ring_add_eq_zero
 *)
-val ring_mult_lneg = store_thm(
-  "ring_mult_lneg",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (- x * y = - (x * y))``,
+Theorem ring_mult_lneg:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (- x * y = - (x * y))
+Proof
   rpt strip_tac >>
   `- x IN R /\ x * y IN R /\ - x * y IN R` by rw[] >>
   `x * y + (- x) * y = (x + -x) * y` by rw_tac std_ss[ring_mult_ladd] >>
-  metis_tac[ring_add_eq_zero, ring_add_rneg, ring_mult_lzero]);
+  metis_tac[ring_add_eq_zero, ring_add_rneg, ring_mult_lzero]
+QED
 
 (* Theorem: x * - y = - (x * y) *)
 (* Proof: by ring_mult_lneg and ring_mult_comm. *)
-val ring_mult_rneg = store_thm(
-  "ring_mult_rneg",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (x * - y = - (x * y))``,
-  metis_tac[ring_mult_lneg, ring_mult_comm, ring_neg_element]);
+Theorem ring_mult_rneg:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (x * - y = - (x * y))
+Proof
+  metis_tac[ring_mult_lneg, ring_mult_comm, ring_neg_element]
+QED
 
 val _ = export_rewrites ["ring_mult_lneg", "ring_mult_rneg"];
 
 (* Theorem: -(x * y) = -x * y  and -(x * y) = x * -y *)
 (* Proof: by ring_mult_lneg and ring_mult_rneg. *)
-val ring_neg_mult = store_thm(
-  "ring_neg_mult",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (- (x * y) = - x * y) /\ (- (x * y) = x * - y)``,
-  rw[]);
+Theorem ring_neg_mult:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (- (x * y) = - x * y) /\ (- (x * y) = x * - y)
+Proof
+  rw[]
+QED
 
 (* Theorem: - x * - y = x * y *)
 (* Proof:
@@ -1287,10 +1320,11 @@ val ring_neg_mult = store_thm(
    = - (- (x * y))   by ring_mult_rneg
    = x * y           by ring_mult_neg_neg
 *)
-val ring_mult_neg_neg = store_thm(
-  "ring_mult_neg_neg",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (- x * - y = x * y)``,
-  metis_tac[ring_mult_lneg, ring_mult_rneg, ring_neg_neg, ring_neg_element]);
+Theorem ring_mult_neg_neg:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (- x * - y = x * y)
+Proof
+  metis_tac[ring_mult_lneg, ring_mult_rneg, ring_neg_neg, ring_neg_element]
+QED
 
 val _ = export_rewrites ["ring_neg_mult", "ring_mult_neg_neg" ];
 
@@ -1309,10 +1343,11 @@ val ring_num_add = lift_group_exp "add" "add";
    = ##m + ##n + x     by ring_add_assoc
    = ##(m + n) + x     by ring_num_add
 *)
-val ring_num_add_assoc = store_thm(
-  "ring_num_add_assoc",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> !m n. ##m + (##n + x) = ##(m + n) + x``,
-  metis_tac[ring_num_add, ring_add_assoc, ring_num_element]);
+Theorem ring_num_add_assoc:
+    !r:'a ring. Ring r ==> !x. x IN R ==> !m n. ##m + (##n + x) = ##(m + n) + x
+Proof
+  metis_tac[ring_num_add, ring_add_assoc, ring_num_element]
+QED
 
 (* Theorem: ##m * ##n = ##(m * n) *)
 (* Proof: by induction on m.
@@ -1329,9 +1364,9 @@ val ring_num_add_assoc = store_thm(
     = ##(m * n + n)         by ring_num_add
     = ##(SUC m * n)         by MULT
 *)
-val ring_num_mult = store_thm(
-  "ring_num_mult",
-  ``!r:'a ring. Ring r ==> !m n. (##m) * (##n) = ##(m * n)``,
+Theorem ring_num_mult:
+    !r:'a ring. Ring r ==> !m n. (##m) * (##n) = ##(m * n)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
@@ -1339,7 +1374,8 @@ val ring_num_mult = store_thm(
   rpt strip_tac >>
   `##(SUC m) * ##n = (##m + #1) * ##n` by rw_tac std_ss[ring_num_suc] >>
   `_ = ##(m * n) + ##n` by rw[ring_mult_ladd] >>
-  rw_tac std_ss[ring_num_add, MULT]);
+  rw_tac std_ss[ring_num_add, MULT]
+QED
 
 (* Theorem: ##m * (##n * x) = ##(m * n) * x *)
 (* Proof: by ring_num_mult.
@@ -1347,10 +1383,11 @@ val ring_num_mult = store_thm(
    = ##m * ##n * x      by ring_mult_assoc
    = ##(m * n) * x     by ring_num_mult
 *)
-val ring_num_mult_assoc = store_thm(
-  "ring_num_mult_assoc",
-  ``!r:'a ring. Ring r ==> !m n x. x IN R ==> ((##m) * (##n * x) = ##(m * n) * x)``,
-  metis_tac[ring_num_mult, ring_mult_assoc, ring_num_element]);
+Theorem ring_num_mult_assoc:
+    !r:'a ring. Ring r ==> !m n x. x IN R ==> ((##m) * (##n * x) = ##(m * n) * x)
+Proof
+  metis_tac[ring_num_mult, ring_mult_assoc, ring_num_element]
+QED
 
 (* Theorem: (##m) ** n = ##(m**n) *)
 (* Proof: by induction on n.
@@ -1365,12 +1402,13 @@ val ring_num_mult_assoc = store_thm(
     = ##(m ** n * m)    by ring_num_mult
     = ##(m ** SUC n)    by EXP
 *)
-val ring_num_exp = store_thm(
-  "ring_num_exp",
-  ``!r:'a ring. Ring r ==> !m n. (##m) ** n = ##(m ** n)``,
+Theorem ring_num_exp:
+    !r:'a ring. Ring r ==> !m n. (##m) ** n = ##(m ** n)
+Proof
   rpt strip_tac >>
   Induct_on `n` >>
-  rw[ring_num_mult, EXP]);
+  rw[ring_num_mult, EXP]
+QED
 
 (* Theorem: ##(m + n) * x = ##m * x + ##n * x *)
 (* Proof:
@@ -1378,10 +1416,11 @@ val ring_num_exp = store_thm(
    = (##m + ##n) * x     by ring_num_add
    = ##m * x + ##n * x   by ring_mult_ladd
 *)
-val ring_num_add_mult = store_thm(
-  "ring_num_add_mult",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> !m n. ##(m + n) * x = ##m * x + ##n * x``,
-  metis_tac[ring_num_add, ring_mult_ladd, ring_num_element]);
+Theorem ring_num_add_mult:
+    !r:'a ring. Ring r ==> !x. x IN R ==> !m n. ##(m + n) * x = ##m * x + ##n * x
+Proof
+  metis_tac[ring_num_add, ring_mult_ladd, ring_num_element]
+QED
 
 (* Theorem: ##(m + n) * x + y = ##m * x + (##n * x + y) *)
 (* Proof: by ring_num_add_mult.
@@ -1389,38 +1428,43 @@ val ring_num_add_mult = store_thm(
    = ##m * x + ##n * x + y     by ring_num_add_mult
    = ##m * x + (##n * x + y)   by ring_add_assoc
 *)
-val ring_num_add_mult_assoc = store_thm(
-  "ring_num_add_mult_assoc",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> !m n. ##(m + n) * x + y = ##m * x + (##n * x + y)``,
-  rw_tac std_ss[ring_num_add_mult, ring_add_assoc, ring_num_mult_element]);
+Theorem ring_num_add_mult_assoc:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> !m n. ##(m + n) * x + y = ##m * x + (##n * x + y)
+Proof
+  rw_tac std_ss[ring_num_add_mult, ring_add_assoc, ring_num_mult_element]
+QED
 
 (* Theorem: - (##n * x) = ##n * (- x) *)
 (* Proof: by ring_mult_rneg. *)
-val ring_num_mult_neg = store_thm(
-  "ring_num_mult_neg",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> !n. - (##n * x) = ##n * (- x)``,
-  rw_tac std_ss[ring_mult_rneg, ring_num_element]);
+Theorem ring_num_mult_neg:
+    !r:'a ring. Ring r ==> !x. x IN R ==> !n. - (##n * x) = ##n * (- x)
+Proof
+  rw_tac std_ss[ring_mult_rneg, ring_num_element]
+QED
 
 (* Theorem: ##n * (x + y) = ##n * x + ##n * y *)
 (* Proof: by ring_mult_radd. *)
-val ring_num_mult_radd = store_thm(
-  "ring_num_mult_radd",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> !n. ##n * (x + y) = ##n * x + ##n * y``,
-  rw[]);
+Theorem ring_num_mult_radd:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> !n. ##n * (x + y) = ##n * x + ##n * y
+Proof
+  rw[]
+QED
 
 (* Theorem: x + x = ##2 * x *)
 (* Proof: by ring_num_mult_small. *)
-val ring_single_add_single = store_thm(
-  "ring_single_add_single",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> (x + x = ##2 * x)``,
-  rw_tac std_ss[ring_num_mult_small]);
+Theorem ring_single_add_single:
+    !r:'a ring. Ring r ==> !x. x IN R ==> (x + x = ##2 * x)
+Proof
+  rw_tac std_ss[ring_num_mult_small]
+QED
 
 (* Theorem: x + (x + y) = ##2 * x + y *)
 (* Proof: by ring_single_add_single. *)
-val ring_single_add_single_assoc = store_thm(
-  "ring_single_add_single_assoc",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (x + (x + y) = ##2 * x + y)``,
-  metis_tac[ring_single_add_single, ring_add_assoc]);
+Theorem ring_single_add_single_assoc:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (x + (x + y) = ##2 * x + y)
+Proof
+  metis_tac[ring_single_add_single, ring_add_assoc]
+QED
 
 (* Theorem: x + ##n * x = ##(n+1) * x *)
 (* Proof:
@@ -1429,10 +1473,11 @@ val ring_single_add_single_assoc = store_thm(
    = ##(1 + n) * x      by ring_num_add_mult
    = ##(n+1) * x        by ADD_COMM
 *)
-val ring_single_add_mult = store_thm(
-  "ring_single_add_mult",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> !n. x + ##n * x = ##(n + 1) * x``,
-  metis_tac[ring_mult_lone, ring_num_add_mult, ring_num_1, ADD_COMM]);
+Theorem ring_single_add_mult:
+    !r:'a ring. Ring r ==> !x. x IN R ==> !n. x + ##n * x = ##(n + 1) * x
+Proof
+  metis_tac[ring_mult_lone, ring_num_add_mult, ring_num_1, ADD_COMM]
+QED
 
 (* Theorem: x + (##n * x + y) = ##(n+1) * x + y *)
 (* Proof: by ring_single_add_mult.
@@ -1440,12 +1485,13 @@ val ring_single_add_mult = store_thm(
    = x + ##n * x + y     by ring_add_assoc
    = ##(n+1) * x + y     by ring_single_add_mult
 *)
-val ring_single_add_mult_assoc = store_thm(
-  "ring_single_add_mult_assoc",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> !n. x + (##n * x + y) = ##(n + 1) * x + y``,
+Theorem ring_single_add_mult_assoc:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> !n. x + (##n * x + y) = ##(n + 1) * x + y
+Proof
   rw_tac std_ss[RES_FORALL_THM] >>
   `x + (##n * x + y) = x + ##n * x + y` by rw[ring_add_assoc] >>
-  rw_tac std_ss[ring_single_add_mult]);
+  rw_tac std_ss[ring_single_add_mult]
+QED
 
 (* Theorem: x + - (##n * x) = (n = 0) ? x : - ##(n-1) * x *)
 (* Proof: by cases on n.
@@ -1462,9 +1508,9 @@ val ring_single_add_mult_assoc = store_thm(
    = - (- x + (x + ##(n-1) * x))    by ring_mult_lone
    = - (##(n-1) * x)                by ring_add_assoc, ring_add_lneg, ring_add_lzero
 *)
-val ring_single_add_neg_mult = store_thm(
-  "ring_single_add_neg_mult",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> !n. x + -(##n * x) = if n = 0 then x else -(##(n - 1) * x)``,
+Theorem ring_single_add_neg_mult:
+    !r:'a ring. Ring r ==> !x. x IN R ==> !n. x + -(##n * x) = if n = 0 then x else -(##(n - 1) * x)
+Proof
   rpt strip_tac >>
   rw_tac std_ss[ring_num_0] >-
   rw_tac std_ss[ring_mult_lzero, ring_neg_zero, ring_add_rzero] >>
@@ -1473,18 +1519,20 @@ val ring_single_add_neg_mult = store_thm(
   `x + - (##n * x) = - (- x + ##n * x)` by rw_tac std_ss[ring_neg_neg, ring_neg_add, ring_num_mult_element] >>
   `_ = - (-x + (#1 * x + ##(n-1) * x))` by metis_tac[ring_num_add_mult, ring_num_1] >>
   `_ = - (-x + x + ##(n-1) * x)` by rw[ring_add_assoc] >>
-  rw_tac std_ss[ring_add_lneg, ring_add_lzero, ring_num_mult_element]);
+  rw_tac std_ss[ring_add_lneg, ring_add_lzero, ring_num_mult_element]
+QED
 
 (* Theorem: x + (- ##n * x + y) = (n = 0) ? x + y : - ##(n-1) * x + y  *)
 (* Proof: by ring_single_add_neg_mult. *)
-val ring_single_add_neg_mult_assoc = store_thm(
-  "ring_single_add_neg_mult_assoc",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==>
-   !n. x + ((- (##n * x)) + y) = if n = 0 then x + y else - (##(n - 1) * x) + y``,
+Theorem ring_single_add_neg_mult_assoc:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==>
+   !n. x + ((- (##n * x)) + y) = if n = 0 then x + y else - (##(n - 1) * x) + y
+Proof
   rpt strip_tac >>
   `x + ((- ((##n) * x)) + y) = x + (- ((##n) * x)) + y`
     by rw_tac std_ss[ring_add_assoc, ring_num_mult_element, ring_neg_element] >>
-  rw_tac std_ss[ring_single_add_neg_mult]);
+  rw_tac std_ss[ring_single_add_neg_mult]
+QED
 
 (* Theorem: ##n * x + - x = (n = 0) ? - x : ##(n - 1) * x *)
 (* Proof: by cases on n.
@@ -1498,9 +1546,9 @@ val ring_single_add_neg_mult_assoc = store_thm(
    = ##(n-1) * x + (x + -x)     by ring_mult_lone, ring_add_assoc
    = ##(n-1) * x                by ring_add_rneg, ring_add_rzero
 *)
-val ring_mult_add_neg = store_thm(
-  "ring_mult_add_neg",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> !n. ##n * x + - x = if n = 0 then - x else ##(n - 1) * x``,
+Theorem ring_mult_add_neg:
+    !r:'a ring. Ring r ==> !x. x IN R ==> !n. ##n * x + - x = if n = 0 then - x else ##(n - 1) * x
+Proof
   rpt strip_tac >>
   rw_tac std_ss[ring_num_0] >-
   rw_tac std_ss[ring_mult_lzero, ring_add_lzero, ring_neg_element] >>
@@ -1508,16 +1556,18 @@ val ring_mult_add_neg = store_thm(
   `##n IN R /\ ##(n-1) IN R /\ -x IN R` by rw[] >>
   `##n * x + - x = ##(n - 1) * x + #1 * x + - x` by metis_tac[ring_num_add_mult, ring_num_1] >>
   `_ = ##(n-1) * x + (x + - x)` by rw_tac std_ss[ring_mult_lone, ring_add_assoc, ring_mult_element] >>
-  rw_tac std_ss[ring_add_rneg, ring_add_rzero, ring_mult_element]);
+  rw_tac std_ss[ring_add_rneg, ring_add_rzero, ring_mult_element]
+QED
 
 (* Theorem: ##n * x + (- x + y) = (n = 0) ? - x + y : ##(n - 1) * x + y *)
 (* Proof: by ring_mult_add_neg. *)
-val ring_mult_add_neg_assoc = store_thm(
-  "ring_mult_add_neg_assoc",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> !n. ##n * x + (- x + y) = if n = 0 then - x + y else ##(n - 1) * x + y``,
+Theorem ring_mult_add_neg_assoc:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> !n. ##n * x + (- x + y) = if n = 0 then - x + y else ##(n - 1) * x + y
+Proof
   rpt strip_tac >>
   `##n * x + (- x + y) = ##n * x + - x + y` by rw[ring_add_assoc] >>
-  metis_tac[ring_mult_add_neg]);
+  metis_tac[ring_mult_add_neg]
+QED
 
 (* Theorem: ##m * x + - (##n * x) = if m < n then - (##(n - m) * x) else ##(m - n) * x *)
 (* Proof: by cases on m < n.
@@ -1532,9 +1582,9 @@ val ring_mult_add_neg_assoc = store_thm(
    = ##(m-n) * x + (##n * x + - (##n * x)) by ring_add_assoc
    = ##(m-n) * x                         by ring_add_rneg, ring_add_rzero
 *)
-val ring_mult_add_neg_mult = store_thm(
-  "ring_mult_add_neg_mult",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> !m n. ##m * x + - (##n * x) = if m < n then - (##(n - m) * x) else ##(m - n) * x``,
+Theorem ring_mult_add_neg_mult:
+    !r:'a ring. Ring r ==> !x. x IN R ==> !m n. ##m * x + - (##n * x) = if m < n then - (##(n - m) * x) else ##(m - n) * x
+Proof
   rpt strip_tac >>
   rw_tac std_ss[] >| [
     `n = m + (n - m)` by decide_tac >>
@@ -1545,18 +1595,20 @@ val ring_mult_add_neg_mult = store_thm(
     `m = m - n + n` by decide_tac >>
     `##m * x + - (##n * x) = ##(m - n) * x + ##n * x + - (##n * x)` by metis_tac[ring_num_add_mult] >>
     rw_tac std_ss[ring_add_assoc, ring_add_rneg, ring_add_rzero, ring_num_mult_element, ring_neg_element]
-  ]);
+  ]
+QED
 
 (* Theorem: ##m * x + (- (##n * x) + y) = if m < n then - (##(n - m) * x) + y else ##(m - n) * x + y *)
 (* Proof: by ring_mult_add_neg_mult. *)
-val ring_mult_add_neg_mult_assoc = store_thm(
-  "ring_mult_add_neg_mult_assoc",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==>
-   !m n. ##m * x + (- (##n * x) + y) = if m < n then - (##(n - m) * x) + y else ##(m - n) * x + y``,
+Theorem ring_mult_add_neg_mult_assoc:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==>
+   !m n. ##m * x + (- (##n * x) + y) = if m < n then - (##(n - m) * x) + y else ##(m - n) * x + y
+Proof
   rpt strip_tac >>
   `##m * x + (- (##n * x) + y) = ##m * x + - (##n * x) + y`
     by rw_tac std_ss[ring_add_assoc, ring_num_mult_element, ring_neg_element] >>
-  rw_tac std_ss[ring_mult_add_neg_mult]);
+  rw_tac std_ss[ring_mult_add_neg_mult]
+QED
 
 (* Theorem: - x + - x = - (##2 * x) *)
 (* Proof:
@@ -1564,19 +1616,21 @@ val ring_mult_add_neg_mult_assoc = store_thm(
    = - (x + x)     by ring_neg_add
    = - (##2 * x)   by ring_num_mult_small
 *)
-val ring_neg_add_neg = store_thm(
-  "ring_neg_add_neg",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> (- x + - x = - (##2 * x))``,
-  rw_tac std_ss[ring_neg_add, ring_num_mult_small]);
+Theorem ring_neg_add_neg:
+    !r:'a ring. Ring r ==> !x. x IN R ==> (- x + - x = - (##2 * x))
+Proof
+  rw_tac std_ss[ring_neg_add, ring_num_mult_small]
+QED
 
 (* Theorem: - x + (- x + y) = - (##2 * x) + y *)
 (* Proof: by ring_neg_add_neg. *)
-val ring_neg_add_neg_assoc = store_thm(
-  "ring_neg_add_neg_assoc",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (- x + (- x + y) = - (##2 * x) + y)``,
+Theorem ring_neg_add_neg_assoc:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (- x + (- x + y) = - (##2 * x) + y)
+Proof
   rpt strip_tac >>
   `- x + (- x + y) = - x + - x + y` by rw[ring_add_assoc] >>
-  rw_tac std_ss[ring_neg_add_neg]);
+  rw_tac std_ss[ring_neg_add_neg]
+QED
 
 (* Theorem:  - x + - (##n * x) = - (##(n + 1) * x) *)
 (* Proof:
@@ -1585,20 +1639,22 @@ val ring_neg_add_neg_assoc = store_thm(
    = ##(n+1) * (- x)      by ring_single_add_mult
    = - (##(n+1) * x)      by ring_num_mult_neg
 *)
-val ring_neg_add_neg_mult = store_thm(
-  "ring_neg_add_neg_mult",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> !n. - x + - (##n * x) = - (##(n + 1) * x)``,
-  rw_tac std_ss[ring_num_mult_neg, ring_single_add_mult, ring_neg_element]);
+Theorem ring_neg_add_neg_mult:
+    !r:'a ring. Ring r ==> !x. x IN R ==> !n. - x + - (##n * x) = - (##(n + 1) * x)
+Proof
+  rw_tac std_ss[ring_num_mult_neg, ring_single_add_mult, ring_neg_element]
+QED
 
 (* Theorem: - x + (- (##n * x) + y) = - (##(n + 1) * x) + y *)
 (* Proof: by ring_neg_add_neg_mult. *)
-val ring_neg_add_neg_mult_assoc = store_thm(
-  "ring_neg_add_neg_mult_assoc",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> !n.  - x + (- (##n * x) + y) = - (##(n + 1) * x) + y``,
+Theorem ring_neg_add_neg_mult_assoc:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> !n.  - x + (- (##n * x) + y) = - (##(n + 1) * x) + y
+Proof
   rpt strip_tac >>
   `- x + (- (##n * x) + y) = - x + - (##n * x) + y`
     by rw_tac std_ss[ring_add_assoc, ring_num_mult_element, ring_neg_element] >>
-  rw_tac std_ss[ring_neg_add_neg_mult]);
+  rw_tac std_ss[ring_neg_add_neg_mult]
+QED
 
 (* Theorem: - (##m * x) + - (##n * x) = - (##(m + n) * x) *)
 (* Proof:
@@ -1607,10 +1663,11 @@ val ring_neg_add_neg_mult_assoc = store_thm(
    = ##(m + n) * (-x)         by ring_num_add_mult
    = - (##(m + n) * x)        by ring_num_mult_neg
 *)
-val ring_neg_mult_add_neg_mult = store_thm(
-  "ring_neg_mult_add_neg_mult",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> !m n. - (##m * x) + - (##n * x) = - (##(m + n) * x)``,
-  rw_tac std_ss[ring_num_add_mult, ring_num_mult_neg, ring_neg_element]);
+Theorem ring_neg_mult_add_neg_mult:
+    !r:'a ring. Ring r ==> !x. x IN R ==> !m n. - (##m * x) + - (##n * x) = - (##(m + n) * x)
+Proof
+  rw_tac std_ss[ring_num_add_mult, ring_num_mult_neg, ring_neg_element]
+QED
 
 (* Theorem: - (##m * x) + (- (##n * x) + y) = - (##(m + n) * x) + y *)
 (* Proof: by ring_neg_mult_add_neg_mult.
@@ -1618,13 +1675,14 @@ val ring_neg_mult_add_neg_mult = store_thm(
    = - (##m * x) + -(##n * x) + y    by ring_add_assoc
    = - (##(m + n) * x) + y           by ring_neg_mult_add_neg_mult
 *)
-val ring_neg_mult_add_neg_mult_assoc = store_thm(
-  "ring_neg_mult_add_neg_mult_assoc",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> !m n. - (##m * x) + (- (##n * x) + y) = - (##(m + n) * x) + y``,
+Theorem ring_neg_mult_add_neg_mult_assoc:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> !m n. - (##m * x) + (- (##n * x) + y) = - (##(m + n) * x) + y
+Proof
   rpt strip_tac >>
   `- (##m * x) + (- (##n * x) + y) = - (##m * x) + - (##n * x) + y`
     by rw_tac std_ss[ring_add_assoc, ring_num_mult_element, ring_neg_element] >>
-  rw_tac std_ss[ring_neg_mult_add_neg_mult]);
+  rw_tac std_ss[ring_neg_mult_add_neg_mult]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* More Ring Exponent Theorems.                                              *)
@@ -1632,33 +1690,37 @@ val ring_neg_mult_add_neg_mult_assoc = store_thm(
 
 (* Theorem: x * x = x ** 2 *)
 (* Proof: by ring_exp_small. *)
-val ring_single_mult_single = store_thm(
-  "ring_single_mult_single",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> (x * x = x ** 2)``,
-  rw_tac std_ss[ring_exp_small]);
+Theorem ring_single_mult_single:
+    !r:'a ring. Ring r ==> !x. x IN R ==> (x * x = x ** 2)
+Proof
+  rw_tac std_ss[ring_exp_small]
+QED
 
 (* Theorem: x * (x * y) = x ** 2 * y *)
 (* Proof: by ring_single_mult_single. *)
-val ring_single_mult_single_assoc = store_thm(
-  "ring_single_mult_single_assoc",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (x * (x * y) = x ** 2 * y)``,
-  metis_tac[ring_mult_assoc, ring_single_mult_single]);
+Theorem ring_single_mult_single_assoc:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (x * (x * y) = x ** 2 * y)
+Proof
+  metis_tac[ring_mult_assoc, ring_single_mult_single]
+QED
 
 (* Theorem: x * x ** n = x ** (n + 1) *)
 (* Proof: by ring_exp_def. *)
-val ring_single_mult_exp = store_thm(
-  "ring_single_mult_exp",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> !n. x * x ** n = x ** (n + 1)``,
-  metis_tac[ring_exp_SUC, ADD1]);
+Theorem ring_single_mult_exp:
+    !r:'a ring. Ring r ==> !x. x IN R ==> !n. x * x ** n = x ** (n + 1)
+Proof
+  metis_tac[ring_exp_SUC, ADD1]
+QED
 
 (* Theorem: x * x ** n = x ** (n + 1) *)
 (* Proof: by ring_single_mult_exp. *)
-val ring_single_mult_exp_assoc = store_thm(
-  "ring_single_mult_exp_assoc",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> !n. x * ((x ** n) * y) = (x ** (n + 1)) *  y``,
+Theorem ring_single_mult_exp_assoc:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> !n. x * ((x ** n) * y) = (x ** (n + 1)) *  y
+Proof
   rpt strip_tac >>
   `x * (x ** n * y) = x * x ** n * y` by rw_tac std_ss[ring_mult_assoc, ring_exp_element] >>
-  rw_tac std_ss[ring_single_mult_exp]);
+  rw_tac std_ss[ring_single_mult_exp]
+QED
 
 (* Theorem: x ** (n + k) = x ** n * x ** k *)
 (* Proof: by monoid_exp_add. *)
@@ -1669,10 +1731,11 @@ val _ = export_rewrites ["ring_exp_add"];
 
 (* Theorem: x ** m * (x ** n * y) = x ** (m + n) * y *)
 (* Proof: by ring_exp_add. *)
-val ring_exp_add_assoc = store_thm(
-  "ring_exp_add_assoc",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> !n k. x ** n * (x ** k * y) = x ** (n + k) * y``,
-  rw_tac std_ss[ring_exp_add, ring_mult_assoc, ring_exp_element]);
+Theorem ring_exp_add_assoc:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> !n k. x ** n * (x ** k * y) = x ** (n + k) * y
+Proof
+  rw_tac std_ss[ring_exp_add, ring_mult_assoc, ring_exp_element]
+QED
 
 (* Theorem: #1 ** n = #1 *)
 (* Proof: by monoid_id_exp and r.prod a monoid. *)
@@ -1686,14 +1749,15 @@ val _ = export_rewrites ["ring_one_exp"];
    If n = 0, #0 ** 0 = #1                     by ring_exp_0.
    If n <> 0, #0 ** n = #0 * #0 ** (n-1) = #0 by ring_exp_SUC, ring_mult_lzero.
 *)
-val ring_zero_exp = store_thm(
-  "ring_zero_exp",
-  ``!r:'a ring. Ring r ==> !n. #0 ** n = if n = 0 then #1 else #0``,
+Theorem ring_zero_exp:
+    !r:'a ring. Ring r ==> !n. #0 ** n = if n = 0 then #1 else #0
+Proof
   rpt strip_tac >>
   rw_tac std_ss[] >-
   rw[] >>
   `n = SUC (n-1)` by decide_tac >>
-  metis_tac[ring_exp_SUC, ring_mult_lzero, ring_exp_element, ring_zero_element]);
+  metis_tac[ring_exp_SUC, ring_mult_lzero, ring_exp_element, ring_zero_element]
+QED
 (*
 val ring_zero_exp = store_thm(
   "ring_zero_exp",
@@ -1725,10 +1789,11 @@ val ring_exp_mult_comm = lift_monoid_thm "exp_mult_comm" "exp_mult_comm";
    = x * x          by ring_neg_neg
    = x ** 2         by ring_single_mult_single
 *)
-val ring_neg_square = store_thm(
-  "ring_neg_square",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> ((- x) ** 2 = x ** 2)``,
-  metis_tac[ring_single_mult_single, ring_mult_lneg, ring_mult_rneg, ring_neg_neg, ring_neg_element]);
+Theorem ring_neg_square:
+    !r:'a ring. Ring r ==> !x. x IN R ==> ((- x) ** 2 = x ** 2)
+Proof
+  metis_tac[ring_single_mult_single, ring_mult_lneg, ring_mult_rneg, ring_neg_neg, ring_neg_element]
+QED
 
 (* Theorem: (- x) ** n = if EVEN n then x ** n else - (x ** n) *)
 (* Proof: by cases on EVEN n.
@@ -1745,9 +1810,9 @@ val ring_neg_square = store_thm(
    = -(x * x ** (n-1))     by ring_mult_lneg
    = - (x ** n)            by ring_exp_def
 *)
-val ring_exp_neg = store_thm(
-  "ring_exp_neg",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> !n. (- x) ** n = if EVEN n then x ** n else - (x ** n)``,
+Theorem ring_exp_neg:
+    !r:'a ring. Ring r ==> !x. x IN R ==> !n. (- x) ** n = if EVEN n then x ** n else - (x ** n)
+Proof
   rpt strip_tac >>
   `-x IN R` by rw[] >>
   `!n. EVEN n ==> ((-x) ** n = x ** n)` by
@@ -1756,7 +1821,8 @@ val ring_exp_neg = store_thm(
   rw_tac std_ss[] >>
   `n <> 0 ==> (n = SUC(n-1))` by decide_tac >>
   `EVEN (n-1) /\ (n = SUC(n-1))` by metis_tac[EVEN] >>
-  metis_tac[ring_exp_SUC, ring_mult_lneg, ring_exp_element]);
+  metis_tac[ring_exp_SUC, ring_mult_lneg, ring_exp_element]
+QED
 
 (* Same theorem, better proof. *)
 
@@ -1785,16 +1851,17 @@ val ring_exp_neg = store_thm(
        = x * x ** n                by ring_neg_neg
        = x ** SUC n                by ring_exp_SUC
 *)
-val ring_neg_exp = store_thm(
-  "ring_neg_exp",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==>
-   !n. -x ** n = if EVEN n then x ** n else -(x ** n)``,
+Theorem ring_neg_exp:
+    !r:'a ring. Ring r ==> !x. x IN R ==>
+   !n. -x ** n = if EVEN n then x ** n else -(x ** n)
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
   rw_tac std_ss[ring_exp_SUC, EVEN] >-
   rw_tac std_ss[ring_mult_lneg, ring_exp_element] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: ##k * ##m ** n = ##(k * m ** n) *)
 (* Proof: by induction on n.
@@ -1819,9 +1886,9 @@ val ring_neg_exp = store_thm(
     = ##(k * (m * m ** n))     by MULT_ASSOC
     = ##(k * m ** SUC n)       by EXP
 *)
-val ring_num_mult_exp = store_thm(
-  "ring_num_mult_exp",
-  ``!r:'a ring. Ring r ==> !k m n. ##k * ##m ** n = ##(k * m ** n)``,
+Theorem ring_num_mult_exp:
+    !r:'a ring. Ring r ==> !k m n. ##k * ##m ** n = ##(k * m ** n)
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[EXP] >>
@@ -1830,22 +1897,25 @@ val ring_num_mult_exp = store_thm(
   `_ = ##m * ##(k * m ** n)` by rw[ring_mult_assoc] >>
   `_ = ##(m * k * m ** n)` by rw[ring_num_mult] >>
   `_ = ##(k * m * m ** n)` by rw_tac std_ss[MULT_COMM] >>
-  rw[EXP]);
+  rw[EXP]
+QED
 
 (* Theorem: Ring r ==> !x. x IN R /\ 0 < order r.prod x ==> !n. x ** n = x ** (n MOD (order r.prod x) *)
 (* Proof:
    Since Ring r ==> Monoid r.prod    by ring_mult_monoid
    Hence result follows              by monoid_exp_mod_order, ring_carriers
 *)
-val ring_exp_mod_order = store_thm(
-  "ring_exp_mod_order",
-  ``!r:'a ring. Ring r ==> !x. x IN R /\ 0 < order r.prod x ==> !n. x ** n = x ** (n MOD (order r.prod x))``,
-  metis_tac[ring_mult_monoid, monoid_exp_mod_order, ring_carriers]);
+Theorem ring_exp_mod_order:
+    !r:'a ring. Ring r ==> !x. x IN R /\ 0 < order r.prod x ==> !n. x ** n = x ** (n MOD (order r.prod x))
+Proof
+  metis_tac[ring_mult_monoid, monoid_exp_mod_order, ring_carriers]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Ring Subtraction Theorems.                                                *)
 (* ------------------------------------------------------------------------- *)
-val ring_sub_def = Define `ring_sub (r:'a ring) x y = x + (- y)`;
+Definition ring_sub_def:   ring_sub (r:'a ring) x y = x + (- y)
+End
 val _ = overload_on ("-", ``ring_sub r``);
 val _ = export_rewrites ["ring_sub_def"];
 
@@ -1856,10 +1926,11 @@ val _ = export_rewrites ["ring_sub_def"];
    = x + #0     by ring_neg_zero
    = x          by ring_add_rzero
 *)
-val ring_sub_zero = store_thm(
-  "ring_sub_zero",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> (x - #0 = x)``,
-  rw[]);
+Theorem ring_sub_zero:
+    !r:'a ring. Ring r ==> !x. x IN R ==> (x - #0 = x)
+Proof
+  rw[]
+QED
 
 (* Theorem: (x - y = #0) <=> (x = y) *)
 (* Proof:
@@ -1868,24 +1939,27 @@ val ring_sub_zero = store_thm(
    <=> -x = -y       by ring_add_eq_zero
    <=> x = y         by ring_neg_neg
 *)
-val ring_sub_eq_zero = store_thm(
-  "ring_sub_eq_zero",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> ((x - y = #0) = (x = y))``,
-  metis_tac[ring_sub_def, ring_add_eq_zero, ring_neg_neg, ring_neg_element]);
+Theorem ring_sub_eq_zero:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> ((x - y = #0) = (x = y))
+Proof
+  metis_tac[ring_sub_def, ring_add_eq_zero, ring_neg_neg, ring_neg_element]
+QED
 
 (* Theorem: x - x = #0 *)
 (* Proof: by ring_sub_eq_zero. *)
-val ring_sub_eq = store_thm(
-  "ring_sub_eq",
-  ``!r:'a ring. Ring r ==> !x y. x IN R ==> (x - x = #0)``,
-  rw_tac std_ss[ring_sub_eq_zero]);
+Theorem ring_sub_eq:
+    !r:'a ring. Ring r ==> !x y. x IN R ==> (x - x = #0)
+Proof
+  rw_tac std_ss[ring_sub_eq_zero]
+QED
 
 (* Theorem: x - y IN R *)
 (* Proof: by definition, and ring_add_element, ring_neg_element. *)
-val ring_sub_element = store_thm(
-  "ring_sub_element",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> x - y IN R``,
-  rw[]);
+Theorem ring_sub_element:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> x - y IN R
+Proof
+  rw[]
+QED
 
 val _ = export_rewrites ["ring_sub_element"];
 
@@ -1895,10 +1969,11 @@ val _ = export_rewrites ["ring_sub_element"];
    = #0 + (-x)       by ring_sub_def
    = -x              by ring_add_lzero
 *)
-val ring_zero_sub = store_thm(
-  "ring_zero_sub",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> (#0 - x = -x)``,
-  rw[]);
+Theorem ring_zero_sub:
+    !r:'a ring. Ring r ==> !x. x IN R ==> (#0 - x = -x)
+Proof
+  rw[]
+QED
 
 (* Theorem: Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((x - y = x - z) <=> (y = z)) *)
 (* Proof:
@@ -1908,10 +1983,11 @@ val ring_zero_sub = store_thm(
     <=>       -y = -z            by ring_add_lcancel
     <=>        y = z             by ring_neg_neg
 *)
-val ring_sub_lcancel = store_thm(
-  "ring_sub_lcancel",
-  ``!r:'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((x - y = x - z) <=> (y = z))``,
-  rw[ring_add_lcancel]);
+Theorem ring_sub_lcancel:
+    !r:'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((x - y = x - z) <=> (y = z))
+Proof
+  rw[ring_add_lcancel]
+QED
 
 (* Theorem: Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((y - x = z - x) <=> (y = z)) *)
 (* Proof:
@@ -1920,10 +1996,11 @@ val ring_sub_lcancel = store_thm(
     <=> y + (-x) = z + (-x)      by ring_sub_def
     <=>        y = z             by ring_add_rcancel
 *)
-val ring_sub_rcancel = store_thm(
-  "ring_sub_rcancel",
-  ``!r:'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((y - x = z - x) <=> (y = z))``,
-  rw[ring_add_rcancel]);
+Theorem ring_sub_rcancel:
+    !r:'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((y - x = z - x) <=> (y = z))
+Proof
+  rw[ring_add_rcancel]
+QED
 
 (* Theorem: -(x - y) = y - x *)
 (* Proof:
@@ -1934,10 +2011,11 @@ val ring_sub_rcancel = store_thm(
    = y + -x        by ring_add_comm
    = y - x         by ring_sub_def
 *)
-val ring_neg_sub = store_thm(
-  "ring_neg_sub",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (-(x - y) = y - x )``,
-  rw[ring_sub_def, ring_add_comm]);
+Theorem ring_neg_sub:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (-(x - y) = y - x )
+Proof
+  rw[ring_sub_def, ring_add_comm]
+QED
 
 (* Theorem: x + y - y = x *)
 (* Proof:
@@ -1947,10 +2025,11 @@ val ring_neg_sub = store_thm(
    = x + #0         by ring_add_rneg
    = x              by ring_add_rzero
 *)
-val ring_add_sub = store_thm(
-  "ring_add_sub",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (x + y - y = x)``,
-  rw[ring_add_assoc]);
+Theorem ring_add_sub:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (x + y - y = x)
+Proof
+  rw[ring_add_assoc]
+QED
 
 (* Theorem: y + x - y = x *)
 (* Proof:
@@ -1958,10 +2037,11 @@ val ring_add_sub = store_thm(
    = x + y - y     by ring_add_comm
    = x             by ring_add_sub
 *)
-val ring_add_sub_comm = store_thm(
-  "ring_add_sub_comm",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (y + x - y = x)``,
-  metis_tac[ring_add_sub, ring_add_comm]);
+Theorem ring_add_sub_comm:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (y + x - y = x)
+Proof
+  metis_tac[ring_add_sub, ring_add_comm]
+QED
 
 (* Theorem: Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> (x + y - z = x + (y - z)) *)
 (* Proof:
@@ -1970,10 +2050,11 @@ val ring_add_sub_comm = store_thm(
    = x + (y + (-z))  by ring_add_assoc, ring_neg_element
    = x + (y - z)     by ring_sub_def
 *)
-val ring_add_sub_assoc = store_thm(
-  "ring_add_sub_assoc",
-  ``!r:'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> (x + y - z = x + (y - z))``,
-  rw_tac std_ss[ring_sub_def, ring_neg_element, ring_add_assoc]);
+Theorem ring_add_sub_assoc:
+    !r:'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> (x + y - z = x + (y - z))
+Proof
+  rw_tac std_ss[ring_sub_def, ring_neg_element, ring_add_assoc]
+QED
 
 (* Theorem: x - y + y = x *)
 (* Proof:
@@ -1983,10 +2064,11 @@ val ring_add_sub_assoc = store_thm(
    = x + #0         by ring_add_lneg
    = x              by ring_add_rzero
 *)
-val ring_sub_add = store_thm(
-  "ring_sub_add",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (x - y + y = x)``,
-  rw[ring_add_assoc]);
+Theorem ring_sub_add:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (x - y + y = x)
+Proof
+  rw[ring_add_assoc]
+QED
 
 (* Theorem: x = y <=> x + z = y + z *)
 (* This is ring_add_rcancel:
@@ -1999,12 +2081,13 @@ val ring_sub_add = store_thm(
    <=>         x = z + y      by ring_sub_add
    <=>         x = y + z      by ring_add_comm
 *)
-val ring_sub_eq_add = store_thm(
-  "ring_sub_eq_add",
-  ``!r:'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((x - y = z) <=> (x = y + z))``,
+Theorem ring_sub_eq_add:
+    !r:'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((x - y = z) <=> (x = y + z))
+Proof
   rpt strip_tac >>
   `(x - y = z) <=> (x - y + y = z + y)` by metis_tac[ring_add_sub, ring_sub_element] >>
-  rw[ring_sub_add, ring_add_comm]);
+  rw[ring_sub_add, ring_add_comm]
+QED
 
 (* Theorem: Ring r ==> (x + z) - (y + z) = x - y *)
 (* Proof:
@@ -2016,10 +2099,11 @@ val ring_sub_eq_add = store_thm(
 
    Should use Theorem Lifting of group_pair_reduce.
 *)
-val ring_sub_pair_reduce = store_thm(
-  "ring_sub_pair_reduce",
-  ``!r:'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((x + z) - (y + z) = x - y)``,
-  rw_tac std_ss[ring_sub_def, ring_add_group, group_pair_reduce]);
+Theorem ring_sub_pair_reduce:
+    !r:'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((x + z) - (y + z) = x - y)
+Proof
+  rw_tac std_ss[ring_sub_def, ring_add_group, group_pair_reduce]
+QED
 
 (* Theorem: Ring r ==> !x y z t. x IN R /\ y IN R /\ z IN R /\ t IN R ==>
                        ((x + y = z + t) <=> (x - z = t - y)) *)
@@ -2030,10 +2114,10 @@ val ring_sub_pair_reduce = store_thm(
    <=> x = (t - y) + z    by ring_add_comm, ring_sub_element
    <=> x - z = t - y      by ring_add_sub, ring_sub_element
 *)
-val ring_add_sub_identity = store_thm(
-  "ring_add_sub_identity",
-  ``!r:'a ring. Ring r ==> !x y z t. x IN R /\ y IN R /\ z IN R /\ t IN R ==>
-    ((x + y = z + t) <=> (x - z = t - y))``,
+Theorem ring_add_sub_identity:
+    !r:'a ring. Ring r ==> !x y z t. x IN R /\ y IN R /\ z IN R /\ t IN R ==>
+    ((x + y = z + t) <=> (x - z = t - y))
+Proof
   rpt strip_tac >>
   `(t - y) IN R /\ (z + t) IN R` by rw[] >>
   rw_tac std_ss[EQ_IMP_THM] >| [
@@ -2043,7 +2127,8 @@ val ring_add_sub_identity = store_thm(
     `x = t - y + z` by metis_tac[ring_sub_add] >>
     `_ = z + t - y` by rw[ring_add_comm, ring_add_assoc] >>
     metis_tac[ring_sub_add]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r ==> x * z - y * z = (x - y) * z *)
 (* Proof:
@@ -2053,10 +2138,11 @@ val ring_add_sub_identity = store_thm(
    = (x + (-y)) * z         by ring_mult_ladd
    = (x - y) * z            by ring_sub_def
 *)
-val ring_mult_lsub = store_thm(
-  "ring_mult_lsub",
-  ``!r:'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((x * z) - (y * z) = (x - y) * z)``,
-  rw_tac std_ss[ring_neg_mult, ring_mult_ladd, ring_neg_element, ring_sub_def]);
+Theorem ring_mult_lsub:
+    !r:'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((x * z) - (y * z) = (x - y) * z)
+Proof
+  rw_tac std_ss[ring_neg_mult, ring_mult_ladd, ring_neg_element, ring_sub_def]
+QED
 
 (* Theorem: Ring r ==> x * y - x * z = x * (y - z) *)
 (* Proof:
@@ -2065,14 +2151,15 @@ val ring_mult_lsub = store_thm(
    = (y - z) * x       by ring_mult_lsub
    = x * (y - z)       by ring_mult_comm, ring_sub_element
 *)
-val ring_mult_rsub = store_thm(
-  "ring_mult_rsub",
-  ``!r:'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> (x * y - x * z = x * (y - z))``,
+Theorem ring_mult_rsub:
+    !r:'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> (x * y - x * z = x * (y - z))
+Proof
   rpt strip_tac >>
   `x * y - x * z = y * x - z * x` by rw_tac std_ss[ring_mult_comm] >>
   `_ = (y - z) * x` by rw_tac std_ss[ring_mult_lsub] >>
   `_ = x * (y - z)` by rw_tac std_ss[ring_mult_comm, ring_sub_element] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: Ring r ==> x + y - (p + q) = (x - p) + (y - q)  *)
 (* Proof:
@@ -2086,9 +2173,9 @@ val ring_mult_rsub = store_thm(
    = (x + - p) + (y + - q)  by ring_add_assoc
    = (x - p) + (y - q)      by ring_sub_def
 *)
-val ring_add_pair_sub = store_thm(
-  "ring_add_pair_sub",
-  ``!r:'a ring. Ring r ==> !x y p q. x IN R /\ y IN R /\ p IN R /\ q IN R ==> (x + y - (p + q) = (x - p) + (y - q))``,
+Theorem ring_add_pair_sub:
+    !r:'a ring. Ring r ==> !x y p q. x IN R /\ y IN R /\ p IN R /\ q IN R ==> (x + y - (p + q) = (x - p) + (y - q))
+Proof
   rpt strip_tac >>
   `x + y - (p + q) = x + y + (- p + - q)` by rw[] >>
   `_ = (x + y + - p) + - q` by rw[ring_add_assoc] >>
@@ -2097,7 +2184,8 @@ val ring_add_pair_sub = store_thm(
   `_ = ((x + - p) + y) + - q` by rw_tac std_ss[ring_add_comm, ring_add_element, ring_neg_element] >>
   `_ = (x + - p) + (y + - q)` by rw[ring_add_assoc] >>
   `_ = (x - p) + (y - q)` by rw_tac std_ss[ring_sub_def] >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* Theorem: Ring r ==> x * y - p * q = (x - p) * (y - q) + (x - p) * q + p * (y - q) *)
 (* Proof:
@@ -2107,10 +2195,10 @@ val ring_add_pair_sub = store_thm(
                  = (x - p) * (y - q) + (x * q - p * q) + (p * y - p * q)
                  = (x - p) * (y - q) + (x - p) * q + p * (y - q)
 *)
-val ring_mult_pair_sub = store_thm(
-  "ring_mult_pair_sub",
-  ``!r:'a ring. Ring r ==> !x y p q. x IN R /\ y IN R /\ p IN R /\ q IN R ==>
-               (x * y - p * q = (x - p) * (y - q) + (x - p) * q + p * (y - q))``,
+Theorem ring_mult_pair_sub:
+    !r:'a ring. Ring r ==> !x y p q. x IN R /\ y IN R /\ p IN R /\ q IN R ==>
+               (x * y - p * q = (x - p) * (y - q) + (x - p) * q + p * (y - q))
+Proof
   rw_tac std_ss[ring_sub_def] >>
   `-x IN R /\ -y IN R /\ -p IN R /\ -q IN R` by rw[] >>
   `(x + -p) IN R /\ (y + -q) IN R` by rw[] >>
@@ -2122,7 +2210,8 @@ val ring_mult_pair_sub = store_thm(
   `_ = x * y + (-(p * y) + p * y) + -(p * q)` by
     rw_tac std_ss[ring_add_assoc, ring_mult_element, ring_add_element, ring_neg_element] >>
   `_ = x * y + - (p * q)` by rw_tac std_ss[ring_mult_element, ring_add_lneg, ring_add_rzero] >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* Theorem: Ring r ==> !x y p q. x IN R /\ y IN R /\ p IN R /\ q IN R ==>
                        (x * y - p * q = (x - p) * y + p * (y - q)) *)
@@ -2136,10 +2225,10 @@ val ring_mult_pair_sub = store_thm(
    = (x - p) * y + (p * y - p * q)         by ring_mult_lsub
    = (x - p) * y + p * (y - q)             by ring_mult_rsub
 *)
-val ring_mult_pair_diff = store_thm(
-  "ring_mult_pair_diff",
-  ``!r:'a ring. Ring r ==> !x y p q. x IN R /\ y IN R /\ p IN R /\ q IN R ==>
-       (x * y - p * q = (x - p) * y + p * (y - q))``,
+Theorem ring_mult_pair_diff:
+    !r:'a ring. Ring r ==> !x y p q. x IN R /\ y IN R /\ p IN R /\ q IN R ==>
+       (x * y - p * q = (x - p) * y + p * (y - q))
+Proof
   rpt strip_tac >>
   `!x y. x IN R /\ y IN R ==> -x IN R /\ (x * y) IN R` by rw[] >>
   `x * y - p * q = x * y + #0 - p * q` by rw_tac std_ss[ring_add_rzero] >>
@@ -2149,7 +2238,8 @@ val ring_mult_pair_diff = store_thm(
   `_ = (x * y - p * y) + (p * y - p * q)` by rw_tac std_ss[ring_add_sub_assoc, ring_sub_element] >>
   `_ = (x - p) * y + (p * y - p * q)` by rw_tac std_ss[ring_mult_lsub] >>
   `_= (x - p) * y + p * (y - q)` by rw_tac std_ss[ring_mult_rsub] >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* Theorem: Ring r ==> !n m. m < n ==> ##(n - m) = ##n - ##m *)
 (* Proof:
@@ -2157,15 +2247,16 @@ val ring_mult_pair_diff = store_thm(
    and   ##n - ##m + ##m = ##n + (-##m + ##m) = ##n
    The results follows by ring_add_rcancel.
 *)
-val ring_num_sub = store_thm(
-  "ring_num_sub",
-  ``!r:'a ring. Ring r ==> !n m. m < n ==> (##(n - m) = ##n - ##m)``,
+Theorem ring_num_sub:
+    !r:'a ring. Ring r ==> !n m. m < n ==> (##(n - m) = ##n - ##m)
+Proof
   rpt strip_tac >>
   `##(n - m) + ##m = ##(n - m + m)` by rw[] >>
   `_ = ##n` by rw_tac arith_ss[] >>
   `##n - ##m + ##m = ##n` by rw[ring_add_assoc] >>
   `##m IN R /\ ##(n - m) IN R /\ (##n - ##m) IN R` by rw[] >>
-  metis_tac[ring_add_rcancel]);
+  metis_tac[ring_add_rcancel]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Ring Binomial Expansions.                                                 *)
@@ -2186,10 +2277,11 @@ val ring_num_sub = store_thm(
    = x ** 2 + (##2 (x * y) + y **2)     by ring_num_mult_small
    = x ** 2 + ##2 (x * y) + y ** 2      by ring_add_assoc
 *)
-val ring_binomial_2 = store_thm(
-  "ring_binomial_2",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> ((x + y) ** 2 = x ** 2 + ##2 * (x * y) + y ** 2)``,
-  rw[ring_exp_small, ring_num_mult_small, ring_mult_comm, ring_add_assoc]);
+Theorem ring_binomial_2:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> ((x + y) ** 2 = x ** 2 + ##2 * (x * y) + y ** 2)
+Proof
+  rw[ring_exp_small, ring_num_mult_small, ring_mult_comm, ring_add_assoc]
+QED
 
 (* Theorem: (x + y) ** 3 =
             x ** 3 + ##3 * (x ** 2 * y) + ##3 * (x * y ** 2) + y ** 3 *)
@@ -2223,10 +2315,10 @@ val ring_binomial_2 = store_thm(
    = ##3 * (x * y ** 2)                  by ring_single_add_mult
    Overall, apply ring_exp_small, ring_add_assoc.
 *)
-val ring_binomial_3 = store_thm(
-  "ring_binomial_3",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==>
-    ((x + y) ** 3 = x ** 3 + ##3 * (x ** 2 * y) + ##3 * (x * y ** 2) + y ** 3)``,
+Theorem ring_binomial_3:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==>
+    ((x + y) ** 3 = x ** 3 + ##3 * (x ** 2 * y) + ##3 * (x * y ** 2) + y ** 3)
+Proof
   rpt strip_tac >>
   `x ** 2 IN R /\ ##2 * (x * y) IN R /\ y ** 2 IN R` by rw[] >>
   `(x + y) ** 3 = (x + y) * (x ** 2 + ##2 * (x * y) + y ** 2)` by rw[ring_binomial_2, ring_exp_small] >>
@@ -2249,7 +2341,8 @@ val ring_binomial_3 = store_thm(
   `_ = ##3 * (x * y ** 2)` by rw_tac std_ss[ring_single_add_mult, ring_mult_element] >>
   `x ** 3 + ##3 * (x ** 2 * y) + ##3 * (x * y ** 2) + y ** 3 =
    x ** 3 + (##3 * (x ** 2 * y) + (##3 * (x * y ** 2) + y ** 3))` by rw[ring_add_assoc] >>
-  rw_tac std_ss[ring_exp_small]);
+  rw_tac std_ss[ring_exp_small]
+QED
 
 (* Theorem:  (x + y) ** 4 =
               x ** 4 + ##4 * (x ** 3 * y) + ##6 * (x ** 2 * y ** 2) + ##4 * (x * y ** 3) + y ** 4 *)
@@ -2327,10 +2420,10 @@ val ring_binomial_3 = store_thm(
    = x ** 4 +  ##4 * x3y +  ##6 * x2y2 +  ##4 * xy3 + y ** 4                             by ring_add_assoc
    Hence true.
 *)
-val ring_binomial_4 = store_thm(
-  "ring_binomial_4",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==>
-    ((x + y) ** 4 = x ** 4 + ##4 * (x ** 3 * y) + ##6 * (x ** 2 * y ** 2) + ##4 * (x * y ** 3) + y ** 4)``,
+Theorem ring_binomial_4:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==>
+    ((x + y) ** 4 = x ** 4 + ##4 * (x ** 3 * y) + ##6 * (x ** 2 * y ** 2) + ##4 * (x * y ** 3) + y ** 4)
+Proof
   rpt strip_tac >>
   `x ** 3 IN R /\ x ** 2 * y IN R /\ x * y ** 2 IN R /\ y ** 3 IN R /\
     x ** 3 * y IN R /\ x ** 2 * y ** 2 IN R /\ x * y ** 3 IN R /\ y * y ** 3 IN R` by rw[] >>
@@ -2381,7 +2474,8 @@ val ring_binomial_4 = store_thm(
   `_ = x ** 4 + (##4 * x3y + (##(3 + 3) * x2y2 + (xy3 + ##3 * xy3 + y ** 4)))` by rw[ring_num_add_mult] >>
   `_ = x ** 4 + (##4 * x3y + (##(3 + 3) * x2y2 + (##4 * xy3 + y ** 4)))` by rw_tac std_ss[ring_single_add_mult] >>
   `_ = x ** 4 + ##4 * x3y + ##(3 + 3) * x2y2 + ##4 * xy3 + y ** 4` by rw[ring_add_assoc] >>
-  rw_tac std_ss[DECIDE “3 + 3 = (6 :num)”]);
+  rw_tac std_ss[DECIDE “3 + 3 = (6 :num)”]
+QED
 
 (* Can also use:
     (x + y) ** 4
@@ -2394,7 +2488,8 @@ val ring_binomial_4 = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the Ring nonzero elements *)
-val ring_nonzero_def = Define `ring_nonzero (r:'a ring) = R DIFF {#0}`;
+Definition ring_nonzero_def:   ring_nonzero (r:'a ring) = R DIFF {#0}
+End
 val _ = overload_on ("R+", ``ring_nonzero r``); (* instead of R_plus *)
 
 (* use overloading for the multiplicative group *)
@@ -2410,20 +2505,22 @@ val _ = overload_on("B*", ``s*.carrier``);
 
 (* Theorem: [Ring nonzero characterization] x IN R+ = (x IN R) and x <> #0 *)
 (* Proof: by definition. *)
-val ring_nonzero_eq = store_thm(
-  "ring_nonzero_eq",
-  ``!(r:'a ring) x. x IN R+ <=> x IN R /\ x <> #0``,
-  rw[ring_nonzero_def]);
+Theorem ring_nonzero_eq:
+    !(r:'a ring) x. x IN R+ <=> x IN R /\ x <> #0
+Proof
+  rw[ring_nonzero_def]
+QED
 
 (* This export is very bad, same as conversion. *)
 (* val _ = export_rewrites ["ring_nonzero_eq"]; *)
 
 (* Theorem: x IN R+ ==> x IN R. *)
 (* Proof: by definition and IN_DIFF. *)
-val ring_nonzero_element = store_thm(
-  "ring_nonzero_element",
-  ``!(r:'a ring) x. x IN R+ ==> x IN R``,
-  rw[ring_nonzero_def]);
+Theorem ring_nonzero_element:
+    !(r:'a ring) x. x IN R+ ==> x IN R
+Proof
+  rw[ring_nonzero_def]
+QED
 
 (* This export is very bad: all goals of x IN R will trigger this and lead to prove x IN R+. *)
 (* val _ = export_rewrites ["ring_nonzero_element"]; *)
@@ -2436,10 +2533,11 @@ val ring_nonzero_element = store_thm(
    Hence x = - #0  by ring_neg_eq_swap,
    or    x = #0    by ring_neg_zero, contradicting x IN R+.
 *)
-val ring_neg_nonzero = store_thm(
-  "ring_neg_nonzero",
-  ``!r:'a ring. Ring r ==> !x. x IN R+ ==> -x IN R+``,
-  rw[ring_nonzero_eq]);
+Theorem ring_neg_nonzero:
+    !r:'a ring. Ring r ==> !x. x IN R+ ==> -x IN R+
+Proof
+  rw[ring_nonzero_eq]
+QED
 
 (* Theorem: Ring r ==> (F* = R+) *)
 (* Proof:
@@ -2451,10 +2549,11 @@ val ring_neg_nonzero = store_thm(
    = R DIFF {#0}               by ring_carriers
    = R+                        by ring_nonzero_def
 *)
-val ring_nonzero_mult_carrier = store_thm(
-  "ring_nonzero_mult_carrier",
-  ``!r:'a ring. Ring r ==> (F* = R+)``,
-  rw[excluding_def, ring_nonzero_def]);
+Theorem ring_nonzero_mult_carrier:
+    !r:'a ring. Ring r ==> (F* = R+)
+Proof
+  rw[excluding_def, ring_nonzero_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Application of Group Exponentiaton in Ring: Characteristic of Ring.       *)
@@ -2465,28 +2564,32 @@ val ring_nonzero_mult_carrier = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define characteristic of a ring *)
-val char_def = Define` char (r:'a ring) = order r.sum #1`;
+Definition char_def:   char (r:'a ring) = order r.sum #1
+End
 
 (* Theorem: ##(char r) = #0 *)
 (* Proof: by char_def, order_property. *)
-val char_property = store_thm(
-  "char_property",
-  ``!r:'a ring. ##(char r) = #0``,
-  rw_tac std_ss[char_def, order_property]);
+Theorem char_property:
+    !r:'a ring. ##(char r) = #0
+Proof
+  rw_tac std_ss[char_def, order_property]
+QED
 
 (* Theorem: char r = 0 <=> !n. 0 < n ==> ##n <> #0 *)
 (* Proof: by char_def, order_eq_0. *)
-val char_eq_0 = store_thm(
-  "char_eq_0",
-  ``!r:'a ring. (char r = 0) <=> !n. 0 < n ==> ##n <> #0``,
-  rw_tac std_ss[char_def, order_eq_0]);
+Theorem char_eq_0:
+    !r:'a ring. (char r = 0) <=> !n. 0 < n ==> ##n <> #0
+Proof
+  rw_tac std_ss[char_def, order_eq_0]
+QED
 
 (* Theorem: 0 < char r ==> !n. 0 < n /\ n < (char r) ==> ##n <> #0 *)
 (* Proof: by char_def, order_minimal. *)
-val char_minimal = store_thm(
-  "char_minimal",
-  ``!r:'a ring. 0 < char r ==> !n. 0 < n /\ n < char r ==> ##n <> #0``,
-  rw_tac std_ss[char_def, order_minimal]);
+Theorem char_minimal:
+    !r:'a ring. 0 < char r ==> !n. 0 < n /\ n < char r ==> ##n <> #0
+Proof
+  rw_tac std_ss[char_def, order_minimal]
+QED
 
 (* Theorem: FiniteRing r ==> 0 < char r *)
 (* Proof:
@@ -2496,12 +2599,13 @@ val char_minimal = store_thm(
       so 0 < order r.sum #1                    by group_order_pos
       or 0 < char r                            by char_def
 *)
-val finite_ring_char_pos = store_thm(
-  "finite_ring_char_pos",
-  ``!r:'a ring. FiniteRing r ==> 0 < char r``,
+Theorem finite_ring_char_pos:
+    !r:'a ring. FiniteRing r ==> 0 < char r
+Proof
   rpt (stripDup[FiniteRing_def]) >>
   `FiniteGroup r.sum` by rw[finite_ring_add_finite_group] >>
-  rw[group_order_pos, char_def]);
+  rw[group_order_pos, char_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Characteristic Theorems                                                   *)
@@ -2532,9 +2636,9 @@ val finite_ring_char_pos = store_thm(
    ==> p = 0                      by NOT_LT_DIVIDES
    Hence ##n = ##p = #0           by ring_num_0
 *)
-val ring_char_divides = store_thm(
-  "ring_char_divides",
-  ``!r:'a ring. Ring r ==> !n. (## n = #0) <=> (char r) divides n``,
+Theorem ring_char_divides:
+    !r:'a ring. Ring r ==> !n. (## n = #0) <=> (char r) divides n
+Proof
   rpt strip_tac >>
   `!x. x <> 0 <=>  0 < x` by decide_tac >>
   qabbrev_tac `m = char r` >>
@@ -2546,7 +2650,8 @@ val ring_char_divides = store_thm(
   `_ = ## p` by rw[] >>
   rw_tac std_ss[EQ_IMP_THM] >-
   metis_tac[char_minimal, divides_def, ADD_0] >>
-  metis_tac[divides_def, DIVIDES_ADD_2, NOT_LT_DIVIDES, ring_num_0]);
+  metis_tac[divides_def, DIVIDES_ADD_2, NOT_LT_DIVIDES, ring_num_0]
+QED
 
 (* Theorem: Ring r ==> char r = 1 iff #1 = #0  *)
 (* Proof:
@@ -2556,13 +2661,14 @@ val ring_char_divides = store_thm(
    Only-if part, (char r) divides 1  by ring_char_divides,
    hence char r = 1                  by DIVIDES_ONE.
 *)
-val ring_char_eq_1 = store_thm(
-  "ring_char_eq_1",
-  ``!r:'a ring. Ring r ==> ((char r = 1) <=> (#1 = #0))``,
+Theorem ring_char_eq_1:
+    !r:'a ring. Ring r ==> ((char r = 1) <=> (#1 = #0))
+Proof
   rw_tac std_ss [EQ_IMP_THM] >| [
     rw [GSYM char_property],
     rw [GSYM ring_char_divides, GSYM DIVIDES_ONE]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r /\ (char r = 2) ==> (- #1 = #1) *)
 (* Proof:
@@ -2572,10 +2678,11 @@ val ring_char_eq_1 = store_thm(
      i.e.           ##2 = #0     by notation
       or        #1 + #1 = #0     by ring_num_2
 *)
-val ring_char_2_property = store_thm(
-  "ring_char_2_property",
-  ``!r:'a ring. Ring r /\ (char r = 2) ==> (#1 + #1 = #0)``,
-  metis_tac[char_def, order_property, ring_num_2]);
+Theorem ring_char_2_property:
+    !r:'a ring. Ring r /\ (char r = 2) ==> (#1 + #1 = #0)
+Proof
+  metis_tac[char_def, order_property, ring_num_2]
+QED
 
 (* Theorem: Ring r /\ (char r = 2) ==> (- #1 = #1) *)
 (* Proof:
@@ -2583,10 +2690,11 @@ val ring_char_2_property = store_thm(
      and #1 IN R          by ring_one_element
    hence - #1 = #1        by ring_add_eq_zero
 *)
-val ring_char_2_neg_one = store_thm(
-  "ring_char_2_neg_one",
-  ``!r:'a ring. Ring r /\ (char r = 2) ==> (- #1 = #1)``,
-  metis_tac[ring_char_2_property, ring_add_eq_zero, ring_one_element]);
+Theorem ring_char_2_neg_one:
+    !r:'a ring. Ring r /\ (char r = 2) ==> (- #1 = #1)
+Proof
+  metis_tac[ring_char_2_property, ring_add_eq_zero, ring_one_element]
+QED
 
 (* Theorem: Ring r /\ (char r = 2) ==> !x. x IN R ==> (x + x = #0) *)
 (* Proof:
@@ -2596,23 +2704,25 @@ val ring_char_2_neg_one = store_thm(
    = #0 * x                by ring_char_2_property
    = #0                    by ring_mult_lzero
 *)
-val ring_char_2_double = store_thm(
-  "ring_char_2_double",
-  ``!r:'a ring. Ring r /\ (char r = 2) ==> !x. x IN R ==> (x + x = #0)``,
+Theorem ring_char_2_double:
+    !r:'a ring. Ring r /\ (char r = 2) ==> !x. x IN R ==> (x + x = #0)
+Proof
   rpt strip_tac >>
   `x + x = (#1 + #1) * x` by rw[] >>
   `_ = #0` by rw_tac std_ss[ring_char_2_property, ring_mult_lzero] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: Ring r /\ (char r = 2) ==> !x. x IN R ==> (-x = x) *)
 (* Proof:
      x + x = #0            by ring_char_2_double
    Hence -x = x            by ring_add_eq_zero
 *)
-val ring_neg_char_2 = store_thm(
-  "ring_neg_char_2",
-  ``!r:'a ring. Ring r /\ (char r = 2) ==> !x. x IN R ==> (-x = x)``,
-  rw[ring_char_2_double, GSYM ring_add_eq_zero]);
+Theorem ring_neg_char_2:
+    !r:'a ring. Ring r /\ (char r = 2) ==> !x. x IN R ==> (-x = x)
+Proof
+  rw[ring_char_2_double, GSYM ring_add_eq_zero]
+QED
 
 (* Theorem: Ring r /\ (char r = 2) ==> !x y. x IN R /\ y IN R ==> (x + y = x - y) *)
 (* Proof:
@@ -2620,10 +2730,11 @@ val ring_neg_char_2 = store_thm(
    = x + -y     by ring_sub_def
    = x + y      by ring_neg_char_2
 *)
-val ring_add_char_2 = store_thm(
-  "ring_add_char_2",
-  ``!r:'a ring. Ring r /\ (char r = 2) ==> !x y. x IN R /\ y IN R ==> (x + y = x - y)``,
-  rw[ring_neg_char_2]);
+Theorem ring_add_char_2:
+    !r:'a ring. Ring r /\ (char r = 2) ==> !x y. x IN R /\ y IN R ==> (x + y = x - y)
+Proof
+  rw[ring_neg_char_2]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !c. coprime c (char r) ==> ##c <> #0 *)
 (* Proof:
@@ -2634,19 +2745,21 @@ val ring_add_char_2 = store_thm(
    but coprime c n means gcd c n = 1,
    contradicting n <> 1. Hence ##c <> #0.
 *)
-val ring_num_char_coprime_nonzero = store_thm(
-  "ring_num_char_coprime_nonzero",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !c. coprime c (char r) ==> ##c <> #0``,
-  metis_tac[ring_char_eq_1, ring_char_divides, divides_iff_gcd_fix, GCD_SYM]);
+Theorem ring_num_char_coprime_nonzero:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !c. coprime c (char r) ==> ##c <> #0
+Proof
+  metis_tac[ring_char_eq_1, ring_char_divides, divides_iff_gcd_fix, GCD_SYM]
+QED
 
 (* Theorem: Ring r ==> !n. 0 < n ==>
             ((char r = n) <=> (##n = #0) /\ (!m. 0 < m /\ m < n ==> ##m <> #0)) *)
 (* Proof: by char_def, order_thm *)
-val ring_char_alt = store_thm(
-  "ring_char_alt",
-  ``!r:'a ring. Ring r ==> !n. 0 < n ==>
-   ((char r = n) <=> (##n = #0) /\ (!m. 0 < m /\ m < n ==> ##m <> #0))``,
-  rw[char_def, order_thm]);
+Theorem ring_char_alt:
+    !r:'a ring. Ring r ==> !n. 0 < n ==>
+   ((char r = n) <=> (##n = #0) /\ (!m. 0 < m /\ m < n ==> ##m <> #0))
+Proof
+  rw[char_def, order_thm]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> ((-#1 = #1) <=> (char r = 2)) *)
 (* Proof:
@@ -2660,9 +2773,9 @@ val ring_char_alt = store_thm(
    Only-if part: char r = 2 ==> -#1 = #1
       True by ring_char_2_neg_one
 *)
-val ring_neg_one_eq_one = store_thm(
-  "ring_neg_one_eq_one",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> ((-#1 = #1) <=> (char r = 2))``,
+Theorem ring_neg_one_eq_one:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> ((-#1 = #1) <=> (char r = 2))
+Proof
   rw[EQ_IMP_THM] >| [
     `##1 = #1` by rw[] >>
     `##2 = #1 + #1` by rw[GSYM ring_num_mult_small] >>
@@ -2670,7 +2783,8 @@ val ring_neg_one_eq_one = store_thm(
     `_ = #0` by rw[] >>
     rw[ring_char_alt, DECIDE``!m. 0 < m /\ m < 2 ==> (m = 1)``],
     rw[ring_char_2_neg_one]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r ==> !x. x IN R ==> !n. r.sum.exp x n = x * ##n *)
 (* Proof:
@@ -2686,13 +2800,14 @@ val ring_neg_one_eq_one = store_thm(
        = x * (#1 + ##n)            by ring_mult_radd
        = x * ##(SUC n)             by ring_num_SUC
 *)
-val ring_add_exp_eqn = store_thm(
-  "ring_add_exp_eqn",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> !n. r.sum.exp x n = x * ##n``,
+Theorem ring_add_exp_eqn:
+    !r:'a ring. Ring r ==> !x. x IN R ==> !n. r.sum.exp x n = x * ##n
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
-  rw[ring_mult_radd]);
+  rw[ring_mult_radd]
+QED
 
 (* Theorem: Ring r ==> !n m. n < char r /\ m < char r ==> (##n = ##m <=> (n = m)) *)
 (* Proof:
@@ -2704,25 +2819,27 @@ val ring_add_exp_eqn = store_thm(
          !m n. m < order r.sum x /\ n < order r.sum x ==> (r.sum.exp x m = r.sum.exp x n) ==> (m = n) : thm
    Take x = #1, apply char_def.
 *)
-val ring_num_eq = store_thm(
-  "ring_num_eq",
-  ``!r:'a ring. Ring r ==> !n m. n < char r /\ m < char r ==> ((##n = ##m) <=> (n = m))``,
+Theorem ring_num_eq:
+    !r:'a ring. Ring r ==> !n m. n < char r /\ m < char r ==> ((##n = ##m) <=> (n = m))
+Proof
   rpt strip_tac >>
   `0 < char r` by decide_tac >>
   `Group r.sum /\ (r.sum.carrier = R)` by rw[ring_add_group] >>
-  metis_tac[group_order_unique, char_def, ring_one_element]);
+  metis_tac[group_order_unique, char_def, ring_one_element]
+QED
 
 (* Theorem: Ring r /\ 0 < char r ==> !n. ##n = ##(n MOD (char r)) *)
 (* Proof:
    Note Group r.sum /\ (r.sum.carrier = R)  by ring_add_group
    The result follows                       by group_exp_mod, char_def
 *)
-val ring_num_mod = store_thm(
-  "ring_num_mod",
-  ``!r:'a ring. Ring r /\ 0 < char r ==> !n. ##n = ##(n MOD (char r))``,
+Theorem ring_num_mod:
+    !r:'a ring. Ring r /\ 0 < char r ==> !n. ##n = ##(n MOD (char r))
+Proof
   rpt strip_tac >>
   `Group r.sum` by rw[ring_add_group] >>
-  fs[Once group_exp_mod, char_def]);
+  fs[Once group_exp_mod, char_def]
+QED
 
 (* export simple result -- but this is bad! *)
 (* val _ = export_rewrites ["finite_ring_num_mod"]; *)
@@ -2741,10 +2858,10 @@ val ring_num_mod = store_thm(
    = #0 + #0                                      by char_property
    = #0                                           by ring_add_zero_zero
 *)
-val ring_num_negative = store_thm(
-  "ring_num_negative",
-  ``!r:'a ring. Ring r /\ 0 < char r ==>
-   !z:num. ?(y:'a) (x:num). (y = ##x) /\ (y + ##z = #0)``,
+Theorem ring_num_negative:
+    !r:'a ring. Ring r /\ 0 < char r ==>
+   !z:num. ?(y:'a) (x:num). (y = ##x) /\ (y + ##z = #0)
+Proof
   rpt strip_tac >>
   qabbrev_tac `n = char r` >>
   `(z = z DIV n * n + z MOD n) /\ z MOD n < n` by rw[DIVISION] >>
@@ -2758,7 +2875,8 @@ val ring_num_negative = store_thm(
   `_ = ##n + ##(z DIV n) * ##n` by rw[GSYM ring_num_mult] >>
   `_ = #0 + #0` by rw[char_property, Abbr`n`] >>
   `_ = #0` by rw[] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: Ring r /\ (char r = 0) ==> INFINITE R *)
 (* Proof:
@@ -2767,10 +2885,11 @@ val ring_num_negative = store_thm(
     ==> 0 < char r                            by finite_ring_char_pos
    This contradicts char r = 0.
 *)
-val ring_char_0 = store_thm(
-  "ring_char_0",
-  ``!r:'a ring. Ring r /\ (char r = 0) ==> INFINITE R``,
-  metis_tac[finite_ring_char_pos, FiniteRing_def, NOT_ZERO_LT_ZERO]);
+Theorem ring_char_0:
+    !r:'a ring. Ring r /\ (char r = 0) ==> INFINITE R
+Proof
+  metis_tac[finite_ring_char_pos, FiniteRing_def, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: Ring r /\ (char r = 1) ==> (R = {#0}) *)
 (* Proof:
@@ -2780,13 +2899,14 @@ val ring_char_0 = store_thm(
      <=> #1 = #0                by ring_num_1
      <=> R = {#0}               by ring_one_eq_zero
 *)
-val ring_char_1 = store_thm(
-  "ring_char_1",
-  ``!r:'a ring. Ring r /\ (char r = 1) ==> (R = {#0})``,
+Theorem ring_char_1:
+    !r:'a ring. Ring r /\ (char r = 1) ==> (R = {#0})
+Proof
   rpt strip_tac >>
   `##(order r.sum #1) = #0` by rw[order_property] >>
   `#1 = #0` by metis_tac[char_def, ring_num_1] >>
-  rw[GSYM ring_one_eq_zero]);
+  rw[GSYM ring_one_eq_zero]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Ring.                                                              *)
@@ -2794,10 +2914,11 @@ val ring_char_1 = store_thm(
 
 (* Theorem: FiniteRing r ==> Ring r *)
 (* Proof: by FiniteRing_def *)
-val finite_ring_is_ring = store_thm(
-  "finite_ring_is_ring",
-  ``!r:'a ring. FiniteRing r ==> Ring r``,
-  rw[FiniteRing_def]);
+Theorem finite_ring_is_ring:
+    !r:'a ring. FiniteRing r ==> Ring r
+Proof
+  rw[FiniteRing_def]
+QED
 
 (* Theorem: FiniteRing r ==> 0 < CARD R *)
 (* Proof:
@@ -2807,13 +2928,14 @@ val finite_ring_is_ring = store_thm(
     then CARD R <> 0                           by CARD_EQ_0
       or 0 < CARD R                            by NOT_ZERO_LT_ZERO
 *)
-val finite_ring_card_pos = store_thm(
-  "finite_ring_card_pos",
-  ``!r:'a ring. FiniteRing r ==> 0 < CARD R``,
+Theorem finite_ring_card_pos:
+    !r:'a ring. FiniteRing r ==> 0 < CARD R
+Proof
   rw[FiniteRing_def] >>
   `#0 IN R` by rw[] >>
   `CARD R <> 0` by metis_tac[CARD_EQ_0, MEMBER_NOT_EMPTY] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: FiniteRing r ==> ((CARD R = 1) <=> (#1 = #0)) *)
 (* Proof:
@@ -2827,12 +2949,13 @@ val finite_ring_card_pos = store_thm(
       #1 = #0 ==> R = {#0}                     by ring_one_eq_zero
               ==> CARD R = 1                   by CARD_SING
 *)
-val finite_ring_card_eq_1 = store_thm(
-  "finite_ring_card_eq_1",
-  ``!r:'a ring. FiniteRing r ==> ((CARD R = 1) <=> (#1 = #0))``,
+Theorem finite_ring_card_eq_1:
+    !r:'a ring. FiniteRing r ==> ((CARD R = 1) <=> (#1 = #0))
+Proof
   rw[FiniteRing_def, EQ_IMP_THM] >-
   metis_tac[SING_IFF_CARD1, SING_DEF, IN_SING, ring_one_element, ring_zero_element] >>
-  metis_tac[ring_one_eq_zero, CARD_SING]);
+  metis_tac[ring_one_eq_zero, CARD_SING]
+QED
 
 (* Theorem: FiniteRing r ==> 0 < char r /\ (char r = order r.sum #1) *)
 (* Proof:
@@ -2842,12 +2965,13 @@ val finite_ring_card_eq_1 = store_thm(
       so 0 < order r.sum #1                    by group_order_pos
       or 0 < char r /\ (char r = order r.sum #1)   by char_def
 *)
-val finite_ring_char = store_thm(
-  "finite_ring_char",
-  ``!r:'a ring. FiniteRing r ==> (0 < char r) /\ (char r = order r.sum #1)``,
+Theorem finite_ring_char:
+    !r:'a ring. FiniteRing r ==> (0 < char r) /\ (char r = order r.sum #1)
+Proof
   (strip_tac >> stripDup[FiniteRing_def]) >>
   `FiniteGroup r.sum` by rw[finite_ring_add_finite_group] >>
-  rw[group_order_pos, char_def]);
+  rw[group_order_pos, char_def]
+QED
 
 (* Theorem: FiniteRing r ==> (char r) divides (CARD R) *)
 (* Proof:
@@ -2858,12 +2982,13 @@ val finite_ring_char = store_thm(
       so (order r.sum #1) divides (CARD R)     by group_order_divides
       or (char r) divides (CARD R)             by char_def
 *)
-val finite_ring_char_divides = store_thm(
-  "finite_ring_char_divides",
-  ``!r:'a ring. FiniteRing r ==> (char r) divides (CARD R)``,
+Theorem finite_ring_char_divides:
+    !r:'a ring. FiniteRing r ==> (char r) divides (CARD R)
+Proof
   rpt (stripDup[FiniteRing_def]) >>
   `FiniteGroup r.sum` by rw[finite_ring_add_finite_group] >>
-  metis_tac[group_order_divides, char_def, ring_one_element, ring_carriers]);
+  metis_tac[group_order_divides, char_def, ring_one_element, ring_carriers]
+QED
 
 (* Theorem: FiniteRing r /\ prime (CARD R) ==> (char r = CARD R) *)
 (* Proof:
@@ -2877,15 +3002,16 @@ val finite_ring_char_divides = store_thm(
       which makes prime (CARD R) = F,
            but (char r = CARD R) = T.
 *)
-val finite_ring_card_prime = store_thm(
-  "finite_ring_card_prime",
-  ``!r:'a ring. FiniteRing r /\ prime (CARD R) ==> (char r = CARD R)``,
+Theorem finite_ring_card_prime:
+    !r:'a ring. FiniteRing r /\ prime (CARD R) ==> (char r = CARD R)
+Proof
   rpt (stripDup[FiniteRing_def]) >>
   `char r divides CARD R` by rw[finite_ring_char_divides] >>
   `(char r = CARD R) \/ (char r = 1)` by metis_tac[prime_def] >>
   `#1 = #0` by rw[GSYM ring_char_eq_1] >>
   `R = {#0}` by rw[GSYM ring_one_eq_zero] >>
-  rw[]);
+  rw[]
+QED
 
 (* Note: the converse is false:
    Counter-example for: char r = CARD R ==> prime (CARD R)
@@ -2899,13 +3025,14 @@ val finite_ring_card_prime = store_thm(
    Note FiniteRing r ==> 0 < char r     by finite_ring_char_pos
    Hence true by ring_char_alt
 *)
-val finite_ring_char_alt = store_thm(
-  "finite_ring_char_alt",
-  ``!r:'a ring. FiniteRing r ==>
-   !n. (char r = n) <=> 0 < n /\ (##n = #0) /\ (!m. 0 < m /\ m < n ==> ##m <> #0)``,
+Theorem finite_ring_char_alt:
+    !r:'a ring. FiniteRing r ==>
+   !n. (char r = n) <=> 0 < n /\ (##n = #0) /\ (!m. 0 < m /\ m < n ==> ##m <> #0)
+Proof
   rpt (stripDup[FiniteRing_def]) >>
   `0 < char r` by rw[finite_ring_char_pos] >>
-  metis_tac[ring_char_alt]);
+  metis_tac[ring_char_alt]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Ring Units Documentation                                                  *)
@@ -2975,17 +3102,19 @@ val _ = overload_on ("R*", ``r*.carrier``); (* instead of R_star *)
 
 (* Theorem: r*.op = r.prod.op /\ r*.id = #1 *)
 (* Proof: by ring_of_units, and Invertibles_def *)
-val ring_units_property = store_thm(
-  "ring_units_property",
-  ``!r:'a ring. Ring r ==> (r*.op = r.prod.op) /\ (r*.id = #1)``,
-  rw_tac std_ss[Invertibles_def]);
+Theorem ring_units_property:
+    !r:'a ring. Ring r ==> (r*.op = r.prod.op) /\ (r*.id = #1)
+Proof
+  rw_tac std_ss[Invertibles_def]
+QED
 
 (* Theorem: #1 IN R* *)
 (* Proof: by monoid_id_invertible. *)
-val ring_units_has_one = store_thm(
-  "ring_units_has_one",
-  ``!r:'a ring. Ring r ==> #1 IN R*``,
-  rw[ring_mult_monoid, Invertibles_def]);
+Theorem ring_units_has_one:
+    !r:'a ring. Ring r ==> #1 IN R*
+Proof
+  rw[ring_mult_monoid, Invertibles_def]
+QED
 
 (* Theorem: #0 IN R* ==> #1 = #0 *)
 (* Proof:
@@ -2995,15 +3124,16 @@ val ring_units_has_one = store_thm(
    Only-if part: #1 = #0 ==> #0 IN R*
       true ring_units_has_one.
 *)
-val ring_units_has_zero = store_thm(
-  "ring_units_has_zero",
-  ``!r:'a ring. Ring r ==> (#0 IN R* <=> (#1 = #0))``,
+Theorem ring_units_has_zero:
+    !r:'a ring. Ring r ==> (#0 IN R* <=> (#1 = #0))
+Proof
   rw_tac std_ss[EQ_IMP_THM] >| [
     `Monoid r.prod /\ (r.prod.carrier = R)` by rw_tac std_ss[ring_mult_monoid] >>
     `R* = monoid_invertibles r.prod` by rw_tac std_ss[Invertibles_def] >>
     metis_tac[ring_mult_lzero, monoid_inv_from_invertibles],
     metis_tac[ring_units_has_one]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r ==> x IN R* ==> x IN R *)
 (* Proof:
@@ -3013,10 +3143,11 @@ val ring_units_has_zero = store_thm(
    ==> x IN r.prod.carrier                    by monoid_invertibles
    ==> x IN R                                 by ring_carriers
 *)
-val ring_units_element = store_thm(
-  "ring_units_element",
-  ``!r:'a ring. Ring r ==> !x. x IN R* ==> x IN R``,
-  rw[Invertibles_def, monoid_invertibles_def]);
+Theorem ring_units_element:
+    !r:'a ring. Ring r ==> !x. x IN R* ==> x IN R
+Proof
+  rw[Invertibles_def, monoid_invertibles_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Units in a Ring form a Group.                                             *)
@@ -3024,10 +3155,11 @@ val ring_units_element = store_thm(
 
 (* Theorem: Ring r ==> Group r* *)
 (* Proof: by monoid_invertibles_is_group, ring_mult_monoid. *)
-val ring_units_group = store_thm(
-  "ring_units_group",
-  ``!r:'a ring. Ring r ==> Group r*``,
-  rw[monoid_invertibles_is_group, ring_mult_monoid]);
+Theorem ring_units_group:
+    !r:'a ring. Ring r ==> Group r*
+Proof
+  rw[monoid_invertibles_is_group, ring_mult_monoid]
+QED
 
 (* Theorem: Units of Ring is an Abelian Group. *)
 (* Proof: by checking definition.
@@ -3038,11 +3170,12 @@ val ring_units_group = store_thm(
        r*.op = r.prod.op      by ring_units_property
        Hence true             by ring_mult_monoid
 *)
-val ring_units_abelain_group = store_thm(
-  "ring_units_abelain_group",
-  ``!r:'a ring. Ring r ==> AbelianGroup r*``,
+Theorem ring_units_abelain_group:
+    !r:'a ring. Ring r ==> AbelianGroup r*
+Proof
   rw[AbelianGroup_def, ring_units_group] >>
-  rw[ring_units_element, ring_mult_monoid, ring_units_property]);
+  rw[ring_units_element, ring_mult_monoid, ring_units_property]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Units in a Ring have inverses.                                            *)
@@ -3057,10 +3190,11 @@ val _ = overload_on ("unit", ``\x. x IN R*``);
 
 (* Theorem: #1 IN R* *)
 (* Proof: by monoid_id_invertible. *)
-val ring_unit_one = store_thm(
-  "ring_unit_one",
-  ``!r:'a ring. Ring r ==> unit #1``,
-  rw[ring_mult_monoid, Invertibles_def]);
+Theorem ring_unit_one:
+    !r:'a ring. Ring r ==> unit #1
+Proof
+  rw[ring_mult_monoid, Invertibles_def]
+QED
 
 (* export simple result *)
 val _ = export_rewrites ["ring_unit_one"];
@@ -3073,22 +3207,24 @@ val _ = export_rewrites ["ring_unit_one"];
    Only-if part: #1 = #0 ==> #0 IN R*
       True by ring_unit_one.
 *)
-val ring_unit_zero = store_thm(
-  "ring_unit_zero",
-  ``!r:'a ring. Ring r ==> (unit #0 <=> (#1 = #0))``,
+Theorem ring_unit_zero:
+    !r:'a ring. Ring r ==> (unit #0 <=> (#1 = #0))
+Proof
   rw[EQ_IMP_THM] >| [
     `Monoid r.prod /\ (r.prod.carrier = R)` by rw[ring_mult_monoid] >>
     `R* = monoid_invertibles r.prod` by rw[Invertibles_def] >>
     metis_tac[ring_mult_lzero, monoid_inv_from_invertibles],
     metis_tac[ring_unit_one]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !x. unit x ==> x <> #0 *)
 (* Proof: by ring_unit_zero: |- !r. Ring r ==> (unit #0 <=> (#1 = #0)) *)
-val ring_unit_nonzero = store_thm(
-  "ring_unit_nonzero",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !x. unit x ==> x <> #0``,
-  metis_tac[ring_unit_zero]);
+Theorem ring_unit_nonzero:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !x. unit x ==> x <> #0
+Proof
+  metis_tac[ring_unit_zero]
+QED
 
 (*
 group_inv_element |> SPEC ``r*``;
@@ -3146,10 +3282,11 @@ val _ = export_rewrites ["ring_unit_element"];
 
 (* Theorem: x IN R* ==> |/ x IN R *)
 (* Proof: by ring_unit_has_inv, ring_unit_element. *)
-val ring_unit_inv_element = store_thm(
-  "ring_unit_inv_element",
-  ``!r:'a ring. Ring r ==> !x. unit x ==> |/ x IN R``,
-  rw[ring_unit_has_inv]);
+Theorem ring_unit_inv_element:
+    !r:'a ring. Ring r ==> !x. unit x ==> |/ x IN R
+Proof
+  rw[ring_unit_has_inv]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !x. unit x ==> |/ x <> #0 *)
 (* Proof:
@@ -3159,10 +3296,11 @@ val ring_unit_inv_element = store_thm(
         = #0               by ring_mult_rzero
    This contradicts #1 <> #0.
 *)
-val ring_unit_inv_nonzero = store_thm(
-  "ring_unit_inv_nonzero",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !x. unit x ==> |/ x <> #0``,
-  metis_tac[ring_unit_rinv, ring_mult_rzero, ring_unit_element]);
+Theorem ring_unit_inv_nonzero:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !x. unit x ==> |/ x <> #0
+Proof
+  metis_tac[ring_unit_rinv, ring_mult_rzero, ring_unit_element]
+QED
 
 (* Theorem: x IN R*, y IN R, x * y = #0 <=> y = #0 *)
 (* Proof:
@@ -3172,16 +3310,17 @@ val ring_unit_inv_nonzero = store_thm(
    <=>            #1 * y = #0               by ring_unit_linv
    <=>                 y = #0               by ring_mult_lone
 *)
-val ring_unit_mult_zero = store_thm(
-  "ring_unit_mult_zero",
-  ``!r:'a ring. Ring r ==> !x y. unit x /\ y IN R ==> ((x * y = #0) <=> (y = #0))``,
+Theorem ring_unit_mult_zero:
+    !r:'a ring. Ring r ==> !x y. unit x /\ y IN R ==> ((x * y = #0) <=> (y = #0))
+Proof
   rpt strip_tac >>
   `x IN R` by rw[] >>
   rw[EQ_IMP_THM] >>
   `|/x IN R` by rw[ring_unit_inv_element] >>
   `y = #1 * y` by rw[] >>
   `_ = ( |/x * x) * y` by rw[ring_unit_linv] >>
-  metis_tac[ring_mult_assoc, ring_mult_rzero]);
+  metis_tac[ring_mult_assoc, ring_mult_rzero]
+QED
 
 (* Theorem: Ring r ==> !u. unit u <=> ?v. u * v = #1 *)
 (* Proof:
@@ -3192,14 +3331,15 @@ val ring_unit_mult_zero = store_thm(
                              = x IN r*.carrier
                              = x IN (Invertibles (r.prod)).carrier
 *)
-val ring_unit_property = store_thm(
-  "ring_unit_property",
-  ``!r:'a ring. Ring r ==> !u. unit u <=> u IN R /\ (?v. v IN R /\ (u * v = #1))``,
+Theorem ring_unit_property:
+    !r:'a ring. Ring r ==> !u. unit u <=> u IN R /\ (?v. v IN R /\ (u * v = #1))
+Proof
   rw[EQ_IMP_THM] >-
   metis_tac[ring_unit_inv_element, ring_unit_rinv] >>
   `r.prod.carrier = R` by rw[ring_mult_monoid] >>
   rw_tac std_ss[Invertibles_def, monoid_invertibles_def, GSPECIFICATION] >>
-  metis_tac[ring_mult_comm]);
+  metis_tac[ring_mult_comm]
+QED
 
 (* Theorem: Ring r ==> !x. unit x ==> unit (-x) *)
 (* Proof:
@@ -3210,10 +3350,11 @@ val ring_unit_property = store_thm(
    Since -v IN R                               by ring_neg_element
    Hence unit (-x)                             by ring_unit_property
 *)
-val ring_unit_neg = store_thm(
-  "ring_unit_neg",
-  ``!r:'a ring. Ring r ==> !x. unit x ==> unit (-x)``,
-  metis_tac[ring_unit_property, ring_mult_neg_neg, ring_neg_element]);
+Theorem ring_unit_neg:
+    !r:'a ring. Ring r ==> !x. unit x ==> unit (-x)
+Proof
+  metis_tac[ring_unit_property, ring_mult_neg_neg, ring_neg_element]
+QED
 
 (* Theorem: Ring r ==> !u v. unit u /\ unit v ==> unit (u * v) *)
 (* Proof:
@@ -3227,9 +3368,9 @@ val ring_unit_neg = store_thm(
        = #1                         by ring_unit_rinv
    Hence unit (u * v)               by ring_unit_property
 *)
-val ring_unit_mult_unit = store_thm(
-  "ring_unit_mult_unit",
-  ``!r:'a ring. Ring r ==> !u v. unit u /\ unit v ==> unit (u * v)``,
+Theorem ring_unit_mult_unit:
+    !r:'a ring. Ring r ==> !u v. unit u /\ unit v ==> unit (u * v)
+Proof
   rpt strip_tac >>
   qabbrev_tac `z = |/ v * |/ u` >>
   `u IN R /\ v IN R` by rw[ring_unit_element] >>
@@ -3240,7 +3381,8 @@ val ring_unit_mult_unit = store_thm(
   `_ = u * (v * |/ v * |/ u)` by rw[ring_mult_assoc] >>
   `_ = u * |/ u` by rw[ring_unit_rinv] >>
   `_ = #1` by rw[ring_unit_rinv] >>
-  metis_tac[ring_unit_property, ring_mult_element]);
+  metis_tac[ring_unit_property, ring_mult_element]
+QED
 
 (* Theorem: Ring r ==> !x y. x IN R /\ y IN R ==>
             (unit (x * y) <=> unit x /\ unit y) *)
@@ -3259,10 +3401,10 @@ val ring_unit_mult_unit = store_thm(
    Only-if part: unit x /\ unit y ==> unit (x * y)
       This is true         by ring_unit_mult_unit
 *)
-val ring_unit_mult_eq_unit = store_thm(
-  "ring_unit_mult_eq_unit",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==>
-    (unit (x * y) <=> unit x /\ unit y)``,
+Theorem ring_unit_mult_eq_unit:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==>
+    (unit (x * y) <=> unit x /\ unit y)
+Proof
   rpt strip_tac >>
   simp[EQ_IMP_THM] >>
   ntac 2 strip_tac >| [
@@ -3272,7 +3414,8 @@ val ring_unit_mult_eq_unit = store_thm(
     `y * (u * x) = #1` by rw[GSYM ring_mult_assoc, ring_mult_comm, Abbr`z`] >>
     metis_tac[ring_unit_property, ring_mult_element],
     rw[ring_unit_mult_unit]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r ==> unit u /\ u * v = #1 ==> v = |/ u *)
 (* Proof:
@@ -3282,29 +3425,32 @@ val ring_unit_mult_eq_unit = store_thm(
                #1 * v = |/ u * #1   by ring_unit_linv
                     v = |/ u        by ring_mult_lone, ring_mult_rone
 *)
-val ring_unit_rinv_unique = store_thm(
-  "ring_unit_rinv_unique",
-  ``!r:'a ring. Ring r ==> !u v. unit u /\ v IN R /\ (u * v = #1) ==> (v = |/ u)``,
+Theorem ring_unit_rinv_unique:
+    !r:'a ring. Ring r ==> !u v. unit u /\ v IN R /\ (u * v = #1) ==> (v = |/ u)
+Proof
   rpt strip_tac >>
   `u IN R /\ |/ u IN R` by rw[ring_unit_inv_element] >>
   `v = ( |/u * u) * v` by rw[ring_unit_linv] >>
   `_ = |/ u * (u * v)` by rw[ring_mult_assoc] >>
   `_ = |/ u` by rw[] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: Ring r ==> unit v /\ u * v = #1 ==> u = |/ v *)
 (* Proof: by ring_unit_rinv_unique and ring_mult_comm. *)
-val ring_unit_linv_unique = store_thm(
-  "ring_unit_linv_unique",
-  ``!r:'a ring. Ring r ==> !u v. u IN R /\ unit v /\ (u * v = #1) ==> (u = |/ v)``,
-  rw[ring_unit_rinv_unique, ring_mult_comm]);
+Theorem ring_unit_linv_unique:
+    !r:'a ring. Ring r ==> !u v. u IN R /\ unit v /\ (u * v = #1) ==> (u = |/ v)
+Proof
+  rw[ring_unit_rinv_unique, ring_mult_comm]
+QED
 
 (* Theorem: Ring r ==> unit u ==> |/ ( |/ u) = u *)
 (* Proof: by ring_unit_rinv_unique, put v = |/ u. *)
-val ring_unit_inv_inv = store_thm(
-  "ring_unit_inv_inv",
-  ``!r:'a ring. Ring r ==> !u. unit u ==> (u = |/ ( |/ u))``,
-  rw[ring_unit_inv_element, ring_unit_has_inv, ring_unit_linv, ring_unit_rinv_unique]);
+Theorem ring_unit_inv_inv:
+    !r:'a ring. Ring r ==> !u. unit u ==> (u = |/ ( |/ u))
+Proof
+  rw[ring_unit_inv_element, ring_unit_has_inv, ring_unit_linv, ring_unit_rinv_unique]
+QED
 
 (* Theorem: Ring r ==> unit u /\ |/ u * v = #1 ==> u = v *)
 (* Proof:
@@ -3314,21 +3460,23 @@ val ring_unit_inv_inv = store_thm(
    or           #1 * v = u * #1   by ring_unit_rinv
    or                v = u        by ring_mult_lone, ring_mult_rone
 *)
-val ring_unit_linv_inv = store_thm(
-  "ring_unit_linv_inv",
-  ``!r:'a ring. Ring r ==> !u v. unit u /\ v IN R /\ ( |/ u * v = #1) ==> (u = v)``,
+Theorem ring_unit_linv_inv:
+    !r:'a ring. Ring r ==> !u v. unit u /\ v IN R /\ ( |/ u * v = #1) ==> (u = v)
+Proof
   rpt strip_tac >>
   `u IN R /\ |/ u IN R` by rw[ring_unit_inv_element] >>
   `u = (u * |/ u) * v` by rw[ring_mult_assoc] >>
   `_ = v` by rw[ring_unit_rinv] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: Ring r ==> unit v /\ u * |/ v = #1 ==> u = v *)
 (* Proof: by ring_unit_linv_inv and ring_mult_comm. *)
-val ring_unit_rinv_inv = store_thm(
-  "ring_unit_rinv_inv",
-  ``!r:'a ring. Ring r ==> !u v. u IN R /\ unit v /\ (u * |/ v = #1) ==> (u = v)``,
-  metis_tac[ring_unit_linv_inv, ring_mult_comm, ring_unit_inv_element]);
+Theorem ring_unit_rinv_inv:
+    !r:'a ring. Ring r ==> !u v. u IN R /\ unit v /\ (u * |/ v = #1) ==> (u = v)
+Proof
+  metis_tac[ring_unit_linv_inv, ring_mult_comm, ring_unit_inv_element]
+QED
 
 (* Theorem: Ring r ==> ( |/ #1 = #1) *)
 (* Proof:
@@ -3337,13 +3485,14 @@ val ring_unit_rinv_inv = store_thm(
    Thus r*.inv r*.id = r*.id    by group_inv_id
      or        |/ #1 = #1       by notation
 *)
-val ring_inv_one = store_thm(
-  "ring_inv_one",
-  ``!r:'a ring. Ring r ==> ( |/ #1 = #1)``,
+Theorem ring_inv_one:
+    !r:'a ring. Ring r ==> ( |/ #1 = #1)
+Proof
   rpt strip_tac >>
   `Group r*` by rw[ring_units_group] >>
   `r*.id = #1` by rw[ring_units_property] >>
-  metis_tac[group_inv_id]);
+  metis_tac[group_inv_id]
+QED
 
 (* export simple theorem *)
 val _ = export_rewrites ["ring_inv_one"];
@@ -3646,26 +3795,29 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* A function f from r to s is a homomorphism if ring properties are preserved. *)
-val RingHomo_def = Define`
+Definition RingHomo_def:
   RingHomo f (r:'a ring) (s:'b ring) <=>
      (!x. x IN r.carrier ==> f x IN s.carrier) /\
      GroupHomo f (r.sum) (s.sum) /\
      MonoidHomo f (r.prod) (s.prod)
-`;
+End
 
 (* A function f from r to s is an isomorphism if f is a bijective homomorphism. *)
-val RingIso_def = Define `
+Definition RingIso_def:
   RingIso f r s <=> RingHomo f r s /\ BIJ f r.carrier s.carrier
-`;
+End
 
 (* A ring homomorphism from r to r is an endomorphism. *)
-val RingEndo_def = Define `RingEndo f r <=> RingHomo f r r`;
+Definition RingEndo_def:   RingEndo f r <=> RingHomo f r r
+End
 
 (* A ring isomorphism from r to r is an automorphism. *)
-val RingAuto_def = Define `RingAuto f r <=> RingIso f r r`;
+Definition RingAuto_def:   RingAuto f r <=> RingIso f r r
+End
 
 (* A subring s of r if identity is a homomorphism from s to r *)
-val subring_def = Define `subring s r <=> RingHomo I s r`;
+Definition subring_def:   subring s r <=> RingHomo I s r
+End
 
 (* Overloads for Homomorphism and Isomorphisms with map *)
 val _ = overload_on("~r~", ``\(r:'a ring) (r_:'b ring) f. Ring r /\ Ring r_ /\ RingHomo f r r_``);
@@ -3709,10 +3861,11 @@ val _ = overload_on("-_", ``neg_``); (* becomes $-_ *)
    RingHomo f r r_ ==> GroupHomo f r.sum r_.sum  by RingHomo_def
    Hence true by group_homo_id.
 *)
-val ring_homo_zero = store_thm(
-  "ring_homo_zero",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> (f #0 = #0_)``,
-  rw_tac std_ss[ring_add_group, RingHomo_def, group_homo_id]);
+Theorem ring_homo_zero:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> (f #0 = #0_)
+Proof
+  rw_tac std_ss[ring_add_group, RingHomo_def, group_homo_id]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> (f #1 = #1_) *)
 (* Proof:
@@ -3721,62 +3874,69 @@ val ring_homo_zero = store_thm(
    RingHomo f r r_ ==> MonoidHomo f r.prod r_.prod  by RingHomo_def
    Hence true by MonoidHomo_def.
 *)
-val ring_homo_one = store_thm(
-  "ring_homo_one",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> (f #1 = #1_)``,
-  rw_tac std_ss[ring_mult_monoid, RingHomo_def, MonoidHomo_def]);
+Theorem ring_homo_one:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> (f #1 = #1_)
+Proof
+  rw_tac std_ss[ring_mult_monoid, RingHomo_def, MonoidHomo_def]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> (f #0 = #0_) /\ (f #1 = #1_) *)
 (* Proof: by ring_homo_zero, ring_homo_one *)
-val ring_homo_ids = store_thm(
-  "ring_homo_ids",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> (f #0 = #0_) /\ (f #1 = #1_)``,
-  rw_tac std_ss[ring_homo_zero, ring_homo_one]);
+Theorem ring_homo_ids:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> (f #0 = #0_) /\ (f #1 = #1_)
+Proof
+  rw_tac std_ss[ring_homo_zero, ring_homo_one]
+QED
 
 (* export simple result *)
 val _ = export_rewrites ["ring_homo_ids"];
 
 (* Theorem: RingHomo f r r_ ==> !x. x IN R ==> f x IN R_ *)
 (* Proof: by RingHomo_def *)
-val ring_homo_element = store_thm(
-  "ring_homo_element",
-  ``!(r:'a ring) (r_:'b ring) f. RingHomo f r r_ ==> !x. x IN R ==> f x IN R_``,
-  rw[RingHomo_def]);
+Theorem ring_homo_element:
+    !(r:'a ring) (r_:'b ring) f. RingHomo f r r_ ==> !x. x IN R ==> f x IN R_
+Proof
+  rw[RingHomo_def]
+QED
 
 (* Theorem: Ring r /\ RingHomo f r r_ ==>
             !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y)) /\ (f (x * y) = (f x) *_ (f y)) *)
 (* Proof: by definitions. *)
-val ring_homo_property = store_thm(
-  "ring_homo_property",
-  ``!(r:'a ring) (r_:'b ring) f. Ring r /\ RingHomo f r r_ ==>
-    !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y)) /\ (f (x * y) = (f x) *_ (f y))``,
-  rw[RingHomo_def, GroupHomo_def, MonoidHomo_def]);
+Theorem ring_homo_property:
+    !(r:'a ring) (r_:'b ring) f. Ring r /\ RingHomo f r r_ ==>
+    !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y)) /\ (f (x * y) = (f x) *_ (f y))
+Proof
+  rw[RingHomo_def, GroupHomo_def, MonoidHomo_def]
+QED
 
 (* Theorem: Ring r /\ Ring r_ /\ (!x. x IN R ==> (f1 x = f2 x)) ==> (RingHomo f1 r r_ = RingHomo f2 r r_) *)
 (* Proof: by RingHomo_def, ring_add_group, group_homo_cong, ring_mult_monoid, monoid_homo_cong *)
-val ring_homo_cong = store_thm(
-  "ring_homo_cong",
-  ``!(r:'a ring) (r_:'b ring) f1 f2. Ring r /\ Ring r_ /\ (!x. x IN R ==> (f1 x = f2 x)) ==>
-                (RingHomo f1 r r_ = RingHomo f2 r r_)``,
+Theorem ring_homo_cong:
+    !(r:'a ring) (r_:'b ring) f1 f2. Ring r /\ Ring r_ /\ (!x. x IN R ==> (f1 x = f2 x)) ==>
+                (RingHomo f1 r r_ = RingHomo f2 r r_)
+Proof
   rw_tac std_ss[RingHomo_def, EQ_IMP_THM] >-
   metis_tac[ring_add_group, group_homo_cong] >-
   metis_tac[ring_mult_monoid, monoid_homo_cong] >-
   metis_tac[ring_add_group, group_homo_cong] >>
-  metis_tac[ring_mult_monoid, monoid_homo_cong]);
+  metis_tac[ring_mult_monoid, monoid_homo_cong]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y)) *)
 (* Proof: by ring_homo_property. *)
-val ring_homo_add = store_thm(
-  "ring_homo_add",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y))``,
-  rw[ring_homo_property]);
+Theorem ring_homo_add:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y))
+Proof
+  rw[ring_homo_property]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !x y. x IN R /\ y IN R ==> (f (x * y) = (f x) *_ (f y)) *)
 (* Proof: by ring_homo_property. *)
-val ring_homo_mult = store_thm(
-  "ring_homo_mult",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !x y. x IN R /\ y IN R ==> (f (x * y) = (f x) *_ (f y))``,
-  rw[ring_homo_property]);
+Theorem ring_homo_mult:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !x y. x IN R /\ y IN R ==> (f (x * y) = (f x) *_ (f y))
+Proof
+  rw[ring_homo_property]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !x. x IN R ==> (f (-x) = $-_ (f x)) *)
 (* Proof:
@@ -3785,10 +3945,11 @@ val ring_homo_mult = store_thm(
    RingHomo f r r_ ==> GroupHomo f r.sum r_.sum    by RingHomo_def
    Hence true                                      by group_homo_inv
 *)
-val ring_homo_neg = store_thm(
-  "ring_homo_neg",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !x. x IN R ==> (f (-x) = $-_ (f x))``,
-  rw[ring_add_group, RingHomo_def, group_homo_inv]);
+Theorem ring_homo_neg:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !x. x IN R ==> (f (-x) = $-_ (f x))
+Proof
+  rw[ring_add_group, RingHomo_def, group_homo_inv]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !x y. x IN R /\ y IN R ==> (f (x - y) = (f x) -_ (f y)) *)
 (* Proof:
@@ -3798,10 +3959,11 @@ val ring_homo_neg = store_thm(
      = (f x) +_ ($-_ (f y))    by ring_homo_neg
      = (f x) -_ (f y)          by ring_sub_def
 *)
-val ring_homo_sub = store_thm(
-  "ring_homo_sub",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !x y. x IN R /\ y IN R ==> (f (x - y) = (f x) -_ (f y))``,
-  metis_tac[ring_sub_def, ring_homo_add, ring_homo_neg, ring_neg_element]);
+Theorem ring_homo_sub:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !x y. x IN R /\ y IN R ==> (f (x - y) = (f x) -_ (f y))
+Proof
+  metis_tac[ring_sub_def, ring_homo_add, ring_homo_neg, ring_neg_element]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !n. f ##n = ##_ #1_ n *)
 (* Proof:
@@ -3819,16 +3981,17 @@ val ring_homo_sub = store_thm(
    = #1_ +_ (##_ #1_ n)    by induction hypothesis
    = ##_ #1_ (SUC n)       by ring_num_SUC
 *)
-val ring_homo_num = store_thm(
-  "ring_homo_num",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !n. f ##n = ##_ #1_ n``,
+Theorem ring_homo_num:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !n. f ##n = ##_ #1_ n
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
   `f (##(SUC n)) = f (#1 + ##n)` by rw[] >>
   `_ = (f #1) +_ (f ##n)` by rw[ring_homo_property] >>
   `_ = #1_ +_ (f ##n)` by metis_tac[ring_homo_one] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !x. x IN R ==> !n. f (x ** n) = (f x) **_ n *)
 (* Proof:
@@ -3845,15 +4008,16 @@ val ring_homo_num = store_thm(
    = (f x) *_ (f x **_ n)        by induction hypothesis
    = (f x) **_ SUC n             by ring_exp_SUC
 *)
-val ring_homo_exp = store_thm(
-  "ring_homo_exp",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !x. x IN R ==> !n. f (x ** n) = (f x) **_ n``,
+Theorem ring_homo_exp:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !x. x IN R ==> !n. f (x ** n) = (f x) **_ n
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
   `f (x ** SUC n) = f (x * x ** n)` by rw[] >>
   `_ = (f x) *_ (f (x ** n))` by rw[ring_homo_property] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: If two rings r and s have a ring homomorphism, then (char s) divides (char f).
             (r ~r~ r_) f ==> (char r_) divides (char r) *)
@@ -3866,14 +4030,15 @@ val ring_homo_exp = store_thm(
    or ##_ #1_ n = #0_       by ring_homo_num, ring_homo_zero
    and result follows       by ring_char_divides.
 *)
-val ring_homo_char_divides = store_thm(
-  "ring_homo_char_divides",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> (char r_) divides (char r)``,
+Theorem ring_homo_char_divides:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> (char r_) divides (char r)
+Proof
   rpt strip_tac >>
   Cases_on `char r = 0` >-
   rw_tac std_ss[ALL_DIVIDES_0] >>
   `0 < char r` by decide_tac >>
-  metis_tac[char_property, ring_homo_num, ring_homo_zero, ring_char_divides]);
+  metis_tac[char_property, ring_homo_num, ring_homo_zero, ring_char_divides]
+QED
 
 (* Theorem: RingHomo I r r *)
 (* Proof:
@@ -3881,10 +4046,11 @@ val ring_homo_char_divides = store_thm(
    (1) GroupHomo I r.sum r.sum, true by group_homo_I_refl
    (2) GroupHomo I f* f*, true by group_homo_I_refl
 *)
-val ring_homo_I_refl = store_thm(
-  "ring_homo_I_refl",
-  ``!r:'a ring. RingHomo I r r``,
-  rw_tac std_ss[RingHomo_def, group_homo_I_refl, monoid_homo_I_refl]);
+Theorem ring_homo_I_refl:
+    !r:'a ring. RingHomo I r r
+Proof
+  rw_tac std_ss[RingHomo_def, group_homo_I_refl, monoid_homo_I_refl]
+QED
 
 (* Theorem: RingHomo f1 r s /\ RingHomo f2 s t ==> RingHomo f2 o f1 r t *)
 (* Proof:
@@ -3894,13 +4060,14 @@ val ring_homo_I_refl = store_thm(
    (2) MonoidHomo f1 r.prod s.prod /\ MonoidHomo f2 s.prod t.pro ==> MonoidHomo (f2 o f1) r.prod t.prod
        True by monoid_homo_trans.
 *)
-val ring_homo_trans = store_thm(
-  "ring_homo_trans",
-  ``!(r:'a ring) (s:'b ring) (t:'c ring). !f1 f2. RingHomo f1 r s /\ RingHomo f2 s t ==> RingHomo (f2 o f1) r t``,
+Theorem ring_homo_trans:
+    !(r:'a ring) (s:'b ring) (t:'c ring). !f1 f2. RingHomo f1 r s /\ RingHomo f2 s t ==> RingHomo (f2 o f1) r t
+Proof
   rw_tac std_ss[RingHomo_def] >| [
     metis_tac[group_homo_trans],
     metis_tac[monoid_homo_trans]
-  ]);
+  ]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ BIJ f R R_ ==> RingHomo (LINV f R) r_ r *)
 (* Proof:
@@ -3922,9 +4089,9 @@ val ring_homo_trans = store_thm(
          and Ring r_ ==> r_.prod.carrier = R_        by ring_mult_monoid
        Hence MonoidHomo (LINV f R) r_.prod r.prod    by monoid_homo_sym
 *)
-val ring_homo_sym = store_thm(
-  "ring_homo_sym",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ BIJ f R R_ ==> RingHomo (LINV f R) r_ r``,
+Theorem ring_homo_sym:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ BIJ f R R_ ==> RingHomo (LINV f R) r_ r
+Proof
   rpt strip_tac >>
   `BIJ (LINV f R) R_ R` by rw[BIJ_LINV_BIJ] >>
   fs[RingHomo_def] >>
@@ -3935,7 +4102,8 @@ val ring_homo_sym = store_thm(
   metis_tac[group_homo_sym]) >>
   `Monoid r.prod /\ (r.prod.carrier = R)` by rw[ring_mult_monoid] >>
   `r_.prod.carrier = R_` by rw[ring_mult_monoid] >>
-  metis_tac[monoid_homo_sym]);
+  metis_tac[monoid_homo_sym]
+QED
 
 Theorem ring_homo_sym_any:
   Ring r /\ Ring s /\ RingHomo f r s /\
@@ -3966,13 +4134,14 @@ QED
    (2) MonoidHomo f1 r.prod s.prod /\ MonoidHomo f2 s.prod t.prod ==> MonoidHomo (f2 o f1) r.prod t.prod
        True by monoid_homo_compose
 *)
-val ring_homo_compose = store_thm(
-  "ring_homo_compose",
-  ``!(r:'a ring) (s:'b ring) (t:'c ring).
-   !f1 f2. RingHomo f1 r s /\ RingHomo f2 s t ==> RingHomo (f2 o f1) r t``,
+Theorem ring_homo_compose:
+    !(r:'a ring) (s:'b ring) (t:'c ring).
+   !f1 f2. RingHomo f1 r s /\ RingHomo f2 s t ==> RingHomo (f2 o f1) r t
+Proof
   rw_tac std_ss[RingHomo_def] >-
   metis_tac[group_homo_compose] >>
-  metis_tac[monoid_homo_compose]);
+  metis_tac[monoid_homo_compose]
+QED
 (* This is the same as ring_homo_trans *)
 
 (* Theorem: (r ~r~ r_) f /\  /\ BIJ f R R_ ==> RingHomo (LINV f R) r_ r *)
@@ -3993,13 +4162,14 @@ val ring_homo_compose = store_thm(
         ==> MonoidIso f r.prod r_.prod             by MonoidIso_def, BIJ f R R_
        Thus MonoidHomo (LINV f R) r_.prod r.prod   by monoid_iso_linv_iso
 *)
-val ring_homo_linv_homo = store_thm(
-  "ring_homo_linv_homo",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ BIJ f R R_ ==> RingHomo (LINV f R) r_ r``,
+Theorem ring_homo_linv_homo:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ BIJ f R R_ ==> RingHomo (LINV f R) r_ r
+Proof
   rw_tac std_ss[RingHomo_def] >-
   metis_tac[BIJ_LINV_ELEMENT] >-
   metis_tac[group_iso_linv_iso, ring_add_group, ring_carriers, GroupIso_def] >>
-  metis_tac[monoid_iso_linv_iso, ring_mult_monoid, ring_carriers, MonoidIso_def]);
+  metis_tac[monoid_iso_linv_iso, ring_mult_monoid, ring_carriers, MonoidIso_def]
+QED
 (* This is the same as ring_homo_sym, direct proof. *)
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==> !x. x IN R ==> ((f x = #0_) <=> (x = #0)) *)
@@ -4011,10 +4181,11 @@ val ring_homo_linv_homo = store_thm(
    Only-if part: x = #0 ==> f x = #0_
       True                 by ring_homo_zero
 *)
-val ring_homo_eq_zero = store_thm(
-  "ring_homo_eq_zero",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> !x. x IN R ==> ((f x = #0_) <=> (x = #0))``,
-  metis_tac[ring_homo_zero, INJ_DEF, ring_zero_element]);
+Theorem ring_homo_eq_zero:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> !x. x IN R ==> ((f x = #0_) <=> (x = #0))
+Proof
+  metis_tac[ring_homo_zero, INJ_DEF, ring_zero_element]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ (#1 = #0) ==> (#1_ = #0_) *)
 (* Proof:
@@ -4022,10 +4193,11 @@ val ring_homo_eq_zero = store_thm(
      and f #0 = #0_     by ring_homo_zero
    Hence #1_ = #0_
 *)
-val ring_homo_one_eq_zero = store_thm(
-  "ring_homo_one_eq_zero",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ (#1 = #0) ==> (#1_ = #0_)``,
-  metis_tac[ring_homo_one, ring_homo_zero]);
+Theorem ring_homo_one_eq_zero:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ (#1 = #0) ==> (#1_ = #0_)
+Proof
+  metis_tac[ring_homo_one, ring_homo_zero]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !c:num. 0 < c /\ c < char r_ ==> ##c <> #0 /\ ##_ #1_ c <> #0_ *)
 (* Proof:
@@ -4049,10 +4221,10 @@ val ring_homo_one_eq_zero = store_thm(
             so (char r_) <= c               by DIVIDES_LE, 0 < c.
        This is a contradiction with given c < (char r_).
 *)
-val ring_homo_sum_num_property = store_thm(
-  "ring_homo_sum_num_property",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
-   !c:num. 0 < c /\ c < char r_ ==> ##c <> #0 /\ ##_ #1_ c <> #0_``,
+Theorem ring_homo_sum_num_property:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
+   !c:num. 0 < c /\ c < char r_ ==> ##c <> #0 /\ ##_ #1_ c <> #0_
+Proof
   rpt strip_tac >| [
     `(char r) divides c` by rw[GSYM ring_char_divides] >>
     `(char r) <= c` by rw[DIVIDES_LE] >>
@@ -4065,7 +4237,8 @@ val ring_homo_sum_num_property = store_thm(
     `(char r_) divides c` by rw[GSYM ring_char_divides] >>
     `(char r_) <= c` by rw[DIVIDES_LE] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !c:num. 0 < c /\ c < char r_ ==>  ##c <> #0 /\ f (##c) <> #0_ *)
 (* Proof:
@@ -4075,11 +4248,12 @@ val ring_homo_sum_num_property = store_thm(
    = ##_ #1_ c      by ring_homo_num
    <> #0_           by above
 *)
-val ring_homo_num_nonzero = store_thm(
-  "ring_homo_num_nonzero",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
-   !c:num. 0 < c /\ c < char r_ ==>  ##c <> #0 /\ f (##c) <> #0_``,
-  metis_tac[ring_homo_num, ring_homo_sum_num_property]);
+Theorem ring_homo_num_nonzero:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
+   !c:num. 0 < c /\ c < char r_ ==>  ##c <> #0 /\ f (##c) <> #0_
+Proof
+  metis_tac[ring_homo_num, ring_homo_sum_num_property]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !x. unit x ==> unit_ (f x) *)
 (* Proof:
@@ -4093,9 +4267,9 @@ val ring_homo_num_nonzero = store_thm(
    = (f x) *_ (f ( |/ x))      by ring_homo_property
    Hence true                  by ring_unit_property
 *)
-val ring_homo_unit = store_thm(
-  "ring_homo_unit",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !x. unit x ==> unit_ (f x)``,
+Theorem ring_homo_unit:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !x. unit x ==> unit_ (f x)
+Proof
   rpt strip_tac >>
   `x IN R` by rw[ring_unit_element] >>
   `|/ x IN R` by rw[ring_unit_inv_element] >>
@@ -4103,7 +4277,8 @@ val ring_homo_unit = store_thm(
   `#1_ = f #1` by rw[ring_homo_one] >>
   `_ = f (x * |/ x)` by rw[ring_unit_rinv] >>
   `_ = (f x) *_ (f ( |/ x))` by rw[ring_homo_property] >>
-  metis_tac[ring_unit_property]);
+  metis_tac[ring_unit_property]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==> !x. unit x ==> (f x) <> #0_ *)
 (* Proof:
@@ -4111,10 +4286,11 @@ val ring_homo_unit = store_thm(
    Since unit x ==> f x IN (Invertibles r_.prod).carrier   by ring_homo_unit
    But this contradicts the given #1_ <> #0_               by ring_unit_zero
 *)
-val ring_homo_unit_nonzero = store_thm(
-  "ring_homo_unit_nonzero",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !x. unit x ==> (f x) <> #0_``,
-  metis_tac[ring_homo_unit, ring_unit_zero]);
+Theorem ring_homo_unit_nonzero:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !x. unit x ==> (f x) <> #0_
+Proof
+  metis_tac[ring_homo_unit, ring_unit_zero]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !x. unit x ==> |/_ (f x) = f ( |/ x) *)
 (* Proof:
@@ -4129,9 +4305,9 @@ val ring_homo_unit_nonzero = store_thm(
    Since unit_ (f x)           by ring_homo_unit
    Hence |/_ (f x) = f ( |/x)  by ring_unit_rinv_unique
 *)
-val ring_homo_unit_inv = store_thm(
-  "ring_homo_unit_inv",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !x. unit x ==> |/_ (f x) = f ( |/ x)``,
+Theorem ring_homo_unit_inv:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !x. unit x ==> |/_ (f x) = f ( |/ x)
+Proof
   rpt strip_tac >>
   `x IN R` by rw[ring_unit_element] >>
   `|/ x IN R` by rw[ring_unit_inv_element] >>
@@ -4139,28 +4315,31 @@ val ring_homo_unit_inv = store_thm(
   `(f x) *_ (f ( |/ x)) = f (x * |/x)` by rw[ring_homo_property] >>
   `_ = f #1` by rw[ring_unit_rinv] >>
   `_ = #1_` by rw[ring_homo_one] >>
-  metis_tac[ring_homo_unit, ring_unit_rinv_unique]);
+  metis_tac[ring_homo_unit, ring_unit_rinv_unique]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !x. unit x ==> |/_ (f x) IN R_ *)
 (* Proof:
    Note unit_ (f x)        by ring_homo_unit
    Thus |/_ (f x) IN R_    by ring_unit_inv_element
 *)
-val ring_homo_unit_inv_element = store_thm(
-  "ring_homo_unit_inv_element",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !x. unit x ==> |/_ (f x) IN R_``,
-  metis_tac[ring_homo_unit, ring_unit_inv_element]);
+Theorem ring_homo_unit_inv_element:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !x. unit x ==> |/_ (f x) IN R_
+Proof
+  metis_tac[ring_homo_unit, ring_unit_inv_element]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==> !x. unit x ==> |/_ (f x) <> #0_ *)
 (* Proof:
    Note unit_ (f x)        by ring_homo_unit
    Thus |/_ (f x) <> #0_   by ring_unit_inv_nonzero
 *)
-val ring_homo_unit_inv_nonzero = store_thm(
-  "ring_homo_unit_inv_nonzero",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
-   !x. unit x ==> |/_ (f x) <> #0_``,
-  metis_tac[ring_homo_unit, ring_unit_inv_nonzero]);
+Theorem ring_homo_unit_inv_nonzero:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
+   !x. unit x ==> |/_ (f x) <> #0_
+Proof
+  metis_tac[ring_homo_unit, ring_unit_inv_nonzero]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !x. unit x ==> (f ( |/ x) = |/_ (f x)) *)
 (* Proof:
@@ -4175,9 +4354,9 @@ val ring_homo_unit_inv_nonzero = store_thm(
    Since unit_ (f x)                      by ring_homo_unit
    Hence f ( |/ x) = |/_ (f x)            by ring_unit_rinv_unique
 *)
-val ring_homo_inv = store_thm(
-  "ring_homo_inv",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !x. unit x ==> (f ( |/ x) = |/_ (f x))``,
+Theorem ring_homo_inv:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !x. unit x ==> (f ( |/ x) = |/_ (f x))
+Proof
   rpt strip_tac >>
   `x IN R` by rw[ring_unit_element] >>
   `|/ x IN R` by rw[ring_unit_inv_element] >>
@@ -4186,7 +4365,8 @@ val ring_homo_inv = store_thm(
   `_ = f (x * |/ x)` by rw[ring_unit_rinv] >>
   `_ = (f x) *_ (f ( |/ x))` by rw[ring_homo_property] >>
   `unit_ (f x)` by metis_tac[ring_homo_unit] >>
-  rw[ring_unit_rinv_unique]);
+  rw[ring_unit_rinv_unique]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Ring Isomorphisms.                                                        *)
@@ -4194,43 +4374,48 @@ val ring_homo_inv = store_thm(
 
 (* Theorem: (r =r= r_) f ==> (f #0 = #0_) *)
 (* Proof: by RingIso_def, ring_homo_zero *)
-val ring_iso_zero = store_thm(
-  "ring_iso_zero",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> (f #0 = #0_)``,
-  rw[RingIso_def]);
+Theorem ring_iso_zero:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> (f #0 = #0_)
+Proof
+  rw[RingIso_def]
+QED
 
 (* Theorem: (r =r= r_) f ==> (f #1 = #1_) *)
 (* Proof: by RingIso_def, ring_homo_zero *)
-val ring_iso_one = store_thm(
-  "ring_iso_one",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> (f #1 = #1_)``,
-  rw[RingIso_def]);
+Theorem ring_iso_one:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> (f #1 = #1_)
+Proof
+  rw[RingIso_def]
+QED
 
 (* Theorem: (r =r= r_) f ==> (f #0 = #0_) /\ (f #1 = #1_) *)
 (* Proof: by ring_iso_zero, ring_iso_one. *)
-val ring_iso_ids = store_thm(
-  "ring_iso_ids",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> (f #0 = #0_) /\ (f #1 = #1_)``,
-  rw_tac std_ss[ring_iso_zero, ring_iso_one]);
+Theorem ring_iso_ids:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> (f #0 = #0_) /\ (f #1 = #1_)
+Proof
+  rw_tac std_ss[ring_iso_zero, ring_iso_one]
+QED
 
 (* export simple result *)
 val _ = export_rewrites ["ring_iso_ids"];
 
 (* Theorem: RingIso f r r_ ==> !x. x IN R ==> f x IN R_ *)
 (* Proof: by RingIso_def, ring_homo_element *)
-val ring_iso_element = store_thm(
-  "ring_iso_element",
-  ``!(r:'a ring) (r_:'b ring) f. RingIso f r r_ ==> !x. x IN R ==> f x IN R_``,
-  metis_tac[RingIso_def, ring_homo_element]);
+Theorem ring_iso_element:
+    !(r:'a ring) (r_:'b ring) f. RingIso f r r_ ==> !x. x IN R ==> f x IN R_
+Proof
+  metis_tac[RingIso_def, ring_homo_element]
+QED
 
 (* Theorem: Ring r /\ RingIso f r r_ ==>
             !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y)) /\ (f (x * y) = (f x) *_ (f y)) *)
 (* Proof: by RingIso_def, ring_homo_property *)
-val ring_iso_property = store_thm(
-  "ring_iso_property",
-  ``!(r:'a ring) (r_:'b ring) f. Ring r /\ RingIso f r r_ ==>
-    !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y)) /\ (f (x * y) = (f x) *_ (f y))``,
-  rw[RingIso_def, ring_homo_property]);
+Theorem ring_iso_property:
+    !(r:'a ring) (r_:'b ring) f. Ring r /\ RingIso f r r_ ==>
+    !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y)) /\ (f (x * y) = (f x) *_ (f y))
+Proof
+  rw[RingIso_def, ring_homo_property]
+QED
 
 (* Theorem: Ring r /\ Ring r_ /\ (!x. x IN R ==> (f1 x = f2 x)) ==> (RingIso f1 r r_ <=> RingIso f2 r r_) *)
 (* Proof:
@@ -4247,10 +4432,10 @@ val ring_iso_property = store_thm(
       (3) MonoidHomo f1 r_.prod r.prod, true  by MonoidHomo_def
       (4) BIJ f2 R R_ ==> BIJ f1 R R), true   by BIJ_DEF, INJ_DEF, SURJ_DEF
 *)
-val ring_iso_cong = store_thm(
-  "ring_iso_cong",
-  ``!(r:'a ring) (r_:'b ring) f1 f2. Ring r /\ Ring r_ /\ (!x. x IN R ==> (f1 x = f2 x)) ==>
-        (RingIso f1 r r_ <=> RingIso f2 r r_)``,
+Theorem ring_iso_cong:
+    !(r:'a ring) (r_:'b ring) f1 f2. Ring r /\ Ring r_ /\ (!x. x IN R ==> (f1 x = f2 x)) ==>
+        (RingIso f1 r r_ <=> RingIso f2 r r_)
+Proof
   rw_tac std_ss[EQ_IMP_THM] >| [
     fs[RingIso_def, RingHomo_def] >>
     rpt strip_tac >-
@@ -4267,49 +4452,56 @@ val ring_iso_cong = store_thm(
     fs[MonoidHomo_def] >>
     fs[BIJ_DEF, INJ_DEF, SURJ_DEF] >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Theorem: (r =r= r_) f ==> !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y)) *)
 (* Proof: by RingIso_def, ring_homo_add *)
-val ring_iso_add = store_thm(
-  "ring_iso_add",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y))``,
-  rw[RingIso_def, ring_homo_add]);
+Theorem ring_iso_add:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y))
+Proof
+  rw[RingIso_def, ring_homo_add]
+QED
 
 (* Theorem: (r =r= r_) f ==> !x y. x IN R /\ y IN R ==> (f (x * y) = (f x) *_ (f y)) *)
 (* Proof: by RingIso_def, ring_homo_mult *)
-val ring_iso_mult = store_thm(
-  "ring_iso_mult",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !x y. x IN R /\ y IN R ==> (f (x * y) = (f x) *_ (f y))``,
-  rw[RingIso_def, ring_homo_mult]);
+Theorem ring_iso_mult:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !x y. x IN R /\ y IN R ==> (f (x * y) = (f x) *_ (f y))
+Proof
+  rw[RingIso_def, ring_homo_mult]
+QED
 
 (* Theorem: (r =r= r_) f ==> !x. x IN R ==> (f (-x) = $-_ (f x)) *)
 (* Proof: by RingIso_def, ring_homo_neg *)
-val ring_iso_neg = store_thm(
-  "ring_iso_neg",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !x. x IN R ==> (f (-x) = $-_ (f x))``,
-  rw[RingIso_def, ring_homo_neg]);
+Theorem ring_iso_neg:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !x. x IN R ==> (f (-x) = $-_ (f x))
+Proof
+  rw[RingIso_def, ring_homo_neg]
+QED
 
 (* Theorem: (r =r= r_) f ==> !x y. x IN R /\ y IN R ==> (f (x - y) = (f x) -_ (f y)) *)
 (* Proof: by RingIso_def, ring_homo_sub *)
-val ring_iso_sub = store_thm(
-  "ring_iso_sub",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !x y. x IN R /\ y IN R ==> (f (x - y) = (f x) -_ (f y))``,
-  rw[RingIso_def, ring_homo_sub]);
+Theorem ring_iso_sub:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !x y. x IN R /\ y IN R ==> (f (x - y) = (f x) -_ (f y))
+Proof
+  rw[RingIso_def, ring_homo_sub]
+QED
 
 (* Theorem: (r =r= r_) f ==> !n. f (##n) = ##_ #1_ n *)
 (* Proof: by RingIso_def, ring_homo_num *)
-val ring_iso_num = store_thm(
-  "ring_iso_num",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !n. f (##n) = ##_ #1_ n``,
-  rw[RingIso_def, ring_homo_num]);
+Theorem ring_iso_num:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !n. f (##n) = ##_ #1_ n
+Proof
+  rw[RingIso_def, ring_homo_num]
+QED
 
 (* Theorem: (r =r= r_) f ==> !x. x IN R ==> !n. f (x ** n) = (f x) **_ n *)
 (* Proof: by RingIso_def, ring_homo_exp *)
-val ring_iso_exp = store_thm(
-  "ring_iso_exp",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !x. x IN R ==> !n. f (x ** n) = (f x) **_ n``,
-  rw[RingIso_def, ring_homo_exp]);
+Theorem ring_iso_exp:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !x. x IN R ==> !n. f (x ** n) = (f x) **_ n
+Proof
+  rw[RingIso_def, ring_homo_exp]
+QED
 
 (* Theorem: RingIso I r r *)
 (* Proof:
@@ -4317,10 +4509,11 @@ val ring_iso_exp = store_thm(
    (1) RingHomo I r r, true by ring_homo_I_refl
    (2) BIJ I R R, true      by BIJ_I_SAME
 *)
-val ring_iso_I_refl = store_thm(
-  "ring_iso_I_refl",
-  ``!r:'a ring. RingIso I r r``,
-  rw[RingIso_def, ring_homo_I_refl, BIJ_I_SAME]);
+Theorem ring_iso_I_refl:
+    !r:'a ring. RingIso I r r
+Proof
+  rw[RingIso_def, ring_homo_I_refl, BIJ_I_SAME]
+QED
 
 (* Theorem: RingIso f1 r s /\ RingIso f2 s t ==> RingIso (f2 o f1) r t *)
 (* Proof:
@@ -4330,12 +4523,13 @@ val ring_iso_I_refl = store_thm(
    (2) BIJ f1 R s.carrier /\ BIJ f2 s.carrier t.carrier ==> BIJ (f2 o f1) R t.carrier
        True by BIJ_COMPOSE.
 *)
-val ring_iso_trans = store_thm(
-  "ring_iso_trans",
-  ``!(r:'a ring) (s:'b ring) (t:'c ring). !f1 f2. RingIso f1 r s /\ RingIso f2 s t ==> RingIso (f2 o f1) r t``,
+Theorem ring_iso_trans:
+    !(r:'a ring) (s:'b ring) (t:'c ring). !f1 f2. RingIso f1 r s /\ RingIso f2 s t ==> RingIso (f2 o f1) r t
+Proof
   rw[RingIso_def] >-
   metis_tac[ring_homo_trans] >>
-  metis_tac[BIJ_COMPOSE]);
+  metis_tac[BIJ_COMPOSE]
+QED
 (* This is the same as ring_iso_trans. *)
 
 (* Theorem: (r =r= r_) f ==> RingIso (LINV f R) r_ r *)
@@ -4344,10 +4538,11 @@ val ring_iso_trans = store_thm(
    (1) RingHomo f r r_ /\ BIJ f R R_ ==> RingHomo (LINV f R) r_ r, true  by ring_homo_sym
    (2) BIJ f R R_ ==> BIJ (LINV f R) R_ R, true                          by BIJ_LINV_BIJ
 *)
-val ring_iso_sym = store_thm(
-  "ring_iso_sym",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> RingIso (LINV f R) r_ r``,
-  rw[RingIso_def, ring_homo_sym, BIJ_LINV_BIJ]);
+Theorem ring_iso_sym:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> RingIso (LINV f R) r_ r
+Proof
+  rw[RingIso_def, ring_homo_sym, BIJ_LINV_BIJ]
+QED
 
 Theorem ring_iso_sym_any:
   Ring r /\ Ring s /\ RingIso f r s /\
@@ -4371,13 +4566,14 @@ QED
    (2) BIJ f1 R s.carrier /\ BIJ f2 s.carrier t.carrier ==> BIJ (f2 o f1) R t.carrier
        True by BIJ_COMPOSE
 *)
-val ring_iso_compose = store_thm(
-  "ring_iso_compose",
-  ``!(r:'a ring) (s:'b ring) (t:'c ring).
-   !f1 f2. RingIso f1 r s /\ RingIso f2 s t ==> RingIso (f2 o f1) r t``,
+Theorem ring_iso_compose:
+    !(r:'a ring) (s:'b ring) (t:'c ring).
+   !f1 f2. RingIso f1 r s /\ RingIso f2 s t ==> RingIso (f2 o f1) r t
+Proof
   rw_tac std_ss[RingIso_def] >-
   metis_tac[ring_homo_compose] >>
-  metis_tac[BIJ_COMPOSE]);
+  metis_tac[BIJ_COMPOSE]
+QED
 
 (* Theorem: Ring r /\ Ring r_ /\ RingIso f r r_ ==> RingIso (LINV f R) r_ r *)
 (* Proof:
@@ -4399,22 +4595,24 @@ val ring_iso_compose = store_thm(
    (4) BIJ f R R_ ==> BIJ (LINV f R) R_ R
        True by BIJ_LINV_BIJ
 *)
-val ring_iso_linv_iso = store_thm(
-  "ring_iso_linv_iso",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> RingIso (LINV f R) r_ r``,
+Theorem ring_iso_linv_iso:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> RingIso (LINV f R) r_ r
+Proof
   rw_tac std_ss[RingIso_def, RingHomo_def] >-
   metis_tac[BIJ_LINV_ELEMENT] >-
   metis_tac[group_iso_linv_iso, ring_add_group, ring_carriers, GroupIso_def] >-
   metis_tac[monoid_iso_linv_iso, ring_mult_monoid, ring_carriers, MonoidIso_def] >>
-  rw_tac std_ss[BIJ_LINV_BIJ]);
+  rw_tac std_ss[BIJ_LINV_BIJ]
+QED
 (* This is the same as ring_iso_sym, direct proof. *)
 
 (* Theorem: (r =r= r_) f ==> !x. x IN R ==> ((f x = #0_) <=> (x = #0)) *)
 (* Proof: by ring_homo_eq_zero, RingIso_def, BIJ_DEF *)
-val ring_iso_eq_zero = store_thm(
-  "ring_iso_eq_zero",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !x. x IN R ==> ((f x = #0_) <=> (x = #0))``,
-  rw_tac std_ss[ring_homo_eq_zero, RingIso_def, BIJ_DEF]);
+Theorem ring_iso_eq_zero:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !x. x IN R ==> ((f x = #0_) <=> (x = #0))
+Proof
+  rw_tac std_ss[ring_homo_eq_zero, RingIso_def, BIJ_DEF]
+QED
 
 (* Theorem: RingIso f r r_ /\ FINITE R ==> (CARD R = CARD R_ *)
 (* Proof:
@@ -4422,10 +4620,11 @@ val ring_iso_eq_zero = store_thm(
       so FINITE R ==> FINITE R_   by BIJ_FINITE
     thus CARD R = CARD R_         by FINITE_BIJ_CARD_EQ
 *)
-val ring_iso_card_eq = store_thm(
-  "ring_iso_card_eq",
-  ``!(r:'a ring) (r_:'b ring) f. RingIso f r r_ /\ FINITE R ==> (CARD R = CARD R_)``,
-  metis_tac[RingIso_def, BIJ_FINITE, FINITE_BIJ_CARD_EQ]);
+Theorem ring_iso_card_eq:
+    !(r:'a ring) (r_:'b ring) f. RingIso f r r_ /\ FINITE R ==> (CARD R = CARD R_)
+Proof
+  metis_tac[RingIso_def, BIJ_FINITE, FINITE_BIJ_CARD_EQ]
+QED
 
 (* Theorem: (r =r= r_) f ==> (char r_ = char r) *)
 (* Proof:
@@ -4434,27 +4633,30 @@ val ring_iso_card_eq = store_thm(
     and (char r) divides (char r_)  by RingIso_def, ring_homo_char_divides
     ==> char r_ = char r            by DIVIDES_ANTISYM
 *)
-val ring_iso_char_eq = store_thm(
-  "ring_iso_char_eq",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> (char r_ = char r)``,
-  metis_tac[ring_iso_sym, DIVIDES_ANTISYM, RingIso_def, ring_homo_char_divides]);
+Theorem ring_iso_char_eq:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> (char r_ = char r)
+Proof
+  metis_tac[ring_iso_sym, DIVIDES_ANTISYM, RingIso_def, ring_homo_char_divides]
+QED
 
 (* Theorem: (r =r= r_) f ==> BIJ f R R_ *)
 (* Proof: by RingIso_def *)
-val ring_iso_bij = store_thm(
-  "ring_iso_bij",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> BIJ f R R_``,
-  rw_tac std_ss[RingIso_def]);
+Theorem ring_iso_bij:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> BIJ f R R_
+Proof
+  rw_tac std_ss[RingIso_def]
+QED
 
 (* Theorem: (r =r= r_) f ==> !x. unit x ==> unit_ (f x) *)
 (* Proof:
    Note RingIso f r r_ ==> RingHomo f r r_   by RingIso_def
    Thus !x. unit x ==> unit_ (f x)           by ring_homo_unit
 *)
-val ring_iso_unit = store_thm(
-  "ring_iso_unit",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !x. unit x ==> unit_ (f x)``,
-  metis_tac[ring_homo_unit, RingIso_def]);
+Theorem ring_iso_unit:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !x. unit x ==> unit_ (f x)
+Proof
+  metis_tac[ring_homo_unit, RingIso_def]
+QED
 
 (* Theorem: (r =r= r_) f ==> !x. x IN R+ ==> !x. x IN R+ ==> (f x) IN R+_ *)
 (* Proof:
@@ -4465,10 +4667,11 @@ val ring_iso_unit = store_thm(
     and x <> #0 ==> f x <> #0_                  by ring_iso_eq_zero
      so (f x) IN R+_                            by ring_nonzero_eq
 *)
-val ring_iso_nonzero = store_thm(
-  "ring_iso_nonzero",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !x. x IN R+ ==> (f x) IN R+_``,
-  metis_tac[ring_nonzero_eq, ring_iso_element, ring_iso_eq_zero]);
+Theorem ring_iso_nonzero:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !x. x IN R+ ==> (f x) IN R+_
+Proof
+  metis_tac[ring_nonzero_eq, ring_iso_element, ring_iso_eq_zero]
+QED
 
 (* Theorem: (r =r= r_) f ==> !x. unit x ==> (f ( |/ x) = |/_ (f x)) *)
 (* Proof:
@@ -4477,10 +4680,11 @@ val ring_iso_nonzero = store_thm(
    ==> Ring r /\ Ring r_ /\ RingdHomo f r r_   by RingIso_def
    ==> f ( |/ x) = |/_ (f x)                   by ring_homo_inv, unit x
 *)
-val ring_iso_inv = store_thm(
-  "ring_iso_inv",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !x. unit x ==> (f ( |/ x) = |/_ (f x))``,
-  rw[RingIso_def, ring_homo_inv]);
+Theorem ring_iso_inv:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !x. unit x ==> (f ( |/ x) = |/_ (f x))
+Proof
+  rw[RingIso_def, ring_homo_inv]
+QED
 
 (* Theorem: (r =r= r_) f ==> !x. x IN R ==> ((f x = #1_) <=> (x = #1)) *)
 (* Proof:
@@ -4491,34 +4695,38 @@ val ring_iso_inv = store_thm(
    Only-if part: x = #1 ==> f x = #1_
       True by ring_iso_one
 *)
-val ring_iso_eq_one = store_thm(
-  "ring_iso_eq_one",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !x. x IN R ==> ((f x = #1_) <=> (x = #1))``,
-  prove_tac[ring_iso_one, RingIso_def, BIJ_DEF, INJ_DEF, ring_one_element]);
+Theorem ring_iso_eq_one:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !x. x IN R ==> ((f x = #1_) <=> (x = #1))
+Proof
+  prove_tac[ring_iso_one, RingIso_def, BIJ_DEF, INJ_DEF, ring_one_element]
+QED
 
 (* Theorem: (r =r= r_) f ==> !y. y IN R_ ==> (LINV f R y) IN R /\ (y = f (LINV f R y)) *)
 (* Proof: by RingIso_def, BIJ_DEF, BIJ_LINV_ELEMENT, BIJ_LINV_INV *)
-val ring_iso_inverse_element = store_thm(
-  "ring_iso_inverse_element",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !y. y IN R_ ==> (LINV f R y) IN R /\ (y = f (LINV f R y))``,
-  metis_tac[RingIso_def, BIJ_DEF, BIJ_LINV_ELEMENT, BIJ_LINV_INV]);
+Theorem ring_iso_inverse_element:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !y. y IN R_ ==> (LINV f R y) IN R /\ (y = f (LINV f R y))
+Proof
+  metis_tac[RingIso_def, BIJ_DEF, BIJ_LINV_ELEMENT, BIJ_LINV_INV]
+QED
 
 (* Theorem: (r =r= r_) f ==> !y. y IN R_ ==> ?x. x IN R /\ (y = f x) *)
 (* Proof: by ring_iso_inverse_element *)
-val ring_iso_inverse = store_thm(
-  "ring_iso_inverse",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !y. y IN R_ ==> ?x. x IN R /\ (y = f x)``,
-  metis_tac[ring_iso_inverse_element]);
+Theorem ring_iso_inverse:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !y. y IN R_ ==> ?x. x IN R /\ (y = f x)
+Proof
+  metis_tac[ring_iso_inverse_element]
+QED
 
 (* Theorem: (r =r= r_) f ==> !x y. x IN R /\ y IN R ==> ((f x = f y) <=> (x = y)) *)
 (* Proof:
    Note INJ R R_                   by RingIso_def, BIJ_DEF
    Hence (f x = f y) <=> (x = y)   by INJ_DEF
 *)
-val ring_iso_element_unique = store_thm(
-  "ring_iso_element_unique",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !x y. x IN R /\ y IN R ==> ((f x = f y) <=> (x = y))``,
-  prove_tac[RingIso_def, BIJ_DEF, INJ_DEF]);
+Theorem ring_iso_element_unique:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !x y. x IN R /\ y IN R ==> ((f x = f y) <=> (x = y))
+Proof
+  prove_tac[RingIso_def, BIJ_DEF, INJ_DEF]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Ring Automorphisms.                                                       *)
@@ -4526,45 +4734,51 @@ val ring_iso_element_unique = store_thm(
 
 (* Theorem: Ring r /\ RingAuto f r ==> (f #0 = #0) *)
 (* Proof: by RingAuto_def, ring_iso_zero *)
-val ring_auto_zero = store_thm(
-  "ring_auto_zero",
-  ``!(r:'a ring) f. Ring r /\ RingAuto f r ==> (f #0 = #0)``,
-  rw_tac std_ss[RingAuto_def, ring_iso_zero]);
+Theorem ring_auto_zero:
+    !(r:'a ring) f. Ring r /\ RingAuto f r ==> (f #0 = #0)
+Proof
+  rw_tac std_ss[RingAuto_def, ring_iso_zero]
+QED
 
 (* Theorem: Ring r /\ RingAuto f r ==> (f #1 = #1) *)
 (* Proof: by RingAuto_def, ring_iso_one *)
-val ring_auto_one = store_thm(
-  "ring_auto_one",
-  ``!(r:'a ring) f. Ring r /\ RingAuto f r ==> (f #1 = #1)``,
-  rw_tac std_ss[RingAuto_def, ring_iso_one]);
+Theorem ring_auto_one:
+    !(r:'a ring) f. Ring r /\ RingAuto f r ==> (f #1 = #1)
+Proof
+  rw_tac std_ss[RingAuto_def, ring_iso_one]
+QED
 
 (* Theorem: Ring r /\ RingAuto f r ==> (f #0 = #0) /\ (f #1 = #1) *)
 (* Proof: by ring_auto_zero, ring_auto_one. *)
-val ring_auto_ids = store_thm(
-  "ring_auto_ids",
-  ``!(r:'a ring) f. Ring r /\ RingAuto f r ==> (f #0 = #0) /\ (f #1 = #1)``,
-  rw_tac std_ss[ring_auto_zero, ring_auto_one]);
+Theorem ring_auto_ids:
+    !(r:'a ring) f. Ring r /\ RingAuto f r ==> (f #0 = #0) /\ (f #1 = #1)
+Proof
+  rw_tac std_ss[ring_auto_zero, ring_auto_one]
+QED
 
 (* Theorem: RingAuto f r ==> !x. x IN R ==> f x IN R *)
 (* Proof: by RingAuto_def, ring_iso_element *)
-val ring_auto_element = store_thm(
-  "ring_auto_element",
-  ``!(r:'a ring) f. RingAuto f r ==> !x. x IN R ==> f x IN R``,
-  metis_tac[RingAuto_def, ring_iso_element]);
+Theorem ring_auto_element:
+    !(r:'a ring) f. RingAuto f r ==> !x. x IN R ==> f x IN R
+Proof
+  metis_tac[RingAuto_def, ring_iso_element]
+QED
 
 (* Theorem: Ring r /\ (!x. x IN R ==> (f1 x = f2 x)) ==> (RingAuto f1 r <=> RingAuto f2 r) *)
 (* Proof: by RingAuto_def, ring_iso_cong. *)
-val ring_auto_cong = store_thm(
-  "ring_auto_cong",
-  ``!(r:'a ring) f1 f2. Ring r /\ (!x. x IN R ==> (f1 x = f2 x)) ==> (RingAuto f1 r <=> RingAuto f2 r)``,
-  rw_tac std_ss[RingAuto_def, ring_iso_cong]);
+Theorem ring_auto_cong:
+    !(r:'a ring) f1 f2. Ring r /\ (!x. x IN R ==> (f1 x = f2 x)) ==> (RingAuto f1 r <=> RingAuto f2 r)
+Proof
+  rw_tac std_ss[RingAuto_def, ring_iso_cong]
+QED
 
 (* Theorem: RingAuto I r *)
 (* Proof: by RingAuto_def, ring_iso_I_refl. *)
-val ring_auto_I = store_thm(
-  "ring_auto_I",
-  ``!(r:'a ring). RingAuto I r``,
-  rw_tac std_ss[RingAuto_def, ring_iso_I_refl]);
+Theorem ring_auto_I:
+    !(r:'a ring). RingAuto I r
+Proof
+  rw_tac std_ss[RingAuto_def, ring_iso_I_refl]
+QED
 
 (* Theorem: Ring r /\ RingAuto f r ==> RingAuto (LINV f R) r *)
 (* Proof:
@@ -4573,18 +4787,20 @@ val ring_auto_I = store_thm(
    ==> RingIso (LINV f R) r         by ring_iso_linv_iso
    ==> RingAuto (LINV f R) r        by RingAuto_def
 *)
-val ring_auto_linv_auto = store_thm(
-  "ring_auto_linv_auto",
-  ``!(r:'a ring) f. Ring r /\ RingAuto f r ==> RingAuto (LINV f R) r``,
-  rw_tac std_ss[RingAuto_def, ring_iso_linv_iso]);
+Theorem ring_auto_linv_auto:
+    !(r:'a ring) f. Ring r /\ RingAuto f r ==> RingAuto (LINV f R) r
+Proof
+  rw_tac std_ss[RingAuto_def, ring_iso_linv_iso]
+QED
 
 
 (* Theorem: Ring r /\ RingAuto f r ==> f PERMUTES R *)
 (* Proof: by RingAuto_def, ring_iso_bij *)
-val ring_auto_bij = store_thm(
-  "ring_auto_bij",
-  ``!(r:'a ring) f. Ring r /\ RingAuto f r ==> f PERMUTES R``,
-  rw_tac std_ss[RingAuto_def, ring_iso_bij]);
+Theorem ring_auto_bij:
+    !(r:'a ring) f. Ring r /\ RingAuto f r ==> f PERMUTES R
+Proof
+  rw_tac std_ss[RingAuto_def, ring_iso_bij]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Subrings.                                                                 *)
@@ -4598,17 +4814,19 @@ val _ = overload_on("<=", ``\(s r):'a ring. Ring r /\ Ring s /\ subring s r``);
 
 (* Theorem: subring s r ==> !x. x IN B ==> x IN R *)
 (* Proof: by subring_def, RingHomo_def *)
-val subring_element = store_thm(
-  "subring_element",
-  ``!(r s):'a ring. subring s r ==> !x. x IN B ==> x IN R``,
-  rw_tac std_ss[subring_def, RingHomo_def]);
+Theorem subring_element:
+    !(r s):'a ring. subring s r ==> !x. x IN B ==> x IN R
+Proof
+  rw_tac std_ss[subring_def, RingHomo_def]
+QED
 
 (* Theorem: subring s r ==> B SUBSET R *)
 (* Proof: by subring_element, SUBSET_DEF *)
-val subring_carrier_subset = store_thm(
-  "subring_carrier_subset",
-  ``!(r s):'a ring. subring s r ==> B SUBSET R``,
-  metis_tac[subring_element, SUBSET_DEF]);
+Theorem subring_carrier_subset:
+    !(r s):'a ring. subring s r ==> B SUBSET R
+Proof
+  metis_tac[subring_element, SUBSET_DEF]
+QED
 
 (* Theorem: FiniteRing r /\ subring s r ==> FINITE B *)
 (* Proof:
@@ -4616,30 +4834,33 @@ val subring_carrier_subset = store_thm(
      and subring s r ==> B SUBSET R   by subring_carrier_subset
    Hence FINITE B                     by SUBSET_FINITE
 *)
-val subring_carrier_finite = store_thm(
-  "subring_carrier_finite",
-  ``!(r s):'a ring. FiniteRing r /\ subring s r ==> FINITE B``,
-  metis_tac[FiniteRing_def, subring_carrier_subset, SUBSET_FINITE]);
+Theorem subring_carrier_finite:
+    !(r s):'a ring. FiniteRing r /\ subring s r ==> FINITE B
+Proof
+  metis_tac[FiniteRing_def, subring_carrier_subset, SUBSET_FINITE]
+QED
 
 (* Theorem: FiniteRing r /\ s <= r ==> FiniteRing s *)
 (* Proof:
    Since FINITE B       by subring_carrier_finite
    Hence FiniteRing s   by FiniteRing_def
 *)
-val subring_finite_ring = store_thm(
-  "subring_finite_ring",
-  ``!(r s):'a ring. FiniteRing r /\ s <= r ==> FiniteRing s``,
-  metis_tac[FiniteRing_def, subring_carrier_finite]);
+Theorem subring_finite_ring:
+    !(r s):'a ring. FiniteRing r /\ s <= r ==> FiniteRing s
+Proof
+  metis_tac[FiniteRing_def, subring_carrier_finite]
+QED
 
 (* Theorem: subring r r *)
 (* Proof:
    By subring_def, this is to show:
    RingHomo I r r, true by ring_homo_I_refl.
 *)
-val subring_refl = store_thm(
-  "subring_refl",
-  ``!r:'a ring. subring r r``,
-  rw[subring_def, ring_homo_I_refl]);
+Theorem subring_refl:
+    !r:'a ring. subring r r
+Proof
+  rw[subring_def, ring_homo_I_refl]
+QED
 
 (* Theorem: subring r s /\ subring s t ==> subring r t *)
 (* Proof:
@@ -4648,10 +4869,11 @@ val subring_refl = store_thm(
    Since I o I = I       by combinTheory.I_o_ID
    This is true          by ring_homo_trans
 *)
-val subring_trans = store_thm(
-  "subring_trans",
-  ``!(r s t):'a ring. subring r s /\ subring s t ==> subring r t``,
-  prove_tac[subring_def, combinTheory.I_o_ID, ring_homo_trans]);
+Theorem subring_trans:
+    !(r s t):'a ring. subring r s /\ subring s t ==> subring r t
+Proof
+  prove_tac[subring_def, combinTheory.I_o_ID, ring_homo_trans]
+QED
 
 (* Theorem: subring s r /\ subring r s ==> RingIso I s r *)
 (* Proof:
@@ -4661,12 +4883,13 @@ val subring_trans = store_thm(
    (1) x IN B ==> x IN R, true    by subring_carrier_subset, subring s r
    (2) x IN R ==> x IN B, true    by subring_carrier_subset, subring r s
 *)
-val subring_I_antisym = store_thm(
-  "subring_I_antisym",
-  ``!(r:'a ring) s. subring s r /\ subring r s ==> RingIso I s r``,
+Theorem subring_I_antisym:
+    !(r:'a ring) s. subring s r /\ subring r s ==> RingIso I s r
+Proof
   rw_tac std_ss[subring_def, RingIso_def] >>
   fs[RingHomo_def] >>
-  rw_tac std_ss[BIJ_DEF, INJ_DEF, SURJ_DEF]);
+  rw_tac std_ss[BIJ_DEF, INJ_DEF, SURJ_DEF]
+QED
 
 (* Theorem: subring s r /\ R SUBSET B ==> RingIso I s r *)
 (* Proof:
@@ -4676,14 +4899,15 @@ val subring_I_antisym = store_thm(
    (1) x IN B ==> x IN R, true    by subring_carrier_subset, subring s r
    (2) x IN R ==> x IN B, true    by R SUBSET B, given
 *)
-val subring_carrier_antisym = store_thm(
-  "subring_carrier_antisym",
-  ``!(r:'a ring) s. subring s r /\ R SUBSET B ==> RingIso I s r``,
+Theorem subring_carrier_antisym:
+    !(r:'a ring) s. subring s r /\ R SUBSET B ==> RingIso I s r
+Proof
   rpt (stripDup[subring_def]) >>
   rw_tac std_ss[RingIso_def] >>
   `B SUBSET R` by rw[subring_carrier_subset] >>
   fs[RingHomo_def, SUBSET_DEF] >>
-  rw_tac std_ss[BIJ_DEF, INJ_DEF, SURJ_DEF]);
+  rw_tac std_ss[BIJ_DEF, INJ_DEF, SURJ_DEF]
+QED
 
 (* Theorem: subring s r ==> subgroup s.sum r.sum *)
 (* Proof:
@@ -4692,10 +4916,11 @@ val subring_carrier_antisym = store_thm(
     ==> GroupHomo I s.sum r.sum   by RingHomo_def
     ==> subgroup s.rum r.sum      by subgroup_def
 *)
-val subring_sum_subgroup = store_thm(
-  "subring_sum_subgroup",
-  ``!(r:'a ring) (s:'a ring). subring s r ==> subgroup s.sum r.sum``,
-  rw_tac std_ss[subring_def, RingHomo_def, subgroup_def]);
+Theorem subring_sum_subgroup:
+    !(r:'a ring) (s:'a ring). subring s r ==> subgroup s.sum r.sum
+Proof
+  rw_tac std_ss[subring_def, RingHomo_def, subgroup_def]
+QED
 
 (* Theorem: subring s r ==> submonoid s.prod r.prod *)
 (* Proof:
@@ -4704,10 +4929,11 @@ val subring_sum_subgroup = store_thm(
     ==> MonoidHomo I s.prod r.prod   by RingHomo_def
     ==> submonoid s.prod r.prod      by submonoid_def
 *)
-val subring_prod_submonoid = store_thm(
-  "subring_prod_submonoid",
-  ``!(r:'a ring) (s:'a ring). subring s r ==> submonoid s.prod r.prod``,
-  rw_tac std_ss[subring_def, RingHomo_def, submonoid_def]);
+Theorem subring_prod_submonoid:
+    !(r:'a ring) (s:'a ring). subring s r ==> submonoid s.prod r.prod
+Proof
+  rw_tac std_ss[subring_def, RingHomo_def, submonoid_def]
+QED
 
 (* Theorem: s <= r <=> Ring r /\ Ring s /\ subgroup s.sum r.sum /\ submonoid s.prod r.prod *)
 (* Proof:
@@ -4724,17 +4950,18 @@ val subring_prod_submonoid = store_thm(
       Thus RingHomo I s r            by RingHomo_def
         or s <= r                    by subring_def
 *)
-val subring_by_subgroup_submonoid = store_thm(
-  "subring_by_subgroup_submonoid",
-  ``!(r:'a ring) (s:'a ring). s <= r <=>
-     Ring r /\ Ring s /\ subgroup s.sum r.sum /\ submonoid s.prod r.prod``,
+Theorem subring_by_subgroup_submonoid:
+    !(r:'a ring) (s:'a ring). s <= r <=>
+     Ring r /\ Ring s /\ subgroup s.sum r.sum /\ submonoid s.prod r.prod
+Proof
   rw[EQ_IMP_THM] >-
   rw[subring_sum_subgroup] >-
   rw[subring_prod_submonoid] >>
   rw_tac std_ss[subring_def, RingHomo_def] >-
   metis_tac[subgroup_subset, ring_carriers, SUBSET_DEF] >-
   fs[subgroup_def] >>
-  fs[submonoid_def]);
+  fs[submonoid_def]
+QED
 
 (* Theorem: subring s r /\ RingHomo f r r_ ==> RingHomo f s r_ *)
 (* Proof:
@@ -4747,13 +4974,14 @@ val subring_by_subgroup_submonoid = store_thm(
        Note submonoid s.prod r.prod                       by subring_prod_submonoid
        Thus MonoidHomo f s.prod r_.prod                   by submonoid_homo_homo
 *)
-val subring_homo_homo = store_thm(
-  "subring_homo_homo",
-  ``!(r:'a ring) (s:'a ring) (r_:'b ring) f. subring s r /\ RingHomo f r r_ ==> RingHomo f s r_``,
+Theorem subring_homo_homo:
+    !(r:'a ring) (s:'a ring) (r_:'b ring) f. subring s r /\ RingHomo f r r_ ==> RingHomo f s r_
+Proof
   rw_tac std_ss[RingHomo_def] >-
   metis_tac[subring_element] >-
   metis_tac[subring_sum_subgroup, subgroup_homo_homo] >>
-  metis_tac[subring_prod_submonoid, submonoid_homo_homo]);
+  metis_tac[subring_prod_submonoid, submonoid_homo_homo]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Subring Theorems                                                          *)
@@ -4767,91 +4995,103 @@ val o_thm = combinTheory.o_THM;
 
 (* Theorem: s <= r ==> s.sum.id = #0 *)
 (* Proof: by subring_def, ring_homo_zero. *)
-val subring_zero = store_thm(
-  "subring_zero",
-  ``!(r s):'a ring. s <= r ==> (s.sum.id = #0)``,
-  metis_tac[subring_def, ring_homo_zero, i_thm]);
+Theorem subring_zero:
+    !(r s):'a ring. s <= r ==> (s.sum.id = #0)
+Proof
+  metis_tac[subring_def, ring_homo_zero, i_thm]
+QED
 
 (* Theorem: s <= r ==> s.prod.id = #1 *)
 (* Proof: by subring_def, ring_homo_one. *)
-val subring_one = store_thm(
-  "subring_one",
-  ``!(r s):'a ring. s <= r ==> (s.prod.id = #1)``,
-  metis_tac[subring_def, ring_homo_one, i_thm]);
+Theorem subring_one:
+    !(r s):'a ring. s <= r ==> (s.prod.id = #1)
+Proof
+  metis_tac[subring_def, ring_homo_one, i_thm]
+QED
 
 (* export simple results *)
 val _ = export_rewrites["subring_zero", "subring_one"];
 
 (* Theorem: s <= r ==> s.sum.id = #0 /\ s.prod.id = #1 *)
 (* Proof: by subring_zero, subring_one. *)
-val subring_ids = store_thm(
-  "subring_ids",
-  ``!(r s):'a ring. s <= r ==> (s.sum.id = #0) /\ (s.prod.id = #1)``,
-  rw[]);
+Theorem subring_ids:
+    !(r s):'a ring. s <= r ==> (s.sum.id = #0) /\ (s.prod.id = #1)
+Proof
+  rw[]
+QED
 
 (* Theorem: s <= r ==> !x. x IN B ==> x IN R *)
 (* Proof: by subring_def, ring_homo_element. *)
-val subring_element_alt = store_thm(
-  "subring_element_alt",
-  ``!(r s):'a ring. s <= r ==> !x. x IN B ==> x IN R``,
-  metis_tac[subring_def, ring_homo_element, i_thm]);
+Theorem subring_element_alt:
+    !(r s):'a ring. s <= r ==> !x. x IN B ==> x IN R
+Proof
+  metis_tac[subring_def, ring_homo_element, i_thm]
+QED
 
 (* Theorem: subring preserves sum and product. *)
 (* Proof: by subring_def, ring_homo_property. *)
-val subring_property = store_thm(
-  "subring_property",
-  ``!(r s):'a ring. Ring s /\ subring s r ==>
-     !x y. x IN B /\ y IN B ==> (s.sum.op x y = x + y) /\ (s.prod.op x y = x * y)``,
-  metis_tac[subring_def, ring_homo_property, i_thm]);
+Theorem subring_property:
+    !(r s):'a ring. Ring s /\ subring s r ==>
+     !x y. x IN B /\ y IN B ==> (s.sum.op x y = x + y) /\ (s.prod.op x y = x * y)
+Proof
+  metis_tac[subring_def, ring_homo_property, i_thm]
+QED
 
 (* Theorem: s <= r ==> !x y. x IN B /\ y IN B ==> (s.sum.op x y = x + y) *)
 (* Proof: by subring_def, ring_homo_add. *)
-val subring_add = store_thm(
-  "subring_add",
-  ``!(r s):'a ring. s <= r ==> !x y. x IN B /\ y IN B ==> (s.sum.op x y = x + y)``,
-  metis_tac[subring_def, ring_homo_add, i_thm]);
+Theorem subring_add:
+    !(r s):'a ring. s <= r ==> !x y. x IN B /\ y IN B ==> (s.sum.op x y = x + y)
+Proof
+  metis_tac[subring_def, ring_homo_add, i_thm]
+QED
 
 (* Theorem: s <= r ==> !x y. x IN B /\ y IN B ==> (s.prod.op x y = x * y) *)
 (* Proof: by subring_def, ring_homo_mult. *)
-val subring_mult = store_thm(
-  "subring_mult",
-  ``!(r s):'a ring. s <= r ==> !x y. x IN B /\ y IN B ==> (s.prod.op x y = x * y)``,
-  metis_tac[subring_def, ring_homo_mult, i_thm]);
+Theorem subring_mult:
+    !(r s):'a ring. s <= r ==> !x y. x IN B /\ y IN B ==> (s.prod.op x y = x * y)
+Proof
+  metis_tac[subring_def, ring_homo_mult, i_thm]
+QED
 
 (* Theorem: s <= r ==> !x. x IN B ==> (s.sum.inv x = -x) *)
 (* Proof: by subring_def, ring_homo_neg. *)
-val subring_neg = store_thm(
-  "subring_neg",
-  ``!(r s):'a ring. s <= r ==> !x. x IN B ==> (s.sum.inv x = -x)``,
-  metis_tac[subring_def, ring_homo_neg, i_thm]);
+Theorem subring_neg:
+    !(r s):'a ring. s <= r ==> !x. x IN B ==> (s.sum.inv x = -x)
+Proof
+  metis_tac[subring_def, ring_homo_neg, i_thm]
+QED
 
 (* Theorem: s <= r ==> !x y. x IN B /\ y IN B ==> (ring_sub s x y = x - y) *)
 (* Proof: by subring_def, ring_homo_sub. *)
-val subring_sub = store_thm(
-  "subring_sub",
-  ``!(r s):'a ring. s <= r ==> !x y. x IN B /\ y IN B ==> (ring_sub s x y = x - y)``,
-  metis_tac[subring_def, ring_homo_sub, i_thm]);
+Theorem subring_sub:
+    !(r s):'a ring. s <= r ==> !x y. x IN B /\ y IN B ==> (ring_sub s x y = x - y)
+Proof
+  metis_tac[subring_def, ring_homo_sub, i_thm]
+QED
 
 (* Theorem: s <= r ==> !n. s.sum.exp s.prod.id n = ##n *)
 (* Proof: by subring_def, ring_homo_num. *)
-val subring_num = store_thm(
-  "subring_num",
-  ``!(r s):'a ring. s <= r ==> !n. s.sum.exp s.prod.id n = ##n``,
-  metis_tac[subring_def, ring_homo_num, i_thm]);
+Theorem subring_num:
+    !(r s):'a ring. s <= r ==> !n. s.sum.exp s.prod.id n = ##n
+Proof
+  metis_tac[subring_def, ring_homo_num, i_thm]
+QED
 
 (* Theorem: s <= r ==> !n. s.sum.exp s.prod.id n = ##n *)
 (* Proof: by subring_def, ring_homo_exp. *)
-val subring_exp = store_thm(
-  "subring_exp",
-  ``!(r s):'a ring. s <= r ==> !x. x IN B ==> !n. s.prod.exp x n = x ** n``,
-  metis_tac[subring_def, ring_homo_exp, i_thm]);
+Theorem subring_exp:
+    !(r s):'a ring. s <= r ==> !x. x IN B ==> !n. s.prod.exp x n = x ** n
+Proof
+  metis_tac[subring_def, ring_homo_exp, i_thm]
+QED
 
 (* Theorem: s <= r ==> (char r) (char s) divides *)
 (* Proof: by subring_def, ring_homo_char_divides. *)
-val subring_char_divides = store_thm(
-  "subring_char_divides",
-  ``!(r s):'a ring. s <= r ==> (char r) divides (char s)``,
-  metis_tac[subring_def, ring_homo_char_divides, i_thm]);
+Theorem subring_char_divides:
+    !(r s):'a ring. s <= r ==> (char r) divides (char s)
+Proof
+  metis_tac[subring_def, ring_homo_char_divides, i_thm]
+QED
 
 (* Note: This seems wrong, but
    ring_homo_char_divides |- !r s. Ring r /\ Ring s ==> !f. RingHomo f r s ==> (char s) divides (char r)
@@ -4878,11 +5118,12 @@ This means: (GF p) a subring of (ZN n), where prime p divides n, is not true!
    = order r.sum #1                     by order_def, period_def
    = char r                             by char_def
 *)
-val subring_char = store_thm(
-  "subring_char",
-  ``!(r s):'a ring. s <= r ==> (char s = char r)``,
+Theorem subring_char:
+    !(r s):'a ring. s <= r ==> (char s = char r)
+Proof
   rw[char_def, order_def, period_def, subring_exp] >>
-  metis_tac[subring_num, subring_ids]);
+  metis_tac[subring_num, subring_ids]
+QED
 
 (* Theorem: s <= r ==> !x. Unit s x ==> unit x *)
 (* Proof:
@@ -4890,10 +5131,11 @@ val subring_char = store_thm(
    Thus Unit s x = unit (I x)       by ring_homo_unit
                  = unit x           by I_THM
 *)
-val subring_unit = store_thm(
-  "subring_unit",
-  ``!(r:'a ring) s. s <= r ==> !x. Unit s x ==> unit x``,
-  metis_tac[ring_homo_unit, subring_def, combinTheory.I_THM]);
+Theorem subring_unit:
+    !(r:'a ring) s. s <= r ==> !x. Unit s x ==> unit x
+Proof
+  metis_tac[ring_homo_unit, subring_def, combinTheory.I_THM]
+QED
 
 (* Theorem: s <= r /\ #1 <> #0 ==> !x. Unit s x ==> x <> #0 *)
 (* Proof:
@@ -4901,10 +5143,11 @@ val subring_unit = store_thm(
    Thus Unit s x <> s.prod.id       by ring_homo_unit_nonzero
      or          <> I #0 = #0       by I_THM
 *)
-val subring_unit_nonzero = store_thm(
-  "subring_unit_nonzero",
-  ``!(r:'a ring) s. s <= r /\ #1 <> #0 ==> !x. Unit s x ==> x <> #0``,
-  metis_tac[ring_homo_unit_nonzero, subring_def, combinTheory.I_THM]);
+Theorem subring_unit_nonzero:
+    !(r:'a ring) s. s <= r /\ #1 <> #0 ==> !x. Unit s x ==> x <> #0
+Proof
+  metis_tac[ring_homo_unit_nonzero, subring_def, combinTheory.I_THM]
+QED
 
 (* Theorem: s <= r ==> !x. Unit s x ==> (Inv s x) IN s.carrier *)
 (* Proof:
@@ -4916,10 +5159,11 @@ val subring_unit_nonzero = store_thm(
 val it = |- !f. (s ~r~ r) f ==> !x. Unit s x ==> |/ (f x) IN R: thm
    This is not what we want to prove.
 *)
-val subring_unit_inv_element = store_thm(
-  "subring_unit_inv_element",
-  ``!(r s):'a ring. s <= r ==> !x. Unit s x ==> (Inv s x) IN s.carrier``,
-  rw[subring_unit, ring_unit_inv_element]);
+Theorem subring_unit_inv_element:
+    !(r s):'a ring. s <= r ==> !x. Unit s x ==> (Inv s x) IN s.carrier
+Proof
+  rw[subring_unit, ring_unit_inv_element]
+QED
 
 (* Theorem: s <= r /\ #1 <> #0 ==> !x. Unit s x ==> (Inv s x) <> #0 *)
 (* Proof:
@@ -4932,10 +5176,11 @@ val subring_unit_inv_element = store_thm(
 val it = |- !f. (s ~r~ r) f /\ #1 <> #0 ==> !x. Unit s x ==> |/ (f x) <> #0
    This is not what we want to prove.
 *)
-val subring_unit_inv_nonzero = store_thm(
-  "subring_unit_inv_nonzero",
-  ``!(r s):'a ring. s <= r /\ #1 <> #0 ==> !x. Unit s x ==> (Inv s x) <> #0``,
-  metis_tac[subring_unit, ring_unit_inv_nonzero, subring_ids]);
+Theorem subring_unit_inv_nonzero:
+    !(r s):'a ring. s <= r /\ #1 <> #0 ==> !x. Unit s x ==> (Inv s x) <> #0
+Proof
+  metis_tac[subring_unit, ring_unit_inv_nonzero, subring_ids]
+QED
 
 (* Theorem: s <= r ==> !x. Unit s x ==> (Inv s x = |/ x) *)
 (* Proof:
@@ -4961,38 +5206,40 @@ QED
    Thus RingHomo (f o I) s r_                  by ring_homo_compose
      or RingHomo f s r_                        by I_o_ID
 *)
-val subring_ring_iso_compose = store_thm(
-  "subring_ring_iso_compose",
-  ``!(r:'a ring) (s:'a ring) (r_:'b ring) f. subring s r /\ RingIso f r r_ ==> RingHomo f s r_``,
+Theorem subring_ring_iso_compose:
+    !(r:'a ring) (s:'a ring) (r_:'b ring) f. subring s r /\ RingIso f r r_ ==> RingHomo f s r_
+Proof
   rpt strip_tac >>
   `RingHomo I s r` by rw[GSYM subring_def] >>
   `RingHomo f r r_` by metis_tac[RingIso_def] >>
-  prove_tac[ring_homo_compose, combinTheory.I_o_ID]);
+  prove_tac[ring_homo_compose, combinTheory.I_o_ID]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Homomorphic Image of Ring.                                                *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define the homomorphic image of a ring. *)
-val homo_ring_def = Define`
+Definition homo_ring_def:
   homo_ring (r:'a ring) (f:'a -> 'b) =
     <| carrier := IMAGE f R;
            sum := homo_group (r.sum) f;
           prod := homo_monoid (r.prod) f
      |>
-`;
+End
 
 (* set overloading *)
 val _ = overload_on ("fR", ``(homo_ring (r:'a ring) (f:'a -> 'b)).carrier``);
 
 (* Theorem: Properties of homo_ring. *)
 (* Proof: by homo_ring_def. *)
-val homo_ring_property = store_thm(
-  "homo_ring_property",
-  ``!(r:'a ring) (f:'a -> 'b). (fR = IMAGE f R) /\
+Theorem homo_ring_property:
+    !(r:'a ring) (f:'a -> 'b). (fR = IMAGE f R) /\
       ((homo_ring r f).sum = homo_group (r.sum) f) /\
-      ((homo_ring r f).prod = homo_monoid (r.prod) f)``,
-  rw_tac std_ss[homo_ring_def]);
+      ((homo_ring r f).prod = homo_monoid (r.prod) f)
+Proof
+  rw_tac std_ss[homo_ring_def]
+QED
 
 (* Theorem: Homomorphic image of a Ring is a Ring. *)
 (* Proof:
@@ -5033,9 +5280,9 @@ val homo_ring_property = store_thm(
       = (homo_ring r f).sum.op ((homo_ring r f).prod.op x y)
                                ((homo_ring r f).prod.op x z)  by GroupHomo_def, ring_carriers
 *)
-val homo_ring_ring = store_thm(
-  "homo_ring_ring",
-  ``!(r:'a ring) f. Ring r /\ RingHomo f r (homo_ring r f) ==> Ring (homo_ring r f)``,
+Theorem homo_ring_ring:
+    !(r:'a ring) f. Ring r /\ RingHomo f r (homo_ring r f) ==> Ring (homo_ring r f)
+Proof
   rw_tac std_ss[RingHomo_def] >>
   rw_tac std_ss[Ring_def] >| [
     fs[homo_ring_property] >>
@@ -5053,7 +5300,8 @@ val homo_ring_ring = store_thm(
     `x'' + x''' IN R /\ x' * x'' IN R /\ x' * x''' IN R` by rw[] >>
     fs[GroupHomo_def, MonoidHomo_def] >>
     metis_tac[ring_carriers]
-  ]);
+  ]
+QED
 
 (* Theorem: Homomorphic image of a Ring is a subring of the target ring. *)
 (* Proof:
@@ -5082,9 +5330,9 @@ val homo_ring_ring = store_thm(
              f (CHOICE (preimage f r.prod.carrier x) * CHOICE (preimage f r.prod.carrier y)) = s.prod.op x y
              True by preimage_choice_property.
 *)
-val homo_ring_subring = store_thm(
-  "homo_ring_subring",
-  ``!(r:'a ring) (s:'b ring) f. Ring r /\ Ring s /\ RingHomo f r s ==> subring (homo_ring r f) s``,
+Theorem homo_ring_subring:
+    !(r:'a ring) (s:'b ring) f. Ring r /\ Ring s /\ RingHomo f r s ==> subring (homo_ring r f) s
+Proof
   rpt strip_tac >>
   rw_tac std_ss[subring_def, RingHomo_def] >| [
     metis_tac[homo_ring_property, IN_IMAGE, RingHomo_def],
@@ -5100,7 +5348,8 @@ val homo_ring_subring = store_thm(
       metis_tac[IN_IMAGE],
       metis_tac[preimage_choice_property]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r /\ INJ f R UNIV ==> RingHomo f r (homo_ring r f) *)
 (* Proof:
@@ -5109,26 +5358,27 @@ val homo_ring_subring = store_thm(
    (2) GroupHomo f r.sum (homo_group r.sum f), true     by homo_group_by_inj
    (3) MonoidHomo f r.prod (homo_group r.prod f), true  by homo_monoid_by_inj
 *)
-val homo_ring_by_inj = store_thm(
-  "homo_ring_by_inj",
-  ``!(r:'a ring) (f:'a -> 'b). Ring r /\ INJ f R UNIV ==> RingHomo f r (homo_ring r f)``,
+Theorem homo_ring_by_inj:
+    !(r:'a ring) (f:'a -> 'b). Ring r /\ INJ f R UNIV ==> RingHomo f r (homo_ring r f)
+Proof
   rw_tac std_ss[RingHomo_def, homo_ring_property] >-
   rw[] >-
   rw[homo_group_by_inj] >>
-  rw[homo_monoid_by_inj]);
+  rw[homo_monoid_by_inj]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Homomorphic Image between Rings.                                          *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define homomorphism image of Ring *)
-val ring_homo_image_def = Define`
+Definition ring_homo_image_def:
   ring_homo_image f (r:'a ring) (r_:'b ring) =
      <| carrier := IMAGE f R;
             sum := homo_image f r.sum r_.sum;
            prod := homo_image f r.prod r_.prod
       |>
-`;
+End
 (*
 We have these (based on image_op):
 - homo_ring_def;
@@ -5152,10 +5402,11 @@ So ring_homo_image is based on homo_image.
 
 (* Theorem: (ring_homo_image f r r_).carrier = IMAGE f R *)
 (* Proof: by ring_homo_image_def *)
-val ring_homo_image_carrier = store_thm(
-  "ring_homo_image_carrier",
-  ``!(r:'a ring) (r_:'b ring) f. (ring_homo_image f r r_).carrier = IMAGE f R``,
-  rw_tac std_ss[ring_homo_image_def]);
+Theorem ring_homo_image_carrier:
+    !(r:'a ring) (r_:'b ring) f. (ring_homo_image f r r_).carrier = IMAGE f R
+Proof
+  rw_tac std_ss[ring_homo_image_def]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> Ring (ring_homo_image f r r_) *)
 (* Proof:
@@ -5182,9 +5433,9 @@ val ring_homo_image_carrier = store_thm(
                           and c IN R with f c = z, hence z = f c IN R_
        Hence true by ring_mult_radd.
 *)
-val ring_homo_image_ring = store_thm(
-  "ring_homo_image_ring",
-  ``!(r:'a ring) (r_:'b ring). !f. (r ~r~ r_) f ==> Ring (ring_homo_image f r r_)``,
+Theorem ring_homo_image_ring:
+    !(r:'a ring) (r_:'b ring). !f. (r ~r~ r_) f ==> Ring (ring_homo_image f r r_)
+Proof
   rw_tac std_ss[RingHomo_def] >>
   `!x. x IN IMAGE f R ==> ?a. a IN R /\ (f a = x)` by metis_tac[IN_IMAGE] >>
   rw_tac std_ss[ring_homo_image_def, Ring_def] >| [
@@ -5203,7 +5454,8 @@ val ring_homo_image_ring = store_thm(
     rw[homo_image_def] >>
     `x IN R_ /\ y IN R_ /\ z IN R_` by metis_tac[] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !s. Ring s /\ subring s r ==> subring (ring_homo_image f s r_) r_ *)
 (* Proof:
@@ -5223,10 +5475,10 @@ val ring_homo_image_ring = store_thm(
        By MonoidHomo_def, ring_homo_image_def, homo_image_def, this is to show:
           y IN B ==> f y IN R_, true by RingHomo_def
 *)
-val ring_homo_image_subring_subring = store_thm(
-  "ring_homo_image_subring_subring",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
-   !s. Ring s /\ subring s r ==> subring (ring_homo_image f s r_) r_``,
+Theorem ring_homo_image_subring_subring:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
+   !s. Ring s /\ subring s r ==> subring (ring_homo_image f s r_) r_
+Proof
   rw[subring_def] >>
   rw_tac std_ss[RingHomo_def] >| [
     fs[ring_homo_image_def] >>
@@ -5235,24 +5487,27 @@ val ring_homo_image_subring_subring = store_thm(
     metis_tac[RingHomo_def, combinTheory.I_THM],
     rw[MonoidHomo_def, ring_homo_image_def, homo_image_def] >>
     metis_tac[RingHomo_def, combinTheory.I_THM]
-  ]);
+  ]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> subring (ring_homo_image f r r_) r_ *)
 (* Proof:
    Note subring r r                           by subring_refl
    Thus subring (ring_homo_image f r r_) r_   by ring_homo_image_subring_subring
 *)
-val ring_homo_image_is_subring = store_thm(
-  "ring_homo_image_is_subring",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> subring (ring_homo_image f r r_) r_``,
-  metis_tac[ring_homo_image_subring_subring, subring_refl]);
+Theorem ring_homo_image_is_subring:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> subring (ring_homo_image f r r_) r_
+Proof
+  metis_tac[ring_homo_image_subring_subring, subring_refl]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> (ring_homo_image f r r_) <= r_ *)
 (* Proof: by ring_homo_image_ring, ring_homo_image_is_subring  *)
-val ring_homo_image_subring = store_thm(
-  "ring_homo_image_subring",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> (ring_homo_image f r r_) <= r_``,
-  rw_tac std_ss[ring_homo_image_ring, ring_homo_image_is_subring]);
+Theorem ring_homo_image_subring:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> (ring_homo_image f r r_) <= r_
+Proof
+  rw_tac std_ss[ring_homo_image_ring, ring_homo_image_is_subring]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> RingHomo f r (ring_homo_image f r r_) *)
 (* Proof:
@@ -5266,26 +5521,28 @@ val ring_homo_image_subring = store_thm(
        Expanding by definitions, this is to show: f (x * y) = f x *_ f y
        True by ring_homo_property.
 *)
-val ring_homo_image_homo = store_thm(
-  "ring_homo_image_homo",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> RingHomo f r (ring_homo_image f r r_)``,
+Theorem ring_homo_image_homo:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> RingHomo f r (ring_homo_image f r r_)
+Proof
   rpt strip_tac >>
   rw_tac std_ss[RingHomo_def] >-
   rw[ring_homo_image_def] >-
   rw[GroupHomo_def, ring_homo_image_def, homo_image_def, ring_homo_property] >>
-  rw[MonoidHomo_def, ring_homo_image_def, homo_image_def, ring_homo_property]);
+  rw[MonoidHomo_def, ring_homo_image_def, homo_image_def, ring_homo_property]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==> BIJ f R (ring_homo_image f r r_).carrier *)
 (* Proof:
    Since (ring_homo_image f r r_).carrier = IMAGE f R     by ring_homo_image_def
    Hence true given INJ f R R_                            by INJ_IMAGE_BIJ
 *)
-val ring_homo_image_bij = store_thm(
-  "ring_homo_image_bij",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> BIJ f R (ring_homo_image f r r_).carrier``,
+Theorem ring_homo_image_bij:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> BIJ f R (ring_homo_image f r r_).carrier
+Proof
   rpt strip_tac >>
   `(ring_homo_image f r r_).carrier = IMAGE f R` by rw[ring_homo_image_def] >>
-  metis_tac[INJ_IMAGE_BIJ]);
+  metis_tac[INJ_IMAGE_BIJ]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==> RingIso f r (ring_homo_image f r r_) *)
 (* Proof:
@@ -5294,10 +5551,11 @@ val ring_homo_image_bij = store_thm(
    (2) RingHomo f r r_ /\ INJ f R R_ ==>
        BIJ f R (ring_homo_image f r r_).carrier, true by ring_homo_image_bij.
 *)
-val ring_homo_image_iso = store_thm(
-  "ring_homo_image_iso",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> RingIso f r (ring_homo_image f r r_)``,
-  rw[RingIso_def, ring_homo_image_homo, ring_homo_image_bij]);
+Theorem ring_homo_image_iso:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> RingIso f r (ring_homo_image f r r_)
+Proof
+  rw[RingIso_def, ring_homo_image_homo, ring_homo_image_bij]
+QED
 
 (* This turns RingHomo to RingIso, for the same function. *)
 
@@ -5315,9 +5573,9 @@ val ring_homo_image_iso = store_thm(
        (2) SURJ f R R_ ==> SURJ I R_ (IMAGE f R)
            By SURJ_DEF, this is true by SURJ_DEF, IN_IMAGE.
 *)
-val ring_homo_image_surj_property = store_thm(
-  "ring_homo_image_surj_property",
-  ``!(r:'a ring) (r_:'b ring) f. Ring r /\ Ring r_ /\ SURJ f R R_ ==> RingIso I r_ (ring_homo_image f r r_)``,
+Theorem ring_homo_image_surj_property:
+    !(r:'a ring) (r_:'b ring) f. Ring r /\ Ring r_ /\ SURJ f R R_ ==> RingIso I r_ (ring_homo_image f r r_)
+Proof
   rw_tac std_ss[RingIso_def] >| [
     rw_tac std_ss[RingHomo_def, GroupHomo_def, MonoidHomo_def, ring_homo_image_def, homo_image_def, ring_carriers] >>
     metis_tac[SURJ_DEF, IN_IMAGE],
@@ -5327,7 +5585,8 @@ val ring_homo_image_surj_property = store_thm(
       rewrite_tac[SURJ_DEF, combinTheory.I_THM] >>
       metis_tac[SURJ_DEF, IN_IMAGE]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ s <= r ==> (s ~r~ (ring_homo_image f s r_)) f *)
 (* Proof:
@@ -5336,14 +5595,15 @@ val ring_homo_image_surj_property = store_thm(
    (1) Ring (ring_homo_image f s r_), true           by ring_homo_image_ring
    (2) RingHomo f s (ring_homo_image f s r_), true   by ring_homo_image_homo
 *)
-val ring_homo_subring_homo = store_thm(
-  "ring_homo_subring_homo",
-  ``!(r:'a ring) (s:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ s <= r ==> (s ~r~ (ring_homo_image f s r_)) f``,
+Theorem ring_homo_subring_homo:
+    !(r:'a ring) (s:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ s <= r ==> (s ~r~ (ring_homo_image f s r_)) f
+Proof
   ntac 5 strip_tac >>
   `RingHomo f s r_` by metis_tac[subring_homo_homo] >>
   rw_tac std_ss[] >-
   rw[ring_homo_image_ring] >>
-  rw[ring_homo_image_homo]);
+  rw[ring_homo_image_homo]
+QED
 
 (* Theorem: (r =r= r_) f /\ s <= r ==> (s =r= (ring_homo_image f s r_)) f *)
 (* Proof:
@@ -5356,16 +5616,17 @@ val ring_homo_subring_homo = store_thm(
         ==> INJ f B R_                             by INJ_SUBSET, subring_carrier_subset, SUBSET_REFL
        Thus RingIso f s (ring_homo_image f s r_)   by ring_homo_image_iso
 *)
-val ring_iso_subring_iso = store_thm(
-  "ring_iso_subring_iso",
-  ``!(r:'a ring) (s:'a ring) (r_:'b ring) f. (r =r= r_) f /\ s <= r ==> (s =r= (ring_homo_image f s r_)) f``,
+Theorem ring_iso_subring_iso:
+    !(r:'a ring) (s:'a ring) (r_:'b ring) f. (r =r= r_) f /\ s <= r ==> (s =r= (ring_homo_image f s r_)) f
+Proof
   ntac 5 strip_tac >>
   `RingHomo f r r_ /\ BIJ f R R_` by metis_tac[RingIso_def] >>
   `RingHomo f s r_` by metis_tac[subring_homo_homo] >>
   rw_tac std_ss[] >-
   rw[ring_homo_image_ring] >>
   `INJ f B R_` by metis_tac[BIJ_DEF, INJ_SUBSET, subring_carrier_subset, SUBSET_REFL] >>
-  rw[ring_homo_image_iso]);
+  rw[ring_homo_image_iso]
+QED
 
 (* Theorem alias *)
 val ring_homo_ring_homo_subring = save_thm("ring_homo_ring_homo_subring", ring_homo_image_is_subring);
@@ -5378,10 +5639,11 @@ val ring_homo_ring_homo_subring = |- !r r_ f. (r ~r~ r_) f ==> subring (ring_hom
    Note RingIso f r r_ ==> RingHomo f r r_   by RingIso_def
    Thus subring (ring_homo_image f r r_) r_  by ring_homo_ring_homo_subring
 *)
-val ring_iso_ring_homo_subring = store_thm(
-  "ring_iso_ring_homo_subring",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> subring (ring_homo_image f r r_) r_``,
-  rw_tac std_ss[ring_homo_ring_homo_subring, RingIso_def]);
+Theorem ring_iso_ring_homo_subring:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> subring (ring_homo_image f r r_) r_
+Proof
+  rw_tac std_ss[ring_homo_ring_homo_subring, RingIso_def]
+QED
 
 (* Theorem: s <= r /\ (r =r= r_) f ==> (ring_homo_image f s r_) <= r_ *)
 (* Proof:
@@ -5389,10 +5651,11 @@ val ring_iso_ring_homo_subring = store_thm(
    Thus (s ~r~ r_) f                       by notation, Ring s
     ==> (ring_homo_image f s r_) <= r_     by ring_homo_image_subring
 *)
-val subring_ring_iso_ring_homo_subring = store_thm(
-  "subring_ring_iso_ring_homo_subring",
-  ``!(r:'a ring) (s:'a ring) (r_:'b ring) f. s <= r /\ (r =r= r_) f ==> (ring_homo_image f s r_) <= r_``,
-  metis_tac[ring_homo_image_subring, subring_ring_iso_compose]);
+Theorem subring_ring_iso_ring_homo_subring:
+    !(r:'a ring) (s:'a ring) (r_:'b ring) f. s <= r /\ (r =r= r_) f ==> (ring_homo_image f s r_) <= r_
+Proof
+  metis_tac[ring_homo_image_subring, subring_ring_iso_compose]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Injective Image of Ring.                                                  *)
@@ -5940,7 +6203,7 @@ val _ = temp_overload_on ("J", ``j.carrier``);
    (2) prod part is absorption: !x IN I, y IN R, x * y IN I
    (3) !x IN I, y IN R, y * x IN I
 *)
-val ideal_def = Define `
+Definition ideal_def:
   ideal (i:'a ring) (r:'a ring) <=>
     i.sum <= r.sum /\
     (i.sum.carrier = I) /\
@@ -5948,7 +6211,7 @@ val ideal_def = Define `
     (i.prod.op = r.prod.op) /\
     (i.prod.id = #1) /\
     (!x y. x IN I /\ y IN R ==> x * y IN I /\ y * x IN I)
-`;
+End
 (*
 - ideal_def;
 > val ideal_def = |- !i r. ideal i r <=>
@@ -5983,10 +6246,11 @@ val ideal_product_property = save_thm("ideal_product_property",
    x IN i.sum.carrier ==> x IN r.sum.carrier  by subgroup_element
    hence true.
 *)
-val ideal_element = store_thm(
-  "ideal_element",
-  ``!r i:'a ring. i << r ==> !x. x IN I ==> x IN r.sum.carrier``,
-  metis_tac[ideal_def, subgroup_element]);
+Theorem ideal_element:
+    !r i:'a ring. i << r ==> !x. x IN I ==> x IN r.sum.carrier
+Proof
+  metis_tac[ideal_def, subgroup_element]
+QED
 
 (* Theorem: i << r ==> (i.sum.op = r.sum.op) /\ (i.prod.op = r.prod.op *)
 (* Proof:
@@ -5994,10 +6258,11 @@ val ideal_element = store_thm(
           ==> i.sum.op = r.sum.op     by Subgroup_def
    i << r ==> i.prod.op = r.prod.op   by ideal_def
 *)
-val ideal_ops = store_thm(
-  "ideal_ops",
-  ``!r i:'a ring. i << r ==> (i.sum.op = r.sum.op) /\ (i.prod.op = r.prod.op)``,
-  rw[ideal_def, Subgroup_def]);
+Theorem ideal_ops:
+    !r i:'a ring. i << r ==> (i.sum.op = r.sum.op) /\ (i.prod.op = r.prod.op)
+Proof
+  rw[ideal_def, Subgroup_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Ideal Theorems                                                            *)
@@ -6009,10 +6274,11 @@ val ideal_ops = store_thm(
    r.sum.carrier = R                by ring_add_group
    hence true.
 *)
-val ideal_element_property = store_thm(
-  "ideal_element_property",
-  ``!r i:'a ring. Ring r /\ i << r ==> !x. x IN I ==> x IN R ``,
-  metis_tac[ideal_element, ring_add_group]);
+Theorem ideal_element_property:
+    !r i:'a ring. Ring r /\ i << r ==> !x. x IN I ==> x IN R
+Proof
+  metis_tac[ideal_element, ring_add_group]
+QED
 
 (* Theorem: Ring r /\ i << r ==> !x y. x IN I /\ y IN I ==> x + y IN I /\ x * y IN I *)
 (* Proof:
@@ -6025,15 +6291,16 @@ val ideal_element_property = store_thm(
      It is because y IN I ==> y IN R by ideal_element_property
      Hence true by ideal_product_property.
 *)
-val ideal_property = store_thm(
-  "ideal_property",
-  ``!r i:'a ring. Ring r /\ i << r ==> !x y. x IN I /\ y IN I ==> x + y IN I /\ x * y IN I``,
+Theorem ideal_property:
+    !r i:'a ring. Ring r /\ i << r ==> !x y. x IN I /\ y IN I ==> x + y IN I /\ x * y IN I
+Proof
   rpt strip_tac >| [
     `i.sum <= r.sum /\ (i.sum.carrier = I)` by metis_tac[ideal_def] >>
     `Group i.sum /\ (i.sum.op x y = x + y)` by metis_tac[subgroup_property] >>
     metis_tac[group_op_element, ideal_element_property],
     metis_tac[ideal_product_property, ideal_element_property]
-  ]);
+  ]
+QED
 
 (* Theorem: i << r ==> #0 IN I *)
 (* Proof:
@@ -6041,52 +6308,58 @@ val ideal_property = store_thm(
    i.sum.id = #0                           by subgroup_id
    hence true by Subgroup_def, group_id_element.
 *)
-val ideal_has_zero = store_thm(
-  "ideal_has_zero",
-  ``!r i:'a ring. Ring r /\ i << r ==> #0 IN I``,
+Theorem ideal_has_zero:
+    !r i:'a ring. Ring r /\ i << r ==> #0 IN I
+Proof
   rpt strip_tac >>
   `i.sum <= r.sum /\ (i.sum.carrier = I)` by metis_tac[ideal_def] >>
-  metis_tac[subgroup_id, Subgroup_def, group_id_element]);
+  metis_tac[subgroup_id, Subgroup_def, group_id_element]
+QED
 
 (* Theorem: i << r ==> !x. x IN I <=> -x IN I *)
 (* Proof:
    i.sum <= r.sum /\ (i.sum.carrier = I)   by ideal_def
    hence true by Subgroup_def, group_inv_element.
 *)
-val ideal_has_neg = store_thm(
-  "ideal_has_neg",
-  ``!r i:'a ring. Ring r /\ i << r ==> !x. x IN I ==> -x IN I``,
+Theorem ideal_has_neg:
+    !r i:'a ring. Ring r /\ i << r ==> !x. x IN I ==> -x IN I
+Proof
   rpt strip_tac >>
   `i.sum <= r.sum /\ (i.sum.carrier = I)` by metis_tac[ideal_def] >>
-  metis_tac[subgroup_inv, Subgroup_def, group_inv_element]);
+  metis_tac[subgroup_inv, Subgroup_def, group_inv_element]
+QED
 
 (* Theorem: i << r ==> !x y. x IN I /\ y IN I ==> (x + y) IN I *)
 (* Proof: by ideal_property. *)
-val ideal_has_sum = store_thm(
-  "ideal_has_sum",
-  ``!r i:'a ring. Ring r /\ i << r ==> !x y. x IN I /\ y IN I ==> (x + y) IN I``,
-  rw[ideal_property]);
+Theorem ideal_has_sum:
+    !r i:'a ring. Ring r /\ i << r ==> !x y. x IN I /\ y IN I ==> (x + y) IN I
+Proof
+  rw[ideal_property]
+QED
 
 (* Theorem: i << r ==> !x y. x IN I /\ y IN I ==> (x - y) IN I *)
 (* Proof: by ideal_has_neg, ideal_has_sum. *)
-val ideal_has_diff = store_thm(
-  "ideal_has_diff",
-  ``!r i:'a ring. Ring r /\ i << r ==> !x y. x IN I /\ y IN I ==> (x - y) IN I``,
-  rw[ideal_has_neg, ideal_has_sum]);
+Theorem ideal_has_diff:
+    !r i:'a ring. Ring r /\ i << r ==> !x y. x IN I /\ y IN I ==> (x - y) IN I
+Proof
+  rw[ideal_has_neg, ideal_has_sum]
+QED
 
 (* Theorem: i << r ==> !x y. x IN I /\ y IN I ==> (x * y) IN I *)
 (* Proof: by ideal_property. *)
-val ideal_has_product = store_thm(
-  "ideal_has_product",
-  ``!r i:'a ring. Ring r /\ i << r ==> !x y. x IN I /\ y IN I ==> (x * y) IN I``,
-  rw[ideal_property]);
+Theorem ideal_has_product:
+    !r i:'a ring. Ring r /\ i << r ==> !x y. x IN I /\ y IN I ==> (x * y) IN I
+Proof
+  rw[ideal_property]
+QED
 
 (* Theorem: i << r ==> !x y. x IN I /\ y IN R ==> x * y IN I *)
 (* Proof: by ideal_product_property. *)
-val ideal_has_multiple = store_thm(
-  "ideal_has_multiple",
-  ``!r i:'a ring. i << r ==> !x y. x IN I /\ y IN R ==> x * y IN I``,
-  rw[ideal_product_property]);
+Theorem ideal_has_multiple:
+    !r i:'a ring. i << r ==> !x y. x IN I /\ y IN R ==> x * y IN I
+Proof
+  rw[ideal_product_property]
+QED
 
 (* Theorem: i << r ==> i.sum.id = #0 *)
 (* Proof:
@@ -6094,10 +6367,11 @@ val ideal_has_multiple = store_thm(
    ==> i.sum <= r.sum        by ideal_def
    ==> i.sum.id = #0         by subgroup_id
 *)
-val ideal_zero = store_thm(
-  "ideal_zero",
-  ``!r i:'a ring. Ring r /\ i << r ==> (i.sum.id = #0)``,
-  rw[ideal_def, subgroup_id]);
+Theorem ideal_zero:
+    !r i:'a ring. Ring r /\ i << r ==> (i.sum.id = #0)
+Proof
+  rw[ideal_def, subgroup_id]
+QED
 
 (* Theorem: i << r /\ j << r ==> ((i = j) <=> (I = J)) *)
 (* Proof:
@@ -6109,11 +6383,12 @@ val ideal_zero = store_thm(
    (2) I = J ==> i.prod = j.prod
        True by monoid_component_equality, ideal_def, ideal_ops.
 *)
-val ideal_eq_ideal = store_thm(
-  "ideal_eq_ideal",
-  ``!r i j:'a ring. Ring r /\ i << r /\ j << r ==> ((i = j) <=> (I = J))``,
+Theorem ideal_eq_ideal:
+    !r i j:'a ring. Ring r /\ i << r /\ j << r ==> ((i = j) <=> (I = J))
+Proof
   rw[ring_component_equality, EQ_IMP_THM] >>
-  metis_tac[monoid_component_equality, ideal_def, ideal_ops, ideal_zero]);
+  metis_tac[monoid_component_equality, ideal_def, ideal_ops, ideal_zero]
+QED
 
 (* Theorem: i << r /\ j << r ==> ((i << j) <=> (I <= J)) *)
 (* Proof:
@@ -6121,22 +6396,24 @@ val ideal_eq_ideal = store_thm(
    (1) x IN I /\ y IN J /\ I SUBSET J ==> x * y IN I, true by SUBSET_DEF, and y IN J ==> y IN R.
    (2) x IN I /\ y IN J /\ I SUBSET J ==> y * x IN I, true by SUBSET_DEF, and x IN I ==> x IN R.
 *)
-val ideal_sub_ideal = store_thm(
-  "ideal_sub_ideal",
-  ``!r i j:'a ring. Ring r /\ i << r /\ j << r ==> ((i << j) <=> (I SUBSET J))``,
+Theorem ideal_sub_ideal:
+    !r i j:'a ring. Ring r /\ i << r /\ j << r ==> ((i << j) <=> (I SUBSET J))
+Proof
   rw[ideal_def, Subgroup_def] >>
   `r.sum.carrier = R` by rw[ring_add_group] >>
-  metis_tac[SUBSET_DEF]);
+  metis_tac[SUBSET_DEF]
+QED
 
 (* Theorem: i << r ==> i << i *)
 (* Proof:
    i << i iff I SUBSET I    by ideal_sub_ideal
           iff T             by SUBSET_REFL
 *)
-val ideal_sub_itself = store_thm(
-  "ideal_sub_itself",
-  ``!r i:'a ring. Ring r /\ i << r ==> i << i``,
-  metis_tac[ideal_sub_ideal, SUBSET_REFL]);
+Theorem ideal_sub_itself:
+    !r i:'a ring. Ring r /\ i << r ==> i << i
+Proof
+  metis_tac[ideal_sub_ideal, SUBSET_REFL]
+QED
 
 (* Theorem: r << r *)
 (* Proof: by definition, this is to show:
@@ -6145,10 +6422,11 @@ val ideal_sub_itself = store_thm(
    (3) x IN R /\ y IN R ==> x * y IN R, true by ring_mult_element.
    (4) x IN R /\ y IN R ==> y * x IN R, true by ring_mult_element.
 *)
-val ideal_refl = store_thm(
-  "ideal_refl",
-  ``!r:'a ring. Ring r ==> r << r``,
-  rw[ideal_def, subgroup_refl]);
+Theorem ideal_refl:
+    !r:'a ring. Ring r ==> r << r
+Proof
+  rw[ideal_def, subgroup_refl]
+QED
 
 (* Theorem: i << r /\ #1 IN I ==> i = r *)
 (* Proof:
@@ -6169,14 +6447,15 @@ val ideal_refl = store_thm(
        (b) i << r ==> i.prod.op = $*, true by ideal_def.
        (c) i << r ==> i.prod.id = #1, true by ideal_def.
 *)
-val ideal_antisym = store_thm(
-  "ideal_antisym",
-  ``!(r:'a ring) (i:'a ring). i << r /\ r << i ==> (i = r)``,
+Theorem ideal_antisym:
+    !(r:'a ring) (i:'a ring). i << r /\ r << i ==> (i = r)
+Proof
   rw[ring_component_equality] >-
   metis_tac[ideal_def, Subgroup_def, SUBSET_ANTISYM] >-
   metis_tac[ideal_def, subgroup_antisym] >>
   rw[monoid_component_equality] >>
-  metis_tac[ideal_def, Subgroup_def, SUBSET_ANTISYM]);
+  metis_tac[ideal_def, Subgroup_def, SUBSET_ANTISYM]
+QED
 
 (* Theorem: i << r /\ #1 IN I ==> I = R *)
 (* Proof:
@@ -6184,14 +6463,15 @@ val ideal_antisym = store_thm(
    Now, !z. #1 IN I /\ z IN R ==> #1 * z = z IN I by ideal_def.
    Hence R SUBSET I, or I = R by SUBSET_ANTISYM.
 *)
-val ideal_has_one = store_thm(
-  "ideal_has_one",
-  ``!r i:'a ring. Ring r /\ i << r /\ #1 IN I ==> (I = R)``,
+Theorem ideal_has_one:
+    !r i:'a ring. Ring r /\ i << r /\ #1 IN I ==> (I = R)
+Proof
   rw[ideal_def] >>
   `I SUBSET R` by metis_tac[Subgroup_def, Ring_def] >>
   `!y. y IN R ==> (#1 * y = y)` by rw[] >>
   `R SUBSET I` by metis_tac[SUBSET_DEF] >>
-  rw[SUBSET_ANTISYM]);
+  rw[SUBSET_ANTISYM]
+QED
 
 (* Theorem: i << r /\ #1 IN I <=> i = r *)
 (* Proof:
@@ -6211,9 +6491,9 @@ val ideal_has_one = store_thm(
    Only-if part: Ring i ==> i << i
    True by ideal_refl.
 *)
-val ideal_with_one = store_thm(
-  "ideal_with_one",
-  ``!r:'a ring. Ring r ==> !i. i << r /\ #1 IN I <=> (i = r)``,
+Theorem ideal_with_one:
+    !r:'a ring. Ring r ==> !i. i << r /\ #1 IN I <=> (i = r)
+Proof
   rw[EQ_IMP_THM] >| [
     rw[ring_component_equality] >| [
       rw[ideal_has_one],
@@ -6229,7 +6509,8 @@ val ideal_with_one = store_thm(
       ]
     ],
     rw[ideal_refl]
-  ]);
+  ]
+QED
 
 (* Theorem: i << r /\ x IN I /\ unit x ==> i = r *)
 (* Proof:
@@ -6239,15 +6520,16 @@ val ideal_with_one = store_thm(
    But x * |/x = #1         by ring_unit_rinv
    i.e. #1 IN I, hence follows by ideal_with_one.
 *)
-val ideal_with_unit = store_thm(
-  "ideal_with_unit",
-  ``!r i:'a ring. Ring r /\ i << r ==> !x. x IN I /\ unit x ==> (i = r)``,
+Theorem ideal_with_unit:
+    !r i:'a ring. Ring r /\ i << r ==> !x. x IN I /\ unit x ==> (i = r)
+Proof
   rpt strip_tac >>
   `x IN R` by metis_tac[ideal_element_property] >>
   `|/x IN R` by rw[ring_unit_inv_element] >>
   `x * |/x = #1` by rw[ring_unit_rinv] >>
   `#1 IN I` by metis_tac[ideal_has_multiple] >>
-  metis_tac[ideal_with_one]);
+  metis_tac[ideal_with_one]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Ideal Cosets                                                              *)
@@ -6269,14 +6551,15 @@ val _ = overload_on ("o", ``coset r.sum``);
          = x + (-x + x')  by ring_add_comm
          = x'             by ring_add_lneg_assoc
 *)
-val ideal_coset_of_element = store_thm(
-  "ideal_coset_of_element",
-  ``!r i:'a ring. Ring r /\ i << r ==> !x. x IN I ==> (x o I = I)``,
+Theorem ideal_coset_of_element:
+    !r i:'a ring. Ring r /\ i << r ==> !x. x IN I ==> (x o I = I)
+Proof
   rw[coset_def, EXTENSION, EQ_IMP_THM] >-
   rw[ideal_property] >>
   qexists_tac `x' + -x` >>
   `-x IN I` by rw[ideal_has_neg] >>
-  metis_tac[ring_add_lneg_assoc, ring_add_comm, ideal_element_property, ideal_property]);
+  metis_tac[ring_add_lneg_assoc, ring_add_comm, ideal_element_property, ideal_property]
+QED
 
 (* Theorem: i << r ==> !x. x IN R /\ (x o I = I) <=> x IN I *)
 (* Proof:
@@ -6290,9 +6573,9 @@ val ideal_coset_of_element = store_thm(
      x IN R     by ideal_element_property
      x o I = I  by ideal_coset_of_element.
 *)
-val ideal_coset_eq_carrier = store_thm(
-  "ideal_coset_eq_carrier",
-  ``!r i:'a ring. Ring r /\ i << r ==> !x. x IN R /\ (x o I = I) <=> x IN I``,
+Theorem ideal_coset_eq_carrier:
+    !r i:'a ring. Ring r /\ i << r ==> !x. x IN R /\ (x o I = I) <=> x IN I
+Proof
   rw[EQ_IMP_THM] >| [
     `x o I = IMAGE (\z. x + z) I` by rw[GSYM coset_def] >>
     `#0 IN I` by rw[ideal_has_zero] >>
@@ -6300,7 +6583,8 @@ val ideal_coset_eq_carrier = store_thm(
     metis_tac[ring_add_rzero, ideal_element_property],
     metis_tac[ideal_element_property],
     rw[ideal_coset_of_element]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r /\ (i << r) ==> !x y. x IN R /\ y IN R ==> ((x o I = y o I) <=> x - y IN I) *)
 (* Proof:
@@ -6311,22 +6595,23 @@ val ideal_coset_eq_carrier = store_thm(
    or        x + -y IN I        by ring_add_comm, ring_neg_element
    or        x - y  IN I        by ring_sub_def
 *)
-val ideal_coset_eq = store_thm(
-  "ideal_coset_eq",
-  ``!r i:'a ring. Ring r /\ (i << r) ==> !x y. x IN R /\ y IN R ==> ((x o I = y o I) <=> x - y IN I)``,
+Theorem ideal_coset_eq:
+    !r i:'a ring. Ring r /\ (i << r) ==> !x y. x IN R /\ y IN R ==> ((x o I = y o I) <=> x - y IN I)
+Proof
   rpt strip_tac >>
   `i.sum <= r.sum /\ (i.sum.carrier = I)` by metis_tac[ideal_def] >>
   `r.sum.carrier = R` by rw[] >>
-  metis_tac[subgroup_coset_eq, ring_add_comm, ring_neg_element, ring_sub_def]);
+  metis_tac[subgroup_coset_eq, ring_add_comm, ring_neg_element, ring_sub_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Ideal induces congruence in Ring.                                         *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define congruence by ideal in Ring *)
-val ideal_congruence_def = Define `
+Definition ideal_congruence_def:
   ideal_congruence (r:'a ring) (i:'a ring) (x:'a) (y:'a) <=> x - y IN i.carrier
-`;
+End
 
 (* set overloading *)
 val _ = overload_on ("===", ``ideal_congruence r i``);
@@ -6340,52 +6625,57 @@ val _ = export_rewrites ["ideal_congruence_def"];
    x - x = #0            by ring_sub_eq_zero
    hence true            by ideal_has_zero
 *)
-val ideal_congruence_refl = store_thm(
-  "ideal_congruence_refl",
-  ``!r i:'a ring. Ring r /\ i << r ==> !x. x IN R ==> x === x``,
-  rw[ideal_has_zero]);
+Theorem ideal_congruence_refl:
+    !r i:'a ring. Ring r /\ i << r ==> !x. x IN R ==> x === x
+Proof
+  rw[ideal_has_zero]
+QED
 
 (* Theorem: x === y <=> y === x *)
 (* Proof:
    x - y = - (y - x)    by ring_neg_sub
    hence true           by ideal_had_neg
 *)
-val ideal_congruence_sym = store_thm(
-  "ideal_congruence_sym",
-  ``!r i:'a ring. Ring r /\ i << r ==> !x y. x IN R /\ y IN R ==> (x === y <=> y === x)``,
+Theorem ideal_congruence_sym:
+    !r i:'a ring. Ring r /\ i << r ==> !x y. x IN R /\ y IN R ==> (x === y <=> y === x)
+Proof
   rw_tac std_ss[ideal_congruence_def] >>
-  metis_tac[ring_neg_sub, ideal_has_neg]);
+  metis_tac[ring_neg_sub, ideal_has_neg]
+QED
 
 (* Theorem: x === y /\ y === z ==> x === z *)
 (* Proof:
    x - z = (x - y) + (y - z)   by ring_sub_def, ring_add_assoc, ring_add_lneg, ring_add_lzero
    hence true                  by ideal_has_sum
 *)
-val ideal_congruence_trans = store_thm(
-  "ideal_congruence_trans",
-  ``!r i:'a ring. Ring r /\ i << r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> (x === y /\ y === z ==> x === z)``,
+Theorem ideal_congruence_trans:
+    !r i:'a ring. Ring r /\ i << r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> (x === y /\ y === z ==> x === z)
+Proof
   rw_tac std_ss[ideal_congruence_def] >>
   `(x - y) + (y - z) = x + (-y + (y + -z))` by rw[ring_add_assoc] >>
   `_ = x + (-y + y + -z)` by rw[ring_add_assoc] >>
   `_ = x - z` by rw[] >>
-  metis_tac[ideal_has_sum]);
+  metis_tac[ideal_has_sum]
+QED
 
 (* Theorem: === is an equivalence relation on R. *)
 (* Proof: by reflexive, symmetric and transitive of === on R. *)
-val ideal_congruence_equiv = store_thm(
-  "ideal_congruence_equiv",
-  ``!r i:'a ring. Ring r /\ i << r ==> $=== equiv_on R``,
+Theorem ideal_congruence_equiv:
+    !r i:'a ring. Ring r /\ i << r ==> $=== equiv_on R
+Proof
   rw_tac std_ss[equiv_on_def] >-
   rw[ideal_congruence_refl] >-
   rw[ideal_congruence_sym] >>
-  metis_tac[ideal_congruence_trans]);
+  metis_tac[ideal_congruence_trans]
+QED
 
 (* Theorem: Ring r /\ (i << r) ==> !x y. x IN R /\ y IN R ==> ((x o I = y o I) <=> x === y) *)
 (* Proof: by ideal_congruence_def, ideal_coset_eq. *)
-val ideal_coset_eq_congruence = store_thm(
-  "ideal_coset_eq_congruence",
-  ``!r i:'a ring. Ring r /\ i << r ==> !x y. x IN R /\ y IN R ==> ((x o I = y o I) <=> x === y)``,
-  rw[ideal_coset_eq]);
+Theorem ideal_coset_eq_congruence:
+    !r i:'a ring. Ring r /\ i << r ==> !x y. x IN R /\ y IN R ==> ((x o I = y o I) <=> x === y)
+Proof
+  rw[ideal_coset_eq]
+QED
 
 (* Characterization: x === y iff x, y in the same coset, element of (r/i) *)
 
@@ -6401,9 +6691,9 @@ val ideal_coset_eq_congruence = store_thm(
        = -z              by ring_add_lneg_assoc
        hence true        by ideal_has_neg
 *)
-val ideal_congruence_iff_inCoset = store_thm(
-  "ideal_congruence_iff_inCoset",
-  ``!r i:'a ring. Ring r /\ i << r ==> !x y. x IN I /\ y IN I ==> ((x === y) <=> inCoset r.sum i.sum x y)``,
+Theorem ideal_congruence_iff_inCoset:
+    !r i:'a ring. Ring r /\ i << r ==> !x y. x IN I /\ y IN I ==> ((x === y) <=> inCoset r.sum i.sum x y)
+Proof
   rpt strip_tac >>
   `i.sum <= r.sum /\ (i.sum.carrier = I)` by metis_tac[ideal_def] >>
   `!z. z IN I ==> z IN R` by metis_tac[ideal_element_property] >>
@@ -6412,7 +6702,8 @@ val ideal_congruence_iff_inCoset = store_thm(
     metis_tac[ring_add_lneg_assoc, ideal_has_neg, ideal_has_sum],
     `!y. y IN R ==> -y IN R` by rw[] >>
     metis_tac[ring_neg_add, ring_add_lneg_assoc, ideal_has_neg]
-  ]);
+  ]
+QED
 
 (* Theorem: x === y ==> z * x === z * y  *)
 (* Proof:
@@ -6422,12 +6713,13 @@ val ideal_congruence_iff_inCoset = store_thm(
    ==> z * x - z * y IN R  by ring_mult_rsub, ideal_element_property
    ==> z * x === z * y     by ideal_congruence_def
 *)
-val ideal_congruence_mult = store_thm(
-  "ideal_congruence_mult",
-  ``!r i:'a ring. Ring r /\ i << r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((x === y) ==> (z * x === z * y))``,
+Theorem ideal_congruence_mult:
+    !r i:'a ring. Ring r /\ i << r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((x === y) ==> (z * x === z * y))
+Proof
   rw_tac std_ss[ideal_congruence_def] >>
   `z * (x - y) IN I` by metis_tac[ideal_def] >>
-  metis_tac[ring_mult_rsub, ideal_element_property]);
+  metis_tac[ring_mult_rsub, ideal_element_property]
+QED
 
 (* Theorem: i << r /\ x IN I /\ y IN R ==> y IN I <=> x === y *)
 (* Proof:
@@ -6442,9 +6734,9 @@ val ideal_congruence_mult = store_thm(
    ==> (y - x) + x IN I       by ideal_has_sum
    ==> y IN I                 by ring_sub_add
 *)
-val ideal_congruence_elements = store_thm(
-  "ideal_congruence_elements",
-  ``!r i:'a ring. Ring r /\ i << r ==> !x y. x IN I /\ y IN R ==> (y IN I <=> x === y)``,
+Theorem ideal_congruence_elements:
+    !r i:'a ring. Ring r /\ i << r ==> !x y. x IN I /\ y IN R ==> (y IN I <=> x === y)
+Proof
   rpt strip_tac >>
   `!z. z IN I ==> z IN R` by metis_tac[ideal_element_property] >>
   rw_tac std_ss[ideal_congruence_def, EQ_IMP_THM] >-
@@ -6452,7 +6744,8 @@ val ideal_congruence_elements = store_thm(
   `x + -y IN I` by metis_tac[ring_sub_def] >>
   `x + -y - x IN I` by rw[ideal_has_diff] >>
   `-y IN I` by metis_tac[ring_add_sub_comm, ring_neg_element] >>
-  metis_tac[ideal_has_neg, ring_neg_neg]);
+  metis_tac[ideal_has_neg, ring_neg_neg]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Principal Ideal = Ideal generated by a Ring element                       *)
@@ -6465,13 +6758,13 @@ val ideal_congruence_elements = store_thm(
 val _ = overload_on ("*", ``coset r.prod``);
 
 (* Integer Ring Ideals are multiples *)
-val principal_ideal_def = Define `
+Definition principal_ideal_def:
   principal_ideal (r:'a ring) (p:'a) =
     <| carrier := p * R;
            sum := <| carrier := p * R; op := r.sum.op; id := r.sum.id |>;
           prod := <| carrier := p * R; op := r.prod.op; id := r.prod.id |>
      |>
-`;
+End
 (* Note: <p>.prod is only type-compatible with monoid, it is not a monoid: prod.id may not be in carrier. *)
 
 (* set overloading *)
@@ -6488,21 +6781,23 @@ val _ = overload_on ("<q>", ``principal_ideal r q``);
 
 (* Theorem: Properties of principal ideal. *)
 (* Proof: by definition. *)
-val principal_ideal_property = store_thm(
-  "principal_ideal_property",
-  ``!(r:'a ring) (p:'a).
+Theorem principal_ideal_property:
+    !(r:'a ring) (p:'a).
      (<p>.carrier = p * R) /\ (<p>.sum.carrier = p * R) /\ (<p>.prod.carrier = p * R) /\
      (<p>.sum.op = r.sum.op) /\ (<p>.prod.op = r.prod.op) /\
-     (<p>.sum.id = #0) /\ (<p>.prod.id = #1)``,
-  rw[principal_ideal_def]);
+     (<p>.sum.id = #0) /\ (<p>.prod.id = #1)
+Proof
+  rw[principal_ideal_def]
+QED
 
 (* Theorem: x IN <p>.carrier <=> ?z. z IN R /\ (x = p * z) *)
 (* Proof: by definitions. *)
-val principal_ideal_element = store_thm(
-  "principal_ideal_element",
-  ``!p x:'a. x IN <p>.carrier <=> ?z. z IN R /\ (x = p * z)``,
+Theorem principal_ideal_element:
+    !p x:'a. x IN <p>.carrier <=> ?z. z IN R /\ (x = p * z)
+Proof
   rw[principal_ideal_def, coset_def] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: p IN <p>.carrier *)
 (* Proof:
@@ -6513,10 +6808,11 @@ val principal_ideal_element = store_thm(
    and  p = p * #1   by ring_mult_rone
    hence true.
 *)
-val principal_ideal_has_element = store_thm(
-  "principal_ideal_has_element",
-  ``!r:'a ring. Ring r ==> !p. p IN R ==> p IN <p>.carrier``,
-  metis_tac[principal_ideal_element, ring_one_element, ring_mult_rone]);
+Theorem principal_ideal_has_element:
+    !r:'a ring. Ring r ==> !p. p IN R ==> p IN <p>.carrier
+Proof
+  metis_tac[principal_ideal_element, ring_one_element, ring_mult_rone]
+QED
 
 (* Theorem: Group <p>.sum *)
 (* Proof:
@@ -6545,9 +6841,9 @@ val principal_ideal_has_element = store_thm(
        = - (p * u) + p * u        by ring_neg_mult
        = #0                       by ring_add_lneg
 *)
-val principal_ideal_group = store_thm(
-  "principal_ideal_group",
-  ``!r:'a ring. Ring r ==> !p. p IN R ==> Group <p>.sum``,
+Theorem principal_ideal_group:
+    !r:'a ring. Ring r ==> !p. p IN R ==> Group <p>.sum
+Proof
   ntac 4 strip_tac >>
   `<p>.carrier = p * R` by rw[principal_ideal_property] >>
   (`!x. x IN p * R ==> x IN R` by (rw[coset_def] >> rw[])) >>
@@ -6564,7 +6860,8 @@ val principal_ideal_group = store_thm(
     `p * -u = - x` by metis_tac[ring_neg_mult] >>
     `p * -u + x = #0` by metis_tac[ring_add_lneg] >>
     metis_tac[principal_ideal_element, ring_neg_element]
-  ]);
+  ]
+QED
 
 (* Theorem: <p>.sum <= r.sum *)
 (* Proof: for a subgroup:
@@ -6575,12 +6872,13 @@ val principal_ideal_group = store_thm(
          or to show: p IN R /\ z IN R ==> p * z IN R
        true by ring_mult_element.
 *)
-val principal_ideal_subgroup = store_thm(
-  "principal_ideal_subgroup",
-  ``!r:'a ring. Ring r ==> !p. p IN R ==> <p>.sum <= r.sum``,
+Theorem principal_ideal_subgroup:
+    !r:'a ring. Ring r ==> !p. p IN R ==> <p>.sum <= r.sum
+Proof
   rw[Subgroup_def, principal_ideal_group, principal_ideal_def] >>
   rw[coset_def, SUBSET_DEF] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: <p>.sum << r.sum *)
 (* Proof: for a normal subgroup:
@@ -6589,15 +6887,16 @@ val principal_ideal_subgroup = store_thm(
    (2) p IN R /\ a IN R ==> IMAGE (\z. a + z) <p>.sum.carrier = IMAGE (\z. z + a) <p>.sum.carrier
        true ring_add_comm and EXTENSION.
 *)
-val principal_ideal_subgroup_normal = store_thm(
-  "principal_ideal_subgroup_normal",
-  ``!r:'a ring. Ring r ==> !p. p IN R ==> <p>.sum << r.sum``,
+Theorem principal_ideal_subgroup_normal:
+    !r:'a ring. Ring r ==> !p. p IN R ==> <p>.sum << r.sum
+Proof
   rw[normal_subgroup_alt, coset_def, right_coset_def] >| [
     rw[principal_ideal_subgroup],
     rw[principal_ideal_def, coset_def, EXTENSION] >>
     `!x. x IN R ==> (a + p * x = p * x + a)` by rw[ring_add_comm] >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Theorem: <p> is an ideal: <p> << r. *)
 (* Proof: by ideal_def
@@ -6611,9 +6910,9 @@ val principal_ideal_subgroup_normal = store_thm(
    (3) x IN p * R /\ y IN R ==> y * x IN p * R
        Use above and y * x = x * y   by ring_mult_comm
 *)
-val principal_ideal_ideal = store_thm(
-  "principal_ideal_ideal",
-  ``!r:'a ring. Ring r ==> !p. p IN R ==> <p> << r``,
+Theorem principal_ideal_ideal:
+    !r:'a ring. Ring r ==> !p. p IN R ==> <p> << r
+Proof
   rpt strip_tac >>
   `<p>.carrier = p * R` by metis_tac[principal_ideal_property] >>
   rw[ideal_def, principal_ideal_def, principal_ideal_subgroup] >| [
@@ -6624,7 +6923,8 @@ val principal_ideal_ideal = store_thm(
     `y * (p * u) = p * u  * y` by rw[ring_mult_comm] >>
     `_ = p * (u * y)` by rw[ring_mult_assoc] >>
     metis_tac[principal_ideal_element, ring_mult_element]
-  ]);
+  ]
+QED
 
 (* Theorem: A principal ideal has all ideals of its elements:
             p IN R /\ q IN <p>.carrier ==> <q> << <p> *)
@@ -6655,9 +6955,9 @@ val principal_ideal_ideal = store_thm(
        Hence true by ideal_product_property.
    (7) Similar to (6), also by ideal_product_property
 *)
-val principal_ideal_has_principal_ideal = store_thm(
-  "principal_ideal_has_principal_ideal",
-  ``!r:'a ring. Ring r ==> !p q. p IN R /\ q IN <p>.carrier ==> (<q> << <p>)``,
+Theorem principal_ideal_has_principal_ideal:
+    !r:'a ring. Ring r ==> !p q. p IN R /\ q IN <p>.carrier ==> (<q> << <p>)
+Proof
   rpt strip_tac >>
   `<p> << r` by rw[principal_ideal_ideal] >>
   `q IN R` by metis_tac[principal_ideal_element, ring_mult_element] >>
@@ -6679,7 +6979,8 @@ val principal_ideal_has_principal_ideal = store_thm(
     metis_tac[ideal_def],
     metis_tac[ideal_element_property, ideal_ops, ideal_product_property],
     metis_tac[ideal_element_property, ideal_ops, ideal_product_property]
-  ]);
+  ]
+QED
 
 (* Theorem: if elements are associates, their principal ideals are equal.
             p IN R /\ q IN R /\ unit u /\ (p = q * u) ==> <p> = <q>  *)
@@ -6702,9 +7003,9 @@ val principal_ideal_has_principal_ideal = store_thm(
    Hence using the same argument gives <q>.carrier SUBSET <p>.carrier.
    or <p>.carrier = <q>.carrier    by SUBSET_ANTISYM
 *)
-val principal_ideal_eq_principal_ideal = store_thm(
-  "principal_ideal_eq_principal_ideal",
-  ``!r:'a ring. Ring r ==> !p q u. p IN R /\ q IN R /\ unit u /\ (p = q * u) ==> (<p> = <q>)``,
+Theorem principal_ideal_eq_principal_ideal:
+    !r:'a ring. Ring r ==> !p q u. p IN R /\ q IN R /\ unit u /\ (p = q * u) ==> (<p> = <q>)
+Proof
   rpt strip_tac >>
   `<p> << r` by rw[principal_ideal_ideal] >>
   `<q> << r` by rw[principal_ideal_ideal] >>
@@ -6717,7 +7018,8 @@ val principal_ideal_eq_principal_ideal = store_thm(
     qexists_tac `|/u * z` >>
     `q * u * ( |/ u * z) = q * (u * |/ u * z)` by rw[ring_mult_assoc] >>
     rw[ring_unit_rinv]
-  ]);
+  ]
+QED
 (* Note: the converse can be proved only in integral domain. *)
 
 (* Theorem: i << r /\ p IN R ==> (p IN I <=> <p> << i) *)
@@ -6747,9 +7049,9 @@ val principal_ideal_eq_principal_ideal = store_thm(
      hence p IN i.sum.carrier   by ideal_element
      or p IN I since i.sum.carrier = I   by ideal_carriers.
 *)
-val ideal_has_principal_ideal = store_thm(
-  "ideal_has_principal_ideal",
-  ``!r i:'a ring. Ring r /\ i << r ==> !p. p IN R ==> (p IN I <=> (<p> << i))``,
+Theorem ideal_has_principal_ideal:
+    !r i:'a ring. Ring r /\ i << r ==> !p. p IN R ==> (p IN I <=> (<p> << i))
+Proof
   rpt strip_tac >>
   `<p> << r` by rw[principal_ideal_ideal] >>
   rw[EQ_IMP_THM] >| [
@@ -6768,7 +7070,8 @@ val ideal_has_principal_ideal = store_thm(
       metis_tac[ideal_element_property, ideal_product_property]
     ],
     metis_tac[principal_ideal_has_element, ideal_element, ideal_carriers]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Trivial Ideal                                                             *)
@@ -6782,22 +7085,24 @@ val _ = overload_on ("<#0>", ``principal_ideal r #0``);
    (1) z IN R ==> #0 * z = #0, true by ring_mult_lzero.
    (2) ?z. (#0 = #0 * z) /\ z IN R, let z = #0, true by ring_mult_zero_zero.
 *)
-val zero_ideal_sing = store_thm(
-  "zero_ideal_sing",
-  ``!r:'a ring. Ring r ==> (<#0>.carrier = {#0})``,
+Theorem zero_ideal_sing:
+    !r:'a ring. Ring r ==> (<#0>.carrier = {#0})
+Proof
   rw[principal_ideal_def, coset_def, EXTENSION, EQ_IMP_THM] >-
   rw[] >>
-  metis_tac[ring_mult_zero_zero, ring_zero_element]);
+  metis_tac[ring_mult_zero_zero, ring_zero_element]
+QED
 
 (* Theorem: <#0> << r *)
 (* Proof:
    Since #0 IN R    by ring_zero_element
    This follows     by principal_ideal_ideal.
 *)
-val zero_ideal_ideal = store_thm(
-  "zero_ideal_ideal",
-  ``!r:'a ring. Ring r ==> <#0> << r``,
-  rw[principal_ideal_ideal]);
+Theorem zero_ideal_ideal:
+    !r:'a ring. Ring r ==> <#0> << r
+Proof
+  rw[principal_ideal_ideal]
+QED
 
 (* Theorem: SING I <=> i = <#0> *)
 (* Proof: This is to show:
@@ -6811,37 +7116,39 @@ val zero_ideal_ideal = store_thm(
        Since <#0>.carrier = {#0}   by zero_ideal_sing
        hence true                  by SING_DEF
 *)
-val ideal_carrier_sing = store_thm(
-  "ideal_carrier_sing",
-  ``!r i:'a ring. Ring r /\ i << r ==> (SING I <=> (i = <#0>))``,
+Theorem ideal_carrier_sing:
+    !r i:'a ring. Ring r /\ i << r ==> (SING I <=> (i = <#0>))
+Proof
   rw[EQ_IMP_THM] >| [
     `#0 IN I` by rw[ideal_has_zero] >>
     `I = {#0}` by metis_tac[SING_DEF, IN_SING] >>
     metis_tac[ideal_eq_ideal, zero_ideal_ideal, zero_ideal_sing],
     rw[zero_ideal_sing]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Sum of Ideals                                                             *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define sum of ideals *)
-val ideal_sum_def = Define `
+Definition ideal_sum_def:
   ideal_sum (r:'a ring) (i:'a ring) (j:'a ring) =
       <| carrier := {x + y | x IN I /\ y IN J};
              sum := <| carrier := {x + y | x IN I /\ y IN J}; op := r.sum.op; id := r.sum.id |>;
             prod := <| carrier := {x + y | x IN I /\ y IN J}; op := r.prod.op; id := r.prod.id |>
        |>
-`;
+End
 val _ = overload_on ("+", ``ideal_sum r``);
 
 (* Theorem: x IN (i + j).carrier <=> ?y z. y IN I /\ z IN J /\ (x = y + z) *)
 (* Proof: by definition. *)
-val ideal_sum_element = store_thm(
-  "ideal_sum_element",
-  ``!(i:'a ring) (j:'a ring) x. x IN (i + j).carrier <=> ?y z. y IN I /\ z IN J /\ (x = y + z)``,
+Theorem ideal_sum_element:
+    !(i:'a ring) (j:'a ring) x. x IN (i + j).carrier <=> ?y z. y IN I /\ z IN J /\ (x = y + z)
+Proof
   rw[ideal_sum_def] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: i << r /\ j << r ==> i + j = j + i *)
 (* Proof:
@@ -6850,11 +7157,12 @@ val ideal_sum_element = store_thm(
    Since !z. z IN I ==> z IN R    by ideal_element_property
    This is true by ring_add_comm.
 *)
-val ideal_sum_comm = store_thm(
-  "ideal_sum_comm",
-  ``!r i j:'a ring. Ring r /\ i << r /\ j << r ==> (i + j = j + i)``,
+Theorem ideal_sum_comm:
+    !r i j:'a ring. Ring r /\ i << r /\ j << r ==> (i + j = j + i)
+Proof
   rw[ideal_sum_def, EXTENSION] >>
-  metis_tac[ideal_element_property, ring_add_comm]);
+  metis_tac[ideal_element_property, ring_add_comm]
+QED
 
 (* Theorem: i << r /\ j << r ==>  Group (i + j).sum *)
 (* Proof: by group definition, this is to show:
@@ -6875,9 +7183,9 @@ val ideal_sum_comm = store_thm(
        -x' IN I and -y IN J            by ideal_has_neg
        Hence true by ring_add_lneg.
 *)
-val ideal_sum_group = store_thm(
-  "ideal_sum_group",
-  ``!r i j:'a ring. Ring r /\ i << r /\ j << r ==> Group (i + j).sum``,
+Theorem ideal_sum_group:
+    !r i j:'a ring. Ring r /\ i << r /\ j << r ==> Group (i + j).sum
+Proof
   rpt strip_tac >>
   (`!z. z IN {x + y | x IN I /\ y IN J} <=> ?x y. x IN I /\ y IN J /\ (z = x + y)` by (rw[] >> metis_tac[])) >>
   `!z. (z IN I ==> z IN R) /\ (z IN J ==> z IN R)` by metis_tac[ideal_element_property] >>
@@ -6896,7 +7204,8 @@ val ideal_sum_group = store_thm(
     qexists_tac `-(x' + y)` >>
     rw[] >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Theorem: i << r /\ j << r ==> i.sum <= (i + j).sum *)
 (* Proof: by Subgroup_def, this is to show:
@@ -6910,9 +7219,9 @@ val ideal_sum_group = store_thm(
    (4) x IN I /\ y IN I ==> i.sum.op x y = (i + j).sum.op x y
        True by ideal_ops.
 *)
-val ideal_subgroup_ideal_sum = store_thm(
-  "ideal_subgroup_ideal_sum",
-  ``!r i j:'a ring. Ring r /\ i << r /\ j << r ==> i.sum <= (i + j).sum``,
+Theorem ideal_subgroup_ideal_sum:
+    !r i j:'a ring. Ring r /\ i << r /\ j << r ==> i.sum <= (i + j).sum
+Proof
   rw[Subgroup_def] >| [
     metis_tac[ideal_def, Subgroup_def],
     rw[ideal_sum_group],
@@ -6920,7 +7229,8 @@ val ideal_subgroup_ideal_sum = store_thm(
     metis_tac[ideal_def, ideal_has_zero, ring_add_rzero, ideal_element_property],
     rw[ideal_sum_def] >>
     metis_tac[ideal_ops]
-  ]);
+  ]
+QED
 
 (* Theorem: i << r /\ j << r ==> (i + j).sum <= r.sum *)
 (* Proof: by Subgroup_def, this is to show:
@@ -6934,15 +7244,16 @@ val ideal_subgroup_ideal_sum = store_thm(
    (3) x IN (i + j).sum.carrier /\ y IN (i + j).sum.carrier ==> (i + j).sum.op x y = x + y
        True by ideal_sum_def.
 *)
-val ideal_sum_subgroup = store_thm(
-  "ideal_sum_subgroup",
-  ``!r i j:'a ring. Ring r /\ i << r /\ j << r ==> (i + j).sum <= r.sum``,
+Theorem ideal_sum_subgroup:
+    !r i j:'a ring. Ring r /\ i << r /\ j << r ==> (i + j).sum <= r.sum
+Proof
   rw[Subgroup_def] >| [
     rw[ideal_sum_group],
     rw[ideal_sum_def, SUBSET_DEF] >>
     metis_tac[ideal_element_property, ring_add_element],
     rw[ideal_sum_def]
-  ]);
+  ]
+QED
 
 (* Theorem: i << r /\ j << r ==> i << i + j *)
 (* Proof: by definition, this is to show:
@@ -6959,9 +7270,9 @@ val ideal_sum_subgroup = store_thm(
        i.e. y * x IN I
        By same reasoning above, apply ring_mult_comm.
 *)
-val ideal_sum_has_ideal = store_thm(
-  "ideal_sum_has_ideal",
-  ``!r i j:'a ring. Ring r /\ i << r /\ j << r ==> i << (i + j)``,
+Theorem ideal_sum_has_ideal:
+    !r i j:'a ring. Ring r /\ i << r /\ j << r ==> i << (i + j)
+Proof
   rpt strip_tac >>
   rw[ideal_def] >-
   rw[ideal_subgroup_ideal_sum] >-
@@ -6976,14 +7287,16 @@ val ideal_sum_has_ideal = store_thm(
   metis_tac[ideal_element_property, ring_add_element, ideal_def]) >>
   rw[ideal_sum_def] >>
   (`!z. z IN (i + j).carrier <=> ?x y. x IN I /\ y IN J /\ (z = x + y)` by (rw[ideal_sum_def] >> metis_tac[])) >>
-  metis_tac[ideal_element_property, ring_add_element, ring_mult_comm, ideal_def]);
+  metis_tac[ideal_element_property, ring_add_element, ring_mult_comm, ideal_def]
+QED
 
 (* Theorem: i << r /\ j << r ==> j << i + j *)
 (* Proof: by ideal_sum_has_ideal and ideal_sum_comm. *)
-val ideal_sum_has_ideal_comm = store_thm(
-  "ideal_sum_has_ideal_comm",
-  ``!r i j:'a ring. Ring r /\ i << r /\ j << r ==> j << (i + j)``,
-  metis_tac[ideal_sum_has_ideal, ideal_sum_comm]);
+Theorem ideal_sum_has_ideal_comm:
+    !r i j:'a ring. Ring r /\ i << r /\ j << r ==> j << (i + j)
+Proof
+  metis_tac[ideal_sum_has_ideal, ideal_sum_comm]
+QED
 
 (* Theorem: i << r /\ j << r ==> i + j << r *)
 (* Proof: by definition, this is to show:
@@ -7001,9 +7314,9 @@ val ideal_sum_has_ideal_comm = store_thm(
    (7) x IN (i + j).carrier /\ y IN R ==> y * x IN (i + j).carrier
        Same reasoning above, using ring_mult_radd.
 *)
-val ideal_sum_ideal = store_thm(
-  "ideal_sum_ideal",
-  ``!r i j:'a ring. Ring r /\ i << r /\ j << r ==> (i + j) << r``,
+Theorem ideal_sum_ideal:
+    !r i j:'a ring. Ring r /\ i << r /\ j << r ==> (i + j) << r
+Proof
   rpt strip_tac >>
   rw[ideal_def] >| [
     rw[ideal_sum_subgroup],
@@ -7025,7 +7338,8 @@ val ideal_sum_ideal = store_thm(
     `_ = y * p + y * q` by rw[ring_mult_radd] >>
     `y * p IN I /\ y * q IN J` by metis_tac[ideal_def] >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Theorem: i << r /\ j << r ==> (i + j << j <=> i << j) *)
 (* Proof:
@@ -7042,9 +7356,9 @@ val ideal_sum_ideal = store_thm(
        y IN I ==> y IN J                      by implication
        Hence y + z IN J                       by ideal_property
 *)
-val ideal_sum_sub_ideal = store_thm(
-  "ideal_sum_sub_ideal",
-  ``!r i j:'a ring. Ring r /\ i << r /\ j << r ==> ((i + j) << j <=> i << j)``,
+Theorem ideal_sum_sub_ideal:
+    !r i j:'a ring. Ring r /\ i << r /\ j << r ==> ((i + j) << j <=> i << j)
+Proof
   rpt strip_tac >>
   `(i + j) << r` by rw[ideal_sum_ideal] >>
   `(i + j).carrier SUBSET J <=> I SUBSET J` suffices_by metis_tac[ideal_sub_ideal] >>
@@ -7053,7 +7367,8 @@ val ideal_sum_sub_ideal = store_thm(
     `x = x + #0` by rw[] >>
     metis_tac[],
     rw[ideal_property]
-  ]);
+  ]
+QED
 
 (* Theorem: i << r /\ p IN I ==> <p> + i = i *)
 (* Proof:
@@ -7073,9 +7388,9 @@ val ideal_sum_sub_ideal = store_thm(
        and #0 IN <p>.carrier by principal_ideal_ideal, ideal_has_zero
        Let x' = #0, y = x, hence true.
 *)
-val principal_ideal_sum_eq_ideal = store_thm(
-  "principal_ideal_sum_eq_ideal",
-  ``!r i:'a ring. Ring r /\ i << r ==> !p. p IN I ==> (<p> + i = i)``,
+Theorem principal_ideal_sum_eq_ideal:
+    !r i:'a ring. Ring r /\ i << r ==> !p. p IN I ==> (<p> + i = i)
+Proof
   rpt strip_tac >>
   `<p> << r` by metis_tac[principal_ideal_ideal, ideal_element_property] >>
   `(<p> + i) << r` by rw[ideal_sum_ideal] >>
@@ -7086,7 +7401,8 @@ val principal_ideal_sum_eq_ideal = store_thm(
     `!z. z IN I ==> z IN R` by metis_tac[ideal_element_property] >>
     `x = #0 + x` by rw[] >>
     metis_tac[principal_ideal_ideal, ideal_has_zero]
-  ]);
+  ]
+QED
 
 (* Theorem: i << r /\ p IN I <=> p IN R /\ (<p> + i = i) *)
 (* Proof:
@@ -7101,9 +7417,9 @@ val principal_ideal_sum_eq_ideal = store_thm(
      or  p IN (<p> + i).carrier      by ideal_carriers
      ==> p IN I                      by given: <p> + i = i
 *)
-val principal_ideal_sum_equal_ideal = store_thm(
-  "principal_ideal_sum_equal_ideal",
-  ``!r i:'a ring. Ring r /\ i << r ==> (!p. p IN I <=> p IN R /\ (<p> + i = i))``,
+Theorem principal_ideal_sum_equal_ideal:
+    !r i:'a ring. Ring r /\ i << r ==> (!p. p IN I <=> p IN R /\ (<p> + i = i))
+Proof
   rw[EQ_IMP_THM] >-
   metis_tac[ideal_element_property] >-
   rw[principal_ideal_sum_eq_ideal] >>
@@ -7111,18 +7427,19 @@ val principal_ideal_sum_equal_ideal = store_thm(
   `<p> << (<p> + i)` by rw[ideal_sum_has_ideal] >>
   `p IN <p>.carrier` by rw[principal_ideal_has_element] >>
   `p IN (<p> + i).carrier` by metis_tac[ideal_element, ideal_carriers] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Maximal Ideals                                                            *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define maximal ideal *)
-val ideal_maximal_def = Define `
+Definition ideal_maximal_def:
   ideal_maximal (r:'a ring) (i:'a ring) <=>
     (i << r) /\
     (!j:'a ring. i << j /\ j << r ==> (i = j) \/ (j = r))
-`;
+End
 
 (* use overloading *)
 val _ = overload_on ("maxi", ``ideal_maximal r``);
@@ -7132,11 +7449,11 @@ val _ = overload_on ("maxi", ``ideal_maximal r``);
 (* ------------------------------------------------------------------------- *)
 
 (* A ring element is irreducible if it is non-zero and non-unit, and its only factors are trivial. *)
-val irreducible_def = Define`
+Definition irreducible_def:
   irreducible (r:'a ring) (z:'a) <=>
     (z IN R+) /\ ~(unit z) /\
     (!x y. x IN R /\ y IN R /\ (z = x * y) ==> (unit x) \/ (unit y))
-`;
+End
 
 (* use overloading *)
 val _ = overload_on ("atom", ``irreducible r``);
@@ -7151,21 +7468,22 @@ val _ = overload_on ("atom", ``irreducible r``);
    atom p ==> p IN R+       by irreducible_def
           ==> p IN R        by ring_nonzero_element
 *)
-val irreducible_element = store_thm(
-  "irreducible_element",
-  ``!r:'a ring. !p. atom p ==> p IN R``,
-  rw[irreducible_def, ring_nonzero_element]);
+Theorem irreducible_element:
+    !r:'a ring. !p. atom p ==> p IN R
+Proof
+  rw[irreducible_def, ring_nonzero_element]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Principal Ideal Ring                                                      *)
 (* ------------------------------------------------------------------------- *)
 
 (* A principal ideal ring = a ring with all ideals being principal ideals. *)
-val PrincipalIdealRing_def = Define`
+Definition PrincipalIdealRing_def:
   PrincipalIdealRing (r:'a ring) <=>
     (Ring r) /\
     (!(i:'a ring). i << r ==> ?p. p IN R /\ (<p> = i))
-`;
+End
 (*
 > val PrincipalIdealRing_def = |- !r. PrincipalIdealRing r <=> Ring r /\ !i. i << r ==> ?p. p IN R /\ (<p> = i)
 *)
@@ -7190,9 +7508,9 @@ val PrincipalIdealRing_def = Define`
       If unit u,
         <p> = <q>                   by principal_ideal_eq_principal_ideal.
 *)
-val principal_ideal_ring_ideal_maximal = store_thm(
-  "principal_ideal_ring_ideal_maximal",
-  ``!r:'a ring. PrincipalIdealRing r ==> !p. atom p ==> maxi <p>``,
+Theorem principal_ideal_ring_ideal_maximal:
+    !r:'a ring. PrincipalIdealRing r ==> !p. atom p ==> maxi <p>
+Proof
   rw[PrincipalIdealRing_def, irreducible_def, ideal_maximal_def] >-
   rw[principal_ideal_ideal, ring_nonzero_element] >>
   `?q. q IN R /\ (<q> = j)` by rw[] >>
@@ -7202,20 +7520,21 @@ val principal_ideal_ring_ideal_maximal = store_thm(
   `?u. u IN R /\ (p = q * u)` by metis_tac[principal_ideal_element] >>
   `unit q \/ unit u` by rw[] >-
   metis_tac[principal_ideal_has_element, ideal_with_unit] >>
-  metis_tac[principal_ideal_eq_principal_ideal]);
+  metis_tac[principal_ideal_eq_principal_ideal]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Euclidean Ring                                                            *)
 (* ------------------------------------------------------------------------- *)
 
 (* A Euclidean Ring is a ring with a norm function f for division algorithm. *)
-val EuclideanRing_def = Define`
+Definition EuclideanRing_def:
   EuclideanRing (r:'a ring) (f:'a -> num) <=>
     (Ring r) /\
     (!x. (f x = 0) <=> (x = #0)) /\
     (!x y:'a. x IN R /\ y IN R /\ y <> #0 ==>
      ?q t:'a. q IN R /\ t IN R /\ (x = q * y + t) /\ f(t) < f(y))
-`;
+End
 
 (* Theorem: EuclideanRing r ==> Ring r *)
 val euclid_ring_ring = save_thm("euclid_ring_ring",
@@ -7262,10 +7581,10 @@ val euclid_ring_property = save_thm("euclid_ring_property",
    z IN I /\ z <> #0         by IN_IMAGE
    and  f p <= f z           by MIN_SET_LEM
 *)
-val ideal_gen_exists = store_thm(
-  "ideal_gen_exists",
-  ``!r i:'a ring. Ring r /\ i << r /\ i <> <#0> ==> !f:'a -> num. (!x. (f x = 0) <=> (x = #0))
-    ==> ?p. p IN I /\ p <> #0 /\ !z. z IN I /\ z <> #0 ==> f p <= f z``,
+Theorem ideal_gen_exists:
+    !r i:'a ring. Ring r /\ i << r /\ i <> <#0> ==> !f:'a -> num. (!x. (f x = 0) <=> (x = #0))
+    ==> ?p. p IN I /\ p <> #0 /\ !z. z IN I /\ z <> #0 ==> f p <= f z
+Proof
   rpt strip_tac >>
   `<#0> << r` by rw[principal_ideal_ideal] >>
   `i.carrier <> {#0}` by metis_tac[ideal_eq_ideal, zero_ideal_sing] >>
@@ -7276,7 +7595,8 @@ val ideal_gen_exists = store_thm(
   qabbrev_tac `s = IMAGE f I DELETE 0` >>
   `MIN_SET s IN s /\ !x. x IN s ==> MIN_SET s <= x` by metis_tac[MIN_SET_LEM] >>
   `?p. p IN I /\ p <> #0 /\ (f p = MIN_SET s)` by metis_tac[IN_IMAGE, IN_DELETE] >>
-  metis_tac[IN_IMAGE, IN_DELETE]);
+  metis_tac[IN_IMAGE, IN_DELETE]
+QED
 
 (* Apply Skolemization *)
 val lemma = prove(
@@ -7315,10 +7635,10 @@ val ideal_gen_def = new_specification(
      Since f #0 = 0                    by given f above
      This is true.
 *)
-val ideal_gen_minimal = store_thm(
-  "ideal_gen_minimal",
-  ``!r i:'a ring. Ring r /\ i << r /\ i <> <#0> ==> !f:'a -> num. (!x. (f x = 0) <=> (x = #0))
-   ==> !z. z IN I ==> (f z < f (ideal_gen r i f) <=> (z = #0))``,
+Theorem ideal_gen_minimal:
+    !r i:'a ring. Ring r /\ i << r /\ i <> <#0> ==> !f:'a -> num. (!x. (f x = 0) <=> (x = #0))
+   ==> !z. z IN I ==> (f z < f (ideal_gen r i f) <=> (z = #0))
+Proof
   rw[ideal_gen_def, EQ_IMP_THM] >| [
     spose_not_then strip_assume_tac >>
     `f (ideal_gen r i f) <= f z` by metis_tac[ideal_gen_def] >>
@@ -7326,7 +7646,8 @@ val ideal_gen_minimal = store_thm(
     `(ideal_gen r i f) <> #0` by metis_tac[ideal_gen_def] >>
     `f (ideal_gen r i f) <> 0 /\ (f #0 = 0)` by metis_tac[] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: EuclideanRing f r ==> PrincipalIdealRing r *)
 (* Proof:
@@ -7356,9 +7677,9 @@ val ideal_gen_minimal = store_thm(
    so <p>.carrier = I           by SUBSET_ANTISYM
    Hence <p> = i                by ideal_eq_ideal.
 *)
-val euclid_ring_principal_ideal_ring = store_thm(
-  "euclid_ring_principal_ideal_ring",
-  ``!r:'a ring. !f. EuclideanRing r f ==> PrincipalIdealRing r``,
+Theorem euclid_ring_principal_ideal_ring:
+    !r:'a ring. !f. EuclideanRing r f ==> PrincipalIdealRing r
+Proof
   rw[EuclideanRing_def, PrincipalIdealRing_def] >>
   Cases_on `i = <#0>` >-
   metis_tac[ring_zero_element] >>
@@ -7379,7 +7700,8 @@ val euclid_ring_principal_ideal_ring = store_thm(
   `t IN I` by rw[ideal_has_diff] >>
   `t = #0` by metis_tac[ideal_gen_minimal] >>
   `x = p * q` by rw[] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Ideal under Ring Homomorphism                                             *)
@@ -7395,13 +7717,13 @@ val homo_ideal_def = Define`
      |>
 `;
 *)
-val homo_ideal_def = Define`
+Definition homo_ideal_def:
   homo_ideal (f:'a -> 'b) (r:'a ring) (s:'b ring) (i:'a ring) =
     <| carrier := IMAGE f I;
            sum := <| carrier := IMAGE f I; op := s.sum.op; id := f #0 |>;
           prod := <| carrier := IMAGE f I; op := s.prod.op; id := f #1 |>
      |>
-`;
+End
 
 (* Theorem: RingHomo f r s /\ i << r ==> Group (homo_ideal f r s i).sum *)
 (* Proof: checking group axioms:
@@ -7443,9 +7765,9 @@ val homo_ideal_def = Define`
        = f (-p + p)                     by RingHomo_def, GroupHomo_def
        = f #0                           by ring_add_lneg
 *)
-val ring_homo_ideal_group = store_thm(
-  "ring_homo_ideal_group",
-  ``!(r:'a ring) (s:'b ring) f.  Ring r /\ Ring s /\ RingHomo f r s ==> !i. i << r ==> Group (homo_ideal f r s i).sum``,
+Theorem ring_homo_ideal_group:
+    !(r:'a ring) (s:'b ring) f.  Ring r /\ Ring s /\ RingHomo f r s ==> !i. i << r ==> Group (homo_ideal f r s i).sum
+Proof
   rpt strip_tac >>
   `r.sum.carrier = R` by rw[] >>
   `!z. z IN I ==> z IN R` by metis_tac[ideal_element_property] >>
@@ -7480,7 +7802,8 @@ val ring_homo_ideal_group = store_thm(
     `f (-p) IN IMAGE f I` by rw[] >>
     qexists_tac `f (-p)` >>
     metis_tac[ring_add_lneg]
-  ]);
+  ]
+QED
 
 (* Theorem: RingHomo f r s /\ i << r ==> (homo_ideal f r s i).sum <= s.sum *)
 (* Proof: by Subgroup_def, this is to show:
@@ -7493,16 +7816,17 @@ val ring_homo_ideal_group = store_thm(
        This is true by SUBSET_DEF.
    (3) (homo_ideal f r s i).sum.op = s.sum.op
 *)
-val ring_homo_ideal_subgroup = store_thm(
-  "ring_homo_ideal_subgroup",
-  ``!(r:'a ring) (s:'b ring) f.  Ring r /\ Ring s /\ RingHomo f r s ==> !i. i << r ==> (homo_ideal f r s i).sum <= s.sum``,
+Theorem ring_homo_ideal_subgroup:
+    !(r:'a ring) (s:'b ring) f.  Ring r /\ Ring s /\ RingHomo f r s ==> !i. i << r ==> (homo_ideal f r s i).sum <= s.sum
+Proof
   rw[Subgroup_def] >| [
     rw[ring_homo_ideal_group],
     rw[homo_ideal_def] >>
     rw[SUBSET_DEF] >>
     metis_tac[ideal_element_property, RingHomo_def],
     rw[homo_ideal_def]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring homomorphic image of an ideal is still an ideal of the target ring, if the map is surjective.
             RingHomo f r s /\ SURJ f R s.carrier ==> !i. i << r ==> (homo_ideal f r s i) << s  *)
@@ -7534,10 +7858,10 @@ val ring_homo_ideal_subgroup = store_thm(
    (7) x IN (homo_ideal f r s i).carrier /\ y IN s.carrier ==> s.prod.op y x IN (homo_ideal f r s i).carrier
        Same as (7), apply ring_mult_comm.
 *)
-val ring_homo_ideal_ideal = store_thm(
-  "ring_homo_ideal_ideal",
-  ``!(r:'a ring) (s:'b ring) f. Ring r /\ Ring s /\ RingHomo f r s /\ SURJ f R s.carrier ==>
-     !i. i << r ==> (homo_ideal f r s i) << s``,
+Theorem ring_homo_ideal_ideal:
+    !(r:'a ring) (s:'b ring) f. Ring r /\ Ring s /\ RingHomo f r s /\ SURJ f R s.carrier ==>
+     !i. i << r ==> (homo_ideal f r s i) << s
+Proof
   rpt strip_tac >>
   `r.prod.carrier = R` by metis_tac[Ring_def] >>
   `MonoidHomo f r.prod s.prod` by metis_tac[RingHomo_def] >>
@@ -7566,7 +7890,8 @@ val ring_homo_ideal_ideal = store_thm(
   `q IN R /\ (f q = y)` by rw[preimage_choice_property, Abbr`q`] >>
   `s.prod.op y x = f (q * p)` by metis_tac[ideal_element_property] >>
   `q * p IN I` by metis_tac[ideal_def] >>
-  metis_tac[IN_IMAGE]);
+  metis_tac[IN_IMAGE]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Ring Binomial Documentation                                               *)
@@ -7673,10 +7998,10 @@ binomial_thm:
 (* ------------------------------------------------------------------------- *)
 
 (* Ring element list. *)
-val ring_list_def = Define`
+Definition ring_list_def:
   (ring_list (r:'a ring) [] <=> T) /\
   (ring_list (r:'a ring) ((h:'a)::(t:'a list)) <=> h IN R /\ (ring_list r t))
-`;
+End
 val _ = overload_on ("rlist", ``ring_list r``);
 
 (* export simple definition. *)
@@ -7707,13 +8032,14 @@ val ring_list_cons = save_thm("ring_list_cons", ring_list_def |> CONJUNCT2);
            or h IN R /\ rlist s                          by induction hypothesis
            hence rlist (h::s)                            by ring_list_cons
 *)
-val ring_list_front_last = store_thm(
-  "ring_list_front_last",
-  ``!s. rlist (FRONT s) /\ LAST s IN R ==> rlist s``,
+Theorem ring_list_front_last:
+    !s. rlist (FRONT s) /\ LAST s IN R ==> rlist s
+Proof
   rpt strip_tac >>
   Induct_on `s` >-
   rw[] >>
-  metis_tac[FRONT_CONS, LAST_CONS, ring_list_def, list_CASES]);
+  metis_tac[FRONT_CONS, LAST_CONS, ring_list_def, list_CASES]
+QED
 
 (* Theorem: !x s. rlist (SNOC x s) <=> x IN R /\ rlist s *)
 (* Proof:
@@ -7730,24 +8056,25 @@ val ring_list_front_last = store_thm(
       <=> h IN R /\ x IN R /\ rlist s  by induction hypothesis
       <=> x IN R /\ rlist (h::s)       by ring_list_cons
 *)
-val ring_list_SNOC = store_thm(
-  "ring_list_SNOC",
-  ``!x s. rlist (SNOC x s) <=> x IN R /\ rlist s``,
+Theorem ring_list_SNOC:
+    !x s. rlist (SNOC x s) <=> x IN R /\ rlist s
+Proof
   rpt strip_tac >>
   Induct_on `s` >-
   rw[] >>
   rw[] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Summation in Ring                                                         *)
 (* ------------------------------------------------------------------------- *)
 
 (* Summation in a Ring. *)
-val ring_sum_def = Define`
+Definition ring_sum_def:
   (ring_sum (r:'a ring) [] = #0) /\
   (ring_sum (r:'a ring) ((h:'a)::(t:'a list)) = h + (ring_sum r t))
-`;
+End
 val _ = overload_on ("rsum", ``ring_sum r``);
 
 (* export simple definition. *)
@@ -7771,12 +8098,13 @@ val ring_sum_cons = save_thm("ring_sum_cons", ring_sum_def |> CONJUNCT2);
       with h IN R and rlist s ==> rsum s IN R by induction hypothesis
       true by ring_add_element
 *)
-val ring_sum_element = store_thm(
-  "ring_sum_element",
-  ``!r:'a ring. Ring r ==> !s. rlist s ==> rsum s IN R``,
+Theorem ring_sum_element:
+    !r:'a ring. Ring r ==> !s. rlist s ==> rsum s IN R
+Proof
   rpt strip_tac >>
   Induct_on `s` >>
-  rw[]);
+  rw[]
+QED
 
 val _ = export_rewrites ["ring_sum_element"];
 
@@ -7787,10 +8115,11 @@ val _ = export_rewrites ["ring_sum_element"];
    = x + #0         by ring_sum_nil
    = x              by ring_add_rzero
 *)
-val ring_sum_sing = store_thm(
-  "ring_sum_sing",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> (rsum [x] = x)``,
-  rw[]);
+Theorem ring_sum_sing:
+    !r:'a ring. Ring r ==> !x. x IN R ==> (rsum [x] = x)
+Proof
+  rw[]
+QED
 
 (* Theorem: rsum (s ++ t) = rsum s + rsum t *)
 (* Proof: by induction on s
@@ -7808,12 +8137,13 @@ val ring_sum_sing = store_thm(
    = (h + rsum s) + rsum t    by ring_add_assoc
    = rsum (h::s) + rsum t     by ring_sum_cons
 *)
-val ring_sum_append = store_thm(
-  "ring_sum_append",
-  ``!r:'a ring. Ring r ==> !s t. rlist s /\ rlist t ==> (rsum (s ++ t) = rsum s + rsum t)``,
+Theorem ring_sum_append:
+    !r:'a ring. Ring r ==> !s t. rlist s /\ rlist t ==> (rsum (s ++ t) = rsum s + rsum t)
+Proof
   rpt strip_tac >>
   Induct_on `s` >>
-  rw[ring_add_assoc]);
+  rw[ring_add_assoc]
+QED
 
 (* Theorem: constant multiplication: k * rsum s = rsum (MAP (\x. k*x) s))  *)
 (* Proof: by induction on s
@@ -7837,12 +8167,13 @@ val ring_sum_append = store_thm(
        = k * h + rsum (MAP (\x. k * x) s
        = LHS
 *)
-val ring_sum_mult = store_thm(
-  "ring_sum_mult",
-  ``!r:'a ring. Ring r ==> !k s. k IN R /\ rlist s ==> (k * rsum s = rsum (MAP (\x. k*x) s))``,
+Theorem ring_sum_mult:
+    !r:'a ring. Ring r ==> !k s. k IN R /\ rlist s ==> (k * rsum s = rsum (MAP (\x. k*x) s))
+Proof
   rpt strip_tac >>
   Induct_on `s` >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: (m+n) * rsum s = rsum (MAP (\x. m*x) s) + rsum (MAP (\x. n*x) s)  *)
 (* Proof:
@@ -7850,11 +8181,12 @@ val ring_sum_mult = store_thm(
   = m * rsum s + n * rsum s                          by ring_mult_ladd
   = rsum (MAP (\x. m*x) s) + rsum (MAP (\x. n*x) s)  by ring_sum_mult
 *)
-val ring_sum_mult_ladd = store_thm(
-  "ring_sum_mult_ladd",
-  ``!r:'a ring. Ring r ==> !m n s. m IN R /\ n IN R /\ rlist s ==>
-       ((m + n) * rsum s = rsum (MAP (\x. m*x) s) + rsum (MAP (\x. n*x) s))``,
-  rw[ring_sum_mult, ring_mult_ladd]);
+Theorem ring_sum_mult_ladd:
+    !r:'a ring. Ring r ==> !m n s. m IN R /\ n IN R /\ rlist s ==>
+       ((m + n) * rsum s = rsum (MAP (\x. m*x) s) + rsum (MAP (\x. n*x) s))
+Proof
+  rw[ring_sum_mult, ring_mult_ladd]
+QED
 
 (*
 - EVAL ``GENLIST I 4``;
@@ -7917,21 +8249,22 @@ val ring_sum_mult_ladd = store_thm(
    = (h + rsum s) + k     by ring_add_assoc, ring_sum_element
    = rsum(h::s) + k       by ring_sum_cons
 *)
-val ring_sum_SNOC = store_thm(
-  "ring_sum_SNOC",
-  ``!r:'a ring. Ring r ==> !k s. k IN R /\ rlist s ==> (rsum (SNOC k s) = (rsum s) + k)``,
+Theorem ring_sum_SNOC:
+    !r:'a ring. Ring r ==> !k s. k IN R /\ rlist s ==> (rsum (SNOC k s) = (rsum s) + k)
+Proof
   rpt strip_tac >>
   Induct_on `s` >>
-  rw[ring_add_assoc]);
+  rw[ring_add_assoc]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Function giving elements in Ring                                          *)
 (* ------------------------------------------------------------------------- *)
 
 (* Ring element function. *)
-val ring_fun_def = Define`
+Definition ring_fun_def:
   ring_fun (r:'a ring) f <=> !x. f x IN R
-`;
+End
 val _ = overload_on ("rfun", ``ring_fun r``);
 
 (* export simple definition. *)
@@ -7939,10 +8272,11 @@ val _ = export_rewrites ["ring_fun_def"];
 
 (* Theorem: rfun a /\ rfun b ==> rfun (\k. a k + b k) *)
 (* Proof: by ring_add_element. *)
-val ring_fun_add = store_thm(
-  "ring_fun_add",
-  ``!r:'a ring. Ring r ==> !a b. rfun a /\ rfun b ==> rfun (\k. a k + b k)``,
-  rw[]);
+Theorem ring_fun_add:
+    !r:'a ring. Ring r ==> !a b. rfun a /\ rfun b ==> rfun (\k. a k + b k)
+Proof
+  rw[]
+QED
 
 (* Theorem: rfun f ==> rlist (GENLIST f n) *)
 (* Proof: by induction on n.
@@ -7951,16 +8285,17 @@ val ring_fun_add = store_thm(
       hence true by ring_list_nil.
    Step case: rlist (GENLIST f n) ==> rlist (GENLIST f (SUC n))
 *)
-val ring_fun_genlist = store_thm(
-  "ring_fun_genlist",
-  ``!f. rfun f ==> !n. rlist (GENLIST f n)``,
+Theorem ring_fun_genlist:
+    !f. rfun f ==> !n. rlist (GENLIST f n)
+Proof
   rw_tac std_ss[ring_fun_def] >>
   Induct_on `n` >-
   rw[] >>
   rw_tac std_ss[ring_list_cons, GENLIST] >>
   `rlist (FRONT (SNOC (f n) (GENLIST f n)))` by rw_tac std_ss[FRONT_SNOC] >>
   `LAST (SNOC (f n) (GENLIST f n)) IN R` by rw_tac std_ss[LAST_SNOC] >>
-  metis_tac[ring_list_front_last]);
+  metis_tac[ring_list_front_last]
+QED
 
 (* Theorem: rfun f ==> rlist (MAP f l) *)
 (* Proof: by induction.
@@ -7969,28 +8304,31 @@ val ring_fun_genlist = store_thm(
    Step case: rlist l ==> rlist (MAP f l) ==> !h. rlist (h::l) ==> rlist (MAP f (h::l))
      True by ring_list_cons, MAP: MAP f (h::t) = f h::MAP f t
 *)
-val ring_fun_map = store_thm(
-  "ring_fun_map",
-  ``!f l. rfun f ==> rlist (MAP f l)``,
+Theorem ring_fun_map:
+    !f l. rfun f ==> rlist (MAP f l)
+Proof
   rw_tac std_ss[ring_fun_def] >>
   Induct_on `l` >| [
     rw_tac std_ss[MAP, ring_list_nil],
     rw_tac std_ss[MAP, ring_list_cons]
-  ]);
+  ]
+QED
 
 (* Theorem: rfun f ==> !x. x IN R ==> rfun (\j. f j * x ** j *)
 (* Proof: by ring_fun_def, ring_exp_element, ring_mult_element *)
-val ring_fun_from_ring_fun = store_thm(
-  "ring_fun_from_ring_fun",
-  ``!r:'a ring. Ring r ==> !f. rfun f ==> !x. x IN R ==> rfun (\j. f j * x ** j)``,
-  rw[ring_fun_def]);
+Theorem ring_fun_from_ring_fun:
+    !r:'a ring. Ring r ==> !f. rfun f ==> !x. x IN R ==> rfun (\j. f j * x ** j)
+Proof
+  rw[ring_fun_def]
+QED
 
 (* Theorem: rfun f ==> !x. x IN R ==> !n. rfun (\j. (f j * x ** j) ** n) *)
 (* Proof: by ring_fun_def, ring_exp_element, ring_mult_element *)
-val ring_fun_from_ring_fun_exp = store_thm(
-  "ring_fun_from_ring_fun_exp",
-  ``!r:'a ring. Ring r ==> !f. rfun f ==> !x. x IN R ==> !n. rfun (\j. (f j * x ** j) ** n)``,
-  rw[ring_fun_def]);
+Theorem ring_fun_from_ring_fun_exp:
+    !r:'a ring. Ring r ==> !f. rfun f ==> !x. x IN R ==> !n. rfun (\j. (f j * x ** j) ** n)
+Proof
+  rw[ring_fun_def]
+QED
 
 (* Theorem: rfun f ==> !x. x IN R ==> !n. rlist (GENLIST (\j. f j * x ** j) n) *)
 (* Proof:
@@ -8005,14 +8343,15 @@ val ring_fun_from_ring_fun_exp = store_thm(
       = true /\ rlist (GENLIST (\j. f j * x ** j) n)                  by ring_fun_def, ring_exp_element
       = true /\ true                                                  by induction hypothesis
 *)
-val ring_list_gen_from_ring_fun = store_thm(
-  "ring_list_gen_from_ring_fun",
-  ``!r:'a ring. Ring r ==> !f. rfun f ==> !x. x IN R ==> !n. rlist (GENLIST (\j. f j * x ** j) n)``,
+Theorem ring_list_gen_from_ring_fun:
+    !r:'a ring. Ring r ==> !f. rfun f ==> !x. x IN R ==> !n. rlist (GENLIST (\j. f j * x ** j) n)
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
   `!j. f j IN R` by metis_tac[ring_fun_def] >>
-  rw_tac std_ss[GENLIST, ring_list_SNOC, ring_exp_element, ring_mult_element]);
+  rw_tac std_ss[GENLIST, ring_list_SNOC, ring_exp_element, ring_mult_element]
+QED
 
 (* Theorem: !f. rfun f ==> !n g. rlist (GENLIST (f o g) n) *)
 (* Proof:
@@ -8029,27 +8368,29 @@ val ring_list_gen_from_ring_fun = store_thm(
       <=> f (g n) IN R                                   by o_THM
       <=> T                                              by ring_fun_def
 *)
-val ring_list_from_genlist_ring_fun = store_thm(
-  "ring_list_from_genlist_ring_fun",
-  ``!r:'a ring. !f. rfun f ==> !n g. rlist (GENLIST (f o g) n)``,
+Theorem ring_list_from_genlist_ring_fun:
+    !r:'a ring. !f. rfun f ==> !n g. rlist (GENLIST (f o g) n)
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
   `rlist (GENLIST (f o g) (SUC n)) <=> f (g n) IN R` by rw_tac std_ss[GENLIST, ring_list_SNOC] >>
-  metis_tac[ring_fun_def]);
+  metis_tac[ring_fun_def]
+QED
 
 (* Theorem: !f. rfun f ==> !n. rlist (GENLIST f n) *)
 (* Proof:
    Since f = f o I      by I_o_ID
    The result follows from ring_list_from_genlist_ring_fun
 *)
-val ring_list_from_genlist = store_thm(
-  "ring_list_from_genlist",
-  ``!r:'a ring. !f. rfun f ==> !n. rlist (GENLIST f n)``,
+Theorem ring_list_from_genlist:
+    !r:'a ring. !f. rfun f ==> !n. rlist (GENLIST f n)
+Proof
   rpt strip_tac >>
   `f = f o I` by rw[] >>
   `rlist (GENLIST (f o I) n)` by rw[ring_list_from_genlist_ring_fun] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Ring Sum Involving GENLIST                                                *)
@@ -8082,10 +8423,10 @@ val ring_list_from_genlist = store_thm(
    = f n                                                    by ring_sum_sing, ring_fun_def
    = #0                                                     by n < SUC n
 *)
-val ring_sum_fun_zero = store_thm(
-  "ring_sum_fun_zero",
-  ``!r:'a ring. Ring r ==> !f. rfun f ==>
-    !n. (!k. 0 < k /\ k < n ==> (f k = #0)) ==> (rsum (MAP f (GENLIST SUC (PRE n))) = #0)``,
+Theorem ring_sum_fun_zero:
+    !r:'a ring. Ring r ==> !f. rfun f ==>
+    !n. (!k. 0 < k /\ k < n ==> (f k = #0)) ==> (rsum (MAP f (GENLIST SUC (PRE n))) = #0)
+Proof
   ntac 4 strip_tac >>
   Induct_on `n` >| [
     `GENLIST SUC 0 = []` by rw_tac std_ss[GENLIST] >>
@@ -8110,7 +8451,8 @@ val ring_sum_fun_zero = store_thm(
       `_ = f n` by metis_tac[ring_sum_sing, ring_fun_def] >>
       metis_tac[]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: rsum (k=0..n) f(k) = f(0) + rsum (k=1..n) f(k)  *)
 (* Proof:
@@ -8118,10 +8460,11 @@ val ring_sum_fun_zero = store_thm(
    = rsum (f 0 :: GENLIST (f o SUC) n)   by GENLIST_CONS
    = f 0 + rsum (GENLIST (f o SUC) n)    by ring_sum_cons
 *)
-val ring_sum_decompose_first = store_thm(
-  "ring_sum_decompose_first",
-  ``!r:'a ring. !f n. rsum (GENLIST f (SUC n)) = f 0 + rsum (GENLIST (f o SUC) n)``,
-  rw[GENLIST_CONS]);
+Theorem ring_sum_decompose_first:
+    !r:'a ring. !f n. rsum (GENLIST f (SUC n)) = f 0 + rsum (GENLIST (f o SUC) n)
+Proof
+  rw[GENLIST_CONS]
+QED
 
 (* Theorem: rsum (k=0..n) f(k) = rsum (k=0..(n-1)) f(k) + f n *)
 (* Proof:
@@ -8131,13 +8474,14 @@ val ring_sum_decompose_first = store_thm(
    = rsum (GENLIST f n) + rsum [f n]   by ring_sum_append
    = rsum (GENLIST f n) + f n          by ring_sum_sing
 *)
-val ring_sum_decompose_last = store_thm(
-  "ring_sum_decompose_last",
-  ``!r:'a ring. Ring r ==> !f n. rfun f ==> (rsum (GENLIST f (SUC n)) = rsum (GENLIST f n) + f n)``,
+Theorem ring_sum_decompose_last:
+    !r:'a ring. Ring r ==> !f n. rfun f ==> (rsum (GENLIST f (SUC n)) = rsum (GENLIST f n) + f n)
+Proof
   rpt strip_tac >>
   `rlist (GENLIST f n)` by rw_tac std_ss[ring_fun_genlist] >>
   `f n IN R /\ rlist [f n]` by metis_tac[ring_list_def, ring_fun_def] >>
-  rw_tac std_ss[GENLIST, SNOC_APPEND, ring_sum_append, ring_sum_sing]);
+  rw_tac std_ss[GENLIST, SNOC_APPEND, ring_sum_append, ring_sum_sing]
+QED
 
 (* Theorem: Ring r /\ rfun f /\ 0 < n ==> rsum (k=0..n) f(k) = f(0) + rsum (k=1..n-1) f(k) + f(n)  *)
 (* Proof:
@@ -8147,15 +8491,16 @@ val ring_sum_decompose_last = store_thm(
    = f 0 + rsum (GENLIST f o SUC m) + f n         by ring_sum_decompose_first
    = f 0 + rsum (GENLIST f o SUC (PRE n)) + f n   by PRE_SUC_EQ
 *)
-val ring_sum_decompose_first_last = store_thm(
-  "ring_sum_decompose_first_last",
-  ``!r:'a ring. Ring r ==> !f n. rfun f /\ 0 < n ==> (rsum (GENLIST f (SUC n)) = f 0 + rsum (GENLIST (f o SUC) (PRE n)) + f n)``,
+Theorem ring_sum_decompose_first_last:
+    !r:'a ring. Ring r ==> !f n. rfun f /\ 0 < n ==> (rsum (GENLIST f (SUC n)) = f 0 + rsum (GENLIST (f o SUC) (PRE n)) + f n)
+Proof
   rpt strip_tac >>
   `n <> 0` by decide_tac >>
   `?m. n = SUC m` by metis_tac[num_CASES] >>
   `rsum (GENLIST f (SUC n)) = rsum (GENLIST f n) + f n` by rw_tac std_ss[ring_sum_decompose_last] >>
   `_ = f 0 + rsum (GENLIST (f o SUC) m) + f n` by rw_tac std_ss[ring_sum_decompose_first] >>
-  rw_tac std_ss[PRE_SUC_EQ]);
+  rw_tac std_ss[PRE_SUC_EQ]
+QED
 
 (* Theorem: rsum (GENLIST a n) + rsum (GENLIST b n) = rsum (GENLIST (\k. a k + b k) n) *)
 (* Proof: by induction on n.
@@ -8174,10 +8519,10 @@ val ring_sum_decompose_first_last = store_thm(
        = rsum (GENLIST (\k. a k + b k) (SUC n))                     by ring_sum_decompose_last
        = RHS
 *)
-val ring_sum_genlist_add = store_thm(
-  "ring_sum_genlist_add",
-  ``!r:'a ring. Ring r ==> !a b. rfun a /\ rfun b ==>
-   !n. rsum (GENLIST a n) + rsum (GENLIST b n) = rsum (GENLIST (\k. a k + b k) n)``,
+Theorem ring_sum_genlist_add:
+    !r:'a ring. Ring r ==> !a b. rfun a /\ rfun b ==>
+   !n. rsum (GENLIST a n) + rsum (GENLIST b n) = rsum (GENLIST (\k. a k + b k) n)
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
@@ -8189,7 +8534,8 @@ val ring_sum_genlist_add = store_thm(
    = rsum (GENLIST a n) + (a n + rsum (GENLIST b n) + b n)` by rw[ring_add_assoc] >>
   `_ = rsum (GENLIST a n) + (rsum (GENLIST b n) + a n + b n)` by rw_tac std_ss[ring_add_comm] >>
   `_ = rsum (GENLIST a n) + rsum (GENLIST b n) + (a n + b n)` by rw[ring_add_assoc] >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* Theorem: rsum (GENLIST a n ++ GENLIST b n) = rsum (GENLIST (\k. a k + b k) n) *)
 (* Proof:
@@ -8197,11 +8543,12 @@ val ring_sum_genlist_add = store_thm(
    = rsum (GENLIST a n) + rsum (GENLIST b n)   by ring_sum_append, due to ring_fun_genlist.
    = rsum (GENLIST (\k. a k + b k) n)          by ring_sum_genlist_add
 *)
-val ring_sum_genlist_append = store_thm(
-  "ring_sum_genlist_append",
-  ``!r:'a ring. Ring r ==> !a b. rfun a /\ rfun b ==>
-    !n. rsum (GENLIST a n ++ GENLIST b n) = rsum (GENLIST (\k. a k + b k) n)``,
-  rw_tac std_ss[ring_sum_append, ring_sum_genlist_add, ring_fun_genlist]);
+Theorem ring_sum_genlist_append:
+    !r:'a ring. Ring r ==> !a b. rfun a /\ rfun b ==>
+    !n. rsum (GENLIST a n ++ GENLIST b n) = rsum (GENLIST (\k. a k + b k) n)
+Proof
+  rw_tac std_ss[ring_sum_append, ring_sum_genlist_add, ring_fun_genlist]
+QED
 
 (* Theorem: Ring r ==> !f. rfun f  ==>
             !n m. rsum (GENLIST f (n + m)) = rsum (GENLIST f m) + rsum (GENLIST (\k. f (k + m)) n) *)
@@ -8213,15 +8560,16 @@ val ring_sum_genlist_append = store_thm(
    = rsum (GENLIST f m ++ GENLIST (\k. f (k + m)) n)         by GENLIST_APPEND
    = rsum (GENLIST f m) + rsum (GENLIST (\k. f (k + m)) n)   by ring_sum_append
 *)
-val ring_sum_genlist_sum = store_thm(
-  "ring_sum_genlist_sum",
-  ``!r:'a ring. Ring r ==> !f. rfun f  ==>
-   !n m. rsum (GENLIST f (n + m)) = rsum (GENLIST f m) + rsum (GENLIST (\k. f (k + m)) n)``,
+Theorem ring_sum_genlist_sum:
+    !r:'a ring. Ring r ==> !f. rfun f  ==>
+   !n m. rsum (GENLIST f (n + m)) = rsum (GENLIST f m) + rsum (GENLIST (\k. f (k + m)) n)
+Proof
   rpt strip_tac >>
   `(\k. f (k + m)) = f o (\k. k + m)` by rw[FUN_EQ_THM] >>
   `rlist (GENLIST (\k. f (k + m)) n)` by rw[ring_list_from_genlist_ring_fun] >>
   `rlist (GENLIST f m)` by rw[ring_list_from_genlist] >>
-  metis_tac[GENLIST_APPEND, ring_sum_append]);
+  metis_tac[GENLIST_APPEND, ring_sum_append]
+QED
 
 (* Theorem: Ring r ==> !x. x IN R ==> !n. rsum (GENLIST (K x) n) = ##n * x *)
 (* Proof:
@@ -8244,16 +8592,17 @@ val ring_sum_genlist_sum = store_thm(
        = (##n + #1) * x                            by ring_mult_ladd
        = ##(SUC n) * x                             by ring_num_suc
 *)
-val ring_sum_genlist_const = store_thm(
-  "ring_sum_genlist_const",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> !n. rsum (GENLIST (K x) n) = ##n * x``,
+Theorem ring_sum_genlist_const:
+    !r:'a ring. Ring r ==> !x. x IN R ==> !n. rsum (GENLIST (K x) n) = ##n * x
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
   `rfun (K x)` by rw[ring_fun_def] >>
   `rlist (GENLIST (K x) n)` by rw[ring_list_from_genlist] >>
   `rsum (GENLIST (K x) (SUC n)) = ##n * x + x` by rw[GENLIST, ring_sum_SNOC] >>
-  rw[ring_mult_ladd, ring_num_suc]);
+  rw[ring_mult_ladd, ring_num_suc]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Ring Binomial Theorem                                                     *)
@@ -8286,24 +8635,26 @@ val ring_sum_genlist_const = store_thm(
    = ##(binomial n (k + 1)) * x ** (n-k) * y ** (k+1)    by definition of SUC
    = (\k. (binomial n (k+1)) * x**(n-k) * y**(k+1)) k
 *)
-val ring_binomial_genlist_index_shift = store_thm(
-  "ring_binomial_genlist_index_shift",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==>
+Theorem ring_binomial_genlist_index_shift:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==>
    !n. GENLIST ((\k. ##(binomial n k) * x ** SUC(n - k) * y ** k) o SUC) n =
-       GENLIST (\k. ##(binomial n (SUC k)) * x**(n-k) * y**(SUC k)) n``,
+       GENLIST (\k. ##(binomial n (SUC k)) * x**(n-k) * y**(SUC k)) n
+Proof
   rw_tac std_ss[GENLIST_FUN_EQ] >>
   `SUC (n - SUC k) = n - k` by decide_tac >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* This is closely related to above, with (SUC n) replacing (n),
    but does not require k < n. *)
 (* Proof: by equality of function. *)
-val ring_binomial_index_shift = store_thm(
-  "ring_binomial_index_shift",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==>
+Theorem ring_binomial_index_shift:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==>
    !n. (\k. ##(binomial (SUC n) k) * x**((SUC n) - k) * y**k) o SUC =
-       (\k. ##(binomial (SUC n) (SUC k)) * x**(n-k) * y**(SUC k))``,
-  rw[FUN_EQ_THM]);
+       (\k. ##(binomial (SUC n) (SUC k)) * x**(n-k) * y**(SUC k))
+Proof
+  rw[FUN_EQ_THM]
+QED
 
 (* Pattern for binomial expansion:
 
@@ -8328,15 +8679,16 @@ val ring_binomial_index_shift = store_thm(
        = ##(binomial n k) * x ** SUC (n - k) * y ** k       by ring_mult_assoc
        = RHS
 *)
-val ring_binomial_term_merge_x = store_thm(
-  "ring_binomial_term_merge_x",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==>
-   !n. (\k. x*k) o (\k. ##(binomial n k) * x ** (n - k) * y ** k) = (\k. ##(binomial n k) * x ** (SUC(n - k)) * y ** k)``,
+Theorem ring_binomial_term_merge_x:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==>
+   !n. (\k. x*k) o (\k. ##(binomial n k) * x ** (n - k) * y ** k) = (\k. ##(binomial n k) * x ** (SUC(n - k)) * y ** k)
+Proof
   rw_tac std_ss[FUN_EQ_THM] >>
   `##(binomial n k) IN R /\ x ** (n - k) IN R /\ y ** k IN R /\ x ** SUC (n - k) IN R` by rw[] >>
   `x * (##(binomial n k) * x ** (n - k) * y ** k) = (x * ##(binomial n k)) * (x ** (n - k) * y ** k)` by rw[ring_mult_assoc] >>
   `_ = (##(binomial n k) * x) * (x ** (n - k) * y ** k)` by rw_tac std_ss[ring_mult_comm] >>
-  rw[ring_mult_assoc]);
+  rw[ring_mult_assoc]
+QED
 
 (* Theorem: multiply y into a binomial term:
    (\k. y*k) o (\k. ##(binomial n k) * x ** (n - k) * y ** k) = (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k))  *)
@@ -8353,10 +8705,10 @@ val ring_binomial_term_merge_x = store_thm(
        = ##(binomial n k) * x ** (n - k) * y ** SUC k       by ring_mult_assoc
        = RHS
 *)
-val ring_binomial_term_merge_y = store_thm(
-  "ring_binomial_term_merge_y",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==>
-   !n. (\k. y*k) o (\k. ##(binomial n k) * x ** (n - k) * y ** k) = (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k))``,
+Theorem ring_binomial_term_merge_y:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==>
+   !n. (\k. y*k) o (\k. ##(binomial n k) * x ** (n - k) * y ** k) = (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k))
+Proof
   rw_tac std_ss[FUN_EQ_THM] >>
   `##(binomial n k) IN R /\ x ** (n - k) IN R /\ y ** k IN R /\ y ** SUC k IN R` by rw[] >>
   `y * (##(binomial n k) * x ** (n - k) * y ** k) =
@@ -8364,7 +8716,8 @@ val ring_binomial_term_merge_y = store_thm(
   `_ = (##(binomial n k) * y) * (y ** k * x ** (n - k))` by rw_tac std_ss[ring_mult_comm] >>
   `_ = ##(binomial n k) * (y ** SUC k * x ** (n - k))` by rw[ring_mult_assoc] >>
   `_ = ##(binomial n k) * (x ** (n - k) * y ** SUC k)` by rw_tac std_ss[ring_mult_comm] >>
-  rw[ring_mult_assoc]);
+  rw[ring_mult_assoc]
+QED
 
 
 (* GOAL: *)
@@ -8470,10 +8823,10 @@ val ring_binomial_term_merge_y = store_thm(
     = C(n+1,0)x^(n+1) + rsum (k=1..n) C(n+1,k) x^(n+1-k)y^k              + C(n+1,n+1)y^(n+1) by binomial identities
     = rsum (k=0..(SUC n))C(SUC n,k) x^((SUC n)-k)y^k                                         by synthesis of sum
 *)
-val ring_binomial_thm = store_thm(
-  "ring_binomial_thm",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==>
-   !n. (x + y)**n = rsum (GENLIST (\k. ##(binomial n k) * x**(n-k) * y**k) (SUC n))``,
+Theorem ring_binomial_thm:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==>
+   !n. (x + y)**n = rsum (GENLIST (\k. ##(binomial n k) * x**(n-k) * y**k) (SUC n))
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[ring_sum_sing, binomial_n_n] >>
@@ -8553,7 +8906,8 @@ val ring_binomial_thm = store_thm(
         by rw_tac std_ss[ring_sum_decompose_first] >>
   `_ = rsum (GENLIST (\k. ##(binomial (SUC n) k) * x ** (SUC n - k) * y ** k) (SUC (SUC n)))`
         by rw_tac std_ss[ring_sum_decompose_last] >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* This is a major milestone theorem. *)
 
@@ -8567,11 +8921,12 @@ val ring_binomial_thm = store_thm(
    <=> divides (char r) (binomial (char r) k) for 0 < k < (char r) by prime_iff_divides_binomials
    <=> ##(binomial (char r) k) = #0           for 0 < k < (char r) by ring_char_divides
 *)
-val ring_char_prime = store_thm(
-  "ring_char_prime",
-  ``!r:'a ring. Ring r ==>
-   (prime (char r) <=> 1 < char r /\ !k. 0 < k /\ k < char r ==> (##(binomial (char r) k) = #0))``,
-  rw_tac std_ss[prime_iff_divides_binomials, ring_char_divides]);
+Theorem ring_char_prime:
+    !r:'a ring. Ring r ==>
+   (prime (char r) <=> 1 < char r /\ !k. 0 < k /\ k < char r ==> (##(binomial (char r) k) = #0))
+Proof
+  rw_tac std_ss[prime_iff_divides_binomials, ring_char_divides]
+QED
 
 (* Theorem: [Freshman's Theorem]
             Ring r /\ prime (char r) ==> !x y. x IN R /\ y IN R ==>
@@ -8598,10 +8953,10 @@ val ring_char_prime = store_thm(
        = y ** p                                      by ring_exp_element, ring_mult_one_one
    The result follows.
 *)
-val ring_freshman_thm = store_thm(
-  "ring_freshman_thm",
-  ``!r:'a ring. Ring r /\ prime (char r) ==> !x y. x IN R /\ y IN R ==>
-         ((x + y) ** (char r) = x ** (char r) + y ** (char r))``,
+Theorem ring_freshman_thm:
+    !r:'a ring. Ring r /\ prime (char r) ==> !x y. x IN R /\ y IN R ==>
+         ((x + y) ** (char r) = x ** (char r) + y ** (char r))
+Proof
   rpt strip_tac >>
   qabbrev_tac `p = char r` >>
   `0 < p` by metis_tac[PRIME_POS] >>
@@ -8615,7 +8970,8 @@ val ring_freshman_thm = store_thm(
   `_ = f 0 + f p` by rw_tac std_ss[ring_sum_fun_zero, ring_add_rzero] >>
   `f 0 = #1 * x**p * #1` by rw_tac std_ss[Abbr`f`, binomial_n_0, ring_exp_0, ring_num_1] >>
   `f p = #1 * #1 * y**p` by rw_tac std_ss[Abbr`f`, binomial_n_n, ring_exp_0, ring_num_1] >>
-  rw[]);
+  rw[]
+QED
 
 (* Note: a ** b ** c = a ** (b ** c) *)
 (* Theorem: [Freshman's Theorem Generalized]
@@ -8645,10 +9001,10 @@ val ring_freshman_thm = store_thm(
        = x ** p ** SUC n + y ** p ** SUC n         by EXP
        = RHS
 *)
-val ring_freshman_all = store_thm(
-  "ring_freshman_all",
-  ``!r:'a ring. Ring r /\ prime (char r) ==> !x y. x IN R /\ y IN R ==>
-   !n. (x + y) ** (char r) ** n = x ** (char r) ** n + y ** (char r) ** n``,
+Theorem ring_freshman_all:
+    !r:'a ring. Ring r /\ prime (char r) ==> !x y. x IN R /\ y IN R ==>
+   !n. (x + y) ** (char r) ** n = x ** (char r) ** n + y ** (char r) ** n
+Proof
   rpt strip_tac >>
   qabbrev_tac `p = char r` >>
   Induct_on `n` >-
@@ -8661,7 +9017,8 @@ val ring_freshman_all = store_thm(
   `_ = x ** (p ** n * p) + y ** (p ** n * p)` by rw[ring_exp_mult] >>
   `_ = x ** (p * p ** n) + y ** (p * p ** n)` by rw_tac std_ss[MULT_COMM] >>
   `_ = x ** p ** SUC n + y ** p ** SUC n` by rw[EXP] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: Ring r /\ prime (char r) ==> !x y. x IN R /\ y IN R ==>
             ((x - y) ** char r = x ** char r - y ** char r) *)
@@ -8679,17 +9036,18 @@ val ring_freshman_all = store_thm(
       (-y) ** m = - (y ** m)  by ring_neg_exp
       The result follows      by ring_sub_def
 *)
-val ring_freshman_thm_sub = store_thm(
-  "ring_freshman_thm_sub",
-  ``!r:'a ring. Ring r /\ prime (char r) ==> !x y. x IN R /\ y IN R ==>
-               ((x - y) ** char r = x ** char r - y ** char r)``,
+Theorem ring_freshman_thm_sub:
+    !r:'a ring. Ring r /\ prime (char r) ==> !x y. x IN R /\ y IN R ==>
+               ((x - y) ** char r = x ** char r - y ** char r)
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = char r` >>
   rw[] >>
   `(x + -y) ** m = x ** m + (-y) ** m` by rw[ring_freshman_thm, Abbr`m`] >>
   Cases_on `EVEN m` >-
   rw[GSYM EVEN_PRIME, ring_neg_exp, ring_neg_char_2, Abbr`m`] >>
-  rw[ring_neg_exp]);
+  rw[ring_neg_exp]
+QED
 
 (* Theorem: Ring r /\ prime (char r) ==> !x y. x IN R /\ y IN R ==>
             !n. (x - y) ** (char r) ** n = x ** (char r) ** n - y ** (char r) ** n *)
@@ -8715,10 +9073,10 @@ val ring_freshman_thm_sub = store_thm(
       = x ** (m * m ** n) - y ** (m * m ** n)     by MULT_COMM
       = x ** m ** SUC n - y ** m ** SUC n         by EXP
 *)
-val ring_freshman_all_sub = store_thm(
-  "ring_freshman_all_sub",
-  ``!r:'a ring. Ring r /\ prime (char r) ==> !x y. x IN R /\ y IN R ==>
-   !n. (x - y) ** (char r) ** n = x ** (char r) ** n - y ** (char r) ** n``,
+Theorem ring_freshman_all_sub:
+    !r:'a ring. Ring r /\ prime (char r) ==> !x y. x IN R /\ y IN R ==>
+   !n. (x - y) ** (char r) ** n = x ** (char r) ** n - y ** (char r) ** n
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = char r` >>
   Induct_on `n` >-
@@ -8731,7 +9089,8 @@ val ring_freshman_all_sub = store_thm(
   `_ = x ** (m ** n * m) - y ** (m ** n * m)` by rw[ring_exp_mult] >>
   `_ = x ** (m * m ** n) - y ** (m * m ** n)` by rw_tac std_ss[MULT_COMM] >>
   `_ = x ** m ** SUC n - y ** m ** SUC n` by rw[EXP] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: [Fermat's Little Theorem]
             Ring r /\ prime (char r) ==> !n. (##n) ** (char r) = (##n)  *)
@@ -8750,9 +9109,9 @@ val ring_freshman_all_sub = store_thm(
    = #1 + ##n             by ring_one_exp
    = ##(SUC n)            by ring_num_SUC
 *)
-val ring_fermat_thm = store_thm(
-  "ring_fermat_thm",
-  ``!r:'a ring. Ring r /\ prime (char r) ==> !n. (##n) ** (char r) = (##n)``,
+Theorem ring_fermat_thm:
+    !r:'a ring. Ring r /\ prime (char r) ==> !n. (##n) ** (char r) = (##n)
+Proof
   rpt strip_tac >>
   qabbrev_tac `p = char r` >>
   `0 < p` by rw_tac std_ss[PRIME_POS] >>
@@ -8762,7 +9121,8 @@ val ring_fermat_thm = store_thm(
     rw_tac std_ss[ring_num_SUC] >>
     `#1 IN R /\ ##n IN R` by rw[] >>
     metis_tac[ring_freshman_thm, ring_one_exp]
-  ]);
+  ]
+QED
 
 (* Theorem: [Fermat's Little Theorem Generalized]
             Ring r /\ prime (char r) ==> !n k. (##n) ** (char r) ** k = (##n)  *)
@@ -8780,16 +9140,17 @@ val ring_fermat_thm = store_thm(
    = ##n ** p               by induction hypothesis
    = ##n                    by ring_fermat_thm
 *)
-val ring_fermat_all = store_thm(
-  "ring_fermat_all",
-  ``!r:'a ring. Ring r /\ prime (char r) ==> !n k. (##n) ** (char r) ** k = (##n)``,
+Theorem ring_fermat_all:
+    !r:'a ring. Ring r /\ prime (char r) ==> !n k. (##n) ** (char r) ** k = (##n)
+Proof
   rpt strip_tac >>
   qabbrev_tac `p = char r` >>
   Induct_on `k` >-
   rw[EXP] >>
   `##n ** p ** SUC k = ##n ** (p * p ** k)` by rw[EXP] >>
   `_ = ##n ** (p ** k * p)` by rw_tac std_ss[MULT_COMM] >>
-  rw[ring_exp_mult, ring_fermat_thm, Abbr`p`]);
+  rw[ring_exp_mult, ring_fermat_thm, Abbr`p`]
+QED
 
 (* Theorem: [Freshman Theorem for Ring Sum]
             Ring r /\ prime (char r) ==> !f. rfun f ==> !x. x IN R ==>
@@ -8818,11 +9179,11 @@ val ring_fermat_all = store_thm(
       = rsum (GENLIST (\j. (f j * x ** j) ** m) n) + (f n * x ** n) ** m  by induction hypothesis
       = rsum (GENLIST (\j. (f j * x ** j) ** m) (SUC n))                  by poly_sum_decompose_last
 *)
-val ring_sum_freshman_thm = store_thm(
-  "ring_sum_freshman_thm",
-  ``!r:'a ring. Ring r /\ prime (char r) ==> !f. rfun f ==> !x. x IN R ==>
+Theorem ring_sum_freshman_thm:
+    !r:'a ring. Ring r /\ prime (char r) ==> !f. rfun f ==> !x. x IN R ==>
    !n. rsum (GENLIST (\j. f j * x ** j) n) ** char r =
-       rsum (GENLIST (\j. (f j * x ** j) ** char r) n)``,
+       rsum (GENLIST (\j. (f j * x ** j) ** char r) n)
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = char r` >>
   Induct_on `n` >| [
@@ -8841,7 +9202,8 @@ val ring_sum_freshman_thm = store_thm(
     `_ = rsum (GENLIST (\j. (f j * x ** j) ** m) n) + (f n * x ** n) ** m` by rw[] >>
     `_ = rsum (GENLIST (\j. (f j * x ** j) ** m) (SUC n))` by rw[ring_sum_decompose_last] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r /\ prime (char r) ==> !f. rfun f ==> !x. x IN R ==>
             !n k. rsum (GENLIST (\j. f j * x ** j) n) ** char r ** k =
@@ -8870,11 +9232,11 @@ val ring_sum_freshman_thm = store_thm(
       = rsum (GENLIST (\j. (f j * x ** j) ** m ** k) n) + (f n * x ** n) ** m ** k  by induction hypothesis
       = rsum (GENLIST (\j. (f j * x ** j) ** m ** k) (SUC n))                       by ring_sum_decompose_last
 *)
-val ring_sum_freshman_all = store_thm(
-  "ring_sum_freshman_all",
-  ``!r:'a ring. Ring r /\ prime (char r) ==> !f. rfun f ==> !x. x IN R ==>
+Theorem ring_sum_freshman_all:
+    !r:'a ring. Ring r /\ prime (char r) ==> !f. rfun f ==> !x. x IN R ==>
    !n k. rsum (GENLIST (\j. f j * x ** j) n) ** char r ** k =
-         rsum (GENLIST (\j. (f j * x ** j) ** char r ** k) n)``,
+         rsum (GENLIST (\j. (f j * x ** j) ** char r ** k) n)
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = char r` >>
   Induct_on `n` >| [
@@ -8894,7 +9256,8 @@ val ring_sum_freshman_all = store_thm(
     `_ = rsum (GENLIST (\j. (f j * x ** j) ** m ** k) n) + (f n * x ** n) ** m ** k` by rw[] >>
     `_ = rsum (GENLIST (\j. (f j * x ** j) ** m ** k) (SUC n))` by rw[ring_sum_decompose_last] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: [Frobenius Theorem]
             For a Ring with prime p = char r, x IN R,
@@ -8913,15 +9276,16 @@ val ring_sum_freshman_all = store_thm(
        Ring r /\ prime p /\ x IN R /\ x' IN R ==> (x * x') ** p = x ** p * x' ** p
        which is true by ring_mult_exp.
 *)
-val ring_char_prime_endo = store_thm(
-  "ring_char_prime_endo",
-  ``!r:'a ring. Ring r /\ prime (char r) ==> RingEndo (\x. x ** (char r)) r``,
+Theorem ring_char_prime_endo:
+    !r:'a ring. Ring r /\ prime (char r) ==> RingEndo (\x. x ** (char r)) r
+Proof
   rpt strip_tac >>
   rw[RingEndo_def, RingHomo_def] >| [
     rw[GroupHomo_def] >>
     metis_tac[ring_freshman_thm],
     rw[MonoidHomo_def, ring_mult_monoid]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Divisbility in Ring Documentation                                         *)
@@ -8994,10 +9358,10 @@ val _ = temp_overload_on ("I", ``i.carrier``);
 val _ = temp_overload_on ("J", ``j.carrier``);
 
 (* Divides relation in ring *)
-val ring_divides_def = Define `
+Definition ring_divides_def:
   ring_divides (r:'a ring) (q:'a) (p:'a) =
     ?s:'a. s IN R /\ (p = s * q)
-`;
+End
 
 (* Overload ring divides *)
 val _ = overload_on ("rdivides", ``ring_divides r``);
@@ -9008,10 +9372,10 @@ ring_divides_def;
 *)
 
 (* Define ring associates *)
-val ring_associates_def = Define `
+Definition ring_associates_def:
   ring_associates (r:'a ring) (p:'a) (q:'a) =
   ?s:'a. unit s /\ (p = s * q)
-`;
+End
 (* Overload ring associates *)
 val _ = overload_on ("rassoc", ``ring_associates r``);
 (*
@@ -9020,10 +9384,10 @@ val _ = overload_on ("rassoc", ``ring_associates r``);
 *)
 
 (* Define prime in ring *)
-val ring_prime_def = Define `
+Definition ring_prime_def:
   ring_prime (r:'a ring) (p:'a) =
   !a b. a IN R /\ b IN R /\ p rdivides a * b ==> (p rdivides a) \/ (p rdivides b)
-`;
+End
 (* Overload prime in ring *)
 val _ = overload_on ("rprime", ``ring_prime r``);
 (*
@@ -9087,9 +9451,9 @@ val _ = overload_on ("rprime", ``ring_prime r``);
        ==> unit (#1 * x) ==> unit x
        If unit y, this is trivial.
 *)
-val irreducible_associates = store_thm(
-  "irreducible_associates",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !p s. p IN R /\ unit s ==> (atom p <=> atom (s * p))``,
+Theorem irreducible_associates:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !p s. p IN R /\ unit s ==> (atom p <=> atom (s * p))
+Proof
   rw[EQ_IMP_THM] >| [
     `unit ((Invertibles r.prod).inv s)` by rw[ring_unit_has_inv] >>
     `s IN R` by rw[ring_unit_element] >>
@@ -9138,7 +9502,8 @@ val irreducible_associates = store_thm(
         rw[]
       ]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: atom z ==> z IN R+ /\ ~(unit z) /\ (!p. p IN R /\ p rdivides z ==> (rassoc z p) \/ unit p) *)
 (* Proof:
@@ -9148,25 +9513,27 @@ val irreducible_associates = store_thm(
    If unit s, rassoc z p            by ring_associates_def
    If unit p, trivially true.
 *)
-val irreducible_factors = store_thm(
-  "irreducible_factors",
-  ``!r:'a ring. !z. atom z ==> z IN R+ /\ ~(unit z) /\ (!p. p IN R /\ p rdivides z ==> (rassoc z p) \/ unit p)``,
+Theorem irreducible_factors:
+    !r:'a ring. !z. atom z ==> z IN R+ /\ ~(unit z) /\ (!p. p IN R /\ p rdivides z ==> (rassoc z p) \/ unit p)
+Proof
   rw[irreducible_def] >>
   `?s. s IN R /\ (z = s * p)` by rw[GSYM ring_divides_def] >>
   `unit s \/ unit p` by rw[] >-
   metis_tac[ring_associates_def] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: p rdivides p *)
 (* Proof:
    Since #1 * p = p      by ring_mult_lone
    p rdivides p          by ring_divides_def
 *)
-val ring_divides_refl = store_thm(
-  "ring_divides_refl",
-  ``!r:'a ring. Ring r ==> !p. p IN R ==> p rdivides p``,
+Theorem ring_divides_refl:
+    !r:'a ring. Ring r ==> !p. p IN R ==> p rdivides p
+Proof
   rw[ring_divides_def] >>
-  metis_tac[ring_mult_lone, ring_one_element]);
+  metis_tac[ring_mult_lone, ring_one_element]
+QED
 
 (* Theorem: p rdivides q /\ q rdivides p ==> p = q *)
 (* Proof:
@@ -9181,23 +9548,25 @@ val ring_divides_refl = store_thm(
    Since s' * s IN R                            by ring_mult_element
    p rdivides t                                 by ring_divides_def
 *)
-val ring_divides_trans = store_thm(
-  "ring_divides_trans",
-  ``!r:'a ring. Ring r ==> !p q t. p IN R /\ q IN R /\ t IN R /\ p rdivides q /\ q rdivides t ==> p rdivides t``,
+Theorem ring_divides_trans:
+    !r:'a ring. Ring r ==> !p q t. p IN R /\ q IN R /\ t IN R /\ p rdivides q /\ q rdivides t ==> p rdivides t
+Proof
   rw[ring_divides_def] >>
   `s' * (s * p) = s' * s * p` by rw[ring_mult_assoc] >>
-  metis_tac[ring_mult_element]);
+  metis_tac[ring_mult_element]
+QED
 
 (* Theorem: p rdivides #0 *)
 (* Proof:
    Since #0 = #0 * p     by ring_mult_lzero
    Hence p rdivides #0   by ring_divides_def
 *)
-val ring_divides_zero = store_thm(
-  "ring_divides_zero",
-  ``!r:'a ring. Ring r ==> !p. p IN R ==> p rdivides #0``,
+Theorem ring_divides_zero:
+    !r:'a ring. Ring r ==> !p. p IN R ==> p rdivides #0
+Proof
   rw[] >>
-  metis_tac[ring_divides_def, ring_mult_lzero, ring_zero_element]);
+  metis_tac[ring_divides_def, ring_mult_lzero, ring_zero_element]
+QED
 
 (* Theorem: Ring r ==> !x. x IN R ==> (#0 rdivides x <=> (x = #0)) *)
 (* Proof:
@@ -9206,20 +9575,22 @@ val ring_divides_zero = store_thm(
    <=> ?s. s IN R /\ (x = #0)        by ring_mult_rzero
    <=> x = #0
 *)
-val ring_zero_divides = store_thm(
-  "ring_zero_divides",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> (#0 rdivides x <=> (x = #0))``,
-  metis_tac[ring_divides_def, ring_mult_rzero]);
+Theorem ring_zero_divides:
+    !r:'a ring. Ring r ==> !x. x IN R ==> (#0 rdivides x <=> (x = #0))
+Proof
+  metis_tac[ring_divides_def, ring_mult_rzero]
+QED
 
 (* Theorem: #1 rdivides p *)
 (* Proof:
    Since p = p * #1   by ring_mult_rone
    Hence true         by ring_divides_def
 *)
-val ring_divides_by_one = store_thm(
-  "ring_divides_by_one",
-  ``!r:'a ring. Ring r ==> !p. p IN R ==> #1 rdivides p``,
-  metis_tac[ring_divides_def, ring_mult_rone]);
+Theorem ring_divides_by_one:
+    !r:'a ring. Ring r ==> !p. p IN R ==> #1 rdivides p
+Proof
+  metis_tac[ring_divides_def, ring_mult_rone]
+QED
 
 (* Theorem: unit t ==> t rdivides p *)
 (* Proof:
@@ -9229,15 +9600,16 @@ val ring_divides_by_one = store_thm(
            = (p * |/t) * t    by ring_mult_assoc
    Hence true                 by ring_divides_def
 *)
-val ring_divides_by_unit = store_thm(
-  "ring_divides_by_unit",
-  ``!r:'a ring. Ring r ==> !p t. p IN R /\ unit t ==> t rdivides p``,
+Theorem ring_divides_by_unit:
+    !r:'a ring. Ring r ==> !p t. p IN R /\ unit t ==> t rdivides p
+Proof
   rpt strip_tac >>
   `|/t IN R /\ p * |/t IN R` by rw[ring_unit_inv_element] >>
   `p = p * #1` by rw[] >>
   `_ = p * ( |/t * t)` by rw[ring_unit_linv] >>
   `_ = p * |/t * t` by rw[ring_mult_assoc] >>
-  metis_tac[ring_divides_def]);
+  metis_tac[ring_divides_def]
+QED
 
 (* Theorem: p = k * q ==> z = s * p ==> z = t * q *)
 (* Proof:
@@ -9246,13 +9618,14 @@ val ring_divides_by_unit = store_thm(
      = (s * k) * q     by ring_mult_assoc
    So let t = s * k, then z = t * q
 *)
-val ring_factor_multiple = store_thm(
-  "ring_factor_multiple",
-  ``!r:'a ring. Ring r ==> !p q. p IN R /\ q IN R /\ (?k. k IN R /\ (p = k * q)) ==>
-     !z. z IN R /\ (?s. s IN R /\ (z = s * p)) ==> (?t. t IN R /\ (z = t * q))``,
+Theorem ring_factor_multiple:
+    !r:'a ring. Ring r ==> !p q. p IN R /\ q IN R /\ (?k. k IN R /\ (p = k * q)) ==>
+     !z. z IN R /\ (?s. s IN R /\ (z = s * p)) ==> (?t. t IN R /\ (z = t * q))
+Proof
   rpt strip_tac >>
   qexists_tac `s * k` >>
-  rw[ring_mult_assoc]);
+  rw[ring_mult_assoc]
+QED
 
 Theorem ring_prime_divides_product:
   !r. Ring r ==>
@@ -9474,13 +9847,13 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define greatest common divisor *)
-val ring_gcd_def = Define`
+Definition ring_gcd_def:
   ring_gcd (r:'a ring) (f:'a -> num) (p:'a) (q:'a) =
    if p = #0 then q
    else if q = #0 then p
    else let s = {a * p + b * q | (a, b) | a IN R /\ b IN R /\ 0 < f (a * p + b * q) }
          in CHOICE (preimage f s (MIN_SET (IMAGE f s)))
-`;
+End
 
 (* Overload ring gcd *)
 val _ = overload_on ("rgcd", ``ring_gcd r f``);
@@ -9493,10 +9866,11 @@ val _ = overload_on ("rgcd", ``ring_gcd r f``);
 
 (* Theorem: !p. (rgcd p #0 = p) /\ (rgcd #0 p = p) *)
 (* Proof: by ring_gcd_def *)
-val ring_gcd_zero = store_thm(
-  "ring_gcd_zero",
-  ``!(r:'a ring) (f :'a -> num). !p. (rgcd p #0 = p) /\ (rgcd #0 p = p)``,
-  rw[ring_gcd_def]);
+Theorem ring_gcd_zero:
+    !(r:'a ring) (f :'a -> num). !p. (rgcd p #0 = p) /\ (rgcd #0 p = p)
+Proof
+  rw[ring_gcd_def]
+QED
 
 (* Theorem: EuclideanRing r f ==> !p q. p IN R /\ q IN R ==>
             (?a b. a IN R /\ b IN R /\ (rgcd p q = a * p + b * q)) *)
@@ -9515,10 +9889,10 @@ val ring_gcd_zero = store_thm(
      or rgcd p q IN s                        by IN_IMAGE
      or ?a b. a IN R /\ b IN R /\ (rgcd p q = a * p + b * q).
 *)
-val ring_gcd_linear = store_thm(
-  "ring_gcd_linear",
-  ``!(r:'a ring) (f:'a -> num). EuclideanRing r f ==>
-     !p q. p IN R /\ q IN R ==> ?a b. a IN R /\ b IN R /\ (rgcd p q = a * p + b * q)``,
+Theorem ring_gcd_linear:
+    !(r:'a ring) (f:'a -> num). EuclideanRing r f ==>
+     !p q. p IN R /\ q IN R ==> ?a b. a IN R /\ b IN R /\ (rgcd p q = a * p + b * q)
+Proof
   rpt strip_tac >>
   `Ring r` by metis_tac[euclid_ring_ring] >>
   `#0 IN R /\ #1 IN R` by rw[] >>
@@ -9537,7 +9911,8 @@ val ring_gcd_linear = store_thm(
   `IMAGE f s <> {}` by rw[IMAGE_EMPTY] >>
   `MIN_SET (IMAGE f s) IN (IMAGE f s)` by rw[MIN_SET_LEM] >>
   `CHOICE (preimage f s (MIN_SET (IMAGE f s))) IN s` by rw[preimage_choice_property] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: EuclideanRing r f ==> rgcd p q rdivides p /\ rgcd p q rdivides q /\
             !d. d IN R /\ d rdivides p /\ d rdivides q ==> d rdivides rgcd p q *)
@@ -9608,11 +9983,11 @@ val ring_gcd_linear = store_thm(
             = (a * u + b * v) * d         by ring_mult_ladd
           Hence d rdivides g              by ring_divides_def
 *)
-val ring_gcd_is_gcd = store_thm(
-  "ring_gcd_is_gcd",
-  ``!(r:'a ring) (f:'a -> num). EuclideanRing r f ==> !p q. p IN R /\ q IN R ==>
+Theorem ring_gcd_is_gcd:
+    !(r:'a ring) (f:'a -> num). EuclideanRing r f ==> !p q. p IN R /\ q IN R ==>
       rgcd p q rdivides p /\ rgcd p q rdivides q /\
-      (!d. d IN R /\ d rdivides p /\ d rdivides q ==> d rdivides rgcd p q)``,
+      (!d. d IN R /\ d rdivides p /\ d rdivides q ==> d rdivides rgcd p q)
+Proof
   ntac 6 strip_tac >>
   `Ring r` by metis_tac[euclid_ring_ring] >>
   Cases_on `p = #0` >-
@@ -9688,7 +10063,8 @@ val ring_gcd_is_gcd = store_thm(
     `_ = (a * u + b * v) * d` by rw[ring_mult_ladd] >>
     `a * u + b * v IN R` by rw[] >>
     metis_tac[ring_divides_def]
-  ]);
+  ]
+QED
 
 (* Theorem: rgcd p q rdivides p /\ rgcd p q rdivides q *)
 val ring_gcd_divides = save_thm("ring_gcd_divides",
@@ -9710,13 +10086,14 @@ val ring_gcd_property = save_thm("ring_gcd_property",
    ?a b. a IN R /\ b IN R /\ (rgcd p q = a * p + b * q)  by ring_gcd_linear
    Hence (rgcd p q) IN R                                 by ring_mult_element, ring_add_element
 *)
-val ring_gcd_element = store_thm(
-  "ring_gcd_element",
-  ``!(r:'a ring) (f:'a -> num). EuclideanRing r f ==> !p q. p IN R /\ q IN R ==> rgcd p q IN R``,
+Theorem ring_gcd_element:
+    !(r:'a ring) (f:'a -> num). EuclideanRing r f ==> !p q. p IN R /\ q IN R ==> rgcd p q IN R
+Proof
   rpt strip_tac >>
   `Ring r` by metis_tac[euclid_ring_ring] >>
   `?a b. a IN R /\ b IN R /\ (rgcd p q = a * p + b * q)` by rw[ring_gcd_linear] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: rgcd p q = rgcd q p *)
 (* Proof:
@@ -9732,9 +10109,9 @@ val ring_gcd_element = store_thm(
    But s = s'  by exchanging a and b, and by ring_add_comm
    Hence rgcd p q = rgcd q p.
 *)
-val ring_gcd_sym = store_thm(
-  "ring_gcd_sym",
-  ``!(r:'a ring) (f:'a -> num). EuclideanRing r f ==> !p q. p IN R /\ q IN R ==> (rgcd p q = rgcd q p)``,
+Theorem ring_gcd_sym:
+    !(r:'a ring) (f:'a -> num). EuclideanRing r f ==> !p q. p IN R /\ q IN R ==> (rgcd p q = rgcd q p)
+Proof
   rw_tac std_ss[ring_gcd_def] >>
   `s = s'` by
   (rw[Abbr`s`, Abbr`s'`, EXTENSION] >>
@@ -9747,7 +10124,8 @@ val ring_gcd_sym = store_thm(
     qexists_tac `a` >>
     rw[ring_add_comm]
   ]) >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: atom p ==> !q. q IN R ==> unit (rgcd p q) \/ p rdivides q *)
 (* Proof:
@@ -9762,10 +10140,10 @@ val ring_gcd_sym = store_thm(
    Since g rdivides q        by ring_gcd_divides
    p rdivides q              by ring_divides_trans
 *)
-val ring_irreducible_gcd = store_thm(
-  "ring_irreducible_gcd",
-  ``!(r:'a ring) (f:'a -> num). EuclideanRing r f ==>
-     !p. p IN R /\ atom p ==> !q. q IN R ==> unit (rgcd p q) \/ p rdivides q``,
+Theorem ring_irreducible_gcd:
+    !(r:'a ring) (f:'a -> num). EuclideanRing r f ==>
+     !p. p IN R /\ atom p ==> !q. q IN R ==> unit (rgcd p q) \/ p rdivides q
+Proof
   rpt strip_tac >>
   `Ring r` by metis_tac[euclid_ring_ring] >>
   qabbrev_tac `g = rgcd p q` >>
@@ -9780,13 +10158,14 @@ val ring_irreducible_gcd = store_thm(
     `p rdivides g` by metis_tac[ring_divides_def] >>
     metis_tac[ring_divides_trans],
     rw[]
-  ]);
+  ]
+QED
 
 (* Define ring ordering function *)
-val ring_ordering_def = Define `
+Definition ring_ordering_def:
   ring_ordering (r:'a ring) (f:'a -> num) =
     !a b. a IN R /\ b IN R /\ b <> #0 ==> f a <= f (a * b)
-`;
+End
 
 (* Theorem: EuclideanRing r /\ ring_ordering r f ==>
             !p q. p IN R /\ q IN R /\ p <> #0 /\ q rdivides p ==> f q <= f p *)
@@ -9798,15 +10177,16 @@ val ring_ordering_def = Define `
               = f (s * q)        by ring_mult_comm
               = f p
 *)
-val ring_divides_le = store_thm(
-  "ring_divides_le",
-  ``!(r:'a ring) (f:'a -> num). EuclideanRing r f /\ ring_ordering r f ==>
-        !p q. p IN R /\ q IN R /\ p <> #0 /\ q rdivides p ==> f q <= f p``,
+Theorem ring_divides_le:
+    !(r:'a ring) (f:'a -> num). EuclideanRing r f /\ ring_ordering r f ==>
+        !p q. p IN R /\ q IN R /\ p <> #0 /\ q rdivides p ==> f q <= f p
+Proof
   rpt strip_tac >>
   `Ring r` by metis_tac[euclid_ring_ring] >>
   `?s. s IN R /\ (p = s * q)` by rw[GSYM ring_divides_def] >>
   `_ = q * s` by rw[ring_mult_comm] >>
-  metis_tac[ring_ordering_def, ring_mult_rzero]);
+  metis_tac[ring_ordering_def, ring_mult_rzero]
+QED
 
 (* division and primality are preserved by isomorphism *)
 
@@ -9866,11 +10246,12 @@ QED
    iff  z IN R /\ (x = z * p)        by ring_mult_comm
    iff  p rdivides x                 by ring_divides_def
 *)
-val principal_ideal_element_divides = store_thm(
-  "principal_ideal_element_divides",
-  ``!r:'a ring. Ring r ==> !p. p IN R ==> !x. x IN <p>.carrier <=> p rdivides x``,
+Theorem principal_ideal_element_divides:
+    !r:'a ring. Ring r ==> !p. p IN R ==> !x. x IN <p>.carrier <=> p rdivides x
+Proof
   rw[principal_ideal_element, ring_divides_def] >>
-  metis_tac[ring_mult_comm]);
+  metis_tac[ring_mult_comm]
+QED
 
 (* Theorem: q rdivides p <=> <p> << <q> *)
 (* Proof:
@@ -9895,9 +10276,9 @@ val principal_ideal_element_divides = store_thm(
      i.e.  p = z * q                                   by ring_mult_comm
      Hence q rdivides p                                by ring_divides_def
 *)
-val principal_ideal_sub_implies_divides = store_thm(
-  "principal_ideal_sub_implies_divides",
-  ``!r:'a ring. Ring r ==> !p q. p IN R /\ q IN R ==> (q rdivides p <=> <p> << <q>)``,
+Theorem principal_ideal_sub_implies_divides:
+    !r:'a ring. Ring r ==> !p q. p IN R /\ q IN R ==> (q rdivides p <=> <p> << <q>)
+Proof
   rpt strip_tac >>
   `<p> << r /\ <q> << r` by rw[principal_ideal_ideal] >>
   rw[EQ_IMP_THM] >| [
@@ -9913,7 +10294,8 @@ val principal_ideal_sub_implies_divides = store_thm(
     `?z. z IN R /\ (p = q * z)` by rw[GSYM principal_ideal_element] >>
     `_ = z * q` by rw[ring_mult_comm] >>
     metis_tac[ring_divides_def]
-  ]);
+  ]
+QED
 
 (* Introduce temporary overlaods *)
 val _ = temp_overload_on ("<a>", ``principal_ideal r a``);
@@ -9963,9 +10345,9 @@ val _ = temp_overload_on ("<u>", ``principal_ideal r u``);
    Hence p rdivides b               by ring_divides_def
    which contradicts ~(p rdivides b).
 *)
-val principal_ideal_ring_atom_is_prime = store_thm(
-  "principal_ideal_ring_atom_is_prime",
-  ``!r:'a ring. PrincipalIdealRing r ==> !p. atom p ==> rprime p``,
+Theorem principal_ideal_ring_atom_is_prime:
+    !r:'a ring. PrincipalIdealRing r ==> !p. atom p ==> rprime p
+Proof
   rw[ring_prime_def] >>
   `Ring r` by metis_tac[PrincipalIdealRing_def] >>
   `p IN R` by rw[irreducible_element] >>
@@ -9999,7 +10381,8 @@ val principal_ideal_ring_atom_is_prime = store_thm(
   `_ = p * (s * h + b * k)` by rw[ring_mult_radd] >>
   `_ = (s * h + b * k) * p` by rw[ring_mult_comm] >>
   `s * h + b * k IN R` by rw[] >>
-  metis_tac[ring_divides_def]);
+  metis_tac[ring_divides_def]
+QED
 
 (* Another proof: *)
 (* Theorem: PrincipalIdealRing r ==> !p. atom p ==> rprime p *)
@@ -10030,9 +10413,9 @@ val principal_ideal_ring_atom_is_prime = store_thm(
    Hence p rdivides b               by ring_divides_def
    which contradicts ~(p rdivides b).
 *)
-val principal_ideal_ring_irreducible_is_prime = store_thm(
-  "principal_ideal_ring_irreducible_is_prime",
-  ``!r:'a ring. PrincipalIdealRing r ==> !p. atom p ==> rprime p``,
+Theorem principal_ideal_ring_irreducible_is_prime:
+    !r:'a ring. PrincipalIdealRing r ==> !p. atom p ==> rprime p
+Proof
   rw[ring_prime_def] >>
   `Ring r` by metis_tac[PrincipalIdealRing_def] >>
   `p IN R` by rw[irreducible_element] >>
@@ -10056,7 +10439,8 @@ val principal_ideal_ring_irreducible_is_prime = store_thm(
   `_ = p * (s * h + b * k)` by rw[ring_mult_radd] >>
   `_ = (s * h + b * k) * p` by rw[ring_mult_comm] >>
   `s * h + b * k IN R` by rw[] >>
-  metis_tac[ring_divides_def]);
+  metis_tac[ring_divides_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Quotient Ring Documentation                                               *)
@@ -10187,14 +10571,14 @@ val _ = overload_on ("R/I", ``CosetPartition r.sum i.sum``);
 val _ = overload_on ("gen", ``cogen r.sum i.sum``);
 
 (* Define addition of ideal cosets *)
-val ideal_coset_add_def = Define`
+Definition ideal_coset_add_def:
   ideal_coset_add (r:'a ring) (i:'a ring) x y = (gen x + gen y) o I
-`;
+End
 
 (* Define multiplication of ideal cosets *)
-val ideal_coset_mult_def = Define`
+Definition ideal_coset_mult_def:
   ideal_coset_mult (r:'a ring) (i:'a ring) x y = (gen x * gen y) o I
-`;
+End
 
 (* Overload operations *)
 val _ = overload_on ("+", ``ideal_coset_add r i``);
@@ -10216,55 +10600,57 @@ val it = |- x IN r.sum.carrier ==>
    = ?y. y IN i.sum.carrier /\ (z = x + y)   by in_coset
    = ?y. y IN I /\ (z = x + y)               by ring_carriers, ideal_carriers
 *)
-val ideal_coset_element = store_thm(
-  "ideal_coset_element",
-  ``!(r:'a ring) (i:'a ring) x. Ring r /\ i << r /\ x IN R ==>
-   !z. z IN x o I <=> ?y. y IN I /\ (z = x + y)``,
-  rw_tac std_ss[in_coset, ring_carriers, ideal_carriers]);
+Theorem ideal_coset_element:
+    !(r:'a ring) (i:'a ring) x. Ring r /\ i << r /\ x IN R ==>
+   !z. z IN x o I <=> ?y. y IN I /\ (z = x + y)
+Proof
+  rw_tac std_ss[in_coset, ring_carriers, ideal_carriers]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Quotient Ring.                                                            *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define addition group in Quotient Ring (R/I) *)
-val quotient_ring_add_def = Define `
+Definition quotient_ring_add_def:
   quotient_ring_add (r:'a ring) (i:'a ring) =
     <| carrier := R/I;
             id := I; (* will show: I = #0 o I *)
             op := ideal_coset_add r i
      |>
-`;
+End
 
 (* Define multiplication monoid in Quotient Ring (R/I) *)
-val quotient_ring_mult_def = Define `
+Definition quotient_ring_mult_def:
   quotient_ring_mult (r:'a ring) (i:'a ring) =
     <| carrier := R/I;
             id := #1 o I;
             op := ideal_coset_mult r i
      |>
-`;
+End
 
 (* Define Quotient Ring (R/I) *)
-val quotient_ring_def = Define `
+Definition quotient_ring_def:
   quotient_ring (r:'a ring) (i:'a ring) =
     <| carrier := R/I;
            sum := quotient_ring_add r i;
           prod := quotient_ring_mult r i
      |>
-`;
+End
 
 (* set overloading for Quotient Ring. *)
 val _ = overload_on ("/", ``quotient_ring``);
 
 (* Theorem: Properties of quotient ring (r / i). *)
 (* Proof: by quotient_ring_def *)
-val quotient_ring_property = store_thm(
-  "quotient_ring_property",
-  ``!r:'a ring i:'a ring.
+Theorem quotient_ring_property:
+    !r:'a ring i:'a ring.
         ((r / i).carrier = R/I) /\
         ((r / i).sum = quotient_ring_add r i) /\
-        ((r / i).prod = quotient_ring_mult r i)``,
-  rw[quotient_ring_def]);
+        ((r / i).prod = quotient_ring_mult r i)
+Proof
+  rw[quotient_ring_def]
+QED
 
 (* Theorem: Ring r /\ (i << r) ==> !x. x IN R/I ==> gen x IN R /\ (gen x o I = x) *)
 (* Proof:
@@ -10277,10 +10663,11 @@ val quotient_ring_property = store_thm(
    = (cogen r.sum i.sum x) o I           by rewrite of gen
    = x                                   by coset_cogen_property, i.sum <= r.sum
 *)
-val ideal_cogen_property = store_thm(
-  "ideal_cogen_property",
-  ``!r i:'a ring. Ring r /\ (i << r) ==> !x. x IN R/I ==> gen x IN R /\ (gen x o I = x)``,
-  metis_tac[ideal_def, ring_add_group, cogen_element, coset_cogen_property]);
+Theorem ideal_cogen_property:
+    !r i:'a ring. Ring r /\ (i << r) ==> !x. x IN R/I ==> gen x IN R /\ (gen x o I = x)
+Proof
+  metis_tac[ideal_def, ring_add_group, cogen_element, coset_cogen_property]
+QED
 
 (* Theorem: Ring r /\ (i << r) ==> !x. x IN R ==> gen (x o I) + I = x o I  *)
 (* Proof:
@@ -10293,10 +10680,11 @@ val ideal_cogen_property = store_thm(
    = (coset r.sum x I)                  by coset_cogen_property
    = x o I                              by ideal_coset rewrite
 *)
-val ideal_coset_property = store_thm(
-  "ideal_coset_property",
-  ``!r i:'a ring. Ring r /\ (i << r) ==> !x. x IN R ==> x o I IN R/I /\ (gen (x o I) o I = x o I)``,
-  metis_tac[ideal_def, ring_add_group, coset_partition_element, coset_cogen_property]);
+Theorem ideal_coset_property:
+    !r i:'a ring. Ring r /\ (i << r) ==> !x. x IN R ==> x o I IN R/I /\ (gen (x o I) o I = x o I)
+Proof
+  metis_tac[ideal_def, ring_add_group, coset_partition_element, coset_cogen_property]
+QED
 
 (* Theorem: Ring r /\ i << r ==> #0 o I = I *)
 (* Proof:
@@ -10305,20 +10693,22 @@ val ideal_coset_property = store_thm(
    and   Group r.sum                       by ring_add_group
    This follows by coset_id_eq_subgroup.
 *)
-val ideal_coset_zero = store_thm(
-  "ideal_coset_zero",
-  ``!r i:'a ring. Ring r /\ i << r ==> (#0 o I = I)``,
-  metis_tac[ideal_def, coset_id_eq_subgroup, ring_add_group]);
+Theorem ideal_coset_zero:
+    !r i:'a ring. Ring r /\ i << r ==> (#0 o I = I)
+Proof
+  metis_tac[ideal_def, coset_id_eq_subgroup, ring_add_group]
+QED
 
 (* Theorem: Ring r /\ i << r ==> I IN R/I *)
 (* Proof:
    Since #0 IN R, #0 o I IN R/I by ideal_coset_property.
    Hence true by By ideal_coset_zero.
 *)
-val ideal_in_quotient_ring = store_thm(
-  "ideal_in_quotient_ring",
-  ``!r i:'a ring. Ring r /\ i << r ==> I IN R/I``,
-  metis_tac[ideal_coset_property, ring_zero_element, ideal_coset_zero]);
+Theorem ideal_in_quotient_ring:
+    !r i:'a ring. Ring r /\ i << r ==> I IN R/I
+Proof
+  metis_tac[ideal_coset_property, ring_zero_element, ideal_coset_zero]
+QED
 
 (* Theorem alias *)
 val quotient_ring_has_ideal = save_thm("quotient_ring_has_ideal", ideal_in_quotient_ring);
@@ -10342,10 +10732,11 @@ In textbook, this is written as: (x + I) + (y + I) = (x + y) + I
    Only-if part: x IN R /\ (z = x o I) ==> z IN R/I
       This is true                          by ideal_coset_property
 *)
-val quotient_ring_element = store_thm(
-  "quotient_ring_element",
-  ``!(r:'a ring) (i:'a ring). Ring r /\ i << r ==> !z. z IN R/I <=> ?x. x IN R /\ (z = x o I)``,
-  metis_tac[ideal_cogen_property, ideal_coset_property]);
+Theorem quotient_ring_element:
+    !(r:'a ring) (i:'a ring). Ring r /\ i << r ==> !z. z IN R/I <=> ?x. x IN R /\ (z = x o I)
+Proof
+  metis_tac[ideal_cogen_property, ideal_coset_property]
+QED
 
 (* Theorem: Ring r /\ i << r ==> !x. x IN R ==> gen (x o I) - x IN I *)
 (* Proof:
@@ -10354,10 +10745,11 @@ val quotient_ring_element = store_thm(
    Thus gen (x o I) IN R           by ideal_cogen_property
    Thus gen (x o I) - x IN I       by ideal_coset_eq
 *)
-val ideal_coset_has_gen_diff = store_thm(
-  "ideal_coset_has_gen_diff",
-  ``!(r:'a ring) (i:'a ring). Ring r /\ i << r ==> !x. x IN R ==> gen (x o I) - x IN I``,
-  rw_tac std_ss[ideal_coset_property, ideal_cogen_property, GSYM ideal_coset_eq]);
+Theorem ideal_coset_has_gen_diff:
+    !(r:'a ring) (i:'a ring). Ring r /\ i << r ==> !x. x IN R ==> gen (x o I) - x IN I
+Proof
+  rw_tac std_ss[ideal_coset_property, ideal_cogen_property, GSYM ideal_coset_eq]
+QED
 
 (* Theorem: Ring r /\ i << r ==> !x y. x IN R /\ y IN R ==> ((x o I) + (y o I) = (x + y) o I) *)
 (* Proof:
@@ -10376,10 +10768,10 @@ val ideal_coset_has_gen_diff = store_thm(
    Thus t - (x + y) IN I                       by ideal_has_sum
      or t o I = (x + y) o I                    by ideal_coset_eq
 *)
-val ideal_coset_add = store_thm(
-  "ideal_coset_add",
-  ``!(r:'a ring) (i:'a ring). Ring r /\ i << r ==>
-   !x y. x IN R /\ y IN R ==> ((x o I) + (y o I) = (x + y) o I)``,
+Theorem ideal_coset_add:
+    !(r:'a ring) (i:'a ring). Ring r /\ i << r ==>
+   !x y. x IN R /\ y IN R ==> ((x o I) + (y o I) = (x + y) o I)
+Proof
   rw_tac std_ss[ideal_coset_add_def] >>
   qabbrev_tac `t = gen (x o I) + gen (y o I)` >>
   `x o I IN R/I /\ y o I IN R/I` by rw[ideal_coset_property] >>
@@ -10387,7 +10779,8 @@ val ideal_coset_add = store_thm(
   `t IN R /\ x + y IN R` by rw[Abbr`t`] >>
   rw_tac std_ss[ideal_coset_eq] >>
   `t - (x + y) = (gen (x o I) - x) + (gen (y o I) - y)` by rw[ring_add_pair_sub, Abbr`t`] >>
-  metis_tac[ideal_coset_has_gen_diff, ideal_has_sum]);
+  metis_tac[ideal_coset_has_gen_diff, ideal_has_sum]
+QED
 
 (* Theorem: Ring r /\ i << r ==> !x y. x IN R /\ y IN R ==> ((x o I) * (y o I) = (x * y) o I) *)
 (* Proof:
@@ -10409,10 +10802,10 @@ val ideal_coset_add = store_thm(
    Thus t - (x * y) IN I                       by ideal_has_sum
      or t o I = (x * y) o I                    by ideal_coset_eq
 *)
-val ideal_coset_mult = store_thm(
-  "ideal_coset_mult",
-  ``!(r:'a ring) (i:'a ring). Ring r /\ i << r ==>
-   !x y. x IN R /\ y IN R ==> ((x o I) * (y o I) = (x * y) o I)``,
+Theorem ideal_coset_mult:
+    !(r:'a ring) (i:'a ring). Ring r /\ i << r ==>
+   !x y. x IN R /\ y IN R ==> ((x o I) * (y o I) = (x * y) o I)
+Proof
   rw_tac std_ss[ideal_coset_mult_def] >>
   qabbrev_tac `t = gen (x o I) * gen (y o I)` >>
   `x o I IN R/I /\ y o I IN R/I` by rw[ideal_coset_property] >>
@@ -10421,7 +10814,8 @@ val ideal_coset_mult = store_thm(
   rw_tac std_ss[ideal_coset_eq] >>
   `t - (x * y) = (gen (x o I) - x) * gen (y o I) + x * (gen (y o I) - y)` by rw_tac std_ss[ring_mult_pair_diff, Abbr`t`] >>
   `_ = (gen (x o I) - x) * gen (y o I) + (gen (y o I) - y) * x` by rw_tac std_ss[ring_mult_comm, ring_sub_element] >>
-  metis_tac[ideal_coset_has_gen_diff, ideal_has_multiple, ideal_has_sum]);
+  metis_tac[ideal_coset_has_gen_diff, ideal_has_multiple, ideal_has_sum]
+QED
 
 (* Theorem: Ring r /\ i << r ==> !x. x IN R ==> (x o I + (-x) o I = I) *)
 (* Proof:
@@ -10431,10 +10825,11 @@ val ideal_coset_mult = store_thm(
    = #0 o I                  by ring_add_rneg
    = I                       by ideal_coset_zero
 *)
-val ideal_coset_neg = store_thm(
-  "ideal_coset_neg",
-  ``!(r:'a ring) (i:'a ring). Ring r /\ i << r ==> !x. x IN R ==> (x o I + (-x) o I = I)``,
-  rw_tac std_ss[ideal_coset_add, ideal_coset_zero, ring_neg_element, ring_add_rneg]);
+Theorem ideal_coset_neg:
+    !(r:'a ring) (i:'a ring). Ring r /\ i << r ==> !x. x IN R ==> (x o I + (-x) o I = I)
+Proof
+  rw_tac std_ss[ideal_coset_add, ideal_coset_zero, ring_neg_element, ring_add_rneg]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Quotient Ring (R/I).sum is an Abelian Group.                              *)
@@ -10451,10 +10846,11 @@ val ideal_coset_neg = store_thm(
    Hence  gen x + gen y IN r.sum.carrier          by ring_add_element
       or  (gen x + gen y) o I IN R/I              by coset_partition_element, since i.sum <= r.sum.
 *)
-val quotient_ring_add_element = store_thm(
-  "quotient_ring_add_element",
-  ``!r i:'a ring. Ring r /\ (i << r) ==> !x y. x IN R/I /\ y IN R/I ==> x + y IN R/I``,
-  rw[ideal_cogen_property, ideal_coset_property]);
+Theorem quotient_ring_add_element:
+    !r i:'a ring. Ring r /\ (i << r) ==> !x y. x IN R/I /\ y IN R/I ==> x + y IN R/I
+Proof
+  rw[ideal_cogen_property, ideal_coset_property]
+QED
 
 (* Theorem: [Quotient Ring Add Commutative] Ring r /\ (i << r) ==> !x y. x IN R/I /\ y IN R/I ==> x + y = y + x *)
 (* Proof:
@@ -10464,10 +10860,11 @@ val quotient_ring_add_element = store_thm(
    = (gen y + gen x) o I        by ring_add_comm
    = y + x                      by ideal_coset_add_def
 *)
-val quotient_ring_add_comm = store_thm(
-  "quotient_ring_add_comm",
-  ``!r i:'a ring. Ring r /\ (i << r) ==> !x y. x IN R/I /\ y IN R/I ==> (x + y = y + x)``,
-  rw[ring_add_comm, ideal_cogen_property]);
+Theorem quotient_ring_add_comm:
+    !r i:'a ring. Ring r /\ (i << r) ==> !x y. x IN R/I /\ y IN R/I ==> (x + y = y + x)
+Proof
+  rw[ring_add_comm, ideal_cogen_property]
+QED
 
 (* Theorem: Ring r /\ i << r /\ x IN R/I /\ y IN R/I /\ z IN R/I ==> x + y + z = x + (y + z) *)
 (* Proof:
@@ -10501,9 +10898,9 @@ val quotient_ring_add_comm = store_thm(
    = (gen x + (gen y + gen z)) o I   by ring_add_assoc
    = x + (y + z)                     by 2nd result
 *)
-val quotient_ring_add_assoc = store_thm(
-  "quotient_ring_add_assoc",
-  ``!r i:'a ring. Ring r /\ (i << r) ==> !x y z. x IN R/I /\ y IN R/I /\ z IN R/I ==> (x + y + z = x + (y + z))``,
+Theorem quotient_ring_add_assoc:
+    !r i:'a ring. Ring r /\ (i << r) ==> !x y z. x IN R/I /\ y IN R/I /\ z IN R/I ==> (x + y + z = x + (y + z))
+Proof
   rw_tac std_ss[ideal_coset_add_def] >>
   `gen x IN R /\ gen y IN R /\ gen z IN R` by rw_tac std_ss[ideal_cogen_property] >>
   `(gen ((gen x + gen y) o I) + gen z) o I = (gen x + gen y + gen z) o I` by
@@ -10518,7 +10915,8 @@ val quotient_ring_add_assoc = store_thm(
   `gen ((gen y + gen z) o I) - (gen y + gen z) IN I` by metis_tac[ideal_coset_eq, ideal_coset_property] >>
   `gen x + gen ((gen y + gen z) o I) - (gen x + (gen y + gen z)) IN I` by metis_tac[ring_sub_pair_reduce, ring_add_comm] >>
   rw_tac std_ss[ideal_coset_eq, ring_add_element]) >>
-  rw_tac std_ss[ring_add_assoc]);
+  rw_tac std_ss[ring_add_assoc]
+QED
 
 (* Theorem: [Quotient Ring Add Identity] Ring r /\ i << r /\ x IN R/I ==> I + x = x *)
 (* Proof:
@@ -10533,16 +10931,17 @@ val quotient_ring_add_assoc = store_thm(
    Hence (gen I + gen x) - gen x IN I       by ring_add_lzero
    Thus LHS = RHS                           by ideal_coset_eq
 *)
-val quotient_ring_add_id = store_thm(
-  "quotient_ring_add_id",
-  ``!r i:'a ring. Ring r /\ i << r ==> !x. x IN R/I ==> (I + x = x)``,
+Theorem quotient_ring_add_id:
+    !r i:'a ring. Ring r /\ i << r ==> !x. x IN R/I ==> (I + x = x)
+Proof
   rw_tac std_ss[ideal_coset_add_def] >>
   `I IN R/I` by rw_tac std_ss[ideal_in_quotient_ring] >>
   `gen x IN R /\ gen I IN R /\ (gen x o I = x) /\ (gen I o I = I)` by rw_tac std_ss[ideal_cogen_property] >>
   `I = #0 o I` by rw_tac std_ss[ideal_coset_zero] >>
   `#0 IN R` by rw_tac std_ss[ring_zero_element] >>
   `(gen I + gen x) - gen x = gen I - #0` by metis_tac[ring_sub_pair_reduce, ring_add_lzero] >>
-  metis_tac[ideal_coset_eq, ring_add_lzero, ring_add_element]);
+  metis_tac[ideal_coset_eq, ring_add_lzero, ring_add_element]
+QED
 
 (* Theorem: [Quotient Ring Add Inverse] Ring r /\ i << r /\ x IN R/I ==> ?y. y IN R/I /\ (y + x = I) *)
 (* Proof:
@@ -10565,9 +10964,9 @@ val quotient_ring_add_id = store_thm(
    i.e. gen (-gen x o I) + gen x - #0 IN I
    Thus true by ideal_coset_eq.
 *)
-val quotient_ring_add_inv = store_thm(
-  "quotient_ring_add_inv",
-  ``!r i:'a ring. Ring r /\ i << r ==> !x. x IN R/I ==> ?y. y IN R/I /\ (y + x = I)``,
+Theorem quotient_ring_add_inv:
+    !r i:'a ring. Ring r /\ i << r ==> !x. x IN R/I ==> ?y. y IN R/I /\ (y + x = I)
+Proof
   rw_tac std_ss[ideal_coset_add_def] >>
   `gen x IN R` by rw_tac std_ss[ideal_cogen_property] >>
   `- gen x IN R` by rw_tac std_ss[ring_neg_element] >>
@@ -10579,7 +10978,8 @@ val quotient_ring_add_inv = store_thm(
   `gen (-gen x o I) - (- gen x) = gen (-gen x o I) + gen x` by rw[] >>
   `_ = gen (-gen x o I) + gen x - #0` by rw[] >>
   `I = #0 o I` by rw_tac std_ss[ideal_coset_zero] >>
-  metis_tac[ideal_coset_eq, ring_add_element, ring_zero_element]);
+  metis_tac[ideal_coset_eq, ring_add_element, ring_zero_element]
+QED
 
 (* Theorem: quotient_ring_add is a Group. *)
 (* Proof:
@@ -10589,29 +10989,31 @@ val quotient_ring_add_inv = store_thm(
    Identity: by quotient_ring_add_id, and ideal_in_quotient_ring
    Inverse: by quotient_ring_add_inv
 *)
-val quotient_ring_add_group = store_thm(
-  "quotient_ring_add_group",
-  ``!r i:'a ring. Ring r /\ (i << r) ==> Group (quotient_ring_add r i)``,
+Theorem quotient_ring_add_group:
+    !r i:'a ring. Ring r /\ (i << r) ==> Group (quotient_ring_add r i)
+Proof
   rw_tac std_ss[group_def_alt, quotient_ring_add_def] >| [
     rw_tac std_ss[quotient_ring_add_element],
     rw_tac std_ss[quotient_ring_add_assoc],
     rw_tac std_ss[ideal_in_quotient_ring],
     rw_tac std_ss[quotient_ring_add_id],
     rw_tac std_ss[quotient_ring_add_inv]
-  ]);
+  ]
+QED
 
 (* Theorem: quotient_ring_add is an Abelain Group. *)
 (* Proof:
    By quotient_ring_add_group, and quotient_ring_add_comm.
 *)
-val quotient_ring_add_abelian_group = store_thm(
-  "quotient_ring_add_abelian_group",
-  ``!r:'a ring. Ring r /\ i << r ==> AbelianGroup (quotient_ring_add r i)``,
+Theorem quotient_ring_add_abelian_group:
+    !r:'a ring. Ring r /\ i << r ==> AbelianGroup (quotient_ring_add r i)
+Proof
   rw_tac std_ss[AbelianGroup_def] >-
   rw_tac std_ss[quotient_ring_add_group] >>
   pop_assum mp_tac >>
   pop_assum mp_tac >>
-  rw_tac std_ss[quotient_ring_add_def, quotient_ring_add_comm]);
+  rw_tac std_ss[quotient_ring_add_def, quotient_ring_add_comm]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Quotient Ring (R/I).prod is an Abelian Monoid.                            *)
@@ -10624,10 +11026,11 @@ val quotient_ring_add_abelian_group = store_thm(
    and gen x IN R and gen y IN R    by ideal_cogen_property
    This is true by ideal_coset_property, ring_mult_element.
 *)
-val quotient_ring_mult_element = store_thm(
-  "quotient_ring_mult_element",
-  ``!r i:'a ring. Ring r /\ (i << r) ==> !x y. x IN R/I /\ y IN R/I ==> x * y IN R/I``,
-  rw[ideal_cogen_property, ideal_coset_property]);
+Theorem quotient_ring_mult_element:
+    !r i:'a ring. Ring r /\ (i << r) ==> !x y. x IN R/I /\ y IN R/I ==> x * y IN R/I
+Proof
+  rw[ideal_cogen_property, ideal_coset_property]
+QED
 
 (* Theorem: [Quotient Ring Mult Commutative] Ring r /\ (i << r) ==> !x y. x IN R/I /\ y IN R/I ==> x * y = y * x *)
 (* Proof:
@@ -10637,10 +11040,11 @@ val quotient_ring_mult_element = store_thm(
    = (gen y * gen x) o I     by ring_mult_comm
    = y * x                   by ideal_coset_mult_def
 *)
-val quotient_ring_mult_comm = store_thm(
-  "quotient_ring_mult_comm",
-  ``!r i:'a ring. Ring r /\ (i << r) ==> !x y. x IN R/I /\ y IN R/I ==> (x * y = y * x)``,
-  rw[ideal_cogen_property, ring_mult_comm]);
+Theorem quotient_ring_mult_comm:
+    !r i:'a ring. Ring r /\ (i << r) ==> !x y. x IN R/I /\ y IN R/I ==> (x * y = y * x)
+Proof
+  rw[ideal_cogen_property, ring_mult_comm]
+QED
 
 (* Theorem: Ring r /\ i << r /\ x IN R/I /\ y IN R/I /\ z IN R/I ==> x * y * z = x * (y * z) *)
 (* Proof:
@@ -10676,9 +11080,9 @@ val quotient_ring_mult_comm = store_thm(
    = (gen x * (gen y * gen z)) o I   by ring_mut_assoc
    = x * (y * z)                     by 2nd result
 *)
-val quotient_ring_mult_assoc = store_thm(
-  "quotient_ring_mult_assoc",
-  ``!r i:'a ring. Ring r /\ (i << r) ==> !x y z. x IN R/I /\ y IN R/I /\ z IN R/I ==> (x * y * z = x * (y * z))``,
+Theorem quotient_ring_mult_assoc:
+    !r i:'a ring. Ring r /\ (i << r) ==> !x y z. x IN R/I /\ y IN R/I /\ z IN R/I ==> (x * y * z = x * (y * z))
+Proof
   rw_tac std_ss[ideal_coset_mult_def] >>
   `gen x IN R /\ gen y IN R /\ gen z IN R` by rw_tac std_ss[ideal_cogen_property] >>
   `(gen ((gen x * gen y) o I) * gen z) o I = (gen x * gen y * gen z) o I` by
@@ -10695,7 +11099,8 @@ val quotient_ring_mult_assoc = store_thm(
   `gen x * (gen ((gen y * gen z) o I) - (gen y * gen z)) IN I` by rw_tac std_ss[ideal_product_property] >>
   `gen x * gen ((gen y * gen z) o I) - (gen x * (gen y * gen z)) IN I` by rw_tac std_ss[ring_mult_rsub] >>
   rw_tac std_ss[ideal_coset_eq, ring_mult_element]) >>
-  rw_tac std_ss[ring_mult_assoc]);
+  rw_tac std_ss[ring_mult_assoc]
+QED
 
 (* Theorem: [Quotient Ring Mult Identity] Ring r /\ i << r ==> !x. x IN R/I ==> ((#1 o I) * x = x) /\ (x * (#1 o I) = x) *)
 (* Proof:
@@ -10724,9 +11129,9 @@ val quotient_ring_mult_assoc = store_thm(
    ==> gen x * gen (#1 o I) - gen x IN I       by ring_mult_rone
    Hence true by ideal_coset_eq.
 *)
-val quotient_ring_mult_id = store_thm(
-  "quotient_ring_mult_id",
-  ``!r i:'a ring. Ring r /\ i << r ==> !x. x IN R/I ==> ((#1 o I) * x = x) /\ (x * (#1 o I) = x)``,
+Theorem quotient_ring_mult_id:
+    !r i:'a ring. Ring r /\ i << r ==> !x. x IN R/I ==> ((#1 o I) * x = x) /\ (x * (#1 o I) = x)
+Proof
   ntac 5 strip_tac >>
   `#1 IN R` by rw[] >>
   `#1 o I IN R/I` by rw_tac std_ss[ideal_coset_property] >>
@@ -10740,7 +11145,8 @@ val quotient_ring_mult_id = store_thm(
     `gen x * gen (#1 o I) - gen x * #1 IN I` by rw_tac std_ss[ring_mult_rsub] >>
     `gen x * gen (#1 o I) - gen x IN I` by metis_tac[ring_mult_rone]
   ] >>
-  metis_tac[ideal_coset_eq, ring_mult_element]);
+  metis_tac[ideal_coset_eq, ring_mult_element]
+QED
 
 (* Theorem: quotient_ring_mult is a Monoid. *)
 (* Proof:
@@ -10749,29 +11155,31 @@ val quotient_ring_mult_id = store_thm(
    Associative: by quotient_ring_mult_assoc
    Identity: by quotient_ring_mult_id, and ideal_coset_property, ring_one_element
 *)
-val quotient_ring_mult_monoid = store_thm(
-  "quotient_ring_mult_monoid",
-  ``!r i:'a ring. Ring r /\ (i << r) ==> Monoid (quotient_ring_mult r i)``,
+Theorem quotient_ring_mult_monoid:
+    !r i:'a ring. Ring r /\ (i << r) ==> Monoid (quotient_ring_mult r i)
+Proof
   rw_tac std_ss[Monoid_def, quotient_ring_mult_def] >| [
     rw_tac std_ss[quotient_ring_mult_element],
     rw_tac std_ss[quotient_ring_mult_assoc],
     rw_tac std_ss[ideal_coset_property, ring_one_element],
     rw_tac std_ss[quotient_ring_mult_id],
     rw_tac std_ss[quotient_ring_mult_id]
-  ]);
+  ]
+QED
 
 (* Theorem: quotient_ring_mult is an Abelain Monoid. *)
 (* Proof:
    By quotient_ring_mult_monoid, and quotient_ring_mult_comm.
 *)
-val quotient_ring_mult_abelian_monoid = store_thm(
-  "quotient_ring_mult_abelian_monoid",
-  ``!r:'a ring. Ring r /\ i << r ==> AbelianMonoid (quotient_ring_mult r i)``,
+Theorem quotient_ring_mult_abelian_monoid:
+    !r:'a ring. Ring r /\ i << r ==> AbelianMonoid (quotient_ring_mult r i)
+Proof
   rw_tac std_ss[AbelianMonoid_def] >-
   rw_tac std_ss[quotient_ring_mult_monoid] >>
   pop_assum mp_tac >>
   pop_assum mp_tac >>
-  rw_tac std_ss[quotient_ring_mult_def, quotient_ring_mult_comm]);
+  rw_tac std_ss[quotient_ring_mult_def, quotient_ring_mult_comm]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Quotient Ring (R/I) is a Ring.                                            *)
@@ -10817,9 +11225,9 @@ val quotient_ring_mult_abelian_monoid = store_thm(
    = (gen x * gen y + gen x * gen z) o I                    by ring_mult_radd
    = gen (gen x * gen y o I) + gen (gen x * gen z o I) o I  by 2nd result
 *)
-val quotient_ring_mult_ladd = store_thm(
-  "quotient_ring_mult_ladd",
-  ``!r i:'a ring. Ring r /\ i << r ==> !x y z. x IN R/I /\ y IN R/I /\ z IN R/I ==> (x * (y + z) = x * y + x * z)``,
+Theorem quotient_ring_mult_ladd:
+    !r i:'a ring. Ring r /\ i << r ==> !x y z. x IN R/I /\ y IN R/I /\ z IN R/I ==> (x * (y + z) = x * y + x * z)
+Proof
   rw_tac std_ss[ideal_coset_add_def, ideal_coset_mult_def] >>
   `gen x IN R /\ gen y IN R /\ gen z IN R` by rw_tac std_ss[ideal_cogen_property] >>
   `gen y + gen z IN R /\ gen x * gen y IN R /\ gen x * gen z IN R` by rw[] >>
@@ -10840,7 +11248,8 @@ val quotient_ring_mult_ladd = store_thm(
   `gen (p o I) + gen (q o I) - (p + q) = (gen (p o I) - p) + (gen (q o I) - q)` by rw_tac std_ss[ring_add_pair_sub] >>
   `gen (p o I) + gen (q o I) - (p + q) IN I` by metis_tac[ideal_property] >>
   rw_tac std_ss[ideal_coset_eq, ring_add_element]) >>
-  rw_tac std_ss[ring_mult_radd]);
+  rw_tac std_ss[ring_mult_radd]
+QED
 
 (* Theorem: Ring r /\ i << r ==> Ring (r/i) *)
 (* Proof:
@@ -10849,9 +11258,9 @@ val quotient_ring_mult_ladd = store_thm(
    Abelian Prod monoid: by quotient_ring_mult_abelian_monoid
    Distribution of sum over product: by quotient_ring_mult_ladd.
 *)
-val quotient_ring_ring = store_thm(
-  "quotient_ring_ring",
-  ``!r i:'a ring. Ring r /\ i << r ==> Ring (r / i)``,
+Theorem quotient_ring_ring:
+    !r i:'a ring. Ring r /\ i << r ==> Ring (r / i)
+Proof
   rpt strip_tac >>
   rw_tac std_ss[Ring_def, quotient_ring_def] >| [
     rw_tac std_ss[quotient_ring_add_abelian_group],
@@ -10859,7 +11268,8 @@ val quotient_ring_ring = store_thm(
     rw_tac std_ss[quotient_ring_add_def],
     rw_tac std_ss[quotient_ring_mult_def],
     rw_tac std_ss[quotient_ring_add_def, quotient_ring_mult_def, quotient_ring_mult_ladd]
-  ]);
+  ]
+QED
 
 (* Theorem: (r/r).carrier = {R} *)
 (* Proof: by defintions, this is to show:
@@ -10877,9 +11287,9 @@ val quotient_ring_ring = store_thm(
           x' o R = #0 o R = R            by ideal_coset_zero
        Hence true.
 *)
-val quotient_ring_ring_sing = store_thm(
-  "quotient_ring_ring_sing",
-  ``!r:'a ring. Ring r ==> ((r/r).carrier = {R})``,
+Theorem quotient_ring_ring_sing:
+    !r:'a ring. Ring r ==> ((r/r).carrier = {R})
+Proof
   rw[quotient_ring_def, CosetPartition_def, partition_def, inCoset_def, EXTENSION] >>
   rw[EQ_IMP_THM] >| [
     metis_tac[],
@@ -10888,7 +11298,8 @@ val quotient_ring_ring_sing = store_thm(
     metis_tac[ring_sub_element],
     `#0 IN R /\ (#0 o R = R)` by rw[ideal_coset_zero, ideal_refl] >>
     metis_tac[]
-  ]);
+  ]
+QED
 (* Michael's proof:
 val quotient_ring_ring_sing = store_thm(
   "quotient_ring_ring_sing",
@@ -10919,10 +11330,11 @@ val quotient_ring_ring_sing = store_thm(
 (* Proof:
    by quotient_ring_ring, principal_ideal_ideal.
 *)
-val quotient_ring_by_principal_ideal = store_thm(
-  "quotient_ring_by_principal_ideal",
-  ``!r:'a ring. Ring r ==> !p. p IN R ==> Ring (r / <p>)``,
-  rw[quotient_ring_ring, principal_ideal_ideal]);
+Theorem quotient_ring_by_principal_ideal:
+    !r:'a ring. Ring r ==> !p. p IN R ==> Ring (r / <p>)
+Proof
+  rw[quotient_ring_ring, principal_ideal_ideal]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Quotient Ring Homomorphism                                                *)
@@ -10953,9 +11365,9 @@ val quotient_ring_by_principal_ideal = store_thm(
        By ideal_product_property and ideal_property, each component is IN I.
        Hence true by ideal_coset_eq.
 *)
-val quotient_ring_homo = store_thm(
-  "quotient_ring_homo",
-  ``!r i:'a ring. Ring r /\ i << r ==> RingHomo (\x. x o I) r (r / i)``,
+Theorem quotient_ring_homo:
+    !r i:'a ring. Ring r /\ i << r ==> RingHomo (\x. x o I) r (r / i)
+Proof
   rw_tac std_ss[RingHomo_def, GroupHomo_def, MonoidHomo_def, quotient_ring_def, quotient_ring_add_def, quotient_ring_mult_def, ring_add_group, ring_mult_monoid] >-
   rw_tac std_ss[ideal_coset_property] >-
   rw_tac std_ss[ideal_coset_property] >-
@@ -10976,7 +11388,8 @@ val quotient_ring_homo = store_thm(
   `gen (x o I) - x IN I` by metis_tac[ideal_cogen_property, ideal_coset_property, ideal_coset_eq] >>
   `gen (x' o I) - x' IN I` by metis_tac[ideal_cogen_property, ideal_coset_property, ideal_coset_eq] >>
   `gen (x o I) * gen (x' o I) - x * x' IN I` by metis_tac[ideal_property, ideal_product_property] >>
-  metis_tac[ideal_coset_eq, ring_mult_element]);
+  metis_tac[ideal_coset_eq, ring_mult_element]
+QED
 
 (* Theorem: The quotient ring homomorphism is surjective. *)
 (* Proof: by SURJ_DEF, this is to show:
@@ -10988,16 +11401,17 @@ val quotient_ring_homo = store_thm(
        i.sum.carrier = I       by ideal_def
        True by coset_partition_element.
 *)
-val quotient_ring_homo_surj = store_thm(
-  "quotient_ring_homo_surj",
-  ``!(r:'a ring) (i:'a ring). Ring r /\ i << r ==> SURJ (\x. x o I) R R/I``,
+Theorem quotient_ring_homo_surj:
+    !(r:'a ring) (i:'a ring). Ring r /\ i << r ==> SURJ (\x. x o I) R R/I
+Proof
   rw[SURJ_DEF] >| [
     rw[ideal_coset_property],
     `i.sum <= r.sum` by metis_tac[ideal_def] >>
     `r.sum.carrier = R` by rw[] >>
     `i.sum.carrier = I` by metis_tac[ideal_def] >>
     metis_tac[coset_partition_element]
-  ]);
+  ]
+QED
 
 (* Theorem: In the ring homomorphism x -> x o I, its kernel = I *)
 (* Proof:
@@ -11013,35 +11427,38 @@ val quotient_ring_homo_surj = store_thm(
       x o I = #0 o I         by ideal_coset_eq
             = I              by ideal_coset_zero
 *)
-val quotient_ring_homo_kernel = store_thm(
-  "quotient_ring_homo_kernel",
-  ``!r i:'a ring. Ring r /\ i << r ==> (kernel (\x. x o I) r.sum (r / i).sum = I)``,
+Theorem quotient_ring_homo_kernel:
+    !r i:'a ring. Ring r /\ i << r ==> (kernel (\x. x o I) r.sum (r / i).sum = I)
+Proof
   rw_tac std_ss[kernel_def, preimage_def, quotient_ring_def, quotient_ring_add_def, ring_add_group] >>
   `#0 o I = I` by rw_tac std_ss[ideal_coset_zero] >>
   rw[Once EXTENSION, EQ_IMP_THM] >| [
     metis_tac[ideal_coset_eq, ring_zero_element, ring_sub_zero],
     metis_tac[ideal_element_property],
     metis_tac[ideal_coset_eq, ring_sub_zero, ideal_element_property, ring_zero_element]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Kernel of Ring Homomorphism.                                              *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define the Kernel Ideal of a ring homomorphism. *)
-val kernel_ideal_def = Define`
+Definition kernel_ideal_def:
   kernel_ideal f (r:'a ring) (s:'b ring) =
     <| carrier := kernel f r.sum s.sum;  (* e.g. s = r / i *)
            sum := <| carrier := kernel f r.sum s.sum; op := r.sum.op; id := r.sum.id |>;
           prod := <| carrier := kernel f r.sum s.sum; op := r.prod.op; id := r.prod.id |>
-     |>`;
+     |>
+End
 
 (* Theorem: (kernel_ideal f r s).sum = kernel_group f r.sum s.sum *)
 (* Proof: kernel_ideal_def, kernel_group_def *)
-val kernel_ideal_sum_eqn = store_thm(
-  "kernel_ideal_sum_eqn",
-  ``!(r:'a ring) (s:'b ring) f. (kernel_ideal f r s).sum = kernel_group f r.sum s.sum``,
-  rw_tac std_ss[kernel_ideal_def, kernel_group_def]);
+Theorem kernel_ideal_sum_eqn:
+    !(r:'a ring) (s:'b ring) f. (kernel_ideal f r s).sum = kernel_group f r.sum s.sum
+Proof
+  rw_tac std_ss[kernel_ideal_def, kernel_group_def]
+QED
 
 (* Theorem: x IN (kernel_ideal f r r_).carrier <=> x IN r.sum.carrier /\ (f x = #0_) *)
 (* Proof:
@@ -11050,11 +11467,12 @@ val kernel_ideal_sum_eqn = store_thm(
    <=> x IN preimage f r.sum.carrier #0_    by kernel_def
    <=> x IN r.sum.carrier /\ (f x = #0_)    by in_preimage
 *)
-val kernel_ideal_element = store_thm(
-  "kernel_ideal_element",
-  ``!(r:'a ring) (r_:'b ring) f x.
-     x IN (kernel_ideal f r r_).carrier <=> x IN r.sum.carrier /\ (f x = #0_)``,
-  rw_tac std_ss[kernel_ideal_def, kernel_def, in_preimage]);
+Theorem kernel_ideal_element:
+    !(r:'a ring) (r_:'b ring) f x.
+     x IN (kernel_ideal f r r_).carrier <=> x IN r.sum.carrier /\ (f x = #0_)
+Proof
+  rw_tac std_ss[kernel_ideal_def, kernel_def, in_preimage]
+QED
 
 (*
 CONJ_ASM1_TAC      A ==> B /\ C  to A ==> B,  A /\ B ==> C
@@ -11105,9 +11523,9 @@ CONJ_ASM2_TAC      A ==> B /\ C  to A ==> C,  A /\ C ==> B
        x IN R                                  by SUBSET_DEF
        Hence this follows from (2) by ring_mult_comm.
 *)
-val ring_homo_kernel_ideal = store_thm(
-  "ring_homo_kernel_ideal",
-  ``!f (r:'a ring) (s:'b ring). Ring r /\ Ring s /\ RingHomo f r s ==> kernel_ideal f r s << r``,
+Theorem ring_homo_kernel_ideal:
+    !f (r:'a ring) (s:'b ring). Ring r /\ Ring s /\ RingHomo f r s ==> kernel_ideal f r s << r
+Proof
   rpt strip_tac >>
   `GroupHomo f r.sum s.sum` by metis_tac[RingHomo_def] >>
   `MonoidHomo f r.prod s.prod` by metis_tac[RingHomo_def] >>
@@ -11140,7 +11558,8 @@ val ring_homo_kernel_ideal = store_thm(
     `x IN R` by metis_tac[SUBSET_DEF] >>
     `!x. x IN kernel f r.sum s.sum ==> (f x = s.sum.id)` by rw_tac std_ss[kernel_def, preimage_def, GSPECIFICATION] >>
     metis_tac[MonoidHomo_def, ring_mult_monoid, ring_mult_rzero]
-  ]);
+  ]
+QED
 
 (* Theorem: Any ideal will induce a ring homomorphism f from r to (r / i) such that kernel_ideal f = i *)
 (* Proof:
@@ -11160,9 +11579,9 @@ val ring_homo_kernel_ideal = store_thm(
        i.prod.id = #1                              by ideal_def
 
 *)
-val quotient_ring_homo_kernel_ideal = store_thm(
-  "quotient_ring_homo_kernel_ideal",
-  ``!r i:'a ring. Ring r /\ i << r ==> RingHomo (\x. x o I) r (r / i) /\ (kernel_ideal (\x. x o I) r (r / i) = i)``,
+Theorem quotient_ring_homo_kernel_ideal:
+    !r i:'a ring. Ring r /\ i << r ==> RingHomo (\x. x o I) r (r / i) /\ (kernel_ideal (\x. x o I) r (r / i) = i)
+Proof
   rw_tac std_ss[quotient_ring_homo] >>
   rw_tac std_ss[kernel_ideal_def] >>
   `kernel (\x. x o I) r.sum (r / i).sum = I` by rw_tac std_ss[quotient_ring_homo_kernel] >>
@@ -11171,7 +11590,8 @@ val quotient_ring_homo_kernel_ideal = store_thm(
     `i.sum.id = #0` by rw_tac std_ss[subgroup_id],
     `(i.prod.carrier = I) /\ (i.prod.op = r.prod.op) /\ (i.prod.id = #1)` by metis_tac[ideal_def]
   ] >>
-  rw_tac std_ss[monoid_component_equality]);
+  rw_tac std_ss[monoid_component_equality]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* First Isomorphism Theorem for Ring.                                       *)
@@ -11201,10 +11621,10 @@ val quotient_ring_homo_kernel_ideal = store_thm(
 
    Thus f (gen (t o I)) = f (gen x) +_ f (gen y)   by ring_sub_eq_zero
 *)
-val kernel_ideal_gen_add_map = store_thm(
-  "kernel_ideal_gen_add_map",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> let i = kernel_ideal f r r_ in
-    !x y. x IN R/I /\ y IN R/I ==> (f (gen ((gen x + gen y) o I)) = (f (gen x)) +_ (f (gen y)))``,
+Theorem kernel_ideal_gen_add_map:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> let i = kernel_ideal f r r_ in
+    !x y. x IN R/I /\ y IN R/I ==> (f (gen ((gen x + gen y) o I)) = (f (gen x)) +_ (f (gen y)))
+Proof
   rw_tac std_ss[] >>
   qabbrev_tac `t = gen x + gen y` >>
   `i << r` by rw[ring_homo_kernel_ideal, Abbr`i`] >>
@@ -11218,7 +11638,8 @@ val kernel_ideal_gen_add_map = store_thm(
   `f (gen (t o I)) -_ (f (gen x) +_ f (gen y)) = f (gen (t o I)) -_ f t` by metis_tac[ring_homo_add] >>
   `_ = f (gen (t o I) - t)` by rw[ring_homo_sub] >>
   `_ = #0_` by metis_tac[kernel_ideal_element] >>
-  metis_tac[ring_sub_eq_zero]);
+  metis_tac[ring_sub_eq_zero]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> let i = kernel_ideal f r r_ in
             !x y. x IN R/I /\ y IN R/I ==> (f (gen ((gen x * gen y) o I)) = (f (gen x)) *_ (f (gen y))) *)
@@ -11244,10 +11665,10 @@ val kernel_ideal_gen_add_map = store_thm(
 
    Thus f (gen (t o I)) = f (gen x) *_ f (gen y)   by ring_sub_eq_zero
 *)
-val kernel_ideal_gen_mult_map = store_thm(
-  "kernel_ideal_gen_mult_map",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> let i = kernel_ideal f r r_ in
-    !x y. x IN R/I /\ y IN R/I ==> (f (gen ((gen x * gen y) o I)) = (f (gen x)) *_ (f (gen y)))``,
+Theorem kernel_ideal_gen_mult_map:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> let i = kernel_ideal f r r_ in
+    !x y. x IN R/I /\ y IN R/I ==> (f (gen ((gen x * gen y) o I)) = (f (gen x)) *_ (f (gen y)))
+Proof
   rw_tac std_ss[] >>
   qabbrev_tac `t = gen x * gen y` >>
   `i << r` by rw[ring_homo_kernel_ideal, Abbr`i`] >>
@@ -11261,7 +11682,8 @@ val kernel_ideal_gen_mult_map = store_thm(
   `f (gen (t o I)) -_ (f (gen x) *_ f (gen y)) = f (gen (t o I)) -_ f t` by metis_tac[ring_homo_mult] >>
   `_ = f (gen (t o I) - t)` by rw[ring_homo_sub] >>
   `_ = #0_` by metis_tac[kernel_ideal_element] >>
-  metis_tac[ring_sub_eq_zero]);
+  metis_tac[ring_sub_eq_zero]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> let i = kernel_ideal f r r_ in
             !x y. x IN R/I /\ y IN R/I ==> (f (gen (#1 o I)) = #1_) *)
@@ -11281,9 +11703,9 @@ val kernel_ideal_gen_mult_map = store_thm(
 
    Thus f (gen (#1 o I)) = #1_           by ring_sub_eq_zero
 *)
-val kernel_ideal_gen_id_map = store_thm(
-  "kernel_ideal_gen_id_map",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> let i = kernel_ideal f r r_ in f (gen (#1 o I)) = #1_``,
+Theorem kernel_ideal_gen_id_map:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> let i = kernel_ideal f r r_ in f (gen (#1 o I)) = #1_
+Proof
   rw_tac std_ss[] >>
   `i << r` by rw[ring_homo_kernel_ideal, Abbr`i`] >>
   `#1 IN R /\ #1_ IN R_` by rw[] >>
@@ -11294,7 +11716,8 @@ val kernel_ideal_gen_id_map = store_thm(
   `f (gen (#1 o I)) -_ #1_ = f (gen (#1 o I)) -_ f #1` by metis_tac[ring_homo_ids] >>
   `_ = f (gen (#1 o I) - #1)` by rw[ring_homo_sub] >>
   `_ = #0_` by metis_tac[kernel_ideal_element] >>
-  metis_tac[ring_sub_eq_zero]);
+  metis_tac[ring_sub_eq_zero]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> let i = kernel_ideal f r r_ in
             !x y. x IN R/I /\ y IN R/I ==> ((gen x - gen y) IN I <=> (x = y)) *)
@@ -11336,10 +11759,10 @@ val kernel_ideal_gen_id_map = store_thm(
                          = #0                  by ring_sub_eq_zero
        and #0 IN I                             by ideal_has_zero
 *)
-val kernel_ideal_quotient_element_eq = store_thm(
-  "kernel_ideal_quotient_element_eq",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> let i = kernel_ideal f r r_ in
-   !x y. x IN R/I /\ y IN R/I ==> ((gen x - gen y) IN I <=> (x = y))``,
+Theorem kernel_ideal_quotient_element_eq:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> let i = kernel_ideal f r r_ in
+   !x y. x IN R/I /\ y IN R/I ==> ((gen x - gen y) IN I <=> (x = y))
+Proof
   rw_tac std_ss[] >>
   `i << r` by rw[ring_homo_kernel_ideal, Abbr`i`] >>
   `gen x IN R /\ (gen x o I = x)` by rw[ideal_cogen_property] >>
@@ -11364,7 +11787,8 @@ val kernel_ideal_quotient_element_eq = store_thm(
     ],
     `gen x - gen x = #0` by rw[] >>
     metis_tac[ideal_has_zero]
-  ]);
+  ]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> let i = kernel_ideal f r r_ in INJ (f o gen) R/I (IMAGE f R) *)
 (* Proof:
@@ -11387,10 +11811,10 @@ val kernel_ideal_quotient_element_eq = store_thm(
        Thus (gen x - gen y) IN I       by kernel_ideal_element
         ==> x = y                      by kernel_ideal_quotient_element_eq
 *)
-val kernel_ideal_quotient_inj = store_thm(
-  "kernel_ideal_quotient_inj",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
-     let i = kernel_ideal f r r_ in INJ (f o gen) R/I (IMAGE f R)``,
+Theorem kernel_ideal_quotient_inj:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
+     let i = kernel_ideal f r r_ in INJ (f o gen) R/I (IMAGE f R)
+Proof
   rw_tac std_ss[] >>
   `i << r` by rw[ring_homo_kernel_ideal, Abbr`i`] >>
   rw_tac std_ss[INJ_DEF] >-
@@ -11400,7 +11824,8 @@ val kernel_ideal_quotient_inj = store_thm(
   `f (gen x) IN R_ /\ f (gen y) IN R_` by metis_tac[ring_homo_element] >>
   `f (gen x - gen y) = #0_` by metis_tac[ring_homo_sub, ring_sub_eq_zero] >>
   `(gen x - gen y) IN I` by rw[kernel_ideal_element, Abbr`i`] >>
-  metis_tac[kernel_ideal_quotient_element_eq]);
+  metis_tac[kernel_ideal_quotient_element_eq]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> let i = kernel_ideal f r r_ in SURJ (f o gen) R/I (IMAGE f R) *)
 (* Proof:
@@ -11420,10 +11845,10 @@ val kernel_ideal_quotient_inj = store_thm(
         ==> f (gen (z o I)) = f z           by ring_sub_eq_zero, ring_homo_element
        Take y = z o I, the result follows.
 *)
-val kernel_ideal_quotient_surj = store_thm(
-  "kernel_ideal_quotient_surj",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
-     let i = kernel_ideal f r r_ in SURJ (f o gen) R/I (IMAGE f R)``,
+Theorem kernel_ideal_quotient_surj:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
+     let i = kernel_ideal f r r_ in SURJ (f o gen) R/I (IMAGE f R)
+Proof
   rw_tac std_ss[] >>
   `i << r` by rw[ring_homo_kernel_ideal, Abbr`i`] >>
   rw_tac std_ss[SURJ_DEF] >-
@@ -11434,7 +11859,8 @@ val kernel_ideal_quotient_surj = store_thm(
   `gen (z o I) - z IN I` by rw[ideal_coset_has_gen_diff] >>
   `#0_ = f (gen (z o I) - z)` by metis_tac[kernel_ideal_element] >>
   `_ = f (gen (z o I)) -_ f z` by rw[ring_homo_sub] >>
-  prove_tac[ring_sub_eq_zero, ring_homo_element]);
+  prove_tac[ring_sub_eq_zero, ring_homo_element]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> let i = kernel_ideal f r r_ in BIJ (f o gen) R/I (IMAGE f R) *)
 (* Proof:
@@ -11444,11 +11870,12 @@ val kernel_ideal_quotient_surj = store_thm(
    (2) SURJ (f o gen) R/I (IMAGE f R)
        This is true by kernel_ideal_quotient_surj
 *)
-val kernel_ideal_quotient_bij = store_thm(
-  "kernel_ideal_quotient_bij",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
-    let i = kernel_ideal f r r_ in BIJ (f o gen) R/I (IMAGE f R)``,
-  metis_tac[BIJ_DEF, kernel_ideal_quotient_inj, kernel_ideal_quotient_surj]);
+Theorem kernel_ideal_quotient_bij:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
+    let i = kernel_ideal f r r_ in BIJ (f o gen) R/I (IMAGE f R)
+Proof
+  metis_tac[BIJ_DEF, kernel_ideal_quotient_inj, kernel_ideal_quotient_surj]
+QED
 
 (* Theorem: (r ~r~ s) f ==>
             let i = kernel_ideal f r s in RingHomo (f o gen) (r / i) (ring_homo_image f r s) *)
@@ -11488,10 +11915,10 @@ val kernel_ideal_quotient_bij = store_thm(
            the goal is: f (gen (#1 o I)) = s.prod.id
            This is true by kernel_ideal_gen_id_map.
 *)
-val kernel_ideal_quotient_homo = store_thm(
-  "kernel_ideal_quotient_homo",
-  ``!(r:'a ring) (s:'b ring) f. (r ~r~ s) f ==>
-   let i = kernel_ideal f r s in RingHomo (f o gen) (r / i) (ring_homo_image f r s)``,
+Theorem kernel_ideal_quotient_homo:
+    !(r:'a ring) (s:'b ring) f. (r ~r~ s) f ==>
+   let i = kernel_ideal f r s in RingHomo (f o gen) (r / i) (ring_homo_image f r s)
+Proof
   rw_tac std_ss[] >>
   qabbrev_tac `r_ = ring_homo_image f r s` >>
   `Ring r_` by rw[ring_homo_image_ring, Abbr`r_`] >>
@@ -11510,7 +11937,8 @@ val kernel_ideal_quotient_homo = store_thm(
       fs[quotient_ring_def, quotient_ring_mult_def, ring_homo_image_def, homo_image_def, Abbr`r_`] >>
       metis_tac[kernel_ideal_gen_id_map]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: (r ~r~ s) f ==> let i = kernel_ideal f r s in
             RingIso (f o gen) (r / i) (ring_homo_image f r s) *)
@@ -11523,15 +11951,16 @@ val kernel_ideal_quotient_homo = store_thm(
         and (ring_homo_image f r s).carrier = IMAGE f R   by ring_homo_image_def
        Hence true by kernel_ideal_quotient_bij
 *)
-val kernel_ideal_quotient_iso = store_thm(
-  "kernel_ideal_quotient_iso",
-  ``!(r:'a ring) (s:'b ring) f. (r ~r~ s) f ==> let i = kernel_ideal f r s in
-         RingIso (f o gen) (r / i) (ring_homo_image f r s)``,
+Theorem kernel_ideal_quotient_iso:
+    !(r:'a ring) (s:'b ring) f. (r ~r~ s) f ==> let i = kernel_ideal f r s in
+         RingIso (f o gen) (r / i) (ring_homo_image f r s)
+Proof
   rw_tac std_ss[RingIso_def] >-
   metis_tac[kernel_ideal_quotient_homo] >>
   `(r / i).carrier = R/I` by rw[quotient_ring_def] >>
   `(ring_homo_image f r s).carrier = IMAGE f R` by rw[ring_homo_image_def] >>
-  metis_tac[kernel_ideal_quotient_bij]);
+  metis_tac[kernel_ideal_quotient_bij]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> let i = kernel_ideal f r r_ in
             (i << r) /\ (ring_homo_image f r r_ <= r_) /\
@@ -11544,13 +11973,14 @@ val kernel_ideal_quotient_iso = store_thm(
    (3) RingIso (f o gen) (r / i) (ring_homo_image f r r_)
        This is true by kernel_ideal_quotient_iso
 *)
-val ring_first_isomorphism_thm = store_thm(
-  "ring_first_isomorphism_thm",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> let i = kernel_ideal f r r_ in
-    (i << r) /\ (ring_homo_image f r r_ <= r_) /\ RingIso (f o gen) (r / i) (ring_homo_image f r r_)``,
+Theorem ring_first_isomorphism_thm:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> let i = kernel_ideal f r r_ in
+    (i << r) /\ (ring_homo_image f r r_ <= r_) /\ RingIso (f o gen) (r / i) (ring_homo_image f r r_)
+Proof
   rw_tac std_ss[ring_homo_image_subring] >-
   rw_tac std_ss[ring_homo_kernel_ideal, Abbr`i`] >>
-  metis_tac[kernel_ideal_quotient_iso]);
+  metis_tac[kernel_ideal_quotient_iso]
+QED
 
 (* This is a significant milestone theorem! *)
 
@@ -11716,7 +12146,7 @@ val ring_first_isomorphism_thm = store_thm(
 (* The Trivial Ring = {|0|}.                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val trivial_ring_def = Define`
+Definition trivial_ring_def:
   (trivial_ring z) : 'a ring =
    <| carrier := {z};
       sum := <| carrier := {z};
@@ -11726,7 +12156,7 @@ val trivial_ring_def = Define`
                 id := z;
                 op := (\x y. z) |>
     |>
-`;
+End
 
 (* Theorem: {|0|} is indeed a ring. *)
 (* Proof: by definition, the field tables are:
@@ -11735,14 +12165,15 @@ val trivial_ring_def = Define`
    ------------     -----------
    |0|  |0|         |0| |0|
 *)
-val trivial_ring = store_thm(
-  "trivial_ring",
-  ``!z. FiniteRing (trivial_ring z)``,
+Theorem trivial_ring:
+    !z. FiniteRing (trivial_ring z)
+Proof
   rw_tac std_ss[FiniteRing_def] >| [
     rw_tac std_ss[trivial_ring_def, Ring_def, AbelianGroup_def, group_def_alt, IN_SING, RES_FORALL_THM, RES_EXISTS_THM] >>
     rw_tac std_ss[AbelianMonoid_def, Monoid_def, IN_SING],
     rw_tac std_ss[trivial_ring_def, FINITE_SING]
-  ]);
+  ]
+QED
 
 (* |- !z. Ring (trivial_ring z), added for ringLibTheory by Chun Tian *)
 Theorem trivial_ring_thm =
@@ -11771,7 +12202,7 @@ Proof
   `FiniteRing (trivial_ring z)` by rw_tac std_ss[trivial_ring] >>
   rw[char_def] >>
   rw_tac std_ss[order_def, period_def, trivial_ring_def, monoid_exp_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
+  DEEP_INTRO_TAC OLEAST_INTRO >>
   rw_tac std_ss[] >>
   spose_not_then strip_assume_tac >>
   `1 < n /\ 0 < 1` by decide_tac >>
@@ -11784,13 +12215,13 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Integer Modulo Ring *)
-val ZN_def = zDefine`
+Definition ZN_def[nocompute]:
   ZN n : num ring =
     <| carrier := count n;
            sum := add_mod n;
           prod := times_mod n
      |>
-`;
+End
 (*
 Note: add_mod is defined in groupInstancesTheory.
 times_mod is defined in monoidInstancesTheory.
@@ -11804,54 +12235,60 @@ times_mod is defined in monoidInstancesTheory.
 
 (* Theorem: Evaluation of ZN component fields. *)
 (* Proof: by ZN_def *)
-val ZN_eval = store_thm(
-  "ZN_eval[compute]",
-  ``!n. ((ZN n).carrier = count n) /\
+Theorem ZN_eval[compute]:
+    !n. ((ZN n).carrier = count n) /\
        ((ZN n).sum = add_mod n) /\
-       ((ZN n).prod = times_mod n)``,
-  rw_tac std_ss[ZN_def]);
+       ((ZN n).prod = times_mod n)
+Proof
+  rw_tac std_ss[ZN_def]
+QED
 (* Put into computeLib, and later with ordz_eval for order computation. *)
 
 (* Theorem: property of ZN Ring *)
 (* Proof: by ZN_def, add_mod_def, times_mod_def. *)
-val ZN_property = store_thm(
-  "ZN_property",
-  ``!n. (!x. x IN (ZN n).carrier <=> x < n) /\
+Theorem ZN_property:
+    !n. (!x. x IN (ZN n).carrier <=> x < n) /\
        ((ZN n).sum.id = 0) /\
        ((ZN n).prod.id = if n = 1 then 0 else 1) /\
        (!x y. (ZN n).sum.op x y = (x + y) MOD n) /\
        (!x y. (ZN n).prod.op x y = (x * y) MOD n) /\
        FINITE (ZN n).carrier /\
-       (CARD (ZN n).carrier = n)``,
-  rw[ZN_def, add_mod_def, times_mod_def]);
+       (CARD (ZN n).carrier = n)
+Proof
+  rw[ZN_def, add_mod_def, times_mod_def]
+QED
 
 (* Theorem: 0 < n ==> ((ZN n).sum.id = 0) /\ ((ZN n).prod.id = 1 MOD n) *)
 (* Proof: by ZN_property *)
-val ZN_ids = store_thm(
-  "ZN_ids",
-  ``!n. 0 < n ==> ((ZN n).sum.id = 0) /\ ((ZN n).prod.id = 1 MOD n)``,
-  rw[ZN_property]);
+Theorem ZN_ids:
+    !n. 0 < n ==> ((ZN n).sum.id = 0) /\ ((ZN n).prod.id = 1 MOD n)
+Proof
+  rw[ZN_property]
+QED
 
 (* Theorem: 1 < n ==> ((ZN n).sum.id = 0) /\ ((ZN n).prod.id = 1) *)
 (* Proof: by ZN_ids, ONE_MOD *)
-val ZN_ids_alt = store_thm(
-  "ZN_ids_alt",
-  ``!n. 1 < n ==> ((ZN n).sum.id = 0) /\ ((ZN n).prod.id = 1)``,
-  rw[ZN_ids]);
+Theorem ZN_ids_alt:
+    !n. 1 < n ==> ((ZN n).sum.id = 0) /\ ((ZN n).prod.id = 1)
+Proof
+  rw[ZN_ids]
+QED
 
 (* Theorem: (ZN n).carrier is FINITE. *)
 (* Proof: by ZN_ring and FINITE_COUNT. *)
-val ZN_finite = store_thm(
-  "ZN_finite",
-  ``!n. FINITE (ZN n).carrier``,
-  rw[ZN_def]);
+Theorem ZN_finite:
+    !n. FINITE (ZN n).carrier
+Proof
+  rw[ZN_def]
+QED
 
 (* Theorem: CARD (ZN n).carrier = n *)
 (* Proof: by ZN_property. *)
-val ZN_card = store_thm(
-  "ZN_card",
-  ``!n. CARD (ZN n).carrier = n``,
-  rw[ZN_property]);
+Theorem ZN_card:
+    !n. CARD (ZN n).carrier = n
+Proof
+  rw[ZN_property]
+QED
 
 (* Theorem: For n > 0, (ZN n) is a Ring. *)
 (* Proof: by checking definitions.
@@ -11863,9 +12300,9 @@ val ZN_card = store_thm(
        = ((x * y) MOD n + (x + y) MOD n) MOD n   by MOD_PLUS
        = RHS
 *)
-val ZN_ring = store_thm(
-  "ZN_ring",
-  ``!n. 0 < n ==> Ring (ZN n)``,
+Theorem ZN_ring:
+    !n. 0 < n ==> Ring (ZN n)
+Proof
   rpt strip_tac >>
   `!x. x IN count n <=> x < n` by rw[] >>
   rw_tac std_ss[ZN_def, Ring_def] >-
@@ -11874,7 +12311,8 @@ val ZN_ring = store_thm(
   rw_tac std_ss[add_mod_def, count_def] >-
   rw_tac std_ss[times_mod_def] >>
   rw_tac std_ss[add_mod_def, times_mod_def] >>
-  metis_tac[LEFT_ADD_DISTRIB, MOD_PLUS, MOD_TIMES2, LESS_MOD]);
+  metis_tac[LEFT_ADD_DISTRIB, MOD_PLUS, MOD_TIMES2, LESS_MOD]
+QED
 
 (* Theorem: !m n. 0 < n /\ m <= n ==> (FUNPOW (\j. (j + 1) MOD n) m 0 = m MOD n) *)
 (* Proof: by induction on m.
@@ -11922,7 +12360,7 @@ Theorem ZN_char:
   !n. 0 < n ==> char (ZN n) = n
 Proof
   rw_tac std_ss[char_def, order_def, period_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
+  DEEP_INTRO_TAC OLEAST_INTRO >>
   simp[Excl "lift_disj_eq", ZN_def, add_mod_def, times_mod_def,
        monoid_exp_def] >>
   rw[Excl "lift_disj_eq"] >| [ (* avoid srw_tac simplication *)
@@ -11995,10 +12433,11 @@ QED
    = (x MOD n) ** k MOD n      by times_mod_exp, 0 < n
    = (x ** k) MOD n            by EXP_MOD, 0 < n
 *)
-val ZN_exp = store_thm(
-  "ZN_exp",
-  ``!n. 0 < n ==> !x k. (ZN n).prod.exp x k = (x ** k) MOD n``,
-  rw[ZN_def, times_mod_exp]);
+Theorem ZN_exp:
+    !n. 0 < n ==> !x k. (ZN n).prod.exp x k = (x ** k) MOD n
+Proof
+  rw[ZN_def, times_mod_exp]
+QED
 
 (* Theorem: 0 < n ==> !k. (ZN n).sum.exp 1 k = k MOD n *)
 (* Proof:
@@ -12007,10 +12446,11 @@ val ZN_exp = store_thm(
    = (1 * k) MOD n         by add_mod_exp, 0 < n
    = k MOD n               by MULT_LEFT_1
 *)
-val ZN_num = store_thm(
-  "ZN_num",
-  ``!n. 0 < n ==> !k. (ZN n).sum.exp 1 k = k MOD n``,
-  rw[ZN_def, add_mod_exp]);
+Theorem ZN_num:
+    !n. 0 < n ==> !k. (ZN n).sum.exp 1 k = k MOD n
+Proof
+  rw[ZN_def, add_mod_exp]
+QED
 
 (* Theorem: (ZN n).sum.exp (ZN n).prod.id 1 = 1 MOD n *)
 (* Proof:
@@ -12030,16 +12470,17 @@ val ZN_num = store_thm(
       = (ZN n).sum.exp 1 1              by ZN_property, n <> 1
       = 1 MOD n                         by ZN_num, 0 < n
 *)
-val ZN_num_1 = store_thm(
-  "ZN_num_1",
-  ``!n. (ZN n).sum.exp (ZN n).prod.id 1 = 1 MOD n``,
+Theorem ZN_num_1:
+    !n. (ZN n).sum.exp (ZN n).prod.id 1 = 1 MOD n
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >| [
     `(ZN 0).sum.exp (ZN 0).prod.id 1 = 1 MOD 0` by EVAL_TAC >>
     rw[],
     rw[ZN_num, ZN_property] >>
     EVAL_TAC
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < n ==> ((ZN n).sum.exp 0 c = 0) *)
 (* Proof:
@@ -12056,13 +12497,14 @@ val ZN_num_1 = store_thm(
        = (ZN n).sum.id          by monoid_exp_0
        = 0                      by ZN_property
 *)
-val ZN_num_0 = store_thm(
-  "ZN_num_0",
-  ``!n c. 0 < n ==> ((ZN n).sum.exp 0 c = 0)``,
+Theorem ZN_num_0:
+    !n c. 0 < n ==> ((ZN n).sum.exp 0 c = 0)
+Proof
   strip_tac >>
   Induct >-
   rw[ZN_property] >>
-  rw[ZN_property, monoid_exp_def]);
+  rw[ZN_property, monoid_exp_def]
+QED
 
 (* Theorem: 0 < n ==> ((ZN n).sum.exp (ZN n).prod.id c = c MOD n) *)
 (* Proof:
@@ -12076,19 +12518,21 @@ val ZN_num_0 = store_thm(
       = (ZN n).sum.exp 1 c            by ZN_property, n <> 1
       = c MOD n                       by ZN_num, 0 < n.
 *)
-val ZN_num_mod = store_thm(
-  "ZN_num_mod",
-  ``!n c. 0 < n ==> ((ZN n).sum.exp (ZN n).prod.id c = c MOD n)``,
+Theorem ZN_num_mod:
+    !n c. 0 < n ==> ((ZN n).sum.exp (ZN n).prod.id c = c MOD n)
+Proof
   rpt strip_tac >>
   rw[ZN_num, ZN_property] >>
-  rw[ZN_num_0]);
+  rw[ZN_num_0]
+QED
 
 (* Theorem: For n > 0, (ZN n) is a FINITE Ring. *)
 (* Proof: by ZN_ring and ZN_finite. *)
-val ZN_finite_ring = store_thm(
-  "ZN_finite_ring",
-  ``!n. 0 < n ==> FiniteRing (ZN n)``,
-  rw_tac std_ss[ZN_ring, ZN_finite, FiniteRing_def]);
+Theorem ZN_finite_ring:
+    !n. 0 < n ==> FiniteRing (ZN n)
+Proof
+  rw_tac std_ss[ZN_ring, ZN_finite, FiniteRing_def]
+QED
 
 (* Theorem: FiniteGroup (Invertibles (ZN n).prod) *)
 (* Proof:
@@ -12096,10 +12540,11 @@ val ZN_finite_ring = store_thm(
      so Monoid (ZN n).prod                         by ring_mult_monoid
    Thus Group (Invertibles (ZN n).prod)            by monoid_invertibles_is_group
 *)
-val ZN_invertibles_group = store_thm(
-  "ZN_invertibles_group",
-  ``!n. 0 < n ==> Group (Invertibles (ZN n).prod)``,
-  rw[ZN_ring, monoid_invertibles_is_group]);
+Theorem ZN_invertibles_group:
+    !n. 0 < n ==> Group (Invertibles (ZN n).prod)
+Proof
+  rw[ZN_ring, monoid_invertibles_is_group]
+QED
 
 (* Theorem: FiniteGroup (Invertibles (ZN n).prod) *)
 (* Proof:
@@ -12110,12 +12555,13 @@ val ZN_invertibles_group = store_thm(
        Since FINITE (ZN n).carrier                      by ZN_finite
        Hence FINITE (Invertibles (ZN n).prod).carrier   by Invertibles_subset, SUBSET_FINITE
 *)
-val ZN_invertibles_finite_group = store_thm(
-  "ZN_invertibles_finite_group",
-  ``!n. 0 < n ==> FiniteGroup (Invertibles (ZN n).prod)``,
+Theorem ZN_invertibles_finite_group:
+    !n. 0 < n ==> FiniteGroup (Invertibles (ZN n).prod)
+Proof
   rw[FiniteGroup_def] >-
   rw[ZN_invertibles_group] >>
-  metis_tac[ZN_finite, Invertibles_subset, SUBSET_FINITE, ZN_ring, ring_carriers]);
+  metis_tac[ZN_finite, Invertibles_subset, SUBSET_FINITE, ZN_ring, ring_carriers]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* ZN Inverse                                                                *)
@@ -12136,16 +12582,17 @@ val ZN_invertibles_finite_group = store_thm(
        = 1                               by coprime_SUC
       so d divides 1, or d = 1           by DIVIDES_ONE
 *)
-val ZN_mult_inv_coprime = store_thm(
-  "ZN_mult_inv_coprime",
-  ``!n. 0 < n ==> !x y. ((x * y) MOD n = 1) ==> coprime x n``,
+Theorem ZN_mult_inv_coprime:
+    !n. 0 < n ==> !x y. ((x * y) MOD n = 1) ==> coprime x n
+Proof
   rpt strip_tac >>
   `?k. x * y = k * n + 1` by metis_tac[MOD_EQN] >>
   qabbrev_tac `d = gcd x n` >>
   `d divides x * y` by rw[DIVIDES_MULT, GCD_IS_GREATEST_COMMON_DIVISOR, Abbr`d`] >>
   `d divides k * n` by rw[DIVIDES_MULTIPLE, GCD_IS_GREATEST_COMMON_DIVISOR, Abbr`d`] >>
   `d divides gcd (k * n) (x * y)` by rw[GCD_IS_GREATEST_COMMON_DIVISOR] >>
-  metis_tac[coprime_SUC, DIVIDES_ONE]);
+  metis_tac[coprime_SUC, DIVIDES_ONE]
+QED
 
 (* Theorem: 1 < n ==> !x. coprime x n <=> ?y. (x * y) MOD n = 1 *)
 (* Proof:
@@ -12154,14 +12601,15 @@ val ZN_mult_inv_coprime = store_thm(
    Only-if part: (x * y) MOD n = 1 ==> coprime x n
       This is true           by ZN_mult_inv_coprime, 0 < n
 *)
-val ZN_mult_inv_coprime_iff = store_thm(
-  "ZN_mult_inv_coprime_iff",
-  ``!n. 1 < n ==> !x. coprime x n <=> ?y. (x * y) MOD n = 1``,
+Theorem ZN_mult_inv_coprime_iff:
+    !n. 1 < n ==> !x. coprime x n <=> ?y. (x * y) MOD n = 1
+Proof
   rpt strip_tac >>
   `0 < n` by decide_tac >>
   rw[EQ_IMP_THM] >-
   metis_tac[GCD_ONE_PROPERTY, GCD_SYM, MULT_COMM] >>
-  metis_tac[ZN_mult_inv_coprime]);
+  metis_tac[ZN_mult_inv_coprime]
+QED
 
 (* Theorem: 1 < m /\ coprime m n ==> (n MOD m) IN (Invertibles (ZN m).prod).carrier *)
 (* Proof:
@@ -12238,9 +12686,9 @@ QED
    (2) (ZN n).prod.op = (\i j. (i * j) MOD n), true  by FUN_EQ_THM, ZN_property
    (3) (ZN n).prod.id = 1, true                      by ZN_property, n <> 1
 *)
-val ZN_invertibles = store_thm(
-  "ZN_invertibles",
-  ``!n. 1 < n ==> (Invertibles (ZN n).prod = Estar n)``,
+Theorem ZN_invertibles:
+    !n. 1 < n ==> (Invertibles (ZN n).prod = Estar n)
+Proof
   rpt strip_tac >>
   `0 < n /\ n <> 1` by decide_tac >>
   `(ZN n).prod.carrier = (ZN n).carrier` by rw[ZN_ring, ring_carriers] >>
@@ -12259,7 +12707,8 @@ val ZN_invertibles = store_thm(
     ],
     rw[FUN_EQ_THM, ZN_property],
     rw[ZN_property]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* ZN Order                                                                  *)
@@ -12293,14 +12742,15 @@ Thus (x ** j = 1) MOD 1, and the least j is 1.
          = FUNPOW (K 0) k 0            by K_THM
          = 0                           by induction hypothesis
 *)
-val ZN_1_exp = store_thm(
-  "ZN_1_exp",
-  ``!n k. (ZN 1).prod.exp n k = 0``,
+Theorem ZN_1_exp:
+    !n k. (ZN 1).prod.exp n k = 0
+Proof
   rw[monoid_exp_def, ZN_property] >>
   `(ZN 1).prod.op n = K 0` by rw[ZN_property, FUN_EQ_THM] >>
   rw[] >>
   Induct_on `k` >>
-  rw[FUNPOW]);
+  rw[FUNPOW]
+QED
 
 (* Theorem: ordz 1 n = 1 *)
 (* Proof:
@@ -12313,16 +12763,17 @@ val ZN_1_exp = store_thm(
    Then 1 < n                                       by n <> 0, n <> 1
    By implication, 1 = 0, which is a contradiction.
 *)
-val ZN_order_mod_1 = store_thm(
-  "ZN_order_mod_1",
-  ``!n. ordz 1 n = 1``,
+Theorem ZN_order_mod_1:
+    !n. ordz 1 n = 1
+Proof
   rw[order_def, period_def, ZN_property] >>
   rw[ZN_1_exp] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
+  DEEP_INTRO_TAC OLEAST_INTRO >>
   rw[] >>
   spose_not_then strip_assume_tac >>
   `1 < n /\ 1 <> 0` by decide_tac >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: 0 < m ==> ordz m (n MOD m) = ordz m n *)
 (* Proof:
@@ -12330,10 +12781,11 @@ val ZN_order_mod_1 = store_thm(
      and !k. (times_mod m).exp (n MOD m) k = (times_mod m).exp n k  by times_mod_exp, MOD_MOD
    Expanding by order_def, period_def, this is trivially true.
 *)
-val ZN_order_mod = store_thm(
-  "ZN_order_mod",
-  ``!m n. 0 < m ==> (ordz m (n MOD m) = ordz m n)``,
-  rw[ZN_def, times_mod_exp, order_def, period_def]);
+Theorem ZN_order_mod:
+    !m n. 0 < m ==> (ordz m (n MOD m) = ordz m n)
+Proof
+  rw[ZN_def, times_mod_exp, order_def, period_def]
+QED
 
 (* Theorem: 0 < m ==> (order (Invertibles (ZN m).prod) (n MOD m) = ordz m n) *)
 (* Proof:
@@ -12341,10 +12793,11 @@ val ZN_order_mod = store_thm(
       = ordz m (n MOD m)          by Invertibles_order
       = ordz m n                  by ZN_order_mod, 0 < m
 *)
-val ZN_invertibles_order = store_thm(
-  "ZN_invertibles_order",
-  ``!m n. 0 < m ==> (order (Invertibles (ZN m).prod) (n MOD m) = ordz m n)``,
-  rw[Invertibles_order, ZN_order_mod]);
+Theorem ZN_invertibles_order:
+    !m n. 0 < m ==> (order (Invertibles (ZN m).prod) (n MOD m) = ordz m n)
+Proof
+  rw[Invertibles_order, ZN_order_mod]
+QED
 
 (*
 > order_thm |> ISPEC ``(ZN n).prod`` |> SPEC ``0`` |> SPEC ``1``;
@@ -12374,15 +12827,16 @@ val it = |- Monoid (ZN n).prod ==> !x. x IN (ZN n).prod.carrier ==> ((ordz n x =
            or: 0 <> 1                                 by ZERO_EXP, 0 < k
       which is true.
 *)
-val ZN_order_0 = store_thm(
-  "ZN_order_0",
-  ``!n. 0 < n ==> (ordz n 0 = if n = 1 then 1 else 0)``,
+Theorem ZN_order_0:
+    !n. 0 < n ==> (ordz n 0 = if n = 1 then 1 else 0)
+Proof
   rw[] >| [
     `(ZN 1).prod.id = 0` by rw[ZN_def, times_mod_def] >>
     `Monoid (ZN 1).prod` by rw[ZN_ring, ring_mult_monoid] >>
     metis_tac[monoid_order_eq_1, monoid_id_element],
     rw[order_eq_0, ZN_property, ZN_exp, ZERO_EXP]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < n ==> (ordz n 1 = 1) *)
 (* Proof:
@@ -12394,9 +12848,9 @@ val ZN_order_0 = store_thm(
        and (ZN n).prod.id = 1       by ZN_property, n <> 1
        ==> ordz n 1 = 1             by monoid_order_id
 *)
-val ZN_order_1 = store_thm(
-  "ZN_order_1",
-  ``!n. 0 < n ==> (ordz n 1 = 1)``,
+Theorem ZN_order_1:
+    !n. 0 < n ==> (ordz n 1 = 1)
+Proof
   rpt strip_tac >>
   Cases_on `n = 1` >-
   rw[ZN_order_mod_1] >>
@@ -12404,7 +12858,8 @@ val ZN_order_1 = store_thm(
   `Ring (ZN n)` by rw[ZN_ring] >>
   `Monoid (ZN n).prod` by rw[ring_mult_monoid] >>
   `(ZN n).prod.id = 1` by rw[ZN_property] >>
-  metis_tac[monoid_order_id]);
+  metis_tac[monoid_order_id]
+QED
 
 (* Theorem: 0 < m ==> ((ordz m n = 1) <=> (n MOD m = 1 MOD m)) *)
 (* Proof:
@@ -12417,21 +12872,23 @@ val ZN_order_1 = store_thm(
      and  ordz m n = ordz m (n MOD m)             by ZN_order_mod, 1 < m
     Thus  n MOD m = 1 MOD m                       by monoid_order_eq_1
 *)
-val ZN_order_eq_1 = store_thm(
-  "ZN_order_eq_1",
-  ``!m n. 0 < m ==> ((ordz m n = 1) <=> (n MOD m = 1 MOD m))``,
+Theorem ZN_order_eq_1:
+    !m n. 0 < m ==> ((ordz m n = 1) <=> (n MOD m = 1 MOD m))
+Proof
   rpt strip_tac >>
   `Ring (ZN m)` by rw[ZN_ring] >>
   `Monoid (ZN m).prod` by rw[] >>
   `ordz m n = ordz m (n MOD m)` by rw[ZN_order_mod] >>
-  rw[monoid_order_eq_1, ZN_property]);
+  rw[monoid_order_eq_1, ZN_property]
+QED
 
 (* Theorem: 1 < m ==> ((ordz m n = 1) <=> (n MOD m = 1)) *)
 (* Proof: ZN_order_eq_1, ONE_MOD *)
-val ZN_order_eq_1_alt = store_thm(
-  "ZN_order_eq_1_alt",
-  ``!m n. 1 < m ==> ((ordz m n = 1) <=> (n MOD m = 1))``,
-  rw[ZN_order_eq_1]);
+Theorem ZN_order_eq_1_alt:
+    !m n. 1 < m ==> ((ordz m n = 1) <=> (n MOD m = 1))
+Proof
+  rw[ZN_order_eq_1]
+QED
 
 (* Theorem: 0 < m ==> (n ** ordz m n MOD m = 1 MOD m) *)
 (* Proof:
@@ -12442,17 +12899,19 @@ val ZN_order_eq_1_alt = store_thm(
     = (ZN m).prod.id             by order_property
     = 1 MOD m                    by ZN_property
 *)
-val ZN_order_property = store_thm(
-  "ZN_order_property",
-  ``!m n. 0 < m ==> (n ** ordz m n MOD m = 1 MOD m)``,
-  rw[order_property, ZN_property, GSYM ZN_exp]);
+Theorem ZN_order_property:
+    !m n. 0 < m ==> (n ** ordz m n MOD m = 1 MOD m)
+Proof
+  rw[order_property, ZN_property, GSYM ZN_exp]
+QED
 
 (* Theorem: 1 < m ==> (n ** ordz m n MOD m = 1) *)
 (* Proof: by ZN_order_property, ONE_MOD *)
-val ZN_order_property_alt = store_thm(
-  "ZN_order_property_alt",
-  ``!m n. 1 < m ==> (n ** ordz m n MOD m = 1)``,
-  rw[ZN_order_property]);
+Theorem ZN_order_property_alt:
+    !m n. 1 < m ==> (n ** ordz m n MOD m = 1)
+Proof
+  rw[ZN_order_property]
+QED
 
 (* Theorem: 0 < m ==> m divides (n ** ordz m n - 1) *)
 (* Proof:
@@ -12464,13 +12923,14 @@ val ZN_order_property_alt = store_thm(
       so (n ** k - 1) MOD m = 0     by MOD_EQ_DIFF, 0 < m
    Hence m divides (n ** k - 1)     by DIVIDES_MOD_0, 0 < m
 *)
-val ZN_order_divisibility = store_thm(
-  "ZN_order_divisibility",
-  ``!m n. 0 < m ==> m divides (n ** ordz m n - 1)``,
+Theorem ZN_order_divisibility:
+    !m n. 0 < m ==> m divides (n ** ordz m n - 1)
+Proof
   rpt strip_tac >>
   Cases_on `m = 1` >-
   rw[] >>
-  rw[DIVIDES_MOD_0, MOD_EQ_DIFF, ONE_MOD, ZN_order_property]);
+  rw[DIVIDES_MOD_0, MOD_EQ_DIFF, ONE_MOD, ZN_order_property]
+QED
 
 (* Theorem: 1 < m /\ coprime m n ==> (n MOD m) IN Euler m *)
 (* Proof:
@@ -12480,14 +12940,15 @@ val ZN_order_divisibility = store_thm(
        Thus true                     by MOD_NONZERO_WHEN_GCD_ONE
    (2) coprime m (n MOD m), true     by MOD_WITH_GCD_ONE, 0 < m.
 *)
-val ZN_coprime_euler_element = store_thm(
-  "ZN_coprime_euler_element",
-  ``!m n. 1 < m /\ coprime m n ==> (n MOD m) IN Euler m``,
+Theorem ZN_coprime_euler_element:
+    !m n. 1 < m /\ coprime m n ==> (n MOD m) IN Euler m
+Proof
   rw[Euler_def] >| [
     `n <> 0` by metis_tac[GCD_0, LESS_NOT_EQ] >>
     rw[MOD_NONZERO_WHEN_GCD_ONE],
     rw[MOD_WITH_GCD_ONE]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < m /\ coprime m n ==> 0 < ordz m n /\ (n ** ordz m n MOD m = 1 MOD m) *)
 (* Proof:
@@ -12504,9 +12965,9 @@ val ZN_coprime_euler_element = store_thm(
      Hence 0 < ordz m n                            by group_order_property
        and n ** (ordz m n) = (ZN m).prod.id = 1    by Invertibles_property, ZN_exp, EXP_MOD
 *)
-val ZN_coprime_order = store_thm(
-  "ZN_coprime_order",
-  ``!m n. 0 < m /\ coprime m n ==> 0 < ordz m n /\ (n ** ordz m n MOD m = 1 MOD m)``,
+Theorem ZN_coprime_order:
+    !m n. 0 < m /\ coprime m n ==> 0 < ordz m n /\ (n ** ordz m n MOD m = 1 MOD m)
+Proof
   ntac 3 strip_tac >>
   Cases_on `m = 1` >-
   rw[ZN_order_mod_1] >>
@@ -12515,16 +12976,18 @@ val ZN_coprime_order = store_thm(
   `order (Invertibles (ZN m).prod) (n MOD m) = ordz m n` by rw[ZN_invertibles_order] >>
   `(ZN m).prod.id = 1` by rw[ZN_property] >>
   `1 MOD m = 1` by rw[] >>
-  metis_tac[group_order_property, Invertibles_property, ZN_exp, EXP_MOD]);
+  metis_tac[group_order_property, Invertibles_property, ZN_exp, EXP_MOD]
+QED
 
 (* This is slightly better than the next: ZN_coprime_order_alt *)
 
 (* Theorem: 1 < m /\ coprime m n ==> 0 < ordz m n /\ (n ** (ordz m n) = 1) *)
 (* Proof: by ZN_coprime_order, ONE_MOD *)
-val ZN_coprime_order_alt = store_thm(
-  "ZN_coprime_order_alt",
-  ``!m n. 1 < m /\ coprime m n ==> 0 < ordz m n /\ ((n ** (ordz m n)) MOD m = 1)``,
-  rw[ZN_coprime_order]);
+Theorem ZN_coprime_order_alt:
+    !m n. 1 < m /\ coprime m n ==> 0 < ordz m n /\ ((n ** (ordz m n)) MOD m = 1)
+Proof
+  rw[ZN_coprime_order]
+QED
 
 (* Theorem: 0 < m /\ coprime m n ==> (ordz m n) divides (totient m) *)
 (* Proof:
@@ -12550,9 +13013,9 @@ val ZN_coprime_order_alt = store_thm(
            (ZN m).prod.exp x (totient m) = (ZN m).prod.id  by ZN_exp
    Therefore   (ordz m n) divides (totient m)              by monoid_order_condition
 *)
-val ZN_coprime_order_divides_totient = store_thm(
-  "ZN_coprime_order_divides_totient",
-  ``!m n. 0 < m /\ coprime m n ==> (ordz m n) divides (totient m)``,
+Theorem ZN_coprime_order_divides_totient:
+    !m n. 0 < m /\ coprime m n ==> (ordz m n) divides (totient m)
+Proof
   rpt strip_tac >>
   Cases_on `m = 1` >-
   rw[ZN_order_mod_1] >>
@@ -12569,7 +13032,8 @@ val ZN_coprime_order_divides_totient = store_thm(
   `m <> 1` by decide_tac >>
   `(ZN m).prod.id = 1` by rw[ZN_property] >>
   `x IN (ZN m).prod.carrier` by rw[ZN_property, MOD_LESS, Abbr`x`] >>
-  metis_tac[monoid_order_condition, ZN_exp, ZN_order_mod]);
+  metis_tac[monoid_order_condition, ZN_exp, ZN_order_mod]
+QED
 
 (* Theorem: 0 < m /\ coprime m n ==> (ordz m n) divides (phi m) *)
 (* Proof:
@@ -12579,13 +13043,14 @@ val ZN_coprime_order_divides_totient = store_thm(
                 so phi m = totient m           by phi_eq_totient, 1 < m
               thus (ordz m n) divides (phi m)  by ZN_coprime_order_divides_totient
 *)
-val ZN_coprime_order_divides_phi = store_thm(
-  "ZN_coprime_order_divides_phi",
-  ``!m n. 0 < m /\ coprime m n ==> (ordz m n) divides (phi m)``,
+Theorem ZN_coprime_order_divides_phi:
+    !m n. 0 < m /\ coprime m n ==> (ordz m n) divides (phi m)
+Proof
   rpt strip_tac >>
   Cases_on `m = 1` >-
   rw[ZN_order_mod_1] >>
-  rw[ZN_coprime_order_divides_totient, phi_eq_totient]);
+  rw[ZN_coprime_order_divides_totient, phi_eq_totient]
+QED
 
 (* Theorem: 1 < m /\ coprime m n ==> ordz m n < m *)
 (* Proof:
@@ -12594,13 +13059,14 @@ val ZN_coprime_order_divides_phi = store_thm(
    Thus ordz m n <= phi m        by DIVIDES_LE, 0 < phi m
                   < m            by phi_lt, 1 < m
 *)
-val ZN_coprime_order_lt = store_thm(
-  "ZN_coprime_order_lt",
-  ``!m n. 1 < m /\ coprime m n ==> ordz m n < m``,
+Theorem ZN_coprime_order_lt:
+    !m n. 1 < m /\ coprime m n ==> ordz m n < m
+Proof
   rpt strip_tac >>
   `0 < phi m /\ phi m < m` by rw[phi_pos, phi_lt] >>
   `ordz m n <= phi m` by rw[ZN_coprime_order_divides_phi, DIVIDES_LE] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 0 < m /\ coprime m n ==> !k. (n ** k) MOD m = (n ** (k MOD (ordz m n))) MOD m *)
 (* Proof:
@@ -12626,9 +13092,9 @@ val ZN_coprime_order_lt = store_thm(
      = ((n MOD m) ** (k MOD z)) MOD m  by group_exp_mod_order, n MOD m IN g.carrier, 0 < z
      = ((n ** (k MOD z)) MOD m)        by EXP_MOD, 0 < m
 *)
-val ZN_coprime_exp_mod = store_thm(
-  "ZN_coprime_exp_mod",
-  ``!m n. 0 < m /\ coprime m n ==> !k. (n ** k) MOD m = (n ** (k MOD (ordz m n))) MOD m``,
+Theorem ZN_coprime_exp_mod:
+    !m n. 0 < m /\ coprime m n ==> !k. (n ** k) MOD m = (n ** (k MOD (ordz m n))) MOD m
+Proof
   rpt strip_tac >>
   Cases_on `m = 1` >-
   rw[ZN_order_mod_1] >>
@@ -12644,7 +13110,8 @@ val ZN_coprime_exp_mod = store_thm(
   `(n ** k) MOD m = ((n MOD m) ** k) MOD m` by metis_tac[EXP_MOD] >>
   `_ = ((n MOD m) ** (k MOD z)) MOD m` by metis_tac[group_exp_mod_order, Invertibles_property, ZN_exp] >>
   `_ = ((n ** (k MOD z)) MOD m)` by metis_tac[EXP_MOD] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: 0 < m /\ coprime m n /\ (!p. prime p /\ p divides n ==> (ordz m p = 1)) ==> (ordz m n = 1) *)
 (* Proof:
@@ -12665,9 +13132,9 @@ val ZN_coprime_exp_mod = store_thm(
       Thus n MOD m = 1                           by ALL_PRIME_FACTORS_MOD_EQ_1
        ==> ordz m p = 1                          by ZN_order_eq_1
 *)
-val ZN_order_eq_1_by_prime_factors = store_thm(
-  "ZN_order_eq_1_by_prime_factors",
-  ``!m n. 0 < m /\ coprime m n /\ (!p. prime p /\ p divides n ==> (ordz m p = 1)) ==> (ordz m n = 1)``,
+Theorem ZN_order_eq_1_by_prime_factors:
+    !m n. 0 < m /\ coprime m n /\ (!p. prime p /\ p divides n ==> (ordz m p = 1)) ==> (ordz m n = 1)
+Proof
   rpt strip_tac >>
   Cases_on `m = 1` >-
   rw[ZN_order_mod_1] >>
@@ -12680,7 +13147,8 @@ val ZN_order_eq_1_by_prime_factors = store_thm(
   `coprime m p` by metis_tac[coprime_prime_factor_coprime, GCD_SYM] >>
   metis_tac[ZN_order_eq_1, ONE_MOD]) >>
   `n MOD m = 1` by rw[ALL_PRIME_FACTORS_MOD_EQ_1] >>
-  rw[ZN_order_eq_1]);
+  rw[ZN_order_eq_1]
+QED
 
 (*
 > order_eq_0 |> ISPEC ``(ZN m).prod`` |> ISPEC ``n:num``;
@@ -12694,17 +13162,19 @@ val it = |- (ordz m n = 0) <=> !n'. 0 < n' ==> (ZN m).prod.exp n n' <> (ZN m).pr
    or (ordz m n = 0) <=> !k. 0 < k ==> n ** k MOD m <> 1    by ZN_exp, ZN_ids_alt, 0 < m, 1 < m
    The result follows by taking negation of both sides.
 *)
-val ZN_order_nonzero_iff = store_thm(
-  "ZN_order_nonzero_iff",
-  ``!m n. 1 < m ==> (ordz m n <> 0 <=> ?k. 0 < k /\ (n ** k MOD m = 1))``,
-  rw[order_eq_0, ZN_exp, ZN_ids_alt]);
+Theorem ZN_order_nonzero_iff:
+    !m n. 1 < m ==> (ordz m n <> 0 <=> ?k. 0 < k /\ (n ** k MOD m = 1))
+Proof
+  rw[order_eq_0, ZN_exp, ZN_ids_alt]
+QED
 
 (* Theorem: 1 < m ==> ((ordz m n = 0) <=> (!k. 0 < k ==> n ** k MOD m <> 1)) *)
 (* Proof: by ZN_order_nonzero_iff *)
-val ZN_order_eq_0_iff = store_thm(
-  "ZN_order_eq_0_iff",
-  ``!m n. 1 < m ==> ((ordz m n = 0) <=> (!k. 0 < k ==> n ** k MOD m <> 1))``,
-  metis_tac[ZN_order_nonzero_iff]);
+Theorem ZN_order_eq_0_iff:
+    !m n. 1 < m ==> ((ordz m n = 0) <=> (!k. 0 < k ==> n ** k MOD m <> 1))
+Proof
+  metis_tac[ZN_order_nonzero_iff]
+QED
 
 (* Theorem: 0 < m ==> ((ordz m n <> 0) <=> coprime m n) *)
 (* Proof:
@@ -12729,9 +13199,9 @@ val ZN_order_eq_0_iff = store_thm(
    Only-if part: coprime m n ==> ordz m n <> 0
      This is true                  by ZN_coprime_order, 0 < m
 *)
-val ZN_order_nonzero = store_thm(
-  "ZN_order_nonzero",
-  ``!m n. 0 < m ==> ((ordz m n <> 0) <=> coprime m n)``,
+Theorem ZN_order_nonzero:
+    !m n. 0 < m ==> ((ordz m n <> 0) <=> coprime m n)
+Proof
   rpt strip_tac >>
   Cases_on `m = 1` >-
   rw[ZN_order_mod_1] >>
@@ -12746,14 +13216,16 @@ val ZN_order_nonzero = store_thm(
     `coprime m x` by metis_tac[Estar_element] >>
     rw[Once coprime_mod_iff],
     metis_tac[ZN_coprime_order, NOT_ZERO_LT_ZERO]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < m ==> ((ordz m n = 0) <=> ~(coprime m n)) *)
 (* Proof: by ZN_order_nonzero *)
-val ZN_order_eq_0 = store_thm(
-  "ZN_order_eq_0",
-  ``!m n. 0 < m ==> ((ordz m n = 0) <=> ~(coprime m n))``,
-  metis_tac[ZN_order_nonzero]);
+Theorem ZN_order_eq_0:
+    !m n. 0 < m ==> ((ordz m n = 0) <=> ~(coprime m n))
+Proof
+  metis_tac[ZN_order_nonzero]
+QED
 
 (* Theorem: 0 < m /\ ~coprime m n ==> !k. 0 < k ==> n ** k MOD m <> 1 *)
 (* Proof:
@@ -12761,14 +13233,15 @@ val ZN_order_eq_0 = store_thm(
     and ~coprime m n ==> ordz m n = 0       by ZN_order_eq_0, 0 < m
     ==> !k. 0 < k ==> (n ** k) MOD m <> 1   by ZN_order_eq_0_iff, 1 < m
 *)
-val ZN_not_coprime = store_thm(
-  "ZN_not_coprime",
-  ``!m n. 0 < m /\ ~coprime m n ==> !k. 0 < k ==> n ** k MOD m <> 1``,
+Theorem ZN_not_coprime:
+    !m n. 0 < m /\ ~coprime m n ==> !k. 0 < k ==> n ** k MOD m <> 1
+Proof
   rpt strip_tac >>
   `m <> 1` by metis_tac[GCD_1] >>
   `ordz m n = 0` by rw[ZN_order_eq_0] >>
   `1 < m` by decide_tac >>
-  metis_tac[ZN_order_eq_0_iff]);
+  metis_tac[ZN_order_eq_0_iff]
+QED
 
 (* Note: "Since ord k n > 1, there must exist a prime divisor p of n such that ord k p > 1." *)
 
@@ -12785,16 +13258,17 @@ val ZN_not_coprime = store_thm(
     ==> p = 1                  by DIVIDES_ONE
     ==> F                      by NOT_PRIME_1
 *)
-val ZN_order_gt_1_property = store_thm(
-  "ZN_order_gt_1_property",
-  ``!m n. 0 < m /\ 1 < ordz m n ==> ?p. prime p /\ p divides n /\ 1 < ordz m p``,
+Theorem ZN_order_gt_1_property:
+    !m n. 0 < m /\ 1 < ordz m n ==> ?p. prime p /\ p divides n /\ 1 < ordz m p
+Proof
   spose_not_then strip_assume_tac >>
   `coprime m n` by metis_tac[ZN_order_eq_0, DECIDE``1 < x ==> x <> 0``] >>
   `?p. prime p /\ p divides n /\ (ordz m p <> 1)` by metis_tac[ZN_order_eq_1_by_prime_factors, LESS_NOT_EQ] >>
   `ordz m p = 0` by metis_tac[DECIDE``~(1 < x) <=> (x = 0) \/ (x = 1)``] >>
   `p divides m` by metis_tac[ZN_order_eq_0, PRIME_GCD, coprime_sym] >>
   `p divides 1` by metis_tac[GCD_PROPERTY] >>
-  metis_tac[DIVIDES_ONE, NOT_PRIME_1]);
+  metis_tac[DIVIDES_ONE, NOT_PRIME_1]
+QED
 
 (*
 > group_order_divides_exp |> ISPEC ``Invertibles (ZN m).prod``;
@@ -12838,9 +13312,9 @@ val it = |- Group (Invertibles (ZN m).prod) ==>
         or x ** k MOD m = 1      by Estar_exp, Estar_property
         or n ** k MOD m = 1      by EXP_MOD, 0 < m
 *)
-val ZN_order_divides_exp = store_thm(
-  "ZN_order_divides_exp",
-  ``!m n k. 1 < m /\ 0 < k ==> ((n ** k MOD m = 1) <=> (ordz m n) divides k)``,
+Theorem ZN_order_divides_exp:
+    !m n k. 1 < m /\ 0 < k ==> ((n ** k MOD m = 1) <=> (ordz m n) divides k)
+Proof
   rpt strip_tac >>
   `0 < m` by decide_tac >>
   qabbrev_tac `g = Invertibles (ZN m).prod` >>
@@ -12867,19 +13341,21 @@ val ZN_order_divides_exp = store_thm(
     `ordz m x = ordz m n` by rw[ZN_order_mod, Abbr`x`] >>
     `x ** k MOD m = 1` by metis_tac[group_order_divides_exp, ZN_invertibles_order, Estar_exp, Estar_property] >>
     rw[GSYM EXP_MOD, Abbr`x`]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < m /\ 0 < ordz m n ==> (ordz m n) divides (phi m) *)
 (* Proof:
    Note 0 < ordz m n ==> coprime m n    by ZN_order_nonzero, 0 < m
    Thus (ordz m n) divides (phi m)      by ZN_coprime_order_divides_phi, 0 < m
 *)
-val ZN_order_divides_phi = store_thm(
-  "ZN_order_divides_phi",
-  ``!m n. 0 < m /\ 0 < ordz m n ==> (ordz m n) divides (phi m)``,
+Theorem ZN_order_divides_phi:
+    !m n. 0 < m /\ 0 < ordz m n ==> (ordz m n) divides (phi m)
+Proof
   rpt strip_tac >>
   `coprime m n` by metis_tac[ZN_order_nonzero, NOT_ZERO_LT_ZERO] >>
-  rw[ZN_coprime_order_divides_phi]);
+  rw[ZN_coprime_order_divides_phi]
+QED
 
 (* Theorem: 0 < m ==> ordz m n <= phi m *)
 (* Proof:
@@ -12889,15 +13365,16 @@ val ZN_order_divides_phi = store_thm(
     and 0 < phi m                    by phi_pos, 0 < m
      so ordz m n <= phi m            by DIVIDES_LE, 0 < phi m
 *)
-val ZN_order_upper = store_thm(
-  "ZN_order_upper",
-  ``!m n. 0 < m ==> ordz m n <= phi m``,
+Theorem ZN_order_upper:
+    !m n. 0 < m ==> ordz m n <= phi m
+Proof
   rpt strip_tac >>
   Cases_on `ordz m n = 0` >-
   rw[] >>
   `ordz m n divides phi m` by rw[ZN_order_divides_phi] >>
   `0 < phi m` by rw[phi_pos] >>
-  rw[DIVIDES_LE]);
+  rw[DIVIDES_LE]
+QED
 
 (* Theorem: 0 < m ==> ordz m n <= m *)
 (* Proof:
@@ -12905,13 +13382,14 @@ val ZN_order_upper = store_thm(
    Also phi m <= m                   by phi_le
    Thus ordz m n <= m                by LESS_EQ_TRANS
 *)
-val ZN_order_le = store_thm(
-  "ZN_order_le",
-  ``!m n. 0 < m ==> ordz m n <= m``,
+Theorem ZN_order_le:
+    !m n. 0 < m ==> ordz m n <= m
+Proof
   rpt strip_tac >>
   `ordz m n <= phi m` by rw[ZN_order_upper] >>
   `phi m <= m` by rw[phi_le] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 0 < k /\ k < m ==> ordz k n < m *)
 (* Proof:
@@ -12919,12 +13397,13 @@ val ZN_order_le = store_thm(
     and             k < m  by given
    Thus ordz k n < m       by LESS_EQ_LESS_TRANS
 *)
-val ZN_order_lt = store_thm(
-  "ZN_order_lt",
-  ``!k n m. 0 < k /\ k < m ==> ordz k n < m``,
+Theorem ZN_order_lt:
+    !k n m. 0 < k /\ k < m ==> ordz k n < m
+Proof
   rpt strip_tac >>
   `ordz k n <= k` by rw[ZN_order_le] >>
-  decide_tac);
+  decide_tac
+QED
 (* Therefore, in the search for k such that m <= ordz k n, start with k = m *)
 
 (*
@@ -12943,10 +13422,11 @@ val ZN_order_minimal = |- 1 < n ==> !x n'. 0 < n' /\ n' < ordz n x ==> x ** n' M
      so (ZN m).prod.id = 1                       by ZN_property, m <> 1
    Thus n ** k MOD m <> 1                        by above
 *)
-val ZN_order_minimal = store_thm(
-  "ZN_order_minimal",
-  ``!m n k. 0 < m /\ 0 < k /\ k < ordz m n ==> n ** k MOD m <> 1``,
-  metis_tac[order_minimal, ZN_order_mod_1, ZN_property, ZN_exp, DECIDE``(0 < k /\ k < 1) = F``]);
+Theorem ZN_order_minimal:
+    !m n k. 0 < m /\ 0 < k /\ k < ordz m n ==> n ** k MOD m <> 1
+Proof
+  metis_tac[order_minimal, ZN_order_mod_1, ZN_property, ZN_exp, DECIDE``(0 < k /\ k < 1) = F``]
+QED
 
 (* Theorem: 1 < m /\ 1 < n MOD m /\ coprime m n ==> 1 < ordz m n *)
 (* Proof:
@@ -12956,15 +13436,16 @@ val ZN_order_minimal = store_thm(
     and ordz m n <> 1                   by ZN_order_eq_1_alt, 1 < m
    Thus ordz 1 < ordz m n               by arithmetic
 *)
-val ZN_coprime_order_gt_1 = store_thm(
-  "ZN_coprime_order_gt_1",
-  ``!m n. 1 < m /\ 1 < n MOD m /\ coprime m n ==> 1 < ordz m n``,
+Theorem ZN_coprime_order_gt_1:
+    !m n. 1 < m /\ 1 < n MOD m /\ coprime m n ==> 1 < ordz m n
+Proof
   rpt strip_tac >>
   qabbrev_tac `x = n MOD m` >>
   `ordz m x = ordz m n` by rw[ZN_order_mod, Abbr`x`] >>
   `ordz m n <> 0` by rw[ZN_order_nonzero] >>
   `ordz m n <> 1` by rw[ZN_order_eq_1_alt, Abbr`x`] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Note: 1 < n MOD m cannot be replaced by 1 < n. A counterexample:
    1 < m /\ 1 < n /\ coprime m n ==> 1 < ordz m n
@@ -12977,13 +13458,14 @@ val ZN_coprime_order_gt_1 = store_thm(
     and m <> 1     by ZN_order_mod_1, 1 < ordz m n
    Thus 1 < m
 *)
-val ZN_order_with_coprime_1 = store_thm(
-  "ZN_order_with_coprime_1",
-  ``!m n. 1 < n /\ coprime m n /\ 1 < ordz m n ==> 1 < m``,
+Theorem ZN_order_with_coprime_1:
+    !m n. 1 < n /\ coprime m n /\ 1 < ordz m n ==> 1 < m
+Proof
   rpt strip_tac >>
   `m <> 0` by metis_tac[GCD_0, LESS_NOT_EQ] >>
   `m <> 1` by metis_tac[ZN_order_mod_1, LESS_NOT_EQ] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 1 < m /\ m divides n /\ 1 < ordz k m /\ coprime k n ==> 1 < n /\ 1 < k *)
 (* Proof:
@@ -12992,14 +13474,15 @@ val ZN_order_with_coprime_1 = store_thm(
    also k <> 0 /\ n <> 0   by coprime_0L, coprime_0R
      so 1 < n /\ 1 < k     by both not 0, not 1.
 *)
-val ZN_order_with_coprime_2 = store_thm(
-  "ZN_order_with_coprime_2",
-  ``!m n k. 1 < m /\ m divides n /\ 1 < ordz k m /\ coprime k n ==> 1 < n /\ 1 < k``,
+Theorem ZN_order_with_coprime_2:
+    !m n k. 1 < m /\ m divides n /\ 1 < ordz k m /\ coprime k n ==> 1 < n /\ 1 < k
+Proof
   ntac 4 strip_tac >>
   `k <> 1` by metis_tac[ZN_order_mod_1, LESS_NOT_EQ] >>
   `n <> 1` by metis_tac[DIVIDES_ONE, LESS_NOT_EQ] >>
   `k <> 0 /\ n <> 0` by metis_tac[coprime_0L, coprime_0R] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 1 < m ==> ((ordz m n = 0) <=> (!j. 0 < j /\ j < m ==> n ** j MOD m <> 1)) *)
 (* Proof:
@@ -13014,16 +13497,17 @@ val ZN_order_with_coprime_2 = store_thm(
        and n ** k MOD m = 1                      by ZN_order_property_alt, 1 < m
       This contradicts n ** k MOD m <> 1         by implication
 *)
-val ZN_order_eq_0_test = store_thm(
-  "ZN_order_eq_0_test",
-  ``!m n. 1 < m ==> ((ordz m n = 0) <=> (!j. 0 < j /\ j < m ==> n ** j MOD m <> 1))``,
+Theorem ZN_order_eq_0_test:
+    !m n. 1 < m ==> ((ordz m n = 0) <=> (!j. 0 < j /\ j < m ==> n ** j MOD m <> 1))
+Proof
   rw[EQ_IMP_THM] >-
   metis_tac[ZN_order_eq_0_iff] >>
   spose_not_then strip_assume_tac >>
   `0 < ordz m n /\ 0 < m` by decide_tac >>
   `coprime m n` by metis_tac[ZN_order_eq_0] >>
   `ordz m n < m` by rw[ZN_coprime_order_lt] >>
-  metis_tac[ZN_order_property_alt]);
+  metis_tac[ZN_order_property_alt]
+QED
 
 (* Theorem: 1 < n /\ 0 < j /\ 1 < k ==>
             (k divides (n ** j - 1) <=> (ordz k n) divides j) *)
@@ -13035,27 +13519,29 @@ val ZN_order_eq_0_test = store_thm(
                     = 1             by ONE_MOD, 1 < k
    <=> (ordz k n) divides j         by ZN_order_divides_exp, 0 < j, 1 < k
 *)
-val ZN_order_divides_tops_index = store_thm(
-  "ZN_order_divides_tops_index",
-  ``!n j k. 1 < n /\ 0 < j /\ 1 < k ==>
-       (k divides (n ** j - 1) <=> (ordz k n) divides j)``,
+Theorem ZN_order_divides_tops_index:
+    !n j k. 1 < n /\ 0 < j /\ 1 < k ==>
+       (k divides (n ** j - 1) <=> (ordz k n) divides j)
+Proof
   rpt strip_tac >>
   `1 < n ** j` by rw[ONE_LT_EXP] >>
   `k divides (n ** j - 1) <=> ((n ** j - 1) MOD k = 0)` by rw[DIVIDES_MOD_0] >>
   `_ = (n ** j MOD k = 1 MOD k)` by rw[MOD_EQ] >>
   `_ = (n ** j MOD k = 1)` by rw[ONE_MOD] >>
   `_ = (ordz k n) divides j` by rw[ZN_order_divides_exp] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: 1 < n /\ 0 < j /\ 1 < k /\ k divides (n ** j - 1) ==> (ordz k n) <= j *)
 (* Proof:
    Note (ordz k n) divides j      by ZN_order_divides_tops_index
    Thus (ordz k n) <= j           by DIVIDES_LE, 0 < j
 *)
-val ZN_order_le_tops_index = store_thm(
-  "ZN_order_le_tops_index",
-  ``!n j k. 1 < n /\ 0 < j /\ 1 < k /\ k divides (n ** j - 1) ==> (ordz k n) <= j``,
-  rw[GSYM ZN_order_divides_tops_index, DIVIDES_LE]);
+Theorem ZN_order_le_tops_index:
+    !n j k. 1 < n /\ 0 < j /\ 1 < k /\ k divides (n ** j - 1) ==> (ordz k n) <= j
+Proof
+  rw[GSYM ZN_order_divides_tops_index, DIVIDES_LE]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* ZN Order Test                                                             *)
@@ -13075,11 +13561,11 @@ val ZN_order_le_tops_index = store_thm(
     Put j = z in implication gives: n ** z MOD m <> 1
     This contradicts n ** z MOD m = 1     by ZN_order_property_alt, 1 < m
 *)
-val ZN_order_test_propery = store_thm(
-  "ZN_order_test_propery",
-  ``!m n k. 1 < m /\ 0 < k /\ (n ** k MOD m = 1) /\
+Theorem ZN_order_test_propery:
+    !m n k. 1 < m /\ 0 < k /\ (n ** k MOD m = 1) /\
    (!j. 0 < j /\ j < k /\ j divides phi m ==> n ** j MOD m <> 1) ==>
-   !j. 0 < j /\ j < k /\ ~(j divides phi m) ==> (ordz m n = k) \/ n ** j MOD m <> 1``,
+   !j. 0 < j /\ j < k /\ ~(j divides phi m) ==> (ordz m n = k) \/ n ** j MOD m <> 1
+Proof
   rpt strip_tac >>
   spose_not_then strip_assume_tac >>
   qabbrev_tac `z = ordz m n` >>
@@ -13088,7 +13574,8 @@ val ZN_order_test_propery = store_thm(
   `z < k` by decide_tac >>
   `0 < z` by metis_tac[ZERO_DIVIDES, NOT_ZERO_LT_ZERO] >>
   `z divides (phi m)` by rw[ZN_order_divides_phi, Abbr`z`] >>
-  metis_tac[ZN_order_property_alt]);
+  metis_tac[ZN_order_property_alt]
+QED
 
 (*
 > order_thm |> GEN_ALL |> ISPEC ``(ZN m).prod`` |> ISPEC ``n:num`` |> ISPEC ``k:num``;
@@ -13107,11 +13594,12 @@ val it = |- 0 < k ==> ((ordz m n = k) <=>
    and (ZN m).prod.id = 1                      by ZN_property, m <> 1
    Thus the result follows.
 *)
-val ZN_order_test_1 = store_thm(
-  "ZN_order_test_1",
-  ``!m n k. 1 < m /\ 0 < k ==>
-   ((ordz m n = k) <=> ((n ** k) MOD m = 1) /\ !j. 0 < j /\ j < k ==> (n ** j) MOD m <> 1)``,
-  metis_tac[order_thm, ZN_exp, ZN_ids_alt, DECIDE``1 < m ==> 0 < m``]);
+Theorem ZN_order_test_1:
+    !m n k. 1 < m /\ 0 < k ==>
+   ((ordz m n = k) <=> ((n ** k) MOD m = 1) /\ !j. 0 < j /\ j < k ==> (n ** j) MOD m <> 1)
+Proof
+  metis_tac[order_thm, ZN_exp, ZN_ids_alt, DECIDE``1 < m ==> 0 < m``]
+QED
 
 (* Theorem: 1 < m /\ 0 < k ==> ((ordz m n = k) <=>
             (n ** k MOD m = 1) /\ !j. 0 < j /\ j < k /\ j divides (phi m) ==> n ** j MOD m <> 1) *)
@@ -13130,17 +13618,18 @@ val ZN_order_test_1 = store_thm(
       !j. 0 < j /\ j < k  ==> n ** j MOD m <> 1
       Thus ordz m n = k                     by ZN_order_test_1
 *)
-val ZN_order_test_2 = store_thm(
-  "ZN_order_test_2",
-  ``!m n k. 1 < m /\ 0 < k ==>
+Theorem ZN_order_test_2:
+    !m n k. 1 < m /\ 0 < k ==>
      ((ordz m n = k) <=>
-      (n ** k MOD m = 1) /\ !j. 0 < j /\ j < k /\ j divides (phi m) ==> n ** j MOD m <> 1)``,
+      (n ** k MOD m = 1) /\ !j. 0 < j /\ j < k /\ j divides (phi m) ==> n ** j MOD m <> 1)
+Proof
   rw[EQ_IMP_THM] >-
   rw[ZN_order_property] >-
   rw[ZN_order_minimal] >>
   `!j. 0 < j /\ j < k /\ ~(j divides phi m) ==>
        (ordz m n = k) \/ n ** j MOD m <> 1` by rw[ZN_order_test_propery] >>
-  metis_tac[ZN_order_test_1]);
+  metis_tac[ZN_order_test_1]
+QED
 
 (* Theorem: 1 < m /\ 0 < k ==> ((ordz m n = k) <=>
    (k divides phi m) /\ (n ** k MOD m = 1) /\ !j. 0 < j /\ j < k /\ j divides (phi m) ==> n ** j MOD m <> 1) *)
@@ -13161,18 +13650,19 @@ val ZN_order_test_2 = store_thm(
       !j. 0 < j /\ j < k  ==> n ** j MOD m <> 1
       Thus ordz m n = k                     by ZN_order_test_1
 *)
-val ZN_order_test_3 = store_thm(
-  "ZN_order_test_3",
-  ``!m n k. 1 < m /\ 0 < k ==>
+Theorem ZN_order_test_3:
+    !m n k. 1 < m /\ 0 < k ==>
      ((ordz m n = k) <=>
-      (k divides phi m) /\ (n ** k MOD m = 1) /\ !j. 0 < j /\ j < k /\ j divides (phi m) ==> n ** j MOD m <> 1)``,
+      (k divides phi m) /\ (n ** k MOD m = 1) /\ !j. 0 < j /\ j < k /\ j divides (phi m) ==> n ** j MOD m <> 1)
+Proof
   rw[EQ_IMP_THM] >-
   rw[ZN_order_divides_phi] >-
   rw[ZN_order_property] >-
   rw[ZN_order_minimal] >>
   `!j. 0 < j /\ j < k /\ ~(j divides phi m) ==>
        (ordz m n = k) \/ n ** j MOD m <> 1` by rw[ZN_order_test_propery] >>
-  metis_tac[ZN_order_test_1]);
+  metis_tac[ZN_order_test_1]
+QED
 
 (* Theorem: 1 < m ==> (ordz m n = k <=> n ** k MOD m = 1 /\
            !j. 0 < j /\ j < (if k = 0 then m else k) ==> n ** j MOD m <> 1) *)
@@ -13184,16 +13674,17 @@ val ZN_order_test_3 = store_thm(
       The result follows                 by ZN_order_eq_0_test
    If k <> 0, the result follows         by ZN_order_test_1
 *)
-val ZN_order_test_4 = store_thm(
-  "ZN_order_test_4",
-  ``!m n k. 1 < m ==> ((ordz m n = k) <=> ((n ** k MOD m = 1) /\
-    !j. 0 < j /\ j < (if k = 0 then m else k) ==> n ** j MOD m <> 1))``,
+Theorem ZN_order_test_4:
+    !m n k. 1 < m ==> ((ordz m n = k) <=> ((n ** k MOD m = 1) /\
+    !j. 0 < j /\ j < (if k = 0 then m else k) ==> n ** j MOD m <> 1))
+Proof
   rpt strip_tac >>
   (Cases_on `k = 0` >> simp[]) >| [
     `n ** 0 MOD m = 1` by rw[EXP_0] >>
     metis_tac[ZN_order_eq_0_test],
     rw[ZN_order_test_1]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* ZN Homomorphism                                                           *)
@@ -13204,10 +13695,11 @@ val ZN_order_test_4 = store_thm(
    Expand by definitions, this is to show:
    x < n ==> x MOD m < m, true by MOD_LESS.
 *)
-val ZN_to_ZN_element = store_thm(
-  "ZN_to_ZN_element",
-  ``!n m x. 0 < m /\ x IN (ZN n).carrier ==> x MOD m IN (ZN m).carrier``,
-  rw[ZN_def]);
+Theorem ZN_to_ZN_element:
+    !n m x. 0 < m /\ x IN (ZN n).carrier ==> x MOD m IN (ZN m).carrier
+Proof
+  rw[ZN_def]
+QED
 
 (* Theorem: 0 < n /\ m divides n ==> GroupHomo (\x. x MOD m) (ZN n).sum (ZN m).sum *)
 (* Proof:
@@ -13218,12 +13710,13 @@ val ZN_to_ZN_element = store_thm(
    = (x + x') MOD m               by DIVIDES_MOD_MOD, 0 < n
    = (x MOD m + x' MOD m) MOD m   by MOD_PLUS, 0 < m
 *)
-val ZN_to_ZN_sum_group_homo = store_thm(
-  "ZN_to_ZN_sum_group_homo",
-  ``!n m. 0 < n /\ m divides n ==> GroupHomo (\x. x MOD m) (ZN n).sum (ZN m).sum``,
+Theorem ZN_to_ZN_sum_group_homo:
+    !n m. 0 < n /\ m divides n ==> GroupHomo (\x. x MOD m) (ZN n).sum (ZN m).sum
+Proof
   rpt strip_tac >>
   `0 < m` by metis_tac[ZERO_DIVIDES, NOT_ZERO] >>
-  rw[ZN_def, GroupHomo_def, DIVIDES_MOD_MOD, MOD_PLUS]);
+  rw[ZN_def, GroupHomo_def, DIVIDES_MOD_MOD, MOD_PLUS]
+QED
 
 (* Theorem: 0 < n /\ m divides n ==> MonoidHomo (\x. x MOD m) (ZN n).prod (ZN m).prod *)
 (* Proof:
@@ -13235,13 +13728,14 @@ val ZN_to_ZN_sum_group_homo = store_thm(
        = (x MOD m * x' MOD m) MOD m     by MOD_TIMES2, 0 < m
    (2) 0 < m /\ m <> 1 ==> 1 < m, trivially true.
 *)
-val ZN_to_ZN_prod_monoid_homo = store_thm(
-  "ZN_to_ZN_prod_monoid_homo",
-  ``!n m. 0 < n /\ m divides n ==> MonoidHomo (\x. x MOD m) (ZN n).prod (ZN m).prod``,
+Theorem ZN_to_ZN_prod_monoid_homo:
+    !n m. 0 < n /\ m divides n ==> MonoidHomo (\x. x MOD m) (ZN n).prod (ZN m).prod
+Proof
   rpt strip_tac >>
   `0 < m` by metis_tac[ZERO_DIVIDES, NOT_ZERO] >>
   rw[ZN_def, MonoidHomo_def, times_mod_def, DIVIDES_MOD_MOD] >>
-  fs[DIVIDES_ONE]);
+  fs[DIVIDES_ONE]
+QED
 
 (* Theorem: 0 < n /\ m divides n ==> RingHomo (\x. x MOD m) (ZN n) (ZN m) *)
 (* Proof:
@@ -13252,24 +13746,25 @@ val ZN_to_ZN_prod_monoid_homo = store_thm(
    (2) GroupHomo (\x. x MOD m) (ZN n).sum (ZN m).sum, true by ZN_to_ZN_sum_group_homo.
    (3) MonoidHomo (\x. x MOD m) (ZN n).prod (ZN m).prod, true by ZN_to_ZN_prod_monoid_homo.
 *)
-val ZN_to_ZN_ring_homo = store_thm(
-  "ZN_to_ZN_ring_homo",
-  ``!n m. 0 < n /\ m divides n ==> RingHomo (\x. x MOD m) (ZN n) (ZN m)``,
+Theorem ZN_to_ZN_ring_homo:
+    !n m. 0 < n /\ m divides n ==> RingHomo (\x. x MOD m) (ZN n) (ZN m)
+Proof
   rw[RingHomo_def] >-
   metis_tac[ZN_to_ZN_element, ZERO_DIVIDES, NOT_ZERO] >-
   rw[ZN_to_ZN_sum_group_homo] >>
-  rw[ZN_to_ZN_prod_monoid_homo]);
+  rw[ZN_to_ZN_prod_monoid_homo]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* A Ring from Sets.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
 (* The Ring from Group (symdiff_set) and Monoid (set_inter). *)
-val symdiff_set_inter_def = Define`
+Definition symdiff_set_inter_def:
   symdiff_set_inter = <| carrier := UNIV;
                              sum := symdiff_set;
                             prod := set_inter |>
-`;
+End
 (* Evaluation is given later in symdiff_eval. *)
 
 (* Theorem: symdiff_set_inter is a Ring. *)
@@ -13289,10 +13784,11 @@ QED
 
 (* Theorem: symdiff UNIV UNIV = EMPTY` *)
 (* Proof: by definition. *)
-val symdiff_univ_univ_eq_empty = store_thm(
-  "symdiff_univ_univ_eq_empty",
-  ``symdiff UNIV UNIV = EMPTY``,
-  rw[symdiff_def]);
+Theorem symdiff_univ_univ_eq_empty:
+    symdiff UNIV UNIV = EMPTY
+Proof
+  rw[symdiff_def]
+QED
 
 (* Note: symdiff_set_inter has carrier infinite, but characteristics 2. *)
 
@@ -13316,7 +13812,7 @@ Proof
   simp[char_def, order_def, period_def, symdiff_set_inter_def,
        monoid_exp_def, symdiff_set_def, set_inter_def] >>
   `FUNPOW (symdiff univ(:'a)) 2 {} = {}` by rw[FUNPOW_2, symdiff_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
+  DEEP_INTRO_TAC OLEAST_INTRO >>
   rw[] >>
   `~(n < 2) /\ ~(2 < n)` suffices_by decide_tac >>
   spose_not_then strip_assume_tac >>
@@ -13362,14 +13858,14 @@ return j                      // the least index j.
 *)
 
 (* Compute ordz m n = order (ZN m).prod n = ordz m n *)
-val compute_ordz_def = Define`
+Definition compute_ordz_def:
     compute_ordz m n =
          if m = 0 then ordz 0 n
     else if m = 1 then 1 (* ordz 1 n = 1 *)
     else if coprime m n then
          WHILE (\i. (n ** i) MOD m <> 1) SUC 1  (* i = 1, WHILE (n ** i (MOD m) <> 1) i <- SUC i) *)
     else 0  (* ordz m n = 0 when ~(coprime m n) *)
-`;
+End
 
 (* Examples:
 > EVAL ``compute_ordz 10 3``; --> 4
@@ -13427,13 +13923,13 @@ val it = |- !P C Q. HOARE_SPEC P C Q <=> !s. P s ==> Q (C s): thm
       With Invariant s,
        ==> Postcond s                           by given
 *)
-val WHILE_RULE_PRE_POST = store_thm(
-  "WHILE_RULE_PRE_POST",
-  ``(!x. Invariant x /\ Guard x ==> f (Cmd x) < f x) /\
+Theorem WHILE_RULE_PRE_POST:
+    (!x. Invariant x /\ Guard x ==> f (Cmd x) < f x) /\
    (!x. Precond x ==> Invariant x) /\
    (!x. Invariant x /\ ~Guard x ==> Postcond x) /\
    HOARE_SPEC (\x. Invariant x /\ Guard x) Cmd Invariant ==>
-   HOARE_SPEC Precond (WHILE Guard Cmd) Postcond``,
+   HOARE_SPEC Precond (WHILE Guard Cmd) Postcond
+Proof
   simp[HOARE_SPEC_DEF] >>
   rpt strip_tac >>
   `!s. Invariant s ==> Postcond (WHILE Guard Cmd s)` suffices_by metis_tac[] >>
@@ -13446,7 +13942,8 @@ val WHILE_RULE_PRE_POST = store_thm(
   rfs[] >>
   ONCE_REWRITE_TAC[WHILE] >>
   Cases_on `Guard s` >>
-  simp[]);
+  simp[]
+QED
 (* Michael's version:
 val WHILE_RULE_PRE_POST = Q.store_thm(
   "WHILE_RULE_PRE_POST",
@@ -13455,7 +13952,7 @@ val WHILE_RULE_PRE_POST = Q.store_thm(
    (!x. Invariant x /\ ~Guard x ==> Postcond x) /\
    HOARE_SPEC (\x. Invariant x /\ Guard x) Cmd Invariant ==>
    HOARE_SPEC Precond (WHILE Guard Cmd) Postcond`,
-  simp[whileTheory.HOARE_SPEC_DEF] >>
+  simp[HOARE_SPEC_DEF] >>
   rpt strip_tac >>
   `!s. Invariant s ==> Postcond (WHILE Guard Cmd s)`
      suffices_by metis_tac[] >>
@@ -13499,12 +13996,12 @@ val WHILE_RULE_PRE_POST = Q.store_thm(
        By contradiction, suppose x = ordz m n.
        Then n ** x MOD m = 1, a contradiction         by ZN_coprime_order_alt, 1 < m
 *)
-val compute_ordz_hoare = store_thm(
-  "compute_ordz_hoare",
-  ``!m n. 1 < m /\ coprime m n ==>
+Theorem compute_ordz_hoare:
+    !m n. 1 < m /\ coprime m n ==>
          HOARE_SPEC (\i. 0 < i /\ i <= ordz m n)
                     (WHILE (\i. (n ** i) MOD m <> 1) SUC)
-                    (\i. i = ordz m n)``,
+                    (\i. i = ordz m n)
+Proof
   rpt strip_tac >>
   irule WHILE_RULE_PRE_POST >>
   qexists_tac `\i. 0 < i /\ i <= ordz m n` >>
@@ -13526,7 +14023,8 @@ val compute_ordz_hoare = store_thm(
     `x = ordz m n` by decide_tac >>
     rw[] >>
     rfs[ZN_coprime_order_alt]
-  ]);
+  ]
+QED
 (* Michael's version:
 val compute_ordz_hoare = prove(
   ``1 < m /\ coprime m n ==>
@@ -13601,17 +14099,19 @@ val compute_ordz_by_while = prove(
 
 (* Theorem: compute_ordz 0 n = ordz 0 n *)
 (* Proof: by compute_ordz_def *)
-val compute_ordz_0 = store_thm(
-  "compute_ordz_0",
-  ``!n. compute_ordz 0 n = ordz 0 n``,
-  rw[compute_ordz_def]);
+Theorem compute_ordz_0:
+    !n. compute_ordz 0 n = ordz 0 n
+Proof
+  rw[compute_ordz_def]
+QED
 
 (* Theorem: compute_ordz 1 n = 1 *)
 (* Proof: by compute_ordz_def *)
-val compute_ordz_1 = store_thm(
-  "compute_ordz_1",
-  ``!n. compute_ordz 1 n = 1``,
-  rw[compute_ordz_def]);
+Theorem compute_ordz_1:
+    !n. compute_ordz 1 n = 1
+Proof
+  rw[compute_ordz_def]
+QED
 
 (* Theorem: compute_ordz m n = ordz m n *)
 (* Proof:
@@ -13634,9 +14134,9 @@ val compute_ordz_1 = store_thm(
             = WHILE (\i. (n ** i) MOD m <> 1) SUC 1   by compute_ordz_def
             = ordz m n                                       by compute_ordz_by_while, put j = 1.
 *)
-val compute_ordz_eqn = store_thm(
-  "compute_ordz_eqn",
-  ``!m n. compute_ordz m n = ordz m n``,
+Theorem compute_ordz_eqn:
+    !m n. compute_ordz m n = ordz m n
+Proof
   rpt strip_tac >>
   Cases_on `m = 0` >-
   rw[compute_ordz_0] >>
@@ -13649,14 +14149,16 @@ val compute_ordz_eqn = store_thm(
     `coprime m n` by metis_tac[ZN_order_eq_0] >>
     `1 < m` by decide_tac >>
     rw[compute_ordz_def, compute_ordz_by_while]
-  ]);
+  ]
+QED
 
 (* Theorem: order (times_mod m) n = compute_ordz m n *)
 (* Proof: by compute_ordz_eqn *)
-val ordz_eval = store_thm(
-  "ordz_eval[compute]",
-  ``!m n. order (times_mod m) n = compute_ordz m n``,
-  rw[ZN_eval, compute_ordz_eqn]);
+Theorem ordz_eval[compute]:
+    !m n. order (times_mod m) n = compute_ordz m n
+Proof
+  rw[ZN_eval, compute_ordz_eqn]
+QED
 (* Put in computeLib for simplifier. *)
 
 (*
@@ -13719,28 +14221,28 @@ val it = |- ordz 7 10 = 6: thm
 (* ------------------------------------------------------------------------- *)
 
 (* Integer Additive Group *)
-val Z_add_def = Define `
+Definition Z_add_def:
   Z_add = <| carrier := univ(:int);
                   op := \(x:int) (y:int). x + y;
                   id := (0:int)
            |>
-`;
+End
 
 (* Integer Multiplicative Monoid *)
-val Z_mult_def = Define `
+Definition Z_mult_def:
   Z_mult = <| carrier := univ(:int);
                    op := \(x:int) (y:int). x * y;
                    id := (1:int)
             |>
-`;
+End
 
 (* Integer Ring *)
-val Z_def = Define `
+Definition Z_def:
   Z = <| carrier := univ(:int);
              sum := Z_add;
             prod := Z_mult
        |>
-`;
+End
 
 (* Theorem: Z_add is a Group. *)
 (* Proof: check group axioms:
@@ -13751,9 +14253,9 @@ val Z_def = Define `
    (5) !x. x IN univ(:int) ==> ?y. y IN univ(:int) /\ (y + x = 0)
        Let y = -x, apply INT_ADD_LINV.
 *)
-val Z_add_group = store_thm(
-  "Z_add_group",
-  ``Group Z_add``,
+Theorem Z_add_group:
+    Group Z_add
+Proof
   rw_tac std_ss[Z_add_def, group_def_alt] >| [
     rw[],
     rw[INT_ADD_ASSOC],
@@ -13761,14 +14263,16 @@ val Z_add_group = store_thm(
     rw[],
     qexists_tac `-x` >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: Z_add is an Abelian Group. *)
 (* Proof: by Group Z_add and INT_ADD_COMM. *)
-val Z_add_abelian_group = store_thm(
-  "Z_add_abelian_group",
-  ``AbelianGroup Z_add``,
-  rw[AbelianGroup_def, Z_add_group, Z_add_def, INT_ADD_COMM]);
+Theorem Z_add_abelian_group:
+    AbelianGroup Z_add
+Proof
+  rw[AbelianGroup_def, Z_add_group, Z_add_def, INT_ADD_COMM]
+QED
 
 (* Theorem: Z_mult is a Monoid. *)
 (* Proof: check monoid axioms:
@@ -13778,18 +14282,20 @@ val Z_add_abelian_group = store_thm(
    (4) 1 * x = x, true by INT_MUL_LID.
    (5) x * 1 = x, true by INT_MUL_RID.
 *)
-val Z_mult_monoid = store_thm(
-  "Z_mult_monoid",
-  ``Monoid Z_mult``,
+Theorem Z_mult_monoid:
+    Monoid Z_mult
+Proof
   rw_tac std_ss [Z_mult_def, Monoid_def] >>
-  rw[INT_MUL_ASSOC]);
+  rw[INT_MUL_ASSOC]
+QED
 
 (* Theorem: Z_mult is an Abelian Monoid. *)
 (* Proof: by Monoid Z_mult and INT_MUL_COMM. *)
-val Z_mult_abelian_monoid = store_thm(
-  "Z_mult_abelian_monoid",
-  ``AbelianMonoid Z_mult``,
-  rw[AbelianMonoid_def, Z_mult_monoid, Z_mult_def, INT_MUL_COMM]);
+Theorem Z_mult_abelian_monoid:
+    AbelianMonoid Z_mult
+Proof
+  rw[AbelianMonoid_def, Z_mult_monoid, Z_mult_def, INT_MUL_COMM]
+QED
 
 (* Theorem: Z is a Ring. *)
 (* Proof: check ring axioms.
@@ -13800,31 +14306,33 @@ val Z_mult_abelian_monoid = store_thm(
    (5) Z_mult.op x (Z_add.op y z) = Z_add.op (Z_mult.op x y) (Z_mult.op x z)
        or x * (y + z) = x * y + x * z, true by INT_LDISTRIB.
 *)
-val Z_ring = store_thm(
-  "Z_ring",
-  ``Ring Z``,
+Theorem Z_ring:
+    Ring Z
+Proof
   rw_tac std_ss [Ring_def, Z_def] >| [
     rw[Z_add_abelian_group],
     rw[Z_mult_abelian_monoid],
     rw[Z_add_def],
     rw[Z_mult_def],
     rw[Z_add_def, Z_mult_def, INT_LDISTRIB]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Ideals in Integer Ring                                                    *)
 (* ------------------------------------------------------------------------- *)
 
 (* Integer Multiples *)
-val Z_multiple_def = Define `Z_multiple (n:num) = {&n * z | z IN univ(:int)}`;
+Definition Z_multiple_def:   Z_multiple (n:num) = {&n * z | z IN univ(:int)}
+End
 
 (* Integer Ring Ideals are multiples *)
-val Z_ideal_def = Define `
+Definition Z_ideal_def:
   Z_ideal (n:num) = <| carrier := Z_multiple n;
                            sum := <| carrier := Z_multiple n; op := Z.sum.op; id := Z.sum.id |>;
                           prod := <| carrier := Z_multiple n; op := Z.prod.op; id := Z.prod.id |>
                      |>
-`;
+End
 
 (* set overloading *)
 val _ = overload_on ("Z*", ``Z_ideal``);
@@ -13846,9 +14354,9 @@ val _ = overload_on ("Z*", ``Z_ideal``);
        Then y IN Z_multiple n,
        y + x = &n * (-x' + x') = 0   by INT_LDISTRIB, INT_ADD_LINV, hence true.
 *)
-val Z_ideal_sum_group = store_thm(
-  "Z_ideal_sum_group",
-  ``!n. Group (Z* n).sum``,
+Theorem Z_ideal_sum_group:
+    !n. Group (Z* n).sum
+Proof
   rpt strip_tac >>
   `!t. t IN Z_multiple n ==> t IN univ(:int)` by rw[Z_multiple_def] >>
   rw_tac std_ss[group_def_alt, Z_ideal_def, Z_def, Z_add_def] >| [
@@ -13865,7 +14373,8 @@ val Z_ideal_sum_group = store_thm(
     `&n * -x' + &n * x' = &n * (-x' + x')` by rw[INT_LDISTRIB] >>
     `_ = 0` by rw[INT_ADD_LINV] >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Theorem: Monoid (Z* n).prod *)
 (* Not true: 1 IN Z_multiple n is FALSE. *)
@@ -13878,15 +14387,16 @@ val Z_ideal_sum_group = store_thm(
    (3) (Z* n).sum.carrier SUBSET Z.sum.carrier   true by definitions
    (4) (Z* n).sum.op x y = Z.sum.op x y          true by Z_ideal_def
 *)
-val Z_ideal_sum_subgroup = store_thm(
-  "Z_ideal_sum_subgroup",
-  ``!n. (Z* n).sum <= Z.sum``,
+Theorem Z_ideal_sum_subgroup:
+    !n. (Z* n).sum <= Z.sum
+Proof
   rw_tac std_ss[Subgroup_def] >| [
     rw[Z_ideal_sum_group],
     rw[Z_ring, Ring_def, AbelianGroup_def],
     rw[Z_ideal_def, Z_def, Z_add_def],
     rw[Z_ideal_def]
-  ]);
+  ]
+QED
 
 (* Theorem: (Z* n).sum << Z.sum *)
 (* Proof:
@@ -13896,15 +14406,16 @@ val Z_ideal_sum_subgroup = store_thm(
        i.e. IMAGE (\z. a + z) (Z_multiple n) = IMAGE (\z. z + a) (Z_multiple n)
        true by INT_ADD_COMM.
 *)
-val Z_ideal_sum_normal = store_thm(
-  "Z_ideal_sum_normal",
-  ``!n. (Z* n).sum << Z.sum``,
+Theorem Z_ideal_sum_normal:
+    !n. (Z* n).sum << Z.sum
+Proof
   rw[normal_subgroup_alt, coset_def, right_coset_def] >| [
     rw[Z_ideal_sum_subgroup],
     pop_assum mp_tac >>
     rw_tac std_ss[Z_ideal_def, Z_def, Z_add_def] >>
     rw[INT_ADD_COMM]
-  ]);
+  ]
+QED
 
 (* Theorem: Z* n is an ideal of Z *)
 (* Proof:
@@ -13915,9 +14426,9 @@ val Z_ideal_sum_normal = store_thm(
    (3) x IN Z_multiple n ==> y * x IN Z_multiple n
        y * (&n * x') = &n * (y * x')  by INT_MUL_ASSOC, INT_MUL_COMM, hence true.
 *)
-val Z_ideal_thm = store_thm(
-  "Z_ideal_thm",
-  ``!n. (Z* n) << Z``,
+Theorem Z_ideal_thm:
+    !n. (Z* n) << Z
+Proof
   rw_tac std_ss[ideal_def, Z_ideal_def, Z_def, Z_mult_def] >| [
     `Z.sum = Z_add` by rw[Z_def] >>
     `(Z* n).sum = <|carrier := Z_multiple n; op := Z_add.op; id := Z_add.id|>` by rw[Z_ideal_def] >>
@@ -13926,7 +14437,8 @@ val Z_ideal_thm = store_thm(
     metis_tac[INT_MUL_ASSOC],
     `!t. t IN Z_multiple n <=> ?(t':int). t = &n * t'` by rw[Z_multiple_def] >>
     metis_tac[INT_MUL_ASSOC, INT_MUL_COMM]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Integer Quotient Ring isomorphic to Integer Modulo                        *)
@@ -13937,13 +14449,14 @@ val Z_ideal_thm = store_thm(
    Since -z + z = 0,
    this follows by group_linv_unique.
 *)
-val Z_add_inv = store_thm(
-  "Z_add_inv",
-  ``!z. z IN Z_add.carrier ==> (Z_add.inv z = -z)``,
+Theorem Z_add_inv:
+    !z. z IN Z_add.carrier ==> (Z_add.inv z = -z)
+Proof
   rpt strip_tac >>
   `Group Z_add` by rw[Z_add_group] >>
   `-z IN Z_add.carrier /\ (Z_add.op (-z) z = Z_add.id)` by rw[Z_add_def] >>
-  metis_tac[group_linv_unique]);
+  metis_tac[group_linv_unique]
+QED
 
 (* Theorem: cogen Z.sum (Z* n).sum (coset Z.sum x (Z* n).sum.carrier) = x + &n * y  for some y. *)
 (* Proof:
@@ -13957,9 +14470,9 @@ val Z_add_inv = store_thm(
    or    -x + m = &n * y               by Z_multiple_def
    or    m = x + &n * y
 *)
-val Z_sum_cogen = store_thm(
-  "Z_sum_cogen",
-  ``!n. 0 < n ==> !x. x IN Z.sum.carrier ==> ? y:int. cogen Z.sum (Z* n).sum (coset Z.sum x (Z* n).sum.carrier) = x + &n * y``,
+Theorem Z_sum_cogen:
+    !n. 0 < n ==> !x. x IN Z.sum.carrier ==> ? y:int. cogen Z.sum (Z* n).sum (coset Z.sum x (Z* n).sum.carrier) = x + &n * y
+Proof
   rpt strip_tac >>
   `(Z* n).sum <= Z.sum` by rw[Z_ideal_sum_subgroup] >>
   `(coset Z.sum x (Z* n).sum.carrier) IN CosetPartition Z.sum (Z* n).sum` by
@@ -13980,7 +14493,8 @@ val Z_sum_cogen = store_thm(
   `x + &n * k = x + (-x + m)` by rw[] >>
   `_ = (x + -x) + m` by rw[INT_ADD_ASSOC] >>
   `_ = m` by rw[] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: coset Z.sum p (Z* n).sum.carrier = coset Z.sum (p % &n) (Z* n).sum.carrier *)
 (* Proof:
@@ -13996,9 +14510,9 @@ val Z_sum_cogen = store_thm(
    = &n * (p / &n)                          by INT_MUL_COMM
    hence in Z_multiple n.
 *)
-val Z_sum_coset_eq = store_thm(
-  "Z_sum_coset_eq",
-  ``!n. 0 < n ==> !p. coset Z.sum p (Z* n).sum.carrier = coset Z.sum (p % &n) (Z* n).sum.carrier``,
+Theorem Z_sum_coset_eq:
+    !n. 0 < n ==> !p. coset Z.sum p (Z* n).sum.carrier = coset Z.sum (p % &n) (Z* n).sum.carrier
+Proof
   rpt strip_tac >>
   `n <> 0` by decide_tac >>
   `&n <> (0 :int)` by rw[INT_INJ] >>
@@ -14013,7 +14527,8 @@ val Z_sum_coset_eq = store_thm(
   `_ = -(p % &n) + p % &n + (p / &n) * &n` by rw[INT_ADD_ASSOC] >>
   `_ = (p / &n) * &n` by rw[INT_ADD_LINV, INT_ADD_LID] >>
   `_ = &n * (p / &n)` by rw[INT_MUL_COMM] >>
-  rw[Z_multiple_def]);
+  rw[Z_multiple_def]
+QED
 
 (* Theorem: x < n /\ y < n /\ -&x + &y IN Z_multiple n ==> (x = y) *)
 (* Proof:
@@ -14054,9 +14569,9 @@ val Z_sum_coset_eq = store_thm(
       n <= y               by INT_LE
    but this contradicts y < n
 *)
-val Z_multiple_less_neg_eq = store_thm(
-  "Z_multiple_less_neg_eq",
-  ``!n x y. 0 < n /\ x < n /\ y < n /\ -&x + &y IN Z_multiple n ==> (x = y)``,
+Theorem Z_multiple_less_neg_eq:
+    !n x y. 0 < n /\ x < n /\ y < n /\ -&x + &y IN Z_multiple n ==> (x = y)
+Proof
   rw[Z_multiple_def] >>
   `-&x + &y + &x = &n * z + &x` by rw[] >>
   `--&x = &x` by rw[INT_NEGNEG] >>
@@ -14089,7 +14604,8 @@ val Z_multiple_less_neg_eq = store_thm(
       `n <= y` by rw[GSYM INT_LE] >>
       decide_tac
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: j IN (ZN n).carrier ==> coset Z.sum (&j) (Z* n).sum.carrier IN (Z / Z* n).carrier *)
 (* Proof: by definitions,
@@ -14097,14 +14613,15 @@ val Z_multiple_less_neg_eq = store_thm(
    ?x. IMAGE (\z. &j + z) (Z_multiple n) = {y | ?z. (y = x + z) /\ z IN Z_multiple n}
    Just take x = &j.
 *)
-val Z_ideal_map_element = store_thm(
-  "Z_ideal_map_element",
-  ``!n j. 0 < n /\ j IN (ZN n).carrier ==> coset Z.sum (&j) (Z* n).sum.carrier IN (Z / Z* n).carrier``,
+Theorem Z_ideal_map_element:
+    !n j. 0 < n /\ j IN (ZN n).carrier ==> coset Z.sum (&j) (Z* n).sum.carrier IN (Z / Z* n).carrier
+Proof
   rw_tac std_ss[quotient_ring_def, coset_def, ZN_def, Z_ideal_def, Z_def, Z_add_def,
      CosetPartition_def, partition_def, inCoset_def, IN_COUNT] >>
   rw[] >>
   qexists_tac `&j` >>
-  rw[EXTENSION]);
+  rw[EXTENSION]
+QED
 
 (* Theorem: GroupHomo (\j. coset Z.sum (&j) (Z* n).sum.carrier) (ZN n).sum (Z / Z* n).sum *)
 (* Proof: by GroupHomo_def, this is to show
@@ -14140,9 +14657,9 @@ val Z_ideal_map_element = store_thm(
        = &n * -(&(j + j') / &n)             by INT_MUL_COMM]
        Hence in Z_multiple n.
 *)
-val Z_ideal_map_group_homo = store_thm(
-  "Z_ideal_map_group_homo",
-  ``!n. 0 < n ==> GroupHomo (\j. coset Z.sum (&j) (Z* n).sum.carrier) (ZN n).sum (Z / Z* n).sum``,
+Theorem Z_ideal_map_group_homo:
+    !n. 0 < n ==> GroupHomo (\j. coset Z.sum (&j) (Z* n).sum.carrier) (ZN n).sum (Z / Z* n).sum
+Proof
   rpt strip_tac >>
   `!r. Ring r ==> (r.sum.carrier = R)` by rw_tac std_ss[Ring_def] >>
   rw[GroupHomo_def] >| [
@@ -14189,7 +14706,8 @@ val Z_ideal_map_group_homo = store_thm(
     `_ = -(&(j + j') / &n) * &n` by rw[INT_NEG_LMUL] >>
     `_ = &n * -(&(j + j') / &n)` by rw[INT_MUL_COMM] >>
     rw[Z_multiple_def]
-  ]);
+  ]
+QED
 
 (* Theorem: MonoidHomo (\j. coset Z.sum (&j) (Z* n).sum.carrier) (ZN n).prod (Z / Z* n).prod *)
 (* Proof: by MonoidHomo_def, this is to show:
@@ -14223,9 +14741,9 @@ val Z_ideal_map_group_homo = store_thm(
        If n = 1, to show -1 in (Z* 1).sum.carrier = Z_multiple 1, true.
        If n <> 1, to show 0 in (Z* n).sum.carrier = Z_multiple n, true.
 *)
-val Z_ideal_map_monoid_homo = store_thm(
-  "Z_ideal_map_monoid_homo",
-  ``!n. 0 < n ==> MonoidHomo (\j. coset Z.sum (&j) (Z* n).sum.carrier) (ZN n).prod (Z / Z* n).prod``,
+Theorem Z_ideal_map_monoid_homo:
+    !n. 0 < n ==> MonoidHomo (\j. coset Z.sum (&j) (Z* n).sum.carrier) (ZN n).prod (Z / Z* n).prod
+Proof
   rpt strip_tac >>
   rw[MonoidHomo_def] >| [
     `Ring (ZN n)` by rw[ZN_ring] >>
@@ -14281,7 +14799,8 @@ val Z_ideal_map_monoid_homo = store_thm(
     rw[Z_def, Z_add_def, Z_mult_def, ZN_def, times_mod_def] >-
     rw[Z_ideal_def, Z_multiple_def] >>
     rw[Z_ideal_def, Z_multiple_def]
-  ]);
+  ]
+QED
 
 (* Theorem: BIJ (\j. coset Z.sum (&j) (Z* n).sum.carrier) (ZN n).carrier (Z / Z* n).carrier *)
 (* Proof:
@@ -14311,9 +14830,9 @@ val Z_ideal_map_monoid_homo = store_thm(
                = &(p MOD n)                 by INT_MOD_ID, INT_MOD_MOD
                = &p % &n                    by INT_MOD
 *)
-val Z_ideal_map_bij = store_thm(
-  "Z_ideal_map_bij",
-  ``!n. 0 < n ==> BIJ (\j. coset Z.sum (&j) (Z* n).sum.carrier) (ZN n).carrier (Z / Z* n).carrier``,
+Theorem Z_ideal_map_bij:
+    !n. 0 < n ==> BIJ (\j. coset Z.sum (&j) (Z* n).sum.carrier) (ZN n).carrier (Z / Z* n).carrier
+Proof
   rw[BIJ_DEF, INJ_DEF, SURJ_DEF] >| [
     rw[Z_ideal_map_element],
     `(Z* n).sum <= Z.sum` by rw[Z_ideal_sum_subgroup] >>
@@ -14361,7 +14880,8 @@ val Z_ideal_map_bij = store_thm(
         rw[MOD_LESS]
       ]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: (ZN n) isomorphic to Z / (Z* n) *)
 (* Proof:
@@ -14376,14 +14896,15 @@ val Z_ideal_map_bij = store_thm(
    (4) BIJ (\j. coset Z.sum (&j) (Z* n).sum.carrier) (ZN n).carrier (Z / Z* n).carrier
        true by Z_ideal_map_bij.
 *)
-val Z_quotient_iso_ZN = store_thm(
-  "Z_quotient_iso_ZN",
-  ``!n. 0 < n ==> RingIso (\(j:num). coset Z.sum (&j) (Z* n).sum.carrier) (ZN n) (Z / (Z* n))``,
+Theorem Z_quotient_iso_ZN:
+    !n. 0 < n ==> RingIso (\(j:num). coset Z.sum (&j) (Z* n).sum.carrier) (ZN n) (Z / (Z* n))
+Proof
   rw[RingIso_def, RingHomo_def] >-
   rw[Z_ideal_map_element] >-
   rw[Z_ideal_map_group_homo] >-
   rw[Z_ideal_map_monoid_homo] >>
-  rw[Z_ideal_map_bij]);
+  rw[Z_ideal_map_bij]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Integer as Euclidean Ring.                                                *)
@@ -14454,10 +14975,11 @@ QED
    Since EuclideanRing Z (Num o ABS)   by Z_euclid_ring
    hence PrincipalIdealRing Z          by euclid_ring_principal_ideal_ring
 *)
-val Z_principal_ideal_ring = store_thm(
-  "Z_principal_ideal_ring",
-  ``PrincipalIdealRing Z``,
-  metis_tac[Z_euclid_ring, euclid_ring_principal_ideal_ring]);
+Theorem Z_principal_ideal_ring:
+    PrincipalIdealRing Z
+Proof
+  metis_tac[Z_euclid_ring, euclid_ring_principal_ideal_ring]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Integral Domain Documentation                                             *)
@@ -14564,16 +15086,16 @@ val Z_principal_ideal_ring = store_thm(
    . #1 <> #0
    . !x y IN R, x * y = #0 <=> x = #0 or y = #0
 *)
-val IntegralDomain_def = Define`
+Definition IntegralDomain_def:
   IntegralDomain (r:'a ring) <=>
     Ring r /\
     #1 <> #0 /\
     (!x y. x IN R /\ y IN R ==> ((x * y = #0) <=> (x = #0) \/ (y = #0)))
-`;
+End
 
-val FiniteIntegralDomain_def = Define`
+Definition FiniteIntegralDomain_def:
   FiniteIntegralDomain (r:'a ring) <=> IntegralDomain r /\ FINITE R
-`;
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Simple Theorems                                                           *)
@@ -14607,31 +15129,35 @@ val integral_domain_zero_product = save_thm("integral_domain_zero_product", inte
 
 (* Theorem: #0 is not a unit of integral domain. *)
 (* Proof: by ring_units_has_zero *)
-val integral_domain_zero_not_unit = store_thm(
-  "integral_domain_zero_not_unit",
-  ``!r:'a ring. IntegralDomain r ==> ~ (#0 IN R*)``,
-  rw[ring_units_has_zero, IntegralDomain_def]);
+Theorem integral_domain_zero_not_unit:
+    !r:'a ring. IntegralDomain r ==> ~ (#0 IN R*)
+Proof
+  rw[ring_units_has_zero, IntegralDomain_def]
+QED
 
 (* Theorem: #1 IN R+ for integral domain. *)
 (* Proof: by #1 <> #0 and ring_nonzero_eq. *)
-val integral_domain_one_nonzero = store_thm(
-  "integral_domain_one_nonzero",
-  ``!r:'a ring. IntegralDomain r ==> #1 IN R+``,
-  rw[integral_domain_is_ring, ring_nonzero_eq]);
+Theorem integral_domain_one_nonzero:
+    !r:'a ring. IntegralDomain r ==> #1 IN R+
+Proof
+  rw[integral_domain_is_ring, ring_nonzero_eq]
+QED
 
 (* Theorem: x IN R+ /\ y IN R+ <=> (x * y) IN R+ *)
 (* Proof: by definitions. *)
-val integral_domain_mult_nonzero = store_thm(
-  "integral_domain_mult_nonzero",
-  ``!r:'a ring. IntegralDomain r ==> !x y. x IN R+ /\ y IN R+ ==> (x * y) IN R+``,
-  rw[integral_domain_zero_product, integral_domain_is_ring, ring_nonzero_eq]);
+Theorem integral_domain_mult_nonzero:
+    !r:'a ring. IntegralDomain r ==> !x y. x IN R+ /\ y IN R+ ==> (x * y) IN R+
+Proof
+  rw[integral_domain_zero_product, integral_domain_is_ring, ring_nonzero_eq]
+QED
 
 (* Theorem: IntegralDomain r ==> (F* = R+) *)
 (* Proof: by integral_domain_is_ring, ring_nonzero_mult_carrier *)
-val integral_domain_nonzero_mult_carrier = store_thm(
-  "integral_domain_nonzero_mult_carrier",
-  ``!r:'a ring. IntegralDomain r ==> (F* = R+)``,
-  rw_tac std_ss[integral_domain_is_ring, ring_nonzero_mult_carrier]);
+Theorem integral_domain_nonzero_mult_carrier:
+    !r:'a ring. IntegralDomain r ==> (F* = R+)
+Proof
+  rw_tac std_ss[integral_domain_is_ring, ring_nonzero_mult_carrier]
+QED
 
 (* Theorem: properties of f*. *)
 (* Proof:
@@ -14644,11 +15170,12 @@ val integral_domain_nonzero_mult_carrier = store_thm(
    For f*.exp = r.prod.exp
        This is true             by monoid_exp_def, FUN_EQ_THM
 *)
-val integral_domain_nonzero_mult_property = store_thm(
-  "integral_domain_nonzero_mult_property",
-  ``!r:'a ring. IntegralDomain r ==>
-               (F* = R+) /\ (f*.id = #1) /\ (f*.op = r.prod.op) /\ (f*.exp = r.prod.exp)``,
-  rw_tac std_ss[IntegralDomain_def, excluding_def, ring_carriers, ring_nonzero_def, monoid_exp_def, FUN_EQ_THM]);
+Theorem integral_domain_nonzero_mult_property:
+    !r:'a ring. IntegralDomain r ==>
+               (F* = R+) /\ (f*.id = #1) /\ (f*.op = r.prod.op) /\ (f*.exp = r.prod.exp)
+Proof
+  rw_tac std_ss[IntegralDomain_def, excluding_def, ring_carriers, ring_nonzero_def, monoid_exp_def, FUN_EQ_THM]
+QED
 
 (* Theorem: IntegralDomain r ==> Monoid f* *)
 (* Proof:
@@ -14660,12 +15187,13 @@ val integral_domain_nonzero_mult_property = store_thm(
    (4) x IN R ==> #1 * x = x, true                 by ring_mult_lone
    (5) x IN R ==> x * #1 = x, true                 by ring_mult_rone
 *)
-val integral_domain_nonzero_monoid = store_thm(
-  "integral_domain_nonzero_monoid",
-  ``!r:'a ring. IntegralDomain r ==> Monoid f*``,
+Theorem integral_domain_nonzero_monoid:
+    !r:'a ring. IntegralDomain r ==> Monoid f*
+Proof
   rw_tac std_ss[IntegralDomain_def] >>
   rw_tac std_ss[Monoid_def, excluding_def, IN_DIFF, IN_SING, ring_carriers] >>
-  rw[ring_mult_assoc]);
+  rw[ring_mult_assoc]
+QED
 
 (* Another proof of the same result. *)
 
@@ -14724,36 +15252,38 @@ QED
    <=>  x = #0 or (y - z) = #0   by integral_domain_zero_product
    <=>  x = #0 or y = z          by ring_sub_eq_zero
 *)
-val integral_domain_mult_lcancel = store_thm(
-  "integral_domain_mult_lcancel",
-  ``!r:'a ring. IntegralDomain r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((x * y = x * z) <=> (x = #0) \/ (y = z))``,
+Theorem integral_domain_mult_lcancel:
+    !r:'a ring. IntegralDomain r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((x * y = x * z) <=> (x = #0) \/ (y = z))
+Proof
   rpt strip_tac >>
   `Ring r` by rw[integral_domain_is_ring] >>
   `(x * y = x * z) <=> (x * y - x * z = #0)` by rw[ring_sub_eq_zero] >>
   `_ = (x * (y - z) = #0)` by rw_tac std_ss[ring_mult_rsub] >>
   `_ = ((x = #0) \/ (y - z = #0))` by rw[integral_domain_zero_product] >>
   `_ = ((x = #0) \/ (y = z))` by rw[ring_sub_eq_zero] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: IntegeralDomain r ==> y * x = z * x <=> x = #0 \/ y = z  *)
 (* Proof: by integral_domain_mult_lcancel, ring_mult_comm. *)
-val integral_domain_mult_rcancel = store_thm(
-  "integral_domain_mult_rcancel",
-  ``!r:'a ring. IntegralDomain r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((y * x = z * x) <=> (x = #0) \/ (y = z))``,
-  rw[integral_domain_mult_lcancel, ring_mult_comm, integral_domain_is_ring]);
+Theorem integral_domain_mult_rcancel:
+    !r:'a ring. IntegralDomain r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((y * x = z * x) <=> (x = #0) \/ (y = z))
+Proof
+  rw[integral_domain_mult_lcancel, ring_mult_comm, integral_domain_is_ring]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Non-zero multiplications form a Monoid.                                   *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define monoid of ring nonzero multiplication. *)
-val monoid_of_ring_nonzero_mult_def = Define`
+Definition monoid_of_ring_nonzero_mult_def:
   monoid_of_ring_nonzero_mult (r:'a ring) :'a monoid  =
   <| carrier := R+;
           op := r.prod.op;
           id := #1
     |>
-`;
+End
 (*
 - type_of ``monoid_of_ring_nonzero_mult r``;
 > val it = ``:'a monoid`` : hol_type
@@ -14761,9 +15291,9 @@ val monoid_of_ring_nonzero_mult_def = Define`
 
 (* Theorem: Integral nonzero multiplication form a Monoid. *)
 (* Proof: by checking definition. *)
-val integral_domain_nonzero_mult_is_monoid = store_thm(
-  "integral_domain_nonzero_mult_is_monoid",
-  ``!r:'a ring. IntegralDomain r ==> Monoid (monoid_of_ring_nonzero_mult r)``,
+Theorem integral_domain_nonzero_mult_is_monoid:
+    !r:'a ring. IntegralDomain r ==> Monoid (monoid_of_ring_nonzero_mult r)
+Proof
   rpt strip_tac >>
   `Ring r` by rw_tac std_ss[integral_domain_is_ring] >>
   rw_tac std_ss[Monoid_def, monoid_of_ring_nonzero_mult_def, RES_FORALL_THM] >-
@@ -14771,7 +15301,8 @@ val integral_domain_nonzero_mult_is_monoid = store_thm(
   rw[ring_mult_assoc, ring_nonzero_element] >-
   rw_tac std_ss[integral_domain_one_nonzero] >-
   rw[ring_nonzero_element] >>
-  rw[ring_nonzero_element]);
+  rw[ring_nonzero_element]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems from Ring exponentiation.                                        *)
@@ -14786,24 +15317,26 @@ val integral_domain_nonzero_mult_is_monoid = store_thm(
       since x ** SUC n = x * x ** n   by ring_exp_SUC
       hence true by integral_domain_mult_nonzero, by induction hypothesis.
 *)
-val integral_domain_exp_nonzero = store_thm(
-  "integral_domain_exp_nonzero",
-  ``!r:'a ring. IntegralDomain r ==> !x. x IN R+ ==> !n. x ** n IN R+``,
+Theorem integral_domain_exp_nonzero:
+    !r:'a ring. IntegralDomain r ==> !x. x IN R+ ==> !n. x ** n IN R+
+Proof
   rpt strip_tac >>
   `Ring r` by rw_tac std_ss[integral_domain_is_ring] >>
   Induct_on `n` >| [
     rw[integral_domain_one_nonzero, ring_nonzero_element],
     rw_tac std_ss[ring_exp_SUC, integral_domain_mult_nonzero, ring_nonzero_element]
-  ]);
+  ]
+QED
 
 (* Theorem: For integral domain, x ** n = #0 <=> n <> 0 /\ x = #0 *)
 (* Proof: by integral_domain_exp_nonzero and ring_zero_exp. *)
-val integral_domain_exp_eq_zero = store_thm(
-  "integral_domain_exp_eq_zero",
-  ``!r:'a ring. IntegralDomain r ==> !x. x IN R ==> !n. (x ** n = #0) <=> n <> 0 /\ (x = #0)``,
+Theorem integral_domain_exp_eq_zero:
+    !r:'a ring. IntegralDomain r ==> !x. x IN R ==> !n. (x ** n = #0) <=> n <> 0 /\ (x = #0)
+Proof
   rpt strip_tac >>
   `Ring r /\ (#1 <> #0)` by rw[integral_domain_is_ring] >>
-  metis_tac[integral_domain_exp_nonzero, ring_nonzero_eq, ring_zero_exp, ring_exp_element]);
+  metis_tac[integral_domain_exp_nonzero, ring_nonzero_eq, ring_zero_exp, ring_exp_element]
+QED
 
 (* Theorem: For m < n, x IN R+ /\ x ** m = x ** n ==> x ** (n-m) = #1 *)
 (* Proof:
@@ -14817,9 +15350,9 @@ val integral_domain_exp_eq_zero = store_thm(
    By no-zero-divisor property of Integral Domain,
    x ** (n-m) - #1 = 0, or x ** (n-m) = #1.
 *)
-val integral_domain_exp_eq = store_thm(
-  "integral_domain_exp_eq",
-  ``!r:'a ring. IntegralDomain r ==> !x. x IN R+ ==> !m n. m < n /\ (x ** m = x ** n) ==> (x ** (n-m) = #1)``,
+Theorem integral_domain_exp_eq:
+    !r:'a ring. IntegralDomain r ==> !x. x IN R+ ==> !m n. m < n /\ (x ** m = x ** n) ==> (x ** (n-m) = #1)
+Proof
   rpt strip_tac >>
   `Ring r` by rw_tac std_ss[integral_domain_is_ring] >>
   `#1 IN R+ /\ !k. x ** k IN R+` by rw_tac std_ss[integral_domain_one_nonzero, integral_domain_exp_nonzero] >>
@@ -14832,7 +15365,8 @@ val integral_domain_exp_eq = store_thm(
   `(x ** (n-m) + (-#1)) * x ** m = #0` by rw_tac std_ss[ring_mult_ladd, ring_neg_element] >>
   `(x ** (n-m) - #1) * x ** m = #0` by metis_tac[ring_sub_def] >>
   `(x ** (n-m) - #1) IN R` by rw_tac std_ss[ring_sub_element] >>
-  metis_tac[ring_sub_eq_zero, integral_domain_zero_product, ring_nonzero_eq]);
+  metis_tac[ring_sub_eq_zero, integral_domain_zero_product, ring_nonzero_eq]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Integral Domain.                                                   *)
@@ -14840,9 +15374,9 @@ val integral_domain_exp_eq = store_thm(
 
 (* Theorem: FINITE IntegralDomain r ==> !x in R+, ?k. 0 < k /\ (x ** k = #1) *)
 (* Proof: by finite_monoid_exp_not_distinct and integral_domain_exp_eq. *)
-val finite_integral_domain_period_exists = store_thm(
-  "finite_integral_domain_period_exists",
-  ``!r:'a ring. FiniteIntegralDomain r ==> !x. x IN R+ ==> ?k. 0 < k /\ (x ** k = #1)``,
+Theorem finite_integral_domain_period_exists:
+    !r:'a ring. FiniteIntegralDomain r ==> !x. x IN R+ ==> ?k. 0 < k /\ (x ** k = #1)
+Proof
   rpt strip_tac >>
   `IntegralDomain r /\ FINITE R /\ Ring r` by metis_tac[FiniteIntegralDomain_def, IntegralDomain_def] >>
   `Monoid r.prod /\ (r.prod.carrier = R)` by rw_tac std_ss[ring_mult_monoid] >>
@@ -14851,7 +15385,8 @@ val finite_integral_domain_period_exists = store_thm(
   Cases_on `h < k` >| [
     `0 < k - h` by decide_tac,
     `k < h /\ 0 < h - k` by decide_tac
-  ] >> metis_tac[integral_domain_exp_eq]);
+  ] >> metis_tac[integral_domain_exp_eq]
+QED
 
 (* Theorem: FINITE IntegralDomain r ==> all x IN R+ are invertible. *)
 (* Proof:
@@ -14870,9 +15405,9 @@ val finite_integral_domain_period_exists = store_thm(
        x * x ** h = x ** k = #1      by ring_exp_add,
        so just take y = x ** h.
 *)
-val finite_integral_domain_nonzero_invertible = store_thm(
-  "finite_integral_domain_nonzero_invertible",
-  ``!r:'a ring. FiniteIntegralDomain r ==> (monoid_invertibles r.prod = R+ )``,
+Theorem finite_integral_domain_nonzero_invertible:
+    !r:'a ring. FiniteIntegralDomain r ==> (monoid_invertibles r.prod = R+ )
+Proof
   rpt strip_tac >>
   `IntegralDomain r` by metis_tac[FiniteIntegralDomain_def] >>
   `Ring r /\ (#1 <> #0)` by rw[integral_domain_is_ring] >>
@@ -14884,7 +15419,8 @@ val finite_integral_domain_nonzero_invertible = store_thm(
     qexists_tac `x ** (k-1)` >>
     `(1 + (k-1) = k) /\ ((k - 1) + 1 = k)` by decide_tac >>
     metis_tac[ring_exp_add, ring_exp_element]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteIntegralDomain r ==> (F* = monoid_invertibles f* *)
 (* Proof:
@@ -14898,16 +15434,17 @@ val finite_integral_domain_nonzero_invertible = store_thm(
       = monoid_invertibles r.prod            by above [1]
       = monoid_invertibles f*                by abelian_monoid_invertible_excluding, [2]
 *)
-val finite_integral_domain_nonzero_invertible_alt = store_thm(
-  "finite_integral_domain_nonzero_invertible_alt",
-  ``!r:'a ring. FiniteIntegralDomain r ==> (monoid_invertibles f* = F* )``,
+Theorem finite_integral_domain_nonzero_invertible_alt:
+    !r:'a ring. FiniteIntegralDomain r ==> (monoid_invertibles f* = F* )
+Proof
   rpt (stripDup[FiniteIntegralDomain_def]) >>
   `Ring r` by rw[integral_domain_is_ring] >>
   `#0 NOTIN R+` by rw[ring_nonzero_eq] >>
   `monoid_invertibles r.prod = R+` by rw_tac std_ss[finite_integral_domain_nonzero_invertible] >>
   `AbelianMonoid r.prod` by rw[ring_mult_abelian_monoid] >>
   `monoid_invertibles f* = monoid_invertibles r.prod` by rw[abelian_monoid_invertible_excluding] >>
-  rw[ring_nonzero_mult_carrier]);
+  rw[ring_nonzero_mult_carrier]
+QED
 
 (* Theorem: FiniteIntegralDomain r ==> Group f* *)
 (* Proof:
@@ -14915,13 +15452,14 @@ val finite_integral_domain_nonzero_invertible_alt = store_thm(
    (1) Monoid f*, true                  by integral_domain_nonzero_monoid
    (2) monoid_invertibles f* = F*, true by finite_integral_domain_nonzero_invertible_alt
 *)
-val finite_integral_domain_nonzero_group = store_thm(
-  "finite_integral_domain_nonzero_group",
-  ``!r:'a ring. FiniteIntegralDomain r ==> Group f*``,
+Theorem finite_integral_domain_nonzero_group:
+    !r:'a ring. FiniteIntegralDomain r ==> Group f*
+Proof
   rpt (stripDup[FiniteIntegralDomain_def]) >>
   rw_tac std_ss[Group_def] >-
   rw[integral_domain_nonzero_monoid] >>
-  rw[finite_integral_domain_nonzero_invertible_alt]);
+  rw[finite_integral_domain_nonzero_invertible_alt]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Integral Domain Element Order                                             *)
@@ -14937,10 +15475,11 @@ val finite_integral_domain_nonzero_group = store_thm(
     = case OLEAST k. period r.prod x k of NONE => 0 | SOME k => k       by period_def
     = order r.prod x                                                    by order_def
 *)
-val integral_domain_nonzero_order = store_thm(
-  "integral_domain_nonzero_order",
-  ``!r:'a ring. IntegralDomain r ==> !x. order r.prod x = order f* x``,
-  rw_tac std_ss[order_def, period_def, integral_domain_nonzero_mult_property]);
+Theorem integral_domain_nonzero_order:
+    !r:'a ring. IntegralDomain r ==> !x. order r.prod x = order f* x
+Proof
+  rw_tac std_ss[order_def, period_def, integral_domain_nonzero_mult_property]
+QED
 
 (* Theorem: IntegralDomain r ==> (order f* #0 = 0) *)
 (* Proof:
@@ -14955,7 +15494,7 @@ Theorem integral_domain_order_zero:
   !r:'a ring. IntegralDomain r ==> (order f* #0 = 0)
 Proof
   rw_tac std_ss[order_def, period_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
+  DEEP_INTRO_TAC OLEAST_INTRO >>
   rw[] >>
   rfs[integral_domain_nonzero_mult_property] >>
   spose_not_then strip_assume_tac >>
@@ -14968,14 +15507,15 @@ QED
      or ?n. n <> 0 /\ (f*.exp x n = f*.id)   by integral_domain_nonzero_mult_property
      or forder x <> 0                        by order_def, period_def
 *)
-val integral_domain_order_nonzero = store_thm(
-  "integral_domain_order_nonzero",
-  ``!r:'a ring. FiniteIntegralDomain r ==> !x. x IN R+ ==> (order f* x <> 0)``,
+Theorem integral_domain_order_nonzero:
+    !r:'a ring. FiniteIntegralDomain r ==> !x. x IN R+ ==> (order f* x <> 0)
+Proof
   rw_tac std_ss[order_def, period_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
+  DEEP_INTRO_TAC OLEAST_INTRO >>
   rw[] >>
   `IntegralDomain r` by fs[FiniteIntegralDomain_def] >>
-  metis_tac[finite_integral_domain_period_exists, integral_domain_nonzero_mult_property, NOT_ZERO_LT_ZERO]);
+  metis_tac[finite_integral_domain_period_exists, integral_domain_nonzero_mult_property, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: FiniteIntegralDomain r ==> !x. x IN R ==> ((order f* x = 0) <=> (x = #0)) *)
 (* Proof:
@@ -14986,13 +15526,14 @@ val integral_domain_order_nonzero = store_thm(
       This contradicts forder x = 0.
    Only-if part: forder #0 = 0, true    by integral_domain_order_zero
 *)
-val integral_domain_order_eq_0 = store_thm(
-  "integral_domain_order_eq_0",
-  ``!r:'a ring. FiniteIntegralDomain r ==> !x. x IN R ==> ((order f* x = 0) <=> (x = #0))``,
+Theorem integral_domain_order_eq_0:
+    !r:'a ring. FiniteIntegralDomain r ==> !x. x IN R ==> ((order f* x = 0) <=> (x = #0))
+Proof
   rpt (stripDup[FiniteIntegralDomain_def]) >>
   rw[EQ_IMP_THM] >-
   metis_tac[integral_domain_order_nonzero, ring_nonzero_eq] >>
-  rw[integral_domain_order_zero]);
+  rw[integral_domain_order_zero]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Integral Domain Characteristic.                                           *)
@@ -15013,9 +15554,9 @@ val integral_domain_order_eq_0 = store_thm(
    ==>  ## k = #0  or ## p = #0   by integral_domain_zero_product
    Either case, this violates the minimality of (char r) given by char_minimal.
 *)
-val integral_domain_char = store_thm(
-  "integral_domain_char",
-  ``!r:'a ring. IntegralDomain r ==> (char r = 0) \/ (prime (char r))``,
+Theorem integral_domain_char:
+    !r:'a ring. IntegralDomain r ==> (char r = 0) \/ (prime (char r))
+Proof
   rpt strip_tac >>
   Cases_on `char r = 0` >-
   rw_tac std_ss[] >>
@@ -15035,7 +15576,8 @@ val integral_domain_char = store_thm(
   `p < char r /\ k < char r /\ 0 < char r` by decide_tac >>
   `#0 = ##(char r)` by rw_tac std_ss[char_property] >>
   `_ = ## k * ## p` by rw_tac std_ss[ring_num_mult] >>
-  metis_tac[integral_domain_zero_product, char_minimal, ring_num_element]);
+  metis_tac[integral_domain_zero_product, char_minimal, ring_num_element]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Primes are irreducible in an Integral Domain                              *)
@@ -15248,9 +15790,9 @@ QED
    Only-if part:
    True by principal_ideal_eq_principal_ideal.
 *)
-val principal_ideal_equal_principal_ideal = store_thm(
-  "principal_ideal_equal_principal_ideal",
-  ``!r:'a ring. IntegralDomain r ==> !p q. p IN R /\ q IN R ==> ((<p> = <q>) <=> ?u. unit u /\ (p = q * u))``,
+Theorem principal_ideal_equal_principal_ideal:
+    !r:'a ring. IntegralDomain r ==> !p q. p IN R /\ q IN R ==> ((<p> = <q>) <=> ?u. unit u /\ (p = q * u))
+Proof
   rewrite_tac[EQ_IMP_THM] >>
   ntac 2 strip_tac >>
   `Ring r` by rw[integral_domain_is_ring] >>
@@ -15270,7 +15812,8 @@ val principal_ideal_equal_principal_ideal = store_thm(
       metis_tac[ring_unit_property]
     ],
     metis_tac[principal_ideal_eq_principal_ideal]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Integral Domain Instances Documentation                                   *)
@@ -15304,7 +15847,7 @@ val principal_ideal_equal_principal_ideal = store_thm(
 (* The Trivial Integral Domain = GF(2) = {|0|, |1|}.                         *)
 (* ------------------------------------------------------------------------- *)
 
-val trivial_integal_domain_def = zDefine`
+Definition trivial_integal_domain_def[nocompute]:
   (trivial_integal_domain e0 e1) : 'a ring =
    <| carrier := {e0; e1};
       sum := <| carrier := {e0; e1};
@@ -15318,7 +15861,7 @@ val trivial_integal_domain_def = zDefine`
                                 else if y = e0 then e0
                                 else e1) |>
     |>
-`;
+End
 
 (* Theorem: {|0|, |1|} is indeed a integral domain. *)
 (* Proof: by definition, the integral domain tables are:
@@ -15329,9 +15872,9 @@ val trivial_integal_domain_def = zDefine`
    |1|  |1| |0|         |1| |0| |1|
 
 *)
-val trivial_integral_domain = store_thm(
-  "trivial_integral_domain",
-  ``!e0 e1. e0 <> e1 ==> FiniteIntegralDomain (trivial_integal_domain e0 e1)``,
+Theorem trivial_integral_domain:
+    !e0 e1. e0 <> e1 ==> FiniteIntegralDomain (trivial_integal_domain e0 e1)
+Proof
   rw_tac std_ss[FiniteIntegralDomain_def] THENL [
     `!x a b. x IN {a; b} <=> ((x = a) \/ (x = b))` by rw[] THEN
     rw_tac std_ss[IntegralDomain_def, Ring_def] THENL [
@@ -15346,20 +15889,21 @@ val trivial_integral_domain = store_thm(
       rw_tac std_ss[trivial_integal_domain_def]
     ],
     rw[trivial_integal_domain_def]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Z_p - Multiplication in Modulo of prime p.                                *)
 (* ------------------------------------------------------------------------- *)
 
 (* Multiplication in Modulo of prime p *)
-val ZP_def = zDefine`
+Definition ZP_def[nocompute]:
   ZP p :num ring =
    <| carrier := count p;
           sum := add_mod p;
          prod := times_mod p
     |>
-`;
+End
 (*
 - type_of ``ZP p``;
 > val it = ``:num ring`` : hol_type
@@ -15369,9 +15913,9 @@ val ZP_def = zDefine`
 (* Proof: check definitions.
    The no-zero divisor property is given by EUCLID_LEMMA for prime p.
 *)
-val ZP_integral_domain = store_thm(
-  "ZP_integral_domain",
-  ``!p. prime p ==> IntegralDomain (ZP p)``,
+Theorem ZP_integral_domain:
+    !p. prime p ==> IntegralDomain (ZP p)
+Proof
   rpt strip_tac >>
   `0 < p /\ 1 < p` by rw_tac std_ss[PRIME_POS, ONE_LT_PRIME] >>
   rw_tac std_ss[IntegralDomain_def, Ring_def] >-
@@ -15389,21 +15933,24 @@ val ZP_integral_domain = store_thm(
   pop_assum mp_tac >>
   pop_assum mp_tac >>
   rw_tac std_ss[ZP_def, add_mod_def, times_mod_def, count_def, GSPECIFICATION] >>
-  rw_tac std_ss[EUCLID_LEMMA, LESS_MOD]);
+  rw_tac std_ss[EUCLID_LEMMA, LESS_MOD]
+QED
 
 (* Theorem: (ZP p).carrier is FINITE. *)
 (* Proof: by FINITE_COUNT. *)
-val ZP_finite = store_thm(
-  "ZP_finite",
-  ``!p. FINITE (ZP p).carrier``,
-  rw[ZP_def]);
+Theorem ZP_finite:
+    !p. FINITE (ZP p).carrier
+Proof
+  rw[ZP_def]
+QED
 
 (* Theorem: ZP p is a FINITE Integral Domain for prime p. *)
 (* Proof: by ZP_integral_domain and ZP_finite. *)
-val ZP_finite_integral_domain = store_thm(
-  "ZP_finite_integral_domain",
-  ``!p. prime p ==> FiniteIntegralDomain (ZP p)``,
-  rw_tac std_ss[ZP_integral_domain, ZP_finite, FiniteIntegralDomain_def]);
+Theorem ZP_finite_integral_domain:
+    !p. prime p ==> FiniteIntegralDomain (ZP p)
+Proof
+  rw_tac std_ss[ZP_integral_domain, ZP_finite, FiniteIntegralDomain_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Integers Z is the prototype Integral Domain.                              *)

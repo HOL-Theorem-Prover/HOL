@@ -4,23 +4,16 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "loopDecrease";
+Theory loopDecrease
+Ancestors
+  arithmetic divides number combinatorics list rich_list
+  listRange loop
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open arithmeticTheory dividesTheory numberTheory combinatoricsTheory listTheory
-     rich_listTheory listRangeTheory;
-
-open loopTheory;
-
 val _ = temp_overload_on ("RISING", ``\f. !x:num. x <= f x``);
 val _ = temp_overload_on ("FALLING", ``\f. !x:num. f x <= x``);
 
@@ -341,9 +334,9 @@ val _ = temp_overload_on ("FALLING", ``\f. !x:num. f x <= x``);
 (* ------------------------------------------------------------------------- *)
 
 (* Define a hop function, count of hops to zero. *)
-val hop_def = Define`
+Definition hop_def:
     hop b n = if (b = 0) \/ (n = 0) then 0 else SUC (hop b (n - b))
-`;
+End
 
 (* alternate form *)
 val hop_alt = save_thm("hop_alt", hop_def |> REWRITE_RULE [SUC_ONE_ADD]);
@@ -1549,10 +1542,10 @@ val loop2_dec_mono_count_le = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Given a number n, generate a decreasing list of n, down to before 0. *)
-val decrease_by_def = Define`
+Definition decrease_by_def:
     decrease_by b n =
        if (b = 0) \/ (n = 0) then [] else n::decrease_by b (n - b)
-`;
+End
 (* Overload decrease_by 1 *)
 val _ = overload_on ("decreasing", ``decrease_by 1``);
 
@@ -2117,8 +2110,4 @@ val loop2_dec_count_upper = store_thm(
   metis_tac[LESS_EQ_REFL]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

@@ -15,22 +15,16 @@ http://www.gilith.com/research/papers/elliptic.pdf
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "field";
+Theory field
+Ancestors
+  pred_set arithmetic divides gcd gcdset number combinatorics
+  monoid group ring
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory arithmeticTheory dividesTheory gcdTheory gcdsetTheory
-     numberTheory combinatoricsTheory;
-
-open monoidTheory groupTheory ringTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -496,15 +490,15 @@ val _ = type_abbrev ("field", Type `:'a ring`);
    . it is a Ring
    . r.prod excluding #0 is a Group
 *)
-val Field_def = Define`
+Definition Field_def:
   Field (r:'a field) <=> Ring r /\ Group f*
-`;
+End
 
 
 
-val FiniteField_def = Define`
+Definition FiniteField_def:
   FiniteField (r:'a field) <=> Field r /\ FINITE R
-`;
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Field theorems from Definition.                                           *)
@@ -2097,7 +2091,8 @@ val field_single_mult_inv_exp_assoc = store_thm(
 (* Field Division Theorems.                                                  *)
 (* ------------------------------------------------------------------------- *)
 (* val field_div_def = Define `field_div (r:'a field) x y = x * ( |/ y)`; -- has problem with Holmake, |/ is OK, but * = g.op *)
-val field_div_def = Define `field_div (r:'a field) x y = (r.prod.op x ( |/ y))`; (* Somehow Holmake takes '*' as g.op here *)
+Definition field_div_def:   field_div (r:'a field) x y = (r.prod.op x ( |/ y))
+End(* Somehow Holmake takes '*' as g.op here *)
 val _ = overload_on("/", ``field_div r``);
 val _ = set_fixity "/" (Infixl 600);
 (* consistent with real and integer theories *)
@@ -2765,13 +2760,13 @@ val field_def_by_inv = store_thm(
 *)
 
 (* Define the field of units of a ring. *)
-val field_units_def = Define`
+Definition field_units_def:
   field_units (r:'a ring) : 'a field =
     <| carrier := R;
            sum := r.sum;
           prod := r* including #0
      |>
-`;
+End
 (*
 - type_of ``field_units r``;
 > val it = ``:'a field`` : hol_type
@@ -3415,8 +3410,4 @@ val field_subgroup_card = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

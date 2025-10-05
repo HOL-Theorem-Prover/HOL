@@ -1,4 +1,9 @@
-open HolKernel Parse boolLib bossLib;
+Theory semi_automaton
+Ancestors
+  infinite_path pred_set list pair xprop_logic container
+  prop_logic set_lemmata prim_rec temporal_deep_mixed
+Libs
+  tuerk_tacticsLib Sanity
 
 (*
 quietdec := true;
@@ -12,11 +17,6 @@ map load
    "containerTheory", "prim_recTheory", "tuerk_tacticsLib", "temporal_deep_mixedTheory"];
 *)
 
-open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory
-     containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
-     tuerk_tacticsLib temporal_deep_mixedTheory;
-open Sanity;
-
 val _ = hide "S";
 val _ = hide "I";
 
@@ -29,7 +29,6 @@ quietdec := false;
 *)
 
 
-val _ = new_theory "semi_automaton";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -51,37 +50,37 @@ Theorem semi_automaton_REWRITES =
                    TypeBase.accessors_of “:(α,β)semi_automaton”)
 
 
-val IS_WELL_FORMED_SEMI_AUTOMATON_def =
- Define
-  `IS_WELL_FORMED_SEMI_AUTOMATON A =
+Definition IS_WELL_FORMED_SEMI_AUTOMATON_def:
+   IS_WELL_FORMED_SEMI_AUTOMATON A =
     (FINITE A.S /\ FINITE A.I /\ A.S0 SUBSET (A.S CROSS (POW A.I)) /\
-     A.R SUBSET (A.S CROSS ((POW A.I) CROSS (A.S CROSS (POW A.I)))))`
+     A.R SUBSET (A.S CROSS ((POW A.I) CROSS (A.S CROSS (POW A.I)))))
+End
 
 (*****************************************************************************)
 (* RUN A i w is true iff p is a run of i through A                             *)
 (*****************************************************************************)
-val IS_RUN_THROUGH_SEMI_AUTOMATON_def =
- Define
-  `IS_RUN_THROUGH_SEMI_AUTOMATON A i w =
+Definition IS_RUN_THROUGH_SEMI_AUTOMATON_def:
+   IS_RUN_THROUGH_SEMI_AUTOMATON A i w =
     ((!n. w n IN A.S) /\
      ((w 0, (i 0) INTER A.I) IN A.S0) /\
-    (!n. (w n, (i n) INTER A.I, w (SUC n), (i (SUC n)) INTER A.I) IN A.R))`;
+    (!n. (w n, (i n) INTER A.I, w (SUC n), (i (SUC n)) INTER A.I) IN A.R))
+End
 
 
-val IS_RUN_THROUGH_SEMI_AUTOMATON_TO_STATE_def =
- Define
-  `IS_RUN_THROUGH_SEMI_AUTOMATON_TO_STATE A i w s m =
+Definition IS_RUN_THROUGH_SEMI_AUTOMATON_TO_STATE_def:
+   IS_RUN_THROUGH_SEMI_AUTOMATON_TO_STATE A i w s m =
     ((!n. n <= m ==> (w n IN A.S)) /\
      ((w 0, (i 0) INTER A.I) IN A.S0) /\ (w m = s) /\
-    (!n. n < m ==> ((w n, (i n) INTER A.I, w (SUC n), (i (SUC n)) INTER A.I) IN A.R)))`;
+    (!n. n < m ==> ((w n, (i n) INTER A.I, w (SUC n), (i (SUC n)) INTER A.I) IN A.R)))
+End
 
 
-val IS_DET_TOTAL_SEMI_AUTOMATON_def =
- Define
-  `IS_DET_TOTAL_SEMI_AUTOMATON A =
+Definition IS_DET_TOTAL_SEMI_AUTOMATON_def:
+   IS_DET_TOTAL_SEMI_AUTOMATON A =
     ((!i. ?!x. (x, i INTER A.I) IN A.S0) /\
      !s i i'. (s IN A.S /\ i SUBSET A.I /\ i' SUBSET A.I) ==>
-           (?!s'. (s, i, s', i') IN A.R))`;
+           (?!s'. (s, i, s', i') IN A.R))
+End
 
 
 val IS_DET_TOTAL_SEMI_AUTOMATON___UNIQUE_RUN_EXISTS =
@@ -165,11 +164,11 @@ val IS_DET_TOTAL_SEMI_AUTOMATON___UNIQUE_RUN_EXISTS =
 
 
 
-val SEMI_AUTOMATON_STATE_VAR_RENAMING_def =
- Define
-  `SEMI_AUTOMATON_STATE_VAR_RENAMING A f g =
+Definition SEMI_AUTOMATON_STATE_VAR_RENAMING_def:
+   SEMI_AUTOMATON_STATE_VAR_RENAMING A f g =
     (semi_automaton (IMAGE f A.S) A.I (\(s,i). (g s, i) IN A.S0)
-                     (\(s1, i, s2, i'). (g s1, i, g s2, i') IN A.R))`;
+                     (\(s1, i, s2, i'). (g s1, i, g s2, i') IN A.R))
+End
 
 val SEMI_AUTOMATON_STATE_VAR_RENAMING___RUN =
   store_thm (
@@ -208,4 +207,3 @@ METIS_TAC[FST, SND]);
 
 
 
-val _ = export_theory();

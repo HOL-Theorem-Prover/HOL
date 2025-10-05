@@ -91,8 +91,9 @@ val one = store_thm("one[simp]",
     Prove also the following theorem:
  ---------------------------------------------------------------------------*)
 
-val one_Axiom = store_thm("one_Axiom",
-    “!e:'a. ?!fn. fn one = e”,
+Theorem one_Axiom:
+     !e:'a. ?!fn. fn one = e
+Proof
     STRIP_TAC THEN
     CONV_TAC EXISTS_UNIQUE_CONV THEN
     STRIP_TAC THENL
@@ -101,7 +102,8 @@ val one_Axiom = store_thm("one_Axiom",
      REPEAT STRIP_TAC THEN
      CONV_TAC FUN_EQ_CONV THEN
      ONCE_REWRITE_TAC [one] THEN
-     ASM_REWRITE_TAC[]]);
+     ASM_REWRITE_TAC[]]
+QED
 
 val one_prim_rec = store_thm
  ("one_prim_rec",
@@ -134,15 +136,17 @@ val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT,0)),
 val _ = overload_on ("()", ``one``);
 val _ = type_abbrev_pp("unit",``:one``);
 
-val one_induction = Q.store_thm
-("one_induction",
- `!P:one->bool. P one ==> !x. P x`,
- REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC [one] THEN ASM_REWRITE_TAC[]);
+Theorem one_induction:
+  !P:one->bool. P one ==> !x. P x
+Proof
+ REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC [one] THEN ASM_REWRITE_TAC[]
+QED
 
-val FORALL_ONE = store_thm(
-  "FORALL_ONE[simp]",
-  ``(!x:unit. P x) <=> P ()``,
-  simpLib.SIMP_TAC boolSimps.bool_ss [EQ_IMP_THM, one_induction]);
+Theorem FORALL_ONE[simp]:
+    (!x:unit. P x) <=> P ()
+Proof
+  simpLib.SIMP_TAC boolSimps.bool_ss [EQ_IMP_THM, one_induction]
+QED
 
 (* This (and the next) was in examples/lambda/basics/termSceipt.sml, etc. *)
 Theorem FORALL_ONE_FN :
@@ -173,10 +177,11 @@ val one_case_def = new_definition (
   "one_case_def",
   Term`one_CASE (u:unit) (x:'a) = x`);
 
-val one_case_thm = Q.store_thm
- ("one_case_thm",
-  `!x:'a. one_CASE () x = x`,
-  ONCE_REWRITE_TAC [GSYM one] THEN REWRITE_TAC [one_case_def]);
+Theorem one_case_thm:
+   !x:'a. one_CASE () x = x
+Proof
+  ONCE_REWRITE_TAC [GSYM one] THEN REWRITE_TAC [one_case_def]
+QED
 
 
 val _ = TypeBase.export (

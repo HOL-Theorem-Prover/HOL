@@ -1,7 +1,6 @@
-open HolKernel boolLib bossLib
-     listTheory rich_listTheory arithmeticTheory
-
-val _ = new_theory"balancedParens"
+Theory balancedParens
+Ancestors
+  list rich_list arithmetic
 
 val _ = Datatype`alpha = a | b`; (* a = "(", b = ")"  *)
 
@@ -37,11 +36,12 @@ val ST = Q.store_thm("ST",
 val T_iff_S = Q.store_thm("T_iff_S",
   `T w ⇔ S w`, metis_tac[TS,ST]);
 
-val balanced_def = Define`
+Definition balanced_def:
   (balanced [] 0 ⇔ T) ∧
   (balanced (a::xs) n ⇔ balanced xs (SUC n)) ∧
   (balanced (b::xs) (SUC n) ⇔ balanced xs n) ∧
-  (balanced _ _ ⇔ F)`
+  (balanced _ _ ⇔ F)
+End
 val _ = export_rewrites["balanced_def"]
 val balanced_ind = theorem"balanced_ind"
 
@@ -81,4 +81,3 @@ val balanced_iff_S = Q.store_thm("balanced_iff_S",
   `balanced w 0 ⇔ S w`,
   metis_tac[balanced_S,S_balanced,REPLICATE,APPEND])
 
-val _ = export_theory()

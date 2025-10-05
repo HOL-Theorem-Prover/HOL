@@ -47,22 +47,17 @@ load "PrimitiveBddRules";
 load "ListPair";
 *)
 
-(* Needed for compilation *)
-open HolKernel Parse boolLib;
+Theory KatiPuzzle
+Ancestors
+  pair
+Libs
+  HolBddLib bdd pairSyntax pairTools
+
 infixr 3 -->;
 infix 9 by;
 infix ++;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 (**)
-
-open bossLib;
-open HolBddLib;
-open bdd;
-open pairSyntax;
-open pairTools;
-open pairTheory;
-
-val _ = new_theory "KatiPuzzle";
 
 (*****************************************************************************)
 (* Varmap (i.e. variable ordering) for later use                             *)
@@ -82,18 +77,17 @@ val basic_varmap =
 (* Initial state                                                             *)
 (*****************************************************************************)
 
-val Init_def =
- Define
-  `Init(v0,v1,v2,v3,v4,v5,v6,v7,v8,c0:bool,c1:bool,c2:bool,c3:bool) =
-    (~v0 /\ v1 /\ ~v2 /\ v3 /\ ~v4 /\ v5 /\ ~v6 /\ v7 /\ ~v8)`;
+Definition Init_def:
+   Init(v0,v1,v2,v3,v4,v5,v6,v7,v8,c0:bool,c1:bool,c2:bool,c3:bool) =
+    (~v0 /\ v1 /\ ~v2 /\ v3 /\ ~v4 /\ v5 /\ ~v6 /\ v7 /\ ~v8)
+End
 
 (*****************************************************************************)
 (* Transition relation                                                       *)
 (*****************************************************************************)
 
-val Trans_def =
- Define
-  `Trans((v0,v1,v2,v3,v4,v5,v6,v7,v8,c0:bool,c1:bool,c2:bool,c3:bool),
+Definition Trans_def:
+   Trans((v0,v1,v2,v3,v4,v5,v6,v7,v8,c0:bool,c1:bool,c2:bool,c3:bool),
          (v0',v1',v2',v3',v4',v5',v6',v7',v8',c0',c1',c2',c3')) =
     (((v0'=~v0)/\(v1'=~v1)/\(v2'=v2)/\(v3'=~v3)/\(v4'=v4)/\    (* toggle 0 *)
      (v5'=v5)/\(v6'=v6)/\(v7'=v7)/\(v8'=v8) /\ ~c3' /\ ~c2' /\ ~c1' /\~c0')
@@ -120,16 +114,17 @@ val Trans_def =
      (v5'=v5)/\(v6'=~v6)/\(v7'=~v7)/\(v8'=~v8) /\ ~c3' /\ c2' /\ c1' /\ c0')
     \/
     ((v0'=v0)/\(v1'=v1)/\(v2'=v2)/\(v3'=v3)/\(v4'=v4)/\       (* toggle 8 *)
-     (v5'=~v5)/\(v6'=v6)/\(v7'=~v7)/\(v8'=~v8) /\ c3' /\ ~c2' /\ ~c1' /\ ~c0'))`;
+     (v5'=~v5)/\(v6'=v6)/\(v7'=~v7)/\(v8'=~v8) /\ c3' /\ ~c2' /\ ~c1' /\ ~c0'))
+End
 
 (*****************************************************************************)
 (* Final state                                                               *)
 (*****************************************************************************)
 
-val Final_def =
- Define
-  `Final(v0,v1,v2,v3,v4,v5,v6,v7,v8,c0:bool,c1:bool,c2:bool,c3:bool) =
-    (~v0 /\ ~v1 /\ ~v2 /\ ~v3 /\ ~v4 /\ ~v5 /\ ~v6 /\ ~v7 /\ ~v8)`;
+Definition Final_def:
+   Final(v0,v1,v2,v3,v4,v5,v6,v7,v8,c0:bool,c1:bool,c2:bool,c3:bool) =
+    (~v0 /\ ~v1 /\ ~v2 /\ ~v3 /\ ~v4 /\ ~v5 /\ ~v6 /\ ~v7 /\ ~v8)
+End
 
 val (_,thl,thfin) = findTrace basic_varmap Trans_def Init_def Final_def;
 
@@ -275,6 +270,3 @@ The number shows the position toggled to get to the following state
       F --- F --- F
 
 *)
-
-
-val _ = export_theory();

@@ -39,73 +39,87 @@ val bias_frac_tm = eval [] ``^bias_tm + ^fracw_tm``
    Useful lemmas.
    ------------------------------------------------------------------------- *)
 
-val SIGN = Q.store_thm ("SIGN",
-  `!a. sign a = FST a`,
-  gen_tac \\ pairLib.PairCases_on `a` \\ simp [sign])
+Theorem SIGN:
+   !a. sign a = FST a
+Proof
+  gen_tac \\ pairLib.PairCases_on `a` \\ simp [sign]
+QED
 
-val EXPONENT = Q.store_thm ("EXPONENT",
-  `!a. exponent a = FST (SND a)`,
-  gen_tac \\ pairLib.PairCases_on `a` \\ simp [exponent])
+Theorem EXPONENT:
+   !a. exponent a = FST (SND a)
+Proof
+  gen_tac \\ pairLib.PairCases_on `a` \\ simp [exponent]
+QED
 
-val FRACTION = Q.store_thm ("FRACTION",
-  `!a. fraction a = SND (SND a)`,
-  gen_tac \\ pairLib.PairCases_on `a` \\ simp [fraction])
+Theorem FRACTION:
+   !a. fraction a = SND (SND a)
+Proof
+  gen_tac \\ pairLib.PairCases_on `a` \\ simp [fraction]
+QED
 
-val IS_VALID = Q.store_thm ("IS_VALID",
-  `!X a. is_valid X a =
+Theorem IS_VALID:
+   !X a. is_valid X a =
          sign a < 2 /\ exponent a < 2 EXP (expwidth X) /\
-         fraction a < 2 EXP (fracwidth X)`,
+         fraction a < 2 EXP (fracwidth X)
+Proof
   REPEAT gen_tac
   \\ pairLib.PairCases_on `a`
   \\ simp [is_valid, sign, exponent, fraction]
-  )
+QED
 
-val VALOF = Q.store_thm ("VALOF",
-  `!X a.
+Theorem VALOF:
+   !X a.
       valof X a =
       if exponent a = 0 then
         ~1 pow sign a * (2 / 2 pow bias X) * (&fraction a / 2 pow fracwidth X)
       else
         ~1 pow sign a * (2 pow exponent a / 2 pow bias X) *
-       (1 + &fraction a / 2 pow fracwidth X)`,
+       (1 + &fraction a / 2 pow fracwidth X)
+Proof
   REPEAT gen_tac
   \\ pairLib.PairCases_on `a`
   \\ simp [valof, sign, exponent, fraction]
-  )
+QED
 
 (*-----------------------*)
 
-val IS_VALID_DEFLOAT = Q.store_thm ("IS_VALID_DEFLOAT",
-  `!a. is_valid float_format (defloat a)`,
-  REWRITE_TAC[float_tybij])
+Theorem IS_VALID_DEFLOAT:
+   !a. is_valid float_format (defloat a)
+Proof
+  REWRITE_TAC[float_tybij]
+QED
 
-val IS_FINITE_EXPLICIT = Q.store_thm ("IS_FINITE_EXPLICIT",
-  `!a. is_finite float_format a =
-       sign a < 2 /\ exponent a < ^emax_tm /\ fraction a < ^frac_tm`,
+Theorem IS_FINITE_EXPLICIT:
+   !a. is_finite float_format a =
+       sign a < 2 /\ exponent a < ^emax_tm /\ fraction a < ^frac_tm
+Proof
   gen_tac
   \\ pairLib.PairCases_on `a`
   \\ simp [is_valid, is_finite, is_normal, is_denormal, is_zero, exponent, emax,
            float_format, fraction, expwidth, fracwidth, sign]
-  )
+QED
 
 (*-----------------------*)
 
-val FLOAT_CASES = Q.store_thm ("FLOAT_CASES",
-  `!a. Isnan a \/ Infinity a \/ Isnormal a \/ Isdenormal a \/ Iszero a`,
+Theorem FLOAT_CASES:
+   !a. Isnan a \/ Infinity a \/ Isnormal a \/ Isdenormal a \/ Iszero a
+Proof
   gen_tac
   \\ mp_tac (Q.SPEC `a:float` IS_VALID_DEFLOAT)
   \\ rw [Isnan, Infinity, Isnormal, Isdenormal, Iszero,
          is_nan, is_infinity, is_normal, is_denormal, is_zero, IS_VALID, emax]
-  )
+QED
 
-val FLOAT_CASES_FINITE = Q.store_thm ("FLOAT_CASES_FINITE",
-  `!a. Isnan a \/ Infinity a \/ Finite a`,
-  rewrite_tac [FLOAT_CASES, Finite])
+Theorem FLOAT_CASES_FINITE:
+   !a. Isnan a \/ Infinity a \/ Finite a
+Proof
+  rewrite_tac [FLOAT_CASES, Finite]
+QED
 
 (*-----------------------*)
 
-val FLOAT_DISTINCT = Q.store_thm ("FLOAT_DISTINCT",
-  `!a. ~(Isnan a /\ Infinity a) /\
+Theorem FLOAT_DISTINCT:
+   !a. ~(Isnan a /\ Infinity a) /\
        ~(Isnan a /\ Isnormal a) /\
        ~(Isnan a /\ Isdenormal a) /\
        ~(Isnan a /\ Iszero a) /\
@@ -114,20 +128,25 @@ val FLOAT_DISTINCT = Q.store_thm ("FLOAT_DISTINCT",
        ~(Infinity a /\ Iszero a) /\
        ~(Isnormal a /\ Isdenormal a) /\
        ~(Isnormal a /\ Iszero a) /\
-       ~(Isdenormal a /\ Iszero a)`,
+       ~(Isdenormal a /\ Iszero a)
+Proof
   rw [Isnan, Infinity, Isnormal, Isdenormal, Iszero,
       is_nan, is_infinity, is_normal, is_denormal, is_zero,
-      float_format, emax, expwidth, exponent, fraction])
+      float_format, emax, expwidth, exponent, fraction]
+QED
 
-val FLOAT_DISTINCT_FINITE = Q.store_thm ("FLOAT_DISTINCT_FINITE",
-  `!a. ~(Isnan a /\ Infinity a) /\ ~(Isnan a /\ Finite a) /\
-       ~(Infinity a /\ Finite a)`,
-  prove_tac [FLOAT_DISTINCT, Finite])
+Theorem FLOAT_DISTINCT_FINITE:
+   !a. ~(Isnan a /\ Infinity a) /\ ~(Isnan a /\ Finite a) /\
+       ~(Infinity a /\ Finite a)
+Proof
+  prove_tac [FLOAT_DISTINCT, Finite]
+QED
 
 (*-----------------------*)
 
-val FLOAT_INFINITIES_SIGNED = Q.store_thm ("FLOAT_INFINITIES_SIGNED",
-  `(sign (defloat Plus_infinity) = 0) /\ (sign (defloat Minus_infinity) = 1)`,
+Theorem FLOAT_INFINITIES_SIGNED:
+   (sign (defloat Plus_infinity) = 0) /\ (sign (defloat Minus_infinity) = 1)
+Proof
   `(defloat (float (plus_infinity float_format)) =
     plus_infinity float_format) /\
    (defloat(float(minus_infinity float_format)) =
@@ -135,10 +154,11 @@ val FLOAT_INFINITIES_SIGNED = Q.store_thm ("FLOAT_INFINITIES_SIGNED",
   by simp [GSYM float_tybij, is_valid, plus_infinity, minus_infinity,
            float_format, emax, fracwidth, expwidth]
   \\ fs [Plus_infinity, Minus_infinity, sign, plus_infinity, minus_infinity]
-  )
+QED
 
-val INFINITY_IS_INFINITY = Q.store_thm ("INFINITY_IS_INFINITY",
-  `Infinity Plus_infinity /\ Infinity Minus_infinity`,
+Theorem INFINITY_IS_INFINITY:
+   Infinity Plus_infinity /\ Infinity Minus_infinity
+Proof
   `(defloat (float (plus_infinity float_format)) =
     plus_infinity float_format) /\
    (defloat (float (minus_infinity float_format)) =
@@ -147,32 +167,38 @@ val INFINITY_IS_INFINITY = Q.store_thm ("INFINITY_IS_INFINITY",
            float_format, emax, fracwidth, expwidth]
   \\ fs [Infinity, Plus_infinity, Minus_infinity, is_infinity, plus_infinity,
          minus_infinity, exponent, fraction]
-  )
+QED
 
-val ZERO_IS_ZERO = Q.store_thm ("ZERO_IS_ZERO",
-  `Iszero Plus_zero /\ Iszero Minus_zero`,
+Theorem ZERO_IS_ZERO:
+   Iszero Plus_zero /\ Iszero Minus_zero
+Proof
   `(defloat (float (plus_zero float_format)) = plus_zero float_format) /\
    (defloat (float (minus_zero float_format)) = minus_zero float_format)`
   by simp [GSYM float_tybij, is_valid, plus_zero, minus_zero, float_format,
            emax, fracwidth, expwidth]
   \\ fs [Iszero, Plus_zero, Minus_zero, is_zero, plus_zero, minus_zero,
           exponent, fraction]
-  )
+QED
 
 (*-----------------------*)
 
-val INFINITY_NOT_NAN = Q.store_thm ("INFINITY_NOT_NAN",
-  `~Isnan Plus_infinity /\ ~Isnan Minus_infinity`,
-  PROVE_TAC [INFINITY_IS_INFINITY, FLOAT_DISTINCT_FINITE])
+Theorem INFINITY_NOT_NAN:
+   ~Isnan Plus_infinity /\ ~Isnan Minus_infinity
+Proof
+  PROVE_TAC [INFINITY_IS_INFINITY, FLOAT_DISTINCT_FINITE]
+QED
 
-val ZERO_NOT_NAN = Q.store_thm ("ZERO_NOT_NAN",
-  `~Isnan Plus_zero /\ ~Isnan Minus_zero`,
-  PROVE_TAC [ZERO_IS_ZERO, FLOAT_DISTINCT])
+Theorem ZERO_NOT_NAN:
+   ~Isnan Plus_zero /\ ~Isnan Minus_zero
+Proof
+  PROVE_TAC [ZERO_IS_ZERO, FLOAT_DISTINCT]
+QED
 
 (*-----------------------*)
 
-val FLOAT_INFINITIES = Q.store_thm ("FLOAT_INFINITIES",
-  `!a. Infinity a = (a == Plus_infinity) \/ (a == Minus_infinity)`,
+Theorem FLOAT_INFINITIES:
+   !a. Infinity a = (a == Plus_infinity) \/ (a == Minus_infinity)
+Proof
   gen_tac
   \\ strip_assume_tac (Q.SPEC `a:float` FLOAT_CASES_FINITE)
   >- (`~Infinity a` by prove_tac [FLOAT_DISTINCT_FINITE]
@@ -190,16 +216,17 @@ val FLOAT_INFINITIES = Q.store_thm ("FLOAT_INFINITIES",
          REWRITE_RULE [Isnan] INFINITY_NOT_NAN,
          REWRITE_RULE [Infinity] INFINITY_IS_INFINITY,
          FLOAT_INFINITIES_SIGNED]
-  )
+QED
 
-val FLOAT_INFINITES_DISTINCT = Q.store_thm ("FLOAT_INFINITES_DISTINCT",
-  `!a. ~(a == Plus_infinity /\ a == Minus_infinity)`,
+Theorem FLOAT_INFINITES_DISTINCT:
+   !a. ~(a == Plus_infinity /\ a == Minus_infinity)
+Proof
   rw [Plus_infinity, Minus_infinity, feq, float_eq, fcompare]
   \\ fs [REWRITE_RULE [Plus_infinity, Minus_infinity] FLOAT_INFINITIES_SIGNED,
          REWRITE_RULE [Infinity, Plus_infinity, Minus_infinity]
            INFINITY_IS_INFINITY,
          REWRITE_RULE [Isnan, Plus_infinity, Minus_infinity] INFINITY_NOT_NAN]
-  )
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Lifting of the nonexceptional comparison operations.                      *)
@@ -217,39 +244,54 @@ val FLOAT_LIFT_TAC =
   \\ prove_tac [REAL_LT_ANTISYM, REAL_LT_TOTAL]
 
 
-val FLOAT_LT = Q.store_thm ("FLOAT_LT",
-  `!a b. Finite a /\ Finite b ==> (a < b = Val a < Val b)`, FLOAT_LIFT_TAC)
+Theorem FLOAT_LT:
+   !a b. Finite a /\ Finite b ==> (a < b = Val a < Val b)
+Proof FLOAT_LIFT_TAC
+QED
 
-val FLOAT_GT = Q.store_thm ("FLOAT_GT",
-  `!a b. Finite a /\ Finite b ==> (a > b = Val a > Val b)`, FLOAT_LIFT_TAC)
+Theorem FLOAT_GT:
+   !a b. Finite a /\ Finite b ==> (a > b = Val a > Val b)
+Proof FLOAT_LIFT_TAC
+QED
 
-val FLOAT_LE = Q.store_thm ("FLOAT_LE",
-  `!a b. Finite a /\ Finite b ==> (a <= b = Val a <= Val b)`, FLOAT_LIFT_TAC)
+Theorem FLOAT_LE:
+   !a b. Finite a /\ Finite b ==> (a <= b = Val a <= Val b)
+Proof FLOAT_LIFT_TAC
+QED
 
-val FLOAT_GE = Q.store_thm ("FLOAT_GE",
-  `!a b. Finite a /\ Finite b ==> (a >= b = Val a >= Val b)`, FLOAT_LIFT_TAC)
+Theorem FLOAT_GE:
+   !a b. Finite a /\ Finite b ==> (a >= b = Val a >= Val b)
+Proof FLOAT_LIFT_TAC
+QED
 
-val FLOAT_EQ = Q.store_thm ("FLOAT_EQ",
-  `!a b. Finite a /\ Finite b ==> (a == b = (Val a = Val b))`, FLOAT_LIFT_TAC)
+Theorem FLOAT_EQ:
+   !a b. Finite a /\ Finite b ==> (a == b = (Val a = Val b))
+Proof FLOAT_LIFT_TAC
+QED
 
-val FLOAT_EQ_REFL = Q.store_thm ("FLOAT_EQ_REFL",
-  `!a. (a == a) = ~Isnan a`, rw [float_eq, feq, fcompare, Isnan])
+Theorem FLOAT_EQ_REFL:
+   !a. (a == a) = ~Isnan a
+Proof rw [float_eq, feq, fcompare, Isnan]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Various lemmas.                                                           *)
 (* ------------------------------------------------------------------------- *)
 
-val IS_VALID_SPECIAL = Q.store_thm ("IS_VALID_SPECIAL",
-  `!X. is_valid X (minus_infinity X) /\ is_valid X (plus_infinity X) /\
+Theorem IS_VALID_SPECIAL:
+   !X. is_valid X (minus_infinity X) /\ is_valid X (plus_infinity X) /\
        is_valid X (topfloat X)       /\ is_valid X (bottomfloat X) /\
-       is_valid X (plus_zero X)      /\ is_valid X (minus_zero X)`,
+       is_valid X (plus_zero X)      /\ is_valid X (minus_zero X)
+Proof
   simp [is_valid, minus_infinity, plus_infinity, plus_zero, minus_zero,
-        topfloat, bottomfloat, emax])
+        topfloat, bottomfloat, emax]
+QED
 
 (*-------------------------------------------------------*)
 
-val IS_CLOSEST_EXISTS = Q.store_thm ("IS_CLOSEST_EXISTS",
-  `!v x s. FINITE s ==> s <> EMPTY ==> ?a:num#num#num. is_closest v s x a`,
+Theorem IS_CLOSEST_EXISTS:
+   !v x s. FINITE s ==> s <> EMPTY ==> ?a:num#num#num. is_closest v s x a
+Proof
   gen_tac
   \\ gen_tac
   \\ HO_MATCH_MP_TAC FINITE_INDUCT
@@ -269,28 +311,33 @@ val IS_CLOSEST_EXISTS = Q.store_thm ("IS_CLOSEST_EXISTS",
   \\ qpat_x_assum `~(abs (v a - x) <= abs (v e - x))` mp_tac
   \\ simp []
   \\ REAL_ARITH_TAC
-  )
+QED
 
-val CLOSEST_IS_EVERYTHING = Q.store_thm ("CLOSEST_IS_EVERYTHING",
-  `!v p s x.
+Theorem CLOSEST_IS_EVERYTHING:
+   !v p s x.
       FINITE s ==> s <> EMPTY ==>
       is_closest v s x (closest v p s x) /\
-      ((?b:num#num#num. is_closest v s x b /\ p b) ==> p (closest v p s x))`,
+      ((?b:num#num#num. is_closest v s x b /\ p b) ==> p (closest v p s x))
+Proof
   rw [closest]
   \\ SELECT_ELIM_TAC
   \\ prove_tac [IS_CLOSEST_EXISTS]
-  )
+QED
 
-val CLOSEST_IN_SET = Q.store_thm ("CLOSEST_IN_SET",
-  `!v p x s:(num#num#num) set.
-      FINITE s ==> s <> EMPTY ==> (closest v p s x) IN s`,
-  prove_tac [CLOSEST_IS_EVERYTHING, is_closest])
+Theorem CLOSEST_IN_SET:
+   !v p x s:(num#num#num) set.
+      FINITE s ==> s <> EMPTY ==> (closest v p s x) IN s
+Proof
+  prove_tac [CLOSEST_IS_EVERYTHING, is_closest]
+QED
 
 
-val CLOSEST_IS_CLOSEST = Q.store_thm ("CLOSEST_IS_CLOSEST",
-  `!v p x s:(num#num#num) set.
-      FINITE s ==> s <> EMPTY ==> is_closest v s x (closest v p s x)`,
-  prove_tac [CLOSEST_IS_EVERYTHING])
+Theorem CLOSEST_IS_CLOSEST:
+   !v p x s:(num#num#num) set.
+      FINITE s ==> s <> EMPTY ==> is_closest v s x (closest v p s x)
+Proof
+  prove_tac [CLOSEST_IS_EVERYTHING]
+QED
 
 (*-------------------------------------------------------*)
 
@@ -323,9 +370,11 @@ val FINITE_R3 = Q.prove (
             FST a < m /\ FST (SND a) < n /\ SND (SND a) < p}`,
   rw [FLOAT_FIRSTCROSS, IMAGE_FINITE, FLOAT_FIRSTCROSS, FLOAT_FINITECOUNT])
 
-val IS_VALID_FINITE = Q.store_thm ("IS_VALID_FINITE",
-  `FINITE {a:num#num#num | is_valid (X:num#num) a}`,
-  rewrite_tac [IS_VALID, SIGN, EXPONENT, FRACTION, FINITE_R3])
+Theorem IS_VALID_FINITE:
+   FINITE {a:num#num#num | is_valid (X:num#num) a}
+Proof
+  rewrite_tac [IS_VALID, SIGN, EXPONENT, FRACTION, FINITE_R3]
+QED
 
 (*-------------------------------------------------------*)
 
@@ -338,80 +387,95 @@ val MATCH_FLOAT_FINITE = Q.prove (
        FINITE {a | is_finite X a}`,
   metis_tac [SUBSET_FINITE, IS_VALID_FINITE])
 
-val IS_FINITE_FINITE = Q.store_thm ("IS_FINITE_FINITE",
-  `!X. FINITE {a | is_finite X a}`,
-  metis_tac [MATCH_FLOAT_FINITE, FLOAT_IS_FINITE_SUBSET])
+Theorem IS_FINITE_FINITE:
+   !X. FINITE {a | is_finite X a}
+Proof
+  metis_tac [MATCH_FLOAT_FINITE, FLOAT_IS_FINITE_SUBSET]
+QED
 
 (*-----------------------*)
 
-val IS_VALID_NONEMPTY = Q.store_thm ("IS_VALID_NONEMPTY",
-  `{a | is_valid X a} <> EMPTY`,
+Theorem IS_VALID_NONEMPTY:
+   {a | is_valid X a} <> EMPTY
+Proof
   rw [EXTENSION]
   \\ qexists_tac `(0,0,0)`
   \\ rw [is_valid]
-  )
+QED
 
-val IS_FINITE_NONEMPTY = Q.store_thm ("IS_FINITE_NONEMPTY",
-  `{a | is_finite X a} <> EMPTY`,
+Theorem IS_FINITE_NONEMPTY:
+   {a | is_finite X a} <> EMPTY
+Proof
   rw [EXTENSION]
   \\ qexists_tac `(0,0,0)`
   \\ rw [is_finite, is_valid, is_zero, exponent, fraction]
-  )
+QED
 
 (*-----------------------*)
 
-val IS_FINITE_CLOSEST = Q.store_thm ("IS_FINITE_CLOSEST",
-  `!X v p x. is_finite X (closest v p {a | is_finite X a} x)`,
+Theorem IS_FINITE_CLOSEST:
+   !X v p x. is_finite X (closest v p {a | is_finite X a} x)
+Proof
   REPEAT gen_tac
   \\ `closest v p {a | is_finite X a} x IN {a | is_finite X a}`
   by metis_tac [CLOSEST_IN_SET, IS_FINITE_FINITE, IS_FINITE_NONEMPTY]
   \\ fs []
-  )
+QED
 
-val IS_VALID_CLOSEST = Q.store_thm ("IS_VALID_CLOSEST",
-  `!X v p x. is_valid X (closest v p {a | is_finite X a} x)`,
-  metis_tac [IS_FINITE_CLOSEST, is_finite])
-
-(*-----------------------*)
-
-val IS_VALID_ROUND = Q.store_thm ("IS_VALID_ROUND",
-  `!X x. is_valid X (round X To_nearest x)`,
-  rw [is_valid, round_def, IS_VALID_SPECIAL, IS_VALID_CLOSEST])
+Theorem IS_VALID_CLOSEST:
+   !X v p x. is_valid X (closest v p {a | is_finite X a} x)
+Proof
+  metis_tac [IS_FINITE_CLOSEST, is_finite]
+QED
 
 (*-----------------------*)
 
-val DEFLOAT_FLOAT_ROUND = Q.store_thm ("DEFLOAT_FLOAT_ROUND",
-  `!x. defloat (float (round float_format To_nearest x)) =
-       round float_format To_nearest x`,
-  rewrite_tac [GSYM float_tybij, IS_VALID_ROUND])
+Theorem IS_VALID_ROUND:
+   !X x. is_valid X (round X To_nearest x)
+Proof
+  rw [is_valid, round_def, IS_VALID_SPECIAL, IS_VALID_CLOSEST]
+QED
 
 (*-----------------------*)
 
-val DEFLOAT_FLOAT_ZEROSIGN_ROUND = Q.store_thm ("DEFLOAT_FLOAT_ZEROSIGN_ROUND",
-  `!x b. defloat (float (zerosign float_format b
+Theorem DEFLOAT_FLOAT_ROUND:
+   !x. defloat (float (round float_format To_nearest x)) =
+       round float_format To_nearest x
+Proof
+  rewrite_tac [GSYM float_tybij, IS_VALID_ROUND]
+QED
+
+(*-----------------------*)
+
+Theorem DEFLOAT_FLOAT_ZEROSIGN_ROUND:
+   !x b. defloat (float (zerosign float_format b
                            (round float_format To_nearest x))) =
-         zerosign float_format b (round float_format To_nearest x)`,
-  rw [GSYM float_tybij, zerosign, IS_VALID_ROUND, IS_VALID_SPECIAL])
+         zerosign float_format b (round float_format To_nearest x)
+Proof
+  rw [GSYM float_tybij, zerosign, IS_VALID_ROUND, IS_VALID_SPECIAL]
+QED
 
 (*-----------------------*)
 
-val VALOF_DEFLOAT_FLOAT_ZEROSIGN_ROUND = Q.store_thm (
-  "VALOF_DEFLOAT_FLOAT_ZEROSIGN_ROUND",
-  `!x b. valof float_format
+Theorem VALOF_DEFLOAT_FLOAT_ZEROSIGN_ROUND:
+   !x b. valof float_format
            (defloat (float (zerosign float_format b
               (round float_format To_nearest x)))) =
-         valof float_format (round float_format To_nearest x)`,
+         valof float_format (round float_format To_nearest x)
+Proof
   rw [DEFLOAT_FLOAT_ZEROSIGN_ROUND, zerosign, minus_zero, plus_zero]
   \\ `?p q r. round float_format To_nearest x = (p, q, r)`
   by metis_tac [pairTheory.pair_CASES]
   \\ fs [is_zero, exponent, fraction, valof]
-  )
+QED
 
 (*--------------------------------------------------------------*)
 
-val ISFINITE = Q.store_thm ("ISFINITE",
-  `!a. Finite a = is_finite float_format (defloat a)`,
-  rewrite_tac [Finite, is_finite, Isnormal, Isdenormal, Iszero, float_tybij])
+Theorem ISFINITE:
+   !a. Finite a = is_finite float_format (defloat a)
+Proof
+  rewrite_tac [Finite, is_finite, Isnormal, Isdenormal, Iszero, float_tybij]
+QED
 
 (*--------------------------------------*)
 
@@ -480,20 +544,22 @@ val FLOAT_LARGEST_EXPLICIT = save_thm ("FLOAT_LARGEST_EXPLICIT",
   EVAL' [largest, float_format, emax, bias, fracwidth, expwidth]
     ``largest float_format``)
 
-val VAL_THRESHOLD = Q.store_thm ("VAL_THRESHOLD",
-  `!a. Finite a ==> abs (Val a) < threshold float_format`,
+Theorem VAL_THRESHOLD:
+   !a. Finite a ==> abs (Val a) < threshold float_format
+Proof
   REPEAT strip_tac
   \\ match_mp_tac REAL_LET_TRANS
   \\ qexists_tac `largest float_format`
   \\ simp [VAL_FINITE, FLOAT_THRESHOLD_EXPLICIT, FLOAT_LARGEST_EXPLICIT]
-  )
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Lifting up of rounding (to nearest).                                      *)
 (* ------------------------------------------------------------------------- *)
 
-val error = Define`
-  error x = Val (float (round float_format To_nearest x)) - x`
+Definition error:
+  error x = Val (float (round float_format To_nearest x)) - x
+End
 
 (*-----------------------*)
 
@@ -517,8 +583,9 @@ val ERROR_AT_WORST_LEMMA = Q.prove (
          abs (error x) <= abs (Val a - x)`,
   rewrite_tac [ISFINITE, Val, error, BOUND_AT_WORST_LEMMA, DEFLOAT_FLOAT_ROUND])
 
-val ERROR_IS_ZERO = Q.store_thm ("ERROR_IS_ZERO",
-  `!a x. Finite a /\ (Val a = x) ==> (error x = 0)`,
+Theorem ERROR_IS_ZERO:
+   !a x. Finite a /\ (Val a = x) ==> (error x = 0)
+Proof
   rw []
   \\ match_mp_tac
       (ERROR_AT_WORST_LEMMA
@@ -526,7 +593,7 @@ val ERROR_IS_ZERO = Q.store_thm ("ERROR_IS_ZERO",
        |> SIMP_RULE (srw_ss())
             [REAL_ABS_0, REAL_ARITH ``abs x <= 0 = (x = 0r)``])
   \\ simp [VAL_THRESHOLD]
-  )
+QED
 
 (*--------------------------------------------------------------*)
 
@@ -930,11 +997,12 @@ val ERROR_BOUND_TINY = Q.prove (
    Stronger versions not requiring exact location of the interval.
    ------------------------------------------------------------------------- *)
 
-val ERROR_BOUND_NORM_STRONG = Q.store_thm ("ERROR_BOUND_NORM_STRONG",
-  `!x j.
+Theorem ERROR_BOUND_NORM_STRONG:
+   !x j.
     abs x < threshold float_format /\
     abs x < 2 pow (SUC j) / 2 pow ^pbias_tm ==>
-    abs (error x) <= 2 pow j / 2 pow ^bias_frac_tm`,
+    abs (error x) <= 2 pow j / 2 pow ^bias_frac_tm
+Proof
   gen_tac
   \\ Induct
   >- (rw_tac std_ss
@@ -1009,16 +1077,17 @@ val ERROR_BOUND_NORM_STRONG = Q.store_thm ("ERROR_BOUND_NORM_STRONG",
         [POW_ADD |> Q.SPECL [`2`, `1`, `^pbias_tm`] |> SIMP_RULE std_ss [],
          REAL_MUL_ASSOC, POW_1,
          pow |> CONJUNCT2 |> ONCE_REWRITE_RULE [REAL_MUL_COMM] |> GSYM]
-  )
+QED
 
 (* -------------------------------------------------------------------------
    "1 + Epsilon" property (relative error bounding).
    ------------------------------------------------------------------------- *)
 
-val normalizes = Define`
+Definition normalizes:
   normalizes x =
   inv (2 pow (bias float_format - 1)) <= abs x /\
-  abs x < threshold float_format`
+  abs x < threshold float_format
+End
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1107,22 +1176,24 @@ val REAL_NEG_IN_BINADE = Q.prove (
            ~x < 2 pow (SUC j) / 2 pow ^pbias_tm`,
   metis_tac [normalizes, ABS_NEG, REAL_POS_IN_BINADE])
 
-val REAL_IN_BINADE = Q.store_thm ("REAL_IN_BINADE",
-  `!x. normalizes x ==>
+Theorem REAL_IN_BINADE:
+   !x. normalizes x ==>
        ?j. j <= emax float_format - 2 /\ 2 pow j / 2 pow ^pbias_tm <= abs x /\
-           abs x < 2 pow (SUC j) / 2 pow ^pbias_tm`,
+           abs x < 2 pow (SUC j) / 2 pow ^pbias_tm
+Proof
   gen_tac
   \\ Cases_on `0 <= x`
   \\ asm_simp_tac arith_ss [abs, REAL_NEG_IN_BINADE, REAL_POS_IN_BINADE,
                             REAL_ARITH ``~(0r <= x) ==> 0 <= ~x``]
-  )
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val ERROR_BOUND_NORM_STRONG_NORMALIZE = Q.store_thm (
-  "ERROR_BOUND_NORM_STRONG_NORMALIZE",
-  `!x. normalizes x ==> ?j. abs (error x) <= 2 pow j / 2 pow ^bias_frac_tm`,
-  metis_tac [REAL_IN_BINADE, ERROR_BOUND_NORM_STRONG, normalizes])
+Theorem ERROR_BOUND_NORM_STRONG_NORMALIZE:
+   !x. normalizes x ==> ?j. abs (error x) <= 2 pow j / 2 pow ^bias_frac_tm
+Proof
+  metis_tac [REAL_IN_BINADE, ERROR_BOUND_NORM_STRONG, normalizes]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1166,10 +1237,11 @@ val RELATIVE_ERROR_ZERO = Q.prove(
   \\ simp [Finite, Iszero, is_zero, exponent, fraction, Val, valof]
   )
 
-val RELATIVE_ERROR = Q.store_thm ("RELATIVE_ERROR",
-  `!x. normalizes x ==>
+Theorem RELATIVE_ERROR:
+   !x. normalizes x ==>
        ?e. abs e <= 1 / 2 pow ^sfracw_tm /\
-           (Val (float (round float_format To_nearest x)) = x * (1 + e))`,
+           (Val (float (round float_format To_nearest x)) = x * (1 + e))
+Proof
   REPEAT strip_tac
   \\ Cases_on `x = 0r` >- metis_tac [RELATIVE_ERROR_ZERO]
   \\ `x < 0r \/ 0 < x` by (POP_ASSUM MP_TAC \\ REAL_ARITH_TAC)
@@ -1208,18 +1280,18 @@ val RELATIVE_ERROR = Q.store_thm ("RELATIVE_ERROR",
            [error, REAL_LDISTRIB, REAL_MUL_RID, REAL_MUL_RINV,
             REAL_SUB_LDISTRIB, REAL_SUB_RDISTRIB, REAL_MUL_LID, REAL_SUB_ADD2,
             REAL_ARITH ``x * (Val qq * inv x) = (x * inv x) * Val qq``])
-  )
+QED
 
 (* -------------------------------------------------------------------------
    We also want to ensure that the result is actually finite!
    ------------------------------------------------------------------------- *)
 
-val DEFLOAT_FLOAT_ZEROSIGN_ROUND_FINITE = Q.store_thm (
-  "DEFLOAT_FLOAT_ZEROSIGN_ROUND_FINITE",
-  `!b x. abs x < threshold float_format ==>
+Theorem DEFLOAT_FLOAT_ZEROSIGN_ROUND_FINITE:
+   !b x. abs x < threshold float_format ==>
          is_finite float_format
            (defloat (float (zerosign float_format b
-                              (round float_format To_nearest x))))`,
+                              (round float_format To_nearest x))))
+Proof
   rw [round_def, REAL_ARITH ``abs x < y = ~(x <= ~y) /\ ~(x >= y)``]
   \\ `is_finite float_format
          (zerosign float_format b
@@ -1229,7 +1301,7 @@ val DEFLOAT_FLOAT_ZEROSIGN_ROUND_FINITE = Q.store_thm (
       \\ simp [IS_FINITE_EXPLICIT, plus_zero, minus_zero, float_format,
                sign, exponent, fraction])
   \\ metis_tac [is_finite, float_tybij]
-  )
+QED
 
 (* -------------------------------------------------------------------------
    Lifting of arithmetic operations.
@@ -1252,30 +1324,38 @@ val lift_arith_tac =
         DEFLOAT_FLOAT_ZEROSIGN_ROUND_FINITE, normalizes]
   \\ metis_tac [Val_FLOAT_ROUND_VALOF]
 
-val FLOAT_ADD = Q.store_thm ("FLOAT_ADD",
-  `!a b.
+Theorem FLOAT_ADD:
+   !a b.
     Finite a /\ Finite b /\ abs (Val a + Val b) < threshold float_format ==>
-    Finite (a + b) /\ (Val (a + b) = Val a + Val b + error (Val a + Val b))`,
-  lift_arith_tac)
+    Finite (a + b) /\ (Val (a + b) = Val a + Val b + error (Val a + Val b))
+Proof
+  lift_arith_tac
+QED
 
-val FLOAT_SUB = Q.store_thm ("FLOAT_SUB",
-  `!a b.
+Theorem FLOAT_SUB:
+   !a b.
     Finite a /\ Finite b /\ abs (Val a - Val b) < threshold float_format ==>
-    Finite (a - b) /\ (Val (a - b) = Val a - Val b + error (Val a - Val b))`,
-  lift_arith_tac)
+    Finite (a - b) /\ (Val (a - b) = Val a - Val b + error (Val a - Val b))
+Proof
+  lift_arith_tac
+QED
 
-val FLOAT_MUL = Q.store_thm ("FLOAT_MUL",
-  `!a b.
+Theorem FLOAT_MUL:
+   !a b.
     Finite a /\ Finite b /\ abs (Val a * Val b) < threshold float_format ==>
-    Finite (a * b) /\ (Val (a * b) = Val a * Val b + error (Val a * Val b))`,
-  lift_arith_tac)
+    Finite (a * b) /\ (Val (a * b) = Val a * Val b + error (Val a * Val b))
+Proof
+  lift_arith_tac
+QED
 
-val FLOAT_DIV = Q.store_thm ("FLOAT_DIV",
-  `!a b.
+Theorem FLOAT_DIV:
+   !a b.
     Finite a /\ Finite b /\ ~Iszero b /\
     abs (Val a / Val b) < threshold float_format ==>
-    Finite (a / b) /\ (Val (a / b) = Val a / Val b + error (Val a / Val b))`,
-  lift_arith_tac)
+    Finite (a / b) /\ (Val (a / b) = Val a / Val b + error (Val a / Val b))
+Proof
+  lift_arith_tac
+QED
 
 (*-----------------------*)
 
@@ -1290,36 +1370,44 @@ val FLOAT_MUL_FINITE = save_thm ("FLOAT_MUL_FINITE", finite_rule FLOAT_MUL)
 
 (*-----------------------*)
 
-val FLOAT_ADD_RELATIVE = Q.store_thm ("FLOAT_ADD_RELATIVE",
-  `!a b.
+Theorem FLOAT_ADD_RELATIVE:
+   !a b.
      Finite a /\ Finite b /\ normalizes (Val a + Val b) ==>
      Finite (a + b) /\
      ?e. abs e <= 1 / 2 pow ^sfracw_tm /\
-         (Val (a + b) = (Val a + Val b) * (1 + e))`,
-  lift_arith_tac)
+         (Val (a + b) = (Val a + Val b) * (1 + e))
+Proof
+  lift_arith_tac
+QED
 
-val FLOAT_SUB_RELATIVE = Q.store_thm ("FLOAT_SUB_RELATIVE",
-  `!a b.
+Theorem FLOAT_SUB_RELATIVE:
+   !a b.
      Finite a /\ Finite b /\ normalizes (Val a - Val b) ==>
      Finite (a - b) /\
      ?e. abs e <= 1 / 2 pow ^sfracw_tm /\
-         (Val (a - b) = (Val a - Val b) * (1 + e))`,
-  lift_arith_tac)
+         (Val (a - b) = (Val a - Val b) * (1 + e))
+Proof
+  lift_arith_tac
+QED
 
-val FLOAT_MUL_RELATIVE = Q.store_thm ("FLOAT_MUL_RELATIVE",
-  `!a b.
+Theorem FLOAT_MUL_RELATIVE:
+   !a b.
      Finite a /\ Finite b /\ normalizes (Val a * Val b) ==>
      Finite (a * b) /\
      ?e. abs e <= 1 / 2 pow ^sfracw_tm /\
-         (Val (a * b) = (Val a * Val b) * (1 + e))`,
-  lift_arith_tac)
+         (Val (a * b) = (Val a * Val b) * (1 + e))
+Proof
+  lift_arith_tac
+QED
 
-val FLOAT_DIV_RELATIVE = Q.store_thm ("FLOAT_DIV_RELATIVE",
-  `!a b.
+Theorem FLOAT_DIV_RELATIVE:
+   !a b.
      Finite a /\ Finite b /\ ~Iszero b /\ normalizes (Val a / Val b) ==>
      Finite (a / b) /\
      ?e. abs e <= 1 / 2 pow ^sfracw_tm /\
-         (Val (a / b) = (Val a / Val b) * (1 + e))`,
-  lift_arith_tac)
+         (Val (a / b) = (Val a / Val b) * (1 + e))
+Proof
+  lift_arith_tac
+QED
 
 (*---------------------------------------------------------------------------*)

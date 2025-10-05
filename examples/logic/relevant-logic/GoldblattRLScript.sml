@@ -1,6 +1,6 @@
-open HolKernel Parse boolLib bossLib stringTheory;
-
-val _ = new_theory "GoldblattRL";
+Theory GoldblattRL
+Ancestors
+  string
 
 Datatype: g_prop = g_VAR string
           | g_IMP g_prop g_prop
@@ -156,4 +156,3 @@ Proof
       metis_tac[g_permutation, g_modus_ponens, g_contrapositive_alt, g_equiv_replacement])
 QED
 
-val _ = export_theory();

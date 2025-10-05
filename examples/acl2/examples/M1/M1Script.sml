@@ -11,28 +11,11 @@ open imported_acl2Theory;
 quietdec := false;                                   (* Restore output       *)
 *)
 
-
-(******************************************************************************
-* Boilerplate needed for compilation: open HOL4 systems modules.
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories (including ratTheory from Jens Brandt).
-******************************************************************************)
-
-open stringLib complex_rationalTheory acl2_packageTheory sexp sexpTheory
-     imported_acl2Theory;
-
-(*****************************************************************************)
-(* END BOILERPLATE                                                           *)
-(*****************************************************************************)
-
-(******************************************************************************
-* Start a new theory called M1
-******************************************************************************)
-
-val _ = new_theory "M1";
+Theory M1
+Ancestors
+  complex_rational acl2_package sexp imported_acl2
+Libs
+  stringLib sexp
 
 val simp_fn =
  SIMP_RULE
@@ -70,5 +53,3 @@ val ifact_sched_def =
 
 val test_ifact_examples =
  save_thm("test_ifact_examples", simp_fn test_ifact_examples_thm);
-
-val _ = export_theory();

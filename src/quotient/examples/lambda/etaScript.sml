@@ -150,10 +150,10 @@ val _ = save_thm ("ETA_R_strong_ind", ETA_R_strong_ind);
 
 (* ETA_R is a deterministic relation. *)
 
-val ETA_R_deterministic = store_thm
-   ("ETA_R_deterministic",
-    “!t:^term u1 u2.
-         ETA_R t u1 /\ ETA_R t u2 ==> (u1 = u2)”,
+Theorem ETA_R_deterministic:
+     !t:^term u1 u2.
+         ETA_R t u1 /\ ETA_R t u2 ==> (u1 = u2)
+Proof
     REWRITE_TAC ETA_R_inv_thms
     THEN REPEAT STRIP_TAC
     THEN UNDISCH_TAC ``(t:^term) = Lam x' (App u2 (Var x'))``
@@ -167,16 +167,16 @@ val ETA_R_deterministic = store_thm
     THEN IMP_RES_TAC SUB_RENAME_TERM
     THEN POP_ASSUM (MP_TAC o SPEC “Var x:^term”)
     THEN IMP_RES_THEN REWRITE_THM subst_EMPTY
-   );
+QED
 
 (* Note that ETA_R is not reflexive, symmetric, or transitive. *)
 
 (* ETA_R is monotonically decreasing with respect to free variables. *)
 
-val ETA_FV = store_thm
-   ("ETA_FV",
-    “!t1:^term t2. ETA_R t1 t2 ==>
-                           (FV t2 SUBSET FV t1)”,
+Theorem ETA_FV:
+     !t1:^term t2. ETA_R t1 t2 ==>
+                           (FV t2 SUBSET FV t1)
+Proof
     rule_induct ETA_R_strong_ind
     THEN REWRITE_TAC[FV_term]
     THEN REPEAT STRIP_TAC
@@ -185,7 +185,7 @@ val ETA_FV = store_thm
     THEN IMP_RES_TAC IN_NOT_IN
     THEN REWRITE_TAC[IN_UNION,IN_DIFF]
     THEN ASM_REWRITE_TAC[IN]
-   );
+QED
 
 
 
@@ -196,10 +196,10 @@ val ETA_FV = store_thm
 (* not appear free in the term.                                    *)
 (* --------------------------------------------------------------- *)
 
-val SUBST_IS_SAME = store_thm
-   ("SUBST_IS_SAME",
-    “!t:^term x y. ((t <[ [x,Var y]) = t) ==>
-                      ((x = y) \/ ~(x IN FV t))”,
+Theorem SUBST_IS_SAME:
+     !t:^term x y. ((t <[ [x,Var y]) = t) ==>
+                      ((x = y) \/ ~(x IN FV t))
+Proof
     MUTUAL_INDUCT_THEN term_height_induct ASSUME_TAC
     THEN REPEAT GEN_TAC
     THENL (* 4 subgoals *)
@@ -228,7 +228,7 @@ val SUBST_IS_SAME = store_thm
         THEN RES_TAC
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 
 (* -------------------------------------------------------------------- *)
@@ -280,9 +280,9 @@ QED
 
 (* Barendregt Proposition 3.3.3, ETA_R is substitutive. *)
 
-val ETA_R_SUBSTITUTIVE = store_thm
-   ("ETA_R_SUBSTITUTIVE",
-    “SUBSTITUTIVE (ETA_R:^term_rel)”,
+Theorem ETA_R_SUBSTITUTIVE:
+     SUBSTITUTIVE (ETA_R:^term_rel)
+Proof
     REWRITE_TAC[SUBSTITUTIVE]
     THEN REPEAT GEN_TAC
     THEN DISCH_THEN (STRIP_ASSUME_TAC o REWRITE_RULE ETA_R_inv_thms)
@@ -300,7 +300,7 @@ val ETA_R_SUBSTITUTIVE = store_thm
     THEN ASM_REWRITE_TAC[SUB_term,SUB]
     THEN REWRITE_TAC[term_one_one]
     THEN IMP_RES_THEN REWRITE_THM subst_EMPTY
-   );
+QED
 
 (* --------------------------------------------------------------- *)
 (* Much of the following development could be moved to the theory  *)
@@ -332,11 +332,11 @@ handle e => (Raise e);
 
 (* Now R |= <> iff R <=> R. *)
 
-val DIAMOND_COMMUTES_SELF = store_thm
-   ("DIAMOND_COMMUTES_SELF",
-    “!R:'a->'a->bool. DIAMOND R = (R <=> R)”,
+Theorem DIAMOND_COMMUTES_SELF:
+     !R:'a->'a->bool. DIAMOND R = (R <=> R)
+Proof
     REWRITE_TAC[DIAMOND,COMMUTE]
-   );
+QED
 
 
 (* ------------------------------------- *)
@@ -350,13 +350,13 @@ val UNION_R =
          (\(a:'a) (b:'b). R1 a b \/ R2 a b)”,
      500);
 
-val IN_UNION_R = store_thm
-   ("IN_UNION_R",
-    “!(R1:'a->'b->bool) R2 x y. (R1 UNION_R R2) x y <=> R1 x y \/ R2 x y”,
+Theorem IN_UNION_R:
+     !(R1:'a->'b->bool) R2 x y. (R1 UNION_R R2) x y <=> R1 x y \/ R2 x y
+Proof
     REWRITE_TAC[UNION_R]
     THEN BETA_TAC
     THEN REWRITE_TAC[]
-   );
+QED
 
 
 (* --------------------------------------------------------- *)
@@ -430,18 +430,18 @@ val DIAMOND_TC_UNION2 = TAC_PROOF(([],
 (* Barendregt Proposition 3.3.5(i) (page 64):   *)
 (* -------------------------------------------- *)
 
-val DIAMOND_TC_UNION = store_thm
-   ("DIAMOND_TC_UNION",
-    “!(R1:'a->'a->bool) R2.
+Theorem DIAMOND_TC_UNION:
+     !(R1:'a->'a->bool) R2.
           DIAMOND R1 /\ DIAMOND R2 /\ (R1 <=> R2) ==>
-          DIAMOND (TC (R1 UNION_R R2))”,
+          DIAMOND (TC (R1 UNION_R R2))
+Proof
     REPEAT STRIP_TAC
     THEN REWRITE_TAC[DIAMOND]
     THEN REPEAT STRIP_TAC
     THEN IMP_RES_TAC DIAMOND_TC_UNION2
     THEN EXISTS_TAC ``d'':'a``
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
 val RED1_COMPAT = REWRITE_RULE[compatible] RED1_compatible;
@@ -510,9 +510,9 @@ val RED1_UNION3 = TAC_PROOF(([],
       ]
    );
 
-val RED1_UNION = store_thm
-   ("RED1_UNION",
-    “!R1:^term_rel R2. RED1 (R1 UNION_R R2) = (RED1 R1 UNION_R RED1 R2)”,
+Theorem RED1_UNION:
+     !R1:^term_rel R2. RED1 (R1 UNION_R R2) = (RED1 R1 UNION_R RED1 R2)
+Proof
     CONV_TAC (TOP_DEPTH_CONV FUN_EQ_CONV)
     THEN REPEAT GEN_TAC
     THEN EQ_TAC
@@ -529,7 +529,7 @@ val RED1_UNION = store_thm
           ]
         THEN FIRST_ASSUM ACCEPT_TAC
       ]
-   );
+QED
 
 (* --------------------------------------------------------------------- *)
 (* The above was for one-step reduction, RED1.  We now prove the         *)
@@ -617,9 +617,9 @@ val RED_UNION4 = TAC_PROOF(([],
 
 (* Remark of Barendregt at bottom of page 64. *)
 
-val RED_UNION = store_thm
-   ("RED_UNION",
-    “!R1:^term_rel R2. RED (R1 UNION_R R2) = TC (RED R1 UNION_R RED R2)”,
+Theorem RED_UNION:
+     !R1:^term_rel R2. RED (R1 UNION_R R2) = TC (RED R1 UNION_R RED R2)
+Proof
     CONV_TAC (TOP_DEPTH_CONV FUN_EQ_CONV)
     THEN REPEAT GEN_TAC
     THEN EQ_TAC
@@ -631,21 +631,21 @@ val RED_UNION = store_thm
 
         IMP_RES_TAC RED_UNION4
       ]
-   );
+QED
 
 
 (* Barendregt Proposition 3.3.5(ii) (page 64): *)
 
-val COMMUTE_CHURCH_ROSSER = store_thm
-   ("COMMUTE_CHURCH_ROSSER",
-    “!R1:^term_rel R2.
+Theorem COMMUTE_CHURCH_ROSSER:
+     !R1:^term_rel R2.
           CHURCH_ROSSER R1 /\ CHURCH_ROSSER R2 /\
           (RED R1 <=> RED R2) ==>
-          CHURCH_ROSSER (R1 UNION_R R2)”,
+          CHURCH_ROSSER (R1 UNION_R R2)
+Proof
     REWRITE_TAC[CHURCH_ROSSER]
     THEN REWRITE_TAC[RED_UNION]
     THEN REWRITE_TAC[DIAMOND_TC_UNION]
-   );
+QED
 
 
 (* -------------------------------------------------------------- *)
@@ -751,33 +751,33 @@ val COMMUTE_TC_RC4 = TAC_PROOF(([],
 
 (* Barendregt Lemma 3.3.6, page 65. *)
 
-val COMMUTE_TC_RC = store_thm
-   ("COMMUTE_TC_RC",
-    “!R1 R2.
+Theorem COMMUTE_TC_RC:
+     !R1 R2.
           (!a b c:'a. R1 a b /\ R2 a c ==>
                    ?d. TC (RC R2) b d /\ RC R1 c d) ==>
-          (TC (RC R1) <=> TC (RC R2))”,
+          (TC (RC R1) <=> TC (RC R2))
+Proof
     REWRITE_TAC[COMMUTE]
     THEN REPEAT STRIP_TAC
     THEN IMP_RES_TAC COMMUTE_TC_RC4
     THEN EXISTS_TAC “d:'a”
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
 val RED1_ETA_FV  = MATCH_MP RED1_FV ETA_FV;
 val RED1_BETA_FV = MATCH_MP RED1_FV BETA_FV;
 
 
-val RED1_ETA_RENAME = store_thm
-   ("RED1_ETA_RENAME",
-    “!t1:^term t2 t1' x y.
+Theorem RED1_ETA_RENAME:
+     !t1:^term t2 t1' x y.
           RED1 ETA_R t1 t2 /\ (Lam x t1 = Lam y t1') ==>
-          (Lam x t2 = Lam y (t2 <[ [x, Var y]))”,
+          (Lam x t2 = Lam y (t2 <[ [x, Var y]))
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC RED1_ETA_FV
     THEN IMP_RES_TAC LAMBDA_RENAME
-   );
+QED
 
 
 val [RED1_R, RED1_App1, RED1_App2, RED1_Lam] = CONJUNCTS RED1_rules_sat;
@@ -787,21 +787,20 @@ val RED1_ETA_SUBSTITUTIVE = REWRITE_RULE[SUBSTITUTIVE]
 
 (* This is necessary for when we change a bound variable: *)
 
-val RED1_ETA_CHANGE_VAR = store_thm
-   ("RED1_ETA_CHANGE_VAR",
-    “!t1:^term t2 x y t1'.
+Theorem RED1_ETA_CHANGE_VAR:
+     !t1:^term t2 x y t1'.
            RED1 ETA_R t1 t2 /\ (Lam x t1 = Lam y t1')  ==>
-           RED1 ETA_R t1' (t2 <[ [x, Var y])”,
+           RED1 ETA_R t1' (t2 <[ [x, Var y])
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_THEN REWRITE_THM Lam_one_one_RENAME
     THEN MATCH_MP_TAC RED1_ETA_SUBSTITUTIVE
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
-val RED1_ETA_cases = store_thm
-   ("RED1_ETA_cases",
-    “(!a t2:^term.
+Theorem RED1_ETA_cases:
+     (!a t2:^term.
           RED1 ETA_R (Con a) t2 ==> F) /\
         (!x t2:^term.
           RED1 ETA_R (Var x) t2 ==> F) /\
@@ -812,7 +811,8 @@ val RED1_ETA_cases = store_thm
         (!x t t2:^term.
           RED1 ETA_R (Lam x t) t2 ==>
            ((~(x IN FV t2) /\ (t = App t2 (Var x)))) \/
-            (?t'. RED1 ETA_R t t' /\ (t2 = Lam x t')))”,
+            (?t'. RED1 ETA_R t t' /\ (t2 = Lam x t')))
+Proof
     REPEAT CONJ_TAC
     THEN REPEAT GEN_TAC THEN DISCH_THEN (STRIP_ASSUME_TAC o
             REWRITE_RULE[term_distinct,term_one_one] o
@@ -848,17 +848,17 @@ val RED1_ETA_cases = store_thm
         THEN IMP_RES_TAC RED1_ETA_CHANGE_VAR
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 val [RED1_ETA_Con_case, RED1_ETA_Var_case,
      RED1_ETA_App_case, RED1_ETA_Lam_case]
     = CONJUNCTS RED1_ETA_cases;
 
-val RED1_ETA_App_Var_case = store_thm
-   ("RED1_ETA_App_Var_case",
-    “!t x t2:^term.
+Theorem RED1_ETA_App_Var_case:
+     !t x t2:^term.
           RED1 ETA_R (App t (Var x)) t2 ==>
-          (?t'. RED1 ETA_R t t' /\ (t2 = App t' (Var x)))”,
+          (?t'. RED1 ETA_R t t' /\ (t2 = App t' (Var x)))
+Proof
     REPEAT GEN_TAC THEN DISCH_THEN (STRIP_ASSUME_TAC o
             REWRITE_RULE[term_distinct,term_one_one] o
             ONCE_REWRITE_RULE[RED1_inv_thms])
@@ -875,7 +875,7 @@ val RED1_ETA_App_Var_case = store_thm
         THEN DISCH_TAC
         THEN IMP_RES_TAC RED1_ETA_Var_case
       ]
-   );
+QED
 
 
 val RC_RED1_COMPAT    = REWRITE_RULE[compatible] RC_RED1_compatible;
@@ -886,11 +886,11 @@ val TC_RC_RED1_COMPAT = REWRITE_RULE[compatible] TC_RC_RED1_compatible;
 
 (* Barendregt Lemma 3.3.7, page 65. *)
 
-val DIAMOND_RED1_ETA_LEMMA = store_thm
-   ("DIAMOND_RED1_ETA_LEMMA",
-    “!R (M:^term) M1. RED1 R M M1 ==>
+Theorem DIAMOND_RED1_ETA_LEMMA:
+     !R (M:^term) M1. RED1 R M M1 ==>
           !M2. RED1 ETA_R M M2 /\ (R = ETA_R) ==>
-              ?M3. RC (RED1 ETA_R) M1 M3 /\ RC (RED1 ETA_R) M2 M3”,
+              ?M3. RC (RED1 ETA_R) M1 M3 /\ RC (RED1 ETA_R) M2 M3
+Proof
     rule_induct RED1_strong_ind
     THEN REPEAT STRIP_TAC (* 4 subgoals *)
     THEN POP_ASSUM REWRITE_ALL_THM
@@ -984,7 +984,7 @@ val DIAMOND_RED1_ETA_LEMMA = store_thm
             THEN IMP_RES_THEN REWRITE_THM RC_RED1_COMPAT
           ]
       ]
-   );
+QED
 
 val DIAMOND_RED1_ETA_LEMMA1 =
     REWRITE_RULE[] (SPEC ``ETA_R:^term_rel`` DIAMOND_RED1_ETA_LEMMA);
@@ -1025,34 +1025,34 @@ val DIAMOND_RC_RED1_ETA2 = TAC_PROOF(([],
       ]
    );
 
-val DIAMOND_RC_RED1_ETA_LEMMA = store_thm
-   ("DIAMOND_RC_RED1_ETA_LEMMA",
-    “!(M:^term) M1 M2.
+Theorem DIAMOND_RC_RED1_ETA_LEMMA:
+     !(M:^term) M1 M2.
           RC (RED1 ETA_R) M M1 /\ RC (RED1 ETA_R) M M2 ==>
-          ?M3. RC (RED1 ETA_R) M1 M3 /\ RC (RED1 ETA_R) M2 M3”,
+          ?M3. RC (RED1 ETA_R) M1 M3 /\ RC (RED1 ETA_R) M2 M3
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC DIAMOND_RC_RED1_ETA2
     THEN EXISTS_TAC “M3':^term”
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
-val DIAMOND_RC_RED1_ETA = store_thm
-   ("DIAMOND_RC_RED1_ETA",
-    “DIAMOND (RC (RED1 (ETA_R:^term_rel)))”,
+Theorem DIAMOND_RC_RED1_ETA:
+     DIAMOND (RC (RED1 (ETA_R:^term_rel)))
+Proof
     REWRITE_TAC[DIAMOND]
     THEN REWRITE_TAC[DIAMOND_RC_RED1_ETA_LEMMA]
-   );
+QED
 
 
 
-val ETA_R_CHURCH_ROSSER = store_thm
-   ("ETA_R_CHURCH_ROSSER",
-    “CHURCH_ROSSER (ETA_R:^term_rel)”,
+Theorem ETA_R_CHURCH_ROSSER:
+     CHURCH_ROSSER (ETA_R:^term_rel)
+Proof
     REWRITE_TAC[CHURCH_ROSSER]
     THEN REWRITE_TAC[GSYM TC_RC_RED1_IS_RED]
     THEN MATCH_MP_TAC TC_DIAMOND
     THEN REWRITE_TAC[DIAMOND_RC_RED1_ETA]
-   );
+QED
 
 
 
@@ -1060,26 +1060,26 @@ val [RED_RED1, RED_REFL, RED_TRANS]
     = CONJUNCTS (CONV_RULE (DEPTH_CONV LEFT_IMP_EXISTS_CONV) RED_rules_sat);
 
 
-val RED1_BETA_Var_case = store_thm
-   ("RED1_BETA_Var_case",
-    “!x t2:^term.
-          RED1 BETA_R (Var x) t2 ==> F”,
+Theorem RED1_BETA_Var_case:
+     !x t2:^term.
+          RED1 BETA_R (Var x) t2 ==> F
+Proof
     REPEAT GEN_TAC THEN DISCH_THEN (STRIP_ASSUME_TAC o
             REWRITE_RULE[term_distinct,term_one_one] o
             ONCE_REWRITE_RULE[RED1_inv_thms])
     THEN UNDISCH_ALL_TAC
     THEN REWRITE_TAC[BETA_R_inv_thms]
     THEN REWRITE_TAC[term_distinct]
-   );
+QED
 
 
-val RED1_BETA_App_case = store_thm
-   ("RED1_BETA_App_case",
-    “!(t:^term) u t2.
+Theorem RED1_BETA_App_case:
+     !(t:^term) u t2.
           RED1 BETA_R (App t u) t2 ==>
           ((?t'. RED1 BETA_R t t' /\ (t2 = App t' u)) \/
            (?u'. RED1 BETA_R u u' /\ (t2 = App t u')) \/
-           (?x t'. (t = Lam x t') /\ (t2 = t' <[ [x,u])))”,
+           (?x t'. (t = Lam x t') /\ (t2 = t' <[ [x,u])))
+Proof
     REPEAT GEN_TAC THEN DISCH_THEN (STRIP_ASSUME_TAC o
             REWRITE_RULE[term_distinct,term_one_one] o
             ONCE_REWRITE_RULE[RED1_inv_thms])
@@ -1103,18 +1103,18 @@ val RED1_BETA_App_case = store_thm
         THEN EXISTS_TAC ``u2:^term``
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 
 val TC_RC_RED1_SUBSTITUTION_REMARK =
     REWRITE_RULE[GSYM TC_RC_RED1_IS_RED] BARENDREGT_SUBSTITUTION_REMARK;
 
 
-val RED1_BETA_COMMUTES_RED1_ETA_LEMMA1 = store_thm
-   ("RED1_BETA_COMMUTES_RED1_ETA_LEMMA1",
-    “!R (M:^term) M1.
+Theorem RED1_BETA_COMMUTES_RED1_ETA_LEMMA1:
+     !R (M:^term) M1.
          RED1 R M M1 ==> !M2. BETA_R M M2 /\ (R = ETA_R) ==>
-         ?M3. RC (RED1 BETA_R) M1 M3 /\ TC (RC (RED1 ETA_R)) M2 M3”,
+         ?M3. RC (RED1 BETA_R) M1 M3 /\ TC (RC (RED1 ETA_R)) M2 M3
+Proof
     rule_induct RED1_height_strong_ind
     THEN REPEAT STRIP_TAC (* 4 subgoals *)
     THEN POP_ASSUM REWRITE_ALL_THM
@@ -1166,15 +1166,15 @@ val RED1_BETA_COMMUTES_RED1_ETA_LEMMA1 = store_thm
         THEN UNDISCH_LAST_TAC
         THEN REWRITE_TAC[term_distinct]
       ]
-   );
+QED
 
 
 
-val RED1_BETA_COMMUTES_RED1_ETA_LEMMA2 = store_thm
-   ("RED1_BETA_COMMUTES_RED1_ETA_LEMMA2",
-    “!R (M:^term) M1.
+Theorem RED1_BETA_COMMUTES_RED1_ETA_LEMMA2:
+     !R (M:^term) M1.
          RED1 R M M1 ==> !M2. RED1 ETA_R M M2 /\ (R = BETA_R) ==>
-         ?M3. TC (RC (RED1 ETA_R)) M1 M3 /\ RC (RED1 BETA_R) M2 M3”,
+         ?M3. TC (RC (RED1 ETA_R)) M1 M3 /\ RC (RED1 BETA_R) M2 M3
+Proof
     rule_induct RED1_height_strong_ind
     THEN REPEAT STRIP_TAC (* 4 subgoals *)
     THEN POP_ASSUM REWRITE_ALL_THM
@@ -1257,19 +1257,19 @@ val RED1_BETA_COMMUTES_RED1_ETA_LEMMA2 = store_thm
             THEN IMP_RES_THEN REWRITE_THM RC_RED1_COMPAT
           ]
       ]
-   );
+QED
 
 
-val RED_BETA_COMMUTES_RED_ETA = store_thm
-   ("RED_BETA_COMMUTES_RED_ETA",
-    “RED (BETA_R:^term_rel) <=> RED ETA_R”,
+Theorem RED_BETA_COMMUTES_RED_ETA:
+     RED (BETA_R:^term_rel) <=> RED ETA_R
+Proof
     REWRITE_TAC[GSYM TC_RC_RED1_IS_RED]
     THEN MATCH_MP_TAC COMMUTE_TC_RC
     THEN REPEAT STRIP_TAC
     THEN IMP_RES_TAC RED1_BETA_COMMUTES_RED1_ETA_LEMMA2
     THEN FIRST_ASSUM MATCH_MP_TAC
     THEN REFL_TAC
-   );
+QED
 
 
 (* ====================================== *)
@@ -1277,50 +1277,50 @@ val RED_BETA_COMMUTES_RED_ETA = store_thm
 (* Barendregt Theorem 3.3.9(i), page 66.  *)
 (* ====================================== *)
 
-val BETA_ETA_R_CHURCH_ROSSER = store_thm
-   ("BETA_ETA_R_CHURCH_ROSSER",
-    “CHURCH_ROSSER ((BETA_R:^term_rel) UNION_R ETA_R)”,
+Theorem BETA_ETA_R_CHURCH_ROSSER:
+     CHURCH_ROSSER ((BETA_R:^term_rel) UNION_R ETA_R)
+Proof
     MATCH_MP_TAC COMMUTE_CHURCH_ROSSER
     THEN REWRITE_TAC[BETA_R_CHURCH_ROSSER,ETA_R_CHURCH_ROSSER,
                      RED_BETA_COMMUTES_RED_ETA]
-   );
+QED
 (* Soli Deo Gloria!!!  To God Alone Be The Glory!!! *)
 
 
 (* Barendregt Theorem 3.3.9 (ii), page 66. *)
 
-val BETA_ETA_R_NORMAL_FORM_EXISTS = store_thm
-   ("BETA_ETA_R_NORMAL_FORM_EXISTS",
-    “!(M:^term) N.
+Theorem BETA_ETA_R_NORMAL_FORM_EXISTS:
+     !(M:^term) N.
           REQUAL (BETA_R UNION_R ETA_R) M N ==>
                 (?Z. RED (BETA_R UNION_R ETA_R) M Z /\
-                     RED (BETA_R UNION_R ETA_R) N Z)”,
+                     RED (BETA_R UNION_R ETA_R) N Z)
+Proof
     MATCH_MP_TAC NORMAL_FORM_EXISTS
     THEN REWRITE_TAC[BETA_ETA_R_CHURCH_ROSSER]
-   );
+QED
 
 (* Barendregt Corollary 3.3.10 (i), page 67. *)
 
-val BETA_ETA_R_NORMAL_FORM_REDUCED_TO = store_thm
-   ("BETA_ETA_R_NORMAL_FORM_REDUCED_TO",
-    “!(M:^term) N.
+Theorem BETA_ETA_R_NORMAL_FORM_REDUCED_TO:
+     !(M:^term) N.
           NORMAL_FORM_OF (BETA_R UNION_R ETA_R) N M ==>
-               RED (BETA_R UNION_R ETA_R) M N”,
+               RED (BETA_R UNION_R ETA_R) M N
+Proof
     MATCH_MP_TAC NORMAL_FORM_REDUCED_TO
     THEN REWRITE_TAC[BETA_ETA_R_CHURCH_ROSSER]
-   );
+QED
 
 (* Barendregt Corollary 3.3.10 (ii), page 67. *)
 
-val BETA_ETA_R_NORMAL_FORM_UNIQUE = store_thm
-   ("BETA_ETA_R_NORMAL_FORM_UNIQUE",
-    “!(M:^term) N1 N2.
+Theorem BETA_ETA_R_NORMAL_FORM_UNIQUE:
+     !(M:^term) N1 N2.
           NORMAL_FORM_OF (BETA_R UNION_R ETA_R) N1 M /\
                    NORMAL_FORM_OF (BETA_R UNION_R ETA_R) N2 M ==>
-                  (N1 = N2)”,
+                  (N1 = N2)
+Proof
     MATCH_MP_TAC NORMAL_FORM_UNIQUE
     THEN REWRITE_TAC[BETA_ETA_R_CHURCH_ROSSER]
-   );
+QED
 
 
 

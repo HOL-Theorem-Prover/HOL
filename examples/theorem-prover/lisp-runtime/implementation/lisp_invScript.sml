@@ -1,12 +1,11 @@
-open HolKernel Parse boolLib bossLib; val _ = new_theory "lisp_inv";
+Theory lisp_inv
+Ancestors
+  words arithmetic list pred_set pair combin finite_map address
+  set_sep bit fcp lisp_sexp lisp_cons stop_and_copy lisp_bytecode
+Libs
+  wordsLib helperLib
+
 val _ = ParseExtras.temp_loose_equality()
-
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory helperLib;
-open set_sepTheory bitTheory fcpTheory;
-
-open lisp_sexpTheory lisp_consTheory stop_and_copyTheory lisp_bytecodeTheory;
 
 
 val RW = REWRITE_RULE;
@@ -24,9 +23,10 @@ val io_streams_11 = fetch "-" "io_streams_11"
 
 (* symbol table definition *)
 
-val one_byte_list_def = Define `
+Definition one_byte_list_def:
   (one_byte_list a [] = emp) /\
-  (one_byte_list a (x::xs) = one (a:word64,x:word8) * one_byte_list (a + 1w) xs)`;
+  (one_byte_list a (x::xs) = one (a:word64,x:word8) * one_byte_list (a + 1w) xs)
+End
 
 val one_byte_list_APPEND = store_thm("one_byte_list_APPEND",
   ``!a xs ys.
@@ -35,48 +35,55 @@ val one_byte_list_APPEND = store_thm("one_byte_list_APPEND",
     LENGTH,WORD_ADD_0,word_arith_lemma1,ADD1,AC ADD_COMM ADD_ASSOC]
   \\ SIMP_TAC (std_ss++star_ss) []);
 
-val string_data_def = Define `
-  string_data str = n2w (LENGTH str + 1) :: MAP ((n2w:num->word8) o ORD) str`;
+Definition string_data_def:
+  string_data str = n2w (LENGTH str + 1) :: MAP ((n2w:num->word8) o ORD) str
+End
 
-val symbol_list_def = Define `
+Definition symbol_list_def:
   (symbol_list [] = [0w]) /\
-  (symbol_list (str::xs) = string_data str ++ symbol_list xs)`;
+  (symbol_list (str::xs) = string_data str ++ symbol_list xs)
+End
 
-val one_symbol_list_def = Define `
+Definition one_symbol_list_def:
   one_symbol_list a xs k =
     SEP_EXISTS ys.
       one_byte_list a (symbol_list xs ++ ys) *
       cond (EVERY (\x. LENGTH x < 255) xs /\ (LENGTH (symbol_list xs ++ ys) = k) /\
             ALL_DISTINCT xs /\ 520 <= LENGTH ys /\
-            LENGTH xs < 536870912)`;
+            LENGTH xs < 536870912)
+End
 
-val symtable_inv_def = Define `
+Definition symtable_inv_def:
   symtable_inv (sa1:word64,sa2:word64,sa3:word64,dg,g) xs =
     (one_symbol_list sa1 xs (w2n sa3 - w2n sa1)) (fun2set (g,dg)) /\
-    (sa2 = sa1 + n2w (LENGTH (symbol_list xs)))`;
+    (sa2 = sa1 + n2w (LENGTH (symbol_list xs)))
+End
 
 
 (* top-level stack declaration *)
 
-val ref_stack_space_above_def = Define `
+Definition ref_stack_space_above_def:
   (ref_stack_space_above sp 0 = emp) /\
   (ref_stack_space_above sp (SUC n) =
-     ref_stack_space_above (sp + 4w) n * SEP_EXISTS w. one (sp + 4w:word64,w:word32))`;
+     ref_stack_space_above (sp + 4w) n * SEP_EXISTS w. one (sp + 4w:word64,w:word32))
+End
 
-val ref_full_stack_def = Define `
+Definition ref_full_stack_def:
   ref_full_stack sp wsp xs xs_rest ys n_rest =
     ref_stack (sp + 4w * wsp) (xs ++ xs_rest) *
     ref_stack_space (sp + 4w * wsp) (w2n wsp + 6) *
     ref_static (sp - 256w) ys *
-    ref_stack_space_above (sp + 4w * wsp + n2w (4 * LENGTH (xs ++ xs_rest))) n_rest`;
+    ref_stack_space_above (sp + 4w * wsp + n2w (4 * LENGTH (xs ++ xs_rest))) n_rest
+End
 
 (* definition of code heap *)
 
-val IMMEDIATE32_def = Define `
+Definition IMMEDIATE32_def:
   IMMEDIATE32 (w:word32) =
-    [w2w w; w2w (w >>> 8); w2w (w >>> 16); w2w (w >>> 24)]:word8 list`;
+    [w2w w; w2w (w >>> 8); w2w (w >>> 16); w2w (w >>> 24)]:word8 list
+End
 
-val bc_ref_def = Define `
+Definition bc_ref_def:
   (bc_ref (i,sym) iPOP =
     [0x44w; 0x8Bw; 0x4w; 0x9Fw; 0x48w; 0xFFw; 0xC3w]) /\
   (bc_ref (i,sym) (iCONST_NUM n) =
@@ -230,24 +237,28 @@ val bc_ref_def = Define `
       0x1w; 0x0w; 0x0w; 0x0w; 0xBAw; 0xBw; 0x0w; 0x0w; 0x0w; 0x48w;
       0xFFw; 0xA7w; 0x38w; 0xFFw; 0xFFw; 0xFFw; 0x49w; 0x8Bw; 0xD2w;
       0x48w; 0xC1w; 0xEAw; 0x2w; 0x48w; 0x3w; 0x97w; 0x60w; 0xFFw;
-      0xFFw; 0xFFw; 0x48w; 0xFFw; 0xD2w])`;
+      0xFFw; 0xFFw; 0x48w; 0xFFw; 0xD2w])
+End
 
-val bc_length_def = Define `
-  bc_length x = LENGTH (bc_ref (0,[]) x)`;
+Definition bc_length_def:
+  bc_length x = LENGTH (bc_ref (0,[]) x)
+End
 
-val bs2bytes_def = Define `
+Definition bs2bytes_def:
   (bs2bytes (i,sym) [] = []) /\
-  (bs2bytes (i,sym) (x::xs) = bc_ref (i,sym) x ++ bs2bytes (i+bc_length x,sym) xs)`;
+  (bs2bytes (i,sym) (x::xs) = bc_ref (i,sym) x ++ bs2bytes (i+bc_length x,sym) xs)
+End
 
 val _ = Hol_datatype `
   code_type = BC_CODE of (num -> bc_inst_type option) # num`;
 
-val WRITE_CODE_def = Define `
+Definition WRITE_CODE_def:
   (WRITE_CODE (BC_CODE (code,ptr)) [] = BC_CODE (code,ptr)) /\
   (WRITE_CODE (BC_CODE (code,ptr)) (c::cs) =
-     WRITE_CODE (BC_CODE ((ptr =+ SOME c) code,ptr+bc_length c)) cs)`;
+     WRITE_CODE (BC_CODE ((ptr =+ SOME c) code,ptr+bc_length c)) cs)
+End
 
-val bc_symbols_ok_def = Define `
+Definition bc_symbols_ok_def:
   (bc_symbols_ok sym [] = T) /\
   (bc_symbols_ok sym (iCONST_NUM i::xs) = i < 2**30 /\ bc_symbols_ok sym xs) /\
   (bc_symbols_ok sym (iCONST_SYM s::xs) = MEM s sym /\ bc_symbols_ok sym xs) /\
@@ -257,32 +268,38 @@ val bc_symbols_ok_def = Define `
   (bc_symbols_ok sym (iSTORE i::xs) = i < 2**29 /\ bc_symbols_ok sym xs) /\
   (bc_symbols_ok sym (iLOAD i::xs) = i < 2**29 /\ bc_symbols_ok sym xs) /\
   (bc_symbols_ok sym (iPOPS i::xs) = i < 2**30 /\ bc_symbols_ok sym xs) /\
-  (bc_symbols_ok sym (_::xs) = bc_symbols_ok sym xs)`;
+  (bc_symbols_ok sym (_::xs) = bc_symbols_ok sym xs)
+End
 
-val code_ptr_def = Define `code_ptr (BC_CODE (_,p)) = p`;
-val code_mem_def = Define `code_mem (BC_CODE (m,_)) = m`;
+Definition code_ptr_def:   code_ptr (BC_CODE (_,p)) = p
+End
+Definition code_mem_def:   code_mem (BC_CODE (m,_)) = m
+End
 
-val code_heap_def = Define `
+Definition code_heap_def:
   code_heap code (sym,base_ptr,curr_ptr,space_left,dh,h) =
     ?bs hs.
       (WRITE_CODE (BC_CODE ((\x. NONE),0)) bs = code) /\
       (curr_ptr = base_ptr + n2w (code_ptr code)) /\
       (one_byte_list base_ptr (bs2bytes (0,sym) bs ++ hs)) (fun2set (h,dh)) /\
       code_ptr code + w2n space_left < 2**30 /\ (LENGTH hs = w2n (space_left:word64)) /\
-      bc_symbols_ok sym bs`;
+      bc_symbols_ok sym bs
+End
 
 
 (* definition of main invariant *)
 
-val INIT_SYMBOLS_def = Define `
+Definition INIT_SYMBOLS_def:
   INIT_SYMBOLS = ["NIL";"T";"QUOTE";"CONS";"CAR";"CDR";"EQUAL";"<";"SYMBOL-<";
                   "+";"-";"ATOMP";"CONSP";"NATP";"SYMBOLP";"DEFINE";"IF";
                   "LAMBDA";"FUNCALL";"ERROR";"PRINT";"LET";"LET*";"COND";"OR";
-                  "AND";"FIRST";"SECOND";"THIRD";"FOURTH";"FIFTH";"LIST";"DEFUN"]`;
+                  "AND";"FIRST";"SECOND";"THIRD";"FOURTH";"FIFTH";"LIST";"DEFUN"]
+End
 
-val IS_TRUE_def = Define `IS_TRUE ok = (ok = T)`;
+Definition IS_TRUE_def:   IS_TRUE ok = (ok = T)
+End
 
-val lisp_inv_def = Define `
+Definition lisp_inv_def:
   lisp_inv (* pointers and bounds that are constant throughout execution *)
            (a1,a2,sl,sl1,e,ex,cs,ok)
            (* high-level data that is held in the heap *)
@@ -309,7 +326,8 @@ val lisp_inv_def = Define `
        ref_full_stack sp wsp ss ss1
          ([a1;a2;n2w e;bp2;sa1;sa2;sa3;ex] ++ cs ++ ds) (sl1 - LENGTH ss1)) (fun2set (f,df)) /\
       symtable_inv (sa1:word64,sa2:word64,sa3:word64,dg,g) (INIT_SYMBOLS++sym) /\
-      code_heap code (INIT_SYMBOLS++sym,EL 4 cs,EL 2 ds,EL 3 ds,dd,d)`;
+      code_heap code (INIT_SYMBOLS++sym,EL 4 cs,EL 2 ds,EL 3 ds,dd,d)
+End
 
 val LISP = lisp_inv_def |> SPEC_ALL |> concl |> dest_eq |> fst
 
@@ -1443,11 +1461,12 @@ val _ = save_thm("lisp_inv_div2",lisp_inv_div2);
 
 (* depth limit *)
 
-val addr_path_def = Define `
+Definition addr_path_def:
   (addr_path s [] sym m = ~isDot s) /\
   (addr_path s (a::xs) sym m =
      lisp_x (m,sym) (H_ADDR a,s) /\ (LDEPTH s = SUC (LENGTH xs)) /\
-     (addr_path (CAR s) xs sym m \/ addr_path (CDR s) xs sym m))`;
+     (addr_path (CAR s) xs sym m \/ addr_path (CDR s) xs sym m))
+End
 
 val lisp_x_IMP_addr_path = prove(
   ``!s a. lisp_x (m,sym) (a,s) ==>
@@ -2350,4 +2369,3 @@ val code_heap_add_symbol = store_thm("code_heap_add_symbol",
   \\ IMP_RES_TAC bc_symbols_ok_IMP \\ ASM_SIMP_TAC std_ss []);
 
 
-val _ = export_theory();

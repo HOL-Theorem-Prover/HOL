@@ -1,12 +1,8 @@
-open HolKernel boolLib Parse bossLib BasicProvers
-
-open pred_setTheory
-
-open binderLib
-
-open nomsetTheory labelledTermsTheory termTheory horeductionTheory chap3Theory
-
-val _ = new_theory "chap11_1";
+Theory chap11_1
+Ancestors
+  pred_set nomset labelledTerms term horeduction chap3
+Libs
+  BasicProvers binderLib boolSimps
 
 (* ----------------------------------------------------------------------
     phi function for reducing all labelled redexes
@@ -211,12 +207,14 @@ val (lcompat_closure_rules, lcompat_closure_ind, lcompat_closure_cases) =
                       lcompat_closure R (LAMi n v z x) (LAMi n v z y))`;
 
 (* reduction on lterms *)
-val beta0_def =
-    Define`beta0 M N = ?n v t u. (M = LAMi n v t u) /\ (N = [u/v]t)`;
+Definition beta0_def:
+    beta0 M N = ?n v t u. (M = LAMi n v t u) /\ (N = [u/v]t)
+End
 
-val beta1_def =
-    Define`beta1 (M: lterm) N =
-              ?v t u. (M = (LAM v t) @@ u) /\ (N = [u/v]t)`;
+Definition beta1_def:
+    beta1 (M: lterm) N =
+              ?v t u. (M = (LAM v t) @@ u) /\ (N = [u/v]t)
+End
 
 val lcc_beta_bvc_ind = store_thm(
   "lcc_beta_bvc_ind",
@@ -287,7 +285,6 @@ val lcc_beta_bvc_ind = store_thm(
     SRW_TAC [][GSYM pmact_decompose]
   ]);
 
-open boolSimps
 val beta_matched = store_thm(
   "beta_matched",
   ``!M' N. beta (strip_label M') N ==>
@@ -550,7 +547,6 @@ Proof
   PROVE_TAC [reduction_rules, strip_lemma]
 QED
 
-val _ = export_theory();
 val _ = html_theory "chap11_1";
 
 (* References:

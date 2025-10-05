@@ -4,56 +4,22 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "ffExist";
+Theory ffExist
+Ancestors
+  arithmetic pred_set list number divides combinatorics gcd
+  gcdset prime cardinal ffBasic ffAdvanced ffPoly ffUnity ffCyclo
+  ffMinimal ffMaster ffConjugate monoid group ring field
+  fieldOrder fieldInstances polynomial polyWeak polyRing
+  polyDivision polyBinomial polyMonic polyEval polyDivides
+  polyMonic polyRoot polyField polyFieldDivision polyFieldModulo
+  polyRingModulo polyModuloRing polyMap fieldMap polyGCD
+  polyIrreducible polyProduct fieldBinomial
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open arithmeticTheory pred_setTheory listTheory numberTheory dividesTheory
-     combinatoricsTheory gcdTheory gcdsetTheory primeTheory cardinalTheory;
-
-open ffBasicTheory;
-open ffAdvancedTheory;
-open ffPolyTheory;
-open ffUnityTheory;
-open ffCycloTheory;
-open ffMinimalTheory;
-open ffMasterTheory;
-open ffConjugateTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-open fieldOrderTheory;
-open fieldInstancesTheory;
-
-(* Get polynomial theory of Ring *)
-open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory polyBinomialTheory;
-open polyMonicTheory polyEvalTheory;
-open polyDividesTheory;
-open polyMonicTheory;
-open polyRootTheory;
-
-open polyFieldTheory;
-open polyFieldDivisionTheory;
-open polyFieldModuloTheory;
-open polyRingModuloTheory;
-open polyModuloRingTheory;
-
-open polyMapTheory;
-open fieldMapTheory;
-
-open polyGCDTheory;
-open polyIrreducibleTheory;
-open polyProductTheory;
-
-open fieldBinomialTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -688,10 +654,10 @@ val _ = add_rule {
 };
 
 (* Define  pairs of field/subfields with isomorphic subfields *)
-val iso_subfields_def = Define`
+Definition iso_subfields_def:
   r =| (s,f,s_) |= r_ <=> FiniteField (r:'a field) /\ FiniteField (r_:'b field) /\
         (CARD R = CARD R_) /\ s <<= r /\ s_ <<= r_ /\ FieldIso f s s_
-`;
+End
 
 (* export definition *)
 val _ = export_rewrites ["iso_subfields_def"];
@@ -1413,10 +1379,10 @@ See Timothy Murphy: Finite Field (Course MA364D)  Chapter 9.
                 #0 -> #0_
                 x  -> mirror f (primitive r) **_ (idx x)
 *)
-val field_iso_map_def = Define`
+Definition field_iso_map_def:
     field_iso_map (r:'a field) (s:'a field) (r_:'b field) (s_:'b field) f x =
     if x = #0 then #0_ else (mirror f (primitive r)) **_ (idx x)
-`;
+End
 
 (* Overload on image of field isomorphism *)
 val _ = overload_on("im", ``field_iso_map (r:'a field) (s:'a field) (r_:'b field) (s_:'b field)``);
@@ -2421,22 +2387,22 @@ val finite_field_clone_exists = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define a monoid bijective image *)
-val monoid_bij_image_def = Define `
+Definition monoid_bij_image_def:
   monoid_bij_image (f:'a -> 'b) (t:'b -> 'a) (g:'a monoid) =
     <|carrier := IMAGE f G;
            op := (\x y. f (g.op (t x) (t y))); (* display as: op := (\x y. f (t x * t y)) *)
            id := f #e
      |>
-`;
+End
 
 (* Define a ring bijective image *)
-val ring_bij_image_def = Define `
+Definition ring_bij_image_def:
   ring_bij_image (f:'a -> 'b) (g:'b -> 'a) (r:'a ring) =
      <| carrier := IMAGE f R;
             sum := monoid_bij_image f g r.sum;
            prod := monoid_bij_image f g r.prod
       |>
-`;
+End
 
 (* Given a Monoid g, and two functions f t that undo each other,
    Then (f g) is a Monoid, with op := (\x y. f (t x * t y))      *)
@@ -3245,8 +3211,4 @@ val poly_unity_special_factor_exists_alt = store_thm(
 *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

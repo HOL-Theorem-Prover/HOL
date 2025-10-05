@@ -1,27 +1,32 @@
-open HolKernel boolLib bossLib
-open set_sepTheory progTheory pred_setTheory stateLib x64_stepTheory
-
-val () = new_theory "x64_prog"
+Theory x64_prog
+Ancestors
+  set_sep prog pred_set temporal_state x64_step
+Libs
+  numLib stateLib
 
 val _ = ParseExtras.temp_loose_equality()
-
+val _ = numLib.temp_prefer_num ();
 (* ------------------------------------------------------------------------ *)
 
 val _ = stateLib.sep_definitions "x64" [] [] x64_stepTheory.NextStateX64_def
 
-val x64_mem_def = Define`
+Definition x64_mem_def:
    x64_mem a (l: word8 list) =
    set (GENLIST (\i. (x64_c_MEM (a + n2w i),
-                      x64_d_word8 (EL i l))) (LENGTH l))`
+                      x64_d_word8 (EL i l))) (LENGTH l))
+End
 
-val x64_instr_def = Define`x64_instr (a, i) = x64_mem a i`
+Definition x64_instr_def:  x64_instr (a, i) = x64_mem a i
+End
 
-val x64_mem16_def = Define`
-   x64_mem16 a (v: word16) = { x64_mem a [(7 >< 0) v; (15 >< 8) v] }`
+Definition x64_mem16_def:
+   x64_mem16 a (v: word16) = { x64_mem a [(7 >< 0) v; (15 >< 8) v] }
+End
 
-val x64_mem32_def = Define`
+Definition x64_mem32_def:
    x64_mem32 a (v: word32) =
-   { x64_mem a [(7 >< 0) v; (15 >< 8) v; (23 >< 16) v; (31 >< 24) v] }`
+   { x64_mem a [(7 >< 0) v; (15 >< 8) v; (23 >< 16) v; (31 >< 24) v] }
+End
 
 val v8 = ``[( 7 ><  0) v; (15 ><  8) v; (23 >< 16) v; (31 >< 24) (v:word64);
             (39 >< 32) v; (47 >< 40) v; (55 >< 48) v; (63 >< 56) v]:word8 list``
@@ -32,12 +37,15 @@ val v16 =
      ( 71 >< 64) v; ( 79 ><  72) v; ( 87 ><  80) v; ( 95 ><  88) v;
      (103 >< 96) v; (111 >< 104) v; (119 >< 112) v; (127 >< 120) v]:word8 list``
 
-val x64_mem64_def = Define `x64_mem64 a (v: word64) = { x64_mem a ^v8 }`
-val x64_mem128_def = Define `x64_mem128 a (v: word128) = { x64_mem a ^v16 }`
+Definition x64_mem64_def:   x64_mem64 a (v: word64) = { x64_mem a ^v8 }
+End
+Definition x64_mem128_def:   x64_mem128 a (v: word128) = { x64_mem a ^v16 }
+End
 
-val X64_MODEL_def = Define`
+Definition X64_MODEL_def:
   X64_MODEL = (STATE x64_proj, NEXT_REL (=) NextStateX64, x64_instr,
-               ($= :x64_state -> x64_state -> bool), K F : x64_state -> bool)`
+               ($= :x64_state -> x64_state -> bool), K F : x64_state -> bool)
+End
 
 val X64_IMP_SPEC = Theory.save_thm ("X64_IMP_SPEC",
    stateTheory.IMP_SPEC
@@ -60,20 +68,23 @@ val x64_MEM_def = DB.definition "x64_MEM_def"
 val (x64_BYTE_MEMORY_def, x64_BYTE_MEMORY_INSERT) =
    stateLib.define_map_component ("x64_BYTE_MEMORY", "bmem", x64_MEM_def)
 
-val x64_MEMORY_def = Define`
+Definition x64_MEMORY_def:
   x64_MEMORY dmem mem =
-  { BIGUNION { BIGUNION (x64_mem64 a (mem a)) | a IN dmem /\ (a && 7w = 0w)} }`
+  { BIGUNION { BIGUNION (x64_mem64 a (mem a)) | a IN dmem /\ (a && 7w = 0w)} }
+End
 
-val x64_PC_def = Define `x64_PC pc = x64_RIP pc * x64_exception NoException`
+Definition x64_PC_def:   x64_PC pc = x64_RIP pc * x64_exception NoException
+End
 
-val x64_ALL_EFLAGS_def = Define `
+Definition x64_ALL_EFLAGS_def:
   x64_ALL_EFLAGS =
     ~(x64_EFLAGS Z_AF) *
     ~(x64_EFLAGS Z_CF) *
     ~(x64_EFLAGS Z_OF) *
     ~(x64_EFLAGS Z_PF) *
     ~(x64_EFLAGS Z_SF) *
-    ~(x64_EFLAGS Z_ZF)`
+    ~(x64_EFLAGS Z_ZF)
+End
 
 (* ------------------------------------------------------------------------ *)
 
@@ -176,5 +187,3 @@ val x64_mem32_TEMPORAL_WRITE_EXTEND = Q.store_thm
    tac)
 
 (* ------------------------------------------------------------------------ *)
-
-val () = export_theory()

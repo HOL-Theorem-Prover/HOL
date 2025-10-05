@@ -1,10 +1,14 @@
-open HolKernel boolLib bossLib Parse stringTheory pred_setTheory nomsetTheory listTheory ramanaLib pairTheory
+Theory dis_set
+Ancestors
+  string pred_set nomset list pair
+Libs
+  ramanaLib
 
-val _ = new_theory "dis_set"
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 }
 
-val dis_set_def = Define`
-  dis_set pi1 pi2 = { a | lswapstr pi1 a ≠ lswapstr pi2 a }`
+Definition dis_set_def:
+  dis_set pi1 pi2 = { a | lswapstr pi1 a ≠ lswapstr pi2 a }
+End
 
 val dis_set_SUBSET_patoms = Q.store_thm(
 "dis_set_SUBSET_patoms",
@@ -55,10 +59,11 @@ val ALL_DISTINCT_DISTINCT = Q.store_thm(
 Induct_on `ls` THEN SRW_TAC [][] THEN
 METIS_TAC [MEM_DISTINCT]);
 
-val dis_list_def = Define`
+Definition dis_list_def:
   dis_list pi1 pi2 =
     DISTINCT (FILTER (λa. lswapstr pi1 a ≠ lswapstr pi2 a)
-                     (pnomsl (pi1 ++ pi2)))`;
+                     (pnomsl (pi1 ++ pi2)))
+End
 
 val dis_list_eq_dis_set = Q.store_thm(
 "dis_list_eq_dis_set",
@@ -89,4 +94,3 @@ val dis_set_comm = Q.store_thm(
 `dis_set p1 p2 = dis_set p2 p1`,
 SRW_TAC [][dis_set_def,EXTENSION,EQ_IMP_THM])
 
-val _ = export_theory ();

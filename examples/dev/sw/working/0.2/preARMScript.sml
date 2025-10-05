@@ -4,15 +4,16 @@ quietdec := true;
 loadPath := (concat Globals.HOLDIR "/examples/dev/sw") :: !loadPath;
 
 app load ["numLib", "pred_setSimps", "pred_setTheory",
-     "arithmeticTheory", "wordsTheory", "pairTheory", "listTheory", "whileTheory", "finite_mapTheory"];
+     "arithmeticTheory", "wordsTheory", "pairTheory", "listTheory", "WhileTheory", "finite_mapTheory"];
 
 quietdec := false;
 *)
+Theory preARM
+Ancestors
+  pred_set arithmetic words pair list While finite_map
+Libs
+  numLib pred_setSimps
 
-open HolKernel Parse boolLib bossLib numLib pred_setSimps pred_setTheory
-     arithmeticTheory wordsTheory pairTheory listTheory whileTheory finite_mapTheory;
-
-val _ = new_theory "preARM";
 
 (*----------------------------------------------------------------------------*)
 (* Registers                                                                  *)
@@ -1199,4 +1200,3 @@ val FUPDATE_GT_COMMUTES = Q.store_thm (
     RW_TAC arith_ss [FUPDATE_COMMUTES]
     );
 
-val _ = export_theory();

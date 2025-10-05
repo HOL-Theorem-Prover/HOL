@@ -1,12 +1,10 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_ops";
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory;
-
-open decompilerLib progTheory set_sepTheory helperLib;
-open lisp_typeTheory lisp_invTheory lisp_gcTheory lisp_equalTheory;
-open ppc_encodeLib x86_encodeLib;
-open prog_armLib prog_ppcLib prog_x86Lib;
+Theory lisp_ops
+Ancestors
+  words arithmetic list pred_set pair combin finite_map address
+  prog set_sep lisp_type lisp_inv lisp_gc lisp_equal divide
+Libs
+  wordsLib decompilerLib helperLib ppc_encodeLib x86_encodeLib
+  prog_armLib prog_ppcLib prog_x86Lib
 
 val decompile_arm = decompile prog_armLib.arm_tools;
 val decompile_ppc = decompile prog_ppcLib.ppc_tools;
@@ -16,26 +14,29 @@ val _ = map Parse.hide ["r0","r1","r2","r3","r4","r5","r6","r7","r8","r9","r10",
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 
-val aLISP_def = Define `
+Definition aLISP_def:
   aLISP (x1,x2,x3,x4,x5,x6,limit) =
     SEP_EXISTS a r3 r4 r5 r6 r7 r8 df f dm m dg g s.
      ~(aR 2w) * aR 3w r3 * aR 4w r4 * aR 5w r5 * aR 6w r6 * aR 7w r7 * aR 8w r8 * aR 9w a *
      aMEMORY df f * aMEMORY dm m * aBYTE_MEMORY dg g *
-       cond (lisp_inv (x1,x2,x3,x4,x5,x6,limit) (r3,r4,r5,r6,r7,r8,a,df,f,s,dm,m,dg,g))`;
+       cond (lisp_inv (x1,x2,x3,x4,x5,x6,limit) (r3,r4,r5,r6,r7,r8,a,df,f,s,dm,m,dg,g))
+End
 
-val pLISP_def = Define `
+Definition pLISP_def:
   pLISP (x1,x2,x3,x4,x5,x6,limit) =
     SEP_EXISTS a r3 r4 r5 r6 r7 r8 df f dm m dg g s.
      ~(pR 0w) * ~(pR 2w) * pR 3w r3 * pR 4w r4 * pR 5w r5 * pR 6w r6 * pR 7w r7 * pR 8w r8 * pR 9w a *
      pMEMORY df f * pMEMORY dm m * pBYTE_MEMORY dg g *
-       cond (lisp_inv (x1,x2,x3,x4,x5,x6,limit) (r3,r4,r5,r6,r7,r8,a,df,f,s,dm,m,dg,g))`;
+       cond (lisp_inv (x1,x2,x3,x4,x5,x6,limit) (r3,r4,r5,r6,r7,r8,a,df,f,s,dm,m,dg,g))
+End
 
-val xLISP_def = Define `
+Definition xLISP_def:
   xLISP (x1,x2,x3,x4,x5,x6,limit) =
     SEP_EXISTS a r3 r4 r5 r6 r7 r8 df f dm m dg g s.
      xR EAX r3 * xR ECX r4 * xR EDX r5 * xR EBX r6 * xR EDI r7 * xR ESI r8 * xR EBP a *
      xMEMORY df f * xMEMORY dm m * xBYTE_MEMORY dg g *
-       cond (lisp_inv (x1,x2,x3,x4,x5,x6,limit) (r3,r4,r5,r6,r7,r8,a,df,f,s,dm,m,dg,g))`;
+       cond (lisp_inv (x1,x2,x3,x4,x5,x6,limit) (r3,r4,r5,r6,r7,r8,a,df,f,s,dm,m,dg,g))
+End
 
 fun x86_reg 1 = "eax" | x86_reg 2 = "ecx" | x86_reg 3 = "edx"
   | x86_reg 4 = "ebx" | x86_reg 5 = "edi" | x86_reg 6 = "esi" | x86_reg _ = fail()
@@ -1063,8 +1064,6 @@ val PPC_LISP_LESS = let
 
 (* mult, div and mod *)
 
-open divideTheory;
-
 val ARM_LISP_MULT = let
   val th = SIMP_RULE std_ss [lisp_word_mul_def,LET_DEF,SEP_CLAUSES] lisp_word_mul_arm_thm
   val th = RW [Q.SPEC `f y` SEP_HIDE_def] th
@@ -1435,4 +1434,3 @@ val _ = map X86_LISP_EQ_ZERO [1,2,3,4,5,6];
 val _ = map PPC_LISP_EQ_ZERO [1,2,3,4,5,6];
 
 
-val _ = export_theory();

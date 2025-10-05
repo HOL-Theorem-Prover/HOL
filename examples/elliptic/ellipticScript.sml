@@ -17,12 +17,12 @@ val () = app load
   "primalityTools", "fieldTools"];
 val () = quietdec := true;
 *)
+Theory elliptic
+Ancestors
+  option list arithmetic divides gcd pred_set group field
+Libs
+  metisLib res_quanTools primalityTools groupTools fieldTools
 
-open HolKernel Parse boolLib bossLib metisLib res_quanTools;
-open optionTheory listTheory arithmeticTheory dividesTheory gcdTheory;
-open pred_setTheory;
-open primalityTools;
-open groupTheory groupTools fieldTheory fieldTools;
 
 (*
 val () = quietdec := false;
@@ -32,7 +32,6 @@ val () = quietdec := false;
 (* Start a new theory called "elliptic".                                     *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = new_theory "elliptic";
 val _ = ParseExtras.temp_loose_equality()
 
 val ERR = mk_HOL_ERR "elliptic";
@@ -284,23 +283,29 @@ val el_append = store_thm
 
 val () = type_abbrev ("vector", Type `:'a list`);
 
-val dimension_def = Define `dimension = (LENGTH : 'a vector -> num)`;
+Definition dimension_def:   dimension = (LENGTH : 'a vector -> num)
+End
 
-val coord_def = Define `coord = (EL : num -> 'a vector -> 'a)`;
+Definition coord_def:   coord = (EL : num -> 'a vector -> 'a)
+End
 
-val coords_def = Define `coords (v : 'a vector) = { i | i < dimension v }`;
+Definition coords_def:   coords (v : 'a vector) = { i | i < dimension v }
+End
 
-val vector_space_def = Define
-  `vector_space (f : 'a field) n =
-   { v | (dimension v = n) /\ !i :: coords v. coord i v IN f.carrier }`;
+Definition vector_space_def:
+   vector_space (f : 'a field) n =
+   { v | (dimension v = n) /\ !i :: coords v. coord i v IN f.carrier }
+End
 
-val origin_def = Define
-  `(origin (f : 'a field) 0 = []) /\
-   (origin (f : 'a field) (SUC n) = field_zero f :: origin f n)`;
+Definition origin_def:
+   (origin (f : 'a field) 0 = []) /\
+   (origin (f : 'a field) (SUC n) = field_zero f :: origin f n)
+End
 
-val nonorigin_def = Define
-  `nonorigin (f : 'a field) =
-   { v | v IN vector_space f (dimension v) /\ ~(v = origin f (dimension v)) }`;
+Definition nonorigin_def:
+   nonorigin (f : 'a field) =
+   { v | v IN vector_space f (dimension v) /\ ~(v = origin f (dimension v)) }
+End
 
 val vector_space_origin = store_thm
   ("vector_space_origin",
@@ -354,20 +359,23 @@ val nonorigin_alt = store_thm
 (* ------------------------------------------------------------------------- *)
 
 (* Tuned to always be an equivalence relation on type 'a when f is a Field *)
-val project_def = Define
-  `project (f : 'a field) v1 v2 =
+Definition project_def:
+   project (f : 'a field) v1 v2 =
    (v1 = v2) \/
    (v1 IN nonorigin f /\ v2 IN nonorigin f /\
     (dimension v1 = dimension v2) /\
     ?c :: (f.carrier). !i :: coords v1.
-      field_mult f c (coord i v1) = coord i v2)`;
+      field_mult f c (coord i v1) = coord i v2)
+End
 
 (* Must use the primitive GSPEC to get around the set binding heuristic *)
-val projective_space_def = Define
-  `projective_space (f : 'a field) n =
-   GSPEC (\v. (project f v, v IN (vector_space f (n + 1) INTER nonorigin f)))`;
+Definition projective_space_def:
+   projective_space (f : 'a field) n =
+   GSPEC (\v. (project f v, v IN (vector_space f (n + 1) INTER nonorigin f)))
+End
 
-val affine_def = Define `affine f v = project f (v ++ [field_one f])`;
+Definition affine_def:   affine f v = project f (v ++ [field_one f])
+End
 
 val project_refl = store_thm
   ("project_refl",
@@ -482,8 +490,8 @@ val () = Hol_datatype
 
 val curve_accessors = fetch "-" "curve_accessors";
 
-val curve_b2_def = Define
-  `curve_b2 e =
+Definition curve_b2_def:
+   curve_b2 e =
    let f = e.field in
    let $& = field_num f in
    let $+ = field_add f in
@@ -491,10 +499,11 @@ val curve_b2_def = Define
    let $** = field_exp f in
    let a1 = e.a1 in
    let a2 = e.a2 in
-   a1 ** 2 + & 4 * a2`;
+   a1 ** 2 + & 4 * a2
+End
 
-val curve_b4_def = Define
-  `curve_b4 e =
+Definition curve_b4_def:
+   curve_b4 e =
    let f = e.field in
    let $& = field_num f in
    let $+ = field_add f in
@@ -502,10 +511,11 @@ val curve_b4_def = Define
    let a1 = e.a1 in
    let a3 = e.a3 in
    let a4 = e.a4 in
-   a1 * a3 + & 2 * a4`;
+   a1 * a3 + & 2 * a4
+End
 
-val curve_b6_def = Define
-  `curve_b6 e =
+Definition curve_b6_def:
+   curve_b6 e =
    let f = e.field in
    let $& = field_num f in
    let $+ = field_add f in
@@ -513,10 +523,11 @@ val curve_b6_def = Define
    let $** = field_exp f in
    let a3 = e.a3 in
    let a6 = e.a6 in
-   a3 ** 2 + & 4 * a6`;
+   a3 ** 2 + & 4 * a6
+End
 
-val curve_b8_def = Define
-  `curve_b8 e =
+Definition curve_b8_def:
+   curve_b8 e =
    let f = e.field in
    let $& = field_num f in
    let $+ = field_add f in
@@ -528,10 +539,11 @@ val curve_b8_def = Define
    let a3 = e.a3 in
    let a4 = e.a4 in
    let a6 = e.a6 in
-   a1 ** 2 * a6 + & 4 * a2 * a6 - a1 * a3 * a4 + a2 * a3 ** 2 - a4 ** 2`;
+   a1 ** 2 * a6 + & 4 * a2 * a6 - a1 * a3 * a4 + a2 * a3 ** 2 - a4 ** 2
+End
 
-val discriminant_def = Define
-  `discriminant e =
+Definition discriminant_def:
+   discriminant e =
    let f = e.field in
    let $& = field_num f in
    let $- = field_sub f in
@@ -541,13 +553,15 @@ val discriminant_def = Define
    let b4 = curve_b4 e in
    let b6 = curve_b6 e in
    let b8 = curve_b8 e in
-   & 9 * b2 * b4 * b6 - b2 * b2 * b8 - & 8 * b4 ** 3 - & 27 * b6 ** 2`;
+   & 9 * b2 * b4 * b6 - b2 * b2 * b8 - & 8 * b4 ** 3 - & 27 * b6 ** 2
+End
 
-val non_singular_def = Define
-  `non_singular e = ~(discriminant e = field_zero e.field)`;
+Definition non_singular_def:
+   non_singular e = ~(discriminant e = field_zero e.field)
+End
 
-val Curve_def = Define
-  `Curve =
+Definition Curve_def:
+   Curve =
    { e |
      e.field IN Field /\
      e.a1 IN e.field.carrier /\
@@ -555,10 +569,11 @@ val Curve_def = Define
      e.a3 IN e.field.carrier /\
      e.a4 IN e.field.carrier /\
      e.a6 IN e.field.carrier /\
-     non_singular e }`;
+     non_singular e }
+End
 
-val curve_points_def = Define
-  `curve_points e =
+Definition curve_points_def:
+   curve_points e =
    let f = e.field in
    let $+ = field_add f in
    let $* = field_mult f in
@@ -572,20 +587,23 @@ val curve_points_def = Define
      (project f [x; y; z],
       [x; y; z] IN nonorigin f /\
       (y ** 2 * z + a1 * x * y * z + a3 * y * z ** 2 =
-       x ** 3 + a2 * x ** 2 * z + a4 * x * z ** 2 + a6 * z ** 3)))`;
+       x ** 3 + a2 * x ** 2 * z + a4 * x * z ** 2 + a6 * z ** 3)))
+End
 
-val curve_zero_def = Define
-  `curve_zero e =
+Definition curve_zero_def:
+   curve_zero e =
    project e.field
-     [field_zero e.field; field_one e.field; field_zero e.field]`;
+     [field_zero e.field; field_one e.field; field_zero e.field]
+End
 
-val affine_case_def = Define
-  `affine_case e z f p =
+Definition affine_case_def:
+   affine_case e z f p =
    if p = curve_zero e then z
-   else @t. ?x y. (p = affine e.field [x; y]) /\ (t = f x y)`;
+   else @t. ?x y. (p = affine e.field [x; y]) /\ (t = f x y)
+End
 
-val curve_neg_def = Define
-  `curve_neg e =
+Definition curve_neg_def:
+   curve_neg e =
    let f = e.field in
    let $~ = field_neg f in
    let $+ = field_add f in
@@ -597,10 +615,11 @@ val curve_neg_def = Define
      (\x1 y1.
         let x = x1 in
         let y = ~y1 - a1 * x1 - a3 in
-        affine f [x; y])`;
+        affine f [x; y])
+End
 
-val curve_double_def = Define
-  `curve_double e =
+Definition curve_double_def:
+   curve_double e =
    let f = e.field in
    let $& = field_num f in
    let $~ = field_neg f in
@@ -623,10 +642,11 @@ val curve_double_def = Define
           let m = (~(x1 ** 3) + a4 * x1 + & 2 * a6 - a3 * y1) / d in
           let x = l ** 2 + a1 * l - a2 - &2 * x1 in
           let y = ~(l + a1) * x - m - a3 in
-          affine e.field [x; y])`;
+          affine e.field [x; y])
+End
 
-val curve_add_def = Define
-  `curve_add e p1 p2 =
+Definition curve_add_def:
+   curve_add e p1 p2 =
    if p1 = p2 then curve_double e p1
    else
      let f = e.field in
@@ -653,18 +673,21 @@ val curve_add_def = Define
                  let m = (y1 * x2 - y2 * x1) / d in
                  let x = l ** 2 + a1 * l - a2 - x1 - x2 in
                  let y = ~(l + a1) * x - m - a3 in
-                 affine e.field [x; y]) p2) p1`;
+                 affine e.field [x; y]) p2) p1
+End
 
-val curve_mult_def = Define
-  `(curve_mult (e : 'a curve) p 0 = curve_zero e) /\
-   (curve_mult (e : 'a curve) p (SUC n) = curve_add e p (curve_mult e p n))`;
+Definition curve_mult_def:
+   (curve_mult (e : 'a curve) p 0 = curve_zero e) /\
+   (curve_mult (e : 'a curve) p (SUC n) = curve_add e p (curve_mult e p n))
+End
 
-val curve_group_def = Define
-  `curve_group e =
+Definition curve_group_def:
+   curve_group e =
    <| carrier := curve_points e;
       id := curve_zero e;
       inv := curve_neg e;
-      mult := curve_add e |>`;
+      mult := curve_add e |>
+End
 
 val curve_field = store_thm
   ("curve_field",
@@ -1538,4 +1561,3 @@ val curve_add_example_compilable =
 
 val _ = html_theory "elliptic";
 
-val () = export_theory ();

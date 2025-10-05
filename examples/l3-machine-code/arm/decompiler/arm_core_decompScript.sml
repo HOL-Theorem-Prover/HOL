@@ -1,7 +1,6 @@
-open HolKernel Parse boolLib bossLib
-open tripleTheory arm_decompTheory
-
-val () = new_theory "arm_core_decomp"
+Theory arm_core_decomp
+Ancestors
+  triple arm_decomp
 
 (* definition of ARM_ASSERT and L3_ARM *)
 
@@ -40,7 +39,7 @@ val () = Hol_datatype`
                     (* memory *) (word32 -> word8) =>
                     (* pc *) word32`;
 
-val ARM_ASSERT_def = Define`
+Definition ARM_ASSERT_def:
    ARM_ASSERT
       (ARM_ASSERTION mode r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14
                      n z c v dfpr fpr rmode fp_n fp_z fp_c fp_v dmem mem r15) =
@@ -71,8 +70,9 @@ val ARM_ASSERT_def = Define`
      arm_FP_FPSCR_C fp_c *
      arm_FP_FPSCR_V fp_v *
      arm_MEMORY dmem mem *
-     arm_PC r15`;
+     arm_PC r15
+End
 
-val L3_ARM_def = Define `L3_ARM = (ARM_ASSERT, ARM_MODEL)`
+Definition L3_ARM_def:   L3_ARM = (ARM_ASSERT, ARM_MODEL)
+End
 
-val () = export_theory()

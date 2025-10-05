@@ -1,8 +1,8 @@
-open HolKernel Parse boolLib bossLib termTheory binderLib chap2Theory
-
-open BasicProvers pred_setTheory boolSimps
-
-val _ = new_theory "term_posns";
+Theory term_posns
+Ancestors
+  term chap2 pred_set
+Libs
+  binderLib BasicProvers boolSimps
 
 fun Store_Thm(n,t,tac) = store_thm(n,t,tac) before export_rewrites [n]
 fun Save_Thm(n,th) = save_thm(n,th) before export_rewrites [n]
@@ -36,7 +36,7 @@ val APPEND_CASES = store_thm(
     ordering positions
    ---------------------------------------------------------------------- *)
 
-val posn_lt_def = Define`
+Definition posn_lt_def:
   (posn_lt _ [] = F) /\
   (posn_lt [] _ = T) /\
   (posn_lt (In::ps1) (In::ps2) = posn_lt ps1 ps2) /\
@@ -46,7 +46,7 @@ val posn_lt_def = Define`
   (posn_lt (Lt::_) (Rt::_) = T) /\
   (posn_lt (Rt::ps1) (Rt::ps2) = posn_lt ps1 ps2) /\
   (posn_lt (Rt::_) _ = F)
-`;
+End
 val _ = export_rewrites ["posn_lt_def"]
 
 
@@ -604,6 +604,4 @@ val v_posns_FINITE = Store_Thm(
   ``!v t. FINITE (v_posns v t)``,
   PROVE_TAC [v_posns_SUBSET_var_posns, var_posns_FINITE,
              pred_setTheory.SUBSET_FINITE, pred_setTheory.SUBSET_DEF]);
-
-val _ = export_theory()
 

@@ -4,44 +4,22 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "AKSclean";
-
 (* ------------------------------------------------------------------------- *)
-
-open jcLib;
-
-(* open dependent theories *)
-open prim_recTheory pred_setTheory listTheory arithmeticTheory logrootTheory
-     numberTheory combinatoricsTheory dividesTheory gcdTheory primeTheory;
-
-(* Get dependent theories local *)
-open AKSimprovedTheory;
-open AKSrevisedTheory;
-open AKStheoremTheory;
-open AKSmapsTheory;
-open AKSsetsTheory;
-open AKSintroTheory;
-open AKSshiftTheory;
-
-open countAKSTheory; (* for aks0_eq_aks *)
-
-open fieldInstancesTheory;
-open monoidTheory groupTheory ringTheory;
-
-open polyRingModuloTheory; (* for poly_mod_ring_has_monomials *)
-open polyFieldModuloTheory; (* for poly_mod_prod_group *)
-open polyIrreducibleTheory; (* for poly_irreducible_poly *)
-
-open computeBasicTheory;
-open computeOrderTheory;
-open computePolyTheory;
-open computeRingTheory;
-open computeParamTheory;
-open computeAKSTheory;
+Theory AKSclean
+Ancestors
+  prim_rec pred_set list arithmetic logroot number combinatorics
+  divides gcd prime AKSimproved AKSrevised AKStheorem AKSmaps
+  AKSsets AKSintro AKSshift
+  countAKS  (* for aks0_eq_aks *)
+  fieldInstances monoid group
+  ring
+  polyRingModulo  (* for poly_mod_ring_has_monomials *)
+  polyFieldModulo  (* for poly_mod_prod_group *)
+  polyIrreducible  (* for poly_irreducible_poly *)
+  computeBasic computeOrder computePoly computeRing computeParam
+  computeAKS
+Libs
+  jcLib
 
 val _ = intLib.deprecate_int ();
 
@@ -370,13 +348,13 @@ val it = |- !r. FiniteField r /\ (CARD R = char r) ==>
 *)
 
 (* Collect all AKS checks for introspective in a general FiniteField r *)
-val aks_criteria_def = Define`
+Definition aks_criteria_def:
    aks_criteria (r:'a field) n k <=>
       0 < n /\ 0 < k /\ (* both positive *)
       1 < ordz k (char r) /\ char r divides n /\ k < char r /\ (* involving (char r) *)
       ulog n ** 2 <= ordz k n /\ (* use of a = ulog n ** 2 *)
       poly_intro_range r k n (SQRT (phi k) * ulog n) (* use of s = SQRT (phi k) * ulog n *)
-`;
+End
 (* FiniteField r will be (ZN p) where p divides n *)
 (* 1 < ordz k (char r) gives 1 < k, by ZN_order_mod_1 *)
 (* Use poly_intro_range for theory criteria in a Ring r *)
@@ -390,13 +368,13 @@ val it = |- !n k. 1 < n /\ 0 < k /\ (!j. 1 < j /\ j <= k ==> ~(j divides n)) /\
 *)
 
 (* Collect the actual AKS checks, given n and parameter k. *)
-val aks_checks_def = Define`
+Definition aks_checks_def:
    aks_checks n k <=>
       1 < k /\
       (!j. 1 < j /\ j <= k /\ j < n ==> ~(j divides n)) /\  (* divisibility checks *)
       ulog n ** 2 <= ordz k n /\  (* condition on k *)
       (k < n ==> poly_intro_checks n k (SQRT (phi k) * ulog n)) (* introspective checks *)
-`;
+End
 (* Use poly_intro_checks for actual checks by algorithm. *)
 (* 0 < k is required for ZN_intro_eqn, to convert poly_intro_range to poly_intro_checks. *)
 (* Note: later (ZN n) is not supposed to be the FiniteField r. *)
@@ -728,7 +706,7 @@ val aks_main_theorem = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Express AKS algorithm in terms of possible results of AKS parameter search. *)
-val aks_def = zDefine`
+Definition aks_def[nocompute]:
     aks n <=>
        power_free n /\         (* power_free n implies 1 < n *)
        case aks_param n of     (* search for AKS parameter given n *)
@@ -736,7 +714,7 @@ val aks_def = zDefine`
        | good k =>             (* found k with m <= ordz k n, where m = (ulog n) ** 2 *)
             poly_intro_checks n k (SQRT (phi k) * ulog n)
        | bad => F              (* impossible *)
-`;
+End
 (* Note: use zDefine to avoid putting into computeLib by default,
    as poly_intro_checks uses !c. 0 < c /\ c <= m ==> ((x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k))
    which is symbolic.
@@ -1371,7 +1349,7 @@ val aks_compute_eqn = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Express AKS algorithm using direct polynomial modular computations in (ZN n). *)
-val aks_algo_def = Define`
+Definition aks_algo_def:
     aks_algo n <=> power_free_check n /\
        case aks_param n of     (* search for AKS parameter given n *)
          nice j => (j = n)     (* found j that will show n prime or composite directly *)
@@ -1379,7 +1357,7 @@ val aks_algo_def = Define`
                                (* found k with m <= ordz k n, where m = (ulog n) ** 2 *)
          (* !c. 0 < c /\ c <= SQRT (phi k) * (LOG2 n + 1) ==> (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k)) *)
        | bad => F              (* impossible *)
-`;
+End
 
 (*
 > EVAL ``aks_algo 2``; --> T
@@ -1521,20 +1499,20 @@ Try this:
 *)
 
 (* Define AKS criteria in a ring *)
-val aks_ring_criteria_def = Define`
+Definition aks_ring_criteria_def:
     aks_ring_criteria (r:'a ring) n k <=>
         0 < n /\ 1 < k /\ k < char r /\ ulog n ** 2 <= ordz k n /\
         poly_intro_range r k n (SQRT (phi k) * ulog n)
-`;
+End
 (* Note: r is supposed to be (ZN n) *)
 
 (* Define AKS criteria in a field *)
-val aks_field_criteria_def = Define`
+Definition aks_field_criteria_def:
     aks_field_criteria (r:'a field) n k <=>
         0 < n /\ 0 < k /\ 1 < ordz k (char r) /\
         char r divides n /\ k < char r /\ ulog n ** 2 <= ordz k n /\
         poly_intro_range r k n (SQRT (phi k) * ulog n)
-`;
+End
 (* Note: r is supposed to be (ZN p) *)
 (* 1 < ordz k (char r) gives 1 < k, by ZN_order_mod_1 *)
 
@@ -1546,13 +1524,13 @@ val aks_field_criteria_alt = store_thm(
   rw_tac std_ss[aks_field_criteria_def, aks_criteria_def]);
 
 (* Define aks_decide *)
-val aks_decide_def = Define`
+Definition aks_decide_def:
     aks_decide n <=>
     case aks_param n of
       nice j => j = n
     | good k => poly_intro_checks n k (SQRT (phi k) * ulog n)
     | bad => F
-`;
+End
 
 (* Theorem: aks_decide n = case aks_param n of
                              nice j => j = n
@@ -2257,9 +2235,9 @@ val reducePQ_def = Define`
     reducePQ (p:num) (q:num) (k:num) = {(p ** i * q ** j) MOD k | i IN univ(num) /\ j IN univ(num)}
 `;
 *)
-val reducePQ_def = Define`
+Definition reducePQ_def:
     reducePQ (p:num) (q:num) (k:num) = {(p ** i * q ** j) MOD k | 0 <= i /\ 0 <= j}
-`;
+End
 (* Another presentation:
 val reducePQ_def = Define`
     reducePQ (p:num) (q:num) (k:num) = {(p ** i * q ** j) MOD k | i, j | 0 <= i /\ 0 <= j}
@@ -2399,9 +2377,9 @@ val reducePQ_upper = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* The monoid of set N *)
-val monoidN_def = Define `
+Definition monoidN_def:
   monoidN (r:'a ring) (k:num) (s:num) = <| carrier := N; op := $*; id := 1 |>
-`;
+End
 
 (* Theorem: 0 < k ==> Monoid (monoidN r k s) *)
 (* Proof:
@@ -2422,9 +2400,9 @@ val monoidN_monoid = store_thm(
   rw[setN_has_1]);
 
 (* The monoid of set M *)
-val monoidM_def = Define `
+Definition monoidM_def:
   monoidM (r:'a ring) (k:num) (s:num) = <| carrier := M; op := (\x y. (x * y) MOD k); id := 1 |>
-`;
+End
 
 (* Theorem: Properties of monoidM *)
 (* Proof: by monoidM_def. *)
@@ -2503,9 +2481,9 @@ val monoidM_finite_monoid = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of monomials introspective with n, in MOD (unity k). *)
-val intro_monomials_def = Define`
+Definition intro_monomials_def:
     intro_monomials (r:'a ring) (n:num) (k:num) = {X + |c| | c:num | n intro (X + |c|)}
-`;
+End
 
 (* Theorem: intro_monomials r n k = IMAGE (\c:num. X + |c|) {c | c:num | (n intro (X + |c|))} *)
 (* Proof: by intro_monomials_def, EXTENSION. *)
@@ -2533,10 +2511,10 @@ val intro_monomials_subset = store_thm(
   metis_tac[poly_mod_ring_has_monomials]);
 
 (* Define the subgroup of introspective monomials in the quotient field by poly z. *)
-val intro_monomials_group_def = Define`
+Definition intro_monomials_group_def:
     intro_monomials_group (r:'a ring) (n:num) (k:num) (z:'a poly) =
        Generated_subset ((PolyModRing r z).prod excluding |0|) (intro_monomials r n k)
-`;
+End
 
 (* Theorem: Field r /\ ipoly z /\ 1 < deg z ==> Group (intro_monomials_group r n k z) *)
 (* Proof:
@@ -2595,9 +2573,9 @@ are roots of (lifted) z ** m1 - z ** m2, where m1 MOD k = m2 MOD k.
 *)
 
 (* Define the introspective exponents, reduced by MOD k *)
-val intro_exp_mod_def = Define`
+Definition intro_exp_mod_def:
     intro_exp_mod (r:'a ring) k s = {m MOD k | m | coprime m k /\ poly_intro_range r k m s}
-`;
+End
 (* This is actually modN r k s = M *)
 
 (* Theorem: n IN intro_exp_mod r k s <=> ?m. (n = m MOD k) /\ coprime m k /\ poly_intro_range r k m s *)
@@ -2661,9 +2639,9 @@ val intro_exp_mod_subset_euler = store_thm(
   rw[intro_exp_mod_thm, modN_subset_euler]);
 
 (* Define the subgroup generated by (intro_exp_mod r k s) *)
-val intro_exp_mod_group_def = Define`
+Definition intro_exp_mod_group_def:
     intro_exp_mod_group (r:'a ring) k s = Generated_subset (Estar k) (intro_exp_mod r k s)
-`;
+End
 
 (* Theorem: 1 < k ==> Group (intro_exp_mod_group r k s) *)
 (* Proof:
@@ -2702,8 +2680,4 @@ val intro_exp_mod_group_subgroup = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

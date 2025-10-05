@@ -40,25 +40,29 @@ val set_ss = std_ss ++ PRED_SET_ss;
 val _ = intLib.deprecate_int ();
 val _ = ratLib.deprecate_rat ();
 
-val PREIMAGE_REAL_COMPL1 = store_thm
-  ("PREIMAGE_REAL_COMPL1", ``!c:real. COMPL {x | c < x} = {x | x <= c}``,
+Theorem PREIMAGE_REAL_COMPL1:   !c:real. COMPL {x | c < x} = {x | x <= c}
+Proof
   RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION]
-  >> RW_TAC real_ss [GSPECIFICATION,GSYM real_lte,SPECIFICATION]);
+  >> RW_TAC real_ss [GSPECIFICATION,GSYM real_lte,SPECIFICATION]
+QED
 
-val PREIMAGE_REAL_COMPL2 = store_thm
-  ("PREIMAGE_REAL_COMPL2", ``!c:real. COMPL {x | c <= x} = {x | x < c}``,
+Theorem PREIMAGE_REAL_COMPL2:   !c:real. COMPL {x | c <= x} = {x | x < c}
+Proof
   RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION]
-  >> RW_TAC real_ss [GSPECIFICATION,GSYM real_lt,SPECIFICATION]);
+  >> RW_TAC real_ss [GSPECIFICATION,GSYM real_lt,SPECIFICATION]
+QED
 
-val PREIMAGE_REAL_COMPL3 = store_thm
-  ("PREIMAGE_REAL_COMPL3", ``!c:real. COMPL {x | x <= c} = {x | c < x}``,
+Theorem PREIMAGE_REAL_COMPL3:   !c:real. COMPL {x | x <= c} = {x | c < x}
+Proof
   RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION]
-  >> RW_TAC real_ss [GSPECIFICATION,GSYM real_lt,SPECIFICATION]);
+  >> RW_TAC real_ss [GSPECIFICATION,GSYM real_lt,SPECIFICATION]
+QED
 
-val PREIMAGE_REAL_COMPL4 = store_thm
-  ("PREIMAGE_REAL_COMPL4", ``!c:real. COMPL {x | x < c} = {x | c <= x}``,
+Theorem PREIMAGE_REAL_COMPL4:   !c:real. COMPL {x | x < c} = {x | c <= x}
+Proof
   RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION]
-  >> RW_TAC real_ss [GSPECIFICATION,GSYM real_lte,SPECIFICATION]);
+  >> RW_TAC real_ss [GSPECIFICATION,GSYM real_lte,SPECIFICATION]
+QED
 
 (* ************************************************************************* *)
 (* Basic Definitions                                                         *)
@@ -97,15 +101,17 @@ Theorem indicator_fn_def[local] = indicator
 (* Proofs                                                                    *)
 (* ************************************************************************* *)
 
-val space_borel = store_thm
-  ("space_borel", ``space borel = UNIV``,
-    METIS_TAC [borel, sigma_def, space_def]);
+Theorem space_borel:   space borel = UNIV
+Proof
+    METIS_TAC [borel, sigma_def, space_def]
+QED
 
-val sigma_algebra_borel = store_thm
-  ("sigma_algebra_borel", ``sigma_algebra borel``,
+Theorem sigma_algebra_borel:   sigma_algebra borel
+Proof
    RW_TAC std_ss [borel]
    >> MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA
-   >> RW_TAC std_ss [subset_class_def, IN_UNIV, IN_IMAGE, SUBSET_DEF]);
+   >> RW_TAC std_ss [subset_class_def, IN_UNIV, IN_IMAGE, SUBSET_DEF]
+QED
 
 (* NOTE: removed ‘sigma_algebra M’ due to changes of ‘measurable’ *)
 Theorem in_borel_measurable_open :
@@ -128,26 +134,32 @@ Proof
 QED
 
 (* NOTE: removed ‘sigma_algebra M’ due to changes of ‘measurable’ *)
-val in_borel_measurable_borel = store_thm
-  ("in_borel_measurable_borel",
-  ``!f M. f IN borel_measurable M <=>
-          (!s. s IN subsets borel ==> (PREIMAGE f s) INTER (space M) IN subsets M)``,
-  SIMP_TAC std_ss [in_borel_measurable_open, borel]);
+Theorem in_borel_measurable_borel:
+    !f M. f IN borel_measurable M <=>
+          (!s. s IN subsets borel ==> (PREIMAGE f s) INTER (space M) IN subsets M)
+Proof
+  SIMP_TAC std_ss [in_borel_measurable_open, borel]
+QED
 
-val space_in_borel = store_thm ("space_in_borel",
-  ``UNIV IN subsets borel``,
+Theorem space_in_borel:
+    UNIV IN subsets borel
+Proof
   SIMP_TAC std_ss [borel, sigma_def, subsets_def] THEN
   SIMP_TAC std_ss [IN_BIGINTER, GSPECIFICATION, SUBSET_DEF] THEN
   REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-  SIMP_TAC std_ss [OPEN_UNIV]);
+  SIMP_TAC std_ss [OPEN_UNIV]
+QED
 
-val borel_open = store_thm ("borel_open",
-  ``!A. open A ==> A IN subsets borel``,
+Theorem borel_open:
+    !A. open A ==> A IN subsets borel
+Proof
   SIMP_TAC std_ss [borel, sigma_def, subsets_def] THEN
-  SIMP_TAC std_ss [IN_BIGINTER, GSPECIFICATION, SUBSET_DEF]);
+  SIMP_TAC std_ss [IN_BIGINTER, GSPECIFICATION, SUBSET_DEF]
+QED
 
-val borel_closed = store_thm ("borel_closed",
-  ``!A. closed A ==> A IN subsets borel``,
+Theorem borel_closed:
+    !A. closed A ==> A IN subsets borel
+Proof
   GEN_TAC THEN REWRITE_TAC [closed_def] THEN
   DISCH_THEN (ASSUME_TAC o MATCH_MP borel_open) THEN
   FULL_SIMP_TAC std_ss [borel, sigma_def, subsets_def] THEN
@@ -156,10 +168,12 @@ val borel_closed = store_thm ("borel_closed",
   REPEAT STRIP_TAC THEN FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def] THEN
   FULL_SIMP_TAC std_ss [subsets_def, space_def] THEN POP_ASSUM K_TAC THEN
   POP_ASSUM K_TAC THEN FIRST_X_ASSUM (MP_TAC o SPEC ``univ(:real) DIFF A``) THEN
-  ASM_SIMP_TAC std_ss [SET_RULE ``UNIV DIFF (UNIV DIFF A) = A``]);
+  ASM_SIMP_TAC std_ss [SET_RULE ``UNIV DIFF (UNIV DIFF A) = A``]
+QED
 
-val borel_singleton = store_thm ("borel_singleton",
-  ``!A x. A IN subsets borel ==> x INSERT A IN subsets borel``,
+Theorem borel_singleton:
+    !A x. A IN subsets borel ==> x INSERT A IN subsets borel
+Proof
   REPEAT GEN_TAC THEN ASSUME_TAC borel_closed THEN
   FULL_SIMP_TAC std_ss [borel, sigma_def, subsets_def] THEN
   FULL_SIMP_TAC std_ss [IN_BIGINTER, GSPECIFICATION, SUBSET_DEF] THEN
@@ -171,26 +185,32 @@ val borel_singleton = store_thm ("borel_singleton",
   REPEAT STRIP_TAC THEN FULL_SIMP_TAC std_ss [] THEN
   FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def, subsets_def] THEN
   REWRITE_TAC [INSERT_DEF] THEN SIMP_TAC std_ss [GSYM IN_SING, GSYM UNION_DEF] THEN
-  FIRST_X_ASSUM MATCH_MP_TAC THEN METIS_TAC []);
+  FIRST_X_ASSUM MATCH_MP_TAC THEN METIS_TAC []
+QED
 
-val borel_comp = store_thm ("borel_comp",
- ``!A. A IN subsets borel ==> (UNIV DIFF A) IN subsets borel``,
+Theorem borel_comp:
+   !A. A IN subsets borel ==> (UNIV DIFF A) IN subsets borel
+Proof
   REPEAT GEN_TAC THEN
   FULL_SIMP_TAC std_ss [borel, sigma_def, subsets_def] THEN
   FULL_SIMP_TAC std_ss [IN_BIGINTER, GSPECIFICATION, SUBSET_DEF] THEN
   REPEAT STRIP_TAC THEN FIRST_X_ASSUM (MP_TAC o SPEC ``P:(real->bool)->bool``) THEN
-FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def, subsets_def, space_def]);
+FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def, subsets_def, space_def]
+QED
 
-val borel_measurable_image = store_thm ("borel_measurable_image",
-  ``!f M x. f IN borel_measurable M ==>
-            (PREIMAGE f {x}) INTER space M IN subsets M``,
+Theorem borel_measurable_image:
+    !f M x. f IN borel_measurable M ==>
+            (PREIMAGE f {x}) INTER space M IN subsets M
+Proof
   REPEAT GEN_TAC THEN SIMP_TAC std_ss [measurable_def] THEN
   SIMP_TAC std_ss [GSPECIFICATION] THEN REPEAT STRIP_TAC THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN MATCH_MP_TAC borel_closed THEN
-  SIMP_TAC std_ss [CLOSED_SING]);
+  SIMP_TAC std_ss [CLOSED_SING]
+QED
 
-val borel_measurable_const = store_thm ("borel_measurable_const",
-  ``!M c. sigma_algebra M ==> (\x. c) IN borel_measurable M``,
+Theorem borel_measurable_const:
+    !M c. sigma_algebra M ==> (\x. c) IN borel_measurable M
+Proof
   REPEAT STRIP_TAC THEN SIMP_TAC std_ss [measurable_def] THEN
   SIMP_TAC std_ss [GSPECIFICATION] THEN ASM_REWRITE_TAC [sigma_algebra_borel] THEN
   CONJ_TAC THENL [EVAL_TAC THEN SIMP_TAC std_ss [space_borel, IN_UNIV] THEN
@@ -204,31 +224,37 @@ val borel_measurable_const = store_thm ("borel_measurable_const",
    MATCH_MP_TAC ALGEBRA_SPACE THEN FULL_SIMP_TAC std_ss [sigma_algebra_def],
    ALL_TAC] THEN
   ASM_SIMP_TAC std_ss [GSPEC_F] THEN MATCH_MP_TAC ALGEBRA_EMPTY THEN
-  FULL_SIMP_TAC std_ss [sigma_algebra_def]);
+  FULL_SIMP_TAC std_ss [sigma_algebra_def]
+QED
 
-val borel_sigma_sets_subset = store_thm ("borel_sigma_sets_subset",
-  ``!A. A SUBSET subsets borel ==> (sigma_sets UNIV A) SUBSET subsets borel``,
+Theorem borel_sigma_sets_subset:
+    !A. A SUBSET subsets borel ==> (sigma_sets UNIV A) SUBSET subsets borel
+Proof
   RW_TAC std_ss [] THEN MATCH_MP_TAC sigma_sets_subset THEN
-  ASM_SIMP_TAC std_ss [GSYM space_borel, SPACE, sigma_algebra_borel]);
+  ASM_SIMP_TAC std_ss [GSYM space_borel, SPACE, sigma_algebra_borel]
+QED
 
-val borel_eq_sigmaI1 = store_thm ("borel_eq_sigmaI1",
-  ``!X A f. (borel = sigma UNIV X) /\
+Theorem borel_eq_sigmaI1:
+    !X A f. (borel = sigma UNIV X) /\
      (!x. x IN X ==> x IN subsets (sigma UNIV (IMAGE f A))) /\
      (!i. i IN A ==> f i IN subsets borel) ==>
-     (borel = sigma UNIV (IMAGE f A))``,
+     (borel = sigma UNIV (IMAGE f A))
+Proof
   RW_TAC std_ss [borel] THEN SIMP_TAC std_ss [sigma_def] THEN
   FULL_SIMP_TAC std_ss [sigma_def, subsets_def, GSYM SUBSET_DEF] THEN
   SIMP_TAC std_ss [EXTENSION, IN_BIGINTER, GSPECIFICATION] THEN
   GEN_TAC THEN FULL_SIMP_TAC std_ss [GSPECIFICATION] THEN
   EQ_TAC THEN REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-  ASM_SET_TAC []);
+  ASM_SET_TAC []
+QED
 
-val borel_eq_sigmaI2 = store_thm ("borel_eq_sigmaI2",
-  ``!G f A B. (borel = sigma UNIV (IMAGE (\(i,j). G i j) B)) /\
+Theorem borel_eq_sigmaI2:
+    !G f A B. (borel = sigma UNIV (IMAGE (\(i,j). G i j) B)) /\
             (!i j. (i,j) IN B ==>
                    G i j IN subsets (sigma UNIV (IMAGE (\(i,j). f i j) A))) /\
             (!i j. (i,j) IN A ==> f i j IN subsets borel) ==>
-            (borel = sigma UNIV (IMAGE (\(i,j). f i j) A))``,
+            (borel = sigma UNIV (IMAGE (\(i,j). f i j) A))
+Proof
   REPEAT STRIP_TAC THEN MATCH_MP_TAC borel_eq_sigmaI1 THEN
   EXISTS_TAC ``(IMAGE (\(i,j). (G:'a->'b->real->bool) i j) B)`` THEN
   FULL_SIMP_TAC std_ss [sigma_def, subsets_def, borel] THEN
@@ -237,26 +263,30 @@ val borel_eq_sigmaI2 = store_thm ("borel_eq_sigmaI2",
   [RW_TAC std_ss [IN_IMAGE] THEN MP_TAC (ISPEC ``x':'a#'b`` ABS_PAIR_THM) THEN
    STRIP_TAC THEN FULL_SIMP_TAC std_ss [], ALL_TAC] THEN
   RW_TAC std_ss [] THEN MP_TAC (ISPEC ``i:'c#'d`` ABS_PAIR_THM) THEN
-  STRIP_TAC THEN FULL_SIMP_TAC std_ss [] THEN ASM_SET_TAC []);
+  STRIP_TAC THEN FULL_SIMP_TAC std_ss [] THEN ASM_SET_TAC []
+QED
 
-val borel_eq_sigmaI3 = store_thm ("borel_eq_sigmaI3",
-  ``!f A X. (borel = sigma UNIV X) /\
+Theorem borel_eq_sigmaI3:
+    !f A X. (borel = sigma UNIV X) /\
           (!x. x IN X ==> x IN subsets (sigma UNIV (IMAGE (\(i,j). f i j) A))) /\
           (!i j. (i,j) IN A ==> f i j IN subsets borel) ==>
-          (borel = sigma UNIV (IMAGE (\(i,j). f i j) A))``,
+          (borel = sigma UNIV (IMAGE (\(i,j). f i j) A))
+Proof
   REPEAT STRIP_TAC THEN MATCH_MP_TAC borel_eq_sigmaI1 THEN
   EXISTS_TAC ``X:(real->bool)->bool`` THEN
   FULL_SIMP_TAC std_ss [sigma_def, subsets_def, borel] THEN
   FULL_SIMP_TAC std_ss [IN_BIGINTER, GSPECIFICATION] THEN
   RW_TAC std_ss [] THEN MP_TAC (ISPEC ``i:'a#'b`` ABS_PAIR_THM) THEN
-   STRIP_TAC THEN FULL_SIMP_TAC std_ss [] THEN ASM_SET_TAC []);
+   STRIP_TAC THEN FULL_SIMP_TAC std_ss [] THEN ASM_SET_TAC []
+QED
 
-val borel_eq_sigmaI4 = store_thm ("borel_eq_sigmaI4",
-  ``!G f A. (borel = sigma UNIV (IMAGE (\(i,j). G i j) A)) /\
+Theorem borel_eq_sigmaI4:
+    !G f A. (borel = sigma UNIV (IMAGE (\(i,j). G i j) A)) /\
             (!i j. (i,j) IN A ==>
                    G i j IN subsets (sigma UNIV (IMAGE f UNIV))) /\
             (!i. f i IN subsets borel) ==>
-            (borel = sigma UNIV (IMAGE f UNIV))``,
+            (borel = sigma UNIV (IMAGE f UNIV))
+Proof
   REPEAT STRIP_TAC THEN MATCH_MP_TAC borel_eq_sigmaI1 THEN
   EXISTS_TAC ``(IMAGE (\(i,j). (G:'a->'b->real->bool) i j) A)`` THEN
   FULL_SIMP_TAC std_ss [sigma_def, subsets_def, borel] THEN
@@ -264,13 +294,15 @@ val borel_eq_sigmaI4 = store_thm ("borel_eq_sigmaI4",
   CONJ_TAC THENL
   [RW_TAC std_ss [IN_IMAGE] THEN MP_TAC (ISPEC ``x':'a#'b`` ABS_PAIR_THM) THEN
    STRIP_TAC THEN FULL_SIMP_TAC std_ss [], ALL_TAC] THEN
-  RW_TAC std_ss [IN_UNIV] THEN ASM_SET_TAC []);
+  RW_TAC std_ss [IN_UNIV] THEN ASM_SET_TAC []
+QED
 
-val borel_eq_sigmaI5 = store_thm ("borel_eq_sigmaI5",
-  ``!G f. (borel = sigma UNIV (IMAGE G UNIV)) /\
+Theorem borel_eq_sigmaI5:
+    !G f. (borel = sigma UNIV (IMAGE G UNIV)) /\
           (!i. G i IN subsets (sigma UNIV (IMAGE (\(i,j). f i j) UNIV))) /\
           (!i j. f i j IN subsets borel) ==>
-          (borel = sigma UNIV (IMAGE (\(i,j). f i j) UNIV))``,
+          (borel = sigma UNIV (IMAGE (\(i,j). f i j) UNIV))
+Proof
   REPEAT STRIP_TAC THEN MATCH_MP_TAC borel_eq_sigmaI1 THEN
   EXISTS_TAC ``(IMAGE (G:'a->real->bool) UNIV)`` THEN
   FULL_SIMP_TAC std_ss [sigma_def, subsets_def, borel] THEN
@@ -280,16 +312,18 @@ val borel_eq_sigmaI5 = store_thm ("borel_eq_sigmaI5",
    ASM_SIMP_TAC std_ss [], ALL_TAC] THEN
   RW_TAC std_ss [IN_UNIV] THEN
   MP_TAC (ISPEC ``i:'b#'c`` ABS_PAIR_THM) THEN STRIP_TAC THEN
-  ASM_SIMP_TAC std_ss [] THEN ASM_SET_TAC []);
+  ASM_SIMP_TAC std_ss [] THEN ASM_SET_TAC []
+QED
 
-val BIGUNION_IMAGE_QSET = store_thm
-  ("BIGUNION_IMAGE_QSET",
-   ``!a f: real -> 'a -> bool. sigma_algebra a /\ f IN (q_set -> subsets a)
-            ==> BIGUNION (IMAGE f q_set) IN subsets a``,
+Theorem BIGUNION_IMAGE_QSET:
+     !a f: real -> 'a -> bool. sigma_algebra a /\ f IN (q_set -> subsets a)
+            ==> BIGUNION (IMAGE f q_set) IN subsets a
+Proof
    RW_TAC std_ss [SIGMA_ALGEBRA, IN_FUNSET, IN_UNIV, SUBSET_DEF] THEN
    FIRST_X_ASSUM MATCH_MP_TAC THEN RW_TAC std_ss [IN_IMAGE] THEN
    ASM_SIMP_TAC std_ss [] THEN MATCH_MP_TAC image_countable THEN
-   SIMP_TAC std_ss [QSET_COUNTABLE]);
+   SIMP_TAC std_ss [QSET_COUNTABLE]
+QED
 
 Definition box : (* `OPEN_interval (a,b)` *)
     box a b = {x:real | a < x /\ x < b}
@@ -301,9 +335,10 @@ Proof
     RW_TAC std_ss [box, OPEN_interval]
 QED
 
-val rational_boxes = store_thm ("rational_boxes",
-  ``!x e. 0 < e ==> ?a b. a IN q_set /\ b IN q_set /\ x IN box a b /\
-                          box a b SUBSET ball (x,e)``,
+Theorem rational_boxes:
+    !x e. 0 < e ==> ?a b. a IN q_set /\ b IN q_set /\ x IN box a b /\
+                          box a b SUBSET ball (x,e)
+Proof
   RW_TAC std_ss [] THEN
   `0:real < e / 2` by FULL_SIMP_TAC real_ss [] THEN
   KNOW_TAC ``?y. y IN q_set /\ y < x /\ x - y < e / 2`` THENL
@@ -321,10 +356,12 @@ val rational_boxes = store_thm ("rational_boxes",
   RW_TAC real_ss [] THEN GEN_REWR_TAC RAND_CONV [GSYM REAL_HALF_DOUBLE] THEN
   MATCH_MP_TAC REAL_LET_TRANS THEN EXISTS_TAC ``(x - y) + (y' - x):real`` THEN
   CONJ_TAC THENL [ALL_TAC, METIS_TAC [REAL_LT_ADD2]] THEN
-  ASM_REAL_ARITH_TAC);
+  ASM_REAL_ARITH_TAC
+QED
 
-val open_UNION_box = store_thm ("open_UNION_box",
-  ``!M. open M ==> (M = BIGUNION {box a b | box a b SUBSET M})``,
+Theorem open_UNION_box:
+    !M. open M ==> (M = BIGUNION {box a b | box a b SUBSET M})
+Proof
   RW_TAC std_ss [OPEN_CONTAINS_BALL] THEN
   SIMP_TAC std_ss [EXTENSION, IN_BIGUNION, GSPECIFICATION, EXISTS_PROD] THEN
   GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL
@@ -332,7 +369,8 @@ val open_UNION_box = store_thm ("open_UNION_box",
    STRIP_TAC THEN
    FIRST_X_ASSUM (MP_TAC o SPEC ``x:real`` o MATCH_MP rational_boxes) THEN
    STRIP_TAC THEN METIS_TAC [SUBSET_DEF], ALL_TAC] THEN
-  FULL_SIMP_TAC std_ss [SUBSET_DEF]);
+  FULL_SIMP_TAC std_ss [SUBSET_DEF]
+QED
 
 val open_union_box = Q.prove (
    `!M. open M ==>
@@ -744,17 +782,18 @@ Proof
 QED
 
 (* NOTE: removed ‘sigma_algebra s’ due to changes in ‘measurable’ *)
-val in_borel_measurable = store_thm
-  ("in_borel_measurable",
-   ``!f s. f IN borel_measurable s <=>
+Theorem in_borel_measurable:
+     !f s. f IN borel_measurable s <=>
            (!s'. s' IN subsets (sigma UNIV (IMAGE (\a. {x | x <= a}) UNIV)) ==>
-                 PREIMAGE f s' INTER space s IN subsets s)``,
+                 PREIMAGE f s' INTER space s IN subsets s)
+Proof
    RW_TAC std_ss [IN_MEASURABLE, borel_def,
                   SPACE_SIGMA, IN_FUNSET, IN_UNIV]
    >> `sigma_algebra (sigma UNIV (IMAGE (\a. {x | x <= a}) UNIV))`
         by (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA
             >> RW_TAC std_ss [subset_class_def, SUBSET_DEF, IN_UNIV])
-   >> ASM_REWRITE_TAC []);
+   >> ASM_REWRITE_TAC []
+QED
 
 Theorem in_borel_measurable_I :
     (\x. x) IN measurable borel borel
@@ -765,10 +804,10 @@ Proof
  >> REWRITE_TAC [sigma_algebra_borel]
 QED
 
-val borel_measurable_indicator = store_thm
-  ("borel_measurable_indicator",
-   ``!s a. sigma_algebra s /\ a IN subsets s ==>
-           indicator_fn a IN borel_measurable s``,
+Theorem borel_measurable_indicator:
+     !s a. sigma_algebra s /\ a IN subsets s ==>
+           indicator_fn a IN borel_measurable s
+Proof
    RW_TAC std_ss [indicator_fn_def, in_borel_measurable]
    >> Cases_on `1 IN s'`
    >- (Cases_on `0 IN s'`
@@ -789,7 +828,8 @@ val borel_measurable_indicator = store_thm
         >> METIS_TAC [SIGMA_ALGEBRA, algebra_def])
    >> `PREIMAGE (\x. (if x IN a then 1 else 0)) s' INTER space s = {}`
         by (RW_TAC std_ss [Once EXTENSION, IN_INTER, IN_PREIMAGE, NOT_IN_EMPTY] >> METIS_TAC [])
-   >> POP_ORW >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA, algebra_def]);
+   >> POP_ORW >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA, algebra_def]
+QED
 
 (* NOTE: moved ‘sigma_algebra m’ to antecedents due to changes of ‘measurable’
 
@@ -826,10 +866,10 @@ Proof
 QED
 
 (* cf. IN_MEASURABLE_BOREL_IMP in borelTheory *)
-val sigma_le_less = store_thm
-  ("sigma_le_less",
-  ``!f A. sigma_algebra A /\ (!(a:real). {w | w IN space A /\ f w <= a} IN subsets A) ==>
-          !a. {w | w IN space A /\ f w < a} IN subsets A``,
+Theorem sigma_le_less:
+    !f A. sigma_algebra A /\ (!(a:real). {w | w IN space A /\ f w <= a} IN subsets A) ==>
+          !a. {w | w IN space A /\ f w < a} IN subsets A
+Proof
    rpt STRIP_TAC
    >> `BIGUNION (IMAGE (\n. {w | w IN space A /\ f w <= a - inv(&(SUC n))}) (UNIV:num->bool)) =
        {w | w IN space A /\ f w < a}`
@@ -864,24 +904,26 @@ val sigma_le_less = store_thm
    >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA]
    >> Q.PAT_ASSUM `!c. P c ==> BIGUNION c IN subsets A` MATCH_MP_TAC
    >> RW_TAC std_ss [COUNTABLE_NUM, image_countable, SUBSET_DEF, IN_IMAGE, IN_UNIV]
-   >> METIS_TAC []);
+   >> METIS_TAC []
+QED
 
-val sigma_less_ge = store_thm
-  ("sigma_less_ge",
-  ``!f A. sigma_algebra A /\ (!(a:real). {w | w IN space A /\ f w < a} IN subsets A) ==>
-          !a. {w | w IN space A /\ a <= f w} IN subsets A``,
+Theorem sigma_less_ge:
+    !f A. sigma_algebra A /\ (!(a:real). {w | w IN space A /\ f w < a} IN subsets A) ==>
+          !a. {w | w IN space A /\ a <= f w} IN subsets A
+Proof
    rpt STRIP_TAC
    >> `{w | w IN space A /\ a <= f w} =
        space A DIFF {w | w IN space A /\ f w < a}`
         by (RW_TAC std_ss [Once EXTENSION, IN_DIFF, GSPECIFICATION, real_lt]
             >> DECIDE_TAC)
    >> POP_ORW
-   >> METIS_TAC [SIGMA_ALGEBRA]);
+   >> METIS_TAC [SIGMA_ALGEBRA]
+QED
 
-val sigma_ge_gr = store_thm
-  ("sigma_ge_gr",
-  ``!f A. sigma_algebra A /\ (!(a:real). {w | w IN space A /\ a <= f w} IN subsets A) ==>
-          !a. {w | w IN space A /\ a < f w} IN subsets A``,
+Theorem sigma_ge_gr:
+    !f A. sigma_algebra A /\ (!(a:real). {w | w IN space A /\ a <= f w} IN subsets A) ==>
+          !a. {w | w IN space A /\ a < f w} IN subsets A
+Proof
    rpt STRIP_TAC
    >> `BIGUNION (IMAGE (\n. {w | w IN space A /\ a <= f w - inv(&(SUC n))}) (UNIV:num->bool)) =
        {w | w IN space A /\ a < f w}`
@@ -915,19 +957,21 @@ val sigma_ge_gr = store_thm
    >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA]
    >> Q.PAT_X_ASSUM `!c. P c ==> BIGUNION c IN subsets A` MATCH_MP_TAC
    >> RW_TAC std_ss [COUNTABLE_NUM, image_countable, SUBSET_DEF, IN_IMAGE, IN_UNIV, REAL_LE_SUB_LADD]
-   >> METIS_TAC []);
+   >> METIS_TAC []
+QED
 
-val sigma_gr_le = store_thm
-  ("sigma_gr_le",
-  ``!f A. sigma_algebra A /\ (!(a:real). {w | w IN space A /\ a < f w} IN subsets A) ==>
-          !a. {w | w IN space A /\ f w <= a} IN subsets A``,
+Theorem sigma_gr_le:
+    !f A. sigma_algebra A /\ (!(a:real). {w | w IN space A /\ a < f w} IN subsets A) ==>
+          !a. {w | w IN space A /\ f w <= a} IN subsets A
+Proof
    rpt STRIP_TAC
    >> `{w | w IN space A /\ f w <= a} =
        space A DIFF {w | w IN space A /\ a < f w}`
         by (RW_TAC std_ss [Once EXTENSION, IN_DIFF, GSPECIFICATION, real_lt]
             >> DECIDE_TAC)
    >> POP_ORW
-   >> METIS_TAC [SIGMA_ALGEBRA]);
+   >> METIS_TAC [SIGMA_ALGEBRA]
+QED
 
 (* NOTE: moved ‘sigma_algebra m’ to antecedents due to changes of ‘measurable’ *)
 Theorem in_borel_measurable_gr :
@@ -2255,15 +2299,17 @@ Definition line :
     line n = {x:real | -&n <= x /\ x <= &n}
 End
 
-val borel_line = store_thm
-  ("borel_line", ``!n. line n IN subsets borel``,
+Theorem borel_line:   !n. line n IN subsets borel
+Proof
     RW_TAC std_ss [line]
  >> MATCH_MP_TAC borel_closed
- >> SIMP_TAC std_ss [GSYM interval, CLOSED_INTERVAL]);
+ >> SIMP_TAC std_ss [GSYM interval, CLOSED_INTERVAL]
+QED
 
-val line_closed = store_thm
-  ("line_closed", ``!n. closed (line n)``,
-    RW_TAC std_ss [GSYM interval, line, CLOSED_INTERVAL]);
+Theorem line_closed:   !n. closed (line n)
+Proof
+    RW_TAC std_ss [GSYM interval, line, CLOSED_INTERVAL]
+QED
 
 Theorem LINE_MONO : (* was: line_subset *)
     !n N. n <= N ==> line n SUBSET line N

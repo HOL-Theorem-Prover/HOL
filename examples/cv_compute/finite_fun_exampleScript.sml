@@ -1,8 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-open wordsTheory wordsLib cv_stdTheory cv_transLib;
-open cv_typeTheory sptreeTheory;
-
-val _ = new_theory "finite_fun_example";
+Theory finite_fun_example
+Ancestors
+  words cv_std cv_type sptree
+Libs
+  wordsLib cv_transLib
 
 (* --- setup --- *)
 
@@ -174,4 +174,3 @@ val def = fetch "-" "cv_mem_test_def";
 
 val res = cv_eval “mem_test mem_empty mem_empty 3w”;
 
-val _ = export_theory();

@@ -3,17 +3,15 @@
 (*        Translation from Reset Linear Temporal Logic (RLTL) to LTL          *)
 (*                                                                            *)
 (******************************************************************************)
+Theory rltl_to_ltl
+Ancestors
+  rltl full_ltl prop_logic pred_set
+Libs
+  Sanity
 
-open HolKernel Parse boolLib bossLib;
 
-open rltlTheory full_ltlTheory prop_logicTheory pred_setTheory;
-
-open Sanity;
-
-val _ = new_theory "rltl_to_ltl";
-
-val RLTL_TO_LTL_def = Define (* see [1, p.35] *)
-  `(RLTL_TO_LTL a r (RLTL_PROP b) = LTL_PROP(P_OR(a, P_AND(b, P_NOT r)))) /\
+Definition RLTL_TO_LTL_def:   (* see [1, p.35] *)
+   (RLTL_TO_LTL a r (RLTL_PROP b) = LTL_PROP(P_OR(a, P_AND(b, P_NOT r)))) /\
    (RLTL_TO_LTL a r (RLTL_NOT f) = LTL_NOT(RLTL_TO_LTL r a f)) /\
    (RLTL_TO_LTL a r (RLTL_AND(f1,f2)) =
       LTL_AND(RLTL_TO_LTL a r f1, RLTL_TO_LTL a r f2)) /\
@@ -22,7 +20,8 @@ val RLTL_TO_LTL_def = Define (* see [1, p.35] *)
    (RLTL_TO_LTL a r (RLTL_SUNTIL(f1, f2)) =
       LTL_SUNTIL(RLTL_TO_LTL a r f1, RLTL_TO_LTL a r f2)) /\
    (RLTL_TO_LTL a r (RLTL_ACCEPT (f, b)) =
-      RLTL_TO_LTL (P_OR(a, P_AND(b, P_NOT(r)))) r f)`;
+      RLTL_TO_LTL (P_OR(a, P_AND(b, P_NOT(r)))) r f)
+End
 
 Theorem RLTL_TO_LTL_REWRITES :
   !a r f1 f2.
@@ -87,14 +86,15 @@ Proof
                      RLTL_TO_LTL_THM]
 QED
 
-val FUTURE_LTL_TO_RLTL_def = Define
-  `(FUTURE_LTL_TO_RLTL (LTL_PROP b) = (RLTL_PROP b)) /\
+Definition FUTURE_LTL_TO_RLTL_def:
+   (FUTURE_LTL_TO_RLTL (LTL_PROP b) = (RLTL_PROP b)) /\
    (FUTURE_LTL_TO_RLTL (LTL_NOT f) = (RLTL_NOT (FUTURE_LTL_TO_RLTL f))) /\
    (FUTURE_LTL_TO_RLTL (LTL_AND(f1,f2)) =
      (RLTL_AND(FUTURE_LTL_TO_RLTL f1, FUTURE_LTL_TO_RLTL f2))) /\
    (FUTURE_LTL_TO_RLTL (LTL_NEXT f) = (RLTL_NEXT (FUTURE_LTL_TO_RLTL f))) /\
    (FUTURE_LTL_TO_RLTL (LTL_SUNTIL(f1,f2)) =
-     (RLTL_SUNTIL(FUTURE_LTL_TO_RLTL f1, FUTURE_LTL_TO_RLTL f2)))`;
+     (RLTL_SUNTIL(FUTURE_LTL_TO_RLTL f1, FUTURE_LTL_TO_RLTL f2)))
+End
 
 Theorem FUTURE_LTL_TO_RLTL_THM :
     !f v t. IS_FUTURE_LTL f ==>
@@ -133,8 +133,6 @@ Proof
  >> FULL_SIMP_TAC std_ss [IS_RLTL_THM, IS_LTL_THM, IS_FUTURE_LTL_def,
                           FUTURE_LTL_TO_RLTL_def, LTL_OR_def]
 QED
-
-val _ = export_theory();
 
 (* References:
 

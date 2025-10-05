@@ -13,39 +13,49 @@ val _ = ParseExtras.temp_loose_equality()
 
 val list_ss  = arith_ss ++ listSimps.LIST_ss
 
-val GUESS_EXISTS_def = Define `
-    GUESS_EXISTS i P = ((?v. P v) = (?fv. P (i fv)))`
+Definition GUESS_EXISTS_def:
+    GUESS_EXISTS i P = ((?v. P v) = (?fv. P (i fv)))
+End
 
-val GUESS_FORALL_def = Define `
-    GUESS_FORALL i P = ((!v. P v) = (!fv. P (i fv)))`
+Definition GUESS_FORALL_def:
+    GUESS_FORALL i P = ((!v. P v) = (!fv. P (i fv)))
+End
 
-val GUESS_EXISTS_FORALL_REWRITES = store_thm ("GUESS_EXISTS_FORALL_REWRITES",
-``(GUESS_EXISTS i P = (!v. P v ==> (?fv. P (i fv)))) /\
-  (GUESS_FORALL i P = (!v. ~(P v) ==> (?fv. ~(P (i fv)))))``,
+Theorem GUESS_EXISTS_FORALL_REWRITES:
+  (GUESS_EXISTS i P = (!v. P v ==> (?fv. P (i fv)))) /\
+  (GUESS_FORALL i P = (!v. ~(P v) ==> (?fv. ~(P (i fv)))))
+Proof
 SIMP_TAC std_ss [GUESS_EXISTS_def, GUESS_FORALL_def] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
 
-val GUESS_EXISTS_POINT_def = Define `
-    GUESS_EXISTS_POINT i P = (!fv. P (i fv))`
+Definition GUESS_EXISTS_POINT_def:
+    GUESS_EXISTS_POINT i P = (!fv. P (i fv))
+End
 
-val GUESS_FORALL_POINT_def = Define `
-    GUESS_FORALL_POINT i P = (!fv. ~(P (i fv)))`
+Definition GUESS_FORALL_POINT_def:
+    GUESS_FORALL_POINT i P = (!fv. ~(P (i fv)))
+End
 
-val GUESS_POINT_THM = store_thm ("GUESS_POINT_THM",
-``(GUESS_EXISTS_POINT i P ==> ((?v. P v) = T)) /\
-  (GUESS_FORALL_POINT i P ==> ((!v. P v) = F))``,
+Theorem GUESS_POINT_THM:
+  (GUESS_EXISTS_POINT i P ==> ((?v. P v) = T)) /\
+  (GUESS_FORALL_POINT i P ==> ((!v. P v) = F))
+Proof
 SIMP_TAC std_ss [GUESS_EXISTS_POINT_def, GUESS_FORALL_POINT_def] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
 
-val GUESS_EXISTS_GAP_def = Define `
+Definition GUESS_EXISTS_GAP_def:
     GUESS_EXISTS_GAP i P =
-       (!v. P v ==> (?fv. v = (i fv)))`;
+       (!v. P v ==> (?fv. v = (i fv)))
+End
 
-val GUESS_FORALL_GAP_def = Define `
+Definition GUESS_FORALL_GAP_def:
     GUESS_FORALL_GAP i P =
-       (!v. ~(P v) ==> (?fv. v = (i fv)))`;
+       (!v. ~(P v) ==> (?fv. v = (i fv)))
+End
 
 
 val GUESS_REWRITES = save_thm ("GUESS_REWRITES",
@@ -59,53 +69,69 @@ val GUESS_REWRITES = save_thm ("GUESS_REWRITES",
 (* Now the intended semantic                                                  *)
 (******************************************************************************)
 
-val GUESS_EXISTS_POINT_THM = store_thm ("GUESS_EXISTS_POINT_THM",
-``!i P. GUESS_EXISTS_POINT i P ==> ($? P = T)``,
+Theorem GUESS_EXISTS_POINT_THM:
+  !i P. GUESS_EXISTS_POINT i P ==> ($? P = T)
+Proof
 SIMP_TAC std_ss [GUESS_EXISTS_POINT_def, EXISTS_THM] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
-val GUESS_FORALL_POINT_THM = store_thm ("GUESS_FORALL_POINT_THM",
-``!i P. GUESS_FORALL_POINT i P ==> (($! P) = F)``,
+Theorem GUESS_FORALL_POINT_THM:
+  !i P. GUESS_FORALL_POINT i P ==> (($! P) = F)
+Proof
 SIMP_TAC std_ss [GUESS_REWRITES, FORALL_THM] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
-val GUESS_EXISTS_THM = store_thm ("GUESS_EXISTS_THM",
-``!i P. GUESS_EXISTS i P ==> ($? P = ?fv. P (i fv))``,
+Theorem GUESS_EXISTS_THM:
+  !i P. GUESS_EXISTS i P ==> ($? P = ?fv. P (i fv))
+Proof
 SIMP_TAC std_ss [GUESS_REWRITES, EXISTS_THM] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
-val GUESS_FORALL_THM = store_thm ("GUESS_FORALL_THM",
-``!i P. GUESS_FORALL i P ==> (($! P) = !fv. P (i fv))``,
+Theorem GUESS_FORALL_THM:
+  !i P. GUESS_FORALL i P ==> (($! P) = !fv. P (i fv))
+Proof
 SIMP_TAC std_ss [GUESS_REWRITES, FORALL_THM] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
 
-val GUESSES_UEXISTS_THM1 = store_thm("GUESSES_UEXISTS_THM1",
-``!i P. GUESS_EXISTS (\x. i) P ==>
-        ($?! P = ((P i) /\ (!v. P v ==> (v = i))))``,
+Theorem GUESSES_UEXISTS_THM1:
+  !i P. GUESS_EXISTS (\x. i) P ==>
+        ($?! P = ((P i) /\ (!v. P v ==> (v = i))))
+Proof
 SIMP_TAC std_ss [GUESS_REWRITES, combinTheory.K_DEF] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
-val GUESSES_UEXISTS_THM2 = store_thm("GUESSES_UEXISTS_THM2",
-``!i P. GUESS_EXISTS_GAP (\x. i) P ==> ($?! P = P i)``,
+Theorem GUESSES_UEXISTS_THM2:
+  !i P. GUESS_EXISTS_GAP (\x. i) P ==> ($?! P = P i)
+Proof
 SIMP_TAC std_ss [GUESS_REWRITES, combinTheory.K_DEF] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
-val GUESSES_UEXISTS_THM3 = store_thm("GUESSES_UEXISTS_THM3",
-``!i P. GUESS_EXISTS_POINT (\x. i) P ==>
-        ($?! P = (!v. P v ==> (v = i)))``,
+Theorem GUESSES_UEXISTS_THM3:
+  !i P. GUESS_EXISTS_POINT (\x. i) P ==>
+        ($?! P = (!v. P v ==> (v = i)))
+Proof
 SIMP_TAC std_ss [GUESS_REWRITES, combinTheory.K_DEF] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
-val GUESSES_UEXISTS_THM4 = store_thm("GUESSES_UEXISTS_THM4",
-``!i P. GUESS_EXISTS_POINT (\x. i) P ==> GUESS_EXISTS_GAP (\x. i) P ==>
-        ($?! P = T)``,
+Theorem GUESSES_UEXISTS_THM4:
+  !i P. GUESS_EXISTS_POINT (\x. i) P ==> GUESS_EXISTS_GAP (\x. i) P ==>
+        ($?! P = T)
+Proof
 SIMP_TAC std_ss [GUESS_REWRITES, combinTheory.K_DEF] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
 
-val GUESSES_NEG_DUALITY = store_thm ("GUESSES_NEG_DUALITY",
-``(GUESS_EXISTS i ($~ o P) =
+Theorem GUESSES_NEG_DUALITY:
+  (GUESS_EXISTS i ($~ o P) =
    GUESS_FORALL i P) /\
 
   (GUESS_FORALL i ($~ o P) =
@@ -121,9 +147,11 @@ val GUESSES_NEG_DUALITY = store_thm ("GUESSES_NEG_DUALITY",
    GUESS_FORALL_POINT i P) /\
 
   (GUESS_FORALL_POINT i ($~ o P) =
-   GUESS_EXISTS_POINT  i P)``,
+   GUESS_EXISTS_POINT  i P)
+Proof
 
-SIMP_TAC std_ss [GUESS_REWRITES, combinTheory.o_DEF]);
+SIMP_TAC std_ss [GUESS_REWRITES, combinTheory.o_DEF]
+QED
 
 
 val GUESSES_NEG_REWRITE = save_thm ("GUESSES_NEG_REWRITE",
@@ -131,14 +159,16 @@ SIMP_RULE std_ss [combinTheory.o_DEF]
   (INST [``P:'b -> bool`` |-> ``\x:'b. (P x):bool``] GUESSES_NEG_DUALITY));
 
 
-val GUESSES_WEAKEN_THM = store_thm ("GUESSES_WEAKEN_THM",
-``(GUESS_FORALL_GAP i P ==> GUESS_FORALL i P) /\
+Theorem GUESSES_WEAKEN_THM:
+  (GUESS_FORALL_GAP i P ==> GUESS_FORALL i P) /\
   (GUESS_FORALL_POINT         i P ==> GUESS_FORALL i P) /\
   (GUESS_EXISTS_POINT          i P ==> GUESS_EXISTS i P) /\
-  (GUESS_EXISTS_GAP i P ==> GUESS_EXISTS i P)``,
+  (GUESS_EXISTS_GAP i P ==> GUESS_EXISTS i P)
+Proof
 
 SIMP_TAC std_ss [GUESS_REWRITES] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
 
 
@@ -146,48 +176,60 @@ METIS_TAC[]);
 (* Equations                                                                  *)
 (******************************************************************************)
 
-val GUESS_RULES_EQUATION_EXISTS_POINT = store_thm ("GUESS_RULES_EQUATION_EXISTS_POINT",
-``!i P Q.
+Theorem GUESS_RULES_EQUATION_EXISTS_POINT:
+  !i P Q.
   (P i = Q i) ==>
-  GUESS_EXISTS_POINT (\xxx:unit. i) (\x. P x = Q x)``,
-SIMP_TAC std_ss [GUESS_REWRITES]);
+  GUESS_EXISTS_POINT (\xxx:unit. i) (\x. P x = Q x)
+Proof
+SIMP_TAC std_ss [GUESS_REWRITES]
+QED
 
-val GUESS_RULES_EQUATION_FORALL_POINT = store_thm ("GUESS_RULES_EQUATION_FORALL_POINT",
-``!i P Q.
+Theorem GUESS_RULES_EQUATION_FORALL_POINT:
+  !i P Q.
   (!fv. ~(P (i fv) = Q (i fv))) ==>
-  GUESS_FORALL_POINT i (\x. P x = Q x)``,
-SIMP_TAC std_ss [GUESS_REWRITES]);
+  GUESS_FORALL_POINT i (\x. P x = Q x)
+Proof
+SIMP_TAC std_ss [GUESS_REWRITES]
+QED
 
-val GUESS_RULES_EQUATION_EXISTS_GAP = store_thm ("GUESS_RULES_EQUATION_EXISTS_GAP",
-``!i.
-  GUESS_EXISTS_GAP (\xxx:unit. i) (\x. x = i)``,
+Theorem GUESS_RULES_EQUATION_EXISTS_GAP:
+  !i.
+  GUESS_EXISTS_GAP (\xxx:unit. i) (\x. x = i)
+Proof
 SIMP_TAC std_ss [GUESS_REWRITES] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
 (******************************************************************************)
 (* Trivial point guesses                                                      *)
 (******************************************************************************)
 
-val GUESS_RULES_TRIVIAL_EXISTS_POINT = store_thm ("GUESS_RULES_TRIVIAL_EXISTS_POINT",
-``!i P. P i ==>
-  GUESS_EXISTS_POINT (\xxx:unit. i) P``,
-SIMP_TAC std_ss [GUESS_REWRITES]);
+Theorem GUESS_RULES_TRIVIAL_EXISTS_POINT:
+  !i P. P i ==>
+  GUESS_EXISTS_POINT (\xxx:unit. i) P
+Proof
+SIMP_TAC std_ss [GUESS_REWRITES]
+QED
 
-val GUESS_RULES_TRIVIAL_FORALL_POINT = store_thm ("GUESS_RULES_TRIVIAL_FORALL_POINT",
-``!i P. ~(P i) ==>
-  GUESS_FORALL_POINT (\xxx:unit. i) P``,
-SIMP_TAC std_ss [GUESS_REWRITES]);
+Theorem GUESS_RULES_TRIVIAL_FORALL_POINT:
+  !i P. ~(P i) ==>
+  GUESS_FORALL_POINT (\xxx:unit. i) P
+Proof
+SIMP_TAC std_ss [GUESS_REWRITES]
+QED
 
 (******************************************************************************)
 (* Trivial booleans                                                           *)
 (******************************************************************************)
 
-val GUESS_RULES_BOOL = store_thm ("GUESS_RULES_BOOL",
-``GUESS_EXISTS_POINT (\ARB:unit. T) (\x. x) /\
+Theorem GUESS_RULES_BOOL:
+  GUESS_EXISTS_POINT (\ARB:unit. T) (\x. x) /\
   GUESS_FORALL_POINT (\ARB:unit. F) (\x. x) /\
   GUESS_EXISTS_GAP (\ARB:unit. T) (\x. x) /\
-  GUESS_FORALL_GAP (\ARB:unit. F) (\x. x)``,
-SIMP_TAC std_ss [GUESS_REWRITES]);
+  GUESS_FORALL_GAP (\ARB:unit. F) (\x. x)
+Proof
+SIMP_TAC std_ss [GUESS_REWRITES]
+QED
 
 
 
@@ -195,29 +237,35 @@ SIMP_TAC std_ss [GUESS_REWRITES]);
 (* Cases                                                                      *)
 (******************************************************************************)
 
-val GUESS_RULES_TWO_CASES = store_thm ("GUESS_RULES_TWO_CASES",
-``!y Q. ((!x. ((x = y) \/ (?fv. x = Q fv)))) ==>
-  GUESS_FORALL_GAP Q (\x. x = y)``,
+Theorem GUESS_RULES_TWO_CASES:
+  !y Q. ((!x. ((x = y) \/ (?fv. x = Q fv)))) ==>
+  GUESS_FORALL_GAP Q (\x. x = y)
+Proof
 SIMP_TAC std_ss [GUESS_REWRITES] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
-val GUESS_RULES_ONE_CASE___FORALL_GAP = store_thm ("GUESS_RULES_ONE_CASE___FORALL_GAP",
-``!P Q. ((!x:'a. (?fv. x = Q fv))) ==>
-  GUESS_FORALL_GAP Q (P:'a -> bool)``,
-SIMP_TAC std_ss [GUESS_REWRITES]);
+Theorem GUESS_RULES_ONE_CASE___FORALL_GAP:
+  !P Q. ((!x:'a. (?fv. x = Q fv))) ==>
+  GUESS_FORALL_GAP Q (P:'a -> bool)
+Proof
+SIMP_TAC std_ss [GUESS_REWRITES]
+QED
 
-val GUESS_RULES_ONE_CASE___EXISTS_GAP = store_thm ("GUESS_RULES_ONE_CASE___EXISTS_GAP",
-``!P Q. ((!x:'a. (?fv. x = Q fv))) ==>
-  GUESS_EXISTS_GAP Q (P:'a -> bool)``,
-SIMP_TAC std_ss [GUESS_REWRITES]);
+Theorem GUESS_RULES_ONE_CASE___EXISTS_GAP:
+  !P Q. ((!x:'a. (?fv. x = Q fv))) ==>
+  GUESS_EXISTS_GAP Q (P:'a -> bool)
+Proof
+SIMP_TAC std_ss [GUESS_REWRITES]
+QED
 
 
 (******************************************************************************)
 (* Boolean operators                                                          *)
 (******************************************************************************)
 
-val GUESS_RULES_NEG = store_thm ("GUESS_RULES_NEG",
-``(GUESS_EXISTS i (\x. P x) ==>
+Theorem GUESS_RULES_NEG:
+  (GUESS_EXISTS i (\x. P x) ==>
    GUESS_FORALL i (\x. ~(P x))) /\
 
   (GUESS_EXISTS_GAP i (\x. P x) ==>
@@ -233,21 +281,27 @@ val GUESS_RULES_NEG = store_thm ("GUESS_RULES_NEG",
    GUESS_EXISTS_GAP i (\x. ~(P x))) /\
 
   (GUESS_FORALL_POINT i (\x. P x) ==>
-   GUESS_EXISTS_POINT  i (\x. ~(P x)))``,
+   GUESS_EXISTS_POINT  i (\x. ~(P x)))
+Proof
 
-SIMP_TAC std_ss [GUESSES_NEG_REWRITE]);
+SIMP_TAC std_ss [GUESSES_NEG_REWRITE]
+QED
 
 
-val GUESS_RULES_CONSTANT_EXISTS = store_thm ("GUESS_RULES_CONSTANT_EXISTS",
-``(GUESS_EXISTS i (\x. p)) = T``,
-SIMP_TAC std_ss [GUESS_REWRITES]);
+Theorem GUESS_RULES_CONSTANT_EXISTS:
+  (GUESS_EXISTS i (\x. p)) = T
+Proof
+SIMP_TAC std_ss [GUESS_REWRITES]
+QED
 
-val GUESS_RULES_CONSTANT_FORALL = store_thm ("GUESS_RULES_CONSTANT_FORALL",
-``(GUESS_FORALL i (\x. p)) = T``,
-SIMP_TAC std_ss [GUESS_REWRITES]);
+Theorem GUESS_RULES_CONSTANT_FORALL:
+  (GUESS_FORALL i (\x. p)) = T
+Proof
+SIMP_TAC std_ss [GUESS_REWRITES]
+QED
 
-val GUESS_RULES_DISJ = store_thm ("GUESS_RULES_DISJ",
-``(GUESS_EXISTS_POINT i (\x. P x) ==>
+Theorem GUESS_RULES_DISJ:
+  (GUESS_EXISTS_POINT i (\x. P x) ==>
    GUESS_EXISTS_POINT i (\x. P x \/ Q x)) /\
 
   (GUESS_EXISTS_POINT i (\x. Q x) ==>
@@ -286,10 +340,12 @@ val GUESS_RULES_DISJ = store_thm ("GUESS_RULES_DISJ",
    GUESS_FORALL_GAP i (\x. P x \/ Q x)) /\
 
   (GUESS_FORALL_GAP i (\x. Q x) ==>
-   GUESS_FORALL_GAP i (\x. P x \/ Q x))``,
+   GUESS_FORALL_GAP i (\x. P x \/ Q x))
+Proof
 
 SIMP_TAC std_ss [GUESS_REWRITES, combinTheory.K_DEF] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
 
 
@@ -429,8 +485,8 @@ end
 
 *)
 
-val GUESS_RULES_EQUIV = store_thm ("GUESS_RULES_EQUIV",
-``(GUESS_EXISTS_POINT i (\x. P x) /\
+Theorem GUESS_RULES_EQUIV:
+  (GUESS_EXISTS_POINT i (\x. P x) /\
    GUESS_EXISTS_POINT i (\x. Q x) ==>
    GUESS_EXISTS_POINT i (\x. P x <=> Q x)) /\
 
@@ -461,14 +517,15 @@ val GUESS_RULES_EQUIV = store_thm ("GUESS_RULES_EQUIV",
   (GUESS_FORALL_GAP i (\x. P1 x) /\
    GUESS_EXISTS_GAP i (\x. P2 x) ==>
    GUESS_EXISTS_GAP i (\x. P1 x <=> P2 x))
-``,
+Proof
 
 SIMP_TAC std_ss [GUESS_REWRITES, combinTheory.K_DEF] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
 
-val GUESS_RULES_COND = store_thm ("GUESS_RULES_COND",
-`` (GUESS_FORALL_POINT i (\x. P x) /\
+Theorem GUESS_RULES_COND:
+   (GUESS_FORALL_POINT i (\x. P x) /\
     GUESS_FORALL_POINT i (\x. Q x) ==>
     GUESS_FORALL_POINT i (\x. if b x then P x else Q x)) /\
 
@@ -523,14 +580,16 @@ val GUESS_RULES_COND = store_thm ("GUESS_RULES_COND",
 
    (GUESS_FORALL_GAP i (\x. b x) /\
     GUESS_FORALL_GAP i (\x. P x) ==>
-    GUESS_FORALL_GAP i (\x. if b x then P x else Q x))``,
+    GUESS_FORALL_GAP i (\x. if b x then P x else Q x))
+Proof
 
 SIMP_TAC std_ss [GUESS_REWRITES] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
 
-val GUESS_RULES_FORALL___NEW_FV = store_thm ("GUESS_RULES_FORALL___NEW_FV",
-``((!y. GUESS_FORALL_POINT (iy y) (\x. P x y)) ==>
+Theorem GUESS_RULES_FORALL___NEW_FV:
+  ((!y. GUESS_FORALL_POINT (iy y) (\x. P x y)) ==>
    GUESS_FORALL_POINT (\fv. iy (FST fv) (SND fv)) (\x. !y. P x y)) /\
 
   ((!y. GUESS_FORALL (iy y) (\x. P x y)) ==>
@@ -540,15 +599,17 @@ val GUESS_RULES_FORALL___NEW_FV = store_thm ("GUESS_RULES_FORALL___NEW_FV",
    GUESS_FORALL_GAP (\fv. iy (FST fv) (SND fv)) (\x. !y. P x y)) /\
 
   ((!y. GUESS_EXISTS_GAP (iy y) (\x. P x y)) ==>
-    GUESS_EXISTS_GAP (\fv. iy (FST fv) (SND fv)) (\x. !y. P x y))``,
+    GUESS_EXISTS_GAP (\fv. iy (FST fv) (SND fv)) (\x. !y. P x y))
+Proof
 
 SIMP_TAC std_ss [GUESS_REWRITES, FORALL_PROD, EXISTS_PROD] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
 
 (* A variant of GUESS_RULES_FORALL___NEW_FV that eliminates unit directly. *)
-val GUESS_RULES_FORALL___NEW_FV_1 = store_thm ("GUESS_RULES_FORALL___NEW_FV_1",
-``((!y. GUESS_FORALL_POINT (\xxx:unit. (i y)) (\x. P (x:'c) (y:'a))) ==>
+Theorem GUESS_RULES_FORALL___NEW_FV_1:
+  ((!y. GUESS_FORALL_POINT (\xxx:unit. (i y)) (\x. P (x:'c) (y:'a))) ==>
    GUESS_FORALL_POINT i (\x. !y. P x y)) /\
 
   ((!y. GUESS_FORALL (\xxx:unit. (i y)) (\x. P x y)) ==>
@@ -558,14 +619,16 @@ val GUESS_RULES_FORALL___NEW_FV_1 = store_thm ("GUESS_RULES_FORALL___NEW_FV_1",
    GUESS_FORALL_GAP i (\x. !y. P x y)) /\
 
   ((!y. GUESS_EXISTS_GAP (\xxx:unit. (i y)) (\x. P x y)) ==>
-    GUESS_EXISTS_GAP i (\x. !y. P x y))``,
+    GUESS_EXISTS_GAP i (\x. !y. P x y))
+Proof
 
 SIMP_TAC std_ss [GUESS_REWRITES, FORALL_PROD, EXISTS_PROD] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
 
-val GUESS_RULES_FORALL = store_thm ("GUESS_RULES_FORALL",
-``((!y. GUESS_FORALL_POINT i (\x. P x y)) ==>
+Theorem GUESS_RULES_FORALL:
+  ((!y. GUESS_FORALL_POINT i (\x. P x y)) ==>
    GUESS_FORALL_POINT i (\x. !y. P x y)) /\
 
   ((!y. GUESS_FORALL i (\x. P x y)) ==>
@@ -581,10 +644,12 @@ val GUESS_RULES_FORALL = store_thm ("GUESS_RULES_FORALL",
    GUESS_EXISTS (\xxx:unit. iK) (\x. !y. P x y)) /\
 
   ((!y. GUESS_EXISTS_GAP i (\x. P x y)) ==>
-    GUESS_EXISTS_GAP i (\x. !y. P x y))``,
+    GUESS_EXISTS_GAP i (\x. !y. P x y))
+Proof
 
 SIMP_TAC std_ss [GUESS_REWRITES, FORALL_PROD, EXISTS_PROD] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
 
 
@@ -615,14 +680,16 @@ val GUESS_RULES_EXISTS = save_thm ("GUESS_RULES_EXISTS",
 end
 
 
-val GUESS_RULES_EXISTS_UNIQUE = store_thm ("GUESS_RULES_EXISTS_UNIQUE",
-``((!y. GUESS_FORALL_POINT i (\x. P x y)) ==>
+Theorem GUESS_RULES_EXISTS_UNIQUE:
+  ((!y. GUESS_FORALL_POINT i (\x. P x y)) ==>
    GUESS_FORALL_POINT i (\x. ?!y. P x y)) /\
 
   ((!y. GUESS_EXISTS_GAP i (\x. P x y)) ==>
-   GUESS_EXISTS_GAP i (\x. ?!y. P x y))``,
+   GUESS_EXISTS_GAP i (\x. ?!y. P x y))
+Proof
 
-SIMP_TAC std_ss [GUESS_REWRITES, EXISTS_UNIQUE_THM]);
+SIMP_TAC std_ss [GUESS_REWRITES, EXISTS_UNIQUE_THM]
+QED
 
 
 val QUANT_UNIT_ELIM = prove (``
@@ -637,8 +704,8 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
 
 
 
-val GUESS_RULES_ELIM_UNIT = store_thm ("GUESS_RULES_ELIM_UNIT",
-``(GUESS_FORALL_POINT (i:('a # unit) -> 'b) vt =
+Theorem GUESS_RULES_ELIM_UNIT:
+  (GUESS_FORALL_POINT (i:('a # unit) -> 'b) vt =
    GUESS_FORALL_POINT (\x:'a. i (x,())) vt) /\
 
   (GUESS_EXISTS_POINT (i:('a # unit) -> 'b) vt =
@@ -654,136 +721,179 @@ val GUESS_RULES_ELIM_UNIT = store_thm ("GUESS_RULES_ELIM_UNIT",
    GUESS_EXISTS_GAP (\x:'a. i (x,())) vt) /\
 
   (GUESS_FORALL_GAP (i:('a # unit) -> 'b) vt =
-   GUESS_FORALL_GAP (\x:'a. i (x,())) vt)``,
+   GUESS_FORALL_GAP (\x:'a. i (x,())) vt)
+Proof
 
 SIMP_TAC std_ss [GUESS_REWRITES, FORALL_PROD,
-   EXISTS_PROD, QUANT_UNIT_ELIM]);
+   EXISTS_PROD, QUANT_UNIT_ELIM]
+QED
 
 
-val GUESS_RULES_STRENGTHEN_EXISTS_POINT = store_thm ("GUESS_RULES_STRENGTHEN_EXISTS_POINT",
-``!P Q. ((!x. P x ==> Q x) ==>
+Theorem GUESS_RULES_STRENGTHEN_EXISTS_POINT:
+  !P Q. ((!x. P x ==> Q x) ==>
   ((GUESS_EXISTS_POINT i P ==>
-    GUESS_EXISTS_POINT i Q)))``,
+    GUESS_EXISTS_POINT i Q)))
+Proof
 SIMP_TAC std_ss [GUESS_REWRITES] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
-val GUESS_RULES_STRENGTHEN_FORALL_GAP = store_thm ("GUESS_RULES_STRENGTHEN_FORALL_GAP",
-``!P Q. ((!x. P x ==> Q x) ==>
+Theorem GUESS_RULES_STRENGTHEN_FORALL_GAP:
+  !P Q. ((!x. P x ==> Q x) ==>
   ((GUESS_FORALL_GAP i P ==>
-    GUESS_FORALL_GAP i Q)))``,
+    GUESS_FORALL_GAP i Q)))
+Proof
 SIMP_TAC std_ss [GUESS_REWRITES] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
-val GUESS_RULES_WEAKEN_FORALL_POINT = store_thm ("GUESS_RULES_WEAKEN_FORALL_POINT",
-``!P Q. ((!x. Q x ==> P x) ==>
+Theorem GUESS_RULES_WEAKEN_FORALL_POINT:
+  !P Q. ((!x. Q x ==> P x) ==>
   ((GUESS_FORALL_POINT i P ==>
-    GUESS_FORALL_POINT i Q)))``,
+    GUESS_FORALL_POINT i Q)))
+Proof
 SIMP_TAC std_ss [GUESS_REWRITES] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
-val GUESS_RULES_WEAKEN_EXISTS_GAP = store_thm ("GUESS_RULES_WEAKEN_EXISTS_GAP",
-``!P Q. ((!x. Q x ==> P x) ==>
+Theorem GUESS_RULES_WEAKEN_EXISTS_GAP:
+  !P Q. ((!x. Q x ==> P x) ==>
   ((GUESS_EXISTS_GAP i P ==>
-    GUESS_EXISTS_GAP i Q)))``,
+    GUESS_EXISTS_GAP i Q)))
+Proof
 SIMP_TAC std_ss [GUESS_REWRITES] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
 
 
 (*Basic theorems*)
 
-val CONJ_NOT_OR_THM = store_thm ("CONJ_NOT_OR_THM",
-``!A B. A /\ B = ~(~A \/ ~B)``,
-REWRITE_TAC[DE_MORGAN_THM])
+Theorem CONJ_NOT_OR_THM:
+  !A B. A /\ B = ~(~A \/ ~B)
+Proof
+REWRITE_TAC[DE_MORGAN_THM]
+QED
 
 
-val EXISTS_NOT_FORALL_THM = store_thm ("EXISTS_NOT_FORALL_THM",
-``!P. ((?x. P x) = (~(!x. ~(P x))))``,
-PROVE_TAC[])
+Theorem EXISTS_NOT_FORALL_THM:
+  !P. ((?x. P x) = (~(!x. ~(P x))))
+Proof
+PROVE_TAC[]
+QED
 
 
-val MOVE_EXISTS_IMP_THM = store_thm ("MOVE_EXISTS_IMP_THM",
-``(?x. ((!y. (~(P x y)) ==> R y) ==> Q x)) =
-         (((!y. (~(!x. P x y)) ==> R y)) ==> ?x. Q x)``,
-         PROVE_TAC[]);
+Theorem MOVE_EXISTS_IMP_THM:
+  (?x. ((!y. (~(P x y)) ==> R y) ==> Q x)) =
+         (((!y. (~(!x. P x y)) ==> R y)) ==> ?x. Q x)
+Proof
+         PROVE_TAC[]
+QED
 
 
-val UNWIND_EXISTS_THM = store_thm ("UNWIND_EXISTS_THM",
- ``!a P. (?x. P x) = ((!x. ~(x = a) ==> ~(P x)) ==> P a)``,
- PROVE_TAC[]);
+Theorem UNWIND_EXISTS_THM:
+   !a P. (?x. P x) = ((!x. ~(x = a) ==> ~(P x)) ==> P a)
+Proof
+ PROVE_TAC[]
+QED
 
 
-val LEFT_IMP_AND_INTRO = store_thm ("LEFT_IMP_AND_INTRO",
- ``!x t1 t2. (t1 ==> t2) ==> ((x /\ t1) ==> (x /\ t2))``,
- PROVE_TAC[]);
+Theorem LEFT_IMP_AND_INTRO:
+   !x t1 t2. (t1 ==> t2) ==> ((x /\ t1) ==> (x /\ t2))
+Proof
+ PROVE_TAC[]
+QED
 
-val RIGHT_IMP_AND_INTRO = store_thm ("RIGHT_IMP_AND_INTRO",
- ``!x t1 t2. (t1 ==> t2) ==> ((t1 /\ x) ==> (t2 /\ x))``,
- PROVE_TAC[]);
-
-
-val LEFT_IMP_OR_INTRO = store_thm ("LEFT_IMP_OR_INTRO",
- ``!x t1 t2. (t1 ==> t2) ==> ((x \/ t1) ==> (x \/ t2))``,
- PROVE_TAC[]);
-
-val RIGHT_IMP_OR_INTRO = store_thm ("RIGHT_IMP_OR_INTRO",
- ``!x t1 t2. (t1 ==> t2) ==> ((t1 \/ x) ==> (t2 \/ x))``,
- PROVE_TAC[]);
-
-val IMP_NEG_CONTRA = store_thm("IMP_NEG_CONTRA",
-   ``!P i x. ~(P i) ==> (P x) ==> ~(x = i)``, PROVE_TAC[])
+Theorem RIGHT_IMP_AND_INTRO:
+   !x t1 t2. (t1 ==> t2) ==> ((t1 /\ x) ==> (t2 /\ x))
+Proof
+ PROVE_TAC[]
+QED
 
 
-val DISJ_IMP_INTRO  = store_thm ("DISJ_IMP_INTRO",
-  ``(!x. P x \/ Q x) ==> ((~(P y) ==> Q y) /\ (~(Q y) ==> P y))``, PROVE_TAC[])
+Theorem LEFT_IMP_OR_INTRO:
+   !x t1 t2. (t1 ==> t2) ==> ((x \/ t1) ==> (x \/ t2))
+Proof
+ PROVE_TAC[]
+QED
+
+Theorem RIGHT_IMP_OR_INTRO:
+   !x t1 t2. (t1 ==> t2) ==> ((t1 \/ x) ==> (t2 \/ x))
+Proof
+ PROVE_TAC[]
+QED
+
+Theorem IMP_NEG_CONTRA:
+     !P i x. ~(P i) ==> (P x) ==> ~(x = i)
+Proof PROVE_TAC[]
+QED
+
+
+Theorem DISJ_IMP_INTRO:
+    (!x. P x \/ Q x) ==> ((~(P y) ==> Q y) /\ (~(Q y) ==> P y))
+Proof PROVE_TAC[]
+QED
 
 
 (******************************************************************************)
 (* Simple GUESSES                                                             *)
 (******************************************************************************)
 
-val SIMPLE_GUESS_EXISTS_def = Define `
+Definition SIMPLE_GUESS_EXISTS_def:
     SIMPLE_GUESS_EXISTS (v : 'a) (i : 'a) (P : bool) =
-      (P ==> (v = i))`
+      (P ==> (v = i))
+End
 
-val SIMPLE_GUESS_EXISTS_ALT_DEF = store_thm ("SIMPLE_GUESS_EXISTS_ALT_DEF",
-  ``(!v. SIMPLE_GUESS_EXISTS (v:'a) i (P v)) <=> (
-    GUESS_EXISTS_GAP ((K i):(unit -> 'a)) (\v. P v))``,
-SIMP_TAC std_ss [SIMPLE_GUESS_EXISTS_def, GUESS_EXISTS_GAP_def]);
+Theorem SIMPLE_GUESS_EXISTS_ALT_DEF:
+    (!v. SIMPLE_GUESS_EXISTS (v:'a) i (P v)) <=> (
+    GUESS_EXISTS_GAP ((K i):(unit -> 'a)) (\v. P v))
+Proof
+SIMP_TAC std_ss [SIMPLE_GUESS_EXISTS_def, GUESS_EXISTS_GAP_def]
+QED
 
 
-val SIMPLE_GUESS_FORALL_def = Define `
+Definition SIMPLE_GUESS_FORALL_def:
     SIMPLE_GUESS_FORALL (v : 'a) (i : 'a) (P : bool) =
-      (~P ==> (v = i))`
+      (~P ==> (v = i))
+End
 
-val SIMPLE_GUESS_FORALL_ALT_DEF = store_thm ("SIMPLE_GUESS_FORALL_ALT_DEF",
-  ``(!v. SIMPLE_GUESS_FORALL (v:'a) i (P v)) <=> (
-    GUESS_FORALL_GAP ((K i):(unit -> 'a)) (\v. P v))``,
-SIMP_TAC std_ss [SIMPLE_GUESS_FORALL_def, GUESS_FORALL_GAP_def]);
+Theorem SIMPLE_GUESS_FORALL_ALT_DEF:
+    (!v. SIMPLE_GUESS_FORALL (v:'a) i (P v)) <=> (
+    GUESS_FORALL_GAP ((K i):(unit -> 'a)) (\v. P v))
+Proof
+SIMP_TAC std_ss [SIMPLE_GUESS_FORALL_def, GUESS_FORALL_GAP_def]
+QED
 
-val SIMPLE_GUESS_FORALL_THM = store_thm ("SIMPLE_GUESS_FORALL_THM",
-  ``!i P. (!v. SIMPLE_GUESS_FORALL v i (P v)) ==>
-    ((!v. P v) <=> (P i))``,
+Theorem SIMPLE_GUESS_FORALL_THM:
+    !i P. (!v. SIMPLE_GUESS_FORALL v i (P v)) ==>
+    ((!v. P v) <=> (P i))
+Proof
 REWRITE_TAC [SIMPLE_GUESS_FORALL_def] THEN
-METIS_TAC[])
+METIS_TAC[]
+QED
 
-val SIMPLE_GUESS_EXISTS_THM = store_thm ("SIMPLE_GUESS_EXISTS_THM",
-  ``!i P. (!v. SIMPLE_GUESS_EXISTS v i (P v)) ==>
-    ((?v. P v) <=> (P i))``,
+Theorem SIMPLE_GUESS_EXISTS_THM:
+    !i P. (!v. SIMPLE_GUESS_EXISTS v i (P v)) ==>
+    ((?v. P v) <=> (P i))
+Proof
 REWRITE_TAC [SIMPLE_GUESS_EXISTS_def] THEN
-METIS_TAC[])
+METIS_TAC[]
+QED
 
-val SIMPLE_GUESS_UEXISTS_THM = store_thm ("SIMPLE_GUESS_UEXISTS_THM",
-  ``!i P.
+Theorem SIMPLE_GUESS_UEXISTS_THM:
+    !i P.
     (!v. SIMPLE_GUESS_EXISTS v i (P v)) ==>
-    ((?!v. P v) <=> (P i))``,
+    ((?!v. P v) <=> (P i))
+Proof
 SIMP_TAC std_ss [SIMPLE_GUESS_EXISTS_def, EXISTS_UNIQUE_THM] THEN
-METIS_TAC[])
+METIS_TAC[]
+QED
 
-val SIMPLE_GUESS_SELECT_THM = store_thm ("SIMPLE_GUESS_SELECT_THM",
-  ``!i P.
+Theorem SIMPLE_GUESS_SELECT_THM:
+    !i P.
     (!v. SIMPLE_GUESS_EXISTS v i (P v)) ==>
-    ((@v. P v) = if P i then i else (@v. F))``,
+    ((@v. P v) = if P i then i else (@v. F))
+Proof
 SIMP_TAC std_ss [SIMPLE_GUESS_EXISTS_def] THEN
 REPEAT STRIP_TAC THEN
 Cases_on `P i` THEN ASM_REWRITE_TAC [] THENL [
@@ -792,95 +902,128 @@ Cases_on `P i` THEN ASM_REWRITE_TAC [] THENL [
 
   `!v. P v = F` by METIS_TAC[] THEN
   ASM_REWRITE_TAC[]
-])
+]
+QED
 
 
-val SIMPLE_GUESS_SOME_THM = store_thm ("SIMPLE_GUESS_SOME_THM",
-  ``!i P.
+Theorem SIMPLE_GUESS_SOME_THM:
+    !i P.
     (!v. SIMPLE_GUESS_EXISTS v i (P v)) ==>
-    ((some v. P v) = (if P i then SOME i else NONE))``,
+    ((some v. P v) = (if P i then SOME i else NONE))
+Proof
 
 SIMP_TAC std_ss [SIMPLE_GUESS_EXISTS_def, some_def] THEN
 REPEAT STRIP_TAC THEN
 Cases_on `?v. P v` THEN (
   ASM_REWRITE_TAC [] THEN
   METIS_TAC[]
-))
+)
+QED
 
 val SIMPLE_GUESS_TAC =
   SIMP_TAC std_ss [SIMPLE_GUESS_FORALL_def, SIMPLE_GUESS_EXISTS_def] THEN METIS_TAC[];
 
-val SIMPLE_GUESS_EXISTS_EQ_1 = store_thm ("SIMPLE_GUESS_EXISTS_EQ_1",
-  ``!v:'a i. SIMPLE_GUESS_EXISTS v i (v = i)``,
-  SIMPLE_GUESS_TAC)
-
-val SIMPLE_GUESS_EXISTS_EQ_2 = store_thm ("SIMPLE_GUESS_EXISTS_EQ_2",
-  ``!v:'a i. SIMPLE_GUESS_EXISTS v i (i = v)``,
-  SIMPLE_GUESS_TAC)
-
-val SIMPLE_GUESS_EXISTS_EQ_T = store_thm ("SIMPLE_GUESS_EXISTS_EQ_T",
-  ``!v. SIMPLE_GUESS_EXISTS v T v``,
-  SIMPLE_GUESS_TAC)
-
-val SIMPLE_GUESS_FORALL_NEG = store_thm ("SIMPLE_GUESS_FORALL_NEG",
-  ``!v:'a i P. SIMPLE_GUESS_EXISTS v i P ==> SIMPLE_GUESS_FORALL v i (~P)``,
+Theorem SIMPLE_GUESS_EXISTS_EQ_1:
+    !v:'a i. SIMPLE_GUESS_EXISTS v i (v = i)
+Proof
   SIMPLE_GUESS_TAC
-)
+QED
 
-val SIMPLE_GUESS_EXISTS_NEG = store_thm ("SIMPLE_GUESS_EXISTS_NEG",
-  ``!v:'a i P. SIMPLE_GUESS_FORALL v i P ==> SIMPLE_GUESS_EXISTS v i (~P)``,
+Theorem SIMPLE_GUESS_EXISTS_EQ_2:
+    !v:'a i. SIMPLE_GUESS_EXISTS v i (i = v)
+Proof
   SIMPLE_GUESS_TAC
-)
+QED
 
-val SIMPLE_GUESS_FORALL_OR_1 = store_thm ("SIMPLE_GUESS_FORALL_OR_1",
-  ``!v:'a i P1 P2. SIMPLE_GUESS_FORALL v i P1 ==> SIMPLE_GUESS_FORALL v i (P1 \/ P2)``,
-  SIMPLE_GUESS_TAC);
+Theorem SIMPLE_GUESS_EXISTS_EQ_T:
+    !v. SIMPLE_GUESS_EXISTS v T v
+Proof
+  SIMPLE_GUESS_TAC
+QED
 
-val SIMPLE_GUESS_FORALL_OR_2 = store_thm ("SIMPLE_GUESS_FORALL_OR_2",
-  ``!v:'a i P1 P2. SIMPLE_GUESS_FORALL v i P2 ==> SIMPLE_GUESS_FORALL v i (P1 \/ P2)``,
-  SIMPLE_GUESS_TAC);
+Theorem SIMPLE_GUESS_FORALL_NEG:
+    !v:'a i P. SIMPLE_GUESS_EXISTS v i P ==> SIMPLE_GUESS_FORALL v i (~P)
+Proof
+  SIMPLE_GUESS_TAC
+QED
 
-val SIMPLE_GUESS_EXISTS_AND_1 = store_thm ("SIMPLE_GUESS_EXISTS_AND_1",
-  ``!v:'a i P1 P2. SIMPLE_GUESS_EXISTS v i P1 ==> SIMPLE_GUESS_EXISTS v i (P1 /\ P2)``,
-  SIMPLE_GUESS_TAC);
+Theorem SIMPLE_GUESS_EXISTS_NEG:
+    !v:'a i P. SIMPLE_GUESS_FORALL v i P ==> SIMPLE_GUESS_EXISTS v i (~P)
+Proof
+  SIMPLE_GUESS_TAC
+QED
 
-val SIMPLE_GUESS_EXISTS_AND_2 = store_thm ("SIMPLE_GUESS_EXISTS_AND_2",
-  ``!v:'a i P1 P2. SIMPLE_GUESS_EXISTS v i P2 ==> SIMPLE_GUESS_EXISTS v i (P1 /\ P2)``,
-  SIMPLE_GUESS_TAC);
+Theorem SIMPLE_GUESS_FORALL_OR_1:
+    !v:'a i P1 P2. SIMPLE_GUESS_FORALL v i P1 ==> SIMPLE_GUESS_FORALL v i (P1 \/ P2)
+Proof
+  SIMPLE_GUESS_TAC
+QED
 
-val SIMPLE_GUESS_EXISTS_EXISTS = store_thm ("SIMPLE_GUESS_EXISTS_EXISTS",
-  ``!v:'a i P. (!v2. SIMPLE_GUESS_EXISTS v i (P v2)) ==>
-               SIMPLE_GUESS_EXISTS v i (?v2. P v2)``,
-  SIMPLE_GUESS_TAC)
+Theorem SIMPLE_GUESS_FORALL_OR_2:
+    !v:'a i P1 P2. SIMPLE_GUESS_FORALL v i P2 ==> SIMPLE_GUESS_FORALL v i (P1 \/ P2)
+Proof
+  SIMPLE_GUESS_TAC
+QED
 
-val SIMPLE_GUESS_EXISTS_FORALL = store_thm ("SIMPLE_GUESS_EXISTS_FORALL",
-  ``!v:'a i P. (!v2. SIMPLE_GUESS_EXISTS v i (P v2)) ==>
-               SIMPLE_GUESS_EXISTS v i (!v2. P v2)``,
-  SIMPLE_GUESS_TAC)
+Theorem SIMPLE_GUESS_EXISTS_AND_1:
+    !v:'a i P1 P2. SIMPLE_GUESS_EXISTS v i P1 ==> SIMPLE_GUESS_EXISTS v i (P1 /\ P2)
+Proof
+  SIMPLE_GUESS_TAC
+QED
 
-val SIMPLE_GUESS_FORALL_EXISTS = store_thm ("SIMPLE_GUESS_FORALL_EXISTS",
-  ``!v:'a i P. (!v2. SIMPLE_GUESS_FORALL v i (P v2)) ==>
-               SIMPLE_GUESS_FORALL v i (?v2. P v2)``,
-  SIMPLE_GUESS_TAC)
+Theorem SIMPLE_GUESS_EXISTS_AND_2:
+    !v:'a i P1 P2. SIMPLE_GUESS_EXISTS v i P2 ==> SIMPLE_GUESS_EXISTS v i (P1 /\ P2)
+Proof
+  SIMPLE_GUESS_TAC
+QED
 
-val SIMPLE_GUESS_FORALL_FORALL = store_thm ("SIMPLE_GUESS_FORALL_FORALL",
-  ``!v i P. (!v2. SIMPLE_GUESS_FORALL v i (P v2)) ==>
-            SIMPLE_GUESS_FORALL v i (!v2. P v2)``,
-  SIMPLE_GUESS_TAC)
+Theorem SIMPLE_GUESS_EXISTS_EXISTS:
+    !v:'a i P. (!v2. SIMPLE_GUESS_EXISTS v i (P v2)) ==>
+               SIMPLE_GUESS_EXISTS v i (?v2. P v2)
+Proof
+  SIMPLE_GUESS_TAC
+QED
 
-val SIMPLE_GUESS_FORALL_IMP_1 = store_thm ("SIMPLE_GUESS_FORALL_IMP_1",
-  ``!v:'a i P1 P2. SIMPLE_GUESS_EXISTS v i P1 ==> SIMPLE_GUESS_FORALL v i (P1 ==> P2)``,
-  SIMPLE_GUESS_TAC);
+Theorem SIMPLE_GUESS_EXISTS_FORALL:
+    !v:'a i P. (!v2. SIMPLE_GUESS_EXISTS v i (P v2)) ==>
+               SIMPLE_GUESS_EXISTS v i (!v2. P v2)
+Proof
+  SIMPLE_GUESS_TAC
+QED
 
-val SIMPLE_GUESS_FORALL_IMP_2 = store_thm ("SIMPLE_GUESS_FORALL_IMP_2",
-  ``!v:'a i P1 P2. SIMPLE_GUESS_FORALL v i P2 ==> SIMPLE_GUESS_FORALL v i (P1 ==> P2)``,
-  SIMPLE_GUESS_TAC);
+Theorem SIMPLE_GUESS_FORALL_EXISTS:
+    !v:'a i P. (!v2. SIMPLE_GUESS_FORALL v i (P v2)) ==>
+               SIMPLE_GUESS_FORALL v i (?v2. P v2)
+Proof
+  SIMPLE_GUESS_TAC
+QED
 
-val SIMPLE_GUESS_EXISTS_EQ_FUN = store_thm ("SIMPLE_GUESS_EXISTS_EQ_FUN",
-  ``!v:'a i t1 t2 f.
+Theorem SIMPLE_GUESS_FORALL_FORALL:
+    !v i P. (!v2. SIMPLE_GUESS_FORALL v i (P v2)) ==>
+            SIMPLE_GUESS_FORALL v i (!v2. P v2)
+Proof
+  SIMPLE_GUESS_TAC
+QED
+
+Theorem SIMPLE_GUESS_FORALL_IMP_1:
+    !v:'a i P1 P2. SIMPLE_GUESS_EXISTS v i P1 ==> SIMPLE_GUESS_FORALL v i (P1 ==> P2)
+Proof
+  SIMPLE_GUESS_TAC
+QED
+
+Theorem SIMPLE_GUESS_FORALL_IMP_2:
+    !v:'a i P1 P2. SIMPLE_GUESS_FORALL v i P2 ==> SIMPLE_GUESS_FORALL v i (P1 ==> P2)
+Proof
+  SIMPLE_GUESS_TAC
+QED
+
+Theorem SIMPLE_GUESS_EXISTS_EQ_FUN:
+    !v:'a i t1 t2 f.
       SIMPLE_GUESS_EXISTS v i (f t1 = f t2) ==>
-      SIMPLE_GUESS_EXISTS v i (t1 = t2)``,
-  SIMPLE_GUESS_TAC)
+      SIMPLE_GUESS_EXISTS v i (t1 = t2)
+Proof
+  SIMPLE_GUESS_TAC
+QED
 
 
 (******************************************************************************)
@@ -888,86 +1031,111 @@ val SIMPLE_GUESS_EXISTS_EQ_FUN = store_thm ("SIMPLE_GUESS_EXISTS_EQ_FUN",
 (******************************************************************************)
 
 
-val IS_REMOVABLE_QUANT_FUN_def = Define `
-    IS_REMOVABLE_QUANT_FUN f = (!v. ?x. f x = v)`
+Definition IS_REMOVABLE_QUANT_FUN_def:
+    IS_REMOVABLE_QUANT_FUN f = (!v. ?x. f x = v)
+End
 
-val IS_REMOVABLE_QUANT_FUN___EXISTS_THM = store_thm ("IS_REMOVABLE_QUANT_FUN___EXISTS_THM",
-  ``!f P. IS_REMOVABLE_QUANT_FUN f ==> ((?x. P (f x)) = (?x'. P x'))``,
-REWRITE_TAC[IS_REMOVABLE_QUANT_FUN_def] THEN METIS_TAC[]);
+Theorem IS_REMOVABLE_QUANT_FUN___EXISTS_THM:
+    !f P. IS_REMOVABLE_QUANT_FUN f ==> ((?x. P (f x)) = (?x'. P x'))
+Proof
+REWRITE_TAC[IS_REMOVABLE_QUANT_FUN_def] THEN METIS_TAC[]
+QED
 
-val IS_REMOVABLE_QUANT_FUN___FORALL_THM = store_thm ("IS_REMOVABLE_QUANT_FUN___FORALL_THM",
-  ``!f P. IS_REMOVABLE_QUANT_FUN f ==> ((!x. P (f x)) = (!x'. P x'))``,
-REWRITE_TAC[IS_REMOVABLE_QUANT_FUN_def] THEN METIS_TAC[]);
+Theorem IS_REMOVABLE_QUANT_FUN___FORALL_THM:
+    !f P. IS_REMOVABLE_QUANT_FUN f ==> ((!x. P (f x)) = (!x'. P x'))
+Proof
+REWRITE_TAC[IS_REMOVABLE_QUANT_FUN_def] THEN METIS_TAC[]
+QED
 
 
 
 (* Theorems for the specialised logics *)
 
-val PAIR_EQ_EXPAND = store_thm ("PAIR_EQ_EXPAND",
-``(((x:'a,y:'b) = X) = ((x = FST X) /\ (y = SND X))) /\
-  ((X = (x,y)) = ((FST X = x) /\ (SND X = y)))``,
+Theorem PAIR_EQ_EXPAND:
+  (((x:'a,y:'b) = X) = ((x = FST X) /\ (y = SND X))) /\
+  ((X = (x,y)) = ((FST X = x) /\ (SND X = y)))
+Proof
 Cases_on `X` THEN
-REWRITE_TAC[pairTheory.PAIR_EQ]);
+REWRITE_TAC[pairTheory.PAIR_EQ]
+QED
 
 
-val PAIR_EQ_SIMPLE_EXPAND = store_thm ("PAIR_EQ_SIMPLE_EXPAND",
-``(((x:'a,y:'b) = (x, y')) = (y = y')) /\
+Theorem PAIR_EQ_SIMPLE_EXPAND:
+  (((x:'a,y:'b) = (x, y')) = (y = y')) /\
   (((y:'b,x:'a) = (y', x)) = (y = y')) /\
   (((FST X, y) = X) = (y = SND X)) /\
   (((x, SND X) = X) = (x = FST X)) /\
   ((X = (FST X, y)) = (SND X = y)) /\
-  ((X = (x, SND X)) = (FST X = x))``,
+  ((X = (x, SND X)) = (FST X = x))
+Proof
 Cases_on `X` THEN
-ASM_REWRITE_TAC[pairTheory.PAIR_EQ]);
+ASM_REWRITE_TAC[pairTheory.PAIR_EQ]
+QED
 
 
-val IS_SOME_EQ_NOT_NONE = store_thm ("IS_SOME_EQ_NOT_NONE",
-``!x. IS_SOME x = ~(x = NONE)``,
-REWRITE_TAC[GSYM optionTheory.NOT_IS_SOME_EQ_NONE]);
+Theorem IS_SOME_EQ_NOT_NONE:
+  !x. IS_SOME x = ~(x = NONE)
+Proof
+REWRITE_TAC[GSYM optionTheory.NOT_IS_SOME_EQ_NONE]
+QED
 
 
-val ISL_exists = store_thm ("ISL_exists",
-  ``ISL x = (?l. x = INL l)``,
-Cases_on `x` THEN SIMP_TAC std_ss [])
+Theorem ISL_exists:
+    ISL x = (?l. x = INL l)
+Proof
+Cases_on `x` THEN SIMP_TAC std_ss []
+QED
 
-val ISR_exists = store_thm ("ISR_exists",
-  ``ISR x = (?r. x = INR r)``,
-Cases_on `x` THEN SIMP_TAC std_ss [])
+Theorem ISR_exists:
+    ISR x = (?r. x = INR r)
+Proof
+Cases_on `x` THEN SIMP_TAC std_ss []
+QED
 
-val INL_NEQ_ELIM = store_thm ("INL_NEQ_ELIM",
-  ``((!l. x <> INL l) <=> (ISR x)) /\
-    ((!l. INL l <> x) <=> (ISR x))``,
-Cases_on `x` THEN SIMP_TAC std_ss []);
+Theorem INL_NEQ_ELIM:
+    ((!l. x <> INL l) <=> (ISR x)) /\
+    ((!l. INL l <> x) <=> (ISR x))
+Proof
+Cases_on `x` THEN SIMP_TAC std_ss []
+QED
 
-val INR_NEQ_ELIM = store_thm ("INR_NEQ_ELIM",
-  ``((!r. x <> INR r) <=> (ISL x)) /\
-    ((!r. INR r <> x) <=> (ISL x))``,
-Cases_on `x` THEN SIMP_TAC std_ss []);
+Theorem INR_NEQ_ELIM:
+    ((!r. x <> INR r) <=> (ISL x)) /\
+    ((!r. INR r <> x) <=> (ISL x))
+Proof
+Cases_on `x` THEN SIMP_TAC std_ss []
+QED
 
-val LENGTH_LE_PLUS = store_thm ("LENGTH_LE_PLUS",
-  ``(n + m) <= LENGTH l <=> (?l1 l2. (LENGTH l1 = n) /\ m <= LENGTH l2 /\ (l = l1 ++ l2))``,
+Theorem LENGTH_LE_PLUS:
+    (n + m) <= LENGTH l <=> (?l1 l2. (LENGTH l1 = n) /\ m <= LENGTH l2 /\ (l = l1 ++ l2))
+Proof
 SIMP_TAC list_ss [arithmeticTheory.LESS_EQ_EXISTS, LENGTH_EQ_NUM, GSYM LEFT_EXISTS_AND_THM,
   GSYM RIGHT_EXISTS_AND_THM] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
-val LENGTH_LE_NUM = store_thm ("LENGTH_LE_NUM",
-  ``n <= LENGTH l <=> (?l1 l2. (LENGTH l1 = n) /\ (l = l1 ++ l2))``,
+Theorem LENGTH_LE_NUM:
+    n <= LENGTH l <=> (?l1 l2. (LENGTH l1 = n) /\ (l = l1 ++ l2))
+Proof
 SIMP_TAC list_ss [arithmeticTheory.LESS_EQ_EXISTS, LENGTH_EQ_NUM, GSYM LEFT_EXISTS_AND_THM,
-  GSYM RIGHT_EXISTS_AND_THM]);
+  GSYM RIGHT_EXISTS_AND_THM]
+QED
 
 
 val LENGTH_NIL_SYM = save_thm ("LENGTH_NIL_SYM",
   CONV_RULE (LHS_CONV SYM_CONV) (SPEC_ALL listTheory.LENGTH_NIL))
 
-val LIST_LENGTH_COMPARE_1 = store_thm ("LIST_LENGTH_COMPARE_1",
-  ``((LENGTH l < 1) <=> (l = [])) /\
+Theorem LIST_LENGTH_COMPARE_1:
+    ((LENGTH l < 1) <=> (l = [])) /\
     ((1 > LENGTH l) <=> (l = [])) /\
     ((0 >= LENGTH l) <=> (l = [])) /\
-    ((LENGTH l <= 0) <=> (l = []))``,
+    ((LENGTH l <= 0) <=> (l = []))
+Proof
 `LENGTH l < 1 <=> (LENGTH l = 0)` by DECIDE_TAC THEN
 `1 > LENGTH l <=> (LENGTH l = 0)` by DECIDE_TAC THEN
 `0 >= LENGTH l <=> (LENGTH l = 0)` by DECIDE_TAC THEN
-ASM_SIMP_TAC arith_ss [LENGTH_NIL]);
+ASM_SIMP_TAC arith_ss [LENGTH_NIL]
+QED
 
 
 val LIST_LENGTH_THMS_0 = ((SPEC_ALL listTheory.LENGTH_NIL)::
@@ -1073,12 +1241,14 @@ Theorem LIST_LENGTH_15[unlisted] = LIST_CONJ (mk_length_upto_n_thms 15)
 Theorem LIST_LENGTH_20[unlisted] = LIST_CONJ (mk_length_upto_n_thms 20)
 Theorem LIST_LENGTH_25[unlisted] = LIST_CONJ (mk_length_upto_n_thms 25)
 
-val LIST_LENGTH_COMPARE_SUC = store_thm ("LIST_LENGTH_COMPARE_SUC",
-``(SUC x <= LENGTH l <=> ?l' e1. x <= LENGTH l' /\ (l = e1::l')) /\
+Theorem LIST_LENGTH_COMPARE_SUC:
+  (SUC x <= LENGTH l <=> ?l' e1. x <= LENGTH l' /\ (l = e1::l')) /\
   (LENGTH l >= SUC x <=> ?l' e1. x <= LENGTH l' /\ (l = e1::l')) /\
   ((LENGTH l = SUC x) <=> ?l' e1. (LENGTH l' = x) /\ (l = e1::l')) /\
-  ((SUC x = LENGTH l) <=> ?l' e1. (LENGTH l' = x) /\ (l = e1::l'))``,
-SIMP_TAC std_ss [arithmeticTheory.ADD1, LIST_LENGTH_1]);
+  ((SUC x = LENGTH l) <=> ?l' e1. (LENGTH l' = x) /\ (l = e1::l'))
+Proof
+SIMP_TAC std_ss [arithmeticTheory.ADD1, LIST_LENGTH_1]
+QED
 
 (* alternative to LIST_LENGTH_n theorems (also use PULL_EXISTS) *)
 Theorem LENGTH_TO_EXISTS_CONS:
@@ -1255,26 +1425,38 @@ Proof
   \\ Cases_on `t` \\ simp_tac list_ss []
 QED
 
-val SOME_THE_EQ = store_thm ("SOME_THE_EQ",
-  ``!opt. (SOME (THE opt) = opt) <=> IS_SOME opt``,
-Cases THEN SIMP_TAC std_ss [])
+Theorem SOME_THE_EQ:
+    !opt. (SOME (THE opt) = opt) <=> IS_SOME opt
+Proof
+Cases THEN SIMP_TAC std_ss []
+QED
 
-val SOME_THE_EQ_SYM = store_thm ("SOME_THE_EQ_SYM",
-  ``!opt. (opt = SOME (THE opt)) <=> IS_SOME opt``,
-Cases THEN SIMP_TAC std_ss [])
+Theorem SOME_THE_EQ_SYM:
+    !opt. (opt = SOME (THE opt)) <=> IS_SOME opt
+Proof
+Cases THEN SIMP_TAC std_ss []
+QED
 
-val FST_PAIR_EQ = store_thm ("FST_PAIR_EQ",
-``!p p2. ((FST p, p2) = p) <=> (p2 = SND p)``,
-Cases THEN SIMP_TAC std_ss [])
+Theorem FST_PAIR_EQ:
+  !p p2. ((FST p, p2) = p) <=> (p2 = SND p)
+Proof
+Cases THEN SIMP_TAC std_ss []
+QED
 
-val SND_PAIR_EQ = store_thm ("SND_PAIR_EQ",
-``!p p1. ((p1, SND p) = p) <=> (p1 = FST p)``,
-Cases THEN SIMP_TAC std_ss [])
+Theorem SND_PAIR_EQ:
+  !p p1. ((p1, SND p) = p) <=> (p1 = FST p)
+Proof
+Cases THEN SIMP_TAC std_ss []
+QED
 
-val FST_PAIR_EQ_SYM = store_thm ("FST_PAIR_EQ_SYM",
-``!p p2. (p = (FST p, p2)) <=> (SND p = p2)``,
-Cases THEN SIMP_TAC std_ss [])
+Theorem FST_PAIR_EQ_SYM:
+  !p p2. (p = (FST p, p2)) <=> (SND p = p2)
+Proof
+Cases THEN SIMP_TAC std_ss []
+QED
 
-val SND_PAIR_EQ_SYM = store_thm ("SND_PAIR_EQ_SYM",
-``!p p1. (p = (p1, SND p)) <=> (FST p = p1)``,
-Cases THEN SIMP_TAC std_ss [])
+Theorem SND_PAIR_EQ_SYM:
+  !p p1. (p = (p1, SND p)) <=> (FST p = p1)
+Proof
+Cases THEN SIMP_TAC std_ss []
+QED

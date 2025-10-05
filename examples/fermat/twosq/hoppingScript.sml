@@ -4,32 +4,20 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "hopping";
+Theory hopping
+Ancestors
+  arithmetic pred_set logroot divides pair list rich_list
+  listRange indexedLists number combinatorics prime helperTwosq
+  quarity windmill involute involuteFix
+  iteration  (* for iterate_period_pos *)
+  iterateCompose  (* for involute_involute_fix_orbit_fix_odd *)
+  iterateCompute  (* for iterate_while_thm *)
+  twoSquares (* for loop test found *)
 
 (* ------------------------------------------------------------------------- *)
 
-open arithmeticTheory pred_setTheory logrootTheory dividesTheory pairTheory
-     listTheory rich_listTheory listRangeTheory indexedListsTheory
-     numberTheory combinatoricsTheory primeTheory;
-
 (* val _ = load "quarityTheory"; *)
-open helperTwosqTheory;
 
-open quarityTheory;
-
-open windmillTheory;
-open involuteTheory;
-open involuteFixTheory;
-open iterationTheory; (* for iterate_period_pos *)
-open iterateComposeTheory; (* for involute_involute_fix_orbit_fix_odd *)
-open iterateComputeTheory; (* for iterate_while_thm *)
-open twoSquaresTheory; (* for loop test found *)
-
-val _ = intLib.deprecate_int ();
 
 val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
@@ -8170,8 +8158,4 @@ End
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

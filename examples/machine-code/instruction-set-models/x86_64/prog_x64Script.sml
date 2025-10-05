@@ -1,13 +1,12 @@
 
-open HolKernel boolLib bossLib Parse;
-open pred_setTheory res_quanTheory wordsTheory wordsLib bitTheory arithmeticTheory;
-open listTheory pairTheory combinTheory addressTheory fcpTheory;
+Theory prog_x64
+Ancestors
+  pred_set res_quan words bit arithmetic list pair combin address
+  fcp set_sep prog x64_ x64_seq_monad x64_icache x64_ast
+  x64_coretypes temporal
+Libs
+  wordsLib x64_Lib x64_encodeLib
 
-open set_sepTheory progTheory x64_Theory x64_seq_monadTheory x64_icacheTheory;
-open x64_astTheory x64_coretypesTheory x64_Lib x64_encodeLib;
-open temporalTheory;
-
-val _ = new_theory "prog_x64";
 val _ = ParseExtras.temp_loose_equality()
 
 val RW = REWRITE_RULE;
@@ -35,15 +34,18 @@ val _ = Parse.type_abbrev("x64_set",``:x64_el set``);
 (* Converting from x64-state tuple to x64_set                                    *)
 (* ----------------------------------------------------------------------------- *)
 
-val x64_2set'_def = Define `
+Definition x64_2set'_def:
   x64_2set' (rs,st,ep,ms) (r,e,s,m,i) =
     IMAGE (\a. zReg a (r a)) rs UNION
     IMAGE (\a. zStatus a (s a)) st UNION
     (if ep then {zRIP e} else {}) UNION
-    IMAGE (\a. zMem a (m a) (X64_ACCURATE a (r,e,s,m,i))) ms`;
+    IMAGE (\a. zMem a (m a) (X64_ACCURATE a (r,e,s,m,i))) ms
+End
 
-val x64_2set_def   = Define `x64_2set s = x64_2set' (UNIV,UNIV,T,UNIV) s`;
-val x64_2set''_def = Define `x64_2set'' x s = x64_2set s DIFF x64_2set' x s`;
+Definition x64_2set_def:     x64_2set s = x64_2set' (UNIV,UNIV,T,UNIV) s
+End
+Definition x64_2set''_def:   x64_2set'' x s = x64_2set s DIFF x64_2set' x s
+End
 
 (* theorems *)
 
@@ -93,7 +95,8 @@ val SPLIT_x64_2set_EXISTS = prove(
   \\ FULL_SIMP_TAC std_ss [EXTENSION,IN_DIFF,IN_UNION,DISJOINT_DEF,NOT_IN_EMPTY,IN_INTER]
   \\ METIS_TAC []);
 
-val X64_GET_MEMORY_def = Define `X64_GET_MEMORY (r,e,t,m,i) = m`;
+Definition X64_GET_MEMORY_def:   X64_GET_MEMORY (r,e,t,m,i) = m
+End
 
 val IN_x64_2set = prove(``
   (!r x s. zReg r x IN (x64_2set s) = (x = ZREAD_REG r s)) /\
@@ -161,44 +164,56 @@ val EMPTY_x64_2set = prove(``
 (* Defining the X64_MODEL                                                        *)
 (* ----------------------------------------------------------------------------- *)
 
-val zR1_def = Define `zR1 a x = SEP_EQ {zReg a x}`;
-val zM1_def = Define `zM1 a x b = SEP_EQ {zMem a x b}`;
-val zS1_def = Define `zS1 a x = SEP_EQ {zStatus a x}`;
-val zPC_def = Define `zPC x = SEP_EQ {zRIP x}`;
+Definition zR1_def:   zR1 a x = SEP_EQ {zReg a x}
+End
+Definition zM1_def:   zM1 a x b = SEP_EQ {zMem a x b}
+End
+Definition zS1_def:   zS1 a x = SEP_EQ {zStatus a x}
+End
+Definition zPC_def:   zPC x = SEP_EQ {zRIP x}
+End
 
-val zS_def = Define `
+Definition zS_def:
   zS (x0,x1,x2,x3,x4,x5) =
     zS1 Z_CF x0 * zS1 Z_PF x1 * zS1 Z_AF x2 *
-    zS1 Z_ZF x3 * zS1 Z_SF x4 * zS1 Z_OF x5`;
+    zS1 Z_ZF x3 * zS1 Z_SF x4 * zS1 Z_OF x5
+End
 
-val X64_INSTR_PERM_def = Define `
-  X64_INSTR_PERM b = {Zread;Zexecute} UNION (if b then {Zwrite} else {})`;
+Definition X64_INSTR_PERM_def:
+  X64_INSTR_PERM b = {Zread;Zexecute} UNION (if b then {Zwrite} else {})
+End
 
-val X64_INSTR_def    = Define `
+Definition X64_INSTR_def:
   (X64_INSTR (a,([])) = {}) /\
   (X64_INSTR (a,((c:word8)::cs)) =
-     zMem a (SOME (c,X64_INSTR_PERM T)) T INSERT X64_INSTR (a+1w,(cs)))`;
+     zMem a (SOME (c,X64_INSTR_PERM T)) T INSERT X64_INSTR (a+1w,(cs)))
+End
 
-val X64_STACK_FULL_def = Define `
-  X64_STACK_FULL ((r,e,s,m,i):x64_state) = (r zGhost_stack_top = r RSP)`;
+Definition X64_STACK_FULL_def:
+  X64_STACK_FULL ((r,e,s,m,i):x64_state) = (r zGhost_stack_top = r RSP)
+End
 
-val X64_MODEL_def = Define `
-  X64_MODEL = (x64_2set, X64_NEXT_REL, X64_INSTR, X64_ICACHE, X64_STACK_FULL)`;
+Definition X64_MODEL_def:
+  X64_MODEL = (x64_2set, X64_NEXT_REL, X64_INSTR, X64_ICACHE, X64_STACK_FULL)
+End
 
-val zCODE_def = Define `zCODE = CODE_POOL X64_INSTR`;
+Definition zCODE_def:   zCODE = CODE_POOL X64_INSTR
+End
 
-val zM_def = Define `
+Definition zM_def:
   zM a (w:word32) =
     ~zM1 a        (SOME ((7 >< 0) (w      ),{Zread;Zwrite;Zexecute})) *
     ~zM1 (a + 1w) (SOME ((7 >< 0) (w >>  8),{Zread;Zwrite;Zexecute})) *
     ~zM1 (a + 2w) (SOME ((7 >< 0) (w >> 16),{Zread;Zwrite;Zexecute})) *
-    ~zM1 (a + 3w) (SOME ((7 >< 0) (w >> 24),{Zread;Zwrite;Zexecute})) `;
+    ~zM1 (a + 3w) (SOME ((7 >< 0) (w >> 24),{Zread;Zwrite;Zexecute}))
+End
 
-val zM64_def = Define `
+Definition zM64_def:
   zM64 a (w:word64) =
-    zM a ((31 >< 0) w) * zM (a + 4w) ((63 >< 32) w)`;
+    zM a ((31 >< 0) w) * zM (a + 4w) ((63 >< 32) w)
+End
 
-val zR_def = Define `
+Definition zR_def:
   (zR 0w = zR1 RAX) /\
   (zR 1w = zR1 RCX) /\
   (zR 2w = zR1 RDX) /\
@@ -214,7 +229,8 @@ val zR_def = Define `
   (zR 12w = zR1 zR12) /\
   (zR 13w = zR1 zR13) /\
   (zR 14w = zR1 zR14) /\
-  (zR (15w:word4) = zR1 zR15)`;
+  (zR (15w:word4) = zR1 zR15)
+End
 
 
 (* theorems *)
@@ -328,15 +344,17 @@ val CODE_POOL_x64_2set_AUZ_LEMMA = prove(
   ``!x y z. ~(z IN y) ==> ((x = z INSERT y) = z IN x /\ (x DELETE z = y))``,
   SIMP_TAC std_ss [EXTENSION,SUBSET_DEF,IN_INSERT,NOT_IN_EMPTY,IN_DELETE] \\ METIS_TAC []);
 
-val address_list_def = Define `
+Definition address_list_def:
   (address_list a 0 = {}) /\
-  (address_list a (SUC n) = a INSERT address_list (a+1w) n)`;
+  (address_list a (SUC n) = a INSERT address_list (a+1w) n)
+End
 
-val x64_pool_def = Define `
+Definition x64_pool_def:
   (x64_pool (r,s,e,m,i) p ([]) = T) /\
   (x64_pool (r,s,e,m,i) p ((c::cs)) =
      (SOME (c:word8,X64_INSTR_PERM T) = m p) /\ X64_ACCURATE p (r,s,e,m,i) /\
-     x64_pool (r,s,e,m,i) (p+1w) (cs))`;
+     x64_pool (r,s,e,m,i) (p+1w) (cs))
+End
 
 val LEMMA1 = prove(
   ``!p q cs y b. zMem p y b IN X64_INSTR (q,(cs)) ==> ?k. k < LENGTH cs /\ (p = q + n2w k)``,
@@ -407,9 +425,10 @@ val CODE_POOL_x64_2set = store_thm("CODE_POOL_x64_2set",
       else zCODE {(p,(cs))} (x64_2set' (rs,st,ei,ms) (r,s,e,m,i))``,
   METIS_TAC [CODE_POOL_x64_2set_LEMMA]);
 
-val icache_revert_def = Define `
+Definition icache_revert_def:
   icache_revert (m1:x64_memory,i1:x64_memory) (m2:x64_memory,i2:x64_memory) a =
-    if m1 a = m2 a then i1 a else i2 a`;
+    if m1 a = m2 a then i1 a else i2 a
+End
 
 val X64_ACCURATE_UPDATE = store_thm("X64_ACCURATE_UPDATE",
   ``(X64_ACCURATE a ((xr =+ yr) r,e,s,m,i) = X64_ACCURATE a (r,e,s,m,i)) /\
@@ -498,8 +517,9 @@ val IMP_X64_SPEC_LEMMA = prove(
   \\ REPEAT STRIP_TAC
   \\ METIS_TAC []);
 
-val X64_ICACHE_EXTRACT_def = Define `
-  X64_ICACHE_EXTRACT ((r1,e1,s1,m1,i1):x64_state) = i1`;
+Definition X64_ICACHE_EXTRACT_def:
+  X64_ICACHE_EXTRACT ((r1,e1,s1,m1,i1):x64_state) = i1
+End
 
 val X64_ICACHE_THM2 = prove(
   ``!s t. X64_ICACHE s t = ?z. t = X64_ICACHE_UPDATE z s``,
@@ -533,9 +553,10 @@ val X64_ICACHE_icache_revert = prove(
   \\ FULL_SIMP_TAC std_ss [X64_ACCURATE_def,icache_revert_def]
   \\ Cases_on `m1 a = m2 a` \\ ASM_SIMP_TAC std_ss []);
 
-val X64_ICACHE_REVERT_def = Define `
+Definition X64_ICACHE_REVERT_def:
   X64_ICACHE_REVERT (r2,e2,s2,m2,i2) (r1,e1,s1,m1,i1) =
-    (r2,e2,s2,m2,icache_revert (m1,i1) (m2,i2))`;
+    (r2,e2,s2,m2,icache_revert (m1,i1) (m2,i2))
+End
 
 val X64_ICACHE_X64_ICACHE_REVERT = store_thm("X64_ICACHE_X64_ICACHE_REVERT",
   ``!s t u. X64_ICACHE s t /\ (X64_ICACHE_EXTRACT t = X64_ICACHE_EXTRACT u) ==>
@@ -651,22 +672,28 @@ val zS_HIDE = store_thm("zS_HIDE",
 (* Byte-sized data memory                                                        *)
 (* ----------------------------------------------------------------------------- *)
 
-val zDATA_PERM_def = Define `
-  zDATA_PERM exec = if exec then {Zread;Zwrite;Zexecute} else {Zread;Zwrite}`;
+Definition zDATA_PERM_def:
+  zDATA_PERM exec = if exec then {Zread;Zwrite;Zexecute} else {Zread;Zwrite}
+End
 
-val zBYTE_MEMORY_ANY_SET_def = Define `
+Definition zBYTE_MEMORY_ANY_SET_def:
   zBYTE_MEMORY_ANY_SET df f exec c =
-    { zMem a (SOME (f a, zDATA_PERM exec)) (c a) | a | a IN df }`;
+    { zMem a (SOME (f a, zDATA_PERM exec)) (c a) | a | a IN df }
+End
 
-val zBYTE_MEMORY_ANY_C_def = Define `
-  zBYTE_MEMORY_ANY_C exec df f c = SEP_EQ (zBYTE_MEMORY_ANY_SET df f exec c)`;
+Definition zBYTE_MEMORY_ANY_C_def:
+  zBYTE_MEMORY_ANY_C exec df f c = SEP_EQ (zBYTE_MEMORY_ANY_SET df f exec c)
+End
 
-val zBYTE_MEMORY_ANY_def = Define `
+Definition zBYTE_MEMORY_ANY_def:
   zBYTE_MEMORY_ANY exec df f =
-    SEP_EXISTS c. SEP_EQ (zBYTE_MEMORY_ANY_SET df f exec c)`;
+    SEP_EXISTS c. SEP_EQ (zBYTE_MEMORY_ANY_SET df f exec c)
+End
 
-val zBYTE_MEMORY_def = Define `zBYTE_MEMORY = zBYTE_MEMORY_ANY T`;
-val zBYTE_MEMORY_Z_def = Define `zBYTE_MEMORY_Z = zBYTE_MEMORY_ANY T`;
+Definition zBYTE_MEMORY_def:   zBYTE_MEMORY = zBYTE_MEMORY_ANY T
+End
+Definition zBYTE_MEMORY_Z_def:   zBYTE_MEMORY_Z = zBYTE_MEMORY_ANY T
+End
 
 val IN_zDATA_PERM = store_thm("IN_zDATA_PERM",
   ``(Zread IN zDATA_PERM exec) /\
@@ -743,19 +770,22 @@ val zBYTE_MEMORY_ANY_INTRO = store_thm("zBYTE_MEMORY_ANY_INTRO",
 (* Word-sized data memory                                                        *)
 (* ----------------------------------------------------------------------------- *)
 
-val zMEMORY_DOMAIN_def = Define `
-  zMEMORY_DOMAIN df = BIGUNION { {b;b+1w;b+2w;b+3w} | (b && 3w = 0w) /\ b:word64 IN df }`;
+Definition zMEMORY_DOMAIN_def:
+  zMEMORY_DOMAIN df = BIGUNION { {b;b+1w;b+2w;b+3w} | (b && 3w = 0w) /\ b:word64 IN df }
+End
 
-val zMEMORY_FUNC_def = Define `
+Definition zMEMORY_FUNC_def:
   zMEMORY_FUNC (f:word64->word32) a =
     let w = f (a - (a && 3w)) in
       if a && 3w = 0w then (7 >< 0) (w) else
       if a && 3w = 1w then (7 >< 0) (w >> 8) else
       if a && 3w = 2w then (7 >< 0) (w >> 16) else
-      if a && 3w = 3w then (7 >< 0) (w >> 24) else 0w:word8`;
+      if a && 3w = 3w then (7 >< 0) (w >> 24) else 0w:word8
+End
 
-val zMEMORY_def = Define `
-  zMEMORY df f = zBYTE_MEMORY (zMEMORY_DOMAIN df) (zMEMORY_FUNC f)`;
+Definition zMEMORY_def:
+  zMEMORY df f = zBYTE_MEMORY (zMEMORY_DOMAIN df) (zMEMORY_FUNC f)
+End
 
 val zBYTE_MEMORY_ANY_SET_EQ = prove(
   ``zBYTE_MEMORY_ANY_SET df f exec c =
@@ -875,12 +905,13 @@ val zMEMORY_INTRO = store_thm("zMEMORY_INTRO",
 (* Word-sized data memory                                                        *)
 (* ----------------------------------------------------------------------------- *)
 
-val zMEMORY64_DOMAIN_def = Define `
+Definition zMEMORY64_DOMAIN_def:
   zMEMORY64_DOMAIN df = BIGUNION
     { {b;b+1w;b+2w;b+3w;b+4w;b+5w;b+6w;b+7w} |
-      (b && 7w = 0w) /\ b:word64 IN df }`;
+      (b && 7w = 0w) /\ b:word64 IN df }
+End
 
-val zMEMORY64_FUNC_def = Define `
+Definition zMEMORY64_FUNC_def:
   zMEMORY64_FUNC (f:word64->word64) a =
     let w = f (a - (a && 7w)) in
       if a && 7w = 0w then (7 >< 0) (w) else
@@ -890,10 +921,12 @@ val zMEMORY64_FUNC_def = Define `
       if a && 7w = 4w then (7 >< 0) (w >> 32) else
       if a && 7w = 5w then (7 >< 0) (w >> 40) else
       if a && 7w = 6w then (7 >< 0) (w >> 48) else
-      if a && 7w = 7w then (7 >< 0) (w >> 56) else 0w:word8`;
+      if a && 7w = 7w then (7 >< 0) (w >> 56) else 0w:word8
+End
 
-val zMEMORY64_def = Define `
-  zMEMORY64 df f = zBYTE_MEMORY (zMEMORY64_DOMAIN df) (zMEMORY64_FUNC f)`;
+Definition zMEMORY64_def:
+  zMEMORY64 df f = zBYTE_MEMORY (zMEMORY64_DOMAIN df) (zMEMORY64_FUNC f)
+End
 
 val zBYTE_MEMORY_ANY_SET_EQ = prove(
   ``zBYTE_MEMORY_ANY_SET df f exec c =
@@ -1041,7 +1074,8 @@ val zMEMORY64_INTRO = store_thm("zMEMORY64_INTRO",
 (* Conversions between code and data                                             *)
 (* ----------------------------------------------------------------------------- *)
 
-val zCODE_SET_def = Define `zCODE_SET df f = { (a,[f a]) | a IN df }`;
+Definition zCODE_SET_def:   zCODE_SET df f = { (a,[f a]) | a IN df }
+End
 
 val zCODE_IMP_BYTE_MEMORY = store_thm("zCODE_IMP_BYTE_MEMORY",
   ``!df f. SEP_IMP (zCODE (zCODE_SET df f)) (zBYTE_MEMORY_Z df f)``,
@@ -1325,16 +1359,18 @@ val SPEC_X64_MERGE_CODE_REV = store_thm("SPEC_X64_MERGE_CODE_REV",
 (* Improved code assertion                                                       *)
 (* ----------------------------------------------------------------------------- *)
 
-val zCODE_HEAP_AUX_def = Define `
+Definition zCODE_HEAP_AUX_def:
   zCODE_HEAP_AUX safe a xs =
     SEP_EXISTS df f.
       cond ((SEP_ARRAY (\a x. one (a,x)) 1w a xs) (fun2set (f,df))) *
-      if safe then zCODE (zCODE_SET df f) else zBYTE_MEMORY_Z df f`;
+      if safe then zCODE (zCODE_SET df f) else zBYTE_MEMORY_Z df f
+End
 
-val zCODE_HEAP_def = Define `
+Definition zCODE_HEAP_def:
   zCODE_HEAP safe a xs n =
     SEP_EXISTS ys.
-      cond (LENGTH xs + LENGTH ys = n) * zCODE_HEAP_AUX safe a (xs ++ ys)`;
+      cond (LENGTH xs + LENGTH ys = n) * zCODE_HEAP_AUX safe a (xs ++ ys)
+End
 
 (* snoc *)
 
@@ -1646,4 +1682,3 @@ in
     |> RW1 [STAR_COMM]);
 end;
 
-val _ = export_theory();

@@ -1,12 +1,10 @@
 
-open HolKernel boolLib bossLib Parse;
-open tailrecTheory mc_tailrecLib compilerLib codegen_x86Lib;
-open wordsTheory addressTheory wordsLib arithmeticTheory;
-
-open decompilerLib set_sepTheory prog_x86Lib;
-
-val _ = new_theory "divide";
-
+Theory divide
+Ancestors
+  tailrec words address arithmetic set_sep lisp_gc
+Libs
+  mc_tailrecLib compilerLib codegen_x86Lib wordsLib decompilerLib
+  prog_x86Lib
 
 val _ = set_x86_regs
   [(3,"eax"),(4,"ecx"),(5,"edx"),(6,"ebx"),(7,"edi"),(8,"esi"),(10,"ebp")]
@@ -329,6 +327,3 @@ val _ = save_all "lisp_word_div_" "_thm" div_thms;
 val _ = save_thm("arm_div_mod_thm",arm_div_mod_thm);
 val _ = save_thm("x86_div_mod_thm",x86_div_mod_thm);
 val _ = save_thm("ppc_div_mod_thm",ppc_div_mod_thm);
-
-
-val _ = export_theory();

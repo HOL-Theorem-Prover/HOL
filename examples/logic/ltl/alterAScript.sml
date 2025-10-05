@@ -1,8 +1,8 @@
-open HolKernel Parse boolLib bossLib pred_setTheory arithmeticTheory relationTheory set_relationTheory pairTheory
+Theory alterA
+Ancestors
+  pred_set arithmetic relation set_relation pair generalHelpers
+  word
 
-open generalHelpersTheory wordTheory
-
-val _ = new_theory "alterA"
 val _ = ParseExtras.temp_loose_equality()
 
 val _ = Datatype
@@ -13,26 +13,29 @@ val _ = Datatype
                final        : 's set
                |>`;
 
-val isValidAlterA_def =
-    Define `isValidAlterA (A: ('s,'a) ALTER_A) =
+Definition isValidAlterA_def:
+     isValidAlterA (A: ('s,'a) ALTER_A) =
              (A.initial ⊆ POW A.states)
           /\ (A.final ⊆ A.states)
           /\ (!s a d. (s ∈ A.states) /\ ((a, d) ∈ (A.trans s))
-                 ==> (d ⊆ A.states ∧ a ⊆ A.alphabet))`;
+                 ==> (d ⊆ A.states ∧ a ⊆ A.alphabet))
+End
 
 (* An alternating automata is very weak if there is a partial order po on
    the states s.t. for every state s all states appearing in trans(s)
    are lower or equal to s
 *)
 
-val isVeryWeakWithOrder_def = Define
-   `isVeryWeakWithOrder A ord =
+Definition isVeryWeakWithOrder_def:
+    isVeryWeakWithOrder A ord =
       partial_order ord A.states
       /\ !s a d. (s ∈ A.states) /\ ((a,d) ∈ (A.trans s))
-                   ==> (!s'. (s' ∈ d) ==> ((s',s) ∈ ord))`;
+                   ==> (!s'. (s' ∈ d) ==> ((s',s) ∈ ord))
+End
 
-val isVeryWeakAlterA_def =
-    Define `isVeryWeakAlterA A = ?ord. isVeryWeakWithOrder A ord`;
+Definition isVeryWeakAlterA_def:
+     isVeryWeakAlterA A = ?ord. isVeryWeakWithOrder A ord
+End
 
 val FINITE_LEMM = store_thm
   ("FINITE_LEMM",
@@ -60,29 +63,33 @@ val _ = Hol_datatype
   validity condition for runs over a given word
 *)
 
-val validAARunFor_def = Define
-`validAARunFor aut run word =
+Definition validAARunFor_def:
+ validAARunFor aut run word =
              (run.V 0 ∈ aut.initial)
              /\ (!i. run.V i ⊆ aut.states)
              /\ (!i q. (q ∈ run.V i)
                            ==> ?a. (a,run.E (i,q)) ∈ aut.trans q /\ (at word i ∈ a))
              /\ (!i q. run.E (i,q) ⊆ run.V (i+1))
              /\ (!i q. (q ∈ run.V i)
-                    ==> ((i = 0) \/ ?q'. (q ∈ run.E (i-1,q')) /\ (q' ∈ run.V (i-1))))`;
+                    ==> ((i = 0) \/ ?q'. (q ∈ run.E (i-1,q')) /\ (q' ∈ run.V (i-1))))
+End
 
 
 (*
   infinite branches of the run
 *)
 
-val infBranchOf_def = Define
-  `infBranchOf run b = (b 0 ∈ run.V 0) /\ !i. (b (i+1) ∈ run.E (i, b i))`;
+Definition infBranchOf_def:
+   infBranchOf run b = (b 0 ∈ run.V 0) /\ !i. (b (i+1) ∈ run.E (i, b i))
+End
 
-val branchFixP_def = Define
-`branchFixP b x = ?i. (b i = x) /\ !m. (m >= i) ==> (b m = x)`;
+Definition branchFixP_def:
+ branchFixP b x = ?i. (b i = x) /\ !m. (m >= i) ==> (b m = x)
+End
 
-val branchRange_def = Define
-`branchRange b = { x | ?i. b i = x }`
+Definition branchRange_def:
+ branchRange b = { x | ?i. b i = x }
+End
 
 val BRANCH_V_LEMM = store_thm
   ("BRANCH_V_LEMM",
@@ -120,21 +127,24 @@ val BRANCHRANGE_NONEMPTY = store_thm
   acceptance condition for a run over a given automaton (CO-BÜCHI condition)
 *)
 
-val acceptingAARun_def = Define
-`acceptingAARun aut run =
-    !b. infBranchOf run b ==> FINITE {i | b i ∈ aut.final }`
+Definition acceptingAARun_def:
+ acceptingAARun aut run =
+    !b. infBranchOf run b ==> FINITE {i | b i ∈ aut.final }
+End
 
 (*
   the language of the automaton
 *)
 
-val runForAA_def = Define
-`runForAA aut run word =
-             validAARunFor aut run word /\ acceptingAARun aut run`;
+Definition runForAA_def:
+ runForAA aut run word =
+             validAARunFor aut run word /\ acceptingAARun aut run
+End
 
-val alterA_lang_def = Define
-`alterA_lang aut = { w | ?run. runForAA aut run w
-                       /\ (word_range w ⊆ aut.alphabet) }`;
+Definition alterA_lang_def:
+ alterA_lang aut = { w | ?run. runForAA aut run w
+                       /\ (word_range w ⊆ aut.alphabet) }
+End
 
 (*
   Some properties of weak alternating automata
@@ -277,12 +287,14 @@ val BRANCH_ACC_LEMM = store_thm
   infinite run suffixes
 *)
 
-val infBranchSuffOf_def = Define
-  `infBranchSuffOf run i b =
-             (b 0 ∈ run.V i) /\ !j. (b (j+1) ∈ run.E (j + i, b j))`;
+Definition infBranchSuffOf_def:
+   infBranchSuffOf run i b =
+             (b 0 ∈ run.V i) /\ !j. (b (j+1) ∈ run.E (j + i, b j))
+End
 
-val appendToBranchSuff_def = Define
-  `appendToBranchSuff b q = \n. if n = 0 then q else b (n-1)`;
+Definition appendToBranchSuff_def:
+   appendToBranchSuff b q = \n. if n = 0 then q else b (n-1)
+End
 
 val APPEND_LEMMA = store_thm
   ("APPEND_LEMMA",
@@ -336,14 +348,17 @@ val BRANCH_SUFF_LEMM = store_thm
 
 (* reachable states *)
 
-val oneStep_def = Define`
-  oneStep aut = \x y. ?a qs. (a,qs) ∈ aut.trans x ∧ y ∈ qs ∧ x ∈ aut.states`;
+Definition oneStep_def:
+  oneStep aut = \x y. ?a qs. (a,qs) ∈ aut.trans x ∧ y ∈ qs ∧ x ∈ aut.states
+End
 
-val reachRel_def = Define`
-  reachRel aut = (oneStep aut)^*`;
+Definition reachRel_def:
+  reachRel aut = (oneStep aut)^*
+End
 
-val reachRelFromSet_def = Define`
-  reachRelFromSet aut s = { y | ?x. reachRel aut x y ∧ x ∈ s }`;
+Definition reachRelFromSet_def:
+  reachRelFromSet aut s = { y | ?x. reachRel aut x y ∧ x ∈ s }
+End
 
 (*TODO rewrite using different reach rel*)
 
@@ -427,17 +442,20 @@ val reachRelFromSet_def = Define`
   restricting a run to a subset of its initial states
 *)
 
-val run_restr_V_def = Define `
+Definition run_restr_V_def:
     (run_restr_V init r_old (SUC i) =
             BIGUNION { e | ?q. (e = r_old.E (i,q)) /\ (q ∈ run_restr_V init r_old i) })
- /\ (run_restr_V init r_old 0       = init)`;
+ /\ (run_restr_V init r_old 0       = init)
+End
 
-val run_restr_E_def = Define `
+Definition run_restr_E_def:
     (run_restr_E init r_old (i,q) =
-           if q ∈ run_restr_V init r_old i then r_old.E (i,q) else {})`;
+           if q ∈ run_restr_V init r_old i then r_old.E (i,q) else {})
+End
 
-val run_restr_def = Define `
-   (run_restr init r_old = ALTERA_RUN (run_restr_V init r_old) (run_restr_E init r_old))`;
+Definition run_restr_def:
+   (run_restr init r_old = ALTERA_RUN (run_restr_V init r_old) (run_restr_E init r_old))
+End
 
 val RUN_RESTR_LEMM = store_thm
   ("RUN_RESTR_LEMM",
@@ -469,7 +487,7 @@ val RUN_RESTR_FIXP_LEMM = store_thm
  conjoining two runs
 *)
 
-val conj_run_branch_cond_def = Define `
+Definition conj_run_branch_cond_def:
   conj_run_branch_cond r1 r2 s q i =
       if q ∈ s
       then (if q ∈ r1.V i
@@ -477,20 +495,24 @@ val conj_run_branch_cond_def = Define `
             else if q ∈ r2.V i
                  then r2.E (i,q)
                  else {})
-      else {}`;
+      else {}
+End
 
-val conj_run_V_def = Define `
+Definition conj_run_V_def:
      (conj_run_V r1 r2 (SUC i) =
           BIGUNION { e | ?q. (e = conj_run_branch_cond r1 r2 (conj_run_V r1 r2 i) q i)
                           /\ (q ∈ conj_run_V r1 r2 i)})
-  /\ (conj_run_V r1 r2 0       = r1.V 0 ∪ r2.V 0)`;
+  /\ (conj_run_V r1 r2 0       = r1.V 0 ∪ r2.V 0)
+End
 
-val conj_run_E_def = Define `
+Definition conj_run_E_def:
   (conj_run_E r1 r2 (i,q) =
-       conj_run_branch_cond r1 r2 (conj_run_V r1 r2 i) q i)`;
+       conj_run_branch_cond r1 r2 (conj_run_V r1 r2 i) q i)
+End
 
-val conj_run_def = Define `
-  conj_run r1 r2 = ALTERA_RUN (conj_run_V r1 r2) (conj_run_E r1 r2)`;
+Definition conj_run_def:
+  conj_run r1 r2 = ALTERA_RUN (conj_run_V r1 r2) (conj_run_E r1 r2)
+End
 
 val CONJ_RUN_V_LEMM = store_thm
   ("CONJ_RUN_V_LEMM",
@@ -772,8 +794,9 @@ val REPL_RUN_CONSTR_LEMM2 = store_thm
   step function of a run
 *)
 
-val step_def = Define
-  `step run (v,i) = (BIGUNION {run.E (i,q) | q ∈ v }, i+1)`;
+Definition step_def:
+   step run (v,i) = (BIGUNION {run.E (i,q) | q ∈ v }, i+1)
+End
 
 val STEP_THM = store_thm
   ("STEP_THM",
@@ -809,7 +832,8 @@ val STEP_THM = store_thm
 
 (* An example alternating automata *)
 
-val A1_def = Define `A1 = ALTER_A {1;2} {T;F} (\_. {({T;F}, {1;2})}) {{1}} {2}`;
+Definition A1_def:   A1 = ALTER_A {1;2} {T;F} (\_. {({T;F}, {1;2})}) {{1}} {2}
+End
 
 val AUT_EX_1 = store_thm
   ("AUT_EX_1",
@@ -829,4 +853,3 @@ val AUT_EX_2 = store_thm
          suffices_by metis_tac[partial_order_def, antisym_def] >> simp[]
   );
 
-val _ = export_theory();

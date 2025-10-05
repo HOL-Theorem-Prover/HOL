@@ -1,25 +1,20 @@
 (* ========================================================================= *)
 (* Create "informationTheory" setting up the theory of information           *)
 (* ========================================================================= *)
+Theory information
+Ancestors
+  arithmetic pred_set list state_transformer combin pair real
+  iterate num seq subtype real_sigma transc lim string rich_list
+  extra_bool extra_num extra_pred_set extra_real sigma_algebra
+  real_measure real_borel real_lebesgue real_probability
+Libs
+  metisLib realLib jrhUtils realSimps simpLib stringSimps
+  listSimps hurdUtils
 
-open HolKernel Parse boolLib bossLib;
-
-open metisLib arithmeticTheory pred_setTheory
-     listTheory state_transformerTheory combinTheory
-     pairTheory realTheory realLib jrhUtils iterateTheory
-     realSimps numTheory simpLib seqTheory subtypeTheory real_sigmaTheory
-     transcTheory limTheory stringTheory rich_listTheory stringSimps listSimps;
-
-open extra_boolTheory extra_numTheory extra_pred_setTheory extra_realTheory;
-
-open hurdUtils sigma_algebraTheory real_measureTheory real_borelTheory
-     real_lebesgueTheory real_probabilityTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "information"                                   *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = new_theory "information";
 
 Overload indicator_fn[local] = “indicator”
 Theorem indicator_fn_def[local] = indicator
@@ -33,31 +28,35 @@ val _ = ratLib.deprecate_rat();
 (* Basic Definitions                                                         *)
 (* ************************************************************************* *)
 
-val KL_divergence_def = Define
-   `KL_divergence b s u v =
-        integral (space s, subsets s, u) (\x. logr b ((RN_deriv (space s, subsets s, v) u) x))`;
+Definition KL_divergence_def:
+    KL_divergence b s u v =
+        integral (space s, subsets s, u) (\x. logr b ((RN_deriv (space s, subsets s, v) u) x))
+End
 
-val mutual_information_def = Define
-   `mutual_information b p s1 s2 X Y  =
+Definition mutual_information_def:
+    mutual_information b p s1 s2 X Y  =
         let prod_space =
                 prod_measure_space (space s1, subsets s1, distribution p X)
                                    (space s2, subsets s2, distribution p Y) in
         KL_divergence b
                 (p_space prod_space, events prod_space)
                 (joint_distribution p X Y)
-                (prob prod_space)`;
+                (prob prod_space)
+End
 
-val entropy_def = Define
-   `entropy b p s X = mutual_information b p s s X X`;
+Definition entropy_def:
+    entropy b p s X = mutual_information b p s s X X
+End
 
 
-val conditional_mutual_information_def = Define
-   `conditional_mutual_information b p s1 s2 s3 X Y Z =
+Definition conditional_mutual_information_def:
+    conditional_mutual_information b p s1 s2 s3 X Y Z =
         let prod_space =
             prod_measure_space (space s2, subsets s2, distribution p Y)
                                (space s3, subsets s3, distribution p Z) in
         mutual_information b p s1 (p_space prod_space, events prod_space) X (\x. (Y x, Z x)) -
-        mutual_information b p s1 s3 X Z`;
+        mutual_information b p s1 s3 X Z
+End
 
 
 (* ************************************************************************* *)
@@ -1718,4 +1717,3 @@ Proof
    >> RW_TAC real_ss [REAL_INVINV, REAL_LT_IMP_NE, REAL_MUL_ASSOC, REAL_MUL_RINV]
 QED
 
-val _ = export_theory ();

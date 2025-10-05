@@ -4,28 +4,15 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "fieldBinomial";
-
 (* ------------------------------------------------------------------------- *)
+Theory fieldBinomial
+Ancestors
+  pred_set list arithmetic number combinatorics divides field
+  ring group monoid fieldMap
+Libs
+  jcLib
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
-     dividesTheory;
-
-open fieldTheory;
-open ringTheory;
-open groupTheory;
-open monoidTheory;
-
-open fieldMapTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -184,8 +171,4 @@ val finite_field_map_auto = store_thm(
   metis_tac[]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

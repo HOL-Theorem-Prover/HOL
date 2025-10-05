@@ -1,4 +1,11 @@
-open HolKernel Parse boolLib bossLib;
+Theory alternating_omega_automata_to_automaton_formula
+Ancestors
+  infinite_path pred_set list pair xprop_logic container
+  prop_logic set_lemmata prim_rec temporal_deep_mixed arithmetic
+  automaton_formula alternating_omega_automata
+  symbolic_semi_automaton
+Libs
+  tuerk_tacticsLib numLib Sanity
 
 (*
 quietdec := true;
@@ -13,13 +20,6 @@ map load
    "alternating_omega_automataTheory", "symbolic_semi_automatonTheory", "automaton_formulaTheory"];
 *)
 
-open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory
-   containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
-   tuerk_tacticsLib temporal_deep_mixedTheory arithmeticTheory numLib
-   automaton_formulaTheory alternating_omega_automataTheory
-   symbolic_semi_automatonTheory;
-open Sanity;
-
 val _ = hide "S";
 val _ = hide "I";
 
@@ -32,7 +32,6 @@ quietdec := false;
 *)
 
 
-val _ = new_theory "alternating_omega_automata_to_automaton_formula";
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 
 (*This file contains some definitions and lemmata about a translation of
@@ -63,46 +62,48 @@ val std_ss = std_ss ++
                        TypeBase.accessors_of “:(α,β)alternating_automaton” @
                        TypeBase.accessors_of “:(α,β)alternating_semi_automaton”)
 
-val IMPL_COLLAPSED_ALTERNATING_SEMI_AUTOMATON_def = Define
-  `IMPL_COLLAPSED_ALTERNATING_SEMI_AUTOMATON (A:('a, 'a) alternating_semi_automaton) (fi:'a->'a set) =
+Definition IMPL_COLLAPSED_ALTERNATING_SEMI_AUTOMATON_def:
+   IMPL_COLLAPSED_ALTERNATING_SEMI_AUTOMATON (A:('a, 'a) alternating_semi_automaton) (fi:'a->'a set) =
      (symbolic_semi_automaton (A:('a, 'a) alternating_semi_automaton).S
         A.S0
         (XP_BIGAND (SET_TO_LIST (IMAGE (\s. XP_IMPL (XP_PROP s,
-                XP_BIGOR (SET_TO_LIST (IMAGE (\i. XP_AND(XP_CURRENT (P_PROP_SET_MODEL (fi i) (BIGUNION(IMAGE fi A.I))), XP_NEXT (A.R s i))) A.I)))) A.S))))`;
+                XP_BIGOR (SET_TO_LIST (IMAGE (\i. XP_AND(XP_CURRENT (P_PROP_SET_MODEL (fi i) (BIGUNION(IMAGE fi A.I))), XP_NEXT (A.R s i))) A.I)))) A.S))))
+End
 
 
-val EQ_COLLAPSED_ALTERNATING_SEMI_AUTOMATON_def = Define
-  `EQ_COLLAPSED_ALTERNATING_SEMI_AUTOMATON (A:('a, 'a) alternating_semi_automaton) (fi:'a->'a set) =
+Definition EQ_COLLAPSED_ALTERNATING_SEMI_AUTOMATON_def:
+   EQ_COLLAPSED_ALTERNATING_SEMI_AUTOMATON (A:('a, 'a) alternating_semi_automaton) (fi:'a->'a set) =
      (symbolic_semi_automaton (A:('a, 'a) alternating_semi_automaton).S
         A.S0
         (XP_BIGAND (SET_TO_LIST (IMAGE (\s. XP_EQUIV(XP_PROP s,
-                XP_BIGOR (SET_TO_LIST (IMAGE (\i. XP_AND(XP_CURRENT (P_PROP_SET_MODEL (fi i) (BIGUNION(IMAGE fi A.I))), XP_NEXT (A.R s i))) A.I)))) A.S))))`;
+                XP_BIGOR (SET_TO_LIST (IMAGE (\i. XP_AND(XP_CURRENT (P_PROP_SET_MODEL (fi i) (BIGUNION(IMAGE fi A.I))), XP_NEXT (A.R s i))) A.I)))) A.S))))
+End
 
 
 
-val COLLAPSED_ALTERNATING_RUN_def =
-Define
-    `COLLAPSED_ALTERNATING_RUN (r:'a alternating_run) = \n:num.
-        {s | IS_REACHABLE_BY_RUN (s, n) r}`;
+Definition COLLAPSED_ALTERNATING_RUN_def:
+     COLLAPSED_ALTERNATING_RUN (r:'a alternating_run) = \n:num.
+        {s | IS_REACHABLE_BY_RUN (s, n) r}
+End
 
 
-val DECOLLAPSED_RUN_def =
-Define
-    `DECOLLAPSED_RUN (r:num->'a set) = alternating_run (r 0) (\s n:num. r (SUC n))`;
+Definition DECOLLAPSED_RUN_def:
+     DECOLLAPSED_RUN (r:num->'a set) = alternating_run (r 0) (\s n:num. r (SUC n))
+End
 
-val EMPTY_ABORT_RUN_def =
-Define
-    `EMPTY_ABORT_RUN (r:num->'a set) = (\n. if (?n'. (n' < n) /\ (r n' = EMPTY)) then EMPTY else r n)`;
+Definition EMPTY_ABORT_RUN_def:
+     EMPTY_ABORT_RUN (r:num->'a set) = (\n. if (?n'. (n' < n) /\ (r n' = EMPTY)) then EMPTY else r n)
+End
 
-val IS_VALID_INPUT_ENCODING_def =
-Define
-    `IS_VALID_INPUT_ENCODING (A:('a,'b) alternating_semi_automaton) (f:'a->'b set) =
-        ((INJ f A.I UNIV) /\ (!i. (i IN A.I ==> (FINITE (f i) /\ DISJOINT A.S (f i)))))`;
+Definition IS_VALID_INPUT_ENCODING_def:
+     IS_VALID_INPUT_ENCODING (A:('a,'b) alternating_semi_automaton) (f:'a->'b set) =
+        ((INJ f A.I UNIV) /\ (!i. (i IN A.I ==> (FINITE (f i) /\ DISJOINT A.S (f i)))))
+End
 
-val IS_VALID_ENCODED_INPUT_def =
-Define
-    `IS_VALID_ENCODED_INPUT (A:('a,'b) alternating_semi_automaton) (f:'a->'b set) i i' =
-        (!n. (i n IN A.I) /\ (i' n = f (i n)))`;
+Definition IS_VALID_ENCODED_INPUT_def:
+     IS_VALID_ENCODED_INPUT (A:('a,'b) alternating_semi_automaton) (f:'a->'b set) i i' =
+        (!n. (i n IN A.I) /\ (i' n = f (i n)))
+End
 
 
 
@@ -790,4 +791,3 @@ val NDET_G___A_UNIVERSALLY_TOTAL_WEAK_CO_BUECHI___IMPL =
 
 
 
-val _ = export_theory();

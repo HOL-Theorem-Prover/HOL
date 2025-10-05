@@ -5,12 +5,10 @@
    for inspiration
 
 *)
+Theory tableauK
+Ancestors
+  pair pred_set list sorting relation modalBasics tableauBasics
 
-open HolKernel Parse boolLib bossLib;
-open pairTheory pred_setTheory listTheory;
-open sortingTheory;
-open relationTheory modalBasicsTheory tableauBasicsTheory
-val _ = new_theory "tableauK";
 
 Definition sat_def:
   sat (tyit : α itself) Γ ⇔
@@ -612,4 +610,3 @@ Proof
   gs[]
 QED
 
-val _ = export_theory();

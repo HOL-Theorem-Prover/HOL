@@ -1,20 +1,16 @@
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory pred_setTheory listTheory
-     state_transformerTheory combinTheory pairTheory
-     realTheory realLib extra_boolTheory res_quanTheory
-     hurdUtils extra_numTheory extra_realTheory numTheory simpLib seqTheory;
-
-open sequenceTheory sequenceTools extra_pred_setTheory extra_pred_setTools
-     subtypeTheory;
-
-open real_measureTheory real_probabilityTheory prob_algebraTheory probTheory;
+Theory prob_dice
+Ancestors
+  arithmetic pred_set list state_transformer combin pair real
+  extra_bool res_quan extra_num extra_real num seq sequence
+  extra_pred_set subtype real_measure real_probability
+  prob_algebra prob
+Libs
+  realLib hurdUtils simpLib sequenceTools extra_pred_setTools
 
 (* interactive mode
 quietdec := false;
 *)
 
-val _ = new_theory "prob_dice";
 val _ = ParseExtras.temp_loose_equality()
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
@@ -58,8 +54,8 @@ val ddg_ss = std_ss ++ simpLib.SSFRAG {
 (* The definition of Knuth's dice.                                           *)
 (* ------------------------------------------------------------------------- *)
 
-val dice_def = Define
-  `dice : (num -> bool) -> num # (num -> bool) =
+Definition dice_def:
+   dice : (num -> bool) -> num # (num -> bool) =
    coin_flip
    (prob_repeat
     (coin_flip
@@ -78,13 +74,15 @@ val dice_def = Define
        (UNIT 5)))
      (coin_flip
       (UNIT (SOME 6))
-      (UNIT NONE))))`;
+      (UNIT NONE))))
+End
 
-val two_dice_def = Define
-  `two_dice = BIND dice (\a. BIND dice (\b. UNIT (a + b)))`;
+Definition two_dice_def:
+   two_dice = BIND dice (\a. BIND dice (\b. UNIT (a + b)))
+End
 
-val optimal_two_dice_def = Define
-  `optimal_two_dice : (num -> bool) -> num # (num -> bool) =
+Definition optimal_two_dice_def:
+   optimal_two_dice : (num -> bool) -> num # (num -> bool) =
    coin_flip
    (prob_repeat
     (coin_flip
@@ -160,7 +158,8 @@ val optimal_two_dice_def = Define
          (coin_flip
           (UNIT (SOME 12))
           (UNIT NONE))
-         (UNIT (SOME 12))))))))`;
+         (UNIT (SOME 12))))))))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems leading to:                                                      *)
@@ -763,4 +762,3 @@ val OPTIMAL_TWO_DICE_CORRECT = store_thm
        prob bern {s | FST (two_dice s) = n}``,
    SIMP_TAC std_ss [PROB_BERN_OPTIMAL_TWO_DICE, PROB_BERN_TWO_DICE]);
 
-val _ = export_theory ();

@@ -11,17 +11,6 @@
 (*                                                                           *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* Ignore everything up to "END BOILERPLATE"                                 *)
-(*****************************************************************************)
-
-(*****************************************************************************)
-(* START BOILERPLATE NEEDED FOR COMPILATION                                  *)
-(*****************************************************************************)
-
-(******************************************************************************
-* Load theories
-******************************************************************************)
 (* The commented out stuff below should be loaded in interactive sessions
 quietdec := true;
 load "stringLib";
@@ -30,26 +19,12 @@ Globals.checking_const_names := false;
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation: open HOL4 systems modules.
-******************************************************************************)
+Theory acl2_package
+Ancestors
+  list
+Libs
+  listSyntax pairSyntax stringLib
 
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories (including ratTheory from Jens Brandt).
-******************************************************************************)
-
-open listSyntax pairSyntax stringLib listTheory;
-
-(*****************************************************************************)
-(* END BOILERPLATE                                                           *)
-(*****************************************************************************)
-
-(*****************************************************************************)
-(* Start new theory "acl2_package"                                           *)
-(*****************************************************************************)
-val _ = new_theory "acl2_package";
 
 (*****************************************************************************)
 (* ACL2_PACKAGE_ALIST contains a list of triples                             *)
@@ -69,9 +44,12 @@ val _ = new_theory "acl2_package";
 (* abbreviations below (this idea due to Konrad). It is strange that         *)
 (* rewriting the big term is no problem, but compiling it breaks.            *)
 (*****************************************************************************)
-val ACL2_CL_def     = Define `ACL2_CL      = ("ACL2", "COMMON-LISP")`;
-val ACL2_USER_def   = Define `ACL2_USER    = ("ACL2-USER" , "ACL2")`;
-val ACL_USER_CL_def = Define `ACL2_USER_CL = ("ACL2-USER" , "COMMON-LISP")`;
+Definition ACL2_CL_def:       ACL2_CL      = ("ACL2", "COMMON-LISP")
+End
+Definition ACL2_USER_def:     ACL2_USER    = ("ACL2-USER" , "ACL2")
+End
+Definition ACL_USER_CL_def:   ACL2_USER_CL = ("ACL2-USER" , "COMMON-LISP")
+End
 
 (*****************************************************************************)
 (* Convert imported ACL2 package structure:                                  *)
@@ -2858,14 +2836,14 @@ val ACL2_PACKAGE_ALIST_def =
 (*    if for all i: ~(sym_name=xi and pkg_name=yi)                           *)
 (*                                                                           *)
 (*****************************************************************************)
-val LOOKUP_def =
- Define
-  `(LOOKUP pkg_name [] _ = pkg_name)
+Definition LOOKUP_def:
+   (LOOKUP pkg_name [] _ = pkg_name)
    /\
    (LOOKUP pkg_name ((x1,y1,z1)::a) sym_name =
      if (sym_name=x1) /\ (pkg_name=y1)
        then z1
-       else LOOKUP pkg_name a sym_name)`;
+       else LOOKUP pkg_name a sym_name)
+End
 
 (*****************************************************************************)
 (* (defun valid-pkg-triples-aux (tail triples)                               *)
@@ -2887,36 +2865,37 @@ val LOOKUP_def =
 (*              (not (equal p2 ""))                                          *)
 (*              (valid-pkg-triples-aux (cdr tail) triples)))))               *)
 (*****************************************************************************)
-val VALID_PKG_TRIPLES_AUX_def =
- Define
-  `(VALID_PKG_TRIPLES_AUX [] triples = T)
+Definition VALID_PKG_TRIPLES_AUX_def:
+   (VALID_PKG_TRIPLES_AUX [] triples = T)
    /\
    (VALID_PKG_TRIPLES_AUX ((sym_name,_,p2)::tail) triples =
      (LOOKUP p2 triples sym_name = p2) /\
      ~(sym_name = "ACL2-PKG-WITNESS")  /\
      ~(p2 = "")                        /\
-     (VALID_PKG_TRIPLES_AUX tail triples))`;
+     (VALID_PKG_TRIPLES_AUX tail triples))
+End
 
-val VALID_PKG_TRIPLES_def =
- Define
-  `VALID_PKG_TRIPLES triples = VALID_PKG_TRIPLES_AUX triples triples`;
+Definition VALID_PKG_TRIPLES_def:
+   VALID_PKG_TRIPLES triples = VALID_PKG_TRIPLES_AUX triples triples
+End
 
 (*****************************************************************************)
 (* Optimisation: Use a quicksort like algorithm to split the list            *)
 (*                                                                           *)
 (*****************************************************************************)
 
-val LOOKUP_AUX_def =
- Define
-  `(LOOKUP_AUX [] _ = T)
+Definition LOOKUP_AUX_def:
+   (LOOKUP_AUX [] _ = T)
    /\
    (LOOKUP_AUX ((x1,y1,z1)::a) (sym_name:string,q:string,pkg_name:string) =
      if (sym_name=x1) /\ (pkg_name=y1)
        then (z1 = pkg_name)
-       else LOOKUP_AUX a (sym_name,q,pkg_name))`;
+       else LOOKUP_AUX a (sym_name,q,pkg_name))
+End
 
-val ELOOKUP_def =
- Define `ELOOKUP l1 = EVERY (LOOKUP_AUX l1) l1`;
+Definition ELOOKUP_def:
+  ELOOKUP l1 = EVERY (LOOKUP_AUX l1) l1
+End
 
 val elookup_empty =
  prove(``ELOOKUP [] = T``,RW_TAC std_ss [ELOOKUP_def,EVERY_DEF]);
@@ -2945,17 +2924,18 @@ val every_split =
  prove(``!l. (!x. A x = B x /\ C x) ==> (EVERY A l = EVERY B l /\ EVERY C l)``,
         Induct THEN RW_TAC std_ss [EVERY_DEF] THEN METIS_TAC []);
 
-val leq_def =
- Define `
+Definition leq_def:
+
   (leq "" "" = T) /\
   (leq "" (STRING a b) = T) /\
   (leq (STRING a b) "" = F) /\
   (leq (STRING a b) (STRING c d) =
-      if ORD a < ORD c then T else (ORD a = ORD c) /\ leq b d)`;
+      if ORD a < ORD c then T else (ORD a = ORD c) /\ leq b d)
+End
 
-val LEQ_def =
- Define
-  `LEQ s1 (s2,x:string # string) = leq s1 s2`;
+Definition LEQ_def:
+   LEQ s1 (s2,x:string # string) = leq s1 s2
+End
 
 val leq_only = prove(``!s a x y. LEQ s (a,x) = LEQ s (a,y)``,
         Cases THEN Cases THEN RW_TAC std_ss [LEQ_def]);
@@ -2990,12 +2970,12 @@ val EVERY_FILTER =
    prove(``!l. EVERY P l = EVERY P (FILTER Q l) /\ EVERY P (FILTER ($~ o Q) l)``,
      Induct THEN RW_TAC arith_ss [EVERY_DEF,FILTER] THEN PROVE_TAC []);
 
-val PLACE_def =
- Define
-   `PLACE s1 s2 s3 a (A,B,C,D) =
+Definition PLACE_def:
+    PLACE s1 s2 s3 a (A,B,C,D) =
         if LEQ s2 a
          then if LEQ s1 a then (a::A,B,C,D) else (A,a::B,C,D)
-         else if LEQ s3 a then (A,B,a::C,D) else (A,B,C,a::D)`;
+         else if LEQ s3 a then (A,B,a::C,D) else (A,B,C,a::D)
+End
 
 val (PARTITION_def,PARTIION_ind) =
  Defn.tprove(Defn.Hol_defn "PARTITION"
@@ -3007,10 +2987,10 @@ val (PARTITION_def,PARTIION_ind) =
     REWRITE_TAC [prim_recTheory.measure_thm] THEN
     RW_TAC std_ss [LENGTH]);
 
-val RFILTER_def =
- Define
-  `(RFILTER P [] A = A) /\
-   (RFILTER P (a::b) A = RFILTER P b (if P a then a::A else A))`;
+Definition RFILTER_def:
+   (RFILTER P [] A = A) /\
+   (RFILTER P (a::b) A = RFILTER P b (if P a then a::A else A))
+End
 
 val partition_lem = prove(``!l A B C D. PARTITION s1 s2 s3 (A,B,C,D) l =
         (RFILTER (\x. LEQ s1 x /\ LEQ s2 x) l A,
@@ -3020,23 +3000,23 @@ val partition_lem = prove(``!l A B C D. PARTITION s1 s2 s3 (A,B,C,D) l =
  Induct THEN RW_TAC arith_ss [PLACE_def,PARTITION_def,RFILTER_def] THEN
  FULL_SIMP_TAC std_ss []);
 
-val EPARTITION_def =
- Define
-  `EPARTITION s1 s2 s3 (A,B,C,D) L =
+Definition EPARTITION_def:
+   EPARTITION s1 s2 s3 (A,B,C,D) L =
         (\ (A,B,C,D). VALID_PKG_TRIPLES (REVERSE A) /\
                       VALID_PKG_TRIPLES (REVERSE B) /\
                       VALID_PKG_TRIPLES (REVERSE C) /\
                       VALID_PKG_TRIPLES (REVERSE D))
-        (PARTITION s1 s2 s3 (A,B,C,D) L)`;
+        (PARTITION s1 s2 s3 (A,B,C,D) L)
+End
 
-val RPARTITION_def =
- Define
-   `RPARTITION s1 s2 s3 (A,B,C,D) L =
+Definition RPARTITION_def:
+    RPARTITION s1 s2 s3 (A,B,C,D) L =
         (\ (A,B,C,D). VALID_PKG_TRIPLES A /\
                       VALID_PKG_TRIPLES B /\
                       VALID_PKG_TRIPLES C /\
                       VALID_PKG_TRIPLES D)
-        (PARTITION s1 s2 s3 (A,B,C,D) L)`;
+        (PARTITION s1 s2 s3 (A,B,C,D) L)
+End
 
 val RFILTER_thm =
   prove(``!A B P. RFILTER P A B = REVERSE (FILTER P A) ++ B``,
@@ -3085,18 +3065,20 @@ val EPARTITION = prove(``
         RW_TAC arith_ss [PLACE_def,PARTITION_def,EPARTITION_def] THEN
         RW_TAC arith_ss [EPARTITION_def] THEN METIS_TAC []);
 
-val LLEQ_def = Define `
+Definition LLEQ_def:
         (LLEQ [] "" = T) /\
         (LLEQ [] (STRING a b) = T) /\
         (LLEQ (x::y) "" = F) /\
-        (LLEQ (x::y) (STRING a b) = if x < ORD a then T else (if (x = ORD a) then LLEQ y b else F))`;
+        (LLEQ (x::y) (STRING a b) = if x < ORD a then T else (if (x = ORD a) then LLEQ y b else F))
+End
 
-val LPLACE_def = Define `
+Definition LPLACE_def:
         LPLACE l1 l2 l3 a (A,B,C,D) =
                 if LLEQ l2 (FST a) then
                         if LLEQ l1 (FST a) then (a::A,B,C,D) else (A,a::B,C,D)
                 else
-                        if LLEQ l3 (FST a) then (A,B,a::C,D) else (A,B,C,a::D)`;
+                        if LLEQ l3 (FST a) then (A,B,a::C,D) else (A,B,C,a::D)
+End
 
 val LLEQ_THM = prove(``!s1 s2 x. LLEQ (MAP ORD (EXPLODE s1)) s2 = LEQ s1 (s2,x)``,
         completeInduct_on `STRLEN s1 + STRLEN s2` THEN
@@ -3115,10 +3097,14 @@ val LPLACE_THM = prove(``!s1 s2 s3. PLACE s1 s2 s3 =
         RW_TAC arith_ss [PLACE_def,LPLACE_def,LLEQ_THM] THEN
         Cases_on `x` THEN FULL_SIMP_TAC arith_ss [GSYM LLEQ_THM]);
 
-val AL_def = Define `AL (a:string # string # string) (A,B,C,D) = (a::A,B,C,D)`;
-val BL_def = Define `BL (a:string # string # string) (A,B,C,D) = (A,a::B,C,D)`;
-val CL_def = Define `CL (a:string # string # string) (A,B,C,D) = (A,B,a::C,D)`;
-val DL_def = Define `DL (a:string # string # string) (A,B,C,D) = (A,B,C,a::D)`;
+Definition AL_def:   AL (a:string # string # string) (A,B,C,D) = (a::A,B,C,D)
+End
+Definition BL_def:   BL (a:string # string # string) (A,B,C,D) = (A,a::B,C,D)
+End
+Definition CL_def:   CL (a:string # string # string) (A,B,C,D) = (A,B,a::C,D)
+End
+Definition DL_def:   DL (a:string # string # string) (A,B,C,D) = (A,B,C,a::D)
+End
 
 val L_defs = LIST_CONJ [AL_def,BL_def,CL_def,DL_def];
 
@@ -3144,7 +3130,8 @@ val LOOKUP_AUX_RWR = prove(``
         RW_TAC arith_ss [LOOKUP_AUX_def,ACL2_CL_def,ACL2_USER_def,ACL_USER_CL_def] THEN
         METIS_TAC []);
 
-val CHECK_def = Define `CHECK (x,y,z) = ~(z = "") /\ ~(x = "ACL2-PKG-WITNESS")`;
+Definition CHECK_def:   CHECK (x,y,z) = ~(z = "") /\ ~(x = "ACL2-PKG-WITNESS")
+End
 
 val VALID_PKG_TRIPLES_RWR = prove(``!l1.
                 VALID_PKG_TRIPLES l1 = EVERY CHECK l1 /\ ELOOKUP l1``,
@@ -3293,5 +3280,3 @@ This causes an overflow:
   Overflow
 
 *)
-
-val _ = export_theory();

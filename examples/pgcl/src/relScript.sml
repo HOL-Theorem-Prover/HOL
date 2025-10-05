@@ -13,12 +13,13 @@ app load
    "metisLib","posrealLib","expectationTheory","intLib"];
 quietdec := true;
 *)
+Theory rel
+Ancestors
+  combin list rich_list string integer real poset posreal measure
+  expectation syntax
+Libs
+  intLib realLib metisLib posrealLib
 
-open HolKernel Parse boolLib bossLib intLib realLib metisLib;
-open combinTheory listTheory rich_listTheory stringTheory integerTheory
-     realTheory posetTheory;
-open posrealTheory posrealLib measureTheory;
-open expectationTheory syntaxTheory;
 
 (*
 quietdec := false;
@@ -27,8 +28,6 @@ quietdec := false;
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "rel"                                           *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = new_theory "rel";
 
 (* ------------------------------------------------------------------------- *)
 (* Helpful proof tools                                                       *)
@@ -43,24 +42,27 @@ val lemma = I prove;
 (* Measures.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val point_measure_def = Define
-  `point_measure (p : 'a -> bool) x =
+Definition point_measure_def:
+   point_measure (p : 'a -> bool) x =
    <| carrier := p;
       sets := UNIV;
-      mu := \s. if x IN s then 1 else 0 |>`;
+      mu := \s. if x IN s then 1 else 0 |>
+End
 
-val linear_measure_def = Define
-  `linear_measure p m1 m2 =
+Definition linear_measure_def:
+   linear_measure p m1 m2 =
    <| carrier := m1.carrier;
       sets := m1.sets INTER m2.sets;
-      mu := \s. p * m1.mu s + (1 - p) * m2.mu s |>`;
+      mu := \s. p * m1.mu s + (1 - p) * m2.mu s |>
+End
 
-val ConvexClosed_def = Define
-  `ConvexClosed =
+Definition ConvexClosed_def:
+   ConvexClosed =
    { s |
      !p. !m1 m2 :: s.
        p <= 1 /\ (m1.carrier = m2.carrier) ==>
-       linear_measure p m1 m2 IN s }`;
+       linear_measure p m1 m2 IN s }
+End
 
 (* ------------------------------------------------------------------------- *)
 (* The HOL type we use to model relations.                                   *)
@@ -72,35 +74,39 @@ val () = type_abbrev ("rel", Type `:'a state -> 'a state measure -> bool`);
 (* Well-formed relations.                                                    *)
 (* ------------------------------------------------------------------------- *)
 
-val Measure_def = Define
-  `Measure =
+Definition Measure_def:
+   Measure =
    { m : 'a state measure |
      m IN ProbabilitySpace /\
      (m.carrier = UNIV) /\
      (m.sets = UNIV) /\
-     countable m.carrier }`;
+     countable m.carrier }
+End
 
-val Rel_def = Define
-  `Rel =
+Definition Rel_def:
+   Rel =
    { r : 'a rel |
      (!s m. r s m ==> m IN Measure) /\
-     (!s. { m | r s m } IN ConvexClosed) }`;
+     (!s. { m | r s m } IN ConvexClosed) }
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Relation operations.                                                      *)
 (* ------------------------------------------------------------------------- *)
 
-val union_rel_def = Define
-  `union_rel r1 r2 s m =
+Definition union_rel_def:
+   union_rel r1 r2 s m =
    ?p m1 m2.
      p <= 1 /\ r1 s m1 /\ r2 s m2 /\
-     (m = linear_measure p m1 m2)`;
+     (m = linear_measure p m1 m2)
+End
 
-val lin_rel_def = Define
-  `lin_rel p r1 r2 s m =
+Definition lin_rel_def:
+   lin_rel p r1 r2 s m =
    ?m1 m2.
      r1 s m1 /\ r2 s m2 /\
-     (m = linear_measure (p s) m1 m2)`;
+     (m = linear_measure (p s) m1 m2)
+End
 
 (* Got stuck on sequential composition
 
@@ -129,4 +135,3 @@ val rel_def = Define
    (rel (While c b) = \r. expect_lfp (\e. Cond c (wp b e) r))`;
 *)
 
-val _ = export_theory();
