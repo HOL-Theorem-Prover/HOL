@@ -1,5 +1,7 @@
 \documentclass{article}
 
+\usepackage{bold-extra}
+\usepackage[T1]{fontenc}
 \usepackage{listings}
 \usepackage{holtexbasic}
 \usepackage{proof}
@@ -71,7 +73,10 @@ The macros are \texttt{\bs{}HOLthm}, \texttt{\bs{}HOLtm} and \verb|\HOLty|.
 Each takes a single argument: something HOL-ish that should be inserted at this point in the file (a theorem, a term, or a type).  Theorems are specified in the form $\langle\mathit{thy}\rangle.\langle\mathit{name}\rangle$; terms and types are given as one would write them in a script-file for consumption by the parser.
 
 Figure~\ref{fig:simple-usage} has a simple illustration of these macros in action.
-There the \verb|\HOLty| command is used in two different ``modes'': the first invocation uses the optional \texttt{of} directive to get the type \emph{of} a particular term to be printed; the second just prints the type directly.
+There the \verb|\HOLty| and \verb|\HOLthm| command are each used in two different ``modes'' by specifying optional arguments between square brackets. \verb|\HOLty|'s first invocation uses the optional \texttt{of} directive to get the type \emph{of} a particular term to be printed; the second just prints the type directly.
+The tweaked version of \verb|\HOLthm| uses the \texttt{def} directive to print an equation with a special equality, and to drop the usual turnstile.
+This definition-usage does not require the theorem to actually be a \HOL{} definition; the author gets to control their presentation of the material!
+
 One other aspect is important to note: the \verb|\HOLtm| and \verb|\HOLty| forms expect to be ``inline'', within usual flowing, paragraphed text.
 In contrast, the \verb|\HOLthm| form should appear in an \texttt{alltt} environment.
 This will keep the output looking reasonable when the output spans multiple lines.
@@ -88,7 +93,7 @@ This will keep the output looking reasonable when the output spans multiple line
 Lead-in text:
 \com{begin}{alltt}
 Alltt text:
-\com{\holthm}{bst.keys_elems}
+\bs{}\holthm{}[def]\args{bst.keys_elems}
 \com{\holthm}{sampleTree.elems_flip}
 \com{end}{alltt}
 The constant \com{\holtm}{keys}
@@ -106,7 +111,7 @@ type like \com{\holty}{:num}.
 Lead-in text:
 \begin{alltt}
 Alltt text:
-\HOLthm{bst.keys_elems}
+\HOLthm[def]{bst.keys_elems}
 \HOLthm{sampleTree.elems_flip}
 \end{alltt}
 The constant \HOLtm{keys} returns the set of a binary search tree's keys.
