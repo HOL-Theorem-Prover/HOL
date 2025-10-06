@@ -600,9 +600,8 @@ val fmap_EXT = save_thm("fmap_EXT", GSYM fmap_EQ_THM)
  ---------------------------------------------------------------------------*)
 
 Definition SUBMAP_DEF[nocompute]:
-  !^fmap g.
-       $SUBMAP f g =
-       !x. x IN FDOM f ==> x IN FDOM g /\ (FAPPLY f x = FAPPLY g x)
+  $SUBMAP ^fmap g =
+  !x. x IN FDOM f ==> x IN FDOM g /\ (FAPPLY f x = FAPPLY g x)
 End
 val _ = set_fixity "SUBMAP" (Infix(NONASSOC, 450));
 val _ = Unicode.unicode_version { u = UTF8.chr 0x2291, tmnm = "SUBMAP"}
