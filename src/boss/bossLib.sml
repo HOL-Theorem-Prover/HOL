@@ -322,6 +322,9 @@ val Abbr = markerLib.Abbr
 val UNABBREV_ALL_TAC = markerLib.UNABBREV_ALL_TAC
 val REABBREV_TAC = markerLib.REABBREV_TAC
 val WITHOUT_ABBREVS = markerLib.WITHOUT_ABBREVS
+val mk_asm = markerLib.mk_asm
+val asm = markerLib.asm
+val asm_x = markerLib.asm_x
 
 val NoAsms = markerLib.NoAsms
 val IgnAsm = markerLib.IgnAsm

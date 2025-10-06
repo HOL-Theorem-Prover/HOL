@@ -208,6 +208,9 @@ sig
   val UNABBREV_ALL_TAC : tactic
   val REABBREV_TAC     : tactic
   val WITHOUT_ABBREVS  : tactic -> tactic
+  val mk_asm           : string -> thm -> tactic
+  val asm              : string -> thm_tactic -> tactic
+  val asm_x            : string -> thm_tactic -> tactic
 
   (* name cases of an induction theorem *)
   val name_ind_cases : term list -> thm -> thm
