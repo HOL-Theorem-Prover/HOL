@@ -4733,9 +4733,9 @@ QED
 (* Big union (union of set of sets)                                      *)
 (* ===================================================================== *)
 
-val BIGUNION = Q.new_definition
- ("BIGUNION",
-  `BIGUNION P = { x | ?s. s IN P /\ x IN s}`);
+Definition BIGUNION[nocompute]:
+  BIGUNION P = { x | ?s. s IN P /\ x IN s}
+End
 val _ = ot0 "BIGUNION" "bigUnion"
 
 (* N-ARY UNION (it's not any bigger but a different symbol)
@@ -4990,9 +4990,9 @@ QED
     BIGINTER (intersection of a set of sets)
    ---------------------------------------------------------------------- *)
 
-val BIGINTER = Q.new_definition
-("BIGINTER",
- `BIGINTER P = { x | !s. s IN P ==> x IN s}`);
+Definition BIGINTER[nocompute]:
+ BIGINTER P = { x | !s. s IN P ==> x IN s}
+End
 val _ = ot0 "BIGINTER" "bigIntersect"
 
 (* N-ARY INTERSECTION (it's not any bigger but a different symbol)
@@ -5117,9 +5117,9 @@ QED
 (* ====================================================================== *)
 
 
-val CROSS_DEF = Q.new_definition(
-  "CROSS_DEF",
-  `CROSS P Q = { p | FST p IN P /\ SND p IN Q }`);
+Definition CROSS_DEF[nocompute]:
+  CROSS P Q = { p | FST p IN P /\ SND p IN Q }
+End
 val _ = set_fixity "CROSS" (Infixr 601);
 val _ = Unicode.unicode_version {tmnm = "CROSS", u = UTF8.chr 0xD7}
 val _ = TeX_notation {hol = "CROSS", TeX = ("\\ensuremath{\\times}", 1)}

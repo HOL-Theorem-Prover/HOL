@@ -497,7 +497,8 @@ QED
 (*  Tag combinator equal to K. Used in generating ML from HOL                *)
 (*---------------------------------------------------------------------------*)
 
-val FAIL_DEF = Q.new_definition("FAIL_DEF", `FAIL = \x y. x`);
+Definition FAIL_DEF[nocompute]: FAIL = \x y. x
+End
 
 Theorem FAIL_THM:  FAIL x y = x
 Proof

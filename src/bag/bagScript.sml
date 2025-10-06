@@ -25,13 +25,13 @@ Definition BAG_INN[nocompute]:
   BAG_INN (e:'a) n b <=> b e >= n
 End
 
-val SUB_BAG = Q.new_definition (
-  "SUB_BAG",
-  `SUB_BAG b1 b2 = !x n. BAG_INN x n b1 ==> BAG_INN x n b2`);
+Definition SUB_BAG[nocompute]:
+  SUB_BAG b1 b2 = !x n. BAG_INN x n b1 ==> BAG_INN x n b2
+End
 
-val PSUB_BAG = Q.new_definition (
-  "PSUB_BAG",
-  `PSUB_BAG b1 b2 <=> SUB_BAG b1 b2 /\ ~(b1 = b2)`);
+Definition PSUB_BAG[nocompute]:
+  PSUB_BAG b1 b2 <=> SUB_BAG b1 b2 /\ ~(b1 = b2)
+End
 
 
 Definition BAG_IN[nocompute]:
@@ -82,16 +82,16 @@ Proof
   ] THEN SRW_TAC [ARITH_ss][]
 QED
 
-val BAG_INTER = Q.new_definition(
-  "BAG_INTER",
-  `BAG_INTER b1 b2 = (\x. if (b1 x < b2 x) then b1 x else b2 x)`);
+Definition BAG_INTER[nocompute]:
+  BAG_INTER b1 b2 = (\x. if (b1 x < b2 x) then b1 x else b2 x)
+End
 
 
 val _ = print "Properties and definition of BAG_MERGE\n"
 
-val BAG_MERGE = Q.new_definition(
-  "BAG_MERGE",
-  `BAG_MERGE b1 b2 = (\x. if (b1 x < b2 x) then b2 x else b1 x)`);
+Definition BAG_MERGE[nocompute]:
+  BAG_MERGE b1 b2 = (\x. if (b1 x < b2 x) then b2 x else b1 x)
+End
 
 Theorem BAG_MERGE_IDEM:
     !b. BAG_MERGE b b = b
@@ -1258,11 +1258,11 @@ QED
 
 val _ = print "Developing theory of finite bags\n"
 
-val FINITE_BAG = Q.new_definition(
-  "FINITE_BAG",
-  `FINITE_BAG (b:'a->num) =
+Definition FINITE_BAG[nocompute]:
+  FINITE_BAG (b:'a->num) =
      !P. P EMPTY_BAG /\ (!b. P b ==> (!e. P (BAG_INSERT e b))) ==>
-         P b`);
+         P b
+End
 
 Theorem FINITE_EMPTY_BAG:
    FINITE_BAG EMPTY_BAG
@@ -1409,12 +1409,12 @@ QED
 
 val _ = print "Developing theory of bag cardinality\n"
 
-val BAG_CARD_RELn = Q.new_definition(
-  "BAG_CARD_RELn",
-  `BAG_CARD_RELn (b:'a->num) n =
+Definition BAG_CARD_RELn[nocompute]:
+  BAG_CARD_RELn (b:'a->num) n =
       !P. P EMPTY_BAG 0 /\
           (!b n. P b n ==> (!e. P (BAG_INSERT e b) (SUC n))) ==>
-          P b n`);
+          P b n
+End
 
 val BCARD_imps = prove(
   Term`(BAG_CARD_RELn EMPTY_BAG 0) /\
@@ -2060,9 +2060,9 @@ val BAG_CHOICE_DEF = new_specification
 (* The REST of a bag after removing a chosen element.                    *)
 (* ===================================================================== *)
 
-val BAG_REST_DEF = Q.new_definition
- ("BAG_REST_DEF",
-  `BAG_REST b = BAG_DIFF b (EL_BAG (BAG_CHOICE b))`);
+Definition BAG_REST_DEF[nocompute]:
+  BAG_REST b = BAG_DIFF b (EL_BAG (BAG_CHOICE b))
+End
 
 
 Theorem BAG_INSERT_CHOICE_REST:

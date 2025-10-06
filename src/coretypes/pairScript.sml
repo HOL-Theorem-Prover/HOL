@@ -75,10 +75,9 @@ val REP_ABS_PAIR = Q.prove
 (*  Define the constructor for pairs, and install grammar rule for it.       *)
 (*---------------------------------------------------------------------------*)
 
-val COMMA_DEF =
- Q.new_definition
-  ("COMMA_DEF[notuserdef]",
-   `$, x y = ABS_prod ^pairfn`);
+Definition COMMA_DEF[notuserdef,nocompute]:
+   $, x y = ABS_prod ^pairfn
+End
 val _ = ot","
 
 val _ = add_rule {term_name = ",", fixity = Infixr 50,
@@ -208,12 +207,13 @@ QED
 (* CURRY and UNCURRY. UNCURRY is needed for terms of the form `\(x,y).t`     *)
 (*---------------------------------------------------------------------------*)
 
-val CURRY_DEF = Q.new_definition ("CURRY_DEF", `CURRY f x y :'c = f (x,y)`);
+Definition CURRY_DEF[nocompute]: CURRY f x y :'c = f (x,y)
+End
 val _ = BasicProvers.export_rewrites ["CURRY_DEF"]
 
-val UNCURRY = Q.new_definition
-  ("UNCURRY",
-   `UNCURRY f (v:'a#'b) = f (FST v) (SND v)`);
+Definition UNCURRY[nocompute]:
+   UNCURRY f (v:'a#'b) = f (FST v) (SND v)
+End
 val _ = ot0 "UNCURRY" "uncurry"
 
 val UNCURRY_VAR = save_thm("UNCURRY_VAR", UNCURRY);  (* compatibility *)
@@ -842,11 +842,10 @@ QED
  * is a consequence of WF_LEX.
  *---------------------------------------------------------------------------*)
 
-val RPROD_DEF =
-Q.new_definition
-("RPROD_DEF",
-   `RPROD (R1:'a->'b->bool)
-          (R2:'c->'d->bool) = \(s,t) (u,v). R1 s u /\ R2 t v`);
+Definition RPROD_DEF[nocompute]:
+   RPROD (R1:'a->'b->bool)
+          (R2:'c->'d->bool) = \(s,t) (u,v). R1 s u /\ R2 t v
+End
 
 
 Theorem WF_RPROD:

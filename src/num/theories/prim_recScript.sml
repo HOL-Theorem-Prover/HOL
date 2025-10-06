@@ -558,10 +558,9 @@ val _ = TypeBase.export $ TypeBasePure.gen_datatype_info
  * logically simpler).                                                       *
  *---------------------------------------------------------------------------*)
 
-val wellfounded_def =
-Q.new_definition
-  ("wellfounded_def",
-   `wellfounded (R:'a->'a->bool) = ~?f. !n. R (f (SUC n)) (f n)`);
+Definition wellfounded_def[nocompute]:
+   wellfounded (R:'a->'a->bool) = ~?f. !n. R (f (SUC n)) (f n)
+End
 
 val _ = overload_on ("Wellfounded", ``wellfounded``);
 
@@ -650,7 +649,8 @@ val _ = BasicProvers.export_rewrites ["WF_LESS"]
  * arising from a measure function is wellfounded, which is really great!
  *---------------------------------------------------------------------------*)
 
-val measure_def = Q.new_definition ("measure_def", `measure = inv_image $<`);
+Definition measure_def[nocompute]: measure = inv_image $<
+End
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="measure"},name=(["Relation"],"measure")}
 
 Theorem WF_measure:  !m. WF (measure m)

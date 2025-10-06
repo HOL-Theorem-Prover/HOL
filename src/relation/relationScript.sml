@@ -18,10 +18,9 @@ Libs
 (* Basic properties of relations.                                            *)
 (*---------------------------------------------------------------------------*)
 
-val transitive_def =
-Q.new_definition
-("transitive_def",
-   `transitive (R:'a->'a->bool) = !x y z. R x y /\ R y z ==> R x z`);
+Definition transitive_def[nocompute]:
+   transitive (R:'a->'a->bool) = !x y z. R x y /\ R y z ==> R x z
+End
 val _ = OpenTheoryMap.OpenTheory_const_name
           {const={Thy="relation",Name="transitive"},
            name=(["Relation"],"transitive")}
@@ -71,11 +70,11 @@ End
    write the transitive closure of the inverse:
       (inv R)^+
 *)
-val TC_DEF = Q.new_definition
-  ("TC_DEF",
-   `TC (R:'a->'a->bool) a b =
+Definition TC_DEF[nocompute]:
+   TC (R:'a->'a->bool) a b =
      !P.(!x y. R x y ==> P x y) /\
-        (!x y z. P x y /\ P y z ==> P x z)  ==> P a b`);
+        (!x y z. P x y /\ P y z ==> P x z)  ==> P a b
+End
 val _ = add_rule { fixity = Suffix 2100,
                    block_style = (AroundEachPhrase, (Portable.CONSISTENT,0)),
                    paren_style = OnlyIfNecessary,
@@ -994,9 +993,8 @@ QED
  * (numbers, lists, etc.) can be found in the respective theories.           *
  *---------------------------------------------------------------------------*)
 
-val WF_DEF =
-Q.new_definition
- ("WF_DEF", `WF R = !B. (?w:'a. B w) ==> ?min. B min /\ !b. R b min ==> ~B b`);
+Definition WF_DEF[nocompute]: WF R = !B. (?w:'a. B w) ==> ?min. B min /\ !b. R b min ==> ~B b
+End
 val _ = OpenTheoryMap.OpenTheory_const_name
           {const={Thy="relation",Name="WF"},name=(["Relation"],"wellFounded")}
 
@@ -1123,9 +1121,8 @@ QED
  * The empty relation is wellfounded.
  *---------------------------------------------------------------------------*)
 
-val EMPTY_REL_DEF =
-Q.new_definition
-        ("EMPTY_REL_DEF", `EMPTY_REL (x:'a) (y:'a) = F`);
+Definition EMPTY_REL_DEF[nocompute]: EMPTY_REL (x:'a) (y:'a) = F
+End
 val _ = export_rewrites ["EMPTY_REL_DEF"]
 Overload REMPTY = ``EMPTY_REL``
 val _ = Unicode.unicode_version {u = UnicodeChars.emptyset ^ UnicodeChars.sub_r,
@@ -1254,10 +1251,9 @@ QED
  * Beta, then y couldn't be in Alpha.
  *---------------------------------------------------------------------------*)
 
-val inv_image_def =
-Q.new_definition
-("inv_image_def",
-   `inv_image R (f:'a->'b) = \x y. R (f x) (f y):bool`);
+Definition inv_image_def[nocompute]:
+   inv_image R (f:'a->'b) = \x y. R (f x) (f y):bool
+End
 
 val inv_image_thm = save_thm(
   "inv_image_thm",
@@ -1379,10 +1375,9 @@ val EXPOSE_CUTS_TAC =
  *
  *---------------------------------------------------------------------------*)
 
-val approx_def =
-Q.new_definition
-  ("approx_def",
-   `approx R M x (f:'a->'b) = (f = RESTRICT (\y. M (RESTRICT f R y) y) R x)`);
+Definition approx_def[nocompute]:
+   approx R M x (f:'a->'b) = (f = RESTRICT (\y. M (RESTRICT f R y) y) R x)
+End
 
 (* This could, in fact, be the definition. *)
 val approx_ext =
@@ -1405,10 +1400,9 @@ val approx_SELECT1 = CONV_RULE FORALL_IMP_CONV  approx_SELECT0;
  *                                    |  (@v. T)))
  *---------------------------------------------------------------------------*)
 
-val the_fun_def =
-Q.new_definition
-("the_fun_def",
-  `the_fun R M x = @f:'a->'b. approx R M x f`);
+Definition the_fun_def[nocompute]:
+  the_fun R M x = @f:'a->'b. approx R M x f
+End
 
 val approx_the_fun0 = ONCE_REWRITE_RULE [GSYM the_fun_def] approx_SELECT0;
 val approx_the_fun1 = ONCE_REWRITE_RULE [GSYM the_fun_def] approx_SELECT1;
@@ -1450,11 +1444,10 @@ QED
  * prove is all about.
  *---------------------------------------------------------------------------*)
 
-val WFREC_DEF =
-Q.new_definition
-("WFREC_DEF",
-  `WFREC R (M:('a->'b) -> ('a->'b)) =
-     \x. M (RESTRICT (the_fun (TC R) (\f v. M (RESTRICT f R v) v) x) R x) x`);
+Definition WFREC_DEF[nocompute]:
+  WFREC R (M:('a->'b) -> ('a->'b)) =
+     \x. M (RESTRICT (the_fun (TC R) (\f v. M (RESTRICT f R v) v) x) R x) x
+End
 
 
 (*---------------------------------------------------------------------------
@@ -1639,9 +1632,9 @@ QED
 (* The wellfounded part of a relation. Defined inductively.                  *)
 (*---------------------------------------------------------------------------*)
 
-val WFP_DEF = Q.new_definition
-  ("WFP_DEF",
-   `WFP R a = !P. (!x. (!y. R y x ==> P y) ==> P x) ==> P a`);
+Definition WFP_DEF[nocompute]:
+   WFP R a = !P. (!x. (!y. R y x ==> P y) ==> P x) ==> P a
+End
 
 Theorem WFP_RULES:
      !R x. (!y. R y x ==> WFP R y) ==> WFP R x
@@ -1707,22 +1700,20 @@ QED
 (* respect to the wellfounded relation R.                                    *)
 (*---------------------------------------------------------------------------*)
 
-val INDUCTIVE_INVARIANT_DEF =
- Q.new_definition
- ("INDUCTIVE_INVARIANT_DEF",
-  `INDUCTIVE_INVARIANT R P M =
-      !f x. (!y. R y x ==> P y (f y)) ==> P x (M f x)`);
+Definition INDUCTIVE_INVARIANT_DEF[nocompute]:
+  INDUCTIVE_INVARIANT R P M =
+      !f x. (!y. R y x ==> P y (f y)) ==> P x (M f x)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Definition. P is an inductive invariant of the functional M on set D with *)
 (* respect to the wellfounded relation R.                                    *)
 (*---------------------------------------------------------------------------*)
 
-val INDUCTIVE_INVARIANT_ON_DEF =
- Q.new_definition
- ("INDUCTIVE_INVARIANT_ON_DEF",
-  `INDUCTIVE_INVARIANT_ON R D P M =
-      !f x. D x /\ (!y. D y ==> R y x ==> P y (f y)) ==> P x (M f x)`);
+Definition INDUCTIVE_INVARIANT_ON_DEF[nocompute]:
+  INDUCTIVE_INVARIANT_ON R D P M =
+      !f x. D x /\ (!y. D y ==> R y x ==> P y (f y)) ==> P x (M f x)
+End
 
 (*---------------------------------------------------------------------------*)
 (* The key theorem, corresponding to theorem 1 of the paper.                 *)
