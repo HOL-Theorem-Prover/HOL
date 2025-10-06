@@ -1010,8 +1010,9 @@ QED
 (* Generic iteration of operation over set with finite support.              *)
 (* ------------------------------------------------------------------------- *)
 
-val neutral = new_definition ("neutral",
-  ``neutral op = @x. !y. (op x y = y) /\ (op y x = y)``);
+Definition neutral[nocompute]:
+  neutral op = @x. !y. (op x y = y) /\ (op y x = y)
+End
 
 (* NOTE: The set of all numbers of the involved type, ‘op’ and ‘neutral op’
    actually form an Abelian Monoid (also called Commutative Monoid), i.e.
@@ -1021,10 +1022,11 @@ val neutral = new_definition ("neutral",
 
    (see also AbelianMonoid_def in examples/algebra/monoid/monoidScript.sml)
  *)
-val monoidal = new_definition ("monoidal",
-  ``monoidal op <=> (!x y. op x y = op y x) /\
+Definition monoidal[nocompute]:
+  monoidal op <=> (!x y. op x y = op y x) /\
                     (!x y z. op x (op y z) = op (op x y) z) /\
-                    (!x:'a. op (neutral op) x = x)``);
+                    (!x:'a. op (neutral op) x = x)
+End
 
 Theorem MONOIDAL_AC:
     !op. monoidal op
@@ -1037,14 +1039,16 @@ Proof
   REWRITE_TAC[monoidal] THEN MESON_TAC[]
 QED
 
-val support = new_definition ("support",
-  ``support op (f:'a->'b) s = {x | x IN s /\ ~(f x = neutral op)}``);
+Definition support[nocompute]:
+  support op (f:'a->'b) s = {x | x IN s /\ ~(f x = neutral op)}
+End
 
-val iterate = new_definition ("iterate",
-  ``iterate op (s:'a->bool) f =
+Definition iterate[nocompute]:
+  iterate op (s:'a->bool) f =
          if FINITE(support op f s)
          then ITSET (\x a. op (f x) a) (support op f s) (neutral op)
-         else neutral op``);
+         else neutral op
+End
 
 Theorem IN_SUPPORT:
     !op f x s. x IN (support op f s) <=> x IN s /\ ~(f x = neutral op)

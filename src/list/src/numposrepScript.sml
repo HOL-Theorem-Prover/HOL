@@ -314,7 +314,8 @@ Proof
    \\ FULL_SIMP_TAC arith_ss [lem, DIV_0_IMP_LT]
 QED
 
-val l2n2_def = new_definition ("l2n2", ``l2n2 = l2n 2``)
+Definition l2n2[nocompute]: l2n2 = l2n 2
+End
 
 val l2n2_empty = Q.prove(
    `l2n2 [] = ZERO`,

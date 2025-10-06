@@ -408,7 +408,8 @@ val _ = export_rewrites ["FDOM_FINITE"]
 (* Define cardinality as the cardinality of the domain of the map        *)
 (* ===================================================================== *)
 
-val FCARD_DEF = new_definition("FCARD_DEF", ``FCARD fm = CARD (FDOM fm)``);
+Definition FCARD_DEF[nocompute]: FCARD fm = CARD (FDOM fm)
+End
 
 (* --------------------------------------------------------------------- *)
 (* Basic cardinality results.                                            *)
@@ -598,11 +599,11 @@ val fmap_EXT = save_thm("fmap_EXT", GSYM fmap_EQ_THM)
            Submaps
  ---------------------------------------------------------------------------*)
 
-val SUBMAP_DEF = new_definition (
-  "SUBMAP_DEF",
-  ``!^fmap g.
+Definition SUBMAP_DEF[nocompute]:
+  !^fmap g.
        $SUBMAP f g =
-       !x. x IN FDOM f ==> x IN FDOM g /\ (FAPPLY f x = FAPPLY g x)``)
+       !x. x IN FDOM f ==> x IN FDOM g /\ (FAPPLY f x = FAPPLY g x)
+End
 val _ = set_fixity "SUBMAP" (Infix(NONASSOC, 450));
 val _ = Unicode.unicode_version { u = UTF8.chr 0x2291, tmnm = "SUBMAP"}
 val _ = TeX_notation {hol = "SUBMAP", TeX = ("\\HOLTokenSubmap{}", 1)}

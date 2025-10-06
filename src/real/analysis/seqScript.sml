@@ -112,8 +112,9 @@ QED
 (* Define convergence and Cauchy-ness                                        *)
 (*---------------------------------------------------------------------------*)
 
-val convergent = new_definition("convergent",
-  “convergent f = ?l. f --> l”);
+Definition convergent[nocompute]:
+  convergent f = ?l. f --> l
+End
 
 (* already defined in real_topologyTheory *)
 Theorem cauchy :
@@ -147,8 +148,9 @@ QED
 (* Define a subsequence                                                      *)
 (*---------------------------------------------------------------------------*)
 
-val subseq = new_definition("subseq",
-  “subseq f = !m n:num. m < n ==> f m < (f n):num”);
+Definition subseq[nocompute]:
+  subseq f = !m n:num. m < n ==> f m < (f n):num
+End
 
 Theorem SUBSEQ_SUC:
    !f. subseq f = !n. f(n) < f(SUC n)
@@ -169,10 +171,11 @@ QED
 (* Define monotonicity                                                       *)
 (*---------------------------------------------------------------------------*)
 
-val mono = new_definition("mono",
-  “mono f = (!m n:num. m <= n ==> f(m) <= (f n:real))
+Definition mono[nocompute]:
+  mono f = (!m n:num. m <= n ==> f(m) <= (f n:real))
                \/
-               (!m n. m <= n ==> f(m) >= f(n))”);
+               (!m n. m <= n ==> f(m) >= f(n))
+End
 
 Theorem MONO_SUC :
   !f:num->real. mono f <=> (!n. f(SUC n) >= f n) \/ (!n. f(SUC n) <= f(n))
@@ -976,12 +979,14 @@ val sums = new_infixr_definition("sums",
   “$sums f s = (\n. sum(0,n) f) --> s”,750);
 
 val _ = hide "summable";
-val summable = new_definition("summable",
-  “summable f = ?s. f sums s”);
+Definition summable[nocompute]:
+  summable f = ?s. f sums s
+End
 
 val _ = hide "suminf";
-val suminf = new_definition("suminf",
-  “suminf f = @s. f sums s”);
+Definition suminf[nocompute]:
+  suminf f = @s. f sums s
+End
 
 (* connection to real_topologyTheory *)
 Theorem sums_univ :

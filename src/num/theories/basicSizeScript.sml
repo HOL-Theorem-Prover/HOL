@@ -4,20 +4,20 @@ Ancestors
 Libs
   HolKernel Parse boolLib pairLib Prim_rec
 
-val bool_size_def = new_definition
-  ("bool_size_def", ``bool_size (b:bool) = 0``);
+Definition bool_size_def[nocompute]: bool_size (b:bool) = 0
+End
 
-val min_pair_size_def = new_definition
-  ("min_pair_size_def", ``min_pair_size f g (x, y) = f x + g y``);
+Definition min_pair_size_def[nocompute]: min_pair_size f g (x, y) = f x + g y
+End
 
-val pair_size_def = new_definition
-  ("pair_size_def", ``pair_size f g (x, y) = 1 + (f x + g y)``);
+Definition pair_size_def[nocompute]: pair_size f g (x, y) = 1 + (f x + g y)
+End
 
-val one_size_def = new_definition
-  ("one_size_def", ``one_size (x:one) = 0``);
+Definition one_size_def[nocompute]: one_size (x:one) = 0
+End
 
-val itself_size_def = new_definition
-  ("itself_size_def", ``itself_size (x : 'a itself) = 0``);
+Definition itself_size_def[nocompute]: itself_size (x : 'a itself) = 0
+End
 
 val sum_size_def =
  new_recursive_definition
@@ -26,8 +26,8 @@ val sum_size_def =
     name="sum_size_def",
     rec_axiom = sumTheory.sum_Axiom};
 
-val full_sum_size_def = new_definition
-  ("full_sum_size_def", ``full_sum_size f g sum = 1 + (sum_size f g sum)``);
+Definition full_sum_size_def[nocompute]: full_sum_size f g sum = 1 + (sum_size f g sum)
+End
 Theorem full_sum_size_thm:
    (full_sum_size f g (INL x) = 1 + (f x)) /\
     (full_sum_size f g (INR y) = 1 + (g y))

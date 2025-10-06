@@ -4,7 +4,7 @@ Ancestors
 Libs
   HolKernel boolLib Parse
 
-val f_def = new_definition(
-  "f_def",
-  ``f x = x + 1``);
+Definition f_def[nocompute]:
+  f x = x + 1
+End
 

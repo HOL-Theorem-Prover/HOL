@@ -8,14 +8,16 @@ Libs
 fun simp ths = ASM_SIMP_TAC (srw_ss()) ths
 fun SRULE ths = SIMP_RULE (srw_ss()) ths
 
-val N0_def = new_definition("N0_def",
-  “N0 (m:num) n = if n = 0 then m+1 else 0”);
+Definition N0_def[nocompute]:
+  N0 (m:num) n = if n = 0 then m+1 else 0
+End
 
-val P0_def = new_definition("P0_def",
-  “P0 (c:num -> num) d n =
+Definition P0_def[nocompute]:
+  P0 (c:num -> num) d n =
    if n = 0 then 0
    else if ODD n then c (n DIV 2)
-   else d ((n-2) DIV 2)”);
+   else d ((n-2) DIV 2)
+End
 
 Theorem N0_11[local,simp]:
   N0 m = N0 n <=> m = n
@@ -67,8 +69,9 @@ val cv_tydefrec = newtypeTools.rich_new_type
     ABS    = "cv_ABS",
     REP    = "cv_REP"};
 
-val Pair_def = new_definition("Pair_def",
-  “Pair c d = cv_ABS (P0 (cv_REP c) (cv_REP d))”);
+Definition Pair_def[nocompute]:
+  Pair c d = cv_ABS (P0 (cv_REP c) (cv_REP d))
+End
 
 Theorem Pair_11:
   Pair c d = Pair e f <=> c = e /\ d = f
@@ -79,7 +82,8 @@ Proof
   simp[#termP_term_REP cv_tydefrec, iscv_pair, #term_REP_11 cv_tydefrec]
 QED
 
-val Num_def = new_definition("Num_def", “Num n = cv_ABS (N0 n)”);
+Definition Num_def[nocompute]: Num n = cv_ABS (N0 n)
+End
 
 Theorem Num_11:
   Num m = Num n <=> m = n
@@ -137,8 +141,9 @@ Proof
   metisLib.METIS_TAC[]
 QED
 
-val cvrelf_def = new_definition("cvrelf_def",
-                                “cvrelf f g c = @r. cvrel f g c r”);
+Definition cvrelf_def[nocompute]:
+                                cvrelf f g c = @r. cvrel f g c r
+End
 
 Theorem cvrelf_Pair:
   cvrelf f g (Pair c d) = g c d (cvrelf f g c) (cvrelf f g d)
@@ -163,10 +168,11 @@ Proof
 QED
 
 (* helpers/auxiliaries *)
-val c2b_def = new_definition ("c2b_def", “c2b x = ?k. x = Num (SUC k)”);
-val cv_if_def0 = new_definition(
-  "cv_if_def0",
-  “cv_if p (q:cv) (r:cv) = if c2b p then q else r”);
+Definition c2b_def[nocompute]: c2b x = ?k. x = Num (SUC k)
+End
+Definition cv_if_def0[nocompute]:
+  cv_if p (q:cv) (r:cv) = if c2b p then q else r
+End
 Theorem cv_if_def:
   cv_if (Num (SUC m)) (p:cv) (q:cv) = p /\
   cv_if (Num 0) p q = q /\
@@ -267,11 +273,12 @@ val cvnumval_def = recdef(
   “cvnumval (Num n) = n /\ cvnumval (Pair c d) = 0”
 );
 
-val cvnum_map2_def = new_definition(
-  "cvnum_map2_def",
-  “cvnum_map2 f c d = Num (f (cvnumval c) (cvnumval d))”);
+Definition cvnum_map2_def[nocompute]:
+  cvnum_map2 f c d = Num (f (cvnumval c) (cvnumval d))
+End
 
-val cv_add_def0 = new_definition ("cv_add_def0", “cv_add = cvnum_map2 $+”);
+Definition cv_add_def0[nocompute]: cv_add = cvnum_map2 $+
+End
 Theorem cv_add_def[simp]:
   cv_add (Num m) (Num n) = Num (m + n) /\
   cv_add (Num m) (Pair p q) = Num m /\
@@ -281,7 +288,8 @@ Proof
   simp[cv_add_def0, FUN_EQ_THM,cvnumval_def, cvnum_map2_def, ADD_CLAUSES]
 QED
 
-val cv_sub_def0 = new_definition("cv_sub_def0", “cv_sub = cvnum_map2 $-”);
+Definition cv_sub_def0[nocompute]: cv_sub = cvnum_map2 $-
+End
 Theorem cv_sub_def[simp]:
   cv_sub (Num m) (Num n) = Num (m - n) /\
   cv_sub (Num m) (Pair p q) = Num m /\
@@ -291,7 +299,8 @@ Proof
   simp[cv_sub_def0, FUN_EQ_THM, cvnum_map2_def, cvnumval_def, SUB_0]
 QED
 
-val cv_mul_def0 = new_definition("cv_mul_def0", “cv_mul = cvnum_map2 $*”);
+Definition cv_mul_def0[nocompute]: cv_mul = cvnum_map2 $*
+End
 Theorem cv_mul_def[simp]:
   cv_mul (Num m) (Num n) = Num (m * n) /\
   cv_mul (Num m) (Pair p q) = Num 0 /\
@@ -301,7 +310,8 @@ Proof
   simp[cv_mul_def0, FUN_EQ_THM, cvnum_map2_def, cvnumval_def]
 QED
 
-val cv_div_def0 = new_definition("cv_div_def0", “cv_div = cvnum_map2 $DIV”);
+Definition cv_div_def0[nocompute]: cv_div = cvnum_map2 $DIV
+End
 Theorem cv_div_def[simp]:
   cv_div (Num m) (Num n) = Num (m DIV n) /\
   cv_div (Num m) (Pair p q) = Num 0 /\
@@ -311,7 +321,8 @@ Proof
   simp[cv_div_def0, FUN_EQ_THM, cvnum_map2_def, cvnumval_def]
 QED
 
-val cv_mod_def0 = new_definition("cv_mod_def0", “cv_mod = cvnum_map2 $MOD”);
+Definition cv_mod_def0[nocompute]: cv_mod = cvnum_map2 $MOD
+End
 Theorem cv_mod_def[simp]:
   cv_mod (Num m) (Num n) = Num (m MOD n) /\
   cv_mod (Num m) (Pair p q) = Num m /\
@@ -321,7 +332,8 @@ Proof
   simp[cv_mod_def0, FUN_EQ_THM, cvnum_map2_def, cvnumval_def]
 QED
 
-val cv_eq_def0 = new_definition("cv_eq_def0", “cv_eq (c:cv) d = b2c (c = d)”);
+Definition cv_eq_def0[nocompute]: cv_eq (c:cv) d = b2c (c = d)
+End
 Theorem cv_eq_def:
   cv_eq p q = Num (if p = q then SUC 0 else 0)
 Proof
@@ -539,8 +551,9 @@ Proof
   rewrite_tac [c2n_def,cv_mod_def]
 QED
 
-val cv_exp_def = new_definition("cv_exp_def",
-  “cv_exp m n = Num (c2n m ** c2n n)”);
+Definition cv_exp_def[nocompute]:
+  cv_exp m n = Num (c2n m ** c2n n)
+End
 
 Theorem cv_exp_eq:
   cv_exp b e =

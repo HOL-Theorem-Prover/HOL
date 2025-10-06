@@ -63,12 +63,12 @@ val _ = TeX_notation { hol = "+", TeX = ("\\ensuremath{+}", 1) };
  * of the "numeral type".                                                    *
  *---------------------------------------------------------------------------*)
 
-val NUMERAL_DEF = new_definition(
-  "NUMERAL_DEF[notuserdef]",
-  “NUMERAL (x:num) = x”
-);
+Definition NUMERAL_DEF[notuserdef,nocompute]:
+  NUMERAL (x:num) = x
+End
 
-val ALT_ZERO = new_definition("ALT_ZERO[notuserdef]", “ZERO = 0”);
+Definition ALT_ZERO[notuserdef,nocompute]: ZERO = 0
+End
 
 local
    open OpenTheoryMap
@@ -79,8 +79,10 @@ in
                                   name=(["Number", "Natural"], "zero")}
 end
 
-val BIT1 = new_definition("BIT1[notuserdef]", “BIT1 n = n + (n + SUC 0)”);
-val BIT2 = new_definition("BIT2[notuserdef]", “BIT2 n = n + (n + SUC (SUC 0))”);
+Definition BIT1[notuserdef,nocompute]: BIT1 n = n + (n + SUC 0)
+End
+Definition BIT2[notuserdef,nocompute]: BIT2 n = n + (n + SUC (SUC 0))
+End
 
 val _ = new_definition(
   GrammarSpecials.nat_elim_term ^ "[notuserdef]",
@@ -177,20 +179,22 @@ val _ = add_rule {fixity = Suffix 2100,
 val _ = overload_on (UnicodeChars.sup_3, “\x. x ** 3”);
 val _ = TeX_notation {hol = UnicodeChars.sup_3, TeX = ("\\HOLTokenSupThree{}", 1)};
 
-val GREATER_DEF = new_definition("GREATER_DEF", “$> m n <=> n < m”)
+Definition GREATER_DEF[nocompute]: $> m n <=> n < m
+End
 val _ = set_fixity ">" (Infix(NONASSOC, 450))
 val _ = TeX_notation {hol = ">", TeX = ("\\HOLTokenGt{}", 1)}
 val _ = ot ">"
 
-val LESS_OR_EQ = new_definition ("LESS_OR_EQ", “$<= m n <=> m < n \/ (m = n)”)
+Definition LESS_OR_EQ[nocompute]: $<= m n <=> m < n \/ (m = n)
+End
 val _ = set_fixity "<=" (Infix(NONASSOC, 450))
 val _ = Unicode.unicode_version { u = Unicode.UChar.leq, tmnm = "<="}
 val _ = TeX_notation {hol = Unicode.UChar.leq, TeX = ("\\HOLTokenLeq{}", 1)}
 val _ = TeX_notation {hol = "<=", TeX = ("\\HOLTokenLeq{}", 1)}
 val _ = ot "<="
 
-val GREATER_OR_EQ =
-    new_definition("GREATER_OR_EQ", “$>= m n <=> m > n \/ (m = n)”)
+Definition GREATER_OR_EQ[nocompute]: $>= m n <=> m > n \/ (m = n)
+End
 val _ = set_fixity ">=" (Infix(NONASSOC, 450))
 val _ = Unicode.unicode_version { u = Unicode.UChar.geq, tmnm = ">="};
 val _ = TeX_notation {hol = ">=", TeX = ("\\HOLTokenGeq{}", 1)}
@@ -223,10 +227,9 @@ val NRC = new_recursive_definition {
   def = “(NRC R 0 x y = (x = y)) /\
           (NRC R (SUC n) x y = ?z. R x z /\ NRC R n z y)”};
 
-val bool_to_bit_def = new_definition(
-  "bool_to_bit_def",
-  “bool_to_bit b = if b then 1 else 0”
-);
+Definition bool_to_bit_def[nocompute]:
+  bool_to_bit b = if b then 1 else 0
+End
 
 val _ = overload_on ("RELPOW", “NRC”)
 val _ = overload_on ("NRC", “NRC”)
@@ -2309,11 +2312,11 @@ val OT_DIVISION =
   new_specification ("OT_DIVISION", ["OT_MOD", "OT_DIV"], MOD_DIV_exist);
 
 (* HOL4 now switches to HOL-Light compatible version of DIV and MOD *)
-val DIV_def = new_definition
-  ("DIV_def", “DIV m n = if n = 0 then 0 else OT_DIV m n”);
+Definition DIV_def[nocompute]: DIV m n = if n = 0 then 0 else OT_DIV m n
+End
 
-val MOD_def = new_definition
-  ("MOD_def", “MOD m n = if n = 0 then m else OT_MOD m n”);
+Definition MOD_def[nocompute]: MOD m n = if n = 0 then m else OT_MOD m n
+End
 
 val _ = set_fixity "MOD" (Infixl 650);
 val _ = set_fixity "DIV" (Infixl 600);
@@ -2329,7 +2332,8 @@ Proof
   THEN ASM_REWRITE_TAC []
 QED
 
-val DIV2_def = new_definition("DIV2_def", “DIV2 n = n DIV 2”);
+Definition DIV2_def[nocompute]: DIV2 n = n DIV 2
+End
 
 local
    open OpenTheoryMap
@@ -3926,8 +3930,10 @@ QED
 
 val _ = print "Minimums and maximums\n"
 
-val MAX_DEF = new_definition("MAX_DEF", “MAX m n = if m < n then n else m”);
-val MIN_DEF = new_definition("MIN_DEF", “MIN m n = if m < n then m else n”);
+Definition MAX_DEF[nocompute]: MAX m n = if m < n then n else m
+End
+Definition MIN_DEF[nocompute]: MIN m n = if m < n then m else n
+End
 
 val MAX = MAX_DEF;
 val MIN = MIN_DEF;
@@ -4286,8 +4292,9 @@ Proof
 QED
 
 (* Absolute difference *)
-val ABS_DIFF_def = new_definition ("ABS_DIFF_def",
-   “ABS_DIFF n m = if n < m then m - n else n - m”)
+Definition ABS_DIFF_def[nocompute]:
+   ABS_DIFF n m = if n < m then m - n else n - m
+End
 
 Theorem ABS_DIFF_SYM:
     !n m. ABS_DIFF n m = ABS_DIFF m n
@@ -5033,9 +5040,9 @@ QED
     Support for using congruential rewriting and MOD
    ---------------------------------------------------------------------- *)
 
-val MODEQ_DEF = new_definition(
-  "MODEQ_DEF",
-  “MODEQ n m1 m2 = ?a b. a * n + m1 = b * n + m2”);
+Definition MODEQ_DEF[nocompute]:
+  MODEQ n m1 m2 = ?a b. a * n + m1 = b * n + m2
+End
 
 Theorem MODEQ_0_CONG:
    MODEQ 0 m1 m2 <=> (m1 = m2)

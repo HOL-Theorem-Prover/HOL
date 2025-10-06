@@ -1036,9 +1036,9 @@ Proof
   ]
 QED
 
-val bmarker_def = new_definition(
-  "bmarker_def",
-  ``bmarker (b:bool) = b``);
+Definition bmarker_def[nocompute]:
+  bmarker (b:bool) = b
+End
 
 Theorem bmarker_rewrites:
     !p q r. (q /\ bmarker p = bmarker p /\ q) /\

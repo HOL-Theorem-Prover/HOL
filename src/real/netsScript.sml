@@ -743,23 +743,29 @@ Proof
  >> PROVE_TAC [METRIC_SYM]
 QED
 
-val at_infinity = new_definition ("at_infinity",
-  ``at_infinity = mk_net(\x y. abs(x) >= abs(y))``);
+Definition at_infinity[nocompute]:
+  at_infinity = mk_net(\x y. abs(x) >= abs(y))
+End
 
-val at_posinfinity = new_definition ("at_posinfinity",
-  ``at_posinfinity = mk_net(\x y:real. x >= y)``);
+Definition at_posinfinity[nocompute]:
+  at_posinfinity = mk_net(\x y:real. x >= y)
+End
 
-val at_neginfinity = new_definition ("at_neginfinity",
-  ``at_neginfinity = mk_net(\x y:real. x <= y)``);
+Definition at_neginfinity[nocompute]:
+  at_neginfinity = mk_net(\x y:real. x <= y)
+End
 
-val sequentially = new_definition ("sequentially",
-  ``sequentially = mk_net(\m:num n. m >= n)``);
+Definition sequentially[nocompute]:
+  sequentially = mk_net(\m:num n. m >= n)
+End
 
-val within = new_definition ("within",
-  ``(net within s) = mk_net(\x y. netord net x y /\ x IN s)``);
+Definition within[nocompute]:
+  (net within s) = mk_net(\x y. netord net x y /\ x IN s)
+End
 
-val in_direction = new_definition ("in_direction",
-  ``(a in_direction v) = ((at a) within {b | ?c. &0 <= c /\ (b - a = c * v)})``);
+Definition in_direction[nocompute]:
+  (a in_direction v) = ((at a) within {b | ?c. &0 <= c /\ (b - a = c * v)})
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Prove that they are all nets.                                             *)

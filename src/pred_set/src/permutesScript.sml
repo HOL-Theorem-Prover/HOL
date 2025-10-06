@@ -87,8 +87,9 @@ Theorem o_ASSOC[local] = combinTheory.o_ASSOC
  *)
 val _ = set_fixity "permutes" (Infix(NONASSOC, 450)); (* same as relation *)
 
-val permutes = new_definition ("permutes",
-   “p permutes s <=> (!x. ~(x IN s) ==> (p(x) = x)) /\ (!y. ?!x. p x = y)”);
+Definition permutes[nocompute]:
+   p permutes s <=> (!x. ~(x IN s) ==> (p(x) = x)) /\ (!y. ?!x. p x = y)
+End
 
 (* connection to ‘pred_set$PERMUTES’, added by Chun Tian *)
 Theorem permutes_alt :
@@ -143,8 +144,9 @@ QED
 (* Inverse function (on whole universe).                                     *)
 (* ------------------------------------------------------------------------- *)
 
-val inverse = new_definition ("inverse",
-   “inverse (f :'a->'b) = \y. @x. f x = y”);
+Definition inverse[nocompute]:
+   inverse (f :'a->'b) = \y. @x. f x = y
+End
 
 (* This connection was suggested by Jeremy Dawson *)
 Theorem inverse_alt_LINV :
@@ -219,8 +221,9 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* cf. “pair$SWAP” (pairTheory.SWAP_def) *)
-val swap_def = new_definition ("swap_def",
-   “swap (i,j) k = if k = i then j else if k = j then i else k”);
+Definition swap_def[nocompute]:
+   swap (i,j) k = if k = i then j else if k = j then i else k
+End
 
 Theorem SWAP_REFL :
    !a. swap (a,a) = I
@@ -548,8 +551,9 @@ Inductive swapseq :
    (!a b p n. swapseq n p /\ ~(a = b) ==> swapseq (SUC n) (swap(a,b) o p))
 End
 
-val permutation = new_definition ("permutation",
-   “permutation p = ?n. swapseq n p”);
+Definition permutation[nocompute]:
+   permutation p = ?n. swapseq n p
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Some closure properties of the set of permutations, with lengths.         *)
@@ -731,8 +735,9 @@ QED
 (* Therefore we have a welldefined notion of parity.                         *)
 (* ------------------------------------------------------------------------- *)
 
-val evenperm = new_definition ("evenperm",
-   “evenperm p = EVEN(@n. swapseq n p)”);
+Definition evenperm[nocompute]:
+   evenperm p = EVEN(@n. swapseq n p)
+End
 
 Theorem SWAPSEQ_EVEN_EVEN :
    !m n p:'a->'a. swapseq m p /\ swapseq n p ==> (EVEN m <=> EVEN n)

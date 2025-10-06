@@ -126,7 +126,8 @@ QED
 
 val th6 = MATCH_MP th5 termination_thm
 val newc = th6 |> concl |> strip_forall |> #2 |> rand |> rhs |> rator
-val def = new_definition("aux'_def", “aux' = ^newc”)
+Definition aux'_def[nocompute]: aux' = ^newc
+End
 
 val th7 = (AP_THM def “(c,d):cv # cv”) |> ONCE_REWRITE_RULE [TAILREC_TAILCALL]
                                        |> REWRITE_RULE[SYM def]
@@ -137,7 +138,8 @@ val th3' = th3 |> Q.INST[‘f’ |-> ‘CURRY g’]
 
 val th8 = REWRITE_RULE[th3'] th7
 
-val def' = new_definition("A", “A = CURRY aux'”);
+Definition A[nocompute]: A = CURRY aux'
+End
 val aux'_elim = prove(“aux' = UNCURRY A”, simp[def'])
 
 val A_def = REWRITE_RULE[aux'_elim,pairTheory.CURRY_UNCURRY_THM,

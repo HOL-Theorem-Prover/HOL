@@ -10,7 +10,8 @@ Termination
 End
 
 val foo_def = Definition.new_definition("foo_def", “foo x = x + 1”);
-val bar_def = new_definition("bar_def", “bar x = x + 2”);
+Definition bar_def[nocompute]: bar x = x + 2
+End
 
 Definition just_listpr:
   just_listpr [] = SOME [] /\

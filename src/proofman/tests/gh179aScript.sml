@@ -12,8 +12,10 @@ val foo_bijs = define_new_type_bijections {
   ABS = "b2f", REP = "f2b", name = "foo_bijs", tyax = foo_TYDEF
 } |> BETA_RULE |> REWRITE_RULE []
 
-val A_def = new_definition ("A_def", ``A = b2f T``)
-val B_def = new_definition ("B_def", ``B = b2f F``)
+Definition A_def[nocompute]: A = b2f T
+End
+Definition B_def[nocompute]: B = b2f F
+End
 
 val A_neq_B = store_thm("A_neq_B", “A <> B”,
   REWRITE_TAC[A_def,B_def] >>

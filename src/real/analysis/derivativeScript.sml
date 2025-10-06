@@ -52,10 +52,11 @@ End
 (* convex                                                                    *)
 (* ------------------------------------------------------------------------- *)
 
-val convex = new_definition ("convex",
-  ``convex (s:real->bool) <=>
+Definition convex[nocompute]:
+  convex (s:real->bool) <=>
         !x y u v. x IN s /\ y IN s /\ &0 <= u /\ &0 <= v /\ (u + v = &1)
-                  ==> ((u * x) + (v * y)) IN s``);
+                  ==> ((u * x) + (v * y)) IN s
+End
 
 Theorem CONVEX_ALT :
     !s. convex s <=> !x y u. x IN s /\ y IN s /\ &0 <= u /\ u <= &1
@@ -315,10 +316,11 @@ QED
 
 val _ = set_fixity "convex_on" (Infix(NONASSOC, 450));
 
-val convex_on = new_definition ("convex_on",
-  ``f convex_on s <=>
+Definition convex_on[nocompute]:
+  f convex_on s <=>
         !x y u v:real. x IN s /\ y IN s /\ &0 <= u /\ &0 <= v /\ (u + v = &1)
-                  ==> f(u * x + v * y) <= u * f(x) + v * f(y)``);
+                  ==> f(u * x + v * y) <= u * f(x) + v * f(y)
+End
 
 Theorem REAL_CONVEX_BOUND2_LT :
     !x y a b u v:real. x < a /\ y < b /\ &0 <= u /\ &0 <= v /\ (u + v = &1)
@@ -373,12 +375,13 @@ QED
 
 val _ = set_fixity "has_derivative" (Infix(NONASSOC, 450));
 
-val has_derivative = new_definition ("has_derivative",
-  ``(f has_derivative f') net <=>
+Definition has_derivative[nocompute]:
+  (f has_derivative f') net <=>
         linear f' /\
         ((\y. inv(abs(y - netlimit net)) *
               (f(y) -
-               (f(netlimit net) + f'(y - netlimit net)))) --> 0) net``);
+               (f(netlimit net) + f'(y - netlimit net)))) --> 0) net
+End
 
 (* ------------------------------------------------------------------------- *)
 (* These are the only cases we'll care about, probably.                      *)
@@ -574,18 +577,21 @@ val _ = set_fixity "differentiable_on" (Infix(NONASSOC, 450));
 
 val _ = hide "differentiable";
 
-val differentiable = new_definition ("differentiable",
-  ``f differentiable net <=> ?f'. ((f has_derivative f') net)``);
+Definition differentiable[nocompute]:
+  f differentiable net <=> ?f'. ((f has_derivative f') net)
+End
 
-val differentiable_on = new_definition ("differentiable_on",
-  ``f differentiable_on s <=> !x. x IN s ==> f differentiable (at x within s)``);
+Definition differentiable_on[nocompute]:
+  f differentiable_on s <=> !x. x IN s ==> f differentiable (at x within s)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Frechet derivative and Jacobian matrix.                                   *)
 (* ------------------------------------------------------------------------- *)
 
-val frechet_derivative = new_definition ("frechet_derivative",
- ``frechet_derivative f net = @f'. (f has_derivative f') net``);
+Definition frechet_derivative[nocompute]:
+ frechet_derivative f net = @f'. (f has_derivative f') net
+End
 
 Theorem FRECHET_DERIVATIVE_WORKS:
    !f net. f differentiable net <=>
@@ -1222,8 +1228,9 @@ QED
 (* Operator norm.                                                            *)
 (* ------------------------------------------------------------------------- *)
 
-val oabs = new_definition ("oabs",
-         ``oabs (f:real->real) = sup { abs(f x) | abs(x) = &1 }``);
+Definition oabs[nocompute]:
+         oabs (f:real->real) = sup { abs(f x) | abs(x) = &1 }
+End
 
 Theorem ABS_BOUND_GENERALIZE:
    !f:real->real b.
@@ -1753,13 +1760,15 @@ QED
 
 val _ = set_fixity "has_vector_derivative" (Infix(NONASSOC, 450));
 
-val has_vector_derivative = new_definition ("has_vector_derivative",
- ``(f has_vector_derivative f') net <=>
-        (f has_derivative (\x. (x) * f')) net``);
+Definition has_vector_derivative[nocompute]:
+ (f has_vector_derivative f') net <=>
+        (f has_derivative (\x. (x) * f')) net
+End
 
-val vector_derivative = new_definition ("vector_derivative",
- ``vector_derivative (f:real->real) net =
-        @f'. (f has_vector_derivative f') net``);
+Definition vector_derivative[nocompute]:
+ vector_derivative (f:real->real) net =
+        @f'. (f has_vector_derivative f') net
+End
 
 Theorem HAS_VECTOR_DERIVATIVE_WITHIN_SUBSET :
     !f f' s t x. (f has_vector_derivative f') (at x within s) /\ t SUBSET s

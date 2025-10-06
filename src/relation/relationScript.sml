@@ -26,40 +26,39 @@ val _ = OpenTheoryMap.OpenTheory_const_name
           {const={Thy="relation",Name="transitive"},
            name=(["Relation"],"transitive")}
 
-val reflexive_def = new_definition(
-  "reflexive_def",
-  ``reflexive (R:'a->'a->bool) = !x. R x x``);
+Definition reflexive_def[nocompute]:
+  reflexive (R:'a->'a->bool) = !x. R x x
+End
 val _ = OpenTheoryMap.OpenTheory_const_name
           {const={Thy="relation",Name="reflexive"},
            name=(["Relation"],"reflexive")}
 
-val irreflexive_def = new_definition(
-  "irreflexive_def",
-  ``irreflexive (R:'a->'a->bool) = !x. ~R x x``);
+Definition irreflexive_def[nocompute]:
+  irreflexive (R:'a->'a->bool) = !x. ~R x x
+End
 val _ = OpenTheoryMap.OpenTheory_const_name
           {const={Thy="relation",Name="irreflexive"},
            name=(["Relation"],"irreflexive")}
 
-val symmetric_def = new_definition(
-  "symmetric_def",
-  ``symmetric (R:'a->'a->bool) = !x y. R x y = R y x``);
+Definition symmetric_def[nocompute]:
+  symmetric (R:'a->'a->bool) = !x y. R x y = R y x
+End
 
-val antisymmetric_def = new_definition(
-  "antisymmetric_def",
-  ``antisymmetric (R:'a->'a->bool) = !x y. R x y /\ R y x ==> (x = y)``);
+Definition antisymmetric_def[nocompute]:
+  antisymmetric (R:'a->'a->bool) = !x y. R x y /\ R y x ==> (x = y)
+End
 
-val equivalence_def = new_definition(
-  "equivalence_def",
-  “equivalence (R:'a->'a->bool) <=> reflexive R /\ symmetric R /\ transitive R”
-);
+Definition equivalence_def[nocompute]:
+  equivalence (R:'a->'a->bool) <=> reflexive R /\ symmetric R /\ transitive R
+End
 
-val total_def = new_definition(
-  "total_def",
-  ``total (R:'a->'a->bool) = !x y. R x y \/ R y x``);
+Definition total_def[nocompute]:
+  total (R:'a->'a->bool) = !x y. R x y \/ R y x
+End
 
-val trichotomous = new_definition(
-  "trichotomous",
-  ``trichotomous (R:'a->'a->bool) = !a b. R a b \/ R b a \/ (a = b)``);
+Definition trichotomous[nocompute]:
+  trichotomous (R:'a->'a->bool) = !a b. R a b \/ R b a \/ (a = b)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Closures                                                                  *)
@@ -105,17 +104,17 @@ val _ = Unicode.unicode_version {u = UTF8.chr 0xA673, tmnm = "RTC"}
 val _ = TeX_notation {hol = UTF8.chr 0xA673, TeX = ("\\HOLTokenSupStar{}", 1)}
 val _ = TeX_notation {hol = "^*", TeX = ("\\HOLTokenSupStar{}", 1)}
 
-val RC_DEF = new_definition(
-  "RC_DEF",
-  ``RC (R:'a->'a->bool) x y <=> (x = y) \/ R x y``);
+Definition RC_DEF[nocompute]:
+  RC (R:'a->'a->bool) x y <=> (x = y) \/ R x y
+End
 
-val SC_DEF = new_definition(
-  "SC_DEF",
-  ``SC (R:'a->'a->bool) x y <=> R x y \/ R y x``);
+Definition SC_DEF[nocompute]:
+  SC (R:'a->'a->bool) x y <=> R x y \/ R y x
+End
 
-val EQC_DEF = new_definition(
-  "EQC_DEF",
-  ``EQC (R:'a->'a->bool) = RC (TC (SC R))``);
+Definition EQC_DEF[nocompute]:
+  EQC (R:'a->'a->bool) = RC (TC (SC R))
+End
 val _ = add_rule { fixity = Suffix 2100,
                    block_style = (AroundEachPhrase, (Portable.CONSISTENT,0)),
                    paren_style = OnlyIfNecessary,
@@ -1324,8 +1323,8 @@ val _ = export_rewrites ["transitive_inv_image"]
 
    :('a -> 'b) -> ('a -> 'a -> bool) -> 'a -> 'a -> 'b
  *)
-val RESTRICT = new_definition
-  ("RESTRICT", “RESTRICT (f :'a->'b) R (x :'a) = RESTRICTION (\y. R y x) f”);
+Definition RESTRICT[nocompute]: RESTRICT (f :'a->'b) R (x :'a) = RESTRICTION (\y. R y x) f
+End
 
 (* The old definition of RESTRICT now becomes a theorem *)
 Theorem RESTRICT_DEF :
@@ -1794,9 +1793,9 @@ end;
     inverting a relation
    ---------------------------------------------------------------------- *)
 
-val inv_DEF = new_definition(
-  "inv_DEF",
-  ``inv (R:'a->'b->bool) x y = R y x``);
+Definition inv_DEF[nocompute]:
+  inv (R:'a->'b->bool) x y = R y x
+End
 val _ = export_rewrites ["inv_DEF"]
 (* superscript suffix T, for "transpose" *)
 val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
@@ -1902,9 +1901,9 @@ QED
   ---------------------------------------------------------------------- *)
 
 
-val INVOL_DEF = new_definition(
-  "INVOL_DEF",
-  ``INVOL (f:'z->'z) = (f o f = I)``);
+Definition INVOL_DEF[nocompute]:
+  INVOL (f:'z->'z) = (f o f = I)
+End
 
 Theorem INVOL:
     !f:'z->'z. INVOL f = (!x. f (f x) = x)
@@ -1935,9 +1934,9 @@ QED
     Idempotent functions are those where f o f = f
    ---------------------------------------------------------------------- *)
 
-val IDEM_DEF = new_definition(
-  "IDEM_DEF",
-  ``IDEM (f:'z->'z) = (f o f = f)``);
+Definition IDEM_DEF[nocompute]:
+  IDEM (f:'z->'z) = (f o f = f)
+End
 
 Theorem IDEM:
     !f:'z->'z. IDEM f = (!x. f (f x) = f x)
@@ -1976,9 +1975,9 @@ QED
 (* This way 'round by analogy with function composition, where the
    second argument to composition acts on the "input" first.  This is also
    consistent with the way this constant is defined in Isabelle/HOL. *)
-val O_DEF = new_definition(
-  "O_DEF",
-  ``(O) R1 R2 (x:'g) (z:'k) = ?y:'h. R2 x y /\ R1 y z``);
+Definition O_DEF[nocompute]:
+  (O) R1 R2 (x:'g) (z:'k) = ?y:'h. R2 x y /\ R1 y z
+End
 val _ = set_fixity "O" (Infixr 800)
 val _ = Unicode.unicode_version {u = UTF8.chr 0x2218 ^ UnicodeChars.sub_r,
                                  tmnm = "O"}
@@ -1995,9 +1994,9 @@ QED
     relational inclusion, analog of SUBSET
    ---------------------------------------------------------------------- *)
 
-val RSUBSET = new_definition(
-  "RSUBSET",
-  ``(RSUBSET) R1 R2 = !x y. R1 x y ==> R2 x y``);
+Definition RSUBSET[nocompute]:
+  (RSUBSET) R1 R2 = !x y. R1 x y ==> R2 x y
+End
 val _ = set_fixity "RSUBSET" (Infix(NONASSOC, 450));
 val _ = OpenTheoryMap.OpenTheory_const_name
           {const={Thy="relation",Name="RSUBSET"},
@@ -2017,9 +2016,9 @@ QED
     relational union
    ---------------------------------------------------------------------- *)
 
-val RUNION = new_definition(
-  "RUNION",
-  ``(RUNION) R1 R2 x y <=> R1 x y \/ R2 x y``);
+Definition RUNION[nocompute]:
+  (RUNION) R1 R2 x y <=> R1 x y \/ R2 x y
+End
 val _ = set_fixity "RUNION" (Infixl 500)
 val _ = OpenTheoryMap.OpenTheory_const_name
           {const={Thy="relation",Name="RUNION"},name=(["Relation"],"union")}
@@ -2045,9 +2044,9 @@ val _ = TeX_notation { hol = UnicodeChars.union ^ UnicodeChars.sub_r,
     relational intersection
    ---------------------------------------------------------------------- *)
 
-val RINTER = new_definition(
-  "RINTER",
-  ``(RINTER) R1 R2 x y <=> R1 x y /\ R2 x y``);
+Definition RINTER[nocompute]:
+  (RINTER) R1 R2 x y <=> R1 x y /\ R2 x y
+End
 val _ = set_fixity "RINTER" (Infixl 600)
 val _ = OpenTheoryMap.OpenTheory_const_name
           {const={Thy="relation",Name="RINTER"},name=(["Relation"],"intersect")}
@@ -2096,9 +2095,9 @@ QED
     relational complement
    ---------------------------------------------------------------------- *)
 
-val RCOMPL = new_definition(
-  "RCOMPL",
-  ``RCOMPL R x y = ~R x y``);
+Definition RCOMPL[nocompute]:
+  RCOMPL R x y = ~R x y
+End
 
 (* ----------------------------------------------------------------------
     theorems about reflexive, symmetric and transitive predicates in
@@ -2127,27 +2126,27 @@ QED
     various sorts of orders
    ---------------------------------------------------------------------- *)
 
-val PreOrder = new_definition(
-  "PreOrder",
-  ``PreOrder R <=> reflexive R /\ transitive R``);
+Definition PreOrder[nocompute]:
+  PreOrder R <=> reflexive R /\ transitive R
+End
 
 (* The following definition follows Rob Arthan's idea of staying mum,
    for the most general notion of (partial) order, about whether the
    relation is to be reflexive, irreflexive, or something in
    between. *)
 
-val Order = new_definition(
-  "Order",
-  ``Order (Z:'g->'g->bool) <=> antisymmetric Z /\ transitive Z``);
+Definition Order[nocompute]:
+  Order (Z:'g->'g->bool) <=> antisymmetric Z /\ transitive Z
+End
 
-val WeakOrder = new_definition(
-  "WeakOrder",
-  ``WeakOrder (Z:'g->'g->bool) <=>
-                       reflexive Z /\ antisymmetric Z /\ transitive Z``);
+Definition WeakOrder[nocompute]:
+  WeakOrder (Z:'g->'g->bool) <=>
+                       reflexive Z /\ antisymmetric Z /\ transitive Z
+End
 
-val StrongOrder = new_definition(
-  "StrongOrder",
-  ``StrongOrder (Z:'g->'g->bool) <=> irreflexive Z /\ transitive Z``);
+Definition StrongOrder[nocompute]:
+  StrongOrder (Z:'g->'g->bool) <=> irreflexive Z /\ transitive Z
+End
 
 Theorem irrefl_trans_implies_antisym:
     !R. irreflexive R /\ transitive R ==> antisymmetric R
@@ -2203,9 +2202,9 @@ val EqIsBothRSUBSET = save_thm(
     STRORD makes an order strict (or "strong")
    ---------------------------------------------------------------------- *)
 
-val STRORD = new_definition(
-  "STRORD",
-  ``STRORD R a b <=> R a b /\ ~(a = b)``);
+Definition STRORD[nocompute]:
+  STRORD R a b <=> R a b /\ ~(a = b)
+End
 
 Theorem STRORD_AND_NOT_Id:
     STRORD R = R RINTER (RCOMPL Id)
@@ -2299,17 +2298,17 @@ val _ = export_rewrites ["trichotomous_RC"]
     absence of numbers I don't see much to prove about them.
    ---------------------------------------------------------------------- *)
 
-val LinearOrder = new_definition(
-  "LinearOrder",
-  ``LinearOrder (R:'a->'a->bool) <=> Order R /\ trichotomous R``);
+Definition LinearOrder[nocompute]:
+  LinearOrder (R:'a->'a->bool) <=> Order R /\ trichotomous R
+End
 
-val StrongLinearOrder = new_definition(
-  "StrongLinearOrder",
-  ``StrongLinearOrder (R:'a->'a->bool) <=> StrongOrder R /\ trichotomous R``);
+Definition StrongLinearOrder[nocompute]:
+  StrongLinearOrder (R:'a->'a->bool) <=> StrongOrder R /\ trichotomous R
+End
 
-val WeakLinearOrder = new_definition(
-  "WeakLinearOrder",
-  ``WeakLinearOrder (R:'a->'a->bool) <=> WeakOrder R /\ trichotomous R``);
+Definition WeakLinearOrder[nocompute]:
+  WeakLinearOrder (R:'a->'a->bool) <=> WeakOrder R /\ trichotomous R
+End
 
 Theorem WeakLinearOrder_dichotomy:
      !R:'a->'a->bool. WeakLinearOrder R <=>
@@ -2323,9 +2322,9 @@ QED
     other stuff (inspired by Isabelle's Relation theory)
    ---------------------------------------------------------------------- *)
 
-val diag_def = new_definition(
-  "diag_def",
-  ``diag A x y <=> (x = y) /\ x IN A``);
+Definition diag_def[nocompute]:
+  diag A x y <=> (x = y) /\ x IN A
+End
 
 (* properties of O *)
 
@@ -2373,9 +2372,9 @@ QED
    I can still prove x IN RDOM (R1 RUNION R2) = x IN RDOM R1 \/ x IN RDOM R2
    though.
 *)
-val RDOM_DEF = new_definition(
-  "RDOM_DEF",
-  ``RDOM R x = ?y. R x y``);
+Definition RDOM_DEF[nocompute]:
+  RDOM R x = ?y. R x y
+End
 
 Theorem IN_RDOM:
     x IN RDOM R <=> ?y. R x y
@@ -2384,9 +2383,9 @@ Proof
 QED
 
 (* range of a relation *)
-val RRANGE_DEF = new_definition(
-  "RRANGE",
-  ``RRANGE R y = ?x. R x y``);
+Definition RRANGE[nocompute]:
+  RRANGE R y = ?x. R x y
+End
 
 Theorem IN_RRANGE:
     y IN RRANGE R <=> ?x. R x y
@@ -2401,9 +2400,9 @@ Proof
 QED
 
 (* top and bottom elements of RSUBSET lattice *)
-val RUNIV = new_definition(
-  "RUNIV",
-  ``RUNIV x y = T``);
+Definition RUNIV[nocompute]:
+  RUNIV x y = T
+End
 val _ = export_rewrites ["RUNIV"]
 val _ = OpenTheoryMap.OpenTheory_const_name
           {const={Thy="relation",Name="RUNIV"},name=(["Relation"],"universe")}
@@ -2445,9 +2444,9 @@ val _ = export_rewrites ["REMPTY_SUBSET"]
 
    ---------------------------------------------------------------------- *)
 
-val RRESTRICT_DEF = new_definition(
-  "RRESTRICT_DEF",
-  ``RRESTRICT R s (x:'a) (y:'b) <=> R x y /\ x IN s``);
+Definition RRESTRICT_DEF[nocompute]:
+  RRESTRICT R s (x:'a) (y:'b) <=> R x y /\ x IN s
+End
 val _ = export_rewrites ["RRESTRICT_DEF"]
 
 Theorem IN_RDOM_RRESTRICT:
@@ -2458,9 +2457,9 @@ Proof
 QED
 val _ = export_rewrites ["IN_RDOM_RRESTRICT"]
 
-val RDOM_DELETE_DEF = new_definition(
-  "RDOM_DELETE_DEF",
-  ``RDOM_DELETE R x u v <=> R u v /\ u <> x``);
+Definition RDOM_DELETE_DEF[nocompute]:
+  RDOM_DELETE R x u v <=> R u v /\ u <> x
+End
 val _ = export_rewrites ["RDOM_DELETE_DEF"]
 
 (* this syntax is compatible (easily confused) with that for finite maps *)
@@ -2483,30 +2482,35 @@ val _ = export_rewrites ["IN_RDOM_DELETE"]
 (* things like confluence and normalisation                                  *)
 (*===========================================================================*)
 
-val diamond_def = new_definition(
-  "diamond_def",
-  ``diamond (R:'a->'a->bool) = !x y z. R x y /\ R x z ==> ?u. R y u /\ R z u``)
+Definition diamond_def[nocompute]:
+  diamond (R:'a->'a->bool) = !x y z. R x y /\ R x z ==> ?u. R y u /\ R z u
+End
 
-val rcdiamond_def = new_definition( (* reflexive closure half diamond *)
-  "rcdiamond_def",
-  ``rcdiamond (R:'a->'a->bool) =
-      !x y z. R x y /\ R x z ==> ?u. RC R y u /\ RC R z u``);
+(* reflexive closure half diamond *)
+Definition rcdiamond_def[nocompute]:
+  rcdiamond (R:'a->'a->bool) =
+      !x y z. R x y /\ R x z ==> ?u. RC R y u /\ RC R z u
+End
 
-val CR_def = new_definition( (* Church-Rosser *)
-  "CR_def",
-  ``CR R = diamond (RTC R)``);
+(* Church-Rosser *)
+Definition CR_def[nocompute]:
+  CR R = diamond (RTC R)
+End
 
-val WCR_def = new_definition( (* weakly Church-Rosser *)
-  "WCR_def",
-  ``WCR R = !x y z. R x y /\ R x z ==> ?u. RTC R y u /\ RTC R z u``);
+(* weakly Church-Rosser *)
+Definition WCR_def[nocompute]:
+  WCR R = !x y z. R x y /\ R x z ==> ?u. RTC R y u /\ RTC R z u
+End
 
-val SN_def = new_definition( (* strongly normalising *)
-  "SN_def",
-  ``SN R = WF (inv R)``);
+(* strongly normalising *)
+Definition SN_def[nocompute]:
+  SN R = WF (inv R)
+End
 
-val nf_def = new_definition( (* normal-form *)
-  "nf_def",
-  ``nf R x = !y. ~R x y``)
+(* normal-form *)
+Definition nf_def[nocompute]:
+  nf R x = !y. ~R x y
+End
 
 (* results *)
 
@@ -2612,8 +2616,9 @@ Proof
 QED
 
 (* ‘RINSERT’ inserts one more element into an existing relation *)
-val RINSERT = new_definition ("RINSERT",
-   “RINSERT R a b = \x y. R x y \/ (x = a /\ y = b)”);
+Definition RINSERT[nocompute]:
+   RINSERT R a b = \x y. R x y \/ (x = a /\ y = b)
+End
 
 Theorem RINSERT_IDEM :
     !R a b. (RINSERT R a b) a b

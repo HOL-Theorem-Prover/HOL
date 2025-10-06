@@ -42,14 +42,16 @@ val PROVE_TAC = metisLib.METIS_TAC
 
 (* Equivalence relations: *)
 
-val EQUIV_def = new_definition("EQUIV_def",
-   “EQUIV E = !x y:'a. E x y = (E x = E y)”);
+Definition EQUIV_def[nocompute]:
+   EQUIV E = !x y:'a. E x y = (E x = E y)
+End
 
 (* Partial Equivalence relations: *)
 
-val PARTIAL_EQUIV_def = new_definition("PARTIAL_EQUIV_def",
-  “PARTIAL_EQUIV R <=> (?x:'a. R x x) /\
-                      (!x y.  R x y <=> R x x /\ R y y /\ (R x = R y))”);
+Definition PARTIAL_EQUIV_def[nocompute]:
+  PARTIAL_EQUIV R <=> (?x:'a. R x x) /\
+                      (!x y.  R x y <=> R x x /\ R y y /\ (R x = R y))
+End
 
 Theorem EQUIV_IMP_PARTIAL_EQUIV:
   !R :'a -> 'a -> bool. EQUIV R ==> PARTIAL_EQUIV R
@@ -62,11 +64,12 @@ QED
 (* Quotients, with partial equivalence relation, abstraction function, and
    representation function: *)
 
-val QUOTIENT_def = new_definition("QUOTIENT_def",
-  “QUOTIENT R abs rep <=>
+Definition QUOTIENT_def[nocompute]:
+  QUOTIENT R abs rep <=>
         (!a:'b. abs (rep a) = a) /\
         (!a. R (rep a) (rep a)) /\
-        (!(r:'a) (s:'a). R r s <=> R r r /\ R s s /\ (abs r = abs s))”);
+        (!(r:'a) (s:'a). R r s <=> R r r /\ R s s /\ (abs r = abs s))
+End
 
 val QUOTIENT_ABS_REP = store_thm
    ("QUOTIENT_ABS_REP",
@@ -268,9 +271,10 @@ val SET_MAP_def =
 
 
 (* The strong version of FUN_REL: *)
-val FUN_REL = new_definition("FUN_REL",
-  “$===> (R1:'a->'b->bool) (R2:'c->'d->bool) f g =
-           !x y. R1 x y ==> R2 (f x) (g y)”);
+Definition FUN_REL[nocompute]:
+  $===> (R1:'a->'b->bool) (R2:'c->'d->bool) f g =
+           !x y. R1 x y ==> R2 (f x) (g y)
+End
 
 val _ = set_fixity "===>" (Infixr 490)
 val _ = TeX_notation {hol = "===>", TeX = ("\\HOLTokenLongimp", 2)};
@@ -361,8 +365,9 @@ val FUN_QUOTIENT = store_thm
 
 (* Definition of respectfulness for restricted quantification. *)
 
-val respects_def = new_definition ("respects_def",
-      “respects = W : ('a -> 'a -> 'b) -> 'a -> 'b”);
+Definition respects_def[nocompute]:
+      respects = W : ('a -> 'a -> 'b) -> 'a -> 'b
+End
 
 (* Tests:
 

@@ -408,36 +408,30 @@ QED
     Predicates on functions
    ---------------------------------------------------------------------- *)
 
-val ASSOC_DEF = new_definition("ASSOC_DEF",
-  ``
+Definition ASSOC_DEF[nocompute]:
     ASSOC (f:'a->'a->'a) <=> (!x y z. f x (f y z) = f (f x y) z)
-  ``);
+End
 
-val COMM_DEF = new_definition("COMM_DEF",
-  ``
+Definition COMM_DEF[nocompute]:
      COMM (f:'a->'a->'b) <=> (!x y. f x y = f y x)
-  ``);
+End
 
-val FCOMM_DEF = new_definition("FCOMM_DEF",
-  ``
+Definition FCOMM_DEF[nocompute]:
     FCOMM (f:'a->'b->'a) (g:'c->'a->'a) <=> (!x y z.  g x (f y z) = f (g x y) z)
-  ``);
+End
 
-val RIGHT_ID_DEF = new_definition("RIGHT_ID_DEF",
-  ``
+Definition RIGHT_ID_DEF[nocompute]:
     RIGHT_ID (f:'a->'b->'a) e <=> (!x. f x e = x)
-  ``);
+End
 
-val LEFT_ID_DEF = new_definition("LEFT_ID_DEF",
-  ``
+Definition LEFT_ID_DEF[nocompute]:
     LEFT_ID (f:'a->'b->'b) e <=> (!x. f e x = x)
-  ``);
+End
 
-val MONOID_DEF = new_definition("MONOID_DEF",
-  ``
+Definition MONOID_DEF[nocompute]:
     MONOID (f:'a->'a->'a) e <=>
              ASSOC f /\ RIGHT_ID f e /\ LEFT_ID f e
-  ``);
+End
 
 (* ======================================================================== *)
 (*  Theorems about operators                                                *)
@@ -530,9 +524,9 @@ val _ = remove_ovl_mapping "C" {Name="C", Thy = "combin"}
 
    EXTENSIONAL s = {f :'a->'b | !x. x NOTIN s ==> f x = ARB}
  *)
-val EXTENSIONAL_def = new_definition
-  ("EXTENSIONAL_def",
-   “EXTENSIONAL s (f :'a->'b) <=> !x. ~(x IN s) ==> f x = ARB”);
+Definition EXTENSIONAL_def[nocompute]:
+   EXTENSIONAL s (f :'a->'b) <=> !x. ~(x IN s) ==> f x = ARB
+End
 
 Theorem IN_EXTENSIONAL :
     !s (f :'a->'b). f IN EXTENSIONAL s <=> (!x. ~(x IN s) ==> f x = ARB)
@@ -562,9 +556,9 @@ QED
 (*       are in pred_setTheory.                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val RESTRICTION = new_definition
-  ("RESTRICTION",
-   “RESTRICTION s (f :'a->'b) x = if x IN s then f x else ARB”);
+Definition RESTRICTION[nocompute]:
+   RESTRICTION s (f :'a->'b) x = if x IN s then f x else ARB
+End
 
 Theorem RESTRICTION_THM :
     !s (f :'a->'b). RESTRICTION s f = \x. if x IN s then f x else ARB

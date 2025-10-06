@@ -161,7 +161,8 @@ Proof
   REWRITE_TAC [PAIR_EQ, FST, SND]
 QED
 
-val SWAP_def = new_definition ("SWAP_def", ``SWAP a = (SND a, FST a)``)
+Definition SWAP_def[nocompute]: SWAP a = (SND a, FST a)
+End
 
 (* Theorem the SWAP inverts itself *)
 Theorem SWAP_SWAP[simp]:
@@ -415,9 +416,9 @@ Theorem pair_induction = #2(EQ_IMP_RULE FORALL_PROD) |> GEN_ALL
     PROD_ALL
    ---------------------------------------------------------------------- *)
 
-val PROD_ALL_def = new_definition(
-  "PROD_ALL_def",
-  ``PROD_ALL (P:'a -> bool) (Q : 'b -> bool) p <=> P (FST p) /\ Q (SND p)``);
+Definition PROD_ALL_def[nocompute]:
+  PROD_ALL (P:'a -> bool) (Q : 'b -> bool) p <=> P (FST p) /\ Q (SND p)
+End
 
 Theorem PROD_ALL_THM[simp,compute]:
   PROD_ALL P Q (x:'a,y:'b) <=> P x /\ Q y
@@ -668,9 +669,9 @@ QED
        TFL support.
  ---------------------------------------------------------------------------*)
 
-val pair_CASE_def =
-  new_definition("pair_CASE_def",
-                 “pair_CASE (p:('a#'b)) f = f (FST p) (SND p)”)
+Definition pair_CASE_def[nocompute]:
+                 pair_CASE (p:('a#'b)) f = f (FST p) (SND p)
+End
 val _ = ot0 "pair_case" "case"
 
 Theorem pair_case_thm =
@@ -968,9 +969,9 @@ QED
     PAIR_SET : ('a -> 'c set) -> ('b -> 'c set) -> 'a # 'b -> 'c set
    ---------------------------------------------------------------------- *)
 
-val PAIR_SET_def = new_definition(
-  "PAIR_SET_def",
-  “PAIR_SET f g = \(a:'a, b:'b) c:'c. c IN f a \/ c IN g b”);
+Definition PAIR_SET_def[nocompute]:
+  PAIR_SET f g = \(a:'a, b:'b) c:'c. c IN f a \/ c IN g b
+End
 
 Theorem IN_PAIR_SET:
   c IN PAIR_SET f g (a,b) <=> c IN f a \/ c IN g b

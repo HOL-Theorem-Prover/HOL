@@ -382,9 +382,9 @@ val BV_vsubst1 = store_thm
 (*   of the substitution; else the result is infinite                    *)
 (* --------------------------------------------------------------------- *)
 
-val FV_subst1 =
-    new_definition("FV_subst1",
-    “FV_subst1 (s:^subs) xs = UNION_SET (IMAGE (FV1 o SUB1 s) xs)”);
+Definition FV_subst1[nocompute]:
+    FV_subst1 (s:^subs) xs = UNION_SET (IMAGE (FV1 o SUB1 s) xs)
+End
 
 
 

@@ -118,11 +118,11 @@ Theorem lrep_ok_MAP_FUNPOW_BIND[local]:
 Proof SIMP_TAC bool_ss [lrep_ok_MAP] THEN irule lrep_ok_FUNPOW_BIND
 QED
 
-val LNIL = new_definition("LNIL", ``LNIL = llist_abs (λn. NONE)``);
-val LCONS = new_definition(
-  "LCONS",
-  ``LCONS h t = llist_abs (λn. if n = 0 then SOME h else llist_rep t (n - 1))``
-);
+Definition LNIL[nocompute]: LNIL = llist_abs (λn. NONE)
+End
+Definition LCONS[nocompute]:
+  LCONS h t = llist_abs (λn. if n = 0 then SOME h else llist_rep t (n - 1))
+End
 
 Theorem llist_rep_LCONS:
   llist_rep (LCONS h t) =
@@ -158,13 +158,13 @@ Proof
                    NOT_SUC, lr_eta, llist_absrep]
 QED
 
-val LHD = new_definition("LHD", ``LHD ll = llist_rep ll 0``);
-val LTL = new_definition(
-  "LTL",
-  ``LTL ll = case LHD ll of
+Definition LHD[nocompute]: LHD ll = llist_rep ll 0
+End
+Definition LTL[nocompute]:
+  LTL ll = case LHD ll of
                NONE => NONE
-             | SOME _ => SOME (llist_abs (\n. llist_rep ll (n + 1)))``
-);
+             | SOME _ => SOME (llist_abs (\n. llist_rep ll (n + 1)))
+End
 
 Theorem LTL_HD_HD: LHD ll = OPTION_MAP SND (LTL_HD ll)
 Proof
@@ -971,9 +971,9 @@ val llength_rel_nil = prove(
   ONCE_REWRITE_TAC [llength_rel_cases] THEN SRW_TAC [][]);
 val _ = augment_srw_ss [rewrites [llength_rel_nil]]
 
-val LLENGTH = new_definition(
-  "LLENGTH",
-  ``LLENGTH ll = if LFINITE ll then SOME (@n. llength_rel ll n) else NONE``);
+Definition LLENGTH[nocompute]:
+  LLENGTH ll = if LFINITE ll then SOME (@n. llength_rel ll n) else NONE
+End
 
 Theorem LLENGTH_THM:
     (LLENGTH LNIL = SOME 0) /\
@@ -1133,9 +1133,9 @@ QED
     mapping in and out of ordinary (finite) lists
    ---------------------------------------------------------------------- *)
 
-val toList = new_definition(
-  "toList",
-  ``toList ll = if LFINITE ll then LTAKE (THE (LLENGTH ll)) ll else NONE``);
+Definition toList[nocompute]:
+  toList ll = if LFINITE ll then LTAKE (THE (LLENGTH ll)) ll else NONE
+End
 
 Theorem toList_THM:
     (toList LNIL = SOME []) /\

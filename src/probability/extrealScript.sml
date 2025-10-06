@@ -1141,9 +1141,9 @@ val lemma3' = Q.prove (
 (* NOTE: EXTREAL_SUM_IMAGE is not defined if there're mixing of PosInfs and NegInfs
    in the summation, since ``PosInf + NegInf`` is not defined. *)
 
-val EXTREAL_SUM_IMAGE_DEF = new_definition
-  ("EXTREAL_SUM_IMAGE_DEF",
-  ``EXTREAL_SUM_IMAGE f s = ITSET (\e acc. f e + acc) s (0 :extreal)``);
+Definition EXTREAL_SUM_IMAGE_DEF[nocompute]:
+  EXTREAL_SUM_IMAGE f s = ITSET (\e acc. f e + acc) s (0 :extreal)
+End
 
 (* Now theorems about EXTREAL_SUM_IMAGE itself *)
 Theorem EXTREAL_SUM_IMAGE_EMPTY[simp] :

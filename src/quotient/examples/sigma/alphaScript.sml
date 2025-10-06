@@ -1158,14 +1158,13 @@ val [ALPHA1_EXTRANEOUS_CONTEXT_obj, ALPHA1_EXTRANEOUS_CONTEXT_dict1,
 
 (* define ALPHA1_subst *)
 
-val ALPHA1_subst =
-    new_definition
-    ("ALPHA1_subst",
-     “ALPHA1_subst xs ys xs' ys' t1 t2 s1 s2 =
+Definition ALPHA1_subst[nocompute]:
+     ALPHA1_subst xs ys xs' ys' t1 t2 s1 s2 =
         (LENGTH xs' = LENGTH ys') /\
         (!x y. (x IN t1) /\ (y IN t2) /\
                alpha_match xs ys x y ==>
-               ALPHA1_obj (SUB1 s1 x) (SUB1 s2 y) xs' ys')”);
+               ALPHA1_obj (SUB1 s1 x) (SUB1 s2 y) xs' ys')
+End
 
 
 Theorem ALPHA1_subst_UNION:
@@ -1965,21 +1964,21 @@ QED
 (* Now we define the alpha-equivalence predicates themselves. *)
 (* ========================================================== *)
 
-val ALPHA_obj =
-    new_definition ("ALPHA_obj",
-    “ALPHA_obj o1 o2 = ALPHA1_obj o1 o2 [] []”);
+Definition ALPHA_obj[nocompute]:
+    ALPHA_obj o1 o2 = ALPHA1_obj o1 o2 [] []
+End
 
-val ALPHA_dict =
-    new_definition ("ALPHA_dict",
-    “ALPHA_dict d1 d2 = ALPHA1_dict d1 d2 [] []”);
+Definition ALPHA_dict[nocompute]:
+    ALPHA_dict d1 d2 = ALPHA1_dict d1 d2 [] []
+End
 
-val ALPHA_entry =
-    new_definition ("ALPHA_entry",
-    “ALPHA_entry e1 e2 = ALPHA1_entry e1 e2 [] []”);
+Definition ALPHA_entry[nocompute]:
+    ALPHA_entry e1 e2 = ALPHA1_entry e1 e2 [] []
+End
 
-val ALPHA_method =
-    new_definition ("ALPHA_method",
-    “ALPHA_method m1 m2 = ALPHA1_method m1 m2 [] []”);
+Definition ALPHA_method[nocompute]:
+    ALPHA_method m1 m2 = ALPHA1_method m1 m2 [] []
+End
 
 
 Theorem ALPHA_object:
@@ -2170,12 +2169,11 @@ val ALPHA1_subst =
                ALPHA1_obj (SUB1 s1 x) (SUB1 s2 y) xs' ys')”);
 *)
 
-val ALPHA_subst =
-    new_definition
-    ("ALPHA_subst",
-     “ALPHA_subst t s1 s2 =
+Definition ALPHA_subst[nocompute]:
+     ALPHA_subst t s1 s2 =
         (!x. (x IN t) ==>
-               ALPHA_obj (SUB1 s1 x) (SUB1 s2 x))”);
+               ALPHA_obj (SUB1 s1 x) (SUB1 s2 x))
+End
 
 
 Theorem ALPHA_SUB_CONTEXT:

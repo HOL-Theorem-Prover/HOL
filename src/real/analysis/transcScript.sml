@@ -51,11 +51,13 @@ Proof
     REWRITE_TAC [exp_def, suminf_univ]
 QED
 
-val cos = new_definition("cos",
-  “cos(x) = suminf(\n. (^cos_ser) n * (x pow n))”);
+Definition cos[nocompute]:
+  cos(x) = suminf(\n. (^cos_ser) n * (x pow n))
+End
 
-val sin = new_definition("sin",
-  “sin(x) = suminf(\n. (^sin_ser) n * (x pow n))”);
+Definition sin[nocompute]:
+  sin(x) = suminf(\n. (^sin_ser) n * (x pow n))
+End
 
 (*---------------------------------------------------------------------------*)
 (* Show the series for exp converges, using the ratio test                   *)
@@ -578,8 +580,9 @@ QED
 (* Properties of the logarithmic function                                    *)
 (*---------------------------------------------------------------------------*)
 
-val ln = new_definition("ln",
-  “ln x = @u. exp(u) = x”);
+Definition ln[nocompute]:
+  ln x = @u. exp(u) = x
+End
 
 Theorem LN_EXP:
    !x. ln(exp x) = x
@@ -1882,8 +1885,9 @@ QED
 (* Tangent                                                                   *)
 (*---------------------------------------------------------------------------*)
 
-val tan = new_definition("tan",
-  “tan(x) = sin(x) / cos(x)”);
+Definition tan[nocompute]:
+  tan(x) = sin(x) / cos(x)
+End
 
 Theorem TAN_0:
    tan(&0) = &0
@@ -2122,14 +2126,17 @@ QED
 (* Inverse trig functions                                                    *)
 (*---------------------------------------------------------------------------*)
 
-val asn = new_definition("asn",
-  “asn(y) = @x. ~(pi / &2) <= x /\ x <= pi / &2 /\ (sin x = y)”);
+Definition asn[nocompute]:
+  asn(y) = @x. ~(pi / &2) <= x /\ x <= pi / &2 /\ (sin x = y)
+End
 
-val acs = new_definition("acs",
-  “acs(y) = @x. &0 <= x /\ x <= pi /\ (cos x = y)”);
+Definition acs[nocompute]:
+  acs(y) = @x. &0 <= x /\ x <= pi /\ (cos x = y)
+End
 
-val atn = new_definition("atn",
-  “atn(y) = @x. ~(pi / &2) < x /\ x < pi / &2 /\ (tan x = y)”);
+Definition atn[nocompute]:
+  atn(y) = @x. ~(pi / &2) < x /\ x < pi / &2 /\ (tan x = y)
+End
 
 Theorem ASN:
    !y. ~(&1) <= y /\ y <= &1 ==>

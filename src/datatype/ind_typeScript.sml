@@ -137,10 +137,10 @@ QED
 (* Now, set up "constructor" and "bottom" element.                           *)
 (* ------------------------------------------------------------------------- *)
 
-val ZCONSTR = new_definition(
-  "ZCONSTR",
-  ``ZCONSTR c i r :num->'a->bool =
-       INJP (INJN (SUC c)) (INJP (INJA i) (INJF r))``);
+Definition ZCONSTR[nocompute]:
+  ZCONSTR c i r :num->'a->bool =
+       INJP (INJN (SUC c)) (INJP (INJA i) (INJF r))
+End
 
 val ZBOT = new_definition(
   "ZBOT",
@@ -336,7 +336,8 @@ val FCONS_UNDO = prove(
   GEN_TAC THEN REWRITE_TAC[FUN_EQ_THM] THEN
   numLib.INDUCT_TAC THEN REWRITE_TAC[FCONS, combinTheory.o_THM]);
 
-val FNIL = new_definition("FNIL", ``FNIL (n:num) = (ARB:'a)``);
+Definition FNIL[nocompute]: FNIL (n:num) = (ARB:'a)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Destructor-style FCONS equation                                           *)

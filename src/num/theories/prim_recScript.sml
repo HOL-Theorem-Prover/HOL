@@ -91,8 +91,9 @@ val INV_SUC_EQ = save_thm("INV_SUC_EQ",
  *
  *   (PRE 0 = 0) /\ (!m. PRE(SUC m) = m)
  *---------------------------------------------------------------------------*)
-val PRE_DEF = new_definition("PRE_DEF",
-    “PRE m = (if (m=0) then 0 else @n. m = SUC n)”);
+Definition PRE_DEF[nocompute]:
+    PRE m = (if (m=0) then 0 else @n. m = SUC n)
+End
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="PRE"},name=(["Number","Natural"],"pre")}
 
 Theorem PRE:
@@ -447,11 +448,10 @@ QED
  *---------------------------------------------------------------------------*)
 
 
-val PRIM_REC_FUN =
- new_definition
-  ("PRIM_REC_FUN",
-   “PRIM_REC_FUN (x:'a) (f:'a->num->'a) =
-        SIMP_REC (\n:num. x) (\fun n. f(fun(PRE n))n)”);
+Definition PRIM_REC_FUN[nocompute]:
+   PRIM_REC_FUN (x:'a) (f:'a->num->'a) =
+        SIMP_REC (\n:num. x) (\fun n. f(fun(PRE n))n)
+End
 
 Theorem PRIM_REC_EQN:
     !(x:'a) f.
@@ -464,10 +464,9 @@ Proof
     THEN REWRITE_TAC[]
 QED
 
-val PRIM_REC =
- new_definition
-  ("PRIM_REC",
-   “PRIM_REC (x:'a) f m = PRIM_REC_FUN x f m (PRE m)”);
+Definition PRIM_REC[nocompute]:
+   PRIM_REC (x:'a) f m = PRIM_REC_FUN x f m (PRE m)
+End
 
 Theorem PRIM_REC_THM:
     !x f.

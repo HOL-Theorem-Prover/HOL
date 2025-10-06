@@ -37,9 +37,9 @@ fun UNPRIME_CONV tmp =
 (* NOTE: this is actually pred_setTheory.FUNSET                              *)
 (* ------------------------------------------------------------------------- *)
 
-val function_def = new_definition
-  ("function_def",
-   ``function a b (f : 'a -> 'b) = !x. a x ==> b (f x)``);
+Definition function_def[nocompute]:
+   function a b (f : 'a -> 'b) = !x. a x ==> b (f x)
+End
 
 Theorem function_in:
     function s s t /\ s x ==> s (t x)
@@ -57,52 +57,52 @@ Type poset[pp] = “:('a -> bool) # ('a -> 'a -> bool)”
 (* Definition of partially-ordered sets                                      *)
 (* ------------------------------------------------------------------------- *)
 
-val poset_def = new_definition
-  ("poset_def",
-   ``poset ((s,r) : 'a poset) <=>
+Definition poset_def[nocompute]:
+   poset ((s,r) : 'a poset) <=>
      (?x. s x) /\
      (!x. s x ==> r x x) /\
      (!x y. s x /\ s y /\ r x y /\ r y x ==> (x = y)) /\
-     (!x y z. s x /\ s y /\ s z /\ r x y /\ r y z ==> r x z)``);
+     (!x y z. s x /\ s y /\ s z /\ r x y /\ r y z ==> r x z)
+End
 
-val carrier_def = new_definition
-  ("carrier_def",
-   ``carrier ((s,r) : 'a poset) = s``);
+Definition carrier_def[nocompute]:
+   carrier ((s,r) : 'a poset) = s
+End
 
-val relation_def = new_definition
-  ("relation_def",
-   ``relation ((s,r) : 'a poset) = r``);
+Definition relation_def[nocompute]:
+   relation ((s,r) : 'a poset) = r
+End
 
 val _ = export_rewrites ["carrier_def", "relation_def"];
 
-val top_def = new_definition
-  ("top_def",
-   ``top ((s,r) : 'a poset) x <=> s x /\ !y. s y ==> r y x``);
+Definition top_def[nocompute]:
+   top ((s,r) : 'a poset) x <=> s x /\ !y. s y ==> r y x
+End
 
-val bottom_def = new_definition
-  ("bottom_def",
-   ``bottom ((s,r) : 'a poset) x <=> s x /\ !y. s y ==> r x y``);
+Definition bottom_def[nocompute]:
+   bottom ((s,r) : 'a poset) x <=> s x /\ !y. s y ==> r x y
+End
 
-val chain_def = new_definition
-  ("chain_def",
-   ``chain ((s,r) : 'a poset) c <=>
-     !x y. s x /\ s y /\ c x /\ c y ==> r x y \/ r y x``);
+Definition chain_def[nocompute]:
+   chain ((s,r) : 'a poset) c <=>
+     !x y. s x /\ s y /\ c x /\ c y ==> r x y \/ r y x
+End
 
-val lub_def = new_definition
-  ("lub_def",
-   ``lub ((s,r) : 'a poset) p x <=>
+Definition lub_def[nocompute]:
+   lub ((s,r) : 'a poset) p x <=>
      s x /\ (!y. s y /\ p y ==> r y x) /\
-     !z. s z /\ (!y. s y /\ p y ==> r y z) ==> r x z``);
+     !z. s z /\ (!y. s y /\ p y ==> r y z) ==> r x z
+End
 
-val glb_def = new_definition
-  ("glb_def",
-   ``glb ((s,r) : 'a poset) p x <=>
+Definition glb_def[nocompute]:
+   glb ((s,r) : 'a poset) p x <=>
      s x /\ (!y. s y /\ p y ==> r x y) /\
-     !z. s z /\ (!y. s y /\ p y ==> r z y) ==> r z x``);
+     !z. s z /\ (!y. s y /\ p y ==> r z y) ==> r z x
+End
 
-val complete_def = new_definition
-  ("complete_def",
-   ``complete (p : 'a poset) = !c. (?x. lub p c x) /\ (?x. glb p c x)``);
+Definition complete_def[nocompute]:
+   complete (p : 'a poset) = !c. (?x. lub p c x) /\ (?x. glb p c x)
+End
 
 Theorem poset_nonempty:
      !s r. poset (s,r) ==> ?x. s x
@@ -186,10 +186,10 @@ QED
 (* Pointwise lifting of posets                                               *)
 (* ------------------------------------------------------------------------- *)
 
-val pointwise_lift_def = new_definition
-  ("pointwise_lift_def",
-   ``pointwise_lift (t : 'a -> bool) ((s,r) : 'b poset) =
-     (function t s, \f g. !x. t x ==> r (f x) (g x))``);
+Definition pointwise_lift_def[nocompute]:
+   pointwise_lift (t : 'a -> bool) ((s,r) : 'b poset) =
+     (function t s, \f g. !x. t x ==> r (f x) (g x))
+End
 
 Theorem complete_pointwise:
      !p t. complete p ==> complete (pointwise_lift t p)
@@ -262,28 +262,28 @@ val lub_pointwise_push = store_thm
 (* Functions acting on posets.                                               *)
 (* ------------------------------------------------------------------------- *)
 
-val monotonic_def = new_definition
-  ("monotonic_def",
-   ``monotonic ((s,r) : 'a poset) f =
-     !x y. s x /\ s y /\ r x y ==> r (f x) (f y)``);
+Definition monotonic_def[nocompute]:
+   monotonic ((s,r) : 'a poset) f =
+     !x y. s x /\ s y /\ r x y ==> r (f x) (f y)
+End
 
-val up_continuous_def = new_definition
-  ("up_continuous_def",
-   ``up_continuous ((s,r) : 'a poset) f =
+Definition up_continuous_def[nocompute]:
+   up_continuous ((s,r) : 'a poset) f =
      !c x.
        chain (s,r) c /\ lub (s,r) c x ==>
-       lub (s,r) (\y. ?z. (s z /\ c z) /\ (y = f z)) (f x)``);
+       lub (s,r) (\y. ?z. (s z /\ c z) /\ (y = f z)) (f x)
+End
 
-val down_continuous_def = new_definition
-  ("down_continuous_def",
-   ``down_continuous ((s,r) : 'a poset) f =
+Definition down_continuous_def[nocompute]:
+   down_continuous ((s,r) : 'a poset) f =
      !c x.
        chain (s,r) c /\ glb (s,r) c x ==>
-       glb (s,r) (\y. ?z. (s z /\ c z) /\ (y = f z)) (f x)``);
+       glb (s,r) (\y. ?z. (s z /\ c z) /\ (y = f z)) (f x)
+End
 
-val continuous_def = new_definition
-  ("continuous_def",
-   “continuous (p : 'a poset) f <=> up_continuous p f /\ down_continuous p f”);
+Definition continuous_def[nocompute]:
+   continuous (p : 'a poset) f <=> up_continuous p f /\ down_continuous p f
+End
 
 
 Theorem monotonic_comp:
@@ -297,15 +297,15 @@ QED
 (* Least and greatest fixed points.                                          *)
 (* ------------------------------------------------------------------------- *)
 
-val lfp_def = new_definition
-  ("lfp_def",
-   ``lfp ((s,r) : 'a poset) f x <=>
-     s x /\ (f x = x) /\ !y. s y /\ r (f y) y ==> r x y``);
+Definition lfp_def[nocompute]:
+   lfp ((s,r) : 'a poset) f x <=>
+     s x /\ (f x = x) /\ !y. s y /\ r (f y) y ==> r x y
+End
 
-val gfp_def = new_definition
-  ("gfp_def",
-   ``gfp ((s,r) : 'a poset) f x <=>
-     s x /\ (f x = x) /\ !y. s y /\ r y (f y) ==> r y x``);
+Definition gfp_def[nocompute]:
+   gfp ((s,r) : 'a poset) f x <=>
+     s x /\ (f x = x) /\ !y. s y /\ r y (f y) ==> r y x
+End
 
 Theorem lfp_unique:
      !p f x x'.

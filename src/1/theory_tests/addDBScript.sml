@@ -4,7 +4,8 @@ Libs
 
 val _ = set_trace "Theory.allow_rebinds" 1
 
-val foo_def = new_definition("foo_def", “foo x <=> ~x”);
+Definition foo_def[nocompute]: foo x <=> ~x
+End
 
 val th1 = DB.fetch "-" "foo_def"
 val th2 = DB.fetch "addDB" "foo_def"
@@ -27,7 +28,8 @@ val _ = length (DB.definitions "addDB") = 1 orelse
 val _ = length (DB.theorems "-") = 1 orelse raise Fail "bad DB.theorems"
 val _ = length (DB.theorems "addDB") = 1 orelse raise Fail "bad DB.theorems"
 
-val bar_def = new_definition("bar_def", “bar x <=> x /\ foo x”);
+Definition bar_def[nocompute]: bar x <=> x /\ foo x
+End
 
 val _ = delete_const "bar"
 
