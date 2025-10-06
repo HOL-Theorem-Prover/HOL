@@ -164,7 +164,7 @@ There is no need of a rule for the latter as the built-in behaviours of \holmake
 
 
 \lstset{basicstyle=\small\ttfamily,
-  numbers=left,numberstyle=\tiny,showtabs=true,morecomment=[n]{$(}{)},
+  numbers=left,numberstyle=\tiny,showtabs=true,morecomment=[n]{\$(}{)},
   commentstyle={\color{vimvert}\slshape},
   morekeywords=[1]{INCLUDES,EXTRA_CLEANS,LATEXMK_EXISTS},
   morekeywords=[2]{ifeq,endif},
@@ -172,28 +172,7 @@ There is no need of a rule for the latter as the built-in behaviours of \holmake
   keywordstyle={[2]\color{blue}}
 }
 \begin{figure}
-\begin{lstlisting}
-INCLUDES = ../theories
-
-LATEXMK_EXISTS = $(if $(which latexmk),yes,no)
-
-ifeq($(LATEXMK_EXISTS), yes)
-paper.pdf: paper.tex holtexbasic.sty
-	latexmk -pdf paper
-endif
-
-paper.tex: paper.htex overrides munge
-	./munge overrides < $< > $@
-
-munge: ppLib.uo
-	$(HOLDIR)/bin/mkmunge.exe -o $@ $<
-
-holtexbasic.sty: $(HOLDIR)/src/TeX/holtexbasic.sty
-	$(CP) $< $@
-
-EXTRA_CLEANS = holtexbasic.sty paper.pdf paper.tex paper.fls \
-               paper.aux paper.fdb_latexmk paper.log munge
-\end{lstlisting}
+\lstinputlisting{Holmakefile}
 \caption{%
 The \hmfile{} in the \texttt{papers} directory.
 The ``dance'' with \texttt{LATEXMK\_EXISTS} (lines 3, 5, and the \texttt{endif} on 8) is specific to this file's position in the \HOL{} repository; all those lines could be omitted in normal usage, where \texttt{latexmk} is presumably sure to be installed.
@@ -302,15 +281,15 @@ The interesting part of the above is that the concrete syntax is targeting the n
 The latter names are arbitrary but
 \begin{itemize}
 \item they should feature the enclosing parentheses to stop token-merging analysis from inserting unnecessary extra spaces; and
-\item they should be different both from each other, and all other magic names chosen for similar purposes with other terms
+\item they should be different both from each other, and all other magic names chosen for similar purposes with other terms.
 \end{itemize}
 
 With only this done, \texttt{\HOLConst{elemcount}~$t$} would be printed as \texttt{(ec1)$t$(ec2)}.
 The substitution of the tokens \texttt{(ec1)} and \texttt{(ec2)} is handled in the \texttt{overrides} file, with lines
-\begin{alltt}
+\begin{verbatim}
    (ec1) 1 \ensuremath{|}
    (ec2) 1 \ensuremath{|}
-\end{alltt}
+\end{verbatim}
 
 We can now see a theorem about the connection between the size of a tree and the length of its in-order traversal:
 
