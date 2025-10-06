@@ -205,8 +205,7 @@ Proof
   REWRITE_TAC (OPTION_MAP2_DEF::option_rws)
 QED
 val _ = export_rewrites ["OPTION_MAP2_THM"];
-val _ = overload_on("lift2", ``OPTION_MAP2``)
-val _ = overload_on("OPTION_MAP2", ``OPTION_MAP2``)
+Overload lift2[inferior] = ``OPTION_MAP2``
 val _ = computeLib.add_persistent_funs ["OPTION_MAP2_THM"]
 
 val option_rws = OPTION_MAP2_THM::option_rws;
