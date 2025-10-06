@@ -277,14 +277,28 @@ val _ = let
                         separator = [TOK ";", BreakSpace(1,0)],
                         cons = "INSERT", nilstr = "EMPTY",
                         block_info = (PP.INCONSISTENT, 1)};
-  fun test (wdth, s, t) =
-      with_flag(linewidth,wdth)
+(* This looks funky : the invocation of term_to_string is done under a
+   different linewidth than the invocation of tpp_expected *)
+(*  fun test (wdth, s, t) =
+      with_flag(Globals.linewidth,wdth)
                (trace ("types", 1) tpp_expected)
                {input = trace ("types", 1) term_to_string t,
                 output = s,
                 testf = fn s =>
                            "Width=" ^ Int.toString wdth ^
                            " type-annotation of “" ^ s ^ "”"}
+*)
+fun test (wdth, s, t) =
+  let val tstr = with_flag (Globals.linewidth,wdth)
+                     (trace ("types", 1) term_to_string) t
+      val _ = print ("\ntstr:\n\n"^tstr^"\n\n")
+  in with_flag(testutils.linewidth,wdth)
+       (trace ("types", 1) tpp_expected)
+       {input = tstr,
+        output = s,
+        testf = fn s => "Width=" ^ Int.toString wdth ^
+                        " type-annotation of “" ^ s ^ "”"}
+  end
 in
   List.app test [
     (75,
