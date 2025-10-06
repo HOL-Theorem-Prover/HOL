@@ -106,6 +106,7 @@ sig
   val NoAsms : thm
 
   val process_taclist_then : {arg: thm list} -> (thm list -> tactic) -> tactic
+  val suspend : string -> tactic
 
 end
 

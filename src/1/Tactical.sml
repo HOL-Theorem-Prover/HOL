@@ -387,12 +387,23 @@ local
    val validity_tag = "ValidityCheck"
    fun masquerade goal = Thm.mk_oracle_thm validity_tag goal
    datatype validity_failure = Concl of term | Hyp of term
+   fun hd_is_suspend t =
+       let val (f, _) = strip_comb t
+           val {Thy,Name,...} = dest_thy_const f
+       in
+         Thy = "marker" andalso Name = "suspendlabel"
+       end handle HOL_ERR _ => false
    fun bad_prf th (asl, w) =
-       if concl th !~ w then SOME (Concl (concl th))
-       else
-         case List.find (fn h => List.all (not o aconv h) asl) (hyp th) of
-             NONE => NONE
-           | SOME h => SOME (Hyp h)
+       let
+         fun goodhyp h = List.exists (aconv h) asl orelse
+                         hd_is_suspend h
+       in
+         if concl th !~ w then SOME (Concl (concl th))
+         else
+           case List.find (not o goodhyp) (hyp th) of
+               NONE => NONE
+             | SOME h => SOME (Hyp h)
+       end
    fun error f t e =
        let
          val pfx = "Invalid " ^ t ^ ": theorem has "

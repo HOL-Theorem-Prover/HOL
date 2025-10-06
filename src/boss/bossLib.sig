@@ -276,4 +276,7 @@ sig
   val qunabbrev_tac : term quotation -> tactic
   val qunabbrevl_tac : term quotation list -> tactic
   val unabbrev_all_tac : tactic
+
+  (* tactics related to suspension and resumption of proofs *)
+  val suspend : string -> tactic
 end

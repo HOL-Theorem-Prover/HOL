@@ -465,4 +465,7 @@ val wlog_then = wlog_then
   fun qx_choosel_then [] ttac = ttac
     | qx_choosel_then (q::qs) ttac = qx_choose_then q (qx_choosel_then qs ttac)
 
-end
+
+val suspend = markerLib.suspend
+
+end (* struct *)

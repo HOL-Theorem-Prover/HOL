@@ -735,4 +735,49 @@ fun process_taclist_then {arg} thltac (gl as (asl,g)) =
       Tactical.THEN(pre, filter_then asms aslPs (mk_require_tac thltac)) gl
     end
 
+(* ----------------------------------------------------------------------
+    suspend : string -> tactic
+
+    Cheats the current goal by assuming it under a "named/labelled"
+    hypothesis.
+   ---------------------------------------------------------------------- *)
+
+val suspimp_t = prim_mk_const{Thy = "marker", Name = "suspendimp"}
+val susp_t = prim_mk_const{Thy = "marker", Name = "suspendlabel"}
+(* to keep it tail-recursive, does it "backwards" *)
+fun list_mk_suspimp (asl, g) =
+  case asl of
+      [] => g
+    | a::rest => list_mk_suspimp(rest, list_mk_comb(suspimp_t, [a,g]))
+
+val simpth = ASSUME “suspendimp p q”
+val th = ASSUME “p:bool”
+
+fun sMP simpth th =
+    let val (f, args) = strip_comb (concl simpth)
+        val _ = same_const f suspimp_t orelse
+                raise ERR "sMP" "Th1 not a suspended implication"
+        val impth =
+            EQ_MP (AP_THM (AP_THM suspendimp_def (hd args)) (hd (tl args)))
+                  simpth
+    in
+      MP impth th
+    end
+
+fun spopmp ([], g) = raise ERR "spopmp" "No assumptions"
+  | spopmp (a::rest, g) =
+    ([(rest, list_mk_suspimp([a], g))], fn ths => sMP (hd ths) (ASSUME (lhand (concl (hd ths)))))
+
+fun suspend nm g =
+  let
+    val lab_t = mk_var(nm, ind)
+    val gl_t = list_mk_suspimp g
+    val eqth = SPECL [lab_t,gl_t] suspendlabel_def
+    val th = ASSUME (lhs (concl eqth))
+    val usable_th = EQ_MP eqth th
+    fun foldthis (ath, mpth) = sMP mpth ath
+  in
+    Tactical.THEN(rpt spopmp, ACCEPT_TAC usable_th)
+  end g
+
 end
