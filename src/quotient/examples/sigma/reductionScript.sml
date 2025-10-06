@@ -977,14 +977,14 @@ Theorem RED_transitive:
      !R. transitve
            (RED_obj R) (RED_dict R) (RED_entry R) (RED_method R)
 Proof
-    REWRITE_TAC[transitive]
+    REWRITE_TAC[transitve]
     THEN REWRITE_TAC[CONV_RULE (DEPTH_CONV LEFT_IMP_EXISTS_CONV)
                                RED_rules_sat]
 QED
 
 val RED_TRANS = save_thm("RED_TRANS",
                    CONV_RULE (TOP_DEPTH_CONV FORALL_AND_CONV)
-                    (REWRITE_RULE[transitive] RED_transitive));
+                    (REWRITE_RULE[transitve] RED_transitive));
 
 Theorem RED_compatible:
      !R. compatible
@@ -1258,14 +1258,14 @@ Theorem REQUAL_transitive:
               (REQUAL_entry R)
               (REQUAL_method R)
 Proof
-    REWRITE_TAC[transitive]
+    REWRITE_TAC[transitve]
     THEN REWRITE_TAC[CONV_RULE (DEPTH_CONV LEFT_IMP_EXISTS_CONV)
                                REQUAL_rules_sat]
 QED
 
 val REQUAL_TRANS = save_thm("REQUAL_TRANS",
                    CONV_RULE (TOP_DEPTH_CONV FORALL_AND_CONV)
-                    (REWRITE_RULE[transitive] REQUAL_transitive));
+                    (REWRITE_RULE[transitve] REQUAL_transitive));
 
 Theorem REQUAL_compatible:
      !R. compatible
