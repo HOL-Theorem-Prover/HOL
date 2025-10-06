@@ -383,6 +383,9 @@ fun ASSUME_NAMED_TAC s bth (g as (asl,w)) =
   end
 end;
 
+val assume_named_tac = ASSUME_NAMED_TAC;
+val mk_asm = ASSUME_NAMED_TAC;
+
 (*---------------------------------------------------------------------------*)
 (* Given an LB encoded label reference, finds a corresponding term in the    *)
 (*   assumption list.                                                        *)
@@ -401,6 +404,9 @@ end;
 
 fun LABEL_ASSUM s ttac (asl, w) =
    ttac (find_labelled_assumption (L s) asl) (asl, w)
+
+val label_assum = LABEL_ASSUM;
+val asm = LABEL_ASSUM;
 
 (*---------------------------------------------------------------------------*)
 (* LABEL_X_ASSUM is almost identical to LABEL_ASSUM. But it is not applied   *)
@@ -422,6 +428,9 @@ fun LABEL_X_ASSUM s ttac : tactic =
      | SOME(named_tm,_)
          => ttac (DEST_LABEL(ASSUME named_tm))
                  (op_set_diff aconv asl [named_tm],w);
+
+val label_x_assum = LABEL_X_ASSUM;
+val asm_x = LABEL_X_ASSUM;
 
 (*---------------------------------------------------------------------------*)
 (* Given a list of theorems thl and a list of assumptions asl, return a list *)
