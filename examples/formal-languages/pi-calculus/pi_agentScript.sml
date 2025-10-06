@@ -1262,7 +1262,7 @@ Proof
     rw [subst_def, swapstr_def] >> METIS_TAC []
 QED
 
-val subst_exists0 =
+val subst_exists =
     parameter_tm_recursion
         |> INST_TYPE [“:'q” |-> “:string # string” (* (key,value) *),
                       “:'r” |-> “:pi # residual”]
@@ -1291,73 +1291,77 @@ val subst_exists0 =
         |> SIMP_RULE (srw_ss()) [support_def, FUN_EQ_THM, fnpm_def,
                                  tpm_COND, tpm_fresh, pmact_sing_inv,
                                  rpm_COND, rpm_fresh, rpm_thm, tpm_thm,
-                                 basic_swapTheory.swapstr_eq_left]
+                                 basic_swapTheory.swapstr_eq_left,
+                                 SYM term_REP_tpm, SYM term_REP_rpm,
+                                 GSYM InputS_def, GSYM BoundOutput_def]
         |> SIMP_RULE (srw_ss()) [rewrite_pairing, pairTheory.FORALL_PROD]
         |> CONV_RULE (DEPTH_CONV (rename_vars [("p_1", "u"), ("p_2", "E")]))
+     (* NOTE: The first ppm represents the two nominal types being constructed,
+        and it should be always like this for any recursive function on multiple
+        nominal types. (This part should be automated.)
 
-(* debug
-val ppm = “pair_pmact pi_pmact residual_pmact”;
-val ppm2 = “pair_pmact string_pmact string_pmact”;
-val alphas = [tpm_ALPHA_Res, tpm_ALPHA_Input, tpm_ALPHA_InputS,
-              tpm_ALPHA_BoundOutput];
-val rwts :thm list = [];
-val th = subst_exists0;
-val th = rpt_hyp_dest_conj (UNDISCH th);
-val ths = hypset th;
-
-val h = el 1 (HOLset.listItems ths);
-set_goal ([], h);
-
-fun prove_alpha_fcbhyp {ppm, alphas, rwts} th = let
-  open nomsetTheory
-  val th = rpt_hyp_dest_conj (UNDISCH th)
-  fun foldthis (h,th) = let
-    val h_th =
-      TAC_PROOF(([], h),
-                rpt gen_tac >> strip_tac >>
-                FIRST (map (match_mp_tac o GSYM) alphas) >>
-                match_mp_tac (GEN_ALL notinsupp_fnapp) >>
-                EXISTS_TAC ppm \\
-                srw_tac [] rwts)
-  in
-    PROVE_HYP h_th th
-  end
-in
-  HOLset.foldl foldthis th (hypset th)
-end
-
-val subst_exists =
-    subst_exists0
-        |> prove_alpha_fcbhyp {ppm = ``pair_pmact string_pmact string_pmact``,
+        The second ppm represents the parameters of the recursive function. In
+        this case it's from string to string. It varies among different recursive
+        functions being constructed.
+      *)
+        |> prove_alpha_fcbhyp {ppms = [“pair_pmact pi_pmact residual_pmact”,
+                                       “pair_pmact string_pmact string_pmact”],
                                rwts = [],
                                alphas = [tpm_ALPHA_Res, tpm_ALPHA_Input,
                                          tpm_ALPHA_InputS,
                                          tpm_ALPHA_BoundOutput]};
 
-val SUB_DEF = new_specification("SUB_DEF", ["SUB"], subst_exists);
+val SUB12 = new_specification
+  ("SUB12", ["SUB1", "SUB2"], subst_exists);
 
-Overload SUB = “SUB”; (* use the syntax already defined in termTheory *)
+(* “[E/u] P” aka “P [u |-> E]” *)
+Definition pi_sub_def :
+    pi_sub E u P = O1 (SUB1 P (u,E))
+End
+Overload SUB = “pi_sub”
 
-val SUB_THMv = prove(
-  “([N/x](var x) = (N :'a CCS)) /\ (x <> y ==> [N/y](var x) = var x)”,
-  SRW_TAC [][SUB_DEF]);
+Definition residual_sub_def :
+    residual_sub E u P = O2 (SUB2 P (u,E))
+End
+Overload SUB = “residual_sub”
 
-Theorem SUB_COMM = prove(
-   “!N x x' y (t :'a CCS).
-        x' <> x /\ x' # N ∧ y <> x /\ y # N ==>
-        (tpm [(x',y)] ([N/x] t) = [N/x] (tpm [(x',y)] t))”,
-  srw_tac [][SUB_DEF, supp_fresh]);
+val ths = CONJUNCTS SUB12;
 
-val SUB_THM = save_thm("SUB_THM",
-  let val (eqns,_) = CONJ_PAIR SUB_DEF
-  in
-    CONJ (REWRITE_RULE [GSYM CONJ_ASSOC]
-                       (LIST_CONJ (SUB_THMv :: tl (CONJUNCTS eqns))))
-         SUB_COMM
-  end);
-val _ = export_rewrites ["SUB_THM"];
-
+(* debug
+val n = List.length ths; (* 15 here *)
+val th = el 1 (CONJUNCTS SUB12);
  *)
+
+(* This function returns the conclusion ignoring antecedents *)
+fun concl1 th =
+    let val tm = concl (SPEC_ALL th) in
+        if is_imp tm then snd (dest_imp tm) else tm
+    end;
+
+(* This function takes “f b” or “f a b” and returns “f” *)
+fun rator2 tm =
+    let val tm1 = rator tm in
+        if is_comb tm1 then rator tm1 else tm1
+    end;
+
+fun has_term sub_tm th =
+    let val (l,r) = dest_eq (concl1 th) in
+       (aconv (rator2 l) sub_tm) orelse
+       (aconv (rator2 r) sub_tm)
+    end;
+val has_sub1 = has_term “SUB1”;
+val has_sub2 = has_term “SUB2”;
+
+val th1s = map (underAIs (SRULE [GSYM pi_sub_def] o
+                          BETA_RULE o AP_TERM “O1”))
+               (filter has_sub1 ths);
+
+val th2s = map (underAIs (SRULE [GSYM residual_sub_def, GSYM pi_sub_def] o
+                          BETA_RULE o AP_TERM “O2”))
+               (filter has_sub2 ths);
+
+Theorem pi_sub_thm[simp]       = LIST_CONJ th1s
+Theorem residual_sub_thm[simp] = LIST_CONJ th2s
 
 val _ = export_theory ();
 val _ = html_theory "pi_agent";

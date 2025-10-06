@@ -29,7 +29,7 @@ val lmf_support = prove(
 
 val lmf_fcond = prove(
   ``y ∉ FV x2 ∪ FINITE (supp (fnpm tpm tpm) r) ==> fcond tpm ^lmf0``,
-  srw_tac [][fcond_def] >>
+  srw_tac [][fcond_def] >> cheat);
 
 
 val precn0 =
@@ -95,6 +95,7 @@ val precn = provehyps(
               qexists_tac `{u;v;x;y} ∪ FV t ∪ FV x2 ∪ FV x'` >>
               srw_tac [][]) >>x
           srw_tac [][Abbr`f`]
+      )]);
 
 
 

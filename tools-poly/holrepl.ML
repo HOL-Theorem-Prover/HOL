@@ -1,12 +1,7 @@
 signature HOL_REPL =
 sig
   val sigint_handler : unit -> unit
-  val topLevel : (string -> unit) ->
-                 {nameSpace : PolyML.NameSpace.nameSpace,
-                  exitLoop : unit -> bool, startExec : unit -> unit,
-                  endExec : unit -> unit, exitOnError : bool,
-                  isInteractive : bool,
-                  zeroTerm : bool} -> unit
+  val topLevel : {diag: string -> unit, zeroTerm : bool} -> unit
 end;
 
 
@@ -22,8 +17,7 @@ val timing = PolyML.Compiler.timing
 (* code here derived from Poly/ML's implementation of its REPL.  Poly/ML code
    is all under LGPL; see required copy at doc/copyrights/lgpl2.1.txt
 *)
-fun topLevel diag {nameSpace, exitLoop, exitOnError, isInteractive, zeroTerm,
-                   startExec, endExec} =
+fun topLevel {diag, zeroTerm} =
   let
     (* This is used as the main read-eval-print loop.  It is also invoked
        by running code that has been compiled with the debug option on
@@ -89,8 +83,7 @@ fun topLevel diag {nameSpace, exitLoop, exitOnError, isInteractive, zeroTerm,
         val code = let
           open PolyML.Compiler
         in
-          polyCompiler (readin, [CPNameSpace nameSpace,
-                                 CPOutStream TextIO.print])
+          polyCompiler (readin, [CPOutStream TextIO.print])
         end
             (* Don't print any times if this raises an exception. *)
             handle exn as Fail s => (
@@ -103,10 +96,8 @@ fun topLevel diag {nameSpace, exitLoop, exitOnError, isInteractive, zeroTerm,
 
         (* Run the code *)
         val startRun = Timer.startCPUTimer()
-        val () = startExec() (* Enable any debugging *)
         (* Run the code and capture any exception (temporarily). *)
         val finalResult = (code(); NONE) handle exn => SOME exn
-        val () = endExec() (* Turn off debugging *)
         val endRun = Timer.checkCPUTimer startRun
       in
         {compileTime = #usr endCompile + #sys endCompile,
@@ -208,7 +199,7 @@ fun topLevel diag {nameSpace, exitLoop, exitOnError, isInteractive, zeroTerm,
           fun readin () =
             let
               val () =
-                if isInteractive andalso !lastWasEol (* Start of line *) then
+                if !lastWasEol (* Start of line *) then
                   if !realDataRead then
                     printOut (!prompt2)
                   else printOut (!prompt1)
@@ -261,16 +252,14 @@ fun topLevel diag {nameSpace, exitLoop, exitOnError, isInteractive, zeroTerm,
       (
         (* Process a single top-level command. *)
         readEvalPrint()
-        handle Thread.Thread.Interrupt =>
-          (* Allow ^C to terminate the debugger and raise Interrupt in
-            the called program. *)
-          if exitOnError then OS.Process.exit OS.Process.failure else ()
-        | _ =>
-          if exitOnError then OS.Process.exit OS.Process.failure else ();
+        (* Allow ^C to terminate the debugger and raise Interrupt in
+          the called program. *)
+        handle Thread.Thread.Interrupt => ()
+        | _ => ();
         if zeroTerm then printOut "\000" else ();
         (* Exit if we've seen end-of-file or we're in the debugger
            and we've run "continue". *)
-        if !endOfFile orelse exitLoop() then ()
+        if !endOfFile then ()
         else handledLoop ()
       )
   in

@@ -4,7 +4,7 @@ struct
 infix ++
 val op++ = OS.Path.concat
 
-fun primLink {from,to} = Systeml.systeml ["ln" "-sf", from, to]
+fun primLink {from,to} = Systeml.systeml ["ln", "-s", from, to]
 fun appendToSRCFILES paths =
     let val istrm = TextIO.openAppend (Systeml.HOLDIR ++ "sigobj" ++ "SRCFILES")
     in
