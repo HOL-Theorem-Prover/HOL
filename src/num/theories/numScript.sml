@@ -38,10 +38,9 @@ val ZERO_REP_DEF = new_specification
 (* under `SUC_REP`.                                                          *)
 (*---------------------------------------------------------------------------*)
 
-Definition IS_NUM_REP[nocompute]:
-     IS_NUM_REP m =
-      !P:ind->bool. (P ZERO_REP /\ (!n. P n ==> P(SUC_REP n))) ==> P m
-End
+val IS_NUM_REP = new_definition("IS_NUM_REP",
+     “IS_NUM_REP m =
+      !P:ind->bool. (P ZERO_REP /\ (!n. P n ==> P(SUC_REP n))) ==> P m”);
 
 (*---------------------------------------------------------------------------
  * Prove that there is a representation in :ind of at least one number.
@@ -75,17 +74,15 @@ and A_ONTO = prove_abs_fn_onto    num_ISO_DEF;
 
 val zero = mk_var("0", mk_thy_type{Tyop="num",Thy="num",Args=[]});
 
-Definition ZERO_DEF[nocompute]: ^zero = ABS_num ZERO_REP
-End
+val ZERO_DEF = new_definition("ZERO_DEF", “^zero = ABS_num ZERO_REP”);
 
 
 (*---------------------------------------------------------------------------
  * Define the successor function on num.
  *---------------------------------------------------------------------------*)
 
-Definition SUC_DEF[nocompute]:
- SUC m = ABS_num(SUC_REP(REP_num m))
-End
+val SUC_DEF = new_definition("SUC_DEF",
+ “SUC m = ABS_num(SUC_REP(REP_num m))”);
 
 local open OpenTheoryMap in
 val ns = ["Number","Natural"]

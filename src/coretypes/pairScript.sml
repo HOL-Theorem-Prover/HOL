@@ -75,9 +75,10 @@ val REP_ABS_PAIR = Q.prove
 (*  Define the constructor for pairs, and install grammar rule for it.       *)
 (*---------------------------------------------------------------------------*)
 
-Definition COMMA_DEF[notuserdef,nocompute]:
-   $, x y = ABS_prod ^pairfn
-End
+val COMMA_DEF =
+ Q.new_definition
+  ("COMMA_DEF[notuserdef]",
+   `$, x y = ABS_prod ^pairfn`);
 val _ = ot","
 
 val _ = add_rule {term_name = ",", fixity = Infixr 50,
@@ -160,8 +161,7 @@ Proof
   REWRITE_TAC [PAIR_EQ, FST, SND]
 QED
 
-Definition SWAP_def[nocompute]: SWAP a = (SND a, FST a)
-End
+val SWAP_def = new_definition ("SWAP_def", ``SWAP a = (SND a, FST a)``)
 
 (* Theorem the SWAP inverts itself *)
 Theorem SWAP_SWAP[simp]:
@@ -207,13 +207,12 @@ QED
 (* CURRY and UNCURRY. UNCURRY is needed for terms of the form `\(x,y).t`     *)
 (*---------------------------------------------------------------------------*)
 
-Definition CURRY_DEF[nocompute]: CURRY f x y :'c = f (x,y)
-End
+val CURRY_DEF = Q.new_definition ("CURRY_DEF", `CURRY f x y :'c = f (x,y)`);
 val _ = BasicProvers.export_rewrites ["CURRY_DEF"]
 
-Definition UNCURRY[nocompute]:
-   UNCURRY f (v:'a#'b) = f (FST v) (SND v)
-End
+val UNCURRY = Q.new_definition
+  ("UNCURRY",
+   `UNCURRY f (v:'a#'b) = f (FST v) (SND v)`);
 val _ = ot0 "UNCURRY" "uncurry"
 
 val UNCURRY_VAR = save_thm("UNCURRY_VAR", UNCURRY);  (* compatibility *)
@@ -416,9 +415,9 @@ Theorem pair_induction = #2(EQ_IMP_RULE FORALL_PROD) |> GEN_ALL
     PROD_ALL
    ---------------------------------------------------------------------- *)
 
-Definition PROD_ALL_def[nocompute]:
-  PROD_ALL (P:'a -> bool) (Q : 'b -> bool) p <=> P (FST p) /\ Q (SND p)
-End
+val PROD_ALL_def = new_definition(
+  "PROD_ALL_def",
+  ``PROD_ALL (P:'a -> bool) (Q : 'b -> bool) p <=> P (FST p) /\ Q (SND p)``);
 
 Theorem PROD_ALL_THM[simp,compute]:
   PROD_ALL P Q (x:'a,y:'b) <=> P x /\ Q y
@@ -669,9 +668,9 @@ QED
        TFL support.
  ---------------------------------------------------------------------------*)
 
-Definition pair_CASE_def[nocompute]:
-                 pair_CASE (p:('a#'b)) f = f (FST p) (SND p)
-End
+val pair_CASE_def =
+  new_definition("pair_CASE_def",
+                 “pair_CASE (p:('a#'b)) f = f (FST p) (SND p)”)
 val _ = ot0 "pair_case" "case"
 
 Theorem pair_case_thm =
@@ -842,10 +841,11 @@ QED
  * is a consequence of WF_LEX.
  *---------------------------------------------------------------------------*)
 
-Definition RPROD_DEF[nocompute]:
-   RPROD (R1:'a->'b->bool)
-          (R2:'c->'d->bool) = \(s,t) (u,v). R1 s u /\ R2 t v
-End
+val RPROD_DEF =
+Q.new_definition
+("RPROD_DEF",
+   `RPROD (R1:'a->'b->bool)
+          (R2:'c->'d->bool) = \(s,t) (u,v). R1 s u /\ R2 t v`);
 
 
 Theorem WF_RPROD:
@@ -968,9 +968,9 @@ QED
     PAIR_SET : ('a -> 'c set) -> ('b -> 'c set) -> 'a # 'b -> 'c set
    ---------------------------------------------------------------------- *)
 
-Definition PAIR_SET_def[nocompute]:
-  PAIR_SET f g = \(a:'a, b:'b) c:'c. c IN f a \/ c IN g b
-End
+val PAIR_SET_def = new_definition(
+  "PAIR_SET_def",
+  “PAIR_SET f g = \(a:'a, b:'b) c:'c. c IN f a \/ c IN g b”);
 
 Theorem IN_PAIR_SET:
   c IN PAIR_SET f g (a,b) <=> c IN f a \/ c IN g b

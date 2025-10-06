@@ -102,9 +102,9 @@ Proof
 QED
 
 
-Definition HOARE_SPEC_DEF[nocompute]:
- HOARE_SPEC P C Q = !s. P s ==> Q (C s)
-End
+val HOARE_SPEC_DEF = new_definition
+ ("HOARE_SPEC_DEF",
+ ``HOARE_SPEC P C Q = !s. P s ==> Q (C s)``);
 
 (*---------------------------------------------------------------------------
        The while rule from Hoare logic, total correctness version.
@@ -130,9 +130,9 @@ QED
 (* LEAST number satisfying a predicate.                                      *)
 (*---------------------------------------------------------------------------*)
 
-Definition LEAST_DEF[nocompute]:
-  LEAST P = WHILE ($~ o P) SUC 0
-End
+val LEAST_DEF = new_definition(
+  "LEAST_DEF",
+  ``LEAST P = WHILE ($~ o P) SUC 0``);
 
 val _ = ot0 "LEAST" "least"
 val _ = set_fixity "LEAST" Binder;
@@ -256,9 +256,9 @@ QED
     least number making the predicate true.
    ---------------------------------------------------------------------- *)
 
-Definition OLEAST_def[nocompute]:
-  (OLEAST) P = if ?n. P n then SOME (LEAST n. P n) else NONE
-End
+val OLEAST_def = new_definition(
+  "OLEAST_def",
+  ``(OLEAST) P = if ?n. P n then SOME (LEAST n. P n) else NONE``)
 val _ = set_fixity "OLEAST" Binder
 
 Theorem OLEAST_INTRO:
@@ -303,11 +303,11 @@ QED
    ---------------------------------------------------------------------- *)
 
 
-Definition OWHILE_def[nocompute]:
-  OWHILE G f s = if ?n. ~ G (FUNPOW f n s) then
+val OWHILE_def = new_definition(
+  "OWHILE_def",
+  ``OWHILE G f s = if ?n. ~ G (FUNPOW f n s) then
                      SOME (FUNPOW f (LEAST n. ~ G (FUNPOW f n s)) s)
-                   else NONE
-End
+                   else NONE``)
 
 val LEAST_ELIM_TAC = DEEP_INTRO_TAC LEAST_ELIM
 
@@ -480,9 +480,9 @@ QED
 
 val TAILREC = new_specification("TAILREC",["TAILREC"],TAILREC_EXISTS);
 
-Definition TAILCALL_def[nocompute]:
-  TAILCALL f k x = case f x of INL cv => k cv | INR tv => tv
-End
+val TAILCALL_def = new_definition(
+  "TAILCALL_def",
+  “TAILCALL f k x = case f x of INL cv => k cv | INR tv => tv”);
 
 Theorem TAILREC_TAILCALL:
   TAILREC f x = TAILCALL f (TAILREC f) x

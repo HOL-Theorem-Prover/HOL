@@ -91,9 +91,8 @@ val INV_SUC_EQ = save_thm("INV_SUC_EQ",
  *
  *   (PRE 0 = 0) /\ (!m. PRE(SUC m) = m)
  *---------------------------------------------------------------------------*)
-Definition PRE_DEF[nocompute]:
-    PRE m = (if (m=0) then 0 else @n. m = SUC n)
-End
+val PRE_DEF = new_definition("PRE_DEF",
+    “PRE m = (if (m=0) then 0 else @n. m = SUC n)”);
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="PRE"},name=(["Number","Natural"],"pre")}
 
 Theorem PRE:
@@ -448,10 +447,11 @@ QED
  *---------------------------------------------------------------------------*)
 
 
-Definition PRIM_REC_FUN[nocompute]:
-   PRIM_REC_FUN (x:'a) (f:'a->num->'a) =
-        SIMP_REC (\n:num. x) (\fun n. f(fun(PRE n))n)
-End
+val PRIM_REC_FUN =
+ new_definition
+  ("PRIM_REC_FUN",
+   “PRIM_REC_FUN (x:'a) (f:'a->num->'a) =
+        SIMP_REC (\n:num. x) (\fun n. f(fun(PRE n))n)”);
 
 Theorem PRIM_REC_EQN:
     !(x:'a) f.
@@ -464,9 +464,10 @@ Proof
     THEN REWRITE_TAC[]
 QED
 
-Definition PRIM_REC[nocompute]:
-   PRIM_REC (x:'a) f m = PRIM_REC_FUN x f m (PRE m)
-End
+val PRIM_REC =
+ new_definition
+  ("PRIM_REC",
+   “PRIM_REC (x:'a) f m = PRIM_REC_FUN x f m (PRE m)”);
 
 Theorem PRIM_REC_THM:
     !x f.
@@ -558,9 +559,10 @@ val _ = TypeBase.export $ TypeBasePure.gen_datatype_info
  * logically simpler).                                                       *
  *---------------------------------------------------------------------------*)
 
-Definition wellfounded_def[nocompute]:
-   wellfounded (R:'a->'a->bool) = ~?f. !n. R (f (SUC n)) (f n)
-End
+val wellfounded_def =
+Q.new_definition
+  ("wellfounded_def",
+   `wellfounded (R:'a->'a->bool) = ~?f. !n. R (f (SUC n)) (f n)`);
 
 val _ = overload_on ("Wellfounded", ``wellfounded``);
 
@@ -649,8 +651,7 @@ val _ = BasicProvers.export_rewrites ["WF_LESS"]
  * arising from a measure function is wellfounded, which is really great!
  *---------------------------------------------------------------------------*)
 
-Definition measure_def[nocompute]: measure = inv_image $<
-End
+val measure_def = Q.new_definition ("measure_def", `measure = inv_image $<`);
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="measure"},name=(["Relation"],"measure")}
 
 Theorem WF_measure:  !m. WF (measure m)

@@ -10,8 +10,7 @@ Libs
     to remove the marker soon after use.
    ---------------------------------------------------------------------- *)
 
-Definition stmarker_def[nocompute]: stmarker (x:'a) = x
-End
+val stmarker_def = new_definition("stmarker_def", ``stmarker (x:'a) = x``);
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="stmarker"},name=(["Unwanted"],"id")}
 
 (* the following move_<dir>_<op> theorems will loop if more than one term
@@ -75,9 +74,9 @@ val move_right_disj = store_thm(
     with an infinity.)
    ---------------------------------------------------------------------- *)
 
-Definition unint_def[nocompute]:
-  unint (x:'a) = x
-End
+val unint_def = new_definition(
+  "unint_def",
+  ``unint (x:'a) = x``);
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="unint"},name=(["Unwanted"],"id")}
 
 (* ----------------------------------------------------------------------
@@ -88,8 +87,7 @@ val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="unint"},na
     be eliminated or unduly messed with by other tactics
    ---------------------------------------------------------------------- *)
 
-Definition Abbrev_def[nocompute]: Abbrev (x:bool) = x
-End
+val Abbrev_def = new_definition("Abbrev_def", ``Abbrev (x:bool) = x``)
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="Abbrev"},name=(["Unwanted"],"id")}
 
 val Abbrev_CONG = store_thm(
@@ -103,28 +101,20 @@ val Abbrev_CONG = store_thm(
    the goal. Not used as yet.
    ---------------------------------------------------------------------- *)
 
-Definition IfCases_def[nocompute]: IfCases = T
-End
+val IfCases_def = new_definition("IfCases_def", ``IfCases = T``)
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="IfCases"},name=(["Data","Bool"],"T")}
 
 (*---------------------------------------------------------------------------*)
 (* Support for the simplifier                                                *)
 (*---------------------------------------------------------------------------*)
 
-Definition AC_DEF[nocompute]: AC b1 b2 <=> b1 /\ b2
-End
-Definition Req0_def[nocompute]: Req0 = T
-End
-Definition ReqD_def[nocompute]: ReqD = T
-End
-Definition Cong_def[nocompute]: Cong (x:bool) = x
-End
-Definition Exclude_def[nocompute]: Exclude (x:'a) = T
-End
-Definition ExcludeFrag_def[nocompute]: ExcludeFrag (x:'a) = T
-End
-Definition FRAG_def[nocompute]: FRAG (x:'a) = T
-End
+val AC_DEF = new_definition("AC_DEF", ``AC b1 b2 <=> b1 /\ b2``);
+val Req0_def = new_definition("Req0_def", “Req0 = T”);
+val ReqD_def = new_definition("ReqD_def", “ReqD = T”);
+val Cong_def = new_definition("Cong_def", ``Cong (x:bool) = x``);
+val Exclude_def = new_definition("Exclude_def", “Exclude (x:'a) = T”);
+val ExcludeFrag_def = new_definition("ExcludeFrag_def", “ExcludeFrag (x:'a) = T”);
+val FRAG_def = new_definition("FRAG_def", “FRAG (x:'a) = T”);
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="AC"},name=(["Data","Bool"],"/\\")}
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="bool",Name="/\\"},name=(["Data","Bool"],"/\\")}
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="Cong"},name=(["Unwanted"],"id")}
@@ -142,18 +132,16 @@ val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 2)),
 
 Type label[local] = “:ind”
 
-Definition label_def[nocompute]:
-  ((lab:label) :- (argument:bool)) = argument
-End
+val label_def = new_definition(
+  "label_def",
+  ``((lab:label) :- (argument:bool)) = argument``);
 
 (* ----------------------------------------------------------------------
     The 'using' label
    ---------------------------------------------------------------------- *)
 
-Definition using_def[nocompute]: using (x:label) = T
-End
-Definition usingThm_def[nocompute]: usingThm (b:bool) = b
-End
+val using_def = new_definition("using_def", “using (x:label) = T”);
+val usingThm_def = new_definition("usingThm_def", “usingThm (b:bool) = b”);
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="usingThm"},name=(["Unwanted"],"id")}
 
 val _ = remove_ovl_mapping  "using" {Name = "using", Thy = "marker"}
@@ -165,9 +153,9 @@ val _ = remove_ovl_mapping  "usingThm" {Name = "usingThm", Thy = "marker"}
 (* For marking the current case in case divisions and inductive proofs       *)
 (*---------------------------------------------------------------------------*)
 
-Definition Case_def[nocompute]:
-  Case X = T
-End
+val Case_def = new_definition(
+  "Case_def",
+  ``Case X = T``);
 
 val add_Case = store_thm (
   "add_Case",
@@ -188,19 +176,17 @@ val elim_Case = store_thm (
     for hiding assumptions from both the user and many tools
    ---------------------------------------------------------------------- *)
 
-Definition hide_def[nocompute]:
-  hide (nm:bool) (x:bool) = x
-End
+val hide_def = new_definition(
+  "hide_def",
+  “hide (nm:bool) (x:bool) = x”);
 
 val hideCONG = store_thm(
   "hideCONG",
   “hide nm x = hide nm x”,
   REWRITE_TAC[]);
 
-Definition NoAsms[nocompute]: NoAsms = T
-End
-Definition IgnAsm_def[nocompute]: IgnAsm (v:'a) = T
-End
+val NoAsms = new_definition("NoAsms", “NoAsms = T”)
+val IgnAsm_def = new_definition("IgnAsm_def", “IgnAsm (v:'a) = T”)
 
 val _ = Tactic.export_ignore {Name = "hide", Thy = "marker"}
 

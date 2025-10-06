@@ -53,11 +53,12 @@ and o_THM = combinTheory.o_THM;
 (* ---------------------------------------------------------------------*)
 
 
-Definition IS_SUM_REP[nocompute]:
-      IS_SUM_REP (f:bool->'a->'b->bool) =
+val IS_SUM_REP =
+    new_definition
+     ("IS_SUM_REP",
+      “IS_SUM_REP (f:bool->'a->'b->bool) =
          ?v1 v2.  (f = \b x y.(x=v1) /\ b) \/
-                  (f = \b x y.(y=v2) /\ ~b)
-End
+                  (f = \b x y.(y=v2) /\ ~b)”);
 
 (* Prove that there exists some object in the representing type that    *)
 (* lies in the subset of legal representations.                         *)
@@ -101,14 +102,12 @@ and A_ONTO = REWRITE_RULE [IS_SUM_REP] (prove_abs_fn_onto sum_ISO_DEF);
 (* --------------------------------------------------------------------- *)
 
 (* Define the injection function INL:'a->('a,'b)sum                     *)
-Definition INL_DEF[notuserdef,nocompute]:
-   !e.(INL:'a->(('a,'b)sum)) e = ABS_sum(\b x (y:'b). (x = e) /\ b)
-End
+val INL_DEF = new_definition("INL_DEF[notuserdef]",
+   “!e.(INL:'a->(('a,'b)sum)) e = ABS_sum(\b x (y:'b). (x = e) /\ b)”);
 
 (* Define the injection function INR:'b->( 'a,'b )sum                   *)
-Definition INR_DEF[notuserdef,nocompute]:
-   !e.(INR:'b->(('a,'b)sum)) e = ABS_sum(\b (x:'a) y. (y = e) /\ ~b)
-End
+val INR_DEF = new_definition("INR_DEF[notuserdef]",
+   “!e.(INR:'b->(('a,'b)sum)) e = ABS_sum(\b (x:'a) y. (y = e) /\ ~b)”);
 
 (* --------------------------------------------------------------------- *)
 (* The proof of the `axiom` for sum types follows.                      *)
@@ -461,9 +460,9 @@ QED
     SUM_FIN, sums built from particular sets
    ---------------------------------------------------------------------- *)
 
-Definition SUM_FIN_def[nocompute]:
-  SUM_FIN A B = \ab. sum_CASE ab (\a. a IN A) (\b. b IN B)
-End
+val SUM_FIN_def = new_definition(
+  "SUM_FIN_def",
+  “SUM_FIN A B = \ab. sum_CASE ab (\a. a IN A) (\b. b IN B)”);
 
 Theorem IN_SUM_FIN_THM[simp]:
   (INL a IN SUM_FIN A B <=> a IN A) /\

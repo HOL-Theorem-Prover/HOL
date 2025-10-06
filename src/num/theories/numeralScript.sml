@@ -74,11 +74,9 @@ val numeral_suc = store_thm(
 (* leading i's                                                               *)
 (*---------------------------------------------------------------------------*)
 
-Definition iZ[nocompute]: iZ (x:num) = x
-End
+val iZ = new_definition("iZ", ``iZ (x:num) = x``);
 
-Definition iiSUC[nocompute]: iiSUC n = SUC (SUC n)
-End
+val iiSUC = new_definition("iiSUC", ``iiSUC n = SUC (SUC n)``);
 
 local open OpenTheoryMap in
 val _ = OpenTheory_const_name
@@ -922,9 +920,9 @@ Proof
   ]
 QED
 
-Definition internal_mult_def[nocompute]:
-  internal_mult = $*
-End
+val internal_mult_def = new_definition(
+  "internal_mult_def",
+  ``internal_mult = $*``);
 val _ = OpenTheory_add "internal_mult"
 
 Theorem DIV2_BIT1:

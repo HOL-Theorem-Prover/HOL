@@ -12,12 +12,11 @@ Libs
 (*  (Strong) bisimulation                                                    *)
 (*---------------------------------------------------------------------------*)
 
-Definition BISIM_def[nocompute]:
-  BISIM ts R = !p q.
+val BISIM_def = new_definition ("BISIM_def",
+  ``BISIM ts R = !p q.
                     R p q ==> !l.
                     (!p'. ts p l p' ==> ?q'. ts q l q' /\ R p' q') /\
-                    (!q'. ts q l q' ==> ?p'. ts p l p' /\ R p' q')
-End
+                    (!q'. ts q l q' ==> ?p'. ts p l p' /\ R p' q')``);
 
 (* (Strong) bisimilarity, see BISIM_REL_def for an alternative definition *)
 CoInductive BISIM_REL :
@@ -106,26 +105,23 @@ QED
 (*---------------------------------------------------------------------------*)
 
 (* Empty transition: zero or more invisible actions *)
-Definition ETS_def[nocompute]: (* was: EPS *)
-  ETS ts tau = RTC (\x y. ts x tau y)
-End
+val ETS_def = new_definition ("ETS_def", (* was: EPS *)
+  ``ETS ts tau = RTC (\x y. ts x tau y)``);
 
 (* Weak transition *)
-Definition WTS_def[nocompute]:
-  WTS ts tau =
-     \p l q. ?p' q'. (ETS ts tau) p p' /\ ts p' l q' /\ (ETS ts tau) q' q
-End
+val WTS_def = new_definition ("WTS_def",
+  ``WTS ts tau =
+     \p l q. ?p' q'. (ETS ts tau) p p' /\ ts p' l q' /\ (ETS ts tau) q' q``);
 
 (* Weak bisimulation *)
-Definition WBISIM_def[nocompute]:
-  WBISIM ts tau R =
+val WBISIM_def = new_definition ("WBISIM_def",
+  ``WBISIM ts tau R =
      !p q. R p q ==>
           (!l. l <> tau ==>
             (!p'. ts p l p' ==> ?q'. (WTS ts tau) q l q' /\ R p' q') /\
             (!q'. ts q l q' ==> ?p'. (WTS ts tau) p l p' /\ R p' q')) /\
           (!p'. ts p tau p' ==> ?q'. (ETS ts tau) q   q' /\ R p' q') /\
-          (!q'. ts q tau q' ==> ?p'. (ETS ts tau) p   p' /\ R p' q')
-End
+          (!q'. ts q tau q' ==> ?p'. (ETS ts tau) p   p' /\ R p' q')``);
 
 (* Weak bisimilarity, see WBISIM_REL_def for an alternative definition *)
 CoInductive WBISIM_REL :

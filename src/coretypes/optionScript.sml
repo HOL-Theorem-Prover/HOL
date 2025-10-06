@@ -65,11 +65,13 @@ val option_ABS_ONTO    = reduce(prove_abs_fn_onto option_REP_ABS_DEF);
 val option_REP_ONE_ONE = prove_rep_fn_one_one option_REP_ABS_DEF;
 val option_REP_ONTO    = reduce(prove_rep_fn_onto option_REP_ABS_DEF);
 
-Definition SOME_DEF[notuserdef,nocompute]:!x. SOME x = option_ABS(INL x)
-End
-Definition NONE_DEF[notuserdef,nocompute]:
-  NONE = option_ABS(INR one)
-End
+val SOME_DEF = new_definition(
+  "SOME_DEF[notuserdef]",“!x. SOME x = option_ABS(INL x)”
+);
+val NONE_DEF = new_definition(
+  "NONE_DEF[notuserdef]",
+  “NONE = option_ABS(INR one)”
+);
 val _ = ot0 "SOME" "some"
 val _ = ot0 "NONE" "none"
 
@@ -542,9 +544,9 @@ Proof
   \\ SRW_TAC[][]
 QED
 
-Definition OPTION_IGNORE_BIND_def[nocompute]:
-  OPTION_IGNORE_BIND m1 m2 = OPTION_BIND m1 (K m2)
-End
+val OPTION_IGNORE_BIND_def = new_definition(
+  "OPTION_IGNORE_BIND_def",
+  ``OPTION_IGNORE_BIND m1 m2 = OPTION_BIND m1 (K m2)``);
 
 Theorem OPTION_IGNORE_BIND_thm:
     (OPTION_IGNORE_BIND NONE m = NONE) /\
@@ -695,11 +697,10 @@ QED
     OPTREL - lift a relation on 'a, 'b to 'a option, 'b option
    ---------------------------------------------------------------------- *)
 
-Definition OPTREL_def[nocompute]:
-  OPTREL R x y <=>
+val OPTREL_def = new_definition("OPTREL_def",
+  ``OPTREL R x y <=>
       (x = NONE) /\ (y = NONE) \/
-      ?x0 y0. (x = SOME x0) /\ (y = SOME y0) /\ R x0 y0
-End
+      ?x0 y0. (x = SOME x0) /\ (y = SOME y0) /\ R x0 y0``);
 
 Theorem OPTREL_MONO:
     (!x:'a y:'b. P x y ==> Q x y) ==> (OPTREL P x y ==> OPTREL Q x y)
@@ -787,9 +788,9 @@ QED
     and avoid having to duplicate the P formula.
    ---------------------------------------------------------------------- *)
 
-Definition some_def[nocompute]:
-  some P = if ?x. P x then SOME (@x. P x) else NONE
-End
+val some_def = new_definition(
+  "some_def",
+  ``some P = if ?x. P x then SOME (@x. P x) else NONE``);
 
 Theorem some_intro:
     (!x. P x ==> Q (SOME x)) /\ ((!x. ~P x) ==> Q NONE) ==> Q (some P)
