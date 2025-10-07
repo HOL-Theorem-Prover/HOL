@@ -316,7 +316,7 @@ fun parseSML file body parseError: scope -> result = let
           val _ = case lab of SOME _ => () | NONE =>
             (parseError (#1 tk, !pos) "expected an identifier"; unread tk)
           val colon = parseKeyword ":" (SOME "expected a colon")
-          in {lab = lab, colon = colon, ty = parseTy false} end,
+          in {start = #1 tk, lab = lab, colon = colon, ty = parseTy false} end,
         delim = fn (_, Symbol #",") => SOME true | (_, Symbol #";") => SOME false | _ => NONE,
         close = fn (_, Symbol #"}") => SOME true | _ => NONE }
       in TyRecord {left = start, elems = elems, right = right, stop = stop} end
@@ -1332,10 +1332,6 @@ fun mkNameAttrs _ (p, name) NONE = mkString (p, name)
   | mkNameAttrs f (p, name) (SOME {attrs = {args, ...}, ...}: 'a attrs) =
     mkString (p, concat [name, "[", String.concatWith ", " (map f args), "]"])
 
-(* fun delimited left {args, ...} f delim right =
-  append left (fn () =>
-    append (flatmap (fn e => append (f e) (fn () => delim)) args) right) *)
-
   (* datatype exp =
   | List of {left: int, elems: exp delimited, right: int option, stop: int}
     (** [ exp, ..., exp ] *)
@@ -1525,7 +1521,7 @@ fun expandExp true (e as Wild _) = e
   | expandExp _ (OrElse {left, orelse_, right}) =
     OrElse {left = expandExp false left, orelse_ = orelse_, right = expandExp false right}
   | expandExp _ (Handle {exp, handle_, elems}) =
-    Handle {exp = expandExp false exp, handle_ = handle_, elems = expandArms elems}
+    Handle {exp = expandExp false exp, handle_ = handle_, elems = expandArms handle_ elems}
   | expandExp _ (Raise {raise_, exp}) = Raise {raise_ = raise_, exp = expandExp false exp}
   | expandExp _ (IfThenElse {if_, exp1, then_, exp2, else_}) = let
     val exp1 = expandExp false exp1
@@ -1536,9 +1532,10 @@ fun expandExp true (e as Wild _) = e
     in IfThenElse {if_ = if_, exp1 = exp1, then_ = then_, exp2 = exp2, else_ = else_} end
   | expandExp _ (While {while_, exp1, do_, exp2}) =
     While {while_ = while_, exp1 = expandExp false exp1, do_ = do_, exp2 = expandExp false exp2}
-  | expandExp _ (Case {case_, exp, of_, elems}) =
-    Case {case_ = case_, exp = expandExp false exp, of_ = of_, elems = expandArms elems}
-  | expandExp _ (Fn {fn_, elems}) = Fn {fn_ = fn_, elems = expandArms elems}
+  | expandExp _ (Case {case_, exp, of_, elems}) = let
+    val p = Option.getOpt (of_, case_)
+    in Case {case_ = case_, exp = expandExp false exp, of_ = of_, elems = expandArms p elems} end
+  | expandExp _ (Fn {fn_, elems}) = Fn {fn_ = fn_, elems = expandArms fn_ elems}
 
   | expandExp _ (HOLFullQuote {head, type_q, quote, stop, ...}) = let
     val id = (#1 head, case type_q of NONE => "Parse.Term" | SOME _ => "Parse.Type")
@@ -1549,20 +1546,23 @@ fun expandExp true (e as Wild _) = e
   | expandExp _ (HOLLinePragmaWith {hash_, ...}) = Unit {left = hash_, right = hash_}
   | expandExp _ (HOLFilePragmaWith {hash_, ...}) = Unit {left = hash_, right = hash_}
   | expandExp _ (EmptyExp p) = Unit {left = p, right = p}
-  | expandExp _ (BadExp {start = p, ...}) =
-    Raise {raise_ = p, exp = App (mkIdent (p, "Fail"), mkString (p, "malformed"))}
+  | expandExp _ (BadExp {start = p, ...}) = mkFail (p, "malformed")
 
-and expandArms elems =
-  map (fn {bar, pat, arrow, exp} =>
-    {bar = bar, pat = expandExp true pat, arrow = arrow, exp = expandExp false exp}) elems
-  handle HasOrPat => mapArms (expandExp true) #pat
-    (fn ({bar, arrow, exp, ...}, pat) => {bar = bar, pat = pat, arrow = arrow, exp = exp}) elems
+and expandArms p [] =
+    [{bar = NONE, pat = Wild p, arrow = NONE, exp = Raise {raise_ = p, exp = mkIdent (p, "Bind")}}]
+  | expandArms _ elems =
+    map (fn {bar, pat, arrow, exp} =>
+      {bar = bar, pat = expandExp true pat, arrow = arrow, exp = expandExp false exp}) elems
+    handle HasOrPat => mapArms (expandExp true) #pat
+      (fn ({bar, arrow, exp, ...}, pat) => {bar = bar, pat = pat, arrow = arrow, exp = exp}) elems
 
-and expandFunBranches elems =
-  map (fn {bar, pat, eq, exp} =>
-    {bar = bar, pat = expandExp true pat, eq = eq, exp = expandExp false exp}) elems
-  handle HasOrPat => mapArms (expandExp true) #pat
-    (fn ({bar, eq, exp, ...}, pat) => {bar = bar, pat = pat, eq = eq, exp = exp}) elems
+and expandFunBranches p [] =
+    [{bar = NONE, pat = Wild p, eq = NONE, exp = Raise {raise_ = p, exp = mkIdent (p, "Bind")}}]
+  | expandFunBranches _ elems =
+    map (fn {bar, pat, eq, exp} =>
+      {bar = bar, pat = expandExp true pat, eq = eq, exp = expandExp false exp}) elems
+    handle HasOrPat => mapArms (expandExp true) #pat
+      (fn ({bar, eq, exp, ...}, pat) => {bar = bar, pat = pat, eq = eq, exp = exp}) elems
 
 and expandQuoteCore start toks = let
   fun go [] acc = rev acc
@@ -1588,8 +1588,9 @@ and expandDec (DecSemi _) acc = acc
       val eq = Option.map (fn {eq, exp} => {eq = eq, exp = expandExp false exp}) eq
       in {rec_ = rec_, pat = pat, eq = eq} end
     in DecVal {val_ = val_, tyvars = tyvars, elems = mapDelim f elems} :: acc end
-  | expandDec (DecFun {fun_, tyvars, fvalbind}) acc =
-    DecFun {fun_ = fun_, tyvars = tyvars, fvalbind = mapDelim expandFunBranches fvalbind} :: acc
+  | expandDec (DecFun {fun_, tyvars, fvalbind}) acc = let
+    val fvalbind = mapDelim (expandFunBranches fun_) fvalbind
+    in DecFun {fun_ = fun_, tyvars = tyvars, fvalbind = fvalbind} :: acc end
   | expandDec (dec as DecType _) acc = dec :: acc
   | expandDec (dec as DecEqtype _) acc = dec :: acc
   | expandDec (dec as DecDatatype _) acc = dec :: acc
@@ -1625,7 +1626,7 @@ and expandDec (DecSemi _) acc = acc
     val p = expStart e
     in DecSemi p :: valPat p (mkIdent (p, "it")) (expandExp false e) :: acc end
 
-  | expandDec (dec as HOLTheory _) acc = dec :: acc
+  | expandDec (HOLTheory thy) acc = expandTheory thy acc
   | expandDec (HOLDefinition {
       definition_, id as (_, name), fileline = (file, (_, line, _)),
       attrs, colon = _, quote, termination, end_ = _, stop}) acc = let
@@ -1787,7 +1788,7 @@ and expandStrExp (s as StrIdent _) = s
     StrLetInEnd {let_ = let_, strdec = expandDecs strdec [], in_ = in_,
       strexp = expandStrExp strexp, end_ = end_, stop = stop}
 
-fun expandTheory {theory_, id, attrs, elems, ...} acc = let
+and expandTheory {theory_, id, attrs, elems, ...} acc = let
   val bare = ref false
   val _ = app (fn
       {key = (_, "bare"), bind = NONE} => bare := true
@@ -1834,8 +1835,6 @@ fun expandTheory {theory_, id, attrs, elems, ...} acc = let
       mkList (theory_, rev (!grammar)))) :: acc
   in acc end
 
-val _ = fn HOLTheory t => expandTheory t | _ => raise Bind
-
 datatype lazyseq =
     Nil
   | String of string * (unit -> lazyseq)
@@ -1849,81 +1848,242 @@ fun append Nil y = y ()
 fun flatmap _ [] = Nil
   | flatmap f (x :: xs) = append (f x) (fn () => flatmap f xs)
 
-fun token s = String (s, fn () => str " ")
+type printer = {token: string -> unit}
 
-fun otoken NONE _ = Nil
-  | otoken (SOME _) s = token s
+fun token s (pr: printer) = #token pr s
+fun ident id = token (#2 id)
 
-(* fun fromRow r = () *)
+fun otoken NONE _ _ = ()
+  | otoken (SOME _) s pr = token s pr
 
-(* fun fromExp _ (Wild _) = str "raise Fail \"_\" "
-fun fromExp _ (IntegerConstant (_, s)) = token s
-  | fromExp _ (WordConstant (_, s)) = token s
-  | fromExp _ (StringConstant (_, s)) = let
+fun delimited left {args, ...} f delim right pr = (
+  left pr;
+  case args of
+    [] => ()
+  | e :: args => (f e pr; app (fn e => (delim pr; f e pr)) args);
+  right pr)
+
+fun seq _ Empty _ = ()
+  | seq f (One a) pr = f a pr
+  | seq f (Many {elems, ...}) pr = delimited (token "(") elems f (token ",") (token ")") pr
+
+fun parenIf false f pr = f pr
+  | parenIf true f pr = (token "(" pr; f pr; token ")" pr)
+
+fun fromTy _ (TyVar id) pr = ident id pr
+  | fromTy _ (TyRecord {elems, ...}) pr = let
+    fun f {start, lab, ty, ...} pr = let
+      val lab = Option.getOpt (lab, (start, "_"))
+      in ident lab pr; token ":" pr; fromTy false ty pr end
+    in delimited (token "{") elems f (token ",") (token "]") pr end
+  | fromTy prec (TyTuple args) pr =
+    parenIf prec (delimited (K ()) args (fromTy true) (token "*") (K ())) pr
+  | fromTy _ (TyCon {args, id}) pr = (seq (fromTy false) args pr; ident id pr)
+  | fromTy prec (TyArrow {from, to, ...}) pr =
+    parenIf prec (fn pr => (fromTy true from pr; token "->" pr; fromTy false to pr)) pr
+  | fromTy prec (TyParens {ty, ...}) pr = fromTy prec ty pr
+  | fromTy _ (BadTy _) pr = token "bad" pr
+val fromTy = fromTy false
+
+fun fromTyBind ({tyvars, tycon, bind}:tybind) pr = (
+  seq ident tyvars pr; ident tycon pr;
+  Option.app (fn {ty, ...} => (token "=" pr; fromTy ty pr)) bind)
+
+fun fromTypeDec kw binds = delimited (token kw) binds fromTyBind (token "and") (K ())
+
+fun fromDatBinds kw dat wt pr = let
+  fun f {op_, id, arg, ...} pr = (
+    otoken op_ "op" pr; ident id pr;
+    Option.app (fn {ty, ...} => (token "of" pr; fromTy ty pr)) arg)
+  fun g ({tyvars, tycon, rhs, ...}:datbind) pr = (
+    seq ident tyvars pr; ident tycon pr; token "=" pr;
+    case rhs of
+      DatvalDatatype {id, ...} => (token "datatype" pr; ident id pr)
+    | DatvalElems args => delimited (token kw) {args = args, delims = []} f (token "|") (K ()) pr)
+  val _ = delimited (token kw) dat g (token "and") (K ()) pr
+  in Option.app (fn {tybind, ...} => fromTypeDec "withtype" tybind pr) wt end
+
+val atomicPrec = 9
+val appPrec = 8
+val infixPrec = 7
+val typedPrec = 6
+val layeredPrec = 5
+(* val orPatPrec = 4 *)
+val kwPrec = 3
+val andPrec = 2
+val orPrec = 1
+val handlePrec = 0
+
+fun fromExp' _ (Wild _) pr = token "_" pr
+  | fromExp' _ (IntegerConstant (_, s)) pr = token s pr
+  | fromExp' _ (WordConstant (_, s)) pr = token s pr
+  | fromExp' _ (StringConstant (_, s)) pr = let
     val s = decodeStr s 1 (size s - 1)
-    in token (encodeStr s "\"" "\"") end
-  | fromExp _ (CharConstant (_, s)) = let
+    in token (encodeStr (Substring.full s) "\"" "\"") pr end
+  | fromExp' _ (CharConstant (_, s)) pr = let
     val s = decodeStr s 2 (size s - 1)
-    in token (encodeStr s "#\"" "\"") end
-  | fromExp _ (RealConstant (_, s)) = token s
-  | fromExp _ (Unit _) = token "()"
-  | fromExp _ (Ident {op_, id}) = append (otoken op_ "op") (fn () => token (#2 id))
-  | fromExp pat (List {elems, ...}) =
-    delimited (token "[") elems fromExp pat (token ",") (fn () => token "]")
-  | fromExp pat (Tuple {elems, ...}) =
-    delimited (token "(") elems fromExp pat (token ",") (fn () => token ")")
-  | fromExp pat (Record {elems, ...}) =
-    delimited (token "{") elems (fromRow pat) (token ",") (fn () => token "}") *)
+    in token (encodeStr (Substring.full s) "#\"" "\"") pr end
+  | fromExp' _ (RealConstant (_, s)) pr = token s pr
+  | fromExp' _ (Unit _) pr = token "()" pr
+  | fromExp' _ (Ident {op_, id}) pr = (otoken op_ "op" pr; ident id pr)
+  | fromExp' _ (List {elems, ...}) pr =
+    delimited (token "[") elems fromExp (token ",") (token "]") pr
+  | fromExp' _ (Tuple {elems, ...}) pr =
+    delimited (token "(") elems fromExp (token ",") (token ")") pr
+  | fromExp' _ (Record {elems, ...}) pr =
+    delimited (token "{") elems fromRow (token ",") (token "}") pr
+  | fromExp' _ (Parens {exp, ...}) pr = fromExp exp pr
+  | fromExp' prec (Infix {left, id, right}) pr = parenIf (prec > infixPrec) (fn pr => (
+    fromExp' appPrec left pr; ident id pr; fromExp' atomicPrec right pr)) pr
+  | fromExp' prec (Typed {exp, ty, ...}) pr = parenIf (prec > typedPrec) (fn pr => (
+    fromExp' appPrec exp pr; token ":" pr; fromTy ty pr)) pr
+  | fromExp' prec (Layered {op_, id, ty, pat, ...}) pr = parenIf (prec > typedPrec) (fn pr => (
+    otoken op_ "op" pr; ident id pr;
+    Option.app (fn {ty, ...} => (token ":" pr; fromTy ty pr)) ty;
+    fromExp pat pr)) pr
+  | fromExp' _ (Or _) _ = raise Fail "unexpanded or pattern"
+  | fromExp' _ (Select {label, ...}) pr = (token "#" pr; ident label pr)
+  | fromExp' _ (Sequence {elems, ...}) pr =
+    delimited (token "(") elems fromExp (token ";") (token ")") pr
+  | fromExp' _ (LetInEnd {dec, exps, ...}) pr = (
+    token "let" pr; fromDecs dec pr; token "in" pr;
+    case #args exps of [] => token "()" pr | _ =>
+      delimited (K ()) exps fromExp (token ";") (K ()) pr;
+    token "end" pr)
+  | fromExp' prec (App (f, e)) pr = parenIf (prec > appPrec) (fn pr => (
+    fromExp' appPrec f pr; fromExp' atomicPrec e pr)) pr
+  | fromExp' prec (AndAlso {left, right, ...}) pr = parenIf (prec > andPrec) (fn pr => (
+    fromExp' kwPrec left pr; token "andalso" pr; fromExp' andPrec right pr)) pr
+  | fromExp' prec (OrElse {left, right, ...}) pr = parenIf (prec > orPrec) (fn pr => (
+    fromExp' andPrec left pr; token "orelse" pr; fromExp' orPrec right pr)) pr
+  | fromExp' prec (Handle {exp, elems, ...}) pr = parenIf (prec > handlePrec) (fn pr => (
+    fromExp' orPrec exp pr; token "handle" pr; fromArms elems pr)) pr
+  | fromExp' prec (Raise {exp, ...}) pr = parenIf (prec > kwPrec) (fn pr => (
+    token "raise" pr; fromExp exp pr)) pr
+  | fromExp' prec (IfThenElse {exp1, exp2, else_, ...}) pr = parenIf (prec > kwPrec) (fn pr => (
+    token "if" pr; fromExp exp1 pr; token "then" pr; fromExp exp2 pr;
+    case else_ of
+      NONE => (token "else" pr; token "()" pr)
+    | SOME {exp3, ...} => (token "else" pr; fromExp exp3 pr))) pr
+  | fromExp' prec (While {exp1, exp2, ...}) pr = parenIf (prec > kwPrec) (fn pr => (
+    token "while" pr; fromExp exp1 pr; token "do" pr; fromExp exp2 pr)) pr
+  | fromExp' prec (Case {exp, elems, ...}) pr = parenIf (prec > kwPrec) (fn pr => (
+    token "case" pr; fromExp exp pr; token "of" pr; fromArms elems pr)) pr
+  | fromExp' prec (Fn {elems, ...}) pr = parenIf (prec > kwPrec) (fn pr => (
+    token "fn" pr; fromArms elems pr)) pr
+  | fromExp' _ (HOLFullQuote _)      _ = raise Fail "unexpanded HOL syntax"
+  | fromExp' _ (HOLQuote _)          _ = raise Fail "unexpanded HOL syntax"
+  | fromExp' _ (HOLLinePragma _)     _ = raise Fail "unexpanded HOL syntax"
+  | fromExp' _ (HOLLinePragmaWith _) _ = raise Fail "unexpanded HOL syntax"
+  | fromExp' _ (HOLFilePragma _)     _ = raise Fail "unexpanded HOL syntax"
+  | fromExp' _ (HOLFilePragmaWith _) _ = raise Fail "unexpanded HOL syntax"
+  | fromExp' _ (EmptyExp _)          _ = raise Fail "missing expression"
+  | fromExp' _ (BadExp _)            _ = raise Fail "malformed expression"
 
-     (* (fn () => token (#2 id)) *)
+and fromExp e = fromExp' handlePrec e
 
+and fromRow (DotDotDot _) pr = token "..." pr
+  | fromRow (LabEq {lab, eq = _, exp}) pr = (ident lab pr; token "=" pr; fromExp exp pr)
+  | fromRow (LabAs {id, ty, aspat}) pr = (
+    ident id pr;
+    Option.app (fn {ty, ...} => (token ":" pr; fromTy ty pr)) ty;
+    Option.app (fn {exp, ...} => (token "as" pr; fromExp exp pr)) aspat)
 
-  (* datatype exp =
-  | Tuple of {left: int, elems: exp delimited, right: int option, stop: int}
-    (** ( exp, ..., exp ) *)
-  | Record of {left: int, elems: row delimited, right: int option, stop: int}
-    (** { lab = exp, ..., lab = exp } *)
-  | Parens of {left: int, exp: exp, right: int option, stop: int} (** ( exp ) *)
-  | Infix of {left: exp, id: ident, right: exp} (** exp vid exp *)
-  | Typed of {exp: exp, colon: int, ty: ty} (** exp : ty *)
-  | Layered of
-    {op_: int option, id: ident, ty: {colon: int, ty: ty} option, as_: int, pat: exp}
-    (** [op] vid [:ty] as pat *)
-  | Or of exp delimited (** SuccessorML "or patterns": pat | pat | ... | pat *)
-  | Select of {hash: int, label: ident} (** # label *)
-  | Sequence of {left: int, elems: exp delimited, right: int option, stop: int}
-    (** (exp; ...; exp) *) (* TODO: this is stupid *)
-  | LetInEnd of
-    {let_: int, dec: dec list, in_: int option, exps: exp delimited, end_: int option, stop: int}
-    (** let dec in exp [; exp ...] end *)
-  | App of exp * exp (** exp exp *)
-  | AndAlso of {left: exp, andalso_: int, right: exp} (** exp andalso exp *)
-  | OrElse of {left: exp, orelse_: int, right: exp} (** exp orelse exp *)
-  | Handle of {exp: exp, handle_: int, elems: arm list}
-    (** exp handle pat => exp [| pat => exp ...] *)
-  | Raise of {raise_: int, exp: exp} (** raise exp *)
-  | IfThenElse of {if_: int, exp1: exp, then_: int option, exp2: exp, else_: int option, exp3: exp}
-    (** if exp then exp else exp *)
-  | While of {while_: int, exp1: exp, do_: int option, exp2: exp} (** while exp do exp *)
-  | Case of {case_: int, exp: exp, of_: int option, elems: arm list}
-    (** case exp of pat => exp [| pat => exp ...] *)
-  | Fn of {fn_: int, elems: arm list} (** fn pat => exp [| pat => exp ...] *)
+and fromArms arms = let
+  fun f {pat, exp, ...} pr = (fromExp pat pr; token "=>" pr; fromExp exp pr)
+  in delimited (K ()) {args = arms, delims = []} f (token "|") (K ()) end
 
-  | HOLFullQuote of {
-      head: int * string, type_q: int option,
-      quote: qbody, end_tok: (int * string) option, stop: int}
-  | HOLQuote of {head: int * string, quote: qbody, end_tok: (int * string) option, stop: int}
-  | HOLLinePragma of {hash_: int, left: int, line_: int, right: int option, stop: int} (* #(LINE) *)
-  | HOLLinePragmaWith of {
-      hash_: int, left: int, line_: int, eq_: int,
-      line: int * string option, col: {comma_: int, col: int * string option} option,
-      right: int option, stop: int} (* #(LINE=3) this is BS *)
-  | HOLFilePragma of {hash_: int, left: int, file_: int, right: int option, stop: int} (* #(FILE) *)
-  | HOLFilePragmaWith of {
-      hash_: int, left: int, file_: int, eq_: int,
-      file: int * string option, right: int option, stop: int} (* #(FILE=foo.sml) this is BS *)
+and fromDecs ds pr = app (fn d => fromDec d pr) ds
 
-  | EmptyExp of int
-  | BadExp of {start: int, stop: int} *)
+and fromDec (DecSemi _) pr = token ";" pr
+  | fromDec (DecVal {tyvars, elems, ...}) pr = let
+    fun f {rec_, pat, eq} pr = (
+      otoken rec_ "rec" pr; fromExp pat pr;
+      Option.app (fn {exp, ...} => fromExp exp pr) eq)
+    in token "val" pr; seq ident tyvars pr; delimited (K ()) elems f (token "and") (K ()) pr end
+  | fromDec (DecFun {tyvars, fvalbind, ...}) pr = let
+    fun f {pat, exp, ...} pr = (fromExp pat pr; token "=" pr; fromExp exp pr)
+    fun g arms = delimited (K ()) {args = arms, delims = []} f (token "|") (K ())
+    in token "fun" pr; seq ident tyvars pr; delimited (K ()) fvalbind g (token "and") (K ()) pr end
+  | fromDec (DecType {tybind, ...}) pr = fromTypeDec "type" tybind pr
+  | fromDec (DecEqtype {tybind, ...}) pr = fromTypeDec "eqtype" tybind pr
+  | fromDec (DecDatatype {datbind, withtype_, ...}) pr =
+    fromDatBinds "datatype" datbind withtype_ pr
+  | fromDec (DecAbstype {datbind, withtype_, dec, ...}) pr = (
+    fromDatBinds "abstype" datbind withtype_ pr;
+    token "with" pr; fromDecs dec pr; token "end" pr)
+  | fromDec (DecException {elems, ...}) pr = let
+    fun f (ExnNew {op_, id, arg}) pr = (
+        otoken op_ "op" pr; ident id pr;
+        Option.app (fn {ty, ...} => (token "of" pr; fromTy ty pr)) arg)
+      | f (ExnReplicate {op_, id, tgt, ...}) pr = (
+        otoken op_ "op" pr; ident id pr; token "=" pr; ident tgt pr)
+    in token "exception" pr; delimited (K ()) elems f (token "and") (K ()) pr end
+  | fromDec (DecLocal {dec1, dec2, ...}) pr = (
+    token "local" pr; fromDecs dec1 pr; token "in" pr; fromDecs dec2 pr; token "end" pr)
+  | fromDec (DecOpen {elems, ...}) pr = (token "open" pr; app (C ident pr) elems)
+  | fromDec (DecInfix {prec, elems, ...}) pr = (
+    token "infix" pr; Option.app (C ident pr) prec; app (C ident pr) elems)
+  | fromDec (DecInfixr {prec, elems, ...}) pr = (
+    token "infixr" pr; Option.app (C ident pr) prec; app (C ident pr) elems)
+  | fromDec (DecNonfix {elems, ...}) pr = (token "nonfix" pr; app (C ident pr) elems)
+  | fromDec (DecStructure {elems, ...}) pr = let
+    fun f {id, constraint, bind} pr = (
+      ident id pr; fromConstraint constraint pr;
+      Option.app (fn {strexp, ...} => (token "=" pr; fromStrExp strexp pr)) bind)
+    in delimited (token "structure") elems f (token "and") (K ()) pr end
+  | fromDec (DecSignature {elems, ...}) pr = let
+    fun f {id, bind} pr = (
+      ident id pr;
+      Option.app (fn {sigexp, ...} => (token "=" pr; fromSigExp sigexp pr)) bind)
+    in delimited (token "signature") elems f (token "and") (K ()) pr end
+  | fromDec (DecInclude {sigexps, ...}) pr = (token "include" pr; app (C fromSigExp pr) sigexps)
+  | fromDec (Sharing {type_, elems, ...}) pr = (
+    token "sharing" pr; otoken type_ "type" pr;
+    delimited (otoken type_ "type") elems ident (token "=") (K ()) pr)
+  | fromDec (DecFunctor {elems, ...}) pr = let
+    fun f {id, funarg, constraint, bind, ...} pr = (
+      ident id pr; token "(" pr;
+      case funarg of
+        ArgIdent {strid, ty} => (
+        ident strid pr;
+        Option.app (fn {sigexp, ...} => (token ":" pr; fromSigExp sigexp pr)) ty)
+      | ArgSpec dec => fromDecs dec pr;
+      token ")" pr; fromConstraint constraint pr;
+      Option.app (fn {strexp, ...} => (token "=" pr; fromStrExp strexp pr)) bind)
+    in delimited (token "functor") elems f (token "and") (K ()) pr end
+  | fromDec (DecExp _)           _ = raise Fail "unexpended top-level expression"
+  | fromDec (HOLTheory _)        _ = raise Fail "unexpanded HOL syntax"
+  | fromDec (HOLDefinition _)    _ = raise Fail "unexpanded HOL syntax"
+  | fromDec (HOLDatatype _)      _ = raise Fail "unexpanded HOL syntax"
+  | fromDec (HOLQuoteDecl _)     _ = raise Fail "unexpanded HOL syntax"
+  | fromDec (HOLInductiveDecl _) _ = raise Fail "unexpanded HOL syntax"
+  | fromDec (HOLType _)          _ = raise Fail "unexpanded HOL syntax"
+  | fromDec (HOLSimpleThm _)     _ = raise Fail "unexpanded HOL syntax"
+  | fromDec (HOLTheoremDecl _)   _ = raise Fail "unexpanded HOL syntax"
+
+  and fromConstraint NONE _ = ()
+    | fromConstraint (SOME {colon = (_, Colon), sigexp}) pr =
+      (token ":" pr; fromSigExp sigexp pr)
+    | fromConstraint (SOME {colon = (_, ColonGt), sigexp}) pr =
+      (token ":>" pr; fromSigExp sigexp pr)
+
+  and fromSigExp (SigIdent id) pr = ident id pr
+    | fromSigExp (Spec {spec, ...}) pr = (token "sig" pr; fromDecs spec pr; token "end" pr)
+    | fromSigExp (WhereType {sigexp, elems, ...}) pr = let
+      fun f {tybind, ...} pr = (token "type" pr; fromTyBind tybind pr)
+      in fromSigExp sigexp pr; delimited (token "where") elems f (token "and") (K ()) pr end
+
+  and fromStrExp (StrIdent id) pr = ident id pr
+    | fromStrExp (StrStruct {strdec, ...}) pr = (
+      token "struct" pr; fromDecs strdec pr; token "end" pr)
+    | fromStrExp (StrConstraint {strexp, kind}) pr = (
+      fromStrExp strexp pr; fromConstraint (SOME kind) pr)
+    | fromStrExp (FunAppExp {funid, strexp, ...}) pr = (
+      ident funid pr; token "(" pr; fromStrExp strexp pr; token ")" pr)
+    | fromStrExp (FunAppDec {funid, strdec, ...}) pr = (
+      ident funid pr; token "(" pr; fromDecs strdec pr; token ")" pr)
+    | fromStrExp (StrLetInEnd {strdec, strexp, ...}) pr = (
+      token "let" pr; fromDecs strdec pr; token "in" pr; fromStrExp strexp pr; token "end" pr)
 
 end;
