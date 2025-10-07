@@ -30,6 +30,7 @@ fun parseSML file body parseError: scope -> result = let
       if String.sub (body, i) = #"\n" then countLines (i+1) (line+1) (i+1) else
       firstLine (i+1)
     in firstLine pos end
+  fun fileline p = (!fileRef, (updatePosLineCol p; !posLineCol))
 
   fun finishString p = case cur () of
     #"\000" => parseError (p, !pos) "unclosed string literal"
@@ -772,19 +773,19 @@ fun parseSML file body parseError: scope -> result = let
               tilde_ = NONE,
               id = (start, (nextn 2; takeWhile isIdRest; ident start)) })
           else NONE
-        val args = case parseSymbol #"[" NONE of
+        val attrs = case parseSymbol #"[" NONE of
           NONE => NONE
         | SOME left => let
-          val (ids, right, stop) = parseDelimitedClose [] [] {
+          val (attrs, right, stop) = parseDelimitedClose [] [] {
             elem = fn () => parseIdentifier false,
             delim = fn (_, Symbol #",") => SOME true | _ => NONE,
             close = fn (_, Symbol #"]") => SOME true | _ => NONE }
-          in SOME {left = left, ids = ids, right = right, stop = stop} end
+          in SOME {left = left, attrs = attrs, right = right, stop = stop} end
         val colon = parseKeyword ":" NONE
         val (right, stop) = parseStop (parseSymbol #"]") 1 "expected ']'"
         val _ = pos := stop
         val r = DefinitionLabel {
-          left = p, label = label, args = args,
+          left = p, label = label, attrs = attrs,
           colon = colon, right = right, stop = stop }
         in go stop (r :: push i p acc) end
     in go qstart [] end
@@ -851,6 +852,7 @@ fun parseSML file body parseError: scope -> result = let
 
     fun parseHolTheorem start triv = let
       val id = parseIdentifier true
+      val fileline = fileline (#1 id)
       val attrs = parseAttrs parseKVals
       val r = case parseKeyword ":" NONE of
         SOME colon => let
@@ -862,11 +864,11 @@ fun parseSML file body parseError: scope -> result = let
         val (qed_, stop) = parseStop (parseHolKeyword "QED") 3 "expected 'QED'"
         val _ = case qed_ of NONE => parseHolKeyword "End" NONE | _ => NONE
         in HOLTheoremDecl {
-          triv = triv, theorem_ = start, id = id, attrs = attrs, colon = colon,
+          triv = triv, theorem_ = start, id = id, fileline = fileline, attrs = attrs, colon = colon,
           quote = qbody, proof_ = proof_, tac = tac, qed_ = qed_, stop = stop }
         end
       | NONE => HOLSimpleThm {
-        triv = triv, theorem_ = start, id = id, attrs = attrs,
+        triv = triv, theorem_ = start, id = id, fileline = fileline, attrs = attrs,
         bind = Option.map (fn eq => {eq = eq, exp = parseExp sc false}) (parseKeyword "=" NONE) }
       in r end
 
@@ -991,6 +993,7 @@ fun parseSML file body parseError: scope -> result = let
           delim = isKeyword "and" } })
       | ("Definition", HolKeyword) => SOME (sc, let
         val id = parseIdentifier true
+        val fileline = fileline (#1 id)
         val attrs = parseAttrs parseKVals
         val (colon, qstart) = parseStop (parseKeyword ":") 1 "expected ':'"
         val (qbody, right) = parseQuoteBody sc qstart qstart false ["End", "Termination"]
@@ -1000,7 +1003,7 @@ fun parseSML file body parseError: scope -> result = let
         else (NONE, if ident right = "End" then (SOME right, right+3) else (NONE, right))
         val _ = case end_ of NONE => parseHolKeyword "QED" NONE | _ => NONE
         in HOLDefinition {
-          definition_ = start, id = id, attrs = attrs, colon = colon,
+          definition_ = start, id = id, fileline = fileline, attrs = attrs, colon = colon,
           quote = qbody, termination = term, end_ = end_, stop = stop }
         end)
       | ("Datatype", HolKeyword) => SOME (sc, let
@@ -1144,6 +1147,18 @@ fun parseSML file body parseError: scope -> result = let
     in {parseDec = parseDec, getScope = fn () => !sc} end
   in go end
 
+fun isOnlyComments s = let
+  val (base, start, len) = Substring.base s
+  val stop = start + len
+  fun cur p = if p < stop then String.sub (base, p) else #"\000"
+  fun go cm p =
+    case cur p of
+      #"\000" => true
+    | #"(" => cur (p+1) = #"*" andalso go (cm + 1) (p+2)
+    | #"*" => cm > 0 andalso if cur (p+1) = #")" then go (cm - 1) (p+2) else go cm (p+1)
+    | c => (cm > 0 orelse Char.isSpace c) andalso go cm (p+1)
+  in go 0 start end
+
 end
 
 fun go file = let
@@ -1169,7 +1184,7 @@ fun go file = let
   val sc = foldl
     (fn ((k, n, r), b) => Binarymap.insert (b, k, (n, r)))
     (Binarymap.mkDict String.compare) infixes
-  val {parseDec, ...} = ParserNew.parseSML file body
+  val {parseDec, ...} = Parser.parseSML file body
     (fn (start, stop) => fn err =>
       (print (concat ["error ", Int.toString start, "-",
         Int.toString stop, ": ", err, "\n"])
@@ -1201,8 +1216,8 @@ val _ = go "test.sml";
 val _ = testall ();
 *)
 
-structure SMLPrinterNew = struct
-open AstNew
+structure SMLPrinter = struct
+open Ast
 
 exception Todo
 
@@ -1299,8 +1314,23 @@ fun encodeStr ss bef aft = let
   in String.concat (rev (bef :: loop start start [aft])) end
 
 fun mkString (p, s) = StringConstant (p, encodeStr (Substring.full s) "\"" "\"")
+fun mkInt (p, s) = IntegerConstant (p, Int.toString s)
 
 fun mkList (p, ls) = List {left = p, elems = {args = ls, delims = []}, right = NONE, stop = p}
+fun mkTuple (p, ls) = Tuple {left = p, elems = {args = ls, delims = []}, right = NONE, stop = p}
+
+fun mkHandleHolErr (p, e) = let
+  val pat = App (mkIdent (p, "Feedback.HOL_ERR"), Wild p)
+  val h = mkIdent (p, "boolTheory.TRUTH")
+  in Handle {exp = e, handle_ = p, elems = [{bar = NONE, pat = pat, arrow = NONE, exp = h}]} end
+
+fun mkKval {key, bind = NONE} = #2 key
+  | mkKval {key, bind = SOME {vals, ...}} =
+    concat [#2 key, " = ", String.concatWith " " (map #2 vals)]
+
+fun mkNameAttrs _ (p, name) NONE = mkString (p, name)
+  | mkNameAttrs f (p, name) (SOME {attrs = {args, ...}, ...}: 'a attrs) =
+    mkString (p, concat [name, "[", String.concatWith ", " (map f args), "]"])
 
 (* fun delimited left {args, ...} f delim right =
   append left (fn () =>
@@ -1343,11 +1373,24 @@ fun expandRecord f pat {left, elems = {args, delims}, right, stop} = let
 fun mkLocPragma line col s =
   concat [" (*#loc ", Int.toString (line + 1), " ", Int.toString (col + 1), "*)", s]
 
+fun mkLocString p file line =
+  App (mkIdent (p, "DB_dtype.mkloc"),
+    mkTuple (p, [mkString (p, file), mkInt (p, line+1), mkIdent (p, "true")]))
+
+val canBindStr = true (* TODO: make false on mosml *)
+
 fun valPat pos pat e = let
   val s = {rec_ = NONE, pat = pat, eq = SOME {eq = pos, exp = e}}
   in DecVal {val_ = pos, tyvars = Empty, elems = {args = [s], delims = []}} end
 
 fun valWild pos = valPat pos (Wild pos)
+
+fun magicBind (p, name) acc =
+  if canBindStr then let
+    val code = mkString (p, concat ["val ", name, " = DB.fetch \"-\" \"", name,
+      "\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;"])
+    in DecSemi p :: valWild p (App (mkIdent (p, "CompilerSpecific.quietbind"), code)) :: acc end
+  else acc
 
 fun mapArms g f1 f2 elems = let
   fun list [] _ f = f []
@@ -1391,11 +1434,63 @@ fun mapArms g f1 f2 elems = let
     | arms (x :: ls) = onPat (f1 x) (fn pat => fn l => f2 (x, pat) :: l) o arms ls
   in arms elems [] end
 
+fun mkFail (p, err) = Raise {raise_ = p, exp = App (mkIdent (p, "Fail"), mkString (p, err))}
+
+fun withLocalAttrs _ false attrs = attrs
+  | withLocalAttrs p true attrs = let
+    val local_ = {key = (p, "local"), bind = NONE}
+    in case attrs of
+      NONE => SOME {
+      left = p, attrs = {args = [local_], delims = []},
+      right = NONE, stop = p}
+    | SOME {left, attrs = {args, delims}, right, stop} => SOME {
+      left = left, attrs = {args = args @ [local_], delims = delims},
+      right = right, stop = stop}
+    end
+
+fun expStart (Wild p) = p
+  | expStart (IntegerConstant (p, _)) = p
+  | expStart (WordConstant (p, _)) = p
+  | expStart (StringConstant (p, _)) = p
+  | expStart (CharConstant (p, _)) = p
+  | expStart (RealConstant (p, _)) = p
+  | expStart (Unit {left, ...}) = left
+  | expStart (Ident {op_ = SOME p, ...}) = p
+  | expStart (Ident {op_ = NONE, id = (p, _)}) = p
+  | expStart (List {left, ...}) = left
+  | expStart (Tuple {left, ...}) = left
+  | expStart (Record {left, ...}) = left
+  | expStart (Parens {left, ...}) = left
+  | expStart (Infix {left, ...}) = expStart left
+  | expStart (Typed {exp, ...}) = expStart exp
+  | expStart (Layered {op_ = SOME p, ...}) = p
+  | expStart (Layered {op_ = NONE, id = (p, _), ...}) = p
+  | expStart (Or {args, ...}) = expStart (hd args)
+  | expStart (Select {hash, ...}) = hash
+  | expStart (Sequence {left, ...}) = left
+  | expStart (LetInEnd {let_, ...}) = let_
+  | expStart (App (e, _)) = expStart e
+  | expStart (AndAlso {left, ...}) = expStart left
+  | expStart (OrElse {left, ...}) = expStart left
+  | expStart (Handle {exp, ...}) = expStart exp
+  | expStart (Raise {raise_, ...}) = raise_
+  | expStart (IfThenElse {if_, ...}) = if_
+  | expStart (While {while_, ...}) = while_
+  | expStart (Case {case_, ...}) = case_
+  | expStart (Fn {fn_, ...}) = fn_
+  | expStart (HOLFullQuote {head = (p, _), ...}) = p
+  | expStart (HOLQuote {head = (p, _), ...}) = p
+  | expStart (HOLLinePragma {hash_, ...}) = hash_
+  | expStart (HOLLinePragmaWith {hash_, ...}) = hash_
+  | expStart (HOLFilePragma {hash_, ...}) = hash_
+  | expStart (HOLFilePragmaWith {hash_, ...}) = hash_
+  | expStart (EmptyExp p) = p
+  | expStart (BadExp {start, ...}) = start
+
 exception HasOrPat
 fun mapDelim f {args, delims} = {args = map f args, delims = delims}
 fun expandExp true (e as Wild _) = e
-  | expandExp false (Wild p) =
-    Raise {raise_ = p, exp = App (mkIdent (p, "Fail"), mkString (p, "_"))}
+  | expandExp false (Wild p) = mkFail (p, "_")
   | expandExp _ (e as IntegerConstant _) = e
   | expandExp _ (e as WordConstant _) = e
   | expandExp _ (StringConstant (p, s)) = mkString (p, decodeStr s 1 (size s - 1))
@@ -1469,7 +1564,7 @@ and expandFunBranches elems =
   handle HasOrPat => mapArms (expandExp true) #pat
     (fn ({bar, eq, exp, ...}, pat) => {bar = bar, pat = pat, eq = eq, exp = exp}) elems
 
-and expandQuote start stop toks = let
+and expandQuoteCore start toks = let
   fun go [] acc = rev acc
     | go (QuoteLiteral {line, col, value} :: rest) acc = let
       val s = mkLocPragma line col (Substring.string value)
@@ -1477,7 +1572,11 @@ and expandQuote start stop toks = let
     | go (QuoteAntiq {exp, ...} :: rest) acc =
       go rest (App (mkIdent (start, "ANTIQUOTE"), expandExp false exp) :: acc)
     | go (DefinitionLabel _ :: _) _ = raise Unreachable
-  in List {left = start, elems = {args = go toks [], delims = []}, right = NONE, stop = stop} end
+  in go toks [] end
+
+and expandQuote start stop toks = let
+  val args = expandQuoteCore start toks
+  in List {left = start, elems = {args = args, delims = []}, right = NONE, stop = stop} end
 
 and expandDecs [] acc = rev acc
   | expandDecs (dec :: rest) acc = expandDecs rest (expandDec dec acc)
@@ -1508,6 +1607,10 @@ and expandDec (DecSemi _) acc = acc
       val bind = Option.map (fn {eq, strexp} => {eq = eq, strexp = expandStrExp strexp}) bind
       in {id = id, constraint = constraint, bind = bind} end
     in DecStructure {structure_ = structure_, elems = mapDelim f elems} :: acc end
+  | expandDec (DecSignature {signature_, elems}) acc = let
+    fun f {eq, sigexp} = {eq = eq, sigexp = expandSigExp sigexp}
+    fun g {id, bind} = {id = id, bind = Option.map f bind}
+    in DecSignature {signature_ = signature_, elems = mapDelim g elems} :: acc end
   | expandDec (DecInclude {include_, sigexps}) acc =
     DecInclude {include_ = include_, sigexps = map expandSigExp sigexps} :: acc
   | expandDec (dec as Sharing _) acc = dec :: acc
@@ -1518,10 +1621,14 @@ and expandDec (DecSemi _) acc = acc
       in {id = id, lparen = lparen, funarg = funarg,
           rparen = rparen, constraint = constraint, bind = bind} end
     in DecFunctor {functor_ = functor_, elems = mapDelim f elems} :: acc end
+  | expandDec (DecExp e) acc = let
+    val p = expStart e
+    in DecSemi p :: valPat p (mkIdent (p, "it")) (expandExp false e) :: acc end
 
   | expandDec (dec as HOLTheory _) acc = dec :: acc
-  | expandDec (HOLDefinition
-      {definition_, id as (_, name), attrs, colon, quote, termination, end_, stop}) acc = let
+  | expandDec (HOLDefinition {
+      definition_, id as (_, name), fileline = (file, (_, line, _)),
+      attrs, colon = _, quote, termination, end_ = _, stop}) acc = let
     val indThm = ref NONE
     val _ = app (fn
         {key = (_, "induction"), bind = SOME {vals = [tgt], ...}} => indThm := SOME tgt
@@ -1535,9 +1642,124 @@ and expandDec (DecSemi _) acc = acc
       else if String.isSuffix "_DEF" name then
         String.extract (name, 0, SOME (size name - 4)) ^ "_IND"
       else name ^ "_ind")
-    val e = ()
-    val acc = valPat definition_ (mkIdent id) e :: acc
-    in acc end
+    val e =
+      if file = "" then mkIdent (definition_, "TotalDefn.qDefine")
+      else App (mkIdent (definition_, "TotalDefn.located_qDefine"),
+        mkLocString definition_ file line)
+    val e = App (e, mkNameAttrs mkKval id attrs)
+    val e = App (e, expandQuote definition_ stop quote)
+    val e = App (e, case termination of
+      NONE => mkIdent (definition_, "NONE")
+    | SOME {tac, ...} => App (mkIdent (definition_, "SOME"), tac))
+    val acc = DecSemi stop :: valPat definition_ (mkIdent id) e :: acc
+    in magicBind indThm acc end
+  | expandDec (HOLDatatype {datatype_, colon = _, quote, end_ = _, stop}) acc = let
+    val e = mkIdent (datatype_, "bossLib.Datatype")
+    val e = App (e, expandQuote datatype_ stop quote)
+    in DecSemi stop :: valWild datatype_ e :: acc end
+  | expandDec (HOLQuoteDecl {quote_, id, bind, colon = _, quote, end_ = _, stop}) acc = let
+    val (pat, e) = case bind of
+      NONE => (Wild (#1 id), mkIdent id)
+    | SOME {exp, ...} => (mkIdent id, exp)
+    val e = App (e, expandQuote quote_ stop quote)
+    in DecSemi stop :: valPat quote_ pat e :: acc end
+  | expandDec (HOLInductiveDecl {
+      co, inductive_, id = (id, stem), colon = _, quote, end_ = _, stop}) acc = let
+    val (entryPoint, indSuffix) =
+      if co then ("CoIndDefLib.xHol_coreln", "_coind") else ("IndDefLib.xHol_reln", "_ind")
+    fun mkQ s = App (mkIdent (inductive_, "QUOTE"), mkString (inductive_, s))
+    val frag = mkQ ") /\\\\ ("
+    fun mk l = frag :: expandQuoteCore inductive_ (rev l)
+    fun split olab l [] qs = rev ((mk l, olab) :: qs)
+      | split olab l (DefinitionLabel lab :: r) qs =
+        if case olab of
+            NONE => C List.all l
+            (fn QuoteLiteral {value,...} => Parser.isOnlyComments value | _ => false)
+          | _ => false
+        then split (SOME lab) [] r qs
+        else split (SOME lab) [] r ((mk l, olab) :: qs)
+      | split olab l (d :: r) qs = split olab (d :: l) r qs
+    val (quotes, conjs) = unzip (split NONE [] quote [])
+    val quote = mkList (inductive_, mkQ "(" :: tl (List.concat quotes) @ [mkQ ")"])
+    fun mkStem x = (id, stem ^ x)
+    val pat = mkTuple (inductive_, map (mkIdent o mkStem) ["_rules", indSuffix, "_cases"])
+    val e = App (App (mkIdent (inductive_, entryPoint), mkString (id, stem)), quote)
+    val acc = DecSemi stop :: valPat inductive_ pat e :: acc
+    val acc = magicBind (mkStem "_strongind") acc
+    fun mkExtra _ [] acc = acc
+      | mkExtra i (SOME {label = SOME (HOLLabel {id, tilde_}), attrs, ...} :: conjs) acc = let
+        val name = case tilde_ of NONE => id | SOME p => (p, stem ^ "_" ^ #2 id)
+        val proof = mkHandleHolErr (inductive_,
+          App (App (mkIdent (inductive_, "Drule.cj"), mkInt (inductive_, i)),
+            mkIdent (mkStem "_rules")))
+        val args = mkTuple (inductive_, [mkNameAttrs #2 id attrs, proof])
+        val e = App (mkIdent (inductive_, "boolLib.save_thm"), args)
+        val acc = DecSemi stop :: valPat inductive_ (mkIdent name) e :: acc
+        in mkExtra (i+1) conjs acc end
+      | mkExtra i (_ :: conjs) acc = mkExtra (i+1) conjs acc
+    in mkExtra 1 conjs acc end
+  | expandDec (HOLType {overload, type_, id, attrs, bind}) acc = let
+    val inferior = ref false
+    val local_ = ref false
+    val pp = ref false
+    val by_nametype = ref false
+    fun f true (_, "inferior") = inferior := true
+      | f _ (_, "local") = local_ := true
+      | f false (_, "pp") = pp := true
+      | f true (_, "by_nametype") = by_nametype := true
+      | f _ (_, sk) = raise Fail ("unexpected attribute '"^sk^"'")
+    val _ = Option.app (app (f overload) o #args o #attrs) attrs
+    val name = "Parse." ^
+      (if !local_ then "temp_" else "") ^
+      (if overload then
+        (if !inferior then "inferior_" else "") ^
+        "overload_on" ^
+        (if !by_nametype then "_by_nametype" else "")
+       else "type_abbrev" ^ (if !pp then "_pp" else ""))
+    val id = case id of QuotedId s => StringConstant s | UnquotedId s => mkString s
+    val rhs = case bind of
+      NONE => mkFail (type_, "Type/Overload missing body")
+    | SOME {exp, ...} => exp
+    val e = App (mkIdent (type_, name), mkTuple (type_, [id, rhs]))
+    in DecSemi type_ :: valWild type_ e :: acc end
+  | expandDec (HOLSimpleThm {
+      triv, theorem_, id, fileline = (file, (_, line, _)), attrs, bind}) acc = let
+    val e =
+      if file = "" then mkIdent (theorem_, "boolLib.save_thm")
+      else App (mkIdent (theorem_, "boolLib.save_thm_at"), mkLocString theorem_ file line)
+    val nameAttrs = mkNameAttrs mkKval id (withLocalAttrs theorem_ triv attrs)
+    val rhs = case bind of
+      NONE => mkFail (theorem_, "Theorem missing body")
+    | SOME {exp, ...} => exp
+    val e = App (e, mkTuple (theorem_, [nameAttrs, rhs]))
+    in DecSemi theorem_ :: valPat theorem_ (mkIdent id) e :: acc end
+  | expandDec (HOLTheoremDecl {
+      triv, theorem_, id, fileline = (file, (_, line, _)),
+      attrs, colon = _, quote, proof_, tac, qed_ = _, stop}) acc = let
+    val nameAttrs = mkNameAttrs mkKval id (withLocalAttrs theorem_ triv attrs)
+    val quote = expandQuote theorem_ stop quote
+    val tac = expandExp false tac
+    val tac = case proof_ of
+      SOME {proof_, attrs = SOME {attrs = {args = kv::kvs, ...}, ...}} => let
+      val e = mkIdent (proof_, "BasicProvers.with_simpset_updates")
+      fun mktm1 {key = (p, key), bind} = let
+        val args = case bind of NONE => [] | SOME {vals, ...} => map mkString vals
+        val key = case key of
+          "exclude_simps" => "simpLib.remove_simps"
+        | "exclude_frags" => "simpLib.remove_ssfrags"
+        | _ => key
+        in App (mkIdent (p, key), mkList (p, args)) end
+      fun mktm (kv, e) = Infix {left = e, id = (proof_, "o"), right = mktm1 kv}
+      in App (App (e, foldl mktm (mktm1 kv) kvs), tac) end
+    | _ => tac
+    val dummy = mkIdent (theorem_, "HOL__GOAL__foo")
+    val tac = Fn {fn_ = theorem_, elems = [
+      {bar = NONE, pat = dummy, arrow = NONE, exp = App (tac, dummy)}]}
+    val e =
+      if file = "" then mkIdent (theorem_, "Q.store_thm")
+      else App (mkIdent (theorem_, "Q.store_thm_at"), mkLocString theorem_ file line)
+    val e = App (e, mkTuple (theorem_, [nameAttrs, quote, tac]))
+    in DecSemi theorem_ :: valPat theorem_ (mkIdent id) e :: acc end
 
 and expandFunArg (ArgIdent {strid, ty}) = let
     val ty = Option.map (fn {colon, sigexp} => {colon = colon, sigexp = expandSigExp sigexp}) ty

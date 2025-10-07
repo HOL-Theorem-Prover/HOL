@@ -3,6 +3,8 @@ structure Ast = struct
   (* (start, content) *)
   type ident = int * string
 
+  type fileline = string * (int * int * int)
+
   exception Unreachable
 
   type 'exp delimited = {args: 'exp list, delims: int option list}
@@ -188,7 +190,7 @@ structure Ast = struct
   | HOLTheory of {theory_: int, id: ident, attrs: kvals attrs, elems: header list}
     (** Theory foo[attrs] [elems ...] *)
   | HOLDefinition of {
-      definition_: int, id: ident, attrs: kvals attrs, colon: int option,
+      definition_: int, id: ident, fileline: fileline, attrs: kvals attrs, colon: int option,
       quote: qdecl list, termination: {termination_: int, tac: exp} option,
       end_: int option, stop: int}
     (** Definition foo[attrs]: ... [Termination tac] End *)
@@ -207,10 +209,10 @@ structure Ast = struct
       overload: bool, type_: int, id: maybe_quoted, attrs: ident attrs,
       bind: {eq: int, exp: exp} option} (** Type id[attrs] = exp *)
   | HOLSimpleThm of {
-      triv: bool, theorem_: int, id: ident, attrs: kvals attrs,
+      triv: bool, theorem_: int, id: ident, fileline: fileline, attrs: kvals attrs,
       bind: {eq: int, exp: exp} option} (** Theorem id[attrs] = exp *)
   | HOLTheoremDecl of {
-      triv: bool, theorem_: int, id: ident, attrs: kvals attrs, colon: int,
+      triv: bool, theorem_: int, id: ident, fileline: fileline, attrs: kvals attrs, colon: int,
       quote: qdecl list, proof_: {proof_: int, attrs: kvals attrs} option,
       tac: exp, qed_: int option, stop: int}
     (** Theorem foo[attrs]: ... [Proof[attrs] tac] QED *)
@@ -240,8 +242,7 @@ structure Ast = struct
   and qdecl =
     QuoteLiteral of {line: int, col: int, value: substring}
   | QuoteAntiq of {caret_: int, exp: exp}
-  | DefinitionLabel of {left: int, label: defn_label_id option,
-      args: {left: int, ids: (int * string) delimited, right: int option, stop: int} option,
+  | DefinitionLabel of {left: int, label: defn_label_id option, attrs: ident attrs,
       colon: int option, right: int option, stop: int}
     (** [id[x,y,z]:] *)
 
