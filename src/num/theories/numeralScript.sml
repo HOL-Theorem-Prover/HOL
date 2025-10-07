@@ -411,7 +411,7 @@ val _ = OpenTheory_add"iBIT_cases"
 (*   require a conditional rewrite, and this is not very appealing.)         *)
 (*---------------------------------------------------------------------------*)
 
-val iDUB = new_definition("iDUB", Term`iDUB x = x + x`);
+val iDUB = new_definition("iDUB", “iDUB x = x + x”);
 val _ = OpenTheory_add "iDUB"
 
 (*---------------------------------------------------------------------------*)
@@ -610,7 +610,7 @@ val _ = print "Developing numeral treatment of exponentiation\n";
 (* doing twice as much work as necessary.)                                   *)
 (*---------------------------------------------------------------------------*)
 
-val iSQR = new_definition("iSQR", Term`iSQR x = x * x`);
+val iSQR = new_definition("iSQR", “iSQR x = x * x”);
 val _ = OpenTheory_add"iSQR"
 
 val numeral_exp = store_thm(
@@ -990,4 +990,3 @@ val _ = app
           (fn s => remove_ovl_mapping s {Name = s, Thy = "numeral"})
           ["iZ", "iiSUC", "iDUB", "iSUB", "iSQR", "texp_help",
            "onecount", "exactlog"]
-
