@@ -113,7 +113,8 @@ val poly_cmul = new_recursive_definition list_Axiom "poly_cmul_def"
        ($## c (h::t) = (c:real * h) :: ($## c t))`);
 val _ = set_fixity "##" (Infixl 600);
 
-val poly_neg = new_definition ("poly_neg_def", Term`poly_neg = $## (~(&1))`);
+Definition poly_neg_def[nocompute]: poly_neg = $## (~(&1))
+End
 
 val _ = overload_on ("~", Term`poly_neg`);
 
@@ -140,8 +141,9 @@ val poly_diff_aux = new_recursive_definition list_Axiom
    (Term`(poly_diff_aux n [] = []) /\
          (poly_diff_aux n (h::t) = (&n * h) :: poly_diff_aux (SUC n) t)`);
 
-val poly_diff = new_definition ("poly_diff_def",
-  Term`diff l = if l = [] then [] else poly_diff_aux 1 (TL l)`);
+Definition poly_diff_def[nocompute]:
+  diff l = if l = [] then [] else poly_diff_aux 1 (TL l)
+End
 
 
 (* ------------------------------------------------------------------------- *)

@@ -39,8 +39,9 @@ val NUMPAIR_DEST = CONJ (SPEC_ALL nfst_npair) (SPEC_ALL nsnd_npair) |> GEN_ALL
 (* Also, an injective map bool->num->num (even easier!)                      *)
 (* ------------------------------------------------------------------------- *)
 
-val NUMSUM = new_definition("NUMSUM",
-  Term`NUMSUM b x = if b then SUC(2 * x) else 2 * x`);
+Definition NUMSUM[nocompute]:
+  NUMSUM b x = if b then SUC(2 * x) else 2 * x
+End
 
 Theorem NUMSUM_INJ:
   !b1 x1 b2 x2. (NUMSUM b1 x1 = NUMSUM b2 x2) <=> (b1 = b2) /\ (x1 = x2)
@@ -62,9 +63,9 @@ val NUMSUM_DEST = Rsyntax.new_specification{
 (* Injection num->Z, where Z == num->A->bool.                                *)
 (* ------------------------------------------------------------------------- *)
 
-val INJN = new_definition(
-  "INJN",
-  Term`INJN (m:num) = \(n:num) (a:'a). n = m`);
+Definition INJN[nocompute]:
+  INJN (m:num) = \(n:num) (a:'a). n = m
+End
 
 Theorem INJN_INJ:
     !n1 n2. (INJN n1 :num->'a->bool = INJN n2) = (n1 = n2)
@@ -78,9 +79,9 @@ QED
 (* Injection A->Z, where Z == num->A->bool.                                  *)
 (* ------------------------------------------------------------------------- *)
 
-val INJA = new_definition(
-  "INJA",
-  Term`INJA (a:'a) = \(n:num) b. b = a`);
+Definition INJA[nocompute]:
+  INJA (a:'a) = \(n:num) b. b = a
+End
 
 Theorem INJA_INJ:
     !a1 a2. (INJA a1 = INJA a2) = (a1:'a = a2)
@@ -96,9 +97,9 @@ QED
 (* Injection (num->Z)->Z, where Z == num->A->bool.                           *)
 (* ------------------------------------------------------------------------- *)
 
-val INJF = new_definition(
-  "INJF",
-  Term`INJF (f:num->(num->'a->bool)) = \n. f (nfst n) (nsnd n)`);
+Definition INJF[nocompute]:
+  INJF (f:num->(num->'a->bool)) = \n. f (nfst n) (nsnd n)
+End
 
 Theorem INJF_INJ:
     !f1 f2. (INJF f1 :num->'a->bool = INJF f2) = (f1 = f2)
@@ -115,10 +116,10 @@ QED
 (* Injection Z->Z->Z, where Z == num->A->bool.                               *)
 (* ------------------------------------------------------------------------- *)
 
-val INJP = new_definition(
-  "INJP",
-  Term`INJP f1 f2:num->'a->bool =
-        \n a. if NUMLEFT n then f1 (NUMRIGHT n) a else f2 (NUMRIGHT n) a`);
+Definition INJP[nocompute]:
+  INJP f1 f2:num->'a->bool =
+        \n a. if NUMLEFT n then f1 (NUMRIGHT n) a else f2 (NUMRIGHT n) a
+End
 
 Theorem INJP_INJ:
   !(f1:num->'a->bool) f1' f2 f2'.
@@ -142,9 +143,9 @@ Definition ZCONSTR[nocompute]:
        INJP (INJN (SUC c)) (INJP (INJA i) (INJF r))
 End
 
-val ZBOT = new_definition(
-  "ZBOT",
-  Term`ZBOT = INJP (INJN 0) (@z:num->'a->bool. T)`);
+Definition ZBOT[nocompute]:
+  ZBOT = INJP (INJN 0) (@z:num->'a->bool. T)
+End
 
 val ZCONSTR_ZBOT = store_thm(
   "ZCONSTR_ZBOT",
@@ -183,13 +184,13 @@ end;
 (* Define lifted constructors.                                               *)
 (* ------------------------------------------------------------------------- *)
 
-val BOTTOM = new_definition(
-  "BOTTOM",
-  Term`BOTTOM = mk_rec (ZBOT:num->'a->bool)`);
+Definition BOTTOM[nocompute]:
+  BOTTOM = mk_rec (ZBOT:num->'a->bool)
+End
 
-val CONSTR = new_definition(
-  "CONSTR",
-  Term`CONSTR c i r : 'a recspace = mk_rec (ZCONSTR c i (\n. dest_rec(r n)))`);
+Definition CONSTR[nocompute]:
+  CONSTR c i r : 'a recspace = mk_rec (ZCONSTR c i (\n. dest_rec(r n)))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Some lemmas.                                                              *)
@@ -353,9 +354,9 @@ QED
 (* Convenient definitions for type isomorphism.                              *)
 (* ------------------------------------------------------------------------- *)
 
-val ISO = new_definition(
-  "ISO",
-  Term`ISO (f:'a->'b) (g:'b->'a) <=> (!x. f(g x) = x) /\ (!y. g(f y) = y)`);
+Definition ISO[nocompute]:
+  ISO (f:'a->'b) (g:'b->'a) <=> (!x. f(g x) = x) /\ (!y. g(f y) = y)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Composition theorems.                                                     *)
