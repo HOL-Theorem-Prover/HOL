@@ -32,10 +32,10 @@ val EMPTY = prove(
 
 (* JEH: Defns moved to boolTheory: the following versions remove lambdas *)
 
-val RES_FORALL = save_thm("RES_FORALL", RES_FORALL_THM);
-val RES_EXISTS = save_thm("RES_EXISTS", RES_EXISTS_THM);
-val RES_EXISTS_UNIQUE = save_thm("RES_EXISTS_UNIQUE", RES_EXISTS_UNIQUE_THM);
-val RES_SELECT = save_thm("RES_SELECT", RES_SELECT_THM);
+Theorem RES_FORALL = RES_FORALL_THM;
+Theorem RES_EXISTS = RES_EXISTS_THM;
+Theorem RES_EXISTS_UNIQUE = RES_EXISTS_UNIQUE_THM;
+Theorem RES_SELECT = RES_SELECT_THM;
 Theorem RES_ABSTRACT = cj 1 RES_ABSTRACT_DEF
 
 (* ===================================================================== *)
@@ -399,8 +399,7 @@ QED
 (* RES_ABSTRACT                                                          *)
 (* --------------------------------------------------------------------- *)
 
-val RES_ABSTRACT_EQUAL =
-  save_thm ("RES_ABSTRACT_EQUAL", CONJUNCT2 RES_ABSTRACT_DEF);
+Theorem RES_ABSTRACT_EQUAL = CONJUNCT2 RES_ABSTRACT_DEF;
 
 Theorem RES_ABSTRACT_IDEMPOT:
      !p m. RES_ABSTRACT p (RES_ABSTRACT p m) = RES_ABSTRACT p m

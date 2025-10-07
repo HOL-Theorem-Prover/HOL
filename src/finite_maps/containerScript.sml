@@ -20,30 +20,30 @@ Libs
      decided to allow bag to move back in the build order.  Alternatively,
      the bag-related theorems could just go into bagTheory... *)
 
-val SET_TO_LIST_THM = save_thm("SET_TO_LIST_THM", listTheory.SET_TO_LIST_THM)
-val SET_TO_LIST_IND = save_thm("SET_TO_LIST_IND", listTheory.SET_TO_LIST_IND);
+Theorem SET_TO_LIST_THM = listTheory.SET_TO_LIST_THM
+Theorem SET_TO_LIST_IND = listTheory.SET_TO_LIST_IND;
 
 (*---------------------------------------------------------------------------
       Map a list into a set.
  ---------------------------------------------------------------------------*)
 
-val LIST_TO_SET_THM = save_thm("LIST_TO_SET_THM", listTheory.LIST_TO_SET_THM)
+Theorem LIST_TO_SET_THM = listTheory.LIST_TO_SET_THM
 
 (*---------------------------------------------------------------------------
             Some consequences
  ---------------------------------------------------------------------------*)
 
-val SET_TO_LIST_INV = save_thm("SET_TO_LIST_INV", listTheory.SET_TO_LIST_INV)
-val SET_TO_LIST_CARD = save_thm("SET_TO_LIST_CARD", listTheory.SET_TO_LIST_CARD)
-val SET_TO_LIST_IN_MEM = save_thm("SET_TO_LIST_IN_MEM",
-                                  listTheory.SET_TO_LIST_IN_MEM)
-val MEM_SET_TO_LIST = save_thm("MEM_SET_TO_LIST", listTheory.MEM_SET_TO_LIST)
-val SET_TO_LIST_SING = save_thm("SET_TO_LIST_SING", listTheory.SET_TO_LIST_SING)
-val UNION_APPEND = save_thm("UNION_APPEND", listTheory.UNION_APPEND);
-val LIST_TO_SET_APPEND = save_thm("LIST_TO_SET_APPEND",
-                                  listTheory.LIST_TO_SET_APPEND)
-val FINITE_LIST_TO_SET = save_thm("FINITE_LIST_TO_SET",
-                                  listTheory.FINITE_LIST_TO_SET)
+Theorem SET_TO_LIST_INV = listTheory.SET_TO_LIST_INV
+Theorem SET_TO_LIST_CARD = listTheory.SET_TO_LIST_CARD
+Theorem SET_TO_LIST_IN_MEM =
+                                  listTheory.SET_TO_LIST_IN_MEM
+Theorem MEM_SET_TO_LIST = listTheory.MEM_SET_TO_LIST
+Theorem SET_TO_LIST_SING = listTheory.SET_TO_LIST_SING
+Theorem UNION_APPEND = listTheory.UNION_APPEND;
+Theorem LIST_TO_SET_APPEND =
+                                  listTheory.LIST_TO_SET_APPEND
+Theorem FINITE_LIST_TO_SET =
+                                  listTheory.FINITE_LIST_TO_SET
 
 (*---------------------------------------------------------------------------
     Lists and bags. Note that we also have SET_OF_BAG and BAG_OF_SET
@@ -78,10 +78,10 @@ Defn.tprove
   WF_REL_TAC `measure BAG_CARD`
    THEN PROVE_TAC [PSUB_BAG_CARD, PSUB_BAG_REST]);
 
-val BAG_TO_LIST_THM = save_thm("BAG_TO_LIST_THM",
- DISCH_ALL (ASM_REWRITE_RULE [ASSUME ``FINITE_BAG bag``] BAG_TO_LIST_EQN));
+Theorem BAG_TO_LIST_THM =
+ DISCH_ALL (ASM_REWRITE_RULE [ASSUME ``FINITE_BAG bag``] BAG_TO_LIST_EQN);
 
-val BAG_TO_LIST_IND = save_thm("BAG_TO_LIST_IND",BAG_TO_LIST_IND);
+Theorem BAG_TO_LIST_IND = BAG_TO_LIST_IND;
 
 (*---------------------------------------------------------------------------
        Some consequences.

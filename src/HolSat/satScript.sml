@@ -14,25 +14,25 @@ fun TT_TAUT_PROVE tm =
         val fv = free_vars tm
     in GENL qv (prove(tm,(MAP_EVERY BOOL_CASES_TAC fv) THEN REWRITE_TAC [])) end
 
-val AND_IMP = save_thm("AND_IMP",
-  TT_TAUT_PROVE ``!A B C. A /\ B ==> C <=> A ==> B ==> C``)
-val NOT_NOT = save_thm("NOT_NOT",
-  GEN_ALL (hd (CONJUNCTS (SPEC_ALL NOT_CLAUSES))))
-val AND_INV = save_thm("AND_INV",TT_TAUT_PROVE ``!A. ~A /\ A <=> F``)
-val AND_INV_IMP = save_thm("AND_INV_IMP",TT_TAUT_PROVE ``!A. A ==> ~A ==> F``)
-val OR_DUAL = save_thm("OR_DUAL",
-  TT_TAUT_PROVE ``(~(A \/ B) ==> F) = (~A ==> ~B ==> F)``)
-val OR_DUAL2 = save_thm("OR_DUAL2",
-  TT_TAUT_PROVE ``(~(A \/ B) ==> F) = ((A==>F) ==> ~B ==> F)``)
-val OR_DUAL3 = save_thm("OR_DUAL3",
-  TT_TAUT_PROVE ``(~(~A \/ B) ==> F) = (A ==> ~B ==> F)``)
-val AND_INV2 = save_thm("AND_INV2",
-  TT_TAUT_PROVE ``(~A ==> F) ==> (A==>F) ==> F``)
-val NOT_ELIM2 = save_thm("NOT_ELIM2",TT_TAUT_PROVE ``(~A ==> F) = A``)
+Theorem AND_IMP =
+  TT_TAUT_PROVE ``!A B C. A /\ B ==> C <=> A ==> B ==> C``
+Theorem NOT_NOT =
+  GEN_ALL (hd (CONJUNCTS (SPEC_ALL NOT_CLAUSES)))
+Theorem AND_INV = TT_TAUT_PROVE ``!A. ~A /\ A <=> F``
+Theorem AND_INV_IMP = TT_TAUT_PROVE ``!A. A ==> ~A ==> F``
+Theorem OR_DUAL =
+  TT_TAUT_PROVE ``(~(A \/ B) ==> F) = (~A ==> ~B ==> F)``
+Theorem OR_DUAL2 =
+  TT_TAUT_PROVE ``(~(A \/ B) ==> F) = ((A==>F) ==> ~B ==> F)``
+Theorem OR_DUAL3 =
+  TT_TAUT_PROVE ``(~(~A \/ B) ==> F) = (A ==> ~B ==> F)``
+Theorem AND_INV2 =
+  TT_TAUT_PROVE ``(~A ==> F) ==> (A==>F) ==> F``
+Theorem NOT_ELIM2 = TT_TAUT_PROVE ``(~A ==> F) = A``
 
 (* for satTools.sml *)
-val EQT_Imp1 = save_thm("EQT_Imp1",TT_TAUT_PROVE ``!b. b ==> (b=T)``)
-val EQF_Imp1 = save_thm("EQF_Imp1",TT_TAUT_PROVE ``!b. (~b) ==> (b=F)``)
+Theorem EQT_Imp1 = TT_TAUT_PROVE ``!b. b ==> (b=T)``
+Theorem EQF_Imp1 = TT_TAUT_PROVE ``!b. (~b) ==> (b=F)``
 
 (* for def_cnf.sml *)
 Theorem dc_eq =
@@ -62,8 +62,10 @@ val [pth_ni1, pth_ni2, pth_no1, pth_no2, pth_an1, pth_an2, pth_nn] =
             /\ (~(p \/ q)  ==> ~p) /\ (~(p \/ q)  ==> ~q)
             /\ ((p /\ q)   ==> p)  /\ ((p /\ q)   ==> q)
             /\ ((~ ~p)     ==> p)``
-val _ = List.map save_thm (
-  ListPair.zip(["pth_ni1", "pth_ni2", "pth_no1", "pth_no2", "pth_an1",
-                "pth_an2", "pth_nn"],
-               [pth_ni1, pth_ni2, pth_no1, pth_no2, pth_an1, pth_an2, pth_nn]));
-
+Theorem pth_ni1 = pth_ni1
+Theorem pth_ni2 = pth_ni2
+Theorem pth_no1 = pth_no1
+Theorem pth_no2 = pth_no2
+Theorem pth_an1 = pth_an1
+Theorem pth_an2 = pth_an2
+Theorem pth_nn = pth_nn

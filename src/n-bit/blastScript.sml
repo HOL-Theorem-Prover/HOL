@@ -609,8 +609,8 @@ val word_asr_bv_expand = Q.prove(
     \\ METIS_TAC [arithmeticTheory.LESS_EQ_REFL, FOLDL_LOG2_INTRO]
   ])
 
-val word_asr_bv_expand = Theory.save_thm("word_asr_bv_expand",
-  SIMP_RULE std_ss [fcp_or, word_msb_def] word_asr_bv_expand)
+Theorem word_asr_bv_expand =
+  SIMP_RULE std_ss [fcp_or, word_msb_def] word_asr_bv_expand
 
 Theorem word_ror_bv_expand:
    !w m.

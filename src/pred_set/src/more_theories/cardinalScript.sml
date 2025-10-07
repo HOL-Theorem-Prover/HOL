@@ -159,11 +159,10 @@ QED
 
    more useful then CARDEQ_INSERT as a (conditional) "rewrite", when
    working with the =~ congruence (rather than equality) *)
-val CARDEQ_INSERT_RWT = save_thm(
-  "CARDEQ_INSERT_RWT",
+Theorem CARDEQ_INSERT_RWT =
   ``INFINITE (s:'a set)`` |> ASSUME |> DISJ2 ``(x:'a) IN s``
                           |> EQ_MP (SYM cardeq_INSERT) |> DISCH_ALL
-                          |> Q.GEN `s`)
+                          |> Q.GEN `s`
 
 Theorem EMPTY_CARDLEQ:
     {} <<= t
@@ -2137,14 +2136,14 @@ Definition cardgeq_def:
 End
 
 val _ = overload_on (">=_c", ``cardgeq``);
-val ge_c = save_thm ("ge_c",   cardgeq_def);
+Theorem ge_c = cardgeq_def;
 
 Definition cardgt_def:
     cardgt s t = cardlt t s
 End
 
 val _ = overload_on (">_c",  ``cardgt``);
-val gt_c = save_thm ("gt_c",   cardgt_def);
+Theorem gt_c = cardgt_def;
 
 Theorem LE_C:
    !s t. s <=_c t <=> ?g. !x. x IN s ==> ?y. y IN t /\ (g y = x)
@@ -2321,7 +2320,7 @@ QED
 (* Totality (cardinal comparability).                                        *)
 (* ------------------------------------------------------------------------- *)
 
-val CARD_LE_TOTAL = save_thm ("CARD_LE_TOTAL", cardleq_dichotomy);
+Theorem CARD_LE_TOTAL = cardleq_dichotomy;
 
 (* ------------------------------------------------------------------------- *)
 (* Other variants like "trichotomy of cardinals" now follow easily.          *)
@@ -2759,8 +2758,7 @@ QED
 (* The key to arithmetic on infinite cardinals: k^2 = k.                     *)
 (* ------------------------------------------------------------------------- *)
 
-val CARD_SQUARE_INFINITE = save_thm
-  ("CARD_SQUARE_INFINITE", SET_SQUARED_CARDEQ_SET);
+Theorem CARD_SQUARE_INFINITE = SET_SQUARED_CARDEQ_SET;
 
 (* ------------------------------------------------------------------------- *)
 (* Preservation of finiteness.                                               *)

@@ -393,8 +393,8 @@ Proof
 QED
 
 (* Rename a theorem *)
-val listRangeINC_MEM = save_thm("listRangeINC_MEM",
-    MEM_listRangeINC |> GEN ``x:num`` |> GEN ``n:num`` |> GEN ``m:num``);
+Theorem listRangeINC_MEM =
+    MEM_listRangeINC |> GEN ``x:num`` |> GEN ``n:num`` |> GEN ``m:num``;
 (*
 val listRangeINC_MEM = |- !m n x. MEM x [m .. n] <=> m <= x /\ x <= n: thm
 *)

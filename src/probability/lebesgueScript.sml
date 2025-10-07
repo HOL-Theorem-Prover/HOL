@@ -9058,9 +9058,8 @@ QED
           measure_space m /\ s IN measurable_sets m /\ t IN measurable_sets m ==>
           measure (density m (indicator_fn s)) t = measure m (s INTER t)
  *)
-val measure_density_indicator = save_thm
-  ("measure_density_indicator",
-    REWRITE_RULE [GSYM density_def, GSYM density_measure_def] measure_restricted);
+Theorem measure_density_indicator =
+    REWRITE_RULE [GSYM density_def, GSYM density_measure_def] measure_restricted;
 
 (* M is finite, while N can be infinite *)
 Theorem Radon_Nikodym_finite_arbitrary :

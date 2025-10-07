@@ -171,9 +171,9 @@ val _ = overload_on ("|++", Term`$PTREE_OF_STRINGSET`);
 
 (* ------------------------------------------------------------------------- *)
 
-val ADD_INSERT_STRING = save_thm("ADD_INSERT_STRING",
+Theorem ADD_INSERT_STRING =
   (GEN_ALL o SIMP_CONV (srw_ss()) [GSYM INSERT_PTREEs_def, oneTheory.one])
-  ``ADDs t (w,v:unit)``);
+  ``ADDs t (w,v:unit)``;
 
 (*
 val PTREE_OF_STRINGSET_EMPTY = store_thm("PTREE_OF_STRINGSET_EMPTY",
@@ -311,8 +311,8 @@ Proof
     ]
 QED
 
-val string_to_num_num_to_string = save_thm("string_to_num_num_to_string",
-  REWRITE_RULE [IMAGE_string_to_num] string_to_num_num_to_string);
+Theorem string_to_num_num_to_string =
+  REWRITE_RULE [IMAGE_string_to_num] string_to_num_num_to_string;
 
 Theorem num_to_string_string_to_num:
    !s. num_to_string (string_to_num s) = s
@@ -322,9 +322,9 @@ QED
 
 (* ------------------------------------------------------------------------- *)
 
-val ADD_INSERT_WORD = save_thm("ADD_INSERT_WORD",
+Theorem ADD_INSERT_WORD =
   (GEN_ALL o SIMP_CONV (srw_ss()) [GSYM INSERT_PTREEw_def, oneTheory.one])
-  ``ADDw t (w,v:unit)``);
+  ``ADDw t (w,v:unit)``;
 
 Theorem THE_PTREE_SOME_PTREE:
    !t. THE_PTREE (SOME_PTREE t) = t

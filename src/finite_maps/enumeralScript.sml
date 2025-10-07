@@ -387,7 +387,7 @@ QED
 (* Following look-up function (disguised as two theorems) to make bt's
    imitate IN on finite sets, may or may not be the reasonable way to go. *)
 
-val NOT_IN_nt = save_thm ("NOT_IN_nt", CONJUNCT1 IN_bt_to_set);
+Theorem NOT_IN_nt = CONJUNCT1 IN_bt_to_set;
 
 (* NOT_IN_nt = |- !cmp y. y IN ENUMERAL cmp nt <=> F *)
 
@@ -900,8 +900,8 @@ THEN1 ASM_REWRITE_TAC [OL_bt_to_ol] THEN
 IMP_RES_THEN (SUBST1_TAC o SYM) list_to_bl_set THEN
 REWRITE_TAC [GSYM bl_to_bt_set, list_to_bt, ol_set]);
 
-val bt_to_ol_ID_IMP = save_thm ("bt_to_ol_ID_IMP", REWRITE_RULE [SPECIFICATION]
-                     (CONV_RULE (ONCE_DEPTH_CONV RES_FORALL_CONV) bt_to_ol_ID));
+Theorem bt_to_ol_ID_IMP = REWRITE_RULE [SPECIFICATION]
+                     (CONV_RULE (ONCE_DEPTH_CONV RES_FORALL_CONV) bt_to_ol_ID);
 
 (* bt_to_ol_ID_IMP: |- !cmp l. OL cmp l ==> (bt_to_ol cmp (list_to_bt l) = l) *)
 
@@ -918,8 +918,8 @@ val OL_UNION = maybe_thm ("OL_UNION",
 CONV_TAC (DEPTH_CONV RES_FORALL_CONV) THEN
 SRW_TAC [] [SPECIFICATION, smerge_set, smerge_OL]);
 
-val OL_UNION_IMP = save_thm ("OL_UNION_IMP", REWRITE_RULE [SPECIFICATION]
-                             (CONV_RULE (DEPTH_CONV RES_FORALL_CONV) OL_UNION));
+Theorem OL_UNION_IMP = REWRITE_RULE [SPECIFICATION]
+                             (CONV_RULE (DEPTH_CONV RES_FORALL_CONV) OL_UNION);
 
 (* OL_UNION_IMP = |- !cmp l. OL cmp l ==> !m. OL cmp m ==>
        OL cmp (smerge cmp l m) /\ (set (smerge cmp l m) = set l UNION set m) *)
@@ -1011,8 +1011,8 @@ val OL_INTER = maybe_thm ("OL_INTER",
 CONV_TAC (DEPTH_CONV RES_FORALL_CONV) THEN
 SRW_TAC [] [SPECIFICATION, sinter_set, sinter_OL]);
 
-val OL_INTER_IMP = save_thm ("OL_INTER_IMP", REWRITE_RULE [SPECIFICATION]
-                             (CONV_RULE (DEPTH_CONV RES_FORALL_CONV) OL_INTER));
+Theorem OL_INTER_IMP = REWRITE_RULE [SPECIFICATION]
+                             (CONV_RULE (DEPTH_CONV RES_FORALL_CONV) OL_INTER);
 
 (* OL_INTER_IMP = |- !cmp l. OL cmp l ==> !m. OL cmp m ==>
        OL cmp (sinter cmp l m) /\ (set (sinter cmp l m) = set l INTER set m) *)
@@ -1108,8 +1108,8 @@ val OL_DIFF = maybe_thm ("OL_DIFF",
 CONV_TAC (DEPTH_CONV RES_FORALL_CONV) THEN
 SRW_TAC [] [SPECIFICATION, sdiff_set, sdiff_OL]);
 
-val OL_DIFF_IMP = save_thm ("OL_DIFF_IMP", REWRITE_RULE [SPECIFICATION]
-                             (CONV_RULE (DEPTH_CONV RES_FORALL_CONV) OL_DIFF));
+Theorem OL_DIFF_IMP = REWRITE_RULE [SPECIFICATION]
+                             (CONV_RULE (DEPTH_CONV RES_FORALL_CONV) OL_DIFF);
 
 (* OL_DIFF_IMP = |- !cmp l. OL cmp l ==> !m. OL cmp m ==>
        OL cmp (sdiff cmp l m) /\ (set (sdiff cmp l m) = set l DIFF set m) *)

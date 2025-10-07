@@ -199,17 +199,17 @@ Proof
     \\ FIRST_X_ASSUM (MP_TAC o Q.SPECL [`p_2`,`t`,`p_2'`,`f`,`n'`]) \\ fs [])
 QED
 
-val int_bit_and = save_thm("int_bit_and",
+Theorem int_bit_and =
   ``int_bit n (int_and i j)``
-  |> SIMP_CONV std_ss [int_and_def,int_bit_bitwise] |> Q.GENL [`j`,`i`,`n`]);
+  |> SIMP_CONV std_ss [int_and_def,int_bit_bitwise] |> Q.GENL [`j`,`i`,`n`];
 
-val int_bit_or = save_thm("int_bit_or",
+Theorem int_bit_or =
   ``int_bit n (int_or i j)``
-  |> SIMP_CONV std_ss [int_or_def,int_bit_bitwise] |> Q.GENL [`j`,`i`,`n`]);
+  |> SIMP_CONV std_ss [int_or_def,int_bit_bitwise] |> Q.GENL [`j`,`i`,`n`];
 
-val int_bit_xor = save_thm("int_bit_xor",
+Theorem int_bit_xor =
   ``int_bit n (int_xor i j)``
-  |> SIMP_CONV std_ss [int_xor_def,int_bit_bitwise] |> Q.GENL [`j`,`i`,`n`]);
+  |> SIMP_CONV std_ss [int_xor_def,int_bit_bitwise] |> Q.GENL [`j`,`i`,`n`];
 
 val LAST_bits_of_num = prove(
   ``!n. LENGTH (bits_of_num n) <> 0 ==>

@@ -102,8 +102,8 @@ Proof
 QED
 
 (* |- !n p. 2 ** p <= n /\ n < 2 ** SUC p ==> (LOG2 n = p) *)
-val LOG2_UNIQUE = save_thm("LOG2_UNIQUE",
-   (REWRITE_RULE [GSYM LOG2_def] o Q.SPEC `2`) LOG_UNIQUE)
+Theorem LOG2_UNIQUE =
+   (REWRITE_RULE [GSYM LOG2_def] o Q.SPEC `2`) LOG_UNIQUE
 
 Theorem LOG2_TWOEXP:
     !n. LOG2 (2 ** n) = n
@@ -114,25 +114,25 @@ Proof
 QED
 
 (* |- !x n. DIVMOD_2EXP x n = (DIV_2EXP x n,MOD_2EXP x n) *)
-val DIVMOD_2EXP = save_thm("DIVMOD_2EXP",
-   REWRITE_RULE [GSYM DIV_2EXP_def, GSYM MOD_2EXP_def] DIVMOD_2EXP_def)
+Theorem DIVMOD_2EXP =
+   REWRITE_RULE [GSYM DIV_2EXP_def, GSYM MOD_2EXP_def] DIVMOD_2EXP_def
 
 (* |- !a. SUC a - a = 1 *)
-val SUC_SUB = save_thm("SUC_SUB", arithmeticTheory.SUC_SUB);
+Theorem SUC_SUB = arithmeticTheory.SUC_SUB;
 
 (* |- !n r. r < n ==> ((n + r) DIV n = 1) *)
-val DIV_MULT_1 = save_thm("DIV_MULT_1",
+Theorem DIV_MULT_1 =
    (GEN_ALL o SIMP_RULE arith_ss [] o Q.INST [`q` |-> `1`] o SPEC_ALL
-            o CONV_RULE (ONCE_DEPTH_CONV RIGHT_IMP_FORALL_CONV)) DIV_MULT)
+            o CONV_RULE (ONCE_DEPTH_CONV RIGHT_IMP_FORALL_CONV)) DIV_MULT
 
 (* |- !m. ~(m = 0) ==> ?p. m = SUC p *)
-val NOT_ZERO_ADD1 = save_thm("NOT_ZERO_ADD1",
+Theorem NOT_ZERO_ADD1 =
    (GEN_ALL o REWRITE_RULE [GSYM NOT_ZERO_LT_ZERO, GSYM ADD1, ADD] o
-    Q.SPECL [`m`, `0`]) LESS_ADD_1)
+    Q.SPECL [`m`, `0`]) LESS_ADD_1
 
 (* |- !n. 0 < 2 ** n *)
-val ZERO_LT_TWOEXP = save_thm("ZERO_LT_TWOEXP",
-   GEN_ALL (numLib.REDUCE_RULE (Q.SPECL [`n`, `1`] ZERO_LESS_EXP)))
+Theorem ZERO_LT_TWOEXP =
+   GEN_ALL (numLib.REDUCE_RULE (Q.SPECL [`n`, `1`] ZERO_LESS_EXP))
 val _ = export_rewrites ["ZERO_LT_TWOEXP"]
 
 Theorem ONE_LE_TWOEXP[simp]:
@@ -147,11 +147,11 @@ local
    val th =
       (SPEC_ALL o REWRITE_RULE [ZERO_LT_TWOEXP] o Q.SPEC `2 ** n`) DIVISION
 in
-   (* |- !n k. k MOD 2 ** n < 2 ** n *)
-   val MOD_2EXP_LT = save_thm("MOD_2EXP_LT", (GEN_ALL o CONJUNCT2) th)
+(* |- !n k. k MOD 2 ** n < 2 ** n *)
+Theorem MOD_2EXP_LT = (GEN_ALL o CONJUNCT2) th
 
-   (* |- !n k. k = k DIV 2 ** n * 2 ** n + k MOD 2 ** n *)
-   val TWOEXP_DIVISION = save_thm("TWOEXP_DIVISION", (GEN_ALL o CONJUNCT1) th)
+(* |- !n k. k = k DIV 2 ** n * 2 ** n + k MOD 2 ** n *)
+Theorem TWOEXP_DIVISION = (GEN_ALL o CONJUNCT1) th;
 end
 
 Theorem TWOEXP_MONO:
@@ -184,8 +184,8 @@ QED
 
 (* ------------------------------------------------------------------------- *)
 
-val BITS_THM = save_thm("BITS_THM",
-   REWRITE_RULE [DIV_2EXP_def, MOD_2EXP_def] BITS_def)
+Theorem BITS_THM =
+   REWRITE_RULE [DIV_2EXP_def, MOD_2EXP_def] BITS_def
 
 Theorem BITSLT_THM:
     !h l n. BITS h l n < 2 ** (SUC h-l)
@@ -332,9 +332,9 @@ Proof
 QED
 
 (* |- !h n. BITS h 0 n = n MOD 2 ** SUC h *)
-val BITS_ZERO3 = save_thm("BITS_ZERO3",
+Theorem BITS_ZERO3 =
    (GEN_ALL o SIMP_RULE bool_ss [CONJUNCT1 EXP, DIV_1] o
-    Q.SPECL [`h`, `0`]) BITS_THM2)
+    Q.SPECL [`h`, `0`]) BITS_THM2
 
 Theorem BITS_ZERO4:
     !h l a. l <= h ==> (BITS h l (a * 2 ** l) = BITS (h - l) 0 a)
@@ -395,8 +395,8 @@ Proof
    ]
 QED
 
-val BIT_B_NEQ = Theory.save_thm("BIT_B_NEQ",
-   METIS_PROVE [BIT_TWO_POW] ``!a b. ~(a = b) ==> ~BIT a (2 ** b)``)
+Theorem BIT_B_NEQ =
+   METIS_PROVE [BIT_TWO_POW] ``!a b. ~(a = b) ==> ~BIT a (2 ** b)``
 
 (* ------------------------------------------------------------------------- *)
 
@@ -462,9 +462,9 @@ Proof
 QED
 
 (* |- !n. 2 * (n DIV 2) = n - n MOD 2 *)
-val DIV_MULT_THM2 = save_thm("DIV_MULT_THM2",
+Theorem DIV_MULT_THM2 =
    ONCE_REWRITE_RULE [MULT_COMM]
-      (REWRITE_RULE [EXP_1] (Q.SPEC `1` DIV_MULT_THM)))
+      (REWRITE_RULE [EXP_1] (Q.SPEC `1` DIV_MULT_THM))
 
 Theorem LESS_EQ_EXP_MULT:
     !a b. a <= b ==> ?p. 2 ** b = p * 2 ** a
@@ -564,9 +564,9 @@ Proof
    \\ ASM_SIMP_TAC bool_ss [LESS_MOD]
 QED
 
-val SLICE_ZERO_THM = save_thm("SLICE_ZERO_THM",
+Theorem SLICE_ZERO_THM =
    (GEN_ALL o REWRITE_RULE [MULT_RIGHT_1, EXP] o Q.SPECL [`n`, `h`, `0`])
-      SLICE_THM)
+      SLICE_THM
 
 Theorem MOD_2EXP_MONO:
   !n h l. l <= h ==> n MOD 2 ** l <= n MOD 2 ** SUC h
@@ -599,8 +599,8 @@ Proof
    RW_TAC arith_ss [SLICE_THM, BITS_ZERO]
 QED
 
-val SLICE_ZERO2 = save_thm("SLICE_ZERO2",
-   GEN_ALL (SIMP_CONV std_ss [SLICE_THM, BITS_ZERO2] ``SLICE h l 0``))
+Theorem SLICE_ZERO2 =
+   GEN_ALL (SIMP_CONV std_ss [SLICE_THM, BITS_ZERO2] ``SLICE h l 0``)
 
 (* ------------------------------------------------------------------------- *)
 
@@ -733,8 +733,8 @@ Proof
 QED
 
 (* |- !x n. SBIT (BIT x n) x = SLICE x x n *)
-val BIT_SLICE_THM = save_thm("BIT_SLICE_THM",
-   SIMP_RULE arith_ss [EXP] (Q.SPEC `0` BIT_SLICE_LEM))
+Theorem BIT_SLICE_THM =
+   SIMP_RULE arith_ss [EXP] (Q.SPEC `0` BIT_SLICE_LEM)
 
 Theorem BIT_SLICE_THM2:
     !b n. BIT b n = (SLICE b b n = 2 ** b)
@@ -896,7 +896,7 @@ Proof
    \\ FULL_SIMP_TAC bool_ss [NOT_BITS2]
 QED
 
-val ADD_BIT0 = save_thm("ADD_BIT0", REWRITE_RULE [GSYM BIT0_ODD] ODD_ADD)
+Theorem ADD_BIT0 = REWRITE_RULE [GSYM BIT0_ODD] ODD_ADD
 
 val BITS_DIVISION =
    DIVISION |> Q.SPEC `2 ** SUC n`
@@ -1388,8 +1388,8 @@ Proof
    end
 QED
 
-val MOD_PLUS_LEFT = save_thm("MOD_PLUS_LEFT",
-   ONCE_REWRITE_RULE [ADD_COMM] MOD_PLUS_RIGHT)
+Theorem MOD_PLUS_LEFT =
+   ONCE_REWRITE_RULE [ADD_COMM] MOD_PLUS_RIGHT
 
 val MOD_LESS = Q.prove(
    `!n a. 0 < n ==> a MOD n < n`, PROVE_TAC [DIVISION])
@@ -1474,14 +1474,14 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* |- !x y. 0 < x ==> x <= y ==> LOG2 x <= LOG2 y *)
-val LOG2_LE_MONO = save_thm("LOG2_LE_MONO",
+Theorem LOG2_LE_MONO =
    logrootTheory.LOG_LE_MONO
    |> Q.SPEC `2`
-   |> SIMP_RULE std_ss [GSYM LOG2_def])
+   |> SIMP_RULE std_ss [GSYM LOG2_def]
 
 (* |- (!x y. 2 ** x <= y ==> x <= LOG2 y) /\
        !y x. 0 < x ==> x <= 2 ** y ==> LOG2 x <= y *)
-val TWOEXP_LE_IMP_LE_LOG2 = save_thm("TWOEXP_LE_IMP_LE_LOG2",
+Theorem TWOEXP_LE_IMP_LE_LOG2 =
    CONJ
     (LOG2_LE_MONO
      |> Q.SPEC `2 ** x`
@@ -1490,7 +1490,7 @@ val TWOEXP_LE_IMP_LE_LOG2 = save_thm("TWOEXP_LE_IMP_LE_LOG2",
     (LOG2_LE_MONO
      |> Q.SPECL [`x`, `2 ** y`]
      |> SIMP_RULE std_ss [ZERO_LT_TWOEXP, LOG2_TWOEXP]
-     |> Q.GEN `x` |> Q.GEN `y`))
+     |> Q.GEN `x` |> Q.GEN `y`)
 
 Theorem NOT_BIT_GT_LOG2:
     !i n. LOG2 n < i ==> ~BIT i n
@@ -1674,10 +1674,10 @@ Proof
    \\ FULL_SIMP_TAC arith_ss [LT_TWOEXP]
 QED
 
-val EXISTS_BIT_LT = save_thm("EXISTS_BIT_LT",
+Theorem EXISTS_BIT_LT =
    EXISTS_BIT_IN_RANGE
    |> Q.SPEC `0`
-   |> SIMP_RULE (arith_ss++boolSimps.CONJ_ss) [])
+   |> SIMP_RULE (arith_ss++boolSimps.CONJ_ss) []
 
 Theorem LEAST_THM:
     !n P. (!m. m < n ==> ~P m) /\ P n ==> ($LEAST P = n)

@@ -387,10 +387,10 @@ val RED1_inv_thms = prove_inversion_theorems
 val RED1_strong_ind = prove_strong_induction
     RED1_rules_sat RED1_ind_thm;
 
-val _ = save_thm ("RED1_rules_sat", RED1_rules_sat);
-val _ = save_thm ("RED1_ind_thm", RED1_ind_thm);
-val _ = save_thm ("RED1_inv_thms", LIST_CONJ RED1_inv_thms);
-val _ = save_thm ("RED1_strong_ind", RED1_strong_ind);
+Theorem RED1_rules_sat = RED1_rules_sat;
+Theorem RED1_ind_thm = RED1_ind_thm;
+Theorem RED1_inv_thms = LIST_CONJ RED1_inv_thms;
+Theorem RED1_strong_ind = RED1_strong_ind;
 
 
 val [RED1_R, RED1_App1, RED1_App2, RED1_Lam] = CONJUNCTS RED1_rules_sat;
@@ -422,7 +422,7 @@ Proof
         THEN ASM_REWRITE_TAC[]
         THEN FIRST_ASSUM MATCH_MP_TAC
         THEN UNDISCH_TAC “RED1 R (t1:^term) t2”
-        THEN ONCE_REWRITE_TAC RED1_inv_thms
+        THEN ONCE_REWRITE_TAC[RED1_inv_thms]
         THEN ASM_REWRITE_TAC[term_distinct],
 
         UNDISCH_ALL_TAC
@@ -517,7 +517,7 @@ Proof
         THEN ASM_REWRITE_TAC[]
         THEN FIRST_ASSUM MATCH_MP_TAC
         THEN UNDISCH_TAC “RED1 R (t1:^term) t2”
-        THEN ONCE_REWRITE_TAC RED1_inv_thms
+        THEN ONCE_REWRITE_TAC[RED1_inv_thms]
         THEN ASM_REWRITE_TAC[term_distinct],
 
         UNDISCH_ALL_TAC
@@ -709,14 +709,15 @@ val (RED_rules_sat,RED_ind_thm) =
 
 val RED_inv_thms = prove_inversion_theorems
     RED_rules_sat RED_ind_thm;
+val [RED_inv] = RED_inv_thms;
 
 val RED_strong_ind = prove_strong_induction
     RED_rules_sat RED_ind_thm;
 
-val _ = save_thm ("RED_rules_sat", RED_rules_sat);
-val _ = save_thm ("RED_ind_thm", RED_ind_thm);
-val _ = save_thm ("RED_inv_thms", LIST_CONJ RED_inv_thms);
-val _ = save_thm ("RED_strong_ind", RED_strong_ind);
+Theorem RED_rules_sat = RED_rules_sat;
+Theorem RED_ind_thm = RED_ind_thm;
+Theorem RED_inv_thms = LIST_CONJ RED_inv_thms;
+Theorem RED_strong_ind = RED_strong_ind;
 
 
 (* --------------------------------------------------------------------- *)
@@ -733,8 +734,6 @@ val [RED_RED1, RED_REFL, RED_TRANS]
     = CONJUNCTS (CONV_RULE (DEPTH_CONV LEFT_IMP_EXISTS_CONV) RED_rules_sat);
 
 
-val [RED_inv]
-    = RED_inv_thms;
 
 
 Theorem RED_reflexive:
@@ -752,8 +751,8 @@ Proof
                                RED_rules_sat]
 QED
 
-val RED_TRANS = save_thm("RED_TRANS",
-                    REWRITE_RULE[transitive] RED_transitive);
+Theorem RED_TRANS =
+                    REWRITE_RULE[transitive] RED_transitive;
 
 Theorem RED_compatible:
      !R:^term_rel. compatible (RED R)
@@ -769,8 +768,8 @@ Proof
     THEN IMP_RES_TAC RED_RED1 (* finishes the last 3 *)
 QED
 
-val RED_COMPAT = save_thm("RED_COMPAT",
-                    (REWRITE_RULE[compatible] RED_compatible));
+Theorem RED_COMPAT =
+                    (REWRITE_RULE[compatible] RED_compatible);
 
 
 
@@ -859,14 +858,15 @@ val (REQUAL_rules_sat,REQUAL_ind_thm) =
 
 val REQUAL_inv_thms = prove_inversion_theorems
     REQUAL_rules_sat REQUAL_ind_thm;
+val [REQUAL_inv] = REQUAL_inv_thms;
 
 val REQUAL_strong_ind = prove_strong_induction
     REQUAL_rules_sat REQUAL_ind_thm;
 
-val _ = save_thm ("REQUAL_rules_sat", REQUAL_rules_sat);
-val _ = save_thm ("REQUAL_ind_thm", REQUAL_ind_thm);
-val _ = save_thm ("REQUAL_inv_thms", LIST_CONJ REQUAL_inv_thms);
-val _ = save_thm ("REQUAL_strong_ind", REQUAL_strong_ind);
+Theorem REQUAL_rules_sat = REQUAL_rules_sat;
+Theorem REQUAL_ind_thm = REQUAL_ind_thm;
+Theorem REQUAL_inv_thms = LIST_CONJ REQUAL_inv_thms;
+Theorem REQUAL_strong_ind = REQUAL_strong_ind;
 
 
 (* --------------------------------------------------------------------- *)
@@ -884,7 +884,6 @@ val [REQUAL_RED, REQUAL_SYM, REQUAL_TRANS]
     = CONJUNCTS (CONV_RULE (DEPTH_CONV LEFT_IMP_EXISTS_CONV) REQUAL_rules_sat);
 
 
-val [REQUAL_inv] = REQUAL_inv_thms;
 
 
 Theorem REQUAL_reflexive:
@@ -911,8 +910,8 @@ Proof
                                REQUAL_rules_sat]
 QED
 
-val REQUAL_TRANS = save_thm("REQUAL_TRANS",
-                   REWRITE_RULE[transitive_def] REQUAL_transitive);
+Theorem REQUAL_TRANS =
+                   REWRITE_RULE[transitive_def] REQUAL_transitive;
 
 Theorem REQUAL_compatible:
      !R:^term_rel. compatible (REQUAL R)
@@ -929,8 +928,8 @@ Proof
     THEN IMP_RES_TAC REQUAL_RED (* finishes the last 3 *)
 QED
 
-val REQUAL_COMPAT = save_thm("REQUAL_COMPAT",
-                    REWRITE_RULE[compatible] REQUAL_compatible);
+Theorem REQUAL_COMPAT =
+                    REWRITE_RULE[compatible] REQUAL_compatible;
 
 
 Theorem REQUAL_reduction:
@@ -1175,7 +1174,7 @@ Proof
         THEN ASM_REWRITE_TAC[]
         THEN FIRST_ASSUM MATCH_MP_TAC
         THEN UNDISCH_TAC “RED1 R (t1:^term) t2”
-        THEN ONCE_REWRITE_TAC RED1_inv_thms
+        THEN ONCE_REWRITE_TAC[RED1_inv_thms]
         THEN ASM_REWRITE_TAC[term_distinct],
 
         UNDISCH_ALL_TAC

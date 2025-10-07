@@ -177,24 +177,20 @@ val LIST_UPDATE2 = Q.prove(
   REPEAT CONJ_TAC
   THEN Induct THEN SRW_TAC [] [LIST_UPDATE_def]);
 
-val LIST_UPDATE_THMS = Theory.save_thm("LIST_UPDATE_THMS",
-   CONJ LIST_UPDATE1 LIST_UPDATE2);
+Theorem LIST_UPDATE_THMS =
+   CONJ LIST_UPDATE1 LIST_UPDATE2;
 
 (* ------------------------------------------------------------------------
    Duplicate theorems about update from combinTheory
    ------------------------------------------------------------------------ *)
 
-val _ = List.map Theory.save_thm
-  (let open combinTheory in
-    [("APPLY_UPDATE_ID", APPLY_UPDATE_ID),
-     ("APPLY_UPDATE_THM", APPLY_UPDATE_THM),
-     ("SAME_KEY_UPDATE_DIFFER", SAME_KEY_UPDATE_DIFFER),
-     ("UPDATE_APPLY_ID", UPDATE_APPLY_ID),
-     ("UPDATE_APPLY_IMP_ID", UPDATE_APPLY_IMP_ID),
-     ("UPDATE_COMMUTES", UPDATE_COMMUTES),
-     ("UPDATE_EQ", UPDATE_EQ),
-     ("UPDATE_def", UPDATE_def)]
-   end)
+Theorem APPLY_UPDATE_ID = combinTheory.APPLY_UPDATE_ID
+Theorem APPLY_UPDATE_THM = combinTheory.APPLY_UPDATE_THM
+Theorem SAME_KEY_UPDATE_DIFFER = combinTheory.SAME_KEY_UPDATE_DIFFER
+Theorem UPDATE_APPLY_ID = combinTheory.UPDATE_APPLY_ID
+Theorem UPDATE_APPLY_IMP_ID = combinTheory.UPDATE_APPLY_IMP_ID
+Theorem UPDATE_COMMUTES = combinTheory.UPDATE_COMMUTES
+Theorem UPDATE_EQ = combinTheory.UPDATE_EQ
+Theorem UPDATE_def = combinTheory.UPDATE_def
 
 (* ------------------------------------------------------------------------ *)
-

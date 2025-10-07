@@ -335,9 +335,9 @@ Proof
 QED
 
 (* |- !x l. SNOC x l = REVERSE (x::REVERSE l) *)
-val SNOC_REVERSE_CONS = Theory.save_thm ("SNOC_REVERSE_CONS",
+Theorem SNOC_REVERSE_CONS =
    GEN_ALL (REWRITE_RULE [REVERSE_REVERSE]
-      (AP_TERM ``REVERSE`` (SPEC_ALL REVERSE_SNOC))));
+      (AP_TERM ``REVERSE`` (SPEC_ALL REVERSE_SNOC)));
 
 Theorem FOLDR_SNOC:
     !f e x l. FOLDR f e (SNOC x l) = FOLDR f (f x e) l
@@ -695,7 +695,7 @@ QED
    |- (!l. [] <<= l <=> T) /\ (!x l. x::l <<= [] <=> F) /\
       !x1 l1 x2 l2. x2::l2 <<= x1::l1 <=> (x1 = x2) /\ l2 <<= l1``
 *)
-val IS_PREFIX = save_thm ("IS_PREFIX",
+Theorem IS_PREFIX = (
    let
       val [c1, c2, c3] = CONJUNCTS isPREFIX_THM
    in
@@ -860,11 +860,11 @@ Proof
 QED
 
 (* |- !l1 l2. IS_SUFFIX (REVERSE l1) (REVERSE l2) = IS_PREFIX l1 l2 *)
-val IS_SUFFIX_REVERSE = save_thm ("IS_SUFFIX_REVERSE",
+Theorem IS_SUFFIX_REVERSE =
    IS_PREFIX_REVERSE
    |> SPECL [``REVERSE (l1:'a list)``, ``REVERSE (l2:'a list)``]
    |> REWRITE_RULE [REVERSE_REVERSE]
-   |> SYM |> GEN_ALL);
+   |> SYM |> GEN_ALL;
 
 Theorem IS_SUFFIX_CONS2_E:
     !s h t. IS_SUFFIX s (h::t) ==> IS_SUFFIX s t
@@ -1297,7 +1297,7 @@ Proof
                      GSYM NOT_NIL_SNOC]
 QED
 
-val MAP_REVERSE = save_thm ("MAP_REVERSE", MAP_REVERSE);
+Theorem MAP_REVERSE = MAP_REVERSE;
 
 Theorem SEG_LENGTH_ID:
     !l. SEG (LENGTH l) 0 l = l
@@ -1528,11 +1528,11 @@ Proof
 QED
 
 (* |- !l2 l1. BUTLASTN (LENGTH l2) (APPEND l1 l2) = l1 *)
-val BUTLASTN_LENGTH_APPEND = save_thm ("BUTLASTN_LENGTH_APPEND",
+Theorem BUTLASTN_LENGTH_APPEND =
    GENL[``l2:'a list``,``l1:'a list``]
      (REWRITE_RULE [LESS_EQ_REFL, BUTLASTN_LENGTH_NIL, APPEND_NIL]
      (SPECL [``LENGTH (l2:'a list)``,``l1:'a list``,``l2:'a list``]
-            BUTLASTN_APPEND2)));
+            BUTLASTN_APPEND2));
 
 Theorem LASTN_LENGTH_APPEND:
     !l2 l1. LASTN (LENGTH l2) (APPEND l1 l2) = l2
@@ -1552,12 +1552,12 @@ Proof
 QED
 
 (* |- !l x. BUTLASTN (LENGTH l) (CONS x l) = [x] *)
-val BUTLASTN_LENGTH_CONS = save_thm ("BUTLASTN_LENGTH_CONS",
+Theorem BUTLASTN_LENGTH_CONS = (
    let
       val thm1 = SPECL [``LENGTH (l:'a list)``,``l:'a list``] BUTLASTN_CONS
    in
       GEN_ALL (REWRITE_RULE [LESS_EQ_REFL, BUTLASTN_LENGTH_NIL] thm1)
-   end);
+   end)
 
 Theorem LAST_LASTN_LAST:
     !n l. n <= LENGTH l ==> 0 < n ==> (LAST (LASTN n l) = LAST l)
@@ -2173,9 +2173,9 @@ Proof
 QED
 
 (* |- !n x l. ELL (SUC n) (SNOC x l) = ELL n l *)
-val ELL_SUC_SNOC = save_thm ("ELL_SUC_SNOC",
+Theorem ELL_SUC_SNOC =
    GEN_ALL (PURE_ONCE_REWRITE_RULE [PRE]
-      (MP (SPEC ``SUC n`` ELL_SNOC) (SPEC_ALL LESS_0))));
+      (MP (SPEC ``SUC n`` ELL_SNOC) (SPEC_ALL LESS_0)));
 
 Theorem ELL_CONS:
     !n l. n < LENGTH l ==> !x. ELL n (CONS x l) = ELL n l
@@ -2948,28 +2948,28 @@ Proof INDUCT_TAC THEN simp [NOT_LESS_0, MEM, EQ_IMP_THM, DISJ_IMP_THM]
 QED
 
 (* |- !l. AND_EL l <=> FOLDL $/\ T l *)
-val AND_EL_FOLDL = save_thm ("AND_EL_FOLDL",
+Theorem AND_EL_FOLDL =
    GEN_ALL (CONV_RULE (DEPTH_CONV ETA_CONV)
     (REWRITE_RULE [EVERY_FOLDL, combinTheory.I_THM]
-      (AP_THM AND_EL_DEF ``l:bool list``))));
+      (AP_THM AND_EL_DEF ``l:bool list``)));
 
 (* |- !l. AND_EL l <=> FOLDR $/\ T l *)
-val AND_EL_FOLDR = save_thm ("AND_EL_FOLDR",
+Theorem AND_EL_FOLDR =
    GEN_ALL (CONV_RULE (DEPTH_CONV ETA_CONV)
     (REWRITE_RULE [EVERY_FOLDR, combinTheory.I_THM]
-      (AP_THM AND_EL_DEF ``l:bool list``))));
+      (AP_THM AND_EL_DEF ``l:bool list``)));
 
 (* |- !l. OR_EL l <=> FOLDL $\/ F l *)
-val OR_EL_FOLDL = save_thm ("OR_EL_FOLDL",
+Theorem OR_EL_FOLDL =
    GEN_ALL (CONV_RULE (DEPTH_CONV ETA_CONV)
     (REWRITE_RULE [EXISTS_FOLDL, combinTheory.I_THM]
-      (AP_THM OR_EL_DEF ``l:bool list``))));
+      (AP_THM OR_EL_DEF ``l:bool list``)));
 
 (* |- !l. OR_EL l <=> FOLDR $\/ F l *)
-val OR_EL_FOLDR = save_thm ("OR_EL_FOLDR",
+Theorem OR_EL_FOLDR =
    GEN_ALL (CONV_RULE (DEPTH_CONV ETA_CONV)
     (REWRITE_RULE [EXISTS_FOLDR, combinTheory.I_THM]
-      (AP_THM OR_EL_DEF ``l:bool list``))));
+      (AP_THM OR_EL_DEF ``l:bool list``)));
 
 Theorem ITSET_TO_FOLDR:
     !f s b. FINITE s ==> ITSET f s b = FOLDR f b (REVERSE (SET_TO_LIST s))
@@ -3077,10 +3077,10 @@ Proof
 QED
 
 (* |- !a c. a <<= a ++ c *)
-val IS_PREFIX_APPEND3 = save_thm("IS_PREFIX_APPEND3",
+Theorem IS_PREFIX_APPEND3 =
   IS_PREFIX_APPENDS |> SPEC_ALL |> Q.INST [`b` |-> `[]`]
                     |> REWRITE_RULE [IS_PREFIX, APPEND_NIL]
-                    |> Q.GENL [`c`, `a`])
+                    |> Q.GENL [`c`, `a`]
 val _ = export_rewrites ["IS_PREFIX_APPEND3"]
 
 Theorem prefixes_is_prefix_total:
@@ -4007,11 +4007,9 @@ val LENGTH_FILTER_LESS = Q.store_thm("LENGTH_FILTER_LESS",
    THEN MATCH_MP_TAC LESS_EQ_IMP_LESS_SUC
    THEN MATCH_ACCEPT_TAC LENGTH_FILTER_LEQ)
 
-val EVERY2_APPEND = save_thm(
-  "EVERY2_APPEND", LIST_REL_APPEND);
+Theorem EVERY2_APPEND = LIST_REL_APPEND
 
-val EVERY2_APPEND_suff = save_thm(
-  "EVERY2_APPEND_suff", LIST_REL_APPEND_suff);
+Theorem EVERY2_APPEND_suff = LIST_REL_APPEND_suff
 
 Theorem EVERY2_DROP:
   !R l1 l2 n.
@@ -4399,12 +4397,12 @@ val SPLITP_AUX = Q.prove(
    THEN SRW_TAC [] [SPLITP_AUX_def, SPLITP, SPLITP_AUX_lem1]
    THEN metisLib.METIS_TAC [SPLITP_AUX_lem2, pairTheory.PAIR]);
 
-val SPLITP_compute = save_thm ("SPLITP_compute",
-   REWRITE_RULE [GSYM FUN_EQ_THM] SPLITP_AUX);
+Theorem SPLITP_compute =
+   REWRITE_RULE [GSYM FUN_EQ_THM] SPLITP_AUX;
 
-val IS_SUFFIX_compute = save_thm ("IS_SUFFIX_compute", GSYM IS_PREFIX_REVERSE);
+Theorem IS_SUFFIX_compute = GSYM IS_PREFIX_REVERSE;
 
-val SEG_compute = save_thm ("SEG_compute", numLib.SUC_RULE SEG);
+Theorem SEG_compute = numLib.SUC_RULE SEG;
 
 Theorem BUTLASTN_compute:
     !n l.
@@ -4697,7 +4695,7 @@ Proof
 QED
 
 (* Theorem alias *)
-val FRONT_LENGTH = save_thm ("FRONT_LENGTH", LENGTH_FRONT);
+Theorem FRONT_LENGTH = LENGTH_FRONT;
 (* val FRONT_LENGTH = |- !l. l <> [] ==> (LENGTH (FRONT l) = PRE (LENGTH l)): thm *)
 
 (* Theorem: l <> [] /\ n < LENGTH (FRONT l) ==> (EL n (FRONT l) = EL n l) *)
@@ -6220,9 +6218,9 @@ QED
    = e :: GENLIST ((K e) o SUC) n       by K_THM
    = e :: GENLIST (K e) n               by K_o_THM
 *)
-val GENLIST_K_CONS = save_thm("GENLIST_K_CONS",
+Theorem GENLIST_K_CONS =
     SIMP_CONV (srw_ss()) [GENLIST_CONS]
-      ``GENLIST (K e) (SUC n)`` |> GEN ``n:num`` |> GEN ``e``);
+      ``GENLIST (K e) (SUC n)`` |> GEN ``n:num`` |> GEN ``e``;
 (* val GENLIST_K_CONS = |- !e n. GENLIST (K e) (SUC n) = e::GENLIST (K e) n: thm  *)
 
 (* Theorem: GENLIST (K e) (n + m) = GENLIST (K e) m ++ GENLIST (K e) n *)
@@ -6470,12 +6468,12 @@ End
 
 (* Theorem: MAX_LIST [] = 0 *)
 (* Proof: by MAX_LIST_def *)
-val MAX_LIST_NIL = save_thm("MAX_LIST_NIL", MAX_LIST_def |> CONJUNCT1);
+Theorem MAX_LIST_NIL = MAX_LIST_def |> CONJUNCT1;
 (* val MAX_LIST_NIL = |- MAX_LIST [] = 0: thm *)
 
 (* Theorem: MAX_LIST (h::t) = MAX h (MAX_LIST t) *)
 (* Proof: by MAX_LIST_def *)
-val MAX_LIST_CONS = save_thm("MAX_LIST_CONS", MAX_LIST_def |> CONJUNCT2);
+Theorem MAX_LIST_CONS = MAX_LIST_def |> CONJUNCT2;
 (* val MAX_LIST_CONS = |- !h t. MAX_LIST (h::t) = MAX h (MAX_LIST t): thm *)
 
 (* export simple results *)

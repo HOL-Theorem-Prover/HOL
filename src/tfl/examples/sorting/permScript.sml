@@ -37,9 +37,8 @@ Proof
 QED
 
 
-val PERM_trans1 = save_thm
-("PERM_trans1",
- REWRITE_RULE [relationTheory.transitive_def] PERM_trans);
+Theorem PERM_trans1 =
+ REWRITE_RULE [relationTheory.transitive_def] PERM_trans;
 
 
 Theorem PERM_sym:
@@ -70,16 +69,15 @@ PROVE_TAC [CONS_APPEND,PERM_cong, PERM_refl]
 QED
 
 
-val PERM_CONS_iff =
+Theorem PERM_CONS_iff = (
 let val lem =
 Q.prove(`PERM (x::l1) (x::l2) ==> PERM l1 l2`,
 RW_TAC list_ss [PERM_def,FILTER]
    THEN POP_ASSUM (MP_TAC o Q.SPEC`x'`)
    THEN RW_TAC list_ss [])
 in
-  save_thm ("PERM_CONS_iff",
-            GEN_ALL(IMP_ANTISYM_RULE lem (SPEC_ALL PERM_mono)))
-end;
+  GEN_ALL(IMP_ANTISYM_RULE lem (SPEC_ALL PERM_mono))
+end)
 
 Theorem PERM_nil:
   !L. (PERM L [] = (L=[])) /\
@@ -174,4 +172,3 @@ Induct
   THEN `PERM l1 u` by PROVE_TAC [PERM_trans1,PERM_CONS_iff]
   THEN RW_TAC list_ss []
 QED
-

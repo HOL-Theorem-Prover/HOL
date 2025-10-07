@@ -160,10 +160,10 @@ val BETA_R_inv_thms = prove_inversion_theorems
 val BETA_R_strong_ind = prove_strong_induction
     BETA_R_rules_sat BETA_R_ind_thm;
 
-val _ = save_thm ("BETA_R_rules_sat", BETA_R_rules_sat);
-val _ = save_thm ("BETA_R_ind_thm", BETA_R_ind_thm);
-val _ = save_thm ("BETA_R_inv_thms", LIST_CONJ BETA_R_inv_thms);
-val _ = save_thm ("BETA_R_strong_ind", BETA_R_strong_ind);
+Theorem BETA_R_rules_sat = BETA_R_rules_sat;
+Theorem BETA_R_ind_thm = BETA_R_ind_thm;
+Theorem BETA_R_inv_thms = LIST_CONJ BETA_R_inv_thms;
+Theorem BETA_R_strong_ind = BETA_R_strong_ind;
 
 
 
@@ -233,7 +233,7 @@ Theorem BETA_R_deterministic:
 Proof
     rule_induct BETA_R_strong_ind
     THEN REPEAT GEN_TAC
-    THEN REWRITE_TAC BETA_R_inv_thms
+    THEN REWRITE_TAC[BETA_R_inv_thms]
     THEN REWRITE_TAC[term_one_one]
     THEN STRIP_TAC
     THEN IMP_RES_TAC SUB_RENAME_TERM
@@ -302,7 +302,7 @@ Theorem BETA_R_equals:
                    (?x u'. (t = Lam x u') /\ (t' = u' <[ [x,u]))) /\
         (!x u t:^term. BETA_R (Lam x u) t = F)
 Proof
-    REWRITE_TAC BETA_R_inv_thms
+    REWRITE_TAC[BETA_R_inv_thms]
     THEN REWRITE_TAC[term_distinct,term_one_one]
     THEN REPEAT STRIP_TAC
     THEN EQ_TAC
@@ -341,12 +341,12 @@ Theorem BETA_R_SUBSTITUTIVE:
 Proof
     REWRITE_TAC[SUBSTITUTIVE]
     THEN REPEAT GEN_TAC
-    THEN DISCH_THEN (STRIP_ASSUME_TAC o REWRITE_RULE BETA_R_inv_thms)
+    THEN DISCH_THEN (STRIP_ASSUME_TAC o REWRITE_RULE[BETA_R_inv_thms])
     THEN ASM_REWRITE_TAC[]
     THEN ONCE_REWRITE_TAC[SUB_term]
     THEN SIMPLE_SUBST_TAC
     THEN IMP_RES_THEN REWRITE_THM SUB_RENAME_TERM
-    THEN REWRITE_TAC BETA_R_inv_thms
+    THEN REWRITE_TAC[BETA_R_inv_thms]
     THEN REWRITE_TAC[term_one_one]
     THEN EXISTS_TAC “z:var”
     THEN EXISTS_TAC “(u':^term) <[ [x,L]”
@@ -405,10 +405,10 @@ val REDL_inv_thms = prove_inversion_theorems
 val REDL_strong_ind = prove_strong_induction
     REDL_rules_sat REDL_ind_thm;
 
-val _ = save_thm ("REDL_rules_sat", REDL_rules_sat);
-val _ = save_thm ("REDL_ind_thm", REDL_ind_thm);
-val _ = save_thm ("REDL_inv_thms", LIST_CONJ REDL_inv_thms);
-val _ = save_thm ("REDL_strong_ind", REDL_strong_ind);
+Theorem REDL_rules_sat = REDL_rules_sat;
+Theorem REDL_ind_thm = REDL_ind_thm;
+Theorem REDL_inv_thms = LIST_CONJ REDL_inv_thms;
+Theorem REDL_strong_ind = REDL_strong_ind;
 
 
 val [REDL_REFL, REDL_Lam, REDL_App, REDL_BETA]
@@ -445,7 +445,7 @@ Proof
         THEN REPEAT STRIP_TAC
         THEN ASM_REWRITE_TAC[]
         THEN UNDISCH_TAC “REDL (t1:^term) t2”
-        THEN ONCE_REWRITE_TAC REDL_inv_thms
+        THEN ONCE_REWRITE_TAC[REDL_inv_thms]
         THEN ASM_REWRITE_TAC[term_distinct,term_one_one]
         THEN DISCH_TAC
         THEN ASM_REWRITE_TAC[],
@@ -549,7 +549,7 @@ Proof
         THEN REPEAT STRIP_TAC
         THEN ASM_REWRITE_TAC[]
         THEN UNDISCH_TAC “REDL (t1:^term) t2”
-        THEN ONCE_REWRITE_TAC REDL_inv_thms
+        THEN ONCE_REWRITE_TAC[REDL_inv_thms]
         THEN ASM_REWRITE_TAC[term_distinct]
         THEN DISCH_TAC
         THEN ASM_REWRITE_TAC[],
@@ -813,7 +813,7 @@ Proof
     REPEAT CONJ_TAC
     THEN REPEAT GEN_TAC THEN DISCH_THEN (STRIP_ASSUME_TAC o
             REWRITE_RULE[term_distinct,term_one_one] o
-            ONCE_REWRITE_RULE REDL_inv_thms)
+            ONCE_REWRITE_RULE[REDL_inv_thms])
     THENL (* 5 subgoals *)
       [ POP_ASSUM REWRITE_THM
         THEN DISJ1_TAC
@@ -1011,10 +1011,10 @@ val REDC_inv_thms = prove_inversion_theorems
 val REDC_strong_ind = prove_strong_induction
     REDC_rules_sat REDC_ind_thm;
 
-val _ = save_thm ("REDC_rules_sat", REDC_rules_sat);
-val _ = save_thm ("REDC_ind_thm", REDC_ind_thm);
-val _ = save_thm ("REDC_inv_thms", LIST_CONJ REDC_inv_thms);
-val _ = save_thm ("REDC_strong_ind", REDC_strong_ind);
+Theorem REDC_rules_sat = REDC_rules_sat;
+Theorem REDC_ind_thm = REDC_ind_thm;
+Theorem REDC_inv_thms = LIST_CONJ REDC_inv_thms;
+Theorem REDC_strong_ind = REDC_strong_ind;
 
 
 val [REDC_Con, REDC_Var, REDC_Lam, REDC_App, REDC_BETA]
@@ -1051,7 +1051,7 @@ Proof
         THEN REPEAT STRIP_TAC
         THEN ASM_REWRITE_TAC[]
         THEN UNDISCH_TAC “REDC (t1:^term) t2”
-        THEN ONCE_REWRITE_TAC REDC_inv_thms
+        THEN ONCE_REWRITE_TAC[REDC_inv_thms]
         THEN ASM_REWRITE_TAC[term_distinct,term_one_one]
         THEN STRIP_TAC
         THEN ASM_REWRITE_TAC[],
@@ -1159,7 +1159,7 @@ Proof
         THEN REPEAT STRIP_TAC
         THEN ASM_REWRITE_TAC[]
         THEN UNDISCH_TAC “REDC (t1:^term) t2”
-        THEN ONCE_REWRITE_TAC REDC_inv_thms
+        THEN ONCE_REWRITE_TAC[REDC_inv_thms]
         THEN ASM_REWRITE_TAC[term_distinct]
         THEN STRIP_TAC
         THEN ASM_REWRITE_TAC[],
@@ -1426,7 +1426,7 @@ Proof
           [ POP_ASSUM STRIP_ASSUME_TAC
             THEN POP_ASSUM REWRITE_ALL_THM
             THEN UNDISCH_ALL_TAC
-            THEN DISCH_THEN (MP_TAC o ONCE_REWRITE_RULE REDC_inv_thms)
+            THEN DISCH_THEN (MP_TAC o ONCE_REWRITE_RULE[REDC_inv_thms])
             THEN REWRITE_TAC[term_distinct]
             THEN REPEAT STRIP_TAC
             THEN EXISTS_TAC ``(t2':^term) <[ [x',t''']``
@@ -1581,7 +1581,7 @@ val RED1_BETA_IMP_REDL_LEMMA = TAC_PROOF(([],
     THEN REPEAT STRIP_TAC
     THEN POP_ASSUM REWRITE_ALL_THM
     THENL
-      [ POP_ASSUM (STRIP_ASSUME_TAC o ONCE_REWRITE_RULE BETA_R_inv_thms)
+      [ POP_ASSUM (STRIP_ASSUME_TAC o ONCE_REWRITE_RULE[BETA_R_inv_thms])
         THEN DEP_ASM_REWRITE_TAC[REDL_rules_sat],
 
         DEP_ASM_REWRITE_TAC[REDL_rules_sat],

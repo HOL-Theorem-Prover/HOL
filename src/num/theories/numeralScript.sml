@@ -445,9 +445,8 @@ val iSUB_DEF = new_recursive_definition {
   rec_axiom = bit_initiality};
 val _ = OpenTheory_add"iSUB"
 
-val bit_induction = save_thm
-  ("bit_induction",
-   Prim_rec.prove_induction_thm old_style_bit_initiality);
+Theorem bit_induction =
+   Prim_rec.prove_induction_thm old_style_bit_initiality;
 
 val iSUB_ZERO = prove(
   Term`(!n b. iSUB b ZERO n = ZERO) /\
@@ -971,17 +970,15 @@ fun gen_case x y =
               (Q.INST [`x` |-> x, `y` |-> y] enhanced_numeral_mult)
 
 
-val enumeral_mult = save_thm(
-  "enumeral_mult",
+Theorem enumeral_mult =
   LIST_CONJ (List.take(CONJUNCTS (SPEC_ALL numeral_mult), 2) @
              [gen_case `BIT1 x` `BIT1 y`,
               gen_case `BIT1 x` `BIT2 y`,
               gen_case `BIT2 x` `BIT1 y`,
-              gen_case `BIT2 x` `BIT2 y`]))
+              gen_case `BIT2 x` `BIT2 y`])
 
-val internal_mult_characterisation = save_thm(
-  "internal_mult_characterisation",
-  REWRITE_RULE [SYM internal_mult_def] numeral_mult);
+Theorem internal_mult_characterisation =
+  REWRITE_RULE [SYM internal_mult_def] numeral_mult;
 
 (* ----------------------------------------------------------------------
     hide the internal constants from this theory so that later name-

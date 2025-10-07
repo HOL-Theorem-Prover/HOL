@@ -1968,10 +1968,9 @@ Proof
 QED
 
 (* |- !a. sigma_algebra a ==> (sigma (space a) (subsets a) = a) *)
-val SIGMA_STABLE = save_thm
-  ("SIGMA_STABLE",
+Theorem SIGMA_STABLE =
     GEN_ALL (REWRITE_RULE [SPACE]
-                (Q.SPECL [`space a`, `subsets a`] SIGMA_STABLE_LEMMA)));
+                (Q.SPECL [`space a`, `subsets a`] SIGMA_STABLE_LEMMA));
 
 (* This is why ‘sigma sp sts’ is "smallest": any sigma-algebra in the middle
    coincides with it. *)

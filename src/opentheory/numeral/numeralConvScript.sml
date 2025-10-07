@@ -8,8 +8,8 @@ Definition BIT0_def:
 End
 
 val (BIT0_0,BIT0_SUC) = CONJ_PAIR BIT0_def
-val _ = save_thm("BIT0_0",BIT0_0);
-val _ = save_thm("BIT0_SUC",BIT0_SUC);
+Theorem BIT0_0 = BIT0_0;
+Theorem BIT0_SUC = BIT0_SUC;
 
 val SUC_0 =
   numeralTheory.numeral_suc

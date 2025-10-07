@@ -78,13 +78,13 @@ val _ = set_fixity "<" (Infix(NONASSOC, 450))
 val _ = TeX_notation {hol = "<", TeX = ("\\HOLTokenLt{}", 1)}
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="<"},name=(["Number","Natural"],"<")}
 
-val INV_SUC_EQ = save_thm("INV_SUC_EQ",
+Theorem INV_SUC_EQ =
    GENL [“m:num”, “n:num”]
         (IMP_ANTISYM_RULE
              (SPEC_ALL INV_SUC)
              (DISCH (“m:num = n”)
                     (AP_TERM (“SUC”)
-                             (ASSUME (“m:num = n”))))));
+                             (ASSUME (“m:num = n”)))));
 
 (*---------------------------------------------------------------------------
  * First we define a partial inverse to SUC called PRE such that:
@@ -257,10 +257,10 @@ Proof
 QED
 
 (* |- !m n. m < (SUC n)  =  (m  =  n)  \/  m < n *)
-val LESS_THM = save_thm("LESS_THM",
+Theorem LESS_THM =
     GENL [“m:num”, “n:num”]
          (IMP_ANTISYM_RULE(SPEC_ALL LESS_LEMMA1)
-                          (SPEC_ALL LESS_LEMMA2)));
+                          (SPEC_ALL LESS_LEMMA2));
 
 Theorem LESS_SUC_IMP:
     !m n. (m < SUC n) ==> ~(m = n) ==> (m < n)

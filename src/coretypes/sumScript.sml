@@ -154,8 +154,8 @@ Proof
    DISCH_THEN SUBST1_TAC THEN REFL_TAC]
 QED
 
-val INR_INL_11 = save_thm("INR_INL_11",
-                          CONJ (GEN_ALL INL_11) (GEN_ALL INR_11));
+Theorem INR_INL_11 =
+                          CONJ (GEN_ALL INL_11) (GEN_ALL INR_11);
 val _ = export_rewrites ["INR_INL_11"]
 
 (* Prove that left injections and right injections are not equal.       *)
@@ -215,8 +215,8 @@ val sum_Axiom0 = prove(
    MATCH_ACCEPT_TAC rew
    end);
 
-val sum_INDUCT = save_thm("sum_INDUCT",
-                          Prim_rec.prove_induction_thm sum_Axiom0);
+Theorem sum_INDUCT =
+                          Prim_rec.prove_induction_thm sum_Axiom0;
 
 Theorem sum_Axiom:
   !(f:'a -> 'c) (g:'b -> 'c).
@@ -246,15 +246,14 @@ Proof
 QED
 
 (* !P. (?s. P s) <=> (?x. P (INL x)) \/ (?y. P (INR y)) *)
-val EXISTS_SUM = save_thm(
-  "EXISTS_SUM",
+Theorem EXISTS_SUM =
   FORALL_SUM |> Q.INST [`P` |-> `\x. ~P x`] |> AP_TERM ``$~``
              |> CONV_RULE (BINOP_CONV (SIMP_CONV bool_ss []))
-             |> Q.GEN `P`)
+             |> Q.GEN `P`
 
 
-val sum_CASES = save_thm("sum_CASES",
-                         hd (Prim_rec.prove_cases_thm sum_INDUCT));
+Theorem sum_CASES =
+                         hd (Prim_rec.prove_cases_thm sum_INDUCT);
 
 val sum_distinct = store_thm("sum_distinct",
   Term`!x:'a y:'b. ~(INL x = INR y)`,
@@ -265,7 +264,7 @@ val sum_distinct = store_thm("sum_distinct",
   ASM_REWRITE_TAC []);
 val _ = export_rewrites ["sum_distinct"]
 
-val sum_distinct_rev = save_thm("sum_distinct1", GSYM sum_distinct);
+Theorem sum_distinct1 = GSYM sum_distinct;
 
 (* ---------------------------------------------------------------------*)
 (* The definitions of ISL, ISR, OUTL, OUTR follow.                      *)
@@ -360,8 +359,8 @@ Proof
 QED
 val _ = export_rewrites ["INR"]
 
-val sum_case_cong = save_thm("sum_case_cong",
-                             Prim_rec.case_cong_thm sum_CASES sum_case_def);
+Theorem sum_case_cong =
+                             Prim_rec.case_cong_thm sum_CASES sum_case_def;
 
 
 (* ----------------------------------------------------------------------

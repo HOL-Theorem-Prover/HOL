@@ -316,10 +316,10 @@ val ALPHA1_inv_thms = prove_inversion_theorems
 val ALPHA1_strong_ind = prove_strong_induction
     ALPHA1_rules_sat ALPHA1_ind_thm;
 
-val _ = save_thm ("ALPHA1_rules_sat", ALPHA1_rules_sat);
-val _ = save_thm ("ALPHA1_ind_thm", ALPHA1_ind_thm);
-val _ = save_thm ("ALPHA1_inv_thms", LIST_CONJ ALPHA1_inv_thms);
-val _ = save_thm ("ALPHA1_strong_ind", ALPHA1_strong_ind);
+Theorem ALPHA1_rules_sat = ALPHA1_rules_sat;
+Theorem ALPHA1_ind_thm = ALPHA1_ind_thm;
+Theorem ALPHA1_inv_thms = LIST_CONJ ALPHA1_inv_thms;
+Theorem ALPHA1_strong_ind = ALPHA1_strong_ind;
 
 
 val [ALPHA1_Con1, ALPHA1_Var1, ALPHA1_App1, ALPHA1_Lam1]
@@ -383,7 +383,7 @@ val ALPHA1_TRANS1 = TAC_PROOF(([],
     rule_induct ALPHA1_strong_ind
     THEN REPEAT STRIP_TAC
     THEN POP_ASSUM MP_TAC
-    THEN ONCE_REWRITE_TAC ALPHA1_inv_thms
+    THEN ONCE_REWRITE_TAC[ALPHA1_inv_thms]
     THEN REWRITE_TAC[term1_one_one,term1_distinct2]
     THEN REPEAT GEN_TAC
     THEN STRIP_TAC
@@ -421,7 +421,7 @@ Theorem ALPHA1_term_similar:
         (!x1 u1 t xs ys. ALPHA1 (Lam1 x1 u1) t xs ys ==>
                          (?x2 u2. t = Lam1 x2 u2 :'a term1))
 Proof
-    PURE_ONCE_REWRITE_TAC ALPHA1_inv_thms
+    PURE_ONCE_REWRITE_TAC[ALPHA1_inv_thms]
     THEN REWRITE_TAC[term1_one_one,term1_distinct2]
     THEN REPEAT STRIP_TAC
     THEN PROVE_TAC[]
@@ -443,7 +443,7 @@ Proof
     THEN (EQ_TAC
           THENL [ DISCH_THEN (STRIP_ASSUME_TAC
                               o REWRITE_RULE[term1_one_one,term1_distinct2]
-                              o ONCE_REWRITE_RULE ALPHA1_inv_thms)
+                              o ONCE_REWRITE_RULE[ALPHA1_inv_thms])
                   THEN ASM_REWRITE_TAC[],
 
                   REWRITE_TAC[]
@@ -471,7 +471,7 @@ Theorem ALPHA1_term_neg:
         (!y u x xs ys. ALPHA1 (Lam1 y u :'a term1) (Var1 x) xs ys = F) /\
       (!y v t u xs ys. ALPHA1 (Lam1 y v :'a term1) (App1 t u) xs ys = F)
 Proof
-    PURE_ONCE_REWRITE_TAC ALPHA1_inv_thms
+    PURE_ONCE_REWRITE_TAC[ALPHA1_inv_thms]
     THEN REWRITE_TAC[term1_one_one,term1_distinct2]
 QED
 

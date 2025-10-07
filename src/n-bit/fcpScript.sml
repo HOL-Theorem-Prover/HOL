@@ -641,7 +641,7 @@ Theorem index_one:
 Proof METIS_TAC [dimindex_def, one_finite_card]
 QED
 
-val finite_one = save_thm("finite_one", CONJUNCT2 one_finite_card)
+Theorem finite_one = CONJUNCT2 one_finite_card
 
 (* ------------------------------------------------------------------------ *
  * FCP update                                                               *

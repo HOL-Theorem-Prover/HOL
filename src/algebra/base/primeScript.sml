@@ -606,11 +606,11 @@ Proof
 QED
 
 (* Extract theorems from definition *)
-val halves_0 = save_thm("halves_0[simp]", halves_def |> SPEC ``0`` |> SIMP_RULE arith_ss[]);
+Theorem halves_0[simp] = halves_def |> SPEC ``0`` |> SIMP_RULE arith_ss[];
 (* val halves_0 = |- halves 0 = 0: thm *)
-val halves_1 = save_thm("halves_1[simp]", halves_def |> SPEC ``1`` |> SIMP_RULE arith_ss[]);
+Theorem halves_1[simp] = halves_def |> SPEC ``1`` |> SIMP_RULE arith_ss[];
 (* val halves_1 = |- halves 1 = 1: thm *)
-val halves_2 = save_thm("halves_2[simp]", halves_def |> SPEC ``2`` |> SIMP_RULE arith_ss[halves_1]);
+Theorem halves_2[simp] = halves_def |> SPEC ``2`` |> SIMP_RULE arith_ss[halves_1];
 (* val halves_2 = |- halves 2 = 2: thm *)
 
 (* Theorem: 0 < n ==> 0 < halves n *)
@@ -5997,9 +5997,9 @@ By prime_powers_eq, when SOME, such (p, k) exists uniquely, or NONE.
 *)
 
 (* Get components of definition *)
-val lcm_fun_0 = save_thm("lcm_fun_0", lcm_fun_def |> CONJUNCT1);
+Theorem lcm_fun_0 = lcm_fun_def |> CONJUNCT1;
 (* val lcm_fun_0 = |- lcm_fun 0 = 1: thm *)
-val lcm_fun_SUC = save_thm("lcm_fun_SUC", lcm_fun_def |> CONJUNCT2);
+Theorem lcm_fun_SUC = lcm_fun_def |> CONJUNCT2;
 (* val lcm_fun_SUC = |- !n. lcm_fun (SUC n) = if n = 0 then 1 else
                             case some p. ?k. SUC n = p ** k of
                             NONE => lcm_fun n | SOME p => p * lcm_fun n: thm *)
@@ -10343,12 +10343,12 @@ QED
 
 (* Theorem: s = (sq_free s) UNION (non_sq_free s) *)
 (* Proof: extract from sq_free_split. *)
-val sq_free_union = save_thm("sq_free_union", sq_free_split |> SPEC_ALL |> CONJUNCT1 |> GEN_ALL);
+Theorem sq_free_union = sq_free_split |> SPEC_ALL |> CONJUNCT1 |> GEN_ALL;
 (* val sq_free_union = |- !s. s = sq_free s UNION non_sq_free s: thm *)
 
 (* Theorem: (sq_free s) INTER (non_sq_free s) = {} *)
 (* Proof: extract from sq_free_split. *)
-val sq_free_inter = save_thm("sq_free_inter", sq_free_split |> SPEC_ALL |> CONJUNCT2 |> GEN_ALL);
+Theorem sq_free_inter = sq_free_split |> SPEC_ALL |> CONJUNCT2 |> GEN_ALL;
 (* val sq_free_inter = |- !s. sq_free s INTER non_sq_free s = {}: thm *)
 
 (* Theorem: DISJOINT (sq_free s) (non_sq_free s) *)
@@ -10480,15 +10480,13 @@ QED
 
 (* Theorem: sq_free s = (even_sq_free s) UNION (odd_sq_free s) *)
 (* Proof: extract from sq_free_split_even_odd. *)
-val sq_free_union_even_odd =
-    save_thm("sq_free_union_even_odd", sq_free_split_even_odd |> SPEC_ALL |> CONJUNCT1 |> GEN_ALL);
+Theorem sq_free_union_even_odd = sq_free_split_even_odd |> SPEC_ALL |> CONJUNCT1 |> GEN_ALL;
 (* val sq_free_union_even_odd =
    |- !s. sq_free s = even_sq_free s UNION odd_sq_free s: thm *)
 
 (* Theorem: (even_sq_free s) INTER (odd_sq_free s) = {} *)
 (* Proof: extract from sq_free_split_even_odd. *)
-val sq_free_inter_even_odd =
-    save_thm("sq_free_inter_even_odd", sq_free_split_even_odd |> SPEC_ALL |> CONJUNCT2 |> GEN_ALL);
+Theorem sq_free_inter_even_odd = sq_free_split_even_odd |> SPEC_ALL |> CONJUNCT2 |> GEN_ALL;
 (* val sq_free_inter_even_odd =
    |- !s. even_sq_free s INTER odd_sq_free s = {}: thm *)
 

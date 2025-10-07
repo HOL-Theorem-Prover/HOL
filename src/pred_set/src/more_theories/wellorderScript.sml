@@ -183,9 +183,8 @@ val CURRY_def = pairTheory.CURRY_DEF |> SPEC_ALL |> ABS ``y:'b``
                                      |> ABS ``x:'a``
                                      |> SIMP_RULE (bool_ss ++ ETA_ss) []
 
-val WIN_WF2 = save_thm(
-  "WIN_WF2",
-  WIN_WF |> SIMP_RULE (srw_ss()) [wellfounded_WF, CURRY_def])
+Theorem WIN_WF2 =
+  WIN_WF |> SIMP_RULE (srw_ss()) [wellfounded_WF, CURRY_def]
 
 Definition iseg_def:  iseg w x = { y | (y,x) WIN w }
 End
@@ -591,13 +590,12 @@ val restrict_away = prove(
   ``IMAGE (RESTRICT f (\x y. (x,y) WIN w) x) (iseg w x) = IMAGE f (iseg w x)``,
   rw[EXTENSION, RESTRICT_DEF, iseg_def] >> srw_tac[CONJ_ss][]);
 
-val wo2wo_thm = save_thm(
-  "wo2wo_thm",
+Theorem wo2wo_thm =
   wo2wo_def |> concl |> strip_forall |> #2 |> rhs |> strip_comb |> #2
             |> C ISPECL WFREC_THM
             |> C MATCH_MP WIN_WF2
             |> SIMP_RULE (srw_ss()) []
-            |> REWRITE_RULE [GSYM wo2wo_def, restrict_away])
+            |> REWRITE_RULE [GSYM wo2wo_def, restrict_away]
 
 val WO_INDUCTION =
     WF_INDUCTION_THM |> C MATCH_MP WIN_WF2 |> Q.GEN `w`
@@ -981,13 +979,12 @@ Proof
   rpt strip_tac >> match_mp_tac SUBSET_ANTISYM >> metis_tac[SUBSET_DEF]
 QED
 
-val wo_INDUCTION = save_thm(
-  "wo_INDUCTION",
+Theorem wo_INDUCTION =
   MATCH_MP WF_INDUCTION_THM WIN_WF2
            |> SIMP_RULE (srw_ss()) []
            |> Q.SPEC `\x. x IN elsOf w ==> P x`
            |> SIMP_RULE (srw_ss()) []
-           |> Q.GEN `w` |> Q.GEN `P`)
+           |> Q.GEN `w` |> Q.GEN `P`
 
 Theorem FORALL_NUM:
     (!n. P n) <=> P 0 /\ !n. P (SUC n)

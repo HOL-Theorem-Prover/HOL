@@ -31,17 +31,17 @@ val CHAR_TYPE_FACTS =
     (define_new_type_bijections
        {ABS="CHR", REP="ORD",name="char_BIJ", tyax=CHAR_TYPE});
 
-val ORD_11   = save_thm("ORD_11",prove_rep_fn_one_one CHAR_TYPE_FACTS)
-val CHR_11   = save_thm("CHR_11",
-                         BETA_RULE (prove_abs_fn_one_one CHAR_TYPE_FACTS));
+Theorem ORD_11 = prove_rep_fn_one_one CHAR_TYPE_FACTS
+Theorem CHR_11 =
+                         BETA_RULE (prove_abs_fn_one_one CHAR_TYPE_FACTS);
 val _ = export_rewrites ["CHR_11"]
-val ORD_ONTO = save_thm("ORD_ONTO",
-                         BETA_RULE (prove_rep_fn_onto CHAR_TYPE_FACTS));
-val CHR_ONTO = save_thm("CHR_ONTO",
-                         BETA_RULE (prove_abs_fn_onto CHAR_TYPE_FACTS));
+Theorem ORD_ONTO =
+                         BETA_RULE (prove_rep_fn_onto CHAR_TYPE_FACTS);
+Theorem CHR_ONTO =
+                         BETA_RULE (prove_abs_fn_onto CHAR_TYPE_FACTS);
 
 Theorem CHR_ORD[simp] = CONJUNCT1 CHAR_TYPE_FACTS
-val ORD_CHR  = save_thm("ORD_CHR",BETA_RULE (CONJUNCT2 CHAR_TYPE_FACTS));
+Theorem ORD_CHR = BETA_RULE (CONJUNCT2 CHAR_TYPE_FACTS);
 
 Theorem ORD_CHR_RWT:
   !r. r < 256 ==> (ORD (CHR r) = r)
@@ -461,8 +461,8 @@ Proof
  Cases THEN SRW_TAC [][]
 QED
 
-val EXPLODE_EQNS = save_thm("EXPLODE_EQNS", EXPLODE_def)
-val IMPLODE_EQNS = save_thm("IMPLODE_EQNS", IMPLODE_def)
+Theorem EXPLODE_EQNS = EXPLODE_def
+Theorem IMPLODE_EQNS = IMPLODE_def
 
 (* ----------------------------------------------------------------------
     More rewrites for IMPLODE and EXPLODE
@@ -533,7 +533,7 @@ Theorem STRLEN_DEF = STRLEN_THM
 Overload STRCAT[inferior] = “list$APPEND : string -> string -> string”
 
 
-val STRCAT_def = save_thm("STRCAT_def", stringinst APPEND)
+Theorem STRCAT_def = stringinst APPEND
 
 Theorem STRCAT:
     STRCAT s1 s2 = STRCAT s1 s2
@@ -549,9 +549,9 @@ Proof
  SRW_TAC [][STRCAT_def]
 QED
 
-val STRCAT_ASSOC = save_thm("STRCAT_ASSOC", stringinst APPEND_ASSOC)
+Theorem STRCAT_ASSOC = stringinst APPEND_ASSOC
 
-val STRCAT_11 = save_thm("STRCAT_11", stringinst APPEND_11)
+Theorem STRCAT_11 = stringinst APPEND_11
 
 Theorem STRCAT_ACYCLIC:
   !s s1. ((s = STRCAT s s1) = (s1 = "")) /\
@@ -566,13 +566,13 @@ Proof
   Induct THEN SRW_TAC [][]
 QED
 
-val STRCAT_EQ_EMPTY = save_thm("STRCAT_EQ_EMPTY",
-                               CONJUNCT2 (stringinst APPEND_eq_NIL))
+Theorem STRCAT_EQ_EMPTY =
+                               CONJUNCT2 (stringinst APPEND_eq_NIL)
 (*---------------------------------------------------------------------------
      String length and concatenation
  ---------------------------------------------------------------------------*)
 
-val STRLEN_CAT = save_thm("STRLEN_CAT", stringinst LENGTH_APPEND)
+Theorem STRLEN_CAT = stringinst LENGTH_APPEND
 
 (*---------------------------------------------------------------------------
        Is one string a prefix of another?

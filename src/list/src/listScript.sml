@@ -396,7 +396,7 @@ QED
 (* |- P [] /\ (!t. P t ==> !h. P(h::t)) ==> (!x.P x)                         *)
 (*---------------------------------------------------------------------------*)
 
-val list_INDUCT0 = save_thm("list_INDUCT0",TypeBase.induction_of “:'a list”);
+Theorem list_INDUCT0 = TypeBase.induction_of “:'a list”;
 
 Theorem list_INDUCT:
   !P. P [] /\ (!t. P t ==> !h. P (h::t)) ==> !l. P l
@@ -440,12 +440,12 @@ QED
 (* CONS_11:  |- !h t h' t'. (h::t = h' :: t') = (h = h') /\ (t = t')         *)
 (*---------------------------------------------------------------------------*)
 
-val CONS_11 = save_thm("CONS_11", TypeBase.one_one_of “:'a list”)
+Theorem CONS_11 = TypeBase.one_one_of “:'a list”
 
-val NOT_NIL_CONS = save_thm("NOT_NIL_CONS", TypeBase.distinct_of “:'a list”);
+Theorem NOT_NIL_CONS = TypeBase.distinct_of “:'a list”;
 
-val NOT_CONS_NIL = save_thm("NOT_CONS_NIL",
-   CONV_RULE(ONCE_DEPTH_CONV SYM_CONV) NOT_NIL_CONS);
+Theorem NOT_CONS_NIL =
+   CONV_RULE(ONCE_DEPTH_CONV SYM_CONV) NOT_NIL_CONS;
 
 Theorem LIST_NOT_EQ:
   !l1 l2. ~(l1 = l2) ==> !h1:'a. !h2. ~(h1::l1 = h2::l2)
@@ -578,7 +578,7 @@ val MAP_MAP_o = store_thm("MAP_MAP_o",
     THEN BETA_TAC THEN REFL_TAC);
 
 (* Theorem alias *)
-val MAP_COMPOSE = save_thm("MAP_COMPOSE", MAP_MAP_o);
+Theorem MAP_COMPOSE = MAP_MAP_o;
 (* val MAP_COMPOSE = |- !f g l. MAP f (MAP g l) = MAP (f o g) l: thm *)
 
 val EL_MAP = store_thm("EL_MAP",
@@ -812,7 +812,7 @@ Proof
 QED
 
 (* val LENGTH_EQ_0 = save_thm("LENGTH_EQ_0", LENGTH_EQ_NUM |> CONJUNCT1); *)
-val LENGTH_EQ_0 = save_thm("LENGTH_EQ_0", LENGTH_NIL);
+Theorem LENGTH_EQ_0 = LENGTH_NIL;
 (* > val LENGTH_EQ_0 = |- !l. (LENGTH l = 0) <=> (l = []): thm *)
 
 Theorem LENGTH1 :
@@ -936,8 +936,8 @@ Proof
   SIMP_TAC arith_ss [LENGTH_NIL, LENGTH_CONS, LENGTH_EQ_SUM]
 QED
 
-val LENGTH_EQ_NUM_compute = save_thm ("LENGTH_EQ_NUM_compute",
-   CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV LENGTH_EQ_NUM);
+Theorem LENGTH_EQ_NUM_compute =
+   CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV LENGTH_EQ_NUM;
 
 
 Theorem LENGTH_EQ_NIL:
@@ -1026,7 +1026,7 @@ Proof
   FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []
 QED
 
-val APPEND_11_LENGTH = save_thm ("APPEND_11_LENGTH",
+Theorem APPEND_11_LENGTH =
  SIMP_RULE bool_ss [DISJ_IMP_THM, FORALL_AND_THM] (prove (
  (“!l1 l2 l1' l2'.
         ((LENGTH l1 = LENGTH l1') \/ (LENGTH l2 = LENGTH l2')) ==>
@@ -1041,7 +1041,7 @@ val APPEND_11_LENGTH = save_thm ("APPEND_11_LENGTH",
            THEN ‘~(LENGTH (l1 ++ l2) = LENGTH (l1' ++ l2'))’
              suffices_by PROVE_TAC[]
            THEN FULL_SIMP_TAC arith_ss [LENGTH_APPEND]
-     ) THEN PROVE_TAC[APPEND_LENGTH_EQ])));
+     ) THEN PROVE_TAC[APPEND_LENGTH_EQ]));
 
 
 Theorem APPEND_EQ_SELF:
@@ -1105,9 +1105,9 @@ Proof
  ]
 QED
 
-val LIST_EQ = save_thm("LIST_EQ",
+Theorem LIST_EQ =
     GENL[“l1:'a list”, “l2:'a list”]
-    (snd(EQ_IMP_RULE (SPEC_ALL LIST_EQ_REWRITE))));
+    (snd(EQ_IMP_RULE (SPEC_ALL LIST_EQ_REWRITE)));
 
 Theorem FOLDL_EQ_FOLDR:
   !f l e. (ASSOC f /\ COMM f) ==>
@@ -1855,7 +1855,7 @@ val MAP2_ZIP = store_thm("MAP2_ZIP",
     THEN ASM_REWRITE_TAC[CONS_11, UNCURRY_DEF, INV_SUC_EQ]
     end);
 
-val MAP2_MAP = save_thm("MAP2_MAP",MAP2_ZIP)
+Theorem MAP2_MAP = MAP2_ZIP
 
 Theorem MAP_ZIP:
    (LENGTH l1 = LENGTH l2) ==>
@@ -2603,7 +2603,7 @@ Proof
 QED
 val _ = export_rewrites ["LIST_TO_SET_APPEND"]
 
-val UNION_APPEND = save_thm ("UNION_APPEND", GSYM LIST_TO_SET_APPEND)
+Theorem UNION_APPEND = GSYM LIST_TO_SET_APPEND
 
 Theorem LIST_TO_SET_EQ_EMPTY:
    ((set l = {}) <=> (l = [])) /\ (({} = set l) <=> (l = []))
@@ -2687,7 +2687,7 @@ Proof
 QED
 val _ = export_rewrites ["LIST_TO_SET_REVERSE"]
 
-val LIST_TO_SET_THM = save_thm("LIST_TO_SET_THM", LIST_TO_SET)
+Theorem LIST_TO_SET_THM = LIST_TO_SET
 Theorem LIST_TO_SET_MAP:
  !f l. LIST_TO_SET (MAP f l) = IMAGE f (LIST_TO_SET l)
 Proof
@@ -2735,10 +2735,10 @@ val (SET_TO_LIST_EQN, SET_TO_LIST_IND) =
 
  ---------------------------------------------------------------------------*)
 
-val SET_TO_LIST_THM = save_thm("SET_TO_LIST_THM",
- DISCH_ALL (ASM_REWRITE_RULE [ASSUME “FINITE s”] SET_TO_LIST_EQN));
+Theorem SET_TO_LIST_THM =
+ DISCH_ALL (ASM_REWRITE_RULE [ASSUME “FINITE s”] SET_TO_LIST_EQN);
 
-val SET_TO_LIST_IND = save_thm("SET_TO_LIST_IND", SET_TO_LIST_IND);
+Theorem SET_TO_LIST_IND = SET_TO_LIST_IND;
 
 
 
@@ -2945,9 +2945,9 @@ val SNOC = new_recursive_definition {
 };
 val _ = BasicProvers.export_rewrites ["SNOC"]
 
-val SNOC_NIL = save_thm("SNOC_NIL", SNOC |> CONJUNCT1);
+Theorem SNOC_NIL = SNOC |> CONJUNCT1;
 (* > val SNOC_NIL = |- !x. SNOC x [] = [x]: thm *)
-val SNOC_CONS = save_thm("SNOC_CONS", SNOC |> CONJUNCT2);
+Theorem SNOC_CONS = SNOC |> CONJUNCT2;
 (* > val SNOC_CONS = |- !x x' l. SNOC x (x'::l) = x'::SNOC x l: thm *)
 
 Theorem LENGTH_SNOC:
@@ -3127,8 +3127,8 @@ Proof
   Q.EXISTS_TAC ‘fn1’ THEN ASM_REWRITE_TAC []
 QED
 
-val SNOC_INDUCT = save_thm("SNOC_INDUCT", prove_induction_thm SNOC_Axiom_old);
-val SNOC_CASES = save_thm("SNOC_CASES", hd (prove_cases_thm SNOC_INDUCT));
+Theorem SNOC_INDUCT = prove_induction_thm SNOC_Axiom_old;
+Theorem SNOC_CASES = hd (prove_cases_thm SNOC_INDUCT);
 
 (* cf. rich_listTheory.IS_PREFIX_SNOC *)
 Theorem isPREFIX_SNOC[simp] :
@@ -3207,8 +3207,8 @@ Proof
 QED
 val _ = export_rewrites ["EL_GENLIST"]
 
-val HD_GENLIST = save_thm("HD_GENLIST",
-  (SIMP_RULE arith_ss [EL] o Q.SPECL [‘f’,‘SUC n’,‘0’]) EL_GENLIST);
+Theorem HD_GENLIST =
+  (SIMP_RULE arith_ss [EL] o Q.SPECL [‘f’,‘SUC n’,‘0’]) EL_GENLIST;
 
 Theorem HD_GENLIST_COR:
    !n f. 0 < n ==> (HD (GENLIST f n) = f 0)
@@ -4177,12 +4177,11 @@ Definition SHORTLEX_def:
 End
 
 val def' = uncurry CONJ (Lib.pair_map SPEC_ALL (CONJ_PAIR SHORTLEX_def))
-val SHORTLEX_THM = save_thm(
-  "SHORTLEX_THM[simp]",
+Theorem SHORTLEX_THM[simp] =
   CONJ (def' |> Q.INST [‘l2’ |-> ‘[]’]
              |> SIMP_RULE (srw_ss()) [])
        (def' |> Q.INST [‘l2’ |-> ‘h2::t2’]
-             |> SIMP_RULE (srw_ss()) []))
+             |> SIMP_RULE (srw_ss()) [])
 
 Theorem SHORTLEX_MONO[mono]:
    (!x y. R1 x y ==> R2 x y) ==> SHORTLEX R1 x y ==> SHORTLEX R2 x y
@@ -4369,12 +4368,11 @@ Definition LLEX_def:
 End
 
 val def' = uncurry CONJ (Lib.pair_map SPEC_ALL (CONJ_PAIR LLEX_def))
-val LLEX_THM = save_thm(
-  "LLEX_THM[simp]",
+Theorem LLEX_THM[simp] =
   CONJ (def' |> Q.INST [‘l2’ |-> ‘[]’]
              |> SIMP_RULE (srw_ss()) [])
        (def' |> Q.INST [‘l2’ |-> ‘h2::t2’]
-             |> SIMP_RULE (srw_ss()) []))
+             |> SIMP_RULE (srw_ss()) [])
 
 Theorem LLEX_MONO[mono]:
    (!x y. R1 x y ==> R2 x y) ==> LLEX R1 x y ==> LLEX R2 x y
@@ -5364,11 +5362,9 @@ val DROP_compute = Q.prove(
     (!n h t. DROP (SUC n) (h::t) = DROP n t)’,
    SRW_TAC [] []);
 
-val TAKE_compute =
-   Theory.save_thm("TAKE_compute", numLib.SUC_RULE TAKE_compute);
+Theorem TAKE_compute = numLib.SUC_RULE TAKE_compute;
 
-val DROP_compute =
-   Theory.save_thm("DROP_compute", numLib.SUC_RULE DROP_compute);
+Theorem DROP_compute = numLib.SUC_RULE DROP_compute;
 
 Theorem DROP_TAKE:
   !xs n k. DROP n (TAKE k xs) = TAKE (k - n) (DROP n xs)
@@ -5546,9 +5542,8 @@ QED
 
 (* ---------------------------------------------------------------------- *)
 
-val lazy_list_case_compute = save_thm(
-  "lazy_list_case_compute[compute]",
-  computeLib.lazyfy_thm list_case_compute);
+Theorem lazy_list_case_compute[compute] =
+  computeLib.lazyfy_thm list_case_compute;
 
 val _ = computeLib.add_persistent_funs [
       "APPEND", "APPEND_NIL", "FLAT", "HD", "TL", "LENGTH", "MAP", "MAP2",

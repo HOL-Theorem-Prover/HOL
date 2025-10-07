@@ -114,9 +114,9 @@ val item_map_def = new_specification("item_map_def",
 val (item_thm, map_thm) =
     CONJ_PAIR (GSYM (SIMP_RULE (srw_ss()) [FORALL_AND_THM]
                                (ISPEC ``FTNode i fm`` item_map_def)))
+Theorem item_thm[simp] = item_thm
+Theorem map_thm[simp] = map_thm
 
-val _ = (save_thm("item_thm", item_thm); export_rewrites ["item_thm"])
-val _ = (save_thm("map_thm", map_thm); export_rewrites ["map_thm"])
 
 Definition apply_path_def:
   (apply_path [] ft = SOME ft) /\

@@ -485,20 +485,20 @@ in
                       TINT_INJ, NUM_POSTINT_EX])}
 end;
 
-val _ = Theory.save_thm ("INT_10",INT_10)
-val _ = Theory.save_thm ("INT_ADD_SYM",INT_ADD_SYM)
-val INT_ADD_COMM = Theory.save_thm("INT_ADD_COMM", INT_ADD_SYM);
-val _ = Theory.save_thm ("INT_MUL_SYM",INT_MUL_SYM)
-val INT_MUL_COMM = Theory.save_thm("INT_MUL_COMM", INT_MUL_SYM);
-val _ = Theory.save_thm ("INT_ADD_ASSOC",INT_ADD_ASSOC)
-val _ = Theory.save_thm ("INT_MUL_ASSOC",INT_MUL_ASSOC)
-val _ = Theory.save_thm ("INT_LDISTRIB",INT_LDISTRIB)
-val _ = Theory.save_thm ("INT_LT_TOTAL",INT_LT_TOTAL)
-val _ = Theory.save_thm ("INT_LT_REFL",INT_LT_REFL)
-val _ = Theory.save_thm ("INT_LT_TRANS",INT_LT_TRANS)
-val _ = Theory.save_thm ("INT_LT_LADD_IMP",INT_LT_LADD_IMP)
-val _ = Theory.save_thm ("INT_LT_MUL",INT_LT_MUL)
-val _ = Theory.save_thm ("NUM_POSINT_EX",NUM_POSINT_EX)
+Theorem INT_10 = INT_10
+Theorem INT_ADD_SYM = INT_ADD_SYM
+Theorem INT_ADD_COMM = INT_ADD_SYM;
+Theorem INT_MUL_SYM = INT_MUL_SYM
+Theorem INT_MUL_COMM = INT_MUL_SYM;
+Theorem INT_ADD_ASSOC = INT_ADD_ASSOC
+Theorem INT_MUL_ASSOC = INT_MUL_ASSOC
+Theorem INT_LDISTRIB = INT_LDISTRIB
+Theorem INT_LT_TOTAL = INT_LT_TOTAL
+Theorem INT_LT_REFL = INT_LT_REFL
+Theorem INT_LT_TRANS = INT_LT_TRANS
+Theorem INT_LT_LADD_IMP = INT_LT_LADD_IMP
+Theorem INT_LT_MUL = INT_LT_MUL
+Theorem NUM_POSINT_EX = NUM_POSINT_EX
 ;
 
 val _ = overload_on ("+", Term`int_add`);
@@ -3006,9 +3006,8 @@ val INT_DIVIDES_LADD = store_thm(
     ASM_REWRITE_TAC [INT_RDISTRIB]
   ]);
 
-val INT_DIVIDES_RADD = save_thm(
-  "INT_DIVIDES_RADD",
-  ONCE_REWRITE_RULE [INT_ADD_COMM] INT_DIVIDES_LADD);
+Theorem INT_DIVIDES_RADD =
+  ONCE_REWRITE_RULE [INT_ADD_COMM] INT_DIVIDES_LADD;
 
 val INT_DIVIDES_NEG = store_thm(
   "INT_DIVIDES_NEG",
@@ -3370,7 +3369,7 @@ val INT_ADD_REDUCE = store_thm(
     NUMERAL_DEF, INT_NEG_0, INT_NEGNEG
   ]);
 
-val INT_SUB_CALCULATE = save_thm("INT_SUB_CALCULATE", int_sub);
+Theorem INT_SUB_CALCULATE = int_sub;
 
 val INT_SUB_REDUCE = store_thm(
   "INT_SUB_REDUCE",
@@ -3382,9 +3381,8 @@ val INT_SUB_REDUCE = store_thm(
         (~&(NUMERAL m) - ~&(NUMERAL n):int = ~&(NUMERAL m) + &(NUMERAL n))`,
   REWRITE_TAC [int_sub, INT_NEG_0, INT_ADD_LID, INT_ADD_RID, INT_NEGNEG]);
 
-val INT_MUL_CALCULATE = save_thm(
-  "INT_MUL_CALCULATE",
-  LIST_CONJ [INT_MUL, GSYM INT_NEG_LMUL, GSYM INT_NEG_RMUL, INT_NEGNEG]);
+Theorem INT_MUL_CALCULATE =
+  LIST_CONJ [INT_MUL, GSYM INT_NEG_LMUL, GSYM INT_NEG_RMUL, INT_NEGNEG];
 
 val INT_MUL_REDUCE = store_thm(
   "INT_MUL_REDUCE",
@@ -3397,9 +3395,8 @@ val INT_MUL_REDUCE = store_thm(
   REWRITE_TAC [INT_MUL, GSYM INT_NEG_LMUL, GSYM INT_NEG_RMUL, INT_NEGNEG,
                NUMERAL_DEF, INT_MUL_LZERO, INT_MUL_RZERO]);
 
-val INT_DIV_CALCULATE = save_thm(
-  "INT_DIV_CALCULATE",
-  LIST_CONJ [INT_DIV, INT_DIV_NEG, INT_INJ, INT_NEG_EQ0, INT_NEGNEG]);
+Theorem INT_DIV_CALCULATE =
+  LIST_CONJ [INT_DIV, INT_DIV_NEG, INT_INJ, INT_NEG_EQ0, INT_NEGNEG];
 
 val NB_NOT_0 = prove(
   ``!n. ~(BIT1 n = 0) /\ ~(BIT2 n = 0)``,
@@ -3440,9 +3437,8 @@ val INT_DIV_REDUCE = store_thm(
   ASM_SIMP_TAC int_ss [ZERO_DIV, NB_NOT_0, GSYM NOT_ZERO_LT_ZERO,
                        ZERO_MOD, INT_NEG_0, INT_ADD, INT_INJ]);
 
-val INT_QUOT_CALCULATE = save_thm(
-  "INT_QUOT_CALCULATE",
-  LIST_CONJ [INT_QUOT, INT_QUOT_NEG, INT_INJ, INT_NEG_EQ0, INT_NEGNEG]);
+Theorem INT_QUOT_CALCULATE =
+  LIST_CONJ [INT_QUOT, INT_QUOT_NEG, INT_INJ, INT_NEG_EQ0, INT_NEGNEG];
 
 val INT_QUOT_REDUCE = store_thm(
   "INT_QUOT_REDUCE",
@@ -3469,9 +3465,8 @@ val INT_QUOT_REDUCE = store_thm(
                     NUMERAL_DEF, BIT1, BIT2, ZERO_DIV, ADD_CLAUSES, NOT_SUC,
                     prim_recTheory.LESS_0]);
 
-val INT_MOD_CALCULATE = save_thm(
-  "INT_MOD_CALCULATE",
-  LIST_CONJ [INT_MOD, INT_MOD_NEG, INT_NEGNEG, INT_INJ, INT_NEG_EQ0]);
+Theorem INT_MOD_CALCULATE =
+  LIST_CONJ [INT_MOD, INT_MOD_NEG, INT_NEGNEG, INT_INJ, INT_NEG_EQ0];
 
 Theorem INT_MOD_REDUCE:
    !m n.
@@ -3501,9 +3496,8 @@ Proof
 QED
 
 
-val INT_REM_CALCULATE = save_thm(
-  "INT_REM_CALCULATE",
-  LIST_CONJ [INT_REM, INT_REM_NEG, INT_NEGNEG, INT_INJ, INT_NEG_EQ0]);
+Theorem INT_REM_CALCULATE =
+  LIST_CONJ [INT_REM, INT_REM_NEG, INT_NEGNEG, INT_INJ, INT_NEG_EQ0];
 
 val INT_REM_REDUCE = store_thm(
   "INT_REM_REDUCE",
@@ -3575,7 +3569,7 @@ val INT_LT_REDUCE = store_thm(
                     BIT2] THEN
   CONV_TAC ARITH_CONV);
 
-val INT_LE_CALCULATE = save_thm("INT_LE_CALCULATE", INT_LE_LT);
+Theorem INT_LE_CALCULATE = INT_LE_LT;
 
 val INT_LE_REDUCE = store_thm(
   "INT_LE_REDUCE",
@@ -3596,18 +3590,15 @@ val INT_LE_REDUCE = store_thm(
                     BIT2] THEN
   CONV_TAC ARITH_CONV);
 
-val INT_GT_CALCULATE = save_thm("INT_GT_CALCULATE", int_gt);
-val INT_GT_REDUCE = save_thm(
-  "INT_GT_REDUCE",
-  PURE_REWRITE_RULE [GSYM int_gt] INT_LT_REDUCE);
-val INT_GE_CALCULATE = save_thm("INT_GE_CALCULATE", int_ge);
-val INT_GE_REDUCE = save_thm(
-  "INT_GE_REDUCE",
-  PURE_REWRITE_RULE [GSYM int_ge] INT_LE_REDUCE);
+Theorem INT_GT_CALCULATE = int_gt;
+Theorem INT_GT_REDUCE =
+  PURE_REWRITE_RULE [GSYM int_gt] INT_LT_REDUCE;
+Theorem INT_GE_CALCULATE = int_ge;
+Theorem INT_GE_REDUCE =
+  PURE_REWRITE_RULE [GSYM int_ge] INT_LE_REDUCE;
 
-val INT_EQ_CALCULATE = save_thm(
-  "INT_EQ_CALCULATE",
-  LIST_CONJ [INT_INJ, INT_EQ_NEG, int_eq_calculate]);
+Theorem INT_EQ_CALCULATE =
+  LIST_CONJ [INT_INJ, INT_EQ_NEG, int_eq_calculate];
 val INT_EQ_REDUCE = store_thm(
   "INT_EQ_REDUCE",
   Term`!n m. ((0i = 0i) <=> T) /\

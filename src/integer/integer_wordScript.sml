@@ -120,7 +120,7 @@ val UINT_MAX_32 = store_thm(
 val _ = export_rewrites ["UINT_MAX_32"]
 *)
 
-val ONE_LE_TWOEXP = save_thm("ONE_LE_TWOEXP", bitTheory.ONE_LE_TWOEXP)
+Theorem ONE_LE_TWOEXP = bitTheory.ONE_LE_TWOEXP
 
 Theorem w2i_w2n_pos:
    !w n. ~word_msb w /\ w2i w < &n ==> w2n w < n
@@ -949,8 +949,8 @@ Proof
   \\ SRW_TAC [] []
 QED
 
-val w2i_minus_1 = Theory.save_thm("w2i_minus_1",
-  SIMP_RULE (srw_ss()) [] w2i_UINT_MAXw)
+Theorem w2i_minus_1 =
+  SIMP_RULE (srw_ss()) [] w2i_UINT_MAXw
 
 Theorem w2i_lt_0:
    !w: 'a word. w2i w < 0 = w < 0w

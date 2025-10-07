@@ -402,11 +402,10 @@ QED
 (* val _ = export_rewrites ["ring_add_group"]; *)
 
 (* Use Michael's version for export_rewrites, stripping commutativity. *)
-val ring_add_group_rwt = save_thm(
-  "ring_add_group_rwt",
+Theorem ring_add_group_rwt =
   ring_add_group |> SPEC_ALL |> UNDISCH |> CONJUNCTS
                  |> (fn l => LIST_CONJ (List.take(l,2)))
-                 |> DISCH_ALL |> GEN_ALL);
+                 |> DISCH_ALL |> GEN_ALL;
 (* > val ring_add_group_rwt = |- !r. Ring r ==> Group r.sum /\ (r.sum.carrier = R) : thm *)
 val _ = export_rewrites ["ring_add_group_rwt"];
 
@@ -431,11 +430,10 @@ QED
 (* val _ = export_rewrites ["ring_mult_monoid"]; *)
 
 (* Copy Michael's version for export_rewrites, stripping commutativity. *)
-val ring_mult_monoid_rwt = save_thm(
-  "ring_mult_monoid_rwt",
+Theorem ring_mult_monoid_rwt =
   ring_mult_monoid |> SPEC_ALL |> UNDISCH |> CONJUNCTS
                    |> (fn l => LIST_CONJ (List.take(l,2)))
-                   |> DISCH_ALL |> GEN_ALL);
+                   |> DISCH_ALL |> GEN_ALL;
 (* > val ring_mult_monoid_rwt = |- !r. Ring r ==> Monoid r.prod /\ (r.prod.carrier = R) : thm *)
 val _ = export_rewrites ["ring_mult_monoid_rwt"];
 
@@ -1094,8 +1092,8 @@ QED
 
 (* Theorem: x * (y + z) = x * y + x * z *)
 (* Proof: by definition. *)
-val ring_mult_radd = save_thm("ring_mult_radd",
-  Ring_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCTS |> last |> DISCH_ALL |> GEN_ALL);
+Theorem ring_mult_radd =
+  Ring_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCTS |> last |> DISCH_ALL |> GEN_ALL;
 (* > val ring_mult_radd = |- !r. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> (x * (y + z) = x * y + x * z) : thm *)
 
 val _ = export_rewrites ["ring_mult_radd"];
@@ -1133,11 +1131,11 @@ val _ = export_rewrites ["ring_mult_ladd"];
 
 (* Theorem: x * (y + z) = x * y + x * z /\ (y + z) * x = y * x + z * x *)
 (* Proof: by ring_mult_ladd and ring_mult_radd. *)
-val ring_mult_add = save_thm("ring_mult_add",
+Theorem ring_mult_add =
     CONJ (ring_mult_radd |> SPEC_ALL |> UNDISCH |> SPEC_ALL |> UNDISCH)
          (ring_mult_ladd |> SPEC_ALL |> UNDISCH |> SPEC_ALL |> UNDISCH)
          |> DISCH ``x IN R /\ y IN R /\ z IN R`` |> GEN_ALL
-         |> DISCH_ALL |> GEN_ALL);
+         |> DISCH_ALL |> GEN_ALL;
 (* > val ring_mult_add =
     |- !r. Ring r ==> !z y x. x IN R /\ y IN R /\ z IN R ==>
            (x * (y + z) = x * y + x * z) /\ ((y + z) * x = y * x + z * x) : thm *)
@@ -3274,7 +3272,7 @@ val ring_unit_rinv = lift_group_inv_thm "rinv" "unit_rinv";
 (* val ring_unit_rinv = |- !r. Ring r ==> !x. unit x ==> (x * |/ x = #1) : thm *)
 
 (* Theorem: x IN R* ==> x IN R *)
-val ring_unit_element = save_thm("ring_unit_element", ring_units_element);
+Theorem ring_unit_element = ring_units_element;
 (* > val ring_unit_element = |- !r. Ring r ==> !x. unit x ==> x IN R : thm *)
 
 (* export simple result *)
@@ -5629,7 +5627,7 @@ Proof
 QED
 
 (* Theorem alias *)
-val ring_homo_ring_homo_subring = save_thm("ring_homo_ring_homo_subring", ring_homo_image_is_subring);
+Theorem ring_homo_ring_homo_subring = ring_homo_image_is_subring;
 (*
 val ring_homo_ring_homo_subring = |- !r r_ f. (r ~r~ r_) f ==> subring (ring_homo_image f r r_) r_: thm
 *)
@@ -6224,20 +6222,20 @@ val _ = overload_on ("<<", ``ideal``);
 val _ = set_fixity "<<" (Infixl 650); (* higher than * or / *)
 
 (* Theorem: Ideal add_group is a subgroup. *)
-val ideal_has_subgroup = save_thm("ideal_has_subgroup",
-    ideal_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL);
+Theorem ideal_has_subgroup =
+    ideal_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val ideal_has_subgroup = |- !r i. i << r ==> i.sum <= r.sum : thm *)
 
 (* Theorem: Ideal carriers are I. *)
-val ideal_carriers = save_thm("ideal_carriers",
+Theorem ideal_carriers =
     CONJ (ideal_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCT2 |> CONJUNCT1)
          (ideal_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCT2 |> CONJUNCT2 |> CONJUNCT1)
-         |> DISCH_ALL |> GEN_ALL);
+         |> DISCH_ALL |> GEN_ALL;
 (* > val ideal_carriers = |- !r i. i << r ==> (i.sum.carrier = I) /\ (i.prod.carrier = I) : thm *)
 
 (* Theorem: Ideal is multiplicative closed with all elements. *)
-val ideal_product_property = save_thm("ideal_product_property",
-    ideal_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCTS |> last |> DISCH_ALL |> GEN_ALL);
+Theorem ideal_product_property =
+    ideal_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCTS |> last |> DISCH_ALL |> GEN_ALL;
 (* > val ideal_product_property = |- !r i. i << r ==> !x y. x IN I /\ y IN R ==> x * y IN I /\ y * x IN I : thm *)
 
 (* Theorem: i << r ==> !x. x IN I ==> x IN r.sum.carrier *)
@@ -7537,15 +7535,15 @@ Definition EuclideanRing_def:
 End
 
 (* Theorem: EuclideanRing r ==> Ring r *)
-val euclid_ring_ring = save_thm("euclid_ring_ring",
+Theorem euclid_ring_ring =
     EuclideanRing_def |> SPEC_ALL |> #1 o EQ_IMP_RULE
-                   |> UNDISCH_ALL |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL);
+                   |> UNDISCH_ALL |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val euclid_ring_ring = |- !r f. EuclideanRing r f ==> Ring r : thm *)
 
 (* Theorem: EuclideanRing r ==> !x. (f x = 0) <=> (x = #0) *)
-val euclid_ring_map = save_thm("euclid_ring_map",
+Theorem euclid_ring_map =
     EuclideanRing_def |> SPEC_ALL |> #1 o EQ_IMP_RULE
-                   |> UNDISCH_ALL |> CONJUNCT2 |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL);
+                   |> UNDISCH_ALL |> CONJUNCT2 |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val euclid_ring_map = |- !r f. EuclideanRing r f ==> !x. (f x = 0) <=> (x = #0) : thm *)
 
 (* Theorem: EuclideanRing property:
@@ -7558,9 +7556,9 @@ val euclid_ring_property = store_thm(
    !x y. x IN R /\ y IN R /\ y <> #0 ==> ?q t. q IN R /\ t IN R /\ (x = y * q + t) /\ f t < f y``,
   rw[EuclideanRing_def]); -- Note: not by metis_tac!
 *)
-val euclid_ring_property = save_thm("euclid_ring_property",
+Theorem euclid_ring_property =
     EuclideanRing_def |> SPEC_ALL |> #1 o EQ_IMP_RULE
-                      |> UNDISCH_ALL |> CONJUNCTS |> last |> DISCH_ALL |> GEN_ALL);
+                      |> UNDISCH_ALL |> CONJUNCTS |> last |> DISCH_ALL |> GEN_ALL;
 (* > val euclid_ring_property = |- !r f.  EuclideanRing r f ==> !x y. x IN R /\ y IN R /\ y <> #0 ==>
                                 ?q t. q IN R /\ t IN R /\ (x = q * y + t) /\ f t < f y : thm *)
 
@@ -8008,11 +8006,11 @@ val _ = overload_on ("rlist", ``ring_list r``);
 val _ = export_rewrites ["ring_list_def"];
 
 (* Theorem: rlist [] <=> T *)
-val ring_list_nil = save_thm("ring_list_nil", ring_list_def |> CONJUNCT1);
+Theorem ring_list_nil = ring_list_def |> CONJUNCT1;
 (* > val ring_list_nil = |- !r. rlist [] <=> T : thm *)
 
 (* Theorem: rlist (h::t) <=> h IN R /\ rlist t *)
-val ring_list_cons = save_thm("ring_list_cons", ring_list_def |> CONJUNCT2);
+Theorem ring_list_cons = ring_list_def |> CONJUNCT2;
 (* > val ring_list_cons = |- !r h t. rlist (h::t) <=> h IN R /\ rlist t : thm *)
 
 
@@ -8081,11 +8079,11 @@ val _ = overload_on ("rsum", ``ring_sum r``);
 val _ = export_rewrites ["ring_sum_def"];
 
 (* Theorem: rsum [] = #0 *)
-val ring_sum_nil = save_thm("ring_sum_nil", ring_sum_def |> CONJUNCT1);
+Theorem ring_sum_nil = ring_sum_def |> CONJUNCT1;
 (* > val ring_sum_nil = |- !r. rsum [] = #0 : thm *)
 
 (* Theorem: rsum (h::t)= h + rsum t *)
-val ring_sum_cons = save_thm("ring_sum_cons", ring_sum_def |> CONJUNCT2);
+Theorem ring_sum_cons = ring_sum_def |> CONJUNCT2;
 (* > val ring_sum_cons = |- !r h t. rsum (h::t) = h + rsum t : thm *)
 
 (* Theorem: rsum s IN R *)
@@ -10067,17 +10065,17 @@ Proof
 QED
 
 (* Theorem: rgcd p q rdivides p /\ rgcd p q rdivides q *)
-val ring_gcd_divides = save_thm("ring_gcd_divides",
+Theorem ring_gcd_divides =
   (CONJ (ring_gcd_is_gcd |> SPEC_ALL |> UNDISCH_ALL |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT1)
         (ring_gcd_is_gcd |> SPEC_ALL |> UNDISCH_ALL |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT2 |> CONJUNCT1))
-        |> DISCH ``p IN R /\ q IN R`` |> GEN ``q`` |> GEN ``p`` |> DISCH_ALL |> GEN_ALL);
+        |> DISCH ``p IN R /\ q IN R`` |> GEN ``q`` |> GEN ``p`` |> DISCH_ALL |> GEN_ALL;
 (* > val ring_gcd_divides = |- !r f. EuclideanRing r f ==>
          !p q. p IN R /\ q IN R ==> rgcd p q rdivides p /\ rgcd p q rdivides q : thm *)
 
 (* Theorem: d rdivides p /\ d rdivides q ==> d rdivides (rgcd p q) *)
-val ring_gcd_property = save_thm("ring_gcd_property",
+Theorem ring_gcd_property =
   ring_gcd_is_gcd |> SPEC_ALL |> UNDISCH_ALL |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCTS |> last
-        |> DISCH ``p IN R /\ q IN R`` |> GEN ``q`` |> GEN ``p`` |> DISCH_ALL |> GEN_ALL);
+        |> DISCH ``p IN R /\ q IN R`` |> GEN ``q`` |> GEN ``p`` |> DISCH_ALL |> GEN_ALL;
 (* > val ring_gcd_property = |- !r f. EuclideanRing r f ==>
          !p q. p IN R /\ q IN R ==> !d. d IN R /\ d rdivides p /\ d rdivides q ==> d rdivides rgcd p q : thm *)
 
@@ -10711,7 +10709,7 @@ Proof
 QED
 
 (* Theorem alias *)
-val quotient_ring_has_ideal = save_thm("quotient_ring_has_ideal", ideal_in_quotient_ring);
+Theorem quotient_ring_has_ideal = ideal_in_quotient_ring;
 
 
 (*
@@ -15103,27 +15101,27 @@ End
 
 (* Theorem: Integral Domain is Ring. *)
 (* Proof: by definition. *)
-val integral_domain_is_ring = save_thm("integral_domain_is_ring",
-  IntegralDomain_def |> SPEC_ALL |> EQ_IMP_RULE |> #1 |> UNDISCH |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL);
+Theorem integral_domain_is_ring =
+  IntegralDomain_def |> SPEC_ALL |> EQ_IMP_RULE |> #1 |> UNDISCH |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val integral_domain_is_ring = |- !r. IntegralDomain r ==> Ring r : thm *)
 
 (* Theorem: Integral Domain has #1 <> #0 *)
 (* Proof: by definition *)
-val integral_domain_one_ne_zero = save_thm("integral_domain_one_ne_zero",
-  IntegralDomain_def |> SPEC_ALL |> EQ_IMP_RULE |> #1 |> UNDISCH |> CONJUNCT2 |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL);
+Theorem integral_domain_one_ne_zero =
+  IntegralDomain_def |> SPEC_ALL |> EQ_IMP_RULE |> #1 |> UNDISCH |> CONJUNCT2 |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val integral_domain_one_ne_zero = |- !r. IntegralDomain r ==> #1 <> #0 : thm *)
 
 val _ = export_rewrites ["integral_domain_one_ne_zero"];
 
 (* Theorem: No zero divisor in integral domain. *)
 (* Proof: by definition. *)
-val integral_domain_mult_eq_zero = save_thm("integral_domain_mult_eq_zero",
-  IntegralDomain_def |> SPEC_ALL |> EQ_IMP_RULE |> #1 |> UNDISCH |> CONJUNCT2 |> CONJUNCT2 |> DISCH_ALL |> GEN_ALL);
+Theorem integral_domain_mult_eq_zero =
+  IntegralDomain_def |> SPEC_ALL |> EQ_IMP_RULE |> #1 |> UNDISCH |> CONJUNCT2 |> CONJUNCT2 |> DISCH_ALL |> GEN_ALL;
 (* > val integral_domain_mult_eq_zero =
      |- !r. IntegralDomain r ==> !x y. x IN R /\ y IN R ==> ((x * y = #0) <=> (x = #0) \/ (y = #0)) : thm *)
 
 (* Alternative name for export *)
-val integral_domain_zero_product = save_thm("integral_domain_zero_product", integral_domain_mult_eq_zero);
+Theorem integral_domain_zero_product = integral_domain_mult_eq_zero;
 (* > val integral_domain_zero_product =
     |- !r. IntegralDomain r ==> !x y. x IN R /\ y IN R ==> ((x * y = #0) <=> (x = #0) \/ (y = #0)) : thm *)
 

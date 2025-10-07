@@ -346,8 +346,8 @@ val l2n2 = Q.prove(
    REWRITE_TAC [l2n2, arithmeticTheory.NUMERAL_DEF]
    )
 
-val l2n_2_thms = save_thm("l2n_2_thms",
-   LIST_CONJ (CONJUNCTS l2n2 @ [l2n2_empty, l2n2_cons0, l2n2_cons1]))
+Theorem l2n_2_thms =
+   LIST_CONJ (CONJUNCTS l2n2 @ [l2n2_empty, l2n2_cons0, l2n2_cons1])
 
 val () = Parse.remove_ovl_mapping "l2n2" {Thy = "numposrep", Name = "l2n2"}
 
