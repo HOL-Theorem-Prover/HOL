@@ -37,46 +37,59 @@ End
 
 val IS_GCD = is_gcd_def;
 
-val IS_GCD_UNIQUE = store_thm("IS_GCD_UNIQUE",
-  Term `!a b c d. is_gcd a b c /\ is_gcd a b d ==> (c = d)`,
-  PROVE_TAC[IS_GCD,DIVIDES_ANTISYM]);
+Theorem IS_GCD_UNIQUE:
+  !a b c d. is_gcd a b c /\ is_gcd a b d ==> (c = d)
+Proof
+  PROVE_TAC[IS_GCD,DIVIDES_ANTISYM]
+QED
 
-val IS_GCD_REF = store_thm(
-  "IS_GCD_REF",
-  Term `!a. is_gcd a a a`,
-  PROVE_TAC[IS_GCD,DIVIDES_REFL]);
+Theorem IS_GCD_REF:
+  !a. is_gcd a a a
+Proof
+  PROVE_TAC[IS_GCD,DIVIDES_REFL]
+QED
 
-val IS_GCD_SYM = store_thm("IS_GCD_SYM",
-                        Term `!a b c. (is_gcd a b c) = is_gcd b a c`,
-                        PROVE_TAC[IS_GCD]);
+Theorem IS_GCD_SYM:
+                        !a b c. (is_gcd a b c) = is_gcd b a c
+Proof
+                        PROVE_TAC[IS_GCD]
+QED
 
-val IS_GCD_0R = store_thm("IS_GCD_0R",
-                        Term `!a. is_gcd a 0 a`,
-                        PROVE_TAC[IS_GCD,DIVIDES_REFL,ALL_DIVIDES_0]);
+Theorem IS_GCD_0R:
+                        !a. is_gcd a 0 a
+Proof
+                        PROVE_TAC[IS_GCD,DIVIDES_REFL,ALL_DIVIDES_0]
+QED
 
-val IS_GCD_0L = store_thm("IS_GCD_0L",
-                        Term `!a. is_gcd 0 a a`,
-                        PROVE_TAC[IS_GCD,DIVIDES_REFL,ALL_DIVIDES_0]);
+Theorem IS_GCD_0L:
+                        !a. is_gcd 0 a a
+Proof
+                        PROVE_TAC[IS_GCD,DIVIDES_REFL,ALL_DIVIDES_0]
+QED
 
-val PRIME_IS_GCD = store_thm("PRIME_IS_GCD",
-                        Term `!p b. prime p ==> divides p b \/ is_gcd p b 1`,
+Theorem PRIME_IS_GCD:
+                        !p b. prime p ==> divides p b \/ is_gcd p b 1
+Proof
                         ARW[] THEN Cases_on `divides p b` THEN ARW[]
                         THEN ARW[IS_GCD,ONE_DIVIDES_ALL]
                         THEN Cases_on `d=1` THEN ARW[ONE_DIVIDES_ALL]
-                        THEN PROVE_TAC[prime_def]);
+                        THEN PROVE_TAC[prime_def]
+QED
 
-val IS_GCD_MINUS_L = store_thm("IS_GCD_MINUS_L",
-                            Term `!a b c. b <= a /\ is_gcd (a-b) b c ==> is_gcd a b c`,
+Theorem IS_GCD_MINUS_L:
+                            !a b c. b <= a /\ is_gcd (a-b) b c ==> is_gcd a b c
+Proof
                             ARW[IS_GCD] THENL [
                               PROVE_TAC[SUB_ADD,DIVIDES_ADD_1],
                               PROVE_TAC[SUB_ADD,DIVIDES_ADD_2,ADD_SYM]
                             ]
-                     );
+QED
 
-val IS_GCD_MINUS_R = store_thm("IS_GCD_MINUS_R",
-                            Term `!a b c. a <= b /\ is_gcd a (b-a) c ==> is_gcd a b c`,
+Theorem IS_GCD_MINUS_R:
+                            !a b c. a <= b /\ is_gcd a (b-a) c ==> is_gcd a b c
+Proof
                             PROVE_TAC[IS_GCD_MINUS_L,IS_GCD_SYM]
-                     );
+QED
 
 Definition gcd_def:
       (gcd 0 y = y)
@@ -104,26 +117,34 @@ Theorem GCD_IS_GREATEST_COMMON_DIVISOR =
   REWRITE_RULE [IS_GCD] GCD_IS_GCD
 
 
-val GCD_REF = store_thm("GCD_REF",
-                        Term `!a. gcd a a = a`,
-                        PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,IS_GCD_REF]);
+Theorem GCD_REF:
+                        !a. gcd a a = a
+Proof
+                        PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,IS_GCD_REF]
+QED
 val _ = export_rewrites ["GCD_REF"]
 
-val GCD_SYM = store_thm("GCD_SYM",
-                        Term `!a b. gcd a b = gcd b a`,
-                        PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,IS_GCD_SYM]);
+Theorem GCD_SYM:
+                        !a b. gcd a b = gcd b a
+Proof
+                        PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,IS_GCD_SYM]
+QED
 
 (* |- gcd a b = gcd b a *)
 Theorem GCD_COMM = GCD_SYM |> SPEC_ALL;
 
-val GCD_0R = store_thm("GCD_0R",
-                        Term `!a. gcd a 0 = a`,
-                        PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,IS_GCD_0R]);
+Theorem GCD_0R:
+                        !a. gcd a 0 = a
+Proof
+                        PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,IS_GCD_0R]
+QED
 val _ = export_rewrites ["GCD_0R"]
 
-val GCD_0L = store_thm("GCD_0L",
-                        Term `!a. gcd 0 a = a`,
-                        PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,IS_GCD_0L]);
+Theorem GCD_0L:
+                        !a. gcd 0 a = a
+Proof
+                        PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,IS_GCD_0L]
+QED
 val _ = export_rewrites ["GCD_0L"]
 
 (* Theorem: (gcd 0 x = x) /\ (gcd x 0 = x) *)
@@ -134,20 +155,22 @@ Proof
   rw_tac std_ss[GCD_0L, GCD_0R]
 QED
 
-val GCD_ADD_R = store_thm("GCD_ADD_R",
-                        Term `!a b. gcd a (a+b) = gcd a b`,
+Theorem GCD_ADD_R:
+                        !a b. gcd a (a+b) = gcd a b
+Proof
                         ARW[] THEN MATCH_MP_TAC (SPECL[Term `a:num`, Term `a+b`] IS_GCD_UNIQUE)
                         THEN ARW[GCD_IS_GCD,SPECL [Term `a:num`, Term `a+b`] IS_GCD_MINUS_R]
-                );
+QED
 
 Theorem GCD_ADD_R_THM =
   CONJ GCD_ADD_R (ONCE_REWRITE_RULE [ADD_COMM] GCD_ADD_R)
 val _ = export_rewrites ["GCD_ADD_R_THM"]
 
-val GCD_ADD_L = store_thm("GCD_ADD_L",
-                        Term `!a b. gcd (a+b) a = gcd a b`,
+Theorem GCD_ADD_L:
+                        !a b. gcd (a+b) a = gcd a b
+Proof
                         PROVE_TAC[GCD_SYM,GCD_ADD_R]
-                );
+QED
 
 Theorem GCD_ADD_L_THM =
  CONJ GCD_ADD_L (ONCE_REWRITE_RULE [ADD_COMM] GCD_ADD_L)
@@ -167,9 +190,11 @@ Proof
 QED
 val _ = export_rewrites ["GCD_1"]
 
-val PRIME_GCD = store_thm("PRIME_GCD",
-                        Term `!p b. prime p ==> divides p b \/ (gcd p b = 1)`,
-                        PROVE_TAC[PRIME_IS_GCD,GCD_IS_GCD,IS_GCD_UNIQUE]);
+Theorem PRIME_GCD:
+                        !p b. prime p ==> divides p b \/ (gcd p b = 1)
+Proof
+                        PROVE_TAC[PRIME_IS_GCD,GCD_IS_GCD,IS_GCD_UNIQUE]
+QED
 
 val EUCLIDES_AUX = prove(Term
 `!a b c d. divides c (d*a) /\ divides c (d*b)
@@ -184,12 +209,14 @@ recInduct gcd_ind THEN SRW_TAC [][gcd_def]
   THEN PROVE_TAC [DIVIDES_ADD_2,ADD_ASSOC]);
 
 
-val L_EUCLIDES = store_thm("L_EUCLIDES",
-  Term `!a b c. (gcd a b = 1) /\ divides b (a*c) ==> divides b c`,
+Theorem L_EUCLIDES:
+  !a b c. (gcd a b = 1) /\ divides b (a*c) ==> divides b c
+Proof
   ARW[]
   THEN `c = c * gcd a b` by ARW[MULT_CLAUSES]
   THEN ONCE_ASM_REWRITE_TAC[]
-  THEN PROVE_TAC[EUCLIDES_AUX,DIVIDES_MULT,MULT_SYM,DIVIDES_REFL]);
+  THEN PROVE_TAC[EUCLIDES_AUX,DIVIDES_MULT,MULT_SYM,DIVIDES_REFL]
+QED
 
 Theorem divides_coprime_mul:
   !n m k. gcd n m = 1 ==> (divides n (m * k) <=> divides n k)
@@ -199,14 +226,15 @@ Proof
   >- (drule dividesTheory.DIVIDES_MULT >> simp_tac bool_ss [Once MULT_COMM])
 QED
 
-val P_EUCLIDES = store_thm(
-  "P_EUCLIDES",
-  Term `!p a b. prime p /\ divides p (a*b)
+Theorem P_EUCLIDES:
+  !p a b. prime p /\ divides p (a*b)
                   ==>
-                divides p a \/ divides p b`,
+                divides p a \/ divides p b
+Proof
   ARW[] THEN Cases_on `divides p a` THEN ARW[] THEN
   `gcd p a = 1` by PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,PRIME_GCD] THEN
-  PROVE_TAC[L_EUCLIDES,GCD_SYM]);
+  PROVE_TAC[L_EUCLIDES,GCD_SYM]
+QED
 
 Theorem FACTOR_OUT_GCD:
     !n m. ~(n = 0) /\ ~(m = 0) ==>

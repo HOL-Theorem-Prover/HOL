@@ -1348,10 +1348,11 @@ Proof
       REWRITE_TAC[REAL_LT, TWO, LESS_0]]]
 QED
 
-val FTC1 = store_thm("FTC1",
- Term `!f f' a b.
+Theorem FTC1:
+ !f f' a b.
        a <= b /\ (!x. a <= x /\ x <= b ==> (f diffl f'(x))(x))
-        ==> Dint(a,b) f' (f(b) - f(a))`,
+        ==> Dint(a,b) f' (f(b) - f(a))
+Proof
   REPEAT STRIP_TAC THEN
   UNDISCH_TAC (Term`a <= b`) THEN REWRITE_TAC[REAL_LE_LT] THEN
   DISCH_THEN DISJ_CASES_TAC THENL
@@ -1410,7 +1411,8 @@ val FTC1 = store_thm("FTC1",
    [IMP_RES_THEN (fn th => REWRITE_TAC[th]) DIVISION_LBOUND,
     IMP_RES_THEN (fn th => REWRITE_TAC[th]) DIVISION_UBOUND,
     UNDISCH_TAC (Term`fine(g)(D,p)`) THEN REWRITE_TAC[fine] THEN
-    DISCH_THEN MATCH_MP_TAC THEN FIRST_ASSUM ACCEPT_TAC]);
+    DISCH_THEN MATCH_MP_TAC THEN FIRST_ASSUM ACCEPT_TAC]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Integration by parts.                                                     *)

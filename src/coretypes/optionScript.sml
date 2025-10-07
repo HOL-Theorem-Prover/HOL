@@ -75,9 +75,9 @@ val NONE_DEF = new_definition(
 val _ = ot0 "SOME" "some"
 val _ = ot0 "NONE" "none"
 
-val option_Axiom = store_thm (
-  "option_Axiom",
-  Term`!e f:'a -> 'b. ?fn. (fn NONE = e) /\ (!x. fn (SOME x) = f x)`,
+Theorem option_Axiom:
+  !e f:'a -> 'b. ?fn. (fn NONE = e) /\ (!x. fn (SOME x) = f x)
+Proof
   REPEAT GEN_TAC THEN
   PURE_REWRITE_TAC[SOME_DEF,NONE_DEF] THEN
   STRIP_ASSUME_TAC
@@ -86,17 +86,19 @@ val option_Axiom = store_thm (
          (INST_TYPE [Type.beta |-> Type`:one`]
           sumTheory.sum_Axiom))) THEN
   EXISTS_TAC “\x:'a option. h(option_REP x):'b” THEN BETA_TAC THEN
-  ASM_REWRITE_TAC[reduce option_REP_ABS_DEF]);
+  ASM_REWRITE_TAC[reduce option_REP_ABS_DEF]
+QED
 
-val option_induction = store_thm (
-  "option_induction",
-  Term`!P. P NONE /\ (!a. P (SOME a)) ==> !x. P x`,
+Theorem option_induction:
+  !P. P NONE /\ (!a. P (SOME a)) ==> !x. P x
+Proof
   GEN_TAC THEN PURE_REWRITE_TAC [SOME_DEF, NONE_DEF] THEN
   REPEAT STRIP_TAC THEN
   ONCE_REWRITE_TAC [GSYM (CONJUNCT1 option_REP_ABS_DEF)] THEN
   SPEC_TAC (Term`option_REP (x:'a option)`, Term`s:'a + one`) THEN
   HO_MATCH_MP_TAC sumTheory.sum_INDUCT THEN
-  ONCE_REWRITE_TAC [oneTheory.one] THEN ASM_REWRITE_TAC []);
+  ONCE_REWRITE_TAC [oneTheory.one] THEN ASM_REWRITE_TAC []
+QED
 
 Theorem option_nchotomy =
   prove_cases_thm option_induction
@@ -130,9 +132,11 @@ Theorem EXISTS_OPTION:
 Proof METIS_TAC [option_nchotomy]
 QED
 
-val SOME_11 = store_thm("SOME_11",
-  Term`!x y :'a. (SOME x = SOME y) <=> (x=y)`,
-  REWRITE_TAC [SOME_DEF,option_ABS_ONE_ONE,sumTheory.INR_INL_11]);
+Theorem SOME_11:
+  !x y :'a. (SOME x = SOME y) <=> (x=y)
+Proof
+  REWRITE_TAC [SOME_DEF,option_ABS_ONE_ONE,sumTheory.INR_INL_11]
+QED
 val _ = export_rewrites ["SOME_11"]
 val _ = computeLib.add_persistent_funs ["SOME_11"]
 
