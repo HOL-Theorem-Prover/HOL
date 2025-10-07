@@ -166,7 +166,7 @@ val POLY_CMUL_CLAUSES = store_thm("POLY_CMUL_CLAUSES",
 val POLY_NEG_CLAUSES = store_thm("POLY_NEG_CLAUSES",
  Term`(poly_neg [] = []) /\
       (poly_neg (h::t) = ~h::poly_neg t)`,
-  REWRITE_TAC[poly_neg, POLY_CMUL_CLAUSES, REAL_MUL_LNEG, REAL_MUL_LID]);
+  REWRITE_TAC[poly_neg_def, POLY_CMUL_CLAUSES, REAL_MUL_LNEG, REAL_MUL_LID]);
 
 val POLY_MUL_CLAUSES = store_thm("POLY_MUL_CLAUSES",
  Term`([] * p2 = []) /\
@@ -178,7 +178,7 @@ val POLY_DIFF_CLAUSES = store_thm("POLY_DIFF_CLAUSES",
  Term`(diff [] = []) /\
    (diff [c] = []) /\
    (diff (h::t) = poly_diff_aux 1 t)`,
-  REWRITE_TAC[poly_diff, NOT_CONS_NIL, HD, TL, poly_diff_aux]);
+  REWRITE_TAC[poly_diff_def, NOT_CONS_NIL, HD, TL, poly_diff_aux]);
 
 (* ------------------------------------------------------------------------- *)
 (* Various natural consequences of syntactic definitions.                    *)
@@ -198,7 +198,7 @@ val POLY_CMUL = store_thm("POLY_CMUL",
 
 val POLY_NEG = store_thm("POLY_NEG",
  Term`!p x. poly (poly_neg p) x = ~(poly p x)`,
-  REWRITE_TAC[poly_neg, POLY_CMUL] THEN
+  REWRITE_TAC[poly_neg_def, POLY_CMUL] THEN
   REAL_ARITH_TAC);
 
 val POLY_MUL = store_thm("POLY_MUL",
@@ -348,7 +348,7 @@ val POLY_DIFF_AUX_CMUL = store_thm("POLY_DIFF_AUX_CMUL",
 val POLY_DIFF_AUX_NEG = store_thm("POLY_DIFF_AUX_NEG",
  (Term`!p n.  poly (poly_diff_aux n (poly_neg p)) =
           poly (poly_neg (poly_diff_aux n p))`),
-  REWRITE_TAC[poly_neg, POLY_DIFF_AUX_CMUL]);
+  REWRITE_TAC[poly_neg_def, POLY_DIFF_AUX_CMUL]);
 
 val POLY_DIFF_AUX_MUL_LEMMA = store_thm("POLY_DIFF_AUX_MUL_LEMMA",
  (Term`!p n. poly (poly_diff_aux (SUC n) p) = poly (poly_diff_aux n p + p)`),
@@ -364,22 +364,22 @@ val POLY_DIFF_ADD = store_thm("POLY_DIFF_ADD",
  (Term`!p1 p2. poly (diff (p1 + p2)) =
            poly (diff p1  + diff p2)`),
   REPEAT LIST_INDUCT_TAC THEN
-  REWRITE_TAC[poly_add, poly_diff, NOT_CONS_NIL, POLY_ADD_RZERO] THEN
+  REWRITE_TAC[poly_add, poly_diff_def, NOT_CONS_NIL, POLY_ADD_RZERO] THEN
   ASM_REWRITE_TAC[HD, TL, POLY_DIFF_AUX_ADD]);
 
 val POLY_DIFF_CMUL = store_thm("POLY_DIFF_CMUL",
  (Term`!p c. poly (diff (c ## p)) = poly (c ## diff p)`),
-  LIST_INDUCT_TAC THEN REWRITE_TAC[poly_diff, poly_cmul] THEN
+  LIST_INDUCT_TAC THEN REWRITE_TAC[poly_diff_def, poly_cmul] THEN
   REWRITE_TAC[NOT_CONS_NIL, HD, TL, POLY_DIFF_AUX_CMUL]);
 
 val POLY_DIFF_NEG = store_thm("POLY_DIFF_NEG",
  (Term`!p. poly (diff (poly_neg p)) = poly (poly_neg (diff p))`),
-  REWRITE_TAC[poly_neg, POLY_DIFF_CMUL]);
+  REWRITE_TAC[poly_neg_def, POLY_DIFF_CMUL]);
 
 val POLY_DIFF_MUL_LEMMA = store_thm("POLY_DIFF_MUL_LEMMA",
  (Term`!t h. poly (diff (CONS h t)) =
          poly (CONS (&0) (diff t) + t)`),
-  REWRITE_TAC[poly_diff, NOT_CONS_NIL] THEN
+  REWRITE_TAC[poly_diff_def, NOT_CONS_NIL] THEN
   LIST_INDUCT_TAC THEN REWRITE_TAC[poly_diff_aux, NOT_CONS_NIL, HD, TL] THENL
    [REWRITE_TAC[FUN_EQ_THM, poly, poly_add, REAL_MUL_RZERO, REAL_ADD_LID],
     REWRITE_TAC[FUN_EQ_THM, poly, POLY_DIFF_AUX_MUL_LEMMA, POLY_ADD] THEN
@@ -389,7 +389,7 @@ val POLY_DIFF_MUL = store_thm("POLY_DIFF_MUL",
  (Term`!p1 p2. poly (diff (p1 * p2)) =
            poly (p1 * diff p2 + diff p1 * p2)`),
   LIST_INDUCT_TAC THEN REWRITE_TAC[poly_mul] THENL
-   [REWRITE_TAC[poly_diff, poly_add, poly_mul], ALL_TAC] THEN
+   [REWRITE_TAC[poly_diff_def, poly_add, poly_mul], ALL_TAC] THEN
   GEN_TAC THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[] THENL
    [REWRITE_TAC[POLY_DIFF_CLAUSES] THEN
     REWRITE_TAC[poly_add, poly_mul, POLY_ADD_RZERO, POLY_DIFF_CMUL],
@@ -418,7 +418,7 @@ val POLY_DIFF_EXP_PRIME = store_thm("POLY_DIFF_EXP_PRIME",
          poly (&(SUC n) ## ([~a; &1] poly_exp n))`),
   REPEAT GEN_TAC THEN SIMP_TAC real_ac_ss [POLY_DIFF_EXP] THEN
   SIMP_TAC real_ac_ss [FUN_EQ_THM, POLY_CMUL, POLY_MUL] THEN
-  SIMP_TAC real_ac_ss [poly_diff, poly_diff_aux, TL, NOT_CONS_NIL] THEN
+  SIMP_TAC real_ac_ss [poly_diff_def, poly_diff_aux, TL, NOT_CONS_NIL] THEN
   SIMP_TAC real_ac_ss [poly] THEN REAL_ARITH_TAC);
 
 (* ------------------------------------------------------------------------- *)
@@ -675,7 +675,7 @@ val POLY_DIFF_ISZERO = store_thm("POLY_DIFF_ISZERO",
 val POLY_DIFF_ZERO = store_thm("POLY_DIFF_ZERO",
  (Term`!p. (poly p = poly []) ==> (poly (diff p) = poly [])`),
   REWRITE_TAC[POLY_ZERO] THEN
-  LIST_INDUCT_TAC THEN REWRITE_TAC[poly_diff, NOT_CONS_NIL] THEN
+  LIST_INDUCT_TAC THEN REWRITE_TAC[poly_diff_def, NOT_CONS_NIL] THEN
   REWRITE_TAC[FORALL, TL] THEN
   DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
   SPEC_TAC((Term`1:num`),(Term`n:num`)) THEN POP_ASSUM_LIST(K ALL_TAC) THEN
@@ -1388,4 +1388,3 @@ val POLY_NORMALIZE_CONV =
      norm_conv2)) tm in
   POLY_NORMALIZE_CONV;
 *)
-
