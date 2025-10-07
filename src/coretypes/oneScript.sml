@@ -73,7 +73,7 @@ val one_axiom = store_thm("one_axiom",
     Define the constant `one` of type one.
  ---------------------------------------------------------------------------*)
 
-val one_DEF = new_definition ("one_DEF", Term`one = @x:one.T`);
+val one_DEF = new_definition ("one_DEF", “one = @x:one.T”);
 
 (*---------------------------------------------------------------------------
   The following theorem shows that there is only one value of type :one
@@ -175,7 +175,7 @@ QED
 
 val one_case_def = new_definition (
   "one_case_def",
-  Term`one_CASE (u:unit) (x:'a) = x`);
+  “one_CASE (u:unit) (x:'a) = x”);
 
 Theorem one_case_thm:
    !x:'a. one_CASE () x = x

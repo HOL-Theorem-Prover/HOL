@@ -73,7 +73,7 @@ fun INDUCT_TAC g = INDUCT_THEN INDUCTION ASSUME_TAC g;
 
 val LESS_DEF = new_definition (
   "LESS_DEF",
-  Term `$< m n = ?P. (!n. P(SUC n) ==> P n) /\ P m /\ ~(P n)`)
+  “$< m n = ?P. (!n. P(SUC n) ==> P n) /\ P m /\ ~(P n)”)
 val _ = set_fixity "<" (Infix(NONASSOC, 450))
 val _ = TeX_notation {hol = "<", TeX = ("\\HOLTokenLt{}", 1)}
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="<"},name=(["Number","Natural"],"<")}
@@ -352,10 +352,10 @@ QED
 val SIMP_REC_REL =
  new_definition
   ("SIMP_REC_REL",
-   Term`!(fun:num->'a) (x:'a) (f:'a->'a) (n:num).
-            SIMP_REC_REL fun x f n <=>
-                (fun 0 = x) /\
-                !m. (m < n) ==> (fun(SUC m) = f(fun m))`);
+   “!(fun:num->'a) (x:'a) (f:'a->'a) (n:num).
+        SIMP_REC_REL fun x f n <=>
+          (fun 0 = x) /\
+          !m. (m < n) ==> (fun(SUC m) = f(fun m))”);
 
 Theorem SIMP_REC_EXISTS:
     !x f n. ?fun:num->'a. SIMP_REC_REL fun x f n
@@ -668,4 +668,3 @@ Proof
  REWRITE_TAC [measure_def,relationTheory.inv_image_def] THEN BETA_TAC THEN
  REWRITE_TAC []
 QED
-

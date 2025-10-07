@@ -145,14 +145,17 @@ val CANCEL_TAC =
 
 val _ = print "Defining operations on pairs of naturals\n"
 
-val tint_0 = new_definition("tint_0",
-                            Term `tint_0 = (1,1)`);
+Definition tint_0[nocompute]:
+                            tint_0 = (1,1)
+End
 
-val tint_1 = new_definition("tint_1",
-                            Term `tint_1 = (1 + 1,1)`);
+Definition tint_1[nocompute]:
+                            tint_1 = (1 + 1,1)
+End
 
-val tint_neg = new_definition("tint_neg",
-                              Term `tint_neg (x:num,(y:num)) = (y,x)`);
+Definition tint_neg[nocompute]:
+                              tint_neg (x:num,(y:num)) = (y,x)
+End
 
 val tint_add =
     new_infixl_definition
@@ -167,9 +170,9 @@ val tint_mul =
                                         (x1 * y2) + (y1 * x2))`,
      600);
 
-val tint_lt = new_definition (
-  "tint_lt",
-  Term `$tint_lt (x1,y1) (x2,y2) <=> (x1 + y2) < (x2 + y1)`);
+Definition tint_lt[nocompute]:
+  $tint_lt (x1,y1) (x2,y2) <=> (x1 + y2) < (x2 + y1)
+End
 val _ = temp_set_fixity "tint_lt" (Infix(NONASSOC, 450))
 
 (*--------------------------------------------------------------------------*)
@@ -178,9 +181,9 @@ val _ = temp_set_fixity "tint_lt" (Infix(NONASSOC, 450))
 
 val _ = print "Define equivalence relation over pairs of naturals\n"
 
-val tint_eq = new_definition(
-  "tint_eq",
-  Term `$tint_eq (x1,y1) (x2,y2) = (x1 + y2 = x2 + y1)`);
+Definition tint_eq[nocompute]:
+  $tint_eq (x1,y1) (x2,y2) = (x1 + y2 = x2 + y1)
+End
 val _ = temp_set_fixity "tint_eq" (Infix(NONASSOC, 450));
 
 val TINT_EQ_REFL =
@@ -531,13 +534,16 @@ val int_sub =
                          500);
 val _ = overload_on ("-",  Term`$int_sub`);
 
-val int_le = new_definition("int_le", Term `int_le x y = ~(y<x:int)`);
+Definition int_le[nocompute]: int_le x y = ~(y<x:int)
+End
 val _ = overload_on ("<=", Term`$int_le`);
 
-val int_gt = new_definition("int_gt", Term `int_gt (x:int) y <=> y < x`);
+Definition int_gt[nocompute]: int_gt (x:int) y <=> y < x
+End
 val _ = overload_on (">",  Term`$int_gt`);
 
-val int_ge = new_definition("int_ge", Term `int_ge x y <=> y <= x:int`)
+Definition int_ge[nocompute]: int_ge x y <=> y <= x:int
+End
 val _ = overload_on (">=", Term`$int_ge`);
 
 Theorem INT_GT = int_gt (* HOL-Light compatible name *)
@@ -1771,8 +1777,9 @@ QED
 (* Theorems about mapping both ways between :num and :int                   *)
 (*--------------------------------------------------------------------------*)
 
-val Num = new_definition("Num",
-  Term `Num (i:int) = @n. if 0 <= i then i = &n else i = - &n`);
+Definition Num[nocompute]:
+  Num (i:int) = @n. if 0 <= i then i = &n else i = - &n
+End
 
 Overload num_of_int[inferior] = “Num” (* from HOL Light *)
 
@@ -2400,9 +2407,9 @@ QED
 
 val _ = print "Absolute value\n"
 
-val INT_ABS = new_definition(
-  "INT_ABS",
-  Term`ABS n = if n < 0 then ~n else n`);
+Definition INT_ABS[nocompute]:
+  ABS n = if n < 0 then ~n else n
+End
 
 val INT_ABS_POS = store_thm(
   "INT_ABS_POS[simp]",
@@ -2915,9 +2922,9 @@ QED
 (*----------------------------------------------------------------------*)
 
 val _ = print "Facts about integer divisibility\n";
-val INT_DIVIDES = new_definition (
-  "INT_DIVIDES",
-  Term`int_divides p q = ?m:int. m * p = q`);
+Definition INT_DIVIDES[nocompute]:
+  int_divides p q = ?m:int. m * p = q
+End
 val _ = set_fixity "int_divides" (Infix(NONASSOC, 450))
 
 (* HOL-Light compatible definition of ‘int_divides’ (divides) *)
@@ -3227,13 +3234,13 @@ val INT_EXP_SUBTRACT_EXPONENTS = store_thm(
 (* Define integer minimum and maximum                                   *)
 (*----------------------------------------------------------------------*)
 
-val INT_MIN = new_definition(
-  "INT_MIN",
-  Term`int_min (x:int) y = if x < y then x else y`);
+Definition INT_MIN[nocompute]:
+  int_min (x:int) y = if x < y then x else y
+End
 
-val INT_MAX = new_definition(
-  "INT_MAX",
-  Term`int_max (x:int) y = if x < y then y else x`);
+Definition INT_MAX[nocompute]:
+  int_max (x:int) y = if x < y then y else x
+End
 
 val INT_MIN_LT = store_thm(
   "INT_MIN_LT",

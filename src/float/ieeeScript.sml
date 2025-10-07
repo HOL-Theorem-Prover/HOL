@@ -551,25 +551,25 @@ Definition ROUNDFLOAT[nocompute]:
   ROUNDFLOAT(a) = float (fintrnd(float_format) To_nearest (defloat a))
 End
 
-val float_lt = new_definition (
-  "float_lt",
-  Term `float_lt a b = flt(float_format) (defloat a) (defloat b)`);
+Definition float_lt[nocompute]:
+  float_lt a b = flt(float_format) (defloat a) (defloat b)
+End
 val _ = overload_on ("<", Term`float_lt`);
 
-val float_le = new_definition (
-  "float_le",
-  Term `float_le a b = fle(float_format) (defloat a) (defloat b)`);
+Definition float_le[nocompute]:
+  float_le a b = fle(float_format) (defloat a) (defloat b)
+End
 val _ = overload_on ("<=", Term`$float_le`);
 
-val float_gt = new_definition (
-  "float_gt",
-  Term `float_gt a b = fgt(float_format) (defloat a) (defloat b)`);
+Definition float_gt[nocompute]:
+  float_gt a b = fgt(float_format) (defloat a) (defloat b)
+End
 
 val _ = overload_on (">", Term`$float_gt`);
 
-val float_ge = new_definition (
-  "float_ge",
-  Term `float_ge a b = fge(float_format) (defloat a) (defloat b)`);
+Definition float_ge[nocompute]:
+  float_ge a b = fge(float_format) (defloat a) (defloat b)
+End
 val _ = overload_on (">=", Term`$float_ge`);
 
 

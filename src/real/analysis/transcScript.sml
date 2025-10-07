@@ -1449,8 +1449,9 @@ Proof
         ASM_REWRITE_TAC[]]]]
 QED
 
-val pi = new_definition("pi",
-  Term `pi = &2 * @x. &0 <= x /\ x <= &2 /\ (cos x = &0)`);
+Definition pi[nocompute]:
+  pi = &2 * @x. &0 <= x /\ x <= &2 /\ (cos x = &0)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Periodicity and related properties of the trig functions                  *)
