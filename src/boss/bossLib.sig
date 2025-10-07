@@ -208,6 +208,9 @@ sig
   val UNABBREV_ALL_TAC : tactic
   val REABBREV_TAC     : tactic
   val WITHOUT_ABBREVS  : tactic -> tactic
+  val mk_asm           : string -> thm -> tactic
+  val asm              : string -> thm_tactic -> tactic
+  val asm_x            : string -> thm_tactic -> tactic
 
   (* name cases of an induction theorem *)
   val name_ind_cases : term list -> thm -> thm
@@ -273,4 +276,7 @@ sig
   val qunabbrev_tac : term quotation -> tactic
   val qunabbrevl_tac : term quotation list -> tactic
   val unabbrev_all_tac : tactic
+
+  (* tactics related to suspension and resumption of proofs *)
+  val suspend : string -> tactic
 end

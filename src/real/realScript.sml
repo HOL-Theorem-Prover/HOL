@@ -2233,8 +2233,9 @@ Proof
     REWRITE_TAC [IN_APP, REAL_SUP_EXISTS, GSYM MEMBER_NOT_EMPTY]
 QED
 
-val sup = new_definition("sup",
-   “sup P = @s. !y. (?x. P x /\ y < x) <=> y < s”);
+Definition sup[nocompute]:
+   sup P = @s. !y. (?x. P x /\ y < x) <=> y < s
+End
 
 Theorem REAL_SUP:
    !P. (?x. P x) /\ (?z. !x. P x ==> x < z) ==>
@@ -5395,8 +5396,8 @@ QED
 (* Some properties of (square) roots (without transcendental functions)      *)
 (*---------------------------------------------------------------------------*)
 
-val sqrt_def = new_definition
-  ("sqrt_def", “sqrt x = @u. (0 < x ==> 0 < u) /\ (u pow 2 = x)”);
+Definition sqrt_def[nocompute]: sqrt x = @u. (0 < x ==> 0 < u) /\ (u pow 2 = x)
+End
 
 Theorem SQRT_0 :
     sqrt(&0) = &0

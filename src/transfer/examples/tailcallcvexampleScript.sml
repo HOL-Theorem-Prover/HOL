@@ -126,10 +126,11 @@ QED
 
 val th6 = MATCH_MP th5 termination_thm
 val newc = th6 |> concl |> strip_forall |> #2 |> rand |> rhs |> rator
-val def = new_definition("aux'_def", “aux' = ^newc”)
+Definition aux'_def[nocompute]: aux' = ^newc
+End
 
-val th7 = (AP_THM def “(c,d):cv # cv”) |> ONCE_REWRITE_RULE [TAILREC_TAILCALL]
-                                       |> REWRITE_RULE[SYM def]
+val th7 = (AP_THM aux'_def “(c,d):cv # cv”) |> ONCE_REWRITE_RULE [TAILREC_TAILCALL]
+                                            |> REWRITE_RULE[SYM aux'_def]
 
 val th3' = th3 |> Q.INST[‘f’ |-> ‘CURRY g’]
                |> REWRITE_RULE[pairTheory.UNCURRY_CURRY_THM]
@@ -137,13 +138,14 @@ val th3' = th3 |> Q.INST[‘f’ |-> ‘CURRY g’]
 
 val th8 = REWRITE_RULE[th3'] th7
 
-val def' = new_definition("A", “A = CURRY aux'”);
-val aux'_elim = prove(“aux' = UNCURRY A”, simp[def'])
+Definition A[nocompute]: A = CURRY aux'
+End
+val aux'_elim = prove(“aux' = UNCURRY A”, simp[A])
 
 val A_def = REWRITE_RULE[aux'_elim,pairTheory.CURRY_UNCURRY_THM,
                          pairTheory.UNCURRY_DEF] th8
 
-val almost_there = REWRITE_RULE[SYM def,aux'_elim, pairTheory.UNCURRY_DEF] th6
+val almost_there = REWRITE_RULE[SYM aux'_def,aux'_elim, pairTheory.UNCURRY_DEF] th6
 
 Theorem BC_E:
   BC b c ==> (b <=> c = Num 1)
@@ -156,5 +158,3 @@ isprime_aux_C
   |> SRULE[transferTheory.FUN_REL_def,cvxferTheory.NC_def, almost_there]
   |> SPEC_ALL
   |> MATCH_MP (GEN_ALL BC_E)
-
-

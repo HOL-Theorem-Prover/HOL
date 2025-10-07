@@ -3211,10 +3211,9 @@ Theorem IS_PREFIX_GENLIST = isPREFIX_GENLIST
     is empty, return []
    ---------------------------------------------------------------------- *)
 
-val common_prefixes_def = new_definition(
-  "common_prefixes_def",
-  “common_prefixes s = { p | !m. m IN s ==> p <<= m}”
-);
+Definition common_prefixes_def[nocompute]:
+  common_prefixes s = { p | !m. m IN s ==> p <<= m}
+End
 
 Theorem common_prefixes_BIGINTER:
    common_prefixes s = BIGINTER (IMAGE (\l. { p | p <<= l }) s)
@@ -3247,12 +3246,11 @@ Proof
   ‘[] IN common_prefixes s’ by simp[common_prefixes_def] >> strip_tac >> fs[]
 QED
 
-val longest_prefix_def = new_definition(
-  "longest_prefix_def",
-  “longest_prefix s =
+Definition longest_prefix_def[nocompute]:
+  longest_prefix s =
      if s = {} then []
-     else @x. is_measure_maximal LENGTH (common_prefixes s) x”
-);
+     else @x. is_measure_maximal LENGTH (common_prefixes s) x
+End
 
 Theorem two_common_prefixes:
    s <> {} /\ p1 IN common_prefixes s /\ p2 IN common_prefixes s ==>

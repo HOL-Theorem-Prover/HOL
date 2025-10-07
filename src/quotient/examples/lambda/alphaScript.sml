@@ -614,14 +614,13 @@ QED
 
 (* define ALPHA1_subst *)
 
-val ALPHA1_subst =
-    new_definition
-    ("ALPHA1_subst",
-     “ALPHA1_subst xs ys xs' ys' t1 t2 s1 (s2:^subs) <=>
+Definition ALPHA1_subst[nocompute]:
+     ALPHA1_subst xs ys xs' ys' t1 t2 s1 (s2:^subs) <=>
         (LENGTH xs' = LENGTH ys') /\
         (!x y. (x IN t1) /\ (y IN t2) /\
                alpha_match xs ys x y ==>
-               ALPHA1 (SUB1 s1 x) (SUB1 s2 y) xs' ys')”);
+               ALPHA1 (SUB1 s1 x) (SUB1 s2 y) xs' ys')
+End
 
 
 Theorem ALPHA1_subst_UNION:
@@ -1314,9 +1313,9 @@ QED
 (* ========================================================== *)
 
 
-val ALPHA =
-    new_definition ("ALPHA",
-    “ALPHA (t1:'a term1) t2 = ALPHA1 t1 t2 [] []”);
+Definition ALPHA[nocompute]:
+    ALPHA (t1:'a term1) t2 = ALPHA1 t1 t2 [] []
+End
 
 
 Theorem ALPHA_term:
@@ -1462,12 +1461,11 @@ val ALPHA1_subst =
                ALPHA1 (SUB1 s1 x) (SUB1 s2 y) xs' ys')”;
 *)
 
-val ALPHA_subst =
-    new_definition
-    ("ALPHA_subst",
-     “ALPHA_subst t s1 (s2:^subs) =
+Definition ALPHA_subst[nocompute]:
+     ALPHA_subst t s1 (s2:^subs) =
         (!x. (x IN t) ==>
-               ALPHA (SUB1 s1 x) (SUB1 s2 x))”);
+               ALPHA (SUB1 s1 x) (SUB1 s2 x))
+End
 
 
 Theorem ALPHA_SUB_CONTEXT:

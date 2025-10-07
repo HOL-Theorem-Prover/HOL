@@ -1,11 +1,18 @@
 \documentclass{article}
 
+\usepackage{bold-extra}
+\usepackage[T1]{fontenc}
+\usepackage{listings}
 \usepackage{holtexbasic}
 \usepackage{proof}
 \usepackage{alltt}
-\include{macros.tex}
+\usepackage{xcolor}
+\usepackage{macros}
+\usepackage{amssymb}
 
-\renewcommand{\HOLConst}[1]{\textsf{#1}}
+\definecolor{keycolor}{RGB}{172, 42, 42}
+\definecolor{vimvert}{RGB}{46, 139, 87}
+\definecolor{mutedkey}{RGB}{120, 42, 42}
 
 \title{Writing \LaTeX{} with Embedded HOL}
 \author{HOL Developers}
@@ -15,8 +22,8 @@
 
 \maketitle
 \begin{abstract}
-This document attempts to provide a tutorial-like introduction to the process of generating \LaTeX{} files (and ultimately, PDFs) that include pretty-printed material from HOL theories.
-While the \textsc{Description} manual includes a fairly careful description of HOL's solution to this problem (the ``munger''), it can be hard to get started using just that documentation.
+This document attempts to provide a tutorial-like introduction to the process of generating \LaTeX{} files (and ultimately, PDFs) that include pretty-printed material from \HOL{} theories.
+While the \textsc{Description} manual includes a fairly careful description of \HOL{}'s solution to this problem (the ``munger''), it can be hard to get started using just that documentation.
 This document provides a simple, sample document that covers a number of standard features, and does so in a style that we hope is easy to understand.
 \end{abstract}
 
@@ -25,13 +32,13 @@ This document provides a simple, sample document that covers a number of standar
 The premise is that this document will simultaneously explain \LaTeX-munging while illustrating the use of the technology with respect to a miniature HOL formalisation (on binary trees).
 Under \texttt{HOL/examples/latex-generation}, we find a somewhat plausible picture:
 in the directory \texttt{theories}, there is a HOL development consisting of two theory files: \texttt{sampleTreeScript.sml} and \texttt{bstScript.sml}, with the latter building on the former.
-This represents the HOL development that is to be documented for publication in this paper.
-In the second directory, \texttt{paper} are all the sources for this PDF.
+This represents the \HOL{} development that is to be documented for publication in this paper.
+The second directory, \texttt{paper}, contains the sources for this PDF.
 
 There is no requirement for the two directories to be siblings of each other in this way, but it is convenient in this context.
 In practice, the theory files will be in one repository (possibly quite public), and the paper will be in a separate space, possibly backed by a more private repository.
 
-The basic flow is that as authors we will write a special \texttt{paper.htex} file, pretending that we are writing normal \LaTeX{} document, but with access to special extra commands (\texttt{\bs{}HOLthm\lb\dots\rb} and others) for inserting HOL material.
+The basic flow is that as authors we will write a special \texttt{paper.htex} file,\footnote{The \texttt{.htex} suffix is arbitrary but probably now conventional.} pretending that we are writing a normal \LaTeX{} document, but with access to special extra commands (\texttt{\bs{}HOLthm\lb\dots\rb} and others) for inserting HOL material.
 Our source \texttt{paper.htex} file will be built into the PDF by first being translated into genuine \LaTeX{} file \texttt{paper.tex}, which can then be turned into a PDF with the usual technology (here we will assume use of \texttt{latexmk}).
 
 \subsection{Manifest}
@@ -39,50 +46,255 @@ Our source \texttt{paper.htex} file will be built into the PDF by first being tr
 The following summarises the contents of the \texttt{papers} directory, with more details to come later in this document:
 \begin{description}
 \item[\texttt{.gitignore}] Specification of names of generated files that \texttt{git} should ignore so that generated files don't end up being committed to repositories.
-\item[\texttt{Holmakefile}] This file specifies the standard build instructions, and includes a pointer to the directory where the HOL sources are to be found in the \texttt{INCLUDES =} line.
-\item[\texttt{macros.tex}] A file of macros supporting our paper; this file can be (and is) perfectly standard \LaTeX, and is \texttt{\bs{}include}-d into the \texttt{paper.htex} file as one might normally proceed.
-\item[\texttt{overrides}] This files includes custom replacements for HOL symbols to give them prettier \LaTeX{} renderings.
+\item[\hmfile{}] This file specifies the standard build instructions, and includes a pointer to the directory where the \HOL{} sources are to be found in the \texttt{INCLUDES =} line.
+\item[\texttt{macros.sty}] A file of macros supporting our paper; this file can be (and is) perfectly standard \LaTeX, and is \texttt{\bs{}usepackage}-d into the \texttt{paper.htex} file as one might do normally.
+\item[\texttt{overrides}] This files includes custom replacements for \HOL{} symbols (ours, or from the core libraries) to give them prettier \LaTeX{} renderings.
 \item[\texttt{paper.htex}] The sources for this paper.
-\item[\texttt{ppLib.sml}] A small HOL ``library'' that refers to the HOL theories where the desired results are present, or which have ancestors where those results are present.
-In our case, the \texttt{ppLib.sml} file refers to \texttt{bstTheory}, which will give us the ability to refer to theorems from \texttt{bstTheory} and \texttt{sampleTheory} both (because the latter is an ancestor of the former, and it's impossible to have a child theory in context without also having its parent).
+\item[\texttt{ppLib.sml}] A small \HOL{} ``library'' that refers to the \HOL{} theories where the desired results are present, or which have ancestors where those results are present.
+In our case, the \texttt{ppLib.sml} file refers to \texttt{bstTheory}, which will give us the ability to refer to theorems from \texttt{bstTheory} and \texttt{sampleTheory} both (because the latter is an ancestor of the former, and it is impossible to have a child theory in context without also having its parent).
 \end{description}
 
-After a call to \texttt{Holmake}, the required theories (\texttt{bst} and its ancestors) in \texttt{theories} will be rebuilt, and the following files will be generated in the \texttt{papers} directory:
+After a call to \holmake{}, the required theories (\texttt{bst} and its ancestors) in \texttt{theories} will be (re-)built as necessary, and the following files will be generated in the \texttt{papers} directory:
 \begin{description}
-\item[\texttt{.hol}] The usual output directory containing HOL object files, logs and the like.
-\item[\texttt{holtexbasic.sty}] A file specifying the standard HOL \LaTeX{} macros, copied across into the working directory from the HOL source tree.
-\item[\texttt{munge}] The munging executable responsible for turning \texttt{paper.htex} into \texttt{paper.tex}.
+\item[\texttt{.hol}] The usual output directory containing \HOL{} object files, logs and the like.
+\item[\texttt{holtexbasic.sty}] A file specifying the standard \HOL{} \LaTeX{} macros, copied across into the working directory from the HOL source tree.
+\item[\texttt{munge}] The ``munging'' executable responsible for turning \texttt{paper.htex} into \texttt{paper.tex}.
 This program is a Unix filter, reading from \texttt{stdin} and writing to \texttt{stdout}.
 \item[\texttt{paper.pdf}] The PDF of this document.
 \item[\texttt{paper.tex}] The translated paper file, containing \LaTeX{} replacements for all of the special HOL-macros.
 \item[\texttt{paper.*}] A slew of the usual auxiliary files generated by \LaTeX{} and \texttt{latexmk} as the PDF is generated.
 \end{description}
 
-\subsection{Sample Usages}
+\section{The ``Magic'' \texttt{\bs{}HOL} Macros}
 
-\noindent The output on the right is generated by writing what appears in the left column:
+When writing one's paper, there are three special commands that can be used. These appear to be \LaTeX{} macros but are processed away by the ``munging'' program.
+The macros are \texttt{\bs{}HOLthm}, \texttt{\bs{}HOLtm} and \verb|\HOLty|.
+Each takes a single argument: something HOL-ish that should be inserted at this point in the file (a theorem, a term, or a type).  Theorems are specified in the form $\langle\mathit{thy}\rangle.\langle\mathit{name}\rangle$; terms and types are given as one would write them in a script-file for consumption by the parser.
 
+Figure~\ref{fig:simple-usage} has a simple illustration of these macros in action.
+There the \verb|\HOLty| and \verb|\HOLthm| command are each used in two different ``modes'' by specifying optional arguments between square brackets. \verb|\HOLty|'s first invocation uses the optional \texttt{of} directive to get the type \emph{of} a particular term to be printed; the second just prints the type directly.
+The tweaked version of \verb|\HOLthm| uses the \texttt{def} directive to print an equation with a special equality, and to drop the usual turnstile.
+This definition-usage does not require the theorem to actually be a \HOL{} definition; the author gets to control their presentation of the material!
+
+One other aspect is important to note: the \verb|\HOLtm| and \verb|\HOLty| forms expect to be ``inline'', within usual flowing, paragraphed text.
+In contrast, the \verb|\HOLthm| form should appear in an \texttt{alltt} environment.
+This will keep the output looking reasonable when the output spans multiple lines.
+
+\newcommand{\holthm}{\textbf{\color{keycolor}HOLthm}}
+\newcommand{\holtm}{\textbf{\color{keycolor}HOLtm}}
+\newcommand{\holty}{\textbf{\color{keycolor}HOLty}}
+\newcommand{\com}[2]{\textbf{\bs\color{mutedkey}#1}\args{#2}}
+\newcommand{\args}[1]{{\slshape\color{vimvert}\lb{}#1\rb{}}}
+\begin{figure}
 \begin{center}
 \begin{minipage}[t]{0.35\textwidth}
 \begin{alltt}
 Lead-in text:
-\bs{}begin\lb{}alltt\rb{}
+\com{begin}{alltt}
 Alltt text:
-\bs{}HOLthm\lb{}bst.keys_elems\rb{}
-\bs{}end\lb{}alltt\rb{}
-The constant \bs{}HOLtm\lb{}keys\rb{}
-returns the set of a
-binary search tree's keys.
+\bs{}\holthm{}[def]\args{bst.keys_elems}
+\com{\holthm}{sampleTree.elems_flip}
+\com{end}{alltt}
+The constant \com{\holtm}{keys}
+returns the set of a binary
+search tree's keys. This
+constant has type
+\bs{}\holty{}[of]\args{keys}; one
+might imagine
+instantiating the type
+variables with a built-in
+type like \com{\holty}{:num}.
 \end{alltt}
 \end{minipage}\hfill{}
-\begin{minipage}[t]{0.55\textwidth}
+\begin{minipage}[t]{0.50\textwidth}
 Lead-in text:
 \begin{alltt}
 Alltt text:
-\HOLthm{bst.keys_elems}
+\HOLthm[def]{bst.keys_elems}
+\HOLthm{sampleTree.elems_flip}
 \end{alltt}
 The constant \HOLtm{keys} returns the set of a binary search tree's keys.
+This constant has type \HOLty[of]{keys}; one might imagine instantiating the type variables with a built-in type like \HOLty{:num}.
 \end{minipage}
 \end{center}
+\caption{%
+  Simple examples of the three ``munging'' macros in action.
+  \LaTeX{} in the left column; output on the right.
+  The \texttt{overrides} file (see below) has adjusted the appearance of some elements.
+}
+\label{fig:simple-usage}
+\end{figure}
+
+
+\section{Input Files in Detail}
+
+In this section, we will attempt to describe the contents of the various input files.
+
+\subsection{The \hmfile{}}
+
+See Figure~\ref{fig:holmakefile} for a copy of the \hmfile{} used to generate this PDF.
+
+\begin{description}
+\item[Locating our \HOL{} Theories:] The first line in the file is the \verb|INCLUDES =| directive; this is needed to point the \texttt{papers} directory at the location of the HOL material that is being documented.
+As with normal \hmfile{}s, multiple directories might appear here (all on the one line, separated by whitespace).
+
+\item[Building the PDF] Next (lines 6--7) comes a standard makefile build recipe for constructing the PDF from the \texttt{.tex} and \texttt{.sty} files.
+These files might be generated by the munging process, or not.
+If there are multiple such (the document is divided into separate files per chapter, say), all of them should be listed.
+The use of \texttt{latexmk} is by no means required, but seems to work well in practice.
+
+As this is the first target in the file, the PDF will be the default target when a bare invocation of \holmake{} is made (without any command-line arguments).
+
+
+\item[Munging to Create the \LaTeX{} file] Lines 10--11 describe the generation of a genuine \LaTeX{} file, \texttt{paper.tex}, from actual source file, \texttt{paper.htex}.
+This involves a call to the \texttt{munge} executable, which is also passed the \texttt{overrides} file (see below) as a parameter.
+If a \HOL{} macro in the \texttt{.htex} file like \verb|\HOLtm| fails (the provided string cannot be parsed into a term, say), this step of the process will fail.
+If there are multiple \texttt{.htex} files, each will need a rule analogous to this one.
+
+\item[Creating the Munger]
+The next recipe in the makefile (lines 13--14) is the generation of the munger executable.
+This uses the \texttt{mkmunge.exe} tool that is built when \HOL{} is built.
+The dependency is on the \texttt{ppLib.uo} file that is the object file built when \texttt{ppLib.sml} is compiled.
+There is no need of a rule for the latter as the built-in behaviours of \holmake{} suffice.
+
+\item[Copying Across the \HOL{} \LaTeX{} Macros:] The rule on lines 16--17 ``build'' the macros file \texttt{holtexbasic.sty} by copying it into position from the \HOL{} sources.
+
+\item[Cleaning Up:] The \verb|EXTRA_CLEANS| variable definition (lines 19--20) specifies the names of all the extra generated files so that \holmake{} will remove these when \texttt{Holmake~clean} is invoked.
+\end{description}
+
+
+\lstset{basicstyle=\small\ttfamily,
+  numbers=left,numberstyle=\tiny,showtabs=true,morecomment=[n]{\$(}{)},
+  commentstyle={\color{vimvert}\slshape},
+  morekeywords=[1]{INCLUDES,EXTRA_CLEANS,LATEXMK_EXISTS},
+  morekeywords=[2]{ifeq,endif},
+  keywordstyle={[1]\bfseries\color{keycolor}},
+  keywordstyle={[2]\color{blue}}
+}
+\begin{figure}
+\lstinputlisting{Holmakefile}
+\caption{%
+The \hmfile{} in the \texttt{papers} directory.
+The ``dance'' with \texttt{LATEXMK\_EXISTS} (lines 3, 5, and the \texttt{endif} on 8) is specific to this file's position in the \HOL{} repository; all those lines could be omitted in normal usage, where \texttt{latexmk} is presumably sure to be installed.
+Lines 7, 11, 14 and 17 begin with TAB characters (indicated by the long underline).}
+\label{fig:holmakefile}
+\end{figure}
+
+\subsection{The \texttt{overrides} File}
+
+The \texttt{overrides} file (see Figure~\ref{fig:overrides}) contains a list of token-mappings, with each line consisting of
+\newcommand{\meta}[1]{\langle\mathit{#1}\rangle}
+\[
+\meta{token}\;\meta{replacement{-}width}\;\meta{replacement}
+\]
+The simple renamings in lines 3--5 are self-explanatory (and their effect can be seen in Figure~\ref{fig:simple-usage}).
+The stranger lines (1--2) are explained below in Section~\ref{sec:fancy-syntax}.
+The widths provided in the middle of the line are always approximate, but do help the \HOL{} pretty-printer generate reasonable linebreaks.
+
+\begin{figure}
+\begin{center}
+\lstinputlisting{overrides}
+\end{center}
+\caption{%
+The \texttt{overrides} file for this PDF.
+\HOL's built-in names (\texttt{IMAGE}, \texttt{FST},\dots) can be overridden just as readily as those from the authors' theories.
+Overrides to mathematical symbols should use \texttt{\bs{}ensuremath\lb{}\dots\rb{}} to protect them.
+}
+\label{fig:overrides}
+\end{figure}
+
+\section{Tips and Tricks}
+
+\subsection{Fiddling with Width}
+
+\subsection{Substitutions}
+
+\subsection{Inference Rules}
+
+One can present implicational theorems as natural deduction style rules, using the \texttt{rule} and \texttt{stackedrule} directives.
+This feature relies on the \texttt{proof.sty} package, which is part of standard \TeX{} distributions.
+As an exception to the general rule, theorems using the \texttt{rule} modifier must be presented inside a ``display-math'' environment, not \texttt{alltt}.
+The following
+
+\begin{alltt}
+   \bs{}frenchspacing
+   \bs{}[
+     \bs{}\holthm{}[stackedrule]\args{bst.sorted_dict_Nd}
+   \bs{}]
+   \bs{}nonfrenchspacing
+\end{alltt}
+generates
+\frenchspacing
+\[
+  \HOLthm[stackedrule]{bst.sorted_dict_Nd}
+\]
+\nonfrenchspacing
+The use of \texttt{stackedrule} stacks the premises above each other.
+The use of the toggle in and out of ``French spacing'' reduces the width of the spacing after the quantifier (strictly, after the full-stop).
+Without it, one would get:
+\[
+\HOLthm[stackedrule]{bst.sorted_dict_Nd}
+\]
+Of course, if there are no quantifiers, this is not required.
+
+When the premises are not so voluminous, the \texttt{rule} modifier can be used instead.
+In addition, rules can be given names; the argument to \texttt{rulename=} is passed to the \texttt{\bs{}HOLRuleName} macro, which is an alias for \texttt{\bs{}textsf} by default.
+Thus,
+\begin{alltt}
+   \bs{}[
+     \bs{}\holthm{}[rule,rulename=exists_atLeft]\args{sampleTree.exists_atLeft}
+   \bs{}]
+\end{alltt}
+generates
+\[
+  \HOLthm[rule,rulename=exists_atLeft]{sampleTree.exists_atLeft}
+\]
+and (to illustrate multiple (short) premises):
+\begin{alltt}
+   \bs{}[
+     \bs{}\holthm{}[rule,rulename=conjL,P/t1,Q/t2]\args{bool.AND2_THM}
+   \bs{}]
+\end{alltt}
+generates
+\[
+  \HOLthm[rule,rulename=conjR,P/t1,Q/t2]{bool.AND2_THM}
+\]
+
+\subsection{Fancy Syntax \emph{via} \texttt{add\_rule} and \texttt{overrides}}
+\label{sec:fancy-syntax}
+
+The constant \HOLtm{elemcount} counts the number of elements in a tree; for this sort of thing one might like vertical bars on either side of the tree argument to indicate size: $|t|$.
+This is impossible to have in \HOL{} directly because it's ambiguous in the eyes of the simplistic precedence parser.
+Nonetheless, we can achieve it with the munger.
+
+First, we add a grammar rule in \texttt{ppLib.sml} to get the basic ``syntax with delimiters'' working:
+\begin{alltt}
+   val _ = add_rule \lb{}
+     term_name = "elemcount",
+     fixity = Closefix,
+     pp_elements = [TOK "(ec1)", TM, TOK "(ec2)"],
+     block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+     paren_style = OnlyIfNecessary
+   \rb{}
+\end{alltt}
+The interesting part of the above is that the concrete syntax is targeting the name \texttt{elemcount}, that it is ``close-fix'', and that the tokens wrapping the argument are \texttt{(ec1)} and \texttt{(ec2)}.
+The latter names are arbitrary but
+\begin{itemize}
+\item they should feature the enclosing parentheses to stop token-merging analysis from inserting unnecessary extra spaces; and
+\item they should be different both from each other, and all other magic names chosen for similar purposes with other terms.
+\end{itemize}
+
+With only this done, \texttt{\HOLConst{elemcount}~$t$} would be printed as \texttt{(ec1)$t$(ec2)}.
+The substitution of the tokens \texttt{(ec1)} and \texttt{(ec2)} is handled in the \texttt{overrides} file, with lines
+\begin{verbatim}
+   (ec1) 1 \ensuremath{|}
+   (ec2) 1 \ensuremath{|}
+\end{verbatim}
+
+We can now see a theorem about the connection between the size of a tree and the length of its in-order traversal:
+
+\begin{alltt}
+\HOLthm{sampleTree.elemcount_LENGTH_inorder}
+\end{alltt}
 
 \end{document}

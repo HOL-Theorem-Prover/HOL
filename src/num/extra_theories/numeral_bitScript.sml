@@ -67,7 +67,8 @@ val NUMERAL_MOD_2EXP = Q.prove(
           [MOD_COMMON_FACTOR, TWO, prim_recTheory.LESS_0, ZERO_LT_TWOEXP]
   ])
 
-val iMOD_2EXP = new_definition("iMOD_2EXP", ``iMOD_2EXP = MOD_2EXP``)
+Definition iMOD_2EXP[nocompute]: iMOD_2EXP = MOD_2EXP
+End
 
 val BIT1n = REWRITE_RULE [GSYM ADD1] BIT1n
 

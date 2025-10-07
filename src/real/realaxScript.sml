@@ -238,12 +238,17 @@ end;
 (* Define subtraction, division and the other orderings (was in realTheory)  *)
 (*---------------------------------------------------------------------------*)
 
-val real_sub = new_definition("real_sub", “real_sub x y = x + ~y”);
-val real_lte = new_definition("real_lte", “real_lte x y = ~(y < x)”);
-val real_gt  = new_definition("real_gt",  “real_gt x y = y < x”);
-val real_ge  = new_definition("real_ge",  “real_ge x y = (real_lte y x)”);
+Definition real_sub[nocompute]: real_sub x y = x + ~y
+End
+Definition real_lte[nocompute]: real_lte x y = ~(y < x)
+End
+Definition real_gt[nocompute]:  real_gt x y = y < x
+End
+Definition real_ge[nocompute]:  real_ge x y = (real_lte y x)
+End
 
-val real_div = new_definition("real_div", “$/ x y = x * inv y”);
+Definition real_div[nocompute]: $/ x y = x * inv y
+End
 val _ = set_fixity "/" (Infixl 600);
 val _ = overload_on(GrammarSpecials.decimal_fraction_special, “$/”);
 val _ = overload_on("/", “$/”);
@@ -262,8 +267,8 @@ val _ = overload_on ("<=", “$real_lte”);
 val _ = overload_on (">",  “$real_gt”);
 val _ = overload_on (">=", “$real_ge”);
 
-val real_abs = new_definition
-  ("real_abs", “abs(x) = (if (0 <= x) then x else ~x)”);
+Definition real_abs[nocompute]: abs(x) = (if (0 <= x) then x else ~x)
+End
 
 val real_pow = new_recursive_definition
    {name = "real_pow",
@@ -271,11 +276,11 @@ val real_pow = new_recursive_definition
     rec_axiom = num_Axiom};
 val _ = set_fixity "pow" (Infixr 700);
 
-val real_max = new_definition
-  ("real_max", “max (x :real) y = if x <= y then y else x”);
+Definition real_max[nocompute]: max (x :real) y = if x <= y then y else x
+End
 
-val real_min = new_definition
-  ("real_min", “min (x :real) y = if x <= y then x else y”);
+Definition real_min[nocompute]: min (x :real) y = if x <= y then x else y
+End
 
 (* |- !y x. x < y <=> ~(y <= x) *)
 Theorem real_lt[allow_rebind]:

@@ -115,10 +115,11 @@ QED
 (* Linear functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-val linear = new_definition ("linear",
-  ``linear (f:real->real) <=>
+Definition linear[nocompute]:
+  linear (f:real->real) <=>
         (!x y. f(x + y) = f(x) + f(y)) /\
-        (!c x. f(c * x) = c * f(x))``);
+        (!c x. f(c * x) = c * f(x))
+End
 
 (* Courtesy to Thomas Sewell for providing this proof (first) on Slack
 
@@ -335,8 +336,9 @@ QED
 (* Bilinear functions.                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-val bilinear = new_definition ("bilinear",
-  ``bilinear f <=> (!x. linear(\y. f x y)) /\ (!y. linear(\x. f x y))``);
+Definition bilinear[nocompute]:
+  bilinear f <=> (!x. linear(\y. f x y)) /\ (!y. linear(\x. f x y))
+End
 
 Theorem BILINEAR_SWAP:
    !op:real->real->real.
@@ -516,20 +518,24 @@ QED
 (* A bit of linear algebra.                                                  *)
 (* ------------------------------------------------------------------------- *)
 
-val subspace = new_definition ("subspace",
- ``subspace s <=>
+Definition subspace[nocompute]:
+ subspace s <=>
         (0:real) IN s /\
         (!x y. x IN s /\ y IN s ==> (x + y) IN s) /\
-        (!c x. x IN s ==> (c * x) IN s)``);
+        (!c x. x IN s ==> (c * x) IN s)
+End
 
-val span = new_definition ("span",
-  ``span s = subspace hull s``);
+Definition span[nocompute]:
+  span s = subspace hull s
+End
 
-val dependent = new_definition ("dependent",
- ``dependent s <=> ?a. a IN s /\ a IN span(s DELETE a)``);
+Definition dependent[nocompute]:
+ dependent s <=> ?a. a IN s /\ a IN span(s DELETE a)
+End
 
-val independent = new_definition ("independent",
- ``independent s <=> ~(dependent s)``);
+Definition independent[nocompute]:
+ independent s <=> ~(dependent s)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Closure properties of subspaces.                                          *)
@@ -1016,8 +1022,9 @@ QED
 
 val _ = hide "collinear";
 
-val collinear = new_definition ("collinear",
- ``collinear s <=> ?u. !x y:real. x IN s /\ y IN s ==> ?c. x - y = c * u``);
+Definition collinear[nocompute]:
+ collinear s <=> ?u. !x y:real. x IN s /\ y IN s ==> ?c. x - y = c * u
+End
 
 Theorem COLLINEAR_SUBSET:
    !s t. collinear t /\ s SUBSET t ==> collinear s
@@ -1201,8 +1208,9 @@ QED
 (* Between-ness.                                                             *)
 (* ------------------------------------------------------------------------- *)
 
-val between = new_definition ("between",
- ``between x (a,b) <=> (dist(a,b) = dist(a,x) + dist(x,b))``);
+Definition between[nocompute]:
+ between x (a,b) <=> (dist(a,b) = dist(a,x) + dist(x,b))
+End
 
 Theorem BETWEEN_REFL:
    !a b. between a (a,b) /\ between b (a,b) /\ between a (a,a)
@@ -1303,8 +1311,9 @@ QED
 (* Midpoint between two points.                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val midpoint = new_definition ("midpoint",
- ``midpoint(a,b) = inv(&2:real) * (a + b)``);
+Definition midpoint[nocompute]:
+ midpoint(a,b) = inv(&2:real) * (a + b)
+End
 
 Theorem MIDPOINT_REFL: !x. midpoint(x,x) = x
 Proof
@@ -1909,9 +1918,10 @@ Proof
    ASM_MESON_TAC[]]
 QED
 
-val dim = new_definition ("dim",
-  ``dim v = @n. ?b. b SUBSET v /\ independent b /\ v SUBSET (span b) /\
-                   b HAS_SIZE n``);
+Definition dim[nocompute]:
+  dim v = @n. ?b. b SUBSET v /\ independent b /\ v SUBSET (span b) /\
+                   b HAS_SIZE n
+End
 
 Theorem BASIS_EXISTS:
    !v. ?b. b SUBSET v /\ independent b /\ v SUBSET (span b) /\ b HAS_SIZE (dim v)
@@ -2483,8 +2493,9 @@ Proof
     rw [cball_def, dist_def, mcball, MSPACE]
 QED
 
-val sphere = new_definition ("sphere",
-  ``sphere(x,e) = { y | dist(x,y) = e}``);
+Definition sphere[nocompute]:
+  sphere(x,e) = { y | dist(x,y) = e}
+End
 
 Theorem IN_BALL:
    !x y e. y IN ball(x,e) <=> dist(x,y) < e
@@ -3119,12 +3130,14 @@ QED
 (* Line segments, with open/closed overloading of (a,b) and [a,b].           *)
 (* ------------------------------------------------------------------------- *)
 
-val closed_segment = new_definition ("closed_segment",
-  ``closed_segment (l:(real#real)list) =
-   {((&1:real) - u) * FST(HD l) + u * SND(HD l) | &0 <= u /\ u <= &1}``);
+Definition closed_segment[nocompute]:
+  closed_segment (l:(real#real)list) =
+   {((&1:real) - u) * FST(HD l) + u * SND(HD l) | &0 <= u /\ u <= &1}
+End
 
-val open_segment = new_definition ("open_segment",
- ``open_segment(a,b) = closed_segment[a,b] DIFF {a;b}``);
+Definition open_segment[nocompute]:
+ open_segment(a,b) = closed_segment[a,b] DIFF {a;b}
+End
 
 Theorem OPEN_SEGMENT_ALT:
    !a b:real.
@@ -3427,11 +3440,12 @@ QED
 (* Connectedness.                                                            *)
 (* ------------------------------------------------------------------------- *)
 
-val connected = new_definition ("connected",
-  ``connected s <=>
+Definition connected[nocompute]:
+  connected s <=>
       ~(?e1 e2. open e1 /\ open e2 /\ s SUBSET (e1 UNION e2) /\
                 (e1 INTER e2 INTER s = {}) /\
-                ~(e1 INTER s = {}) /\ ~(e2 INTER s = {}))``);
+                ~(e1 INTER s = {}) /\ ~(e2 INTER s = {}))
+End
 
 Theorem CONNECTED_CLOSED:
    !s:real->bool.
@@ -6134,9 +6148,10 @@ QED
 
 val _ = set_fixity "condensation_point_of" (Infix(NONASSOC, 450));
 
-val condensation_point_of = new_definition ("condensation_point_of",
- ``x condensation_point_of s <=>
-        !t. x IN t /\ open t ==> ~COUNTABLE(s INTER t)``);
+Definition condensation_point_of[nocompute]:
+ x condensation_point_of s <=>
+        !t. x IN t /\ open t ==> ~COUNTABLE(s INTER t)
+End
 
 Theorem CONDENSATION_POINT_OF_SUBSET:
    !x:real s t.
@@ -8091,10 +8106,11 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* cf. [compact_def] connecting “compact” with “compact_in” (topologyTheory) *)
-val compact = new_definition ("compact",
- ``compact s <=> !f:num->real. (!n. f(n) IN s)
+Definition compact[nocompute]:
+ compact s <=> !f:num->real. (!n. f(n) IN s)
    ==> ?l r. l IN s /\ (!m n:num. m < n ==> r(m) < r(n)) /\
-       ((f o r) --> l) sequentially``);
+       ((f o r) --> l) sequentially
+End
 
 Theorem MONOTONE_BIGGER:
    !r. (!m n. m < n ==> r(m) < r(n)) ==> !n:num. n <= r(n)
@@ -8261,10 +8277,11 @@ Definition cauchy_def :
 End
 Theorem cauchy[local] = cauchy_def
 
-val complete = new_definition ("complete",
-  ``complete s <=>
+Definition complete[nocompute]:
+  complete s <=>
      !f:num->real. (!n. f n IN s) /\ cauchy f
-                      ==> ?l. l IN s /\ (f --> l) sequentially``);
+                      ==> ?l. l IN s /\ (f --> l) sequentially
+End
 
 Theorem CAUCHY:
    !s:num->real.
@@ -9415,8 +9432,9 @@ QED
 
 val _ = set_fixity "continuous" (Infix(NONASSOC, 450));
 
-val continuous = new_definition ("continuous",
- ``f continuous net <=> (f --> f(netlimit net)) net``);
+Definition continuous[nocompute]:
+ f continuous net <=> (f --> f(netlimit net)) net
+End
 
 Theorem CONTINUOUS_TRIVIAL_LIMIT:
    !f net. trivial_limit net ==> f continuous net
@@ -13328,9 +13346,10 @@ QED
 (* Connected components, considered as a "connectedness" relation or a set.  *)
 (* ------------------------------------------------------------------------- *)
 
-val connected_component = new_definition ("connected_component",
- ``connected_component s x y <=>
-        ?t. connected t /\ t SUBSET s /\ x IN t /\ y IN t``);
+Definition connected_component[nocompute]:
+ connected_component s x y <=>
+        ?t. connected t /\ t SUBSET s /\ x IN t /\ y IN t
+End
 
 Theorem CONNECTED_COMPONENT_IN:
    !s x y. connected_component s x y ==> x IN s /\ y IN s
@@ -13773,8 +13792,9 @@ QED
 (* The set of connected components of a set.                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val components = new_definition ("components",
-  ``components s = {connected_component s x | x | x:real IN s}``);
+Definition components[nocompute]:
+  components s = {connected_component s x | x | x:real IN s}
+End
 
 Theorem IN_COMPONENTS:
    !u:real->bool s. s IN components u
@@ -16516,12 +16536,13 @@ QED
 (* Intervals in general, including infinite and mixtures of open and closed. *)
 (* ------------------------------------------------------------------------- *)
 
-val is_interval = new_definition ("is_interval",
-  ``is_interval(s:real->bool) <=>
+Definition is_interval[nocompute]:
+  is_interval(s:real->bool) <=>
         !a b x. a IN s /\ b IN s
                      ==> (a <= x /\ x <= b) \/
                          (b <= x /\ x <= a)
-                ==> x IN s``);
+                ==> x IN s
+End
 
 Theorem IS_INTERVAL_INTERVAL:
    !a:real b. is_interval(interval (a,b)) /\ is_interval(interval [a,b])
@@ -17508,15 +17529,17 @@ QED
 (* Basic homeomorphism definitions.                                          *)
 (* ------------------------------------------------------------------------- *)
 
-val homeomorphism = new_definition ("homeomorphism",
-  ``homeomorphism (s,t) (f,g) <=>
+Definition homeomorphism[nocompute]:
+  homeomorphism (s,t) (f,g) <=>
      (!x. x IN s ==> (g(f(x)) = x)) /\ (IMAGE f s = t) /\ f continuous_on s /\
-     (!y. y IN t ==> (f(g(y)) = y)) /\ (IMAGE g t = s) /\ g continuous_on t``);
+     (!y. y IN t ==> (f(g(y)) = y)) /\ (IMAGE g t = s) /\ g continuous_on t
+End
 
 val _ = set_fixity "homeomorphic" (Infix(NONASSOC, 450));
 
-val homeomorphic = new_definition ("homeomorphic",
-  ``s homeomorphic t <=> ?f g. homeomorphism (s,t) (f,g)``);
+Definition homeomorphic[nocompute]:
+  s homeomorphic t <=> ?f g. homeomorphism (s,t) (f,g)
+End
 
 Theorem HOMEOMORPHISM:
    !s:real->bool t:real->bool f g.
@@ -21251,8 +21274,9 @@ QED
 (* Closest point of a (closed) set to a point.                               *)
 (* ------------------------------------------------------------------------- *)
 
-val closest_point = new_definition ("closest_point",
- ``closest_point s a = @x. x IN s /\ !y. y IN s ==> dist(a,x) <= dist(a,y)``);
+Definition closest_point[nocompute]:
+ closest_point s a = @x. x IN s /\ !y. y IN s ==> dist(a,x) <= dist(a,y)
+End
 
 Theorem CLOSEST_POINT_EXISTS:
    !s a. closed s /\ ~(s = {})
@@ -22205,11 +22229,12 @@ QED
 (* Hausdorff distance between sets.                                          *)
 (* ------------------------------------------------------------------------- *)
 
-val hausdist = new_definition ("hausdist",
- ``hausdist(s:real->bool,t:real->bool) =
+Definition hausdist[nocompute]:
+ hausdist(s:real->bool,t:real->bool) =
         if (({setdist({x},t) | x IN s} UNION {setdist({y},s) | y IN t} <> {}) /\
             (?b. !d. d IN {setdist({x},t) | x IN s} UNION {setdist({y},s) | y IN t} ==> d <= b))
-        then sup ({setdist({x},t) | x IN s} UNION {setdist({y},s) | y IN t}) else &0``);
+        then sup ({setdist({x},t) | x IN s} UNION {setdist({y},s) | y IN t}) else &0
+End
 
 Theorem HAUSDIST_POS_LE:
    !s t:real->bool. &0 <= hausdist(s,t)
@@ -23249,11 +23274,12 @@ QED
 (* Basics about "local" properties in general.                               *)
 (* ------------------------------------------------------------------------- *)
 
-val locally = new_definition ("locally",
- ``locally P (s:real->bool) <=>
+Definition locally[nocompute]:
+ locally P (s:real->bool) <=>
         !w x. open_in (subtopology euclidean s) w /\ x IN w
               ==> ?u v. open_in (subtopology euclidean s) u /\ P v /\
-                        x IN u /\ u SUBSET v /\ v SUBSET w``);
+                        x IN u /\ u SUBSET v /\ v SUBSET w
+End
 
 Theorem LOCALLY_MONO:
    !P Q s. (!t. P t ==> Q t) /\ locally P s ==> locally Q s
@@ -24619,10 +24645,11 @@ QED
 (* Content (length) of an interval (moved from integrationTheory)            *)
 (* ------------------------------------------------------------------------- *)
 
-val content = new_definition ("content",
-  ``content(s:real->bool) =
+Definition content[nocompute]:
+  content(s:real->bool) =
     if s = {} then 0:real
-              else (interval_upperbound s - interval_lowerbound s)``);
+              else (interval_upperbound s - interval_lowerbound s)
+End
 
 Theorem CONTENT_CLOSED_INTERVAL:
    !a b:real. a <= b ==> (content(interval[a,b]) = b - a)

@@ -314,11 +314,12 @@ Proof
    \\ FULL_SIMP_TAC arith_ss [lem, DIV_0_IMP_LT]
 QED
 
-val l2n2_def = new_definition ("l2n2", ``l2n2 = l2n 2``)
+Definition l2n2[nocompute]: l2n2 = l2n 2
+End
 
 val l2n2_empty = Q.prove(
    `l2n2 [] = ZERO`,
-   REWRITE_TAC [l2n2_def, l2n_def, arithmeticTheory.ALT_ZERO]
+   REWRITE_TAC [l2n2, l2n_def, arithmeticTheory.ALT_ZERO]
    )
 
 val l2n_2 =
@@ -327,14 +328,14 @@ val l2n_2 =
 
 val l2n2_cons0 = Q.prove(
    `!t. l2n2 (0::t) = numeral$iDUB (l2n2 t)`,
-   SIMP_TAC arith_ss [l2n2_def, l2n_2]
+   SIMP_TAC arith_ss [l2n2, l2n_2]
    \\ METIS_TAC [arithmeticTheory.MULT_COMM, arithmeticTheory.TIMES2,
                  numeralTheory.iDUB]
    )
 
 val l2n2_cons1 = Q.prove(
    `!t. l2n2 (1::t) = arithmetic$BIT1 (l2n2 t)`,
-   SIMP_TAC arith_ss [l2n2_def, l2n_2]
+   SIMP_TAC arith_ss [l2n2, l2n_2]
    \\ METIS_TAC [numLib.DECIDE ``2 * a + 1 = a + (a + SUC 0)``,
                  arithmeticTheory.BIT1]
    )
@@ -342,7 +343,7 @@ val l2n2_cons1 = Q.prove(
 val l2n2 = Q.prove(
    `(!t. l2n 2 (0::t) = NUMERAL (l2n2 (0::t))) /\
     (!t. l2n 2 (1::t) = NUMERAL (l2n2 (1::t)))`,
-   REWRITE_TAC [l2n2_def, arithmeticTheory.NUMERAL_DEF]
+   REWRITE_TAC [l2n2, arithmeticTheory.NUMERAL_DEF]
    )
 
 Theorem l2n_2_thms =
@@ -539,4 +540,3 @@ Proof
   \\ fs[PAD_RIGHT, l2n_APPEND]
   \\ fs[l2n_eq_0, EVERY_GENLIST]
 QED
-

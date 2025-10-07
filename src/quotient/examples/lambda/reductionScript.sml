@@ -166,13 +166,13 @@ QED
 
 (* Define the reflexive closure of a relation.                           *)
 
-val RC_DEF =
-   new_definition("RC_DEF",
-   “RC (R:'a->'a->bool) a b =
+Definition RC_DEF[nocompute]:
+   RC (R:'a->'a->bool) a b =
        !P.
           (!x y. R x y ==> P x y) /\
           (!x. P x x)
-          ==> P a b”);
+          ==> P a b
+End
 
 
 Theorem RC_REFLEXIVE:
@@ -245,22 +245,22 @@ QED
 
 val term_rel = ty_antiq ( ==`:'a term -> 'a term -> bool`== );
 
-val compatible =
-    new_definition ("compatible",
-    “compatible R =
+Definition compatible[nocompute]:
+    compatible R =
         (!t1:^term t2. R t1 t2 ==> (!u. R (App u t1) (App u t2))  /\
                                    (!u. R (App t1 u) (App t2 u))  /\
-                                   (!x. R (Lam x t1) (Lam x t2)))”);
+                                   (!x. R (Lam x t1) (Lam x t2)))
+End
 
-val reflexive =
-    new_definition ("reflexive",
-    “reflexive R =
-        (!t:^term. R t t)”);
+Definition reflexive[nocompute]:
+    reflexive R =
+        (!t:^term. R t t)
+End
 
-val symmetric =
-    new_definition ("symmetric",
-    “symmetric R =
-        (!t1 t2:^term. R t1 t2 ==> R t2 t1)”);
+Definition symmetric[nocompute]:
+    symmetric R =
+        (!t1 t2:^term. R t1 t2 ==> R t2 t1)
+End
 
 (* Already defined in relationTheory:
 val transitive_def =
@@ -270,20 +270,20 @@ val transitive_def =
 *)
 val transitive = relationTheory.transitive_def;
 
-val equality =
-    new_definition ("equality",
-    “equality (R:^term_rel) =
+Definition equality[nocompute]:
+    equality (R:^term_rel) =
         (compatible R /\
          reflexive  R /\
          symmetric  R /\
-         transitive R)”);
+         transitive R)
+End
 
-val reduction =
-    new_definition ("reduction",
-    “reduction (R:^term_rel) =
+Definition reduction[nocompute]:
+    reduction (R:^term_rel) =
         (compatible R /\
          reflexive  R /\
-         transitive R)”);
+         transitive R)
+End
 
 
 Theorem RC_compatible:
@@ -955,17 +955,15 @@ QED
 
 
 
-val NORMAL_FORM =
-    new_definition
-    ("NORMAL_FORM",
-     “NORMAL_FORM R a = (!a':^term. ~(RED1 R a a'))”);
+Definition NORMAL_FORM[nocompute]:
+     NORMAL_FORM R a = (!a':^term. ~(RED1 R a a'))
+End
 
 
-val NORMAL_FORM_OF =
-    new_definition
-    ("NORMAL_FORM_OF",
-     “NORMAL_FORM_OF R (a:^term) b =
-         (NORMAL_FORM R a /\ REQUAL R b a)”);
+Definition NORMAL_FORM_OF[nocompute]:
+     NORMAL_FORM_OF R (a:^term) b =
+         (NORMAL_FORM R a /\ REQUAL R b a)
+End
 
 
 Theorem NORMAL_FORM_IDENT_LEMMA:
@@ -990,19 +988,17 @@ QED
 (* THE DIAMOND PROPERTY *)
 
 
-val DIAMOND =
-    new_definition
-    ("DIAMOND",
-     “DIAMOND R = (!a b c:'a. R a b /\ R a c ==> (?d. R b d /\ R c d))”);
+Definition DIAMOND[nocompute]:
+     DIAMOND R = (!a b c:'a. R a b /\ R a c ==> (?d. R b d /\ R c d))
+End
 
 
 (* THE CHURCH-ROSSER PROPERTY *)
 
 
-val CHURCH_ROSSER =
-    new_definition
-    ("CHURCH_ROSSER",
-     “CHURCH_ROSSER (R:^term_rel) = DIAMOND (RED R)”);
+Definition CHURCH_ROSSER[nocompute]:
+     CHURCH_ROSSER (R:^term_rel) = DIAMOND (RED R)
+End
 
 
 
@@ -1088,12 +1084,11 @@ QED
 (* SUBSTITUTIVE RELATIONS *)
 
 
-val SUBSTITUTIVE =
-    new_definition
-    ("SUBSTITUTIVE",
-     “SUBSTITUTIVE R =
+Definition SUBSTITUTIVE[nocompute]:
+     SUBSTITUTIVE R =
            (!(M:^term) (N:^term) L x.
-             R M N ==> R (M <[ [x,L]) (N <[ [x,L]))”);
+             R M N ==> R (M <[ [x,L]) (N <[ [x,L]))
+End
 
 
 val RED1_SUBSTITUTIVE_LEMMA = TAC_PROOF(([],

@@ -150,26 +150,26 @@ val is_fmap_REP_ABS = Q.prove
         DEFINITIONS OF UPDATE, EMPTY, APPLY and DOMAIN
  ---------------------------------------------------------------------------*)
 
-val FUPDATE_DEF = Q.new_definition
-("FUPDATE_DEF",
- `FUPDATE (f:'a |-> 'b) (x,y)
-    = fmap_ABS (\a. if a=x then INL y else fmap_REP f a)`);
+Definition FUPDATE_DEF[nocompute]:
+ FUPDATE (f:'a |-> 'b) (x,y)
+    = fmap_ABS (\a. if a=x then INL y else fmap_REP f a)
+End
 
 Overload "|+" = “FUPDATE”
 
-val FEMPTY_DEF = Q.new_definition
-("FEMPTY_DEF",
- `(FEMPTY:'a |-> 'b) = fmap_ABS (\a. INR one)`);
+Definition FEMPTY_DEF[nocompute]:
+ (FEMPTY:'a |-> 'b) = fmap_ABS (\a. INR one)
+End
 
-val FAPPLY_DEF = Q.new_definition
-("FAPPLY_DEF",
- `FAPPLY (f:'a |-> 'b) x = OUTL (fmap_REP f x)`);
+Definition FAPPLY_DEF[nocompute]:
+ FAPPLY (f:'a |-> 'b) x = OUTL (fmap_REP f x)
+End
 
 Overload "'" = “FAPPLY”
 
-val FDOM_DEF = Q.new_definition
-("FDOM_DEF",
- `FDOM (f:'a |-> 'b) x = ISL (fmap_REP f x)`);
+Definition FDOM_DEF[nocompute]:
+ FDOM (f:'a |-> 'b) x = ISL (fmap_REP f x)
+End
 
 val update_rep = Term`\(f:'a->'b+one) x y. \a. if a=x then INL y else f a`;
 
@@ -407,7 +407,8 @@ val _ = export_rewrites ["FDOM_FINITE"]
 (* Define cardinality as the cardinality of the domain of the map        *)
 (* ===================================================================== *)
 
-val FCARD_DEF = new_definition("FCARD_DEF", ``FCARD fm = CARD (FDOM fm)``);
+Definition FCARD_DEF[nocompute]: FCARD fm = CARD (FDOM fm)
+End
 
 (* --------------------------------------------------------------------- *)
 (* Basic cardinality results.                                            *)
@@ -597,11 +598,10 @@ Theorem fmap_EXT = GSYM fmap_EQ_THM
            Submaps
  ---------------------------------------------------------------------------*)
 
-val SUBMAP_DEF = new_definition (
-  "SUBMAP_DEF",
-  ``!^fmap g.
-       $SUBMAP f g =
-       !x. x IN FDOM f ==> x IN FDOM g /\ (FAPPLY f x = FAPPLY g x)``)
+Definition SUBMAP_DEF[nocompute]:
+  $SUBMAP ^fmap g =
+  !x. x IN FDOM f ==> x IN FDOM g /\ (FAPPLY f x = FAPPLY g x)
+End
 val _ = set_fixity "SUBMAP" (Infix(NONASSOC, 450));
 val _ = Unicode.unicode_version { u = UTF8.chr 0x2291, tmnm = "SUBMAP"}
 val _ = TeX_notation {hol = "SUBMAP", TeX = ("\\HOLTokenSubmap{}", 1)}
@@ -1042,9 +1042,9 @@ QED
     "assoc" for finite maps
  ---------------------------------------------------------------------------*)
 
-val FLOOKUP_DEF = Q.new_definition
-("FLOOKUP_DEF",
- `FLOOKUP ^fmap x = if x IN FDOM f then SOME (FAPPLY f x) else NONE`);
+Definition FLOOKUP_DEF[nocompute]:
+ FLOOKUP ^fmap x = if x IN FDOM f then SOME (FAPPLY f x) else NONE
+End
 
 Theorem FLOOKUP_EMPTY:
     FLOOKUP FEMPTY k = NONE
@@ -1265,9 +1265,9 @@ QED
        Universal quantifier on finite maps
  ---------------------------------------------------------------------------*)
 
-val FEVERY_DEF = Q.new_definition
-("FEVERY_DEF",
- `FEVERY P ^fmap = !x. x IN FDOM f ==> P (x, FAPPLY f x)`);
+Definition FEVERY_DEF[nocompute]:
+ FEVERY P ^fmap = !x. x IN FDOM f ==> P (x, FAPPLY f x)
+End
 
 Theorem FEVERY_FEMPTY:
   !P:'a#'b -> bool. FEVERY P FEMPTY
@@ -1402,9 +1402,9 @@ QED
           Range of a finite map
  ---------------------------------------------------------------------------*)
 
-val FRANGE_DEF = Q.new_definition
-("FRANGE_DEF",
- `FRANGE ^fmap = { y | ?x. x IN FDOM f /\ (FAPPLY f x = y)}`);
+Definition FRANGE_DEF[nocompute]:
+ FRANGE ^fmap = { y | ?x. x IN FDOM f /\ (FAPPLY f x = y)}
+End
 
 Theorem FRANGE_FEMPTY:
   FRANGE FEMPTY = {}

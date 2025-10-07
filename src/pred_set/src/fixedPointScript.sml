@@ -9,28 +9,28 @@ Libs
   pred_setLib
 
 
-val monotone_def = new_definition(
-  "monotone_def",
-  “monotone f = !X Y. X SUBSET Y ==> f X SUBSET f Y”);
+Definition monotone_def[nocompute]:
+  monotone f = !X Y. X SUBSET Y ==> f X SUBSET f Y
+End
 
 val _ = app (ignore o hide) ["lfp", "gfp"]
 Overload po_lfp = “poset$lfp”
 Overload po_gfp = “poset$gfp”
-val lfp_def = new_definition(
-  "lfp_def",
-  “lfp f = BIGINTER { X | f X SUBSET X }”);
+Definition lfp_def[nocompute]:
+  lfp f = BIGINTER { X | f X SUBSET X }
+End
 
-val gfp_def = new_definition(
-  "gfp_def",
-  “gfp f = BIGUNION { X | X SUBSET f X }”);
+Definition gfp_def[nocompute]:
+  gfp f = BIGUNION { X | X SUBSET f X }
+End
 
-val closed_def = new_definition(
-  "closed_def",
-  “closed f X <=> f X SUBSET X”);
+Definition closed_def[nocompute]:
+  closed f X <=> f X SUBSET X
+End
 
-val dense_def = new_definition(
-  "dense_def",
-  “dense f X <=> X SUBSET f X”);
+Definition dense_def[nocompute]:
+  dense f X <=> X SUBSET f X
+End
 
 Theorem SUBSET_poset[simp]:
   poset (UNIV, $SUBSET)
@@ -169,9 +169,9 @@ Theorem gfp_strong_coinduction =
             UNDISCH o SPEC_ALL) gfp_coinduction;
 end;
 
-val fnsum_def = new_definition(
-  "fnsum_def",
-  “fnsum f1 f2 X = f1 X UNION f2 X”);
+Definition fnsum_def[nocompute]:
+  fnsum f1 f2 X = f1 X UNION f2 X
+End
 
 val _ = set_fixity "++" (Infixl 480)
 val _ = inferior_overload_on ("++", “fnsum”);
@@ -186,7 +186,8 @@ Proof
   PROVE_TAC [SUBSET_DEF, IN_UNION]
 QED
 
-val empty_def = new_definition("empty_def", “empty = \X. {}”);
+Definition empty_def[nocompute]: empty = \X. {}
+End
 
 Theorem empty_monotone:
    monotone empty

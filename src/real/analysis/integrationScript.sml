@@ -251,14 +251,15 @@ QED
 
 val _ = set_fixity "division_of" (Infix(NONASSOC, 450));
 
-val division_of = new_definition ("division_of",
- ``s division_of i <=>
+Definition division_of[nocompute]:
+ s division_of i <=>
         FINITE s /\
         (!k. k IN s
              ==> k SUBSET i /\ ~(k = {}) /\ ?a b. k = interval[a,b]) /\
         (!k1 k2. k1 IN s /\ k2 IN s /\ ~(k1 = k2)
                  ==> (interior(k1) INTER interior(k2) = {})) /\
-        (BIGUNION s = i)``);
+        (BIGUNION s = i)
+End
 
 Theorem DIVISION_OF :
     !s i. s division_of i <=>
@@ -1475,18 +1476,20 @@ val _ = set_fixity "tagged_partial_division_of" (Infix(NONASSOC, 450));
 val _ = set_fixity "tagged_division_of" (Infix(NONASSOC, 450));
 
 (* ‘s’ is a set of pair of tags x and non-overlapping closed intervals k *)
-val tagged_partial_division_of = new_definition ("tagged_partial_division_of",
-  ``s tagged_partial_division_of i <=>
+Definition tagged_partial_division_of[nocompute]:
+  s tagged_partial_division_of i <=>
         FINITE s /\
         (!x k. (x,k) IN s
                ==> x IN k /\ k SUBSET i /\ ?a b. k = interval[a,b]) /\
         (!x1 k1 x2 k2. (x1,k1) IN s /\ (x2,k2) IN s /\ ~((x1,k1) = (x2,k2))
-                       ==> (interior(k1) INTER interior(k2) = {}))``);
+                       ==> (interior(k1) INTER interior(k2) = {}))
+End
 
 (* A partial tagged division becomes total when all closed intervals cover i *)
-val tagged_division_of = new_definition ("tagged_division_of",
-  ``s tagged_division_of i <=>
-        s tagged_partial_division_of i /\ (BIGUNION {k | ?x. (x,k) IN s} = i)``);
+Definition tagged_division_of[nocompute]:
+  s tagged_division_of i <=>
+        s tagged_partial_division_of i /\ (BIGUNION {k | ?x. (x,k) IN s} = i)
+End
 
 Theorem TAGGED_DIVISION_OF_FINITE:
    !s i. s tagged_division_of i ==> FINITE s
@@ -1775,8 +1778,9 @@ QED
 val _ = set_fixity "FINE" (Infix(NONASSOC, 450));
 
 (* ‘d’ is a guage, ‘s’ is a tagged division *)
-val FINE = new_definition ("FINE",
-  ``d FINE s <=> !x k. (x,k) IN s ==> k SUBSET d(x)``);
+Definition FINE[nocompute]:
+  d FINE s <=> !x k. (x,k) IN s ==> k SUBSET d(x)
+End
 
 Theorem FINE_INTER:
    !p d1 d2. (\x. d1(x) INTER d2(x)) FINE p <=> d1 FINE p /\ d2 FINE p
@@ -3443,11 +3447,12 @@ QED
 (* Generalized notion of additivity.                                         *)
 (* ------------------------------------------------------------------------- *)
 
-val operative = new_definition ("operative",
- ``operative op (f:(real->bool)->'a) <=>
+Definition operative[nocompute]:
+ operative op (f:(real->bool)->'a) <=>
   (!a b. (content(interval[a,b]) = &0) ==> (f(interval[a,b]) = neutral(op))) /\
   (!a b c. (f(interval[a,b]) = op (f(interval[a,b] INTER {x | x <= c}))
-                                  (f(interval[a,b] INTER {x | x >= c}))))``);
+                                  (f(interval[a,b] INTER {x | x >= c}))))
+End
 
 Theorem OPERATIVE_TRIVIAL:
    !op f a b.
@@ -3511,12 +3516,13 @@ QED
 val _ = hide "division_points";
 
 (* NOTE: ‘(j <= 1:num)’ was ‘j <= dimindex(:'N)’ for multivariate calculus *)
-val division_points = new_definition ("division_points",
- ``division_points (k:real->bool) (d:(real->bool)->bool) =
+Definition division_points[nocompute]:
+ division_points (k:real->bool) (d:(real->bool)->bool) =
    {(j,x) | (1:num <= j) /\ (j <= 1:num) /\ (interval_lowerbound k) < x /\
                           x < (interval_upperbound k) /\
         ?i. i IN d /\ ((interval_lowerbound i = x) \/
-                       (interval_upperbound i = x))}``);
+                       (interval_upperbound i = x))}
+End
 
 Theorem DIVISION_POINTS_FINITE:
    !d i:real->bool. d division_of i ==> FINITE(division_points i d)
@@ -4549,8 +4555,9 @@ QED
 (* Negligible sets.                                                          *)
 (* ------------------------------------------------------------------------- *)
 
-val negligible = new_definition ("negligible",
- ``negligible s <=> !a b. (indicator s has_integral (0)) (interval[a,b])``);
+Definition negligible[nocompute]:
+ negligible s <=> !a b. (indicator s has_integral (0)) (interval[a,b])
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Negligibility of hyperplane.                                              *)
@@ -9585,14 +9592,16 @@ QED
 
 val _ = set_fixity "has_bounded_setvariation_on" (Infix(NONASSOC, 450));
 
-val set_variation = new_definition ("set_variation",
- ``set_variation s (f:(real->bool)->real) =
-        sup { sum d (\k. abs(f k)) | ?t. d division_of t /\ t SUBSET s}``);
+Definition set_variation[nocompute]:
+ set_variation s (f:(real->bool)->real) =
+        sup { sum d (\k. abs(f k)) | ?t. d division_of t /\ t SUBSET s}
+End
 
-val has_bounded_setvariation_on = new_definition ("has_bounded_setvariation_on",
-  ``(f:(real->bool)->real) has_bounded_setvariation_on s <=>
+Definition has_bounded_setvariation_on[nocompute]:
+  (f:(real->bool)->real) has_bounded_setvariation_on s <=>
         ?B. !d t. d division_of t /\ t SUBSET s
-                  ==> sum d (\k. abs(f k)) <= B``);
+                  ==> sum d (\k. abs(f k)) <= B
+End
 
 Theorem HAS_BOUNDED_SETVARIATION_ON:
    !f:(real->bool)->real s.
@@ -10639,9 +10648,10 @@ QED
 
 val _ = set_fixity "absolutely_integrable_on" (Infix(NONASSOC, 450));
 
-val absolutely_integrable_on = new_definition ("absolutely_integrable_on",
- ``f absolutely_integrable_on s <=>
-        f integrable_on s /\ (\x. abs(f x)) integrable_on s``);
+Definition absolutely_integrable_on[nocompute]:
+ f absolutely_integrable_on s <=>
+        f integrable_on s /\ (\x. abs(f x)) integrable_on s
+End
 
 Theorem ABSOLUTELY_INTEGRABLE_IMP_INTEGRABLE:
    !f s. f absolutely_integrable_on s ==> f integrable_on s
@@ -14800,14 +14810,15 @@ QED
 
 val _ = set_fixity "equiintegrable_on" (Infix(NONASSOC, 450));
 
-val equiintegrable_on = new_definition ("equiintegrable_on",
-  ``fs equiintegrable_on i <=>
+Definition equiintegrable_on[nocompute]:
+  fs equiintegrable_on i <=>
         (!f:real->real. f IN fs ==> f integrable_on i) /\
         (!e. &0 < e
              ==> ?d. gauge d /\
                     !f p. f IN fs /\ p tagged_division_of i /\ d FINE p
                         ==> abs(sum p (\(x,k). content(k) * f(x)) -
-                                 integral i f) < e)``);
+                                 integral i f) < e)
+End
 
 Theorem EQUIINTEGRABLE_ON_SING:
    !f:real->real a b.
@@ -18460,14 +18471,16 @@ QED
 
 val _ = set_fixity "has_bounded_variation_on" (Infix(NONASSOC, 450));
 
-val has_bounded_variation_on = new_definition ("has_bounded_variation_on",
- ``(f:real->real) has_bounded_variation_on s <=>
+Definition has_bounded_variation_on[nocompute]:
+ (f:real->real) has_bounded_variation_on s <=>
         (\k. f(interval_upperbound k) - f(interval_lowerbound k))
-        has_bounded_setvariation_on s``);
+        has_bounded_setvariation_on s
+End
 
-val vector_variation = new_definition ("vector_variation",
- ``vector_variation s (f:real->real) =
-   set_variation s (\k. f(interval_upperbound k) - f(interval_lowerbound k))``);
+Definition vector_variation[nocompute]:
+ vector_variation s (f:real->real) =
+   set_variation s (\k. f(interval_upperbound k) - f(interval_lowerbound k))
+End
 
 Theorem HAS_BOUNDED_VARIATION_ON_EQ:
    !f g:real->real s.

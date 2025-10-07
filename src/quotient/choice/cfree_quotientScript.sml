@@ -404,10 +404,9 @@ QED
 
 (* just like RPROD_DEF, except infix: *)
 
-val PAIR_REL =
-    new_definition
-    ("PAIR_REL",
-     “$### R1 R2 = \(a:'a,b:'b) (c:'c,d:'d). R1 a c /\ R2 b d”);
+Definition PAIR_REL[nocompute]:
+     $### R1 R2 = \(a:'a,b:'b) (c:'c,d:'d). R1 a c /\ R2 b d
+End
 val _ = set_fixity "###" (Infix(NONASSOC, 450))
 
 Theorem PAIR_REL_THM:
@@ -725,10 +724,9 @@ val CONTENTS_DEF =
 (* for ABS of functions,
    use ((abs1 // R1) --> abs2) *)
 
-val FUN_REP =
-    new_definition
-    ("FUN_REP",
-     “$// (f:'a->'b) R = \a r. R r r /\ (f r = a)”);
+Definition FUN_REP[nocompute]:
+     $// (f:'a->'b) R = \a r. R r r /\ (f r = a)
+End
 val _ = set_fixity "//" (Infix(NONASSOC, 450))
 
 Theorem FUN_REP_THM:
@@ -757,11 +755,10 @@ Proof
 QED
 
 val _ = hide "-->"
-val FUN_MAP =
-    new_definition
-    ("FUN_MAP",
-     “$--> (rep:'c->'a->bool) (abs:'b->'d) =
-            \h x. $@! (IMAGE abs (IMAGE h (rep x)))”);
+Definition FUN_MAP[nocompute]:
+     $--> (rep:'c->'a->bool) (abs:'b->'d) =
+            \h x. $@! (IMAGE abs (IMAGE h (rep x)))
+End
 val _ = set_fixity "-->" (Infix(NONASSOC, 450))
 
 
@@ -790,11 +787,10 @@ QED
 
 (* The strong version of FUN_REL: *)
 
-val FUN_REL =
-    new_definition
-    ("FUN_REL",
-     “$===> (R1:'a->'a->bool) (R2:'b->'b->bool) f g =
-           !x y. R1 x y ==> R2 (f x) (g y)”);
+Definition FUN_REL[nocompute]:
+     $===> (R1:'a->'a->bool) (R2:'b->'b->bool) f g =
+           !x y. R1 x y ==> R2 (f x) (g y)
+End
 val _ = set_fixity "===>" (Infix(NONASSOC, 450))
 
 (* NOTE: R1 ===> R2 is NOT an equivalence relation, but a partial

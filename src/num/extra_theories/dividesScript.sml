@@ -32,9 +32,9 @@ val op >~ = Q.>~
 
 val ARW = RW_TAC arith_ss;
 
-val divides_def = Q.new_definition
-  ("divides_def",
-   `divides a b = ?q. b = q*a`);
+Definition divides_def[nocompute]:
+   divides a b = ?q. b = q*a
+End
 
 val ALL_DIVIDES_0 = store_thm
 ("ALL_DIVIDES_0",
@@ -243,9 +243,9 @@ QED
 (* Definition and trivial facts about primality.                             *)
 (*---------------------------------------------------------------------------*)
 
-val prime_def = Q.new_definition
-("prime_def",
- `prime a <=> a <> 1 /\ !b. divides b a ==> (b=a) \/ (b=1)`);
+Definition prime_def[nocompute]:
+ prime a <=> a <> 1 /\ !b. divides b a ==> (b=a) \/ (b=1)
+End
 
 
 val NOT_PRIME_0 = Q.store_thm
