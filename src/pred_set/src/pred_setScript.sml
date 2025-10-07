@@ -405,9 +405,9 @@ val _ = TeX_notation {hol = UnicodeChars.universal_set,
 (* Set inclusion.                                                        *)
 (* ===================================================================== *)
 
-val SUBSET_DEF = new_definition(
-  "SUBSET_DEF",
-  ``$SUBSET s t = !x:'a. x IN s ==> x IN t``);
+Definition SUBSET_DEF[nocompute]:
+  $SUBSET s t = !x:'a. x IN s ==> x IN t
+End
 val _ = set_fixity "SUBSET" (Infix(NONASSOC, 450))
 val _ = unicode_version { u = UChar.subset, tmnm = "SUBSET"};
 val _ = TeX_notation {hol = "SUBSET", TeX = ("\\HOLTokenSubset{}", 1)}
@@ -550,9 +550,9 @@ QED
 (* Proper subset.                                                        *)
 (* ===================================================================== *)
 
-val PSUBSET_DEF = new_definition(
-  "PSUBSET_DEF",
-  ``PSUBSET (s:'a set) t <=> s SUBSET t /\ ~(s = t)``);
+Definition PSUBSET_DEF[nocompute]:
+  PSUBSET (s:'a set) t <=> s SUBSET t /\ ~(s = t)
+End
 val _ = set_fixity "PSUBSET" (Infix(NONASSOC, 450))
 val _ = unicode_version { u = UTF8.chr 0x2282, tmnm = "PSUBSET"}
 val _ = TeX_notation {hol = "PSUBSET", TeX = ("\\HOLTokenPSubset", 1)}
@@ -2490,12 +2490,14 @@ QED
 (* ===================================================================== *)
 
 (* f:P->Q := f IN (FUNSET P Q) *)
-val FUNSET = new_definition ("FUNSET",
-  ``FUNSET  (P :'a -> bool) (Q :'b -> bool)   = \f. !x. x IN P ==> f x IN Q``);
+Definition FUNSET[nocompute]:
+  FUNSET  (P :'a -> bool) (Q :'b -> bool)   = \f. !x. x IN P ==> f x IN Q
+End
 
-val DFUNSET = new_definition ("DFUNSET",
-  ``DFUNSET (P :'a -> bool) (Q :'a -> 'b -> bool) =
-      \f. !x. x IN P ==> f x IN Q x``);
+Definition DFUNSET[nocompute]:
+  DFUNSET (P :'a -> bool) (Q :'a -> 'b -> bool) =
+      \f. !x. x IN P ==> f x IN Q x
+End
 
 Theorem IN_FUNSET:
   !(f :'a -> 'b) P Q. f IN (FUNSET P Q) <=> !x. x IN P ==> f x IN Q
@@ -2542,8 +2544,9 @@ Proof
 QED
 
 (* (schroeder_close f s) is a set defined as a closure of f^n on set s *)
-val schroeder_close_def = new_definition ("schroeder_close_def",
-  ``schroeder_close f s x = ?n. x IN FUNPOW (IMAGE f) n s``);
+Definition schroeder_close_def[nocompute]:
+  schroeder_close f s x = ?n. x IN FUNPOW (IMAGE f) n s
+End
 
 (* fundamental property by definition *)
 Theorem SCHROEDER_CLOSE:
@@ -2711,9 +2714,10 @@ QED
 (* ===================================================================== *)
 
 (* Left inverse, to option type, result is NONE outside image of domain *)
-val LINV_OPT_def = new_definition ("LINV_OPT_def",
-  ``LINV_OPT f s y =
-    if y IN IMAGE f s then SOME (@x. x IN s /\ (f x = y)) else NONE``) ;
+Definition LINV_OPT_def[nocompute]:
+  LINV_OPT f s y =
+    if y IN IMAGE f s then SOME (@x. x IN s /\ (f x = y)) else NONE
+End
 
 val SELECT_EQ_AX = Q.prove
   (`($@ P = x) ==> $? P ==> P x`,
@@ -2766,8 +2770,9 @@ Proof
 QED
 
 (* LINV was previously "defined" by new_specification, giving LINV_DEF *)
-val LINV_LO = new_definition ("LINV_LO",
-  ``LINV f s y = THE (LINV_OPT f s y)``) ;
+Definition LINV_LO[nocompute]:
+  LINV f s y = THE (LINV_OPT f s y)
+End
 
 (* --------------------------------------------------------------------- *)
 (* LINV_DEF:                                                             *)
@@ -2847,8 +2852,9 @@ Proof
 QED
 
 (* RINV was previously "defined" by new_specification, giving RINV_DEF *)
-val RINV_LO = new_definition ("RINV_LO",
-  ``RINV f s y = THE (LINV_OPT f s y)``) ;
+Definition RINV_LO[nocompute]:
+  RINV f s y = THE (LINV_OPT f s y)
+End
 
 (* --------------------------------------------------------------------- *)
 (* RINV_DEF:                                                             *)
@@ -3248,9 +3254,9 @@ Proof
  METIS_TAC [lem]
 QED
 
-val REL_RESTRICT_DEF = new_definition(
-  "REL_RESTRICT_DEF",
-  ``REL_RESTRICT R s x y <=> x IN s /\ y IN s /\ R x y``);
+Definition REL_RESTRICT_DEF[nocompute]:
+  REL_RESTRICT R s x y <=> x IN s /\ y IN s /\ R x y
+End
 
 Theorem REL_RESTRICT_EMPTY:
     REL_RESTRICT R {} = REMPTY
@@ -3949,8 +3955,9 @@ QED
 
 val _ = set_fixity "HAS_SIZE" (Infix(NONASSOC, 450));
 
-val HAS_SIZE = new_definition ("HAS_SIZE",
-   “s HAS_SIZE n <=> FINITE s /\ (CARD s = n)”);
+Definition HAS_SIZE[nocompute]:
+   s HAS_SIZE n <=> FINITE s /\ (CARD s = n)
+End
 
 Theorem HAS_SIZE_CARD :
     !s n. s HAS_SIZE n ==> (CARD s = n)
@@ -4185,7 +4192,8 @@ QED
 (* Sets of size n.                                                        *)
 (* ====================================================================== *)
 
-val count_def = new_definition ("count_def", ``count (n:num) = {m | m < n}``);
+Definition count_def[nocompute]: count (n:num) = {m | m < n}
+End
 
 Theorem IN_COUNT[simp]:
   !m n. m IN count n <=> m < n
@@ -4725,9 +4733,9 @@ QED
 (* Big union (union of set of sets)                                      *)
 (* ===================================================================== *)
 
-val BIGUNION = Q.new_definition
- ("BIGUNION",
-  `BIGUNION P = { x | ?s. s IN P /\ x IN s}`);
+Definition BIGUNION[nocompute]:
+  BIGUNION P = { x | ?s. s IN P /\ x IN s}
+End
 val _ = ot0 "BIGUNION" "bigUnion"
 
 (* N-ARY UNION (it's not any bigger but a different symbol)
@@ -4982,9 +4990,9 @@ QED
     BIGINTER (intersection of a set of sets)
    ---------------------------------------------------------------------- *)
 
-val BIGINTER = Q.new_definition
-("BIGINTER",
- `BIGINTER P = { x | !s. s IN P ==> x IN s}`);
+Definition BIGINTER[nocompute]:
+ BIGINTER P = { x | !s. s IN P ==> x IN s}
+End
 val _ = ot0 "BIGINTER" "bigIntersect"
 
 (* N-ARY INTERSECTION (it's not any bigger but a different symbol)
@@ -5109,9 +5117,9 @@ QED
 (* ====================================================================== *)
 
 
-val CROSS_DEF = Q.new_definition(
-  "CROSS_DEF",
-  `CROSS P Q = { p | FST p IN P /\ SND p IN Q }`);
+Definition CROSS_DEF[nocompute]:
+  CROSS P Q = { p | FST p IN P /\ SND p IN Q }
+End
 val _ = set_fixity "CROSS" (Infixr 601);
 val _ = Unicode.unicode_version {tmnm = "CROSS", u = UTF8.chr 0xD7}
 val _ = TeX_notation {hol = "CROSS", TeX = ("\\ensuremath{\\times}", 1)}
@@ -5363,9 +5371,9 @@ Proof
   SIMP_TAC (srw_ss()) [INJ_DEF]
 QED
 
-val disjUNION_def = new_definition(
-  "disjUNION_def",
-  “disjUNION A B = {INL a | a IN A} UNION {INR b | b IN B}”);
+Definition disjUNION_def[nocompute]:
+  disjUNION A B = {INL a | a IN A} UNION {INR b | b IN B}
+End
 
 val _ = set_mapped_fixity {fixity = Infixl 500,
                            term_name = "disjUNION",
@@ -5411,7 +5419,8 @@ QED
 (* Set complements.                                                       *)
 (* ====================================================================== *)
 
-val COMPL_DEF = new_definition ("COMPL_DEF", ``COMPL P = UNIV DIFF P``);
+Definition COMPL_DEF[nocompute]: COMPL P = UNIV DIFF P
+End
 
 Theorem IN_COMPL[simp]:
   !(x:'a) s. x IN COMPL s <=> x NOTIN s
@@ -5894,9 +5903,9 @@ QED
     Where f's range is the natural numbers and P is finite.
    ---------------------------------------------------------------------- *)
 
-val SUM_IMAGE_DEF = new_definition(
-  "SUM_IMAGE_DEF",
-  ``SUM_IMAGE f s = ITSET (\e acc. f e + acc) s 0``);
+Definition SUM_IMAGE_DEF[nocompute]:
+  SUM_IMAGE f s = ITSET (\e acc. f e + acc) s 0
+End
 
 val _ = overload_on ("SIGMA", ``SUM_IMAGE``);
 val _ = Unicode.unicode_version {u = UTF8.chr 0x2211, tmnm = "SIGMA"};
@@ -6398,7 +6407,8 @@ QED
 (* SUM_SET sums the elements of a set of natural numbers                     *)
 (*---------------------------------------------------------------------------*)
 
-val SUM_SET_DEF = new_definition("SUM_SET_DEF", ``SUM_SET = SUM_IMAGE I``);
+Definition SUM_SET_DEF[nocompute]: SUM_SET = SUM_IMAGE I
+End
 
 Theorem SUM_SET_THM:
     (SUM_SET {} = 0) /\
@@ -6492,9 +6502,9 @@ QED
    ---------------------------------------------------------------------- *)
 
 (* Define PROD_IMAGE similar to SUM_IMAGE *)
-val PROD_IMAGE_DEF = new_definition(
-  "PROD_IMAGE_DEF",
-  ``PROD_IMAGE f s = ITSET (\e acc. f e * acc) s 1``);
+Definition PROD_IMAGE_DEF[nocompute]:
+  PROD_IMAGE f s = ITSET (\e acc. f e * acc) s 1
+End
 
 (* Theorem: property of PROD_IMAGE *)
 Theorem PROD_IMAGE_THM:
@@ -6680,7 +6690,8 @@ QED
 (*---------------------------------------------------------------------------*)
 
 (* Define PROD_SET similar to SUM_SET *)
-val PROD_SET_DEF = new_definition("PROD_SET_DEF", ``PROD_SET = PROD_IMAGE I``);
+Definition PROD_SET_DEF[nocompute]: PROD_SET = PROD_IMAGE I
+End
 
 (* Theorem: Product Set property *)
 Theorem PROD_SET_THM:
@@ -6799,7 +6810,8 @@ Proof
 QED
 
 (* NOTE: “MIN_SET {}” is undefined *)
-val MIN_SET_DEF = new_definition("MIN_SET_DEF", ``MIN_SET = $LEAST``);
+Definition MIN_SET_DEF[nocompute]: MIN_SET = $LEAST
+End
 
 Theorem MIN_SET_ELIM:
     !P Q. ~(P = {}) /\ (!x. (!y. y IN P ==> x <= y) /\ x IN P ==> Q x) ==>
@@ -7143,10 +7155,9 @@ QED
 (* POW s is the powerset of s                                                *)
 (*---------------------------------------------------------------------------*)
 
-val POW_DEF =
- new_definition
-  ("POW_DEF",
-   ``POW set = {s | s SUBSET set}``);
+Definition POW_DEF[nocompute]:
+   POW set = {s | s SUBSET set}
+End
 
 Theorem IN_POW:
   !set e. e IN POW set <=> e SUBSET set
@@ -7364,12 +7375,12 @@ QED
     a relation that is reflexive, symmetric and transitive over that set)
    ---------------------------------------------------------------------- *)
 
-val equiv_on_def = new_definition(
-  "equiv_on_def",
-  ``(equiv_on) R s <=>
+Definition equiv_on_def[nocompute]:
+  (equiv_on) R s <=>
        (!x. x IN s ==> R x x) /\
        (!x y. x IN s /\ y IN s ==> (R x y = R y x)) /\
-       (!x y z. x IN s /\ y IN s /\ z IN s /\ R x y /\ R y z ==> R x z)``);
+       (!x y z. x IN s /\ y IN s /\ z IN s /\ R x y /\ R y z ==> R x z)
+End
 val _ = set_fixity "equiv_on" (Infix(NONASSOC, 425))
 
 Theorem inv_image_equiv_on:
@@ -7403,10 +7414,10 @@ Proof
   METIS_TAC[]
 QED
 
-val partition_def = new_definition(
-  "partition_def",
-  ``partition R s =
-      { t | ?x. x IN s /\ (t = { y | y IN s /\ R x y})}``);
+Definition partition_def[nocompute]:
+  partition R s =
+      { t | ?x. x IN s /\ (t = { y | y IN s /\ R x y})}
+End
 
 Theorem BIGUNION_partition:
     R equiv_on s ==> (BIGUNION (partition R s) = s)
@@ -7942,9 +7953,9 @@ QED
     Take the RC of the P argument to consider only pairs of distinct elements.
    ---------------------------------------------------------------------- *)
 
-val pairwise_def = new_definition(
-  "pairwise_def",
-  ``pairwise P s = !e1 e2. e1 IN s /\ e2 IN s ==> P e1 e2``);
+Definition pairwise_def[nocompute]:
+  pairwise P s = !e1 e2. e1 IN s /\ e2 IN s ==> P e1 e2
+End
 
 Theorem pairwise_UNION:
  pairwise R (s1 UNION s2) <=>
@@ -8679,8 +8690,9 @@ Proof
 QED
 
 (** enumerate functions as BIJ from univ(:num) to countable sets, from util_prob *)
-val enumerate_def = new_definition ("enumerate_def",
-  ``enumerate s = @f :num -> 'a. BIJ f UNIV s``);
+Definition enumerate_def[nocompute]:
+  enumerate s = @f :num -> 'a. BIJ f UNIV s
+End
 
 Theorem ENUMERATE:
      !s. (?f :num -> 'a. BIJ f UNIV s) = BIJ (enumerate s) UNIV s
@@ -9207,9 +9219,9 @@ val _ = Unicode.unicode_version {u = UTF8.chr 0x227C, tmnm = "<<="};
 val _ = TeX_notation {hol = "<<=",           TeX = ("\\HOLTokenIsPrefix{}",   1)};
 val _ = TeX_notation {hol = UTF8.chr 0x227C, TeX = ("\\HOLTokenIsPrefix{}",   1)};
 
-val is_measure_maximal_def = new_definition("is_measure_maximal_def",
-  “is_measure_maximal m s x <=> x IN s /\ !y. y IN s ==> m y <= m x”
-);
+Definition is_measure_maximal_def[nocompute]:
+  is_measure_maximal m s x <=> x IN s /\ !y. y IN s ==> m y <= m x
+End
 
 (* cf. arithmeticTheory.WOP_measure for the "is_measure_minimal" of s *)
 Theorem FINITE_is_measure_maximal :

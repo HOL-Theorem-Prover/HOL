@@ -228,13 +228,13 @@ QED
 
 But the following definition is not the same as that in relationTheory. *)
 
-val RC_DEF =
-   new_definition("RC_DEF",
-   “RC (R:'a->'a->bool) a b =
+Definition RC_DEF[nocompute]:
+   RC (R:'a->'a->bool) a b =
        !P.
           (!x y. R x y ==> P x y) /\
           (!x. P x x)
-          ==> P a b”);
+          ==> P a b
+End
 
 
 Theorem RC_REFLEXIVE:
@@ -305,9 +305,8 @@ QED
 (* Define compatible relations on the object/method language.            *)
 (* --------------------------------------------------------------------- *)
 
-val compatible =
-    new_definition ("compatible",
-    “compatible Ro Rd Re Rm =
+Definition compatible[nocompute]:
+    compatible Ro Rd Re Rm =
         ((!o1 o2. Ro o1 o2 ==> (!l. Ro (INVOKE o1 l) (INVOKE o2 l))  /\
                                (!l m. Ro (UPDATE o1 l m) (UPDATE o2 l m))  /\
                                (!x. Rm (SIGMA x o1) (SIGMA x o2)))
@@ -319,48 +318,49 @@ val compatible =
           /\
          (!m1 m2. Rm m1 m2 ==> (!o' l. Ro (UPDATE o' l m1) (UPDATE o' l m2))
                                /\
-                               (!l. Re (l, m1) (l, m2))))”);
+                               (!l. Re (l, m1) (l, m2))))
+End
 
-val reflexve =
-    new_definition ("reflexve",
-    “reflexve Ro Rd Re Rm =
+Definition reflexve[nocompute]:
+    reflexve Ro Rd Re Rm =
         ((!o1: obj. Ro o1 o1)  /\
          (!d1:^dict. Rd d1 d1)  /\
          (!e1:^entry. Re e1 e1)  /\
-         (!m1: method. Rm m1 m1))”);
+         (!m1: method. Rm m1 m1))
+End
 
 val _ = hide "symmetric";
 
-val symmetric =
-    new_definition ("symmetric",
-    “symmetric Ro Rd Re Rm =
+Definition symmetric[nocompute]:
+    symmetric Ro Rd Re Rm =
         ((!o1 o2: obj. Ro o1 o2 ==> Ro o2 o1)  /\
          (!d1 d2:^dict. Rd d1 d2 ==> Rd d2 d1)  /\
          (!e1 e2:^entry. Re e1 e2 ==> Re e2 e1)  /\
-         (!m1 m2: method. Rm m1 m2 ==> Rm m2 m1))”);
+         (!m1 m2: method. Rm m1 m2 ==> Rm m2 m1))
+End
 
-val transitive =
-    new_definition ("transitve",
-    “transitve Ro Rd Re Rm =
+Definition transitve[nocompute]:
+    transitve Ro Rd Re Rm =
         ((!o1 o2 o3: obj. Ro o1 o2 /\ Ro o2 o3 ==> Ro o1 o3)  /\
          (!d1 d2 d3:^dict. Rd d1 d2 /\ Rd d2 d3 ==> Rd d1 d3)  /\
          (!e1 e2 e3:^entry. Re e1 e2 /\ Re e2 e3 ==> Re e1 e3)  /\
-         (!m1 m2 m3: method. Rm m1 m2 /\ Rm m2 m3 ==> Rm m1 m3))”);
+         (!m1 m2 m3: method. Rm m1 m2 /\ Rm m2 m3 ==> Rm m1 m3))
+End
 
-val equality =
-    new_definition ("equality",
-    “equality Ro Rd Re Rm =
+Definition equality[nocompute]:
+    equality Ro Rd Re Rm =
         (compatible Ro Rd Re Rm /\
          reflexve   Ro Rd Re Rm /\
          symmetric  Ro Rd Re Rm /\
-         transitve  Ro Rd Re Rm)”);
+         transitve  Ro Rd Re Rm)
+End
 
-val reduction =
-    new_definition ("reduction",
-    “reduction Ro Rd Re Rm =
+Definition reduction[nocompute]:
+    reduction Ro Rd Re Rm =
         (compatible Ro Rd Re Rm /\
          reflexve   Ro Rd Re Rm /\
-         transitve  Ro Rd Re Rm)”);
+         transitve  Ro Rd Re Rm)
+End
 
 
 
@@ -977,14 +977,14 @@ Theorem RED_transitive:
      !R. transitve
            (RED_obj R) (RED_dict R) (RED_entry R) (RED_method R)
 Proof
-    REWRITE_TAC[transitive]
+    REWRITE_TAC[transitve]
     THEN REWRITE_TAC[CONV_RULE (DEPTH_CONV LEFT_IMP_EXISTS_CONV)
                                RED_rules_sat]
 QED
 
 val RED_TRANS = save_thm("RED_TRANS",
                    CONV_RULE (TOP_DEPTH_CONV FORALL_AND_CONV)
-                    (REWRITE_RULE[transitive] RED_transitive));
+                    (REWRITE_RULE[transitve] RED_transitive));
 
 Theorem RED_compatible:
      !R. compatible
@@ -1258,14 +1258,14 @@ Theorem REQUAL_transitive:
               (REQUAL_entry R)
               (REQUAL_method R)
 Proof
-    REWRITE_TAC[transitive]
+    REWRITE_TAC[transitve]
     THEN REWRITE_TAC[CONV_RULE (DEPTH_CONV LEFT_IMP_EXISTS_CONV)
                                REQUAL_rules_sat]
 QED
 
 val REQUAL_TRANS = save_thm("REQUAL_TRANS",
                    CONV_RULE (TOP_DEPTH_CONV FORALL_AND_CONV)
-                    (REWRITE_RULE[transitive] REQUAL_transitive));
+                    (REWRITE_RULE[transitve] REQUAL_transitive));
 
 Theorem REQUAL_compatible:
      !R. compatible
@@ -1325,25 +1325,21 @@ QED
                          (* ============ *)
 
 
-val NORMAL_FORM_obj =
-    new_definition
-    ("NORMAL_FORM_obj",
-     “NORMAL_FORM_obj R a = (!a'. ~(RED1_obj R a a'))”);
+Definition NORMAL_FORM_obj[nocompute]:
+     NORMAL_FORM_obj R a = (!a'. ~(RED1_obj R a a'))
+End
 
-val NORMAL_FORM_dict =
-    new_definition
-    ("NORMAL_FORM_dict",
-     “NORMAL_FORM_dict R a = (!a'. ~(RED1_dict R a a'))”);
+Definition NORMAL_FORM_dict[nocompute]:
+     NORMAL_FORM_dict R a = (!a'. ~(RED1_dict R a a'))
+End
 
-val NORMAL_FORM_entry =
-    new_definition
-    ("NORMAL_FORM_entry",
-     “NORMAL_FORM_entry R a = (!a'. ~(RED1_entry R a a'))”);
+Definition NORMAL_FORM_entry[nocompute]:
+     NORMAL_FORM_entry R a = (!a'. ~(RED1_entry R a a'))
+End
 
-val NORMAL_FORM_method =
-    new_definition
-    ("NORMAL_FORM_method",
-     “NORMAL_FORM_method R a = (!a'. ~(RED1_method R a a'))”);
+Definition NORMAL_FORM_method[nocompute]:
+     NORMAL_FORM_method R a = (!a'. ~(RED1_method R a a'))
+End
 
 val NORMAL_FORM = save_thm
   ("NORMAL_FORM",
@@ -1351,29 +1347,25 @@ val NORMAL_FORM = save_thm
                    NORMAL_FORM_entry, NORMAL_FORM_method]);
 
 
-val NORMAL_FORM_OF_obj =
-    new_definition
-    ("NORMAL_FORM_OF_obj",
-     “NORMAL_FORM_OF_obj R a b =
-         (NORMAL_FORM_obj R a /\ REQUAL_obj R b a)”);
+Definition NORMAL_FORM_OF_obj[nocompute]:
+     NORMAL_FORM_OF_obj R a b =
+         (NORMAL_FORM_obj R a /\ REQUAL_obj R b a)
+End
 
-val NORMAL_FORM_OF_dict =
-    new_definition
-    ("NORMAL_FORM_OF_dict",
-     “NORMAL_FORM_OF_dict R a b =
-         (NORMAL_FORM_dict R a /\ REQUAL_dict R b a)”);
+Definition NORMAL_FORM_OF_dict[nocompute]:
+     NORMAL_FORM_OF_dict R a b =
+         (NORMAL_FORM_dict R a /\ REQUAL_dict R b a)
+End
 
-val NORMAL_FORM_OF_entry =
-    new_definition
-    ("NORMAL_FORM_OF_entry",
-     “NORMAL_FORM_OF_entry R a b =
-         (NORMAL_FORM_entry R a /\ REQUAL_entry R b a)”);
+Definition NORMAL_FORM_OF_entry[nocompute]:
+     NORMAL_FORM_OF_entry R a b =
+         (NORMAL_FORM_entry R a /\ REQUAL_entry R b a)
+End
 
-val NORMAL_FORM_OF_method =
-    new_definition
-    ("NORMAL_FORM_OF_method",
-     “NORMAL_FORM_OF_method R a b =
-         (NORMAL_FORM_method R a /\ REQUAL_method R b a)”);
+Definition NORMAL_FORM_OF_method[nocompute]:
+     NORMAL_FORM_OF_method R a b =
+         (NORMAL_FORM_method R a /\ REQUAL_method R b a)
+End
 
 val NORMAL_FORM_OF = save_thm
   ("NORMAL_FORM_OF",
@@ -1409,23 +1401,21 @@ QED
 
 (* THE DIAMOND PROPERTY *)
 
-val DIAMOND =
-    new_definition
-    ("DIAMOND",
-     “DIAMOND R = (!a b c:'a. R a b /\ R a c ==> (?d. R b d /\ R c d))”);
+Definition DIAMOND[nocompute]:
+     DIAMOND R = (!a b c:'a. R a b /\ R a c ==> (?d. R b d /\ R c d))
+End
 
 
 
 (* THE CHURCH-ROSSER PROPERTY *)
 
-val CHURCH_ROSSER =
-    new_definition
-    ("CHURCH_ROSSER",
-     “CHURCH_ROSSER R =
+Definition CHURCH_ROSSER[nocompute]:
+     CHURCH_ROSSER R =
             (DIAMOND (RED_obj R) /\
              DIAMOND (RED_dict R) /\
              DIAMOND (RED_entry R) /\
-             DIAMOND (RED_method R))”);
+             DIAMOND (RED_method R))
+End
 
 
 
@@ -1609,33 +1599,29 @@ QED
 (* SUBSTITUTIVE RELATIONS *)
 
 
-val SUBSTITUTIVE_obj =
-    new_definition
-    ("SUBSTITUTIVE_obj",
-     “SUBSTITUTIVE_obj R =
+Definition SUBSTITUTIVE_obj[nocompute]:
+     SUBSTITUTIVE_obj R =
            (!(M:obj) (N:obj) L x.
-             R M N ==> R (M <[ [x,L]) (N <[ [x,L]))”);
+             R M N ==> R (M <[ [x,L]) (N <[ [x,L]))
+End
 
-val SUBSTITUTIVE_dict =
-    new_definition
-    ("SUBSTITUTIVE_dict",
-     “SUBSTITUTIVE_dict R =
+Definition SUBSTITUTIVE_dict[nocompute]:
+     SUBSTITUTIVE_dict R =
            (!(M:^dict) (N:^dict) L x.
-             R M N ==> R (M <[ [x,L]) (N <[ [x,L]))”);
+             R M N ==> R (M <[ [x,L]) (N <[ [x,L]))
+End
 
-val SUBSTITUTIVE_entry =
-    new_definition
-    ("SUBSTITUTIVE_entry",
-     “SUBSTITUTIVE_entry R =
+Definition SUBSTITUTIVE_entry[nocompute]:
+     SUBSTITUTIVE_entry R =
            (!(M:^entry) (N:^entry) L x.
-             R M N ==> R (M <[ [x,L]) (N <[ [x,L]))”);
+             R M N ==> R (M <[ [x,L]) (N <[ [x,L]))
+End
 
-val SUBSTITUTIVE_method =
-    new_definition
-    ("SUBSTITUTIVE_method",
-     “SUBSTITUTIVE_method R =
+Definition SUBSTITUTIVE_method[nocompute]:
+     SUBSTITUTIVE_method R =
            (!(M:method) (N:method) L x.
-             R M N ==> R (M <[ [x,L]) (N <[ [x,L]))”);
+             R M N ==> R (M <[ [x,L]) (N <[ [x,L]))
+End
 
 val SUBSTITUTIVE = save_thm
   ("SUBSTITUTIVE",

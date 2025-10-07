@@ -30,10 +30,10 @@ val qabbrev_tac = Q.ABBREV_TAC;
 fun simp l = ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) l;
 fun fs l = FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) l;
 
-val is_gcd_def = Q.new_definition
- ("is_gcd_def",
-  `is_gcd a b c <=> divides c a /\ divides c b /\
-                    !d. divides d a /\ divides d b ==> divides d c`);
+Definition is_gcd_def[nocompute]:
+  is_gcd a b c <=> divides c a /\ divides c b /\
+                    !d. divides d a /\ divides d b ==> divides d c
+End
 
 val IS_GCD = is_gcd_def;
 

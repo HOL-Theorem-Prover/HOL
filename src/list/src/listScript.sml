@@ -5251,8 +5251,9 @@ QED
 (* end CakeML lemmas *)
 
 (* u is unique in L, learnt from Robert Beers <robert@beers.org> *)
-val UNIQUE_DEF = new_definition ("UNIQUE_DEF",
-  “UNIQUE e L = ?L1 L2. (L1 ++ [e] ++ L2 = L) /\ ~MEM e L1 /\ ~MEM e L2”);
+Definition UNIQUE_DEF[nocompute]:
+  UNIQUE e L = ?L1 L2. (L1 ++ [e] ++ L2 = L) /\ ~MEM e L1 /\ ~MEM e L2
+End
 
 local
     fun take ts = MAP_EVERY Q.EXISTS_TAC ts;    (* from HOL mizar mode *)

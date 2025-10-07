@@ -1866,12 +1866,11 @@ QED
 
 
 
-val EQ_subst =
-    new_definition
-    ("EQ_subst",
-     “EQ_subst t (s1:^subs) s2 =
+Definition EQ_subst[nocompute]:
+     EQ_subst t (s1:^subs) s2 =
         (!x. (x IN t) ==>
-             (SUB s1 x = SUB s2 x))”);
+             (SUB s1 x = SUB s2 x))
+End
 
 
 Theorem SUB_CONTEXT:

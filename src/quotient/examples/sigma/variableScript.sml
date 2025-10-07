@@ -164,10 +164,10 @@ QED
 new_infix("is_variant",  ==`:var->var->bool`==, 450);
 *)
 
-val is_variant = new_definition (
-  "is_variant",
-  ``$is_variant y x =
-            ((Base y = Base x) /\ (Index x <= Index y))``)
+Definition is_variant[nocompute]:
+  $is_variant y x =
+            ((Base y = Base x) /\ (Index x <= Index y))
+End
 val _ = set_fixity "is_variant" (Infix(NONASSOC, 450))
 
 

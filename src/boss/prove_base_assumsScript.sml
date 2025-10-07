@@ -1740,8 +1740,8 @@ val itself_tydef = prim_type_definition({Thy="prove_base_assums",Tyop="itself"},
   SPEC boolSyntax.arb exists_refl |> CONV_RULE(QUANT_CONV SYM_CONV))
 
 val _ = Parse.hide "the_value";
-val the_value_def = new_definition
-  ("the_value_def", ``the_value = (ARB:'a prove_base_assums$itself)``);
+Definition the_value_def[nocompute]: the_value = (ARB:'a prove_base_assums$itself)
+End
 
 Theorem itself_unique:
    !i. i = the_value

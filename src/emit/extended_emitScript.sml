@@ -14,8 +14,8 @@ Libs
 
 fun ARITH q = EQT_ELIM (numLib.ARITH_CONV (Parse.Term q));
 
-val BAG_VAL_DEF = Q.new_definition
-("BAG_VAL_DEF",`BAG_VAL b x = b(x)`);
+Definition BAG_VAL_DEF[nocompute]:BAG_VAL b x = b(x)
+End
 
 val BAG_VAL_THM = Q.prove
 (`(!x. BAG_VAL EMPTY_BAG x = 0) /\

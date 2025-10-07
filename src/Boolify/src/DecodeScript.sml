@@ -215,9 +215,9 @@ QED
      Units
  ---------------------------------------------------------------------------*)
 
-val decode_unit_def = Q.new_definition
-  ("decode_unit_def",
-   `decode_unit p = enc2dec p encode_unit`);
+Definition decode_unit_def[nocompute]:
+   decode_unit p = enc2dec p encode_unit
+End
 
 Theorem wf_decode_unit:
      wf_decoder p (decode_unit p)
@@ -243,9 +243,9 @@ QED
      Booleans
  ---------------------------------------------------------------------------*)
 
-val decode_bool_def = Q.new_definition
-   ("decode_bool_def",
-    `decode_bool p = enc2dec p encode_bool`);
+Definition decode_bool_def[nocompute]:
+    decode_bool p = enc2dec p encode_bool
+End
 
 Theorem wf_decode_bool:
      !p. wf_decoder p (decode_bool p)
@@ -273,9 +273,9 @@ QED
      Pairs
  ---------------------------------------------------------------------------*)
 
-val decode_prod_def = Q.new_definition
-  ("decode_prod_def",
-   `decode_prod p d1 d2 = enc2dec p (encode_prod (dec2enc d1) (dec2enc d2))`);
+Definition decode_prod_def[nocompute]:
+   decode_prod p d1 d2 = enc2dec p (encode_prod (dec2enc d1) (dec2enc d2))
+End
 
 Theorem wf_decode_prod:
      !p1 p2 d1 d2.
@@ -388,9 +388,9 @@ QED
      Sums
  ---------------------------------------------------------------------------*)
 
-val decode_sum_def = Q.new_definition
-  ("decode_sum_def",
-   `decode_sum p d1 d2 = enc2dec p (encode_sum (dec2enc d1) (dec2enc d2))`);
+Definition decode_sum_def[nocompute]:
+   decode_sum p d1 d2 = enc2dec p (encode_sum (dec2enc d1) (dec2enc d2))
+End
 
 Theorem wf_decode_sum:
      !p1 p2 d1 d2.
@@ -514,9 +514,9 @@ QED
      Options
  ---------------------------------------------------------------------------*)
 
-val decode_option_def = Q.new_definition
-  ("decode_option_def",
-   `decode_option p d = enc2dec p (encode_option (dec2enc d))`);
+Definition decode_option_def[nocompute]:
+   decode_option p d = enc2dec p (encode_option (dec2enc d))
+End
 
 Theorem wf_decode_option:
      !p d.
@@ -616,9 +616,9 @@ QED
      Lists
  ---------------------------------------------------------------------------*)
 
-val decode_list_def = Q.new_definition
-  ("decode_list_def",
-   `decode_list p d = enc2dec p (encode_list (dec2enc d))`);
+Definition decode_list_def[nocompute]:
+   decode_list p d = enc2dec p (encode_list (dec2enc d))
+End
 
 Theorem wf_decode_list:
      !p d.
@@ -746,9 +746,9 @@ QED
      Bounded lists
  ---------------------------------------------------------------------------*)
 
-val decode_blist_def = Q.new_definition
-  ("decode_blist_def",
-   `decode_blist p m d = enc2dec p (encode_blist m (dec2enc d))`);
+Definition decode_blist_def[nocompute]:
+   decode_blist p m d = enc2dec p (encode_blist m (dec2enc d))
+End
 
 Theorem wf_decode_blist:
      !m p d.
@@ -870,9 +870,9 @@ QED
      Nums
  ---------------------------------------------------------------------------*)
 
-val decode_num_def = Q.new_definition
-  ("decode_num_def",
-   `decode_num p = enc2dec p encode_num`);
+Definition decode_num_def[nocompute]:
+   decode_num p = enc2dec p encode_num
+End
 
 Theorem wf_decode_num:
      !p. wf_decoder p (decode_num p)
@@ -1001,9 +1001,9 @@ QED
      Bounded numbers
  ---------------------------------------------------------------------------*)
 
-val decode_bnum_def = Q.new_definition
-   ("decode_bnum_def",
-    `decode_bnum m p = enc2dec p (encode_bnum m)`);
+Definition decode_bnum_def[nocompute]:
+    decode_bnum m p = enc2dec p (encode_bnum m)
+End
 
 Definition dec_bnum_def:
    (dec_bnum 0 l = SOME (0, l)) /\
@@ -1114,9 +1114,9 @@ QED
      Trees
  ---------------------------------------------------------------------------*)
 
-val decode_tree_def = Q.new_definition
-  ("decode_tree_def",
-   `decode_tree p d = enc2dec p (encode_tree (dec2enc d))`);
+Definition decode_tree_def[nocompute]:
+   decode_tree p d = enc2dec p (encode_tree (dec2enc d))
+End
 
 Theorem wf_decode_tree:
      !p d.

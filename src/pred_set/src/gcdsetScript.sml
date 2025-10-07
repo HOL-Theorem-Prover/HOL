@@ -20,12 +20,12 @@ val qabbrev_tac = Q.ABBREV_TAC;
 val qexists_tac = Q.EXISTS_TAC;
 val rw = SRW_TAC [ARITH_ss];
 
-val gcdset_def = new_definition(
-  "gcdset_def",
-  ``gcdset s =
+Definition gcdset_def[nocompute]:
+  gcdset s =
       if (s = {}) \/ (s = {0}) then 0
       else MAX_SET ({ n | n <= MIN_SET (s DELETE 0) } INTER
-                    { d | !e. e IN s ==> divides d e })``);
+                    { d | !e. e IN s ==> divides d e })
+End
 
 val FINITE_LEQ_MIN_SET = prove(
   ``FINITE { n | n <= MIN_SET (s DELETE 0) }``,

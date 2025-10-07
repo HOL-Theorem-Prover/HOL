@@ -3738,8 +3738,9 @@ QED
 (* LEAST integer satisfying a predicate (may be undefined).                  *)
 (*---------------------------------------------------------------------------*)
 
-val LEAST_INT_DEF = new_definition ("LEAST_INT_DEF",
-  ``LEAST_INT P = @i. P i /\ !j. j < i ==> ~P j``)
+Definition LEAST_INT_DEF[nocompute]:
+  LEAST_INT P = @i. P i /\ !j. j < i ==> ~P j
+End
 
 val _ = set_fixity "LEAST_INT" Binder
 
@@ -3757,11 +3758,13 @@ QED
 (* Euclidean div and mod                                                     *)
 (*---------------------------------------------------------------------------*)
 
-val EDIV_DEF = new_definition ("EDIV_DEF",
-  ``ediv i j = if 0 < j then i / j else -(i / -j)``)
+Definition EDIV_DEF[nocompute]:
+  ediv i j = if 0 < j then i / j else -(i / -j)
+End
 
-val EMOD_DEF = new_definition ("EMOD_DEF",
-  ``emod i j = i % ABS j``)
+Definition EMOD_DEF[nocompute]:
+  emod i j = i % ABS j
+End
 
 (*---------------------------------------------------------------------------*)
 (* Theorems used for converting div/mod operations into ediv and emod        *)
