@@ -41,7 +41,10 @@ EXDIRS = algebra/aat \
          Crypto/pedersenCommitment Crypto/sigmaProtocol \
          Hoare-for-divergence MLsyntax \
          PSL/1.01/executable-semantics PSL/1.1/official-semantics \
-	 STE algorithms computability countchars dependability dev \
+	 STE algorithms computability countchars \
+         data-structures/ \
+         data-structures/AVL_tree \
+         dependability dev \
          developers/ThmSetData \
 	 fermat \
 	 formal-languages formal-languages/context-free \
@@ -58,8 +61,7 @@ EXDIRS = algebra/aat \
          logic/temporal/src \
          misc \
          padics parity \
-         rings \
-         zipper
+         rings
 
 # selftest directories under src/quotient
 QUOTDIRS = examples examples/lambda examples/sigma choice
@@ -92,10 +94,10 @@ EX2DIRS = AKS algebra algorithms/boyer_moore \
             algorithms/unification/triangular/first-order/compilation \
             arm/arm6-verification/correctness \
             arm/v4 arm/v7 \
-          balanced_bst \
           category computability/kolmog computability/lambda \
             computability/recdegrees \
             computability/register computability/turing Crypto \
+          data-structures/balanced_bst \
           decidable_separationLogic/src \
           formal-languages/regular pl-semantics \
           generic_graphs \

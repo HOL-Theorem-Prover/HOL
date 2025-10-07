@@ -45,6 +45,12 @@ Incompatibilities
 -   We have implemented a new policy forbidding theory names from being SML or HOL keywords (*e.g.,* `case`, `while`, `of`, …, `Theorem`, `Theory`, `Definition`, …).
     The theories `while` and `functor` have been renamed to `While` and `category_functor`, respectively, in accordance with this.
 
+-   The `examples/fun-op-sem` directory has been renamed `examples/pl-semantics`.
+
+-   The `examples/balanced_bst` directory has been renamed `examples/data-structures/balanced_bst`;
+    the script file `examples/zipper/zipperScript.sml` has been moved to `examples/data-structures`;
+    the script file `examples/balanced_bst/AVL_treeScript.sml` has been moved to a directory of its own at `examples/data-structures/AVL_tree`.
+
 * * * * *
 
 <div class="footer">
