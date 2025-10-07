@@ -148,59 +148,76 @@ val poly_diff = new_definition ("poly_diff_def",
 (* Useful clausifications.                                                   *)
 (* ------------------------------------------------------------------------- *)
 
-val POLY_ADD_CLAUSES = store_thm("POLY_ADD_CLAUSES",
- Term`([] + p2 = p2) /\
+Theorem POLY_ADD_CLAUSES:
+ ([] + p2 = p2) /\
       (p1 + [] = p1) /\
-   ((h1::t1) + (h2::t2) = (h1 + h2) :: (t1 + t2))`,
+   ((h1::t1) + (h2::t2) = (h1 + h2) :: (t1 + t2))
+Proof
   REWRITE_TAC[poly_add, NOT_CONS_NIL, HD, TL] THEN
   SPEC_TAC(Term`p1:real list`,Term`p1:real list`) THEN
-  LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[poly_add]);
+  LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[poly_add]
+QED
 
-val POLY_CMUL_CLAUSES = store_thm("POLY_CMUL_CLAUSES",
- Term`(c ## [] = []) /\
-      (c ## (h::t) = (c * h) :: (c ## t))`,
-  REWRITE_TAC[poly_cmul]);
+Theorem POLY_CMUL_CLAUSES:
+ (c ## [] = []) /\
+      (c ## (h::t) = (c * h) :: (c ## t))
+Proof
+  REWRITE_TAC[poly_cmul]
+QED
 
-val POLY_NEG_CLAUSES = store_thm("POLY_NEG_CLAUSES",
- Term`(poly_neg [] = []) /\
-      (poly_neg (h::t) = ~h::poly_neg t)`,
-  REWRITE_TAC[poly_neg, POLY_CMUL_CLAUSES, REAL_MUL_LNEG, REAL_MUL_LID]);
+Theorem POLY_NEG_CLAUSES:
+ (poly_neg [] = []) /\
+      (poly_neg (h::t) = ~h::poly_neg t)
+Proof
+  REWRITE_TAC[poly_neg, POLY_CMUL_CLAUSES, REAL_MUL_LNEG, REAL_MUL_LID]
+QED
 
-val POLY_MUL_CLAUSES = store_thm("POLY_MUL_CLAUSES",
- Term`([] * p2 = []) /\
+Theorem POLY_MUL_CLAUSES:
+ ([] * p2 = []) /\
     ([h1] * p2 = h1 ## p2) /\
-   ((h1::k1::t1) * p2 = (h1 ## p2) + (&0 :: ((k1::t1) * p2)))`,
-  REWRITE_TAC[poly_mul, NOT_CONS_NIL]);
+   ((h1::k1::t1) * p2 = (h1 ## p2) + (&0 :: ((k1::t1) * p2)))
+Proof
+  REWRITE_TAC[poly_mul, NOT_CONS_NIL]
+QED
 
-val POLY_DIFF_CLAUSES = store_thm("POLY_DIFF_CLAUSES",
- Term`(diff [] = []) /\
+Theorem POLY_DIFF_CLAUSES:
+ (diff [] = []) /\
    (diff [c] = []) /\
-   (diff (h::t) = poly_diff_aux 1 t)`,
-  REWRITE_TAC[poly_diff, NOT_CONS_NIL, HD, TL, poly_diff_aux]);
+   (diff (h::t) = poly_diff_aux 1 t)
+Proof
+  REWRITE_TAC[poly_diff, NOT_CONS_NIL, HD, TL, poly_diff_aux]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Various natural consequences of syntactic definitions.                    *)
 (* ------------------------------------------------------------------------- *)
 
-val POLY_ADD = store_thm("POLY_ADD",
- Term`!p1 p2 x. poly (p1 + p2) x = poly p1 x + poly p2 x`,
+Theorem POLY_ADD:
+ !p1 p2 x. poly (p1 + p2) x = poly p1 x + poly p2 x
+Proof
   LIST_INDUCT_TAC THEN REWRITE_TAC[poly_add, poly, REAL_ADD_LID] THEN
   LIST_INDUCT_TAC THEN
   ASM_REWRITE_TAC[NOT_CONS_NIL, HD, TL, poly, REAL_ADD_RID] THEN
-  REAL_ARITH_TAC);
+  REAL_ARITH_TAC
+QED
 
-val POLY_CMUL = store_thm("POLY_CMUL",
- Term`!p c x. poly (c ## p) x = c * poly p x`,
+Theorem POLY_CMUL:
+ !p c x. poly (c ## p) x = c * poly p x
+Proof
   LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[poly, poly_cmul] THEN
-  REAL_ARITH_TAC);
+  REAL_ARITH_TAC
+QED
 
-val POLY_NEG = store_thm("POLY_NEG",
- Term`!p x. poly (poly_neg p) x = ~(poly p x)`,
+Theorem POLY_NEG:
+ !p x. poly (poly_neg p) x = ~(poly p x)
+Proof
   REWRITE_TAC[poly_neg, POLY_CMUL] THEN
-  REAL_ARITH_TAC);
+  REAL_ARITH_TAC
+QED
 
-val POLY_MUL = store_thm("POLY_MUL",
- Term`!x p1 p2. poly (p1 * p2) x = poly p1 x * poly p2 x`,
+Theorem POLY_MUL:
+ !x p1 p2. poly (p1 * p2) x = poly p1 x * poly p2 x
+Proof
   GEN_TAC THEN LIST_INDUCT_TAC THEN
   REWRITE_TAC[poly_mul, poly, REAL_MUL_LZERO, POLY_CMUL, POLY_ADD] THEN
   SPEC_TAC(Term`h:real`,Term`h:real`) THEN
@@ -209,12 +226,15 @@ val POLY_MUL = store_thm("POLY_MUL",
   REWRITE_TAC[poly_mul, POLY_CMUL, POLY_ADD, poly, POLY_CMUL,
     REAL_MUL_RZERO, REAL_ADD_RID, NOT_CONS_NIL] THEN
   ASM_REWRITE_TAC[POLY_ADD, POLY_CMUL, poly] THEN
-  REAL_ARITH_TAC);
+  REAL_ARITH_TAC
+QED
 
-val POLY_EXP = store_thm("POLY_EXP",
- Term`!p n (x:real). poly (p poly_exp n) x = (poly p x) pow n`,
+Theorem POLY_EXP:
+ !p n (x:real). poly (p poly_exp n) x = (poly p x) pow n
+Proof
   GEN_TAC THEN INDUCT_TAC THEN ASM_REWRITE_TAC[poly_exp, pow, POLY_MUL] THEN
-  REWRITE_TAC[poly] THEN REAL_ARITH_TAC);
+  REWRITE_TAC[poly] THEN REAL_ARITH_TAC
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* The derivative is a bit more complicated.                                 *)

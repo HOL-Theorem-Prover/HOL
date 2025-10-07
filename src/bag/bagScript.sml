@@ -397,18 +397,20 @@ Proof
   FULL_SIMP_TAC (srw_ss()) []
 QED
 
-val BAG_INN_BAG_DELETE = store_thm(
-  "BAG_INN_BAG_DELETE",
-  Term`!b n e. BAG_INN e n b /\ n > 0 ==> ?b'. BAG_DELETE b e b'`,
+Theorem BAG_INN_BAG_DELETE:
+  !b n e. BAG_INN e n b /\ n > 0 ==> ?b'. BAG_DELETE b e b'
+Proof
   SRW_TAC [][BAG_DELETE] THEN MATCH_MP_TAC BAG_DECOMPOSE THEN
   SRW_TAC [][BAG_IN] THEN
   `(n = 1) \/ 1 < n` by DECIDE_TAC THEN
-  METIS_TAC [BAG_INN_LESS]);
+  METIS_TAC [BAG_INN_LESS]
+QED
 
-val BAG_IN_BAG_DELETE = store_thm(
-  "BAG_IN_BAG_DELETE",
-  Term`!b e:'a. BAG_IN e b ==> ?b'. BAG_DELETE b e b'`,
-  METIS_TAC [BAG_INN_BAG_DELETE, ARITH_PROVE (Term`1 > 0`), BAG_IN]);
+Theorem BAG_IN_BAG_DELETE:
+  !b e:'a. BAG_IN e b ==> ?b'. BAG_DELETE b e b'
+Proof
+  METIS_TAC [BAG_INN_BAG_DELETE, ARITH_PROVE (Term`1 > 0`), BAG_IN]
+QED
 
 val ELIM_TAC = BasicProvers.VAR_EQ_TAC
 val ARWT = SRW_TAC [ARITH_ss][]
@@ -1525,15 +1527,16 @@ val BAG_CARD_INSERT = prove(
 Theorem BAG_CARD_THM =
   CONJ BAG_CARD_EMPTY BAG_CARD_INSERT;
 
-val BAG_CARD_UNION = store_thm (
-  "BAG_CARD_UNION",
-  Term `!b1 b2. FINITE_BAG b1 /\ FINITE_BAG b2 ==>
+Theorem BAG_CARD_UNION:
+  !b1 b2. FINITE_BAG b1 /\ FINITE_BAG b2 ==>
                 (BAG_CARD (BAG_UNION b1 b2) =
-                 (BAG_CARD b1) + (BAG_CARD b2))`,
+                 (BAG_CARD b1) + (BAG_CARD b2))
+Proof
   SIMP_TAC std_ss [GSYM AND_IMP_INTRO, RIGHT_FORALL_IMP_THM] THEN
   HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN
   SIMP_TAC arith_ss [BAG_UNION_INSERT, BAG_UNION_EMPTY,
-     BAG_CARD_THM, FINITE_BAG_UNION]);
+     BAG_CARD_THM, FINITE_BAG_UNION]
+QED
 val _ = export_rewrites ["BAG_CARD_UNION"]
 
 

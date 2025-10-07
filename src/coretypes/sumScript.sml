@@ -255,13 +255,15 @@ Theorem EXISTS_SUM =
 Theorem sum_CASES =
                          hd (Prim_rec.prove_cases_thm sum_INDUCT);
 
-val sum_distinct = store_thm("sum_distinct",
-  Term`!x:'a y:'b. ~(INL x = INR y)`,
+Theorem sum_distinct:
+  !x:'a y:'b. ~(INL x = INR y)
+Proof
   REPEAT STRIP_TAC THEN
   STRIP_ASSUME_TAC ((BETA_RULE o REWRITE_RULE [EXISTS_UNIQUE_DEF] o
                      Q.ISPECL [`\x:'a. T`, `\y:'b. F`]) sum_Axiom) THEN
   FIRST_X_ASSUM (MP_TAC o AP_TERM (Term`h:'a + 'b -> bool`)) THEN
-  ASM_REWRITE_TAC []);
+  ASM_REWRITE_TAC []
+QED
 val _ = export_rewrites ["sum_distinct"]
 
 Theorem sum_distinct1 = GSYM sum_distinct;

@@ -59,12 +59,13 @@ val PRE_ADD = prove(
   “!n m. PRE (n + SUC m) = n + m”,
   INDUCT_TAC THEN SIMP_TAC bool_ss [ADD_CLAUSES, PRE]);
 
-val numeral_suc = store_thm(
-  "numeral_suc",
-  Term `(SUC ZERO = BIT1 ZERO) /\
+Theorem numeral_suc:
+  (SUC ZERO = BIT1 ZERO) /\
         (!n. SUC (BIT1 n) = BIT2 n) /\
-        (!n. SUC (BIT2 n) = BIT1 (SUC n))`,
-  SIMP_TAC bool_ss [BIT1, BIT2, ALT_ZERO, ADD_CLAUSES]);
+        (!n. SUC (BIT2 n) = BIT1 (SUC n))
+Proof
+  SIMP_TAC bool_ss [BIT1, BIT2, ALT_ZERO, ADD_CLAUSES]
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -86,9 +87,7 @@ fun OpenTheory_add s = OpenTheory_const_name
 val _ = OpenTheory_add "iiSUC"
 end
 
-val numeral_distrib = store_thm(
-  "numeral_distrib", Term
-  `(!n. 0 + n = n) /\ (!n. n + 0 = n) /\
+Theorem numeral_distrib: (!n. 0 + n = n) /\ (!n. n + 0 = n) /\
    (!n m. NUMERAL n + NUMERAL m = NUMERAL (iZ (n + m))) /\
    (!n. 0 * n = 0) /\ (!n. n * 0 = 0) /\
    (!n m. NUMERAL n * NUMERAL m = NUMERAL (n * m)) /\
@@ -114,19 +113,21 @@ val numeral_distrib = store_thm(
    (!n. n >= 0 <=> T) /\ (!n. 0 >= n <=> (n = 0)) /\
    (!n m. NUMERAL n >= NUMERAL m <=> m <= n) /\
    (!n. ODD (NUMERAL n) = ODD n) /\ (!n. EVEN (NUMERAL n) = EVEN n) /\
-   ~ODD 0 /\ EVEN 0`,
+   ~ODD 0 /\ EVEN 0
+Proof
   SIMP_TAC bool_ss [NUMERAL_DEF, GREATER_DEF, iZ, GREATER_OR_EQ,
                     LESS_OR_EQ, EQ_IMP_THM, DISJ_IMP_THM, ADD_CLAUSES,
                     ALT_ZERO, MULT_CLAUSES, EXP, PRE, NOT_LESS_0, SUB_0,
                     BIT1, BIT2, ODD, EVEN] THEN
-  mesonLib.MESON_TAC [LESS_0_CASES]);
+  mesonLib.MESON_TAC [LESS_0_CASES]
+QED
 
-val numeral_iisuc = store_thm(
-  "numeral_iisuc", Term
-  `(iiSUC ZERO = BIT2 ZERO) /\
+Theorem numeral_iisuc: (iiSUC ZERO = BIT2 ZERO) /\
    (iiSUC (BIT1 n) = BIT1 (SUC n)) /\
-   (iiSUC (BIT2 n) = BIT2 (SUC n))`,
-  SIMP_TAC bool_ss [BIT1, BIT2, iiSUC, ALT_ZERO, ADD_CLAUSES]);
+   (iiSUC (BIT2 n) = BIT2 (SUC n))
+Proof
+  SIMP_TAC bool_ss [BIT1, BIT2, iiSUC, ALT_ZERO, ADD_CLAUSES]
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -142,10 +143,7 @@ val numeral_iisuc = store_thm(
 (* formulation of numerals).                                                 *)
 (*---------------------------------------------------------------------------*)
 
-val numeral_add = store_thm(
-  "numeral_add",
-  Term
-  `!n m.
+Theorem numeral_add:!n m.
    (iZ (ZERO + n) = n) /\
    (iZ (n + ZERO) = n) /\
    (iZ (BIT1 n + BIT1 m) = BIT2 (iZ (n + m))) /\
@@ -163,9 +161,11 @@ val numeral_add = store_thm(
    (iiSUC (BIT1 n + BIT1 m) = BIT2 (SUC (n + m))) /\
    (iiSUC (BIT1 n + BIT2 m) = BIT1 (iiSUC (n + m))) /\
    (iiSUC (BIT2 n + BIT1 m) = BIT1 (iiSUC (n + m))) /\
-   (iiSUC (BIT2 n + BIT2 m) = BIT2 (iiSUC (n + m)))`,
+   (iiSUC (BIT2 n + BIT2 m) = BIT2 (iiSUC (n + m)))
+Proof
   SIMP_TAC bool_ss [BIT1, BIT2, iZ, iiSUC,ADD_CLAUSES, INV_SUC_EQ, ALT_ZERO] THEN
-  REPEAT GEN_TAC THEN CONV_TAC (AC_CONV(ADD_ASSOC, ADD_SYM)));
+  REPEAT GEN_TAC THEN CONV_TAC (AC_CONV(ADD_ASSOC, ADD_SYM))
+QED
 
 (*---------------------------------------------------------------------------*)
 (* rewrites needed for addition                                              *)
@@ -186,9 +186,8 @@ val double_add_not_SUC = prove(Term
 
 val _ = print "Developing numeral rewrites for relations\n"
 
-val numeral_eq = store_thm(
-  "numeral_eq",
-  Term`!n m.
+Theorem numeral_eq:
+  !n m.
     ((ZERO = BIT1 n) = F) /\
     ((BIT1 n = ZERO) = F) /\
     ((ZERO = BIT2 n) = F) /\
@@ -196,11 +195,13 @@ val numeral_eq = store_thm(
     ((BIT1 n = BIT2 m) = F) /\
     ((BIT2 n = BIT1 m) = F) /\
     ((BIT1 n = BIT1 m) = (n = m)) /\
-    ((BIT2 n = BIT2 m) = (n = m))`,
+    ((BIT2 n = BIT2 m) = (n = m))
+Proof
   SIMP_TAC bool_ss numeral_proof_rwts THEN
   INDUCT_TAC THEN
   SIMP_TAC bool_ss (double_add_not_SUC::numeral_proof_rwts) THEN
-  INDUCT_TAC THEN ASM_SIMP_TAC bool_ss numeral_proof_rwts);
+  INDUCT_TAC THEN ASM_SIMP_TAC bool_ss numeral_proof_rwts
+QED
 
 
 fun ncases str n0 =
@@ -236,38 +237,37 @@ REWRITE_TAC [double_less]);
 
 val DOUBLE_FACTS = LIST_CONJ [double_less, double_1suc_less, double_2suc_less]
 
-val numeral_lt = store_thm(
-  "numeral_lt",
-  Term
-  `!n m.
+Theorem numeral_lt:!n m.
     (ZERO < BIT1 n <=> T) /\
     (ZERO < BIT2 n <=> T) /\
     (n < ZERO <=> F) /\
     (BIT1 n < BIT1 m <=> n < m) /\
     (BIT2 n < BIT2 m <=> n < m) /\
     (BIT1 n < BIT2 m <=> ~(m < n)) /\
-    (BIT2 n < BIT1 m <=> n < m)`,
-  SIMP_TAC bool_ss (DOUBLE_FACTS::LESS_MONO_EQ::numeral_proof_rwts));
+    (BIT2 n < BIT1 m <=> n < m)
+Proof
+  SIMP_TAC bool_ss (DOUBLE_FACTS::LESS_MONO_EQ::numeral_proof_rwts)
+QED
 
 (*---------------------------------------------------------------------------*)
 (* I've kept this rewrite entirely independent of the above.  I don't if     *)
 (* this is a good idea or not.                                               *)
 (*---------------------------------------------------------------------------*)
 
-val numeral_lte = store_thm(
-  "numeral_lte", Term
-  `!n m. (ZERO <= n         <=> T) /\
+Theorem numeral_lte: !n m. (ZERO <= n         <=> T) /\
          (BIT1 n <= ZERO    <=> F) /\
          (BIT2 n <= ZERO    <=> F) /\
          (BIT1 n <= BIT1 m  <=> n <= m) /\
          (BIT1 n <= BIT2 m  <=> n <= m) /\
          (BIT2 n <= BIT1 m  <=> ~(m <= n)) /\
-         (BIT2 n <= BIT2 m  <=> n <= m)`,
+         (BIT2 n <= BIT2 m  <=> n <= m)
+Proof
   SIMP_TAC bool_ss ([DOUBLE_FACTS, LESS_MONO_EQ, LESS_EQ_MONO] @
                     (map (REWRITE_RULE [NUMERAL_DEF])
                          [ZERO_LESS_EQ, NOT_SUC_LESS_EQ_0, NOT_LESS]) @
                     numeral_proof_rwts) THEN
-  SIMP_TAC bool_ss [GSYM NOT_LESS]);
+  SIMP_TAC bool_ss [GSYM NOT_LESS]
+QED
 
 val _ = print "Developing numeral rewrites for subtraction\n";
 val _ = print "   (includes initiality theorem for bit functions)\n";
@@ -317,14 +317,12 @@ fun AP_TAC (asl, g) =
 val APn_TAC = REPEAT AP_TAC;
 
 
-val bit_initiality = store_thm(
-  "bit_initiality",
-  Term
-  `!zf b1f b2f.
+Theorem bit_initiality:!zf b1f b2f.
       ?f.
         (f ZERO = zf) /\
         (!n. f (BIT1 n) = b1f n (f n)) /\
-        (!n. f (BIT2 n) = b2f n (f n))`,
+        (!n. f (BIT2 n) = b2f n (f n))
+Proof
   REPEAT STRIP_TAC THEN
   ASSUME_TAC
     (MP (INST_TYPE [Type.beta |-> Type.alpha]
@@ -345,7 +343,8 @@ val bit_initiality = store_thm(
     SIMP_TAC bool_ss [numeral_eq] THEN AP_TAC THEN
     SIMP_TAC bool_ss [relationTheory.RESTRICT_DEF, BIT2] THEN
     ONCE_REWRITE_TAC [ADD_CLAUSES] THEN REWRITE_TAC [LESS_ADD_SUC]
-  ]);
+  ]
+QED
 
 val bit_cases = prove(Term
   `!n. (n = ZERO) \/ (?b1. n = BIT1 b1) \/ (?b2. n = BIT2 b2)`,
@@ -464,10 +463,7 @@ val iSUB_ZERO = prove(
 (* at all.                                                                   *)
 (*---------------------------------------------------------------------------*)
 
-val iSUB_THM = store_thm(
-  "iSUB_THM",
-  Term
-  `!b n m. (iSUB b ZERO x = ZERO) /\
+Theorem iSUB_THM:!b n m. (iSUB b ZERO x = ZERO) /\
            (iSUB T n ZERO = n) /\
            (iSUB F (BIT1 n) ZERO = iDUB n) /\
            (iSUB T (BIT1 n) (BIT1 m) = iDUB (iSUB T n m)) /\
@@ -479,8 +475,10 @@ val iSUB_THM = store_thm(
            (iSUB T (BIT2 n) (BIT1 m) = BIT1 (iSUB T n m)) /\
            (iSUB F (BIT2 n) (BIT1 m) = iDUB (iSUB T n m)) /\
            (iSUB T (BIT2 n) (BIT2 m) = iDUB (iSUB T n m)) /\
-           (iSUB F (BIT2 n) (BIT2 m) = BIT1 (iSUB F n m))`,
-  SIMP_TAC bool_ss [iSUB_DEF, iBIT_cases, iSUB_ZERO]);
+           (iSUB F (BIT2 n) (BIT2 m) = BIT1 (iSUB F n m))
+Proof
+  SIMP_TAC bool_ss [iSUB_DEF, iBIT_cases, iSUB_ZERO]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Rewrites for relational expressions that can be used under the guards of  *)
@@ -569,36 +567,36 @@ val iSUB_correct = prove(
     ]
   ]);
 
-val numeral_sub = store_thm(
-  "numeral_sub",
-  Term
-  `!n m. NUMERAL (n - m) = if m < n then NUMERAL (iSUB T n m) else 0`,
+Theorem numeral_sub:!n m. NUMERAL (n - m) = if m < n then NUMERAL (iSUB T n m) else 0
+Proof
   SIMP_TAC bool_ss [iSUB_correct, COND_OUT_THMS,
                     REWRITE_RULE [NUMERAL_DEF] SUB_EQ_0, LESS_EQ_CASES,
-                    NUMERAL_DEF, LESS_IMP_LESS_OR_EQ, GSYM NOT_LESS]);
+                    NUMERAL_DEF, LESS_IMP_LESS_OR_EQ, GSYM NOT_LESS]
+QED
 
 val NOT_ZERO = arithmeticTheory.NOT_ZERO_LT_ZERO;
 
-val iDUB_removal = store_thm(
-  "iDUB_removal",
-  Term`!n. (iDUB (BIT1 n) = BIT2 (iDUB n)) /\
+Theorem iDUB_removal:
+  !n. (iDUB (BIT1 n) = BIT2 (iDUB n)) /\
            (iDUB (BIT2 n) = BIT2 (BIT1 n)) /\
-           (iDUB ZERO = ZERO)`,
+           (iDUB ZERO = ZERO)
+Proof
   SIMP_TAC bool_ss [iDUB, BIT2, BIT1, PRE_SUB1,
-                    ADD_CLAUSES, ALT_ZERO]);
+                    ADD_CLAUSES, ALT_ZERO]
+QED
 
 val _ = print "Developing numeral rewrites for multiplication\n"
 
-val numeral_mult = store_thm(
-  "numeral_mult", Term
-  `!n m.
+Theorem numeral_mult: !n m.
      (ZERO * n = ZERO) /\
      (n * ZERO = ZERO) /\
      (BIT1 n * m = iZ (iDUB (n * m) + m)) /\
-     (BIT2 n * m = iDUB (iZ (n * m + m)))`,
+     (BIT2 n * m = iDUB (iZ (n * m + m)))
+Proof
   SIMP_TAC bool_ss [BIT1, BIT2, iDUB, RIGHT_ADD_DISTRIB, iZ,
                     MULT_CLAUSES, ADD_CLAUSES, ALT_ZERO] THEN
-  REPEAT GEN_TAC THEN CONV_TAC (AC_CONV (ADD_ASSOC, ADD_SYM)));
+  REPEAT GEN_TAC THEN CONV_TAC (AC_CONV (ADD_ASSOC, ADD_SYM))
+QED
 
 
 val _ = print "Developing numeral treatment of exponentiation\n";
@@ -613,51 +611,54 @@ val _ = print "Developing numeral treatment of exponentiation\n";
 val iSQR = new_definition("iSQR", Term`iSQR x = x * x`);
 val _ = OpenTheory_add"iSQR"
 
-val numeral_exp = store_thm(
-  "numeral_exp", Term
-  `(!n. n EXP ZERO = BIT1 ZERO) /\
+Theorem numeral_exp: (!n. n EXP ZERO = BIT1 ZERO) /\
    (!n m. n EXP (BIT1 m) = n * iSQR (n EXP m)) /\
-   (!n m. n EXP (BIT2 m) = iSQR n * iSQR (n EXP m))`,
+   (!n m. n EXP (BIT2 m) = iSQR n * iSQR (n EXP m))
+Proof
   SIMP_TAC bool_ss [BIT1, iSQR, BIT2, EXP_ADD, EXP,
                     ADD_CLAUSES, ALT_ZERO, NUMERAL_DEF] THEN
-  REPEAT STRIP_TAC THEN CONV_TAC (AC_CONV(MULT_ASSOC, MULT_SYM)));
+  REPEAT STRIP_TAC THEN CONV_TAC (AC_CONV(MULT_ASSOC, MULT_SYM))
+QED
 
 val _ = print "Even-ness and odd-ness of numerals\n"
 
-val numeral_evenodd = store_thm(
-  "numeral_evenodd",
-  Term`!n. EVEN ZERO /\ EVEN (BIT2 n) /\ ~EVEN (BIT1 n) /\
-           ~ODD ZERO /\ ~ODD (BIT2 n) /\ ODD (BIT1 n)`,
+Theorem numeral_evenodd:
+  !n. EVEN ZERO /\ EVEN (BIT2 n) /\ ~EVEN (BIT1 n) /\
+           ~ODD ZERO /\ ~ODD (BIT2 n) /\ ODD (BIT1 n)
+Proof
   SIMP_TAC bool_ss [BIT1, ALT_ZERO, BIT2, ADD_CLAUSES,
-                    EVEN, ODD, EVEN_ADD, ODD_ADD]);
+                    EVEN, ODD, EVEN_ADD, ODD_ADD]
+QED
 
 val _ = print "Factorial for numerals\n"
 
-val numeral_fact = store_thm
-("numeral_fact",
-  Term `(FACT 0 = 1)
+Theorem numeral_fact:
+  (FACT 0 = 1)
   /\  (!n. FACT (NUMERAL (BIT1 n)) = NUMERAL (BIT1 n) * FACT (PRE(NUMERAL(BIT1 n))))
-  /\  (!n. FACT (NUMERAL (BIT2 n)) = NUMERAL (BIT2 n) * FACT (NUMERAL (BIT1 n)))`,
+  /\  (!n. FACT (NUMERAL (BIT2 n)) = NUMERAL (BIT2 n) * FACT (NUMERAL (BIT1 n)))
+Proof
  REPEAT STRIP_TAC THEN REWRITE_TAC [FACT] THEN
  (STRIP_ASSUME_TAC (SPEC (Term`n:num`) num_CASES) THENL [
     ALL_TAC,
     POP_ASSUM SUBST_ALL_TAC
   ] THEN ASM_REWRITE_TAC[FACT,PRE,NOT_SUC, NUMERAL_DEF,
-                         BIT1, BIT2, ADD_CLAUSES]));
+                         BIT1, BIT2, ADD_CLAUSES])
+QED
 
 val _ = print "funpow for numerals\n"
 
-val numeral_funpow = store_thm(
-  "numeral_funpow",
-  Term `(FUNPOW f 0 x = x) /\
+Theorem numeral_funpow:
+  (FUNPOW f 0 x = x) /\
         (FUNPOW f (NUMERAL (BIT1 n)) x = FUNPOW f (PRE (NUMERAL (BIT1 n))) (f x)) /\
-        (FUNPOW f (NUMERAL (BIT2 n)) x = FUNPOW f (NUMERAL (BIT1 n)) (f x))`,
+        (FUNPOW f (NUMERAL (BIT2 n)) x = FUNPOW f (NUMERAL (BIT1 n)) (f x))
+Proof
  REPEAT STRIP_TAC THEN REWRITE_TAC [FUNPOW] THEN
  (STRIP_ASSUME_TAC (SPEC (Term`n:num`) num_CASES) THENL [
     ALL_TAC,
     POP_ASSUM SUBST_ALL_TAC
   ] THEN  ASM_REWRITE_TAC[FUNPOW,PRE,ADD_CLAUSES, NUMERAL_DEF,
-                          BIT1, BIT2]));
+                          BIT1, BIT2])
+QED
 
 val _ = print "min and max for numerals\n"
 

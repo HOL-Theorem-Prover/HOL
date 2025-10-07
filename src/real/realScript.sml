@@ -565,14 +565,16 @@ Proof
 QED
 
 (* cf. REAL_INVINV *)
-val REAL_INV_INV = store_thm("REAL_INV_INV",
- Term`!x. inv(inv x) = x`,
+Theorem REAL_INV_INV:
+ !x. inv(inv x) = x
+Proof
   GEN_TAC THEN ASM_CASES_TAC (Term `x = 0`) THEN
   ASM_REWRITE_TAC[REAL_INV_0] THEN
   ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN
   MATCH_MP_TAC REAL_RINV_UNIQ THEN
   MATCH_MP_TAC REAL_MUL_LINV THEN
-  ASM_REWRITE_TAC[]);;
+  ASM_REWRITE_TAC[]
+QED
 
 Theorem REAL_INV_EQ_0[simp]:
  !x. (inv(x) = 0) <=> (x = 0)
@@ -625,9 +627,11 @@ Proof
   MESON_TAC[REAL_INV_EQ_0]
 QED
 
-val REAL_LE_INV = store_thm("REAL_LE_INV",
- Term `!x. 0 <= x ==> 0 <= inv(x)`,
-  REWRITE_TAC[REAL_LE_INV_EQ]);;
+Theorem REAL_LE_INV:
+ !x. 0 <= x ==> 0 <= inv(x)
+Proof
+  REWRITE_TAC[REAL_LE_INV_EQ]
+QED
 
 Theorem REAL_LE_ADDR[simp] = REAL_LE_ADDR
 
@@ -1156,15 +1160,19 @@ Proof
     THEN MATCH_MP_TAC REAL_LE_RMUL THEN POP_ASSUM ACCEPT_TAC]
 QED
 
-val REAL_LT_DIV = store_thm("REAL_LT_DIV",
- Term`!x y. 0 < x /\ 0 < y ==> 0 < x / y`,
+Theorem REAL_LT_DIV:
+ !x y. 0 < x /\ 0 < y ==> 0 < x / y
+Proof
  REWRITE_TAC [real_div] THEN REPEAT STRIP_TAC
-  THEN MATCH_MP_TAC REAL_LT_MUL THEN ASM_REWRITE_TAC [REAL_LT_INV_EQ]);
+  THEN MATCH_MP_TAC REAL_LT_MUL THEN ASM_REWRITE_TAC [REAL_LT_INV_EQ]
+QED
 
-val REAL_LE_DIV = store_thm("REAL_LE_DIV",
- Term`!x y. 0 <= x /\ 0 <= y ==> 0 <= x / y`,
+Theorem REAL_LE_DIV:
+ !x y. 0 <= x /\ 0 <= y ==> 0 <= x / y
+Proof
  REWRITE_TAC [real_div] THEN REPEAT STRIP_TAC
-  THEN MATCH_MP_TAC REAL_LE_MUL THEN ASM_REWRITE_TAC [REAL_LE_INV_EQ]);
+  THEN MATCH_MP_TAC REAL_LE_MUL THEN ASM_REWRITE_TAC [REAL_LE_INV_EQ]
+QED
 
 Theorem REAL_LT_1:
    !x y. 0 <= x /\ x < y ==> (x / y) < &1
@@ -1986,11 +1994,13 @@ Proof
     ASM_REWRITE_TAC[] THEN MATCH_MP_TAC POW_POS THEN ASM_REWRITE_TAC[]]
 QED
 
-val REAL_POW_LT = store_thm("REAL_POW_LT",
- Term`!x n. 0 < x ==> 0 < (x pow n)`,
+Theorem REAL_POW_LT:
+ !x n. 0 < x ==> 0 < (x pow n)
+Proof
   REPEAT STRIP_TAC THEN SPEC_TAC(Term`n:num`,Term`n:num`) THEN
   INDUCT_TAC THEN REWRITE_TAC[pow, REAL_LT_01] THEN
-  MATCH_MP_TAC REAL_LT_MUL THEN ASM_REWRITE_TAC[]);;
+  MATCH_MP_TAC REAL_LT_MUL THEN ASM_REWRITE_TAC[]
+QED
 
 Theorem REAL_POW_LE_1 :
     !(n:num) (x:real). (&1:real) <= x ==> (&1:real) <= x pow n
@@ -2049,13 +2059,15 @@ Proof
   DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[POW_0]
 QED
 
-val REAL_POW_LT2 = store_thm("REAL_POW_LT2",
- Term `!n x y. ~(n = 0) /\ 0 <= x /\ x < y ==> x pow n < y pow n`,
+Theorem REAL_POW_LT2:
+ !n x y. ~(n = 0) /\ 0 <= x /\ x < y ==> x pow n < y pow n
+Proof
  INDUCT_TAC THEN REWRITE_TAC[NOT_SUC, pow] THEN REPEAT STRIP_TAC THEN
   ASM_CASES_TAC (Term `n = 0:num`) THEN ASM_REWRITE_TAC[pow, REAL_MUL_RID] THEN
   MATCH_MP_TAC REAL_LT_MUL2 THEN ASM_REWRITE_TAC[] THEN CONJ_TAC THENL
    [MATCH_MP_TAC POW_POS THEN ASM_REWRITE_TAC[],
-    FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[]]);;
+    FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[]]
+QED
 
 Theorem REAL_POW_INV :
     !x n. (inv x) pow n = inv(x pow n)

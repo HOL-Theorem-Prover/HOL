@@ -103,17 +103,18 @@ val _ = add_listform {separator = [TOK ";", BreakSpace(1,0)],
 
 val list_Axiom = TypeBase.axiom_of “:'a list”;
 
-val list_Axiom_old = store_thm(
-  "list_Axiom_old",
-  Term‘!x f. ?!fn1:'a list -> 'b.
-          (fn1 [] = x) /\ (!h t. fn1 (h::t) = f (fn1 t) h t)’,
+Theorem list_Axiom_old:
+  !x f. ?!fn1:'a list -> 'b.
+          (fn1 [] = x) /\ (!h t. fn1 (h::t) = f (fn1 t) h t)
+Proof
   REPEAT GEN_TAC THEN CONV_TAC EXISTS_UNIQUE_CONV THEN CONJ_TAC THENL [
     ASSUME_TAC list_Axiom THEN
     POP_ASSUM (ACCEPT_TAC o BETA_RULE o Q.SPECL [‘x’, ‘\x y z. f z x y’]),
     REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN
     HO_MATCH_MP_TAC (TypeBase.induction_of “:'a list”) THEN
     simpLib.ASM_SIMP_TAC boolSimps.bool_ss []
-  ]);
+  ]
+QED
 
 (*---------------------------------------------------------------------------
      Now some definitions.
@@ -952,10 +953,12 @@ Proof
     [ASM_REWRITE_TAC [], ASM_REWRITE_TAC [LENGTH, NOT_SUC]]]
 QED
 
-val CONS_ACYCLIC = store_thm("CONS_ACYCLIC",
-Term‘!l x. ~(l = x::l) /\ ~(x::l = l)’,
+Theorem CONS_ACYCLIC:
+!l x. ~(l = x::l) /\ ~(x::l = l)
+Proof
  LIST_INDUCT_TAC
- THEN ASM_REWRITE_TAC[CONS_11, NOT_NIL_CONS, NOT_CONS_NIL, LENGTH_NIL]);
+ THEN ASM_REWRITE_TAC[CONS_11, NOT_NIL_CONS, NOT_CONS_NIL, LENGTH_NIL]
+QED
 
 Theorem APPEND_eq_NIL[simp]:
   (!l1 l2:'a list. ([] = APPEND l1 l2) <=> (l1=[]) /\ (l2=[])) /\
@@ -990,10 +993,10 @@ Proof
   Cases_on ‘l1’ THEN SRW_TAC [] [CONJ_ASSOC]
 QED
 
-val APPEND_11 = store_thm(
-  "APPEND_11",
-  Term‘(!l1 l2 l3:'a list. (APPEND l1 l2 = APPEND l1 l3) = (l2 = l3)) /\
-       (!l1 l2 l3:'a list. (APPEND l2 l1 = APPEND l3 l1) = (l2 = l3))’,
+Theorem APPEND_11:
+  (!l1 l2 l3:'a list. (APPEND l1 l2 = APPEND l1 l3) = (l2 = l3)) /\
+       (!l1 l2 l3:'a list. (APPEND l2 l1 = APPEND l3 l1) = (l2 = l3))
+Proof
   CONJ_TAC THEN LIST_INDUCT_TAC THEN
   ASM_REWRITE_TAC [APPEND, CONS_11, APPEND_NIL] THEN
   Q.SUBGOAL_THEN
@@ -1011,7 +1014,8 @@ val APPEND_11 = store_thm(
       ASM_REWRITE_TAC [APPEND, CONS_11, APPEND_eq_NIL, NOT_CONS_NIL,
                        NOT_NIL_CONS]
     ]
-  ]);
+  ]
+QED
 
 Theorem APPEND_LENGTH_EQ:
   !l1 l1'. (LENGTH l1 = LENGTH l1') ==>
@@ -1368,8 +1372,9 @@ Proof
 QED
 
 
-val WF_LIST_PRED = store_thm("WF_LIST_PRED",
-Term‘WF \L1 L2. ?h:'a. L2 = h::L1’,
+Theorem WF_LIST_PRED:
+WF \L1 L2. ?h:'a. L2 = h::L1
+Proof
 REWRITE_TAC[relationTheory.WF_DEF] THEN BETA_TAC THEN GEN_TAC
   THEN CONV_TAC CONTRAPOS_CONV
   THEN Ho_Rewrite.REWRITE_TAC
@@ -1379,7 +1384,8 @@ REWRITE_TAC[relationTheory.WF_DEF] THEN BETA_TAC THEN GEN_TAC
   THEN STRIP_TAC THEN RES_TAC
   THEN RULE_ASSUM_TAC(REWRITE_RULE[NOT_NIL_CONS, CONS_11])
   THENL [FIRST_ASSUM ACCEPT_TAC,
-         PAT_X_ASSUM (Term‘x /\ y’) (SUBST_ALL_TAC o CONJUNCT2) THEN RES_TAC]);
+         PAT_X_ASSUM (Term‘x /\ y’) (SUBST_ALL_TAC o CONJUNCT2) THEN RES_TAC]
+QED
 
 (* ----------------------------------------------------------------------
     LIST_REL : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
