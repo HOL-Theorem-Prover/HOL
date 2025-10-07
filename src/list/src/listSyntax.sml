@@ -177,7 +177,8 @@ fun dest_mem t = let
   val (x,setl) = pred_setSyntax.dest_in t
 in
   (x, dest_list_to_set setl)
-end handle HOL_ERR {message,...} => raise ERR "dest_mem" message
+end
+handle HOL_ERR herr => raise ERR "dest_mem" (message_of herr)
 
 
 (*---------------------------------------------------------------------------

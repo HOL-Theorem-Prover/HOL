@@ -49,12 +49,12 @@ fun expect_thm name smt_tac t =
   let
     open boolLib
     val thm = Tactical.TAC_PROOF (([], t), smt_tac)
-      handle Feedback.HOL_ERR {origin_structure, origin_function, source_location, message} =>
-        die ("Test of solver '" ^ name ^ "' failed on term '" ^
+      handle Feedback.HOL_ERR holerr =>
+         die ("Test of solver '" ^ name ^ "' failed on term '" ^
           term_with_types t ^ "': exception HOL_ERR (in " ^
-          origin_structure ^ "." ^ origin_function ^
-          " " ^ locn.toString source_location ^ ", message: " ^ message ^
-          ")")
+          top_structure_of holerr ^ "." ^ top_function_of holerr ^
+          " " ^ locn.toString (top_location_of holerr) ^
+          ", message: " ^ message_of holerr ^ ")")
   in
     if null (Thm.hyp thm) andalso Thm.concl thm ~~ t then ()
     else
@@ -76,11 +76,11 @@ fun expect_sat name smt_tac t =
   in
     die ("Test of solver '" ^ name ^ "' failed on term '" ^
       term_with_types t ^ "': exception expected")
-  end handle Feedback.HOL_ERR {origin_structure, origin_function, source_location, message} =>
-    if origin_structure = "HolSmtLib" andalso
-       origin_function = "GENERIC_SMT_TAC" andalso
-       (message = "solver reports negated term to be 'satisfiable'" orelse
-        message = "solver reports negated term to be 'satisfiable' (model returned)")
+  end handle Feedback.HOL_ERR holerr =>
+    if top_structure_of holerr = "HolSmtLib" andalso
+       top_function_of holerr = "GENERIC_SMT_TAC" andalso
+       (message_of holerr = "solver reports negated term to be 'satisfiable'" orelse
+        message_of holerr = "solver reports negated term to be 'satisfiable' (model returned)")
     then
       (* re-enable inclusion of theorems, i.e. restore the default setting *)
       SmtLib.include_theorems := true
@@ -88,9 +88,10 @@ fun expect_sat name smt_tac t =
       die ("Test of solver '" ^ name ^ "' failed on term '" ^
         term_with_types t ^
         "': exception HOL_ERR has unexpected argument values (in " ^
-        origin_structure ^ "." ^ origin_function ^
-        " " ^ locn.toString source_location ^ ", message: " ^ message ^
-        ")")
+        top_structure_of holerr ^ "." ^
+        top_function_of holerr ^
+        " " ^ locn.toString (top_location_of holerr) ^
+        ", message: " ^ message_of holerr ^ ")")
 
 fun mk_test_fun is_configured expect_fun name smt_tac =
   if is_configured then

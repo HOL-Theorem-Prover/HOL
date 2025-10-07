@@ -1239,13 +1239,14 @@ fun located_new_definition0 fnm {name,def=M,loc} =
    gen_store_definition (name, post(V,def_th),loc) before
    call_hooks (TheoryDelta.NewConstant{Name=Name, Thy=Thy})
  end
- handle e => raise (wrap_exn "Definition" fnm e);
+ handle e => raise wrap_exn "Definition" fnm e
+;
+
 val located_new_definition =
     located_new_definition0 "located_new_definition"
+
 fun new_definition(n,def_t) =
     located_new_definition0 "new_definition" {loc=Unknown,def=def_t,name=n}
-
-
 
 end (* Definition struct *)
 

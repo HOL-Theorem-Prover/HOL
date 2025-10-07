@@ -1131,8 +1131,12 @@ fun pairf (stem, eqs0) =
        (tuple_args [(f, (stem', argtys))] eqs0, stem'name, untuple_args)
      end
  end
- handle e as HOL_ERR {message = "incompatible types", ...} =>
-   case move_arg eqs0 of SOME tm => pairf (stem, tm) | NONE => raise e
+ handle e as HOL_ERR herr =>
+   if message_of herr = "incompatible types" then
+      (case move_arg eqs0
+        of SOME tm => pairf (stem, tm)
+         | NONE => raise e)
+   else raise e
 
 (*---------------------------------------------------------------------------*)
 (* Abbreviation or prim. rec. definitions.                                   *)
@@ -1233,11 +1237,6 @@ fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
     in TotalDefn.
  ---------------------------------------------------------------------------*)
 
-fun holexnMessage (HOL_ERR {origin_structure,origin_function,source_location,message}) =
-      origin_structure ^ "." ^ origin_function ^
-      ":" ^ locn.toShortString source_location ^ ": " ^ message
-  | holexnMessage e = General.exnMessage e
-
 fun is_simple_arg t =
   is_var t orelse
   (case Lib.total dest_pair t of
@@ -1264,8 +1263,7 @@ fun prim_mk_defn stem eqns =
                List.all is_simple_arg args
             then
               (* not recursive, yet failed *)
-              raise err ("Simple definition failed with message: "^
-                         holexnMessage e)
+              raise wrap_exn "Defn" "prim_mk_defn (simple definition)" e
             else
              let
                 val (tup_eqs, stem', untuple) = pairf (stem, eqns)
