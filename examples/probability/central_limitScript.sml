@@ -2299,7 +2299,11 @@ Definition third_moment_def:
 End
 
 Definition absolute_third_moment_def:
-  absolute_third_moment p X  = absolute_moment p X 0 3
+  absolute_third_moment p X = absolute_moment p X 0 3
+End
+
+Definition absolute_third_moments_def :
+  absolute_third_moments p X n = SIGMA (λi. absolute_third_moment p (X i)) (count n)
 End
 
 Definition second_moments_def:
@@ -6674,18 +6678,13 @@ Proof
 QED
 
 val bn_not_infty_tactic =
-    Suff ‘b n ≠ PosInf ∧ b n ≠ NegInf’
-    >- (rw [] >> ‘∃y. b n = Normal y’ by METIS_TAC [extreal_cases] \\
-        gs [extreal_pow_def, extreal_div_eq, extreal_mul_eq]) \\
-        simp [Abbr ‘b’, third_moment_def, central_moment_def, moment_def, third_moments_def] \\
-        CONJ_TAC >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> rw [] \\
-                     Q.PAT_X_ASSUM ‘∀i. expectation p (λx. (abs (X i x))³) < +∞’
-                      (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> fs [GSYM pow_abs, GSYM o_DEF] \\
-                     METIS_TAC [expectation_bound_finite, real_random_variable_pow]) \\
-        irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> rw [] \\
-        Q.PAT_X_ASSUM ‘∀i. expectation p (λx. (abs (X i x))³) < +∞’
-         (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> fs [GSYM pow_abs, GSYM o_DEF] \\
-METIS_TAC [expectation_bound_finite, real_random_variable_pow];
+    rw [Abbr ‘b’, absolute_third_moments_def, absolute_third_moment_def, absolute_moment_def]
+    (* ∑ (λi. expectation p (λx. (abs (X i x))³)) (count z) ≠ +∞ *)
+    >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> rw [] \\
+        MATCH_MP_TAC (cj 1 expectation_finite) >> fs []) \\
+    irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> rw [] \\
+    MATCH_MP_TAC (cj 2 expectation_finite) >> fs [];
+
 
 (* ===================================================== *)
 (*  Central Limit Theorem – modular tactic               *)
@@ -7092,6 +7091,7 @@ clt_tactic3_p6;
 
 
 
+
 Theorem central_limit_theorem :
     ∀p X N.
       prob_space p ∧
@@ -7103,18 +7103,20 @@ Theorem central_limit_theorem :
       (∀i. variance p (X i) < PosInf) ∧
       (∀i. variance p (X i) ≠ 0) ∧
       (∀n. (sqrt (second_moments p X n)) ≠ 0) ∧
-      ((\n. (third_moments p X n) / ((sqrt (second_moments p X n)) pow 3)) --> 0) sequentially ⇒
+      ((\n. (absolute_third_moments p X n) / ((sqrt (second_moments p X n)) pow 3)) --> 0) sequentially ⇒
       ((\n x. (SIGMA (λi. X i x) (count n)) / (sqrt (second_moments p X n))) --> N) (in_distribution p)
 Proof
 
   rpt STRIP_TAC
  >> Q.ABBREV_TAC ‘s = λn. sqrt (second_moments p X n)’ >> fs []
- >> Q.ABBREV_TAC ‘b = λn. third_moments p X n’ >> fs []
+ >> Q.ABBREV_TAC ‘b = λn. absolute_third_moments p X n’ >> fs []
  >> Q.ABBREV_TAC ‘R = λn x. ∑ (λi. X i x) (count n) / s n’
  >> clt_tactic1
  >> Q.PAT_X_ASSUM ‘∀n. 0 ≤ s n’ (K_TAC)
  >> ‘∀i. integrable p (X i) ∧ integrable p (λx. (X i x) pow 2) ∧
          integrable p (λx. (X i x)³)’ by METIS_TAC [clt_integrable_lemma]
+ >> ‘∀i. integrable p (λx. (abs (X i x))³)’
+    by (rw [GSYM pow_abs, GSYM o_DEF] >> MATCH_MP_TAC integrable_abs >> fs [prob_space_def])
  >> Know ‘∀i. real_random_variable (R i) p’
  >- (Q.X_GEN_TAC ‘n’ \\
      drule real_random_variable_sum_cdiv >> STRIP_TAC \\
@@ -7163,12 +7165,7 @@ Proof
           CCONTR_TAC >> fs [] \\
          MP_TAC (Q.SPECL [‘3’, ‘s (z :num)’] pow_zero_imp) >> STRIP_TAC \\
          Q.PAT_X_ASSUM ‘∀n. s n ≠ 0’ (STRIP_ASSUME_TAC o Q.SPEC ‘z’) >> fs []) \\
-     rw [Abbr ‘b’, third_moments_def, third_moment_def, central_moment_def, moment_def]
-     (* ∑ (λi. expectation p (λx. (X i x)³)) (count z) ≠ +∞ *)
-     >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> rw [] \\
-         MATCH_MP_TAC (cj 1 expectation_finite) >> fs []) \\
-     irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> rw [] \\
-     MATCH_MP_TAC (cj 2 expectation_finite) >> fs [])
+     bn_not_infty_tactic)
  >> STRIP_TAC
  >> fs [LIM_SEQUENTIALLY, metricTheory.dist] >> rw []
  >> Q.ABBREV_TAC ‘(A :extreal) = sup (IMAGE (λt. abs (Normal (diffn 3 f t))) UNIV)’
@@ -7186,22 +7183,20 @@ Proof
       ‘0 < Normal (c pow 3)’ by METIS_TAC [GSYM extreal_lt_eq, normal_0, pow_pos_lt, extreal_pow_def] \\
       ‘0 < (Normal 6 * Normal c³)’ by METIS_TAC [lt_mul] \\
       ‘(6 :extreal) = Normal (6 :real)’ by EVAL_TAC >> gs [lt_imp_ne, zero_div, mul_lzero])
-
-  >> Know ‘0 < U’
-  >- (rw [Abbr ‘U’] \\
-      ‘0 < 8:real’ by EVAL_TAC \\
-      ‘0 < sqrt (8 / pi)’ by METIS_TAC [SQRT_POS_LT, REAL_LT_DIV, PI_POS] \\
-      MATCH_MP_TAC REAL_LT_MUL' >> rw []
-      >- (METIS_TAC [GSYM REAL_LT_LE]) \\
-      METIS_TAC [REAL_LT_ADD, REAL_LT_01])
-  >> DISCH_TAC
+ >> Know ‘0 < U’
+ >- (rw [Abbr ‘U’] \\
+     ‘0 < 8:real’ by EVAL_TAC \\
+     ‘0 < sqrt (8 / pi)’ by METIS_TAC [SQRT_POS_LT, REAL_LT_DIV, PI_POS] \\
+     MATCH_MP_TAC REAL_LT_MUL' >> rw []
+     >- (METIS_TAC [GSYM REAL_LT_LE]) \\
+     METIS_TAC [REAL_LT_ADD, REAL_LT_01])
+ >> DISCH_TAC
  >> ‘0 < e / U’ by METIS_TAC [REAL_LT_DIV, REAL_LT_LE]
  >> Q.PAT_X_ASSUM ‘∀e. 0 < e ⇒ ∃N. ∀n. N ≤ n ⇒ abs (real (b n / (s n)³)) < e’
      (STRIP_ASSUME_TAC o Q.SPEC ‘e / U’) >> gs []
  >> ‘0 < (2 :real)’ by simp []
  >> ‘0 < e / 2’ by METIS_TAC [REAL_LT_DIV]
  >> clt_tactic3
-
  >> Know ‘∀i. i < n ⇒ integrable r (λx. (Y' i x)³)’
  >- (rw [Abbr ‘Y'’] \\
      MP_TAC (Q.SPECL [‘p’, ‘p'’, ‘λx. (Y (i :num) x)³’]
@@ -7313,13 +7308,12 @@ Proof
               (INST_TYPE [“:'b” |-> “:'a list”] expectation_fst)) \\
      impl_tac >- (fs [real_random_variable, GSYM pow_abs] \\
                   (* ∀x. x ∈ p_space p ⇒ abs (X i x)³ ≠ +∞ ∧ abs (X i x)³ ≠ −∞ *)
-                  CONJ_TAC >- (NTAC 2 STRIP_TAC \\
-                               Q.PAT_X_ASSUM ‘∀i. X i ∈ Borel_measurable (p_space p,events p) ∧ _’
-                                (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
-                               POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs [] \\
-                               ‘∃a. X i x = Normal a’ by METIS_TAC [extreal_cases] \\
-                               METIS_TAC [extreal_abs_def, extreal_pow_def, extreal_not_infty]) \\
-                  METIS_TAC [GSYM o_DEF, integrable_abs, prob_space_def]) \\
+                  NTAC 2 STRIP_TAC \\
+                  Q.PAT_X_ASSUM ‘∀i. X i ∈ Borel_measurable (p_space p,events p) ∧ _’
+                   (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
+                  POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs [] \\
+                  ‘∃a. X i x = Normal a’ by METIS_TAC [extreal_cases] \\
+                  METIS_TAC [extreal_abs_def, extreal_pow_def, extreal_not_infty]) \\
      rw [o_DEF]) >> rw []
  >> Know ‘∀i. i < n ⇒ B i = expectation p' (λx. (abs (Y i x)) pow 3)’
  >- (rw [Abbr ‘B’, Abbr ‘r’, Abbr ‘Y'’] \\
@@ -7333,40 +7327,39 @@ Proof
                   ‘∃a. Y i x = Normal a’ by METIS_TAC [extreal_cases] \\
                    METIS_TAC [extreal_abs_def, extreal_pow_def, extreal_not_infty]) \\
      rw [o_DEF]) >> rw []
-
  >> Know ‘Normal m / 6 *
           ∑ (λj. expectation p (λx. (abs (X j x))³) / (Normal c)³ +
                  B j / (Normal c)³) (count n) =
           Normal m / (6 * Normal c³) * ∑ (λj. expectation p (λx. (abs (X j x))³) + B j) (count n)’
-  >- (Q.ABBREV_TAC ‘L = λj. expectation p (λx. (abs (X j x))³)’ >> gs [] \\
-      Know ‘∑ (λj. L j / (Normal c)³ + B j / (Normal c)³) (count n) =
-            ∑ (λj. (L j + B j) / (Normal c)³) (count n)’
-      >- (irule EXTREAL_SUM_IMAGE_EQ' >> rw [FUN_EQ_THM] \\
-          MATCH_MP_TAC div_add \\
-          simp [extreal_pow_def, extreal_not_infty]) \\
-      Rewr \\
-      Know ‘∑ (λj. (L j + B j) / (Normal c)³) (count n) = ∑ (λj. (L j + B j)) (count n) / (Normal c)³’
-      >- (MP_TAC (Q.SPEC ‘count (n :num)’ (INST_TYPE [“:'a” |-> “:num”] EXTREAL_SUM_IMAGE_CDIV)) \\
-          rw [] \\
-          POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘λj. (L j + B j)’, ‘c pow 3’]) \\
-          gs [add_not_infty, extreal_pow_def]) \\
-      Rewr >> rw [extreal_pow_def] \\
-      ‘6 = Normal 6’ by EVAL_TAC \\
-      Suff ‘∑ (λj. L j + B j) (count n) ≠ PosInf /\ ∑ (λj. L j + B j) (count n) ≠ NegInf’
-      >- (rw [] \\
-          ‘∃l. ∑ (λj. L j + B j) (count n) = Normal l’ by METIS_TAC [extreal_cases] \\
-          gs [div_eq_mul_rinv, extreal_not_infty] \\
-          ‘Normal l * inv (Normal (c pow 3)) = inv (Normal (c pow 3)) * Normal l’ by rw [mul_comm] \\
-          POP_ORW \\
-          rw [mul_assoc] \\
-          ‘Normal m / (Normal 6 * Normal c³) = Normal m * (Normal 6)⁻¹ * (Normal c³)⁻¹’
-            by (rw [extreal_mul_eq, div_eq_mul_rinv, extreal_not_infty] \\
-                rw [GSYM extreal_mul_eq, inv_mul, mul_assoc]) \\
-          POP_ORW >> gs []) \\
-      POP_ORW \\
-      rw [Abbr ‘L’, Abbr ‘B’]
-      >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> gs [add_not_infty]) \\
-      irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> gs [add_not_infty])
+ >- (Q.ABBREV_TAC ‘L = λj. expectation p (λx. (abs (X j x))³)’ >> gs [] \\
+     Know ‘∑ (λj. L j / (Normal c)³ + B j / (Normal c)³) (count n) =
+           ∑ (λj. (L j + B j) / (Normal c)³) (count n)’
+     >- (irule EXTREAL_SUM_IMAGE_EQ' >> rw [FUN_EQ_THM] \\
+         MATCH_MP_TAC div_add \\
+         simp [extreal_pow_def, extreal_not_infty]) \\
+     Rewr \\
+     Know ‘∑ (λj. (L j + B j) / (Normal c)³) (count n) = ∑ (λj. (L j + B j)) (count n) / (Normal c)³’
+     >- (MP_TAC (Q.SPEC ‘count (n :num)’ (INST_TYPE [“:'a” |-> “:num”] EXTREAL_SUM_IMAGE_CDIV)) \\
+         rw [] \\
+         POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘λj. (L j + B j)’, ‘c pow 3’]) \\
+         gs [add_not_infty, extreal_pow_def]) \\
+     Rewr >> rw [extreal_pow_def] \\
+     ‘6 = Normal 6’ by EVAL_TAC \\
+     Suff ‘∑ (λj. L j + B j) (count n) ≠ PosInf /\ ∑ (λj. L j + B j) (count n) ≠ NegInf’
+     >- (rw [] \\
+         ‘∃l. ∑ (λj. L j + B j) (count n) = Normal l’ by METIS_TAC [extreal_cases] \\
+         gs [div_eq_mul_rinv, extreal_not_infty] \\
+         ‘Normal l * inv (Normal (c pow 3)) = inv (Normal (c pow 3)) * Normal l’ by rw [mul_comm] \\
+         POP_ORW \\
+         rw [mul_assoc] \\
+         ‘Normal m / (Normal 6 * Normal c³) = Normal m * (Normal 6)⁻¹ * (Normal c³)⁻¹’
+           by (rw [extreal_mul_eq, div_eq_mul_rinv, extreal_not_infty] \\
+               rw [GSYM extreal_mul_eq, inv_mul, mul_assoc]) \\
+         POP_ORW >> gs []) \\
+     POP_ORW \\
+     rw [Abbr ‘L’, Abbr ‘B’]
+     >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> gs [add_not_infty]) \\
+     irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> gs [add_not_infty])
  >> Rewr
  >> MATCH_MP_TAC let_trans
  >> qexists ‘Normal U * (b n / (s n) pow 3)’
@@ -7374,66 +7367,187 @@ Proof
  >- (Q.PAT_X_ASSUM ‘∀n. k ≤ n ⇒ U * abs (real (b n / (s n)³)) < e * NZ U’
       (STRIP_ASSUME_TAC o Q.SPEC ‘n’) >> gs [] \\
      MP_TAC (Q.SPECL [‘Normal U * (b (n :num) / (Normal c)³)’, ‘Normal e’] real_lt_eq) \\
-     impl_tac >- (bn_not_infty_tactic) \\
+     impl_tac >- (Suff ‘b n ≠ PosInf ∧ b n ≠ NegInf’
+                  >- (rw [] >> ‘∃y. b n = Normal y’ by METIS_TAC [extreal_cases] \\
+                      gs [extreal_pow_def, extreal_div_eq, extreal_mul_eq]) \\
+                  bn_not_infty_tactic) \\
      rw [] >> POP_ASSUM (rw o wrap o SYM) \\
      MP_TAC (Q.SPECL [‘Normal U’, ‘b (n :num) / (Normal c)³’] mul_real) \\
      gs [] \\
-     impl_tac >- (bn_not_infty_tactic) \\
+     impl_tac >- (Suff ‘b n ≠ PosInf ∧ b n ≠ NegInf’
+                  >- (rw [] >> ‘∃y. b n = Normal y’ by METIS_TAC [extreal_cases] \\
+                      gs [extreal_pow_def, extreal_div_eq, extreal_mul_eq]) \\
+                  bn_not_infty_tactic) \\
      Rewr \\
      ‘U ≠ 0’ by METIS_TAC [REAL_LT_IMP_NE] \\
      fs [nonzerop_def] \\
      MATCH_MP_TAC REAL_LET_TRANS \\
      qexists ‘U * abs (real (b n / (Normal c)³))’ >> gs [ABS_LE])
-
-  >> Know ‘∀i. i < n ⇒ B i = sqrt (8 / Normal pi) * (Normal ((sig i) pow 3))’
-  >- (rw [] >> gs [] \\
-      irule ext_normal_rv_abs_third_moment >> gs [])
-  >> DISCH_TAC
-
+ >> Know ‘∀i. i < n ⇒ B i = sqrt (8 / Normal pi) * (Normal ((sig i) pow 3))’
+ >- (rw [] >> gs [] \\
+     irule ext_normal_rv_abs_third_moment >> gs [])
+ >> DISCH_TAC
  >> Know ‘∀i. i < n ⇒ B i ≤ sqrt (8 / Normal pi) * A i’
-  >- (rw [] >> gs [] \\
-      Q.PAT_X_ASSUM ‘∀i'. i' < n ⇒ sqrt (8 / Normal pi) * Normal (sig i')³ = _’
-       (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [] \\
-      POP_ASSUM (rw o wrap o SYM) \\
-      MATCH_MP_TAC le_lmul_imp >> gs [PI_POS, sqrt_pos_le, le_div] \\
-      MATCH_MP_TAC eqle_trans \\
-      qexists ‘expectation p (λx. ((X i x) pow 2)) powr (3 * inv 2)’ \\
-      rw [Abbr ‘sig’, Abbr ‘s’]
-      >- (MP_TAC (Q.SPECL [‘p’, ‘λx. X (i :num) x’] variance_eq) \\
-          impl_tac >- (fs [real_random_variable_def] \\
-                       Q.PAT_X_ASSUM ‘∀i. random_variable (X i) p Borel ∧ _’
-                        (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
-                       METIS_TAC [ETA_AX]) \\
-          Q.PAT_X_ASSUM ‘∀i. expectation p (X i) = 0’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
-          rw [SF ETA_ss, sub_rzero, zero_pow] \\
-          simp [GSYM extreal_sqrt_def, GSYM extreal_pow_def] \\
-          MP_TAC (Q.SPECL [‘expectation p (λx. (X (i :num) x)²)’] normal_real) \\
-          Q.PAT_X_ASSUM ‘∀i. variance p (X i) ≠ −∞ ∧ variance p (X i) ≠ +∞’
-           (MP_TAC o Q.SPEC ‘i’) >> rw [] \\
-          MP_TAC (Q.SPECL [‘expectation p (λx. (X (i :num) x)²)’] sqrt_powr) \\
-          rw [expectation_pos, le_pow2] \\
-          qmatch_abbrev_tac ‘(a powr (inv 2)) pow 3 = _’ \\
-          MP_TAC (Q.SPECL [‘a powr (inv 2)’, ‘3’] gen_powr) \\
-          ‘0 ≤ a powr (inv 2)’ by METIS_TAC [Abbr ‘a’, expectation_pos, le_pow2, powr_pos] \\
-          gs [] >> STRIP_TAC \\
-          MP_TAC (Q.SPECL [‘a’, ‘inv 2’, ‘3’] powr_powr) \\
-          ‘0 ≤ a’ by METIS_TAC [Abbr ‘a’, expectation_pos, le_pow2] \\
-          gs [] >> impl_tac
-          >- (reverse CONJ_TAC >- (MATCH_MP_TAC (cj 1 inv_not_infty) >> EVAL_TAC) \\
-              MATCH_MP_TAC inv_pos' >> gs []) >> gs [mul_comm]) \\
-      qmatch_abbrev_tac ‘a powr (3 * 2⁻¹) ≤ _’ \\
-
-
-
-  cheat)
+ >- (rw [] >> gs [] \\
+     Q.PAT_X_ASSUM ‘∀i'. i' < n ⇒ sqrt (8 / Normal pi) * Normal (sig i')³ = _’
+      (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [] \\
+     POP_ASSUM (rw o wrap o SYM) \\
+     MATCH_MP_TAC le_lmul_imp >> gs [PI_POS, sqrt_pos_le, le_div] \\
+     MATCH_MP_TAC eqle_trans \\
+     qexists ‘expectation p (λx. ((X i x) pow 2)) powr (3 * inv 2)’ \\
+     rw [Abbr ‘sig’, Abbr ‘s’]
+     >- (MP_TAC (Q.SPECL [‘p’, ‘λx. X (i :num) x’] variance_eq) \\
+         impl_tac >- (fs [real_random_variable_def] \\
+                      Q.PAT_X_ASSUM ‘∀i. random_variable (X i) p Borel ∧ _’
+                       (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
+                      METIS_TAC [ETA_AX]) \\
+         Q.PAT_X_ASSUM ‘∀i. expectation p (X i) = 0’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
+         rw [SF ETA_ss, sub_rzero, zero_pow] \\
+         simp [GSYM extreal_sqrt_def, GSYM extreal_pow_def] \\
+         MP_TAC (Q.SPECL [‘expectation p (λx. (X (i :num) x)²)’] normal_real) \\
+         Q.PAT_X_ASSUM ‘∀i. variance p (X i) ≠ −∞ ∧ variance p (X i) ≠ +∞’
+          (MP_TAC o Q.SPEC ‘i’) >> rw [] \\
+         MP_TAC (Q.SPECL [‘expectation p (λx. (X (i :num) x)²)’] sqrt_powr) \\
+         rw [expectation_pos, le_pow2] \\
+         qmatch_abbrev_tac ‘(a powr (inv 2)) pow 3 = _’ \\
+         MP_TAC (Q.SPECL [‘a powr (inv 2)’, ‘3’] gen_powr) \\
+         ‘0 ≤ a powr (inv 2)’ by METIS_TAC [Abbr ‘a’, expectation_pos, le_pow2, powr_pos] \\
+         gs [] >> STRIP_TAC \\
+         MP_TAC (Q.SPECL [‘a’, ‘inv 2’, ‘3’] powr_powr) \\
+         ‘0 ≤ a’ by METIS_TAC [Abbr ‘a’, expectation_pos, le_pow2] \\
+         gs [] >> impl_tac
+         >- (reverse CONJ_TAC >- (MATCH_MP_TAC (cj 1 inv_not_infty) >> EVAL_TAC) \\
+             MATCH_MP_TAC inv_pos' >> gs []) >> gs [mul_comm]) \\
+     ‘∀x. (X i x) pow 2 = (abs (X i x)) pow 2’ by rw [abs_pow2] >> POP_ORW \\
+     Q.ABBREV_TAC ‘u = λx. abs (X i x)’ \\
+     ‘expectation p (λx. (abs (X i x))²) powr (3 * 2⁻¹) = expectation p (λx. (u x) pow 2) powr (3 * 2⁻¹)’
+       by rw [Abbr ‘u’] >> POP_ORW \\
+     simp [] \\
+     Know ‘u IN lp_space 2 p’
+     >- (simp [Abbr ‘u’, lp_space_def, GSYM o_DEF] \\
+         CONJ_TAC >- (irule IN_MEASURABLE_BOREL_ABS' \\
+                      fs [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def, real_random_variable, o_DEF] \\
+                      irule IN_MEASURABLE_BOREL_COMP_BOREL \\
+                      qexistsl [‘λx. x’, ‘λx. X i x’] \\
+                      fs [IN_MEASURABLE_BOREL_BOREL_I, p_space_def, events_def] \\
+                      Q.PAT_X_ASSUM ‘∀i'. X i' ∈ Borel_measurable (measurable_space p) ∧ _’
+                       (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
+                      METIS_TAC [ETA_AX]) \\
+         Q.PAT_X_ASSUM ‘∀i. integrable p (X i) ∧ integrable p (λx. (X i x)²) ∧
+                            integrable p (λx. (X i x)³)’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
+         ‘∀x. abs (X i x) powr 2 = abs (X i x) pow 2’ by rw [GSYM gen_powr, abs_pos] \\
+         POP_ORW \\
+         ‘integrable p (λx. (X i x)²) = integrable p (λx. (abs (X i x)²))’
+           by (MATCH_MP_TAC integrable_cong >> fs [prob_space_def, pow_abs]) >> gs [] \\
+         ‘∀x. (X i x) pow 2 = (abs (X i x)) pow 2’ by rw [abs_pow2] >> POP_ORW \\
+         MP_TAC (Q.SPECL [‘p’, ‘λx. (X (i :num) x) pow 2’] (INST_TYPE [“:'b” |-> “:'a”] integrable_abs_alt)) \\
+         impl_tac
+         >- (fs [prob_space_def, real_random_variable, p_space_def, events_def] \\
+             MATCH_MP_TAC IN_MEASURABLE_BOREL_POW \\
+             Q.PAT_X_ASSUM ‘∀i'. X i' ∈ Borel_measurable (measurable_space p) ∧ _’
+              (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
+             METIS_TAC [ETA_AX]) \\
+         rw [o_DEF, pow_abs]) \\
+     DISCH_TAC \\
+     Know ‘u IN lp_space 3 p’
+     >- (simp [Abbr ‘u’, lp_space_def, GSYM o_DEF] \\
+         CONJ_TAC >- (irule IN_MEASURABLE_BOREL_ABS' \\
+                      fs [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def, real_random_variable, o_DEF] \\
+                      irule IN_MEASURABLE_BOREL_COMP_BOREL \\
+                      qexistsl [‘λx. x’, ‘λx. X i x’] \\
+                      fs [IN_MEASURABLE_BOREL_BOREL_I, p_space_def, events_def] \\
+                      Q.PAT_X_ASSUM ‘∀i'. X i' ∈ Borel_measurable (measurable_space p) ∧ _’
+                       (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
+                      METIS_TAC [ETA_AX]) \\
+         Q.PAT_X_ASSUM ‘∀i. integrable p (X i) ∧ integrable p (λx. (X i x)²) ∧
+                            integrable p (λx. (X i x)³)’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
+         ‘∀x. abs (X i x) powr 2 = abs (X i x) pow 2’ by rw [GSYM gen_powr, abs_pos] \\
+         POP_ORW \\
+         ‘integrable p (λx. (X i x)²) = integrable p (λx. (abs (X i x)²))’
+           by (MATCH_MP_TAC integrable_cong >> fs [prob_space_def, pow_abs]) >> gs [] \\
+         ‘∀x. abs (X i x) powr 3 = abs (X i x) pow 3’ by rw [GSYM gen_powr, abs_pos] >> POP_ORW \\
+         MP_TAC (Q.SPECL [‘p’, ‘λx. (X (i :num) x) pow 3’] (INST_TYPE [“:'b” |-> “:'a”] integrable_abs_alt)) \\
+         impl_tac
+         >- (fs [prob_space_def, real_random_variable, p_space_def, events_def] \\
+             MATCH_MP_TAC IN_MEASURABLE_BOREL_POW \\
+             Q.PAT_X_ASSUM ‘∀i'. X i' ∈ Borel_measurable (measurable_space p) ∧ _’
+              (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
+             METIS_TAC [ETA_AX]) \\
+         rw [o_DEF, pow_abs] \\
+         MP_TAC (Q.SPECL [‘p’, ‘λx. (X (i :num) x) pow 3’] (INST_TYPE [“:'b” |-> “:'a”] integrable_abs)) \\
+         fs [prob_space_def, o_DEF, pow_abs]) \\
+     DISCH_TAC \\
+     MP_TAC (Q.SPECL [‘p’, ‘u’, ‘2’, ‘3’] liapounov_ineq_rv) >> rw [seminorm_def, expectation_def] \\
+     fs [integral_abs_pos_fn, prob_space_def, GSYM o_DEF, GSYM pow_abs] \\
+     ‘∀x. abs (u x) = u x’ by rw [Abbr ‘u’, abs_abs] >> gs [] \\
+     POP_ORW \\
+     ‘∀x. (u x) powr 2 = (u x) pow 2’ by rw [Abbr ‘u’, GSYM gen_powr, abs_pos] >> gs [] \\
+     POP_ORW \\
+     ‘∀x. (u x) powr 3 = (u x) pow 3’ by rw [Abbr ‘u’, GSYM gen_powr, abs_pos] >> gs [] \\
+     POP_ORW \\
+     Know ‘∫⁺ p (λx. (u x) pow 2) = ∫ p (λx. (u x) pow 2)’
+     >- (ASM_SIMP_TAC std_ss [Abbr ‘u’, GSYM pow_abs, GSYM o_DEF] \\
+         MATCH_MP_TAC (GSYM integral_abs_pos_fn) >> fs [prob_space_def]) \\
+     rw [] >> gs [] \\
+     POP_ASSUM K_TAC \\
+     Know ‘∫⁺ p (λx. (u x) pow 3) = ∫ p (λx. (u x) pow 3)’
+     >- (ASM_SIMP_TAC std_ss [Abbr ‘u’, GSYM pow_abs, GSYM o_DEF] \\
+         MATCH_MP_TAC (GSYM integral_abs_pos_fn) >> fs [prob_space_def]) \\
+     rw [] >> gs [] \\
+     POP_ASSUM K_TAC \\
+     MP_TAC (Q.SPECL [‘∫ p (λx. (u x)²) powr (3 * 2⁻¹)’, ‘inv 3’, ‘∫ p (λx. (u x)³)’] powr_mono_eq) \\
+     impl_tac >- (simp [powr_pos, inv_pos'] \\
+                  CONJ_TAC >- (MATCH_MP_TAC integral_pos \\
+                               fs [prob_space_def, Abbr ‘u’, pow_pos_le, abs_pos]) \\
+                  MATCH_MP_TAC (cj 1 inv_not_infty) >> EVAL_TAC) \\
+     Suff ‘(∫ p (λx. (u x)²) powr (3 * 2⁻¹)) powr 3⁻¹ =  ∫ p (λx. (u x)²) powr 2⁻¹’ >> gs [] \\
+     Q.ABBREV_TAC ‘l = ∫ p (λx. (u x)²)’ >> gs [] \\
+     MP_TAC (Q.SPECL [‘l’, ‘3 * inv 2’, ‘inv 3’] powr_powr) \\
+     impl_tac >- (simp [inv_not_infty, inv_pos'] \\
+                  CONJ_TAC >- (rw [Abbr ‘l’] \\
+                               MATCH_MP_TAC integral_pos \\
+                               fs [prob_space_def, abs_pos, Abbr ‘u’, le_pow2]) \\
+                  CONJ_TAC >- (MATCH_MP_TAC lt_mul >> simp [inv_pos']) \\
+                  MATCH_MP_TAC (cj 1 inv_not_infty) >> EVAL_TAC) \\
+     Rewr \\
+     Know ‘3 * 2⁻¹ * 3⁻¹ = inv 2’
+     >- (rw [mul_comm] \\
+         ‘inv 2 * 3 = 3 * inv 2’ by rw [mul_comm] >> POP_ORW \\
+         rw [mul_assoc, mul_linv_pos]) \\
+     Rewr)
+ >> DISCH_TAC
+ >> Q.ABBREV_TAC ‘c0 = sqrt (8 / Normal pi)’
+ >> Know ‘c0 ≠ PosInf /\ c0 ≠ NegInf’
+ >- (simp [Abbr ‘c0’] \\
+     ‘8 = Normal 8’ by rw [extreal_of_num_def] >> POP_ORW \\
+     ‘pi ≠ 0’ by METIS_TAC [PI_POS, REAL_LT_IMP_NE] \\
+     METIS_TAC [extreal_div_eq, extreal_sqrt_def, extreal_not_infty])
+ >> rw [Abbr ‘c0’]
+ >> ‘∃c0. sqrt (8 / Normal pi) = Normal c0’ by METIS_TAC [extreal_cases]
+ >> Know ‘∑ (λj. A j + B j) (count n) ≤ (1 + Normal c0) * ∑ A (count n)’
+ >- (simp [extreal_add_eq, GSYM normal_1] \\
+     MP_TAC (Q.SPEC ‘count (n :num)’ (INST_TYPE [“:'a” |-> “:num”] EXTREAL_SUM_IMAGE_CMUL)) \\
+     rw [] \\
+     POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘A’, ‘1 + c0’]) >> gs [] \\
+     POP_ASSUM (rw o wrap o SYM) \\
+     irule EXTREAL_SUM_IMAGE_MONO >> simp [] \\
+     CONJ_TAC >- (rw [GSYM extreal_add_eq, normal_1] \\
+                  MP_TAC (Q.SPECL [‘expectation p (λx'. (abs (X (x :num) x'))³)’,
+                                   ‘1’, ‘sqrt (8 / Normal pi)’] add_rdistrib) \\
+                  impl_tac >- (DISJ1_TAC >> simp [] \\
+                               MATCH_MP_TAC sqrt_pos_le \\
+                               MATCH_MP_TAC le_div >> simp [PI_POS]) \\
+                  Rewr >> rw [mul_lone] \\
+                  METIS_TAC [GSYM le_ladd_imp]) \\
+     DISJ2_TAC >> rw [add_not_infty, mul_not_infty2, extreal_not_infty])
  >> rw []
- >> Know ‘∑ (λj. A j + B j) (count n) ≤ (1 + sqrt (8 / Normal pi)) * ∑ A (count n)’
- >- (cheat) >> rw []
  >> Know ‘∑ A (count n) = b n’
- >- (cheat) >> rw [] >> gs [Abbr ‘U’]
+ >- (rw [Abbr ‘A’,Abbr ‘b’, absolute_third_moments_def, absolute_third_moment_def, absolute_moment_def] \\
+        irule EXTREAL_SUM_IMAGE_EQ' >> rw [])
+ >> rw [] >> gs [Abbr ‘U’] >> gs []
  >> POP_ORW
  >> MP_TAC (Q.SPECL [‘∑ (λj. expectation p (λx. (abs (X j x))³) + B j) (count n)’,
-                     ‘(1 + sqrt (8 / Normal pi)) * b (n :num)’, ‘Normal m / (6 * Normal c³)’] le_lmul_imp)
+                    ‘(1 + sqrt (8 / Normal pi)) * b (n :num)’, ‘Normal m / (6 * Normal c³)’] le_lmul_imp)
  >> impl_tac
  >- (gs [] \\
      ‘0 < Normal 6’ by EVAL_TAC \\
@@ -7445,7 +7559,35 @@ Proof
  >> DISCH_TAC
  >> Know ‘Normal (1 / 6 * (m * (1 + sqrt (8 / pi)))) * (b n / (Normal c)³) =
           Normal m / (6 * Normal c³) * ((1 + sqrt (8 / Normal pi)) * b n)’
- >- (cheat)
+ >- (rw [extreal_pow_def] \\
+     Q.ABBREV_TAC ‘l = 1 + sqrt (8 / pi)’ >> gs [] \\
+     Know ‘b n ≠ PosInf ∧ b n ≠ NegInf’
+     >- (bn_not_infty_tactic) \\
+     DISCH_TAC \\
+     ‘∃b0. b n = Normal b0’ by METIS_TAC [extreal_cases] >> gs [] \\
+     ‘Normal b0 / Normal c³ = Normal b0 * inv (Normal (c pow 3))’
+       by METIS_TAC [div_eq_mul_rinv, extreal_not_infty, extreal_pow_def, pow_pos_lt] \\
+     POP_ORW \\
+     ‘Normal b0 * inv (Normal (c pow 3)) = inv (Normal (c pow 3)) * Normal b0’ by rw [mul_comm] \\
+     POP_ORW \\
+     ‘1 / (6 :real) = inv 6’ by REAL_ARITH_TAC >> POP_ORW \\
+     rw [GSYM extreal_mul_eq] \\
+     ‘Normal m / (6 * Normal c³) = Normal m * inv (6 * Normal (c pow 3))’
+       by (MATCH_MP_TAC div_eq_mul_rinv >> simp [] \\
+           MATCH_MP_TAC lt_mul >> simp []) \\
+     POP_ORW \\
+     ‘inv (6 * Normal (c pow 3)) = inv 6 * inv (Normal (c pow 3))’
+       by (MATCH_MP_TAC inv_mul >> simp [] >> EVAL_TAC) \\
+     POP_ORW \\
+     ‘inv (6 :extreal) = Normal (inv (6 :real))’ by rw [extreal_inv_def, extreal_of_num_def] \\
+     POP_ORW \\
+     ‘Normal l = 1 + sqrt (8 / Normal pi)’
+       by (rw [Abbr ‘l’, GSYM extreal_add_eq, GSYM extreal_sqrt_def, normal_1] \\
+           NTAC 2 AP_TERM_TAC \\
+           ‘8 = Normal 8’ by EVAL_TAC >> POP_ORW \\
+           METIS_TAC [GSYM extreal_div_eq, PI_POS, REAL_LT_IMP_NE]) \\
+     POP_ASSUM (rw o wrap o SYM) \\
+     METIS_TAC [mul_comm, mul_assoc])
  >> Rewr >> fs []
 QED
 
