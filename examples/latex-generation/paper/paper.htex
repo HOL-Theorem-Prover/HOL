@@ -207,6 +207,28 @@ Overrides to mathematical symbols should use \texttt{\bs{}ensuremath\lb{}\dots\r
 
 \subsection{Fiddling with Width}
 
+Large, multi-line theorems can be laid out quite differently depending on the number of columns the \HOL{} pretty-printer uses.
+For example, the default width turns
+\begin{alltt}
+  \bs{}HOLthm[def,>>]\lb{}list.SHORTLEX_def\rb{}
+\end{alltt}
+into
+\begin{alltt}
+\HOLthm[def,>>]{list.SHORTLEX_def}
+\end{alltt}
+If we boost the width of the lines with
+\begin{alltt}
+  \bs{}HOLthm[def,width=80]\lb{}list.SHORTLEX_def\rb{}
+\end{alltt}
+we get
+\begin{alltt}
+\HOLthm[def,width=80]{list.SHORTLEX_def}
+\end{alltt}
+This is a very tight fit (which is why the \verb|>>| option hasn't been used), but it does save some horizontal space.
+
+The default width for an entire paper is controlled by the \texttt{-w} option to the \texttt{munge} command-line tool.
+If a number is not given on the command-line, then the (default) default width is 65 columns.
+
 \subsection{Substitutions}
 
 \subsection{Inference Rules}
