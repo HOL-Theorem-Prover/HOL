@@ -696,17 +696,45 @@ fun PURE_FULL_CASE_TAC (g as (asl,w)) =
  in Cases_on `^t` end g;
 
 local
-  fun tot f x = f x handle HOL_ERR _ => NONE
-in
+
+fun tot f x = f x handle HOL_ERR _ => NONE
+
 fun case_rws tyi =
     List.mapPartial I
        [Lib.total TypeBasePure.case_def_of tyi,
         tot TypeBasePure.distinct_of tyi,
         tot TypeBasePure.one_one_of tyi]
 
+fun decompose (th::res) =
+   let val th = SPEC_ALL th
+       val t = concl th
+   in
+     if is_conj t then (let val (th1,th2) = CONJ_PAIR th
+                        in decompose (th1::th2::res) end)
+     else (th::decompose res)
+   end
+  | decompose [] = []
+
+fun raw_case_rwlist tb =
+  decompose (itlist (fn tyi => fn rws => case_rws tyi @ rws)
+        (TypeBasePure.listItems tb) []);
+
+val cache = ref (NONE: (TypeBase.typeBase * thm list) option)
+
+in
+
 fun case_rwlist () =
- itlist (fn tyi => fn rws => case_rws tyi @ rws)
-        (TypeBase.elts()) [];
+    case (!cache) of
+       NONE => (let val new = TypeBase.theTypeBase()
+                    val new_thms = raw_case_rwlist new
+                in (cache := SOME (new,new_thms));new_thms end)
+     | SOME (old,thms) => let val new = TypeBase.theTypeBase()
+                          in
+                             if Portable.pointer_eq (old,new)
+                             then thms
+                             else (let val new_thms = raw_case_rwlist new
+                                  in (cache := SOME (new,new_thms)); new_thms end)
+                             end
 
 (* Add the rewrites into a simpset to avoid re-processing them when
  * (PURE_CASE_SIMP_CONV rws) is called multiple times by EVERY_CASE_TAC.  This
