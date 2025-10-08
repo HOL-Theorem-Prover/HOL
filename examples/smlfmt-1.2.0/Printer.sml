@@ -16,6 +16,8 @@ fun flatmap _ [] = Nil
 
 type printer = {token: string -> unit}
 
+fun mkPrinter str = {token = fn ";" => str ";\n" | s => (str s; str " ")}
+
 fun token s (pr: printer) = #token pr s
 fun ident id = token (#2 id)
 
@@ -165,7 +167,7 @@ and fromDec (DecSemi _) pr = token ";" pr
   | fromDec (DecVal {tyvars, elems, ...}) pr = let
     fun f {rec_, pat, eq} pr = (
       otoken rec_ "rec" pr; fromExp pat pr;
-      Option.app (fn {exp, ...} => fromExp exp pr) eq)
+      Option.app (fn {exp, ...} => (token "=" pr; fromExp exp pr)) eq)
     in token "val" pr; seq ident tyvars pr; delimited (K ()) elems f (token "and") (K ()) pr end
   | fromDec (DecFun {tyvars, fvalbind, ...}) pr = let
     fun f {pat, exp, ...} pr = (fromExp pat pr; token "=" pr; fromExp exp pr)

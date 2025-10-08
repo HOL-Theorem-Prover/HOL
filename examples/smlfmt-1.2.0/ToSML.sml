@@ -51,7 +51,7 @@ fun magicBind (p, name) acc =
   if canBindStr then let
     val code = mkString (p, concat ["val ", name, " = DB.fetch \"-\" \"", name,
       "\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;"])
-    in DecSemi p :: valWild p (App (mkIdent (p, "CompilerSpecific.quietbind"), code)) :: acc end
+    in valWild p (App (mkIdent (p, "CompilerSpecific.quietbind"), code)) :: acc end
   else acc
 
 fun mapArms g f1 f2 elems = let
@@ -290,7 +290,7 @@ and expandDec (DecSemi _) acc = acc
     in DecFunctor {functor_ = functor_, elems = mapDelim f elems} :: acc end
   | expandDec (DecExp e) acc = let
     val p = expStart e
-    in DecSemi p :: valPat p (mkIdent (p, "it")) (expandExp false e) :: acc end
+    in valPat p (mkIdent (p, "it")) (expandExp false e) :: acc end
 
   | expandDec (HOLTheory thy) acc = expandTheory thy acc
   | expandDec (HOLDefinition {
@@ -298,8 +298,11 @@ and expandDec (DecSemi _) acc = acc
       attrs, colon = _, quote, termination, end_ = _, stop}) acc = let
     val indThm = ref NONE
     val _ = app (fn
-        {key = (_, "induction"), bind = SOME {vals = [tgt], ...}} => indThm := SOME tgt
-      | _ => raise Fail "unknown definition attribute"
+        {key = (_, "induction"), bind} =>
+        (case bind of
+          SOME {vals = [tgt], ...} => indThm := SOME tgt
+        | _ => raise Fail "unexpected arguments to [induction] attribute")
+      | _ => ()
       ) (case attrs of NONE => [] | SOME v => #args (#attrs v))
     val indThm = case !indThm of
       SOME s => s
@@ -317,21 +320,17 @@ and expandDec (DecSemi _) acc = acc
     val e = App (e, expandQuote definition_ stop quote)
     val e = App (e, case termination of
       NONE => mkIdent (definition_, "NONE")
-    | SOME {tac, ...} => App (mkIdent (definition_, "SOME"), tac))
-    val acc = DecSemi stop :: valPat definition_ (mkIdent id) e :: acc
-    in magicBind indThm acc end
-  | expandDec (HOLDatatype {datatype_, colon = _, quote, end_ = _, stop}) acc = let
-    val e = mkIdent (datatype_, "bossLib.Datatype")
-    val e = App (e, expandQuote datatype_ stop quote)
-    in DecSemi stop :: valWild datatype_ e :: acc end
+    | SOME {tac, ...} => App (mkIdent (definition_, "SOME"), expandExp false tac))
+    in magicBind indThm (valPat definition_ (mkIdent id) e :: acc) end
+  | expandDec (HOLDatatype {datatype_, quote, stop, ...}) acc = let
+    val e = App (mkIdent (datatype_, "bossLib.Datatype"), expandQuote datatype_ stop quote)
+    in valWild datatype_ e :: acc end
   | expandDec (HOLQuoteDecl {quote_, id, bind, colon = _, quote, end_ = _, stop}) acc = let
     val (pat, e) = case bind of
       NONE => (Wild (#1 id), mkIdent id)
-    | SOME {exp, ...} => (mkIdent id, exp)
-    val e = App (e, expandQuote quote_ stop quote)
-    in DecSemi stop :: valPat quote_ pat e :: acc end
-  | expandDec (HOLInductiveDecl {
-      co, inductive_, id = (id, stem), colon = _, quote, end_ = _, stop}) acc = let
+    | SOME {exp, ...} => (mkIdent id, expandExp false exp)
+    in valPat quote_ pat (App (e, expandQuote quote_ stop quote)) :: acc end
+  | expandDec (HOLInductiveDecl {co, inductive_, id = (id, stem), quote, ...}) acc = let
     val (entryPoint, indSuffix) =
       if co then ("CoIndDefLib.xHol_coreln", "_coind") else ("IndDefLib.xHol_reln", "_ind")
     fun mkQ s = App (mkIdent (inductive_, "QUOTE"), mkString (inductive_, s))
@@ -351,8 +350,7 @@ and expandDec (DecSemi _) acc = acc
     fun mkStem x = (id, stem ^ x)
     val pat = mkTuple (inductive_, map (mkIdent o mkStem) ["_rules", indSuffix, "_cases"])
     val e = App (App (mkIdent (inductive_, entryPoint), mkString (id, stem)), quote)
-    val acc = DecSemi stop :: valPat inductive_ pat e :: acc
-    val acc = magicBind (mkStem "_strongind") acc
+    val acc = magicBind (mkStem "_strongind") (valPat inductive_ pat e :: acc)
     fun mkExtra _ [] acc = acc
       | mkExtra i (SOME {label = SOME (HOLLabel {id, tilde_}), attrs, ...} :: conjs) acc = let
         val name = case tilde_ of NONE => id | SOME p => (p, stem ^ "_" ^ #2 id)
@@ -361,8 +359,7 @@ and expandDec (DecSemi _) acc = acc
             mkIdent (mkStem "_rules")))
         val args = mkTuple (inductive_, [mkNameAttrs #2 id attrs, proof])
         val e = App (mkIdent (inductive_, "boolLib.save_thm"), args)
-        val acc = DecSemi stop :: valPat inductive_ (mkIdent name) e :: acc
-        in mkExtra (i+1) conjs acc end
+        in mkExtra (i+1) conjs (valPat inductive_ (mkIdent name) e :: acc) end
       | mkExtra i (_ :: conjs) acc = mkExtra (i+1) conjs acc
     in mkExtra 1 conjs acc end
   | expandDec (HOLType {overload, type_, id, attrs, bind}) acc = let
@@ -386,9 +383,8 @@ and expandDec (DecSemi _) acc = acc
     val id = case id of QuotedId s => StringConstant s | UnquotedId s => mkString s
     val rhs = case bind of
       NONE => mkFail (type_, "Type/Overload missing body")
-    | SOME {exp, ...} => exp
-    val e = App (mkIdent (type_, name), mkTuple (type_, [id, rhs]))
-    in DecSemi type_ :: valWild type_ e :: acc end
+    | SOME {exp, ...} => expandExp false exp
+    in valWild type_ (App (mkIdent (type_, name), mkTuple (type_, [id, rhs]))) :: acc end
   | expandDec (HOLSimpleThm {
       triv, theorem_, id, fileline = (file, (_, line, _)), attrs, bind}) acc = let
     val e =
@@ -397,9 +393,8 @@ and expandDec (DecSemi _) acc = acc
     val nameAttrs = mkNameAttrs mkKval id (withLocalAttrs theorem_ triv attrs)
     val rhs = case bind of
       NONE => mkFail (theorem_, "Theorem missing body")
-    | SOME {exp, ...} => exp
-    val e = App (e, mkTuple (theorem_, [nameAttrs, rhs]))
-    in DecSemi theorem_ :: valPat theorem_ (mkIdent id) e :: acc end
+    | SOME {exp, ...} => expandExp false exp
+    in valPat theorem_ (mkIdent id) (App (e, mkTuple (theorem_, [nameAttrs, rhs]))) :: acc end
   | expandDec (HOLTheoremDecl {
       triv, theorem_, id, fileline = (file, (_, line, _)),
       attrs, colon = _, quote, proof_, tac, qed_ = _, stop}) acc = let
@@ -426,7 +421,7 @@ and expandDec (DecSemi _) acc = acc
       if file = "" then mkIdent (theorem_, "Q.store_thm")
       else App (mkIdent (theorem_, "Q.store_thm_at"), mkLocString theorem_ file line)
     val e = App (e, mkTuple (theorem_, [nameAttrs, quote, tac]))
-    in DecSemi theorem_ :: valPat theorem_ (mkIdent id) e :: acc end
+    in valPat theorem_ (mkIdent id) e :: acc end
 
 and expandFunArg (ArgIdent {strid, ty}) = let
     val ty = Option.map (fn {colon, sigexp} => {colon = colon, sigexp = expandSigExp sigexp}) ty
@@ -463,8 +458,8 @@ and expandTheory {theory_, id, attrs, elems, ...} acc = let
   val grammar = ref []
   fun finish (NONE, acc) = acc
     | finish (SOME (false, ns), acc) =
-      DecOpen {open_ = theory_, elems = rev ns} :: acc
-    | finish (SOME (true, ns), acc) = DecLocal {
+      DecSemi theory_ :: DecOpen {open_ = theory_, elems = rev ns} :: acc
+    | finish (SOME (true, ns), acc) = DecSemi theory_ :: DecLocal {
       local_ = theory_, dec1 = [DecOpen {open_ = theory_, elems = rev ns}],
       in_ = SOME theory_, dec2 = [], end_ = SOME theory_, stop = theory_} :: acc
   fun push b x (NONE, acc) = (SOME (b, [x]), acc)

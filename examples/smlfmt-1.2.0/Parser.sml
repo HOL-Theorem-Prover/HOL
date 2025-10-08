@@ -740,8 +740,8 @@ fun parseSML file body parseError: scope -> result = let
         (p, EOF) => (parseError (start, p) "unclosed quotation"; (rev (push i p acc), p))
       | (p, StrongEndTk) => (
         if mem (ident p) s then () else parseError (start, p) (expected ());
-        (rev acc, p))
-      | (p, EndTk) => if mem (ident p) s then (rev acc, p) else go i acc
+        (rev (push i p acc), p))
+      | (p, EndTk) => if mem (ident p) s then (rev (push i p acc), p) else go i acc
       | (p, AntiqIdent) => let
         val exp = case identKind (p + 1) of
           (s, Regular) => Ident {op_ = NONE, id = (p+1, s)}
