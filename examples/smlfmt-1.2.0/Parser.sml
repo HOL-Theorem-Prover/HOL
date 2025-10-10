@@ -212,18 +212,18 @@ fun parseSML file body parseError: scope -> result = let
   fun parseDelimitedClose args delims (f as {elem, close, ...}) =
     case token () of tk =>
       case close tk of
-        SOME true => ({args = rev args, delims = rev delims}, SOME (#1 tk), !pos)
+        SOME true => ({args = rev args, delims = rev delims, stop = #1 tk}, SOME (#1 tk), !pos)
       | SOME false => (
         parseError (#1 tk, !pos) "unexpected close token";
-        ({args = rev args, delims = rev delims}, NONE, !pos))
+        ({args = rev args, delims = rev delims, stop = !pos}, NONE, !pos))
       | NONE => (unread tk; case elem () of e => parseDelimitedClose2 (e :: args) delims f)
   and parseDelimitedClose2 args delims (f as {delim, close, ...}) =
     case token () of tk =>
       case close tk of
-        SOME true => ({args = rev args, delims = rev delims}, SOME (#1 tk), !pos)
+        SOME true => ({args = rev args, delims = rev delims, stop = #1 tk}, SOME (#1 tk), !pos)
       | SOME false => (
         parseError (#1 tk, !pos) "unexpected close token";
-        ({args = rev args, delims = rev delims}, NONE, !pos))
+        ({args = rev args, delims = rev delims, stop = !pos}, NONE, !pos))
       | NONE => case delim tk of
           SOME true => parseDelimitedClose args (SOME (#1 tk) :: delims) f
         | SOME false => (
@@ -231,7 +231,7 @@ fun parseSML file body parseError: scope -> result = let
           parseDelimitedClose args (NONE :: delims) f)
         | NONE => (
           parseError (#1 tk, !pos) "expected close delimiter";
-          unread tk; ({args = rev args, delims = rev delims}, NONE, #1 tk))
+          unread tk; ({args = rev args, delims = rev delims, stop = #1 tk}, NONE, #1 tk))
 
   fun parseDelimited args delims (f as {elem, delim}) =
     case (elem (), token ()) of (e, tk) =>
@@ -240,7 +240,7 @@ fun parseSML file body parseError: scope -> result = let
       | SOME false => (
         parseError (#1 tk, !pos) "unexpected delimiter";
         parseDelimited (e :: args) (NONE :: delims) f)
-      | NONE => (unread tk; {args = rev (e :: args), delims = rev delims})
+      | NONE => (unread tk; {args = rev (e :: args), delims = rev delims, stop = #1 tk})
 
   fun isKeyword kw = fn (s, IdentTk) => if ident s = kw then SOME true else NONE | _ => NONE
 
@@ -292,7 +292,7 @@ fun parseSML file body parseError: scope -> result = let
         close = fn (_, Symbol #")") => SOME true | _ => NONE }
       in
         case elems of
-          {args = [ty], delims = []} =>
+          {args = [ty], delims = [], ...} =>
           TyParens {left = start, ty = ty, right = right, stop = stop}
         | _ => case token () of tk =>
           case case tk of (start, IdentTk) => SOME (identKind start) | _ => NONE of
@@ -477,6 +477,27 @@ fun parseSML file body parseError: scope -> result = let
         close = isKeyword "end" }
       in LetInEnd {let_ = start, dec = dec, in_ = in_, exps = exps, end_ = end_, stop = stop} end
     | "op" => Ident {op_ = SOME start, id = parseIdentifierOrEq true}
+    | "raise" => Raise {raise_ = start, exp = parseExp sc false}
+    | "if" => IfThenElse {
+      if_ = start,
+      exp1 = parseExp sc false,
+      then_ = parseKeyword "then" (SOME "expected keyword then"),
+      exp2 = parseExp sc false,
+      else_ = Option.map (fn else_ =>
+        {else_ = else_, exp3 = parseExp sc false}) (parseKeyword "else" NONE) }
+    | "while" => While {
+      while_ = start,
+      exp1 = parseExp sc false,
+      do_ = parseKeyword "do" (SOME "expected keyword do"),
+      exp2 = parseExp sc false }
+    | "case" => let
+      val exp = parseExp sc false
+      val of_ = parseKeyword "of" (SOME "expected keyword of")
+      val (elems, stop) = parseArmList sc []
+      in Case {case_ = start, exp = exp, of_ = of_, elems = elems, stop = stop} end
+    | "fn" => let
+      val (elems, stop) = parseArmList sc []
+      in Fn {fn_ = start, elems = elems, stop = stop} end
     | _ => (
       unread (start, IdentTk);
       case parseIdentifierOrEq force of
@@ -513,14 +534,6 @@ fun parseSML file body parseError: scope -> result = let
 
   and parseExp sc pat = parseExp' sc pat true
   and parseExp' sc pat force: exp = let
-    fun parseArmList acc = case (parseKeyword "|" NONE, acc) of
-      (NONE, _::_) => rev acc
-    | (bar, acc) => let
-      val pat = parseExp sc true
-      val arrow = parseKeyword "=>" (SOME "expected =>")
-      val exp = parseExp sc false
-      in parseArmList ({bar = bar, pat = pat, arrow = arrow, exp = exp} :: acc) end
-
     fun parseInfix pat force = let
 
       fun peekInfix () = let
@@ -566,8 +579,7 @@ fun parseSML file body parseError: scope -> result = let
     fun parseLayered pat lhs = if not pat then lhs else let
       fun finish {op_, id} ty = case parseKeyword "as" NONE of
           NONE => lhs
-        | SOME as_ => parseLayered pat
-          (Layered {op_ = op_, id = id, ty = ty, as_ = as_, pat = parseExp sc true})
+        | SOME as_ => Layered {op_ = op_, id = id, ty = ty, as_ = as_, pat = parseExp sc true}
       in
         case lhs of
           Ident id => finish id NONE
@@ -585,32 +597,8 @@ fun parseSML file body parseError: scope -> result = let
         elem = fn () => parseExp1 true true,
         delim = isKeyword "|" })
 
-    fun parseKwExp force =
-      case token () of tk as (start, _) =>
-      case case #2 tk of IdentTk => ident start | _ => "" of
-        "raise" => Raise {raise_ = start, exp = parseExp sc false}
-      | "if" => IfThenElse {
-        if_ = start,
-        exp1 = parseExp sc false,
-        then_ = parseKeyword "then" (SOME "expected keyword then"),
-        exp2 = parseExp sc false,
-        else_ = Option.map (fn else_ =>
-          {else_ = else_, exp3 = parseExp sc false}) (parseKeyword "else" NONE) }
-      | "while" => While {
-        while_ = start,
-        exp1 = parseExp sc false,
-        do_ = parseKeyword "do" (SOME "expected keyword do"),
-        exp2 = parseExp sc false }
-      | "case" => Case {
-        case_ = start,
-        exp = parseExp sc false,
-        of_ = parseKeyword "of" (SOME "expected keyword of"),
-        elems = parseArmList [] }
-      | "fn" => Fn {fn_ = start, elems = parseArmList []}
-      | _ => (unread tk; parseExp1 false force)
-
     fun parseAndAlso force =
-      case parseKwExp force of left =>
+      case parseExp1 false force of left =>
       case parseKeyword "andalso" NONE of
         SOME andalso_ => AndAlso {left = left, andalso_ = andalso_, right = parseAndAlso true}
       | NONE => left
@@ -625,7 +613,9 @@ fun parseSML file body parseError: scope -> result = let
       if pat then parseOrPat force else
       case parseOrElse force of exp =>
       case parseKeyword "handle" NONE of
-        SOME handle_ => Handle {exp = exp, handle_ = handle_, elems = parseArmList []}
+        SOME handle_ => let
+        val (elems, stop) = parseArmList sc []
+        in Handle {exp = exp, handle_ = handle_, elems = elems, stop = stop} end
       | NONE => exp
     end
 
@@ -652,6 +642,14 @@ fun parseSML file body parseError: scope -> result = let
         parseError (#1 tk, #1 tk) "expected closing parenthesis";
         unread tk;
         Parens {left = startOpen, exp = exp, right = NONE, stop = #1 tk}))
+
+  and parseArmList sc acc = case (parseKeyword "|" NONE, acc) of
+    (NONE, {exp, ...}::_) => (rev acc, expStop exp)
+  | (bar, acc) => let
+    val pat = parseExp sc true
+    val arrow = parseKeyword "=>" (SOME "expected =>")
+    val exp = parseExp sc false
+    in parseArmList sc ({bar = bar, pat = pat, arrow = arrow, exp = exp} :: acc) end
 
   and parseQuoteBody sc start qstart brack (s:string list) = let
     datatype qtoken = EOF | EndTk | StrongEndTk | AntiqIdent | AntiqParen | OpenBrack

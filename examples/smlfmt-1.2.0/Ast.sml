@@ -7,7 +7,7 @@ type fileline = string * (int * int * int)
 
 exception Unreachable
 
-type 'exp delimited = {args: 'exp list, delims: int option list}
+type 'exp delimited = {args: 'exp list, delims: int option list, stop: int}
 
 datatype 'a seq =
   Empty
@@ -98,16 +98,16 @@ datatype exp =
 | App of exp * exp (** exp exp *)
 | AndAlso of {left: exp, andalso_: int, right: exp} (** exp andalso exp *)
 | OrElse of {left: exp, orelse_: int, right: exp} (** exp orelse exp *)
-| Handle of {exp: exp, handle_: int, elems: arm list}
+| Handle of {exp: exp, handle_: int, elems: arm list, stop: int}
   (** exp handle pat => exp [| pat => exp ...] *)
 | Raise of {raise_: int, exp: exp} (** raise exp *)
 | IfThenElse of {
     if_: int, exp1: exp, then_: int option, exp2: exp, else_: {else_: int, exp3: exp} option}
   (** if exp then exp else exp *)
 | While of {while_: int, exp1: exp, do_: int option, exp2: exp} (** while exp do exp *)
-| Case of {case_: int, exp: exp, of_: int option, elems: arm list}
+| Case of {case_: int, exp: exp, of_: int option, elems: arm list, stop: int}
   (** case exp of pat => exp [| pat => exp ...] *)
-| Fn of {fn_: int, elems: arm list} (** fn pat => exp [| pat => exp ...] *)
+| Fn of {fn_: int, elems: arm list, stop: int} (** fn pat => exp [| pat => exp ...] *)
 
 | HOLFullQuote of {
     head: int * string, type_q: int option,
@@ -268,7 +268,7 @@ local
       parseDec s (p+1) (n-1) (res * 10 + ord c - ord #"0")
     else NONE
 in
-fun decodeStr s start stop = let
+fun decodeStr parseError s start stop = let
   fun push start p acc =
     if start = p then acc else String.substring (s, start, p - start) :: acc
   fun loop start p acc =
@@ -290,7 +290,7 @@ fun decodeStr s start stop = let
         if 64 <= c andalso c <= 95 then
           loop (p+3) (p+3) (String.str (chr (c - 64)) :: push start p acc)
         else loop start (p+2) acc)
-      | #"u" => raise Fail "unicode escapes are not supported"
+      | #"u" => (parseError (p, p + 2) "unicode escapes are not supported"; loop start (p+2) acc)
       | c =>
         if Char.isSpace c then
           case push start p acc of acc =>
@@ -338,7 +338,183 @@ fun encodeStr ss bef aft = let
 fun mkString (p, s) = StringConstant (p, encodeStr (Substring.full s) "\"" "\"")
 fun mkInt (p, s) = IntegerConstant (p, Int.toString s)
 
-fun mkList (p, ls) = List {left = p, elems = {args = ls, delims = []}, right = NONE, stop = p}
-fun mkTuple (p, ls) = Tuple {left = p, elems = {args = ls, delims = []}, right = NONE, stop = p}
+fun mkList (p, ls) =
+  List {left = p, elems = {args = ls, delims = [], stop = p}, right = NONE, stop = p}
+fun mkTuple (p, ls) =
+  Tuple {left = p, elems = {args = ls, delims = [], stop = p}, right = NONE, stop = p}
+
+fun seqStart _ Empty = NONE
+  | seqStart f (One p) = SOME (f p)
+  | seqStart _ (Many {left, ...}) = SOME left
+
+fun seqStop _ Empty = NONE
+  | seqStop f (One p) = SOME (f p)
+  | seqStop _ (Many {stop, ...}) = SOME stop
+
+fun idStop (p, s) = p + size s
+
+fun tyStart (TyVar (p, _)) = p
+  | tyStart (TyRecord {left, ...}) = left
+  | tyStart (TyTuple {args = a::_, ...}) = tyStart a
+  | tyStart (TyTuple {args = [], stop, ...}) = stop
+  | tyStart (TyCon {args, id}) = (case seqStop tyStart args of SOME p => p | NONE => #1 id)
+  | tyStart (TyArrow {from, ...}) = tyStart from
+  | tyStart (TyParens {left, ...}) = left
+  | tyStart (BadTy {start, ...}) = start
+
+fun tyStop (TyVar id) = idStop id
+  | tyStop (TyRecord {stop, ...}) = stop
+  | tyStop (TyTuple {stop, ...}) = stop
+  | tyStop (TyCon {id, ...}) = idStop id
+  | tyStop (TyArrow {to, ...}) = tyStop to
+  | tyStop (TyParens {stop, ...}) = stop
+  | tyStop (BadTy {stop, ...}) = stop
+
+fun tySpan ty = (tyStart ty, tyStop ty)
+
+fun expStart (Wild p) = p
+  | expStart (IntegerConstant (p, _)) = p
+  | expStart (WordConstant (p, _)) = p
+  | expStart (StringConstant (p, _)) = p
+  | expStart (CharConstant (p, _)) = p
+  | expStart (RealConstant (p, _)) = p
+  | expStart (Unit {left, ...}) = left
+  | expStart (Ident {op_ = SOME p, ...}) = p
+  | expStart (Ident {op_ = NONE, id = (p, _)}) = p
+  | expStart (List {left, ...}) = left
+  | expStart (Tuple {left, ...}) = left
+  | expStart (Record {left, ...}) = left
+  | expStart (Parens {left, ...}) = left
+  | expStart (Infix {left, ...}) = expStart left
+  | expStart (Typed {exp, ...}) = expStart exp
+  | expStart (Layered {op_ = SOME p, ...}) = p
+  | expStart (Layered {op_ = NONE, id = (p, _), ...}) = p
+  | expStart (Or {args, ...}) = expStart (hd args)
+  | expStart (Select {hash, ...}) = hash
+  | expStart (Sequence {left, ...}) = left
+  | expStart (LetInEnd {let_, ...}) = let_
+  | expStart (App (e, _)) = expStart e
+  | expStart (AndAlso {left, ...}) = expStart left
+  | expStart (OrElse {left, ...}) = expStart left
+  | expStart (Handle {exp, ...}) = expStart exp
+  | expStart (Raise {raise_, ...}) = raise_
+  | expStart (IfThenElse {if_, ...}) = if_
+  | expStart (While {while_, ...}) = while_
+  | expStart (Case {case_, ...}) = case_
+  | expStart (Fn {fn_, ...}) = fn_
+  | expStart (HOLFullQuote {head = (p, _), ...}) = p
+  | expStart (HOLQuote {head = (p, _), ...}) = p
+  | expStart (HOLLinePragma {hash_, ...}) = hash_
+  | expStart (HOLLinePragmaWith {hash_, ...}) = hash_
+  | expStart (HOLFilePragma {hash_, ...}) = hash_
+  | expStart (HOLFilePragmaWith {hash_, ...}) = hash_
+  | expStart (EmptyExp p) = p
+  | expStart (BadExp {start, ...}) = start
+
+fun expStop (Wild p) = p + 1
+  | expStop (IntegerConstant id) = idStop id
+  | expStop (WordConstant id) = idStop id
+  | expStop (StringConstant id) = idStop id
+  | expStop (CharConstant id) = idStop id
+  | expStop (RealConstant id) = idStop id
+  | expStop (Unit {right, ...}) = right + 1
+  | expStop (Ident {id, ...}) = idStop id
+  | expStop (List {stop, ...}) = stop
+  | expStop (Tuple {stop, ...}) = stop
+  | expStop (Record {stop, ...}) = stop
+  | expStop (Parens {stop, ...}) = stop
+  | expStop (Infix {right, ...}) = expStop right
+  | expStop (Typed {ty, ...}) = tyStop ty
+  | expStop (Layered {pat, ...}) = expStop pat
+  | expStop (Or {stop, ...}) = stop
+  | expStop (Select {label, ...}) = idStop label
+  | expStop (Sequence {stop, ...}) = stop
+  | expStop (LetInEnd {stop, ...}) = stop
+  | expStop (App (_, e)) = expStop e
+  | expStop (AndAlso {right, ...}) = expStop right
+  | expStop (OrElse {right, ...}) = expStop right
+  | expStop (Handle {stop, ...}) = stop
+  | expStop (Raise {exp, ...}) = expStop exp
+  | expStop (IfThenElse {else_ = SOME {exp3, ...}, ...}) = expStop exp3
+  | expStop (IfThenElse {else_ = NONE, exp2, ...}) = expStop exp2
+  | expStop (While {exp2, ...}) = expStop exp2
+  | expStop (Case {stop, ...}) = stop
+  | expStop (Fn {stop, ...}) = stop
+  | expStop (HOLFullQuote {stop, ...}) = stop
+  | expStop (HOLQuote {stop, ...}) = stop
+  | expStop (HOLLinePragma {stop, ...}) = stop
+  | expStop (HOLLinePragmaWith {stop, ...}) = stop
+  | expStop (HOLFilePragma {stop, ...}) = stop
+  | expStop (HOLFilePragmaWith {stop, ...}) = stop
+  | expStop (EmptyExp p) = p
+  | expStop (BadExp {stop, ...}) = stop
+
+fun expSpan e = (expStart e, expStop e)
+
+fun exbindStop (ExnNew {arg = SOME {ty, ...}, ...}) = tyStop ty
+  | exbindStop (ExnNew {arg = NONE, id, ...}) = idStop id
+  | exbindStop (ExnReplicate {tgt, ...}) = idStop tgt
+
+fun sigexpStop (SigIdent id) = idStop id
+  | sigexpStop (Spec {stop, ...}) = stop
+  | sigexpStop (WhereType {elems = {stop, ...}, ...}) = stop
+
+fun headerElemStop {id, attrs = NONE} = idStop id
+  | headerElemStop {attrs = SOME {stop, ...}, ...} = stop
+
+fun headerStop (HOLAncestors {ancestors_, elems}) =
+    (headerElemStop (List.last elems) handle List.Empty => ancestors_ + 9)
+  | headerStop (HOLLibs {libs_, elems}) =
+    (headerElemStop (List.last elems) handle List.Empty => libs_ + 4)
+
+fun maybeQuotedStop (UnquotedId id) = idStop id
+  | maybeQuotedStop (QuotedId id) = idStop id
+
+fun decSpan (DecSemi p) = (p, p + 1)
+  | decSpan (DecVal {val_, elems = {stop, ...}, ...}) = (val_, stop)
+  | decSpan (DecFun {fun_, fvalbind = {stop, ...}, ...}) = (fun_, stop)
+  | decSpan (DecType {type_, tybind = {stop, ...}, ...}) = (type_, stop)
+  | decSpan (DecEqtype {eqtype_, tybind = {stop, ...}, ...}) = (eqtype_, stop)
+  | decSpan (DecDatatype {datatype_, withtype_ = SOME {tybind = {stop, ...}, ...}, ...}) =
+    (datatype_, stop)
+  | decSpan (DecDatatype {datatype_, withtype_ = NONE, datbind = {stop, ...}, ...}) =
+    (datatype_, stop)
+  | decSpan (DecAbstype {abstype_, withtype_ = SOME {tybind = {stop, ...}, ...}, ...}) =
+    (abstype_, stop)
+  | decSpan (DecAbstype {abstype_, withtype_ = NONE, datbind = {stop, ...}, ...}) =
+    (abstype_, stop)
+  | decSpan (DecException {exception_, elems = {stop, ...}, ...}) = (exception_, stop)
+  | decSpan (DecLocal {local_, stop, ...}) = (local_, stop)
+  | decSpan (DecOpen {open_, elems, ...}) =
+    (open_, idStop (List.last elems) handle List.Empty => open_ + 4)
+  | decSpan (DecInfix {infix_, prec, elems, ...}) =
+    (infix_, idStop (List.last elems) handle List.Empty =>
+      case prec of SOME p => idStop p | NONE => infix_ + 5)
+  | decSpan (DecInfixr {infixr_, prec, elems, ...}) =
+    (infixr_, idStop (List.last elems) handle List.Empty =>
+      case prec of SOME p => idStop p | NONE => infixr_ + 6)
+  | decSpan (DecNonfix {nonfix_, elems, ...}) =
+    (nonfix_, idStop (List.last elems) handle List.Empty => nonfix_ + 6)
+  | decSpan (DecStructure {structure_, elems = {stop, ...}, ...}) = (structure_, stop)
+  | decSpan (DecSignature {signature_, elems = {stop, ...}, ...}) = (signature_, stop)
+  | decSpan (DecInclude {include_, sigexps, ...}) =
+    (include_, sigexpStop (List.last sigexps) handle List.Empty => include_ + 7)
+  | decSpan (Sharing {sharing_, elems = {stop, ...}, ...}) = (sharing_, stop)
+  | decSpan (DecFunctor {functor_, elems = {stop, ...}, ...}) = (functor_, stop)
+  | decSpan (DecExp e)           = expSpan e
+  | decSpan (HOLTheory {theory_, id, attrs, elems}) =
+    (theory_, headerStop (List.last elems) handle List.Empty =>
+      case attrs of NONE => idStop id | SOME {stop, ...} => stop)
+  | decSpan (HOLDefinition {definition_, stop, ...}) = (definition_, stop)
+  | decSpan (HOLDatatype {datatype_, stop, ...}) = (datatype_, stop)
+  | decSpan (HOLQuoteDecl {quote_, stop, ...}) = (quote_, stop)
+  | decSpan (HOLInductiveDecl {inductive_, stop, ...}) = (inductive_, stop)
+  | decSpan (HOLType {type_, id, attrs, bind, ...}) =
+    (type_, case bind of SOME {exp, ...} => expStop exp | NONE =>
+      case attrs of SOME {stop, ...} => stop | NONE => maybeQuotedStop id)
+  | decSpan (HOLSimpleThm {theorem_, id, attrs, bind, ...}) =
+    (theorem_, case bind of SOME {exp, ...} => expStop exp | NONE =>
+      case attrs of SOME {stop, ...} => stop | NONE => idStop id)
+  | decSpan (HOLTheoremDecl {theorem_, stop, ...}) = (theorem_, stop)
 
 end
