@@ -73,6 +73,8 @@ Ancestors[qualified]
   val _ = s ("F_OR", T ``(F \/ p <=> F \/ q) ==> (p <=> q)``)
   val _ = s ("CONJ_CONG", T ``(p <=> q) ==> (r <=> s) ==> (p /\ r <=> q /\ s)``)
   val _ = s ("NOT_NOT_ELIM", T ``!p. ~~p ==> p``)
+  val _ = s ("NOT_NOT_INTRO", T ``!p. p <=> ~~p``)
+  val _ = s ("NOT_REVERSE", T ``(p <=> ~q) ==> (q <=> ~p)``)
   val _ = s ("NOT_FALSE", T ``!p. p ==> ~p ==> F``)
   val _ = s ("NNF_CONJ", T
     ``!p q r s. (~p <=> r) ==> (~q <=> s) ==> (~(p /\ q) <=> r \/ s)``)

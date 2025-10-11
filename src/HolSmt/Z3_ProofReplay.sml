@@ -29,6 +29,8 @@ local
   val F_OR = HolSmtTheory.F_OR
   val CONJ_CONG = HolSmtTheory.CONJ_CONG
   val NOT_NOT_ELIM = HolSmtTheory.NOT_NOT_ELIM
+  val NOT_NOT_INTRO = HolSmtTheory.NOT_NOT_INTRO
+  val NOT_REVERSE = HolSmtTheory.NOT_REVERSE
   val NOT_FALSE = HolSmtTheory.NOT_FALSE
   val NNF_CONJ = HolSmtTheory.NNF_CONJ
   val NNF_DISJ = HolSmtTheory.NNF_DISJ
@@ -1006,10 +1008,14 @@ local
             handle Conv.UNCHANGED => raise ERR "" "") ()
         handle Feedback.HOL_ERR _ =>
 
-        profile "rewrite(10)(BBLAST)" blastLib.BBLAST_PROVE t
+        (profile "rewrite(10)(BBLAST)" (Feedback.trace("print blast counterexamples", 0) blastLib.BBLAST_PROVE) t
+
         handle Feedback.HOL_ERR _ =>
 
         profile "rewrite(11)(arith)" arith_prove t
+
+        | HolSatLib.SAT_cex _ => profile "rewrite(11)(arith)" arith_prove t)
+
     in
       (state_cache_thm state thm, thm)
     end
@@ -1043,11 +1049,40 @@ local
 
     let
       val (lhs, rhs) = boolSyntax.dest_eq t
-      val thm = profile "rewrite(12)(unification)" Library.gen_instantiation
+      val thm = profile "rewrite(12.1)(unification)" Library.gen_instantiation
         (lhs, rhs, #var_set state)
       val asl = Thm.hyp thm
     in
       (state_define (state_cache_thm state thm) asl, thm)
+    end
+
+    handle Feedback.HOL_ERR _ =>
+
+    let
+      val (lhs, rhs) = boolSyntax.dest_eq t
+      val rhs = boolSyntax.dest_neg (boolSyntax.dest_neg rhs)
+      val thm = profile "rewrite(12.2)(unification)" Library.gen_instantiation
+        (lhs, rhs, #var_set state)
+      fun not_not_conv tm = Thm.SPEC tm NOT_NOT_INTRO
+      val thm = Conv.CONV_RULE (Conv.RHS_CONV not_not_conv) thm
+      val asl = Thm.hyp thm
+    in
+      (state_define (state_cache_thm state thm) asl, thm)
+    end
+
+    handle Feedback.HOL_ERR _ =>
+
+    let
+      val (lhs, rhs) = boolSyntax.dest_eq t
+      val neg_lhs = boolSyntax.mk_neg lhs
+      val var = boolSyntax.dest_neg rhs
+      val def = boolSyntax.mk_eq (var, neg_lhs)
+      val p = Term.mk_var ("p", Type.bool)
+      val q = Term.mk_var ("q", Type.bool)
+      val thm' = Thm.INST [p |-> var, q |-> lhs] NOT_REVERSE
+      val thm = Drule.UNDISCH thm'
+    in
+      (state_define (state_cache_thm state thm) [def], thm)
     end
   end
 
@@ -1195,11 +1230,11 @@ local
 
   fun check_thm (name, thm, concl) =
     if Thm.concl thm !~ concl then
-      raise ERR "check_thm" (name ^ ": conclusion is " ^ Hol_pp.term_to_string
-        (Thm.concl thm) ^ ", expected: " ^ Hol_pp.term_to_string concl)
+      raise ERR "check_thm" (name ^ ": conclusion is " ^ Library.term_to_string
+        (Thm.concl thm) ^ ", expected: " ^ Library.term_to_string concl)
     else if !Library.trace > 2 then
       Feedback.HOL_MESG
-        ("HolSmtLib: " ^ name ^ " proved: " ^ Hol_pp.thm_to_string thm)
+        ("HolSmtLib: " ^ name ^ " proved: " ^ Library.thm_to_string thm)
     else ()
 
   fun zero_prems (state : state, proof : proof)
