@@ -1150,13 +1150,15 @@ QED
 val set_ss' = arith_ss ++ PRED_SET_ss;
 
 (* This lemma is provided by Konrad Slind *)
-val lemma = Q.prove
-  (`!P. ~(?N. INFINITE N /\ !n. N n ==> P n) <=> !N. N SUBSET P ==> FINITE N`,
+Theorem lemma[local]:
+    !P. ~(?N. INFINITE N /\ !n. N n ==> P n) <=> !N. N SUBSET P ==> FINITE N
+Proof
   rw_tac set_ss' [EQ_IMP_THM, SUBSET_DEF, IN_DEF]
   >- (`FINITE P \/ ?n. P n /\ ~P n` by metis_tac []
        >> imp_res_tac SUBSET_FINITE
        >> full_simp_tac std_ss [SUBSET_DEF, IN_DEF])
-  >- metis_tac[]);
+  >- metis_tac[]
+QED
 
 (* "From this and the original assumption, you should be able to get that P is finite,
     so has a maximum element." -- Konrad Slind, Feb 17, 2019.

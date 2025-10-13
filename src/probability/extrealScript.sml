@@ -1051,10 +1051,11 @@ in
 end;
 
 (** lemma3 depends on both lemma1 and lemma2 *)
-val lemma3 = Q.prove (
-   `!b f x s. (!y. y IN (x INSERT s) ==> f y <> PosInf) /\ b <> PosInf /\ FINITE s ==>
+Theorem lemma3[local]:
+    !b f x s. (!y. y IN (x INSERT s) ==> f y <> PosInf) /\ b <> PosInf /\ FINITE s ==>
               (ITSET (\e acc. f e + acc) (x INSERT s) b =
-               (\e acc. f e + acc) x (ITSET (\e acc. f e + acc) (s DELETE x) b))`,
+               (\e acc. f e + acc) x (ITSET (\e acc. f e + acc) (s DELETE x) b))
+Proof
   (* proof *)
     Suff `!f s. FINITE s ==>
                 !x b. (!y. y IN (x INSERT s) ==> f y <> PosInf) /\ b <> PosInf ==>
@@ -1092,13 +1093,15 @@ val lemma3 = Q.prove (
  >> `ITSET (\e acc. f e + acc) s b <> PosInf` by METIS_TAC [lemma2]
  >> Q.ABBREV_TAC `t = ITSET (\e acc. f e + acc) s b`
  >> Q.PAT_X_ASSUM `!x b. b <> PosInf => X` K_TAC
- >> METIS_TAC [add_assoc, add_comm, IN_INSERT]);
+ >> METIS_TAC [add_assoc, add_comm, IN_INSERT]
+QED
 
 (** lemma3' depends on lemma1' and lemma2' (proof is the same as lemma3) *)
-val lemma3' = Q.prove (
-   `!b f x s. (!y. y IN (x INSERT s) ==> f y <> NegInf) /\ b <> NegInf /\ FINITE s ==>
+Theorem lemma3'[local]:
+    !b f x s. (!y. y IN (x INSERT s) ==> f y <> NegInf) /\ b <> NegInf /\ FINITE s ==>
               (ITSET (\e acc. f e + acc) (x INSERT s) b =
-               (\e acc. f e + acc) x (ITSET (\e acc. f e + acc) (s DELETE x) b))`,
+               (\e acc. f e + acc) x (ITSET (\e acc. f e + acc) (s DELETE x) b))
+Proof
  (* proof *)
     Suff `!f s. FINITE s ==>
                 !x b. (!y. y IN (x INSERT s) ==> f y <> NegInf) /\ b <> NegInf ==>
@@ -1136,7 +1139,8 @@ val lemma3' = Q.prove (
  >> `ITSET (\e acc. f e + acc) s b <> NegInf` by METIS_TAC [lemma2']
  >> Q.ABBREV_TAC `t = ITSET (\e acc. f e + acc) s b`
  >> Q.PAT_X_ASSUM `!x b. b <> NegInf => X` K_TAC
- >> METIS_TAC [add_assoc, add_comm, IN_INSERT]);
+ >> METIS_TAC [add_assoc, add_comm, IN_INSERT]
+QED
 
 (* NOTE: EXTREAL_SUM_IMAGE is not defined if there're mixing of PosInfs and NegInfs
    in the summation, since ``PosInf + NegInf`` is not defined. *)

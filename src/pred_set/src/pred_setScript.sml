@@ -2716,13 +2716,18 @@ Definition LINV_OPT_def[nocompute]:
     if y IN IMAGE f s then SOME (@x. x IN s /\ (f x = y)) else NONE
 End
 
-val SELECT_EQ_AX = Q.prove
-  (`($@ P = x) ==> $? P ==> P x`,
+Theorem SELECT_EQ_AX[local]:
+    ($@ P = x) ==> $? P ==> P x
+Proof
   DISCH_THEN (fn th => REWRITE_TAC [SYM th]) THEN DISCH_TAC THEN
-  irule SELECT_AX THEN ASM_REWRITE_TAC [ETA_AX]) ;
+  irule SELECT_AX THEN ASM_REWRITE_TAC [ETA_AX]
+QED
 
-val IN_IMAGE' = Q.prove (`y IN IMAGE f s <=> ?x. x IN s /\ (f x = y)`,
-  mesonLib.MESON_TAC [IN_IMAGE]) ;
+Theorem IN_IMAGE'[local]:
+   y IN IMAGE f s <=> ?x. x IN s /\ (f x = y)
+Proof
+  mesonLib.MESON_TAC [IN_IMAGE]
+QED
 
 Theorem LINV_OPT_THM:
    (LINV_OPT f s y = SOME x) ==> x IN s /\ (f x = y)
@@ -3229,8 +3234,9 @@ Proof
  >> RW_TAC std_ss []
 QED
 
-val lem = Q.prove
-(`!t. FINITE t ==> !s f. INJ f s t ==> FINITE s`,
+Theorem lem[local]:
+  !t. FINITE t ==> !s f. INJ f s t ==> FINITE s
+Proof
  SET_INDUCT_TAC
   THEN RW_TAC bool_ss [INJ_EMPTY,FINITE_EMPTY]
   THEN Cases_on `?a. a IN s' /\ (f a = e)`
@@ -3243,7 +3249,8 @@ val lem = Q.prove
        THEN RW_TAC bool_ss [INJ_DEF]
        THEN `!x. x IN s' ==> f x IN s` by METIS_TAC [IN_INSERT]
        THEN `INJ f s' s` by METIS_TAC [INJ_DEF]
-       THEN METIS_TAC[]]);
+       THEN METIS_TAC[]]
+QED
 
 Theorem FINITE_INJ:
   !(f:'a->'b) s t. INJ f s t /\ FINITE t ==> FINITE s
@@ -4412,10 +4419,12 @@ val gdef = map Term
 val rand_case =
     prove_case_rand_thm {case_def = option_case_def, nchotomy = option_CASES};
 
-val optcase_elim = Q.prove(
-  ‘option_CASE optv n fv:bool <=>
-     (optv = NONE) /\ n \/ ?x. (optv = SOME x) /\ fv x’,
-  Cases_on `optv` >> simp[]);
+Theorem optcase_elim[local]:
+   option_CASE optv n fv:bool <=>
+     (optv = NONE) /\ n \/ ?x. (optv = SOME x) /\ fv x
+Proof
+  Cases_on `optv` >> simp[]
+QED
 
 val g_finite =
     TAC_PROOF
@@ -4520,8 +4529,9 @@ val result_part1 =
     |> CHOOSE(``g:num ->'a set``, gexists)
     |> DISCH_ALL
 
-val result_part2 = Q.prove(
-  ‘!s. FINITE s ==> !f. INJ f s s ==> SURJ f s s’,
+Theorem result_part2[local]:
+   !s. FINITE s ==> !f. INJ f s s ==> SURJ f s s
+Proof
   ho_match_mp_tac FINITE_COMPLETE_INDUCTION >>
   simp[INJ_IFF, SURJ_DEF] >>
   rpt strip_tac >> SPOSE_NOT_THEN strip_assume_tac >>
@@ -4530,7 +4540,8 @@ val result_part2 = Q.prove(
   ‘INJ f s s0’ by simp[INJ_DEF, Abbr‘s0’] >>
   ‘FINITE s0’ by simp[Abbr‘s0’] >>
   ‘CARD s0 < CARD s’ suffices_by METIS_TAC[PHP] >>
-  simp[Abbr‘s0’, CARD_DELETE] >> Cases_on ‘s’ >> fs[])
+  simp[Abbr‘s0’, CARD_DELETE] >> Cases_on ‘s’ >> fs[]
+QED
 
 (* ---------------------------------------------------------------------*)
 (* Finally, we can prove the desired theorem.                           *)
@@ -4593,8 +4604,11 @@ QED
 val FINITE_INDUCT' =
   Ho_Rewrite.REWRITE_RULE [PULL_FORALL] FINITE_INDUCT ;
 
-val NOT_IN_COUNT = Q.prove (`~ (m IN count m)`,
-  REWRITE_TAC [IN_COUNT, LESS_REFL]) ;
+Theorem NOT_IN_COUNT[local]:
+   ~ (m IN count m)
+Proof
+  REWRITE_TAC [IN_COUNT, LESS_REFL]
+QED
 
 Theorem FINITE_BIJ_COUNT_EQ:
    !s. FINITE s = ?c n. BIJ c (count n) s
@@ -4807,11 +4821,13 @@ Proof
                     EXISTS_OR_THM]
 QED
 
-val DISJOINT_BIGUNION_lemma = Q.prove
-(`!s t. DISJOINT (BIGUNION s) t = !s'. s' IN s ==> DISJOINT s' t`,
+Theorem DISJOINT_BIGUNION_lemma[local]:
+  !s t. DISJOINT (BIGUNION s) t = !s'. s' IN s ==> DISJOINT s' t
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THEN
   SIMP_TAC bool_ss [DISJOINT_DEF, EXTENSION, IN_BIGUNION, IN_INTER,
-                    NOT_IN_EMPTY] THEN MESON_TAC []);
+                    NOT_IN_EMPTY] THEN MESON_TAC []
+QED
 
 (* above with DISJOINT x y both ways round *)
 Theorem DISJOINT_BIGUNION =
@@ -6073,11 +6089,12 @@ Proof
   PROVE_TAC [LESS_EQ_LESS_EQ_MONO, ADD_COMM]
 QED
 
-val DISJ_BIGUNION_CARD = Q.prove (
-`!P. FINITE P
+Theorem DISJ_BIGUNION_CARD[local]:
+ !P. FINITE P
      ==> (!s. s IN P ==> FINITE s) /\
          (!s t. s IN P /\ t IN P /\ ~(s = t) ==> DISJOINT s t)
-     ==> (CARD (BIGUNION P) = SUM_IMAGE CARD P)`,
+     ==> (CARD (BIGUNION P) = SUM_IMAGE CARD P)
+Proof
   SET_INDUCT_TAC THEN
   RW_TAC bool_ss [CARD_EMPTY,BIGUNION_EMPTY,SUM_IMAGE_THM,
                   BIGUNION_INSERT] THEN
@@ -6091,7 +6108,8 @@ val DISJ_BIGUNION_CARD = Q.prove (
     by RW_TAC arith_ss [] THEN
   ONCE_ASM_REWRITE_TAC [] THEN
   FULL_SIMP_TAC arith_ss [CARD_UNION, DELETE_NON_ELEMENT] THEN
-  METIS_TAC [IN_INSERT]);
+  METIS_TAC [IN_INSERT]
+QED
 
 Theorem SUM_SAME_IMAGE:
   !P. FINITE P
@@ -7259,9 +7277,11 @@ Proof
   simp[]
 QED
 
-val lem = Q.prove
-(`!n. 2 * 2**n = 2**n + 2**n`,
- RW_TAC arith_ss [EXP]);
+Theorem lem[local]:
+  !n. 2 * 2**n = 2**n + 2**n
+Proof
+ RW_TAC arith_ss [EXP]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Cardinality of the power set of a finite set                              *)
@@ -8225,35 +8245,42 @@ Definition chooser_def:
   (chooser s (SUC n) = chooser (REST s) n)
 End
 
-val chooser_lem1 = Q.prove (
-`!n s t. INFINITE s /\ s SUBSET t ==> chooser s n IN t`,
+Theorem chooser_lem1[local]:
+ !n s t. INFINITE s /\ s SUBSET t ==> chooser s n IN t
+Proof
 Induct THEN
 RWTAC [chooser_def, SUBSET_DEF] THENL [
   `s <> {}` by (RWTAC [EXTENSION] THEN METIS_TAC [INFINITE_INHAB]) THEN
   METIS_TAC [CHOICE_DEF],
   `REST s SUBSET s` by RWTAC [REST_SUBSET] THEN
   METIS_TAC [infinite_rest]
-]);
+]
+QED
 
-val chooser_lem2 = Q.prove (
-`!n s. INFINITE s ==> chooser (REST s) n <> CHOICE s`,
+Theorem chooser_lem2[local]:
+ !n s. INFINITE s ==> chooser (REST s) n <> CHOICE s
+Proof
 RWTAC [] THEN
 IMP_RES_TAC infinite_rest THEN
 `chooser (REST s) n IN (REST s)`
         by METIS_TAC [chooser_lem1, SUBSET_REFL] THEN
-FSTAC [REST_DEF, IN_DELETE]);
+FSTAC [REST_DEF, IN_DELETE]
+QED
 
-val chooser_lem3 = Q.prove (
-`!x y s. INFINITE s /\ (chooser s x = chooser s y) ==> (x = y)`,
+Theorem chooser_lem3[local]:
+ !x y s. INFINITE s /\ (chooser s x = chooser s y) ==> (x = y)
+Proof
 Induct_on `x` THEN
 RWTAC [chooser_def] THEN
 Cases_on `y` THEN
 FSTAC [chooser_def] THEN
 RWTAC [] THEN
-METIS_TAC [chooser_lem2, infinite_rest]);
+METIS_TAC [chooser_lem2, infinite_rest]
+QED
 
-val infinite_num_inj_lem = Q.prove (
-`!s. FINITE s ==> ~?f. INJ f (UNIV:num set) s`,
+Theorem infinite_num_inj_lem[local]:
+ !s. FINITE s ==> ~?f. INJ f (UNIV:num set) s
+Proof
 HO_MATCH_MP_TAC FINITE_INDUCT THEN
 RWTAC [] THEN
 FSTAC [INJ_DEF] THEN
@@ -8275,7 +8302,8 @@ RWTAC [] THENL [
     `SUC x = SUC y'` by METIS_TAC [] THEN DECIDE_TAC
   ],
   METIS_TAC []
-]);
+]
+QED
 
 Theorem infinite_num_inj:
  !s. INFINITE s = ?f. INJ f (UNIV:num set) s
@@ -8324,9 +8352,11 @@ Q.EXISTS_TAC `\x.x` THEN
 RWTAC []
 QED
 
-val INJ_SUBSET = Q.prove (
-`!f s t s'. INJ f s t /\ s' SUBSET s ==> INJ f s' t`,
-RWTAC [INJ_DEF, SUBSET_DEF]);
+Theorem INJ_SUBSET[local]:
+ !f s t s'. INJ f s t /\ s' SUBSET s ==> INJ f s' t
+Proof
+RWTAC [INJ_DEF, SUBSET_DEF]
+QED
 
 Theorem subset_countable:
  !s t. countable s /\ t SUBSET s ==> countable t
@@ -8438,10 +8468,12 @@ Proof
     simp[FORALL_PROD,pair_to_num_inv]
 QED
 
-val num_cross_countable = Q.prove (
-  `countable (UNIV:num set CROSS UNIV:num set)`,
+Theorem num_cross_countable[local]:
+   countable (UNIV:num set CROSS UNIV:num set)
+Proof
   RWTAC [countable_surj, SURJ_DEF, CROSS_DEF] THEN
-  METIS_TAC [PAIR, pair_to_num_inv]);
+  METIS_TAC [PAIR, pair_to_num_inv]
+QED
 
 Theorem cross_countable:
  !s t. countable s /\ countable t ==> countable (s CROSS t)

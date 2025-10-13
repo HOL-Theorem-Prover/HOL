@@ -1526,10 +1526,12 @@ SRW_TAC [] [] THEN
 METIS_TAC []
 QED
 
-val okpath_co_ind2 = Q.prove (
-`!P R p.
-  (!x r p. P (pcons x r p) ==> R x r (first p) /\ P p) /\ P p ==> okpath R p`,
-METIS_TAC [okpath_co_ind]);
+Theorem okpath_co_ind2[local]:
+ !P R p.
+  (!x r p. P (pcons x r p) ==> R x r (first p) /\ P p) /\ P p ==> okpath R p
+Proof
+METIS_TAC [okpath_co_ind]
+QED
 
 Theorem okpath_unfold:
   !P m proj f s.

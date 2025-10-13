@@ -33,13 +33,15 @@ fun simp ths = simpLib.asm_simp_tac (srw_ss()) ths (* don't eta-reduce *)
 
 val pairfn = Term `\a b. (a=x) /\ (b=y)`;
 
-val PAIR_EXISTS = Q.prove
-(`?p:'a -> 'b -> bool. (\p. ?x y. p = ^pairfn) p`,
+Theorem PAIR_EXISTS[local]:
+  ?p:'a -> 'b -> bool. (\p. ?x y. p = ^pairfn) p
+Proof
  BETA_TAC
   THEN Ho_Rewrite.ONCE_REWRITE_TAC [SWAP_EXISTS_THM] THEN Q.EXISTS_TAC `x`
   THEN Ho_Rewrite.ONCE_REWRITE_TAC [SWAP_EXISTS_THM] THEN Q.EXISTS_TAC `y`
   THEN EXISTS_TAC pairfn
-  THEN REFL_TAC);
+  THEN REFL_TAC
+QED
 
 val ABS_REP_prod =
  let val tydef = new_type_definition("prod", PAIR_EXISTS)
@@ -62,13 +64,15 @@ in
   fun ot x = ot0 x x
 end
 
-val REP_ABS_PAIR = Q.prove
-(`!x y. REP_prod (ABS_prod ^pairfn) = ^pairfn`,
+Theorem REP_ABS_PAIR[local]:
+  !x y. REP_prod (ABS_prod ^pairfn) = ^pairfn
+Proof
  REPEAT GEN_TAC
   THEN REWRITE_TAC [SYM (SPEC pairfn (CONJUNCT2 ABS_REP_prod))]
   THEN BETA_TAC
   THEN MAP_EVERY Q.EXISTS_TAC [`x`, `y`]
-  THEN REFL_TAC);
+  THEN REFL_TAC
+QED
 
 
 (*---------------------------------------------------------------------------*)

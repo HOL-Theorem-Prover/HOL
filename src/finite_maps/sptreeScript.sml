@@ -468,8 +468,9 @@ QED
 
 val DIV2 = DIVISION |> Q.SPEC `2` |> REWRITE_RULE [DECIDE ``0 < 2``]
 
-val even_lem = Q.prove(
-  `EVEN k /\ k <> 0 ==> (2 * ((k - 1) DIV 2) + 2 = k)`,
+Theorem even_lem[local]:
+   EVEN k /\ k <> 0 ==> (2 * ((k - 1) DIV 2) + 2 = k)
+Proof
   qabbrev_tac `k0 = k - 1`  >>
   strip_tac >> `k = k0 + 1` by simp[Abbr`k0`] >>
   pop_assum SUBST_ALL_TAC >> qunabbrev_tac `k0` >>
@@ -478,10 +479,12 @@ val even_lem = Q.prove(
   map_every qabbrev_tac [`q = k0 DIV 2`, `r = k0 MOD 2`] >>
   markerLib.RM_ALL_ABBREVS_TAC >>
   fs[EVEN_ADD, EVEN_MULT] >>
-  `(r = 0) \/ (r = 1)` by simp[] >> fs[])
+  `(r = 0) \/ (r = 1)` by simp[] >> fs[]
+QED
 
-val odd_lem = Q.prove(
-  `~EVEN k /\ k <> 0 ==> (2 * ((k - 1) DIV 2) + 1 = k)`,
+Theorem odd_lem[local]:
+   ~EVEN k /\ k <> 0 ==> (2 * ((k - 1) DIV 2) + 1 = k)
+Proof
   qabbrev_tac `k0 = k - 1`  >>
   strip_tac >> `k = k0 + 1` by simp[Abbr`k0`] >>
   pop_assum SUBST_ALL_TAC >> qunabbrev_tac `k0` >>
@@ -490,17 +493,22 @@ val odd_lem = Q.prove(
   map_every qabbrev_tac [`q = k0 DIV 2`, `r = k0 MOD 2`] >>
   markerLib.RM_ALL_ABBREVS_TAC >>
   fs[EVEN_ADD, EVEN_MULT] >>
-  `(r = 0) \/ (r = 1)` by simp[] >> fs[])
+  `(r = 0) \/ (r = 1)` by simp[] >> fs[]
+QED
 
 val even_lem' = CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])) even_lem
 val odd_lem' = CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])) odd_lem
 
-val even_imposs = Q.prove(
-  ‘EVEN n ==> !m. n <> 2 * m + 1’,
-  rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]);
-val odd_imposs = Q.prove(
-  ‘~EVEN n ==> !m. n <> 2 * m + 2’,
-  rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]);
+Theorem even_imposs[local]:
+   EVEN n ==> !m. n <> 2 * m + 1
+Proof
+  rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]
+QED
+Theorem odd_imposs[local]:
+   ~EVEN n ==> !m. n <> 2 * m + 2
+Proof
+  rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]
+QED
 
 fun writeL th = CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [th]))
 
@@ -1609,11 +1617,13 @@ Definition subspt_eq:
      subspt t1 (spt_left t) /\ subspt t2 (spt_right t))
 End
 
-val subspt_lookup_lemma = Q.prove(
-  `(!x y. ((if x = 0:num then SOME a else f x) = SOME y) ==> p x y)
+Theorem subspt_lookup_lemma[local]:
+   (!x y. ((if x = 0:num then SOME a else f x) = SOME y) ==> p x y)
    <=>
-   p 0 a /\ (!x y. x <> 0 /\ (f x = SOME y) ==> p x y)`,
-  metis_tac [optionTheory.SOME_11]);
+   p 0 a /\ (!x y. x <> 0 /\ (f x = SOME y) ==> p x y)
+Proof
+  metis_tac [optionTheory.SOME_11]
+QED
 
 Theorem subspt_lookup:
    !t1 t2.
@@ -1780,10 +1790,12 @@ Proof
   simp[wf_def, wf_mk_BN, wf_mk_BS]
 QED
 
-val ALOOKUP_MAP_lemma = Q.prove(
-  `ALOOKUP (MAP (\kv. (FST kv, f (FST kv) (SND kv))) al) n =
-   OPTION_MAP (\v. f n v) (ALOOKUP al n)`,
-  Induct_on `al` >> simp[pairTheory.FORALL_PROD] >> rw[]);
+Theorem ALOOKUP_MAP_lemma[local]:
+   ALOOKUP (MAP (\kv. (FST kv, f (FST kv) (SND kv))) al) n =
+   OPTION_MAP (\v. f n v) (ALOOKUP al n)
+Proof
+  Induct_on `al` >> simp[pairTheory.FORALL_PROD] >> rw[]
+QED
 
 Theorem lookup_mk_BN:
    lookup i (mk_BN t1 t2) =
@@ -1882,21 +1894,23 @@ Proof
   SIMP_TAC std_ss [lookup_fromList] \\ DECIDE_TAC
 QED
 
-val lemmas = Q.prove(
-  `(2 + 2 * n - 1 = 2 * n + 1:num) /\
+Theorem lemmas[local]:
+   (2 + 2 * n - 1 = 2 * n + 1:num) /\
     ((2 + 2 * n' = 2 * n'' + 2) <=> (n' = n'':num)) /\
     ((2 * m = 2 * n) <=> (m = n)) /\
     ((2 * n'' + 1) DIV 2 = n'') /\
     ((2 * n) DIV 2 = n) /\
     (2 + 2 * n' <> 2 * n'' + 1) /\
-    (2 * m + 1 <> 2 * n' + 2)`,
+    (2 * m + 1 <> 2 * n' + 2)
+Proof
   REPEAT STRIP_TAC \\ SIMP_TAC std_ss [] \\ fs []
   \\ full_simp_tac(srw_ss())[ONCE_REWRITE_RULE [MULT_COMM] MULT_DIV]
   \\ full_simp_tac(srw_ss())[ONCE_REWRITE_RULE [MULT_COMM] DIV_MULT]
   \\ IMP_RES_TAC (METIS_PROVE [] ``(m = n) ==> (m MOD 2 = n MOD 2)``)
   \\ POP_ASSUM MP_TAC \\ SIMP_TAC std_ss []
   \\ ONCE_REWRITE_TAC [MATCH_MP (GSYM MOD_PLUS) (DECIDE ``0 < 2:num``)]
-  \\ EVAL_TAC \\ fs[MOD_EQ_0,ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0]);
+  \\ EVAL_TAC \\ fs[MOD_EQ_0,ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0]
+QED
 
 Definition spt_fold_def:
   (spt_fold f acc LN = acc) /\
@@ -2116,23 +2130,28 @@ Proof
   \\ simp[ADD1]
 QED
 
-val splem1 = Q.prove(`
-  a <> 0 ==> (a-1) DIV 2 < a`,
-  simp[DIV_LT_X]);
+Theorem splem1[local]:
+
+  a <> 0 ==> (a-1) DIV 2 < a
+Proof
+  simp[DIV_LT_X]
+QED
 
 val DIV2_P_UNIV =
   DIV_P_UNIV |> SPEC_ALL |> Q.INST [`n` |-> `2`] |> SIMP_RULE (srw_ss()) []
              |> EQ_IMP_RULE |> #2 |> Q.GENL [`P`, `m`]
 
-val splem3 = Q.prove(
-  `(EVEN c /\ EVEN a \/ ODD a /\ ODD c) /\ a <> c /\ a <> 0 /\ c <> 0 ==>
-   (a-1) DIV 2 <> (c-1) DIV 2`,
+Theorem splem3[local]:
+   (EVEN c /\ EVEN a \/ ODD a /\ ODD c) /\ a <> c /\ a <> 0 /\ c <> 0 ==>
+   (a-1) DIV 2 <> (c-1) DIV 2
+Proof
   map_every Cases_on [`a`, `c`] >>
   simp[DIV_LT_X, EVEN, ODD] >> DEEP_INTRO_TAC DIV2_P_UNIV >> rpt gen_tac >>
   rw[] >> fs[EVEN_ADD, EVEN_MULT, ODD_ADD, ODD_MULT] >>
   DEEP_INTRO_TAC DIV2_P_UNIV >> rw[] >>
   fs[EVEN_ADD, EVEN_MULT, ODD_ADD, ODD_MULT] >>
-  rpt (rename [‘x < 2’] >> ‘(x = 0) \/ (x = 1)’ by simp[] >> fs[]));
+  rpt (rename [‘x < 2’] >> ‘(x = 0) \/ (x = 1)’ by simp[] >> fs[])
+QED
 
 Theorem insert_swap:
   !t a b c d.

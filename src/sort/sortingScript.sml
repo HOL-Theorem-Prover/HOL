@@ -96,21 +96,27 @@ Proof
  METIS_TAC [NOT_CONS_NIL]
 QED
 
-val MEM_FILTER_EQ = Q.prove
-(‘!l x. MEM x l = ~(FILTER ($= x) l = [])’,
- Induct THEN SRW_TAC [][]);
+Theorem MEM_FILTER_EQ[local]:
+  !l x. MEM x l = ~(FILTER ($= x) l = [])
+Proof
+ Induct THEN SRW_TAC [][]
+QED
 
-val MEM_APPEND_SPLIT = Q.prove
-(‘!L x. MEM x L ==> ?M N. L = M ++ x::N’,
+Theorem MEM_APPEND_SPLIT[local]:
+  !L x. MEM x L ==> ?M N. L = M ++ x::N
+Proof
  Induct THEN SRW_TAC [][] THENL [
    Q.EXISTS_TAC ‘[]’ THEN SRW_TAC [][],
    ‘?M N. L = M ++ x::N’ by METIS_TAC [] THEN
    Q.EXISTS_TAC ‘h::M’ THEN SRW_TAC [][]
- ]);
+ ]
+QED
 
-val FILTER_EQ_CONS_APPEND = Q.prove
-(‘!M N x. FILTER ($= x) M ++ x::N = x::FILTER ($= x) M ++ N’,
- Induct THEN SRW_TAC [][])
+Theorem FILTER_EQ_CONS_APPEND[local]:
+  !M N x. FILTER ($= x) M ++ x::N = x::FILTER ($= x) M ++ N
+Proof
+ Induct THEN SRW_TAC [][]
+QED
 
 Theorem PERM_CONS_EQ_APPEND:
   !L h. PERM (h::t) L = ?M N. (L = M ++ h::N) /\ PERM t (M ++ N)
@@ -282,13 +288,15 @@ val perm_PERM = UNDISCH perm_PERM
 
 val _ = print "Proving perm has primitive recursive characterisation\n"
 
-val perm_cons_append' = Q.prove
-  (‘^perm_t ==> !M. perm (h::M ++ N) (M ++ [h] ++ N)’,
+Theorem perm_cons_append'[local]:
+    ^perm_t ==> !M. perm (h::M ++ N) (M ++ [h] ++ N)
+Proof
   STRIP_TAC >> ASSUME_TAC perm_rules >> ASSUME_TAC perm_refl >>
     RULE_L_ASSUM_TAC CONJUNCTS >>
     Induct >> ASM_SIMP_TAC list_ss [] >> GEN_TAC >>
     MATCH_MP_TAC perm_trans >> Q.EXISTS_TAC ‘h'::h::(M ++ N)’ >>
-    RES_TAC >> ASM_SIMP_TAC list_ss []) ;
+    RES_TAC >> ASM_SIMP_TAC list_ss []
+QED
 
 val perm_cons_append = prove(
   “^perm_t ==> !l1 l2. perm l1 l2 ==>
@@ -683,17 +691,19 @@ QED
 (* original list.                                                            *)
 (*---------------------------------------------------------------------------*)
 
-val PART_PERM = Q.prove
-(‘!P L a1 a2 l1 l2.
+Theorem PART_PERM[local]:
+  !P L a1 a2 l1 l2.
    ((a1,a2) = PART P L l1 l2)
       ==>
-   PERM (L ++ (l1 ++ l2)) (a1 ++ a2)’,
+   PERM (L ++ (l1 ++ l2)) (a1 ++ a2)
+Proof
 Induct_on ‘L’
   THEN RW_TAC list_ss [PART_DEF, PERM_REFL]
   THEN RES_TAC THEN MATCH_MP_TAC PERM_TRANS THENL
   [Q.EXISTS_TAC ‘APPEND L (APPEND (h::l1) l2)’,
    Q.EXISTS_TAC ‘APPEND L (APPEND l1 (h::l2))’]
-  THEN PROVE_TAC [APPEND,APPEND_ASSOC,CONS_PERM,PERM_REFL]);
+  THEN PROVE_TAC [APPEND,APPEND_ASSOC,CONS_PERM,PERM_REFL]
+QED
 
 (*---------------------------------------------------------------------------
      Everything in the partitions occurs in the original list, and
@@ -860,8 +870,9 @@ Proof
   irule PERM_SINGLE_SWAP_CONS >> FIRST_ASSUM ACCEPT_TAC
 QED
 
-val PERM_is_TC_PSS = Q.prove (
-  ‘!l1 l2. PERM l1 l2 ==> TC PERM_SINGLE_SWAP l1 l2’,
+Theorem PERM_is_TC_PSS[local]:
+   !l1 l2. PERM l1 l2 ==> TC PERM_SINGLE_SWAP l1 l2
+Proof
   Induct THEN1 (SIMP_TAC list_ss [PERM_NIL] >>
       irule TC_SUBSET >> irule PERM_SINGLE_SWAP_REFL) >>
     REPEAT STRIP_TAC >> IMP_RES_TAC PERM_CONS_EQ_APPEND >>
@@ -872,13 +883,16 @@ val PERM_is_TC_PSS = Q.prove (
       RES_TAC >> irule TC_TRANS >> Q.EXISTS_TAC ‘M ++ N’ >>
       CONJ_TAC THEN1 POP_ASSUM ACCEPT_TAC >>
       irule TC_SUBSET >> irule PERM_SINGLE_SWAP_APPEND,
-    irule TC_SUBSET >> irule PERM_SINGLE_SWAP_APPEND ] ) ;
+    irule TC_SUBSET >> irule PERM_SINGLE_SWAP_APPEND ]
+QED
 
-val PSS_is_PERM = Q.prove (
-  ‘!l1 l2. PERM_SINGLE_SWAP l1 l2 ==> PERM l1 l2’,
+Theorem PSS_is_PERM[local]:
+   !l1 l2. PERM_SINGLE_SWAP l1 l2 ==> PERM l1 l2
+Proof
   SIMP_TAC list_ss [PERM_SINGLE_SWAP_DEF, PERM_alt] >>
     REPEAT STRIP_TAC >>
-    ASM_SIMP_TAC list_ss [FILTER_APPEND_DISTRIB]) ;
+    ASM_SIMP_TAC list_ss [FILTER_APPEND_DISTRIB]
+QED
 
 val TC_PSS_is_PERM =
   REWRITE_RULE [MATCH_MP transitive_TC_identity PERM_transitive]

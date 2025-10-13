@@ -38,11 +38,13 @@ End
 val _ = export_rewrites["ALOOKUP_def"];
 val ALOOKUP_ind = theorem"ALOOKUP_ind";
 
-val lemma = Q.prove(
-`MAP (\k.(k,fm ' k)) (SET_TO_LIST (REST (FDOM fm))) =
- fmap_to_alist (fm \\ (CHOICE (FDOM fm)))`,
+Theorem lemma[local]:
+ MAP (\k.(k,fm ' k)) (SET_TO_LIST (REST (FDOM fm))) =
+ fmap_to_alist (fm \\ (CHOICE (FDOM fm)))
+Proof
 SRW_TAC [][fmap_to_alist_def,REST_DEF] THEN
-MATCH_MP_TAC MAP_CONG THEN SRW_TAC [][DOMSUB_FAPPLY_THM]);
+MATCH_MP_TAC MAP_CONG THEN SRW_TAC [][DOMSUB_FAPPLY_THM]
+QED
 
 Theorem ALOOKUP_FAILS:
     (ALOOKUP l x = NONE) <=> !k v. MEM (k,v) l ==> k <> x

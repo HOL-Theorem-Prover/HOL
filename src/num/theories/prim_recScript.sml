@@ -573,8 +573,9 @@ val _ = overload_on ("Wellfounded", ``wellfounded``);
  * First half of showing that the two definitions of wellfoundedness agree.
  *---------------------------------------------------------------------------*)
 
-val WF_IMP_WELLFOUNDED = Q.prove(
-`!R. WF R ==> wellfounded R`,
+Theorem WF_IMP_WELLFOUNDED[local]:
+ !R. WF R ==> wellfounded R
+Proof
  GEN_TAC THEN CONV_TAC CONTRAPOS_CONV
  THEN REWRITE_TAC[wellfounded_def,relationTheory.WF_DEF]
  THEN STRIP_TAC
@@ -586,14 +587,16 @@ val WF_IMP_WELLFOUNDED = Q.prove(
    REWRITE_TAC[GSYM IMP_DISJ_THM]
     THEN GEN_TAC THEN DISCH_THEN (CHOOSE_THEN SUBST1_TAC)
     THEN Q.EXISTS_TAC`f(SUC n)` THEN ASM_REWRITE_TAC[]
-    THEN Q.EXISTS_TAC`SUC n` THEN REFL_TAC]);
+    THEN Q.EXISTS_TAC`SUC n` THEN REFL_TAC]
+QED
 
 (*---------------------------------------------------------------------------
  * Second half.
  *---------------------------------------------------------------------------*)
 
-val WELLFOUNDED_IMP_WF = Q.prove(
-`!R. wellfounded R ==> WF R`,
+Theorem WELLFOUNDED_IMP_WF[local]:
+ !R. wellfounded R ==> WF R
+Proof
  REWRITE_TAC[wellfounded_def,relationTheory.WF_DEF]
   THEN GEN_TAC THEN CONV_TAC CONTRAPOS_CONV
   THEN Ho_Rewrite.REWRITE_TAC
@@ -608,7 +611,8 @@ val WELLFOUNDED_IMP_WF = Q.prove(
   THEN RES_TAC
   THEN IMP_RES_TAC(BETA_RULE
      (Q.SPEC `\q. R q (SIMP_REC w (\x. @q. R q x /\ B q) n) /\ B q`
-              boolTheory.SELECT_AX)));
+              boolTheory.SELECT_AX))
+QED
 
 
 Theorem WF_IFF_WELLFOUNDED:

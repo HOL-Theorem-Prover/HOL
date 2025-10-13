@@ -3291,9 +3291,11 @@ Proof
   REWRITE_TAC [numTheory.NOT_SUC, NULL_DEF, CONJUNCT1 GENLIST, GENLIST_CONS]
 QED
 
-val GENLIST_AUX_lem = Q.prove(
-  ‘!n l1 l2. GENLIST_AUX f n l1 ++ l2 = GENLIST_AUX f n (l1 ++ l2)’,
-  Induct_on ‘n’ THEN SRW_TAC [] [GENLIST_AUX]);
+Theorem GENLIST_AUX_lem[local]:
+   !n l1 l2. GENLIST_AUX f n l1 ++ l2 = GENLIST_AUX f n (l1 ++ l2)
+Proof
+  Induct_on ‘n’ THEN SRW_TAC [] [GENLIST_AUX]
+QED
 
 Theorem GENLIST_GENLIST_AUX:
    !n. GENLIST f n = GENLIST_AUX f n []
@@ -4506,12 +4508,14 @@ Theorem MEM_nub: MEM x (nub l) = MEM x l
 Proof simp[]
 QED
 
-val filter_helper = Q.prove (
-   ‘!x l1 l2.
-      ~MEM x l2 ==> (MEM x (FILTER (\x. x NOTIN set l2) l1) = MEM x l1)’,
+Theorem filter_helper[local]:
+    !x l1 l2.
+      ~MEM x l2 ==> (MEM x (FILTER (\x. x NOTIN set l2) l1) = MEM x l1)
+Proof
    Induct_on ‘l1’
    >> rw []
-   >> metis_tac []);
+   >> metis_tac []
+QED
 
 Theorem nub_append:
     !l1 l2. nub (l1++l2) = nub (FILTER (\x. ~MEM x l2) l1) ++ nub l2
@@ -4549,12 +4553,14 @@ Proof
    Induct_on ‘l2’ >> rw []
 QED
 
-val card_eqn_help = Q.prove (
-   ‘!l1 l2. CARD (set l2) - CARD (set l1 INTER set l2) =
-            CARD (set (FILTER (\x. x NOTIN set l1) l2))’,
+Theorem card_eqn_help[local]:
+    !l1 l2. CARD (set l2) - CARD (set l1 INTER set l2) =
+            CARD (set (FILTER (\x. x NOTIN set l1) l2))
+Proof
    rw [Once INTER_COMM]
    >> SIMP_TAC bool_ss [GSYM CARD_DIFF, FINITE_LIST_TO_SET]
-   >> metis_tac [list_to_set_diff]);
+   >> metis_tac [list_to_set_diff]
+QED
 
 Theorem length_nub_append:
     !l1 l2. LENGTH (nub (l1 ++ l2)) =
@@ -5356,17 +5362,21 @@ Proof
    SRW_TAC [] [LAST_DEF]
 QED
 
-val TAKE_compute = Q.prove(
-   ‘(!l. TAKE 0 l = []) /\
+Theorem TAKE_compute[local]:
+    (!l. TAKE 0 l = []) /\
     (!n. TAKE (SUC n) [] = []) /\
-    (!n h t. TAKE (SUC n) (h::t) = h :: TAKE n t)’,
-   SRW_TAC [] []);
+    (!n h t. TAKE (SUC n) (h::t) = h :: TAKE n t)
+Proof
+   SRW_TAC [] []
+QED
 
-val DROP_compute = Q.prove(
-   ‘(!l. DROP 0 l = l) /\
+Theorem DROP_compute[local]:
+    (!l. DROP 0 l = l) /\
     (!n. DROP (SUC n) [] = []) /\
-    (!n h t. DROP (SUC n) (h::t) = DROP n t)’,
-   SRW_TAC [] []);
+    (!n h t. DROP (SUC n) (h::t) = DROP n t)
+Proof
+   SRW_TAC [] []
+QED
 
 Theorem TAKE_compute = numLib.SUC_RULE TAKE_compute;
 

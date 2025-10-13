@@ -17,13 +17,15 @@ fun ARITH q = EQT_ELIM (numLib.ARITH_CONV (Parse.Term q));
 Definition BAG_VAL_DEF[nocompute]:BAG_VAL b x = b(x)
 End
 
-val BAG_VAL_THM = Q.prove
-(`(!x. BAG_VAL EMPTY_BAG x = 0) /\
+Theorem BAG_VAL_THM[local]:
+  (!x. BAG_VAL EMPTY_BAG x = 0) /\
   (!x b e. BAG_VAL (BAG_INSERT e b) x =
-     if (e=x) then 1 + BAG_VAL b x else BAG_VAL b x)`,
+     if (e=x) then 1 + BAG_VAL b x else BAG_VAL b x)
+Proof
  CONJ_TAC THENL
  [RW_TAC arith_ss [EMPTY_BAG,BAG_VAL_DEF],
-  RW_TAC arith_ss [BAG_VAL_DEF] THEN METIS_TAC [BAG_VAL_DEF,BAG_INSERT]]);
+  RW_TAC arith_ss [BAG_VAL_DEF] THEN METIS_TAC [BAG_VAL_DEF,BAG_INSERT]]
+QED
 
 Theorem BAG_IN_EQNS[local]:
   (!x. BAG_IN x {||} <=> F) /\
@@ -31,9 +33,11 @@ Theorem BAG_IN_EQNS[local]:
 Proof METIS_TAC [NOT_IN_EMPTY_BAG,BAG_IN_BAG_INSERT]
 QED
 
-val BAG_INN_EQN = Q.prove
-(`BAG_INN e n b <=> BAG_VAL b e >= n`,
- RW_TAC arith_ss [BAG_VAL_DEF, BAG_INN]);
+Theorem BAG_INN_EQN[local]:
+  BAG_INN e n b <=> BAG_VAL b e >= n
+Proof
+ RW_TAC arith_ss [BAG_VAL_DEF, BAG_INN]
+QED
 
 Theorem BAG_DIFF_EQNS:
   (!b:'a bag. BAG_DIFF b {||} = b) /\
@@ -95,9 +99,11 @@ Proof
   RES_THEN MP_TAC THEN ASM_REWRITE_TAC [] THEN DECIDE_TAC]
 QED
 
-val PSUB_BAG_LEM = Q.prove
-(`!b1 b2.PSUB_BAG b1 b2 <=> SUB_BAG b1 b2 /\ ~SUB_BAG b2 b1`,
- METIS_TAC [SUB_BAG_PSUB_BAG,PSUB_BAG_ANTISYM]);
+Theorem PSUB_BAG_LEM[local]:
+  !b1 b2.PSUB_BAG b1 b2 <=> SUB_BAG b1 b2 /\ ~SUB_BAG b2 b1
+Proof
+ METIS_TAC [SUB_BAG_PSUB_BAG,PSUB_BAG_ANTISYM]
+QED
 
 Theorem SET_OF_BAG_EQNS[local]:
   (SET_OF_BAG ({||}:'a bag) = ({}:'a set)) /\

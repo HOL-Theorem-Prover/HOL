@@ -30,9 +30,11 @@ val qexists_tac = Q.EXISTS_TAC;
 val qspecl_then = Q.SPECL_THEN;
 val qid_spec_tac = Q.ID_SPEC_TAC;
 
-val list_INDUCT = Q.prove(
-   `!P. P [] /\ (!l. P l ==> !x. P (CONS x l)) ==> !l. P l`,
-   REWRITE_TAC [list_INDUCT]);
+Theorem list_INDUCT[local]:
+    !P. P [] /\ (!l. P l ==> !x. P (CONS x l)) ==> !l. P l
+Proof
+   REWRITE_TAC [list_INDUCT]
+QED
 
 val LIST_INDUCT_TAC = INDUCT_THEN list_INDUCT ASSUME_TAC;
 val SNOC_INDUCT_TAC = Prim_rec.INDUCT_THEN SNOC_INDUCT ASSUME_TAC;
@@ -490,22 +492,26 @@ Proof
    THEN SRW_TAC [] [numLib.DECIDE ``!a b. a <= b ==> a <= SUC b``]
 QED
 
-val EL_FILTER = Q.prove(
-   `!i l P. i < LENGTH (FILTER P l) ==> P (EL i (FILTER P l))`,
+Theorem EL_FILTER[local]:
+    !i l P. i < LENGTH (FILTER P l) ==> P (EL i (FILTER P l))
+Proof
    BasicProvers.Induct_on `l`
    THEN SRW_TAC [] []
    THEN Cases_on `i`
-   THEN SRW_TAC [numSimps.ARITH_ss] []);
+   THEN SRW_TAC [numSimps.ARITH_ss] []
+QED
 
-val FILTER_EQ_lem = Q.prove(
-   `!l l2 P h. ~P h ==> (FILTER P l <> h :: l2)`,
+Theorem FILTER_EQ_lem[local]:
+    !l l2 P h. ~P h ==> (FILTER P l <> h :: l2)
+Proof
    SRW_TAC [] [LIST_EQ_REWRITE]
    THEN Q.EXISTS_TAC `0`
    THEN SRW_TAC [numSimps.ARITH_ss] []
    THEN `0 < LENGTH (FILTER P l)` by numLib.DECIDE_TAC
    THEN IMP_RES_TAC EL_FILTER
    THEN FULL_SIMP_TAC (srw_ss()) []
-   THEN metisLib.METIS_TAC []);
+   THEN metisLib.METIS_TAC []
+QED
 
 Theorem FILTER_EQ:
     !P1 P2 l. (FILTER P1 l = FILTER P2 l) = (!x. MEM x l ==> (P1 x = P2 x))
@@ -591,13 +597,17 @@ Proof
    REWRITE_TAC [ASSOC_DEF, APPEND_ASSOC]
 QED
 
-val RIGHT_ID_APPEND_NIL = Q.prove(
-   `RIGHT_ID APPEND []`,
-   REWRITE_TAC [RIGHT_ID_DEF, APPEND, APPEND_NIL]);
+Theorem RIGHT_ID_APPEND_NIL[local]:
+    RIGHT_ID APPEND []
+Proof
+   REWRITE_TAC [RIGHT_ID_DEF, APPEND, APPEND_NIL]
+QED
 
-val LEFT_ID_APPEND_NIL = Q.prove(
-   `LEFT_ID APPEND []`,
-   REWRITE_TAC [LEFT_ID_DEF, APPEND, APPEND_NIL]);
+Theorem LEFT_ID_APPEND_NIL[local]:
+    LEFT_ID APPEND []
+Proof
+   REWRITE_TAC [LEFT_ID_DEF, APPEND, APPEND_NIL]
+QED
 
 Theorem MONOID_APPEND_NIL:
     MONOID APPEND []
@@ -750,10 +760,12 @@ Proof
       THEN CONV_TAC (RAND_CONV EXISTS_AND_CONV) THEN REFL_TAC]]
 QED
 
-val NOT_NIL_APPEND_CONS2 = Q.prove(
-   `!l1 l2 x. ~([] = APPEND l1 (CONS x l2))`,
+Theorem NOT_NIL_APPEND_CONS2[local]:
+    !l1 l2 x. ~([] = APPEND l1 (CONS x l2))
+Proof
    BasicProvers.Induct THEN REWRITE_TAC [APPEND] THEN REPEAT GEN_TAC
-   THEN MATCH_ACCEPT_TAC (GSYM NOT_CONS_NIL))
+   THEN MATCH_ACCEPT_TAC (GSYM NOT_CONS_NIL)
+QED
 
 Theorem IS_SUBLIST_APPEND:
     !l1 l2. IS_SUBLIST l1 l2 = ?l l'. l1 = APPEND l (APPEND l2 l')
@@ -826,12 +838,14 @@ Proof
   rw[IS_SUFFIX_APPEND] \\ metis_tac[APPEND_ASSOC]
 QED
 
-val NOT_NIL_APPEND_SNOC2 = Q.prove(
-   `!l1 l2 x. ~([] = (APPEND l1 (SNOC x l2)))`,
+Theorem NOT_NIL_APPEND_SNOC2[local]:
+    !l1 l2 x. ~([] = (APPEND l1 (SNOC x l2)))
+Proof
    LIST_INDUCT_TAC
    THEN REWRITE_TAC [APPEND_SNOC]
    THEN REPEAT GEN_TAC
-   THEN MATCH_ACCEPT_TAC NOT_NIL_SNOC)
+   THEN MATCH_ACCEPT_TAC NOT_NIL_SNOC
+QED
 
 Theorem IS_PREFIX_REVERSE:
     !l1 l2. IS_PREFIX (REVERSE l1) (REVERSE l2) = IS_SUFFIX l1 l2
@@ -2029,10 +2043,11 @@ Proof
    THEN ASM_REWRITE_TAC []
 QED
 
-val FOLDR1 = Q.prove(
-   `!(f:'a->'a->'a).
+Theorem FOLDR1[local]:
+    !(f:'a->'a->'a).
       (!a b c. f a (f b c) = f b (f a c)) ==>
-       (!e l. (FOLDR f (f x e) l = f x (FOLDR f e l)))`,
+       (!e l. (FOLDR f (f x e) l = f x (FOLDR f e l)))
+Proof
    GEN_TAC
    THEN DISCH_TAC
    THEN GEN_TAC
@@ -2041,12 +2056,14 @@ val FOLDR1 = Q.prove(
    THEN ONCE_REWRITE_TAC
            [ASSUME ``!a b c. (f:'a->'a->'a) a (f b c) = f b (f a c)``]
    THEN REWRITE_TAC
-           [ASSUME ``FOLDR (f:'a->'a->'a)(f x e) l = f x (FOLDR f e l)``]);
+           [ASSUME ``FOLDR (f:'a->'a->'a)(f x e) l = f x (FOLDR f e l)``]
+QED
 
-val FOLDL1 = Q.prove(
-   `!(f:'a->'a->'a).
+Theorem FOLDL1[local]:
+    !(f:'a->'a->'a).
       (!a b c. f (f a b) c = f (f a c) b) ==>
-       (!e l. (FOLDL f (f e x) l = f (FOLDL f e l) x))`,
+       (!e l. (FOLDL f (f e x) l = f (FOLDL f e l) x))
+Proof
    GEN_TAC
    THEN DISCH_TAC
    THEN GEN_TAC
@@ -2055,19 +2072,22 @@ val FOLDL1 = Q.prove(
    THEN ONCE_REWRITE_TAC
            [ASSUME ``!a b c. (f:'a->'a->'a) (f a b) c = f (f a c) b``]
    THEN REWRITE_TAC
-           [ASSUME``FOLDL(f:'a->'a->'a)(f e x) l = f (FOLDL f e l) x``]);
+           [ASSUME``FOLDL(f:'a->'a->'a)(f e x) l = f (FOLDL f e l) x``]
+QED
 
-val FOLDR_REVERSE2 = Q.prove(
-   `!(f:'a->'a->'a).
+Theorem FOLDR_REVERSE2[local]:
+    !(f:'a->'a->'a).
       (!a b c. f a (f b c) = f b (f a c)) ==>
-       (!e l. FOLDR f e (REVERSE l) = FOLDR f e l)`,
+       (!e l. FOLDR f e (REVERSE l) = FOLDR f e l)
+Proof
    GEN_TAC
    THEN DISCH_TAC
    THEN GEN_TAC
    THEN LIST_INDUCT_TAC
    THEN ASM_REWRITE_TAC [REVERSE, FOLDR, FOLDR_SNOC]
    THEN IMP_RES_TAC FOLDR1
-   THEN ASM_REWRITE_TAC []);
+   THEN ASM_REWRITE_TAC []
+QED
 
 Theorem FOLDR_MAP_REVERSE:
     !f:'a -> 'a -> 'a.
@@ -2104,30 +2124,36 @@ Proof
         ASM_REWRITE_TAC [FOLDR, FOLDR_SNOC, FILTER, FILTER_SNOC]]
 QED
 
-val FOLDL_REVERSE2 = Q.prove(
-   `!(f:'a->'a->'a).
+Theorem FOLDL_REVERSE2[local]:
+    !(f:'a->'a->'a).
       (!a b c. f (f a b) c = f (f a c) b) ==>
-       (!e l. FOLDL f e (REVERSE l) = FOLDL f e l)`,
+       (!e l. FOLDL f e (REVERSE l) = FOLDL f e l)
+Proof
    GEN_TAC THEN DISCH_TAC THEN GEN_TAC THEN SNOC_INDUCT_TAC
    THEN ASM_REWRITE_TAC [REVERSE, REVERSE_SNOC, FOLDL, FOLDL_SNOC]
-   THEN IMP_RES_TAC FOLDL1 THEN ASM_REWRITE_TAC []);
+   THEN IMP_RES_TAC FOLDL1 THEN ASM_REWRITE_TAC []
+QED
 
-val COMM_ASSOC_LEM1 = Q.prove(
-   `!(f:'a->'a->'a). COMM f ==> (ASSOC f ==>
-      (!a b c. f a (f b c) = f b (f a c)))`,
+Theorem COMM_ASSOC_LEM1[local]:
+    !(f:'a->'a->'a). COMM f ==> (ASSOC f ==>
+      (!a b c. f a (f b c) = f b (f a c)))
+Proof
    REWRITE_TAC [ASSOC_DEF] THEN REPEAT STRIP_TAC
    THEN ASM_REWRITE_TAC [] THEN SUBST1_TAC(SPECL [``a:'a``,``b:'a``]
       (REWRITE_RULE [COMM_DEF] (ASSUME ``COMM (f:'a->'a->'a)``)))
-   THEN REWRITE_TAC []);
+   THEN REWRITE_TAC []
+QED
 
-val COMM_ASSOC_LEM2 = Q.prove(
-   `!(f:'a->'a->'a). COMM f ==> (ASSOC f ==>
-      (!a b c. f (f a b) c = f (f a c) b))`,
+Theorem COMM_ASSOC_LEM2[local]:
+    !(f:'a->'a->'a). COMM f ==> (ASSOC f ==>
+      (!a b c. f (f a b) c = f (f a c) b))
+Proof
    REPEAT STRIP_TAC THEN ASM_REWRITE_TAC
       [GSYM (REWRITE_RULE [ASSOC_DEF] (ASSUME ``ASSOC (f:'a->'a->'a)``))]
    THEN SUBST1_TAC(SPECL [``b:'a``,``c:'a``]
       (REWRITE_RULE [COMM_DEF] (ASSUME ``COMM (f:'a->'a->'a)``)))
-   THEN REWRITE_TAC []);
+   THEN REWRITE_TAC []
+QED
 
 Theorem COMM_ASSOC_FOLDR_REVERSE:
     !f:'a -> 'a -> 'a.
@@ -2362,10 +2388,12 @@ Proof
    THEN ASM_REWRITE_TAC [REVERSE_APPEND, FLAT_SNOC]
 QED
 
-val MAP_COND = Q.prove(
-   `!(f:'a-> 'b) c l1 l2.
-       (MAP f (if c then l1 else l2)) = (if c then (MAP f l1) else (MAP f l2))`,
-   REPEAT GEN_TAC THEN BOOL_CASES_TAC ``c:bool`` THEN ASM_REWRITE_TAC []);
+Theorem MAP_COND[local]:
+    !(f:'a-> 'b) c l1 l2.
+       (MAP f (if c then l1 else l2)) = (if c then (MAP f l1) else (MAP f l2))
+Proof
+   REPEAT GEN_TAC THEN BOOL_CASES_TAC ``c:bool`` THEN ASM_REWRITE_TAC []
+QED
 
 Theorem MAP_FILTER:
     !f P l. (!x. P (f x) = P x) ==> (MAP f (FILTER P l) = FILTER P (MAP f l))
@@ -4370,9 +4398,11 @@ QED
 (* Add evaluation theorems to computeLib.the_compset                         *)
 (*---------------------------------------------------------------------------*)
 
-val COUNT_LIST_AUX = Q.prove(
-   `!n l1 l2. COUNT_LIST_AUX n l1 ++ l2 = COUNT_LIST_AUX n (l1 ++ l2)`,
-   Induct THEN SRW_TAC [] [COUNT_LIST_AUX_def]);
+Theorem COUNT_LIST_AUX[local]:
+    !n l1 l2. COUNT_LIST_AUX n l1 ++ l2 = COUNT_LIST_AUX n (l1 ++ l2)
+Proof
+   Induct THEN SRW_TAC [] [COUNT_LIST_AUX_def]
+QED
 
 Theorem COUNT_LIST_compute:
     !n. COUNT_LIST n = COUNT_LIST_AUX n []
@@ -4382,20 +4412,26 @@ Proof
    THEN FULL_SIMP_TAC (srw_ss()) [COUNT_LIST_GENLIST, COUNT_LIST_AUX]
 QED
 
-val SPLITP_AUX_lem1 = Q.prove(
-   `!P acc l h.
-     ~P h ==> (h::FST (SPLITP_AUX acc P l) = FST (SPLITP_AUX (h::acc) P l))`,
-   Induct_on `l` THEN SRW_TAC [] [SPLITP_AUX_def]);
+Theorem SPLITP_AUX_lem1[local]:
+    !P acc l h.
+     ~P h ==> (h::FST (SPLITP_AUX acc P l) = FST (SPLITP_AUX (h::acc) P l))
+Proof
+   Induct_on `l` THEN SRW_TAC [] [SPLITP_AUX_def]
+QED
 
-val SPLITP_AUX_lem2 = Q.prove(
-   `!P acc1 acc2 l. SND (SPLITP_AUX acc1 P l) = SND (SPLITP_AUX acc2 P l)`,
-   Induct_on `l` THEN SRW_TAC [] [SPLITP_AUX_def]);
+Theorem SPLITP_AUX_lem2[local]:
+    !P acc1 acc2 l. SND (SPLITP_AUX acc1 P l) = SND (SPLITP_AUX acc2 P l)
+Proof
+   Induct_on `l` THEN SRW_TAC [] [SPLITP_AUX_def]
+QED
 
-val SPLITP_AUX = Q.prove(
-   `!P l. SPLITP P l = SPLITP_AUX [] P l`,
+Theorem SPLITP_AUX[local]:
+    !P l. SPLITP P l = SPLITP_AUX [] P l
+Proof
    Induct_on `l`
    THEN SRW_TAC [] [SPLITP_AUX_def, SPLITP, SPLITP_AUX_lem1]
-   THEN metisLib.METIS_TAC [SPLITP_AUX_lem2, pairTheory.PAIR]);
+   THEN metisLib.METIS_TAC [SPLITP_AUX_lem2, pairTheory.PAIR]
+QED
 
 Theorem SPLITP_compute =
    REWRITE_RULE [GSYM FUN_EQ_THM] SPLITP_AUX;

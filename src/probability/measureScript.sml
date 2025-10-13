@@ -356,12 +356,13 @@ Proof
    >> PROVE_TAC [countably_additive_def]
 QED
 
-val COUNTABLY_ADDITIVE_ADDITIVE_lemma = Q.prove (
-   `!m s t. {} IN measurable_sets m /\ (measure m {} = 0) /\
+Theorem COUNTABLY_ADDITIVE_ADDITIVE_lemma[local]:
+    !m s t. {} IN measurable_sets m /\ (measure m {} = 0) /\
         (!s. s IN measurable_sets m ==> 0 <= measure m s) /\
          s IN measurable_sets m /\ t IN measurable_sets m ==>
         (suminf (measure m o (\n. if n = 0 then s else if n = 1 then t else {})) =
-         measure m s + measure m t)`,
+         measure m s + measure m t)
+Proof
     rpt STRIP_TAC
  >> `FINITE (count 2)` by RW_TAC std_ss [FINITE_COUNT]
  >> `!n. FINITE ((count n) DIFF (count 2))` by METIS_TAC [FINITE_COUNT, FINITE_DIFF]
@@ -423,7 +424,8 @@ val COUNTABLY_ADDITIVE_ADDITIVE_lemma = Q.prove (
  >- METIS_TAC [IN_DEF]
  >> RW_TAC std_ss [IN_IMAGE, IN_UNIV]
  >> Q.EXISTS_TAC `2`
- >> METIS_TAC []);
+ >> METIS_TAC []
+QED
 
 (* removed `algebra (m_space m, measurable_sets m)` from antecedents,
    added `{} IN measurable_sets m` into antecedents. *)
@@ -494,11 +496,12 @@ Proof
  >> MATCH_MP_TAC COUNTABLY_ADDITIVE_ADDITIVE_lemma >> art []
 QED
 
-val COUNTABLY_ADDITIVE_FINITE_ADDITIVE_lemma = Q.prove (
-   `!m f n. {} IN measurable_sets m /\ (measure m {} = 0) /\
+Theorem COUNTABLY_ADDITIVE_FINITE_ADDITIVE_lemma[local]:
+    !m f n. {} IN measurable_sets m /\ (measure m {} = 0) /\
         (!s. s IN measurable_sets m ==> 0 <= measure m s) /\
         (!i. i < n ==> f i IN measurable_sets m) ==>
-        (suminf (measure m o (\i. if i < n then f i else {})) = SIGMA (measure m o f) (count n))`,
+        (suminf (measure m o (\i. if i < n then f i else {})) = SIGMA (measure m o f) (count n))
+Proof
     rpt STRIP_TAC
  >> Know `!j. 0 <= (measure m o (\i. if i < n then f i else {})) j`
  >- RW_TAC std_ss [o_DEF, le_refl]
@@ -562,7 +565,8 @@ val COUNTABLY_ADDITIVE_FINITE_ADDITIVE_lemma = Q.prove (
  >- METIS_TAC [IN_APP]
  >> SIMP_TAC std_ss [IN_IMAGE, IN_UNIV]
  >> Q.EXISTS_TAC `n`
- >> METIS_TAC []);
+ >> METIS_TAC []
+QED
 
 Theorem COUNTABLY_ADDITIVE_FINITE_ADDITIVE :
     !m. {} IN measurable_sets m /\ positive m /\ countably_additive m ==>

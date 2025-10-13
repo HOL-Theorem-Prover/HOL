@@ -4257,18 +4257,22 @@ Proof
    METIS_TAC [STRICTLY_INCREASING_ONE_ONE,ONE_ONE_UNBOUNDED]
 QED
 
-val STRICTLY_DECREASING_TC = Q.prove(
-   `!f. (!n. f (SUC n) < f n) ==> !m n. m < n ==> f n < f m`,
+Theorem STRICTLY_DECREASING_TC[local]:
+    !f. (!n. f (SUC n) < f n) ==> !m n. m < n ==> f n < f m
+Proof
    NTAC 2 STRIP_TAC THEN
    (transitive_monotone |> Q.ISPECL [`\x y. y < x`,`f:num->num`] |>
     SIMP_RULE bool_ss [] |> MATCH_MP_TAC) THEN
    SRW_TAC [][relationTheory.transitive_def] THEN
-   METIS_TAC [LESS_TRANS])
+   METIS_TAC [LESS_TRANS]
+QED
 
-val STRICTLY_DECREASING_ONE_ONE = Q.prove(
-   `!f. (!n. f (SUC n) < f n) ==> ONE_ONE f`,
+Theorem STRICTLY_DECREASING_ONE_ONE[local]:
+    !f. (!n. f (SUC n) < f n) ==> ONE_ONE f
+Proof
    SRW_TAC [] [ONE_ONE_THM] THEN
-   METIS_TAC [STRICTLY_DECREASING_TC,NOT_LESS,LESS_OR_EQ,LESS_EQUAL_ANTISYM])
+   METIS_TAC [STRICTLY_DECREASING_TC,NOT_LESS,LESS_OR_EQ,LESS_EQUAL_ANTISYM]
+QED
 
 Theorem NOT_STRICTLY_DECREASING:
     !f. ~(!n. f (SUC n) < f n)
@@ -4653,8 +4657,9 @@ QED
 val GSYM_MOD_PLUS' = GSYM (SPEC_ALL (UNDISCH_ALL (SPEC_ALL MOD_PLUS))) ;
 val MOD_LESS' = UNDISCH (Q.SPECL [`a`, `n`] MOD_LESS) ;
 
-val SUC_MOD_lem = Q.prove (
-  `0 < n ==> (SUC a MOD n = if SUC (a MOD n) = n then 0 else SUC (a MOD n))`,
+Theorem SUC_MOD_lem[local]:
+   0 < n ==> (SUC a MOD n = if SUC (a MOD n) = n then 0 else SUC (a MOD n))
+Proof
   DISCH_TAC THEN REWRITE_TAC [SUC_ONE_ADD] THEN
   CONV_TAC (LHS_CONV (REWR_CONV_A GSYM_MOD_PLUS')) THEN
   MP_TAC (Q.SPECL [`n`, `1`] LESS_LESS_CASES) THEN STRIP_TAC
@@ -4669,7 +4674,8 @@ val SUC_MOD_lem = Q.prove (
       Once LESS_OR_EQ]) THEN
     REWRITE_TAC [GSYM SUC_ONE_ADD] THEN
     FIRST_X_ASSUM DISJ_CASES_TAC THEN
-    FULL_SIMP_TAC bool_ss [NOT_LESS_0] ]) ;
+    FULL_SIMP_TAC bool_ss [NOT_LESS_0] ]
+QED
 
 Theorem SUC_MOD:
     !n a b. 0 < n ==> ((SUC a MOD n = SUC b MOD n) = (a MOD n = b MOD n))

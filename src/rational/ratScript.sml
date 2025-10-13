@@ -2823,25 +2823,31 @@ Theorem RAT_EQ_NUM_CALCULATE[simp] =
 
 val RAT_LT_NUM1 = RAT_OF_NUM_LES
 
-val RAT_LT_NUM2 = Q.prove(
-  ‘-&m < &n <=> 0 < m \/ 0 < n’,
+Theorem RAT_LT_NUM2[local]:
+   -&m < &n <=> 0 < m \/ 0 < n
+Proof
   eq_tac >- (spose_not_then strip_assume_tac >> fs[]) >>
   strip_tac
   >- (irule RAT_LES_LEQ_TRANS >> qexists_tac `0` >> simp[] >>
       simp[Once RAT_AINV_LES]) >>
   irule RAT_LEQ_LES_TRANS >> qexists_tac `0` >> simp[] >>
   simp[rat_leq_def] >>
-  simp[Once RAT_AINV_LES]);
+  simp[Once RAT_AINV_LES]
+QED
 
-val RAT_LT_NUM3 = Q.prove(
-  ‘&m < -&n <=> F’,
+Theorem RAT_LT_NUM3[local]:
+   &m < -&n <=> F
+Proof
   simp[] >> strip_tac >>
   ‘-&n <= 0’ by simp[rat_leq_def, Once RAT_AINV_LES] >>
-  ‘&m < 0’ by metis_tac[RAT_LES_LEQ_TRANS] >> fs[])
+  ‘&m < 0’ by metis_tac[RAT_LES_LEQ_TRANS] >> fs[]
+QED
 
-val RAT_LT_NUM4 = Q.prove(
-  ‘-&m < -&n <=> n < m’,
-  simp[RAT_LES_AINV]);
+Theorem RAT_LT_NUM4[local]:
+   -&m < -&n <=> n < m
+Proof
+  simp[RAT_LES_AINV]
+QED
 
 Theorem RAT_LT_NUM_CALCULATE[simp] =
   LIST_CONJ [RAT_LT_NUM1, RAT_LT_NUM2, RAT_LT_NUM3, RAT_LT_NUM4];
@@ -2850,17 +2856,23 @@ Theorem RAT_LT_NUM_CALCULATE[simp] =
     RAT_LE_NUM
    ---------------------------------------------------------------------- *)
 
-val RAT_LE_NUM2 = Q.prove(
-  ‘-&m <= &n <=> T’,
-  simp[rat_leq_def]);
+Theorem RAT_LE_NUM2[local]:
+   -&m <= &n <=> T
+Proof
+  simp[rat_leq_def]
+QED
 
-val RAT_LE_NUM3 = Q.prove(
-  ‘&m <= -&n <=> (m = 0) /\ (n = 0)’,
-  simp[rat_leq_def]);
+Theorem RAT_LE_NUM3[local]:
+   &m <= -&n <=> (m = 0) /\ (n = 0)
+Proof
+  simp[rat_leq_def]
+QED
 
-val RAT_LE_NUM4 = Q.prove(
-  ‘-&m <= -&n <=> n <= m’,
-  simp[rat_leq_def]);
+Theorem RAT_LE_NUM4[local]:
+   -&m <= -&n <=> n <= m
+Proof
+  simp[rat_leq_def]
+QED
 
 Theorem RAT_LE_NUM_CALCULATE[simp] =
   LIST_CONJ [RAT_OF_NUM_LEQ, RAT_LE_NUM2, RAT_LE_NUM3, RAT_LE_NUM4];

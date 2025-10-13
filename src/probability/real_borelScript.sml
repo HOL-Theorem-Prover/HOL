@@ -372,10 +372,11 @@ Proof
   FULL_SIMP_TAC std_ss [SUBSET_DEF]
 QED
 
-val open_union_box = Q.prove (
-   `!M. open M ==>
+Theorem open_union_box[local]:
+    !M. open M ==>
        (M = BIGUNION
-            {box (FST f) (SND f) | f IN {f | box (FST f) (SND f) SUBSET M}})`,
+            {box (FST f) (SND f) | f IN {f | box (FST f) (SND f) SUBSET M}})
+Proof
   RW_TAC std_ss [OPEN_CONTAINS_BALL] THEN
   SIMP_TAC std_ss [EXTENSION, IN_BIGUNION, GSPECIFICATION, EXISTS_PROD] THEN
   GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL
@@ -383,7 +384,8 @@ val open_union_box = Q.prove (
    STRIP_TAC THEN
    FIRST_ASSUM (MP_TAC o SPEC ``x:real`` o MATCH_MP rational_boxes) THEN
    STRIP_TAC THEN METIS_TAC [SUBSET_DEF], ALL_TAC] THEN
-  FULL_SIMP_TAC std_ss [SUBSET_DEF]);
+  FULL_SIMP_TAC std_ss [SUBSET_DEF]
+QED
 
 Theorem open_UNION_rational_box :
     !M. open M ==> (M = BIGUNION {box a b | a IN q_set /\ b IN q_set /\
@@ -399,11 +401,12 @@ Proof
   FULL_SIMP_TAC std_ss [SUBSET_DEF]
 QED
 
-val open_union_rational_box = Q.prove (
-   `!M. open M ==>
+Theorem open_union_rational_box[local]:
+    !M. open M ==>
        (M = BIGUNION
             {box (FST f) (SND f) | f IN {f | (FST f) IN q_set /\ (SND f) IN q_set /\
-                                         box (FST f) (SND f) SUBSET M}})`,
+                                         box (FST f) (SND f) SUBSET M}})
+Proof
   RW_TAC std_ss [OPEN_CONTAINS_BALL] THEN
   SIMP_TAC std_ss [EXTENSION, IN_BIGUNION, GSPECIFICATION, EXISTS_PROD] THEN
   GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL
@@ -411,7 +414,8 @@ val open_union_rational_box = Q.prove (
    STRIP_TAC THEN
    FIRST_ASSUM (MP_TAC o SPEC ``x:real`` o MATCH_MP rational_boxes) THEN
    STRIP_TAC THEN METIS_TAC [SUBSET_DEF], ALL_TAC] THEN
-  FULL_SIMP_TAC std_ss [SUBSET_DEF]);
+  FULL_SIMP_TAC std_ss [SUBSET_DEF]
+QED
 
 (* key lemma for alternative definitions of ``borel`` *)
 Theorem borel_eq_box :
@@ -1810,8 +1814,11 @@ Proof
     RW_TAC std_ss [right_open_interval_empty, REAL_LT_REFL]
 QED
 
-val FINITE_TWO = Q.prove (`!s t. FINITE {s; t}`,
-    PROVE_TAC [FINITE_INSERT, FINITE_SING]);
+Theorem FINITE_TWO[local]:
+   !s t. FINITE {s; t}
+Proof
+    PROVE_TAC [FINITE_INSERT, FINITE_SING]
+QED
 
 Theorem right_open_interval_DISJOINT :
     !a b c d. a <= b /\ b <= c /\ c <= d ==>

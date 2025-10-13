@@ -1309,9 +1309,11 @@ val FINITE_BAG_INSERT_down' = prove(
     FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][FINITE_BAG_INSERT]
   ])
 
-val FINITE_BAG_INSERT = Q.prove(
-`!e b. FINITE_BAG (BAG_INSERT e b) = FINITE_BAG b`,
-  MESON_TAC [FINITE_BAG_INSERT, FINITE_BAG_INSERT_down'])
+Theorem FINITE_BAG_INSERT[local]:
+ !e b. FINITE_BAG (BAG_INSERT e b) = FINITE_BAG b
+Proof
+  MESON_TAC [FINITE_BAG_INSERT, FINITE_BAG_INSERT_down']
+QED
 
 Theorem FINITE_BAG_THM[simp] =
   CONJ FINITE_EMPTY_BAG FINITE_BAG_INSERT
@@ -1580,9 +1582,11 @@ Proof
    THEN RW_TAC arith_ss []
 QED
 
-val SUB_BAG_DIFF_EXISTS = Q.prove
-(`!b1 b2. SUB_BAG b1 b2 ==> ?d. b2 = BAG_UNION b1 d`,
- PROVE_TAC [SUB_BAG_DIFF_EQ]);
+Theorem SUB_BAG_DIFF_EXISTS[local]:
+  !b1 b2. SUB_BAG b1 b2 ==> ?d. b2 = BAG_UNION b1 d
+Proof
+ PROVE_TAC [SUB_BAG_DIFF_EQ]
+QED
 
 Theorem SUB_BAG_CARD:
  !b1 b2:'a bag. FINITE_BAG b2 /\ SUB_BAG b1 b2 ==> BAG_CARD b1 <= BAG_CARD b2
@@ -2102,11 +2106,13 @@ QED
 
 
 
-val BAG_UNION_STABLE = Q.prove
-(`!b1 b2. (b1 = BAG_UNION b1 b2) = (b2 = {||})`,
+Theorem BAG_UNION_STABLE[local]:
+  !b1 b2. (b1 = BAG_UNION b1 b2) = (b2 = {||})
+Proof
  RW_TAC bool_ss [BAG_UNION,EMPTY_BAG_alt,FUN_EQ_THM] THEN
  EQ_TAC THEN DISCH_THEN (fn th => GEN_TAC THEN MP_TAC(SPEC_ALL th)) THEN
- RW_TAC arith_ss []);
+ RW_TAC arith_ss []
+QED
 
 val SUB_BAG_UNION_MONO_0 = prove(
   ``!x y. SUB_BAG x (BAG_UNION x y)``,
@@ -2604,15 +2610,17 @@ Proof
  RW_TAC arith_ss [BAG_UNION,FUN_EQ_THM]
 QED
 
-val lem = Q.prove
-(`!b. FINITE_BAG b ==> !x a. BAG_IN x b ==> divides x (BAG_GEN_PROD b a)`,
+Theorem lem[local]:
+  !b. FINITE_BAG b ==> !x a. BAG_IN x b ==> divides x (BAG_GEN_PROD b a)
+Proof
  HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN
  RW_TAC arith_ss [NOT_IN_EMPTY_BAG,BAG_IN_BAG_INSERT] THENL
  [RW_TAC arith_ss [BAG_GEN_PROD_REC] THEN
   METIS_TAC[DIVIDES_REFL,DIVIDES_MULT],
   `divides x (BAG_GEN_PROD b a)` by METIS_TAC[] THEN
   RW_TAC arith_ss [BAG_GEN_PROD_REC] THEN
-  METIS_TAC[DIVIDES_MULT,MULT_SYM]]);
+  METIS_TAC[DIVIDES_MULT,MULT_SYM]]
+QED
 
 Theorem BAG_IN_DIVIDES:
   !b x a. FINITE_BAG b /\ BAG_IN x b ==> divides x (BAG_GEN_PROD b a)
