@@ -2189,7 +2189,6 @@ Proof
 QED
 
 Theorem splem1[local]:
-
   a <> 0 ==> (a-1) DIV 2 < a
 Proof
   simp[DIV_LT_X]

@@ -693,7 +693,6 @@ QED
 
 
 Theorem QUANT_UNIT_ELIM[local]:
-
   ((!x:unit. P x) = (P ())) /\
   ((?x:unit. P x) = (P ()))
 Proof
