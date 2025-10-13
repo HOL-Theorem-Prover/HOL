@@ -3157,8 +3157,8 @@ Proof
         ASM_REWRITE_TAC [] THEN REAL_ARITH_TAC
 QED
 
-val _ = overload_on ("segment", ``open_segment``);
-val _ = overload_on ("segment", ``closed_segment``);
+Overload segment = ``open_segment``
+Overload segment = ``closed_segment``
 
 Theorem segment:
    (segment[a,b] = {(&1 - u) * a + u * b | &0 <= u /\ u <= &1:real}) /\
@@ -15538,8 +15538,8 @@ Definition CLOSED_interval :
       {x:real | FST (HD l) <= x /\ x <= SND (HD l)}
 End
 
-val _ = overload_on ("interval", ``OPEN_interval``);
-val _ = overload_on ("interval", ``CLOSED_interval``);
+Overload interval = ``OPEN_interval``
+Overload interval = ``CLOSED_interval``
 
 Theorem interval:
    (interval (a,b) = {x:real | a < x /\ x < b}) /\
@@ -19696,7 +19696,7 @@ val sums = sums_def;
 Definition suminf_def : (* cf. seqTheory.suminf *)
     infsum s f = @l. (f sums l) s
 End
-val _ = overload_on ("suminf", ``infsum``);
+Overload suminf = ``infsum``
 val infsum = suminf_def;
 
 Definition summable_def : (* cf. seqTheory.summable *)

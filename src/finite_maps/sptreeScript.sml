@@ -33,7 +33,7 @@ val _ = Datatype`spt = LN | LS 'a | BN spt spt | BS spt 'a spt`
 Type num_map[pp] = “:'a spt”
 Type num_set[pp] = “:unit spt”
 
-val _ = overload_on ("isEmpty", ``\t. t = LN``)
+Overload isEmpty = ``\t. t = LN``
 
 Definition wf_def:
   (wf LN <=> T) /\

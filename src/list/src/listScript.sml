@@ -146,7 +146,7 @@ Definition APPEND_def:
 End
 
 val _ = set_fixity "++" (Infixl 480);
-val _ = overload_on ("++", Term‘APPEND’);
+Overload "++" = Term‘APPEND’
 val _ = Unicode.unicode_version {u = UnicodeChars.doubleplus, tmnm = "++"}
 val _ = TeX_notation { hol = UnicodeChars.doubleplus,
                        TeX = ("\\HOLTokenDoublePlus", 1) }
@@ -180,9 +180,9 @@ Definition LIST_TO_SET_DEF[simp]:
   (LIST_TO_SET (h::t) x <=> (x = h) \/ LIST_TO_SET t x)
 End
 
-val _ = overload_on ("set", “LIST_TO_SET”)
-val _ = overload_on ("MEM", “\h:'a l:'a list. h IN LIST_TO_SET l”)
-val _ = overload_on ("", “\h:'a l:'a list. ~(h IN LIST_TO_SET l)”)
+Overload set = “LIST_TO_SET”
+Overload MEM = “\h:'a l:'a list. h IN LIST_TO_SET l”
+Overload "" = “\h:'a l:'a list. ~(h IN LIST_TO_SET l)”
   (* last over load here causes the term ~(h IN LIST_TO_SET l) to not print
      using overloads.  In particular, this prevents the existing overload for
      NOTIN from firing in this type instance, and allows ~MEM a l to print
@@ -4081,8 +4081,8 @@ End
 
 (* the "return" or "pure" constant for lists isn't an existing one, unlike
    the situation with 'a option, where SOME fits the bill. *)
-val _ = overload_on("SINGL", “\x:'a. [x]”)
-val _ = overload_on("", “\x:'a. [x]”)
+Overload SINGL = “\x:'a. [x]”
+Overload "" = “\x:'a. [x]”
 
 Theorem SINGL_LIST_APPLY_L:
    LIST_BIND (SINGL x) f = f x
@@ -4108,7 +4108,7 @@ Definition LIST_APPLY_def:
 End
 
 (* pick up the <*> syntax *)
-val _ = overload_on("APPLICATIVE_FAPPLY", “LIST_APPLY”)
+Overload APPLICATIVE_FAPPLY = “LIST_APPLY”
 
 (* derives the lift2 function to boot *)
 Definition LIST_LIFT2_def:

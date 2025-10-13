@@ -381,7 +381,7 @@ Proof
    RW_TAC std_ss [IN_UNIV]
 QED
 
-val _ = overload_on ("univ", ``\x:'a itself. UNIV : 'a set``)
+Overload univ = ``\x:'a itself. UNIV : 'a set``
 val _ = set_fixity "univ" (Prefix 2200)
 
 val _ = overload_on (UnicodeChars.universal_set, ``\x:'a itself. UNIV: 'a set``)
@@ -390,7 +390,7 @@ val _ = set_fixity UnicodeChars.universal_set (Prefix 2200)
    with a user-printer.  (Otherwise the fact that the x is not bound in the
    abstraction produces ARB terms.)  To turn printing off, we overload the
    same pattern to "" *)
-val _ = overload_on ("", “\x:'a itself. UNIV : 'a set”)
+Overload "" = “\x:'a itself. UNIV : 'a set”
 
 val _ = add_ML_dependency "pred_setpp"
 val _ = add_user_printer ("pred_set.UNIV", ``UNIV:'a set``)
@@ -4285,7 +4285,7 @@ QED
 (* Infiniteness                                                         *)
 (* =====================================================================*)
 
-val _ = overload_on ("INFINITE", ``\s. ~FINITE s``)
+Overload INFINITE = ``\s. ~FINITE s``
 
 val NOT_IN_FINITE =
     store_thm
@@ -5903,7 +5903,7 @@ Definition SUM_IMAGE_DEF[nocompute]:
   SUM_IMAGE f s = ITSET (\e acc. f e + acc) s 0
 End
 
-val _ = overload_on ("SIGMA", ``SUM_IMAGE``);
+Overload SIGMA = ``SUM_IMAGE``
 val _ = Unicode.unicode_version {u = UTF8.chr 0x2211, tmnm = "SIGMA"};
 val _ = TeX_notation {hol = UTF8.chr 0x2211, TeX = ("\\HOLTokenSum{}", 1)};
 val _ = TeX_notation {hol = "SIGMA",         TeX = ("\\HOLTokenSum{}", 1)};
@@ -6243,7 +6243,7 @@ Proof
   SRW_TAC[][SUM_IMAGE_THM, IMAGE_FINITE]
 QED
 
-val _ = overload_on("PERMUTES", ``\f s. BIJ f s s``);
+Overload PERMUTES = ``\f s. BIJ f s s``
 val _ = set_fixity "PERMUTES" (Infix(NONASSOC, 450)); (* same as relation *)
 
 Theorem SUM_IMAGE_PERMUTES:
@@ -6518,7 +6518,7 @@ Proof
   SRW_TAC [ARITH_ss][Abbr`g`]
 QED
 
-val _ = overload_on ("PI", ``PROD_IMAGE``)
+Overload PI = ``PROD_IMAGE``
 val _ = Unicode.unicode_version {tmnm = "PROD_IMAGE", u = UnicodeChars.Pi}
 
 Theorem PROD_IMAGE_EQ_0:

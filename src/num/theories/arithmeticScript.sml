@@ -153,7 +153,7 @@ val EXP = new_recursive_definition
 val _ = ot0 "EXP" "^"
 val _ = set_fixity "EXP" (Infixr 700);
 val _ = add_infix("**", 700, HOLgrammars.RIGHT);
-val _ = overload_on ("**", Term`$EXP`);
+Overload "**" = Term`$EXP`
 val _ = TeX_notation {hol = "**", TeX = ("\\HOLTokenExp{}", 2)}
 
 Theorem EXP0[simp] = cj 1 EXP
@@ -228,8 +228,8 @@ val bool_to_bit_def = new_definition(
   “bool_to_bit b = if b then 1 else 0”
 );
 
-val _ = overload_on ("RELPOW", “NRC”)
-val _ = overload_on ("NRC", “NRC”)
+Overload RELPOW = “NRC”
+Overload NRC = “NRC”
 
 (*---------------------------------------------------------------------------
                         THEOREMS

@@ -92,18 +92,18 @@ val natless  = Term`$<`;
 val bool_not = “$~ : bool -> bool”
 val natmult  = Term`$*`;
 
-val _ = overload_on ("+", natplus);
-val _ = overload_on ("*", natmult);
-val _ = overload_on ("<", natless);
+Overload "+" = natplus
+Overload "*" = natmult
+Overload "<" = natless
 
 Overload "~" = “$real_neg”
 Overload "~" = bool_not
 Overload "¬" = bool_not
 Overload "numeric_negate" = “$real_neg”
 
-val _ = overload_on ("+", Term`$real_add`);
-val _ = overload_on ("*", Term`$real_mul`);
-val _ = overload_on ("<", Term`real_lt`);
+Overload "+" = Term`$real_add`
+Overload "*" = Term`$real_mul`
+Overload "<" = Term`real_lt`
 
 (*---------------------------------------------------------------------------*)
 (* Transfer of supremum property for all-positive sets - bit painful         *)
@@ -251,21 +251,21 @@ Definition real_div[nocompute]: $/ x y = x * inv y
 End
 val _ = set_fixity "/" (Infixl 600);
 val _ = overload_on(GrammarSpecials.decimal_fraction_special, “$/”);
-val _ = overload_on("/", “$/”);
+Overload "/" = “$/”
 
 val _ = add_ML_dependency "realPP"
 val _ = add_user_printer ("real.decimalfractions",
                           “&(NUMERAL x) : real / &(NUMERAL y)”);
 
-val _ = overload_on ("-",  “$-”);  (* natsub *)
-val _ = overload_on ("<=", “$<=”); (* natlte *)
-val _ = overload_on (">",  “$>”);  (* natgt *)
-val _ = overload_on (">=", “$>=”); (* natge *)
+Overload "-" = “$-”(* natsub *)
+Overload "<=" = “$<=”(* natlte *)
+Overload ">" = “$>”(* natgt *)
+Overload ">=" = “$>=”(* natge *)
 
-val _ = overload_on ("-",  “$real_sub”);
-val _ = overload_on ("<=", “$real_lte”);
-val _ = overload_on (">",  “$real_gt”);
-val _ = overload_on (">=", “$real_ge”);
+Overload "-" = “$real_sub”
+Overload "<=" = “$real_lte”
+Overload ">" = “$real_gt”
+Overload ">=" = “$real_ge”
 
 Definition real_abs[nocompute]: abs(x) = (if (0 <= x) then x else ~x)
 End

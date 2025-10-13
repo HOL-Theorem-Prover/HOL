@@ -108,7 +108,7 @@ Theorem option_nchotomy =
 
 val [option_case_def] = Prim_rec.define_case_constant option_Axiom
 val _ = ot0 "option_case" "case"
-val _ = overload_on("case", ``option_CASE``)
+Overload case = ``option_CASE``
 val _ = export_rewrites ["option_case_def"]
 
 (* get the names right for Cases_on ‘option’ for proofs that depend on the
@@ -659,7 +659,7 @@ val _ = export_rewrites ["OPTION_APPLY_def"]
 val _ = set_mapped_fixity { fixity = Infixl 500,
                             term_name = "APPLICATIVE_FAPPLY",
                             tok = "<*>" }
-val _ = overload_on ("APPLICATIVE_FAPPLY", ``OPTION_APPLY``)
+Overload APPLICATIVE_FAPPLY = ``OPTION_APPLY``
 
 (* this could be the definition of OPTION_MAP2/lift2 *)
 Theorem OPTION_APPLY_MAP2:

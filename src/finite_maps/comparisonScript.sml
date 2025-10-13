@@ -40,7 +40,7 @@ QED
 
 Theorem cmp_thms = LIST_CONJ [comparison_distinct, comparison_case_def, comparison_nchotomy, good_cmp_def]
 
-val _ = overload_on ("option_cmp", ``option_compare``);
+Overload option_cmp = ``option_compare``
 Theorem option_cmp_def =
   ternaryComparisonsTheory.option_compare_def
 
@@ -51,21 +51,21 @@ Definition option_cmp2_def:
   (option_cmp2 cmp (SOME x) (SOME y) = cmp x y)
 End
 
-val _ = overload_on ("list_cmp", ``list_compare``)
+Overload list_cmp = ``list_compare``
 val list_cmp_def = ternaryComparisonsTheory.list_compare_def
 val list_cmp_ind = ternaryComparisonsTheory.list_compare_ind
 
-val _ = overload_on ("pair_cmp", ``pair_compare``)
+Overload pair_cmp = ``pair_compare``
 Theorem pair_cmp_def =
   PART_MATCH lhs ternaryComparisonsTheory.pair_compare_def
      ``pair_cmp c1 c2 (FST x, SND x) (FST y, SND y)``
      |> REWRITE_RULE [pairTheory.PAIR];
 
-val _ = overload_on ("bool_cmp", ``bool_compare``)
+Overload bool_cmp = ``bool_compare``
 Theorem bool_cmp_def =
   ternaryComparisonsTheory.bool_compare_def
 
-val _ = overload_on ("num_cmp", ``num_compare``)
+Overload num_cmp = ``num_compare``
 Theorem num_cmp_def =
   ternaryComparisonsTheory.num_compare_def
 

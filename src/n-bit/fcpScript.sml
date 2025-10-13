@@ -171,7 +171,7 @@ val fcp_index_def =
       ("fcp_index", `$fcp_index x i = dest_cart x (finite_index i)`, 500)
 
 val () = set_fixity "'" (Infixl 2000)
-val () = overload_on ("'", Term`$fcp_index`)
+Overload "'" = Term`$fcp_index`
 
 (* ---------------------------------------------------------------------- *
  *  Establish arrays as an algebraic datatype, with constructor           *

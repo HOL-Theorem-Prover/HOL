@@ -87,7 +87,7 @@ val fsequiv_inv_thms = prove_inversion_theorems
 val fsequiv_strong_ind = prove_strong_induction
     fsequiv_rules_sat fsequiv_ind_thm;
 
-val _ = overload_on("==", ``fsequiv:'a list -> 'a list -> bool``);
+Overload "==" = ``fsequiv:'a list -> 'a list -> bool``
 val _ = add_infix ("==", 425, HOLgrammars.NONASSOC);
 
 Theorem fsequiv_rules_sat = fsequiv_rules_sat;
@@ -159,7 +159,7 @@ QED
 (*       (!x h t. MEM x (h::t) = (x = h) \/ MEM x t)                     *)
 (* --------------------------------------------------------------------- *)
 
-val _ = overload_on("MEM", ``MEM :'a -> 'a list -> bool``);
+Overload MEM = ``MEM :'a -> 'a list -> bool``
 
 Theorem MEM_RSP1:
       !X Y. X == Y ==> (!x:'a. MEM x X = MEM x Y)
@@ -648,7 +648,7 @@ Proof
     THEN RW_TAC arith_ss [Fold,Card]
 QED
 
-val _ = overload_on("In", ``\e s. e IN fset2set s``);
+Overload In = ``\e s. e IN fset2set s``
 val _ = set_fixity "In" (Infix(NONASSOC, 425))
 
 (* --------------------------------------------------------------------- *)

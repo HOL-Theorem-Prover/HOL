@@ -462,7 +462,7 @@ QED
 Definition ES_APPLY_DEF:
   ES_APPLY fM xM = BIND fM (\f. BIND xM (\x. UNIT (f x)))
 End
-val _ = overload_on ("APPLICATIVE_FAPPLY", ``ES_APPLY``)
+Overload APPLICATIVE_FAPPLY = ``ES_APPLY``
 
 Theorem APPLY_UNIT:
     UNIT f <*> xM = MMAP f xM

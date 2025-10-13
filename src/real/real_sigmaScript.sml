@@ -729,7 +729,7 @@ Definition sum_def[nocompute]:
   (Sum :('a->bool)->('a->real)->real) = iterate (+)
 End
 
-val _ = overload_on ("sum",``Sum``);
+Overload sum = ``Sum``
 
 Theorem NEUTRAL_REAL_ADD:
     neutral((+):real->real->real) = &0

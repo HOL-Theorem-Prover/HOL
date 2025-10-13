@@ -305,9 +305,9 @@ in
                       ("IS_SUFFIX", ["IS_SUFFIX"], is_suffix_exists)
 end;
 
-val _ = overload_on ("IS_PREFIX", ``\x y. isPREFIX y x``)
+Overload IS_PREFIX = ``\x y. isPREFIX y x``
 val _ = remove_ovl_mapping "<<=" {Name = "isPREFIX", Thy = "list"}
-val _ = overload_on ("<<=", ``\x y. isPREFIX x y``)
+Overload "<<=" = ``\x y. isPREFIX x y``
 (* second call makes the infix the preferred printing form *)
 
 (* ======================================================================== *)
@@ -6785,10 +6785,10 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Overload increasing list and decreasing list *)
-val _ = overload_on("MONO_INC",
-          ``\ls:num list. !m n. m <= n /\ n < LENGTH ls ==> EL m ls <= EL n ls``);
-val _ = overload_on("MONO_DEC",
-          ``\ls:num list. !m n. m <= n /\ n < LENGTH ls ==> EL n ls <= EL m ls``);
+Overload MONO_INC =
+          ``\ls:num list. !m n. m <= n /\ n < LENGTH ls ==> EL m ls <= EL n ls``
+Overload MONO_DEC =
+          ``\ls:num list. !m n. m <= n /\ n < LENGTH ls ==> EL n ls <= EL m ls``
 
 (* Theorem: MONO_INC []*)
 (* Proof: no member to falsify. *)

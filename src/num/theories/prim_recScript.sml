@@ -549,7 +549,7 @@ Proof
 QED
 
 val [num_case_def] = Prim_rec.define_case_constant num_Axiom
-val _ = overload_on("case", “num_CASE”)
+Overload case = “num_CASE”
 
 val _ = TypeBase.export $ TypeBasePure.gen_datatype_info
           {ax=num_Axiom, case_defs=[num_case_def], ind=INDUCTION}
@@ -567,7 +567,7 @@ Q.new_definition
   ("wellfounded_def",
    `wellfounded (R:'a->'a->bool) = ~?f. !n. R (f (SUC n)) (f n)`);
 
-val _ = overload_on ("Wellfounded", ``wellfounded``);
+Overload Wellfounded = ``wellfounded``
 
 (*---------------------------------------------------------------------------
  * First half of showing that the two definitions of wellfoundedness agree.

@@ -1114,7 +1114,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Use overload for SQRT *)
-val _ = overload_on ("SQRT", ``\n. ROOT 2 n``);
+Overload SQRT = ``\n. ROOT 2 n``
 
 (* Theorem: 0 < n ==> (SQRT n) ** 2 <= n /\ n < SUC (SQRT n) ** 2 *)
 (* Proof: by ROOT:
@@ -1559,7 +1559,7 @@ time (CBV_CONV compset1) ``ROOT 2 123456789123456789123456789``;
 
 
 (* Overload LOG base 2 *)
-val _ = overload_on ("LOG2", ``\n. LOG 2 n``);
+Overload LOG2 = ``\n. LOG 2 n``
 
 (* Theorem: LOG2 1 = 0 *)
 (* Proof:

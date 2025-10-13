@@ -183,9 +183,9 @@ Overload "¬" = “words$word_1comp”
 val _ = send_to_back_overload "~" {Name = "word_1comp", Thy = "words"}
 val _ = send_to_back_overload "¬" {Name = "word_1comp", Thy = "words"}
 
-val _ = overload_on ("UINT_MAXw", ``words$word_T``)
-val _ = overload_on ("INT_MAXw",  ``words$word_H``)
-val _ = overload_on ("INT_MINw",  ``words$word_L``)
+Overload UINT_MAXw = ``words$word_T``
+Overload INT_MAXw = ``words$word_H``
+Overload INT_MINw = ``words$word_L``
 
 val _ = Unicode.unicode_version {u = Unicode.UChar.xor, tmnm = "??"}
 val _ = Unicode.unicode_version {u = Unicode.UChar.or, tmnm = "||"}

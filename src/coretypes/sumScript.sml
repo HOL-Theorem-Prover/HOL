@@ -232,7 +232,7 @@ QED
 
 val [sum_case_def] = Prim_rec.define_case_constant sum_Axiom
 val _ = export_rewrites ["sum_case_def"]
-val _ = overload_on("case", ``sum_CASE``)
+Overload case = ``sum_CASE``
 
 
 val _ = TypeBase.export $ TypeBasePure.gen_datatype_info

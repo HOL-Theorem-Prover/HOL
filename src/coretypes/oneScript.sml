@@ -138,7 +138,7 @@ val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT,0)),
      wouldn't matter if it did.
  ---------------------------------------------------------------------------*)
 
-val _ = overload_on ("()", ``one``);
+Overload "()" = ``one``
 val _ = type_abbrev_pp("unit",``:one``);
 
 Theorem one_induction:

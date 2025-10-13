@@ -50,7 +50,7 @@ Overload TWICE[local] = ``\n. 2 * n``
 (* ------------------------------------------------------------------------- *)
 
 (* Overload for REVERSE [m .. n] *)
-val _ = overload_on ("downto", ``\n m. REVERSE [m .. n]``);
+Overload downto = ``\n m. REVERSE [m .. n]``
 val _ = set_fixity "downto" (Infix(NONASSOC, 450)); (* same as relation *)
 
 (* ------------------------------------------------------------------------- *)
@@ -601,7 +601,7 @@ Proof
 QED
 
 (* Overload repeated turns *)
-val _ = overload_on("turn_exp", ``\l n. FUNPOW turn n l``);
+Overload turn_exp = ``\l n. FUNPOW turn n l``
 
 (* Theorem: turn_exp l 0 = l *)
 (* Proof:
@@ -1844,8 +1844,8 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Overload a positive list *)
-val _ = overload_on("POSITIVE", ``\l. !x. MEM x l ==> 0 < x``);
-val _ = overload_on("EVERY_POSITIVE", ``\l. EVERY (\k. 0 < k) l``);
+Overload POSITIVE = ``\l. !x. MEM x l ==> 0 < x``
+Overload EVERY_POSITIVE = ``\l. EVERY (\k. 0 < k) l``
 
 (* Theorem: EVERY_POSITIVE ls <=> POSITIVE ls *)
 (* Proof: by EVERY_MEM *)
@@ -5541,7 +5541,7 @@ val binomial_horizontal_def = Define `
 *)
 
 (* Use overloading for binomial_horizontal n. *)
-val _ = overload_on("binomial_horizontal", ``\n. GENLIST (binomial n) (n + 1)``);
+Overload binomial_horizontal = ``\n. GENLIST (binomial n) (n + 1)``
 
 (* Theorem: binomial_horizontal 0 = [1] *)
 (* Proof:
@@ -5815,11 +5815,11 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Stirling's formula: n! ~ sqrt(2 pi n) (n/e)^n. *)
-val _ = overload_on("Stirling",
+Overload Stirling =
    ``(!n. FACT n = (SQRT (2 * pi * n)) * (n DIV e) ** n) /\
      (!n. SQRT n = n ** h) /\ (2 * h = 1) /\ (0 < pi) /\ (0 < e) /\
      (!a b x y. (a * b) DIV (x * y) = (a DIV x) * (b DIV y)) /\
-     (!a b c. (a DIV c) DIV (b DIV c) = a DIV b)``);
+     (!a b c. (a DIV c) DIV (b DIV c) = a DIV b)``
 
 (* Theorem: Stirling ==>
             !n. 0 < n /\ EVEN n ==> (binomial n (HALF n) = (2 ** (n + 1)) DIV (SQRT (2 * pi * n))) *)
@@ -7897,7 +7897,7 @@ val _ = overload_on("leibniz_vertical", ``\n. GENLIST ((+) 1) (n + 1)``);
 (* Define Vertical (downward list) in Leibniz Triangle *)
 
 (* Use overloading for leibniz_vertical n. *)
-val _ = overload_on("leibniz_vertical", ``\n. [1 .. (n+1)]``);
+Overload leibniz_vertical = ``\n. [1 .. (n+1)]``
 
 (* Theorem: leibniz_vertical n = GENLIST (\i. 1 + i) (n + 1) *)
 (* Proof:
@@ -8001,7 +8001,7 @@ Proof
 QED
 
 (* Use overloading for leibniz_up n. *)
-val _ = overload_on("leibniz_up", ``\n. REVERSE (leibniz_vertical n)``);
+Overload leibniz_up = ``\n. REVERSE (leibniz_vertical n)``
 
 (* Theorem: leibniz_up 0 = [1] *)
 (* Proof:
@@ -8084,7 +8084,7 @@ val _ = overload_on("leibniz_horizontal", ``\n. GENLIST (leibniz n) (n + 1)``);
 *)
 
 (* Use overloading for leibniz_horizontal n. *)
-val _ = overload_on("leibniz_horizontal", ``\n. GENLIST (leibniz n) (n + 1)``);
+Overload leibniz_horizontal = ``\n. GENLIST (leibniz n) (n + 1)``
 
 (*
 > EVAL ``leibniz_horizontal 0``;
@@ -8505,7 +8505,7 @@ Definition leibniz_zigzag_def:
     leibniz_zigzag (p1: path) (p2: path) <=>
     ?(n k):num (x y):path. (p1 = x ++ [tb; ta] ++ y) /\ (p2 = x ++ [tb; tc] ++ y)
 End
-val _ = overload_on("zigzag", ``leibniz_zigzag``);
+Overload zigzag = ``leibniz_zigzag``
 val _ = set_fixity "zigzag" (Infix(NONASSOC, 450)); (* same as relation *)
 
 (* Theorem: p1 zigzag p2 ==> (list_lcm p1 = list_lcm p2) *)
@@ -8667,7 +8667,7 @@ val leibniz_wriggle_def = Define`
 *)
 
 (* Define paths reachable by many zigzags by closure *)
-val _ = overload_on("wriggle", ``RTC leibniz_zigzag``); (* RTC = reflexive transitive closure *)
+Overload wriggle = ``RTC leibniz_zigzag``(* RTC = reflexive transitive closure *)
 val _ = set_fixity "wriggle" (Infix(NONASSOC, 450)); (* same as relation *)
 
 (* Theorem: p1 wriggle p2 ==> (list_lcm p1 = list_lcm p2) *)
@@ -8908,10 +8908,10 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Use overloading for leibniz_col_arm rooted at leibniz a b, of length n. *)
-val _ = overload_on("leibniz_col_arm", ``\a b n. MAP (\x. leibniz (a - x) b) [0 ..< n]``);
+Overload leibniz_col_arm = ``\a b n. MAP (\x. leibniz (a - x) b) [0 ..< n]``
 
 (* Use overloading for leibniz_seg_arm rooted at leibniz a b, of length n. *)
-val _ = overload_on("leibniz_seg_arm", ``\a b n. MAP (\x. leibniz a (b + x)) [0 ..< n]``);
+Overload leibniz_seg_arm = ``\a b n. MAP (\x. leibniz a (b + x)) [0 ..< n]``
 
 (*
 > EVAL ``leibniz_col_arm 5 1 4``;
@@ -9475,15 +9475,15 @@ by Leibniz triplet.
 *)
 
 (* Introduce a segment, a partial horizontal row, in Leibniz Denominator Triangle *)
-val _ = overload_on("leibniz_seg", ``\n k h. IMAGE (\j. leibniz n (k + j)) (count h)``);
+Overload leibniz_seg = ``\n k h. IMAGE (\j. leibniz n (k + j)) (count h)``
 (* This is a segment starting at leibniz n k, of length h *)
 
 (* Introduce a horizontal row in Leibniz Denominator Triangle *)
-val _ = overload_on("leibniz_row", ``\n h. IMAGE (leibniz n) (count h)``);
+Overload leibniz_row = ``\n h. IMAGE (leibniz n) (count h)``
 (* This is a row starting at leibniz n 0, of length h *)
 
 (* Introduce a vertical column in Leibniz Denominator Triangle *)
-val _ = overload_on("leibniz_col", ``\h. IMAGE (\i. leibniz i 0) (count h)``);
+Overload leibniz_col = ``\h. IMAGE (\i. leibniz i 0) (count h)``
 (* This is a column starting at leibniz 0 0, descending for a length h *)
 
 (* Representations of paths based on indexed sets *)
@@ -10131,7 +10131,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Overload on consecutive LCM *)
-val _ = overload_on("lcm_run", ``\n. list_lcm [1 .. n]``);
+Overload lcm_run = ``\n. list_lcm [1 .. n]``
 
 (* Theorem: lcm_run n = FOLDL lcm 1 [1 .. n] *)
 (* Proof:
@@ -12660,10 +12660,10 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Overload bijectively equal. *)
-val _ = overload_on("bij_eq", ``\s t. ?f. BIJ f s t``);
+Overload bij_eq = ``\s t. ?f. BIJ f s t``
 val _ = set_fixity "bij_eq" (Infix(NONASSOC, 450)); (* same as relation *)
 
-val _ = overload_on ("=b=", ``$bij_eq``);
+Overload "=b=" = ``$bij_eq``
 val _ = set_fixity "=b=" (Infix(NONASSOC, 450));
 
 (*

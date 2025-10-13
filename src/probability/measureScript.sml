@@ -5784,7 +5784,7 @@ val _ = Unicode.unicode_version {u = Unicode.UChar.lsl, tmnm = "<<"};
 val _ = TeX_notation {hol = "<<",              TeX = ("\\HOLTokenLsl{}", 2)};
 val _ = TeX_notation {hol = Unicode.UChar.lsl, TeX = ("\\HOLTokenLsl{}", 2)};
 
-val _ = overload_on ("<<", ``measure_absolutely_continuous``);
+Overload "<<" = ``measure_absolutely_continuous``
 
 (* backward compatible with HVG's original definition, see also RN_deriv' *)
 Overload measure_absolutely_continuous' = “\N M. measure N << M”

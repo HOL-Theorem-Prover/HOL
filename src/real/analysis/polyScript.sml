@@ -104,7 +104,7 @@ val poly_add = new_recursive_definition list_Axiom "poly_add_def"
        (poly_add (h::t) l2 = if (l2 = []) then h::t
                              else  ((h:real) + HD l2)::poly_add t (TL l2))`);
 
-val _ = overload_on ("+", Term`poly_add`);
+Overload "+" = Term`poly_add`
 
 val _ = Parse.hide "##";
 
@@ -115,14 +115,14 @@ val _ = set_fixity "##" (Infixl 600);
 
 val poly_neg = new_definition ("poly_neg_def", Term`poly_neg = $## (~(&1))`);
 
-val _ = overload_on ("~", Term`poly_neg`);
+Overload "~" = Term`poly_neg`
 
 val poly_mul = new_recursive_definition list_Axiom "poly_mul_def"
  (Term`(poly_mul [] l2     = []) /\
        (poly_mul (h::t) l2 = if (t = []) then h ## l2
                              else (h ## l2) + (0r :: poly_mul t l2))`);
 
-val _ = overload_on ("*", Term`poly_mul`);
+Overload "*" = Term`poly_mul`
 
 val poly_exp = new_recursive_definition num_Axiom "poly_exp_def"
  (Term`(poly_exp p 0       = [1r]) /\

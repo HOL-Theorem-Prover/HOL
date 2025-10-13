@@ -1583,8 +1583,8 @@ QED
 
 Definition every_def:  every P ll = ~exists ((~) o P) ll
 End
-val _ = overload_on ("LL_ALL", ``every``)
-val _ = overload_on ("every", ``every``)
+Overload LL_ALL = ``every``
+Overload every = ``every``
 
 Theorem every_coind:
     !P Q.

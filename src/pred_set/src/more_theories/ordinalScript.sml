@@ -40,12 +40,12 @@ Theorem ordlt_TRANS = ordlt_TRANS
 Theorem ordlt_WF =
   REWRITE_RULE [GSYM relationTheory.WF_DEF] ordlt_WF0
 
-val _ = overload_on ("<", ``ordlt``)
-val _ = overload_on ("<=", ``\a b. ~(b < a)``)
+Overload "<" = ``ordlt``
+Overload "<=" = ``\a b. ~(b < a)``
 
 Theorem ordlt_trichotomy = ordlt_trichotomy
 
-val _ = overload_on ("mkOrdinal", ``ordinal_ABS``)
+Overload mkOrdinal = ``ordinal_ABS``
 
 Definition allOrds_def:
   allOrds = mkWO { (x,y) | (x = y) \/ ordlt x y }
@@ -345,7 +345,7 @@ QED
 Definition ordSUC_def:
   ordSUC a = oleast b. a < b
 End
-val _ = overload_on ("TC", ``ordSUC``)
+Overload TC = ``ordSUC``
 
 Definition fromNat_def:
   (fromNat 0 = oleast a. T) /\
@@ -578,7 +578,7 @@ Proof
   res_tac >> fs[ordlt_SUC]
 QED
 
-val _ = overload_on ("countableOrd", ``\a. countable(preds a)``)
+Overload countableOrd = ``\a. countable(preds a)``
 
 Theorem preds_ordSUC:
     preds a^+ = a INSERT preds a
@@ -696,7 +696,7 @@ Proof
   fs[preds_omax_SOME_SUC]
 QED
 
-val _ = overload_on ("islimit", ``\a:'a ordinal. omax (preds a) = NONE``)
+Overload islimit = ``\a:'a ordinal. omax (preds a) = NONE``
 
 Theorem sup_preds_omax_NONE:
     (omax (preds a) = NONE) <=> (sup (preds a) = a)
@@ -835,7 +835,7 @@ val allNats_dwardclosedetc = prove(
 Definition omega_def:
   omega = sup { fromNat i | T }
 End
-val _ = overload_on ("ω", ``omega``)
+Overload "ω" = ``omega``
 
 val lt_omega0 =
   MATCH_MP preds_sup_thm allNats_dwardclosedetc
@@ -897,7 +897,7 @@ val ordADD_def = new_specification(
                 |> Q.GEN `b`
                 |> CONV_RULE SKOLEM_CONV)
 val _ = export_rewrites ["ordADD_def"]
-val _ = overload_on ("+", ``ordADD``)
+Overload "+" = ``ordADD``
 
 Theorem ordADD_0L:
     !a:'a ordinal. 0 + a = a
@@ -1295,7 +1295,7 @@ val ordMULT_def = new_specification(
                 |> CONV_RULE SKOLEM_CONV
                 |> BETA_RULE)
 val _ = export_rewrites ["ordMULT_def"]
-val _ = overload_on ("*", ``ordMULT``)
+Overload "*" = ``ordMULT``
 
 Theorem ordMULT_0L:
     !a:'a ordinal. 0 * a = 0
@@ -1532,10 +1532,10 @@ Theorem ordDIVISION =
 (* end of new definition of ordDIV and ordMOD *)
 
 val _ = set_fixity "/" (Infixl 600)
-val _ = overload_on ("/", ``ordDIV``)
+Overload "/" = ``ordDIV``
 
 val _ = set_fixity "%" (Infixl 650)
-val _ = overload_on ("%", ``ordMOD``)
+Overload "%" = ``ordMOD``
 
 Theorem ordDIV_UNIQUE:
     !a b q r. 0 < (b:'a ordinal) /\ a = b*q + r /\ r < b ==> a / b = q
@@ -1594,7 +1594,7 @@ val ordEXP_def = new_specification(
                 |> BETA_RULE
                 |> SIMP_RULE (srw_ss()) [FORALL_AND_THM])
 val _ = export_rewrites ["ordEXP_def"]
-val _ = overload_on ("**", ``ordEXP``)
+Overload "**" = ``ordEXP``
 
 Theorem ordEXP_1R:
     (a:'a ordinal) ** 1 = a
@@ -1888,7 +1888,7 @@ Definition epsilon0_def:
   epsilon0 = oleast x. omega ** x = x
 End
 
-val _ = overload_on("ε₀", ``epsilon0``)
+Overload "ε₀" = ``epsilon0``
 
 Theorem epsilon0_fixpoint:
     omega ** epsilon0 = epsilon0
@@ -2213,7 +2213,7 @@ val polyform_def = new_specification(
             polyform_exists);
 
 (* Cantor Normal Form - polynomials where the base is omega *)
-val _ = overload_on ("CNF", ``polyform omega``)
+Overload CNF = ``polyform omega``
 
 Theorem CNF_thm =
   polyform_def |> SPEC ``omega`` |> SIMP_RULE (srw_ss()) []
@@ -2356,8 +2356,8 @@ Proof
   rw[] >> match_mp_tac polyform_UNIQUE >> rw[is_polyform_def] >> decide_tac
 QED
 
-val _ = overload_on ("ordLOG", ``\b x. SND (HD (polyform b x))``)
-val _ = overload_on ("olog", ``\x. ordLOG omega x``)
+Overload ordLOG = ``\b x. SND (HD (polyform b x))``
+Overload olog = ``\x. ordLOG omega x``
 Theorem ordLOG_correct:
     1 < b /\ 0 < x ==> ordEXP b (ordLOG b x) <= x /\
     !a. ordLOG b x < a ==> x < ordEXP b a
