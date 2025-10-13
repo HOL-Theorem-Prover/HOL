@@ -10,9 +10,9 @@ val every_case_tac = BasicProvers.EVERY_CASE_TAC;
 val comparison_distinct = TypeBase.distinct_of ``:ordering``
 val comparison_case_def = TypeBase.case_def_of ``:ordering``
 val comparison_nchotomy = TypeBase.nchotomy_of ``:ordering``
-val _ = Parse.overload_on("Less",``LESS``)
-val _ = Parse.overload_on("Equal",``EQUAL``)
-val _ = Parse.overload_on("Greater",``GREATER``)
+Overload Less = ``LESS``
+Overload Equal = ``EQUAL``
+Overload Greater = ``GREATER``
 
 Definition good_cmp_def:
 good_cmp cmp <=>
