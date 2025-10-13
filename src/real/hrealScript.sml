@@ -1398,9 +1398,11 @@ Proof
   THEN CANCEL_TAC
 QED
 
-val TREAL_INV_0 = store_thm("TREAL_INV_0",
- Term`treal_inv (treal_0) treal_eq (treal_0)`,
-  REWRITE_TAC[treal_inv, treal_eq, treal_0]);
+Theorem TREAL_INV_0:
+ treal_inv (treal_0) treal_eq (treal_0)
+Proof
+  REWRITE_TAC[treal_inv, treal_eq, treal_0]
+QED
 
 Theorem TREAL_MUL_LINV:
    !x. ~(x treal_eq treal_0) ==>

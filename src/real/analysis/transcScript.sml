@@ -679,8 +679,9 @@ Proof
   REWRITE_TAC[GSYM EXP_N, LN_EXP]
 QED
 
-val LN_LE = store_thm("LN_LE",
-  Term `!x. &0 <= x ==> ln(&1 + x) <= x`,
+Theorem LN_LE:
+  !x. &0 <= x ==> ln(&1 + x) <= x
+Proof
   GEN_TAC THEN DISCH_TAC THEN
   GEN_REWRITE_TAC RAND_CONV empty_rewrites [GSYM LN_EXP] THEN
   MP_TAC(SPECL [Term`&1 + x`, Term`exp x`] LN_MONO_LE) THEN
@@ -688,7 +689,8 @@ val LN_LE = store_thm("LN_LE",
   THENL
    [REWRITE_TAC[EXP_POS_LT] THEN MATCH_MP_TAC REAL_LET_TRANS THEN
     EXISTS_TAC (Term`x:real`) THEN ASM_REWRITE_TAC[REAL_LT_ADDL, REAL_LT_01],
-    DISCH_THEN SUBST1_TAC THEN MATCH_MP_TAC EXP_LE_X THEN ASM_REWRITE_TAC[]]);
+    DISCH_THEN SUBST1_TAC THEN MATCH_MP_TAC EXP_LE_X THEN ASM_REWRITE_TAC[]]
+QED
 
 Theorem LN_LT_X:
    !x. &0 < x ==> ln(x) < x
@@ -2320,25 +2322,29 @@ Proof
   POP_ASSUM ACCEPT_TAC
 QED
 
-val COS_SIN_SQRT = store_thm("COS_SIN_SQRT",
-  Term `!x. &0 <= cos(x) ==> (cos(x) = sqrt(&1 - (sin(x) pow 2)))`,
+Theorem COS_SIN_SQRT:
+  !x. &0 <= cos(x) ==> (cos(x) = sqrt(&1 - (sin(x) pow 2)))
+Proof
   GEN_TAC THEN DISCH_TAC THEN
   MP_TAC (ONCE_REWRITE_RULE[REAL_ADD_SYM] (SPEC (Term`x:real`) SIN_CIRCLE))
   THEN REWRITE_TAC[GSYM REAL_EQ_SUB_LADD] THEN
   DISCH_THEN(SUBST1_TAC o SYM) THEN
   REWRITE_TAC[sqrt, TWO] THEN
   CONV_TAC SYM_CONV THEN MATCH_MP_TAC POW_ROOT_POS THEN
-  ASM_REWRITE_TAC[]);;
+  ASM_REWRITE_TAC[]
+QED
 
-val SIN_COS_SQRT = store_thm("SIN_COS_SQRT",
-  Term`!x. &0 <= sin(x) ==> (sin(x) = sqrt(&1 - (cos(x) pow 2)))`,
+Theorem SIN_COS_SQRT:
+  !x. &0 <= sin(x) ==> (sin(x) = sqrt(&1 - (cos(x) pow 2)))
+Proof
   GEN_TAC THEN DISCH_TAC THEN
   MP_TAC (SPEC (Term`x:real`) SIN_CIRCLE) THEN
   REWRITE_TAC[GSYM REAL_EQ_SUB_LADD] THEN
   DISCH_THEN(SUBST1_TAC o SYM) THEN
   REWRITE_TAC[sqrt, TWO] THEN
   CONV_TAC SYM_CONV THEN MATCH_MP_TAC POW_ROOT_POS THEN
-  ASM_REWRITE_TAC[]);;
+  ASM_REWRITE_TAC[]
+QED
 
 
 (*---------------------------------------------------------------------------*)

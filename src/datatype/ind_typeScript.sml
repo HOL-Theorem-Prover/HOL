@@ -147,10 +147,11 @@ Definition ZBOT[nocompute]:
   ZBOT = INJP (INJN 0) (@z:num->'a->bool. T)
 End
 
-val ZCONSTR_ZBOT = store_thm(
-  "ZCONSTR_ZBOT",
-  Term`!c i r. ~(ZCONSTR c i r :num->'a->bool = ZBOT)`,
-  REWRITE_TAC[ZCONSTR, ZBOT, INJP_INJ, INJN_INJ, NOT_SUC]);
+Theorem ZCONSTR_ZBOT:
+  !c i r. ~(ZCONSTR c i r :num->'a->bool = ZBOT)
+Proof
+  REWRITE_TAC[ZCONSTR, ZBOT, INJP_INJ, INJN_INJ, NOT_SUC]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Carve out an inductively defined set.                                     *)
@@ -362,29 +363,32 @@ End
 (* Composition theorems.                                                     *)
 (* ------------------------------------------------------------------------- *)
 
-val ISO_REFL = store_thm(
-  "ISO_REFL",
-  Term`ISO (\x:'a. x) (\x. x)`,
-  SIMP_TAC bool_ss [ISO]);
+Theorem ISO_REFL:
+  ISO (\x:'a. x) (\x. x)
+Proof
+  SIMP_TAC bool_ss [ISO]
+QED
 
-val ISO_FUN = store_thm(
-  "ISO_FUN",
-  Term`ISO (f:'a->'c) f' /\ ISO (g:'b->'d) g' ==>
-       ISO (\h a'. g(h(f' a'))) (\h a. g'(h(f a)))`,
-  REWRITE_TAC [ISO] THEN SIMP_TAC bool_ss [ISO, FUN_EQ_THM]);
+Theorem ISO_FUN:
+  ISO (f:'a->'c) f' /\ ISO (g:'b->'d) g' ==>
+       ISO (\h a'. g(h(f' a'))) (\h a. g'(h(f a)))
+Proof
+  REWRITE_TAC [ISO] THEN SIMP_TAC bool_ss [ISO, FUN_EQ_THM]
+QED
   (* bug in the simplifier requires first rewrite to be performed *)
 
 (* ------------------------------------------------------------------------- *)
 (* The use we make of isomorphism when finished.                             *)
 (* ------------------------------------------------------------------------- *)
 
-val ISO_USAGE = store_thm(
-  "ISO_USAGE",
-  Term`ISO f g ==>
+Theorem ISO_USAGE:
+  ISO f g ==>
          (!P. (!x. P x) = (!x. P(g x))) /\
          (!P. (?x. P x) = (?x. P(g x))) /\
-         (!a b. (a = g b) = (f a = b))`,
-  SIMP_TAC bool_ss [ISO, FUN_EQ_THM] THEN MESON_TAC[]);
+         (!a b. (a = g b) = (f a = b))
+Proof
+  SIMP_TAC bool_ss [ISO, FUN_EQ_THM] THEN MESON_TAC[]
+QED
 
 (* ----------------------------------------------------------------------
     Remove constants from top-level name-space
