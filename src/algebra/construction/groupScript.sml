@@ -3861,11 +3861,11 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Use K to denote k.carrier *)
-val _ = temp_overload_on ("K", ``(k:'a group).carrier``);
+Overload K[local] = ``(k:'a group).carrier``
 (* Use o to denote h.op *)
-val _ = temp_overload_on ("o", ``(h:'a group).op``);
+Overload o[local] = ``(h:'a group).op``
 (* Use #i to denote h.id *)
-val _ = temp_overload_on ("#i", ``(h:'a monoid).id``);
+Overload "#i"[local] = ``(h:'a monoid).id``
 
 (* Theorem: h <= g /\ k <= g ==> !x. x IN H INTER K ==> |/ x IN H INTER K *)
 (* Proof:
@@ -6149,7 +6149,7 @@ Definition GROUP_IMAGE_DEF:
 End
 
 (* overload GROUP_IMAGE *)
-val _ = temp_overload_on("GPI", ``GROUP_IMAGE g``);
+Overload GPI[local] = ``GROUP_IMAGE g``
 
 (*
 > GROUP_IMAGE_DEF;
@@ -6256,7 +6256,7 @@ Definition group_fun_def:
 End
 
 (* overload on group function *)
-val _ = temp_overload_on("gfun", ``group_fun g``);
+Overload gfun[local] = ``group_fun g``
 
 (* Theorem: Monoid g ==> !f. gfun f ==> !x. x IN G ==> (GPI f {x} = f x) *)
 (* Proof:
@@ -9141,7 +9141,7 @@ End
 (* This is the same as add_mod below, using {i | i < n} as carrier. *)
 
 (* Overload Zadd n *)
-val _ = temp_overload_on("Z", ``Zadd``);
+Overload Z[local] = ``Zadd``
 
 (*
 - type_of ``Z n``;
@@ -9364,7 +9364,7 @@ End
 (* This is the same as mult_mod below, using { i | i <> 0 /\ i < p } as carrier. *)
 
 (* Overload Zstar n *)
-val _ = temp_overload_on("Z*", ``Zstar``);
+Overload "Z*"[local] = ``Zstar``
 
 (*
 - type_of ``Z* p``;
@@ -12815,7 +12815,7 @@ End
 (* Note: use zDefine as this is not effective. *)
 
 (* Overload reach relation *)
-val _ = temp_overload_on("~~", ``\(x:'b) (y:'b) f (g:'a group). reach f g x y``);
+Overload "~~"[local] = ``\(x:'b) (y:'b) f (g:'a group). reach f g x y``
 (* Make reach an infix. *)
 val _ = set_fixity "~~" (Infix(NONASSOC, 450)); (* same as relation *)
 

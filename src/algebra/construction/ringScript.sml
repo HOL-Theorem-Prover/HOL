@@ -6192,9 +6192,9 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* The carrier of Ideal = carrier of group i.sum *)
-val _ = temp_overload_on ("I", ``i.carrier``);
+Overload I[local] = ``i.carrier``
 (* The carrier of Ideal = carrier of group j.sum *)
-val _ = temp_overload_on ("J", ``j.carrier``);
+Overload J[local] = ``j.carrier``
 
 (* An Ideal i (structurally a ring: carrier, sum, prod) of a ring r satisfies 2 conditions:
    (1) sum part is subgroup: i.sum is a subgroup of r.sum
@@ -9351,9 +9351,9 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* The carrier of Ideal = carrier of group i.sum *)
-val _ = temp_overload_on ("I", ``i.carrier``);
+Overload I[local] = ``i.carrier``
 (* The carrier of Ideal = carrier of group j.sum *)
-val _ = temp_overload_on ("J", ``j.carrier``);
+Overload J[local] = ``j.carrier``
 
 (* Divides relation in ring *)
 Definition ring_divides_def:
@@ -10296,9 +10296,9 @@ Proof
 QED
 
 (* Introduce temporary overlaods *)
-val _ = temp_overload_on ("<a>", ``principal_ideal r a``);
-val _ = temp_overload_on ("<b>", ``principal_ideal r b``);
-val _ = temp_overload_on ("<u>", ``principal_ideal r u``);
+Overload "<a>"[local] = ``principal_ideal r a``
+Overload "<b>"[local] = ``principal_ideal r b``
+Overload "<u>"[local] = ``principal_ideal r u``
 
 (* Theorem: PrincipalIdealRing r ==> !p. atom p ==> rprime p *)
 (* Proof:
@@ -10558,9 +10558,9 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* The carrier of Ideal = carrier of group i.sum *)
-val _ = temp_overload_on ("I", ``i.carrier``);
+Overload I[local] = ``i.carrier``
 (* The carrier of Ideal = carrier of group j.sum *)
-val _ = temp_overload_on ("J", ``j.carrier``);
+Overload J[local] = ``j.carrier``
 
 (* Define carrier set of Quotient Ring (R/I) by overloading *)
 val _ = overload_on ("R/I", ``CosetPartition r.sum i.sum``);

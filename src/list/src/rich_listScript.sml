@@ -7051,7 +7051,7 @@ Definition sublist_def:
 End
 
 (* Overload sublist by infix operator *)
-val _ = temp_overload_on ("<=", ``sublist``);
+Overload "<="[local] = ``sublist``
 (*
 > sublist_def;
 val it = |- (!x. [] <= x <=> T) /\ (!t1 h1. h1::t1 <= [] <=> F) /\

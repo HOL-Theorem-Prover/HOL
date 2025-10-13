@@ -1220,7 +1220,7 @@ QED
     The Boolean operations : theorems
    ------------------------------------------------------------------------- *)
 
-val _ = temp_overload_on ("Tw",``words$word_T``)
+Overload Tw[local] = ``words$word_T``
 
 val ONE_COMP_0_THM =
   (SIMP_RULE arith_ss [BIT_ZERO,ZERO_MOD,ZERO_LT_TWOEXP] o

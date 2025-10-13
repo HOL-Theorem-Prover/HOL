@@ -13,9 +13,9 @@ Ancestors
   listRange gcdset option number combinatorics prim_rec
 
 
-val _ = temp_overload_on("SQ", ``\n. n * n``);
-val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
-val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
+Overload SQ[local] = ``\n. n * n``
+Overload HALF[local] = ``\n. n DIV 2``
+Overload TWICE[local] = ``\n. 2 * n``
 
 (* ------------------------------------------------------------------------- *)
 (* Integer Functions Computation Documentation                               *)

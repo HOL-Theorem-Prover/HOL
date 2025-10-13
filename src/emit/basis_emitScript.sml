@@ -1325,7 +1325,7 @@ val INT_REM_EMIT = Q.prove(
   SRW_TAC [] [combinTheory.FAIL_THM, int_rem]);
 
 val _ = temp_clear_overloads_on "&";
-val _ = temp_overload_on("int_of_num", ``integer$int_of_num``);
+Overload int_of_num[local] = ``integer$int_of_num``
 
 val _ = eSML "int"
  (OPEN ["num", "words"]

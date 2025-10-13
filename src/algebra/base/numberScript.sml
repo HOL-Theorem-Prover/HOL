@@ -574,13 +574,13 @@ Proof
 QED
 
 (* Overload squaring (temporalized by Chun Tian) *)
-val _ = temp_overload_on("SQ", ``\n. n * n``); (* not n ** 2 *)
+Overload SQ[local] = ``\n. n * n``(* not n ** 2 *)
 
 (* Overload half of a number (temporalized by Chun Tian) *)
-val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
+Overload HALF[local] = ``\n. n DIV 2``
 
 (* Overload twice of a number (temporalized by Chun Tian) *)
-val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
+Overload TWICE[local] = ``\n. 2 * n``
 
 (* make divides infix *)
 val _ = set_fixity "divides" (Infixl 480); (* relation is 450, +/- is 500, * is 600. *)
@@ -8580,10 +8580,10 @@ Proof
 QED
 
 (* Overload a RISING function (temporalizaed by Chun Tian) *)
-val _ = temp_overload_on ("RISING", ``\f. !x:num. x <= f x``);
+Overload RISING[local] = ``\f. !x:num. x <= f x``
 
 (* Overload a FALLING function (temporalizaed by Chun Tian) *)
-val _ = temp_overload_on ("FALLING", ``\f. !x:num. f x <= x``);
+Overload FALLING[local] = ``\f. !x:num. f x <= x``
 
 (* Theorem: RISING f /\ m <= n ==> !x. FUNPOW f m x <= FUNPOW f n x *)
 (* Proof:
@@ -10289,7 +10289,7 @@ Proof
 QED
 
 (* Overload sublist by infix operator *)
-val _ = temp_overload_on ("<=", ``sublist``);
+Overload "<="[local] = ``sublist``
 
 (* Theorem: m < n ==> [m; n] <= [m .. n] *)
 (* Proof:

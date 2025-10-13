@@ -3201,7 +3201,7 @@ QED
     more theorems about RAT_SGN : rat -> int  (-1,0,1)
    ---------------------------------------------------------------------- *)
 
-val _ = temp_overload_on ("RAT_SGN", ``rat_sgn``)
+Overload RAT_SGN[local] = ``rat_sgn``
 Theorem RAT_SGN_NUM_COND:
    rat_sgn (&n) = if n = 0 then 0 else 1
 Proof

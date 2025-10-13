@@ -2298,7 +2298,7 @@ Definition spts_to_alist_add_pause_def:
   )
 End
 
-val _ = temp_overload_on("add_pause", ``spts_to_alist_add_pause``);
+Overload add_pause[local] = ``spts_to_alist_add_pause``
 
 Triviality SUM_add_pause:
   SUM (MAP FST (add_pause j q)) = j + SUM (MAP FST q)
@@ -2390,8 +2390,8 @@ Proof
   \\ simp [MAP_MAP_o, Q.prove (`SND o (f ## g) = g o SND`, simp [FUN_EQ_THM])]
 QED
 
-val _ = temp_overload_on("inclist_stable",
-  `` \xs. FILTER ((~) o isEmpty o SND) (gather_inclist_offsets xs) ``)
+Overload inclist_stable[local] =
+  `` \xs. FILTER ((~) o isEmpty o SND) (gather_inclist_offsets xs) ``
 
 Triviality gather_add_pause:
   inclist_stable (REVERSE (add_pause j xs)) =

@@ -466,7 +466,7 @@ QED
 (* --------------------------------------------------------------------- *)
 
 (* Respectfulness theorem for the list2set function. *)
-val _ = temp_overload_on("list2set", ``LIST_TO_SET``)
+Overload list2set[local] = ``LIST_TO_SET``
 Theorem list2set_RSP:
       !X Y:'a list. X == Y ==>
           (list2set X = list2set Y)

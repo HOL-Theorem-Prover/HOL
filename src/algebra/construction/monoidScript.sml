@@ -3564,13 +3564,13 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Use K to denote k.carrier *)
-val _ = temp_overload_on ("K", ``(k:'a monoid).carrier``);
+Overload K[local] = ``(k:'a monoid).carrier``
 
 (* Use o to denote h.op *)
-val _ = temp_overload_on ("o", ``(h:'a monoid).op``);
+Overload o[local] = ``(h:'a monoid).op``
 
 (* Use #i to denote h.id *)
-val _ = temp_overload_on ("#i", ``(h:'a monoid).id``);
+Overload "#i"[local] = ``(h:'a monoid).id``
 
 (* A Submonoid is a subset of a monoid that's a monoid itself, keeping op, id. *)
 Definition Submonoid_def:

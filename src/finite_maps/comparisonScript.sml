@@ -82,7 +82,7 @@ Proof
   rw[TotOrd,good_cmp_thm] >> metis_tac[]
 QED
 
-val _ = temp_overload_on ("invert", ``ternaryComparisons$invert_comparison``)
+Overload invert[local] = ``ternaryComparisons$invert_comparison``
 
 Theorem TO_inv_invert:
     !c. TotOrd c ==> TO_inv c = CURRY (invert o UNCURRY c)

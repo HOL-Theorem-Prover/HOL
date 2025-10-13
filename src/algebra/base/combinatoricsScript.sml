@@ -41,9 +41,9 @@ Ancestors
   rich_list number listRange indexedLists relation
 
 
-val _ = temp_overload_on("SQ", ``\n. n * n``);
-val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
-val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
+Overload SQ[local] = ``\n. n * n``
+Overload HALF[local] = ``\n. n DIV 2``
+Overload TWICE[local] = ``\n. 2 * n``
 
 (* ------------------------------------------------------------------------- *)
 (* List Reversal.                                                            *)
@@ -8396,9 +8396,9 @@ val _ = overload_on("tri_a", ``(triple n k).a``);
 val _ = overload_on("tri_b", ``(triple n k).b``);
 val _ = overload_on("tri_c", ``(triple n k).c``);
 *)
-val _ = temp_overload_on("ta", ``(triplet n k).a``);
-val _ = temp_overload_on("tb", ``(triplet n k).b``);
-val _ = temp_overload_on("tc", ``(triplet n k).c``);
+Overload ta[local] = ``(triplet n k).a``
+Overload tb[local] = ``(triplet n k).b``
+Overload tc[local] = ``(triplet n k).c``
 
 (* Theorem: (ta = leibniz n k) /\ (tb = leibniz (n + 1) k) /\ (tc = leibniz (n + 1) (k + 1)) *)
 (* Proof: by triplet_def *)
@@ -11519,7 +11519,7 @@ val beta_def = Define`
     beta n k = k * (binomial n k)
 `;
 *)
-val _ = temp_overload_on ("beta", ``\n k. k * (binomial n k)``); (* for temporary overloading *)
+Overload beta[local] = ``\n k. k * (binomial n k)``(* for temporary overloading *)
 (* can use overload, but then hard to print and change the appearance of too many theorem? *)
 
 (*
@@ -11686,7 +11686,7 @@ QED
 (* Use overloading for a row of beta n k, k = 1 to n. *)
 (* val _ = overload_on("beta_horizontal", ``\n. TL (GENLIST (beta n) (n + 1))``); *)
 (* use a direct GENLIST rather than tail of a GENLIST *)
-val _ = temp_overload_on("beta_horizontal", ``\n. GENLIST (beta n o SUC) n``); (* for temporary overloading *)
+Overload beta_horizontal[local] = ``\n. GENLIST (beta n o SUC) n``(* for temporary overloading *)
 
 (*
 > EVAL ``leibniz_horizontal 5``; --> [6; 30; 60; 60; 30; 6]
@@ -12507,7 +12507,7 @@ QED
 
    NOTE: this is FUNSET --Chun Tian
  *)
-val _ = temp_overload_on("over", ``\f s t. !x. x IN s ==> f x IN t``);
+Overload over[local] = ``\f s t. !x. x IN s ==> f x IN t``
 (* not easy to make this a good infix operator! *)
 
 (* Theorem: INJ f s t ==> over f s t *)
