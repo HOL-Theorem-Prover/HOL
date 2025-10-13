@@ -82,6 +82,48 @@ Proof
       PROVE_TAC [BISIM_def] ]
 QED
 
+Theorem BISIM_REL_sym:
+  symmetric (BISIM_REL ts)
+Proof
+  SRW_TAC[][symmetric_def, BISIM_REL_def]
+  >> METIS_TAC[BISIM_INV, inv_DEF]
+QED
+
+Theorem BISIM_REL_strong_thm:
+  BISIM_REL ts p0 q0 <=> ∃R. R p0 q0 ∧
+    (∀p q. R p q ⇒
+      ∀l. (∀p'. ts p l p' ⇒ ∃q'. ts q l q' ∧ (R p' q' ∨ BISIM_REL ts p' q')) ∧
+           (∀q'. ts q l q' ⇒ ∃p'. ts p l p' ∧ (R p' q' ∨ BISIM_REL ts p' q')))
+Proof
+  SRW_TAC[][EQ_IMP_THM]
+  >- (Q.EXISTS_TAC `BISIM_REL ts`
+      >> SRW_TAC[][BISIM_REL_def, BISIM_def]
+      >> METIS_TAC[])
+  >> SRW_TAC[][BISIM_REL_def, BISIM_def]
+  >> Q.EXISTS_TAC `λp q. R p q ∨ BISIM_REL ts p q`
+  >> METIS_TAC[BISIM_REL_def, BISIM_def]
+QED
+
+Theorem BISIM_REL_sym_thm:
+  BISIM_REL ts p0 q0 <=> ∃R. symmetric R ∧ R p0 q0 ∧
+    (∀p q. R p q ⇒ ∀l p'. ts p l p' ⇒ ∃q'. ts q l q' ∧ R p' q')
+Proof
+  SRW_TAC[][EQ_IMP_THM, symmetric_def, BISIM_REL_def]
+  >| [Q.EXISTS_TAC `λp q. R p q ∨ R q p`, SRW_TAC[][]]
+  >> METIS_TAC[BISIM_INV, BISIM_def]
+QED
+
+Theorem BISIM_REL_sym_strong_thm:
+  BISIM_REL ts p0 q0 <=> ∃R. symmetric R ∧ R p0 q0 ∧
+    (∀p q. R p q ⇒ ∀l p'. ts p l p' ⇒ ∃q'. ts q l q' ∧ (R p' q' ∨ BISIM_REL ts p' q'))
+Proof
+  SRW_TAC[][EQ_IMP_THM]
+  >- METIS_TAC[BISIM_REL_sym_thm]
+  >> PURE_ONCE_REWRITE_TAC[BISIM_REL_strong_thm]
+  >> Q.EXISTS_TAC `λp q. R p q ∨ R q p`
+  >> METIS_TAC[symmetric_def, BISIM_REL_sym]
+QED
+
 Theorem BISIM_REL_IS_EQUIV_REL :
     !ts. equivalence (BISIM_REL ts)
 Proof
@@ -340,8 +382,8 @@ Proof
       Q.EXISTS_TAC `SC R` \\
       FULL_SIMP_TAC (srw_ss ()) [WBISIM_def, SC_DEF] \\
       METIS_TAC [])
-  >- (SRW_TAC[][transitive_def, WBISIM_REL_def] >>
-      Q.EXISTS_TAC `R' O R` \\
+  >- (SRW_TAC[][transitive_def, WBISIM_REL_def]
+>> Q.EXISTS_TAC `R' O R` \\
       METIS_TAC [WBISIM_O, O_DEF])
 QED
 
@@ -384,4 +426,5 @@ Theorem BISIM_REL_IMP_WBISIM_REL :
 Proof
     REWRITE_TAC [GSYM RSUBSET, BISIM_REL_RSUBSET_WBISIM_REL]
 QED
+
 
