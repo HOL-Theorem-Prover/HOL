@@ -463,10 +463,11 @@ Proof
   SRW_TAC [][]
 QED
 
-val add_eq_conv_diff = prove(
-  ``(M + {|a|} = N + {|b|}) <=>
+Theorem add_eq_conv_diff[local]:
+    (M + {|a|} = N + {|b|}) <=>
     (M = N) /\ (a = b) \/
-    (M = N - {|a|} + {|b|}) /\ (N = M - {|b|} + {|a|})``,
+    (M = N - {|a|} + {|b|}) /\ (N = M - {|b|} + {|a|})
+Proof
   SRW_TAC [][BAG_UNION, BAG_DIFF, FUN_EQ_THM, BAG_INSERT, EMPTY_BAG] THEN
   Cases_on `a = b` THEN SRW_TAC [][] THENL [
     EQ_TAC THEN1 SRW_TAC [][] THEN STRIP_TAC THEN
@@ -478,13 +479,16 @@ val add_eq_conv_diff = prove(
     Q.X_GEN_TAC `x` THEN
     REPEAT (FIRST_X_ASSUM (Q.SPEC_THEN `x` MP_TAC)) THEN
     SRW_TAC [][] THEN DECIDE_TAC
-  ]);
+  ]
+QED
 
-val insert_diffM2 = prove(
-  ``BAG_IN x M ==> (M - {|x|} + {|x|} = M)``,
+Theorem insert_diffM2[local]:
+    BAG_IN x M ==> (M - {|x|} + {|x|} = M)
+Proof
   SRW_TAC [][BAG_UNION, BAG_DIFF, BAG_INSERT, EMPTY_BAG, FUN_EQ_THM, BAG_IN,
              BAG_INN] THEN
-  SRW_TAC [][] THEN DECIDE_TAC);
+  SRW_TAC [][] THEN DECIDE_TAC
+QED
 
 Theorem BAG_UNION_DIFF_eliminate:
     (BAG_DIFF (BAG_UNION b c) c = b) /\
@@ -494,10 +498,11 @@ Proof
 QED
 val _ = export_rewrites ["BAG_UNION_DIFF_eliminate"]
 
-val add_eq_conv_ex = prove(
-  “(M + {|a|} = N + {|b|}) <=>
+Theorem add_eq_conv_ex[local]:
+   (M + {|a|} = N + {|b|}) <=>
      (M = N) /\ (a = b) \/
-     ?k. (M = k + {|b|}) /\ (N = k + {|a|})”,
+     ?k. (M = k + {|b|}) /\ (N = k + {|a|})
+Proof
   SRW_TAC [][add_eq_conv_diff] THEN Cases_on `a = b` THENL [
     SRW_TAC [][EQ_IMP_THM] THEN
     FULL_SIMP_TAC (srw_ss()) [insert_diffM2] THEN
@@ -510,7 +515,8 @@ val add_eq_conv_ex = prove(
 
       SRW_TAC [][]
     ]
-  ]);
+  ]
+QED
 
 Theorem BAG_INSERT_EQUAL =
   SIMP_RULE (srw_ss()) [BAG_UNION_INSERT] add_eq_conv_ex
@@ -1291,8 +1297,9 @@ Theorem STRONG_FINITE_BAG_INDUCT =
 
 val _ = IndDefLib.export_rule_induction "STRONG_FINITE_BAG_INDUCT";
 
-val FINITE_BAG_INSERT_down' = prove(
-  ``!b. FINITE_BAG b ==> (!e b0. (b = BAG_INSERT e b0) ==> FINITE_BAG b0)``,
+Theorem FINITE_BAG_INSERT_down'[local]:
+    !b. FINITE_BAG b ==> (!e b0. (b = BAG_INSERT e b0) ==> FINITE_BAG b0)
+Proof
   HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN
   SIMP_TAC std_ss [BAG_INSERT_NOT_EMPTY] THEN
   REPEAT STRIP_TAC THEN Q.ASM_CASES_TAC `e = e'` THENL [
@@ -1307,7 +1314,8 @@ val FINITE_BAG_INSERT_down' = prove(
     RES_TAC THEN ELIM_TAC THEN
     RULE_ASSUM_TAC (ONCE_REWRITE_RULE [BAG_INSERT_commutes]) THEN
     FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][FINITE_BAG_INSERT]
-  ])
+  ]
+QED
 
 Theorem FINITE_BAG_INSERT[local]:
  !e b. FINITE_BAG (BAG_INSERT e b) = FINITE_BAG b
@@ -1348,15 +1356,17 @@ val FINITE_BAG_UNION_1 = prove(
             !b2. FINITE_BAG b2 ==> FINITE_BAG (BAG_UNION b1 b2)`,
   HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN
   SIMP_TAC std_ss [FINITE_BAG_THM, BAG_UNION_EMPTY, BAG_UNION_INSERT]);
-val FINITE_BAG_UNION_2 = prove(
-  ``!b. FINITE_BAG b ==>
-           !b1 b2. (b = BAG_UNION b1 b2) ==> FINITE_BAG b1 /\ FINITE_BAG b2``,
+Theorem FINITE_BAG_UNION_2[local]:
+    !b. FINITE_BAG b ==>
+           !b1 b2. (b = BAG_UNION b1 b2) ==> FINITE_BAG b1 /\ FINITE_BAG b2
+Proof
   HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN SRW_TAC [][] THEN
   MAP_EVERY IMP_RES_TAC [BAG_INSERT_EQ_UNION,
                          REWRITE_RULE [BAG_DELETE] BAG_IN_BAG_DELETE] THEN
   ELIM_TAC THEN
   FULL_SIMP_TAC std_ss [BAG_UNION_INSERT, BAG_INSERT_ONE_ONE,
-                        FINITE_BAG_THM] THEN METIS_TAC []);
+                        FINITE_BAG_THM] THEN METIS_TAC []
+QED
 
 Theorem FINITE_BAG_UNION[simp]:
   !b1 b2. FINITE_BAG (BAG_UNION b1 b2) <=>
@@ -2114,9 +2124,11 @@ Proof
  RW_TAC arith_ss []
 QED
 
-val SUB_BAG_UNION_MONO_0 = prove(
-  ``!x y. SUB_BAG x (BAG_UNION x y)``,
-  RW_TAC arith_ss [SUB_BAG,BAG_UNION,BAG_INN]);
+Theorem SUB_BAG_UNION_MONO_0[local]:
+    !x y. SUB_BAG x (BAG_UNION x y)
+Proof
+  RW_TAC arith_ss [SUB_BAG,BAG_UNION,BAG_INN]
+QED
 Theorem SUB_BAG_UNION_MONO =
   CONJ SUB_BAG_UNION_MONO_0
        (ONCE_REWRITE_RULE [COMM_BAG_UNION] SUB_BAG_UNION_MONO_0)
@@ -2451,8 +2463,11 @@ Proof
 QED
 val _ = export_rewrites ["BAG_ALL_DISTINCT_THM"]
 
-val forall_eq_thm = prove (``(!s:'a. (P s = Q s)) ==> ((!s. P s) = (!s. Q s))``,
-                             STRIP_TAC THEN ASM_REWRITE_TAC[]);
+Theorem forall_eq_thm[local]:
+    (!s:'a. (P s = Q s)) ==> ((!s. P s) = (!s. Q s))
+Proof
+                             STRIP_TAC THEN ASM_REWRITE_TAC[]
+QED
 
 Theorem BAG_ALL_DISTINCT_BAG_MERGE:
     !b1 b2. BAG_ALL_DISTINCT (BAG_MERGE b1 b2) =
@@ -2825,18 +2840,21 @@ Proof
   ]
 QED
 
-val bag_insert_union = prove(
-  ``BAG_INSERT e b = b + {|e|}``,
+Theorem bag_insert_union[local]:
+    BAG_INSERT e b = b + {|e|}
+Proof
   SRW_TAC [][FUN_EQ_THM, BAG_UNION, BAG_INSERT, EMPTY_BAG] THEN
-  SRW_TAC [bossLib.ARITH_ss][]);
+  SRW_TAC [bossLib.ARITH_ss][]
+QED
 
-val tedious_reasoning = prove(
-  ``!M0 a.
+Theorem tedious_reasoning[local]:
+    !M0 a.
       WFP (mlt1 R) M0 /\
       (!b. R b a ==> !M. WFP (mlt1 R) M ==>  WFP (mlt1 R) (M + {|b|})) /\
       (!M. mlt1 R M M0 ==> WFP (mlt1 R) (M + {|a|}))
     ==>
-      WFP (mlt1 R) (M0 + {|a|})``,
+      WFP (mlt1 R) (M0 + {|a|})
+Proof
   REPEAT STRIP_TAC THEN MATCH_MP_TAC relationTheory.WFP_RULES THEN
   REPEAT STRIP_TAC THEN
   `FINITE_BAG y` by FULL_SIMP_TAC (srw_ss()) [mlt1_def] THEN
@@ -2855,7 +2873,8 @@ val tedious_reasoning = prove(
   Q_TAC SUFF_TAC `M0 + BAG_INSERT e KK = M0 + KK + {|e|}`
         THEN1 METIS_TAC [] THEN
   SRW_TAC [][BAG_UNION, FUN_EQ_THM, BAG_INSERT, EMPTY_BAG] THEN
-  SRW_TAC [bossLib.ARITH_ss][]);
+  SRW_TAC [bossLib.ARITH_ss][]
+QED
 
 
 Theorem mlt1_all_accessible:
@@ -2974,10 +2993,11 @@ Proof
   simp[dominates_def]
 QED
 
-val cycles_exist = prove(
-  ``!X. FINITE X ==> (!x. x IN X ==> f x IN X) /\ X <> {}
+Theorem cycles_exist[local]:
+    !X. FINITE X ==> (!x. x IN X ==> f x IN X) /\ X <> {}
       ==>
-        ?x n. 0 < n /\ x IN X /\ (FUNPOW f n x = x)``,
+        ?x n. 0 < n /\ x IN X /\ (FUNPOW f n x = x)
+Proof
   strip_tac >> completeInduct_on `CARD X` >>
   full_simp_tac (srw_ss() ++ boolSimps.DNF_ss) [AND_IMP_INTRO] >> rw[] >>
   `?e X0. (X = e INSERT X0) /\ e NOTIN X0` by metis_tac[SET_CASES] >>
@@ -2998,7 +3018,8 @@ val cycles_exist = prove(
     by (dsimp[Abbr`XX`] >> qx_gen_tac `p` >> qexists_tac `SUC p` >>
         simp[FUNPOW_SUC]) >>
   `XX <> {}` by simp[Abbr`XX`, EXTENSION] >>
-  metis_tac[SUBSET_DEF]);
+  metis_tac[SUBSET_DEF]
+QED
 
 Theorem dominates_SUBSET:
     transitive R /\ FINITE Y /\ dominates R Y X /\ X SUBSET Y /\ X <> {} ==>
@@ -3309,14 +3330,16 @@ Theorem mlt_UNION_LCANCEL_I =
 Theorem mlt_UNION_LCANCEL[simp] =
   ONCE_REWRITE_RULE [COMM_BAG_UNION] mlt_UNION_RCANCEL
 
-val mlt_UNION_lemma = prove(
-  ``WF R ==>
+Theorem mlt_UNION_lemma[local]:
+    WF R ==>
     (mlt R b1 (BAG_UNION b1 b2) <=>
-      FINITE_BAG b1 /\ FINITE_BAG b2 /\ b2 <> {||})``,
+      FINITE_BAG b1 /\ FINITE_BAG b2 /\ b2 <> {||})
+Proof
   strip_tac >> `WF (mlt R)` by simp[relationTheory.WF_TC_EQN, WF_mlt1] >>
   reverse eq_tac >- simp[TC_mlt1_UNION2_I] >>
   strip_tac >> imp_res_tac TC_mlt1_FINITE_BAG >>
-  fs[] >> strip_tac >> fs[] >> metis_tac[relationTheory.WF_NOT_REFL]);
+  fs[] >> strip_tac >> fs[] >> metis_tac[relationTheory.WF_NOT_REFL]
+QED
 
 Theorem mlt_UNION_CANCEL_EQN[simp]:
     WF R ==>

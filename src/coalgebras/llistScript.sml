@@ -348,9 +348,11 @@ QED
 
 (* can also prove that two lists are equal "extensionally", by showing
    that LNTH is everywhere the same over them *)
-val LNTH_llist_rep = prove(
-  ``!n r. lrep_ok r ==> (LNTH n (llist_abs r) = r n)``,
-  SIMP_TAC bool_ss [LNTH_rep, llist_repabs']) ;
+Theorem LNTH_llist_rep[local]:
+    !n r. lrep_ok r ==> (LNTH n (llist_abs r) = r n)
+Proof
+  SIMP_TAC bool_ss [LNTH_rep, llist_repabs']
+QED
 
 Theorem LNTH_EQ:
     !ll1 ll2. (ll1 = ll2) = (!n. LNTH n ll1 = LNTH n ll2)
@@ -704,11 +706,13 @@ Proof
 QED
 val _ = export_rewrites ["LTAKE_NIL_EQ_NONE"]
 
-val SNOC_11 = prove(
-  ``!l1 l2 x y. (l1 ++ [x] = l2 ++ [y]) <=> (l1 = l2) /\ (x = y)``,
+Theorem SNOC_11[local]:
+    !l1 l2 x y. (l1 ++ [x] = l2 ++ [y]) <=> (l1 = l2) /\ (x = y)
+Proof
   SIMP_TAC (srw_ss() ++ DNF_ss) [EQ_IMP_THM] THEN CONJ_TAC THEN
   Induct THEN REPEAT GEN_TAC THEN SIMP_TAC (srw_ss()) [] THEN
-  Cases_on `l2` THEN SRW_TAC [][] THEN METIS_TAC []);
+  Cases_on `l2` THEN SRW_TAC [][] THEN METIS_TAC []
+QED
 
 Theorem LTAKE_EQ:
     !ll1 ll2. (ll1 = ll2) = (!n. LTAKE n ll1 = LTAKE n ll2)
@@ -953,25 +957,33 @@ val (llength_rel_rules,llength_rel_ind,llength_rel_cases) = Hol_reln`
   (!h n t. llength_rel t n ==> llength_rel (h:::t) (SUC n))
 `;
 
-val llength_lfinite = prove(
- ``!t n. llength_rel t n ==> LFINITE t``,
-  HO_MATCH_MP_TAC llength_rel_ind THEN SRW_TAC [][]);
-val lfinite_llength = prove(
-  ``!t. LFINITE t ==> ?n. llength_rel t n``,
+Theorem llength_lfinite[local]:
+   !t n. llength_rel t n ==> LFINITE t
+Proof
+  HO_MATCH_MP_TAC llength_rel_ind THEN SRW_TAC [][]
+QED
+Theorem lfinite_llength[local]:
+    !t. LFINITE t ==> ?n. llength_rel t n
+Proof
   HO_MATCH_MP_TAC LFINITE_ind THEN SRW_TAC [][] THEN
-  METIS_TAC [llength_rel_rules]);
+  METIS_TAC [llength_rel_rules]
+QED
 
-val llength_unique = prove(
-  ``!t m n. llength_rel t n /\ llength_rel t m ==> (m = n)``,
+Theorem llength_unique[local]:
+    !t m n. llength_rel t n /\ llength_rel t m ==> (m = n)
+Proof
   Q_TAC SUFF_TAC `!t n. llength_rel t n ==> !m. llength_rel t m ==> (m = n)`
         THEN1 METIS_TAC [] THEN
   HO_MATCH_MP_TAC llength_rel_ind THEN SRW_TAC [][] THEN
   POP_ASSUM (ASSUME_TAC o ONCE_REWRITE_RULE [llength_rel_cases]) THEN
-  FULL_SIMP_TAC (srw_ss()) []);
+  FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val llength_rel_nil = prove(
-  ``llength_rel [||] n = (n = 0)``,
-  ONCE_REWRITE_TAC [llength_rel_cases] THEN SRW_TAC [][]);
+Theorem llength_rel_nil[local]:
+    llength_rel [||] n = (n = 0)
+Proof
+  ONCE_REWRITE_TAC [llength_rel_cases] THEN SRW_TAC [][]
+QED
 val _ = augment_srw_ss [rewrites [llength_rel_nil]]
 
 Definition LLENGTH[nocompute]:
@@ -1359,10 +1371,12 @@ Proof
   FULL_SIMP_TAC (srw_ss()) []
 QED
 
-val option_case_NONE = prove(
-  ``!f x y. (option_CASE x NONE f = SOME y) =
-            (?z. (x = SOME z) /\ (f z = SOME y))``,
-  REPEAT GEN_TAC THEN Cases_on `x` THEN SIMP_TAC (srw_ss()) []);
+Theorem option_case_NONE[local]:
+    !f x y. (option_CASE x NONE f = SOME y) =
+            (?z. (x = SOME z) /\ (f z = SOME y))
+Proof
+  REPEAT GEN_TAC THEN Cases_on `x` THEN SIMP_TAC (srw_ss()) []
+QED
 
 Theorem LTAKE_DROP:
     (!n ll:'a llist.
@@ -1655,8 +1669,9 @@ QED
     can now define LFILTER and LFLATTEN
    ---------------------------------------------------------------------- *)
 
-val least_lemma = prove(
-  ``(?n. P n) ==> ((LEAST) P = if P 0 then 0 else SUC ((LEAST) (P o SUC)))``,
+Theorem least_lemma[local]:
+    (?n. P n) ==> ((LEAST) P = if P 0 then 0 else SUC ((LEAST) (P o SUC)))
+Proof
   SRW_TAC [][] THENL [
     Q_TAC SUFF_TAC `(\n. n = 0) ($LEAST P)` THEN1 SRW_TAC [][] THEN
     MATCH_MP_TAC LEAST_ELIM THEN SRW_TAC [][] THENL [
@@ -1680,7 +1695,8 @@ val least_lemma = prove(
         FULL_SIMP_TAC (srw_ss()) []
       ]
     ]
-  ]);
+  ]
+QED
 
 val LFILTER = new_specification
  ("LFILTER", ["LFILTER"],

@@ -124,13 +124,15 @@ Definition OPTION_UPDATE:
  OPTION_UPDATE (f:'a->'b option) g x = optry (f x) (g x)
 End
 
-val IS_SOME_OPTION_UPDATE = prove (
-``!u (v:'a -> 'b option). IS_SOME o OPTION_UPDATE u v =
-                          IS_SOME o u UNION IS_SOME o v``,
+Theorem IS_SOME_OPTION_UPDATE[local]:
+  !u (v:'a -> 'b option). IS_SOME o OPTION_UPDATE u v =
+                          IS_SOME o u UNION IS_SOME o v
+Proof
 REPEAT GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN
 REWRITE_TAC [rrs IN_UNION, combinTheory.o_THM, OPTION_UPDATE, optry_case] THEN
 Cases_on `u x` THEN REWRITE_TAC [option_CLAUSES] THEN
-BETA_TAC THEN REWRITE_TAC [option_CLAUSES]);
+BETA_TAC THEN REWRITE_TAC [option_CLAUSES]
+QED
 
 (* ***************************************************************** *)
 (*  merge sorting for functions (as association lists here. We call  *)
@@ -708,10 +710,12 @@ End
 (* ********* We require a short interlude relating option-valued ******** *)
 (* ********* and finite functions, via FLOOKUP and unlookup.     ******** *)
 
-val FUPDATE_ALT = prove (
-``!f:'a |-> 'b l. f |++ REVERSE l = FOLDR (combin$C FUPDATE) f l``,
+Theorem FUPDATE_ALT[local]:
+  !f:'a |-> 'b l. f |++ REVERSE l = FOLDR (combin$C FUPDATE) f l
+Proof
 REPEAT GEN_TAC THEN REWRITE_TAC [FUPDATE_LIST, combinTheory.C_DEF]
-THEN BETA_TAC THEN REWRITE_TAC [rich_listTheory.FOLDL_REVERSE]);
+THEN BETA_TAC THEN REWRITE_TAC [rich_listTheory.FOLDL_REVERSE]
+QED
 
 val IS_SOME_FDOM = maybe_thm ("IS_SOME_FDOM",
 ``!f:'a |-> 'b. IS_SOME o FLOOKUP f = FDOM f``,
@@ -975,10 +979,12 @@ val IN_ub_imp = maybe_thm ("IN_ub_imp",
 ``!cmp x t:'a bt ub. x IN bt_to_set_ub cmp t ub ==> (apto cmp x ub = LESS)``,
 SRW_TAC [] [bt_to_set_ub]);
 
-val piecewise_FUNION = prove (
-``!a b c x y z:'a|->'b.(a=x)/\(b=y)/\(c=z)==>
-                       (a FUNION b FUNION c = x FUNION y FUNION z)``,
-METIS_TAC []);
+Theorem piecewise_FUNION[local]:
+  !a b c x y z:'a|->'b.(a=x)/\(b=y)/\(c=z)==>
+                       (a FUNION b FUNION c = x FUNION y FUNION z)
+Proof
+METIS_TAC []
+QED
 
 val bt_to_fmap_lb_ub_mut_rec = maybe_thm ("bt_to_fmap_lb_ub_mut_rec",
 ``!cmp lb l x:'a y:'b r ub. bt_to_fmap_lb_ub cmp lb (node l (x,y) r) ub =
@@ -2231,10 +2237,12 @@ GEN_TAC THEN GEN_TAC THEN Induct THEN SRW_TAC [] [bt_map]);
 Definition AP_SND:  AP_SND (f:'b->'c) (a:'a,b:'b) = (a, f b)
 End
 
-val FST_two_ways = prove (
-``!f:'b->'c. FST o AP_SND f = (FST:'a#'b->'a)``,
+Theorem FST_two_ways[local]:
+  !f:'b->'c. FST o AP_SND f = (FST:'a#'b->'a)
+Proof
 GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN
-P_PGEN_TAC ``a:'a,b:'b`` THEN SRW_TAC [] [combinTheory.o_THM, AP_SND]);
+P_PGEN_TAC ``a:'a,b:'b`` THEN SRW_TAC [] [combinTheory.o_THM, AP_SND]
+QED
 
 Theorem o_f_bt_map:
   !cmp f:'b -> 'c t:('a#'b)bt.
@@ -2428,8 +2436,11 @@ GEN_TAC THEN GEN_TAC THEN Induct THENL
  CONV_TAC FUN_EQ_CONV THEN SRW_TAC [] []
 ]);
 
-val bool_lem = prove (``!P Q.(if ~P then ~P else P /\ Q) <=> P ==> Q``,
-RW_TAC bool_ss [IMP_DISJ_THM]);
+Theorem bool_lem[local]:
+    !P Q.(if ~P then ~P else P /\ Q) <=> P ==> Q
+Proof
+RW_TAC bool_ss [IMP_DISJ_THM]
+QED
 
 Theorem list_rplacv_thm:
   !x:'a y:'b l.
@@ -2574,8 +2585,11 @@ QED
 (*               Theorems to support FUN_fmap_CONV                   *)
 (* ***************************************************************** *)
 
-val FST_PAIR_ID = prove (``!f:'a->'b. FST o (\x. (x,f x)) = I``,
-GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN SRW_TAC [][combinTheory.o_THM]);
+Theorem FST_PAIR_ID[local]:
+    !f:'a->'b. FST o (\x. (x,f x)) = I
+Proof
+GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN SRW_TAC [][combinTheory.o_THM]
+QED
 
 Theorem FUN_fmap_thm:
   !f:'a->'b l:'a list. fmap (MAP (\x. (x, f x)) l) = FUN_FMAP f (set l)

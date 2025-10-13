@@ -229,8 +229,9 @@ QED
 (* REAL_COMPLETE                                                             *)
 (* ------------------------------------------------------------------------- *)
 
-val lemma1 = prove (
- ``!P s. (!x:real. P x ==> x <= s) = (!y:real. (?x. P x /\ y < x) ==> y < s)``,
+Theorem lemma1[local]:
+   !P s. (!x:real. P x ==> x <= s) = (!y:real. (?x. P x /\ y < x) ==> y < s)
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL
   [DISCH_TAC THEN GEN_TAC THEN STRIP_TAC THEN
    FIRST_X_ASSUM (MP_TAC o SPEC ``x:real``) THEN ASM_REWRITE_TAC [] THEN
@@ -238,10 +239,12 @@ val lemma1 = prove (
    ONCE_REWRITE_TAC [MONO_NOT_EQ] THEN RW_TAC std_ss [REAL_NOT_LE, REAL_NOT_LT] THEN
    POP_ASSUM MP_TAC THEN GEN_REWR_TAC LAND_CONV [REAL_LT_BETWEEN] THEN
    STRIP_TAC THEN EXISTS_TAC ``x':real`` THEN ASM_REWRITE_TAC [REAL_LE_LT] THEN
-   EXISTS_TAC ``x:real`` THEN ASM_REWRITE_TAC []]);
+   EXISTS_TAC ``x:real`` THEN ASM_REWRITE_TAC []]
+QED
 
-val lemma2 = prove (
- ``!P s. (!M:real. (!x. P x ==> x <= M) ==> s <= M) = (!y. y < s ==> (?x. P x /\ y < x))``,
+Theorem lemma2[local]:
+   !P s. (!M:real. (!x. P x ==> x <= M) ==> s <= M) = (!y. y < s ==> (?x. P x /\ y < x))
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL
   [ONCE_REWRITE_TAC [MONO_NOT_EQ] THEN
    RW_TAC std_ss [REAL_NOT_LE, REAL_NOT_LT] THEN UNDISCH_TAC ``y < s:real`` THEN
@@ -249,26 +252,31 @@ val lemma2 = prove (
    EXISTS_TAC ``x:real`` THEN ASM_REWRITE_TAC [] THEN GEN_TAC THEN
    METIS_TAC [REAL_LE_TRANS, REAL_LE_LT],
    ONCE_REWRITE_TAC [MONO_NOT_EQ] THEN RW_TAC std_ss [REAL_NOT_LE, REAL_NOT_LT] THEN
-   EXISTS_TAC ``M:real`` THEN METIS_TAC []]);
+   EXISTS_TAC ``M:real`` THEN METIS_TAC []]
+QED
 
-val lemma3 = prove (
- ``(?s:real. !y. (?x. P x /\ y < x) <=> y < s) =
-   (?M:real. (!x. P x ==> x <= M) /\ (!M'. (!x. P x ==> x <= M') ==> M <= M'))``,
- SIMP_TAC std_ss [lemma1, lemma2] THEN METIS_TAC []);
+Theorem lemma3[local]:
+   (?s:real. !y. (?x. P x /\ y < x) <=> y < s) =
+   (?M:real. (!x. P x ==> x <= M) /\ (!M'. (!x. P x ==> x <= M') ==> M <= M'))
+Proof
+ SIMP_TAC std_ss [lemma1, lemma2] THEN METIS_TAC []
+QED
 
-val lemma4 = prove (
- ``!P:real->bool.
+Theorem lemma4[local]:
+   !P:real->bool.
     ((?x. P x) /\ (?z. !x. P x ==> x < z) ==>
      (?s. !y. (?x. P x /\ y < x) <=> y < s)) ==>
     ((?x. P x) /\ (?s. !x. P x ==> x <= s)
        ==> ?s. (!x. P x ==> x <= s) /\
-               !M'. (!x. P x ==> x <= M') ==> s <= M')``,
+               !M'. (!x. P x ==> x <= M') ==> s <= M')
+Proof
   REPEAT STRIP_TAC THEN REWRITE_TAC [GSYM lemma3] THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN CONJ_TAC THENL
   [METIS_TAC [], ALL_TAC] THEN
   EXISTS_TAC ``s + 1:real`` THEN GEN_TAC THEN STRIP_TAC THEN
   FIRST_X_ASSUM (MP_TAC o SPEC ``x':real``) THEN
-  ASM_REWRITE_TAC [] THEN REAL_ARITH_TAC);
+  ASM_REWRITE_TAC [] THEN REAL_ARITH_TAC
+QED
 
 Theorem REAL_COMPLETE:
    !P:real->bool. (?x. P x) /\ (?M. !x. P x ==> x <= M)
@@ -1134,11 +1142,13 @@ Proof
   SIMP_TAC std_ss [sum_def, GSYM NEUTRAL_REAL_ADD, ITERATE_SUPERSET, MONOIDAL_REAL_ADD]
 QED
 
-val lemma = prove (
-  ``!s. DISJOINT {x | x IN s /\ P x} {x | x IN s /\ ~P x}``,
+Theorem lemma[local]:
+    !s. DISJOINT {x | x IN s /\ P x} {x | x IN s /\ ~P x}
+Proof
   GEN_TAC THEN SIMP_TAC std_ss [DISJOINT_DEF, INTER_DEF, EXTENSION, GSPECIFICATION]
   THEN GEN_TAC THEN EQ_TAC THENL
-  [RW_TAC std_ss [], RW_TAC std_ss [NOT_IN_EMPTY]]);
+  [RW_TAC std_ss [], RW_TAC std_ss [NOT_IN_EMPTY]]
+QED
 
 Theorem SUM_UNION_RZERO:
    !f:'a->real u v.
@@ -3441,13 +3451,15 @@ QED
  *)
 Theorem REAL_SUM_IMAGE_POS_LT = translate SUM_POS_LT
 
-val REAL_SUM_IMAGE_IF_ELIM_lem = prove
-  (``!s. FINITE s ==>
+Theorem REAL_SUM_IMAGE_IF_ELIM_lem[local]:
+     !s. FINITE s ==>
                 (\s. !P f. (!x. x IN s ==> P x) ==>
                         (REAL_SUM_IMAGE (\x. if P x then f x else 0) s =
-                         REAL_SUM_IMAGE f s)) s``,
+                         REAL_SUM_IMAGE f s)) s
+Proof
    MATCH_MP_TAC FINITE_INDUCT
-   >> RW_TAC real_ss [REAL_SUM_IMAGE_THM, IN_INSERT, DELETE_NON_ELEMENT]);
+   >> RW_TAC real_ss [REAL_SUM_IMAGE_THM, IN_INSERT, DELETE_NON_ELEMENT]
+QED
 
 Theorem REAL_SUM_IMAGE_IF_ELIM:
      !s P f. FINITE s /\ (!x. x IN s ==> P x) ==>
@@ -3457,10 +3469,11 @@ Proof
    METIS_TAC [REAL_SUM_IMAGE_IF_ELIM_lem]
 QED
 
-val REAL_SUM_IMAGE_FINITE_SAME_lem = prove
-  (``!P. FINITE P ==>
+Theorem REAL_SUM_IMAGE_FINITE_SAME_lem[local]:
+     !P. FINITE P ==>
          (\P. !f p.
-             p IN P /\ (!q. q IN P ==> (f p = f q)) ==> (REAL_SUM_IMAGE f P = (&(CARD P)) * f p)) P``,
+             p IN P /\ (!q. q IN P ==> (f p = f q)) ==> (REAL_SUM_IMAGE f P = (&(CARD P)) * f p)) P
+Proof
    MATCH_MP_TAC FINITE_INDUCT
    >> RW_TAC real_ss [REAL_SUM_IMAGE_THM, CARD_EMPTY, DELETE_NON_ELEMENT]
    >> `f p = f e` by FULL_SIMP_TAC std_ss [IN_INSERT]
@@ -3474,7 +3487,8 @@ val REAL_SUM_IMAGE_FINITE_SAME_lem = prove
    >- RW_TAC real_ss [REAL_SUM_IMAGE_THM, CARD_EMPTY]
    >> `f e = f x` by FULL_SIMP_TAC std_ss [IN_INSERT]
    >> FULL_SIMP_TAC std_ss [] >> POP_ASSUM (K ALL_TAC)
-   >> Q.PAT_ASSUM `!f p. b` MATCH_MP_TAC >> METIS_TAC [IN_INSERT]);
+   >> Q.PAT_ASSUM `!f p. b` MATCH_MP_TAC >> METIS_TAC [IN_INSERT]
+QED
 
 Theorem REAL_SUM_IMAGE_FINITE_SAME:
      !P. FINITE P ==>
@@ -3523,9 +3537,10 @@ Proof
     rw [REAL_SUM_IMAGE_sum, SUM_CONST]
 QED
 
-val REAL_SUM_IMAGE_IN_IF_lem = prove
-  (``!P. FINITE P ==>
-                (\P.!f. REAL_SUM_IMAGE f P = REAL_SUM_IMAGE (\x. if x IN P then f x else 0) P) P``,
+Theorem REAL_SUM_IMAGE_IN_IF_lem[local]:
+     !P. FINITE P ==>
+                (\P.!f. REAL_SUM_IMAGE f P = REAL_SUM_IMAGE (\x. if x IN P then f x else 0) P) P
+Proof
    MATCH_MP_TAC FINITE_INDUCT
    >> RW_TAC real_ss [REAL_SUM_IMAGE_THM]
    >> POP_ASSUM MP_TAC
@@ -3537,7 +3552,8 @@ val REAL_SUM_IMAGE_IN_IF_lem = prove
             >> RW_TAC std_ss [])
    >> POP_ORW
    >> POP_ASSUM (MP_TAC o Q.SPECL [`f`])
-   >> RW_TAC real_ss []);
+   >> RW_TAC real_ss []
+QED
 
 Theorem REAL_SUM_IMAGE_IN_IF:
      !P. FINITE P ==>
@@ -3580,9 +3596,10 @@ Proof
  >> rw [GSYM DISJOINT_DEF, FINITE_UNION]
 QED
 
-val REAL_SUM_IMAGE_EQ_CARD_lem = prove
-   (``!P. FINITE P ==>
-        (\P. REAL_SUM_IMAGE (\x. if x IN P then 1 else 0) P = (&(CARD P))) P``,
+Theorem REAL_SUM_IMAGE_EQ_CARD_lem[local]:
+      !P. FINITE P ==>
+        (\P. REAL_SUM_IMAGE (\x. if x IN P then 1 else 0) P = (&(CARD P))) P
+Proof
    MATCH_MP_TAC FINITE_INDUCT
    >> RW_TAC real_ss [REAL_SUM_IMAGE_THM, CARD_EMPTY, IN_INSERT]
    >> (MP_TAC o Q.SPECL [`s`]) CARD_INSERT
@@ -3595,7 +3612,8 @@ val REAL_SUM_IMAGE_EQ_CARD_lem = prove
    >> `REAL_SUM_IMAGE (\x. (if (x = e) \/ x IN s then 1 else 0)) s =
        REAL_SUM_IMAGE (\x. if x IN s then (\x. (if (x = e) \/ x IN s then 1 else 0)) x else 0) s`
         by (METIS_TAC [REAL_SUM_IMAGE_IN_IF])
-   >> RW_TAC std_ss []);
+   >> RW_TAC std_ss []
+QED
 
 Theorem REAL_SUM_IMAGE_EQ_CARD:
      !P. FINITE P ==>
@@ -3624,10 +3642,11 @@ Proof
     >> METIS_TAC [CARD_EQ_0]
 QED
 
-val REAL_SUM_IMAGE_INTER_NONZERO_lem = prove
-  (``!P. FINITE P ==>
+Theorem REAL_SUM_IMAGE_INTER_NONZERO_lem[local]:
+     !P. FINITE P ==>
         (\P. !f. REAL_SUM_IMAGE f (P INTER (\p. ~(f p = 0))) =
-                 REAL_SUM_IMAGE f P) P``,
+                 REAL_SUM_IMAGE f P) P
+Proof
    MATCH_MP_TAC FINITE_INDUCT
    >> RW_TAC std_ss [REAL_SUM_IMAGE_THM, INTER_EMPTY, INSERT_INTER]
    >> FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT]
@@ -3637,7 +3656,8 @@ val REAL_SUM_IMAGE_INTER_NONZERO_lem = prove
    >> FULL_SIMP_TAC std_ss [GSYM DELETE_NON_ELEMENT]
    >> `~(e IN (s INTER (\p. ~(f p = 0))))`
         by RW_TAC std_ss [IN_INTER]
-   >> FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT]);
+   >> FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT]
+QED
 
 Theorem REAL_SUM_IMAGE_INTER_NONZERO:
      !P. FINITE P ==>
@@ -3647,18 +3667,20 @@ Proof
    METIS_TAC [REAL_SUM_IMAGE_INTER_NONZERO_lem]
 QED
 
-val REAL_SUM_IMAGE_INTER_ELIM_lem = prove
-  (``!P. FINITE P ==>
+Theorem REAL_SUM_IMAGE_INTER_ELIM_lem[local]:
+     !P. FINITE P ==>
         (\P. !f P'. (!x. (~(x IN P')) ==> (f x = 0)) ==>
                         (REAL_SUM_IMAGE f (P INTER P') =
-                         REAL_SUM_IMAGE f P)) P``,
+                         REAL_SUM_IMAGE f P)) P
+Proof
    MATCH_MP_TAC FINITE_INDUCT
    >> RW_TAC std_ss [INTER_EMPTY, REAL_SUM_IMAGE_THM, INSERT_INTER]
    >> Cases_on `e IN P'`
    >- (`~ (e IN (s INTER P'))` by RW_TAC std_ss [IN_INTER]
        >> FULL_SIMP_TAC std_ss [INTER_FINITE, REAL_SUM_IMAGE_THM, DELETE_NON_ELEMENT])
    >> FULL_SIMP_TAC real_ss []
-   >> FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT]);
+   >> FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT]
+QED
 
 Theorem REAL_SUM_IMAGE_INTER_ELIM:
      !P. FINITE P ==>

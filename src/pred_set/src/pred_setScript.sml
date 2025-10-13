@@ -156,14 +156,16 @@ QED
 (* ===================================================================== *)
 (* Generalized set specification.                                        *)
 (* ===================================================================== *)
-val GSPEC_DEF_LEMMA = prove(
-   “?g:('b->('a#bool))-> 'a set.
-           !f. !v:'a. v IN (g f) <=> ?x:'b. (v,T) = f x”,
+Theorem GSPEC_DEF_LEMMA[local]:
+    ?g:('b->('a#bool))-> 'a set.
+           !f. !v:'a. v IN (g f) <=> ?x:'b. (v,T) = f x
+Proof
      EXISTS_TAC (“\f. \y:'a. ?x:'b. (y,T) = f x”) THEN
      REPEAT GEN_TAC THEN
      PURE_ONCE_REWRITE_TAC [SPECIFICATION] THEN
      CONV_TAC (DEPTH_CONV BETA_CONV) THEN
-     REFL_TAC);
+     REFL_TAC
+QED
 
 (* --------------------------------------------------------------------- *)
 (* generalized axiom of specification:                                   *)
@@ -3042,8 +3044,9 @@ Proof
    RW_TAC std_ss [REST_DEF, FINITE_DELETE]
 QED
 
-val UNION_FINITE = prove(
-  “!s:'a set. FINITE s ==> !t. FINITE t ==> FINITE (s UNION t)”,
+Theorem UNION_FINITE[local]:
+   !s:'a set. FINITE s ==> !t. FINITE t ==> FINITE (s UNION t)
+Proof
   SET_INDUCT_TAC THENL [
     REWRITE_TAC [UNION_EMPTY],
     SET_INDUCT_TAC THENL [
@@ -3054,7 +3057,8 @@ val UNION_FINITE = prove(
                            EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM] THEN
       ASM_SIMP_TAC bool_ss [FINITE_INSERT, FINITE_EMPTY]
     ]
-  ]);
+  ]
+QED
 
 val FINITE_UNION_LEMMA = TAC_PROOF(([],
 “!s:'a set. FINITE s ==> !t. FINITE (s UNION t) ==> FINITE t”),
@@ -3066,10 +3070,12 @@ val FINITE_UNION_LEMMA = TAC_PROOF(([],
        DISCH_THEN (MP_TAC o MATCH_MP INSERT_FINITE) THEN
        FIRST_ASSUM MATCH_ACCEPT_TAC]]);
 
-val FINITE_UNION = prove(
-  “!s:'a set. !t. FINITE(s UNION t) ==> (FINITE s /\ FINITE t)”,
+Theorem FINITE_UNION[local]:
+   !s:'a set. !t. FINITE(s UNION t) ==> (FINITE s /\ FINITE t)
+Proof
   REPEAT STRIP_TAC THEN IMP_RES_THEN MATCH_MP_TAC FINITE_UNION_LEMMA THEN
-  PROVE_TAC [UNION_COMM, UNION_ASSOC, UNION_IDEMPOT]);
+  PROVE_TAC [UNION_COMM, UNION_ASSOC, UNION_IDEMPOT]
+QED
 
 Theorem FINITE_UNION[simp]:
   !s:'a set. !t. FINITE(s UNION t) <=> FINITE s /\ FINITE t
@@ -4686,11 +4692,12 @@ Proof
       REPEAT STRIP_TAC THEN Q.EXISTS_TAC `n` THEN ASM_REWRITE_TAC [] ]]
 QED
 
-val lem = prove(
-  ``!s R.
+Theorem lem[local]:
+    !s R.
       FINITE s /\ (!e. e IN s <=> (?y. R e y) \/ (?x. R x e)) /\
       (!n. R (f (SUC n)) (f n)) ==>
-      ?x. R^+ x x``,
+      ?x. R^+ x x
+Proof
   REPEAT STRIP_TAC THEN `!n. f n IN s` by METIS_TAC [] THEN
   Cases_on `?n m. (f n = f m) /\ n <> m` THENL [
     POP_ASSUM STRIP_ASSUME_TAC THEN
@@ -4707,7 +4714,8 @@ val lem = prove(
       by (SRW_TAC [][SUBSET_DEF, IN_IMAGE] THEN METIS_TAC []) THEN
     `FINITE (IMAGE f univ(:num))` by METIS_TAC [SUBSET_FINITE] THEN
     POP_ASSUM MP_TAC THEN SRW_TAC [][INJECTIVE_IMAGE_FINITE]
-  ])
+  ]
+QED
 
 Theorem FINITE_WF_noloops:
     !s. FINITE s ==>
@@ -6750,9 +6758,10 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* every finite, non-empty set of natural numbers has a maximum element *)
-val max_lemma = prove(
-  ``!s. FINITE s ==> ?x. (s <> {} ==> x IN s /\ !y. y IN s ==> y <= x) /\
-                         ((s = {}) ==> (x = 0))``,
+Theorem max_lemma[local]:
+    !s. FINITE s ==> ?x. (s <> {} ==> x IN s /\ !y. y IN s ==> y <= x) /\
+                         ((s = {}) ==> (x = 0))
+Proof
   HO_MATCH_MP_TAC FINITE_INDUCT THEN
   SIMP_TAC bool_ss [NOT_INSERT_EMPTY, IN_INSERT] THEN
   REPEAT STRIP_TAC THEN
@@ -6765,7 +6774,8 @@ val max_lemma = prove(
       `m <= e` by RW_TAC arith_ss [] THEN
       PROVE_TAC [LESS_EQ_REFL, LESS_EQ_TRANS]
     ]
-  ])
+  ]
+QED
 
 (* |- !s. FINITE s ==>
           (s <> {} ==> MAX_SET s IN s /\ !y. y IN s ==> y <= MAX_SET s) /\
@@ -8103,10 +8113,11 @@ QED
 (* a counting exercise for R-trees.  If x0 has finitely many successors, and
    each of these successors has finite trees underneath, then x0's tree is
    also finite *)
-val KL_lemma1 = prove(
-  ``FINITE { x | R x0 x} /\
+Theorem KL_lemma1[local]:
+    FINITE { x | R x0 x} /\
     (!y. R x0 y ==> FINITE { x | RTC R y x }) ==>
-    FINITE { x | RTC R x0 x}``,
+    FINITE { x | RTC R x0 x}
+Proof
   REPEAT STRIP_TAC THEN
   `{ x | RTC R x0 x} =
    x0 INSERT BIGUNION (IMAGE (\x. {y | RTC R x y}) {x | R x0 x})`
@@ -8117,7 +8128,8 @@ val KL_lemma1 = prove(
   POP_ASSUM SUBST_ALL_TAC THEN SRW_TAC [][IN_IMAGE] THENL [
     SRW_TAC [][IMAGE_FINITE, IN_IMAGE, GSPECIFICATION],
     RES_TAC
-  ]);
+  ]
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -8126,10 +8138,12 @@ val KL_lemma1 = prove(
 (* the immediate children is on top of an infinite R tree                    *)
 (*---------------------------------------------------------------------------*)
 
-val KL_lemma2 = prove(
-  ``(!x. FINITE {y | R x y}) ==>
-    !y. ~ FINITE {x | RTC R y x} ==> ?z. R y z /\ ~FINITE { x | RTC R z x}``,
-  METIS_TAC [KL_lemma1]);
+Theorem KL_lemma2[local]:
+    (!x. FINITE {y | R x y}) ==>
+    !y. ~ FINITE {x | RTC R y x} ==> ?z. R y z /\ ~FINITE { x | RTC R z x}
+Proof
+  METIS_TAC [KL_lemma1]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Now throw in the unavoidable use of the axiom of choice, and say that     *)

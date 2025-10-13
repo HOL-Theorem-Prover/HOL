@@ -5385,21 +5385,27 @@ Proof
   ASM_SIMP_TAC std_ss []
 QED
 
-val lemma1 = prove (
-  ``!A sp M u. A IN (univ(:num) -> measurable_sets (sp,M,u)) <=>
-              IMAGE A UNIV SUBSET M``,
+Theorem lemma1[local]:
+    !A sp M u. A IN (univ(:num) -> measurable_sets (sp,M,u)) <=>
+              IMAGE A UNIV SUBSET M
+Proof
   REPEAT STRIP_TAC THEN SIMP_TAC std_ss [measurable_sets_def] THEN
-  EVAL_TAC THEN SRW_TAC[] [IN_FUNSET,IN_UNIV,SUBSET_DEF,IMAGE_DEF] THEN METIS_TAC[]);
+  EVAL_TAC THEN SRW_TAC[] [IN_FUNSET,IN_UNIV,SUBSET_DEF,IMAGE_DEF] THEN METIS_TAC[]
+QED
 
-val lemma2 = prove (
-  ``!A. (!m n. m <> n ==> DISJOINT (A m) (A n)) <=> disjoint_family A``,
+Theorem lemma2[local]:
+    !A. (!m n. m <> n ==> DISJOINT (A m) (A n)) <=> disjoint_family A
+Proof
   STRIP_TAC THEN SIMP_TAC std_ss [disjoint_family_on] THEN
-  SET_TAC []);
+  SET_TAC []
+QED
 
-val lemma3 = prove (
-  ``!A sp M u. BIGUNION (IMAGE A univ(:num)) IN measurable_sets (sp,M,u) <=>
-               BIGUNION {A i | i IN UNIV} IN M``,
-  REPEAT STRIP_TAC THEN SIMP_TAC std_ss [measurable_sets_def, IMAGE_DEF]);
+Theorem lemma3[local]:
+    !A sp M u. BIGUNION (IMAGE A univ(:num)) IN measurable_sets (sp,M,u) <=>
+               BIGUNION {A i | i IN UNIV} IN M
+Proof
+  REPEAT STRIP_TAC THEN SIMP_TAC std_ss [measurable_sets_def, IMAGE_DEF]
+QED
 
 Theorem countably_additive_alt_eq :
     !sp M u. countably_additive (sp,M,u) <=>

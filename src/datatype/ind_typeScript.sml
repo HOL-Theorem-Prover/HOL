@@ -332,10 +332,12 @@ val FCONS = new_recursive_definition {
   def = ``(!a f. FCONS (a:'a) f 0 = a) /\
           (!a f n. FCONS (a:'a) f (SUC n) = f n)``};
 
-val FCONS_UNDO = prove(
-  ``!f:num->'a. f = FCONS (f 0) (f o SUC)``,
+Theorem FCONS_UNDO[local]:
+    !f:num->'a. f = FCONS (f 0) (f o SUC)
+Proof
   GEN_TAC THEN REWRITE_TAC[FUN_EQ_THM] THEN
-  numLib.INDUCT_TAC THEN REWRITE_TAC[FCONS, combinTheory.o_THM]);
+  numLib.INDUCT_TAC THEN REWRITE_TAC[FCONS, combinTheory.o_THM]
+QED
 
 Definition FNIL[nocompute]: FNIL (n:num) = (ARB:'a)
 End

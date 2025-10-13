@@ -311,10 +311,12 @@ val tc_right_asm =
                      (!x y z. P x y /\ R y z ==> P x z) ==>
                      P a b``;
 
-val tc_left_rules0 = prove(
-  ``^tc_left_asm ==> (!x y. R x y ==> tc R x y) /\
-                     (!x y z. R x y /\ tc R y z ==> tc R x z)``,
-  STRIP_TAC THEN ASM_REWRITE_TAC [] THEN BETA_TAC THEN MESON_TAC []);
+Theorem tc_left_rules0[local]:
+    ^tc_left_asm ==> (!x y. R x y ==> tc R x y) /\
+                     (!x y z. R x y /\ tc R y z ==> tc R x z)
+Proof
+  STRIP_TAC THEN ASM_REWRITE_TAC [] THEN BETA_TAC THEN MESON_TAC []
+QED
 val tc_left_rules = UNDISCH tc_left_rules0
 
 val tc_right_rules = UNDISCH (prove(
@@ -402,12 +404,14 @@ val TC_INDUCT_TAC =
  in tac
  end;
 
-val TC_STRONG_INDUCT0 = prove(
-  ``!R P. (!x y. R x y ==> P x y) /\
+Theorem TC_STRONG_INDUCT0[local]:
+    !R P. (!x y. R x y ==> P x y) /\
           (!x y z. P x y /\ P y z /\ TC R x y /\ TC R y z ==> P x z) ==>
-          (!u v. TC R u v ==> P u v /\ TC R u v)``,
+          (!u v. TC R u v ==> P u v /\ TC R u v)
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN TC_INDUCT_TAC THEN
-  ASM_MESON_TAC [TC_RULES]);
+  ASM_MESON_TAC [TC_RULES]
+QED
 
 Theorem TC_STRONG_INDUCT[rule_induction]:
   !R P. (!x y. R x y ==> P x y) /\
@@ -416,19 +420,23 @@ Theorem TC_STRONG_INDUCT[rule_induction]:
 Proof REPEAT STRIP_TAC THEN IMP_RES_TAC TC_STRONG_INDUCT0
 QED
 
-val TC_STRONG_INDUCT_LEFT1_0 = prove(
-  ``!R P. (!x y. R x y ==> P x y) /\
+Theorem TC_STRONG_INDUCT_LEFT1_0[local]:
+    !R P. (!x y. R x y ==> P x y) /\
           (!x y z. R x y /\ P y z /\ TC R y z ==> P x z) ==>
-          (!u v. TC R u v ==> P u v /\ TC R u v)``,
+          (!u v. TC R u v ==> P u v /\ TC R u v)
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC TC_INDUCT_LEFT1 THEN
-  ASM_MESON_TAC [TC_RULES]);
+  ASM_MESON_TAC [TC_RULES]
+QED
 
-val TC_STRONG_INDUCT_RIGHT1_0 = prove(
-  ``!R P. (!x y. R x y ==> P x y) /\
+Theorem TC_STRONG_INDUCT_RIGHT1_0[local]:
+    !R P. (!x y. R x y ==> P x y) /\
           (!x y z. P x y /\ TC R x y /\ R y z ==> P x z) ==>
-          (!u v. TC R u v ==> P u v /\ TC R u v)``,
+          (!u v. TC R u v ==> P u v /\ TC R u v)
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC TC_INDUCT_RIGHT1 THEN
-  ASM_MESON_TAC [TC_RULES]);
+  ASM_MESON_TAC [TC_RULES]
+QED
 
 Theorem TC_STRONG_INDUCT_LEFT1:
     !R P. (!x y. R x y ==> P x y) /\
@@ -2550,9 +2558,11 @@ Proof
   ] THEN PROVE_TAC [TC_RULES]
 QED
 
-val RTC_eq_TCRC = prove(
-  ``RTC R = TC (RC R)``,
-  REWRITE_TAC [TC_RC_EQNS]);
+Theorem RTC_eq_TCRC[local]:
+    RTC R = TC (RC R)
+Proof
+  REWRITE_TAC [TC_RC_EQNS]
+QED
 
 Theorem establish_CR:
     !R. (rcdiamond R ==> CR R) /\ (diamond R ==> CR R)

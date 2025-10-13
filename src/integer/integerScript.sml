@@ -1964,8 +1964,8 @@ QED
 
 val _ = print "Integer division\n"
 
-val int_div_exists0 = prove(
-  ``!i j. ?q. ~(j = 0) ==>
+Theorem int_div_exists0[local]:
+    !i j. ?q. ~(j = 0) ==>
                (q = if 0 < j then
                       if 0 <= i then &(Num i DIV Num j)
                       else ~&(Num ~i DIV Num j) +
@@ -1973,10 +1973,12 @@ val int_div_exists0 = prove(
                     else
                       if 0 <= i then ~&(Num i DIV Num ~j) +
                                      (if Num i MOD Num ~j = 0 then 0 else ~1)
-                      else &(Num ~i DIV Num ~j))``,
+                      else &(Num ~i DIV Num ~j))
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC [IMP_DISJ_THM] THEN
   CONV_TAC EXISTS_OR_CONV THEN DISJ2_TAC THEN
-  REWRITE_TAC [EXISTS_REFL]);
+  REWRITE_TAC [EXISTS_REFL]
+QED
 
 val int_div_exists =
     CONV_RULE (BINDER_CONV SKOLEM_CONV THENC SKOLEM_CONV) int_div_exists0
@@ -2055,11 +2057,13 @@ QED
 
 val _ = print "Integer modulus\n"
 
-val int_mod_exists0 = prove(
-  ``!i j. ?r. ~(j = 0) ==> (r = i - i / j * j)``,
+Theorem int_mod_exists0[local]:
+    !i j. ?r. ~(j = 0) ==> (r = i - i / j * j)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC [IMP_DISJ_THM] THEN
   CONV_TAC EXISTS_OR_CONV THEN DISJ2_TAC THEN
-  REWRITE_TAC [EXISTS_REFL]);
+  REWRITE_TAC [EXISTS_REFL]
+QED
 val int_mod_exists =
     CONV_RULE (BINDER_CONV SKOLEM_CONV THENC SKOLEM_CONV) int_mod_exists0
 
@@ -2069,16 +2073,20 @@ val int_mod = new_specification ("int_mod",["int_mod"],int_mod_exists);
 val _ = set_fixity "%" (Infixl 650)
 Overload "%" = “int_mod”
 
-val little_lemma = prove(
-  ``!x y z. ~x < y + ~z <=> z < y + x``,
+Theorem little_lemma[local]:
+    !x y z. ~x < y + ~z <=> z < y + x
+Proof
   REWRITE_TAC [GSYM int_sub, INT_LT_SUB_LADD] THEN
   REPEAT GEN_TAC THEN
   CONV_TAC (LHS_CONV (LAND_CONV  (REWR_CONV INT_ADD_COMM))) THEN
-  REWRITE_TAC [GSYM int_sub, INT_LT_SUB_RADD]);
+  REWRITE_TAC [GSYM int_sub, INT_LT_SUB_RADD]
+QED
 
-val ll2 = prove(
-  ``!x y. (x + ~y <= 0) = (x <= y)``,
-  REWRITE_TAC [GSYM int_sub, INT_LE_SUB_RADD, INT_ADD_LID]);
+Theorem ll2[local]:
+    !x y. (x + ~y <= 0) = (x <= y)
+Proof
+  REWRITE_TAC [GSYM int_sub, INT_LE_SUB_RADD, INT_ADD_LID]
+QED
 
 
 Theorem INT_MOD_BOUNDS:
@@ -2181,13 +2189,16 @@ Proof
   PROVE_TAC []
 QED
 
-val lessmult_lemma = prove(
-  ``!x y:num. x * y < y ==> (x = 0)``,
-  Induct THEN ASM_SIMP_TAC int_ss [MULT_CLAUSES]);
+Theorem lessmult_lemma[local]:
+    !x y:num. x * y < y ==> (x = 0)
+Proof
+  Induct THEN ASM_SIMP_TAC int_ss [MULT_CLAUSES]
+QED
 
-val negcase = prove(
-  ``!q n m.
-       m < n /\ ~(q = 0) ==> ((~&q * &n + &m) / &n = ~ &q)``,
+Theorem negcase[local]:
+    !q n m.
+       m < n /\ ~(q = 0) ==> ((~&q * &n + &m) / &n = ~ &q)
+Proof
   REPEAT STRIP_TAC THEN
   `m < q * n` by
      PROVE_TAC [NOT_LESS_EQUAL, lessmult_lemma, LESS_LESS_EQ_TRANS] THEN
@@ -2224,7 +2235,8 @@ val negcase = prove(
     Q_TAC SUFF_TAC `~(m = 0)` THEN1 ASM_SIMP_TAC int_ss [] THEN
     DISCH_THEN SUBST_ALL_TAC THEN
     FULL_SIMP_TAC bool_ss [SUB_0] THEN PROVE_TAC [MOD_EQ_0, MULT_COMM]
-  ]);
+  ]
+QED
 
 Theorem INT_DIV_UNIQUE:
     !i j q. (?r. (i = q * j + r) /\
@@ -2358,19 +2370,23 @@ Proof
   ]
 QED
 
-val INT_MOD_ADD0 = prove(
-  ``0 <= r /\ r < k ==> ((q * k + r) % k = r)``,
+Theorem INT_MOD_ADD0[local]:
+    0 <= r /\ r < k ==> ((q * k + r) % k = r)
+Proof
   STRIP_TAC THEN
   MATCH_MP_TAC INT_MOD_UNIQUE THEN
   Q.EXISTS_TAC `q` THEN
-  METIS_TAC [INT_LET_TRANS, INT_LT_TRANS, INT_LT_REFL])
+  METIS_TAC [INT_LET_TRANS, INT_LT_TRANS, INT_LT_REFL]
+QED
 
-val INT_MOD_ADD1 = prove(
-  ``k < r /\ r <= 0 ==> ((q * k + r) % k = r)``,
+Theorem INT_MOD_ADD1[local]:
+    k < r /\ r <= 0 ==> ((q * k + r) % k = r)
+Proof
   STRIP_TAC THEN
   MATCH_MP_TAC INT_MOD_UNIQUE THEN
   Q.EXISTS_TAC `q` THEN
-  METIS_TAC [INT_LTE_TRANS])
+  METIS_TAC [INT_LTE_TRANS]
+QED
 
 Theorem INT_MOD_ADD_MULTIPLES:
     ~(k = 0) ==> ((q * k + r) % k = r % k)
@@ -2692,16 +2708,18 @@ QED
 
 val _ = print "Define integer rem(ainder) and quot(ient) functions\n"
 
-val int_quot_exists0 = prove(
-  ``!i j. ?q. ~(j = 0) ==>
+Theorem int_quot_exists0[local]:
+    !i j. ?q. ~(j = 0) ==>
               (q = if 0 < j then
                      if 0 <= i then &(Num i DIV Num j)
                      else ~&(Num ~i DIV Num j)
                    else
                      if 0 <= i then ~&(Num i DIV Num ~j)
-                     else &(Num ~i DIV Num ~j))``,
+                     else &(Num ~i DIV Num ~j))
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC [IMP_DISJ_THM] THEN
-  CONV_TAC EXISTS_OR_CONV THEN REWRITE_TAC [EXISTS_REFL]);
+  CONV_TAC EXISTS_OR_CONV THEN REWRITE_TAC [EXISTS_REFL]
+QED
 
 val int_quot_exists =
     CONV_RULE (BINDER_CONV SKOLEM_CONV THENC SKOLEM_CONV) int_quot_exists0
@@ -2770,21 +2788,31 @@ fun case_tac s =
     FIRST_X_ASSUM SUBST_ALL_TAC THEN Q.ABBREV_TAC [QUOTE s, QUOTE " = n"] THEN
     POP_ASSUM (K ALL_TAC)
 
-val lem1 = prove(
-  ``!x y z. (x = y + ~z) = (x + z = y)``,
-  REWRITE_TAC [GSYM int_sub, INT_EQ_SUB_LADD]);
-val lem2 = prove(
-  ``!x y z. (x = ~y + z) = (x + y = z)``,
-  PROVE_TAC [INT_ADD_COMM, lem1]);
-val lem3 = prove(
-  ``!x y z. (~x + y = z) = (y = x + z)``,
-  PROVE_TAC [INT_ADD_COMM, lem2]);
-val lem3a = prove(
-  ``!x y z. (x + ~y = z) = (x = y + z)``,
-  PROVE_TAC [INT_ADD_COMM, lem2]);
-val lem4 = prove(
-  ``!x y:num. x * y < y <=> (x = 0) /\ ~(y = 0)``,
-  Induct THEN ASM_SIMP_TAC int_ss [MULT_CLAUSES]);
+Theorem lem1[local]:
+    !x y z. (x = y + ~z) = (x + z = y)
+Proof
+  REWRITE_TAC [GSYM int_sub, INT_EQ_SUB_LADD]
+QED
+Theorem lem2[local]:
+    !x y z. (x = ~y + z) = (x + y = z)
+Proof
+  PROVE_TAC [INT_ADD_COMM, lem1]
+QED
+Theorem lem3[local]:
+    !x y z. (~x + y = z) = (y = x + z)
+Proof
+  PROVE_TAC [INT_ADD_COMM, lem2]
+QED
+Theorem lem3a[local]:
+    !x y z. (x + ~y = z) = (x = y + z)
+Proof
+  PROVE_TAC [INT_ADD_COMM, lem2]
+QED
+Theorem lem4[local]:
+    !x y:num. x * y < y <=> (x = 0) /\ ~(y = 0)
+Proof
+  Induct THEN ASM_SIMP_TAC int_ss [MULT_CLAUSES]
+QED
 
 Theorem INT_QUOT_UNIQUE:
   !p q k.
@@ -2834,10 +2862,12 @@ Proof
 QED
 
 (* define rem *)
-val int_rem_exists0 = prove(
-  ``!i j. ?r. ~(j = 0) ==> (r = i - i quot j * j)``,
+Theorem int_rem_exists0[local]:
+    !i j. ?r. ~(j = 0) ==> (r = i - i quot j * j)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC [IMP_DISJ_THM] THEN
-  CONV_TAC EXISTS_OR_CONV THEN REWRITE_TAC [EXISTS_REFL]);
+  CONV_TAC EXISTS_OR_CONV THEN REWRITE_TAC [EXISTS_REFL]
+QED
 val int_rem_exists =
     CONV_RULE (BINDER_CONV SKOLEM_CONV THENC SKOLEM_CONV) int_rem_exists0
 
@@ -2854,18 +2884,23 @@ Proof
   PROVE_TAC [DIVISION, NOT_ZERO_LT_ZERO, MULT_COMM]
 QED
 
-val newlemma = prove(
-  ``!x y. (~x + y <= 0 <=> y <= x) /\ (0 <= x + ~y <=> y <= x)``,
+Theorem newlemma[local]:
+    !x y. (~x + y <= 0 <=> y <= x) /\ (0 <= x + ~y <=> y <= x)
+Proof
   REPEAT STRIP_TAC THENL [
     CONV_TAC (LHS_CONV (LAND_CONV (REWR_CONV INT_ADD_COMM))),
     ALL_TAC
   ] THEN REWRITE_TAC [GSYM int_sub, INT_LE_SUB_RADD, INT_LE_SUB_LADD,
-                      INT_ADD_RID, INT_ADD_LID]);
-val nl2 = prove(
-  ``!p q. ~(q = 0n) ==> p DIV q * q <= p``,
-  PROVE_TAC [DIVISION, LESS_EQ_ADD, NOT_ZERO_LT_ZERO]);
-val nl2a = prove(
-  ``!p q. ~(q = 0n) ==> p < q + p DIV q * q /\ p DIV q * q < p + q``,
+                      INT_ADD_RID, INT_ADD_LID]
+QED
+Theorem nl2[local]:
+    !p q. ~(q = 0n) ==> p DIV q * q <= p
+Proof
+  PROVE_TAC [DIVISION, LESS_EQ_ADD, NOT_ZERO_LT_ZERO]
+QED
+Theorem nl2a[local]:
+    !p q. ~(q = 0n) ==> p < q + p DIV q * q /\ p DIV q * q < p + q
+Proof
   REPEAT STRIP_TAC THENL [
     `(p = p DIV q * q + p MOD q) /\ p MOD q < q` by
       PROVE_TAC [DIVISION, NOT_ZERO_LT_ZERO] THEN
@@ -2874,20 +2909,25 @@ val nl2a = prove(
     ASM_REWRITE_TAC [LESS_MONO_ADD_EQ],
     MATCH_MP_TAC LESS_EQ_LESS_TRANS THEN Q.EXISTS_TAC `p` THEN
     ASM_SIMP_TAC int_ss [nl2]
-  ]);
+  ]
+QED
 
-val nl3 = prove(
-  ``!x y z.
-      (x + ~y < z <=> x < y + z) /\ (~x < y + ~z <=> z < y + x)``,
+Theorem nl3[local]:
+    !x y z.
+      (x + ~y < z <=> x < y + z) /\ (~x < y + ~z <=> z < y + x)
+Proof
   REPEAT GEN_TAC THEN
   REWRITE_TAC [GSYM int_sub, INT_LT_SUB_RADD, INT_LT_SUB_LADD] THEN
   CONV_TAC (RAND_CONV (LHS_CONV (LAND_CONV (REWR_CONV INT_ADD_COMM)))) THEN
   REWRITE_TAC [GSYM int_sub, INT_LT_SUB_RADD, INT_LT_SUB_LADD] THEN
-  PROVE_TAC [INT_ADD_COMM]);
-val nl4 = prove(
-  ``!x y z.
-      (~x + y < z <=> y < x + z) /\ (~x < ~y + z <=> y < x + z)``,
-  PROVE_TAC [nl3, INT_ADD_COMM]);
+  PROVE_TAC [INT_ADD_COMM]
+QED
+Theorem nl4[local]:
+    !x y z.
+      (~x + y < z <=> y < x + z) /\ (~x < ~y + z <=> y < x + z)
+Proof
+  PROVE_TAC [nl3, INT_ADD_COMM]
+QED
 
 Theorem INT_REMQUOT:
     !q. ~(q = 0) ==> !p. (p = p quot q * q + p rem q) /\
@@ -3561,9 +3601,11 @@ QED
 Theorem INT_DIV_CALCULATE =
   LIST_CONJ [INT_DIV, INT_DIV_NEG, INT_INJ, INT_NEG_EQ0, INT_NEGNEG];
 
-val NB_NOT_0 = prove(
-  ``!n. ~(BIT1 n = 0) /\ ~(BIT2 n = 0)``,
-  SIMP_TAC bool_ss [BIT1, BIT2, ADD_CLAUSES, SUC_NOT]);
+Theorem NB_NOT_0[local]:
+    !n. ~(BIT1 n = 0) /\ ~(BIT2 n = 0)
+Proof
+  SIMP_TAC bool_ss [BIT1, BIT2, ADD_CLAUSES, SUC_NOT]
+QED
 Theorem INT_DIV_REDUCE:
   !m n.
          (0i / &(NUMERAL (BIT1 n)) = 0i) /\

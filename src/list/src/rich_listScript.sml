@@ -6776,9 +6776,11 @@ QED
 
 (* Theorem: a <= b /\ c <= d ==> MIN a c <= MIN b d *)
 (* Proof: by MIN_DEF *)
-val MIN_LE_PAIR = prove(
-  ``!a b c d. a <= b /\ c <= d ==> MIN a c <= MIN b d``,
-  rw[]);
+Theorem MIN_LE_PAIR[local]:
+    !a b c d. a <= b /\ c <= d ==> MIN a c <= MIN b d
+Proof
+  rw[]
+QED
 
 (* Theorem: (!x. f x <= g x) ==> !ls. MIN_LIST (MAP f ls) <= MIN_LIST (MAP g ls) *)
 (* Proof:

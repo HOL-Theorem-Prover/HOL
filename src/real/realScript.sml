@@ -4411,22 +4411,26 @@ Theorem NUM_CEILING_def = NUM_CEILING_def
 val lem = SIMP_RULE arith_ss [REAL_POS,REAL_ADD_RID]
               (Q.SPECL[`y`,`&n`,`0r`,`1r`] REAL_LTE_ADD2);
 
-val add1_gt_exists = prove(
-  ``!y : real. ?n. & (n + 1) > y``,
+Theorem add1_gt_exists[local]:
+    !y : real. ?n. & (n + 1) > y
+Proof
   GEN_TAC THEN Q.SPEC_THEN `1` MP_TAC REAL_ARCH THEN
   SIMP_TAC (srw_ss()) [] THEN
   DISCH_THEN (Q.SPEC_THEN `y` STRIP_ASSUME_TAC) THEN
   Q.EXISTS_TAC `n` THEN
   SIMP_TAC arith_ss [GSYM REAL_ADD,real_gt,REAL_LT_ADDL,REAL_LT_ADDR] THEN
-  METIS_TAC [lem]);
+  METIS_TAC [lem]
+QED
 
-val lt_add1_exists = prove(
-  ``!y: real. ?n. y < &(n + 1)``,
+Theorem lt_add1_exists[local]:
+    !y: real. ?n. y < &(n + 1)
+Proof
   GEN_TAC THEN Q.SPEC_THEN `1` MP_TAC REAL_ARCH THEN
   SIMP_TAC (srw_ss()) [] THEN
   DISCH_THEN (Q.SPEC_THEN `y` STRIP_ASSUME_TAC) THEN
   Q.EXISTS_TAC `n` THEN
-  SIMP_TAC bool_ss [GSYM REAL_ADD] THEN METIS_TAC [lem]);
+  SIMP_TAC bool_ss [GSYM REAL_ADD] THEN METIS_TAC [lem]
+QED
 
 Theorem NUM_FLOOR_LE:
     0 <= x ==> &(NUM_FLOOR x) <= x

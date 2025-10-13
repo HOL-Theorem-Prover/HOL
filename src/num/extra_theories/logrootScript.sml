@@ -703,7 +703,10 @@ Theorem LOG_NUMERAL[compute,simp] =
 end (* local *)
 
 
-val lem = prove(``0 < r ==> (0 ** r = 0)``, RW_TAC arith_ss [EXP_EQ_0])
+Theorem lem[local]:
+   0 < r ==> (0 ** r = 0)
+Proof RW_TAC arith_ss [EXP_EQ_0]
+QED
 
 Theorem ROOT_COMPUTE:
     !r n.

@@ -530,9 +530,11 @@ Proof
 rw[fmap_to_alist_def,MAP_MAP_o,MAP_EQ_f]
 QED
 
-val INJ_I = prove (
-``!s t. INJ I s t <=> s SUBSET t``,
-SRW_TAC[][INJ_DEF,SUBSET_DEF])
+Theorem INJ_I[local]:
+  !s t. INJ I s t <=> s SUBSET t
+Proof
+SRW_TAC[][INJ_DEF,SUBSET_DEF]
+QED
 
 Theorem MAP_KEYS_I[simp]:
   !fm. MAP_KEYS I fm = fm

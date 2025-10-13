@@ -617,9 +617,11 @@ Proof
   SRW_TAC [][FUN_EQ_THM, UNCURRY, PAIR]
 QED
 
-val UNCURRY' = prove(
-  ``UNCURRY f = \p. f (FST p) (SND p)``,
-  SRW_TAC [][FUN_EQ_THM, UNCURRY]);
+Theorem UNCURRY'[local]:
+    UNCURRY f = \p. f (FST p) (SND p)
+Proof
+  SRW_TAC [][FUN_EQ_THM, UNCURRY]
+QED
 
 Theorem FORALL_UNCURRY:
     (!) (UNCURRY f) = (!) ((!) o f)

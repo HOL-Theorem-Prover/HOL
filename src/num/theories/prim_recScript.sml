@@ -176,15 +176,21 @@ QED
 
 (* now show that < is the transitive closure of the successor relation *)
 
-val TC_LESS_0 = prove ( “!n. TC (\x y. y = SUC x) 0 (SUC n)”,
+Theorem TC_LESS_0[local]:
+    !n. TC (\x y. y = SUC x) 0 (SUC n)
+Proof
   INDUCT_TAC
   THENL [ irule relationTheory.TC_SUBSET THEN BETA_TAC THEN REFL_TAC,
     ONCE_REWRITE_TAC [relationTheory.TC_CASES2] THEN DISJ2_TAC
-    THEN EXISTS_TAC ``SUC n`` THEN BETA_TAC THEN ASM_REWRITE_TAC [] ]) ;
+    THEN EXISTS_TAC ``SUC n`` THEN BETA_TAC THEN ASM_REWRITE_TAC [] ]
+QED
 
-val TC_NOT_LESS_0 = prove ( “!n. ~(TC (\x y. y = SUC x) n 0)”,
+Theorem TC_NOT_LESS_0[local]:
+    !n. ~(TC (\x y. y = SUC x) n 0)
+Proof
   ONCE_REWRITE_TAC [relationTheory.TC_CASES2]
-  THEN BETA_TAC THEN REWRITE_TAC [GSYM NOT_SUC] ) ;
+  THEN BETA_TAC THEN REWRITE_TAC [GSYM NOT_SUC]
+QED
 
 Theorem TC_IM_RTC_SUC:
     !m n. TC (\x y. y = SUC x) m (SUC n) = RTC (\x y. y = SUC x) m n
@@ -207,9 +213,11 @@ Proof
    THEN ASM_REWRITE_TAC []
 QED
 
-val TC_LESS_MONO_EQ = prove (
-  ``!m n. TC (\x y. y = SUC x) (SUC m) (SUC n) = TC (\x y. y = SUC x) m n``,
-  REWRITE_TAC [TC_IM_RTC_SUC, RTC_IM_TC] ) ;
+Theorem TC_LESS_MONO_EQ[local]:
+    !m n. TC (\x y. y = SUC x) (SUC m) (SUC n) = TC (\x y. y = SUC x) m n
+Proof
+  REWRITE_TAC [TC_IM_RTC_SUC, RTC_IM_TC]
+QED
 
 Theorem LESS_ALT:
     $< = TC (\x y. y = SUC x)

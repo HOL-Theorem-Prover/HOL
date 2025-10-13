@@ -257,33 +257,39 @@ val perm_rules = UNDISCH perm_rules;
 
 val _ = print "Proving perm symmetric, reflexive & transitive\n"
 
-val perm_sym = prove(
-  “^perm_t ==> (perm l1 l2 = perm l2 l1)”,
+Theorem perm_sym[local]:
+   ^perm_t ==> (perm l1 l2 = perm l2 l1)
+Proof
   STRIP_TAC THEN
   Q_TAC SUFF_TAC
         ‘!l1 l2. perm l1 l2 ==> perm l2 l1’
         THEN1 METIS_TAC [] THEN
   HO_MATCH_MP_TAC perm_ind THEN
-  SRW_TAC [][perm_rules] THEN METIS_TAC [perm_rules]);
+  SRW_TAC [][perm_rules] THEN METIS_TAC [perm_rules]
+QED
 val perm_sym = UNDISCH perm_sym
 
-val perm_refl = prove(
-  “^perm_t ==> !l. perm l l”,
-  STRIP_TAC THEN Induct THEN SRW_TAC [][perm_rules]);
+Theorem perm_refl[local]:
+   ^perm_t ==> !l. perm l l
+Proof
+  STRIP_TAC THEN Induct THEN SRW_TAC [][perm_rules]
+QED
 val perm_refl = UNDISCH perm_refl
 
 val perm_trans = last (CONJUNCTS perm_rules)
 
 val _ = print "Proving perm ==> PERM\n"
 
-val perm_PERM = prove(
-  “^perm_t ==> !l1 l2. perm l1 l2 ==> PERM l1 l2”,
+Theorem perm_PERM[local]:
+   ^perm_t ==> !l1 l2. perm l1 l2 ==> PERM l1 l2
+Proof
   STRIP_TAC THEN HO_MATCH_MP_TAC perm_ind THEN SRW_TAC [][] THENL [
     SRW_TAC [][PERM_CONS_EQ_APPEND] THEN
     MAP_EVERY Q.EXISTS_TAC [‘[y]’, ‘l2’] THEN SRW_TAC [][] THEN
     MAP_EVERY Q.EXISTS_TAC [‘[]’, ‘l2’] THEN SRW_TAC [][],
     METIS_TAC [PERM_TRANS]
-  ]);
+  ]
+QED
 val perm_PERM = UNDISCH perm_PERM
 
 val _ = print "Proving perm has primitive recursive characterisation\n"
@@ -298,25 +304,29 @@ Proof
     RES_TAC >> ASM_SIMP_TAC list_ss []
 QED
 
-val perm_cons_append = prove(
-  “^perm_t ==> !l1 l2. perm l1 l2 ==>
+Theorem perm_cons_append[local]:
+   ^perm_t ==> !l1 l2. perm l1 l2 ==>
                         !M N. (l2 = M ++ N) ==>
-                              !h. perm (h::l1) (M ++ [h] ++ N)”,
+                              !h. perm (h::l1) (M ++ [h] ++ N)
+Proof
   REPEAT STRIP_TAC >> MATCH_MP_TAC perm_trans >>
     Q.EXISTS_TAC ‘h :: l2’ >> CONJ_TAC
   THENL [ ASSUME_TAC perm_rules >> ASM_SIMP_TAC list_ss [],
     BasicProvers.VAR_EQ_TAC >>
-    MATCH_ACCEPT_TAC (REWRITE_RULE [APPEND] (UNDISCH perm_cons_append')) ]) ;
+    MATCH_ACCEPT_TAC (REWRITE_RULE [APPEND] (UNDISCH perm_cons_append')) ]
+QED
 
 val perm_cons_append =
     SIMP_RULE (bool_ss ++ boolSimps.DNF_ss) [] (UNDISCH perm_cons_append)
 
 val _ = print "Proving PERM ==> perm\n"
 
-val PERM_perm = prove(
-  “^perm_t ==> !l1 l2. PERM l1 l2 ==> perm l1 l2”,
+Theorem PERM_perm[local]:
+   ^perm_t ==> !l1 l2. PERM l1 l2 ==> perm l1 l2
+Proof
   STRIP_TAC THEN Induct THEN SRW_TAC [][perm_rules, PERM_CONS_EQ_APPEND] THEN
-  METIS_TAC [perm_cons_append])
+  METIS_TAC [perm_cons_append]
+QED
 val PERM_perm = UNDISCH PERM_perm
 
 val perm_elim = GEN_ALL
@@ -359,7 +369,10 @@ val PERM_SWAP_AT_FRONT = save_thm( "PERM_SWAP_AT_FRONT",
 val PERM_SWAP = PERM_SWAP_AT_FRONT |> EQ_IMP_RULE |> #2
                                    |> Q.GENL [‘x’, ‘y’, ‘l1’, ‘l2’]
 
-val PERM_NILNIL = prove(“PERM [][]”, SRW_TAC[][])
+Theorem PERM_NILNIL[local]:
+  PERM [][]
+Proof SRW_TAC[][]
+QED
 
 Theorem PERM_STRONG_IND =
   IndDefLib.derive_strong_induction(
@@ -1384,10 +1397,12 @@ PROVE_TAC [PERM_EQUIVALENCE_ALT_DEF, PERM_APPEND_IFF]
 QED
 
 
-val PERM_CENTRE1 = prove (
-“(PERM (xs ++ l) (r1 ++ xs ++ r2) = PERM l (r1 ++ r2))”,
+Theorem PERM_CENTRE1[local]:
+ (PERM (xs ++ l) (r1 ++ xs ++ r2) = PERM l (r1 ++ r2))
+Proof
 METIS_TAC [APPEND_ASSOC, PERM_APPEND_IFF,
-    PERM_APPEND, PERM_EQUIVALENCE_ALT_DEF]);
+    PERM_APPEND, PERM_EQUIVALENCE_ALT_DEF]
+QED
 val PERM_CENTRE2 = PERM_CENTRE1 |> Q.GEN ‘xs’ |> Q.SPEC ‘[x]’
   |> SIMP_RULE bool_ss [APPEND, GSYM APPEND_ASSOC]
 
@@ -1541,15 +1556,19 @@ Definition PART3_DEF:
                     else (I ## I ## CONS hd) (PART3 R h tl))
 End
 
-val LENGTH_FILTER =
-  prove(“!a. LENGTH (FILTER P a) <= LENGTH a”,
-    Induct THEN RW_TAC arith_ss [FILTER, LENGTH]);
+Theorem LENGTH_FILTER[local]:
+  !a. LENGTH (FILTER P a) <= LENGTH a
+Proof
+    Induct THEN RW_TAC arith_ss [FILTER, LENGTH]
+QED
 
-val length_lem =
-  prove(“!a h. LENGTH (FILTER P a) < LENGTH (h::a)”,
+Theorem length_lem[local]:
+  !a h. LENGTH (FILTER P a) < LENGTH (h::a)
+Proof
     REPEAT STRIP_TAC THEN REWRITE_TAC [LENGTH] THEN
     MATCH_MP_TAC (DECIDE “!a b. a <= b ==> a < SUC b”) THEN
-    MATCH_ACCEPT_TAC LENGTH_FILTER);
+    MATCH_ACCEPT_TAC LENGTH_FILTER
+QED
 
 (*---------------------------------------------------------------------------*)
 (* PART3_FILTER - Partition is the same as filtering.                        *)
@@ -1597,10 +1616,12 @@ val tospec =
       (MATCH_MP (SPEC_ALL
         (REWRITE_RULE [GSYM AND_IMP_INTRO] PERM_TRANS)) (SPEC_ALL PERM_SPLIT));
 
-val filter_filter =
-  prove(
-    “!l P Q. FILTER P (FILTER Q l) = FILTER (\x. P x /\ Q x) l”,
-    Induct THEN NTAC 2 (RW_TAC std_ss [FILTER]) THEN PROVE_TAC []);
+Theorem filter_filter[local]:
+
+     !l P Q. FILTER P (FILTER Q l) = FILTER (\x. P x /\ Q x) l
+Proof
+    Induct THEN NTAC 2 (RW_TAC std_ss [FILTER]) THEN PROVE_TAC []
+QED
 
 Theorem PERM3_FILTER:
   !l h.
@@ -1678,14 +1699,16 @@ fun LIND_STEP (a,goal) =
      SPEC (mk_comb(“LENGTH:'a list -> num”,lhs goal)) o
      Q.GEN ‘m’ o C (PART_MATCH (lhs o rand)) (lhs goal) o PULL_RULE) (a,goal)
 
-val FILTER_P =
-  prove(
-    “!R h. p h /\ transitive R /\ total R /\ (!x y. p x /\ p y ==> R x y) ==>
+Theorem FILTER_P[local]:
+
+     !R h. p h /\ transitive R /\ total R /\ (!x y. p x /\ p y ==> R x y) ==>
              !l. (FILTER (\x. p x /\ R x h /\ R h x) l = FILTER p l) /\
                  (FILTER p (FILTER (\x. R x h /\ ~R h x) l) = []) /\
-                 (FILTER p (FILTER (\x. ~R x h) l) = [])”,
+                 (FILTER p (FILTER (\x. ~R x h) l) = [])
+Proof
     NTAC 3 STRIP_TAC THEN Induct THEN RW_TAC std_ss [FILTER] THEN
-    PROVE_TAC [relationTheory.transitive_def, relationTheory.total_def]);
+    PROVE_TAC [relationTheory.transitive_def, relationTheory.total_def]
+QED
 
 Theorem QSORT3_SPLIT:
   !R. transitive R /\ total R ==>

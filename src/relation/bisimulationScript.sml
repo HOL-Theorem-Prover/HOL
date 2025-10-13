@@ -168,15 +168,17 @@ Proof
  >> ASM_REWRITE_TAC []
 QED
 
-val lemma1 = prove (
-  ``!R. (!p q.   ts p tau q ==> R p q) /\
+Theorem lemma1[local]:
+    !R. (!p q.   ts p tau q ==> R p q) /\
         (!p.     R p p) /\
         (!p q r. R p q /\ R q r ==> R p r)
-    ==> !p q. (ETS ts tau) p q ==> R p q``,
+    ==> !p q. (ETS ts tau) p q ==> R p q
+Proof
     GEN_TAC >> STRIP_TAC
  >> REWRITE_TAC [ETS_def]
  >> HO_MATCH_MP_TAC RTC_INDUCT
- >> METIS_TAC []);
+ >> METIS_TAC []
+QED
 
 Theorem ETS_WTS_ETS :
     !ts tau p p1 l p2 p'.
@@ -218,24 +220,27 @@ Proof
       Q.EXISTS_TAC `q'` >> ASM_REWRITE_TAC [] ]
 QED
 
-val lemma2' = prove (
-  ``!q q'. (ETS ts tau) q q' ==>
+Theorem lemma2'[local]:
+    !q q'. (ETS ts tau) q q' ==>
            !R p. WBISIM ts tau R /\ R p q ==>
-                 ?p'. (ETS ts tau) p p' /\ R p' q'``,
+                 ?p'. (ETS ts tau) p p' /\ R p' q'
+Proof
     rpt STRIP_TAC
  >> MP_TAC (Q.SPECL [`q`, `q'`] lemma2) >> SRW_TAC[][]
  >> POP_ASSUM (MP_TAC o (REWRITE_RULE [inv_DEF]) o (Q.SPECL [`inv R`, `p`]))
  >> IMP_RES_TAC WBISIM_INV
- >> SRW_TAC[][]);
+ >> SRW_TAC[][]
+QED
 
 (* p ==> p1 -l-> p2 ==> p'
    R     R       R      R
    q ==> q1 =l=> q2 ==> q'
  *)
-val lemma3 = prove (
-  ``!p l p'. (WTS ts tau) p l p' /\ l <> tau ==>
+Theorem lemma3[local]:
+    !p l p'. (WTS ts tau) p l p' /\ l <> tau ==>
              !R q. WBISIM ts tau R /\ R p q ==>
-                   ?q'. (WTS ts tau) q l q' /\ R p' q'``,
+                   ?q'. (WTS ts tau) q l q' /\ R p' q'
+Proof
     rpt STRIP_TAC
  >> `?p1 p2. (ETS ts tau) p p1 /\ ts p1 l p2 /\ (ETS ts tau) p2 p'`
         by PROVE_TAC [WTS_def]
@@ -246,17 +251,20 @@ val lemma3 = prove (
  >> MATCH_MP_TAC ETS_WTS_ETS
  >> Q.EXISTS_TAC `q1`
  >> Q.EXISTS_TAC `q2`
- >> ASM_REWRITE_TAC []);
+ >> ASM_REWRITE_TAC []
+QED
 
-val lemma3' = prove (
-  ``!q l q'. (WTS ts tau) q l q' /\ l <> tau ==>
+Theorem lemma3'[local]:
+    !q l q'. (WTS ts tau) q l q' /\ l <> tau ==>
              !R p. WBISIM ts tau R /\ R p q ==>
-                   ?p'. (WTS ts tau) p l p' /\ R p' q'``,
+                   ?p'. (WTS ts tau) p l p' /\ R p' q'
+Proof
     rpt STRIP_TAC
  >> MP_TAC (Q.SPECL [`q`, `l`, `q'`] lemma3) >> SRW_TAC[][]
  >> POP_ASSUM (MP_TAC o (REWRITE_RULE [inv_DEF]) o (Q.SPECL [`inv R`, `p`]))
  >> IMP_RES_TAC WBISIM_INV
- >> SRW_TAC[][]);
+ >> SRW_TAC[][]
+QED
 
 Theorem WBISIM_ID :
     !ts tau. WBISIM ts tau Id

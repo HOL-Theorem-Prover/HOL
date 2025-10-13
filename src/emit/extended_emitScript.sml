@@ -239,31 +239,41 @@ Definition LLCONS_def:
   LLCONS h t = LCONS h (t ())
 End
 
-val LAPPEND_llcases = prove(
-  ``LAPPEND l1 l2 = llcases l2 (λ(h,t). LLCONS h (λ(). LAPPEND t l2)) l1``,
+Theorem LAPPEND_llcases[local]:
+    LAPPEND l1 l2 = llcases l2 (λ(h,t). LLCONS h (λ(). LAPPEND t l2)) l1
+Proof
   Q.SPEC_THEN `l1` STRUCT_CASES_TAC llist_CASES THEN
-  SRW_TAC [][LLCONS_def, llcases_LCONS, llcases_LNIL]);
+  SRW_TAC [][LLCONS_def, llcases_LCONS, llcases_LNIL]
+QED
 
-val LMAP_llcases = prove(
-  ``LMAP f l = llcases LNIL (λ(h,t). LLCONS (f h) (λ(). LMAP f t)) l``,
+Theorem LMAP_llcases[local]:
+    LMAP f l = llcases LNIL (λ(h,t). LLCONS (f h) (λ(). LMAP f t)) l
+Proof
   Q.ISPEC_THEN `l` STRUCT_CASES_TAC llist_CASES THEN
-  SRW_TAC [][LLCONS_def, llcases_LCONS, llcases_LNIL]);
+  SRW_TAC [][LLCONS_def, llcases_LCONS, llcases_LNIL]
+QED
 
-val LFILTER_llcases = prove(
-  ``LFILTER P l = llcases LNIL (λ(h,t). if P h then LLCONS h (λ(). LFILTER P t)
-                                        else LFILTER P t) l``,
+Theorem LFILTER_llcases[local]:
+    LFILTER P l = llcases LNIL (λ(h,t). if P h then LLCONS h (λ(). LFILTER P t)
+                                        else LFILTER P t) l
+Proof
   Q.ISPEC_THEN `l` STRUCT_CASES_TAC llist_CASES THEN
-  SRW_TAC [][LLCONS_def, llcases_LCONS, llcases_LNIL]);
+  SRW_TAC [][LLCONS_def, llcases_LCONS, llcases_LNIL]
+QED
 
-val LHD_llcases = prove(
-  ``LHD ll = llcases NONE (λ(h,t). SOME h) ll``,
+Theorem LHD_llcases[local]:
+    LHD ll = llcases NONE (λ(h,t). SOME h) ll
+Proof
   Q.ISPEC_THEN `ll` STRUCT_CASES_TAC llist_CASES THEN
-  SRW_TAC [][llcases_LCONS, llcases_LNIL]);
+  SRW_TAC [][llcases_LCONS, llcases_LNIL]
+QED
 
-val LTL_llcases = prove(
-  ``LTL ll = llcases NONE (λ(h,t). SOME t) ll``,
+Theorem LTL_llcases[local]:
+    LTL ll = llcases NONE (λ(h,t). SOME t) ll
+Proof
   Q.ISPEC_THEN `ll` STRUCT_CASES_TAC llist_CASES THEN
-  SRW_TAC [][llcases_LCONS, llcases_LNIL]);
+  SRW_TAC [][llcases_LCONS, llcases_LNIL]
+QED
 
 Theorem LTAKE_thm[local]:
   !ll. LTAKE n ll =
@@ -280,10 +290,12 @@ Proof
   SRW_TAC [][]
 QED
 
-val toList_llcases = prove(
-  ``toList ll = llcases (SOME []) (λ(h,t). OPTION_MAP (\t. h::t) (toList t)) ll``,
+Theorem toList_llcases[local]:
+    toList ll = llcases (SOME []) (λ(h,t). OPTION_MAP (\t. h::t) (toList t)) ll
+Proof
   Q.ISPEC_THEN `ll` STRUCT_CASES_TAC llist_CASES THEN
-  SRW_TAC [boolSimps.ETA_ss][llcases_LCONS, llcases_LNIL, toList_THM])
+  SRW_TAC [boolSimps.ETA_ss][llcases_LCONS, llcases_LNIL, toList_THM]
+QED
 
 fun insert_const c = let val t = Parse.Term [QUOTE c] in
   ConstMapML.prim_insert(t, (false, "", c, type_of t))

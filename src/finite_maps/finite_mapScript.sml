@@ -912,15 +912,16 @@ val _ = export_rewrites["FUNION_IDEMPOT"]
  ---------------------------------------------------------------------------*)
 
 
-val fmerge_exists = prove (
-  “!m f g.
+Theorem fmerge_exists[local]:
+   !m f g.
      ?merge.
        (FDOM merge = FDOM f UNION FDOM g) /\
        (!x. FAPPLY merge x = if ~(x IN FDOM f) then FAPPLY g x
                              else
                                if ~(x IN FDOM g) then FAPPLY f x
                                else
-                                 (m (FAPPLY f x) (FAPPLY g x)))”,
+                                 (m (FAPPLY f x) (FAPPLY g x)))
+Proof
   GEN_TAC THEN GEN_TAC THEN
   INDUCT_THEN fmap_INDUCT ASSUME_TAC THENL [
     Q.EXISTS_TAC `f` THEN
@@ -941,7 +942,8 @@ val fmerge_exists = prove (
               ASM_SIMP_TAC std_ss [FAPPLY_FUPDATE_THM, IN_INSERT]
             )
     )
-  ]);
+  ]
+QED
 
 val FMERGE_DEF = new_specification
   ("FMERGE_DEF", ["FMERGE"],
@@ -2000,11 +2002,13 @@ QED
     More theorems
    ---------------------------------------------------------------------- *)
 
-val FAPPLY_FUPD_EQ = prove(
-  ``!fmap k1 v1 k2 v2.
+Theorem FAPPLY_FUPD_EQ[local]:
+    !fmap k1 v1 k2 v2.
        ((fmap |+ (k1, v1)) ' k2 = v2) <=>
-       k1 = k2 /\ v1 = v2 \/ k1 <> k2 /\ fmap ' k2 = v2``,
-  SRW_TAC [][FAPPLY_FUPDATE_THM, EQ_IMP_THM]);
+       k1 = k2 /\ v1 = v2 \/ k1 <> k2 /\ fmap ' k2 = v2
+Proof
+  SRW_TAC [][FAPPLY_FUPDATE_THM, EQ_IMP_THM]
+QED
 
 
 (* (pseudo) injectivity results about fupdate *)
@@ -2136,15 +2140,17 @@ Proof
   ASM_SIMP_TAC (srw_ss()) [FUPDATE_LIST_SAME_UPDATE]
 QED
 
-val lemma = prove(
-  ``!kvl k fm. MEM k (MAP FST kvl) ==>
-               MEM (k, (fm |++ kvl) ' k) kvl``,
+Theorem lemma[local]:
+    !kvl k fm. MEM k (MAP FST kvl) ==>
+               MEM (k, (fm |++ kvl) ' k) kvl
+Proof
   Induct THEN
   ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, FUPDATE_LIST_THM,
                            DISJ_IMP_THM, FORALL_AND_THM] THEN
   REPEAT STRIP_TAC THEN
   Cases_on `MEM p_1 (MAP FST kvl)` THEN
-  SRW_TAC [][FUPDATE_LIST_APPLY_NOT_MEM]);
+  SRW_TAC [][FUPDATE_LIST_APPLY_NOT_MEM]
+QED
 
 Theorem FMEQ_ENUMERATE_CASES:
     !f1 kvl p. (f1 |+ p = FEMPTY |++ kvl) ==> MEM p kvl

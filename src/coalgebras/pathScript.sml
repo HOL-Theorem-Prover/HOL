@@ -33,16 +33,22 @@ Theorem toPath_onto =
 val _ = augment_srw_ss [rewrites [path_rep_bijections_thm,
                                   toPath_11, fromPath_11]]
 
-val path_eq_fromPath = prove(
-  ``!p q. (p = q) = (fromPath p = fromPath q)``,
-  SRW_TAC [][]);
+Theorem path_eq_fromPath[local]:
+    !p q. (p = q) = (fromPath p = fromPath q)
+Proof
+  SRW_TAC [][]
+QED
 
-val forall_path = prove(
-  ``(!p. P p) = !r. P (toPath r)``,
-  SRW_TAC [][EQ_IMP_THM] THEN PROVE_TAC [toPath_onto]);
-val exists_path = prove(
-  ``(?p. P p) = ?r. P (toPath r)``,
-  SRW_TAC [][EQ_IMP_THM] THEN PROVE_TAC [toPath_onto]);
+Theorem forall_path[local]:
+    (!p. P p) = !r. P (toPath r)
+Proof
+  SRW_TAC [][EQ_IMP_THM] THEN PROVE_TAC [toPath_onto]
+QED
+Theorem exists_path[local]:
+    (?p. P p) = ?r. P (toPath r)
+Proof
+  SRW_TAC [][EQ_IMP_THM] THEN PROVE_TAC [toPath_onto]
+QED
 
 Definition first_def:  first (p:('a,'b) path) = FST (fromPath p)
 End
@@ -331,8 +337,9 @@ Proof
   SRW_TAC [][alt_length_thm]
 QED
 
-val finite_length_lemma = prove(
-  ``!p. finite p = ?n. length p = SOME n``,
+Theorem finite_length_lemma[local]:
+    !p. finite p = ?n. length p = SOME n
+Proof
   SIMP_TAC (srw_ss()) [EQ_IMP_THM, FORALL_AND_THM] THEN CONJ_TAC THENL [
     HO_MATCH_MP_TAC finite_path_ind THEN
     SRW_TAC [][length_thm],
@@ -340,7 +347,8 @@ val finite_length_lemma = prove(
     Induct_on `n` THEN GEN_TAC THEN
     Q.SPEC_THEN `p` STRUCT_CASES_TAC path_cases THEN
     SRW_TAC [][length_thm]
-  ]);
+  ]
+QED
 
 
 Theorem finite_length:
@@ -585,15 +593,18 @@ Definition firstP_at_def:
   firstP_at P p i <=> i IN PL p /\ P (el i p) /\ !j. j < i ==> ~P(el j p)
 End
 
-val firstP_at_stopped = prove(
-  ``!P x n. firstP_at P (stopped_at x) n <=> (n = 0) /\ P x``,
+Theorem firstP_at_stopped[local]:
+    !P x n. firstP_at P (stopped_at x) n <=> (n = 0) /\ P x
+Proof
   SIMP_TAC (srw_ss() ++ ARITH_ss) [firstP_at_def, EQ_IMP_THM,
-                                   FORALL_AND_THM]);
+                                   FORALL_AND_THM]
+QED
 
-val firstP_at_pcons = prove(
-  ``!P n x r p.
+Theorem firstP_at_pcons[local]:
+    !P n x r p.
        firstP_at P (pcons x r p) n <=>
-          (n = 0) /\ P x \/ 0 < n /\ ~P x /\ firstP_at P p (n - 1)``,
+          (n = 0) /\ P x \/ 0 < n /\ ~P x /\ firstP_at P p (n - 1)
+Proof
  REPEAT GEN_TAC THEN Cases_on `n` THENL [
    SRW_TAC [ARITH_ss][firstP_at_def, PL_pcons],
    SRW_TAC [ARITH_ss][firstP_at_def, PL_pcons, EQ_IMP_THM]
@@ -604,7 +615,8 @@ val firstP_at_pcons = prove(
      SRW_TAC [ARITH_ss][],
      Cases_on `j` THEN SRW_TAC [ARITH_ss][]
    ]
- ]);
+ ]
+QED
 
 Theorem firstP_at_thm =
   CONJ firstP_at_stopped firstP_at_pcons;
@@ -685,8 +697,11 @@ Proof
   ]
 QED
 
-val double_neg_lemma = prove(``$~ o $~ o P = P``,
-                             SRW_TAC [][FUN_EQ_THM, combinTheory.o_THM])
+Theorem double_neg_lemma[local]:
+   $~ o $~ o P = P
+Proof
+                             SRW_TAC [][FUN_EQ_THM, combinTheory.o_THM]
+QED
 
 Theorem exists_induction =
   (SIMP_RULE (srw_ss()) [double_neg_lemma] o
@@ -958,9 +973,11 @@ Proof
 QED
 
 
-val PLdc_le = prove(
-  ``i <= j ==> j IN PL p ==> i IN PL p``,
-  PROVE_TAC [arithmeticTheory.LESS_OR_EQ, PL_downward_closed]);
+Theorem PLdc_le[local]:
+    i <= j ==> j IN PL p ==> i IN PL p
+Proof
+  PROVE_TAC [arithmeticTheory.LESS_OR_EQ, PL_downward_closed]
+QED
 
 Theorem PL_seg:
     !i j p. i <= j /\ j IN PL p ==> (PL (seg i j p) = {n | n <= j - i})
@@ -1093,17 +1110,21 @@ val filter_def =
             ]));
 
 
-val filter_eq_stopped = prove(
-  ``!P p. exists P p ==> !x. (filter P p = stopped_at x) ==> P x``,
+Theorem filter_eq_stopped[local]:
+    !P p. exists P p ==> !x. (filter P p = stopped_at x) ==> P x
+Proof
   GEN_TAC THEN HO_MATCH_MP_TAC exists_induction THEN
-  SRW_TAC [][filter_def]);
+  SRW_TAC [][filter_def]
+QED
 
-val filter_eq_pcons = prove(
-  ``!P p. exists P p ==> !x r q. (filter P p = pcons x r q) ==>
+Theorem filter_eq_pcons[local]:
+    !P p. exists P p ==> !x r q. (filter P p = pcons x r q) ==>
                                  P x /\
-                                 ?q0. (q = filter P q0) /\ exists P q0``,
+                                 ?q0. (q = filter P q0) /\ exists P q0
+Proof
   GEN_TAC THEN HO_MATCH_MP_TAC exists_induction THEN
-  SRW_TAC [][filter_def] THEN PROVE_TAC []);
+  SRW_TAC [][filter_def] THEN PROVE_TAC []
+QED
 
 Theorem filter_every:
     !P p. exists P p ==> every P (filter P p)

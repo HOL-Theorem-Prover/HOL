@@ -474,11 +474,13 @@ Proof
     SIMP_TAC std_ss [borel_eq_box, box]
 QED
 
-val halfspace_gt_in_halfspace = prove (
-  ``!a. {x | x < a} IN
-        subsets (sigma univ(:real) (IMAGE (\(a,i). {x | x < a}) UNIV))``,
+Theorem halfspace_gt_in_halfspace[local]:
+    !a. {x | x < a} IN
+        subsets (sigma univ(:real) (IMAGE (\(a,i). {x | x < a}) UNIV))
+Proof
   RW_TAC std_ss [sigma_def, subsets_def, IN_BIGINTER, GSPECIFICATION,
-                 SUBSET_DEF] THEN ASM_SET_TAC []);
+                 SUBSET_DEF] THEN ASM_SET_TAC []
+QED
 
 Theorem borel_eq_less : (* was: borel_eq_halfspace_less *)
     borel = sigma UNIV (IMAGE (\a. {x | x < a}) UNIV)

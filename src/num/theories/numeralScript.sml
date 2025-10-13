@@ -55,9 +55,11 @@ val INDUCT_TAC = INDUCT_THEN INDUCTION ASSUME_TAC
 
 val _ = print "Developing rewrites for numeral addition\n"
 
-val PRE_ADD = prove(
-  “!n m. PRE (n + SUC m) = n + m”,
-  INDUCT_TAC THEN SIMP_TAC bool_ss [ADD_CLAUSES, PRE]);
+Theorem PRE_ADD[local]:
+   !n m. PRE (n + SUC m) = n + m
+Proof
+  INDUCT_TAC THEN SIMP_TAC bool_ss [ADD_CLAUSES, PRE]
+QED
 
 Theorem numeral_suc:
   (SUC ZERO = BIT1 ZERO) /\

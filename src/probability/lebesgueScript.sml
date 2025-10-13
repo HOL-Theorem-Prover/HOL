@@ -7014,14 +7014,16 @@ Proof
  >> simp [INDICATOR_FN_POS]
 QED
 
-val suminf_measure = prove (
-  ``!M A. measure_space M /\ IMAGE (\i:num. A i) UNIV SUBSET measurable_sets M /\
+Theorem suminf_measure[local]:
+    !M A. measure_space M /\ IMAGE (\i:num. A i) UNIV SUBSET measurable_sets M /\
           disjoint_family A ==>
-         (suminf (\i. measure M (A i)) = measure M (BIGUNION {A i | i IN UNIV}))``,
+         (suminf (\i. measure M (A i)) = measure M (BIGUNION {A i | i IN UNIV}))
+Proof
     RW_TAC std_ss [GSYM IMAGE_DEF]
  >> MATCH_MP_TAC (SIMP_RULE std_ss [o_DEF] MEASURE_COUNTABLY_ADDITIVE)
  >> FULL_SIMP_TAC std_ss [IN_FUNSET, disjoint_family_on]
- >> ASM_SET_TAC []);
+ >> ASM_SET_TAC []
+QED
 
 (* reduced ‘N’ (measure_space) to ‘B’ (sigma_algebra) *)
 Theorem measure_space_distr :

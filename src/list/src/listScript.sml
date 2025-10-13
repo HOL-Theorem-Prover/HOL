@@ -2404,12 +2404,14 @@ val ALL_DISTINCT = new_recursive_definition {
   rec_axiom = list_Axiom};
 val _ = export_rewrites ["ALL_DISTINCT"]
 
-val lemma = prove(
-  “!l x. (FILTER ((=) x) l = []) = ~MEM x l”,
+Theorem lemma[local]:
+   !l x. (FILTER ((=) x) l = []) = ~MEM x l
+Proof
   LIST_INDUCT_TAC THEN
   ASM_SIMP_TAC (bool_ss ++ COND_elim_ss)
                [FILTER, MEM, NOT_CONS_NIL, EQ_IMP_THM,
-                LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]);
+                LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]
+QED
 
 Theorem ALL_DISTINCT_FILTER:
    !l. ALL_DISTINCT l = !x. MEM x l ==> (FILTER ((=) x) l = [x])
@@ -3089,11 +3091,12 @@ val f_REVERSE_lemma = TAC_PROOF (([],
       (GEN (“x:('a)list”) (BETA_RULE (AP_THM x (“REVERSE (x:('a)list)”))))))),
       ASM_REWRITE_TAC[]]);
 
-val SNOC_Axiom_old = prove(
-  “!(e:'b) (f:'b -> ('a -> (('a)list -> 'b))).
+Theorem SNOC_Axiom_old[local]:
+   !(e:'b) (f:'b -> ('a -> (('a)list -> 'b))).
         ?! fn1.
           (fn1[] = e) /\
-          (!x l. fn1(SNOC x l) = f(fn1 l)x l)”,
+          (!x l. fn1(SNOC x l) = f(fn1 l)x l)
+Proof
 
  let val lemma = CONV_RULE (EXISTS_UNIQUE_CONV)
        (REWRITE_RULE[REVERSE_REVERSE] (BETA_RULE (SPECL
@@ -3119,7 +3122,8 @@ val SNOC_Axiom_old = prove(
                  SPECL [“(fn1' o REVERSE):('a)list->'b”,
                         “(fn1'' o REVERSE):('a)list->'b”])
      ]
-  end);
+  end
+QED
 
 Theorem SNOC_Axiom:
    !e f. ?fn:'a list -> 'b.

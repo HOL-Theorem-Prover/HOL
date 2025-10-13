@@ -215,9 +215,11 @@ Proof
   GEN_TAC THEN Induct THEN simp[l2n_def]
 QED
 
-val MOD_EQ_0_0 = prove(
-  ``!n b. 0 < b ==> (n MOD b = 0) ==> n < b ==> (n = 0)``,
-  SRW_TAC[][MOD_EQ_0_DIVISOR] THEN Cases_on`d` THEN FULL_SIMP_TAC(srw_ss())[])
+Theorem MOD_EQ_0_0[local]:
+    !n b. 0 < b ==> (n MOD b = 0) ==> n < b ==> (n = 0)
+Proof
+  SRW_TAC[][MOD_EQ_0_DIVISOR] THEN Cases_on`d` THEN FULL_SIMP_TAC(srw_ss())[]
+QED
 
 Theorem LOG_l2n:
     !b. 1 < b ==> !l. l <> [] /\ 0 < LAST l /\ EVERY ($> b) l ==>
