@@ -41,9 +41,12 @@ fun rw thl = SRW_TAC[ARITH_ss]thl
 val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] \\
                    POP_ASSUM K_TAC;
 
+(* TODO Is there a better way than messing with store_thm_at and Q like this? *)
 fun store_thm_at loc (r as(n,t,tac)) = let
   val th = boolLib.store_thm_at loc r
+  val {reserved, ...} = ThmAttribute.extract_attributes n
 in
+  if List.exists (fn (x,_) => x = "local") reserved then th else
   if String.isPrefix "IN_" n then let
       val stem0 = String.extract(n,3,NONE)
       val stem = Substring.full stem0
