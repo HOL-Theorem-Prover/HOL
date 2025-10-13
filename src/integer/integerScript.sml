@@ -1806,9 +1806,11 @@ val _ = TypeBase.export [
     Discreteness of <
    ---------------------------------------------------------------------- *)
 
-val int_cases = prove(
-  Term`!x:int. (?n. x = &n) \/ (?n. ~(n = 0) /\ (x = ~&n))`,
-  PROVE_TAC [INT_NUM_CASES]);
+Theorem int_cases[local]:
+   !x:int. (?n. x = &n) \/ (?n. ~(n = 0) /\ (x = ~&n))
+Proof
+  PROVE_TAC [INT_NUM_CASES]
+QED
 
 Theorem INT_DISCRETE:
   !x:int y. ~(x < y /\ y < x + 1)
@@ -3730,12 +3732,16 @@ Proof
                    NUMERAL_DEF, ALT_ZERO, ZERO_MOD]
 QED
 
-val ODD_NB1 = prove(
-  Term`!n. ODD(BIT1 n)`,
-  SIMP_TAC bool_ss [BIT1, ODD, ADD_CLAUSES, ODD_ADD]);
-val EVEN_NB2 = prove(
-  Term`!n. EVEN(BIT2 n)`,
-  SIMP_TAC bool_ss [BIT2, ADD_CLAUSES, EVEN, EVEN_ADD]);
+Theorem ODD_NB1[local]:
+   !n. ODD(BIT1 n)
+Proof
+  SIMP_TAC bool_ss [BIT1, ODD, ADD_CLAUSES, ODD_ADD]
+QED
+Theorem EVEN_NB2[local]:
+   !n. EVEN(BIT2 n)
+Proof
+  SIMP_TAC bool_ss [BIT2, ADD_CLAUSES, EVEN, EVEN_ADD]
+QED
 
 Theorem INT_EXP_CALCULATE:
   !p:int n m.

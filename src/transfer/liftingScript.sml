@@ -20,7 +20,7 @@ Proof
   metis_tac[]
 QED
 
-Theorem Qt_alt_def2:(* isabelle name *)
+Theorem Qt_alt_def2: (* isabelle name *)
   Qt R Abs Rep Tf <=>
     (!c a. Tf c a ==> Abs c = a) /\
     (!a. Tf (Rep a) a) /\
@@ -150,4 +150,3 @@ Proof
   simp[Qt_def, surj_def, relationTheory.inv_DEF, relationTheory.O_DEF] >>
   metis_tac[]
 QED
-

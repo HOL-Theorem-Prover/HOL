@@ -196,17 +196,19 @@ Proof
                         PROVE_TAC[PRIME_IS_GCD,GCD_IS_GCD,IS_GCD_UNIQUE]
 QED
 
-val EUCLIDES_AUX = prove(Term
-`!a b c d. divides c (d*a) /\ divides c (d*b)
+Theorem EUCLIDES_AUX[local]:
+ !a b c d. divides c (d*a) /\ divides c (d*b)
                ==>
-             divides c (d*gcd a b)`,
+             divides c (d*gcd a b)
+Proof
 recInduct gcd_ind THEN SRW_TAC [][gcd_def]
   THEN FIRST_X_ASSUM MATCH_MP_TAC
   THENL [`?z. x = y+z` by (Q.EXISTS_TAC `x-y` THEN DECIDE_TAC),
          `?z. y = x+z` by (Q.EXISTS_TAC `y-x` THEN DECIDE_TAC)]
   THEN RW_TAC bool_ss [DECIDE (Term`(x + y) - x = y`)]
   THEN FULL_SIMP_TAC (srw_ss()) [MULT_CLAUSES, LEFT_ADD_DISTRIB]
-  THEN PROVE_TAC [DIVIDES_ADD_2,ADD_ASSOC]);
+  THEN PROVE_TAC [DIVIDES_ADD_2,ADD_ASSOC]
+QED
 
 
 Theorem L_EUCLIDES:

@@ -25,11 +25,12 @@ Libs
  * holML formalization (she called it "lift").                               *
  *---------------------------------------------------------------------------*)
 
-val option_TY_DEF =
- new_type_definition
-  ("option",
-   prove(Term`?x:'a + one. (\x.T) x`,
-          BETA_TAC THEN EXISTS_TAC“x:'a + one” THEN ACCEPT_TAC TRUTH));
+Theorem option_not_empty[local]:
+  ?x:'a + one. (\x.T) x
+Proof
+  BETA_TAC THEN EXISTS_TAC“x:'a + one” THEN ACCEPT_TAC TRUTH
+QED
+val option_TY_DEF = new_type_definition ("option", option_not_empty);
 
 local
   val ns = ["Data","Option"]
@@ -210,8 +211,11 @@ val _ = computeLib.add_persistent_funs ["OPTION_MAP2_THM"]
 
 val option_rws = OPTION_MAP2_THM::option_rws;
 
-val ex1_rw = prove(Term`!x. (?y. x = y) /\ (?y. y = x)`,
-   GEN_TAC THEN CONJ_TAC THEN EXISTS_TAC (Term`x`) THEN REFL_TAC);
+Theorem ex1_rw[local]:
+  !x. (?y. x = y) /\ (?y. y = x)
+Proof
+   GEN_TAC THEN CONJ_TAC THEN EXISTS_TAC (Term`x`) THEN REFL_TAC
+QED
 
 fun OPTION_CASES_TAC t = STRUCT_CASES_TAC (ISPEC t option_nchotomy);
 

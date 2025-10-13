@@ -1351,11 +1351,13 @@ Proof
   ]
 QED
 
-val FINITE_BAG_UNION_1 = prove(
-  Term`!b1. FINITE_BAG b1 ==>
-            !b2. FINITE_BAG b2 ==> FINITE_BAG (BAG_UNION b1 b2)`,
+Theorem FINITE_BAG_UNION_1[local]:
+   !b1. FINITE_BAG b1 ==>
+            !b2. FINITE_BAG b2 ==> FINITE_BAG (BAG_UNION b1 b2)
+Proof
   HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN
-  SIMP_TAC std_ss [FINITE_BAG_THM, BAG_UNION_EMPTY, BAG_UNION_INSERT]);
+  SIMP_TAC std_ss [FINITE_BAG_THM, BAG_UNION_EMPTY, BAG_UNION_INSERT]
+QED
 Theorem FINITE_BAG_UNION_2[local]:
     !b. FINITE_BAG b ==>
            !b1 b2. (b = BAG_UNION b1 b2) ==> FINITE_BAG b1 /\ FINITE_BAG b2
@@ -1423,78 +1425,96 @@ Definition BAG_CARD_RELn[nocompute]:
           P b n
 End
 
-val BCARD_imps = prove(
-  Term`(BAG_CARD_RELn EMPTY_BAG 0) /\
+Theorem BCARD_imps[local]:
+   (BAG_CARD_RELn EMPTY_BAG 0) /\
        (!b n. BAG_CARD_RELn b n ==>
-           (!e. BAG_CARD_RELn (BAG_INSERT e b) (n + 1)))`,
-  REWRITE_TAC [BAG_CARD_RELn, arithmeticTheory.ADD1] THEN MESON_TAC [])
+           (!e. BAG_CARD_RELn (BAG_INSERT e b) (n + 1)))
+Proof
+  REWRITE_TAC [BAG_CARD_RELn, arithmeticTheory.ADD1] THEN MESON_TAC []
+QED
 
-val BCARD_induct = prove(
-  Term`!P. P EMPTY_BAG 0 /\
+Theorem BCARD_induct[local]:
+   !P. P EMPTY_BAG 0 /\
            (!b n. P b n ==> (!e. P (BAG_INSERT e b) (n + 1))) ==>
-           (!b n. BAG_CARD_RELn b n ==> P b n)`,
-  REWRITE_TAC [BAG_CARD_RELn, arithmeticTheory.ADD1] THEN MESON_TAC []);
+           (!b n. BAG_CARD_RELn b n ==> P b n)
+Proof
+  REWRITE_TAC [BAG_CARD_RELn, arithmeticTheory.ADD1] THEN MESON_TAC []
+QED
 
 val strong_BCARD_induct =
   BCARD_induct |> Q.SPEC `\b n. BAG_CARD_RELn b n /\ P b n`
                |> SIMP_RULE std_ss [BCARD_imps]
 
-val BCARD_R_cases = prove(
-  Term`!b n. BAG_CARD_RELn b n ==>
+Theorem BCARD_R_cases[local]:
+   !b n. BAG_CARD_RELn b n ==>
              (b = EMPTY_BAG) /\ (n = 0) \/
              (?b0 e m. (b = BAG_INSERT e b0) /\
-                       BAG_CARD_RELn b0 m /\ (n = m + 1))`,
+                       BAG_CARD_RELn b0 m /\ (n = m + 1))
+Proof
   HO_MATCH_MP_TAC BCARD_induct THEN SIMP_TAC std_ss [] THEN
-  REPEAT STRIP_TAC THEN ELIM_TAC THEN ASM_MESON_TAC [BCARD_imps]);
+  REPEAT STRIP_TAC THEN ELIM_TAC THEN ASM_MESON_TAC [BCARD_imps]
+QED
 
-val BCARD_rwts = prove(
-  Term`!b n. BAG_CARD_RELn b n <=>
+Theorem BCARD_rwts[local]:
+   !b n. BAG_CARD_RELn b n <=>
              (b = EMPTY_BAG) /\ (n = 0) \/
              (?b0 e m. (b = BAG_INSERT e b0) /\ (n = m + 1) /\
-                       BAG_CARD_RELn b0 m)`,
-  METIS_TAC [BCARD_R_cases, BCARD_imps]);
+                       BAG_CARD_RELn b0 m)
+Proof
+  METIS_TAC [BCARD_R_cases, BCARD_imps]
+QED
 
-val BCARD_BINSERT_indifferent = prove(
-  Term`!b n. BAG_CARD_RELn b n ==>
+Theorem BCARD_BINSERT_indifferent[local]:
+   !b n. BAG_CARD_RELn b n ==>
              !b0 e. (b = BAG_INSERT e b0) ==>
-                    BAG_CARD_RELn b0 (n - 1) /\ ~(n = 0)`,
+                    BAG_CARD_RELn b0 (n - 1) /\ ~(n = 0)
+Proof
   HO_MATCH_MP_TAC strong_BCARD_induct THEN SRW_TAC [][] THEN
   FULL_SIMP_TAC (srw_ss()) [BAG_INSERT_EQUAL] THEN1 SRW_TAC [][] THEN
   `BAG_CARD_RELn k (n - 1) /\ n <> 0` by METIS_TAC [] THEN
-  `n = (n - 1) + 1` by DECIDE_TAC THEN METIS_TAC [BCARD_imps]);
+  `n = (n - 1) + 1` by DECIDE_TAC THEN METIS_TAC [BCARD_imps]
+QED
 
 val BCARD_BINSERT' =
   SIMP_RULE bool_ss [GSYM RIGHT_FORALL_IMP_THM] BCARD_BINSERT_indifferent
 
-val BCARD_EMPTY = prove(
-  Term`!n. BAG_CARD_RELn EMPTY_BAG n = (n = 0)`,
+Theorem BCARD_EMPTY[local]:
+   !n. BAG_CARD_RELn EMPTY_BAG n = (n = 0)
+Proof
   ONCE_REWRITE_TAC [BCARD_rwts] THEN
-  SIMP_TAC std_ss [BAG_INSERT_NOT_EMPTY]);
+  SIMP_TAC std_ss [BAG_INSERT_NOT_EMPTY]
+QED
 
-val BCARD_BINSERT = prove(
-  Term`!b e n. BAG_CARD_RELn (BAG_INSERT e b) n =
-               (?m. (n = m + 1) /\ BAG_CARD_RELn b m)`,
+Theorem BCARD_BINSERT[local]:
+   !b e n. BAG_CARD_RELn (BAG_INSERT e b) n =
+               (?m. (n = m + 1) /\ BAG_CARD_RELn b m)
+Proof
   SRW_TAC [][EQ_IMP_THM] THENL [
     IMP_RES_TAC BCARD_BINSERT' THEN Q.EXISTS_TAC `n - 1` THEN
     ASM_SIMP_TAC std_ss [],
     ASM_MESON_TAC [BCARD_imps]
-  ]);
+  ]
+QED
 
 val BCARD_RWT = CONJ BCARD_EMPTY BCARD_BINSERT
 
-val BCARD_R_det = prove(
-  Term`!b n. BAG_CARD_RELn b n ==>
-             !n'. BAG_CARD_RELn b n' ==> (n' = n)`,
+Theorem BCARD_R_det[local]:
+   !b n. BAG_CARD_RELn b n ==>
+             !n'. BAG_CARD_RELn b n' ==> (n' = n)
+Proof
   HO_MATCH_MP_TAC BCARD_induct THEN CONJ_TAC THENL [
     ONCE_REWRITE_TAC [BCARD_rwts] THEN
     SIMP_TAC std_ss [BAG_INSERT_NOT_EMPTY],
     REPEAT STRIP_TAC THEN IMP_RES_TAC BCARD_BINSERT THEN RES_TAC THEN
     ASM_SIMP_TAC std_ss []
-  ]);
+  ]
+QED
 
-val FINITE_BAGS_BCARD = prove(
-  Term`!b. FINITE_BAG b ==> ?n. BAG_CARD_RELn b n`,
-  HO_MATCH_MP_TAC FINITE_BAG_INDUCT THEN MESON_TAC [BCARD_imps]);
+Theorem FINITE_BAGS_BCARD[local]:
+   !b. FINITE_BAG b ==> ?n. BAG_CARD_RELn b n
+Proof
+  HO_MATCH_MP_TAC FINITE_BAG_INDUCT THEN MESON_TAC [BCARD_imps]
+QED
 
 val BAG_CARD = new_specification
   ("BAG_CARD",["BAG_CARD"],
@@ -1519,22 +1539,26 @@ Proof
   FULL_SIMP_TAC (srw_ss()) [Once BCARD_rwts]
 QED
 
-val BAG_CARD_EL_BAG = prove(
-  Term`!e. BAG_CARD (EL_BAG e) = 1`,
+Theorem BAG_CARD_EL_BAG[local]:
+   !e. BAG_CARD (EL_BAG e) = 1
+Proof
   GEN_TAC THEN SIMP_TAC std_ss [EL_BAG] THEN
   Q.SUBGOAL_THEN `FINITE_BAG (BAG_INSERT e EMPTY_BAG)` ASSUME_TAC
   THENL [MESON_TAC [FINITE_BAG_INSERT, FINITE_EMPTY_BAG],
          ALL_TAC] THEN IMP_RES_TAC BAG_CARD THEN
-  FULL_SIMP_TAC std_ss [BCARD_RWT])
+  FULL_SIMP_TAC std_ss [BCARD_RWT]
+QED
 
-val BAG_CARD_INSERT = prove(
-  Term`!b. FINITE_BAG b ==>
-           !e. BAG_CARD (BAG_INSERT e b) = BAG_CARD b + 1`,
+Theorem BAG_CARD_INSERT[local]:
+   !b. FINITE_BAG b ==>
+           !e. BAG_CARD (BAG_INSERT e b) = BAG_CARD b + 1
+Proof
   REPEAT STRIP_TAC THEN
   Q.SUBGOAL_THEN `FINITE_BAG (BAG_INSERT e b)` ASSUME_TAC THENL [
     ASM_MESON_TAC [FINITE_BAG_INSERT], ALL_TAC] THEN
   IMP_RES_TAC BAG_CARD THEN
-  FULL_SIMP_TAC std_ss [BCARD_RWT] THEN IMP_RES_TAC BCARD_R_det);
+  FULL_SIMP_TAC std_ss [BCARD_RWT] THEN IMP_RES_TAC BCARD_R_det
+QED
 
 Theorem BAG_CARD_THM =
   CONJ BAG_CARD_EMPTY BAG_CARD_INSERT;

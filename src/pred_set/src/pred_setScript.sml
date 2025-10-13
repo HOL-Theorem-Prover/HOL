@@ -5253,10 +5253,11 @@ Proof
 QED
 
 
-val FINITE_CROSS_EQ_lemma0 = prove(
-  Term`!x. FINITE x ==>
+Theorem FINITE_CROSS_EQ_lemma0[local]:
+   !x. FINITE x ==>
            !P Q. (x = P CROSS Q) ==>
-                 (P = {}) \/ (Q = {}) \/ FINITE P /\ FINITE Q`,
+                 (P = {}) \/ (Q = {}) \/ FINITE P /\ FINITE Q
+Proof
   HO_MATCH_MP_TAC FINITE_COMPLETE_INDUCTION THEN
   REPEAT STRIP_TAC THEN POP_ASSUM SUBST_ALL_TAC THEN
   `(P = {}) \/ ?p P0. (P = p INSERT P0) /\ ~(p IN P0)` by
@@ -5296,7 +5297,8 @@ val FINITE_CROSS_EQ_lemma0 = prove(
       MESON_TAC [FINITE_EMPTY, NOT_INSERT_EMPTY],
       ASM_SIMP_TAC bool_ss [FINITE_EMPTY]
     ]
-  ]);
+  ]
+QED
 
 val FINITE_CROSS_EQ_lemma =
   SIMP_RULE bool_ss [GSYM RIGHT_FORALL_IMP_THM] FINITE_CROSS_EQ_lemma0

@@ -253,8 +253,10 @@ REPEAT CONJ_TAC THEN REPEAT GEN_TAC THEN REWRITE_TAC [MEM, merge] THENL
 
 (* ****** more lemmas that do need an ORL hypothesis ****** *)
 
-val ORL_single_valued = prove (Term`!cmp l. ORL cmp l ==>
- !x:'a y:'b z. MEM (x,y) l /\ MEM (x,z) l ==> (z = y)`,
+Theorem ORL_single_valued[local]:
+   !cmp l. ORL cmp l ==>
+ !x:'a y:'b z. MEM (x,y) l /\ MEM (x,z) l ==> (z = y)
+Proof
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [MEM]
 ,P_PGEN_TAC (Term`p:'a,q:'b`) THEN
@@ -265,7 +267,8 @@ GEN_TAC THEN Induct THENL
  [AR
  ,IMP_RES_THEN MP_TAC toto_glneq THEN REWRITE_TAC []
  ,IMP_RES_THEN MP_TAC toto_glneq THEN REWRITE_TAC []
- ]]);
+ ]]
+QED
 
 val merge_MEM_thm = maybe_thm ("merge_MEM_thm",
 ``!cmp:'a toto l m:('a#'b)list. ORL cmp l /\ ORL cmp m ==>

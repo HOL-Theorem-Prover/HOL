@@ -35,18 +35,25 @@ val FORALL = LIST_CONJ (map SPEC_ALL (CONJUNCTS EVERY_DEF));
 
 (* Basic extra theorems *)
 
-val FUN_EQ_THM = prove (Term`!f g.  (f = g) = (!x. f x = g x)`,
+Theorem FUN_EQ_THM[local]:
+   !f g.  (f = g) = (!x. f x = g x)
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL
    [DISCH_THEN SUBST1_TAC THEN GEN_TAC THEN REFL_TAC,
-    MATCH_ACCEPT_TAC EQ_EXT]);
+    MATCH_ACCEPT_TAC EQ_EXT]
+QED
 
-val RIGHT_IMP_EXISTS_THM = prove (
-  Term`!P Q. P ==> (?x. Q x) = (?x. P ==> Q x)`,
-  MESON_TAC []);
+Theorem RIGHT_IMP_EXISTS_THM[local]:
+   !P Q. P ==> (?x. Q x) = (?x. P ==> Q x)
+Proof
+  MESON_TAC []
+QED
 
-val LEFT_IMP_EXISTS_THM = prove (
-  Term`!P Q. (?x. P x) ==> Q = (!x. P x ==> Q)`,
-  MESON_TAC []);
+Theorem LEFT_IMP_EXISTS_THM[local]:
+   !P Q. (?x. P x) ==> Q = (!x. P x ==> Q)
+Proof
+  MESON_TAC []
+QED
 
 (* Extra theorems needed about the naturals *)
 
@@ -55,32 +62,47 @@ val SUC_INJ = prim_recTheory.INV_SUC_EQ
 
 val LE_EXISTS = arithmeticTheory.LESS_EQ_EXISTS;
 
-val LE_SUC_LT = prove (
-  Term`!m n. SUC m <= n = m < n`,
-  ARITH_TAC);
+Theorem LE_SUC_LT[local]:
+   !m n. SUC m <= n = m < n
+Proof
+  ARITH_TAC
+QED
 
-val LT_CASES = prove (
-  Term`!m n:num. m < n \/ n < m \/ (m = n)`,
-  ARITH_TAC);
+Theorem LT_CASES[local]:
+   !m n:num. m < n \/ n < m \/ (m = n)
+Proof
+  ARITH_TAC
+QED
 
-val LE_REFL = prove (Term`!n:num. n <= n`, ARITH_TAC);
+Theorem LE_REFL[local]:
+   !n:num. n <= n
+Proof ARITH_TAC
+QED
 
 (* Extra theorems needed about sets *)
 
-val FINITE_SUBSET = prove (Term`!s t. FINITE t /\ s SUBSET t ==> FINITE s`,
-  MESON_TAC [SUBSET_FINITE]);
+Theorem FINITE_SUBSET[local]:
+   !s t. FINITE t /\ s SUBSET t ==> FINITE s
+Proof
+  MESON_TAC [SUBSET_FINITE]
+QED
 
-val FINITE_RULES = prove (
-  Term`FINITE {} /\ (!x s. FINITE s ==> FINITE (x INSERT s))`,
-  MESON_TAC [FINITE_EMPTY, FINITE_INSERT]);
+Theorem FINITE_RULES[local]:
+   FINITE {} /\ (!x s. FINITE s ==> FINITE (x INSERT s))
+Proof
+  MESON_TAC [FINITE_EMPTY, FINITE_INSERT]
+QED
 
-val GSPEC_DEF = prove (Term`!f. GSPEC f = \v. ?z. f z = (v,T)`,
+Theorem GSPEC_DEF[local]:
+   !f. GSPEC f = \v. ?z. f z = (v,T)
+Proof
 GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN BETA_TAC THEN GEN_TAC
   THEN ONCE_REWRITE_TAC[BETA_RULE
         (ONCE_REWRITE_CONV[GSYM SPECIFICATION](Term`(\x. GSPEC f x) x`))]
   THEN CONV_TAC (ONCE_DEPTH_CONV ETA_CONV)
   THEN REWRITE_TAC[GSPECIFICATION]
-  THEN MESON_TAC[]);
+  THEN MESON_TAC[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Application of polynomial as a real function.                             *)

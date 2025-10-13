@@ -979,7 +979,10 @@ Proof
  >> METIS_TAC [ROOT_11, REAL_LT_LE]
 QED
 
-val lem = prove(Term`0<2:num`, REWRITE_TAC[TWO,LESS_0]);
+Theorem lem[local]:
+  0<2:num
+Proof REWRITE_TAC[TWO,LESS_0]
+QED
 
 Theorem EVEN_MOD[local] :
     !n. EVEN(n) = (n MOD 2 = 0)
