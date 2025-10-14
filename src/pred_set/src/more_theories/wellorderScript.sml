@@ -658,8 +658,7 @@ Proof
   metis_tac [wo2wo_EQ_NONE, option_CASES]
 QED
 
-Overload
-  woseg =
+Overload woseg =
   ``\w1 w2 x. IMAGE THE (IMAGE (wo2wo w1 w2) (iseg w1 x) DELETE NONE)``
 
 Theorem mono_woseg:
