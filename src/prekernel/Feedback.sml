@@ -50,29 +50,6 @@ fun empty_origins_error sfn =
    {origins = [mk_origin "Feedback" sfn locn.Loc_Unknown],
     message = "no origin"}
 
-(*-------------------------------------------------------------------------*)
-(* Exceptions used in HOL code.                                              *)
-(*---------------------------------------------------------------------------*)
-
-exception HOL_ERR of hol_error;
-
-exception BATCH_ERR of string;
-
-fun top_structure_of herr =
-  case origins_of herr
-   of [] => raise HOL_ERR (empty_origins_error "top_structure_of")
-    | h::_ => #origin_structure h
-
-fun top_function_of herr =
-  case origins_of herr
-   of [] => raise HOL_ERR (empty_origins_error "top_function_of")
-    | h::_ => #origin_function h
-
-fun top_location_of herr =
-  case origins_of herr
-   of [] => raise HOL_ERR (empty_origins_error "top_location_of")
-    | h::_ => #source_location h
-
 val pp_hol_error =
   let open HOLPP
       fun pp_origin {origin_structure,origin_function,source_location} =
@@ -96,10 +73,72 @@ val pp_hol_error =
 fun format_hol_error holerr =
   HOLPP.pp_to_string (!Globals.linewidth) pp_hol_error holerr
 
+(*-------------------------------------------------------------------------*)
+(* Exceptions used in HOL code.                                              *)
+(*---------------------------------------------------------------------------*)
+
+exception HOL_ERR of hol_error;
+
+fun top_structure_of herr =
+  case origins_of herr
+   of [] => raise HOL_ERR (empty_origins_error "top_structure_of")
+    | h::_ => #origin_structure h
+
+fun top_function_of herr =
+  case origins_of herr
+   of [] => raise HOL_ERR (empty_origins_error "top_function_of")
+    | h::_ => #origin_function h
+
+fun top_location_of herr =
+  case origins_of herr
+   of [] => raise HOL_ERR (empty_origins_error "top_location_of")
+    | h::_ => #source_location h
+
+(*---------------------------------------------------------------------------
+  Curious thing: if pp_hol_error is installed inside structure Feedback,
+  then the prettyprinter invoked for value "HOL_ERR <holerr>" will dispatch
+  to pp_hol_error when it comes to printing <holerr>. But not so if
+  pp_hol_error is installed after Feedback is declared.
+
+  In the HOL build, prettyprinters are installed as part of the
+  invocation of the REPL, after all the structures are loaded.
+
+  My theory: that the prettyprinting for an exn is determined at the
+  point of declaring the exception, where "point of declaration" means the
+  enclosing structure.
+
+  TODO: check this by concocting a simple non-HOL example. Something like
+
+   structure Foo =
+    datatype klist = KLIST of int list
+    fun pp_klist (KLIST list) =
+      let open HOLPP
+      in add_string ("<"^Int.toString (length list)^">")
+      end
+
+    exception KERR of klist
+
+    val _ =
+      let fun pp i _ e = pp_klist e
+       in PolyML.addPrettyPrinter pp
+      end
+   end
+
+  (... Work on TODO ...) Hrm. The simple example seems to work fine.
+  What the devil is going on?
+
+
+MOSML NOTE: looks like any exceptions other than with a string argument
+  will not have their arguments printed. So "HOL_ERR <holerr>" will
+  get printed in the REPL as simply "HOLERR".
+*)
+
+(*
 val _ =
   let fun pp i _ e = pp_hol_error e
   in PolyML.addPrettyPrinter pp
   end
+*)
 
 fun mk_HOL_ERRloc s1 s2 locn s3 = HOL_ERR (mk_hol_error s1 s2 locn s3)
 
@@ -107,7 +146,7 @@ fun mk_HOL_ERR s1 s2 s3 = HOL_ERR (mk_hol_error s1 s2 locn.Loc_Unknown s3)
 
 fun set_top_function fnm (HOL_ERROR {origins,message}) =
   case origins
-   of [] => raise HOL_ERR (empty_origins_error "set_origin_function")
+   of [] => raise HOL_ERR (empty_origins_error "set_top_function")
     | h::t => HOL_ERROR
       {origins = {origin_structure = #origin_structure h,
                   source_location = #source_location h,
@@ -191,7 +230,7 @@ fun render_exn srcfn e =
        raise e
     else
       (output_ERR (exn_to_string e);
-       raise BATCH_ERR srcfn)
+       raise Fail srcfn)
 
 fun Raise e = (output_ERR (exn_to_string e); raise e)
 

@@ -15,7 +15,7 @@
 (* Many micro-optimizations added, February 24, 1992, KLS                *)
 (* ===================================================================== *)
 
-structure Conv (* :> Conv *) =
+structure Conv :> Conv =
 struct
 
 open HolKernel Parse boolTheory Drule boolSyntax Abbrev

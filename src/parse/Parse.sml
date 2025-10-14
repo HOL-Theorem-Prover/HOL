@@ -4,8 +4,6 @@ struct
 open Feedback HolKernel HOLgrammars GrammarSpecials term_grammar type_grammar
 open term_grammar_dtype
 
-val _ = print "Loading Parse structure.\n"
-
 type pp_element = term_grammar.pp_element
 type PhraseBlockStyle = term_grammar.PhraseBlockStyle
 type ParenStyle = term_grammar.ParenStyle

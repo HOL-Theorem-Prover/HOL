@@ -24,7 +24,6 @@ sig
     val pp_hol_error    : hol_error -> HOLPP.pretty
 
     exception HOL_ERR of hol_error
-    exception BATCH_ERR of string
 
     val mk_HOL_ERR        : string -> string -> string -> exn
     val mk_HOL_ERRloc     : string -> string -> locn.locn -> string -> exn
