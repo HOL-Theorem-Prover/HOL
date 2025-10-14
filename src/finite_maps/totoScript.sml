@@ -66,8 +66,8 @@ val cpn_nchotomy = TypeBase.nchotomy_of ``:ordering``
 
 (* Define being a (cpn-valued) total order: *)
 
-val _ = type_abbrev ("cpn", ``:ordering``)
-val _ = type_abbrev ("comp", Type`:'a->'a->cpn`);
+Type cpn = ``:ordering``
+Type comp = “:'a->'a->cpn”
 
 Definition TotOrd:  TotOrd (c: 'a comp) =
    (!x y. (c x y = EQUAL) <=> (x = y)) /\

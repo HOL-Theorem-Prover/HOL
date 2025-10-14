@@ -6,7 +6,7 @@ Libs
 
 val _ = diminish_srw_ss ["NORMEQ"]
 
-val _ = type_abbrev("alist",``:(('a # 'b) list)``);
+Type alist = ``:(('a # 'b) list)``
 
 Definition fmap_to_alist_def:
   fmap_to_alist s = MAP (\k.(k,s ' k)) (SET_TO_LIST (FDOM s))

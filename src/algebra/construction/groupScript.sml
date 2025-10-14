@@ -206,7 +206,7 @@ val _ = Hol_datatype`
                 mult:'a -> 'a -> 'a
            |>`;
 *)
-val _ = type_abbrev ("group", Type `:'a monoid`);
+Type group = “:'a monoid”
 
 (* Define Group by Monoid
 

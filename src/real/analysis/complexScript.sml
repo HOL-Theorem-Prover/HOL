@@ -29,7 +29,7 @@ val _ = ParseExtras.temp_loose_equality()
 (* Definition of complex number type.                                 *)
 (* ------------------------------------------------------------------ *)
 
-val _ = type_abbrev ("complex", ``: real # real``);
+Type complex = ``: real # real``
 
 (*--------------------------------------------------------------------*)
 (* Now prove 2 lemmas.                                                *)

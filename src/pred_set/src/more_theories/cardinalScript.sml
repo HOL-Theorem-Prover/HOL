@@ -227,7 +227,7 @@ Proof
   metis_tac[cardleq_def,FINITE_INJ]
 QED
 
-val _ = type_abbrev ("inf", ``:num + 'a``)
+Type inf = ``:num + 'a``
 
 Theorem INFINITE_UNIV_INF:
     INFINITE univ(:'a inf)

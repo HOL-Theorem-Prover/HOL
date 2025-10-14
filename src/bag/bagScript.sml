@@ -6,8 +6,8 @@ Libs
 
 fun ARITH q = EQT_ELIM (ARITH_CONV (Parse.Term q));
 
-val _ = type_abbrev("bag", “:'a -> num”)
-val _ = type_abbrev("multiset", “:'a -> num”)
+Type bag = “:'a -> num”
+Type multiset = “:'a -> num”
 
 val _ = print "Defining basic bag operations\n"
 
