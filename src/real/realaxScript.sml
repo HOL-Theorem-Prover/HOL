@@ -199,11 +199,10 @@ QED
 (* Now define the inclusion homomorphism &:num->real. (was in realTheory)    *)
 (*---------------------------------------------------------------------------*)
 
-val real_of_num = new_recursive_definition
-  {name = "real_of_num",
-   def = “(real_of_num 0 = real_0) /\
-     (real_of_num(SUC n) = real_of_num n + real_1)”,
-   rec_axiom = num_Axiom}
+Definition real_of_num[nocompute]:
+  (real_of_num 0 = real_0) /\
+  (real_of_num(SUC n) = real_of_num n + real_1)
+End
 
 val _ = add_numeral_form(#"r", SOME "real_of_num");
 
@@ -270,10 +269,9 @@ val _ = overload_on (">=", “$real_ge”);
 Definition real_abs[nocompute]: abs(x) = (if (0 <= x) then x else ~x)
 End
 
-val real_pow = new_recursive_definition
-   {name = "real_pow",
-    def = “($pow x 0 = &1) /\ ($pow x (SUC n) = x * ($pow x n))”,
-    rec_axiom = num_Axiom};
+Definition real_pow[nocompute]:
+  ($pow x 0 = &1) /\ ($pow x (SUC n) = x * ($pow x n))
+End
 val _ = set_fixity "pow" (Infixr 700);
 
 Definition real_max[nocompute]: max (x :real) y = if x <= y then y else x
