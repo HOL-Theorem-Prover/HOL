@@ -1386,7 +1386,7 @@ QED
 (*  Basic definitions.                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = type_abbrev_pp ("algebra", ``:('a set) # ('a set set)``);
+Type algebra[pp] = ``:('a set) # ('a set set)``
 
 Definition space_def:
     space   (x :'a set, y :('a set) set) = x

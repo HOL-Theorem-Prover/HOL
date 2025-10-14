@@ -238,7 +238,7 @@ QED
       representation.
  ---------------------------------------------------------------------------*)
 
-val _ = type_abbrev_pp ("string", ``:char list``)
+Type string[pp] = ``:char list``
 
 Overload STRING[inferior] = “CONS : char -> string -> string”
 Overload EMPTYSTRING[inferior] = “[] : string”
