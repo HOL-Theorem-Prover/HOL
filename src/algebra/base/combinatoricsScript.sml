@@ -8498,7 +8498,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define a path type *)
-val _ = temp_type_abbrev("path", Type `:num list`);
+Type path[local] = “:num list”
 
 (* Define paths reachable by one zigzag *)
 Definition leibniz_zigzag_def:
