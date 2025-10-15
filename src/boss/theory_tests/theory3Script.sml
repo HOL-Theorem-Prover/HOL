@@ -9,13 +9,16 @@ Libs
 val _ = temp_add_monadsyntax()
 val _ = overload_on ("monad_bind", ``OPTION_BIND``)
 
-val _ = Hol_datatype `nt = NT1 | NT2`;
+Datatype: nt = NT1 | NT2
+End
 
 val _ = new_type ("ast", 0)
 
-val _ = Hol_datatype`gtok = NT of nt | TOK of num`
+Datatype: gtok = NT of nt | TOK of num
+End
 
-val _ = Hol_datatype`ptree = Lf of gtok | Nd of nt => ptree list`
+Datatype: ptree = Lf of gtok | Nd of nt => ptree list
+End
 
 val _ = new_constant("Ast_Tapp", ``:ast list -> num -> ast``);
 

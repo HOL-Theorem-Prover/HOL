@@ -15,22 +15,24 @@ val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
 (* relation defines translation of programs into bytecode *)
 
-val _ = Hol_datatype`
+Datatype:
   stack_slot = ssTEMP
-             | ssVAR of string`;
+             | ssVAR of string
+End
 
 val stack_slot_11 = fetch "-" "stack_slot_11"
 val stack_slot_distinct = fetch "-" "stack_slot_distinct"
 val stack_slot = simpLib.type_ssfrag ``:stack_slot``
 
-val _ = Hol_datatype `
+Datatype:
   bc_state = <| code : num -> bc_inst_type option ;
                 code_end : num;
                 compiled : (string # (num # num)) list ; (* this is an alist *)
                 instr_length : bc_inst_type -> num ;
                 consts : SExp list ;
                 io_out : string ;
-                ok : bool |>`;
+                ok : bool |>
+End
 
 Definition iLENGTH_def:
   (iLENGTH il [] = 0) /\

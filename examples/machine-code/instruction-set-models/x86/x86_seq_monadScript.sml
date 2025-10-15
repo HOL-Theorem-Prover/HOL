@@ -6,7 +6,8 @@ Ancestors
 val _ = ParseExtras.temp_loose_equality()
 
 
-val _ = Hol_datatype `x86_permission = Xread | Xwrite | Xexecute`;
+Datatype: x86_permission = Xread | Xwrite | Xexecute
+End
 
 val _ = type_abbrev("x86_memory",``: word32 -> ((word8 # x86_permission set) option)``);
 

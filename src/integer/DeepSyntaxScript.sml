@@ -6,13 +6,14 @@ Libs
 
 val _ = ParseExtras.temp_loose_equality()
 
-val _ = Hol_datatype `deep_form = Conjn of deep_form => deep_form
+Datatype: deep_form = Conjn of deep_form => deep_form
                                 | Disjn of deep_form => deep_form
                                 | Negn of deep_form
                                 | UnrelatedBool of bool
                                 | xLT of int | LTx of int
                                 | xEQ of int
-                                | xDivided of int => int`;
+                                | xDivided of int => int
+End
 
 Definition eval_form_def:
    (eval_form (Conjn f1 f2) x = eval_form f1 x /\ eval_form f2 x) /\

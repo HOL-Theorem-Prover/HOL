@@ -54,14 +54,14 @@ val _ = hide "S";
 (*****************************************************************************)
 (* ``: ('prop,'state)model``                                                 *)
 (*****************************************************************************)
-val model_def =
- Hol_datatype
-  `model =
+Datatype:
+   model =
     <| S: 'state -> bool;
        S0:'state -> bool;
        R: 'state # 'state -> bool;
        P: 'prop -> bool;
-       L: 'state -> ('prop -> bool) |>`;
+       L: 'state -> ('prop -> bool) |>
+End
 
 Definition MODEL_def:
    MODEL M =
@@ -74,9 +74,9 @@ End
 (* A letter is either TOP, or BOTTOM                                         *)
 (* or a set of atomic propositions repersenting a state                      *)
 (*****************************************************************************)
-val letter_def =
- Hol_datatype
-  `letter = TOP | BOTTOM | STATE of ('prop -> bool)`;
+Datatype:
+   letter = TOP | BOTTOM | STATE of ('prop -> bool)
+End
 
 (*****************************************************************************)
 (* PATH M s is true of path p iff p is a computation path of model M         *)

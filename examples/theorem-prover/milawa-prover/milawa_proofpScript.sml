@@ -706,9 +706,10 @@ val logic_disjoin_formulas_thm = add_prove(
   \\ Cases_on `xs` \\ FS [MAP,or_list_def]
   \\ ONCE_REWRITE_TAC [logic_disjoin_formulas_def] \\ FS [f2sexp_def]);
 
-val _ = Hol_datatype `
+Datatype:
   logic_appeal =
-    Appeal of string => formula => (logic_appeal list # (SExp option)) option`
+    Appeal of string => formula => (logic_appeal list # (SExp option)) option
+End
 
 val logic_appeal_size_def = fetch "-" "logic_appeal_size_def"
 

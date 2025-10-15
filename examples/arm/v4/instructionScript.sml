@@ -18,42 +18,49 @@ Libs
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = Hol_datatype`
+Datatype:
   shift =
     LSL of word4
   | LSR of word4
   | ASR of word4
-  | ROR of word4`;
+  | ROR of word4
+End
 
-val _ = Hol_datatype
-  `addr_mode1 =
+Datatype:
+   addr_mode1 =
      Dp_immediate of word4=>word8
    | Dp_shift_immediate of shift=>word5
-   | Dp_shift_register of shift=>word4`;
+   | Dp_shift_register of shift=>word4
+End
 
-val _ = Hol_datatype
-  `addr_mode2 =
+Datatype:
+   addr_mode2 =
      Dt_immediate of word12
-   | Dt_shift_immediate of shift=>word5`;
+   | Dt_shift_immediate of shift=>word5
+End
 
-val _ = Hol_datatype
-  `addr_mode3 =
+Datatype:
+   addr_mode3 =
      Dth_immediate of word8
-   | Dth_register of word4`;
+   | Dth_register of word4
+End
 
-val _ = Hol_datatype
-  `msr_mode =
+Datatype:
+   msr_mode =
      Msr_immediate of word4=>word8
-   | Msr_register of word4`;
+   | Msr_register of word4
+End
 
-val _ = Hol_datatype
-  `msr_psr = CPSR_c | CPSR_f | CPSR_a | SPSR_c | SPSR_f | SPSR_a`;
+Datatype:
+   msr_psr = CPSR_c | CPSR_f | CPSR_a | SPSR_c | SPSR_f | SPSR_a
+End
 
-val _ = Hol_datatype
-  `transfer_options = <| Pre : bool; Up : bool; Wb : bool |>`;
+Datatype:
+   transfer_options = <| Pre : bool; Up : bool; Wb : bool |>
+End
 
-val _ = Hol_datatype
- `arm_instruction =
+Datatype:
+  arm_instruction =
     B of condition=>word24
   | BL of condition=>word24
   | SWI of condition
@@ -93,7 +100,8 @@ val _ = Hol_datatype
   | STC of condition=>bool=>transfer_options=>word4=>word4=>word4=>word8
   | MRC of condition=>word4=>word3=>word4=>word4=>word4=>word3
   | MCR of condition=>word4=>word3=>word4=>word4=>word4=>word3
-  | UND of condition`;
+  | UND of condition
+End
 
 (* ------------------------------------------------------------------------- *)
 

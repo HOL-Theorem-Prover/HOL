@@ -97,7 +97,8 @@ QED
 (* Output of the compiler is in terms of vectors.                            *)
 (*---------------------------------------------------------------------------*)
 
-val _ = Hol_datatype `vector = Vector of 'a list`;
+Datatype: vector = Vector of 'a list
+End
 
 Definition fromList_def : fromList l = Vector l
 End

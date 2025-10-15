@@ -116,12 +116,13 @@ End
 
 (* Defining the abstract type of Trajectory formulas *)
 
-val _ = Hol_datatype
-    `TF = Is_0 of string
+Datatype:
+     TF = Is_0 of string
   | Is_1 of string
   | AND of TF => TF
   | WHEN of TF => bool
-  | NEXT of TF`;
+  | NEXT of TF
+End
 
 (* Defining the operators WHEN and AND to be left infix *)
 
@@ -148,7 +149,8 @@ End
 
 (* Datatype of Assertions - leadsto operator *)
 
-val _ = Hol_datatype `Assertion = ==>> of TF => TF`;
+Datatype: Assertion = ==>> of TF => TF
+End
 
 (* leadsto is infix *)
 

@@ -1082,12 +1082,13 @@ METIS_TAC[HEAP_DISTINCT___NOT_ALL_DISTINCT]);
 
 
 
-val _ = Hol_datatype `hypothesis_rule_cases =
+Datatype: hypothesis_rule_cases =
      hyp_keep
    | hyp_c_dse_nil of bool => num
    | hyp_c_unequal of num => num
    | hyp_in_precond of bool => num
-   | hyp_in_self of bool => num`
+   | hyp_in_self of bool => num
+End
 
 
 Definition HYPOTHESIS_RULE_COND_def:
@@ -1509,10 +1510,11 @@ Induct_on `l` THENL [
 
 
 
-val _ = Hol_datatype `pointsto_cases =
+Datatype: pointsto_cases =
      pointsto_skip
    | pointsto_pointsto
-   | pointsto_tree of bool => num`
+   | pointsto_tree of bool => num
+End
 
 Definition SF_POINTS_TO_LIST_COND_def:
    (SF_POINTS_TO_LIST_COND pfL pointsto_skip h = []) /\

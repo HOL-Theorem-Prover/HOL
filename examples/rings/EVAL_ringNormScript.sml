@@ -96,13 +96,14 @@ fun ARW_TAC l = RW_TAC bool_ss
 
 (* ring normalization *)
 
-val _ = Hol_datatype
- ` polynom =
+Datatype:
+   polynom =
      Pvar of index
    | Pconst of 'a
    | Pplus of polynom => polynom
    | Pmult of polynom => polynom
-   | Popp of polynom `;
+   | Popp of polynom
+End
 
 val polynom_normalize_def = Define `
    (polynom_normalize (Pvar i) = (Cons_varlist [i] Nil_monom))

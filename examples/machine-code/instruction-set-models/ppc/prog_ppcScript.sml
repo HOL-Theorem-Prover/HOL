@@ -16,10 +16,11 @@ val RW1 = ONCE_REWRITE_RULE;
 (* The PowerPC set                                                               *)
 (* ----------------------------------------------------------------------------- *)
 
-val _ = Hol_datatype `
+Datatype:
   ppc_el =  pReg of ppc_reg => word32
           | pMem of word32 => word8 option
-          | pStatus of ppc_bit => bool option`;
+          | pStatus of ppc_bit => bool option
+End
 
 val ppc_el_11 = DB.fetch "-" "ppc_el_11";
 val ppc_el_distinct = DB.fetch "-" "ppc_el_distinct";

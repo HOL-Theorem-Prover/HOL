@@ -10,8 +10,9 @@ Ancestors
 (* 8 bits per byte, represented as an 8-tuple of truth values.               *)
 (*---------------------------------------------------------------------------*)
 
-val _ = Hol_datatype `word8 = BYTE of bool => bool => bool => bool =>
-                                      bool => bool => bool => bool`;
+Datatype: word8 = BYTE of bool => bool => bool => bool =>
+                                      bool => bool => bool => bool
+End
 
 val word8_case_def = fetch "-" "word8_case_def";
 

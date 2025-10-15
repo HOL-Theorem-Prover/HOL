@@ -2,11 +2,12 @@ Theory commonUnif
 Ancestors
   string arithmetic pred_set finite_map prim_rec
 
-val _ = Hol_datatype `
+Datatype:
   const = Null
         | Bool of bool
         | Num of num
-        | String of string`;
+        | String of string
+End
 
 Theorem extension_chain:
   !subst source z.

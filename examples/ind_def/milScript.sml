@@ -25,9 +25,9 @@ Libs
 (* Combinatory logic types and type judgements.                          *)
 (* ===================================================================== *)
 
-val _ =
- Hol_datatype `ty = G  of 'a
-                  | -> of ty => ty`;
+Datatype:      ty = G  of 'a
+                  | -> of ty => ty
+End
 
 val _ = set_fixity "->" (Infixr 800);
 val _ = set_MLname "->" "ARROW_DEF";
@@ -97,4 +97,3 @@ val CURRY_HOWARD = Q.store_thm
 (* --------------------------------------------------------------------- *)
 (* End of example.                                                       *)
 (* --------------------------------------------------------------------- *)
-

@@ -33,14 +33,14 @@ quietdec := false;
 val _ = ParseExtras.temp_loose_equality()
 
 
-val kripke_structure_def =
- Hol_datatype
-  `kripke_structure =
+Datatype:
+   kripke_structure =
     <| S:  'state set;                     (*set of states *)
        S0: 'state set;                     (*initial states*)
        R:  ('state # 'state) set;          (*transition relation*)
        P:  'label set;                     (*set of used labels *)
-       L:  'state -> ('label set)          (*label function*) |>`;
+       L:  'state -> ('label set)          (*label function*) |>
+End
 
 Theorem kripke_structure_REWRITES =
         LIST_CONJ (TypeBase.one_one_of “:(α,β)kripke_structure” ::

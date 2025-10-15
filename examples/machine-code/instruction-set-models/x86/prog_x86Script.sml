@@ -17,11 +17,12 @@ val RW1 = ONCE_REWRITE_RULE;
 (* The x86 set                                                                   *)
 (* ----------------------------------------------------------------------------- *)
 
-val _ = Hol_datatype `
+Datatype:
   x86_el =  xReg of Xreg => word32
           | xStatus of Xeflags => bool option
           | xEIP of word32
-          | xMem of word32 => ((word8 # x86_permission set) option) => bool `;
+          | xMem of word32 => ((word8 # x86_permission set) option) => bool
+End
 
 val x86_el_11 = DB.fetch "-" "x86_el_11";
 val x86_el_distinct = DB.fetch "-" "x86_el_distinct";

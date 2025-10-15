@@ -31,15 +31,15 @@ quietdec := false;
 *)
 
 
-val explicit_acceptance_condition =
- Hol_datatype
-  `explicit_acceptance_condition =
+Datatype:
+   explicit_acceptance_condition =
           EXPLICIT_ACCEPT_INPUT of 'input prop_logic
         | EXPLICIT_ACCEPT_STATE of 'state set
         | EXPLICIT_ACCEPT_TRUE
         | EXPLICIT_ACCEPT_NOT  of explicit_acceptance_condition
         | EXPLICIT_ACCEPT_AND  of explicit_acceptance_condition # explicit_acceptance_condition
-        | EXPLICIT_ACCEPT_G    of explicit_acceptance_condition`;
+        | EXPLICIT_ACCEPT_G    of explicit_acceptance_condition
+End
 
 
 

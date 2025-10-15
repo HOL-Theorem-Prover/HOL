@@ -8,7 +8,7 @@ val RW1 = ONCE_REWRITE_RULE;
 
 (* abstract syntax of bytecode *)
 
-val _ = Hol_datatype `
+Datatype:
   bc_inst_type =
   (* stack operations *)
     iPOP
@@ -29,6 +29,7 @@ val _ = Hol_datatype `
   | iFAIL
   (* special instructions *)
   | iCOMPILE
-  | iPRINT`;
+  | iPRINT
+End
 
 

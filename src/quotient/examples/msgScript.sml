@@ -38,12 +38,13 @@ val REWRITE_THM = fn th => REWRITE_TAC[th];
 (* --------------------------------------------------------------------- *)
 
 
-val _ = Hol_datatype
+Datatype:
 
-        ` msg1 = Nonce1 of num
+          msg1 = Nonce1 of num
                | Mpair1 of msg1 => msg1
                | Crypt1 of num => msg1
-               | Decrypt1 of num => msg1 ` ;
+               | Decrypt1 of num => msg1
+End
 
 (* Notice: no nesting or mutual recursion; a simply recursive type. *)
 

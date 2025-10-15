@@ -26,11 +26,11 @@ val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
 (*------------------------------*)
 val _ = type_abbrev( "event" , ``:'a ->bool``);
 
-val _ = Hol_datatype` gate = AND of gate list
+Datatype:  gate = AND of gate list
                             | OR of gate list
                             | NOT of gate
                             | atomic of 'a  event
-`;
+End
 
 (*----------------------------------------------*)
 (*      Fault Tree  Semantic Function        *)

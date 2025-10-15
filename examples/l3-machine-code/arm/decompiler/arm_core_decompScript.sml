@@ -6,7 +6,7 @@ Ancestors
 
 val _ = Parse.hide "mem"
 
-val () = Hol_datatype`
+Datatype:
    arm_assertion = ARM_ASSERTION of
                     (* mode *) word5 =>
                     (* r0 *) word32 =>
@@ -37,7 +37,8 @@ val () = Hol_datatype`
                     (* fp_v *) bool =>
                     (* domain of memory *) word32 set =>
                     (* memory *) (word32 -> word8) =>
-                    (* pc *) word32`;
+                    (* pc *) word32
+End
 
 Definition ARM_ASSERT_def:
    ARM_ASSERT

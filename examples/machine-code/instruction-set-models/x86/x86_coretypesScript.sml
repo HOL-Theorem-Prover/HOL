@@ -14,21 +14,25 @@ Ancestors
 (* type of address values and of values stored in registers *)
 val _ = type_abbrev("Ximm",``:word32``);
 
-val _ = Hol_datatype `Xreg = EAX | EBX | ECX | EDX | ESP | EBP | ESI | EDI `;
+Datatype: Xreg = EAX | EBX | ECX | EDX | ESP | EBP | ESI | EDI
+End
 
 (* used elsewhere *)
 
-val _ = Hol_datatype `
-  Xeflags = X_CF | X_PF | X_AF | X_ZF | X_SF | X_OF `;
+Datatype:
+  Xeflags = X_CF | X_PF | X_AF | X_ZF | X_SF | X_OF
+End
 
-val _ = Hol_datatype `
+Datatype:
   Xea =
       Xea_i of Ximm     (* constant       *)
     | Xea_r of Xreg     (* register name  *)
-    | Xea_m of word32   (* memory address *) `;
+    | Xea_m of word32   (* memory address *)
+End
 
-val _ = Hol_datatype   `iiid = <| proc : num ;
-             program_order_index : num |>`;
+Datatype: iiid = <| proc : num ;
+             program_order_index : num |>
+End
 
 
 

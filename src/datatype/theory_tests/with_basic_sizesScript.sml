@@ -52,40 +52,46 @@ fun check_size_eq ty nms =
  end
 
 (* Tom Ridge's example from 2009/04/23 *)
-val _ = Hol_datatype `
+Datatype:
   command2 =
      Skip2
    | Seq2 of bool # command2 # command2
    | IfThenElse2 of bool # num # command2 # command2
    | While2 of (num # num) # bool # command2
-`;
+End
 
 val _ = check_size_eq ``: command2`` ["pair_size", "bool_size"]
 
 (* this version raises a different error *)
-val _ = Hol_datatype `
+Datatype:
   tr20090423 =
      trSkip2
    | trSeq2 of bool # tr20090423 # tr20090423
    | trIfThenElse2 of bool # num # tr20090423 # tr20090423
    | trWhile2 of (num # num) # bool # tr20090423
-`;
+End
 
 val _ = check_size_eq ``: tr20090423`` ["pair_size", "bool_size"]
 
 (* Ramana Kumar's examples from 2010/08/25
    with itself replaced by option to avoid a particular silly issue *)
-val _ = Hol_datatype `t1 = c1 of 'a => t1 option `;
-val _ = Hol_datatype `t2 = c2 of t2 t1 option ` ;
+Datatype: t1 = c1 of 'a => t1 option
+End
+Datatype: t2 = c2 of t2 t1 option
+End
 
-val _ = Hol_datatype `u1 = d1 of 'a option`;
-val _ = Hol_datatype `u2 = d2 of 'a u1 `;
-val _ = Hol_datatype `u3 = d3 of u4 u2 u1 ;
-                      u4 = d4 of u3 u1 `;
+Datatype: u1 = d1 of 'a option
+End
+Datatype: u2 = d2 of 'a u1
+End
+Datatype: u3 = d3 of u4 u2 u1 ;
+                      u4 = d4 of u3 u1
+End
 
 val _ = check_size_eq ``: u3`` ["u1_size", "u2_size"];
 
-val _ = Hol_datatype `list = NIL | :: of 'a => list`;
+Datatype: list = NIL | :: of 'a => list
+End
 
 val _ = Datatype `v_rec = V (v_rec + num) | W`
 

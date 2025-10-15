@@ -47,9 +47,10 @@ Libs
 
    ---------------------------------------------------------------------- *)
 
-val _ = Hol_datatype `raw_term = var of string
+Datatype: raw_term = var of string
                                | app of raw_term => raw_term
-                               | lam of string => raw_term`;
+                               | lam of string => raw_term
+End
 
 Definition fv_def:
   (fv (var s) = {s}) /\

@@ -23,7 +23,7 @@ Ancestors
 <* ---------------------------------------------------------------------------------- *)
 
 
-val _ = Hol_datatype `
+Datatype:
   instruction =
     Padd of ireg => ireg => ireg            (* integer addition *)
   | Padde of ireg => ireg => ireg           (* add include carry bit *)
@@ -110,7 +110,7 @@ val _ = Hol_datatype `
   | Pxor of ireg => ireg => ireg            (* bitwise xor *)
   | Pxori of ireg => ireg => ppc_constant   (* bitwise xor with immediate *)
   | Pxoris of ireg => ireg => ppc_constant  (* bitwise xor with immediate high *)
-`;
+End
 
 
 

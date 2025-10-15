@@ -479,14 +479,15 @@ val affine_eq = store_thm
 (* The basic definitions                                                     *)
 (* ------------------------------------------------------------------------- *)
 
-val () = Hol_datatype
-  `curve =
+Datatype:
+   curve =
    <| field : 'a field;
       a1 : 'a;
       a2 : 'a;
       a3 : 'a;
       a4 : 'a;
-      a6 : 'a |>`;
+      a6 : 'a |>
+End
 
 val curve_accessors = fetch "-" "curve_accessors";
 

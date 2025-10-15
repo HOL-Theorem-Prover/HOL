@@ -38,10 +38,10 @@ val _ = ParseExtras.temp_loose_equality()
 (******************************************************************************
 * A path is finite or infinite
 ******************************************************************************)
-val path_def =
- Hol_datatype
-  `path = FINITE   of ('s list)
-        | INFINITE of (num -> 's)`;
+Datatype:
+   path = FINITE   of ('s list)
+        | INFINITE of (num -> 's)
+End
 
 (******************************************************************************
 * Tests
@@ -147,10 +147,10 @@ val FINITE_TL =
 (******************************************************************************
 * Extended numbers.
 ******************************************************************************)
-val xnum_def =
- Hol_datatype
-  `xnum = INFINITY                            (* length of an infinite path  *)
-        | XNUM of num`;                       (* length of a finite path     *)
+Datatype:
+   xnum = INFINITY                            (* length of an infinite path  *)
+        | XNUM of num                         (* length of a finite path     *)
+End
 
 (******************************************************************************
 * The constant ``to`` is a left associative infix with precedence 500.

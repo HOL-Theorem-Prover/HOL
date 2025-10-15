@@ -6,13 +6,14 @@ val _ = Parse.hide "mem"
 
 (* definition of M0_ASSERT *)
 
-val _ = Hol_datatype`
+Datatype:
    m0_assertion =
    M0_ASSERTION of bool => bool => bool => bool =>    (* n z c v      *)
                    num =>                             (* count        *)
                    RName set => (RName -> word32) =>  (* gp registers *)
                    word32 set => (word32 -> word8) => (* memory       *)
-                   word32                             (* pc           *)`
+                   word32                             (* pc           *)
+End
 
 Definition M0_ASSERT_def:
    M0_ASSERT (M0_ASSERTION n z c v count dreg reg dmem mem pc) =

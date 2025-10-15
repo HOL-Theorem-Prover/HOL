@@ -174,14 +174,15 @@ End
  *     >
  *---------------------------------------------------------------------------*)
 
-val _ = Hol_datatype
-  `STRUCTURE = <| states      : 'state -> bool;
+Datatype:
+   STRUCTURE = <| states      : 'state -> bool;
                   states0     : 'state -> bool;
                   atoms       : 'varatom  -> bool;
                   valids      : 'state -> 'varatom -> bool;
                   transitions : 'state # 'state -> bool;
                   fairSets    : ('state -> bool) # ('state -> bool) -> bool
-                |>`;
+                |>
+End
 
 
 Definition wfSTRUCTURE_def:
@@ -197,7 +198,8 @@ End
  * PI is infinite sequence of states s0,s1,s2... s.t. !i. R(si, si+1)
  *---------------------------------------------------------------------------*)
 
-val _ = Hol_datatype `Path = PATH of num -> 'state`;
+Datatype: Path = PATH of num -> 'state
+End
 
 val _ = mkMyInfix "STATE_NO" 140;
 val _ = mkMyInfix "IS_PATH_IN" 140;

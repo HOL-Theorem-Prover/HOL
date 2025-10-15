@@ -206,15 +206,16 @@ val MEM_ALL_SPLITS_LENGTH = prove
 (* Modified by MJCG from KXS version to match Accellera PSL                  *)
 (*---------------------------------------------------------------------------*)
 
-val () = Hol_datatype
-  `regexp =
+Datatype:
+   regexp =
      Atom of ('s -> bool)                 (* Boolean expression       *)
    | Cat of regexp => regexp              (* Concatenation            *)
    | Fuse of regexp => regexp             (* Fusion                   *)
    | Or of regexp => regexp               (* Disjunction              *)
    | And of regexp => regexp              (* Conjunction              *)
    | Repeat of regexp                     (* Iterated concat, >= 0    *)
-   | Prefix of regexp`;                   (* Prefix                   *)
+   | Prefix of regexp                     (* Prefix                   *)
+End
 
 Definition Dot_def:    Dot  = Atom (\x : 'a. T)
 End
@@ -426,4 +427,3 @@ val sem_match = store_thm
       Q.EXISTS_TAC `p_1::wlist` THEN RW_TAC list_ss [CONCAT_def] THEN
       PROVE_TAC [MEM_TL,SPLITS_NON_EMPTY,SPLITS_APPEND,IN_DEF]]],
     RW_TAC std_ss [sem_def, match_def]]);
-

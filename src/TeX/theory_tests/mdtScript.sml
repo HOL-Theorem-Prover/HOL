@@ -4,7 +4,7 @@ val _ = new_type ("char", 0)
 
 val _ = type_abbrev_pp("string", ``:char list``)
 
-val _ = Hol_datatype`
+Datatype:
   term = Var of string => type
        | Const of string => type => const_tag
        | Comb of term => term
@@ -22,7 +22,7 @@ val _ = Hol_datatype`
    | Defined of num => (string # term) list => term
    | Tyabs of string => term
    | Tyrep of string => term
-`;
+End
 
 val _ = Datatype`testrcd = <| fld1 : bool ; fld2 : 'a -> num |>`;
 

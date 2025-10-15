@@ -39,12 +39,13 @@ val _ = type_abbrev("name",        ``:string``);
 (* ACL2 S-expressions defined as a HOL datatype.                             *)
 (* Definition below adapted from Mark Staples' code.                         *)
 (*****************************************************************************)
-val _ = Hol_datatype
- `sexp = ACL2_SYMBOL    of packagename => name     (* only curried for style *)
+Datatype:
+  sexp = ACL2_SYMBOL    of packagename => name     (* only curried for style *)
        | ACL2_STRING    of string
        | ACL2_CHARACTER of char
        | ACL2_NUMBER    of complex_rational
-       | ACL2_PAIR      of sexp => sexp`;          (* only curried for style *)
+       | ACL2_PAIR      of sexp => sexp            (* only curried for style *)
+End
 
 (*****************************************************************************)
 (* Each ACL2 function or constant is given a name of the form "pkg::nam".    *)

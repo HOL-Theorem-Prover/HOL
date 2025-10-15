@@ -16,12 +16,13 @@ val RW1 = ONCE_REWRITE_RULE;
 (* The M1_ set                                                                   *)
 (* ----------------------------------------------------------------------------- *)
 
-val _ = Hol_datatype `
+Datatype:
   m1_el =   tPC    of sexp
           | tLocal of num => sexp
           | tStack of sexp
           | tInstr of sexp => sexp
-          | tOK    of bool`;
+          | tOK    of bool
+End
 
 val m1_el_11 = DB.fetch "-" "m1_el_11";
 val m1_el_distinct = DB.fetch "-" "m1_el_distinct";

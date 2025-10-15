@@ -32,12 +32,12 @@ val set_ss = std_ss ++ SET_SPEC_ss ++ PRED_SET_ss;
 (*---------------------------------------------------------------------------------*)
 (*      read from an data state                                                    *)
 (*---------------------------------------------------------------------------------*)
-val _ = Hol_datatype `
+Datatype:
     REXP = RR of MREG
          | RM of MMEM
          | RC of DATA
          | PR of REXP # REXP
-    `;
+End
 
 
 val mread_def = Define `
@@ -475,10 +475,10 @@ val PRJ_PUSH_RULE = Q.store_thm (
 
 (*   Vectors *)
 
-val _ = Hol_datatype `
+Datatype:
     VEXP = SG of DATA                (* registers *)
          | VT of VEXP # VEXP         (* pairs     *)
-    `;
+End
 
 val readv_def = Define `
      (readv st (PR (a,b)) = VT (readv st a, readv st b)) /\

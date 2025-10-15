@@ -22,19 +22,23 @@ val _ = ParseExtras.temp_loose_equality()
 (* The State Space --------------------------------------------------------- *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = Hol_datatype `iseq = t3 | t4 | t5 | t6 | tn | tm`;
+Datatype: iseq = t3 | t4 | t5 | t6 | tn | tm
+End
 
-val _ = Hol_datatype
-  `dp = DP of reg=>psr=>word32=>word32=>word32=>word32=>word32`;
+Datatype:
+   dp = DP of reg=>psr=>word32=>word32=>word32=>word32=>word32
+End
 
-val _ = Hol_datatype
-  `ctrl = CTRL of word32=>bool=>word32=>bool=>word32=>bool=>bool=>bool=>
+Datatype:
+   ctrl = CTRL of word32=>bool=>word32=>bool=>word32=>bool=>bool=>bool=>
                   bool=>bool=>bool=>iclass=>iseq=>bool=>bool=>bool=>bool=>
                   bool=>bool=>bool=>bool=>bool=>bool=>bool=>word3=>bool=>
                   bool=>bool=>word32=>word32=>word2=>word16=>word4=>word4=>
-                  word2=>word32=>bool=>word5`;
+                  word2=>word32=>bool=>word5
+End
 
-val _ = Hol_datatype `state_arm6 = ARM6 of dp=>ctrl`;
+Datatype: state_arm6 = ARM6 of dp=>ctrl
+End
 
 val arm6state = ``ARM6 (DP reg psr areg din alua alub dout)
   (CTRL pipea pipeaval pipeb pipebval ireg iregval ointstart onewinst endinst

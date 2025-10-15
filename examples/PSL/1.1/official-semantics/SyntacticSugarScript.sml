@@ -2,25 +2,11 @@
 (* Definitions from LRM Version 1.1, B.3 "Syntactic sugaring"                *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* START BOILERPLATE                                                         *)
-(*****************************************************************************)
-
-(*
-quietdec := true;
-map load ["intLib","ClockedSemanticsTheory"];
-quietdec := false;
-*)
-
 Theory SyntacticSugar
 Ancestors
   Syntax
 Libs
   intLib
-
-(*****************************************************************************)
-(* END BOILERPLATE                                                           *)
-(*****************************************************************************)
 
 (******************************************************************************
 * Ensure term_of_int has correct type
@@ -131,10 +117,10 @@ End
 (******************************************************************************
 * Datatype to represent a number or range
 ******************************************************************************)
-val count_def =
- Hol_datatype
-  `count = NUM of num                            (* number                   *)
-         | RANGE of num # num option`;           (* range                    *)
+Datatype:
+   count = NUM of num                            (* number                   *)
+         | RANGE of num # num option             (* range                    *)
+End
 
 (******************************************************************************
 * S_RANGE_REPEAT(r, NUM i)      = r[*i]

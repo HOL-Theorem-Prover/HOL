@@ -33,9 +33,11 @@ val BigSig = false;
 fun maybe_thm (s, tm, tac) = if BigSig then store_thm (s, tm, tac)
                                        else prove (tm, tac);
 
-val _ = Hol_datatype `bt = nt | node of bt => 'a => bt`;
-val _ = Hol_datatype `bl = nbl | zerbl of bl
-                               | onebl of 'a => 'a bt => bl`;
+Datatype: bt = nt | node of bt => 'a => bt
+End
+Datatype: bl = nbl | zerbl of bl
+                               | onebl of 'a => 'a bt => bl
+End
 
 val bt_size_def = definition "bt_size_def";
 (* |- (!f. bt_size f nt = 0) /\

@@ -47,7 +47,8 @@ Libs
 
 (* our example tests whether or not every number occurring in a t-value
    is even *)
-val _ = Hol_datatype `t = v of num | app of t list`
+Datatype: t = v of num | app of t list
+End
 
 val (alleven_rules, alleven_ind, alleven_cases) = Hol_reln `
   (!n. EVEN n ==> alleven (v n)) /\

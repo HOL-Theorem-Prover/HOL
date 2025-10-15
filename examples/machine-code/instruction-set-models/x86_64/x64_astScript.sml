@@ -15,9 +15,10 @@ Ancestors
 <* ---------------------------------------------------------------------------------- *)
 
 
-val _ = Hol_datatype `
+Datatype:
   Zrm = Zr of Zreg                                           (* register *)
-      | Zm of (word2 # Zreg) option => Zreg option => word64 (* mem[2^{scale} * index + base + displacement] *)`;
+      | Zm of (word2 # Zreg) option => Zreg option => word64 (* mem[2^{scale} * index + base + displacement] *)
+End
 
 (* check whether rm requires a lock, i.e. specifies a memory access *)
 
@@ -26,26 +27,31 @@ Definition Zrm_is_memory_access_def:
   (Zrm_is_memory_access (Zr r) = F)
 End
 
-val _ = Hol_datatype `                 (* Here XX is one of 8, 16, 32, 64. *)
+Datatype:                  (* Here XX is one of 8, 16, 32, 64. *)
   Zdest_src = Zrm_i of Zrm  => word64  (* mnemonic r/mXX, immXX (sign-extended) *)
             | Zrm_r of Zrm  => Zreg    (* mnemonic r/mXX, rXX *)
-            | Zr_rm of Zreg => Zrm     (* mnemonic rXX, r/mXX *)  `;
+            | Zr_rm of Zreg => Zrm     (* mnemonic rXX, r/mXX *)
+End
 
-val _ = Hol_datatype `
+Datatype:
   Zimm_rm = Zi_rm of Zrm      (* r/mXX *)
-          | Zi    of word64   (* sign-extended immediate *) `;
+          | Zi    of word64   (* sign-extended immediate *)
+End
 
-val _ = Hol_datatype `Zbinop_name = Zadc | Zadd | Zand | Zcmp | Zor | Zshl | Zshr | Zsar | Zsub | Zsbb | Ztest | Zxor `;
-val _ = Hol_datatype `Zmonop_name = Zdec | Zinc | Znot | Zneg `;
+Datatype: Zbinop_name = Zadc | Zadd | Zand | Zcmp | Zor | Zshl | Zshr | Zsar | Zsub | Zsbb | Ztest | Zxor
+End
+Datatype: Zmonop_name = Zdec | Zinc | Znot | Zneg
+End
 
-val _ = Hol_datatype `Zcond = (* this list is not complete *)
+Datatype: Zcond = (* this list is not complete *)
     Z_ALWAYS            (* N = not     *)
   | Z_E | Z_NE          (* E = equal   *)
   | Z_S | Z_NS          (* S = signed  *)
   | Z_A | Z_NA          (* A = above   *)
-  | Z_B | Z_NB          (* B = below   *)`;
+  | Z_B | Z_NB          (* B = below   *)
+End
 
-val _ = Hol_datatype `
+Datatype:
   Zinstruction = Zbinop     of Zbinop_name => Zsize => Zdest_src
                | Zmonop     of Zmonop_name => Zsize => Zrm
                | Zcmpxchg   of Zsize => Zrm => Zreg
@@ -63,13 +69,15 @@ val _ = Hol_datatype `
                | Zmovzx     of Zsize => Zdest_src => Zsize
                | Zjcc       of Zcond => word64    (* jcc includes jmp rel, i.e. unconditional relative jumps. *)
                | Zjmp       of Zrm                (* jmp excludes relative jumps, see jcc. *)
-               | Zloop      of Zcond => word64    (* Here Zcond over approximates possibilities. *)`;
+               | Zloop      of Zcond => word64    (* Here Zcond over approximates possibilities. *)
+End
 
 (* This semantics understands the following prefixes in addition to the REX prefix. *)
-val _ = Hol_datatype `Zprefix = Zlock
+Datatype: Zprefix = Zlock
                               | Zbranch_taken
                               | Zbranch_not_taken
-                              | Zoperand_size_override `;
+                              | Zoperand_size_override
+End
 
 Definition Zprefix_group_def:
   (Zprefix_group Zlock = 1) /\
@@ -78,6 +86,7 @@ Definition Zprefix_group_def:
   (Zprefix_group Zoperand_size_override = 3)
 End
 
-val _ = Hol_datatype `Zinst = Zfull_inst of Zprefix list => Zinstruction`;
+Datatype: Zinst = Zfull_inst of Zprefix list => Zinstruction
+End
 
 

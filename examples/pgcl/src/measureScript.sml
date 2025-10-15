@@ -84,9 +84,10 @@ End
 (* Set systems.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val () = Hol_datatype
-  `set_system = <| carrier : 'a -> bool;
-                   sets : ('a -> bool) -> bool |>`;
+Datatype:
+   set_system = <| carrier : 'a -> bool;
+                   sets : ('a -> bool) -> bool |>
+End
 
 Definition SetSystem_def:
    SetSystem = { a : 'a set_system | !s :: (a.sets). s SUBSET a.carrier }
@@ -262,10 +263,11 @@ val LAMBDA_SYSTEM_EMPTY = store_thm
 (* Measure theory.                                                           *)
 (* ------------------------------------------------------------------------- *)
 
-val () = Hol_datatype
-  `measure = <| carrier : 'a -> bool;
+Datatype:
+   measure = <| carrier : 'a -> bool;
                 sets : ('a -> bool) -> bool;
-                mu : ('a -> bool) -> posreal |>`;
+                mu : ('a -> bool) -> posreal |>
+End
 
 Definition zero_empty_def:
    zero_empty (m : 'a measure) = (m.mu {} = 0)

@@ -707,19 +707,21 @@ val sexp_lex_sexp2abbrev_aux = prove(
 
 (* Part 2 - section 2: algorithm for parsing a list of tokens *)
 
-val _ = Hol_datatype `
+Datatype:
   lisp_parse_mode =
      L_READ
    | L_RETURN of SExp
-   | L_COLLECT of SExp`;
+   | L_COLLECT of SExp
+End
 
-val _ = Hol_datatype `
+Datatype:
   lisp_parse_action =
      L_CONS of SExp
    | L_STOP
    | L_DOT
    | L_QUOTE
-   | L_STORE of num`;
+   | L_STORE of num
+End
 
 val (R_parse_rules,R_parse_ind,R_parse_cases) = Hol_reln `
   (* from mode: L_READ *)

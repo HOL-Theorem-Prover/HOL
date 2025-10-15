@@ -30,7 +30,8 @@ val _ = type_abbrev("REGISTER", Type`:word4`);
 (*----------------------------------------------------------------------------*)
 
 val _ = type_abbrev("CPSR", Type`:word32`);
-val _ = Hol_datatype `SRS = SN | SZ | SC | SV`;
+Datatype: SRS = SN | SZ | SC | SV
+End
 
 val getS_def = Define
         `getS (cpsr : CPSR) (flag:SRS) =
@@ -90,21 +91,22 @@ val setNZCV_thm = Q.store_thm (
 (* Operator                                                                      *)
 (*-------------------------------------------------------------------------------*)
 
-val _ = Hol_datatype ` OPERATOR = MOV |
+Datatype:  OPERATOR = MOV |
                         ADD | SUB | RSB | MUL | MLA |
                         AND | ORR | EOR | CMP | TST |
                         LSL | LSR | ASR | ROR |
                         LDR | STR | LDMFD | STMFD |
                         MRS | MSR |
                         B | BL
-             `;
+End
 
 (*-------------------------------------------------------------------------------*)
 (* Condition Codes                                                                      *)
 (*-------------------------------------------------------------------------------*)
 
-val _ = Hol_datatype ` COND = EQ | CS | MI | VS | HI | GE | GT | AL |
-                              NE | CC | PL | VC | LS | LT | LE | NV`;
+Datatype:    COND = EQ | CS | MI | VS | HI | GE | GT | AL |
+                              NE | CC | PL | VC | LS | LT | LE | NV
+End
 
 (*-------------------------------------------------------------------------------*)
 (* Expressions                                                                   *)
@@ -114,18 +116,18 @@ val _ = type_abbrev("ADDR", Type`:word30`);
 val _ = type_abbrev("DATA", Type`:word32`);
 val _ = type_abbrev("DISTANCE", Type`:num`);
 
-val _ = Hol_datatype `OFFSET = POS of DISTANCE
+Datatype: OFFSET = POS of DISTANCE
                | NEG of DISTANCE
                | INR
-             `;
+End
 
 
-val _ = Hol_datatype `EXP = MEM of num # OFFSET                 (* (register, offset) *)
+Datatype:     EXP = MEM of num # OFFSET                 (* (register, offset) *)
                   | NCONST of num
                   | WCONST of word32
-        | REG of num
+                  | REG of num
                   | WREG of num
-             `;
+End
 
 val FP_def =
   Define `FP = REG 11`;
@@ -1417,4 +1419,3 @@ val ADDR30_ADD_CONST_MULT = store_thm ("ADDR30_ADD_CONST_MULT",
         ONCE_ASM_REWRITE_TAC[ADDR30_ADD_CONST] THEN
         ASM_REWRITE_TAC[ADDR30_CONST_EVAL] THEN
         SIMP_TAC arith_ss [MOD_EQ_0, MULT_DIV, WORD_ADD_0]);
-

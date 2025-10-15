@@ -3219,7 +3219,8 @@ val mwi_to_dec_thm = store_thm("mwi_to_dec_thm",
 
 (* top-level entry point *)
 
-val _ = Hol_datatype `mw_op = Add | Sub | Mul | Div | Mod | Lt | Eq | Dec`;
+Datatype: mw_op = Add | Sub | Mul | Div | Mod | Lt | Eq | Dec
+End
 
 Definition int_op_def:
   (int_op Add i j = i + j) /\

@@ -32,12 +32,13 @@ app load ["listTheory", "pred_setTheory", "pairTheory",
 (* --------------------------------------------------------------------- *)
 
 
-val _ = Hol_datatype
+Datatype:
 
-        ` term1 = Con1 of 'a
+          term1 = Con1 of 'a
                 | Var1 of var
                 | App1 of term1 => term1
-                | Lam1 of var => term1 ` ;
+                | Lam1 of var => term1
+End
 
 
 val term1_distinct = theorem "term1_distinct";

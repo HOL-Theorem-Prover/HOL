@@ -20,9 +20,10 @@ quietdec := false;
 
 val _ = ParseExtras.temp_loose_equality()
 
-val tree = Hol_datatype `tree =
+Datatype: tree =
     leaf
-  | node of 'a => tree list`
+  | node of 'a => tree list
+End
 
 
 val tree_11 = DB.fetch "-" "tree_11";

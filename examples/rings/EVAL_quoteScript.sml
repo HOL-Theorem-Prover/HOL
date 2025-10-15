@@ -4,10 +4,11 @@ Ancestors
 Libs
   TotalDefn Datatype BasicProvers
 
-val _ = Hol_datatype
- ` index = Left_idx of index
+Datatype:
+   index = Left_idx of index
          | Right_idx of index
-         | End_idx `;
+         | End_idx
+End
 
 Definition index_compare_def:
    (index_compare End_idx End_idx = EQUAL)
@@ -40,10 +41,11 @@ Definition index_lt_def:    index_lt i1 i2 = (index_compare i1 i2 = LESS)
 End
 
 
-val _ = Hol_datatype
- ` varmap =
+Datatype:
+   varmap =
      Empty_vm
-   | Node_vm of 'a => varmap => varmap `;
+   | Node_vm of 'a => varmap => varmap
+End
 
 
 Definition varmap_find_def:

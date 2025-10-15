@@ -46,7 +46,8 @@ app load ["stringTheory", "stringLib", "pred_setTheory", "pred_setLib",
 (* will not be read; thus ("x",0) => "x" but ("y",2) => "y2".*)
 (*===========================================================*)
 
-val _ = Hol_datatype `var = VAR of string => num`;
+Datatype: var = VAR of string => num
+End
 
 (*
 val var_Axiom = theorem "var_Axiom";

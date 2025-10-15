@@ -5,7 +5,8 @@ Libs
   boolSimps
 
 (* Diagram evaluation *)
-val _ = Hol_datatype `reltype = Atomic | TC`
+Datatype: reltype = Atomic | TC
+End
 
 Definition liftrel_def:
   liftrel b ty R x y = (if b then I else (~))
@@ -132,12 +133,12 @@ val no_terminal_object = store_thm(
     Propositional Diagrams
    ---------------------------------------------------------------------- *)
 
-val _ = Hol_datatype`
+Datatype:
   diaform = Lf of (('n # 'a # 'a # bool # reltype) -> bool) =>
                   (('n # ('a + 'b) # ('a + 'b) # bool # reltype) -> bool)
           | /\ of diaform => diaform
           | ~ of diaform
-`
+End
 
 Definition evalform_def:
   (evalform (Lf fa ex) R <=> eval fa ex R) /\

@@ -11,12 +11,13 @@ val permeq_exists = RWstore_thm(
 `(∃x. p == x) ∧ (∃x. x == p)`,
 METIS_TAC [permeq_refl]);
 
-val _ = Hol_datatype`
+Datatype:
   Cterm = CNom of string
         | CSus of (string # string) list => num
         | CTie of string => Cterm
         | CnPair of Cterm => Cterm
-        | CnConst of 'a`;
+        | CnConst of 'a
+End
 
 Definition Ctermeq_def[simp]:
   (Ctermeq (CNom a1) (CNom a2) = (a1 = a2)) ∧

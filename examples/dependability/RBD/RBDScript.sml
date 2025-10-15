@@ -28,8 +28,9 @@ val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
 (*------------------------------*)
 val _ = type_abbrev( "event" , ``:'a ->bool``);
 
-val _ = Hol_datatype
-       `rbd = series of rbd list| parallel of rbd list | atomic of 'a  event`;
+Datatype:
+        rbd = series of rbd list| parallel of rbd list | atomic of 'a  event
+End
 
 (*----------------------------------------------*)
 (*      RBD Structures Semantic Function        *)

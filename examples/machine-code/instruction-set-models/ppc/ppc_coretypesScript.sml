@@ -18,16 +18,19 @@ val _ = type_abbrev("crbit",``:word2``);
 
 (* used elsewhere *)
 
-val _ = Hol_datatype `
+Datatype:
   ppc_bit = PPC_CARRY     (* carry bit of the status register *)
-          | PPC_CR0 of word2  (* bit i of the condition register  *)`;
+          | PPC_CR0 of word2  (* bit i of the condition register  *)
+End
 
-val _ = Hol_datatype `
+Datatype:
   ppc_reg = PPC_IR of word5  (* integer registers *)
           | PPC_LR           (* link register (return address) *)
           | PPC_CTR          (* count register, used for some branches *)
-          | PPC_PC           (* program counter *)`;
+          | PPC_PC           (* program counter *)
+End
 
-val _ = Hol_datatype   `iiid = <| proc : num ; program_order_index : num |>`;
+Datatype: iiid = <| proc : num ; program_order_index : num |>
+End
 
 

@@ -14,12 +14,12 @@ val _ = numLib.temp_prefer_num();
 (******************************************************************************
 * Boolean expressions
 ******************************************************************************)
-val bexp_def =
- Hol_datatype
-  `bexp = B_TRUE                                  (* truth *)
+Datatype:
+   bexp = B_TRUE                                 (* truth *)
         | B_PROP   of 'a                         (* atomic proposition       *)
         | B_NOT    of bexp                       (* negation                 *)
-        | B_AND    of bexp # bexp`;              (* conjunction              *)
+        | B_AND    of bexp # bexp                (* conjunction              *)
+End
 
 (******************************************************************************
 * Definition of disjunction
@@ -41,26 +41,26 @@ End
 (******************************************************************************
 * Formulas of Sugar Optional Branching Extension (CTL)
 ******************************************************************************)
-val ctl_def =
- Hol_datatype
-  `ctl = C_BOOL        of 'a bexp                (* boolean expression       *)
+Datatype:
+   ctl = C_BOOL        of 'a bexp                (* boolean expression       *)
        | C_NOT         of ctl                    (* \neg f                   *)
        | C_AND         of ctl # ctl              (* f1 \wedge f2             *)
        | C_EX          of ctl                    (* EX f                     *)
        | C_EU          of ctl # ctl              (* E[f1 U f2]               *)
-       | C_EG          of ctl`;                  (* EG f                     *)
+       | C_EG          of ctl                    (* EG f                     *)
+End
 
 (******************************************************************************
 * ``: ('prop,'state)kripke_structure``
 ******************************************************************************)
-val kripke_structure_def =
- Hol_datatype
-  `kripke_structure =
+Datatype:
+   kripke_structure =
     <| S: 'state -> bool;
        S0:'state -> bool;
        R: 'state # 'state -> bool;
        P: 'prop -> bool;
-       L: 'state -> ('prop -> bool) |>`;
+       L: 'state -> ('prop -> bool) |>
+End
 
 (******************************************************************************
 * B_SEM l b means "l |= b" where l is a letter, i.e. l : 'prop -> bool
@@ -78,10 +78,10 @@ End
 (******************************************************************************
 * A path is finite or infinite
 ******************************************************************************)
-val path_def =
- Hol_datatype
-  `path = FINITE   of ('s list)
-        | INFINITE of (num -> 's)`;
+Datatype:
+   path = FINITE   of ('s list)
+        | INFINITE of (num -> 's)
+End
 
 (******************************************************************************
 * Tests
@@ -191,10 +191,10 @@ End
 (******************************************************************************
 * Extended numbers.
 ******************************************************************************)
-val xnum_def =
- Hol_datatype
-  `xnum = INFINITY                            (* length of an infinite path  *)
-        | XNUM of num`;                       (* length of a finite path     *)
+Datatype:
+   xnum = INFINITY                            (* length of an infinite path  *)
+        | XNUM of num                         (* length of a finite path     *)
+End
 
 (******************************************************************************
 * The constant ``to`` is a left associative infix with precedence 500.
@@ -524,4 +524,3 @@ val REST_FINITE =
   ("REST_FINITE",
    ``!l. REST (FINITE l) = FINITE(TL l)``,
    RW_TAC list_ss [REST_def]);
-

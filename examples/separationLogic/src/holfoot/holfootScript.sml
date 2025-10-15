@@ -39,12 +39,14 @@ val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"]
  * States
  *********************)
 
-val holfoot_tag = Hol_datatype `holfoot_tag =
-   holfoot_tag of string`
+Datatype: holfoot_tag =
+   holfoot_tag of string
+End
 val holfoot_tag_11 = DB.fetch "-" "holfoot_tag_11";
 
-val holfoot_var = Hol_datatype `holfoot_var =
-   holfoot_var of string`
+Datatype: holfoot_var =
+   holfoot_var of string
+End
 val holfoot_var_11 = DB.fetch "-" "holfoot_var_11";
 
 

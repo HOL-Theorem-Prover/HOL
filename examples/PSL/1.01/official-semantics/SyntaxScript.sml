@@ -15,31 +15,30 @@ Theory Syntax
 (******************************************************************************
 * Boolean expressions
 ******************************************************************************)
-val bexp_def =
- Hol_datatype
-  `bexp = B_PROP   of 'a                         (* atomic proposition       *)
+Datatype:
+   bexp = B_PROP   of 'a                         (* atomic proposition       *)
         | B_NOT    of bexp                       (* negation                 *)
-        | B_AND    of bexp # bexp`;              (* conjunction              *)
+        | B_AND    of bexp # bexp                (* conjunction              *)
+End
 
 (******************************************************************************
 * Sugar Extended Regular Expressions (SEREs)
 ******************************************************************************)
-val sere_def =
- Hol_datatype
-  `sere = S_BOOL        of 'a bexp               (* boolean expression       *)
+Datatype:
+   sere = S_BOOL        of 'a bexp               (* boolean expression       *)
         | S_CAT         of sere # sere           (* r1 ;  r2                 *)
         | S_FUSION      of sere # sere           (* r1 :  r2                 *)
         | S_OR          of sere # sere           (* r1 |  r2                 *)
         | S_AND         of sere # sere           (* r1 && r2                 *)
         | S_REPEAT      of sere                  (* r[*]                     *)
-        | S_CLOCK       of sere # 'a bexp`;      (* r@clk                    *)
+        | S_CLOCK       of sere # 'a bexp        (* r@clk                    *)
+End
 
 (******************************************************************************
 * Formulas of Sugar Foundation Language (FL)
 ******************************************************************************)
-val fl_def =
- Hol_datatype
-  `fl = F_BOOL         of 'a bexp                (* boolean expression       *)
+Datatype:
+   fl = F_BOOL         of 'a bexp                (* boolean expression       *)
       | F_NOT          of fl                     (* \neg f                   *)
       | F_AND          of fl # fl                (* f1 \wedge f2             *)
       | F_NEXT         of fl                     (* X! f                     *)
@@ -48,16 +47,17 @@ val fl_def =
       | F_STRONG_IMP   of 'a sere # 'a sere      (* {r1} |-> {r2}!           *)
       | F_WEAK_IMP     of 'a sere # 'a sere      (* {r1} |-> {r2}            *)
       | F_ABORT        of fl # 'a bexp           (* f abort b                *)
-      | F_STRONG_CLOCK of fl # 'a bexp`;         (* f@clk!                   *)
+      | F_STRONG_CLOCK of fl # 'a bexp           (* f@clk!                   *)
+End
 
 (******************************************************************************
 * Formulas of Sugar Optional Branching Extension (OBE)
 ******************************************************************************)
-val obe_def =
- Hol_datatype
-  `obe = O_BOOL        of 'a bexp                (* boolean expression       *)
+Datatype:
+   obe = O_BOOL        of 'a bexp                (* boolean expression       *)
        | O_NOT         of obe                    (* \neg f                   *)
        | O_AND         of obe # obe              (* f1 \wedge f2             *)
        | O_EX          of obe                    (* EX f                     *)
        | O_EU          of obe # obe              (* E[f1 U f2]               *)
-       | O_EG          of obe`;                  (* EG f                     *)
+       | O_EG          of obe                    (* EG f                     *)
+End

@@ -9,11 +9,12 @@ val op \\ = op THEN;
 
 (* abstract syntax of well-formed Lisp prorams *)
 
-val _ = Hol_datatype `
+Datatype:
   func = PrimitiveFun of lisp_primitive_op
-       | Define | Print | Error | Funcall | Fun of string`;
+       | Define | Print | Error | Funcall | Fun of string
+End
 
-val _ = Hol_datatype `
+Datatype:
   term = Const of SExp
        | Var of string
        | App of func => term list
@@ -26,7 +27,8 @@ val _ = Hol_datatype `
        | Or of term list | And of term list
        | First of term | Second of term | Third of term
        | Fourth of term | Fifth of term | List of term list
-       | Defun of string => string list => SExp`;
+       | Defun of string => string list => SExp
+End
 
 val term_11 = fetch "-" "term_11";
 val term_distinct = fetch "-" "term_distinct";

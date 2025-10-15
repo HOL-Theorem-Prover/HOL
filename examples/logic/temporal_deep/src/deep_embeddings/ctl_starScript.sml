@@ -36,16 +36,16 @@ val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val _ = ParseExtras.temp_loose_equality()
 
 
-val ctl_star_def =
- Hol_datatype
-  `ctl_star = CTL_STAR_PROP       of 'a prop_logic               (* boolean expression      *)
+Datatype:
+   ctl_star = CTL_STAR_PROP       of 'a prop_logic               (* boolean expression      *)
             | CTL_STAR_NOT        of ctl_star                    (* \neg f                  *)
             | CTL_STAR_AND        of ctl_star # ctl_star         (* f1 \wedge f2            *)
             | CTL_STAR_PSNEXT     of ctl_star                    (* X f                     *)
             | CTL_STAR_PSUNTIL    of ctl_star # ctl_star         (* f1 U f2                 *)
             | CTL_STAR_NEXT       of ctl_star                    (* X f                     *)
             | CTL_STAR_SUNTIL     of ctl_star # ctl_star         (* f1 U f2                 *)
-            | CTL_STAR_E          of ctl_star`;                  (* E f                     *)
+            | CTL_STAR_E          of ctl_star                    (* E f                     *)
+End
 
 
 val ctl_star_induct =
@@ -520,14 +520,14 @@ val LTL_KS_SEM___TO___CTL_STAR_KS_SEM =
  *  Fair CTL
  ******************************************************************************)
 
-val fair_ctl_def =
- Hol_datatype
-  `fair_ctl =   FAIR_CTL_PROP     of 'a prop_logic                     (* boolean expression      *)
+Datatype:
+   fair_ctl =   FAIR_CTL_PROP     of 'a prop_logic                     (* boolean expression      *)
          | FAIR_CTL_NOT      of fair_ctl                                    (* \neg f                  *)
          | FAIR_CTL_AND      of fair_ctl # fair_ctl                              (* f1 \wedge f2            *)
          | FAIR_CTL_E_NEXT   of ('a prop_logic list) => fair_ctl            (* X f                     *)
          | FAIR_CTL_E_SUNTIL of ('a prop_logic list) => (fair_ctl # fair_ctl)    (* strong_until            *)
-         | FAIR_CTL_E_UNTIL  of ('a prop_logic list) => (fair_ctl # fair_ctl)`;  (* weak until              *)
+         | FAIR_CTL_E_UNTIL  of ('a prop_logic list) => (fair_ctl # fair_ctl)    (* weak until              *)
+End
 
 val fair_ctl_induct =
  save_thm
@@ -827,14 +827,14 @@ val FAIR_CTL_SEM_THM =
  *  CTL
  ******************************************************************************)
 
-val ctl_def =
- Hol_datatype
-  `ctl =   CTL_PROP     of 'a prop_logic     (* boolean expression      *)
+Datatype:
+   ctl =   CTL_PROP     of 'a prop_logic     (* boolean expression      *)
          | CTL_NOT      of ctl               (* \neg f                  *)
          | CTL_AND      of ctl # ctl         (* f1 \wedge f2            *)
          | CTL_E_NEXT   of ctl               (* X f                     *)
          | CTL_E_SUNTIL of ctl # ctl         (* strong_until            *)
-         | CTL_E_UNTIL  of ctl # ctl`;       (* weak until              *)
+         | CTL_E_UNTIL  of ctl # ctl         (* weak until              *)
+End
 
 
 val ctl_induct =
@@ -1045,6 +1045,3 @@ val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___TO___CTL_KS_FAIR_SEM =
     IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE_def,
     IS_FAIR_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def] THEN
   METIS_TAC[]);
-
-
-

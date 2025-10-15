@@ -54,12 +54,13 @@ val GSPEC_DEF = Q.prove
 (* PART I: A type of de Bruijn terms.                                    *)
 (* ===================================================================== *)
 
-val _ = Hol_datatype
-           `dB = dCON   of 'a
+Datatype:
+            dB = dCON   of 'a
                | dVAR   of string
                | dBOUND of num
                | dABS   of dB
-               | dAPP   of dB => dB`;
+               | dAPP   of dB => dB
+End
 
 
 (* --------------------------------------------------------------------- *)

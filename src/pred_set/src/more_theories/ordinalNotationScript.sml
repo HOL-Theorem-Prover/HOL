@@ -31,9 +31,10 @@ val meter = Count.mk_meter();
 (*---------------------------------------------------------------------------*)
 
 val _ = set_fixity "=" (Infix(NONASSOC, 100))
-val _ = Hol_datatype
-  `osyntax = End of num
-           | Plus of osyntax => num => osyntax`;
+Datatype:
+   osyntax = End of num
+           | Plus of osyntax => num => osyntax
+End
 
 val osyntax_11       = TypeBase.one_one_of ``:osyntax``;
 val osyntax_distinct = TypeBase.distinct_of ``:osyntax``;

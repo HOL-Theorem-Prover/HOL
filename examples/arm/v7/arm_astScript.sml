@@ -12,51 +12,57 @@ Ancestors
 
 val _ = temp_type_abbrev("reg", ``:word4``);
 
-val _ = Hol_datatype
-  `addressing_mode1 =
+Datatype:
+   addressing_mode1 =
      Mode1_immediate of word12
    | Mode1_register of word5=>word2=>reg
-   | Mode1_register_shifted_register of reg=>word2=>reg`;
+   | Mode1_register_shifted_register of reg=>word2=>reg
+End
 
-val _ = Hol_datatype
-  `addressing_mode2 =
+Datatype:
+   addressing_mode2 =
      Mode2_immediate of word12
-   | Mode2_register of word5=>word2=>reg`;
+   | Mode2_register of word5=>word2=>reg
+End
 
-val _ = Hol_datatype
-  `addressing_mode3 =
+Datatype:
+   addressing_mode3 =
      Mode3_immediate of word12
-   | Mode3_register of word2=>reg`;
+   | Mode3_register of word2=>reg
+End
 
-val _ = Hol_datatype
- `parallel_add_sub_op1 =
+Datatype:
+  parallel_add_sub_op1 =
     Parallel_normal
   | Parallel_saturating
-  | Parallel_halving`;
+  | Parallel_halving
+End
 
-val _ = Hol_datatype
- `parallel_add_sub_op2 =
+Datatype:
+  parallel_add_sub_op2 =
     Parallel_add_16
   | Parallel_add_sub_exchange
   | Parallel_sub_add_exchange
   | Parallel_sub_16
   | Parallel_add_8
-  | Parallel_sub_8`;
+  | Parallel_sub_8
+End
 
 val _ = temp_type_abbrev("parallel_add_sub",
   ``: parallel_add_sub_op1 # parallel_add_sub_op2``);
 
-val _ = Hol_datatype `hint =
+Datatype: hint =
     Hint_nop
   | Hint_yield
   | Hint_wait_for_event
   | Hint_wait_for_interrupt
   | Hint_send_event
-  | Hint_debug of word4`;
+  | Hint_debug of word4
+End
 
 (* ------------------------------------------------------------------------ *)
 
-val _ = Hol_datatype `branch_instruction =
+Datatype: branch_instruction =
     Branch_Target                  of word24
   | Branch_Exchange                of reg
   | Branch_Link_Exchange_Immediate of bool=>bool=>word24
@@ -66,9 +72,10 @@ val _ = Hol_datatype `branch_instruction =
   | Check_Array                    of word4=>word4
   | Handler_Branch_Link            of bool=>word8
   | Handler_Branch_Link_Parameter  of word5=>word5
-  | Handler_Branch_Parameter       of word3=>word5`;
+  | Handler_Branch_Parameter       of word3=>word5
+End
 
-val _ = Hol_datatype `data_processing_instruction =
+Datatype: data_processing_instruction =
     Data_Processing                   of word4=>bool=>reg=>reg=>addressing_mode1
   | Add_Sub                           of bool=>reg=>reg=>word12
   | Move_Halfword                     of bool=>reg=>word16
@@ -99,16 +106,18 @@ val _ = Hol_datatype `data_processing_instruction =
   | Select_Bytes                      of reg=>reg=>reg
   | Unsigned_Sum_Absolute_Differences of reg=>reg=>reg=>reg
   | Parallel_Add_Subtract             of bool=>parallel_add_sub=>reg=>reg=>reg
-  | Divide                            of bool=>reg=>reg=>reg`;
+  | Divide                            of bool=>reg=>reg=>reg
+End
 
-val _ = Hol_datatype `status_access_instruction =
+Datatype: status_access_instruction =
     Status_to_Register     of bool=>reg
   | Register_to_Status     of bool=>word4=>reg
   | Immediate_to_Status    of bool=>word4=>word12
   | Change_Processor_State of word2=>bool=>bool=>bool=>word5 option
-  | Set_Endianness         of bool`;
+  | Set_Endianness         of bool
+End
 
-val _ = Hol_datatype `load_store_instruction =
+Datatype: load_store_instruction =
     Load                       of bool=>bool=>bool=>bool=>bool=>reg=>reg=>
                                   addressing_mode2
   | Store                      of bool=>bool=>bool=>bool=>bool=>reg=>reg=>
@@ -132,9 +141,10 @@ val _ = Hol_datatype `load_store_instruction =
   | Load_Exclusive_Byte        of reg=>reg
   | Store_Exclusive_Byte       of reg=>reg=>reg
   | Store_Return_State         of bool=>bool=>bool=>word5
-  | Return_From_Exception      of bool=>bool=>bool=>reg`;
+  | Return_From_Exception      of bool=>bool=>bool=>reg
+End
 
-val _ = Hol_datatype `miscellaneous_instruction =
+Datatype: miscellaneous_instruction =
     Hint                         of hint
   | Breakpoint                   of word16
   | Data_Memory_Barrier          of word4
@@ -148,20 +158,22 @@ val _ = Hol_datatype `miscellaneous_instruction =
   | Secure_Monitor_Call          of word4
   | Enterx_Leavex                of bool
   | Clear_Exclusive
-  | If_Then                      of word4=>word4`;
+  | If_Then                      of word4=>word4
+End
 
-val _ = Hol_datatype `coprocessor_instruction =
+Datatype: coprocessor_instruction =
     Coprocessor_Load            of bool=>bool=>bool=>bool=>reg=>reg=>word4=>
                                    word8
   | Coprocessor_Store           of bool=>bool=>bool=>bool=>reg=>reg=>word4=>
                                    word8
   | Coprocessor_Data_Processing of word4=>reg=>reg=>word4=>word3=>reg
   | Coprocessor_Transfer        of word3=>bool=>reg=>reg=>word4=>word3=>reg
-  | Coprocessor_Transfer_Two    of bool=>reg=>reg=>word4=>word4=>reg`;
+  | Coprocessor_Transfer_Two    of bool=>reg=>reg=>word4=>word4=>reg
+End
 
 (* ------------------------------------------------------------------------ *)
 
-val _ = Hol_datatype `ARMinstruction =
+Datatype: ARMinstruction =
     Unpredictable
   | Undefined
   | Branch         of branch_instruction
@@ -169,7 +181,8 @@ val _ = Hol_datatype `ARMinstruction =
   | StatusAccess   of status_access_instruction
   | LoadStore      of load_store_instruction
   | Miscellaneous  of miscellaneous_instruction
-  | Coprocessor    of coprocessor_instruction`;
+  | Coprocessor    of coprocessor_instruction
+End
 
 (* ------------------------------------------------------------------------ *)
 

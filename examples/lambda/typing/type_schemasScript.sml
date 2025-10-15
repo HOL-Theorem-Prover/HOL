@@ -35,11 +35,11 @@ Libs
   binderLib boolSimps BasicProvers
 
 
-val _ = Hol_datatype`
+Datatype:
   type = tyvar of string
        | tyfun of type => type
        | tyforall of string set => type
-`;
+End
 
 Definition fv_def:
   (fv (tyvar s) = {s}) /\

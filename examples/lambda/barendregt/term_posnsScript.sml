@@ -12,7 +12,8 @@ fun Save_Thm(n,th) = save_thm(n,th) before export_rewrites [n]
     type of (term) positions
    ---------------------------------------------------------------------- *)
 
-val _ = Hol_datatype `redpos = Lt | Rt | In`;
+Datatype: redpos = Lt | Rt | In
+End
 
 val _ = type_abbrev ("posn", ``:redpos list``)
 

@@ -12,7 +12,8 @@ val eq_equiv = prove(``!n m. <=> n m = (<=> n = <=> m)``,
 
 val _ = define_quotient_type "mod3" "abs_mod3" "rep_mod3" eq_equiv
 
-val _ = Hol_datatype `foo = C1 | C2`
+Datatype: foo = C1 | C2
+End
 
 fun mk_def t = let
   val s = "l" ^ term_to_string t

@@ -352,7 +352,8 @@ QED
  * bit0                                                                      *
  * ------------------------------------------------------------------------- *)
 
-val () = Hol_datatype `bit0 = BIT0A of 'a | BIT0B of 'a`
+Datatype: bit0 = BIT0A of 'a | BIT0B of 'a
+End
 
 Definition IS_BIT0A_def[nocompute]:
    (IS_BIT0A (BIT0A x) = T) /\ (IS_BIT0A (BIT0B x) = F)
@@ -468,7 +469,8 @@ QED
  * bit1                                                                      *
  * ------------------------------------------------------------------------- *)
 
-val () = Hol_datatype `bit1 = BIT1A of 'a | BIT1B of 'a | BIT1C`
+Datatype: bit1 = BIT1A of 'a | BIT1B of 'a | BIT1C
+End
 
 Definition IS_BIT1A_def[nocompute]:
    (IS_BIT1A (BIT1A x) = T) /\ (IS_BIT1A (BIT1B x) = F) /\

@@ -7,7 +7,8 @@ val _ = ParseExtras.temp_loose_equality()
 
 val _ = type_abbrev("Zimm",``:word64``);
 
-val _ = Hol_datatype `x64_permission = Zread | Zwrite | Zexecute`;
+Datatype: x64_permission = Zread | Zwrite | Zexecute
+End
 
 val _ = type_abbrev("x64_memory",``: word64 -> ((word8 # x64_permission set) option)``);
 

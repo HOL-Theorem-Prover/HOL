@@ -2,7 +2,8 @@ Theory tailrecAckermann
 Ancestors[qualified]
   container
 
-val _ = Hol_datatype `work = DO of num => num | PENDING of num`;
+Datatype: work = DO of num => num | PENDING of num
+End
 
 Definition wsize_def:
   (wsize (DO n m) = (2 * n, m)) ∧

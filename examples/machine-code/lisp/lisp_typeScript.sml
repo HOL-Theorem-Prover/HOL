@@ -11,7 +11,8 @@ val RW1 = ONCE_REWRITE_RULE;
 
 (* type *)
 
-val _ = Hol_datatype `SExp = Dot of SExp => SExp | Val of num | Sym of string`;
+Datatype: SExp = Dot of SExp => SExp | Val of num | Sym of string
+End
 val SExp_11 = fetch "-" "SExp_11";
 val SExp_distinct = fetch "-" "SExp_distinct";
 

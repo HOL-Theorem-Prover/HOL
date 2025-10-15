@@ -6,10 +6,11 @@ Libs
 
 fun Store_thm (n,t,tac) = store_thm(n,t,tac) before export_rewrites [n]
 
-val _ = Hol_datatype `MPterm = Var of string
+Datatype: MPterm = Var of string
                              | Parameter of string
                              | App of MPterm => MPterm
-                             | Abs of string => MPterm`;
+                             | Abs of string => MPterm
+End
 
 Definition psub_def:
   (psub a p (Var s) = Var s) /\
