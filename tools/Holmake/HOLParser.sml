@@ -1,8 +1,33 @@
-structure Parser = struct
-open Ast
+structure HOLParser = struct
+open HOLAst
+
+fun mem x = List.exists (fn y => x = y)
 
 exception Unreachable
 type scope = (string, int * bool) Binarymap.dict
+
+val initialScope: scope = let
+  val infixes =
+    List.concat (map (fn ((b, a), l) => map (fn x => (x, a, b)) l) [
+      ((false, 0), ["before", "++", "&&", "|->", "THEN", "THEN1",
+        "THENL", "THEN_LT", "THENC", "ORELSE", "ORELSE_LT", "ORELSEC",
+        "THEN_TCL", "ORELSE_TCL", "?>", "|>", "|>>", "||>", "||->",
+        ">>", ">-", ">|", "\\\\", ">>>", ">>-", "??", ">~", ">>~", ">>~-"]),
+      ((true, 0), ["##", "?"]),
+      ((true, 1), ["$"]),
+      ((false, 3), [":=", "o"]),
+      ((true, 3), ["-->"]),
+      ((false, 4), ["=", "<>", ">", ">=", "<", "<="]),
+      ((true, 5), ["::", "@"]),
+      ((false, 6), ["+", "-", "^"]),
+      ((false, 7), ["*", "/", "div", "mod"]),
+      ((false, 8), ["via", "by", "suffices_by"]),
+      ((false, 9), ["using"])])
+  val sc = foldl
+    (fn ((k, n, r), b) => Binarymap.insert (b, k, (n, r)))
+    (Binarymap.mkDict String.compare) infixes
+  in sc end
+
 type result = {getScope: unit -> scope, parseDec: unit -> dec option}
 fun parseSML file body parseError: scope -> result = let
   val pos = ref 0
@@ -357,9 +382,9 @@ fun parseSML file body parseError: scope -> result = let
     tycon = parseIdentifier true,
     bind = Option.map (fn eq => {eq = eq, ty = parseTy ()}) (parseKeyword "=" NONE) }
 
-  fun updateScope sc = let
-    fun updateInfix right prec elems sc =
-      case case prec of SOME (_, prec) => Int.fromString prec | _ => NONE of
+  fun updateScope (sc:scope): dec -> scope = let
+    fun updateInfix right prec elems (sc:scope): scope =
+      case case prec of SOME (_, prec) => Int.fromString prec | NONE => SOME 0 of
         NONE => sc
       | SOME prec => let
         fun go [] sc = sc
@@ -427,11 +452,11 @@ fun parseSML file body parseError: scope -> result = let
               val (right, stop) = parseStop (parseSymbol #")") 1 "expected ')'"
               val _ = updatePosLineCol start
               val _ = case case line of (_, SOME n) => Int.fromString n | _ => NONE of
-                SOME n => posLineCol := (fn (a,_,c) => (a,n,c)) (!posLineCol)
+                SOME n => posLineCol := (fn (a,_,c) => (a,n-1,c)) (!posLineCol)
               | _ => ()
               val col' = case col of SOME {col = (_, SOME n), ...} => Int.fromString n | _ => NONE
               val _ = case col' of
-                SOME n => posLineCol := (fn (a,b,_) => (a,b,n)) (!posLineCol)
+                SOME n => posLineCol := (fn (a,b,_) => (a,b,n-1)) (!posLineCol)
               | _ => ()
               in HOLLinePragmaWith {
                 hash_ = start, left = startParen, line_ = kw,
@@ -442,7 +467,7 @@ fun parseSML file body parseError: scope -> result = let
               val (_, line, _) = (updatePosLineCol start; !posLineCol)
               in HOLLinePragma {
                 hash_ = start, left = startParen, line_ = kw,
-                right = right, stop = stop, value = line}
+                right = right, stop = stop, value = line+1}
               end)
           | "FILE" => (case parseKeyword "=" NONE of
               SOME eq_ => let
@@ -509,15 +534,15 @@ fun parseSML file body parseError: scope -> result = let
       "`" => (false, "`")
     | "``" => (true, "``")
     | "\226\128\152" => (false, "\226\128\153")
-    | "\226\128\156" => (false, "\226\128\157")
+    | "\226\128\156" => (true, "\226\128\157")
     | _ => raise Unreachable
+    val left = !pos
     fun findColon i =
       case ahead i of
-        #":" => SOME (!pos + i)
+        #":" => SOME (left + i)
       | #" " => findColon (i + 1)
       | #"\t" => findColon (i + 1)
       | _ => NONE
-    val left = !pos
     val type_q = if full then SOME (findColon 0) else NONE
     val (quote, right) = parseQuoteBody sc start left false [s]
     val end_tok = case ident right of
@@ -532,8 +557,8 @@ fun parseSML file body parseError: scope -> result = let
     if force then parseError (#1 tk, #1 tk) "expected an expression" else ();
     unread tk; EmptyExp (#1 tk))
 
-  and parseExp sc pat = parseExp' sc pat true
-  and parseExp' sc pat force: exp = let
+  and parseExp (sc:scope) pat = parseExp' sc pat true
+  and parseExp' (sc:scope) pat force: exp = let
     fun parseInfix pat force = let
 
       fun peekInfix () = let
@@ -721,15 +746,15 @@ fun parseSML file body parseError: scope -> result = let
           | #"(" => (!pos - 1, (next (); AntiqParen))
           | c =>
             if Char.isAlpha c then
-              (!pos - 1, (takeWhile isIdRest; finishId (); AntiqIdent))
+              (!pos - 1, (takeWhile isIdRest; AntiqIdent))
             else qtoken cm
         else qtoken cm)
       | _ => (next (); qtoken cm)
 
     fun expected () = "expected [" ^ String.concatWith ", " s ^ "]"
 
-    fun push i p acc = if i = p then acc else let
-      val (_, line, col) = (updatePosLineCol start; !posLineCol)
+    fun push i p acc = if i = p andalso not (null acc) then acc else let
+      val (_, line, col) = (updatePosLineCol i; !posLineCol)
       val value = Substring.substring (body, i, p - i)
       in QuoteLiteral {line = line, col = col, value = value} :: acc end
 
@@ -741,11 +766,13 @@ fun parseSML file body parseError: scope -> result = let
         (rev (push i p acc), p))
       | (p, EndTk) => if mem (ident p) s then (rev (push i p acc), p) else go i acc
       | (p, AntiqIdent) => let
+        val acc = push i p acc
         val exp = case identKind (p + 1) of
           (s, Regular) => Ident {op_ = NONE, id = (p+1, s)}
         | _ => (parseError (p+1, !pos) "expected identifier"; BadExp {start = p+1, stop = !pos})
-        in go (!pos) (QuoteAntiq {caret_ = p, exp = exp} :: push i p acc) end
+        in go (!pos) (QuoteAntiq {caret_ = p, exp = exp} :: acc) end
       | (p, AntiqParen) => let
+        val acc = push i p acc
         val e = parseParen sc false (p+1)
         val stop = case e of
           Unit {right, ...} => right+1
@@ -753,8 +780,9 @@ fun parseSML file body parseError: scope -> result = let
         | Tuple {stop, ...} => stop
         | Sequence {stop, ...} => stop
         | _ => raise Unreachable
-        in go stop (QuoteAntiq {caret_ = p, exp = e} :: push i p acc) end
+        in go stop (QuoteAntiq {caret_ = p, exp = e} :: acc) end
       | (p, OpenBrack) => let
+        val acc = push i p acc
         val _ = ws ()
         val label =
           if checkKW "/\\" 0 then
@@ -784,10 +812,10 @@ fun parseSML file body parseError: scope -> result = let
         val r = DefinitionLabel {
           left = p, label = label, attrs = attrs,
           colon = colon, right = right, stop = stop }
-        in go stop (r :: push i p acc) end
+        in go stop (r :: acc) end
     in go qstart [] end
 
-  and parseDec (inSig: bool) sc: (scope * dec) option = let
+  and parseDec (inSig: bool) (sc: scope): (scope * dec) option = let
 
     fun parseInfixElems acc =
       case parseIdentifierOrEq false of
@@ -1143,17 +1171,5 @@ fun parseSML file body parseError: scope -> result = let
       | SOME (sc', d) => (sc := sc'; SOME d)
     in {parseDec = parseDec, getScope = fn () => !sc} end
   in go end
-
-fun isOnlyComments s = let
-  val (base, start, len) = Substring.base s
-  val stop = start + len
-  fun cur p = if p < stop then String.sub (base, p) else #"\000"
-  fun go cm p =
-    case cur p of
-      #"\000" => true
-    | #"(" => cur (p+1) = #"*" andalso go (cm + 1) (p+2)
-    | #"*" => cm > 0 andalso if cur (p+1) = #")" then go (cm - 1) (p+2) else go cm (p+1)
-    | c => (cm > 0 orelse Char.isSpace c) andalso go cm (p+1)
-  in go 0 start end
 
 end;

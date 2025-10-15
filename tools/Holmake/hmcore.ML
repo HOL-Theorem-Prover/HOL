@@ -23,7 +23,9 @@ in
                "Holdep_tokens", "AttributeSyntax"] ;
   app (myuse hmakedir) ["HolLex.sml", "Holmake_tools_dtype.sml",
                         "terminal_primitives.sig",
-                        "poly-terminal-prims.ML"];
+                        "poly-terminal-prims.ML",
+                        "HOLAst.sml", "HOLParser.sml",
+                        "HOLToSML.sml", "HOLPrinter.sml"];
   app appthis ["HolParser", "Holdep", "Holmake_tools", "internal_functions",
                "Holmake_types",
                "ReadHMF"]

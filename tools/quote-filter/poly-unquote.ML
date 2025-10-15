@@ -15,6 +15,12 @@ use "../Holmake/poly/HFS_NameMunge.sml";
 use "../Holmake/HOLFS_dtype.sml";
 use "../Holmake/HOLFileSys.sig";
 use "../Holmake/HOLFileSys.sml";
+use "../../tools-poly/poly/Binarymap.sig";
+use "../../tools-poly/poly/Binarymap.sml";
+use "../Holmake/HOLAst.sml";
+use "../Holmake/HOLParser.sml";
+use "../Holmake/HOLToSML.sml";
+use "../Holmake/HOLPrinter.sml";
 use "../Holmake/HolParser.sig";
 use "../Holmake/HolParser.sml";
 use "quotefix.sig";
@@ -41,16 +47,14 @@ fun main() = let
     quotefix.run read write
   else let
     open HolParser.ToSML
-    val read = mkPushTranslator {
+    val read = mkPullTranslator {
       read = read,
       filename = infilename,
       parseError = fn (start, stop) => fn s =>
         TextIO.output (TextIO.stdErr,
           "parse error at " ^ Int.toString start ^ "-" ^ Int.toString stop ^ ": " ^ s ^ "\n"),
-      quietOpen = quietOpen
-    } (mkStrcode write)
-
-    fun loop () = if read () then () else loop ()
+      quietOpen = quietOpen }
+    fun loop () = case read () of "" => () | s => (write s; loop ())
     in loop () end
 in
   closefn ();

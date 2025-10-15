@@ -1,5 +1,5 @@
-structure ToSML = struct
-open Ast
+structure HOLToSML = struct
+open HOLAst
 
 fun mkHandleHolErr (p, e) = let
   val pat = App (mkIdent (p, "Feedback.HOL_ERR"), Wild p)
@@ -365,16 +365,16 @@ and expandDec _ (DecSemi _) acc = acc
     fun mkQ s = App (mkIdent (inductive_, "QUOTE"), mkString (inductive_, s))
     val frag = mkQ ") /\\\\ ("
     fun mk l = frag :: expandQuoteCore inductive_ (rev l)
-    fun split olab l [] qs = rev ((mk l, olab) :: qs)
-      | split olab l (DefinitionLabel lab :: r) qs =
+    fun split olab l [] (qs, labs) = (rev (mk l :: qs), rev (olab :: labs))
+      | split olab l (DefinitionLabel lab :: r) (qs, labs) =
         if case olab of
-            NONE => C List.all l
-            (fn QuoteLiteral {value,...} => Parser.isOnlyComments value | _ => false)
+            NONE => List.all
+            (fn QuoteLiteral {value,...} => isOnlyComments value | _ => false) l
           | _ => false
-        then split (SOME lab) [] r qs
-        else split (SOME lab) [] r ((mk l, olab) :: qs)
+        then split (SOME lab) [] r (qs, labs)
+        else split (SOME lab) [] r (mk l :: qs, olab :: labs)
       | split olab l (d :: r) qs = split olab (d :: l) r qs
-    val (quotes, conjs) = unzip (split NONE [] quote [])
+    val (quotes, conjs) = split NONE [] quote ([], [])
     val quote = mkList (inductive_, mkQ "(" :: tl (List.concat quotes) @ [mkQ ")"])
     fun mkStem x = (id, stem ^ x)
     val pat = mkTuple (inductive_, map (mkIdent o mkStem) ["_rules", indSuffix, "_cases"])

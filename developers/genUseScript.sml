@@ -39,7 +39,10 @@ in
   (push, read, reset)
 end;
 
-val _ = use "../tools/Holmake/HolLex.sml";
+val _ = use "../tools/Holmake/HOLAst.sml";
+val _ = use "../tools/Holmake/HOLParser.sml";
+val _ = use "../tools/Holmake/HOLToSML.sml";
+val _ = use "../tools/Holmake/HOLPrinter.sml";
 val _ = use "../tools/Holmake/HolParser.sig";
 val _ = use "../tools/Holmake/HolParser.sml";
 val _ = use "../tools/Holmake/Holdep_tokens.sig"

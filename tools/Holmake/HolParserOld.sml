@@ -1,14 +1,12 @@
-structure HolParser :> HolParser =
+structure HolParserOld :> HolParserOld =
 struct
 
+infix |>
+fun x |> f = f x
+fun mlquote s = String.concat ["\"", String.toString s, "\""]
 fun K a _ = a
 fun I a = a
 
-(* infix |>
-fun x |> f = f x
-fun mlquote s = String.concat ["\"", String.toString s, "\""]
-fun I a = a *)
-(*
 (* replace \c pairs with just c *)
 fun unescape s =
   let val limit = size s
@@ -205,18 +203,11 @@ fun parseDefnLabel text = let
     else SOME name
   in {tilde = tilde, name = name, attrs = attrs, name_attrs = ss} end
 
-end *)
+end
 
 structure ToSML = struct
 
-  type args = {
-    read: int -> string,
-    filename: string,
-    parseError: int * int -> string -> unit,
-    quietOpen: bool
-  }
-
-  (* type double_reader = {
+  type double_reader = {
     read: int -> string,
     readAt: int -> int -> (int * substring -> unit) -> unit
   }
@@ -319,6 +310,13 @@ structure ToSML = struct
     strcode = strcode push
   }
 
+
+  type args = {
+    read: int -> string,
+    filename: string,
+    parseError: int * int -> string -> unit,
+    quietOpen: bool
+  }
 
   fun mk_mkloc_string (fname,i) =
       String.concat [
@@ -721,25 +719,12 @@ structure ToSML = struct
       case feed () of
         TopDecl d => (pos := doDecl true (!pos) d; false)
       | Simple.EOF p => (regular (!pos, p); finish (); pos := p; true)
-    end *)
+    end
 
-  fun mkPullTranslator ({read, filename, parseError, quietOpen}:args) = let
+  fun mkPullTranslator args = let
     val queue = ref []
     val atEnd = ref false
-    fun body acc = case read 1024 of "" => concat (rev acc) | s => body (s :: acc)
-    val {parseDec, ...} = HOLParser.parseSML filename (body []) parseError HOLParser.initialScope
-    val expandDec = HOLToSML.expandDec {parseError = parseError, quietOpen = quietOpen}
-    val pr = HOLPrinter.mkPrinter {
-      str = fn s => queue := s :: !queue,
-      startSpan = K (),
-      stopSpan = K () }
-    fun push () = case parseDec () of
-      NONE => true
-    | SOME dec => case expandDec dec [] of
-        [] => false
-      | decs => (
-        HOLPrinter.printDecs parseError (rev (HOLAst.DecSemi 0 :: decs)) pr;
-        queue := "\n" :: !queue; false)
+    val push = mkPushTranslator args (mkStrcode (fn s => queue := s :: !queue))
     fun loop () =
       case !queue of
         s :: rest => (queue := rest; s)

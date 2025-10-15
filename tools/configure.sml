@@ -330,6 +330,10 @@ val _ =
     compile [] "terminal_primitives.sig";
     compile [] "terminal_primitives.sml";
     compile [] "Holmake_tools_dtype.sml";
+    compile [] "HOLAst.sml";
+    compile [] "HOLParser.sml";
+    compile [] "HOLToSML.sml";
+    compile [] "HOLPrinter.sml";
     compile [] "HolParser.sig";
     compile [] "HolParser.sml";
     compile ["-I", "mosml"] "Holdep.sig";

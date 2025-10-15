@@ -15,7 +15,10 @@ Holdep_tokens.sig
 Holdep_tokens.sml
 AttributeSyntax.sig
 AttributeSyntax.sml
-HolLex.sml
+HOLAst.sml
+HOLParser.sml
+HOLToSML.sml
+HOLPrinter.sml
 HolParser.sig
 HolParser.sml
 Holdep.sig

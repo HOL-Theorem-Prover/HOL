@@ -1,4 +1,4 @@
-structure Ast = struct
+structure HOLAst = struct
 
 (* (start, content) *)
 type ident = int * string
@@ -333,7 +333,7 @@ fun encodeStr ss bef aft = let
         val b = chr ((n div 10) mod 10 + ord #"0")
         val c = chr (n mod 10 + ord #"0")
         in loop (p+1) (p+1) (implode [#"\\", a, b, c] :: push start p acc) end
-  in String.concat (rev (bef :: loop start start [aft])) end
+  in String.concat (rev (aft :: loop start start [bef])) end
 
 fun mkString (p, s) = StringConstant (p, encodeStr (Substring.full s) "\"" "\"")
 fun mkInt (p, s) = IntegerConstant (p, Int.toString s)
@@ -516,5 +516,17 @@ fun decSpan (DecSemi p) = (p, p + 1)
     (theorem_, case bind of SOME {exp, ...} => expStop exp | NONE =>
       case attrs of SOME {stop, ...} => stop | NONE => idStop id)
   | decSpan (HOLTheoremDecl {theorem_, stop, ...}) = (theorem_, stop)
+
+fun isOnlyComments s = let
+  val (base, start, len) = Substring.base s
+  val stop = start + len
+  fun cur p = if p < stop then String.sub (base, p) else #"\000"
+  fun go cm p =
+    case cur p of
+      #"\000" => true
+    | #"(" => cur (p+1) = #"*" andalso go (cm + 1) (p+2)
+    | #"*" => cm > 0 andalso if cur (p+1) = #")" then go (cm - 1) (p+2) else go cm (p+1)
+    | c => (cm > 0 orelse Char.isSpace c) andalso go cm (p+1)
+  in go 0 start end
 
 end
