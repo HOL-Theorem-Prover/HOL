@@ -11,17 +11,17 @@ sig
         {origins : origin list,
          message : string}
 
-    val mk_hol_error    : string -> string -> locn.locn -> string -> hol_error
-    val wrap_hol_error  : string -> string -> locn.locn -> hol_error -> hol_error
-    val empty_hol_error : hol_error
-    val top_structure_of: hol_error -> string
-    val top_function_of : hol_error -> string
-    val top_location_of : hol_error -> locn.locn
-    val origins_of      : hol_error -> origin list
-    val message_of      : hol_error -> string
-    val set_message     : string -> hol_error -> hol_error
-    val set_top_function : string -> hol_error -> hol_error
-    val pp_hol_error    : hol_error -> HOLPP.pretty
+    val pp_hol_error      : hol_error -> HOLPP.pretty
+    val mk_hol_error      : string -> string -> locn.locn -> string -> hol_error
+    val wrap_hol_error    : string -> string -> locn.locn -> hol_error -> hol_error
+    val empty_hol_error   : hol_error
+    val top_structure_of  : hol_error -> string
+    val top_function_of   : hol_error -> string
+    val top_location_of   : hol_error -> locn.locn
+    val origins_of        : hol_error -> origin list
+    val message_of        : hol_error -> string
+    val set_message       : string -> hol_error -> hol_error
+    val set_top_function  : string -> hol_error -> hol_error
 
     exception HOL_ERR of hol_error
 

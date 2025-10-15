@@ -5,10 +5,10 @@
 (* AUTHOR        : (c) Konrad Slind, University of Cambridge             *)
 (* DATE          : October 1, 2000 Konrad Slind                          *)
 (* HISTORY       : Derived from Exception module, plus generalized       *)
-(*                 tracing stuff from Michael Norrish.                   *)
+(*                 tracing facility from Michael Norrish.                *)
 (* ===================================================================== *)
 
-structure Feedback :> Feedback =
+structure Feedback : Feedback =
 struct
 
 local open HOLPP in end
@@ -67,7 +67,10 @@ val pp_hol_error =
         add_string "<empty-hol-error>"
      else
         block INCONSISTENT 2
-          (pr_list pp_origin [NL] origins @ [NL, add_string message])
+          (pr_list pp_origin [NL] origins @
+           (if message = "" then
+	       []
+            else [NL, add_string message]))
   end
 
 fun format_hol_error holerr =
@@ -93,52 +96,6 @@ fun top_location_of herr =
   case origins_of herr
    of [] => raise HOL_ERR (empty_origins_error "top_location_of")
     | h::_ => #source_location h
-
-(*---------------------------------------------------------------------------
-  Curious thing: if pp_hol_error is installed inside structure Feedback,
-  then the prettyprinter invoked for value "HOL_ERR <holerr>" will dispatch
-  to pp_hol_error when it comes to printing <holerr>. But not so if
-  pp_hol_error is installed after Feedback is declared.
-
-  In the HOL build, prettyprinters are installed as part of the
-  invocation of the REPL, after all the structures are loaded.
-
-  My theory: that the prettyprinting for an exn is determined at the
-  point of declaring the exception, where "point of declaration" means the
-  enclosing structure.
-
-  TODO: check this by concocting a simple non-HOL example. Something like
-
-   structure Foo =
-    datatype klist = KLIST of int list
-    fun pp_klist (KLIST list) =
-      let open HOLPP
-      in add_string ("<"^Int.toString (length list)^">")
-      end
-
-    exception KERR of klist
-
-    val _ =
-      let fun pp i _ e = pp_klist e
-       in PolyML.addPrettyPrinter pp
-      end
-   end
-
-  (... Work on TODO ...) Hrm. The simple example seems to work fine.
-  What the devil is going on?
-
-
-MOSML NOTE: looks like any exceptions other than with a string argument
-  will not have their arguments printed. So "HOL_ERR <holerr>" will
-  get printed in the REPL as simply "HOLERR".
-*)
-
-(*
-val _ =
-  let fun pp i _ e = pp_hol_error e
-  in PolyML.addPrettyPrinter pp
-  end
-*)
 
 fun mk_HOL_ERRloc s1 s2 locn s3 = HOL_ERR (mk_hol_error s1 s2 locn s3)
 
