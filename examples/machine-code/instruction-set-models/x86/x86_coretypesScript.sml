@@ -25,14 +25,11 @@ End
 
 Datatype:
   Xea =
-      Xea_i of Ximm     (* constant       *)
-    | Xea_r of Xreg     (* register name  *)
-    | Xea_m of word32   (* memory address *)
+      Xea_i Ximm     (* constant       *)
+    | Xea_r Xreg     (* register name  *)
+    | Xea_m word32   (* memory address *)
 End
 
 Datatype: iiid = <| proc : num ;
              program_order_index : num |>
 End
-
-
-

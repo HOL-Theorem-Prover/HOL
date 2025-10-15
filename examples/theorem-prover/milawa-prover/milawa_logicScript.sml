@@ -33,21 +33,21 @@ Datatype:
 End
 
 Datatype:
-  logic_func = mPrimitiveFun of logic_primitive_op
-             | mFun of string
+  logic_func = mPrimitiveFun logic_primitive_op
+             | mFun string
 End
 
 Datatype:
-  logic_term = mConst of SExp
-             | mVar of string
-             | mApp of logic_func => logic_term list
-             | mLamApp of string list => logic_term => logic_term list
+  logic_term = mConst SExp
+             | mVar string
+             | mApp logic_func (logic_term list)
+             | mLamApp (string list) logic_term (logic_term list)
 End
 
 Datatype:
-  formula = Or of formula => formula              (*  por*     *)
-          | Not of formula                        (*  pnot*    *)
-          | Equal of logic_term => logic_term     (*  pequal*  *)
+  formula = Or formula formula              (*  por*     *)
+          | Not formula                        (*  pnot*    *)
+          | Equal logic_term logic_term     (*  pequal*  *)
 End
 
 (* Unfortunately, the above definition is not enough to completely define
@@ -88,9 +88,9 @@ End
 
 Datatype:
   func_body = (* body of normal function defition *)
-              BODY_FUN of logic_term
+              BODY_FUN logic_term
             | (* expression, variable name, and semantic witness function *)
-              WITNESS_FUN of logic_term => string
+              WITNESS_FUN logic_term string
             | (* intermediate step in function definition *)
               NO_FUN
 End
@@ -2263,4 +2263,3 @@ val definition_ok_BODY_FUN = store_thm("definition_ok_BODY_FUN",
   (definition_ok_lemma
     |> SPEC_ALL |> Q.INST [`body`|->`BODY_FUN l`]
     |> SIMP_RULE (srw_ss()) []) \\ FULL_SIMP_TAC std_ss []);
-

@@ -8,9 +8,6 @@
 (* DATE         : 2006.09.08                                            *)
 (* =====================================================================*)
 
-(*
-  app load ["IndDefLib", "Datatype", "clTheory"] ;
-*)
 Theory monoset
 Ancestors
   list
@@ -47,7 +44,7 @@ Libs
 
 (* our example tests whether or not every number occurring in a t-value
    is even *)
-Datatype: t = v of num | app of t list
+Datatype: t = v num | app (t list)
 End
 
 val (alleven_rules, alleven_ind, alleven_cases) = Hol_reln `
@@ -94,4 +91,3 @@ val strong_allbigger_ind = save_thm(
 (* --------------------------------------------------------------------- *)
 (* End of example.                                                       *)
 (* --------------------------------------------------------------------- *)
-

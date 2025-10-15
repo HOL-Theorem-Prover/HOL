@@ -4,9 +4,9 @@ Ancestors
 
 Datatype:
   const = Null
-        | Bool of bool
-        | Num of num
-        | String of string
+        | Bool bool
+        | Num num
+        | String string
 End
 
 Theorem extension_chain:
@@ -51,4 +51,3 @@ Q.EXISTS_TAC `n` THEN
    by METIS_TAC [CARD_PSUBSET,FDOM_FINITE]
 THEN DECIDE_TAC
 QED
-

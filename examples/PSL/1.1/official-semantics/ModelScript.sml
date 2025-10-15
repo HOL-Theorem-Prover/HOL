@@ -20,29 +20,10 @@
 (* and 'prop, but may use 'a, 'b etc or whatever typechecking assigns.       *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* Load theory of syntax, paths and models                                   *)
-(* (commented out for compilation)                                           *)
-(*****************************************************************************)
-
-(*
-quietdec := true;                         (* Switch off output               *)
-loadPath                                  (* Add path to loadPath            *)
- :=
- "../../path" :: !loadPath;
-map load ["pred_setLib","PSLPathTheory"];
-open ped_setTheory PSLPathTheory;
-quietdec := false;                        (* Restore output                  *)
-*)
-
 Theory Model
 Ancestors
   pred_set PSLPath
 
-
-(*****************************************************************************)
-(* END BOILERPLATE                                                           *)
-(*****************************************************************************)
 
 val _ = ParseExtras.temp_loose_equality()
 
@@ -75,7 +56,7 @@ End
 (* or a set of atomic propositions repersenting a state                      *)
 (*****************************************************************************)
 Datatype:
-   letter = TOP | BOTTOM | STATE of ('prop -> bool)
+   letter = TOP | BOTTOM | STATE ('prop -> bool)
 End
 
 (*****************************************************************************)

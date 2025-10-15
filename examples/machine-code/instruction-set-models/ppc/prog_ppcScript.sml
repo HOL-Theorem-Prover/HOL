@@ -17,9 +17,9 @@ val RW1 = ONCE_REWRITE_RULE;
 (* ----------------------------------------------------------------------------- *)
 
 Datatype:
-  ppc_el =  pReg of ppc_reg => word32
-          | pMem of word32 => word8 option
-          | pStatus of ppc_bit => bool option
+  ppc_el =  pReg ppc_reg word32
+          | pMem word32 (word8 option)
+          | pStatus ppc_bit (bool option)
 End
 
 val ppc_el_11 = DB.fetch "-" "ppc_el_11";
@@ -413,5 +413,3 @@ val pBYTE_MEMORY_INTRO = store_thm("pBYTE_MEMORY_INTRO",
   ONCE_REWRITE_TAC [STAR_COMM]
   \\ SIMP_TAC std_ss [pBYTE_MEMORY_INSERT,STAR_ASSOC]
   \\ METIS_TAC [SPEC_FRAME]);
-
-

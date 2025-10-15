@@ -6,9 +6,6 @@
 (* DATE          : 2001 - 2005                                               *)
 (* ========================================================================= *)
 
-(* interactive use:
-  app load ["wordsLib", "wordsSyntax", "rich_listTheory", "io_onestepTheory"];
-*)
 Theory arm
 Ancestors
   rich_list io_onestep words
@@ -44,22 +41,22 @@ Datatype:
               dabort | address |interrupt | fast
 End
 
-Datatype: state_arm = ARM of reg=>psr
+Datatype: state_arm = ARM reg psr
 End
-Datatype: state_arm_ex = ARM_EX of state_arm=>word32=>exception
+Datatype: state_arm_ex = ARM_EX state_arm word32 exception
 End
 
 (* ......................................................................... *)
 
 Datatype:
-  memop = MemRead of word32 | MemWrite of bool=>word32=>word32 |
-          CPMemRead of bool=>word32 | CPMemWrite of bool=>word32 |
-          CPWrite of word32
+  memop = MemRead word32 | MemWrite bool word32 word32 |
+          CPMemRead bool word32 | CPMemWrite bool word32 |
+          CPWrite word32
 End
 
 Datatype:
-  interrupts = Reset of state_arm | Undef | Prefetch |
-               Dabort of num | Fiq | Irq
+  interrupts = Reset state_arm | Undef | Prefetch |
+               Dabort num | Fiq | Irq
 End
 
 Datatype: mode = usr | fiq | irq | svc | abt | und | safe

@@ -134,10 +134,10 @@ val no_terminal_object = store_thm(
    ---------------------------------------------------------------------- *)
 
 Datatype:
-  diaform = Lf of (('n # 'a # 'a # bool # reltype) -> bool) =>
-                  (('n # ('a + 'b) # ('a + 'b) # bool # reltype) -> bool)
-          | /\ of diaform => diaform
-          | ~ of diaform
+  diaform = Lf (('n # 'a # 'a # bool # reltype) -> bool)
+               (('n # ('a + 'b) # ('a + 'b) # bool # reltype) -> bool)
+          | /\ diaform diaform
+          | ~  diaform
 End
 
 Definition evalform_def:
@@ -419,4 +419,3 @@ val Pres_structure_RTC = store_thm(
   SIMP_TAC (srw_ss()) [Pres_def, kSound_def] THEN STRIP_TAC THEN
   HO_MATCH_MP_TAC RTC_INDUCT THEN SRW_TAC [][RTC_RULES, RUNION] THEN
   METIS_TAC [RTC_RULES]);
-

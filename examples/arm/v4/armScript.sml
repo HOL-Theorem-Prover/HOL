@@ -6,9 +6,6 @@
 (* DATE          : 2001 - 2007                                               *)
 (* ========================================================================= *)
 
-(* interactive use:
-  app load ["wordsLib", "wordsSyntax", "rich_listTheory", "updateTheory"];
-*)
 Theory arm
 Ancestors
   words rich_list update
@@ -62,15 +59,15 @@ Datatype:
              UnsignedHalfWord | UnsignedWord
 End
 
-Datatype: data = Byte of word8 | Half of word16 | Word of word32
+Datatype: data = Byte word8 | Half word16 | Word word32
 End
 
 Datatype:
-  memop = MemRead of word32 | MemWrite of word32=>data | CPWrite of word32
+  memop = MemRead word32 | MemWrite word32 data | CPWrite word32
 End
 
 Datatype:
-  interrupt = Reset of regs | Undef | Prefetch | Dabort of num | Fiq | Irq
+  interrupt = Reset regs | Undef | Prefetch | Dabort num | Fiq | Irq
 End
 
 Datatype:
@@ -1037,4 +1034,3 @@ val _ = computeLib.add_persistent_funs
    "mode2num_thm", "psr_EQ_psr", "psr2num_thm", "iclass_EQ_iclass",
    "iclass2num_thm", "num2condition_thm", "condition2num_thm",
    "exceptions_EQ_exceptions", "num2exceptions_thm", "exceptions2num_thm"])
-

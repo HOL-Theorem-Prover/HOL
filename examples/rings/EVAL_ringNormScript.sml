@@ -98,11 +98,11 @@ fun ARW_TAC l = RW_TAC bool_ss
 
 Datatype:
    polynom =
-     Pvar of index
-   | Pconst of 'a
-   | Pplus of polynom => polynom
-   | Pmult of polynom => polynom
-   | Popp of polynom
+     Pvar index
+   | Pconst 'a
+   | Pplus polynom polynom
+   | Pmult polynom polynom
+   | Popp polynom
 End
 
 val polynom_normalize_def = Define `
@@ -161,4 +161,3 @@ val _ = record_terms (
     “r_spolynom_simplify”, “r_interp_sp”
   ]
 )
-

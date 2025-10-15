@@ -63,8 +63,7 @@ val PAIR_EQ      = pairTheory.PAIR_EQ;
 (* Declare the datatype of lists                                             *)
 (*---------------------------------------------------------------------------*)
 
-Datatype: list = NIL | CONS of 'a => list
-End
+val _ = Datatype.Hol_datatype ‘list = NIL | CONS of 'a => list’;
 
 local open OpenTheoryMap val cname = OpenTheory_const_name in
 val ns = ["Data","List"]

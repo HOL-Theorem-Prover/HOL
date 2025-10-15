@@ -17,15 +17,6 @@ Libs
 val _ = ParseExtras.temp_loose_equality()
 
 
-(* In interactive sessions, do:
-
-app load ["pred_setTheory",
-          "ind_rel",
-          "bossLib",
-          "quotientLib"];
-
-*)
-
 val REWRITE_THM = fn th => REWRITE_TAC[th];
 
 
@@ -40,10 +31,10 @@ val REWRITE_THM = fn th => REWRITE_TAC[th];
 
 Datatype:
 
-          msg1 = Nonce1 of num
-               | Mpair1 of msg1 => msg1
-               | Crypt1 of num => msg1
-               | Decrypt1 of num => msg1
+          msg1 = Nonce1 num
+               | Mpair1 msg1 msg1
+               | Crypt1 num msg1
+               | Decrypt1 num msg1
 End
 
 (* Notice: no nesting or mutual recursion; a simply recursive type. *)

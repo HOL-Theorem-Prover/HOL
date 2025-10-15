@@ -3,30 +3,11 @@
 (* Note that finite paths can be empty.                                      *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* START BOILERPLATE                                                         *)
-(*****************************************************************************)
-
-(******************************************************************************
-* Load theories
-* (commented out for compilation)
-******************************************************************************)
-(*
-quietdec := true;
-map load ["intLib","FinitePSLPathTheory"];
-open intLib rich_listTheory FinitePSLPathTheory;
-quietdec := false;
-*)
-
 Theory PSLPath
 Ancestors
   rich_list FinitePSLPath
 Libs
   intLib
-
-(*****************************************************************************)
-(* END BOILERPLATE                                                           *)
-(*****************************************************************************)
 
 (******************************************************************************
 * Simpsets to deal properly with theorems containing SUC
@@ -39,8 +20,8 @@ val _ = ParseExtras.temp_loose_equality()
 * A path is finite or infinite
 ******************************************************************************)
 Datatype:
-   path = FINITE   of ('s list)
-        | INFINITE of (num -> 's)
+   path = FINITE   ('s list)
+        | INFINITE (num -> 's)
 End
 
 (******************************************************************************
@@ -149,7 +130,7 @@ val FINITE_TL =
 ******************************************************************************)
 Datatype:
    xnum = INFINITY                            (* length of an infinite path  *)
-        | XNUM of num                         (* length of a finite path     *)
+        | XNUM num                            (* length of a finite path     *)
 End
 
 (******************************************************************************

@@ -36,9 +36,9 @@ Libs
 
 
 Datatype:
-  type = tyvar of string
-       | tyfun of type => type
-       | tyforall of string set => type
+  type = tyvar string
+       | tyfun type type
+       | tyforall (string set) type
 End
 
 Definition fv_def:
@@ -689,4 +689,3 @@ val tys_fresh = store_thm(
       SRW_TAC [][pmact_decompose]
     ]
   ]);
-

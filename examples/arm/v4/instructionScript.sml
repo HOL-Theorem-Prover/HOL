@@ -6,9 +6,6 @@
 (* DATE          : 2006 - 2007                                               *)
 (* ========================================================================= *)
 
-(* interactive use:
-  app load ["wordsTheory", "armTheory"];
-*)
 Theory instruction
 Ancestors
   words arm
@@ -20,35 +17,35 @@ Libs
 
 Datatype:
   shift =
-    LSL of word4
-  | LSR of word4
-  | ASR of word4
-  | ROR of word4
+    LSL word4
+  | LSR word4
+  | ASR word4
+  | ROR word4
 End
 
 Datatype:
    addr_mode1 =
-     Dp_immediate of word4=>word8
-   | Dp_shift_immediate of shift=>word5
-   | Dp_shift_register of shift=>word4
+     Dp_immediate word4 word8
+   | Dp_shift_immediate shift word5
+   | Dp_shift_register shift word4
 End
 
 Datatype:
    addr_mode2 =
-     Dt_immediate of word12
-   | Dt_shift_immediate of shift=>word5
+     Dt_immediate word12
+   | Dt_shift_immediate shift word5
 End
 
 Datatype:
    addr_mode3 =
-     Dth_immediate of word8
-   | Dth_register of word4
+     Dth_immediate word8
+   | Dth_register word4
 End
 
 Datatype:
    msr_mode =
-     Msr_immediate of word4=>word8
-   | Msr_register of word4
+     Msr_immediate word4 word8
+   | Msr_register word4
 End
 
 Datatype:
@@ -61,46 +58,46 @@ End
 
 Datatype:
   arm_instruction =
-    B of condition=>word24
-  | BL of condition=>word24
-  | SWI of condition
-  | AND of condition=>bool=>word4=>word4=>addr_mode1
-  | EOR of condition=>bool=>word4=>word4=>addr_mode1
-  | SUB of condition=>bool=>word4=>word4=>addr_mode1
-  | RSB of condition=>bool=>word4=>word4=>addr_mode1
-  | ADD of condition=>bool=>word4=>word4=>addr_mode1
-  | ADC of condition=>bool=>word4=>word4=>addr_mode1
-  | SBC of condition=>bool=>word4=>word4=>addr_mode1
-  | RSC of condition=>bool=>word4=>word4=>addr_mode1
-  | TST of condition=>word4=>addr_mode1
-  | TEQ of condition=>word4=>addr_mode1
-  | CMP of condition=>word4=>addr_mode1
-  | CMN of condition=>word4=>addr_mode1
-  | ORR of condition=>bool=>word4=>word4=>addr_mode1
-  | MOV of condition=>bool=>word4=>addr_mode1
-  | BIC of condition=>bool=>word4=>word4=>addr_mode1
-  | MVN of condition=>bool=>word4=>addr_mode1
-  | MUL of condition=>bool=>word4=>word4=>word4
-  | MLA of condition=>bool=>word4=>word4=>word4=>word4
-  | UMULL of condition=>bool=>word4=>word4=>word4=>word4
-  | UMLAL of condition=>bool=>word4=>word4=>word4=>word4
-  | SMULL of condition=>bool=>word4=>word4=>word4=>word4
-  | SMLAL of condition=>bool=>word4=>word4=>word4=>word4
-  | LDRH of condition=>bool=>bool=>transfer_options=>word4=>word4=>addr_mode3
-  | STRH of condition=>transfer_options=>word4=>word4=>addr_mode3
-  | LDR of condition=>bool=>transfer_options=>word4=>word4=>addr_mode2
-  | STR of condition=>bool=>transfer_options=>word4=>word4=>addr_mode2
-  | LDM of condition=>bool=>transfer_options=>word4=>word16
-  | STM of condition=>bool=>transfer_options=>word4=>word16
-  | SWP of condition=>bool=>word4=>word4=>word4
-  | MRS of condition=>bool=>word4
-  | MSR of condition=>msr_psr=>msr_mode
-  | CDP of condition=>word4=>word4=>word4=>word4=>word4=>word3
-  | LDC of condition=>bool=>transfer_options=>word4=>word4=>word4=>word8
-  | STC of condition=>bool=>transfer_options=>word4=>word4=>word4=>word8
-  | MRC of condition=>word4=>word3=>word4=>word4=>word4=>word3
-  | MCR of condition=>word4=>word3=>word4=>word4=>word4=>word3
-  | UND of condition
+    B condition word24
+  | BL condition word24
+  | SWI condition
+  | AND condition bool word4 word4 addr_mode1
+  | EOR condition bool word4 word4 addr_mode1
+  | SUB condition bool word4 word4 addr_mode1
+  | RSB condition bool word4 word4 addr_mode1
+  | ADD condition bool word4 word4 addr_mode1
+  | ADC condition bool word4 word4 addr_mode1
+  | SBC condition bool word4 word4 addr_mode1
+  | RSC condition bool word4 word4 addr_mode1
+  | TST condition word4 addr_mode1
+  | TEQ condition word4 addr_mode1
+  | CMP condition word4 addr_mode1
+  | CMN condition word4 addr_mode1
+  | ORR condition bool word4 word4 addr_mode1
+  | MOV condition bool word4 addr_mode1
+  | BIC condition bool word4 word4 addr_mode1
+  | MVN condition bool word4 addr_mode1
+  | MUL condition bool word4 word4 word4
+  | MLA condition bool word4 word4 word4 word4
+  | UMULL condition bool word4 word4 word4 word4
+  | UMLAL condition bool word4 word4 word4 word4
+  | SMULL condition bool word4 word4 word4 word4
+  | SMLAL condition bool word4 word4 word4 word4
+  | LDRH condition bool bool transfer_options word4 word4 addr_mode3
+  | STRH condition transfer_options word4 word4 addr_mode3
+  | LDR condition bool transfer_options word4 word4 addr_mode2
+  | STR condition bool transfer_options word4 word4 addr_mode2
+  | LDM condition bool transfer_options word4 word16
+  | STM condition bool transfer_options word4 word16
+  | SWP condition bool word4 word4 word4
+  | MRS condition bool word4
+  | MSR condition msr_psr msr_mode
+  | CDP condition word4 word4 word4 word4 word4 word3
+  | LDC condition bool transfer_options word4 word4 word4 word8
+  | STC condition bool transfer_options word4 word4 word4 word8
+  | MRC condition word4 word3 word4 word4 word4 word3
+  | MCR condition word4 word3 word4 word4 word4 word3
+  | UND condition
 End
 
 (* ------------------------------------------------------------------------- *)
@@ -266,4 +263,3 @@ End
 val _ = overload_on("enc", ``instruction_encode``);
 
 (* ------------------------------------------------------------------------- *)
-

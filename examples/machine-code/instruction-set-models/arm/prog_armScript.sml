@@ -16,11 +16,11 @@ val _ = prefer_num();
 (* ----------------------------------------------------------------------------- *)
 
 Datatype:
-  arm_el =  aReg of word4 => word32
-          | aMem of word32 => word8
-          | aStatus of arm_bit => bool
-          | aCPSR_Reg of word32
-          | aUndef of bool
+  arm_el =  aReg word4 word32
+          | aMem word32 word8
+          | aStatus arm_bit bool
+          | aCPSR_Reg word32
+          | aUndef bool
 End
 
 val arm_el_11 = DB.fetch "-" "arm_el_11";

@@ -97,7 +97,7 @@ QED
 (* Output of the compiler is in terms of vectors.                            *)
 (*---------------------------------------------------------------------------*)
 
-Datatype: vector = Vector of 'a list
+Datatype: vector = Vector ('a list)
 End
 
 Definition fromList_def : fromList l = Vector l

@@ -7,9 +7,6 @@
 
  ---------------------------------------------------------------------------*)
 
-(* Interactive use:
-   app load ["bossLib", "Q", "pred_setTheory", "stringTheory"];
-*)
 Theory dB
 Ancestors
   pred_set arithmetic basic_swap
@@ -55,11 +52,11 @@ val GSPEC_DEF = Q.prove
 (* ===================================================================== *)
 
 Datatype:
-            dB = dCON   of 'a
-               | dVAR   of string
-               | dBOUND of num
-               | dABS   of dB
-               | dAPP   of dB => dB
+            dB = dCON   'a
+               | dVAR   string
+               | dBOUND num
+               | dABS   dB
+               | dAPP   dB dB
 End
 
 

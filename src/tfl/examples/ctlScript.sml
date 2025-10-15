@@ -44,23 +44,23 @@ Datatype:
      state_formula
           = TRUE
           | FALSE
-          | REG of 'a
-          | NOT of state_formula
-          | SDISJ of state_formula => state_formula
-          | SCONJ of state_formula => state_formula
-          | E of path_formula
-          | A of path_formula;
+          | REG 'a
+          | NOT state_formula
+          | SDISJ state_formula state_formula
+          | SCONJ state_formula state_formula
+          | E path_formula
+          | A path_formula;
 
      path_formula
-          = STATE of state_formula
-          | FAILS of path_formula
-          | PDISJ of path_formula => path_formula
-          | PCONJ of path_formula => path_formula
-          | X of path_formula
-          | FU of path_formula
-          | G of path_formula
-          | U of path_formula => path_formula
-          | R of path_formula => path_formula
+          = STATE state_formula
+          | FAILS path_formula
+          | PDISJ path_formula path_formula
+          | PCONJ path_formula path_formula
+          | X path_formula
+          | FU path_formula
+          | G path_formula
+          | U path_formula path_formula
+          | R path_formula path_formula
 End
 
 (*---------------------------------------------------------------------------
@@ -199,7 +199,7 @@ End
  * PI is infinite sequence of states s0,s1,s2... s.t. !i. R(si, si+1)
  *---------------------------------------------------------------------------*)
 
-Datatype: Path = PATH of num -> 'state
+Datatype: Path = PATH (num -> 'state)
 End
 
 val _ = mkMyInfix "STATE_NO" 140;

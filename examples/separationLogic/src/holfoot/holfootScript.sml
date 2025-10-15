@@ -6,24 +6,6 @@ Ancestors
 Libs
   ConseqConv boolSimps quantHeuristicsLib
 
-(*
-quietdec := true;
-loadPath :=
-            (concat [Globals.HOLDIR, "/examples/separationLogic/src"]) ::
-            (concat [Globals.HOLDIR, "/examples/separationLogic/src/holfoot"]) ::
-            !loadPath;
-
-map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
-   "rich_listTheory", "generalHelpersTheory", "latticeTheory", "separationLogicTheory",
-   "stringTheory",
-   "vars_as_resourceTheory", "containerTheory"];
-show_assums := true;
-*)
-
-(*
-quietdec := false;
-*)
-
 val _ = ParseExtras.temp_loose_equality()
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"]
@@ -40,12 +22,12 @@ val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"]
  *********************)
 
 Datatype: holfoot_tag =
-   holfoot_tag of string
+   holfoot_tag string
 End
 val holfoot_tag_11 = DB.fetch "-" "holfoot_tag_11";
 
 Datatype: holfoot_var =
-   holfoot_var of string
+   holfoot_var string
 End
 val holfoot_var_11 = DB.fetch "-" "holfoot_var_11";
 
@@ -10036,5 +10018,3 @@ val asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___HOLFOOT_REWRITES =
   save_thm ("asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___HOLFOOT_REWRITES",
   LIST_CONJ [
     asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___HOLFOOT_SIMPLE_REWRITES])
-
-

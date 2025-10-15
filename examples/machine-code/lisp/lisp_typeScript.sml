@@ -11,7 +11,7 @@ val RW1 = ONCE_REWRITE_RULE;
 
 (* type *)
 
-Datatype: SExp = Dot of SExp => SExp | Val of num | Sym of string
+Datatype: SExp = Dot SExp SExp | Val num | Sym string
 End
 val SExp_11 = fetch "-" "SExp_11";
 val SExp_distinct = fetch "-" "SExp_distinct";
@@ -126,5 +126,3 @@ val isQuote_thm = store_thm("isQuote_thm",
   \\ SIMP_TAC std_ss [SExp_distinct] \\ Cases_on `S0`
   \\ REWRITE_TAC [isQuote_def,isDot_def,CAR_def,CDR_def,SExp_11]
   \\ METIS_TAC [SExp_distinct]);
-
-

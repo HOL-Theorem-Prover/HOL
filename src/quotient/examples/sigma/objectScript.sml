@@ -14,17 +14,6 @@ Libs
 val _ = ParseExtras.temp_loose_equality()
 
 
-(* In interactive sessions, do:
-
-app load ["combinTheory", "listTheory",
-          "arithmeticTheory", "numTheory", "prim_recTheory",
-          "pairTheory", "pairLib", "pred_setTheory",
-          "dep_rewrite", "more_listTheory", "more_setTheory",
-          "variableTheory",
-          "bossLib", "MutualIndThen"];
-
-*)
-
 (* --------------------------------------------------------------------- *)
 (* Create datatypes for objects, methods, and method dictionaries.       *)
 (* --------------------------------------------------------------------- *)
@@ -32,14 +21,14 @@ app load ["combinTheory", "listTheory",
 Datatype:
        (* obj1 ::= x | [li=mi] i in 1..n |  a.l | a.l:=m *)
 
-          obj1  = OVAR1 of var
-                | OBJ1 of (string # method1) list
-                | INVOKE1 of obj1 => string
-                | UPDATE1 of obj1 => string => method1 ;
+          obj1  = OVAR1 var
+                | OBJ1 ((string # method1) list)
+                | INVOKE1 obj1 string
+                | UPDATE1 obj1 string method1 ;
 
        (* method ::= sigma(x)b *)
 
-          method1 = SIGMA1 of var => obj1
+          method1 = SIGMA1 var obj1
 End
 
 

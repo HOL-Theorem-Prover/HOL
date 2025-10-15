@@ -18,10 +18,10 @@ val RW1 = ONCE_REWRITE_RULE;
 (* ----------------------------------------------------------------------------- *)
 
 Datatype:
-  x86_el =  xReg of Xreg => word32
-          | xStatus of Xeflags => bool option
-          | xEIP of word32
-          | xMem of word32 => ((word8 # x86_permission set) option) => bool
+  x86_el =  xReg Xreg word32
+          | xStatus Xeflags (bool option)
+          | xEIP word32
+          | xMem word32 ((word8 # x86_permission set) option) bool
 End
 
 val x86_el_11 = DB.fetch "-" "x86_el_11";
@@ -1066,4 +1066,3 @@ val xSTACK_INTRO_EBX = store_thm("xSTACK_INTRO_EBX",
     RW1 [MULT_COMM] word_mul_n2w,GSYM word_sub_def,SEP_ARRAY_def,SEP_CLAUSES,
     LENGTH,LENGTH_APPEND,SPEC_MOVE_COND] \\ ONCE_REWRITE_TAC [STAR6]
   \\ METIS_TAC [SPEC_FRAME]);
-

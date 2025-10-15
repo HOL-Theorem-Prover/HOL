@@ -14,10 +14,10 @@ End
 
 val _ = new_type ("ast", 0)
 
-Datatype: gtok = NT of nt | TOK of num
+Datatype: gtok = NT nt | TOK num
 End
 
-Datatype: ptree = Lf of gtok | Nd of nt => ptree list
+Datatype: ptree = Lf gtok | Nd nt (ptree list)
 End
 
 val _ = new_constant("Ast_Tapp", ``:ast list -> num -> ast``);
@@ -55,6 +55,3 @@ val fails_ptree_Type_def = Pmatch.with_classic_heuristic Define `
                  | _ => NONE)
        | _ => NONE)
 `
-
-
-

@@ -8,11 +8,11 @@ val _ = Parse.hide "mem"
 
 Datatype:
    m0_assertion =
-   M0_ASSERTION of bool => bool => bool => bool =>    (* n z c v      *)
-                   num =>                             (* count        *)
-                   RName set => (RName -> word32) =>  (* gp registers *)
-                   word32 set => (word32 -> word8) => (* memory       *)
-                   word32                             (* pc           *)
+   M0_ASSERTION    bool bool bool bool            (* n z c v      *)
+                   num                            (* count        *)
+                   (RName set) (RName -> word32)  (* gp registers *)
+                   (word32 set) (word32 -> word8) (* memory       *)
+                   word32                         (* pc           *)
 End
 
 Definition M0_ASSERT_def:
@@ -29,4 +29,3 @@ End
 
 Definition L3_M0_def:   L3_M0 = (M0_ASSERT, M0_MODEL)
 End
-

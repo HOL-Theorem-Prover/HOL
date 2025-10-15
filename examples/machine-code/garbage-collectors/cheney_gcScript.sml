@@ -32,7 +32,7 @@ val SUBSET0_TRANS = store_thm("SUBSET0_TRANS",
   REWRITE_TAC [SUBSET0_DEF,SUBSET_DEF,IN_INSERT] \\ METIS_TAC []);
 
 Datatype:
-  heap_type = EMP | REF of num | DATA of num # num # 'a
+  heap_type = EMP | REF num | DATA (num # num # 'a)
 End
 
 Definition isREF_def:   isREF x = ?i. x = REF i

@@ -352,7 +352,7 @@ QED
  * bit0                                                                      *
  * ------------------------------------------------------------------------- *)
 
-Datatype: bit0 = BIT0A of 'a | BIT0B of 'a
+Datatype: bit0 = BIT0A 'a | BIT0B 'a
 End
 
 Definition IS_BIT0A_def[nocompute]:
@@ -469,7 +469,7 @@ QED
  * bit1                                                                      *
  * ------------------------------------------------------------------------- *)
 
-Datatype: bit1 = BIT1A of 'a | BIT1B of 'a | BIT1C
+Datatype: bit1 = BIT1A 'a | BIT1B 'a | BIT1C
 End
 
 Definition IS_BIT1A_def[nocompute]:

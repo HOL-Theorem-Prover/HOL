@@ -38,7 +38,7 @@ End
 
 Datatype: mode_status
                      = armed
-                     | Mode of off_eng
+                     | Mode off_eng
 End
 
 
@@ -367,4 +367,3 @@ val reachable_induct = prove
 
 
 val _ = Count.report (Count.read meter);
-

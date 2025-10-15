@@ -29,7 +29,7 @@ val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
 val _ = type_abbrev( "event" , ``:'a ->bool``);
 
 Datatype:
-        rbd = series of rbd list| parallel of rbd list | atomic of 'a  event
+  rbd = series (rbd list) | parallel (rbd list) | atomic ('a event)
 End
 
 (*----------------------------------------------*)
@@ -3713,5 +3713,3 @@ GEN_TAC
 >> EXISTS_TAC(``FLAT (FLAT h):'a event list``)
 >> RW_TAC list_ss[]
 QED
-
-

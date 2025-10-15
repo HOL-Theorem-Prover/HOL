@@ -208,13 +208,13 @@ val MEM_ALL_SPLITS_LENGTH = prove
 
 Datatype:
    regexp =
-     Atom of ('s -> bool)                 (* Boolean expression       *)
-   | Cat of regexp => regexp              (* Concatenation            *)
-   | Fuse of regexp => regexp             (* Fusion                   *)
-   | Or of regexp => regexp               (* Disjunction              *)
-   | And of regexp => regexp              (* Conjunction              *)
-   | Repeat of regexp                     (* Iterated concat, >= 0    *)
-   | Prefix of regexp                     (* Prefix                   *)
+     Atom ('s -> bool)              (* Boolean expression       *)
+   | Cat regexp regexp              (* Concatenation            *)
+   | Fuse regexp regexp             (* Fusion                   *)
+   | Or regexp regexp               (* Disjunction              *)
+   | And regexp regexp              (* Conjunction              *)
+   | Repeat regexp                  (* Iterated concat, >= 0    *)
+   | Prefix regexp                  (* Prefix                   *)
 End
 
 Definition Dot_def:    Dot  = Atom (\x : 'a. T)

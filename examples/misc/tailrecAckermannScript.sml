@@ -2,7 +2,7 @@ Theory tailrecAckermann
 Ancestors[qualified]
   container
 
-Datatype: work = DO of num => num | PENDING of num
+Datatype: work = DO num num | PENDING num
 End
 
 Definition wsize_def:
@@ -57,4 +57,3 @@ A(4,0) is also fine.  A(4,1) certainly isn't.
 
 (* I haven't given any thought to proving this formulation equivalent to
    the traditional definition *)
-

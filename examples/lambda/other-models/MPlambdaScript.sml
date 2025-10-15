@@ -6,10 +6,12 @@ Libs
 
 fun Store_thm (n,t,tac) = store_thm(n,t,tac) before export_rewrites [n]
 
-Datatype: MPterm = Var of string
-                             | Parameter of string
-                             | App of MPterm => MPterm
-                             | Abs of string => MPterm
+Datatype:
+  MPterm =
+  Var string
+  | Parameter string
+  | App MPterm MPterm
+  | Abs string MPterm
 End
 
 Definition psub_def:
@@ -938,5 +940,3 @@ val ccbeta_beta = store_thm(
     MAP_EVERY Q.EXISTS_TAC [`v`, `N`, `v`, `N`] THEN
     FULL_SIMP_TAC (srw_ss()) [alpha_def] THEN METIS_TAC [convert_unique]
   ]);
-
-

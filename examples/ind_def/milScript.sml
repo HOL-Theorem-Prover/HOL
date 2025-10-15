@@ -7,9 +7,6 @@
 (* DATE         : 90.12.03                                              *)
 (* =====================================================================*)
 
-(*
-  app load ["IndDefLib", "clTheory"] ;
-*)
 Theory mil
 Ancestors
   cl
@@ -25,8 +22,8 @@ Libs
 (* Combinatory logic types and type judgements.                          *)
 (* ===================================================================== *)
 
-Datatype:      ty = G  of 'a
-                  | -> of ty => ty
+Datatype:
+  ty = G 'a | -> ty ty
 End
 
 val _ = set_fixity "->" (Infixr 800);

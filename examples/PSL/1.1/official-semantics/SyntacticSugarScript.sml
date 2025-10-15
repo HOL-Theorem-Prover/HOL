@@ -118,8 +118,8 @@ End
 * Datatype to represent a number or range
 ******************************************************************************)
 Datatype:
-   count = NUM of num                            (* number                   *)
-         | RANGE of num # num option             (* range                    *)
+   count = NUM    num                            (* number                   *)
+         | RANGE    (num # num option)           (* range                    *)
 End
 
 (******************************************************************************

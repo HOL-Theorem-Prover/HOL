@@ -13,7 +13,7 @@ Ancestors
 (*****************************************************************************)
 
 Datatype:
-   atom = Nil | Number of num | String of string
+   atom = Nil | Number num | String string
 End
 
 (*****************************************************************************)
@@ -21,7 +21,7 @@ End
 (*****************************************************************************)
 
 Datatype:
-   sexpression = A of atom | Cons of sexpression => sexpression
+   sexpression = A atom | Cons sexpression sexpression
 End
 
 (*****************************************************************************)
@@ -29,15 +29,15 @@ End
 (*****************************************************************************)
 
 Datatype:
-   term = Con of sexpression
-        | Var of string
-        | App of func => term list
-        | Ite of (term # term)list;
+   term = Con sexpression
+        | Var string
+        | App func (term list)
+        | Ite ((term # term) list);
 
-   func = FunCon of string
-        | FunVar of string
-        | Lambda of string list => term
-        | Label  of string => func
+   func = FunCon string
+        | FunVar string
+        | Lambda (string list) term
+        | Label  string func
 End
 
 (*****************************************************************************)
@@ -263,4 +263,3 @@ val (R_ap_rules,R_ap_ind,R_ap_cases) =
   (!e el s sl a.
     R_ev (e,a) s /\ R_evl (el,a) sl
     ==> R_evl (e::el,a) (s::sl))`;
-

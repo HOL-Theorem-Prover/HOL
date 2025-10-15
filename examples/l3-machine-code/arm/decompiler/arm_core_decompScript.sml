@@ -7,36 +7,36 @@ Ancestors
 val _ = Parse.hide "mem"
 
 Datatype:
-   arm_assertion = ARM_ASSERTION of
-                    (* mode *) word5 =>
-                    (* r0 *) word32 =>
-                    (* r1 *) word32 =>
-                    (* r2 *) word32 =>
-                    (* r3 *) word32 =>
-                    (* r4 *) word32 =>
-                    (* r5 *) word32 =>
-                    (* r6 *) word32 =>
-                    (* r7 *) word32 =>
-                    (* r8 *) word32 =>
-                    (* r9 *) word32 =>
-                    (* r10 *) word32 =>
-                    (* r11 *) word32 =>
-                    (* r12 *) word32 =>
-                    (* r13 *) word32 =>
-                    (* r14 *) word32 =>
-                    (* n *) bool =>
-                    (* z *) bool =>
-                    (* c *) bool =>
-                    (* v *) bool =>
-                    (* domain of fps *) word5 set =>
-                    (* fp registers *) (word5 -> word64) =>
-                    (* rmode *) word2 =>
-                    (* fp_n *) bool =>
-                    (* fp_z *) bool =>
-                    (* fp_c *) bool =>
-                    (* fp_v *) bool =>
-                    (* domain of memory *) word32 set =>
-                    (* memory *) (word32 -> word8) =>
+   arm_assertion = ARM_ASSERTION
+                    (* mode *) word5
+                    (* r0 *) word32
+                    (* r1 *) word32
+                    (* r2 *) word32
+                    (* r3 *) word32
+                    (* r4 *) word32
+                    (* r5 *) word32
+                    (* r6 *) word32
+                    (* r7 *) word32
+                    (* r8 *) word32
+                    (* r9 *) word32
+                    (* r10 *) word32
+                    (* r11 *) word32
+                    (* r12 *) word32
+                    (* r13 *) word32
+                    (* r14 *) word32
+                    (* n *) bool
+                    (* z *) bool
+                    (* c *) bool
+                    (* v *) bool
+                    (* domain of fps *) (word5 set)
+                    (* fp registers *) (word5 -> word64)
+                    (* rmode *) word2
+                    (* fp_n *) bool
+                    (* fp_z *) bool
+                    (* fp_c *) bool
+                    (* fp_v *) bool
+                    (* domain of memory *) (word32 set)
+                    (* memory *) (word32 -> word8)
                     (* pc *) word32
 End
 
@@ -76,4 +76,3 @@ End
 
 Definition L3_ARM_def:   L3_ARM = (ARM_ASSERT, ARM_MODEL)
 End
-

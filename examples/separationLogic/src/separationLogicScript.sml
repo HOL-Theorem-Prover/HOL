@@ -5,24 +5,6 @@ Ancestors
 Libs
   congLib boolSimps ConseqConv quantHeuristicsLib
 
-(*
-quietdec := true;
-
-loadPath :=
-       (concat [Globals.HOLDIR, "/examples/separationLogic/src"]) ::
-       !loadPath;
-
-map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
-   "rich_listTheory", "generalHelpersTheory", "latticeTheory", "containerTheory",
-   "bagTheory"];
-show_assums := true;
-*)
-
-(*
-open Sanity
-quietdec := false;
-*)
-
 val _ = ParseExtras.temp_loose_equality()
 
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
@@ -4311,12 +4293,12 @@ SIMP_TAC std_ss [GSYM asla_diverge_def, asla_seq_diverge]);
 
 
 Datatype:
- asl_predicate = asl_pred_prim of (('state option -> 'state option -> 'state option) -> 'state set)
+ asl_predicate = asl_pred_prim (('state option -> 'state option -> 'state option) -> 'state set)
          | asl_pred_true
          | asl_pred_false
-         | asl_pred_neg of asl_predicate
-         | asl_pred_and of asl_predicate => asl_predicate
-         | asl_pred_or of asl_predicate => asl_predicate
+         | asl_pred_neg asl_predicate
+         | asl_pred_and asl_predicate asl_predicate
+         | asl_pred_or asl_predicate asl_predicate
 End
 
 
@@ -4639,7 +4621,7 @@ Induct_on `L` THENL [
 (* -------------------------------------------------------------------------- *)
 
 Datatype:
- asl_prim_command = asl_pc_shallow_command of (('state option -> 'state option -> 'state option) -> 'state asl_action)
+ asl_prim_command = asl_pc_shallow_command (('state option -> 'state option -> 'state option) -> 'state asl_action)
 End
 
 
@@ -4722,10 +4704,10 @@ SIMP_TAC std_ss [EVAL_asl_prim_command_def, COND_RAND, COND_RATOR,
 (* -------------------------------------------------------------------------- *)
 
 Datatype:
- asl_atomic_action = asl_aa_pc of 'state asl_prim_command
-              |   asl_aa_check of 'state asl_prim_command => 'state asl_prim_command
-              |   asl_aa_prolaag of 'lock
-              |   asl_aa_verhoog of 'lock
+ asl_atomic_action = asl_aa_pc ('state asl_prim_command)
+              |   asl_aa_check ('state asl_prim_command) ('state asl_prim_command)
+              |   asl_aa_prolaag 'lock
+              |   asl_aa_verhoog 'lock
 End
 
 
@@ -5528,12 +5510,12 @@ SIMP_TAC list_ss [ASL_TRACE_IS_LOCK_FREE_def, ASL_IS_SING_LOCK_ATOMIC_ACTION_def
 
 Datatype:
    asl_proto_trace =
-             asl_pt_prim_command of 'state asl_prim_command
-           |      asl_pt_seq of asl_proto_trace => asl_proto_trace
-           |      asl_pt_procedure_call of 'name => 'arg
-           |      asl_pt_parallel of asl_proto_trace => asl_proto_trace
-           |      asl_pt_lock_declaration of 'lock => asl_proto_trace
-           |      asl_pt_critical_section of 'lock => asl_proto_trace
+             asl_pt_prim_command ('state asl_prim_command)
+           |      asl_pt_seq asl_proto_trace asl_proto_trace
+           |      asl_pt_procedure_call 'name 'arg
+           |      asl_pt_parallel asl_proto_trace asl_proto_trace
+           |      asl_pt_lock_declaration 'lock asl_proto_trace
+           |      asl_pt_critical_section 'lock asl_proto_trace
 End
 
 val asl_proto_trace_size_def = fetch "-" "asl_proto_trace_size_def";

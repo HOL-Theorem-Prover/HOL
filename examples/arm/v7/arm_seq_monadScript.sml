@@ -4,9 +4,6 @@
 (*     Defines ARM state-space and a sequential state-transforming Monad    *)
 (* ------------------------------------------------------------------------ *)
 
-(* interactive use:
-  app load ["arm_astTheory", "wordsLib"];
-*)
 Theory arm_seq_monad
 Ancestors
   arm_ast
@@ -101,7 +98,7 @@ End
 
 (* ------------------------------------------------------------------------ *)
 
-Datatype: error_option = ValueState of 'a => 'b | Error of string
+Datatype: error_option = ValueState 'a 'b | Error string
 End
 
 val _ = type_abbrev("M",``:arm_state -> ('a, arm_state) error_option``);
@@ -959,4 +956,3 @@ val _ = computeLib.add_persistent_funs
   ["have_security_ext",
    "have_thumbEE",
    "have_jazelle"];
-

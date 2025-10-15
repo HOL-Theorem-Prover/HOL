@@ -17,7 +17,7 @@ val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
 Datatype:
   stack_slot = ssTEMP
-             | ssVAR of string
+             | ssVAR string
 End
 
 val stack_slot_11 = fetch "-" "stack_slot_11"
@@ -3200,4 +3200,3 @@ val iSTEP_DETERMINISTIC = store_thm("iSTEP_DETERMINISTIC",
   \\ IMP_RES_TAC list2sexp_MAP_Sym_11 \\ FULL_SIMP_TAC std_ss []);
 
 *)
-

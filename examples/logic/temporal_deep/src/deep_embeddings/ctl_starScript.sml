@@ -6,45 +6,22 @@ Ancestors
 Libs
   tuerk_tacticsLib res_quanTools numLib Sanity
 
-(*
-quietdec := true;
-
-val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") ::
-            (concat home_dir "src/tools") :: !loadPath;
-
-map load
- ["tuerk_tacticsLib", "res_quanTools", "prop_logicTheory",
-  "infinite_pathTheory", "symbolic_kripke_structureTheory", "numLib",
-  "full_ltlTheory", "pred_setTheory",
-  "symbolic_semi_automatonTheory", "automaton_formulaTheory",
-  "temporal_deep_mixedTheory", "pairTheory", "set_lemmataTheory"];
-*)
-
 val _ = hide "S";
 val _ = hide "I";
-
-(*
-show_assums := false;
-show_assums := true;
-show_types := true;
-show_types := false;
-quietdec := false;
-*)
 
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val _ = ParseExtras.temp_loose_equality()
 
 
 Datatype:
-   ctl_star = CTL_STAR_PROP       of 'a prop_logic               (* boolean expression      *)
-            | CTL_STAR_NOT        of ctl_star                    (* \neg f                  *)
-            | CTL_STAR_AND        of ctl_star # ctl_star         (* f1 \wedge f2            *)
-            | CTL_STAR_PSNEXT     of ctl_star                    (* X f                     *)
-            | CTL_STAR_PSUNTIL    of ctl_star # ctl_star         (* f1 U f2                 *)
-            | CTL_STAR_NEXT       of ctl_star                    (* X f                     *)
-            | CTL_STAR_SUNTIL     of ctl_star # ctl_star         (* f1 U f2                 *)
-            | CTL_STAR_E          of ctl_star                    (* E f                     *)
+   ctl_star = CTL_STAR_PROP       ('a prop_logic)             (* boolean expression      *)
+            | CTL_STAR_NOT        ctl_star                    (* \neg f                  *)
+            | CTL_STAR_AND        (ctl_star # ctl_star)       (* f1 \wedge f2            *)
+            | CTL_STAR_PSNEXT     ctl_star                    (* X f                     *)
+            | CTL_STAR_PSUNTIL    (ctl_star # ctl_star)       (* f1 U f2                 *)
+            | CTL_STAR_NEXT       ctl_star                    (* X f                     *)
+            | CTL_STAR_SUNTIL     (ctl_star # ctl_star)       (* f1 U f2                 *)
+            | CTL_STAR_E          ctl_star                    (* E f                     *)
 End
 
 
@@ -521,12 +498,12 @@ val LTL_KS_SEM___TO___CTL_STAR_KS_SEM =
  ******************************************************************************)
 
 Datatype:
-   fair_ctl =   FAIR_CTL_PROP     of 'a prop_logic                     (* boolean expression      *)
-         | FAIR_CTL_NOT      of fair_ctl                                    (* \neg f                  *)
-         | FAIR_CTL_AND      of fair_ctl # fair_ctl                              (* f1 \wedge f2            *)
-         | FAIR_CTL_E_NEXT   of ('a prop_logic list) => fair_ctl            (* X f                     *)
-         | FAIR_CTL_E_SUNTIL of ('a prop_logic list) => (fair_ctl # fair_ctl)    (* strong_until            *)
-         | FAIR_CTL_E_UNTIL  of ('a prop_logic list) => (fair_ctl # fair_ctl)    (* weak until              *)
+   fair_ctl =   FAIR_CTL_PROP     ('a prop_logic)                          (* boolean expression      *)
+         | FAIR_CTL_NOT      fair_ctl                                      (* \neg f                  *)
+         | FAIR_CTL_AND      (fair_ctl # fair_ctl)                         (* f1 \wedge f2            *)
+         | FAIR_CTL_E_NEXT   ('a prop_logic list) fair_ctl                 (* X f                     *)
+         | FAIR_CTL_E_SUNTIL ('a prop_logic list) (fair_ctl # fair_ctl)    (* strong_until            *)
+         | FAIR_CTL_E_UNTIL  ('a prop_logic list) (fair_ctl # fair_ctl)    (* weak until              *)
 End
 
 val fair_ctl_induct =
@@ -828,12 +805,12 @@ val FAIR_CTL_SEM_THM =
  ******************************************************************************)
 
 Datatype:
-   ctl =   CTL_PROP     of 'a prop_logic     (* boolean expression      *)
-         | CTL_NOT      of ctl               (* \neg f                  *)
-         | CTL_AND      of ctl # ctl         (* f1 \wedge f2            *)
-         | CTL_E_NEXT   of ctl               (* X f                     *)
-         | CTL_E_SUNTIL of ctl # ctl         (* strong_until            *)
-         | CTL_E_UNTIL  of ctl # ctl         (* weak until              *)
+   ctl =   CTL_PROP     ('a prop_logic)   (* boolean expression      *)
+         | CTL_NOT      ctl               (* \neg f                  *)
+         | CTL_AND      (ctl # ctl)       (* f1 \wedge f2            *)
+         | CTL_E_NEXT   ctl               (* X f                     *)
+         | CTL_E_SUNTIL (ctl # ctl)       (* strong_until            *)
+         | CTL_E_UNTIL  (ctl # ctl)       (* weak until              *)
 End
 
 

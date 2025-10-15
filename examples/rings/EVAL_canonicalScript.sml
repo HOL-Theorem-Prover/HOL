@@ -57,8 +57,8 @@ fun ARW_TAC l = BasicProvers.RW_TAC bool_ss
 Datatype:
    canonical_sum =
      Nil_monom
-   | Cons_monom of 'a => index list => canonical_sum
-   | Cons_varlist of index list => canonical_sum
+   | Cons_monom 'a (index list) canonical_sum
+   | Cons_varlist (index list) canonical_sum
 End
 
 

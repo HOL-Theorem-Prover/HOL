@@ -4,25 +4,11 @@ Ancestors
 Libs
   boolSimps ConseqConv
 
-(*
-quietdec := true;
-loadPath :=
-            (Globals.HOLDIR ^ "/examples/separationLogic/src") ::
-            !loadPath;
-
-map load ["relationTheory", "pred_setTheory", "operatorTheory"];
-show_assums := true;
-*)
-
-(*
-quietdec := false;
-*)
-
 val _ = ParseExtras.temp_loose_equality()
 
 Datatype: tree =
     leaf
-  | node of 'a => tree list
+  | node 'a (tree list)
 End
 
 
@@ -665,5 +651,3 @@ val TREE_PATHS_NOT_EMPTY = store_thm ("TREE_PATHS_NOT_EMPTY",
    Q.EXISTS_TAC `h` THEN
    ASM_REWRITE_TAC[]
 );
-
-

@@ -143,7 +143,7 @@ Datatype: MBReqTypes = MBReqTypes_All | MBReqTypes_Writes
 End
 
 Datatype: memory_access =
-  MEM_READ of FullAddress | MEM_WRITE of FullAddress => word8
+  MEM_READ FullAddress | MEM_WRITE FullAddress word8
 End
 
 (* Coprocessors *)

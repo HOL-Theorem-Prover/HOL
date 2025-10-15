@@ -16,8 +16,8 @@ Ancestors
 
 
 Datatype:
-  Zrm = Zr of Zreg                                           (* register *)
-      | Zm of (word2 # Zreg) option => Zreg option => word64 (* mem[2^{scale} * index + base + displacement] *)
+  Zrm = Zr Zreg                                         (* register *)
+      | Zm ((word2 # Zreg) option) (Zreg option) word64 (* mem[2^{scale} * index + base + displacement] *)
 End
 
 (* check whether rm requires a lock, i.e. specifies a memory access *)
@@ -28,14 +28,14 @@ Definition Zrm_is_memory_access_def:
 End
 
 Datatype:                  (* Here XX is one of 8, 16, 32, 64. *)
-  Zdest_src = Zrm_i of Zrm  => word64  (* mnemonic r/mXX, immXX (sign-extended) *)
-            | Zrm_r of Zrm  => Zreg    (* mnemonic r/mXX, rXX *)
-            | Zr_rm of Zreg => Zrm     (* mnemonic rXX, r/mXX *)
+  Zdest_src = Zrm_i Zrm  word64  (* mnemonic r/mXX, immXX (sign-extended) *)
+            | Zrm_r Zrm  Zreg    (* mnemonic r/mXX, rXX *)
+            | Zr_rm Zreg Zrm     (* mnemonic rXX, r/mXX *)
 End
 
 Datatype:
-  Zimm_rm = Zi_rm of Zrm      (* r/mXX *)
-          | Zi    of word64   (* sign-extended immediate *)
+  Zimm_rm = Zi_rm Zrm      (* r/mXX *)
+          | Zi    word64   (* sign-extended immediate *)
 End
 
 Datatype: Zbinop_name = Zadc | Zadd | Zand | Zcmp | Zor | Zshl | Zshr | Zsar | Zsub | Zsbb | Ztest | Zxor
@@ -52,24 +52,24 @@ Datatype: Zcond = (* this list is not complete *)
 End
 
 Datatype:
-  Zinstruction = Zbinop     of Zbinop_name => Zsize => Zdest_src
-               | Zmonop     of Zmonop_name => Zsize => Zrm
-               | Zcmpxchg   of Zsize => Zrm => Zreg
-               | Zxadd      of Zsize => Zrm => Zreg
-               | Zxchg      of Zsize => Zrm => Zreg
-               | Zmul       of Zsize => Zrm
-               | Zdiv       of Zsize => Zrm
-               | Zlea       of Zsize => Zdest_src
-               | Zpop       of Zrm
-               | Zpush      of Zimm_rm
-               | Zcall      of Zimm_rm
-               | Zret       of word64
+  Zinstruction = Zbinop     Zbinop_name Zsize Zdest_src
+               | Zmonop     Zmonop_name Zsize Zrm
+               | Zcmpxchg   Zsize Zrm Zreg
+               | Zxadd      Zsize Zrm Zreg
+               | Zxchg      Zsize Zrm Zreg
+               | Zmul       Zsize Zrm
+               | Zdiv       Zsize Zrm
+               | Zlea       Zsize Zdest_src
+               | Zpop       Zrm
+               | Zpush      Zimm_rm
+               | Zcall      Zimm_rm
+               | Zret       word64
                | Zcpuid
-               | Zmov       of Zcond => Zsize => Zdest_src
-               | Zmovzx     of Zsize => Zdest_src => Zsize
-               | Zjcc       of Zcond => word64    (* jcc includes jmp rel, i.e. unconditional relative jumps. *)
-               | Zjmp       of Zrm                (* jmp excludes relative jumps, see jcc. *)
-               | Zloop      of Zcond => word64    (* Here Zcond over approximates possibilities. *)
+               | Zmov       Zcond Zsize Zdest_src
+               | Zmovzx     Zsize Zdest_src Zsize
+               | Zjcc       Zcond word64    (* jcc includes jmp rel, i.e. unconditional relative jumps. *)
+               | Zjmp       Zrm                (* jmp excludes relative jumps, see jcc. *)
+               | Zloop      Zcond word64    (* Here Zcond over approximates possibilities. *)
 End
 
 (* This semantics understands the following prefixes in addition to the REX prefix. *)
@@ -86,7 +86,5 @@ Definition Zprefix_group_def:
   (Zprefix_group Zoperand_size_override = 3)
 End
 
-Datatype: Zinst = Zfull_inst of Zprefix list => Zinstruction
+Datatype: Zinst = Zfull_inst (Zprefix list) Zinstruction
 End
-
-

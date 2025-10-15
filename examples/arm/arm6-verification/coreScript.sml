@@ -26,18 +26,18 @@ Datatype: iseq = t3 | t4 | t5 | t6 | tn | tm
 End
 
 Datatype:
-   dp = DP of reg=>psr=>word32=>word32=>word32=>word32=>word32
+   dp = DP reg psr word32 word32 word32 word32 word32
 End
 
 Datatype:
-   ctrl = CTRL of word32=>bool=>word32=>bool=>word32=>bool=>bool=>bool=>
-                  bool=>bool=>bool=>iclass=>iseq=>bool=>bool=>bool=>bool=>
-                  bool=>bool=>bool=>bool=>bool=>bool=>bool=>word3=>bool=>
-                  bool=>bool=>word32=>word32=>word2=>word16=>word4=>word4=>
-                  word2=>word32=>bool=>word5
+   ctrl = CTRL word32 bool word32 bool word32 bool bool bool
+                  bool bool bool iclass iseq bool bool bool bool
+                  bool bool bool bool bool bool bool word3 bool
+                  bool bool word32 word32 word2 word16 word4 word4
+                  word2 word32 bool word5
 End
 
-Datatype: state_arm6 = ARM6 of dp=>ctrl
+Datatype: state_arm6 = ARM6 dp ctrl
 End
 
 val arm6state = ``ARM6 (DP reg psr areg din alua alub dout)
@@ -1289,4 +1289,3 @@ val DUR_X = save_thm("DUR_X",
      SPEC `<|state := (^arm6state); inp := i|>`) DUR_X_def);
 
 (* ------------------------------------------------------------------------- *)
-
