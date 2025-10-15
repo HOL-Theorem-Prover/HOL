@@ -69,7 +69,7 @@ val pp_hol_error =
         block INCONSISTENT 0
           (pr_list pp_origin [NL] origins @
            (if message = "" then
-	       []
+               []
             else [add_break(1,2), add_string message]))
   end
 

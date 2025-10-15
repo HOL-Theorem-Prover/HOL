@@ -4,4 +4,4 @@ val _ = (
   Define ` (dummy2 c NONE = c) /\ (dummy2 d (SOME _) = c)` ;
   print "Malformed definition goes through - FAILURE\n";
   OS.Process.exit OS.Process.failure)
-handle BATCH_ERR _ => print "Test-case OK\n"
+handle Fail _ => print "Test-case OK\n"
