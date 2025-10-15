@@ -150,26 +150,26 @@ val is_fmap_REP_ABS = Q.prove
         DEFINITIONS OF UPDATE, EMPTY, APPLY and DOMAIN
  ---------------------------------------------------------------------------*)
 
-val FUPDATE_DEF = Q.new_definition
-("FUPDATE_DEF",
- `FUPDATE (f:'a |-> 'b) (x,y)
-    = fmap_ABS (\a. if a=x then INL y else fmap_REP f a)`);
+Definition FUPDATE_DEF[nocompute]:
+ FUPDATE (f:'a |-> 'b) (x,y)
+    = fmap_ABS (\a. if a=x then INL y else fmap_REP f a)
+End
 
 Overload "|+" = “FUPDATE”
 
-val FEMPTY_DEF = Q.new_definition
-("FEMPTY_DEF",
- `(FEMPTY:'a |-> 'b) = fmap_ABS (\a. INR one)`);
+Definition FEMPTY_DEF[nocompute]:
+ (FEMPTY:'a |-> 'b) = fmap_ABS (\a. INR one)
+End
 
-val FAPPLY_DEF = Q.new_definition
-("FAPPLY_DEF",
- `FAPPLY (f:'a |-> 'b) x = OUTL (fmap_REP f x)`);
+Definition FAPPLY_DEF[nocompute]:
+ FAPPLY (f:'a |-> 'b) x = OUTL (fmap_REP f x)
+End
 
 Overload "'" = “FAPPLY”
 
-val FDOM_DEF = Q.new_definition
-("FDOM_DEF",
- `FDOM (f:'a |-> 'b) x = ISL (fmap_REP f x)`);
+Definition FDOM_DEF[nocompute]:
+ FDOM (f:'a |-> 'b) x = ISL (fmap_REP f x)
+End
 
 val update_rep = Term`\(f:'a->'b+one) x y. \a. if a=x then INL y else f a`;
 
@@ -353,9 +353,8 @@ Proof
   SRW_TAC [][FDOM_FUPDATE, EXTENSION] THEN PROVE_TAC []
 QED
 
-val FDOM_EQ_EMPTY_SYM = save_thm(
-"FDOM_EQ_EMPTY_SYM",
-CONV_RULE (QUANT_CONV (LAND_CONV SYM_CONV)) FDOM_EQ_EMPTY)
+Theorem FDOM_EQ_EMPTY_SYM =
+CONV_RULE (QUANT_CONV (LAND_CONV SYM_CONV)) FDOM_EQ_EMPTY
 
 val FUPDATE_ABSORB_THM = Q.prove (
   `!(f:'a |-> 'b) x y.
@@ -408,7 +407,8 @@ val _ = export_rewrites ["FDOM_FINITE"]
 (* Define cardinality as the cardinality of the domain of the map        *)
 (* ===================================================================== *)
 
-val FCARD_DEF = new_definition("FCARD_DEF", ``FCARD fm = CARD (FDOM fm)``);
+Definition FCARD_DEF[nocompute]: FCARD fm = CARD (FDOM fm)
+End
 
 (* --------------------------------------------------------------------- *)
 (* Basic cardinality results.                                            *)
@@ -592,17 +592,16 @@ Proof
 QED
 
 (* and it's more useful still if the main equality is the other way 'round *)
-val fmap_EXT = save_thm("fmap_EXT", GSYM fmap_EQ_THM)
+Theorem fmap_EXT = GSYM fmap_EQ_THM
 
 (*---------------------------------------------------------------------------
            Submaps
  ---------------------------------------------------------------------------*)
 
-val SUBMAP_DEF = new_definition (
-  "SUBMAP_DEF",
-  ``!^fmap g.
-       $SUBMAP f g =
-       !x. x IN FDOM f ==> x IN FDOM g /\ (FAPPLY f x = FAPPLY g x)``)
+Definition SUBMAP_DEF[nocompute]:
+  $SUBMAP ^fmap g =
+  !x. x IN FDOM f ==> x IN FDOM g /\ (FAPPLY f x = FAPPLY g x)
+End
 val _ = set_fixity "SUBMAP" (Infix(NONASSOC, 450));
 val _ = Unicode.unicode_version { u = UTF8.chr 0x2291, tmnm = "SUBMAP"}
 val _ = TeX_notation {hol = "SUBMAP", TeX = ("\\HOLTokenSubmap{}", 1)}
@@ -1043,9 +1042,9 @@ QED
     "assoc" for finite maps
  ---------------------------------------------------------------------------*)
 
-val FLOOKUP_DEF = Q.new_definition
-("FLOOKUP_DEF",
- `FLOOKUP ^fmap x = if x IN FDOM f then SOME (FAPPLY f x) else NONE`);
+Definition FLOOKUP_DEF[nocompute]:
+ FLOOKUP ^fmap x = if x IN FDOM f then SOME (FAPPLY f x) else NONE
+End
 
 Theorem FLOOKUP_EMPTY:
     FLOOKUP FEMPTY k = NONE
@@ -1095,9 +1094,8 @@ Proof
  PROVE_TAC [optionTheory.SOME_11,optionTheory.NOT_SOME_NONE]
 QED
 
-val fmap_eq_flookup = save_thm(
-  "fmap_eq_flookup",
-  FLOOKUP_EXT |> REWRITE_RULE[FUN_EQ_THM]);
+Theorem fmap_eq_flookup =
+  FLOOKUP_EXT |> REWRITE_RULE[FUN_EQ_THM];
 
 Theorem FLOOKUP_DRESTRICT:
     !fm s k. FLOOKUP (DRESTRICT fm s) k = if k IN s then FLOOKUP fm k else NONE
@@ -1267,9 +1265,9 @@ QED
        Universal quantifier on finite maps
  ---------------------------------------------------------------------------*)
 
-val FEVERY_DEF = Q.new_definition
-("FEVERY_DEF",
- `FEVERY P ^fmap = !x. x IN FDOM f ==> P (x, FAPPLY f x)`);
+Definition FEVERY_DEF[nocompute]:
+ FEVERY P ^fmap = !x. x IN FDOM f ==> P (x, FAPPLY f x)
+End
 
 Theorem FEVERY_FEMPTY:
   !P:'a#'b -> bool. FEVERY P FEMPTY
@@ -1359,7 +1357,7 @@ Proof
 REWRITE_TAC [o_f_DEF]
 QED
 
-val FDOM_o_f = save_thm("FDOM_o_f", GSYM o_f_FDOM);
+Theorem FDOM_o_f = GSYM o_f_FDOM;
 val _ = export_rewrites ["FDOM_o_f"]
 
 Theorem o_f_FAPPLY:
@@ -1404,9 +1402,9 @@ QED
           Range of a finite map
  ---------------------------------------------------------------------------*)
 
-val FRANGE_DEF = Q.new_definition
-("FRANGE_DEF",
- `FRANGE ^fmap = { y | ?x. x IN FDOM f /\ (FAPPLY f x = y)}`);
+Definition FRANGE_DEF[nocompute]:
+ FRANGE ^fmap = { y | ?x. x IN FDOM f /\ (FAPPLY f x = y)}
+End
 
 Theorem FRANGE_FEMPTY:
   FRANGE FEMPTY = {}
@@ -3367,11 +3365,10 @@ Proof
      )
 QED
 
-val NUM_NOT_IN_FDOM =
+Theorem NUM_NOT_IN_FDOM =
   MATCH_MP IN_INFINITE_NOT_FINITE (CONJ INFINITE_NUM_UNIV
     (Q.ISPEC `f:num|->'a` FDOM_FINITE))
   |> SIMP_RULE std_ss [IN_UNIV]
-  |> curry save_thm "NUM_NOT_IN_FDOM";
 
 val EXISTS_NOT_IN_FDOM_LEMMA = Q.prove(
   `?x. ~(x IN FDOM (refs:num|->'a))`,

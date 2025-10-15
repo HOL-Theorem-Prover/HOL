@@ -105,8 +105,8 @@ REWRITE_TAC [PAIR_EQ]);
 
 (* cpn_distinct |- LESS <> EQUAL /\ LESS <> GREATER /\ EQUAL <> GREATER *)
 
-val all_cpn_distinct = save_thm ("all_cpn_distinct",
-CONJ cpn_distinct (GSYM cpn_distinct));
+Theorem all_cpn_distinct =
+CONJ cpn_distinct (GSYM cpn_distinct);
 
 (* We now follow boilerplate from S-K Chin, aclFoundationScript *)
 
@@ -126,36 +126,39 @@ val toto_type_definition = new_type_definition ("toto", TO_exists);
 val to_bij = define_new_type_bijections
      {name="to_bij", ABS="TO", REP="apto", tyax=toto_type_definition};
 
-val [TO_apto_ID, TO_apto_TO_ID] = map2 (curry save_thm)
-    ["TO_apto_ID", "TO_apto_TO_ID"]
-    (CONJUNCTS to_bij);
+local val [TO_apto_ID, TO_apto_TO_ID] = CONJUNCTS to_bij in
+Theorem TO_apto_ID = TO_apto_ID
+Theorem TO_apto_TO_ID = TO_apto_TO_ID;
+end
 
 (* TO_apto_ID = |- !(a :'x toto). TO (apto a) = a : thm
    TO_apto_TO_ID = |- !(r :'x comp). TotOrd r <=> (apto (TO r) = r) *)
 
-val TO_11 = save_thm ("TO_11", prove_abs_fn_one_one to_bij);
+Theorem TO_11 = prove_abs_fn_one_one to_bij;
 
 (* TO_11 = |- !(r :'x comp) (r' :'x comp).
               TotOrd r ==> TotOrd r' ==> ((TO r = TO r') <=> (r = r')) *)
 
-val onto_apto = save_thm ("onto_apto", prove_rep_fn_onto to_bij);
+Theorem onto_apto = prove_rep_fn_onto to_bij;
 
 (* onto_apto = |- !(r :'x comp). TotOrd r <=> ?(a :'x toto). r = apto a *)
 
-val TO_onto = save_thm ("TO_onto", prove_abs_fn_onto to_bij);
+Theorem TO_onto = prove_abs_fn_onto to_bij;
 
 (* TO_onto = |- !(a :'x toto). ?(r :'x comp). (a = TO r) /\ TotOrd r *)
 
 (* With introduction of 'a toto, we should now have "... c:'a toto ..."
    wherever was previously "TotOrd (c:'a comp) ==> ... c ... . *)
 
-val TotOrd_apto = store_thm ("TotOrd_apto", Term`!c:'a toto. TotOrd (apto c)`,
+Theorem TotOrd_apto: !c:'a toto. TotOrd (apto c)
+Proof
 GEN_TAC THEN MATCH_MP_TAC (CONJUNCT2 (ISPEC (Term`apto (c:'a toto)`)
                       (REWRITE_RULE [EQ_IMP_THM] onto_apto))) THEN
-EXISTS_TAC (Term`c:'a toto`) THEN REFL_TAC);
+EXISTS_TAC (Term`c:'a toto`) THEN REFL_TAC
+QED
 
-val TO_apto_TO_IMP = save_thm ("TO_apto_TO_IMP",
-GEN_ALL (fst (EQ_IMP_RULE (SPEC_ALL TO_apto_TO_ID))));
+Theorem TO_apto_TO_IMP =
+GEN_ALL (fst (EQ_IMP_RULE (SPEC_ALL TO_apto_TO_ID)));
 
 (* TO_apto_TO_IMP = |- !r. TotOrd r ==> (apto (TO r) = r) *)
 
@@ -169,35 +172,47 @@ val TO_equal_eq = maybe_thm ("TO_equal_eq",
 Term`!c:'a comp. TotOrd c ==> (!x y. (c x y = EQUAL) <=> (x = y))`,
 REWRITE_TAC [TotOrd] THEN REPEAT STRIP_TAC THEN AR);
 
-val toto_equal_eq = store_thm ("toto_equal_eq",
-Term`!c:'a toto x y. (apto c x y = EQUAL) <=> (x = y)`,
-REWRITE_TAC [toto_thm]);
+Theorem toto_equal_eq:
+!c:'a toto x y. (apto c x y = EQUAL) <=> (x = y)
+Proof
+REWRITE_TAC [toto_thm]
+QED
 
-val toto_equal_imp_eq = store_thm ("toto_equal_imp_eq",
-Term`!c:'a toto x y. (apto c x y = EQUAL) ==> (x = y)`,
-REWRITE_TAC [toto_equal_eq]);
+Theorem toto_equal_imp_eq:
+!c:'a toto x y. (apto c x y = EQUAL) ==> (x = y)
+Proof
+REWRITE_TAC [toto_equal_eq]
+QED
 
-val TO_refl = store_thm ("TO_refl",
-Term`!c:'a comp. TotOrd c ==> (!x. c x x = EQUAL)`,
+Theorem TO_refl:
+!c:'a comp. TotOrd c ==> (!x. c x x = EQUAL)
+Proof
 REPEAT STRIP_TAC THEN
 IMP_RES_THEN (MATCH_MP_TAC o snd o EQ_IMP_RULE o SPEC_ALL) TO_equal_eq THEN
-REFL_TAC);
+REFL_TAC
+QED
 
-val toto_refl = store_thm ("toto_refl",
-Term`!c:'a toto x. apto c x x = EQUAL`,
-REWRITE_TAC [toto_thm]);
+Theorem toto_refl:
+!c:'a toto x. apto c x x = EQUAL
+Proof
+REWRITE_TAC [toto_thm]
+QED
 
-val toto_equal_sym = store_thm ("toto_equal_sym",
-Term`!c:'a toto x y. (apto c x y = EQUAL) <=> (apto c y x = EQUAL)`,
-REWRITE_TAC [toto_equal_eq] THEN MATCH_ACCEPT_TAC EQ_SYM_EQ);
+Theorem toto_equal_sym:
+!c:'a toto x y. (apto c x y = EQUAL) <=> (apto c y x = EQUAL)
+Proof
+REWRITE_TAC [toto_equal_eq] THEN MATCH_ACCEPT_TAC EQ_SYM_EQ
+QED
 
 val TO_antisym = maybe_thm ("TO_antisym",
 Term`!c:'a comp. TotOrd c ==> (!x y. (c x y = GREATER) <=> (c y x = LESS))`,
 REWRITE_TAC [TotOrd] THEN REPEAT STRIP_TAC THEN AR);
 
-val toto_antisym = store_thm ("toto_antisym",
-Term`!c:'a toto x y. (apto c x y = GREATER) <=> (apto c y x = LESS)`,
-REWRITE_TAC [toto_thm]);
+Theorem toto_antisym:
+!c:'a toto x y. (apto c x y = GREATER) <=> (apto c y x = LESS)
+Proof
+REWRITE_TAC [toto_thm]
+QED
 
 Theorem toto_not_less_refl:
   !cmp:'a toto h. (apto cmp h h = LESS) <=> F
@@ -205,23 +220,26 @@ Proof
 SRW_TAC [] [toto_antisym, toto_refl]
 QED
 
-val toto_swap_cases = store_thm ("toto_swap_cases",
-Term`!c:'a toto x y. apto c y x =
-  case apto c x y of LESS => GREATER | EQUAL => EQUAL | GREATER => LESS`,
+Theorem toto_swap_cases:
+!c:'a toto x y. apto c y x =
+  case apto c x y of LESS => GREATER | EQUAL => EQUAL | GREATER => LESS
+Proof
 REPEAT GEN_TAC THEN Cases_on `apto c x y` THEN
 REWRITE_TAC [cpn_case_def] THENL
 [IMP_RES_TAC toto_antisym
 ,IMP_RES_TAC toto_equal_sym
-,IMP_RES_TAC toto_antisym]);
+,IMP_RES_TAC toto_antisym]
+QED
 
-val toto_glneq = store_thm ("toto_glneq", Term
-`(!c x y:'a. (apto c x y = LESS) ==> x <> y) /\
- (!c x y:'a. (apto c x y = GREATER) ==> x <> y)`,
+Theorem toto_glneq: (!c x y:'a. (apto c x y = LESS) ==> x <> y) /\
+ (!c x y:'a. (apto c x y = GREATER) ==> x <> y)
+Proof
 CONJ_TAC THEN REPEAT GEN_TAC THEN
 SUBST1_TAC (SYM (SPEC_ALL toto_equal_eq)) THEN
-DISCH_TAC THEN ASM_REWRITE_TAC [all_cpn_distinct]);
+DISCH_TAC THEN ASM_REWRITE_TAC [all_cpn_distinct]
+QED
 
-val toto_cpn_eqn = save_thm ("toto_cpn_eqn",CONJ toto_equal_imp_eq toto_glneq);
+Theorem toto_cpn_eqn = CONJ toto_equal_imp_eq toto_glneq;
 
 (* toto_cpn_eqn = |- (!c x y. (apto c x y = EQUAL) ==> (x = y)) /\
                      (!c x y. (apto c x y = LESS) ==> x <> y) /\
@@ -243,39 +261,53 @@ QED
 
 (* Seven forms of transitivity: *)
 
-val totoEEtrans = store_thm ("totoEEtrans", Term`!c:'a toto x y z.
+Theorem totoEEtrans: !c:'a toto x y z.
  ((apto c x y = EQUAL) /\ (apto c y z = EQUAL) ==> (apto c x z = EQUAL)) /\
- ((apto c x y = EQUAL) /\ (apto c z y = EQUAL) ==> (apto c x z = EQUAL))`,
-REPEAT GEN_TAC THEN REWRITE_TAC [toto_equal_eq] THEN REPEAT STRIP_TAC THEN AR);
+ ((apto c x y = EQUAL) /\ (apto c z y = EQUAL) ==> (apto c x z = EQUAL))
+Proof
+REPEAT GEN_TAC THEN REWRITE_TAC [toto_equal_eq] THEN REPEAT STRIP_TAC THEN AR
+QED
 
-val totoLLtrans = store_thm ("totoLLtrans", Term`!c:'a toto x y z.
- (apto c x y = LESS) /\ (apto c y z = LESS) ==> (apto c x z = LESS)`,
-REWRITE_TAC [toto_thm]);
+Theorem totoLLtrans: !c:'a toto x y z.
+ (apto c x y = LESS) /\ (apto c y z = LESS) ==> (apto c x z = LESS)
+Proof
+REWRITE_TAC [toto_thm]
+QED
 
-val totoLGtrans = store_thm ("totoLGtrans", Term`!c:'a toto x y z.
- (apto c x y = LESS) /\ (apto c z y = GREATER) ==> (apto c x z = LESS)`,
-REPEAT STRIP_TAC THEN IMP_RES_TAC toto_antisym THEN IMP_RES_TAC totoLLtrans);
+Theorem totoLGtrans: !c:'a toto x y z.
+ (apto c x y = LESS) /\ (apto c z y = GREATER) ==> (apto c x z = LESS)
+Proof
+REPEAT STRIP_TAC THEN IMP_RES_TAC toto_antisym THEN IMP_RES_TAC totoLLtrans
+QED
 
-val totoGGtrans = store_thm ("totoGGtrans", Term`!c:'a toto x y z.
- (apto c y x = GREATER) /\ (apto c z y = GREATER) ==> (apto c x z = LESS)`,
-REPEAT STRIP_TAC THEN IMP_RES_TAC toto_antisym THEN IMP_RES_TAC totoLLtrans);
+Theorem totoGGtrans: !c:'a toto x y z.
+ (apto c y x = GREATER) /\ (apto c z y = GREATER) ==> (apto c x z = LESS)
+Proof
+REPEAT STRIP_TAC THEN IMP_RES_TAC toto_antisym THEN IMP_RES_TAC totoLLtrans
+QED
 
-val totoGLtrans = store_thm ("totoGLtrans", Term`!c:'a toto x y z.
- (apto c y x = GREATER) /\ (apto c y z = LESS) ==> (apto c x z = LESS)`,
-REPEAT STRIP_TAC THEN IMP_RES_TAC toto_antisym THEN IMP_RES_TAC totoLLtrans);
+Theorem totoGLtrans: !c:'a toto x y z.
+ (apto c y x = GREATER) /\ (apto c y z = LESS) ==> (apto c x z = LESS)
+Proof
+REPEAT STRIP_TAC THEN IMP_RES_TAC toto_antisym THEN IMP_RES_TAC totoLLtrans
+QED
 
-val totoLEtrans = store_thm ("totoLEtrans", Term`!c:'a toto x y z.
- (apto c x y = LESS) /\ (apto c y z = EQUAL) ==> (apto c x z = LESS)`,
+Theorem totoLEtrans: !c:'a toto x y z.
+ (apto c x y = LESS) /\ (apto c y z = EQUAL) ==> (apto c x z = LESS)
+Proof
 REWRITE_TAC [toto_equal_eq] THEN
-PURE_ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN REPEAT STRIP_TAC THEN AR);
+PURE_ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN REPEAT STRIP_TAC THEN AR
+QED
 
-val totoELtrans = store_thm ("totoELtrans", Term`!c:'a toto x y z.
- (apto c x y = EQUAL) /\ (apto c y z = LESS) ==> (apto c x z = LESS)`,
-REWRITE_TAC [toto_equal_eq] THEN REPEAT STRIP_TAC THEN AR);
+Theorem totoELtrans: !c:'a toto x y z.
+ (apto c x y = EQUAL) /\ (apto c y z = LESS) ==> (apto c x z = LESS)
+Proof
+REWRITE_TAC [toto_equal_eq] THEN REPEAT STRIP_TAC THEN AR
+QED
 
-val toto_trans_less = save_thm ("toto_trans_less",
+Theorem toto_trans_less =
               CONJ totoLLtrans (CONJ totoLGtrans (CONJ totoGGtrans
-                (CONJ totoGLtrans (CONJ totoLEtrans totoELtrans)))));
+                (CONJ totoGLtrans (CONJ totoLEtrans totoELtrans))));
 
 Definition WeakLinearOrder_of_TO:
  WeakLinearOrder_of_TO (c:'a comp) x y =
@@ -351,11 +383,13 @@ REPEAT STRIP_TAC THEN MATCH_MP_TAC TotOrd_TO_of_LO THEN
 IMP_RES_TAC WeakLinearOrder THEN ASM_REWRITE_TAC [LinearOrder] THEN
 IMP_RES_TAC WeakOrd_Ord);
 
-val TotOrd_TO_of_Strong = store_thm("TotOrd_TO_of_Strong",Term`!r:'a reln.
-                 StrongLinearOrder r ==> TotOrd (TO_of_LinearOrder r)`,
+Theorem TotOrd_TO_of_Strong:!r:'a reln.
+                 StrongLinearOrder r ==> TotOrd (TO_of_LinearOrder r)
+Proof
 REPEAT STRIP_TAC THEN MATCH_MP_TAC TotOrd_TO_of_LO THEN
 IMP_RES_TAC StrongLinearOrder THEN ASM_REWRITE_TAC [LinearOrder] THEN
-IMP_RES_TAC StrongOrd_Ord);
+IMP_RES_TAC StrongOrd_Ord
+QED
 
 val toto_Weak_thm = maybe_thm ("toto_Weak_thm", Term
 `!c:'a toto. toto_of_LinearOrder (WeakLinearOrder_of_TO (apto c)) = c`,
@@ -481,27 +515,29 @@ IMP_RES_THEN (REWRITE_TAC o ulist) TO_of_less_rel);
 (* Consequences of TO_of_LenearOrder, toto_of_LinearOrder definitions,
    tailor-made for use by toto_CONV. *)
 
-val toto_equal_imp = store_thm ("toto_equal_imp", Term
-`!cmp:'a toto phi. LinearOrder phi /\ (cmp = toto_of_LinearOrder phi) ==>
-                   !x y. ((x = y) = T) ==> (apto cmp x y = EQUAL)`,
+Theorem toto_equal_imp: !cmp:'a toto phi. LinearOrder phi /\ (cmp = toto_of_LinearOrder phi) ==>
+                   !x y. ((x = y) = T) ==> (apto cmp x y = EQUAL)
+Proof
 REPEAT GEN_TAC THEN REWRITE_TAC [toto_of_LinearOrder] THEN
 STRIP_TAC THEN AR THEN
 IMP_RES_TAC TotOrd_TO_of_LO THEN
 IMP_RES_THEN SUBST1_TAC TO_apto_TO_ID THEN
-REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [TO_of_LinearOrder]);
+REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [TO_of_LinearOrder]
+QED
 
-val toto_unequal_imp = store_thm ("toto_unequal_imp", Term
-`!cmp:'a toto phi. LinearOrder phi /\ (cmp = toto_of_LinearOrder phi) ==>
+Theorem toto_unequal_imp: !cmp:'a toto phi. LinearOrder phi /\ (cmp = toto_of_LinearOrder phi) ==>
                    !x y. ((x = y) = F) ==>
                          (if phi x y
                           then apto cmp x y = LESS
-                          else apto cmp x y = GREATER)`,
+                          else apto cmp x y = GREATER)
+Proof
 REPEAT GEN_TAC THEN REWRITE_TAC [toto_of_LinearOrder] THEN
 STRIP_TAC THEN AR THEN
 IMP_RES_TAC TotOrd_TO_of_LO THEN
 IMP_RES_THEN SUBST1_TAC TO_apto_TO_ID THEN
 REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [TO_of_LinearOrder] THEN
-Cases_on `phi x y` THEN AR);
+Cases_on `phi x y` THEN AR
+QED
 
 (* TO_inv_Ord did not require r to be a linear order; hence no toto analog.*)
 
@@ -512,13 +548,15 @@ Cases_on `phi x y` THEN AR);
    WF and LEX are both defined in relationTheory, it seems most natural
    to work with StrongLinearOrder, and transfer the results to TotOrd. *)
 
-val StrongOrder_ALT = store_thm ("StrongOrder_ALT",
- Term`!Z:'a reln. StrongOrder Z <=> irreflexive Z /\ transitive Z`,
+Theorem StrongOrder_ALT:
+ !Z:'a reln. StrongOrder Z <=> irreflexive Z /\ transitive Z
+Proof
 GEN_TAC THEN REWRITE_TAC [StrongOrder] THEN EQ_TAC THEN
 STRIP_TAC THEN AR THEN
 REWRITE_TAC [antisymmetric_def] THEN
 REPEAT STRIP_TAC THEN IMP_RES_TAC transitive_def THEN
-IMP_RES_TAC irreflexive_def);
+IMP_RES_TAC irreflexive_def
+QED
 
 val _ = set_fixity "lexTO" (Infixr 850);
 val _ = set_fixity "lextoto" (Infixr 850);
@@ -612,13 +650,14 @@ IMP_RES_TAC (GSYM lexTO_THM) THEN AR THEN REPEAT AP_THM_TAC THEN
 MATCH_MP_TAC TO_apto_TO_IMP THEN
 IMP_RES_TAC TO_lexTO);
 
-val aplextoto = store_thm ("aplextoto", Term
-`!c:'a toto v:'b toto x1 x2 y1 y2. (apto (c lextoto v) (x1,x2) (y1,y2) =
+Theorem aplextoto: !c:'a toto v:'b toto x1 x2 y1 y2. (apto (c lextoto v) (x1,x2) (y1,y2) =
  case apto c x1 y1 of LESS => LESS
                   | EQUAL => apto v x2 y2
-                | GREATER => GREATER)`,
+                | GREATER => GREATER)
+Proof
 REPEAT GEN_TAC THEN PURE_ONCE_REWRITE_TAC [GSYM PAIR] THEN
-REWRITE_TAC [pre_aplextoto]);
+REWRITE_TAC [pre_aplextoto]
+QED
 
 (* **** Some particular total order generators, additional to lextoto: **** *)
 
@@ -644,20 +683,23 @@ THEN REPEAT CONJ_TAC THENL
 Definition numOrd:  numOrd = TO_of_LinearOrder ($< :num reln)
 End
 
-val TO_numOrd = store_thm ("TO_numOrd", Term`TotOrd numOrd`,
+Theorem TO_numOrd: TotOrd numOrd
+Proof
 REWRITE_TAC [numOrd] THEN MATCH_MP_TAC TotOrd_TO_of_Strong THEN
-ACCEPT_TAC StrongLinearOrder_LESS);
+ACCEPT_TAC StrongLinearOrder_LESS
+QED
 
 Definition numto:  numto = TO numOrd
 End
 
-val apnumto_thm = store_thm ("apnumto_thm", Term`apto numto = numOrd`,
-REWRITE_TAC [numto, GSYM TO_apto_TO_ID, TO_numOrd]);
+Theorem apnumto_thm: apto numto = numOrd
+Proof
+REWRITE_TAC [numto, GSYM TO_apto_TO_ID, TO_numOrd]
+QED
 
 (* Practice: re_define numOrd, numto for computation on numerals. *)
 
-val numeralOrd = store_thm ("numeralOrd", Term
-`!x y.
+Theorem numeralOrd: !x y.
  (numOrd ZERO ZERO = EQUAL) /\
  (numOrd ZERO (BIT1 y) = LESS) /\
  (numOrd ZERO (BIT2 y) = LESS) /\
@@ -668,7 +710,8 @@ val numeralOrd = store_thm ("numeralOrd", Term
  (numOrd (BIT1 x) (BIT2 y) =
   case numOrd x y of LESS => LESS | EQUAL => LESS | GREATER => GREATER) /\
  (numOrd (BIT2 x) (BIT1 y) =
-  case numOrd x y of LESS => LESS | EQUAL => GREATER | GREATER => GREATER)`,
+  case numOrd x y of LESS => LESS | EQUAL => GREATER | GREATER => GREATER)
+Proof
 REPEAT GEN_TAC THEN
 ASSUME_TAC (REWRITE_RULE [numOrd] (MATCH_MP TO_equal_eq TO_numOrd)) THEN
 ASSUME_TAC (MATCH_MP TO_of_less_rel StrongLinearOrder_LESS) THEN
@@ -677,7 +720,8 @@ REWRITE_TAC [numOrd] THEN Cases_on `TO_of_LinearOrder $< x y` THEN
 RES_TAC THEN ASM_REWRITE_TAC [numeral_lt, cpn_case_def] THENL
 [DISCH_TAC THEN IMP_RES_TAC LESS_ANTISYM
 ,MATCH_ACCEPT_TAC prim_recTheory.LESS_REFL
-,DISCH_TAC THEN IMP_RES_TAC LESS_ANTISYM]);
+,DISCH_TAC THEN IMP_RES_TAC LESS_ANTISYM]
+QED
 
 (* ********************************************************************* *)
 (*         qk_numto_CONV, a nonstandard ordering of num                  *)
@@ -786,10 +830,12 @@ ONCE_REWRITE_TAC [num_to_dt] THEN EQ_TAC THENL
  ,MATCH_MP_TAC DIV2_EVEN_EQ THEN AR]
 ,DISCH_TAC THEN AR]);
 
-val TO_qk_numOrd = store_thm ("TO_qk_numOrd", Term`TotOrd qk_numOrd`,
+Theorem TO_qk_numOrd: TotOrd qk_numOrd
+Proof
 REWRITE_TAC
  [TotOrd, qk_numOrd_def, REWRITE_RULE [TotOrd] TO_num_dtOrd] THEN
-MATCH_ACCEPT_TAC num_to_dt_bij);
+MATCH_ACCEPT_TAC num_to_dt_bij
+QED
 
 (* ******* At last we can prove (given a few more lemmas) what would ****** *)
 (* ******* be a definition if only numeral were a datatype:          ****** *)
@@ -815,8 +861,7 @@ REPEAT AP_TERM_TAC THEN
 CONV_TAC (LAND_CONV (LAND_CONV (LAND_CONV (REWR_CONV BIT2)))) THEN
 SIMP_TAC arith_ss [TWICE_DIV_2]);
 
-val qk_numeralOrd = store_thm ("qk_numeralOrd", Term
-`!x y.
+Theorem qk_numeralOrd: !x y.
  (qk_numOrd ZERO ZERO = EQUAL) /\
  (qk_numOrd ZERO (BIT1 y) = LESS) /\
  (qk_numOrd ZERO (BIT2 y) = LESS) /\
@@ -825,17 +870,20 @@ val qk_numeralOrd = store_thm ("qk_numeralOrd", Term
  (qk_numOrd (BIT1 x) (BIT1 y) = qk_numOrd x y) /\
  (qk_numOrd (BIT2 x) (BIT2 y) = qk_numOrd x y) /\
  (qk_numOrd (BIT1 x) (BIT2 y) = LESS) /\
- (qk_numOrd (BIT2 x) (BIT1 y) = GREATER)`,
-REWRITE_TAC [qk_numOrd_def, ZERO_to_dt, BIT1_to_dt, BIT2_to_dt, num_dtOrd]);
+ (qk_numOrd (BIT2 x) (BIT1 y) = GREATER)
+Proof
+REWRITE_TAC [qk_numOrd_def, ZERO_to_dt, BIT1_to_dt, BIT2_to_dt, num_dtOrd]
+QED
 
 (* ******** From here on we can imitate the treatment of numOrd ********** *)
 
 Definition qk_numto:  qk_numto = TO qk_numOrd
 End
 
-val ap_qk_numto_thm = store_thm ("ap_qk_numto_thm", Term
-`apto qk_numto = qk_numOrd`,
-REWRITE_TAC [qk_numto, GSYM TO_apto_TO_ID, TO_qk_numOrd]);
+Theorem ap_qk_numto_thm: apto qk_numto = qk_numOrd
+Proof
+REWRITE_TAC [qk_numto, GSYM TO_apto_TO_ID, TO_qk_numOrd]
+QED
 
 (* ******************************************************************** *)
 (* charOrd seems to be a serious problem. It takes some ingenuity to    *)
@@ -855,11 +903,14 @@ STRIP_ASSUME_TAC (REWRITE_RULE [TotOrd] TO_numOrd) THEN
 REPEAT STRIP_TAC THEN AR THENL
 [MATCH_ACCEPT_TAC ORD_11, RES_TAC]);
 
-val apcharto_thm = store_thm ("apcharto_thm", Term`apto charto = charOrd`,
-REWRITE_TAC [charto, SYM (ISPEC (Term`charOrd`) TO_apto_TO_ID), TO_charOrd]);
+Theorem apcharto_thm: apto charto = charOrd
+Proof
+REWRITE_TAC [charto, SYM (ISPEC (Term`charOrd`) TO_apto_TO_ID), TO_charOrd]
+QED
 
-val charOrd_lt_lem = store_thm ("charOrd_lt_lem", Term`!a b.
- (numOrd a b = LESS) ==> (b < 256 = T) ==> (charOrd (CHR a) (CHR b) = LESS)`,
+Theorem charOrd_lt_lem: !a b.
+ (numOrd a b = LESS) ==> (b < 256 = T) ==> (charOrd (CHR a) (CHR b) = LESS)
+Proof
 REWRITE_TAC [] THEN REPEAT STRIP_TAC THEN
 SUBGOAL_THEN (Term`a:num < b`) ASSUME_TAC THENL
 [SUBGOAL_THEN (Term`(numOrd a b = LESS) <=> a < b`)
@@ -867,11 +918,12 @@ SUBGOAL_THEN (Term`a:num < b`) ASSUME_TAC THENL
  REWRITE_TAC [numOrd] THEN MATCH_MP_TAC TO_of_less_rel THEN
  ACCEPT_TAC StrongLinearOrder_LESS
 ,IMP_RES_TAC LESS_TRANS THEN REWRITE_TAC [charOrd] THEN
- IMP_RES_THEN SUBST1_TAC ORD_CHR_RWT THEN AR]);
+ IMP_RES_THEN SUBST1_TAC ORD_CHR_RWT THEN AR]
+QED
 
-val charOrd_gt_lem = store_thm ("charOrd_gt_lem", Term
-`!a b. (numOrd a b = GREATER) ==> (a < 256 = T) ==>
- (charOrd (CHR a) (CHR b) = GREATER)`,
+Theorem charOrd_gt_lem: !a b. (numOrd a b = GREATER) ==> (a < 256 = T) ==>
+ (charOrd (CHR a) (CHR b) = GREATER)
+Proof
 REWRITE_TAC [] THEN REPEAT STRIP_TAC THEN
 SUBGOAL_THEN (Term`b:num < a`) ASSUME_TAC THENL
 [SUBGOAL_THEN (Term`(numOrd a b = GREATER) <=> b < a`)
@@ -879,12 +931,14 @@ SUBGOAL_THEN (Term`b:num < a`) ASSUME_TAC THENL
  REWRITE_TAC [numOrd] THEN MATCH_MP_TAC TO_of_greater_ler THEN
  ACCEPT_TAC StrongLinearOrder_LESS
 ,IMP_RES_TAC LESS_TRANS THEN REWRITE_TAC [charOrd] THEN
- IMP_RES_THEN SUBST1_TAC ORD_CHR_RWT THEN AR]);
+ IMP_RES_THEN SUBST1_TAC ORD_CHR_RWT THEN AR]
+QED
 
-val charOrd_eq_lem = store_thm ("charOrd_eq_lem", Term
-`!a b. (numOrd a b = EQUAL) ==> (charOrd (CHR a) (CHR b) = EQUAL)`,
+Theorem charOrd_eq_lem: !a b. (numOrd a b = EQUAL) ==> (charOrd (CHR a) (CHR b) = EQUAL)
+Proof
 REPEAT GEN_TAC THEN
-REWRITE_TAC [charOrd, MATCH_MP TO_equal_eq TO_numOrd] THEN DISCH_TAC THEN AR);
+REWRITE_TAC [charOrd, MATCH_MP TO_equal_eq TO_numOrd] THEN DISCH_TAC THEN AR
+QED
 
 val charOrd_thm = maybe_thm ("charOrd_thm", Term
 `charOrd = TO_of_LinearOrder $<`,
@@ -961,18 +1015,20 @@ IMP_RES_TAC toto_cpn_eqn THEN ASM_REWRITE_TAC [all_cpn_distinct]);
 Definition listoto:  listoto (c:'a toto) = TO (ListOrd c)
 End
 
-val aplistoto = store_thm ("aplistoto", Term`!c:'a toto.
+Theorem aplistoto: !c:'a toto.
 (apto (listoto c) [] [] = EQUAL) /\
 (!b y. apto (listoto c) [] (b :: y) = LESS) /\
 (!a x. apto (listoto c) (a :: x) [] = GREATER) /\
 (!a x b y. apto (listoto c) (a :: x) (b :: y) =
         case apto c a b of LESS => LESS |
                           EQUAL => apto (listoto c) x y |
-                        GREATER => GREATER)`,
+                        GREATER => GREATER)
+Proof
 GEN_TAC THEN ASSUME_TAC (SPEC_ALL TO_ListOrd) THEN
 REWRITE_TAC [listoto] THEN
 IMP_RES_THEN (REWRITE_TAC o ulist) TO_apto_TO_IMP THEN
-MATCH_ACCEPT_TAC ListOrd_THM);
+MATCH_ACCEPT_TAC ListOrd_THM
+QED
 
 (* ***** string a synonym for char list -- makes stringto very easy. ***** *)
 

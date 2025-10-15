@@ -724,7 +724,7 @@ QED
 val borel_eq_atLeastAtMost = borel_eq_ge_le;
 
 (* this is the original definition *)
-val borel_def = save_thm ("borel_def", borel_eq_le);
+Theorem borel_def = borel_eq_le;
 
 Theorem borel_eq_gr_le :
     borel = sigma UNIV (IMAGE (\(a,b). {x | a < x /\ x <= b}) UNIV)

@@ -135,7 +135,7 @@ Proof
 QED
 
 (* Obtain a theorem *)
-val EXP_LE = save_thm("EXP_LE", X_LE_X_EXP |> GEN ``x:num`` |> SPEC ``b:num`` |> GEN_ALL);
+Theorem EXP_LE = X_LE_X_EXP |> GEN ``x:num`` |> SPEC ``b:num`` |> GEN_ALL;
 (* val EXP_LE = |- !n b. 0 < n ==> b <= b ** n: thm *)
 
 (* Theorem: 1 < b /\ 1 < n ==> b < b ** n *)
@@ -273,8 +273,8 @@ val log_exists = Q.prove(
       THEN SRW_TAC [][EXP, NOT_LESS]
    ]);
 
-val LOG_exists = save_thm( "LOG_exists",
-   SIMP_RULE bool_ss [SKOLEM_THM, GSYM RIGHT_EXISTS_IMP_THM] log_exists);
+Theorem LOG_exists =
+   SIMP_RULE bool_ss [SKOLEM_THM, GSYM RIGHT_EXISTS_IMP_THM] log_exists;
 
 val LOG = new_specification("LOG", ["LOG"], LOG_exists);
 
@@ -1131,8 +1131,8 @@ Theorem SQRT_UNIQUE = ROOT_UNIQUE |> SPEC ``2``;
 (* val SQRT_UNIQUE = |- !n p. p ** 2 <= n /\ n < SUC p ** 2 ==> SQRT n = p: thm *)
 
 (* Obtain a theorem *)
-val SQRT_THM = save_thm("SQRT_THM",
-    ROOT_THM |> SPEC ``2`` |> SIMP_RULE (srw_ss())[]);
+Theorem SQRT_THM =
+    ROOT_THM |> SPEC ``2`` |> SIMP_RULE (srw_ss())[];
 (* val SQRT_THM = |- !n p. (SQRT n = p) <=> p ** 2 <= n /\ n < SUC p ** 2: thm *)
 
 (* Theorem: n <= m ==> SQRT n <= SQRT m *)
@@ -1240,7 +1240,7 @@ Proof
 QED
 
 (* Theorem alias *)
-val SQRT_OF_SQ = save_thm("SQRT_OF_SQ", SQRT_EXP_2);
+Theorem SQRT_OF_SQ = SQRT_EXP_2;
 (* val SQRT_OF_SQ = |- !n. SQRT (n ** 2) = n: thm *)
 
 (* Theorem: (n <= SQRT n) <=> ((n = 0) \/ (n = 1)) *)
@@ -1584,8 +1584,8 @@ Proof
 QED
 
 (* Obtain a theorem *)
-val LOG2_THM = save_thm("LOG2_THM",
-    LOG_THM |> SPEC ``2`` |> SIMP_RULE (srw_ss())[]);
+Theorem LOG2_THM =
+    LOG_THM |> SPEC ``2`` |> SIMP_RULE (srw_ss())[];
 (* val LOG2_THM = |- !n. 0 < n ==> !p. (LOG2 n = p) <=> 2 ** p <= n /\ n < 2 ** SUC p: thm *)
 
 (* Obtain a theorem *)
@@ -1601,8 +1601,8 @@ Proof
 QED
 
 (* Obtain a theorem *)
-val LOG2_UNIQUE = save_thm("LOG2_UNIQUE",
-    LOG_UNIQUE |> SPEC ``2`` |> SPEC ``n:num`` |> SPEC ``m:num`` |> GEN_ALL);
+Theorem LOG2_UNIQUE =
+    LOG_UNIQUE |> SPEC ``2`` |> SPEC ``n:num`` |> SPEC ``m:num`` |> GEN_ALL;
 (* val LOG2_UNIQUE = |- !n m. 2 ** m <= n /\ n < 2 ** SUC m ==> LOG2 n = m: thm *)
 
 (* Theorem: 0 < n ==> ((LOG2 n = 0) <=> (n = 1)) *)
@@ -1640,9 +1640,9 @@ Proof
 QED
 
 (* Obtain theorem *)
-val LOG2_LE_MONO = save_thm("LOG2_LE_MONO",
+Theorem LOG2_LE_MONO =
     LOG_LE_MONO |> SPEC ``2`` |> SPEC ``n:num`` |> SPEC ``m:num``
-                |> SIMP_RULE (srw_ss())[] |> GEN_ALL);
+                |> SIMP_RULE (srw_ss())[] |> GEN_ALL;
 (* val LOG2_LE_MONO = |- !n m. 0 < n ==> n <= m ==> LOG2 n <= LOG2 m: thm *)
 
 (* Theorem: 0 < n /\ n <= m ==> LOG2 n <= LOG2 m *)

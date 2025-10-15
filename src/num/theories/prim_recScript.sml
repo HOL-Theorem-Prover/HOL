@@ -78,13 +78,13 @@ val _ = set_fixity "<" (Infix(NONASSOC, 450))
 val _ = TeX_notation {hol = "<", TeX = ("\\HOLTokenLt{}", 1)}
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="<"},name=(["Number","Natural"],"<")}
 
-val INV_SUC_EQ = save_thm("INV_SUC_EQ",
+Theorem INV_SUC_EQ =
    GENL [“m:num”, “n:num”]
         (IMP_ANTISYM_RULE
              (SPEC_ALL INV_SUC)
              (DISCH (“m:num = n”)
                     (AP_TERM (“SUC”)
-                             (ASSUME (“m:num = n”))))));
+                             (ASSUME (“m:num = n”)))));
 
 (*---------------------------------------------------------------------------
  * First we define a partial inverse to SUC called PRE such that:
@@ -257,10 +257,10 @@ Proof
 QED
 
 (* |- !m n. m < (SUC n)  =  (m  =  n)  \/  m < n *)
-val LESS_THM = save_thm("LESS_THM",
+Theorem LESS_THM =
     GENL [“m:num”, “n:num”]
          (IMP_ANTISYM_RULE(SPEC_ALL LESS_LEMMA1)
-                          (SPEC_ALL LESS_LEMMA2)));
+                          (SPEC_ALL LESS_LEMMA2));
 
 Theorem LESS_SUC_IMP:
     !m n. (m < SUC n) ==> ~(m = n) ==> (m < n)
@@ -376,25 +376,27 @@ Proof
    ]
 QED
 
-val SIMP_REC_REL_UNIQUE = store_thm(
-  "SIMP_REC_REL_UNIQUE",
-  Term`!x f g1 g2 m1 m2.
+Theorem SIMP_REC_REL_UNIQUE:
+  !x f g1 g2 m1 m2.
           SIMP_REC_REL g1 x f m1 /\ SIMP_REC_REL g2 x f m2 ==>
-          !n. n < m1 /\ n < m2 ==> (g1 n = g2 n)`,
+          !n. n < m1 /\ n < m2 ==> (g1 n = g2 n)
+Proof
   REWRITE_TAC [SIMP_REC_REL] THEN REPEAT GEN_TAC THEN STRIP_TAC THEN
   INDUCT_THEN INDUCTION STRIP_ASSUME_TAC THEN ASM_REWRITE_TAC [] THEN
   DISCH_THEN (CONJUNCTS_THEN (ASSUME_TAC o MATCH_MP SUC_LESS)) THEN
-  RES_TAC THEN ASM_REWRITE_TAC []);
+  RES_TAC THEN ASM_REWRITE_TAC []
+QED
 
-val SIMP_REC_REL_UNIQUE_RESULT = store_thm(
-  "SIMP_REC_REL_UNIQUE_RESULT",
-  Term`!x f n.
-         ?!y. ?g. SIMP_REC_REL g x f (SUC n) /\ (y = g n)`,
+Theorem SIMP_REC_REL_UNIQUE_RESULT:
+  !x f n.
+         ?!y. ?g. SIMP_REC_REL g x f (SUC n) /\ (y = g n)
+Proof
   REPEAT GEN_TAC THEN
   SIMP_TAC bool_ss [EXISTS_UNIQUE_THM, SIMP_REC_EXISTS] THEN
   REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [] THEN
   ASSUME_TAC (Q.SPEC `n` LESS_SUC_REFL) THEN
-  IMP_RES_TAC SIMP_REC_REL_UNIQUE);
+  IMP_RES_TAC SIMP_REC_REL_UNIQUE
+QED
 
 val SIMP_REC = new_specification
   ("SIMP_REC",["SIMP_REC"],
@@ -535,15 +537,16 @@ Proof
     INDUCT_TAC THEN ASM_REWRITE_TAC []]
 QED
 
-val num_Axiom = store_thm(
-  "num_Axiom",
-  Term`!(e:'a) f. ?fn. (fn 0 = e) /\ !n. fn (SUC n) = f n (fn n)`,
+Theorem num_Axiom:
+  !(e:'a) f. ?fn. (fn 0 = e) /\ !n. fn (SUC n) = f n (fn n)
+Proof
   REPEAT GEN_TAC THEN
   STRIP_ASSUME_TAC
      (CONV_RULE EXISTS_UNIQUE_CONV
         (SPECL [Term`e:'a`, Term`\a:'a n:num. f n a:'a`] num_Axiom_old)) THEN
   EXISTS_TAC (Term`fn1 : num -> 'a`) THEN
-  RULE_ASSUM_TAC BETA_RULE THEN ASM_REWRITE_TAC []);
+  RULE_ASSUM_TAC BETA_RULE THEN ASM_REWRITE_TAC []
+QED
 
 val [num_case_def] = Prim_rec.define_case_constant num_Axiom
 val _ = overload_on("case", “num_CASE”)

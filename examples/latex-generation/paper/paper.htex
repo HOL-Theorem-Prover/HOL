@@ -8,12 +8,11 @@
 \usepackage{alltt}
 \usepackage{xcolor}
 \usepackage{macros}
+\usepackage{amssymb}
 
 \definecolor{keycolor}{RGB}{172, 42, 42}
 \definecolor{vimvert}{RGB}{46, 139, 87}
 \definecolor{mutedkey}{RGB}{120, 42, 42}
-
-\renewcommand{\HOLConst}[1]{\textsf{#1}}
 
 \title{Writing \LaTeX{} with Embedded HOL}
 \author{HOL Developers}
@@ -85,7 +84,7 @@ This will keep the output looking reasonable when the output spans multiple line
 \newcommand{\holtm}{\textbf{\color{keycolor}HOLtm}}
 \newcommand{\holty}{\textbf{\color{keycolor}HOLty}}
 \newcommand{\com}[2]{\textbf{\bs\color{mutedkey}#1}\args{#2}}
-\newcommand{\args}[1]{{\lb{}\slshape\color{vimvert}#1\rb{}}}
+\newcommand{\args}[1]{{\slshape\color{vimvert}\lb{}#1\rb{}}}
 \begin{figure}
 \begin{center}
 \begin{minipage}[t]{0.35\textwidth}
@@ -118,7 +117,11 @@ The constant \HOLtm{keys} returns the set of a binary search tree's keys.
 This constant has type \HOLty[of]{keys}; one might imagine instantiating the type variables with a built-in type like \HOLty{:num}.
 \end{minipage}
 \end{center}
-\caption{Simple examples of the three ``munging'' macros in action. \LaTeX{} in the left column; output on the right.}
+\caption{%
+  Simple examples of the three ``munging'' macros in action.
+  \LaTeX{} in the left column; output on the right.
+  The \texttt{overrides} file (see below) has adjusted the appearance of some elements.
+}
 \label{fig:simple-usage}
 \end{figure}
 
@@ -161,7 +164,7 @@ There is no need of a rule for the latter as the built-in behaviours of \holmake
 
 
 \lstset{basicstyle=\small\ttfamily,
-  numbers=left,numberstyle=\tiny,showtabs=true,morecomment=[n]{$(}{)},
+  numbers=left,numberstyle=\tiny,showtabs=true,morecomment=[n]{\$(}{)},
   commentstyle={\color{vimvert}\slshape},
   morekeywords=[1]{INCLUDES,EXTRA_CLEANS,LATEXMK_EXISTS},
   morekeywords=[2]{ifeq,endif},
@@ -169,28 +172,7 @@ There is no need of a rule for the latter as the built-in behaviours of \holmake
   keywordstyle={[2]\color{blue}}
 }
 \begin{figure}
-\begin{lstlisting}
-INCLUDES = ../theories
-
-LATEXMK_EXISTS = $(if $(which latexmk),yes,no)
-
-ifeq($(LATEXMK_EXISTS), yes)
-paper.pdf: paper.tex holtexbasic.sty
-	latexmk -pdf paper
-endif
-
-paper.tex: paper.htex overrides munge
-	./munge overrides < $< > $@
-
-munge: ppLib.uo
-	$(HOLDIR)/bin/mkmunge.exe -o $@ $<
-
-holtexbasic.sty: $(HOLDIR)/src/TeX/holtexbasic.sty
-	$(CP) $< $@
-
-EXTRA_CLEANS = holtexbasic.sty paper.pdf paper.tex paper.fls \
-               paper.aux paper.fdb_latexmk paper.log munge
-\end{lstlisting}
+\lstinputlisting{Holmakefile}
 \caption{%
 The \hmfile{} in the \texttt{papers} directory.
 The ``dance'' with \texttt{LATEXMK\_EXISTS} (lines 3, 5, and the \texttt{endif} on 8) is specific to this file's position in the \HOL{} repository; all those lines could be omitted in normal usage, where \texttt{latexmk} is presumably sure to be installed.
@@ -198,10 +180,56 @@ Lines 7, 11, 14 and 17 begin with TAB characters (indicated by the long underlin
 \label{fig:holmakefile}
 \end{figure}
 
-\newpage
 \subsection{The \texttt{overrides} File}
 
+The \texttt{overrides} file (see Figure~\ref{fig:overrides}) contains a list of token-mappings, with each line consisting of
+\newcommand{\meta}[1]{\langle\mathit{#1}\rangle}
+\[
+\meta{token}\;\meta{replacement{-}width}\;\meta{replacement}
+\]
+The simple renamings in lines 3--5 are self-explanatory (and their effect can be seen in Figure~\ref{fig:simple-usage}).
+The stranger lines (1--2) are explained below in Section~\ref{sec:fancy-syntax}.
+The widths provided in the middle of the line are always approximate, but do help the \HOL{} pretty-printer generate reasonable linebreaks.
+
+\begin{figure}
+\begin{center}
+\lstinputlisting{overrides}
+\end{center}
+\caption{%
+The \texttt{overrides} file for this PDF.
+\HOL's built-in names (\texttt{IMAGE}, \texttt{FST},\dots) can be overridden just as readily as those from the authors' theories.
+Overrides to mathematical symbols should use \texttt{\bs{}ensuremath\lb{}\dots\rb{}} to protect them.
+}
+\label{fig:overrides}
+\end{figure}
+
 \section{Tips and Tricks}
+
+\subsection{Fiddling with Width}
+
+Large, multi-line theorems can be laid out quite differently depending on the number of columns the \HOL{} pretty-printer uses.
+For example, the default width turns
+\begin{alltt}
+  \bs{}HOLthm[def,>>]\lb{}list.SHORTLEX_def\rb{}
+\end{alltt}
+into
+\begin{alltt}
+\HOLthm[def,>>]{list.SHORTLEX_def}
+\end{alltt}
+If we boost the width of the lines with
+\begin{alltt}
+  \bs{}HOLthm[def,width=80]\lb{}list.SHORTLEX_def\rb{}
+\end{alltt}
+we get
+\begin{alltt}
+\HOLthm[def,width=80]{list.SHORTLEX_def}
+\end{alltt}
+This is a very tight fit (which is why the \verb|>>| option hasn't been used), but it does save some horizontal space.
+
+The default width for an entire paper is controlled by the \texttt{-w} option to the \texttt{munge} command-line tool.
+If a number is not given on the command-line, then the (default) default width is 65 columns.
+
+\subsection{Substitutions}
 
 \subsection{Inference Rules}
 
@@ -236,14 +264,14 @@ In addition, rules can be given names; the argument to \texttt{rulename=} is pas
 Thus,
 \begin{alltt}
    \bs{}[
-     \bs{}\holthm{}[rule,rulename=existsL]\args{sampleTree.exists_atLeft}
+     \bs{}\holthm{}[rule,rulename=exists_atLeft]\args{sampleTree.exists_atLeft}
    \bs{}]
 \end{alltt}
 generates
 \[
-  \HOLthm[rule,rulename=existsL]{sampleTree.exists_atLeft}
+  \HOLthm[rule,rulename=exists_atLeft]{sampleTree.exists_atLeft}
 \]
-and (to illustrate multiple (short) premises)
+and (to illustrate multiple (short) premises):
 \begin{alltt}
    \bs{}[
      \bs{}\holthm{}[rule,rulename=conjL,P/t1,Q/t2]\args{bool.AND2_THM}
@@ -253,5 +281,42 @@ generates
 \[
   \HOLthm[rule,rulename=conjR,P/t1,Q/t2]{bool.AND2_THM}
 \]
+
+\subsection{Fancy Syntax \emph{via} \texttt{add\_rule} and \texttt{overrides}}
+\label{sec:fancy-syntax}
+
+The constant \HOLtm{elemcount} counts the number of elements in a tree; for this sort of thing one might like vertical bars on either side of the tree argument to indicate size: $|t|$.
+This is impossible to have in \HOL{} directly because it's ambiguous in the eyes of the simplistic precedence parser.
+Nonetheless, we can achieve it with the munger.
+
+First, we add a grammar rule in \texttt{ppLib.sml} to get the basic ``syntax with delimiters'' working:
+\begin{alltt}
+   val _ = add_rule \lb{}
+     term_name = "elemcount",
+     fixity = Closefix,
+     pp_elements = [TOK "(ec1)", TM, TOK "(ec2)"],
+     block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+     paren_style = OnlyIfNecessary
+   \rb{}
+\end{alltt}
+The interesting part of the above is that the concrete syntax is targeting the name \texttt{elemcount}, that it is ``close-fix'', and that the tokens wrapping the argument are \texttt{(ec1)} and \texttt{(ec2)}.
+The latter names are arbitrary but
+\begin{itemize}
+\item they should feature the enclosing parentheses to stop token-merging analysis from inserting unnecessary extra spaces; and
+\item they should be different both from each other, and all other magic names chosen for similar purposes with other terms.
+\end{itemize}
+
+With only this done, \texttt{\HOLConst{elemcount}~$t$} would be printed as \texttt{(ec1)$t$(ec2)}.
+The substitution of the tokens \texttt{(ec1)} and \texttt{(ec2)} is handled in the \texttt{overrides} file, with lines
+\begin{verbatim}
+   (ec1) 1 \ensuremath{|}
+   (ec2) 1 \ensuremath{|}
+\end{verbatim}
+
+We can now see a theorem about the connection between the size of a tree and the length of its in-order traversal:
+
+\begin{alltt}
+\HOLthm{sampleTree.elemcount_LENGTH_inorder}
+\end{alltt}
 
 \end{document}

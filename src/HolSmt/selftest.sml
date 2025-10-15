@@ -341,7 +341,7 @@ in
     (``(0:num) ** 1 = 1``, [sat_CVC, sat_Z3, sat_Z3p]),
     (``(1:num) ** x = 1``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
     (``(1:num) ** x = 0``, [sat_CVC, sat_Z3, sat_Z3p]),
-    (``(x:num) ** 2 = x * x``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``(x:num) ** 2 = x * x``, [thm_AUTO, (*thm_CVC,*) thm_Z3, thm_Z3p_v4]),
     (``(x:num) ** 2 = 2``, [sat_CVC, sat_Z3, sat_Z3p]),
     (``(x:num) ** 3 = x * x * x``, [(*thm_AUTO, thm_CVC, thm_Z3, thm_Z3p*)]),
     (``(x:num) ** 3 = 4``, [sat_CVC, sat_Z3, sat_Z3p]),

@@ -48,10 +48,10 @@ val term1_case_cong = theorem "term1_case_cong";
 val term1_induct = theorem "term1_induction";
 val term1_Axiom = theorem "term1_Axiom";
 
-val term1_distinct2 = save_thm("term1_distinct2",
-                         CONJ term1_distinct (GSYM term1_distinct));
-val _ = save_thm("term1_one_one", term1_one_one);
-val _ = save_thm("term1_cases", term1_cases);
+Theorem term1_distinct2 =
+                         CONJ term1_distinct (GSYM term1_distinct);
+Theorem term1_one_one = term1_one_one;
+Theorem term1_cases = term1_cases;
 
 
 
@@ -382,9 +382,9 @@ val BV_vsubst1 = store_thm
 (*   of the substitution; else the result is infinite                    *)
 (* --------------------------------------------------------------------- *)
 
-val FV_subst1 =
-    new_definition("FV_subst1",
-    “FV_subst1 (s:^subs) xs = UNION_SET (IMAGE (FV1 o SUB1 s) xs)”);
+Definition FV_subst1[nocompute]:
+    FV_subst1 (s:^subs) xs = UNION_SET (IMAGE (FV1 o SUB1 s) xs)
+End
 
 
 

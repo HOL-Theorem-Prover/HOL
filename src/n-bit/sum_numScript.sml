@@ -147,23 +147,23 @@ QED
 
 val SYM_SUM = GSYM SUM;
 
-val SUM_1 = save_thm("SUM_1",
-  (REWRITE_RULE [SYM_SUM] o SPEC `0`) GSUM_1);
+Theorem SUM_1 =
+  (REWRITE_RULE [SYM_SUM] o SPEC `0`) GSUM_1;
 
-val SUM_MONO = save_thm("SUM_MONO",
-  (REWRITE_RULE [SYM_SUM,ADD] o SPEC `0`) GSUM_MONO);
+Theorem SUM_MONO =
+  (REWRITE_RULE [SYM_SUM,ADD] o SPEC `0`) GSUM_MONO;
 
-val SUM_LESS = save_thm("SUM_LESS",
-  (REWRITE_RULE [SYM_SUM,ADD_CLAUSES] o SPEC `0`) GSUM_LESS);
+Theorem SUM_LESS =
+  (REWRITE_RULE [SYM_SUM,ADD_CLAUSES] o SPEC `0`) GSUM_LESS;
 
-val SUM_EQUAL = save_thm("SUM_EQUAL",
-  (SIMP_RULE arith_ss [SYM_SUM] o SPEC `0`) GSUM_EQUAL);
+Theorem SUM_EQUAL =
+  (SIMP_RULE arith_ss [SYM_SUM] o SPEC `0`) GSUM_EQUAL;
 
-val SUM_FUN_EQUAL = save_thm("SUM_FUN_EQUAL",
-  (SIMP_RULE arith_ss [SYM_SUM] o SPECL [`0`,`n`]) GSUM_FUN_EQUAL);
+Theorem SUM_FUN_EQUAL =
+  (SIMP_RULE arith_ss [SYM_SUM] o SPECL [`0`,`n`]) GSUM_FUN_EQUAL;
 
-val SUM_ZERO = save_thm("SUM_ZERO",
-  (SIMP_RULE arith_ss [SYM_SUM] o SPEC `0`) GSUM_ZERO);
+Theorem SUM_ZERO =
+  (SIMP_RULE arith_ss [SYM_SUM] o SPEC `0`) GSUM_ZERO;
 
 Theorem SUM_FOLDL:
     !n f. SUM n f = FOLDL (\x n. f n + x) 0 (COUNT_LIST n)

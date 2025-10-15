@@ -326,8 +326,8 @@ QED
 val MOD_2EXP_LT_COR =
   METIS_PROVE [MOD_2EXP_LT, MOD_2EXP_def] ``MOD_2EXP x n < 2 ** x``;
 
-val EMPTY_IS_PTREE = save_thm("EMPTY_IS_PTREE",
-  EQT_ELIM (CONJUNCT1 IS_PTREE_def));
+Theorem EMPTY_IS_PTREE =
+  EQT_ELIM (CONJUNCT1 IS_PTREE_def);
 
 Theorem ADD_IS_PTREE:
    !t x. IS_PTREE t ==> IS_PTREE (ADD t x)
@@ -702,8 +702,8 @@ Proof
     \\ SRW_TAC [] [INSERT_PTREE_def]
 QED
 
-val PTREE_OF_NUMSET_IS_PTREE_EMPTY = save_thm("PTREE_OF_NUMSET_IS_PTREE_EMPTY",
-  (SIMP_RULE (srw_ss()) [] o SPEC `Empty`) PTREE_OF_NUMSET_IS_PTREE);
+Theorem PTREE_OF_NUMSET_IS_PTREE_EMPTY =
+  (SIMP_RULE (srw_ss()) [] o SPEC `Empty`) PTREE_OF_NUMSET_IS_PTREE;
 
 val _ = export_rewrites ["ADD_LIST_IS_PTREE", "PTREE_OF_NUMSET_IS_PTREE",
                          "PTREE_OF_NUMSET_IS_PTREE_EMPTY"];
@@ -762,9 +762,9 @@ Proof
   SRW_TAC [] [NUMSET_OF_PTREE_def, FINITE_LIST_TO_SET]
 QED
 
-val ADD_INSERT = save_thm("ADD_INSERT",
+Theorem ADD_INSERT =
   (GEN_ALL o SIMP_CONV (srw_ss()) [GSYM INSERT_PTREE_def, oneTheory.one])
-  ``ADD t (n,v:unit)``);
+  ``ADD t (n,v:unit)``;
 
 val _ = export_rewrites ["INSERT_PTREE_IS_PTREE", "FINITE_NUMSET_OF_PTREE",
                          "ADD_INSERT"];
@@ -773,9 +773,9 @@ val IS_PTREE_FOLDR_INSERT_PTREE = prove(
   `!l t. IS_PTREE t ==> IS_PTREE (FOLDR (\x y. x INSERT_PTREE y) t l)`,
   Induct_on `l` \\ SRW_TAC [] []);
 
-val PEEK_INSERT_PTREE = save_thm("PEEK_INSERT_PTREE",
+Theorem PEEK_INSERT_PTREE =
    (GEN_ALL o SPEC_ALL o ONCE_REWRITE_RULE [oneTheory.one] o
-    REWRITE_RULE [ADD_INSERT] o ISPEC `t:ptreeset`) PEEK_ADD);
+    REWRITE_RULE [ADD_INSERT] o ISPEC `t:ptreeset`) PEEK_ADD;
 
 Theorem MEM_TRAVERSE_INSERT_PTREE:
    !t x h. IS_PTREE t ==>
@@ -808,9 +808,9 @@ val PERM_INSERT_PTREE = prove(
     \\ FULL_SIMP_TAC (srw_ss()) [MEM_SET_TO_LIST, MEM_TRAVERSE]
      \\ METIS_TAC []);
 
-val PERM_INSERT_PTREE = save_thm("PERM_INSERT_PTREE",
+Theorem PERM_INSERT_PTREE =
   (GEN_ALL o SIMP_RULE (srw_ss()) [SET_TO_LIST_INV] o
-   DISCH `FINITE s` o SPECL [`t`, `SET_TO_LIST s`]) PERM_INSERT_PTREE);
+   DISCH `FINITE s` o SPECL [`t`, `SET_TO_LIST s`]) PERM_INSERT_PTREE;
 
 Theorem IN_PTREE_OF_NUMSET:
    !t s n. IS_PTREE t /\ FINITE s ==>
@@ -827,13 +827,13 @@ Proof
     \\ SRW_TAC [] [PTREE_OF_NUMSET_def, PERM_INSERT_PTREE]
 QED
 
-val IN_PTREE_EMPTY = save_thm("IN_PTREE_EMPTY", (GEN_ALL o EQF_ELIM o
-  SIMP_CONV (srw_ss()) [IN_PTREE_def, PEEK_def]) ``n IN_PTREE <{}>``);
+Theorem IN_PTREE_EMPTY = (GEN_ALL o EQF_ELIM o
+  SIMP_CONV (srw_ss()) [IN_PTREE_def, PEEK_def]) ``n IN_PTREE <{}>``;
 
 val _ = export_rewrites ["IN_PTREE_EMPTY"];
 
-val IN_PTREE_OF_NUMSET_EMPTY = save_thm("IN_PTREE_OF_NUMSET_EMPTY",
-  (GSYM o SIMP_RULE (srw_ss()) [] o SPEC `Empty`) IN_PTREE_OF_NUMSET);
+Theorem IN_PTREE_OF_NUMSET_EMPTY =
+  (GSYM o SIMP_RULE (srw_ss()) [] o SPEC `Empty`) IN_PTREE_OF_NUMSET;
 
 val IS_SOME_EQ_UNIT = prove(
   `!a b:unit option. (IS_SOME a = IS_SOME b) = (a = b)`,
@@ -878,9 +878,8 @@ QED
 
 val _ = export_rewrites ["NUMSET_OF_PTREE_EMPTY", "PTREE_OF_NUMSET_EMPTY"];
 
-val NUMSET_OF_PTREE_PTREE_OF_NUMSET_EMPTY = save_thm(
-  "NUMSET_OF_PTREE_PTREE_OF_NUMSET_EMPTY",
-  (SIMP_RULE (srw_ss()) [] o SPEC `Empty`) NUMSET_OF_PTREE_PTREE_OF_NUMSET);
+Theorem NUMSET_OF_PTREE_PTREE_OF_NUMSET_EMPTY =
+  (SIMP_RULE (srw_ss()) [] o SPEC `Empty`) NUMSET_OF_PTREE_PTREE_OF_NUMSET;
 
 Theorem IN_PTREE_INSERT_PTREE:
    !t m n. IS_PTREE t ==>
@@ -920,8 +919,8 @@ Proof
   SRW_TAC [] [PTREE_EXTENSION] \\ METIS_TAC [IN_PTREE_UNION_PTREE]
 QED
 
-val UNION_PTREE_COMM_EMPTY = save_thm("UNION_PTREE_COMM_EMPTY",
-  (GEN_ALL o SIMP_RULE (srw_ss()) [] o SPECL [`Empty`,`t`]) UNION_PTREE_COMM);
+Theorem UNION_PTREE_COMM_EMPTY =
+  (GEN_ALL o SIMP_RULE (srw_ss()) [] o SPECL [`Empty`,`t`]) UNION_PTREE_COMM;
 
 Theorem UNION_PTREE_EMPTY:
     (!t. t UNION_PTREE Empty = t) /\
@@ -955,8 +954,8 @@ Proof
     \\ METIS_TAC []
 QED
 
-val PTREE_OF_NUMSET_INSERT_EMPTY = save_thm("PTREE_OF_NUMSET_INSERT_EMPTY",
-  (SIMP_RULE (srw_ss()) [] o SPEC `Empty`) PTREE_OF_NUMSET_INSERT);
+Theorem PTREE_OF_NUMSET_INSERT_EMPTY =
+  (SIMP_RULE (srw_ss()) [] o SPEC `Empty`) PTREE_OF_NUMSET_INSERT;
 
 Theorem PTREE_OF_NUMSET_DELETE:
   !t s x. IS_PTREE t /\ FINITE s ==>
@@ -1010,8 +1009,8 @@ val QSORT_EQ =
   METIS_PROVE [QSORT_PERM, PERM_TRANS, PERM_SYM, PERM_REFL]
   ``!R l1 l2. (QSORT R l1 = QSORT R l2) ==> PERM l1 l2``;
 
-val QSORT_MEM_EQ = save_thm("QSORT_MEM_EQ",
-  GEN_ALL (IMP_TRANS (SPEC_ALL QSORT_EQ) (SPEC_ALL PERM_MEM_EQ)));
+Theorem QSORT_MEM_EQ =
+  GEN_ALL (IMP_TRANS (SPEC_ALL QSORT_EQ) (SPEC_ALL PERM_MEM_EQ));
 
 Theorem KEYS_PEEK:
    !t1 t2. IS_PTREE t1 /\ IS_PTREE t2 ==>
@@ -1180,13 +1179,13 @@ val LENGTH_FOLDL_ADD = prove(
     by RW_TAC std_ss [SIZE_ADD, INSERT_PTREE_def]
     \\ METIS_TAC [INSERT_PTREE_IS_PTREE, DECIDE ``a + 1 + b = a + SUC b``]);
 
-val SIZE_PTREE_OF_NUMSET = save_thm("SIZE_PTREE_OF_NUMSET",
+Theorem SIZE_PTREE_OF_NUMSET =
   (GEN_ALL o SIMP_RULE (srw_ss()) [GSYM PTREE_OF_NUMSET_def, SET_TO_LIST_CARD] o
-   DISCH `FINITE s` o SPECL [`SET_TO_LIST s`,`t`]) LENGTH_FOLDL_ADD);
+   DISCH `FINITE s` o SPECL [`SET_TO_LIST s`,`t`]) LENGTH_FOLDL_ADD;
 
-val SIZE_PTREE_OF_NUMSET_EMPTY = save_thm("SIZE_PTREE_OF_NUMSET_EMPTY",
+Theorem SIZE_PTREE_OF_NUMSET_EMPTY =
   (SIMP_RULE (srw_ss()) [TRAVERSE_def, SIZE] o
-   SPEC `Empty`) SIZE_PTREE_OF_NUMSET);
+   SPEC `Empty`) SIZE_PTREE_OF_NUMSET;
 
 Theorem CARD_LIST_TO_SET:
    !l. ALL_DISTINCT l ==> (CARD (LIST_TO_SET l) = LENGTH l)

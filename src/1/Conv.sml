@@ -376,8 +376,9 @@ fun BINDER_CONV conv = ABS_CONV conv ORELSEC QUANT_CONV conv
 fun STRIP_BINDER_CONV opt conv tm =
    let
       val (vlist, M) = strip_binder opt tm
+      val newbody = conv M
    in
-      GEN_ABS opt vlist (conv M)
+      GEN_ABS opt vlist newbody
       handle HOL_ERR _ =>
             let
                val gvs = map (genvar o type_of) vlist

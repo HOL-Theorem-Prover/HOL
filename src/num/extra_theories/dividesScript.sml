@@ -32,9 +32,9 @@ val op >~ = Q.>~
 
 val ARW = RW_TAC arith_ss;
 
-val divides_def = Q.new_definition
-  ("divides_def",
-   `divides a b = ?q. b = q*a`);
+Definition divides_def[nocompute]:
+   divides a b = ?q. b = q*a
+End
 
 val ALL_DIVIDES_0 = store_thm
 ("ALL_DIVIDES_0",
@@ -243,9 +243,9 @@ QED
 (* Definition and trivial facts about primality.                             *)
 (*---------------------------------------------------------------------------*)
 
-val prime_def = Q.new_definition
-("prime_def",
- `prime a <=> a <> 1 /\ !b. divides b a ==> (b=a) \/ (b=1)`);
+Definition prime_def[nocompute]:
+ prime a <=> a <> 1 /\ !b. divides b a ==> (b=a) \/ (b=1)
+End
 
 
 val NOT_PRIME_0 = Q.store_thm
@@ -795,9 +795,9 @@ QED
    Apply DIV_SUB |> GEN_ALL |> SPEC ``1`` |> REWRITE_RULE[MULT_RIGHT_1];
    val it = |- !n m. 0 < n /\ n <= m ==> ((m - n) DIV n = m DIV n - 1): thm
 *)
-val SUB_DIV = save_thm("SUB_DIV",
+Theorem SUB_DIV =
     DIV_SUB |> GEN ``n:num`` |> GEN ``m:num`` |> GEN ``q:num`` |> SPEC ``1``
-            |> REWRITE_RULE[MULT_RIGHT_1]);
+            |> REWRITE_RULE[MULT_RIGHT_1];
 (* val SUB_DIV = |- !m n. 0 < n /\ n <= m ==> ((m - n) DIV n = m DIV n - 1): thm *)
 
 (* Theorem: 0 < n ==> !k m. (m MOD n = 0) ==> ((k * n = m) <=> (k = m DIV n)) *)

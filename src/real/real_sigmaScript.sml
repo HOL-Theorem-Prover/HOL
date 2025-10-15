@@ -725,8 +725,9 @@ QED
 (* Sums of real numbers.                                                     *)
 (* ------------------------------------------------------------------------- *)
 
-val sum_def = new_definition ("sum_def",
-  ``(Sum :('a->bool)->('a->real)->real) = iterate (+)``);
+Definition sum_def[nocompute]:
+  (Sum :('a->bool)->('a->real)->real) = iterate (+)
+End
 
 val _ = overload_on ("sum",``Sum``);
 
@@ -2042,8 +2043,9 @@ QED
 (* A general notion of polynomial function.                                  *)
 (* ------------------------------------------------------------------------- *)
 
-val polynomial_function = new_definition ("polynomial_function",
- ``polynomial_function p <=> ?m c. !x. p x = sum{0..m} (\i. c i * x pow i)``);
+Definition polynomial_function[nocompute]:
+ polynomial_function p <=> ?m c. !x. p x = sum{0..m} (\i. c i * x pow i)
+End
 
 Theorem POLYNOMIAL_FUNCTION_CONST:
    !c. polynomial_function (\x. c)
@@ -2247,8 +2249,9 @@ QED
 (* Now products over real numbers.                                           *)
 (* ------------------------------------------------------------------------- *)
 
-val product = new_definition ("product",
-  ``product = iterate (( * ):real->real->real)``);
+Definition product[nocompute]:
+  product = iterate (( * ):real->real->real)
+End
 
 Theorem PRODUCT_CLAUSES:
    (!f. product {} f = &1) /\

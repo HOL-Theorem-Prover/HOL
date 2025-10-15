@@ -28,11 +28,11 @@ val frac_tyax = new_type_definition( "frac",
                 REWRITE_TAC[SND] THEN
                 RW_TAC int_ss []) );
 
-val frac_bij = save_thm("frac_bij", define_new_type_bijections{
+Theorem frac_bij = define_new_type_bijections{
                 name="frac_tybij",
                 ABS="abs_frac",
                 REP="rep_frac",
-                tyax=frac_tyax } );
+                tyax=frac_tyax };
 
 (*--------------------------------------------------------------------------*
  * operations

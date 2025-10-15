@@ -75,9 +75,9 @@ val NONE_DEF = new_definition(
 val _ = ot0 "SOME" "some"
 val _ = ot0 "NONE" "none"
 
-val option_Axiom = store_thm (
-  "option_Axiom",
-  Term`!e f:'a -> 'b. ?fn. (fn NONE = e) /\ (!x. fn (SOME x) = f x)`,
+Theorem option_Axiom:
+  !e f:'a -> 'b. ?fn. (fn NONE = e) /\ (!x. fn (SOME x) = f x)
+Proof
   REPEAT GEN_TAC THEN
   PURE_REWRITE_TAC[SOME_DEF,NONE_DEF] THEN
   STRIP_ASSUME_TAC
@@ -86,17 +86,19 @@ val option_Axiom = store_thm (
          (INST_TYPE [Type.beta |-> Type`:one`]
           sumTheory.sum_Axiom))) THEN
   EXISTS_TAC “\x:'a option. h(option_REP x):'b” THEN BETA_TAC THEN
-  ASM_REWRITE_TAC[reduce option_REP_ABS_DEF]);
+  ASM_REWRITE_TAC[reduce option_REP_ABS_DEF]
+QED
 
-val option_induction = store_thm (
-  "option_induction",
-  Term`!P. P NONE /\ (!a. P (SOME a)) ==> !x. P x`,
+Theorem option_induction:
+  !P. P NONE /\ (!a. P (SOME a)) ==> !x. P x
+Proof
   GEN_TAC THEN PURE_REWRITE_TAC [SOME_DEF, NONE_DEF] THEN
   REPEAT STRIP_TAC THEN
   ONCE_REWRITE_TAC [GSYM (CONJUNCT1 option_REP_ABS_DEF)] THEN
   SPEC_TAC (Term`option_REP (x:'a option)`, Term`s:'a + one`) THEN
   HO_MATCH_MP_TAC sumTheory.sum_INDUCT THEN
-  ONCE_REWRITE_TAC [oneTheory.one] THEN ASM_REWRITE_TAC []);
+  ONCE_REWRITE_TAC [oneTheory.one] THEN ASM_REWRITE_TAC []
+QED
 
 Theorem option_nchotomy =
   prove_cases_thm option_induction
@@ -130,23 +132,21 @@ Theorem EXISTS_OPTION:
 Proof METIS_TAC [option_nchotomy]
 QED
 
-val SOME_11 = store_thm("SOME_11",
-  Term`!x y :'a. (SOME x = SOME y) <=> (x=y)`,
-  REWRITE_TAC [SOME_DEF,option_ABS_ONE_ONE,sumTheory.INR_INL_11]);
+Theorem SOME_11:
+  !x y :'a. (SOME x = SOME y) <=> (x=y)
+Proof
+  REWRITE_TAC [SOME_DEF,option_ABS_ONE_ONE,sumTheory.INR_INL_11]
+QED
 val _ = export_rewrites ["SOME_11"]
 val _ = computeLib.add_persistent_funs ["SOME_11"]
 
-val (NOT_NONE_SOME,NOT_SOME_NONE) =
- let val thm = TAC_PROOF(([], Term`!x:'a. ~(NONE = SOME x)`),
-                  REWRITE_TAC [SOME_DEF,NONE_DEF,
-                               option_ABS_ONE_ONE,sumTheory.INR_neq_INL])
- in
-   (save_thm("NOT_NONE_SOME", thm),
-    save_thm("NOT_SOME_NONE", GSYM thm))
-  end;
-val _ = export_rewrites ["NOT_NONE_SOME"]
-        (* only need one because simplifier automatically flips the equality
-           for us *)
+Theorem NOT_NONE_SOME[simp]:
+  !x:'a. ~(NONE = SOME x)
+Proof
+  REWRITE_TAC [SOME_DEF,NONE_DEF,option_ABS_ONE_ONE,sumTheory.INR_neq_INL]
+QED
+(* [simp] not needed, as the simplifier automatically flips the equality for us *)
+Theorem NOT_SOME_NONE = GSYM NOT_NONE_SOME
 val _ = computeLib.add_persistent_funs ["NOT_NONE_SOME", "NOT_SOME_NONE"]
 
 
@@ -292,7 +292,7 @@ val IS_NONE_option_case = Q.prove(
 );
 
 
-val option_CLAUSES = save_thm("option_CLAUSES",
+Theorem option_CLAUSES =
      LIST_CONJ ([SOME_11,THE_DEF,NOT_NONE_SOME,NOT_SOME_NONE]@
                 (CONJUNCTS IS_SOME_DEF)@
                 [IS_NONE_EQ_NONE,
@@ -305,7 +305,7 @@ val option_CLAUSES = save_thm("option_CLAUSES",
                  IS_SOME_option_case_SOME]@
                  CONJUNCTS option_case_def@
                  CONJUNCTS OPTION_MAP_DEF@
-                 CONJUNCTS OPTION_JOIN_DEF));
+                 CONJUNCTS OPTION_JOIN_DEF);
 
 Theorem option_case_compute:
   option_CASE (x:'a option) (e:'b) f =
@@ -823,9 +823,8 @@ val _ = export_rewrites ["some_EQ"]
         M = M' /\ (M' = NONE ==> v = v') /\ (!x. M' = SOME x ==> f x = f' x) ==>
         option_CASE M v f = option_CASE M' v' f'
  *)
-val option_case_cong =
-  save_thm("option_case_cong",
-      Prim_rec.case_cong_thm option_nchotomy option_case_def);
+Theorem option_case_cong =
+      Prim_rec.case_cong_thm option_nchotomy option_case_def;
 
 (* another similar theorem, moved here from cardinalTheory:
    |- option_CASE x v f <=> (x = NONE ==> v) /\ !x'. x = SOME x' ==> f x'
@@ -874,10 +873,10 @@ QED
 
 val S = PP.add_string and NL = PP.NL and B = PP.block PP.CONSISTENT 0
 
-val option_Induct = save_thm("option_Induct",
-  ONCE_REWRITE_RULE [boolTheory.CONJ_SYM] option_induction);
-val option_CASES = save_thm("option_CASES",
-  ONCE_REWRITE_RULE [boolTheory.DISJ_SYM] option_nchotomy);
+Theorem option_Induct =
+  ONCE_REWRITE_RULE [boolTheory.CONJ_SYM] option_induction;
+Theorem option_CASES =
+  ONCE_REWRITE_RULE [boolTheory.DISJ_SYM] option_nchotomy;
 
 val _ = TypeBase.general_update “:'a option” (
           TypeBasePure.put_recognizers [IS_NONE_DEF, IS_SOME_DEF] o

@@ -18,8 +18,9 @@ val GEN_ALL   = hol88Lib.GEN_ALL;   (* it has old reverted variable order *)
 (* Lemmas about the half-rationals, including definition of ordering         *)
 (*---------------------------------------------------------------------------*)
 
-val hrat_lt = new_definition("hrat_lt",
-  “$hrat_lt x y = ?d. y = x hrat_add d”);
+Definition hrat_lt[nocompute]:
+  $hrat_lt x y = ?d. y = x hrat_add d
+End
 val _ = temp_set_fixity "hrat_lt" (Infix(NONASSOC, 450))
 
 Theorem HRAT_LT_REFL:
@@ -294,15 +295,17 @@ QED
 
 val _ = Parse.hide "C";   (* in combinTheory *)
 
-val isacut = new_definition("isacut",
-“isacut C =
+Definition isacut[nocompute]:
+isacut C =
       (?x. C x)                          /\     (* Nonempty     *)
       (?x. ~C x)                         /\     (* Bounded above   *)
       (!x y. C x /\ y hrat_lt x ==> C y) /\     (* Downward closed *)
-      (!x. C x ==> ?y. C y /\ x hrat_lt y)”);  (* No greatest element*)
+      (!x. C x ==> ?y. C y /\ x hrat_lt y)      (* No greatest element*)
+End
 
-val cut_of_hrat = new_definition("cut_of_hrat",
-  “cut_of_hrat x = \y. y hrat_lt x”);
+Definition cut_of_hrat[nocompute]:
+  cut_of_hrat x = \y. y hrat_lt x
+End
 
 Theorem ISACUT_HRAT:
    !h. isacut(cut_of_hrat h)
@@ -453,8 +456,9 @@ QED
 (* Define the operations. "hreal_lt" and "hreal_sub are convenient later     *)
 (*---------------------------------------------------------------------------*)
 
-val hreal_1 = new_definition("hreal_1",
-  “hreal_1 = hreal (cut_of_hrat hrat_1)”);
+Definition hreal_1[nocompute]:
+  hreal_1 = hreal (cut_of_hrat hrat_1)
+End
 
 val hreal_add = new_infixl_definition("hreal_add",
   “hreal_add X Y = hreal (\w. ?x y. (w = x hrat_add y) /\
@@ -464,15 +468,18 @@ val hreal_mul = new_infixl_definition("hreal_mul",
   “hreal_mul X Y = hreal (\w. ?x y. (w = x hrat_mul y) /\
                                     (cut X) x /\ (cut Y) y)”,600);
 
-val hreal_inv = new_definition("hreal_inv",
-  “hreal_inv X = hreal (\w. ?d. (d hrat_lt hrat_1) /\
-                   (!x. (cut X) x ==> ($hrat_mul w x) hrat_lt d))”);
+Definition hreal_inv[nocompute]:
+  hreal_inv X = hreal (\w. ?d. (d hrat_lt hrat_1) /\
+                   (!x. (cut X) x ==> ($hrat_mul w x) hrat_lt d))
+End
 
-val hreal_sup = new_definition("hreal_sup",
-  “hreal_sup P = hreal (\w. ?X. (P X) /\ (cut X) w)”);
+Definition hreal_sup[nocompute]:
+  hreal_sup P = hreal (\w. ?X. (P X) /\ (cut X) w)
+End
 
-val hreal_lt = new_definition("hreal_lt",
-  “hreal_lt X Y = ~(X = Y) /\ !x. (cut X) x ==> (cut Y) x”);
+Definition hreal_lt[nocompute]:
+  hreal_lt X Y = ~(X = Y) /\ !x. (cut X) x ==> (cut Y) x
+End
 val _ = set_fixity "hreal_lt" (Infix(NONASSOC, 450))
 
 
@@ -1233,14 +1240,17 @@ val CANCEL_TAC = (C (curry op THEN)
 (* Define operations on representatives.                                     *)
 (*---------------------------------------------------------------------------*)
 
-val treal_0 = new_definition("treal_0",
-  “treal_0 = (hreal_1,hreal_1)”);
+Definition treal_0[nocompute]:
+  treal_0 = (hreal_1,hreal_1)
+End
 
-val treal_1 = new_definition("treal_1",
-  “treal_1 = (hreal_1 hreal_add hreal_1,hreal_1)”);
+Definition treal_1[nocompute]:
+  treal_1 = (hreal_1 hreal_add hreal_1,hreal_1)
+End
 
-val treal_neg = new_definition("treal_neg",
-  “treal_neg (x:hreal,(y:hreal)) = (y,x)”);
+Definition treal_neg[nocompute]:
+  treal_neg (x:hreal,(y:hreal)) = (y,x)
+End
 
 val treal_add = new_infixl_definition("treal_add",
   “$treal_add (x1,y1) (x2,y2) = (x1 hreal_add x2, y1 hreal_add y2)”,500);
@@ -1250,23 +1260,26 @@ val treal_mul = new_infixl_definition("treal_mul",
       ((x1 hreal_mul x2) hreal_add (y1 hreal_mul y2),
        (x1 hreal_mul y2) hreal_add (y1 hreal_mul x2))”, 600);
 
-val treal_lt = new_definition("treal_lt",
-“treal_lt (x1,y1) (x2,y2) = (x1 hreal_add y2) hreal_lt (x2 hreal_add y1)”);
+Definition treal_lt[nocompute]:
+treal_lt (x1,y1) (x2,y2) = (x1 hreal_add y2) hreal_lt (x2 hreal_add y1)
+End
 val _ = temp_set_fixity "treal_lt" (Infix(NONASSOC, 450))
 
-val treal_inv = new_definition("treal_inv",
-  “treal_inv (x,y) =
+Definition treal_inv[nocompute]:
+  treal_inv (x,y) =
       if (x = y) then treal_0
       else if y hreal_lt x then
         ((hreal_inv (x hreal_sub y)) hreal_add hreal_1,hreal_1)
-      else (hreal_1,(hreal_inv(y hreal_sub x)) hreal_add hreal_1)”);
+      else (hreal_1,(hreal_inv(y hreal_sub x)) hreal_add hreal_1)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Define the equivalence relation and prove it *is* one                     *)
 (*---------------------------------------------------------------------------*)
 
-val treal_eq = new_definition("treal_eq",
-  “treal_eq (x1,y1) (x2,y2) = (x1 hreal_add y2 = x2 hreal_add y1)”);
+Definition treal_eq[nocompute]:
+  treal_eq (x1,y1) (x2,y2) = (x1 hreal_add y2 = x2 hreal_add y1)
+End
 val _ = temp_set_fixity "treal_eq" (Infix(NONASSOC, 450))
 
 Theorem TREAL_EQ_REFL:
@@ -1385,9 +1398,11 @@ Proof
   THEN CANCEL_TAC
 QED
 
-val TREAL_INV_0 = store_thm("TREAL_INV_0",
- Term`treal_inv (treal_0) treal_eq (treal_0)`,
-  REWRITE_TAC[treal_inv, treal_eq, treal_0]);
+Theorem TREAL_INV_0:
+ treal_inv (treal_0) treal_eq (treal_0)
+Proof
+  REWRITE_TAC[treal_inv, treal_eq, treal_0]
+QED
 
 Theorem TREAL_MUL_LINV:
    !x. ~(x treal_eq treal_0) ==>
@@ -1452,11 +1467,13 @@ QED
 (* we prove the appropriate order-isomorphism {x::R|0 < r} <-> R^+           *)
 (*---------------------------------------------------------------------------*)
 
-val treal_of_hreal = new_definition("treal_of_hreal",
-  “treal_of_hreal x = (x hreal_add hreal_1,hreal_1)”);
+Definition treal_of_hreal[nocompute]:
+  treal_of_hreal x = (x hreal_add hreal_1,hreal_1)
+End
 
-val hreal_of_treal = new_definition("hreal_of_treal",
-  “hreal_of_treal (x,y) = @d. x = y hreal_add d”);
+Definition hreal_of_treal[nocompute]:
+  hreal_of_treal (x,y) = @d. x = y hreal_add d
+End
 
 Theorem TREAL_BIJ:
    (!h. (hreal_of_treal(treal_of_hreal h)) = h) /\
@@ -1618,4 +1635,3 @@ Proof
   THEN REPEAT(DISCH_THEN(SUBST1_TAC o MATCH_MP HREAL_SUB_ADD)) THEN
   FIRST_ASSUM SUBST1_TAC THEN REFL_TAC end
 QED
-

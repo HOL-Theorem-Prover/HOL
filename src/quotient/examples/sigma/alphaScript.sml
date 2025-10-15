@@ -357,10 +357,10 @@ val ALPHA1_inv_thms = prove_inversion_theorems
 val ALPHA1_strong_ind = prove_strong_induction
     ALPHA1_rules_sat ALPHA1_ind_thm;
 
-val _ = save_thm ("ALPHA1_rules_sat", ALPHA1_rules_sat);
-val _ = save_thm ("ALPHA1_ind_thm", ALPHA1_ind_thm);
-val _ = save_thm ("ALPHA1_inv_thms", LIST_CONJ ALPHA1_inv_thms);
-val _ = save_thm ("ALPHA1_strong_ind", ALPHA1_strong_ind);
+Theorem ALPHA1_rules_sat = ALPHA1_rules_sat;
+Theorem ALPHA1_ind_thm = ALPHA1_ind_thm;
+Theorem ALPHA1_inv_thms = LIST_CONJ ALPHA1_inv_thms;
+Theorem ALPHA1_strong_ind = ALPHA1_strong_ind;
 
 
 val [ALPHA1_OVAR1, ALPHA1_OBJ1, ALPHA1_INVOKE1, ALPHA1_UPDATE1,
@@ -477,7 +477,7 @@ val ALPHA1_TRANS1 = TAC_PROOF(([],
     THEN REPEAT CONJ_TAC
     THEN REPEAT GEN_TAC
     THEN STRIP_TAC
-    THEN ONCE_REWRITE_TAC ALPHA1_inv_thms
+    THEN ONCE_REWRITE_TAC[ALPHA1_inv_thms]
     THEN REWRITE_TAC[object1_one_one,object1_distinct]
     THEN REPEAT CONJ_TAC
     THEN REPEAT GEN_TAC
@@ -629,7 +629,7 @@ Theorem ALPHA1_object_similar:
         (!x1 o1 m xs ys. ALPHA1_method (SIGMA1 x1 o1) m xs ys ==>
                    (?x2 o2. m = SIGMA1 x2 o2))
 Proof
-    PURE_ONCE_REWRITE_TAC ALPHA1_inv_thms
+    PURE_ONCE_REWRITE_TAC[ALPHA1_inv_thms]
     THEN REWRITE_TAC[object1_one_one,object1_distinct]
     THEN REPEAT STRIP_TAC
     THENL (* 7 subgoals *)
@@ -688,7 +688,7 @@ Proof
     THEN (EQ_TAC
           THENL [ DISCH_THEN (STRIP_ASSUME_TAC
                               o REWRITE_RULE[object1_one_one,object1_distinct]
-                              o ONCE_REWRITE_RULE ALPHA1_inv_thms)
+                              o ONCE_REWRITE_RULE[ALPHA1_inv_thms])
                   THEN ASM_REWRITE_TAC[],
 
                   REWRITE_TAC[]
@@ -722,7 +722,7 @@ Theorem ALPHA1_object_neg:
         (!e d xs ys. ALPHA1_dict (CONS e d) NIL xs ys = F) /\
         (!e d xs ys. ALPHA1_dict NIL (CONS e d) xs ys = F)
 Proof
-    PURE_ONCE_REWRITE_TAC ALPHA1_inv_thms
+    PURE_ONCE_REWRITE_TAC[ALPHA1_inv_thms]
     THEN REWRITE_TAC[object1_one_one,object1_distinct]
 QED
 
@@ -1158,14 +1158,13 @@ val [ALPHA1_EXTRANEOUS_CONTEXT_obj, ALPHA1_EXTRANEOUS_CONTEXT_dict1,
 
 (* define ALPHA1_subst *)
 
-val ALPHA1_subst =
-    new_definition
-    ("ALPHA1_subst",
-     “ALPHA1_subst xs ys xs' ys' t1 t2 s1 s2 =
+Definition ALPHA1_subst[nocompute]:
+     ALPHA1_subst xs ys xs' ys' t1 t2 s1 s2 =
         (LENGTH xs' = LENGTH ys') /\
         (!x y. (x IN t1) /\ (y IN t2) /\
                alpha_match xs ys x y ==>
-               ALPHA1_obj (SUB1 s1 x) (SUB1 s2 y) xs' ys')”);
+               ALPHA1_obj (SUB1 s1 x) (SUB1 s2 y) xs' ys')
+End
 
 
 Theorem ALPHA1_subst_UNION:
@@ -1965,21 +1964,21 @@ QED
 (* Now we define the alpha-equivalence predicates themselves. *)
 (* ========================================================== *)
 
-val ALPHA_obj =
-    new_definition ("ALPHA_obj",
-    “ALPHA_obj o1 o2 = ALPHA1_obj o1 o2 [] []”);
+Definition ALPHA_obj[nocompute]:
+    ALPHA_obj o1 o2 = ALPHA1_obj o1 o2 [] []
+End
 
-val ALPHA_dict =
-    new_definition ("ALPHA_dict",
-    “ALPHA_dict d1 d2 = ALPHA1_dict d1 d2 [] []”);
+Definition ALPHA_dict[nocompute]:
+    ALPHA_dict d1 d2 = ALPHA1_dict d1 d2 [] []
+End
 
-val ALPHA_entry =
-    new_definition ("ALPHA_entry",
-    “ALPHA_entry e1 e2 = ALPHA1_entry e1 e2 [] []”);
+Definition ALPHA_entry[nocompute]:
+    ALPHA_entry e1 e2 = ALPHA1_entry e1 e2 [] []
+End
 
-val ALPHA_method =
-    new_definition ("ALPHA_method",
-    “ALPHA_method m1 m2 = ALPHA1_method m1 m2 [] []”);
+Definition ALPHA_method[nocompute]:
+    ALPHA_method m1 m2 = ALPHA1_method m1 m2 [] []
+End
 
 
 Theorem ALPHA_object:
@@ -2170,12 +2169,11 @@ val ALPHA1_subst =
                ALPHA1_obj (SUB1 s1 x) (SUB1 s2 y) xs' ys')”);
 *)
 
-val ALPHA_subst =
-    new_definition
-    ("ALPHA_subst",
-     “ALPHA_subst t s1 s2 =
+Definition ALPHA_subst[nocompute]:
+     ALPHA_subst t s1 s2 =
         (!x. (x IN t) ==>
-               ALPHA_obj (SUB1 s1 x) (SUB1 s2 x))”);
+               ALPHA_obj (SUB1 s1 x) (SUB1 s2 x))
+End
 
 
 Theorem ALPHA_SUB_CONTEXT:

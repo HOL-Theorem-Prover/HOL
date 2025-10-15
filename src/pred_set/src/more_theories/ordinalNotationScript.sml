@@ -83,8 +83,7 @@ val (oless_rules, oless_ind, oless_cases) =
   (!e1 k1 t1 e2 k2 t2. (e1=e2) /\ (k1=k2) /\ oless t1 t2
                         ==> oless (Plus e1 k1 t1) (Plus e2 k2 t2))`;
 
-val oless_strong_ind =
-    save_thm ("oless_strong_ind",theorem "oless_strongind");
+Theorem oless_strong_ind = theorem "oless_strongind";
 
 Theorem oless_End_End:
   !k1 k2. oless (End k1) (End k2) ==> k1 < k2
@@ -125,8 +124,7 @@ val (is_ord_rules, is_ord_ind, is_ord_cases) =
    (!e k t. is_ord e /\ ~(e = End 0) /\ 0 < k /\ is_ord t /\ oless (expt t) e
             ==> is_ord (Plus e k t))`;
 
-val is_ord_strong_ind =
-    save_thm("is_ord_strong_ind", theorem "is_ord_strongind")
+Theorem is_ord_strong_ind = theorem "is_ord_strongind"
 
 Theorem decompose_plus:
   !e k t. is_ord (Plus e k t) ==>
@@ -741,13 +739,12 @@ QED
 val WF_ord_measure =
  SPEC_ALL (MATCH_MP relationTheory.WF_inv_image WF_ord_less);
 
-val e0_induction = save_thm
-("e0_INDUCTION",
+Theorem e0_INDUCTION =
  GEN ``P:'a->bool``
   (GEN ``f:'a->osyntax``
     (SPEC_ALL
        (SIMP_RULE std_ss [relationTheory.inv_image_def]
-          (MATCH_MP relationTheory.WF_INDUCTION_THM WF_ord_measure)))));
+          (MATCH_MP relationTheory.WF_INDUCTION_THM WF_ord_measure))));
 
 Theorem e0_RECURSION:
   !f. ?!g. !x. g x = M (RESTRICT g (\x y. ord_less (f x) (f y)) x) x

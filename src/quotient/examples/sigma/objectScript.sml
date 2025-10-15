@@ -62,11 +62,11 @@ val object1_induct = theorem "obj1_induction";
 val object1_Axiom = theorem "obj1_Axiom";
 
 val object1_distinct = LIST_CONJ[obj1_distinct,list_distinct];
-val object1_distinct = save_thm("object1_distinct",
-                         CONJ object1_distinct (GSYM object1_distinct));
-val object1_one_one  = save_thm("object1_one_one",
+Theorem object1_distinct =
+                         CONJ object1_distinct (GSYM object1_distinct);
+Theorem object1_one_one =
                          LIST_CONJ[obj1_one_one,list_11,CLOSED_PAIR_EQ,
-                                   method1_one_one]);
+                                   method1_one_one];
 
 
 
@@ -98,10 +98,10 @@ QED
 val [obj1_cases, dict1_cases, entry1_cases, method1_cases]
     = CONJUNCTS object1_cases;
 
-val _ = save_thm ("obj1_cases", obj1_cases);
-val _ = save_thm ("dict1_cases", dict1_cases);
-val _ = save_thm ("entry1_cases", entry1_cases);
-val _ = save_thm ("method1_cases", method1_cases);
+Theorem obj1_cases = obj1_cases;
+Theorem dict1_cases = dict1_cases;
+Theorem entry1_cases = entry1_cases;
+Theorem method1_cases = method1_cases;
 
 
 
@@ -423,9 +423,9 @@ QED
 (*   of the substitution; else the result is infinite                    *)
 (* --------------------------------------------------------------------- *)
 
-val FV_subst1 =
-    new_definition("FV_subst1",
-    “FV_subst1 s xs = UNION_SET (IMAGE (FV_obj1 o SUB1 s) xs)”);
+Definition FV_subst1[nocompute]:
+    FV_subst1 s xs = UNION_SET (IMAGE (FV_obj1 o SUB1 s) xs)
+End
 
 
 
@@ -874,15 +874,15 @@ QED
 
 (* obj1_0 is a null, meaningless object. *)
 
-val obj1_0 = new_definition(
-      "obj1_0",
-      “obj1_0 = OBJ1 []”);
+Definition obj1_0[nocompute]:
+      obj1_0 = OBJ1 []
+End
 
 (* method1_0 is a null, meaningless method. *)
 
-val method1_0 = new_definition(
-      "method1_0",
-      “method1_0 = SIGMA1 (VAR "" 0) obj1_0”);
+Definition method1_0[nocompute]:
+      method1_0 = SIGMA1 (VAR "" 0) obj1_0
+End
 
 
 Definition invoke_method1_def:

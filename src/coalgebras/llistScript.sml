@@ -118,11 +118,11 @@ Theorem lrep_ok_MAP_FUNPOW_BIND[local]:
 Proof SIMP_TAC bool_ss [lrep_ok_MAP] THEN irule lrep_ok_FUNPOW_BIND
 QED
 
-val LNIL = new_definition("LNIL", ``LNIL = llist_abs (λn. NONE)``);
-val LCONS = new_definition(
-  "LCONS",
-  ``LCONS h t = llist_abs (λn. if n = 0 then SOME h else llist_rep t (n - 1))``
-);
+Definition LNIL[nocompute]: LNIL = llist_abs (λn. NONE)
+End
+Definition LCONS[nocompute]:
+  LCONS h t = llist_abs (λn. if n = 0 then SOME h else llist_rep t (n - 1))
+End
 
 Theorem llist_rep_LCONS:
   llist_rep (LCONS h t) =
@@ -158,13 +158,13 @@ Proof
                    NOT_SUC, lr_eta, llist_absrep]
 QED
 
-val LHD = new_definition("LHD", ``LHD ll = llist_rep ll 0``);
-val LTL = new_definition(
-  "LTL",
-  ``LTL ll = case LHD ll of
+Definition LHD[nocompute]: LHD ll = llist_rep ll 0
+End
+Definition LTL[nocompute]:
+  LTL ll = case LHD ll of
                NONE => NONE
-             | SOME _ => SOME (llist_abs (\n. llist_rep ll (n + 1)))``
-);
+             | SOME _ => SOME (llist_abs (\n. llist_rep ll (n + 1)))
+End
 
 Theorem LTL_HD_HD: LHD ll = OPTION_MAP SND (LTL_HD ll)
 Proof
@@ -971,9 +971,9 @@ val llength_rel_nil = prove(
   ONCE_REWRITE_TAC [llength_rel_cases] THEN SRW_TAC [][]);
 val _ = augment_srw_ss [rewrites [llength_rel_nil]]
 
-val LLENGTH = new_definition(
-  "LLENGTH",
-  ``LLENGTH ll = if LFINITE ll then SOME (@n. llength_rel ll n) else NONE``);
+Definition LLENGTH[nocompute]:
+  LLENGTH ll = if LFINITE ll then SOME (@n. llength_rel ll n) else NONE
+End
 
 Theorem LLENGTH_THM:
     (LLENGTH LNIL = SOME 0) /\
@@ -1017,14 +1017,12 @@ Proof
   fs[]
 QED
 
-val LFINITE_INDUCTION = save_thm(
-  "LFINITE_INDUCTION",
-  CONV_RULE (RENAME_VARS_CONV ["P"]) LFINITE_ind);
+Theorem LFINITE_INDUCTION =
+  CONV_RULE (RENAME_VARS_CONV ["P"]) LFINITE_ind;
 
-val LFINITE_STRONG_INDUCTION = save_thm(
-  "LFINITE_STRONG_INDUCTION",
+Theorem LFINITE_STRONG_INDUCTION =
   SIMP_RULE (srw_ss()) [LFINITE_THM]
-  (Q.SPEC `\ll. LFINITE ll /\ P ll` LFINITE_INDUCTION))
+  (Q.SPEC `\ll. LFINITE ll /\ P ll` LFINITE_INDUCTION)
 
 Theorem LFINITE_MAP[simp]:
   !f (ll:'a llist). LFINITE (LMAP f ll) = LFINITE ll
@@ -1133,9 +1131,9 @@ QED
     mapping in and out of ordinary (finite) lists
    ---------------------------------------------------------------------- *)
 
-val toList = new_definition(
-  "toList",
-  ``toList ll = if LFINITE ll then LTAKE (THE (LLENGTH ll)) ll else NONE``);
+Definition toList[nocompute]:
+  toList ll = if LFINITE ll then LTAKE (THE (LLENGTH ll)) ll else NONE
+End
 
 Theorem toList_THM:
     (toList LNIL = SOME []) /\
@@ -1525,11 +1523,10 @@ Proof
 QED
 val _ = IndDefLib.export_mono "MONO_exists"
 
-val exists_strong_ind = save_thm(
-  "exists_strong_ind",
+Theorem exists_strong_ind =
   exists_ind |> Q.SPECL [`P`, `\ll. Q ll /\ exists P ll`]
              |> SIMP_RULE (srw_ss()) []
-             |> Q.GEN `Q` |> Q.GEN `P`);
+             |> Q.GEN `Q` |> Q.GEN `P`;
 
 Theorem exists_LDROP:
     exists P ll <=> ?n a t. (LDROP n ll = SOME (a:::t)) /\ P a
@@ -1606,7 +1603,7 @@ Theorem every_thm[simp]:
     (every P (h:::t) <=> P h /\ every P t)
 Proof SRW_TAC [][every_def]
 QED
-val LL_ALL_THM = save_thm("LL_ALL_THM", every_thm)
+Theorem LL_ALL_THM = every_thm
 
 Theorem MONO_every:
     (!x. P x ==> Q x) ==> (every P l ==> every Q l)
@@ -1616,12 +1613,11 @@ Proof
 QED
 val _ = export_mono "MONO_every"
 
-val every_strong_coind = save_thm(
-  "every_strong_coind",
+Theorem every_strong_coind =
   every_coind |> Q.SPECL [`P`, `\ll. Q ll \/ every P ll`]
               |> SIMP_RULE (srw_ss()) [DISJ_IMP_THM, IMP_CONJ_THM,
                                        FORALL_AND_THM]
-              |> Q.GEN `Q` |> Q.GEN `P`);
+              |> Q.GEN `Q` |> Q.GEN `P`;
 
 Theorem every_LNTH:
   !P ll. every P ll <=> !n e. LNTH n ll = SOME e ==> P e
@@ -2765,7 +2761,7 @@ val LDROP_EQ_LNIL' = Q.prove (
   ASM_SIMP_TAC std_ss [LTL_THM, LLENGTH_THM, FUNPOW_BIND_NONE,
     SUC_NOT]) ;
 
-val LDROP_EQ_LNIL = save_thm("LDROP_EQ_LNIL", SPEC_ALL LDROP_EQ_LNIL') ;
+Theorem LDROP_EQ_LNIL = SPEC_ALL LDROP_EQ_LNIL' ;
 
 Theorem LPREFIX_APPEND:
    LPREFIX l1 l2 <=> ?ll. l2 = LAPPEND l1 ll
@@ -2972,10 +2968,9 @@ Proof
   simp[LTL_HD_LTL_LHD, Excl "LTL_HD_11"]
 QED
 
-val LGENLIST_SOME_compute = save_thm(
-  "LGENLIST_SOME_compute[compute]",
+Theorem LGENLIST_SOME_compute[compute] =
   CONJ (CONJUNCT1 LGENLIST_SOME)
-       (CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV (CONJUNCT2 LGENLIST_SOME)))
+       (CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV (CONJUNCT2 LGENLIST_SOME))
 
 Theorem LNTH_LGENLIST:
    !n f lim.
@@ -3667,11 +3662,14 @@ Inductive llist_upto:
   (llist_upto R x y ==> llist_upto R (LAPPEND z x) (LAPPEND z y))
 End
 
-val [llist_upto_eq,llist_upto_rel,llist_upto_trans,llist_upto_context] =
+local val [llist_upto_eq,llist_upto_rel,llist_upto_trans,llist_upto_context] =
   llist_upto_rules |> SPEC_ALL |> CONJUNCTS |> map GEN_ALL
-  |> curry (ListPair.map save_thm)
-    ["llist_upto_eq","llist_upto_rel",
-     "llist_upto_trans","llist_upto_context"]
+in
+Theorem llist_upto_eq = llist_upto_eq
+Theorem llist_upto_rel = llist_upto_rel
+Theorem llist_upto_trans = llist_upto_trans
+Theorem llist_upto_context = llist_upto_context;
+end
 
 Theorem LLIST_BISIM_UPTO:
   !ll1 ll2 R.
@@ -4191,4 +4189,3 @@ Proof
   fs[Once LAPPEND_ASSOC]>>
   fs[LFINITE_fromList,LAPPEND11_FINITE1]>>metis_tac[]
 QED
-

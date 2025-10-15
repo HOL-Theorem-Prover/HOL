@@ -4,4 +4,4 @@ Ancestors
 Libs
   emitRecordTestML
 
-val _ = save_thm("T", TRUTH)
+Theorem T = TRUTH

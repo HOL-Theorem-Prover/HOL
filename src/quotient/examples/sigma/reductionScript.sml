@@ -228,13 +228,13 @@ QED
 
 But the following definition is not the same as that in relationTheory. *)
 
-val RC_DEF =
-   new_definition("RC_DEF",
-   “RC (R:'a->'a->bool) a b =
+Definition RC_DEF[nocompute]:
+   RC (R:'a->'a->bool) a b =
        !P.
           (!x y. R x y ==> P x y) /\
           (!x. P x x)
-          ==> P a b”);
+          ==> P a b
+End
 
 
 Theorem RC_REFLEXIVE:
@@ -305,9 +305,8 @@ QED
 (* Define compatible relations on the object/method language.            *)
 (* --------------------------------------------------------------------- *)
 
-val compatible =
-    new_definition ("compatible",
-    “compatible Ro Rd Re Rm =
+Definition compatible[nocompute]:
+    compatible Ro Rd Re Rm =
         ((!o1 o2. Ro o1 o2 ==> (!l. Ro (INVOKE o1 l) (INVOKE o2 l))  /\
                                (!l m. Ro (UPDATE o1 l m) (UPDATE o2 l m))  /\
                                (!x. Rm (SIGMA x o1) (SIGMA x o2)))
@@ -319,48 +318,49 @@ val compatible =
           /\
          (!m1 m2. Rm m1 m2 ==> (!o' l. Ro (UPDATE o' l m1) (UPDATE o' l m2))
                                /\
-                               (!l. Re (l, m1) (l, m2))))”);
+                               (!l. Re (l, m1) (l, m2))))
+End
 
-val reflexve =
-    new_definition ("reflexve",
-    “reflexve Ro Rd Re Rm =
+Definition reflexve[nocompute]:
+    reflexve Ro Rd Re Rm =
         ((!o1: obj. Ro o1 o1)  /\
          (!d1:^dict. Rd d1 d1)  /\
          (!e1:^entry. Re e1 e1)  /\
-         (!m1: method. Rm m1 m1))”);
+         (!m1: method. Rm m1 m1))
+End
 
 val _ = hide "symmetric";
 
-val symmetric =
-    new_definition ("symmetric",
-    “symmetric Ro Rd Re Rm =
+Definition symmetric[nocompute]:
+    symmetric Ro Rd Re Rm =
         ((!o1 o2: obj. Ro o1 o2 ==> Ro o2 o1)  /\
          (!d1 d2:^dict. Rd d1 d2 ==> Rd d2 d1)  /\
          (!e1 e2:^entry. Re e1 e2 ==> Re e2 e1)  /\
-         (!m1 m2: method. Rm m1 m2 ==> Rm m2 m1))”);
+         (!m1 m2: method. Rm m1 m2 ==> Rm m2 m1))
+End
 
-val transitive =
-    new_definition ("transitve",
-    “transitve Ro Rd Re Rm =
+Definition transitve[nocompute]:
+    transitve Ro Rd Re Rm =
         ((!o1 o2 o3: obj. Ro o1 o2 /\ Ro o2 o3 ==> Ro o1 o3)  /\
          (!d1 d2 d3:^dict. Rd d1 d2 /\ Rd d2 d3 ==> Rd d1 d3)  /\
          (!e1 e2 e3:^entry. Re e1 e2 /\ Re e2 e3 ==> Re e1 e3)  /\
-         (!m1 m2 m3: method. Rm m1 m2 /\ Rm m2 m3 ==> Rm m1 m3))”);
+         (!m1 m2 m3: method. Rm m1 m2 /\ Rm m2 m3 ==> Rm m1 m3))
+End
 
-val equality =
-    new_definition ("equality",
-    “equality Ro Rd Re Rm =
+Definition equality[nocompute]:
+    equality Ro Rd Re Rm =
         (compatible Ro Rd Re Rm /\
          reflexve   Ro Rd Re Rm /\
          symmetric  Ro Rd Re Rm /\
-         transitve  Ro Rd Re Rm)”);
+         transitve  Ro Rd Re Rm)
+End
 
-val reduction =
-    new_definition ("reduction",
-    “reduction Ro Rd Re Rm =
+Definition reduction[nocompute]:
+    reduction Ro Rd Re Rm =
         (compatible Ro Rd Re Rm /\
          reflexve   Ro Rd Re Rm /\
-         transitve  Ro Rd Re Rm)”);
+         transitve  Ro Rd Re Rm)
+End
 
 
 
@@ -443,10 +443,10 @@ val RED1_inv_thms = prove_inversion_theorems
 val RED1_strong_ind = prove_strong_induction
     RED1_rules_sat RED1_ind_thm;
 
-val _ = save_thm ("RED1_rules_sat", RED1_rules_sat);
-val _ = save_thm ("RED1_ind_thm", RED1_ind_thm);
-val _ = save_thm ("RED1_inv_thms", LIST_CONJ RED1_inv_thms);
-val _ = save_thm ("RED1_strong_ind", RED1_strong_ind);
+Theorem RED1_rules_sat = RED1_rules_sat;
+Theorem RED1_ind_thm = RED1_ind_thm;
+Theorem RED1_inv_thms = LIST_CONJ RED1_inv_thms;
+Theorem RED1_strong_ind = RED1_strong_ind;
 
 
 val [RED1_R, RED1_OBJ, RED1_INVOKE, RED1_UPDATE1, RED1_UPDATE2,
@@ -499,11 +499,11 @@ Proof
         THENL
           [ FIRST_ASSUM MATCH_MP_TAC
             THEN UNDISCH_TAC “RED1_obj R o1 o2”
-            THEN ONCE_REWRITE_TAC RED1_inv_thms
+            THEN ONCE_REWRITE_TAC[RED1_inv_thms]
             THEN ASM_REWRITE_TAC[object_distinct],
 
             UNDISCH_TAC “RED1_dict R d1 d2”
-            THEN ONCE_REWRITE_TAC RED1_inv_thms
+            THEN ONCE_REWRITE_TAC[RED1_inv_thms]
             THEN ASM_REWRITE_TAC[object_distinct,NOT_NIL_CONS]
           ],
 
@@ -669,11 +669,11 @@ Proof
         THENL
           [ FIRST_ASSUM MATCH_MP_TAC
             THEN UNDISCH_TAC “RED1_obj R o1 o2”
-            THEN ONCE_REWRITE_TAC RED1_inv_thms
+            THEN ONCE_REWRITE_TAC[RED1_inv_thms]
             THEN ASM_REWRITE_TAC[object_distinct],
 
             UNDISCH_TAC “RED1_dict R d1 d2”
-            THEN ONCE_REWRITE_TAC RED1_inv_thms
+            THEN ONCE_REWRITE_TAC[RED1_inv_thms]
             THEN ASM_REWRITE_TAC[object_distinct,NOT_NIL_CONS]
           ],
 
@@ -923,14 +923,16 @@ val (RED_rules_sat,RED_ind_thm) =
 
 val RED_inv_thms = prove_inversion_theorems
     RED_rules_sat RED_ind_thm;
+val [RED_obj_inv, RED_dict_inv, RED_entry_inv, RED_method_inv]
+    = RED_inv_thms;
 
 val RED_strong_ind = prove_strong_induction
     RED_rules_sat RED_ind_thm;
 
-val _ = save_thm ("RED_rules_sat", RED_rules_sat);
-val _ = save_thm ("RED_ind_thm", RED_ind_thm);
-val _ = save_thm ("RED_inv_thms", LIST_CONJ RED_inv_thms);
-val _ = save_thm ("RED_strong_ind", RED_strong_ind);
+Theorem RED_rules_sat = RED_rules_sat;
+Theorem RED_ind_thm = RED_ind_thm;
+Theorem RED_inv_thms = LIST_CONJ RED_inv_thms;
+Theorem RED_strong_ind = RED_strong_ind;
 
 
 
@@ -950,19 +952,14 @@ val [RED_obj_RED1, RED_obj_REFL, RED_obj_TRANS,
      RED_method_RED1, RED_method_REFL, RED_method_TRANS]
     = CONJUNCTS (CONV_RULE (DEPTH_CONV LEFT_IMP_EXISTS_CONV) RED_rules_sat);
 
-val RED_RED1 = save_thm
-  ("RED_RED1",
+Theorem RED_RED1 =
         LIST_CONJ [RED_obj_RED1, RED_dict_RED1,
-                   RED_entry_RED1, RED_method_RED1]);
+                   RED_entry_RED1, RED_method_RED1];
 
-val RED_REFL = save_thm
-  ("RED_REFL",
+Theorem RED_REFL =
         LIST_CONJ [RED_obj_REFL, RED_dict_REFL,
-                   RED_entry_REFL, RED_method_REFL]);
+                   RED_entry_REFL, RED_method_REFL];
 
-
-val [RED_obj_inv, RED_dict_inv, RED_entry_inv, RED_method_inv]
-    = RED_inv_thms;
 
 
 Theorem RED_reflexive:
@@ -977,14 +974,14 @@ Theorem RED_transitive:
      !R. transitve
            (RED_obj R) (RED_dict R) (RED_entry R) (RED_method R)
 Proof
-    REWRITE_TAC[transitive]
+    REWRITE_TAC[transitve]
     THEN REWRITE_TAC[CONV_RULE (DEPTH_CONV LEFT_IMP_EXISTS_CONV)
                                RED_rules_sat]
 QED
 
-val RED_TRANS = save_thm("RED_TRANS",
+Theorem RED_TRANS =
                    CONV_RULE (TOP_DEPTH_CONV FORALL_AND_CONV)
-                    (REWRITE_RULE[transitive] RED_transitive));
+                    (REWRITE_RULE[transitve] RED_transitive);
 
 Theorem RED_compatible:
      !R. compatible
@@ -1002,9 +999,9 @@ Proof
     THEN IMP_RES_TAC RED_RED1 (* finishes the last 8 *)
 QED
 
-val RED_COMPAT = save_thm("RED_COMPAT",
+Theorem RED_COMPAT =
                    CONV_RULE (TOP_DEPTH_CONV FORALL_AND_CONV)
-                    (REWRITE_RULE[compatible] RED_compatible));
+                    (REWRITE_RULE[compatible] RED_compatible);
 
 val [RED_obj_COMPAT, RED_dict_COMPAT, RED_entry_COMPAT, RED_method_COMPAT]
     = CONJUNCTS RED_COMPAT;
@@ -1184,14 +1181,16 @@ val (REQUAL_rules_sat,REQUAL_ind_thm) =
 
 val REQUAL_inv_thms = prove_inversion_theorems
     REQUAL_rules_sat REQUAL_ind_thm;
+val [REQUAL_obj_inv, REQUAL_dict_inv, REQUAL_entry_inv, REQUAL_method_inv]
+    = REQUAL_inv_thms;
 
 val REQUAL_strong_ind = prove_strong_induction
     REQUAL_rules_sat REQUAL_ind_thm;
 
-val _ = save_thm ("REQUAL_rules_sat", REQUAL_rules_sat);
-val _ = save_thm ("REQUAL_ind_thm", REQUAL_ind_thm);
-val _ = save_thm ("REQUAL_inv_thms", LIST_CONJ REQUAL_inv_thms);
-val _ = save_thm ("REQUAL_strong_ind", REQUAL_strong_ind);
+Theorem REQUAL_rules_sat = REQUAL_rules_sat;
+Theorem REQUAL_ind_thm = REQUAL_ind_thm;
+Theorem REQUAL_inv_thms = LIST_CONJ REQUAL_inv_thms;
+Theorem REQUAL_strong_ind = REQUAL_strong_ind;
 
 
 
@@ -1212,19 +1211,14 @@ val [REQUAL_obj_RED, REQUAL_obj_SYM, REQUAL_obj_TRANS,
      REQUAL_method_RED, REQUAL_method_SYM, REQUAL_method_TRANS]
     = CONJUNCTS (CONV_RULE (DEPTH_CONV LEFT_IMP_EXISTS_CONV) REQUAL_rules_sat);
 
-val REQUAL_RED = save_thm
-  ("REQUAL_RED",
+Theorem REQUAL_RED =
         LIST_CONJ [REQUAL_obj_RED, REQUAL_dict_RED,
-                   REQUAL_entry_RED, REQUAL_method_RED]);
+                   REQUAL_entry_RED, REQUAL_method_RED];
 
-val REQUAL_SYM = save_thm
-  ("REQUAL_SYM",
+Theorem REQUAL_SYM =
         LIST_CONJ [REQUAL_obj_SYM, REQUAL_dict_SYM,
-                   REQUAL_entry_SYM, REQUAL_method_SYM]);
+                   REQUAL_entry_SYM, REQUAL_method_SYM];
 
-
-val [REQUAL_obj_inv, REQUAL_dict_inv, REQUAL_entry_inv, REQUAL_method_inv]
-    = REQUAL_inv_thms;
 
 
 Theorem REQUAL_reflexive:
@@ -1258,14 +1252,14 @@ Theorem REQUAL_transitive:
               (REQUAL_entry R)
               (REQUAL_method R)
 Proof
-    REWRITE_TAC[transitive]
+    REWRITE_TAC[transitve]
     THEN REWRITE_TAC[CONV_RULE (DEPTH_CONV LEFT_IMP_EXISTS_CONV)
                                REQUAL_rules_sat]
 QED
 
-val REQUAL_TRANS = save_thm("REQUAL_TRANS",
+Theorem REQUAL_TRANS =
                    CONV_RULE (TOP_DEPTH_CONV FORALL_AND_CONV)
-                    (REWRITE_RULE[transitive] REQUAL_transitive));
+                    (REWRITE_RULE[transitve] REQUAL_transitive);
 
 Theorem REQUAL_compatible:
      !R. compatible
@@ -1286,9 +1280,9 @@ Proof
     THEN IMP_RES_TAC REQUAL_RED (* finishes the last 8 *)
 QED
 
-val REQUAL_COMPAT = save_thm("REQUAL_COMPAT",
+Theorem REQUAL_COMPAT =
                    CONV_RULE (TOP_DEPTH_CONV FORALL_AND_CONV)
-                    (REWRITE_RULE[compatible] REQUAL_compatible));
+                    (REWRITE_RULE[compatible] REQUAL_compatible);
 
 val [REQUAL_obj_COMPAT, REQUAL_dict_COMPAT,
      REQUAL_entry_COMPAT, REQUAL_method_COMPAT]
@@ -1325,60 +1319,50 @@ QED
                          (* ============ *)
 
 
-val NORMAL_FORM_obj =
-    new_definition
-    ("NORMAL_FORM_obj",
-     “NORMAL_FORM_obj R a = (!a'. ~(RED1_obj R a a'))”);
+Definition NORMAL_FORM_obj[nocompute]:
+     NORMAL_FORM_obj R a = (!a'. ~(RED1_obj R a a'))
+End
 
-val NORMAL_FORM_dict =
-    new_definition
-    ("NORMAL_FORM_dict",
-     “NORMAL_FORM_dict R a = (!a'. ~(RED1_dict R a a'))”);
+Definition NORMAL_FORM_dict[nocompute]:
+     NORMAL_FORM_dict R a = (!a'. ~(RED1_dict R a a'))
+End
 
-val NORMAL_FORM_entry =
-    new_definition
-    ("NORMAL_FORM_entry",
-     “NORMAL_FORM_entry R a = (!a'. ~(RED1_entry R a a'))”);
+Definition NORMAL_FORM_entry[nocompute]:
+     NORMAL_FORM_entry R a = (!a'. ~(RED1_entry R a a'))
+End
 
-val NORMAL_FORM_method =
-    new_definition
-    ("NORMAL_FORM_method",
-     “NORMAL_FORM_method R a = (!a'. ~(RED1_method R a a'))”);
+Definition NORMAL_FORM_method[nocompute]:
+     NORMAL_FORM_method R a = (!a'. ~(RED1_method R a a'))
+End
 
-val NORMAL_FORM = save_thm
-  ("NORMAL_FORM",
+Theorem NORMAL_FORM =
         LIST_CONJ [NORMAL_FORM_obj, NORMAL_FORM_dict,
-                   NORMAL_FORM_entry, NORMAL_FORM_method]);
+                   NORMAL_FORM_entry, NORMAL_FORM_method];
 
 
-val NORMAL_FORM_OF_obj =
-    new_definition
-    ("NORMAL_FORM_OF_obj",
-     “NORMAL_FORM_OF_obj R a b =
-         (NORMAL_FORM_obj R a /\ REQUAL_obj R b a)”);
+Definition NORMAL_FORM_OF_obj[nocompute]:
+     NORMAL_FORM_OF_obj R a b =
+         (NORMAL_FORM_obj R a /\ REQUAL_obj R b a)
+End
 
-val NORMAL_FORM_OF_dict =
-    new_definition
-    ("NORMAL_FORM_OF_dict",
-     “NORMAL_FORM_OF_dict R a b =
-         (NORMAL_FORM_dict R a /\ REQUAL_dict R b a)”);
+Definition NORMAL_FORM_OF_dict[nocompute]:
+     NORMAL_FORM_OF_dict R a b =
+         (NORMAL_FORM_dict R a /\ REQUAL_dict R b a)
+End
 
-val NORMAL_FORM_OF_entry =
-    new_definition
-    ("NORMAL_FORM_OF_entry",
-     “NORMAL_FORM_OF_entry R a b =
-         (NORMAL_FORM_entry R a /\ REQUAL_entry R b a)”);
+Definition NORMAL_FORM_OF_entry[nocompute]:
+     NORMAL_FORM_OF_entry R a b =
+         (NORMAL_FORM_entry R a /\ REQUAL_entry R b a)
+End
 
-val NORMAL_FORM_OF_method =
-    new_definition
-    ("NORMAL_FORM_OF_method",
-     “NORMAL_FORM_OF_method R a b =
-         (NORMAL_FORM_method R a /\ REQUAL_method R b a)”);
+Definition NORMAL_FORM_OF_method[nocompute]:
+     NORMAL_FORM_OF_method R a b =
+         (NORMAL_FORM_method R a /\ REQUAL_method R b a)
+End
 
-val NORMAL_FORM_OF = save_thm
-  ("NORMAL_FORM_OF",
+Theorem NORMAL_FORM_OF =
         LIST_CONJ [NORMAL_FORM_OF_obj, NORMAL_FORM_OF_dict,
-                   NORMAL_FORM_OF_entry, NORMAL_FORM_OF_method]);
+                   NORMAL_FORM_OF_entry, NORMAL_FORM_OF_method];
 
 
 Theorem NORMAL_FORM_IDENT_LEMMA:
@@ -1409,23 +1393,21 @@ QED
 
 (* THE DIAMOND PROPERTY *)
 
-val DIAMOND =
-    new_definition
-    ("DIAMOND",
-     “DIAMOND R = (!a b c:'a. R a b /\ R a c ==> (?d. R b d /\ R c d))”);
+Definition DIAMOND[nocompute]:
+     DIAMOND R = (!a b c:'a. R a b /\ R a c ==> (?d. R b d /\ R c d))
+End
 
 
 
 (* THE CHURCH-ROSSER PROPERTY *)
 
-val CHURCH_ROSSER =
-    new_definition
-    ("CHURCH_ROSSER",
-     “CHURCH_ROSSER R =
+Definition CHURCH_ROSSER[nocompute]:
+     CHURCH_ROSSER R =
             (DIAMOND (RED_obj R) /\
              DIAMOND (RED_dict R) /\
              DIAMOND (RED_entry R) /\
-             DIAMOND (RED_method R))”);
+             DIAMOND (RED_method R))
+End
 
 
 
@@ -1609,38 +1591,33 @@ QED
 (* SUBSTITUTIVE RELATIONS *)
 
 
-val SUBSTITUTIVE_obj =
-    new_definition
-    ("SUBSTITUTIVE_obj",
-     “SUBSTITUTIVE_obj R =
+Definition SUBSTITUTIVE_obj[nocompute]:
+     SUBSTITUTIVE_obj R =
            (!(M:obj) (N:obj) L x.
-             R M N ==> R (M <[ [x,L]) (N <[ [x,L]))”);
+             R M N ==> R (M <[ [x,L]) (N <[ [x,L]))
+End
 
-val SUBSTITUTIVE_dict =
-    new_definition
-    ("SUBSTITUTIVE_dict",
-     “SUBSTITUTIVE_dict R =
+Definition SUBSTITUTIVE_dict[nocompute]:
+     SUBSTITUTIVE_dict R =
            (!(M:^dict) (N:^dict) L x.
-             R M N ==> R (M <[ [x,L]) (N <[ [x,L]))”);
+             R M N ==> R (M <[ [x,L]) (N <[ [x,L]))
+End
 
-val SUBSTITUTIVE_entry =
-    new_definition
-    ("SUBSTITUTIVE_entry",
-     “SUBSTITUTIVE_entry R =
+Definition SUBSTITUTIVE_entry[nocompute]:
+     SUBSTITUTIVE_entry R =
            (!(M:^entry) (N:^entry) L x.
-             R M N ==> R (M <[ [x,L]) (N <[ [x,L]))”);
+             R M N ==> R (M <[ [x,L]) (N <[ [x,L]))
+End
 
-val SUBSTITUTIVE_method =
-    new_definition
-    ("SUBSTITUTIVE_method",
-     “SUBSTITUTIVE_method R =
+Definition SUBSTITUTIVE_method[nocompute]:
+     SUBSTITUTIVE_method R =
            (!(M:method) (N:method) L x.
-             R M N ==> R (M <[ [x,L]) (N <[ [x,L]))”);
+             R M N ==> R (M <[ [x,L]) (N <[ [x,L]))
+End
 
-val SUBSTITUTIVE = save_thm
-  ("SUBSTITUTIVE",
+Theorem SUBSTITUTIVE =
         LIST_CONJ [SUBSTITUTIVE_obj, SUBSTITUTIVE_dict,
-                   SUBSTITUTIVE_entry, SUBSTITUTIVE_method]);
+                   SUBSTITUTIVE_entry, SUBSTITUTIVE_method];
 
 
 val RED1_SUBSTITUTIVE_LEMMA = TAC_PROOF(([],
@@ -1790,11 +1767,11 @@ Proof
         THENL
           [ FIRST_ASSUM MATCH_MP_TAC
             THEN UNDISCH_TAC “RED1_obj R o1 o2”
-            THEN ONCE_REWRITE_TAC RED1_inv_thms
+            THEN ONCE_REWRITE_TAC[RED1_inv_thms]
             THEN ASM_REWRITE_TAC[object_distinct,NOT_NIL_CONS],
 
             UNDISCH_TAC “RED1_dict R d1 d2”
-            THEN ONCE_REWRITE_TAC RED1_inv_thms
+            THEN ONCE_REWRITE_TAC[RED1_inv_thms]
             THEN ASM_REWRITE_TAC[object_distinct,NOT_NIL_CONS]
           ],
 

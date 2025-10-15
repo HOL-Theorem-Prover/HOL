@@ -21,8 +21,9 @@ Libs
    summuation of bit streams "x" and "y" with carry-in "c"
    -------------------------------------------------------- *)
 
-val bcarry_def = new_definition ("bcarry_def",
-  ``bcarry x y c <=> x /\ y \/ (x \/ y) /\ c``)
+Definition bcarry_def[nocompute]:
+  bcarry x y c <=> x /\ y \/ (x \/ y) /\ c
+End
 
 Definition BCARRY_def:
   (BCARRY 0 x y c = c) /\
@@ -34,11 +35,13 @@ End
    bit streams "x" and "y" with carry-in "c"
    -------------------------------------------------------- *)
 
-val bsum_def = new_definition ("bsum_def",
-  ``bsum (x:bool) y c = ((x = ~y) = ~c)``)
+Definition bsum_def[nocompute]:
+  bsum (x:bool) y c = ((x = ~y) = ~c)
+End
 
-val BSUM_def = new_definition ("BSUM_def",
-  ``BSUM i x y c = bsum (x i) (y i) (BCARRY i x y c)``)
+Definition BSUM_def[nocompute]:
+  BSUM i x y c = bsum (x i) (y i) (BCARRY i x y c)
+End
 
 (* ------------------------------------------------------------------------- *)
 
@@ -606,8 +609,8 @@ val word_asr_bv_expand = Q.prove(
     \\ METIS_TAC [arithmeticTheory.LESS_EQ_REFL, FOLDL_LOG2_INTRO]
   ])
 
-val word_asr_bv_expand = Theory.save_thm("word_asr_bv_expand",
-  SIMP_RULE std_ss [fcp_or, word_msb_def] word_asr_bv_expand)
+Theorem word_asr_bv_expand =
+  SIMP_RULE std_ss [fcp_or, word_msb_def] word_asr_bv_expand
 
 Theorem word_ror_bv_expand:
    !w m.

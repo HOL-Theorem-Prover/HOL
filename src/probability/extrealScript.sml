@@ -1141,9 +1141,9 @@ val lemma3' = Q.prove (
 (* NOTE: EXTREAL_SUM_IMAGE is not defined if there're mixing of PosInfs and NegInfs
    in the summation, since ``PosInf + NegInf`` is not defined. *)
 
-val EXTREAL_SUM_IMAGE_DEF = new_definition
-  ("EXTREAL_SUM_IMAGE_DEF",
-  ``EXTREAL_SUM_IMAGE f s = ITSET (\e acc. f e + acc) s (0 :extreal)``);
+Definition EXTREAL_SUM_IMAGE_DEF[nocompute]:
+  EXTREAL_SUM_IMAGE f s = ITSET (\e acc. f e + acc) s (0 :extreal)
+End
 
 (* Now theorems about EXTREAL_SUM_IMAGE itself *)
 Theorem EXTREAL_SUM_IMAGE_EMPTY[simp] :
@@ -4455,8 +4455,7 @@ Proof
 QED
 
 (* |- suminf (\n. 0) = 0 *)
-val ext_suminf_0 = save_thm (* was: suminf_0 *)
-  ("ext_suminf_0", SIMP_RULE std_ss [] (Q.SPEC `\n. 0` ext_suminf_zero));
+Theorem ext_suminf_0 = SIMP_RULE std_ss [] (Q.SPEC `\n. 0` ext_suminf_zero);
 
 Theorem ext_suminf_pos :
     !f. (!n. 0 <= f n) ==> (0 <= ext_suminf f)
@@ -4531,8 +4530,7 @@ QED
          (!i x. i < n ==> 0 <= f i x) ==>
          (SIGMA (\x. suminf (f x)) (count n) =
           suminf (\x. SIGMA (\i. f i x) (count n))) *)
-val ext_suminf_sigma' = save_thm
-  ("ext_suminf_sigma'", REWRITE_RULE [o_DEF] ext_suminf_sigma);
+Theorem ext_suminf_sigma' = REWRITE_RULE [o_DEF] ext_suminf_sigma;
 
 val lemma = prove (
   ``!f n'. (!i. (!m n. m <= n ==> (\x. f x i) m <= (\x. f x i) n)) /\

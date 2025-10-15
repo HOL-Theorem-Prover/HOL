@@ -51,11 +51,13 @@ Proof
     REWRITE_TAC [exp_def, suminf_univ]
 QED
 
-val cos = new_definition("cos",
-  “cos(x) = suminf(\n. (^cos_ser) n * (x pow n))”);
+Definition cos[nocompute]:
+  cos(x) = suminf(\n. (^cos_ser) n * (x pow n))
+End
 
-val sin = new_definition("sin",
-  “sin(x) = suminf(\n. (^sin_ser) n * (x pow n))”);
+Definition sin[nocompute]:
+  sin(x) = suminf(\n. (^sin_ser) n * (x pow n))
+End
 
 (*---------------------------------------------------------------------------*)
 (* Show the series for exp converges, using the ratio test                   *)
@@ -578,8 +580,9 @@ QED
 (* Properties of the logarithmic function                                    *)
 (*---------------------------------------------------------------------------*)
 
-val ln = new_definition("ln",
-  “ln x = @u. exp(u) = x”);
+Definition ln[nocompute]:
+  ln x = @u. exp(u) = x
+End
 
 Theorem LN_EXP:
    !x. ln(exp x) = x
@@ -676,8 +679,9 @@ Proof
   REWRITE_TAC[GSYM EXP_N, LN_EXP]
 QED
 
-val LN_LE = store_thm("LN_LE",
-  Term `!x. &0 <= x ==> ln(&1 + x) <= x`,
+Theorem LN_LE:
+  !x. &0 <= x ==> ln(&1 + x) <= x
+Proof
   GEN_TAC THEN DISCH_TAC THEN
   GEN_REWRITE_TAC RAND_CONV empty_rewrites [GSYM LN_EXP] THEN
   MP_TAC(SPECL [Term`&1 + x`, Term`exp x`] LN_MONO_LE) THEN
@@ -685,7 +689,8 @@ val LN_LE = store_thm("LN_LE",
   THENL
    [REWRITE_TAC[EXP_POS_LT] THEN MATCH_MP_TAC REAL_LET_TRANS THEN
     EXISTS_TAC (Term`x:real`) THEN ASM_REWRITE_TAC[REAL_LT_ADDL, REAL_LT_01],
-    DISCH_THEN SUBST1_TAC THEN MATCH_MP_TAC EXP_LE_X THEN ASM_REWRITE_TAC[]]);
+    DISCH_THEN SUBST1_TAC THEN MATCH_MP_TAC EXP_LE_X THEN ASM_REWRITE_TAC[]]
+QED
 
 Theorem LN_LT_X:
    !x. &0 < x ==> ln(x) < x
@@ -1882,8 +1887,9 @@ QED
 (* Tangent                                                                   *)
 (*---------------------------------------------------------------------------*)
 
-val tan = new_definition("tan",
-  “tan(x) = sin(x) / cos(x)”);
+Definition tan[nocompute]:
+  tan(x) = sin(x) / cos(x)
+End
 
 Theorem TAN_0:
    tan(&0) = &0
@@ -2122,14 +2128,17 @@ QED
 (* Inverse trig functions                                                    *)
 (*---------------------------------------------------------------------------*)
 
-val asn = new_definition("asn",
-  “asn(y) = @x. ~(pi / &2) <= x /\ x <= pi / &2 /\ (sin x = y)”);
+Definition asn[nocompute]:
+  asn(y) = @x. ~(pi / &2) <= x /\ x <= pi / &2 /\ (sin x = y)
+End
 
-val acs = new_definition("acs",
-  “acs(y) = @x. &0 <= x /\ x <= pi /\ (cos x = y)”);
+Definition acs[nocompute]:
+  acs(y) = @x. &0 <= x /\ x <= pi /\ (cos x = y)
+End
 
-val atn = new_definition("atn",
-  “atn(y) = @x. ~(pi / &2) < x /\ x < pi / &2 /\ (tan x = y)”);
+Definition atn[nocompute]:
+  atn(y) = @x. ~(pi / &2) < x /\ x < pi / &2 /\ (tan x = y)
+End
 
 Theorem ASN:
    !y. ~(&1) <= y /\ y <= &1 ==>
@@ -2312,25 +2321,29 @@ Proof
   POP_ASSUM ACCEPT_TAC
 QED
 
-val COS_SIN_SQRT = store_thm("COS_SIN_SQRT",
-  Term `!x. &0 <= cos(x) ==> (cos(x) = sqrt(&1 - (sin(x) pow 2)))`,
+Theorem COS_SIN_SQRT:
+  !x. &0 <= cos(x) ==> (cos(x) = sqrt(&1 - (sin(x) pow 2)))
+Proof
   GEN_TAC THEN DISCH_TAC THEN
   MP_TAC (ONCE_REWRITE_RULE[REAL_ADD_SYM] (SPEC (Term`x:real`) SIN_CIRCLE))
   THEN REWRITE_TAC[GSYM REAL_EQ_SUB_LADD] THEN
   DISCH_THEN(SUBST1_TAC o SYM) THEN
   REWRITE_TAC[sqrt, TWO] THEN
   CONV_TAC SYM_CONV THEN MATCH_MP_TAC POW_ROOT_POS THEN
-  ASM_REWRITE_TAC[]);;
+  ASM_REWRITE_TAC[]
+QED
 
-val SIN_COS_SQRT = store_thm("SIN_COS_SQRT",
-  Term`!x. &0 <= sin(x) ==> (sin(x) = sqrt(&1 - (cos(x) pow 2)))`,
+Theorem SIN_COS_SQRT:
+  !x. &0 <= sin(x) ==> (sin(x) = sqrt(&1 - (cos(x) pow 2)))
+Proof
   GEN_TAC THEN DISCH_TAC THEN
   MP_TAC (SPEC (Term`x:real`) SIN_CIRCLE) THEN
   REWRITE_TAC[GSYM REAL_EQ_SUB_LADD] THEN
   DISCH_THEN(SUBST1_TAC o SYM) THEN
   REWRITE_TAC[sqrt, TWO] THEN
   CONV_TAC SYM_CONV THEN MATCH_MP_TAC POW_ROOT_POS THEN
-  ASM_REWRITE_TAC[]);;
+  ASM_REWRITE_TAC[]
+QED
 
 
 (*---------------------------------------------------------------------------*)

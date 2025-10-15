@@ -56,10 +56,10 @@ val msg1_case_cong = theorem "msg1_case_cong";
 val msg1_induction = theorem "msg1_induction";
 val msg1_Axiom = theorem "msg1_Axiom";
 
-val msg1_distinct2 = save_thm("msg1_distinct2",
-                         CONJ msg1_distinct (GSYM msg1_distinct));
-val _ = save_thm("msg1_one_one", msg1_one_one);
-val _ = save_thm("msg1_cases", msg1_cases);
+Theorem msg1_distinct2 =
+                         CONJ msg1_distinct (GSYM msg1_distinct);
+Theorem msg1_one_one = msg1_one_one;
+Theorem msg1_cases = msg1_cases;
 
 
 
@@ -123,10 +123,10 @@ val msgrel_inv_thms = prove_inversion_theorems
 val msgrel_strong_ind = prove_strong_induction
     msgrel_rules_sat msgrel_ind_thm;
 
-val _ = save_thm ("msgrel_rules_sat", msgrel_rules_sat);
-val _ = save_thm ("msgrel_ind_thm", msgrel_ind_thm);
-val _ = save_thm ("msgrel_inv_thms", LIST_CONJ msgrel_inv_thms);
-val _ = save_thm ("msgrel_strong_ind", msgrel_strong_ind);
+Theorem msgrel_rules_sat = msgrel_rules_sat;
+Theorem msgrel_ind_thm = msgrel_ind_thm;
+Theorem msgrel_inv_thms = LIST_CONJ msgrel_inv_thms;
+Theorem msgrel_strong_ind = msgrel_strong_ind;
 
 
 val [CD, DC, NONCE, MPAIR, CRYPT, DECRYPT, msgSYM, msgTRANS]
@@ -258,8 +258,8 @@ QED
 (* --------------------------------------------------------------------- *)
 
 
-val msgrel_EQUIV = save_thm("msgrel_EQUIV",
-    refl_sym_trans_equiv msgrel_REFL msgrel_SYM msgrel_TRANS);
+Theorem msgrel_EQUIV =
+    refl_sym_trans_equiv msgrel_REFL msgrel_SYM msgrel_TRANS;
 
 val equivs = [msgrel_EQUIV];
 
@@ -316,12 +316,10 @@ val [msg_cases,
 (* Save the theorems lifted by the quotient operations.             *)
 (* ---------------------------------------------------------------- *)
 
-val _ = map save_thm
-    [("msg_cases",msg_cases),
-     ("msgCD",msgCD),
-     ("msgDC",msgDC),
-     ("msg_induction",msg_induction)
-    ];
+Theorem msg_cases = msg_cases
+Theorem msgCD = msgCD
+Theorem msgDC = msgDC
+Theorem msg_induction = msg_induction
 
 (* Notice the important induction theorem for the lifted msg type:
 

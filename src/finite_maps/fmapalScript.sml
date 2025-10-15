@@ -1695,8 +1695,8 @@ THEN1 ASM_REWRITE_TAC [ORL_bt_to_orl] THEN
 IMP_RES_THEN (SUBST1_TAC o SYM) list_to_bl_fmap THEN
 REWRITE_TAC [GSYM bl_to_bt_fmap, list_to_bt, orl_fmap]);
 
-val bt_to_orl_ID_IMP = save_thm ("bt_to_orl_ID_IMP", REWRITE_RULE
- [SPECIFICATION] (CONV_RULE (ONCE_DEPTH_CONV RES_FORALL_CONV) bt_to_orl_ID));
+Theorem bt_to_orl_ID_IMP = REWRITE_RULE
+ [SPECIFICATION] (CONV_RULE (ONCE_DEPTH_CONV RES_FORALL_CONV) bt_to_orl_ID);
 
 (* bt_to_orl_ID_IMP = !cmp l. ORL cmp l ==> (bt_to_orl cmp (list_to_bt l) = l)*)
 
@@ -1810,8 +1810,8 @@ val ORL_FUNION = maybe_thm ("ORL_FUNION",
 CONV_TAC (DEPTH_CONV RES_FORALL_CONV) THEN
 SRW_TAC [] [SPECIFICATION, merge_ORL, merge_fmap]);
 
-val ORL_FUNION_IMP = save_thm ("ORL_FUNION_IMP", REWRITE_RULE [SPECIFICATION]
-                       (CONV_RULE (DEPTH_CONV RES_FORALL_CONV) ORL_FUNION));
+Theorem ORL_FUNION_IMP = REWRITE_RULE [SPECIFICATION]
+                       (CONV_RULE (DEPTH_CONV RES_FORALL_CONV) ORL_FUNION);
 
 (* ORL_FUNION_IMP = |- !cmp l. ORL cmp l ==> !m. ORL cmp m ==>
    ORL cmp (merge cmp l m) /\ (fmap (merge cmp l m) = fmap l FUNION fmap m) *)
@@ -1992,9 +1992,9 @@ val ORL_DRESTRICT = maybe_thm ("ORL_DRESTRICT",
 CONV_TAC (DEPTH_CONV RES_FORALL_CONV) THEN
 SRW_TAC [] [SPECIFICATION, inter_merge_ORL, inter_merge_fmap]);
 
-val ORL_DRESTRICT_IMP = save_thm ("ORL_DRESTRICT_IMP",
+Theorem ORL_DRESTRICT_IMP =
 REWRITE_RULE [SPECIFICATION]
-             (CONV_RULE (DEPTH_CONV RES_FORALL_CONV) ORL_DRESTRICT));
+             (CONV_RULE (DEPTH_CONV RES_FORALL_CONV) ORL_DRESTRICT);
 
 (* ORL_DRESTRICT_IMP = |- !cmp l. ORL cmp l ==> !m. OL cmp m ==>
        ORL cmp (inter_merge cmp l m) /\
@@ -2152,9 +2152,9 @@ val ORL_DRESTRICT_COMPL = maybe_thm ("ORL_DRESTRICT_COMPL",
 CONV_TAC (DEPTH_CONV RES_FORALL_CONV) THEN
 SRW_TAC [] [SPECIFICATION, diff_merge_ORL, diff_merge_fmap]);
 
-val ORL_DRESTRICT_COMPL_IMP = save_thm ("ORL_DRESTRICT_COMPL_IMP",
+Theorem ORL_DRESTRICT_COMPL_IMP =
 REWRITE_RULE [SPECIFICATION]
-             (CONV_RULE (DEPTH_CONV RES_FORALL_CONV) ORL_DRESTRICT_COMPL));
+             (CONV_RULE (DEPTH_CONV RES_FORALL_CONV) ORL_DRESTRICT_COMPL);
 
 (* ORL_DRESTRICT_COMPL_IMP = |- !cmp l. ORL cmp l ==> !m. OL cmp m ==>
        ORL cmp (diff_merge cmp l m) /\

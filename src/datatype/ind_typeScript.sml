@@ -137,19 +137,20 @@ QED
 (* Now, set up "constructor" and "bottom" element.                           *)
 (* ------------------------------------------------------------------------- *)
 
-val ZCONSTR = new_definition(
-  "ZCONSTR",
-  ``ZCONSTR c i r :num->'a->bool =
-       INJP (INJN (SUC c)) (INJP (INJA i) (INJF r))``);
+Definition ZCONSTR[nocompute]:
+  ZCONSTR c i r :num->'a->bool =
+       INJP (INJN (SUC c)) (INJP (INJA i) (INJF r))
+End
 
 val ZBOT = new_definition(
   "ZBOT",
   Term`ZBOT = INJP (INJN 0) (@z:num->'a->bool. T)`);
 
-val ZCONSTR_ZBOT = store_thm(
-  "ZCONSTR_ZBOT",
-  Term`!c i r. ~(ZCONSTR c i r :num->'a->bool = ZBOT)`,
-  REWRITE_TAC[ZCONSTR, ZBOT, INJP_INJ, INJN_INJ, NOT_SUC]);
+Theorem ZCONSTR_ZBOT:
+  !c i r. ~(ZCONSTR c i r :num->'a->bool = ZBOT)
+Proof
+  REWRITE_TAC[ZCONSTR, ZBOT, INJP_INJ, INJN_INJ, NOT_SUC]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Carve out an inductively defined set.                                     *)
@@ -336,7 +337,8 @@ val FCONS_UNDO = prove(
   GEN_TAC THEN REWRITE_TAC[FUN_EQ_THM] THEN
   numLib.INDUCT_TAC THEN REWRITE_TAC[FCONS, combinTheory.o_THM]);
 
-val FNIL = new_definition("FNIL", ``FNIL (n:num) = (ARB:'a)``);
+Definition FNIL[nocompute]: FNIL (n:num) = (ARB:'a)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Destructor-style FCONS equation                                           *)
@@ -360,29 +362,32 @@ val ISO = new_definition(
 (* Composition theorems.                                                     *)
 (* ------------------------------------------------------------------------- *)
 
-val ISO_REFL = store_thm(
-  "ISO_REFL",
-  Term`ISO (\x:'a. x) (\x. x)`,
-  SIMP_TAC bool_ss [ISO]);
+Theorem ISO_REFL:
+  ISO (\x:'a. x) (\x. x)
+Proof
+  SIMP_TAC bool_ss [ISO]
+QED
 
-val ISO_FUN = store_thm(
-  "ISO_FUN",
-  Term`ISO (f:'a->'c) f' /\ ISO (g:'b->'d) g' ==>
-       ISO (\h a'. g(h(f' a'))) (\h a. g'(h(f a)))`,
-  REWRITE_TAC [ISO] THEN SIMP_TAC bool_ss [ISO, FUN_EQ_THM]);
+Theorem ISO_FUN:
+  ISO (f:'a->'c) f' /\ ISO (g:'b->'d) g' ==>
+       ISO (\h a'. g(h(f' a'))) (\h a. g'(h(f a)))
+Proof
+  REWRITE_TAC [ISO] THEN SIMP_TAC bool_ss [ISO, FUN_EQ_THM]
+QED
   (* bug in the simplifier requires first rewrite to be performed *)
 
 (* ------------------------------------------------------------------------- *)
 (* The use we make of isomorphism when finished.                             *)
 (* ------------------------------------------------------------------------- *)
 
-val ISO_USAGE = store_thm(
-  "ISO_USAGE",
-  Term`ISO f g ==>
+Theorem ISO_USAGE:
+  ISO f g ==>
          (!P. (!x. P x) = (!x. P(g x))) /\
          (!P. (?x. P x) = (?x. P(g x))) /\
-         (!a b. (a = g b) = (f a = b))`,
-  SIMP_TAC bool_ss [ISO, FUN_EQ_THM] THEN MESON_TAC[]);
+         (!a b. (a = g b) = (f a = b))
+Proof
+  SIMP_TAC bool_ss [ISO, FUN_EQ_THM] THEN MESON_TAC[]
+QED
 
 (* ----------------------------------------------------------------------
     Remove constants from top-level name-space

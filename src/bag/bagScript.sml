@@ -11,9 +11,9 @@ val _ = type_abbrev("multiset", “:'a -> num”)
 
 val _ = print "Defining basic bag operations\n"
 
-val EMPTY_BAG = new_definition (
-  "EMPTY_BAG",
-  ``(EMPTY_BAG:'a bag) = K 0``);
+Definition EMPTY_BAG[nocompute]:
+  (EMPTY_BAG:'a bag) = K 0
+End
 
 Theorem EMPTY_BAG_alt:
     EMPTY_BAG:'a bag = \x.0
@@ -21,22 +21,22 @@ Proof
   SIMP_TAC std_ss [EMPTY_BAG, FUN_EQ_THM]
 QED
 
-val BAG_INN = new_definition(
-  "BAG_INN",
-  ``BAG_INN (e:'a) n b <=> b e >= n``);
+Definition BAG_INN[nocompute]:
+  BAG_INN (e:'a) n b <=> b e >= n
+End
 
-val SUB_BAG = Q.new_definition (
-  "SUB_BAG",
-  `SUB_BAG b1 b2 = !x n. BAG_INN x n b1 ==> BAG_INN x n b2`);
+Definition SUB_BAG[nocompute]:
+  SUB_BAG b1 b2 = !x n. BAG_INN x n b1 ==> BAG_INN x n b2
+End
 
-val PSUB_BAG = Q.new_definition (
-  "PSUB_BAG",
-  `PSUB_BAG b1 b2 <=> SUB_BAG b1 b2 /\ ~(b1 = b2)`);
+Definition PSUB_BAG[nocompute]:
+  PSUB_BAG b1 b2 <=> SUB_BAG b1 b2 /\ ~(b1 = b2)
+End
 
 
-val BAG_IN = new_definition (
-  "BAG_IN",
-  ``BAG_IN (e:'a) b <=> BAG_INN e 1 b``);
+Definition BAG_IN[nocompute]:
+  BAG_IN (e:'a) b <=> BAG_INN e 1 b
+End
 
 val _ = set_fixity "<:" (Infix(NONASSOC, 425))
 val _ = overload_on ("<:", ``BAG_IN``)
@@ -46,17 +46,18 @@ val _ = Unicode.unicode_version {tmnm = "<:", u = UTF8.chr 0x22F2}
 val _ = TeX_notation {hol = "<:", TeX = ("\\HOLTokenIn{}:",2)}
 val _ = TeX_notation {hol = UTF8.chr 0x22F2, TeX = ("\\HOLTokenIn{}:",2)}
 
-val BAG_UNION = new_definition ("BAG_UNION",
-                ``BAG_UNION b (c:'a bag) = \x. b x + c x``);
+Definition BAG_UNION[nocompute]:
+                BAG_UNION b (c:'a bag) = \x. b x + c x
+End
 val _ = overload_on ("+", ``BAG_UNION``)
 val _ = send_to_back_overload "+" {Name = "BAG_UNION", Thy = "bag"}
 val _ = set_fixity (UTF8.chr 0x228E) (Infixl 500) (* LaTeX's \uplus *)
 val _ = overload_on (UTF8.chr 0x228E, ``BAG_UNION``)
 val _ = TeX_notation {hol = UTF8.chr 0x228E, TeX = ("\\ensuremath{\\uplus}", 1)}
 
-val BAG_DIFF = new_definition (
-  "BAG_DIFF",
-  ``BAG_DIFF b1 (b2:'a bag) = \x. b1 x - b2 x``);
+Definition BAG_DIFF[nocompute]:
+  BAG_DIFF b1 (b2:'a bag) = \x. b1 x - b2 x
+End
 val _ = overload_on ("-", ``BAG_DIFF``)
 val _ = send_to_back_overload "-" {Name = "BAG_DIFF", Thy = "bag"}
 
@@ -81,16 +82,16 @@ Proof
   ] THEN SRW_TAC [ARITH_ss][]
 QED
 
-val BAG_INTER = Q.new_definition(
-  "BAG_INTER",
-  `BAG_INTER b1 b2 = (\x. if (b1 x < b2 x) then b1 x else b2 x)`);
+Definition BAG_INTER[nocompute]:
+  BAG_INTER b1 b2 = (\x. if (b1 x < b2 x) then b1 x else b2 x)
+End
 
 
 val _ = print "Properties and definition of BAG_MERGE\n"
 
-val BAG_MERGE = Q.new_definition(
-  "BAG_MERGE",
-  `BAG_MERGE b1 b2 = (\x. if (b1 x < b2 x) then b2 x else b1 x)`);
+Definition BAG_MERGE[nocompute]:
+  BAG_MERGE b1 b2 = (\x. if (b1 x < b2 x) then b2 x else b1 x)
+End
 
 Theorem BAG_MERGE_IDEM:
     !b. BAG_MERGE b b = b
@@ -367,9 +368,9 @@ Proof SRW_TAC [][BAG_UNION, EMPTY_BAG, FUN_EQ_THM] THEN METIS_TAC []
 QED
 
 val _ = print "Definition and properties of BAG_DELETE\n"
-val BAG_DELETE = new_definition (
-  "BAG_DELETE",
-  ``BAG_DELETE b0 (e:'a) b = (b0 = BAG_INSERT e b)``);
+Definition BAG_DELETE[nocompute]:
+  BAG_DELETE b0 (e:'a) b = (b0 = BAG_INSERT e b)
+End
 
 Theorem BAG_DELETE_EMPTY:
     !(e:'a) b. ~(BAG_DELETE EMPTY_BAG e b)
@@ -396,18 +397,20 @@ Proof
   FULL_SIMP_TAC (srw_ss()) []
 QED
 
-val BAG_INN_BAG_DELETE = store_thm(
-  "BAG_INN_BAG_DELETE",
-  Term`!b n e. BAG_INN e n b /\ n > 0 ==> ?b'. BAG_DELETE b e b'`,
+Theorem BAG_INN_BAG_DELETE:
+  !b n e. BAG_INN e n b /\ n > 0 ==> ?b'. BAG_DELETE b e b'
+Proof
   SRW_TAC [][BAG_DELETE] THEN MATCH_MP_TAC BAG_DECOMPOSE THEN
   SRW_TAC [][BAG_IN] THEN
   `(n = 1) \/ 1 < n` by DECIDE_TAC THEN
-  METIS_TAC [BAG_INN_LESS]);
+  METIS_TAC [BAG_INN_LESS]
+QED
 
-val BAG_IN_BAG_DELETE = store_thm(
-  "BAG_IN_BAG_DELETE",
-  Term`!b e:'a. BAG_IN e b ==> ?b'. BAG_DELETE b e b'`,
-  METIS_TAC [BAG_INN_BAG_DELETE, ARITH_PROVE (Term`1 > 0`), BAG_IN]);
+Theorem BAG_IN_BAG_DELETE:
+  !b e:'a. BAG_IN e b ==> ?b'. BAG_DELETE b e b'
+Proof
+  METIS_TAC [BAG_INN_BAG_DELETE, ARITH_PROVE (Term`1 > 0`), BAG_IN]
+QED
 
 val ELIM_TAC = BasicProvers.VAR_EQ_TAC
 val ARWT = SRW_TAC [ARITH_ss][]
@@ -509,9 +512,8 @@ val add_eq_conv_ex = prove(
     ]
   ]);
 
-val BAG_INSERT_EQUAL = save_thm(
-  "BAG_INSERT_EQUAL",
-  SIMP_RULE (srw_ss()) [BAG_UNION_INSERT] add_eq_conv_ex)
+Theorem BAG_INSERT_EQUAL =
+  SIMP_RULE (srw_ss()) [BAG_UNION_INSERT] add_eq_conv_ex
 
 Theorem BAG_DELETE_TWICE:
     !b0 e1 e2 b1 b2.
@@ -525,9 +527,9 @@ Proof
   SRW_TAC [][BAG_UNION_INSERT]
 QED
 
-val SING_BAG = new_definition(
-  "SING_BAG",
-  ``SING_BAG (b:'a->num) = ?x. b = BAG_INSERT x EMPTY_BAG``);
+Definition SING_BAG[nocompute]:
+  SING_BAG (b:'a->num) = ?x. b = BAG_INSERT x EMPTY_BAG
+End
 
 Theorem SING_BAG_THM:
     !e:'a. SING_BAG (BAG_INSERT e EMPTY_BAG)
@@ -535,9 +537,9 @@ Proof
   MESON_TAC [SING_BAG]
 QED
 
-val EL_BAG = new_definition(
-  "EL_BAG",
-  ``EL_BAG (e:'a) = BAG_INSERT e EMPTY_BAG``);
+Definition EL_BAG[nocompute]:
+  EL_BAG (e:'a) = BAG_INSERT e EMPTY_BAG
+End
 
 Theorem EL_BAG_11:
     !x y. (EL_BAG x = EL_BAG y) ==> (x = y)
@@ -683,9 +685,8 @@ Proof
   SRW_TAC [][SUB_BAG_LEQ, BAG_DIFF, EMPTY_BAG, FUN_EQ_THM]
 QED
 
-val BAG_DIFF_EMPTY_simple = save_thm(
-  "BAG_DIFF_EMPTY_simple",
-  LIST_CONJ (List.take(CONJUNCTS BAG_DIFF_EMPTY, 3)))
+Theorem BAG_DIFF_EMPTY_simple =
+  LIST_CONJ (List.take(CONJUNCTS BAG_DIFF_EMPTY, 3))
 val _ = export_rewrites ["BAG_DIFF_EMPTY_simple"];
 
 Theorem BAG_DIFF_EQ_EMPTY[simp]:
@@ -897,10 +898,9 @@ val union2_union_assocr =
 
 val union2_union_assoc = union2_union_assocl @ union2_union_assocr;
 
-val SUB_BAG_UNION = save_thm(
-  "SUB_BAG_UNION",
+Theorem SUB_BAG_UNION =
   LIST_CONJ (simplest_cases @ one_from_assoc @ union_from_union @
-             union_union2_assoc @ union2_union_assoc));
+             union_union2_assoc @ union2_union_assoc);
 
 Theorem SUB_BAG_EL_BAG:
    !e b. SUB_BAG (EL_BAG e) b = BAG_IN e b
@@ -1010,13 +1010,13 @@ QED
 
 val _ = print "Relating bags to (pred)sets\n";
 
-val SET_OF_BAG = new_definition(
-  "SET_OF_BAG",
-  ``SET_OF_BAG (b:'a->num) = \x. BAG_IN x b``);
+Definition SET_OF_BAG[nocompute]:
+  SET_OF_BAG (b:'a->num) = \x. BAG_IN x b
+End
 
-val BAG_OF_SET = new_definition(
-  "BAG_OF_SET",
-  ``BAG_OF_SET (P:'a->bool) = \x. if x IN P then 1 else 0``);
+Definition BAG_OF_SET[nocompute]:
+  BAG_OF_SET (P:'a->bool) = \x. if x IN P then 1 else 0
+End
 
 Theorem BAG_OF_SET_UNION:
   !b b'. BAG_OF_SET (b UNION b') = (BAG_MERGE (BAG_OF_SET b) (BAG_OF_SET b'))
@@ -1201,10 +1201,10 @@ QED
 
 
 val _ = print "Bag disjointness\n"
-val BAG_DISJOINT = new_definition(
-  "BAG_DISJOINT",
-  ``BAG_DISJOINT (b1:'a->num) b2 =
-        DISJOINT (SET_OF_BAG b1) (SET_OF_BAG b2)``);
+Definition BAG_DISJOINT[nocompute]:
+  BAG_DISJOINT (b1:'a->num) b2 =
+        DISJOINT (SET_OF_BAG b1) (SET_OF_BAG b2)
+End
 
 Theorem BAG_DISJOINT_EMPTY[simp]:
     !b:'a->num.
@@ -1257,11 +1257,11 @@ QED
 
 val _ = print "Developing theory of finite bags\n"
 
-val FINITE_BAG = Q.new_definition(
-  "FINITE_BAG",
-  `FINITE_BAG (b:'a->num) =
+Definition FINITE_BAG[nocompute]:
+  FINITE_BAG (b:'a->num) =
      !P. P EMPTY_BAG /\ (!b. P b ==> (!e. P (BAG_INSERT e b))) ==>
-         P b`);
+         P b
+End
 
 Theorem FINITE_EMPTY_BAG:
    FINITE_BAG EMPTY_BAG
@@ -1283,12 +1283,11 @@ Proof
   SIMP_TAC std_ss [FINITE_BAG]
 QED
 
-val STRONG_FINITE_BAG_INDUCT = save_thm(
-  "STRONG_FINITE_BAG_INDUCT",
+Theorem STRONG_FINITE_BAG_INDUCT =
   FINITE_BAG_INDUCT
       |> Q.SPEC `\b. FINITE_BAG b /\ P b`
       |> SIMP_RULE std_ss [FINITE_EMPTY_BAG, FINITE_BAG_INSERT]
-      |> GEN_ALL)
+      |> GEN_ALL
 
 val _ = IndDefLib.export_rule_induction "STRONG_FINITE_BAG_INDUCT";
 
@@ -1314,11 +1313,8 @@ val FINITE_BAG_INSERT = Q.prove(
 `!e b. FINITE_BAG (BAG_INSERT e b) = FINITE_BAG b`,
   MESON_TAC [FINITE_BAG_INSERT, FINITE_BAG_INSERT_down'])
 
-val FINITE_BAG_THM = save_thm(
-  "FINITE_BAG_THM",
-  CONJ FINITE_EMPTY_BAG FINITE_BAG_INSERT)
- before
- export_rewrites ["FINITE_BAG_THM"];
+Theorem FINITE_BAG_THM[simp] =
+  CONJ FINITE_EMPTY_BAG FINITE_BAG_INSERT
 
 Theorem FINITE_BAG_DIFF:
    !b1. FINITE_BAG b1 ==> !b2. FINITE_BAG (BAG_DIFF b1 b2)
@@ -1408,12 +1404,12 @@ QED
 
 val _ = print "Developing theory of bag cardinality\n"
 
-val BAG_CARD_RELn = Q.new_definition(
-  "BAG_CARD_RELn",
-  `BAG_CARD_RELn (b:'a->num) n =
+Definition BAG_CARD_RELn[nocompute]:
+  BAG_CARD_RELn (b:'a->num) n =
       !P. P EMPTY_BAG 0 /\
           (!b n. P b n ==> (!e. P (BAG_INSERT e b) (SUC n))) ==>
-          P b n`);
+          P b n
+End
 
 val BCARD_imps = prove(
   Term`(BAG_CARD_RELn EMPTY_BAG 0) /\
@@ -1499,7 +1495,7 @@ val BAG_CARD_EMPTY =
            |> SIMP_RULE std_ss [FINITE_EMPTY_BAG]
            |> ONCE_REWRITE_RULE [BCARD_rwts]
            |> SIMP_RULE std_ss [BAG_INSERT_NOT_EMPTY]
-val _ = save_thm("BAG_CARD_EMPTY", BAG_CARD_EMPTY);
+Theorem BAG_CARD_EMPTY = BAG_CARD_EMPTY;
 val _ = export_rewrites ["BAG_CARD_EMPTY"];
 
 Theorem BCARD_0:
@@ -1528,19 +1524,19 @@ val BAG_CARD_INSERT = prove(
   IMP_RES_TAC BAG_CARD THEN
   FULL_SIMP_TAC std_ss [BCARD_RWT] THEN IMP_RES_TAC BCARD_R_det);
 
-val BAG_CARD_THM = save_thm(
-  "BAG_CARD_THM",
-  CONJ BAG_CARD_EMPTY BAG_CARD_INSERT);
+Theorem BAG_CARD_THM =
+  CONJ BAG_CARD_EMPTY BAG_CARD_INSERT;
 
-val BAG_CARD_UNION = store_thm (
-  "BAG_CARD_UNION",
-  Term `!b1 b2. FINITE_BAG b1 /\ FINITE_BAG b2 ==>
+Theorem BAG_CARD_UNION:
+  !b1 b2. FINITE_BAG b1 /\ FINITE_BAG b2 ==>
                 (BAG_CARD (BAG_UNION b1 b2) =
-                 (BAG_CARD b1) + (BAG_CARD b2))`,
+                 (BAG_CARD b1) + (BAG_CARD b2))
+Proof
   SIMP_TAC std_ss [GSYM AND_IMP_INTRO, RIGHT_FORALL_IMP_THM] THEN
   HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN
   SIMP_TAC arith_ss [BAG_UNION_INSERT, BAG_UNION_EMPTY,
-     BAG_CARD_THM, FINITE_BAG_UNION]);
+     BAG_CARD_THM, FINITE_BAG_UNION]
+QED
 val _ = export_rewrites ["BAG_CARD_UNION"]
 
 
@@ -1637,9 +1633,9 @@ QED
     FILTER for bags (alternatively, intersection with a set)
    ---------------------------------------------------------------------- *)
 
-val BAG_FILTER_DEF = new_definition(
-  "BAG_FILTER_DEF",
-  ``BAG_FILTER P (b :'a bag) : 'a bag = \e. if P e then b e else 0``);
+Definition BAG_FILTER_DEF[nocompute]:
+  BAG_FILTER P (b :'a bag) : 'a bag = \e. if P e then b e else 0
+End
 
 val BAG_FILTER_EMPTY = store_thm(
   "BAG_FILTER_EMPTY",
@@ -1887,12 +1883,12 @@ QED
    ---------------------------------------------------------------------- *)
 
 val _ = augment_srw_ss [simpLib.rewrites [LET_THM]]
-val BAG_IMAGE_DEF = new_definition(
-  "BAG_IMAGE_DEF",
-  ``BAG_IMAGE f b = \e. let sb = BAG_FILTER (\e0. f e0 = e) b
+Definition BAG_IMAGE_DEF[nocompute]:
+  BAG_IMAGE f b = \e. let sb = BAG_FILTER (\e0. f e0 = e) b
                         in
                             if FINITE_BAG sb then BAG_CARD sb
-                            else 1``);
+                            else 1
+End
 
 val BAG_IMAGE_EMPTY = store_thm(
   "BAG_IMAGE_EMPTY",
@@ -2059,9 +2055,9 @@ val BAG_CHOICE_DEF = new_specification
 (* The REST of a bag after removing a chosen element.                    *)
 (* ===================================================================== *)
 
-val BAG_REST_DEF = Q.new_definition
- ("BAG_REST_DEF",
-  `BAG_REST b = BAG_DIFF b (EL_BAG (BAG_CHOICE b))`);
+Definition BAG_REST_DEF[nocompute]:
+  BAG_REST b = BAG_DIFF b (EL_BAG (BAG_CHOICE b))
+End
 
 
 Theorem BAG_INSERT_CHOICE_REST:
@@ -2115,10 +2111,9 @@ val BAG_UNION_STABLE = Q.prove
 val SUB_BAG_UNION_MONO_0 = prove(
   ``!x y. SUB_BAG x (BAG_UNION x y)``,
   RW_TAC arith_ss [SUB_BAG,BAG_UNION,BAG_INN]);
-val SUB_BAG_UNION_MONO = save_thm(
-  "SUB_BAG_UNION_MONO",
+Theorem SUB_BAG_UNION_MONO =
   CONJ SUB_BAG_UNION_MONO_0
-       (ONCE_REWRITE_RULE [COMM_BAG_UNION] SUB_BAG_UNION_MONO_0))
+       (ONCE_REWRITE_RULE [COMM_BAG_UNION] SUB_BAG_UNION_MONO_0)
 val _ = export_rewrites ["SUB_BAG_UNION_MONO"]
 
 Theorem PSUB_BAG_CARD:
@@ -2206,18 +2201,14 @@ val ITBAG_THM =
     GENL [``b: 'a -> num``, ``f:'a -> 'b -> 'b``, ``acc:'b``]
          (DISCH_ALL (ASM_REWRITE_RULE [Q.ASSUME `FINITE_BAG b`] ITBAG_eqn0))
 
-val _ = save_thm("ITBAG_IND", ITBAG_IND);
-val _ = save_thm("ITBAG_THM", ITBAG_THM);
+Theorem ITBAG_IND = ITBAG_IND;
+Theorem ITBAG_THM = ITBAG_THM;
 
-val ITBAG_EMPTY = save_thm(
-  "ITBAG_EMPTY",
-  REWRITE_RULE [] (MATCH_MP (Q.SPEC `{||}` ITBAG_THM) FINITE_EMPTY_BAG))
- before
- export_rewrites ["ITBAG_EMPTY"];
+Theorem ITBAG_EMPTY[simp] =
+  REWRITE_RULE [] (MATCH_MP (Q.SPEC `{||}` ITBAG_THM) FINITE_EMPTY_BAG)
 
-val ITBAG_INSERT = save_thm(
-  "ITBAG_INSERT",
-  SIMP_RULE (srw_ss())[] (Q.SPEC `BAG_INSERT x b` ITBAG_THM))
+Theorem ITBAG_INSERT =
+  SIMP_RULE (srw_ss())[] (Q.SPEC `BAG_INSERT x b` ITBAG_THM)
 
 Theorem COMMUTING_ITBAG_INSERT:
     !f b. (!x y z. f x (f y z) = f y (f x z)) /\ FINITE_BAG b ==>
@@ -2271,15 +2262,13 @@ QED
 (* Sums and products on finite bags                                          *)
 (*---------------------------------------------------------------------------*)
 
-val BAG_GEN_SUM_def =
- new_definition
- ("BAG_GEN_SUM_def",
-  ``BAG_GEN_SUM bag (n:num) = ITBAG (+) bag n``);
+Definition BAG_GEN_SUM_def[nocompute]:
+  BAG_GEN_SUM bag (n:num) = ITBAG (+) bag n
+End
 
-val BAG_GEN_PROD_def =
- new_definition
- ("BAG_GEN_PROD_def",
-  ``BAG_GEN_PROD bag n = ITBAG $* bag n``);
+Definition BAG_GEN_PROD_def[nocompute]:
+  BAG_GEN_PROD bag n = ITBAG $* bag n
+End
 
 Theorem BAG_GEN_SUM_EMPTY:
    !n. BAG_GEN_SUM {||} n = n
@@ -2366,10 +2355,9 @@ Proof
  METIS_TAC [arithmeticTheory.LESS_MULT2]]
 QED
 
-val BAG_EVERY =
- new_definition
-   ("BAG_EVERY",
-    ``BAG_EVERY P b = !e. BAG_IN e b ==> P e``);
+Definition BAG_EVERY[nocompute]:
+    BAG_EVERY P b = !e. BAG_IN e b ==> P e
+End
 
 Theorem BAG_EVERY_THM:
   (!P. BAG_EVERY P EMPTY_BAG) /\
@@ -2440,8 +2428,9 @@ Proof
   HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN SRW_TAC [][]
 QED
 
-val BAG_ALL_DISTINCT = new_definition ("BAG_ALL_DISTINCT",
-  ``BAG_ALL_DISTINCT b = (!e. b e <= 1:num)``);
+Definition BAG_ALL_DISTINCT[nocompute]:
+  BAG_ALL_DISTINCT b = (!e. b e <= 1:num)
+End
 
 Theorem BAG_ALL_DISTINCT_THM:
     BAG_ALL_DISTINCT EMPTY_BAG /\
@@ -2791,11 +2780,11 @@ QED
 
 (* The 1 is from the fact that is one step of the relation, other uses
    might want to take the transitive closure of this (overloaded below). *)
-val mlt1_def = new_definition(
-  "mlt1_def",
-  ``mlt1 r b1 b2 <=> FINITE_BAG b1 /\ FINITE_BAG b2 /\
+Definition mlt1_def[nocompute]:
+  mlt1 r b1 b2 <=> FINITE_BAG b1 /\ FINITE_BAG b2 /\
                      ?e rep res. (b1 = rep + res) /\ (b2 = res + {|e|}) /\
-                                 !e'. BAG_IN e' rep ==> r e' e``);
+                                 !e'. BAG_IN e' rep ==> r e' e
+End
 
 val _ = overload_on ("mlt", ``\R. TC (mlt1 R)``);
 
@@ -3306,13 +3295,11 @@ Proof
   simp[BAG_UNION_INSERT, mlt_INSERT_CANCEL]
 QED
 
-val mlt_UNION_LCANCEL_I = save_thm(
-  "mlt_UNION_LCANCEL_I",
-  ONCE_REWRITE_RULE [COMM_BAG_UNION] mlt_UNION_RCANCEL_I);
+Theorem mlt_UNION_LCANCEL_I =
+  ONCE_REWRITE_RULE [COMM_BAG_UNION] mlt_UNION_RCANCEL_I;
 
-val mlt_UNION_LCANCEL = save_thm(
-  "mlt_UNION_LCANCEL[simp]",
-  ONCE_REWRITE_RULE [COMM_BAG_UNION] mlt_UNION_RCANCEL)
+Theorem mlt_UNION_LCANCEL[simp] =
+  ONCE_REWRITE_RULE [COMM_BAG_UNION] mlt_UNION_RCANCEL
 
 val mlt_UNION_lemma = prove(
   ``WF R ==>
@@ -3333,10 +3320,9 @@ Proof
   metis_tac[COMM_BAG_UNION, mlt_UNION_lemma]
 QED
 
-val mlt_UNION_EMPTY_EQN = save_thm(
-  "mlt_UNION_EMPTY_EQN",
+Theorem mlt_UNION_EMPTY_EQN =
   mlt_UNION_CANCEL_EQN |> Q.INST [`b1` |-> `{||}`]
-                       |> SIMP_RULE (srw_ss()) []);
+                       |> SIMP_RULE (srw_ss()) [];
 
 Theorem SUB_BAG_SING[simp]:
     b <= {|e|} <=> (b = {||}) \/ (b = {|e|})
@@ -3398,8 +3384,7 @@ QED
 (*   bag_size eltsize (BAG_INSERT e b) = 1 + eltsize e + bag_size eltsize b  *)
 (*---------------------------------------------------------------------------*)
 
-val BAG_SIZE_INSERT = save_thm
-("BAG_SIZE_INSERT",
+Theorem BAG_SIZE_INSERT = (
  let val f = ``\(e:'a) acc. 1 + eltsize e + acc``
      val LCOMM_INCR = Q.prove
      (`!x y z. ^f x (^f y z) = ^f y (^f x z)`, RW_TAC arith_ss [])
@@ -3408,13 +3393,13 @@ val BAG_SIZE_INSERT = save_thm
     |> SIMP_RULE bool_ss [LCOMM_INCR]
     |> (ISPEC``0n`` o Q.ID_SPEC o Q.ID_SPEC)
     |> SIMP_RULE bool_ss [GSYM bag_size_def]
- end);
+ end)
 
 val _ = print "Unibags (bags made all distinct)\n"
 
 val _ = overload_on ("unibag", ``\b. BAG_OF_SET (SET_OF_BAG b)``);
 
-val unibag_thm = save_thm("unibag_thm", CONJ BAG_OF_SET SET_OF_BAG);
+Theorem unibag_thm = CONJ BAG_OF_SET SET_OF_BAG;
 
 Theorem unibag_INSERT:
   !a b. (unibag (BAG_INSERT a b)) = BAG_MERGE {|a|} (unibag b)
@@ -3576,4 +3561,3 @@ val _ = TypeBase.export [
           size = NONE,
           encode=NONE})
     ]
-

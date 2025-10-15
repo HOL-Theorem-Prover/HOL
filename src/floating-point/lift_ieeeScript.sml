@@ -1452,17 +1452,17 @@ val finite_rule =
    MATCH_MP (DECIDE ``(X ==> a /\ b) ==> (X ==> a)``) o
    Drule.SPEC_ALL
 
-val float_add_finite = save_thm ("float_add_finite", finite_rule float_add)
-val float_sub_finite = save_thm ("float_sub_finite", finite_rule float_sub)
-val float_mul_finite = save_thm ("float_mul_finite", finite_rule float_mul)
-val float_div_finite = save_thm ("float_div_finite", finite_rule float_div)
-val float_sqrt_finite = save_thm ("float_sqrt_finite", finite_rule float_sqrt)
+Theorem float_add_finite = finite_rule float_add
+Theorem float_sub_finite = finite_rule float_sub
+Theorem float_mul_finite = finite_rule float_mul
+Theorem float_div_finite = finite_rule float_div
+Theorem float_sqrt_finite = finite_rule float_sqrt
 
-val float_mul_add_finite = save_thm ("float_mul_add_finite",
-  finite_rule float_mul_add)
+Theorem float_mul_add_finite =
+  finite_rule float_mul_add
 
-val float_mul_sub_finite = save_thm ("float_mul_sub_finite",
-  finite_rule float_mul_sub)
+Theorem float_mul_sub_finite =
+  finite_rule float_mul_sub
 
 (*-----------------------*)
 

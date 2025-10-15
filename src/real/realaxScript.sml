@@ -51,24 +51,24 @@ val [REAL_10, REAL_ADD_SYM, REAL_MUL_SYM, REAL_ADD_ASSOC,
  end;
 
 (* Export all 18 primitive theorems in total, without any changes (yet) *)
-val _ = save_thm ("REAL_10",        REAL_10);
-val _ = save_thm ("REAL_ADD_SYM",   REAL_ADD_SYM);
-val _ = save_thm ("REAL_MUL_SYM",   REAL_MUL_SYM);
-val _ = save_thm ("REAL_ADD_ASSOC", REAL_ADD_ASSOC);
-val _ = save_thm ("REAL_MUL_ASSOC", REAL_MUL_ASSOC);
-val _ = save_thm ("REAL_LDISTRIB",  REAL_LDISTRIB);
-val _ = save_thm ("REAL_ADD_LID",   REAL_ADD_LID);
-val _ = save_thm ("REAL_MUL_LID",   REAL_MUL_LID);
-val _ = save_thm ("REAL_ADD_LINV",  REAL_ADD_LINV);
-val _ = save_thm ("REAL_MUL_LINV",  REAL_MUL_LINV);
-val _ = save_thm ("REAL_LT_TOTAL",  REAL_LT_TOTAL);
-val _ = save_thm ("REAL_LT_REFL",   REAL_LT_REFL);
-val _ = save_thm ("REAL_LT_TRANS",  REAL_LT_TRANS);
-val _ = save_thm ("REAL_LT_IADD",   REAL_LT_IADD);
-val _ = save_thm ("REAL_LT_MUL",    REAL_LT_MUL);
-val _ = save_thm ("REAL_BIJ",       REAL_BIJ);
-val _ = save_thm ("REAL_ISO",       REAL_ISO);
-val _ = save_thm ("REAL_INV_0",     REAL_INV_0);
+Theorem REAL_10 = REAL_10;
+Theorem REAL_ADD_SYM = REAL_ADD_SYM;
+Theorem REAL_MUL_SYM = REAL_MUL_SYM;
+Theorem REAL_ADD_ASSOC = REAL_ADD_ASSOC;
+Theorem REAL_MUL_ASSOC = REAL_MUL_ASSOC;
+Theorem REAL_LDISTRIB = REAL_LDISTRIB;
+Theorem REAL_ADD_LID = REAL_ADD_LID;
+Theorem REAL_MUL_LID = REAL_MUL_LID;
+Theorem REAL_ADD_LINV = REAL_ADD_LINV;
+Theorem REAL_MUL_LINV = REAL_MUL_LINV;
+Theorem REAL_LT_TOTAL = REAL_LT_TOTAL;
+Theorem REAL_LT_REFL = REAL_LT_REFL;
+Theorem REAL_LT_TRANS = REAL_LT_TRANS;
+Theorem REAL_LT_IADD = REAL_LT_IADD;
+Theorem REAL_LT_MUL = REAL_LT_MUL;
+Theorem REAL_BIJ = REAL_BIJ;
+Theorem REAL_ISO = REAL_ISO;
+Theorem REAL_INV_0 = REAL_INV_0;
 
 (*---------------------------------------------------------------------------
        Overload arithmetic operations.
@@ -223,28 +223,32 @@ QED
    A "prime" is added into some exported names to make sure that the original
    theorems are still accessible.
  *)
-local val reeducate = REWRITE_RULE[REAL_0, REAL_1]
-in
-  val REAL_10         = save_thm("REAL_10'",        reeducate(REAL_10));
-  val REAL_ADD_LID    = save_thm("REAL_ADD_LID'",   reeducate(REAL_ADD_LID));
-  val REAL_ADD_LINV   = save_thm("REAL_ADD_LINV'",  reeducate(REAL_ADD_LINV));
-  val REAL_INV_0      = save_thm("REAL_INV_0'",     reeducate(REAL_INV_0));
-  val REAL_LT_MUL     = save_thm("REAL_LT_MUL'",    reeducate(REAL_LT_MUL));
-  val REAL_MUL_LID    = save_thm("REAL_MUL_LID'",   reeducate(REAL_MUL_LID));
-  val REAL_MUL_LINV   = save_thm("REAL_MUL_LINV'",  reeducate(REAL_MUL_LINV));
-  val REAL_SUP_ALLPOS = save_thm("REAL_SUP_ALLPOS'",reeducate(REAL_SUP_ALLPOS));
+local val reeducate = REWRITE_RULE[REAL_0, REAL_1] in
+Theorem REAL_10' = reeducate(REAL_10)
+Theorem REAL_ADD_LID' = reeducate(REAL_ADD_LID)
+Theorem REAL_ADD_LINV' = reeducate(REAL_ADD_LINV)
+Theorem REAL_INV_0' = reeducate(REAL_INV_0)
+Theorem REAL_LT_MUL' = reeducate(REAL_LT_MUL)
+Theorem REAL_MUL_LID' = reeducate(REAL_MUL_LID)
+Theorem REAL_MUL_LINV' = reeducate(REAL_MUL_LINV)
+Theorem REAL_SUP_ALLPOS' = reeducate(REAL_SUP_ALLPOS);
 end;
 
 (*---------------------------------------------------------------------------*)
 (* Define subtraction, division and the other orderings (was in realTheory)  *)
 (*---------------------------------------------------------------------------*)
 
-val real_sub = new_definition("real_sub", “real_sub x y = x + ~y”);
-val real_lte = new_definition("real_lte", “real_lte x y = ~(y < x)”);
-val real_gt  = new_definition("real_gt",  “real_gt x y = y < x”);
-val real_ge  = new_definition("real_ge",  “real_ge x y = (real_lte y x)”);
+Definition real_sub[nocompute]: real_sub x y = x + ~y
+End
+Definition real_lte[nocompute]: real_lte x y = ~(y < x)
+End
+Definition real_gt[nocompute]:  real_gt x y = y < x
+End
+Definition real_ge[nocompute]:  real_ge x y = (real_lte y x)
+End
 
-val real_div = new_definition("real_div", “$/ x y = x * inv y”);
+Definition real_div[nocompute]: $/ x y = x * inv y
+End
 val _ = set_fixity "/" (Infixl 600);
 val _ = overload_on(GrammarSpecials.decimal_fraction_special, “$/”);
 val _ = overload_on("/", “$/”);
@@ -263,8 +267,8 @@ val _ = overload_on ("<=", “$real_lte”);
 val _ = overload_on (">",  “$real_gt”);
 val _ = overload_on (">=", “$real_ge”);
 
-val real_abs = new_definition
-  ("real_abs", “abs(x) = (if (0 <= x) then x else ~x)”);
+Definition real_abs[nocompute]: abs(x) = (if (0 <= x) then x else ~x)
+End
 
 val real_pow = new_recursive_definition
    {name = "real_pow",
@@ -272,11 +276,11 @@ val real_pow = new_recursive_definition
     rec_axiom = num_Axiom};
 val _ = set_fixity "pow" (Infixr 700);
 
-val real_max = new_definition
-  ("real_max", “max (x :real) y = if x <= y then y else x”);
+Definition real_max[nocompute]: max (x :real) y = if x <= y then y else x
+End
 
-val real_min = new_definition
-  ("real_min", “min (x :real) y = if x <= y then x else y”);
+Definition real_min[nocompute]: min (x :real) y = if x <= y then x else y
+End
 
 (* |- !y x. x < y <=> ~(y <= x) *)
 Theorem real_lt[allow_rebind]:
@@ -352,7 +356,7 @@ QED
 Theorem REAL_ADD_RINV:
    !x:real. x + ~x = 0r
 Proof
-  MESON_TAC[REAL_ADD_SYM, REAL_ADD_LINV]
+  MESON_TAC[REAL_ADD_SYM, REAL_ADD_LINV']
 QED
 
 (* HOL-Light compatible *)
@@ -361,7 +365,7 @@ Theorem REAL_EQ_ADD_LCANCEL:
 Proof
   REPEAT GEN_TAC THEN EQ_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[] THEN
   POP_ASSUM(MP_TAC o AP_TERM “$+ ~x”) THEN
-  REWRITE_TAC[REAL_ADD_ASSOC, REAL_ADD_LINV, REAL_ADD_LID]
+  REWRITE_TAC[REAL_ADD_ASSOC, REAL_ADD_LINV', REAL_ADD_LID']
 QED
 
 (* HOL-Light compatible *)
@@ -389,7 +393,7 @@ Theorem REAL_ADD_RDISTRIB = REAL_RDISTRIB
 Theorem REAL_MUL_RZERO:
    !x. x * 0r = 0r
 Proof
-  MESON_TAC[REAL_EQ_ADD_RCANCEL, REAL_ADD_LDISTRIB, REAL_ADD_LID]
+  MESON_TAC[REAL_EQ_ADD_RCANCEL, REAL_ADD_LDISTRIB, REAL_ADD_LID']
 QED
 
 Theorem REAL_MUL_LZERO:
@@ -402,13 +406,13 @@ Theorem REAL_NEG_NEG:
    !x:real. ~~x = x
 Proof
   MESON_TAC
-   [REAL_EQ_ADD_RCANCEL, REAL_ADD_LINV, REAL_ADD_SYM, REAL_ADD_LINV]
+   [REAL_EQ_ADD_RCANCEL, REAL_ADD_LINV', REAL_ADD_SYM, REAL_ADD_LINV']
 QED
 
 Theorem REAL_MUL_RNEG:
    !x y. x * ~y = ~(x * y)
 Proof
-  MESON_TAC[REAL_EQ_ADD_RCANCEL, REAL_ADD_LDISTRIB, REAL_ADD_LINV,
+  MESON_TAC[REAL_EQ_ADD_RCANCEL, REAL_ADD_LDISTRIB, REAL_ADD_LINV',
             REAL_MUL_RZERO]
 QED
 
@@ -423,20 +427,20 @@ Theorem REAL_NEG_ADD:
 Proof
   REPEAT GEN_TAC THEN
   MATCH_MP_TAC(GEN_ALL(fst(EQ_IMP_RULE(SPEC_ALL REAL_EQ_ADD_RCANCEL)))) THEN
-  Q.EXISTS_TAC `x + y` THEN REWRITE_TAC[REAL_ADD_LINV] THEN
+  Q.EXISTS_TAC `x + y` THEN REWRITE_TAC[REAL_ADD_LINV'] THEN
   ONCE_REWRITE_TAC[AC(REAL_ADD_ASSOC,REAL_ADD_SYM)
     “(a + b) + (c + d) = (a + c) + (b + d):real”] THEN
-  REWRITE_TAC[REAL_ADD_LINV, REAL_ADD_LID]
+  REWRITE_TAC[REAL_ADD_LINV', REAL_ADD_LID']
 QED
 
 Theorem REAL_ADD_RID:
    !x. x + 0r = x
-Proof MESON_TAC[REAL_ADD_SYM, REAL_ADD_LID]
+Proof MESON_TAC[REAL_ADD_SYM, REAL_ADD_LID']
 QED
 
 Theorem REAL_NEG_0:
    ~0r = 0r
-Proof MESON_TAC[REAL_ADD_LINV, REAL_ADD_RID]
+Proof MESON_TAC[REAL_ADD_LINV', REAL_ADD_RID]
 QED
 
 (* NOTE: REAL_LE_LADD_IMP (and many others below) is primative in HOL Light, i.e.
@@ -448,7 +452,7 @@ Theorem REAL_LT_LADD:
 Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL
    [DISCH_THEN(MP_TAC o Q.SPEC ‘~x’ o MATCH_MP REAL_LT_IADD) THEN
-    REWRITE_TAC[REAL_ADD_ASSOC, REAL_ADD_LINV, REAL_ADD_LID],
+    REWRITE_TAC[REAL_ADD_ASSOC, REAL_ADD_LINV', REAL_ADD_LID'],
     MATCH_ACCEPT_TAC REAL_LT_IADD]
 QED
 
@@ -463,13 +467,13 @@ Proof
 QED
 
 (* |- !x y z. y <= z ==> x + y <= x + z *)
-val REAL_LE_LADD_IMP = save_thm("REAL_LE_LADD_IMP",
+Theorem REAL_LE_LADD_IMP = (
   let
     val th1 = GSYM (SPEC_ALL REAL_LE_LADD)
     val th2 = TAUT_PROVE ``(x:bool = y) ==> (x ==> y)``
   in
     Q.GENL [‘x’, ‘y’, ‘z’] (MATCH_MP th2 th1)
-  end);
+  end)
 
 Theorem REAL_LE_LNEG:
   !x y. ~x <= y <=> 0r <= x + y
@@ -477,10 +481,10 @@ Proof
   REPEAT GEN_TAC THEN EQ_TAC THEN
   DISCH_THEN(MP_TAC o MATCH_MP REAL_LE_LADD_IMP) THENL
    [DISCH_THEN(MP_TAC o Q.SPEC `x:real`) THEN
-    REWRITE_TAC[ONCE_REWRITE_RULE[REAL_ADD_SYM] REAL_ADD_LINV],
+    REWRITE_TAC[ONCE_REWRITE_RULE[REAL_ADD_SYM] REAL_ADD_LINV'],
     DISCH_THEN(MP_TAC o Q.SPEC `~x`) THEN
-    REWRITE_TAC[REAL_ADD_LINV, REAL_ADD_ASSOC, REAL_ADD_LID,
-        ONCE_REWRITE_RULE[REAL_ADD_SYM] REAL_ADD_LID]]
+    REWRITE_TAC[REAL_ADD_LINV', REAL_ADD_ASSOC, REAL_ADD_LID',
+        ONCE_REWRITE_RULE[REAL_ADD_SYM] REAL_ADD_LID']]
 QED
 
 Theorem REAL_LE_NEG2:
@@ -500,7 +504,7 @@ Proof
   REWRITE_TAC[REAL_LE_LNEG, GSYM REAL_NEG_ADD] THEN
   GEN_REWR_TAC RAND_CONV [GSYM REAL_LE_NEG2] THEN
   AP_THM_TAC THEN AP_TERM_TAC THEN
-  REWRITE_TAC[GSYM REAL_ADD_LINV] THEN
+  REWRITE_TAC[GSYM REAL_ADD_LINV'] THEN
   REWRITE_TAC[REAL_NEG_ADD, REAL_NEG_NEG] THEN
   MATCH_ACCEPT_TAC REAL_ADD_SYM
 QED
@@ -515,7 +519,7 @@ QED
 Theorem REAL_ADD:
    !m n. real_of_num m + real_of_num n = real_of_num(m + n)
 Proof
-  INDUCT_TAC THEN REWRITE_TAC[REAL, ADD, REAL_ADD_LID] THEN
+  INDUCT_TAC THEN REWRITE_TAC[REAL, ADD, REAL_ADD_LID'] THEN
   RULE_ASSUM_TAC GSYM THEN GEN_TAC THEN ASM_REWRITE_TAC[] THEN
   CONV_TAC(AC_CONV(REAL_ADD_ASSOC,REAL_ADD_SYM))
 QED
@@ -530,7 +534,7 @@ Proof
   >> simp[SUB_RIGHT_EQ]
   >> once_rewrite_tac[GSYM REAL_ADD]
   >> simp[REAL_ADD_RINV, bossLib.AC REAL_ADD_ASSOC REAL_ADD_SYM,
-          real_sub, REAL_ADD_LID]
+          real_sub, REAL_ADD_LID']
 QED
 
 Theorem REAL_MUL:
@@ -539,7 +543,7 @@ Proof
   INDUCT_TAC THEN REWRITE_TAC[REAL_MUL_LZERO, MULT_CLAUSES, REAL,
     GSYM REAL_ADD, REAL_RDISTRIB] THEN
   FIRST_ASSUM(fn th => REWRITE_TAC[GSYM th]) THEN
-  REWRITE_TAC[REAL_MUL_LID]
+  REWRITE_TAC[REAL_MUL_LID']
 QED
 
 (* HOL-Light compatible name of the above theorem *)
@@ -644,7 +648,7 @@ Proof
   MAP_EVERY ASM_CASES_TAC [“0r = x”, “0r = y”] THEN
   ASM_REWRITE_TAC[] THEN TRY(FIRST_ASSUM(SUBST1_TAC o SYM)) THEN
   REWRITE_TAC[REAL_MUL_LZERO, REAL_MUL_RZERO] THEN
-  DISCH_TAC THEN DISJ1_TAC THEN MATCH_MP_TAC REAL_LT_MUL THEN
+  DISCH_TAC THEN DISJ1_TAC THEN MATCH_MP_TAC REAL_LT_MUL' THEN
   ASM_REWRITE_TAC[]
 QED
 
@@ -667,7 +671,7 @@ Theorem REAL_NEG_LT0 :
 Proof
   GEN_TAC THEN
   SUBST1_TAC(SYM(Q.SPECL [‘~x’, ‘0r’, ‘x’] REAL_LT_RADD))
-  THEN REWRITE_TAC[REAL_ADD_LINV, REAL_ADD_LID]
+  THEN REWRITE_TAC[REAL_ADD_LINV', REAL_ADD_LID']
 QED
 
 Theorem REAL_LT_NEGTOTAL:
@@ -690,7 +694,7 @@ QED
 Theorem REAL_LNEG_UNIQ:
    !x y. (x + y = 0r) <=> (x = ~y)
 Proof
-  REPEAT GEN_TAC THEN SUBST1_TAC (SYM(SPEC “y:real” REAL_ADD_LINV)) THEN
+  REPEAT GEN_TAC THEN SUBST1_TAC (SYM(SPEC “y:real” REAL_ADD_LINV')) THEN
   MATCH_ACCEPT_TAC REAL_EQ_ADD_RCANCEL
 QED
 
@@ -706,7 +710,7 @@ Theorem REAL_NEG_LMUL:
 Proof
   REPEAT GEN_TAC THEN CONV_TAC SYM_CONV THEN
   REWRITE_TAC[GSYM REAL_LNEG_UNIQ, GSYM REAL_RDISTRIB,
-              REAL_ADD_LINV, REAL_MUL_LZERO]
+              REAL_ADD_LINV', REAL_MUL_LZERO]
 QED
 
 Theorem REAL_NEG_RMUL:
@@ -727,7 +731,7 @@ QED
 Theorem REAL_LE_01:
     0r <= 1r
 Proof
-  SUBST1_TAC(SYM(SPEC “1r” REAL_MUL_LID)) THEN
+  SUBST1_TAC(SYM(SPEC “1r” REAL_MUL_LID')) THEN
   MATCH_ACCEPT_TAC REAL_LE_SQUARE
 QED
 
@@ -736,7 +740,7 @@ Theorem REAL_LT_01:
 Proof
   REWRITE_TAC[REAL_LT_LE, REAL_LE_01] THEN
   CONV_TAC(RAND_CONV SYM_CONV) THEN
-  REWRITE_TAC[REAL_10]
+  REWRITE_TAC[REAL_10']
 QED
 
 Theorem REAL_LE_ADDR :
@@ -886,9 +890,9 @@ Theorem REAL_ENTIRE:
 Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL
    [ASM_CASES_TAC “x = 0r” THEN ASM_REWRITE_TAC[] THEN
-    RULE_ASSUM_TAC(MATCH_MP REAL_MUL_LINV) THEN
+    RULE_ASSUM_TAC(MATCH_MP REAL_MUL_LINV') THEN
     DISCH_THEN(MP_TAC o AP_TERM “$* (inv x)”) THEN
-    ASM_REWRITE_TAC[REAL_MUL_ASSOC, REAL_MUL_LID, REAL_MUL_RZERO],
+    ASM_REWRITE_TAC[REAL_MUL_ASSOC, REAL_MUL_LID', REAL_MUL_RZERO],
     DISCH_THEN(DISJ_CASES_THEN SUBST1_TAC) THEN
     REWRITE_TAC[REAL_MUL_LZERO, REAL_MUL_RZERO]]
 QED
@@ -896,7 +900,7 @@ QED
 Theorem REAL_MUL_RID:
    !x. x * 1r = x
 Proof
-  MESON_TAC[REAL_MUL_LID, REAL_MUL_SYM]
+  MESON_TAC[REAL_MUL_LID', REAL_MUL_SYM]
 QED
 
 Theorem REAL_POW_2:
@@ -920,7 +924,7 @@ Triviality REAL_POLY_CLAUSES :
    (!x n. x pow (SUC n) = x * x pow n)
 Proof
   REWRITE_TAC[real_pow, REAL_ADD_LDISTRIB, REAL_MUL_LZERO] THEN
-  REWRITE_TAC[REAL_MUL_ASSOC, REAL_ADD_ASSOC, REAL_ADD_LID, REAL_MUL_LID] THEN
+  REWRITE_TAC[REAL_MUL_ASSOC, REAL_ADD_ASSOC, REAL_ADD_LID', REAL_MUL_LID'] THEN
   REWRITE_TAC[Once REAL_ADD_AC] THEN REWRITE_TAC[Once REAL_MUL_SYM]
 QED
 Theorem REAL_POLY_CLAUSES = MATCH_MP SEMIRING_PTHS REAL_POLY_CLAUSES;
@@ -929,7 +933,7 @@ Theorem REAL_POLY_NEG_CLAUSES :
    (!x. ~x = ~(1r) * x) /\
    (!x y. x - y = x + ~(1r) * y)
 Proof
-  REWRITE_TAC[REAL_MUL_LNEG, real_sub, REAL_MUL_LID]
+  REWRITE_TAC[REAL_MUL_LNEG, real_sub, REAL_MUL_LID']
 QED
 
 Theorem REAL_LE_TOTAL:
@@ -944,7 +948,7 @@ Theorem REAL_ABS_NEG :
    !x. abs(~x) = abs x
 Proof
   GEN_TAC THEN
-  REWRITE_TAC[real_abs, REAL_LE_RNEG, REAL_NEG_NEG, REAL_ADD_LID] THEN
+  REWRITE_TAC[real_abs, REAL_LE_RNEG, REAL_NEG_NEG, REAL_ADD_LID'] THEN
   METIS_TAC[REAL_LE_TOTAL, REAL_LE_ANTISYM, REAL_NEG_0]
 QED
 
@@ -1061,12 +1065,12 @@ Proof
 QED
 
 Theorem REAL_PROD_NORM_CONV_pth1[unlisted] = SYM(SPEC ``x:real`` REAL_MUL_RID)
-Theorem REAL_PROD_NORM_CONV_pth2[unlisted] = SYM(SPEC ``x:real`` REAL_MUL_LID)
+Theorem REAL_PROD_NORM_CONV_pth2[unlisted] = SYM(SPEC ``x:real`` REAL_MUL_LID')
 
 Theorem REAL_INT_ADD_CONV_pth0[unlisted]:
   (~(&m) + &m = &0) /\ (&m + ~(&m) = &0)
 Proof
-  REWRITE_TAC[REAL_ADD_LINV, REAL_ADD_RINV]
+  REWRITE_TAC[REAL_ADD_LINV', REAL_ADD_RINV]
 QED
 
 Theorem REAL_INT_ADD_CONV_pth1[unlisted]:
@@ -1078,17 +1082,17 @@ Theorem REAL_INT_ADD_CONV_pth1[unlisted]:
   (&m + &n = &(m + n) :real)
 Proof
   REWRITE_TAC[GSYM REAL_ADD, REAL_NEG_ADD] THEN
-  REWRITE_TAC[REAL_ADD_ASSOC, REAL_ADD_LINV, REAL_ADD_LID] THEN
-  REWRITE_TAC[REAL_ADD_RINV, REAL_ADD_LID] THEN
+  REWRITE_TAC[REAL_ADD_ASSOC, REAL_ADD_LINV', REAL_ADD_LID'] THEN
+  REWRITE_TAC[REAL_ADD_RINV, REAL_ADD_LID'] THEN
   ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN
-  REWRITE_TAC[REAL_ADD_ASSOC, REAL_ADD_LINV, REAL_ADD_LID] THEN
-  REWRITE_TAC[REAL_ADD_RINV, REAL_ADD_LID]
+  REWRITE_TAC[REAL_ADD_ASSOC, REAL_ADD_LINV', REAL_ADD_LID'] THEN
+  REWRITE_TAC[REAL_ADD_RINV, REAL_ADD_LID']
 QED
 
 Theorem LINEAR_ADD_pth0a[unlisted]:
   &0 + x = x :real
 Proof
-  REWRITE_TAC[REAL_ADD_LID]
+  REWRITE_TAC[REAL_ADD_LID']
 QED
 
 Theorem LINEAR_ADD_pth0b[unlisted]:
@@ -1122,7 +1126,7 @@ QED
 Theorem REAL_SUM_NORM_CONV_pth1[unlisted]:
   ~x = ~(&1) * x
 Proof
-  REWRITE_TAC[REAL_MUL_LNEG, REAL_MUL_LID]
+  REWRITE_TAC[REAL_MUL_LNEG, REAL_MUL_LID']
 QED
 
 Theorem REAL_SUM_NORM_CONV_pth2[unlisted]:
@@ -1136,7 +1140,7 @@ Theorem REAL_NEGATE_CANON_pth1[unlisted]:
   ((a:real < b = &0 < X) = (b <= a = &0 <= ~X))
 Proof
   REWRITE_TAC[real_lt, REAL_LE_LNEG, REAL_LE_RNEG] THEN
-  REWRITE_TAC[REAL_ADD_RID, REAL_ADD_LID] THEN
+  REWRITE_TAC[REAL_ADD_RID, REAL_ADD_LID'] THEN
   CONV_TAC tautLib.TAUT_CONV
 QED
 
@@ -1215,7 +1219,7 @@ Theorem ADD_INEQS_pth[unlisted]:
 Proof
   CONV_TAC(ONCE_DEPTH_CONV SYM_CONV) THEN
   REPEAT STRIP_TAC THEN
-  ASM_REWRITE_TAC[REAL_ADD_LID, REAL_ADD_RID] THENL
+  ASM_REWRITE_TAC[REAL_ADD_LID', REAL_ADD_RID] THENL
   [MATCH_MP_TAC REAL_LE_TRANS,
   MATCH_MP_TAC REAL_LET_TRANS,
   MATCH_MP_TAC REAL_LTE_TRANS,
@@ -1234,7 +1238,7 @@ Proof
   CONV_TAC(ONCE_DEPTH_CONV SYM_CONV) THEN
   REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[REAL_MUL_RZERO] THENL
   [MATCH_MP_TAC REAL_LE_MUL,
-  MATCH_MP_TAC REAL_LT_MUL] THEN
+  MATCH_MP_TAC REAL_LT_MUL'] THEN
   ASM_REWRITE_TAC[]
 QED
 
@@ -1274,7 +1278,7 @@ Proof
   MATCH_MP_TAC REAL_LE_LADD_IMP THEN
   MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC ``&0 :real`` THEN
   REWRITE_TAC[REAL_LE_LNEG, REAL_LE_RNEG] THEN
-  ASM_REWRITE_TAC[REAL_ADD_RID, REAL_ADD_LID] THEN
+  ASM_REWRITE_TAC[REAL_ADD_RID, REAL_ADD_LID'] THEN
   MP_TAC (SPEC(Term`&0 :real`) (SPEC (Term`x:real`)
           REAL_LE_TOTAL))
   THEN ASM_REWRITE_TAC[]
@@ -1292,7 +1296,7 @@ Theorem ABS_STRONG_CASES_THM[unlisted]:
 Proof
   REWRITE_TAC[real_abs] THEN COND_CASES_TAC
   THEN REWRITE_TAC[] THEN
-  REWRITE_TAC[REAL_LE_RNEG, REAL_ADD_LID] THEN
+  REWRITE_TAC[REAL_LE_RNEG, REAL_ADD_LID'] THEN
   MP_TAC (SPECL [``&0 :real``, ``x:real``] REAL_LE_TOTAL)
   THEN ASM_REWRITE_TAC[]
 QED
@@ -1343,10 +1347,10 @@ Theorem GEN_REAL_ARITH0_pth_add[unlisted]:
   (x > &0 /\ y >= &0 ==> x + y > &0) /\
   (x > &0 /\ y > &0 ==> x + y > &0)
 Proof
-  SIMP_TAC arith_ss [REAL_ADD_LID, REAL_ADD_RID, real_ge, real_gt] THEN
+  SIMP_TAC arith_ss [REAL_ADD_LID', REAL_ADD_RID, real_ge, real_gt] THEN
   REWRITE_TAC[REAL_LE_LT] THEN
   REPEAT STRIP_TAC >>
-  RW_TAC bool_ss [REAL_LT_ADD, REAL_ADD_RID, REAL_ADD_LID]
+  RW_TAC bool_ss [REAL_LT_ADD, REAL_ADD_RID, REAL_ADD_LID']
 QED
 
 Theorem GEN_REAL_ARITH0_pth_mul[unlisted]:
@@ -1396,4 +1400,3 @@ Proof
   REWRITE_TAC[real_min, real_gt, real_ge] THEN
   COND_CASES_TAC THEN ASM_REWRITE_TAC[real_lt]
 QED
-

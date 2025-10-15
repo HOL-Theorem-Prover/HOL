@@ -34,17 +34,16 @@ val [ordlt_REFL, ordlt_TRANS, ordlt_WF0, ordlt_trichotomy] =
                  alphaise (REWRITE_RULE [relationTheory.WF_DEF] orderlt_WF),
                  alphaise orderlt_trichotomy]}
 
-val _ = save_thm ("ordlt_REFL", ordlt_REFL)
+Theorem ordlt_REFL = ordlt_REFL
 val _ = export_rewrites ["ordlt_REFL"]
-val _ = save_thm ("ordlt_TRANS", ordlt_TRANS)
-val ordlt_WF = save_thm (
-  "ordlt_WF",
-  REWRITE_RULE [GSYM relationTheory.WF_DEF] ordlt_WF0)
+Theorem ordlt_TRANS = ordlt_TRANS
+Theorem ordlt_WF =
+  REWRITE_RULE [GSYM relationTheory.WF_DEF] ordlt_WF0
 
 val _ = overload_on ("<", ``ordlt``)
 val _ = overload_on ("<=", ``\a b. ~(b < a)``)
 
-val _ = save_thm ("ordlt_trichotomy", ordlt_trichotomy)
+Theorem ordlt_trichotomy = ordlt_trichotomy
 
 val _ = overload_on ("mkOrdinal", ``ordinal_ABS``)
 
@@ -352,7 +351,7 @@ Definition fromNat_def:
   (fromNat 0 = oleast a. T) /\
   (fromNat (SUC n) = ordSUC (fromNat n))
 End
-val fromNat_SUC = save_thm("fromNat_SUC", fromNat_def |> CONJUNCT2)
+Theorem fromNat_SUC = fromNat_def |> CONJUNCT2
 val _ = export_rewrites ["fromNat_SUC"]
 
 val _ = add_numeral_form (#"o", SOME "fromNat")
@@ -365,11 +364,10 @@ Proof
 QED
 val _ = export_rewrites ["ordlt_ZERO"]
 
-val preds_surj = save_thm(
-  "preds_surj",
+Theorem preds_surj =
   preds_bij |> SIMP_RULE (srw_ss()) [BIJ_DEF] |> CONJUNCT2
             |> SIMP_RULE (srw_ss()) [SURJ_DEF] |> CONJUNCT2
-            |> REWRITE_RULE [SPECIFICATION]);
+            |> REWRITE_RULE [SPECIFICATION];
 
 Theorem no_maximal_ordinal:
     !a. ?b. a < b
@@ -452,8 +450,7 @@ Definition sup_def:
   sup ordset = oleast a. a NOTIN BIGUNION (IMAGE preds ordset)
 End
 
-val ord_induction = save_thm(
-  "ord_induction",
+Theorem ord_induction =
   ordlt_WF0 |> Q.SPEC `P` |> CONV_RULE CONTRAPOS_CONV
             |> CONV_RULE (BINOP_CONV NOT_EXISTS_CONV)
             |> CONV_RULE (LAND_CONV (REWRITE_CONV [DE_MORGAN_THM] THENC
@@ -461,7 +458,7 @@ val ord_induction = save_thm(
                                      REWRITE_CONV [GSYM IMP_DISJ_THM]))
             |> Q.INST [`P` |-> `\x. ~ P x`] |> BETA_RULE
             |> REWRITE_RULE []
-            |> CONV_RULE (RAND_CONV (RENAME_VARS_CONV ["a"])))
+            |> CONV_RULE (RAND_CONV (RENAME_VARS_CONV ["a"]))
 
 Theorem sup_thm:
   (s: 'a ordinal set) <<= univ(:'a inf) ==>
@@ -535,18 +532,16 @@ QED
 
 val impI = DECIDE ``~p \/ q <=> (p ==> q)``
 
-val predimage_suplt_ELIM = save_thm(
-  "predimage_suplt_ELIM",
+Theorem predimage_suplt_ELIM =
   predimage_sup_thm |> SPEC_ALL |> Q.AP_TERM `$~`
                     |> CONV_RULE (RAND_CONV (SIMP_CONV bool_ss [impI]))
                     |> EQ_IMP_RULE |> #1
                     |> SIMP_RULE bool_ss [SimpL ``$==>``, ordle_lteq]
                     |> SIMP_RULE bool_ss [DISJ_IMP_THM]
-                    |> CONJUNCT1)
-val suppred_suplt_ELIM = save_thm(
-  "suppred_suplt_ELIM",
+                    |> CONJUNCT1
+Theorem suppred_suplt_ELIM =
   predimage_suplt_ELIM |> Q.INST [`f` |-> `\x.x`]
-                       |> SIMP_RULE (srw_ss()) []);
+                       |> SIMP_RULE (srw_ss()) [];
 
 Theorem sup_EMPTY:
     sup {} = 0
@@ -773,7 +768,7 @@ fun mklesup th =
     th |> UNDISCH_ALL |> Q.SPEC `sup s`
        |> SIMP_RULE (srw_ss()) [] |> REWRITE_RULE [impI] |> DISCH_ALL
 (* |- countable s ==> !d. d IN s ==> d <= sup s *)
-val csup_lesup = save_thm("csup_lesup", mklesup csup_thm)
+Theorem csup_lesup = mklesup csup_thm
 
 fun mksuple th =
     th |> UNDISCH_ALL |> Q.SPEC `b` |> AP_TERM ``$~``
@@ -781,7 +776,7 @@ fun mksuple th =
        |> REWRITE_RULE [impI]
        |> DISCH_ALL
 
-val csup_suple = save_thm("csup_suple", mksuple csup_thm)
+Theorem csup_suple = mksuple csup_thm
 
 Theorem preds_sup_thm:
     downward_closed s /\ s <> univ(:'a ordinal) ==>
@@ -807,8 +802,8 @@ Proof
   rw[]
 QED
 
-val preds_lesup = save_thm("preds_lesup", mklesup preds_sup_thm)
-val preds_suple = save_thm("preds_suple", mksuple preds_sup_thm)
+Theorem preds_lesup = mklesup preds_sup_thm
+Theorem preds_suple = mksuple preds_sup_thm
 
 Theorem ordlt_fromNat:
     !n (x:'a ordinal). x < &n <=> ?m. (x = &m) /\ m < n
@@ -939,7 +934,7 @@ Proof
   simp_tac (srw_ss() ++ DNF_ss) [omax_NONE, lt_omega] >> qx_gen_tac `m` >>
   qexists_tac `SUC m` >> simp[]
 QED
-val omega_islimit = save_thm("omega_islimit", omax_preds_omega)
+Theorem omega_islimit = omax_preds_omega
 
 Theorem ordADD_fromNat_omega:
     &n + omega = omega
@@ -958,9 +953,8 @@ Proof
   qexists_tac `m+1` >> decide_tac
 QED
 
-val lt_suppreds = save_thm(
-  "lt_suppreds",
-  predimage_sup_thm |> Q.INST [`f` |-> `\x. x`] |> SIMP_RULE (srw_ss()) [])
+Theorem lt_suppreds =
+  predimage_sup_thm |> Q.INST [`f` |-> `\x. x`] |> SIMP_RULE (srw_ss()) []
 
 Theorem ORD_ONE:
     0^+ = 1
@@ -1009,11 +1003,10 @@ val ordADD_CANCEL_LEMMA0 = prove(
   Cases_on `c = 0` >> simp[] >>
   qsuff_tac `a < a + c` >- metis_tac[ordlt_REFL] >> simp[] >>
   spose_not_then strip_assume_tac >> fs[ordle_lteq])
-val ordADD_CANCEL1 = save_thm(
-  "ordADD_CANCEL1",
+Theorem ordADD_CANCEL1 =
   CONJ (GEN_ALL ordADD_CANCEL_LEMMA0)
        (ordADD_CANCEL_LEMMA0 |> CONV_RULE (LAND_CONV (REWR_CONV EQ_SYM_EQ))
-                             |> GEN_ALL))
+                             |> GEN_ALL)
 val _ = export_rewrites ["ordADD_CANCEL1"]
 
 Theorem ordADD_MONO:
@@ -1247,9 +1240,8 @@ Proof
   metis_tac[ordle_TRANS, ordle_TRANS]
 QED
 
-val ordADD_continuous = save_thm(
-  "ordADD_continuous",
-  generic_continuity |> Q.INST [`f` |-> `$+ a`] |> SIMP_RULE (srw_ss()) [])
+Theorem ordADD_continuous =
+  generic_continuity |> Q.INST [`f` |-> `$+ a`] |> SIMP_RULE (srw_ss()) []
 
 Theorem ordADD_ASSOC:
     !a b c:'a ordinal. a + (b + c) = (a + b) + c
@@ -1924,10 +1916,9 @@ val one_lt_epsilon0 =
              |> SIMP_RULE (srw_ss()) []
 
 (* |- omega < epsilon0 *)
-val omega_lt_epsilon0 = save_thm(
-  "omega_lt_epsilon0",
+Theorem omega_lt_epsilon0 =
   MATCH_MP epsilon0_least_fixpoint one_lt_epsilon0
-           |> SIMP_RULE (srw_ss()) [])
+           |> SIMP_RULE (srw_ss()) []
 val _ = export_rewrites ["omega_lt_epsilon0"]
 
 Theorem fromNat_lt_epsilon0:
@@ -2224,9 +2215,8 @@ val polyform_def = new_specification(
 (* Cantor Normal Form - polynomials where the base is omega *)
 val _ = overload_on ("CNF", ``polyform omega``)
 
-val CNF_thm = save_thm(
-  "CNF_thm",
-  polyform_def |> SPEC ``omega`` |> SIMP_RULE (srw_ss()) [])
+Theorem CNF_thm =
+  polyform_def |> SPEC ``omega`` |> SIMP_RULE (srw_ss()) []
 
 Theorem polyform_0:
     1 < a ==> polyform a 0 = []
@@ -2392,9 +2382,8 @@ Proof
 QED
 
 (* |- 0 < x ==> omega ** olog x <= x /\ !a. olog x < a ==> x < omega ** a *)
-val olog_correct = save_thm(
-  "olog_correct",
-  ordLOG_correct |> Q.INST [`b` |-> `omega`] |> SIMP_RULE (srw_ss()) []);
+Theorem olog_correct =
+  ordLOG_correct |> Q.INST [`b` |-> `omega`] |> SIMP_RULE (srw_ss()) [];
 
 (* ----------------------------------------------------------------------
     Results about cardinalities of ordinal predecessor sets
