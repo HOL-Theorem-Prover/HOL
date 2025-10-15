@@ -66,11 +66,11 @@ val pp_hol_error =
     if err = empty_hol_error then
         add_string "<empty-hol-error>"
      else
-        block INCONSISTENT 2
+        block INCONSISTENT 0
           (pr_list pp_origin [NL] origins @
            (if message = "" then
 	       []
-            else [NL, add_string message]))
+            else [add_break(1,2), add_string message]))
   end
 
 fun format_hol_error holerr =
