@@ -37,12 +37,12 @@ val _ = hide "S";
 * The dollar ($) is an escape telling the HOL parser not to parse as an infix.
 * In this example the type ``:'val`` is instantiated to ``:num``.
 ******************************************************************************)
-Datatype:
-   exp = CONST of 'val
+val exp_def =
+ Hol_datatype
+  `exp = CONST of 'val
        | VAR   of string
        | UNOP  of ('val -> 'val) => exp
-       | BINOP of ('val -> 'val -> 'val) => (exp # exp)
-End
+       | BINOP of ('val -> 'val -> 'val) => (exp # exp)`;
 
 (******************************************************************************
 *

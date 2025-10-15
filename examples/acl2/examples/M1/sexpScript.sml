@@ -9,6 +9,16 @@
 (*                                                                           *)
 (*****************************************************************************)
 
+(* The commented out stuff below should be loaded in interactive sessions
+quietdec := true;
+app
+ load
+ ["complex_rationalTheory", "sexp","acl2_packageTheory"];
+open complex_rationalTheory sexp acl2_packageTheory stringLib;
+Globals.checking_const_names := false;
+quietdec := false;
+*)
+
 Theory sexp
 Ancestors
   complex_rational acl2_package
@@ -29,13 +39,12 @@ val _ = type_abbrev("name",        ``:string``);
 (* ACL2 S-expressions defined as a HOL datatype.                             *)
 (* Definition below adapted from Mark Staples' code.                         *)
 (*****************************************************************************)
-Datatype:
-  sexp = ACL2_SYMBOL    of packagename => name     (* only curried for style *)
+val _ = Hol_datatype
+ `sexp = ACL2_SYMBOL    of packagename => name     (* only curried for style *)
        | ACL2_STRING    of string
        | ACL2_CHARACTER of char
        | ACL2_NUMBER    of complex_rational
-       | ACL2_PAIR      of sexp => sexp            (* only curried for style *)
-End
+       | ACL2_PAIR      of sexp => sexp`;          (* only curried for style *)
 
 (*****************************************************************************)
 (* Each ACL2 function or constant is given a name of the form "pkg::nam".    *)

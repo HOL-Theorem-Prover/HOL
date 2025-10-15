@@ -28,16 +28,15 @@ val set_ss = std_ss ++ SET_SPEC_ss ++ PRED_SET_ss;
 (*      Registers and memory data in IL                                            *)
 (*---------------------------------------------------------------------------------*)
 
-Datatype:
-    MREG = R0 | R1 | R2 | R3 | R4 | R5 | R6 | R7 | R8 | R9 | R10 | R11 | R12 | R13 | R14
-End
+val _ = Hol_datatype `
+    MREG = R0 | R1 | R2 | R3 | R4 | R5 | R6 | R7 | R8 | R9 | R10 | R11 | R12 | R13 | R14`;
 
 val _ = type_abbrev("MMEM", Type`:MREG # OFFSET`);      (* memory in ir *)
 
-Datatype:
+val _ = Hol_datatype `
     MEXP = MR of MREG          (* registers *)
          | MC of word4 => word8 (* constants *)
-End
+    `;
 
 val index_of_reg = Define `
     (index_of_reg R0 = 0) /\
@@ -110,7 +109,7 @@ val toEXP_def = Define `
 (*      Semantics of the intermediate language                                     *)
 (*---------------------------------------------------------------------------------*)
 
-Datatype:
+val _ = Hol_datatype `
     DOPER = MLDR of MREG => MMEM |
            MSTR of MMEM => MREG |
            MMOV of MREG => MEXP |
@@ -126,17 +125,16 @@ Datatype:
      MASR of MREG => MREG => word5 |
      MROR of MREG => MREG => word5 |
      MPUSH of num => num list |
-     MPOP of num => num list
-End
+     MPOP of num => num list`;
 
 val _ = type_abbrev("CEXP", Type`:MREG # COND # MEXP`);
 
-Datatype: CTL_STRUCTURE =
+val _ = Hol_datatype `CTL_STRUCTURE =
     BLK of DOPER list |
     SC of CTL_STRUCTURE => CTL_STRUCTURE |
     CJ of CEXP => CTL_STRUCTURE => CTL_STRUCTURE |
     TR of CEXP => CTL_STRUCTURE
-End
+  `;
 
 (*---------------------------------------------------------------------------------*)
 (*      Macro machine                                                              *)

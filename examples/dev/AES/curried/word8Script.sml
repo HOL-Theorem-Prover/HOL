@@ -10,9 +10,8 @@ Ancestors
 (* 8 bits per byte, represented as an 8-tuple of truth values.               *)
 (*---------------------------------------------------------------------------*)
 
-Datatype: word8 = BYTE of bool => bool => bool => bool =>
-                                      bool => bool => bool => bool
-End
+val _ = Hol_datatype `word8 = BYTE of bool => bool => bool => bool =>
+                                      bool => bool => bool => bool`;
 
 val word8_case_def = fetch "-" "word8_case_def";
 
@@ -208,8 +207,7 @@ val RightShift_lem =
 
 (*
 
-Datatype: order = LESS | EQUAL | GREATER
-End
+val _ = Hol_datatype `order = LESS | EQUAL | GREATER`;
 
 val BIT_COMPARE = Define
   `(BIT_COMPARE F T = LESS) /\
@@ -293,3 +291,4 @@ val XOR8_AC = Q.store_thm
   (!x y:word8. (x # y) = (y # x))`,
  SIMP_TAC std_ss [FORALL_BYTE_VARS,XOR_def,XOR8_def]
   THEN RW_TAC std_ss [] THEN DECIDE_TAC);
+

@@ -8,8 +8,7 @@ Theory SAL
 (* Labels                                                                    *)
 (*---------------------------------------------------------------------------*)
 
-Datatype: LABEL = L of num
-End
+val _ = Hol_datatype `LABEL = L of num`;
 
 Definition inc_def:   inc (L i) = L (i + 1)
 End
@@ -64,14 +63,14 @@ val rec_INTRO = Q.store_thm
 (* Syntax                                                                    *)
 (*---------------------------------------------------------------------------*)
 
-Datatype:
-    COMPOSITE
+val _ =
+ Hol_datatype
+   `COMPOSITE
       = NOP
       | ASG of LABEL => 'a => 'a  => LABEL
       | IFGOTO of LABEL => ('a -> bool) => LABEL => LABEL
       | GOTO of LABEL => LABEL
-      | UNION of COMPOSITE => COMPOSITE
-End
+      | UNION of COMPOSITE => COMPOSITE`;
 
 val _ = overload_on ("|++|", ``SAL$UNION``);
 val _ = set_fixity "|++|" (Infixl 650);

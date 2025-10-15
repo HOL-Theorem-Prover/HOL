@@ -60,11 +60,11 @@ val _ = intLib.deprecate_int();
 (* Definition of a datatypetype A. It creates a tagged disjoint union with   *)
 (* elements ``N l``, ``W l`` and ``S l``, where l is a HOL list.             *)
 (*****************************************************************************)
-Datatype:
-   A = N of 'a list
+val A_def =
+ Hol_datatype
+  `A = N of 'a list
      | W of 'a list
-     | S of 'a list
-End
+     | S of 'a list`;
 
 (*****************************************************************************)
 (* Retrieve from data-base (DB) automatically proved theorems about A        *)

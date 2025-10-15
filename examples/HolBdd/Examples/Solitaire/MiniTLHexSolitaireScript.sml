@@ -198,14 +198,14 @@ val ReachTb =
 (* A Mini Temporal Logic                                                     *)
 (*****************************************************************************)
 
-Datatype:
-   wff = ATOM     of ('state -> bool)
+val _ =
+ Hol_datatype
+  `wff = ATOM     of ('state -> bool)
        | NOT      of wff
        | AND      of wff => wff
        | OR       of wff => wff
        | SOMETIME of wff
-       | ALWAYS   of wff
-End
+       | ALWAYS   of wff`;
 
 Definition Eval_def:
    (Eval (ATOM p)     R s = p s)                                        /\
@@ -285,14 +285,14 @@ val ModelCheckTh3 = BddThmOracle EvalTb3;
 (* A version of the Mini Temporal Logic with Kripke structures               *)
 (*****************************************************************************)
 
-Datatype:
-   awff = aATOM     of string
+val _ =
+ Hol_datatype
+  `awff = aATOM     of string
         | aNOT      of awff
         | aAND      of awff => awff
         | aOR       of awff => awff
         | aSOMETIME of awff
-        | aALWAYS   of awff
-End
+        | aALWAYS   of awff`;
 
 Definition aEval_def:
    (aEval (aATOM a)     (R,L) s = L a s)                                           /\

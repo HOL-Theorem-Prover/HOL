@@ -11,6 +11,15 @@
 (*                                                                           *)
 (*****************************************************************************)
 
+(*  Commands when run interactively:
+quietdec := true;                                    (* Switch off output    *)
+map load
+ ["pred_setLib","stringLib","finite_mapTheory"];
+open
+ pred_setTheory stringLib finite_mapTheory;
+quietdec := false;                                   (* Restore output       *)
+*)
+
 Theory LTL
 Ancestors
   pred_set
@@ -23,8 +32,9 @@ Ancestors
 (******************************************************************************
 * LTL formulas are polymorphic: have type ``:'prop formula``
 ******************************************************************************)
-Datatype:
-   formula = TRUE  (* one value satisfying ltl-constantp *)
+val formula_def =
+ Hol_datatype
+  `formula = TRUE  (* one value satisfying ltl-constantp *)
            | FALSE (* one value satisfying ltl-constantp *)
            | ATOMIC     of 'prop (* in ACL2: a symbol satisfying ltl-variablep *)
            | NOT        of formula (* ~ *)
@@ -34,8 +44,7 @@ Datatype:
            | ALWAYS     of formula (* G *)
            | NEXT       of formula (* X *)
            | UNTIL      of formula => formula (* U *)
-           | WEAK_UNTIL of formula => formula (* W *)
-End
+           | WEAK_UNTIL of formula => formula`; (* W *)
 (******************************************************************************
 * Recognizer for formulas using only variables in a given s-expression list:
 ******************************************************************************)
@@ -103,8 +112,9 @@ val _ = hide "S";
 (******************************************************************************
 * A Kripke structure has type ``: ('prop,'state)model`` (Clarke et al. p13)
 ******************************************************************************)
-Datatype:
-   model =
+val model_def =
+ Hol_datatype
+  `model =
     <| S: 'state set;
       (* set of all states *)
        S0:'state set ;
@@ -113,8 +123,7 @@ Datatype:
       (* transition relation *)
        L: 'state -> 'prop set
       (* maps a state to the set of propositions true in that state *)
-    |>
-End
+    |>`;
 
 (******************************************************************************
 * Requirements for a model to be a well-formed Kripke structure

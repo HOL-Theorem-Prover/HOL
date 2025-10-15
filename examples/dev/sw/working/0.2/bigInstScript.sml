@@ -39,12 +39,12 @@ Libs
 (*         Expressions                                                             *)
 (*---------------------------------------------------------------------------------*)
 
-Datatype:
+val _ = Hol_datatype `
     CFL_EXP = isR of num            (* registers *)
          | isC of word32            (* constants *)
          | isV of num               (* stack variables *)
          | isM of num               (* memory locations *)
-End
+    `;
 
 val reade_def = Define `
     (reade st (isR r) = read st (REG r)) /\

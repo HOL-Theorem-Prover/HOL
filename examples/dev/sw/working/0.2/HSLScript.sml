@@ -27,9 +27,8 @@ Libs
 
 (* Pointer registers *)
 
-Datatype:
-    PTR = TTP | THP | TFP | TIP | TSP | TLR  (* temporary register, heap pointer, fp, ip, sp and lr *)
-End
+val _ = Hol_datatype `
+    PTR = TTP | THP | TFP | TIP | TSP | TLR`;   (* temporary register, heap pointer, fp, ip, sp and lr *)
 
 val toPTR_def = Define `
     (toPTR TTP = tp) /\
@@ -50,9 +49,8 @@ val toPTR_lem = Q.store_thm
 
 (* Data regisiters *)
 
-Datatype:
-    TREG = r0 | r1 | r2 | r3 | r4 | r5 | r6 | r7 | r8
-End
+val _ = Hol_datatype `
+    TREG = r0 | r1 | r2 | r3 | r4 | r5 | r6 | r7 | r8`;
 
 val data_reg_index_def = Define `
     (data_reg_index r0 = 0) /\
@@ -147,18 +145,18 @@ val FORALL_TSTATE = Q.store_thm (
 
 val _ = type_abbrev("TMEM", Type`:PTR # OFFSET`);      (* memory in HSL *)
 
-Datatype:
+val _ = Hol_datatype `
     TEXP = inR of TREG            (* registers *)
          | inC of word32          (* constants *)
          | inE of num             (* stack variables, in environments *)
-End
+    `;
 
 (* Register Or Constants *)
 
-Datatype:
+val _ = Hol_datatype `
     TROC = Rg of TREG           (* registers *)
          | Cn of word32         (* constants *)
-End
+    `;
 
 val roc_2_exp_def = Define `
   (roc_2_exp (Rg r) = inR r) /\
@@ -188,7 +186,7 @@ val _ = type_abbrev("TCND", Type`:TREG # COND # TROC`);
 (*      Syntax of HSL                                                              *)
 (*---------------------------------------------------------------------------------*)
 
-Datatype:
+val _ = Hol_datatype `
     TOPER = TLDR of TREG => num |
             TSTR of num => TREG |
             TMOV of TREG => TROC |
@@ -206,15 +204,15 @@ Datatype:
 (*
             TCPY of TEXP list => TEXP list   (* copy from a list to a list *)
 *)
-End
+     `;
 
-Datatype: HSL_STRUCTURE =
+val _ = Hol_datatype `HSL_STRUCTURE =
     Blk of TOPER list |
     Sc of HSL_STRUCTURE => HSL_STRUCTURE |
     Cj of TCND => HSL_STRUCTURE => HSL_STRUCTURE |
     Tr of TCND => HSL_STRUCTURE |
     Fc of (TEXP list # TEXP list) => HSL_STRUCTURE => (TEXP list # TEXP list) => (num # num)
-End
+  `;
 
 (*---------------------------------------------------------------------------------*)
 (*      Eval the conditions                                                        *)
@@ -548,3 +546,4 @@ val Fc_RULE = Q.store_thm (
   );
 
 (*---------------------------------------------------------------------------------*)
+

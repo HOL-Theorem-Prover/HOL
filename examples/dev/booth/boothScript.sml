@@ -22,8 +22,7 @@ val WL_EVEN = prove(
 
 (* -------------------------------------------------------- *)
 
-Datatype: state_BOOTH = BOOTH of num=>num=>bool=>num=>word=>word
-End
+val _ = Hol_datatype `state_BOOTH = BOOTH of num=>num=>bool=>num=>word=>word`;
 (* mul,mul2,borrow2,mshift,rm,rd *)
 
 (* -------------------------------------------------------- *)

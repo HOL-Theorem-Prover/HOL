@@ -44,16 +44,15 @@ val set_ss = std_ss ++ SET_SPEC_ss ++ PRED_SET_ss;
 (*      the pc is invisible in this level                                          *)
 (*---------------------------------------------------------------------------------*)
 
-Datatype:
-    MREG = R0 | R1 | R2 | R3 | R4 | R5 | R6 | R7 | R8 | R9 | R10 | R11 | R12 | R13 | R14
-End
+val _ = Hol_datatype `
+    MREG = R0 | R1 | R2 | R3 | R4 | R5 | R6 | R7 | R8 | R9 | R10 | R11 | R12 | R13 | R14`;
 
 val _ = type_abbrev("MMEM", Type`:num # OFFSET`);      (* memory in ir *)
 
-Datatype:
+val _ = Hol_datatype `
     MEXP = MR of MREG          (* registers *)
          | MC of word32        (* constants *)
-End
+    `;
 
 val index_of_reg = Define `
     (index_of_reg R0 = 0) /\
@@ -148,7 +147,7 @@ val lr_def = Define `
 (*      Syntax of CFL                                                              *)
 (*---------------------------------------------------------------------------------*)
 
-Datatype:
+val _ = Hol_datatype `
     DOPER =
      MLDR of MREG => MMEM |
      MSTR of MMEM => MREG |
@@ -165,17 +164,16 @@ Datatype:
      MASR of MREG => MREG => word5 |
      MROR of MREG => MREG => word5 |
      MPUSH of REGISTER => REGISTER list |
-     MPOP of REGISTER => REGISTER list
-End
+     MPOP of REGISTER => REGISTER list`;
 
 val _ = type_abbrev("CEXP", Type`:MREG # COND # MEXP`);
 
-Datatype: CTL_STRUCTURE =
+val _ = Hol_datatype `CTL_STRUCTURE =
     BLK of DOPER list |
     SC of CTL_STRUCTURE => CTL_STRUCTURE |
     CJ of CEXP => CTL_STRUCTURE => CTL_STRUCTURE |
     TR of CEXP => CTL_STRUCTURE
-End
+  `;
 
 (*---------------------------------------------------------------------------------*)
 (*      Stack Operations (push and pop)                                            *)

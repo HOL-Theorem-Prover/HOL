@@ -22,8 +22,7 @@ Libs
 (* The type ``:complex_rational`` is a datatype isomorphic to                *)
 (* ``:rat # rat``, with curried constructor ``COMPLEX_RATIONAL``.            *)
 (*****************************************************************************)
-Datatype: complex_rational = COMPLEX_RATIONAL of rat => rat
-End
+val _ = Hol_datatype `complex_rational = COMPLEX_RATIONAL of rat => rat`;
 
 (*****************************************************************************)
 (* Abbreviation for the complex rational constructor                         *)

@@ -16,7 +16,7 @@ fun tsimps ty = let val {convs,rewrs} = TypeBase.simpls_of ty in rewrs end
 (*       even though this approach clutters up the syntax with double quotes, it is the right way to do things       *)
 (*      however, using strings for bound vars of mu an nu is a hack because it is a pain getting general support for binders *)
 
-Datatype:
+val _ = bossLib.Hol_datatype `
         mu = TR
         | FL
         | Not of mu
@@ -27,8 +27,7 @@ Datatype:
         | DIAMOND of string => mu (* diamond *)
         | BOX of string => mu (* box *)
         | mu of string => mu   (* lfp *)
-        | nu of string => mu  (* mfp *)
-End
+        | nu of string => mu` (* mfp *)
 
 val tsimps_mu = tsimps ``:'prop mu``;
 
