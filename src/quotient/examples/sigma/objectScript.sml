@@ -29,21 +29,18 @@ app load ["combinTheory", "listTheory",
 (* Create datatypes for objects, methods, and method dictionaries.       *)
 (* --------------------------------------------------------------------- *)
 
-
-val _ = Hol_datatype
-
+Datatype:
        (* obj1 ::= x | [li=mi] i in 1..n |  a.l | a.l:=m *)
 
-        ` obj1  = OVAR1 of var
+          obj1  = OVAR1 of var
                 | OBJ1 of (string # method1) list
                 | INVOKE1 of obj1 => string
                 | UPDATE1 of obj1 => string => method1 ;
 
        (* method ::= sigma(x)b *)
 
-          method1 = SIGMA1 of var => obj1 `
-
-handle e => Raise e;
+          method1 = SIGMA1 of var => obj1
+End
 
 
 val obj1_distinct = theorem "obj1_distinct";

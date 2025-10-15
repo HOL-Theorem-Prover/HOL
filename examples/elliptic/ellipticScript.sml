@@ -2,21 +2,6 @@
 (* Create "ellipticTheory" setting up the theory of elliptic curves          *)
 (* ========================================================================= *)
 
-(* ------------------------------------------------------------------------- *)
-(* Load and open relevant theories.                                          *)
-(* (Comment out "load"s and "quietdec"s for compilation.)                    *)
-(* ------------------------------------------------------------------------- *)
-(*
-val () = loadPath := [] @ !loadPath;
-val () = app load
-  ["Algebra",
-   "bossLib", "metisLib", "res_quanTools",
-   "optionTheory", "listTheory",
-   "arithmeticTheory", "dividesTheory", "gcdTheory",
-   "pred_setTheory", "pred_setSyntax",
-  "primalityTools", "fieldTools"];
-val () = quietdec := true;
-*)
 Theory elliptic
 Ancestors
   option list arithmetic divides gcd pred_set group field
@@ -1519,10 +1504,11 @@ Count.apply example_curve_pt (rhs (concl it));
 (* A formalized version of random binary maps in HOL.                        *)
 (* ------------------------------------------------------------------------- *)
 
-val () = Hol_datatype
-  `randomMap =
+Datatype:
+   randomMap =
      Leaf
-   | Node of num => randomMap => 'a => 'b => randomMap`;
+   | Node of num => randomMap => 'a => 'b => randomMap
+End
 
 val emptyMap_def = Define `emptyMap : ('a,'b) randomMap = Leaf`;
 
@@ -1561,4 +1547,3 @@ val curve_add_example_compilable =
 ***)
 
 val _ = html_theory "elliptic";
-

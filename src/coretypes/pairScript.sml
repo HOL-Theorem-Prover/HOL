@@ -12,11 +12,6 @@
 (* DATE          : August 7, 1997                                        *)
 (* ===================================================================== *)
 
-(*  interactive use:
- app load ["Q", "relationTheory", "mesonLib", "OpenTheoryMap", "BasicProvers"];
- open Parse relationTheory mesonLib;
-*)
-
 Theory pair[bare]
 Ancestors
   relation
@@ -677,7 +672,7 @@ Theorem pair_case_thm =
   pair_CASE_def |> Q.SPEC ‘(x,y)’ |> REWRITE_RULE [FST, SND] |> SPEC_ALL
 
 (* and, to be consistent with what would be generated if we could use
-   Hol_datatype to generate the pair type: *)
+   Datatype to generate the pair type: *)
 Theorem pair_case_def = pair_case_thm
 Overload case = “pair_CASE”
 

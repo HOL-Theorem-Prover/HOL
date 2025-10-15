@@ -26,8 +26,7 @@ val entry1 =  ty_antiq( ==`:string # method1`== );
 
 (* Here is the syntax, repeated for clarity:
 
-val _ = Hol_datatype
-
+Datatype:
        (* obj1 ::= x | [li=mi] i in 1..n |  a.l | a.l:=m *)
 
         ` obj1  = OVAR1 of var
@@ -37,8 +36,8 @@ val _ = Hol_datatype
 
        (* method ::= sigma(x)b *)
 
-          method1 = SIGMA1 of var => obj1 ` ;
-
+          method1 = SIGMA1 of var => obj1
+End
 *)
 
 

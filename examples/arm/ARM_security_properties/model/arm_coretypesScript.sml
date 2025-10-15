@@ -121,10 +121,11 @@ Datatype: MemoryAttributes =
 End
 
 (*
-val _ = Hol_datatype `FullAddress =
+Datatype: FullAddress =
   <| physicaladdress    : word32;
      physicaladdressext : word8;
-     NS                 : bool  (* F = Secure; T = Non-secure *) |>`;
+     NS                 : bool  (* F = Secure; T = Non-secure *) |>
+End
 *)
 
 (* For now, assume that a full address is word32 *)
@@ -567,4 +568,3 @@ val _ = computeLib.add_persistent_funs
    "num2Encoding_thm"];
 
 (* ------------------------------------------------------------------------ *)
-

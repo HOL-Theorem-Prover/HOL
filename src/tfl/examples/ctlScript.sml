@@ -40,8 +40,8 @@ fun mkMyInfix s prec = mkMyInfixAlias s s prec;
  * and also [2] Model Checking (Clarke, Grumberg & Peled)                    *
  *---------------------------------------------------------------------------*)
 
-val _ = bossLib.Hol_datatype
-    `state_formula
+Datatype:
+     state_formula
           = TRUE
           | FALSE
           | REG of 'a
@@ -60,7 +60,8 @@ val _ = bossLib.Hol_datatype
           | FU of path_formula
           | G of path_formula
           | U of path_formula => path_formula
-          | R of path_formula => path_formula`;
+          | R of path_formula => path_formula
+End
 
 (*---------------------------------------------------------------------------
     Set-up special parsing for constructors, and inform the system
@@ -286,4 +287,3 @@ Termination
                                INL (x,y) => state_formula_size (\v.0) y
                              | INR (x,y) => path_formula_size (\v.0) y)`
 End
-

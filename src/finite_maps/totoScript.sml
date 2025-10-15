@@ -12,7 +12,6 @@
 (* based on a total order.                                             *)
 (* ******************************************************************  *)
 
-(* app load ["wotTheory", "stringTheory"]; *)
 Theory toto
 Ancestors
   pred_set relation pair arithmetic numeral string list
@@ -733,7 +732,8 @@ v   lists, least significant bit first. *)
 (* Doubtless there is a better way, but all I can see to do is define
    a datatype like numerals as a crutch for getting qk_numOrd defined. *)
 
-val _ = Hol_datatype `num_dt = zer | bit1 of num_dt | bit2 of num_dt`;
+Datatype: num_dt = zer | bit1 of num_dt | bit2 of num_dt
+End
 
 val num_to_dt_defn = Hol_defn "num_to_dt"
 `num_to_dt n = if n = 0 then zer
