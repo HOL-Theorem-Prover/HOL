@@ -6626,6 +6626,23 @@ Proof
  >> ‘∃b. y = Normal b’ by METIS_TAC [extreal_cases] >> gs []
 QED
 
+Theorem indep_rv_const :
+  ∀p X c A B.
+    random_variable X p A ∧ prob_space p ⇒
+    indep_vars p X (λx. c) A B
+Proof
+  rpt STRIP_TAC
+  >> rw [indep_rv_def, indep_def]
+  >> fs [random_variable_def, p_space_def, events_def]
+  >> ‘PREIMAGE (λx. c) b ∩ m_space p = (if c ∈ b then m_space p else ∅)’
+    by rw [PREIMAGE_def, INTER_DEF, Once EXTENSION]
+  >- (METIS_TAC [MEASURABLE_PREIMAGE])
+  >- (Cases_on ‘c IN b’ >> gs [MEASURE_SPACE_SPACE, prob_space_def] \\
+      gs [MEASURE_SPACE_EMPTY_MEASURABLE])
+  >> Cases_on ‘c IN b’ >> (gs [prob_space_def, prob_def] >> rw [INTER_IDEMPOT, GSYM INTER_ASSOC])
+  >> gs [MEASURE_EMPTY]
+QED
+
 val bn_not_infty_tactic =
     rw [Abbr ‘b’, absolute_third_moments_def, absolute_third_moment_def, absolute_moment_def]
     (* ∑ (λi. expectation p (λx. (abs (X i x))³)) (count z) ≠ +∞ *)
@@ -6898,7 +6915,7 @@ val clt_tactic3_p4 =
 (* -------------------------------------------------------------------------- *)
 
 val clt_tactic3_p5 =
-Q.ABBREV_TAC ‘Z = (λj x. if x IN p_space r then
+    Q.ABBREV_TAC ‘Z = (λj x. if x IN p_space r then
                                (∑ (λi. Y' i x) (count j) + ∑ (λi. X' i x) (count n DIFF count1 j))
                              else 0)’
  >> (MP_TAC o (Q.SPECL [‘r’, ‘X'’, ‘Y'’, ‘f’, ‘s’, ‘n’]) o
@@ -6912,8 +6929,7 @@ Q.ABBREV_TAC ‘Z = (λj x. if x IN p_space r then
             (INST_TYPE [alpha |-> “:('a # 'a list)”])) clt_real_random_variable_partial_sum2
  >> simp [] >> DISCH_TAC
  >> Q.ABBREV_TAC ‘(M :extreal) = sup (IMAGE (λt. abs (Normal (diffn 3 f t))) UNIV)’
-  >> ‘M ≠ PosInf’ by METIS_TAC [clt_sup_finite]
-
+ >> ‘M ≠ PosInf’ by METIS_TAC [clt_sup_finite]
  >> (MP_TAC o (Q.SPECL [‘r’, ‘X'’, ‘Y'’, ‘Z’, ‘f’, ‘M’, ‘s’, ‘n’]) o
             (INST_TYPE [alpha |-> “:('a # 'a list)”])) clt_lindeberg_taylor_error_bound
  >> impl_tac
@@ -6964,7 +6980,7 @@ Q.ABBREV_TAC ‘Z = (λj x. if x IN p_space r then
      DISCH_TAC \\
      STRONG_CONJ_TAC
      >- (MP_TAC (Q.SPECL [‘r’, ‘λx. (X' (j :num) x)’]
-               (INST_TYPE [“:'a” |-> “:(α # α list)”] variance_alt)) >> rw [] \\
+                  (INST_TYPE [“:'a” |-> “:(α # α list)”] variance_alt)) >> rw [] \\
          MP_TAC (Q.SPECL [‘r’, ‘λx. (Y' (j :num) x)’]
                   (INST_TYPE [“:'a” |-> “:(α # α list)”] variance_alt)) >> rw [] \\
          NTAC 2 (POP_ASSUM (rw o wrap o SYM)) \\
@@ -6984,10 +7000,68 @@ Q.ABBREV_TAC ‘Z = (λj x. if x IN p_space r then
              METIS_TAC [real_normal, ETA_AX]) \\
          METIS_TAC [variance_of_normal_rv']) \\
      DISCH_TAC \\
-     STRONG_CONJ_TAC
+     simp [indep_rv_def] \\
+     Q.ABBREV_TAC ‘Z0 = λj x. ∑ (λi. Y' i x) (count j) +
+                              ∑ (λi. X' i x) (count n DIFF count1 j)’ \\
+     ‘∀x. x ∈ p_space r ⇒ Z j x = Z0 j x’ by rw [Abbr ‘Z’, Abbr ‘Z0’] \\
+     ‘∀A. PREIMAGE (Z j) A ∩ p_space r = PREIMAGE (Z0 j) A ∩ p_space r’
+       by (rw [PREIMAGE_def, INTER_DEF, Once EXTENSION] \\
+           EQ_TAC >> rw [] >> METIS_TAC []) \\
+     POP_ORW \\
+     fs [GSYM indep_rv_def] \\
+     Q.PAT_X_ASSUM ‘indep_vars r _ (λi. Borel) (count (2 * n))’ (ASSUME_TAC) \\
+     Q.ABBREV_TAC ‘W0 = (λi x. if i < n then X i (FST x) else Y (i − n) (SND x))’ \\
+     Q.ABBREV_TAC ‘t = (count n DIFF count1 j) ∪ IMAGE (λi. n + i) (count j)’ \\
+     ‘∀x. X' j x = W0 j x’ by rw [Abbr ‘W0’, Abbr ‘X'’] \\
+     ‘∀x. Y' j x = W0 (j + n) x’ by rw [Abbr ‘W0’, Abbr ‘Y'’] \\
+     Know ‘∀x. x IN p_space r ⇒ Z0 j x = sum_list (MAP (λn. W0 n x) (SET_TO_LIST t))’
+     >- (rw [] \\
+         MP_TAC (Q.SPECL [‘λ(n :num). W0 n (x : α # α list)’, ‘t’]
+                  (INST_TYPE [“:'a” |-> “:num”] sum_list_eq_EXTREAL_SUM_IMAGE)) \\
+         impl_tac >- (fs [real_random_variable, Abbr ‘X'’, Abbr ‘Y'’, o_DEF] \\
+                      rw [Abbr ‘t’, Abbr ‘W0’]) \\
+         STRIP_TAC >> POP_ASSUM (rw o wrap o SYM) \\
+         rw [Abbr ‘t’] \\
+         Know ‘∑ (λn. W0 n x) (count n DIFF count1 j ∪ IMAGE (λi. i + n) (count j)) =
+               ∑ (λn. W0 n x) (count n DIFF count1 j) +
+               ∑ (λn. W0 n x) (IMAGE (λi. i + n) (count j))’
+         >- (irule EXTREAL_SUM_IMAGE_DISJOINT_UNION \\
+             simp [DISJOINT_DEF, DIFF_DEF, IMAGE_DEF, Once EXTENSION] \\
+             DISJ2_TAC >> rw [Abbr ‘W0’] \\
+             fs [real_random_variable, Abbr ‘X'’, Abbr ‘Y'’, o_DEF]) \\
+         Rewr \\
+         rw [Abbr ‘W0’, Abbr ‘Z0’] \\
+         Know ‘∑ (λi. X' i x) (count n DIFF count1 j) =
+               ∑ (λn'. if n' < n then X n' (FST x) else Y (n' − n) (SND x))
+                 (count n DIFF count1 j)’
+         >- (irule EXTREAL_SUM_IMAGE_EQ' >> rw [Abbr ‘X'’]) \\
+         STRIP_TAC >> POP_ASSUM (rw o wrap o SYM) \\
+         Know ‘∑ (λi. Y' i x) (count j) = ∑ (λn'. if n' < n then X n' (FST x) else Y (n' − n) (SND x))
+                                            (IMAGE (λi. i + n) (count j))’
+         >- (Q.ABBREV_TAC ‘W0 = λn'. if n' < n then X n' (FST x) else Y (n' − n) (SND x)’ \\
+             Q.ABBREV_TAC ‘W1 = λi. i + n’ >> gs [] \\
+             MATCH_MP_TAC EQ_TRANS \\
+             qexists ‘∑ (W0 o W1) (count j)’ \\
+             CONJ_TAC >- (irule EXTREAL_SUM_IMAGE_EQ' \\
+                          rw [Abbr ‘Y'’, Abbr ‘W0’, Abbr ‘W1’]) \\
+             irule (GSYM EXTREAL_SUM_IMAGE_IMAGE) \\
+             rw [Abbr ‘W1’, Abbr ‘W0’, INJ_DEF, IMAGE_DEF, Once EXTENSION] \\
+             DISJ2_TAC >> fs [real_random_variable, Abbr ‘Y'’] >> rw []) \\
+         STRIP_TAC >> POP_ASSUM (rw o wrap o SYM) \\
+         MATCH_MP_TAC add_comm \\
+         DISJ2_TAC \\
+         CONJ_TAC >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF \\
+                      fs [real_random_variable, Abbr ‘Y'’] >> rw []) \\
+         irule EXTREAL_SUM_IMAGE_NOT_POSINF \\
+         fs [real_random_variable, Abbr ‘Y'’] >> rw []) \\
+     STRIP_TAC \\
+     ‘measurable_space (p × p') = measurable_space p × measurable_space p'’
+       by (irule MEASURABLE_SPACE_PROD >> fs [prob_space_def]) \\
+     Cases_on ‘n = 1’
+     >- (gs [Abbr ‘t’, UNION_EMPTY, Abbr ‘Z0’] \\
+         METIS_TAC [indep_rv_const, real_random_variable_def]) \\
+     CONJ_TAC
      >- (simp [indep_rv_def, indep_def] \\
-        ‘measurable_space (p × p') = measurable_space p × measurable_space p'’
-         by (irule MEASURABLE_SPACE_PROD >> fs [prob_space_def]) \\
          Q.X_GEN_TAC ‘a1’ >> Q.X_GEN_TAC ‘a2’ >> STRIP_TAC \\
          (* PREIMAGE (X' j) a1 ∩ p_space r ∈ events r *)
          STRONG_CONJ_TAC
@@ -7000,12 +7074,131 @@ Q.ABBREV_TAC ‘Z = (λj x. if x IN p_space r then
          STRONG_CONJ_TAC
          >- (rw [p_space_def, events_def] \\
              irule MEASURABLE_PREIMAGE \\
-             qexists ‘Borel’ >> fs [real_random_variable, p_space_def, p_space_def, events_def]) \\
+             qexists ‘Borel’ >> fs [real_random_variable, p_space_def, p_space_def, events_def] \\
+             MATCH_MP_TAC IN_MEASURABLE_BOREL_EQ \\
+             qexists ‘Z j’ >> fs []) \\
          DISCH_TAC \\
-         (*TODO*)
-         cheat) \\
-     cheat)
->> DISCH_TAC >> gs [];
+         Q.ABBREV_TAC ‘u = {j}’ \\
+         ‘u INTER t = {}’ by rw [Abbr ‘u’, Abbr ‘t’, INTER_DEF, UNION_DEF, Once EXTENSION] \\
+         ‘u UNION t SUBSET count (2 * n)’
+           by simp [Abbr ‘u’, Abbr ‘t’, INTER_DEF, UNION_DEF, Once EXTENSION, SUBSET_DEF] \\
+         MP_TAC (Q.SPECL [‘r’, ‘W0’, ‘λi. Borel’, ‘u UNION t’]
+                  (INST_TYPE [“:'a” |-> “:(α # α list)”, “:'b” |-> “:extreal”,
+                              “:'index”  |-> “:num”] indep_vars_subset)) \\
+         STRIP_TAC \\
+         POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘count (2 * n)’) >> gs [] \\
+         MP_TAC (Q.SPECL [‘r’, ‘W0’, ‘[j]’, ‘SET_TO_LIST t’, ‘1’, ‘LENGTH (SET_TO_LIST (t :num -> bool))’]
+                  (INST_TYPE [“:'a” |-> “:(α # α list)”, “:'b” |-> “:extreal”,
+                              “:'index”  |-> “:num”] indep_sum_list_of_vars)) \\
+         impl_tac >- (ASM_SIMP_TAC std_ss [] \\
+                      (* ALL_DISTINCT ([j] ⧺ SET_TO_LIST t) *)
+                      STRONG_CONJ_TAC
+                      >- (rw [ALL_DISTINCT_APPEND, ALL_DISTINCT_SET_TO_LIST, Abbr ‘t’]) \\
+                      STRIP_TAC \\
+                      (* ∀n. MEM n ([j] ⧺ SET_TO_LIST t) ⇒ random_variable (W0 n) r Borel *)
+                      STRONG_CONJ_TAC
+                      >- (rw [MEM_APPEND, Abbr ‘W0’, Abbr ‘X'’, Abbr ‘Y'’] \\
+                          fs [random_variable_def, real_random_variable, p_space_def, events_def, o_DEF] \\
+                          Cases_on ‘n' < n’ >- (gs []) \\
+                          gs [NOT_LT] \\
+                          Q.PAT_X_ASSUM ‘∀i. i < n ⇒
+                                             (λx. Y i (SND x)) ∈ Borel_measurable _ ∧ ∀x. x ∈ m_space r ⇒ _’
+                           (STRIP_ASSUME_TAC o Q.SPEC ‘n' - n’) \\
+                          fs [Abbr ‘t’, MEM_SET_TO_LIST, UNION_DEF, DIFF_DEF, IMAGE_DEF, Once EXTENSION]) \\
+                      STRIP_TAC >> simp [] \\
+                      ‘FINITE t’ by rw [Abbr ‘t’] \\
+                      CONJ_TAC >- (simp [GSYM NOT_NIL_EQ_LENGTH_NOT_0] \\
+                                   Suff ‘t ≠ {}’ >- (METIS_TAC [SET_TO_LIST_EMPTY_IFF]) \\
+                                   rw [Abbr ‘t’, count_def, DIFF_DEF, count1_def,
+                                       Once EXTENSION, MEMBER_NOT_EMPTY] \\
+                                   qexists ‘1’ >> simp []) \\
+                      simp [SET_TO_LIST_INV]) \\
+         rw [] \\
+         fs [indep_rv_def, indep_def] \\
+         Q.PAT_X_ASSUM ‘∀a b. a ∈ subsets Borel ∧ b ∈ subsets Borel ⇒ _’
+          (STRIP_ASSUME_TAC o Q.SPECL [‘a1’, ‘a2’]) >> gs [] \\
+         ‘∀x. PREIMAGE (λx. W0 j x) a1 ∩ p_space r = PREIMAGE (X' j) a1 ∩ p_space r’
+           by (rw [PREIMAGE_def, INTER_DEF, Once EXTENSION] \\
+               EQ_TAC >> rw [] >> METIS_TAC []) \\
+         ‘∀x. PREIMAGE (λx. sum_list (MAP (λn. W0 n x) (SET_TO_LIST t))) a2 ∩ p_space r =
+              PREIMAGE (Z0 j) a2 ∩ p_space r’
+           by (rw [PREIMAGE_def, INTER_DEF, Once EXTENSION] \\
+               EQ_TAC >> rw [] >> METIS_TAC []) \\
+         ‘∀x. PREIMAGE (λx. W0 j x) a1 ∩ p_space r ∩
+                       (PREIMAGE (λx. sum_list (MAP (λn. W0 n x) (SET_TO_LIST t))) a2 ∩ p_space r) =
+              PREIMAGE (X' j) a1 ∩ p_space r ∩ (PREIMAGE (Z0 j) a2 ∩ p_space r)’
+           by (rw [PREIMAGE_def, INTER_DEF, Once EXTENSION, UNION_DEF] \\
+               EQ_TAC >> rw [] >> METIS_TAC []) \\
+         METIS_TAC []) \\
+     simp [indep_rv_def, indep_def] \\
+     Q.X_GEN_TAC ‘a1’ >> Q.X_GEN_TAC ‘a2’ >> STRIP_TAC \\
+     (* PREIMAGE (Y' j) a1 ∩ p_space r ∈ events r *)
+     STRONG_CONJ_TAC
+     >- (rw [p_space_def, events_def] \\
+         irule MEASURABLE_PREIMAGE \\
+         qexists ‘Borel’ >> fs [real_random_variable, p_space_def, Abbr ‘X'’, Abbr ‘r’] \\
+         METIS_TAC [IN_MEASURABLE_BOREL_FST, p_space_def, events_def, prob_space_def,
+                    MEASURE_SPACE_SIGMA_ALGEBRA]) \\
+     DISCH_TAC \\
+     STRONG_CONJ_TAC
+     >- (rw [p_space_def, events_def] \\
+         irule MEASURABLE_PREIMAGE \\
+         qexists ‘Borel’ >> fs [real_random_variable, p_space_def, p_space_def, events_def] \\
+         MATCH_MP_TAC IN_MEASURABLE_BOREL_EQ \\
+         qexists ‘Z j’ >> fs []) \\
+     DISCH_TAC \\
+     Q.ABBREV_TAC ‘u = {j + n}’ \\
+     ‘u INTER t = {}’ by rw [Abbr ‘u’, Abbr ‘t’, INTER_DEF, UNION_DEF, Once EXTENSION] \\
+     ‘u UNION t SUBSET count (2 * n)’
+       by simp [Abbr ‘u’, Abbr ‘t’, INTER_DEF, UNION_DEF, Once EXTENSION, SUBSET_DEF] \\
+     MP_TAC (Q.SPECL [‘r’, ‘W0’, ‘λi. Borel’, ‘u UNION t’]
+              (INST_TYPE [“:'a” |-> “:(α # α list)”, “:'b” |-> “:extreal”,
+                          “:'index”  |-> “:num”] indep_vars_subset)) \\
+     STRIP_TAC \\
+     POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘count (2 * n)’) >> gs [] \\
+     MP_TAC (Q.SPECL [‘r’, ‘W0’, ‘[j + n]’, ‘SET_TO_LIST t’, ‘1’, ‘LENGTH (SET_TO_LIST (t :num -> bool))’]
+              (INST_TYPE [“:'a” |-> “:(α # α list)”, “:'b” |-> “:extreal”,
+                          “:'index”  |-> “:num”] indep_sum_list_of_vars)) \\
+     impl_tac >- (ASM_SIMP_TAC std_ss [] \\
+                  (* ALL_DISTINCT ([j] ⧺ SET_TO_LIST t) *)
+                  STRONG_CONJ_TAC
+                  >- (rw [ALL_DISTINCT_APPEND, ALL_DISTINCT_SET_TO_LIST, Abbr ‘t’]) \\
+                  STRIP_TAC \\
+                  (* ∀n. MEM n ([j] ⧺ SET_TO_LIST t) ⇒ random_variable (W0 n) r Borel *)
+                  STRONG_CONJ_TAC
+                  >- (rw [MEM_APPEND, Abbr ‘W0’, Abbr ‘X'’, Abbr ‘Y'’] \\
+                      fs [random_variable_def, real_random_variable, p_space_def, events_def, o_DEF] \\
+                      Cases_on ‘n' < n’ >- (gs []) \\
+                      gs [NOT_LT] \\
+                      Q.PAT_X_ASSUM ‘∀i. i < n ⇒
+                                         (λx. Y i (SND x)) ∈ Borel_measurable _ ∧ ∀x. x ∈ m_space r ⇒ _’
+                       (STRIP_ASSUME_TAC o Q.SPEC ‘n' - n’) \\
+                      fs [Abbr ‘t’, MEM_SET_TO_LIST, UNION_DEF, DIFF_DEF, IMAGE_DEF, Once EXTENSION]) \\
+                  STRIP_TAC >> simp [] \\
+                  ‘FINITE t’ by rw [Abbr ‘t’] \\
+                  CONJ_TAC >- (simp [GSYM NOT_NIL_EQ_LENGTH_NOT_0] \\
+                               Suff ‘t ≠ {}’ >- (METIS_TAC [SET_TO_LIST_EMPTY_IFF]) \\
+                               rw [Abbr ‘t’, count_def, DIFF_DEF, count1_def,
+                                   Once EXTENSION, MEMBER_NOT_EMPTY] \\
+                               qexists ‘1’ >> simp []) \\
+                  simp [SET_TO_LIST_INV]) \\
+     rw [] >> fs [indep_rv_def, indep_def] \\
+     Q.PAT_X_ASSUM ‘∀a b. a ∈ subsets Borel ∧ b ∈ subsets Borel ⇒ _’
+      (STRIP_ASSUME_TAC o Q.SPECL [‘a1’, ‘a2’]) >> gs [] \\
+     ‘∀x. PREIMAGE (λx. W0 (j + n) x) a1 ∩ p_space r = PREIMAGE (Y' j) a1 ∩ p_space r’
+       by (rw [PREIMAGE_def, INTER_DEF, Once EXTENSION] \\
+           EQ_TAC >> rw [] >> METIS_TAC []) \\
+     ‘∀x. PREIMAGE (λx. sum_list (MAP (λn. W0 n x) (SET_TO_LIST t))) a2 ∩ p_space r =
+          PREIMAGE (Z0 j) a2 ∩ p_space r’
+       by (rw [PREIMAGE_def, INTER_DEF, Once EXTENSION] \\
+           EQ_TAC >> rw [] >> METIS_TAC []) \\
+     ‘∀x. PREIMAGE (λx. W0 (j + n) x) a1 ∩ p_space r ∩
+                   (PREIMAGE (λx. sum_list (MAP (λn. W0 n x) (SET_TO_LIST t))) a2 ∩ p_space r) =
+          PREIMAGE (Y' j) a1 ∩ p_space r ∩ (PREIMAGE (Z0 j) a2 ∩ p_space r)’
+       by (rw [PREIMAGE_def, INTER_DEF, Once EXTENSION, UNION_DEF] \\
+           EQ_TAC >> rw [] >> METIS_TAC []) \\
+     METIS_TAC [])
+ >> DISCH_TAC >> gs [];
 
 (* -------------------------------------------------------------------------- *)
 (* Part 6: Final inequality                                                   *)
@@ -7050,8 +7243,7 @@ Theorem central_limit_theorem :
       ((\n. (absolute_third_moments p X n) / ((sqrt (second_moments p X n)) pow 3)) --> 0) sequentially ⇒
       ((\n x. (SIGMA (λi. X i x) (count n)) / (sqrt (second_moments p X n))) --> N) (in_distribution p)
 Proof
-
-  rpt STRIP_TAC
+    rpt STRIP_TAC
  >> Q.ABBREV_TAC ‘s = λn. sqrt (second_moments p X n)’ >> fs []
  >> Q.ABBREV_TAC ‘b = λn. absolute_third_moments p X n’ >> fs []
  >> Q.ABBREV_TAC ‘R = λn x. ∑ (λi. X i x) (count n) / s n’
@@ -7120,13 +7312,13 @@ Proof
  >> ‘∃m. A = Normal m’ by METIS_TAC [extreal_cases] >> gs [Abbr ‘A’]
  >> Q.ABBREV_TAC ‘U = m / 6 * (1 + sqrt (8 / pi))’
  >> Cases_on ‘m = 0’
-  >- (‘U = 0’ by gs [mul_lzero, normal_0, extreal_pow_def] \\
-      clt_tactic3 \\
-      gs [mul_lzero, normal_0, extreal_pow_def] \\
-      ‘0 < Normal 6’ by EVAL_TAC \\
-      ‘0 < Normal (c pow 3)’ by METIS_TAC [GSYM extreal_lt_eq, normal_0, pow_pos_lt, extreal_pow_def] \\
-      ‘0 < (Normal 6 * Normal c³)’ by METIS_TAC [lt_mul] \\
-      ‘(6 :extreal) = Normal (6 :real)’ by EVAL_TAC >> gs [lt_imp_ne, zero_div, mul_lzero])
+ >- (‘U = 0’ by gs [mul_lzero, normal_0, extreal_pow_def] \\
+     clt_tactic3 \\
+     gs [mul_lzero, normal_0, extreal_pow_def] \\
+     ‘0 < Normal 6’ by EVAL_TAC \\
+     ‘0 < Normal (c pow 3)’ by METIS_TAC [GSYM extreal_lt_eq, normal_0, pow_pos_lt, extreal_pow_def] \\
+     ‘0 < (Normal 6 * Normal c³)’ by METIS_TAC [lt_mul] \\
+     ‘(6 :extreal) = Normal (6 :real)’ by EVAL_TAC >> gs [lt_imp_ne, zero_div, mul_lzero])
  >> Know ‘0 < U’
  >- (rw [Abbr ‘U’] \\
      ‘0 < 8:real’ by EVAL_TAC \\
@@ -7139,107 +7331,8 @@ Proof
  >> Q.PAT_X_ASSUM ‘∀e. 0 < e ⇒ ∃N. ∀n. N ≤ n ⇒ abs (real (b n / (s n)³)) < e’
      (STRIP_ASSUME_TAC o Q.SPEC ‘e / U’) >> gs []
  >> ‘0 < (2 :real)’ by simp []
-  >> ‘0 < e / 2’ by METIS_TAC [REAL_LT_DIV]
-
-  >> clt_tactic3_p1 \\
-  clt_tactic3_p2 \\
-  clt_tactic3_p3 \\
-  clt_tactic3_p4
-
-  >> Q.ABBREV_TAC ‘Z = (λj x. if x IN p_space r then
-                             (∑ (λi. Y' i x) (count j) + ∑ (λi. X' i x) (count n DIFF count1 j))
-                             else 0)’
- >> (MP_TAC o (Q.SPECL [‘r’, ‘X'’, ‘Y'’, ‘f’, ‘s’, ‘n’]) o
-            (INST_TYPE [alpha |-> “:('a # 'a list)”])) clt_Lindeberg_replacement_trick_bounded
- >> simp []
- >> Know ‘∀i. i < n ⇒ integrable r (X' i) ∧ integrable r (Y' i)’
- >- (METIS_TAC [Abbr ‘X'’, Abbr ‘r’, Abbr ‘Y'’, integrable_fst, integrable_snd])
- >> DISCH_TAC >> simp []
- >> DISCH_TAC
- >> (MP_TAC o (Q.SPECL [‘r’, ‘X'’, ‘Y'’, ‘f’ ,‘n’]) o
-            (INST_TYPE [alpha |-> “:('a # 'a list)”])) clt_real_random_variable_partial_sum2
- >> simp [] >> DISCH_TAC
- >> Q.ABBREV_TAC ‘(M :extreal) = sup (IMAGE (λt. abs (Normal (diffn 3 f t))) UNIV)’
-  >> ‘M ≠ PosInf’ by METIS_TAC [clt_sup_finite]
-
- >> (MP_TAC o (Q.SPECL [‘r’, ‘X'’, ‘Y'’, ‘Z’, ‘f’, ‘M’, ‘s’, ‘n’]) o
-            (INST_TYPE [alpha |-> “:('a # 'a list)”])) clt_lindeberg_taylor_error_bound
- >> impl_tac
- >- (simp [] >> GEN_TAC >> STRIP_TAC \\
-     STRONG_CONJ_TAC
-     >- (Q.PAT_X_ASSUM ‘∀j. j < n ⇒ real_random_variable (λx. Z j x) r ∧ _’
-          (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> METIS_TAC []) \\
-     DISCH_TAC \\
-     STRONG_CONJ_TAC
-     >- (Q.PAT_X_ASSUM ‘∀i. i < n ⇒ integrable r (X' i) ∧  _’
-          (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> METIS_TAC []) \\
-     DISCH_TAC \\
-     STRONG_CONJ_TAC
-     >- (Q.PAT_X_ASSUM ‘∀i. i < n ⇒ integrable r (X' i) ∧  _’
-          (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> METIS_TAC []) \\
-     DISCH_TAC \\
-     (*integrable r (λx. (abs (X' j x))³)*)
-     STRONG_CONJ_TAC
-     >- (rw [GSYM pow_abs, GSYM o_DEF] \\
-         irule integrable_abs >> fs [prob_space_def, Abbr ‘X'’, Abbr ‘r’] \\
-         MP_TAC (Q.SPECL [‘p’, ‘p'’, ‘λx. (X (j: num) x) pow 3’]
-                  (INST_TYPE [“:'b” |-> “:'a list”] integrable_fst)) >> fs [prob_space_def, o_DEF]) \\
-     DISCH_TAC \\
-     STRONG_CONJ_TAC
-     >- (rw [GSYM pow_abs, GSYM o_DEF] \\
-         irule integrable_abs >> fs [prob_space_def, Abbr ‘Y'’, Abbr ‘r’] \\
-         MP_TAC (Q.SPECL [‘p’, ‘p'’, ‘λx. (Y (j: num) x) pow 3’]
-                  (INST_TYPE [“:'b” |-> “:'a list”] integrable_snd)) >> fs [prob_space_def, o_DEF]) \\
-     DISCH_TAC \\
-     STRONG_CONJ_TAC
-     >- (fs [Abbr ‘X'’, GSYM o_DEF, Abbr ‘r’] \\
-         MP_TAC (Q.SPECL [‘p’, ‘p'’, ‘X (j: num)’]
-                  (INST_TYPE [“:'b” |-> “:'a list”] expectation_fst)) \\
-         impl_tac >- (fs [real_random_variable]) \\
-         rw [o_DEF]) \\
-     DISCH_TAC \\
-     STRONG_CONJ_TAC
-     >- (fs [Abbr ‘Y'’, GSYM o_DEF, Abbr ‘r’] \\
-         MP_TAC (Q.SPECL [‘p’, ‘p'’, ‘Y (j: num)’]
-                  (INST_TYPE [“:'b” |-> “:'a list”] expectation_snd)) \\
-         impl_tac >- (fs [real_random_variable]) \\
-         rw [o_DEF] >> POP_ASSUM (rw o wrap o SYM) \\
-         Q.PAT_X_ASSUM ‘∀i. i < n ⇒ ext_normal_rv (Y i) p' 0 (sig i)’
-          (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [] \\
-         MP_TAC (Q.SPECL [‘p'’, ‘Y (j: num)’, ‘0’, ‘sig (j: num)’]
-                  (INST_TYPE [“:'a” |-> “:'a list”] (cj 2 expectation_of_normal_rv'))) \\
-         simp []) \\
-     DISCH_TAC \\
-     STRONG_CONJ_TAC
-     >- (MP_TAC (Q.SPECL [‘r’, ‘λx. (X' (j :num) x)’]
-               (INST_TYPE [“:'a” |-> “:(α # α list)”] variance_alt)) >> rw [] \\
-         MP_TAC (Q.SPECL [‘r’, ‘λx. (Y' (j :num) x)’]
-                  (INST_TYPE [“:'a” |-> “:(α # α list)”] variance_alt)) >> rw [] \\
-         NTAC 2 (POP_ASSUM (rw o wrap o SYM)) \\
-         rw [Abbr ‘X'’, Abbr ‘Y'’, Abbr ‘r’, GSYM o_DEF] \\
-         MP_TAC (Q.SPECL [‘p’, ‘p'’, ‘λx. (X (j :num) x)’]
-                  (INST_TYPE [“:'b” |-> “:('a list)”] variance_fst)) \\
-         impl_tac >- (fs [real_random_variable] >> METIS_TAC [ETA_AX]) \\
-         rw [o_DEF] >> POP_ASSUM (rw o wrap o SYM) \\
-         MP_TAC (Q.SPECL [‘p’, ‘p'’, ‘λx. (Y (j :num) x)’]
-                  (INST_TYPE [“:'b” |-> “:('a list)”] variance_snd)) \\
-         impl_tac >- (fs [real_random_variable] >> METIS_TAC [ETA_AX]) \\
-         rw [o_DEF] >> POP_ASSUM (rw o wrap o SYM) \\
-         Suff ‘variance p (λx. X j x) = Normal (sig j) pow 2  ∧
-               variance p' (λx. Y j x) = Normal (sig j) pow 2’ >> rw [extreal_pow_def]
-         >- (MP_TAC (Q.SPECL [‘variance p (λx. X (j :num) x)’, ‘Normal ((sig (j :num)) pow 2)’] real_11) \\
-             impl_tac >- (fs [] >> METIS_TAC [ETA_AX]) \\
-             METIS_TAC [real_normal, ETA_AX]) \\
-         METIS_TAC [variance_of_normal_rv']) \\
-     DISCH_TAC \\
-     STRONG_CONJ_TAC
-     >-((*TODO*)
-         cheat) \\
-     cheat)
-  >> DISCH_TAC >> gs []
-
-  >> clt_tactic3_p6
-
+ >> ‘0 < e / 2’ by METIS_TAC [REAL_LT_DIV]
+ >> clt_tactic3
  >> Know ‘∀i. i < n ⇒ integrable r (λx. (Y' i x)³)’
  >- (rw [Abbr ‘Y'’] \\
      MP_TAC (Q.SPECL [‘p’, ‘p'’, ‘λx. (Y (i :num) x)³’]
