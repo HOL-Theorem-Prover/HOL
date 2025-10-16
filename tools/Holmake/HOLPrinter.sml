@@ -20,7 +20,7 @@ fun flatmap _ [] = Nil
 type printer = {token: string -> unit, startSpan: int * int -> unit, stopSpan: unit -> unit}
 
 fun mkPrinter {str, startSpan, stopSpan} = {
-  token = fn s => (str s; str "\n"),
+  token = fn s => (str s; str " "),
   startSpan = startSpan, stopSpan = stopSpan }
 
 fun token s (pr: printer) = #token pr s

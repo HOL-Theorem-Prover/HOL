@@ -49,7 +49,7 @@ datatype constraint = Colon | ColonGt
 
 datatype defn_label_id =
   HOLConjLabel of int * string
-| HOLLabel of {tilde_: int option, id: int * string}
+| HOLLabel of {fileline: fileline, tilde_: int option, id: int * string}
 
 type 'a attrs = {
   left: int,

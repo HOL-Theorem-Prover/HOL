@@ -36,9 +36,10 @@ fun expandRecord f pat {left, elems = {args, delims, stop = stop1}, right, stop}
 fun mkLocPragma line col s =
   concat [" (*#loc ", Int.toString (line + 1), " ", Int.toString (col + 1), "*)", s]
 
-fun mkLocString p file line =
-  App (mkIdent (p, "DB_dtype.mkloc"),
-    mkTuple (p, [mkString (p, file), mkInt (p, line+1), mkIdent (p, "true")]))
+fun mkLocString (p, noloc, _) ("", _) = mkIdent (p, noloc)
+  | mkLocString (p, _, loc) (file, (_, line, _)) =
+    App (mkIdent (p, loc), App (mkIdent (p, "DB_dtype.mkloc"),
+      mkTuple (p, [mkString (p, file), mkInt (p, line+1), mkIdent (p, "true")])))
 
 val canBindStr = true (* TODO: make false on mosml *)
 
@@ -323,7 +324,7 @@ and expandDec _ (DecSemi _) acc = acc
         mkList (theory_, rev (!grammar)))) :: acc
     in acc end
   | expandDec _ (HOLDefinition {
-      definition_, id as (_, name), fileline = (file, (_, line, _)),
+      definition_, id as (_, name), fileline,
       attrs, colon = _, quote, termination, end_ = _, stop}) acc = let
     val indThm = ref NONE
     val _ = app (fn
@@ -341,10 +342,7 @@ and expandDec _ (DecSemi _) acc = acc
       else if String.isSuffix "_DEF" name then
         String.extract (name, 0, SOME (size name - 4)) ^ "_IND"
       else name ^ "_ind")
-    val e =
-      if file = "" then mkIdent (definition_, "TotalDefn.qDefine")
-      else App (mkIdent (definition_, "TotalDefn.located_qDefine"),
-        mkLocString definition_ file line)
+    val e = mkLocString (definition_, "TotalDefn.qDefine", "TotalDefn.located_qDefine") fileline
     val e = App (e, mkNameAttrs mkKval id attrs)
     val e = App (e, expandQuote definition_ stop quote)
     val e = App (e, case termination of
@@ -363,7 +361,7 @@ and expandDec _ (DecSemi _) acc = acc
     val (entryPoint, indSuffix) =
       if co then ("CoIndDefLib.xHol_coreln", "_coind") else ("IndDefLib.xHol_reln", "_ind")
     fun mkQ s = App (mkIdent (inductive_, "QUOTE"), mkString (inductive_, s))
-    val frag = mkQ ") /\\\\ ("
+    val frag = mkQ ") /\\ ("
     fun mk l = frag :: expandQuoteCore inductive_ (rev l)
     fun split olab l [] (qs, labs) = (rev (mk l :: qs), rev (olab :: labs))
       | split olab l (DefinitionLabel lab :: r) (qs, labs) =
@@ -381,14 +379,15 @@ and expandDec _ (DecSemi _) acc = acc
     val e = App (App (mkIdent (inductive_, entryPoint), mkString (id, stem)), quote)
     val acc = magicBind (mkStem "_strongind") (valPat inductive_ pat e :: acc)
     fun mkExtra _ [] acc = acc
-      | mkExtra i (SOME {label = SOME (HOLLabel {id, tilde_}), attrs, ...} :: conjs) acc = let
+      | mkExtra i (SOME {label =
+          SOME (HOLLabel {fileline, tilde_, id}), attrs, ...} :: conjs) acc = let
         val name = case tilde_ of NONE => id | SOME p => (p, stem ^ "_" ^ #2 id)
         val proof = mkHandleHolErr (inductive_,
           App (App (mkIdent (inductive_, "Drule.cj"), mkInt (inductive_, i)),
             mkIdent (mkStem "_rules")))
-        val args = mkTuple (inductive_, [mkNameAttrs #2 id attrs, proof])
-        val e = App (mkIdent (inductive_, "boolLib.save_thm"), args)
-        in mkExtra (i+1) conjs (valPat inductive_ (mkIdent name) e :: acc) end
+        val args = mkTuple (inductive_, [mkNameAttrs #2 name attrs, proof])
+        val e = mkLocString (inductive_, "boolLib.save_thm", "boolLib.save_thm_at") fileline
+        in mkExtra (i+1) conjs (valPat inductive_ (mkIdent name) (App (e, args)) :: acc) end
       | mkExtra i (_ :: conjs) acc = mkExtra (i+1) conjs acc
     in mkExtra 1 conjs acc end
   | expandDec _ (HOLType {overload, type_, id, attrs, bind}) acc = let
@@ -414,18 +413,15 @@ and expandDec _ (DecSemi _) acc = acc
       NONE => mkFail (type_, "Type/Overload missing body")
     | SOME {exp, ...} => expandExp false exp
     in valWild type_ (App (mkIdent (type_, name), mkTuple (type_, [id, rhs]))) :: acc end
-  | expandDec _ (HOLSimpleThm {
-      triv, theorem_, id, fileline = (file, (_, line, _)), attrs, bind}) acc = let
-    val e =
-      if file = "" then mkIdent (theorem_, "boolLib.save_thm")
-      else App (mkIdent (theorem_, "boolLib.save_thm_at"), mkLocString theorem_ file line)
+  | expandDec _ (HOLSimpleThm {triv, theorem_, id, fileline, attrs, bind}) acc = let
+    val e = mkLocString (theorem_, "boolLib.save_thm", "boolLib.save_thm_at") fileline
     val nameAttrs = mkNameAttrs mkKval id (withLocalAttrs theorem_ triv attrs)
     val rhs = case bind of
       NONE => mkFail (theorem_, "Theorem missing body")
     | SOME {exp, ...} => expandExp false exp
     in valPat theorem_ (mkIdent id) (App (e, mkTuple (theorem_, [nameAttrs, rhs]))) :: acc end
   | expandDec _ (HOLTheoremDecl {
-      triv, theorem_, id, fileline = (file, (_, line, _)),
+      triv, theorem_, id, fileline,
       attrs, colon = _, quote, proof_, tac, qed_ = _, stop}) acc = let
     val nameAttrs = mkNameAttrs mkKval id (withLocalAttrs theorem_ triv attrs)
     val quote = expandQuote theorem_ stop quote
@@ -446,9 +442,7 @@ and expandDec _ (DecSemi _) acc = acc
     val dummy = mkIdent (theorem_, "HOL__GOAL__foo")
     val tac = Fn {fn_ = theorem_, elems = [
       {bar = NONE, pat = dummy, arrow = NONE, exp = App (tac, dummy)}], stop = expStop tac}
-    val e =
-      if file = "" then mkIdent (theorem_, "Q.store_thm")
-      else App (mkIdent (theorem_, "Q.store_thm_at"), mkLocString theorem_ file line)
+    val e = mkLocString (theorem_, "Q.store_thm", "Q.store_thm_at") fileline
     val e = App (e, mkTuple (theorem_, [nameAttrs, quote, tac]))
     in valPat theorem_ (mkIdent id) e :: acc end
 

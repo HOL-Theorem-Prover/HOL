@@ -791,11 +791,11 @@ fun parseSML file body parseError: scope -> result = let
             SOME (HOLConjLabel (!pos, (nextn 3; ident (!pos - 3))))
           else if cur () = #"~" andalso isIdRest (ahead 1) then
             case !pos + 1 of start => SOME (HOLLabel {
-              tilde_ = SOME (!pos),
+              fileline = fileline (!pos), tilde_ = SOME (!pos),
               id = (start, (nextn 2; takeWhile isIdRest; ident start)) })
           else if Char.isAlpha (cur ()) then
             case !pos of start => SOME (HOLLabel {
-              tilde_ = NONE,
+              fileline = fileline start, tilde_ = NONE,
               id = (start, (nextn 2; takeWhile isIdRest; ident start)) })
           else NONE
         val attrs = case parseSymbol #"[" NONE of
