@@ -164,11 +164,11 @@ fun store_thm_at loc (n0,t,tac) =
                handle HOL_ERR herr =>
                let val err_mesg = tac_failure name (message_of herr)
                    val err = HOL_ERR (set_message err_mesg herr)
-               in render_exn "store_thm_at"
+               in render_exn
                     (wrap_exn "boolLib" "store_thm_at" err) end
   in
     save_thm_attrs loc (attrblock,th)
-    handle e => render_exn "store_thm_at"
+    handle e => render_exn
                     (wrap_exn "boolLib" "store_thm_at" e)
   end
 end

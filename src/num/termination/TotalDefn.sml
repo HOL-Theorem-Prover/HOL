@@ -336,7 +336,7 @@ fun list_mk_prod_tyl L =
  let val (front,(b,last)) = front_last L
      val tysize = TypeBasePure.type_size (TypeBase.theTypeBase())
      val last' = (if b then tysize else K0) last
-                 handle e => render_exn "last'" e
+                 handle e => raise wrap_exn "TotalDefn" "last'" e
   in
   itlist (fn (b,ty1) => fn M =>
      let val x = mk_var("x",ty1)
@@ -347,6 +347,7 @@ fun list_mk_prod_tyl L =
                numSyntax.mk_plus(mk_comb(blagga,x),mk_comb(M,y)))
      end) front last'
  end
+ handle e => raise wrap_exn "TotalDefn" "list_mk_prod" e;
 
 (*---------------------------------------------------------------------------*)
 (* Construct all lex combos corresponding to permutations of list            *)
@@ -742,7 +743,7 @@ fun located_xDefine loc stem q =
  Parse.try_grammar_extension
    (Theory.try_theory_extension
        (def_n_ind o located_primDefine loc o Defn.Hol_defn stem)) q
-  handle e => render_exn "xDefine" e;
+  handle e => render_exn (wrap_exn "TotalDefn" "xDefine" e);
 
 val xDefine = located_xDefine DB.Unknown
 
@@ -803,7 +804,7 @@ fun located_tDefine loc stem q tac =
  in
   Parse.try_grammar_extension
     (Theory.try_theory_extension thunk) ()
-  handle e => render_exn "tDefine" e
+  handle e => render_exn (wrap_exn "TotalDefn" "tDefine" e)
  end
 
 val tDefine = located_tDefine DB.Unknown
@@ -906,7 +907,7 @@ fun multidefine q = List.map (#1 o primDefine) (Defn.Hol_multi_defns q)
 
 fun multiDefine q =
   Parse.try_grammar_extension (Theory.try_theory_extension multidefine) q
-  handle e => render_exn "multiDefine" e;
+  handle e => render_exn (wrap_exn "TotalDefn" "multiDefine" e);
 
 (*---------------------------------------------------------------------------*)
 (* API for Define                                                            *)

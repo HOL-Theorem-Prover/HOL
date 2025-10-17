@@ -195,15 +195,15 @@ val parse =
 fun xHol_coreln name q =
     Hol_mono_coreln name (!IndDefLib.the_monoset) (parse q)
     handle e as HOL_ERR _ =>
-    render_exn "xHol_coreln" (wrap_exn "CoIndDefLib" "xHol_coreln" e)
+    render_exn (wrap_exn "CoIndDefLib" "xHol_coreln" e)
 
 fun Hol_coreln q = let
   val def as (def_t, _) = parse q
   val name = IndDefLib.name_from_def def_t
 in
   Hol_mono_coreln name (!IndDefLib.the_monoset) def
-end handle e =>
-    render_exn "Hol_coreln" (wrap_exn "CoIndDefLib" "Hol_coreln" e)
+end
+handle e => render_exn (wrap_exn "CoIndDefLib" "Hol_coreln" e)
 
 
 end (* CoIndDefLib *)

@@ -177,17 +177,16 @@ fun exn_to_string (HOL_ERR herr) = !ERR_to_string herr
   | exn_to_string e = General.exnMessage e
 
 (*---------------------------------------------------------------------------*)
-(* Either raise the exception, presumably a HOL_ERR, in the REPL (it gets    *)
-(* printed by the installed prettyprinter) or print the error and raise      *)
-(* BATCH_ERR with a message.                                                 *)
+(* Either raise the exception in the REPL (it gets printed by the installed  *)
+(* prettyprinter) or print the error and exit to the OS.                     *)
 (*---------------------------------------------------------------------------*)
 
-fun render_exn srcfn e =
+fun render_exn e =
     if !Globals.interactive then
        raise e
     else
       (output_ERR (exn_to_string e);
-       raise Fail srcfn)
+       OS.Process.exit OS.Process.failure)
 
 fun Raise e = (output_ERR (exn_to_string e); raise e)
 
@@ -399,7 +398,7 @@ fun pp_trace_elt (TraceElt{name,aliases,trace_level,default,max}) =
     in block INCONSISTENT 2
          [name_plus_aliases, add_string ":", add_break(1,0),
           add_string (Int.toString trace_level), add_break(1,0),
-          block CONSISTENT 0 (interval default max)]
+          block CONSISTENT 0 (interval 0 max)]
     end
 
 fun traces () =
