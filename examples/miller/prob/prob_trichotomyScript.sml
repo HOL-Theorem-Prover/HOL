@@ -1,21 +1,15 @@
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory pred_setTheory
-     listTheory sequenceTheory state_transformerTheory
-     hurdUtils extra_numTheory combinTheory
-     pairTheory realTheory realLib extra_boolTheory
-     extra_pred_setTheory sumTheory res_quanTheory
-     extra_realTheory extra_pred_setTools numTheory
-     simpLib seqTheory sequenceTools subtypeTheory;
-
-open sigma_algebraTheory real_measureTheory real_probabilityTheory;
-open prob_algebraTheory probTheory;
+Theory prob_trichotomy
+Ancestors
+  arithmetic pred_set list sequence state_transformer extra_num
+  combin pair real extra_bool extra_pred_set sum res_quan
+  extra_real num seq subtype sigma_algebra real_measure
+  real_probability prob_algebra prob
+Libs
+  hurdUtils realLib extra_pred_setTools simpLib sequenceTools
 
 (* interactive mode
 quietdec := false;
 *)
-
-val _ = new_theory "prob_trichotomy";
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
 val std_ss' = std_ss ++ boolSimps.ETA_ss;
@@ -35,11 +29,13 @@ val Cond =
 (* The simple trichotomy example used in the thesis.                         *)
 (* ------------------------------------------------------------------------- *)
 
-val prob_trichotomy_iter_def = Define
-  `prob_trichotomy_iter = BIND sdest (\x. BIND sdest (\y. UNIT (x, y)))`;
+Definition prob_trichotomy_iter_def:
+   prob_trichotomy_iter = BIND sdest (\x. BIND sdest (\y. UNIT (x, y)))
+End
 
-val prob_trichotomy_def = Define
-  `prob_trichotomy = prob_until prob_trichotomy_iter (\(x,y). x \/ y)`;
+Definition prob_trichotomy_def:
+   prob_trichotomy = prob_until prob_trichotomy_iter (\(x,y). x \/ y)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems leading to:                                                      *)
@@ -285,4 +281,3 @@ val PROB_TRICHOTOMY_COMPUTE = store_thm
    >> RW_TAC std_ss [prob_trichotomy_iter_def, GSYM BIND_ASSOC,
                      BIND_LEFT_UNIT]);
 
-val _ = export_theory ();

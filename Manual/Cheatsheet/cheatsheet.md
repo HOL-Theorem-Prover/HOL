@@ -461,18 +461,19 @@ The latter usually have a `"_x_"` in their names.
 : Like `goal_assum`, but geared towards proof-by-contradiction: negates the goal **and** pushes the negation inwards, before applying the given theorem-tactic to the result.
   A common usage is `spose_not_then assume_tac`.
 
-<code>ASSUME_NAMED_TAC "<i>label</i>" <i>theorem</i></code>
+<code>mk_asm "<i>label</i>" <i>theorem</i></code>
 : Found in `markerLib`.
   Add the theorem as an labelled assumption: `label :- theorem`.
-  E.g. `pop_assum $ ASSUME_NAMED_TAC "..."`.
+  E.g. `pop_assum $ mk_asm "..."`.
 
-<code>LABEL_ASSUM "<i>label</i>" <i>thm_tactic</i></code><br><code>LABEL_X_ASSUM "<i>label</i>" <i>thm_tactic</i></code>
+<code>asm "<i>label</i>" <i>thm_tactic</i></code><br><code>asm_x "<i>label</i>" <i>thm_tactic</i></code>
 : Found in `markerLib`.
   Select the labelled assumption `label :- assumption` and apply <code><i>thm_tactic</i> assumption</code>.
+  <code>asm_x</code> deletes the labelled assumption it selected.
 
 <code>L "<i>label</i>"</code>
 : Found in `markerLib`.
-  When used in a stateful simplifier, produces the theorem `assumption` from labelled assumption `label :- assumption`.
+  When used in the arguments to the simplifier, produces the theorem `assumption` from labelled assumption `label :- assumption`.
 
 <code>kall_tac</code>
 : Equivalent to `K ALL_TAC`, i.e. accepts any input and leaves the goal unchanged.
@@ -572,6 +573,13 @@ Instead, we can rename variables appropriately, and abbreviate large terms.
 : Matches the pattern against a subterm in the goal or assumptions, and renames the subterm to match the pattern.
   For example, `rename1 ‘n + _ <= foo’` renames `a + b <= c + d` into `n + b <= foo`.
   Note that we have lost information here on the RHS.
+
+<code>rename [‘<i>pattern₁</i>’, ‘<i>pattern₂</i>’, …]</code>
+: Matches all of the patterns against the goal and assumptions. By using multiple patterns, more precise renaming can be achieved, because the final instantiation must respect names that occur in multiple patterns.
+
+  In general, <code>rename1 ‘<i>pattern</i>’</code> is **not** the same as <code>rename[‘<i>pattern</i>’]</code>. This is because `rename1` allows its parsing of the pattern to be driven by variables already occuring in the goal, but `rename` ignores them: if your pattern wants `n` to now be of type `:num`, it won’t be messed up by a variable `n` in the goal that a different type.
+
+  There are other features allowing user-control of where patterns match in the goal; see the REFERENCE page for details.
 
 <code>qmatch_goalsub_abbrev_tac ‘<i>pattern</i>’</code>
 : Matches the pattern to a subterm in the goal, abbreviating the matching subterm to fit the pattern.

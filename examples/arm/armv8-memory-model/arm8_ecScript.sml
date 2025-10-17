@@ -1,7 +1,6 @@
-open HolKernel boolLib bossLib
-open arm8_commonTheory
-
-val () = new_theory "arm8_ec"
+Theory arm8_ec
+Ancestors
+  arm8_common
 
 (* -------------------------------------------------------------------------
    External Completion
@@ -55,4 +54,3 @@ End
    End
    ------------------------------------------------------------------------- *)
 
-val () = export_theory()

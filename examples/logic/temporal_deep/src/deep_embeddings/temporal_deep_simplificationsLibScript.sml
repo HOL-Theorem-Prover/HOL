@@ -1,18 +1,18 @@
-open HolKernel Parse boolLib bossLib;
+Theory temporal_deep_simplificationsLib
+Ancestors
+  full_ltl arithmetic automaton_formula xprop_logic prop_logic
+  infinite_path symbolic_semi_automaton list pred_set rich_list
+  pair rltl relation congToolsLib
+Libs
+  numLib listLib computeLib tuerk_tacticsLib congLib Travrules
+  Sanity
 
-open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
-     infinite_pathTheory symbolic_semi_automatonTheory listTheory pred_setTheory
-     rich_listTheory pairTheory numLib listLib rltlTheory computeLib relationTheory
-     tuerk_tacticsLib congLib Travrules congToolsLibTheory
-
-open Sanity;
-
-val _ = new_theory "temporal_deep_simplificationsLib";
 val _ = ParseExtras.temp_loose_equality()
 
-val PROP_LOGIC_EQUIVALENT_LIST_AS_SET_def = Define
-   `PROP_LOGIC_EQUIVALENT_LIST_AS_SET =
-         LIST_AS_SET_CONGRUENCE_RELATION PROP_LOGIC_EQUIVALENT`;
+Definition PROP_LOGIC_EQUIVALENT_LIST_AS_SET_def:
+    PROP_LOGIC_EQUIVALENT_LIST_AS_SET =
+         LIST_AS_SET_CONGRUENCE_RELATION PROP_LOGIC_EQUIVALENT
+End
 
 Theorem PROP_LOGIC_EQUIVALENT_REFL :
     !x. PROP_LOGIC_EQUIVALENT x x
@@ -27,8 +27,9 @@ Proof
     SIMP_TAC std_ss [PROP_LOGIC_EQUIVALENT_def]
 QED
 
-val PROP_LOGIC_EQUIVALENT_STATE = Define
-   `PROP_LOGIC_EQUIVALENT_STATE s p1 p2 = (P_SEM s p1 = P_SEM s p2)`;
+Definition PROP_LOGIC_EQUIVALENT_STATE:
+    PROP_LOGIC_EQUIVALENT_STATE s p1 p2 = (P_SEM s p1 = P_SEM s p2)
+End
 
 val PROP_LOGIC_EQUIVALENT_congs =
   store_thm (
@@ -246,14 +247,15 @@ val PROP_LOGIC_EQUIVALENT_dnf_rewrites =
     SIMP_TAC std_ss [PROP_LOGIC_EQUIVALENT_def, P_SEM_THM] THEN
     METIS_TAC[]);
 
-val LIST_AS_SET_CONGRUENCE_RELATION___PROP_LOGIC_EQUIVALENT_def =
-    Define
-     `LIST_AS_SET_CONGRUENCE_RELATION___PROP_LOGIC_EQUIVALENT =
-      LIST_AS_SET_CONGRUENCE_RELATION PROP_LOGIC_EQUIVALENT`;
+Definition LIST_AS_SET_CONGRUENCE_RELATION___PROP_LOGIC_EQUIVALENT_def:
+      LIST_AS_SET_CONGRUENCE_RELATION___PROP_LOGIC_EQUIVALENT =
+      LIST_AS_SET_CONGRUENCE_RELATION PROP_LOGIC_EQUIVALENT
+End
 
-val XPROP_LOGIC_EQUIVALENT_LIST_AS_SET_def =
-  Define `XPROP_LOGIC_EQUIVALENT_LIST_AS_SET =
-          LIST_AS_SET_CONGRUENCE_RELATION XPROP_LOGIC_EQUIVALENT`
+Definition XPROP_LOGIC_EQUIVALENT_LIST_AS_SET_def:
+   XPROP_LOGIC_EQUIVALENT_LIST_AS_SET =
+          LIST_AS_SET_CONGRUENCE_RELATION XPROP_LOGIC_EQUIVALENT
+End
 
 val XPROP_LOGIC_EQUIVALENT_REFL =
   store_thm (
@@ -1148,4 +1150,3 @@ val LTL_EQUIVALENT_homogeneous_conj_disj_rewrites =
     LTL_EQUIVALENT_before_homogeneous_conj_disj_rewrites]);
 
 
-val _ = export_theory();

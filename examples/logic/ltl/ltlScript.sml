@@ -1,8 +1,7 @@
-open HolKernel Parse boolLib bossLib pred_setTheory relationTheory set_relationTheory prim_recTheory
+Theory ltl
+Ancestors
+  pred_set relation set_relation prim_rec generalHelpers word
 
-open generalHelpersTheory wordTheory
-
-val _ = new_theory "ltl"
 val _ = ParseExtras.temp_loose_equality()
 
 val _ = Datatype`
@@ -15,9 +14,8 @@ val _ = Datatype`
   | U ltl_frml ltl_frml
   | R ltl_frml ltl_frml`;
 
-val MODELS_def =
-  Define
-    `(MODELS w (VAR a) = (a IN (at w 0)))
+Definition MODELS_def:
+     (MODELS w (VAR a) = (a IN (at w 0)))
   /\ (MODELS w (N_VAR a) = ~(a IN (at w 0)))
   /\ (MODELS w (DISJ f1 f2) = (MODELS w f1) \/ (MODELS w f2))
   /\ (MODELS w (CONJ f1 f2) = (MODELS w f1) /\ (MODELS w f2))
@@ -25,7 +23,8 @@ val MODELS_def =
   /\ (MODELS w (U f1 f2) =
         ?n. (MODELS (suff w n) f2) /\ !i. (i < n) ==> (MODELS (suff w i) f1))
   /\ (MODELS w (R f1 f2) =
-        !n. (MODELS (suff w n) f2) \/ ?i. (i < n) /\ (MODELS (suff w i) f1))`;
+        !n. (MODELS (suff w n) f2) \/ ?i. (i < n) /\ (MODELS (suff w i) f1))
+End
 
 val R_COND_LEMM = store_thm
   ("R_COND_LEMM",
@@ -50,8 +49,10 @@ val R_COND_LEMM = store_thm
        )
   );
 
-val TRUE_def = Define `TRUE = DISJ (VAR ARB) (N_VAR ARB)`;
-val FALSE_def = Define `FALSE = CONJ (VAR ARB) (N_VAR ARB)`;
+Definition TRUE_def:   TRUE = DISJ (VAR ARB) (N_VAR ARB)
+End
+Definition FALSE_def:   FALSE = CONJ (VAR ARB) (N_VAR ARB)
+End
 
 (*
 
@@ -59,14 +60,15 @@ val FALSE_def = Define `FALSE = CONJ (VAR ARB) (N_VAR ARB)`;
 
 *)
 
-val subForms_def = Define
-    `  (subForms (VAR a) = {VAR a})
+Definition subForms_def:
+       (subForms (VAR a) = {VAR a})
     /\ (subForms (N_VAR a) = {N_VAR a})
     /\ (subForms (DISJ f1 f2) = {DISJ f1 f2} ∪ (subForms f1) ∪ (subForms f2))
     /\ (subForms (CONJ f1 f2) = {CONJ f1 f2} ∪ (subForms f1) ∪ (subForms f2))
     /\ (subForms (X f) = {X f} ∪ (subForms f))
     /\ (subForms (U f1 f2) = {U f1 f2} ∪ (subForms f1) ∪ (subForms f2))
-    /\ (subForms (R f1 f2) = {R f1 f2} ∪ (subForms f1) ∪ (subForms f2))`;
+    /\ (subForms (R f1 f2) = {R f1 f2} ∪ (subForms f1) ∪ (subForms f2))
+End
 
 val SUBFORMS_REFL = store_thm
   ("SUBFORMS_REFL",
@@ -81,14 +83,15 @@ val SUBFORMS_TRANS = store_thm
   >> metis_tac[]
   );
 
-val no_tmp_op_def = Define
-`(no_tmp_op (VAR a) = 1)
+Definition no_tmp_op_def:
+ (no_tmp_op (VAR a) = 1)
     /\ (no_tmp_op (N_VAR a) = 1)
     /\ (no_tmp_op (DISJ f1 f2) = (no_tmp_op f1) + (no_tmp_op f2))
     /\ (no_tmp_op (CONJ f1 f2) = (no_tmp_op f1) + (no_tmp_op f2))
     /\ (no_tmp_op (X f) = (no_tmp_op f) + 1)
     /\ (no_tmp_op (U f1 f2) =(no_tmp_op f1) + (no_tmp_op f2) +1)
-    /\ (no_tmp_op (R f1 f2) =(no_tmp_op f1) + (no_tmp_op f2) +1)`;
+    /\ (no_tmp_op (R f1 f2) =(no_tmp_op f1) + (no_tmp_op f2) +1)
+End
 
 val NO_TMP_LEMM = store_thm
   ("NO_TMP_LEMM", ``!f. no_tmp_op f >= 1``,
@@ -182,9 +185,10 @@ val SF_ANTISYM_LEMM = store_thm
       )
   );
 
-val is_until_def = Define`
+Definition is_until_def:
    (is_until (U f1 f2) = T)
- ∧ (is_until _ = F)`;
+ ∧ (is_until _ = F)
+End
 
 (*
 
@@ -193,17 +197,19 @@ val is_until_def = Define`
 *)
 
 
-val tempSubForms_def = Define
-   `(tempSubForms (VAR a) = {VAR a})
+Definition tempSubForms_def:
+    (tempSubForms (VAR a) = {VAR a})
  /\ (tempSubForms (N_VAR a) = {N_VAR a})
  /\ (tempSubForms (DISJ f1 f2) = (tempSubForms f1) ∪ (tempSubForms f2))
  /\ (tempSubForms (CONJ f1 f2) = (tempSubForms f1) ∪ (tempSubForms f2))
  /\ (tempSubForms (X f) = {X f} ∪ (tempSubForms f))
  /\ (tempSubForms (U f1 f2) = {U f1 f2} ∪ (tempSubForms f1) ∪ (tempSubForms f2))
- /\ (tempSubForms (R f1 f2) = {R f1 f2} ∪ (tempSubForms f1) ∪ (tempSubForms f2))`;
+ /\ (tempSubForms (R f1 f2) = {R f1 f2} ∪ (tempSubForms f1) ∪ (tempSubForms f2))
+End
 
-val TSF_def = Define `
-  TSF (x,y) = x ∈ tempSubForms y`;
+Definition TSF_def:
+  TSF (x,y) = x ∈ tempSubForms y
+End
 
 val TSF_REFL = store_thm
   ("TSF_REFL",
@@ -321,14 +327,15 @@ val CONJ_TEMP_SUBF = store_thm
 
 *)
 
-val tempDNF_def = Define
-   `(tempDNF (VAR a) = {{VAR a}})
+Definition tempDNF_def:
+    (tempDNF (VAR a) = {{VAR a}})
  /\ (tempDNF (N_VAR a) = {{N_VAR a}})
  /\ (tempDNF (DISJ f1 f2) = (tempDNF f1) ∪ (tempDNF f2))
  /\ (tempDNF (CONJ f1 f2) = {f' ∪ f'' | (f' ∈ tempDNF f1) /\ (f'' ∈ tempDNF f2)})
  /\ (tempDNF (X f) = {{X f}})
  /\ (tempDNF (U f1 f2) = {{U f1 f2}})
- /\ (tempDNF (R f1 f2) = {{R f1 f2}})`;
+ /\ (tempDNF (R f1 f2) = {{R f1 f2}})
+End
 
 val TEMPDNF_NOT_EMPTY = store_thm
   ("TEMPDNF_NOT_EMPTY",
@@ -361,17 +368,20 @@ val TEMPDNF_TEMPSUBF = store_thm
   LTL language
 *)
 
-val props_def = Define
-`props f = {a | (VAR a) ∈ (subForms f) \/ (N_VAR a) ∈ (subForms f) }`;
+Definition props_def:
+ props f = {a | (VAR a) ∈ (subForms f) \/ (N_VAR a) ∈ (subForms f) }
+End
 
-val ltl_lang_def = Define
-`ltl_lang f = {w | MODELS w f /\ word_range w ⊆ POW (props f)}`;
+Definition ltl_lang_def:
+ ltl_lang f = {w | MODELS w f /\ word_range w ⊆ POW (props f)}
+End
 
 (*
    EXAMPLES
 *)
 
-val W1_def = Define `W1 = WORD (\x. {x})`;
+Definition W1_def:   W1 = WORD (\x. {x})
+End
 
 val EX1 = store_thm
  ("EX1", ``(MODELS W1 TRUE)``,  fs[MODELS_def,TRUE_def]);
@@ -399,16 +409,16 @@ val _ = Datatype`
   | F_X full_ltl_frml
   | F_U full_ltl_frml full_ltl_frml`;
 
-val FLTL_MODELS_def =
-    Define
-      `(FLTL_MODELS w (F_VAR a) = (a ∈ (at w 0)))
+Definition FLTL_MODELS_def:
+       (FLTL_MODELS w (F_VAR a) = (a ∈ (at w 0)))
     /\ (FLTL_MODELS w (F_CONJ f1 f2) = (FLTL_MODELS w f1) /\ (FLTL_MODELS w f2))
     /\ (FLTL_MODELS w (F_NEG f) = ~(FLTL_MODELS w f))
     /\ (FLTL_MODELS w (F_X f) = (FLTL_MODELS (suff w 1) f))
     /\ (FLTL_MODELS w (F_U f1 f2) =
-        ?n. (FLTL_MODELS (suff w n) f2) /\ !i. (i < n) ==> (FLTL_MODELS (suff w i) f1))`;
+        ?n. (FLTL_MODELS (suff w n) f2) /\ !i. (i < n) ==> (FLTL_MODELS (suff w i) f1))
+End
 
-val NNF_def = Define`
+Definition NNF_def:
     (NNF (F_VAR a) = VAR a)
   ∧ (NNF (F_CONJ f1 f2) = CONJ (NNF f1) (NNF f2))
   ∧ (NNF (F_NEG (F_VAR a)) = N_VAR a)
@@ -417,7 +427,8 @@ val NNF_def = Define`
   ∧ (NNF (F_NEG (F_X f)) = X (NNF (F_NEG f)))
   ∧ (NNF (F_NEG (F_U f1 f2)) = R (NNF (F_NEG f1)) (NNF (F_NEG f2)))
   ∧ (NNF (F_X f) = X (NNF f))
-  ∧ (NNF (F_U f1 f2) = U (NNF f1) (NNF f2))`;
+  ∧ (NNF (F_U f1 f2) = U (NNF f1) (NNF f2))
+End
 
 val NNF_NEG_LEMM = store_thm
   ("NNF_NEG_LEMM",
@@ -432,38 +443,47 @@ val NNF_THM = store_thm
    >> metis_tac[NNF_NEG_LEMM]
   );
 
-val LTL_FALSE_def = zDefine `
-  LTL_FALSE p  = F_CONJ (F_VAR p) (F_NEG (F_VAR p))`;
+Definition LTL_FALSE_def[nocompute]:
+  LTL_FALSE p  = F_CONJ (F_VAR p) (F_NEG (F_VAR p))
+End
 
-val LTL_TRUE_def = zDefine `
-  LTL_TRUE p = F_NEG (LTL_FALSE p)`;
+Definition LTL_TRUE_def[nocompute]:
+  LTL_TRUE p = F_NEG (LTL_FALSE p)
+End
 
-val LTL_F_def = zDefine `
-  LTL_F φ p = F_U (LTL_TRUE p) φ`
+Definition LTL_F_def[nocompute]:
+  LTL_F φ p = F_U (LTL_TRUE p) φ
+End
 
-val LTL_G_def = zDefine `
-  LTL_G φ p = F_NEG (LTL_F (F_NEG φ) p)`;
+Definition LTL_G_def[nocompute]:
+  LTL_G φ p = F_NEG (LTL_F (F_NEG φ) p)
+End
 
 (* Some example formulae*)
 
-val LTL_EX1_def = Define`
- LTL_EX1 = VAR 0`;
+Definition LTL_EX1_def:
+ LTL_EX1 = VAR 0
+End
 
-val LTL_EX2_def = Define`
- LTL_EX2 = U (VAR 0) (VAR 1)`;
+Definition LTL_EX2_def:
+ LTL_EX2 = U (VAR 0) (VAR 1)
+End
 
-val LTL_EX3_def = Define`
- LTL_EX3 = R (VAR 0) (VAR 1)`;
+Definition LTL_EX3_def:
+ LTL_EX3 = R (VAR 0) (VAR 1)
+End
 
-val LTL_EX4_def = Define`
+Definition LTL_EX4_def:
  LTL_EX4 = NNF (F_CONJ (LTL_G (LTL_F (F_VAR 1) 0) 0)
-                       ((LTL_F (F_CONJ (F_VAR 2) (LTL_G (F_NEG (F_VAR 3)) 0)) 0)))`;
+                       ((LTL_F (F_CONJ (F_VAR 2) (LTL_G (F_NEG (F_VAR 3)) 0)) 0)))
+End
 
-val LTL_EX5_def = Define`
+Definition LTL_EX5_def:
  LTL_EX5 = NNF (F_CONJ (F_CONJ (LTL_G (LTL_F (F_VAR 1) 0) 0)
                                (LTL_G (LTL_F (F_VAR 2) 0) 0)
                        )
-                       ((LTL_F (F_CONJ (F_VAR 3) (LTL_G (F_NEG (F_VAR 4)) 0)) 0)))`;
+                       ((LTL_F (F_CONJ (F_VAR 3) (LTL_G (F_NEG (F_VAR 4)) 0)) 0)))
+End
 
 Definition LTL_EX6_def:
   LTL_EX6 = NNF (F_CONJ (F_CONJ (F_CONJ (LTL_G (LTL_F (F_VAR 1) 0) 0)
@@ -476,4 +496,3 @@ Definition LTL_EX6_def:
                                 0)))
 End
 
-val _ = export_theory();

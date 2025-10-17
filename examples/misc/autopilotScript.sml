@@ -5,8 +5,8 @@
 (* Copyright 1998, Mark Staples                                              *)
 (* Modifications (April,June 1998) Konrad Slind.                             *)
 (*===========================================================================*)
+Theory autopilot
 
-open HolKernel boolLib Parse bossLib
 
 (*---------------------------------------------------------------------------*
  * We'll track information on inferences.                                    *
@@ -18,9 +18,6 @@ val meter = Count.mk_meter();
 (*---------------------------------------------------------------------------*
  * Start the theory.                                                         *
  *---------------------------------------------------------------------------*)
-
-val _ = new_theory "autopilot";
-
 
 val _ = Hol_datatype `events = press_att_cws
                      | press_cas_eng
@@ -71,9 +68,8 @@ val _ = Hol_datatype `states = <| att_cws  : off_eng;
  * State predicates.                                                         *
  *---------------------------------------------------------------------------*)
 
-val tran_att_cws_def =
- Define
-     `tran_att_cws st =
+Definition tran_att_cws_def:
+      tran_att_cws st =
          if st.att_cws = off
          then st with
                  <| att_cws := engaged;
@@ -81,20 +77,20 @@ val tran_att_cws_def =
                     alt_eng := Mode off;
                    fpa_disp := current;
                    alt_disp := current|>
-         else st`;
+         else st
+End
 
 
-val tran_cas_eng_def =
- Define
-    `tran_cas_eng st =
+Definition tran_cas_eng_def:
+     tran_cas_eng st =
         if st.cas_eng = off
           then st with cas_eng := engaged
-          else (st with <|cas_disp := current; cas_eng := off|>)`;
+          else (st with <|cas_disp := current; cas_eng := off|>)
+End
 
 
-val tran_fpa_sel_def =
- Define
-    `tran_fpa_sel st =
+Definition tran_fpa_sel_def:
+     tran_fpa_sel st =
        if st.fpa_sel = off
        then st with
                <| fpa_sel := engaged;
@@ -106,11 +102,11 @@ val tran_fpa_sel_def =
                   fpa_disp := current;
                    att_cws := engaged;
                    alt_eng := Mode off;
-                  alt_disp := current|>)`;
+                  alt_disp := current|>)
+End
 
-val tran_alt_eng_def =
- Define
-     `tran_alt_eng st =
+Definition tran_alt_eng_def:
+      tran_alt_eng st =
          if (st.alt_eng = Mode off) /\
             (st.alt_disp = pre_selected)
          then (if ~(st.altitude = away)
@@ -123,11 +119,11 @@ val tran_alt_eng_def =
                         <|att_cws := off;
                           fpa_sel := engaged;
                           alt_eng := armed|>))
-         else st`;
+         else st
+End
 
-val tran_input_alt_def =
- Define
-     `tran_input_alt st =
+Definition tran_input_alt_def:
+      tran_input_alt st =
          if st.alt_eng = Mode off
          then st with alt_disp := pre_selected
          else if (st.alt_eng = armed) \/ (st.alt_eng = Mode engaged)
@@ -137,25 +133,25 @@ val tran_input_alt_def =
                       att_cws  := engaged;
                       fpa_sel  := off;
                       fpa_disp := current|>
-              else st`;
+              else st
+End
 
-val tran_input_fpa_def =
- Define
-     `tran_input_fpa st =
+Definition tran_input_fpa_def:
+      tran_input_fpa st =
          if st.fpa_sel = off
          then st with fpa_disp := pre_selected
-         else st`;
+         else st
+End
 
 
-val tran_input_cas_def =
- Define
-     `tran_input_cas st =
-         if st.cas_eng = off then st with cas_disp := pre_selected else st`;
+Definition tran_input_cas_def:
+      tran_input_cas st =
+         if st.cas_eng = off then st with cas_disp := pre_selected else st
+End
 
 
-val tran_alt_gets_near_def =
- Define
-     `tran_alt_gets_near st =
+Definition tran_alt_gets_near_def:
+      tran_alt_gets_near st =
          if st.alt_eng = armed
          then st with
                 <|altitude := near_pre_selected;
@@ -163,11 +159,11 @@ val tran_alt_gets_near_def =
                   fpa_sel  := off;
                   fpa_disp := current|>
          else
-           (st with altitude := near_pre_selected)`;
+           (st with altitude := near_pre_selected)
+End
 
-val tran_alt_reached_def =
- Define
-     `tran_alt_reached st =
+Definition tran_alt_reached_def:
+      tran_alt_reached st =
         if st.alt_eng = armed
         then st with
               <|altitude := at_pre_selected;
@@ -175,11 +171,12 @@ val tran_alt_reached_def =
                 alt_eng  := Mode engaged;
                 fpa_sel  := off;
                 fpa_disp := current|>
-        else (st with <|altitude := at_pre_selected; alt_disp := current|>)`;
+        else (st with <|altitude := at_pre_selected; alt_disp := current|>)
+End
 
-val tran_fpa_reached_def =
- Define
-     `tran_fpa_reached st = (st with fpa_disp := current)`;
+Definition tran_fpa_reached_def:
+      tran_fpa_reached st = (st with fpa_disp := current)
+End
 
 
 val tran_defs =
@@ -192,9 +189,8 @@ val tran_defs =
  * The transition function.                                                  *
  *---------------------------------------------------------------------------*)
 
-val nextstate_def =
-  Define
-     `(nextstate st press_att_cws  =  tran_att_cws st)
+Definition nextstate_def:
+      (nextstate st press_att_cws  =  tran_att_cws st)
   /\  (nextstate st press_alt_eng  =  tran_alt_eng st)
   /\  (nextstate st press_fpa_sel  =  tran_fpa_sel st)
   /\  (nextstate st press_cas_eng  =  tran_cas_eng st)
@@ -203,47 +199,48 @@ val nextstate_def =
   /\  (nextstate st input_cas      =  tran_input_cas st)
   /\  (nextstate st alt_reached    =  tran_alt_reached st)
   /\  (nextstate st fpa_reached    =  tran_fpa_reached st)
-  /\  (nextstate st alt_gets_near  =  tran_alt_gets_near st)`;
+  /\  (nextstate st alt_gets_near  =  tran_alt_gets_near st)
+End
 
 
 (*---------------------------------------------------------------------------*
  * Initial state.                                                            *
  *---------------------------------------------------------------------------*)
 
-val st0_def =
- Define
-    `st0 = <|att_cws  := engaged;
+Definition st0_def:
+     st0 = <|att_cws  := engaged;
              cas_eng  := off;
              fpa_sel  := off;
              alt_eng  := Mode off;
              alt_disp := current;
              fpa_disp := current;
              cas_disp := current;
-             altitude := away|>`;
+             altitude := away|>
+End
 
 
-val is_initial_def =
- Define
-     `is_initial st <=>
+Definition is_initial_def:
+      is_initial st <=>
          (st.att_cws = engaged)  /\
          (st.cas_eng = off)      /\
          (st.fpa_sel = off)      /\
          (st.alt_eng = Mode off) /\
          (st.alt_disp = current) /\
          (st.fpa_disp = current) /\
-         (st.cas_disp = current)`;
+         (st.cas_disp = current)
+End
 
 
-val valid_state_def =
- Define
-     `valid_state st <=>
+Definition valid_state_def:
+      valid_state st <=>
          ((st.att_cws = engaged) \/ (st.fpa_sel = engaged) \/
           (st.alt_eng = Mode engaged))
      /\  (~(st.alt_eng = Mode engaged) \/ ~(st.fpa_sel = engaged))
      /\  ((st.att_cws = engaged)
            ==> ~(st.alt_eng = Mode engaged) /\
                ~(st.fpa_sel = engaged))
-     /\  ((st.alt_eng = armed) ==> (st.fpa_sel = engaged))`;
+     /\  ((st.alt_eng = armed) ==> (st.fpa_sel = engaged))
+End
 
 
 (*---------------------------------------------------------------------------*
@@ -286,11 +283,11 @@ Count.apply prove
  * Reachability. This could also be given as an inductive definition.        *
  *---------------------------------------------------------------------------*)
 
-val reachable_in_def =
- Define
-    `(reachable_in 0 st = is_initial st) /\
+Definition reachable_in_def:
+     (reachable_in 0 st = is_initial st) /\
      (reachable_in (SUC n) st =
-        ?pst ev. (st = nextstate pst ev) /\ reachable_in n pst)`;
+        ?pst ev. (st = nextstate pst ev) /\ reachable_in n pst)
+End
 
 
 
@@ -309,7 +306,8 @@ val reachable_valid_state = prove
  * A state is reachable if it is reachable in a finite number of steps.      *
  *---------------------------------------------------------------------------*)
 
-val is_reachable_def = Define  `is_reachable st = ?n. reachable_in n st`;
+Definition is_reachable_def:    is_reachable st = ?n. reachable_in n st
+End
 
 
 val is_reachable_valid_state = prove
@@ -364,4 +362,3 @@ val reachable_induct = prove
 
 val _ = Count.report (Count.read meter);
 
-val _ = export_theory()

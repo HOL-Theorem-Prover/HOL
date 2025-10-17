@@ -5,15 +5,13 @@
 (* AUTHORS : 2005-2011 Michael Norrish                                        *)
 (*         : 2023-2024 Michael Norrish and Chun Tian                          *)
 (* ========================================================================== *)
+Theory term
+Ancestors
+  arithmetic pred_set list finite_map relation pair rich_list
+  basic_swap generic_terms nomset
+Libs
+  boolSimps hurdUtils binderLib nomdatatype
 
-open HolKernel Parse boolLib bossLib;
-
-open boolSimps arithmeticTheory pred_setTheory listTheory finite_mapTheory
-     relationTheory pairTheory hurdUtils rich_listTheory;
-
-open basic_swapTheory generic_termsTheory binderLib nomsetTheory nomdatatype;
-
-val _ = new_theory "term";
 
 val _ = set_fixity "=" (Infix(NONASSOC, 450))
 
@@ -2081,7 +2079,6 @@ val nti =
        binders = [(``term$LAM``, 0, tpm_ALPHA)]}
 val _ = binderLib.export_nomtype(“:term”, nti)
 
-val _ = export_theory()
 val _ = html_theory "term";
 
 (* References:

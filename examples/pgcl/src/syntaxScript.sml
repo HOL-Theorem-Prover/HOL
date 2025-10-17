@@ -13,11 +13,13 @@ app load
    "metisLib","posrealLib","expectationTheory","intLib"];
 quietdec := true;
 *)
+Theory syntax
+Ancestors
+  combin list rich_list string integer real poset posreal
+  expectation
+Libs
+  intLib realLib metisLib posrealLib
 
-open HolKernel Parse boolLib bossLib intLib realLib metisLib;
-open combinTheory listTheory rich_listTheory stringTheory integerTheory
-     realTheory;
-open posetTheory posrealTheory posrealLib expectationTheory;
 
 (*
 quietdec := false;
@@ -26,8 +28,6 @@ quietdec := false;
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "syntax"                                        *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = new_theory "syntax";
 
 (* ------------------------------------------------------------------------- *)
 (* Helpful proof tools                                                       *)
@@ -51,8 +51,9 @@ val lemma = I prove;
 
 val () = type_abbrev ("state", Type `:string -> 'a`);
 
-val assign_def = Define
-  `assign v (e : 'a state -> 'a) (s:'a state) w = if v = w then e s else s w`;
+Definition assign_def:
+   assign v (e : 'a state -> 'a) (s:'a state) w = if v = w then e s else s w
+End
 
 val assign_eta = store_thm
   ("assign_eta",
@@ -74,35 +75,43 @@ val () = Hol_datatype
      | Prob of ('a state -> posreal) => command => command
      | While of ('a state -> bool) => command`;
 
-val Assert_def = Define
-  `Assert (x : 'a state -> posreal) (c : 'a command) = c`;
+Definition Assert_def:
+   Assert (x : 'a state -> posreal) (c : 'a command) = c
+End
 
-val Skip_def = Define `Skip = Consume (\s. 0)`;
+Definition Skip_def:   Skip = Consume (\s. 0)
+End
 
-val Program_def = Define
-  `(Program [] = Skip) /\
+Definition Program_def:
+   (Program [] = Skip) /\
    (Program [c] = c) /\
-   (Program (c :: c' :: cs) = Seq c (Program (c' :: cs)))`;
+   (Program (c :: c' :: cs) = Seq c (Program (c' :: cs)))
+End
 
-val If_def = Define `If c a b = Prob (\s. if c s then 1 else 0) a b`;
+Definition If_def:   If c a b = Prob (\s. if c s then 1 else 0) a b
+End
 
 (* wp (Nondets []) should evaluate to the identity for Nondet, which is *)
 (* Magic. But we don't allow magic (i.e., miraculous) programs, so we *)
 (* underspecify Nondets to avoid this nasty case. *)
 
-val Nondets_def = Define
-  `(Nondets [x] = x) /\
-   (Nondets (x :: y :: z) = Nondet x (Nondets (y :: z)))`;
+Definition Nondets_def:
+   (Nondets [x] = x) /\
+   (Nondets (x :: y :: z) = Nondet x (Nondets (y :: z)))
+End
 
-val NondetAssign_def = Define
-  `NondetAssign v xs = Nondets (MAP (\x. Assign v (\s. x)) xs)`;
+Definition NondetAssign_def:
+   NondetAssign v xs = Nondets (MAP (\x. Assign v (\s. x)) xs)
+End
 
-val guards_def = Define
-  `(guards cs [] = if cs = [] then Abort else Nondets cs) /\
+Definition guards_def:
+   (guards cs [] = if cs = [] then Abort else Nondets cs) /\
    (guards cs ((p, c) :: rest) =
-    If p (guards (c :: cs) rest) (guards cs rest))`;
+    If p (guards (c :: cs) rest) (guards cs rest))
+End
 
-val Guards_def = Define `Guards l = guards [] l`;
+Definition Guards_def:   Guards l = guards [] l
+End
 
 val (Probs_def, _) = Defn.tprove
   (Defn.Hol_defn "Probs_def"
@@ -114,15 +123,17 @@ val (Probs_def, _) = Defn.tprove
 
 val _ = save_thm ("Probs_def", Probs_def);
 
-val ProbAssign_def = Define
-  `ProbAssign v xs =
-   Probs (MAP (\x. (1 / & (LENGTH xs), Assign v (\s. x))) xs)`;
+Definition ProbAssign_def:
+   ProbAssign v xs =
+   Probs (MAP (\x. (1 / & (LENGTH xs), Assign v (\s. x))) xs)
+End
 
-val For_def = Define
-   `For i init cond incr c =
+Definition For_def:
+    For i init cond incr c =
         Seq (Assign i init)
-            (While cond (Seq (Program c) (Assign i incr)))`;
+            (While cond (Seq (Program c) (Assign i incr)))
+End
 
-val WhileProgram_def = Define `WhileProgram c l = While c (Program l)`;
+Definition WhileProgram_def:   WhileProgram c l = While c (Program l)
+End
 
-val _ = export_theory();

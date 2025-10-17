@@ -1,20 +1,19 @@
 
-open HolKernel Parse boolLib bossLib;
+Theory prog_x64_extra
+Ancestors
+  prog_x64 prog set_sep address temporal words list arithmetic
+  While pair relation combin option
+Libs
+  prog_x64Lib x64_encodeLib helperLib wordsLib
 
-val _ = new_theory "prog_x64_extra";
 val _ = ParseExtras.temp_loose_equality()
-
-open prog_x64Theory prog_x64Lib x64_encodeLib;
-open helperLib progTheory set_sepTheory addressTheory temporalTheory;
-
-open wordsTheory wordsLib listTheory arithmeticTheory;
-open whileTheory pairTheory relationTheory combinTheory optionTheory;
 
 (* generic code gen infrastructure *)
 
-val zCODE_HEAP_RAX_def = Define `
+Definition zCODE_HEAP_RAX_def:
   zCODE_HEAP_RAX b a n code =
-    zCODE_HEAP b a code n * zR 0w (a + n2w (LENGTH code))`;
+    zCODE_HEAP b a code n * zR 0w (a + n2w (LENGTH code))
+End
 
 val SNOC_R1 = let
   val (_,_,sts,_) = x64_tools
@@ -110,9 +109,10 @@ val LUPDATE_IMM = let
   val th = MP th lemma
   in th end;
 
-val IMM32_def = Define `
+Definition IMM32_def:
   IMM32 (w:word32) =
-    [w2w w; w2w (w >>> 8); w2w (w >>> 16); w2w (w >>> 24)]:word8 list`;
+    [w2w w; w2w (w >>> 8); w2w (w >>> 16); w2w (w >>> 24)]:word8 list
+End
 
 val IMM32_INTRO = prove(
   ``[w2w r1; w2w (r1 >>> 8); w2w (r1 >>> 16); w2w (r1 >>> 24)] =
@@ -140,27 +140,31 @@ val SNOC_IMM32 = let
     - SPEC is setup to say nothing if RSP hits Ghost_stack_top
  *)
 
-val stack_list_def = Define `
+Definition stack_list_def:
   (stack_list a [] = emp) /\
-  (stack_list a (x::xs) = one (a,x:word64) * stack_list (a+8w) xs)`;
+  (stack_list a (x::xs) = one (a,x:word64) * stack_list (a+8w) xs)
+End
 
-val stack_list_rev_def = Define `
+Definition stack_list_rev_def:
   (stack_list_rev a [] = emp) /\
-  (stack_list_rev a (x::xs) = one (a-8w,x:word64) * stack_list_rev (a-8w) xs)`;
+  (stack_list_rev a (x::xs) = one (a-8w,x:word64) * stack_list_rev (a-8w) xs)
+End
 
-val stack_ok_def = Define `
+Definition stack_ok_def:
   stack_ok (rsp:word64) top base stack dm m =
     (rsp && 7w = 0w) /\ (top && 7w = 0w) /\ (base && 7w = 0w) /\
     (rsp + n2w (8 * LENGTH stack) = base) /\
     ?rest. (stack_list top (rest ++ stack)) (fun2set (m,dm)) /\
            (top + n2w (8 * LENGTH (rest ++ stack)) = base) /\
-           8 * LENGTH (rest ++ stack) < 2 ** 64 /\ rest <> []`;
+           8 * LENGTH (rest ++ stack) < 2 ** 64 /\ rest <> []
+End
 
-val zSTACK_def = Define `
+Definition zSTACK_def:
   zSTACK (base,stack) =
     SEP_EXISTS rsp top dm m.
       zR1 RSP rsp * zR1 zGhost_stack_top top * zR1 zGhost_stack_bottom base *
-      zMEMORY64 dm m * cond (stack_ok rsp top base stack dm m)`;
+      zMEMORY64 dm m * cond (stack_ok rsp top base stack dm m)
+End
 
 val x0 = ("r0",``0w:word4``,``r0:word64``)
 val x1 = ("r1",``1w:word4``,``r1:word64``)
@@ -999,8 +1003,9 @@ val IO_ASSUMS_def = Define `
   IO_ASSUMS ^IO = ^(genall io_getchar_tm IO) /\ ^(genall io_putchar_tm IO)`
   |> RW [STAR_ASSOC];
 
-val zIO_def = Define `
-  zIO x = SEP_EXISTS IO. ^IO x * cond (IO_ASSUMS ^IO)`;
+Definition zIO_def:
+  zIO x = SEP_EXISTS IO. ^IO x * cond (IO_ASSUMS ^IO)
+End
 
 val x64_putchar_thm = prove(
   io_putchar_tm |> subst [IO|->``zIO``],
@@ -1024,4 +1029,3 @@ val _ = save_thm("x64_getchar_r1_thm",
 val _ = save_thm("x64_putchar_r1_thm",
   SPEC_COMPOSE_RULE [fetch "-" "x64_call_r1",x64_putchar_thm] |> RW [STAR_ASSOC]);
 
-val _ = export_theory();

@@ -7,19 +7,13 @@
 (*                 2018-2019 Fondazione Bruno Kessler, Italy (Chun Tian)      *)
 (*                 2023-2024 The Australian National University (Chun Tian)   *)
 (******************************************************************************)
+Theory Congruence
+Ancestors
+  pred_set relation combin arithmetic CCS StrongEQ StrongLaws
+  WeakEQ WeakLaws ObsCongr ObsCongrLaws BisimulationUpto
+Libs
+  pred_setLib binderLib CCSLib ObsCongrLib ObsCongrConv
 
-open HolKernel Parse boolLib bossLib;
-
-open pred_setTheory pred_setLib relationTheory combinTheory arithmeticTheory;
-
-open binderLib;
-
-open CCSLib CCSTheory;
-open StrongEQTheory StrongLawsTheory WeakEQTheory WeakLawsTheory;
-open ObsCongrTheory ObsCongrLib ObsCongrLawsTheory ObsCongrConv;
-open BisimulationUptoTheory;
-
-val _ = new_theory "Congruence";
 
 val set_ss = std_ss ++ PRED_SET_ss;
 
@@ -581,11 +575,13 @@ Proof
 QED
 
 (* Building (pre)congruence closure from any relation on CCS *)
-val CC_def = Define `
-    CC R = (\g h. !c. CONTEXT c ==> R (c g) (c h))`;
+Definition CC_def:
+    CC R = (\g h. !c. CONTEXT c ==> R (c g) (c h))
+End
 
-val GCC_def = Define `
-    GCC R = (\g h. !c. GCONTEXT c ==> R (c g) (c h))`;
+Definition GCC_def:
+    GCC R = (\g h. !c. GCONTEXT c ==> R (c g) (c h))
+End
 
 val CC_precongruence = store_thm (
    "CC_precongruence", ``!R. PreOrder R ==> precongruence (CC R)``,
@@ -1871,7 +1867,6 @@ Proof
       BETA_TAC >> RW_TAC std_ss [] ]
 QED
 
-val _ = export_theory ();
 val _ = html_theory "Congruence";
 
 (* Bibliography:

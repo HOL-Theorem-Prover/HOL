@@ -6,7 +6,8 @@ Libs
 
 (* --------------------------------------------------------------------- *)
 
-val interval_def = Define `interval a b = {x : real | a <= x /\ x < b}`
+Definition interval_def:   interval a b = {x : real | a <= x /\ x < b}
+End
 
 val lb = UTF8.chr 0x298B
   (* square bracket with underbar, reminiscent of the way < gets an underbar
@@ -145,26 +146,26 @@ val fp16_float_sqrt_relative = Q.prove(
       binary_ieeeTheory.float_negate_def, binary_ieeeTheory.float_plus_zero_def]
   )
 
-val fp16_float_add_relative = save_thm("fp16_float_add_relative",
-  rule fp16_float_add_relative)
+Theorem fp16_float_add_relative =
+  rule fp16_float_add_relative
 
-val fp16_float_sub_relative = save_thm("fp16_float_sub_relative",
-  rule fp16_float_sub_relative)
+Theorem fp16_float_sub_relative =
+  rule fp16_float_sub_relative
 
-val fp16_float_mul_relative = save_thm("fp16_float_mul_relative",
-  rule fp16_float_mul_relative)
+Theorem fp16_float_mul_relative =
+  rule fp16_float_mul_relative
 
-val fp16_float_mul_add_relative = save_thm("fp16_float_mul_add_relative",
-  rule fp16_float_mul_add_relative)
+Theorem fp16_float_mul_add_relative =
+  rule fp16_float_mul_add_relative
 
-val fp16_float_mul_sub_relative = save_thm("fp16_float_mul_sub_relative",
-  rule fp16_float_mul_sub_relative)
+Theorem fp16_float_mul_sub_relative =
+  rule fp16_float_mul_sub_relative
 
-val fp16_float_div_relative = save_thm("fp16_float_div_relative",
-  rule fp16_float_div_relative)
+Theorem fp16_float_div_relative =
+  rule fp16_float_div_relative
 
-val fp16_float_sqrt_relative = save_thm("fp16_float_sqrt_relative",
-  rule fp16_float_sqrt_relative)
+Theorem fp16_float_sqrt_relative =
+  rule fp16_float_sqrt_relative
 
 (* --------------------------------------------------------------------- *)
 
@@ -252,26 +253,26 @@ val fp32_float_sqrt_relative = Q.prove(
       binary_ieeeTheory.float_negate_def, binary_ieeeTheory.float_plus_zero_def]
   )
 
-val fp32_float_add_relative = save_thm("fp32_float_add_relative",
-  rule fp32_float_add_relative)
+Theorem fp32_float_add_relative =
+  rule fp32_float_add_relative
 
-val fp32_float_sub_relative = save_thm("fp32_float_sub_relative",
-  rule fp32_float_sub_relative)
+Theorem fp32_float_sub_relative =
+  rule fp32_float_sub_relative
 
-val fp32_float_mul_relative = save_thm("fp32_float_mul_relative",
-  rule fp32_float_mul_relative)
+Theorem fp32_float_mul_relative =
+  rule fp32_float_mul_relative
 
-val fp32_float_mul_add_relative = save_thm("fp32_float_mul_add_relative",
-  rule fp32_float_mul_add_relative)
+Theorem fp32_float_mul_add_relative =
+  rule fp32_float_mul_add_relative
 
-val fp32_float_mul_sub_relative = save_thm("fp32_float_mul_sub_relative",
-  rule fp32_float_mul_sub_relative)
+Theorem fp32_float_mul_sub_relative =
+  rule fp32_float_mul_sub_relative
 
-val fp32_float_div_relative = save_thm("fp32_float_div_relative",
-  rule fp32_float_div_relative)
+Theorem fp32_float_div_relative =
+  rule fp32_float_div_relative
 
-val fp32_float_sqrt_relative = save_thm("fp32_float_sqrt_relative",
-  rule fp32_float_sqrt_relative)
+Theorem fp32_float_sqrt_relative =
+  rule fp32_float_sqrt_relative
 
 (* --------------------------------------------------------------------- *)
 
@@ -360,25 +361,25 @@ val fp64_float_sqrt_relative = Q.prove(
        binary_ieeeTheory.float_plus_zero_def]
   )
 
-val fp64_float_add_relative = save_thm("fp64_float_add_relative",
-  rule fp64_float_add_relative)
+Theorem fp64_float_add_relative =
+  rule fp64_float_add_relative
 
-val fp64_float_sub_relative = save_thm("fp64_float_sub_relative",
-  rule fp64_float_sub_relative)
+Theorem fp64_float_sub_relative =
+  rule fp64_float_sub_relative
 
-val fp64_float_mul_relative = save_thm("fp64_float_mul_relative",
-  rule fp64_float_mul_relative)
+Theorem fp64_float_mul_relative =
+  rule fp64_float_mul_relative
 
-val fp64_float_mul_add_relative = save_thm("fp64_float_mul_add_relative",
-  rule fp64_float_mul_add_relative)
+Theorem fp64_float_mul_add_relative =
+  rule fp64_float_mul_add_relative
 
-val fp64_float_mul_sub_relative = save_thm("fp64_float_mul_sub_relative",
-  rule fp64_float_mul_sub_relative)
+Theorem fp64_float_mul_sub_relative =
+  rule fp64_float_mul_sub_relative
 
-val fp64_float_div_relative = save_thm("fp64_float_div_relative",
-  rule fp64_float_div_relative)
+Theorem fp64_float_div_relative =
+  rule fp64_float_div_relative
 
-val fp64_float_sqrt_relative = save_thm("fp64_float_sqrt_relative",
-  rule fp64_float_sqrt_relative)
+Theorem fp64_float_sqrt_relative =
+  rule fp64_float_sqrt_relative
 
 (* --------------------------------------------------------------------- *)

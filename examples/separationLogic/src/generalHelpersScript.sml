@@ -1,5 +1,10 @@
 
-open HolKernel Parse boolLib bossLib;
+Theory generalHelpers
+Ancestors
+  finite_map relation pred_set list rich_list arithmetic combin
+  container bag sorting
+Libs
+  stringLib boolSimps ConseqConv quantHeuristicsLib
 
 (*
 quietdec := true;
@@ -12,15 +17,10 @@ map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
 show_assums := true;
 *)
 
-open finite_mapTheory relationTheory pred_setTheory listTheory rich_listTheory arithmeticTheory
-     combinTheory containerTheory bagTheory stringLib
-     boolSimps ConseqConv sortingTheory quantHeuristicsLib;
-
 (*
 quietdec := false;
 *)
 
-val _ = new_theory "generalHelpers";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -32,9 +32,10 @@ val COND_EXISTS = store_thm ("COND_EXISTS",
 ``!P Q c. (?v. if c then P v else Q v) = if c then ?v. P v else ?v. Q v``,
 METIS_TAC[])
 
-val BOOL_TO_NUM_def = Define `
+Definition BOOL_TO_NUM_def:
 (BOOL_TO_NUM T = 1:num) /\
-(BOOL_TO_NUM F = 0)`;
+(BOOL_TO_NUM F = 0)
+End
 
 val BOOL_TO_NUM_REWRITE = store_thm ("BOOL_TO_NUM_REWRITE",
  ``((BOOL_TO_NUM c = 0) = ~c) /\
@@ -47,8 +48,9 @@ Cases_on `c` THEN Cases_on `d` THEN
 SIMP_TAC std_ss [BOOL_TO_NUM_def]);
 
 
-val IS_BOOL_TO_NUM_def = Define `
-  IS_BOOL_TO_NUM n = (n = 0:num) \/ (n = 1)`;
+Definition IS_BOOL_TO_NUM_def:
+  IS_BOOL_TO_NUM n = (n = 0:num) \/ (n = 1)
+End
 
 val IS_BOOL_TO_NUM_REWRITE = store_thm ("IS_BOOL_TO_NUM_REWRITE",
   ``(IS_BOOL_TO_NUM 0) /\ (IS_BOOL_TO_NUM 1) /\
@@ -211,9 +213,10 @@ Induct_on `n` THEN Induct_on `l` THEN
 ASM_SIMP_TAC list_ss []);
 
 
-val EVERY_PAIR_def = Define `
+Definition EVERY_PAIR_def:
    (EVERY_PAIR P [] = T) /\
-   (EVERY_PAIR P (e::l) = (EVERY (P e) l /\ EVERY_PAIR P l))`
+   (EVERY_PAIR P (e::l) = (EVERY (P e) l /\ EVERY_PAIR P l))
+End
 
 
 val ALL_DISTINCT_EVERY_PAIR = store_thm ("ALL_DISTINCT_EVERY_PAIR",
@@ -365,7 +368,8 @@ Cases_on `m` THEN (
 ));
 
 
-val ALL_DISJOINT_def = Define `ALL_DISJOINT = EVERY_PAIR DISJOINT`
+Definition ALL_DISJOINT_def:   ALL_DISJOINT = EVERY_PAIR DISJOINT
+End
 
 val ALL_DISJOINT_THM = store_thm ("ALL_DISJOINT_THM",
  ``(ALL_DISJOINT []) /\ (!e. ALL_DISJOINT [e]) /\
@@ -671,10 +675,10 @@ ASM_SIMP_TAC (list_ss++QUANT_INST_ss[list_qp]) [LIST_ZIP_REWRITE]);
 
 val _ = type_abbrev ("label", ``:ind``);
 
-val LIST_UNROLL_GIVEN_ELEMENT_NAMES_def = Define `
+Definition LIST_UNROLL_GIVEN_ELEMENT_NAMES_def:
     LIST_UNROLL_GIVEN_ELEMENT_NAMES l1 (l2:label list) =
     (LENGTH l1 = LENGTH l2)
-`;
+End
 
 
 val LIST_UNROLL_GIVEN_ELEMENT_NAMES_REWRITE = store_thm ("LIST_UNROLL_GIVEN_ELEMENT_NAMES_REWRITE",
@@ -709,9 +713,10 @@ SIMP_TAC list_ss [LIST_UNROLL_GIVEN_ELEMENT_NAMES_def]);
 
 
 
-val LIST_TO_FUN_def = Define `
+Definition LIST_TO_FUN_def:
 (LIST_TO_FUN [] = \x. ARB) /\
-(LIST_TO_FUN (x::L) = (FST x =+ SND x) (LIST_TO_FUN L))`;
+(LIST_TO_FUN (x::L) = (FST x =+ SND x) (LIST_TO_FUN L))
+End
 
 
 val LIST_TO_FUN_THM = store_thm ("LIST_TO_FUN_THM",
@@ -768,10 +773,11 @@ val FRONT_TAKE_THM2 = store_thm ("FRONT_TAKE_THM2",
  ``!x xs. TAKE (LENGTH xs) (x::xs) = FRONT (x::xs)``,
 Induct_on `xs` THEN ASM_SIMP_TAC list_ss []);
 
-val SWAP_ELEMENTS_def = Define `
+Definition SWAP_ELEMENTS_def:
 SWAP_ELEMENTS n m l =
   (LUPDATE (EL n l) m
-      (LUPDATE (EL m l) n l))`
+      (LUPDATE (EL m l) n l))
+End
 
 val SWAP_ELEMENTS_INTRO = store_thm ("SWAP_ELEMENTS_INTRO",
 ``!n m l e1 e2.
@@ -876,12 +882,14 @@ REPEAT STRIP_TAC THEN
 ));
 
 
-val LIST_NUM_STAR_def = Define `
+Definition LIST_NUM_STAR_def:
    (LIST_NUM_STAR 0 l = []) /\
-   (LIST_NUM_STAR (SUC n) l = l++(LIST_NUM_STAR n l))`
+   (LIST_NUM_STAR (SUC n) l = l++(LIST_NUM_STAR n l))
+End
 
-val LIST_STAR_def = Define `
-   LIST_STAR l l' = ?n. l' = LIST_NUM_STAR n l`
+Definition LIST_STAR_def:
+   LIST_STAR l l' = ?n. l' = LIST_NUM_STAR n l
+End
 
 
 val LIST_STAR_REWRITE = store_thm ("LIST_STAR_REWRITE",
@@ -923,13 +931,15 @@ Induct_on `n` THENL [
 
 
 
-val LIST_NUM_SET_STAR_def = Define `
+Definition LIST_NUM_SET_STAR_def:
    (LIST_NUM_SET_STAR 0 ls = {[]}) /\
    (LIST_NUM_SET_STAR (SUC n) ls =
-      {l++t | (l IN ls) /\ (t IN (LIST_NUM_SET_STAR n ls))})`
+      {l++t | (l IN ls) /\ (t IN (LIST_NUM_SET_STAR n ls))})
+End
 
-val LIST_SET_STAR_def = Define `
-   LIST_SET_STAR ls = \l'. ?n. l' IN LIST_NUM_SET_STAR n ls`
+Definition LIST_SET_STAR_def:
+   LIST_SET_STAR ls = \l'. ?n. l' IN LIST_NUM_SET_STAR n ls
+End
 
 
 val LIST_NUM_SET_STAR___SING = store_thm ("LIST_NUM_SET_STAR___SING",
@@ -1293,8 +1303,9 @@ val FUPDATE_LIST_IDEMPOT = store_thm ("FUPDATE_LIST_IDEMPOT",
 PROVE_TAC[SUBSET_REFL, FUPDATE_LIST_SUBSUME]);
 
 
-val LIST_TO_FMAP_def = Define `
-   LIST_TO_FMAP L = FEMPTY |++ (REVERSE L)`
+Definition LIST_TO_FMAP_def:
+   LIST_TO_FMAP L = FEMPTY |++ (REVERSE L)
+End
 
 
 val LIST_TO_FMAP_THM = store_thm ("LIST_TO_FMAP_THM",
@@ -1444,4 +1455,3 @@ PROVE_TAC[]);
 
 
 
-val _ = export_theory();

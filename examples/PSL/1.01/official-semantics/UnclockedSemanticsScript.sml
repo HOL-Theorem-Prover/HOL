@@ -23,51 +23,31 @@ map load
 open SyntaxTheory SyntacticSugarTheory
      PSLPathTheory KripkeTheory listTheory rich_listTheory intLib;
 
-val _ = intLib.deprecate_int();
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories of sequences and lists
-******************************************************************************)
-open SyntaxTheory SyntacticSugarTheory PSLPathTheory KripkeTheory
-     listTheory rich_listTheory intLib;
-
-(******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
-val _ = intLib.deprecate_int();
+Theory UnclockedSemantics
+Ancestors
+  Syntax SyntacticSugar PSLPath Kripke list rich_list
+Libs
+  intLib
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
 
-(******************************************************************************
-* Start a new theory called UnclockedSugarSemantics
-******************************************************************************)
-val _ = new_theory "UnclockedSemantics";
 val _ = ParseExtras.temp_loose_equality()
-
-(******************************************************************************
-* pureDefine doesn't export definitions to theCompset (for EVAL).
-******************************************************************************)
-val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
 
 (******************************************************************************
 * B_SEM l b means "l |= b" where l is a letter, i.e. l : 'prop -> bool
 ******************************************************************************)
-val B_SEM_def =
- Define
-  `(B_SEM l (B_PROP(p:'prop)) = p IN l)
+Definition B_SEM_def:
+   (B_SEM l (B_PROP(p:'prop)) = p IN l)
    /\
    (B_SEM l (B_NOT b)         = ~(B_SEM l b))
    /\
-   (B_SEM l (B_AND(b1,b2))    = B_SEM l b1 /\ B_SEM l b2)`;
+   (B_SEM l (B_AND(b1,b2))    = B_SEM l b1 /\ B_SEM l b2)
+End
 
 val B_SEM =
  store_thm
@@ -91,9 +71,8 @@ val B_SEM =
 * US_SEM w r means "w is in the language of r" in the unclocked semantics
 * where w is a word, i.e. a list of letters: w : ('prop -> bool)list
 ******************************************************************************)
-val US_SEM_def =
- pureDefine
-  `(US_SEM w (S_BOOL b) = (LENGTH w = 1) /\ B_SEM (ELEM w 0) b)
+Definition US_SEM_def[nocompute]:
+   (US_SEM w (S_BOOL b) = (LENGTH w = 1) /\ B_SEM (ELEM w 0) b)
    /\
    (US_SEM w (S_CAT(r1,r2)) =
      ?w1 w2. (w = w1 <> w2) /\ US_SEM w1 r1 /\ US_SEM w2 r2)
@@ -109,16 +88,16 @@ val US_SEM_def =
      US_SEM w r1 /\ US_SEM w r2)
    /\
    (US_SEM w (S_REPEAT r) =
-     ?wlist. (w = CONCAT wlist) /\ EVERY (\w. US_SEM w r) wlist)`;
+     ?wlist. (w = CONCAT wlist) /\ EVERY (\w. US_SEM w r) wlist)
+End
 
 (******************************************************************************
 * Original unclocked "SEM 1" semantics of Sugar formulas
 * UF_SEM w f means "w |= f"  in the unclocked semantics
 * where w is a finite or infinite word i.e. w : ('prop -> bool)path
 ******************************************************************************)
-val OLD_UF_SEM_def =
- Define
-   `(OLD_UF_SEM w (F_BOOL b) =
+Definition OLD_UF_SEM_def:
+    (OLD_UF_SEM w (F_BOOL b) =
       B_SEM (ELEM w 0) b)
     /\
     (OLD_UF_SEM w (F_NOT f) =
@@ -160,7 +139,8 @@ val OLD_UF_SEM_def =
       ?j :: (1 to LENGTH w).
         ?w'. OLD_UF_SEM (RESTN w j) (F_BOOL b)
              /\
-             OLD_UF_SEM (CAT(SEL w (0,j-1),w')) f)`;
+             OLD_UF_SEM (CAT(SEL w (0,j-1),w')) f)
+End
 
 (******************************************************************************
 * Unclocked "SEM 1" semantics of Sugar formulas
@@ -168,9 +148,8 @@ val OLD_UF_SEM_def =
 * UF_SEM w f means "w |= f"  in the unclocked semantics
 * where w is a finite or infinite word i.e. w : ('prop -> bool)path
 ******************************************************************************)
-val UF_SEM_def =
- Define
-   `(UF_SEM w (F_BOOL b) =
+Definition UF_SEM_def:
+    (UF_SEM w (F_BOOL b) =
       LENGTH w > 0 /\ B_SEM (ELEM w 0) b)
     /\
     (UF_SEM w (F_NOT f) =
@@ -212,19 +191,20 @@ val UF_SEM_def =
       ?j :: (1 to LENGTH w).
         ?w'. UF_SEM (RESTN w j) (F_BOOL b)
              /\
-             UF_SEM (CAT(SEL w (0,j-1),w')) f)`;
+             UF_SEM (CAT(SEL w (0,j-1),w')) f)
+End
 
 (******************************************************************************
 * PATH M p is true iff p is a path with respect to transition relation M.R
 ******************************************************************************)
-val PATH_def = Define `PATH M p s = IS_INFINITE p /\ (ELEM p 0 = s) /\ (!n. M.R(ELEM p n, ELEM p (n+1)))`;
+Definition PATH_def:   PATH M p s = IS_INFINITE p /\ (ELEM p 0 = s) /\ (!n. M.R(ELEM p n, ELEM p (n+1)))
+End
 
 (******************************************************************************
 * O_SEM M s f means "M, s |= f"
 ******************************************************************************)
-val O_SEM_def =
- Define
-  `(O_SEM M (O_BOOL b) s = B_SEM (M.L s) b)
+Definition O_SEM_def:
+   (O_SEM M (O_BOOL b) s = B_SEM (M.L s) b)
    /\
    (O_SEM M (O_NOT f) s = ~(O_SEM M f s))
    /\
@@ -238,6 +218,5 @@ val O_SEM_def =
          ?k :: (0 to LENGTH p). O_SEM M f2 (ELEM p k) /\ !j. j < k ==> O_SEM M f1 (ELEM p j))
    /\
    (O_SEM M (O_EG f) s =
-     ?p. PATH M p s /\ !j :: (0 to LENGTH p). O_SEM M f (ELEM p j))`;
-
-val _ = export_theory();
+     ?p. PATH M p s /\ !j :: (0 to LENGTH p). O_SEM M f (ELEM p j))
+End

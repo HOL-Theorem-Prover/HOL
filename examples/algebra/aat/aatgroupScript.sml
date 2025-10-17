@@ -1,10 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open aatmonoidTheory groupTheory transferTheory transferLib liftingTheory
-
-open liftLib
-
-val _ = new_theory "aatgroup";
+Theory aatgroup
+Ancestors
+  aatmonoid group transfer lifting
+Libs
+  transferLib liftLib
 
 Theorem Group_respects[local]:
   (mequiv ===> (=)) Group Group
@@ -574,4 +572,3 @@ val ths = map transfer [
 ]
 
 
-val _ = export_theory();

@@ -2,17 +2,6 @@
 (* HOL proofs of defthms in defaxioms.lisp.trans.                            *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* Ignore everything up to "END BOILERPLATE"                                 *)
-(*****************************************************************************)
-
-(*****************************************************************************)
-(* START BOILERPLATE NEEDED FOR COMPILATION                                  *)
-(*****************************************************************************)
-
-(******************************************************************************
-* Load theories
-******************************************************************************)
 (* The commented out stuff below should be loaded in interactive sessions
 quietdec := true;
 map
@@ -25,23 +14,11 @@ Globals.checking_const_names := false;
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation: open HOL4 systems modules.
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories (including ratTheory from Jens Brandt).
-******************************************************************************)
-open stringLib complex_rationalTheory gcdTheory
-     sexp sexpTheory hol_defaxiomsTheory;
-
-(*****************************************************************************)
-(* END BOILERPLATE                                                           *)
-(*****************************************************************************)
-
-val _ = new_theory "hol_defaxioms_thms";
-
+Theory hol_defaxioms_thms
+Ancestors
+  complex_rational gcd sexp hol_defaxioms
+Libs
+  stringLib sexp
 
 (*
      [oracles: DEFTHM ACL2::CHARACTER-LISTP-FORWARD-TO-EQLABLE-LISTP]
@@ -143,4 +120,3 @@ val lower_case_p_char_downcase_defaxiom =
 
 
 val _ = export_acl2_theory();
-

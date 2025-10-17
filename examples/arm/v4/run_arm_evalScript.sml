@@ -9,11 +9,12 @@
 (* interactive use:
   load "arm_evalLib";
 *)
+Theory run_arm_eval
+Ancestors
+  arm_eval
+Libs
+  arm_evalLib
 
-open HolKernel boolLib bossLib;
-open Parse arm_evalLib;
-
-val _ = new_theory "run_arm_eval";
 
 (* ------------------------------------------------------------------------- *)
 
@@ -166,5 +167,3 @@ val run_mul9 = save_thm("run_mul9", evaluate(max,prog,reg,psr));
 *)
 
 (* ------------------------------------------------------------------------- *)
-
-val _ = export_theory();

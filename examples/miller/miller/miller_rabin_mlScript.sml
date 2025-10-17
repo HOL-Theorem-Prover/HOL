@@ -1,10 +1,9 @@
-open HolKernel Parse boolLib;
-
-open bossLib hurdUtils miller_rabinTheory state_transformerTheory
-     pairTheory arithmeticTheory combinTheory prob_uniformTheory
-     extra_numTheory probTheory;
-
-val _ = new_theory "miller_rabin_ml";
+Theory miller_rabin_ml
+Ancestors
+  miller_rabin state_transformer pair arithmetic combin
+  prob_uniform extra_num prob
+Libs
+  hurdUtils
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
 val REVERSE = Tactical.REVERSE;
@@ -122,4 +121,3 @@ val MILLER_RABIN_ML = save_thm ("MILLER_RABIN_ML", miller_rabin_def);
 
 (* non-interactive mode
 *)
-val _ = export_theory ();

@@ -4,43 +4,21 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "AKSshift";
-
 (* ------------------------------------------------------------------------- *)
+Theory AKSshift
+Ancestors
+  pred_set list arithmetic divides gcd number combinatorics
+  AKSintro
+  computeRing  (* for overloads on x^, x+^, x^+, x^- *)
+  polynomial polyWeak polyRing polyField
+  polyBinomial polyDivision polyEval polyDivides polyMonic
+  polyFieldDivision polyFieldModulo polyRingModulo polyMap monoid
+  group ring field fieldInstances ffBasic ffAdvanced ffPoly
+  ffUnity
+Libs
+  jcLib
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory dividesTheory gcdTheory
-     numberTheory combinatoricsTheory;
-
-open AKSintroTheory;
-open computeRingTheory; (* for overloads on x^, x+^, x^+, x^- *)
-
-open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
-open polyBinomialTheory polyDivisionTheory polyEvalTheory;
-
-open polyDividesTheory;
-open polyMonicTheory;
-
-open polyFieldDivisionTheory;
-open polyFieldModuloTheory;
-open polyRingModuloTheory;
-open polyMapTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
-open fieldInstancesTheory;
-
-open ffBasicTheory;
-open ffAdvancedTheory;
-open ffPolyTheory;
-open ffUnityTheory;
 
 val _ = intLib.deprecate_int ();
 
@@ -322,8 +300,4 @@ val ring_homo_intro_range_ZN_to_ZN_X_add_c_alt = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

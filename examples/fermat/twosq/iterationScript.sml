@@ -4,16 +4,11 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "iteration";
+Theory iteration
+Ancestors
+  arithmetic pred_set divides gcd number combinatorics
 
 (* ------------------------------------------------------------------------- *)
-
-open arithmeticTheory pred_setTheory dividesTheory gcdTheory numberTheory
-     combinatoricsTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Iteration Period Documentation                                            *)
@@ -107,7 +102,7 @@ Theorem iterate_period_property:
 Proof
   rpt strip_tac >>
   simp[iterate_period_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
+  DEEP_INTRO_TAC WhileTheory.OLEAST_INTRO >>
   simp[]
 QED
 
@@ -118,7 +113,7 @@ Theorem iterate_period_minimal:
 Proof
   ntac 2 strip_tac >>
   simp[iterate_period_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
+  DEEP_INTRO_TAC WhileTheory.OLEAST_INTRO >>
   rw_tac std_ss[] >>
   metis_tac[DECIDE``~(0 < 0)``]
 QED
@@ -148,7 +143,7 @@ Proof
   simp[iterate_period_property] >-
   simp[iterate_period_minimal] >>
   simp[iterate_period_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
+  DEEP_INTRO_TAC WhileTheory.OLEAST_INTRO >>
   rw[] >>
   `~(n' < n) /\ ~(n < n')` by metis_tac[] >>
   decide_tac
@@ -300,7 +295,7 @@ Theorem iterate_period_eq_0:
   !f x. iterate_period f x = 0 <=> !n. 0 < n ==> FUNPOW f n x <> x
 Proof
   rw[iterate_period_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
+  DEEP_INTRO_TAC WhileTheory.OLEAST_INTRO >>
   simp[] >>
   metis_tac[NOT_ZERO]
 QED
@@ -646,8 +641,4 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

@@ -108,6 +108,7 @@ val CP = ""
 val DEFAULT_STATE = fullPath [HOLDIR, "bin", "hol.state"]
 
 val isUnix = true
+val haveWord64 = _
 
 val pointer_eq = PolyML.pointerEq
 

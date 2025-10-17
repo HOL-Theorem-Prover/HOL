@@ -4,26 +4,20 @@
 (*                                                                            *)
 (* AUTHORS : 2023-2024 The Australian National University (Chun Tian)         *)
 (* ========================================================================== *)
+Theory boehm
+Ancestors
+  option arithmetic pred_set list rich_list llist relation ltree
+  path poset pair finite_map topology combin string_num
+  basic_swap nomset term appFOLDL chap2 chap3 head_reduction
+  standardisation solvable horeduction takahashiS3
+Libs
+  hurdUtils tautLib listLib numLib BasicProvers NEWLib
+  reductionEval head_reductionLib monadsyntax
 
-open HolKernel Parse boolLib bossLib;
-
-(* core theories *)
-open optionTheory arithmeticTheory pred_setTheory listTheory rich_listTheory
-     llistTheory relationTheory ltreeTheory pathTheory posetTheory hurdUtils
-     pairTheory finite_mapTheory topologyTheory combinTheory tautLib listLib
-     string_numTheory numLib BasicProvers;
-
-(* local theories *)
-open basic_swapTheory nomsetTheory termTheory appFOLDLTheory NEWLib chap2Theory
-     chap3Theory reductionEval head_reductionTheory head_reductionLib
-     standardisationTheory solvableTheory horeductionTheory takahashiS3Theory;
 
 (* enable basic monad support *)
-open monadsyntax;
 val _ = enable_monadsyntax ();
 val _ = enable_monad "option";
-
-val _ = new_theory "boehm";
 
 (* These theorems usually give unexpected results, should be applied manually *)
 val _ = temp_delsimps [
@@ -6964,7 +6958,6 @@ Proof
  >> Q.EXISTS_TAC ‘N’ >> art []
 QED
 
-val _ = export_theory ();
 val _ = html_theory "boehm";
 
 (* References:

@@ -9,11 +9,13 @@
 (* interactive use:
   app load ["armTheory"];
 *)
+Theory core
+Ancestors
+  io_onestep arm
+Libs
+  Q
 
-open HolKernel boolLib Parse bossLib;
-open Q io_onestepTheory armTheory;
 
-val _ = new_theory "core";
 val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
@@ -44,21 +46,24 @@ val arm6state = ``ARM6 (DP reg psr areg din alua alub dout)
 
 val Rg = inst [alpha |-> ``:32``, beta |-> ``:4``] ``$><``;
 
-val CLEARBIT_def = Define `CLEARBIT x = word_modify (\i b. ~(i = x) /\ b)`;
-val LEASTBIT_def = Define `LEASTBIT n = LEAST b. n %% b`;
+Definition CLEARBIT_def:   CLEARBIT x = word_modify (\i b. ~(i = x) /\ b)
+End
+Definition LEASTBIT_def:   LEASTBIT n = LEAST b. n %% b
+End
 
-val REG_READ6_def = Define`
+Definition REG_READ6_def:
   REG_READ6 reg mode n =
     if n = 15w then
       FETCH_PC reg
     else
-      REG_READ reg mode n`;
+      REG_READ reg mode n
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Data Path Control: Instruction Fetch Phase 1 ---------------------------- *)
 (* ------------------------------------------------------------------------- *)
 
-val NMREQ_def = Define`
+Definition NMREQ_def:
   NMREQ ic is pencz mulx cpb =
     (is = t3) /\ ((ic = reg_shift) \/ (ic = mla_mul) \/ (ic = mcr) \/
                  ((ic = cdp_und) \/ (ic = ldc) \/ (ic = stc)) /\ cpb) \/
@@ -66,11 +71,12 @@ val NMREQ_def = Define`
     (is = t5) /\ (ic = swp) \/
     (is = tn) /\ (ic = mla_mul) /\ ~mulx \/
     ~(is = t3) /\ ~(is = tm) /\ (ic = ldm) /\ pencz \/
-    ~(is = t5) /\ (ic = mrc)`;
+    ~(is = t5) /\ (ic = mrc)
+End
 
 (* True if pc is to be updated by incrementor *)
 
-val PCWA_def = Define`
+Definition PCWA_def:
   PCWA ic is ireg cpb =
     let bit24 = ireg %% 24
     and bit23 = ireg %% 23
@@ -81,7 +87,8 @@ val PCWA_def = Define`
           (ic = mrs_msr) /\ ~bit21 /\ (bits1512 = 15w) \/
           (((ic = cdp_und) \/ (ic = mcr) \/ (ic = mrc) \/
           (ic = ldc) \/ (ic = stc)) /\ cpb)) \/
-      (ic = br) \/ (ic = swi_ex)`;
+      (ic = br) \/ (ic = swi_ex)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Data Path Control: Instruction Fetch Phase 2 ---------------------------- *)
@@ -89,30 +96,33 @@ val PCWA_def = Define`
 
 (* Memory access on next cycle: Byte (F) or word (T) *)
 
-val NBW_def = Define`
+Definition NBW_def:
   NBW ic is (ireg:word32) =
     ~(ireg %% 22 /\
       ((is = t3) /\ ((ic = ldr) \/ (ic = str) \/ (ic = swp)) \/
-      (is = t4) /\ (ic = swp)))`;
+      (is = t4) /\ (ic = swp)))
+End
 
-val NOPC_def = Define`
+Definition NOPC_def:
   NOPC ic is pencz cpb =
     ((ic = ldr) \/ (ic = str) \/ (ic = swp)) /\ (is = t3) \/
     ((ic = ldc) \/ (ic = stc)) /\ ~cpb \/
     (ic = swp) /\ (is = t4) \/
     (ic = ldm) /\ ~(is  = tm) /\ ~pencz \/
-    (ic = stm) /\ ~pencz`;
+    (ic = stm) /\ ~pencz
+End
 
 (* Memory access on next cycle: Write (T) or other (F) *)
 
-val NRW_def = Define`
+Definition NRW_def:
   NRW ic is pencz cpb =
     (is = t3) /\ ((ic = str) \/ (ic = mcr) /\ ~cpb) \/
     (is = t4) /\ (ic = swp) \/
     (ic = stc) /\ ~cpb \/
-    (ic = stm) /\ ~pencz`;
+    (ic = stm) /\ ~pencz
+End
 
-val AREG_def = Define`
+Definition AREG_def:
   AREG ic is ireg (aregn:word3) (inc:word32) reg15 aluout (list:word16)
        pencz (oorp:word4) cpb dataabt =
     let bits1916 = ^Rg 19 16 ireg
@@ -163,37 +173,41 @@ val AREG_def = Define`
             (~(is = t3) \/ cpb) /\ ((ic = mcr) \/ (ic = mrc)) then
       reg15
     else
-      inc`;
+      inc
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Data Path Control: Instruction Decode Phase 2 --------------------------- *)
 (* ------------------------------------------------------------------------- *)
 
-val DIN_def = Define`
+Definition DIN_def:
   DIN ic is (ireg:word32) data =
     if ((ic = ldr) \/ (ic = ldm) \/ (ic = swp) \/ (ic = mrc)) /\ (is = t4) \/
         (ic = ldm) /\ (is = tn) then
       data
     else
-      ireg`;
+      ireg
+End
 
-val DINWRITE_def = Define`
-  DINWRITE ic is = ~((ic = swp) /\ (is = t5))`;
+Definition DINWRITE_def:
+  DINWRITE ic is = ~((ic = swp) /\ (is = t5))
+End
 
-val MASK_def = Define`
+Definition MASK_def:
   MASK nxtic nxtis (mask:word16) (rp:word4) =
     if (nxtic = ldm) \/ (nxtic = stm) then
       if nxtis = t3 then
         UINT_MAXw
       else
         CLEARBIT (w2n rp) mask
-    else ARB`;
+    else ARB
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Data Path Control: Instruction Execute Phase 1 -------------------------- *)
 (* ------------------------------------------------------------------------- *)
 
-val NBS_def = Define`
+Definition NBS_def:
   NBS ic is (ireg:word32) m =
     let bit22 = ireg %% 22
     and bit15 = ireg %% 15 in
@@ -201,21 +215,24 @@ val NBS_def = Define`
                    ((is = t4) \/ (is = tn)) /\ (ic = stm)) then
         usr
       else
-        DECODE_MODE m`;
+        DECODE_MODE m
+End
 
-val RP_def = Define`
+Definition RP_def:
   RP ic (list:word16) mask =
     if (ic = ldm) \/ (ic = stm) then
       n2w (LEASTBIT (list && mask)):word4
-    else ARB`;
+    else ARB
+End
 
-val PENCZ_def = Define`
+Definition PENCZ_def:
   PENCZ ic (list:word16) mask =
     if (ic = ldm) \/ (ic = stm) then
       (list && mask) = 0w
-    else ARB`;
+    else ARB
+End
 
-val OFFSET_def = Define`
+Definition OFFSET_def:
   OFFSET ic is (ireg:word32) (list:word16) =
     let bit24 = ireg %% 24
     and bit23 = ireg %% 23
@@ -232,9 +249,10 @@ val OFFSET_def = Define`
       else if (is = t5) /\ ((ic = br) \/ (ic = swi_ex)) then
         3w
       else
-        ARB`;
+        ARB
+End
 
-val FIELD_def = Define`
+Definition FIELD_def:
   FIELD ic is (ireg:word32) (oareg:word2) (din:word32) =
     if is = t3 then
       if ic = br then
@@ -255,9 +273,10 @@ val FIELD_def = Define`
             (ic = mrc) /\ (is = t5) then
       din
     else
-      ARB`;
+      ARB
+End
 
-val RBA_def = Define`
+Definition RBA_def:
   RBA ic is ireg orp =
     if (is = t3) /\ ((ic = data_proc) \/ (ic = mrs_msr) \/
                      (ic = ldr) \/ (ic = str)) \/
@@ -275,9 +294,10 @@ val RBA_def = Define`
     else if ((is = t4) \/ (is = tn)) /\ (ic = stm) then
        orp
     else
-       ARB`;
+       ARB
+End
 
-val RAA_def = Define`
+Definition RAA_def:
   RAA ic is ireg =
     if is = t3 then
        if (ic = data_proc) \/ (ic = ldr) \/ (ic = str) \/
@@ -292,18 +312,20 @@ val RAA_def = Define`
             ((is = tn) \/ (is = tm)) /\ (ic = ldm) \/
             (is = tn) /\ (ic = mla_mul) then
        ^Rg 19 16 ireg
-    else ARB`;
+    else ARB
+End
 
-val PSRA_def = Define`
+Definition PSRA_def:
   PSRA ic is (ireg:word32) =
     let bit22 = ireg %% 22
     and bit20 = ireg %% 20 in
       (is = t3) /\ ((ic = swi_ex) \/ ~bit22 /\ ((ic = mrs_msr) \/
                     (ic = data_proc) /\ ~bit20)) \/
       (is = t4) /\ ~bit22 /\ (ic = reg_shift) /\ ~bit20 \/
-      (is = tm) /\ ~bit22 /\ (ic = ldm)`;
+      (is = tm) /\ ~bit22 /\ (ic = ldm)
+End
 
-val BUSB_def = Define`
+Definition BUSB_def:
   BUSB ic is (ireg:word32) (din':word32) rb =
     let bit25 = ireg %% 25 in
       if (is = t3) /\
@@ -316,9 +338,10 @@ val BUSB_def = Define`
          ((is = tn) \/ (is = tm)) /\ (ic = ldm) then
          din'
       else
-         rb`;
+         rb
+End
 
-val BUSA_def = Define`
+Definition BUSA_def:
   BUSA ic is (psrrd:word32) ra offset =
     if ((is = t3) \/ (is = t4)) /\ ((ic = ldm) \/ (ic = stm)) \/
         (is = t5) /\ ((ic = br) \/ (ic = swi_ex)) then
@@ -336,11 +359,12 @@ val BUSA_def = Define`
             ((is = tn) \/ (is = tm)) /\ (ic = ldm) then
        ra
     else
-       ARB`;
+       ARB
+End
 
 (* Incorporates SCTLC *)
 
-val SHIFTER_def = Define`
+Definition SHIFTER_def:
   SHIFTER ic is (ireg:word32) (oareg:word2) (mshift:word5)
           (sctrlreg:word32) busb c =
     let bit25 = ireg %% 25
@@ -370,50 +394,58 @@ val SHIFTER_def = Define`
       else if ic = mla_mul then (* is = tn *)
         LSL busb (w2w mshift) c
       else
-        ARB`;
+        ARB
+End
 
-val BORROW_def = Define`
+Definition BORROW_def:
   BORROW ic is (mul:word2) =
     if ic = mla_mul then
        ~(is = t3) /\ mul %% 1
     else
-       ARB`;
+       ARB
+End
 
-val COUNT1_def = Define`
+Definition COUNT1_def:
   COUNT1 ic is (mshift:word5) =
     if ic = mla_mul then
        if is = t3 then (0w:word4) else (4 >< 1) mshift + 1w
     else
-       ARB`;
+       ARB
+End
 
-val MUL1_def = Define`
+Definition MUL1_def:
   MUL1 ic is ra (mul2:word32) =
     if ic = mla_mul then
        if is = t3 then ra else (29 -- 0) mul2
     else
-       ARB`;
+       ARB
+End
 
-val MULZ_def = Define`
+Definition MULZ_def:
   MULZ ic is mul2 =
    if (is = tn) /\ (ic = mla_mul) then
      (29 -- 0) mul2 = 0w
    else
-     ARB`;
+     ARB
+End
 
-val MULX_def = Define`
+Definition MULX_def:
   MULX ic is mulz borrow (mshift:word5) =
     if (is = tn) /\ (ic = mla_mul) then
       mulz /\ ~borrow \/ ((4 -- 1) mshift = 15w)
     else
-      ARB`;
+      ARB
+End
 
-val PSRFBWRITE_def = Define`
-  PSRFBWRITE ic is = ~((ic = mla_mul) \/ (is = t4) /\ (ic = swi_ex))`;
+Definition PSRFBWRITE_def:
+  PSRFBWRITE ic is = ~((ic = mla_mul) \/ (is = t4) /\ (ic = swi_ex))
+End
 
-val SCTRLREGWRITE_def = Define`
-  SCTRLREGWRITE ic is = (is = t3) /\ (ic = reg_shift)`;
+Definition SCTRLREGWRITE_def:
+  SCTRLREGWRITE ic is = (is = t3) /\ (ic = reg_shift)
+End
 
-val ALUAWRITE_def = Define`
+Definition ALUAWRITE_def:
   ALUAWRITE ic is obaselatch =
     (is = t3) /\ ((ic = data_proc) \/ (ic = mrs_msr) \/
       (ic = ldr) \/ (ic = str) \/ (ic = ldm) \/
@@ -422,22 +454,26 @@ val ALUAWRITE_def = Define`
     (is = tn) /\ (ic = mla_mul) \/
     ~(is = tn) /\ (ic = stm) \/
     ~(is = t4) /\ ((ic = br) \/ (ic = swi_ex)) \/
-    (ic = ldm) /\ obaselatch`;
+    (ic = ldm) /\ obaselatch
+End
 
-val ALUBWRITE_def = Define`
+Definition ALUBWRITE_def:
   ALUBWRITE ic is =
     ~((ic = stm) /\ ~(is = t3) \/
       (is = t4) /\ ((ic = ldr) \/ (ic = str) \/ (ic = swp) \/ (ic = ldm)) \/
-      (is = tn) /\ ((ic = ldc) \/ (ic = stc)))`;
+      (is = tn) /\ ((ic = ldc) \/ (ic = stc)))
+End
 
-val BASELATCH_def = Define`
-  BASELATCH ic is = (ic = ldm) /\ (is = t4)`;
+Definition BASELATCH_def:
+  BASELATCH ic is = (ic = ldm) /\ (is = t4)
+End
 
-val NCPI_def = Define`
+Definition NCPI_def:
   NCPI ic = ~((ic = cdp_und) \/ (ic = mcr) \/ (ic = mrc) \/
-              (ic = ldc) \/ (ic = stc))`;
+              (ic = ldc) \/ (ic = stc))
+End
 
-val RWA_def = Define`
+Definition RWA_def:
   RWA ic is ireg (list:word16) oorp dataabt =
     let bits1916 = ^Rg 19 16 ireg
     and bits1512 = ^Rg 15 12 ireg
@@ -467,13 +503,14 @@ val RWA_def = Define`
         (T,14w)
       else if (ic = ldm) /\ ((is = tn) \/ (is = tm)) /\ ~dataabt then
         (T,oorp)
-      else (F,ARB)`;
+      else (F,ARB)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Data Path Control: Instruction Execute Phase 2 -------------------------- *)
 (* ------------------------------------------------------------------------- *)
 
-val ALU6_def = Define`
+Definition ALU6_def:
  ALU6 ic is ireg borrow2 (mul:word2) dataabt alua alub c =
   let opc = ^Rg 24 21 ireg in
    if ((ic = data_proc) /\ (is = t3)) \/
@@ -535,16 +572,18 @@ val ALU6_def = Define`
      if is = t5 then ADD (~alua) alub F  else ARB
    else if (ic = swp) \/ (is = t5) /\ (ic = mrc) then
      ALU_logic alub
-   else ARB`;
+   else ARB
+End
 
-val MSHIFT_def = Define`
+Definition MSHIFT_def:
   MSHIFT ic borrow mul count1 =
     if ic = mla_mul then
       MSHIFT2 borrow mul count1
     else
-      ARB`;
+      ARB
+End
 
-val PSRWA_def = Define`
+Definition PSRWA_def:
   PSRWA ic is ireg nbs =
     let bits1916 = ^Rg 19 16 ireg
     and bit22 = ireg %% 22
@@ -570,9 +609,10 @@ val PSRWA_def = Define`
       else if (is = t4) /\ (ic = swi_ex) then
          (T,F)
       else
-         (F,ARB)`;
+         (F,ARB)
+End
 
-val PSRDAT_def = Define`
+Definition PSRDAT_def:
   PSRDAT ic is ireg nbs (oorp:word4) dataabt (aregn:word3)
          cpsrl psrfb alu sctlc =
     let bit24 = ireg %% 24
@@ -627,63 +667,76 @@ val PSRDAT_def = Define`
       else if (is = tm) /\ (ic = ldm) then
         if (oorp = 15w) /\ ~dataabt then psrfb else cpsrl
       else
-        ARB`;
+        ARB
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Pipeline Control: phase 1 ----------------------------------------------- *)
 (* ------------------------------------------------------------------------- *)
 
-val ABORTINST_def = Define`
+Definition ABORTINST_def:
   ABORTINST iregval onewinst ointstart ireg flags =
-    ~iregval \/ (onewinst /\ ~ointstart /\ ~CONDITION_PASSED flags ireg)`;
+    ~iregval \/ (onewinst /\ ~ointstart /\ ~CONDITION_PASSED flags ireg)
+End
 
-val DATAABT_def = Define`
-  DATAABT dataabt2 endinst = dataabt2 /\ ~endinst`;
+Definition DATAABT_def:
+  DATAABT dataabt2 endinst = dataabt2 /\ ~endinst
+End
 
-val IC_def = Define`
+Definition IC_def:
   IC abortinst nxtic =
-    if abortinst then unexec else nxtic`;
+    if abortinst then unexec else nxtic
+End
 
-val IS_def = Define`
+Definition IS_def:
   IS abortinst nxtis =
-    if abortinst then t3 else nxtis`;
+    if abortinst then t3 else nxtis
+End
 
-val COPROC1_def = Define`
-  COPROC1 cpa ncpi = cpa /\ ~ncpi`;
+Definition COPROC1_def:
+  COPROC1 cpa ncpi = cpa /\ ~ncpi
+End
 
-val DATAABT1_def = Define`
+Definition DATAABT1_def:
   DATAABT1 dataabt2 endinst mrq2 nopc1 abort =
-    dataabt2 /\ ~endinst \/ mrq2 /\ nopc1 /\ abort`;
+    dataabt2 /\ ~endinst \/ mrq2 /\ nopc1 /\ abort
+End
 
-val FIQACT_def = Define`
-  FIQACT cpsrf ooonfq = ~cpsrf /\ ~ooonfq`;
+Definition FIQACT_def:
+  FIQACT cpsrf ooonfq = ~cpsrf /\ ~ooonfq
+End
 
-val IRQACT_def = Define`
-  IRQACT cpsri oooniq = ~cpsri /\ ~oooniq`;
+Definition IRQACT_def:
+  IRQACT cpsri oooniq = ~cpsri /\ ~oooniq
+End
 
-val PCCHANGE_def = Define`
-  PCCHANGE rwa = let (rw,a:word4) = rwa in rw /\ (a = 15w)`;
+Definition PCCHANGE_def:
+  PCCHANGE rwa = let (rw,a:word4) = rwa in rw /\ (a = 15w)
+End
 
-val RESETLATCH_def = Define`
+Definition RESETLATCH_def:
   RESETLATCH ph1 oorst resetstart resetlatch =
     if ph1 then
       oorst \/ resetlatch
     else (* ph2 *)
-      if oorst \/ resetstart then oorst else resetlatch`;
+      if oorst \/ resetstart then oorst else resetlatch
+End
 
-val RESETSTART_def = Define`
-  RESETSTART resetlatch oorst = resetlatch /\ ~oorst`;
+Definition RESETSTART_def:
+  RESETSTART resetlatch oorst = resetlatch /\ ~oorst
+End
 
-val INTSEQ_def = Define`
+Definition INTSEQ_def:
   INTSEQ mrq2 nopc1 abort dataabt2 endinst ncpi cpa cpb
          fiqact iregabt1 irqact resetlatch oorst =
      mrq2 /\ nopc1 /\ abort \/
      dataabt2 /\ ~endinst \/
      ~ncpi /\ cpa /\ cpb \/
      fiqact \/ iregabt1 \/ irqact \/
-     resetlatch /\ ~oorst`;
+     resetlatch /\ ~oorst
+End
 
-val NEWINST_def = Define`
+Definition NEWINST_def:
   NEWINST ic is cpb intseq pencz mulx =
      (ic = data_proc) \/ (ic = mrs_msr) \/ (ic = unexec) \/
      (ic = cdp_und) /\ ~cpb \/
@@ -697,34 +750,40 @@ val NEWINST_def = Define`
      (ic = ldm) /\ (is = tm) \/
      ((ic = swp) /\ (is = t6)) \/
      (ic = mla_mul) /\ (is = tn) /\ mulx \/
-     (ic = stm) /\ pencz /\ ((is = t4) \/ (is = tn))`;
+     (ic = stm) /\ pencz /\ ((is = t4) \/ (is = tn))
+End
 
-val PIPEALL_def = Define`
-   PIPEALL opipebll = opipebll`;
+Definition PIPEALL_def:
+   PIPEALL opipebll = opipebll
+End
 
-val PIPEBLL_def = Define`
+Definition PIPEBLL_def:
    PIPEBLL ic newinst =
-      newinst \/ (ic = br) \/ (ic = swi_ex)`;
+      newinst \/ (ic = br) \/ (ic = swi_ex)
+End
 
-val PIPECWRITE_def = Define`
-   PIPECWRITE newinst = newinst`;
+Definition PIPECWRITE_def:
+   PIPECWRITE newinst = newinst
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Pipeline Control: phase 2 ----------------------------------------------- *)
 (* ------------------------------------------------------------------------- *)
 
-val NXTIC_def = Define`
+Definition NXTIC_def:
   NXTIC intstart newinst ic ireg =
     if ~newinst then
       ic
     else if intstart then
       swi_ex
     else
-      DECODE_INST ireg`;
+      DECODE_INST ireg
+End
 
-val INC_IS_def = Define`INC_IS is = num2iseq (iseq2num is + 1)`;
+Definition INC_IS_def:  INC_IS is = num2iseq (iseq2num is + 1)
+End
 
-val NXTIS_def = Define`
+Definition NXTIS_def:
   NXTIS ic is newinst cpb pencz =
     if newinst \/
        ((ic = cdp_und) \/ (ic = mcr) \/ (ic = mrc) \/
@@ -736,54 +795,66 @@ val NXTIS_def = Define`
             ((ic = ldc) \/ (ic = stc)) /\ ~cpb then
        tn
     else
-       INC_IS is`;
+       INC_IS is
+End
 
-val PIPEAWRITE_def = Define`
-   PIPEAWRITE pipeall = pipeall`;
+Definition PIPEAWRITE_def:
+   PIPEAWRITE pipeall = pipeall
+End
 
-val PIPEBWRITE_def = Define`
-   PIPEBWRITE pipebll = pipebll`;
+Definition PIPEBWRITE_def:
+   PIPEBWRITE pipebll = pipebll
+End
 
-val PIPESTATAWRITE_def = Define`
-   PIPESTATAWRITE pipeall pcchange = pipeall \/ pcchange`;
+Definition PIPESTATAWRITE_def:
+   PIPESTATAWRITE pipeall pcchange = pipeall \/ pcchange
+End
 
-val PIPESTATBWRITE_def = Define`
-   PIPESTATBWRITE pipebll pcchange = pipebll \/ pcchange`;
+Definition PIPESTATBWRITE_def:
+   PIPESTATBWRITE pipebll pcchange = pipebll \/ pcchange
+End
 
-val PIPESTATIREGWRITE_def = Define`
+Definition PIPESTATIREGWRITE_def:
    PIPESTATIREGWRITE pipeall newinst srst =
-      pipeall \/ newinst \/ srst`;
+      pipeall \/ newinst \/ srst
+End
 
-val PIPEAVAL_def = Define`
-   PIPEAVAL srst pcchange = srst \/ ~pcchange`;
+Definition PIPEAVAL_def:
+   PIPEAVAL srst pcchange = srst \/ ~pcchange
+End
 
-val IREGVAL_def = Define`
-   IREGVAL pipecval srst pcchange = pipecval /\ ~srst /\ ~pcchange`;
+Definition IREGVAL_def:
+   IREGVAL pipecval srst pcchange = pipecval /\ ~srst /\ ~pcchange
+End
 
-val PIPEAABT_def = Define`
-  PIPEAABT abortlatch srst pcchange = abortlatch /\ (srst \/ ~pcchange)`;
+Definition PIPEAABT_def:
+  PIPEAABT abortlatch srst pcchange = abortlatch /\ (srst \/ ~pcchange)
+End
 
-val IREGABT2_def = Define`
-  IREGABT2 iregabt1 srst pcchange = iregabt1 /\ ~srst /\ ~pcchange`;
+Definition IREGABT2_def:
+  IREGABT2 iregabt1 srst pcchange = iregabt1 /\ ~srst /\ ~pcchange
+End
 
-val AREGN1_def = Define`
+Definition AREGN1_def:
   AREGN1 resetstart dataabt1 fiqactl irqactl coproc1 iregabt2 =
     if resetstart then 0w else
     if dataabt1   then 4w else
     if fiqactl    then 7w else
     if irqactl    then 6w else
     if coproc1    then 1w else
-    if iregabt2   then 3w else 2w:word3`;
+    if iregabt2   then 3w else 2w:word3
+End
 
-val ENDINST_def = Define`
+Definition ENDINST_def:
   ENDINST resetstart iregval newinst =
-    resetstart \/ iregval /\ newinst`;
+    resetstart \/ iregval /\ newinst
+End
 
 (* ------------------------------------------------------------------------- *)
 (* The State Function ------------------------------------------------------ *)
 (* ------------------------------------------------------------------------- *)
 
-val NEXT_ARM6_def = Define`
+Definition NEXT_ARM6_def:
    NEXT_ARM6 (^arm6state) (NRESET,ABORT,NFQ,NIQ,DATA,CPA,CPB) =
      let cpsr = CPSR_READ psr
      in
@@ -915,12 +986,14 @@ val NEXT_ARM6_def = Define`
            endinst' baselatch pipebll nxtic' nxtis' nopc oorst' resetlatch''
            NFQ oonfq NIQ ooniq pipeaabt' pipebabt' iregabt2' dataabt1 aregn1
            (~nmreq) nbw' nrw' sctrlreg' psrfb' oareg' mask' rp orp mul' mul2'
-           borrow mshift')`;
+           borrow mshift')
+End
 
-val OUT_ARM6_def = Define`
-  OUT_ARM6 (^arm6state) = (dout,~mrq2,nopc1,nrw,nbw,areg)`;
+Definition OUT_ARM6_def:
+  OUT_ARM6 (^arm6state) = (dout,~mrq2,nopc1,nrw,nbw,areg)
+End
 
-val INIT_ARM6_def = Define`
+Definition INIT_ARM6_def:
   INIT_ARM6 (^arm6state) =
     let ointstart1 = ~(aregn2 = 2w) in
     let nxtic1 = if ointstart1 then swi_ex else NXTIC F T nxtic ireg in
@@ -930,15 +1003,18 @@ val INIT_ARM6_def = Define`
               ointstart1 T T obaselatch T nxtic1 t3 F F F
               onfq ooonfq oniq oooniq pipeaabt pipebabt iregabt2 dataabt2
               aregn2 mrq2 nbw F sctrlreg psrfb oareg
-              (MASK nxtic1 t3 mask ARB) orp oorp mul mul2 borrow2 mshift)`;
+              (MASK nxtic1 t3 mask ARB) orp oorp mul mul2 borrow2 mshift)
+End
 
-val STATE_ARM6_def = Define`
+Definition STATE_ARM6_def:
   (STATE_ARM6 0 x = INIT_ARM6 x.state) /\
-  (STATE_ARM6 (SUC t) x = NEXT_ARM6 (STATE_ARM6 t x) (x.inp t))`;
+  (STATE_ARM6 (SUC t) x = NEXT_ARM6 (STATE_ARM6 t x) (x.inp t))
+End
 
-val ARM6_SPEC_def = Define`
+Definition ARM6_SPEC_def:
   ARM6_SPEC t x = let s = STATE_ARM6 t x in
-     <| state := s; out := OUT_ARM6 s |>`;
+     <| state := s; out := OUT_ARM6 s |>
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Projections ------------------------------------------------------------- *)
@@ -947,46 +1023,63 @@ val ARM6_SPEC_def = Define`
 val arm6inp =
  ``(NRESET:bool,ABORT:bool,NFIQ:bool,NIRQ:bool,DATA:word32,CPA:bool,CPB:bool)``;
 
-val PROJ_NRESET_def = Define `PROJ_NRESET (^arm6inp) = NRESET`;
-val PROJ_ABORT_def  = Define `PROJ_ABORT  (^arm6inp) = ABORT`;
-val PROJ_NFIQ_def   = Define `PROJ_NFIQ   (^arm6inp) = NFIQ`;
-val PROJ_NIRQ_def   = Define `PROJ_NIRQ   (^arm6inp) = NIRQ`;
-val PROJ_DATA_def   = Define `PROJ_DATA   (^arm6inp) = DATA`;
-val PROJ_CPA_def    = Define `PROJ_CPA    (^arm6inp) = CPA`;
-val PROJ_CPB_def    = Define `PROJ_CPB    (^arm6inp) = CPB`;
+Definition PROJ_NRESET_def:   PROJ_NRESET (^arm6inp) = NRESET
+End
+Definition PROJ_ABORT_def:    PROJ_ABORT  (^arm6inp) = ABORT
+End
+Definition PROJ_NFIQ_def:     PROJ_NFIQ   (^arm6inp) = NFIQ
+End
+Definition PROJ_NIRQ_def:     PROJ_NIRQ   (^arm6inp) = NIRQ
+End
+Definition PROJ_DATA_def:     PROJ_DATA   (^arm6inp) = DATA
+End
+Definition PROJ_CPA_def:      PROJ_CPA    (^arm6inp) = CPA
+End
+Definition PROJ_CPB_def:      PROJ_CPB    (^arm6inp) = CPB
+End
 
-val IS_RESET_def  = Define `IS_RESET  i (t:num) = ~PROJ_NRESET (i t)`;
-val IS_ABORT_def  = Define `IS_ABORT  i (t:num) =  PROJ_ABORT  (i t)`;
-val IS_FIQ_def    = Define `IS_FIQ    i (t:num) = ~PROJ_NFIQ   (i t)`;
-val IS_IRQ_def    = Define `IS_IRQ    i (t:num) = ~PROJ_NIRQ   (i t)`;
-val IS_ABSENT_def = Define `IS_ABSENT i (t:num) =  PROJ_CPA    (i t)`;
-val IS_BUSY_def   = Define `IS_BUSY   i (t:num) =  PROJ_CPB    (i t)`;
+Definition IS_RESET_def:    IS_RESET  i (t:num) = ~PROJ_NRESET (i t)
+End
+Definition IS_ABORT_def:    IS_ABORT  i (t:num) =  PROJ_ABORT  (i t)
+End
+Definition IS_FIQ_def:      IS_FIQ    i (t:num) = ~PROJ_NFIQ   (i t)
+End
+Definition IS_IRQ_def:      IS_IRQ    i (t:num) = ~PROJ_NIRQ   (i t)
+End
+Definition IS_ABSENT_def:   IS_ABSENT i (t:num) =  PROJ_CPA    (i t)
+End
+Definition IS_BUSY_def:     IS_BUSY   i (t:num) =  PROJ_CPB    (i t)
+End
 
 val arm6out =
   ``(dout:word32, mrq2:bool, nopc1:bool, nrw:bool, nbw:bool, areg:word32)``;
 
-val IS_MEMOP_def = Define `IS_MEMOP (^arm6out) = nopc1`;
+Definition IS_MEMOP_def:   IS_MEMOP (^arm6out) = nopc1
+End
 
 (* ------------------------------------------------------------------------- *)
 (* The Uniform Immersion --------------------------------------------------- *)
 (* ------------------------------------------------------------------------- *)
 
-val CP_INTERRUPT_def = Define`
+Definition CP_INTERRUPT_def:
   CP_INTERRUPT (onfq,ooonfq,oniq,oooniq,cpsrf,cpsri,pipebabt) i n =
     IS_ABSENT i n \/
     ~cpsrf /\ (if n = 0 then ~ooonfq else
                if n = 1 then ~onfq else IS_FIQ i (n - 2)) \/
     ~cpsri /\ (if n = 0 then ~oooniq else
                if n = 1 then ~oniq else IS_IRQ i (n - 2)) \/
-    pipebabt`; (* abort on fetch *)
+    pipebabt
+End(* abort on fetch *)
 
-val BUSY_WAIT_DONE_def = Define`
-  BUSY_WAIT_DONE iflags i n = IS_BUSY i n ==> CP_INTERRUPT iflags i n`;
+Definition BUSY_WAIT_DONE_def:
+  BUSY_WAIT_DONE iflags i n = IS_BUSY i n ==> CP_INTERRUPT iflags i n
+End
 
-val BUSY_WAIT_def = Define`
-  BUSY_WAIT x i = LEAST n. BUSY_WAIT_DONE x i n`;
+Definition BUSY_WAIT_def:
+  BUSY_WAIT x i = LEAST n. BUSY_WAIT_DONE x i n
+End
 
-val DUR_IC_def = Define`
+Definition DUR_IC_def:
   DUR_IC ic ireg rs iflags inp =
     if (ic = br) \/ (ic = swi_ex) then
       3
@@ -1022,14 +1115,16 @@ val DUR_IC_def = Define`
     else if (ic = ldc) \/ (ic = stc) then
       1 + b + (LEAST n. IS_BUSY (ADVANCE b inp) n)
     else (* unexec *)
-      1`;
+      1
+End
 
-val IFLAGS_def = Define`
+Definition IFLAGS_def:
   IFLAGS x = case x of (^arm6state) =>
       let (flags,cpsri,cpsrf,m) = DECODE_PSR (CPSR_READ psr) in
-        (onfq,ooonfq,oniq,oooniq,cpsrf,cpsri,pipebabt)`;
+        (onfq,ooonfq,oniq,oooniq,cpsrf,cpsri,pipebabt)
+End
 
-val DUR_X_def = Define`
+Definition DUR_X_def:
   DUR_X x = case x.state of (^arm6state) =>
     let (flags,cpsri,cpsrf,m) = DECODE_PSR (CPSR_READ psr) in
     let abortinst = ABORTINST iregval onewinst ointstart ireg flags in
@@ -1041,32 +1136,38 @@ val DUR_X_def = Define`
         (T,(LEAST t. IS_RESET x.inp t /\
               ~IS_RESET x.inp (t + 1) /\ ~IS_RESET x.inp (t + 2)) + 3)
       else
-        (F,d)`;
+        (F,d)
+End
 
-val DUR_ARM6_def = Define`DUR_ARM6 x = SND (DUR_X x)`;
+Definition DUR_ARM6_def:  DUR_ARM6 x = SND (DUR_X x)
+End
 
-val IMM_ARM6_def = Define`
+Definition IMM_ARM6_def:
   (IMM_ARM6 x 0 = 0) /\
   (IMM_ARM6 x (SUC t) =
      DUR_ARM6 <|state := STATE_ARM6 (IMM_ARM6 x t) x;
-       inp := ADVANCE (IMM_ARM6 x t) x.inp|> + IMM_ARM6 x t)`;
+       inp := ADVANCE (IMM_ARM6 x t) x.inp|> + IMM_ARM6 x t)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* The Data Abstraction ---------------------------------------------------- *)
 (* ------------------------------------------------------------------------- *)
 
-val SUB8_PC_def = Define `SUB8_PC (reg:reg) = (r15 =+ reg r15 - 8w) reg`;
-val ADD8_PC_def = Define `ADD8_PC (reg:reg) = (r15 =+ reg r15 + 8w) reg`;
+Definition SUB8_PC_def:   SUB8_PC (reg:reg) = (r15 =+ reg r15 - 8w) reg
+End
+Definition ADD8_PC_def:   ADD8_PC (reg:reg) = (r15 =+ reg r15 + 8w) reg
+End
 
-val ABS_ARM6_def = Define`
+Definition ABS_ARM6_def:
   ABS_ARM6 (^arm6state) =
-    ARM_EX (ARM (SUB8_PC reg) psr) ireg (num2exception (w2n aregn2))`;
+    ARM_EX (ARM (SUB8_PC reg) psr) ireg (num2exception (w2n aregn2))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Stream Domain and Abstraction ------------------------------------------- *)
 (* ------------------------------------------------------------------------- *)
 
-val STRM_ARM6_def = Define`
+Definition STRM_ARM6_def:
   STRM_ARM6 i =
     (!t. IS_RESET i t ==>
            ~(t = 0) /\ IS_RESET i (t - 1) \/
@@ -1074,9 +1175,10 @@ val STRM_ARM6_def = Define`
     (!t. IS_ABSENT i t ==> IS_BUSY i t) /\
     (!t. ?t2. t < t2 /\ ~IS_RESET i t2 /\ ~IS_RESET i (t2 + 1)) /\
     (!t. ?t2. t < t2 /\ (IS_BUSY i t2 ==> IS_ABSENT i t2)) /\
-    (!t. ~IS_BUSY i t ==> ?t2. t < t2 /\ IS_BUSY i t2)`;
+    (!t. ~IS_BUSY i t ==> ?t2. t < t2 /\ IS_BUSY i t2)
+End
 
-val exc2exception_def = Define`
+Definition exc2exception_def:
   exc2exception exc a n =
    case exc of
      reset     => SOME (Reset a)
@@ -1085,9 +1187,10 @@ val exc2exception_def = Define`
    | interrupt => SOME Irq
    | pabort    => SOME Prefetch
    | undefined => SOME Undef
-   | _         => NONE`;
+   | _         => NONE
+End
 
-val SMPL_EXC_ARM6_def = Define`
+Definition SMPL_EXC_ARM6_def:
   SMPL_EXC_ARM6 x t =
     case ABS_ARM6 (STATE_ARM6 (IMM_ARM6 x (t + 1)) x) of
       ARM_EX state ireg exc =>
@@ -1096,30 +1199,36 @@ val SMPL_EXC_ARM6_def = Define`
          let s = IMM_ARM6 x t in
          let b = BUSY_WAIT (IFLAGS (STATE_ARM6 s x)) (ADVANCE s x.inp) in
            IS_BUSY x.inp (s + b),
-         ireg)`;
+         ireg)
+End
 
-val SMPL_DATA_ARM6_def = Define`
+Definition SMPL_DATA_ARM6_def:
   SMPL_DATA_ARM6 x =
-    MAP_STRM TL (PACK (IMM_ARM6 x) (MAP_STRM PROJ_DATA x.inp))`;
+    MAP_STRM TL (PACK (IMM_ARM6 x) (MAP_STRM PROJ_DATA x.inp))
+End
 
-val SMPL_ARM6_def = Define`
+Definition SMPL_ARM6_def:
   SMPL_ARM6 x =
-    COMBINE (\(a,b,c) d. (a,b,c,d)) (SMPL_EXC_ARM6 x) (SMPL_DATA_ARM6 x)`;
+    COMBINE (\(a,b,c) d. (a,b,c,d)) (SMPL_EXC_ARM6 x) (SMPL_DATA_ARM6 x)
+End
 
-val MOVE_DOUT_def = Define`
+Definition MOVE_DOUT_def:
   MOVE_DOUT x l =
-    if NULL l then [] else ZIP (SNOC x (TL (MAP FST l)),MAP SND l)`;
+    if NULL l then [] else ZIP (SNOC x (TL (MAP FST l)),MAP SND l)
+End
 
-val MEMOP_def = Define`
+Definition MEMOP_def:
   MEMOP (^arm6out) =
     if nrw then
       MemWrite (~nbw) areg dout
     else
-      MemRead areg`;
+      MemRead areg
+End
 
-val PROJ_IREG_def = Define `PROJ_IREG (^arm6state) = ireg`;
+Definition PROJ_IREG_def:   PROJ_IREG (^arm6state) = ireg
+End
 
-val OSMPL_ARM6_def = Define`
+Definition OSMPL_ARM6_def:
   OSMPL_ARM6 x l =
     let x0 = SINIT INIT_ARM6 x in
     let ireg = PROJ_IREG x0.state in
@@ -1134,7 +1243,8 @@ val OSMPL_ARM6_def = Define`
         OUT_ARM (ABS_ARM6 x.state)
       else
         (MAP MEMOP o FILTER IS_MEMOP o
-         MOVE_DOUT (FST (OUT_ARM6 (STATE_ARM6 (IMM_ARM6 x 1) x)))) l`;
+         MOVE_DOUT (FST (OUT_ARM6 (STATE_ARM6 (IMM_ARM6 x 1) x)))) l
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Basic Theorems ---------------------------------------------------------- *)
@@ -1176,4 +1286,3 @@ val DUR_X = save_thm("DUR_X",
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory();

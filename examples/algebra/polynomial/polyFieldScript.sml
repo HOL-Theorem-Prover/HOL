@@ -4,25 +4,16 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polyField";
+Theory polyField
+Ancestors
+  pred_set list arithmetic number combinatorics divides gcd
+  monoid group ring field polynomial polyWeak polyRing
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* Polynomials over a Field F[x] Documentation                               *)
 (* ------------------------------------------------------------------------- *)
@@ -988,8 +979,4 @@ val poly_field_deg_exp = store_thm(
   metis_tac[MULT_SUC, MULT_COMM]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

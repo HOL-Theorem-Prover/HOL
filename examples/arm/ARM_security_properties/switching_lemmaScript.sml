@@ -1,17 +1,17 @@
-open HolKernel boolLib bossLib Parse proofManagerLib;
-open arm_coretypesTheory arm_seq_monadTheory arm_opsemTheory arm_stepTheory;
-open MMUTheory MMU_SetupTheory inference_rulesTheory switching_lemma_helperTheory;
-open priv_constraints_cpsr_pcTheory priv_constraints_lrTheory priv_constraints_bisimTheory tacticsLib;
-open user_lemma_basicsTheory;
-(* user_lemma_primitive_operationsTheory;*)
-open ARM_proverLib;
+Theory switching_lemma
+Ancestors
+  arm_coretypes arm_seq_monad arm_opsem arm_step MMU MMU_Setup
+  inference_rules switching_lemma_helper priv_constraints_cpsr_pc
+  priv_constraints_lr priv_constraints_bisim user_lemma_basics
+Libs
+  proofManagerLib tacticsLib ARM_proverLib
 
+(* user_lemma_primitive_operationsTheory;*)
 (****************************************************************)
 (*                    SWITCHING LEMMA                           *)
 (*                        Narges                                *)
 (****************************************************************)
 
-val _ =  new_theory("switching_lemma");
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -19,31 +19,33 @@ val let_ss = simpLib.mk_simpset [boolSimps.LET_ss];
 
 val _ = set_trace "Goalstack.show_proved_subtheorems" 0;
 
-val tautology_fun_def = Define `tautology_fun (g:word32)
+Definition tautology_fun_def:   tautology_fun (g:word32)
                                             (s1:arm_state) (s2:arm_state) =
-                               (T)`;
+                               (T)
+End
 
-val have_same_mem_accesses_def =
-Define `have_same_mem_accesses (g:word32)
+Definition have_same_mem_accesses_def:
+ have_same_mem_accesses (g:word32)
                                             (s1:arm_state) (s2:arm_state) =
                                (s1.accesses = s2.accesses) /\
-                               (s1.memory = s2.memory)`;
+                               (s1.memory = s2.memory)
+End
 
-val assert_mode_no_access_violation_def =
-Define `assert_mode_no_access_violation k s=
+Definition assert_mode_no_access_violation_def:
+ assert_mode_no_access_violation k s=
                         (~ access_violation s) /\
                         ((s.psrs (0,CPSR)).M = k)
-      `;
+End
 
-val assert_mode_access_violation_def =
-Define `assert_mode_access_violation k s=
+Definition assert_mode_access_violation_def:
+ assert_mode_access_violation k s=
                         (access_violation s) /\
                         ((s.psrs (0,CPSR)).M = k)
-      `;
+End
 
 
-val take_svc_exception1_def =
-Define `take_svc_exception1 =
+Definition take_svc_exception1_def:
+ take_svc_exception1 =
 (read_reg <|proc := 0|> 15w ||| exc_vector_base <|proc := 0|>
               ||| read_cpsr <|proc := 0|> ||| read_scr <|proc := 0|>
               ||| read_sctlr <|proc := 0|>) >>=
@@ -66,7 +68,8 @@ Define `take_svc_exception1 =
                                 T := sctlr.TE|>))
                     ||| branch_to <|proc := 0|>
                           (ExcVectorBase + 8w)) >>=
-                 (λ(u1,u2,u3,u4). constT ())))`;
+                 (λ(u1,u2,u3,u4). constT ())))
+End
 
 val trans_tautology_fun_thm =
     store_thm("trans_tautology_fun_thm",
@@ -945,8 +948,8 @@ val write_reg_irq_thm =
                     of take exception in no access violation case                  *)
 (* =====================================================+++++===================== *)
 
-val write_scr_cpsr_preconds_def =
-    Define `write_scr_cpsr_preconds g s1 s2 =
+Definition write_scr_cpsr_preconds_def:
+     write_scr_cpsr_preconds g s1 s2 =
            (~access_violation s1)
            /\  (mmu_requirements s1 g)
            /\ (mmu_requirements s2 g)
@@ -955,7 +958,8 @@ val write_scr_cpsr_preconds_def =
            /\ (¬access_violation s1)
            /\ ((s1.psrs (0,CPSR)).M = 16w)
            /\ (¬access_violation s2)
-           /\ ((s2.psrs (0,CPSR)).M = 16w )`;
+           /\ ((s2.psrs (0,CPSR)).M = 16w )
+End
 
 
 val TAKE_EXCEPTION_MODE_CHANGING_ERROR_TAC =
@@ -2171,8 +2175,8 @@ ASSUME_TAC  take_irq_exception_av_thm
 THEN ASSUME_TAC  take_irq_exception_priv_nav_thm
 THEN RW_TAC (srw_ss()) [deduce_pr_from_pr_av_and_pr_no_av_thm]);
 
-val take_svc_exception_part2_def =
-Define `take_svc_exception_part2 ii =
+Definition take_svc_exception_part2_def:
+ take_svc_exception_part2 ii =
 (read_reg ii 15w ||| exc_vector_base ii ||| read_cpsr ii
            ||| read_scr ii ||| read_sctlr ii) >>=
         (λ(pc,ExcVectorBase,cpsr,scr,sctlr).
@@ -2189,7 +2193,8 @@ Define `take_svc_exception_part2 ii =
                            <|I := T; IT := 0w; J := F; T := sctlr.TE;
                              E := sctlr.EE|>))
                  ||| branch_to ii (ExcVectorBase + 8w)) >>=
-              (λ(u1,u2,u3,u4). constT ())))`;
+              (λ(u1,u2,u3,u4). constT ())))
+End
 
 val take_svc_exception_part2_thm =
 store_thm ("take_svc_exception_part2_thm",
@@ -2354,4 +2359,3 @@ val take_svc_exception_thm =
                              THEN FULL_SIMP_TAC (srw_ss()) [take_svc_exception_part2_def]
               );
 
-val _ = export_theory();

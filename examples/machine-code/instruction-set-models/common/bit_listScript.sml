@@ -1,66 +1,77 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory stringTheory stringLib listTheory stringSimps listLib fcpTheory arithmeticTheory;
-open rich_listTheory;
-
-val _ = new_theory "bit_list";
-
+Theory bit_list
+Ancestors
+  words string list fcp arithmetic rich_list
+Libs
+  stringLib stringSimps listLib
 
 (* conversions between ``:bool list`` and ``:num`` *)
 
-val bits2num_def = Define `
+Definition bits2num_def:
   (bits2num [] = 0) /\
   (bits2num (T::bs) = 1 + 2 * bits2num bs) /\
-  (bits2num (F::bs) = 0 + 2 * bits2num bs)` ;
+  (bits2num (F::bs) = 0 + 2 * bits2num bs)
+End
 
-val n2bits_def = Define `
-  n2bits i n = if i = 0 then [] else (n MOD 2 = 1) :: n2bits (i-1) (n DIV 2)`;
+Definition n2bits_def:
+  n2bits i n = if i = 0 then [] else (n MOD 2 = 1) :: n2bits (i-1) (n DIV 2)
+End
 
-val w2bits_def = Define `
-  w2bits (w:'a word) = n2bits (dimindex(:'a)) (w2n w)`;
+Definition w2bits_def:
+  w2bits (w:'a word) = n2bits (dimindex(:'a)) (w2n w)
+End
 
-val b2w_def = Define `b2w v x = n2w (bits2num (v x))`;
+Definition b2w_def:   b2w v x = n2w (bits2num (v x))
+End
 
 
 (* parsing hex numbers represented by strings *)
 
-val is_hex_def = Define `
+Definition is_hex_def:
   is_hex s = EVERY (\n. ORD #"0" <= n /\ n <= ORD #"9" \/ ORD #"A" <= n /\ n <= ORD #"F")
-                   (MAP ORD (EXPLODE s))`;
+                   (MAP ORD (EXPLODE s))
+End
 
-val char2num_def = Define `
-  char2num c = let n = ORD c in if n <= ORD #"9" then n - ORD #"0" else n - ORD #"A" + 10`;
+Definition char2num_def:
+  char2num c = let n = ORD c in if n <= ORD #"9" then n - ORD #"0" else n - ORD #"A" + 10
+End
 
-val hex2num_aux_def = Define `
+Definition hex2num_aux_def:
   (hex2num_aux [] = 0) /\
-  (hex2num_aux (c::cs) = char2num c + 16 * hex2num_aux cs)`;
+  (hex2num_aux (c::cs) = char2num c + 16 * hex2num_aux cs)
+End
 
-val hex2num_def = Define `
-  hex2num s = hex2num_aux (REVERSE (EXPLODE s))`;
+Definition hex2num_def:
+  hex2num s = hex2num_aux (REVERSE (EXPLODE s))
+End
 
-val hex2word_def = Define `
-  hex2word s = n2w (hex2num s) :'a word`;
+Definition hex2word_def:
+  hex2word s = n2w (hex2num s) :'a word
+End
 
 (* EVAL ``hex2num "F8"`` gives ``242`` *)
 
 
 (* converting between bytes and words *)
 
-val bytes2word_def = Define `
+Definition bytes2word_def:
   (bytes2word [] = 0w:'a word) /\
-  (bytes2word (x:word8 ::xs) = w2w x || (bytes2word xs << 8))`;
+  (bytes2word (x:word8 ::xs) = w2w x || (bytes2word xs << 8))
+End
 
-val word2bytes_def = Define `
+Definition word2bytes_def:
   word2bytes n (w:'a word) =
-    if n = 0 then [] else (((7 >< 0) w):word8) :: word2bytes (n-1) (w >> 8)`;
+    if n = 0 then [] else (((7 >< 0) w):word8) :: word2bytes (n-1) (w >> 8)
+End
 
-val address_aligned_def = Define `
+Definition address_aligned_def:
   address_aligned n a =
     if n = 2  then (a && 1w = 0w) else
     if n = 4  then (a && 3w = 0w) else
     if n = 8  then (a && 7w = 0w) else
     if n = 16 then (a && 15w = 0w) else
-    if n = 32 then (a && 31w = 0w) else T`;
+    if n = 32 then (a && 31w = 0w) else T
+End
 
 val bytes2word_lem = SIMP_RULE (std_ss++wordsLib.SIZES_ss) []
   (CONJ (INST_TYPE [``:'b``|->``:32``] (CONJ w2w FCP_BETA))
@@ -218,4 +229,3 @@ val COLLECT_BYTES_n2w_bits2num = store_thm("COLLECT_BYTES_n2w_bits2num",
   THEN FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [w2bits_def,w2n_n2w,bits2num_n2bits]);
 
 
-val _ = export_theory ();

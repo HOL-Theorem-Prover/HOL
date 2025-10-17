@@ -17,11 +17,12 @@ val () = app load
    "primalityTools"];
 val () = quietdec := true;
 *)
+Theory group
+Ancestors
+  option list arithmetic divides gcd pred_set
+Libs
+  metisLib res_quanTools primalityTools
 
-open HolKernel Parse boolLib bossLib metisLib res_quanTools;
-open optionTheory listTheory arithmeticTheory dividesTheory gcdTheory;
-open pred_setTheory;
-open primalityTools;
 
 (*
 val () = quietdec := false;
@@ -31,7 +32,6 @@ val () = quietdec := false;
 (* Start a new theory called "group".                                        *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = new_theory "group";
 val _ = ParseExtras.temp_loose_equality()
 
 val ERR = mk_HOL_ERR "group";
@@ -228,8 +228,9 @@ val prime_one_lt = store_thm
 (* Basic definitions                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-val totient_def = Define
-  `totient n = CARD { i | 0 < i /\ i < n /\ (gcd n i = 1) }`;
+Definition totient_def:
+   totient n = CARD { i | 0 < i /\ i < n /\ (gcd n i = 1) }
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Fermat's Little Theorem                                                   *)
@@ -471,31 +472,36 @@ val () = Hol_datatype
               inv : 'a -> 'a;
               mult : 'a -> 'a -> 'a |>`;
 
-val Group_def = Define
-  `Group =
+Definition Group_def:
+   Group =
    { (g : 'a group) |
      g.id IN g.carrier /\
      (!x y :: (g.carrier). g.mult x y IN g.carrier) /\
      (!x :: (g.carrier). g.inv x IN g.carrier) /\
      (!x :: (g.carrier). g.mult g.id x = x) /\
      (!x :: (g.carrier). g.mult (g.inv x) x = g.id) /\
-     (!x y z :: (g.carrier). g.mult (g.mult x y) z = g.mult x (g.mult y z)) }`;
+     (!x y z :: (g.carrier). g.mult (g.mult x y) z = g.mult x (g.mult y z)) }
+End
 
-val group_exp_def = Define
-  `(group_exp G g 0 = G.id) /\
-   (group_exp G g (SUC n) = G.mult g (group_exp G g n))`;
+Definition group_exp_def:
+   (group_exp G g 0 = G.id) /\
+   (group_exp G g (SUC n) = G.mult g (group_exp G g n))
+End
 
-val AbelianGroup_def = Define
-  `AbelianGroup =
+Definition AbelianGroup_def:
+   AbelianGroup =
    { (g : 'a group) |
-     g IN Group /\ !x y :: (g.carrier). g.mult x y = g.mult y x }`;
+     g IN Group /\ !x y :: (g.carrier). g.mult x y = g.mult y x }
+End
 
-val FiniteGroup_def = Define
-  `FiniteGroup = { (g : 'a group) | g IN Group /\ FINITE g.carrier }`;
+Definition FiniteGroup_def:
+   FiniteGroup = { (g : 'a group) | g IN Group /\ FINITE g.carrier }
+End
 
-val FiniteAbelianGroup_def = Define
-  `FiniteAbelianGroup =
-   { (g : 'a group) | g IN FiniteGroup /\ g IN AbelianGroup }`;
+Definition FiniteAbelianGroup_def:
+   FiniteAbelianGroup =
+   { (g : 'a group) | g IN FiniteGroup /\ g IN AbelianGroup }
+End
 
 val group_accessors = fetch "-" "group_accessors";
 
@@ -1097,33 +1103,39 @@ val group_exp_eval = store_thm
 (* Homomorphisms, isomorphisms, endomorphisms, automorphisms and subgroups.  *)
 (* ------------------------------------------------------------------------- *)
 
-val GroupHom_def = Define
-  `GroupHom g h =
+Definition GroupHom_def:
+   GroupHom g h =
    { f |
      (!x :: (g.carrier). f x IN h.carrier) /\
      (f (g.id) = h.id) /\
      (!x :: (g.carrier). f (g.inv x) = h.inv (f x)) /\
-     (!x y :: (g.carrier). f (g.mult x y) = h.mult (f x) (f y)) }`;
+     (!x y :: (g.carrier). f (g.mult x y) = h.mult (f x) (f y)) }
+End
 
-val GroupIso_def = Define
-  `GroupIso g h =
+Definition GroupIso_def:
+   GroupIso g h =
    { f |
      f IN GroupHom g h /\
-     (!y :: (h.carrier). ?!x :: (g.carrier). f x = y) }`;
+     (!y :: (h.carrier). ?!x :: (g.carrier). f x = y) }
+End
 
-val GroupEndo_def = Define `GroupEndo g = GroupHom g g`;
+Definition GroupEndo_def:   GroupEndo g = GroupHom g g
+End
 
-val GroupAuto_def = Define `GroupAuto g = GroupIso g g`;
+Definition GroupAuto_def:   GroupAuto g = GroupIso g g
+End
 
-val subgroup_def = Define `subgroup g h = I IN GroupHom g h`;
+Definition subgroup_def:   subgroup g h = I IN GroupHom g h
+End
 
 (* ------------------------------------------------------------------------- *)
 (* The trivial group.                                                        *)
 (* ------------------------------------------------------------------------- *)
 
-val trivial_group_def = Define
-  `trivial_group e : 'a group =
-   <| carrier := {e}; id := e; inv := (\x. e); mult := (\x y. e) |>`;
+Definition trivial_group_def:
+   trivial_group e : 'a group =
+   <| carrier := {e}; id := e; inv := (\x. e); mult := (\x y. e) |>
+End
 
 val trivial_group = store_thm
   ("trivial_group",
@@ -1140,8 +1152,8 @@ val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 (* The cyclic group.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-val cyclic_group_def = Define
-  `cyclic_group e f : 'a group =
+Definition cyclic_group_def:
+   cyclic_group e f : 'a group =
    <| carrier := { x | ?n. FUNPOW f n e = x };
       id := e;
       inv := (\x. @y. ?yi. !xi.
@@ -1149,7 +1161,8 @@ val cyclic_group_def = Define
                 ((FUNPOW f xi e = x) ==> (FUNPOW f (xi + yi) e = e)));
       mult := (\x y. @z. !xi yi.
                 (FUNPOW f xi e = x) /\ (FUNPOW f yi e = y) ==>
-                (FUNPOW f (xi + yi) e = z)) |>`;
+                (FUNPOW f (xi + yi) e = z)) |>
+End
 
 val cyclic_group_alt = store_thm
   ("cyclic_group_alt",
@@ -1165,7 +1178,7 @@ val cyclic_group_alt = store_thm
           (cyclic_group e f).mult (FUNPOW f i e) (FUNPOW f j e) =
           FUNPOW f ((i + j) MOD n) e)``,
    REPEAT GEN_TAC
-   ++ SIMP_TAC std_ss [whileTheory.LEAST_EXISTS]
+   ++ SIMP_TAC std_ss [WhileTheory.LEAST_EXISTS]
    ++ Q.SPEC_TAC (`LEAST k. ~(k = 0) /\ (FUNPOW f k e = e)`,`k`)
    ++ GEN_TAC
    ++ STRIP_TAC
@@ -1315,7 +1328,7 @@ val cyclic_group = store_thm
    ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
    ++ CONJ_TAC >> (RW_TAC std_ss [] ++ METIS_TAC [])
    ++ POP_ASSUM MP_TAC
-   ++ SIMP_TAC std_ss [whileTheory.LEAST_EXISTS]
+   ++ SIMP_TAC std_ss [WhileTheory.LEAST_EXISTS]
    ++ Q.SPEC_TAC (`LEAST n. ~(n = 0) /\ (FUNPOW f n e = e)`,`k`)
    ++ REPEAT GEN_TAC
    ++ STRIP_TAC
@@ -1382,14 +1395,16 @@ val cyclic_group = store_thm
 (* The group of addition modulo n.                                           *)
 (* ------------------------------------------------------------------------- *)
 
-val Nonzero_def = Define `Nonzero = { n | ~(n = 0) }`;
+Definition Nonzero_def:   Nonzero = { n | ~(n = 0) }
+End
 
-val add_mod_def = Define
-  `add_mod n =
+Definition add_mod_def:
+   add_mod n =
    <| carrier := { i | i < n };
       id := 0;
       inv := (\i. (n - i) MOD n);
-      mult := (\i j. (i + j) MOD n) |>`;
+      mult := (\i j. (i + j) MOD n) |>
+End
 
 val group_add_mod = store_thm
   ("group_add_mod",
@@ -1431,14 +1446,16 @@ val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 (* The group of multiplication modulo p.                                     *)
 (* ------------------------------------------------------------------------- *)
 
-val Prime_def = Define `Prime = { n | prime n }`;
+Definition Prime_def:   Prime = { n | prime n }
+End
 
-val mult_mod_def = Define
-  `mult_mod p =
+Definition mult_mod_def:
+   mult_mod p =
    <| carrier := { i | ~(i = 0) /\ i < p };
       id := 1;
       inv := (\i. i ** (p - 2) MOD p);
-      mult := (\i j. (i * j) MOD p) |>`;
+      mult := (\i j. (i * j) MOD p) |>
+End
 
 val Prime_Nonzero = store_thm
   ("Prime_Nonzero",
@@ -1523,12 +1540,14 @@ val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 (* ElGamal encryption                                                        *)
 (* ------------------------------------------------------------------------- *)
 
-val elgamal_encrypt_def = Define
-  `elgamal_encrypt G g h m k =
-   (group_exp G g k, G.mult (group_exp G h k) m)`;
+Definition elgamal_encrypt_def:
+   elgamal_encrypt G g h m k =
+   (group_exp G g k, G.mult (group_exp G h k) m)
+End
 
-val elgamal_decrypt_def = Define
-  `elgamal_decrypt G x (a,b) = G.mult (G.inv (group_exp G a x)) b`;
+Definition elgamal_decrypt_def:
+   elgamal_decrypt G x (a,b) = G.mult (G.inv (group_exp G a x)) b
+End
 
 val elgamal_correctness = store_thm
   ("elgamal_correctness",
@@ -1549,4 +1568,3 @@ val elgamal_correctness = store_thm
 
 val _ = html_theory "group";
 
-val () = export_theory ();

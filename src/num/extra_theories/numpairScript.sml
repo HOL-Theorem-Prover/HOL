@@ -19,11 +19,12 @@ Definition tri_def[nocompute,simp]:
   (tri (SUC n) = SUC n + tri n)
 End
 
-val twotri_formula = store_thm(
-  "twotri_formula",
-  ``2 * tri n = n * (n + 1)``,
+Theorem twotri_formula:
+    2 * tri n = n * (n + 1)
+Proof
   Induct_on `n` THEN
-  SRW_TAC [ARITH_ss][tri_def, MULT_CLAUSES, LEFT_ADD_DISTRIB]);
+  SRW_TAC [ARITH_ss][tri_def, MULT_CLAUSES, LEFT_ADD_DISTRIB]
+QED
 
 Theorem tri_formula[compute]:
   tri n = (n * (n + 1)) DIV 2
@@ -38,11 +39,12 @@ val tri_eq_0 = Store_thm(
   Cases_on `n` THEN SRW_TAC [ARITH_ss][tri_def]);
 
 val DECIDE_TAC = SRW_TAC [ARITH_ss][]
-val tri_LT_I = store_thm(
-  "tri_LT_I",
-  ``!n m. n < m ==> tri n < tri m``,
+Theorem tri_LT_I:
+    !n m. n < m ==> tri n < tri m
+Proof
   Induct THEN Cases_on `m` THEN SRW_TAC [ARITH_ss][tri_def] THEN
-  RES_TAC THEN DECIDE_TAC);
+  RES_TAC THEN DECIDE_TAC
+QED
 
 val tri_LT = Store_thm(
   "tri_LT",
@@ -64,45 +66,50 @@ val tri_LE = Store_thm(
   ``!m n. tri m <= tri n <=> m <= n``,
   SRW_TAC [][LESS_OR_EQ]);
 
-val invtri0_def = Define`
+Definition invtri0_def:
   invtri0 n a = if n < a + 1 then (n,a)
                 else invtri0 (n - (a + 1)) (a + 1)
-`;
+End
 
-val invtri_def = Define`invtri n = SND (invtri0 n 0)`;
+Definition invtri_def:  invtri n = SND (invtri0 n 0)
+End
 val _ = Unicode.unicode_version {tmnm = "invtri",
                                  u = "tri"^UnicodeChars.sup_minus^
                                      UnicodeChars.sup_1}
 
-val invtri0_thm = store_thm(
-  "invtri0_thm",
-  ``!n a. tri (SND (invtri0 n a)) + FST (invtri0 n a) = n + tri a``,
+Theorem invtri0_thm:
+    !n a. tri (SND (invtri0 n a)) + FST (invtri0 n a) = n + tri a
+Proof
   HO_MATCH_MP_TAC (theorem "invtri0_ind") THEN SRW_TAC [][] THEN
   Cases_on `n < a + 1` THEN
   ONCE_REWRITE_TAC [invtri0_def] THEN SRW_TAC [ARITH_ss][] THEN
-  SRW_TAC [ARITH_ss][GSYM ADD1, tri_def]);
+  SRW_TAC [ARITH_ss][GSYM ADD1, tri_def]
+QED
 
-val SND_invtri0 = store_thm(
-  "SND_invtri0",
-  ``!n a. FST (invtri0 n a) < SUC (SND (invtri0 n a))``,
+Theorem SND_invtri0:
+    !n a. FST (invtri0 n a) < SUC (SND (invtri0 n a))
+Proof
   HO_MATCH_MP_TAC (theorem "invtri0_ind") THEN SRW_TAC [][] THEN
   Cases_on `n < a + 1` THEN ONCE_REWRITE_TAC [invtri0_def] THEN
-  SRW_TAC [ARITH_ss][]);
+  SRW_TAC [ARITH_ss][]
+QED
 
-val invtri_lower = store_thm(
-  "invtri_lower",
-  ``tri (invtri n) <= n``,
+Theorem invtri_lower:
+    tri (invtri n) <= n
+Proof
   SRW_TAC [][invtri_def] THEN
   Q.SPECL_THEN [`n`, `0`] MP_TAC invtri0_thm THEN
-  SRW_TAC [ARITH_ss][tri_def]);
+  SRW_TAC [ARITH_ss][tri_def]
+QED
 
-val invtri_upper = store_thm(
-  "invtri_upper",
-  ``n < tri (invtri n + 1)``,
+Theorem invtri_upper:
+    n < tri (invtri n + 1)
+Proof
   SRW_TAC [][invtri_def, GSYM ADD1, tri_def] THEN
   Q.SPECL_THEN [`n`, `0`] MP_TAC invtri0_thm THEN
   Q.SPECL_THEN [`n`, `0`] MP_TAC SND_invtri0 THEN
-  SRW_TAC [ARITH_ss][tri_def]);
+  SRW_TAC [ARITH_ss][tri_def]
+QED
 
 val invtri_linverse = Store_thm(
   "invtri_linverse",
@@ -111,9 +118,9 @@ val invtri_linverse = Store_thm(
             [invtri_upper, invtri_lower] THEN
   SRW_TAC [ARITH_ss][]);
 
-val invtri_unique = store_thm(
-  "invtri_unique",
-  ``tri y <= n /\ n < tri (y + 1) ==> (invtri n = y)``,
+Theorem invtri_unique:
+    tri y <= n /\ n < tri (y + 1) ==> (invtri n = y)
+Proof
   STRIP_TAC THEN MAP_EVERY ASSUME_TAC [invtri_lower, invtri_upper] THEN
   `invtri n < y \/ (invtri n = y) \/ y < invtri n` by DECIDE_TAC THENL [
      `invtri n + 1 <= y` by DECIDE_TAC THEN
@@ -122,24 +129,28 @@ val invtri_unique = store_thm(
      `y + 1 <= invtri n` by DECIDE_TAC THEN
      `tri (y + 1) <= tri (invtri n)` by SRW_TAC [][] THEN
      DECIDE_TAC
-  ]);
+  ]
+QED
 
-val invtri_linverse_r = store_thm(
-  "invtri_linverse_r",
-  ``y <= x ==> (invtri (tri x + y) = x)``,
+Theorem invtri_linverse_r:
+    y <= x ==> (invtri (tri x + y) = x)
+Proof
   STRIP_TAC THEN MATCH_MP_TAC invtri_unique THEN
-  SRW_TAC [ARITH_ss][GSYM ADD1, tri_def]);
+  SRW_TAC [ARITH_ss][GSYM ADD1, tri_def]
+QED
 
-val tri_le = store_thm(
-  "tri_le",
-  ``n <= tri n``,
-  Induct_on `n` THEN SRW_TAC [][tri_def]);
+Theorem tri_le:
+    n <= tri n
+Proof
+  Induct_on `n` THEN SRW_TAC [][tri_def]
+QED
 
-val invtri_le = store_thm(
-  "invtri_le",
-  ``invtri n <= n``,
+Theorem invtri_le:
+    invtri n <= n
+Proof
   Q_TAC SUFF_TAC `tri (invtri n) <= tri n` THEN1 SRW_TAC [][] THEN
-  METIS_TAC [tri_le, invtri_lower, arithmeticTheory.LESS_EQ_TRANS]);
+  METIS_TAC [tri_le, invtri_lower, arithmeticTheory.LESS_EQ_TRANS]
+QED
 
 
 
@@ -149,9 +160,9 @@ val invtri_le = store_thm(
     Numeric pair, fst and snd
    ---------------------------------------------------------------------- *)
 
-val npair_def = Define`
+Definition npair_def:
   npair m n = tri (m + n) + n
-`;
+End
 
 val _ = set_fixity "*," (Infixr 601)
 val _ = Unicode.unicode_version {tmnm = "*,", u = UTF8.chr 0x2297 (* \otimes *)}
@@ -161,13 +172,13 @@ val _ = TeX_notation {TeX = ("\\ensuremath{\\otimes}", 1),
                       hol = UTF8.chr 0x2297}
 
 
-val nfst_def = Define`
+Definition nfst_def:
   nfst n = tri (invtri n) + invtri n - n
-`;
+End
 
-val nsnd_def = Define`
+Definition nsnd_def:
   nsnd n = n - tri (invtri n)
-`;
+End
 
 val nfst_npair = Store_thm(
   "nfst_npair",
@@ -181,16 +192,17 @@ val nsnd_npair = Store_thm(
   SRW_TAC [][nsnd_def, npair_def] THEN
   SRW_TAC [ARITH_ss][invtri_linverse_r]);
 
-val npair_cases = store_thm(
-  "npair_cases",
-  ``!n. ?x y. n = (x *, y)``,
+Theorem npair_cases:
+    !n. ?x y. n = (x *, y)
+Proof
   STRIP_TAC THEN MAP_EVERY Q.EXISTS_TAC [`nfst n`, `nsnd n`] THEN
   SRW_TAC [][nsnd_def, nfst_def, npair_def] THEN
   `n <= tri (invtri n) + invtri n`
      by (ASSUME_TAC invtri_upper THEN
          FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [GSYM ADD1, tri_def]) THEN
   ASSUME_TAC invtri_lower THEN
-  ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) []);
+  ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) []
+QED
 
 val npair = Store_thm(
   "npair",
@@ -206,13 +218,16 @@ val npair_11 = Store_thm(
     POP_ASSUM (MP_TAC o Q.AP_TERM `nsnd`) THEN SRW_TAC [][]
   ]);
 
-val nfst_le = store_thm(
-  "nfst_le",
-  ``nfst n <= n``,
+Theorem nfst_le:
+    nfst n <= n
+Proof
   SRW_TAC [][nfst_def] THEN
   MAP_EVERY ASSUME_TAC [invtri_lower, invtri_le] THEN
-  DECIDE_TAC);
-val nsnd_le = store_thm("nsnd_le", ``nsnd n <= n``, SRW_TAC [][nsnd_def]);
+  DECIDE_TAC
+QED
+Theorem nsnd_le:   nsnd n <= n
+Proof SRW_TAC [][nsnd_def]
+QED
 
 Theorem npair00[simp]:
   npair 0 0 = 0

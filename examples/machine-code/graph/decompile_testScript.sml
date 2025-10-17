@@ -1,7 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-open decompileLib backgroundLib;
-
-val _ = new_theory "decompile_test";
+Theory decompile_test
+Ancestors
+  GraphLang
+Libs
+  decompileLib backgroundLib
 
 (*
 
@@ -49,5 +50,3 @@ val base_name = "loop-m0/example";
 val fast = false;
 val ignore_names = "";
 val res = decomp base_name fast ignore_names;
-
-val _ = export_theory();

@@ -1,9 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-local open stringTheory in end
-open pred_setTheory listTheory
-
-val _ = new_theory "ncfolLang";
+Theory ncfolLang
+Ancestors
+  pred_set list string[qualified]
 
 val _ = Unicode.unicode_version {tmnm = "INSERT", u = "⨾"}
 
@@ -702,4 +699,3 @@ Proof
 QED
 
 
-val _ = export_theory();

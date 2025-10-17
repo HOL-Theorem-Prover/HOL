@@ -10,20 +10,16 @@
 (*                                                                           *)
 (*   Enriched by Chun Tian (Australian National University, 2024 - 2025)     *)
 (* ========================================================================= *)
+Theory distribution  (* was: "normal_rv" *)
+Ancestors
+  combin arithmetic logroot pred_set topology pair cardinal real
+  seq transc real_sigma iterate real_topology derivative metric
+  nets sigma_algebra extreal_base extreal real_borel measure
+  borel lebesgue martingale probability
+Libs
+  numLib hurdUtils pred_setLib tautLib jrhUtils realLib
 
-open HolKernel Parse boolLib bossLib;
 
-open combinTheory arithmeticTheory numLib logrootTheory hurdUtils pred_setLib
-     pred_setTheory topologyTheory pairTheory tautLib jrhUtils cardinalTheory;
-
-open realTheory realLib seqTheory transcTheory real_sigmaTheory iterateTheory
-     real_topologyTheory derivativeTheory metricTheory netsTheory;
-
-open sigma_algebraTheory extreal_baseTheory extrealTheory real_borelTheory
-     measureTheory borelTheory lebesgueTheory martingaleTheory
-     probabilityTheory;
-
-val _ = new_theory "distribution"; (* was: "normal_rv" *)
 
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 val T_TAC = rpt (Q.PAT_X_ASSUM ‘T’ K_TAC);
@@ -5477,7 +5473,6 @@ Proof
  >> simp [Abbr ‘g’]
 QED
 
-val _ = export_theory ();
 val _ = html_theory "distribution";
 
 (* References:

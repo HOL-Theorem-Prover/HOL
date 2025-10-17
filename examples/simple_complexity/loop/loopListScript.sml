@@ -4,28 +4,18 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "loopList";
+Theory loopList
+Ancestors
+  loop bitsize arithmetic divides number combinatorics list
+  rich_list listRange
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* Get dependent theories in lib *)
 (* val _ = load "loopTheory"; *)
-open loopTheory;
-
 (* val _ = load "bitsizeTheory"; *)
-open bitsizeTheory;
-
-(* open dependent theories *)
-open arithmeticTheory dividesTheory numberTheory combinatoricsTheory listTheory
-     rich_listTheory listRangeTheory;
-
 (* Overload sublist by infix operator *)
 val _ = temp_overload_on ("<=", ``sublist``);
 
@@ -2499,8 +2489,4 @@ val loop2_list_tail_head_count_exit_by_sum = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

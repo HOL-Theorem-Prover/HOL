@@ -1,11 +1,7 @@
 
-open HolKernel boolLib bossLib Parse;
-
-open ppc_coretypesTheory;
-
-
-val _ = new_theory "ppc_ast";
-
+Theory ppc_ast
+Ancestors
+  ppc_coretypes
 
 (* ---------------------------------------------------------------------------------- *>
 
@@ -118,4 +114,3 @@ val _ = Hol_datatype `
 
 
 
-val _ = export_theory ();

@@ -4,41 +4,17 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "AKSsets";
-
 (* ------------------------------------------------------------------------- *)
-
-open jcLib;
-
-(* open dependent theories *)
-open prim_recTheory pred_setTheory listTheory arithmeticTheory dividesTheory
-     gcdTheory gcdsetTheory logrootTheory numberTheory combinatoricsTheory
-     primeTheory;
-
-(* Get dependent theories local *)
-open AKSintroTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory
-     polyBinomialTheory;
-
-open polyMonicTheory;
-
-open polyFieldTheory;
-open polyFieldDivisionTheory;
-open polyFieldModuloTheory;
-open polyRingModuloTheory;
-open polyModuloRingTheory;
-open polyIrreducibleTheory;
-open polyRootTheory;
-open polyProductTheory;
-
-open fieldInstancesTheory;
+Theory AKSsets
+Ancestors
+  prim_rec pred_set list arithmetic divides gcd gcdset logroot
+  number combinatorics prime AKSintro monoid group ring field
+  polynomial polyWeak polyRing polyDivision polyBinomial
+  polyMonic polyField polyFieldDivision polyFieldModulo
+  polyRingModulo polyModuloRing polyIrreducible polyRoot
+  polyProduct fieldInstances
+Libs
+  jcLib
 
 val _ = intLib.deprecate_int ();
 
@@ -221,9 +197,9 @@ val _ = overload_on ("|c|", ``###c``);
 
 (* The set of introspective exponents *)
 (* N = {m | gcd(m, k) = 1 /\ m intro p  where p = X + |c|, and for 0 < c <= s } *)
-val setN_def = Define`
+Definition setN_def:
   setN (r:'a ring) (k:num) (s:num) = {m | coprime m k /\ (!c. 0 < c /\ c <= s ==> m intro X + |c|) }
-`;
+End
 
 (* overload for setN *)
 val _ = overload_on ("N", ``setN (r:'a ring) k s``);
@@ -376,9 +352,9 @@ val setN_has_char_and_cofactor = store_thm(
 
 (* P = {p | ((peval p X) ** m == peval p (X ** m)) (pm (X ** k - |1|)) for m IN N } *)
 (* P = {p | m intro p, for m IN N } *)
-val setP_def = Define`
+Definition setP_def:
   setP (r:'a ring) (k:num) (s:num) = {p | poly p /\ !m. m IN N ==> m intro p }
-`;
+End
 
 (* overload for setP *)
 val _ = overload_on ("P", ``setP (r:'a ring) k s``);
@@ -467,9 +443,9 @@ val setP_has_X_add_c = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define M = IMAGE (MOD k) N. *)
-val modN_def = Define`
+Definition modN_def:
   modN (r:'a ring) (k:num) (s:num) = IMAGE (\m. m MOD k) N
-`;
+End
 
 (* overload for modN *)
 val _ = overload_on ("M", ``modN (r:'a ring) k s``);
@@ -877,9 +853,9 @@ val modN_card_gt_1_by_ulog = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define Q z = IMAGE (pmod z) P. *)
-val modP_def = Define`
+Definition modP_def:
   modP (r:'a ring) (k:num) (s:num) (z:'a poly) = IMAGE (\p. p % z) P
-`;
+End
 (* Note: s is hidden in set P for the range. *)
 (* overload for modP *)
 val _ = overload_on ("Q", ``modP (r:'a ring) k s``);
@@ -1023,9 +999,9 @@ val setP_element_mod = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the reduced set of poly IN P of deg < CARD A0 *)
-val reduceP_def = Define`
+Definition reduceP_def:
   reduceP (r:'a ring) (k:num) (s:num) = {p | p IN P /\ deg p < CARD M }
-`;
+End
 
 (* overload for reduceP *)
 val _ = overload_on ("PM", ``reduceP (r:'a ring) k s``);
@@ -1143,10 +1119,10 @@ val reduceP_has_X = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the reduced set of exponents in N with indexes <= n, later n = sqrt(CARD M) *)
-val reduceN_def = Define`
+Definition reduceN_def:
   reduceN (p:num) (q:num) n =
      IMAGE (\(i, j). p ** i * q ** j) ((count (SUC n)) CROSS (count (SUC n)))
-`;
+End
 (* Note: indexes from 0 to n inclusive. *)
 
 (* overload for reduceN *)
@@ -1495,10 +1471,10 @@ Thus this absolute maximum is independent of the range s of polynomial checks.
 (* ------------------------------------------------------------------------- *)
 
 (* Define a simple set of polynomials in reduceP *)
-val reduceP_poly_def = Define `
+Definition reduceP_poly_def:
   reduceP_poly (r:'a ring) n =
     IMAGE (\s. PPROD (IMAGE (\c. X + |c|) s)) (PPOW (IMAGE SUC (count n)))
-`;
+End
 
 (* overload for reduceP_poly *)
 val _ = overload_on ("PPM", ``reduceP_poly r``);
@@ -1656,8 +1632,4 @@ val reduceP_poly_card = store_thm(
   rw[CARD_PPOW, CARD_INJ_IMAGE]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

@@ -23,18 +23,12 @@ This is a combinatorial proof without reference to Group Theory.
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "FLTnecklace";
+Theory FLTnecklace
+Ancestors
+  arithmetic divides logroot gcd pred_set number combinatorics
+  cycle pattern
 
 (* ------------------------------------------------------------------------- *)
-
-open arithmeticTheory dividesTheory logrootTheory gcdTheory pred_setTheory
-     numberTheory combinatoricsTheory;
-
-open cycleTheory patternTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Fermat's Little Theorem by necklace Documentation                         *)
@@ -1185,8 +1179,4 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

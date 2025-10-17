@@ -13,20 +13,15 @@
 (*                                                                           *)
 (*                                                                           *)
 (* ========================================================================= *)
+Theory transform_FT_RBD
+Ancestors
+  lim arithmetic real prim_rec real_probability seq pred_set
+  res_quan sorting list transc rich_list pair combin option
+  extreal real_measure real_lebesgue real_sigma sat num RBD
+  FT_deep VDC ASN_gateway
+Libs
+  res_quanTools realLib dep_rewrite extra_pred_setTools
 
-open HolKernel Parse boolLib bossLib;
-
-open limTheory arithmeticTheory realTheory prim_recTheory real_probabilityTheory
-     seqTheory pred_setTheory res_quanTheory sortingTheory res_quanTools
-     listTheory transcTheory rich_listTheory pairTheory combinTheory realLib
-     optionTheory dep_rewrite;
-
-open extrealTheory real_measureTheory real_lebesgueTheory real_sigmaTheory
-     satTheory numTheory;
-
-open RBDTheory FT_deepTheory VDCTheory ASN_gatewayTheory extra_pred_setTools;
-
-val _ = new_theory "transform_FT_RBD";
 
 val op by = BasicProvers.byA;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
@@ -124,4 +119,3 @@ Proof
 RW_TAC std_ss[majority_voting_FT_gate_def,K_out_N_struct_def]
 QED
 
-val _ = export_theory();

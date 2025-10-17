@@ -1,6 +1,7 @@
-open HolKernel Parse boolLib bossLib integerTheory EVAL_ringTheory;
+Theory integerRing
+Ancestors
+  integer EVAL_ring
 
-val _ = new_theory "integerRing";
 val _ = ParseExtras.temp_loose_equality()
 
 val ARW_TAC = RW_TAC arith_ss;
@@ -24,4 +25,3 @@ val int_rewrites = save_thm("int_rewrites", LIST_CONJ
     numeral_lt, numeral_lte, numeral_sub, iSUB_THM, AND_CLAUSES ]);
 end;
 
-val _ = export_theory();

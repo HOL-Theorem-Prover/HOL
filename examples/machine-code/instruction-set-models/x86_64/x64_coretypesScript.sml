@@ -1,9 +1,7 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory listTheory;
-
-val _ = new_theory "x64_coretypes";
-
+Theory x64_coretypes
+Ancestors
+  words list
 
 (* ---------------------------------------------------------------------------------- *>
 
@@ -41,4 +39,3 @@ val ALL_DISTINCT_Zreg = store_thm("ALL_DISTINCT_Zreg",
       zR12;zR13;zR14;zR15;zGhost_stack_top;zGhost_stack_bottom]:Zreg list)``,
   SRW_TAC[][]);
 
-val _ = export_theory ();

@@ -27,7 +27,7 @@ ENV PATH=/ML/polyml/bin:/ML/HOL/bin:$PATH
 # Some necessary Debian packages
 # NOTE: GCC 13 is necessary for building Moscow ML (default compiler is now GCC 14).
 RUN apt-get update -qy
-RUN apt-get install -qy build-essential git libgmp-dev wget curl procps file unzip vim
+RUN apt-get install -qy build-essential git libgmp-dev wget curl procps file unzip vim parallel
 
 # for Unicode display, learnt from Magnus Myreen
 RUN apt-get install -qy locales-all terminfo

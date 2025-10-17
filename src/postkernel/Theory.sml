@@ -64,6 +64,29 @@ type num = Arbnum.num
 val ERR  = mk_HOL_ERR "Theory";
 val WARN = HOL_WARNING "Theory";
 
+(* Certain words cannot be the names of theories.
+   These forbidden words are stored in a text file that we read on
+   startup. *)
+val reserved_words_filename =
+    let
+      infix ++
+      val op++ = OS.Path.concat
+    in
+      Globals.HOLDIR ++ "src" ++ "prekernel" ++ "HOLkeywords.txt"
+    end
+val reserved_names = let
+  val chomp = Portable.remove_external_wspace
+  val istrm = TextIO.openIn reserved_words_filename
+  fun recurse A =
+      case TextIO.inputLine istrm of
+          NONE => (TextIO.closeIn istrm; A)
+        | SOME s => recurse (chomp s::A)
+in
+  recurse []
+end handle e => (print ("Exception raised reading reserved words file: " ^
+                        General.exnMessage e);
+                 OS.Process.exit OS.Process.failure);
+
 open DB_dtype
 
 val delta_hook : TheoryDelta.t Listener.t = Listener.new_listener()
@@ -984,6 +1007,10 @@ fun new_theory str =
     if not(Lexis.ok_identifier str) then
       raise ERR "new_theory"
                 ("proposed theory name "^Lib.quote str^" is not an identifier")
+    else if Portable.mem str reserved_names then
+      raise ERR "new_theory"
+            ("proposed theory name "^Lib.quote str^
+             " is not permitted as a theory name.")
     else let
         val thy as {name=thyname, ...} = theCT()
         val tdelta = TheoryDelta.NewTheory{oldseg=thyname,newseg=str}

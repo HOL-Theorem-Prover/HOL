@@ -4,8 +4,6 @@ Ancestors
 Libs
   pairSyntax simpLib BasicProvers boolSimps metisLib
 
-val DEF = Lib.with_flag (boolLib.def_suffix, "_DEF") TotalDefn.Define
-
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
@@ -13,11 +11,14 @@ val DEF = Lib.with_flag (boolLib.def_suffix, "_DEF") TotalDefn.Define
 Type M[local] = “:'state -> 'a # 'state”
 
 (* identity of the Kleisli category *)
-val UNIT_DEF = DEF `UNIT (x:'b) = \(s:'a). (x, s)`;
+Definition UNIT_DEF:   UNIT (x:'b) = \(s:'a). (x, s)
+End
 
-val BIND_DEF = DEF `BIND (g: ('b, 'a) M) (f: 'b -> ('c, 'a) M) = UNCURRY f o g`;
+Definition BIND_DEF:   BIND (g: ('b, 'a) M) (f: 'b -> ('c, 'a) M) = UNCURRY f o g
+End
 
-val IGNORE_BIND_DEF = DEF `IGNORE_BIND f g = BIND f (\x. g)`;
+Definition IGNORE_BIND_DEF:   IGNORE_BIND f g = BIND f (\x. g)
+End
 
 val _ =
     monadsyntax.declare_monad (
@@ -29,16 +30,20 @@ val _ =
 val _ = monadsyntax.add_monadsyntax()
 val _ = monadsyntax.enable_monad "state"
 
-val MMAP_DEF = DEF `MMAP (f: 'c -> 'b) (m: ('c, 'a) M) = BIND m (UNIT o f)`;
+Definition MMAP_DEF:   MMAP (f: 'c -> 'b) (m: ('c, 'a) M) = BIND m (UNIT o f)
+End
 
-val JOIN_DEF = DEF `JOIN (z: (('b, 'a) M, 'a) M) = BIND z I`;
+Definition JOIN_DEF:   JOIN (z: (('b, 'a) M, 'a) M) = BIND z I
+End
 
 (* functor (on arrows) from the Kleisli category *)
-val EXT_DEF = DEF `EXT (f: 'b -> ('c, 's) M) (m: ('b, 's) M) = UNCURRY f o m`;
+Definition EXT_DEF:   EXT (f: 'b -> ('c, 's) M) (m: ('b, 's) M) = UNCURRY f o m
+End
 
 (* composition in the Kleisli category *)
-val MCOMP_DEF =
-  DEF `MCOMP (g: 'b -> ('c, 's) M) (f: 'a -> ('b, 's) M) = EXT g o f` ;
+Definition MCOMP_DEF:
+   MCOMP (g: 'b -> ('c, 's) M) (f: 'a -> ('b, 's) M) = EXT g o f
+End
 
 val FOR_def = TotalDefn.tDefine "FOR"
  `(FOR : num # num # (num -> (unit, 'state) M) -> (unit, 'state) M) (i, j, a) =
@@ -48,30 +53,37 @@ val FOR_def = TotalDefn.tDefine "FOR"
         BIND (a i) (\u. FOR (if i < j then i + 1 else i - 1, j, a))`
   (TotalDefn.WF_REL_TAC `measure (\(i, j, a). if i < j then j - i else i - j)`)
 
-val FOREACH_def = TotalDefn.Define`
+Definition FOREACH_def:
    ((FOREACH : 'a list # ('a -> (unit, 'state) M) -> (unit, 'state) M) ([], a) =
        UNIT ()) /\
-   (FOREACH (h :: t, a) = BIND (a h) (\u. FOREACH (t, a)))`
+   (FOREACH (h :: t, a) = BIND (a h) (\u. FOREACH (t, a)))
+End
 
-val READ_def = TotalDefn.Define`
-   (READ : ('state -> 'a) -> ('a, 'state) M) f = \s. (f s, s)`;
+Definition READ_def:
+   (READ : ('state -> 'a) -> ('a, 'state) M) f = \s. (f s, s)
+End
 
-val WRITE_def = TotalDefn.Define`
-   (WRITE : ('state -> 'state) -> (unit, 'state) M) f = \s. ((), f s)`;
+Definition WRITE_def:
+   (WRITE : ('state -> 'state) -> (unit, 'state) M) f = \s. ((), f s)
+End
 
-val NARROW_def = TotalDefn.Define`
+Definition NARROW_def:
    (NARROW : 'b -> ('a, 'b # 'state) M -> ('a, 'state) M) v f =
-   \s. let (r, s1) = f (v, s) in (r, SND s1)`
+   \s. let (r, s1) = f (v, s) in (r, SND s1)
+End
 
-val WIDEN_def = TotalDefn.Define`
+Definition WIDEN_def:
    (WIDEN : ('a, 'state) M -> ('a, 'b # 'state) M) f =
-   \(s1, s2). let (r, s3) = f s2 in (r, (s1, s3))`
+   \(s1, s2). let (r, s3) = f s2 in (r, (s1, s3))
+End
 
-val sequence_def = TotalDefn.Define`
-   sequence = FOLDR (\m ms. BIND m (\x. BIND ms (\xs. UNIT (x::xs)))) (UNIT [])`
+Definition sequence_def:
+   sequence = FOLDR (\m ms. BIND m (\x. BIND ms (\xs. UNIT (x::xs)))) (UNIT [])
+End
 
-val mapM_def = TotalDefn.Define`
-   mapM f = sequence o MAP f`
+Definition mapM_def:
+   mapM f = sequence o MAP f
+End
 
 val mwhile_exists = prove(
   ``!g b. ?f.
@@ -156,189 +168,223 @@ val Know = Q_TAC KNOW_TAC
 val FUN_EQ_TAC = CONV_TAC (ONCE_DEPTH_CONV FUN_EQ_CONV)
 
 (* UNIT and MCOMP are identity and composition of the Kleisli category *)
-val UNIT_CURRY = store_thm
-  ("UNIT_CURRY",
-   ``UNIT = CURRY I``,
+Theorem UNIT_CURRY:
+     UNIT = CURRY I
+Proof
    REWRITE_TAC [CURRY_DEF, UNIT_DEF, FUN_EQ_THM, combinTheory.I_THM]
-    >> BETA_TAC >> REWRITE_TAC []) ;
+    >> BETA_TAC >> REWRITE_TAC []
+QED
 
-val MCOMP_ALT = store_thm
-  ("MCOMP_ALT",
-  ``MCOMP g f = CURRY (UNCURRY g o UNCURRY f)``,
-  REWRITE_TAC [MCOMP_DEF, CURRY_DEF, FUN_EQ_THM, o_THM, UNCURRY_DEF, EXT_DEF]);
+Theorem MCOMP_ALT:
+    MCOMP g f = CURRY (UNCURRY g o UNCURRY f)
+Proof
+  REWRITE_TAC [MCOMP_DEF, CURRY_DEF, FUN_EQ_THM, o_THM, UNCURRY_DEF, EXT_DEF]
+QED
 
-val MCOMP_ID = store_thm
-  ("MCOMP_ID",
-   ``(MCOMP g UNIT = g) /\ (MCOMP UNIT f = f)``,
+Theorem MCOMP_ID:
+     (MCOMP g UNIT = g) /\ (MCOMP UNIT f = f)
+Proof
   REWRITE_TAC [MCOMP_ALT, UNIT_CURRY,
-    UNCURRY_CURRY_THM, CURRY_UNCURRY_THM, I_o_ID]);
+    UNCURRY_CURRY_THM, CURRY_UNCURRY_THM, I_o_ID]
+QED
 
-val MCOMP_ASSOC = store_thm
-  ("MCOMP_ASSOC",
-   ``MCOMP f (MCOMP g h) = MCOMP (MCOMP f g) h``,
-  REWRITE_TAC [MCOMP_ALT, o_ASSOC, UNCURRY_CURRY_THM, CURRY_UNCURRY_THM]);
+Theorem MCOMP_ASSOC:
+     MCOMP f (MCOMP g h) = MCOMP (MCOMP f g) h
+Proof
+  REWRITE_TAC [MCOMP_ALT, o_ASSOC, UNCURRY_CURRY_THM, CURRY_UNCURRY_THM]
+QED
 
 (* EXT is a functor from the Kleisli category into the (I,o) category *)
-val EXT_UNIT = store_thm
-  ("EXT_UNIT",
-  ``EXT UNIT = I``,
+Theorem EXT_UNIT:
+    EXT UNIT = I
+Proof
   REWRITE_TAC [FUN_EQ_THM, EXT_DEF, UNIT_CURRY,
-    UNCURRY_CURRY_THM, o_THM, I_THM]);
+    UNCURRY_CURRY_THM, o_THM, I_THM]
+QED
 
-val EXT_MCOMP = store_thm
-  ("EXT_MCOMP",
-  ``EXT (MCOMP g f) = EXT g o EXT f``,
-  REWRITE_TAC [FUN_EQ_THM, EXT_DEF, UNCURRY_CURRY_THM, o_THM, MCOMP_ALT]);
+Theorem EXT_MCOMP:
+    EXT (MCOMP g f) = EXT g o EXT f
+Proof
+  REWRITE_TAC [FUN_EQ_THM, EXT_DEF, UNCURRY_CURRY_THM, o_THM, MCOMP_ALT]
+QED
 
-val EXT_o_UNIT = store_thm
-  ("EXT_o_UNIT",
-  ``EXT f o UNIT = f``,
-  REWRITE_TAC [GSYM MCOMP_DEF, MCOMP_ID]);
+Theorem EXT_o_UNIT:
+    EXT f o UNIT = f
+Proof
+  REWRITE_TAC [GSYM MCOMP_DEF, MCOMP_ID]
+QED
 
 (* UNIT o _ is the functor in the opposite direction *)
-val UNIT_o_MCOMP = store_thm
-  ("UNIT_o_MCOMP",
-  ``MCOMP (UNIT o g) (UNIT o f) = UNIT o g o f``,
-  REWRITE_TAC [MCOMP_DEF, o_ASSOC, EXT_o_UNIT]) ;
+Theorem UNIT_o_MCOMP:
+    MCOMP (UNIT o g) (UNIT o f) = UNIT o g o f
+Proof
+  REWRITE_TAC [MCOMP_DEF, o_ASSOC, EXT_o_UNIT]
+QED
 
-val BIND_EXT = store_thm
-  ("BIND_EXT",
-  ``BIND m f = EXT f m``,
-  REWRITE_TAC [BIND_DEF, EXT_DEF]) ;
+Theorem BIND_EXT:
+    BIND m f = EXT f m
+Proof
+  REWRITE_TAC [BIND_DEF, EXT_DEF]
+QED
 
-val MMAP_EXT = store_thm
-  ("MMAP_EXT",
-  ``MMAP f = EXT (UNIT o f)``,
-  REWRITE_TAC [FUN_EQ_THM, MMAP_DEF, BIND_EXT]) ;
+Theorem MMAP_EXT:
+    MMAP f = EXT (UNIT o f)
+Proof
+  REWRITE_TAC [FUN_EQ_THM, MMAP_DEF, BIND_EXT]
+QED
 
-val JOIN_EXT = store_thm
-  ("JOIN_EXT",
-  ``JOIN = EXT I``,
-  REWRITE_TAC [FUN_EQ_THM, JOIN_DEF, BIND_EXT]) ;
+Theorem JOIN_EXT:
+    JOIN = EXT I
+Proof
+  REWRITE_TAC [FUN_EQ_THM, JOIN_DEF, BIND_EXT]
+QED
 
-val EXT_JM = store_thm
-  ("EXT_JM",
-  ``EXT f = JOIN o MMAP f``,
+Theorem EXT_JM:
+    EXT f = JOIN o MMAP f
+Proof
   REWRITE_TAC [JOIN_EXT, BIND_EXT, MMAP_EXT, GSYM EXT_MCOMP,
-    MCOMP_DEF, o_ASSOC, EXT_o_UNIT, I_o_ID]) ;
+    MCOMP_DEF, o_ASSOC, EXT_o_UNIT, I_o_ID]
+QED
 
-val BIND_LEFT_UNIT = store_thm
-  ("BIND_LEFT_UNIT",
-   ``!(k:'a->'b->'c#'b) x. BIND (UNIT x) k = k x``,
+Theorem BIND_LEFT_UNIT:
+     !(k:'a->'b->'c#'b) x. BIND (UNIT x) k = k x
+Proof
    REPEAT STRIP_TAC
    >> MATCH_MP_TAC EQ_EXT
    >> REWRITE_TAC [BIND_DEF, UNIT_DEF, o_DEF]
    >> CONV_TAC (DEPTH_CONV BETA_CONV)
-   >> REWRITE_TAC [UNCURRY_DEF]);
+   >> REWRITE_TAC [UNCURRY_DEF]
+QED
 
-val UNIT_UNCURRY = store_thm
-  ("UNIT_UNCURRY",
-   ``!(s:'a#'b). UNCURRY UNIT s = s``,
+Theorem UNIT_UNCURRY:
+     !(s:'a#'b). UNCURRY UNIT s = s
+Proof
    REWRITE_TAC [UNCURRY_VAR, UNIT_DEF]
    >> CONV_TAC (DEPTH_CONV BETA_CONV)
-   >> REWRITE_TAC [PAIR]);
+   >> REWRITE_TAC [PAIR]
+QED
 
-val BIND_RIGHT_UNIT = store_thm
-  ("BIND_RIGHT_UNIT",
-   ``!(k:'a->'b#'a). BIND k UNIT = k``,
+Theorem BIND_RIGHT_UNIT:
+     !(k:'a->'b#'a). BIND k UNIT = k
+Proof
    REPEAT STRIP_TAC
    >> MATCH_MP_TAC EQ_EXT
    >> REWRITE_TAC [BIND_DEF, UNIT_UNCURRY, o_DEF]
    >> CONV_TAC (DEPTH_CONV BETA_CONV)
-   >> REWRITE_TAC []);
+   >> REWRITE_TAC []
+QED
 
-val BIND_ASSOC = store_thm
-  ("BIND_ASSOC",
-   ``!(k:'a->'b#'a) (m:'b->'a->'c#'a) (n:'c->'a->'d#'a).
-       BIND k (\a. BIND (m a) n) = BIND (BIND k m) n``,
+Theorem BIND_ASSOC:
+     !(k:'a->'b#'a) (m:'b->'a->'c#'a) (n:'c->'a->'d#'a).
+       BIND k (\a. BIND (m a) n) = BIND (BIND k m) n
+Proof
    REWRITE_TAC [BIND_DEF, UNCURRY_VAR, o_DEF]
    >> CONV_TAC (DEPTH_CONV BETA_CONV)
-   >> REWRITE_TAC []);
+   >> REWRITE_TAC []
+QED
 
-val MMAP_ID = store_thm
-  ("MMAP_ID",
-   ``MMAP I = (I:('a->'b#'a)->('a->'b#'a))``,
-   REWRITE_TAC [MMAP_EXT, I_o_ID, EXT_UNIT]) ;
+Theorem MMAP_ID:
+     MMAP I = (I:('a->'b#'a)->('a->'b#'a))
+Proof
+   REWRITE_TAC [MMAP_EXT, I_o_ID, EXT_UNIT]
+QED
 
-val MMAP_COMP = store_thm
-  ("MMAP_COMP",
-   ``!f g. (MMAP (f o g):('a->'b#'a)->('a->'d#'a))
-           = (MMAP f:('a->'c#'a)->('a->'d#'a)) o MMAP g``,
-   REWRITE_TAC [MMAP_EXT, o_THM, GSYM EXT_MCOMP, UNIT_o_MCOMP]) ;
+Theorem MMAP_COMP:
+     !f g. (MMAP (f o g):('a->'b#'a)->('a->'d#'a))
+           = (MMAP f:('a->'c#'a)->('a->'d#'a)) o MMAP g
+Proof
+   REWRITE_TAC [MMAP_EXT, o_THM, GSYM EXT_MCOMP, UNIT_o_MCOMP]
+QED
 
-val MMAP_UNIT = store_thm
-  ("MMAP_UNIT",
-   ``!(f:'b->'c). MMAP f o UNIT = (UNIT:'c->'a->'c#'a) o f``,
-   REWRITE_TAC [MMAP_EXT, EXT_o_UNIT]) ;
+Theorem MMAP_UNIT:
+     !(f:'b->'c). MMAP f o UNIT = (UNIT:'c->'a->'c#'a) o f
+Proof
+   REWRITE_TAC [MMAP_EXT, EXT_o_UNIT]
+QED
 
-val EXT_o_JOIN = store_thm
-  ("EXT_o_JOIN",
-   ``!f. EXT f o JOIN = EXT (EXT f:('a->'b#'a)->('a->'c#'a))``,
-   REWRITE_TAC [JOIN_EXT, GSYM EXT_MCOMP, MCOMP_DEF, I_o_ID]) ;
+Theorem EXT_o_JOIN:
+     !f. EXT f o JOIN = EXT (EXT f:('a->'b#'a)->('a->'c#'a))
+Proof
+   REWRITE_TAC [JOIN_EXT, GSYM EXT_MCOMP, MCOMP_DEF, I_o_ID]
+QED
 
-val MMAP_JOIN = store_thm
-  ("MMAP_JOIN",
-   ``!f. MMAP f o JOIN = JOIN o MMAP (MMAP f:('a->'b#'a)->('a->'c#'a))``,
-   REWRITE_TAC [GSYM EXT_JM] >> REWRITE_TAC [MMAP_EXT, EXT_o_JOIN]) ;
+Theorem MMAP_JOIN:
+     !f. MMAP f o JOIN = JOIN o MMAP (MMAP f:('a->'b#'a)->('a->'c#'a))
+Proof
+   REWRITE_TAC [GSYM EXT_JM] >> REWRITE_TAC [MMAP_EXT, EXT_o_JOIN]
+QED
 
-val JOIN_UNIT = store_thm
-  ("JOIN_UNIT",
-   ``JOIN o UNIT = (I:('a->'b#'a)->('a->'b#'a))``,
-   REWRITE_TAC [JOIN_EXT, EXT_o_UNIT]) ;
+Theorem JOIN_UNIT:
+     JOIN o UNIT = (I:('a->'b#'a)->('a->'b#'a))
+Proof
+   REWRITE_TAC [JOIN_EXT, EXT_o_UNIT]
+QED
 
-val JOIN_MMAP_UNIT = store_thm
-  ("JOIN_MMAP_UNIT",
-   ``JOIN o MMAP UNIT = (I:('a->'b#'a)->('a->'b#'a))``,
-   REWRITE_TAC [GSYM EXT_JM, EXT_UNIT]) ;
+Theorem JOIN_MMAP_UNIT:
+     JOIN o MMAP UNIT = (I:('a->'b#'a)->('a->'b#'a))
+Proof
+   REWRITE_TAC [GSYM EXT_JM, EXT_UNIT]
+QED
 
-val JOIN_MAP_JOIN = store_thm
-  ("JOIN_MAP_JOIN",
-   ``JOIN o MMAP JOIN = ((JOIN o JOIN)
-       :('a -> ('a -> ('a -> 'b # 'a) # 'a) # 'a) -> 'a -> 'b # 'a)``,
-   REWRITE_TAC [GSYM EXT_JM] >> REWRITE_TAC [JOIN_EXT, GSYM EXT_o_JOIN]) ;
+Theorem JOIN_MAP_JOIN:
+     JOIN o MMAP JOIN = ((JOIN o JOIN)
+       :('a -> ('a -> ('a -> 'b # 'a) # 'a) # 'a) -> 'a -> 'b # 'a)
+Proof
+   REWRITE_TAC [GSYM EXT_JM] >> REWRITE_TAC [JOIN_EXT, GSYM EXT_o_JOIN]
+QED
 
-val JOIN_MAP = store_thm
-  ("JOIN_MAP",
-   ``!k (m:'b->'a->'c#'a). BIND k m = JOIN (MMAP m k)``,
-   REWRITE_TAC [BIND_EXT, EXT_JM, o_THM]) ;
+Theorem JOIN_MAP:
+     !k (m:'b->'a->'c#'a). BIND k m = JOIN (MMAP m k)
+Proof
+   REWRITE_TAC [BIND_EXT, EXT_JM, o_THM]
+QED
 
-val FST_o_UNIT = store_thm
-  ("FST_o_UNIT",
-   ``!x. FST o UNIT x = K x``,
+Theorem FST_o_UNIT:
+     !x. FST o UNIT x = K x
+Proof
    FUN_EQ_TAC
    >> REWRITE_TAC [o_THM, UNIT_DEF, K_THM]
    >> BETA_TAC
-   >> REWRITE_TAC [FST]);
+   >> REWRITE_TAC [FST]
+QED
 
-val SND_o_UNIT = store_thm
-  ("SND_o_UNIT",
-   ``!x. SND o UNIT x = I``,
+Theorem SND_o_UNIT:
+     !x. SND o UNIT x = I
+Proof
    FUN_EQ_TAC
    >> REWRITE_TAC [o_THM, UNIT_DEF, I_THM]
    >> BETA_TAC
-   >> REWRITE_TAC [SND]);
+   >> REWRITE_TAC [SND]
+QED
 
-val FST_o_MMAP = store_thm
-  ("FST_o_MMAP",
-   ``!f g. FST o MMAP f g = f o FST o g``,
+Theorem FST_o_MMAP:
+     !f g. FST o MMAP f g = f o FST o g
+Proof
    FUN_EQ_TAC
    >> REWRITE_TAC [MMAP_DEF, BIND_DEF, UNCURRY, o_THM, UNIT_DEF]
    >> BETA_TAC
-   >> REWRITE_TAC [FST]);
+   >> REWRITE_TAC [FST]
+QED
 
-val sequence_nil = store_thm("sequence_nil",
-  ``sequence [] = UNIT []``,
-  BasicProvers.SRW_TAC[][sequence_def])
+Theorem sequence_nil:
+    sequence [] = UNIT []
+Proof
+  BasicProvers.SRW_TAC[][sequence_def]
+QED
 val _ = BasicProvers.export_rewrites["sequence_nil"]
 
-val mapM_nil = store_thm("mapM_nil",
-  ``mapM f [] = UNIT []``,
-  BasicProvers.SRW_TAC[][mapM_def])
+Theorem mapM_nil:
+    mapM f [] = UNIT []
+Proof
+  BasicProvers.SRW_TAC[][mapM_def]
+QED
 val _ = BasicProvers.export_rewrites["mapM_nil"]
 
-val mapM_cons = store_thm("mapM_cons",
-  ``mapM f (x::xs) = BIND (f x) (\y. BIND (mapM f xs) (\ys. UNIT (y::ys)))``,
-  BasicProvers.SRW_TAC[][mapM_def,sequence_def])
+Theorem mapM_cons:
+    mapM f (x::xs) = BIND (f x) (\y. BIND (mapM f xs) (\ys. UNIT (y::ys)))
+Proof
+  BasicProvers.SRW_TAC[][mapM_def,sequence_def]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Support for termination condition extraction for recursive monadic defns. *)
@@ -360,4 +406,3 @@ val _ = TotalDefn.export_termsimp "UNIT_DEF"
 *)
 
 (* ------------------------------------------------------------------------- *)
-

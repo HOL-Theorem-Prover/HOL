@@ -1,13 +1,11 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "milawa_defs";
+Theory milawa_defs
+Ancestors
+  lisp_extract string finite_map pred_set list sum option
+  arithmetic relation lisp_sexp lisp_semantics lisp_parse
+  milawa_init
+Libs
+  lisp_extractLib
 
-open lisp_extractLib lisp_extractTheory;
-
-open stringTheory finite_mapTheory pred_setTheory listTheory sumTheory;
-open optionTheory arithmeticTheory relationTheory;
-
-open lisp_sexpTheory lisp_semanticsTheory lisp_parseTheory;
-
-open milawa_initTheory;
 val _ = max_print_depth := 20;
 
 val RW = REWRITE_RULE;
@@ -392,4 +390,3 @@ val _ = atbl_install "MILAWA-INIT" R_ev_milawa_init;
 
 val milawa_main_def = impure_extract "MILAWA-MAIN" term_tac;
 
-val _ = export_theory();

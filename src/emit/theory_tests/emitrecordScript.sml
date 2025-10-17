@@ -7,16 +7,18 @@ Libs
 val fooq = `foo = <| n : num ; b : bool |>`;
 val _ = Datatype fooq
 
-val literal_def = Define`literal m = <| n := m ; b := T |>`;
+Definition literal_def:  literal m = <| n := m ; b := T |>
+End
 
 val polyrcdq = `prcd = <| m : num ; s : 'a # bool |>`
 val _ = Datatype polyrcdq
 
-val prcdf_def = Define`
+Definition prcdf_def:
   prcdf (g : 'a -> 'b) r = r with s updated_by (\ (a,b). (g a, ~b))
-`;
+End
 
-val accessor_def = Define`accessor x = x.n + 1`;
+Definition accessor_def:  accessor x = x.n + 1
+End
 
 val _ = eSML "emitRecordTest"
              [OPEN ["num"],

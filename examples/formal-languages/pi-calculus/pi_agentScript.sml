@@ -4,17 +4,13 @@
 (*                                                                            *)
 (* Copyright 2025  Michael Norrish and Chun Tian                              *)
 (* ========================================================================== *)
+Theory pi_agent
+Ancestors
+  pair pred_set list basic_swap generic_terms nomset
+  term[qualified]  (* only for its syntax of SUB *)
+Libs
+  listLib hurdUtils binderLib nomdatatype
 
-open HolKernel Parse boolLib bossLib;
-
-open pairTheory pred_setTheory listTheory listLib hurdUtils;
-
-open basic_swapTheory generic_termsTheory binderLib nomsetTheory nomdatatype;
-
-(* only for its syntax of SUB *)
-local open termTheory in end;
-
-val _ = new_theory "pi_agent";
 
 (* ----------------------------------------------------------------------
    Pi-calculus as a nominal datatype in HOL4
@@ -1383,5 +1379,4 @@ Proof
  >> simp [Once rpm_CONS]
 QED
 
-val _ = export_theory ();
 val _ = html_theory "pi_agent";

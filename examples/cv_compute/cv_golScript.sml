@@ -1,10 +1,11 @@
 (*
   Sketch of symbolic conway's game-of-life evaluation
 *)
-open HolKernel Parse boolLib bossLib;
-open cv_transLib cv_stdTheory
-
-val _ = new_theory "cv_gol";
+Theory cv_gol
+Ancestors
+  cv_std
+Libs
+  cv_transLib
 
 Datatype:
   var = A num | B num
@@ -185,4 +186,3 @@ val res = cv_eval “next_sim [[False; Var (A 1); False];
                              [Var (A 1); Var (A 1);  Var (B 1)];
                              [False; Var (A 1); False]]”
 
-val _ = export_theory();

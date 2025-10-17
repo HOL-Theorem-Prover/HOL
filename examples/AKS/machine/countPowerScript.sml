@@ -4,30 +4,17 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "countPower";
-
 (* ------------------------------------------------------------------------- *)
+Theory countPower
+Ancestors
+  pred_set list arithmetic divides gcd number combinatorics
+  logroot pair option listRange prime countMonad countMacro
+  countBasic bitsize complexity loopIncrease loopDecrease
+  loopDivide
+Libs
+  jcLib monadsyntax
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory listTheory arithmeticTheory dividesTheory gcdTheory
-     numberTheory combinatoricsTheory logrootTheory pairTheory optionTheory
-     listRangeTheory primeTheory;
-
-open countMonadTheory countMacroTheory;
-open countBasicTheory;
-
-open bitsizeTheory complexityTheory;
-open loopIncreaseTheory loopDecreaseTheory;
-open loopDivideTheory;
-
-open monadsyntax;
-
 val _ = monadsyntax.enable_monadsyntax();
 val _ = monadsyntax.enable_monad "Count";
 
@@ -1676,9 +1663,9 @@ val rootM_thm = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define integer square-root *)
-val sqrtM_def = Define`
+Definition sqrtM_def:
     sqrtM = rootM 2
-`;
+End
 
 (*
 > EVAL ``MAP sqrtM [0 .. 16]``;  =
@@ -1767,7 +1754,7 @@ val it = |- !n. power_free_test n <=> 1 < n /\ n power_free_upto ulog n: thm
 *)
 
 (* Define power_free in monadic style *)
-val power_freeM_def = Define`
+Definition power_freeM_def:
     power_freeM n =
       do
          m <- ulogM n;
@@ -1775,7 +1762,7 @@ val power_freeM_def = Define`
          if m0 then return F
          else power_free_loopM n m;
       od
-`;
+End
 
 (*
 > EVAL ``power_freeM 0``; = (F,Count 2): thm
@@ -2303,8 +2290,4 @@ Joachim von zur Gathen and Jürgen Gerhard. Modern Computer Algebra (1999)
 *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

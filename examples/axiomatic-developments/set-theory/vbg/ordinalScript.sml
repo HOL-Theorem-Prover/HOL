@@ -1,28 +1,27 @@
-open HolKernel boolLib Parse bossLib
+Theory ordinal
+Ancestors
+  vbgset vbgnats
+Libs
+  boolSimps
 
-open vbgsetTheory vbgnatsTheory
-open boolSimps
-
-val _ = new_theory "ordinal"
-
-val poc_def = Define`
+Definition poc_def:
   poc A R ⇔
     (∀x. x ∈ A ⇒ R x x) ∧
     (∀x y z. x ∈ A ∧ y ∈ A ∧ z ∈ A ∧ R x y ∧ R y z ⇒ R x z) ∧
     (∀x y. x ∈ A ∧ y ∈ A ∧ R x y ∧ R y x ⇒ (x = y))
-`;
+End
 
-val chain_def = Define`
+Definition chain_def:
   chain A R C ⇔ C ⊆ A ∧ ∀x y. x ∈ C ∧ y ∈ C ⇒ R x y ∨ R y x
-`
+End
 
-val totalR_def = Define`
+Definition totalR_def:
   totalR A R ⇔ poc A R ∧ ∀x y. x ∈ A ∧ y ∈ A ⇒ R x y ∨ R y x
-`;
+End
 
-val iseg_def = Define`
+Definition iseg_def:
   iseg A R x = SPEC0 (λy. y ∈ A ∧ R y x ∧ x ≠ y ∧ x ∈ A)
-`;
+End
 
 val iseg_SUBSET = store_thm(
   "iseg_SUBSET",
@@ -35,11 +34,11 @@ val iseg_SUBSET = store_thm(
   `∀x y. x ∈ A ∧ y ∈ A ∧ R x y ∧ R y x ⇒ (x = y)` by fs[poc_def] >>
   metis_tac[]);
 
-val woclass_def = Define`
+Definition woclass_def:
   woclass A R ⇔
      totalR A R ∧
      ∀B. B ⊆ A ∧ B ≠ {} ⇒ ∃e. e ∈ B ∧ ∀d. d ∈ B ⇒ R e d
-`;
+End
 
 val Nats_SETs = prove(``n ∈ Nats ⇒ SET n``, metis_tac [SET_def])
 val _ = augment_srw_ss [rewrites [Nats_SETs]]
@@ -53,18 +52,19 @@ val Nats_wo = store_thm(
   `∃e. e ∈ B` by (fs[EXTENSION] >> metis_tac[]) >>
   metis_tac [Nats_least_element]);
 
-val ordinal_def = Define`
+Definition ordinal_def:
   ordinal α ⇔ SET α ∧ transitive α ∧
               (∀x y. x ∈ α ∧ y ∈ α ⇒ x ∈ y ∨ y ∈ x ∨ (x = y))
-`;
+End
 
-val Ord_def = Define`Ord = SPEC0 (λs. ordinal s)`
+Definition Ord_def:  Ord = SPEC0 (λs. ordinal s)
+End
 
 val _ = clear_overloads_on "<="
 
-val ordle_def = Define`
+Definition ordle_def:
   ordle x y ⇔ x ∈ y ∨ (x = y)
-`;
+End
 
 val _ = overload_on ("<=", ``ordle``)
 
@@ -162,13 +162,13 @@ val ords_segs2 = store_thm(
   metis_tac [SET_def, ordle_def, IN_REFL, transitive_ALT]);
 
 
-val orderiso_def = Define`
+Definition orderiso_def:
   orderiso A B R ⇔ ∃f. (∀x. x ∈ A ⇒ f x ∈ B) ∧
                        (∀x1 x2. x1 ∈ A ∧ x2 ∈ A ⇒
                                 ((f x1 = f x2)  ⇔ (x1 = x2))) ∧
                        (∀y. y ∈ B ⇒ ∃x. x ∈ A ∧ (f x = y)) ∧
                        (∀x1 x2. x1 ∈ A ∧ x2 ∈ A ∧ R x1 x2 ⇒ R (f x1) (f x2))
-`;
+End
 
 val ordle_wo = store_thm(
   "ordle_wo",
@@ -261,10 +261,6 @@ val orderiso_ordinals = store_thm(
   `iseg α ordle e = e` by metis_tac [ords_segs2] >>
   metis_tac [])
 
-
-
-
-val _ = export_theory()
 
 
 

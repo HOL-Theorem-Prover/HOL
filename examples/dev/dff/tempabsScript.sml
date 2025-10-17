@@ -18,22 +18,12 @@ load "hol88Lib";
 load "nextTheory";
 load "stableTheory";
 *)
+Theory tempabs
+Ancestors
+  arithmetic prim_rec combin pair num next stable
+Libs
+  Globals proofManagerLib Psyntax hol88Lib numLib
 
-open Globals HolKernel Parse boolLib proofManagerLib;
-open Psyntax;
-open bossLib;
-open arithmeticTheory;
-open prim_recTheory;
-open combinTheory;
-open hol88Lib;
-open pairTheory;
-open numLib;
-open numTheory;
-open nextTheory;
-open stableTheory;
-
-(* Create the new theory, "tempabs.th". *)
-val _ = new_theory "tempabs";
 
 val SUB_MONO_EQ =
     store_thm
@@ -624,6 +614,3 @@ val tempabs' =
     IMP_RES_THEN (STRIP_ASSUME_TAC o REWRITE_RULE [Next] o SPEC ``n:num``)
                        Timeof_thm1 THEN
     ASM_REWRITE_TAC [LESS_OR_EQ,num_CONV ``1``,ADD_CLAUSES]);
-
-
-val _ = export_theory();

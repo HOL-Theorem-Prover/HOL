@@ -4,28 +4,16 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "countPrime";
-
 (* ------------------------------------------------------------------------- *)
+Theory countPrime
+Ancestors
+  pred_set list arithmetic divides number combinatorics logroot
+  pair option prime countMonad countMacro countBasic countPower
+  bitsize complexity loopIncrease
+Libs
+  jcLib monadsyntax
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory listTheory arithmeticTheory dividesTheory numberTheory
-     combinatoricsTheory logrootTheory pairTheory optionTheory primeTheory;
-
-open countMonadTheory countMacroTheory;
-open countBasicTheory countPowerTheory;
-
-open bitsizeTheory complexityTheory;
-open loopIncreaseTheory;
-
-open monadsyntax;
-
 val _ = monadsyntax.enable_monadsyntax();
 val _ = monadsyntax.enable_monad "Count";
 
@@ -176,7 +164,7 @@ End
 (* Note: ~(1 < q) = q <= 1, ensure 1 < q before n MOD q. *)
 
 (* Primality test by seeking factor up to (1 + SQRT n) *)
-val prime_testM_def = Define`
+Definition prime_testM_def:
     prime_testM n =
       do
          n0 <- zeroM n;
@@ -189,7 +177,7 @@ val prime_testM_def = Define`
                 eqM p n;
               od
       od
-`;
+End
 
 (*
 EVAL ``MAP prime_testM [1 .. 15]``; =
@@ -858,8 +846,4 @@ val ulog_power_nonlinear = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

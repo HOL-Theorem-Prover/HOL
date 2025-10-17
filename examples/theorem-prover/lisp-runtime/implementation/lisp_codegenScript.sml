@@ -1,18 +1,15 @@
-open HolKernel Parse boolLib bossLib; val _ = new_theory "lisp_codegen";
-val _ = ParseExtras.temp_loose_equality()
-open lisp_sexpTheory lisp_consTheory lisp_invTheory lisp_symbolsTheory;
+Theory lisp_codegen
+Ancestors
+  lisp_sexp lisp_cons lisp_inv lisp_symbols words arithmetic list
+  pred_set pair combin finite_map address set_sep bit fcp string
+  stop_and_copy prog_x64 prog lisp_parse
+Libs
+  wordsLib helperLib codegenLib decompilerLib prog_x64Lib
 
+val _ = ParseExtras.temp_loose_equality()
 (* --- *)
 
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory helperLib;
-open set_sepTheory bitTheory fcpTheory stringTheory;
-
 val wstd_ss = std_ss ++ SIZES_ss ++ rewrites [DECIDE ``n<256 ==> (n:num)<18446744073709551616``,ORD_BOUND];
-
-open stop_and_copyTheory;
-open codegenLib decompilerLib prog_x64Lib prog_x64Theory progTheory;
-open lisp_parseTheory;
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -593,8 +590,10 @@ val _ = save_thm("mc_read_snd_code_thm",mc_read_snd_code_thm);
 
 (* safe versions of car and cdr, i.e. total versions *)
 
-val SAFE_CAR_def = Define `SAFE_CAR x = CAR x`;
-val SAFE_CDR_def = Define `SAFE_CDR x = CDR x`;
+Definition SAFE_CAR_def:   SAFE_CAR x = CAR x
+End
+Definition SAFE_CDR_def:   SAFE_CDR x = CDR x
+End
 
 val (mc_safe_car_spec,mc_safe_car_def) = basic_decompile_strings x64_tools "mc_safe_car"
   (SOME (``(r0:word64,r6:word64,r8:word64,df:word64 set,f:word64->word32)``,
@@ -809,9 +808,10 @@ val bc_symbols_ok_APPEND = prove(
   Induct \\ SIMP_TAC std_ss [APPEND,bc_symbols_ok_def] \\ Cases_on `h`
   \\ ASM_SIMP_TAC std_ss [APPEND,bc_symbols_ok_def,CONJ_ASSOC]);
 
-val code_length_def = Define `
+Definition code_length_def:
   (code_length [] = 0) /\
-  (code_length (x::xs) = bc_length x + code_length xs)`;
+  (code_length (x::xs) = bc_length x + code_length xs)
+End
 
 val bs2bytes_APPEND = prove(
   ``!xs ys k sym.
@@ -1622,13 +1622,15 @@ fun straight_line_decompile func_name code in_out_vars = let
   val _ = print "done!\n"
   in (th,x) end;
 
-val one_write_list_def = Define `
+Definition one_write_list_def:
   (one_write_list a [] f = f) /\
-  (one_write_list (a:word64) (x::xs) f = one_write_list (a + 1w) xs ((a =+ x) f))`;
+  (one_write_list (a:word64) (x::xs) f = one_write_list (a + 1w) xs ((a =+ x) f))
+End
 
-val one_address_list_def = Define `
+Definition one_address_list_def:
   (one_address_list a [] = []) /\
-  (one_address_list (a:word64) (x::xs) = a::one_address_list (a+1w) xs)`;
+  (one_address_list (a:word64) (x::xs) = a::one_address_list (a+1w) xs)
+End
 
 val STAR5_LEMMA = prove(
   ``STAR x1 x2 * x3 * x4 * x5 = x1 * x3 * x2 * x4 * x5``,
@@ -1813,15 +1815,17 @@ val (mc_update_jnil_spec,mc_update_jnil_def) = basic_decompile_strings x64_tools
        mov r1d,1
    `)
 
-val REPLACE_CODE_def = Define `
-  REPLACE_CODE (BC_CODE (c1,c2)) p x = BC_CODE ((p =+ SOME x) c1,c2)`;
+Definition REPLACE_CODE_def:
+  REPLACE_CODE (BC_CODE (c1,c2)) p x = BC_CODE ((p =+ SOME x) c1,c2)
+End
 
 val SND_REPLACE_CODE = prove(
   ``!code p x. code_ptr (REPLACE_CODE code p x) = code_ptr code``,
   Cases \\ Cases_on `p` \\ FULL_SIMP_TAC std_ss [REPLACE_CODE_def,code_ptr_def]);
 
-val CODE_UPDATE_def = Define `
-  CODE_UPDATE x (BC_CODE (c,n)) = BC_CODE ((n =+ SOME x) c, n + bc_length x)`;
+Definition CODE_UPDATE_def:
+  CODE_UPDATE x (BC_CODE (c,n)) = BC_CODE ((n =+ SOME x) c, n + bc_length x)
+End
 
 val WRITE_CODE_SNOC = prove(
   ``!xs x c. WRITE_CODE c (xs ++ [x]) = CODE_UPDATE x (WRITE_CODE c xs)``,
@@ -2055,8 +2059,9 @@ val stack_tm =
   |> (fn tm => list_mk_forall (filter (fn v => fst (dest_var v) <> "stack")
                                  (free_vars tm), tm));
 
-val zSTACK_def = Define ` (* improve at some point... *)
-  zSTACK rbp xs = SEP_EXISTS stack. stack rbp xs * cond ^stack_tm`
+Definition zSTACK_def:    (* improve at some point... *)
+  zSTACK rbp xs = SEP_EXISTS stack. stack rbp xs * cond ^stack_tm
+End
 
 val zSTACK_PROPS = store_thm("zSTACK_PROPS",
   subst [hd (free_vars stack_tm)|->``zSTACK``] stack_tm,
@@ -2071,4 +2076,3 @@ val lisp_inv_stack = prove(
 val _ = save_thm("lisp_inv_stack",lisp_inv_stack);
 
 
-val _ = export_theory();

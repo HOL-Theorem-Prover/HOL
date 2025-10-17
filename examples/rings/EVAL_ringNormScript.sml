@@ -5,13 +5,12 @@ load "prelimTheory";
 load "canonicalTheory";
 load "ringTheory";
 *)
+Theory EVAL_ringNorm
+Ancestors
+  EVAL_ring EVAL_canonical
+Libs
+  abs_tools BasicProvers Datatype
 
-open HolKernel Parse boolLib abs_tools;
-open BasicProvers Datatype;
-
-val _ = new_theory "EVAL_ringNorm";
-
-open EVAL_ringTheory EVAL_canonicalTheory;
 
 val r = “r:'a ring”;
 val sr = “semi_ring_of r”;
@@ -162,4 +161,3 @@ val _ = record_terms (
   ]
 )
 
-val _ = export_theory();

@@ -7,17 +7,14 @@
 (*               (c) Copyright, Marco Maggesi 2014                           *)
 (*       (c) Copyright, Andrea Gabrielli, Marco Maggesi 2016-2017            *)
 (* ========================================================================= *)
+Theory matrix
+Ancestors
+  arithmetic combin pred_set pair fcp list rich_list topology
+  real iterate real_sigma permutes vector
+Libs
+  PairedLambda pred_setLib fcpLib tautLib numLib
+  InductiveDefinition realLib RealArith mesonLib hurdUtils
 
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory combinTheory pred_setTheory pairTheory PairedLambda
-     pred_setLib fcpTheory fcpLib tautLib numLib listTheory rich_listTheory
-     topologyTheory InductiveDefinition;
-
-open realTheory realLib iterateTheory real_sigmaTheory RealArith mesonLib;
-open hurdUtils permutesTheory vectorTheory;
-
-val _ = new_theory "matrix";
 
 val bool_ss' = bool_ss -* ["lift_disj_eq", "lift_imp_disj"];
 
@@ -959,7 +956,6 @@ Proof
  METIS_TAC[MATRIX_LINV_UNIQ, MATRIX_INV_INV, INVERTIBLE_LEFT_INVERSE]
 QED
 
-val _ = export_theory ();
 val _ = html_theory "matrix";
 
 (* References:

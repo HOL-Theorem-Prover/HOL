@@ -1,10 +1,8 @@
-open HolKernel boolLib Parse bossLib
-
-open churchDBTheory churchboolTheory
-open normal_orderTheory termTheory chap3Theory pure_dBTheory
-open binderLib reductionEval
-
-val _ = new_theory "HaltingProblems"
+Theory HaltingProblems
+Ancestors
+  churchDB churchbool normal_order term chap3 pure_dB
+Libs
+  binderLib reductionEval
 
 val _ = set_trace "Unicode" 1
 
@@ -125,4 +123,3 @@ val HP_bnf = store_thm(
         MATCH_MP_TAC nstar_betastar THEN ASM_SIMP_TAC (srw_ss()) []) THEN
   METIS_TAC [HP_selfapp]);
 
-val _ = export_theory()

@@ -21,11 +21,10 @@
 (* License along with this program; if not, write to the Free         *)
 (* Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA *)
 (* 02110-1301 USA                                                     *)
+Theory Lambek
+Ancestors
+  pred_set pair list arithmetic integer relation
 
-open HolKernel Parse boolLib bossLib;
-
-open pred_setTheory pairTheory listTheory arithmeticTheory integerTheory;
-open relationTheory;
 
 local
     val PAT_X_ASSUM = PAT_ASSUM;
@@ -41,8 +40,6 @@ in
     fun set  ts = MAP_EVERY Q.ABBREV_TAC ts;    (* from HOL mizar mode *)
     fun take ts = MAP_EVERY Q.EXISTS_TAC ts;    (* from HOL mizar mode *)
 end;
-
-val _ = new_theory "Lambek";
 
 (******************************************************************************)
 (*                                                                            *)
@@ -128,7 +125,8 @@ val extends_transitive = store_thm (
 
 (** most popular extensions **)
 
-val NL_def = Define `(NL :'a arrow_extension) = EMPTY_REL`;
+Definition NL_def:   (NL :'a arrow_extension) = EMPTY_REL
+End
 
 (* L is defined by two rules, and it's reflexitive *)
 val (L_rules, L_ind, L_cases) = Hol_reln `
@@ -142,7 +140,8 @@ val [L_rule_rl, L_rule_lr] =
 val (NLP_rules, NLP_ind, NLP_cases) = Hol_reln `
     (!A B. NLP (Dot A B) (Dot B A))`;
 
-val LP_def = Define `LP = add_extension NLP L`;
+Definition LP_def:   LP = add_extension NLP L
+End
 
 val NLextendsAll = store_thm (
    "NLextendsAll", ``!X. extends NL X``,
@@ -392,9 +391,10 @@ val Term_11        = TypeBase.one_one_of ``:'a Term``;
 val _ = type_abbrev ("gentzen_extension", ``:'a Term -> 'a Term -> bool``);
 
 (* Definition of the recursive function that translates Terms to Forms *)
-val deltaTranslation_def = Define `
+Definition deltaTranslation_def:
    (deltaTranslation (OneForm f) = f) /\
-   (deltaTranslation (Comma t1 t2) = Dot (deltaTranslation t1) (deltaTranslation t2))`;
+   (deltaTranslation (Comma t1 t2) = Dot (deltaTranslation t1) (deltaTranslation t2))
+End
 
 val deltaTranslationOneForm = store_thm (
    "deltaTranslationOneForm[simp]",
@@ -406,8 +406,9 @@ val deltaTranslationComma = store_thm (
     RW_TAC std_ss [deltaTranslation_def]);
 
 (* Non-associative extension, an empty relation actually *)
-val NL_Sequent_def = Define `
-   (NL_Sequent :'a gentzen_extension) = EMPTY_REL`;
+Definition NL_Sequent_def:
+   (NL_Sequent :'a gentzen_extension) = EMPTY_REL
+End
 
 (* NLP Sequent extension *)
 val (NLP_Sequent_rules, NLP_Sequent_ind, NLP_Sequent_cases) = Hol_reln `
@@ -423,8 +424,9 @@ val (L_Sequent_rules, L_Sequent_ind, L_Sequent_cases) = Hol_reln `
 val [L_Intro_lr, L_Intro_rl] =
     map save_thm (combine (["L_Intro_lr", "L_Intro_rl"], CONJUNCTS L_Sequent_rules));
 
-val LP_Sequent_def = Define `
-    LP_Sequent = add_extension NLP_Sequent L_Sequent`;
+Definition LP_Sequent_def:
+    LP_Sequent = add_extension NLP_Sequent L_Sequent
+End
 
 val NLP_Sequent_LP_Sequent = store_thm (
    "NLP_Sequent_LP_Sequent", ``extends NLP_Sequent LP_Sequent``,
@@ -482,7 +484,8 @@ val (replaceCommaDot1_rules, replaceCommaDot1_ind, replaceCommaDot1_cases) = Hol
     (!T1 T2 A B. replace T1 T2 (Comma (OneForm A) (OneForm B)) (OneForm (Dot A B))
              ==> replaceCommaDot1 T1 T2)`;
 
-val replaceCommaDot_def = Define `replaceCommaDot = RTC replaceCommaDot1`;
+Definition replaceCommaDot_def:   replaceCommaDot = RTC replaceCommaDot1
+End
 
 val replaceCommaDot_rule = store_thm ("replaceCommaDot_rule",
   ``!T1 T2 A B. replace T1 T2 (Comma (OneForm A) (OneForm B)) (OneForm (Dot A B))
@@ -1426,9 +1429,10 @@ val replace_arrow' = store_thm ("replace_arrow'",
  >> IMP_RES_TAC comp);
 
 (* from axiomatic presentation to sequent calculus *)
-val arrowToGentzenExt_def = Define `
+Definition arrowToGentzenExt_def:
     arrowToGentzenExt (X :'a arrow_extension) (E :'a gentzen_extension) =
-        !A B. X A B ==> gentzenSequent E (OneForm A) B`;
+        !A B. X A B ==> gentzenSequent E (OneForm A) B
+End
 
 val NLToNL_Sequent = store_thm (
    "NLToNL_Sequent", ``arrowToGentzenExt NL NL_Sequent``,
@@ -1530,14 +1534,16 @@ val arrowToGentzenLP = store_thm (
 
 (* from sequent calculus to axiomatic presentation.
    Notice the strange thing here: the order of T1 and T2 are changed from E to X. *)
-val gentzenToArrowExt_def = Define
-   `gentzenToArrowExt (E :'a gentzen_extension) (X :'a arrow_extension) =
-        (!T1 T2. E T1 T2 ==> X (deltaTranslation T2) (deltaTranslation T1))`;
+Definition gentzenToArrowExt_def:
+    gentzenToArrowExt (E :'a gentzen_extension) (X :'a arrow_extension) =
+        (!T1 T2. E T1 T2 ==> X (deltaTranslation T2) (deltaTranslation T1))
+End
 
 (* Build arrow_extensions directly from gentzen_extensions *)
-val ToArrowExt_def = Define `
+Definition ToArrowExt_def:
     ToArrowExt (E :'a gentzen_extension) =
-        CURRY { (deltaTranslation y, deltaTranslation x) | (x,y) IN (UNCURRY E) }`;
+        CURRY { (deltaTranslation y, deltaTranslation x) | (x,y) IN (UNCURRY E) }
+End
 
 val ToArrowExt_thm = store_thm (
    "ToArrowExt_thm",
@@ -1756,11 +1762,12 @@ val replaceNatDed = store_thm ("replaceNatDed",
  >> RW_TAC bool_ss [NatAxiomGeneralized]);
 
 (* E T1[A] T2[A] ==> ?T1[Delta]. X T1[Delta] T2[Delta] *)
-val condCutExt_def = Define `
+Definition condCutExt_def:
     condCutExt (E :'a gentzen_extension) =
         !Gamma T1 T2 A Delta.
          E T1 T2 ==> replace T2 Gamma (OneForm A) Delta
-                 ==> ?Gamma'. E Gamma' Gamma /\ replace T1 Gamma' (OneForm A) Delta`;
+                 ==> ?Gamma'. E Gamma' Gamma /\ replace T1 Gamma' (OneForm A) Delta
+End
 
 val conditionOKNL = store_thm ("conditionOKNL", ``condCutExt NL_Sequent``,
     REWRITE_TAC [condCutExt_def]
@@ -2266,7 +2273,6 @@ end;
 
 val _ = enable_grammar ();
 
-val _ = export_theory ();
 val _ = html_theory "Lambek";
 
 (* last updated: April 10, 2017 *)

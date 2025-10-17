@@ -1,9 +1,10 @@
-open HolKernel boolLib bossLib Parse
+Theory redUnif
+Ancestors
+  pred_set relation finite_map term pair bag prim_rec subst walk
+  walkstar unifDef unifProps
+Libs
+  ramanaLib
 
-open pred_setTheory relationTheory finite_mapTheory termTheory ramanaLib
-     pairTheory bagTheory prim_recTheory substTheory walkTheory walkstarTheory
-
-val _ = new_theory "redUnif"
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 }
 
 Definition istep_def:
@@ -20,7 +21,7 @@ Definition istep_def:
     sr = sl |+ (v,t))
 End
 
-val tstep_def = Define`
+Definition tstep_def:
   tstep (sl,bl) (sr,br) <=>
   (∃t1 t2.
     (walk sl t1 = walk sl t2) ∧
@@ -35,9 +36,8 @@ val tstep_def = Define`
      (walk sl t1 = t) ∧ (walk sl t2 = Var v)) ∧
     ¬ oc sl t v ∧
     (br + {|(t1,t2)|} = bl) ∧
-    (sr = sl |+ (v,t)))`;
-
-open unifDefTheory unifPropsTheory;
+    (sr = sl |+ (v,t)))
+End
 
 val wfs_tstep = Q.store_thm(
 "wfs_tstep",
@@ -231,4 +231,3 @@ val tstep_def = Define`
     (sr = sl |+ (v,t)))`;
 *)
 
-val _ = export_theory ();

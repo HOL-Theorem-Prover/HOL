@@ -4,36 +4,18 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "ffInstances";
+Theory ffInstances
+Ancestors
+  pred_set arithmetic list number divides gcd ffBasic monoid
+  group ring field fieldInstances polynomial polyWeak polyRing
+  polyField polyDivision polyFieldDivision polyModuloRing
+  polyFieldModulo polyMonic polyRoot polyIrreducible
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory arithmeticTheory listTheory numberTheory dividesTheory
-     gcdTheory;
-
-(* Get dependent theories local *)
-open ffBasicTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-open fieldInstancesTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory;
-
-open polyFieldTheory polyDivisionTheory polyFieldDivisionTheory;
-open polyModuloRingTheory polyFieldModuloTheory;
-
-open polyMonicTheory;
-open polyRootTheory;
-open polyIrreducibleTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -908,8 +890,4 @@ val GF_4_H_factors = store_thm(
   rw[]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

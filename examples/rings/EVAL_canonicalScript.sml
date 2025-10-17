@@ -1,10 +1,8 @@
-open HolKernel Parse boolLib;
-open BasicProvers Datatype;
-open abs_tools;
-
-val _ = new_theory "EVAL_canonical";
-
-open ternaryComparisonsTheory EVAL_quoteTheory
+Theory EVAL_canonical
+Ancestors
+  ternaryComparisons EVAL_semiring EVAL_quote
+Libs
+  BasicProvers Datatype abs_tools
 
 val _ = app (fn s => temp_overload_on (s, Parse.Term [QUOTE ("semi_ring_"^s)]))
         ["SR0","SR1","SRP","SRM"];
@@ -384,5 +382,3 @@ val _ = record_terms (
       “canonical_sum_merge”
     ]
   )
-
-val _ = export_theory();

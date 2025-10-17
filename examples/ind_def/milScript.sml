@@ -10,15 +10,16 @@
 (*
   app load ["IndDefLib", "clTheory"] ;
 *)
+Theory mil
+Ancestors
+  cl
+Libs
+  IndDefLib IndDefRules
 
-open HolKernel Parse boolLib bossLib
-     IndDefLib IndDefRules clTheory;
 
 (* --------------------------------------------------------------------- *)
 (* Open a new theory and load the inductive definitions library.         *)
 (* --------------------------------------------------------------------- *)
-
-val _ = new_theory "mil";
 
 (* ===================================================================== *)
 (* Combinatory logic types and type judgements.                          *)
@@ -97,4 +98,3 @@ val CURRY_HOWARD = Q.store_thm
 (* End of example.                                                       *)
 (* --------------------------------------------------------------------- *)
 
-val _ = export_theory();

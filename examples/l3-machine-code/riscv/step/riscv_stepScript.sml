@@ -1,14 +1,13 @@
 (* ------------------------------------------------------------------------
    Definitions and theorems used by RISC-V step evaluator (riscv_stepLib)
    ------------------------------------------------------------------------ *)
+Theory riscv_step
+Ancestors
+  alignment riscv
+Libs
+  utilsLib wordsLib blastLib
 
-open HolKernel boolLib bossLib
 
-open utilsLib
-open wordsLib blastLib alignmentTheory
-open riscvTheory
-
-val () = Theory.new_theory "riscv_step"
 val _ = ParseExtras.temp_loose_equality()
 
 val ERR = mk_HOL_ERR "riscv_stepTheory";
@@ -26,17 +25,20 @@ fun uprove a b = utilsLib.STRIP_UNDISCH (Q.prove (a, b))
    Simplified Fetch and Next functions
    ------------------------------------------------------------------------ *)
 
-val Fetch_def = Define`
+Definition Fetch_def:
   Fetch s =
   let (w, s) = translateAddr (PC s, Instruction, Read) s in
-    (rawReadInst (THE w) s)`
+    (rawReadInst (THE w) s)
+End
 
-val update_pc_def = Define `update_pc v s = SOME (write'PC v s)`
+Definition update_pc_def:   update_pc v s = SOME (write'PC v s)
+End
 
-val DecodeAny_def = Define `
-  DecodeAny f = case f of Half h => DecodeRVC h | Word w => Decode w`
+Definition DecodeAny_def:
+  DecodeAny f = case f of Half h => DecodeRVC h | Word w => Decode w
+End
 
-val NextRISCV_def = Define`
+Definition NextRISCV_def:
   NextRISCV s =
   let (f, s) = Fetch s in
   let s = Run (DecodeAny f) s in
@@ -47,7 +49,8 @@ val NextRISCV_def = Define`
     case NextFetch s of
        NONE => update_pc (pc + Skip s) s
      | SOME (BranchTo a) => update_pc a (write'NextFetch NONE s)
-     | _ => NONE`
+     | _ => NONE
+End
 
 (* ------------------------------------------------------------------------
    Evaluation theorem
@@ -96,11 +99,12 @@ val NextRISCV_cond_branch = Q.store_thm("NextRISCV_cond_branch",
    Sub-word select operation (temporary)
    ------------------------------------------------------------------------ *)
 
-val select_def = zDefine`
+Definition select_def[nocompute]:
   select (p:'a word) (w: word64) =
   let sz = 64 DIV (2 ** dimindex(:'a)) in
   let l = w2n p * sz in
-    (l + sz - 1 >< l) w : 'b word`
+    (l + sz - 1 >< l) w : 'b word
+End
 
 (* ------------------------------------------------------------------------
    Word extend abbreviations
@@ -892,6 +896,5 @@ val SB  = store [] "SB"
 
 (* ------------------------------------------------------------------------ *)
 
-val () = ( Theory.delete_const "select"
-         ; export_theory ()
-         )
+val () = Theory.delete_const "select";
+

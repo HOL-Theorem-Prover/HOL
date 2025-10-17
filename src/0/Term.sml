@@ -202,9 +202,9 @@ val empty_varset = HOLset.empty var_compare
 
 fun fast_term_eq (t1:term) (t2:term) = Portable.pointer_eq (t1,t2)
 
-fun compare (p as (t1,t2)) =
+fun compare (t1,t2) =
     if fast_term_eq t1 t2 then EQUAL else
-    case p of
+    case (t1,t2) of
       (t1 as Clos _, t2)     => compare (push_clos t1, t2)
     | (t1, t2 as Clos _)     => compare (t1, push_clos t2)
     | (u as Fv _, v as Fv _) => var_compare (u,v)

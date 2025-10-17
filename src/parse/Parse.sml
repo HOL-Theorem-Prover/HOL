@@ -215,7 +215,14 @@ fun print_term_by_grammar Gs t =
   in
     stdprint (termprinter t) ;
     print "\n"
-end
+  end
+
+fun term_to_string_by_grammar Gs t =
+  let
+    val (_, termprinter) = rawterm_pp print_from_grammars Gs
+  in
+    ppstring termprinter t
+  end
 
 val min_grammars = (type_grammar.min_grammar, term_grammar.min_grammar)
 

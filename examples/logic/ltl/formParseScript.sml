@@ -1,10 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open monadsyntax ltlTheory errorStateMonadTheory
-
-local open stringTheory in end
-
-val _ = new_theory "formParse";
+Theory formParse
+Ancestors
+  ltl errorStateMonad string[qualified]
+Libs
+  monadsyntax
 
 (* grammar parsed looks like
 
@@ -38,10 +36,10 @@ Overload monad_unitbind[local] = “errorStateMonad$IGNORE_BIND”
 Overload assert[local] = “errorStateMonad$ES_GUARD”
 Overload "++"[local] = “errorStateMonad$ES_CHOICE”
 
-val token_def = Define‘
+Definition token_def:
   (token p [] = p []) ∧
   (token p (h::t) = if isSpace h then token p t else p (h::t))
-’;
+End
 
 val token_APPEND = Q.store_thm(
   "token_APPEND[simp]",
@@ -51,19 +49,19 @@ val token_APPEND = Q.store_thm(
 val token_Spaces = token_APPEND |> Q.INST [‘s2’ |-> ‘[]’]
                                 |> REWRITE_RULE [listTheory.APPEND_NIL]
 
-val literal_def = Define‘
+Definition literal_def:
   literal s inp = if s <<= inp then SOME ((), DROP (LENGTH s) inp)
                   else NONE
-’;
+End
 
-val ident_def = Define‘
+Definition ident_def:
   (ident [] = NONE) ∧
   (ident (h::t) = if isAlpha h ∧ isLower h then
                     case ident t of
                         NONE => SOME([h], t)
                       | SOME (i, r) => SOME (h::i, r)
                   else NONE)
-’;
+End
 
 Theorem ident_EQ_SOME[simp]:
   ident s = SOME v ⇔
@@ -125,7 +123,7 @@ val literal_EQ_NONE = Q.store_thm(
   ‘literal l s = NONE ⇔ ¬(l <<= s)’,
   simp[literal_def]);
 
-val parseFGX_def = Define ‘
+Definition parseFGX_def:
   parseFGX fgx top =
     do
       token (literal "F") ;
@@ -157,7 +155,7 @@ val parseFGX_def = Define ‘
       v <- token ident ;
       return (F_VAR v)
     od
-’;
+End
 
 val parseFGX_CONG = Q.store_thm(
   "parseFGX_CONG[defncong]",
@@ -214,16 +212,16 @@ val ParseFGX_thm =
     |> SIMP_RULE (srw_ss() ++ boolSimps.ETA_ss)
           [parseFGX_def, Once (GSYM FUN_EQ_THM)]
 
-val mksafe_def = Define‘
+Definition mksafe_def:
   mksafe f s = case f s of
                    NONE => NONE
                  | SOME (v, s') => if IS_SUFFIX s s' then SOME (v, s')
                                    else NONE
-’;
+End
 
-val is_safe_def = Define‘
+Definition is_safe_def:
   is_safe p = ∀s s' v. p s = SOME (v,s') ⇒ IS_SUFFIX s s'
-’;
+End
 
 val is_safe_mksafe = Q.store_thm(
   "is_safe_mksafe[simp]",
@@ -315,7 +313,7 @@ val mksafe_cong = Q.store_thm("mksafe_cong",
        ∀s. STRLEN s < n ⇒ mksafe t1 s = mksafe t2 s’,
   simp[mksafe_def]);
 
-val parseU_def = Define‘
+Definition parseU_def:
   parseU u top =
     do
       f1 <- ParseFGX (mksafe top) ;
@@ -325,7 +323,7 @@ val parseU_def = Define‘
         return (F_U f1 f2)
       od ++ return f1
     od
-’;
+End
 
 val parseU_CONG = Q.store_thm("parseU_CONG[defncong]",
   ‘∀s1 s2 t1 t2 c1 c2.
@@ -398,7 +396,7 @@ val is_safe_ParseU = Q.store_thm(
     by (first_x_assum irule >> simp[] >> fs[rich_listTheory.IS_SUFFIX_APPEND])>>
   metis_tac[IS_SUFFIX_TRANS, IS_SUFFIX_APPEND_E]);
 
-val parseCNJ_def = Define‘
+Definition parseCNJ_def:
   parseCNJ cnj top =
     do
       f1 <- ParseU (mksafe top) ;
@@ -408,7 +406,7 @@ val parseCNJ_def = Define‘
         return (F_CONJ f1 f2)
       od ++ return f1
     od
-’;
+End
 
 val parseCNJ_CONG = Q.store_thm("parseCNJ_CONG[defncong]",
   ‘∀s1 s2 t1 t2 c1 c2.
@@ -481,11 +479,11 @@ val is_safe_ParseCNJ = Q.store_thm(
     by (first_x_assum irule >> simp[] >> fs[rich_listTheory.IS_SUFFIX_APPEND])>>
   metis_tac[IS_SUFFIX_TRANS, IS_SUFFIX_APPEND_E]);
 
-val F_DISJ_def = zDefine‘
+Definition F_DISJ_def[nocompute]:
   F_DISJ f1 f2 = F_NEG (F_CONJ (F_NEG f1) (F_NEG f2))
-’;
+End
 
-val parseDSJ_def = Define‘
+Definition parseDSJ_def:
   parseDSJ d top =
     do
       f1 <- ParseCNJ (mksafe top) ;
@@ -495,7 +493,7 @@ val parseDSJ_def = Define‘
         return (F_DISJ f1 f2)
       od ++ return f1
     od
-’;
+End
 
 val parseDSJ_CONG = Q.store_thm("parseDSJ_CONG[defncong]",
   ‘∀s1 s2 t1 t2 d1 d2.
@@ -572,7 +570,7 @@ Definition F_IMP_def[nocompute]:
   F_IMP f1 f2 = F_DISJ (F_NEG f1) f2
 End
 
-val parseIMP_def = Define‘
+Definition parseIMP_def:
   parseIMP d top =
     do
       f1 <- ParseDSJ (mksafe top) ;
@@ -582,7 +580,7 @@ val parseIMP_def = Define‘
         return (F_IMP f1 f2)
       od ++ return f1
     od
-’;
+End
 
 val parseIMP_CONG = Q.store_thm("parseIMP_CONG[defncong]",
   ‘∀s1 s2 t1 t2 d1 d2.
@@ -674,4 +672,3 @@ val Parse_thm = save_thm(
 
 val eg1 = time EVAL “Parse "pp & Gq -> pp U X(x|!y|z)"”;
 
-val _ = export_theory();

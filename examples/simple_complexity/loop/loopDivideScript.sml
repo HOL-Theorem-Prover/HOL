@@ -4,23 +4,16 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "loopDivide";
+Theory loopDivide
+Ancestors
+  arithmetic divides number combinatorics list rich_list
+  listRange logroot loop bitsize
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open arithmeticTheory dividesTheory numberTheory combinatoricsTheory listTheory
-     rich_listTheory listRangeTheory logrootTheory;
-
-open loopTheory bitsizeTheory;
-
 val _ = temp_overload_on("SQ", ``\n. n * n``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
 val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
@@ -360,9 +353,9 @@ val _ = temp_overload_on ("FALLING", ``\f. !x:num. f x <= x``);
 (* ------------------------------------------------------------------------- *)
 
 (* Define a pop function, count of pops to zero. *)
-val pop_def = Define`
+Definition pop_def:
     pop b n = if (b <= 1) \/ (n = 0) then 0 else SUC (pop b (n DIV b))
-`;
+End
 
 (* alternate form *)
 val pop_alt = save_thm("pop_alt", pop_def |> REWRITE_RULE [SUC_ONE_ADD]);
@@ -1651,10 +1644,10 @@ val loop2_div_mono_count_le = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Given a number n, generate a dividing list of n, down to before 0. *)
-val divide_by_def = Define`
+Definition divide_by_def:
     divide_by b n =
        if (b <= 1) \/ (n = 0) then [] else n::divide_by b (n DIV b)
-`;
+End
 (* Overload divide_by 2 *)
 val _ = overload_on ("halving", ``divide_by 2``);
 
@@ -2199,8 +2192,4 @@ val loop2_div_count_upper = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

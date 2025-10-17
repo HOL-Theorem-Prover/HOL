@@ -100,8 +100,8 @@ end;
  * All CTL formulae are of type 'a state_formula
  *---------------------------------------------------------------------------*)
 
-val IS_CTL_def = Define
-      `(IS_CTL (E X STATE f)                 = IS_CTL f)
+Definition IS_CTL_def:
+       (IS_CTL (E X STATE f)                 = IS_CTL f)
   /\   (IS_CTL (E FU STATE f)                = IS_CTL f)
   /\   (IS_CTL (E G STATE f)                 = IS_CTL f)
   /\   (IS_CTL (E ((STATE f1) U (STATE f2))) = IS_CTL f1 /\ IS_CTL f2)
@@ -118,7 +118,8 @@ val IS_CTL_def = Define
   /\   (IS_CTL (f1 \/ f2)                    = IS_CTL f1 /\ IS_CTL f2)
   /\   (IS_CTL (f1 /\ f2)                    = IS_CTL f1 /\ IS_CTL f2)
   /\   (IS_CTL (E _)                         = F)
-  /\   (IS_CTL (A _)                         = F)`;
+  /\   (IS_CTL (A _)                         = F)
+End
 
 (*---------------------------------------------------------------------------*
  * Restrictions to Universally Quantified formulae (ACTL* and ACTL)
@@ -128,8 +129,8 @@ val IS_CTL_def = Define
  * ACTL* formulae may be of type 'a state_formula or 'a path_formula
  *---------------------------------------------------------------------------*)
 
-val ACTLSTAR_FORMULA_def = Define
-      `(ACTLSTAR_STATE  TRUE      = T)
+Definition ACTLSTAR_FORMULA_def:
+       (ACTLSTAR_STATE  TRUE      = T)
   /\   (ACTLSTAR_STATE  FALSE     = T)
   /\   (ACTLSTAR_STATE ~TRUE      = T)
   /\   (ACTLSTAR_STATE ~FALSE     = T)
@@ -148,14 +149,16 @@ val ACTLSTAR_FORMULA_def = Define
   /\   (ACTLSTAR_PATH  (FU g)     = ACTLSTAR_PATH g)
   /\   (ACTLSTAR_PATH  (G g)      = ACTLSTAR_PATH g)
   /\   (ACTLSTAR_PATH  (g1 U g2)  = ACTLSTAR_PATH g1 /\ ACTLSTAR_PATH g2)
-  /\   (ACTLSTAR_PATH  (g1 R g2)  = ACTLSTAR_PATH g1 /\ ACTLSTAR_PATH g2)`;
+  /\   (ACTLSTAR_PATH  (g1 R g2)  = ACTLSTAR_PATH g1 /\ ACTLSTAR_PATH g2)
+End
 
 (*---------------------------------------------------------------------------*
  * ACTL is CTL with restrictions A1 and A2
  * ACTL formulae ore of type 'a state_formula
  *---------------------------------------------------------------------------*)
 
-val IS_ACTL_def = Define `IS_ACTL f = ACTLSTAR_STATE f /\ IS_CTL f`;
+Definition IS_ACTL_def:   IS_ACTL f = ACTLSTAR_STATE f /\ IS_CTL f
+End
 
 
 (*---------------------------------------------------------------------------*
@@ -181,11 +184,12 @@ val _ = Hol_datatype
                 |>`;
 
 
-val wfSTRUCTURE_def = Define
-`wfSTRUCTURE (M: ('state,'atom) STRUCTURE)
+Definition wfSTRUCTURE_def:
+ wfSTRUCTURE (M: ('state,'atom) STRUCTURE)
  = (M.states0 SUBSET M.states) /\
    (!P Q. (P,Q) IN M.fairSets ==> P SUBSET M.states /\ Q SUBSET M.states) /\
-   (!s. s IN M.states ==> (M.valids s) SUBSET M.atoms)`;
+   (!s. s IN M.states ==> (M.valids s) SUBSET M.atoms)
+End
 
 (*---------------------------------------------------------------------------*
  * Definition 3: of paths PI:
@@ -200,12 +204,14 @@ val _ = mkMyInfix "IS_PATH_IN" 140;
 val _ = mkMyInfix "IS_FAIR_PATH_IN" 140;
 val _ = mkMyInfix "FROM" 140;
 
-val STATE_NO_def = Define `PATH(Sn) STATE_NO n = Sn n`;
+Definition STATE_NO_def:   PATH(Sn) STATE_NO n = Sn n
+End
 
-val IS_PATH_IN_def = Define
-    `(PI:'state Path) IS_PATH_IN  (M:('state,'atom)STRUCTURE)
+Definition IS_PATH_IN_def:
+     (PI:'state Path) IS_PATH_IN  (M:('state,'atom)STRUCTURE)
        = (PI STATE_NO 0) IN M.states /\
-         !n. ((PI STATE_NO n), (PI STATE_NO (n+1))) IN M.transitions`;
+         !n. ((PI STATE_NO n), (PI STATE_NO (n+1))) IN M.transitions
+End
 
 
 (*---------------------------------------------------------------------------*
@@ -219,21 +225,24 @@ val IS_PATH_IN_def = Define
  * where * is set intersection
  *---------------------------------------------------------------------------*)
 
-val INF_def = Define `INF PI = {s | !m. ?n. n > m /\ (PI STATE_NO m = s)}`;
+Definition INF_def:   INF PI = {s | !m. ?n. n > m /\ (PI STATE_NO m = s)}
+End
 
-val IS_FAIR_PATH_IN_def = Define
-    `(PI:'state Path) IS_FAIR_PATH_IN  (M:('state,'atom)STRUCTURE)
+Definition IS_FAIR_PATH_IN_def:
+     (PI:'state Path) IS_FAIR_PATH_IN  (M:('state,'atom)STRUCTURE)
       = (PI IS_PATH_IN M) /\
         !P Q. (P,Q) IN M.fairSets
               ==> ~(((INF PI) INTER P) = {})
-              ==> ~(((INF PI) INTER Q) = {})`;
+              ==> ~(((INF PI) INTER Q) = {})
+End
 
 (*---------------------------------------------------------------------------*
  * PISn denotes sn in PI
  * PIn denotes the Path sn,sn+1,sn+2...
  *---------------------------------------------------------------------------*)
 
-val FROM_def = Define `PI FROM n = PATH(\x. PI STATE_NO (n+x))`;
+Definition FROM_def:   PI FROM n = PATH(\x. PI STATE_NO (n+x))
+End
 
 
 (*---------------------------------------------------------------------------*)

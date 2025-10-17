@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "modalBasics";
+Theory modalBasics
 
 Datatype:
   form = VAR num | DISJ form form | FALSE | NOT form | DIAM form
@@ -118,4 +116,3 @@ Definition transitive_M:
             m.frame.rel u w
 End
 
-val _ = export_theory();

@@ -4,30 +4,18 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polyRingModulo";
+Theory polyRingModulo
+Ancestors
+  pred_set list arithmetic number combinatorics divides gcd
+  monoid group ring polynomial polyWeak polyRing polyDivision
+  polyMonic polyRoot polyEval polyDivides polyModuloRing
+  polyBinomial
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory;
-
-open monoidTheory groupTheory ringTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory;
-open polyDivisionTheory polyMonicTheory;
-open polyRootTheory polyEvalTheory;
-open polyDividesTheory;
-open polyModuloRingTheory;
-open polyBinomialTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -681,8 +669,4 @@ val poly_peval_peval_X_exp_X_exp = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

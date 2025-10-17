@@ -137,6 +137,19 @@ val label_def = new_definition(
   ``((lab:label) :- (argument:bool)) = argument``);
 
 (* ----------------------------------------------------------------------
+    The suspend-tactic label
+   ---------------------------------------------------------------------- *)
+
+val suspendlabel_def = new_definition(
+  "suspendlabel_def",
+  “suspendlabel (l:label) (arg:bool) = arg”);
+
+val suspendimp_def = new_definition(
+  "suspendimp_def",
+  “suspendimp = $==>”);
+
+
+(* ----------------------------------------------------------------------
     The 'using' label
    ---------------------------------------------------------------------- *)
 

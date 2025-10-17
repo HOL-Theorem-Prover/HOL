@@ -1,11 +1,10 @@
 (*===========================================================================*)
 (* Simple theory of bytes.                                                   *)
 (*===========================================================================*)
+Theory word8
+Ancestors
+  pair
 
-open HolKernel Parse boolLib bossLib
-     pairTheory;
-
-val _ = new_theory "word8";
 
 (*---------------------------------------------------------------------------*)
 (* 8 bits per byte, represented as an 8-tuple of truth values.               *)
@@ -16,10 +15,14 @@ val _ = Hol_datatype `word8 = BYTE of bool => bool => bool => bool =>
 
 val word8_case_def = fetch "-" "word8_case_def";
 
-val ZERO_def   = Define   `ZERO = BYTE F F F F F F F F`;
-val ONE_def    = Define    `ONE = BYTE F F F F F F F T`;
-val TWO_def    = Define    `TWO = BYTE F F F F F F T F`;
-val THREE_def  = Define  `THREE = BYTE F F F F F F T T`;
+Definition ZERO_def:       ZERO = BYTE F F F F F F F F
+End
+Definition ONE_def:         ONE = BYTE F F F F F F F T
+End
+Definition TWO_def:         TWO = BYTE F F F F F F T F
+End
+Definition THREE_def:     THREE = BYTE F F F F F F T T
+End
 
 (*---------------------------------------------------------------------------*)
 (* There are two ways to do case-analysis on bytes: as an 8-tuple of         *)
@@ -133,15 +136,17 @@ val FORALL_BYTE_BITS = Q.store_thm
 (* Bytes and numbers.                                                        *)
 (*---------------------------------------------------------------------------*)
 
-val B2N = Define `(B2N T = 1) /\ (B2N F = 0)`;
+Definition B2N:   (B2N T = 1) /\ (B2N F = 0)
+End
 
-val BYTE_TO_NUM = Define
-   `BYTE_TO_NUM (BYTE b7 b6 b5 b4 b3 b2 b1 b0) =
+Definition BYTE_TO_NUM:
+    BYTE_TO_NUM (BYTE b7 b6 b5 b4 b3 b2 b1 b0) =
       128*B2N(b7) + 64*B2N(b6) + 32*B2N(b5) +
-       16*B2N(b4) +  8*B2N(b3) +  4*B2N(b2) + 2*B2N(b1) + B2N(b0)`;
+       16*B2N(b4) +  8*B2N(b3) +  4*B2N(b2) + 2*B2N(b1) + B2N(b0)
+End
 
-val NUM_TO_BYTE = Define
-   `NUM_TO_BYTE n7 =
+Definition NUM_TO_BYTE:
+    NUM_TO_BYTE n7 =
       let n6 = n7 DIV 2 in
       let n5 = n6 DIV 2 in
       let n4 = n5 DIV 2 in
@@ -151,7 +156,8 @@ val NUM_TO_BYTE = Define
       let n0 = n1 DIV 2
       in
         BYTE (ODD n0) (ODD n1) (ODD n2) (ODD n3)
-             (ODD n4) (ODD n5) (ODD n6) (ODD n7)`;
+             (ODD n4) (ODD n5) (ODD n6) (ODD n7)
+End
 
 
 val BYTE_TO_NUM_TO_BYTE = Q.store_thm
@@ -169,11 +175,13 @@ val NUM_TO_BYTE_TO_NUM = Q.store_thm
         Shift a byte left and right
  ---------------------------------------------------------------------------*)
 
-val LeftShift = Define
-   `LeftShift (BYTE b7 b6 b5 b4 b3 b2 b1 b0) = BYTE b6 b5 b4 b3 b2 b1 b0 F`;
+Definition LeftShift:
+    LeftShift (BYTE b7 b6 b5 b4 b3 b2 b1 b0) = BYTE b6 b5 b4 b3 b2 b1 b0 F
+End
 
-val RightShift = Define
-   `RightShift (BYTE b7 b6 b5 b4 b3 b2 b1 b0) = BYTE F b7 b6 b5 b4 b3 b2 b1`;
+Definition RightShift:
+    RightShift (BYTE b7 b6 b5 b4 b3 b2 b1 b0) = BYTE F b7 b6 b5 b4 b3 b2 b1
+End
 
 
 val LeftShift_lem =
@@ -242,21 +250,23 @@ val _ = (set_fixity "XOR"     (Infixr 350);
          set_fixity "XOR8"    (Infixr 350);
          set_fixity "AND8"    (Infixr 350));
 
-val XOR_def =  Define `(x:bool) XOR y = ~(x=y)`;
+Definition XOR_def:    (x:bool) XOR y = ~(x=y)
+End
 
-val XOR8_def = Define
- `(BYTE a b c d e f g h) XOR8 (BYTE a1 b1 c1 d1 e1 f1 g1 h1) =
+Definition XOR8_def:
+  (BYTE a b c d e f g h) XOR8 (BYTE a1 b1 c1 d1 e1 f1 g1 h1) =
    BYTE (a XOR a1) (b XOR b1) (c XOR c1) (d XOR d1)
-        (e XOR e1) (f XOR f1) (g XOR g1) (h XOR h1)`;
+        (e XOR e1) (f XOR f1) (g XOR g1) (h XOR h1)
+End
 
 val _ = overload_on ("#",Term`$XOR8`);
 val _ = set_fixity "#" (Infixl 625);
 
-val AND8_def =
- Define
- `(BYTE a b c d e f g h) AND8 (BYTE a1 b1 c1 d1 e1 f1 g1 h1) =
+Definition AND8_def:
+  (BYTE a b c d e f g h) AND8 (BYTE a1 b1 c1 d1 e1 f1 g1 h1) =
    BYTE (a /\ a1) (b /\ b1) (c /\ c1) (d /\ d1)
-        (e /\ e1) (f /\ f1) (g /\ g1) (h /\ h1)`;
+        (e /\ e1) (f /\ f1) (g /\ g1) (h /\ h1)
+End
 
 val _ = overload_on ("&",Term`$AND8`);
 val _ = set_fixity "&" (Infixl 650);
@@ -282,4 +292,3 @@ val XOR8_AC = Q.store_thm
  SIMP_TAC std_ss [FORALL_BYTE_VARS,XOR_def,XOR8_def]
   THEN RW_TAC std_ss [] THEN DECIDE_TAC);
 
-val _ = export_theory();

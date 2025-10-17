@@ -19,7 +19,7 @@ val _ = Hol_datatype`ptree = Lf of gtok | Nd of nt => ptree list`
 
 val _ = new_constant("Ast_Tapp", ``:ast list -> num -> ast``);
 
-val works_ptree_Type_def = Define`
+Definition works_ptree_Type_def:
   works_ptree_Type ptree =
     case ptree of
       Nd nt args =>
@@ -33,7 +33,7 @@ val works_ptree_Type_def = Define`
                  | _ => NONE)
        | _ => NONE)
     | _ => NONE
-`
+End
 
 
 val fails_ptree_Type_def = Pmatch.with_classic_heuristic Define `

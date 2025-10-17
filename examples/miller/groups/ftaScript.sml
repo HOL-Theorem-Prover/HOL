@@ -1,15 +1,13 @@
 (* non-interactive mode
 *)
-open HolKernel Parse boolLib;
-val _ = new_theory "fta";
+Theory fta
+Ancestors
+  list pred_set divides gcd extra_pred_set relation extra_list
+  order arithmetic extra_arith subtype
+Libs
+  hurdUtils subtypeTools arithContext listContext ho_proverTools
+
 val _ = ParseExtras.temp_loose_equality()
-
-open bossLib listTheory hurdUtils subtypeTools
-     pred_setTheory dividesTheory gcdTheory extra_pred_setTheory
-     arithContext listContext relationTheory
-     ho_proverTools extra_listTheory
-     orderTheory arithmeticTheory extra_arithTheory subtypeTheory
-
 
 (* ------------------------------------------------------------------------- *)
 (* Tools.                                                                    *)
@@ -183,4 +181,3 @@ val FUNDAMENTAL_ARITHMETIC = store_thm
 
 (* non-interactive mode
 *)
-val _ = export_theory ();

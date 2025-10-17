@@ -1,40 +1,35 @@
-open HolKernel Parse boolLib bossLib;
-open chap1Theory;
-open numpairTheory;
-open pred_setTheory;
-open relationTheory;
-open arithmeticTheory;
-open set_relationTheory;
-open pairTheory;
-open prim_recTheory;
-
-
-val _ = new_theory "ultrafilter";
+Theory ultrafilter
+Ancestors
+  chap1 numpair pred_set relation arithmetic set_relation pair
+  prim_rec
 
 (* ultrafilters *)
 
-val filter_def = Define`
+Definition filter_def:
 filter FLT W <=> W <> {} /\
                  FLT SUBSET (POW W) /\
                  W IN FLT /\
                  (!X Y. X IN FLT /\ Y IN FLT ==> (X INTER Y) IN FLT) /\
                  (!X Z. X IN FLT /\ X SUBSET Z /\ Z SUBSET W ==> Z IN FLT)
-                 `;
+End
 
 val POW_filter = store_thm(
 "POW_filter",
 ``!W. W <> {} ==> filter (POW W) W``,
 rw[filter_def] >> fs[POW_DEF] >> fs[SUBSET_DEF,INTER_DEF]);
 
-val proper_filter_def = Define`
-proper_filter FLT W <=> filter FLT W /\ FLT <> (POW W)`;
+Definition proper_filter_def:
+proper_filter FLT W <=> filter FLT W /\ FLT <> (POW W)
+End
 
-val ultrafilter_def = Define`
+Definition ultrafilter_def:
 ultrafilter U W <=> proper_filter U W /\
-                      (!X. X IN (POW W) ==> (X IN U <=> (W DIFF X) ∉ U))`;
+                      (!X. X IN (POW W) ==> (X IN U <=> (W DIFF X) ∉ U))
+End
 
-val cofinite_def = Define`
-cofinite X S <=> INFINITE S /\ X SUBSET S /\ FINITE (S DIFF X)`;
+Definition cofinite_def:
+cofinite X S <=> INFINITE S /\ X SUBSET S /\ FINITE (S DIFF X)
+End
 
 val cofinite_filter = store_thm(
 "cofinite_filter",
@@ -52,8 +47,9 @@ rw[filter_def]
      `(S' DIFF Z) SUBSET (S' DIFF X)` suffices_by metis_tac[SUBSET_FINITE] >>
      fs[DIFF_DEF,SUBSET_DEF] >> metis_tac[]));
 
-val generated_filter_def = Define`
-generated_filter E W = BIGINTER {G | E SUBSET G /\ filter G W}`;
+Definition generated_filter_def:
+generated_filter E W = BIGINTER {G | E SUBSET G /\ filter G W}
+End
 
 val generated_filter_ind = save_thm(
 "generated_filter_ind",
@@ -114,8 +110,9 @@ val EMPTY_NOTIN_ultrafilter = store_thm(
 
 
 
-val principle_UF_def = Define`
-principle_UF w W = {X | X SUBSET W /\ w IN X}`;
+Definition principle_UF_def:
+principle_UF w W = {X | X SUBSET W /\ w IN X}
+End
 
 val principle_UF_UF = store_thm(
 "principle_UF_UF",
@@ -174,9 +171,10 @@ rw[SET_EQ_SUBSET]
    `(X INTER (W' DIFF X)) IN S'` by metis_tac[filter_def] >>
    `X ∩ (W' DIFF X) = {}` by (fs[INTER_DEF,DIFF_DEF] >> simp[EXTENSION] >> metis_tac[]) >> metis_tac[filter_def]));
 
-val FIP_def = Define`
+Definition FIP_def:
 FIP S W = (S SUBSET (POW W) /\
-(!S'. (S' SUBSET S /\ FINITE S' /\ S' <> {}) ==> BIGINTER S' <> {}))`;
+(!S'. (S' SUBSET S /\ FINITE S' /\ S' <> {}) ==> BIGINTER S' <> {}))
+End
 
 
 
@@ -504,9 +502,10 @@ val FIP_closed_under_intersection = store_thm(
                `e ∩ BIGINTER (s ∩ B) IN B` by metis_tac[] >>
                metis_tac[INTER_COMM])))));
 
-val countably_incomplete_def = Define`
+Definition countably_incomplete_def:
   countably_incomplete U W <=> (ultrafilter U W /\
-                                ?IFS f. IFS ⊆ U /\ BIJ f (univ(:num)) IFS /\ (BIGINTER IFS) = {})`
+                                ?IFS f. IFS ⊆ U /\ BIJ f (univ(:num)) IFS /\ (BIGINTER IFS) = {})
+End
 
 Theorem example_2_72:
   (ultrafilter U (univ (:num)) /\ !n. {n} NOTIN U) ==> countably_incomplete U (univ (:num))
@@ -788,4 +787,3 @@ QED
 
 
 
-val _ = export_theory();

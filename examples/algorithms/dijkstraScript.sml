@@ -1,11 +1,9 @@
 (*
   Dijkstra's algorithm for computing shortest paths
 *)
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory pred_setTheory listTheory;
-open finite_mapTheory optionTheory pairTheory;
-
-val _ = new_theory "dijkstra";
+Theory dijkstra
+Ancestors
+  arithmetic pred_set list finite_map option pair
 
 (* --- definition of algorithm --- *)
 
@@ -481,4 +479,3 @@ Proof
   \\ irule_at Any has_path_end
 QED
 
-val _ = export_theory();

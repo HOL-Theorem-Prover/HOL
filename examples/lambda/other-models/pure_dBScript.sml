@@ -4,15 +4,13 @@
    "pure" in contrast with Andy Gordon's de Bruijn terms, which have
    indices for bound variables and strings for free variables.)
  *---------------------------------------------------------------------------*)
+Theory pure_dB
+Ancestors
+  arithmetic pred_set string_num list term appFOLDL chap2
+  horeduction chap3
+Libs
+  BasicProvers boolSimps hurdUtils
 
-open HolKernel boolLib Parse bossLib BasicProvers;
-
-open boolSimps arithmeticTheory pred_setTheory string_numTheory listTheory
-     hurdUtils;
-
-open termTheory appFOLDLTheory chap2Theory horeductionTheory chap3Theory;
-
-val _ = new_theory "pure_dB"
 
 val _ = temp_set_fixity "=" (Infix(NONASSOC, 100))
 
@@ -68,11 +66,11 @@ Definition dLAM_def :
 End
 
 (* the set of free indices in a term *)
-val dFV_def = Define`
+Definition dFV_def:
   (dFV (dV i) = {i}) /\
   (dFV (dAPP t u) = dFV t UNION dFV u) /\
   (dFV (dABS t) = IMAGE PRE (dFV t DELETE 0))
-`
+End
 
 val IN_dFV_thm = store_thm(
   "IN_dFV_thm",
@@ -94,9 +92,9 @@ val _ = export_rewrites ["FINITE_dFV"]
 (* guarded increment of a string: it's untouched if the corresponding index
    is less than the guard, otherwise it's bumped, and then pushed back into
    the string type *)
-val ginc_def = Define`
+Definition ginc_def:
   ginc gd s = if s2n s < gd then s else n2s (s2n s + 1)
-`
+End
 
 val ginc_0 = store_thm(
   "ginc_0",
@@ -130,10 +128,10 @@ val _ = export_rewrites ["ginc_neq"]
 
 (* incrementing a permutation, defined in terms of the underlying list of
    pairs representation *)
-val inc_pm_def = Define`
+Definition inc_pm_def:
   (inc_pm g [] = []) /\
   (inc_pm g ((x,y)::rest) = (ginc g x, ginc g y) :: inc_pm g rest)
-`;
+End
 val _ = export_rewrites ["inc_pm_def"]
 
 val inc_pm_APPEND = store_thm(
@@ -162,11 +160,11 @@ val inc_pm_permeq = store_thm(
                        FUN_EQ_THM]);
 
 (* definition of permutation over de Bruijn terms *)
-val raw_dpm_def = Define`
+Definition raw_dpm_def:
   (raw_dpm pi (dV i) = dV (s2n (lswapstr pi (n2s i)))) /\
   (raw_dpm pi (dAPP t u) = dAPP (raw_dpm pi t) (raw_dpm pi u)) /\
   (raw_dpm pi (dABS t) = dABS (raw_dpm (inc_pm 0 pi) t))
-`;
+End
 val _ = export_rewrites ["raw_dpm_def"]
 val _ = overload_on("d_pmact",``mk_pmact raw_dpm``);
 val _ = overload_on("dpm",``pmact d_pmact``);
@@ -191,7 +189,8 @@ val _ = export_rewrites ["dpm_thm"]
 (* being a nominal set gives us properties of dpm "for free" *)
 
 (* dFVs gives the free indices of a dB term as strings *)
-val dFVs_def = Define`dFVs t = IMAGE n2s (dFV t)`
+Definition dFVs_def:  dFVs t = IMAGE n2s (dFV t)
+End
 
 val IN_dFVs_thm = store_thm(
   "IN_dFVs_thm",
@@ -692,11 +691,11 @@ val dbeta'_dpm_calc = store_thm(
      lift M lim
    as long as n is as big as the biggest free index in M
 *)
-val lifting_pm_def = Define`
+Definition lifting_pm_def:
   lifting_pm lim n = if n < lim then []
                     else if n = lim then [(n2s n, n2s (n + 1))]
                     else lifting_pm lim (n - 1) ++ [(n2s n, n2s (n + 1))]
-`
+End
 
 val lifting_pm_behaves = store_thm(
   "lifting_pm_behaves",
@@ -929,11 +928,11 @@ val dbeta_ccbeta_eqn = store_thm(
 (* to finish, a demonstration that fromTerm is also onto, using a size
    measure on dB terms.  Could alternatively prove an induction
    principle for dB in terms of dLAM.  *)
-val dbsize_def = Define`
+Definition dbsize_def:
   (dbsize (dV i) = 1) /\
   (dbsize (dAPP d1 d2) = dbsize d1 + dbsize d2 + 1) /\
   (dbsize (dABS d) = dbsize d + 1)
-`
+End
 val _ = export_rewrites ["dbsize_def"]
 
 val dbsize_sub = store_thm(
@@ -1082,11 +1081,11 @@ Proof
   Induct THEN SRW_TAC [][]
 QED
 
-val dbnf_def = Define`
+Definition dbnf_def:
   (dbnf (dV i) = T) /\
   (dbnf (dAPP d1 d2) = dbnf d1 /\ dbnf d2 /\ ~is_dABS d1) /\
   (dbnf (dABS d) = dbnf d)
-`;
+End
 val _ = export_rewrites ["dbnf_def"]
 
 Theorem dbnf_vnsub_invariant[simp] :
@@ -1610,7 +1609,6 @@ QED
 Theorem dLAMl_to_dABSi_applied =
     GEN_ALL (SIMP_RULE std_ss [LET_DEF] dLAMl_to_dABSi)
 
-val _ = export_theory();
 val _ = html_theory "pure_dB";
 
 (* References:

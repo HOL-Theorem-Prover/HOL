@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-open pred_setTheory;
-open listTheory;
-
-val _ = new_theory "hilbert";
+Theory hilbert
+Ancestors
+  pred_set list
 
 (* Useful definition/s *)
 Definition only_one_def:
@@ -1262,4 +1260,3 @@ QED
 (*   cheat *)
 (* QED *)
 
-val _ = export_theory();

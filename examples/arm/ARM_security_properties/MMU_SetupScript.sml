@@ -1,16 +1,20 @@
 (*  Oliver *)
+Theory MMU_Setup
+Ancestors
+  MMU
+Libs
+  Cond_rewrite blastLib
 
-open HolKernel boolLib bossLib Parse;
-open MMUTheory;
-open Cond_rewrite blastLib;
-
-val _ = new_theory "MMU_Setup";
 
 (* === MMU requirements  === *)
-val guest1_min_adr_def = Define `guest1_min_adr = 0x100000w:word32`;
-val guest1_max_adr_def = Define `guest1_max_adr= 0x3FFFFFw:word32`;
-val guest2_min_adr_def = Define `guest2_min_adr = 0x400000w:word32`;
-val guest2_max_adr_def = Define `guest2_max_adr = 0x6FFFFFw:word32`;
+Definition guest1_min_adr_def:   guest1_min_adr = 0x100000w:word32
+End
+Definition guest1_max_adr_def:   guest1_max_adr= 0x3FFFFFw:word32
+End
+Definition guest2_min_adr_def:   guest2_min_adr = 0x400000w:word32
+End
+Definition guest2_max_adr_def:   guest2_max_adr = 0x6FFFFFw:word32
+End
 
 val _ = new_constant ("guest1", ``:word32``);
 val _ = new_constant ("guest2", ``:word32``);
@@ -187,7 +191,7 @@ val address_complete = store_thm(
 
 
 (* what we assume when guests are running *)
-val mmu_requirements_def = Define `mmu_requirements state id =
+Definition mmu_requirements_def:   mmu_requirements state id =
 !add1 is_write u p m.
   ((u,p,m) = permitted_byte add1
                             is_write
@@ -203,11 +207,12 @@ val mmu_requirements_def = Define `mmu_requirements state id =
 /\  ( ((add1 >+  guest2_max_adr) \/ (add1 <+   guest1_min_adr))   ==>    (~p) )
 /\  ((state.coprocessors.state.cp15.C2  && (0xFFFFC000w:bool[32])) >=+  0w)
 /\  ((state.coprocessors.state.cp15.C2  && (0xFFFFC000w:bool[32])) <+  guest1_min_adr)
-/\  (((state.coprocessors.state.cp15.C2  && (0xFFFFC000w:bool[32])) + 4w * 4095w + 3w) <+   guest1_min_adr)`;
+/\  (((state.coprocessors.state.cp15.C2  && (0xFFFFC000w:bool[32])) + 4w * 4095w + 3w) <+   guest1_min_adr)
+End
 
 
 (* some consequences from the above for permitted_byte_pure *)
-val mmu_requirements_pure_def = Define `mmu_requirements_pure state id =
+Definition mmu_requirements_pure_def:   mmu_requirements_pure state id =
 !add1 is_write.
 ( ((add1 <=+ guest1_max_adr) /\ (add1 >=+ guest1_min_adr))   ==>
   ((id=guest1) = permitted_byte_pure add1
@@ -232,7 +237,8 @@ val mmu_requirements_pure_def = Define `mmu_requirements_pure state id =
                                 state.coprocessors.state.cp15.C2
                                 state.coprocessors.state.cp15.C3
                                 F
-                                state.memory))`;
+                                state.memory))
+End
 
 
 (* lemma: mmu_requirements_pure follows from mmu_requirements *)
@@ -424,7 +430,7 @@ val malicious_write = store_thm (
 (* predicate "word aligned around address add is readable" *)
 
 
-val aligned_word_readable_def = Define `aligned_word_readable s is_thumb add1 =
+Definition aligned_word_readable_def:   aligned_word_readable s is_thumb add1 =
  (  permitted_byte_pure (add1) F s.coprocessors.state.cp15.C1 s.coprocessors.state.cp15.C2 s.coprocessors.state.cp15.C3 F s.memory
        /\ (is_thumb ==> (  permitted_byte_pure (align(add1,2)) F s.coprocessors.state.cp15.C1
                                                         s.coprocessors.state.cp15.C2
@@ -444,7 +450,7 @@ val aligned_word_readable_def = Define `aligned_word_readable s is_thumb add1 =
                                                               s.coprocessors.state.cp15.C3 F s.memory
                                /\ permitted_byte_pure (align (add1,4) + 3w) F s.coprocessors.state.cp15.C1
                                                               s.coprocessors.state.cp15.C2
-                                                              s.coprocessors.state.cp15.C3 F s.memory)))`;
+                                                              s.coprocessors.state.cp15.C3 F s.memory)))
+End
 
 
-val _ = export_theory();

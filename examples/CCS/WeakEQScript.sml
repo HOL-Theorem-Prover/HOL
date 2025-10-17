@@ -3,14 +3,13 @@
  * Copyright 2016-2017  University of Bologna, Italy (Author: Chun Tian)
  * Copyright 2018-2019  Fondazione Bruno Kessler, Italy (Author: Chun Tian)
  *)
+Theory WeakEQ
+Ancestors
+  pred_set relation bisimulation list CCS StrongEQ
+Libs
+  IndDefRules CCSLib
 
-open HolKernel Parse boolLib bossLib;
 
-open pred_setTheory relationTheory bisimulationTheory listTheory IndDefRules;
-
-open CCSLib CCSTheory StrongEQTheory;
-
-val _ = new_theory "WeakEQ";
 val _ = temp_loose_equality ();
 
 (******************************************************************************)
@@ -21,7 +20,8 @@ val _ = temp_loose_equality ();
 
 (* new definition for the epsilon transition relation. *)
 val EPS_defn = ``\E E'. TRANS E tau E'``;
-val EPS_def = Define `EPS = RTC ^EPS_defn`;
+Definition EPS_def:   EPS = RTC ^EPS_defn
+End
 
 val _ = set_mapped_fixity { fixity = Infix (NONASSOC, 450),
                             tok = ("=" ^ (UTF8.chr 0x03B5) ^ "=>"), term_name = "EPS" };
@@ -400,8 +400,9 @@ val WEAK_SUM2 = store_thm ((* NEW *)
 (*                                                                            *)
 (******************************************************************************)
 
-val WEAK_BISIM_def = Define
-   `WEAK_BISIM (R :'a simulation) = WBISIM TRANS tau R`;
+Definition WEAK_BISIM_def:
+    WEAK_BISIM (R :'a simulation) = WBISIM TRANS tau R
+End
 
 Theorem WEAK_BISIM :
     WEAK_BISIM (Wbsm: 'a simulation) =
@@ -1815,5 +1816,4 @@ val STRONG_EQUIV_WEAK_TRANS' = store_thm ((* NEW *)
  >> Q.EXISTS_TAC `E2'` >> ASM_REWRITE_TAC []
  >> IMP_RES_TAC STRONG_EQUIV_SYM);
 
-val _ = export_theory ();
 val _ = html_theory "WeakEQ";

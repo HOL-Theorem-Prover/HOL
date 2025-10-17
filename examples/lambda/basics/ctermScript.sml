@@ -1,10 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open boolSimps arithmeticTheory pred_setTheory listTheory finite_mapTheory hurdUtils;
-
-open generic_termsTheory binderLib nomsetTheory nomdatatype;
-
-val _ = new_theory "cterm";
+Theory cterm
+Ancestors
+  arithmetic pred_set list finite_map generic_terms nomset
+Libs
+  boolSimps hurdUtils binderLib nomdatatype
 
 val tyname = "cterm"
 
@@ -1033,4 +1031,3 @@ val term_info =
 
 val _ = binderLib.export_nomtype (“:α cterm”, term_info)
 
-val _ = export_theory()

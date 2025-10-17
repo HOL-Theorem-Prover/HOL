@@ -31,22 +31,15 @@ Overall Idea:
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "VectorSpace";
+Theory VectorSpace
+Ancestors
+  pred_set list arithmetic number combinatorics group field
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory;
-
-open groupTheory fieldTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* Vector Space Documentation                                                *)
 (* ------------------------------------------------------------------------- *)
@@ -169,7 +162,7 @@ open groupTheory fieldTheory;
 *)
 
 (* Axioms of Vector Space *)
-val VSpace_def = Define`
+Definition VSpace_def:
   VSpace (r:'a field) (g:'b group) (op:'a -> 'b -> 'b) <=>
      Field r /\ (* scalars from a field *)
      AbelianGroup g /\ (* vectors form a commutative additive group *)
@@ -180,7 +173,7 @@ val VSpace_def = Define`
        (op a (g.op u v) = g.op (op a u) (op a v))) /\ (* distribution of scalar over vector *)
      (!a b v. a IN R /\ b IN R /\ v IN g.carrier ==>
        (op (a + b) v = g.op (op a v) (op b v))) (* distribution of vector over scalar *)
-`;
+End
 
 (* Overloads for convenience *)
 val _ = temp_overload_on ("o", ``(op:'a -> 'b -> 'b)``);
@@ -457,9 +450,9 @@ val vspace_vadd_eq_zero_alt = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Sticks is a set of vectors of length m *)
-val sticks_def = Define`
+Definition sticks_def:
   sticks (r:'a field) (m:num) = { (l:'a list) | (set l) SUBSET R /\ (LENGTH l = m) }
-`;
+End
 
 (* Theorem: sticks r 0 = {[]} *)
 (* Proof:
@@ -772,11 +765,11 @@ val stick_snoc = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define stick addition by components. *)
-val stick_add_def = Define`
+Definition stick_add_def:
   (stick_add (r:'a field) [][] = []) /\
   (stick_add (r:'a field) ((h:'a)::(t:'a list)) ((h':'a)::(t':'a list)) =
                                                 (h + h')::(stick_add r t t'))
-`;
+End
 
 val _ = temp_overload_on ("+", ``stick_add r``);
 (* - stick_add_def;
@@ -820,10 +813,10 @@ val stick_add_length = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define stick addition by components. *)
-val stick_neg_def = Define`
+Definition stick_neg_def:
   (stick_neg (r:'a field) [] = []) /\
   (stick_neg (r:'a field) ((h:'a)::(t:'a list)) = (-h)::(stick_neg r t))
-`;
+End
 
 val _ = temp_overload_on ("-", ``stick_neg r``);
 (* - stick_neg_def;
@@ -868,10 +861,10 @@ val stick_neg_length = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define stick scalar multiplication by components. *)
-val stick_cmult_def = Define`
+Definition stick_cmult_def:
   (stick_cmult (r:'a field) (c:'a) [] = []) /\
   (stick_cmult (r:'a field) (c:'a) ((h:'a)::(t:'a list)) = (c * h)::(stick_cmult r c t))
-`;
+End
 
 val _ = temp_overload_on ("*", ``stick_cmult r``);
 (* - stick_cmult_def;
@@ -916,11 +909,11 @@ val stick_cmult_length = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define stick subtraction by components. *)
-val stick_sub_def = Define`
+Definition stick_sub_def:
   (stick_sub (r:'a field) [][] = []) /\
   (stick_sub (r:'a field) ((h:'a)::(t:'a list)) ((h':'a)::(t':'a list)) =
                                                 (h - h')::(stick_sub r t t'))
-`;
+End
 
 val _ = temp_overload_on ("-", ``stick_sub r``);
 (* - stick_sub_def;
@@ -1047,8 +1040,4 @@ val stick_eq_property = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

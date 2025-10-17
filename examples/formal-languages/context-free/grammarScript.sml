@@ -1,15 +1,12 @@
-open HolKernel Parse boolLib bossLib
-
-open boolSimps
-
-open listTheory pred_setTheory finite_mapTheory locationTheory
-open relationTheory
+Theory grammar
+Ancestors
+  list pred_set finite_map location relation
+Libs
+  boolSimps
 
 val FLAT_APPEND = rich_listTheory.FLAT_APPEND
 val rveq = rpt BasicProvers.VAR_EQ_TAC
 fun asm_match q = Q.MATCH_ASSUM_RENAME_TAC q
-
-val _ = new_theory "grammar"
 
 val _ = type_abbrev("inf", ``:'a + num``)
 Datatype: symbol = TOK 'a | NT ('b inf)
@@ -446,4 +443,3 @@ val derives_split_horizontally = store_thm(
   map_every qexists_tac [`sf1`, `sf2`] >> simp[] >> match_mp_tac RTC_R_I >>
   metis_tac[derive_def]);
 
-val _ = export_theory()

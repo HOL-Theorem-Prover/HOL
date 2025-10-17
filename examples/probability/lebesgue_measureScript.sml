@@ -15,19 +15,15 @@
 (* Last update: Jan, 2015                                                    *)
 (*                                                                           *)
 (* ========================================================================= *)
+Theory lebesgue_measure
+Ancestors
+  prim_rec arithmetic num pred_set combin cardinal ordinal
+  relation real seq transc real_sigma iterate topology metric
+  real_topology integration sigma_algebra extreal real_borel
+  measure borel
+Libs
+  numLib pred_setLib hurdUtils jrhUtils realLib
 
-open HolKernel Parse boolLib bossLib;
-
-open prim_recTheory arithmeticTheory numTheory numLib pred_setTheory pred_setLib
-     combinTheory hurdUtils jrhUtils cardinalTheory ordinalTheory relationTheory;
-
-open realTheory realLib seqTheory transcTheory real_sigmaTheory iterateTheory
-     topologyTheory metricTheory real_topologyTheory integrationTheory;
-
-open sigma_algebraTheory extrealTheory real_borelTheory measureTheory borelTheory;
-
-val theory_name = "lebesgue_measure";
-val _ = new_theory theory_name;
 
 val ASM_ARITH_TAC = rpt (POP_ASSUM MP_TAC) >> ARITH_TAC; (* numLib *)
 val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] >> POP_ASSUM K_TAC;
@@ -601,8 +597,7 @@ Proof
  >> ASM_SIMP_TAC std_ss [lebesgue_eq_lambda, lambda_open_interval]
 QED
 
-val _ = export_theory ();
-val _ = html_theory theory_name;
+val _ = html_theory $ current_theory();
 
 (* References:
 

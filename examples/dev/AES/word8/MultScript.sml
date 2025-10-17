@@ -9,20 +9,22 @@
   open wordsTheory bitTheory wordsLib arithmeticTheory;
   quietdec := false;
 *)
+Theory Mult
+Ancestors
+  words bit arithmetic
+Libs
+  wordsLib
 
-open HolKernel Parse boolLib bossLib
-     wordsTheory bitTheory wordsLib arithmeticTheory;
-
-val _ = new_theory "Mult";
 
 (*---------------------------------------------------------------------------
     Multiply a byte (representing a polynomial) by x.
 
  ---------------------------------------------------------------------------*)
 
-val xtime_def = Define
-  `xtime (w : word8) =
-     w << 1 ?? (if word_msb w then 0x1Bw else 0w)`;
+Definition xtime_def:
+   xtime (w : word8) =
+     w << 1 ?? (if word_msb w then 0x1Bw else 0w)
+End
 
 val MSB_lem = Q.prove (
   `!a b. word_msb (a ?? b) = ~(word_msb a = word_msb b)`,
@@ -154,9 +156,8 @@ val _ = save_thm ("mult_ifs", mult_ifs)
 (* Exponentiation                                                            *)
 (*---------------------------------------------------------------------------*)
 
-val PolyExp_def =
- Define
-   `PolyExp x n = if n=0 then 1w else x ** PolyExp x (n-1)`;
+Definition PolyExp_def:
+    PolyExp x n = if n=0 then 1w else x ** PolyExp x (n-1)
+End
 
 
-val _ = export_theory();

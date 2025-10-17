@@ -1,10 +1,11 @@
-open HolKernel boolLib bossLib Parse wordsLib
-     messageDigestPaddingTheory cv_transLib cv_stdTheory
+Theory sha2
+Ancestors
+  messageDigestPadding cv_std
+Libs
+  wordsLib cv_transLib
 
 (* The SHA-2 Standard: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf *)
 (* SHA-256 in particular (i.e. Section 6.2) *)
-
-val _ = new_theory"sha2";
 
 (* TODO: move *)
 Definition initial_hash_value_def:
@@ -189,4 +190,3 @@ Proof
   \\ (fn g => (g |> #2 |> lhs |> cv_eval |> ACCEPT_TAC) g)
 QED
 
-val _ = export_theory();

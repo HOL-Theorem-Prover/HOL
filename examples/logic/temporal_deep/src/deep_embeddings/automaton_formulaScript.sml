@@ -3,20 +3,18 @@
 (*     Automaton formula (symbolic semi-automaton + acceptance_condition)     *)
 (*                                                                            *)
 (******************************************************************************)
+Theory automaton_formula
+Ancestors
+  symbolic_semi_automaton prop_logic xprop_logic set_lemmata
+  pred_set list pair container infinite_path
+  symbolic_kripke_structure temporal_deep_mixed
+Libs
+  tuerk_tacticsLib Sanity
 
-open HolKernel Parse boolLib bossLib;
-
-open symbolic_semi_automatonTheory prop_logicTheory xprop_logicTheory
-     set_lemmataTheory pred_setTheory listTheory pairTheory
-     containerTheory infinite_pathTheory symbolic_kripke_structureTheory
-     tuerk_tacticsLib temporal_deep_mixedTheory;
-
-open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
 
-val _ = new_theory "automaton_formula";
 val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************)
@@ -49,13 +47,14 @@ Theorem acceptance_condition_induct = Q.GEN `P`
          [`P`,`\(f1,f2). P f1 /\ P f2`]
          (TypeBase.induction_of ``:'a acceptance_condition``))));
 
-val ACCEPT_COND_USED_VARS_def = Define
-  `(ACCEPT_COND_USED_VARS (ACCEPT_PROP p) = P_USED_VARS p) /\
+Definition ACCEPT_COND_USED_VARS_def:
+   (ACCEPT_COND_USED_VARS (ACCEPT_PROP p) = P_USED_VARS p) /\
    (ACCEPT_COND_USED_VARS ACCEPT_TRUE = EMPTY) /\
    (ACCEPT_COND_USED_VARS (ACCEPT_NOT a) = ACCEPT_COND_USED_VARS a) /\
    (ACCEPT_COND_USED_VARS (ACCEPT_G a) = ACCEPT_COND_USED_VARS a) /\
    (ACCEPT_COND_USED_VARS (ACCEPT_AND(a, b)) =
-     (ACCEPT_COND_USED_VARS a) UNION (ACCEPT_COND_USED_VARS b))`;
+     (ACCEPT_COND_USED_VARS a) UNION (ACCEPT_COND_USED_VARS b))
+End
 
 (*****************************************************************************
  * Automaton formulas
@@ -80,24 +79,27 @@ Theorem automaton_formula_induct = Q.GEN `P0`
          [`P0`,`\(A, f). P0 f`,`\(f1,f2). P0 f1 /\ P0 f2`]
          (TypeBase.induction_of ``:'a automaton_formula``))));
 
-val A_USED_INPUT_VARS_def = Define
-  `(A_USED_INPUT_VARS (ACCEPT_COND p) = ACCEPT_COND_USED_VARS p) /\
+Definition A_USED_INPUT_VARS_def:
+   (A_USED_INPUT_VARS (ACCEPT_COND p) = ACCEPT_COND_USED_VARS p) /\
    (A_USED_INPUT_VARS A_TRUE = EMPTY) /\
    (A_USED_INPUT_VARS (A_NDET(A, f)) =
      (SEMI_AUTOMATON_USED_INPUT_VARS A) UNION
      (A_USED_INPUT_VARS f DIFF A.S)) /\
    (A_USED_INPUT_VARS (A_NOT a) = A_USED_INPUT_VARS a) /\
-   (A_USED_INPUT_VARS (A_AND(a, b)) = (A_USED_INPUT_VARS a) UNION (A_USED_INPUT_VARS b))`;
+   (A_USED_INPUT_VARS (A_AND(a, b)) = (A_USED_INPUT_VARS a) UNION (A_USED_INPUT_VARS b))
+End
 
-val A_USED_STATE_VARS_def = Define
-  `(A_USED_STATE_VARS (ACCEPT_COND p) = EMPTY) /\
+Definition A_USED_STATE_VARS_def:
+   (A_USED_STATE_VARS (ACCEPT_COND p) = EMPTY) /\
    (A_USED_STATE_VARS A_TRUE = EMPTY) /\
    (A_USED_STATE_VARS (A_NDET(A, f)) = A.S UNION (A_USED_STATE_VARS f)) /\
    (A_USED_STATE_VARS (A_NOT a) = A_USED_STATE_VARS a) /\
-   (A_USED_STATE_VARS (A_AND(a, b)) = (A_USED_STATE_VARS a) UNION (A_USED_STATE_VARS b))`;
+   (A_USED_STATE_VARS (A_AND(a, b)) = (A_USED_STATE_VARS a) UNION (A_USED_STATE_VARS b))
+End
 
-val A_USED_VARS_def = Define
-   `A_USED_VARS a = (A_USED_INPUT_VARS a) UNION (A_USED_STATE_VARS a)`;
+Definition A_USED_VARS_def:
+    A_USED_VARS a = (A_USED_INPUT_VARS a) UNION (A_USED_STATE_VARS a)
+End
 
 (* added toplevel quantifiers *)
 Theorem A_USED_VARS___DIRECT_DEF :
@@ -117,40 +119,44 @@ Proof
       SIMP_TAC std_ss [EXTENSION, IN_UNION] >> PROVE_TAC [] ]
 QED
 
-val STATE_VARDISJOINT_AUTOMATON_FORMULA_def = Define
-  `(STATE_VARDISJOINT_AUTOMATON_FORMULA (ACCEPT_COND p) = T) /\
+Definition STATE_VARDISJOINT_AUTOMATON_FORMULA_def:
+   (STATE_VARDISJOINT_AUTOMATON_FORMULA (ACCEPT_COND p) = T) /\
    (STATE_VARDISJOINT_AUTOMATON_FORMULA A_TRUE = T) /\
    (STATE_VARDISJOINT_AUTOMATON_FORMULA (A_NDET(A, f)) =
      (DISJOINT A.S (A_USED_STATE_VARS f) /\ STATE_VARDISJOINT_AUTOMATON_FORMULA f)) /\
    (STATE_VARDISJOINT_AUTOMATON_FORMULA (A_NOT a) = STATE_VARDISJOINT_AUTOMATON_FORMULA a) /\
    (STATE_VARDISJOINT_AUTOMATON_FORMULA (A_AND(a, b)) =
      (DISJOINT (A_USED_STATE_VARS a) (A_USED_STATE_VARS b) /\
-      STATE_VARDISJOINT_AUTOMATON_FORMULA a /\ STATE_VARDISJOINT_AUTOMATON_FORMULA b))`;
+      STATE_VARDISJOINT_AUTOMATON_FORMULA a /\ STATE_VARDISJOINT_AUTOMATON_FORMULA b))
+End
 
 (* also disjoint with input variables *)
-val VARDISJOINT_AUTOMATON_FORMULA_def = Define
-   `VARDISJOINT_AUTOMATON_FORMULA f =
+Definition VARDISJOINT_AUTOMATON_FORMULA_def:
+    VARDISJOINT_AUTOMATON_FORMULA f =
      (STATE_VARDISJOINT_AUTOMATON_FORMULA f /\
-      DISJOINT (A_USED_STATE_VARS f) (A_USED_INPUT_VARS f))`;
+      DISJOINT (A_USED_STATE_VARS f) (A_USED_INPUT_VARS f))
+End
 
 (*****************************************************************************
  * Variable renamings
  *****************************************************************************)
-val ACCEPT_VAR_RENAMING_def = Define
-  `(ACCEPT_VAR_RENAMING (f:'a->'b) (ACCEPT_TRUE) = ACCEPT_TRUE) /\
+Definition ACCEPT_VAR_RENAMING_def:
+   (ACCEPT_VAR_RENAMING (f:'a->'b) (ACCEPT_TRUE) = ACCEPT_TRUE) /\
    (ACCEPT_VAR_RENAMING f (ACCEPT_PROP p) = (ACCEPT_PROP (P_VAR_RENAMING f p))) /\
    (ACCEPT_VAR_RENAMING f (ACCEPT_NOT b) = ACCEPT_NOT (ACCEPT_VAR_RENAMING f b)) /\
    (ACCEPT_VAR_RENAMING f (ACCEPT_G b) = ACCEPT_G (ACCEPT_VAR_RENAMING f b)) /\
    (ACCEPT_VAR_RENAMING f (ACCEPT_AND(b1,b2)) =
-      ACCEPT_AND(ACCEPT_VAR_RENAMING f b1, ACCEPT_VAR_RENAMING f b2))`;
+      ACCEPT_AND(ACCEPT_VAR_RENAMING f b1, ACCEPT_VAR_RENAMING f b2))
+End
 
-val A_VAR_RENAMING_def = Define
-  `(A_VAR_RENAMING (f:'a -> 'b) (ACCEPT_COND p) = ACCEPT_COND (ACCEPT_VAR_RENAMING f p)) /\
+Definition A_VAR_RENAMING_def:
+   (A_VAR_RENAMING (f:'a -> 'b) (ACCEPT_COND p) = ACCEPT_COND (ACCEPT_VAR_RENAMING f p)) /\
    (A_VAR_RENAMING f A_TRUE = A_TRUE) /\
    (A_VAR_RENAMING f (A_NDET(A:'a symbolic_semi_automaton, f')) =
       A_NDET(SEMI_AUTOMATON_VAR_RENAMING f A, A_VAR_RENAMING f f')) /\
    (A_VAR_RENAMING f (A_NOT a) = A_NOT(A_VAR_RENAMING f a)) /\
-   (A_VAR_RENAMING f (A_AND(a, b)) = (A_AND (A_VAR_RENAMING f a, A_VAR_RENAMING f b)))`;
+   (A_VAR_RENAMING f (A_AND(a, b)) = (A_AND (A_VAR_RENAMING f a, A_VAR_RENAMING f b)))
+End
 
 (*=============================================================================
 = Semantics
@@ -159,33 +165,37 @@ val A_VAR_RENAMING_def = Define
 (*****************************************************************************
  * Acceptance conditions
  *****************************************************************************)
-val ACCEPT_COND_SEM_TIME_def = Define
-  `(ACCEPT_COND_SEM_TIME t v (ACCEPT_PROP p) = P_SEM (v t) p) /\
+Definition ACCEPT_COND_SEM_TIME_def:
+   (ACCEPT_COND_SEM_TIME t v (ACCEPT_PROP p) = P_SEM (v t) p) /\
    (ACCEPT_COND_SEM_TIME t v ACCEPT_TRUE = T) /\
    (ACCEPT_COND_SEM_TIME t v (ACCEPT_NOT a) = ~(ACCEPT_COND_SEM_TIME t v a)) /\
    (ACCEPT_COND_SEM_TIME t v (ACCEPT_G a) =
      !t':num. t' >= t ==> ACCEPT_COND_SEM_TIME t' v a) /\
    (ACCEPT_COND_SEM_TIME t v (ACCEPT_AND(a, b)) =
-     (ACCEPT_COND_SEM_TIME t v a /\ ACCEPT_COND_SEM_TIME t v b))`;
+     (ACCEPT_COND_SEM_TIME t v a /\ ACCEPT_COND_SEM_TIME t v b))
+End
 
-val ACCEPT_COND_SEM_def = Define
-   `ACCEPT_COND_SEM v f = ACCEPT_COND_SEM_TIME 0 v f`;
+Definition ACCEPT_COND_SEM_def:
+    ACCEPT_COND_SEM v f = ACCEPT_COND_SEM_TIME 0 v f
+End
 
 (*****************************************************************************
  * Automaton formulas
  *****************************************************************************)
-val A_SEM_def = Define
-  `(A_SEM i (ACCEPT_COND p) = ACCEPT_COND_SEM i p) /\
+Definition A_SEM_def:
+   (A_SEM i (ACCEPT_COND p) = ACCEPT_COND_SEM i p) /\
    (A_SEM i (A_TRUE) = T) /\
    (A_SEM i (A_NDET(A, f)) =
       ?w. (IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w) /\
           (A_SEM (INPUT_RUN_PATH_UNION A i w) f)) /\
    (A_SEM i (A_NOT a) = ~(A_SEM i a)) /\
-   (A_SEM i (A_AND(a, b)) = ((A_SEM i a) /\ A_SEM i b))`;
+   (A_SEM i (A_AND(a, b)) = ((A_SEM i a) /\ A_SEM i b))
+End
 
-val A_KS_SEM_def = Define
-   `A_KS_SEM M A =
-      !i. IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M i ==> A_SEM i A`;
+Definition A_KS_SEM_def:
+    A_KS_SEM M A =
+      !i. IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M i ==> A_SEM i A
+End
 
 (*=============================================================================
 = Syntactic Sugar and elementary lemmata
@@ -194,52 +204,66 @@ val A_KS_SEM_def = Define
 (*****************************************************************************
  * Acceptance conditions
 *****************************************************************************)
-val ACCEPT_F_def = Define
-   `ACCEPT_F b = ACCEPT_NOT(ACCEPT_G (ACCEPT_NOT b))`;
+Definition ACCEPT_F_def:
+    ACCEPT_F b = ACCEPT_NOT(ACCEPT_G (ACCEPT_NOT b))
+End
 
-val ACCEPT_FALSE_def = Define
-   `ACCEPT_FALSE = ACCEPT_NOT(ACCEPT_TRUE)`;
+Definition ACCEPT_FALSE_def:
+    ACCEPT_FALSE = ACCEPT_NOT(ACCEPT_TRUE)
+End
 
-val ACCEPT_OR_def = Define
-   `ACCEPT_OR(b1, b2) = ACCEPT_NOT(ACCEPT_AND(ACCEPT_NOT b1, ACCEPT_NOT b2))`;
+Definition ACCEPT_OR_def:
+    ACCEPT_OR(b1, b2) = ACCEPT_NOT(ACCEPT_AND(ACCEPT_NOT b1, ACCEPT_NOT b2))
+End
 
-val ACCEPT_IMPL_def = Define
-   `ACCEPT_IMPL(b1, b2) = ACCEPT_OR(ACCEPT_NOT b1, b2)`;
+Definition ACCEPT_IMPL_def:
+    ACCEPT_IMPL(b1, b2) = ACCEPT_OR(ACCEPT_NOT b1, b2)
+End
 
-val ACCEPT_EQUIV_def = Define
-   `ACCEPT_EQUIV(b1, b2) = ACCEPT_AND(ACCEPT_IMPL(b1, b2),ACCEPT_IMPL(b2, b1))`;
+Definition ACCEPT_EQUIV_def:
+    ACCEPT_EQUIV(b1, b2) = ACCEPT_AND(ACCEPT_IMPL(b1, b2),ACCEPT_IMPL(b2, b1))
+End
 
-val ACCEPT_BIGAND_def = Define
-  `(ACCEPT_BIGAND [] = ACCEPT_TRUE) /\
-   (ACCEPT_BIGAND (e::C) = ACCEPT_AND(e, ACCEPT_BIGAND C))`;
+Definition ACCEPT_BIGAND_def:
+   (ACCEPT_BIGAND [] = ACCEPT_TRUE) /\
+   (ACCEPT_BIGAND (e::C) = ACCEPT_AND(e, ACCEPT_BIGAND C))
+End
 
 (*****************************************************************************
  * Automaton formulas
  *****************************************************************************)
-val A_BIGAND_def = Define
-  `(A_BIGAND ([] :'a automaton_formula list) = (A_TRUE :'a automaton_formula)) /\
-   (A_BIGAND (e::C) = A_AND(e, A_BIGAND C))`;
+Definition A_BIGAND_def:
+   (A_BIGAND ([] :'a automaton_formula list) = (A_TRUE :'a automaton_formula)) /\
+   (A_BIGAND (e::C) = A_AND(e, A_BIGAND C))
+End
 
-val A_UNIV_def = Define
-   `A_UNIV(A, f) = A_NOT(A_NDET(A, A_NOT f))`;
+Definition A_UNIV_def:
+    A_UNIV(A, f) = A_NOT(A_NDET(A, A_NOT f))
+End
 
-val A_FALSE_def = Define
-   `A_FALSE = A_NOT(A_TRUE)`;
+Definition A_FALSE_def:
+    A_FALSE = A_NOT(A_TRUE)
+End
 
-val A_OR_def = Define
-   `A_OR(b1, b2) = A_NOT(A_AND(A_NOT b1, A_NOT b2))`;
+Definition A_OR_def:
+    A_OR(b1, b2) = A_NOT(A_AND(A_NOT b1, A_NOT b2))
+End
 
-val A_IMPL_def = Define
-   `A_IMPL(b1, b2) = A_OR(A_NOT b1, b2)`;
+Definition A_IMPL_def:
+    A_IMPL(b1, b2) = A_OR(A_NOT b1, b2)
+End
 
-val A_EQUIV_def = Define
-   `A_EQUIV(b1, b2) = A_AND(A_IMPL(b1, b2),A_IMPL(b2, b1))`;
+Definition A_EQUIV_def:
+    A_EQUIV(b1, b2) = A_AND(A_IMPL(b1, b2),A_IMPL(b2, b1))
+End
 
-val A_NDET_CONSTRAINED_def = Define
-   `A_NDET_CONSTRAINED(A, C, f) = A_NDET(A, A_AND(f, A_BIGAND C))`;
+Definition A_NDET_CONSTRAINED_def:
+    A_NDET_CONSTRAINED(A, C, f) = A_NDET(A, A_AND(f, A_BIGAND C))
+End
 
-val A_UNIV_CONSTRAINED_def = Define
-   `A_UNIV_CONSTRAINED(A, C, f) = A_UNIV(A, A_IMPL(A_BIGAND C, f))`;
+Definition A_UNIV_CONSTRAINED_def:
+    A_UNIV_CONSTRAINED(A, C, f) = A_UNIV(A, A_IMPL(A_BIGAND C, f))
+End
 
 (* semantics of automata formula, `v` is input trace *)
 Theorem A_SEM_THM :
@@ -261,11 +285,12 @@ Proof
  >> rpt STRIP_TAC >> PROVE_TAC []
 QED
 
-val A_USED_STATE_VARS_COMPATIBLE_def = Define
-   `A_USED_STATE_VARS_COMPATIBLE a1 a2 =
+Definition A_USED_STATE_VARS_COMPATIBLE_def:
+    A_USED_STATE_VARS_COMPATIBLE a1 a2 =
      (DISJOINT (A_USED_INPUT_VARS a1) (A_USED_STATE_VARS a2) /\
       DISJOINT (A_USED_INPUT_VARS a2) (A_USED_STATE_VARS a1) /\
-      DISJOINT (A_USED_STATE_VARS a1) (A_USED_STATE_VARS a2))`;
+      DISJOINT (A_USED_STATE_VARS a1) (A_USED_STATE_VARS a2))
+End
 
 (* added toplevel quantifiers *)
 Theorem VARDISJOINT_AUTOMATON_FORMULA___A_USED_STATE_VARS_COMPATIBLE :
@@ -281,8 +306,9 @@ Proof
 QED
 
 (* two automata are equivalent if they accept the same set of input traces *)
-val AUTOMATON_EQUIV_def = Define
-   `AUTOMATON_EQUIV a1 a2 = !v. A_SEM v a1 <=> A_SEM v a2`;
+Definition AUTOMATON_EQUIV_def:
+    AUTOMATON_EQUIV a1 a2 = !v. A_SEM v a1 <=> A_SEM v a2
+End
 
 Theorem AUTOMATON_EQUIV_THM :
       (!A f. AUTOMATON_EQUIV (A_NDET(A, f)) (A_NOT (A_UNIV(A, A_NOT f)))) /\
@@ -415,15 +441,17 @@ Proof
 QED
 
 (* for any input trace i there exists a run (i,w) with property C *)
-val EXISTS_RUN_WITH_PROPERTIES_def = Define
-   `EXISTS_RUN_WITH_PROPERTIES A C =
+Definition EXISTS_RUN_WITH_PROPERTIES_def:
+    EXISTS_RUN_WITH_PROPERTIES A C =
       !i. ?w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w /\
-              A_SEM (INPUT_RUN_PATH_UNION A i w) (A_BIGAND C)`;
+              A_SEM (INPUT_RUN_PATH_UNION A i w) (A_BIGAND C)
+End
 
-val UNIQUE_RUN_WITH_PROPERTIES_def = Define
-   `UNIQUE_RUN_WITH_PROPERTIES A C =
+Definition UNIQUE_RUN_WITH_PROPERTIES_def:
+    UNIQUE_RUN_WITH_PROPERTIES A C =
       !i. ?!w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w /\
-               A_SEM (INPUT_RUN_PATH_UNION A i w) (A_BIGAND C)`;
+               A_SEM (INPUT_RUN_PATH_UNION A i w) (A_BIGAND C)
+End
 
 Theorem UNIQUE_RUN_WITH_PROPERTIES___IMPLIES_EXISTENCE :
     !A C. UNIQUE_RUN_WITH_PROPERTIES A C ==> EXISTS_RUN_WITH_PROPERTIES A C
@@ -448,8 +476,9 @@ QED
 (*                                                                            *)
 (******************************************************************************)
 
-val ACCEPT_COND_PROP_def = Define
-   `ACCEPT_COND_PROP b = ACCEPT_COND (ACCEPT_PROP b)`;
+Definition ACCEPT_COND_PROP_def:
+    ACCEPT_COND_PROP b = ACCEPT_COND (ACCEPT_PROP b)
+End
 
 Theorem ACCEPT_COND_PROP_11 :
     !p1 p2. (ACCEPT_COND_PROP p1 = ACCEPT_COND_PROP p2) <=> (p1 = p2)
@@ -458,88 +487,114 @@ Proof
 QED
 
 (* Buechi acceptance condition (infinitely often) [4] *)
-val ACCEPT_COND_GF_def = Define
-   `ACCEPT_COND_GF b = ACCEPT_COND (ACCEPT_G(ACCEPT_F (ACCEPT_PROP b)))`;
+Definition ACCEPT_COND_GF_def:
+    ACCEPT_COND_GF b = ACCEPT_COND (ACCEPT_G(ACCEPT_F (ACCEPT_PROP b)))
+End
 
-val ACCEPT_COND_FG_def = Define
-   `ACCEPT_COND_FG b = ACCEPT_COND (ACCEPT_F(ACCEPT_G (ACCEPT_PROP b)))`;
+Definition ACCEPT_COND_FG_def:
+    ACCEPT_COND_FG b = ACCEPT_COND (ACCEPT_F(ACCEPT_G (ACCEPT_PROP b)))
+End
 
-val ACCEPT_COND_F_def = Define
-   `ACCEPT_COND_F b = ACCEPT_COND (ACCEPT_F (ACCEPT_PROP b))`;
+Definition ACCEPT_COND_F_def:
+    ACCEPT_COND_F b = ACCEPT_COND (ACCEPT_F (ACCEPT_PROP b))
+End
 
-val ACCEPT_COND_G_def = Define
-   `ACCEPT_COND_G b = ACCEPT_COND (ACCEPT_G (ACCEPT_PROP b))`;
+Definition ACCEPT_COND_G_def:
+    ACCEPT_COND_G b = ACCEPT_COND (ACCEPT_G (ACCEPT_PROP b))
+End
 
-val IS_EX_AUTOMATON_def = Define
-   `IS_EX_AUTOMATON af = ?A f. af = A_NDET(A, f)`;
+Definition IS_EX_AUTOMATON_def:
+    IS_EX_AUTOMATON af = ?A f. af = A_NDET(A, f)
+End
 
-val IS_ALL_AUTOMATON_def = Define
-   `IS_ALL_AUTOMATON af = ?A f. af = A_UNIV(A, f)`;
+Definition IS_ALL_AUTOMATON_def:
+    IS_ALL_AUTOMATON af = ?A f. af = A_UNIV(A, f)
+End
 
 (* when automaton formula is an automaton *)
-val IS_AUTOMATON_def = Define
-   `IS_AUTOMATON af = (IS_EX_AUTOMATON af \/ IS_ALL_AUTOMATON af)`;
+Definition IS_AUTOMATON_def:
+    IS_AUTOMATON af = (IS_EX_AUTOMATON af \/ IS_ALL_AUTOMATON af)
+End
 
-val IS_DET_EX_AUTOMATON_def = Define
-   `IS_DET_EX_AUTOMATON af = ?A f. ((af = A_NDET(A, f)) /\ IS_DET_SYMBOLIC_SEMI_AUTOMATON A)`;
+Definition IS_DET_EX_AUTOMATON_def:
+    IS_DET_EX_AUTOMATON af = ?A f. ((af = A_NDET(A, f)) /\ IS_DET_SYMBOLIC_SEMI_AUTOMATON A)
+End
 
-val IS_DET_ALL_AUTOMATON_def = Define
-   `IS_DET_ALL_AUTOMATON af = ?A f. ((af = A_UNIV(A, f)) /\ IS_DET_SYMBOLIC_SEMI_AUTOMATON A)`;
+Definition IS_DET_ALL_AUTOMATON_def:
+    IS_DET_ALL_AUTOMATON af = ?A f. ((af = A_UNIV(A, f)) /\ IS_DET_SYMBOLIC_SEMI_AUTOMATON A)
+End
 
-val IS_DET_AUTOMATON_def = Define
-   `IS_DET_AUTOMATON af = (IS_DET_EX_AUTOMATON af \/ IS_DET_ALL_AUTOMATON af)`;
+Definition IS_DET_AUTOMATON_def:
+    IS_DET_AUTOMATON af = (IS_DET_EX_AUTOMATON af \/ IS_DET_ALL_AUTOMATON af)
+End
 
-val IS_NDET_GF_AUTOMATON_def = Define
-   `IS_NDET_GF_AUTOMATON af = ?A b. ((af = A_NDET(A, ACCEPT_COND_GF b)))`;
+Definition IS_NDET_GF_AUTOMATON_def:
+    IS_NDET_GF_AUTOMATON af = ?A b. ((af = A_NDET(A, ACCEPT_COND_GF b)))
+End
 
-val IS_NDET_FG_AUTOMATON_def = Define
-   `IS_NDET_FG_AUTOMATON af = ?A b. ((af = A_NDET(A, ACCEPT_COND_FG b)))`;
+Definition IS_NDET_FG_AUTOMATON_def:
+    IS_NDET_FG_AUTOMATON af = ?A b. ((af = A_NDET(A, ACCEPT_COND_FG b)))
+End
 
-val IS_NDET_F_AUTOMATON_def = Define
-   `IS_NDET_F_AUTOMATON af = ?A b. ((af = A_NDET(A, ACCEPT_COND_F b)))`;
+Definition IS_NDET_F_AUTOMATON_def:
+    IS_NDET_F_AUTOMATON af = ?A b. ((af = A_NDET(A, ACCEPT_COND_F b)))
+End
 
-val IS_NDET_G_AUTOMATON_def = Define
-   `IS_NDET_G_AUTOMATON af = ?A b. ((af = A_NDET(A, ACCEPT_COND_G b)))`;
+Definition IS_NDET_G_AUTOMATON_def:
+    IS_NDET_G_AUTOMATON af = ?A b. ((af = A_NDET(A, ACCEPT_COND_G b)))
+End
 
-val IS_DET_EX_GF_AUTOMATON_def = Define
-   `IS_DET_EX_GF_AUTOMATON af =
-      ?A b. (af = A_NDET (A,ACCEPT_COND_GF b)) /\ IS_DET_SYMBOLIC_SEMI_AUTOMATON A`;
+Definition IS_DET_EX_GF_AUTOMATON_def:
+    IS_DET_EX_GF_AUTOMATON af =
+      ?A b. (af = A_NDET (A,ACCEPT_COND_GF b)) /\ IS_DET_SYMBOLIC_SEMI_AUTOMATON A
+End
 
-val IS_DET_EX_FG_AUTOMATON_def = Define
-   `IS_DET_EX_FG_AUTOMATON af =
-      ?A b. (af = A_NDET (A,ACCEPT_COND_FG b)) /\ IS_DET_SYMBOLIC_SEMI_AUTOMATON A`;
+Definition IS_DET_EX_FG_AUTOMATON_def:
+    IS_DET_EX_FG_AUTOMATON af =
+      ?A b. (af = A_NDET (A,ACCEPT_COND_FG b)) /\ IS_DET_SYMBOLIC_SEMI_AUTOMATON A
+End
 
-val IS_DET_EX_G_AUTOMATON_def = Define
-   `IS_DET_EX_G_AUTOMATON af =
-      ?A b. (af = A_NDET (A,ACCEPT_COND_G b)) /\ IS_DET_SYMBOLIC_SEMI_AUTOMATON A`;
+Definition IS_DET_EX_G_AUTOMATON_def:
+    IS_DET_EX_G_AUTOMATON af =
+      ?A b. (af = A_NDET (A,ACCEPT_COND_G b)) /\ IS_DET_SYMBOLIC_SEMI_AUTOMATON A
+End
 
-val IS_DET_EX_F_AUTOMATON_def = Define
-   `IS_DET_EX_F_AUTOMATON af =
-      ?A b. (af = A_NDET (A,ACCEPT_COND_F b)) /\ IS_DET_SYMBOLIC_SEMI_AUTOMATON A`;
+Definition IS_DET_EX_F_AUTOMATON_def:
+    IS_DET_EX_F_AUTOMATON af =
+      ?A b. (af = A_NDET (A,ACCEPT_COND_F b)) /\ IS_DET_SYMBOLIC_SEMI_AUTOMATON A
+End
 
-val IS_UNIV_GF_AUTOMATON_def = Define
-   `IS_UNIV_GF_AUTOMATON af = ?A b. ((af = A_UNIV(A, ACCEPT_COND_GF b)))`;
+Definition IS_UNIV_GF_AUTOMATON_def:
+    IS_UNIV_GF_AUTOMATON af = ?A b. ((af = A_UNIV(A, ACCEPT_COND_GF b)))
+End
 
-val IS_UNIV_FG_AUTOMATON_def = Define
-   `IS_UNIV_FG_AUTOMATON af = ?A b. ((af = A_UNIV(A, ACCEPT_COND_FG b)))`;
+Definition IS_UNIV_FG_AUTOMATON_def:
+    IS_UNIV_FG_AUTOMATON af = ?A b. ((af = A_UNIV(A, ACCEPT_COND_FG b)))
+End
 
-val IS_UNIV_F_AUTOMATON_def = Define
-   `IS_UNIV_F_AUTOMATON af = ?A b. ((af = A_UNIV(A, ACCEPT_COND_F b)))`;
+Definition IS_UNIV_F_AUTOMATON_def:
+    IS_UNIV_F_AUTOMATON af = ?A b. ((af = A_UNIV(A, ACCEPT_COND_F b)))
+End
 
-val IS_UNIV_G_AUTOMATON_def = Define
-   `IS_UNIV_G_AUTOMATON af = ?A b. ((af = A_UNIV(A, ACCEPT_COND_G b)))`;
+Definition IS_UNIV_G_AUTOMATON_def:
+    IS_UNIV_G_AUTOMATON af = ?A b. ((af = A_UNIV(A, ACCEPT_COND_G b)))
+End
 
-val A_NDET_GEN_GF_def = Define
-   `A_NDET_GEN_GF(A, C) = A_NDET(A, A_BIGAND (MAP (\p. ACCEPT_COND_GF p) C))`;
+Definition A_NDET_GEN_GF_def:
+    A_NDET_GEN_GF(A, C) = A_NDET(A, A_BIGAND (MAP (\p. ACCEPT_COND_GF p) C))
+End
 
-val A_IS_EMPTY_def = Define
-   `A_IS_EMPTY A = ~(?i. A_SEM i A)`;
+Definition A_IS_EMPTY_def:
+    A_IS_EMPTY A = ~(?i. A_SEM i A)
+End
 
-val A_IS_CONTRADICTION_def = Define
-   `A_IS_CONTRADICTION A = A_IS_EMPTY A`;
+Definition A_IS_CONTRADICTION_def:
+    A_IS_CONTRADICTION A = A_IS_EMPTY A
+End
 
-val A_IS_TAUTOLOGY_def = Define
-   `A_IS_TAUTOLOGY A = (!i. A_SEM i A)`;
+Definition A_IS_TAUTOLOGY_def:
+    A_IS_TAUTOLOGY A = (!i. A_SEM i A)
+End
 
 Theorem A_TAUTOLOGY_CONTRADICTION_DUAL :
     (!A. A_IS_CONTRADICTION (A_NOT A) = A_IS_TAUTOLOGY A) /\
@@ -1520,8 +1575,6 @@ Proof
  >- ASM_SIMP_TAC std_ss [ACCEPT_COND_USED_VARS_def]
  >> ASM_SIMP_TAC std_ss [ACCEPT_VAR_RENAMING_def]
 QED
-
-val _ = export_theory();
 
 (* References:
 

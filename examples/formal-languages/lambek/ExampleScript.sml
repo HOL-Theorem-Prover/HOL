@@ -20,11 +20,11 @@
 (* License along with this program; if not, write to the Free         *)
 (* Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA *)
 (* 02110-1301 USA                                                     *)
+Theory Example
+Ancestors
+  pred_set relation pair list prim_rec arithmetic string integer
+  Lambek CutFree
 
-open HolKernel Parse boolLib bossLib;
-
-open pred_setTheory relationTheory pairTheory listTheory prim_recTheory arithmeticTheory
-open stringTheory integerTheory LambekTheory CutFreeTheory;
 
 local
     val PAT_X_ASSUM = PAT_ASSUM;
@@ -41,11 +41,10 @@ in
     fun take ts = MAP_EVERY Q.EXISTS_TAC ts;    (* from HOL mizar mode *)
 end;
 
-val _ = new_theory "Example";
-
 (* check if a given sentence has category s *)
-val sentence_def = Define `
-    sentence words = arrow NL words (At "S")`;
+Definition sentence_def:
+    sentence words = arrow NL words (At "S")
+End
 
 (******************************************************************************)
 (*                                                                            *)
@@ -501,7 +500,6 @@ val r0_to_final = store_thm (
  >> ASSUME_TAC (derivToDeriv r6_to_final)
  >> REPEAT (IMP_RES_TAC Deriv_trans));
 
-val _ = export_theory ();
 val _ = html_theory "Example";
 
 (* Emit theory books in TeX *)

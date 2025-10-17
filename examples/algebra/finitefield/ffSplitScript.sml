@@ -4,55 +4,22 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "ffSplit";
+Theory ffSplit
+Ancestors
+  prim_rec pred_set list arithmetic number combinatorics divides
+  gcd gcdset prime ffBasic ffAdvanced ffPoly ffCyclo ffConjugate
+  ffMaster ffMinimal ffUnity ffExist ffExtend bag monoid group
+  ring field fieldInstances fieldMap fieldOrder polynomial
+  polyWeak polyRing polyField polyDivision polyBinomial
+  polyDivides polyMonic polyRoot polyFieldDivision
+  polyFieldModulo polyRingModulo polyModuloRing polyIrreducible
+  polyGCD polyMultiplicity polyMap
+  polyProduct  (* for PPROD *)
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
-open jcLib;
-
-(* open dependent theories *)
-open prim_recTheory pred_setTheory listTheory arithmeticTheory numberTheory
-     combinatoricsTheory dividesTheory gcdTheory gcdsetTheory primeTheory;
-
-(* Get dependent theories local *)
-open ffBasicTheory;
-open ffAdvancedTheory;
-open ffPolyTheory;
-open ffCycloTheory;
-open ffConjugateTheory;
-open ffMasterTheory;
-open ffMinimalTheory;
-open ffUnityTheory;
-open ffExistTheory;
-open ffExtendTheory;
-
-open bagTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-open fieldInstancesTheory fieldMapTheory;
-
-open fieldOrderTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
-open polyDivisionTheory polyBinomialTheory;
-open polyDividesTheory;
-open polyMonicTheory;
-open polyRootTheory;
-open polyFieldDivisionTheory;
-open polyFieldModuloTheory;
-open polyRingModuloTheory;
-open polyModuloRingTheory;
-
-open polyIrreducibleTheory;
-open polyGCDTheory;
-open polyMultiplicityTheory;
-open polyMapTheory;
-
-open polyProductTheory; (* for PPROD *)
 
 val _ = intLib.deprecate_int ();
 
@@ -417,9 +384,9 @@ val poly_root_multiplicity_nonzero_const_empty = store_thm(
 (* Note: multiplicity p x gives a number, so (multiplicity p) is a bag with members x. *)
 
 (* Define bag splitting field *)
-val splitting_def = Define`
+Definition splitting_def:
     splitting (r:'a field) (p:'a poly) <=> (deg p = BAG_CARD (multiplicity p))
-`;
+End
 
 (* Theorem: Ring r ==> !c. c IN R /\ c <> #0 ==> splitting r [c] *)
 (* Proof:
@@ -776,10 +743,10 @@ val finite_field_is_master_splitting_field = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define another polynomial splitting field, counting root multiplicity. *)
-val splits_in_def = Define`
+Definition splits_in_def:
     splits_in (p:'a poly) (r:'a field) <=>
     ?c. c IN R /\ c <> #0 /\ (p = c * PPIMAGE (\x. (factor x) ** (multiplicity p x)) (roots p))
-`;
+End
 (* Note: c is just a nonzero constant, no requirement for invertible, i.e. upoly [c] is not required. *)
 
 (* put splits_in as infix *)
@@ -987,9 +954,9 @@ val splits_in_factor_exp = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* A polynomial splits in a field when its root count equals its degree. *)
-val poly_splits_def = Define`
+Definition poly_splits_def:
   poly_splits (r:'a field) (p:'a poly) <=> (CARD (roots p) = deg p)
-`;
+End
 (* overload on poly_splits r *)
 val _ = overload_on("splits", ``poly_splits r``);
 (*
@@ -2429,9 +2396,9 @@ val poly_minimal_root_order = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the minimal polynomial from an element of order n *)
-val poly_mini_def = Define`
+Definition poly_mini_def:
     poly_mini (r:'a ring) (s:'a ring) n = poly_minimal r s (CHOICE (orders f* n))
-`;
+End
 
 (* Overload on poly_mini *)
 val _ = overload_on("mini", ``poly_mini r s``);
@@ -2888,8 +2855,4 @@ poly_unity_eq_poly_cyclo_product;
 *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

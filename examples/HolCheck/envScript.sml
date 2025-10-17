@@ -1,24 +1,10 @@
 
-open HolKernel Parse boolLib bossLib
-
-val _ = new_theory("env")
-
-
-open bossLib
-open pairTheory
-open pairLib
-open pairTools
-open pairSyntax
-open pred_setTheory
-open pred_setLib
-open listTheory
-open stringTheory
-open sumTheory
-open simpLib
-open stringLib
-open numLib
-open metisLib
-open setLemmasTheory
+Theory env
+Ancestors
+  pair pred_set list string sum setLemmas
+Libs
+  pairLib pairTools pairSyntax pred_setLib simpLib stringLib
+  numLib metisLib
 
 (* defns about environments *)
 
@@ -33,7 +19,8 @@ val _ = add_rule {term_name = "ENV_UPDATE", fixity = Suffix 2503,
 (* initially had BOTTOMSET instead of {} but that causes problems when evaluating concrete environments where I would like all empty
 environments to evaluate to the same thing, rather than not evaluate at all. Using {} is not as satisfactory theoretically but more
 practical *)
-val EMPTY_ENV = Define `EMPTY_ENV = \(s:string). {}`
+Definition EMPTY_ENV:   EMPTY_ENV = \(s:string). {}
+End
 
 
 (* thms about environments *)
@@ -64,4 +51,3 @@ val ENV_UPDATE_BOTH_INV = save_thm("ENV_UPDATE_BOTH_INV",prove(``!e Q Q' X Y. ~(
 
 val ENV_CASES = save_thm("ENV_CASES",prove(``!e e' P Q X Y. e[[[P<--X]]] Q SUBSET e'[[[P<--Y]]] Q = if (Q=P) then X SUBSET Y else e Q SUBSET e' Q``,REPEAT STRIP_TAC THEN SIMP_TAC std_ss [ENV_UPDATE_def,SUBSET_DEF] THEN REPEAT COND_CASES_TAC THEN SIMP_TAC std_ss []))
 
-val _ = export_theory()

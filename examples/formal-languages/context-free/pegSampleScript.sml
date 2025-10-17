@@ -1,14 +1,10 @@
-open HolKernel Parse boolLib bossLib
-
-open pegexecTheory
-
-val _ = new_theory "pegSample"
+Theory pegSample
+Ancestors
+  pegexec string[qualified]
 
 Datatype:
   tok = Plus | Times | Number num | LParen | RParen
 End
-
-local open stringTheory in end
 
 Datatype:
   expr = XN num
@@ -110,4 +106,3 @@ Theorem result2 =
                        Times; LParen; Number 3; Plus; Number 1; RParen] 0)
                       [] NONE [] done failed”
 
-val _ = export_theory()

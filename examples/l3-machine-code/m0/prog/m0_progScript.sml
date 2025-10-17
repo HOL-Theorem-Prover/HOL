@@ -1,7 +1,8 @@
-open HolKernel boolLib bossLib
-open blastLib stateLib set_sepTheory progTheory m0_stepTheory
-
-val () = new_theory "m0_prog"
+Theory m0_prog
+Ancestors
+  set_sep prog m0_step temporal_state
+Libs
+  blastLib stateLib
 
 (* ------------------------------------------------------------------------ *)
 
@@ -9,7 +10,7 @@ val _ = stateLib.sep_definitions "m0"
           [["PSR"], ["CONTROL"], ["AIRCR"]] [["pcinc"]]
           m0_stepTheory.NextStateM0_def
 
-val m0_instr_def = Define`
+Definition m0_instr_def:
   (m0_instr (a, INL (opc16: word16)) =
    { (m0_c_MEM a, m0_d_word8 ((7 >< 0) opc16));
      (m0_c_MEM (a + 1w), m0_d_word8 ((15 >< 8) opc16)) }) /\
@@ -17,11 +18,13 @@ val m0_instr_def = Define`
    { (m0_c_MEM a, m0_d_word8 ((23 >< 16) opc32));
      (m0_c_MEM (a + 1w), m0_d_word8 ((31 >< 24) opc32));
      (m0_c_MEM (a + 2w), m0_d_word8 ((7 >< 0) opc32));
-     (m0_c_MEM (a + 3w), m0_d_word8 ((15 >< 8) opc32)) })`;
+     (m0_c_MEM (a + 3w), m0_d_word8 ((15 >< 8) opc32)) })
+End
 
-val M0_MODEL_def = Define`
+Definition M0_MODEL_def:
   M0_MODEL = (STATE m0_proj, NEXT_REL (=) NextStateM0, m0_instr,
-              ($= :m0_state -> m0_state -> bool), K F : m0_state -> bool)`
+              ($= :m0_state -> m0_state -> bool), K F : m0_state -> bool)
+End
 
 val M0_IMP_SPEC = Theory.save_thm ("M0_IMP_SPEC",
    stateTheory.IMP_SPEC
@@ -47,30 +50,35 @@ val (m0_REGISTERS_def, m0_REGISTERS_INSERT) =
 val (m0_MEMORY_def, m0_MEMORY_INSERT) =
    stateLib.define_map_component ("m0_MEMORY", "mem", m0_MEM_def)
 
-val m0_WORD_def = Define`
+Definition m0_WORD_def:
    m0_WORD a (i: word32) =
    m0_MEM a ((7 >< 0) i) *
    m0_MEM (a + 1w) ((15 >< 8) i) *
    m0_MEM (a + 2w) ((23 >< 16) i) *
-   m0_MEM (a + 3w) ((31 >< 24) i)`;
+   m0_MEM (a + 3w) ((31 >< 24) i)
+End
 
-val m0_BE_WORD_def = Define`
+Definition m0_BE_WORD_def:
    m0_BE_WORD a (i: word32) =
    m0_MEM a ((31 >< 24) i) *
    m0_MEM (a + 1w) ((23 >< 16) i) *
    m0_MEM (a + 2w) ((15 >< 8) i) *
-   m0_MEM (a + 3w) ((7 >< 0) i)`;
+   m0_MEM (a + 3w) ((7 >< 0) i)
+End
 
-val m0_CONFIG_def = Define`
+Definition m0_CONFIG_def:
    m0_CONFIG (bigend, spsel) =
       m0_exception NoException * m0_AIRCR_ENDIANNESS bigend *
-      m0_CONTROL_SPSEL spsel`
+      m0_CONTROL_SPSEL spsel
+End
 
-val m0_PC_def = Define`
-   m0_PC pc = m0_REG RName_PC pc * cond (aligned 1 pc)`
+Definition m0_PC_def:
+   m0_PC pc = m0_REG RName_PC pc * cond (aligned 1 pc)
+End
 
-val m0_NZCV_def = Define`
-   m0_NZCV (n,z,c,v) = m0_PSR_N n * m0_PSR_Z z * m0_PSR_C c * m0_PSR_V v`
+Definition m0_NZCV_def:
+   m0_NZCV (n,z,c,v) = m0_PSR_N n * m0_PSR_Z z * m0_PSR_C c * m0_PSR_V v
+End
 
 (* ------------------------------------------------------------------------ *)
 
@@ -119,10 +127,11 @@ val m0_TEMPORAL_PC_INTRO = Q.store_thm("m0_TEMPORAL_PC_INTRO",
 
 val () = wordsLib.guess_lengths()
 
-val data_to_thumb2_def = Define`
+Definition data_to_thumb2_def:
    data_to_thumb2 (w: word32) =
    INR ((15 >< 8) w @@ (7 >< 0) w @@ (31 >< 24) w @@ (23 >< 16) w):
-   word16 + word32`
+   word16 + word32
+End
 
 val tm = data_to_thumb2_def |> SPEC_ALL |> concl |> rhs |> rand
 
@@ -280,5 +289,3 @@ val disjoint_m0_instr_thms = Theory.save_thm("disjoint_m0_instr_thms",
    )
 
 (* ------------------------------------------------------------------------ *)
-
-val () = export_theory()

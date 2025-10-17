@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib bossLib listTheory pred_setTheory;
-
-open sptreeTheory arithmeticTheory;
-
-val _ = new_theory "gfg";
+Theory gfg
+Ancestors
+  list pred_set sptree arithmetic
 
 val _ = ParseExtras.tight_equality()
 val _ = monadsyntax.temp_add_monadsyntax();
@@ -15,14 +13,16 @@ val _ = Datatype‘
            next : num
         |>’;
 
-val empty_def = Define‘
-  empty = <| nodeInfo := LN ; followers := LN ; preds := LN; next := 0|>’;
+Definition empty_def:
+  empty = <| nodeInfo := LN ; followers := LN ; preds := LN; next := 0|>
+End
 
-val addNode_def = Define‘
+Definition addNode_def:
   addNode i g = g with <| nodeInfo updated_by (insert g.next i) ;
                           next updated_by SUC ;
                           followers updated_by (insert g.next []) ;
-                          preds updated_by (insert g.next []) ; |>’;
+                          preds updated_by (insert g.next []) ; |>
+End
 
 Definition addEdge_def:
   addEdge src (e,tgt) g =
@@ -206,7 +206,8 @@ val updateNode_preserves_domain = Q.store_thm(
    >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> metis_tac[IN_INSERT]
     );
 
-val graph_size_def = Define‘graph_size g = sptree$size g.nodeInfo’;
+Definition graph_size_def:  graph_size g = sptree$size g.nodeInfo
+End
 
 val graph_size_addNode = Q.store_thm(
   "graph_size_addNode[simp]",
@@ -308,4 +309,3 @@ Proof
   rw[addNodeN_def, pred_setTheory.ABSORPTION_RWT]
 QED
 
-val _ = export_theory();

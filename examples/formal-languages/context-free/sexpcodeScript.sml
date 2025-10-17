@@ -1,9 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open pairTheory
-open simpleSexpTheory
-
-val _ = new_theory "sexpcode";
+Theory sexpcode
+Ancestors
+  pair simpleSexp
 
 val _ = monadsyntax.enable_monadsyntax()
 val _ = monadsyntax.enable_monad "option"
@@ -370,4 +367,3 @@ Proof
 QED
 
 
-val _ = export_theory();

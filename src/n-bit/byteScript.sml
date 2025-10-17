@@ -96,6 +96,19 @@ Proof
   rw[set_byte_def,byte_index_def]
 QED
 
+Theorem set_byte_eq_or:
+  (!j. j < 8n ==> ~ w ' (byte_index ix bige + j)) ==>
+  set_byte ix b w bige = (w || (w2w b << byte_index ix bige))
+Proof
+  simp [set_byte_bit_field_insert, wordsTheory.bit_field_insert_def,
+        wordsTheory.word_modify_def, wordsTheory.word_or_def, wordsTheory.word_lsl_def]
+  \\ simp_tac (std_ss ++ fcpLib.FCP_ss) [wordsTheory.w2w]
+  \\ rw []
+  \\ iff_tac \\ CCONTR_TAC \\ gs [wordsTheory.w2w]
+  \\ first_x_assum (qspec_then `i - byte_index ix bige` assume_tac)
+  \\ gs []
+QED
+
 Triviality lt_or_gt:
   (a: num) <> b ==> a < b \/ b < a
 Proof
@@ -200,6 +213,64 @@ Proof
       >> irule set_byte_transpose
       >> qspecl_then [`dimindex (:'a) DIV 8`, `LENGTH bs + 1`, `0`, `w2n n`] assume_tac ADD_MOD
       >> rfs [w2n_add_2, num_bytes_nonzero])
+QED
+
+Triviality word_of_bytes_eq_or_helper:
+  !bs n w. (!j. j < LENGTH bs ==> ~ (f (EL j bs) (j + n) ' ix)) /\
+  ~ ((w : 'a word) ' ix) /\ ix < dimindex (: 'a) ==>
+  ~ FOLDRi (\x b w. w || (f b (n + x))) w bs ' ix
+Proof
+  Induct
+  \\ simp []
+  \\ rw []
+  \\ ONCE_REWRITE_TAC [wordsTheory.word_or_def]
+  \\ simp [fcpTheory.FCP_BETA]
+  \\ conj_tac
+  >- (
+    first_x_assum (qspec_then `0n` mp_tac)
+    \\ simp []
+  )
+  \\ simp [combinTheory.o_DEF]
+  \\ last_x_assum (qspec_then `SUC n` mp_tac)
+  \\ simp [arithmeticTheory.ADD1]
+  \\ disch_then irule
+  \\ rw []
+  \\ first_x_assum (qspec_then `SUC j` mp_tac)
+  \\ simp [arithmeticTheory.ADD1]
+QED
+
+Triviality word_of_bytes_eq_or_helper2 =
+    word_of_bytes_eq_or_helper |> Q.SPECL [`bs`, `0n`]
+    |> SIMP_RULE std_ss []
+
+Triviality w2n_increment:
+  w2n (x + 1w) = (if x = UINT_MAXw then 0n else w2n x + 1)
+Proof
+  qspec_then `x` mp_tac wordsTheory.w2n_plus1
+  \\ rw []
+QED
+
+Theorem word_of_bytes_eq_or:
+  !bs ix.
+  (w2n ix + LENGTH bs) * 8 <= dimindex (: 'a) /\
+  EVERYi (\i _. ix + n2w i <> -1w) bs ==>
+  word_of_bytes F ix bs =
+    FOLDRi (\i b w. (w2w b << ((w2n ix + i) * 8)) || w) (0w : 'a word) bs
+Proof
+  Induct
+  \\ simp [word_of_bytes_def]
+  \\ rw []
+  \\ first_x_assum (qspec_then `ix + 1w` mp_tac)
+  \\ fs [listTheory.EVERYi_def, w2n_increment]
+  \\ fs [combinTheory.o_DEF, wordsTheory.n2w_SUC]
+  \\ rw []
+  \\ dep_rewrite.DEP_ONCE_REWRITE_TAC [set_byte_eq_or]
+  \\ simp [byte_index_def]
+  \\ simp [arithmeticTheory.LESS_MOD, arithmeticTheory.X_LT_DIV]
+  \\ rw [arithmeticTheory.ADD1]
+  \\ ho_match_mp_tac word_of_bytes_eq_or_helper2
+  \\ rw [wordsTheory.word_0]
+  \\ simp [wordsTheory.word_lsl_def, wordsTheory.w2w, fcpTheory.FCP_BETA]
 QED
 
 Definition words_of_bytes_def:

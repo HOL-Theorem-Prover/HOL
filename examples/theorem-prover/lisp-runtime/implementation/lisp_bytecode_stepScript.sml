@@ -1,16 +1,15 @@
-open HolKernel Parse boolLib bossLib; val _ = new_theory "lisp_bytecode_step";
+Theory lisp_bytecode_step
+Ancestors
+  lisp_sexp lisp_inv lisp_ops lisp_bigops lisp_codegen lisp_init
+  lisp_symbols lisp_sexp lisp_inv lisp_parse lisp_semantics
+  lisp_compiler lisp_compiler_op prog prog_x64 words arithmetic
+  list pred_set pair combin finite_map address sum set_sep bit
+  fcp string option relation stop_and_copy lisp_cons
+Libs
+  compilerLib decompilerLib codegenLib prog_x64Lib wordsLib
+  helperLib
+
 val _ = ParseExtras.temp_loose_equality()
-
-open lisp_sexpTheory lisp_invTheory lisp_opsTheory lisp_bigopsTheory;
-open lisp_codegenTheory lisp_initTheory lisp_symbolsTheory;
-open lisp_sexpTheory lisp_invTheory lisp_parseTheory;
-open lisp_semanticsTheory lisp_compilerTheory lisp_compiler_opTheory progTheory;
-open compilerLib decompilerLib codegenLib prog_x64Lib prog_x64Theory;
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory helperLib sumTheory;
-open set_sepTheory bitTheory fcpTheory stringTheory optionTheory relationTheory;
-open stop_and_copyTheory lisp_consTheory;
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -27,7 +26,7 @@ fun MERGE_CODE th = let
   in MERGE_CODE th end handle HOL_ERR _ => th;
 
 
-val zLISP_BYTECODE_def = Define `
+Definition zLISP_BYTECODE_def:
   zLISP_BYTECODE (a1,a2,sl,sl1,e,ex,cs,rbp,ddd,cu) (xs,p,rs,bc) (stack,input,xbp,rstack,amnt,w) =
     (SEP_EXISTS x1 x2 x3 x4.
       zLISP (a1,a2,sl,sl1,e,ex,cs,rbp,ddd,cu)
@@ -35,7 +34,8 @@ val zLISP_BYTECODE_def = Define `
                TL (xs ++ Sym "NIL"::stack),bc.consts,
                IO_STREAMS input bc.io_out,xbp,rs ++ rstack,
                BC_CODE (bc.code,bc.code_end),amnt,bc.ok) * zPC p * ~zS *
-      cond (bc_inv bc)) \/ zLISP_FAIL (a1,a2,sl,sl1,e,ex,cs,rbp,ddd,cu)`;
+      cond (bc_inv bc)) \/ zLISP_FAIL (a1,a2,sl,sl1,e,ex,cs,rbp,ddd,cu)
+End
 
 val SPEC_PULL_EXISTS = prove(
   ``(?x. SPEC m p c (q x)) ==> SPEC m p c (SEP_EXISTS x. q x)``,
@@ -72,14 +72,15 @@ val UPDATE_NTH_APPEND1 = prove(
   \\ FULL_SIMP_TAC std_ss [APPEND,CONS_11]
   \\ Q.PAT_X_ASSUM `!ys.bbb` MATCH_MP_TAC \\ DECIDE_TAC);
 
-val code_abbrevs_def = Define `
+Definition code_abbrevs_def:
   code_abbrevs cs =
     abbrev_code_for_compile_inst (cs,EL 9 cs) UNION
     abbrev_code_for_compile (cs,EL 8 cs) UNION
     abbrev_code_for_parse (cs,EL 3 cs) UNION
     abbrev_code_for_print (EL 7 cs) UNION
     abbrev_code_for_equal (EL 6 cs) UNION
-    abbrev_code_for_cons (EL 5 cs)`;
+    abbrev_code_for_cons (EL 5 cs)
+End
 
 val SPEC_CODE_ABBREV = prove(
   ``SPEC m p (c INSERT d) q ==> !d2. d SUBSET d2 ==> SPEC m p (c INSERT d2) q``,
@@ -1393,11 +1394,12 @@ val X64_LISP_BYTECODE_JNIL2 = prove(
 
 (* compose together *)
 
-val zLISP_BYTECODE_SHORT_def = Define `
+Definition zLISP_BYTECODE_SHORT_def:
   zLISP_BYTECODE_SHORT
     (a1,a2,sl,sl1,e,ex,cs,rbp,ddd,cu,x,p,rs,bc,stack,input,xbp,rstack,amnt,w) =
   zLISP_BYTECODE (a1,a2,sl,sl1,e,ex,cs,rbp,ddd,cu) ([x],p,rs,bc)
-    (stack,input,xbp,rstack,amnt,w)`;
+    (stack,input,xbp,rstack,amnt,w)
+End
 
 val f1 = PURE_REWRITE_RULE [AND_IMP_INTRO] o
          (fn th => if is_imp (concl th) then th else DISCH T th) o
@@ -1453,4 +1455,3 @@ val (READ_EVAL_PRINT_LOOP_BASE,READ_EVAL_PRINT_LOOP_STEP) = let
 val _ = save_thm("READ_EVAL_PRINT_LOOP_BASE",READ_EVAL_PRINT_LOOP_BASE);
 val _ = save_thm("READ_EVAL_PRINT_LOOP_STEP",READ_EVAL_PRINT_LOOP_STEP);
 
-val _ = export_theory();

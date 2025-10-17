@@ -6,15 +6,12 @@
 (*                 2016-2017 University of Bologna, Italy (Chun Tian)         *)
 (*                 2018-2019 Fondazione Bruno Kessler, Italy (Chun Tian)      *)
 (******************************************************************************)
+Theory StrongEQ
+Ancestors
+  pred_set pair relation bisimulation list finite_map CCS
+Libs
+  CCSLib
 
-open HolKernel Parse boolLib bossLib;
-
-open pred_setTheory pairTheory relationTheory bisimulationTheory listTheory
-     finite_mapTheory;
-
-open CCSLib CCSTheory;
-
-val _ = new_theory "StrongEQ";
 
 val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"];
 
@@ -643,7 +640,6 @@ val PROPERTY_STAR' = store_thm (
       PURE_ONCE_REWRITE_TAC
         [ONCE_REWRITE_RULE [STRONG_EQUIV'] STRONG_EQUIV'_IMP_STRONG_EQUIV] ]);
 
-val _ = export_theory ();
 val _ = html_theory "StrongEQ";
 
 (* Bibliography:

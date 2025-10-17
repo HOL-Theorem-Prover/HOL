@@ -1,15 +1,9 @@
-open HolKernel Parse boolLib bossLib;
-open listTheory rich_listTheory combinTheory;
-open pred_setTheory;
+Theory regexCachedMarked
+Ancestors
+  list rich_list combin pred_set regexSemantics regexExecutable
+  regexMarked
 
-val _ = new_theory "regexCachedMarked";
 val _ = ParseExtras.temp_loose_equality()
-
-open regexSemanticsTheory;
-open regexExecutableTheory;
-open regexMarkedTheory;
-
-
 
 (* definitions *)
 (* ----------------------------------------------------------------------------- *)
@@ -21,72 +15,72 @@ val CMReg_rw  = LIST_CONJ CMReg_rws;
 val CMReg_ss  = rewrites CMReg_rws;
 
 
-val cempty_def = Define `
+Definition cempty_def:
          (cempty (CMEps)         = T) /\
          (cempty (CMSym _ _)     = F) /\
          (cempty (CMAlt e _ _ _) = e) /\
          (cempty (CMSeq e _ _ _) = e) /\
          (cempty (CMRep   _ _)   = T)
-`;
+End
 
-val cfinal_def = Define `
+Definition cfinal_def:
          (cfinal (CMEps)         = F) /\
          (cfinal (CMSym b _)     = b) /\
          (cfinal (CMAlt _ f _ _) = f) /\
          (cfinal (CMSeq _ f _ _) = f) /\
          (cfinal (CMRep   f _)   = f)
-`;
+End
 
-val cmEps_def = Define `
+Definition cmEps_def:
          (cmEps     = CMEps)
-`;
-val cmSym_def = Define `
+End
+Definition cmSym_def:
          (cmSym b c = CMSym b c)
-`;
-val cmAlt_def = Define `
+End
+Definition cmAlt_def:
          (cmAlt p q = CMAlt ((cempty p) \/ (cempty q)) ((cfinal p) \/ (cfinal q)) p q)
-`;
-val cmSeq_def = Define `
+End
+Definition cmSeq_def:
          (cmSeq p q = CMSeq ((cempty p) /\ (cempty q)) (((cfinal p) /\ (cempty q)) \/ (cfinal q)) p q)
-`;
-val cmRep_def = Define `
+End
+Definition cmRep_def:
          (cmRep r   = CMRep (cfinal r) r)
-`;
+End
 
 
 
-val CACHE_REG_def = Define `
+Definition CACHE_REG_def:
          (CACHE_REG (MEps)          = cmEps                            ) /\
          (CACHE_REG (MSym b (c:'a)) = cmSym b c                        ) /\
          (CACHE_REG (MAlt p q)      = cmAlt (CACHE_REG p) (CACHE_REG q)) /\
          (CACHE_REG (MSeq p q)      = cmSeq (CACHE_REG p) (CACHE_REG q)) /\
          (CACHE_REG (MRep r)        = cmRep (CACHE_REG r)              )
-`;
+End
 
-val UNCACHE_REG_def = Define `
+Definition UNCACHE_REG_def:
          (UNCACHE_REG (CMEps)            = MEps                                ) /\
          (UNCACHE_REG (CMSym b (c:'a))   = MSym b c                            ) /\
          (UNCACHE_REG (CMAlt _ _ p q)    = MAlt (UNCACHE_REG p) (UNCACHE_REG q)) /\
          (UNCACHE_REG (CMSeq _ _ p q)    = MSeq (UNCACHE_REG p) (UNCACHE_REG q)) /\
          (UNCACHE_REG (CMRep   _ r)      = MRep (UNCACHE_REG r)                )
-`;
+End
 
 
 
-val cshift_def = Define `
+Definition cshift_def:
          (cshift _ (CMEps)            _ = cmEps                                                            ) /\
          (cshift m (CMSym _ (x:'a))   c = cmSym (m /\ (x = c)) x                                           ) /\
          (cshift m (CMAlt _ _ p q)    c = cmAlt (cshift m p c) (cshift m q c)                              ) /\
          (cshift m (CMSeq _ _ p q)    c = cmSeq (cshift m p c) (cshift ((m /\ (cempty p)) \/ cfinal p) q c)) /\
          (cshift m (CMRep   _ r)      c = cmRep (cshift (m \/ (cfinal r)) r c)                             )
-`;
+End
 
 
 
-val acceptCM_def = Define `
+Definition acceptCM_def:
          (acceptCM r []           = cempty r                                   ) /\
          (acceptCM r ((c:'a)::cs) = cfinal (FOLDL (cshift F) (cshift T r c) cs))
-`;
+End
 
 
 
@@ -190,13 +184,13 @@ val acceptCM_DEF = store_thm ("acceptCM_DEF", ``
 
 (* helper definitions *)
 (* ----------------------------------------------------------------------------- *)
-val CMREG_SUBEXP_def = Define `
+Definition CMREG_SUBEXP_def:
          (CMREG_SUBEXP s (CMEps)         = F                                                             ) /\
          (CMREG_SUBEXP s (CMSym _ _)     = F                                                             ) /\
          (CMREG_SUBEXP s (CMAlt _ _ p q) = (s = p) \/ (s = q) \/ (CMREG_SUBEXP s p) \/ (CMREG_SUBEXP s q)) /\
          (CMREG_SUBEXP s (CMSeq _ _ p q) = (s = p) \/ (s = q) \/ (CMREG_SUBEXP s p) \/ (CMREG_SUBEXP s q)) /\
          (CMREG_SUBEXP s (CMRep   _ r)   = (s = r) \/ (CMREG_SUBEXP s r)                                 )
-`;
+End
 
 (*
 val CMREG_WELLFORMED_SUB_def = Define `
@@ -206,13 +200,13 @@ val CMREG_WELLFORMED_SUB_def = Define `
 `;
 *)
 
-val CMREG_WELLFORMED_def = Define `
+Definition CMREG_WELLFORMED_def:
          (CMREG_WELLFORMED (CMEps)         = T                                                             ) /\
          (CMREG_WELLFORMED (CMSym _ _)     = T                                                             ) /\
          (CMREG_WELLFORMED (CMAlt e f p q) = (e = empty (UNCACHE_REG p) \/ empty (UNCACHE_REG q)) /\ (f = final (UNCACHE_REG p) \/ final (UNCACHE_REG q)) /\ CMREG_WELLFORMED p /\ CMREG_WELLFORMED q) /\
          (CMREG_WELLFORMED (CMSeq e f p q) = (e = empty (UNCACHE_REG p) /\ empty (UNCACHE_REG q)) /\ (f = (final (UNCACHE_REG p) /\ empty (UNCACHE_REG q)) \/ final (UNCACHE_REG q)) /\ CMREG_WELLFORMED p /\ CMREG_WELLFORMED q) /\
          (CMREG_WELLFORMED (CMRep   f r)   = (f = final (UNCACHE_REG r)) /\ CMREG_WELLFORMED r)
-`;
+End
 
 
 val CMREG_SUBEXP_WELLFORMED_thm = store_thm ("CMREG_SUBEXP_WELLFORMED_thm", ``
@@ -354,4 +348,3 @@ val acceptM_correctness_thm = store_thm("acceptM_correctness_thm", ``!r w. accep
 
 
 
-val _ = export_theory();

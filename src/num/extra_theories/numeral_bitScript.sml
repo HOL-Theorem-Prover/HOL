@@ -67,12 +67,13 @@ val NUMERAL_MOD_2EXP = Q.prove(
           [MOD_COMMON_FACTOR, TWO, prim_recTheory.LESS_0, ZERO_LT_TWOEXP]
   ])
 
-val iMOD_2EXP = new_definition("iMOD_2EXP", ``iMOD_2EXP = MOD_2EXP``)
+Definition iMOD_2EXP[nocompute]: iMOD_2EXP = MOD_2EXP
+End
 
 val BIT1n = REWRITE_RULE [GSYM ADD1] BIT1n
 
-val numeral_imod_2exp = Q.store_thm("numeral_imod_2exp",
-  `(!n. iMOD_2EXP 0 n = ZERO) /\
+Theorem numeral_imod_2exp:
+   (!n. iMOD_2EXP 0 n = ZERO) /\
    (!x n. iMOD_2EXP x ZERO = ZERO) /\
    (!x n. iMOD_2EXP (NUMERAL (BIT1 x)) (BIT1 n) =
           BIT1 (iMOD_2EXP (NUMERAL (BIT1 x) - 1) n)) /\
@@ -81,21 +82,24 @@ val numeral_imod_2exp = Q.store_thm("numeral_imod_2exp",
    (!x n. iMOD_2EXP (NUMERAL (BIT1 x)) (BIT2 n) =
           numeral$iDUB (iMOD_2EXP (NUMERAL (BIT1 x) - 1) (SUC n))) /\
     !x n. iMOD_2EXP (NUMERAL (BIT2 x)) (BIT2 n) =
-          numeral$iDUB (iMOD_2EXP (NUMERAL (BIT1 x)) (SUC n))`,
+          numeral$iDUB (iMOD_2EXP (NUMERAL (BIT1 x)) (SUC n))
+Proof
   RW_TAC bool_ss [iMOD_2EXP, NUMERAL_MOD_2EXP]
   \\ SUBST1_TAC (Q.SPEC `BIT1 x` NUMERAL_DEF)
   \\ SUBST1_TAC (Q.SPEC `BIT2 x` NUMERAL_DEF)
   \\ SUBST1_TAC (Q.SPEC `x` BIT1n)
   \\ SUBST1_TAC (Q.SPEC `x` ((GSYM o hd o tl o CONJUNCTS) numeral_suc))
-  \\ SIMP_TAC bool_ss [NUMERAL_MOD_2EXP, SUC_SUB1, GSYM BIT1n])
+  \\ SIMP_TAC bool_ss [NUMERAL_MOD_2EXP, SUC_SUB1, GSYM BIT1n]
+QED
 
-val MOD_2EXP = save_thm("MOD_2EXP",
+Theorem MOD_2EXP =
   CONJ (REWRITE_RULE [ALT_ZERO] (hd (tl (CONJUNCTS NUMERAL_MOD_2EXP))))
        (METIS_PROVE [NUMERAL_DEF, iMOD_2EXP]
-         ``!x n. MOD_2EXP x (NUMERAL n) = NUMERAL (iMOD_2EXP x n)``))
+         ``!x n. MOD_2EXP x (NUMERAL n) = NUMERAL (iMOD_2EXP x n)``)
 
-val DIV_2EXP = Q.store_thm("DIV_2EXP",
-  `!n x. DIV_2EXP n x = FUNPOW DIV2 n x`,
+Theorem DIV_2EXP:
+   !n x. DIV_2EXP n x = FUNPOW DIV2 n x
+Proof
   Induct
   \\ ASM_SIMP_TAC bool_ss
         [DIV_2EXP_def, CONJUNCT1 FUNPOW, FUNPOW_SUC, CONJUNCT1 EXP, DIV_1]
@@ -103,25 +107,30 @@ val DIV_2EXP = Q.store_thm("DIV_2EXP",
         (fn th =>
             SIMP_TAC bool_ss
                [GSYM th, EXP_1, ADD1, EXP_ADD, DIV2_def, DIV_2EXP_def,
-                DIV_DIV_DIV_MULT, ZERO_LT_TWO, ZERO_LT_TWOEXP]))
+                DIV_DIV_DIV_MULT, ZERO_LT_TWO, ZERO_LT_TWOEXP])
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val numeral_mod2 = Q.store_thm("numeral_mod2",
-   `(0 MOD 2 = 0) /\
+Theorem numeral_mod2:
+    (0 MOD 2 = 0) /\
     (!n. NUMERAL (BIT1 n) MOD 2 = 1) /\
-    (!n. NUMERAL (BIT2 n) MOD 2 = 0)`,
+    (!n. NUMERAL (BIT2 n) MOD 2 = 0)
+Proof
    SRW_TAC [] []
    >| [`NUMERAL (BIT1 n) = 2 * n + 1`
        by metisLib.METIS_TAC [NUMERAL_DEF, ONE, ADD_ASSOC, BIT1, TIMES2],
        `NUMERAL (BIT2 n) = 2 * (SUC n)`
        by metisLib.METIS_TAC [NUMERAL_DEF, ADD_ASSOC, ADD1, ADD, BIT2, TIMES2]]
    \\ POP_ASSUM SUBST1_TAC
-   \\ SRW_TAC [numSimps.MOD_ss] [])
+   \\ SRW_TAC [numSimps.MOD_ss] []
+QED
 
-val iDUB_NUMERAL = Q.store_thm("iDUB_NUMERAL",
-   `numeral$iDUB (NUMERAL i) = NUMERAL (numeral$iDUB i)`,
-   REWRITE_TAC [arithmeticTheory.NUMERAL_DEF])
+Theorem iDUB_NUMERAL:
+    numeral$iDUB (NUMERAL i) = NUMERAL (numeral$iDUB i)
+Proof
+   REWRITE_TAC [arithmeticTheory.NUMERAL_DEF]
+QED
 
 val BIT_REV_def =
    Prim_rec.new_recursive_definition
@@ -157,8 +166,8 @@ val BIT_REVERSE_REV = Q.prove(
    >- SIMP_TAC std_ss [BIT_REVERSE_def, FUNPOW]
    \\ ASM_SIMP_TAC arith_ss [BIT_REVERSE_def, BIT_R_FUNPOW])
 
-val BIT_REVERSE_EVAL = save_thm("BIT_REVERSE_EVAL",
-   REWRITE_RULE [BIT_R_BIT_REV] BIT_REVERSE_REV)
+Theorem BIT_REVERSE_EVAL =
+   REWRITE_RULE [BIT_R_BIT_REV] BIT_REVERSE_REV
 
 (* ------------------------------------------------------------------------- *)
 
@@ -202,8 +211,8 @@ val BIT_MODIFY_MODF = Q.prove(
    >- SIMP_TAC std_ss [BIT_MODIFY_def, FUNPOW]
    \\ RW_TAC arith_ss [SBIT_def, BIT_MODIFY_def, BIT_M_FUNPOW])
 
-val BIT_MODIFY_EVAL = save_thm("BIT_MODIFY_EVAL",
-   REWRITE_RULE [BIT_M_BIT_MODF] BIT_MODIFY_MODF)
+Theorem BIT_MODIFY_EVAL =
+   REWRITE_RULE [BIT_M_BIT_MODF] BIT_MODIFY_MODF
 
 (* ------------------------------------------------------------------------- *)
 
@@ -224,17 +233,19 @@ val iBITWISE = Q.prove(
                     BIT0_ODD, GSYM DIV2_def, BITWISE_EVAL, LET_THM]
    \\ REWRITE_TAC [BITWISE_def, ALT_ZERO])
 
-val iBITWISE = save_thm("iBITWISE", SUC_RULE iBITWISE)
+Theorem iBITWISE = SUC_RULE iBITWISE
 
-val NUMERAL_BITWISE = Q.store_thm("NUMERAL_BITWISE",
-   `(!x f a. BITWISE x f 0 0 = NUMERAL (iBITWISE x f 0 0)) /\
+Theorem NUMERAL_BITWISE:
+    (!x f a. BITWISE x f 0 0 = NUMERAL (iBITWISE x f 0 0)) /\
     (!x f a. BITWISE x f (NUMERAL a) 0 =
              NUMERAL (iBITWISE x f (NUMERAL a) 0)) /\
     (!x f b. BITWISE x f 0 (NUMERAL b) =
              NUMERAL (iBITWISE x f 0 (NUMERAL b))) /\
      !x f a b. BITWISE x f (NUMERAL a) (NUMERAL b) =
-               NUMERAL (iBITWISE x f (NUMERAL a) (NUMERAL b))`,
-   REWRITE_TAC [iBITWISE_def, NUMERAL_DEF])
+               NUMERAL (iBITWISE x f (NUMERAL a) (NUMERAL b))
+Proof
+   REWRITE_TAC [iBITWISE_def, NUMERAL_DEF]
+QED
 
 val NUMERAL_BIT_REV = Q.prove(
    `(!x y. BIT_REV 0 x y = y) /\
@@ -246,13 +257,15 @@ val NUMERAL_BIT_REV = Q.prove(
                    ADD, ADD_0, BIT2, BIT1, iDUB, ALT_ZERO]
    \\ FULL_SIMP_TAC arith_ss [])
 
-val NUMERAL_BIT_REV = save_thm("NUMERAL_BIT_REV", SUC_RULE NUMERAL_BIT_REV)
+Theorem NUMERAL_BIT_REV = SUC_RULE NUMERAL_BIT_REV
 
-val NUMERAL_BIT_REVERSE = Q.store_thm("NUMERAL_BIT_REVERSE",
-   `(!m. BIT_REVERSE (NUMERAL m) 0 = NUMERAL (BIT_REV (NUMERAL m) 0 ZERO)) /\
+Theorem NUMERAL_BIT_REVERSE:
+    (!m. BIT_REVERSE (NUMERAL m) 0 = NUMERAL (BIT_REV (NUMERAL m) 0 ZERO)) /\
      !n m. BIT_REVERSE (NUMERAL m) (NUMERAL n) =
-           NUMERAL (BIT_REV (NUMERAL m) (NUMERAL n) ZERO)`,
-   SIMP_TAC bool_ss [NUMERAL_DEF, ALT_ZERO, BIT_REVERSE_EVAL])
+           NUMERAL (BIT_REV (NUMERAL m) (NUMERAL n) ZERO)
+Proof
+   SIMP_TAC bool_ss [NUMERAL_DEF, ALT_ZERO, BIT_REVERSE_EVAL]
+QED
 
 val NUMERAL_BIT_MODF = Q.prove(
    `(!f x b e y. BIT_MODF 0 f x b e y = y) /\
@@ -268,13 +281,15 @@ val NUMERAL_BIT_MODF = Q.prove(
                    ADD, ADD_0, BIT2, BIT1, iDUB, ALT_ZERO]
    \\ FULL_SIMP_TAC arith_ss [])
 
-val NUMERAL_BIT_MODF = save_thm("NUMERAL_BIT_MODF", SUC_RULE NUMERAL_BIT_MODF)
+Theorem NUMERAL_BIT_MODF = SUC_RULE NUMERAL_BIT_MODF
 
-val NUMERAL_BIT_MODIFY = Q.store_thm("NUMERAL_BIT_MODIFY",
-  `(!m f. BIT_MODIFY (NUMERAL m) f 0 = BIT_MODF (NUMERAL m) f 0 0 1 0) /\
+Theorem NUMERAL_BIT_MODIFY:
+   (!m f. BIT_MODIFY (NUMERAL m) f 0 = BIT_MODF (NUMERAL m) f 0 0 1 0) /\
     !m f n. BIT_MODIFY (NUMERAL m) f (NUMERAL n) =
-            BIT_MODF (NUMERAL m) f (NUMERAL n) 0 1 0`,
-  SIMP_TAC bool_ss [NUMERAL_DEF, ALT_ZERO, BIT_MODIFY_EVAL])
+            BIT_MODF (NUMERAL m) f (NUMERAL n) 0 1 0
+Proof
+  SIMP_TAC bool_ss [NUMERAL_DEF, ALT_ZERO, BIT_MODIFY_EVAL]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -348,9 +363,10 @@ val NUMERAL_SFUNPOW = Q.prove(
    \\ MAP_EVERY IMP_RES_TAC [SFUNPOW_BIT1_lem, SFUNPOW_BIT2_lem]
    \\ ASM_REWRITE_TAC [SFUNPOW_strict, SFUNPOW_def, NUMERAL_DEF])
 
-val NUMERAL_TIMES_2EXP = Q.store_thm("NUMERAL_TIMES_2EXP",
-   `(!n. TIMES_2EXP n 0 = 0) /\
-    (!n x. TIMES_2EXP n (NUMERAL x) = NUMERAL (SFUNPOW numeral$iDUB n x))`,
+Theorem NUMERAL_TIMES_2EXP:
+    (!n. TIMES_2EXP n 0 = 0) /\
+    (!n x. TIMES_2EXP n (NUMERAL x) = NUMERAL (SFUNPOW numeral$iDUB n x))
+Proof
    CONJ_TAC
    \\ REWRITE_TAC [TIMES_2EXP_def, MULT_CLAUSES]
    \\ Induct
@@ -358,16 +374,18 @@ val NUMERAL_TIMES_2EXP = Q.store_thm("NUMERAL_TIMES_2EXP",
    \\ POP_ASSUM (ASSUME_TAC o GSYM)
    \\ RW_TAC std_ss []
    \\ ASM_REWRITE_TAC [NUMERAL_DEF, BIT1, BIT2, iDUB, ALT_ZERO, ADD_CLAUSES]
-   \\ RW_TAC arith_ss [])
+   \\ RW_TAC arith_ss []
+QED
 
-val NUMERAL_iDIV2 = Q.store_thm("NUMERAL_iDIV2",
-   `(iDIV2 ZERO = ZERO) /\
+Theorem NUMERAL_iDIV2:
+    (iDIV2 ZERO = ZERO) /\
     (iDIV2 (iSUC ZERO) = ZERO) /\
     (iDIV2 (BIT1 n) = n) /\
     (iDIV2 (iSUC (BIT1 n)) = iSUC n) /\
     (iDIV2 (BIT2 n) = iSUC n) /\
     (iDIV2 (iSUC (BIT2 n)) = iSUC n) /\
-    (NUMERAL (iSUC n) = NUMERAL (SUC n))`,
+    (NUMERAL (iSUC n) = NUMERAL (SUC n))
+Proof
    REWRITE_TAC [ALT_ZERO, BIT1, BIT2, iDIV2_def, iSUC_def, ADD_CLAUSES]
    \\ REWRITE_TAC [DIV2_def, GSYM TIMES2]
    \\ `0 < 2 /\ 1 < 2` by DECIDE_TAC
@@ -375,11 +393,13 @@ val NUMERAL_iDIV2 = Q.store_thm("NUMERAL_iDIV2",
         [ZERO_DIV, ADD_DIV_RWT, DIV_LESS,
          LESS_DIV_EQ_ZERO, ONCE_REWRITE_RULE [MULT_COMM] MULT_DIV]
    \\ RULE_ASSUM_TAC (REWRITE_RULE [GSYM EVEN_MOD2])
-   \\ RW_TAC arith_ss [ADD1, EVEN_DOUBLE])
+   \\ RW_TAC arith_ss [ADD1, EVEN_DOUBLE]
+QED
 
-val NUMERAL_DIV_2EXP = Q.store_thm("NUMERAL_DIV_2EXP",
-   `(!n. DIV_2EXP n 0 = 0) /\
-    (!n x. DIV_2EXP n (NUMERAL x) = NUMERAL (SFUNPOW iDIV2 n x))`,
+Theorem NUMERAL_DIV_2EXP:
+    (!n. DIV_2EXP n 0 = 0) /\
+    (!n x. DIV_2EXP n (NUMERAL x) = NUMERAL (SFUNPOW iDIV2 n x))
+Proof
    CONJ_TAC
    \\ REWRITE_TAC [DIV_2EXP_def]
    >- (STRIP_TAC \\ MATCH_MP_TAC ZERO_DIV \\ RW_TAC std_ss [ZERO_LT_TWOEXP])
@@ -388,57 +408,67 @@ val NUMERAL_DIV_2EXP = Q.store_thm("NUMERAL_DIV_2EXP",
    \\ `!x. NUMERAL x DIV 2 = NUMERAL (x DIV 2)` by REWRITE_TAC [NUMERAL_DEF]
    \\ RW_TAC arith_ss
          [ZERO_LT_TWOEXP, GSYM DIV_DIV_DIV_MULT, SFUNPOW_strict, iDIV2_def,
-          DIV2_def])
+          DIV2_def]
+QED
 
-val NUMERAL_SFUNPOW_iDIV2 = save_thm("NUMERAL_SFUNPOW_iDIV2",
+Theorem NUMERAL_SFUNPOW_iDIV2 =
    MATCH_MP (SPEC_ALL NUMERAL_SFUNPOW)
-      (Q.prove(`iDIV2 0 = 0`, RW_TAC arith_ss [iDIV2_def, DIV2_def])))
+      (Q.prove(`iDIV2 0 = 0`, RW_TAC arith_ss [iDIV2_def, DIV2_def]))
 
-val NUMERAL_SFUNPOW_iDUB = save_thm("NUMERAL_SFUNPOW_iDUB",
+Theorem NUMERAL_SFUNPOW_iDUB =
    MATCH_MP (SPEC_ALL NUMERAL_SFUNPOW)
-      (Q.prove(`numeral$iDUB 0 = 0`, RW_TAC arith_ss [iDUB])))
+      (Q.prove(`numeral$iDUB 0 = 0`, RW_TAC arith_ss [iDUB]))
 
-val NUMERAL_SFUNPOW_FDUB = save_thm("NUMERAL_SFUNPOW_FDUB",
+Theorem NUMERAL_SFUNPOW_FDUB =
    GEN_ALL (MATCH_MP (SPEC_ALL NUMERAL_SFUNPOW)
-                     (SPEC_ALL (CONJUNCT1 FDUB_def))))
+                     (SPEC_ALL (CONJUNCT1 FDUB_def)))
 
-val FDUB_iDIV2 = Q.store_thm("FDUB_iDIV2",
-   `!x. FDUB iDIV2 x = iDIV2 (iDIV2 x)`,
-   Cases \\ RW_TAC arith_ss [FDUB_def, iDIV2_def, DIV2_def])
+Theorem FDUB_iDIV2:
+    !x. FDUB iDIV2 x = iDIV2 (iDIV2 x)
+Proof
+   Cases \\ RW_TAC arith_ss [FDUB_def, iDIV2_def, DIV2_def]
+QED
 
-val FDUB_iDUB = Q.store_thm("FDUB_iDUB",
-   `!x. FDUB numeral$iDUB x = numeral$iDUB (numeral$iDUB x)`,
-   Cases \\ RW_TAC arith_ss [FDUB_def, iDUB])
+Theorem FDUB_iDUB:
+    !x. FDUB numeral$iDUB x = numeral$iDUB (numeral$iDUB x)
+Proof
+   Cases \\ RW_TAC arith_ss [FDUB_def, iDUB]
+QED
 
-val FDUB_FDUB = Q.store_thm("FDUB_FDUB",
-   `(FDUB (FDUB f) ZERO = ZERO) /\
+Theorem FDUB_FDUB:
+    (FDUB (FDUB f) ZERO = ZERO) /\
     (!x. FDUB (FDUB f) (iSUC x) = FDUB f (FDUB f (iSUC x))) /\
     (!x. FDUB (FDUB f) (BIT1 x) = FDUB f (FDUB f (BIT1 x))) /\
-    (!x. FDUB (FDUB f) (BIT2 x) = FDUB f (FDUB f (BIT2 x)))`,
-   REWRITE_TAC [BIT1, BIT2, iSUC_def, FDUB_def, ALT_ZERO, ADD_CLAUSES])
+    (!x. FDUB (FDUB f) (BIT2 x) = FDUB f (FDUB f (BIT2 x)))
+Proof
+   REWRITE_TAC [BIT1, BIT2, iSUC_def, FDUB_def, ALT_ZERO, ADD_CLAUSES]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val LOG_compute = Q.store_thm("LOG_compute",
-   `!m n. LOG m n =
+Theorem LOG_compute:
+    !m n. LOG m n =
           if m < 2 \/ (n = 0) then
             FAIL LOG ^(mk_var("base < 2 or n = 0", bool)) m n
           else
             if n < m then
               0
             else
-              SUC (LOG m (n DIV m))`,
-   SRW_TAC [ARITH_ss] [logrootTheory.LOG_RWT, combinTheory.FAIL_THM])
+              SUC (LOG m (n DIV m))
+Proof
+   SRW_TAC [ARITH_ss] [logrootTheory.LOG_RWT, combinTheory.FAIL_THM]
+QED
 
 val iLOG2_def =
    Definition.new_definition("iLOG2_def", ``iLOG2 n = LOG2 (n + 1)``)
 
 val LOG2_1 = (SIMP_RULE arith_ss [] o Q.SPECL [`1`,`0`]) LOG2_UNIQUE
 
-val numeral_ilog2 = Q.store_thm("numeral_ilog2",
-   `(iLOG2 ZERO = 0) /\
+Theorem numeral_ilog2:
+    (iLOG2 ZERO = 0) /\
     (!n. iLOG2 (BIT1 n) = 1 + iLOG2 n) /\
-    (!n. iLOG2 (BIT2 n) = 1 + iLOG2 n)`,
+    (!n. iLOG2 (BIT2 n) = 1 + iLOG2 n)
+Proof
    RW_TAC bool_ss [ALT_ZERO, NUMERAL_DEF, BIT1, BIT2, iLOG2_def]
    \\ SIMP_TAC arith_ss [LOG2_1]
    >| [
@@ -462,14 +492,17 @@ val numeral_ilog2 = Q.store_thm("numeral_ilog2",
       \\ SIMP_TAC arith_ss
             [DECIDE ``a < 2 * b ==> SUC (2 * a) < 4 * b``,
              (Once o GSYM) EXP, logrootTheory.LOG]
-   ])
+   ]
+QED
 
-val numeral_log2 = Q.store_thm("numeral_log2",
-   `(!n. LOG2 (NUMERAL (BIT1 n)) = iLOG2 (numeral$iDUB n)) /\
-    (!n. LOG2 (NUMERAL (BIT2 n)) = iLOG2 (BIT1 n))`,
+Theorem numeral_log2:
+    (!n. LOG2 (NUMERAL (BIT1 n)) = iLOG2 (numeral$iDUB n)) /\
+    (!n. LOG2 (NUMERAL (BIT2 n)) = iLOG2 (BIT1 n))
+Proof
    RW_TAC bool_ss [ALT_ZERO, NUMERAL_DEF, BIT1, BIT2, iLOG2_def,
                    numeralTheory.iDUB]
-   \\ SIMP_TAC arith_ss [])
+   \\ SIMP_TAC arith_ss []
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -515,7 +548,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 val LEAST_BIT_INTRO =
-   (SIMP_RULE (srw_ss()) [] o Q.SPEC `\i. BIT i n`)  whileTheory.LEAST_INTRO
+   (SIMP_RULE (srw_ss()) [] o Q.SPEC `\i. BIT i n`)  WhileTheory.LEAST_INTRO
 
 Theorem LOWEST_SET_BIT:
    !n. n <> 0 ==>
@@ -528,7 +561,7 @@ Proof
       Cases_on `(LEAST i. BIT i (n DIV 2)) = 0`
       >- FULL_SIMP_TAC (srw_ss()) [DECIDE ``m < 1 ==> (m = 0)``, BIT0_ODD]
       \\ IMP_RES_TAC (DECIDE ``~(a = 0) /\ m < a + 1 ==> (m - 1 < a)``)
-      \\ IMP_RES_TAC whileTheory.LESS_LEAST
+      \\ IMP_RES_TAC WhileTheory.LESS_LEAST
       \\ FULL_SIMP_TAC (srw_ss()) [BIT_DIV2]
       \\ Cases_on `m = 0`
       \\ FULL_SIMP_TAC (srw_ss())
@@ -544,7 +577,7 @@ Proof
    ]
 QED
 
-val LOWEST_SET_BIT_compute = save_thm("LOWEST_SET_BIT_compute",
+Theorem LOWEST_SET_BIT_compute = (
    let
       open numeralTheory
       val rule = (GEN_ALL o SIMP_RULE (srw_ss())
@@ -560,4 +593,3 @@ val LOWEST_SET_BIT_compute = save_thm("LOWEST_SET_BIT_compute",
 val () =
    List.app (fn s => remove_ovl_mapping s {Name = s, Thy = "numeral_bit"})
             ["iBITWISE", "iSUC", "iDIV2", "iLOG2", "iMOD_2EXP"]
-

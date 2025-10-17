@@ -4,14 +4,12 @@
 (*                                                                            *)
 (* Copyright 2025  The Australian National University (Author: Chun Tian)     *)
 (* ========================================================================== *)
+Theory open_bisimulation
+Ancestors
+  pair pred_set relation basic_swap nomset pi_agent
+Libs
+  hurdUtils NEWLib
 
-open HolKernel Parse boolLib bossLib;
-
-open pairTheory pred_setTheory relationTheory hurdUtils;
-
-open basic_swapTheory nomsetTheory NEWLib pi_agentTheory;
-
-val _ = new_theory "open_bisimulation";
 
 (* some proofs here are large with too many assumptions *)
 val _ = set_trace "Goalstack.print_goal_at_top" 0;
@@ -920,5 +918,4 @@ Proof
       Q.EXISTS_TAC ‘y’ >> art [] ]
 QED
 
-val _ = export_theory ();
 val _ = html_theory "open_bisimulation";

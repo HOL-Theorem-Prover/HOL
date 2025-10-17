@@ -1,7 +1,12 @@
 (* non-interactive mode
 *)
-open HolKernel Parse boolLib;
-val _ = new_theory "extra_binomial";
+Theory extra_binomial
+Ancestors
+  arithmetic divides gcd res_quan pred_set subtype extra_num
+  extra_arith binomial summation
+Libs
+  res_quanTools subtypeTools ho_proverTools numContext hurdUtils
+  ho_basicTools arithContext
 
 (* interactive mode
 show_assums := true;
@@ -26,12 +31,6 @@ app load
 installPP subtypeTools.pp_precontext;
 installPP subtypeTools.pp_context;
 *)
-
-open bossLib arithmeticTheory dividesTheory gcdTheory
-     res_quanTheory pred_setTheory subtypeTheory
-     res_quanTools subtypeTools ho_proverTools numContext hurdUtils
-     extra_numTheory ho_basicTools arithContext extra_arithTheory
-     binomialTheory summationTheory;
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ##;
 infix 1 >>;
@@ -239,4 +238,3 @@ val PRIME_ADD_1_EXP = store_thm
 
 (* non-interactive mode
 *)
-val _ = export_theory ();

@@ -1,17 +1,12 @@
-open HolKernel boolLib bossLib Parse
-
-open prnlistTheory numpairTheory pure_dBTheory
-open enumerationsTheory primrecfnsTheory
-open rich_listTheory arithmeticTheory
-open pred_setTheory
-
-open reductionEval churchnumTheory churchboolTheory normal_orderTheory
-     dnoreductTheory stepsTheory recursivefnsTheory recfunsTheory
-     churchlistTheory churchDBTheory nlistTheory
+Theory prterm
+Ancestors
+  prnlist numpair pure_dB enumerations primrecfns rich_list
+  arithmetic pred_set churchnum churchbool normal_order dnoreduct
+  steps recursivefns recfuns churchlist churchDB nlist
+Libs
+  reductionEval
 
 fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
-
-val _ = new_theory "prterm"
 
 val _ = augment_srw_ss [rewrites [DISJ_IMP_EQ]]
 
@@ -158,11 +153,11 @@ val TAKE_EQ_GENLIST = store_thm(
   Q.ID_SPEC_TAC `n` THEN Induct_on `l` THEN SRW_TAC [][GENLIST] THEN
   Cases_on `n` >> simp[GENLIST_CONS, combinTheory.o_DEF]);
 
-val swap2_def = Define`
+Definition swap2_def:
   (swap2 f [] = f [0; 0]) ∧
   (swap2 f [n] = f [0; n]) ∧
   (swap2 f (h1::h2::t) = f (h2::h1::t))
-`;
+End
 
 val primrec_swap2 = store_thm(
   "primrec_swap2",
@@ -241,7 +236,7 @@ val primrec_cons = store_thm(
 
 
 
-val prtermrec1_def = Define`
+Definition prtermrec1_def:
   prtermrec1 v c a =
    (λl. nel (l ' 0)
             (Pr (λl. ncons (v [0; l ' 0]) nnil)
@@ -264,7 +259,8 @@ val prtermrec1_def = Define`
                      let r0 = nel t0 r
                      in
                        napp r (ncons (a [t0; r0; p]) nnil))
-              l))`
+              l))
+End
 
 val nfst_snd_div3 = Store_thm(
   "nfst_snd_div3",
@@ -362,12 +358,12 @@ val prtermrec1_thm = Store_thm(
   SRW_TAC [][SimpLHS, Once prtermrec_def, LET_THM, dBnum_def, MOD3_thm,
              DIV3_thm]);
 
-val prtermrec0_def = Define`
+Definition prtermrec0_def:
   prtermrec0 v c a = Cn (prtermrec1 (Cn v [proj 0])
                                     (Cn c [proj 0; proj 1; proj 2; proj 3])
                                     (Cn a [proj 0; proj 1]))
                         [proj 0; K 0]
-`;
+End
 
 val primrec_prtermrec0 = Store_thm(
   "primrec_prtermrec0",
@@ -385,9 +381,9 @@ val prtermrec0_thm = Store_thm(
        a [dBnum t; prtermrec0 v c a [dBnum t]])``,
   SRW_TAC [][prtermrec0_def, Cn_def]);
 
-val pr_is_abs_def = Define`
+Definition pr_is_abs_def:
   pr_is_abs = (λl. nB (l ' 0 MOD 3 = 2))
-`;
+End
 
 val primrec_is_abs = Store_thm(
   "primrec_is_abs",
@@ -407,7 +403,7 @@ val pr_is_abs_correct = store_thm(
   SRW_TAC [][pr_is_abs_def, Once numdB_def] THEN
   `n MOD 3 < 3` by SRW_TAC [][MOD_LESS] THEN DECIDE_TAC);
 
-val pr_bnf_def = Define`
+Definition pr_bnf_def:
   pr_bnf =
   prtermrec0 (K 1)
              (λl. let t1 = l ' 0 in
@@ -416,7 +412,7 @@ val pr_bnf_def = Define`
                   in
                     r1 * r2 * (1 - pr_is_abs [t1]))
              (proj 1)
-`;
+End
 
 val primrec_pr_bnf = Store_thm(
   "primrec_pr_bnf",
@@ -437,11 +433,11 @@ val pr_bnf_correct = Store_thm(
   SRW_TAC [][pr_bnf_def, LET_THM] THEN
   Induct_on `d` THEN SRW_TAC [][pr_is_abs_correct, CONJ_ASSOC]);
 
-val max_abs_def = Define`
+Definition max_abs_def:
   (max_abs (dV i) = 0) ∧
   (max_abs (dAPP t1 t2) = MAX (max_abs t1) (max_abs t2)) ∧
   (max_abs (dABS t) = 1 + max_abs t)
-`;
+End
 val _ = export_rewrites ["max_abs_def"]
 
 val primrec_MAX = Store_thm(
@@ -473,10 +469,10 @@ val primrec_max_abs = Store_thm(
        lift (dABS s) k = dABS (lift s (k + 1))
    ---------------------------------------------------------------------- *)
 
-val maxf_def = Define`
+Definition maxf_def:
   (maxf f 0 = f 0) ∧
   (maxf f (SUC n) = MAX (f (SUC n)) (maxf f n))
-`;
+End
 
 val LE_maxf = store_thm(
   "LE_maxf",
@@ -494,7 +490,7 @@ val primrec_maxf = Store_thm(
                          SRW_TAC [][primrec_rules]) THEN
   Induct_on `n` THEN SRW_TAC [][maxf_def]);
 
-val pr_lift_def = Define`
+Definition pr_lift_def:
   pr_lift =
   (λns. let t = ns ' 0 in
         let k = ns ' 1 in
@@ -543,7 +539,7 @@ val pr_lift_def = Define`
                            napp r (ncons (3 * rt + 2) nnil))
                     [gmx - mx; r])
            [t; mx]))
-`;
+End
 
 val nsnd_le' = nsnd_le |> Q.INST [`n` |-> `x ⊗ y`]
                        |> SIMP_RULE (srw_ss()) []
@@ -711,7 +707,7 @@ val primrec_FUNPOW = Store_thm(
 val _ = temp_overload_on ("sknlift",
                           ``FUNPOW (λt. dBnum (lift (numdB t) 0))``)
 
-val pr_nsub_def = Define`
+Definition pr_nsub_def:
   pr_nsub =
   (λns. let s = ns ' 0 in
         let k = ns ' 1 in
@@ -769,7 +765,7 @@ val pr_nsub_def = Define`
                                      napp r (ncons (3 * recresult + 2) 0))
                              [gmx - mx; rs])
                  [t; (s ⊗ k) ⊗ gmx]))
-`;
+End
 
 val SUBSET_FINITE_I =
     SIMP_RULE (srw_ss() ++ boolSimps.DNF_ss) [AND_IMP_INTRO]
@@ -1010,7 +1006,7 @@ val primrec_pr_nsub = Store_thm(
     if there isn't a reduct (i.e., if the term is in bnf).
    ---------------------------------------------------------------------- *)
 
-val pr_noreduct_def = Define`
+Definition pr_noreduct_def:
   pr_noreduct =
   prtermrec0
       (λvs. 3 * vs ' 0)
@@ -1025,7 +1021,7 @@ val pr_noreduct_def = Define`
                 3 * (t1 ⊗ r2) + 1
               else 3 * (r1 ⊗ t2) + 1)
       (λabs. 3 * abs ' 1 + 2)
-`;
+End
 
 val fv_exists = prove(
   ``∀d. ∃n. ∀m. n < m ⇒ m ∉ dFV d``,
@@ -1098,14 +1094,14 @@ val primrec_noreduct = Store_thm(
     steps function
    ---------------------------------------------------------------------- *)
 
-val pr_steps_def = Define`
+Definition pr_steps_def:
   pr_steps =
   Pr (proj 0)
      (λl. let r = l ' 1
           in
             if pr_bnf [r] = 1 then r
             else pr_noreduct [r])
-`;
+End
 
 val primrec_steps = Store_thm(
   "primrec_steps",
@@ -1143,10 +1139,10 @@ val pr_steps_correct = store_thm(
     bnf_of (requires minimisation - and thus recursivefnsTheory
    ---------------------------------------------------------------------- *)
 
-val pr_steps_pred_def = Define`
+Definition pr_steps_pred_def:
   pr_steps_pred =
   Cn (pr2 $-) [K 1; Cn pr_bnf [pr_steps]]
-`
+End
 val pr_steps_pred_correct = store_thm(
   "pr_steps_pred_correct",
   ``pr_steps_pred [n; t] = nB (¬dbnf (fromTerm (steps n (toTerm (numdB t)))))``,
@@ -1163,11 +1159,11 @@ val primrec_steps_pred = Store_thm(
   SRW_TAC [][primrec_rules, pr_steps_pred_def]);
 
 
-val recbnf_of_def = Define`
+Definition recbnf_of_def:
   recbnf_of =
   recCn (SOME o pr_steps)
         [minimise (SOME o pr_steps_pred); SOME o proj 0]
-`;
+End
 
 val recfn_recbnf_of = Store_thm(
   "recfn_recbnf_of",
@@ -1210,7 +1206,7 @@ val recbnf_of_correct = Store_thm(
     METIS_TAC [optionTheory.option_CASES, bnf_steps]
   ]);
 
-val pr_is_ichurch_def = Define`
+Definition pr_is_ichurch_def:
   pr_is_ichurch = prtermrec0
                       (Cn pr_eq [proj 0; K 1])
                       (λls. let t1 = ls ' 0 in
@@ -1218,7 +1214,7 @@ val pr_is_ichurch_def = Define`
                             in
                               nB (t1 = 0) * r2)
                       (K 0)
-`;
+End
 
 val pr_is_ichurch_correct = store_thm(
   "pr_is_ichurch_correct",
@@ -1245,11 +1241,11 @@ val primrec_is_ichurch = Store_thm(
   SRW_TAC [][primrec_rules, LET_THM] THEN intro2 `$*` THEN
   SRW_TAC [][pr_eq]);
 
-val pr_is_church_def = Define`
+Definition pr_is_church_def:
   pr_is_church =
   prtermrec0 (K 0) (K 0)
              (Cn (prtermrec0 (K 0) (K 0) (Cn pr_is_ichurch [proj 0])) [proj 0])
-`
+End
 
 val primrec_pr_is_church = Store_thm(
   "primrec_pr_is_church",
@@ -1303,11 +1299,11 @@ val pr_is_church_correct = Store_thm(
   ]);
 
 (* size of a λ-term *)
-val pr_dbsize_def = Define`
+Definition pr_dbsize_def:
   pr_dbsize = prtermrec0 (K 1)
                          (Cn succ [Cn (pr2 $+) [proj 2; proj 3]])
                          (Cn succ [proj 1])
-`;
+End
 val pr_dbsize_correct = Store_thm(
   "pr_dbsize_correct",
   ``pr_dbsize [n] = dbsize (numdB n)``,
@@ -1321,10 +1317,10 @@ val primrec_dbsize = Store_thm(
   SRW_TAC [][primrec_rules]);
 
 (* turn a term into a number *)
-val pr_forcenum_def = Define`
+Definition pr_forcenum_def:
   pr_forcenum =
   (λl. if pr_is_church [l ' 0] = 1 then pr_dbsize [l ' 0] DIV 2 − 1 else 0)
-`;
+End
 val pr_forcenum_correct = Store_thm(
   "pr_forcenum_correct",
   ``pr_forcenum [n] = force_num (toTerm (numdB n))``,
@@ -1349,9 +1345,9 @@ val primrec_forcenum = Store_thm(
   ]);
 
 (* Term constructors - abstractions *)
-val pr_dABS_def = Define`
+Definition pr_dABS_def:
   pr_dABS = Cn (pr2 $+) [Cn (pr2 $*) [K 3; proj 0]; K 2]
-`;
+End
 val primrec_pr_dABS = Store_thm(
   "primrec_pr_dABS",
   ``primrec pr_dABS 1``,
@@ -1362,9 +1358,9 @@ val pr_dABS_thm = Store_thm(
   SRW_TAC [][pr_dABS_def, dBnum_def]);
 
 (* Term constructors - applications *)
-val pr_dAPP_def = Define`
+Definition pr_dAPP_def:
   pr_dAPP = Cn (pr2 $+) [Cn (pr2 $*) [K 3; pr2 npair]; K 1]
-`;
+End
 val primrec_dAPP = Store_thm(
   "primrec_dAPP",
   ``primrec pr_dAPP 2``,
@@ -1375,9 +1371,9 @@ val pr_dAPP_thm = Store_thm(
   SRW_TAC [][pr_dAPP_def, dBnum_def]);
 
 (* create a church numeral *)
-val pr_church_def = Define`
+Definition pr_church_def:
   pr_church = Cn pr_dABS [Cn pr_dABS [Pr1 3 (Cn pr_dAPP [K 0; proj 1])]]
-`;
+End
 val primrec_church = Store_thm(
   "primrec_church",
   ``primrec pr_church 1``,
@@ -1396,12 +1392,12 @@ val pr_church_thm = Store_thm(
   Induct_on `n` THEN SRW_TAC [][dBnum_def, FUNPOW_SUC]);
 
 
-val recPhi_def = Define`
+Definition recPhi_def:
   recPhi = recCn (SOME o pr_forcenum)
                  [recCn recbnf_of
                         [SOME o
                          Cn pr_dAPP [proj 0; Cn pr_church [proj 1]]]]
-`
+End
 
 val recfn_recPhi = Store_thm(
   "recfn_recPhi",
@@ -1437,7 +1433,7 @@ val recPhi_rec2Phi = store_thm(
   simp[recPhi_def, recCn_def, GSYM recPhi_correct])
 
 (* the other way - every recursive function can be emulated in the λ-calculus *)
-val cnel_def = Define`
+Definition cnel_def:
   cnel =
   natrec
     @@ (LAM "ns" (cis_zero @@ VAR "ns" @@ church 0
@@ -1446,7 +1442,7 @@ val cnel_def = Define`
          cis_zero @@ VAR "ns" @@ church 0
                   @@ (VAR "r" @@ (cnsnd @@ (cminus @@ VAR "ns"
                                                    @@ church 1)))))))
-`;
+End
 
 Theorem FV_cnel[simp]: FV cnel = {}
 Proof simp[EXTENSION,cnel_def,DISJ_IMP_EQ]
@@ -1485,13 +1481,13 @@ val nel_proj = prove(
   Cases_on `l` THEN1 SRW_TAC [][nel_def, nhd_def] THEN
   SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []);
 
-val cnlist_of_def = Define`
+Definition cnlist_of_def:
   cnlist_of =
   LAM "ns" (VAR "ns"
                 @@ church 0
                 @@ (LAM "h" (LAM "tr" (
                       csuc @@ (cnpair @@ VAR "h" @@ VAR "tr")))))
-`;
+End
 val FV_cnlist_of = Store_thm(
   "FV_cnlist_of",
   ``FV cnlist_of = {}``,
@@ -1508,7 +1504,7 @@ val cnlist_of_behaviour = store_thm(
                             ncons_def, arithmeticTheory.ADD1]);
 
 
-val crecCn_def = Define`
+Definition crecCn_def:
   crecCn =
   LAM "f" (LAM "gs" (LAM "x" (
     VAR "gs"
@@ -1526,7 +1522,7 @@ val crecCn_def = Define`
                  @@ (cdAPP @@ (cnumdB @@ VAR "h")
                            @@ (cchurch @@ VAR "x")))))))
         @@ cnil)))
-`;
+End
 
 val FV_crecCn = Store_thm(
   "FV_crecCn",
@@ -1613,9 +1609,9 @@ val crecCn_succeeds1 = store_thm(
 
 val MAP_CONG' = SPEC_ALL (REWRITE_RULE [GSYM AND_IMP_INTRO] listTheory.MAP_CONG)
 
-val cntl_def = Define`
+Definition cntl_def:
   cntl = LAM "ns" (cnsnd @@ (cminus @@ VAR "ns" @@ church 1))
-`;
+End
 val FV_cntl = Store_thm("FV_cntl", ``FV cntl = {}``,
                         SRW_TAC [][EXTENSION, cntl_def]);
 val cntl_behaviour = store_thm(
@@ -1623,9 +1619,9 @@ val cntl_behaviour = store_thm(
   ``cntl @@ church n == church (ntl n)``,
   SIMP_TAC (bsrw_ss()) [cntl_def, cminus_behaviour, ntl_def, cnsnd_behaviour]);
 
-val cnhd_def = Define`
+Definition cnhd_def:
   cnhd = LAM "ns" (cnfst @@ (cminus @@ VAR "ns" @@ church 1))
-`;
+End
 val FV_cnhd = Store_thm("FV_cnhd", ``FV cnhd = {}``,
                         SRW_TAC [][EXTENSION, cnhd_def]);
 val cnhd_behaviour = store_thm(
@@ -1633,9 +1629,9 @@ val cnhd_behaviour = store_thm(
   ``cnhd @@ church n == church (nhd n)``,
   SIMP_TAC (bsrw_ss()) [cnhd_def, cminus_behaviour, nhd_def, cnfst_behaviour]);
 
-val cncons_def = Define`
+Definition cncons_def:
   cncons = LAM "h" (LAM "t" (csuc @@ (cnpair @@ VAR "h" @@ VAR "t")))
-`;
+End
 val cncons_equiv = brackabs.brackabs_equiv [] cncons_def
 val FV_cncons = Store_thm(
   "FV_cncons",
@@ -1686,7 +1682,7 @@ val cncons_behaviour = store_thm(
 
 *)
 
-val PrSstep_def = Define`
+Definition PrSstep_def:
   PrSstep =
   LAM "sdb" (LAM "t" (LAM "number" (LAM "k" (LAM "n" (
     cbnf_ofk @@ (B @@ VAR "k" @@ cforce_num)
@@ -1696,7 +1692,7 @@ val PrSstep_def = Define`
                          @@ (cnpair
                                @@ VAR "number"
                                @@ (cnpair @@ VAR "n" @@ VAR "t")))))))))
-`;
+End
 
 val PrSstep_eval = brackabs.brackabs_equiv [] PrSstep_def
 val FV_PrSstep = Store_thm(
@@ -1704,7 +1700,7 @@ val FV_PrSstep = Store_thm(
   ``FV PrSstep = {}``,
   SRW_TAC [][PrSstep_def, EXTENSION]);
 
-val crecPr_def = Define`
+Definition crecPr_def:
   crecPr =
   LAM "b" (LAM "s" (LAM "ns" (
              natrec
@@ -1722,7 +1718,7 @@ val crecPr_def = Define`
                                @@ VAR "k")))))
                    @@ (cnfst @@ VAR "ns")
                    @@ I)))
-`;
+End
 
 val FV_crecPr = Store_thm(
   "FV_crecPr",
@@ -1819,7 +1815,7 @@ val crecPr_consSUC = store_thm(
   imp_res_tac PhiSOME_cbnf_ofk >>
   asm_simp_tac (bsrw_ss()) [bnf_bnf_of]);
 
-val cminimise_def = Define`
+Definition cminimise_def:
   cminimise =
   LAM "i" (LAM "x" (
     cfindleast
@@ -1830,7 +1826,7 @@ val cminimise_def = Define`
               @@ (cdAPP @@ (cnumdB @@ VAR "i")
                         @@ (cchurch @@ (cnpair @@ VAR "n" @@ VAR "x")))))))
       @@ I))
-`;
+End
 
 Theorem FV_cminimise[simp]:
   FV cminimise = {}
@@ -2126,4 +2122,3 @@ val UMi_def = new_specification(
 Theorem UMi_works =
   UMi_def |> Q.SPEC `[m;n]` |> SIMP_RULE (srw_ss()) []
 
-val _ = export_theory()

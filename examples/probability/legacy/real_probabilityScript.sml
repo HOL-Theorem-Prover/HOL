@@ -13,19 +13,16 @@
 (*                       Concordia University                                *)
 (*                                                                           *)
 (* ========================================================================= *)
+Theory real_probability
+Ancestors
+  arithmetic prim_rec seq res_quan list rich_list pair combin
+  real option transc real_sigma pred_set iterate topology
+  sigma_algebra real_measure real_lebesgue
+Libs
+  res_quanTools realLib pred_setLib mesonLib hurdUtils
 
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory prim_recTheory seqTheory res_quanTheory res_quanTools
-     listTheory rich_listTheory pairTheory combinTheory realTheory realLib
-     optionTheory transcTheory real_sigmaTheory pred_setTheory pred_setLib
-     mesonLib hurdUtils iterateTheory topologyTheory;
-
-open sigma_algebraTheory real_measureTheory real_lebesgueTheory;
 
 val set_ss = std_ss ++ PRED_SET_ss;
-
-val _ = new_theory "real_probability";
 
 val _ = intLib.deprecate_int ();
 val _ = ratLib.deprecate_rat ();
@@ -36,78 +33,101 @@ Overload indicator_fn[local] = “indicator”
 (* Basic probability theory definitions.                                     *)
 (* ------------------------------------------------------------------------- *)
 
-val p_space_def = Define `p_space = m_space`;
+Definition p_space_def:   p_space = m_space
+End
 
-val events_def = Define `events = measurable_sets`;
+Definition events_def:   events = measurable_sets
+End
 
-val prob_def = Define `prob = measure`;
+Definition prob_def:   prob = measure
+End
 
-val prob_preserving_def = Define
-   `prob_preserving = measure_preserving`;
+Definition prob_preserving_def:
+    prob_preserving = measure_preserving
+End
 
-val prob_space_def = Define
-   `prob_space p <=> measure_space p /\ (measure p (p_space p) = 1)`;
+Definition prob_space_def:
+    prob_space p <=> measure_space p /\ (measure p (p_space p) = 1)
+End
 
-val indep_def = Define
-   `indep p a b <=> a IN events p /\ b IN events p /\
-                    (prob p (a INTER b) = prob p a * prob p b)`;
+Definition indep_def:
+    indep p a b <=> a IN events p /\ b IN events p /\
+                    (prob p (a INTER b) = prob p a * prob p b)
+End
 
-val indep_families_def = Define `
-    indep_families p q r <=> !s t. s IN q /\ t IN r ==> indep p s t`;
+Definition indep_families_def:
+    indep_families p q r <=> !s t. s IN q /\ t IN r ==> indep p s t
+End
 
-val indep_function_def = Define `
+Definition indep_function_def:
     indep_function p =
    {f | indep_families p (IMAGE (PREIMAGE (FST o f)) UNIV)
-                         (IMAGE (PREIMAGE (SND o f)) (events p))}`;
+                         (IMAGE (PREIMAGE (SND o f)) (events p))}
+End
 
-val probably_def = Define `probably p e <=> (e IN events p) /\ (prob p e = 1)`;
+Definition probably_def:   probably p e <=> (e IN events p) /\ (prob p e = 1)
+End
 
-val possibly_def = Define `possibly p e <=> (e IN events p) /\ ~(prob p e = 0)`;
+Definition possibly_def:   possibly p e <=> (e IN events p) /\ ~(prob p e = 0)
+End
 
-val random_variable_def = Define
-   `random_variable X p s <=> prob_space p /\ X IN measurable (p_space p, events p) s`;
+Definition random_variable_def:
+    random_variable X p s <=> prob_space p /\ X IN measurable (p_space p, events p) s
+End
 
-val real_random_variable_def = Define
-   `real_random_variable X p <=> prob_space p /\ X IN borel_measurable (p_space p, events p)`;
+Definition real_random_variable_def:
+    real_random_variable X p <=> prob_space p /\ X IN borel_measurable (p_space p, events p)
+End
 
-val distribution_def = Define
-   `distribution p X = (\s. prob p ((PREIMAGE X s) INTER (p_space p)))`;
+Definition distribution_def:
+    distribution p X = (\s. prob p ((PREIMAGE X s) INTER (p_space p)))
+End
 
-val joint_distribution_def = Define
-   `joint_distribution p X Y = (\a. prob p (PREIMAGE (\x. (X x, Y x)) a INTER p_space p))`;
+Definition joint_distribution_def:
+    joint_distribution p X Y = (\a. prob p (PREIMAGE (\x. (X x, Y x)) a INTER p_space p))
+End
 
-val joint_distribution3_def = Define
-   `joint_distribution3 p X Y Z = (\a. prob p (PREIMAGE (\x. (X x,Y x, Z x)) a INTER p_space p))`;
+Definition joint_distribution3_def:
+    joint_distribution3 p X Y Z = (\a. prob p (PREIMAGE (\x. (X x,Y x, Z x)) a INTER p_space p))
+End
 
-val conditional_distribution_def = Define
-   `conditional_distribution p X Y a b = joint_distribution p X Y (a CROSS b) / distribution p Y b `;
+Definition conditional_distribution_def:
+    conditional_distribution p X Y a b = joint_distribution p X Y (a CROSS b) / distribution p Y b
+End
 
-val indep_rv_def = Define
-   `indep_rv p X Y s t = !A B. (A IN subsets s) /\ (B IN subsets t)
-                     ==> indep p (PREIMAGE X A) (PREIMAGE Y B)`;
+Definition indep_rv_def:
+    indep_rv p X Y s t = !A B. (A IN subsets s) /\ (B IN subsets t)
+                     ==> indep p (PREIMAGE X A) (PREIMAGE Y B)
+End
 
-val uniform_distribution_def = Define
-   `uniform_distribution p X s = (\a. (&CARD a / &CARD (space s)):real)`;
+Definition uniform_distribution_def:
+    uniform_distribution p X s = (\a. (&CARD a / &CARD (space s)):real)
+End
 
-val expectation_def = Define
-   `expectation = integral`;
+Definition expectation_def:
+    expectation = integral
+End
 
-val conditional_expectation_def = Define
-   `conditional_expectation p X s =
+Definition conditional_expectation_def:
+    conditional_expectation p X s =
         @f. real_random_variable f p /\
             !g. g IN s ==>
                 (integral p (\x. f x * indicator_fn g x) =
-                 integral p (\x. X x * indicator_fn g x))`;
+                 integral p (\x. X x * indicator_fn g x))
+End
 
-val conditional_prob_def = Define
-   `conditional_prob p e1 e2 = conditional_expectation p (indicator_fn e1) e2`;
+Definition conditional_prob_def:
+    conditional_prob p e1 e2 = conditional_expectation p (indicator_fn e1) e2
+End
 
-val cond_prob_def = Define
-   `cond_prob p e1 e2 = (prob p (e1 INTER e2)) / (prob p e2)`;
+Definition cond_prob_def:
+    cond_prob p e1 e2 = (prob p (e1 INTER e2)) / (prob p e2)
+End
 
-val rv_conditional_expectation_def = Define
-   `rv_conditional_expectation p s X Y =
-       conditional_expectation p X (IMAGE (\a. (PREIMAGE Y a) INTER p_space p) (subsets s))`;
+Definition rv_conditional_expectation_def:
+    rv_conditional_expectation p s X Y =
+       conditional_expectation p X (IMAGE (\a. (PREIMAGE Y a) INTER p_space p) (subsets s))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Basic probability theorems, leading to:                                   *)
@@ -1777,4 +1797,3 @@ val COND_PROB_INTER_SPLIT = store_thm
         by METIS_TAC [REAL_MUL_ASSOC, REAL_MUL_COMM]
  >> RW_TAC std_ss [cond_prob_def, real_div, INTER_ASSOC, REAL_MUL_LINV, REAL_MUL_RID]);
 
-val _ = export_theory ();

@@ -1,28 +1,22 @@
 (* ========================================================================= *)
 (* Create "leakageTheory" setting up the theory of information leakage       *)
 (* ========================================================================= *)
+Theory leakage
+Ancestors
+  arithmetic pred_set list state_transformer combin pair num
+  subtype string rich_list real transc lim seq real_sigma
+  extra_bool extra_num extra_pred_set extra_real extra_list
+  extra_string sigma_algebra real_measure real_lebesgue
+  real_probability information
+Libs
+  metisLib jrhUtils simpLib stringSimps listSimps hurdUtils
+  realLib realSimps extra_stringLib
 
-open HolKernel Parse boolLib bossLib;
-
-open metisLib arithmeticTheory pred_setTheory listTheory state_transformerTheory
-     combinTheory pairTheory jrhUtils numTheory simpLib subtypeTheory
-     stringTheory rich_listTheory stringSimps listSimps hurdUtils;
-
-open realTheory realLib realSimps transcTheory limTheory seqTheory real_sigmaTheory;
-
-open extra_boolTheory extra_numTheory extra_pred_setTheory extra_realTheory
-     extra_listTheory extra_stringTheory extra_stringLib;
-
-open sigma_algebraTheory real_measureTheory real_lebesgueTheory
-     real_probabilityTheory;
-
-open informationTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "information"                                   *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = new_theory "leakage";
 val _ = temp_set_fixity "CROSS" (Infixl 600)
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"];
 val real_ss = real_ss -* ["lift_disj_eq", "lift_imp_disj"];
@@ -41,33 +35,38 @@ val () = type_abbrev ("prog_state", Type `:(('a state # 'b state) # 'c state)`);
 
 val () = type_abbrev ("prog", Type `:(('a,'b,'c) prog_state) -> 'd state`);
 
-val high_state_def = Define `H (s:(('a,'b,'c) prog_state)) = FST (FST s)`;
+Definition high_state_def:   H (s:(('a,'b,'c) prog_state)) = FST (FST s)
+End
 
-val low_state_def = Define `L (s:(('a,'b,'c) prog_state)) = SND (FST s)`;
+Definition low_state_def:   L (s:(('a,'b,'c) prog_state)) = SND (FST s)
+End
 
-val random_state_def = Define `R (s:(('a,'b,'c) prog_state)) = SND s`;
+Definition random_state_def:   R (s:(('a,'b,'c) prog_state)) = SND s
+End
 
 (* ------------------------------------------------------------------------- *)
 (* --------  Interference of a program defined w/ prob_space p ------------- *)
 (* ------------------------------------------------------------------------- *)
 
 
-val leakage_def = Define
-   `leakage p (f:('a,'b,'c,'d) prog) =
+Definition leakage_def:
+    leakage p (f:('a,'b,'c,'d) prog) =
         conditional_mutual_information 2 p
                 ((IMAGE f (p_space p)), POW (IMAGE f (p_space p)))
                 ((IMAGE H (p_space p)), POW (IMAGE H (p_space p)))
                 ((IMAGE L (p_space p)), POW (IMAGE L (p_space p)))
-                f H L`;
+                f H L
+End
 
-val visible_leakage_def = Define
-   `visible_leakage p (f:('a,'b,'c,'d) prog) =
+Definition visible_leakage_def:
+    visible_leakage p (f:('a,'b,'c,'d) prog) =
         conditional_mutual_information 2 p
                 ((IMAGE f (p_space p)), POW (IMAGE f (p_space p)))
                 ((IMAGE H (p_space p)), POW (IMAGE H (p_space p)))
                 ((IMAGE (\s:('a,'b,'c) prog_state. (L s, R s)) (p_space p)),
                  POW (IMAGE (\s:('a,'b,'c) prog_state. (L s, R s)) (p_space p)))
-                 f H (\s:('a,'b,'c) prog_state. (L s, R s))`;
+                 f H (\s:('a,'b,'c) prog_state. (L s, R s))
+End
 
 
 (* ************************************************************************* *)
@@ -76,17 +75,19 @@ val visible_leakage_def = Define
 (*      sets of possible initial input states                                *)
 (* ************************************************************************* *)
 
-val unif_prog_dist_def = Define
-   `unif_prog_dist high low random =
+Definition unif_prog_dist_def:
+    unif_prog_dist high low random =
         (\s. if s IN (high CROSS low) CROSS random then
-             1/(&(CARD ((high CROSS low) CROSS random))) else 0)`;
+             1/(&(CARD ((high CROSS low) CROSS random))) else 0)
+End
 
 
-val unif_prog_space_def = Define
-   `unif_prog_space high low random =
+Definition unif_prog_space_def:
+    unif_prog_space high low random =
         ((high CROSS low) CROSS random,
          POW ((high CROSS low) CROSS random),
-         (\s. SIGMA (unif_prog_dist high low random) s))`;
+         (\s. SIGMA (unif_prog_dist high low random) s))
+End
 
 (* ************************************************************************* *)
 (* Proofs                                                                    *)
@@ -1918,4 +1919,3 @@ Proof
 QED
 
 
-val _ = export_theory ();

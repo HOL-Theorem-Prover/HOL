@@ -4,32 +4,17 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polyBinomial";
+Theory polyBinomial
+Ancestors
+  pred_set arithmetic list rich_list number combinatorics divides
+  gcd monoid group ring field fieldInstances polynomial polyWeak
+  polyRing polyDivision polyMonic polyField polyRoot polyEval
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory arithmeticTheory listTheory rich_listTheory numberTheory
-     combinatoricsTheory dividesTheory gcdTheory;
-
-open monoidTheory groupTheory ringTheory;
-
-open fieldTheory fieldInstancesTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory;
-
-open polyMonicTheory;
-open polyFieldTheory;
-open polyRootTheory;
-open polyEvalTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -460,18 +445,18 @@ val poly_freshman_fermat_field = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define a weak function *)
-val weak_fun_def = Define`
+Definition weak_fun_def:
     weak_fun (r:'a ring) f <=> !x. weak (f x)
-`;
+End
 
 (* Overload on weak_function *)
 val _ = overload_on("wfun", ``weak_fun r``);
 
 (* Weak poly list. *)
-val poly_weak_list_def = Define`
+Definition poly_weak_list_def:
   (poly_weak_list (r:'a ring) [] <=> T) /\
   (poly_weak_list (r:'a ring) ((h:'a poly)::(t:'a poly list)) <=> weak h /\ (poly_weak_list r t))
-`;
+End
 val _ = overload_on ("plist", ``poly_weak_list r``);
 
 (* export simple definition. *)
@@ -526,10 +511,10 @@ val poly_weak_list_from_weak_fun = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Weak poly sum. *)
-val poly_weak_sum_def = Define`
+Definition poly_weak_sum_def:
   (poly_weak_sum (r:'a ring) [] = |0|) /\
   (poly_weak_sum (r:'a ring) ((h:'a poly)::(t:'a poly list)) = h || (poly_weak_sum r t))
-`;
+End
 val _ = overload_on ("psum", ``poly_weak_sum r``);
 
 (* export simple definition. *)
@@ -3117,9 +3102,9 @@ This old investigation is solved in this proper script.
 *)
 
 (* Define polynomial dilate using list DILATE *)
-val poly_dilate_def = Define`
+Definition poly_dilate_def:
     poly_dilate (r:'a ring) n (p:'a poly) = DILATE #0 0 n p
-`;
+End
 (* overload polynomial dilation *)
 val _ = overload_on("pdilate", ``poly_dilate r``);
 (* > poly_dilate_def;
@@ -3394,8 +3379,4 @@ val poly_dilate_const = store_thm(
   rw[DILATE_SING]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

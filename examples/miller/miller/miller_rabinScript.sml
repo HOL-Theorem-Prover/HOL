@@ -1,19 +1,15 @@
-open HolKernel Parse boolLib bossLib;
+Theory miller_rabin
+Ancestors
+  list res_quan pred_set extra_pred_set extra_list subtype
+  arithmetic group extra_num gcd divides extra_arith finite_group
+  abelian_group num_poly extra_binomial binomial summation
+  mult_group extra_real real seq state_transformer combin
+  real_probability prob prob_uniform
+Libs
+  subtypeTools res_quanTools arithContext ho_proverTools
+  listContext hurdUtils groupContext finite_groupContext
+  pred_setContext realLib
 
-open listTheory subtypeTools
-     res_quanTools res_quanTheory pred_setTheory extra_pred_setTheory
-     arithContext ho_proverTools extra_listTheory subtypeTheory
-     listContext arithmeticTheory groupTheory hurdUtils
-     groupContext extra_numTheory gcdTheory dividesTheory
-     extra_arithTheory finite_groupTheory finite_groupContext
-     abelian_groupTheory num_polyTheory extra_binomialTheory
-     binomialTheory summationTheory pred_setContext mult_groupTheory
-     extra_realTheory realTheory realLib seqTheory
-     state_transformerTheory combinTheory;
-
-open real_probabilityTheory probTheory prob_uniformTheory;
-
-val _ = new_theory "miller_rabin";
 val _ = ParseExtras.temp_loose_equality()
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
@@ -65,25 +61,29 @@ val (modexp_def, modexp_ind) = Defn.tprove
 val _ = save_thm ("modexp_def", modexp_def);
 val _ = save_thm ("modexp_ind", modexp_ind);
 
-val witness_tail_def = Define `(witness_tail n a 0 = ~(a = 1))
+Definition witness_tail_def:   (witness_tail n a 0 = ~(a = 1))
   /\ (witness_tail n a (SUC r)
       = let a2 = (a * a) MOD n
         in if a2 = 1 then ~(a = 1) /\ ~(a = n - 1)
-           else witness_tail n a2 r)`;
+           else witness_tail n a2 r)
+End
 
-val witness_def = Define `witness n a
+Definition witness_def:   witness n a
   = let (r, s) = factor_twos (n - 1)
-    in witness_tail n (modexp n a s) r`;
+    in witness_tail n (modexp n a s) r
+End
 
-val miller_rabin_1_def = Define
-  `miller_rabin_1 n s =
+Definition miller_rabin_1_def:
+   miller_rabin_1 n s =
      if n = 2 then (T, s)
      else if (n = 1) \/ EVEN n then (F, s)
      else
        let (a, s') = prob_uniform_cut (2 * log2 (n - 1)) (n - 2) s
-       in (~witness n (a + 2), s')`;
+       in (~witness n (a + 2), s')
+End
 
-val miller_rabin_def = Define `miller_rabin n t = many (miller_rabin_1 n) t`;
+Definition miller_rabin_def:   miller_rabin n t = many (miller_rabin_1 n) t
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)
@@ -931,4 +931,3 @@ val MILLER_RABIN_DEDUCE_COMPOSITE = store_thm
    >> Suff `~FST (miller_rabin n t s) = T` >- PROVE_TAC [MILLER_RABIN_PRIME]
    >> RW_TAC std_ss []);
 
-val _ = export_theory ();

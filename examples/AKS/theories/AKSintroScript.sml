@@ -4,44 +4,21 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory listRangeTheory dividesTheory
-     gcdTheory numberTheory combinatoricsTheory;
-
-(* declare new theory at start *)
-val _ = new_theory "AKSintro";
-
 (* ------------------------------------------------------------------------- *)
+Theory AKSintro
+Ancestors
+  pred_set list arithmetic listRange divides gcd number
+  combinatorics ffBasic ffAdvanced ffPoly ffUnity ffConjugate
+  ffExist polynomial polyWeak polyRing polyDivision polyBinomial
+  polyEval polyDivides polyMonic polyField polyFieldModulo
+  polyRingModulo polyMap polyIrreducible monoid group ring field
+  fieldMap
+  computeRing  (* for overloads on x^, x+^, x^+, x^- *)
+Libs
+  jcLib
 
 (* val _ = load "jcLib"; *)
-open jcLib;
 
-(* Get dependent theories *)
-open ffBasicTheory;
-open ffAdvancedTheory;
-open ffPolyTheory;
-open ffUnityTheory;
-open ffConjugateTheory;
-open ffExistTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory;
-open polyBinomialTheory polyEvalTheory;
-
-open polyDividesTheory;
-open polyMonicTheory;
-open polyFieldTheory;
-open polyFieldModuloTheory;
-open polyRingModuloTheory;
-open polyMapTheory;
-open polyIrreducibleTheory;
-
-open monoidTheory groupTheory ringTheory;
-open fieldTheory fieldMapTheory;
-
-open computeRingTheory; (* for overloads on x^, x+^, x^+, x^- *)
 
 val _ = intLib.deprecate_int ();
 
@@ -202,10 +179,10 @@ val _ = intLib.deprecate_int ();
 
 (* Introspective = when first substitution by X, then taking exponential
                    equals just substitution by exponential of X *)
-val poly_intro_def = Define`
+Definition poly_intro_def:
   poly_intro (r:'a ring) (k:num) (n:num) (p:'a poly) <=>
     poly p /\ (p ** n == peval p (X ** n)) (pm (unity k))
-`;
+End
 (* Note: since peval p X = p, the definition means:
   (peval p X) ** n == peval p (X ** n) (pm z)  where z = X ** k - |1| = unity k
 *)
@@ -987,9 +964,9 @@ val poly_intro_checks_thm = store_thm(
 (* cannot put into computeLib due to LHS is a lambda expression *)
 
 (* Put poly_intro_checks as definition (for printing) *)
-val ZN_intro_checks_def = Define`
+Definition ZN_intro_checks_def:
     ZN_intro_checks n k s <=> poly_intro_checks n k s
-`;
+End
 
 (* Theorem: 0 < k /\ 0 < n ==>
    !c. poly_intro (ZN n) k n (x+ n c) = (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k)) *)
@@ -1596,9 +1573,9 @@ poly_intro_def
 *)
 
 (* Define introspective with respect to a modulus z polynomial *)
-val introspective_def = Define`
+Definition introspective_def:
     introspective (r:'a ring) (z:'a poly) n p <=> (p ** n == peval p (X ** n)) (pm z)
-`;
+End
 
 (* Theorem: poly p ==> !z. introspective r z n p <=> ((peval p X) ** n == peval p (X ** n)) (pm z) *)
 (* Proof: by introspective_def, poly_peval_by_X *)
@@ -2191,8 +2168,4 @@ val introspective_unity_X_add_c_char_cofactor = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

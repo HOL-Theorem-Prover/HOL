@@ -27,7 +27,8 @@ val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy=Thy,Name="fromSet"},name=
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy=Thy,Name="toSet"},name=(["Relation"],"toSet")}
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy=Thy,Name="bigIntersect"},name=(["Relation"],"bigIntersect")}
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy=Thy,Name="bigUnion"},name=(["Relation"],"bigUnion")}
-val _ = new_definition("fromPredicate_def",``fromPredicate (x:'a -> bool) = x``)
+Definition fromPredicate_def[nocompute]:fromPredicate (x:'a -> bool) = x
+End
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy=Thy,Name="fromPredicate"},name=(["Set"],"fromPredicate")}
 
 fun define_const {Name,Thy} tm =

@@ -4,36 +4,20 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "countPoly";
-
 (* ------------------------------------------------------------------------- *)
+Theory countPoly
+Ancestors
+  pred_set list arithmetic divides gcd rich_list listRange
+  logroot number combinatorics pair option prime ring countMonad
+  countMacro countModulo bitsize complexity loopIncrease
+  loopDecrease loopDivide loopList
+  computeRing  (* for ZN_poly_cmult_alt *)
+  computePoly  (* for unity_mod_monomial *)
+  polynomial polyWeak
+Libs
+  jcLib monadsyntax
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory listTheory arithmeticTheory dividesTheory gcdTheory
-     rich_listTheory listRangeTheory logrootTheory numberTheory
-     combinatoricsTheory pairTheory optionTheory primeTheory;
-
-open ringTheory;
-
-open countMonadTheory countMacroTheory;
-open countModuloTheory;
-
-open bitsizeTheory complexityTheory;
-open loopIncreaseTheory loopDecreaseTheory;
-open loopDivideTheory loopListTheory;
-
-open monadsyntax;
-
-open computeRingTheory; (* for ZN_poly_cmult_alt *)
-open computePolyTheory; (* for unity_mod_monomial *)
-
-open polynomialTheory polyWeakTheory;
 
 val _ = monadsyntax.enable_monadsyntax();
 val _ = monadsyntax.enable_monad "Count";
@@ -661,9 +645,9 @@ End
 *)
 
 (* Make |0| of length k *)
-val poly_zeroM_def = Define`
+Definition poly_zeroM_def:
     poly_zeroM (n:num) k = poly_extendM [] k
-`;
+End
 
 (* Pseudocode:
    Extend |1 (mod n)| to length k.
@@ -674,7 +658,7 @@ val poly_zeroM_def = Define`
 *)
 
 (* Make |1| of length k *)
-val poly_oneM_def = Define`
+Definition poly_oneM_def:
     poly_oneM n k =
       do
         k0 <- zeroM k;
@@ -686,7 +670,7 @@ val poly_oneM_def = Define`
                consM c p; (* LENGTH is 1 + j = k *)
              od
       od
-`;
+End
 (* Note:
 poly_oneM n k can be defined as (later) poly_constM n k 1,
 but then the theorems will have a prefix: 0 < n.
@@ -1135,7 +1119,7 @@ val poly_oneM_steps_bound = store_thm(
 *)
 
 (* Make c (MOD n, (unity k)) of length k. *)
-val poly_constM_def = Define`
+Definition poly_constM_def:
     poly_constM n k c =
       do
         (* k = 0 will give length = 0 *)
@@ -1148,7 +1132,7 @@ val poly_constM_def = Define`
                consM d p; (* the c MOD n, LENGTH 1 + j = k *)
              od
       od
-`;
+End
 
 (*
 > EVAL ``poly_constM 10 7 13``; = ([3; 0; 0; 0; 0; 0; 0],Count 58): thm
@@ -1364,7 +1348,7 @@ val poly_constM_steps_bound = store_thm(
       return list_extend q j       // extend with preceding zeroes
 *)
 
-val poly_X_expM_def = Define`
+Definition poly_X_expM_def:
     poly_X_expM n k m =
        do
           k0 <- zeroM k;
@@ -1383,7 +1367,7 @@ val poly_X_expM_def = Define`
                       od
                od
        od
-`;
+End
 
 (*
 > EVAL ``poly_X_expM 10 7 2``; = ([0; 0; 1; 0; 0; 0; 0],Count 53): thm
@@ -2619,7 +2603,7 @@ End
 *)
 
 (* Multiply a polynomial p by X, in (mod unity k). *)
-val poly_turnM_def = Define`
+Definition poly_turnM_def:
     poly_turnM p =
        do
           p0 <- nullM p;
@@ -2630,7 +2614,7 @@ val poly_turnM_def = Define`
                  consM h t;
                od
        od
-`;
+End
 
 (*
 EVAL ``poly_lastM [1;2;4;5;3]``; = (3,Count 20): thm
@@ -3478,9 +3462,9 @@ val poly_multM_steps_bound_alt = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Squaring a polynomial p, of length k, in (MOD n, (unity k)). *)
-val poly_sqM_def = Define`
+Definition poly_sqM_def:
     poly_sqM n p = poly_multM n p p
-`;
+End
 
 (*
 EVAL ``poly_sqM 10 [1;1;0;0;0;0;0]``; = ([1; 2; 1; 0; 0; 0; 0],Count 1448): thm
@@ -4215,8 +4199,4 @@ End
 *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

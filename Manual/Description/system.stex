@@ -1626,10 +1626,12 @@ interpreted as a request merely to clear the current theory segment
 
 A call to \ml{new\_theory "$\mathit{name}$"} fails if:
 \begin{itemize}
-\item $name$ is not an alphanumeric starting with a letter.
+\item $name$ is not an alphanumeric starting with a letter;
 
-\item there is a theory already named $name$ in the ancestry of the
-current segment.
+\item there is a theory already named $\mathit{name}$ in the ancestry of the
+current segment;
+
+\item the chosen $\mathit{name}$ is in a set of reserved words (SML and HOL keywords); or
 
 \item if it is necessary to export the current segment before creating
 the new theory and the export attempt fails.

@@ -1,8 +1,8 @@
-open HolKernel Parse reductionEval bossLib boolLib binderLib
-
-open termTheory
-
-val _ = new_theory "brackabs"
+Theory brackabs
+Ancestors
+  term chap2
+Libs
+  reductionEval binderLib
 
 val _ = remove_ovl_mapping "LAM" {Name="LAM", Thy="labelledTerms"}
 val _ = clear_overloads_on "FV"
@@ -124,6 +124,3 @@ val B_eta = store_thm(
   `∀x y. (x = y) ⇒ x == y` by SRW_TAC [][] THEN
   POP_ASSUM MATCH_MP_TAC THEN
   SRW_TAC [][LAM_eq_thm, tpm_fresh]);
-
-
-val _ = export_theory()

@@ -1,6 +1,6 @@
-open HolKernel bossLib word8Theory;
-
-val _ = new_theory "tables";
+Theory tables
+Ancestors
+  word8
 
 val Sbox_def = Count.apply Define
  `(Sbox (BYTE F F F F F F F F) = BYTE F T T F F F T T) /\
@@ -2071,4 +2071,3 @@ val Sbox_Inversion = Q.store_thm
  `!w:word8. InvSbox (Sbox w) = w`,
  SIMP_TAC std_ss [FORALL_BYTE_BITS, Sbox_def, InvSbox_def]);
 
-val _ = export_theory();

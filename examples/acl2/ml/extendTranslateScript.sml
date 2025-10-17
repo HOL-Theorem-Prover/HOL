@@ -9,11 +9,14 @@ quietdec := true;
 use "extendTranslateScript.sml" handle _ => quietdec := false;
 quietdec := false;
 *)
+Theory extendTranslate
+Ancestors
+   sexp arithmetic integer bool translate divides gcd frac rat
+  intExtension complex_rational list fcp signedint
+Libs
+  Term Type Thm Tactic Tactical Drule Rewrite boolSyntax Lib Conv
+  intLib translateLib
 
-open Term Type Thm Theory Tactic Tactical Drule Rewrite boolSyntax;
-open Lib bossLib Conv Parse
-open sexpTheory arithmeticTheory integerTheory intLib boolTheory
-     (*hol_defaxiomsTheory*) translateLib translateTheory;
 
 val fix_def=hol_defaxiomsTheory.fix_def;
 val zip_def = hol_defaxiomsTheory.zip_def;
@@ -24,12 +27,6 @@ val endp_def = hol_defaxiomsTheory.endp_def;
 val atom_def = hol_defaxiomsTheory.atom_def;
 val zp_def = hol_defaxiomsTheory.zp_def;
 val eql_def = hol_defaxiomsTheory.eql_def;
-
-(*****************************************************************************)
-(* Start new theory "extendTranslate"                                        *)
-(*****************************************************************************)
-
-val _ = new_theory "extendTranslate";
 
 (*****************************************************************************)
 (* CHOOSEP_TAC : performs the following for ints & nums:                     *)
@@ -202,8 +199,6 @@ val rat_mul_lem = prove(``0 < c * b /\ 0 < c ==>
     RW_TAC int_ss [ratTheory.RAT_EQ_CALCULATE,fracTheory.NMR,
            fracTheory.DNM] THEN
     ARITH_TAC);
-
-open dividesTheory gcdTheory;
 
 val both_divides = prove(``(a * b = c) ==> divides a c /\ divides b c``,
     METIS_TAC [divides_def,MULT_COMM]);
@@ -625,12 +620,11 @@ val NAT_MOD = store_thm("NAT_MOD",
 (* longer required here.                                                     *)
 (*****************************************************************************)
 
-open fracTheory ratTheory intExtensionTheory complex_rationalTheory;
-
-val rat_of_int_def = Define
-    `rat_of_int x =
+Definition rat_of_int_def:
+     rat_of_int x =
     if 0 <= x then & (Num (ABS x))
-              else rat_ainv (& (Num (ABS x)))`;
+              else rat_ainv (& (Num (ABS x)))
+End
 
 val rat_of_int_neg = store_thm("rat_of_int_neg",
     ``rat_of_int ~x = ~rat_of_int x``,
@@ -966,8 +960,6 @@ val INT_ABS = store_thm("INT_ABS",
 (*                 nth, last, strip_cars, strip_cdrs, pairlis$               *)
 (*                                                                           *)
 (*****************************************************************************)
-
-open listTheory;
 
 val CAR_NIL = store_thm("CAR_NIL",``car nil = nil``,
     RW_TAC int_ss [car_def,nil_def]);
@@ -1432,25 +1424,27 @@ val STRINGP_STRCAT = prove(``!s1 s2. |= stringp (acl2_strcat s1 s2)``,
 (* FCPs                                                                      *)
 (*****************************************************************************)
 
-open fcpTheory;
-
-val fcp_encode_def =
-    Define `fcp_encode f (:'b) (x:'a ** 'b) = list f (V2L x)`;
-val fcp_decode_def =
-    Define `fcp_decode f (:'b) x =
+Definition fcp_encode_def:
+     fcp_encode f (:'b) (x:'a ** 'b) = list f (V2L x)
+End
+Definition fcp_decode_def:
+     fcp_decode f (:'b) x =
             if LENGTH (sexp_to_list I x) = dimindex(:'b)
                then L2V (sexp_to_list f x):('a ** 'b)
-               else FCP i. f nil`;
+               else FCP i. f nil
+End
 
-val fcp_detect_def =
-    Define `fcp_detect f (:'b) x =
-            listp f x /\ (LENGTH (sexp_to_list I x) = dimindex(:'b))`;
+Definition fcp_detect_def:
+     fcp_detect f (:'b) x =
+            listp f x /\ (LENGTH (sexp_to_list I x) = dimindex(:'b))
+End
 
-val fcp_fix_def =
-    Define `fcp_fix f (:'b) x =
+Definition fcp_fix_def:
+     fcp_fix f (:'b) x =
             if LENGTH (sexp_to_list I x) = dimindex(:'b)
                then fix_list f x
-               else fix_list f (fcp_encode I (:'b) ((FCP i.nil):sexp ** 'b))`;
+               else fix_list f (fcp_encode I (:'b) ((FCP i.nil):sexp ** 'b))
+End
 
 val ENCDECMAP_FCP = store_thm("ENCDECMAP_FCP",
     ``fcp_decode g (:'b) o fcp_encode f (:'b) = FCP_MAP (g o f)``,
@@ -1540,10 +1534,11 @@ val FCP_INDEX = store_thm("FCP_INDEX",
      RW_TAC int_ss [INT_ADD_CALCULATE,INT_ABS_NUM,INT_ABS_NEG] THEN
      ARITH_TAC);
 
-val update_def = Define `
+Definition update_def:
     (update (SUC n) y (x::xs) = x::update n y xs) /\
     (update 0 y (x::xs) = y::xs) /\
-    (update _ y [] = [])`;
+    (update _ y [] = [])
+End
 
 val LIST_UPDATE = store_thm("LIST_UPDATE",
     ``!x y z. x < LENGTH z ==>
@@ -1681,23 +1676,25 @@ val FCP_VALUE = store_thm("FCP_VALUE",
 (* FCP words                                                                 *)
 (*****************************************************************************)
 
-open signedintTheory;
-
 (*****************************************************************************)
 (* Coding function definitions                                               *)
 (*****************************************************************************)
 
-val word_encode_def =
-    Define `word_encode (:'b) (x:'b word) = int (sw2i x)`;
-val word_decode_def =
-    Define `word_decode (:'b) x = (i2sw (sexp_to_int x)) : 'b word`;
-val word_detect_def =
-    Define `word_detect (:'b) x =
+Definition word_encode_def:
+     word_encode (:'b) (x:'b word) = int (sw2i x)
+End
+Definition word_decode_def:
+     word_decode (:'b) x = (i2sw (sexp_to_int x)) : 'b word
+End
+Definition word_detect_def:
+     word_detect (:'b) x =
            ((sexp_to_bool o  integerp) x) /\
            sexp_to_int x < 2 ** (dimindex (:'b) - 1) /\
-           ~(2 ** (dimindex (:'b) - 1)) <= sexp_to_int x`;
-val word_fix_def =
-    Define `word_fix (:'b) x = int (extend (sexp_to_int x) (dimindex (:'b)))`;
+           ~(2 ** (dimindex (:'b) - 1)) <= sexp_to_int x
+End
+Definition word_fix_def:
+     word_fix (:'b) x = int (extend (sexp_to_int x) (dimindex (:'b)))
+End
 
 (*****************************************************************************)
 (* Coding function proofs                                                    *)
@@ -2054,5 +2051,3 @@ val NAT_BIT = store_thm("NAT_BIT",
            NAT_IFIX,GSYM NAT_ODD,BOOL_CONG] THEN
     RW_TAC int_ss [BIT_def,BITS_THM,ADD1,ODD_MOD2_LEM])
 end
-
-val _ = export_theory();

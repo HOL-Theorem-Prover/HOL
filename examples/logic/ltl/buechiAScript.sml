@@ -1,8 +1,8 @@
-open HolKernel Parse bossLib boolLib pairTheory pred_setTheory arithmeticTheory relationTheory set_relationTheory whileTheory
+Theory buechiA
+Ancestors
+  pair pred_set arithmetic relation set_relation While word
+  generalHelpers
 
-open wordTheory generalHelpersTheory
-
-val _ = new_theory "buechiA"
 val _ = ParseExtras.temp_loose_equality()
 
 val _ = Datatype
@@ -13,34 +13,39 @@ val _ = Datatype
             alphabet    : 'a set
             |>`;
 
-val isValidGBA_def = Define`
+Definition isValidGBA_def:
   isValidGBA (A: ('s,'a) GBA) =
     (A.initial ⊆ A.states)
         ∧ (!s a d. (s ∈ A.states) /\ ((a, d) ∈ (A.trans s))
                                   ==> (d ∈ A.states) ∧ (a ⊆ A.alphabet))
         ∧ (!q1 a q2 T. (q1,a,q2) ∈ T ∧ T ∈ A.accTrans
-               ==> (q1 ∈ A.states ∧ (a,q2) ∈ A.trans q1))`;
+               ==> (q1 ∈ A.states ∧ (a,q2) ∈ A.trans q1))
+End
 
 val _ = Datatype` gba_run = GBA_RUN (num -> 's)`;
 
-val isValidGBARunFor_def = Define`
+Definition isValidGBARunFor_def:
   isValidGBARunFor aut (GBA_RUN r) word =
     (r 0 ∈ aut.initial)
-    ∧ (!i. ?a. (a, r (i + 1)) ∈ aut.trans (r i) ∧ (at word i ∈ a))`;
+    ∧ (!i. ?a. (a, r (i + 1)) ∈ aut.trans (r i) ∧ (at word i ∈ a))
+End
 
-val isAcceptingGBARunFor_def = Define`
+Definition isAcceptingGBARunFor_def:
   isAcceptingGBARunFor aut (GBA_RUN r) x =
     !T. T ∈ aut.accTrans
         ==> INFINITE { i | ?a. (r i,a,r (i+1)) ∈ T
                             ∧ (a, r (i+1)) ∈ aut.trans (r i)
-                            ∧ at x i ∈ a}`;
+                            ∧ at x i ∈ a}
+End
 
-val isGBARunFor_def = Define`
+Definition isGBARunFor_def:
   isGBARunFor aut run word =
-    isValidGBARunFor aut run word ∧ isAcceptingGBARunFor aut run word`;
+    isValidGBARunFor aut run word ∧ isAcceptingGBARunFor aut run word
+End
 
-val GBA_lang_def = Define`
-  GBA_lang aut = { w | ?r. isGBARunFor aut r w ∧ word_range w ⊆ aut.alphabet }`;
+Definition GBA_lang_def:
+  GBA_lang aut = { w | ?r. isGBARunFor aut r w ∧ word_range w ⊆ aut.alphabet }
+End
 
 val GBA_ACC_LEMM = store_thm
   ("GBA_ACC_LEMM",
@@ -175,7 +180,7 @@ val ACC_TRANS_LEMM = store_thm
    >> metis_tac[]
   );
 
-val alph_counter_def = Define`
+Definition alph_counter_def:
   (alph_counter N num_to_T acc_T 0 = (0,0))
   ∧ (alph_counter N num_to_T acc_T (SUC i) =
        let last_switched = FST (alph_counter N num_to_T acc_T i)
@@ -183,7 +188,8 @@ val alph_counter_def = Define`
        in if acc_T (num_to_T currentT_no) last_switched = i
           then (SUC i,(currentT_no + 1) MOD N)
           else (last_switched, currentT_no)
-    )`;
+    )
+End
 
 val ALPH_COUNTER_FST_LEMM = store_thm
   ("ALPH_COUNTER_FST_LEMM",
@@ -632,14 +638,17 @@ val GBA_RUN_LEMM = store_thm
   reachable states
 *)
 
-val stepGBA_def = Define`
-  stepGBA aut = \x y. ?a. (a,y) ∈ aut.trans x ∧ x ∈ aut.states`;
+Definition stepGBA_def:
+  stepGBA aut = \x y. ?a. (a,y) ∈ aut.trans x ∧ x ∈ aut.states
+End
 
-val reachableFromGBA_def = Define`
-  reachableFromGBA aut = (stepGBA aut)^*`;
+Definition reachableFromGBA_def:
+  reachableFromGBA aut = (stepGBA aut)^*
+End
 
-val reachableFromSetGBA_def = Define`
-  reachableFromSetGBA aut s = { y | ?x. reachableFromGBA aut x y ∧ x ∈ s }`;
+Definition reachableFromSetGBA_def:
+  reachableFromSetGBA aut s = { y | ?x. reachableFromGBA aut x y ∧ x ∈ s }
+End
 
 val REACHABLE_GBA_LEMM = store_thm
   ("REACHABLE_GBA_LEMM",
@@ -654,4 +663,3 @@ val REACHABLE_GBA_LEMM = store_thm
   >> fs[stepGBA_def,isValidGBA_def] >> metis_tac[]
   );
 
-val _ = export_theory();

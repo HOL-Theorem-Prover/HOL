@@ -1,19 +1,15 @@
-open HolKernel Parse bossLib boolLib
-
-val _ = new_theory "recsets"
-
-open listTheory
-open recfunsTheory reductionEval
-open binderLib
-open stepsTheory
-open churchlistTheory churchDBTheory churchnumTheory churchboolTheory
-open normal_orderTheory
+Theory recsets
+Ancestors
+  list recfuns steps churchlist churchDB churchnum churchbool
+  normal_order rich_list pred_set
+Libs
+  reductionEval binderLib
 
 fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
-val recursive_def = Define`
+Definition recursive_def:
   recursive s = ∃M. ∀e. Phi M e = SOME (if e ∈ s then 1 else 0)
-`;
+End
 
 val empty_recursive = Store_thm(
   "empty_recursive",
@@ -120,9 +116,9 @@ val finite_recursive = Store_thm(
 (* an r.e. set is one that can be enumerated.  In this world, I take enumerable
    to mean there exists a function that returns values at successive indices.
 *)
-val re_def = Define`
+Definition re_def:
   re s = ∃Mi. ∀e. e ∈ s ⇔ ∃j. Phi Mi j = SOME e
-`;
+End
 
 (* if a set s is r.e., then there is a machine that terminates on only those
    elements of the set (and fails to terminate on non-members)
@@ -133,7 +129,6 @@ val re_def = Define`
    evaluating [Mi 0, Mi 1, Mi 2, ... Mi n] for n steps.  For all the bnfs in
    this list, see if one of them is equal to e.  If so, terminate.
 *)
-open rich_listTheory
 val EXISTS_FILTER = store_thm(
   "EXISTS_FILTER",
   ``EXISTS P (FILTER Q l) = EXISTS (λe. Q e ∧ P e) l``,
@@ -304,9 +299,9 @@ QED
 
 (* yet another K - this one is the set of machines that terminate when
    given their own index as input *)
-val K_def = Define`
+Definition K_def:
   K = { Mi | ∃z. Phi Mi Mi = SOME z }
-`;
+End
 
 val K_re = store_thm(
   "K_re",
@@ -516,9 +511,8 @@ val COMPL_K_NOT_RE = store_thm(
     Rice's Theorem
    ---------------------------------------------------------------------- *)
 
-open pred_setTheory
-
-val indices_def = Define`indices P = { i | P (Phi i) }`
+Definition indices_def:  indices P = { i | P (Phi i) }
+End
 
 val indices_COMPL = store_thm(
   "indices_COMPL",
@@ -535,9 +529,9 @@ val wlog_lemma = prove(
     METIS_TAC []
   ]);
 
-val looper_i_def = Define`
+Definition looper_i_def:
   looper_i = dBnum (fromTerm (LAM "n" Ω))
-`;
+End
 
 val looper_loops = store_thm(
   "looper_loops",
@@ -601,4 +595,3 @@ val Rices_Theorem = store_thm(
     FULL_SIMP_TAC (srw_ss()) [indices_def]
   ]);
 
-val _ = export_theory ()

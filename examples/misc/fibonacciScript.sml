@@ -3,15 +3,14 @@
 (*                                                                           *)
 (* Some lemmas are ported from HOL-Light's "Examples/gcdrecurrence.ml".      *)
 (* ------------------------------------------------------------------------- *)
+Theory fibonacci
+Ancestors
+  arithmetic real iterate
+Libs
+  hurdUtils numLib realLib
 
-open HolKernel Parse boolLib bossLib;
 
-open arithmeticTheory hurdUtils numLib realTheory realLib iterateTheory;
-
-val _ = intLib.deprecate_int ();
 val _ = numLib.prefer_num ();
-
-val _ = new_theory "fibonacci";
 
 val num_INDUCTION = numTheory.INDUCTION;
 val ARITH_RULE    = numLib.DECIDE;
@@ -122,16 +121,16 @@ Theorem fibA_thm:
   fibA i p t = SND (SND (WHILE Gd Body (i,p,t)))
 Proof
   map_every qid_spec_tac [‘p’, ‘t’] >> Induct_on ‘i’ >> simp[] >>
-  simp [Once whileTheory.WHILE, SimpRHS]
+  simp [Once WhileTheory.WHILE, SimpRHS]
 QED
 
 Theorem WHILE_correct:
   HOARE_SPEC (Inv L) (WHILE Gd Body) (λs. Inv L s ∧ ¬Gd s)
 Proof
-  irule whileTheory.WHILE_RULE >> conj_tac
+  irule WhileTheory.WHILE_RULE >> conj_tac
   >- (qexists_tac ‘inv_image $< FST’ >>
       simp[pairTheory.FORALL_PROD, relationTheory.WF_inv_image]) >>
-  simp[pairTheory.FORALL_PROD, whileTheory.HOARE_SPEC_DEF] >>
+  simp[pairTheory.FORALL_PROD, WhileTheory.HOARE_SPEC_DEF] >>
   rpt strip_tac >> simp[Once fib_def, SimpRHS]
 QED
 
@@ -141,7 +140,7 @@ Proof
   rw[fastfib_def, fibA_thm]
   >- simp[Once fib_def] >>
   qmatch_abbrev_tac ‘SND (SND (prog _)) = _’>>
-  assume_tac (GEN_ALL $ SRULE[whileTheory.HOARE_SPEC_DEF] WHILE_correct) >>
+  assume_tac (GEN_ALL $ SRULE[WhileTheory.HOARE_SPEC_DEF] WHILE_correct) >>
   gvs[] >>
   ‘Inv (n - 1) (n - 1, 0, 1)’
     by (simp[] >> conj_tac >> simp[Once fib_def]) >>
@@ -162,8 +161,6 @@ lo, exponential speedup
  time EVAL “fib 25”      (* 5.9s *)
  time EVAL “fastfib 25”  (* 0.00204s *)
 *)
-
-val _ = export_theory ();
 
 (* References:
 

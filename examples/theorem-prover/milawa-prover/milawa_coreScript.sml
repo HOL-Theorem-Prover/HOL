@@ -1,9 +1,7 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "milawa_core";
-
-open stringTheory finite_mapTheory pred_setTheory listTheory sumTheory;
-open optionTheory arithmeticTheory relationTheory;
-
-open lisp_sexpTheory lisp_parseTheory;
+Theory milawa_core
+Ancestors
+  string finite_map pred_set list sum option arithmetic relation
+  lisp_sexp lisp_parse
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -224,9 +222,10 @@ val sexp_lex_parse_SIMP2 = prove(
     (sexp_lex_parse (#"("::cs,s,L_READ,mem) = sexp_lex_parse (cs,L_STOP::s,L_READ,mem))``,
   EVAL_TAC);
 
-val DROP_WHILE_NOT_NL_def = Define `
+Definition DROP_WHILE_NOT_NL_def:
   (DROP_WHILE_NOT_NL [] = []) /\
-  (DROP_WHILE_NOT_NL (x::xs) = if x = #"\n" then #"\n"::xs else DROP_WHILE_NOT_NL xs)`
+  (DROP_WHILE_NOT_NL (x::xs) = if x = #"\n" then #"\n"::xs else DROP_WHILE_NOT_NL xs)
+End
 
 val DROP_WHILE_NOT_NL_INTRO = prove(
   ``!t s. SND (read_while (\x. x <> #"\n") t s) =
@@ -413,9 +412,10 @@ in
     in th end;
 end
 
-val is_eof_aux_def = Define `
+Definition is_eof_aux_def:
   (is_eof_aux "" = is_eof "") /\
-  (is_eof_aux (x::xs) = if x = #"\n" then is_eof xs else is_eof_aux xs)`
+  (is_eof_aux (x::xs) = if x = #"\n" then is_eof xs else is_eof_aux xs)
+End
 
 val is_eof_comment = prove(
   ``!xs. is_eof (#";"::xs) = is_eof_aux xs``,
@@ -467,8 +467,10 @@ val read_sexps_milawa_core_thm =
 val input_tm = milawa_core_append_thm |> concl |> rator |> rand
 val output_tm = read_sexps_milawa_core_thm |> concl |> rand
 
-val MILAWA_CORE_TEXT_def = Define `MILAWA_CORE_TEXT = ^(input_tm |> rator |> rand)`;
-val MILAWA_CORE_SEXP_def = Define `MILAWA_CORE_SEXP rest = ^output_tm`;
+Definition MILAWA_CORE_TEXT_def:   MILAWA_CORE_TEXT = ^(input_tm |> rator |> rand)
+End
+Definition MILAWA_CORE_SEXP_def:   MILAWA_CORE_SEXP rest = ^output_tm
+End
 
 val lemma = milawa_core_append_thm
   |> CONV_RULE ((RATOR_CONV o RAND_CONV o RATOR_CONV o RAND_CONV)
@@ -480,4 +482,3 @@ val MILAWA_CORE_TEXT_THM = save_thm("MILAWA_CORE_TEXT_THM",
   |> CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV) (REWR_CONV (GSYM lemma))));
 
 val _ = max_print_depth := 0;
-val _ = export_theory();

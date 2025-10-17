@@ -23,16 +23,11 @@
 (*                                                                           *)
 (* ------------------------------------------------------------------------- *)
 
-(* Import External Theories *)
-open HolKernel boolLib bossLib Parse;
-open jcLib;
-open ringTheory;
-open groupTheory;
-open arithmeticTheory;
-
-
-(* Declare new theory at start *)
-val _ = new_theory "sigmaProtocol";
+Theory sigmaProtocol
+Ancestors
+  ring group arithmetic
+Libs
+  jcLib
 
 (* Define a symbol for Field sum operation *)
 Overload "⊕" = “(GF q).sum.op”;
@@ -1332,6 +1327,3 @@ val HonestVerifierZeroKnowledge_SP_eq_thm = store_thm(
     ‘p_1 ∈ sp.Statements ∧ w ∈ sp.Witnesses ∧ r ∈ sp.RandomCoins ∧ e ∈ sp.Challenges.carrier ∧ sp.Relation p_1 w’ by metis_tac[] >>
     ‘let c = sp.Prover_0 p_1 w r; spm = sp.SimulatorMap p_1 w e; spmi = sp.SimulatorMapInverse p_1 w e in spmi(spm r) = r’ by metis_tac[] >>
     metis_tac[]));
-
-
-val _ = export_theory();

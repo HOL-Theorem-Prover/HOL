@@ -1,4 +1,10 @@
-open HolKernel Parse boolLib bossLib;
+Theory holfoot
+Ancestors
+  generalHelpers finite_map relation pred_set sorting list
+  rich_list arithmetic combin option separationLogic
+  vars_as_resource pair string tree bag container
+Libs
+  ConseqConv boolSimps quantHeuristicsLib
 
 (*
 quietdec := true;
@@ -14,18 +20,10 @@ map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
 show_assums := true;
 *)
 
-open generalHelpersTheory finite_mapTheory relationTheory pred_setTheory
-     sortingTheory listTheory rich_listTheory arithmeticTheory
-     combinTheory optionTheory separationLogicTheory
-     vars_as_resourceTheory pairTheory;
-open stringTheory ConseqConv boolSimps treeTheory
-     quantHeuristicsLib bagTheory containerTheory
-
 (*
 quietdec := false;
 *)
 
-val _ = new_theory "holfoot";
 val _ = ParseExtras.temp_loose_equality()
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"]
@@ -109,9 +107,10 @@ val _ = type_abbrev_pp("holfoot_a_proposition", “:holfoot_state -> bool”);
  * Separation combinator on these states
  **************************************)
 
-val holfoot_separation_combinator_def = Define `
+Definition holfoot_separation_combinator_def:
    holfoot_separation_combinator =
-   (VAR_RES_COMBINATOR DISJOINT_FMAP_UNION):   holfoot_state bin_option_function`;
+   (VAR_RES_COMBINATOR DISJOINT_FMAP_UNION):   holfoot_state bin_option_function
+End
 
 
 val IS_SEPARATION_ALGEBRA___holfoot_separation_combinator =
@@ -269,9 +268,10 @@ SIMP_TAC std_ss [holfoot_separation_combinator_def,
  * SUBSTATES
  **************************************)
 
-val HOLFOOT_IS_SUBSTATE_def = Define
-`HOLFOOT_IS_SUBSTATE =
- ASL_IS_SUBSTATE holfoot_separation_combinator`;
+Definition HOLFOOT_IS_SUBSTATE_def:
+ HOLFOOT_IS_SUBSTATE =
+ ASL_IS_SUBSTATE holfoot_separation_combinator
+End
 
 
 
@@ -344,9 +344,10 @@ SIMP_TAC std_ss [GSYM HOLFOOT_IS_SUBSTATE_def,
  * not in heap
  ******************************************)
 
-val holfoot_not_in_heap_def = Define `
+Definition holfoot_not_in_heap_def:
 holfoot_not_in_heap (e:holfoot_a_expression) =
-\s. ?c. (e (FST s) = SOME c) /\ (~(c IN FDOM (SND s)))`
+\s. ?c. (e (FST s) = SOME c) /\ (~(c IN FDOM (SND s)))
+End
 
 
 val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___holfoot_not_in_heap =
@@ -387,21 +388,24 @@ FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_INTER]);
  * implies in heap
  ******************************************)
 
-val holfoot_implies_in_heap_pred_def = Define `
+Definition holfoot_implies_in_heap_pred_def:
   holfoot_implies_in_heap_pred p B b e =
   (!st:holfoot_stack st2:holfoot_stack h1:holfoot_heap h2:holfoot_heap.
        VAR_RES_STACK_IS_SUBSTATE st2 st /\
        (st,  h1) IN (var_res_bigstar DISJOINT_FMAP_UNION B) /\
        (st2, h2) IN (var_res_bigstar DISJOINT_FMAP_UNION b) ==>
-      (IS_SOME ((e:holfoot_a_expression) st) /\ (p (FDOM h2) (THE (e st)))))`;
+      (IS_SOME ((e:holfoot_a_expression) st) /\ (p (FDOM h2) (THE (e st)))))
+End
 
-val holfoot_implies_in_heap_def = Define `
+Definition holfoot_implies_in_heap_def:
   holfoot_implies_in_heap =
-  holfoot_implies_in_heap_pred (\X x. ~(x = 0) /\ x IN X)`
+  holfoot_implies_in_heap_pred (\X x. ~(x = 0) /\ x IN X)
+End
 
-val holfoot_implies_in_heap_or_null_def = Define `
+Definition holfoot_implies_in_heap_or_null_def:
   holfoot_implies_in_heap_or_null =
-  holfoot_implies_in_heap_pred (\X x. (x = 0) \/ x IN X)`
+  holfoot_implies_in_heap_pred (\X x. (x = 0) \/ x IN X)
+End
 
 
 val holfoot_implies_in_heap___implies___or_null =
@@ -849,7 +853,7 @@ SIMP_TAC std_ss [LEFT_AND_OVER_OR, DISJ_IMP_THM, SUBSET_DEF,
 (*-----------------
  * Points to
  *-----------------*)
-val holfoot_ap_points_to_def = Define `
+Definition holfoot_ap_points_to_def:
    holfoot_ap_points_to e1 L = \state:holfoot_state.
       let stack = FST state in
       let heap = SND state in
@@ -857,7 +861,8 @@ val holfoot_ap_points_to_def = Define `
       let (loc = THE loc_opt) in (~(loc = 0) /\  ((FDOM heap)= {loc}) /\
       (FEVERY (\(tag,exp).
             (IS_SOME (exp stack)) /\
-            (THE (exp stack) = (heap ' loc) tag)) L)))`;
+            (THE (exp stack) = (heap ' loc) tag)) L)))
+End
 
 
 
@@ -1319,11 +1324,12 @@ PROVE_TAC[MEM_EL]);
 
 val _ = save_thm ("holfoot_ap_data_tree_seg_def", holfoot_ap_data_tree_seg_def);
 
-val holfoot_ap_data_tree___WELL_FORMED_DATA_def =
-Define `holfoot_ap_data_tree___WELL_FORMED_DATA tagL data =
+Definition holfoot_ap_data_tree___WELL_FORMED_DATA_def:
+ holfoot_ap_data_tree___WELL_FORMED_DATA tagL data =
 ((TREE_EVERY (\v. LENGTH v = LENGTH (FST data)) (SND data)) /\
  (NARY (SND data) (LENGTH tagL)) /\
- (ALL_DISTINCT (tagL++(FST data))))`;
+ (ALL_DISTINCT (tagL++(FST data))))
+End
 
 val holfoot_ap_data_tree_seg___TREE_PROPS = store_thm ("holfoot_ap_data_tree_seg___TREE_PROPS",
 ``
@@ -1360,19 +1366,22 @@ FULL_SIMP_TAC std_ss [EXISTS_MEM, MEM_EL] THEN (
 
 
 
-val holfoot_ap_data_tree_def = Define `
+Definition holfoot_ap_data_tree_def:
   holfoot_ap_data_tree tagL startExp data =
-  holfoot_ap_data_tree_seg tagL startExp data (var_res_prop_equal DISJOINT_FMAP_UNION (var_res_exp_const 0))`;
+  holfoot_ap_data_tree_seg tagL startExp data (var_res_prop_equal DISJOINT_FMAP_UNION (var_res_exp_const 0))
+End
 
 
-val holfoot_ap_tree_def = Define `
+Definition holfoot_ap_tree_def:
    holfoot_ap_tree tagL startExp =
-   asl_exists dataTree. holfoot_ap_data_tree tagL startExp ([],dataTree)`;
+   asl_exists dataTree. holfoot_ap_data_tree tagL startExp ([],dataTree)
+End
 
 
-val holfoot_ap_bintree_def = Define `
+Definition holfoot_ap_bintree_def:
    holfoot_ap_bintree (lt,rt) startExp =
-   holfoot_ap_tree [lt;rt] startExp`;
+   holfoot_ap_tree [lt;rt] startExp
+End
 
 
 
@@ -3189,7 +3198,7 @@ ASM_REWRITE_TAC[]);
  *-----------------*)
 
 
-val holfoot_ap_gendl_data_list_seg_num_def = Define `
+Definition holfoot_ap_gendl_data_list_seg_num_def:
   (holfoot_ap_gendl_data_list_seg_num 0 np startExp data endExp =
     if (EVERY (\x. NULL (SND x)) data) /\ ALL_DISTINCT (MAP FST data) then
        (var_res_prop_equal DISJOINT_FMAP_UNION startExp endExp)
@@ -3205,9 +3214,10 @@ val holfoot_ap_gendl_data_list_seg_num_def = Define `
                             (MAP (\x. var_res_exp_const (HD (SND x))) data))))))
                       (holfoot_ap_gendl_data_list_seg_num n np
                (var_res_exp_const n') (MAP (\ (t, l). (t, TL l)) data) endExp)
-     else asl_false)`;
+     else asl_false)
+End
 
-val holfoot_ap_data_list_seg_num_def = Define `
+Definition holfoot_ap_data_list_seg_num_def:
   holfoot_ap_data_list_seg_num n tl startExp data endExp =
   if MEM tl (MAP FST data) then asl_false else
   holfoot_ap_gendl_data_list_seg_num n
@@ -3216,7 +3226,8 @@ val holfoot_ap_data_list_seg_num_def = Define `
      let v2 = e2 (FST state) in
      (IS_SOME v1 /\ IS_SOME v2 /\
       ((THE v1) IN FDOM (SND state)) /\
-      ((SND state) ' (THE v1) tl = THE v2))) startExp data endExp`;
+      ((SND state) ' (THE v1) tl = THE v2))) startExp data endExp
+End
 
 val holfoot_ap_data_list_seg_num_REWRITE = store_thm ("holfoot_ap_data_list_seg_num_REWRITE",
 ``(holfoot_ap_data_list_seg_num 0 tl startExp data endExp =
@@ -3256,9 +3267,10 @@ ASM_SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [IN_SING]);
 
 
 
-val holfoot_ap_list_seg_num_def = Define `
+Definition holfoot_ap_list_seg_num_def:
   holfoot_ap_list_seg_num n tl startExp endExp =
-  holfoot_ap_data_list_seg_num n tl startExp [] endExp`;
+  holfoot_ap_data_list_seg_num n tl startExp [] endExp
+End
 
 
 val holfoot_ap_gendl_data_list_seg_num___DATA_PROPS =
@@ -3413,9 +3425,10 @@ ASM_SIMP_TAC list_ss []);
 
 
 
-val holfoot_ap_data_list_seg_def = Define `
+Definition holfoot_ap_data_list_seg_def:
    holfoot_ap_data_list_seg tl startExp data endExp =
-   asl_exists n. holfoot_ap_data_list_seg_num n tl startExp data endExp`
+   asl_exists n. holfoot_ap_data_list_seg_num n tl startExp data endExp
+End
 
 
 val holfoot_ap_data_list_seg_REWRITE = store_thm ("holfoot_ap_data_list_seg_REWRITE",
@@ -3458,9 +3471,10 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
 
 
 
-val holfoot_ap_list_seg_def = Define `
+Definition holfoot_ap_list_seg_def:
    holfoot_ap_list_seg tl startExp endExp =
-   holfoot_ap_data_list_seg tl startExp [] endExp`
+   holfoot_ap_data_list_seg tl startExp [] endExp
+End
 
 
 val holfoot_ap_list_seg_REWRITE = save_thm ("holfoot_ap_list_seg_REWRITE",
@@ -3472,13 +3486,15 @@ val holfoot_ap_list_seg_REWRITE = save_thm ("holfoot_ap_list_seg_REWRITE",
      thm2
   end);
 
-val holfoot_ap_data_list_def = Define `
+Definition holfoot_ap_data_list_def:
    holfoot_ap_data_list tl startExp data =
-   holfoot_ap_data_list_seg tl startExp data (var_res_exp_const 0)`
+   holfoot_ap_data_list_seg tl startExp data (var_res_exp_const 0)
+End
 
-val holfoot_ap_list_def = Define `
+Definition holfoot_ap_list_def:
    holfoot_ap_list tl startExp =
-   holfoot_ap_list_seg tl startExp (var_res_exp_const 0)`
+   holfoot_ap_list_seg tl startExp (var_res_exp_const 0)
+End
 
 
 
@@ -6139,7 +6155,7 @@ ASM_REWRITE_TAC[]);
  * Queues
  *-----------------*)
 
-val holfoot_ap_data_queue_def = Define `
+Definition holfoot_ap_data_queue_def:
    holfoot_ap_data_queue tl startExp data endExp =
       var_res_prop_binexpression_cond DISJOINT_FMAP_UNION $=
           startExp (var_res_exp_const 0)
@@ -6154,7 +6170,8 @@ val holfoot_ap_data_queue_def = Define `
                   (holfoot_ap_points_to endExp
                       (LIST_TO_FMAP (ZIP
                           (tl::MAP FST data, MAP var_res_exp_const
-                          (0::MAP (\x. LAST (SND x)) data))))))`;
+                          (0::MAP (\x. LAST (SND x)) data))))))
+End
 
 
 val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___holfoot_ap_data_queue =
@@ -6269,22 +6286,24 @@ SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) []);
 
 
 
-val holfoot_ap_data_array_MAP_LIST_def = Define
-`holfoot_ap_data_array_MAP_LIST (e:holfoot_a_expression) (n:num)
+Definition holfoot_ap_data_array_MAP_LIST_def:
+ holfoot_ap_data_array_MAP_LIST (e:holfoot_a_expression) (n:num)
       (data:((holfoot_tag # num list) list)) =
     (MAP (\n. (var_res_exp_add e n,
                LIST_TO_FMAP (MAP (\tl. (FST tl,  (var_res_exp_const (EL n (SND tl))):holfoot_a_expression)) data)))
-         (COUNT_LIST n))`
+         (COUNT_LIST n))
+End
 
 
-val holfoot_ap_data_array_def = Define `
+Definition holfoot_ap_data_array_def:
    holfoot_ap_data_array e ne data =
       var_res_exp_prop ne (\n.
       (asl_trivial_cond (EVERY (\tl. (LENGTH (SND tl) = n)) data /\
                          ALL_DISTINCT (MAP FST data))
       (var_res_map DISJOINT_FMAP_UNION
          (\el. holfoot_ap_points_to (FST el) (SND el))
-         (holfoot_ap_data_array_MAP_LIST e n data))))`
+         (holfoot_ap_data_array_MAP_LIST e n data))))
+End
 
 
 val LENGTH___holfoot_ap_data_array_MAP_LIST = store_thm ("LENGTH___holfoot_ap_data_array_MAP_LIST",
@@ -6578,8 +6597,9 @@ Q.UNABBREV_TAC `P1` THEN
 ASM_SIMP_TAC std_ss [holfoot_ap_points_to_def, LET_THM, IN_ABS]);
 
 
-val holfoot_ap_array_def = Define `
-   holfoot_ap_array e n = holfoot_ap_data_array e n []`;
+Definition holfoot_ap_array_def:
+   holfoot_ap_array e n = holfoot_ap_data_array e n []
+End
 
 val holfoot_ap_array___ALTERNATIVE_DEF = store_thm ("holfoot_ap_array___ALTERNATIVE_DEF",
 ``!e en. holfoot_ap_array e en =
@@ -7454,9 +7474,10 @@ ASM_REWRITE_TAC[]);
 
 
 
-val holfoot_ap_data_interval_def = Define `
+Definition holfoot_ap_data_interval_def:
    holfoot_ap_data_interval e1 e2 data =
-   holfoot_ap_data_array e1 (var_res_exp_binop $- (var_res_exp_add e2 1) e1) data`
+   holfoot_ap_data_array e1 (var_res_exp_binop $- (var_res_exp_add e2 1) e1) data
+End
 
 val holfoot_ap_data_interval___CONST = store_thm ("holfoot_ap_data_interval___CONST",
 ``holfoot_ap_data_interval (var_res_exp_const c1) (var_res_exp_const c2) data =
@@ -8099,13 +8120,14 @@ val _ = type_abbrev_pp("holfoot_program",
  = field lookup
  ===============*)
 
-val holfoot_field_lookup_action_def = Define `
+Definition holfoot_field_lookup_action_def:
    (holfoot_field_lookup_action v e t) (s:holfoot_state) =
       let loc_opt = e (FST s) in
       if (~(var_res_sl___has_write_permission v (FST s)) \/ (IS_NONE loc_opt)) then NONE else
       let loc = (THE loc_opt) in (
       if (~(loc IN FDOM (SND s)) \/ (loc = 0)) then NONE else
-      SOME {var_res_ext_state_var_update (v, (((SND s) ' loc) t)) s})`;
+      SOME {var_res_ext_state_var_update (v, (((SND s) ' loc) t)) s})
+End
 
 
 val ASL_IS_LOCAL_ACTION___holfoot_field_lookup_action = store_thm (
@@ -8148,9 +8170,10 @@ REPEAT CONJ_TAC THEN REPEAT GEN_TAC THENL [
 
 
 
-val holfoot_prog_field_lookup_def = Define `
+Definition holfoot_prog_field_lookup_def:
 (holfoot_prog_field_lookup v e t):holfoot_program =
-asl_prog_prim_command (asl_pc_shallow_command (\f. holfoot_field_lookup_action v e t))`;
+asl_prog_prim_command (asl_pc_shallow_command (\f. holfoot_field_lookup_action v e t))
+End
 
 
 
@@ -8665,7 +8688,7 @@ ASM_SIMP_TAC arith_ss []);
  = field assign
  ===============*)
 
-val holfoot_field_assign_action_def = Define `
+Definition holfoot_field_assign_action_def:
    holfoot_field_assign_action e1 t e2 (s:holfoot_state) =
       let e1_opt = e1 (FST s) in
       let e2_opt = e2 (FST s) in
@@ -8673,7 +8696,8 @@ val holfoot_field_assign_action_def = Define `
       let e1_v = (THE e1_opt) in
       let e2_v = (THE e2_opt) in (
       if (~(e1_v IN FDOM (SND s)) \/ (e1_v = 0)) then NONE else
-      (SOME {(FST s, (SND s) |+ (e1_v, ((t =+ e2_v) ((SND s) ' e1_v))))}))`
+      (SOME {(FST s, (SND s) |+ (e1_v, ((t =+ e2_v) ((SND s) ' e1_v))))}))
+End
 
 
 
@@ -8709,9 +8733,10 @@ Cases_on `x = ev1` THEN ASM_SIMP_TAC std_ss []);
 
 
 
-val holfoot_prog_field_assign_def = Define `
+Definition holfoot_prog_field_assign_def:
 (holfoot_prog_field_assign e1 t e2):holfoot_program =
-asl_prog_prim_command (asl_pc_shallow_command (\f. holfoot_field_assign_action e1 t e2))`;
+asl_prog_prim_command (asl_pc_shallow_command (\f. holfoot_field_assign_action e1 t e2))
+End
 
 
 
@@ -9092,7 +9117,7 @@ SIMP_TAC (std_ss++CONJ_ss) [var_res_prop_equal_unequal_EXPAND, IN_ABS,
  = new heap location
  ===================*)
 
-val holfoot_new_action_def = Define `
+Definition holfoot_new_action_def:
    holfoot_new_action me v (tagL:holfoot_tag list) (s:holfoot_state) =
       if ~(var_res_sl___has_write_permission v (FST s)) \/
          ~(IS_SOME (me (FST s))) then NONE else
@@ -9101,7 +9126,8 @@ val holfoot_new_action_def = Define `
                 (!m'. (n <= m' /\ (m' < n + m)) ==> ~(m' IN FDOM (SND s))) /\
                 (LENGTH XL = m) /\
                 (s' = ((FST s) |+ (v, n, var_res_write_permission),
-                       (SND s) |++ MAP (\m'. (n+m', EL m' XL)) (COUNT_LIST m))))`;
+                       (SND s) |++ MAP (\m'. (n+m', EL m' XL)) (COUNT_LIST m))))
+End
 
 
 val holfoot_new_action_1 = store_thm ("holfoot_new_action_1",
@@ -9195,9 +9221,10 @@ REPEAT CONJ_TAC THENL [
 ]);
 
 
-val holfoot_prog_new_def = Define `
+Definition holfoot_prog_new_def:
 (holfoot_prog_new n v tL):holfoot_program =
-asl_prog_prim_command (asl_pc_shallow_command (\f. holfoot_new_action n v tL))`;
+asl_prog_prim_command (asl_pc_shallow_command (\f. holfoot_new_action n v tL))
+End
 
 
 val VAR_RES_PROGRAM_IS_ABSTRACTION___holfoot_prog_new = store_thm (
@@ -9536,7 +9563,7 @@ SIMP_TAC (std_ss++CONJ_ss) [var_res_prop_equal_unequal_EXPAND, IN_ABS,
  ========================*)
 
 
-val holfoot_dispose_action_def = Define `
+Definition holfoot_dispose_action_def:
    holfoot_dispose_action me e (s:holfoot_state) =
       let loc_opt = e (FST s) in
       let m_opt   = me (FST s) in
@@ -9545,7 +9572,8 @@ val holfoot_dispose_action_def = Define `
       if (IS_NONE loc_opt) then NONE else
       let loc = (THE loc_opt) in  (
       if (~((IMAGE (\n'. loc + n') (count m)) SUBSET FDOM (SND s)) \/ (loc = 0)) then NONE else
-      (SOME {(FST s, DRESTRICT (SND s) (COMPL (IMAGE (\n'. loc + n') (count m))))}))`;
+      (SOME {(FST s, DRESTRICT (SND s) (COMPL (IMAGE (\n'. loc + n') (count m))))}))
+End
 
 val ASL_IS_LOCAL_ACTION___holfoot_dispose_action = store_thm (
 "ASL_IS_LOCAL_ACTION___holfoot_dispose_action",
@@ -9586,9 +9614,10 @@ METIS_TAC[]);
 
 
 
-val holfoot_prog_dispose_def = Define `
+Definition holfoot_prog_dispose_def:
 (holfoot_prog_dispose ne e):holfoot_program =
-asl_prog_prim_command (asl_pc_shallow_command (\f. holfoot_dispose_action ne e))`;
+asl_prog_prim_command (asl_pc_shallow_command (\f. holfoot_dispose_action ne e))
+End
 
 
 val holfoot_prog_dispose_0 = store_thm ("holfoot_prog_dispose_0",
@@ -10007,4 +10036,3 @@ val asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___HOLFOOT_REWRITES =
     asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___HOLFOOT_SIMPLE_REWRITES])
 
 
-val _ = export_theory();

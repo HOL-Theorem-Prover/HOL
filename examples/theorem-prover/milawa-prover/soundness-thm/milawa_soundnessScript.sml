@@ -1,10 +1,11 @@
 
-open HolKernel Parse boolLib bossLib; val _ = new_theory "milawa_soundness";
+Theory milawa_soundness
+Ancestors
+  set_sep prog lisp_correctness milawa_proofp lisp_semantics
+Libs
+  helperLib
 
 (* open prog_armTheory prog_ppcTheory prog_x86Theory; *)
-
-open helperLib set_sepTheory progTheory;
-open lisp_correctnessTheory milawa_proofpTheory lisp_semanticsTheory;
 
 val R_exec_T_11 = prove(
   ``!x y. R_exec x y ==> !z. SND y /\ R_exec x z ==> (y = z)``,
@@ -44,4 +45,3 @@ val milawa_soundness_thm = save_thm("milawa_soundness_thm",let
   val th = REWRITE_RULE [GSYM SPEC_MOVE_COND] th
   in th end);
 
-val _ = export_theory();

@@ -1,4 +1,9 @@
-open HolKernel Parse boolLib bossLib;
+Theory temporal_deep_mixed
+Ancestors
+  pred_set pair arithmetic container list rich_list set_lemmata
+  bit
+Libs
+  tuerk_tacticsLib Sanity
 
 (*
 quietdec := true;
@@ -8,11 +13,6 @@ map load
   "containerTheory", "listTheory", "rich_listTheory", "set_lemmataTheory", "bitTheory"];
 *)
 
-
-open pred_setTheory pairTheory arithmeticTheory tuerk_tacticsLib
-    containerTheory listTheory rich_listTheory set_lemmataTheory
-    bitTheory;
-open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
@@ -27,7 +27,6 @@ quietdec := false;
 
 
 
-val _ = new_theory "temporal_deep_mixed";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -36,11 +35,11 @@ val _ = ParseExtras.temp_loose_equality()
 (* This described a function that can create a number of new elements         *)
 (******************************************************************************)
 
-val IS_ELEMENT_ITERATOR_def =
-Define
-    `IS_ELEMENT_ITERATOR f n S =
+Definition IS_ELEMENT_ITERATOR_def:
+     IS_ELEMENT_ITERATOR f n S =
       (!i j. (i < n /\ j < n) ==> ((f i = f j) = (i = j))) /\
-      (!i. (i < n) ==> ~(f i IN S))`
+      (!i. (i < n) ==> ~(f i IN S))
+End
 
 val IS_ELEMENT_ITERATOR_0 =
  store_thm
@@ -236,10 +235,10 @@ val POW_VARRENAMING_EXISTS =
 (* LIST_BIGUNION                                                              *)
 (******************************************************************************)
 
-val LIST_BIGUNION_def =
- Define
-   `(LIST_BIGUNION [] = EMPTY) /\
-    (LIST_BIGUNION (h::l) = (h UNION (LIST_BIGUNION l)))`;
+Definition LIST_BIGUNION_def:
+    (LIST_BIGUNION [] = EMPTY) /\
+    (LIST_BIGUNION (h::l) = (h UNION (LIST_BIGUNION l)))
+End
 
 
 val LIST_BIGUNION_APPEND =
@@ -310,8 +309,9 @@ val SUC_MOD_CASES =
 (* COND_IMP_EQ               *)
 (*****************************)
 
-val COND_IMP_EQ_def =
-  Define `COND_IMP_EQ c A B = if c then A=B else A ==> B`
+Definition COND_IMP_EQ_def:
+   COND_IMP_EQ c A B = if c then A=B else A ==> B
+End
 
 val COND_IMP_EQ___REWRITE =
   store_thm ("COND_IMP_EQ___REWRITE",
@@ -327,15 +327,17 @@ val COND_IMP_EQ___REWRITE =
 (* Similar to count and COUNT_LIST, but have a starting point that might differ from 0  *)
 (****************************************************************************************)
 
-val INTERVAL_SET_def =
-  Define `
-    INTERVAL_SET (n1:num) (n2:num) = IMAGE (\x. n1 + x) (count ((SUC n2)-n1))`
+Definition INTERVAL_SET_def:
+
+    INTERVAL_SET (n1:num) (n2:num) = IMAGE (\x. n1 + x) (count ((SUC n2)-n1))
+End
 
 
-val INTERVAL_LIST_def =
-  Define `
+Definition INTERVAL_LIST_def:
+
     INTERVAL_LIST (n1:num) (n2:num) =
-      MAP (\x. n1 + x) (COUNT_LIST ((SUC n2) - n1))`
+      MAP (\x. n1 + x) (COUNT_LIST ((SUC n2) - n1))
+End
 
 
 val INTERVAL_SET_0 = store_thm ("INTERVAL_SET_0",
@@ -414,9 +416,10 @@ val INTERVAL_LIST_THM =
 (* Encode sets of numbers as numbers. Each number in the original set of numbers
    sets the corresponding bit of the resulting number. *)
 
-val SET_BINARY_ENCODING_def =
-  Define `SET_BINARY_ENCODING =
-          SIGMA (\n:num. (2:num)**n)`;
+Definition SET_BINARY_ENCODING_def:
+   SET_BINARY_ENCODING =
+          SIGMA (\n:num. (2:num)**n)
+End
 
 
 val SET_BINARY_ENCODING_THM =
@@ -617,10 +620,11 @@ val SET_BINARY_ENCODING___INJ =
 
 
 
-val SET_BINARY_ENCODING_SHIFT_def =
-  Define `
+Definition SET_BINARY_ENCODING_SHIFT_def:
+
     SET_BINARY_ENCODING_SHIFT n1 n2 S =
-      (SET_BINARY_ENCODING (IMAGE (\n. n - n1) S) + n2)`;
+      (SET_BINARY_ENCODING (IMAGE (\n. n - n1) S) + n2)
+End
 
 
 val SET_BINARY_ENCODING_SHIFT___INJ =
@@ -780,4 +784,3 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
   PROVE_TAC[]
 ]);
 
-val _ = export_theory();

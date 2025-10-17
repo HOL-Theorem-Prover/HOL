@@ -41,7 +41,7 @@ fun chop_list 0 l      = ([], l)
   | chop_list n (h::t) = let val (m,l') = chop_list (n-1) t in (h::m, l') end;
 
 val lhand = rand o rator;
-val LAND_CONV = RATOR_CONV o RAND_CONV;
+val LAND_CONV = Conv.LAND_CONV;
 val RIGHT_BETAS = rev_itlist(fn a=>CONV_RULE(RAND_CONV BETA_CONV) o C AP_THM a)
 
 fun sucivate n = funpow n numSyntax.mk_suc numSyntax.zero_tm;

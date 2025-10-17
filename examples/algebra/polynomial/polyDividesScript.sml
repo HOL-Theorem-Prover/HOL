@@ -4,30 +4,17 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polyDivides";
+Theory polyDivides
+Ancestors
+  pred_set list arithmetic number divides monoid group ring field
+  polynomial polyWeak polyRing polyDivision polyRoot polyMonic
+  polyField polyFieldDivision polyEval
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory numberTheory dividesTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory;
-
-open polyRootTheory;
-open polyMonicTheory;
-open polyFieldTheory;
-open polyFieldDivisionTheory;
-open polyEvalTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -506,10 +493,10 @@ val poly_monic_mult_lcancel = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Divides relation between polynomials *)
-val poly_divides_def = Define `
+Definition poly_divides_def:
   poly_divides (r:'a field) (q:'a poly) (p:'a poly) =
     ?s:'a poly. poly s /\ (p = s * q)
-`;
+End
 
 (* Overload polynomial divides *)
 val _ = overload_on ("pdivides", ``poly_divides r``);
@@ -2498,8 +2485,4 @@ val poly_monic_divides_one = store_thm(
   ]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

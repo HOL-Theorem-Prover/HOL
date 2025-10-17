@@ -6,16 +6,14 @@
 (*                 2018-2019 Fondazione Bruno Kessler, Italy (Chun Tian)      *)
 (*                 2023-2024 The Australian National University (Chun Tian)   *)
 (* ========================================================================== *)
+Theory UniqueSolutions
+Ancestors
+  combin pred_set relation pair sum list prim_rec arithmetic CCS
+  Trace StrongEQ WeakEQ ObsCongr BisimulationUpto Congruence
+  Expansion Contraction
+Libs
+  CCSLib
 
-open HolKernel Parse boolLib bossLib;
-
-open combinTheory pred_setTheory relationTheory pairTheory sumTheory listTheory
-     prim_recTheory arithmeticTheory;
-
-open CCSLib CCSTheory TraceTheory StrongEQTheory WeakEQTheory ObsCongrTheory
-     BisimulationUptoTheory CongruenceTheory ExpansionTheory ContractionTheory;
-
-val _ = new_theory "UniqueSolutions";
 
 (******************************************************************************)
 (*                                                                            *)
@@ -2161,6 +2159,5 @@ QED
  * [2] Sangiorgi, D.: Equations, contractions, and unique solutions. ACM SIGPLAN Notices. (2015).
  *)
 
-val _ = export_theory ();
 val _ = print_theory_to_file "-" "UniqueSolutionsTheory.lst";
 val _ = html_theory "UniqueSolutions";

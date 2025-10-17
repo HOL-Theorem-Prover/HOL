@@ -1,12 +1,11 @@
-open HolKernel boolLib bossLib Parse BasicProvers dep_rewrite
-open armv86aTheory armv86a_terminationTheory armv86a_typesTheory
-open arm8Theory arm8Lib arm8_stepTheory arm8_stepLib
-open wordsTheory bitstringTheory finite_mapTheory listTheory
-     arithmeticTheory integerTheory realTheory intrealTheory
-open l3_equivalenceTheory l3_equivalence_miscTheory l3_equivalence_lemmasTheory
-open wordsLib intLib l3_equivalenceLib
-
-val _ = new_theory "l3_equivalenceProof";
+Theory l3_equivalenceProof
+Ancestors
+  armv86a armv86a_termination armv86a_types arm8 arm8_step words
+  bitstring finite_map list arithmetic integer real intreal
+  l3_equivalence l3_equivalence_misc l3_equivalence_lemmas
+Libs
+  BasicProvers dep_rewrite arm8Lib arm8_stepLib wordsLib intLib
+  l3_equivalenceLib
 
 Type res = ``:('a, exception) result # regstate sequential_state``;
 
@@ -7669,4 +7668,3 @@ QED
 
 (****************************************)
 
-val _ = export_theory();

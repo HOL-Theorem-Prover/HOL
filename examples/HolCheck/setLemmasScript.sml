@@ -1,8 +1,8 @@
-open HolKernel Parse boolLib bossLib
-
-val _ = new_theory("setLemmas");
-
-open pred_setLib pred_setTheory numLib metisLib pairTheory stringTheory stringLib
+Theory setLemmas
+Ancestors
+  pred_set pair string
+Libs
+  pred_setLib numLib metisLib stringLib
 
 infix &&; infix 8 by;
 
@@ -173,7 +173,8 @@ val IN_APPLY = save_thm("IN_APPLY",prove(``!P x. x IN P = P x``,SIMP_TAC std_ss 
 val IMPLODE_EXPLODE_BIJ = prove(``BIJ (IMPLODE o EXPLODE) UNIV UNIV``,
 SIMP_TAC std_ss [BIJ_DEF,INJ_DEF,SURJ_DEF,IN_UNIV,IMPLODE_ONTO,EXPLODE_ONTO,IMPLODE_11,EXPLODE_11,INJ_COMPOSE,SURJ_COMPOSE]THEN METIS_TAC [IMPLODE_EXPLODE])
 
-val PRIME_def = Define `PRIME s = STRCAT s "'"`;
+Definition PRIME_def:   PRIME s = STRCAT s "'"
+End
 
 val PRIME_11 = prove(``!x y. (PRIME x = PRIME y) ==> (x=y)``,
 Induct_on `x` THEN Induct_on `y` THEN REWRITE_TAC [PRIME_def] THEN METIS_TAC [STRCAT_11])
@@ -200,4 +201,3 @@ val NOT_IN_FIN_STRING_SET = save_thm("NOT_IN_FIN_STRING_SET",prove(``!s. FINITE 
 (* used by commonTools.PUSH_IMP_CONV *)
 val PUSH_IMP_THM = save_thm("PUSH_IMP_THM",prove(``!a b c. a ==> b ==> c = b ==> a ==> c``,PROVE_TAC []))
 
-val _ = export_theory();

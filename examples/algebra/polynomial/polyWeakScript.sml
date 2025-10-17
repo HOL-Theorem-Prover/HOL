@@ -4,23 +4,16 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polyWeak";
+Theory polyWeak
+Ancestors
+  pair bag pred_set list arithmetic number rich_list
+  combinatorics monoid group ring polynomial
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pairTheory bagTheory pred_setTheory listTheory arithmeticTheory
-     numberTheory rich_listTheory combinatoricsTheory;
-
-open monoidTheory groupTheory ringTheory polynomialTheory;
-
 (* Overload sublist by infix operator *)
 val _ = temp_overload_on ("<=", ``sublist``);
 
@@ -5807,8 +5800,4 @@ val weak_add_const_shift = store_thm(
   rw[]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

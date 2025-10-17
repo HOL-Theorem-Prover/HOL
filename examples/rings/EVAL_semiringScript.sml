@@ -1,13 +1,13 @@
 (*
 app load ["abs_tools", "RecordType", "BasicProvers", "Datatype"];
 *)
-open HolKernel Parse boolLib;
-open BasicProvers Datatype;
-open abs_tools;  (* Rebinds Term and Define *)
+Theory EVAL_semiring
+Libs
+  BasicProvers Datatype
+  abs_tools  (* Rebinds Term and Define *)
 
 val APP_DIFF = REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC);
 
-val _ = new_theory "EVAL_semiring";
 val _ = ParseExtras.temp_loose_equality()
 
 val _ = Hol_datatype
@@ -131,6 +131,3 @@ val mult_permute = asm_store_thm
      Term` !m n p. SRM (SRM m n) p = SRM (SRM m p) n `,
 ONCE_REWRITE_TAC [mult_rotate] THEN APP_DIFF THEN
 PROVE_TAC[mult_sym]);
-
-
-val _ = export_theory();

@@ -1,8 +1,7 @@
-open HolKernel Parse bossLib boolLib gfgTheory listTheory optionTheory pred_setTheory rich_listTheory sortingTheory relationTheory
-
-open alterATheory sptreeTheory ltlTheory generalHelpersTheory
-
-val _ = new_theory "concrRep";
+Theory concrRep
+Ancestors
+  gfg list option pred_set rich_list sorting relation alterA
+  sptree ltl generalHelpers
 
 val _ = monadsyntax.temp_add_monadsyntax();
 val _ = overload_on("monad_bind",``OPTION_BIND``);
@@ -26,40 +25,45 @@ val _ = Datatype`
                atomicProp : α list
             |>`;
 
-val concr2Abstr_states_def = Define`
+Definition concr2Abstr_states_def:
   concr2Abstr_states graph =
      { x.frml | SOME x ∈
-                (IMAGE (\n. lookup n graph.nodeInfo) (domain graph.nodeInfo))}`;
+                (IMAGE (\n. lookup n graph.nodeInfo) (domain graph.nodeInfo))}
+End
 
-val concr2Abstr_init_def = Define`
+Definition concr2Abstr_init_def:
   concr2Abstr_init concrInit graph =
      LIST_TO_SET
          (MAP
           (\l. {x.frml |
                 MEM x (CAT_OPTIONS (MAP (\n. lookup n graph.nodeInfo) l)) })
-          concrInit)`;
+          concrInit)
+End
 
-val concr2Abstr_final_def = Define`
+Definition concr2Abstr_final_def:
   concr2Abstr_final graph =
      {x.frml | SOME x ∈
                  (IMAGE (\n. lookup n graph.nodeInfo) (domain graph.nodeInfo))
-               ∧ x.is_final}`;
+               ∧ x.is_final}
+End
 
 val _ = Datatype`
   concrEdge = <| pos : (α list) ;
                  neg : (α list) ;
                  sucs : (α ltl_frml) list |>`;
 
-val cE_equiv_def = Define `
+Definition cE_equiv_def:
   cE_equiv cE1 cE2 =
       ((MEM_EQUAL cE1.pos cE2.pos)
      ∧ (MEM_EQUAL cE1.neg cE2.neg)
-     ∧ (MEM_EQUAL cE1.sucs cE2.sucs))`;
+     ∧ (MEM_EQUAL cE1.sucs cE2.sucs))
+End
 
-val transformLabel_def = Define`
+Definition transformLabel_def:
   transformLabel aP pos neg =
    FOLDR (\a sofar. (char (POW aP) a) ∩ sofar)
-         (FOLDR (\a sofar. (char_neg (POW aP) a) ∩ sofar) (POW aP) neg) pos`;
+         (FOLDR (\a sofar. (char_neg (POW aP) a) ∩ sofar) (POW aP) neg) pos
+End
 
 val TRANSFORMLABEL_AP = store_thm
   ("TRANSFORMLABEL_AP",
@@ -499,9 +503,10 @@ val TRANSFORMLABEL_FOLDR = store_thm
    >> rw[FOLDR_LEMM5]
   );
 
-val concr2AbstractEdge_def = Define`
+Definition concr2AbstractEdge_def:
   concr2AbstractEdge aP (concrEdge pos neg sucs) =
-      (transformLabel aP pos neg, set sucs)`;
+      (transformLabel aP pos neg, set sucs)
+End
 
 val C2A_EDGE_CE_EQUIV = store_thm
   ("C2A_EDGE_CE_EQUIV",
@@ -513,7 +518,7 @@ val C2A_EDGE_CE_EQUIV = store_thm
    >> metis_tac[FOLDR_INTER_MEMEQUAL]
   );
 
-val extractTrans_def = Define`
+Definition extractTrans_def:
   extractTrans graph s =
      let sucs =
             OPTION_TO_LIST
@@ -536,24 +541,28 @@ val extractTrans_def = Define`
                  ∧ ~(labelSucs = {})
                  ∧ edge = (label.edge_grp, label.pos_lab,
                            label.neg_lab, labelSucs) }
-      ∪ { (0,l.pos_lab,l.neg_lab,{}) | MEM l trueLabels }`;
+      ∪ { (0,l.pos_lab,l.neg_lab,{}) | MEM l trueLabels }
+End
 
-val concrTrans_def = Define `
+Definition concrTrans_def:
   concrTrans g prop f =
-    IMAGE (λ(i,p,n,e). (transformLabel prop p n,e)) (extractTrans g f)`;
+    IMAGE (λ(i,p,n,e). (transformLabel prop p n,e)) (extractTrans g f)
+End
 
-val concr2AbstrAA_def = Define`
+Definition concr2AbstrAA_def:
   concr2AbstrAA (concrAA g init prop) =
     ALTER_A
         (concr2Abstr_states g)
         (POW (LIST_TO_SET prop))
         (concrTrans g (set prop))
         (concr2Abstr_init init g)
-        (concr2Abstr_final g)`;
+        (concr2Abstr_final g)
+End
 
-val graphStatesWithId_def = Define`
+Definition graphStatesWithId_def:
   graphStatesWithId g =
-        MAP (λ(id,label). (id, label.frml)) (toAList g.nodeInfo)`;
+        MAP (λ(id,label). (id, label.frml)) (toAList g.nodeInfo)
+End
 
 val GRAPH_STATES_WITH_ID_LEMM = store_thm
   ("GRAPH_STATES_WITH_ID_LEMM",
@@ -569,11 +578,12 @@ val GRAPHSTATES_WITH_ID_EMPTY = store_thm
    simp[graphStatesWithId_def,toAList_def,empty_def,foldi_def]
   );
 
-val unique_node_formula_def = Define`
+Definition unique_node_formula_def:
   unique_node_formula g =
    ∀id h.
     MEM (id,h) (graphStatesWithId g) ⇒
-     ∀oId. MEM (oId,h) (graphStatesWithId g) ⇒ (id = oId)`;
+     ∀oId. MEM (oId,h) (graphStatesWithId g) ⇒ (id = oId)
+End
 
 val UNIQUE_NODE_FORM_EMPTY = store_thm
   ("UNIQUE_NODE_FORM_EMPTY",
@@ -746,8 +756,9 @@ val EXTR_TRANS_LEMM = store_thm
       )
   );
 
-val graphStates_def = Define
- `graphStates g = MAP ((\l. l.frml) o SND) (toAList g.nodeInfo)`;
+Definition graphStates_def:
+  graphStates g = MAP ((\l. l.frml) o SND) (toAList g.nodeInfo)
+End
 
 val GRAPHSTATES_EMPTY = store_thm
   ("GRAPHSTATES_EMPTY",
@@ -786,11 +797,13 @@ val GRAPH_STATES_ID_IMP_GRAPH_STATES = store_thm
       )
   );
 
-val autoStates_def = Define`
-  autoStates (concrAA g i aP) = graphStates g`;
+Definition autoStates_def:
+  autoStates (concrAA g i aP) = graphStates g
+End
 
-val inAuto_def = Define`
-  inAuto aut f = MEM f (autoStates aut)`;
+Definition inAuto_def:
+  inAuto aut f = MEM f (autoStates aut)
+End
 
 val IN_AUTO_FINITE = store_thm
   ("IN_AUTO_FINITE",
@@ -798,7 +811,7 @@ val IN_AUTO_FINITE = store_thm
    rpt strip_tac >> metis_tac[FINITE_LIST_TO_SET]
   );
 
-val addFrmlToGraph_def = Define`
+Definition addFrmlToGraph_def:
    (addFrmlToGraph g (U f1 f2) =
        if MEM (U f1 f2) (MAP ((λl. l.frml) ∘ SND) (toAList g.nodeInfo))
        then g
@@ -807,7 +820,8 @@ val addFrmlToGraph_def = Define`
  ∧ (addFrmlToGraph g f =
        if MEM f (MAP ((λl. l.frml) ∘ SND) (toAList g.nodeInfo))
        then g
-       else addNode <| frml := f; is_final := F ; true_labels := []|> g)`;
+       else addNode <| frml := f; is_final := F ; true_labels := []|> g)
+End
 
 val ADDFRML_LEMM = store_thm
   ("ADDFRML_LEMM",
@@ -841,7 +855,7 @@ val ADDFRML_LEMM_AUT = store_thm
    metis_tac[inAuto_def,autoStates_def,ADDFRML_LEMM]
   );
 
-val addEdgeToGraph_def = Define`
+Definition addEdgeToGraph_def:
   addEdgeToGraph f (concrEdge pos neg sucs) g =
     if sucs = []
     then do (nodeId,nodeLabel) <- findNode (λ(n,l). l.frml = f) g;
@@ -868,14 +882,16 @@ val addEdgeToGraph_def = Define`
                                SOME newGraph
                             od)
                  (SOME g) unfolded_edges
-        od`;
+        od
+End
 
-val empty_followers_def = Define`
+Definition empty_followers_def:
   empty_followers g f =
     !id node. (lookup id g.nodeInfo = SOME node
             ∧ node.frml = f)
                ==> (lookup id g.followers = SOME []
-                  ∧ node.true_labels = [])`;
+                  ∧ node.true_labels = [])
+End
 
 val EMPTY_FLWS_GRAPHSTATES = store_thm
   ("EMPTY_FLWS_GRAPHSTATES",
@@ -924,14 +940,15 @@ val EMPTY_FLWS_LEMM = store_thm
       )
   );
 
-val flws_sorted_def = Define `
+Definition flws_sorted_def:
   flws_sorted g =
     (!x_id fls. x_id ∈ domain g.nodeInfo
    ∧ (lookup x_id g.followers = SOME fls)
    ==> (SORTED (λf1 f2. (FST f2).edge_grp <= (FST f1).edge_grp) fls
       ∧ (!x y. (MEM x fls ∧ MEM y fls ∧ ((FST x).edge_grp = (FST y).edge_grp))
             ==> (FST x = FST y))
-      ∧ (!x. MEM x fls ==> (0 < (FST x).edge_grp))))`;
+      ∧ (!x. MEM x fls ==> (0 < (FST x).edge_grp))))
+End
 
 val FLWS_SORTED_EMPTY = store_thm
   ("FLWS_SORTED_EMPTY",
@@ -939,12 +956,13 @@ val FLWS_SORTED_EMPTY = store_thm
    fs[flws_sorted_def] >> rpt strip_tac >> fs[empty_def,domain_def,foldi_def]
   );
 
-val first_flw_has_max_counter_def = Define`
+Definition first_flw_has_max_counter_def:
   first_flw_has_max_counter g =
      (!x_id fls fl. x_id ∈ domain g.nodeInfo
                ∧ (lookup x_id g.followers = SOME (fl::fls))
                ==> (!y. MEM y fls
-                        ==> ((FST y).edge_grp <= (FST fl).edge_grp)))`;
+                        ==> ((FST y).edge_grp <= (FST fl).edge_grp)))
+End
 
 val FLWS_SORTED_IMP_FFHMC = store_thm
   ("FLWS_SORTED_IMP_FFHMC",
@@ -1002,10 +1020,11 @@ val ADDFRML_FLW_LEMM = store_thm
    >> first_x_assum (qspec_then `(h::t)` mp_tac) >> simp[]
   );
 
-val until_iff_final_def = Define`
+Definition until_iff_final_def:
     until_iff_final g =
            !id node. (lookup id g.nodeInfo = SOME node)
-               ==> ((?f1 f2. node.frml = U f1 f2) = node.is_final)`;
+               ==> ((?f1 f2. node.frml = U f1 f2) = node.is_final)
+End
 
 val ADDFRML_LEMM2 = store_thm
   ("ADDFRML_LEMM2",
@@ -3310,4 +3329,3 @@ val ADDEDGE_FOLDR_LEMM = store_thm
    >- metis_tac[]
   );
 
-val _ = export_theory ();

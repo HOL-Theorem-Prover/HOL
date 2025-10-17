@@ -38,27 +38,26 @@ val from_inftree_11 = prove(
   ``(from_inftree t1 = from_inftree t2) = (t1 = t2)``,
   METIS_TAC [inftree_bijections])
 
-val Define = TotalDefn.Define
-
-val iLf_def = Define`
+Definition iLf_def:
   iLf a = to_inftree (\p. INL a)
-`
+End
 
-val iNd_def = Define`
+Definition iNd_def:
   iNd b f = to_inftree (\p. if p = [] then INR b
                             else from_inftree (f (HD p)) (TL p))
-`
+End
 
-val iNd_is_tree = store_thm(
-  "iNd_is_tree",
-  ``!b f. is_tree (\p. if p = [] then INR b
-                       else from_inftree (f (HD p)) (TL p))``,
+Theorem iNd_is_tree:
+    !b f. is_tree (\p. if p = [] then INR b
+                       else from_inftree (f (HD p)) (TL p))
+Proof
   REPEAT GEN_TAC THEN
   Q_TAC SUFF_TAC `is_tree (\p. if p = [] then INR b
                                else (from_inftree o f) (HD p) (TL p))`
         THEN1 SRW_TAC [][] THEN
   MATCH_MP_TAC (#2 (CONJ_PAIR is_tree_rules)) THEN
-  SRW_TAC [][])
+  SRW_TAC [][]
+QED
 
 Theorem inftree_11[simp]:
     ((iLf a1 = iLf a2 : ('a,'b,'c) inftree) <=> (a1 = a2)) /\
@@ -82,13 +81,14 @@ Proof
   ]
 QED
 
-val inftree_distinct = store_thm(
-  "inftree_distinct",
-  ``~(iLf a = iNd b f)``,
+Theorem inftree_distinct:
+    ~(iLf a = iNd b f)
+Proof
   SRW_TAC [][iLf_def, iNd_def] THEN
   DISCH_THEN (MP_TAC o AP_TERM ``from_inftree``) THEN
   SRW_TAC [][fromto_id, iNd_is_tree, is_tree_rules, FUN_EQ_THM] THEN
-  Q.EXISTS_TAC `[]` THEN SRW_TAC [][])
+  Q.EXISTS_TAC `[]` THEN SRW_TAC [][]
+QED
 val _ = export_rewrites ["inftree_distinct"]
 
 val strong_ind =
@@ -99,19 +99,20 @@ val forall_inftree = prove(
   ``(!t. P t) = (!f. is_tree f ==> P (to_inftree f))``,
   METIS_TAC [inftree_bijections]);
 
-val inftree_ind = store_thm(
-  "inftree_ind",
-  ``!P.
+Theorem inftree_ind:
+    !P.
        (!a. P (iLf a)) /\
        (!b f. (!d. P (f d)) ==> P (iNd b f)) ==>
-       !t. P t``,
+       !t. P t
+Proof
   SIMP_TAC (srw_ss()) [forall_inftree, iNd_def, iLf_def] THEN
   GEN_TAC THEN STRIP_TAC THEN
   HO_MATCH_MP_TAC strong_ind THEN CONJ_TAC THEN1 SRW_TAC [][] THEN
   REPEAT STRIP_TAC THEN
   FIRST_X_ASSUM (MP_TAC o SPEC ``b:'b``) THEN
   DISCH_THEN (Q.SPEC_THEN `to_inftree o f` MP_TAC) THEN
-  SRW_TAC [][fromto_id]);
+  SRW_TAC [][fromto_id]
+QED
 
 val (relrec_rules, relrec_ind, relrec_cases) = Hol_reln`
   (!lf nd a. relrec lf nd (iLf a) (lf a)) /\
@@ -134,9 +135,9 @@ val relrec_total = prove(
   ONCE_REWRITE_TAC [relrec_cases] THEN SRW_TAC [][] THEN
   METIS_TAC [])
 
-val inftree_rec_def = Define`
+Definition inftree_rec_def:
   inftree_rec lf nd t = @r. relrec lf nd t r
-`
+End
 
 val inftree_rec_thm = prove(
   ``(inftree_rec lf nd (iLf a) = lf a) /\
@@ -165,11 +166,11 @@ val inftree_Axiom0 = prove(
   REPEAT GEN_TAC THEN Q.EXISTS_TAC `inftree_rec lf nd` THEN
   SRW_TAC [][inftree_rec_thm])
 
-val inftree_Axiom = store_thm(
-  "inftree_Axiom",
-  ``!lf nd. ?f : ('a,'b,'c)inftree -> 'd.
+Theorem inftree_Axiom:
+    !lf nd. ?f : ('a,'b,'c)inftree -> 'd.
        (!a. f (iLf a) = lf a) /\
-       (!b d. f (iNd b d) = nd b d (f o d))``,
+       (!b d. f (iNd b d) = nd b d (f o d))
+Proof
   REPEAT GEN_TAC THEN
   Q.SPECL_THEN [`\a. (lf a, iLf a)`,
                  `\b f. (nd b (SND o f) (FST o f), iNd b (SND o f))`]
@@ -180,16 +181,18 @@ val inftree_Axiom = store_thm(
   SRW_TAC [][] THEN
   Q_TAC SUFF_TAC `SND o f o d = d` THEN1 SRW_TAC [][] THEN
   Q_TAC SUFF_TAC `!x. SND (f x) = x` THEN1 SRW_TAC [][FUN_EQ_THM] THEN
-  HO_MATCH_MP_TAC inftree_ind THEN SRW_TAC [][FUN_EQ_THM])
+  HO_MATCH_MP_TAC inftree_ind THEN SRW_TAC [][FUN_EQ_THM]
+QED
 
 
 val inftree_case_def = hd (Prim_rec.define_case_constant inftree_Axiom)
 val _ = export_rewrites ["inftree_case_def"]
 
-val inftree_nchotomy = store_thm(
-  "inftree_nchotomy",
-  ``!t. (?a. t = iLf a) \/ (?b d. t = iNd b d)``,
-  HO_MATCH_MP_TAC inftree_ind THEN SRW_TAC [][]);
+Theorem inftree_nchotomy:
+    !t. (?a. t = iLf a) \/ (?b d. t = iNd b d)
+Proof
+  HO_MATCH_MP_TAC inftree_ind THEN SRW_TAC [][]
+QED
 
 val _ = TypeBase.export (
   TypeBasePure.gen_datatype_info {

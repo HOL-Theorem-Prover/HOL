@@ -4,29 +4,17 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "countModulo";
-
 (* ------------------------------------------------------------------------- *)
+Theory countModulo
+Ancestors
+  pred_set list arithmetic divides gcd logroot number
+  combinatorics pair option listRange countMonad countMacro
+  bitsize complexity loopIncrease loopDecrease loopDivide
+  loopMultiply
+Libs
+  jcLib monadsyntax
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory listTheory arithmeticTheory dividesTheory gcdTheory
-     logrootTheory numberTheory combinatoricsTheory pairTheory optionTheory
-     listRangeTheory;
-
-open countMonadTheory countMacroTheory;
-
-open bitsizeTheory complexityTheory;
-open loopIncreaseTheory loopDecreaseTheory;
-open loopDivideTheory loopMultiplyTheory;
-
-open monadsyntax;
-
 val _ = monadsyntax.enable_monadsyntax();
 val _ = monadsyntax.enable_monad "Count";
 
@@ -152,13 +140,13 @@ val _ = computeLib.set_skip computeLib.the_compset ``ifM`` (SOME 1);
 (* ------------------------------------------------------------------------- *)
 
 (* Define modular addition: (x + y) MOD m *)
-val maddM_def = Define`
+Definition maddM_def:
     maddM m x y =
        do
           z <- addM x y;
           modM z m;
        od
-`;
+End
 
 (* Theorem: valueOf(maddM m x y) = (x + y) MOD m *)
 (* Proof: by maddM_def *)
@@ -228,13 +216,13 @@ val maddM_steps_bound = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define modular subtraction: (x - y) MOD m *)
-val msubM_def = Define`
+Definition msubM_def:
     msubM m x y =
        do
           z <- subM x y;
           modM z m;
        od
-`;
+End
 
 (* Theorem: valueOf(msubM m x y) = (x - y) MOD m *)
 (* Proof: by msubM_def *)
@@ -297,13 +285,13 @@ val msubM_steps_bound = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define modular multiplication: (x * y) MOD m *)
-val mmulM_def = Define`
+Definition mmulM_def:
     mmulM m x y =
        do
           z <- mulM x y;
           modM z m;
        od
-`;
+End
 
 (* Theorem: valueOf(mmulM m x y) = (x * y) MOD m *)
 (* Proof: by mmulM_def *)
@@ -365,9 +353,9 @@ val mmulM_steps_bound = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define modular square *)
-val msqM_def = Define`
+Definition msqM_def:
     msqM m x = mmulM m x x
-`;
+End
 
 (* Obtain theorems *)
 val msqM_value = save_thm("msqM_value[simp]",
@@ -889,8 +877,4 @@ val mexpM_thm = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

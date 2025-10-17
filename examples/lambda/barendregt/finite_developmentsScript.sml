@@ -4,18 +4,16 @@
 (*                                                                            *)
 (* AUTHORS : 2005-2011 Michael Norrish                                        *)
 (* ========================================================================== *)
+Theory finite_developments
+Ancestors
+  pred_set path relation chap3 chap2 labelledTerms term
+  term_posns horeduction chap11_1 nomset
+Libs
+  BasicProvers metisLib boolSimps binderLib nomdatatype
+  pred_setLib[qualified]
 
-open HolKernel Parse bossLib boolLib;
 
-open BasicProvers metisLib boolSimps pred_setTheory pathTheory relationTheory;
-
-open chap3Theory chap2Theory labelledTermsTheory termTheory binderLib
-     term_posnsTheory horeductionTheory chap11_1Theory nomsetTheory;
-
-local open pred_setLib in end
 val _ = augment_srw_ss [boolSimps.LET_ss]
-
-val _ = new_theory "finite_developments";
 
 fun Store_Thm(n, t, tac) = store_thm(n, t, tac) before export_rewrites [n]
 
@@ -30,13 +28,13 @@ val SN_def = pathTheory.SN_def; (* cf. chap3Theory.SN_def, relationTheory.SN_def
     substitutivity etc
    ---------------------------------------------------------------------- *)
 
-val lsubstitutive_def = Define`
+Definition lsubstitutive_def:
   lsubstitutive R = !M (N:lterm) v L. R M N ==> R ([L/v]M) ([L/v]N)
-`;
+End
 
-val lpermutative_def = Define`
+Definition lpermutative_def:
   lpermutative R = !M (N:lterm) pi. R M N ==> R (ltpm pi M) (ltpm pi N)
-`;
+End
 
 val RUNION_lsubstitutive = store_thm(
   "RUNION_lsubstitutive",
@@ -283,7 +281,8 @@ val lrcc_labelled_redn = store_thm(
   SRW_TAC [][strip_label_subst, labelled_redn_rules] THEN
   METIS_TAC [beta_def, labelled_redn_rules]);
 
-val strip_path_label_def = Define`strip_path_label = pmap strip_label I`;
+Definition strip_path_label_def:  strip_path_label = pmap strip_label I
+End
 
 val strip_path_label_thm = store_thm(
   "strip_path_label_thm",
@@ -539,8 +538,9 @@ val lemma11_2_2 = store_thm(
 (* support the notation of saying that a redex position is \in a
    term *)
 
-val is_redex_occurrence_def =
-    Define`is_redex_occurrence pos M = ?N. labelled_redn beta M pos N`;
+Definition is_redex_occurrence_def:
+    is_redex_occurrence pos M = ?N. labelled_redn beta M pos N
+End
 
 val is_redex_occurrence_thm = store_thm(
   "is_redex_occurrence_thm",
@@ -567,9 +567,10 @@ val is_redex_occurrence_thm = store_thm(
     PROVE_TAC []
   ]);
 
-val redexes_all_occur_def =
-    Define`redexes_all_occur posS M =
-               !s. s IN posS ==> is_redex_occurrence s M`
+Definition redexes_all_occur_def:
+    redexes_all_occur posS M =
+               !s. s IN posS ==> is_redex_occurrence s M
+End
 
 val _ = overload_on("IN", ``is_redex_occurrence``);
 val _ = overload_on("SUBSET", ``redexes_all_occur``);
@@ -711,7 +712,6 @@ val ltpm_if = prove(
     if P then ltpm [(x,y)] M else ltpm [(x,y)] N``,
   SRW_TAC [][]);
 
-open nomdatatype
 val ordering = prove(
   ``(?f : term -> num # posn set -> lterm. P f) <=>
     (?f. P (\t (n,ps). f n t ps))``,
@@ -876,7 +876,8 @@ val from_to_def =
 *)
 
 
-val lv_posns_def = Define`lv_posns v t = v_posns v (strip_label t)`
+Definition lv_posns_def:  lv_posns v t = v_posns v (strip_label t)
+End
 
 val lv_posns_thm = store_thm(
   "lv_posns_thm",
@@ -1261,9 +1262,9 @@ val residuals_stopped_at = store_thm(
      by PROVE_TAC [nlabel_11] THEN
   PROVE_TAC [SUBSET_INTER_ABSORPTION]);
 
-val residual1_def = Define`
+Definition residual1_def:
   residual1 x r y ps = n_posns 0 (lift_redn (nlabel 0 x ps) r y)
-`;
+End
 
 val residuals_pcons = store_thm(
   "residuals_pcons",
@@ -1567,12 +1568,12 @@ val lemma11_2_6 = store_thm(
    labels a term accordingly. *)
 
 (* definition 11.2.11 *)
-val development_f_def = Define`
+Definition development_f_def:
   development_f X =
       { (stopped_at x, ps) | T } UNION
       { (pcons x r p, ps) | (p, residual1 x r (first p) ps) IN X /\ r IN ps /\
                             labelled_redn beta x r (first p) }
-`;
+End
 
 val development_f_monotone = store_thm(
   "development_f_monotone",
@@ -1580,9 +1581,9 @@ val development_f_monotone = store_thm(
   SRW_TAC [][fixedPointTheory.monotone_def, SUBSET_DEF,
              development_f_def]);
 
-val development0_def = Define`
+Definition development0_def:
   development0 sigma ps <=> (sigma, ps) IN gfp development_f
-`;
+End
 
 val development0_coinduction = store_thm(
   "development0_coinduction",
@@ -1614,10 +1615,10 @@ val development0_cases = save_thm(
     (MATCH_MP fixedPointTheory.gfp_greatest_fixedpoint
               (SPEC_ALL development_f_monotone)));
 
-val term_posset_development_def = Define`
+Definition term_posset_development_def:
   term_posset_development M posset sigma <=>
       (first sigma = M) /\ posset SUBSET M /\ development0 sigma posset
-`;
+End
 
 val _ = overload_on ("development", ``term_posset_development``);
 
@@ -1659,10 +1660,10 @@ val developments_ok = store_thm(
   HO_MATCH_MP_TAC okpath_co_ind THEN
   METIS_TAC [development_cases, pcons_11, stopped_at_not_pcons]);
 
-val complete_development_def = Define`
+Definition complete_development_def:
   complete_development M ps sigma <=>
     finite sigma /\ sigma IN development M ps /\ (residuals sigma ps = {})
-`;
+End
 
 val complete_development_thm = store_thm(
   "complete_development_thm",
@@ -1670,9 +1671,9 @@ val complete_development_thm = store_thm(
       finite sigma /\ sigma IN development M ps /\ (residuals sigma ps = {})``,
   SRW_TAC [][SPECIFICATION, complete_development_def]);
 
-val term_development_def = Define`
+Definition term_development_def:
   term_development M sigma = development M (redex_posns M) sigma
-`;
+End
 
 val _ = overload_on ("development", ``term_development``);
 
@@ -1843,9 +1844,9 @@ val lemma11_2_12 = store_thm(
     ]
   ]);
 
-val lvar_posns_def = Define`
+Definition lvar_posns_def:
   lvar_posns t = var_posns (strip_label t)
-`;
+End
 
 val (update_weighing_def, update_weighing_swap) =
     define_recursive_term_function`
@@ -1907,13 +1908,13 @@ val beta0_redex_posn = store_thm(
   SIMP_TAC (srw_ss() ++ DNF_ss)
            [redex_posns_thm, strip_label_thm, beta0_def]);
 
-val term_weight_def = Define`
+Definition term_weight_def:
   term_weight (t:term) w = SUM_IMAGE w (var_posns t)
-`;
+End
 
-val lterm_weight_def = Define`
+Definition lterm_weight_def:
   lterm_weight (t: lterm) w = SUM_IMAGE w (lvar_posns t)
-`;
+End
 
 val delete_non_element =
     #1 (EQ_IMP_RULE (SPEC_ALL DELETE_NON_ELEMENT))
@@ -2029,13 +2030,13 @@ val weight_at_thm = save_thm(
   "weight_at_thm",
   LIST_CONJ (butlast (CONJUNCTS weight_at_def)));
 
-val decreasing_def = Define`
+Definition decreasing_def:
   decreasing t w <=>
     !n p1 p2. p1 IN n_posns n t /\
               p2 IN bv_posns_at (APPEND p1 [Lt]) (strip_label t) ==>
               weight_at (APPEND p1 [Rt]) w (strip_label t) <
               weight_at p2 w (strip_label t)
-`;
+End
 
 val n_posns_lam_posns = store_thm(
   "n_posns_lam_posns",
@@ -2091,9 +2092,9 @@ val decreasing_thm = store_thm(
                               lv_posns_def]
   ]);
 
-val nonzero_def = Define`
+Definition nonzero_def:
   nonzero t w = !p. p IN lvar_posns t ==> 0 < w p
-`;
+End
 
 val nonzero_thm = store_thm(
   "nonzero_thm",
@@ -2210,10 +2211,10 @@ Proof
   ]
 QED
 
-val weighted_reduction_def = Define`
+Definition weighted_reduction_def:
   weighted_reduction (M', w0) r (N', w) <=>
     lrcc beta0 M' r N' /\ (w = update_weighing (strip_label M') r w0)
-`;
+End
 
 
 val op on = BasicProvers.on;
@@ -2286,9 +2287,9 @@ val weighted_reduction_preserves_nonzero_weighing = store_thm(
     SRW_TAC [ETA_ss][]
   ]);
 
-val wterm_ordering_def = Define`
+Definition wterm_ordering_def:
   wterm_ordering (N, w) (M, w0) <=> lterm_weight N w < lterm_weight M w0
-`;
+End
 
 val WF_wterm_ordering = store_thm(
   "WF_wterm_ordering",
@@ -2299,7 +2300,8 @@ val WF_wterm_ordering = store_thm(
                              relationTheory.inv_image_def] THEN
   SRW_TAC [][prim_recTheory.WF_measure]);
 
-val weighing_at_def = Define`weighing_at l w = w o APPEND l`;
+Definition weighing_at_def:  weighing_at l w = w o APPEND l
+End
 
 val CARD_IMAGE = prove(
   ``!f s. (!x y. (f x = f y) = (x = y)) /\ FINITE s ==>
@@ -3230,9 +3232,10 @@ val WF_path_finite = save_thm("WF_path_finite",
                               SIMP_RULE bool_ss [] WF_path_finite0);
 
 
-val path_case_def =
-  Define`path_case f g p = if is_stopped p then f (first p)
-                           else g (first p) (first_label p) (tail p)`;
+Definition path_case_def:
+  path_case f g p = if is_stopped p then f (first p)
+                           else g (first p) (first_label p) (tail p)
+End
 
 val path_case_thm = store_thm(
   "path_case_thm",
@@ -3265,9 +3268,9 @@ val lift_weighing_def = new_specification(
         POP_ASSUM (fn th => CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [th]))) THEN
         SRW_TAC [][path_case_thm]));
 
-val pstrip_weights_def = Define`
+Definition pstrip_weights_def:
   pstrip_weights = pmap (FST : lterm # (redpos list -> num) -> lterm) I
-`;
+End
 
 val pstrip_lift_weighing = store_thm(
   "pstrip_lift_weighing",
@@ -3762,9 +3765,9 @@ val cpl_exists =
 val lterm_cpl_def =
     new_specification("lterm_cpl_def", ["lterm_cpl"], cpl_exists)
 
-val term_posset_cpl_def = Define`
+Definition term_posset_cpl_def:
   term_posset_cpl (M, FS) = strip_label (lterm_cpl (nlabel 0 M FS))
-`;
+End
 
 val _ = overload_on("Cpl", ``lterm_cpl``);
 val _ = overload_on("Cpl", ``term_posset_cpl``);
@@ -3824,9 +3827,9 @@ val FDbang = store_thm(
    in Barendregt *)
 
 
-val fd_grandbeta_def = Define`
+Definition fd_grandbeta_def:
   fd_grandbeta M N = ?FS. (Cpl(M, FS) = N) /\ FS SUBSET M
-`;
+End
 
 val n_posns_null_labelling = store_thm(
   "n_posns_null_labelling",
@@ -4096,7 +4099,6 @@ val corollary11_2_29 = store_thm(
   SRW_TAC [][CR_def, lemma11_2_28i, lemma11_2_28ii,
              relationTheory.diamond_TC_diamond]);
 
-val _ = export_theory();
 val _ = html_theory "finite_developments";
 
 (* References:

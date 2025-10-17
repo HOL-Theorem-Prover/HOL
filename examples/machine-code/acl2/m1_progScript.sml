@@ -1,11 +1,8 @@
 
-open HolKernel boolLib bossLib Parse;
-open pred_setTheory set_sepTheory progTheory listTheory pairTheory
-open combinTheory addressTheory sexpTheory imported_acl2Theory;
-open complex_rationalTheory hol_defaxiomsTheory arithmeticTheory;
-
-val _ = new_theory "m1_prog";
-
+Theory m1_prog
+Ancestors
+  pred_set set_sep prog list pair combin address sexp
+  imported_acl2 complex_rational hol_defaxioms arithmetic
 
 infix \\
 val op \\ = op THEN;
@@ -36,20 +33,26 @@ val _ = Parse.type_abbrev("m1_set",``:m1_el set``);
 (* Converting from m1_state to m1_set                                          *)
 (* ----------------------------------------------------------------------------- *)
 
-val instr_def = Define `instr a s = nth a (program s)`;
-val nth_local_def = Define `nth_local a s = nth (nat a) (locals s)`;
-val m1_ok_def = Define `m1_ok s = ?x1 x2 x3 x4. s = make_state x1 x2 x3 x4`;
+Definition instr_def:   instr a s = nth a (program s)
+End
+Definition nth_local_def:   nth_local a s = nth (nat a) (locals s)
+End
+Definition m1_ok_def:   m1_ok s = ?x1 x2 x3 x4. s = make_state x1 x2 x3 x4
+End
 
-val m1_2set'_def = Define `
+Definition m1_2set'_def:
   m1_2set' (ps:unit set, ls: num set, ss: unit set, is: sexp set, os: unit set) (s:sexp) =
     IMAGE (\a. tPC (pc s)) ps UNION
     IMAGE (\a. tLocal a (nth_local a s)) ls UNION
     IMAGE (\a. tStack (stack s)) ss UNION
     IMAGE (\a. tInstr a (instr a s)) is UNION
-    IMAGE (\a. tOK (m1_ok s)) os`;
+    IMAGE (\a. tOK (m1_ok s)) os
+End
 
-val m1_2set_def   = Define `m1_2set s = m1_2set' (UNIV,UNIV,UNIV,UNIV,UNIV) s`;
-val m1_2set''_def = Define `m1_2set'' x s = m1_2set s DIFF m1_2set' x s`;
+Definition m1_2set_def:     m1_2set s = m1_2set' (UNIV,UNIV,UNIV,UNIV,UNIV) s
+End
+Definition m1_2set''_def:   m1_2set'' x s = m1_2set s DIFF m1_2set' x s
+End
 
 (* theorems *)
 
@@ -166,19 +169,28 @@ val EMPTY_m1_2set = prove(``
 (* Defining the M1_MODEL                                                        *)
 (* ----------------------------------------------------------------------------- *)
 
-val tP_def = Define `tP x = SEP_EQ {tPC x}`;
-val tS_def = Define `tS x = SEP_EQ {tStack x}`;
-val tL_def = Define `tL a x = SEP_EQ {tLocal a x}`;
-val tO_def = Define `tO x = SEP_EQ {tOK x}`;
-val tI_def = Define `tI a x = SEP_EQ {tInstr a x}`;
+Definition tP_def:   tP x = SEP_EQ {tPC x}
+End
+Definition tS_def:   tS x = SEP_EQ {tStack x}
+End
+Definition tL_def:   tL a x = SEP_EQ {tLocal a x}
+End
+Definition tO_def:   tO x = SEP_EQ {tOK x}
+End
+Definition tI_def:   tI a x = SEP_EQ {tInstr a x}
+End
 
-val PC_def = Define `PC x = tP x * tO T`;
+Definition PC_def:   PC x = tP x * tO T
+End
 
-val M1_INSTR_def = Define `M1_INSTR (a,w) = { tInstr a w }`;
-val M1_NEXT_def = Define `M1_NEXT s1 s2 = (step s1 = s2)`;
+Definition M1_INSTR_def:   M1_INSTR (a,w) = { tInstr a w }
+End
+Definition M1_NEXT_def:   M1_NEXT s1 s2 = (step s1 = s2)
+End
 
-val M1_MODEL_def = Define `
-  M1_MODEL = (m1_2set, M1_NEXT, M1_INSTR, (\x y. (x:sexp) = y))`;
+Definition M1_MODEL_def:
+  M1_MODEL = (m1_2set, M1_NEXT, M1_INSTR, (\x y. (x:sexp) = y))
+End
 
 
 (* theorems *)
@@ -649,4 +661,3 @@ val M1_ISTORE = store_thm("M1_ISTORE",
   M1_TAC IMP_SPEC_M1_MODEL_3);
 
 
-val _ = export_theory();

@@ -1,6 +1,11 @@
-open HolKernel boolLib bossLib Parse stringTheory arithmeticTheory finite_mapTheory pred_setTheory bagTheory pairTheory relationTheory prim_recTheory quotientLib nomsetTheory listTheory ramanaLib ntermTheory nsubstTheory apply_piTheory nwalkTheory nwalkstarTheory nunifDefTheory dis_setTheory monadsyntax ntermLib
+Theory nunifProps
+Ancestors
+  string arithmetic finite_map pred_set bag pair relation
+  prim_rec nomset list nterm nsubst apply_pi nwalk nwalkstar
+  nunifDef dis_set
+Libs
+  quotientLib ramanaLib monadsyntax ntermLib
 
-val _ = new_theory "nunifProps"
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 }
 
 val _ = export_permweakening "dis_set.dis_set_eq_perms"
@@ -11,10 +16,10 @@ val fresh_q = `
   (fresh fe a (Tie b t) <=> (a = b) ∨ a ≠ b ∧ fresh fe a t) ∧
   (fresh fe a (nPair t1 t2) <=> fresh fe a t1 ∧ fresh fe a t2) ∧
   (fresh fe a (nConst c) <=> T)`;
-val def_suffix = !Defn.def_suffix;
-val _ = Defn.def_suffix := "_def_with_choice";
-val fresh_def_with_choice = Define fresh_q;
-val _ = Defn.def_suffix := def_suffix;
+
+val fresh_def_with_choice =
+  with_flag (Defn.def_suffix, "_def_with_choice") Define fresh_q;
+
 val fresh_def = Q.store_thm("fresh_def",fresh_q,SIMP_TAC (psrw_ss()) [fresh_def_with_choice]);
 
 val fresh_apply_pi = Q.store_thm(
@@ -1635,14 +1640,14 @@ THEN1 (
 
 val _ = set_fixity "COMPAT" (Infix(NONASSOC,450))
 
-val COMPAT_def = Define`
+Definition COMPAT_def:
   (sx,fex) COMPAT (s,fe) <=>
      nwfs s ∧ nwfs sx ∧ FINITE fe ∧ FINITE fex ∧
      ∃ve vex. (verify_fcs fe s = SOME ve) ∧
               (verify_fcs fex sx = SOME vex) ∧
      ∀t1 t2. equiv ve (nwalk* s t1) (nwalk* s t2) ⇒
              equiv vex (nwalk* sx t1) (nwalk* sx t2)
-`;
+End
 
 val COMPAT_REFL = Q.store_thm(
 "COMPAT_REFL",
@@ -3217,5 +3222,3 @@ Cases_on `fcs2 ⊆ fe2` THEN SRW_TAC [][] THEN
 SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
 IMP_RES_TAC term_fcs_SUBMAP THEN
 FULL_SIMP_TAC (srw_ss()) [])
-
-val _ = export_theory ();

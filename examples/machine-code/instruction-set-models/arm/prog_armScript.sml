@@ -1,17 +1,15 @@
 
-open HolKernel boolLib bossLib Parse;
-open pred_setTheory res_quanTheory wordsTheory wordsLib bitTheory arithmeticTheory;
-open listTheory pairTheory combinTheory addressTheory;
-open finite_mapTheory;
-
-open set_sepTheory progTheory;
-open armTheory arm_coretypesTheory arm_stepTheory armLib;
-
-val _ = new_theory "prog_arm";
+Theory prog_arm
+Ancestors
+  pred_set res_quan words bit arithmetic list pair combin address
+  bit_list[qualified] finite_map set_sep prog arm arm_coretypes arm_step
+Libs
+  wordsLib numLib armLib
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 
+val _ = prefer_num();
 
 (* ----------------------------------------------------------------------------- *)
 (* The ARM set                                                                   *)
@@ -45,21 +43,26 @@ Definition ARM_OK_def:
     (ARM_MODE state = 16w)
 End
 
-val ARM_READ_UNDEF_def = Define `ARM_READ_UNDEF s = ~(ARM_OK s)`;
+Definition ARM_READ_UNDEF_def:   ARM_READ_UNDEF s = ~(ARM_OK s)
+End
 
-val ARM_READ_MASKED_CPSR_def = Define `
-  ARM_READ_MASKED_CPSR s = (26 '' 0) (encode_psr (ARM_READ_CPSR s))`;
+Definition ARM_READ_MASKED_CPSR_def:
+  ARM_READ_MASKED_CPSR s = (26 '' 0) (encode_psr (ARM_READ_CPSR s))
+End
 
-val arm2set'_def = Define `
+Definition arm2set'_def:
   arm2set' (rs,ms,st,cp,ud) (s:arm_state) =
     IMAGE (\a. aReg a (ARM_READ_REG a s)) rs UNION
     IMAGE (\a. aMem a (ARM_READ_MEM a s)) ms UNION
     IMAGE (\a. aStatus a (ARM_READ_STATUS a s)) st UNION
     (if cp then { aCPSR_Reg (ARM_READ_MASKED_CPSR s) } else {}) UNION
-    (if ud then { aUndef (ARM_READ_UNDEF s) } else {})`;
+    (if ud then { aUndef (ARM_READ_UNDEF s) } else {})
+End
 
-val arm2set_def   = Define `arm2set s = arm2set' (UNIV,UNIV,UNIV,T,T) s`;
-val arm2set''_def = Define `arm2set'' x s = arm2set s DIFF arm2set' x s`;
+Definition arm2set_def:     arm2set s = arm2set' (UNIV,UNIV,UNIV,T,T) s
+End
+Definition arm2set''_def:   arm2set'' x s = arm2set s DIFF arm2set' x s
+End
 
 (* theorems *)
 
@@ -177,42 +180,56 @@ val ARM_READ_MASKED_CPSR_THM =
 (* Defining the ARM_MODEL                                                        *)
 (* ----------------------------------------------------------------------------- *)
 
-val aR_def = Define `aR a x = SEP_EQ {aReg a x}`;
-val aM1_def = Define `aM1 a x = SEP_EQ {aMem a x}`;
-val aS1_def = Define `aS1 a x = SEP_EQ {aStatus a x}`;
-val aU1_def = Define `aU1 x = SEP_EQ {aUndef x}`;
-val aCPSR_def = Define `aCPSR x = SEP_EQ {aCPSR_Reg x}`;
+Definition aR_def:   aR a x = SEP_EQ {aReg a x}
+End
+Definition aM1_def:   aM1 a x = SEP_EQ {aMem a x}
+End
+Definition aS1_def:   aS1 a x = SEP_EQ {aStatus a x}
+End
+Definition aU1_def:   aU1 x = SEP_EQ {aUndef x}
+End
+Definition aCPSR_def:   aCPSR x = SEP_EQ {aCPSR_Reg x}
+End
 
-val aLR_def = Define `aLR lr = cond (ALIGNED lr) * aR 14w lr`;
+Definition aLR_def:   aLR lr = cond (ALIGNED lr) * aR 14w lr
+End
 
-val aM_def = Define `
+Definition aM_def:
   aM a (w:word32) =
     aM1 a        ((7 >< 0) w) *
     aM1 (a + 1w) ((7 >< 0) (w >> 8)) *
     aM1 (a + 2w) ((7 >< 0) (w >> 16)) *
-    aM1 (a + 3w) ((7 >< 0) (w >> 24))`;
+    aM1 (a + 3w) ((7 >< 0) (w >> 24))
+End
 
-val aPC_def = Define `aPC x = aR 15w x * aU1 F * cond (ALIGNED x)`;
+Definition aPC_def:   aPC x = aR 15w x * aU1 F * cond (ALIGNED x)
+End
 
-val aS_def = Define `aS (n,z,c,v) = aS1 psrN n * aS1 psrZ z * aS1 psrC c * aS1 psrV v`;
+Definition aS_def:   aS (n,z,c,v) = aS1 psrN n * aS1 psrZ z * aS1 psrC c * aS1 psrV v
+End
 
-val ARM_NEXT_REL_def = Define `ARM_NEXT_REL s s' = (ARM_NEXT NoInterrupt s = SOME s')`;
+Definition ARM_NEXT_REL_def:   ARM_NEXT_REL s s' = (ARM_NEXT NoInterrupt s = SOME s')
+End
 
-val ARM_INSTR_def    = Define `ARM_INSTR (a,w:word32) =
+Definition ARM_INSTR_def:      ARM_INSTR (a,w:word32) =
   { aMem (a+3w) ((31 >< 24) w) ;
     aMem (a+2w) ((23 >< 16) w) ;
     aMem (a+1w) ((15 ><  8) w) ;
-    aMem (a+0w) (( 7 ><  0) w) }`;
+    aMem (a+0w) (( 7 ><  0) w) }
+End
 
-val ARM_MODEL_def = Define `
+Definition ARM_MODEL_def:
   ARM_MODEL = (arm2set, ARM_NEXT_REL, ARM_INSTR, (\x y. x = (y:arm_state)),
-               (K F):arm_state -> bool)`;
+               (K F):arm_state -> bool)
+End
 
-val aST_LIST_def = Define `
+Definition aST_LIST_def:
   (aST_LIST a [] = emp) /\
-  (aST_LIST a (x::xs) = aM a x * aST_LIST (a-4w) xs)`;
+  (aST_LIST a (x::xs) = aM a x * aST_LIST (a-4w) xs)
+End
 
-val aST_def = Define `aST a xs = aR 13w a * aST_LIST a xs * cond (ALIGNED a)`;
+Definition aST_def:   aST a xs = aR 13w a * aST_LIST a xs * cond (ALIGNED a)
+End
 
 (* theorems *)
 
@@ -310,8 +327,9 @@ val CODE_POOL_arm2set_1 = prove(
 val CODE_POOL_arm2set = save_thm("CODE_POOL_arm2set",
   CONJ CODE_POOL_arm2set_1 CODE_POOL_arm2set_2);
 
-val ARM_WRITE_STS_def = Define `
-  ARM_WRITE_STS a x s = if a IN {psrN;psrZ;psrC;psrV;psrQ} then ARM_WRITE_STATUS a x s else s`;
+Definition ARM_WRITE_STS_def:
+  ARM_WRITE_STS a x s = if a IN {psrN;psrZ;psrC;psrV;psrQ} then ARM_WRITE_STATUS a x s else s
+End
 
 val ARM_WRITE_STS_INTRO = store_thm("ARM_WRITE_STS_INTRO",
   ``(ARM_WRITE_STATUS psrN x s = ARM_WRITE_STS psrN x s) /\
@@ -436,10 +454,12 @@ val aM_INTRO = save_thm("aM_INTRO",
 (* Byte-sized data memory                                                        *)
 (* ----------------------------------------------------------------------------- *)
 
-val aBYTE_MEMORY_SET_def = Define `
-  aBYTE_MEMORY_SET df f = { aMem a (f a) | a | a IN df }`;
+Definition aBYTE_MEMORY_SET_def:
+  aBYTE_MEMORY_SET df f = { aMem a (f a) | a | a IN df }
+End
 
-val aBYTE_MEMORY_def = Define `aBYTE_MEMORY df f = SEP_EQ (aBYTE_MEMORY_SET df f)`;
+Definition aBYTE_MEMORY_def:   aBYTE_MEMORY df f = SEP_EQ (aBYTE_MEMORY_SET df f)
+End
 
 val IN_aBYTE_MEMORY_SET = prove(
   ``a IN df ==>
@@ -478,7 +498,8 @@ val aBYTE_MEMORY_INTRO = store_thm("aBYTE_MEMORY_INTRO",
 (* Memory assertion based on finite maps                                         *)
 (* ----------------------------------------------------------------------------- *)
 
-val aMEM_def = Define `aMEM m = aBYTE_MEMORY (FDOM m) (\x. m ' x)`;
+Definition aMEM_def:   aMEM m = aBYTE_MEMORY (FDOM m) (\x. m ' x)
+End
 
 (*
 val _ = wordsLib.guess_lengths();
@@ -520,17 +541,20 @@ val aMEM_WRITE_BYTE = store_thm("aMEM_WRITE_BYTE",
 (* Word-sized data memory                                                        *)
 (* ----------------------------------------------------------------------------- *)
 
-val aMEMORY_WORD_def = Define `
+Definition aMEMORY_WORD_def:
   aMEMORY_WORD (a:word32) (w:word32) =
     { aMem a      (((7 >< 0) (w))) ;
       aMem (a+1w) (((7 >< 0) (w >> 8))) ;
       aMem (a+2w) (((7 >< 0) (w >> 16))) ;
-      aMem (a+3w) (((7 >< 0) (w >> 24))) }`;
+      aMem (a+3w) (((7 >< 0) (w >> 24))) }
+End
 
-val aMEMORY_SET_def = Define `
-  aMEMORY_SET df f = BIGUNION { aMEMORY_WORD a (f a) | a | a IN df /\ ALIGNED a  }`;
+Definition aMEMORY_SET_def:
+  aMEMORY_SET df f = BIGUNION { aMEMORY_WORD a (f a) | a | a IN df /\ ALIGNED a  }
+End
 
-val aMEMORY_def = Define `aMEMORY df f = SEP_EQ (aMEMORY_SET df f)`;
+Definition aMEMORY_def:   aMEMORY df f = SEP_EQ (aMEMORY_SET df f)
+End
 
 val aMEMORY_SET_SING = prove(
   ``!a f. ALIGNED a ==> (aMEMORY_SET {a} f = aMEMORY_WORD a (f a))``,
@@ -682,13 +706,15 @@ val FCP_UPDATE_WORD_AND = store_thm("FCP_UPDATE_WORD_AND",
 
 (* Stack --- sp points at top of stack, stack grows towards smaller addresses *)
 
-val SEP_HIDE_ARRAY_def = Define `
-  SEP_HIDE_ARRAY p i a n = SEP_EXISTS xs. SEP_ARRAY p i a xs * cond (LENGTH xs = n)`;
+Definition SEP_HIDE_ARRAY_def:
+  SEP_HIDE_ARRAY p i a n = SEP_EXISTS xs. SEP_ARRAY p i a xs * cond (LENGTH xs = n)
+End
 
-val aSTACK_def = Define `
+Definition aSTACK_def:
   aSTACK bp n xs =
     SEP_ARRAY aM 4w bp xs * cond (ALIGNED bp) *
-    SEP_HIDE_ARRAY aM (-4w) (bp - 4w) n`;
+    SEP_HIDE_ARRAY aM (-4w) (bp - 4w) n
+End
 
 val SEP_HIDE_ARRAY_SUC = prove(
   ``SEP_HIDE_ARRAY aM w a (SUC n) = ~aM a * SEP_HIDE_ARRAY aM w (a + w) n``,
@@ -716,23 +742,27 @@ val SEP_EXISTS_aSTACK = store_thm("SEP_EXISTS_aSTACK",
 (* Reading/writing chunks of memory                                              *)
 (* ----------------------------------------------------------------------------- *)
 
-val READ8_def = Define `
-  READ8 a (m:word32 -> word8) = m a`;
+Definition READ8_def:
+  READ8 a (m:word32 -> word8) = m a
+End
 
-val WRITE8_def = Define `
-  WRITE8 (a:word32) (w:word8) m = (a =+ w:word8) m`;
+Definition WRITE8_def:
+  WRITE8 (a:word32) (w:word8) m = (a =+ w:word8) m
+End
 
 val _ = wordsLib.guess_lengths();
-val READ32_def = zDefine `
+Definition READ32_def[nocompute]:
   READ32 a (m:word32 -> word8) =
-    (m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m (a)):word32`;
+    (m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m (a)):word32
+End
 
-val WRITE32_def = zDefine `
+Definition WRITE32_def[nocompute]:
   WRITE32 (a:word32) (w:word32) m =
     ((a + 0w =+ (w2w w):word8)
     ((a + 1w =+ (w2w (w >>> 8)):word8)
     ((a + 2w =+ (w2w (w >>> 16)):word8)
-    ((a + 3w =+ (w2w (w >>> 24)):word8) m))))`;
+    ((a + 3w =+ (w2w (w >>> 24)):word8) m))))
+End
 
 val WRITE32_blast_lemma = blastLib.BBLAST_PROVE
   ``((( 7 ><  0) (w:word32)) = (w2w w):word8) /\
@@ -754,6 +784,3 @@ val WRITE32_THM = store_thm("WRITE32_THM",
   \\ SRW_TAC [] [] \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [WORD_EQ_ADD_LCANCEL,
        RW [WORD_ADD_0] (Q.SPECL [`w`,`0w`] WORD_EQ_ADD_LCANCEL),
        RW [WORD_ADD_0] (Q.SPECL [`w`,`v`,`0w`] WORD_EQ_ADD_LCANCEL),n2w_11]);
-
-
-val _ = export_theory();

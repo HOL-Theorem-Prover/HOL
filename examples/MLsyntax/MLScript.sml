@@ -53,14 +53,10 @@
  *             | <var>                                                       *
  *                                                                           *
  *---------------------------------------------------------------------------*)
+Theory ML
+Ancestors
+   string[qualified] pred_set[qualified]
 
-
-open bossLib Theory Parse ;
-
-local open stringTheory pred_setTheory   (* Make strings and sets be present *)
-in end;
-
-val _ = new_theory "ML";
 
 
 (*---------------------------------------------------------------------------
@@ -131,4 +127,3 @@ Definition Vars_def:
     (valbindV (rec_bind vb)  = (valbindV vb))
 End
 
-val _ = export_theory();

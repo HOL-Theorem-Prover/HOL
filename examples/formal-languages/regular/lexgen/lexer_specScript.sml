@@ -2,11 +2,10 @@
 (* Specification of a lexer in terms of regular expressions paired with      *)
 (* action functions.                                                         *)
 (*---------------------------------------------------------------------------*)
+Theory lexer_spec
+Ancestors
+  string list rich_list regexp
 
-open HolKernel Parse boolLib bossLib;
-open stringTheory listTheory rich_listTheory regexpTheory;
-
-val _ = new_theory "lexer_spec";
 
 (*---------------------------------------------------------------------------*)
 (* A lexer is specified by a list of regexps, each paired with an action     *)
@@ -47,23 +46,23 @@ Induct_on `s1`
 (* How a lexer spec matches the prefix of a string                           *)
 (*---------------------------------------------------------------------------*)
 
-val lexer_spec_matches_prefix_def =
- Define
-  `lexer_spec_matches_prefix lexer_spec n token prefix suffix s =
+Definition lexer_spec_matches_prefix_def:
+   lexer_spec_matches_prefix lexer_spec n token prefix suffix s =
    ?r f.
       n < LENGTH lexer_spec     /\
       (EL n lexer_spec = (r,f)) /\
       (token = f prefix)        /\
       regexp_lang r prefix      /\
-      (s = prefix ++ suffix)`;
+      (s = prefix ++ suffix)
+End
 
-val lexer_spec_matches_prefix_alt_def =
- Define
-  `lexer_spec_matches_prefix_alt lexer_spec token prefix suffix s =
+Definition lexer_spec_matches_prefix_alt_def:
+   lexer_spec_matches_prefix_alt lexer_spec token prefix suffix s =
     ?r f. (MEM (r,f) lexer_spec) /\
           (token = f prefix)     /\
           regexp_lang r prefix   /\
-          (s = prefix ++ suffix)`;
+          (s = prefix ++ suffix)
+End
 
 val lexer_spec_matches_equiv = Q.store_thm
 ("lexer_spec_matches_equiv",
@@ -82,9 +81,8 @@ val lexer_spec_matches_equiv = Q.store_thm
 (* "maximal munch" approach to making lexing deterministic.                  *)
 (*---------------------------------------------------------------------------*)
 
-val correct_lex_def =
- Define
-  `(correct_lex lexer_spec s [] = (s = [])) /\
+Definition correct_lex_def:
+   (correct_lex lexer_spec s [] = (s = [])) /\
    (correct_lex lexer_spec s (tok::toks) =
      ?prefix n suffix.
        (prefix <> []) /\
@@ -99,7 +97,8 @@ val correct_lex_def =
        (!n' tok' prefix' suffix'.
            lexer_spec_matches_prefix lexer_spec n' tok' prefix' suffix' s
              ==>
-           (LENGTH prefix' <> LENGTH prefix) \/ n <= n'))`;
+           (LENGTH prefix' <> LENGTH prefix) \/ n <= n'))
+End
 
 val correct_lex_thm = Q.store_thm
 ("correct_lex_thm",
@@ -197,4 +196,3 @@ Induct_on `toks`
      >> metis_tac [strcat_lem])
 );
 
-val _ = export_theory ();

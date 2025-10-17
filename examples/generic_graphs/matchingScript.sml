@@ -1,15 +1,9 @@
-open HolKernel Parse boolLib bossLib;
-open fsgraphTheory pred_setTheory pred_setLib arithmeticTheory listTheory genericGraphTheory set_relationTheory;
-open rich_listTheory integerTheory combinTheory topologyTheory whileTheory pairTheory;
-open hurdUtils;
-open tautLib;
-val _ = new_theory "matching";
-
-open realTheory;
-open prim_recTheory;
-
-
-
+Theory matching
+Ancestors
+  fsgraph pred_set arithmetic list genericGraph set_relation
+  rich_list integer combin topology While pair real prim_rec
+Libs
+  pred_setLib hurdUtils tautLib
 
 Overload V[local] = “nodes (G :fsgraph)”;
 Overload E[local] = “fsgedges (G :fsgraph)”;
@@ -3542,5 +3536,4 @@ Proof
 QED
 
 
-val _ = export_theory();
 val _ = html_theory "matching";

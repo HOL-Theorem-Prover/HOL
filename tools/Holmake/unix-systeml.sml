@@ -113,6 +113,7 @@ val CP = ""
 val DEFAULT_STATE = fullPath [HOLDIR, "bin", "hol.state"]
 
 val isUnix = true
+val haveWord64 = false
 local val cast : 'a -> int = Obj.magic
 in
   fun pointer_eq (x:'a, y:'a) = (cast x = cast y)

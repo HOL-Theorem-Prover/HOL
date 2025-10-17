@@ -4,17 +4,10 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-open arithmeticTheory pred_setTheory pairTheory listTheory rich_listTheory
-     listRangeTheory dividesTheory gcdTheory logrootTheory numberTheory
-     combinatoricsTheory primeTheory;
-
-open helperTwosqTheory windmillTheory;
-
-(* declare new theory at start *)
-val _ = new_theory "quarity";
+Theory quarity
+Ancestors
+  arithmetic pred_set pair list rich_list listRange divides gcd
+  logroot number combinatorics prime helperTwosq windmill
 
 (* ------------------------------------------------------------------------- *)
 
@@ -2415,8 +2408,4 @@ QED
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

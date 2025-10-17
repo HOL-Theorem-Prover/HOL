@@ -4,23 +4,16 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "LinearIndep";
+Theory LinearIndep
+Ancestors
+  pred_set arithmetic list number combinatorics VectorSpace
+  SpanSpace monoid group field
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory arithmeticTheory listTheory numberTheory combinatoricsTheory;
-
-open VectorSpaceTheory SpanSpaceTheory;
-open monoidTheory groupTheory fieldTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* Linear Independence Documentation                                         *)
 (* ------------------------------------------------------------------------- *)
@@ -353,11 +346,11 @@ If h is not spanned by b (or b'), (h::b) gives another dimension, same as (h::b'
           then any vector has a unique representation. *)
 
 (* Linearly Independent basis has only one representation of zero vector *)
-val LinearIndepBasis_def = Define`
+Definition LinearIndepBasis_def:
   LinearIndepBasis (r:'a field) (g:'b group) (op:'a -> 'b -> 'b) (b:'b list) <=>
     (basis g b) /\
     !n. n IN sticks r (LENGTH b) ==> ((n |o| b = |0|) <=> !k. k < LENGTH b ==> (EL k n = #0))
-`;
+End
 
 (* Theorem: LinearIndepBasis r g op b ==> basis g b *)
 (* Proof: by LinearIndepBasis_def *)
@@ -473,8 +466,4 @@ val vspace_basis_dep_one_more = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

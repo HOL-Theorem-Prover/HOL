@@ -12,23 +12,33 @@ val _ = Datatype‘Normal = E1 num | E2 bool | E3’;
 
 val _ = Datatype‘Record = <| fld1 : num ; fld2 : 'a -> num |>’;
 
-val enum_lemma1 = Q.store_thm("enum_lemma1",
-  ‘C1 <> C2’,
-  simp_tac (srw_ss()) []);
+Theorem enum_lemma1:
+   C1 <> C2
+Proof
+  simp_tac (srw_ss()) []
+QED
 
-val enum_lemma2 = Q.store_thm("enum_lemma2",
-  ‘D1 <> D2’,
-  simp_tac (srw_ss()) []);
+Theorem enum_lemma2:
+   D1 <> D2
+Proof
+  simp_tac (srw_ss()) []
+QED
 
-val recd_lemma1 = Q.store_thm("recd_lemma1",
-  ‘(r with fld1 := 3).fld1 = 3’,
-  simp_tac (srw_ss()) []);
+Theorem recd_lemma1:
+   (r with fld1 := 3).fld1 = 3
+Proof
+  simp_tac (srw_ss()) []
+QED
 
-val recd_lemma2 = Q.store_thm("recd_lemma2",
-  ‘(r with fld1 := 3).fld2 = r.fld2’,
-  simp_tac (srw_ss()) []);
+Theorem recd_lemma2:
+   (r with fld1 := 3).fld2 = r.fld2
+Proof
+  simp_tac (srw_ss()) []
+QED
 
-val normal_lemma = Q.store_thm("normal_lemma",
-  ‘E1 n <> E3’,
-  computeLib.EVAL_TAC);
+Theorem normal_lemma:
+   E1 n <> E3
+Proof
+  computeLib.EVAL_TAC
+QED
 

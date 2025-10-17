@@ -1,48 +1,47 @@
-open HolKernel Parse boolLib bossLib binderLib
-open nomsetTheory horeductionTheory
-
-local open stringTheory in end
+Theory MPlambda
+Ancestors
+  nomset horeduction chap3 string[qualified]
+Libs
+  binderLib
 
 fun Store_thm (n,t,tac) = store_thm(n,t,tac) before export_rewrites [n]
-
-val _ = new_theory "MPlambda"
 
 val _ = Hol_datatype `MPterm = Var of string
                              | Parameter of string
                              | App of MPterm => MPterm
                              | Abs of string => MPterm`;
 
-val psub_def = Define`
+Definition psub_def:
   (psub a p (Var s) = Var s) /\
   (psub a p (Parameter q) = if p = q then a else Parameter q) /\
   (psub a p (App t1 t2) = App (psub a p t1) (psub a p t2)) /\
   (psub a p (Abs v t) = Abs v (psub a p t))
-`;
+End
 val _ = export_rewrites ["psub_def"]
 
-val params_def = Define`
+Definition params_def:
   (params (Var s) = {}) /\
   (params (Parameter p) = {p}) /\
   (params (App t1 t2) = params t1 UNION params t2) /\
   (params (Abs v t) = params t)
-`;
+End
 val _ = export_rewrites ["params_def"]
 
-val vsub_def = Define`
+Definition vsub_def:
   (vsub a v (Var u) = if u = v then a else Var u) /\
   (vsub a v (Parameter p) = Parameter p) /\
   (vsub a v (App t1 t2) = App (vsub a v t1) (vsub a v t2)) /\
   (vsub a v (Abs u t) = if u = v then Abs u t
                         else Abs u (vsub a v t))
-`;
+End
 val _ = export_rewrites ["vsub_def"]
 
-val allvars_def = Define`
+Definition allvars_def:
   (allvars (Parameter p) = {}) /\
   (allvars (Var v) = {v}) /\
   (allvars (App t1 t2) = allvars t1 UNION allvars t2) /\
   (allvars (Abs v t) = v INSERT allvars t)
-`;
+End
 val _= export_rewrites ["allvars_def"]
 
 val FINITE_allvars = Store_thm(
@@ -129,12 +128,12 @@ val vsub_is_psub_alpha = store_thm(
               (psub N p (vsub (Parameter p) v M) = vsub N v M)``,
   Induct THEN SRW_TAC [][]);
 
-val vars_def = Define`
+Definition vars_def:
   (vars (Var u) = {u}) /\
   (vars (Parameter p) = {}) /\
   (vars (App t1 t2) = vars t1 UNION vars t2) /\
   (vars (Abs v t) = vars t DIFF {v})
-`;
+End
 val _ = export_rewrites ["vars_def"]
 
 val vsub_14a = Store_thm(
@@ -143,12 +142,12 @@ val vsub_14a = Store_thm(
   Induct THEN SRW_TAC [][]);
 
 
-val raw_MPpm_def = Define`
+Definition raw_MPpm_def:
   (raw_MPpm pi (Parameter s) = Parameter (lswapstr pi s)) /\
   (raw_MPpm pi (Var v) = Var v) /\
   (raw_MPpm pi (App t1 t2) = App (raw_MPpm pi t1) (raw_MPpm pi t2)) /\
   (raw_MPpm pi (Abs v t) = Abs v (raw_MPpm pi t))
-`;
+End
 val _ = export_rewrites ["raw_MPpm_def"]
 
 val _ = overload_on("MP_pmact",``mk_pmact raw_MPpm``);
@@ -525,7 +524,6 @@ val (mpbeta_rules, mpbeta_ind, mpbeta_cases) = Hol_reln`
            mpbeta (App (Abs x M) N) (vsub N x M))
 `;
 
-open chap3Theory
 val (convert_rules, convert_ind, convert_cases) = Hol_reln`
   (!p. convert (Parameter p) (VAR p)) /\
   (!t1 t2 M N. convert t1 M /\ convert t2 N ==>
@@ -851,7 +849,8 @@ val mpbeta_ccbeta = store_thm(
   ]);
 
 
-val alpha_def = Define`alpha t1 t2 = ?M. convert t1 M /\ convert t2 M`
+Definition alpha_def:  alpha t1 t2 = ?M. convert t1 M /\ convert t2 M
+End
 
 val alpha_trans = store_thm(
   "alpha_trans",
@@ -940,4 +939,3 @@ val ccbeta_beta = store_thm(
   ]);
 
 
-val _ = export_theory()

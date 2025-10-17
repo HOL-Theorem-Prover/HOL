@@ -1,11 +1,8 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory bit_listTheory;
-
-open x64_coretypesTheory x64_astTheory x64_opsemTheory;
-open x64_seq_monadTheory x64_decoderTheory x64_icacheTheory;
-
-val _ = new_theory "x64_";
+Theory x64_
+Ancestors
+  words bit_list x64_coretypes x64_ast x64_opsem x64_seq_monad
+  x64_decoder x64_icache
 
 (* ---------------------------------------------------------------------------------- *>
 
@@ -14,15 +11,18 @@ val _ = new_theory "x64_";
 
 <* ---------------------------------------------------------------------------------- *)
 
-val iiid_dummy_def = Define `iiid_dummy = <| proc:=0; program_order_index:=0 |>`;
+Definition iiid_dummy_def:   iiid_dummy = <| proc:=0; program_order_index:=0 |>
+End
 
-val x64_decode_bytes_def = Define `
-  x64_decode_bytes b = x64_decode (FOLDR APPEND [] (MAP w2bits b))`;
+Definition x64_decode_bytes_def:
+  x64_decode_bytes b = x64_decode (FOLDR APPEND [] (MAP w2bits b))
+End
 
-val x64_execute_some_def = Define `
-  x64_execute_some i w s = option_apply (x64_execute iiid_dummy i w s) (\t. SOME (SND t))`;
+Definition x64_execute_some_def:
+  x64_execute_some i w s = option_apply (x64_execute iiid_dummy i w s) (\t. SOME (SND t))
+End
 
-val X64_NEXT_def = Define `
+Definition X64_NEXT_def:
   X64_NEXT s =
     let e = ZREAD_RIP s in                                     (* read rip *)
     let xs = MAP THE (ZREAD_INSTR_BYTES 20 e s) in             (* read next 20 bytes *)
@@ -31,10 +31,12 @@ val X64_NEXT_def = Define `
         let (i,w) = THE m in                                   (* otherwise extract content *)
         let n = 20 - (LENGTH w DIV 8) in                       (* calc length of instruction *)
           if EVERY (\x. ~(x = NONE)) (ZREAD_INSTR_BYTES n e s) (* check that the memory is there *)
-          then x64_execute_some i (n2w n) s else NONE          (* execute the instruction *)`;
+          then x64_execute_some i (n2w n) s else NONE          (* execute the instruction *)
+End
 
-val X64_NEXT_REL_def = Define `
-  X64_NEXT_REL s t = ?u. X64_ICACHE s u /\ (X64_NEXT u = SOME t)`;
+Definition X64_NEXT_REL_def:
+  X64_NEXT_REL s t = ?u. X64_ICACHE s u /\ (X64_NEXT u = SOME t)
+End
 
 
 (* help to evaluate X64_NEXT *)
@@ -49,4 +51,3 @@ val X64_NEXT_THM = store_thm("X64_NEXT_THM",
     x64_execute_some_def,option_apply_def]);
 
 
-val _ = export_theory ();

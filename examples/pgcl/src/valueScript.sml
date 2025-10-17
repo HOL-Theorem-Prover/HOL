@@ -13,11 +13,13 @@ app load
    "metisLib","posrealLib","expectationTheory","intLib", "wpTheory"];
 quietdec := true;
 *)
+Theory value
+Ancestors
+  combin list rich_list string integer real poset posreal
+  expectation wp
+Libs
+  intLib realLib metisLib posrealLib
 
-open HolKernel Parse boolLib bossLib intLib realLib metisLib;
-open combinTheory listTheory rich_listTheory stringTheory integerTheory
-     realTheory;
-open posetTheory posrealTheory posrealLib expectationTheory wpTheory;
 
 (*
 quietdec := false;
@@ -26,8 +28,6 @@ quietdec := false;
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "value"                                         *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = new_theory "value";
 
 (* ------------------------------------------------------------------------- *)
 (* Helpful proof tools                                                       *)
@@ -58,19 +58,22 @@ val () = Hol_datatype `value =
 (* Useful Functions for Turning Values into nums or ints                     *)
 (* ------------------------------------------------------------------------- *)
 
-val int_of_value_def = Define
-   `int_of_value (Int i) = i`;
+Definition int_of_value_def:
+    int_of_value (Int i) = i
+End
 
-val num_of_value_def = Define
-   `num_of_value i = Num (int_of_value i)`;
+Definition num_of_value_def:
+    num_of_value i = Num (int_of_value i)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions for dealing with Array assignment                             *)
 (* ------------------------------------------------------------------------- *)
 
-val update_nth_def = Define
- `(update_nth l 0 v = v :: TL l) /\
-  (update_nth l (SUC n) v = HD l :: update_nth (TL l) n v)`;
+Definition update_nth_def:
+  (update_nth l 0 v = v :: TL l) /\
+  (update_nth l (SUC n) v = HD l :: update_nth (TL l) n v)
+End
 
 val update_nth_length = store_thm
  ("update_nth_length",
@@ -94,14 +97,17 @@ val update_nth_el = store_thm
 
 (* use SNOC for reverse of CONS *)
 
-val update_Array_i_def = Define
-   `update_Array_i (Array l) i v = Array (update_nth l i v)`;
+Definition update_Array_i_def:
+    update_Array_i (Array l) i v = Array (update_nth l i v)
+End
 
-val get_Array_i_def = Define
-   `get_Array_i (Array l) i = EL i l`;
+Definition get_Array_i_def:
+    get_Array_i (Array l) i = EL i l
+End
 
-val Array_length_def = Define
-   `Array_length (Array l) = LENGTH l`;
+Definition Array_length_def:
+    Array_length (Array l) = LENGTH l
+End
 
 val update_Array_i_length = store_thm
  ("update_Array_i_length",
@@ -121,8 +127,9 @@ val update_Array_i_el = store_thm
    ++ FULL_SIMP_TAC arith_ss [update_Array_i_def, get_Array_i_def, Array_length_def]
    ++ RW_TAC arith_ss [update_nth_el]);
 
-val extend_Array_def = Define
-  `extend_Array (Array l) v = Array (SNOC v l)`;
+Definition extend_Array_def:
+   extend_Array (Array l) v = Array (SNOC v l)
+End
 
 val extend_Array_length = store_thm
  ("extend_Array_length",
@@ -139,22 +146,27 @@ val extend_Array_el = store_thm
   RW_TAC arith_ss []
   ++ FULL_SIMP_TAC arith_ss [get_Array_i_def, extend_Array_def, Array_length_def, EL_SNOC, EL_LENGTH_SNOC]);
 
-val Assign_Array_num_i = Define
-   `Assign_Array_num_i v i (e:value state -> value) = Assign v (\s. update_Array_i (s v) i (e s))`;
+Definition Assign_Array_num_i:
+    Assign_Array_num_i v i (e:value state -> value) = Assign v (\s. update_Array_i (s v) i (e s))
+End
 
-val Assign_Array_i = Define
-   `Assign_Array_i v i (e:value state -> value) =
-       Assign v (\(s:value state). update_Array_i (s v) (num_of_value(s i)) (e s))`;
+Definition Assign_Array_i:
+    Assign_Array_i v i (e:value state -> value) =
+       Assign v (\(s:value state). update_Array_i (s v) (num_of_value(s i)) (e s))
+End
 
-val Assign_Array_extend = Define
-   `Assign_Array_extend v (e:value state -> value) = Assign v (\(s:value state). extend_Array (s v) (e s))`;
+Definition Assign_Array_extend:
+    Assign_Array_extend v (e:value state -> value) = Assign v (\(s:value state). extend_Array (s v) (e s))
+End
 
-val Assign_Array_empty = Define
-   `Assign_Array_empty v = Assign v (\s. Array [])`;
+Definition Assign_Array_empty:
+    Assign_Array_empty v = Assign v (\s. Array [])
+End
 
-val n_list_def = Define
-   `(n_list 0 x = []) /\
-    (n_list (SUC n) x = x::(n_list (n) x))`;
+Definition n_list_def:
+    (n_list 0 x = []) /\
+    (n_list (SUC n) x = x::(n_list (n) x))
+End
 
 val length_of_n_list = store_thm
   ("length_of_n_list",
@@ -163,35 +175,43 @@ val length_of_n_list = store_thm
    ++ Induct_on `n`
    ++ RW_TAC arith_ss [LENGTH, n_list_def]);
 
-val New_Array = Define
-   `New_Array a n = Assign a (\s. Array (n_list (num_of_value (s n)) Null))`;
+Definition New_Array:
+    New_Array a n = Assign a (\s. Array (n_list (num_of_value (s n)) Null))
+End
 
-val NondetAssign_Array_num_i_def = Define
-   `NondetAssign_Array_num_i a i xs =
-        Nondets (MAP (\x. Assign_Array_num_i a i (\s. x)) xs)`;
+Definition NondetAssign_Array_num_i_def:
+    NondetAssign_Array_num_i a i xs =
+        Nondets (MAP (\x. Assign_Array_num_i a i (\s. x)) xs)
+End
 
-val NondetAssign_Array_i_def = Define
-   `NondetAssign_Array_i a i xs =
-        Nondets (MAP (\x. Assign_Array_i a i (\s. x)) xs)`;
+Definition NondetAssign_Array_i_def:
+    NondetAssign_Array_i a i xs =
+        Nondets (MAP (\x. Assign_Array_i a i (\s. x)) xs)
+End
 
-val ProbAssign_Array_num_i_def = Define
-   `ProbProbAssign_Array_num_i a i xs =
-        Probs (MAP (\x. (1/ & (LENGTH xs), Assign_Array_num_i a i (\s. x))) xs)`;
+Definition ProbAssign_Array_num_i_def:
+    ProbProbAssign_Array_num_i a i xs =
+        Probs (MAP (\x. (1/ & (LENGTH xs), Assign_Array_num_i a i (\s. x))) xs)
+End
 
-val ProbAssign_Array_i_def = Define
-   `ProbAssign_Array_i a i xs =
-        Probs (MAP (\x. (1/ & (LENGTH xs), Assign_Array_i a i (\s. x))) xs)`;
+Definition ProbAssign_Array_i_def:
+    ProbAssign_Array_i a i xs =
+        Probs (MAP (\x. (1/ & (LENGTH xs), Assign_Array_i a i (\s. x))) xs)
+End
 
-val NondetAssign_Array_extend_def = Define
-   `NondetAssign_Array_extend a xs =
-        Nondets (MAP (\x. Assign_Array_extend a (\s. x)) xs)`;
+Definition NondetAssign_Array_extend_def:
+    NondetAssign_Array_extend a xs =
+        Nondets (MAP (\x. Assign_Array_extend a (\s. x)) xs)
+End
 
-val ProbAssign_Array_extend_def = Define
-   `ProbAssign_Array_extend a xs =
-        Probs (MAP (\x. (1/ & (LENGTH xs), Assign_Array_extend a (\s. x))) xs)`;
+Definition ProbAssign_Array_extend_def:
+    ProbAssign_Array_extend a xs =
+        Probs (MAP (\x. (1/ & (LENGTH xs), Assign_Array_extend a (\s. x))) xs)
+End
 
-val For_0_to_n_def = Define
-   `For_0_to_n i n l = For i (\s. Int 0) (\s. (int_of_value(s i)) < (int_of_value(s n))) (\s. Int ((int_of_value(s i)) + 1)) l`;
+Definition For_0_to_n_def:
+    For_0_to_n i n l = For i (\s. Int 0) (\s. (int_of_value(s i)) < (int_of_value(s n))) (\s. Int ((int_of_value(s i)) + 1)) l
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Showing the need for SUB-linearity for value states.                      *)
@@ -206,4 +226,3 @@ val sublinear_necessary_value = store_thm
    ++ Q.EXISTS_TAC `Int 0`
    ++ RW_TAC std_ss []);
 
-val _ = export_theory();

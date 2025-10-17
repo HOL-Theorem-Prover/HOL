@@ -1,10 +1,8 @@
-open HolKernel Parse boolLib bossLib stringLib
-
-open pred_setTheory
-
-open basic_swapTheory nomsetTheory NEWLib
-
-val _ = new_theory "lambda_hol"
+Theory lambda_hol
+Ancestors
+  pred_set basic_swap nomset
+Libs
+  stringLib NEWLib
 
 (* a theory of higher order logic terms, as modelled in systems such as
    HOL4, Isabelle/HOL and HOL Light *)
@@ -420,4 +418,3 @@ Proof
   ]
 QED
 
-val _ = export_theory()

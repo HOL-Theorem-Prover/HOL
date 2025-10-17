@@ -1,20 +1,15 @@
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory pred_setTheory
-     listTheory sequenceTheory state_transformerTheory
-     hurdUtils extra_numTheory combinTheory
-     pairTheory realTheory realLib extra_boolTheory
-     extra_pred_setTheory extra_realTheory extra_pred_setTools numTheory
-     simpLib seqTheory sequenceTools subtypeTheory res_quanTheory;
-
-open sigma_algebraTheory real_measureTheory real_probabilityTheory;
-open prob_algebraTheory probTheory;
+Theory prob_geometric
+Ancestors
+  arithmetic pred_set list sequence state_transformer extra_num
+  combin pair real extra_bool extra_pred_set extra_real num seq
+  subtype res_quan sigma_algebra real_measure real_probability
+  prob_algebra prob
+Libs
+  hurdUtils realLib extra_pred_setTools simpLib sequenceTools
 
 (* interactive mode
 quietdec := false;
 *)
-
-val _ = new_theory "prob_geometric";
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
 val std_ss' = std_ss ++ boolSimps.ETA_ss;
@@ -34,15 +29,18 @@ val Cond =
 (* The definition of the geometric(1/2) random number generator.             *)
 (* ------------------------------------------------------------------------- *)
 
-val prob_geometric_iter_def = Define
-  `prob_geometric_iter s = BIND sdest (\b. UNIT (b, SUC (SND s)))`;
+Definition prob_geometric_iter_def:
+   prob_geometric_iter s = BIND sdest (\b. UNIT (b, SUC (SND s)))
+End
 
-val prob_geometric_loop_def = Define
-  `prob_geometric_loop = prob_while FST prob_geometric_iter`;
+Definition prob_geometric_loop_def:
+   prob_geometric_loop = prob_while FST prob_geometric_iter
+End
 
-val prob_geometric_def = Define
-  `prob_geometric =
-   BIND (BIND (UNIT (T, 0)) prob_geometric_loop) (\s. UNIT (SND s - 1))`;
+Definition prob_geometric_def:
+   prob_geometric =
+   BIND (BIND (UNIT (T, 0)) prob_geometric_loop) (\s. UNIT (SND s - 1))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems leading to:                                                      *)
@@ -314,4 +312,3 @@ val PROB_BERN_GEOMETRIC = store_thm
     RW_TAC std_ss [GSPECIFICATION]
     >> DECIDE_TAC]);
 
-val _ = export_theory ();
