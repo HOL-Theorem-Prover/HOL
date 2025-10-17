@@ -1650,6 +1650,64 @@ Proof
       Q.EXISTS_TAC ‘Y’ >> rw [] ]
 QED
 
+Theorem real_random_variable_equiv :
+    !p X. prob_space p ==>
+          (real_random_variable (Normal o X) p <=>
+             random_variable X p borel)
+Proof
+    rw [real_random_variable_def, random_variable_def,
+        AND_INTRO_THM, EQ_IMP_THM]
+ >- (MP_TAC (Q.SPECL [‘(p_space p,events p)’, ‘Normal o X’]
+             in_borel_measurable_from_Borel) \\
+     FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA_BOREL, prob_space_def,
+                           p_space_def, events_def, measure_space_def] \\
+     rw [o_DEF] \\
+     METIS_TAC [])
+ >> irule IN_MEASURABLE_BOREL_IMP_BOREL'
+ >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA_BOREL, prob_space_def, p_space_def, events_def, measure_space_def]
+QED
+
+Theorem real_random_variable_abs :
+    !p X.
+          prob_space p /\ real_random_variable X p ==>
+          real_random_variable (λx. abs (X x)) p
+Proof
+    rpt STRIP_TAC
+ >> fs [real_random_variable, prob_space_def, p_space_def, events_def]
+ >> CONJ_TAC
+ (* (λx. abs (X x)) IN Borel_measurable (measurable_space p) *)
+ >- (irule IN_MEASURABLE_BOREL_ABS \\
+     FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA_BOREL, measure_space_def] \\
+     qexists ‘X’ \\
+     simp [])
+ (* !x. x IN m_space p ==> abs (X x) <> - ∞ /\ abs (X x) <> +∞ *)
+ >> Q.X_GEN_TAC ‘x’
+ >> DISCH_TAC
+ >> ‘?z. X x = Normal z’ by METIS_TAC [extreal_cases] >> POP_ORW
+ >> rw[extreal_abs_def]
+QED
+
+Theorem real_random_variable_exp :
+  !p X r. prob_space p /\ real_random_variable X p ==> real_random_variable (λx. exp (X x)) p
+Proof
+  rpt GEN_TAC
+  >> simp [real_random_variable, prob_space_def, p_space_def, events_def]
+  >> STRIP_TAC
+  >> CONJ_TAC
+  >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_EXP >>  qexists_tac ‘X’ >> rw [])
+  >> Q.X_GEN_TAC ‘x’
+  >> DISCH_TAC
+  >> ‘?z. X x = Normal z’ by METIS_TAC [extreal_cases] >> POP_ORW
+  >> rw[extreal_exp_def]
+QED
+
+Theorem real_random_variable_exp_normal :
+    !p X r s. prob_space p /\ real_random_variable X p ==>
+              real_random_variable (λx. exp (Normal s * X x)) p
+Proof
+    rw [real_random_variable_cmul, real_random_variable_exp]
+QED
+
 (* added `integrable p X`, otherwise `expectation p X` is not defined *)
 Theorem finite_expectation1:
     !p X. prob_space p /\ FINITE (p_space p) /\
@@ -2270,6 +2328,25 @@ Proof
  >> MATCH_MP_TAC abs_pow_le_mono >> art []
 QED
 
+Theorem integrable_finite_expectation :
+  !p X n.
+    prob_space p /\ real_random_variable X p /\
+    integrable p (\x. (abs (X x)) pow n) ==>
+    (!m. m <= n ==> integrable p (λx. (X x) pow m))
+Proof
+  rpt STRIP_TAC
+  >> MATCH_MP_TAC integrable_from_abs
+  >> fs [prob_space_def]
+  >> CONJ_TAC
+  >- (irule IN_MEASURABLE_BOREL_POW' \\
+      simp [MEASURE_SPACE_SIGMA_ALGEBRA] \\
+      qexistsl [‘X’, ‘m’] >> fs [real_random_variable, p_space_def, events_def])
+  >> rw [o_DEF]
+  >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘n’] integrable_absolute_moments)
+  >> impl_tac >- (fs [prob_space_def])
+  >> rw [GSYM pow_abs]
+QED
+
 Theorem variance_alt:
     !p X. variance p X = expectation p (\x. (X x - expectation p X) pow 2)
 Proof
@@ -2525,6 +2602,38 @@ Theorem expectation_cong :
 Proof
     rw [prob_space_def, p_space_def, expectation_def]
  >> MATCH_MP_TAC integral_cong >> art []
+QED
+
+Theorem expectation_add :
+  !p f g.
+    prob_space p /\ integrable p f /\ integrable p g ==>
+    expectation p (λx. f x + g x) = expectation p f + expectation p g
+Proof
+  rw [expectation_def, prob_space_def]
+  >> MATCH_MP_TAC integral_add'
+  >> simp []
+QED
+
+Theorem expectation_sub :
+  !p X Y.
+    prob_space p /\
+    integrable p X /\
+    integrable p Y ==>
+    expectation p (λx. X x - Y x) = expectation p X - expectation p Y
+Proof
+  rw [expectation_def, prob_space_def]
+  >> MATCH_MP_TAC integral_sub'
+  >> simp []
+QED
+
+Theorem expectation_mono:
+  !p f g.
+    prob_space p /\ integrable p f /\ integrable p g /\
+    (!x. x IN p_space p ==> f x <= g x) ==>
+    expectation p f <= expectation p g
+Proof
+  rw [prob_space_def, p_space_def, expectation_def]
+  >> MATCH_MP_TAC integral_mono >> art []
 QED
 
 Theorem variance_cong :
