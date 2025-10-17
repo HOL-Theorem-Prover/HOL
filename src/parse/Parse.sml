@@ -465,6 +465,7 @@ fun smashErrm m =
   case m Pretype.Env.empty of
       errormonad.Error e => raise Preterm.mkExn e
     | errormonad.Some (_, result) => result
+
 val stdprinters = SOME(term_to_string,type_to_string)
 
 fun ctxt_absyn_to_preterm fvs a =
