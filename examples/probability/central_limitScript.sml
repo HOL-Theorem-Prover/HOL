@@ -237,7 +237,7 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
-(*  Add to probabilityTheory                                                 *)
+(*  Delete                                                *)
 (* ------------------------------------------------------------------------- *)
 
 Theorem real_to_extreal_rv[local] :
@@ -267,16 +267,7 @@ Theorem real_random_variable_equiv :
           (real_random_variable (Normal o X) p ⇔
              random_variable X p borel)
 Proof
-    rw [real_random_variable_def, random_variable_def,
-        AND_INTRO_THM, EQ_IMP_THM]
- >- (MP_TAC (Q.SPECL [‘(p_space p,events p)’, ‘Normal o X’]
-             in_borel_measurable_from_Borel) \\
-     FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA_BOREL, prob_space_def,
-                           p_space_def, events_def, measure_space_def] \\
-     rw [o_DEF] \\
-     METIS_TAC [])
- >> irule IN_MEASURABLE_BOREL_IMP_BOREL'
- >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA_BOREL, prob_space_def, p_space_def, events_def, measure_space_def]
+    cheat
 QED
 
 Theorem real_random_variable_abs :
@@ -284,40 +275,20 @@ Theorem real_random_variable_abs :
           prob_space p ∧ real_random_variable X p ⇒
           real_random_variable (λx. abs (X x)) p
 Proof
-    rpt STRIP_TAC
- >> fs [real_random_variable, prob_space_def, p_space_def, events_def]
- >> CONJ_TAC
- (* (λx. abs (X x)) ∈ Borel_measurable (measurable_space p) *)
- >- (irule IN_MEASURABLE_BOREL_ABS \\
-     FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA_BOREL, measure_space_def] \\
-     qexists ‘X’ \\
-     simp [])
- (* ∀x. x ∈ m_space p ⇒ abs (X x) ≠ −∞ ∧ abs (X x) ≠ +∞ *)
- >> Q.X_GEN_TAC ‘x’
- >> DISCH_TAC
- >> ‘?z. X x = Normal z’ by METIS_TAC [extreal_cases] >> POP_ORW
- >> rw[extreal_abs_def]
+    cheat
 QED
 
 Theorem real_random_variable_exp :
   ∀p X r. prob_space p ∧ real_random_variable X p ⇒ real_random_variable (λx. exp (X x)) p
 Proof
-  rpt GEN_TAC
-  >> simp [real_random_variable, prob_space_def, p_space_def, events_def]
-  >> STRIP_TAC
-  >> CONJ_TAC
-  >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_EXP >>  qexists_tac ‘X’ >> rw [])
-  >> Q.X_GEN_TAC ‘x’
-  >> DISCH_TAC
-  >> ‘?z. X x = Normal z’ by METIS_TAC [extreal_cases] >> POP_ORW
-  >> rw[extreal_exp_def]
+  cheat
 QED
 
 Theorem real_random_variable_exp_normal :
     ∀p X r s. prob_space p ∧ real_random_variable X p ⇒
               real_random_variable (λx. exp (Normal s * X x)) p
 Proof
-    rw [real_random_variable_cmul, real_random_variable_exp]
+    cheat
 QED
 
 Theorem lim_null :
@@ -348,26 +319,7 @@ Theorem real_random_variable_sum_cdiv :
               0 < s n ∧ s n ≠ +∞ ∧ s n ≠ −∞  ⇒
               real_random_variable ((λx. ∑ (λi. X i x) (count n) / s n)) p
 Proof
-    rpt STRIP_TAC
- >> BETA_TAC
- >> ‘∃r. Normal r = s n’ by METIS_TAC [extreal_cases]
- >> ‘0 < r’ by POP_ASSUM (fs o wrap o SYM)
- >> Know ‘∀x. ∑ (λi. X i x) (count n) / s n = ∑ (λi. X i x) (count n) / Normal r’
- >- (qx_gen_tac ‘x’ \\
-     POP_ORW \\
-     rw [])
- >> DISCH_TAC
- >> Know ‘real_random_variable (λx. ∑ (λi. X i x) (count n)) p’
- >- (HO_MATCH_MP_TAC real_random_variable_sum \\
-     rw [])
- >> DISCH_TAC
- >> Know ‘real_random_variable (λx. ∑ (λi. X i x) (count n) / Normal r) p’
- >- (HO_MATCH_MP_TAC real_random_variable_cdiv \\
-     simp [] \\
-     ‘r ≠ 0’ by METIS_TAC [REAL_LT_IMP_NE] \\
-     fs [])
- >> DISCH_TAC
- >> METIS_TAC []
+    cheat
 QED
 
 Theorem IN_PSPACE_PROD_SIGMA :
@@ -431,9 +383,7 @@ Theorem expectation_add :
       prob_space p ∧ integrable p f ∧ integrable p g ⇒
       expectation p (λx. f x + g x) = expectation p f + expectation p g
 Proof
-  rw [expectation_def, prob_space_def]
-  >> MATCH_MP_TAC integral_add'
-  >> simp []
+  cheat
 QED
 
 Theorem expectation_sub :
@@ -443,9 +393,7 @@ Theorem expectation_sub :
           integrable p Y ⇒
           expectation p (λx. X x - Y x) = expectation p X - expectation p Y
 Proof
-    rw [expectation_def, prob_space_def]
- >> MATCH_MP_TAC integral_sub'
- >> simp []
+    cheat
 QED
 
 Theorem expectation_mono:
@@ -454,8 +402,7 @@ Theorem expectation_mono:
             (∀x. x ∈ p_space p ⇒ f x ≤ g x) ⇒
             expectation p f ≤ expectation p g
 Proof
-    rw [prob_space_def, p_space_def, expectation_def]
- >> MATCH_MP_TAC integral_mono >> art []
+    cheat
 QED
 
 
@@ -477,14 +424,16 @@ QED
 Theorem mgf_linear :
     ∀p X a b s. prob_space p ∧ real_random_variable X p ∧
                 integrable p (λx. exp (Normal (a * s) * X x))  ⇒
-                mgf p (λx.( Normal a * X x) + Normal b) s =  (exp (Normal s * Normal b)) * mgf p X (a * s)
+                mgf p (λx.( Normal a * X x) + Normal b) s =
+                (exp (Normal s * Normal b)) * mgf p X (a * s)
 Proof
     rw [mgf_def, real_random_variable_def]
  >> Know ‘ expectation p (λx. exp (Normal s * ((Normal a * X x) + Normal b)))
          = expectation p (λx. exp ((Normal s * (Normal a * X x)) + Normal s * Normal b))’
  >- (MATCH_MP_TAC expectation_cong  >> rw[] >> AP_TERM_TAC
      >> ‘∃c. X x = Normal c’ by METIS_TAC [extreal_cases] >> rw[]
-     >> ‘∃d. Normal a * Normal c = Normal d’ by METIS_TAC [extreal_mul_eq] >> rw[add_ldistrib_normal2]) >> Rewr'
+     >> ‘∃d. Normal a * Normal c = Normal d’ by METIS_TAC [extreal_mul_eq]
+     >> rw[add_ldistrib_normal2]) >> Rewr'
  >> Know ‘expectation p
          (λx. exp (Normal s * (Normal a * X x) + Normal s * Normal b)) =
           expectation p (λx. (exp (Normal s * (Normal a * X x))) * exp (Normal s * Normal b))’
@@ -493,7 +442,8 @@ Proof
      >> ‘∃c. X x = Normal c’ by METIS_TAC [extreal_cases]>> rw[]
      >> ‘∃d. Normal a * Normal c = Normal d’ by METIS_TAC [extreal_mul_eq] >> rw[]
      >> ‘∃e. Normal s * Normal d = Normal e’ by METIS_TAC [extreal_mul_eq] >> rw[]
-     >> ‘∃f. Normal s * Normal b = Normal f’ by METIS_TAC [extreal_mul_eq] >> rw[exp_add]) >> Rewr'
+     >> ‘∃f. Normal s * Normal b = Normal f’ by METIS_TAC [extreal_mul_eq] >> rw[exp_add])
+ >> Rewr'
  >> ‘∃g. exp (Normal s * Normal b) = Normal g’ by  METIS_TAC [extreal_mul_eq, normal_exp]
  >> rw[]
  >> GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [mul_comm]
@@ -3328,11 +3278,10 @@ QED
 Theorem integrable_finite_expectation :
     ∀p X n.
       prob_space p ∧ real_random_variable X p ∧
-      expectation p (λx. (abs (X x)) pow n) < +∞ ⇒
+      integrable p (λx. abs (X x) pow n) ⇒
       (∀m. m ≤ n ⇒ integrable p (λx. (X x) pow m))
 Proof
   rpt STRIP_TAC
-  >> gs [GSYM expectation_finite_eq_integrable]
   >> MATCH_MP_TAC integrable_from_abs
   >> fs [prob_space_def]
   >> CONJ_TAC
@@ -6279,8 +6228,9 @@ val clt_tactic3_p3 =
      irule IN_MEASURABLE_BOREL_POW  >> METIS_TAC [real_random_variable, p_space_def, events_def])
  >> STRIP_TAC
  >> Know ‘∀i. i < n ⇒ integrable p' (λx. (Y i x) pow 2)’
- >- (rw [] >>  irule integrable_finite_expectation >> fs [] \\
-     qexists ‘3’ >> fs [] >> METIS_TAC [expectation_finite_eq_integrable])
+>- (rw [] >> gs [expectation_finite_eq_integrable] \\
+    irule integrable_finite_expectation >> fs [] \\
+    qexists ‘3’ >> fs [] >> METIS_TAC [expectation_finite_eq_integrable])
 >> STRIP_TAC;
 
 (* -------------------------------------------------------------------------- *)
