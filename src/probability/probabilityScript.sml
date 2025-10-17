@@ -1708,6 +1708,34 @@ Proof
     rw [real_random_variable_cmul, real_random_variable_exp]
 QED
 
+Theorem real_random_variable_sum_cdiv :
+  !p X s n. prob_space p /\
+            (!i. i IN (count n) ==> real_random_variable (X i) p) /\
+            0 < s n /\ s n <> PosInf /\ s n <> NegInf  ==>
+            real_random_variable ((λx. ∑ (λi. X i x) (count n) / s n)) p
+Proof
+  rpt STRIP_TAC
+  >> BETA_TAC
+  >> ‘?r. Normal r = s n’ by METIS_TAC [extreal_cases]
+  >> ‘0 < r’ by POP_ASSUM (fs o wrap o SYM)
+  >> Know ‘!x. ∑ (λi. X i x) (count n) / s n = ∑ (λi. X i x) (count n) / Normal r’
+  >- (qx_gen_tac ‘x’ \\
+      POP_ORW \\
+      rw [])
+  >> DISCH_TAC
+  >> Know ‘real_random_variable (λx. ∑ (λi. X i x) (count n)) p’
+  >- (HO_MATCH_MP_TAC real_random_variable_sum \\
+      rw [])
+  >> DISCH_TAC
+  >> Know ‘real_random_variable (λx. ∑ (λi. X i x) (count n) / Normal r) p’
+  >- (HO_MATCH_MP_TAC real_random_variable_cdiv \\
+      simp [] \\
+      ‘r <> 0’ by METIS_TAC [REAL_LT_IMP_NE] \\
+      fs [])
+  >> DISCH_TAC
+  >> METIS_TAC []
+QED
+
 (* added `integrable p X`, otherwise `expectation p X` is not defined *)
 Theorem finite_expectation1:
     !p X. prob_space p /\ FINITE (p_space p) /\
