@@ -17,6 +17,8 @@ open extrealTheory sigma_algebraTheory measureTheory
 open distributionTheory realaxTheory stochastic_processTheory listTheory
                         rich_listTheory limTheory;
 
+open complexityTheory;
+
 val _ = new_theory "central_limit";
 
 val _ = intLib.deprecate_int();
@@ -1820,11 +1822,11 @@ Proof
   cheat
 QED
 
-(* Gammar func with ComplexTheory *)
 Theorem ext_normal_rv_abs_third_moment :
     ∀p X sig. prob_space p ∧ 0 < sig ∧
               ext_normal_rv X p 0 sig ⇒
-              expectation p (λx. abs (X x) pow 3) = sqrt (8 / Normal pi) * Normal (sig pow 3)
+              expectation p (λx. abs (X x) pow 3) =
+              sqrt (8 / Normal pi) * Normal (sig pow 3)
 Proof
   cheat
 QED
