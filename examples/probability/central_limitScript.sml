@@ -3277,7 +3277,7 @@ Proof
   >> METIS_TAC [IN_MEASURABLE_BOREL_POW]
 QED
 
-Theorem integrable_finite_expectation :
+Theorem integrable_absolute_moments_mono :
     ∀p X n.
       prob_space p ∧ real_random_variable X p ∧
       integrable p (λx. abs (X x) pow n) ⇒
@@ -6231,7 +6231,7 @@ val clt_tactic3_p3 =
  >> STRIP_TAC
  >> Know ‘∀i. i < n ⇒ integrable p' (λx. (Y i x) pow 2)’
 >- (rw [] >> gs [expectation_finite_eq_integrable] \\
-    irule integrable_finite_expectation >> fs [] \\
+    irule integrable_absolute_moments_mono >> fs [] \\
     qexists ‘3’ >> fs [] >> METIS_TAC [expectation_finite_eq_integrable])
 >> STRIP_TAC;
 
