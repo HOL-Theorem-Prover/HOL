@@ -2356,7 +2356,7 @@ Proof
  >> MATCH_MP_TAC abs_pow_le_mono >> art []
 QED
 
-Theorem integrable_finite_expectation :
+Theorem integrable_absolute_moments_mono :
   !p X n.
     prob_space p /\ real_random_variable X p /\
     integrable p (\x. (abs (X x)) pow n) ==>
