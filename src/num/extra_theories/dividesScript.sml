@@ -147,9 +147,11 @@ Proof
   METIS_TAC [MULT_EQ_1]
 QED
 
-val DIVIDES_EXP = Q.prove
-(`!a b x. 0 < x /\ divides a b ==> divides a (b ** x)`,
- Cases_on `x` THEN RW_TAC arith_ss [EXP] THEN METIS_TAC [DIVIDES_MULT]);
+Theorem DIVIDES_EXP[local]:
+  !a b x. 0 < x /\ divides a b ==> divides a (b ** x)
+Proof
+ Cases_on `x` THEN RW_TAC arith_ss [EXP] THEN METIS_TAC [DIVIDES_MULT]
+QED
 
 Theorem DIVIDES_FACT:
    !b. 0<b ==> divides b (FACT b)

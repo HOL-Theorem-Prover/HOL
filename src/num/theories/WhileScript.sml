@@ -20,9 +20,11 @@ end
 fun INDUCT_TAC g = INDUCT_THEN numTheory.INDUCTION ASSUME_TAC g;
 fun simp ths = asm_simp_tac (srw_ss()) ths
 
-val cond_lemma = prove(
-  ``(if ~p then q else r) = (if p then r else q)``,
-  Q.ASM_CASES_TAC `p` THEN ASM_REWRITE_TAC []);
+Theorem cond_lemma[local]:
+    (if ~p then q else r) = (if p then r else q)
+Proof
+  Q.ASM_CASES_TAC `p` THEN ASM_REWRITE_TAC []
+QED
 
 (* ----------------------------------------------------------------------
     Existence of WHILE
@@ -415,10 +417,12 @@ Proof
   ]
 QED
 
-val IF_SOME_EQ_SOME_LEMMA = prove(
-  ``!b (x:'a) y. ((if b then SOME x else NONE) = SOME y) <=> b /\ (x = y)``,
+Theorem IF_SOME_EQ_SOME_LEMMA[local]:
+    !b (x:'a) y. ((if b then SOME x else NONE) = SOME y) <=> b /\ (x = y)
+Proof
   Cases THEN
-  FULL_SIMP_TAC bool_ss [optionTheory.NOT_NONE_SOME,optionTheory.SOME_11]);
+  FULL_SIMP_TAC bool_ss [optionTheory.NOT_NONE_SOME,optionTheory.SOME_11]
+QED
 
 Theorem OWHILE_IND:
     !P G (f:'a->'a).

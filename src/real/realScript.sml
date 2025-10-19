@@ -4411,22 +4411,26 @@ Theorem NUM_CEILING_def = NUM_CEILING_def
 val lem = SIMP_RULE arith_ss [REAL_POS,REAL_ADD_RID]
               (Q.SPECL[`y`,`&n`,`0r`,`1r`] REAL_LTE_ADD2);
 
-val add1_gt_exists = prove(
-  ``!y : real. ?n. & (n + 1) > y``,
+Theorem add1_gt_exists[local]:
+    !y : real. ?n. & (n + 1) > y
+Proof
   GEN_TAC THEN Q.SPEC_THEN `1` MP_TAC REAL_ARCH THEN
   SIMP_TAC (srw_ss()) [] THEN
   DISCH_THEN (Q.SPEC_THEN `y` STRIP_ASSUME_TAC) THEN
   Q.EXISTS_TAC `n` THEN
   SIMP_TAC arith_ss [GSYM REAL_ADD,real_gt,REAL_LT_ADDL,REAL_LT_ADDR] THEN
-  METIS_TAC [lem]);
+  METIS_TAC [lem]
+QED
 
-val lt_add1_exists = prove(
-  ``!y: real. ?n. y < &(n + 1)``,
+Theorem lt_add1_exists[local]:
+    !y: real. ?n. y < &(n + 1)
+Proof
   GEN_TAC THEN Q.SPEC_THEN `1` MP_TAC REAL_ARCH THEN
   SIMP_TAC (srw_ss()) [] THEN
   DISCH_THEN (Q.SPEC_THEN `y` STRIP_ASSUME_TAC) THEN
   Q.EXISTS_TAC `n` THEN
-  SIMP_TAC bool_ss [GSYM REAL_ADD] THEN METIS_TAC [lem]);
+  SIMP_TAC bool_ss [GSYM REAL_ADD] THEN METIS_TAC [lem]
+QED
 
 Theorem NUM_FLOOR_LE:
     0 <= x ==> &(NUM_FLOOR x) <= x
@@ -4527,20 +4531,23 @@ val lem =
   metisLib.METIS_PROVE [REAL_LT_01, REAL_LET_TRANS]
     ``!r: real. r <= 0 ==> r < 1``
 
-val NUM_FLOOR_NEG = Q.prove(
-  `NUM_FLOOR (~real_of_num n) = 0`,
+Theorem NUM_FLOOR_NEG[local]:
+   NUM_FLOOR (~real_of_num n) = 0
+Proof
   MATCH_MP_TAC NUM_FLOOR_BASE
   THEN MATCH_MP_TAC lem
-  THEN REWRITE_TAC [REAL_NEG_LE0, REAL_POS])
+  THEN REWRITE_TAC [REAL_NEG_LE0, REAL_POS]
+QED
 
-val NUM_FLOOR_NEGQ = Q.prove(
-  `0 < m ==> (NUM_FLOOR (~real_of_num n / real_of_num m) = 0)`,
+Theorem NUM_FLOOR_NEGQ[local]:
+   0 < m ==> (NUM_FLOOR (~real_of_num n / real_of_num m) = 0)
+Proof
   ONCE_REWRITE_TAC [GSYM REAL_LT]
   THEN STRIP_TAC
   THEN MATCH_MP_TAC NUM_FLOOR_BASE
   THEN ASM_SIMP_TAC std_ss [REAL_LT_LDIV_EQ, REAL_MUL_LID, lt_int]
   THEN FULL_SIMP_TAC arith_ss [REAL_LT]
-  )
+QED
 
 Theorem NUM_FLOOR_EQNS:
     (NUM_FLOOR (real_of_num n) = n) /\
@@ -5872,8 +5879,9 @@ Proof
   ASM_REWRITE_TAC[real_sub, GSYM REAL_MUL_LNEG]
 QED
 
-val lemma = Q.prove
-   (`!x y. &0 < y ==> (&0 <= x * y <=> &0 <= x)`,
+Theorem lemma[local]:
+     !x y. &0 < y ==> (&0 <= x * y <=> &0 <= x)
+Proof
     rpt GEN_TAC THEN DISCH_TAC THEN EQ_TAC THEN DISCH_TAC THENL
     [ (* goal 1 (of 2) *)
       Q.SUBGOAL_THEN `&0 <= x * (y * inv y)` MP_TAC THENL
@@ -5888,7 +5896,8 @@ val lemma = Q.prove
         Q.UNDISCH_TAC `&0 < y` THEN REAL_ARITH_TAC ],
       (* goal 2 (of 2) *)
       MATCH_MP_TAC REAL_LE_MUL THEN ASM_REWRITE_TAC[] THEN
-      MATCH_MP_TAC REAL_LT_IMP_LE THEN ASM_REWRITE_TAC[] ]);
+      MATCH_MP_TAC REAL_LT_IMP_LE THEN ASM_REWRITE_TAC[] ]
+QED
 
 (* These are HOL-Light compatible names (locally used):
    |- !x y. 0 < x /\ x < y ==> realinv y < realinv x
