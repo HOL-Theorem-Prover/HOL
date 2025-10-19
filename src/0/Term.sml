@@ -766,28 +766,78 @@ fun inst_ty_tm_3 theta tytheta =
     nochange_total isubst
   end
 
+(*---------------------------------------------------------------------------*)
+(* Space saving via pointer equality                                         *)
+(*---------------------------------------------------------------------------*)
+
+fun inst_ty_tm_4 theta tytheta =
+  let val vmap = var_map_of theta
+      fun fv_subst v = HOLdict.find(vmap,v) handle NotFound => v
+      val tysubst = Type.type_subst tytheta
+      fun fv_inst (tm as Fv(s,ty)) = let val new_ty = tysubst ty
+                                     in
+                                       if Portable.pointer_eq(ty,new_ty)
+                                       then tm else Fv(s,new_ty)
+                                     end
+      val fvFn =
+          if null tytheta then
+             fv_subst
+          else if null theta then
+             fv_inst
+          else
+	     fv_subst o fv_inst
+      fun isubst tm =
+       case tm
+        of Bv _ => tm
+         | v as Fv _ => fvFn v
+         | Const(_, GRND _) => tm
+         | Const(r, POLY ty) => let val new_ty = tysubst ty
+                                in
+                                  if Portable.pointer_eq (ty,new_ty)
+                                  then tm else Const(r,tag_type new_ty)
+                                end
+         | Comb(M,N) => let val M' = isubst M
+                            val N' = isubst N
+                        in
+                          if Portable.pointer_eq (M,M') andalso Portable.pointer_eq (N,N')
+                          then tm else Comb(M',N')
+                        end
+         | Abs(v,M) => let val v' = fv_inst v
+                           val M' = isubst M
+                       in
+                          if Portable.pointer_eq (v,v') andalso Portable.pointer_eq (M,M')
+                          then tm else Abs(v',M')
+                       end
+         | Clos _ => isubst(push_clos tm)
+  in
+    isubst
+  end;
+
 exception AGREE_ERR of
     (term,term) subst *
     (hol_type,hol_type) subst *
-    term * term * term * term * term
+    term * term * term * term * term * term
 
 fun inst_ty_tm_agree theta tytheta =
   let val fn0 = inst_ty_tm_0 theta tytheta
       val fn1 = inst_ty_tm_1 theta tytheta
       val fn2 = inst_ty_tm_2 theta tytheta
       val fn3 = inst_ty_tm_3 theta tytheta
+      val fn4 = inst_ty_tm_4 theta tytheta
   in
     fn tm =>
       let val tm0 = fn0 tm
           val tm1 = fn1 tm
           val tm2 = fn2 tm
-	  val tm3 = fn3 tm
+	      val tm3 = fn3 tm
+          val tm4 = fn4 tm
       in
          if identical tm0 tm1 andalso
             identical tm1 tm2 andalso
-            identical tm2 tm3 then
+            identical tm2 tm3 andalso
+            identical tm3 tm4 then
             tm1
-         else raise AGREE_ERR (theta,tytheta,tm,tm0,tm1,tm2,tm3)
+         else raise AGREE_ERR (theta,tytheta,tm,tm0,tm1,tm2,tm3,tm4)
        end
   end
 
