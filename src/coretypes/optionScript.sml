@@ -25,11 +25,12 @@ Libs
  * holML formalization (she called it "lift").                               *
  *---------------------------------------------------------------------------*)
 
-val option_TY_DEF =
- new_type_definition
-  ("option",
-   prove(Term`?x:'a + one. (\x.T) x`,
-          BETA_TAC THEN EXISTS_TAC“x:'a + one” THEN ACCEPT_TAC TRUTH));
+Theorem option_not_empty[local]:
+  ?x:'a + one. (\x.T) x
+Proof
+  BETA_TAC THEN EXISTS_TAC“x:'a + one” THEN ACCEPT_TAC TRUTH
+QED
+val option_TY_DEF = new_type_definition ("option", option_not_empty);
 
 local
   val ns = ["Data","Option"]
@@ -210,8 +211,11 @@ val _ = computeLib.add_persistent_funs ["OPTION_MAP2_THM"]
 
 val option_rws = OPTION_MAP2_THM::option_rws;
 
-val ex1_rw = prove(Term`!x. (?y. x = y) /\ (?y. y = x)`,
-   GEN_TAC THEN CONJ_TAC THEN EXISTS_TAC (Term`x`) THEN REFL_TAC);
+Theorem ex1_rw[local]:
+  !x. (?y. x = y) /\ (?y. y = x)
+Proof
+   GEN_TAC THEN CONJ_TAC THEN EXISTS_TAC (Term`x`) THEN REFL_TAC
+QED
 
 fun OPTION_CASES_TAC t = STRUCT_CASES_TAC (ISPEC t option_nchotomy);
 
@@ -242,20 +246,22 @@ Proof
   REWRITE_TAC [GSYM NOT_IS_SOME_EQ_NONE]
 QED
 
-val IS_SOME_EQ_EXISTS = Q.prove(
- `!x. IS_SOME x = (?v. x = SOME v)`,
+Theorem IS_SOME_EQ_EXISTS[local]:
+  !x. IS_SOME x = (?v. x = SOME v)
+Proof
     GEN_TAC
     THEN OPTION_CASES_TAC “(x :'a option)”
     THEN ASM_REWRITE_TAC (ex1_rw::option_rws)
-);
+QED
 
 
-val IS_SOME_IMP_SOME_THE_CANCEL = Q.prove(
-`!x:'a option. IS_SOME x ==> (SOME (THE x) = x)`,
+Theorem IS_SOME_IMP_SOME_THE_CANCEL[local]:
+ !x:'a option. IS_SOME x ==> (SOME (THE x) = x)
+Proof
     GEN_TAC
     THEN OPTION_CASES_TAC “(x :'a option)”
     THEN ASM_REWRITE_TAC option_rws
-);
+QED
 
 Theorem option_case_ID[simp]:
   !x:'a option. option_CASE x NONE SOME = x
@@ -263,12 +269,13 @@ Proof
   GEN_TAC THEN OPTION_CASES_TAC “x :'a option” THEN ASM_REWRITE_TAC option_rws
 QED
 
-val IS_SOME_option_case_SOME = Q.prove(
-`!x:'a option. IS_SOME x ==> (option_CASE x e SOME = x)`,
+Theorem IS_SOME_option_case_SOME[local]:
+ !x:'a option. IS_SOME x ==> (option_CASE x e SOME = x)
+Proof
     GEN_TAC
     THEN OPTION_CASES_TAC “(x :'a option)”
     THEN ASM_REWRITE_TAC option_rws
-);
+QED
 
 Theorem option_case_SOME_ID[simp]:
   !x:'a option. (option_CASE x x SOME = x)
@@ -276,20 +283,22 @@ Proof
   GEN_TAC THEN OPTION_CASES_TAC “x :'a option” THEN ASM_REWRITE_TAC option_rws
 QED
 
-val IS_SOME_option_case = Q.prove(
-`!x:'a option. IS_SOME x ==> (option_CASE x e (f:'a->'b) = f (THE x))`,
+Theorem IS_SOME_option_case[local]:
+ !x:'a option. IS_SOME x ==> (option_CASE x e (f:'a->'b) = f (THE x))
+Proof
     GEN_TAC
     THEN OPTION_CASES_TAC “(x :'a option)”
     THEN ASM_REWRITE_TAC option_rws
-);
+QED
 
 
-val IS_NONE_option_case = Q.prove(
-`!x:'a option. IS_NONE x ==> (option_CASE x e f = (e:'b))`,
+Theorem IS_NONE_option_case[local]:
+ !x:'a option. IS_NONE x ==> (option_CASE x e f = (e:'b))
+Proof
     GEN_TAC
     THEN OPTION_CASES_TAC “(x :'a option)”
     THEN ASM_REWRITE_TAC option_rws
-);
+QED
 
 
 Theorem option_CLAUSES =
@@ -741,11 +750,13 @@ Proof
   SRW_TAC[][OPTREL_def]
 QED
 
-val OPTREL_O_lemma = Q.prove(
-  `!R1 R2 l1 l2.
-     OPTREL (R1 O R2) l1 l2 <=> ?l3. OPTREL R2 l1 l3 /\ OPTREL R1 l3 l2`,
+Theorem OPTREL_O_lemma[local]:
+   !R1 R2 l1 l2.
+     OPTREL (R1 O R2) l1 l2 <=> ?l3. OPTREL R2 l1 l3 /\ OPTREL R1 l3 l2
+Proof
   SRW_TAC [][OPTREL_def,EQ_IMP_THM,relationTheory.O_DEF,PULL_EXISTS] >>
-  FULL_SIMP_TAC (srw_ss()) [PULL_EXISTS] >> METIS_TAC[]);
+  FULL_SIMP_TAC (srw_ss()) [PULL_EXISTS] >> METIS_TAC[]
+QED
 
 Theorem OPTREL_O:
   !R1 R2. OPTREL (R1 O R2) = OPTREL R1 O OPTREL R2

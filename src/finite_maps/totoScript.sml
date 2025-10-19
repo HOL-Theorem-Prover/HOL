@@ -383,7 +383,7 @@ REPEAT STRIP_TAC THEN MATCH_MP_TAC TotOrd_TO_of_LO THEN
 IMP_RES_TAC WeakLinearOrder THEN ASM_REWRITE_TAC [LinearOrder] THEN
 IMP_RES_TAC WeakOrd_Ord);
 
-Theorem TotOrd_TO_of_Strong:!r:'a reln.
+Theorem TotOrd_TO_of_Strong: !r:'a reln.
                  StrongLinearOrder r ==> TotOrd (TO_of_LinearOrder r)
 Proof
 REPEAT STRIP_TAC THEN MATCH_MP_TAC TotOrd_TO_of_LO THEN
@@ -740,8 +740,11 @@ val num_to_dt_defn = Hol_defn "num_to_dt"
                else if ODD n then bit1 (num_to_dt (DIV2 (n - 1)))
                else bit2 (num_to_dt (DIV2 (n - 2)))`;
 
-val half_lem = prove (Term`!m. m DIV 2 <= m`,
-GEN_TAC THEN SIMP_TAC arith_ss [DIV_LESS_EQ]);
+Theorem half_lem[local]:
+   !m. m DIV 2 <= m
+Proof
+GEN_TAC THEN SIMP_TAC arith_ss [DIV_LESS_EQ]
+QED
 
 val (num_to_dt, num_to_dt_ind) = tprove (num_to_dt_defn,
 WF_REL_TAC `measure I` THEN
@@ -769,12 +772,15 @@ val all_dt_distinct = CONJ num_dt_distinct (GSYM num_dt_distinct);
 
 val num_dt_11 = theorem "num_dt_11";
 
-val TO_num_dtOrd = prove (Term`TotOrd num_dtOrd`,
+Theorem TO_num_dtOrd[local]:
+   TotOrd num_dtOrd
+Proof
 REWRITE_TAC [TotOrd] THEN REPEAT CONJ_TAC THEN
 Induct THEN GEN_TAC THEN Cases_on `y` THEN
 ASM_REWRITE_TAC [num_dtOrd, all_cpn_distinct, all_dt_distinct, num_dt_11] THEN
 GEN_TAC THEN Cases_on `z` THEN
-ASM_REWRITE_TAC [num_dtOrd, all_cpn_distinct, all_dt_distinct, num_dt_11]);
+ASM_REWRITE_TAC [num_dtOrd, all_cpn_distinct, all_dt_distinct, num_dt_11]
+QED
 
 Definition qk_numOrd_def:
   qk_numOrd m n = num_dtOrd (num_to_dt m) (num_to_dt n)
@@ -783,32 +789,44 @@ End
 (* Most of the work to prove TO_qk_numOrd (below) comes in showing that
    num_to_dt is a bijection, which we do first, with help of some lemmas. *)
 
-val zer_bit_neq = prove (Term`!P a b. zer <> (if P then bit1 a else bit2 b) /\
-                                      (if P then bit1 a else bit2 b) <> zer`,
+Theorem zer_bit_neq[local]:
+   !P a b. zer <> (if P then bit1 a else bit2 b) /\
+                                      (if P then bit1 a else bit2 b) <> zer
+Proof
 REPEAT GEN_TAC THEN CONJ_TAC THEN
-Cases_on `P` THEN ASM_REWRITE_TAC [all_dt_distinct]);
+Cases_on `P` THEN ASM_REWRITE_TAC [all_dt_distinct]
+QED
 
-val TWICE_DIV_2 = prove (Term`!n. 2 * n DIV 2 = n`,
+Theorem TWICE_DIV_2[local]:
+   !n. 2 * n DIV 2 = n
+Proof
 GEN_TAC THEN
 CONV_TAC (LAND_CONV (LAND_CONV (REWR_CONV MULT_COMM))) THEN
 SUBGOAL_THEN (Term`0 < 2`) (REWRITE_TAC o ulist o MATCH_MP MULT_DIV) THEN
-SIMP_TAC arith_ss []);
+SIMP_TAC arith_ss []
+QED
 
-val DIV2_ODD_EQ = prove (Term
-`!x y. x <> 0 /\ y <> 0 /\ ODD x /\ ODD y ==>
-            (DIV2 (x - 1) = DIV2 (y - 1)) ==> (x = y)`,
+Theorem DIV2_ODD_EQ[local]:
+ !x y. x <> 0 /\ y <> 0 /\ ODD x /\ ODD y ==>
+            (DIV2 (x - 1) = DIV2 (y - 1)) ==> (x = y)
+Proof
 REPEAT GEN_TAC THEN REWRITE_TAC [ODD_EXISTS] THEN STRIP_TAC THEN AR THEN
 SIMP_TAC arith_ss [DIV2_def] THEN
-REWRITE_TAC [TWICE_DIV_2] THEN DISCH_TAC THEN AR);
+REWRITE_TAC [TWICE_DIV_2] THEN DISCH_TAC THEN AR
+QED
 
-val EVEN_NZ = prove (Term`!z. z <> 0 /\ ~ODD z ==> z - 1 <> 0 /\ ODD (z - 1)`,
+Theorem EVEN_NZ[local]:
+   !z. z <> 0 /\ ~ODD z ==> z - 1 <> 0 /\ ODD (z - 1)
+Proof
 Cases THENL
 [REWRITE_TAC []
-,SIMP_TAC arith_ss [ODD] THEN Cases_on `n` THEN SIMP_TAC arith_ss [ODD]]);
+,SIMP_TAC arith_ss [ODD] THEN Cases_on `n` THEN SIMP_TAC arith_ss [ODD]]
+QED
 
-val DIV2_EVEN_EQ = prove (Term
-`x <> 0 /\ y <> 0 /\ ~ODD x /\ ~ODD y ==>
-       (DIV2 (x - 2) = DIV2 (y - 2)) ==> (x = y)`,
+Theorem DIV2_EVEN_EQ[local]:
+ x <> 0 /\ y <> 0 /\ ~ODD x /\ ~ODD y ==>
+       (DIV2 (x - 2) = DIV2 (y - 2)) ==> (x = y)
+Proof
 STRIP_TAC THEN
 SUBGOAL_THEN (Term`x - 1 <> 0 /\ y-1 <> 0 /\ ODD (x - 1) /\ ODD (y - 1)`)
              MP_TAC THENL
@@ -816,9 +834,12 @@ SUBGOAL_THEN (Term`x - 1 <> 0 /\ y-1 <> 0 /\ ODD (x - 1) /\ ODD (y - 1)`)
 ,DISCH_THEN (fn cj => MP_TAC (MATCH_MP DIV2_ODD_EQ cj)) THEN
  SIMP_TAC arith_ss [] THEN
  DISCH_THEN (fn imp => DISCH_THEN (fn eq => MP_TAC (MATCH_MP imp eq))) THEN
- ASM_SIMP_TAC arith_ss []]);
+ ASM_SIMP_TAC arith_ss []]
+QED
 
-val num_to_dt_bij = prove (Term`!x y. (num_to_dt x = num_to_dt y) <=> (x = y)`,
+Theorem num_to_dt_bij[local]:
+   !x y. (num_to_dt x = num_to_dt y) <=> (x = y)
+Proof
 INDUCT_THEN num_to_dt_ind ASSUME_TAC THEN
 INDUCT_THEN num_to_dt_ind ASSUME_TAC THEN
 ONCE_REWRITE_TAC [num_to_dt] THEN EQ_TAC THENL
@@ -828,7 +849,8 @@ ONCE_REWRITE_TAC [num_to_dt] THEN EQ_TAC THENL
  ASM_REWRITE_TAC [all_dt_distinct, num_dt_11] THENL
  [MATCH_MP_TAC DIV2_ODD_EQ THEN AR
  ,MATCH_MP_TAC DIV2_EVEN_EQ THEN AR]
-,DISCH_TAC THEN AR]);
+,DISCH_TAC THEN AR]
+QED
 
 Theorem TO_qk_numOrd: TotOrd qk_numOrd
 Proof
@@ -840,26 +862,38 @@ QED
 (* ******* At last we can prove (given a few more lemmas) what would ****** *)
 (* ******* be a definition if only numeral were a datatype:          ****** *)
 
-val ZERO_to_dt = prove (Term`num_to_dt ZERO = zer`,
-ONCE_REWRITE_TAC [num_to_dt] THEN REWRITE_TAC [ALT_ZERO]);
+Theorem ZERO_to_dt[local]:
+   num_to_dt ZERO = zer
+Proof
+ONCE_REWRITE_TAC [num_to_dt] THEN REWRITE_TAC [ALT_ZERO]
+QED
 
-val BIT_NZ = prove (Term`!n. BIT1 n <> 0 /\ BIT2 n <> 0`,
+Theorem BIT_NZ[local]:
+   !n. BIT1 n <> 0 /\ BIT2 n <> 0
+Proof
 GEN_TAC THEN REWRITE_TAC [BIT1, BIT2] THEN
-Cases_on `n` THEN SIMP_TAC arith_ss []);
+Cases_on `n` THEN SIMP_TAC arith_ss []
+QED
 
-val BIT1_to_dt = prove (Term`!n. num_to_dt (BIT1 n) = bit1 (num_to_dt n)`,
+Theorem BIT1_to_dt[local]:
+   !n. num_to_dt (BIT1 n) = bit1 (num_to_dt n)
+Proof
 GEN_TAC THEN CONV_TAC (LAND_CONV (REWR_CONV num_to_dt)) THEN
 REWRITE_TAC [numeral_evenodd, BIT_NZ, DIV2_def] THEN
 REPEAT AP_TERM_TAC THEN
 CONV_TAC (LAND_CONV (LAND_CONV (LAND_CONV (REWR_CONV BIT1)))) THEN
-SIMP_TAC arith_ss [TWICE_DIV_2]);
+SIMP_TAC arith_ss [TWICE_DIV_2]
+QED
 
-val BIT2_to_dt = prove (Term`!n. num_to_dt (BIT2 n) = bit2 (num_to_dt n)`,
+Theorem BIT2_to_dt[local]:
+   !n. num_to_dt (BIT2 n) = bit2 (num_to_dt n)
+Proof
 GEN_TAC THEN CONV_TAC (LAND_CONV (REWR_CONV num_to_dt)) THEN
 REWRITE_TAC [numeral_evenodd, BIT_NZ, DIV2_def] THEN
 REPEAT AP_TERM_TAC THEN
 CONV_TAC (LAND_CONV (LAND_CONV (LAND_CONV (REWR_CONV BIT2)))) THEN
-SIMP_TAC arith_ss [TWICE_DIV_2]);
+SIMP_TAC arith_ss [TWICE_DIV_2]
+QED
 
 Theorem qk_numeralOrd: !x y.
  (qk_numOrd ZERO ZERO = EQUAL) /\

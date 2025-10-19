@@ -3315,9 +3315,11 @@ Proof
 QED
 
 (* Apply Skolemization *)
-val lemma = prove(
-  ``!p n. ?m. 0 < n /\ prime p ==> (p ** m) divides n /\ coprime p (n DIV (p ** m))``,
-  metis_tac[prime_power_index_exists]);
+Theorem lemma[local]:
+    !p n. ?m. 0 < n /\ prime p ==> (p ** m) divides n /\ coprime p (n DIV (p ** m))
+Proof
+  metis_tac[prime_power_index_exists]
+QED
 (* Note !p n, for first parameter p, second parameter n. *)
 (*
 - SKOLEM_THM;
@@ -10993,10 +10995,11 @@ QED
        and 2 * q <= q * q           by MULT_RIGHT_CANCEL, q <> 0.
      Hence 2 * q <= p ** n          by LESS_EQ_TRANS
 *)
-val perfect_power_half_inequality_lemma = prove(
-  ``!p n. 1 < p /\ 1 < n ==>
+Theorem perfect_power_half_inequality_lemma[local]:
+    !p n. 1 < p /\ 1 < n ==>
          p ** (n DIV 2) * p ** (n DIV 2) <= p ** n /\
-         2 * p ** (n DIV 2) <= p ** (n DIV 2) * p ** (n DIV 2)``,
+         2 * p ** (n DIV 2) <= p ** (n DIV 2) * p ** (n DIV 2)
+Proof
   ntac 3 strip_tac >>
   qabbrev_tac `m = n DIV 2` >>
   qabbrev_tac `q = p ** m` >>
@@ -11013,7 +11016,8 @@ val perfect_power_half_inequality_lemma = prove(
     `0 < m` by decide_tac >>
     `1 < q` by rw[ONE_LT_EXP, Abbr`q`] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: 1 < p /\ 0 < n ==> 2 * p ** (n DIV 2) <= p ** n *)
 (* Proof:

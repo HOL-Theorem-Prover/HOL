@@ -64,9 +64,11 @@ Proof
   qexists_tac `\x. x` >> simp[]
 QED
 
-val cardeq_SYMlemma = prove(
-  ``!s t. s =~ t ==> t =~ s``,
-  rw[cardeq_def] >> metis_tac [BIJ_LINV_BIJ]);
+Theorem cardeq_SYMlemma[local]:
+    !s t. s =~ t ==> t =~ s
+Proof
+  rw[cardeq_def] >> metis_tac [BIJ_LINV_BIJ]
+QED
 
 
 Theorem cardeq_SYM:
@@ -395,10 +397,11 @@ Proof
   simp_tac (srw_ss() ++ DNF_ss) [DISJ_ASSOC]
 QED
 
-val lemma1 = prove(
-  ``INFINITE M /\ M =~ M CROSS M ==>
+Theorem lemma1[local]:
+    INFINITE M /\ M =~ M CROSS M ==>
     M =~ {T;F} CROSS M /\
-    !A B. DISJOINT A B /\ A =~ M /\ B =~ M ==> A UNION B =~ M``,
+    !A B. DISJOINT A B /\ A =~ M /\ B =~ M ==> A UNION B =~ M
+Proof
   strip_tac >> CONJ_ASM1_TAC
   >- (match_mp_tac cardleq_ANTISYM >> conj_tac
       >- (simp[cardleq_def] >> qexists_tac `\x. (T,x)` >> simp[INJ_DEF]) >>
@@ -420,7 +423,8 @@ val lemma1 = prove(
   >- (`?a. a IN A /\ (f1 a = m)` by metis_tac [BIJ_DEF, SURJ_DEF] >>
       qexists_tac `a` >> simp[]) >>
   `?b. b IN B /\ (f2 b = m)` by metis_tac [BIJ_DEF, SURJ_DEF] >>
-  qexists_tac `b` >> simp[] >> metis_tac[]);
+  qexists_tac `b` >> simp[] >> metis_tac[]
+QED
 
 fun PRINT_TAC s gl = (print ("** " ^ s ^ "\n"); ALL_TAC gl)
 
@@ -1684,10 +1688,12 @@ Proof
     METIS_TAC [AND_IMP_INTRO]
 QED
 
-val lemma = prove (
-  ``(!x. x IN s ==> (g(f(x)) = x)) <=>
-    (!y x. x IN s /\ (y = f x) ==> (g y = x))``,
- MESON_TAC []);
+Theorem lemma[local]:
+    (!x. x IN s ==> (g(f(x)) = x)) <=>
+    (!y x. x IN s /\ (y = f x) ==> (g y = x))
+Proof
+ MESON_TAC []
+QED
 
 Theorem INJECTIVE_ON_LEFT_INVERSE:
    !f s. (!x y. x IN s /\ y IN s /\ (f x = f y) ==> (x = y)) <=>

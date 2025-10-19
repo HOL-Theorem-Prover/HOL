@@ -1981,9 +1981,11 @@ Proof
 QED
 
 (* Convert this into the form: !g x. ?y. ..... for SKOLEM_THM *)
-val lemma = prove(
-  ``!(g:'a monoid) x. ?y. Monoid g /\ x IN G* ==> y IN G /\ (x * y = #e) /\ (y * x = #e)``,
-  metis_tac[monoid_inv_from_invertibles]);
+Theorem lemma[local]:
+    !(g:'a monoid) x. ?y. Monoid g /\ x IN G* ==> y IN G /\ (x * y = #e) /\ (y * x = #e)
+Proof
+  metis_tac[monoid_inv_from_invertibles]
+QED
 
 (* Convert this into the form: !g x. ?y. ..... for SKOLEM_THM
 

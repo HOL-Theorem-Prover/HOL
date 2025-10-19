@@ -201,11 +201,13 @@ Proof
    \\ METIS_TAC [EXP_SUB_LESS_EQ, LESS_LESS_EQ_TRANS]
 QED
 
-val DIV_MULT_LEM = Q.prove(
-   `!m n. 0 < n ==> m DIV n * n <= m`,
+Theorem DIV_MULT_LEM[local]:
+    !m n. 0 < n ==> m DIV n * n <= m
+Proof
    RW_TAC std_ss [LESS_EQ_EXISTS]
    \\ Q.EXISTS_TAC `m MOD n`
-   \\ RW_TAC std_ss [GSYM DIVISION])
+   \\ RW_TAC std_ss [GSYM DIVISION]
+QED
 
 (* |- !x n. n DIV 2 ** x * 2 ** x <= n *)
 val DIV_MULT_LESS_EQ =
@@ -213,34 +215,41 @@ val DIV_MULT_LESS_EQ =
                 |> SIMP_RULE bool_ss [ZERO_LT_TWOEXP]
                 |> GEN_ALL
 
-val MOD_2EXP_LEM = Q.prove(
-   `!n x. n MOD 2 ** x = n - n DIV 2 ** x * 2 ** x`,
+Theorem MOD_2EXP_LEM[local]:
+    !n x. n MOD 2 ** x = n - n DIV 2 ** x * 2 ** x
+Proof
    RW_TAC arith_ss
-      [DIV_MULT_LESS_EQ, GSYM ADD_EQ_SUB, ZERO_LT_TWOEXP, GSYM DIVISION])
+      [DIV_MULT_LESS_EQ, GSYM ADD_EQ_SUB, ZERO_LT_TWOEXP, GSYM DIVISION]
+QED
 
-val DIV_MULT_LEM2 = Q.prove(
-   `!a b p. a DIV 2 ** (b + p) * 2 ** (p + b) <= a DIV 2 ** b * 2 ** b`,
+Theorem DIV_MULT_LEM2[local]:
+    !a b p. a DIV 2 ** (b + p) * 2 ** (p + b) <= a DIV 2 ** b * 2 ** b
+Proof
    RW_TAC bool_ss
       [Q.SPECL [`a DIV 2 ** b`, `2 ** p`] DIV_MULT_LEM, EXP_ADD, MULT_ASSOC,
-       GSYM DIV_DIV_DIV_MULT, ZERO_LT_TWOEXP, LESS_MONO_MULT])
+       GSYM DIV_DIV_DIV_MULT, ZERO_LT_TWOEXP, LESS_MONO_MULT]
+QED
 
-val MOD_EXP_ADD = Q.prove(
-   `!a b p.
-      a MOD 2 ** (b + p) = a MOD 2 ** b + (a DIV 2 ** b) MOD 2 ** p * 2 ** b`,
+Theorem MOD_EXP_ADD[local]:
+    !a b p.
+      a MOD 2 ** (b + p) = a MOD 2 ** b + (a DIV 2 ** b) MOD 2 ** p * 2 ** b
+Proof
    REPEAT STRIP_TAC
    \\ SIMP_TAC bool_ss [MOD_2EXP_LEM, RIGHT_SUB_DISTRIB, DIV_DIV_DIV_MULT,
                         ZERO_LT_TWOEXP, GSYM MULT_ASSOC, GSYM EXP_ADD]
    \\ ASM_SIMP_TAC arith_ss
         [DIV_MULT_LEM2, DIV_MULT_LEM, ZERO_LT_TWOEXP, SUB_ADD,
          (GSYM o Q.SPECL [`a DIV 2 ** (b + p) * 2 ** (p + b)`,
-                          `a DIV 2 ** b * 2 ** b`]) LESS_EQ_ADD_SUB])
+                          `a DIV 2 ** b * 2 ** b`]) LESS_EQ_ADD_SUB]
+QED
 
 val DIV_MOD_MOD_DIV2 =
    (SIMP_RULE std_ss [ZERO_LT_TWOEXP, GSYM EXP_ADD] o
     Q.SPECL [`a`, `2 ** b`, `2 ** p`]) DIV_MOD_MOD_DIV
 
-val DIV_MOD_MOD_DIV3 = Q.prove(
-   `!a b c. (a DIV 2 ** b) MOD 2 ** (c - b) = (a MOD 2 ** c) DIV 2 ** b`,
+Theorem DIV_MOD_MOD_DIV3[local]:
+    !a b c. (a DIV 2 ** b) MOD 2 ** (c - b) = (a MOD 2 ** c) DIV 2 ** b
+Proof
    REPEAT STRIP_TAC
    \\ Cases_on `c <= b`
    >| [
@@ -253,7 +262,8 @@ val DIV_MOD_MOD_DIV3 = Q.prove(
       RULE_ASSUM_TAC (REWRITE_RULE [NOT_LESS_EQUAL])
       \\ IMP_RES_TAC LESS_ADD
       \\ POP_ASSUM (fn th => SIMP_TAC arith_ss [SYM th, DIV_MOD_MOD_DIV2])
-  ])
+  ]
+QED
 
 Theorem BITS_THM2:
     !h l n. BITS h l n = (n MOD 2 ** SUC h) DIV 2 ** l
@@ -271,11 +281,12 @@ Proof
    \\ DECIDE_TAC
 QED
 
-val BITS_COMP_LEM = Q.prove(
-   `!h1 l1 h2 l2 n.
+Theorem BITS_COMP_LEM[local]:
+    !h1 l1 h2 l2 n.
       h2 + l1 <= h1 ==>
       (((n DIV 2 ** l1) MOD 2 ** (h1 - l1) DIV 2 ** l2) MOD 2 ** (h2 - l2) =
-        (n DIV 2 ** (l2 + l1)) MOD 2 ** ((h2 + l1) - (l2 + l1)))`,
+        (n DIV 2 ** (l2 + l1)) MOD 2 ** ((h2 + l1) - (l2 + l1)))
+Proof
    REPEAT STRIP_TAC
    \\ REWRITE_TAC
          [Q.SPECL [`(n DIV 2 ** l1) MOD 2 ** (h1 - l1)`, `l2`, `h2`]
@@ -287,7 +298,8 @@ val BITS_COMP_LEM = Q.prove(
    \\ SIMP_TAC arith_ss [DIV_DIV_DIV_MULT, ZERO_LT_TWOEXP, GSYM EXP_ADD]
    \\ REWRITE_TAC
         [SIMP_RULE arith_ss []
-            (Q.SPECL [`n`, `l1 + l2`, `h2 + l1`] DIV_MOD_MOD_DIV3)])
+            (Q.SPECL [`n`, `l1 + l2`, `h2 + l1`] DIV_MOD_MOD_DIV3)]
+QED
 
 Theorem BITS_COMP_THM:
     !h1 l1 h2 l2 n.
@@ -481,19 +493,22 @@ val LESS_EXP_MULT =
 
 (* ------------------------------------------------------------------------- *)
 
-val SLICE_LEM1 = Q.prove(
-   `!a x y. a DIV 2 ** (x + y) * 2 ** (x + y) =
-            a DIV 2 ** x * 2 ** x - (a DIV 2 ** x) MOD 2 ** y * 2 ** x`,
+Theorem SLICE_LEM1[local]:
+    !a x y. a DIV 2 ** (x + y) * 2 ** (x + y) =
+            a DIV 2 ** x * 2 ** x - (a DIV 2 ** x) MOD 2 ** y * 2 ** x
+Proof
    REPEAT STRIP_TAC
    \\ REWRITE_TAC [EXP_ADD]
    \\ SUBST_OCCS_TAC [([2], Q.SPECL [`2 ** x`, `2 ** y`] MULT_COMM)]
    \\ SIMP_TAC bool_ss
         [ZERO_LT_TWOEXP, GSYM DIV_DIV_DIV_MULT, MULT_ASSOC,
-         Q.SPECL [`y`, `a DIV 2 ** x`] DIV_MULT_THM, RIGHT_SUB_DISTRIB])
+         Q.SPECL [`y`, `a DIV 2 ** x`] DIV_MULT_THM, RIGHT_SUB_DISTRIB]
+QED
 
-val SLICE_LEM2 = Q.prove(
-   `!a x y. n MOD 2 ** (x + y) =
-            n MOD 2 ** x + (n DIV 2 ** x) MOD 2 ** y * 2 ** x`,
+Theorem SLICE_LEM2[local]:
+    !a x y. n MOD 2 ** (x + y) =
+            n MOD 2 ** x + (n DIV 2 ** x) MOD 2 ** y * 2 ** x
+Proof
    REPEAT STRIP_TAC
    \\ SIMP_TAC bool_ss [DIV_MULT_LESS_EQ, MOD_2EXP_LEM, SLICE_LEM1,
                         RIGHT_SUB_DISTRIB, SUB_SUB, SUB_LESS_EQ]
@@ -502,15 +517,18 @@ val SLICE_LEM2 = Q.prove(
    \\ ASSUME_TAC (REWRITE_RULE [GSYM NOT_LESS] DIV_MULT_LESS_EQ)
    \\ IMP_RES_TAC LESS_CASES_IMP
    \\ RW_TAC bool_ss [SUB_RIGHT_ADD]
-   \\ PROVE_TAC [GSYM NOT_LESS_EQUAL])
+   \\ PROVE_TAC [GSYM NOT_LESS_EQUAL]
+QED
 
-val SLICE_LEM3 = Q.prove(
-   `!n h l. l < h ==> n MOD 2 ** SUC l <= n MOD 2 ** h`,
+Theorem SLICE_LEM3[local]:
+    !n h l. l < h ==> n MOD 2 ** SUC l <= n MOD 2 ** h
+Proof
    REPEAT STRIP_TAC
    \\ IMP_RES_TAC LESS_ADD_1
    \\ POP_ASSUM (fn th => REWRITE_TAC [th])
    \\ REWRITE_TAC [GSYM ADD1, GSYM ADD_SUC, GSYM (CONJUNCT2 ADD)]
-   \\ SIMP_TAC arith_ss [SLICE_LEM2])
+   \\ SIMP_TAC arith_ss [SLICE_LEM2]
+QED
 
 Theorem SLICE_THM:
     !n h l. SLICE h l n = BITS h l n * 2 ** l
@@ -617,13 +635,15 @@ Proof
    RW_TAC bool_ss [BITS_THM2, MOD_TIMES, ZERO_LT_TWOEXP]
 QED
 
-val SLICE_TWOEXP = Q.prove(
-   `!h l a n. SLICE (h + n) (l + n) (a * 2 ** n) = (SLICE h l a) * 2 ** n`,
+Theorem SLICE_TWOEXP[local]:
+    !h l a n. SLICE (h + n) (l + n) (a * 2 ** n) = (SLICE h l a) * 2 ** n
+Proof
    REPEAT STRIP_TAC
    \\ SUBST1_TAC (Q.SPECL [`l`, `n`] ADD_COMM)
    \\ RW_TAC bool_ss [(GSYM o CONJUNCT2) ADD, SLICE_THM, BITS_THM, MULT_DIV,
                       EXP_ADD, GSYM DIV_DIV_DIV_MULT, ZERO_LT_TWOEXP]
-   \\ SIMP_TAC arith_ss [])
+   \\ SIMP_TAC arith_ss []
+QED
 
 val SPEC_SLICE_TWOEXP =
    (GEN_ALL o SIMP_RULE arith_ss [] o Q.DISCH `n <= l /\ n <= h` o
@@ -657,17 +677,23 @@ QED
 
 (* ------------------------------------------------------------------------- *)
 
-val lem  = Q.prove(
-   `!c a b. (a = b) ==> (a DIV c = b DIV c)`, RW_TAC arith_ss [])
+Theorem lem[local]:
+    !c a b. (a = b) ==> (a DIV c = b DIV c)
+Proof RW_TAC arith_ss []
+QED
 
-val lem2 = Q.prove(
-   `!a b c. a * (b * c) = a * c * b`, SIMP_TAC arith_ss [])
+Theorem lem2[local]:
+    !a b c. a * (b * c) = a * c * b
+Proof SIMP_TAC arith_ss []
+QED
 
-val lem3 = Q.prove(
-   `!a m n. n <= m ==> (a * 2 ** m DIV 2 ** n = a * 2 ** (m - n))`,
+Theorem lem3[local]:
+    !a m n. n <= m ==> (a * 2 ** m DIV 2 ** n = a * 2 ** (m - n))
+Proof
    REPEAT STRIP_TAC
    \\ IMP_RES_TAC LESS_EQUAL_ADD
-   \\ ASM_SIMP_TAC std_ss [EXP_ADD, MULT_DIV, ZERO_LT_TWOEXP, lem2])
+   \\ ASM_SIMP_TAC std_ss [EXP_ADD, MULT_DIV, ZERO_LT_TWOEXP, lem2]
+QED
 
 (* |- !a m n. n < m ==> (a * 2 ** m DIV 2 ** n = a * 2 ** (m - n)) *)
 val lem4 =
@@ -772,9 +798,10 @@ Proof
    ]
 QED
 
-val SUB_BITS = Q.prove(
-   `!h l a b.
-       (BITS (SUC h) l a = BITS (SUC h) l b) ==> (BITS h l a = BITS h l b)`,
+Theorem SUB_BITS[local]:
+    !h l a b.
+       (BITS (SUC h) l a = BITS (SUC h) l b) ==> (BITS h l a = BITS h l b)
+Proof
    REPEAT STRIP_TAC
    \\ Cases_on `h < l`
    >- RW_TAC bool_ss [BITS_ZERO]
@@ -783,7 +810,8 @@ val SUB_BITS = Q.prove(
          (fn th => ONCE_REWRITE_TAC
                      [(GSYM o SIMP_RULE arith_ss [th, SUB_ADD] o
                        Q.SPECL [`SUC h`, `l`, `h - l`, `0`]) BITS_COMP_THM])
-   \\ ASM_REWRITE_TAC [])
+   \\ ASM_REWRITE_TAC []
+QED
 
 Theorem SBIT_DIV:
     !b m n. n < m ==> (SBIT b (m - n) = SBIT b m DIV 2 ** n)
@@ -819,19 +847,23 @@ Proof
    RW_TAC arith_ss [BITS_ZERO, BITS_SUC]
 QED
 
-val DECEND_LEMMA = Q.prove(
-   `!P l y.
-      (!x. l <= x /\ x <= SUC y ==> P x) ==> (!x. l <= x /\ x <= y ==> P x)`,
-   RW_TAC arith_ss [])
+Theorem DECEND_LEMMA[local]:
+    !P l y.
+      (!x. l <= x /\ x <= SUC y ==> P x) ==> (!x. l <= x /\ x <= y ==> P x)
+Proof
+   RW_TAC arith_ss []
+QED
 
-val BIT_BITS_LEM = Q.prove(
-   `!h l a b. l <= h ==> (BITS h l a = BITS h l b) ==> (BIT h a = BIT h b)`,
+Theorem BIT_BITS_LEM[local]:
+    !h l a b. l <= h ==> (BITS h l a = BITS h l b) ==> (BIT h a = BIT h b)
+Proof
    RW_TAC bool_ss [BIT_SLICE, SLICE_THM]
    \\ Q.PAT_ASSUM `l <= h`
         (fn th => ONCE_REWRITE_TAC
                      [(GSYM o SIMP_RULE arith_ss [th, SUB_ADD] o
                        Q.SPECL [`h`, `l`, `h - l`, `h - l`]) BITS_COMP_THM])
-   \\ ASM_REWRITE_TAC [])
+   \\ ASM_REWRITE_TAC []
+QED
 
 Theorem BIT_BITS_THM:
     !h l a b. (!x. l <= x /\ x <= h ==> (BIT x a = BIT x b)) =
@@ -954,21 +986,25 @@ Proof
    \\ numLib.REDUCE_TAC
 QED
 
-val LESS_EXP_MULT2 = Q.prove(
-   `!a b. a < b ==> ?p. 2 ** b = 2 ** (p + 1) * 2 ** a`,
+Theorem LESS_EXP_MULT2[local]:
+    !a b. a < b ==> ?p. 2 ** b = 2 ** (p + 1) * 2 ** a
+Proof
    REPEAT STRIP_TAC
    \\ IMP_RES_TAC LESS_ADD_1
    \\ Q.EXISTS_TAC `p`
-   \\ FULL_SIMP_TAC arith_ss [EXP_ADD])
+   \\ FULL_SIMP_TAC arith_ss [EXP_ADD]
+QED
 
-val BITWISE_LEM = Q.prove(
-   `!n op a b. BIT n (BITWISE (SUC n) op a b) = op (BIT n a) (BIT n b)`,
+Theorem BITWISE_LEM[local]:
+    !n op a b. BIT n (BITWISE (SUC n) op a b) = op (BIT n a) (BIT n b)
+Proof
    RW_TAC arith_ss [SBIT_def, BITWISE_def, NOT_BIT]
    >- SIMP_TAC arith_ss
         [BIT_def, BITS_THM, SUC_SUB,
          REWRITE_RULE [BITWISE_LT_2EXP]
            (Q.SPECL [`BITWISE n op a b`, `2 ** n`] DIV_MULT_1)]
-   \\ SIMP_TAC arith_ss [BITS_THM, LESS_DIV_EQ_ZERO, BITWISE_LT_2EXP, SUC_SUB])
+   \\ SIMP_TAC arith_ss [BITS_THM, LESS_DIV_EQ_ZERO, BITWISE_LT_2EXP, SUC_SUB]
+QED
 
 val TWO_SUC_SUB =
    GEN_ALL (SIMP_CONV bool_ss [SUC_SUB, EXP_1] ``2 ** (SUC x - x)``)
@@ -1042,13 +1078,17 @@ Proof
    METIS_TAC [NOT_BIT_GT_TWOEXP, NOT_LESS_EQUAL]
 QED
 
-val BITS_SUC2 = Q.prove(
-   `!n a. BITS (SUC n) 0 a = SLICE (SUC n) (SUC n) a + BITS n 0 a`,
-   RW_TAC arith_ss [GSYM SLICE_ZERO_THM, SLICE_COMP_THM])
+Theorem BITS_SUC2[local]:
+    !n a. BITS (SUC n) 0 a = SLICE (SUC n) (SUC n) a + BITS n 0 a
+Proof
+   RW_TAC arith_ss [GSYM SLICE_ZERO_THM, SLICE_COMP_THM]
+QED
 
-val lem = Q.prove(
-   `!n a. a < 2 ** SUC n ==> ~(2 ** SUC n < a + 1)`,
-   RW_TAC arith_ss [NOT_LESS, EXP])
+Theorem lem[local]:
+    !n a. a < 2 ** SUC n ==> ~(2 ** SUC n < a + 1)
+Proof
+   RW_TAC arith_ss [NOT_LESS, EXP]
+QED
 
 val lem2 =
    MATCH_MP lem (REWRITE_RULE [SUB_0] (Q.SPECL [`n`, `0`, `a`] BITSLT_THM))
@@ -1074,14 +1114,17 @@ Proof
    ]
 QED
 
-val ONE_COMP = Q.prove(
-   `!i n a b.
-      i < SUC n ==> (~BIT i a = BIT i (BITWISE (SUC n) (\x y. ~x) a b))`,
-   SRW_TAC [] [BITWISE_THM])
+Theorem ONE_COMP[local]:
+    !i n a b.
+      i < SUC n ==> (~BIT i a = BIT i (BITWISE (SUC n) (\x y. ~x) a b))
+Proof
+   SRW_TAC [] [BITWISE_THM]
+QED
 
-val BIT_COMPLEMENT_LEM = Q.prove(
-  `!n i a. i < n /\ a MOD 2 ** n <> 0 ==>
-           (BIT i (2 ** n - a MOD 2 ** n) = ~BIT i (a MOD 2 ** n - 1))`,
+Theorem BIT_COMPLEMENT_LEM[local]:
+   !n i a. i < n /\ a MOD 2 ** n <> 0 ==>
+           (BIT i (2 ** n - a MOD 2 ** n) = ~BIT i (a MOD 2 ** n - 1))
+Proof
    Cases
    \\ SRW_TAC [] []
    \\ `~BIT i (a MOD 2 ** SUC n' - 1) =
@@ -1092,7 +1135,8 @@ val BIT_COMPLEMENT_LEM = Q.prove(
    by SRW_TAC [ARITH_ss] [MOD_2EXP_LT, DECIDE ``a < b ==> a < b + 1n``]
    \\ ASM_SIMP_TAC std_ss
          [BITWISE_ONE_COMP_LEM, BITS_ZEROL,
-          DECIDE ``b <> 0 ==> (a - 1 - (b - 1n) = a - b)``])
+          DECIDE ``b <> 0 ==> (a - 1 - (b - 1n) = a - b)``]
+QED
 
 Theorem BIT_COMPLEMENT:
     !n i a.
@@ -1176,8 +1220,9 @@ Proof
                                    ZERO_LT_TWOEXP, EXP])
 QED
 
-val MOD0_MONO = Q.prove(
-   `!n m a. n < m /\ (a MOD 2 ** m = 0) ==> (a MOD 2 ** n = 0)`,
+Theorem MOD0_MONO[local]:
+    !n m a. n < m /\ (a MOD 2 ** m = 0) ==> (a MOD 2 ** n = 0)
+Proof
    Cases
    \\ Cases
    \\ SRW_TAC [] []
@@ -1185,7 +1230,8 @@ val MOD0_MONO = Q.prove(
    \\ `n' <= n` by DECIDE_TAC
    \\ Q.SPECL_THEN [`n`, `0`, `n'`, `0`, `a`]
         (IMP_RES_TAC o SIMP_RULE std_ss []) BITS_COMP_THM
-   \\ METIS_TAC [BITS_ZERO2])
+   \\ METIS_TAC [BITS_ZERO2]
+QED
 
 Theorem DIV_LT:
     !n m a. n < m /\ a < 2 ** m ==> a DIV 2 ** n < 2 ** m
@@ -1235,8 +1281,9 @@ Proof
         DECIDE ``0 < x ==> (p + x - 1 = p + (x - 1n))``]
 QED
 
-val DIV_SUB0 = Q.prove(
-   `!a b. a MOD 2 ** b <> 0 ==> (a DIV 2 ** b = (a - 1) DIV 2 ** b)`,
+Theorem DIV_SUB0[local]:
+    !a b. a MOD 2 ** b <> 0 ==> (a DIV 2 ** b = (a - 1) DIV 2 ** b)
+Proof
    REPEAT STRIP_TAC
    \\ Q.SPECL_THEN [`b`, `a`] ASSUME_TAC TWOEXP_DIVISION
    \\ POP_ASSUM SUBST1_TAC
@@ -1245,7 +1292,8 @@ val DIV_SUB0 = Q.prove(
          DECIDE ``n <> 0n ==> (x + n - 1 = x + (n - 1))``]
    \\ `a MOD 2 ** b - 1 < 2 ** b`
    by METIS_TAC [DECIDE ``n <> 0n ==> (n - 1 < n)``, MOD_2EXP_LT, LESS_TRANS]
-   \\ ASM_SIMP_TAC arith_ss [arithmeticTheory.LESS_DIV_EQ_ZERO, ZERO_LT_TWOEXP])
+   \\ ASM_SIMP_TAC arith_ss [arithmeticTheory.LESS_DIV_EQ_ZERO, ZERO_LT_TWOEXP]
+QED
 
 Theorem BIT_EXP_SUB1:
    !b n. BIT b (2 ** n - 1) <=> b < n
@@ -1295,18 +1343,22 @@ QED
 
 (* ------------------------------------------------------------------------- *)
 
-val BIT_SET_NOT_ZERO = Q.prove(
-   `!a. (a MOD 2 = 1) ==> (1 <= a)`,
+Theorem BIT_SET_NOT_ZERO[local]:
+    !a. (a MOD 2 = 1) ==> (1 <= a)
+Proof
    SPOSE_NOT_THEN STRIP_ASSUME_TAC
    \\ `a = 0` by DECIDE_TAC
-   \\ FULL_SIMP_TAC arith_ss [ZERO_MOD])
+   \\ FULL_SIMP_TAC arith_ss [ZERO_MOD]
+QED
 
-val BIT_SET_NOT_ZERO_COR = Q.prove(
-   `!x n op a b.
+Theorem BIT_SET_NOT_ZERO_COR[local]:
+    !x n op a b.
       x < n ==> op (BIT x a) (BIT x b) ==>
-      (1 <= (BITWISE n op a b DIV 2 ** x))`,
+      (1 <= (BITWISE n op a b DIV 2 ** x))
+Proof
    REPEAT STRIP_TAC
-   \\ ASM_SIMP_TAC bool_ss [BITWISE_COR, BIT_SET_NOT_ZERO])
+   \\ ASM_SIMP_TAC bool_ss [BITWISE_COR, BIT_SET_NOT_ZERO]
+QED
 
 val BIT_SET_NOT_ZERO_COR2 =
    REWRITE_RULE [DIV_1, EXP] (Q.SPEC `0` BIT_SET_NOT_ZERO_COR)
@@ -1317,46 +1369,54 @@ Proof
    RW_TAC arith_ss [SBIT_def, EXP_ADD]
 QED
 
-val lemma1 = Q.prove(
-   `!a b n. 0 < n ==> ((a + SBIT b n) DIV 2 = a DIV 2 + SBIT b (n - 1))`,
+Theorem lemma1[local]:
+    !a b n. 0 < n ==> ((a + SBIT b n) DIV 2 = a DIV 2 + SBIT b (n - 1))
+Proof
    RW_TAC arith_ss [SBIT_def]
    \\ IMP_RES_TAC LESS_ADD_1
    \\ FULL_SIMP_TAC arith_ss
-        [GSYM ADD1, EXP, (SIMP_RULE arith_ss [] o Q.SPEC `2`) ADD_DIV_ADD_DIV])
+        [GSYM ADD1, EXP, (SIMP_RULE arith_ss [] o Q.SPEC `2`) ADD_DIV_ADD_DIV]
+QED
 
 val lemma2 =
    (ONCE_REWRITE_RULE [MULT_COMM] o REWRITE_RULE [EXP_1] o
     Q.INST [`m` |-> `1`] o SPEC_ALL) SBIT_MULT
 
-val lemma3 = Q.prove(
-   `!n op a b.
-      0 < n ==> (BITWISE n op a b MOD 2 = SBIT (op (ODD a) (ODD b)) 0)`,
+Theorem lemma3[local]:
+    !n op a b.
+      0 < n ==> (BITWISE n op a b MOD 2 = SBIT (op (ODD a) (ODD b)) 0)
+Proof
    RW_TAC bool_ss [GSYM BIT0_ODD]
    \\ POP_ASSUM
        (fn th =>
           ONCE_REWRITE_TAC [MATCH_MP ((GSYM o Q.SPEC `0`) BITWISE_THM) th])
    \\ RW_TAC bool_ss [BIT0_ODD, ODD_MOD2_LEM, SBIT_def, EXP]
-   \\ FULL_SIMP_TAC bool_ss [GSYM NOT_MOD2_LEM])
+   \\ FULL_SIMP_TAC bool_ss [GSYM NOT_MOD2_LEM]
+QED
 
-val lemma4 = Q.prove(
-   `!n op a b. 0 < n /\ BITWISE n op a b <= SBIT (op (ODD a) (ODD b)) 0 ==>
-              (BITWISE n op a b = SBIT (op (ODD a) (ODD b)) 0)`,
+Theorem lemma4[local]:
+    !n op a b. 0 < n /\ BITWISE n op a b <= SBIT (op (ODD a) (ODD b)) 0 ==>
+              (BITWISE n op a b = SBIT (op (ODD a) (ODD b)) 0)
+Proof
    RW_TAC arith_ss [GSYM BIT0_ODD, SBIT_def, EXP]
    \\ IMP_RES_TAC BIT_SET_NOT_ZERO_COR2
-   \\ ASM_SIMP_TAC arith_ss [])
+   \\ ASM_SIMP_TAC arith_ss []
+QED
 
-val BITWISE_ISTEP = Q.prove(
-   `!n op a b.
+Theorem BITWISE_ISTEP[local]:
+    !n op a b.
       0 < n ==>
       (BITWISE n op (a DIV 2) (b DIV 2) =
-       (BITWISE n op a b) DIV 2 + SBIT (op (BIT n a) (BIT n b)) (n - 1))`,
+       (BITWISE n op a b) DIV 2 + SBIT (op (BIT n a) (BIT n b)) (n - 1))
+Proof
   Induct_on `n`
   \\ REPEAT STRIP_TAC
   >- FULL_SIMP_TAC arith_ss []
   \\ Cases_on `n = 0`
   >- RW_TAC arith_ss [BITWISE_def, SBIT_def, BIT_DIV2]
   \\ FULL_SIMP_TAC bool_ss
-        [NOT_ZERO_LT_ZERO, BITWISE_def, SUC_SUB1, BIT_DIV2, lemma1])
+        [NOT_ZERO_LT_ZERO, BITWISE_def, SUC_SUB1, BIT_DIV2, lemma1]
+QED
 
 Theorem BITWISE_EVAL:
     !n op a b.
@@ -1391,21 +1451,27 @@ QED
 Theorem MOD_PLUS_LEFT =
    ONCE_REWRITE_RULE [ADD_COMM] MOD_PLUS_RIGHT
 
-val MOD_LESS = Q.prove(
-   `!n a. 0 < n ==> a MOD n < n`, PROVE_TAC [DIVISION])
+Theorem MOD_LESS[local]:
+    !n a. 0 < n ==> a MOD n < n
+Proof PROVE_TAC [DIVISION]
+QED
 
-val MOD_LESS1 = Q.prove(
-   `!n. 0 < n ==> a MOD n + 1 <= n`,
+Theorem MOD_LESS1[local]:
+    !n. 0 < n ==> a MOD n + 1 <= n
+Proof
    REPEAT STRIP_TAC
    \\ IMP_RES_TAC MOD_LESS
    \\ POP_ASSUM (fn th => ASSUME_TAC (Q.SPEC `a` th))
-   \\ RW_TAC arith_ss [])
+   \\ RW_TAC arith_ss []
+QED
 
-val MOD_ZERO = Q.prove(
-   `!n. 0 < n /\ 0 < a /\ a <= n /\ (a MOD n = 0) ==> (a = n)`,
+Theorem MOD_ZERO[local]:
+    !n. 0 < n /\ 0 < a /\ a <= n /\ (a MOD n = 0) ==> (a = n)
+Proof
    REPEAT STRIP_TAC
    \\ Cases_on `a < n`
-   \\ FULL_SIMP_TAC arith_ss [LESS_MOD, GSYM NOT_ZERO_LT_ZERO])
+   \\ FULL_SIMP_TAC arith_ss [LESS_MOD, GSYM NOT_ZERO_LT_ZERO]
+QED
 
 Theorem MOD_PLUS_1:
     !n. 0 < n ==> !x. ((x + 1) MOD n = 0) = (x MOD n + 1 = n)
@@ -1538,22 +1604,26 @@ QED
 
 (* ------------------------------------------------------------------------- *)
 
-val BIT_MODIFY_LT_2EXP = Q.prove(
-   `!n f a. BIT_MODIFY n f a < 2 ** n`,
+Theorem BIT_MODIFY_LT_2EXP[local]:
+    !n f a. BIT_MODIFY n f a < 2 ** n
+Proof
    Induct_on `n`
    \\ RW_TAC bool_ss [ADD_0, TIMES2, LESS_IMP_LESS_ADD, LESS_MONO_ADD,
                       BIT_MODIFY_def, SBIT_def, EXP]
-   \\ numLib.REDUCE_TAC)
+   \\ numLib.REDUCE_TAC
+QED
 
-val BIT_MODIFY_LEM = Q.prove(
-   `!n f a. BIT n (BIT_MODIFY (SUC n) f a) = f n (BIT n a)`,
+Theorem BIT_MODIFY_LEM[local]:
+    !n f a. BIT n (BIT_MODIFY (SUC n) f a) = f n (BIT n a)
+Proof
    RW_TAC arith_ss [SBIT_def, BIT_MODIFY_def, NOT_BIT]
    >- SIMP_TAC arith_ss
         [BIT_def, BITS_THM, SUC_SUB,
          REWRITE_RULE [BIT_MODIFY_LT_2EXP]
            (Q.SPECL [`BIT_MODIFY n f a`, `2 ** n`] DIV_MULT_1)]
    \\ SIMP_TAC arith_ss
-        [BITS_THM, LESS_DIV_EQ_ZERO, BIT_MODIFY_LT_2EXP, SUC_SUB])
+        [BITS_THM, LESS_DIV_EQ_ZERO, BIT_MODIFY_LT_2EXP, SUC_SUB]
+QED
 
 Theorem BIT_MODIFY_THM:
     !x n f a. x < n ==> (BIT x (BIT_MODIFY n f a) = f x (BIT x a))
@@ -1579,15 +1649,17 @@ QED
 
 (* ------------------------------------------------------------------------- *)
 
-val SUB1_EXP_MOD2 = Q.prove(
-   `!n. ~(n = 0) ==> ((2 ** n - 1) MOD 2 = 1)`,
+Theorem SUB1_EXP_MOD2[local]:
+    !n. ~(n = 0) ==> ((2 ** n - 1) MOD 2 = 1)
+Proof
    Induct
    \\ SRW_TAC [] [EXP, DECIDE ``2 * a - 1 = a + (a - 1)``]
    \\ Cases_on `n` >- computeLib.EVAL_TAC
    \\ `2 ** SUC n' + (2 ** SUC n' - 1) = 2 ** n' * 2 + (2 ** SUC n' - 1)`
    by SIMP_TAC arith_ss [EXP]
    \\ ASM_SIMP_TAC std_ss [MOD_TIMES]
-   \\ FULL_SIMP_TAC arith_ss [])
+   \\ FULL_SIMP_TAC arith_ss []
+QED
 
 Theorem BIT_SIGN_EXTEND:
   !l h n i.

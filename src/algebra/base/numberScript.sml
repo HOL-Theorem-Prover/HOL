@@ -3014,9 +3014,11 @@ QED
 (* Convert this theorem into MUL_INV_DEF *)
 
 (* Step 1: move ?y forward by collecting quantifiers *)
-val lemma = prove(
-  ``!p x. ?y. prime p /\ 0 < x /\ x < p ==> 0 < y /\ y < p /\ ((y * x) MOD p = 1)``,
-  metis_tac[MOD_MULT_INV_EXISTS]);
+Theorem lemma[local]:
+    !p x. ?y. prime p /\ 0 < x /\ x < p ==> 0 < y /\ y < p /\ ((y * x) MOD p = 1)
+Proof
+  metis_tac[MOD_MULT_INV_EXISTS]
+QED
 
 (* Step 2: apply SKOLEM_THM *)
 (*
@@ -4149,10 +4151,12 @@ Proof
 QED
 
 (* Convert this into an existence definition *)
-val lemma = prove(
-  ``!n x. ?y. 1 < n /\ 0 < x /\ x < n /\ coprime n x ==>
-              0 < y /\ y < n /\ coprime n y /\ ((y * x) MOD n = 1)``,
-  metis_tac[GCD_MOD_MULT_INV]);
+Theorem lemma[local]:
+    !n x. ?y. 1 < n /\ 0 < x /\ x < n /\ coprime n x ==>
+              0 < y /\ y < n /\ coprime n y /\ ((y * x) MOD n = 1)
+Proof
+  metis_tac[GCD_MOD_MULT_INV]
+QED
 
 val GEN_MULT_INV_DEF = new_specification(
   "GEN_MULT_INV_DEF",

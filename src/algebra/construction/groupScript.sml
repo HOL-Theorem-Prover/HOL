@@ -3270,10 +3270,12 @@ QED
    x * z IN G /\ z IN H ==> ?z'. z' IN H /\ (x = x * z * z')
    Just take z' = |/z.
 *)
-val subgroup_coset_relate = prove(
-  ``!(g:'a group) h. h <= g ==> !x y. x IN G /\ y IN G /\ y IN x * H ==> ?z. z IN H /\ (x = y * z)``,
+Theorem subgroup_coset_relate[local]:
+    !(g:'a group) h. h <= g ==> !x y. x IN G /\ y IN G /\ y IN x * H ==> ?z. z IN H /\ (x = y * z)
+Proof
   rw[coset_def] >>
-  metis_tac[subgroup_inv, group_rinv_assoc, subgroup_element, group_inv_element, Subgroup_def]);
+  metis_tac[subgroup_inv, group_rinv_assoc, subgroup_element, group_inv_element, Subgroup_def]
+QED
 
 (* Theorem: For h <= g, |/y * x in H ==> x * H = y * H. *)
 (* Proof:
@@ -3283,8 +3285,9 @@ val subgroup_coset_relate = prove(
    (2) |/ y * x IN H /\ z IN H ==> ?z'. (y * z = x * z') /\ z' IN H
        Solving, z' = |/x * (y * z) = ( |/x * y) * z, and |/( |/y * x) = |/x * y IN H.
 *)
-val subgroup_coset_eq1 = prove(
-  ``!(g:'a group) h. h <= g ==> !x y. x IN G /\ y IN G /\ ( |/y * x) IN H ==> (x * H = y * H)``,
+Theorem subgroup_coset_eq1[local]:
+    !(g:'a group) h. h <= g ==> !x y. x IN G /\ y IN G /\ ( |/y * x) IN H ==> (x * H = y * H)
+Proof
   rpt strip_tac >>
   `Group h /\ Group g /\ !x y. x IN H /\ y IN H ==> (h.op x y = x * y)` by metis_tac[Subgroup_def] >>
   rw[coset_def, EXTENSION, EQ_IMP_THM] >| [
@@ -3295,7 +3298,8 @@ val subgroup_coset_eq1 = prove(
     `x * ( |/x * y * z) = y * z` by rw[group_assoc, group_linv_assoc] >>
     `|/( |/y * x) = |/x * y` by rw[group_inv_op] >>
     metis_tac[subgroup_inv, group_inv_element, group_op_element]
-  ]);
+  ]
+QED
 
 (* Theorem: For h <= g, x * H = y * H ==> |/y * x in H. *)
 (* Proof:   Since y IN y * H, always, by subgroup_coset_nonempty.
@@ -3303,12 +3307,14 @@ val subgroup_coset_eq1 = prove(
    hence ?z IN H /\  x = y * z  by subgroup_coset_relate.
    Solving, z = |/y * x, and z IN H.
 *)
-val subgroup_coset_eq2 = prove(
-  ``!(g:'a group) h. h <= g ==> !x y. x IN G /\ y IN G /\ (x * H = y * H) ==> ( |/y * x) IN H``,
+Theorem subgroup_coset_eq2[local]:
+    !(g:'a group) h. h <= g ==> !x y. x IN G /\ y IN G /\ (x * H = y * H) ==> ( |/y * x) IN H
+Proof
   rpt strip_tac >>
   `y IN x * H` by rw_tac std_ss[subgroup_coset_nonempty] >>
   `?z. z IN H /\ (x = y * z)` by rw_tac std_ss[subgroup_coset_relate] >>
-  metis_tac[group_rsolve, Subgroup_def, subgroup_element]);
+  metis_tac[group_rsolve, Subgroup_def, subgroup_element]
+QED
 
 (* Theorem: For h <= g, x * H = y * H iff |/y * x in H *)
 (* Proof:
@@ -4764,9 +4770,11 @@ QED
 *)
 
 (* Existence of coset generator: e IN CosetPartition g h ==> ?a. a IN G /\ (e = a * H) *)
-val lemma = prove(
-  ``!g h e. ?a. h <= g /\ e IN CosetPartition g h ==> a IN G /\ (e = a * H)``,
-  metis_tac[coset_partition_element]);
+Theorem lemma[local]:
+    !g h e. ?a. h <= g /\ e IN CosetPartition g h ==> a IN G /\ (e = a * H)
+Proof
+  metis_tac[coset_partition_element]
+QED
 (*
 - SKOLEM_THM;
 > val it = |- !P. (!x. ?y. P x y) <=> ?f. !x. P x (f x) : thm
@@ -6740,13 +6748,15 @@ QED
    Hence order h x = ord x               by DIVIDES_ANTISYM
 *)
 (* keep subgroupTheory.subgroup_order *)
-val subgroup_order = prove(
-  ``!g h:'a group. h <= g ==> !x. x IN H ==> (order h x = ord x)``,
+Theorem subgroup_order[local]:
+    !g h:'a group. h <= g ==> !x. x IN H ==> (order h x = ord x)
+Proof
   rpt strip_tac >>
   `Group g /\ Group h /\ H SUBSET G /\ (h.op = g.op) /\ (h.id = #e)` by metis_tac[Subgroup_def, subgroup_id] >>
   `!x. x IN H ==> x IN G` by metis_tac[SUBSET_DEF] >>
   `!x. x IN H ==> !n. h.exp x n = x ** n` by metis_tac[subgroup_exp] >>
-  metis_tac[order_property, group_order_condition, DIVIDES_ANTISYM]);
+  metis_tac[order_property, group_order_condition, DIVIDES_ANTISYM]
+QED
 
 (* Theorem: Group g ==> !x. x IN G /\ 0 < ord x ==> !n. x ** n = x ** (n MOD (ord x)) *)
 (* Proof: by monoid_exp_mod_order, group_is_monoid *)
@@ -8212,9 +8222,11 @@ QED
 subset_cross_element_iff
 |- !g s1 s2 z. z IN s1 o s2 <=> ?x y. x IN s1 /\ y IN s2 /\ (z = x * y)
 *)
-val lemma = prove(
-  ``!g:'a group. !(s1 s2):'a -> bool. !z. ?x y. z IN (s1 o s2) ==> x IN s1 /\ y IN s2 /\ (z = x * y)``,
-  metis_tac[subset_cross_element_iff]);
+Theorem lemma[local]:
+    !g:'a group. !(s1 s2):'a -> bool. !z. ?x y. z IN (s1 o s2) ==> x IN s1 /\ y IN s2 /\ (z = x * y)
+Proof
+  metis_tac[subset_cross_element_iff]
+QED
 
 (* 2. Apply Skolemization *)
 val subset_cross_left_right_def = new_specification(
@@ -10936,9 +10948,11 @@ Definition cyclic_def:
 End
 
 (* Apply Skolemization *)
-val lemma = prove(
-  ``!(g:'a group). ?z. cyclic g ==> z IN G /\ !x. x IN G ==> ?n. x = z ** n``,
-  metis_tac[cyclic_def]);
+Theorem lemma[local]:
+    !(g:'a group). ?z. cyclic g ==> z IN G /\ !x. x IN G ==> ?n. x = z ** n
+Proof
+  metis_tac[cyclic_def]
+QED
 (*
 - SKOLEM_THM;
 > val it = |- !P. (!x. ?y. P x y) <=> ?f. !x. P x (f x) : thm
@@ -12096,9 +12110,11 @@ Proof
 QED
 
 (* Apply Skolemization *)
-val lemma = prove(
-  ``!(g:'a group) x. ?n. cyclic g /\ x IN G ==> (x = (cyclic_gen g) ** n) /\ (FINITE G ==> n < CARD G)``,
-  metis_tac[cyclic_index_exists]);
+Theorem lemma[local]:
+    !(g:'a group) x. ?n. cyclic g /\ x IN G ==> (x = (cyclic_gen g) ** n) /\ (FINITE G ==> n < CARD G)
+Proof
+  metis_tac[cyclic_index_exists]
+QED
 (*
 - SKOLEM_THM;
 > val it = |- !P. (!x. ?y. P x y) <=> ?f. !x. P x (f x) : thm
@@ -13660,9 +13676,11 @@ QED
 *)
 
 (* Existence of act_by: the x in reach f g X b, such that a IN G /\ f a x = b. *)
-val lemma = prove(
-  ``!f (g:'a group) (x:'b) (y:'b). ?a. reach f g x y ==> a IN G /\ f a x = y``,
-  metis_tac[reach_def]);
+Theorem lemma[local]:
+    !f (g:'a group) (x:'b) (y:'b). ?a. reach f g x y ==> a IN G /\ f a x = y
+Proof
+  metis_tac[reach_def]
+QED
 (*
 - SKOLEM_THM;
 > val it = |- !P. (!x. ?y. P x y) <=> ?f. !x. P x (f x) : thm

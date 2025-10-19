@@ -44,16 +44,17 @@ val finite_image_tybij =
                    PROVE []
                       ``?x:'a. (\x. (x = ARB) \/ FINITE (UNIV:'a->bool)) x``)})
 
-val FINITE_IMAGE_IMAGE = Q.prove(
-   `UNIV:'a finite_image->bool =
+Theorem FINITE_IMAGE_IMAGE[local]:
+    UNIV:'a finite_image->bool =
     IMAGE mk_finite_image
-      (if FINITE(UNIV:'a->bool) then UNIV:'a->bool else {ARB})`,
+      (if FINITE(UNIV:'a->bool) then UNIV:'a->bool else {ARB})
+Proof
    MP_TAC finite_image_tybij
    THEN COND_CASES_TAC
    THEN ASM_REWRITE_TAC []
    THEN REWRITE_TAC [EXTENSION, IN_IMAGE, IN_SING, IN_UNIV]
    THEN PROVE_TAC []
-   )
+QED
 
 (* ------------------------------------------------------------------------- *
  * Dimension of such a type, and indexing over it.                           *
@@ -69,8 +70,9 @@ Proof
    METIS_TAC [dimindex_def]
 QED
 
-val HAS_SIZE_FINITE_IMAGE = Q.prove(
-   `(UNIV:'a finite_image->bool) HAS_SIZE dimindex(:'a)`,
+Theorem HAS_SIZE_FINITE_IMAGE[local]:
+    (UNIV:'a finite_image->bool) HAS_SIZE dimindex(:'a)
+Proof
    REWRITE_TAC [dimindex_def, FINITE_IMAGE_IMAGE]
    THEN MP_TAC finite_image_tybij
    THEN COND_CASES_TAC
@@ -80,7 +82,8 @@ val HAS_SIZE_FINITE_IMAGE = Q.prove(
    THEN ASM_REWRITE_TAC [HAS_SIZE, IN_UNIV, IN_SING]
    THEN SIMP_TAC arith_ss [CARD_EMPTY, CARD_SING, CARD_INSERT, FINITE_SING,
                            FINITE_INSERT, NOT_IN_EMPTY]
-   THEN PROVE_TAC[])
+   THEN PROVE_TAC[]
+QED
 
 val CARD_FINITE_IMAGE =
    PROVE [HAS_SIZE_FINITE_IMAGE, HAS_SIZE]
@@ -104,20 +107,22 @@ QED
 Theorem DIMINDEX_GT_0[simp] =
    REWRITE_RULE [arithmeticTheory.NOT_ZERO_LT_ZERO] DIMINDEX_NONZERO
 
-val DIMINDEX_FINITE_IMAGE = Q.prove(
-   `dimindex(:'a finite_image) = dimindex(:'a)`,
+Theorem DIMINDEX_FINITE_IMAGE[local]:
+    dimindex(:'a finite_image) = dimindex(:'a)
+Proof
    GEN_REWRITE_TAC LAND_CONV empty_rewrites [dimindex_def]
    THEN MP_TAC HAS_SIZE_FINITE_IMAGE
    THEN SIMP_TAC std_ss [FINITE_FINITE_IMAGE, HAS_SIZE]
-   )
+QED
 
 Definition finite_index[nocompute]:
    finite_index = @f:num->'a. !x:'a. ?!n. n < dimindex(:'a) /\ (f n = x)
 End
 
-val FINITE_INDEX_WORKS_FINITE = Q.prove(
-   `FINITE (UNIV:'n->bool) ==>
-    !i:'n. ?!n. n < dimindex(:'n) /\ (finite_index n = i)`,
+Theorem FINITE_INDEX_WORKS_FINITE[local]:
+    FINITE (UNIV:'n->bool) ==>
+    !i:'n. ?!n. n < dimindex(:'n) /\ (finite_index n = i)
+Proof
    DISCH_TAC
    THEN ASM_REWRITE_TAC [finite_index, dimindex_def]
    THEN CONV_TAC SELECT_CONV
@@ -125,17 +130,19 @@ val FINITE_INDEX_WORKS_FINITE = Q.prove(
    THEN1 PROVE_TAC [HAS_SIZE]
    THEN DISCH_THEN (MP_TAC o MATCH_MP HAS_SIZE_INDEX)
    THEN ASM_REWRITE_TAC [HAS_SIZE, IN_UNIV]
-   )
+QED
 
-val FINITE_INDEX_WORKS = Q.prove(
-   `!i:'a finite_image. ?!n. n < dimindex(:'a) /\ (finite_index n = i)`,
+Theorem FINITE_INDEX_WORKS[local]:
+    !i:'a finite_image. ?!n. n < dimindex(:'a) /\ (finite_index n = i)
+Proof
    MP_TAC (MATCH_MP FINITE_INDEX_WORKS_FINITE FINITE_FINITE_IMAGE)
    THEN PROVE_TAC [DIMINDEX_FINITE_IMAGE]
-   )
+QED
 
-val FINITE_INDEX_INJ = Q.prove(
-   `!i j. i < dimindex(:'a) /\ j < dimindex(:'a) ==>
-          ((finite_index i :'a = finite_index j) = (i = j))`,
+Theorem FINITE_INDEX_INJ[local]:
+    !i j. i < dimindex(:'a) /\ j < dimindex(:'a) ==>
+          ((finite_index i :'a = finite_index j) = (i = j))
+Proof
    Q.ASM_CASES_TAC `FINITE(UNIV:'a->bool)`
    THEN ASM_REWRITE_TAC [dimindex_def]
    THENL [
@@ -143,7 +150,8 @@ val FINITE_INDEX_INJ = Q.prove(
       THEN ASM_REWRITE_TAC [dimindex_def]
       THEN PROVE_TAC [],
       PROVE_TAC [DECIDE ``!a. a < 1 <=> (a = 0)``]
-   ])
+   ]
+QED
 
 val FORALL_FINITE_INDEX =
    PROVE [FINITE_INDEX_WORKS]
@@ -274,60 +282,69 @@ QED
    Sums (for concatenation)
    ------------------------------------------------------------------------- *)
 
-val sum_union = Q.prove(
-   `UNIV:('a+'b)->bool = ISL UNION ISR`,
+Theorem sum_union[local]:
+    UNIV:('a+'b)->bool = ISL UNION ISR
+Proof
    REWRITE_TAC [FUN_EQ_THM, UNIV_DEF, UNION_DEF]
    THEN STRIP_TAC
    THEN ONCE_REWRITE_TAC [GSYM SPECIFICATION]
    THEN SIMP_TAC std_ss [GSPECIFICATION, IN_DEF, sumTheory.ISL_OR_ISR]
-   )
+QED
 
-val inl_inr_bij = Q.prove(
-   `BIJ INL (UNIV:'a->bool) (ISL:'a + 'b -> bool) /\
-    BIJ INR (UNIV:'b->bool) (ISR:'a + 'b -> bool)`,
+Theorem inl_inr_bij[local]:
+    BIJ INL (UNIV:'a->bool) (ISL:'a + 'b -> bool) /\
+    BIJ INR (UNIV:'b->bool) (ISR:'a + 'b -> bool)
+Proof
    RW_TAC std_ss [UNIV_DEF, BIJ_DEF, INJ_DEF, SURJ_DEF, IN_DEF]
    THEN PROVE_TAC [sumTheory.INL, sumTheory.INR]
-   )
+QED
 
-val inl_inr_image = Q.prove(
-   `((ISL:'a + 'b -> bool) = IMAGE INL (UNIV:'a->bool)) /\
-    ((ISR:'a + 'b -> bool) = IMAGE INR (UNIV:'b->bool))`,
+Theorem inl_inr_image[local]:
+    ((ISL:'a + 'b -> bool) = IMAGE INL (UNIV:'a->bool)) /\
+    ((ISR:'a + 'b -> bool) = IMAGE INR (UNIV:'b->bool))
+Proof
    RW_TAC std_ss [EXTENSION, IMAGE_DEF, IN_UNIV, GSPECIFICATION]
    THEN SIMP_TAC std_ss [IN_DEF]
    THEN Cases_on `x`
    THEN SIMP_TAC std_ss [sumTheory.ISL, sumTheory.ISR, sumTheory.sum_distinct]
-   )
+QED
 
-val isl_isr_finite = Q.prove(
-   `(FINITE (ISL:'a + 'b -> bool) = FINITE (UNIV:'a->bool)) /\
-    (FINITE (ISR:'a + 'b -> bool) = FINITE (UNIV:'b->bool))`,
+Theorem isl_isr_finite[local]:
+    (FINITE (ISL:'a + 'b -> bool) = FINITE (UNIV:'a->bool)) /\
+    (FINITE (ISR:'a + 'b -> bool) = FINITE (UNIV:'b->bool))
+Proof
    REWRITE_TAC [inl_inr_image]
    THEN CONJ_TAC
    THEN MATCH_MP_TAC INJECTIVE_IMAGE_FINITE
    THEN REWRITE_TAC [sumTheory.INR_INL_11]
-   )
+QED
 
-val isl_isr_univ = Q.prove(
-   `(FINITE (UNIV:'a -> bool) ==>
+Theorem isl_isr_univ[local]:
+    (FINITE (UNIV:'a -> bool) ==>
       (CARD (ISL:'a + 'b -> bool) = CARD (UNIV:'a->bool))) /\
     (FINITE (UNIV:'b -> bool) ==>
-      (CARD (ISR:'a + 'b -> bool) = CARD (UNIV:'b->bool)))`,
-    METIS_TAC [FINITE_BIJ_CARD_EQ, isl_isr_finite, inl_inr_bij])
+      (CARD (ISR:'a + 'b -> bool) = CARD (UNIV:'b->bool)))
+Proof
+    METIS_TAC [FINITE_BIJ_CARD_EQ, isl_isr_finite, inl_inr_bij]
+QED
 
-val isl_isr_inter = Q.prove(
-   `(ISL:'a + 'b -> bool) INTER (ISR:'a + 'b -> bool) = {}`,
+Theorem isl_isr_inter[local]:
+    (ISL:'a + 'b -> bool) INTER (ISR:'a + 'b -> bool) = {}
+Proof
    RW_TAC std_ss [INTER_DEF, EXTENSION, NOT_IN_EMPTY, GSPECIFICATION]
    THEN SIMP_TAC std_ss [IN_DEF]
    THEN Cases_on `x`
    THEN SIMP_TAC std_ss [sumTheory.ISR, sumTheory.ISL]
-   )
+QED
 
-val isl_isr_union = Q.prove(
-   `FINITE (UNIV:'a -> bool) /\ FINITE (UNIV:'b -> bool) ==>
+Theorem isl_isr_union[local]:
+    FINITE (UNIV:'a -> bool) /\ FINITE (UNIV:'b -> bool) ==>
       (CARD ((ISL:'a + 'b -> bool) UNION (ISR:'a + 'b -> bool)) =
-       CARD (ISL:'a + 'b -> bool) + CARD (ISR:'a + 'b -> bool))`,
+       CARD (ISL:'a + 'b -> bool) + CARD (ISR:'a + 'b -> bool))
+Proof
    METIS_TAC [CARD_UNION, arithmeticTheory.ADD_0, CARD_EMPTY,
-              isl_isr_inter, isl_isr_finite])
+              isl_isr_inter, isl_isr_finite]
+QED
 
 Theorem index_sum:
     dimindex(:('a+'b)) =
@@ -362,91 +379,106 @@ Definition IS_BIT0B_def[nocompute]:
    (IS_BIT0B (BIT0A x) = F) /\ (IS_BIT0B (BIT0B x) = T)
 End
 
-val IS_BIT0A_OR_IS_BIT0B = Q.prove(
-   `!x. IS_BIT0A x \/ IS_BIT0B x`,
-   Cases THEN METIS_TAC [IS_BIT0A_def, IS_BIT0B_def])
+Theorem IS_BIT0A_OR_IS_BIT0B[local]:
+    !x. IS_BIT0A x \/ IS_BIT0B x
+Proof
+   Cases THEN METIS_TAC [IS_BIT0A_def, IS_BIT0B_def]
+QED
 
-val bit0_union = Q.prove(
-   `UNIV:('a bit0)->bool = IS_BIT0A UNION IS_BIT0B`,
+Theorem bit0_union[local]:
+    UNIV:('a bit0)->bool = IS_BIT0A UNION IS_BIT0B
+Proof
    REWRITE_TAC [FUN_EQ_THM, UNIV_DEF, UNION_DEF]
    THEN STRIP_TAC
    THEN ONCE_REWRITE_TAC [GSYM SPECIFICATION]
    THEN SIMP_TAC std_ss [GSPECIFICATION, IN_DEF, IS_BIT0A_OR_IS_BIT0B]
-   )
+QED
 
-val is_bit0a_bij = Q.prove(
-   `BIJ BIT0A (UNIV:'a->bool) (IS_BIT0A:'a bit0->bool)`,
+Theorem is_bit0a_bij[local]:
+    BIJ BIT0A (UNIV:'a->bool) (IS_BIT0A:'a bit0->bool)
+Proof
    RW_TAC std_ss [UNIV_DEF, BIJ_DEF, INJ_DEF, SURJ_DEF, IN_DEF, IS_BIT0A_def]
    THEN Cases_on `x`
    THEN FULL_SIMP_TAC std_ss [IS_BIT0A_def, IS_BIT0B_def]
    THEN METIS_TAC []
-   )
+QED
 
-val is_bit0b_bij = Q.prove(
-   `BIJ BIT0B (UNIV:'a->bool) (IS_BIT0B:'a bit0->bool)`,
+Theorem is_bit0b_bij[local]:
+    BIJ BIT0B (UNIV:'a->bool) (IS_BIT0B:'a bit0->bool)
+Proof
    RW_TAC std_ss [UNIV_DEF, BIJ_DEF, INJ_DEF, SURJ_DEF, IN_DEF, IS_BIT0B_def]
    THEN Cases_on `x`
    THEN FULL_SIMP_TAC std_ss [IS_BIT0A_def, IS_BIT0B_def]
    THEN METIS_TAC []
-   )
+QED
 
-val is_bit0a_image = Q.prove(
-   `IS_BIT0A = IMAGE BIT0A (UNIV:'a->bool)`,
+Theorem is_bit0a_image[local]:
+    IS_BIT0A = IMAGE BIT0A (UNIV:'a->bool)
+Proof
    RW_TAC std_ss [EXTENSION, IMAGE_DEF, IN_UNIV, GSPECIFICATION]
    THEN SIMP_TAC std_ss [IN_DEF]
    THEN Cases_on `x`
    THEN SIMP_TAC (srw_ss()) [IS_BIT0A_def, IS_BIT0B_def]
-   )
+QED
 
-val is_bit0b_image = Q.prove(
-   `IS_BIT0B = IMAGE BIT0B (UNIV:'a->bool)`,
+Theorem is_bit0b_image[local]:
+    IS_BIT0B = IMAGE BIT0B (UNIV:'a->bool)
+Proof
    RW_TAC std_ss [EXTENSION, IMAGE_DEF, IN_UNIV, GSPECIFICATION]
    THEN SIMP_TAC std_ss [IN_DEF]
    THEN Cases_on `x`
    THEN SIMP_TAC (srw_ss()) [IS_BIT0A_def, IS_BIT0B_def]
-   )
+QED
 
-val is_bit0a_finite = Q.prove(
-   `FINITE (IS_BIT0A:'a bit0->bool) = FINITE (UNIV:'a->bool)`,
+Theorem is_bit0a_finite[local]:
+    FINITE (IS_BIT0A:'a bit0->bool) = FINITE (UNIV:'a->bool)
+Proof
    REWRITE_TAC [is_bit0a_image]
    THEN MATCH_MP_TAC INJECTIVE_IMAGE_FINITE
    THEN SIMP_TAC (srw_ss()) []
-   )
+QED
 
-val is_bit0b_finite = Q.prove(
-   `FINITE (IS_BIT0B:'a bit0->bool) = FINITE (UNIV:'a->bool)`,
+Theorem is_bit0b_finite[local]:
+    FINITE (IS_BIT0B:'a bit0->bool) = FINITE (UNIV:'a->bool)
+Proof
    REWRITE_TAC [is_bit0b_image]
    THEN MATCH_MP_TAC INJECTIVE_IMAGE_FINITE
    THEN SIMP_TAC (srw_ss()) []
-   )
+QED
 
-val is_bit0a_card = Q.prove(
-   `FINITE (UNIV:'a->bool) ==>
-      (CARD (IS_BIT0A:'a bit0->bool) = CARD (UNIV:'a->bool))`,
-   METIS_TAC [FINITE_BIJ_CARD_EQ, is_bit0a_finite, is_bit0a_bij])
+Theorem is_bit0a_card[local]:
+    FINITE (UNIV:'a->bool) ==>
+      (CARD (IS_BIT0A:'a bit0->bool) = CARD (UNIV:'a->bool))
+Proof
+   METIS_TAC [FINITE_BIJ_CARD_EQ, is_bit0a_finite, is_bit0a_bij]
+QED
 
-val is_bit0b_card = Q.prove(
-   `FINITE (UNIV:'a->bool) ==>
-    (CARD (IS_BIT0B:'a bit0->bool) = CARD (UNIV:'a->bool))`,
-   METIS_TAC [FINITE_BIJ_CARD_EQ, is_bit0b_finite, is_bit0b_bij])
+Theorem is_bit0b_card[local]:
+    FINITE (UNIV:'a->bool) ==>
+    (CARD (IS_BIT0B:'a bit0->bool) = CARD (UNIV:'a->bool))
+Proof
+   METIS_TAC [FINITE_BIJ_CARD_EQ, is_bit0b_finite, is_bit0b_bij]
+QED
 
-val is_bit0a_is_bit0b_inter = Q.prove(
-   `IS_BIT0A INTER IS_BIT0B = {}`,
+Theorem is_bit0a_is_bit0b_inter[local]:
+    IS_BIT0A INTER IS_BIT0B = {}
+Proof
    RW_TAC std_ss [INTER_DEF, EXTENSION, NOT_IN_EMPTY, GSPECIFICATION]
    THEN Cases_on `x`
    THEN SIMP_TAC std_ss [IN_DEF, IS_BIT0A_def, IS_BIT0B_def]
-   )
+QED
 
-val is_bit0a_is_bit0b_union = Q.prove(
-   `FINITE (UNIV:'a -> bool) ==>
+Theorem is_bit0a_is_bit0b_union[local]:
+    FINITE (UNIV:'a -> bool) ==>
      (CARD ((IS_BIT0A:'a bit0 -> bool) UNION (IS_BIT0B:'a bit0 -> bool)) =
-      CARD (IS_BIT0A:'a bit0 -> bool) + CARD (IS_BIT0B:'a bit0 -> bool))`,
+      CARD (IS_BIT0A:'a bit0 -> bool) + CARD (IS_BIT0B:'a bit0 -> bool))
+Proof
    STRIP_TAC
    THEN IMP_RES_TAC (GSYM is_bit0a_finite)
    THEN IMP_RES_TAC (GSYM is_bit0b_finite)
    THEN IMP_RES_TAC CARD_UNION
    THEN FULL_SIMP_TAC std_ss [is_bit0a_is_bit0b_inter, CARD_EMPTY]
-   )
+QED
 
 Theorem index_bit0:
     dimindex(:('a bit0)) =
@@ -485,107 +517,127 @@ Definition IS_BIT1C_def[nocompute]:
    (IS_BIT1C (BIT1C) = T)
 End
 
-val IS_BIT1A_OR_IS_BIT1B_OR_IS_BIT1C = Q.prove(
-   `!x. IS_BIT1A x \/ IS_BIT1B x \/ IS_BIT1C x`,
-   Cases THEN METIS_TAC [IS_BIT1A_def, IS_BIT1B_def, IS_BIT1C_def])
+Theorem IS_BIT1A_OR_IS_BIT1B_OR_IS_BIT1C[local]:
+    !x. IS_BIT1A x \/ IS_BIT1B x \/ IS_BIT1C x
+Proof
+   Cases THEN METIS_TAC [IS_BIT1A_def, IS_BIT1B_def, IS_BIT1C_def]
+QED
 
-val bit1_union = Q.prove(
-   `UNIV:('a bit1)->bool = IS_BIT1A UNION IS_BIT1B UNION IS_BIT1C`,
+Theorem bit1_union[local]:
+    UNIV:('a bit1)->bool = IS_BIT1A UNION IS_BIT1B UNION IS_BIT1C
+Proof
    REWRITE_TAC [FUN_EQ_THM, UNIV_DEF, UNION_DEF]
    THEN STRIP_TAC
    THEN ONCE_REWRITE_TAC [GSYM SPECIFICATION]
    THEN SIMP_TAC std_ss [GSPECIFICATION, IN_DEF]
    THEN METIS_TAC [IS_BIT1A_OR_IS_BIT1B_OR_IS_BIT1C]
-   )
+QED
 
-val is_bit1a_bij = Q.prove(
-   `BIJ BIT1A (UNIV:'a->bool) (IS_BIT1A:'a bit1->bool)`,
+Theorem is_bit1a_bij[local]:
+    BIJ BIT1A (UNIV:'a->bool) (IS_BIT1A:'a bit1->bool)
+Proof
    RW_TAC std_ss [UNIV_DEF, BIJ_DEF, INJ_DEF, SURJ_DEF, IN_DEF, IS_BIT1A_def]
    THEN Cases_on `x`
    THEN FULL_SIMP_TAC std_ss [IS_BIT1A_def, IS_BIT1B_def, IS_BIT1C_def]
    THEN METIS_TAC []
-   )
+QED
 
-val is_bit1b_bij = Q.prove(
-   `BIJ BIT1B (UNIV:'a->bool) (IS_BIT1B:'a bit1->bool)`,
+Theorem is_bit1b_bij[local]:
+    BIJ BIT1B (UNIV:'a->bool) (IS_BIT1B:'a bit1->bool)
+Proof
    RW_TAC std_ss [UNIV_DEF, BIJ_DEF, INJ_DEF, SURJ_DEF, IN_DEF, IS_BIT1B_def]
    THEN Cases_on `x`
    THEN FULL_SIMP_TAC std_ss [IS_BIT1A_def, IS_BIT1B_def, IS_BIT1C_def]
    THEN METIS_TAC []
-   )
+QED
 
-val is_bit1a_image = Q.prove(
-   `IS_BIT1A = IMAGE BIT1A (UNIV:'a->bool)`,
+Theorem is_bit1a_image[local]:
+    IS_BIT1A = IMAGE BIT1A (UNIV:'a->bool)
+Proof
    RW_TAC std_ss [EXTENSION, IMAGE_DEF, IN_UNIV, GSPECIFICATION]
    THEN SIMP_TAC std_ss [IN_DEF]
    THEN Cases_on `x`
    THEN SIMP_TAC (srw_ss()) [IS_BIT1A_def, IS_BIT1B_def, IS_BIT1C_def]
-   )
+QED
 
-val is_bit1b_image = Q.prove(
-   `IS_BIT1B = IMAGE BIT1B (UNIV:'a->bool)`,
+Theorem is_bit1b_image[local]:
+    IS_BIT1B = IMAGE BIT1B (UNIV:'a->bool)
+Proof
    RW_TAC std_ss [EXTENSION, IMAGE_DEF, IN_UNIV, GSPECIFICATION]
    THEN SIMP_TAC std_ss [IN_DEF]
    THEN Cases_on `x`
    THEN SIMP_TAC (srw_ss()) [IS_BIT1A_def, IS_BIT1B_def, IS_BIT1C_def]
-   )
+QED
 
-val is_bit1a_finite = Q.prove(
-   `FINITE (IS_BIT1A:'a bit1->bool) = FINITE (UNIV:'a->bool)`,
+Theorem is_bit1a_finite[local]:
+    FINITE (IS_BIT1A:'a bit1->bool) = FINITE (UNIV:'a->bool)
+Proof
    REWRITE_TAC [is_bit1a_image]
    THEN MATCH_MP_TAC INJECTIVE_IMAGE_FINITE
    THEN SIMP_TAC (srw_ss()) []
-   )
+QED
 
-val is_bit1b_finite = Q.prove(
-   `FINITE (IS_BIT1B:'a bit1->bool) = FINITE (UNIV:'a->bool)`,
+Theorem is_bit1b_finite[local]:
+    FINITE (IS_BIT1B:'a bit1->bool) = FINITE (UNIV:'a->bool)
+Proof
    REWRITE_TAC [is_bit1b_image]
    THEN MATCH_MP_TAC INJECTIVE_IMAGE_FINITE
    THEN SIMP_TAC (srw_ss()) []
-   )
+QED
 
-val is_bit1a_card = Q.prove(
-   `FINITE (UNIV:'a->bool) ==>
-    (CARD (IS_BIT1A:'a bit1->bool) = CARD (UNIV:'a->bool))`,
-   METIS_TAC [FINITE_BIJ_CARD_EQ, is_bit1a_finite, is_bit1a_bij])
+Theorem is_bit1a_card[local]:
+    FINITE (UNIV:'a->bool) ==>
+    (CARD (IS_BIT1A:'a bit1->bool) = CARD (UNIV:'a->bool))
+Proof
+   METIS_TAC [FINITE_BIJ_CARD_EQ, is_bit1a_finite, is_bit1a_bij]
+QED
 
-val is_bit1b_card = Q.prove(
-   `FINITE (UNIV:'a->bool) ==>
-    (CARD (IS_BIT1B:'a bit1->bool) = CARD (UNIV:'a->bool))`,
-   METIS_TAC [FINITE_BIJ_CARD_EQ, is_bit1b_finite, is_bit1b_bij])
+Theorem is_bit1b_card[local]:
+    FINITE (UNIV:'a->bool) ==>
+    (CARD (IS_BIT1B:'a bit1->bool) = CARD (UNIV:'a->bool))
+Proof
+   METIS_TAC [FINITE_BIJ_CARD_EQ, is_bit1b_finite, is_bit1b_bij]
+QED
 
-val is_bit1a_is_bit1b_inter = Q.prove(
-   `IS_BIT1A INTER IS_BIT1B = {}`,
+Theorem is_bit1a_is_bit1b_inter[local]:
+    IS_BIT1A INTER IS_BIT1B = {}
+Proof
    RW_TAC std_ss [INTER_DEF, EXTENSION, NOT_IN_EMPTY, GSPECIFICATION]
    THEN Cases_on `x`
-   THEN SIMP_TAC std_ss [IN_DEF, IS_BIT1A_def, IS_BIT1B_def, IS_BIT1C_def])
+   THEN SIMP_TAC std_ss [IN_DEF, IS_BIT1A_def, IS_BIT1B_def, IS_BIT1C_def]
+QED
 
-val IS_BIT1C_EQ_BIT1C = Q.prove(
-   `!x. IS_BIT1C x = (x = BIT1C)`,
-   Cases THEN SIMP_TAC (srw_ss()) [IS_BIT1C_def])
+Theorem IS_BIT1C_EQ_BIT1C[local]:
+    !x. IS_BIT1C x = (x = BIT1C)
+Proof
+   Cases THEN SIMP_TAC (srw_ss()) [IS_BIT1C_def]
+QED
 
-val is_bit1c_sing = Q.prove(
-   `SING IS_BIT1C`,
+Theorem is_bit1c_sing[local]:
+    SING IS_BIT1C
+Proof
    REWRITE_TAC [SING_DEF]
    THEN Q.EXISTS_TAC `BIT1C`
    THEN SIMP_TAC std_ss [FUN_EQ_THM, IS_BIT1C_EQ_BIT1C]
    THEN METIS_TAC [IN_SING, SPECIFICATION]
-   )
+QED
 
 val is_bit1c_finite_card = REWRITE_RULE [SING_IFF_CARD1] is_bit1c_sing
 
-val bit1_union_inter = Q.prove(
-   `(IS_BIT1A UNION IS_BIT1B) INTER IS_BIT1C = {}`,
+Theorem bit1_union_inter[local]:
+    (IS_BIT1A UNION IS_BIT1B) INTER IS_BIT1C = {}
+Proof
    RW_TAC std_ss [INTER_DEF, EXTENSION, NOT_IN_EMPTY, GSPECIFICATION, IN_UNION]
    THEN Cases_on `x`
    THEN SIMP_TAC std_ss [IN_DEF, IS_BIT1A_def, IS_BIT1B_def, IS_BIT1C_def]
-   )
+QED
 
-val is_bit1a_is_bit1b_is_bit1c_union = Q.prove(
-   `FINITE (UNIV:'a -> bool) ==>
+Theorem is_bit1a_is_bit1b_is_bit1c_union[local]:
+    FINITE (UNIV:'a -> bool) ==>
     (CARD ((IS_BIT1A:'a bit1 -> bool) UNION (IS_BIT1B:'a bit1 -> bool) UNION
            (IS_BIT1C:'a bit1 -> bool)) =
-     CARD (IS_BIT1A:'a bit1 -> bool) + CARD (IS_BIT1B:'a bit1 -> bool) + 1)`,
+     CARD (IS_BIT1A:'a bit1 -> bool) + CARD (IS_BIT1B:'a bit1 -> bool) + 1)
+Proof
    STRIP_TAC
    THEN `FINITE (IS_BIT1A UNION IS_BIT1B)`
      by METIS_TAC [is_bit1a_finite, is_bit1b_finite, FINITE_UNION]
@@ -597,7 +649,7 @@ val is_bit1a_is_bit1b_is_bit1c_union = Q.prove(
    THEN IMP_RES_TAC (GSYM is_bit1b_finite)
    THEN IMP_RES_TAC CARD_UNION
    THEN FULL_SIMP_TAC std_ss [is_bit1a_is_bit1b_inter, CARD_EMPTY]
-   )
+QED
 
 Theorem index_bit1:
     dimindex(:('a bit1)) =
@@ -625,14 +677,15 @@ val () = List.app Theory.delete_const
  * one                                                                      *
  * ------------------------------------------------------------------------ *)
 
-val one_sing = Q.prove(
-   `SING (UNIV:one->bool)`,
+Theorem one_sing[local]:
+    SING (UNIV:one->bool)
+Proof
    REWRITE_TAC [SING_DEF]
    THEN Q.EXISTS_TAC `()`
    THEN SIMP_TAC std_ss [FUN_EQ_THM]
    THEN Cases
    THEN METIS_TAC [IN_SING, IN_UNIV, SPECIFICATION]
-   )
+QED
 
 val one_finite_card = REWRITE_RULE [SING_IFF_CARD1] one_sing
 

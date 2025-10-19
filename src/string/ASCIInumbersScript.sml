@@ -173,9 +173,11 @@ Proof
   \\ EVAL_TAC
 QED
 
-val MAP_ID = Q.prove(
-  `!l. EVERY (\x. f x = x) l ==> (MAP f l = l)`,
-  Induct \\ SRW_TAC [] []);
+Theorem MAP_ID[local]:
+   !l. EVERY (\x. f x = x) l ==> (MAP f l = l)
+Proof
+  Induct \\ SRW_TAC [] []
+QED
 
 Theorem s2n_n2s:
    !c2n n2c b n. 1 < b /\ (!x. x < b ==> (c2n (n2c x) = x)) ==>
@@ -193,9 +195,11 @@ QED
 
 (* ......................................................................... *)
 
-val REVERSE_LASTN = Q.prove(
-  `!n l. n <= LENGTH l ==> (LASTN n l = REVERSE (TAKE n (REVERSE l)))`,
-  SRW_TAC [] [FIRSTN_REVERSE]);
+Theorem REVERSE_LASTN[local]:
+   !n l. n <= LENGTH l ==> (LASTN n l = REVERSE (TAKE n (REVERSE l)))
+Proof
+  SRW_TAC [] [FIRSTN_REVERSE]
+QED
 
 Theorem n2s_s2n:
    !c2n n2c b s.

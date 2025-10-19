@@ -499,9 +499,10 @@ Proof
   rw[Once SPECIFICATION]
 QED
 
-val FINITE_IMAGE_INJfn = prove(
-  ``!s. (!x y. x IN s /\ y IN s ==> ((f x = f y) = (x = y))) ==>
-        (FINITE (IMAGE f s) = FINITE s)``,
+Theorem FINITE_IMAGE_INJfn[local]:
+    !s. (!x y. x IN s /\ y IN s ==> ((f x = f y) = (x = y))) ==>
+        (FINITE (IMAGE f s) = FINITE s)
+Proof
   rpt strip_tac >> simp[EQ_IMP_THM, IMAGE_FINITE] >>
   qsuff_tac `!t. FINITE t ==>
                  !s'. s' SUBSET s /\ (t = IMAGE f s') ==> FINITE s'`
@@ -517,17 +518,20 @@ val FINITE_IMAGE_INJfn = prove(
   strip_tac >> qx_gen_tac `x` >>
   `!x. x IN s' ==> x IN s` by fs[SUBSET_DEF] >>
   Cases_on `x = f d` >> asm_simp_tac(srw_ss() ++ CONJ_ss)[] >- rw[] >>
-  first_x_assum (qspec_then `x` mp_tac) >> simp[] >> metis_tac []);
+  first_x_assum (qspec_then `x` mp_tac) >> simp[] >> metis_tac []
+QED
 
-val IMAGE_CARD_INJfn = prove(
-  ``!s. FINITE s /\ (!x y. x IN s /\ y IN s ==> ((f x = f y) = (x = y))) ==>
-        (CARD (IMAGE f s) = CARD s)``,
+Theorem IMAGE_CARD_INJfn[local]:
+    !s. FINITE s /\ (!x y. x IN s /\ y IN s ==> ((f x = f y) = (x = y))) ==>
+        (CARD (IMAGE f s) = CARD s)
+Proof
   rpt strip_tac >>
   qsuff_tac `!t. FINITE t ==> t SUBSET s ==> (CARD (IMAGE f t) = CARD t)`
     >- metis_tac [SUBSET_REFL] >>
   Induct_on `FINITE t` >> simp[] >> rpt strip_tac >>
   `!x. x IN t ==> x IN s` by fs[SUBSET_DEF] >>
-  asm_simp_tac (srw_ss() ++ CONJ_ss) []);
+  asm_simp_tac (srw_ss() ++ CONJ_ss) []
+QED
 
 Theorem wobounds_preserve_bijections:
     BIJ f (elsOf w1) (elsOf w2) /\ x IN elsOf w1 /\
@@ -586,9 +590,11 @@ Definition wo2wo_def:
                    else wleast w2 s1)
 End
 
-val restrict_away = prove(
-  ``IMAGE (RESTRICT f (\x y. (x,y) WIN w) x) (iseg w x) = IMAGE f (iseg w x)``,
-  rw[EXTENSION, RESTRICT_DEF, iseg_def] >> srw_tac[CONJ_ss][]);
+Theorem restrict_away[local]:
+    IMAGE (RESTRICT f (\x y. (x,y) WIN w) x) (iseg w x) = IMAGE f (iseg w x)
+Proof
+  rw[EXTENSION, RESTRICT_DEF, iseg_def] >> srw_tac[CONJ_ss][]
+QED
 
 Theorem wo2wo_thm =
   wo2wo_def |> concl |> strip_forall |> #2 |> rhs |> strip_comb |> #2
@@ -667,13 +673,15 @@ Proof
   simp_tac(srw_ss() ++ DNF_ss) [SUBSET_DEF, iseg_def]>> metis_tac [WIN_TRANS]
 QED
 
-val wo2wo_injlemma = prove(
-  ``(x,y) WIN w1 /\ (wo2wo w1 w2 y = SOME z) ==> (wo2wo w1 w2 x <> SOME z)``,
+Theorem wo2wo_injlemma[local]:
+    (x,y) WIN w1 /\ (wo2wo w1 w2 y = SOME z) ==> (wo2wo w1 w2 x <> SOME z)
+Proof
   rw[Once wo2wo_thm, LET_THM, SimpL ``$==>``] >> strip_tac >>
   `z IN woseg w1 w2 y`
      by (asm_simp_tac (srw_ss() ++ DNF_ss) [] >> qexists_tac `x` >>
          simp[iseg_def]) >>
-  metis_tac [wleast_IN_wo]);
+  metis_tac [wleast_IN_wo]
+QED
 
 Theorem wo2wo_11:
     x1 IN elsOf w1 /\ x2 IN elsOf w1 /\ (wo2wo w1 w2 x1 = SOME y) /\

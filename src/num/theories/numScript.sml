@@ -16,13 +16,15 @@ val SUC_REP_DEF = new_specification
    ("SUC_REP_DEF",["SUC_REP"], boolTheory.INFINITY_AX);
 
 
-val ZERO_REP_EXISTS = prove(
-  Term`?z. !y. ~(z = SUC_REP y)`,
+Theorem ZERO_REP_EXISTS[local]:
+   ?z. !y. ~(z = SUC_REP y)
+Proof
   Q.X_CHOOSE_THEN `zrep` ASSUME_TAC ((CONV_RULE NOT_FORALL_CONV o
                                       REWRITE_RULE [ONTO_THM] o
                                       CONJUNCT2) SUC_REP_DEF) THEN
   POP_ASSUM (ASSUME_TAC o CONV_RULE NOT_EXISTS_CONV) THEN
-  Q.EXISTS_TAC `zrep` THEN POP_ASSUM ACCEPT_TAC);
+  Q.EXISTS_TAC `zrep` THEN POP_ASSUM ACCEPT_TAC
+QED
 
 (*---------------------------------------------------------------------------
  * `ZERO_REP:ind` represents `0:num`

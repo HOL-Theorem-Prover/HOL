@@ -549,23 +549,27 @@ Proof
   ]
 QED
 
-val INT_MUL_DIV' = prove(
-  ``!p q k.
-       ~(q = 0) /\ q int_divides p ==> (k * (p / q) = k * p / q)``,
+Theorem INT_MUL_DIV'[local]:
+    !p q k.
+       ~(q = 0) /\ q int_divides p ==> (k * (p / q) = k * p / q)
+Proof
   REPEAT STRIP_TAC THEN
   FULL_SIMP_TAC bool_ss [INT_DIVIDES_MOD0] THEN FULL_SIMP_TAC bool_ss [] THEN
-  PROVE_TAC [INT_MUL_DIV]);
+  PROVE_TAC [INT_MUL_DIV]
+QED
 
-val fractions = prove(
-  ``!p q r.
+Theorem fractions[local]:
+    !p q r.
        ~(r = 0) /\ r int_divides p /\ r int_divides q ==>
-       (p / r + q / r = (p + q) / r)``,
+       (p / r + q / r = (p + q) / r)
+Proof
   REPEAT STRIP_TAC THEN
   `?i. p = i * r` by PROVE_TAC [INT_DIVIDES] THEN POP_ASSUM SUBST1_TAC THEN
   `?j. q = j * r` by PROVE_TAC [INT_DIVIDES] THEN POP_ASSUM SUBST1_TAC THEN
   `i * r + j * r = (i + j) * r` by REWRITE_TAC [INT_RDISTRIB] THEN
   POP_ASSUM SUBST1_TAC THEN
-  ASM_SIMP_TAC bool_ss [INT_MUL_DIV, INT_MOD_ID, INT_DIV_ID, INT_MUL_RID]);
+  ASM_SIMP_TAC bool_ss [INT_MUL_DIV, INT_MOD_ID, INT_DIV_ID, INT_MUL_RID]
+QED
 
 Theorem gcdthm2:
     !m:num a:num x b d p q.
@@ -878,12 +882,16 @@ val int_acnorm_ss = SSFRAG{
      ( m | ax + b /\ n | ux + v =
         mn | dx + bqn + vpm /\ d | av - ub )
 *)
-val adhoc_lemma = prove(
-  ``!a b c.  a + (b - c) = (a - c) + b:int``,
-  SIMP_TAC (bool_ss ++ int_acnorm_ss) [INT_SUB_CALCULATE]);
-val adhoc_lemma2 = prove(
-  ``!a b c.  a - b + c = a + (c - b:int)``,
-  SIMP_TAC (bool_ss ++ int_acnorm_ss) [INT_SUB_CALCULATE]);
+Theorem adhoc_lemma[local]:
+    !a b c.  a + (b - c) = (a - c) + b:int
+Proof
+  SIMP_TAC (bool_ss ++ int_acnorm_ss) [INT_SUB_CALCULATE]
+QED
+Theorem adhoc_lemma2[local]:
+    !a b c.  a - b + c = a + (c - b:int)
+Proof
+  SIMP_TAC (bool_ss ++ int_acnorm_ss) [INT_SUB_CALCULATE]
+QED
 
 
 Theorem cooper_lemma_1:
@@ -1075,11 +1083,13 @@ Proof
   REWRITE_TAC [bmarker_def] THEN tautLib.TAUT_TAC
 QED
 
-val positive_mod_part = prove(
-  ``!p q r. 0 < q /\ 0 <= r /\ r < q ==>
-            ((p * q + r) % q = r)``,
+Theorem positive_mod_part[local]:
+    !p q r. 0 < q /\ 0 <= r /\ r < q ==>
+            ((p * q + r) % q = r)
+Proof
   REPEAT STRIP_TAC THEN MATCH_MP_TAC INT_MOD_UNIQUE THEN
-  ASM_SIMP_TAC bool_ss [INT_LT_GT] THEN PROVE_TAC []);
+  ASM_SIMP_TAC bool_ss [INT_LT_GT] THEN PROVE_TAC []
+QED
 
 val int_ss = srw_ss() ++ numSimps.ARITH_ss
 val tac1 =

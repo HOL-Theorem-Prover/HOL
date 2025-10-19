@@ -125,9 +125,11 @@ val nested_if_def = function "nested_if"
 val vary_defn = Hol_defn "vary"
     `vary(x, L) = if mem x L then let x = SUC x in vary(x,L) else x`;
 
-val vary_lemma = prove(
-  ``LENGTH (filter (\y. SUC x <= y) L) <= LENGTH (filter (\y. x <= y) L)``,
-  Induct_on `L` THEN SRW_TAC [ARITH_ss][] THEN DECIDE_TAC);
+Theorem vary_lemma[local]:
+    LENGTH (filter (\y. SUC x <= y) L) <= LENGTH (filter (\y. x <= y) L)
+Proof
+  Induct_on `L` THEN SRW_TAC [ARITH_ss][] THEN DECIDE_TAC
+QED
 
 val (vary_def, vary_ind) = Defn.tprove(
   vary_defn,

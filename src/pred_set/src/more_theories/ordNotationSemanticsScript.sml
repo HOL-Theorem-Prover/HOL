@@ -159,9 +159,11 @@ Proof
 QED
 
 (* |- <[expt t]> < <[e]> /\ is_ord e /\ is_ord t ==> <[t]> < omega ** <[e]> *)
-val neqend0_lemma = prove(
-  ``x < <[e]> ==> e <> End 0``,
-  rpt strip_tac >> fs[]);
+Theorem neqend0_lemma[local]:
+    x < <[e]> ==> e <> End 0
+Proof
+  rpt strip_tac >> fs[]
+QED
 
 Theorem tail_dominated =
   ord_less_models_ordlt
