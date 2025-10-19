@@ -33,17 +33,23 @@ val rule =
     [normalizes_def, binary_ieeeTheory.threshold_def, realTheory.REAL_INV_1OVER,
      GSYM (SIMP_CONV (srw_ss()) [interval_def] ``a IN interval x y``)]
 
-val word_msb16 = Q.prove(
-  `!a: word16. ~word_msb a = ((fp16_to_float a).Sign = 0w)`,
-  srw_tac [wordsLib.WORD_BIT_EQ_ss] [fp16_to_float_def])
+Theorem word_msb16[local]:
+   !a: word16. ~word_msb a = ((fp16_to_float a).Sign = 0w)
+Proof
+  srw_tac [wordsLib.WORD_BIT_EQ_ss] [fp16_to_float_def]
+QED
 
-val word_msb32 = Q.prove(
-  `!a: word32. ~word_msb a = ((fp32_to_float a).Sign = 0w)`,
-  srw_tac [wordsLib.WORD_BIT_EQ_ss] [fp32_to_float_def])
+Theorem word_msb32[local]:
+   !a: word32. ~word_msb a = ((fp32_to_float a).Sign = 0w)
+Proof
+  srw_tac [wordsLib.WORD_BIT_EQ_ss] [fp32_to_float_def]
+QED
 
-val word_msb64 = Q.prove(
-  `!a: word64. ~word_msb a = ((fp64_to_float a).Sign = 0w)`,
-  srw_tac [wordsLib.WORD_BIT_EQ_ss] [fp64_to_float_def])
+Theorem word_msb64[local]:
+   !a: word64. ~word_msb a = ((fp64_to_float a).Sign = 0w)
+Proof
+  srw_tac [wordsLib.WORD_BIT_EQ_ss] [fp64_to_float_def]
+QED
 
 val tac =
   simp_tac std_ss
@@ -62,41 +68,44 @@ val tac =
 
 (* --------------------------------------------------------------------- *)
 
-val fp16_float_add_relative = Q.prove(
-  `!a b.
+Theorem fp16_float_add_relative[local]:
+   !a b.
       fp16_isFinite a /\ fp16_isFinite b /\
       normalizes (:10 # 5) (fp16_to_real a + fp16_to_real b) ==>
       fp16_isFinite (fp16_add roundTiesToEven a b) /\
       ?e. abs e <= 1 / 2 pow (dimindex (:10) + 1) /\
           (fp16_to_real (fp16_add roundTiesToEven a b) =
-           (fp16_to_real a + fp16_to_real b) * (1 + e))`,
+           (fp16_to_real a + fp16_to_real b) * (1 + e))
+Proof
   tac
-  )
+QED
 
-val fp16_float_sub_relative = Q.prove(
-  `!a b.
+Theorem fp16_float_sub_relative[local]:
+   !a b.
       fp16_isFinite a /\ fp16_isFinite b /\
       normalizes (:10 # 5) (fp16_to_real a - fp16_to_real b) ==>
       fp16_isFinite (fp16_sub roundTiesToEven a b) /\
       ?e. abs e <= 1 / 2 pow (dimindex (:10) + 1) /\
           (fp16_to_real (fp16_sub roundTiesToEven a b) =
-           (fp16_to_real a - fp16_to_real b) * (1 + e))`,
+           (fp16_to_real a - fp16_to_real b) * (1 + e))
+Proof
   tac
-  )
+QED
 
-val fp16_float_mul_relative = Q.prove(
-  `!a b.
+Theorem fp16_float_mul_relative[local]:
+   !a b.
       fp16_isFinite a /\ fp16_isFinite b /\
       normalizes (:10 # 5) (fp16_to_real a * fp16_to_real b) ==>
       fp16_isFinite (fp16_mul roundTiesToEven a b) /\
       ?e. abs e <= 1 / 2 pow (dimindex (:10) + 1) /\
           (fp16_to_real (fp16_mul roundTiesToEven a b) =
-           (fp16_to_real a * fp16_to_real b) * (1 + e))`,
+           (fp16_to_real a * fp16_to_real b) * (1 + e))
+Proof
   tac
-  )
+QED
 
-val fp16_float_mul_add_relative = Q.prove(
-  `!a b c.
+Theorem fp16_float_mul_add_relative[local]:
+   !a b c.
       fp16_isFinite a /\ fp16_isFinite b /\ fp16_isFinite c /\
       normalizes (:10 # 5)
        (fp16_to_real a * fp16_to_real b + fp16_to_real c) ==>
@@ -104,12 +113,13 @@ val fp16_float_mul_add_relative = Q.prove(
       ?e. abs e <= 1 / 2 pow (dimindex (:10) + 1) /\
           (fp16_to_real (fp16_mul_add roundTiesToEven a b c) =
            (fp16_to_real a * fp16_to_real b +
-            fp16_to_real c) * (1 + e))`,
+            fp16_to_real c) * (1 + e))
+Proof
   tac
-  )
+QED
 
-val fp16_float_mul_sub_relative = Q.prove(
-  `!a b c.
+Theorem fp16_float_mul_sub_relative[local]:
+   !a b c.
       fp16_isFinite a /\ fp16_isFinite b /\ fp16_isFinite c /\
       normalizes (:10 # 5)
        (fp16_to_real a * fp16_to_real b - fp16_to_real c) ==>
@@ -117,34 +127,37 @@ val fp16_float_mul_sub_relative = Q.prove(
       ?e. abs e <= 1 / 2 pow (dimindex (:10) + 1) /\
           (fp16_to_real (fp16_mul_sub roundTiesToEven a b c) =
            (fp16_to_real a * fp16_to_real b -
-            fp16_to_real c) * (1 + e))`,
+            fp16_to_real c) * (1 + e))
+Proof
   tac
-  )
+QED
 
-val fp16_float_div_relative = Q.prove(
-  `!a b.
+Theorem fp16_float_div_relative[local]:
+   !a b.
       fp16_isFinite a /\ fp16_isFinite b /\ ~fp16_isZero b /\
       normalizes (:10 # 5) (fp16_to_real a / fp16_to_real b) ==>
       fp16_isFinite (fp16_div roundTiesToEven a b) /\
       ?e. abs e <= 1 / 2 pow (dimindex (:10) + 1) /\
           (fp16_to_real (fp16_div roundTiesToEven a b) =
-           (fp16_to_real a / fp16_to_real b) * (1 + e))`,
+           (fp16_to_real a / fp16_to_real b) * (1 + e))
+Proof
   tac
-  )
+QED
 
-val fp16_float_sqrt_relative = Q.prove(
-  `!a.
+Theorem fp16_float_sqrt_relative[local]:
+   !a.
       fp16_isFinite a /\ (~word_msb a \/ a = INT_MINw) /\
       normalizes (:10 # 5) (sqrt (fp16_to_real a)) ==>
       fp16_isFinite (fp16_sqrt roundTiesToEven a) /\
       ?e. abs e <= 1 / 2 pow (dimindex (:10) + 1) /\
           (fp16_to_real (fp16_sqrt roundTiesToEven a) =
-           (sqrt (fp16_to_real a)) * (1 + e))`,
+           (sqrt (fp16_to_real a)) * (1 + e))
+Proof
   tac >> gen_tac >> strip_tac >> irule float_sqrt_relative >>
   simp[sqrtable_def] >>
   simp[fp16_to_float_def, binary_ieeeTheory.float_minus_zero_def,
       binary_ieeeTheory.float_negate_def, binary_ieeeTheory.float_plus_zero_def]
-  )
+QED
 
 Theorem fp16_float_add_relative =
   rule fp16_float_add_relative
@@ -169,41 +182,44 @@ Theorem fp16_float_sqrt_relative =
 
 (* --------------------------------------------------------------------- *)
 
-val fp32_float_add_relative = Q.prove(
-  `!a b.
+Theorem fp32_float_add_relative[local]:
+   !a b.
       fp32_isFinite a /\ fp32_isFinite b /\
       normalizes (:23 # 8) (fp32_to_real a + fp32_to_real b) ==>
       fp32_isFinite (fp32_add roundTiesToEven a b) /\
       ?e. abs e <= 1 / 2 pow (dimindex (:23) + 1) /\
           (fp32_to_real (fp32_add roundTiesToEven a b) =
-           (fp32_to_real a + fp32_to_real b) * (1 + e))`,
+           (fp32_to_real a + fp32_to_real b) * (1 + e))
+Proof
   tac
-  )
+QED
 
-val fp32_float_sub_relative = Q.prove(
-  `!a b.
+Theorem fp32_float_sub_relative[local]:
+   !a b.
       fp32_isFinite a /\ fp32_isFinite b /\
       normalizes (:23 # 8) (fp32_to_real a - fp32_to_real b) ==>
       fp32_isFinite (fp32_sub roundTiesToEven a b) /\
       ?e. abs e <= 1 / 2 pow (dimindex (:23) + 1) /\
           (fp32_to_real (fp32_sub roundTiesToEven a b) =
-           (fp32_to_real a - fp32_to_real b) * (1 + e))`,
+           (fp32_to_real a - fp32_to_real b) * (1 + e))
+Proof
   tac
-  )
+QED
 
-val fp32_float_mul_relative = Q.prove(
-  `!a b.
+Theorem fp32_float_mul_relative[local]:
+   !a b.
       fp32_isFinite a /\ fp32_isFinite b /\
       normalizes (:23 # 8) (fp32_to_real a * fp32_to_real b) ==>
       fp32_isFinite (fp32_mul roundTiesToEven a b) /\
       ?e. abs e <= 1 / 2 pow (dimindex (:23) + 1) /\
           (fp32_to_real (fp32_mul roundTiesToEven a b) =
-           (fp32_to_real a * fp32_to_real b) * (1 + e))`,
+           (fp32_to_real a * fp32_to_real b) * (1 + e))
+Proof
   tac
-  )
+QED
 
-val fp32_float_mul_add_relative = Q.prove(
-  `!a b c.
+Theorem fp32_float_mul_add_relative[local]:
+   !a b c.
       fp32_isFinite a /\ fp32_isFinite b /\ fp32_isFinite c /\
       normalizes (:23 # 8)
        (fp32_to_real a * fp32_to_real b + fp32_to_real c) ==>
@@ -211,12 +227,13 @@ val fp32_float_mul_add_relative = Q.prove(
       ?e. abs e <= 1 / 2 pow (dimindex (:23) + 1) /\
           (fp32_to_real (fp32_mul_add roundTiesToEven a b c) =
            (fp32_to_real a * fp32_to_real b +
-            fp32_to_real c) * (1 + e))`,
+            fp32_to_real c) * (1 + e))
+Proof
   tac
-  )
+QED
 
-val fp32_float_mul_sub_relative = Q.prove(
-  `!a b c.
+Theorem fp32_float_mul_sub_relative[local]:
+   !a b c.
       fp32_isFinite a /\ fp32_isFinite b /\ fp32_isFinite c /\
       normalizes (:23 # 8)
        (fp32_to_real a * fp32_to_real b - fp32_to_real c) ==>
@@ -224,34 +241,37 @@ val fp32_float_mul_sub_relative = Q.prove(
       ?e. abs e <= 1 / 2 pow (dimindex (:23) + 1) /\
           (fp32_to_real (fp32_mul_sub roundTiesToEven a b c) =
            (fp32_to_real a * fp32_to_real b -
-            fp32_to_real c) * (1 + e))`,
+            fp32_to_real c) * (1 + e))
+Proof
   tac
-  )
+QED
 
-val fp32_float_div_relative = Q.prove(
-  `!a b.
+Theorem fp32_float_div_relative[local]:
+   !a b.
       fp32_isFinite a /\ fp32_isFinite b /\ ~fp32_isZero b /\
       normalizes (:23 # 8) (fp32_to_real a / fp32_to_real b) ==>
       fp32_isFinite (fp32_div roundTiesToEven a b) /\
       ?e. abs e <= 1 / 2 pow (dimindex (:23) + 1) /\
           (fp32_to_real (fp32_div roundTiesToEven a b) =
-           (fp32_to_real a / fp32_to_real b) * (1 + e))`,
+           (fp32_to_real a / fp32_to_real b) * (1 + e))
+Proof
   tac
-  )
+QED
 
-val fp32_float_sqrt_relative = Q.prove(
-  `!a.
+Theorem fp32_float_sqrt_relative[local]:
+   !a.
       fp32_isFinite a /\ (~word_msb a \/ a = INT_MINw) /\
       normalizes (:23 # 8) (sqrt (fp32_to_real a)) ==>
       fp32_isFinite (fp32_sqrt roundTiesToEven a) /\
       ?e. abs e <= 1 / 2 pow (dimindex (:23) + 1) /\
           (fp32_to_real (fp32_sqrt roundTiesToEven a) =
-           (sqrt (fp32_to_real a)) * (1 + e))`,
+           (sqrt (fp32_to_real a)) * (1 + e))
+Proof
   tac >> gen_tac >> strip_tac >> irule float_sqrt_relative >>
   simp[sqrtable_def] >>
   simp[fp32_to_float_def, binary_ieeeTheory.float_minus_zero_def,
       binary_ieeeTheory.float_negate_def, binary_ieeeTheory.float_plus_zero_def]
-  )
+QED
 
 Theorem fp32_float_add_relative =
   rule fp32_float_add_relative
@@ -276,41 +296,44 @@ Theorem fp32_float_sqrt_relative =
 
 (* --------------------------------------------------------------------- *)
 
-val fp64_float_add_relative = Q.prove(
-  `!a b.
+Theorem fp64_float_add_relative[local]:
+   !a b.
       fp64_isFinite a /\ fp64_isFinite b /\
       normalizes (:52 # 11) (fp64_to_real a + fp64_to_real b) ==>
       fp64_isFinite (fp64_add roundTiesToEven a b) /\
       ?e. abs e <= 1 / 2 pow (dimindex (:52) + 1) /\
           (fp64_to_real (fp64_add roundTiesToEven a b) =
-           (fp64_to_real a + fp64_to_real b) * (1 + e))`,
+           (fp64_to_real a + fp64_to_real b) * (1 + e))
+Proof
   tac
-  )
+QED
 
-val fp64_float_sub_relative = Q.prove(
-  `!a b.
+Theorem fp64_float_sub_relative[local]:
+   !a b.
       fp64_isFinite a /\ fp64_isFinite b /\
       normalizes (:52 # 11) (fp64_to_real a - fp64_to_real b) ==>
       fp64_isFinite (fp64_sub roundTiesToEven a b) /\
       ?e. abs e <= 1 / 2 pow (dimindex (:52) + 1) /\
           (fp64_to_real (fp64_sub roundTiesToEven a b) =
-           (fp64_to_real a - fp64_to_real b) * (1 + e))`,
+           (fp64_to_real a - fp64_to_real b) * (1 + e))
+Proof
   tac
-  )
+QED
 
-val fp64_float_mul_relative = Q.prove(
-  `!a b.
+Theorem fp64_float_mul_relative[local]:
+   !a b.
       fp64_isFinite a /\ fp64_isFinite b /\
       normalizes (:52 # 11) (fp64_to_real a * fp64_to_real b) ==>
       fp64_isFinite (fp64_mul roundTiesToEven a b) /\
       ?e. abs e <= 1 / 2 pow (dimindex (:52) + 1) /\
           (fp64_to_real (fp64_mul roundTiesToEven a b) =
-           (fp64_to_real a * fp64_to_real b) * (1 + e))`,
+           (fp64_to_real a * fp64_to_real b) * (1 + e))
+Proof
   tac
-  )
+QED
 
-val fp64_float_mul_add_relative = Q.prove(
-  `!a b c.
+Theorem fp64_float_mul_add_relative[local]:
+   !a b c.
       fp64_isFinite a /\ fp64_isFinite b /\ fp64_isFinite c /\
       normalizes (:52 # 11)
        (fp64_to_real a * fp64_to_real b + fp64_to_real c) ==>
@@ -318,12 +341,13 @@ val fp64_float_mul_add_relative = Q.prove(
       ?e. abs e <= 1 / 2 pow (dimindex (:52) + 1) /\
           (fp64_to_real (fp64_mul_add roundTiesToEven a b c) =
            (fp64_to_real a * fp64_to_real b +
-            fp64_to_real c) * (1 + e))`,
+            fp64_to_real c) * (1 + e))
+Proof
   tac
-  )
+QED
 
-val fp64_float_mul_sub_relative = Q.prove(
-  `!a b c.
+Theorem fp64_float_mul_sub_relative[local]:
+   !a b c.
       fp64_isFinite a /\ fp64_isFinite b /\ fp64_isFinite c /\
       normalizes (:52 # 11)
        (fp64_to_real a * fp64_to_real b - fp64_to_real c) ==>
@@ -331,35 +355,38 @@ val fp64_float_mul_sub_relative = Q.prove(
       ?e. abs e <= 1 / 2 pow (dimindex (:52) + 1) /\
           (fp64_to_real (fp64_mul_sub roundTiesToEven a b c) =
            (fp64_to_real a * fp64_to_real b -
-            fp64_to_real c) * (1 + e))`,
+            fp64_to_real c) * (1 + e))
+Proof
   tac
-  )
+QED
 
-val fp64_float_div_relative = Q.prove(
-  `!a b.
+Theorem fp64_float_div_relative[local]:
+   !a b.
       fp64_isFinite a /\ fp64_isFinite b /\ ~fp64_isZero b /\
       normalizes (:52 # 11) (fp64_to_real a / fp64_to_real b) ==>
       fp64_isFinite (fp64_div roundTiesToEven a b) /\
       ?e. abs e <= 1 / 2 pow (dimindex (:52) + 1) /\
           (fp64_to_real (fp64_div roundTiesToEven a b) =
-           (fp64_to_real a / fp64_to_real b) * (1 + e))`,
+           (fp64_to_real a / fp64_to_real b) * (1 + e))
+Proof
   tac
-  )
+QED
 
-val fp64_float_sqrt_relative = Q.prove(
-  `!a.
+Theorem fp64_float_sqrt_relative[local]:
+   !a.
       fp64_isFinite a /\ (~word_msb a \/ a = INT_MINw) /\
       normalizes (:52 # 11) (sqrt (fp64_to_real a)) ==>
       fp64_isFinite (fp64_sqrt roundTiesToEven a) /\
       ?e. abs e <= 1 / 2 pow (dimindex (:52) + 1) /\
           (fp64_to_real (fp64_sqrt roundTiesToEven a) =
-           (sqrt (fp64_to_real a)) * (1 + e))`,
+           (sqrt (fp64_to_real a)) * (1 + e))
+Proof
   tac >> gen_tac >> strip_tac >> irule float_sqrt_relative >>
   simp[sqrtable_def] >>
   simp[fp64_to_float_def, binary_ieeeTheory.float_minus_zero_def,
        binary_ieeeTheory.float_negate_def,
        binary_ieeeTheory.float_plus_zero_def]
-  )
+QED
 
 Theorem fp64_float_add_relative =
   rule fp64_float_add_relative

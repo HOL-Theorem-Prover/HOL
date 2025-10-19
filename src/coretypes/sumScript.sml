@@ -204,16 +204,18 @@ QED
 (* use with the recursive type definition tools.                        *)
 (* ---------------------------------------------------------------------*)
 
-val sum_Axiom0 = prove(
-   “!f:'a->'c.
+Theorem sum_Axiom0[local]:
+    !f:'a->'c.
       !g:'b->'c.
       ?!h. (!x. h(INL x) = f x) /\
-           (!y. h(INR y) = g y)”,
+           (!y. h(INR y) = g y)
+Proof
    let val cnv = CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) sum_axiom
        val rew = SPEC_ALL (REWRITE_RULE [o_THM] cnv)
    in
    MATCH_ACCEPT_TAC rew
-   end);
+   end
+QED
 
 Theorem sum_INDUCT =
                           Prim_rec.prove_induction_thm sum_Axiom0;

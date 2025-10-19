@@ -55,9 +55,11 @@ val INDUCT_TAC = INDUCT_THEN INDUCTION ASSUME_TAC
 
 val _ = print "Developing rewrites for numeral addition\n"
 
-val PRE_ADD = prove(
-  “!n m. PRE (n + SUC m) = n + m”,
-  INDUCT_TAC THEN SIMP_TAC bool_ss [ADD_CLAUSES, PRE]);
+Theorem PRE_ADD[local]:
+   !n m. PRE (n + SUC m) = n + m
+Proof
+  INDUCT_TAC THEN SIMP_TAC bool_ss [ADD_CLAUSES, PRE]
+QED
 
 Theorem numeral_suc:
   (SUC ZERO = BIT1 ZERO) /\
@@ -143,7 +145,7 @@ QED
 (* formulation of numerals).                                                 *)
 (*---------------------------------------------------------------------------*)
 
-Theorem numeral_add:!n m.
+Theorem numeral_add: !n m.
    (iZ (ZERO + n) = n) /\
    (iZ (n + ZERO) = n) /\
    (iZ (BIT1 n + BIT1 m) = BIT2 (iZ (n + m))) /\
@@ -177,11 +179,13 @@ val numeral_proof_rwts = [BIT1, BIT2, INV_SUC_EQ,
                           NUMERAL_DEF, iZ, iiSUC, ADD_CLAUSES, NOT_SUC,
                           SUC_NOT, LESS_0, NOT_LESS_0, ALT_ZERO]
 
-val double_add_not_SUC = prove(Term
-`!n m.
-   ~(SUC (n + n) = m + m) /\ ~(m + m = SUC (n + n))`,
+Theorem double_add_not_SUC[local]:
+ !n m.
+   ~(SUC (n + n) = m + m) /\ ~(m + m = SUC (n + n))
+Proof
   INDUCT_TAC THEN SIMP_TAC bool_ss numeral_proof_rwts THEN
-  INDUCT_TAC THEN ASM_SIMP_TAC bool_ss numeral_proof_rwts);
+  INDUCT_TAC THEN ASM_SIMP_TAC bool_ss numeral_proof_rwts
+QED
 
 
 val _ = print "Developing numeral rewrites for relations\n"
@@ -209,35 +213,41 @@ fun ncases str n0 =
                    (X_CHOOSE_THEN (mk_var(n0, (==`:num`==))) SUBST_ALL_TAC)
                    (SPEC (mk_var(str, (==`:num`==))) num_CASES)
 
-val double_less = prove(Term
-  `!n m. (n + n < m + m <=> n < m) /\ (n + n <= m + m <=> n <= m)`,
+Theorem double_less[local]:
+   !n m. (n + n < m + m <=> n < m) /\ (n + n <= m + m <=> n <= m)
+Proof
   INDUCT_TAC THEN GEN_TAC THEN ncases "m" "m0" THEN
   ASM_SIMP_TAC bool_ss [ADD_CLAUSES, NOT_LESS_0, LESS_0, LESS_MONO_EQ,
-                        ZERO_LESS_EQ, NOT_SUC_LESS_EQ_0, LESS_EQ_MONO]);
+                        ZERO_LESS_EQ, NOT_SUC_LESS_EQ_0, LESS_EQ_MONO]
+QED
 
 
-val double_1suc_less = prove(Term
-  `!x y. (SUC(x + x) < y + y <=> x < y) /\
+Theorem double_1suc_less[local]:
+   !x y. (SUC(x + x) < y + y <=> x < y) /\
          (SUC(x + x) <= y + y <=> x < y) /\
          (x + x < SUC(y + y) <=> ~(y < x)) /\
-         (x + x <= SUC(y + y) <=> ~(y < x))`,
+         (x + x <= SUC(y + y) <=> ~(y < x))
+Proof
   INDUCT_TAC THEN GEN_TAC THEN ncases "y" "y0" THEN
   ASM_SIMP_TAC bool_ss [ADD_CLAUSES, LESS_EQ_MONO, NOT_LESS_0,
                         ZERO_LESS_EQ, NOT_SUC_LESS_EQ_0, LESS_0,
-                        LESS_MONO_EQ]);
+                        LESS_MONO_EQ]
+QED
 
-val double_2suc_less = prove(Term
-`!n m. (n + n < SUC (SUC (m + m)) <=> n < SUC m) /\
+Theorem double_2suc_less[local]:
+ !n m. (n + n < SUC (SUC (m + m)) <=> n < SUC m) /\
        (SUC (SUC (m + m)) < n + n <=> SUC m < n) /\
        (n + n <= SUC (SUC (m + m)) <=> n <= SUC m) /\
-       (SUC (SUC (m + m)) <= n + n <=> SUC m <= n)`,
+       (SUC (SUC (m + m)) <= n + n <=> SUC m <= n)
+Proof
 ONCE_REWRITE_TAC [GSYM (el 4 (CONJUNCTS ADD_CLAUSES))] THEN
 ONCE_REWRITE_TAC [GSYM (el 3 (CONJUNCTS ADD_CLAUSES))] THEN
-REWRITE_TAC [double_less]);
+REWRITE_TAC [double_less]
+QED
 
 val DOUBLE_FACTS = LIST_CONJ [double_less, double_1suc_less, double_2suc_less]
 
-Theorem numeral_lt:!n m.
+Theorem numeral_lt: !n m.
     (ZERO < BIT1 n <=> T) /\
     (ZERO < BIT2 n <=> T) /\
     (n < ZERO <=> F) /\
@@ -317,7 +327,7 @@ fun AP_TAC (asl, g) =
 val APn_TAC = REPEAT AP_TAC;
 
 
-Theorem bit_initiality:!zf b1f b2f.
+Theorem bit_initiality: !zf b1f b2f.
       ?f.
         (f ZERO = zf) /\
         (!n. f (BIT1 n) = b1f n (f n)) /\
@@ -346,8 +356,9 @@ Proof
   ]
 QED
 
-val bit_cases = prove(Term
-  `!n. (n = ZERO) \/ (?b1. n = BIT1 b1) \/ (?b2. n = BIT2 b2)`,
+Theorem bit_cases[local]:
+   !n. (n = ZERO) \/ (?b1. n = BIT1 b1) \/ (?b2. n = BIT2 b2)
+Proof
 INDUCT_TAC THENL [
   SIMP_TAC bool_ss [ALT_ZERO],
   POP_ASSUM (STRIP_ASSUME_TAC) THEN POP_ASSUM SUBST_ALL_TAC THENL [
@@ -358,14 +369,16 @@ INDUCT_TAC THENL [
     DISJ2_TAC THEN DISJ1_TAC THEN Q.EXISTS_TAC `SUC b2` THEN
     SIMP_TAC bool_ss [BIT1, BIT2, ADD_CLAUSES]
   ]
-]);
+]
+QED
 
-val old_style_bit_initiality = prove(Term
-  `!zf b1f b2f.
+Theorem old_style_bit_initiality[local]:
+   !zf b1f b2f.
       ?!f.
         (f ZERO = zf) /\
         (!n. f (BIT1 n) = b1f (f n) n) /\
-        (!n. f (BIT2 n) = b2f (f n) n)`,
+        (!n. f (BIT2 n) = b2f (f n) n)
+Proof
   REPEAT GEN_TAC THEN CONV_TAC EXISTS_UNIQUE_CONV THEN CONJ_TAC THENL [
     STRIP_ASSUME_TAC
       (Q.SPECL [`zf`, `\n a. b1f a n`, `\n a. b2f a n`] bit_initiality) THEN
@@ -383,7 +396,8 @@ val old_style_bit_initiality = prove(Term
       FIRST_ASSUM MATCH_MP_TAC THEN SIMP_TAC bool_ss [BIT2] THEN
       ONCE_REWRITE_TAC [ADD_CLAUSES] THEN REWRITE_TAC [LESS_ADD_SUC]
     ]
-  ]);
+  ]
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -447,12 +461,14 @@ val _ = OpenTheory_add"iSUB"
 Theorem bit_induction =
    Prim_rec.prove_induction_thm old_style_bit_initiality;
 
-val iSUB_ZERO = prove(
-  Term`(!n b. iSUB b ZERO n = ZERO) /\
-       (!n.   iSUB T n ZERO = n)`,
+Theorem iSUB_ZERO[local]:
+   (!n b. iSUB b ZERO n = ZERO) /\
+       (!n.   iSUB T n ZERO = n)
+Proof
   SIMP_TAC bool_ss [iSUB_DEF] THEN GEN_TAC THEN
   STRUCT_CASES_TAC (Q.SPEC `n` bit_cases) THEN
-  SIMP_TAC bool_ss [iSUB_DEF, iBIT_cases]);
+  SIMP_TAC bool_ss [iSUB_DEF, iBIT_cases]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* An equivalent form to the definition that doesn't need the cases theorem, *)
@@ -463,7 +479,7 @@ val iSUB_ZERO = prove(
 (* at all.                                                                   *)
 (*---------------------------------------------------------------------------*)
 
-Theorem iSUB_THM:!b n m. (iSUB b ZERO x = ZERO) /\
+Theorem iSUB_THM: !b n m. (iSUB b ZERO x = ZERO) /\
            (iSUB T n ZERO = n) /\
            (iSUB F (BIT1 n) ZERO = iDUB n) /\
            (iSUB T (BIT1 n) (BIT1 m) = iDUB (iSUB T n m)) /\
@@ -485,11 +501,12 @@ QED
 (* conditional operators.                                                    *)
 (*---------------------------------------------------------------------------*)
 
-val less_less_eqs = prove(
-  Term`!n m. (n < m ==> ~(m <= n) /\ (m <= SUC n <=> (m = SUC n)) /\
+Theorem less_less_eqs[local]:
+   !n m. (n < m ==> ~(m <= n) /\ (m <= SUC n <=> (m = SUC n)) /\
                         ~(m + m <= n)) /\
              (n <= m ==> ~(m < n) /\ (m <= n <=> (m = n)) /\
-                         ~(SUC m <= n))`,
+                         ~(SUC m <= n))
+Proof
   REPEAT GEN_TAC THEN CONJ_TAC THEN STRIP_TAC THEN REPEAT CONJ_TAC THENL [
     STRIP_TAC THEN MAP_EVERY IMP_RES_TAC [LESS_LESS_EQ_TRANS, LESS_REFL],
     EQ_TAC THEN SIMP_TAC bool_ss [LESS_OR_EQ] THEN STRIP_TAC THEN
@@ -505,21 +522,26 @@ val less_less_eqs = prove(
     IMP_RES_TAC LESS_EQUAL_ANTISYM,
     SIMP_TAC bool_ss [GSYM NOT_LESS] THEN
     ASM_SIMP_TAC bool_ss [LESS_EQ, LESS_EQ_MONO]
-  ]);
+  ]
+QED
 
 
-val sub_facts = prove(Term
-`!m. (SUC (SUC m) - m = SUC (SUC 0)) /\
+Theorem sub_facts[local]:
+ !m. (SUC (SUC m) - m = SUC (SUC 0)) /\
      (SUC m - m = SUC 0) /\
-     (m - m = 0)`,
-INDUCT_TAC THEN ASM_SIMP_TAC bool_ss [SUB_MONO_EQ, SUB_0, SUB_EQUAL_0]);
+     (m - m = 0)
+Proof
+INDUCT_TAC THEN ASM_SIMP_TAC bool_ss [SUB_MONO_EQ, SUB_0, SUB_EQUAL_0]
+QED
 
 val COND_OUT_THMS = CONJ COND_RAND COND_RATOR
 
-val SUB_elim = prove(Term
-  `!n m. (n + m) - m = n`,
+Theorem SUB_elim[local]:
+   !n m. (n + m) - m = n
+Proof
   GEN_TAC THEN INDUCT_THEN numTheory.INDUCTION ASSUME_TAC THEN
-  ASM_SIMP_TAC bool_ss [ADD_CLAUSES, SUB_0, SUB_MONO_EQ])
+  ASM_SIMP_TAC bool_ss [ADD_CLAUSES, SUB_0, SUB_MONO_EQ]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Induction over the bit structure to demonstrate that the iSUB function    *)
@@ -527,9 +549,10 @@ val SUB_elim = prove(Term
 (* "right way round"                                                         *)
 (*---------------------------------------------------------------------------*)
 
-val iSUB_correct = prove(
-  Term`!n m. (m <= n ==> (iSUB T n m = n - m)) /\
-             (m < n ==>  (iSUB F n m = n - SUC m))`,
+Theorem iSUB_correct[local]:
+   !n m. (m <= n ==> (iSUB T n m = n - m)) /\
+             (m < n ==>  (iSUB F n m = n - SUC m))
+Proof
   INDUCT_THEN bit_induction ASSUME_TAC THENL [
     SIMP_TAC bool_ss [SUB, iSUB_ZERO, ALT_ZERO],
     SIMP_TAC bool_ss [iSUB_DEF] THEN GEN_TAC THEN
@@ -565,9 +588,10 @@ val iSUB_correct = prove(
       CONJ_TAC THEN
       SIMP_TAC bool_ss [COND_OUT_THMS, ADD_CLAUSES, sub_facts, NUMERAL_DEF]
     ]
-  ]);
+  ]
+QED
 
-Theorem numeral_sub:!n m. NUMERAL (n - m) = if m < n then NUMERAL (iSUB T n m) else 0
+Theorem numeral_sub: !n m. NUMERAL (n - m) = if m < n then NUMERAL (iSUB T n m) else 0
 Proof
   SIMP_TAC bool_ss [iSUB_correct, COND_OUT_THMS,
                     REWRITE_RULE [NUMERAL_DEF] SUB_EQ_0, LESS_EQ_CASES,

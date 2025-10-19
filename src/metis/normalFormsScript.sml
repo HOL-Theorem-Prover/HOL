@@ -68,8 +68,9 @@ QED
 (* If a predicate P is true on its UNIV_POINT, it is true everywhere.        *)
 (* ------------------------------------------------------------------------- *)
 
-val UNIV_POINT_EXISTS = prove
-  (``?f. !p. p (f p) ==> !x : 'a. p x``,
+Theorem UNIV_POINT_EXISTS[local]:
+     ?f. !p. p (f p) ==> !x : 'a. p x
+Proof
    EXISTS_TAC ``\p. @x : 'a. ~p x`` THEN
    GEN_TAC THEN
    BETA_TAC THEN
@@ -78,7 +79,8 @@ val UNIV_POINT_EXISTS = prove
    CONV_TAC (RAND_CONV NOT_FORALL_CONV) THEN
    REWRITE_TAC [EXISTS_DEF] THEN
    BETA_TAC THEN
-   ASM_REWRITE_TAC []);
+   ASM_REWRITE_TAC []
+QED
 
 val UNIV_POINT_DEF =
   Definition.new_specification

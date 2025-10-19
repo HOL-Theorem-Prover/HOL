@@ -96,9 +96,12 @@ Definition istopology :
        (!k. k SUBSET L ==> (BIGUNION k) IN L))
 End
 
-val EXISTS_istopology = prove (``?t. istopology t``,
+Theorem EXISTS_istopology[local]:
+    ?t. istopology t
+Proof
     EXISTS_TAC ``univ(:'a set)``
- >> REWRITE_TAC [istopology, IN_UNIV]);
+ >> REWRITE_TAC [istopology, IN_UNIV]
+QED
 
 val topology_tydef = new_type_definition
   ("topology", EXISTS_istopology);

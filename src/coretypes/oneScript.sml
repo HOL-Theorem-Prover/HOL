@@ -41,9 +41,11 @@ end
 (* prove the (trivial) theorem: ?b.(\b.b)b.                             *)
 (*----------------------------------------------------------------------*)
 
-val EXISTS_ONE_REP = prove
-(“?b:bool. (\b.b) b”,
- EXISTS_TAC “T” THEN CONV_TAC BETA_CONV THEN ACCEPT_TAC TRUTH);
+Theorem EXISTS_ONE_REP[local]:
+  ?b:bool. (\b.b) b
+Proof
+ EXISTS_TAC “T” THEN CONV_TAC BETA_CONV THEN ACCEPT_TAC TRUTH
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Use the type definition mechanism to introduce the new type.              *)

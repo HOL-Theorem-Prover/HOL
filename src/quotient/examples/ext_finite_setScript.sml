@@ -75,13 +75,17 @@ Proof
   SRW_TAC [] [leq_def] THEN PROVE_TAC []
 QED
 
-val CONS_LEFT_COMM = prove(
-  ``!A x y:'a. leq (x::y::A) (y::x::A)``,
-  SRW_TAC [] [leq_def] THEN PROVE_TAC []);
+Theorem CONS_LEFT_COMM[local]:
+    !A x y:'a. leq (x::y::A) (y::x::A)
+Proof
+  SRW_TAC [] [leq_def] THEN PROVE_TAC []
+QED
 
-val CONS_LEFT_IDEM = prove(
-  ``!A x:'a. leq (x::x::A) (x::A)``,
-  SRW_TAC [] [leq_def] THEN PROVE_TAC []);
+Theorem CONS_LEFT_IDEM[local]:
+    !A x:'a. leq (x::x::A) (x::A)
+Proof
+  SRW_TAC [] [leq_def] THEN PROVE_TAC []
+QED
 
 Theorem finite_set1_strong_cases:
     !X. (X = []) \/ ?(a:'a) Y. ~MEM a Y /\ leq X (a::Y)
@@ -214,10 +218,12 @@ Proof
 QED
 
 (* list2set *)
-val list2set_thm = prove(
-  ``(LIST_TO_SET ([]:'a list) = {}) /\
-    (!h:'a t. LIST_TO_SET (h::t) = h INSERT LIST_TO_SET t)``,
-  SRW_TAC [][pred_setTheory.EXTENSION]);
+Theorem list2set_thm[local]:
+    (LIST_TO_SET ([]:'a list) = {}) /\
+    (!h:'a t. LIST_TO_SET (h::t) = h INSERT LIST_TO_SET t)
+Proof
+  SRW_TAC [][pred_setTheory.EXTENSION]
+QED
 
 Theorem list2set_RSP:
     !A B:'a list. leq A B ==> (LIST_TO_SET A = LIST_TO_SET B)

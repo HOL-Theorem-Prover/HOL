@@ -1051,10 +1051,11 @@ in
 end;
 
 (** lemma3 depends on both lemma1 and lemma2 *)
-val lemma3 = Q.prove (
-   `!b f x s. (!y. y IN (x INSERT s) ==> f y <> PosInf) /\ b <> PosInf /\ FINITE s ==>
+Theorem lemma3[local]:
+    !b f x s. (!y. y IN (x INSERT s) ==> f y <> PosInf) /\ b <> PosInf /\ FINITE s ==>
               (ITSET (\e acc. f e + acc) (x INSERT s) b =
-               (\e acc. f e + acc) x (ITSET (\e acc. f e + acc) (s DELETE x) b))`,
+               (\e acc. f e + acc) x (ITSET (\e acc. f e + acc) (s DELETE x) b))
+Proof
   (* proof *)
     Suff `!f s. FINITE s ==>
                 !x b. (!y. y IN (x INSERT s) ==> f y <> PosInf) /\ b <> PosInf ==>
@@ -1092,13 +1093,15 @@ val lemma3 = Q.prove (
  >> `ITSET (\e acc. f e + acc) s b <> PosInf` by METIS_TAC [lemma2]
  >> Q.ABBREV_TAC `t = ITSET (\e acc. f e + acc) s b`
  >> Q.PAT_X_ASSUM `!x b. b <> PosInf => X` K_TAC
- >> METIS_TAC [add_assoc, add_comm, IN_INSERT]);
+ >> METIS_TAC [add_assoc, add_comm, IN_INSERT]
+QED
 
 (** lemma3' depends on lemma1' and lemma2' (proof is the same as lemma3) *)
-val lemma3' = Q.prove (
-   `!b f x s. (!y. y IN (x INSERT s) ==> f y <> NegInf) /\ b <> NegInf /\ FINITE s ==>
+Theorem lemma3'[local]:
+    !b f x s. (!y. y IN (x INSERT s) ==> f y <> NegInf) /\ b <> NegInf /\ FINITE s ==>
               (ITSET (\e acc. f e + acc) (x INSERT s) b =
-               (\e acc. f e + acc) x (ITSET (\e acc. f e + acc) (s DELETE x) b))`,
+               (\e acc. f e + acc) x (ITSET (\e acc. f e + acc) (s DELETE x) b))
+Proof
  (* proof *)
     Suff `!f s. FINITE s ==>
                 !x b. (!y. y IN (x INSERT s) ==> f y <> NegInf) /\ b <> NegInf ==>
@@ -1136,7 +1139,8 @@ val lemma3' = Q.prove (
  >> `ITSET (\e acc. f e + acc) s b <> NegInf` by METIS_TAC [lemma2']
  >> Q.ABBREV_TAC `t = ITSET (\e acc. f e + acc) s b`
  >> Q.PAT_X_ASSUM `!x b. b <> NegInf => X` K_TAC
- >> METIS_TAC [add_assoc, add_comm, IN_INSERT]);
+ >> METIS_TAC [add_assoc, add_comm, IN_INSERT]
+QED
 
 (* NOTE: EXTREAL_SUM_IMAGE is not defined if there're mixing of PosInfs and NegInfs
    in the summation, since ``PosInf + NegInf`` is not defined. *)
@@ -4532,11 +4536,12 @@ QED
           suminf (\x. SIGMA (\i. f i x) (count n))) *)
 Theorem ext_suminf_sigma' = REWRITE_RULE [o_DEF] ext_suminf_sigma;
 
-val lemma = prove (
-  ``!f n'. (!i. (!m n. m <= n ==> (\x. f x i) m <= (\x. f x i) n)) /\
+Theorem lemma[local]:
+    !f n'. (!i. (!m n. m <= n ==> (\x. f x i) m <= (\x. f x i) n)) /\
         (!n i. 0 <= f n i) ==>
         (SIGMA (\i. sup {f k i | k IN univ(:num)}) (count n') =
-         sup {SIGMA (\i. f k i) (count n') | k IN UNIV})``,
+         sup {SIGMA (\i. f k i) (count n') | k IN UNIV})
+Proof
   RW_TAC std_ss [] THEN Q.ABBREV_TAC `s = count n'` THEN
   `FINITE s` by METIS_TAC [FINITE_COUNT] THEN POP_ASSUM MP_TAC THEN
   Q.SPEC_TAC (`s`,`s`) THEN SET_INDUCT_TAC THENL
@@ -4589,7 +4594,8 @@ val lemma = prove (
    SIMP_TAC std_ss [GSYM extreal_lt_def] THEN
    METIS_TAC [lte_trans, num_not_infty, lt_infty]]
  >> Rewr'
- >> ASM_SIMP_TAC std_ss [EXTREAL_SUM_IMAGE_SING]);
+ >> ASM_SIMP_TAC std_ss [EXTREAL_SUM_IMAGE_SING]
+QED
 
 Theorem ext_suminf_sup_eq : (* was: suminf_SUP_eq *)
    !(f:num->num->extreal).
@@ -4798,11 +4804,12 @@ Proof
  >> REWRITE_TAC [ETA_AX]
 QED
 
-val SUMINF_2D_suminf = prove (
-  ``!(f :num -> num -> real) (g :num -> real) (h :num -> num # num).
+Theorem SUMINF_2D_suminf[local]:
+    !(f :num -> num -> real) (g :num -> real) (h :num -> num # num).
        (!m n. 0 <= f m n) /\ (!n. summable (f n) /\ (suminf (f n) = g n)) /\ summable g /\
        BIJ h UNIV (UNIV CROSS UNIV) ==>
-       (suminf (UNCURRY f o h) = suminf g)``,
+       (suminf (UNCURRY f o h) = suminf g)
+Proof
     rpt STRIP_TAC
  >> MATCH_MP_TAC EQ_SYM
  >> MATCH_MP_TAC SUM_UNIQ
@@ -4810,13 +4817,15 @@ val SUMINF_2D_suminf = prove (
  >> ASM_REWRITE_TAC []
  >> GEN_TAC
  >> `summable (f n)` by METIS_TAC []
- >> METIS_TAC [SUMMABLE_SUM]);
+ >> METIS_TAC [SUMMABLE_SUM]
+QED
 
-val SUMINF_2D_summable = prove (
-  ``!(f :num -> num -> real) (g :num -> real) (h :num -> num # num).
+Theorem SUMINF_2D_summable[local]:
+    !(f :num -> num -> real) (g :num -> real) (h :num -> num # num).
        (!m n. 0 <= f m n) /\ (!n. summable (f n) /\ (suminf (f n) = g n)) /\ summable g /\
        BIJ h UNIV (UNIV CROSS UNIV) ==>
-       summable (UNCURRY f o h)``,
+       summable (UNCURRY f o h)
+Proof
     rpt STRIP_TAC
  >> REWRITE_TAC [summable]
  >> Q.EXISTS_TAC `suminf g`
@@ -4825,7 +4834,8 @@ val SUMINF_2D_summable = prove (
  >> GEN_TAC
  >> Suff `f n sums suminf (f n)` >- METIS_TAC []
  >> MATCH_MP_TAC SUMMABLE_SUM
- >> ASM_REWRITE_TAC []);
+ >> ASM_REWRITE_TAC []
+QED
 
 (* extreal version of SUMINF_2D, based on SUMINF_2D_suminf and SUMINF_2D_summable,
    c.f. ext_suminf_2d_infinite (more general, proved from scratch)

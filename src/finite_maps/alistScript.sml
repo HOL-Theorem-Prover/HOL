@@ -38,11 +38,13 @@ End
 val _ = export_rewrites["ALOOKUP_def"];
 val ALOOKUP_ind = theorem"ALOOKUP_ind";
 
-val lemma = Q.prove(
-`MAP (\k.(k,fm ' k)) (SET_TO_LIST (REST (FDOM fm))) =
- fmap_to_alist (fm \\ (CHOICE (FDOM fm)))`,
+Theorem lemma[local]:
+ MAP (\k.(k,fm ' k)) (SET_TO_LIST (REST (FDOM fm))) =
+ fmap_to_alist (fm \\ (CHOICE (FDOM fm)))
+Proof
 SRW_TAC [][fmap_to_alist_def,REST_DEF] THEN
-MATCH_MP_TAC MAP_CONG THEN SRW_TAC [][DOMSUB_FAPPLY_THM]);
+MATCH_MP_TAC MAP_CONG THEN SRW_TAC [][DOMSUB_FAPPLY_THM]
+QED
 
 Theorem ALOOKUP_FAILS:
     (ALOOKUP l x = NONE) <=> !k v. MEM (k,v) l ==> k <> x
@@ -528,9 +530,11 @@ Proof
 rw[fmap_to_alist_def,MAP_MAP_o,MAP_EQ_f]
 QED
 
-val INJ_I = prove (
-``!s t. INJ I s t <=> s SUBSET t``,
-SRW_TAC[][INJ_DEF,SUBSET_DEF])
+Theorem INJ_I[local]:
+  !s t. INJ I s t <=> s SUBSET t
+Proof
+SRW_TAC[][INJ_DEF,SUBSET_DEF]
+QED
 
 Theorem MAP_KEYS_I[simp]:
   !fm. MAP_KEYS I fm = fm
