@@ -2,6 +2,7 @@
 
 \usepackage{bold-extra}
 \usepackage[T1]{fontenc}
+\usepackage[english]{babel}
 \usepackage{listings}
 \usepackage{holtexbasic}
 \usepackage{proof}
@@ -9,6 +10,7 @@
 \usepackage{xcolor}
 \usepackage{macros}
 \usepackage{amssymb}
+\usepackage{lstlinebgrd}
 
 \definecolor{keycolor}{RGB}{172, 42, 42}
 \definecolor{vimvert}{RGB}{46, 139, 87}
@@ -203,6 +205,34 @@ Overrides to mathematical symbols should use \texttt{\bs{}ensuremath\lb{}\dots\r
 \label{fig:overrides}
 \end{figure}
 
+\subsection{The \texttt{paper.htex} File}
+
+The \LaTeX{} file that generates a PDF needs to include a standard set of packages, as described in Figure~\ref{fig:paper-htex}.
+In addition, the prelude to this file can redefine commands such as \verb|\HOLConst| to alter the style in which these are presented.
+
+\begin{figure}[htbp]
+\lstinputlisting[lastline=20,linebackgroundcolor={%
+    \ifnum\value{lstnumber}=4
+            \color{blue!10}
+    \fi
+    \ifnum\value{lstnumber}=5
+            \color{blue!10}
+    \fi
+    \ifnum\value{lstnumber}=7
+            \color{blue!10}
+    \fi
+    \ifnum\value{lstnumber}=8
+            \color{blue!10}
+    \fi
+    \ifnum\value{lstnumber}=9
+            \color{blue!10}
+    \fi
+    }
+]{paper.htex}
+\caption{The first 20 lines of the \texttt{.htex} file that generates this PDF. The critical lines are 4 (stops underscore characters in \texttt{alltt} environments from rendering strangely); 5 (allows underscores in \LaTeX{} \texttt{\bs{}label}'s); 7 (enables all of the \HOL{} macros); 8 (enables the natural deduction style presentation of implications (see Section~\ref{sec:inference-rules} below)) and 9 (the environment in which \texttt{\bs{}HOLthm}'s expect to be rendered).}
+\label{fig:paper-htex}
+
+\end{figure}
 \section{Tips and Tricks}
 
 \subsection{Fiddling with Width}
@@ -232,6 +262,7 @@ If a number is not given on the command-line, then the (default) default width i
 \subsection{Substitutions}
 
 \subsection{Inference Rules}
+\label{sec:inference-rules}
 
 One can present implicational theorems as natural deduction style rules, using the \texttt{rule} and \texttt{stackedrule} directives.
 This feature relies on the \texttt{proof.sty} package, which is part of standard \TeX{} distributions.
