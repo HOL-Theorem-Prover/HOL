@@ -46,28 +46,34 @@ in
        | (l, _) => (unsolved_list := l; raise ERR "TAC_PROOF" "unsolved goals")
 end
 
-fun default_prover (t, tac) = TAC_PROOF (([], t), tac)
+fun default_prover (t, tac) = TAC_PROOF(([], t), tac)
 
 local
+  fun goal_to_string (asms, t) =
+      case asms of
+          [] => Parse.term_to_string t
+        | _ => "([" ^ CharVector.tabulate(length asms, fn _ => #".") ^ "], " ^
+               Parse.term_to_string t ^ ")"
    val mesg = Lib.with_flag (Feedback.MESG_to_string, Lib.I) Feedback.HOL_MESG
-   fun provide_feedback f (t, tac: tactic) =
-      f (t, tac)
+   fun provide_feedback f (g, tac: tactic) =
+      f (g, tac)
       handle (e as HOL_ERR {message = m, origin_function = f, ...}) =>
-           (mesg ("Proof of \n\n" ^ Parse.term_to_string t ^ "\n\nfailed.\n")
-            ; (case (m, f, unsolved ()) of
+           (mesg ("Proof of \n\n" ^ goal_to_string g ^ "\n\nfailed.\n") ;
+            case (m, f, unsolved ()) of
                   ("unsolved goals", "TAC_PROOF", (_, u)::_) =>
-                      if Term.term_eq u t
+                      if Term.term_eq u (#2 g)
                          then ()
                       else mesg ("First unsolved sub-goal is\n\n" ^
                                  Parse.term_to_string u ^ "\n\n")
-                | _ => ())
-            ; raise e)
+                | _ => ();
+            raise e)
    val internal_prover =
-      ref (provide_feedback default_prover: Term.term * tactic -> Thm.thm)
+      ref (provide_feedback TAC_PROOF: goal * tactic -> Thm.thm)
 in
    fun set_prover f = internal_prover := provide_feedback f
-   fun restore_prover () = set_prover default_prover
-   fun prove (t, tac) = !internal_prover (t, tac)
+   fun restore_prover () = set_prover TAC_PROOF
+   fun prove (t, tac) = !internal_prover (([], t), tac)
+   fun prove_goal (g, tac) = !internal_prover (g, tac)
 end
 
 fun store_thm (name, tm, tac) =
