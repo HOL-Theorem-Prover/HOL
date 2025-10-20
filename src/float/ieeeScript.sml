@@ -554,7 +554,7 @@ End
 Definition float_lt[nocompute]:
   float_lt a b = flt(float_format) (defloat a) (defloat b)
 End
-Overload "<" = “float_lt”
+Overload "<" = “$float_lt”
 
 Definition float_le[nocompute]:
   float_le a b = fle(float_format) (defloat a) (defloat b)
@@ -565,7 +565,7 @@ Definition float_gt[nocompute]:
   float_gt a b = fgt(float_format) (defloat a) (defloat b)
 End
 
-Overload ">" = “$float_gt`”
+Overload ">" = “$float_gt”
 
 Definition float_ge[nocompute]:
   float_ge a b = fge(float_format) (defloat a) (defloat b)
