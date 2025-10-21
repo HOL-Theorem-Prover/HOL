@@ -25,16 +25,16 @@
 \maketitle
 \begin{abstract}
 This document attempts to provide a tutorial-like introduction to the process of generating \LaTeX{} files (and ultimately, PDFs) that include pretty-printed material from \HOL{} theories.
-While the \textsc{Description} manual includes a fairly careful description of \HOL{}'s solution to this problem (the ``munger''), it can be hard to get started using just that documentation.
-This document provides a simple, sample document that covers a number of standard features, and does so in a style that we hope is easy to understand.
+While the \DESCRIPTION{} manual includes a fairly careful description of \HOL{}'s solution to this problem (the ``munger''), it can be hard to get started using just that documentation.
+This document is a simple sample that covers a number of standard features, and does so in a style that we hope is easy to understand.
 \end{abstract}
 
 \section{Introduction}
 
 The premise is that this document will simultaneously explain \LaTeX-munging while illustrating the use of the technology with respect to a miniature HOL formalisation (on binary trees).
 Under \texttt{HOL/examples/latex-generation}, we find a somewhat plausible picture:
-in the directory \texttt{theories}, there is a HOL development consisting of two theory files: \texttt{sampleTreeScript.sml} and \texttt{bstScript.sml}, with the latter building on the former.
-This represents the \HOL{} development that is to be documented for publication in this paper.
+in the directory \texttt{theories}, there is a HOL development consisting of two script files generating the theories \texttt{sampleTree} and \texttt{bst}, with the latter building on the former.
+These theories make up the \HOL{} development that is to be documented for ``publication'' in this paper.
 The second directory, \texttt{paper}, contains the sources for this PDF.
 
 There is no requirement for the two directories to be siblings of each other in this way, but it is convenient in this context.
@@ -43,9 +43,12 @@ In practice, the theory files will be in one repository (possibly quite public),
 The basic flow is that as authors we will write a special \texttt{paper.htex} file,\footnote{The \texttt{.htex} suffix is arbitrary but probably now conventional.} pretending that we are writing a normal \LaTeX{} document, but with access to special extra commands (\texttt{\bs{}HOLthm\lb\dots\rb} and others) for inserting HOL material.
 Our source \texttt{paper.htex} file will be built into the PDF by first being translated into genuine \LaTeX{} file \texttt{paper.tex}, which can then be turned into a PDF with the usual technology (here we will assume use of \texttt{latexmk}).
 
+This technology is detailed in a more detailed, reference-like way in \HOL{}'s \DESCRIPTION{} manual.
+This document omits some details and options, but is hopefully enough to get a new user started.
+
 \subsection{Manifest}
 
-The following summarises the contents of the \texttt{papers} directory, with more details to come later in this document:
+The following summarises the contents of the \texttt{papers} directory, with more details to come later:
 \begin{description}
 \item[\texttt{.gitignore}] Specification of names of generated files that \texttt{git} should ignore so that generated files don't end up being committed to repositories.
 \item[\hmfile{}] This file specifies the standard build instructions, and includes a pointer to the directory where the \HOL{} sources are to be found in the \texttt{INCLUDES =} line.
@@ -183,11 +186,12 @@ Lines 7, 11, 14 and 17 begin with TAB characters (indicated by the long underlin
 \end{figure}
 
 \subsection{The \texttt{overrides} File}
+\label{sec:overrides}
 
 The \texttt{overrides} file (see Figure~\ref{fig:overrides}) contains a list of token-mappings, with each line consisting of
 \newcommand{\meta}[1]{\langle\mathit{#1}\rangle}
 \[
-\meta{token}\;\meta{replacement{-}width}\;\meta{replacement}
+\meta{token}\;\meta{replacement\mbox{-}width}\;\meta{replacement}
 \]
 The simple renamings in lines 3--5 are self-explanatory (and their effect can be seen in Figure~\ref{fig:simple-usage}).
 The stranger lines (1--2) are explained below in Section~\ref{sec:fancy-syntax}.
@@ -229,11 +233,24 @@ In addition, the prelude to this file can redefine commands such as \verb|\HOLCo
     \fi
     }
 ]{paper.htex}
-\caption{The first 20 lines of the \texttt{.htex} file that generates this PDF. The critical lines are 4 (stops underscore characters in \texttt{alltt} environments from rendering strangely); 5 (allows underscores in \LaTeX{} \texttt{\bs{}label}'s); 7 (enables all of the \HOL{} macros); 8 (enables the natural deduction style presentation of implications (see Section~\ref{sec:inference-rules} below)) and 9 (the environment in which \texttt{\bs{}HOLthm}'s expect to be rendered).}
+\caption{The first 20 lines of the \texttt{.htex} file that generates this PDF. The critical lines are 4 (stops underscore characters in \texttt{alltt} environments from rendering strangely); 5 (allows underscores in \LaTeX{} \texttt{\bs{}label}'s); 7 (enables all of the \HOL{} macros); 8 (enables the natural deduction style presentation of implications (see Section~\ref{sec:inference-rules} below)) and 9 (importing the environment in which \texttt{\bs{}HOLthm}'s expect to be rendered).}
 \label{fig:paper-htex}
+\end{figure}
 
+\subsection{The \texttt{ppLib.sml} File}
+
+The \texttt{ppLib.sml} file is presented in full in Figure~\ref{fig:pplib}.
+The only necessary part of the file is the reference to the theory or theories that are to be referred to in the PDF.
+If the theories required are cousins/siblings of each other, each will require its own \texttt{open} declaration.
+
+\begin{figure}[htbp]
+\lstinputlisting{ppLib.sml}
+\caption{The \texttt{ppLib.sml} file. The \texttt{open~bstTheory} declaration is mandatory. The \texttt{add_rule} invocation in lines 7--13 achieves the effect discussed below in Section~\ref{sec:fancy-syntax}.}
+\label{fig:pplib}
 \end{figure}
 \section{Tips and Tricks}
+
+This final section documents some standard ways and options that allow for nicer control of what \HOL{} munging produces.
 
 \subsection{Fiddling with Width}
 
@@ -260,6 +277,64 @@ The default width for an entire paper is controlled by the \texttt{-w} option to
 If a number is not given on the command-line, then the (default) default width is 65 columns.
 
 \subsection{Substitutions}
+\label{sec:substitutions}
+
+All three special commands allow for substitutions to be specified as part of the options passed to the commands between square brackets.
+The more common form of substitution allows adjustment of variables.
+This form is written $\mathit{new}\texttt{/}\mathit{old}$, and multiple substitutions can be used (separated by commas, as with all options).
+Term variables can be substituted for term variables, and this is done for both free and bound variables.
+When substituting types (remembering the leading colons), type variables can be instantiated with arbitrary other types.
+
+The occasionally useful token substitution uses the $\mathit{new}\texttt{//}\mathit{old}$ syntax.
+This allows simple \emph{ad hoc} forms of what might otherwise be achieved with the \texttt{overrides} file (see Section~\ref{sec:overrides}).
+
+All forms are illustrated in Figure~\ref{fig:substitutions}.
+
+
+\begin{figure}
+\begin{center}
+\begin{minipage}[t]{0.5\textwidth}
+\small
+\begin{alltt}
+Lead-in text:
+\com{begin}{alltt}
+\bs{}\holthm{}[conj1]\args{arithmetic.ADD_CLAUSES}
+(Free) Variable subst:
+\bs{}\holthm{}[conj1,n1/m]\args{arithmetic.ADD_CLAUSES}
+(Bound) Variable subst:
+\bs{}\holthm{}[v/x]\args{bool.FORALL_SIMP}
+Token substitution:
+\bs{}\holthm{}[conj1,++//+]\args{arithmetic.ADD_CLAUSES}
+\com{end}{alltt}
+The type \bs{}\holty[:'b/:'a,of]\args{LENGTH} is
+polymorphic. The term
+\bs{}\holtm[:num->bool/:'a]\args{univ(:'a)} is not.
+
+\end{alltt}
+\end{minipage}\hfill{}
+\begin{minipage}[t]{0.35\textwidth}
+Lead-in text:
+\begin{alltt}
+\HOLthm[conj1]{arithmetic.ADD_CLAUSES}
+(Free) Variable subst:
+\HOLthm[conj1,n1/m]{arithmetic.ADD_CLAUSES}
+(Bound) Variable subst:
+\HOLthm[v/x]{bool.FORALL_SIMP}
+Token substitution:
+\HOLthm[conj1,++//+]{arithmetic.ADD_CLAUSES}
+\end{alltt}
+The type \HOLty[:'b/:'a,of]{LENGTH} is polymorphic.
+The term \HOLtm[:num->bool/:'a]{univ(:'a)} is not.
+\end{minipage}
+\end{center}
+\caption{%
+  The substitution options in action.
+  \LaTeX{} in the left column; output on the right.
+  The \texttt{conj1} option selects the first conjunct of a theorem (\texttt{ADD_CLAUSES} has four to choose from).
+}
+\label{fig:substitutions}
+\end{figure}
+
 
 \subsection{Inference Rules}
 \label{sec:inference-rules}

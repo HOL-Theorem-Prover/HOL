@@ -161,7 +161,7 @@ using the ML functions `ASSUME` and `MP`.
 >> MP th1 th2;
 ```
 
-In the following, the `Count.apply` function is used to count the
+In the following, the `Count.inferences` function is used to count the
 number of primitive inferences performed in the course of applying the
 function to the argument.  In the first invocation, this means that
 only the *modus ponens* step is counted.  We create an artificial
@@ -315,7 +315,7 @@ adjusted as above.
 ```
 
 Notice that rewriting equations can be extracted from universally
-quantified theorems.To construct the proof step-wise, with all of the
+quantified theorems. To construct the proof step-wise, with all of the
 instantiations, substitutions, uses of transitivity, *etc*, would be a
 lengthy process. The rewriting rules make it easy, and do so whilst
 still generating the entire chain of inferences.
@@ -366,7 +366,7 @@ which
 
 1. is an axiom, or
 2. is a hypothesis of the rule being derived, or
-3.  follows from preceding steps by a rule of inference (either primitive
+3. follows from preceding steps by a rule of inference (either primitive
 or previously derived).
 
 The abbreviation `conv` ("conversion") is used for the ML type
@@ -421,7 +421,6 @@ The abbreviation `conv` ("conversion") is used for the ML type
 
 
 ### Transitivity of equality
-
 
 ```
    TRANS : thm -> thm -> thm
