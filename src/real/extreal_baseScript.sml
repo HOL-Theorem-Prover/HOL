@@ -1759,6 +1759,14 @@ Proof
     rpt Cases >> rw [extreal_sub_def, extreal_add_def, REAL_ADD2_SUB2]
 QED
 
+Theorem add2_assoc :
+    !a b c d. a <> NegInf /\ b <> NegInf /\ c <> NegInf /\ d <> NegInf
+          ==> a + b + (c + d) = a + c + (b + d)
+Proof
+    rpt Cases >> rw [extreal_add_def]
+ >> REAL_ARITH_TAC
+QED
+
 Theorem sub_ldistrib :
     !x y z. x <> NegInf /\ x <> PosInf /\
             y <> NegInf /\ y <> PosInf /\

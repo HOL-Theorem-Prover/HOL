@@ -17,14 +17,14 @@
 (* originally proved by Joe Hurd [4] under algebra and [0, +inf) measure.    *)
 (* The theorem is now reproved under semiring and [0, +inf] measure.         *)
 (* ------------------------------------------------------------------------- *)
+
 Theory measure
 Ancestors
   prim_rec arithmetic option pair combin pred_set topology
   iterate real metric seq transc real_sigma real_topology extreal
   sigma_algebra
 Libs
-  pred_setLib jrhUtils numLib realLib hurdUtils
-
+  pred_setLib jrhUtils numLib realLib hurdUtils tautLib
 
 val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] >> POP_ASSUM K_TAC;
 val SET_SPEC_TAC = SIMP_TAC (std_ss ++ pred_setSimps.SET_SPEC_ss);
@@ -432,7 +432,6 @@ QED
 Theorem COUNTABLY_ADDITIVE_ADDITIVE:
     !m. {} IN measurable_sets m /\ positive m /\ countably_additive m ==> additive m
 Proof
-(* proof *)
    RW_TAC std_ss [additive_def, positive_def, countably_additive_def]
    >> Q.PAT_X_ASSUM `!f. P f`
       (MP_TAC o Q.SPEC `\n : num. if n = 0 then s else if n = 1 then t else {}`)
@@ -1765,7 +1764,6 @@ Theorem measure_split:
              !a. a IN measurable_sets m ==>
                  ((measure m) a = SIGMA (\i. (measure m) (a INTER (b i))) r)
 Proof
-(* proof *)
    Suff `!r. FINITE r ==>
              (\r. !(b :num -> ('a -> bool)) m.
                    measure_space m /\
@@ -2956,6 +2954,56 @@ Proof
  >> PROVE_TAC [SIGMA_ALGEBRA_ALGEBRA, premeasure_def]
 QED
 
+Theorem MEASURE_SUBADDITIVE :
+    !m s t u. measure_space m /\ s IN measurable_sets m /\ t IN measurable_sets m /\
+              u = s UNION t ==> measure m u <= measure m s + measure m t
+Proof
+    RW_TAC std_ss []
+ >> MATCH_MP_TAC SUBADDITIVE
+ >> RW_TAC std_ss [MEASURE_SPACE_SUBADDITIVE]
+ >> MATCH_MP_TAC MEASURE_SPACE_UNION >> art []
+QED
+
+(* NOTE: t is neither subset nor disjoint with s but it contributes no
+   additional measure in “measure m (s UNION t)”.
+ *)
+Theorem MEASURE_ADD_ABSORB :
+    !m s t. measure_space m /\ s IN measurable_sets m /\ t IN measurable_sets m /\
+            measure m t = 0 ==> measure m (s UNION t) = measure m s
+Proof
+    rpt STRIP_TAC
+ >> reverse (rw [GSYM le_antisym])
+ >- (MATCH_MP_TAC MEASURE_INCREASING >> simp [] \\
+     MATCH_MP_TAC MEASURE_SPACE_UNION >> art [])
+ >> ‘measure m s = measure m s + measure m t’ by simp []
+ >> POP_ORW
+ >> MATCH_MP_TAC MEASURE_SUBADDITIVE >> art []
+QED
+
+(* NOTE: t is neither subset nor disjoint with s *)
+Theorem MEASURE_SUB_ABSORB :
+    !m s t. measure_space m /\ s IN measurable_sets m /\ t IN measurable_sets m /\
+            measure m t = 0 ==> measure m (s DIFF t) = measure m s
+Proof
+    rpt STRIP_TAC
+ >> Know ‘measure m s = measure m ((s DIFF t) UNION (s INTER t))’
+ >- (AP_TERM_TAC >> SET_TAC [])
+ >> Rewr'
+ >> qmatch_abbrev_tac ‘_ = measure m (A UNION B)’
+ >> ‘DISJOINT A B’ by ASM_SET_TAC []
+ >> ‘A IN measurable_sets m’ by METIS_TAC [MEASURE_SPACE_DIFF]
+ >> ‘B IN measurable_sets m’ by METIS_TAC [MEASURE_SPACE_INTER]
+ >> Know ‘measure m (A UNION B) = measure m A + measure m B’
+ >- (MATCH_MP_TAC MEASURE_ADDITIVE >> art [])
+ >> Rewr'
+ >> Suff ‘measure m B = 0’ >- simp []
+ >> reverse (rw [GSYM le_antisym])
+ >- (MATCH_MP_TAC MEASURE_POSITIVE >> art [])
+ >> Q.PAT_X_ASSUM ‘measure m t = 0’ (REWRITE_TAC o wrap o SYM)
+ >> MATCH_MP_TAC MEASURE_INCREASING >> art []
+ >> simp [Abbr ‘B’]
+QED
+
 Theorem RING_PREMEASURE_FINITE_SUBADDITIVE:
     !m. ring (m_space m, measurable_sets m) /\ premeasure m ==> finite_subadditive m
 Proof
@@ -3064,6 +3112,18 @@ Proof
  >> MATCH_MP_TAC RING_PREMEASURE_COUNTABLY_SUBADDITIVE
  >> ASM_REWRITE_TAC [premeasure_def]
  >> MATCH_MP_TAC ALGEBRA_IMP_RING >> art []
+QED
+
+Theorem MEASURE_COUNTABLY_SUBADDITIVE :
+    !m f s. measure_space m /\ f IN (univ(:num) -> measurable_sets m) /\
+            s = BIGUNION (IMAGE f univ(:num)) ==>
+            measure m s <= suminf (measure m o f)
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC COUNTABLY_SUBADDITIVE
+ >> RW_TAC std_ss [MEASURE_SPACE_COUNTABLY_SUBADDITIVE]
+ >> MATCH_MP_TAC MEASURE_SPACE_BIGUNION
+ >> fs [IN_FUNSET]
 QED
 
 Theorem RING_ADDITIVE_INCREASING :
@@ -5508,6 +5568,12 @@ Proof
  >> Q.EXISTS_TAC ‘m’ >> simp []
 QED
 
+Theorem measure_of_reduce :
+    !M. measure_of M = measure_of (m_space M, measurable_sets M, measure M)
+Proof
+    SIMP_TAC std_ss [MEASURE_SPACE_REDUCE]
+QED
+
 Theorem measure_space_eq_sym_eq :
     !M N. measure_space_eq M N <=> measure_space_eq N M
 Proof
@@ -6933,6 +6999,78 @@ Proof
  >> CONJ_TAC
  >- (MATCH_MP_TAC MEASURE_SPACE_SPACE >> art [])
  >> MATCH_MP_TAC MEASURABLE_SETS_SUBSET_SPACE >> art []
+QED
+
+(* NOTE: The antecedent ‘ring (sp,M)’ (can be weaken to ‘semiring (sp,M)’) is
+   to make sure ‘{} IN M’.
+ *)
+Theorem positive_cong_eq :
+    !sp M u u'. ring (sp,M) /\ (!a. a IN M ==> u' a = u a) ==>
+                positive (sp,M,u) = positive (sp,M,u')
+Proof
+  SIMP_TAC std_ss [positive_def, measure_def, measurable_sets_def] THEN
+  RW_TAC std_ss [ring_alt, subset_class_def]
+QED
+
+Theorem countably_additive_eq :
+    !sp M u u'. (!a. a IN M ==> u' a = u a) ==>
+                countably_additive (sp,M,u') = countably_additive (sp,M,u)
+Proof
+  SIMP_TAC std_ss [countably_additive_def, IN_FUNSET, IN_UNIV] THEN
+  REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THEN
+  FIRST_X_ASSUM (MP_TAC o SPEC ``f:num->'a->bool``) THEN
+  FULL_SIMP_TAC std_ss [measurable_sets_def, measure_def, o_DEF]
+QED
+
+Theorem measure_space_sigma_sets_eq : (* was: measure_space_eq *)
+    !sp A u u'. A SUBSET POW sp /\
+               (!a. a IN sigma_sets sp A ==> u a = u' a) ==>
+                measure_space (sp, (sigma_sets sp A), u) =
+                measure_space (sp, (sigma_sets sp A), u')
+Proof
+  REPEAT STRIP_TAC THEN POP_ASSUM MP_TAC THEN FIRST_X_ASSUM MP_TAC THEN
+  DISCH_THEN (MP_TAC o MATCH_MP sigma_algebra_sigma_sets) THEN
+  SIMP_TAC std_ss [measure_space_def] THEN REPEAT STRIP_TAC THEN
+  SIMP_TAC std_ss [measurable_sets_def, m_space_def] THEN AP_TERM_TAC THEN
+  MATCH_MP_TAC (TAUT `(a = b) /\ (c = d) ==>
+    ((a /\ c) <=> (b /\ d))`) THEN CONJ_TAC THENL
+  [MATCH_MP_TAC positive_cong_eq THEN ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN
+   FULL_SIMP_TAC std_ss [sigma_algebra_alt_eq, ALGEBRA_IMP_RING],
+   MATCH_MP_TAC countably_additive_eq THEN ASM_REWRITE_TAC []]
+QED
+
+Theorem measure_of_eq :
+    !sp A u u'. A SUBSET POW sp /\ (!a. a IN sigma_sets sp A ==> (u a = u' a)) ==>
+                (measure_of (sp,A,u) = measure_of (sp,A,u'))
+Proof
+  REPEAT GEN_TAC THEN DISCH_TAC THEN FIRST_ASSUM MP_TAC THEN
+  DISCH_THEN (MP_TAC o MATCH_MP measure_space_sigma_sets_eq) THEN
+  SIMP_TAC std_ss [measure_of] THEN DISCH_TAC THEN
+  ABS_TAC THEN COND_CASES_TAC THEN FULL_SIMP_TAC std_ss []
+QED
+
+Theorem measure_of_eq' : (* was: measure_eqI *)
+    !M N. measure_space M /\ measure_space N /\
+          measurable_sets M = measurable_sets N /\
+         (!A. A IN measurable_sets M ==> measure M A = measure N A) ==>
+          measure_of M = measure_of N
+Proof
+  RW_TAC std_ss [] THEN ONCE_REWRITE_TAC [measure_of_reduce] THEN
+  KNOW_TAC ``m_space M = m_space N`` THENL
+  [METIS_TAC [sets_eq_imp_space_eq], DISCH_TAC] THEN
+  ASM_SIMP_TAC std_ss [] THEN MATCH_MP_TAC measure_of_eq THEN
+  FULL_SIMP_TAC std_ss [measure_space_def] THEN
+  FULL_SIMP_TAC std_ss [sigma_sets_eq, sigma_algebra_iff2]
+QED
+
+(* This is HVG's original definition, ‘sigma_finite’ is unnecessary *)
+Theorem finite_measure_space :
+    !m. finite_measure_space m <=> sigma_finite_measure_space m /\
+                                   measure m (m_space m) <> PosInf
+Proof
+    rw [finite_measure_space_def, sigma_finite_measure_space_def]
+ >> EQ_TAC >> rw []
+ >> MATCH_MP_TAC FINITE_IMP_SIGMA_FINITE >> art []
 QED
 
 (* References:

@@ -1812,8 +1812,8 @@ val _ = TypeBase.export [
     Discreteness of <
    ---------------------------------------------------------------------- *)
 
-Theorem int_cases[local]:
-   !x:int. (?n. x = &n) \/ (?n. ~(n = 0) /\ (x = ~&n))
+Theorem int_cases :
+    !x:int. (?n. x = &n) \/ (?n. ~(n = 0) /\ (x = ~&n))
 Proof
   PROVE_TAC [INT_NUM_CASES]
 QED

@@ -2699,18 +2699,17 @@ Theorem BOREL_MEASURABLE_SETS:
     (!c. {c} IN subsets Borel) /\
     (!c. {x | x <> c} IN subsets Borel)
 Proof
- (* proof *)
-    RW_TAC std_ss [BOREL_MEASURABLE_SETS_RO, (*         x < c *)
-                   BOREL_MEASURABLE_SETS_OR, (* c < x         *)
-                   BOREL_MEASURABLE_SETS_RC, (*         x <= c *)
-                   BOREL_MEASURABLE_SETS_CR, (* c <= x         *)
-                   BOREL_MEASURABLE_SETS_CO, (* c <= x /\ x < d *)
-                   BOREL_MEASURABLE_SETS_OC, (* c < x /\ x <= d *)
+    RW_TAC std_ss [BOREL_MEASURABLE_SETS_RO, (*           x < c  *)
+                   BOREL_MEASURABLE_SETS_OR, (* c < x            *)
+                   BOREL_MEASURABLE_SETS_RC, (*           x <= c *)
+                   BOREL_MEASURABLE_SETS_CR, (* c <= x           *)
+                   BOREL_MEASURABLE_SETS_CO, (* c <= x /\ x < d  *)
+                   BOREL_MEASURABLE_SETS_OC, (* c < x  /\ x <= d *)
                    BOREL_MEASURABLE_SETS_CC, (* c <= x /\ x <= d *)
-                   BOREL_MEASURABLE_SETS_OO, (* c < x /\ x < d *)
-                   BOREL_MEASURABLE_SETS_SING,       (* x = c *)
-                   BOREL_MEASURABLE_SETS_NOT_SING]
-QED(* x <> c *)
+                   BOREL_MEASURABLE_SETS_OO, (* c < x  /\ x < d  *)
+                   BOREL_MEASURABLE_SETS_SING,         (* x = c  *)
+                   BOREL_MEASURABLE_SETS_NOT_SING]     (* x <> c *)
+QED
 
 (* NOTE: This is similar with Borel_eq_le but this generator contains exhausting
    sequences, which is needed when generating product sigma-algebras.
