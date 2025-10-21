@@ -30,10 +30,12 @@ Definition is_lbtree_def:
                     P t
 End
 
-val type_inhabited = prove(
-  ``?t. is_lbtree t``,
+Theorem type_inhabited[local]:
+    ?t. is_lbtree t
+Proof
   Q.EXISTS_TAC `Lfrep` THEN SRW_TAC [][is_lbtree_def] THEN
-  Q.EXISTS_TAC `(=) Lfrep` THEN SRW_TAC [][]);
+  Q.EXISTS_TAC `(=) Lfrep` THEN SRW_TAC [][]
+QED
 
 val lbtree_tydef = new_type_definition ("lbtree", type_inhabited)
 
@@ -47,61 +49,77 @@ val repabs_fns = define_new_type_bijections {
 val (lbtree_absrep, lbtree_repabs) = CONJ_PAIR repabs_fns
 val _ = BasicProvers.augment_srw_ss [rewrites [lbtree_absrep]]
 
-val is_lbtree_lbtree_rep = prove(
-  ``is_lbtree (lbtree_rep t)``,
-  SRW_TAC [][lbtree_repabs]);
+Theorem is_lbtree_lbtree_rep[local]:
+    is_lbtree (lbtree_rep t)
+Proof
+  SRW_TAC [][lbtree_repabs]
+QED
 val _ = BasicProvers.augment_srw_ss [rewrites [is_lbtree_lbtree_rep]]
 
-val lbtree_rep_11 = prove(
-  ``(lbtree_rep t1 = lbtree_rep t2) = (t1 = t2)``,
+Theorem lbtree_rep_11[local]:
+    (lbtree_rep t1 = lbtree_rep t2) = (t1 = t2)
+Proof
   SRW_TAC [][EQ_IMP_THM] THEN
-  POP_ASSUM (MP_TAC o AP_TERM ``lbtree_abs``) THEN SRW_TAC [][]);
+  POP_ASSUM (MP_TAC o AP_TERM ``lbtree_abs``) THEN SRW_TAC [][]
+QED
 val _ = BasicProvers.augment_srw_ss [rewrites [lbtree_rep_11]]
 
-val lbtree_abs_11 = prove(
-  ``is_lbtree f1 /\ is_lbtree f2 ==>
-    ((lbtree_abs f1 = lbtree_abs f2) = (f1 = f2))``,
-  SRW_TAC [][lbtree_repabs, EQ_IMP_THM] THEN METIS_TAC []);
+Theorem lbtree_abs_11[local]:
+    is_lbtree f1 /\ is_lbtree f2 ==>
+    ((lbtree_abs f1 = lbtree_abs f2) = (f1 = f2))
+Proof
+  SRW_TAC [][lbtree_repabs, EQ_IMP_THM] THEN METIS_TAC []
+QED
 
 val lbtree_repabs' = #1 (EQ_IMP_RULE (SPEC_ALL lbtree_repabs))
 
-val is_lbtree_rules = prove(
-  ``is_lbtree Lfrep /\
-    (is_lbtree t1 /\ is_lbtree t2 ==> is_lbtree (Ndrep a t1 t2))``,
+Theorem is_lbtree_rules[local]:
+    is_lbtree Lfrep /\
+    (is_lbtree t1 /\ is_lbtree t2 ==> is_lbtree (Ndrep a t1 t2))
+Proof
   SRW_TAC [][is_lbtree_def] THENL [
     Q.EXISTS_TAC `(=) Lfrep` THEN SRW_TAC [][],
     Q.EXISTS_TAC `\t. P t \/ P' t \/ (t = Ndrep a t1 t2)` THEN
     SRW_TAC [][] THEN METIS_TAC []
-  ]);
+  ]
+QED
 
-val is_lbtree_cases = prove(
-  ``is_lbtree t <=>
+Theorem is_lbtree_cases[local]:
+    is_lbtree t <=>
        (t = Lfrep) \/
-       ?a t1 t2. (t = Ndrep a t1 t2) /\ is_lbtree t1 /\ is_lbtree t2``,
+       ?a t1 t2. (t = Ndrep a t1 t2) /\ is_lbtree t1 /\ is_lbtree t2
+Proof
   SIMP_TAC (srw_ss() ++ DNF_ss) [EQ_IMP_THM, is_lbtree_rules] THEN
   SRW_TAC [][is_lbtree_def] THEN RES_TAC THEN SRW_TAC [][] THEN
   DISJ2_TAC THEN MAP_EVERY Q.EXISTS_TAC [`a`, `t1`, `t2`] THEN
-  SRW_TAC [][] THEN Q.EXISTS_TAC `P` THEN SRW_TAC [][]);
+  SRW_TAC [][] THEN Q.EXISTS_TAC `P` THEN SRW_TAC [][]
+QED
 
-val forall_lbtree = prove(
-  ``(!t. P t) = (!f. is_lbtree f ==> P (lbtree_abs f))``,
+Theorem forall_lbtree[local]:
+    (!t. P t) = (!f. is_lbtree f ==> P (lbtree_abs f))
+Proof
   SRW_TAC [][EQ_IMP_THM] THEN ONCE_REWRITE_TAC [GSYM lbtree_absrep] THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
-val Ndrep_11 = prove(
-  ``(Ndrep a1 t1 u1 = Ndrep a2 t2 u2) <=> (a1 = a2) /\ (t1 = t2) /\ (u1 = u2)``,
+Theorem Ndrep_11[local]:
+    (Ndrep a1 t1 u1 = Ndrep a2 t2 u2) <=> (a1 = a2) /\ (t1 = t2) /\ (u1 = u2)
+Proof
   SRW_TAC [][Ndrep_def, EQ_IMP_THM, FUN_EQ_THM] THENL [
     POP_ASSUM (Q.SPEC_THEN `[]` MP_TAC) THEN SRW_TAC [][],
     POP_ASSUM (Q.SPEC_THEN `T::x` MP_TAC) THEN SRW_TAC [][],
     POP_ASSUM (Q.SPEC_THEN `F::x` MP_TAC) THEN SRW_TAC [][]
-  ]);
+  ]
+QED
 
 (* this is only used in the one proof below *)
-val is_lbtree_coinduction = prove(
-  ``(!f. P f ==> (f = Lfrep) \/
+Theorem is_lbtree_coinduction[local]:
+    (!f. P f ==> (f = Lfrep) \/
                  (?a t1 t2. P t1 /\ P t2 /\ (f = Ndrep a t1 t2))) ==>
-   !f. P f ==> is_lbtree f``,
-  SRW_TAC [][is_lbtree_def] THEN Q.EXISTS_TAC `P` THEN SRW_TAC [][]);
+   !f. P f ==> is_lbtree f
+Proof
+  SRW_TAC [][is_lbtree_def] THEN Q.EXISTS_TAC `P` THEN SRW_TAC [][]
+QED
 
 (* the path_follow function motivates the unique co-recursive function.
    for the moment we are still at the concrete/representative level *)
@@ -115,8 +133,9 @@ Definition path_follow_def:
 End
 
 
-val path_follow_is_lbtree = prove(
-  ``!g x. is_lbtree (path_follow g x)``,
+Theorem path_follow_is_lbtree[local]:
+    !g x. is_lbtree (path_follow g x)
+Proof
   REPEAT GEN_TAC THEN
   Q_TAC SUFF_TAC `!f. (?x. f = path_follow g x) ==> is_lbtree f`
         THEN1 METIS_TAC [] THEN
@@ -134,7 +153,8 @@ val path_follow_is_lbtree = prove(
       SRW_TAC [][FUN_EQ_THM] THEN Cases_on `x'` THEN
       SRW_TAC [][path_follow_def, Ndrep_def]
     ]
-  ]);
+  ]
+QED
 
 (* now start to lift the representative operations to the abstract level *)
 
@@ -791,38 +811,46 @@ Proof
              optionTheory.SOME_11, optionTheory.NOT_SOME_NONE]
 QED
 
-val mmindex_bump = prove(
-  ``(f x = NONE) ==> (is_mmindex f (x::t) (SUC j) n = is_mmindex f t j n)``,
+Theorem mmindex_bump[local]:
+    (f x = NONE) ==> (is_mmindex f (x::t) (SUC j) n = is_mmindex f t j n)
+Proof
   SRW_TAC [][EQ_IMP_THM, is_mmindex_def] THENL [
     FIRST_X_ASSUM (Q.SPEC_THEN `SUC i` MP_TAC) THEN
     SRW_TAC [][],
     Cases_on `i` THEN SRW_TAC [][] THEN
     FULL_SIMP_TAC (srw_ss()) []
-  ]);
+  ]
+QED
 
 (* set up the induction principle the final proof will use *)
-val WF_ltlt = prove(
-  ``WF ((<) LEX (<))``,
-  SRW_TAC [][prim_recTheory.WF_LESS, pairTheory.WF_LEX]);
+Theorem WF_ltlt[local]:
+    WF ((<) LEX (<))
+Proof
+  SRW_TAC [][prim_recTheory.WF_LESS, pairTheory.WF_LEX]
+QED
 val ltlt_induction = MATCH_MP relationTheory.WF_INDUCTION_THM WF_ltlt
 
 (* this or something like it is in rich_listTheory - am tempted to put it
    in listTheory *)
-val EL_APPEND = prove(
-  ``!l1 l2 n. n < LENGTH l1 + LENGTH l2 ==>
+Theorem EL_APPEND[local]:
+    !l1 l2 n. n < LENGTH l1 + LENGTH l2 ==>
               (EL n (l1 ++ l2) =
                   if n < LENGTH l1 then EL n l1
-                  else EL (n - LENGTH l1) l2)``,
+                  else EL (n - LENGTH l1) l2)
+Proof
   Induct THEN SRW_TAC [][] THENL [
     Cases_on `n` THEN
     FULL_SIMP_TAC (srw_ss()) [arithmeticTheory.ADD_CLAUSES],
     Cases_on `n` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
     FULL_SIMP_TAC (srw_ss()) [arithmeticTheory.ADD_CLAUSES]
-  ]);
+  ]
+QED
 
-val optmin_EQ_NONE = prove(
-  ``(optmin n m = NONE) <=> (n = NONE) /\ (m = NONE)``,
-  Cases_on `n` THEN Cases_on `m` THEN SRW_TAC [][optmin_def]);
+Theorem optmin_EQ_NONE[local]:
+    (optmin n m = NONE) <=> (n = NONE) /\ (m = NONE)
+Proof
+  Cases_on `n` THEN Cases_on `m` THEN SRW_TAC [][optmin_def]
+QED
 
 Theorem mem_bf_flatten:
     exists ((=)x) (bf_flatten tlist) = EXISTS (mem x) tlist

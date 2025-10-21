@@ -187,10 +187,12 @@ QED
 (* oless is antireflexive                                                    *)
 (*---------------------------------------------------------------------------*)
 
-val oless_antirefl_lem = Q.prove
-(`!x y. oless x y ==> (x=y) /\ is_ord x ==> F`,
+Theorem oless_antirefl_lem[local]:
+  !x y. oless x y ==> (x=y) /\ is_ord x ==> F
+Proof
  HO_MATCH_MP_TAC oless_ind
-   THEN RW_TAC ord_ss [] THEN METIS_TAC[decompose_plus]);
+   THEN RW_TAC ord_ss [] THEN METIS_TAC[decompose_plus]
+QED
 
 Theorem oless_antirefl:
   !x. is_ord x ==> ~oless x x
@@ -202,12 +204,14 @@ QED
 (* oless is antisymmetric                                                    *)
 (*---------------------------------------------------------------------------*)
 
-val oless_antisym_lem = Q.prove
-(`!x y. oless x y ==> is_ord x /\ is_ord y ==> ~oless y x`,
+Theorem oless_antisym_lem[local]:
+  !x y. oless x y ==> is_ord x /\ is_ord y ==> ~oless y x
+Proof
  HO_MATCH_MP_TAC oless_strong_ind THEN RW_TAC std_ss []
    THEN ONCE_REWRITE_TAC [oless_cases]
    THEN RW_TAC ord_ss []
-   THEN METIS_TAC [oless_antirefl,decompose_plus]);
+   THEN METIS_TAC [oless_antirefl,decompose_plus]
+QED
 
 Theorem oless_antisym:
   !x y. is_ord x /\ is_ord y /\ oless x y ==> ~oless y x
@@ -300,12 +304,14 @@ Proof
  METIS_TAC [is_ord_downclosed]
 QED
 
-val oless_tail_lem = Q.prove
-(`!x. is_ord x ==> ~finp x ==> oless (tail x) x`,
+Theorem oless_tail_lem[local]:
+  !x. is_ord x ==> ~finp x ==> oless (tail x) x
+Proof
  HO_MATCH_MP_TAC is_ord_ind THEN
  RW_TAC ord_ss [tail_def,finp_def] THEN
  Cases_on `x'` THEN FULL_SIMP_TAC ord_ss [finp_def,tail_def,expt_def] THEN
- METIS_TAC [oless_rules]);;
+ METIS_TAC [oless_rules]
+QED
 
 Theorem oless_tail:
   !x. is_ord x /\ ~finp x ==> oless (tail x) x
@@ -319,14 +325,16 @@ QED
 (* one element of rank <= n or all are of rank = n+1.                        *)
 (*---------------------------------------------------------------------------*)
 
-val split_lem = Q.prove
-(`!P n. (?x. P x) /\ (!x. P x ==> rank x <= SUC n) ==>
-        (?x. P x /\ rank x <= n) \/ (!x. P x ==> (rank x = SUC n))`,
+Theorem split_lem[local]:
+  !P n. (?x. P x) /\ (!x. P x ==> rank x <= SUC n) ==>
+        (?x. P x /\ rank x <= n) \/ (!x. P x ==> (rank x = SUC n))
+Proof
  RW_TAC ord_ss [] THEN SPOSE_NOT_THEN ASSUME_TAC THEN RW_TAC arith_ss [] THEN
  STRIP_ASSUME_TAC
    (Q.SPECL [`rank x'`, `n`]
          (DECIDE ``!x y. x <= y \/ (x = SUC y) \/ (x > SUC y)``)) THENL
- [METIS_TAC [], RES_TAC THEN DECIDE_TAC]);
+ [METIS_TAC [], RES_TAC THEN DECIDE_TAC]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Every n.e. set of ordinals of rank <= n has an oless-minimal element      *)
@@ -334,8 +342,8 @@ val split_lem = Q.prove
 (* oless-minimal element.                                                    *)
 (*---------------------------------------------------------------------------*)
 
-val stronger = Q.prove
-(`(!n. !P:osyntax->bool. !x.
+Theorem stronger[local]:
+  (!n. !P:osyntax->bool. !x.
      P x /\ (!x. P x ==> is_ord(x) /\ rank(x) <= n) ==>
      ?m. is_ord m /\ P m /\ rank m <= n /\
          !y. is_ord y /\ rank y <= n /\ oless y m ==> ~P y)
@@ -343,11 +351,13 @@ val stronger = Q.prove
    (!n. !P:osyntax->bool.
      (?x. is_ord x /\ P x /\ rank x <= n) ==>
       ?m. is_ord m /\ P m /\ rank m <= n /\
-       !y. is_ord y /\ rank y <= n /\ oless y m ==> ~P y)`,
+       !y. is_ord y /\ rank y <= n /\ oless y m ==> ~P y)
+Proof
  RW_TAC std_ss [] THEN
  Q.PAT_X_ASSUM `$!M`
     (MP_TAC o Q.SPEC `\a. P a /\ is_ord a /\ rank a <= n` o Q.ID_SPEC) THEN
- DISCH_THEN (MP_TAC o Q.ID_SPEC) THEN RW_TAC std_ss [] THEN METIS_TAC []);
+ DISCH_THEN (MP_TAC o Q.ID_SPEC) THEN RW_TAC std_ss [] THEN METIS_TAC []
+QED
 
 
 (*---------------------------------------------------------------------------*)

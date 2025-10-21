@@ -7597,10 +7597,12 @@ Proof
 QED
 
 (* Apply Skolemization *)
-val lemma = prove(
-  ``!r i f. ?p. Ring r /\ i << r /\ i <> <#0> /\ (!x. (f x = 0) <=> (x = #0))
-       ==> p IN I /\ p <> #0 /\ !z. z IN I /\ z <> #0 ==> f p <= f z``,
-  metis_tac[ideal_gen_exists]);
+Theorem lemma[local]:
+    !r i f. ?p. Ring r /\ i << r /\ i <> <#0> /\ (!x. (f x = 0) <=> (x = #0))
+       ==> p IN I /\ p <> #0 /\ !z. z IN I /\ z <> #0 ==> f p <= f z
+Proof
+  metis_tac[ideal_gen_exists]
+QED
 (*
 - SKOLEM_THM;
 > val it = |- !P. (!x. ?y. P x y) <=> ?f. !x. P x (f x) : thm
@@ -12327,20 +12329,24 @@ QED
          = (m + 1) MOD n    since m < n
          = SUC m MOD n      by ADD1
 *)
-val ZN_lemma1 = prove(
-  ``!m n. 0 < n /\ m <= n ==> (FUNPOW (\j. (j + 1) MOD n) m 0 = m MOD n)``,
+Theorem ZN_lemma1[local]:
+    !m n. 0 < n /\ m <= n ==> (FUNPOW (\j. (j + 1) MOD n) m 0 = m MOD n)
+Proof
   Induct_on `m`  >-
   srw_tac[ARITH_ss][] >>
-  srw_tac[ARITH_ss][FUNPOW_SUC, ADD1]);
+  srw_tac[ARITH_ss][FUNPOW_SUC, ADD1]
+QED
 
 (* Theorem: 0 < n ==> FUNPOW (\j. (j + 1) MOD n) n 0 = 0 *)
 (* Proof:
    Put m = n in ZN_lemma1:
    FUNPOW (\j. (j + 1) MOD n) n 0 = n MOD n = 0  by DIVMOD_ID.
 *)
-val ZN_lemma2 = prove(
-  ``!n. 0 < n ==> (FUNPOW (\j. (j + 1) MOD n) n 0 = 0)``,
-  rw_tac std_ss[ZN_lemma1]);
+Theorem ZN_lemma2[local]:
+    !n. 0 < n ==> (FUNPOW (\j. (j + 1) MOD n) n 0 = 0)
+Proof
+  rw_tac std_ss[ZN_lemma1]
+QED
 
 (* Theorem: 0 < n ==> char (ZN n) = n *)
 (* Proof:
@@ -14081,15 +14087,17 @@ val it = |- 1 < m /\ coprime m n ==>
      or !j. 0 < j /\ j <= ordz m n ==>
         (WHILE (\i. (n ** i) MOD m <> 1) SUC j = ordz m n)
 *)
-val compute_ordz_by_while = prove(
-  ``!m n. 1 < m /\ coprime m n ==>
-   !j. 0 < j /\ j <= ordz m n ==> (WHILE (\i. (n ** i) MOD m <> 1) SUC j = ordz m n)``,
+Theorem compute_ordz_by_while[local]:
+    !m n. 1 < m /\ coprime m n ==>
+   !j. 0 < j /\ j <= ordz m n ==> (WHILE (\i. (n ** i) MOD m <> 1) SUC j = ordz m n)
+Proof
   rpt strip_tac >>
   `HOARE_SPEC
       (\i. 0 < i /\ i <= ordz m n)
       (WHILE (\i. (n ** i) MOD m <> 1) SUC)
       (\i. i = ordz m n)` by rw[compute_ordz_hoare] >>
-  fs[HOARE_SPEC_DEF]);
+  fs[HOARE_SPEC_DEF]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of computing ordz m n.                                        *)

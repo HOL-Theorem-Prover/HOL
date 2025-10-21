@@ -73,7 +73,7 @@ fun INDUCT_TAC g = INDUCT_THEN INDUCTION ASSUME_TAC g;
 
 val LESS_DEF = new_definition (
   "LESS_DEF",
-  Term `$< m n = ?P. (!n. P(SUC n) ==> P n) /\ P m /\ ~(P n)`)
+  “$< m n = ?P. (!n. P(SUC n) ==> P n) /\ P m /\ ~(P n)”)
 val _ = set_fixity "<" (Infix(NONASSOC, 450))
 val _ = TeX_notation {hol = "<", TeX = ("\\HOLTokenLt{}", 1)}
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="<"},name=(["Number","Natural"],"<")}
@@ -176,15 +176,21 @@ QED
 
 (* now show that < is the transitive closure of the successor relation *)
 
-val TC_LESS_0 = prove ( “!n. TC (\x y. y = SUC x) 0 (SUC n)”,
+Theorem TC_LESS_0[local]:
+    !n. TC (\x y. y = SUC x) 0 (SUC n)
+Proof
   INDUCT_TAC
   THENL [ irule relationTheory.TC_SUBSET THEN BETA_TAC THEN REFL_TAC,
     ONCE_REWRITE_TAC [relationTheory.TC_CASES2] THEN DISJ2_TAC
-    THEN EXISTS_TAC ``SUC n`` THEN BETA_TAC THEN ASM_REWRITE_TAC [] ]) ;
+    THEN EXISTS_TAC ``SUC n`` THEN BETA_TAC THEN ASM_REWRITE_TAC [] ]
+QED
 
-val TC_NOT_LESS_0 = prove ( “!n. ~(TC (\x y. y = SUC x) n 0)”,
+Theorem TC_NOT_LESS_0[local]:
+    !n. ~(TC (\x y. y = SUC x) n 0)
+Proof
   ONCE_REWRITE_TAC [relationTheory.TC_CASES2]
-  THEN BETA_TAC THEN REWRITE_TAC [GSYM NOT_SUC] ) ;
+  THEN BETA_TAC THEN REWRITE_TAC [GSYM NOT_SUC]
+QED
 
 Theorem TC_IM_RTC_SUC:
     !m n. TC (\x y. y = SUC x) m (SUC n) = RTC (\x y. y = SUC x) m n
@@ -207,9 +213,11 @@ Proof
    THEN ASM_REWRITE_TAC []
 QED
 
-val TC_LESS_MONO_EQ = prove (
-  ``!m n. TC (\x y. y = SUC x) (SUC m) (SUC n) = TC (\x y. y = SUC x) m n``,
-  REWRITE_TAC [TC_IM_RTC_SUC, RTC_IM_TC] ) ;
+Theorem TC_LESS_MONO_EQ[local]:
+    !m n. TC (\x y. y = SUC x) (SUC m) (SUC n) = TC (\x y. y = SUC x) m n
+Proof
+  REWRITE_TAC [TC_IM_RTC_SUC, RTC_IM_TC]
+QED
 
 Theorem LESS_ALT:
     $< = TC (\x y. y = SUC x)
@@ -352,10 +360,10 @@ QED
 val SIMP_REC_REL =
  new_definition
   ("SIMP_REC_REL",
-   Term`!(fun:num->'a) (x:'a) (f:'a->'a) (n:num).
-            SIMP_REC_REL fun x f n <=>
-                (fun 0 = x) /\
-                !m. (m < n) ==> (fun(SUC m) = f(fun m))`);
+   “!(fun:num->'a) (x:'a) (f:'a->'a) (n:num).
+        SIMP_REC_REL fun x f n <=>
+          (fun 0 = x) /\
+          !m. (m < n) ==> (fun(SUC m) = f(fun m))”);
 
 Theorem SIMP_REC_EXISTS:
     !x f n. ?fun:num->'a. SIMP_REC_REL fun x f n
@@ -573,8 +581,9 @@ val _ = overload_on ("Wellfounded", ``wellfounded``);
  * First half of showing that the two definitions of wellfoundedness agree.
  *---------------------------------------------------------------------------*)
 
-val WF_IMP_WELLFOUNDED = Q.prove(
-`!R. WF R ==> wellfounded R`,
+Theorem WF_IMP_WELLFOUNDED[local]:
+ !R. WF R ==> wellfounded R
+Proof
  GEN_TAC THEN CONV_TAC CONTRAPOS_CONV
  THEN REWRITE_TAC[wellfounded_def,relationTheory.WF_DEF]
  THEN STRIP_TAC
@@ -586,14 +595,16 @@ val WF_IMP_WELLFOUNDED = Q.prove(
    REWRITE_TAC[GSYM IMP_DISJ_THM]
     THEN GEN_TAC THEN DISCH_THEN (CHOOSE_THEN SUBST1_TAC)
     THEN Q.EXISTS_TAC`f(SUC n)` THEN ASM_REWRITE_TAC[]
-    THEN Q.EXISTS_TAC`SUC n` THEN REFL_TAC]);
+    THEN Q.EXISTS_TAC`SUC n` THEN REFL_TAC]
+QED
 
 (*---------------------------------------------------------------------------
  * Second half.
  *---------------------------------------------------------------------------*)
 
-val WELLFOUNDED_IMP_WF = Q.prove(
-`!R. wellfounded R ==> WF R`,
+Theorem WELLFOUNDED_IMP_WF[local]:
+ !R. wellfounded R ==> WF R
+Proof
  REWRITE_TAC[wellfounded_def,relationTheory.WF_DEF]
   THEN GEN_TAC THEN CONV_TAC CONTRAPOS_CONV
   THEN Ho_Rewrite.REWRITE_TAC
@@ -608,7 +619,8 @@ val WELLFOUNDED_IMP_WF = Q.prove(
   THEN RES_TAC
   THEN IMP_RES_TAC(BETA_RULE
      (Q.SPEC `\q. R q (SIMP_REC w (\x. @q. R q x /\ B q) n) /\ B q`
-              boolTheory.SELECT_AX)));
+              boolTheory.SELECT_AX))
+QED
 
 
 Theorem WF_IFF_WELLFOUNDED:
@@ -671,4 +683,3 @@ Proof
  REWRITE_TAC [measure_def,relationTheory.inv_image_def] THEN BETA_TAC THEN
  REWRITE_TAC []
 QED
-

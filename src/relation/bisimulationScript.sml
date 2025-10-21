@@ -211,10 +211,10 @@ Proof
 QED
 
 Theorem lemma1[local]:
-  !R. (!p q.   ts p tau q ==> R p q) /\
-          (!p.     R p p) /\
-          (!p q r. R p q /\ R q r ==> R p r)
-      ==> !p q. (ETS ts tau) p q ==> R p q
+    !R. (!p q.   ts p tau q ==> R p q) /\
+        (!p.     R p p) /\
+        (!p q r. R p q /\ R q r ==> R p r)
+    ==> !p q. (ETS ts tau) p q ==> R p q
 Proof
     GEN_TAC >> STRIP_TAC
  >> REWRITE_TAC [ETS_def]
@@ -263,9 +263,9 @@ Proof
 QED
 
 Theorem lemma2'[local]:
-  !q q'. (ETS ts tau) q q' ==>
-         !R p. WBISIM ts tau R /\ R p q ==>
-               ?p'. (ETS ts tau) p p' /\ R p' q'
+    !q q'. (ETS ts tau) q q' ==>
+           !R p. WBISIM ts tau R /\ R p q ==>
+                 ?p'. (ETS ts tau) p p' /\ R p' q'
 Proof
     rpt STRIP_TAC
  >> MP_TAC (Q.SPECL [`q`, `q'`] lemma2) >> SRW_TAC[][]
@@ -279,9 +279,9 @@ QED
    q ==> q1 =l=> q2 ==> q'
  *)
 Theorem lemma3[local]:
-  !p l p'. (WTS ts tau) p l p' /\ l <> tau ==>
-           !R q. WBISIM ts tau R /\ R p q ==>
-                 ?q'. (WTS ts tau) q l q' /\ R p' q'
+    !p l p'. (WTS ts tau) p l p' /\ l <> tau ==>
+             !R q. WBISIM ts tau R /\ R p q ==>
+                   ?q'. (WTS ts tau) q l q' /\ R p' q'
 Proof
     rpt STRIP_TAC
  >> `?p1 p2. (ETS ts tau) p p1 /\ ts p1 l p2 /\ (ETS ts tau) p2 p'`
@@ -297,9 +297,9 @@ Proof
 QED
 
 Theorem lemma3'[local]:
-  !q l q'. (WTS ts tau) q l q' /\ l <> tau ==>
-           !R p. WBISIM ts tau R /\ R p q ==>
-                 ?p'. (WTS ts tau) p l p' /\ R p' q'
+    !q l q'. (WTS ts tau) q l q' /\ l <> tau ==>
+             !R p. WBISIM ts tau R /\ R p q ==>
+                   ?p'. (WTS ts tau) p l p' /\ R p' q'
 Proof
     rpt STRIP_TAC
  >> MP_TAC (Q.SPECL [`q`, `l`, `q'`] lemma3) >> SRW_TAC[][]

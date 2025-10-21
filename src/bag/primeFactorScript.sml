@@ -22,9 +22,11 @@ fun DECIDE_TAC (g as (asl,_)) =
  ORELSE
  tautLib.TAUT_TAC ORELSE NO_TAC) g;
 
-val MULT_LEFT_CANCEL = Q.prove
-(`!m n p. 0 < m ==> ((m*n = m*p) = (n=p))`,
- Cases_on `m` THEN RW_TAC arith_ss []);
+Theorem MULT_LEFT_CANCEL[local]:
+  !m n p. 0 < m ==> ((m*n = m*p) = (n=p))
+Proof
+ Cases_on `m` THEN RW_TAC arith_ss []
+QED
 
 Theorem PRIME_FACTORS_EXIST:
   !n. 0 < n ==>
@@ -72,17 +74,19 @@ val PRIME_FACTORS_def = new_specification
  ["PRIME_FACTORS"],
  SIMP_RULE bool_ss [SKOLEM_THM,GSYM RIGHT_EXISTS_IMP_THM] PRIME_FACTORS_EXIST);
 
-val lem1 = Q.prove
-(`!b. FINITE_BAG b
+Theorem lem1[local]:
+  !b. FINITE_BAG b
      ==> !m. prime m /\
              divides m (BAG_GEN_PROD b 1) /\
              (!x. BAG_IN x b ==> prime x)
-     ==> BAG_IN m b`,
+     ==> BAG_IN m b
+Proof
  HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN REPEAT STRIP_TAC THENL
  [FULL_SIMP_TAC arith_ss [BAG_GEN_PROD_EMPTY] THEN
     METIS_TAC [DIVIDES_ONE,NOT_PRIME_1],
   Q.PAT_X_ASSUM `divides p q` MP_TAC THEN RW_TAC arith_ss [BAG_GEN_PROD_REC] THEN
-    METIS_TAC [gcdTheory.P_EUCLIDES,prime_divides_only_self,BAG_IN_BAG_INSERT]]);
+    METIS_TAC [gcdTheory.P_EUCLIDES,prime_divides_only_self,BAG_IN_BAG_INSERT]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Uniqueness.                                                               *)

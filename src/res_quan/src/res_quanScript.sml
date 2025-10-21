@@ -22,9 +22,11 @@ fun simp thml = ASM_SIMP_TAC (bool_ss ++ pred_setSimps.PRED_SET_ss) thml;
 val CONJ_AC = AC CONJ_COMM CONJ_ASSOC;
 val ELIM_EXISTS_IMP = GSYM boolTheory.LEFT_FORALL_IMP_THM;
 
-val EMPTY = prove(
-  ``!s. (s = {}) <=> !x. x NOTIN s``,
-  prove_tac [MEMBER_NOT_EMPTY]);
+Theorem EMPTY[local]:
+    !s. (s = {}) <=> !x. x NOTIN s
+Proof
+  prove_tac [MEMBER_NOT_EMPTY]
+QED
 
 (* --------------------------------------------------------------------- *)
 (* Definitions to support restricted abstractions and quantifications    *)

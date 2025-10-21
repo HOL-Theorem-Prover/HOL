@@ -17,13 +17,15 @@ fun ARITH q = EQT_ELIM (numLib.ARITH_CONV (Parse.Term q));
 Definition BAG_VAL_DEF[nocompute]:BAG_VAL b x = b(x)
 End
 
-val BAG_VAL_THM = Q.prove
-(`(!x. BAG_VAL EMPTY_BAG x = 0) /\
+Theorem BAG_VAL_THM[local]:
+  (!x. BAG_VAL EMPTY_BAG x = 0) /\
   (!x b e. BAG_VAL (BAG_INSERT e b) x =
-     if (e=x) then 1 + BAG_VAL b x else BAG_VAL b x)`,
+     if (e=x) then 1 + BAG_VAL b x else BAG_VAL b x)
+Proof
  CONJ_TAC THENL
  [RW_TAC arith_ss [EMPTY_BAG,BAG_VAL_DEF],
-  RW_TAC arith_ss [BAG_VAL_DEF] THEN METIS_TAC [BAG_VAL_DEF,BAG_INSERT]]);
+  RW_TAC arith_ss [BAG_VAL_DEF] THEN METIS_TAC [BAG_VAL_DEF,BAG_INSERT]]
+QED
 
 Theorem BAG_IN_EQNS[local]:
   (!x. BAG_IN x {||} <=> F) /\
@@ -31,9 +33,11 @@ Theorem BAG_IN_EQNS[local]:
 Proof METIS_TAC [NOT_IN_EMPTY_BAG,BAG_IN_BAG_INSERT]
 QED
 
-val BAG_INN_EQN = Q.prove
-(`BAG_INN e n b <=> BAG_VAL b e >= n`,
- RW_TAC arith_ss [BAG_VAL_DEF, BAG_INN]);
+Theorem BAG_INN_EQN[local]:
+  BAG_INN e n b <=> BAG_VAL b e >= n
+Proof
+ RW_TAC arith_ss [BAG_VAL_DEF, BAG_INN]
+QED
 
 Theorem BAG_DIFF_EQNS:
   (!b:'a bag. BAG_DIFF b {||} = b) /\
@@ -95,9 +99,11 @@ Proof
   RES_THEN MP_TAC THEN ASM_REWRITE_TAC [] THEN DECIDE_TAC]
 QED
 
-val PSUB_BAG_LEM = Q.prove
-(`!b1 b2.PSUB_BAG b1 b2 <=> SUB_BAG b1 b2 /\ ~SUB_BAG b2 b1`,
- METIS_TAC [SUB_BAG_PSUB_BAG,PSUB_BAG_ANTISYM]);
+Theorem PSUB_BAG_LEM[local]:
+  !b1 b2.PSUB_BAG b1 b2 <=> SUB_BAG b1 b2 /\ ~SUB_BAG b2 b1
+Proof
+ METIS_TAC [SUB_BAG_PSUB_BAG,PSUB_BAG_ANTISYM]
+QED
 
 Theorem SET_OF_BAG_EQNS[local]:
   (SET_OF_BAG ({||}:'a bag) = ({}:'a set)) /\
@@ -233,31 +239,41 @@ Definition LLCONS_def:
   LLCONS h t = LCONS h (t ())
 End
 
-val LAPPEND_llcases = prove(
-  ``LAPPEND l1 l2 = llcases l2 (λ(h,t). LLCONS h (λ(). LAPPEND t l2)) l1``,
+Theorem LAPPEND_llcases[local]:
+    LAPPEND l1 l2 = llcases l2 (λ(h,t). LLCONS h (λ(). LAPPEND t l2)) l1
+Proof
   Q.SPEC_THEN `l1` STRUCT_CASES_TAC llist_CASES THEN
-  SRW_TAC [][LLCONS_def, llcases_LCONS, llcases_LNIL]);
+  SRW_TAC [][LLCONS_def, llcases_LCONS, llcases_LNIL]
+QED
 
-val LMAP_llcases = prove(
-  ``LMAP f l = llcases LNIL (λ(h,t). LLCONS (f h) (λ(). LMAP f t)) l``,
+Theorem LMAP_llcases[local]:
+    LMAP f l = llcases LNIL (λ(h,t). LLCONS (f h) (λ(). LMAP f t)) l
+Proof
   Q.ISPEC_THEN `l` STRUCT_CASES_TAC llist_CASES THEN
-  SRW_TAC [][LLCONS_def, llcases_LCONS, llcases_LNIL]);
+  SRW_TAC [][LLCONS_def, llcases_LCONS, llcases_LNIL]
+QED
 
-val LFILTER_llcases = prove(
-  ``LFILTER P l = llcases LNIL (λ(h,t). if P h then LLCONS h (λ(). LFILTER P t)
-                                        else LFILTER P t) l``,
+Theorem LFILTER_llcases[local]:
+    LFILTER P l = llcases LNIL (λ(h,t). if P h then LLCONS h (λ(). LFILTER P t)
+                                        else LFILTER P t) l
+Proof
   Q.ISPEC_THEN `l` STRUCT_CASES_TAC llist_CASES THEN
-  SRW_TAC [][LLCONS_def, llcases_LCONS, llcases_LNIL]);
+  SRW_TAC [][LLCONS_def, llcases_LCONS, llcases_LNIL]
+QED
 
-val LHD_llcases = prove(
-  ``LHD ll = llcases NONE (λ(h,t). SOME h) ll``,
+Theorem LHD_llcases[local]:
+    LHD ll = llcases NONE (λ(h,t). SOME h) ll
+Proof
   Q.ISPEC_THEN `ll` STRUCT_CASES_TAC llist_CASES THEN
-  SRW_TAC [][llcases_LCONS, llcases_LNIL]);
+  SRW_TAC [][llcases_LCONS, llcases_LNIL]
+QED
 
-val LTL_llcases = prove(
-  ``LTL ll = llcases NONE (λ(h,t). SOME t) ll``,
+Theorem LTL_llcases[local]:
+    LTL ll = llcases NONE (λ(h,t). SOME t) ll
+Proof
   Q.ISPEC_THEN `ll` STRUCT_CASES_TAC llist_CASES THEN
-  SRW_TAC [][llcases_LCONS, llcases_LNIL]);
+  SRW_TAC [][llcases_LCONS, llcases_LNIL]
+QED
 
 Theorem LTAKE_thm[local]:
   !ll. LTAKE n ll =
@@ -274,10 +290,12 @@ Proof
   SRW_TAC [][]
 QED
 
-val toList_llcases = prove(
-  ``toList ll = llcases (SOME []) (λ(h,t). OPTION_MAP (\t. h::t) (toList t)) ll``,
+Theorem toList_llcases[local]:
+    toList ll = llcases (SOME []) (λ(h,t). OPTION_MAP (\t. h::t) (toList t)) ll
+Proof
   Q.ISPEC_THEN `ll` STRUCT_CASES_TAC llist_CASES THEN
-  SRW_TAC [boolSimps.ETA_ss][llcases_LCONS, llcases_LNIL, toList_THM])
+  SRW_TAC [boolSimps.ETA_ss][llcases_LCONS, llcases_LNIL, toList_THM]
+QED
 
 fun insert_const c = let val t = Parse.Term [QUOTE c] in
   ConstMapML.prim_insert(t, (false, "", c, type_of t))
