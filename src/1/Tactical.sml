@@ -55,17 +55,17 @@ local
         | _ => "([" ^ CharVector.tabulate(length asms, fn _ => #".") ^ "], " ^
                Parse.term_to_string t ^ ")"
    val mesg = Lib.with_flag (Feedback.MESG_to_string, Lib.I) Feedback.HOL_MESG
-   fun provide_feedback f (t, tac: tactic) =
-      f (t, tac)
+   fun provide_feedback f (g, tac: tactic) =
+      f (g, tac)
       handle e as HOL_ERR herr =>
         let val m = message_of herr
             val f = top_function_of herr
         in
-           mesg ("Proof of \n\n" ^ Parse.term_to_string t ^ "\n\nfailed.\n")
+           mesg ("Proof of \n\n" ^ goal_to_string g ^ "\n\nfailed.\n")
            ;
            (case (m, f, unsolved ())
              of ("unsolved goals", "TAC_PROOF", (_, u)::_) =>
-                 if Term.term_eq u t then
+                 if Term.term_eq u (snd g) then
                     ()
                  else mesg ("First unsolved sub-goal is\n\n" ^
                             Parse.term_to_string u ^ "\n\n")
