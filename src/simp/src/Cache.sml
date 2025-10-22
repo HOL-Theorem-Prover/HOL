@@ -1,8 +1,8 @@
 structure Cache :> Cache =
 struct
 
-open HolKernel liteLib Trace Abbrev boolSyntax boolLib
-
+open HolKernel liteLib Abbrev boolSyntax boolLib
+open Trace
 
 type key = term
 type hypinfo = {hyps : term HOLset.set, thms : term HOLset.set}

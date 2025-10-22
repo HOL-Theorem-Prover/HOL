@@ -1092,9 +1092,11 @@ in
                 | [x] => x
                 | l => (List.app (fn x => (Parse.print_thm x; print "\n")) l
                         ; err "more than one valid step theorem"))
-              handle HOL_ERR {message = "not found",
-                              origin_function = "find_rw", ...} =>
-                 err "instruction instance not supported"
+              handle (e as HOL_ERR herr) =>
+                if message_of herr = "not found" andalso
+                   top_function_of herr = "find_rw"
+                  then err "instruction instance not supported"
+                else raise e
             end
       end
 end

@@ -14,6 +14,8 @@ local open TypeBase Ho_Rewrite Psyntax Rsyntax in end
 
 val parse_from_grammars = Parse.parse_from_grammars;
 
+val ERR = Feedback.mk_HOL_ERR "boolLib"
+
 (*---------------------------------------------------------------------------
       Stock the rewriter in Ho_Rewrite with some rules not yet
       proved in boolTheory.
@@ -104,8 +106,6 @@ val UNIQUE_SKOLEM_THM = prove
       ASM_REWRITE_TAC[],
       DISCH_THEN(MP_TAC o C AP_THM ``x:'a``) THEN REWRITE_TAC[BETA_THM]]])
 
-
-
 end (* local open *)
 
 val def_suffix = ref "_def"
@@ -130,13 +130,13 @@ in
 fun save_thm_attrs loc (attrblock, th) = let
   val {thmname=n,attrs,unknown,reserved} = attrblock
   val _ = null unknown orelse
-          raise mk_HOL_ERR "boolLib" "save_thm_attrs"
+          raise ERR "save_thm_attrs"
                 ("Unknown attributes: " ^
                  String.concatWith ", " (map #1 unknown))
   val (localp,privp,rebindok,reserved_leftover) =
       extract_localpriv (false,false,false,[]) reserved
   val _ = null reserved_leftover orelse
-          raise mk_HOL_ERR "boolLib" "save_thm_attrs"
+          raise ERR "save_thm_attrs"
                 ("Unhandled attributes: " ^
                  String.concatWith ", " (map #1 reserved_leftover))
   val save =
@@ -151,17 +151,33 @@ fun save_thm_attrs loc (attrblock, th) = let
 in
   storemod save(n,th) before app do_attr attrs
 end
-fun store_thm_at loc (n0,t,tac) = let
-  val attrblock = ThmAttribute.extract_attributes n0
-  val th = Tactical.prove(t,tac)
-              handle e => (print ("Failed to prove theorem " ^ #thmname attrblock ^ ".\n");
-                           Raise e)
+
+local
+  open Feedback
+  fun tac_failure s1 s2 =
+      String.concat ["Failed to prove theorem ", Lib.quote s1, ":\n", s2]
 in
-  save_thm_attrs loc (attrblock,th)
+fun store_thm_at loc (n0,t,tac) =
+  let val attrblock = ThmAttribute.extract_attributes n0
+      val name = #thmname attrblock
+      val th = Tactical.prove(t,tac)
+               handle HOL_ERR herr =>
+               let val err_mesg = tac_failure name (message_of herr)
+                   val err = HOL_ERR (set_message err_mesg herr)
+               in render_exn
+                    (wrap_exn "boolLib" "store_thm_at" err) end
+  in
+    save_thm_attrs loc (attrblock,th)
+    handle e => render_exn
+                    (wrap_exn "boolLib" "store_thm_at" e)
+  end
 end
+
 val store_thm = store_thm_at DB.Unknown
+
 fun save_thm_at loc (n0,th) =
   save_thm_attrs loc (ThmAttribute.extract_attributes n0,th)
+
 val save_thm = save_thm_at DB.Unknown
 
 fun new_recursive_definition rcd =
