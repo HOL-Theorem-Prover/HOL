@@ -1,15 +1,9 @@
 signature Feedback =
 sig
 
-    type origin =
-      {origin_structure:string,
-       origin_function:string,
-       source_location : locn.locn}
+    type origin = Feedback_dtype.origin
 
-    datatype hol_error =
-      HOL_ERROR of
-        {origins : origin list,
-         message : string}
+    datatype hol_error = datatype Feedback_dtype.hol_error
 
     val pp_hol_error      : hol_error -> HOLPP.pretty
     val mk_hol_error      : string -> string -> locn.locn -> string -> hol_error

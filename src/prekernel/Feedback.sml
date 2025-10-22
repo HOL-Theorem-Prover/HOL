@@ -8,25 +8,16 @@
 (*                 tracing facility from Michael Norrish.                *)
 (* ===================================================================== *)
 
-structure Feedback : Feedback =
+structure Feedback :> Feedback =
 struct
 
+open Feedback_dtype
 local open HOLPP in end
-
-type origin =
-  {origin_structure:string,
-   origin_function:string,
-   source_location : locn.locn}
 
 fun mk_origin s1 s2 loc =
   {origin_structure = s1,
    origin_function = s2,
    source_location = loc}
-
-datatype hol_error =
-  HOL_ERROR of
-     {origins : origin list,
-      message : string}
 
 fun origins_of (HOL_ERROR {origins,...}) = origins
 fun message_of (HOL_ERROR {message,...}) = message
