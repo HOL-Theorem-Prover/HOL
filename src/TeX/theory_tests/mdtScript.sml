@@ -2,7 +2,7 @@ Theory mdt
 
 val _ = new_type ("char", 0)
 
-val _ = type_abbrev_pp("string", ``:char list``)
+Type string[pp] = ``:char list``
 
 Datatype:
   term = Var string type

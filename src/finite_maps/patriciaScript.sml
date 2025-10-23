@@ -156,7 +156,7 @@ val _ = set_fixity "IN_PTREE" (Infix (NONASSOC, 425));
 val _ = set_fixity "INSERT_PTREE" (Infixr 490);
 val _ = set_fixity "UNION_PTREE" (Infixl 500);
 
-val _ = type_abbrev("ptreeset", ``:unit ptree``);
+Type ptreeset = ``:unit ptree``
 
 Definition IN_PTREE_def[nocompute]:   $IN_PTREE n t = IS_SOME (PEEK (t:unit ptree) n)
 End

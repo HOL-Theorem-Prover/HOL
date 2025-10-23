@@ -253,7 +253,7 @@ Proof
   fs[BIJ_DEF, INJ_DEF]
 QED
 
-val _ = type_abbrev("cord", ``:unit ordinal``)
+Type cord = ``:unit ordinal``
 
 Theorem unitinf_univnum:
     univ(:unit inf) =~ univ(:num)

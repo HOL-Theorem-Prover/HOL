@@ -140,8 +140,8 @@ val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT,0)),
      wouldn't matter if it did.
  ---------------------------------------------------------------------------*)
 
-Overload "()" = ``one``
-val _ = type_abbrev_pp("unit",``:one``);
+Overload "()" = “one”
+Type unit[pp] = ``:one``
 
 Theorem one_induction:
   !P:one->bool. P one ==> !x. P x
