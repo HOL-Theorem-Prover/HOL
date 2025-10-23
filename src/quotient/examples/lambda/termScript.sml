@@ -16,28 +16,18 @@ Libs
 (* --------------------------------------------------------------------- *)
 
 
-(* In interactive sessions, do:
-
-app load ["listTheory", "pred_setTheory", "pairTheory",
-          "arithmeticTheory", "numTheory", "prim_recTheory",
-          "dep_rewrite", "more_listTheory", "more_setTheory",
-          "variableTheory",
-          "pairLib", "numLib", "listLib",
-          "tautLib", "bossLib"];
-
-*)
-
 (* --------------------------------------------------------------------- *)
 (* Create datatypes for lambda expressions.                              *)
 (* --------------------------------------------------------------------- *)
 
 
-val _ = Hol_datatype
+Datatype:
 
-        ` term1 = Con1 of 'a
-                | Var1 of var
-                | App1 of term1 => term1
-                | Lam1 of var => term1 ` ;
+          term1 = Con1 'a
+                | Var1 var
+                | App1 term1 term1
+                | Lam1 var term1
+End
 
 
 val term1_distinct = theorem "term1_distinct";

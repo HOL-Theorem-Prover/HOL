@@ -40,27 +40,28 @@ fun mkMyInfix s prec = mkMyInfixAlias s s prec;
  * and also [2] Model Checking (Clarke, Grumberg & Peled)                    *
  *---------------------------------------------------------------------------*)
 
-val _ = bossLib.Hol_datatype
-    `state_formula
+Datatype:
+     state_formula
           = TRUE
           | FALSE
-          | REG of 'a
-          | NOT of state_formula
-          | SDISJ of state_formula => state_formula
-          | SCONJ of state_formula => state_formula
-          | E of path_formula
-          | A of path_formula;
+          | REG 'a
+          | NOT state_formula
+          | SDISJ state_formula state_formula
+          | SCONJ state_formula state_formula
+          | E path_formula
+          | A path_formula;
 
      path_formula
-          = STATE of state_formula
-          | FAILS of path_formula
-          | PDISJ of path_formula => path_formula
-          | PCONJ of path_formula => path_formula
-          | X of path_formula
-          | FU of path_formula
-          | G of path_formula
-          | U of path_formula => path_formula
-          | R of path_formula => path_formula`;
+          = STATE state_formula
+          | FAILS path_formula
+          | PDISJ path_formula path_formula
+          | PCONJ path_formula path_formula
+          | X path_formula
+          | FU path_formula
+          | G path_formula
+          | U path_formula path_formula
+          | R path_formula path_formula
+End
 
 (*---------------------------------------------------------------------------
     Set-up special parsing for constructors, and inform the system
@@ -176,14 +177,15 @@ End
  *     >
  *---------------------------------------------------------------------------*)
 
-val _ = Hol_datatype
-  `STRUCTURE = <| states      : 'state -> bool;
+Datatype:
+   STRUCTURE = <| states      : 'state -> bool;
                   states0     : 'state -> bool;
                   atoms       : 'varatom  -> bool;
                   valids      : 'state -> 'varatom -> bool;
                   transitions : 'state # 'state -> bool;
                   fairSets    : ('state -> bool) # ('state -> bool) -> bool
-                |>`;
+                |>
+End
 
 
 Definition wfSTRUCTURE_def:
@@ -199,7 +201,8 @@ End
  * PI is infinite sequence of states s0,s1,s2... s.t. !i. R(si, si+1)
  *---------------------------------------------------------------------------*)
 
-val _ = Hol_datatype `Path = PATH of num -> 'state`;
+Datatype: Path = PATH (num -> 'state)
+End
 
 val _ = mkMyInfix "STATE_NO" 140;
 val _ = mkMyInfix "IS_PATH_IN" 140;

@@ -14,14 +14,15 @@ val RW1 = ONCE_REWRITE_RULE;
 (* The LPC set                                                                   *)
 (* ----------------------------------------------------------------------------- *)
 
-val _ = Hol_datatype `
-  lpc_el =  tReg of word4 => word32
-          | tStatus of arm_bit => bool
-          | tRom of word32 => word8 option
-          | tRam of word32 => word8 option
-          | tTime of num
-          | tUart0 of (word8 list # num # word8 list # num)
-          | tUndef of bool`;
+Datatype:
+  lpc_el =  tReg word4 word32
+          | tStatus arm_bit bool
+          | tRom word32 (word8 option)
+          | tRam word32 (word8 option)
+          | tTime num
+          | tUart0 (word8 list # num # word8 list # num)
+          | tUndef bool
+End
 
 val lpc_el_11 = DB.fetch "-" "lpc_el_11";
 val lpc_el_distinct = DB.fetch "-" "lpc_el_distinct";
@@ -398,5 +399,3 @@ Proof
   THEN1 (Q.PAT_ASSUM `!x.bb` (ASSUME_TAC o Q.SPEC `tUndef (LPC_READ_UNDEF s1)`)
          \\ FULL_SIMP_TAC std_ss [IN_lpc2set,oneTheory.one] \\ METIS_TAC [])
 QED
-
-

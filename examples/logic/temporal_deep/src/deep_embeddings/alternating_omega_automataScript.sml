@@ -5,69 +5,48 @@ Ancestors
 Libs
   tuerk_tacticsLib numLib Sanity
 
-(*
-quietdec := true;
-
-val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") ::
-            (concat home_dir "src/tools") :: !loadPath;
-
-map load
- ["xprop_logicTheory", "prop_logicTheory", "infinite_pathTheory", "pred_setTheory", "listTheory", "pairTheory", "set_lemmataTheory",
-   "containerTheory", "prim_recTheory", "tuerk_tacticsLib", "temporal_deep_mixedTheory", "arithmeticTheory", "numLib"];
-*)
-
 val _ = hide "S";
 val _ = hide "I";
-
-(*
-show_assums := false;
-show_assums := true;
-show_types := true;
-show_types := false;
-quietdec := false;
-*)
-
 
 (*****************************************************************************)
 (* symbolic representation of alternating automata                 *)
 (*****************************************************************************)
-val alternating_acceptance_condition_def =
-Hol_datatype
-`alternating_acceptance_condition =
+Datatype:
+ alternating_acceptance_condition =
     TRUE |
     FALSE |
-    INITIAL of 'state set |
-    CO_INITIAL of 'state set |
-    BUECHI of 'state set |
-    CO_BUECHI of 'state set |
-    PARITY of 'state->num |
-    WEAK_PARITY of 'state->num |
-    WEAK_BUECHI of 'state set |
-    WEAK_CO_BUECHI of 'state set`;
+    INITIAL ('state set) |
+    CO_INITIAL ('state set) |
+    BUECHI ('state set) |
+    CO_BUECHI ('state set) |
+    PARITY ('state->num) |
+    WEAK_PARITY ('state->num) |
+    WEAK_BUECHI ('state set) |
+    WEAK_CO_BUECHI ('state set)
+End
 
-val alternating_semi_automaton_def =
-Hol_datatype
-`alternating_semi_automaton =
+Datatype:
+ alternating_semi_automaton =
     <| S:   'state set;                        (*set of all used statevariables *)
         I: 'input set;
         S0: 'state prop_logic;              (*initial condition*)
         R:   'state -> 'input -> 'state prop_logic (*transition function*)
-    |>`;
+    |>
+End
 
-val alternating_automaton_def =
-Hol_datatype
-`alternating_automaton =
+Datatype:
+ alternating_automaton =
     <| A: ('input, 'state) alternating_semi_automaton;
         AC: 'state alternating_acceptance_condition (*acceptance condition*)
-    |>`;
+    |>
+End
 
-val alternating_run_def =
-Hol_datatype
-`alternating_run =
+Datatype:
+ alternating_run =
     <| S0:   'state set;                          (*choosen initial states*)
          R:   'state -> num -> 'state set (*choosen transitions*)
-    |>`;
+    |>
+End
 
 Theorem alternating_automaton_REWRITES =
       LIST_CONJ (List.concat
@@ -1534,7 +1513,3 @@ val NDET_TRUE___NDET_WEAK_CO_BUECHI =
     Cases_on `s IN S` THEN ASM_REWRITE_TAC[] THEN
     REWRITE_TAC[IS_PROP_DISJUNCTION_def] THEN
     PROVE_TAC[P_PROP_DISJUNCTION_def]);
-
-
-
-

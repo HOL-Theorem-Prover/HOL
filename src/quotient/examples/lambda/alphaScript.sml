@@ -21,13 +21,12 @@ val subs   =  ty_antiq( ==`:(var # 'a term1) list`== );
 
 (* Here is the syntax, repeated for clarity:
 
-val _ = Hol_datatype
-
-        ` term1 = Con1 of 'a
+Datatype:
+          term1 = Con1 of 'a
                 | Var1 of var
                 | App1 of term1 => term1
-                | Lam1 of var => term1 ` ;
-
+                | Lam1 of var => term1
+End
 *)
 
 

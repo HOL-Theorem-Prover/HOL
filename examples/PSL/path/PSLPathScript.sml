@@ -3,30 +3,11 @@
 (* Note that finite paths can be empty.                                      *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* START BOILERPLATE                                                         *)
-(*****************************************************************************)
-
-(******************************************************************************
-* Load theories
-* (commented out for compilation)
-******************************************************************************)
-(*
-quietdec := true;
-map load ["intLib","FinitePSLPathTheory"];
-open intLib rich_listTheory FinitePSLPathTheory;
-quietdec := false;
-*)
-
 Theory PSLPath
 Ancestors
   rich_list FinitePSLPath
 Libs
   intLib
-
-(*****************************************************************************)
-(* END BOILERPLATE                                                           *)
-(*****************************************************************************)
 
 (******************************************************************************
 * Simpsets to deal properly with theorems containing SUC
@@ -38,10 +19,10 @@ val _ = ParseExtras.temp_loose_equality()
 (******************************************************************************
 * A path is finite or infinite
 ******************************************************************************)
-val path_def =
- Hol_datatype
-  `path = FINITE   of ('s list)
-        | INFINITE of (num -> 's)`;
+Datatype:
+   path = FINITE   ('s list)
+        | INFINITE (num -> 's)
+End
 
 (******************************************************************************
 * Tests
@@ -147,10 +128,10 @@ val FINITE_TL =
 (******************************************************************************
 * Extended numbers.
 ******************************************************************************)
-val xnum_def =
- Hol_datatype
-  `xnum = INFINITY                            (* length of an infinite path  *)
-        | XNUM of num`;                       (* length of a finite path     *)
+Datatype:
+   xnum = INFINITY                            (* length of an infinite path  *)
+        | XNUM num                            (* length of a finite path     *)
+End
 
 (******************************************************************************
 * The constant ``to`` is a left associative infix with precedence 500.

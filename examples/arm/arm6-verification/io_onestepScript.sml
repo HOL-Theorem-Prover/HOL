@@ -26,8 +26,10 @@ val bool_ss = bool_ss ++ boolSimps.LET_ss;
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = Hol_datatype `state_inp = <| state : 'a; inp : num -> 'b |>`;
-val _ = Hol_datatype `state_out = <| state : 'a; out : 'b |>`;
+Datatype: state_inp = <| state : 'a; inp : num -> 'b |>
+End
+Datatype: state_out = <| state : 'a; out : 'b |>
+End
 
 (*---------------------------------------------------------------------------
   - Paired Iterated Maps ----------------------------------------------------

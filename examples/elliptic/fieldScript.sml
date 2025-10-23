@@ -149,10 +149,11 @@ val EXP_EXP = store_thm
 (* The basic definitions                                                     *)
 (* ------------------------------------------------------------------------- *)
 
-val () = Hol_datatype
-  `field = <| carrier : 'a -> bool;
+Datatype:
+   field = <| carrier : 'a -> bool;
               sum : 'a group;
-              prod : 'a group |>`;
+              prod : 'a group |>
+End
 
 val field_accessors = fetch "-" "field_accessors";
 

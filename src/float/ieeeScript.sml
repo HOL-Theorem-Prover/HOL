@@ -196,11 +196,12 @@ End
 (* Enumerated type for rounding modes.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-val roundmode = Hol_datatype
-  `roundmode = To_nearest
+Datatype:
+   roundmode = To_nearest
   | float_To_zero
   | To_pinfinity
-  | To_ninfinity`;
+  | To_ninfinity
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Characterization of best approximation from a set of abstract values.     *)

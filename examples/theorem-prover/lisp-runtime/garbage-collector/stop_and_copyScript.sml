@@ -15,7 +15,8 @@ fun ALPHA_TAC s = let
 
 
 
-val _ = Hol_datatype `heap_address = H_ADDR of num | H_DATA of 'a`;
+Datatype: heap_address = H_ADDR num | H_DATA 'a
+End
 val heap_address_11 = fetch "-" "heap_address_11";
 val heap_address_distinct = fetch "-" "heap_address_distinct";
 
@@ -336,8 +337,9 @@ val gc_exec_thm = store_thm("gc_exec_thm",
 
 (* next level *)
 
-val _ = Hol_datatype `heap_element =
-    H_EMP | H_REF of num | H_BLOCK of ('a heap_address) list # (num # 'b)`;
+Datatype: heap_element =
+    H_EMP | H_REF num | H_BLOCK ((('a heap_address) list) # (num # 'b))
+End
 val heap_element_distinct = fetch "-" "heap_element_distinct";
 val heap_element_11 = fetch "-" "heap_element_11";
 

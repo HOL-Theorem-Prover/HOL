@@ -11,12 +11,13 @@ val permeq_exists = RWstore_thm(
 `(∃x. p == x) ∧ (∃x. x == p)`,
 METIS_TAC [permeq_refl]);
 
-val _ = Hol_datatype`
-  Cterm = CNom of string
-        | CSus of (string # string) list => num
-        | CTie of string => Cterm
-        | CnPair of Cterm => Cterm
-        | CnConst of 'a`;
+Datatype:
+  Cterm = CNom string
+        | CSus ((string # string) list) num
+        | CTie string Cterm
+        | CnPair Cterm Cterm
+        | CnConst 'a
+End
 
 Definition Ctermeq_def[simp]:
   (Ctermeq (CNom a1) (CNom a2) = (a1 = a2)) ∧
@@ -348,4 +349,3 @@ Theorem IN_nvarb_nvars[simp]:
   ∀t. BAG_IN e (nvarb t) <=> e IN nvars t
 Proof Induct THEN SRW_TAC [][]
 QED
-

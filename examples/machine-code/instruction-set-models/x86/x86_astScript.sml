@@ -18,9 +18,10 @@ Ancestors
 <* ---------------------------------------------------------------------------------- *)
 
 
-val _ = Hol_datatype `
-  Xrm = Xr of Xreg                                         (* register *)
-      | Xm of (word2 # Xreg) option => Xreg option => Ximm (* mem[2^{scale} * index + base + displacement] *)`;
+Datatype:
+  Xrm = Xr Xreg                                         (* register *)
+      | Xm ((word2 # Xreg) option) (Xreg option) Ximm (* mem[2^{scale} * index + base + displacement] *)
+End
 
 (* check whether rm requires a lock, i.e. specifies a memory access *)
 
@@ -29,52 +30,59 @@ Definition rm_is_memory_access_def:
   (rm_is_memory_access (Xr r) = F)
 End
 
-val _ = Hol_datatype `
-  Xdest_src = Xrm_i of Xrm  => Ximm  (* mnemonic r/m32, imm32 or mnemonic r/m32, imm8 (sign-extended) *)
-            | Xrm_r of Xrm  => Xreg  (* mnemonic r/m32, r32 *)
-            | Xr_rm of Xreg => Xrm   (* mnemonic r32, r/m32 *)  `;
+Datatype:
+  Xdest_src = Xrm_i Xrm  Ximm  (* mnemonic r/m32, imm32 or mnemonic r/m32, imm8 (sign-extended) *)
+            | Xrm_r Xrm  Xreg  (* mnemonic r/m32, r32 *)
+            | Xr_rm Xreg Xrm   (* mnemonic r32, r/m32 *)
+End
 
-val _ = Hol_datatype `
-  Ximm_rm = Xi_rm of Xrm    (* r/m32 *)
-          | Xi    of Ximm   (* imm32 or imm8 (sign-extended) *) `;
+Datatype:
+  Ximm_rm = Xi_rm Xrm    (* r/m32 *)
+          | Xi    Ximm   (* imm32 or imm8 (sign-extended) *)
+End
 
-val _ = Hol_datatype `Xbinop_name = Xadc | Xadd | Xand | Xcmp | Xor | Xshl | Xshr | Xsar | Xsub | Xsbb | Xtest | Xxor `;
-val _ = Hol_datatype `Xmonop_name = Xdec | Xinc | Xnot | Xneg `;
+Datatype: Xbinop_name = Xadc | Xadd | Xand | Xcmp | Xor | Xshl | Xshr | Xsar | Xsub | Xsbb | Xtest | Xxor
+End
+Datatype: Xmonop_name = Xdec | Xinc | Xnot | Xneg
+End
 
-val _ = Hol_datatype `Xcond = (* this list is not complete *)
+Datatype: Xcond = (* this list is not complete *)
     X_ALWAYS            (* N = not     *)
   | X_E | X_NE          (* E = equal   *)
   | X_S | X_NS          (* S = signed  *)
   | X_A | X_NA          (* A = above   *)
-  | X_B | X_NB          (* B = below   *)`;
+  | X_B | X_NB          (* B = below   *)
+End
 
-val _ = Hol_datatype `
-  Xinstruction = Xbinop     of Xbinop_name => Xdest_src
-               | Xmonop     of Xmonop_name => Xrm
-               | Xcmpxchg   of Xrm => Xreg
-               | Xxadd      of Xrm => Xreg
-               | Xxchg      of Xrm => Xreg
-               | Xmul       of Xrm
-               | Xdiv       of Xrm
-               | Xlea       of Xdest_src
-               | Xpop       of Xrm
-               | Xpush      of Ximm_rm
-               | Xcall      of Ximm_rm
-               | Xret       of Ximm
-               | Xmov       of Xcond => Xdest_src
-               | Xmovzx     of Xdest_src
-               | Xmov_byte  of Xdest_src
-               | Xcmp_byte  of Xdest_src
-               | Xdec_byte  of Xrm
-               | Xjcc       of Xcond => Ximm      (* jcc includes jmp rel, i.e. unconditional relative jumps. *)
-               | Xjmp       of Xrm                (* jmp excludes relative jumps, see jcc. *)
-               | Xloop      of Xcond => Ximm      (* Here Xcond over approximates possibilities. *)
+Datatype:
+  Xinstruction = Xbinop     Xbinop_name Xdest_src
+               | Xmonop     Xmonop_name Xrm
+               | Xcmpxchg   Xrm Xreg
+               | Xxadd      Xrm Xreg
+               | Xxchg      Xrm Xreg
+               | Xmul       Xrm
+               | Xdiv       Xrm
+               | Xlea       Xdest_src
+               | Xpop       Xrm
+               | Xpush      Ximm_rm
+               | Xcall      Ximm_rm
+               | Xret       Ximm
+               | Xmov       Xcond Xdest_src
+               | Xmovzx     Xdest_src
+               | Xmov_byte  Xdest_src
+               | Xcmp_byte  Xdest_src
+               | Xdec_byte  Xrm
+               | Xjcc       Xcond Ximm      (* jcc includes jmp rel, i.e. unconditional relative jumps. *)
+               | Xjmp       Xrm                (* jmp excludes relative jumps, see jcc. *)
+               | Xloop      Xcond Ximm      (* Here Xcond over approximates possibilities. *)
                | Xpushad
-               | Xpopad     `;
+               | Xpopad
+End
 
-val _ = Hol_datatype `Xpre_g1 = Xlock | Xg1_none `;
-val _ = Hol_datatype `Xpre_g2 = Xbranch_taken | Xbranch_not_taken | Xg2_none `;
+Datatype: Xpre_g1 = Xlock | Xg1_none
+End
+Datatype: Xpre_g2 = Xbranch_taken | Xbranch_not_taken | Xg2_none
+End
 
-val _ = Hol_datatype `Xinst = Xprefix of Xpre_g1 => Xpre_g2 => Xinstruction`;
-
-
+Datatype: Xinst = Xprefix Xpre_g1 Xpre_g2 Xinstruction
+End

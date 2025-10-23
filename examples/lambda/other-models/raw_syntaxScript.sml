@@ -47,9 +47,12 @@ Libs
 
    ---------------------------------------------------------------------- *)
 
-val _ = Hol_datatype `raw_term = var of string
-                               | app of raw_term => raw_term
-                               | lam of string => raw_term`;
+Datatype:
+  raw_term =
+    var  string
+  | app  raw_term raw_term
+  | lam  string raw_term
+End
 
 Definition fv_def:
   (fv (var s) = {s}) /\
@@ -671,4 +674,3 @@ val raw_diamond = store_thm(
   SRW_TAC [][GSYM diamond_eval, collapse_preserves_diagrams] THEN
   SRW_TAC [][diamond_eval] THEN
   METIS_TAC [chap3Theory.beta_CR, chap3Theory.CR_def]);
-

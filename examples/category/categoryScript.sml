@@ -40,8 +40,9 @@ Proof
   \\ metis_tac[]
 QED
 
-val _ = Hol_datatype`morphism = <|
-  dom : α; cod : β; map : γ |>`;
+Datatype: morphism = <|
+  dom : α; cod : β; map : γ |>
+End
 
 val morphism_component_equality = DB.theorem"morphism_component_equality";
 
@@ -78,11 +79,12 @@ End
 
 val _ = type_abbrev("mor",``:(α,α,β) morphism``);
 
-val _ = Hol_datatype `category =
+Datatype: category =
   <| obj : α set ;
      mor : (α,β) mor set ;
      id_map : α -> β;
-     comp : (α,β) mor -> (α,β) mor -> β |>`;
+     comp : (α,β) mor -> (α,β) mor -> β |>
+End
 
 val category_component_equality = DB.theorem "category_component_equality";
 

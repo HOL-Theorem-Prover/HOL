@@ -199,12 +199,13 @@ Libs
 *)
 
 (* Monoid and Group share the same type: already defined in monoid.hol
-val _ = Hol_datatype`
+Datatype:
   group = <| carrier:'a -> bool;
                   id: 'a;
                  inv:'a -> 'a; -- by val _ = add_record_field ("inv", ``monoid_inv``);
                 mult:'a -> 'a -> 'a
-           |>`;
+           |>
+End
 *)
 val _ = type_abbrev ("group", Type `:'a monoid`);
 

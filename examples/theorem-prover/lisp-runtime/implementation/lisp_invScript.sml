@@ -16,8 +16,9 @@ val wstd_ss = std_ss ++ SIZES_ss ++ rewrites [DECIDE ``n<256 ==> (n:num)<1844674
 
 (* I/O definition *)
 
-val _ = Hol_datatype `
-  io_streams = IO_STREAMS of string (* input *) => string (* output *)`;
+Datatype:
+  io_streams = IO_STREAMS string (* input *) string (* output *)
+End
 
 val io_streams_11 = fetch "-" "io_streams_11"
 
@@ -249,8 +250,9 @@ Definition bs2bytes_def:
   (bs2bytes (i,sym) (x::xs) = bc_ref (i,sym) x ++ bs2bytes (i+bc_length x,sym) xs)
 End
 
-val _ = Hol_datatype `
-  code_type = BC_CODE of (num -> bc_inst_type option) # num`;
+Datatype:
+  code_type = BC_CODE ((num -> bc_inst_type option) # num)
+End
 
 Definition WRITE_CODE_def:
   (WRITE_CODE (BC_CODE (code,ptr)) [] = BC_CODE (code,ptr)) /\
@@ -2367,5 +2369,3 @@ val code_heap_add_symbol = store_thm("code_heap_add_symbol",
   Cases_on `code` \\ SIMP_TAC std_ss [code_heap_def] \\ REPEAT STRIP_TAC
   \\ Q.LIST_EXISTS_TAC [`bs`,`hs`] \\ FULL_SIMP_TAC std_ss []
   \\ IMP_RES_TAC bc_symbols_ok_IMP \\ ASM_SIMP_TAC std_ss []);
-
-

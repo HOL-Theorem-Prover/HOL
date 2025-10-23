@@ -134,11 +134,12 @@ Libs
    . a binary operation (2-nary function) called multiplication
    . an identity element for the binary operation
 *)
-val _ = Hol_datatype`
+Datatype:
   monoid = <| carrier: 'a -> bool;
                    op: 'a -> 'a -> 'a;
                    id: 'a
-            |>`;
+            |>
+End
 (* If the field  inv: 'a -> 'a; is included,
    there will be an implicit monoid_inv accessor generated.
    Later, when monoid_inv_def defines another monoid_inv,

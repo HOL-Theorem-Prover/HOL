@@ -18,11 +18,12 @@ val T64 = ``18446744073709551616:num``
 (* The x64 set                                                                   *)
 (* ----------------------------------------------------------------------------- *)
 
-val _ = Hol_datatype `
-  x64_el =  zReg of Zreg => word64
-          | zStatus of Zeflags => bool option
-          | zRIP of word64
-          | zMem of word64 => ((word8 # x64_permission set) option) => bool `;
+Datatype:
+  x64_el =  zReg Zreg word64
+          | zStatus Zeflags (bool option)
+          | zRIP word64
+          | zMem word64 ((word8 # x64_permission set) option) bool
+End
 
 val x64_el_11 = DB.fetch "-" "x64_el_11";
 val x64_el_distinct = DB.fetch "-" "x64_el_distinct";
@@ -1681,4 +1682,3 @@ in
     |> RW [AND_IMP_INTRO] |> RW1 [CONJ_COMM] |> RW [GSYM AND_IMP_INTRO]
     |> RW1 [STAR_COMM]);
 end;
-

@@ -6,13 +6,16 @@ Libs
 
 val _ = ParseExtras.temp_loose_equality()
 
-val _ = Hol_datatype `deep_form = Conjn of deep_form => deep_form
-                                | Disjn of deep_form => deep_form
-                                | Negn of deep_form
-                                | UnrelatedBool of bool
-                                | xLT of int | LTx of int
-                                | xEQ of int
-                                | xDivided of int => int`;
+Datatype:
+  deep_form =
+    Conjn deep_form deep_form
+  | Disjn deep_form deep_form
+  | Negn deep_form
+  | UnrelatedBool bool
+  | xLT int | LTx int
+  | xEQ int
+  | xDivided int int
+End
 
 Definition eval_form_def:
    (eval_form (Conjn f1 f2) x = eval_form f1 x /\ eval_form f2 x) /\
@@ -436,6 +439,3 @@ Proof
   SIMP_TAC std_ss [IN_UNION, NOT_IN_EMPTY, IN_SING, Aset_def] THEN
   PROVE_TAC []
 QED
-
-
-

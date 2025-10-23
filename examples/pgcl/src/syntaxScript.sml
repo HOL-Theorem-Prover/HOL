@@ -65,15 +65,16 @@ val assign_eta = store_thm
 (* Probabilisitic programs: syntax                                           *)
 (* ------------------------------------------------------------------------- *)
 
-val () = Hol_datatype
-  `command =
+Datatype:
+   command =
        Abort
      | Consume of ('a state -> posreal)
      | Assign of string => ('a state -> 'a)
      | Seq of command => command
      | Nondet of command => command
      | Prob of ('a state -> posreal) => command => command
-     | While of ('a state -> bool) => command`;
+     | While of ('a state -> bool) => command
+End
 
 Definition Assert_def:
    Assert (x : 'a state -> posreal) (c : 'a command) = c

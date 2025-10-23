@@ -35,11 +35,11 @@ Libs
   binderLib boolSimps BasicProvers
 
 
-val _ = Hol_datatype`
-  type = tyvar of string
-       | tyfun of type => type
-       | tyforall of string set => type
-`;
+Datatype:
+  type = tyvar string
+       | tyfun type type
+       | tyforall (string set) type
+End
 
 Definition fv_def:
   (fv (tyvar s) = {s}) /\
@@ -689,4 +689,3 @@ val tys_fresh = store_thm(
       SRW_TAC [][pmact_decompose]
     ]
   ]);
-

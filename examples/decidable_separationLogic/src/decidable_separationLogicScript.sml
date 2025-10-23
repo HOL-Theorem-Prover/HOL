@@ -4,24 +4,6 @@ Ancestors
 Libs
   congLib
 
-(*
-quietdec := true;
-loadPath :=
-            (concat [Globals.HOLDIR, "/examples/decidable_separationLogic/src"]) ::
-            !loadPath;
-
-map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
-   "rich_listTheory"];
-show_assums := true;
-*)
-
-(*
-load "decidable_separationLogicTheory";
-open decidable_separationLogicTheory;
-
-quietdec := false;
-*)
-
 val _ = ParseExtras.temp_loose_equality()
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"]
@@ -653,9 +635,10 @@ val ALL_DISTINCT___PERM = store_thm ("ALL_DISTINCT___PERM",
 
 
 
-val _ = Hol_datatype ‘ds_value =
+Datatype: ds_value =
      dsv_nil
-   | dsv_const of 'value’
+   | dsv_const 'value
+End
 
 val ds_value_11 = DB.fetch "-" "ds_value_11";
 val ds_value_distinct = DB.fetch "-" "ds_value_distinct";
@@ -703,25 +686,28 @@ val dsv_const_GET_DSV_VALUE = store_thm ("dsv_const_GET_DSV_VALUE",
    Cases_on ‘v’ THEN
    SIMP_TAC std_ss [IS_DSV_NIL_def, GET_DSV_VALUE_def]);
 
-val _ = Hol_datatype ‘ds_expression =
-     dse_const of 'value ds_value
-   | dse_var of 'vars’;
+Datatype: ds_expression =
+     dse_const ('value ds_value)
+   | dse_var 'vars
+End
 
 
 Definition dse_nil_def:   dse_nil = dse_const dsv_nil
 End
 
-val _ = Hol_datatype ‘ds_pure_formula =
+Datatype: ds_pure_formula =
      pf_true
-   | pf_equal of ('vars, 'value) ds_expression => ('vars, 'value) ds_expression
-   | pf_unequal of ('vars, 'value) ds_expression => ('vars, 'value) ds_expression
-   | pf_and of ds_pure_formula => ds_pure_formula’;
+   | pf_equal (('vars, 'value) ds_expression) (('vars, 'value) ds_expression)
+   | pf_unequal (('vars, 'value) ds_expression) (('vars, 'value) ds_expression)
+   | pf_and ds_pure_formula ds_pure_formula
+End
 
-val _ = Hol_datatype ‘ds_spatial_formula =
+Datatype: ds_spatial_formula =
      sf_emp
-   | sf_points_to of ('vars, 'value) ds_expression => ('field # ('vars, 'value) ds_expression) list
-   | sf_tree of 'field list => ('vars, 'value) ds_expression => ('vars, 'value) ds_expression
-   | sf_star of ds_spatial_formula => ds_spatial_formula’;
+   | sf_points_to (('vars, 'value) ds_expression) (('field # ('vars, 'value) ds_expression) list)
+   | sf_tree ('field list) (('vars, 'value) ds_expression) (('vars, 'value) ds_expression)
+   | sf_star ds_spatial_formula ds_spatial_formula
+End
 
 
 val ds_expression_11 = DB.fetch "-" "ds_expression_11";
@@ -10349,4 +10335,3 @@ BINOP_TAC THENL [
    REPEAT STRIP_TAC THEN
    METIS_TAC[]
 ])
-

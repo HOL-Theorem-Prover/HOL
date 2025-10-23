@@ -466,11 +466,12 @@ val fermat_little = store_thm
 (* The basic definitions                                                     *)
 (* ------------------------------------------------------------------------- *)
 
-val () = Hol_datatype
-  `group = <| carrier : 'a -> bool;
+Datatype:
+   group = <| carrier : 'a -> bool;
               id : 'a;
               inv : 'a -> 'a;
-              mult : 'a -> 'a -> 'a |>`;
+              mult : 'a -> 'a -> 'a |>
+End
 
 Definition Group_def:
    Group =

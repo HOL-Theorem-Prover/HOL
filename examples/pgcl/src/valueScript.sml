@@ -49,10 +49,11 @@ val lemma = I prove;
 (* The HOL type we use to model values                                       *)
 (* ------------------------------------------------------------------------- *)
 
-val () = Hol_datatype `value =
+Datatype: value =
                 Null
               | Int of int
-              | Array of value list`;
+              | Array of value list
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Useful Functions for Turning Values into nums or ints                     *)

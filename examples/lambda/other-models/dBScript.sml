@@ -7,9 +7,6 @@
 
  ---------------------------------------------------------------------------*)
 
-(* Interactive use:
-   app load ["bossLib", "Q", "pred_setTheory", "stringTheory"];
-*)
 Theory dB
 Ancestors
   pred_set arithmetic basic_swap
@@ -54,12 +51,13 @@ val GSPEC_DEF = Q.prove
 (* PART I: A type of de Bruijn terms.                                    *)
 (* ===================================================================== *)
 
-val _ = Hol_datatype
-           `dB = dCON   of 'a
-               | dVAR   of string
-               | dBOUND of num
-               | dABS   of dB
-               | dAPP   of dB => dB`;
+Datatype:
+            dB = dCON   'a
+               | dVAR   string
+               | dBOUND num
+               | dABS   dB
+               | dAPP   dB dB
+End
 
 
 (* --------------------------------------------------------------------- *)

@@ -54,11 +54,12 @@ fun ARW_TAC l = BasicProvers.RW_TAC bool_ss
 
 
 
-val _ = Hol_datatype
- ` canonical_sum =
+Datatype:
+   canonical_sum =
      Nil_monom
-   | Cons_monom of 'a => index list => canonical_sum
-   | Cons_varlist of index list => canonical_sum `;
+   | Cons_monom 'a (index list) canonical_sum
+   | Cons_varlist (index list) canonical_sum
+End
 
 
 val canonical_sum_merge_def = Define `

@@ -6,9 +6,6 @@
 (* DATE          : 2001 - 2005                                               *)
 (* ========================================================================= *)
 
-(* interactive use:
-  app load ["wordsLib", "wordsSyntax", "rich_listTheory", "io_onestepTheory"];
-*)
 Theory arm
 Ancestors
   rich_list io_onestep words
@@ -23,48 +20,58 @@ Libs
 val _ = set_fixity "%%" (Infixl 500);
 val _ = overload_on ("%%", Term`$fcp_index`);
 
-val _ = Hol_datatype `register =
+Datatype: register =
  r0     | r1     | r2      | r3      | r4      | r5      | r6      | r7  |
  r8     | r9     | r10     | r11     | r12     | r13     | r14     | r15 |
  r8_fiq | r9_fiq | r10_fiq | r11_fiq | r12_fiq | r13_fiq | r14_fiq |
                                                  r13_irq | r14_irq |
                                                  r13_svc | r14_svc |
                                                  r13_abt | r14_abt |
-                                                 r13_und | r14_und`;
-val _ = Hol_datatype`
-  psrs = CPSR | SPSR_fiq | SPSR_irq | SPSR_svc | SPSR_abt | SPSR_und`;
+                                                 r13_und | r14_und
+End
+Datatype:
+  psrs = CPSR | SPSR_fiq | SPSR_irq | SPSR_svc | SPSR_abt | SPSR_und
+End
 
 val _ = type_abbrev("reg", ``:register->word32``);
 val _ = type_abbrev("psr", ``:psrs->word32``);
 
-val _ = Hol_datatype`
+Datatype:
   exception = reset | undefined | software | pabort |
-              dabort | address |interrupt | fast`;
+              dabort | address |interrupt | fast
+End
 
-val _ = Hol_datatype `state_arm = ARM of reg=>psr`;
-val _ = Hol_datatype `state_arm_ex = ARM_EX of state_arm=>word32=>exception`;
+Datatype: state_arm = ARM reg psr
+End
+Datatype: state_arm_ex = ARM_EX state_arm word32 exception
+End
 
 (* ......................................................................... *)
 
-val _ = Hol_datatype`
-  memop = MemRead of word32 | MemWrite of bool=>word32=>word32 |
-          CPMemRead of bool=>word32 | CPMemWrite of bool=>word32 |
-          CPWrite of word32`;
+Datatype:
+  memop = MemRead word32 | MemWrite bool word32 word32 |
+          CPMemRead bool word32 | CPMemWrite bool word32 |
+          CPWrite word32
+End
 
-val _ = Hol_datatype`
-  interrupts = Reset of state_arm | Undef | Prefetch |
-               Dabort of num | Fiq | Irq`;
+Datatype:
+  interrupts = Reset state_arm | Undef | Prefetch |
+               Dabort num | Fiq | Irq
+End
 
-val _ = Hol_datatype `mode = usr | fiq | irq | svc | abt | und | safe`;
+Datatype: mode = usr | fiq | irq | svc | abt | und | safe
+End
 
-val _ = Hol_datatype`
+Datatype:
   condition  = EQ | CS | MI | VS | HI | GE | GT | AL |
-               NE | CC | PL | VC | LS | LT | LE | NV`;
+               NE | CC | PL | VC | LS | LT | LE | NV
+End
 
-val _ = Hol_datatype`
+Datatype:
   iclass = swp | mrs_msr | data_proc | reg_shift | mla_mul |
            ldr | str | ldm | stm | br | swi_ex | cdp_und |
-           mcr | mrc | ldc | stc | unexec`;
+           mcr | mrc | ldc | stc | unexec
+End
 
 (* ------------------------------------------------------------------------- *)
 (*  General Purpose Register operations                                      *)

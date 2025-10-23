@@ -10,12 +10,13 @@ val APP_DIFF = REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC);
 
 val _ = ParseExtras.temp_loose_equality()
 
-val _ = Hol_datatype
-          `semi_ring = <| SR0 : 'a;
+Datatype:
+           semi_ring = <| SR0 : 'a;
                           SR1 : 'a;
                           SRP : 'a -> 'a -> 'a;
                           SRM : 'a -> 'a -> 'a
-                       |>`;
+                       |>
+End
 
 val sr = Term`r:'a semi_ring`;
 val _ = add_parameter sr;

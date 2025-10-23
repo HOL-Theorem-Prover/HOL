@@ -9,24 +9,26 @@ val op \\ = op THEN;
 
 (* abstract syntax of well-formed Lisp prorams *)
 
-val _ = Hol_datatype `
-  func = PrimitiveFun of lisp_primitive_op
-       | Define | Print | Error | Funcall | Fun of string`;
+Datatype:
+  func = PrimitiveFun lisp_primitive_op
+       | Define | Print | Error | Funcall | Fun string
+End
 
-val _ = Hol_datatype `
-  term = Const of SExp
-       | Var of string
-       | App of func => term list
-       | If of term => term => term
-       | LamApp of string list => term => term list
+Datatype:
+  term = Const SExp
+       | Var string
+       | App func (term list)
+       | If term term term
+       | LamApp (string list) term (term list)
        (* only macros below *)
-       | Let of (string # term) list => term
-       | LetStar of (string # term) list => term
-       | Cond of (term # term) list
-       | Or of term list | And of term list
-       | First of term | Second of term | Third of term
-       | Fourth of term | Fifth of term | List of term list
-       | Defun of string => string list => SExp`;
+       | Let ((string # term) list) term
+       | LetStar ((string # term) list) term
+       | Cond ((term # term) list)
+       | Or (term list) | And (term list)
+       | First term | Second term | Third term
+       | Fourth term | Fifth term | List (term list)
+       | Defun string (string list) SExp
+End
 
 val term_11 = fetch "-" "term_11";
 val term_distinct = fetch "-" "term_distinct";
@@ -400,5 +402,3 @@ Theorem R_ev_T_cases:
 Proof REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
       \\ IMP_RES_TAC R_ev_OK \\ FULL_SIMP_TAC std_ss []
 QED
-
-

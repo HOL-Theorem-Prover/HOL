@@ -6,40 +6,18 @@ Ancestors
 Libs
   tuerk_tacticsLib numLib Sanity
 
-(*
-quietdec := true;
-
-val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") ::
-            (concat home_dir "src/tools") :: !loadPath;
-
-map load
- ["xprop_logicTheory", "prop_logicTheory", "infinite_pathTheory", "pred_setTheory", "listTheory", "pairTheory", "set_lemmataTheory",
-   "containerTheory", "prim_recTheory", "tuerk_tacticsLib", "temporal_deep_mixedTheory", "semi_automatonTheory", "numLib",
-  "relationTheory", "symbolic_kripke_structureTheory"];
-*)
-
 val _ = hide "S";
 val _ = hide "I";
 
-(*
-show_assums := false;
-show_assums := true;
-show_types := true;
-show_types := false;
-quietdec := false;
-*)
-
-
-val explicit_acceptance_condition =
- Hol_datatype
-  `explicit_acceptance_condition =
-          EXPLICIT_ACCEPT_INPUT of 'input prop_logic
-        | EXPLICIT_ACCEPT_STATE of 'state set
+Datatype:
+   explicit_acceptance_condition =
+          EXPLICIT_ACCEPT_INPUT ('input prop_logic)
+        | EXPLICIT_ACCEPT_STATE ('state set)
         | EXPLICIT_ACCEPT_TRUE
-        | EXPLICIT_ACCEPT_NOT  of explicit_acceptance_condition
-        | EXPLICIT_ACCEPT_AND  of explicit_acceptance_condition # explicit_acceptance_condition
-        | EXPLICIT_ACCEPT_G    of explicit_acceptance_condition`;
+        | EXPLICIT_ACCEPT_NOT  explicit_acceptance_condition
+        | EXPLICIT_ACCEPT_AND  (explicit_acceptance_condition # explicit_acceptance_condition)
+        | EXPLICIT_ACCEPT_G    explicit_acceptance_condition
+End
 
 
 
@@ -327,6 +305,3 @@ val OMEGA_AUTOMATON___STATE_VAR_RENAMING =
       ASM_SIMP_TAC std_ss [PATH_MAP_def, IN_IMAGE, ETA_THM] THEN
       METIS_TAC[]
     ]);
-
-
-

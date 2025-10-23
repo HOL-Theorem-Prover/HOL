@@ -28,14 +28,6 @@ Libs
 val _ = ParseExtras.temp_loose_equality()
 
 
-(*
-app load ["stringTheory", "stringLib", "pred_setTheory", "pred_setLib",
-          "listTheory", "rich_listTheory", "listLib",
-          "numLib", "Datatype",
-          "arithmeticTheory", "Psyntax", "Define_type",
-          "more_listTheory", "more_setTheory",
-          "dep_rewrite", "bossLib" ];
-*)
 (*===========================================================*)
 (* The actual "names" of variables will be defined as a      *)
 (* composite type, containing not only a string but also a   *)
@@ -46,7 +38,8 @@ app load ["stringTheory", "stringLib", "pred_setTheory", "pred_setLib",
 (* will not be read; thus ("x",0) => "x" but ("y",2) => "y2".*)
 (*===========================================================*)
 
-val _ = Hol_datatype `var = VAR of string => num`;
+Datatype: var = VAR string num
+End
 
 (*
 val var_Axiom = theorem "var_Axiom";

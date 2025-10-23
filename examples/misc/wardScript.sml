@@ -9,7 +9,8 @@ End
 
 
 
-val _ = Hol_datatype `alphabet = a | b | I`
+Datatype: alphabet = a | b | I
+End
 
 val (thm_rules, thm_ind, thm_cases) = Hol_reln`
   thm [I] ∧

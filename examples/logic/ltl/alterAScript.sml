@@ -54,10 +54,11 @@ val FINITE_LEMM = store_thm
    RUNs over the alternating automaton
 *)
 
-val _ = Hol_datatype
-   `ALTERA_RUN = <| V : num -> 's set;
+Datatype:
+    ALTERA_RUN = <| V : num -> 's set;
                     E : (num # 's) -> 's set
-                                         |>`;
+                                         |>
+End
 
 (*
   validity condition for runs over a given word

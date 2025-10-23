@@ -33,20 +33,13 @@ val BigSig = false;
 fun maybe_thm (s, tm, tac) = if BigSig then store_thm (s, tm, tac)
                                        else prove (tm, tac);
 
-val _ = Hol_datatype `bt = nt | node of bt => 'a => bt`;
-val _ = Hol_datatype `bl = nbl | zerbl of bl
-                               | onebl of 'a => 'a bt => bl`;
+Datatype: bt = nt | node bt 'a bt
+End
+Datatype: bl = nbl | zerbl bl | onebl 'a ('a bt) bl
+End
 
 val bt_size_def = definition "bt_size_def";
-(* |- (!f. bt_size f nt = 0) /\
-       !f a0 a1 a2. bt_size f (node a0 a1 a2) =
-         1 + (bt_size f a0 + (f a1 + bt_size f a2)) *)
-
 val bl_size_def = definition "bl_size_def";
-(* |- (!f. bl_size f nbl = 0) /\
-       (!f a. bl_size f (zerbl a) = 1 + bl_size f a) /\
-       !f a0 a1 a2. bl_size f (onebl a0 a1 a2) =
-         1 + (f a0 + (bt_size f a1 + bl_size f a2)) *)
 
 (* helper function, BL_ACCUM, for use only by BL_CONS: *)
 

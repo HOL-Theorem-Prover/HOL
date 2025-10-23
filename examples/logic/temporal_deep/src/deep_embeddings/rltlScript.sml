@@ -5,25 +5,6 @@ Ancestors
 Libs
   tuerk_tacticsLib numLib Sanity
 
-(*
-quietdec := true;
-
-val home_dir = (Globals.HOLDIR ^ "/examples/temporal_deep/");
-loadPath := (home_dir ^ "src/deep_embeddings") ::
-            (home_dir ^ "src/tools") :: !loadPath;
-
-map load
- ["infinite_pathTheory", "prop_logicTheory", "pred_setTheory", "arithmeticTheory", "tuerk_tacticsLib", "numLib", "symbolic_kripke_structureTheory", "set_lemmataTheory"];
-*)
-
-(*
-show_assums := false;
-show_assums := true;
-show_types := true;
-show_types := false;
-quietdec := false;
-*)
-
 val _ = hide "S";
 val _ = hide "I";
 
@@ -34,14 +15,14 @@ val _ = ParseExtras.temp_loose_equality()
 (******************************************************************************
 * Syntax and semantic
 ******************************************************************************)
-val rltl_def =
- Hol_datatype
-  `rltl = RLTL_PROP       of 'prop prop_logic         (* b!                       *)
-      | RLTL_NOT          of rltl                     (* not f                    *)
-      | RLTL_AND          of rltl # rltl              (* f1 and f2                *)
-      | RLTL_NEXT         of rltl                     (* X! f                     *)
-      | RLTL_SUNTIL       of rltl # rltl              (* [f1 U f2]                *)
-      | RLTL_ACCEPT       of rltl # 'prop prop_logic`;          (* f abort b                *)
+Datatype:
+   rltl = RLTL_PROP       ('prop prop_logic)         (* b!                       *)
+      | RLTL_NOT          rltl                       (* not f                    *)
+      | RLTL_AND          (rltl # rltl)              (* f1 and f2                *)
+      | RLTL_NEXT         rltl                       (* X! f                     *)
+      | RLTL_SUNTIL       (rltl # rltl)              (* [f1 U f2]                *)
+      | RLTL_ACCEPT       (rltl # 'prop prop_logic)  (* f abort b                *)
+End
 
 
 val rltl_induct =
@@ -1299,6 +1280,3 @@ val RLTL_SEM___VAR_RENAMING___PATH_RESTRICT =
    Q_SPECL_NO_ASSUM 0 [`f'`, `0:num`, `v`, `P_FALSE`, `P_FALSE`, `f`] THEN
    UNDISCH_HD_TAC THEN
    ASM_SIMP_TAC std_ss [P_USED_VARS_EVAL, UNION_EMPTY]);
-
-
-

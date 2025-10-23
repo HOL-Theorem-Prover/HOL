@@ -1151,7 +1151,8 @@ val ch_arm_alloc = store_thm("ch_arm_alloc",
 
 (* prove tree like representation *)
 
-val _ = Hol_datatype `XExp = XDot of XExp => XExp | XVal of word30 | XSym of word30`;
+Datatype: XExp = XDot XExp XExp | XVal word30 | XSym word30
+End
 val XExp_11 = fetch "-" "XExp_11";
 val XExp_distinct = fetch "-" "XExp_distinct";
 

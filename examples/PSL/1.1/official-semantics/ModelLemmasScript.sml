@@ -230,14 +230,14 @@ val MODEL_PATH_TO_MODEL =
 (* Definition of an automaton: ``: ('label,'state)automaton``                *)
 (* (e.g. Clarke/Grumberg/Peled "Model Checking" Chapter 9)                   *)
 (*****************************************************************************)
-val automaton_def =
- Hol_datatype
-  `automaton =
+Datatype:
+   automaton =
     <| Sigma: 'label -> bool;
        Q:     'state -> bool;
        Delta: 'state # 'label # 'state -> bool;
        Q0:    'state -> bool;
-       F:     'state -> bool |>`;
+       F:     'state -> bool |>
+End
 
 (*****************************************************************************)
 (* AUTOMATON_PATH A w <=> w is a (finite or infinite) trace of A             *)

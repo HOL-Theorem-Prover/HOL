@@ -31,8 +31,9 @@ val SUBSET0_TRANS = store_thm("SUBSET0_TRANS",
   ``!x y z. x SUBSET0 y /\ y SUBSET0 z ==> x SUBSET0 z``,
   REWRITE_TAC [SUBSET0_DEF,SUBSET_DEF,IN_INSERT] \\ METIS_TAC []);
 
-val _ = Hol_datatype `
-  heap_type = EMP | REF of num | DATA of num # num # 'a`;
+Datatype:
+  heap_type = EMP | REF num | DATA (num # num # 'a)
+End
 
 Definition isREF_def:   isREF x = ?i. x = REF i
 End

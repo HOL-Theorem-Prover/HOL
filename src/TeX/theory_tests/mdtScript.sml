@@ -4,25 +4,25 @@ val _ = new_type ("char", 0)
 
 val _ = type_abbrev_pp("string", ``:char list``)
 
-val _ = Hol_datatype`
-  term = Var of string => type
-       | Const of string => type => const_tag
-       | Comb of term => term
-       | Abs of string => type => term
+Datatype:
+  term = Var string type
+       | Const string type const_tag
+       | Comb term term
+       | Abs string type term
        ;
-   type = Tyvar of string
-       | Tyapp of type_op => type list
+   type = Tyvar string
+       | Tyapp type_op (type list)
        ;
    type_op =
-     Typrim of string => num
-   | Tydefined of string => term
+     Typrim string num
+   | Tydefined string term
        ;
    const_tag =
      Prim
-   | Defined of num => (string # term) list => term
-   | Tyabs of string => term
-   | Tyrep of string => term
-`;
+   | Defined num ((string # term) list) term
+   | Tyabs string term
+   | Tyrep string term
+End
 
-val _ = Datatype`testrcd = <| fld1 : bool ; fld2 : 'a -> num |>`;
-
+Datatype: testrcd = <| fld1 : bool ; fld2 : 'a -> num |>
+End

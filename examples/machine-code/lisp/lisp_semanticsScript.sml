@@ -12,33 +12,33 @@ Ancestors
 (* An atom is Nil or a number or a string                                    *)
 (*****************************************************************************)
 
-val _ =
- Hol_datatype
-  `atom = Nil | Number of num | String of string`;
+Datatype:
+   atom = Nil | Number num | String string
+End
 
 (*****************************************************************************)
 (* An S-expression is an atom or a dotted pair (cons-cell)                   *)
 (*****************************************************************************)
 
-val _ =
- Hol_datatype
-  `sexpression = A of atom | Cons of sexpression => sexpression`;
+Datatype:
+   sexpression = A atom | Cons sexpression sexpression
+End
 
 (*****************************************************************************)
 (* Syntax of Pure Lisp                                                       *)
 (*****************************************************************************)
 
-val _ =
- Hol_datatype
-  `term = Con of sexpression
-        | Var of string
-        | App of func => term list
-        | Ite of (term # term)list;
+Datatype:
+   term = Con sexpression
+        | Var string
+        | App func (term list)
+        | Ite ((term # term) list);
 
-   func = FunCon of string
-        | FunVar of string
-        | Lambda of string list => term
-        | Label  of string => func`;
+   func = FunCon string
+        | FunVar string
+        | Lambda (string list) term
+        | Label  string func
+End
 
 (*****************************************************************************)
 (* Some utility values and functions                                         *)
@@ -263,4 +263,3 @@ val (R_ap_rules,R_ap_ind,R_ap_cases) =
   (!e el s sl a.
     R_ev (e,a) s /\ R_evl (el,a) sl
     ==> R_evl (e::el,a) (s::sl))`;
-

@@ -706,9 +706,10 @@ val logic_disjoin_formulas_thm = add_prove(
   \\ Cases_on `xs` \\ FS [MAP,or_list_def]
   \\ ONCE_REWRITE_TAC [logic_disjoin_formulas_def] \\ FS [f2sexp_def]);
 
-val _ = Hol_datatype `
+Datatype:
   logic_appeal =
-    Appeal of string => formula => (logic_appeal list # (SExp option)) option`
+    Appeal string formula ((logic_appeal list # (SExp option)) option)
+End
 
 val logic_appeal_size_def = fetch "-" "logic_appeal_size_def"
 
@@ -5516,5 +5517,3 @@ val milawa_main_soundness = store_thm("milawa_main_soundness",
   \\ FULL_SIMP_TAC std_ss [] \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [LET_DEF]
   \\ SIMP_TAC std_ss [EVAL ``sexp2string (Sym "SUCCESS")``]
   \\ SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND]);
-
-

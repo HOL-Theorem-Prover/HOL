@@ -10,14 +10,6 @@
 * Load theory of syntax, paths and models
 * (commented out for compilation)
 ******************************************************************************)
-(*
-quietdec := true;
-map load
- ["intLib","stringLib","SyntaxTheory","SyntacticSugarTheory"];
-open intLib stringLib stringTheory SyntaxTheory SyntacticSugarTheory;
-quietdec := false;
-*)
-
 Theory ExtendedSyntax
 Ancestors
   string Syntax SyntacticSugar

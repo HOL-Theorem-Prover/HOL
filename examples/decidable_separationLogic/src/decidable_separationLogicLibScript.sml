@@ -5,21 +5,6 @@ Ancestors
 Libs
   congLib listLib
 
-(*
-quietdec := true;
-loadPath :=
-            (concat [Globals.HOLDIR, "/examples/decidable_separationLogic/src"]) ::
-            !loadPath;
-
-map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
-   "rich_listTheory", "decidable_separationLogicTheory", "listLib", "stringTheory", "pred_setLib"];
-show_assums := true;
-*)
-
-(*
-quietdec := false;
-*)
-
 val _ = ParseExtras.temp_loose_equality()
 
 val nchotomy_thm = prove (``!x.
@@ -1082,12 +1067,13 @@ METIS_TAC[HEAP_DISTINCT___NOT_ALL_DISTINCT]);
 
 
 
-val _ = Hol_datatype `hypothesis_rule_cases =
+Datatype: hypothesis_rule_cases =
      hyp_keep
-   | hyp_c_dse_nil of bool => num
-   | hyp_c_unequal of num => num
-   | hyp_in_precond of bool => num
-   | hyp_in_self of bool => num`
+   | hyp_c_dse_nil bool num
+   | hyp_c_unequal num num
+   | hyp_in_precond bool num
+   | hyp_in_self bool num
+End
 
 
 Definition HYPOTHESIS_RULE_COND_def:
@@ -1509,10 +1495,11 @@ Induct_on `l` THENL [
 
 
 
-val _ = Hol_datatype `pointsto_cases =
+Datatype: pointsto_cases =
      pointsto_skip
    | pointsto_pointsto
-   | pointsto_tree of bool => num`
+   | pointsto_tree bool num
+End
 
 Definition SF_POINTS_TO_LIST_COND_def:
    (SF_POINTS_TO_LIST_COND pfL pointsto_skip h = []) /\
@@ -2849,4 +2836,3 @@ DB.find "SF_POINTS_TO_LIST_def"
 
 
 *)
-

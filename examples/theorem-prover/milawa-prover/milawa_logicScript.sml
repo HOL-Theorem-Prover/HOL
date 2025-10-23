@@ -25,26 +25,30 @@ val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
    We start by defining the abstract syntax of valid Milawa terms and formulas. *)
 
-val _ = Hol_datatype `
+Datatype:
   logic_primitive_op =
     logic_CONS | logic_EQUAL | logic_LESS | logic_SYMBOL_LESS |
     logic_ADD | logic_SUB | logic_NOT | logic_RANK | logic_CONSP | logic_NATP |
-    logic_SYMBOLP | logic_CAR | logic_CDR | logic_ORD_LESS | logic_ORDP | logic_IF`;
+    logic_SYMBOLP | logic_CAR | logic_CDR | logic_ORD_LESS | logic_ORDP | logic_IF
+End
 
-val _ = Hol_datatype `
-  logic_func = mPrimitiveFun of logic_primitive_op
-             | mFun of string`;
+Datatype:
+  logic_func = mPrimitiveFun logic_primitive_op
+             | mFun string
+End
 
-val _ = Hol_datatype `
-  logic_term = mConst of SExp
-             | mVar of string
-             | mApp of logic_func => logic_term list
-             | mLamApp of string list => logic_term => logic_term list`
+Datatype:
+  logic_term = mConst SExp
+             | mVar string
+             | mApp logic_func (logic_term list)
+             | mLamApp (string list) logic_term (logic_term list)
+End
 
-val _ = Hol_datatype `
-  formula = Or of formula => formula              (*  por*     *)
-          | Not of formula                        (*  pnot*    *)
-          | Equal of logic_term => logic_term     (*  pequal*  *)`;
+Datatype:
+  formula = Or formula formula              (*  por*     *)
+          | Not formula                        (*  pnot*    *)
+          | Equal logic_term logic_term     (*  pequal*  *)
+End
 
 (* Unfortunately, the above definition is not enough to completely define
    what correct syntax is. In particular, the folloing properties require
@@ -82,13 +86,14 @@ Definition primitive_arity_def:
   (primitive_arity _ = 2:num)
 End
 
-val _ = Hol_datatype `
+Datatype:
   func_body = (* body of normal function defition *)
-              BODY_FUN of logic_term
+              BODY_FUN logic_term
             | (* expression, variable name, and semantic witness function *)
-              WITNESS_FUN of logic_term => string
+              WITNESS_FUN logic_term string
             | (* intermediate step in function definition *)
-              NO_FUN`;
+              NO_FUN
+End
 
 val _ = type_abbrev("context_type",
   ``:string |-> (string list # func_body # (SExp list -> SExp))``)
@@ -2258,4 +2263,3 @@ val definition_ok_BODY_FUN = store_thm("definition_ok_BODY_FUN",
   (definition_ok_lemma
     |> SPEC_ALL |> Q.INST [`body`|->`BODY_FUN l`]
     |> SIMP_RULE (srw_ss()) []) \\ FULL_SIMP_TAC std_ss []);
-

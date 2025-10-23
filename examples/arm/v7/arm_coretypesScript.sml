@@ -15,7 +15,7 @@ val _ = wordsLib.prefer_word();
 
 (* ------------------------------------------------------------------------ *)
 
-val _ = Hol_datatype `RName =
+Datatype: RName =
     RName_0usr  | RName_1usr  | RName_2usr  | RName_3usr
   | RName_4usr  | RName_5usr  | RName_6usr  | RName_7usr
   | RName_8usr  | RName_8fiq  | RName_9usr  | RName_9fiq
@@ -25,104 +25,126 @@ val _ = Hol_datatype `RName =
   | RName_SPabt | RName_SPund | RName_SPmon
   | RName_LRusr | RName_LRfiq | RName_LRirq | RName_LRsvc
   | RName_LRabt | RName_LRund | RName_LRmon
-  | RName_PC`;
+  | RName_PC
+End
 
-val _ = Hol_datatype `PSRName =
-  CPSR | SPSR_fiq | SPSR_irq | SPSR_svc | SPSR_mon | SPSR_abt | SPSR_und`;
+Datatype: PSRName =
+  CPSR | SPSR_fiq | SPSR_irq | SPSR_svc | SPSR_mon | SPSR_abt | SPSR_und
+End
 
-val _ = Hol_datatype `HWInterrupt =
-  NoInterrupt | HW_Reset | HW_Irq | HW_Fiq`;
+Datatype: HWInterrupt =
+  NoInterrupt | HW_Reset | HW_Irq | HW_Fiq
+End
 
-val _ = Hol_datatype `ARMpsr =
+Datatype: ARMpsr =
   <| N  : bool;  Z : bool; C : bool; V : bool; Q : bool;
      IT : word8; J : bool; Reserved : word4; GE : word4;
-     E  : bool;  A : bool; I : bool; F : bool; T : bool; M : word5 |>`;
+     E  : bool;  A : bool; I : bool; F : bool; T : bool; M : word5 |>
+End
 
-val _ = Hol_datatype `CP15sctlr =
+Datatype: CP15sctlr =
   <| IE : bool; TE : bool; AFE : bool; TRE : bool; NMFI : bool;
      EE : bool; VE : bool; U   : bool; FI  : bool; DZ   : bool;
      HA : bool; RR : bool; V   : bool; I   : bool; Z    : bool;
-     SW : bool; B  : bool; C   : bool; A   : bool; M    : bool |>`;
+     SW : bool; B  : bool; C   : bool; A   : bool; M    : bool |>
+End
 
-val _ = Hol_datatype `CP15scr =
+Datatype: CP15scr =
   <| nET : bool; AW  : bool; FW : bool; EA  : bool;
-     FIQ : bool; IRQ : bool; NS : bool |>`;
+     FIQ : bool; IRQ : bool; NS : bool |>
+End
 
-val _ = Hol_datatype `CP15nsacr =
-  <| RFR : bool; NSASEDIS : bool; NSD32DIS : bool; cp : 14 word |>`;
+Datatype: CP15nsacr =
+  <| RFR : bool; NSASEDIS : bool; NSD32DIS : bool; cp : 14 word |>
+End
 
-val _ = Hol_datatype `CP15reg =
+Datatype: CP15reg =
    <| SCTLR : CP15sctlr;
       SCR   : CP15scr;
       NSACR : CP15nsacr;
       VBAR  : word32;
-      MVBAR : word32 |>`;
+      MVBAR : word32 |>
+End
 
-val _ = Hol_datatype `CP14reg =
-   <| TEEHBR : word32 |>`;
+Datatype: CP14reg =
+   <| TEEHBR : word32 |>
+End
 
-val _ = Hol_datatype `ARMarch =
+Datatype: ARMarch =
     ARMv4   | ARMv4T
   | ARMv5T  | ARMv5TE
   | ARMv6   | ARMv6K  | ARMv6T2
-  | ARMv7_A | ARMv7_R`;
+  | ARMv7_A | ARMv7_R
+End
 
-val _ = Hol_datatype `ARMextensions =
+Datatype: ARMextensions =
     Extension_ThumbEE  | Extension_VFP     | Extension_AdvanvedSIMD
-  | Extension_Security | Extension_Jazelle | Extension_Multiprocessing`;
+  | Extension_Security | Extension_Jazelle | Extension_Multiprocessing
+End
 
-val _ = Hol_datatype `ARMinfo =
+Datatype: ARMinfo =
   <| arch              : ARMarch;
      extensions        : ARMextensions set;
-     unaligned_support : bool |>`;
+     unaligned_support : bool |>
+End
 
-val _ = Hol_datatype `SRType =
+Datatype: SRType =
     SRType_LSL
   | SRType_LSR
   | SRType_ASR
   | SRType_ROR
-  | SRType_RRX`;
+  | SRType_RRX
+End
 
-val _ = Hol_datatype `InstrSet =
-  InstrSet_ARM | InstrSet_Thumb | InstrSet_Jazelle | InstrSet_ThumbEE`;
+Datatype: InstrSet =
+  InstrSet_ARM | InstrSet_Thumb | InstrSet_Jazelle | InstrSet_ThumbEE
+End
 
-val _ = Hol_datatype `Encoding =
-  Encoding_ARM | Encoding_Thumb | Encoding_Thumb2 | Encoding_ThumbEE`;
+Datatype: Encoding =
+  Encoding_ARM | Encoding_Thumb | Encoding_Thumb2 | Encoding_ThumbEE
+End
 
-val _ = Hol_datatype `MemType =
-  MemType_Normal | MemType_Device | MemType_StronglyOrdered`;
+Datatype: MemType =
+  MemType_Normal | MemType_Device | MemType_StronglyOrdered
+End
 
-val _ = Hol_datatype `MemoryAttributes =
+Datatype: MemoryAttributes =
   <| type           : MemType;
      innerattrs     : word2;
      outerattrs     : word2;
      shareable      : bool;
-     outershareable : bool |>`;
+     outershareable : bool |>
+End
 
 (*
-val _ = Hol_datatype `FullAddress =
+Datatype: FullAddress =
   <| physicaladdress    : word32;
      physicaladdressext : word8;
-     NS                 : bool  (* F = Secure; T = Non-secure *) |>`;
+     NS                 : bool  (* F = Secure; T = Non-secure *) |>
+End
 *)
 
 (* For now, assume that a full address is word32 *)
 val _ = type_abbrev("FullAddress", ``:word32``);
 
-val _ = Hol_datatype `AddressDescriptor =
+Datatype: AddressDescriptor =
   <| memattrs : MemoryAttributes;
-     paddress : FullAddress |>`;
+     paddress : FullAddress |>
+End
 
-val _ = Hol_datatype `MBReqDomain =
+Datatype: MBReqDomain =
     MBReqDomain_FullSystem
   | MBReqDomain_OuterShareable
   | MBReqDomain_InnerShareable
-  | MBReqDomain_Nonshareable`;
+  | MBReqDomain_Nonshareable
+End
 
-val _ = Hol_datatype `MBReqTypes = MBReqTypes_All | MBReqTypes_Writes`;
+Datatype: MBReqTypes = MBReqTypes_All | MBReqTypes_Writes
+End
 
-val _ = Hol_datatype `memory_access =
-  MEM_READ of FullAddress | MEM_WRITE of FullAddress => word8`;
+Datatype: memory_access =
+  MEM_READ FullAddress | MEM_WRITE FullAddress word8
+End
 
 (* Coprocessors *)
 
@@ -130,7 +152,8 @@ val _ = type_abbrev("cpid", ``:word4``);
 
 val _ = type_abbrev ("proc", ``:num``);
 
-val _ = Hol_datatype `iiid = <| proc : num |>`;
+Datatype: iiid = <| proc : num |>
+End
 
 
 (* ------------------------------------------------------------------------ *)
@@ -542,4 +565,3 @@ val _ = computeLib.add_persistent_funs
    "num2Encoding_thm"];
 
 (* ------------------------------------------------------------------------ *)
-

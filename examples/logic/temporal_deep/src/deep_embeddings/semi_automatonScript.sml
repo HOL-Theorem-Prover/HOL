@@ -37,13 +37,13 @@ val _ = ParseExtras.temp_loose_equality()
 (* representation of non deterministic semi automata, that use               *)
 (* the powerset of a set of propositional varibales as inputs                *)
 (*****************************************************************************)
-val semi_automaton_def =
- Hol_datatype
-  `semi_automaton =
+Datatype:
+   semi_automaton =
     <| S:  'state set;                         (*set of states *)
        I:  'input set;                         (*set of inputs *)
        S0: ('state # 'input set) set;          (*initial states*)
-       R:  ('state # 'input set # 'state # 'input set) set  (*transition relation*) |>`;
+       R:  ('state # 'input set # 'state # 'input set) set  (*transition relation*) |>
+End
 
 Theorem semi_automaton_REWRITES =
         LIST_CONJ (TypeBase.one_one_of “:(α,β) semi_automaton” ::

@@ -3,11 +3,7 @@
 (* DESCRIPTION   : STE Embedding in HOL                                  *)
 (* AUTHOR        : Ashish Darbari                                        *)
 (* ===================================================================== *)
-(*
-(* For interactive running uncomment this part *)
-   val _ = load "stringLib";
-   val _ = load "mesonLib";
- *)
+
 Theory STE
 Ancestors
   arithmetic list pair string
@@ -116,12 +112,14 @@ End
 
 (* Defining the abstract type of Trajectory formulas *)
 
-val _ = Hol_datatype
-    `TF = Is_0 of string
-  | Is_1 of string
-  | AND of TF => TF
-  | WHEN of TF => bool
-  | NEXT of TF`;
+Datatype:
+  TF =
+    Is_0 string
+  | Is_1 string
+  | AND TF TF
+  | WHEN TF bool
+  | NEXT TF
+End
 
 (* Defining the operators WHEN and AND to be left infix *)
 
@@ -148,7 +146,8 @@ End
 
 (* Datatype of Assertions - leadsto operator *)
 
-val _ = Hol_datatype `Assertion = ==>> of TF => TF`;
+Datatype: Assertion = ==>> TF TF
+End
 
 (* leadsto is infix *)
 

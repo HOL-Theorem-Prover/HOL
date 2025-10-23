@@ -338,12 +338,12 @@ val _ = intLib.deprecate_int ();
    . a sum group (with sum as its binary operation )
    . a product monoid (with multiplication as its binary operation)
 *)
-val _ = Hol_datatype`
+Datatype:
   ring = <| carrier: 'a -> bool;
                 sum: 'a group;
                prod: 'a monoid (* monoid and group share the same type *)
           |>
-`;
+End
 
 (* overloading  *)
 Overload "+" = ``r.sum.op``

@@ -27,27 +27,30 @@ Libs
 
 val _ = type_abbrev("mem", ``:word30->word32``);
 
-val _ = Hol_datatype`
-  cp_output = <| data : word32 option list; absent : bool |>`;
+Datatype:
+  cp_output = <| data : word32 option list; absent : bool |>
+End
 
-val _ = Hol_datatype `bus =
+Datatype: bus =
    <| data     : word32 list;
       memory   : mem;
       abort    : num option;
       cp_state : 'a
-   |>`;
+   |>
+End
 
 (* -------------------------------------------------------------------------- *)
 (* The system state                                                           *)
 (* -------------------------------------------------------------------------- *)
 
-val _ = Hol_datatype `arm_sys_state =
+Datatype: arm_sys_state =
    <| registers : registers;
       psrs      : psrs;
       memory    : mem;
       undefined : bool;
       cp_state  : 'a
-   |>`;
+   |>
+End
 
 (* -------------------------------------------------------------------------- *)
 (* The model is paramaterised by a collection of coprocessor operations       *)
@@ -72,7 +75,7 @@ val _ = Hol_datatype `arm_sys_state =
 (*                                                                            *)
 (* -------------------------------------------------------------------------- *)
 
-val _ = Hol_datatype `coproc =
+Datatype: coproc =
   <| absent : bool -> word32 -> bool;
      f_cdp  : 'a -> bool -> word32 -> 'a;
      f_mrc  : 'a -> bool -> word32 -> word32;
@@ -80,7 +83,8 @@ val _ = Hol_datatype `coproc =
      f_stc  : 'a -> bool -> word32 -> word32 option list;
      f_ldc  : 'a -> bool -> word32 -> word32 list -> 'a;
      n_ldc  : 'a -> bool -> word32 -> num
-  |>`;
+  |>
+End
 
 (* -------------------------------------------------------------------------- *)
 (* ADD_COPROC                                                                 *)

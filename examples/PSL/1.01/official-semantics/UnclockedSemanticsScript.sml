@@ -14,18 +14,6 @@
 * Load theory of finite and infinite sequences and additional definitions of
 functions on lists (commented out for compilation)
 ******************************************************************************)
-(*
-quietdec := true;
-map load
- ["SyntaxTheory", "SyntacticSugarTheory", "PSLPathTheory", "KripkeTheory",
-  "rich_listTheory", "intLib"];
-
-open SyntaxTheory SyntacticSugarTheory
-     PSLPathTheory KripkeTheory listTheory rich_listTheory intLib;
-
-quietdec := false;
-*)
-
 Theory UnclockedSemantics
 Ancestors
   Syntax SyntacticSugar PSLPath Kripke list rich_list

@@ -19,7 +19,7 @@ val meter = Count.mk_meter();
  * Start the theory.                                                         *
  *---------------------------------------------------------------------------*)
 
-val _ = Hol_datatype `events = press_att_cws
+Datatype: events = press_att_cws
                      | press_cas_eng
                      | press_alt_eng
                      | press_fpa_sel
@@ -28,40 +28,46 @@ val _ = Hol_datatype `events = press_att_cws
                      | input_cas
                      | alt_reached
                      | fpa_reached
-                     | alt_gets_near`;
+                     | alt_gets_near
+End
 
 
-val _ = Hol_datatype `off_eng = off | engaged`;
+Datatype: off_eng = off | engaged
+End
 
 
-val _ = Hol_datatype `mode_status
+Datatype: mode_status
                      = armed
-                     | Mode of off_eng`;
+                     | Mode off_eng
+End
 
 
-val _ = Hol_datatype `disp_status
+Datatype: disp_status
                      = pre_selected
-                     | current`;
+                     | current
+End
 
 
-val _ = Hol_datatype `altitude_vals
+Datatype: altitude_vals
                      = away
                      | near_pre_selected
-                     | at_pre_selected`;
+                     | at_pre_selected
+End
 
 
 (*---------------------------------------------------------------------------*
  * Define state-type projection and update functions.                        *
  *---------------------------------------------------------------------------*)
 
-val _ = Hol_datatype `states = <| att_cws  : off_eng;
+Datatype: states = <| att_cws  : off_eng;
                                   cas_eng  : off_eng;
                                   fpa_sel  : off_eng;
                                   alt_eng  : mode_status;
                                   alt_disp : disp_status;
                                   fpa_disp : disp_status;
                                   cas_disp : disp_status;
-                                  altitude : altitude_vals |>`;
+                                  altitude : altitude_vals |>
+End
 
 
 (*---------------------------------------------------------------------------*
@@ -361,4 +367,3 @@ val reachable_induct = prove
 
 
 val _ = Count.report (Count.read meter);
-

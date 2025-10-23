@@ -8359,12 +8359,12 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define a triple type *)
-val _ = Hol_datatype`
+Datatype:
   triple = <| a: num;
               b: num;
               c: num
             |>
-`;
+End
 
 (* A triplet is a triple composed of Leibniz node and children. *)
 Definition triplet_def:
