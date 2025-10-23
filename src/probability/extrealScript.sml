@@ -7747,6 +7747,25 @@ Proof
  >> simp[GSYM neg_minus1]
 QED
 
+Theorem pow_abs :
+  !c n. abs (c pow n) = (abs c) pow n
+Proof
+  rpt STRIP_TAC
+  >> Cases_on ‘c = PosInf’ >- (gs [] \\
+                               Cases_on ‘n = 0’  >- (gs [abs_refl, extreal_1_simps]) \\
+                               gs [extreal_pow_def, extreal_abs_def])
+  >> Cases_on ‘c = NegInf’ >- (gs [] \\
+                               Cases_on ‘n = 0’ >- (gs [abs_refl, extreal_1_simps]) \\
+                               Cases_on ‘EVEN n’ >- (gs [extreal_pow_def, extreal_abs_def]) \\
+                               gs [extreal_pow_def, extreal_abs_def])
+  >> ‘?r. c = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW
+  >> ‘Normal r pow n = Normal (r pow n)’ by rw [extreal_pow_def] >> POP_ORW
+  >> ‘abs (Normal (r pow n)) = Normal (abs (r pow n))’ by rw [extreal_abs_def] >> POP_ORW
+  >> ‘abs (Normal r) = Normal (abs r)’ by rw [extreal_abs_def] >> POP_ORW
+  >> ‘Normal (abs r) pow n = Normal ((abs r) pow n)’ by rw [extreal_pow_def]
+  >> METIS_TAC [extreal_11, POW_ABS]
+QED
+
 Theorem sub_le_sub_imp:
     !w x y z. w <= x /\ z <= y ==> w - y <= x - z
 Proof
