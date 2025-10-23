@@ -161,11 +161,11 @@ Definition complex_inv[nocompute]:
                               -IM z / ((RE z) pow 2 + (IM z) pow 2))
 End
 
-val _ = overload_on ("+",  Term`$complex_add`);
-val _ = overload_on ("~",  Term`$complex_neg`);
-val _ = overload_on ("*",  Term`$complex_mul`);
-val _ = overload_on ("inv",  Term`$complex_inv`);
-val _ = overload_on ("numeric_negate", ``$~ : complex->complex``);
+Overload "+" = Term`$complex_add`
+Overload "~" = Term`$complex_neg`
+Overload "*" = Term`$complex_mul`
+Overload inv = Term`$complex_inv`
+Overload numeric_negate = ``$~ : complex->complex``
 Overload "~" = “$~ : bool -> bool”
 Overload "¬" = “$~ : bool -> bool”
 
@@ -177,9 +177,9 @@ Definition complex_div[nocompute]:
  complex_div (z:complex) (w:complex) = z * inv w
 End
 
-val _ = overload_on ("-",  Term`$complex_sub`);
+Overload "-" = Term`$complex_sub`
 val _ = overload_on (GrammarSpecials.decimal_fraction_special, ``complex_div``)
-val _ = overload_on ("/",  Term`complex_div`);
+Overload "/" = Term`complex_div`
 
 val _ = add_ML_dependency "complexPP"
 val _ =
@@ -991,8 +991,8 @@ Definition complex_scalar_rmul[nocompute]:
 complex_scalar_rmul (z:complex) (k:real) = (RE z * k,IM z * k)
 End
 
-val _ = overload_on ("*",  Term`$complex_scalar_lmul`);
-val _ = overload_on ("*",  Term`$complex_scalar_rmul`);
+Overload "*" = Term`$complex_scalar_lmul`
+Overload "*" = Term`$complex_scalar_rmul`
 
 (*--------------------------------------------------------------------*)
 (* The properities of R-module                                        *)
@@ -1707,7 +1707,7 @@ Definition complex_pow:
       (complex_pow (z:complex) (SUC n) = z * (complex_pow z n))
 End
 
-val _ = overload_on ("pow",  Term`$complex_pow`);
+Overload pow = Term`$complex_pow`
 
 Theorem COMPLEX_POW_0:
     !n:num. 0 pow (SUC n) = 0
@@ -1856,7 +1856,7 @@ Definition complex_exp[nocompute]:
   complex_exp (z:complex) = exp(RE z) * (cos (IM z),sin (IM z))
 End
 
-val _ = overload_on ("exp",  Term`$complex_exp`);
+Overload exp = Term`$complex_exp`
 
 Theorem EXP_IMAGINARY:
     !x:real. exp (i * x) = (cos x,sin x)

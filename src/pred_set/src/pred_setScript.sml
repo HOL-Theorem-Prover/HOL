@@ -41,9 +41,12 @@ fun rw thl = SRW_TAC[ARITH_ss]thl
 val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] \\
                    POP_ASSUM K_TAC;
 
+(* TODO Is there a better way than messing with store_thm_at and Q like this? *)
 fun store_thm_at loc (r as(n,t,tac)) = let
   val th = boolLib.store_thm_at loc r
+  val {reserved, ...} = ThmAttribute.extract_attributes n
 in
+  if List.exists (fn (x,_) => x = "local") reserved then th else
   if String.isPrefix "IN_" n then let
       val stem0 = String.extract(n,3,NONE)
       val stem = Substring.full stem0
@@ -156,14 +159,16 @@ QED
 (* ===================================================================== *)
 (* Generalized set specification.                                        *)
 (* ===================================================================== *)
-val GSPEC_DEF_LEMMA = prove(
-   “?g:('b->('a#bool))-> 'a set.
-           !f. !v:'a. v IN (g f) <=> ?x:'b. (v,T) = f x”,
+Theorem GSPEC_DEF_LEMMA[local]:
+    ?g:('b->('a#bool))-> 'a set.
+           !f. !v:'a. v IN (g f) <=> ?x:'b. (v,T) = f x
+Proof
      EXISTS_TAC (“\f. \y:'a. ?x:'b. (y,T) = f x”) THEN
      REPEAT GEN_TAC THEN
      PURE_ONCE_REWRITE_TAC [SPECIFICATION] THEN
      CONV_TAC (DEPTH_CONV BETA_CONV) THEN
-     REFL_TAC);
+     REFL_TAC
+QED
 
 (* --------------------------------------------------------------------- *)
 (* generalized axiom of specification:                                   *)
@@ -381,7 +386,7 @@ Proof
    RW_TAC std_ss [IN_UNIV]
 QED
 
-val _ = overload_on ("univ", ``\x:'a itself. UNIV : 'a set``)
+Overload univ = ``\x:'a itself. UNIV : 'a set``
 val _ = set_fixity "univ" (Prefix 2200)
 
 val _ = overload_on (UnicodeChars.universal_set, ``\x:'a itself. UNIV: 'a set``)
@@ -390,7 +395,7 @@ val _ = set_fixity UnicodeChars.universal_set (Prefix 2200)
    with a user-printer.  (Otherwise the fact that the x is not bound in the
    abstraction produces ARB terms.)  To turn printing off, we overload the
    same pattern to "" *)
-val _ = overload_on ("", “\x:'a itself. UNIV : 'a set”)
+Overload "" = “\x:'a itself. UNIV : 'a set”
 
 val _ = add_ML_dependency "pred_setpp"
 val _ = add_user_printer ("pred_set.UNIV", ``UNIV:'a set``)
@@ -2716,13 +2721,18 @@ Definition LINV_OPT_def[nocompute]:
     if y IN IMAGE f s then SOME (@x. x IN s /\ (f x = y)) else NONE
 End
 
-val SELECT_EQ_AX = Q.prove
-  (`($@ P = x) ==> $? P ==> P x`,
+Theorem SELECT_EQ_AX[local]:
+    ($@ P = x) ==> $? P ==> P x
+Proof
   DISCH_THEN (fn th => REWRITE_TAC [SYM th]) THEN DISCH_TAC THEN
-  irule SELECT_AX THEN ASM_REWRITE_TAC [ETA_AX]) ;
+  irule SELECT_AX THEN ASM_REWRITE_TAC [ETA_AX]
+QED
 
-val IN_IMAGE' = Q.prove (`y IN IMAGE f s <=> ?x. x IN s /\ (f x = y)`,
-  mesonLib.MESON_TAC [IN_IMAGE]) ;
+Theorem IN_IMAGE'[local]:
+   y IN IMAGE f s <=> ?x. x IN s /\ (f x = y)
+Proof
+  mesonLib.MESON_TAC [IN_IMAGE]
+QED
 
 Theorem LINV_OPT_THM:
    (LINV_OPT f s y = SOME x) ==> x IN s /\ (f x = y)
@@ -3037,8 +3047,9 @@ Proof
    RW_TAC std_ss [REST_DEF, FINITE_DELETE]
 QED
 
-val UNION_FINITE = prove(
-  “!s:'a set. FINITE s ==> !t. FINITE t ==> FINITE (s UNION t)”,
+Theorem UNION_FINITE[local]:
+   !s:'a set. FINITE s ==> !t. FINITE t ==> FINITE (s UNION t)
+Proof
   SET_INDUCT_TAC THENL [
     REWRITE_TAC [UNION_EMPTY],
     SET_INDUCT_TAC THENL [
@@ -3049,7 +3060,8 @@ val UNION_FINITE = prove(
                            EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM] THEN
       ASM_SIMP_TAC bool_ss [FINITE_INSERT, FINITE_EMPTY]
     ]
-  ]);
+  ]
+QED
 
 val FINITE_UNION_LEMMA = TAC_PROOF(([],
 “!s:'a set. FINITE s ==> !t. FINITE (s UNION t) ==> FINITE t”),
@@ -3061,10 +3073,12 @@ val FINITE_UNION_LEMMA = TAC_PROOF(([],
        DISCH_THEN (MP_TAC o MATCH_MP INSERT_FINITE) THEN
        FIRST_ASSUM MATCH_ACCEPT_TAC]]);
 
-val FINITE_UNION = prove(
-  “!s:'a set. !t. FINITE(s UNION t) ==> (FINITE s /\ FINITE t)”,
+Theorem FINITE_UNION[local]:
+   !s:'a set. !t. FINITE(s UNION t) ==> (FINITE s /\ FINITE t)
+Proof
   REPEAT STRIP_TAC THEN IMP_RES_THEN MATCH_MP_TAC FINITE_UNION_LEMMA THEN
-  PROVE_TAC [UNION_COMM, UNION_ASSOC, UNION_IDEMPOT]);
+  PROVE_TAC [UNION_COMM, UNION_ASSOC, UNION_IDEMPOT]
+QED
 
 Theorem FINITE_UNION[simp]:
   !s:'a set. !t. FINITE(s UNION t) <=> FINITE s /\ FINITE t
@@ -3229,8 +3243,9 @@ Proof
  >> RW_TAC std_ss []
 QED
 
-val lem = Q.prove
-(`!t. FINITE t ==> !s f. INJ f s t ==> FINITE s`,
+Theorem lem[local]:
+  !t. FINITE t ==> !s f. INJ f s t ==> FINITE s
+Proof
  SET_INDUCT_TAC
   THEN RW_TAC bool_ss [INJ_EMPTY,FINITE_EMPTY]
   THEN Cases_on `?a. a IN s' /\ (f a = e)`
@@ -3243,7 +3258,8 @@ val lem = Q.prove
        THEN RW_TAC bool_ss [INJ_DEF]
        THEN `!x. x IN s' ==> f x IN s` by METIS_TAC [IN_INSERT]
        THEN `INJ f s' s` by METIS_TAC [INJ_DEF]
-       THEN METIS_TAC[]]);
+       THEN METIS_TAC[]]
+QED
 
 Theorem FINITE_INJ:
   !(f:'a->'b) s t. INJ f s t /\ FINITE t ==> FINITE s
@@ -4285,7 +4301,7 @@ QED
 (* Infiniteness                                                         *)
 (* =====================================================================*)
 
-val _ = overload_on ("INFINITE", ``\s. ~FINITE s``)
+Overload INFINITE = ``\s. ~FINITE s``
 
 val NOT_IN_FINITE =
     store_thm
@@ -4412,10 +4428,12 @@ val gdef = map Term
 val rand_case =
     prove_case_rand_thm {case_def = option_case_def, nchotomy = option_CASES};
 
-val optcase_elim = Q.prove(
-  ‘option_CASE optv n fv:bool <=>
-     (optv = NONE) /\ n \/ ?x. (optv = SOME x) /\ fv x’,
-  Cases_on `optv` >> simp[]);
+Theorem optcase_elim[local]:
+   option_CASE optv n fv:bool <=>
+     (optv = NONE) /\ n \/ ?x. (optv = SOME x) /\ fv x
+Proof
+  Cases_on `optv` >> simp[]
+QED
 
 val g_finite =
     TAC_PROOF
@@ -4520,8 +4538,9 @@ val result_part1 =
     |> CHOOSE(``g:num ->'a set``, gexists)
     |> DISCH_ALL
 
-val result_part2 = Q.prove(
-  ‘!s. FINITE s ==> !f. INJ f s s ==> SURJ f s s’,
+Theorem result_part2[local]:
+   !s. FINITE s ==> !f. INJ f s s ==> SURJ f s s
+Proof
   ho_match_mp_tac FINITE_COMPLETE_INDUCTION >>
   simp[INJ_IFF, SURJ_DEF] >>
   rpt strip_tac >> SPOSE_NOT_THEN strip_assume_tac >>
@@ -4530,7 +4549,8 @@ val result_part2 = Q.prove(
   ‘INJ f s s0’ by simp[INJ_DEF, Abbr‘s0’] >>
   ‘FINITE s0’ by simp[Abbr‘s0’] >>
   ‘CARD s0 < CARD s’ suffices_by METIS_TAC[PHP] >>
-  simp[Abbr‘s0’, CARD_DELETE] >> Cases_on ‘s’ >> fs[])
+  simp[Abbr‘s0’, CARD_DELETE] >> Cases_on ‘s’ >> fs[]
+QED
 
 (* ---------------------------------------------------------------------*)
 (* Finally, we can prove the desired theorem.                           *)
@@ -4593,8 +4613,11 @@ QED
 val FINITE_INDUCT' =
   Ho_Rewrite.REWRITE_RULE [PULL_FORALL] FINITE_INDUCT ;
 
-val NOT_IN_COUNT = Q.prove (`~ (m IN count m)`,
-  REWRITE_TAC [IN_COUNT, LESS_REFL]) ;
+Theorem NOT_IN_COUNT[local]:
+   ~ (m IN count m)
+Proof
+  REWRITE_TAC [IN_COUNT, LESS_REFL]
+QED
 
 Theorem FINITE_BIJ_COUNT_EQ:
    !s. FINITE s = ?c n. BIJ c (count n) s
@@ -4672,11 +4695,12 @@ Proof
       REPEAT STRIP_TAC THEN Q.EXISTS_TAC `n` THEN ASM_REWRITE_TAC [] ]]
 QED
 
-val lem = prove(
-  ``!s R.
+Theorem lem[local]:
+    !s R.
       FINITE s /\ (!e. e IN s <=> (?y. R e y) \/ (?x. R x e)) /\
       (!n. R (f (SUC n)) (f n)) ==>
-      ?x. R^+ x x``,
+      ?x. R^+ x x
+Proof
   REPEAT STRIP_TAC THEN `!n. f n IN s` by METIS_TAC [] THEN
   Cases_on `?n m. (f n = f m) /\ n <> m` THENL [
     POP_ASSUM STRIP_ASSUME_TAC THEN
@@ -4693,7 +4717,8 @@ val lem = prove(
       by (SRW_TAC [][SUBSET_DEF, IN_IMAGE] THEN METIS_TAC []) THEN
     `FINITE (IMAGE f univ(:num))` by METIS_TAC [SUBSET_FINITE] THEN
     POP_ASSUM MP_TAC THEN SRW_TAC [][INJECTIVE_IMAGE_FINITE]
-  ])
+  ]
+QED
 
 Theorem FINITE_WF_noloops:
     !s. FINITE s ==>
@@ -4807,11 +4832,13 @@ Proof
                     EXISTS_OR_THM]
 QED
 
-val DISJOINT_BIGUNION_lemma = Q.prove
-(`!s t. DISJOINT (BIGUNION s) t = !s'. s' IN s ==> DISJOINT s' t`,
+Theorem DISJOINT_BIGUNION_lemma[local]:
+  !s t. DISJOINT (BIGUNION s) t = !s'. s' IN s ==> DISJOINT s' t
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THEN
   SIMP_TAC bool_ss [DISJOINT_DEF, EXTENSION, IN_BIGUNION, IN_INTER,
-                    NOT_IN_EMPTY] THEN MESON_TAC []);
+                    NOT_IN_EMPTY] THEN MESON_TAC []
+QED
 
 (* above with DISJOINT x y both ways round *)
 Theorem DISJOINT_BIGUNION =
@@ -5229,10 +5256,11 @@ Proof
 QED
 
 
-val FINITE_CROSS_EQ_lemma0 = prove(
-  Term`!x. FINITE x ==>
+Theorem FINITE_CROSS_EQ_lemma0[local]:
+   !x. FINITE x ==>
            !P Q. (x = P CROSS Q) ==>
-                 (P = {}) \/ (Q = {}) \/ FINITE P /\ FINITE Q`,
+                 (P = {}) \/ (Q = {}) \/ FINITE P /\ FINITE Q
+Proof
   HO_MATCH_MP_TAC FINITE_COMPLETE_INDUCTION THEN
   REPEAT STRIP_TAC THEN POP_ASSUM SUBST_ALL_TAC THEN
   `(P = {}) \/ ?p P0. (P = p INSERT P0) /\ ~(p IN P0)` by
@@ -5272,7 +5300,8 @@ val FINITE_CROSS_EQ_lemma0 = prove(
       MESON_TAC [FINITE_EMPTY, NOT_INSERT_EMPTY],
       ASM_SIMP_TAC bool_ss [FINITE_EMPTY]
     ]
-  ]);
+  ]
+QED
 
 val FINITE_CROSS_EQ_lemma =
   SIMP_RULE bool_ss [GSYM RIGHT_FORALL_IMP_THM] FINITE_CROSS_EQ_lemma0
@@ -5903,7 +5932,7 @@ Definition SUM_IMAGE_DEF[nocompute]:
   SUM_IMAGE f s = ITSET (\e acc. f e + acc) s 0
 End
 
-val _ = overload_on ("SIGMA", ``SUM_IMAGE``);
+Overload SIGMA = ``SUM_IMAGE``
 val _ = Unicode.unicode_version {u = UTF8.chr 0x2211, tmnm = "SIGMA"};
 val _ = TeX_notation {hol = UTF8.chr 0x2211, TeX = ("\\HOLTokenSum{}", 1)};
 val _ = TeX_notation {hol = "SIGMA",         TeX = ("\\HOLTokenSum{}", 1)};
@@ -6073,11 +6102,12 @@ Proof
   PROVE_TAC [LESS_EQ_LESS_EQ_MONO, ADD_COMM]
 QED
 
-val DISJ_BIGUNION_CARD = Q.prove (
-`!P. FINITE P
+Theorem DISJ_BIGUNION_CARD[local]:
+ !P. FINITE P
      ==> (!s. s IN P ==> FINITE s) /\
          (!s t. s IN P /\ t IN P /\ ~(s = t) ==> DISJOINT s t)
-     ==> (CARD (BIGUNION P) = SUM_IMAGE CARD P)`,
+     ==> (CARD (BIGUNION P) = SUM_IMAGE CARD P)
+Proof
   SET_INDUCT_TAC THEN
   RW_TAC bool_ss [CARD_EMPTY,BIGUNION_EMPTY,SUM_IMAGE_THM,
                   BIGUNION_INSERT] THEN
@@ -6091,7 +6121,8 @@ val DISJ_BIGUNION_CARD = Q.prove (
     by RW_TAC arith_ss [] THEN
   ONCE_ASM_REWRITE_TAC [] THEN
   FULL_SIMP_TAC arith_ss [CARD_UNION, DELETE_NON_ELEMENT] THEN
-  METIS_TAC [IN_INSERT]);
+  METIS_TAC [IN_INSERT]
+QED
 
 Theorem SUM_SAME_IMAGE:
   !P. FINITE P
@@ -6243,7 +6274,7 @@ Proof
   SRW_TAC[][SUM_IMAGE_THM, IMAGE_FINITE]
 QED
 
-val _ = overload_on("PERMUTES", ``\f s. BIJ f s s``);
+Overload PERMUTES = ``\f s. BIJ f s s``
 val _ = set_fixity "PERMUTES" (Infix(NONASSOC, 450)); (* same as relation *)
 
 Theorem SUM_IMAGE_PERMUTES:
@@ -6518,7 +6549,7 @@ Proof
   SRW_TAC [ARITH_ss][Abbr`g`]
 QED
 
-val _ = overload_on ("PI", ``PROD_IMAGE``)
+Overload PI = ``PROD_IMAGE``
 val _ = Unicode.unicode_version {tmnm = "PROD_IMAGE", u = UnicodeChars.Pi}
 
 Theorem PROD_IMAGE_EQ_0:
@@ -6732,9 +6763,10 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* every finite, non-empty set of natural numbers has a maximum element *)
-val max_lemma = prove(
-  ``!s. FINITE s ==> ?x. (s <> {} ==> x IN s /\ !y. y IN s ==> y <= x) /\
-                         ((s = {}) ==> (x = 0))``,
+Theorem max_lemma[local]:
+    !s. FINITE s ==> ?x. (s <> {} ==> x IN s /\ !y. y IN s ==> y <= x) /\
+                         ((s = {}) ==> (x = 0))
+Proof
   HO_MATCH_MP_TAC FINITE_INDUCT THEN
   SIMP_TAC bool_ss [NOT_INSERT_EMPTY, IN_INSERT] THEN
   REPEAT STRIP_TAC THEN
@@ -6747,7 +6779,8 @@ val max_lemma = prove(
       `m <= e` by RW_TAC arith_ss [] THEN
       PROVE_TAC [LESS_EQ_REFL, LESS_EQ_TRANS]
     ]
-  ])
+  ]
+QED
 
 (* |- !s. FINITE s ==>
           (s <> {} ==> MAX_SET s IN s /\ !y. y IN s ==> y <= MAX_SET s) /\
@@ -7259,9 +7292,11 @@ Proof
   simp[]
 QED
 
-val lem = Q.prove
-(`!n. 2 * 2**n = 2**n + 2**n`,
- RW_TAC arith_ss [EXP]);
+Theorem lem[local]:
+  !n. 2 * 2**n = 2**n + 2**n
+Proof
+ RW_TAC arith_ss [EXP]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Cardinality of the power set of a finite set                              *)
@@ -8083,10 +8118,11 @@ QED
 (* a counting exercise for R-trees.  If x0 has finitely many successors, and
    each of these successors has finite trees underneath, then x0's tree is
    also finite *)
-val KL_lemma1 = prove(
-  ``FINITE { x | R x0 x} /\
+Theorem KL_lemma1[local]:
+    FINITE { x | R x0 x} /\
     (!y. R x0 y ==> FINITE { x | RTC R y x }) ==>
-    FINITE { x | RTC R x0 x}``,
+    FINITE { x | RTC R x0 x}
+Proof
   REPEAT STRIP_TAC THEN
   `{ x | RTC R x0 x} =
    x0 INSERT BIGUNION (IMAGE (\x. {y | RTC R x y}) {x | R x0 x})`
@@ -8097,7 +8133,8 @@ val KL_lemma1 = prove(
   POP_ASSUM SUBST_ALL_TAC THEN SRW_TAC [][IN_IMAGE] THENL [
     SRW_TAC [][IMAGE_FINITE, IN_IMAGE, GSPECIFICATION],
     RES_TAC
-  ]);
+  ]
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -8106,10 +8143,12 @@ val KL_lemma1 = prove(
 (* the immediate children is on top of an infinite R tree                    *)
 (*---------------------------------------------------------------------------*)
 
-val KL_lemma2 = prove(
-  ``(!x. FINITE {y | R x y}) ==>
-    !y. ~ FINITE {x | RTC R y x} ==> ?z. R y z /\ ~FINITE { x | RTC R z x}``,
-  METIS_TAC [KL_lemma1]);
+Theorem KL_lemma2[local]:
+    (!x. FINITE {y | R x y}) ==>
+    !y. ~ FINITE {x | RTC R y x} ==> ?z. R y z /\ ~FINITE { x | RTC R z x}
+Proof
+  METIS_TAC [KL_lemma1]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Now throw in the unavoidable use of the axiom of choice, and say that     *)
@@ -8225,35 +8264,42 @@ Definition chooser_def:
   (chooser s (SUC n) = chooser (REST s) n)
 End
 
-val chooser_lem1 = Q.prove (
-`!n s t. INFINITE s /\ s SUBSET t ==> chooser s n IN t`,
+Theorem chooser_lem1[local]:
+ !n s t. INFINITE s /\ s SUBSET t ==> chooser s n IN t
+Proof
 Induct THEN
 RWTAC [chooser_def, SUBSET_DEF] THENL [
   `s <> {}` by (RWTAC [EXTENSION] THEN METIS_TAC [INFINITE_INHAB]) THEN
   METIS_TAC [CHOICE_DEF],
   `REST s SUBSET s` by RWTAC [REST_SUBSET] THEN
   METIS_TAC [infinite_rest]
-]);
+]
+QED
 
-val chooser_lem2 = Q.prove (
-`!n s. INFINITE s ==> chooser (REST s) n <> CHOICE s`,
+Theorem chooser_lem2[local]:
+ !n s. INFINITE s ==> chooser (REST s) n <> CHOICE s
+Proof
 RWTAC [] THEN
 IMP_RES_TAC infinite_rest THEN
 `chooser (REST s) n IN (REST s)`
         by METIS_TAC [chooser_lem1, SUBSET_REFL] THEN
-FSTAC [REST_DEF, IN_DELETE]);
+FSTAC [REST_DEF, IN_DELETE]
+QED
 
-val chooser_lem3 = Q.prove (
-`!x y s. INFINITE s /\ (chooser s x = chooser s y) ==> (x = y)`,
+Theorem chooser_lem3[local]:
+ !x y s. INFINITE s /\ (chooser s x = chooser s y) ==> (x = y)
+Proof
 Induct_on `x` THEN
 RWTAC [chooser_def] THEN
 Cases_on `y` THEN
 FSTAC [chooser_def] THEN
 RWTAC [] THEN
-METIS_TAC [chooser_lem2, infinite_rest]);
+METIS_TAC [chooser_lem2, infinite_rest]
+QED
 
-val infinite_num_inj_lem = Q.prove (
-`!s. FINITE s ==> ~?f. INJ f (UNIV:num set) s`,
+Theorem infinite_num_inj_lem[local]:
+ !s. FINITE s ==> ~?f. INJ f (UNIV:num set) s
+Proof
 HO_MATCH_MP_TAC FINITE_INDUCT THEN
 RWTAC [] THEN
 FSTAC [INJ_DEF] THEN
@@ -8275,7 +8321,8 @@ RWTAC [] THENL [
     `SUC x = SUC y'` by METIS_TAC [] THEN DECIDE_TAC
   ],
   METIS_TAC []
-]);
+]
+QED
 
 Theorem infinite_num_inj:
  !s. INFINITE s = ?f. INJ f (UNIV:num set) s
@@ -8324,9 +8371,11 @@ Q.EXISTS_TAC `\x.x` THEN
 RWTAC []
 QED
 
-val INJ_SUBSET = Q.prove (
-`!f s t s'. INJ f s t /\ s' SUBSET s ==> INJ f s' t`,
-RWTAC [INJ_DEF, SUBSET_DEF]);
+Theorem INJ_SUBSET[local]:
+ !f s t s'. INJ f s t /\ s' SUBSET s ==> INJ f s' t
+Proof
+RWTAC [INJ_DEF, SUBSET_DEF]
+QED
 
 Theorem subset_countable:
  !s t. countable s /\ t SUBSET s ==> countable t
@@ -8438,10 +8487,12 @@ Proof
     simp[FORALL_PROD,pair_to_num_inv]
 QED
 
-val num_cross_countable = Q.prove (
-  `countable (UNIV:num set CROSS UNIV:num set)`,
+Theorem num_cross_countable[local]:
+   countable (UNIV:num set CROSS UNIV:num set)
+Proof
   RWTAC [countable_surj, SURJ_DEF, CROSS_DEF] THEN
-  METIS_TAC [PAIR, pair_to_num_inv]);
+  METIS_TAC [PAIR, pair_to_num_inv]
+QED
 
 Theorem cross_countable:
  !s t. countable s /\ countable t ==> countable (s CROSS t)

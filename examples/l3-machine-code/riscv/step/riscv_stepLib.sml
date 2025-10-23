@@ -277,8 +277,12 @@ in
         [] => err tm "no valid step theorem"
       | [x] => x
       | l => List.last (mlibUseful.sort_map neg_count Int.compare l))
-    handle HOL_ERR {message = "not found", origin_function = "find_rw", ...} =>
-      err tm "instruction instance not supported"
+    handle (e as HOL_ERR herr) =>
+      if message_of herr = "not found" andalso
+         top_function_of herr = "find_rw"
+      then
+         err tm "instruction instance not supported"
+      else raise e
 end
 
 (* -------------------------------------------------------------------------

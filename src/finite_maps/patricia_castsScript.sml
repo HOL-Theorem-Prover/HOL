@@ -43,10 +43,10 @@ End
 Definition REMOVEs_def:     REMOVEs t w = REMOVE t (string_to_num w)
 End
 
-val _ = overload_on ("'", Term`$PEEKs`);
-val _ = overload_on ("|+", Term`$ADDs`);
-val _ = overload_on ("|++", Term`$ADD_LISTs`);
-val _ = overload_on ("\\\\", Term`$REMOVEs`);
+Overload "'" = Term`$PEEKs`
+Overload "|+" = Term`$ADDs`
+Overload "|++" = Term`$ADD_LISTs`
+Overload "\\\\" = Term`$REMOVEs`
 
 Definition TRAVERSEs_def:
    TRAVERSEs t = MAP num_to_string (TRAVERSE t)
@@ -108,10 +108,10 @@ Definition REMOVEw_def:
   SOME_PTREE (REMOVE (THE_PTREE t) (w2n w)) : ('a,'b) word_ptree
 End
 
-val _ = overload_on ("'", Term`$PEEKw`);
-val _ = overload_on ("|+", Term`$ADDw`);
-val _ = overload_on ("|++", Term`$ADD_LISTw`);
-val _ = overload_on ("\\\\", Term`$REMOVEw`);
+Overload "'" = Term`$PEEKw`
+Overload "|+" = Term`$ADDw`
+Overload "|++" = Term`$ADD_LISTw`
+Overload "\\\\" = Term`$REMOVEw`
 
 Definition TRAVERSEw_def:
   TRAVERSEw (t:('a, 'b) word_ptree) =
@@ -166,8 +166,8 @@ Definition PTREE_OF_WORDSET_def:
   : ('a, unit) word_ptree
 End
 
-val _ = overload_on ("|++", Term`$PTREE_OF_WORDSET`);
-val _ = overload_on ("|++", Term`$PTREE_OF_STRINGSET`);
+Overload "|++" = Term`$PTREE_OF_WORDSET`
+Overload "|++" = Term`$PTREE_OF_STRINGSET`
 
 (* ------------------------------------------------------------------------- *)
 
@@ -221,44 +221,60 @@ Proof
          (SIMP_RULE (srw_ss()) [stringTheory.ORD_11] o ISPEC `ORD`) MAP_11]
 QED
 
-val n2l_NOT_NULL = prove( `!b n. ~(n2l b n = [])`, SRW_TAC [] [Once n2l_def]);
+Theorem n2l_NOT_NULL[local]:
+   !b n. ~(n2l b n = [])
+Proof SRW_TAC [] [Once n2l_def]
+QED
 
-val STRING_SKIP1 = prove(
-  `!l c. EVERY ($> 256) l ==>
+Theorem STRING_SKIP1[local]:
+   !l c. EVERY ($> 256) l ==>
          ((STRING c (SKIP1 (MAP CHR l)) = MAP CHR l) =
-         ~(l = []) /\ (l = ORD c::TL l))`,
+         ~(l = []) /\ (l = ORD c::TL l))
+Proof
   Induct \\ SRW_TAC [] [SKIP1_def]
-    \\ Cases_on `c` \\ SRW_TAC [ARITH_ss] [stringTheory.CHR_11]);
+    \\ Cases_on `c` \\ SRW_TAC [ARITH_ss] [stringTheory.CHR_11]
+QED
 
-val EVERY_CHR_LT_256 = prove(
-  `!n. EVERY ($> 256) (REVERSE (n2l 256 n))`,
-  SRW_TAC [] [ALL_EL_REVERSE, n2l_BOUND]);
+Theorem EVERY_CHR_LT_256[local]:
+   !n. EVERY ($> 256) (REVERSE (n2l 256 n))
+Proof
+  SRW_TAC [] [ALL_EL_REVERSE, n2l_BOUND]
+QED
 
-val TL_APPEND = prove(
-  `!l1 l2. ~(l1 = []) ==> (TL (l1 ++ l2) = TL l1 ++ l2)`,
-  Induct \\ SRW_TAC [] []);
+Theorem TL_APPEND[local]:
+   !l1 l2. ~(l1 = []) ==> (TL (l1 ++ l2) = TL l1 ++ l2)
+Proof
+  Induct \\ SRW_TAC [] []
+QED
 
-val TL_REVERSE = prove(
-  `!l. ~(l = []) ==> (TL (REVERSE l) = REVERSE (FRONT l))`,
-  Induct \\ SRW_TAC [] [Once FRONT_DEF, TL_APPEND, REVERSE_EQ_NIL]);
+Theorem TL_REVERSE[local]:
+   !l. ~(l = []) ==> (TL (REVERSE l) = REVERSE (FRONT l))
+Proof
+  Induct \\ SRW_TAC [] [Once FRONT_DEF, TL_APPEND, REVERSE_EQ_NIL]
+QED
 
-val TL_REVERSE_LAST = prove(
-  `!l h. ~(l = []) ==> ((REVERSE l = h :: TL (REVERSE l)) = (h = LAST l))`,
+Theorem TL_REVERSE_LAST[local]:
+   !l h. ~(l = []) ==> ((REVERSE l = h :: TL (REVERSE l)) = (h = LAST l))
+Proof
   Induct \\ SRW_TAC [] [LAST_DEF] >- METIS_TAC []
     \\ PAT_X_ASSUM `!h. P` IMP_RES_TAC
     \\ NTAC 2 (POP_ASSUM (K ALL_TAC))
     \\ POP_ASSUM (SPEC_THEN `h'` (SUBST1_TAC o SYM))
     \\ SRW_TAC [] [TL_REVERSE, TL_APPEND, REVERSE_EQ_NIL]
-    \\ METIS_TAC [APPEND, APPEND_11]);
+    \\ METIS_TAC [APPEND, APPEND_11]
+QED
 
-val LENGTH_n2l_256 = prove(
-  `!n. 0 < LENGTH (n2l 256 n)`, SRW_TAC [] [LENGTH_n2l]);
+Theorem LENGTH_n2l_256[local]:
+   !n. 0 < LENGTH (n2l 256 n)
+Proof SRW_TAC [] [LENGTH_n2l]
+QED
 
 val LOG_ADD_COMM = ONCE_REWRITE_RULE [ADD_COMM] logrootTheory.LOG_ADD;
 
-val STRING1_SKIP1 = prove(
-  `!n. 256 <= n /\ (n DIV 256 ** LOG 256 n = 1) ==>
-       (STRING (CHR 1) (SKIP1 (n2s 256 CHR n)) = n2s 256 CHR n)`,
+Theorem STRING1_SKIP1[local]:
+   !n. 256 <= n /\ (n DIV 256 ** LOG 256 n = 1) ==>
+       (STRING (CHR 1) (SKIP1 (n2s 256 CHR n)) = n2s 256 CHR n)
+Proof
   REPEAT STRIP_TAC
     \\ `n = (n DIV (256 ** LOG 256 n)) * (256 ** LOG 256 n) +
              n MOD (256 ** LOG 256 n)`
@@ -268,22 +284,27 @@ val STRING1_SKIP1 = prove(
                    STRING_SKIP1, EVERY_CHR_LT_256, TL_REVERSE_LAST]
     \\ SRW_TAC [] [DECIDE ``0 < n ==> PRE n < n``, n2l_NOT_NULL,
          GSYM EL_PRE_LENGTH, LENGTH_n2l_256, EL_n2l]
-    \\ SRW_TAC [ARITH_ss] [LENGTH_n2l, DIV_MULT_1, LOG_ADD_COMM]);
+    \\ SRW_TAC [ARITH_ss] [LENGTH_n2l, DIV_MULT_1, LOG_ADD_COMM]
+QED
 
-val string_to_num_num_to_string = prove(
-  `!n. (n = 1) \/ (256 <= n) /\ (n DIV 256 ** LOG 256 n = 1) ==>
-       (string_to_num (num_to_string n) = n)`,
+Theorem string_to_num_num_to_string[local]:
+   !n. (n = 1) \/ (256 <= n) /\ (n DIV 256 ** LOG 256 n = 1) ==>
+       (string_to_num (num_to_string n) = n)
+Proof
   SRW_TAC [] [string_to_num_def, num_to_string_def] >- EVAL_TAC
-    \\ SRW_TAC [] [STRING1_SKIP1, stringTheory.ORD_CHR_RWT, s2n_n2s]);
+    \\ SRW_TAC [] [STRING1_SKIP1, stringTheory.ORD_CHR_RWT, s2n_n2s]
+QED
 
-val s2n_STRING_STRING = prove(
-  `!f b c1 c2 s.
+Theorem s2n_STRING_STRING[local]:
+   !f b c1 c2 s.
        1 < b /\ 0 < (f c1 MOD b) ==>
-       b <= s2n b f (STRING c1 (STRING c2 s))`,
+       b <= s2n b f (STRING c1 (STRING c2 s))
+Proof
   SRW_TAC [ARITH_ss] [EXP_ADD, s2n_def, l2n_def, Once l2n_APPEND]
     \\ MATCH_MP_TAC (DECIDE ``a <= b ==> a <= b + c``)
     \\ REWRITE_TAC [GSYM MULT_ASSOC]
-    \\ SRW_TAC [ARITH_ss] [ZERO_LESS_MULT, ZERO_LT_EXP]);
+    \\ SRW_TAC [ARITH_ss] [ZERO_LESS_MULT, ZERO_LT_EXP]
+QED
 
 val s2n_STRING_STRING1 =
  (SIMP_RULE (srw_ss()) [EVAL ``ORD (CHR 1)``] o

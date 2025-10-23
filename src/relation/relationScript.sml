@@ -311,10 +311,12 @@ val tc_right_asm =
                      (!x y z. P x y /\ R y z ==> P x z) ==>
                      P a b``;
 
-val tc_left_rules0 = prove(
-  ``^tc_left_asm ==> (!x y. R x y ==> tc R x y) /\
-                     (!x y z. R x y /\ tc R y z ==> tc R x z)``,
-  STRIP_TAC THEN ASM_REWRITE_TAC [] THEN BETA_TAC THEN MESON_TAC []);
+Theorem tc_left_rules0[local]:
+    ^tc_left_asm ==> (!x y. R x y ==> tc R x y) /\
+                     (!x y z. R x y /\ tc R y z ==> tc R x z)
+Proof
+  STRIP_TAC THEN ASM_REWRITE_TAC [] THEN BETA_TAC THEN MESON_TAC []
+QED
 val tc_left_rules = UNDISCH tc_left_rules0
 
 val tc_right_rules = UNDISCH (prove(
@@ -402,12 +404,14 @@ val TC_INDUCT_TAC =
  in tac
  end;
 
-val TC_STRONG_INDUCT0 = prove(
-  ``!R P. (!x y. R x y ==> P x y) /\
+Theorem TC_STRONG_INDUCT0[local]:
+    !R P. (!x y. R x y ==> P x y) /\
           (!x y z. P x y /\ P y z /\ TC R x y /\ TC R y z ==> P x z) ==>
-          (!u v. TC R u v ==> P u v /\ TC R u v)``,
+          (!u v. TC R u v ==> P u v /\ TC R u v)
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN TC_INDUCT_TAC THEN
-  ASM_MESON_TAC [TC_RULES]);
+  ASM_MESON_TAC [TC_RULES]
+QED
 
 Theorem TC_STRONG_INDUCT[rule_induction]:
   !R P. (!x y. R x y ==> P x y) /\
@@ -416,19 +420,23 @@ Theorem TC_STRONG_INDUCT[rule_induction]:
 Proof REPEAT STRIP_TAC THEN IMP_RES_TAC TC_STRONG_INDUCT0
 QED
 
-val TC_STRONG_INDUCT_LEFT1_0 = prove(
-  ``!R P. (!x y. R x y ==> P x y) /\
+Theorem TC_STRONG_INDUCT_LEFT1_0[local]:
+    !R P. (!x y. R x y ==> P x y) /\
           (!x y z. R x y /\ P y z /\ TC R y z ==> P x z) ==>
-          (!u v. TC R u v ==> P u v /\ TC R u v)``,
+          (!u v. TC R u v ==> P u v /\ TC R u v)
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC TC_INDUCT_LEFT1 THEN
-  ASM_MESON_TAC [TC_RULES]);
+  ASM_MESON_TAC [TC_RULES]
+QED
 
-val TC_STRONG_INDUCT_RIGHT1_0 = prove(
-  ``!R P. (!x y. R x y ==> P x y) /\
+Theorem TC_STRONG_INDUCT_RIGHT1_0[local]:
+    !R P. (!x y. R x y ==> P x y) /\
           (!x y z. P x y /\ TC R x y /\ R y z ==> P x z) ==>
-          (!u v. TC R u v ==> P u v /\ TC R u v)``,
+          (!u v. TC R u v ==> P u v /\ TC R u v)
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC TC_INDUCT_RIGHT1 THEN
-  ASM_MESON_TAC [TC_RULES]);
+  ASM_MESON_TAC [TC_RULES]
+QED
 
 Theorem TC_STRONG_INDUCT_LEFT1:
     !R P. (!x y. R x y ==> P x y) /\
@@ -1092,8 +1100,11 @@ val WF_INDUCT_TAC =
  end;
 
 
-val ex_lem = Q.prove(`!x. (?y. y = x) /\ ?y. x=y`,
-GEN_TAC THEN CONJ_TAC THEN Q.EXISTS_TAC`x` THEN REFL_TAC);
+Theorem ex_lem[local]:
+  !x. (?y. y = x) /\ ?y. x=y
+Proof
+GEN_TAC THEN CONJ_TAC THEN Q.EXISTS_TAC`x` THEN REFL_TAC
+QED
 
 Theorem WF_NOT_REFL:
  !R x y. WF R ==> R x y ==> ~(x=y)
@@ -1350,17 +1361,19 @@ QED
  * element of their domain.
  *---------------------------------------------------------------------------*)
 
-val CUTS_EQ = Q.prove(
-`!R f g (x:'a).
+Theorem CUTS_EQ[local]:
+ !R f g (x:'a).
    (RESTRICT f R x = RESTRICT g R x)
-    = !y:'a. R y x ==> (f y:'b = g y)`,
+    = !y:'a. R y x ==> (f y:'b = g y)
+Proof
 REPEAT GEN_TAC THEN REWRITE_TAC[RESTRICT_DEF]
  THEN CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC THEN EQ_TAC
  THENL
  [ CONV_TAC RIGHT_IMP_FORALL_CONV THEN GEN_TAC
    THEN DISCH_THEN (MP_TAC o Q.SPEC`y`) THEN COND_CASES_TAC THEN REWRITE_TAC[],
    DISCH_TAC THEN GEN_TAC THEN COND_CASES_TAC THEN RES_TAC
-   THEN ASM_REWRITE_TAC[]]);
+   THEN ASM_REWRITE_TAC[]]
+QED
 
 
 val EXPOSE_CUTS_TAC =
@@ -1459,12 +1472,13 @@ Q.new_definition
  * Two approximations agree on their common domain.
  *---------------------------------------------------------------------------*)
 
-val APPROX_EQUAL_BELOW = Q.prove(
-`!R M f g u v.
+Theorem APPROX_EQUAL_BELOW[local]:
+ !R M f g u v.
   WF R /\ transitive R /\
   approx R M u f /\ approx R M v g
   ==> !x:'a. R x u ==> R x v
-             ==> (f x:'b = g x)`,
+             ==> (f x:'b = g x)
+Proof
 REWRITE_TAC[approx_ext] THEN REPEAT GEN_TAC THEN STRIP_TAC
   THEN WF_INDUCT_TAC THEN Q.EXISTS_TAC`R`
   THEN ASM_REWRITE_TAC[] THEN REPEAT STRIP_TAC
@@ -1474,7 +1488,8 @@ REWRITE_TAC[approx_ext] THEN REPEAT GEN_TAC THEN STRIP_TAC
   THEN RULE_ASSUM_TAC (REWRITE_RULE[TAUT`A==>B==>C==>D <=> A/\B/\C==>D`,
                                     transitive_def])
   THEN FIRST_ASSUM MATCH_MP_TAC
-  THEN RES_TAC THEN ASM_REWRITE_TAC[]);
+  THEN RES_TAC THEN ASM_REWRITE_TAC[]
+QED
 
 Triviality AGREE_BELOW =
    REWRITE_RULE[TAUT`A==>B==>C==>D <=> B/\C/\A==>D`]
@@ -1485,14 +1500,15 @@ Triviality AGREE_BELOW =
  * A specialization of AGREE_BELOW
  *---------------------------------------------------------------------------*)
 
-val RESTRICT_FUN_EQ = Q.prove(
-`!R M f (g:'a->'b) u v.
+Theorem RESTRICT_FUN_EQ[local]:
+ !R M f (g:'a->'b) u v.
      WF R /\
      transitive R   /\
      approx R M u f /\
      approx R M v g /\
      R v u
-     ==> (RESTRICT f R v = g)`,
+     ==> (RESTRICT f R v = g)
+Proof
 REWRITE_TAC[RESTRICT_DEF,transitive_def] THEN REPEAT STRIP_TAC
   THEN CONV_TAC (Q.X_FUN_EQ_CONV`w`) THEN BETA_TAC THEN GEN_TAC
   THEN COND_CASES_TAC (* on R w v *)
@@ -1500,7 +1516,8 @@ REWRITE_TAC[RESTRICT_DEF,transitive_def] THEN REPEAT STRIP_TAC
             THEN RES_TAC THEN ASM_REWRITE_TAC[transitive_def],
           Q.UNDISCH_TAC`approx R M v (g:'a->'b)`
             THEN DISCH_THEN(fn th =>
-                   ASM_REWRITE_TAC[REWRITE_RULE[approx_ext]th])]);
+                   ASM_REWRITE_TAC[REWRITE_RULE[approx_ext]th])]
+QED
 
 
 (*---------------------------------------------------------------------------
@@ -1535,16 +1552,18 @@ REPEAT GEN_TAC >> STRIP_TAC
 QED
 
 
-val the_fun_unroll = Q.prove(
- `!R M x (w:'a).
+Theorem the_fun_unroll[local]:
+  !R M x (w:'a).
      WF R /\ transitive R
        ==> R w x
-        ==> (the_fun R M x w:'b = M (RESTRICT (the_fun R M x) R w) w)`,
+        ==> (the_fun R M x w:'b = M (RESTRICT (the_fun R M x) R w) w)
+Proof
 REPEAT GEN_TAC THEN DISCH_TAC
   THEN Q.ID_SPEC_TAC`w`
   THEN MATCH_MP_TAC the_fun_rw1
   THEN MATCH_MP_TAC EXISTS_LEMMA
-  THEN POP_ASSUM ACCEPT_TAC);
+  THEN POP_ASSUM ACCEPT_TAC
+QED
 
 (*---------------------------------------------------------------------------
  * Unrolling works for any R M and x, hence it works for "TC R" and
@@ -1561,15 +1580,17 @@ val the_fun_TC0 =
 (*---------------------------------------------------------------------------
  * There's a rewrite rule that simplifies this mess.
  *---------------------------------------------------------------------------*)
-val TC_RESTRICT_LEMMA = Q.prove(
- `!(f:'a->'b) R w. RESTRICT (RESTRICT f (TC R) w) R w = RESTRICT f R w`,
+Theorem TC_RESTRICT_LEMMA[local]:
+  !(f:'a->'b) R w. RESTRICT (RESTRICT f (TC R) w) R w = RESTRICT f R w
+Proof
 REPEAT GEN_TAC
   THEN REWRITE_TAC[RESTRICT_DEF]
   THEN CONV_TAC (Q.X_FUN_EQ_CONV`p`)
   THEN BETA_TAC THEN GEN_TAC
   THEN COND_CASES_TAC
   THENL [IMP_RES_TAC TC_SUBSET, ALL_TAC]
-  THEN ASM_REWRITE_TAC[]);
+  THEN ASM_REWRITE_TAC[]
+QED
 
 val the_fun_TC = REWRITE_RULE[TC_RESTRICT_LEMMA] the_fun_TC0;
 
@@ -2537,9 +2558,11 @@ Proof
   ] THEN PROVE_TAC [TC_RULES]
 QED
 
-val RTC_eq_TCRC = prove(
-  ``RTC R = TC (RC R)``,
-  REWRITE_TAC [TC_RC_EQNS]);
+Theorem RTC_eq_TCRC[local]:
+    RTC R = TC (RC R)
+Proof
+  REWRITE_TAC [TC_RC_EQNS]
+QED
 
 Theorem establish_CR:
     !R. (rcdiamond R ==> CR R) /\ (diamond R ==> CR R)

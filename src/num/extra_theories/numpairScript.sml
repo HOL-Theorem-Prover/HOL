@@ -166,7 +166,7 @@ End
 
 val _ = set_fixity "*," (Infixr 601)
 val _ = Unicode.unicode_version {tmnm = "*,", u = UTF8.chr 0x2297 (* \otimes *)}
-val _ = overload_on ("*,", ``npair``)
+Overload "*," = ``npair``
 val _ = TeX_notation {TeX = ("\\ensuremath{\\otimes}", 1), hol = "*,"}
 val _ = TeX_notation {TeX = ("\\ensuremath{\\otimes}", 1),
                       hol = UTF8.chr 0x2297}

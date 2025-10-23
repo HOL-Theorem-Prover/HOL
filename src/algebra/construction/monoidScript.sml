@@ -152,9 +152,9 @@ val _ = Hol_datatype`
    will give excessive overloading for Monoid and Group,
    so the generic symbol for both is taken as g. *)
 (* set overloading  *)
-val _ = overload_on ("*", ``g.op``);
-val _ = overload_on ("#e", ``g.id``);
-val _ = overload_on ("G", ``g.carrier``);
+Overload "*" = ``g.op``
+Overload "#e" = ``g.id``
+Overload G = ``g.carrier``
 
 (* Monoid Definition:
    A Monoid is a set with elements of type 'a monoid, such that
@@ -365,7 +365,7 @@ val _ = add_record_field ("exp", ``monoid_exp``);
 (* overloading  *)
 (* val _ = clear_overloads_on "**"; *)
 (* val _ = overload_on ("**", ``monoid_exp g``); -- not this *)
-val _ = overload_on ("**", ``g.exp``);
+Overload "**" = ``g.exp``
 
 (* Theorem: x ** 0 = #e *)
 (* Proof: by definition and FUNPOW_0. *)
@@ -688,7 +688,7 @@ from which the no-zero-divisor property of Integral Domain gives x ** (h-k) = #1
 (* ------------------------------------------------------------------------- *)
 
 (* Define ITSET for Monoid -- fold of g.op, especially for Abelian Monoid (by lifting) *)
-val _ = overload_on("GITSET", ``\(g:'a monoid) s b. ITSET g.op s b``);
+Overload GITSET = ``\(g:'a monoid) s b. ITSET g.op s b``
 
 (*
 > ITSET_def |> ISPEC ``s:'b -> bool`` |> ISPEC ``(g:'a monoid).op`` |> ISPEC ``b:'a``;
@@ -1045,7 +1045,7 @@ Theorem order_alt = REWRITE_RULE [period_def] order_def;
             case OLEAST k. 0 < k /\ x ** k = #e of NONE => 0 | SOME k => k: thm *)
 
 (* overloading on Monoid Order *)
-val _ = overload_on ("ord", ``order g``);
+Overload ord = ``order g``
 
 (* Theorem: (x ** (ord x) = #e *)
 (* Proof: by definition, and x ** 0 = #e by monoid_exp_0. *)
@@ -1682,7 +1682,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Overload maximal_order of a group *)
-val _ = overload_on("maximal_order", ``\g:'a monoid. MAX_SET (IMAGE ord G)``);
+Overload maximal_order = ``\g:'a monoid. MAX_SET (IMAGE ord G)``
 
 (* Theorem: maximal_order g = MAX_SET {ord z | z | z IN G} *)
 (* Proof: by IN_IMAGE *)
@@ -1885,7 +1885,7 @@ Definition monoid_invertibles_def:
     monoid_invertibles (g:'a monoid) =
     { x | x IN G /\ (?y. y IN G /\ (x * y = #e) /\ (y * x = #e)) }
 End
-val _ = overload_on ("G*", ``monoid_invertibles g``);
+Overload "G*" = ``monoid_invertibles g``
 
 (* Theorem: x IN G* <=> x IN G /\ ?y. y IN G /\ (x * y = #e) /\ (y * x = #e) *)
 (* Proof: by monoid_invertibles_def. *)
@@ -1981,9 +1981,11 @@ Proof
 QED
 
 (* Convert this into the form: !g x. ?y. ..... for SKOLEM_THM *)
-val lemma = prove(
-  ``!(g:'a monoid) x. ?y. Monoid g /\ x IN G* ==> y IN G /\ (x * y = #e) /\ (y * x = #e)``,
-  metis_tac[monoid_inv_from_invertibles]);
+Theorem lemma[local]:
+    !(g:'a monoid) x. ?y. Monoid g /\ x IN G* ==> y IN G /\ (x * y = #e) /\ (y * x = #e)
+Proof
+  metis_tac[monoid_inv_from_invertibles]
+QED
 
 (* Convert this into the form: !g x. ?y. ..... for SKOLEM_THM
 
@@ -2024,8 +2026,8 @@ val _ = add_rule{fixity = Suffix 2100,
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                  paren_style = OnlyIfNecessary,
                  pp_elements = [TOK (UnicodeChars.sup_minus ^ UnicodeChars.sup_1)]};
-val _ = overload_on("reciprocal", ``monoid_inv g``);
-val _ = overload_on ("|/", ``reciprocal``); (* for non-unicode input *)
+Overload reciprocal = ``monoid_inv g``
+Overload "|/" = ``reciprocal``(* for non-unicode input *)
 
 (* This means: reciprocal will have the display $^{-1}$, and here reciprocal is
    short-name for monoid_inv g *)
@@ -2859,7 +2861,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Use H to denote h.carrier *)
-val _ = overload_on ("H", ``(h:'a monoid).carrier``);
+Overload H = ``(h:'a monoid).carrier``
 
 (* Theorem: submonoid h g ==> H SUBSET G /\ (!x y. x IN H /\ y IN H ==> (h.op x y = x * y)) /\ (h.id = #e) *)
 (* Proof:
@@ -3062,9 +3064,9 @@ Definition homo_monoid_def:
 End
 
 (* set overloading *)
-val _ = overload_on ("o", ``(homo_monoid (g:'a monoid) (f:'a -> 'b)).op``);
-val _ = overload_on ("#i", ``(homo_monoid (g:'a monoid) (f:'a -> 'b)).id``);
-val _ = overload_on ("fG", ``(homo_monoid (g:'a monoid) (f:'a -> 'b)).carrier``);
+Overload o = ``(homo_monoid (g:'a monoid) (f:'a -> 'b)).op``
+Overload "#i" = ``(homo_monoid (g:'a monoid) (f:'a -> 'b)).id``
+Overload fG = ``(homo_monoid (g:'a monoid) (f:'a -> 'b)).carrier``
 
 (* Theorem: Properties of homo_monoid. *)
 (* Proof: by homo_monoid_def and image_op_def. *)
@@ -3564,13 +3566,13 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Use K to denote k.carrier *)
-val _ = temp_overload_on ("K", ``(k:'a monoid).carrier``);
+Overload K[local] = ``(k:'a monoid).carrier``
 
 (* Use o to denote h.op *)
-val _ = temp_overload_on ("o", ``(h:'a monoid).op``);
+Overload o[local] = ``(h:'a monoid).op``
 
 (* Use #i to denote h.id *)
-val _ = temp_overload_on ("#i", ``(h:'a monoid).id``);
+Overload "#i"[local] = ``(h:'a monoid).id``
 
 (* A Submonoid is a subset of a monoid that's a monoid itself, keeping op, id. *)
 Definition Submonoid_def:
@@ -3580,7 +3582,7 @@ Definition Submonoid_def:
 End
 
 (* Overload Submonoid *)
-val _ = overload_on ("<<", ``Submonoid``);
+Overload "<<" = ``Submonoid``
 val _ = set_fixity "<<" (Infix(NONASSOC, 450)); (* same as relation *)
 
 (* Note: The requirement $o = $* is stronger than the following:
@@ -3807,7 +3809,7 @@ Definition monoid_intersect_def:
        |>
 End
 
-val _ = overload_on ("mINTER", ``monoid_intersect``);
+Overload mINTER = ``monoid_intersect``
 val _ = set_fixity "mINTER" (Infix(NONASSOC, 450)); (* same as relation *)
 (*
 > monoid_intersect_def;
@@ -3979,7 +3981,7 @@ Definition submonoid_big_intersect_def:
        |>
 End
 
-val _ = overload_on ("smbINTER", ``submonoid_big_intersect``);
+Overload smbINTER = ``submonoid_big_intersect``
 (*
 > submonoid_big_intersect_def;
 val it = |- !g. smbINTER g =

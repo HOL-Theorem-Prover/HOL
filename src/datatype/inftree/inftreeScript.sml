@@ -25,18 +25,24 @@ val inftree_bijections = define_new_type_bijections {
   name = "inftree_bijections", tyax = inftree
 };
 
-val fromto_id = prove(
-  ``is_tree f ==> (from_inftree (to_inftree f) = f)``,
-  METIS_TAC [inftree_bijections])
+Theorem fromto_id[local]:
+    is_tree f ==> (from_inftree (to_inftree f) = f)
+Proof
+  METIS_TAC [inftree_bijections]
+QED
 
-val is_tree_from_inftree = prove(
-  ``is_tree (from_inftree x)``,
-  METIS_TAC [inftree_bijections])
+Theorem is_tree_from_inftree[local]:
+    is_tree (from_inftree x)
+Proof
+  METIS_TAC [inftree_bijections]
+QED
 val _ = augment_srw_ss [rewrites [is_tree_from_inftree]]
 
-val from_inftree_11 = prove(
-  ``(from_inftree t1 = from_inftree t2) = (t1 = t2)``,
-  METIS_TAC [inftree_bijections])
+Theorem from_inftree_11[local]:
+    (from_inftree t1 = from_inftree t2) = (t1 = t2)
+Proof
+  METIS_TAC [inftree_bijections]
+QED
 
 Definition iLf_def:
   iLf a = to_inftree (\p. INL a)
@@ -95,9 +101,11 @@ val strong_ind =
     SIMP_RULE bool_ss [is_tree_rules]
               (Q.SPEC `\f. is_tree f /\ P f` is_tree_ind)
 
-val forall_inftree = prove(
-  ``(!t. P t) = (!f. is_tree f ==> P (to_inftree f))``,
-  METIS_TAC [inftree_bijections]);
+Theorem forall_inftree[local]:
+    (!t. P t) = (!f. is_tree f ==> P (to_inftree f))
+Proof
+  METIS_TAC [inftree_bijections]
+QED
 
 Theorem inftree_ind:
     !P.
@@ -120,28 +128,33 @@ val (relrec_rules, relrec_ind, relrec_cases) = Hol_reln`
                   relrec lf nd (iNd b df) (nd b g))
 `
 
-val relrec_fn = prove(
-  ``!lf nd t r1. relrec lf nd t r1 ==> !r2. relrec lf nd t r2 ==> (r1 = r2)``,
+Theorem relrec_fn[local]:
+    !lf nd t r1. relrec lf nd t r1 ==> !r2. relrec lf nd t r2 ==> (r1 = r2)
+Proof
   HO_MATCH_MP_TAC relrec_ind THEN CONJ_TAC THEN REPEAT GEN_TAC THENL [
     ONCE_REWRITE_TAC [relrec_cases] THEN SRW_TAC [][],
     STRIP_TAC THEN ONCE_REWRITE_TAC [relrec_cases] THEN
     SRW_TAC [][] THEN Q_TAC SUFF_TAC `g = g'` THEN1 SRW_TAC [][] THEN
     SRW_TAC [][FUN_EQ_THM]
-  ])
+  ]
+QED
 
-val relrec_total = prove(
-  ``!t. ?r. relrec lf nd t r``,
+Theorem relrec_total[local]:
+    !t. ?r. relrec lf nd t r
+Proof
   HO_MATCH_MP_TAC inftree_ind THEN REPEAT STRIP_TAC THEN
   ONCE_REWRITE_TAC [relrec_cases] THEN SRW_TAC [][] THEN
-  METIS_TAC [])
+  METIS_TAC []
+QED
 
 Definition inftree_rec_def:
   inftree_rec lf nd t = @r. relrec lf nd t r
 End
 
-val inftree_rec_thm = prove(
-  ``(inftree_rec lf nd (iLf a) = lf a) /\
-    (inftree_rec lf nd (iNd b d) = nd b (inftree_rec lf nd o d))``,
+Theorem inftree_rec_thm[local]:
+    (inftree_rec lf nd (iLf a) = lf a) /\
+    (inftree_rec lf nd (iNd b d) = nd b (inftree_rec lf nd o d))
+Proof
   SRW_TAC [][inftree_rec_def] THEN
   ONCE_REWRITE_TAC [relrec_cases] THEN SRW_TAC [][] THEN
   Q.SUBGOAL_THEN `inftree_rec lf nd = \t. @r. relrec lf nd t r` ASSUME_TAC
@@ -157,14 +170,17 @@ val inftree_rec_thm = prove(
     SELECT_ELIM_TAC THEN METIS_TAC [relrec_total, relrec_fn],
     POP_ASSUM (K ALL_TAC) THEN SELECT_ELIM_TAC THEN
     METIS_TAC [relrec_total]
-  ])
+  ]
+QED
 
-val inftree_Axiom0 = prove(
-  ``!lf nd. ?f : ('a,'b,'c) inftree -> 'd.
+Theorem inftree_Axiom0[local]:
+    !lf nd. ?f : ('a,'b,'c) inftree -> 'd.
        (!a. f (iLf a) = lf a) /\
-       (!b d. f (iNd b d) = nd b (f o d))``,
+       (!b d. f (iNd b d) = nd b (f o d))
+Proof
   REPEAT GEN_TAC THEN Q.EXISTS_TAC `inftree_rec lf nd` THEN
-  SRW_TAC [][inftree_rec_thm])
+  SRW_TAC [][inftree_rec_thm]
+QED
 
 Theorem inftree_Axiom:
     !lf nd. ?f : ('a,'b,'c)inftree -> 'd.

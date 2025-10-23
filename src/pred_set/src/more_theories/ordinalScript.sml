@@ -8,11 +8,13 @@ Libs
 fun mk_def(s,t) =
     {def_name = s ^ "_def", fixity = NONE, fname = s, func = t};
 
-val orderiso_equiv = prove(
-  ``!s1 s2. orderiso (s1:'a wellorder) (s2:'a wellorder) <=>
-            (orderiso s1 : 'a wellorder set = orderiso s2)``,
+Theorem orderiso_equiv[local]:
+    !s1 s2. orderiso (s1:'a wellorder) (s2:'a wellorder) <=>
+            (orderiso s1 : 'a wellorder set = orderiso s2)
+Proof
   rw[FUN_EQ_THM, EQ_IMP_THM] >>
-  metis_tac [orderiso_SYM, orderiso_TRANS, orderiso_REFL])
+  metis_tac [orderiso_SYM, orderiso_TRANS, orderiso_REFL]
+QED
 
 val alphaise =
     INST_TYPE  [beta |-> ``:'a inf``, delta |-> ``:'a inf``,
@@ -40,12 +42,12 @@ Theorem ordlt_TRANS = ordlt_TRANS
 Theorem ordlt_WF =
   REWRITE_RULE [GSYM relationTheory.WF_DEF] ordlt_WF0
 
-val _ = overload_on ("<", ``ordlt``)
-val _ = overload_on ("<=", ``\a b. ~(b < a)``)
+Overload "<" = ``ordlt``
+Overload "<=" = ``\a b. ~(b < a)``
 
 Theorem ordlt_trichotomy = ordlt_trichotomy
 
-val _ = overload_on ("mkOrdinal", ``ordinal_ABS``)
+Overload mkOrdinal = ``ordinal_ABS``
 
 Definition allOrds_def:
   allOrds = mkWO { (x,y) | (x = y) \/ ordlt x y }
@@ -345,7 +347,7 @@ QED
 Definition ordSUC_def:
   ordSUC a = oleast b. a < b
 End
-val _ = overload_on ("TC", ``ordSUC``)
+Overload TC = ``ordSUC``
 
 Definition fromNat_def:
   (fromNat 0 = oleast a. T) /\
@@ -578,7 +580,7 @@ Proof
   res_tac >> fs[ordlt_SUC]
 QED
 
-val _ = overload_on ("countableOrd", ``\a. countable(preds a)``)
+Overload countableOrd = ``\a. countable(preds a)``
 
 Theorem preds_ordSUC:
     preds a^+ = a INSERT preds a
@@ -696,7 +698,7 @@ Proof
   fs[preds_omax_SOME_SUC]
 QED
 
-val _ = overload_on ("islimit", ``\a:'a ordinal. omax (preds a) = NONE``)
+Overload islimit = ``\a:'a ordinal. omax (preds a) = NONE``
 
 Theorem sup_preds_omax_NONE:
     (omax (preds a) = NONE) <=> (sup (preds a) = a)
@@ -819,9 +821,10 @@ Proof
 QED
 val _ = export_rewrites ["fromNat_ordlt"]
 
-val allNats_dwardclosedetc = prove(
-  ``downward_closed { fromNat i : 'a ordinal | T } /\
-    { fromNat i | T } <> univ(:'a ordinal)``,
+Theorem allNats_dwardclosedetc[local]:
+    downward_closed { fromNat i : 'a ordinal | T } /\
+    { fromNat i | T } <> univ(:'a ordinal)
+Proof
   simp[downward_closed_def] >> conj_tac
   >- (map_every qx_gen_tac [`a`, `b`] >>
       disch_then (CONJUNCTS_THEN2 (Q.X_CHOOSE_THEN `i` assume_tac)
@@ -830,12 +833,13 @@ val allNats_dwardclosedetc = prove(
   qsuff_tac `{&i : 'a ordinal | T} <<= univ(:'a inf)`
   >- metis_tac [univ_ord_greater_cardinal] >>
   simp[cardleq_def] >> qexists_tac `\a. INL (@n. &n = a)` >>
-  simp[INJ_DEF] >> rw[] >> fs[]);
+  simp[INJ_DEF] >> rw[] >> fs[]
+QED
 
 Definition omega_def:
   omega = sup { fromNat i | T }
 End
-val _ = overload_on ("ω", ``omega``)
+Overload "ω" = ``omega``
 
 val lt_omega0 =
   MATCH_MP preds_sup_thm allNats_dwardclosedetc
@@ -863,9 +867,11 @@ QED
 val _ = export_rewrites ["fromNat_eq_omega"]
 
 (* recursion principles *)
-val restrict_away = prove(
-  ``IMAGE (RESTRICT f $< (a:'a ordinal)) (preds a) = IMAGE f (preds a)``,
-  rw[EXTENSION, relationTheory.RESTRICT_DEF] >> srw_tac[CONJ_ss][]);
+Theorem restrict_away[local]:
+    IMAGE (RESTRICT f $< (a:'a ordinal)) (preds a) = IMAGE f (preds a)
+Proof
+  rw[EXTENSION, relationTheory.RESTRICT_DEF] >> srw_tac[CONJ_ss][]
+QED
 
 Theorem ord_RECURSION:
     !(z:'b) (sf:'a ordinal -> 'b -> 'b) (lf:'a ordinal -> 'b set -> 'b).
@@ -897,7 +903,7 @@ val ordADD_def = new_specification(
                 |> Q.GEN `b`
                 |> CONV_RULE SKOLEM_CONV)
 val _ = export_rewrites ["ordADD_def"]
-val _ = overload_on ("+", ``ordADD``)
+Overload "+" = ``ordADD``
 
 Theorem ordADD_0L:
     !a:'a ordinal. 0 + a = a
@@ -998,11 +1004,13 @@ Proof
 QED
 val _ = export_rewrites ["ordlt_CANCEL_ADDL"]
 
-val ordADD_CANCEL_LEMMA0 = prove(
-  ``a = a + c <=> c = 0``,
+Theorem ordADD_CANCEL_LEMMA0[local]:
+    a = a + c <=> c = 0
+Proof
   Cases_on `c = 0` >> simp[] >>
   qsuff_tac `a < a + c` >- metis_tac[ordlt_REFL] >> simp[] >>
-  spose_not_then strip_assume_tac >> fs[ordle_lteq])
+  spose_not_then strip_assume_tac >> fs[ordle_lteq]
+QED
 Theorem ordADD_CANCEL1 =
   CONJ (GEN_ALL ordADD_CANCEL_LEMMA0)
        (ordADD_CANCEL_LEMMA0 |> CONV_RULE (LAND_CONV (REWR_CONV EQ_SYM_EQ))
@@ -1049,12 +1057,14 @@ Proof
 QED
 val _ = export_rewrites ["leqLEFT_CANCEL"]
 
-val lemma = prove(
-  ``!c a b:'a ordinal. a < b /\ b < a + c ==> ?d. a + d = b``,
+Theorem lemma[local]:
+    !c a b:'a ordinal. a < b /\ b < a + c ==> ?d. a + d = b
+Proof
   ho_match_mp_tac simple_ord_induction >> simp[] >> rpt conj_tac
   >- metis_tac [ordlt_TRANS, ordlt_REFL]
   >- (simp[ordlt_SUC_DISCRETE] >> metis_tac[]) >>
-  simp[predimage_sup_thm]);
+  simp[predimage_sup_thm]
+QED
 
 Theorem ordlt_EXISTS_ADD:
     !a b:'a ordinal. a < b <=> ?c. c <> 0 /\ b = a + c
@@ -1257,12 +1267,14 @@ Proof
   metis_tac [preds_0, preds_11, ordlt_REFL]
 QED
 
-val exists_C = prove(
-  ``(?h:'a -> 'a -> 'a. P h) <=> (?h. P (combin$C h))``,
+Theorem exists_C[local]:
+    (?h:'a -> 'a -> 'a. P h) <=> (?h. P (combin$C h))
+Proof
   eq_tac >> strip_tac
   >- (qexists_tac `combin$C h` >>
       qsuff_tac `combin$C (combin$C h) = h` >- simp[] >>
-      simp[FUN_EQ_THM]) >> metis_tac[]);
+      simp[FUN_EQ_THM]) >> metis_tac[]
+QED
 
 Theorem ADD1R:
     a + 1 = a^+
@@ -1295,7 +1307,7 @@ val ordMULT_def = new_specification(
                 |> CONV_RULE SKOLEM_CONV
                 |> BETA_RULE)
 val _ = export_rewrites ["ordMULT_def"]
-val _ = overload_on ("*", ``ordMULT``)
+Overload "*" = ``ordMULT``
 
 Theorem ordMULT_0L:
     !a:'a ordinal. 0 * a = 0
@@ -1461,8 +1473,9 @@ Proof
   asm_simp_tac (srw_ss() ++ CONJ_ss) []
 QED
 
-val ordDIVISION0 = prove(
-  ``!a b:'a ordinal. 0 < b ==> ?q r. a = b * q + r /\ r < b``,
+Theorem ordDIVISION0[local]:
+    !a b:'a ordinal. 0 < b ==> ?q r. a = b * q + r /\ r < b
+Proof
   rpt strip_tac >>
   qabbrev_tac `d = sup { c | b * c <= a }` >>
   `!c. b * c <= a ==> c <= a`
@@ -1491,7 +1504,8 @@ val ordDIVISION0 = prove(
   `?bb. b + bb = r` by metis_tac [ordle_EXISTS_ADD] >>
   `b * d^+ + bb = a` by simp[GSYM ordADD_ASSOC] >>
   `!c. b * c <= a ==> c <= d` by metis_tac [ordlt_REFL] >>
-  metis_tac [ordlt_SUC, ordle_EXISTS_ADD]);
+  metis_tac [ordlt_SUC, ordle_EXISTS_ADD]
+QED
 
 (* old definition:
 val ordDIVISION = new_specification(
@@ -1532,10 +1546,10 @@ Theorem ordDIVISION =
 (* end of new definition of ordDIV and ordMOD *)
 
 val _ = set_fixity "/" (Infixl 600)
-val _ = overload_on ("/", ``ordDIV``)
+Overload "/" = ``ordDIV``
 
 val _ = set_fixity "%" (Infixl 650)
-val _ = overload_on ("%", ``ordMOD``)
+Overload "%" = ``ordMOD``
 
 Theorem ordDIV_UNIQUE:
     !a b q r. 0 < (b:'a ordinal) /\ a = b*q + r /\ r < b ==> a / b = q
@@ -1594,7 +1608,7 @@ val ordEXP_def = new_specification(
                 |> BETA_RULE
                 |> SIMP_RULE (srw_ss()) [FORALL_AND_THM])
 val _ = export_rewrites ["ordEXP_def"]
-val _ = overload_on ("**", ``ordEXP``)
+Overload "**" = ``ordEXP``
 
 Theorem ordEXP_1R:
     (a:'a ordinal) ** 1 = a
@@ -1888,7 +1902,7 @@ Definition epsilon0_def:
   epsilon0 = oleast x. omega ** x = x
 End
 
-val _ = overload_on("ε₀", ``epsilon0``)
+Overload "ε₀" = ``epsilon0``
 
 Theorem epsilon0_fixpoint:
     omega ** epsilon0 = epsilon0
@@ -2213,7 +2227,7 @@ val polyform_def = new_specification(
             polyform_exists);
 
 (* Cantor Normal Form - polynomials where the base is omega *)
-val _ = overload_on ("CNF", ``polyform omega``)
+Overload CNF = ``polyform omega``
 
 Theorem CNF_thm =
   polyform_def |> SPEC ``omega`` |> SIMP_RULE (srw_ss()) []
@@ -2247,9 +2261,10 @@ Proof
   simp[is_polyform_def]
 QED
 
-val expbounds = prove(
-  ``1 < (a:'a ordinal) /\ y < a ** e /\ c < a /\ e < e' ==>
-    a ** e * c + y < a ** e'``,
+Theorem expbounds[local]:
+    1 < (a:'a ordinal) /\ y < a ** e /\ c < a /\ e < e' ==>
+    a ** e * c + y < a ** e'
+Proof
   strip_tac >>
   `a ** e * c + y < a ** e * c + a ** e` by simp[] >>
   `a ** e * c + a ** e = a ** e * ordSUC c` by simp[] >>
@@ -2261,7 +2276,8 @@ val expbounds = prove(
      by (match_mp_tac ordEXP_le_MONO_R >> conj_tac
          >- (spose_not_then strip_assume_tac >> fs[]) >>
          metis_tac [ordlt_DISCRETE1]) >>
-  metis_tac [ordlte_TRANS, ordle_TRANS])
+  metis_tac [ordlte_TRANS, ordle_TRANS]
+QED
 
 Theorem is_polyform_head_dominates_tail:
     1 < a /\ is_polyform a ((c,e)::t) ==> eval_poly a t < a ** e
@@ -2285,22 +2301,25 @@ Proof
 QED
 val _ = export_rewrites ["cx_lt_x"]
 
-val explemma = prove(
-  ``1 < a /\ a ** e1 * c1 + eval_poly a t1 = a ** e2 * c2 + eval_poly a t2 /\
+Theorem explemma[local]:
+    1 < a /\ a ** e1 * c1 + eval_poly a t1 = a ** e2 * c2 + eval_poly a t2 /\
     is_polyform a ((c1,e1)::t1) /\ is_polyform a ((c2,e2)::t2) ==>
-    e1 <= e2``,
+    e1 <= e2
+Proof
   rpt strip_tac (* e2 < e1 *) >>
   `eval_poly a t2 < a ** e2` by metis_tac [is_polyform_head_dominates_tail] >>
   imp_res_tac is_polyform_CONS_E >>
   `a ** e2 * c2 + eval_poly a t2 < a ** e1` by simp[expbounds] >>
   `a ** e1 <= a ** e1 * c1` by (simp[IFF_ZERO_lt] >> rw[] >> fs[]) >>
   `a ** e1 * c1 <= a ** e1 * c1 + eval_poly a t1` by simp[] >>
-  metis_tac[ordlte_TRANS, ordle_TRANS, ordlt_REFL]);
+  metis_tac[ordlte_TRANS, ordle_TRANS, ordlt_REFL]
+QED
 
-val coefflemma = prove(
-  ``1 < a /\ a ** e * c1 + eval_poly a t1 = a ** e * c2 + eval_poly a t2 /\
+Theorem coefflemma[local]:
+    1 < a /\ a ** e * c1 + eval_poly a t1 = a ** e * c2 + eval_poly a t2 /\
     is_polyform a ((c1,e)::t1) /\ is_polyform a ((c2,e)::t2) ==>
-    c1 <= c2``,
+    c1 <= c2
+Proof
   rpt strip_tac (* c2 < c1 *) >>
   `eval_poly a t2 < a ** e` by metis_tac [is_polyform_head_dominates_tail] >>
   imp_res_tac is_polyform_CONS_E >>
@@ -2308,7 +2327,8 @@ val coefflemma = prove(
   `a ** e * c2 + a ** e = a ** e * c2^+` by simp[] >> pop_assum SUBST_ALL_TAC >>
   `a ** e * c2^+ <= a ** e * c1` by (simp[] >> metis_tac [ordlt_DISCRETE1]) >>
   `a ** e * c1 <= a ** e * c1 + eval_poly a t1` by simp[] >>
-  metis_tac [ordlte_TRANS, ordle_TRANS, ordlt_REFL]);
+  metis_tac [ordlte_TRANS, ordle_TRANS, ordlt_REFL]
+QED
 
 Theorem polyform_UNIQUE:
     !a b ces.
@@ -2356,8 +2376,8 @@ Proof
   rw[] >> match_mp_tac polyform_UNIQUE >> rw[is_polyform_def] >> decide_tac
 QED
 
-val _ = overload_on ("ordLOG", ``\b x. SND (HD (polyform b x))``)
-val _ = overload_on ("olog", ``\x. ordLOG omega x``)
+Overload ordLOG = ``\b x. SND (HD (polyform b x))``
+Overload olog = ``\x. ordLOG omega x``
 Theorem ordLOG_correct:
     1 < b /\ 0 < x ==> ordEXP b (ordLOG b x) <= x /\
     !a. ordLOG b x < a ==> x < ordEXP b a

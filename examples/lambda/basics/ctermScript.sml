@@ -165,7 +165,7 @@ Proof
   Cases_on ‘bv’ >> simp[]
 QED
 
-val term_ind =
+Theorem cterm_bvc_induction =
     bvc_genind
         |> INST_TYPE [alpha |-> ``:'a ctrep``]
         |> Q.INST [`lp` |-> `^lp`]
@@ -187,12 +187,13 @@ val term_ind =
                                   [ASSUME ``!x:'b. FINITE (fv x:string set)``]
         |> SPEC_ALL |> UNDISCH
         |> genit |> DISCH_ALL |> Q.GEN `fv` |> Q.GEN `P`
+        |> SIMP_RULE bool_ss [] (* removes redundant (∀x. FINITE (fv x)) *);
 
 fun mkX_ind th = th |> Q.SPEC `λt x. Q t` |> Q.SPEC `λx. X`
                     |> SIMP_RULE std_ss [] |> Q.GEN `X`
                     |> Q.INST [`Q` |-> `P`] |> Q.GEN `P`
 
-Theorem cterm_induction = mkX_ind term_ind
+Theorem cterm_induction = mkX_ind cterm_bvc_induction
 
 Theorem LAM_eq_thm =
   ``LAM u t1 = LAM v t2``

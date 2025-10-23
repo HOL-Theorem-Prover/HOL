@@ -23,7 +23,10 @@ val is_char =
  in mk_abs(n,mk_less(n,topnum))
  end;
 
-val CHAR_EXISTS = Q.prove (`?n. ^is_char n`, Q.EXISTS_TAC `0` THEN REDUCE_TAC);
+Theorem CHAR_EXISTS[local]:
+   ?n. ^is_char n
+Proof Q.EXISTS_TAC `0` THEN REDUCE_TAC
+QED
 
 val CHAR_TYPE = new_type_definition("char", CHAR_EXISTS);
 
@@ -268,12 +271,16 @@ End
 Definition TRANSLATE_def:   TRANSLATE f (s:string) = CONCAT (MAP f s)
 End
 
-val SPLITP_MONO = Q.prove(
-  `!P l. LENGTH (SND (SPLITP P l)) <= LENGTH l`,
-  Induct_on `l` THEN SRW_TAC [] [SPLITP, DECIDE ``a <= b ==> a <= SUC b``]);
+Theorem SPLITP_MONO[local]:
+   !P l. LENGTH (SND (SPLITP P l)) <= LENGTH l
+Proof
+  Induct_on `l` THEN SRW_TAC [] [SPLITP, DECIDE ``a <= b ==> a <= SUC b``]
+QED
 
-val TAIL_MONO = Q.prove(
-  `!l. ~(l = []) ==> LENGTH (TL l) < LENGTH l`, Cases THEN SRW_TAC [] []);
+Theorem TAIL_MONO[local]:
+   !l. ~(l = []) ==> LENGTH (TL l) < LENGTH l
+Proof Cases THEN SRW_TAC [] []
+QED
 
 Definition TOKENS_def:
   (TOKENS P ([]:string) = []) /\
@@ -407,16 +414,18 @@ QED
     Definability of prim. rec. functions over strings.
  ---------------------------------------------------------------------------*)
 
-val alt_string_Axiom = Q.prove
-(`!b g. ?f.  (f (IMPLODE []) = b) /\
-       (!c t. f (IMPLODE (c::t)) = g c t (f (IMPLODE t)))`,
+Theorem alt_string_Axiom[local]:
+  !b g. ?f.  (f (IMPLODE []) = b) /\
+       (!c t. f (IMPLODE (c::t)) = g c t (f (IMPLODE t)))
+Proof
 REPEAT GEN_TAC
   THEN STRIP_ASSUME_TAC
      (prove_rec_fn_exists listTheory.list_Axiom
         ``(list_rec (b:'a) f ([]:char list) = b) /\
           (list_rec b f (h::t) = f h t (list_rec b f t))``)
    THEN Q.EXISTS_TAC`list_rec b g o EXPLODE`
-   THEN RW_TAC bool_ss [combinTheory.o_DEF,list_case_def,EXPLODE_IMPLODE]);
+   THEN RW_TAC bool_ss [combinTheory.o_DEF,list_case_def,EXPLODE_IMPLODE]
+QED
 
 
 Theorem STRING_ACYCLIC:

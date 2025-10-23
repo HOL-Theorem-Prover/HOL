@@ -2428,11 +2428,13 @@ Definition finite_second_moments_def:
     finite_second_moments p X = ?a. second_moment p X a < PosInf
 End
 
-val finite_variance_imp_finite_second_moments = Q.prove (
-   `!p X. variance p X < PosInf ==> finite_second_moments p X`,
+Theorem finite_variance_imp_finite_second_moments[local]:
+    !p X. variance p X < PosInf ==> finite_second_moments p X
+Proof
     RW_TAC std_ss [finite_second_moments_def, variance_def, central_moment_def,
                    second_moment_def]
- >> Q.EXISTS_TAC `expectation p X` >> art []);
+ >> Q.EXISTS_TAC `expectation p X` >> art []
+QED
 
 (* TODO: extend `Normal c` to all extreals (not possible for integral_cmul) *)
 Theorem expectation_cmul :

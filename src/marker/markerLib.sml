@@ -744,14 +744,45 @@ fun process_taclist_then {arg} thltac (gl as (asl,g)) =
 
 val suspimp_t = prim_mk_const{Thy = "marker", Name = "suspendimp"}
 val susp_t = prim_mk_const{Thy = "marker", Name = "suspendlabel"}
+
+fun dest_slab t =
+    let val (f, xs) = strip_comb t
+        val _ = same_const susp_t f orelse
+                raise ERR "dest_slab" "Term not a suspendlabel"
+    in
+      case xs of
+          [labt, arg] => ((#1 (dest_var labt), arg)
+                          handle HOL_ERR _ => raise ERR "dest_slab"
+                                                    "Label argument invalid")
+        | _ => raise ERR "dest_slab" "Incomplete suspendlabel term"
+    end
+
+fun dest_simp t =
+    let val (f, xs) = strip_comb t
+        val _ = same_const suspimp_t f orelse
+                raise ERR "dest_simp" "Term not a suspendimp"
+    in
+      case xs of
+          [x,y] => (x,y)
+        | _ => raise ERR "dest_simp" "Incomplete suspendimp term"
+    end
+
 (* to keep it tail-recursive, does it "backwards" *)
 fun list_mk_suspimp (asl, g) =
   case asl of
       [] => g
     | a::rest => list_mk_suspimp(rest, list_mk_comb(suspimp_t, [a,g]))
 
-val simpth = ASSUME “suspendimp p q”
-val th = ASSUME “p:bool”
+fun strip_simp t =
+    let fun recurse A t =
+            case Lib.total dest_simp t of
+                SOME(h,c) => recurse (h::A) c
+              | NONE => (List.rev A, t)
+    in
+      recurse [] t
+    end
+
+
 
 fun sMP simpth th =
     let val (f, args) = strip_comb (concl simpth)
@@ -766,7 +797,8 @@ fun sMP simpth th =
 
 fun spopmp ([], g) = raise ERR "spopmp" "No assumptions"
   | spopmp (a::rest, g) =
-    ([(rest, list_mk_suspimp([a], g))], fn ths => sMP (hd ths) (ASSUME (lhand (concl (hd ths)))))
+    ([(rest, list_mk_suspimp([a], g))],
+     fn ths => sMP (hd ths) (ASSUME (lhand (concl (hd ths)))))
 
 fun suspend nm g =
   let
@@ -779,5 +811,55 @@ fun suspend nm g =
   in
     Tactical.THEN(rpt spopmp, ACCEPT_TAC usable_th)
   end g
+
+val simp_def' = SYM suspendimp_def
+val slab_def' = GSYM suspendlabel_def
+val labty = slab_def' |> concl |> dest_forall |> #1 |> dest_var |> #2
+fun sDISCH t th =
+    CONV_RULE (RATOR_CONV (RATOR_CONV (K simp_def'))) $ DISCH t th
+
+fun addlabel nm th = EQ_MP (SPECL [mk_var(nm, labty), concl th] slab_def') th
+
+fun suspended_to_goal t =
+    let val (_, s_t) = dest_slab t
+        val (asl0, g) = strip_simp s_t
+    in
+      (List.rev asl0, g)
+    end
+
+(* th is the theorem corresponding to the suspended goal (which the user has
+   presumably just proved interactively);
+   s_t is the term encoding that goal.
+   We need to generate the theorem |- s_t so that we can PROVE_HYP this against
+   the main, overall theorem *)
+fun prove_suspended s_t th =
+    let
+      val (nm, tm) = dest_slab s_t
+      val (imps, c) = strip_simp tm
+      val result0 = itlist sDISCH imps th
+    in
+      addlabel nm result0
+    end
+
+fun extract_suspended_goal0 th label =
+    let fun myhyp t =
+            #1 (dest_slab t) = label handle HOL_ERR _ => false
+    in
+      case List.find myhyp (hyp th) of
+          NONE => raise ERR "extract_suspended_goal"
+                        ("No such label in theorem: " ^ label)
+        | SOME t => t
+    end
+
+fun extract_suspended_goal th label =
+    suspended_to_goal (extract_suspended_goal0 th label)
+
+fun resume (th,label,tac) =
+    let val s_t = extract_suspended_goal0 th label
+        val sub_th = prove_goal(suspended_to_goal s_t, tac)
+    in
+      {subresult = sub_th, main = PROVE_HYP (prove_suspended s_t sub_th) th,
+       label = label}
+    end
 
 end

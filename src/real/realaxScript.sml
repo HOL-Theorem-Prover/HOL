@@ -92,18 +92,18 @@ val natless  = Term`$<`;
 val bool_not = “$~ : bool -> bool”
 val natmult  = Term`$*`;
 
-val _ = overload_on ("+", natplus);
-val _ = overload_on ("*", natmult);
-val _ = overload_on ("<", natless);
+Overload "+" = natplus
+Overload "*" = natmult
+Overload "<" = natless
 
 Overload "~" = “$real_neg”
 Overload "~" = bool_not
 Overload "¬" = bool_not
 Overload "numeric_negate" = “$real_neg”
 
-val _ = overload_on ("+", Term`$real_add`);
-val _ = overload_on ("*", Term`$real_mul`);
-val _ = overload_on ("<", Term`real_lt`);
+Overload "+" = Term`$real_add`
+Overload "*" = Term`$real_mul`
+Overload "<" = Term`real_lt`
 
 (*---------------------------------------------------------------------------*)
 (* Transfer of supremum property for all-positive sets - bit painful         *)
@@ -123,31 +123,38 @@ Proof
 QED
 
 (* cf. the other REAL_POS exported below *)
-val REAL_POS = prove (
-  “!X. real_0 < real_of_hreal X”,
-  GEN_TAC THEN REWRITE_TAC[REAL_BIJ]);
+Theorem REAL_POS[local]:
+   !X. real_0 < real_of_hreal X
+Proof
+  GEN_TAC THEN REWRITE_TAC[REAL_BIJ]
+QED
 
-val SUP_ALLPOS_LEMMA1 = prove ((* no need to export *)
-  “!P y. (!x. P x ==> real_0 < x) ==>
+Theorem SUP_ALLPOS_LEMMA1[local]:  (* no need to export *)
+   !P y. (!x. P x ==> real_0 < x) ==>
             ((?x. P x /\ y < x) =
-            (?X. P(real_of_hreal X) /\ y < (real_of_hreal X)))”,
+            (?X. P(real_of_hreal X) /\ y < (real_of_hreal X)))
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN EQ_TAC THENL
    [DISCH_THEN(X_CHOOSE_THEN “x:real” (fn th => MP_TAC th THEN POP_ASSUM
      (SUBST1_TAC o SYM o REWRITE_RULE[REAL_BIJ] o C MATCH_MP (CONJUNCT1 th))))
     THEN DISCH_TAC THEN EXISTS_TAC “hreal_of_real x” THEN ASM_REWRITE_TAC[],
     DISCH_THEN(X_CHOOSE_THEN “X:hreal” ASSUME_TAC) THEN
-    EXISTS_TAC “real_of_hreal X” THEN ASM_REWRITE_TAC[]]);
+    EXISTS_TAC “real_of_hreal X” THEN ASM_REWRITE_TAC[]]
+QED
 
-val SUP_ALLPOS_LEMMA2 = prove ((* no need to export *)
-  “!P X. P(real_of_hreal X) :bool = (\h. P(real_of_hreal h)) X”,
-  REPEAT GEN_TAC THEN BETA_TAC THEN REFL_TAC);
+Theorem SUP_ALLPOS_LEMMA2[local]:  (* no need to export *)
+   !P X. P(real_of_hreal X) :bool = (\h. P(real_of_hreal h)) X
+Proof
+  REPEAT GEN_TAC THEN BETA_TAC THEN REFL_TAC
+QED
 
-val SUP_ALLPOS_LEMMA3 = prove ((* no need to export *)
-  “!P. (!x. P x ==> real_0 < x) /\
+Theorem SUP_ALLPOS_LEMMA3[local]:  (* no need to export *)
+   !P. (!x. P x ==> real_0 < x) /\
           (?x. P x) /\
           (?z. !x. P x ==> x < z)
            ==> (?X. (\h. P(real_of_hreal h)) X) /\
-               (?Y. !X. (\h. P(real_of_hreal h)) X ==> X hreal_lt Y)”,
+               (?Y. !X. (\h. P(real_of_hreal h)) X ==> X hreal_lt Y)
+Proof
   GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC STRIP_ASSUME_TAC) THEN
   CONJ_TAC THENL
    [EXISTS_TAC “hreal_of_real x” THEN BETA_TAC THEN
@@ -161,16 +168,19 @@ val SUP_ALLPOS_LEMMA3 = prove ((* no need to export *)
     REWRITE_TAC[REAL_ISO_EQ] THEN
     MP_TAC(SPECL[“real_0”, “real_of_hreal X”, “z:real”] REAL_LT_TRANS) THEN
     ASM_REWRITE_TAC[REAL_BIJ] THEN
-    DISCH_THEN SUBST_ALL_TAC THEN FIRST_ASSUM ACCEPT_TAC]);
+    DISCH_THEN SUBST_ALL_TAC THEN FIRST_ASSUM ACCEPT_TAC]
+QED
 
-val SUP_ALLPOS_LEMMA4 = prove ((* no need to export *)
-  “!y. ~(real_0 < y) ==> !x. y < (real_of_hreal x)”,
+Theorem SUP_ALLPOS_LEMMA4[local]:  (* no need to export *)
+   !y. ~(real_0 < y) ==> !x. y < (real_of_hreal x)
+Proof
   GEN_TAC THEN DISCH_THEN(curry op THEN GEN_TAC o MP_TAC) THEN
   REPEAT_TCL DISJ_CASES_THEN ASSUME_TAC
    (SPECL [“y:real”, “real_0”] REAL_LT_TOTAL) THEN
   ASM_REWRITE_TAC[REAL_POS] THEN DISCH_THEN(K ALL_TAC) THEN
   POP_ASSUM(MP_TAC o C CONJ (SPEC “x:hreal” REAL_POS)) THEN
-  DISCH_THEN(ACCEPT_TAC o MATCH_MP REAL_LT_TRANS));
+  DISCH_THEN(ACCEPT_TAC o MATCH_MP REAL_LT_TRANS)
+QED
 
 Theorem REAL_SUP_ALLPOS:
    !P. (!x. P x ==> real_0 < x) /\ (?x. P x) /\ (?z. !x. P x ==> x < z)
@@ -251,21 +261,21 @@ Definition real_div[nocompute]: $/ x y = x * inv y
 End
 val _ = set_fixity "/" (Infixl 600);
 val _ = overload_on(GrammarSpecials.decimal_fraction_special, “$/”);
-val _ = overload_on("/", “$/”);
+Overload "/" = “$/”
 
 val _ = add_ML_dependency "realPP"
 val _ = add_user_printer ("real.decimalfractions",
                           “&(NUMERAL x) : real / &(NUMERAL y)”);
 
-val _ = overload_on ("-",  “$-”);  (* natsub *)
-val _ = overload_on ("<=", “$<=”); (* natlte *)
-val _ = overload_on (">",  “$>”);  (* natgt *)
-val _ = overload_on (">=", “$>=”); (* natge *)
+Overload "-" = “$-”(* natsub *)
+Overload "<=" = “$<=”(* natlte *)
+Overload ">" = “$>”(* natgt *)
+Overload ">=" = “$>=”(* natge *)
 
-val _ = overload_on ("-",  “$real_sub”);
-val _ = overload_on ("<=", “$real_lte”);
-val _ = overload_on (">",  “$real_gt”);
-val _ = overload_on (">=", “$real_ge”);
+Overload "-" = “$real_sub”
+Overload "<=" = “$real_lte”
+Overload ">" = “$real_gt”
+Overload ">=" = “$real_ge”
 
 Definition real_abs[nocompute]: abs(x) = (if (0 <= x) then x else ~x)
 End

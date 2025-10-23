@@ -356,12 +356,13 @@ Proof
    >> PROVE_TAC [countably_additive_def]
 QED
 
-val COUNTABLY_ADDITIVE_ADDITIVE_lemma = Q.prove (
-   `!m s t. {} IN measurable_sets m /\ (measure m {} = 0) /\
+Theorem COUNTABLY_ADDITIVE_ADDITIVE_lemma[local]:
+    !m s t. {} IN measurable_sets m /\ (measure m {} = 0) /\
         (!s. s IN measurable_sets m ==> 0 <= measure m s) /\
          s IN measurable_sets m /\ t IN measurable_sets m ==>
         (suminf (measure m o (\n. if n = 0 then s else if n = 1 then t else {})) =
-         measure m s + measure m t)`,
+         measure m s + measure m t)
+Proof
     rpt STRIP_TAC
  >> `FINITE (count 2)` by RW_TAC std_ss [FINITE_COUNT]
  >> `!n. FINITE ((count n) DIFF (count 2))` by METIS_TAC [FINITE_COUNT, FINITE_DIFF]
@@ -423,7 +424,8 @@ val COUNTABLY_ADDITIVE_ADDITIVE_lemma = Q.prove (
  >- METIS_TAC [IN_DEF]
  >> RW_TAC std_ss [IN_IMAGE, IN_UNIV]
  >> Q.EXISTS_TAC `2`
- >> METIS_TAC []);
+ >> METIS_TAC []
+QED
 
 (* removed `algebra (m_space m, measurable_sets m)` from antecedents,
    added `{} IN measurable_sets m` into antecedents. *)
@@ -494,11 +496,12 @@ Proof
  >> MATCH_MP_TAC COUNTABLY_ADDITIVE_ADDITIVE_lemma >> art []
 QED
 
-val COUNTABLY_ADDITIVE_FINITE_ADDITIVE_lemma = Q.prove (
-   `!m f n. {} IN measurable_sets m /\ (measure m {} = 0) /\
+Theorem COUNTABLY_ADDITIVE_FINITE_ADDITIVE_lemma[local]:
+    !m f n. {} IN measurable_sets m /\ (measure m {} = 0) /\
         (!s. s IN measurable_sets m ==> 0 <= measure m s) /\
         (!i. i < n ==> f i IN measurable_sets m) ==>
-        (suminf (measure m o (\i. if i < n then f i else {})) = SIGMA (measure m o f) (count n))`,
+        (suminf (measure m o (\i. if i < n then f i else {})) = SIGMA (measure m o f) (count n))
+Proof
     rpt STRIP_TAC
  >> Know `!j. 0 <= (measure m o (\i. if i < n then f i else {})) j`
  >- RW_TAC std_ss [o_DEF, le_refl]
@@ -562,7 +565,8 @@ val COUNTABLY_ADDITIVE_FINITE_ADDITIVE_lemma = Q.prove (
  >- METIS_TAC [IN_APP]
  >> SIMP_TAC std_ss [IN_IMAGE, IN_UNIV]
  >> Q.EXISTS_TAC `n`
- >> METIS_TAC []);
+ >> METIS_TAC []
+QED
 
 Theorem COUNTABLY_ADDITIVE_FINITE_ADDITIVE :
     !m. {} IN measurable_sets m /\ positive m /\ countably_additive m ==>
@@ -5381,21 +5385,27 @@ Proof
   ASM_SIMP_TAC std_ss []
 QED
 
-val lemma1 = prove (
-  ``!A sp M u. A IN (univ(:num) -> measurable_sets (sp,M,u)) <=>
-              IMAGE A UNIV SUBSET M``,
+Theorem lemma1[local]:
+    !A sp M u. A IN (univ(:num) -> measurable_sets (sp,M,u)) <=>
+              IMAGE A UNIV SUBSET M
+Proof
   REPEAT STRIP_TAC THEN SIMP_TAC std_ss [measurable_sets_def] THEN
-  EVAL_TAC THEN SRW_TAC[] [IN_FUNSET,IN_UNIV,SUBSET_DEF,IMAGE_DEF] THEN METIS_TAC[]);
+  EVAL_TAC THEN SRW_TAC[] [IN_FUNSET,IN_UNIV,SUBSET_DEF,IMAGE_DEF] THEN METIS_TAC[]
+QED
 
-val lemma2 = prove (
-  ``!A. (!m n. m <> n ==> DISJOINT (A m) (A n)) <=> disjoint_family A``,
+Theorem lemma2[local]:
+    !A. (!m n. m <> n ==> DISJOINT (A m) (A n)) <=> disjoint_family A
+Proof
   STRIP_TAC THEN SIMP_TAC std_ss [disjoint_family_on] THEN
-  SET_TAC []);
+  SET_TAC []
+QED
 
-val lemma3 = prove (
-  ``!A sp M u. BIGUNION (IMAGE A univ(:num)) IN measurable_sets (sp,M,u) <=>
-               BIGUNION {A i | i IN UNIV} IN M``,
-  REPEAT STRIP_TAC THEN SIMP_TAC std_ss [measurable_sets_def, IMAGE_DEF]);
+Theorem lemma3[local]:
+    !A sp M u. BIGUNION (IMAGE A univ(:num)) IN measurable_sets (sp,M,u) <=>
+               BIGUNION {A i | i IN UNIV} IN M
+Proof
+  REPEAT STRIP_TAC THEN SIMP_TAC std_ss [measurable_sets_def, IMAGE_DEF]
+QED
 
 Theorem countably_additive_alt_eq :
     !sp M u. countably_additive (sp,M,u) <=>
@@ -5784,7 +5794,7 @@ val _ = Unicode.unicode_version {u = Unicode.UChar.lsl, tmnm = "<<"};
 val _ = TeX_notation {hol = "<<",              TeX = ("\\HOLTokenLsl{}", 2)};
 val _ = TeX_notation {hol = Unicode.UChar.lsl, TeX = ("\\HOLTokenLsl{}", 2)};
 
-val _ = overload_on ("<<", ``measure_absolutely_continuous``);
+Overload "<<" = ``measure_absolutely_continuous``
 
 (* backward compatible with HVG's original definition, see also RN_deriv' *)
 Overload measure_absolutely_continuous' = “\N M. measure N << M”

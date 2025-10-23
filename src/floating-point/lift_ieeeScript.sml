@@ -11,7 +11,7 @@ Libs
 val _ = ParseExtras.temp_loose_equality()
 val _ = diminish_srw_ss ["RMULCANON","RMULRELNORM"]
 
-val () = Parse.temp_overload_on ("bias", ``words$INT_MAX``)
+Overload bias[local] = “words$INT_MAX”
 
 (* ------------------------------------------------------------------------ *)
 
@@ -152,40 +152,46 @@ QED
 
    ------------------------------------------------------------------------ *)
 
-val REAL_ABS_INV = Q.prove(
-  `!x. abs (inv x) = inv (abs x)`,
+Theorem REAL_ABS_INV[local]:
+   !x. abs (inv x) = inv (abs x)
+Proof
   gen_tac
   \\ Cases_on `x = 0r`
   \\ simp [REAL_INV_0, REAL_ABS_0, ABS_INV]
-  );
+QED
 
-val REAL_ABS_DIV = Q.prove(
-  `!x y. abs (x / y) = abs x / abs y`,
-  rewrite_tac [real_div, REAL_ABS_INV, REAL_ABS_MUL])
+Theorem REAL_ABS_DIV[local]:
+   !x y. abs (x / y) = abs x / abs y
+Proof
+  rewrite_tac [real_div, REAL_ABS_INV, REAL_ABS_MUL]
+QED
 
-val REAL_LE_LDIV2 = Q.prove(
-  `!x y z. 0r < z ==> (x / z <= y / z <=> x <= y)`,
+Theorem REAL_LE_LDIV2[local]:
+   !x y z. 0r < z ==> (x / z <= y / z <=> x <= y)
+Proof
   simp [REAL_LE_LDIV_EQ, REAL_DIV_RMUL, REAL_POS_NZ]
-  );
+QED
 
-val REAL_POW_LE_1 = Q.prove(
-  `!n x. 1r <= x ==> 1 <= x pow n`,
+Theorem REAL_POW_LE_1[local]:
+   !n x. 1r <= x ==> 1 <= x pow n
+Proof
   Induct
   \\ rw [pow]
   \\ Ho_Rewrite.GEN_REWRITE_TAC LAND_CONV [GSYM REAL_MUL_LID]
   \\ match_mp_tac REAL_LE_MUL2
   \\ simp []
-  );
+QED
 
 val REAL_POW_MONO = realTheory.REAL_POW_MONO
 
-val exponent_le = Q.prove(
-  `!e : 'a word. e <> -1w ==> (w2n e <= UINT_MAX (:'a) - 1)`,
+Theorem exponent_le[local]:
+   !e : 'a word. e <> -1w ==> (w2n e <= UINT_MAX (:'a) - 1)
+Proof
   simp_tac std_ss
     [wordsTheory.WORD_NEG_1, wordsTheory.UINT_MAX_def, wordsTheory.word_T_def]
   \\ Cases
   \\ simp []
-  );
+QED
 
 Theorem float_to_real_finite:
   !x : ('t, 'w) float.
@@ -236,11 +242,12 @@ QED
      Lifting up of rounding to nearest
    ------------------------------------------------------------------------ *)
 
-val bound_at_worst_lemma = Q.prove(
-  `!a : ('t, 'w) float x.
+Theorem bound_at_worst_lemma[local]:
+   !a : ('t, 'w) float x.
       abs x < threshold (:'t # 'w) /\ float_is_finite a ==>
       abs (float_to_real (round roundTiesToEven x : ('t, 'w) float) - x) <=
-      abs (float_to_real a - x)`,
+      abs (float_to_real a - x)
+Proof
   rw [round_def, REAL_ARITH ``abs x < y = ~(x <= ~y) /\ ~(x >= y)``]
   \\ match_mp_tac
        (MATCH_MP closest_is_closest is_finite_nonempty
@@ -249,7 +256,7 @@ val bound_at_worst_lemma = Q.prove(
                          pred_setTheory.GSPEC_ETA]
         |> CONJUNCT2)
   \\ simp [pred_setTheory.SPECIFICATION]
-  );
+QED
 
 Theorem error_at_worst_lemma:
    !a : ('t, 'w) float x.
@@ -274,20 +281,22 @@ QED
 
 (* ------------------------------------------------------------------------ *)
 
-val lem = Q.prove(
-  `!a b. 0 < b /\ b < a ==> 1 < a / b : real`,
+Theorem lem[local]:
+   !a b. 0 < b /\ b < a ==> 1 < a / b : real
+Proof
   simp [realTheory.REAL_LT_RDIV_EQ]
-  );
+QED
 
-val lem2 = Q.prove(
-  `!n x. 0r < n /\ n <= n * x ==> 1 <= x`,
+Theorem lem2[local]:
+   !n x. 0r < n /\ n <= n * x ==> 1 <= x
+Proof
   rpt strip_tac
   \\ spose_not_then assume_tac
   \\ qpat_x_assum `n <= n * x` mp_tac
   \\ fs [realTheory.REAL_NOT_LE,
          GSYM (ONCE_REWRITE_RULE [REAL_MUL_COMM] realTheory.REAL_LT_RDIV_EQ),
          realTheory.REAL_DIV_REFL, realTheory.REAL_POS_NZ]
-  );
+QED
 
 Theorem error_bound_lemma1:
   !fracw x.
@@ -324,11 +333,12 @@ QED
 
 (* ------------------------------------------------------------------------ *)
 
-val error_bound_lemma2 = Q.prove(
-  `!fracw x.
+Theorem error_bound_lemma2[local]:
+   !fracw x.
       0r <= x /\ x < 1 /\ 0 < fracw ==>
       ?n. n <= 2 EXP fracw /\
-          abs (x - &n / 2 pow fracw) <= inv (2 pow (fracw + 1))`,
+          abs (x - &n / 2 pow fracw) <= inv (2 pow (fracw + 1))
+Proof
   ntac 2 gen_tac
   \\ disch_then
        (fn th => Q.X_CHOOSE_THEN `n` (CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)
@@ -347,15 +357,16 @@ val error_bound_lemma2 = Q.prove(
   >- (qexists_tac `n` \\ fs [])
   \\ qexists_tac `SUC n`
   \\ fs []
-  );
+QED
 
 (* ------------------------------------------------------------------------ *)
 
-val error_bound_lemma3 = Q.prove(
-  `!fracw x.
+Theorem error_bound_lemma3[local]:
+   !fracw x.
        1r <= x /\ x < 2 /\ 0 < fracw ==>
        ?n. n <= 2 EXP fracw /\
-           abs ((1 + &n / 2 pow fracw) - x) <= inv (2 pow (fracw + 1))`,
+           abs ((1 + &n / 2 pow fracw) - x) <= inv (2 pow (fracw + 1))
+Proof
   rpt strip_tac
   \\ Q.SUBGOAL_THEN `0r <= x - 1 /\ x - 1 < 1 /\ 0 < fracw`
        (assume_tac o MATCH_MP error_bound_lemma2)
@@ -366,28 +377,30 @@ val error_bound_lemma3 = Q.prove(
      )
   \\ metis_tac
        [ABS_NEG, REAL_NEG_SUB, REAL_ARITH ``a - (b - c) = (c + a:real) - b``]
-  );
+QED
 
 (* ------------------------------------------------------------------------ *)
 
-val two_pow_over_pre = Q.prove(
-   `!n. 0 < n ==> (2 pow n / 2 pow (n - 1) = 2)`,
+Theorem two_pow_over_pre[local]:
+    !n. 0 < n ==> (2 pow n / 2 pow (n - 1) = 2)
+Proof
    rpt strip_tac
    \\ imp_res_tac arithmeticTheory.LESS_ADD_1
    \\ fs [POW_ADD,
           realTheory.REAL_DIV_LMUL_CANCEL
           |> Q.SPECL [`2 pow n`, `2`, `1`]
           |> SIMP_RULE (srw_ss()) []]
-   );
+QED
 
-val error_bound_lemma4 = Q.prove(
-  `!x. 1r <= x /\ x < 2 /\ 1 < dimindex (:'w) ==>
+Theorem error_bound_lemma4[local]:
+   !x. 1r <= x /\ x < 2 /\ 1 < dimindex (:'w) ==>
        ?e f.
          abs (float_to_real <| Sign := 0w;
                                Exponent := e : 'w word;
                                Significand := f : 't word |> - x) <=
          inv (2 pow (dimindex (:'t) + 1)) /\
-         ((e = n2w (bias (:'w))) \/ (e = n2w (INT_MIN (:'w))) /\ (f = 0w))`,
+         ((e = n2w (bias (:'w))) \/ (e = n2w (INT_MIN (:'w))) /\ (f = 0w))
+Proof
   gen_tac
   \\ DISCH_TAC
   \\ Q.SUBGOAL_THEN `1 <= x /\ x < 2 /\ 0 < dimindex (:'t)` assume_tac
@@ -408,18 +421,19 @@ val error_bound_lemma4 = Q.prove(
   \\ rfs [float_to_real_def, GSYM realTheory.REAL_OF_NUM_POW, two_pow_over_pre,
           realTheory.REAL_DIV_REFL, wordsTheory.INT_MAX_def,
           wordsTheory.INT_MIN_LT_DIMWORD, DECIDE ``0 < x ==> x <> 0n``]
-  );
+QED
 
 (* ------------------------------------------------------------------------ *)
 
-val error_bound_lemma5 = Q.prove(
-  `!x. 1r <= abs x /\ abs x < 2 /\ 1 < dimindex (:'w) ==>
+Theorem error_bound_lemma5[local]:
+   !x. 1r <= abs x /\ abs x < 2 /\ 1 < dimindex (:'w) ==>
        ?s e f.
          abs (float_to_real <| Sign := s;
                                Exponent := e : 'w word;
                                Significand := f : 't word |> - x) <=
          inv (2 pow (dimindex (:'t) + 1)) /\
-         ((e = n2w (bias (:'w))) \/ (e = n2w (INT_MIN (:'w))) /\ (f = 0w))`,
+         ((e = n2w (bias (:'w))) \/ (e = n2w (INT_MIN (:'w))) /\ (f = 0w))
+Proof
   gen_tac
   \\ DISCH_TAC
   \\ SUBGOAL_THEN ``1 <= (x:real) /\ x < 2 /\ 1 < dimindex (:'w) \/
@@ -437,28 +451,30 @@ val error_bound_lemma5 = Q.prove(
                  REAL_ARITH ``abs (-2 - x) = abs (2 - -x)``,
                  REAL_ARITH ``abs (-1 * y - x) = abs (y - -x)``])
   \\ rfs [DECIDE ``0 < x ==> x <> 0n``, wordsTheory.ZERO_LT_INT_MAX]
-  );
+QED
 
 (* ------------------------------------------------------------------------ *)
 
 val REAL_LE_LCANCEL_IMP =
   METIS_PROVE [REAL_LE_LMUL] ``!x y z. 0r < x /\ x * y <= x * z ==> y <= z``
 
-val lem = Q.prove(
-  `!a x.
-    1 < a ==> (2 pow (a - 2) * inv (2 pow (a - 1 + x)) = inv (2 pow (x + 1)))`,
+Theorem lem[local]:
+   !a x.
+    1 < a ==> (2 pow (a - 2) * inv (2 pow (a - 1 + x)) = inv (2 pow (x + 1)))
+Proof
   rw [realTheory.REAL_INV_1OVER, realTheory.mult_ratr, realTheory.mult_ratl,
       realTheory.REAL_EQ_RDIV_EQ, GSYM realTheory.POW_ADD,
       realTheory.REAL_DIV_REFL]
-  );
+QED
 
-val error_bound_lemma6 = Q.prove(
-  `!expw fracw x.
+Theorem error_bound_lemma6[local]:
+   !expw fracw x.
        0 <= x /\ x < inv (2 pow (2 ** (expw - 1) - 2)) /\
        1 < expw /\ 0 < fracw ==>
        ?n. n <= 2 EXP fracw /\
            abs (x - 2 / 2 pow (2 ** (expw - 1) - 1) * &n / 2 pow fracw) <=
-           inv (2 pow (2 ** (expw - 1) - 1 + fracw))`,
+           inv (2 pow (2 ** (expw - 1) - 1 + fracw))
+Proof
   rpt strip_tac
   \\ Q.SPECL_THEN [`fracw`, `2 pow (2 ** (expw - 1) - 2) * x`] mp_tac
         error_bound_lemma2
@@ -493,23 +509,25 @@ val error_bound_lemma6 = Q.prove(
          |> GSYM
          |> ONCE_REWRITE_RULE [REAL_MUL_COMM]
          ]
-  );
+QED
 
 (* ------------------------------------------------------------------------ *)
 
-val lem = Q.prove(
-  `!n. &(2 * 2 ** n) = 2 * 2 pow n`,
+Theorem lem[local]:
+   !n. &(2 * 2 ** n) = 2 * 2 pow n
+Proof
   simp [realTheory.REAL_OF_NUM_POW]
-  );
+QED
 
-val error_bound_lemma7 = Q.prove(
-  `!x. 0 <= x /\ x < inv (2 pow (bias (:'w) - 1)) /\ 1 < dimindex (:'w) ==>
+Theorem error_bound_lemma7[local]:
+   !x. 0 <= x /\ x < inv (2 pow (bias (:'w) - 1)) /\ 1 < dimindex (:'w) ==>
        ?e f.
          abs (float_to_real <| Sign := 0w;
                                Exponent := e : 'w word;
                                Significand := f : 't word |> - x) <=
          inv (2 pow (bias (:'w) + dimindex (:'t))) /\
-         ((e = 0w) \/ (e = 1w) /\ (f = 0w))`,
+         ((e = 0w) \/ (e = 1w) /\ (f = 0w))
+Proof
   gen_tac
   \\ DISCH_TAC
   \\ Q.SUBGOAL_THEN
@@ -536,18 +554,19 @@ val error_bound_lemma7 = Q.prove(
   \\ simp [Once realTheory.ABS_SUB]
   \\ rfs [realTheory.mult_rat, realTheory.mult_ratl, Once realTheory.div_ratl,
           realTheory.REAL_DIV_RMUL_CANCEL, lem]
-  );
+QED
 
 (* ------------------------------------------------------------------------ *)
 
-val error_bound_lemma8 = Q.prove(
-  `!x. abs x < inv (2 pow (bias (:'w) - 1)) /\ 1 < dimindex (:'w) ==>
+Theorem error_bound_lemma8[local]:
+   !x. abs x < inv (2 pow (bias (:'w) - 1)) /\ 1 < dimindex (:'w) ==>
        ?s e f.
          abs (float_to_real <| Sign := s;
                                Exponent := e : 'w word;
                                Significand := f : 't word |> - x) <=
          inv (2 pow (bias (:'w) + dimindex (:'t))) /\
-         ((e = 0w) \/ (e = 1w) /\ (f = 0w))`,
+         ((e = 0w) \/ (e = 1w) /\ (f = 0w))
+Proof
   gen_tac
   \\ DISCH_TAC
   \\ SUBGOAL_THEN
@@ -565,25 +584,26 @@ val error_bound_lemma8 = Q.prove(
                  DECIDE ``0 < x ==> x <> 0n``, wordsTheory.ZERO_LT_INT_MAX,
                  REAL_ARITH ``abs (y - -x) = abs (-1 * y - x)``])
   \\ rfs [DECIDE ``0 < x ==> x <> 0n``, wordsTheory.ZERO_LT_INT_MAX]
-  );
+QED
 
 (* ------------------------------------------------------------------------ *)
 
-val float_to_real_scale_up = Q.prove(
-  `!s e f k.
+Theorem float_to_real_scale_up[local]:
+   !s e f k.
       e <> 0w /\ (e + n2w k <> 0w) /\ (w2n (e + n2w k) = w2n e + k) ==>
       (float_to_real <| Sign := s;
                         Exponent := e + n2w k : 'w word;
                         Significand := f : 't word |> =
        2 pow k * float_to_real <| Sign := s;
                                   Exponent := e : 'w word;
-                                  Significand := f : 't word |>)`,
+                                  Significand := f : 't word |>)
+Proof
   simp [float_to_real_def, REAL_POW_ADD, real_div,
         AC REAL_MUL_ASSOC REAL_MUL_COMM]
-  );
+QED
 
-val float_to_real_scale_down = Q.prove(
-  `!s e f k.
+Theorem float_to_real_scale_down[local]:
+   !s e f k.
       e <> 0w /\ n2w k <> e /\
       (w2n (e - n2w k + n2w k) = w2n (e - n2w k) + k) ==>
       (float_to_real <| Sign := s;
@@ -592,7 +612,8 @@ val float_to_real_scale_down = Q.prove(
        inv (2 pow k) *
        float_to_real <| Sign := s;
                         Exponent := e : 'w word;
-                        Significand := f : 't word |>)`,
+                        Significand := f : 't word |>)
+Proof
   rpt strip_tac
   \\ `e + -n2w k <> 0w /\ (e = (e - n2w k) + n2w k)`
   by metis_tac [wordsTheory.WORD_EQ_SUB_ZERO, wordsTheory.WORD_SUB_INTRO,
@@ -603,35 +624,40 @@ val float_to_real_scale_down = Q.prove(
   \\ simp [SIMP_CONV (srw_ss()) [] ``a + b + -b : 'a word``,
            REAL_MUL_ASSOC, realTheory.mult_ratr, REAL_MUL_LINV, POW_NZ,
            REAL_ARITH ``inv a * b * c * a * d = (inv a * a) * b * c * d``]
-  );
+QED
 
 (* ------------------------------------------------------------------------ *)
 
-val two_times_bias_lt = Q.prove(
-   `bias (:'a) + bias (:'a) < dimword (:'a) - 1`,
+Theorem two_times_bias_lt[local]:
+    bias (:'a) + bias (:'a) < dimword (:'a) - 1
+Proof
    simp [wordsTheory.INT_MAX_def, wordsTheory.INT_MAX_def,
          GSYM wordsTheory.dimword_IS_TWICE_INT_MIN,
          DECIDE ``1n < n ==> 0 < n - 1``]
-  );
+QED
 
-val int_min_bias_plus1 = Q.prove(
-  `INT_MIN (:'a) = INT_MAX (:'a) + 1`,
-  simp [wordsTheory.INT_MAX_def, DECIDE ``0n < n ==> (n - 1 + 1 = n)``])
+Theorem int_min_bias_plus1[local]:
+   INT_MIN (:'a) = INT_MAX (:'a) + 1
+Proof
+  simp [wordsTheory.INT_MAX_def, DECIDE ``0n < n ==> (n - 1 + 1 = n)``]
+QED
 
 
-val lem = Q.prove(
-  `1 < dimindex (:'a) ==>
-   2 pow (UINT_MAX (:'a) - 1) / 2 pow (INT_MAX (:'a)) <= 2 pow (INT_MAX (:'a))`,
+Theorem lem[local]:
+   1 < dimindex (:'a) ==>
+   2 pow (UINT_MAX (:'a) - 1) / 2 pow (INT_MAX (:'a)) <= 2 pow (INT_MAX (:'a))
+Proof
   rw [GSYM POW_ADD, realTheory.REAL_LE_LDIV_EQ]
   \\ match_mp_tac REAL_POW_MONO
   \\ simp [wordsTheory.UINT_MAX_def, wordsTheory.ZERO_LT_INT_MAX,
            DECIDE ``0n < a ==> 0 < 2 * a``,
            wordsTheory.dimword_IS_TWICE_INT_MIN]
   \\ simp [wordsTheory.INT_MAX_def]
-  );
+QED
 
-val lem2 = Q.prove(
-  `!a b c d : real. 0 < b /\ 0 <= c /\ a < b * c /\ b <= d ==> a < c * d`,
+Theorem lem2[local]:
+   !a b c d : real. 0 < b /\ 0 <= c /\ a < b * c /\ b <= d ==> a < c * d
+Proof
   rw []
   \\ `?p. 0 <= p /\ (d = b + p)`
   by (qexists_tac `d - b`
@@ -644,7 +670,7 @@ val lem2 = Q.prove(
           |> Q.SPECL [`0`, `c`, `0`, `p`]
           |> SIMP_RULE (srw_ss()) []]
   \\ simp [REAL_ARITH ``0 <= c /\ a < b ==> a < b + c : real``]
-  );
+QED
 
 Theorem error_bound_big1[local]:
   !x k. 2 pow k <= abs x /\ abs x < 2 pow SUC k /\
@@ -751,28 +777,32 @@ Proof
      )
 QED
 
-val error_bound_big = Q.prove(
-  `!k x.
+Theorem error_bound_big[local]:
+   !k x.
       2 pow k <= abs x /\ abs x < 2 pow (SUC k) /\
       abs x < threshold (:'t # 'w) /\ 1 < dimindex (:'w) ==>
-      abs (error (:'t # 'w) x) <= 2 pow k / 2 pow (dimindex (:'t) + 1)`,
-  prove_tac [error_bound_big1, error_at_worst_lemma, REAL_LE_TRANS])
+      abs (error (:'t # 'w) x) <= 2 pow k / 2 pow (dimindex (:'t) + 1)
+Proof
+  prove_tac [error_bound_big1, error_at_worst_lemma, REAL_LE_TRANS]
+QED
 
 (* ------------------------------------------------------------------------ *)
 
-val suc_bias_lt_dimword = Q.prove(
-  `1 < dimindex (:'a) ==> bias (:'a) + 1 < dimword (:'a)`,
+Theorem suc_bias_lt_dimword[local]:
+   1 < dimindex (:'a) ==> bias (:'a) + 1 < dimword (:'a)
+Proof
   simp [wordsTheory.INT_MAX_def, wordsTheory.dimword_IS_TWICE_INT_MIN,
         DECIDE ``0n < n ==> (n - 1 + 1 = n)``]
-  );
+QED
 
-val error_bound_small1 = Q.prove(
-  `!x k. inv (2 pow SUC k) <= abs x /\ abs x < inv (2 pow k) /\
+Theorem error_bound_small1[local]:
+   !x k. inv (2 pow SUC k) <= abs x /\ abs x < inv (2 pow k) /\
          k < bias (:'w) - 1 /\ 1 < dimindex (:'w) ==>
          ?a : ('t, 'w) float.
            float_is_finite a /\
            abs (float_to_real a - x) <=
-           inv (2 pow SUC k * 2 pow (dimindex (:'t) + 1))`,
+           inv (2 pow SUC k * 2 pow (dimindex (:'t) + 1))
+Proof
   rpt strip_tac
   \\ qspec_then `x * 2 pow (SUC k)` mp_tac error_bound_lemma5
   \\ Lib.W (Lib.C SUBGOAL_THEN mp_tac o lhand o lhand o snd)
@@ -834,15 +864,18 @@ val error_bound_small1 = Q.prove(
   by simp [REAL_MUL_ASSOC, REAL_MUL_RINV, REAL_POS_NZ]
   \\ simp [REAL_POW_LT, REAL_SUB_LDISTRIB, REAL_POS_NZ, REAL_INV_MUL]
   \\ NO_STRIP_FULL_SIMP_TAC (srw_ss()) [AC REAL_MUL_ASSOC REAL_MUL_COMM]
-  );
+QED
 
-val REAL_LE_INV2 = Q.prove(
-  `!x y. 0 < x /\ x <= y ==> inv y <= inv x`,
-  metis_tac [REAL_LE_LT, REAL_LT_INV])
+Theorem REAL_LE_INV2[local]:
+   !x y. 0 < x /\ x <= y ==> inv y <= inv x
+Proof
+  metis_tac [REAL_LE_LT, REAL_LT_INV]
+QED
 
-val lem = Q.prove(
-  `!n m. 2n <= n /\ 0 < m ==>
-         2 pow (n - 1) < 2 pow (2 * n - 1) - 2 pow (2 * n - 2) / &(4 * m)`,
+Theorem lem[local]:
+   !n m. 2n <= n /\ 0 < m ==>
+         2 pow (n - 1) < 2 pow (2 * n - 1) - 2 pow (2 * n - 2) / &(4 * m)
+Proof
   rw [realTheory.REAL_LT_SUB_LADD]
   \\ `1 < 4 * m /\ 0 < 4 * m` by decide_tac
   \\ `!x y:real. x < y = x * &(4 * m) < y * &(4 * m)`
@@ -874,10 +907,11 @@ val lem = Q.prove(
   \\ simp [GSYM (CONJUNCT2 pow)]
   \\ match_mp_tac REAL_POW_MONO
   \\ simp []
-  );
+QED
 
-val threshold_gt1 = Q.prove(
-  `1 < dimindex (:'w) ==> 1 < threshold (:'t # 'w)`,
+Theorem threshold_gt1[local]:
+   1 < dimindex (:'w) ==> 1 < threshold (:'t # 'w)
+Proof
   simp [threshold, realTheory.REAL_INV_1OVER, realTheory.REAL_LT_RDIV_EQ,
         realTheory.mult_ratl, realTheory.mult_ratr,
         GSYM realTheory.REAL_OF_NUM_POW, prim_recTheory.LESS_NOT_EQ,
@@ -892,14 +926,15 @@ val threshold_gt1 = Q.prove(
   \\ `2n <= n` by simp [Abbr `n`, wordsTheory.INT_MIN_def]
   \\ `0n < m` by simp [Abbr `m`, wordsTheory.INT_MIN_def]
   \\ simp [lem]
-  );
+QED
 
-val error_bound_small = Q.prove(
-  `!k x.
+Theorem error_bound_small[local]:
+   !k x.
      inv (2 pow (SUC k)) <= abs x /\ abs x < inv (2 pow k) /\
      k < bias (:'w) - 1 /\ 1 < dimindex (:'w) ==>
      abs (error (:'t # 'w) x) <=
-     inv (2 pow (SUC k) * 2 pow (dimindex (:'t) + 1))`,
+     inv (2 pow (SUC k) * 2 pow (dimindex (:'t) + 1))
+Proof
   rpt strip_tac
   \\ `?a : ('t, 'w) float.
         float_is_finite a /\
@@ -919,20 +954,22 @@ val error_bound_small = Q.prove(
   \\ conj_tac
   >- (match_mp_tac REAL_LE_INV2 \\ simp [REAL_POW_LE_1])
   \\ simp [realTheory.REAL_INV_1OVER, threshold_gt1]
-  );
+QED
 
 (* ------------------------------------------------------------------------ *)
 
-val lem = Q.prove(
-  `1 < dimindex (:'w) ==> -1w <> (1w : 'w word)`,
+Theorem lem[local]:
+   1 < dimindex (:'w) ==> -1w <> (1w : 'w word)
+Proof
   srw_tac [wordsLib.WORD_BIT_EQ_ss] []
   \\ qexists_tac `1`
   \\ simp [wordsTheory.word_index]
-  );
+QED
 
-val error_bound_tiny = Q.prove(
-  `!x. abs x < inv (2 pow (bias (:'w) - 1)) /\ 1 < dimindex (:'w) ==>
-       abs (error (:'t # 'w) x) <= inv (2 pow (bias (:'w) + dimindex (:'t)))`,
+Theorem error_bound_tiny[local]:
+   !x. abs x < inv (2 pow (bias (:'w) - 1)) /\ 1 < dimindex (:'w) ==>
+       abs (error (:'t # 'w) x) <= inv (2 pow (bias (:'w) + dimindex (:'t)))
+Proof
   strip_tac
   \\ DISCH_TAC
   \\ `?a : ('t, 'w) float.
@@ -961,26 +998,28 @@ val error_bound_tiny = Q.prove(
   \\ CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [GSYM (EVAL ``2r pow 0``)]))
   \\ match_mp_tac REAL_POW_MONO
   \\ simp []
-  );
+QED
 
 (* -------------------------------------------------------------------------
    Stronger versions not requiring exact location of the interval.
    ------------------------------------------------------------------------- *)
 
-val lem = Q.prove(
-  `!n. 1 < n ==> (2 * inv (2 pow (n - 1)) = inv (2 pow (n - 2)))`,
+Theorem lem[local]:
+   !n. 1 < n ==> (2 * inv (2 pow (n - 1)) = inv (2 pow (n - 2)))
+Proof
   rw [realTheory.REAL_INV_1OVER, realTheory.REAL_EQ_RDIV_EQ,
       REAL_ARITH ``2 * (a:real) * b = a * (2 * b)``, GSYM (CONJUNCT2 pow),
       DECIDE ``1 < n ==> (SUC (n - 2) = n - 1)``,
       realTheory.REAL_DIV_RMUL
       ]
-  );
+QED
 
-val error_bound_norm_strong = Q.prove(
-  `!x j.
+Theorem error_bound_norm_strong[local]:
+   !x j.
     abs x < threshold (:'t # 'w) /\
     abs x < 2 pow (SUC j) / 2 pow (bias (:'w) - 1) /\ 1 < bias (:'w) ==>
-    abs (error (:'t # 'w) x) <= 2 pow j / 2 pow (bias (:'w) + dimindex (:'t))`,
+    abs (error (:'t # 'w) x) <= 2 pow j / 2 pow (bias (:'w) + dimindex (:'t))
+Proof
   gen_tac
   \\ Induct
   >- (
@@ -1050,7 +1089,7 @@ val error_bound_norm_strong = Q.prove(
          |> Q.SPECL [`2 pow n`, `a`, `1`]
          |> SIMP_RULE (srw_ss()) []
         ]
-  );
+QED
 
 Theorem absolute_error_denormal:
   !x. abs x < threshold (:'t # 'w) /\ abs x < 2 * 1 / 2 pow (bias (:'w) - 1) /\
@@ -1074,20 +1113,24 @@ QED
    "1 + Epsilon" property (relative error bounding).
    ------------------------------------------------------------------------- *)
 
-val bias_imp_dimindex = Q.prove(
-  `1 < bias (:'a) ==> 1 < dimindex (:'a)`,
+Theorem bias_imp_dimindex[local]:
+   1 < bias (:'a) ==> 1 < dimindex (:'a)
+Proof
   rw [wordsTheory.INT_MAX_def, wordsTheory.INT_MIN_def]
   \\ spose_not_then assume_tac
   \\ `dimindex (:'a) = 1` by simp [DECIDE ``0n < n /\ ~(1 < n) ==> (n = 1)``]
   \\ fs []
-  );
+QED
 
-val lem = Q.prove(
-  `!n : num. n + SUC (n - 1) <= 2 ** n`,
-  Induct \\ rw [arithmeticTheory.EXP])
+Theorem lem[local]:
+   !n : num. n + SUC (n - 1) <= 2 ** n
+Proof
+  Induct \\ rw [arithmeticTheory.EXP]
+QED
 
-val THRESHOLD_MUL_LT = Q.prove(
-  `threshold (:'t # 'w) * 2 pow (bias (:'w) - 1) < 2 pow (2 EXP (bias (:'w)))`,
+Theorem THRESHOLD_MUL_LT[local]:
+   threshold (:'t # 'w) * 2 pow (bias (:'w) - 1) < 2 pow (2 EXP (bias (:'w)))
+Proof
   `2 pow (UINT_MAX (:'w) - 1) * inv (2 pow (bias (:'w))) = 2 pow (bias (:'w))`
   by (simp [REAL_INV_1OVER, realTheory.mult_ratr, realTheory.REAL_EQ_LDIV_EQ,
             GSYM REAL_POW_ADD]
@@ -1108,16 +1151,18 @@ val THRESHOLD_MUL_LT = Q.prove(
      )
   \\ match_mp_tac REAL_POW_MONO
   \\ simp [lem]
-  );
+QED
 
-val lem = Q.prove(
-  `!a b c:real. 0 < b ==> ((a / b) * c = a * (c / b))`,
+Theorem lem[local]:
+   !a b c:real. 0 < b ==> ((a / b) * c = a * (c / b))
+Proof
   rw [realTheory.mult_ratl, realTheory.mult_ratr]
-  );
+QED
 
-val LT_THRESHOLD_LT_POW_INV = Q.prove(
-  `!x. 1 < dimindex (:'w) ==> x < threshold (:'t # 'w) ==>
-       x < 2 pow (UINT_MAX (:'w) - 1) / 2 pow (bias (:'w) - 1)`,
+Theorem LT_THRESHOLD_LT_POW_INV[local]:
+   !x. 1 < dimindex (:'w) ==> x < threshold (:'t # 'w) ==>
+       x < 2 pow (UINT_MAX (:'w) - 1) / 2 pow (bias (:'w) - 1)
+Proof
   gen_tac
   \\ strip_tac
   \\ simp [threshold]
@@ -1128,12 +1173,13 @@ val LT_THRESHOLD_LT_POW_INV = Q.prove(
   \\ match_mp_tac (REAL_ARITH ``0r < a /\ 0r < b ==> a - b < a``)
   \\ `0r < &(2 * dimword (:'t))` by simp [DECIDE ``0n < n ==> 0 < 2 * n``]
   \\ simp [realTheory.REAL_LT_RDIV_0]
-  );
+QED
 
-val real_pos_in_binade = Q.prove(
-  `!x. normalizes (:'t # 'w) x /\ 0 <= x ==>
+Theorem real_pos_in_binade[local]:
+   !x. normalizes (:'t # 'w) x /\ 0 <= x ==>
        ?j. j <= UINT_MAX (:'w) - 2 /\ 2 pow j / 2 pow (bias (:'w) - 1) <= x /\
-           x < 2 pow (SUC j) / 2 pow (bias (:'w) - 1)`,
+           x < 2 pow (SUC j) / 2 pow (bias (:'w) - 1)
+Proof
   rw_tac arith_ss [normalizes_def, abs]
   \\ imp_res_tac bias_imp_dimindex
   \\ qspec_then `\n. 2 pow n / 2 pow (bias (:'w) - 1) <= x`
@@ -1175,64 +1221,73 @@ val real_pos_in_binade = Q.prove(
   by metis_tac [REAL_POW_MONO, REAL_ARITH ``1 <= 2r``]
   \\ full_simp_tac std_ss
        [REAL_LT_RDIV, REAL_POW_LT, REAL_ARITH ``0 < 2r``, real_lte]
-  );
+QED
 
-val real_neg_in_binade = Q.prove(
-  `!x. normalizes (:'t # 'w) x /\ 0 <= ~x ==>
+Theorem real_neg_in_binade[local]:
+   !x. normalizes (:'t # 'w) x /\ 0 <= ~x ==>
        ?j. j <= UINT_MAX (:'w) - 2 /\ 2 pow j / 2 pow (bias (:'w) - 1) <= ~x /\
-           ~x < 2 pow (SUC j) / 2 pow (bias (:'w) - 1)`,
-  metis_tac [normalizes_def, ABS_NEG, real_pos_in_binade])
+           ~x < 2 pow (SUC j) / 2 pow (bias (:'w) - 1)
+Proof
+  metis_tac [normalizes_def, ABS_NEG, real_pos_in_binade]
+QED
 
-val real_in_binade = Q.prove(
-  `!x. normalizes (:'t # 'w) x ==>
+Theorem real_in_binade[local]:
+   !x. normalizes (:'t # 'w) x ==>
        ?j. j <= UINT_MAX (:'w) - 2 /\
            2 pow j / 2 pow (bias (:'w) - 1) <= abs x /\
-           abs x < 2 pow (SUC j) / 2 pow (bias (:'w) - 1)`,
+           abs x < 2 pow (SUC j) / 2 pow (bias (:'w) - 1)
+Proof
   gen_tac
   \\ Cases_on `0 <= x`
   \\ asm_simp_tac arith_ss [abs, real_neg_in_binade, real_pos_in_binade,
                             REAL_ARITH ``~(0r <= x) ==> 0 <= ~x``]
-  );
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val error_bound_norm_strong_normalize = Q.prove(
-  `!x. normalizes (:'t # 'w) x ==>
+Theorem error_bound_norm_strong_normalize[local]:
+   !x. normalizes (:'t # 'w) x ==>
        ?j. abs (error (:'t # 'w) x) <=
-           2 pow j / 2 pow (bias (:'w) + dimindex (:'t))`,
-  metis_tac [real_in_binade, error_bound_norm_strong, normalizes_def])
+           2 pow j / 2 pow (bias (:'w) + dimindex (:'t))
+Proof
+  metis_tac [real_in_binade, error_bound_norm_strong, normalizes_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val inv_le = Q.prove(
-  `!a b. 0 < a /\ 0 < b ==> (inv a <= inv b = b <= a)`,
+Theorem inv_le[local]:
+   !a b. 0 < a /\ 0 < b ==> (inv a <= inv b = b <= a)
+Proof
   rw [realTheory.REAL_INV_1OVER, realTheory.REAL_LE_LDIV_EQ,
       realTheory.mult_ratl, realTheory.REAL_LE_RDIV_EQ]
-  );
+QED
 
-val relative_bound_lem = Q.prove(
-  `!x j. x <> 0 ==>
+Theorem relative_bound_lem[local]:
+   !x j. x <> 0 ==>
          (2 pow j * inv (2 pow (bias (:'w) - 1)) <= abs x =
-          inv (abs x) <= inv (2 pow j * inv (2 pow (bias (:'w) - 1))))`,
+          inv (abs x) <= inv (2 pow j * inv (2 pow (bias (:'w) - 1))))
+Proof
   REPEAT strip_tac
   \\ match_mp_tac (GSYM inv_le)
   \\ asm_simp_tac std_ss [REAL_ARITH ``x <> 0 ==> 0 < abs x``]
   \\ match_mp_tac realTheory.REAL_LT_MUL
   \\ simp_tac std_ss [realTheory.REAL_POW_LT, realTheory.REAL_LT_INV_EQ,
                       REAL_ARITH ``0 < 2r``]
-  );
+QED
 
-val inv_mul = Q.prove(
-  `!a b. a <> 0 /\ b <> 0 ==> (inv (a * inv b) = b / a)`,
+Theorem inv_mul[local]:
+   !a b. a <> 0 /\ b <> 0 ==> (inv (a * inv b) = b / a)
+Proof
   rw [realTheory.REAL_INV_MUL, realTheory.REAL_INV_NZ, realTheory.REAL_INV_INV]
   \\ simp [realTheory.REAL_INV_1OVER, realTheory.mult_ratl]
-  );
+QED
 
-val relative_error_zero = Q.prove(
-  `!x. (x = 0) ==>
+Theorem relative_error_zero[local]:
+   !x. (x = 0) ==>
        ?e. abs e <= 1 / 2 pow (dimindex (:'t) + 1) /\
            (float_to_real (round roundTiesToEven x : ('t, 'w) float) =
-            x * (1 + e))`,
+            x * (1 + e))
+Proof
   rw []
   \\ qexists_tac `0`
   \\ qspec_then `0`
@@ -1241,7 +1296,7 @@ val relative_error_zero = Q.prove(
   \\ match_mp_tac error_is_zero
   \\ qexists_tac `float_plus_zero (:'t # 'w)`
   \\ simp [binary_ieeeTheory.zero_to_real, binary_ieeeTheory.zero_properties]
-  );
+QED
 
 Theorem relative_error:
    !x. normalizes (:'t # 'w) x ==>
@@ -1311,29 +1366,33 @@ Proof
       REWRITE_RULE [pred_setTheory.GSPEC_ETA] is_finite_closest]
 QED
 
-val float_value_finite = Q.prove(
-  `!a. float_is_finite a ==> (float_value a = Float (float_to_real a))`,
+Theorem float_value_finite[local]:
+   !a. float_is_finite a ==> (float_value a = Float (float_to_real a))
+Proof
   Cases
   \\ rename [`float s e f`]
   \\ `float s e f = <| Sign := s; Exponent := e; Significand := f |>`
   by simp [float_component_equality]
   \\ simp [binary_ieeeTheory.float_tests, float_value_def]
-  );
+QED
 
 (* -------------------------------------------------------------------------
    Lifting of arithmetic operations.
    ------------------------------------------------------------------------- *)
 
-val finite_not = Q.prove(
-  `!a. float_is_finite a ==> ~float_is_infinite a /\ ~float_is_nan a`,
+Theorem finite_not[local]:
+   !a. float_is_finite a ==> ~float_is_infinite a /\ ~float_is_nan a
+Proof
   strip_tac
   \\ Cases_on `float_value a`
   \\ simp [float_is_finite_def, float_is_infinite_def, float_is_nan_def]
-  )
+QED
 
-val zero_le_ulp = Q.prove(
-  `0 <= ulp (:'t # 'w)`,
-  simp [ulp_def, ULP_def])
+Theorem zero_le_ulp[local]:
+   0 <= ulp (:'t # 'w)
+Proof
+  simp [ulp_def, ULP_def]
+QED
 
 val round_zero =
   binary_ieeeTheory.round_roundTiesToEven_is_zero
@@ -1781,4 +1840,3 @@ Proof
   \\ fs [round_roundTiesToEven_is_plus_zero,
          round_roundTiesToEven_is_minus_zero, zero_to_real]
 QED
-

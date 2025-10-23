@@ -27,6 +27,8 @@ val shouldfail : {testfn: 'a -> 'b, printresult: 'b -> string,
                   printarg : 'a -> string,
                   checkexn: exn -> bool} -> 'a -> unit
 
+val in_repl_mode      : ('a -> 'b) -> 'a -> 'b
+val in_batch_mode     : ('a -> 'b) -> 'a -> 'b
 val is_struct_HOL_ERR : string -> exn -> bool
 val check_HOL_ERRexn : (string * string * string -> bool) -> exn -> bool
 val check_HOL_ERR : (string * string * string -> bool) -> 'a testresult ->

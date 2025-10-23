@@ -84,8 +84,11 @@ QED
 
 val times_dnmb = MATCH_MP INT_EQ_RMUL_EXP (Q.SPEC `b` FRAC_DNMPOS) ;
 
-val box_equals = prove (``(a = b) ==> (c = a) /\ (d = b) ==> (c = d)``,
-  REPEAT STRIP_TAC THEN BasicProvers.VAR_EQ_TAC THEN ASM_SIMP_TAC bool_ss []) ;
+Theorem box_equals[local]:
+    (a = b) ==> (c = a) /\ (d = b) ==> (c = d)
+Proof
+  REPEAT STRIP_TAC THEN BasicProvers.VAR_EQ_TAC THEN ASM_SIMP_TAC bool_ss []
+QED
 
 Theorem RAT_EQUIV_TRANS:
   !a b c. rat_equiv a b /\ rat_equiv b c ==> rat_equiv a c
@@ -262,18 +265,18 @@ QED
 
 val _ = set_fixity "//" (Infixl 600)
 
-val _ = overload_on ("+",  ``rat_add``);
-val _ = overload_on ("-",  ``rat_sub``);
-val _ = overload_on ("*",  ``rat_mul``);
+Overload "+" = ``rat_add``
+Overload "-" = ``rat_sub``
+Overload "*" = ``rat_mul``
 val _ = overload_on (GrammarSpecials.decimal_fraction_special, ``rat_div``);
-val _ = overload_on ("/",  ``rat_div``);
-val _ = overload_on ("<",  ``rat_les``);
-val _ = overload_on ("<=", ``rat_leq``);
-val _ = overload_on (">",  ``rat_gre``);
-val _ = overload_on (">=", ``rat_geq``);
-val _ = overload_on ("~",  ``rat_ainv``);
-val _ = overload_on ("numeric_negate",  ``rat_ainv``);
-val _ = overload_on ("//",  ``rat_cons``);
+Overload "/" = ``rat_div``
+Overload "<" = ``rat_les``
+Overload "<=" = ``rat_leq``
+Overload ">" = ``rat_gre``
+Overload ">=" = ``rat_geq``
+Overload "~" = ``rat_ainv``
+Overload numeric_negate = ``rat_ainv``
+Overload "//" = ``rat_cons``
 
 val _ = add_ML_dependency "ratPP"
 val _ = add_user_printer ("rat.decimalfractions",
@@ -299,20 +302,29 @@ Proof
         REWRITE_TAC [rat_type_thm]
 QED
 
-val REP_ABS_EQUIV = prove(``!a. rat_equiv a (rep_rat (abs_rat a))``,
-        REWRITE_TAC [rat_type_thm]) ;
+Theorem REP_ABS_EQUIV[local]:
+   !a. rat_equiv a (rep_rat (abs_rat a))
+Proof
+        REWRITE_TAC [rat_type_thm]
+QED
 
 val RAT_ABS_EQUIV' = GSYM RAT_ABS_EQUIV ;
 val REP_ABS_EQUIV' = ONCE_REWRITE_RULE [RAT_EQUIV_SYM] REP_ABS_EQUIV ;
 
-val REP_ABS_DFN_EQUIV = prove(``!x. frac_nmr x * frac_dnm (rep_rat(abs_rat x)) = frac_nmr (rep_rat(abs_rat x)) * frac_dnm x``,
+Theorem REP_ABS_DFN_EQUIV[local]:
+   !x. frac_nmr x * frac_dnm (rep_rat(abs_rat x)) = frac_nmr (rep_rat(abs_rat x)) * frac_dnm x
+Proof
         GEN_TAC THEN
         REWRITE_TAC[GSYM rat_equiv_def] THEN
-        REWRITE_TAC[REP_ABS_EQUIV] );
+        REWRITE_TAC[REP_ABS_EQUIV]
+QED
 
-val RAT_IMP_EQUIV = prove(``!r1 r2. (r1 = r2) ==> rat_equiv r1 r2``,
+Theorem RAT_IMP_EQUIV[local]:
+   !r1 r2. (r1 = r2) ==> rat_equiv r1 r2
+Proof
         REPEAT STRIP_TAC THEN
-        ASM_REWRITE_TAC[RAT_EQUIV_REF]) ;
+        ASM_REWRITE_TAC[RAT_EQUIV_REF]
+QED
 
 (*==========================================================================
  * equivalence of rational numbers
@@ -2544,7 +2556,9 @@ Proof
         REWRITE_TAC[rat_of_num_def, RAT_ADD_LID]
 QED
 
-val RAT_OF_NUM_LEQ_0 = prove(``!n. 0 <= &n``,
+Theorem RAT_OF_NUM_LEQ_0[local]:
+   !n. 0 <= &n
+Proof
         Induct_on `n` THEN1
         PROVE_TAC[RAT_LEQ_REF] THEN
         REWRITE_TAC[RAT_OF_NUM] THEN
@@ -2552,7 +2566,8 @@ val RAT_OF_NUM_LEQ_0 = prove(``!n. 0 <= &n``,
         ASSUME_TAC (SPECL [``1:rat``, ``&n:rat``] RAT_0LES_0LEQ_ADD) THEN
         REWRITE_TAC[RAT_1, RAT_0] THEN
         REWRITE_TAC[rat_leq_def] THEN
-        PROVE_TAC[RAT_ADD_COMM] );
+        PROVE_TAC[RAT_ADD_COMM]
+QED
 
 (*--------------------------------------------------------------------------
  *  RAT_MINV_1: thm
@@ -2659,7 +2674,9 @@ QED
    |- !n m. ~&n + ~&m = ~&(n+m)
  *--------------------------------------------------------------------------*)
 
-val RAT_ADD_NUM1 = prove(``!n m. ( &n +  &m = &(n+m))``,
+Theorem RAT_ADD_NUM1[local]:
+   !n m. ( &n +  &m = &(n+m))
+Proof
         Induct_on `m` THEN
         Induct_on `n` THEN
         RW_TAC int_ss [RAT_ADD_LID, RAT_ADD_RID] THEN
@@ -2667,7 +2684,8 @@ val RAT_ADD_NUM1 = prove(``!n m. ( &n +  &m = &(n+m))``,
         UNDISCH_HD_TAC THEN
         REWRITE_TAC[RAT_OF_NUM] THEN
         `SUC (SUC n) + m = SUC m + SUC n` by ARITH_TAC THEN
-        PROVE_TAC[RAT_ADD_ASSOC, RAT_ADD_COMM] );
+        PROVE_TAC[RAT_ADD_ASSOC, RAT_ADD_COMM]
+QED
 
 Theorem RAT_ADD_NUM2[local]:
   !n m. (~&n + &m = if n<=m then &(m-n) else ~&(n-m))
@@ -2687,11 +2705,17 @@ Proof
   REWRITE_TAC[RAT_ADD_RINV, RAT_ADD_RID]
 QED
 
-val RAT_ADD_NUM3 = prove(``!n m.  &n + ~&m = if m<=n then &(n-m) else ~&(m-n)``,
-        PROVE_TAC[RAT_ADD_NUM2, RAT_ADD_COMM] );
+Theorem RAT_ADD_NUM3[local]:
+   !n m.  &n + ~&m = if m<=n then &(n-m) else ~&(m-n)
+Proof
+        PROVE_TAC[RAT_ADD_NUM2, RAT_ADD_COMM]
+QED
 
-val RAT_ADD_NUM4 = prove(``!n m. ~&n + ~&m = ~&(n+m)``,
-        PROVE_TAC[RAT_ADD_NUM1, RAT_EQ_AINV, RAT_AINV_ADD] );
+Theorem RAT_ADD_NUM4[local]:
+   !n m. ~&n + ~&m = ~&(n+m)
+Proof
+        PROVE_TAC[RAT_ADD_NUM1, RAT_EQ_AINV, RAT_AINV_ADD]
+QED
 
 Theorem RAT_ADD_NUM_CALCULATE = LIST_CONJ[RAT_ADD_NUM1, RAT_ADD_NUM2, RAT_ADD_NUM3, RAT_ADD_NUM4];
 
@@ -2711,23 +2735,35 @@ QED
    |- !n m. ~&n * ~&m =  &(n*m)
  *--------------------------------------------------------------------------*)
 
-val RAT_MUL_NUM1 = prove(``!n m. &n *  &m =  &(n*m)``,
+Theorem RAT_MUL_NUM1[local]:
+   !n m. &n *  &m =  &(n*m)
+Proof
         Induct_on `m` THEN
         Induct_on `n` THEN
         RW_TAC int_ss [RAT_MUL_LZERO, RAT_MUL_RZERO] THEN
         `!x. SUC x = x + 1` by ARITH_TAC THEN
         `(n+1) * (m+1) = n * m + n + m + 1:num` by ARITH_TAC THEN
         ASM_REWRITE_TAC[GSYM RAT_ADD_NUM1, RAT_LDISTRIB, RAT_RDISTRIB, RAT_ADD_ASSOC, RAT_MUL_ASSOC, RAT_MUL_LID, RAT_MUL_RID, MULT_CLAUSES] THEN
-        METIS_TAC[RAT_ADD_ASSOC, RAT_ADD_COMM, MULT_COMM] );
+        METIS_TAC[RAT_ADD_ASSOC, RAT_ADD_COMM, MULT_COMM]
+QED
 
-val RAT_MUL_NUM2 = prove(``!n m. ~&n *  &m = ~&(n*m)``,
-        PROVE_TAC[GSYM RAT_AINV_LMUL, RAT_EQ_AINV, RAT_MUL_NUM1] );
+Theorem RAT_MUL_NUM2[local]:
+   !n m. ~&n *  &m = ~&(n*m)
+Proof
+        PROVE_TAC[GSYM RAT_AINV_LMUL, RAT_EQ_AINV, RAT_MUL_NUM1]
+QED
 
-val RAT_MUL_NUM3 = prove(``!n m.  &n * ~&m = ~&(n*m)``,
-        PROVE_TAC[GSYM RAT_AINV_RMUL, RAT_EQ_AINV, RAT_MUL_NUM1] );
+Theorem RAT_MUL_NUM3[local]:
+   !n m.  &n * ~&m = ~&(n*m)
+Proof
+        PROVE_TAC[GSYM RAT_AINV_RMUL, RAT_EQ_AINV, RAT_MUL_NUM1]
+QED
 
-val RAT_MUL_NUM4 = prove(``!n m. ~&n * ~&m =  &(n*m)``,
-        PROVE_TAC[GSYM RAT_AINV_RMUL, GSYM RAT_AINV_LMUL, RAT_AINV_AINV, RAT_MUL_NUM1] );
+Theorem RAT_MUL_NUM4[local]:
+   !n m. ~&n * ~&m =  &(n*m)
+Proof
+        PROVE_TAC[GSYM RAT_AINV_RMUL, GSYM RAT_AINV_LMUL, RAT_AINV_AINV, RAT_MUL_NUM1]
+QED
 
 Theorem RAT_MUL_NUM_CALCULATE = LIST_CONJ[RAT_MUL_NUM1, RAT_MUL_NUM2, RAT_MUL_NUM3, RAT_MUL_NUM4];
 
@@ -2823,25 +2859,31 @@ Theorem RAT_EQ_NUM_CALCULATE[simp] =
 
 val RAT_LT_NUM1 = RAT_OF_NUM_LES
 
-val RAT_LT_NUM2 = Q.prove(
-  ‘-&m < &n <=> 0 < m \/ 0 < n’,
+Theorem RAT_LT_NUM2[local]:
+   -&m < &n <=> 0 < m \/ 0 < n
+Proof
   eq_tac >- (spose_not_then strip_assume_tac >> fs[]) >>
   strip_tac
   >- (irule RAT_LES_LEQ_TRANS >> qexists_tac `0` >> simp[] >>
       simp[Once RAT_AINV_LES]) >>
   irule RAT_LEQ_LES_TRANS >> qexists_tac `0` >> simp[] >>
   simp[rat_leq_def] >>
-  simp[Once RAT_AINV_LES]);
+  simp[Once RAT_AINV_LES]
+QED
 
-val RAT_LT_NUM3 = Q.prove(
-  ‘&m < -&n <=> F’,
+Theorem RAT_LT_NUM3[local]:
+   &m < -&n <=> F
+Proof
   simp[] >> strip_tac >>
   ‘-&n <= 0’ by simp[rat_leq_def, Once RAT_AINV_LES] >>
-  ‘&m < 0’ by metis_tac[RAT_LES_LEQ_TRANS] >> fs[])
+  ‘&m < 0’ by metis_tac[RAT_LES_LEQ_TRANS] >> fs[]
+QED
 
-val RAT_LT_NUM4 = Q.prove(
-  ‘-&m < -&n <=> n < m’,
-  simp[RAT_LES_AINV]);
+Theorem RAT_LT_NUM4[local]:
+   -&m < -&n <=> n < m
+Proof
+  simp[RAT_LES_AINV]
+QED
 
 Theorem RAT_LT_NUM_CALCULATE[simp] =
   LIST_CONJ [RAT_LT_NUM1, RAT_LT_NUM2, RAT_LT_NUM3, RAT_LT_NUM4];
@@ -2850,17 +2892,23 @@ Theorem RAT_LT_NUM_CALCULATE[simp] =
     RAT_LE_NUM
    ---------------------------------------------------------------------- *)
 
-val RAT_LE_NUM2 = Q.prove(
-  ‘-&m <= &n <=> T’,
-  simp[rat_leq_def]);
+Theorem RAT_LE_NUM2[local]:
+   -&m <= &n <=> T
+Proof
+  simp[rat_leq_def]
+QED
 
-val RAT_LE_NUM3 = Q.prove(
-  ‘&m <= -&n <=> (m = 0) /\ (n = 0)’,
-  simp[rat_leq_def]);
+Theorem RAT_LE_NUM3[local]:
+   &m <= -&n <=> (m = 0) /\ (n = 0)
+Proof
+  simp[rat_leq_def]
+QED
 
-val RAT_LE_NUM4 = Q.prove(
-  ‘-&m <= -&n <=> n <= m’,
-  simp[rat_leq_def]);
+Theorem RAT_LE_NUM4[local]:
+   -&m <= -&n <=> n <= m
+Proof
+  simp[rat_leq_def]
+QED
 
 Theorem RAT_LE_NUM_CALCULATE[simp] =
   LIST_CONJ [RAT_OF_NUM_LEQ, RAT_LE_NUM2, RAT_LE_NUM3, RAT_LE_NUM4];
@@ -3201,7 +3249,7 @@ QED
     more theorems about RAT_SGN : rat -> int  (-1,0,1)
    ---------------------------------------------------------------------- *)
 
-val _ = temp_overload_on ("RAT_SGN", ``rat_sgn``)
+Overload RAT_SGN[local] = ``rat_sgn``
 Theorem RAT_SGN_NUM_COND:
    rat_sgn (&n) = if n = 0 then 0 else 1
 Proof

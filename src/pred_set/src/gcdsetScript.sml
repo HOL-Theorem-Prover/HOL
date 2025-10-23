@@ -27,21 +27,25 @@ Definition gcdset_def[nocompute]:
                     { d | !e. e IN s ==> divides d e })
 End
 
-val FINITE_LEQ_MIN_SET = prove(
-  ``FINITE { n | n <= MIN_SET (s DELETE 0) }``,
+Theorem FINITE_LEQ_MIN_SET[local]:
+    FINITE { n | n <= MIN_SET (s DELETE 0) }
+Proof
   Q_TAC SUFF_TAC `
     { n | n <= MIN_SET (s DELETE 0) } = count (MIN_SET (s DELETE 0) + 1)
   ` THEN1 SRW_TAC [][] THEN
-  SRW_TAC [ARITH_ss][EXTENSION]);
+  SRW_TAC [ARITH_ss][EXTENSION]
+QED
 
-val NON_EMPTY_INTERSECTION = prove(
-  ``s <> {} /\ s <> {0} ==>
+Theorem NON_EMPTY_INTERSECTION[local]:
+    s <> {} /\ s <> {0} ==>
     { n | n <= MIN_SET (s DELETE 0) } INTER
-    { d | !e. e IN s ==> divides d e}  <> {}``,
+    { d | !e. e IN s ==> divides d e}  <> {}
+Proof
   STRIP_TAC THEN SIMP_TAC (srw_ss()) [EXTENSION] THEN Q.EXISTS_TAC `1` THEN
   SRW_TAC [][] THEN DEEP_INTRO_TAC MIN_SET_ELIM THEN
   SRW_TAC [ARITH_ss][EXTENSION] THEN
-  FULL_SIMP_TAC (srw_ss()) [EXTENSION] THEN METIS_TAC []);
+  FULL_SIMP_TAC (srw_ss()) [EXTENSION] THEN METIS_TAC []
+QED
 
 Theorem gcdset_divides:
     !e. e IN s ==> divides (gcdset s) e
@@ -106,7 +110,7 @@ val _ = export_rewrites ["gcdset_INSERT"]
 (* ------------------------------------------------------------------------- *)
 
 (* Overload the set of natural numbers (like count) *)
-val _ = overload_on("natural", ``\n. IMAGE SUC (count n)``);
+Overload natural = ``\n. IMAGE SUC (count n)``
 
 (* Theorem: j IN (natural n) <=> 0 < j /\ j <= n *)
 (* Proof:

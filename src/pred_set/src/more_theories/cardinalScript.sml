@@ -52,7 +52,7 @@ val _ = Unicode.unicode_version {u = UTF8.chr 0x2248, tmnm = "=~"};
 val _ = TeX_notation {hol = "=~",            TeX = ("\\ensuremath{\\approx}", 1)};
 val _ = TeX_notation {hol = UTF8.chr 0x2248, TeX = ("\\ensuremath{\\approx}", 1)};
 
-val _ = overload_on("=~", ``cardeq``)
+Overload "=~" = ``cardeq``
 
 Overload "≉" = “λa b. ¬(a ≈ b)”
 val _ = set_fixity "≉" (Infix(NONASSOC, 450))
@@ -64,9 +64,11 @@ Proof
   qexists_tac `\x. x` >> simp[]
 QED
 
-val cardeq_SYMlemma = prove(
-  ``!s t. s =~ t ==> t =~ s``,
-  rw[cardeq_def] >> metis_tac [BIJ_LINV_BIJ]);
+Theorem cardeq_SYMlemma[local]:
+    !s t. s =~ t ==> t =~ s
+Proof
+  rw[cardeq_def] >> metis_tac [BIJ_LINV_BIJ]
+QED
 
 
 Theorem cardeq_SYM:
@@ -86,7 +88,7 @@ Definition cardleq_def:
   cardleq s1 s2 <=> ?f. INJ f s1 s2
 End
 
-val _ = overload_on ("<<=", ``cardleq``)
+Overload "<<=" = ``cardleq``
 
 Theorem cardleq_REFL:
     !s:'a set. s <<= s
@@ -319,8 +321,8 @@ val _ = Unicode.unicode_version {u = UTF8.chr 0x227A, tmnm = "<</="};
 val _ = TeX_notation {hol = "<</=",          TeX = ("\\ensuremath{\\prec}", 1)};
 val _ = TeX_notation {hol = UTF8.chr 0x227A, TeX = ("\\ensuremath{\\prec}", 1)};
 
-val _ = overload_on ("cardlt", ``\s1 s2. ~(cardleq s2 s1)``); (* cardlt *)
-val _ = overload_on ("<</=", ``cardlt``);
+Overload cardlt = ``\s1 s2. ~(cardleq s2 s1)``(* cardlt *)
+Overload "<</=" = ``cardlt``
 
 Theorem cardleq_lteq:
     !s1 s2. s1 <<= s2 <=> s1 <</= s2 \/ (s1 =~ s2)
@@ -395,10 +397,11 @@ Proof
   simp_tac (srw_ss() ++ DNF_ss) [DISJ_ASSOC]
 QED
 
-val lemma1 = prove(
-  ``INFINITE M /\ M =~ M CROSS M ==>
+Theorem lemma1[local]:
+    INFINITE M /\ M =~ M CROSS M ==>
     M =~ {T;F} CROSS M /\
-    !A B. DISJOINT A B /\ A =~ M /\ B =~ M ==> A UNION B =~ M``,
+    !A B. DISJOINT A B /\ A =~ M /\ B =~ M ==> A UNION B =~ M
+Proof
   strip_tac >> CONJ_ASM1_TAC
   >- (match_mp_tac cardleq_ANTISYM >> conj_tac
       >- (simp[cardleq_def] >> qexists_tac `\x. (T,x)` >> simp[INJ_DEF]) >>
@@ -420,7 +423,8 @@ val lemma1 = prove(
   >- (`?a. a IN A /\ (f1 a = m)` by metis_tac [BIJ_DEF, SURJ_DEF] >>
       qexists_tac `a` >> simp[]) >>
   `?b. b IN B /\ (f2 b = m)` by metis_tac [BIJ_DEF, SURJ_DEF] >>
-  qexists_tac `b` >> simp[] >> metis_tac[]);
+  qexists_tac `b` >> simp[] >> metis_tac[]
+QED
 
 fun PRINT_TAC s gl = (print ("** " ^ s ^ "\n"); ALL_TAC gl)
 
@@ -1684,10 +1688,12 @@ Proof
     METIS_TAC [AND_IMP_INTRO]
 QED
 
-val lemma = prove (
-  ``(!x. x IN s ==> (g(f(x)) = x)) <=>
-    (!y x. x IN s /\ (y = f x) ==> (g y = x))``,
- MESON_TAC []);
+Theorem lemma[local]:
+    (!x. x IN s ==> (g(f(x)) = x)) <=>
+    (!y x. x IN s /\ (y = f x) ==> (g y = x))
+Proof
+ MESON_TAC []
+QED
 
 Theorem INJECTIVE_ON_LEFT_INVERSE:
    !f s. (!x y. x IN s /\ y IN s /\ (f x = f y) ==> (x = y)) <=>
@@ -2083,12 +2089,12 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 val _ = set_fixity "<=_c" (Infix(NONASSOC, 450)); (* for cardleq *)
-val _ = overload_on("<=_c", ``cardleq``);
-val _ = overload_on("<<=",  ``$<=_c``);           (* defined in pred_setTheory *)
+Overload "<=_c" = ``cardleq``
+Overload "<<=" = ``$<=_c``(* defined in pred_setTheory *)
 
 val _ = set_fixity "<_c" (Infix(NONASSOC, 450));  (* for cardlt *)
-val _ = overload_on("<_c", ``cardlt``);
-val _ = overload_on("<</=", ``$<_c``);
+Overload "<_c" = ``cardlt``
+Overload "<</=" = ``$<_c``
 
 val _ = set_fixity ">=_c" (Infix(NONASSOC, 450)); (* for cardgeq *)
 val _ = Unicode.unicode_version {u = UTF8.chr 0x227D, tmnm = ">=_c"};
@@ -2101,8 +2107,8 @@ val _ = TeX_notation {hol = ">_c",           TeX = ("\\ensuremath{\\succ}", 1)};
 val _ = TeX_notation {hol = UTF8.chr 0x227B, TeX = ("\\ensuremath{\\succ}", 1)};
 
 val _ = set_fixity "=_c" (Infix(NONASSOC, 450));  (* for cardeq *)
-val _ = overload_on("=_c", ``cardeq``);
-val _ = overload_on("=~",  ``$=_c``);
+Overload "=_c" = ``cardeq``
+Overload "=~" = ``$=_c``
 
 Theorem le_c:
     !s t. s <=_c t <=> ?f. (!x. x IN s ==> f(x) IN t) /\
@@ -2135,14 +2141,14 @@ Definition cardgeq_def:
     cardgeq s t = cardleq t s
 End
 
-val _ = overload_on (">=_c", ``cardgeq``);
+Overload ">=_c" = ``cardgeq``
 Theorem ge_c = cardgeq_def;
 
 Definition cardgt_def:
     cardgt s t = cardlt t s
 End
 
-val _ = overload_on (">_c",  ``cardgt``);
+Overload ">_c" = ``cardgt``
 Theorem gt_c = cardgt_def;
 
 Theorem LE_C:

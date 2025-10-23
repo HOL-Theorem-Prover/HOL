@@ -54,9 +54,18 @@ end
 
 val mk_type_rsubst = map (fn {redex,residue} => (pty redex |-> pty residue));
 
-fun store_thm(s,q,t) = boolLib.store_thm(s,btm q,t);
-fun store_thm_at loc (s,q,t) = boolLib.store_thm_at loc (s,btm q,t);
-fun prove (q, t) = Tactical.prove(btm q,t);
+fun store_thm(s,q,t) =
+    boolLib.store_thm(s,Parse.typedTerm q bool,t)
+    handle e => Feedback.render_exn (wrap_exn "Q" "store_thm" e);
+
+fun store_thm_at loc (s,q,t) =
+    boolLib.store_thm_at loc (s,Parse.typedTerm q bool,t)
+    handle e => Feedback.render_exn (wrap_exn "Q" "store_thm_at" e);
+
+fun prove (q, t) =
+    Tactical.prove(Parse.typedTerm q bool,t)
+    handle e => Feedback.render_exn (wrap_exn "Q" "prove" e);
+
 fun new_definition_at l (s,q) = boolLib.new_definition_at l (s,btm q);
 val new_definition = new_definition_at DB.Unknown
 fun new_infixl_definition(s,q,f) = boolLib.new_infixl_definition(s,btm q,f);

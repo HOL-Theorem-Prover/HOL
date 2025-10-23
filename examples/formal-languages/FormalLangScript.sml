@@ -995,26 +995,22 @@ QED
 (* Closure properties for FINITE_STATE                                       *)
 (*---------------------------------------------------------------------------*)
 
-Theorem FINITE_STATE_UNION:
-  FINITE_STATE(L1,A) ∧ FINITE_STATE (L2,A) ⇒ FINITE_STATE(L1 ∪ L2, A)
-Proof
-  rw [FINITE_STATE_def,IS_FORMAL_LANG_def] >>
-  rw [INTRINSIC_STATES_def] >>
-  rw [GSPEC_IMAGE,combinTheory.o_DEF,IMAGE_applied] >>
-  cheat
-QED
+fun Conjecture name q s = Parse.Term q
 
-Theorem FINITE_STATE_DOT:
-  FINITE_STATE(L1,A) ∧ FINITE_STATE (L2,A) ⇒ FINITE_STATE(L1 • L2, A)
-Proof
-  cheat
-QED
+val _ =
+  Conjecture "FINITE_STATE_UNION"
+    ‘FINITE_STATE(L1,A) ∧ FINITE_STATE (L2,A) ⇒ FINITE_STATE(L1 ∪ L2, A)’
+    "";
 
-Theorem FINITE_STATE_KSTAR:
-  FINITE_STATE(L,A) ⇒ FINITE_STATE(KSTAR L, A)
-Proof
-  cheat
-QED
+val _ =
+  Conjecture "FINITE_STATE_DOT"
+    ‘FINITE_STATE(L1,A) ∧ FINITE_STATE (L2,A) ⇒ FINITE_STATE(L1 • L2, A)’
+    "";
+
+val _ =
+  Conjecture "FINITE_STATE_KSTAR"
+    ‘FINITE_STATE(L,A) ⇒ FINITE_STATE(KSTAR L, A)’
+    "";
 
 (*---------------------------------------------------------------------------*)
 (* Inductive definition of regular sets                                      *)
@@ -1033,13 +1029,7 @@ Inductive REGSET:
   (∀L. REGSET (L,A) ⇒ REGSET (KSTAR L, A))
 End
 
-(*
-Theorem REGSET_IMP_FINITE_STATE:
-  REGSET ⊆ FINITE_STATE
-Proof
- simp [SUBSET_DEF,IN_DEF] >>
- ho_match_mp_tac REGSET_ind >> rw[]
- >- metis_tac [FINITE_STATE_EMPTYSET]
- >> cheat
-QED
-*)
+val _ =
+  Conjecture "REGSET_SUBSET_FINITE_STATE"
+    ‘REGSET ⊆ FINITE_STATE’
+    "";

@@ -160,7 +160,7 @@ Theorem density = REWRITE_RULE [density_measure_def] density_def
 
       `(f * m = v) <=> (f = v / m)`     or      `v / m * m = v`
  *)
-val _ = overload_on ("*", ``\f m. density_measure m f``);
+Overload "*" = ``\f m. density_measure m f``
 
 (* |- !m f s. (f * m) s = pos_fn_integral m (\x. f x * indicator_fn s x) *)
 Theorem density_measure = SIMP_RULE std_ss [FUN_EQ_THM] density_measure_def
@@ -7014,14 +7014,16 @@ Proof
  >> simp [INDICATOR_FN_POS]
 QED
 
-val suminf_measure = prove (
-  ``!M A. measure_space M /\ IMAGE (\i:num. A i) UNIV SUBSET measurable_sets M /\
+Theorem suminf_measure[local]:
+    !M A. measure_space M /\ IMAGE (\i:num. A i) UNIV SUBSET measurable_sets M /\
           disjoint_family A ==>
-         (suminf (\i. measure M (A i)) = measure M (BIGUNION {A i | i IN UNIV}))``,
+         (suminf (\i. measure M (A i)) = measure M (BIGUNION {A i | i IN UNIV}))
+Proof
     RW_TAC std_ss [GSYM IMAGE_DEF]
  >> MATCH_MP_TAC (SIMP_RULE std_ss [o_DEF] MEASURE_COUNTABLY_ADDITIVE)
  >> FULL_SIMP_TAC std_ss [IN_FUNSET, disjoint_family_on]
- >> ASM_SET_TAC []);
+ >> ASM_SET_TAC []
+QED
 
 (* reduced ‘N’ (measure_space) to ‘B’ (sigma_algebra) *)
 Theorem measure_space_distr :
@@ -8221,12 +8223,13 @@ Proof
  >> FULL_SIMP_TAC std_ss [le_add2, pos_fn_integral_add]
 QED
 
-val lemma_radon_seq_conv_sup = Q.prove (
-   `!f m v. (measure_space m /\ measure_space v /\
+Theorem lemma_radon_seq_conv_sup[local]:
+    !f m v. (measure_space m /\ measure_space v /\
             (m_space v = m_space m) /\ (measurable_sets v = measurable_sets m)) /\
             (measure v (m_space v) <> PosInf) ==>
       ?f. (!n. f n IN RADON_F m v) /\ (!x n. f n x <= f (SUC n) x) /\
-          (sup (IMAGE (\n. pos_fn_integral m (f n)) UNIV) = sup (RADON_F_integrals m v))`,
+          (sup (IMAGE (\n. pos_fn_integral m (f n)) UNIV) = sup (RADON_F_integrals m v))
+Proof
     RW_TAC std_ss [RADON_F_integrals_def]
  >> MATCH_MP_TAC EXTREAL_SUP_FUN_SEQ_MONO_IMAGE
  >> CONJ_TAC
@@ -8249,16 +8252,18 @@ val lemma_radon_seq_conv_sup = Q.prove (
  >- RW_TAC std_ss [EXTENSION,GSPECIFICATION, IN_IMAGE, RADON_F_def]
  >> CONJ_TAC
  >- RW_TAC std_ss [RADON_F_def, GSPECIFICATION, pos_fn_integral_mono]
- >> RW_TAC std_ss [lemma_radon_max_in_F]);
+ >> RW_TAC std_ss [lemma_radon_max_in_F]
+QED
 
-val RN_lemma1 = Q.prove (
-   `!m v e. measure_space m /\ measure_space v /\ 0 < e /\
+Theorem RN_lemma1[local]:
+    !m v e. measure_space m /\ measure_space v /\ 0 < e /\
            (m_space v = m_space m) /\ (measurable_sets v = measurable_sets m) /\
             measure v (m_space m) <> PosInf /\
             measure m (m_space m) <> PosInf ==>
         ?A. A IN measurable_sets m /\
             measure m (m_space m) - measure v (m_space m) <= measure m A - measure v A /\
-           !B. B IN measurable_sets m /\ B SUBSET A ==> -e < measure m B - measure v B`,
+           !B. B IN measurable_sets m /\ B SUBSET A ==> -e < measure m B - measure v B
+Proof
  (* proof *)
     RW_TAC std_ss []
  >> `!A. A IN measurable_sets m ==> measure m A <> NegInf`
@@ -8449,17 +8454,19 @@ val RN_lemma1 = Q.prove (
            >> ONCE_REWRITE_TAC [GSYM SPECIFICATION]
            >> RW_TAC std_ss [IN_IMAGE,IN_UNIV]
            >> METIS_TAC [])
- >> METIS_TAC [extreal_lt_def]);
+ >> METIS_TAC [extreal_lt_def]
+QED
 
-val RN_lemma2 = Q.prove (
-   `!m v. measure_space m /\ measure_space v /\
+Theorem RN_lemma2[local]:
+    !m v. measure_space m /\ measure_space v /\
          (m_space v = m_space m) /\
          (measurable_sets v = measurable_sets m) /\
           measure v (m_space m) <> PosInf /\
           measure m (m_space m) <> PosInf ==>
       ?A. A IN measurable_sets m /\
           measure m (m_space m) - measure v (m_space m) <= measure m A - measure v A /\
-         !B. B IN measurable_sets m /\ B SUBSET A ==> 0 <= measure m B - measure v B`,
+         !B. B IN measurable_sets m /\ B SUBSET A ==> 0 <= measure m B - measure v B
+Proof
  (* proof *)
     RW_TAC std_ss []
  >> Q.ABBREV_TAC `d = (\a. measure m a - measure v a)`
@@ -8588,7 +8595,8 @@ val RN_lemma2 = Q.prove (
            >> ONCE_REWRITE_TAC [GSYM SPECIFICATION]
            >> RW_TAC std_ss [IN_IMAGE, IN_UNIV]
            >> METIS_TAC [])
- >> METIS_TAC [le_neg]);
+ >> METIS_TAC [le_neg]
+QED
 
 Theorem Radon_Nikodym_finite : (* was: Radon_Nikodym *)
     !M N. measure_space M /\ measure_space N /\

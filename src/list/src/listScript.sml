@@ -146,7 +146,7 @@ Definition APPEND_def:
 End
 
 val _ = set_fixity "++" (Infixl 480);
-val _ = overload_on ("++", Term‘APPEND’);
+Overload "++" = Term‘APPEND’
 val _ = Unicode.unicode_version {u = UnicodeChars.doubleplus, tmnm = "++"}
 val _ = TeX_notation { hol = UnicodeChars.doubleplus,
                        TeX = ("\\HOLTokenDoublePlus", 1) }
@@ -180,9 +180,9 @@ Definition LIST_TO_SET_DEF[simp]:
   (LIST_TO_SET (h::t) x <=> (x = h) \/ LIST_TO_SET t x)
 End
 
-val _ = overload_on ("set", “LIST_TO_SET”)
-val _ = overload_on ("MEM", “\h:'a l:'a list. h IN LIST_TO_SET l”)
-val _ = overload_on ("", “\h:'a l:'a list. ~(h IN LIST_TO_SET l)”)
+Overload set = “LIST_TO_SET”
+Overload MEM = “\h:'a l:'a list. h IN LIST_TO_SET l”
+Overload "" = “\h:'a l:'a list. ~(h IN LIST_TO_SET l)”
   (* last over load here causes the term ~(h IN LIST_TO_SET l) to not print
      using overloads.  In particular, this prevents the existing overload for
      NOTIN from firing in this type instance, and allows ~MEM a l to print
@@ -2404,12 +2404,14 @@ val ALL_DISTINCT = new_recursive_definition {
   rec_axiom = list_Axiom};
 val _ = export_rewrites ["ALL_DISTINCT"]
 
-val lemma = prove(
-  “!l x. (FILTER ((=) x) l = []) = ~MEM x l”,
+Theorem lemma[local]:
+   !l x. (FILTER ((=) x) l = []) = ~MEM x l
+Proof
   LIST_INDUCT_TAC THEN
   ASM_SIMP_TAC (bool_ss ++ COND_elim_ss)
                [FILTER, MEM, NOT_CONS_NIL, EQ_IMP_THM,
-                LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]);
+                LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]
+QED
 
 Theorem ALL_DISTINCT_FILTER:
    !l. ALL_DISTINCT l = !x. MEM x l ==> (FILTER ((=) x) l = [x])
@@ -3089,11 +3091,12 @@ val f_REVERSE_lemma = TAC_PROOF (([],
       (GEN (“x:('a)list”) (BETA_RULE (AP_THM x (“REVERSE (x:('a)list)”))))))),
       ASM_REWRITE_TAC[]]);
 
-val SNOC_Axiom_old = prove(
-  “!(e:'b) (f:'b -> ('a -> (('a)list -> 'b))).
+Theorem SNOC_Axiom_old[local]:
+   !(e:'b) (f:'b -> ('a -> (('a)list -> 'b))).
         ?! fn1.
           (fn1[] = e) /\
-          (!x l. fn1(SNOC x l) = f(fn1 l)x l)”,
+          (!x l. fn1(SNOC x l) = f(fn1 l)x l)
+Proof
 
  let val lemma = CONV_RULE (EXISTS_UNIQUE_CONV)
        (REWRITE_RULE[REVERSE_REVERSE] (BETA_RULE (SPECL
@@ -3119,7 +3122,8 @@ val SNOC_Axiom_old = prove(
                  SPECL [“(fn1' o REVERSE):('a)list->'b”,
                         “(fn1'' o REVERSE):('a)list->'b”])
      ]
-  end);
+  end
+QED
 
 Theorem SNOC_Axiom:
    !e f. ?fn:'a list -> 'b.
@@ -3291,9 +3295,11 @@ Proof
   REWRITE_TAC [numTheory.NOT_SUC, NULL_DEF, CONJUNCT1 GENLIST, GENLIST_CONS]
 QED
 
-val GENLIST_AUX_lem = Q.prove(
-  ‘!n l1 l2. GENLIST_AUX f n l1 ++ l2 = GENLIST_AUX f n (l1 ++ l2)’,
-  Induct_on ‘n’ THEN SRW_TAC [] [GENLIST_AUX]);
+Theorem GENLIST_AUX_lem[local]:
+   !n l1 l2. GENLIST_AUX f n l1 ++ l2 = GENLIST_AUX f n (l1 ++ l2)
+Proof
+  Induct_on ‘n’ THEN SRW_TAC [] [GENLIST_AUX]
+QED
 
 Theorem GENLIST_GENLIST_AUX:
    !n. GENLIST f n = GENLIST_AUX f n []
@@ -4081,8 +4087,8 @@ End
 
 (* the "return" or "pure" constant for lists isn't an existing one, unlike
    the situation with 'a option, where SOME fits the bill. *)
-val _ = overload_on("SINGL", “\x:'a. [x]”)
-val _ = overload_on("", “\x:'a. [x]”)
+Overload SINGL = “\x:'a. [x]”
+Overload "" = “\x:'a. [x]”
 
 Theorem SINGL_LIST_APPLY_L:
    LIST_BIND (SINGL x) f = f x
@@ -4108,7 +4114,7 @@ Definition LIST_APPLY_def:
 End
 
 (* pick up the <*> syntax *)
-val _ = overload_on("APPLICATIVE_FAPPLY", “LIST_APPLY”)
+Overload APPLICATIVE_FAPPLY = “LIST_APPLY”
 
 (* derives the lift2 function to boot *)
 Definition LIST_LIFT2_def:
@@ -4506,12 +4512,14 @@ Theorem MEM_nub: MEM x (nub l) = MEM x l
 Proof simp[]
 QED
 
-val filter_helper = Q.prove (
-   ‘!x l1 l2.
-      ~MEM x l2 ==> (MEM x (FILTER (\x. x NOTIN set l2) l1) = MEM x l1)’,
+Theorem filter_helper[local]:
+    !x l1 l2.
+      ~MEM x l2 ==> (MEM x (FILTER (\x. x NOTIN set l2) l1) = MEM x l1)
+Proof
    Induct_on ‘l1’
    >> rw []
-   >> metis_tac []);
+   >> metis_tac []
+QED
 
 Theorem nub_append:
     !l1 l2. nub (l1++l2) = nub (FILTER (\x. ~MEM x l2) l1) ++ nub l2
@@ -4549,12 +4557,14 @@ Proof
    Induct_on ‘l2’ >> rw []
 QED
 
-val card_eqn_help = Q.prove (
-   ‘!l1 l2. CARD (set l2) - CARD (set l1 INTER set l2) =
-            CARD (set (FILTER (\x. x NOTIN set l1) l2))’,
+Theorem card_eqn_help[local]:
+    !l1 l2. CARD (set l2) - CARD (set l1 INTER set l2) =
+            CARD (set (FILTER (\x. x NOTIN set l1) l2))
+Proof
    rw [Once INTER_COMM]
    >> SIMP_TAC bool_ss [GSYM CARD_DIFF, FINITE_LIST_TO_SET]
-   >> metis_tac [list_to_set_diff]);
+   >> metis_tac [list_to_set_diff]
+QED
 
 Theorem length_nub_append:
     !l1 l2. LENGTH (nub (l1 ++ l2)) =
@@ -5356,17 +5366,21 @@ Proof
    SRW_TAC [] [LAST_DEF]
 QED
 
-val TAKE_compute = Q.prove(
-   ‘(!l. TAKE 0 l = []) /\
+Theorem TAKE_compute[local]:
+    (!l. TAKE 0 l = []) /\
     (!n. TAKE (SUC n) [] = []) /\
-    (!n h t. TAKE (SUC n) (h::t) = h :: TAKE n t)’,
-   SRW_TAC [] []);
+    (!n h t. TAKE (SUC n) (h::t) = h :: TAKE n t)
+Proof
+   SRW_TAC [] []
+QED
 
-val DROP_compute = Q.prove(
-   ‘(!l. DROP 0 l = l) /\
+Theorem DROP_compute[local]:
+    (!l. DROP 0 l = l) /\
     (!n. DROP (SUC n) [] = []) /\
-    (!n h t. DROP (SUC n) (h::t) = DROP n t)’,
-   SRW_TAC [] []);
+    (!n h t. DROP (SUC n) (h::t) = DROP n t)
+Proof
+   SRW_TAC [] []
+QED
 
 Theorem TAKE_compute = numLib.SUC_RULE TAKE_compute;
 

@@ -2157,7 +2157,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* For those same as monoids, use overloading  *)
-val _ = overload_on ("homo_group", ``homo_monoid``);
+Overload homo_group = ``homo_monoid``
 
 (* Theorem: [Closure] Group g /\ GroupHomo f g (homo_group g f) ==> x IN fG /\ y IN fG ==> x o y IN fG *)
 (* Proof:
@@ -2743,7 +2743,7 @@ Definition Subgroup_def:
 End
 
 (* Overload Subgroup *)
-val _ = overload_on ("<=", ``Subgroup``);
+Overload "<=" = ``Subgroup``
 (* already an infix symbol *)
 
 (* Note: The requirement $o = $* is stronger than the following:
@@ -3139,8 +3139,8 @@ Definition right_coset_def:
 End
 
 (* set overloading after all above defintions. *)
-val _ = overload_on ("*", ``coset g``);
-val _ = overload_on ("*", ``right_coset g``);
+Overload "*" = ``coset g``
+Overload "*" = ``right_coset g``
 
 (* Derive theorems. *)
 Theorem coset_alt =
@@ -3270,10 +3270,12 @@ QED
    x * z IN G /\ z IN H ==> ?z'. z' IN H /\ (x = x * z * z')
    Just take z' = |/z.
 *)
-val subgroup_coset_relate = prove(
-  ``!(g:'a group) h. h <= g ==> !x y. x IN G /\ y IN G /\ y IN x * H ==> ?z. z IN H /\ (x = y * z)``,
+Theorem subgroup_coset_relate[local]:
+    !(g:'a group) h. h <= g ==> !x y. x IN G /\ y IN G /\ y IN x * H ==> ?z. z IN H /\ (x = y * z)
+Proof
   rw[coset_def] >>
-  metis_tac[subgroup_inv, group_rinv_assoc, subgroup_element, group_inv_element, Subgroup_def]);
+  metis_tac[subgroup_inv, group_rinv_assoc, subgroup_element, group_inv_element, Subgroup_def]
+QED
 
 (* Theorem: For h <= g, |/y * x in H ==> x * H = y * H. *)
 (* Proof:
@@ -3283,8 +3285,9 @@ val subgroup_coset_relate = prove(
    (2) |/ y * x IN H /\ z IN H ==> ?z'. (y * z = x * z') /\ z' IN H
        Solving, z' = |/x * (y * z) = ( |/x * y) * z, and |/( |/y * x) = |/x * y IN H.
 *)
-val subgroup_coset_eq1 = prove(
-  ``!(g:'a group) h. h <= g ==> !x y. x IN G /\ y IN G /\ ( |/y * x) IN H ==> (x * H = y * H)``,
+Theorem subgroup_coset_eq1[local]:
+    !(g:'a group) h. h <= g ==> !x y. x IN G /\ y IN G /\ ( |/y * x) IN H ==> (x * H = y * H)
+Proof
   rpt strip_tac >>
   `Group h /\ Group g /\ !x y. x IN H /\ y IN H ==> (h.op x y = x * y)` by metis_tac[Subgroup_def] >>
   rw[coset_def, EXTENSION, EQ_IMP_THM] >| [
@@ -3295,7 +3298,8 @@ val subgroup_coset_eq1 = prove(
     `x * ( |/x * y * z) = y * z` by rw[group_assoc, group_linv_assoc] >>
     `|/( |/y * x) = |/x * y` by rw[group_inv_op] >>
     metis_tac[subgroup_inv, group_inv_element, group_op_element]
-  ]);
+  ]
+QED
 
 (* Theorem: For h <= g, x * H = y * H ==> |/y * x in H. *)
 (* Proof:   Since y IN y * H, always, by subgroup_coset_nonempty.
@@ -3303,12 +3307,14 @@ val subgroup_coset_eq1 = prove(
    hence ?z IN H /\  x = y * z  by subgroup_coset_relate.
    Solving, z = |/y * x, and z IN H.
 *)
-val subgroup_coset_eq2 = prove(
-  ``!(g:'a group) h. h <= g ==> !x y. x IN G /\ y IN G /\ (x * H = y * H) ==> ( |/y * x) IN H``,
+Theorem subgroup_coset_eq2[local]:
+    !(g:'a group) h. h <= g ==> !x y. x IN G /\ y IN G /\ (x * H = y * H) ==> ( |/y * x) IN H
+Proof
   rpt strip_tac >>
   `y IN x * H` by rw_tac std_ss[subgroup_coset_nonempty] >>
   `?z. z IN H /\ (x = y * z)` by rw_tac std_ss[subgroup_coset_relate] >>
-  metis_tac[group_rsolve, Subgroup_def, subgroup_element]);
+  metis_tac[group_rsolve, Subgroup_def, subgroup_element]
+QED
 
 (* Theorem: For h <= g, x * H = y * H iff |/y * x in H *)
 (* Proof:
@@ -3861,11 +3867,11 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Use K to denote k.carrier *)
-val _ = temp_overload_on ("K", ``(k:'a group).carrier``);
+Overload K[local] = ``(k:'a group).carrier``
 (* Use o to denote h.op *)
-val _ = temp_overload_on ("o", ``(h:'a group).op``);
+Overload o[local] = ``(h:'a group).op``
 (* Use #i to denote h.id *)
-val _ = temp_overload_on ("#i", ``(h:'a monoid).id``);
+Overload "#i"[local] = ``(h:'a monoid).id``
 
 (* Theorem: h <= g /\ k <= g ==> !x. x IN H INTER K ==> |/ x IN H INTER K *)
 (* Proof:
@@ -4018,7 +4024,7 @@ Definition subgroup_big_intersect_def:
        |>
 End
 
-val _ = overload_on ("sgbINTER", ``subgroup_big_intersect``);
+Overload sgbINTER = ``subgroup_big_intersect``
 (*
 > subgroup_big_intersect_def;
 val it = |- !g. sgbINTER g =
@@ -4413,7 +4419,7 @@ Definition group_div_def:
 End
 
 (* set overloading *)
-val _ = overload_on ("/", ``group_div g``);
+Overload "/" = ``group_div g``
 val _ = set_fixity "/" (Infixl 600); (* same as "*" in arithmeticScript.sml *)
 
 (* export simple defintion *)
@@ -4511,7 +4517,7 @@ Definition normal_subgroup_def:
 End
 
 (* set overloading *)
-val _ = overload_on ("<<", ``normal_subgroup``);
+Overload "<<" = ``normal_subgroup``
 val _ = set_fixity "<<" (Infixl 650); (* higher than * or / *)
 
 (* Theorem: Normal subgroup is a subgroup. *)
@@ -4644,7 +4650,7 @@ Definition group_equiv_def:
 End
 
 (* set overloading *)
-val _ = overload_on ("==", ``group_equiv g h``);
+Overload "==" = ``group_equiv g h``
 val _ = set_fixity "==" (Infix(NONASSOC, 450));
 
 (* Theorem: [== is reflexive] h << g ==> z == z   for z IN G. *)
@@ -4764,9 +4770,11 @@ QED
 *)
 
 (* Existence of coset generator: e IN CosetPartition g h ==> ?a. a IN G /\ (e = a * H) *)
-val lemma = prove(
-  ``!g h e. ?a. h <= g /\ e IN CosetPartition g h ==> a IN G /\ (e = a * H)``,
-  metis_tac[coset_partition_element]);
+Theorem lemma[local]:
+    !g h e. ?a. h <= g /\ e IN CosetPartition g h ==> a IN G /\ (e = a * H)
+Proof
+  metis_tac[coset_partition_element]
+QED
 (*
 - SKOLEM_THM;
 > val it = |- !P. (!x. ?y. P x y) <=> ?f. !x. P x (f x) : thm
@@ -4794,7 +4802,7 @@ Definition coset_op_def:
 End
 
 (* set overloading *)
-val _ = overload_on ("o", ``coset_op g h``);
+Overload o = ``coset_op g h``
 
 (* Theorem: h <= g ==> cogen g h H * H = H *)
 (* Proof:
@@ -4906,7 +4914,7 @@ Definition quotient_group_def:
 End
 
 (* set overloading *)
-val _ = overload_on ("/", ``quotient_group``);
+Overload "/" = ``quotient_group``
 val _ = set_fixity "/" (Infixl 600); (* same as "*" in arithmeticScript.sml *)
 
 (*
@@ -6115,7 +6123,7 @@ val PROD_IMAGE_THM = store_thm(
 *)
 
 (* Overload a communtative operation *)
-val _ = overload_on("FUN_COMM", ``\op f. !x y z. op (f x) (op (f y) z) = op (f y) (op (f x) z)``);
+Overload FUN_COMM = ``\op f. !x y z. op (f x) (op (f y) z) = op (f y) (op (f x) z)``
 
 (* Theorem: (OP_IMAGE op id f {} = id)  /\
             (FUN_COMM op f ==> !s. FINITE s ==>
@@ -6149,7 +6157,7 @@ Definition GROUP_IMAGE_DEF:
 End
 
 (* overload GROUP_IMAGE *)
-val _ = temp_overload_on("GPI", ``GROUP_IMAGE g``);
+Overload GPI[local] = ``GROUP_IMAGE g``
 
 (*
 > GROUP_IMAGE_DEF;
@@ -6256,7 +6264,7 @@ Definition group_fun_def:
 End
 
 (* overload on group function *)
-val _ = temp_overload_on("gfun", ``group_fun g``);
+Overload gfun[local] = ``group_fun g``
 
 (* Theorem: Monoid g ==> !f. gfun f ==> !x. x IN G ==> (GPI f {x} = f x) *)
 (* Proof:
@@ -6740,13 +6748,15 @@ QED
    Hence order h x = ord x               by DIVIDES_ANTISYM
 *)
 (* keep subgroupTheory.subgroup_order *)
-val subgroup_order = prove(
-  ``!g h:'a group. h <= g ==> !x. x IN H ==> (order h x = ord x)``,
+Theorem subgroup_order[local]:
+    !g h:'a group. h <= g ==> !x. x IN H ==> (order h x = ord x)
+Proof
   rpt strip_tac >>
   `Group g /\ Group h /\ H SUBSET G /\ (h.op = g.op) /\ (h.id = #e)` by metis_tac[Subgroup_def, subgroup_id] >>
   `!x. x IN H ==> x IN G` by metis_tac[SUBSET_DEF] >>
   `!x. x IN H ==> !n. h.exp x n = x ** n` by metis_tac[subgroup_exp] >>
-  metis_tac[order_property, group_order_condition, DIVIDES_ANTISYM]);
+  metis_tac[order_property, group_order_condition, DIVIDES_ANTISYM]
+QED
 
 (* Theorem: Group g ==> !x. x IN G /\ 0 < ord x ==> !n. x ** n = x ** (n MOD (ord x)) *)
 (* Proof: by monoid_exp_mod_order, group_is_monoid *)
@@ -6922,8 +6932,8 @@ End
 
 
 (* overload on generated group and its carrier *)
-val _ = overload_on("gen", ``Generated g``);
-val _ = overload_on("Gen", ``\a. (Generated g a).carrier``);
+Overload gen = ``Generated g``
+Overload Gen = ``\a. (Generated g a).carrier``
 
 (* Theorem: x IN Gen a <=> ?n. x = a ** n *)
 (* Proof: by Generated_def *)
@@ -7317,7 +7327,7 @@ Definition roots_of_unity_def:
       |>
 End
 (* Overload root of unity *)
-val _ = overload_on ("uroots", ``roots_of_unity g``);
+Overload uroots = ``roots_of_unity g``
 
 (*
 > roots_of_unity_def;
@@ -7433,7 +7443,7 @@ Definition Generated_subset_def:
 End
 (* Note: this is the minimal subgroup containing the subset. *)
 (* Similar to subgroup_big_intersect_def in subgroup theory. *)
-val _ = overload_on("gen_set", ``Generated_subset (g:'a group)``);
+Overload gen_set = ``Generated_subset (g:'a group)``
 
 (* Theorem: ((gen_set s).carrier = BIGINTER (IMAGE (\h. H) {h | h <= g /\ s SUBSET H})) /\
             ((gen_set s).op = g.op) /\ ((gen_set s).id = #e) *)
@@ -7755,7 +7765,7 @@ Definition subset_cross_def:
 End
 
 (* Overload subset cross product *)
-val _ = overload_on("o", ``subset_cross (g:'a group)``);
+Overload o = ``subset_cross (g:'a group)``
 (*
 > subset_cross_def;
 val it = |- !g s1 s2. s1 o s2 = {x * y | x IN s1 /\ y IN s2}: thm
@@ -7810,7 +7820,7 @@ Definition subgroup_cross_def:
 End
 
 (* Overload subgroup cross product *)
-val _ = overload_on("o", ``subgroup_cross (g:'a group)``);
+Overload o = ``subgroup_cross (g:'a group)``
 (*
 > subgroup_cross_def;
 val it = |- !g h1 h2. h1 o h2 = make_group g (h1.carrier o h2.carrier): thm
@@ -8212,9 +8222,11 @@ QED
 subset_cross_element_iff
 |- !g s1 s2 z. z IN s1 o s2 <=> ?x y. x IN s1 /\ y IN s2 /\ (z = x * y)
 *)
-val lemma = prove(
-  ``!g:'a group. !(s1 s2):'a -> bool. !z. ?x y. z IN (s1 o s2) ==> x IN s1 /\ y IN s2 /\ (z = x * y)``,
-  metis_tac[subset_cross_element_iff]);
+Theorem lemma[local]:
+    !g:'a group. !(s1 s2):'a -> bool. !z. ?x y. z IN (s1 o s2) ==> x IN s1 /\ y IN s2 /\ (z = x * y)
+Proof
+  metis_tac[subset_cross_element_iff]
+QED
 
 (* 2. Apply Skolemization *)
 val subset_cross_left_right_def = new_specification(
@@ -8223,8 +8235,8 @@ val subset_cross_left_right_def = new_specification(
   SIMP_RULE bool_ss [SKOLEM_THM] lemma);
 
 (* overload subset_cross_left and subset_cross_right *)
-val _ = overload_on("left", ``subset_cross_left (g:'a group) (s1:'a -> bool) (s2:'a -> bool)``);
-val _ = overload_on("right", ``subset_cross_right (g:'a group) (s1:'a -> bool) (s2:'a -> bool)``);
+Overload left = ``subset_cross_left (g:'a group) (s1:'a -> bool) (s2:'a -> bool)``
+Overload right = ``subset_cross_right (g:'a group) (s1:'a -> bool) (s2:'a -> bool)``
 
 (*
 > subset_cross_left_right_def;
@@ -8593,8 +8605,8 @@ Thus (Gen a) INTER (Gen b) = {#e} is a condition in elements a, b, called these 
 *)
 
 (* Overload the notion of independent group elements *)
-val _ = overload_on("independent",
-        ``\(g:'a group) a b. (Gen a) INTER (Gen b) = {#e}``);
+Overload independent =
+        ``\(g:'a group) a b. (Gen a) INTER (Gen b) = {#e}``
 
 (* Theorem: independent g a b = independent g b a *)
 (* Proof:
@@ -8814,7 +8826,7 @@ Definition subset_big_cross_def:
     subset_big_cross (g:'a group) (B:('a -> bool) -> bool) = ITSET (subset_cross g) B {#e}
 End
 (* overload big cross product of subsets. *)
-val _ = overload_on("ssbcross", ``subset_big_cross (g:'a group)``);
+Overload ssbcross = ``subset_big_cross (g:'a group)``
 
 (*
 > subset_big_cross_def;
@@ -8883,7 +8895,7 @@ Definition subgroup_big_cross_def:
     subgroup_big_cross (g:'a group) (B:('a group) -> bool) = ITSET (subgroup_cross g) B (gen #e)
 End
 (* overload big cross product of subgroups. *)
-val _ = overload_on("sgbcross", ``subgroup_big_cross (g:'a group)``);
+Overload sgbcross = ``subgroup_big_cross (g:'a group)``
 
 (*
 > subgroup_big_cross_def;
@@ -9141,7 +9153,7 @@ End
 (* This is the same as add_mod below, using {i | i < n} as carrier. *)
 
 (* Overload Zadd n *)
-val _ = temp_overload_on("Z", ``Zadd``);
+Overload Z[local] = ``Zadd``
 
 (*
 - type_of ``Z n``;
@@ -9364,7 +9376,7 @@ End
 (* This is the same as mult_mod below, using { i | i <> 0 /\ i < p } as carrier. *)
 
 (* Overload Zstar n *)
-val _ = temp_overload_on("Z*", ``Zstar``);
+Overload "Z*"[local] = ``Zstar``
 
 (*
 - type_of ``Z* p``;
@@ -10936,9 +10948,11 @@ Definition cyclic_def:
 End
 
 (* Apply Skolemization *)
-val lemma = prove(
-  ``!(g:'a group). ?z. cyclic g ==> z IN G /\ !x. x IN G ==> ?n. x = z ** n``,
-  metis_tac[cyclic_def]);
+Theorem lemma[local]:
+    !(g:'a group). ?z. cyclic g ==> z IN G /\ !x. x IN G ==> ?n. x = z ** n
+Proof
+  metis_tac[cyclic_def]
+QED
 (*
 - SKOLEM_THM;
 > val it = |- !P. (!x. ?y. P x y) <=> ?f. !x. P x (f x) : thm
@@ -12096,9 +12110,11 @@ Proof
 QED
 
 (* Apply Skolemization *)
-val lemma = prove(
-  ``!(g:'a group) x. ?n. cyclic g /\ x IN G ==> (x = (cyclic_gen g) ** n) /\ (FINITE G ==> n < CARD G)``,
-  metis_tac[cyclic_index_exists]);
+Theorem lemma[local]:
+    !(g:'a group) x. ?n. cyclic g /\ x IN G ==> (x = (cyclic_gen g) ** n) /\ (FINITE G ==> n < CARD G)
+Proof
+  metis_tac[cyclic_index_exists]
+QED
 (*
 - SKOLEM_THM;
 > val it = |- !P. (!x. ?y. P x y) <=> ?f. !x. P x (f x) : thm
@@ -12722,7 +12738,7 @@ Definition action_def:
 End
 
 (* Overload on action *)
-val _ = overload_on("act", ``\(g:'a group) (X:'b -> bool) f. action f g X``);
+Overload act = ``\(g:'a group) (X:'b -> bool) f. action f g X``
 val _ = set_fixity "act" (Infix(NONASSOC, 450)); (* same as relation *)
 
 (*
@@ -12815,7 +12831,7 @@ End
 (* Note: use zDefine as this is not effective. *)
 
 (* Overload reach relation *)
-val _ = temp_overload_on("~~", ``\(x:'b) (y:'b) f (g:'a group). reach f g x y``);
+Overload "~~"[local] = ``\(x:'b) (y:'b) f (g:'a group). reach f g x y``
 (* Make reach an infix. *)
 val _ = set_fixity "~~" (Infix(NONASSOC, 450)); (* same as relation *)
 
@@ -13660,9 +13676,11 @@ QED
 *)
 
 (* Existence of act_by: the x in reach f g X b, such that a IN G /\ f a x = b. *)
-val lemma = prove(
-  ``!f (g:'a group) (x:'b) (y:'b). ?a. reach f g x y ==> a IN G /\ f a x = y``,
-  metis_tac[reach_def]);
+Theorem lemma[local]:
+    !f (g:'a group) (x:'b) (y:'b). ?a. reach f g x y ==> a IN G /\ f a x = y
+Proof
+  metis_tac[reach_def]
+QED
 (*
 - SKOLEM_THM;
 > val it = |- !P. (!x. ?y. P x y) <=> ?f. !x. P x (f x) : thm
