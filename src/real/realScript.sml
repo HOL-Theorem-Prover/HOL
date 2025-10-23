@@ -350,6 +350,12 @@ Theorem REAL_NEG_SUB = REAL_NEG_SUB;
 (* |- !x y. 0 < x - y <=> y < x *)
 Theorem REAL_SUB_LT = REAL_SUB_LT;
 
+Theorem REAL_SUB_LT_NEG :
+    !x (y :real). x - y < 0 <=> x < y
+Proof
+    REAL_ARITH_TAC
+QED
+
 (* |- !x y. 0 <= x - y <=> y <= x *)
 Theorem REAL_SUB_LE = REAL_SUB_LE;
 
@@ -979,6 +985,12 @@ Proof
   ASM_REWRITE_TAC[REAL_MUL_LID]
 QED
 
+Theorem REAL_LE_INV2 :
+    !x y. 0 < x /\ x <= y ==> inv y <= inv x
+Proof
+  metis_tac [REAL_LE_LT, REAL_LT_INV]
+QED
+
 Theorem REAL_SUB_LNEG:
    !x y. ~x - y = ~(x + y)
 Proof
@@ -1510,6 +1522,12 @@ Proof
   CONV_TAC(ONCE_DEPTH_CONV NUM_EQ_CONV) THEN REWRITE_TAC[] THEN
   DISCH_THEN SUBST_ALL_TAC THEN POP_ASSUM MP_TAC THEN
   REWRITE_TAC[REAL_LE_REFL]
+QED
+
+Theorem ABS_REDUCE :
+    !(x :real). 0 <= x ==> abs x = x
+Proof
+    RW_TAC std_ss [ABS_REFL]
 QED
 
 Theorem ABS_EQ_NEG :
@@ -2129,6 +2147,20 @@ Proof
     ASM_REWRITE_TAC[REAL_LT,prim_recTheory.LESS_0, ONE]]
 QED
 
+Theorem REAL_POW_MONO_EQ :
+    !m n (x :real). 1 < x ==> (x pow m <= x pow n <=> m <= n)
+Proof
+    rpt STRIP_TAC
+ >> reverse EQ_TAC
+ >- (DISCH_TAC \\
+     MATCH_MP_TAC REAL_POW_MONO >> art [] \\
+     MATCH_MP_TAC REAL_LT_IMP_LE >> art [])
+ >> DISCH_TAC
+ >> SPOSE_NOT_THEN (ASSUME_TAC o REWRITE_RULE [NOT_LE])
+ >> ‘x pow n < (x pow m) :real’ by PROVE_TAC [REAL_POW_MONO_LT]
+ >> METIS_TAC [REAL_LET_ANTISYM]
+QED
+
 Theorem REAL_POW_POW :
     !x m n. (x pow m) pow n = x pow (m * n)
 Proof
@@ -2379,25 +2411,22 @@ Proof
     FIRST_ASSUM(SUBST1_TAC o SYM) THEN REWRITE_TAC[PRE, LESS_SUC_REFL]]
 QED
 
-Theorem SIMP_REAL_ARCH :
-    !x:real. ?n. x <= &n
-Proof
-    REWRITE_TAC [REAL_LE_LT]
- >> FULL_SIMP_TAC std_ss [EXISTS_OR_THM]
- >> RW_TAC std_ss []
- >> DISJ1_TAC
- >> MP_TAC (Q.SPEC `1` REAL_ARCH)
- >> REWRITE_TAC [REAL_LT_01, REAL_MUL_RID]
- >> RW_TAC std_ss []
-QED
-
 Theorem REAL_BIGNUM :
-    !r : real. ?n : num. r < &n
+    !(r :real). ?(n :num). r < &n
 Proof
    GEN_TAC
    THEN MP_TAC (Q.SPEC `1` REAL_ARCH)
    THEN REWRITE_TAC [REAL_LT_01, REAL_MUL_RID]
    THEN PROVE_TAC []
+QED
+
+Theorem SIMP_REAL_ARCH :
+    !(x:real). ?n. x <= &n
+Proof
+    Q.X_GEN_TAC ‘x’
+ >> STRIP_ASSUME_TAC (Q.SPEC ‘x’ REAL_BIGNUM)
+ >> Q.EXISTS_TAC ‘n’
+ >> MATCH_MP_TAC REAL_LT_IMP_LE >> art []
 QED
 
 Theorem REAL_ARCH_INV :
@@ -2980,6 +3009,8 @@ Theorem REAL_ADD_RDISTRIB = REAL_RDISTRIB;
 
 (* !m n. &m + &n = &(m + n) *)
 Theorem REAL_OF_NUM_ADD = REAL_ADD;
+
+Theorem REAL_OF_NUM_SUB = realaxTheory.REAL_OF_NUM_SUB;
 
 (* |- !m n. &m <= &n <=> m <= n *)
 Theorem REAL_OF_NUM_LE = REAL_LE;
@@ -4315,8 +4346,6 @@ Proof
   REALMUL_AC
 QED
 
-
-
 Theorem div_rat:
     (x/y) / (u/v) =
       if (u = 0) \/ (v = 0) then (x/y) / unint (u/v)
@@ -4722,6 +4751,16 @@ Proof
   THEN FULL_SIMP_TAC arith_ss []
 QED
 
+Theorem SIMP_REAL_ARCH_SUC :
+    !(x :real). 0 <= x ==> ?n. &n <= x /\ x < &SUC n
+Proof
+    rpt STRIP_TAC
+ >> Q.EXISTS_TAC ‘flr x’
+ >> ASM_SIMP_TAC std_ss [NUM_FLOOR_LE, ADD1, GSYM REAL_OF_NUM_ADD]
+ >> MP_TAC (Q.SPEC ‘x’ NUM_FLOOR_LT)
+ >> REAL_ARITH_TAC
+QED
+
 (*---------------------------------------------------------------------------*)
 (* Ceiling function                                                          *)
 (*---------------------------------------------------------------------------*)
@@ -5039,18 +5078,6 @@ Theorem REAL_INV_LE_ANTIMONO_IMPR:
     0 < x /\ 0 < y /\ y <= x ==> inv x <= inv y
 Proof
   rpt strip_tac >> fs[REAL_INV_LE_ANTIMONO]
-QED
-
-(* for HOL-Light compatibility *)
-Theorem REAL_LE_INV2 :
-    !x y. (&0:real) < x /\ x <= y ==> inv(y) <= inv(x)
-Proof
-    rpt STRIP_TAC
- >> MATCH_MP_TAC REAL_INV_LE_ANTIMONO_IMPR
- >> ASM_REWRITE_TAC []
- >> MATCH_MP_TAC REAL_LTE_TRANS
- >> Q.EXISTS_TAC ‘x’
- >> ASM_REWRITE_TAC []
 QED
 
 Theorem REAL_INV_LE_1 :
@@ -5783,7 +5810,7 @@ Proof
 QED
 
 Theorem POW_2_LT_1:
-    !x. -1 < x /\ x < 1 ==> x² < 1
+    !x. -1 < x /\ x < 1 ==> x pow 2 < 1
 Proof
     rw[] >> wlog_tac ‘0 <= x’ [‘x’]
     >- (first_x_assum $ qspec_then ‘-x’ mp_tac >> simp[] >>
@@ -5794,7 +5821,7 @@ Proof
 QED
 
 Theorem POW_2_1_LT:
-    !x. x < -1 \/ 1 < x ==> 1 < x²
+    !x. x < -1 \/ 1 < x ==> 1 < x pow 2
 Proof
     strip_tac >> wlog_tac ‘0 <= x’ [‘x’]
     >- (first_x_assum $ qspec_then ‘-x’ mp_tac >>
@@ -5806,7 +5833,7 @@ Proof
 QED
 
 Theorem SQRT_POW_2_ABS:
-    !x. sqrt x² = abs x
+    !x. sqrt (x pow 2) = abs x
 Proof
     rw[] >> Cases_on ‘0 <= x’ >- simp[POW_2_SQRT] >> simp[abs] >>
     ‘0 <= -x’ by gs[REAL_NOT_LE,REAL_LE_LT] >>
@@ -5814,7 +5841,7 @@ Proof
 QED
 
 Theorem SQUARE_ROOTS:
-    !x y. x² = y ==> x = sqrt y \/ x = -sqrt y
+    !x y. x pow 2 = y ==> x = sqrt y \/ x = -sqrt y
 Proof
     rw[] >> Cases_on ‘0 <= x’ >- simp[POW_2_SQRT] >> disj2_tac >>
     qspec_then ‘-x’ mp_tac $ GENL [“x:real”] POW_2_SQRT >>
@@ -5829,9 +5856,9 @@ Proof
 QED
 
 Theorem QUADRATIC_FORMULA:
-    !a b c x. a <> 0 ==> a * x² + b * x + c = 0 ==>
-        x = (-b + sqrt(b² - 4 * a * c)) / (2 * a) \/
-        x = (-b - sqrt(b² - 4 * a * c)) / (2 * a)
+    !a b c x. a <> 0 ==> a * x pow 2 + b * x + c = 0 ==>
+        x = (-b + sqrt(b pow 2 - 4 * a * c)) / (2 * a) \/
+        x = (-b - sqrt(b pow 2 - 4 * a * c)) / (2 * a)
 Proof
     rw[real_sub,REAL_EQ_RDIV_EQ'] >>
     ‘!x y. x = -b + y <=> x + b = y’ by
@@ -6013,3 +6040,16 @@ Proof
  >> irule_at Any REAL_MUL_RINV
  >> ASM_REWRITE_TAC [REAL_SUB_0]
 QED
+
+Theorem REAL_MUL_POS_LT :
+    !x y:real. &0 < x * y <=> &0 < x /\ &0 < y \/ x < &0 /\ y < &0
+Proof
+  REPEAT STRIP_TAC THEN
+  STRIP_ASSUME_TAC(SPEC ``x:real`` REAL_LT_NEGTOTAL) THEN
+  STRIP_ASSUME_TAC(SPEC ``y:real`` REAL_LT_NEGTOTAL) THEN
+  ASM_REWRITE_TAC[REAL_MUL_LZERO, REAL_MUL_RZERO, REAL_LT_REFL] THEN
+  ASSUM_LIST(MP_TAC o MATCH_MP REAL_LT_MUL o end_itlist CONJ) THEN
+  REPEAT(POP_ASSUM MP_TAC) THEN REAL_ARITH_TAC
+QED
+
+(* END *)

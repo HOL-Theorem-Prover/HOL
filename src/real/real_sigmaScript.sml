@@ -2703,6 +2703,8 @@ Proof
     RW_TAC real_ss [DROP_INDICATOR]
 QED
 
+Theorem INDICATOR_POS = DROP_INDICATOR_POS_LE
+
 Theorem DROP_INDICATOR_LE_1 :
     !s x. (indicator s x) <= &1
 Proof
@@ -2726,6 +2728,17 @@ Theorem INDICATOR_COMPLEMENT :
 Proof
     rw [FUN_EQ_THM, indicator]
  >> Cases_on ‘x IN s’ >> rw []
+QED
+
+Theorem INDICATOR_MONO :
+    !s t x. s SUBSET t ==> indicator s x <= indicator t x
+Proof
+    rpt STRIP_TAC
+ >> Cases_on ‘x IN s’
+ >- (‘x IN t’ by PROVE_TAC [SUBSET_DEF] \\
+     RW_TAC real_ss [indicator])
+ >> ‘indicator s x = 0’ by METIS_TAC [indicator]
+ >> ASM_REWRITE_TAC [INDICATOR_POS]
 QED
 
 (* ------------------------------------------------------------------------- *)

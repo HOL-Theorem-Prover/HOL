@@ -3779,6 +3779,7 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
 QED
 
+(* This is the simplest "0-1 law" *)
 Theorem INDEP_REFL:
     !p a. prob_space p /\ a IN events p ==>
          (indep p a a = (prob p a = 0) \/ (prob p a = 1))
@@ -9966,6 +9967,22 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC
  >> Q.PAT_X_ASSUM ‘_ = m_space p1’ (REWRITE_TAC o wrap o SYM)
  >> MATCH_MP_TAC MEASURE_SPACE_SPACE >> art []
+QED
+
+Theorem prob_space_cong :
+    !sp sts u v. (!s. s IN sts ==> u s = v s) ==>
+                 (prob_space (sp,sts,u) <=> prob_space (sp,sts,v))
+Proof
+    rw [prob_space_def, p_space_def, events_def, prob_def]
+ >> Know ‘measure_space (sp,sts,u) <=> measure_space (sp,sts,v)’
+ >- (MATCH_MP_TAC measure_space_cong >> art [])
+ >> Rewr'
+ >> Cases_on ‘measure_space (sp,sts,v)’ >> simp []
+ >> Suff ‘u sp = v sp’ >- rw []
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> qabbrev_tac ‘m = (sp,sts,v)’
+ >> ‘sp = m_space m /\ sts = measurable_sets m’ by simp [Abbr ‘m’]
+ >> simp [MEASURE_SPACE_SPACE]
 QED
 
 (* tidy up theory exports, learnt from Magnus Myreen *)

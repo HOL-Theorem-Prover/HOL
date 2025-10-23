@@ -494,6 +494,24 @@ Proof
       fs [] ]
 QED
 
+Theorem BIGUNION_IMAGE_UNION :
+    !f g s. BIGUNION (IMAGE f s) UNION BIGUNION (IMAGE g s) =
+            BIGUNION (IMAGE (\i. f i UNION g i) s)
+Proof
+    rw [Once EXTENSION, IN_BIGUNION_IMAGE]
+ >> EQ_TAC >> rw [] (* 4 subgoals *)
+ >| [ (* goal 1 (of 4) *)
+      rename1 ‘x IN f n’ \\
+      Q.EXISTS_TAC ‘n’ >> art [],
+      (* goal 2 (of 4) *)
+      rename1 ‘x IN g n’ \\
+      Q.EXISTS_TAC ‘n’ >> art [],
+      (* goal 3 (of 4) *)
+      DISJ1_TAC >> Q.EXISTS_TAC ‘i’ >> art [],
+      (* goal 4 (of 4) *)
+      DISJ2_TAC >> Q.EXISTS_TAC ‘i’ >> art [] ]
+QED
+
 Theorem BIGINTER_OVER_INTER_L :
     !f s d. s <> {} ==> (BIGINTER (IMAGE f s) INTER d =
                          BIGINTER (IMAGE (\i. f i INTER d) s))

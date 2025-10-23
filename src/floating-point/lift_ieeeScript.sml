@@ -3,7 +3,7 @@
    ------------------------------------------------------------------------ *)
 Theory lift_ieee
 Ancestors
-  binary_ieee real
+  binary_ieee real words[qualified]
 Libs
   wordsLib realLib realSimps
 
@@ -301,7 +301,7 @@ QED
 Theorem error_bound_lemma1:
   !fracw x.
        0r <= x /\ x < 1 /\ 0 < fracw ==>
-       ?n. n < 2n EXP fracw /\ &n / 2 pow fracw <= x /\
+       ?n. n < 2 EXP fracw /\ &n / 2 pow fracw <= x /\
            x < &(SUC n) / 2 pow fracw
 Proof
   rpt strip_tac
@@ -331,9 +331,7 @@ Proof
                 realTheory.real_lt]
 QED
 
-(* ------------------------------------------------------------------------ *)
-
-Theorem error_bound_lemma2[local]:
+Theorem error_bound_lemma2 :
    !fracw x.
       0r <= x /\ x < 1 /\ 0 < fracw ==>
       ?n. n <= 2 EXP fracw /\
@@ -359,9 +357,7 @@ Proof
   \\ fs []
 QED
 
-(* ------------------------------------------------------------------------ *)
-
-Theorem error_bound_lemma3[local]:
+Theorem error_bound_lemma3 :
    !fracw x.
        1r <= x /\ x < 2 /\ 0 < fracw ==>
        ?n. n <= 2 EXP fracw /\
