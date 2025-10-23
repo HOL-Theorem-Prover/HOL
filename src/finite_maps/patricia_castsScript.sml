@@ -43,10 +43,10 @@ End
 Definition REMOVEs_def:     REMOVEs t w = REMOVE t (string_to_num w)
 End
 
-val _ = overload_on ("'", Term`$PEEKs`);
-val _ = overload_on ("|+", Term`$ADDs`);
-val _ = overload_on ("|++", Term`$ADD_LISTs`);
-val _ = overload_on ("\\\\", Term`$REMOVEs`);
+Overload "'" = Term`$PEEKs`
+Overload "|+" = Term`$ADDs`
+Overload "|++" = Term`$ADD_LISTs`
+Overload "\\\\" = Term`$REMOVEs`
 
 Definition TRAVERSEs_def:
    TRAVERSEs t = MAP num_to_string (TRAVERSE t)
@@ -108,10 +108,10 @@ Definition REMOVEw_def:
   SOME_PTREE (REMOVE (THE_PTREE t) (w2n w)) : ('a,'b) word_ptree
 End
 
-val _ = overload_on ("'", Term`$PEEKw`);
-val _ = overload_on ("|+", Term`$ADDw`);
-val _ = overload_on ("|++", Term`$ADD_LISTw`);
-val _ = overload_on ("\\\\", Term`$REMOVEw`);
+Overload "'" = Term`$PEEKw`
+Overload "|+" = Term`$ADDw`
+Overload "|++" = Term`$ADD_LISTw`
+Overload "\\\\" = Term`$REMOVEw`
 
 Definition TRAVERSEw_def:
   TRAVERSEw (t:('a, 'b) word_ptree) =
@@ -166,8 +166,8 @@ Definition PTREE_OF_WORDSET_def:
   : ('a, unit) word_ptree
 End
 
-val _ = overload_on ("|++", Term`$PTREE_OF_WORDSET`);
-val _ = overload_on ("|++", Term`$PTREE_OF_STRINGSET`);
+Overload "|++" = Term`$PTREE_OF_WORDSET`
+Overload "|++" = Term`$PTREE_OF_STRINGSET`
 
 (* ------------------------------------------------------------------------- *)
 

@@ -528,9 +528,9 @@ Theorem INT_LT_MUL = INT_LT_MUL
 Theorem NUM_POSINT_EX = NUM_POSINT_EX
 ;
 
-val _ = overload_on ("+", Term`int_add`);
-val _ = overload_on ("<", Term`int_lt`);
-val _ = overload_on ("*", Term`int_mul`);
+Overload "+" = Term`int_add`
+Overload "<" = Term`int_lt`
+Overload "*" = Term`int_mul`
 
 
 (* this is a slightly tricky case; we don't have to call overload_on
@@ -556,19 +556,19 @@ val int_sub =
     new_infixl_definition("int_sub",
                          Term `$int_sub x y = x + ~y`,
                          500);
-val _ = overload_on ("-",  Term`$int_sub`);
+Overload "-" = Term`$int_sub`
 
 Definition int_le[nocompute]: int_le x y = ~(y<x:int)
 End
-val _ = overload_on ("<=", Term`$int_le`);
+Overload "<=" = “$int_le”
 
 Definition int_gt[nocompute]: int_gt (x:int) y <=> y < x
 End
-val _ = overload_on (">",  Term`$int_gt`);
+Overload ">" = “$int_gt”
 
 Definition int_ge[nocompute]: int_ge x y <=> y <= x:int
 End
-val _ = overload_on (">=", Term`$int_ge`);
+Overload ">=" = “$int_ge”
 
 Theorem INT_GT = int_gt (* HOL-Light compatible name *)
 Theorem INT_GE = int_ge (* HOL-Light compatible name *)
@@ -1995,7 +1995,7 @@ val int_div_exists =
 val int_div = new_specification ("int_div", ["int_div"], int_div_exists);
 
 val _ = set_fixity "/" (Infixl 600)
-val _ = overload_on("/", Term`int_div`)
+Overload "/" = Term`int_div`
 
 Theorem INT_DIV:
   !n m. ~(m = 0) ==> (&n / &m = &(n DIV m))
@@ -2737,7 +2737,7 @@ val int_quot_exists =
 val int_quot = new_specification ("int_quot",["int_quot"],int_quot_exists);
 
 val _ = set_fixity "quot" (Infixl 600)
-val _ = overload_on("quot", ``int_quot``);
+Overload quot = ``int_quot``
 
 Theorem INT_QUOT:
     !p q. ~(q = 0) ==> (&p quot &q = &(p DIV q))
@@ -2883,7 +2883,7 @@ val int_rem_exists =
 val int_rem = new_specification ("int_rem",["int_rem"],int_rem_exists);
 
 val _ = set_fixity "rem" (Infixl 650);
-val _ = overload_on("rem", ``int_rem``);
+Overload rem = ``int_rem``
 
 Theorem INT_REM:
     !p q. ~(q = 0) ==> (&p rem &q = &(p MOD q))
@@ -3274,7 +3274,7 @@ val int_exp = Prim_rec.new_recursive_definition{
   rec_axiom = prim_recTheory.num_Axiom};
 
 val _ = set_fixity "int_exp"  (Infixr 700);
-val _ = overload_on ("**", Term`$int_exp`);
+Overload "**" = Term`$int_exp`
 
 Theorem INT_POW :
     (x :int) ** 0 = &1 /\ (!n. x ** SUC n = x * x ** n)

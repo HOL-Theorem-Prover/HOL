@@ -583,10 +583,7 @@ handle e => Raise e;
 
 (* Now overload the substitution operator <[ to refer to any of the  *)
 (* object, dict, entry, or method substitution operators defined:    *)
-
-val _ = map (fn t => overload_on("<[", t))
-            [“$SUB1t :'a term1 -> ^subs -> 'a term1”]
-handle e => Raise e;
+Overload "<[" = “$SUB1t :'a term1 -> ^subs -> 'a term1”
 
 
 (* Now, printed interactively, we read

@@ -39,7 +39,7 @@ Definition BAG_IN[nocompute]:
 End
 
 val _ = set_fixity "<:" (Infix(NONASSOC, 425))
-val _ = overload_on ("<:", ``BAG_IN``)
+Overload "<:" = ``BAG_IN``
 val _ = Unicode.unicode_version {tmnm = "<:", u = UTF8.chr 0x22F2}
         (* U+22F2 looks like ⋲ in your current font; unfortunately this
            symbol doesn't seem to correspond to anything in LaTeX... *)
@@ -49,7 +49,7 @@ val _ = TeX_notation {hol = UTF8.chr 0x22F2, TeX = ("\\HOLTokenIn{}:",2)}
 Definition BAG_UNION[nocompute]:
                 BAG_UNION b (c:'a bag) = \x. b x + c x
 End
-val _ = overload_on ("+", ``BAG_UNION``)
+Overload "+" = ``BAG_UNION``
 val _ = send_to_back_overload "+" {Name = "BAG_UNION", Thy = "bag"}
 val _ = set_fixity (UTF8.chr 0x228E) (Infixl 500) (* LaTeX's \uplus *)
 val _ = overload_on (UTF8.chr 0x228E, ``BAG_UNION``)
@@ -58,7 +58,7 @@ val _ = TeX_notation {hol = UTF8.chr 0x228E, TeX = ("\\ensuremath{\\uplus}", 1)}
 Definition BAG_DIFF[nocompute]:
   BAG_DIFF b1 (b2:'a bag) = \x. b1 x - b2 x
 End
-val _ = overload_on ("-", ``BAG_DIFF``)
+Overload "-" = ``BAG_DIFF``
 val _ = send_to_back_overload "-" {Name = "BAG_DIFF", Thy = "bag"}
 
 Definition BAG_INSERT[nocompute]:
@@ -607,8 +607,8 @@ QED
 
 val _ = print "Properties of SUB_BAG\n"
 
-val _ = overload_on ("<=", ``SUB_BAG``)
-val _ = overload_on ("<", ``PSUB_BAG``)
+Overload "<=" = ``SUB_BAG``
+Overload "<" = ``PSUB_BAG``
 val _ = send_to_back_overload "<=" {Name = "SUB_BAG", Thy = "bag"}
 val _ = send_to_back_overload "<" {Name = "PSUB_BAG", Thy = "bag"}
 
@@ -2833,7 +2833,7 @@ Definition mlt1_def[nocompute]:
                                  !e'. BAG_IN e' rep ==> r e' e
 End
 
-val _ = overload_on ("mlt", ``\R. TC (mlt1 R)``);
+Overload mlt = ``\R. TC (mlt1 R)``
 
 Theorem BAG_NOT_LESS_EMPTY:
     ~mlt1 r b {||}
@@ -3008,8 +3008,8 @@ Definition dominates_def:
   dominates R s1 s2 = !x. x IN s1 ==> ?y. y IN s2 /\ R x y
 End
 
-val _ = overload_on ("bdominates",
-                     ``\R b1 b2. dominates R (SET_OF_BAG b1) (SET_OF_BAG b2)``)
+Overload bdominates =
+                     ``\R b1 b2. dominates R (SET_OF_BAG b1) (SET_OF_BAG b2)``
 
 Theorem dominates_EMPTY[simp]:
     dominates R {} b
@@ -3452,7 +3452,7 @@ Theorem BAG_SIZE_INSERT = (
 
 val _ = print "Unibags (bags made all distinct)\n"
 
-val _ = overload_on ("unibag", ``\b. BAG_OF_SET (SET_OF_BAG b)``);
+Overload unibag = ``\b. BAG_OF_SET (SET_OF_BAG b)``
 
 Theorem unibag_thm = CONJ BAG_OF_SET SET_OF_BAG;
 

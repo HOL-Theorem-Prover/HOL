@@ -29,7 +29,7 @@ Definition wellfounded_def:
   wellfounded R <=>
    !s. (?w. w IN s) ==> ?min. min IN s /\ !w. (w,min) IN R ==> w NOTIN s
 End
-val _ = overload_on ("Wellfounded", ``wellfounded``);
+Overload Wellfounded = ``wellfounded``
 
 Theorem wellfounded_WF:
     !R. wellfounded R <=> WF (CURRY R)
@@ -91,11 +91,11 @@ Definition elsOf_def:
   elsOf w = domain (destWO w) UNION range (destWO w)
 End
 
-val _ = overload_on("WIN", ``\p w. p IN strict (destWO w)``)
+Overload WIN = ``\p w. p IN strict (destWO w)``
 val _ = set_fixity "WIN" (Infix(NONASSOC, 425))
-val _ = overload_on("WLE", ``\p w. p IN destWO w``)
+Overload WLE = ``\p w. p IN destWO w``
 val _ = set_fixity "WLE" (Infix(NONASSOC, 425))
-val _ = overload_on ("wrange", ``\w. range (destWO w)``)
+Overload wrange = ``\w. range (destWO w)``
 
 Theorem WIN_elsOf:
     (x,y) WIN w ==> x IN elsOf w /\ y IN elsOf w
@@ -664,9 +664,8 @@ Proof
   metis_tac [wo2wo_EQ_NONE, option_CASES]
 QED
 
-val _ = overload_on (
-  "woseg",
-  ``\w1 w2 x. IMAGE THE (IMAGE (wo2wo w1 w2) (iseg w1 x) DELETE NONE)``)
+Overload woseg =
+  ``\w1 w2 x. IMAGE THE (IMAGE (wo2wo w1 w2) (iseg w1 x) DELETE NONE)``
 
 Theorem mono_woseg:
     (x1,x2) WIN w1 ==> woseg w1 w2 x1 SUBSET woseg w1 w2 x2

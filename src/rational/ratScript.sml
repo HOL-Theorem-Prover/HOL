@@ -265,18 +265,18 @@ QED
 
 val _ = set_fixity "//" (Infixl 600)
 
-val _ = overload_on ("+",  ``rat_add``);
-val _ = overload_on ("-",  ``rat_sub``);
-val _ = overload_on ("*",  ``rat_mul``);
+Overload "+" = ``rat_add``
+Overload "-" = ``rat_sub``
+Overload "*" = ``rat_mul``
 val _ = overload_on (GrammarSpecials.decimal_fraction_special, ``rat_div``);
-val _ = overload_on ("/",  ``rat_div``);
-val _ = overload_on ("<",  ``rat_les``);
-val _ = overload_on ("<=", ``rat_leq``);
-val _ = overload_on (">",  ``rat_gre``);
-val _ = overload_on (">=", ``rat_geq``);
-val _ = overload_on ("~",  ``rat_ainv``);
-val _ = overload_on ("numeric_negate",  ``rat_ainv``);
-val _ = overload_on ("//",  ``rat_cons``);
+Overload "/" = ``rat_div``
+Overload "<" = ``rat_les``
+Overload "<=" = ``rat_leq``
+Overload ">" = ``rat_gre``
+Overload ">=" = ``rat_geq``
+Overload "~" = ``rat_ainv``
+Overload numeric_negate = ``rat_ainv``
+Overload "//" = ``rat_cons``
 
 val _ = add_ML_dependency "ratPP"
 val _ = add_user_printer ("rat.decimalfractions",
@@ -3249,7 +3249,7 @@ QED
     more theorems about RAT_SGN : rat -> int  (-1,0,1)
    ---------------------------------------------------------------------- *)
 
-val _ = temp_overload_on ("RAT_SGN", ``rat_sgn``)
+Overload RAT_SGN[local] = ``rat_sgn``
 Theorem RAT_SGN_NUM_COND:
    rat_sgn (&n) = if n = 0 then 0 else 1
 Proof

@@ -11,7 +11,7 @@ Libs
 val _ = ParseExtras.temp_loose_equality()
 val _ = diminish_srw_ss ["RMULCANON","RMULRELNORM"]
 
-val () = Parse.temp_overload_on ("bias", ``words$INT_MAX``)
+Overload bias[local] = “words$INT_MAX”
 
 (* ------------------------------------------------------------------------ *)
 
@@ -1840,4 +1840,3 @@ Proof
   \\ fs [round_roundTiesToEven_is_plus_zero,
          round_roundTiesToEven_is_minus_zero, zero_to_real]
 QED
-

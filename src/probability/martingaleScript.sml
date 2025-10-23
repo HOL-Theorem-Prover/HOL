@@ -8025,7 +8025,7 @@ End
 (* `f = RN_deriv v m` is denoted by `f = v / m`
    NOTE: cannot use the Overload syntax sugar here (on "/").
  *)
-val _ = overload_on ("/", “RN_deriv”);
+Overload "/" = “RN_deriv”
 
 Theorem RN_deriv_thm :
     !m v. measure_space m /\
