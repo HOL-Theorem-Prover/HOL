@@ -1942,11 +1942,10 @@ QED
 (* REVERSE                                                               *)
 (* --------------------------------------------------------------------- *)
 
-val REVERSE_DEF = new_recursive_definition {
-  name = "REVERSE_DEF",
-  rec_axiom = list_Axiom,
-  def = “(REVERSE [] = []) /\
-          (REVERSE (h::t) = (REVERSE t) ++ [h])”};
+Definition REVERSE_DEF[nocompute]:
+  (REVERSE [] = []) /\
+  (REVERSE (h::t) = (REVERSE t) ++ [h])
+End
 val _ = export_rewrites ["REVERSE_DEF"]
 
 Theorem REVERSE_APPEND:
@@ -2015,15 +2014,13 @@ QED
     FRONT and LAST
    ---------------------------------------------------------------------- *)
 
-val LAST_DEF = new_recursive_definition {
-  name = "LAST_DEF",
-  rec_axiom = list_Axiom,
-  def = “LAST (h::t) = if t = [] then h else LAST t”};
+Definition LAST_DEF[nocompute]:
+  LAST (h::t) = if t = [] then h else LAST t
+End
 
-val FRONT_DEF = new_recursive_definition {
-  name = "FRONT_DEF",
-  rec_axiom = list_Axiom,
-  def = “FRONT (h::t) = if t = [] then [] else h :: FRONT t”};
+Definition FRONT_DEF[nocompute]:
+  FRONT (h::t) = if t = [] then [] else h :: FRONT t
+End
 
 Theorem LAST_CONS:
    (!x:'a. LAST [x] = x) /\
@@ -2397,11 +2394,10 @@ Theorem EVERY2_mono = LIST_REL_mono
     ALL_DISTINCT
    ---------------------------------------------------------------------- *)
 
-val ALL_DISTINCT = new_recursive_definition {
-  def = Term‘(ALL_DISTINCT [] <=> T) /\
-             (ALL_DISTINCT (h::t) <=> ~MEM h t /\ ALL_DISTINCT t)’,
-  name = "ALL_DISTINCT",
-  rec_axiom = list_Axiom};
+Definition ALL_DISTINCT[nocompute]:
+  (ALL_DISTINCT [] <=> T) /\
+  (ALL_DISTINCT (h::t) <=> ~MEM h t /\ ALL_DISTINCT t)
+End
 val _ = export_rewrites ["ALL_DISTINCT"]
 
 Theorem lemma[local]:

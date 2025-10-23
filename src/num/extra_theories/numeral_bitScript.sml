@@ -134,13 +134,11 @@ Proof
    REWRITE_TAC [arithmeticTheory.NUMERAL_DEF]
 QED
 
-val BIT_REV_def =
-   Prim_rec.new_recursive_definition
-     {name = "BIT_REV_def",
-      def = ``(BIT_REV 0 x y = y) /\
-              (BIT_REV (SUC n) x y =
-               BIT_REV n (x DIV 2) (2 * y + SBIT (ODD x) 0))``,
-      rec_axiom = prim_recTheory.num_Axiom}
+Definition BIT_REV_def[nocompute]:
+  (BIT_REV 0 x y = y) /\
+  (BIT_REV (SUC n) x y =
+   BIT_REV n (x DIV 2) (2 * y + SBIT (ODD x) 0))
+End
 
 val BIT_R = ``\(x,y). (x DIV 2, 2 * y + SBIT (BIT 0 x) 0)``
 
@@ -179,14 +177,12 @@ Theorem BIT_REVERSE_EVAL =
 
 (* ------------------------------------------------------------------------- *)
 
-val BIT_MODF_def =
-  Prim_rec.new_recursive_definition
-     {name = "BIT_MODF_def",
-      def = ``(BIT_MODF 0 f x b e y = y) /\
-              (BIT_MODF (SUC n) f x b e y =
-                 BIT_MODF n f (x DIV 2) (b + 1) (2 * e)
-                   (if f b (ODD x) then e + y else y))``,
-      rec_axiom = prim_recTheory.num_Axiom}
+Definition BIT_MODF_def[nocompute]:
+  (BIT_MODF 0 f x b e y = y) /\
+  (BIT_MODF (SUC n) f x b e y =
+   BIT_MODF n f (x DIV 2) (b + 1) (2 * e)
+            (if f b (ODD x) then e + y else y))
+End
 
 val BIT_M =
    ``\(y,f,x,b,e).
@@ -317,19 +313,15 @@ val iSUC_def = Definition.new_definition ("iSUC",``iSUC = SUC``)
 
 val iDIV2_def = Definition.new_definition ("iDIV2",``iDIV2 = DIV2``)
 
-val SFUNPOW_def =
-  Prim_rec.new_recursive_definition
-    {name = "SFUNPOW_def",
-     def = ``(SFUNPOW f 0 x = x) /\
-             (SFUNPOW f (SUC n) x = if x = 0n then 0n else SFUNPOW f n (f x))``,
-     rec_axiom = prim_recTheory.num_Axiom}
+Definition SFUNPOW_def[nocompute]:
+  (SFUNPOW f 0 x = x) /\
+  (SFUNPOW f (SUC n) x = if x = 0n then 0n else SFUNPOW f n (f x))
+End
 
-val FDUB_def =
-   Prim_rec.new_recursive_definition
-      {name = "FDUB_def",
-       def = ``(FDUB f 0 = 0n) /\
-               (FDUB f (SUC n) = f (f (SUC n)))``,
-      rec_axiom = prim_recTheory.num_Axiom}
+Definition FDUB_def[nocompute]:
+  (FDUB f 0 = 0n) /\
+  (FDUB f (SUC n) = f (f (SUC n)))
+End
 
 Theorem FDUB_lem[local]:
     !f. (f 0 = 0n) ==> (FDUB f = (\x.f (f x)))

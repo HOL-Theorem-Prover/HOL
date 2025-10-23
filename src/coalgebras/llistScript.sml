@@ -319,11 +319,10 @@ QED
     LNTH : num -> 'a llist -> 'a option
    ---------------------------------------------------------------------- *)
 
-val LNTH = new_recursive_definition{
-  name = "LNTH",
-  rec_axiom = num_Axiom,
-  def = ``(LNTH 0 ll = LHD ll) /\
-          (LNTH (SUC n) ll = OPTION_JOIN (OPTION_MAP (LNTH n) (LTL ll)))``};
+Definition LNTH[nocompute]:
+  (LNTH 0 ll = LHD ll) /\
+  (LNTH (SUC n) ll = OPTION_JOIN (OPTION_MAP (LNTH n) (LTL ll)))
+End
 
 Theorem LNTH_THM:
     (!n. LNTH n LNIL = NONE) /\
@@ -623,17 +622,16 @@ QED
     that long
    ---------------------------------------------------------------------- *)
 
-val LTAKE = new_recursive_definition {
-  def = ``(LTAKE 0 ll = SOME []) /\
-          (LTAKE (SUC n) ll =
-             case LHD ll of
-                 NONE => NONE
-               | SOME hd =>
-                   case LTAKE n (THE (LTL ll)) of
-                       NONE => NONE
-                     | SOME tl => SOME (hd::tl))``,
-  name = "LTAKE",
-  rec_axiom = num_Axiom};
+Definition LTAKE[nocompute]:
+  (LTAKE 0 ll = SOME []) /\
+  (LTAKE (SUC n) ll =
+     case LHD ll of
+         NONE => NONE
+       | SOME hd =>
+         case LTAKE n (THE (LTL ll)) of
+             NONE => NONE
+           | SOME tl => SOME (hd::tl))
+End
 
 Theorem LTAKE_LUNFOLD:
    (LTAKE 0 (LUNFOLD f x) = SOME []) /\
@@ -1282,11 +1280,10 @@ QED
     dropped
    ---------------------------------------------------------------------- *)
 
-val LDROP = new_recursive_definition {
-  def = ``(LDROP 0 ll = SOME ll) /\
-          (LDROP (SUC n) ll = OPTION_JOIN (OPTION_MAP (LDROP n) (LTL ll)))``,
-  rec_axiom = num_Axiom,
-  name = "LDROP"};
+Definition LDROP[nocompute]:
+  (LDROP 0 ll = SOME ll) /\
+  (LDROP (SUC n) ll = OPTION_JOIN (OPTION_MAP (LDROP n) (LTL ll)))
+End
 
 Theorem FUNPOW_BIND_NONE[local]:
    !n. FUNPOW (\m. OPTION_BIND m g) n NONE = NONE

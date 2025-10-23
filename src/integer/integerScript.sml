@@ -427,12 +427,10 @@ QED
 (* Now define the inclusion homomorphism tint_of_num:num->tint.             *)
 (*--------------------------------------------------------------------------*)
 
-val tint_of_num =
-    new_recursive_definition
-      {name = "tint_of_num",
-       rec_axiom = prim_recTheory.num_Axiom,
-       def = Term `(tint_of_num 0 = tint_0) /\
-                   (tint_of_num (SUC n) = (tint_of_num n) tint_add tint_1)`};
+Definition tint_of_num[nocompute]:
+  (tint_of_num 0 = tint_0) /\
+  (tint_of_num (SUC n) = (tint_of_num n) tint_add tint_1)
+End
 
 (* Could do the following if wished:
 val _ = add_numeral_form(#"t", SOME "tint_of_num");
@@ -3267,11 +3265,10 @@ QED
 
 val _ = print "Exponentiation\n"
 
-val int_exp = Prim_rec.new_recursive_definition{
-  def = Term`(int_exp (p:int) 0 = 1) /\
-             (int_exp p (SUC n) = p * int_exp p n)`,
-  name = "int_exp",
-  rec_axiom = prim_recTheory.num_Axiom};
+Definition int_exp[nocompute]:
+  (int_exp (p:int) 0 = 1) /\
+  (int_exp p (SUC n) = p * int_exp p n)
+End
 
 val _ = set_fixity "int_exp"  (Infixr 700);
 Overload "**" = Term`$int_exp`
@@ -4087,4 +4084,3 @@ val _ = BasicProvers.export_rewrites
          "INT_SUB_NEG2", "INT_SUB_REFL",
          "INT_SUB_RNEG", "INT_SUB_SUB",
          "INT_SUB_SUB2", "NUM_OF_INT"]
-

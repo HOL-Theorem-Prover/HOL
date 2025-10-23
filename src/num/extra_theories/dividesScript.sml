@@ -382,11 +382,10 @@ QED
 (* The sequence of primes.                                                   *)
 (*---------------------------------------------------------------------------*)
 
-val PRIMES_def = new_recursive_definition
- {name = "PRIMES_def",
-  rec_axiom = prim_recTheory.num_Axiom,
-  def = ``(PRIMES 0 = 2) /\
-          (PRIMES (SUC n) = LEAST p. prime p /\ PRIMES n < p)``};
+Definition PRIMES_def[nocompute]:
+  (PRIMES 0 = 2) /\
+  (PRIMES (SUC n) = LEAST p. prime p /\ PRIMES n < p)
+End
 
 Theorem primePRIMES:
   !n. prime (PRIMES n)
