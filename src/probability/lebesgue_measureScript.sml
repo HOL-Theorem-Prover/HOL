@@ -3274,9 +3274,6 @@ Proof
  >> MATCH_MP_TAC REAL_LE_DIV >> simp [POW_POS]
 QED
 
-val _ = export_theory ();
-val _ = html_theory "lebesgue_measure";
-
 (* References:
 
   [1] Schilling, R.L.: Measures, Integrals and Martingales (Second Edition).
