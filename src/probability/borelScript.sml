@@ -4979,7 +4979,7 @@ Proof
 QED
 
 (* give `measure lebesgue` a special symbol (cf. `lambda0`) *)
-val _ = overload_on ("lambda", ``measure lborel``);
+Overload lambda = ``measure lborel``
 
 Theorem lambda_empty :
     lambda {} = 0

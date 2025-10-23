@@ -13,9 +13,9 @@ Ancestors
   listRange gcdset option number combinatorics prim_rec
 
 
-val _ = temp_overload_on("SQ", ``\n. n * n``);
-val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
-val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
+Overload SQ[local] = ``\n. n * n``
+Overload HALF[local] = ``\n. n DIV 2``
+Overload TWICE[local] = ``\n. 2 * n``
 
 (* ------------------------------------------------------------------------- *)
 (* Integer Functions Computation Documentation                               *)
@@ -814,7 +814,7 @@ Definition perfect_power_def:
 End
 
 (* Overload perfect_power *)
-val _ = overload_on("power_of", ``perfect_power``);
+Overload power_of = ``perfect_power``
 val _ = set_fixity "power_of" (Infix(NONASSOC, 450)); (* same as relation *)
 (* from pretty-printing, a good idea. *)
 
@@ -3340,7 +3340,7 @@ val prime_power_index_def = new_specification(
 *)
 
 (* Overload on prime_power_index of prime p *)
-val _ = overload_on("ppidx", ``prime_power_index p``);
+Overload ppidx = ``prime_power_index p``
 
 (*
 > prime_power_index_def;
@@ -4485,7 +4485,7 @@ Definition primes_upto_def:
 End
 
 (* Overload the counts of primes up to n *)
-val _ = overload_on("primes_count", ``\n. CARD (primes_upto n)``);
+Overload primes_count = ``\n. CARD (primes_upto n)``
 
 (* Define the prime powers up to n *)
 Definition prime_powers_upto_def:
@@ -5171,16 +5171,16 @@ This separation of prime factors keep coprime P Q, but P * Q = lcm m n.
 *)
 
 (* Overload the park sets *)
-val _ = overload_on ("common_prime_divisors",
-        ``\m n. (prime_divisors m) INTER (prime_divisors n)``);
-val _ = overload_on ("total_prime_divisors",
-        ``\m n. (prime_divisors m) UNION (prime_divisors n)``);
-val _ = overload_on ("park_on",
-        ``\m n. {p | p IN common_prime_divisors m n /\ ppidx m <= ppidx n}``);
-val _ = overload_on ("park_off",
-        ``\m n. {p | p IN common_prime_divisors m n /\ ppidx n < ppidx m}``);
+Overload common_prime_divisors =
+        ``\m n. (prime_divisors m) INTER (prime_divisors n)``
+Overload total_prime_divisors =
+        ``\m n. (prime_divisors m) UNION (prime_divisors n)``
+Overload park_on =
+        ``\m n. {p | p IN common_prime_divisors m n /\ ppidx m <= ppidx n}``
+Overload park_off =
+        ``\m n. {p | p IN common_prime_divisors m n /\ ppidx n < ppidx m}``
 (* Overload the parking divisor of GCD *)
-val _ = overload_on("park", ``\m n. PROD_SET (IMAGE (\p. p ** ppidx m) (park_on m n))``);
+Overload park = ``\m n. PROD_SET (IMAGE (\p. p ** ppidx m) (park_on m n))``
 
 (* Note:
 The basic one is park_on m n, defined only for 0 < m and 0 < n.
@@ -10276,10 +10276,10 @@ Proof
 QED
 
 (* Overload square-free filter of a set *)
-val _ = overload_on("sq_free", ``\s. {n | n IN s /\ square_free n}``);
+Overload sq_free = ``\s. {n | n IN s /\ square_free n}``
 
 (* Overload non-square-free filter of a set *)
-val _ = overload_on("non_sq_free", ``\s. {n | n IN s /\ ~(square_free n)}``);
+Overload non_sq_free = ``\s. {n | n IN s /\ ~(square_free n)}``
 
 (* Theorem: n IN sq_free s <=> n IN s /\ square_free n *)
 (* Proof: by notation. *)
@@ -10411,10 +10411,10 @@ Proof
 QED
 
 (* Overload even square-free filter of a set *)
-val _ = overload_on("even_sq_free", ``\s. {n | n IN (sq_free s) /\ EVEN (CARD (prime_factors n))}``);
+Overload even_sq_free = ``\s. {n | n IN (sq_free s) /\ EVEN (CARD (prime_factors n))}``
 
 (* Overload odd square-free filter of a set *)
-val _ = overload_on("odd_sq_free", ``\s. {n | n IN (sq_free s) /\ ODD (CARD (prime_factors n))}``);
+Overload odd_sq_free = ``\s. {n | n IN (sq_free s) /\ ODD (CARD (prime_factors n))}``
 
 (* Theorem: n IN even_sq_free s <=> n IN s /\ square_free n /\ EVEN (CARD (prime_factors n)) *)
 (* Proof: by notation. *)
@@ -10505,7 +10505,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Overload the set of divisors less than n *)
-val _ = overload_on("less_divisors", ``\n. {x | x IN (divisors n) /\ x <> n}``);
+Overload less_divisors = ``\n. {x | x IN (divisors n) /\ x <> n}``
 
 (* Theorem: x IN (less_divisors n) <=> (0 < x /\ x < n /\ x divides n) *)
 (* Proof: by divisors_element. *)
@@ -10612,7 +10612,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Overload the set of proper divisors of n *)
-val _ = overload_on("proper_divisors", ``\n. {x | x IN (divisors n) /\ x <> 1 /\ x <> n}``);
+Overload proper_divisors = ``\n. {x | x IN (divisors n) /\ x <> 1 /\ x <> n}``
 
 (* Theorem: x IN (proper_divisors n) <=> (1 < x /\ x < n /\ x divides n) *)
 (* Proof:

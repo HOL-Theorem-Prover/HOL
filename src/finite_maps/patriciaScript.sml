@@ -46,7 +46,7 @@ Definition PEEK_def[nocompute]:
   (PEEK (Branch p m l r) k = PEEK (if BIT m k then l else r) k)
 End
 
-val _ = overload_on ("'", Term`$PEEK`);
+Overload "'" = Term`$PEEK`
 
 Definition JOIN_def[nocompute]:
   JOIN (p0,t0,p1,t1) =
@@ -71,7 +71,7 @@ Definition ADD_def[nocompute]:
            JOIN (k, Leaf k e, p, Branch p m l r))
 End
 
-val _ = overload_on ("|+", Term`$ADD`);
+Overload "|+" = Term`$ADD`
 
 Definition BRANCH_def[nocompute]:
   (BRANCH (p,m,Empty,t) = t) /\
@@ -92,7 +92,7 @@ Definition REMOVE_def[nocompute]:
            Branch p m l r)
 End
 
-val _ = overload_on ("\\\\", Term`$REMOVE`);
+Overload "\\\\" = Term`$REMOVE`
 
 Definition TRAVERSE_AUX_def:
     (TRAVERSE_AUX Empty a = a) /\
@@ -150,7 +150,7 @@ End
 (* ------------------------------------------------------------------------- *)
 
 val _ = hide "set";
-val _ = overload_on("LIST_TO_SET", ``list$LIST_TO_SET``);
+Overload LIST_TO_SET = ``list$LIST_TO_SET``
 
 val _ = set_fixity "IN_PTREE" (Infix (NONASSOC, 425));
 val _ = set_fixity "INSERT_PTREE" (Infixr 490);
@@ -173,7 +173,7 @@ Definition PTREE_OF_NUMSET_def[nocompute]:
   FOLDL (combin$C $INSERT_PTREE) t (SET_TO_LIST s)
 End
 
-val _ = overload_on ("|++", Term`$PTREE_OF_NUMSET`);
+Overload "|++" = Term`$PTREE_OF_NUMSET`
 
 Definition NUMSET_OF_PTREE_def:
   NUMSET_OF_PTREE (t:unit ptree) = LIST_TO_SET (TRAVERSE t)
@@ -192,7 +192,7 @@ End
 Definition ADD_LIST_def:   ADD_LIST = FOLDL ADD
 End
 
-val _ = overload_on ("|++", Term`$ADD_LIST`);
+Overload "|++" = Term`$ADD_LIST`
 
 (* ------------------------------------------------------------------------- *)
 

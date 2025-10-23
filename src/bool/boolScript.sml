@@ -31,7 +31,7 @@ val _ = TeX_notation {hol = UChar.lambda, TeX = ("\\HOLTokenLambda{}", 1)}
 val _ = TeX_notation {hol = "@", TeX = ("\\HOLTokenHilbert{}", 1)}
 
 (* iff *)
-val _ = overload_on ("<=>", “(=) : bool -> bool -> bool”)
+Overload "<=>" = “(=) : bool -> bool -> bool”
 val _ = set_fixity "<=>" (Infix(NONASSOC, 100))
 val _ = unicode_version {u = UChar.iff, tmnm = "<=>"}
 val _ = TeX_notation {hol = "<=>", TeX = ("\\HOLTokenEquiv{}",3)}
@@ -115,7 +115,7 @@ val NOT_DEF = def (#(FILE), #(LINE))
    ("NOT_DEF",        “~ = \t. t ==> F”);
 
 (* now allows parsing of not equal *)
-val _ = overload_on ("<>", “\x:'a y:'a. ~(x = y)”)
+Overload "<>" = “\x:'a y:'a. ~(x = y)”
 val _ = set_fixity "<>" (Infix(NONASSOC, 450))
 val _ = TeX_notation {hol="<>", TeX = ("\\HOLTokenNotEqual{}",1)}
 
@@ -142,7 +142,7 @@ val COND_DEF = def (#(FILE), #(LINE))
    ("COND_DEF",       “COND = \t t1 t2.
                                       @x:'a. ((t=T) ==> (x=t1)) /\
                                              ((t=F) ==> (x=t2))”);
-val _ = overload_on ("case", “COND”)
+Overload case = “COND”
 
 val ONE_ONE_DEF = def (#(FILE), #(LINE))
    ("ONE_ONE_DEF",    “ONE_ONE = \f:'a->'b. !x1 x2.
@@ -239,7 +239,7 @@ val arb = new_constant("ARB",alpha);  (* Doesn't have to be defined at all. *)
 val literal_case_DEF = def (#(FILE), #(LINE))
    ("literal_case_DEF",  “literal_case = λ(f:'a->'b) x. f x”);
 
-val _ = overload_on ("case", “bool$literal_case”);
+Overload case = “bool$literal_case”
 
 val IN_DEF = def (#(FILE), #(LINE))
    ("IN_DEF",         “IN = \x (f:'a->bool). f x”);
@@ -4346,7 +4346,7 @@ in
     loc = mkloc(#(FILE), #(LINE)-5)
   }
 end
-val _ = overload_on("case", “itself_case”)
+Overload case = “itself_case”
 
 (* FORALL_itself : |- (!x:'a itself. P x) <=> P (:'a)
    EXISTS_itself : |- (?x:'a itself. P x) <=> P (:'a)
@@ -4437,7 +4437,7 @@ end
 
 (* Parsing additions *)
 (* not an element of *)
-val _ = overload_on ("NOTIN", “\x:'a y:('a -> bool). ~(x IN y)”)
+Overload NOTIN = “\x:'a y:('a -> bool). ~(x IN y)”
 val _ = set_fixity "NOTIN" (Infix(NONASSOC, 425))
 val _ = unicode_version {u = UChar.not_elementof, tmnm = "NOTIN"}
 val _ = TeX_notation {hol="NOTIN", TeX = ("\\HOLTokenNotIn{}",1)}
@@ -4445,7 +4445,7 @@ val _ = TeX_notation {hol=UChar.not_elementof,
                       TeX = ("\\HOLTokenNotIn{}",1)}
 
 (* not iff *)
-val _ = overload_on ("<=/=>", “$<> : bool -> bool -> bool”)
+Overload "<=/=>" = “$<> : bool -> bool -> bool”
 val _ = set_fixity "<=/=>" (Infix(NONASSOC, 100))
 val _ = unicode_version {u = UChar.not_iff, tmnm = "<=/=>"}
 val _ = TeX_notation {hol="<=/=>", TeX = ("\\HOLTokenNotEquiv{}",3)}

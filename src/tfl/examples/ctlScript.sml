@@ -86,11 +86,13 @@ val _ = mkMyPrefix "X"     255;
        Term`A ((X (STATE TRUE)) FAILS)`
  ---------------------------------------------------------------------------*)
 
-let val overloading = app o curry overload_on
-in overloading "~"   [boolSyntax.negation, Term`NOT`];
-   overloading "/\\" [boolSyntax.conjunction, Term`PCONJ`, Term`SCONJ`];
-   overloading "\\/" [boolSyntax.disjunction, Term`PDISJ`, Term`SDISJ`]
-end;
+Overload "~" = “NOT”
+
+Overload "/\\" = “PCONJ”
+Overload "/\\" = “SCONJ”
+
+Overload "\\/" = “PDISJ”
+Overload "\\/" = “SDISJ”
 
 (*---------------------------------------------------------------------------*
  * The branching time logic CTL (Computation Tree Logic) [2:p30]
@@ -284,4 +286,3 @@ Termination
                                INL (x,y) => state_formula_size (\v.0) y
                              | INR (x,y) => path_formula_size (\v.0) y)`
 End
-

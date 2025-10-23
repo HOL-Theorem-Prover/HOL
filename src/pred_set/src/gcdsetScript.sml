@@ -110,7 +110,7 @@ val _ = export_rewrites ["gcdset_INSERT"]
 (* ------------------------------------------------------------------------- *)
 
 (* Overload the set of natural numbers (like count) *)
-val _ = overload_on("natural", ``\n. IMAGE SUC (count n)``);
+Overload natural = ``\n. IMAGE SUC (count n)``
 
 (* Theorem: j IN (natural n) <=> 0 < j /\ j <= n *)
 (* Proof:

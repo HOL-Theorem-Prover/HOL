@@ -19,7 +19,7 @@ fun tmlist_tyvs tlist =
 
 type 'a in_env = 'a Pretype.in_env
 
-val show_typecheck_errors = ref true
+val show_typecheck_errors = ref false
 val _ = register_btrace ("show_typecheck_errors", show_typecheck_errors)
 fun tcheck_say s = if !show_typecheck_errors then Lib.say s else ()
 
@@ -599,14 +599,7 @@ in
 fun typecheck_phase1 printers = let
   val (ptm, pty) =
       case printers of
-        SOME (x,y) => let
-          val typrint = y
-          fun tmprint tm =
-              if Term.is_const tm then x tm ^ " " ^ y (Term.type_of tm)
-              else x tm
-        in
-          (tmprint, typrint)
-        end
+        SOME (x,y) => (x,y)
       | NONE => (default_tmprinter, default_typrinter)
   fun check(Comb{Rator, Rand, Locn}) =
     check Rator >> check Rand >>
@@ -615,36 +608,14 @@ fun typecheck_phase1 printers = let
     Pretype.new_uvar >- (fn range_var =>
     (Pretype.unify rator_ty (rand_ty --> range_var)) ++?
      (fn unify_error => fn env =>
-          let val tmp = !Globals.show_types
-              val _   = Globals.show_types := true
-              val Rator' = smashTm Rator env
-                handle e => (Globals.show_types := tmp; raise e)
+          let val Rator' = smashTm Rator env
               val Rand'  = smashTm Rand env
-                handle e => (Globals.show_types := tmp; raise e)
-              val message =
-                  String.concat
-                      [
-                       "\nType inference failure: unable to infer a type \
-                       \for the application of\n\n",
-                       ptm Rator',
-                       "\n\n"^locn.toString (locn Rator)^"\n\n",
-                       if is_atom Rator then ""
-                       else ("which has type\n\n" ^
-                             pty(Term.type_of Rator') ^ "\n\n"),
-
-                       "to\n\n",
-                       ptm Rand',
-                       "\n\n"^locn.toString (locn Rand)^"\n\n",
-
-                       if is_atom Rand then ""
-                       else ("which has type\n\n" ^
-                             pty(Term.type_of Rand') ^ "\n\n"),
-
-                       "unification failure message: " ^
-                       errorMsg (#1 unify_error) ^ "\n"]
+              val message = String.concat
+                  ["\nType error in function application.\n",
+                   "  Function: ", ptm Rator', " ", pty(Term.type_of Rator'), "\n",
+                   "  Argument: ", ptm Rand',  " ", pty(Term.type_of Rand'), "\n",
+                   "  Reason: ",   errorMsg (#1 unify_error), "\n"]
           in
-            Globals.show_types := tmp;
-            tcheck_say message;
             Error (AppFail(Rator',Rand',message), locn Rand)
           end))))
     | check (Abs{Bvar, Body, Locn}) = (check Bvar >> check Body)
@@ -652,28 +623,15 @@ fun typecheck_phase1 printers = let
         check Ptm >> ptype_of Ptm >- (fn ptyp =>
         (Pretype.unify ptyp Ty ++
          (fn env =>
-             let val tmp = !Globals.show_types
-                 val _ = Globals.show_types := true
-                 val real_term = smashTm Ptm env
-                   handle e => (Globals.show_types := tmp; raise e)
-                 val real_type = Pretype.toType Ty
-                   handle e => (Globals.show_types := tmp; raise e)
-                 val message =
-                  String.concat
-                      [
-                       "\nType inference failure: the term\n\n",
-                       ptm real_term,
-                       "\n\n", locn.toString (locn Ptm), "\n\n",
-                       if is_atom Ptm then ""
-                       else("which has type\n\n" ^
-                            pty(Term.type_of real_term) ^ "\n\n"),
-                       "can not be constrained to be of type\n\n",
-                       pty real_type,
-                       "\n\nunification failure message: ???\n"]
+             let val real_term = smashTm Ptm env
+                 val rty = Term.type_of real_term
+                 val constraint = Pretype.toType Ty
+                 val message = String.concat
+                     ["\nType constraint failure: \n",
+                      "  Term: ", ptm real_term, " ", pty rty, "\n",
+                      "  Constraint: ", pty constraint, "\n"]
              in
-               Globals.show_types := tmp;
-               tcheck_say message;
-               Error(ConstrainFail(real_term, real_type, message), Locn)
+               Error(ConstrainFail(real_term, constraint, message), Locn)
              end)))
     | check _ = ok
 in

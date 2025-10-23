@@ -124,7 +124,7 @@ Definition poly_add_def[nocompute]:
                         else  ((h:real) + HD l2)::poly_add t (TL l2))
 End
 
-val _ = overload_on ("+", Term`poly_add`);
+Overload "+" = Term`poly_add`
 
 val _ = Parse.hide "##";
 
@@ -137,14 +137,14 @@ val _ = set_fixity "##" (Infixl 600);
 Definition poly_neg_def[nocompute]: poly_neg = $## (~(&1))
 End
 
-val _ = overload_on ("~", Term`poly_neg`);
+Overload "~" = Term`poly_neg`
 
 Definition poly_mul_def[nocompute]:
   (poly_mul [] l2     = []) /\
   (poly_mul (h::t) l2 = if (t = []) then h ## l2
                         else (h ## l2) + (0r :: poly_mul t l2))
 End
-val _ = overload_on ("*", Term`poly_mul`);
+Overload "*" = “poly_mul”
 
 Definition poly_exp_def[nocompute]:
   (poly_exp p 0       = [1r]) /\

@@ -1,6 +1,5 @@
 open HolKernel Parse
 open Defn
-
 open testutils
 
 fun test msg f x = (tprint msg; require (check_result (K true)) f x)
@@ -52,16 +51,17 @@ fun define q =
   in
     Defn.mk_defn (hd names) tm
   end
-fun exnlookfor sl (Exn (HOL_ERR {message,...})) =
-     if List.all (fn s => String.isSubstring s message) sl then OK()
+
+fun exnlookfor sl (Exn (HOL_ERR herr)) =
+     if List.all (fn s => String.isSubstring s (message_of herr)) sl then OK()
      else
-       die ("\nBad exception message:\n  "^message)
+       die ("\nBad exception message:\n  "^message_of herr)
   | exnlookfor _ (Exn e) =
       die ("\nException not a HOL_ERR;\n  "^General.exnMessage e)
   | exnlookfor _ _ = die ("\nExecution unexpectedly successful")
 
 fun badvarcheck r =
-  exnlookfor ["Simple definition failed", "Free variables in rhs"] r
+  exnlookfor ["Free variables in rhs"] r
 
 fun wfunivq r =
   exnlookfor ["Universally quantified equation as argument"] r

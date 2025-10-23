@@ -393,8 +393,10 @@ in
       let
          val ((t, _), is_list) =
             (patriciaSyntax.dest_add_list tm, true)
-            handle HOL_ERR {origin_function = "dest_add_list", ...} =>
-               (patriciaSyntax.dest_add tm, false)
+            handle e as HOL_ERR holerr =>
+              if top_function_of holerr = "dest_add_list" then
+                 (patriciaSyntax.dest_add tm, false)
+              else raise e
          val ty = Term.type_of t
          val tty = patriciaSyntax.dest_ptree_type ty
          val d = Term.mk_var ("d", tty)

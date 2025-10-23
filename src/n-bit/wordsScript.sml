@@ -183,9 +183,9 @@ Overload "¬" = “words$word_1comp”
 val _ = send_to_back_overload "~" {Name = "word_1comp", Thy = "words"}
 val _ = send_to_back_overload "¬" {Name = "word_1comp", Thy = "words"}
 
-val _ = overload_on ("UINT_MAXw", ``words$word_T``)
-val _ = overload_on ("INT_MAXw",  ``words$word_H``)
-val _ = overload_on ("INT_MINw",  ``words$word_L``)
+Overload UINT_MAXw = ``words$word_T``
+Overload INT_MAXw = ``words$word_H``
+Overload INT_MINw = ``words$word_L``
 
 val _ = Unicode.unicode_version {u = Unicode.UChar.xor, tmnm = "??"}
 val _ = Unicode.unicode_version {u = Unicode.UChar.or, tmnm = "||"}
@@ -384,14 +384,14 @@ End
 Definition word_L2_def:   word_L2 = word_mul word_L word_L
 End
 
-val () = List.app (fn (s, t) => Parse.overload_on (s, Parse.Term t))
-  [("+", `$word_add`),
-   ("-", `$word_sub`),
-   ("numeric_negate", `$word_2comp`),
-   ("*", `$word_mul`),
-   ("**", `$word_exp`),
-   ("CARRY_OUT", `\a b c. FST (SND (add_with_carry (a,b,c)))`),
-   ("OVERFLOW",  `\a b c. SND (SND (add_with_carry (a,b,c)))`)]
+Overload "+" = “$word_add”
+Overload "-" = “$word_sub”
+Overload numeric_negate = “$word_2comp”
+Overload "*" = “$word_mul”
+Overload "**" = “$word_exp”
+Overload CARRY_OUT = “λa b c. FST (SND (add_with_carry (a,b,c)))”
+Overload OVERFLOW =  “λa b c. SND (SND (add_with_carry (a,b,c)))”
+
 
 val () = add_infixes 600 HOLgrammars.LEFT
   [("//", `$word_div`),
@@ -1232,7 +1232,7 @@ QED
     The Boolean operations : theorems
    ------------------------------------------------------------------------- *)
 
-val _ = temp_overload_on ("Tw",``words$word_T``)
+Overload Tw[local] = ``words$word_T``
 
 val ONE_COMP_0_THM =
   (SIMP_RULE arith_ss [BIT_ZERO,ZERO_MOD,ZERO_LT_TWOEXP] o

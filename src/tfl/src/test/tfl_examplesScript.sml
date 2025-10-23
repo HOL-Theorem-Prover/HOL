@@ -50,8 +50,8 @@ val sorted_def = function "sorted"
     (sorted (R, CONS x (CONS y rst)) <=> R x y /\ sorted(R, CONS y rst))`;
 
 val fin_def = function "fin" `(fin(R:^order,[x:'a]) = T)`;
-val _ = overload_on("filter", ``FILTER``)
-val _ = overload_on ("mem", ``MEM``)
+Overload filter = ``FILTER``
+Overload mem = ``MEM``
 
 val qsort_defn = Hol_defn "qsort"
    `(qsort(ord:^order,[]) = []) /\

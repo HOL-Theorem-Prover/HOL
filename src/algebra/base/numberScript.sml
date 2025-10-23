@@ -10,24 +10,24 @@ Ancestors
 
 
 (* Overload non-decreasing functions with different arity. *)
-val _ = overload_on("MONO", ``\f:num -> num. !x y. x <= y ==> f x <= f y``);
-val _ = overload_on("MONO2",
+Overload MONO = ``\f:num -> num. !x y. x <= y ==> f x <= f y``
+Overload MONO2 =
       ``\f:num -> num -> num.
-           !x1 y1 x2 y2. x1 <= x2 /\ y1 <= y2 ==> f x1 y1 <= f x2 y2``);
-val _ = overload_on("MONO3",
+           !x1 y1 x2 y2. x1 <= x2 /\ y1 <= y2 ==> f x1 y1 <= f x2 y2``
+Overload MONO3 =
       ``\f:num -> num -> num -> num.
            !x1 y1 z1 x2 y2 z2. x1 <= x2 /\ y1 <= y2 /\ z1 <= z2 ==>
-                               f x1 y1 z1 <= f x2 y2 z2``);
+                               f x1 y1 z1 <= f x2 y2 z2``
 
 (* Overload non-increasing functions with different arity. *)
-val _ = overload_on("RMONO", ``\f:num -> num. !x y. x <= y ==> f y <= f x``);
-val _ = overload_on("RMONO2",
+Overload RMONO = ``\f:num -> num. !x y. x <= y ==> f y <= f x``
+Overload RMONO2 =
       ``\f:num -> num -> num.
-           !x1 y1 x2 y2. x1 <= x2 /\ y1 <= y2 ==> f x2 y2 <= f x1 y1``);
-val _ = overload_on("RMONO3",
+           !x1 y1 x2 y2. x1 <= x2 /\ y1 <= y2 ==> f x2 y2 <= f x1 y1``
+Overload RMONO3 =
       ``\f:num -> num -> num -> num.
            !x1 y1 z1 x2 y2 z2. x1 <= x2 /\ y1 <= y2 /\ z1 <= z2 ==>
-                               f x2 y2 z2 <= f x1 y1 z1``);
+                               f x2 y2 z2 <= f x1 y1 z1``
 
 (* ------------------------------------------------------------------------- *)
 (* More Set Theorems                                                         *)
@@ -401,7 +401,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of all proper subsets of a set *)
-val _ = overload_on ("PPOW", ``\s. (POW s) DIFF {s}``);
+Overload PPOW = ``\s. (POW s) DIFF {s}``
 
 (* Theorem: !s e. e IN PPOW s ==> e PSUBSET s *)
 (* Proof:
@@ -470,7 +470,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Overload partition by split *)
-val _ = overload_on("split", ``\s u v. (s = u UNION v) /\ (DISJOINT u v)``);
+Overload split = ``\s u v. (s = u UNION v) /\ (DISJOINT u v)``
 
 (* Pretty printing of partition by split *)
 val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT, 2)),
@@ -574,13 +574,13 @@ Proof
 QED
 
 (* Overload squaring (temporalized by Chun Tian) *)
-val _ = temp_overload_on("SQ", ``\n. n * n``); (* not n ** 2 *)
+Overload SQ[local] = ``\n. n * n``(* not n ** 2 *)
 
 (* Overload half of a number (temporalized by Chun Tian) *)
-val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
+Overload HALF[local] = ``\n. n DIV 2``
 
 (* Overload twice of a number (temporalized by Chun Tian) *)
-val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
+Overload TWICE[local] = ``\n. 2 * n``
 
 (* make divides infix *)
 val _ = set_fixity "divides" (Infixl 480); (* relation is 450, +/- is 500, * is 600. *)
@@ -5090,7 +5090,7 @@ Overload tops = “\b:num n. b ** n - 1”
 *)
 
 (* Overload power predecessor base 10 *)
-val _ = overload_on("nines", ``\n. tops 10 n``);
+Overload nines = ``\n. tops 10 n``
 
 (* Obtain corollaries *)
 
@@ -5838,7 +5838,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Overload pairwise coprime set *)
-val _ = overload_on("PAIRWISE_COPRIME", ``\s. !x y. x IN s /\ y IN s /\ x <> y ==> coprime x y``);
+Overload PAIRWISE_COPRIME = ``\s. !x y. x IN s /\ y IN s /\ x <> y ==> coprime x y``
 
 (* Theorem: e NOTIN s /\ PAIRWISE_COPRIME (e INSERT s) ==>
             (!x. x IN s ==> coprime e x) /\ PAIRWISE_COPRIME s *)
@@ -6220,7 +6220,7 @@ Proof
 QED
 
 (* Introduce countFrom m n, the set {m, m + 1, m + 2, ...., m + n - 1} *)
-val _ = overload_on("countFrom", ``\m n. IMAGE ($+ m) (count n)``);
+Overload countFrom = ``\m n. IMAGE ($+ m) (count n)``
 
 (* Theorem: countFrom m 0 = {} *)
 (* Proof:
@@ -7607,7 +7607,7 @@ Sort of yes, but have to use BIGUNION, and for a set_additive function f.
 *)
 
 (* Overload every element finite of a superset *)
-val _ = overload_on("EVERY_FINITE", ``\P. (!s. s IN P ==> FINITE s)``);
+Overload EVERY_FINITE = ``\P. (!s. s IN P ==> FINITE s)``
 
 (*
 > FINITE_BIGUNION;
@@ -7615,7 +7615,7 @@ val it = |- !P. FINITE P /\ EVERY_FINITE P ==> FINITE (BIGUNION P): thm
 *)
 
 (* Overload pairwise disjoint of a superset *)
-val _ = overload_on("PAIR_DISJOINT", ``\P. (!s t. s IN P /\ t IN P /\ ~(s = t) ==> DISJOINT s t)``);
+Overload PAIR_DISJOINT = ``\P. (!s t. s IN P /\ t IN P /\ ~(s = t) ==> DISJOINT s t)``
 
 (*
 > partition_elements_disjoint;
@@ -7631,8 +7631,8 @@ Proof
 QED
 
 (* Overload an additive set function *)
-val _ = overload_on("SET_ADDITIVE",
-   ``\f. (f {} = 0) /\ (!s t. FINITE s /\ FINITE t ==> (f (s UNION t) + f (s INTER t) = f s + f t))``);
+Overload SET_ADDITIVE =
+   ``\f. (f {} = 0) /\ (!s t. FINITE s /\ FINITE t ==> (f (s UNION t) + f (s INTER t) = f s + f t))``
 
 (* Theorem: FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P ==>
             !f. SET_ADDITIVE f ==> (f (BIGUNION P) = SIGMA f P) *)
@@ -7780,8 +7780,8 @@ Proof
 QED
 
 (* Overload a multiplicative set function *)
-val _ = overload_on("SET_MULTIPLICATIVE",
-   ``\f. (f {} = 1) /\ (!s t. FINITE s /\ FINITE t ==> (f (s UNION t) * f (s INTER t) = f s * f t))``);
+Overload SET_MULTIPLICATIVE =
+   ``\f. (f {} = 1) /\ (!s t. FINITE s /\ FINITE t ==> (f (s UNION t) * f (s INTER t) = f s * f t))``
 
 (* Theorem: FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P ==>
             !f. SET_MULTIPLICATIVE f ==> (f (BIGUNION P) = PI f P) *)
@@ -7886,7 +7886,7 @@ Proof
 QED
 
 (* Overload on permutation *)
-val _ = overload_on("PERMUTES", ``\f s. BIJ f s s``);
+Overload PERMUTES = ``\f s. BIJ f s s``
 val _ = set_fixity "PERMUTES" (Infix(NONASSOC, 450)); (* same as relation *)
 
 (* Theorem: FINITE s ==> !g. g PERMUTES s ==> !f. SIGMA (f o g) s = SIGMA f s *)
@@ -8584,10 +8584,10 @@ Proof
 QED
 
 (* Overload a RISING function (temporalizaed by Chun Tian) *)
-val _ = temp_overload_on ("RISING", ``\f. !x:num. x <= f x``);
+Overload RISING[local] = ``\f. !x:num. x <= f x``
 
 (* Overload a FALLING function (temporalizaed by Chun Tian) *)
-val _ = temp_overload_on ("FALLING", ``\f. !x:num. f x <= x``);
+Overload FALLING[local] = ``\f. !x:num. f x <= x``
 
 (* Theorem: RISING f /\ m <= n ==> !x. FUNPOW f m x <= FUNPOW f n x *)
 (* Proof:
@@ -9596,7 +9596,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Overload on another count-related set *)
-val _ = overload_on("upto", ``\n. count (SUC n)``);
+Overload upto = ``\n. count (SUC n)``
 
 (* Theorem: FINITE (upto n) *)
 (* Proof: by FINITE_COUNT *)
@@ -10293,7 +10293,7 @@ Proof
 QED
 
 (* Overload sublist by infix operator *)
-val _ = temp_overload_on ("<=", ``sublist``);
+Overload "<="[local] = ``sublist``
 
 (* Theorem: m < n ==> [m; n] <= [m .. n] *)
 (* Proof:

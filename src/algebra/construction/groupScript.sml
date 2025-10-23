@@ -2157,7 +2157,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* For those same as monoids, use overloading  *)
-val _ = overload_on ("homo_group", ``homo_monoid``);
+Overload homo_group = ``homo_monoid``
 
 (* Theorem: [Closure] Group g /\ GroupHomo f g (homo_group g f) ==> x IN fG /\ y IN fG ==> x o y IN fG *)
 (* Proof:
@@ -2743,7 +2743,7 @@ Definition Subgroup_def:
 End
 
 (* Overload Subgroup *)
-val _ = overload_on ("<=", ``Subgroup``);
+Overload "<=" = ``Subgroup``
 (* already an infix symbol *)
 
 (* Note: The requirement $o = $* is stronger than the following:
@@ -3139,8 +3139,8 @@ Definition right_coset_def:
 End
 
 (* set overloading after all above defintions. *)
-val _ = overload_on ("*", ``coset g``);
-val _ = overload_on ("*", ``right_coset g``);
+Overload "*" = ``coset g``
+Overload "*" = ``right_coset g``
 
 (* Derive theorems. *)
 Theorem coset_alt =
@@ -3867,11 +3867,11 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Use K to denote k.carrier *)
-val _ = temp_overload_on ("K", ``(k:'a group).carrier``);
+Overload K[local] = ``(k:'a group).carrier``
 (* Use o to denote h.op *)
-val _ = temp_overload_on ("o", ``(h:'a group).op``);
+Overload o[local] = ``(h:'a group).op``
 (* Use #i to denote h.id *)
-val _ = temp_overload_on ("#i", ``(h:'a monoid).id``);
+Overload "#i"[local] = ``(h:'a monoid).id``
 
 (* Theorem: h <= g /\ k <= g ==> !x. x IN H INTER K ==> |/ x IN H INTER K *)
 (* Proof:
@@ -4024,7 +4024,7 @@ Definition subgroup_big_intersect_def:
        |>
 End
 
-val _ = overload_on ("sgbINTER", ``subgroup_big_intersect``);
+Overload sgbINTER = ``subgroup_big_intersect``
 (*
 > subgroup_big_intersect_def;
 val it = |- !g. sgbINTER g =
@@ -4419,7 +4419,7 @@ Definition group_div_def:
 End
 
 (* set overloading *)
-val _ = overload_on ("/", ``group_div g``);
+Overload "/" = ``group_div g``
 val _ = set_fixity "/" (Infixl 600); (* same as "*" in arithmeticScript.sml *)
 
 (* export simple defintion *)
@@ -4517,7 +4517,7 @@ Definition normal_subgroup_def:
 End
 
 (* set overloading *)
-val _ = overload_on ("<<", ``normal_subgroup``);
+Overload "<<" = ``normal_subgroup``
 val _ = set_fixity "<<" (Infixl 650); (* higher than * or / *)
 
 (* Theorem: Normal subgroup is a subgroup. *)
@@ -4650,7 +4650,7 @@ Definition group_equiv_def:
 End
 
 (* set overloading *)
-val _ = overload_on ("==", ``group_equiv g h``);
+Overload "==" = ``group_equiv g h``
 val _ = set_fixity "==" (Infix(NONASSOC, 450));
 
 (* Theorem: [== is reflexive] h << g ==> z == z   for z IN G. *)
@@ -4802,7 +4802,7 @@ Definition coset_op_def:
 End
 
 (* set overloading *)
-val _ = overload_on ("o", ``coset_op g h``);
+Overload o = ``coset_op g h``
 
 (* Theorem: h <= g ==> cogen g h H * H = H *)
 (* Proof:
@@ -4914,7 +4914,7 @@ Definition quotient_group_def:
 End
 
 (* set overloading *)
-val _ = overload_on ("/", ``quotient_group``);
+Overload "/" = ``quotient_group``
 val _ = set_fixity "/" (Infixl 600); (* same as "*" in arithmeticScript.sml *)
 
 (*
@@ -6123,7 +6123,7 @@ val PROD_IMAGE_THM = store_thm(
 *)
 
 (* Overload a communtative operation *)
-val _ = overload_on("FUN_COMM", ``\op f. !x y z. op (f x) (op (f y) z) = op (f y) (op (f x) z)``);
+Overload FUN_COMM = ``\op f. !x y z. op (f x) (op (f y) z) = op (f y) (op (f x) z)``
 
 (* Theorem: (OP_IMAGE op id f {} = id)  /\
             (FUN_COMM op f ==> !s. FINITE s ==>
@@ -6157,7 +6157,7 @@ Definition GROUP_IMAGE_DEF:
 End
 
 (* overload GROUP_IMAGE *)
-val _ = temp_overload_on("GPI", ``GROUP_IMAGE g``);
+Overload GPI[local] = ``GROUP_IMAGE g``
 
 (*
 > GROUP_IMAGE_DEF;
@@ -6264,7 +6264,7 @@ Definition group_fun_def:
 End
 
 (* overload on group function *)
-val _ = temp_overload_on("gfun", ``group_fun g``);
+Overload gfun[local] = ``group_fun g``
 
 (* Theorem: Monoid g ==> !f. gfun f ==> !x. x IN G ==> (GPI f {x} = f x) *)
 (* Proof:
@@ -6932,8 +6932,8 @@ End
 
 
 (* overload on generated group and its carrier *)
-val _ = overload_on("gen", ``Generated g``);
-val _ = overload_on("Gen", ``\a. (Generated g a).carrier``);
+Overload gen = ``Generated g``
+Overload Gen = ``\a. (Generated g a).carrier``
 
 (* Theorem: x IN Gen a <=> ?n. x = a ** n *)
 (* Proof: by Generated_def *)
@@ -7327,7 +7327,7 @@ Definition roots_of_unity_def:
       |>
 End
 (* Overload root of unity *)
-val _ = overload_on ("uroots", ``roots_of_unity g``);
+Overload uroots = ``roots_of_unity g``
 
 (*
 > roots_of_unity_def;
@@ -7443,7 +7443,7 @@ Definition Generated_subset_def:
 End
 (* Note: this is the minimal subgroup containing the subset. *)
 (* Similar to subgroup_big_intersect_def in subgroup theory. *)
-val _ = overload_on("gen_set", ``Generated_subset (g:'a group)``);
+Overload gen_set = ``Generated_subset (g:'a group)``
 
 (* Theorem: ((gen_set s).carrier = BIGINTER (IMAGE (\h. H) {h | h <= g /\ s SUBSET H})) /\
             ((gen_set s).op = g.op) /\ ((gen_set s).id = #e) *)
@@ -7765,7 +7765,7 @@ Definition subset_cross_def:
 End
 
 (* Overload subset cross product *)
-val _ = overload_on("o", ``subset_cross (g:'a group)``);
+Overload o = ``subset_cross (g:'a group)``
 (*
 > subset_cross_def;
 val it = |- !g s1 s2. s1 o s2 = {x * y | x IN s1 /\ y IN s2}: thm
@@ -7820,7 +7820,7 @@ Definition subgroup_cross_def:
 End
 
 (* Overload subgroup cross product *)
-val _ = overload_on("o", ``subgroup_cross (g:'a group)``);
+Overload o = ``subgroup_cross (g:'a group)``
 (*
 > subgroup_cross_def;
 val it = |- !g h1 h2. h1 o h2 = make_group g (h1.carrier o h2.carrier): thm
@@ -8235,8 +8235,8 @@ val subset_cross_left_right_def = new_specification(
   SIMP_RULE bool_ss [SKOLEM_THM] lemma);
 
 (* overload subset_cross_left and subset_cross_right *)
-val _ = overload_on("left", ``subset_cross_left (g:'a group) (s1:'a -> bool) (s2:'a -> bool)``);
-val _ = overload_on("right", ``subset_cross_right (g:'a group) (s1:'a -> bool) (s2:'a -> bool)``);
+Overload left = ``subset_cross_left (g:'a group) (s1:'a -> bool) (s2:'a -> bool)``
+Overload right = ``subset_cross_right (g:'a group) (s1:'a -> bool) (s2:'a -> bool)``
 
 (*
 > subset_cross_left_right_def;
@@ -8605,8 +8605,8 @@ Thus (Gen a) INTER (Gen b) = {#e} is a condition in elements a, b, called these 
 *)
 
 (* Overload the notion of independent group elements *)
-val _ = overload_on("independent",
-        ``\(g:'a group) a b. (Gen a) INTER (Gen b) = {#e}``);
+Overload independent =
+        ``\(g:'a group) a b. (Gen a) INTER (Gen b) = {#e}``
 
 (* Theorem: independent g a b = independent g b a *)
 (* Proof:
@@ -8826,7 +8826,7 @@ Definition subset_big_cross_def:
     subset_big_cross (g:'a group) (B:('a -> bool) -> bool) = ITSET (subset_cross g) B {#e}
 End
 (* overload big cross product of subsets. *)
-val _ = overload_on("ssbcross", ``subset_big_cross (g:'a group)``);
+Overload ssbcross = ``subset_big_cross (g:'a group)``
 
 (*
 > subset_big_cross_def;
@@ -8895,7 +8895,7 @@ Definition subgroup_big_cross_def:
     subgroup_big_cross (g:'a group) (B:('a group) -> bool) = ITSET (subgroup_cross g) B (gen #e)
 End
 (* overload big cross product of subgroups. *)
-val _ = overload_on("sgbcross", ``subgroup_big_cross (g:'a group)``);
+Overload sgbcross = ``subgroup_big_cross (g:'a group)``
 
 (*
 > subgroup_big_cross_def;
@@ -9153,7 +9153,7 @@ End
 (* This is the same as add_mod below, using {i | i < n} as carrier. *)
 
 (* Overload Zadd n *)
-val _ = temp_overload_on("Z", ``Zadd``);
+Overload Z[local] = ``Zadd``
 
 (*
 - type_of ``Z n``;
@@ -9376,7 +9376,7 @@ End
 (* This is the same as mult_mod below, using { i | i <> 0 /\ i < p } as carrier. *)
 
 (* Overload Zstar n *)
-val _ = temp_overload_on("Z*", ``Zstar``);
+Overload "Z*"[local] = ``Zstar``
 
 (*
 - type_of ``Z* p``;
@@ -12738,7 +12738,7 @@ Definition action_def:
 End
 
 (* Overload on action *)
-val _ = overload_on("act", ``\(g:'a group) (X:'b -> bool) f. action f g X``);
+Overload act = ``\(g:'a group) (X:'b -> bool) f. action f g X``
 val _ = set_fixity "act" (Infix(NONASSOC, 450)); (* same as relation *)
 
 (*
@@ -12831,7 +12831,7 @@ End
 (* Note: use zDefine as this is not effective. *)
 
 (* Overload reach relation *)
-val _ = temp_overload_on("~~", ``\(x:'b) (y:'b) f (g:'a group). reach f g x y``);
+Overload "~~"[local] = ``\(x:'b) (y:'b) f (g:'a group). reach f g x y``
 (* Make reach an infix. *)
 val _ = set_fixity "~~" (Infix(NONASSOC, 450)); (* same as relation *)
 

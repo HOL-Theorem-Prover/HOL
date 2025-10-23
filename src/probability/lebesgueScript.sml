@@ -160,7 +160,7 @@ Theorem density = REWRITE_RULE [density_measure_def] density_def
 
       `(f * m = v) <=> (f = v / m)`     or      `v / m * m = v`
  *)
-val _ = overload_on ("*", ``\f m. density_measure m f``);
+Overload "*" = ``\f m. density_measure m f``
 
 (* |- !m f s. (f * m) s = pos_fn_integral m (\x. f x * indicator_fn s x) *)
 Theorem density_measure = SIMP_RULE std_ss [FUN_EQ_THM] density_measure_def

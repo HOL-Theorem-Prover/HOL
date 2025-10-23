@@ -1243,8 +1243,8 @@ Definition set_liminf_def:   (* "almost always" *)
       BIGUNION (IMAGE (\m. BIGINTER {E n | m <= n}) UNIV)
 End
 
-val _ = overload_on ("limsup", ``set_limsup``);
-val _ = overload_on ("liminf", ``set_liminf``);
+Overload limsup = ``set_limsup``
+Overload liminf = ``set_liminf``
 
 (* alternative definition of `limsup` using `from` *)
 Theorem set_limsup_alt:
@@ -4798,7 +4798,7 @@ Definition prod_sigma_def:
       sigma (space a CROSS space b) (prod_sets (subsets a) (subsets b))
 End
 
-val _ = overload_on ("CROSS", “prod_sigma”);
+Overload CROSS = “prod_sigma”
 
 (* NOTE: the following easy satifsiable antecedents are added, due to changes
          in ‘measurable’ which previously requires that a1 and a2 are
