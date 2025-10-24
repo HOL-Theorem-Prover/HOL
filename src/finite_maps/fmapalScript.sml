@@ -10,9 +10,6 @@ Libs
   pred_setLib res_quanLib PairRules
 
 
-(* app load ["totoTheory", "res_quanLib", "enumeralTheory",
-             "finite_mapTheory", "combinTheory"]; *)
-(* comment out above load when Holmaking *)
 val _ = set_trace "Unicode" 0;
 val _ = ParseExtras.temp_loose_equality()
 val cpn_case_def = TypeBase.case_def_of ``:ordering``
@@ -32,44 +29,39 @@ fun rrs th = REWRITE_RULE [SPECIFICATION] th;
 
 val _ = set_fixity "FUNION" (Infixl 500);
 
-(* ***************************************************************** *)
-(* Following switch, BigSig, allows "maybe_thm" to act either as     *)
-(* store_thm or as prove, thus maximizing or minimizing the output   *)
-(* from print_theory and the stuff known to DB.match, DB.find        *)
-(* ***************************************************************** *)
-
-val BigSig = false;
-
-fun maybe_thm (s, tm, tac) = if BigSig then store_thm (s, tm, tac)
-                                       else prove (tm, tac);
-
 Definition ORL:  (ORL (cmp:'a toto) ([]:('a#'b)list) = T) /\
                  (ORL cmp ((a,b) :: l) = ORL cmp l /\
                    (!p q. MEM (p,q) l ==> (apto cmp a p = LESS)))
 End
 
-val ORL_LEM = maybe_thm ("ORL_LEM", Term
-`!cmp l:('a#'b)list m. ORL cmp (l ++ m) ==> ORL cmp l /\ ORL cmp m`,
+Theorem ORL_LEM[local]:
+ !cmp l:('a#'b)list m. ORL cmp (l ++ m) ==> ORL cmp l /\ ORL cmp m
+Proof
 GEN_TAC THEN Induct THEN REWRITE_TAC [APPEND, ORL] THEN
 P_PGEN_TAC (Term`x:'a,y:'b`) THEN ASM_REWRITE_TAC [ORL] THEN
-REWRITE_TAC [MEM_APPEND] THEN REPEAT STRIP_TAC THEN RES_TAC THEN AR);
+REWRITE_TAC [MEM_APPEND] THEN REPEAT STRIP_TAC THEN RES_TAC THEN AR
+QED
 
-val MEM_FST = maybe_thm ("MEM_FST",
-``!x l:('a#'b)list. (?y. MEM (x,y) l) <=> MEM x (MAP FST l)``,
+Theorem MEM_FST[local]:
+  !x l:('a#'b)list. (?y. MEM (x,y) l) <=> MEM x (MAP FST l)
+Proof
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [MEM, MAP]
 ,P_PGEN_TAC ``a:'a, b:'b`` THEN SRW_TAC [] [MAP,MEM] THEN
  METIS_TAC [MEM]
-]);
+]
+QED
 
-val ORL_OL_FST = maybe_thm ("ORL_OL_FST",
-``!cmp:'a toto l:('a#'b) list. ORL cmp l <=> OL cmp (MAP FST l)``,
+Theorem ORL_OL_FST[local]:
+  !cmp:'a toto l:('a#'b) list. ORL cmp l <=> OL cmp (MAP FST l)
+Proof
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [ORL, OL, MAP]
 ,P_PGEN_TAC ``a:'a, b:'b`` THEN SRW_TAC [] [MAP, ORL, OL] THEN
  CONV_TAC (LAND_CONV (ONCE_DEPTH_CONV FORALL_IMP_CONV)) THEN
  REWRITE_TAC [MEM_FST]
-]);
+]
+QED
 
 (* A useful way of combining option values, that I don't find premade: *)
 
@@ -77,24 +69,32 @@ Definition optry:  (optry (SOME p) (q:'z option) = SOME p)
                 /\ (optry NONE q = q)
 End
 
-val optry_case = maybe_thm ("optry_case", Term
-`!p q:'z option. optry p q = case p of SOME x => SOME x | NONE => q`,
+Theorem optry_case[local]:
+ !p q:'z option. optry p q = case p of SOME x => SOME x | NONE => q
+Proof
 REPEAT GEN_TAC THEN Cases_on `p` THEN REWRITE_TAC [optry, option_CLAUSES] THEN
-BETA_TAC THEN REFL_TAC);
+BETA_TAC THEN REFL_TAC
+QED
 
-val optry_ASSOC = maybe_thm ("optry_ASSOC", Term
-`!p q r:'z option. optry p (optry q r) = optry (optry p q) r`,
+Theorem optry_ASSOC[local]:
+ !p q r:'z option. optry p (optry q r) = optry (optry p q) r
+Proof
 REPEAT GEN_TAC THEN
-Cases_on `p` THEN REWRITE_TAC [option_case_def, optry]);
+Cases_on `p` THEN REWRITE_TAC [option_case_def, optry]
+QED
 
-val optry_ID = maybe_thm ("optry_ID", Term
-`(!p:'z option. optry p NONE = p) /\ (!p:'z option. optry NONE p = p)`,
-REWRITE_TAC [optry] THEN Cases THEN REWRITE_TAC [optry]);
+Theorem optry_ID[local]:
+ (!p:'z option. optry p NONE = p) /\ (!p:'z option. optry NONE p = p)
+Proof
+REWRITE_TAC [optry] THEN Cases THEN REWRITE_TAC [optry]
+QED
 
-val IS_SOME_optry = maybe_thm ("IS_SOME_optry",
-``!a b:'a option. IS_SOME a ==> (optry a b = a)``,
+Theorem IS_SOME_optry[local]:
+  !a b:'a option. IS_SOME a ==> (optry a b = a)
+Proof
 REPEAT GEN_TAC THEN Cases_on `a` THEN
-ASM_REWRITE_TAC [optry, option_CLAUSES]);
+ASM_REWRITE_TAC [optry, option_CLAUSES]
+QED
 
 Definition optry_list:
    (optry_list (f:'z->'g option) ([]:'z option list) = NONE)
@@ -161,19 +161,21 @@ val merge_ind = theorem "merge_ind";
         P cmp ((a1,b1)::l1) ((a2,b2)::l2)) ==>
      !v v1 v2. P v v1 v2 *)
 
-val merge_thm = maybe_thm ("merge_thm", Term
-`!cmp:'a toto. (!m:('a#'b)list. merge cmp [] m = m)
+Theorem merge_thm[local]:
+ !cmp:'a toto. (!m:('a#'b)list. merge cmp [] m = m)
              /\ (!l:('a#'b)list. merge cmp l [] = l)
              /\ (!a1:'a b1:'b a2:'a b2:'b l1 l2.
                  merge cmp ((a1, b1) :: l1) ((a2, b2) :: l2) =
                      case apto cmp a1 a2 of
                       LESS => (a1, b1) :: merge cmp l1 ((a2, b2) :: l2)
                   | EQUAL => (a1, b1:'b) :: merge cmp l1 l2
-                | GREATER => (a2, b2) :: merge cmp ((a1, b1) :: l1) l2)`,
+                | GREATER => (a2, b2) :: merge cmp ((a1, b1) :: l1) l2)
+Proof
 GEN_TAC THEN REWRITE_TAC [merge] THEN
 Cases_on `l:('a#'b)list` THENL
 [REWRITE_TAC [merge]
-,PURE_ONCE_REWRITE_TAC [GSYM PAIR] THEN REWRITE_TAC [merge]]);
+,PURE_ONCE_REWRITE_TAC [GSYM PAIR] THEN REWRITE_TAC [merge]]
+QED
 
 (* If we are to use incr_sort, we doubtless will need to prove that its
 ouput is sorted and contains the pairs that assocv would find from its
@@ -183,9 +185,10 @@ argument. *)
    lemmas like MAP FST (merge cmp l m) = smerge cmp (MAP FST l) (MAP FST m),
    and corresponding to _set thms might be _assocv thms, or direct to fmaps.*)
 
-val merge_FST_smerge = maybe_thm ("merge_FST_smerge",
-``!cmp:'a toto l m:('a#'b)list.
-         MAP FST (merge cmp l m) = smerge cmp (MAP FST l) (MAP FST m)``,
+Theorem merge_FST_smerge[local]:
+  !cmp:'a toto l m:('a#'b)list.
+         MAP FST (merge cmp l m) = smerge cmp (MAP FST l) (MAP FST m)
+Proof
 GEN_TAC THEN Induct THENL
 [REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [merge_thm, smerge_nil, MAP]
 ,P_PGEN_TAC (Term`(a:'a,b:'b)`) THEN Induct THENL
@@ -194,17 +197,22 @@ GEN_TAC THEN Induct THENL
   SRW_TAC [] [merge_thm, smerge, MAP, FST] THEN
   Cases_on `apto cmp a a'` THEN
   SRW_TAC [] []
-]]);
+]]
+QED
 
-val merge_ORL = maybe_thm ("merge_ORL", ``!cmp:'a toto l m:('a#'b)list.
-         ORL cmp l /\ ORL cmp m ==> ORL cmp (merge cmp l m)``,
-METIS_TAC [smerge_OL, merge_FST_smerge, ORL_OL_FST]);
+Theorem merge_ORL[local]:
+    !cmp:'a toto l m:('a#'b)list.
+         ORL cmp l /\ ORL cmp m ==> ORL cmp (merge cmp l m)
+Proof
+METIS_TAC [smerge_OL, merge_FST_smerge, ORL_OL_FST]
+QED
 
 (* **** We need to show that assocv is preserved by sorting **** *)
 
-val merge_subset_union = maybe_thm ("merge_subset_union",
-``!cmp:'a toto l m:('a#'b)list h.
-              MEM h (merge cmp l m) ==> MEM h l \/ MEM h m``,
+Theorem merge_subset_union[local]:
+  !cmp:'a toto l m:('a#'b)list h.
+              MEM h (merge cmp l m) ==> MEM h l \/ MEM h m
+Proof
 HO_MATCH_MP_TAC merge_ind THEN
 REPEAT CONJ_TAC THEN REPEAT GEN_TAC THENL
 [REWRITE_TAC [MEM, merge]
@@ -214,20 +222,24 @@ REPEAT CONJ_TAC THEN REPEAT GEN_TAC THENL
  REWRITE_TAC [all_cpn_distinct] THEN
  STRIP_TAC THEN GEN_TAC THEN REWRITE_TAC [cpn_case_def] THEN
  CONV_TAC (LAND_CONV (REWRITE_CONV [MEM])) THEN
- STRIP_TAC THEN RES_TAC THEN ASM_REWRITE_TAC [MEM]]);
+ STRIP_TAC THEN RES_TAC THEN ASM_REWRITE_TAC [MEM]]
+QED
 
-val MEM_MEM_merge = maybe_thm ("MEM_MEM_merge",
-``!cmp:'a toto l m:('a#'b)list x y.
-     MEM (x,y) l ==> MEM (x,y) (merge cmp l m)``,
+Theorem MEM_MEM_merge[local]:
+  !cmp:'a toto l m:('a#'b)list x y.
+     MEM (x,y) l ==> MEM (x,y) (merge cmp l m)
+Proof
 HO_MATCH_MP_TAC merge_ind THEN
 REPEAT CONJ_TAC THEN REPEAT GEN_TAC THEN REWRITE_TAC [MEM, merge] THEN
 Cases_on `apto cmp a1 a2` THEN
 REWRITE_TAC [all_cpn_distinct] THEN
-REPEAT STRIP_TAC THEN REWRITE_TAC [cpn_case_def, MEM] THEN RES_TAC THEN AR);
+REPEAT STRIP_TAC THEN REWRITE_TAC [cpn_case_def, MEM] THEN RES_TAC THEN AR
+QED
 
-val NOT_MEM_merge = maybe_thm ("NOT_MEM_merge",
-``!cmp:'a toto l m:('a#'b)list x y. (!z.~MEM (x,z) l) ==>
-   (MEM (x,y) (merge cmp l m) <=> MEM (x,y) m)``,
+Theorem NOT_MEM_merge[local]:
+  !cmp:'a toto l m:('a#'b)list x y. (!z.~MEM (x,z) l) ==>
+   (MEM (x,y) (merge cmp l m) <=> MEM (x,y) m)
+Proof
 HO_MATCH_MP_TAC merge_ind THEN
 REPEAT CONJ_TAC THEN REPEAT GEN_TAC THEN REWRITE_TAC [MEM, merge] THENL
 [DISCH_TAC THEN AR
@@ -246,7 +258,8 @@ REPEAT CONJ_TAC THEN REPEAT GEN_TAC THEN REWRITE_TAC [MEM, merge] THENL
   ,DISCH_TAC THEN AR
   ]
  ,RES_TAC THEN AR
-]]);
+]]
+QED
 
 (* By good fortune, the previous three lemmas about merge (including
    merge_subset_union) did not care if the lists were sorted or not. *)
@@ -270,10 +283,11 @@ GEN_TAC THEN Induct THENL
  ]]
 QED
 
-val merge_MEM_thm = maybe_thm ("merge_MEM_thm",
-``!cmp:'a toto l m:('a#'b)list. ORL cmp l /\ ORL cmp m ==>
+Theorem merge_MEM_thm[local]:
+  !cmp:'a toto l m:('a#'b)list. ORL cmp l /\ ORL cmp m ==>
  (!x y. MEM (x,y) (merge cmp l m)
- <=> MEM (x,y) l \/ MEM (x,y) m /\ !z.~MEM (x,z) l)``,
+ <=> MEM (x,y) l \/ MEM (x,y) m /\ !z.~MEM (x,z) l)
+Proof
 REPEAT STRIP_TAC THEN EQ_TAC THENL
 [Cases_on `!z. ~MEM (x,z) l` THENL
  [DISCH_TAC THEN IMP_RES_TAC merge_subset_union THEN AR
@@ -293,15 +307,19 @@ REPEAT STRIP_TAC THEN EQ_TAC THENL
 ,STRIP_TAC THENL
  [IMP_RES_TAC MEM_MEM_merge THEN AR
  ,IMP_RES_TAC NOT_MEM_merge THEN AR
-]]);
+]]
+QED
 
-val ORL_TL = maybe_thm ("ORL_TL", Term
-`!cmp ab:('a#'b) l. ORL cmp (ab::l) ==> ORL cmp l`,
+Theorem ORL_TL[local]:
+ !cmp ab:('a#'b) l. ORL cmp (ab::l) ==> ORL cmp l
+Proof
 GEN_TAC THEN P_PGEN_TAC (Term`a:'a,b:'b`) THEN
-REWRITE_TAC [ORL] THEN REPEAT STRIP_TAC THEN AR);
+REWRITE_TAC [ORL] THEN REPEAT STRIP_TAC THEN AR
+QED
 
-val assocv_MEM_thm = maybe_thm ("assocv_MEM_thm",
-``!cmp l. ORL cmp l ==> (!x:'a y:'b. (assocv l x = SOME y) <=> MEM (x,y) l)``,
+Theorem assocv_MEM_thm[local]:
+  !cmp l. ORL cmp l ==> (!x:'a y:'b. (assocv l x = SOME y) <=> MEM (x,y) l)
+Proof
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [assocv, MEM, option_CLAUSES]
 ,P_PGEN_TAC (Term`p:'a,q:'b`) THEN
@@ -317,24 +335,28 @@ GEN_TAC THEN Induct THENL
                              ASM_REWRITE_TAC [assocv, option_CLAUSES]) THEN
     IMP_RES_TAC ORL_single_valued]]
  ,ASM_REWRITE_TAC [MEM, assocv, PAIR_EQ]
-]]);
+]]
+QED
 
 (* Following 2 lemmas can be proved with hypothesis ORL cmp l from
    assoc_MEM_thm, but are easier to use without the hypothesis. *)
 
-val assocv_NOT_MEM = maybe_thm ("assocv_NOT_MEM", Term
-`!x:'a l. (assocv l x = NONE) <=> !y:'b. ~MEM (x,y) l`,
+Theorem assocv_NOT_MEM[local]:
+ !x:'a l. (assocv l x = NONE) <=> !y:'b. ~MEM (x,y) l
+Proof
 GEN_TAC THEN Induct THEN REWRITE_TAC [assocv, MEM] THEN
 P_PGEN_TAC (Term`a:'a,b:'b`) THEN
 ASM_REWRITE_TAC [assocv, PAIR_EQ] THEN COND_CASES_TAC THENL
 [REWRITE_TAC [option_CLAUSES] THEN CONV_TAC NOT_FORALL_CONV THEN
  EXISTS_TAC (Term`b:'b`) THEN REWRITE_TAC []
-,AR]);
+,AR]
+QED
 
-val NOT_MEM_merge = maybe_thm ("NOT_MEM_merge",
-``!cmp:'a toto l m. ORL cmp l /\ ORL cmp m ==>
+Theorem NOT_MEM_merge[local]:
+  !cmp:'a toto l m. ORL cmp l /\ ORL cmp m ==>
        !a. (!z. ~MEM (a:'a,z:'b) (merge cmp l m)) ==>
-           (!z. ~MEM (a,z) l) /\ (!z. ~MEM (a,z) m)``,
+           (!z. ~MEM (a,z) l) /\ (!z. ~MEM (a,z) m)
+Proof
 REPEAT GEN_TAC THEN DISCH_THEN (fn conj => GEN_TAC THEN
                                 ASSUME_TAC (MATCH_MP merge_ORL conj) THEN
 CONV_TAC (RAND_CONV (AND_FORALL_CONV THENC
@@ -351,11 +373,14 @@ STRIP_TAC THEN MP_TAC (MATCH_MP merge_MEM_thm conj)) THENL
  ,UNDISCH_TAC (Term`~?y. MEM (a:'a,y:'b) l`) THEN
   CONV_TAC (LAND_CONV NOT_EXISTS_CONV) THEN DISCH_TAC THEN
   EXISTS_TAC (Term`z:'b`) THEN AR
-]]);
+]]
+QED
 
-val assocv_merge = maybe_thm ("assocv_merge", Term`!cmp l m:('a#'b)list a.
+Theorem assocv_merge[local]:
+   !cmp l m:('a#'b)list a.
  ORL cmp l /\ ORL cmp m ==>
- (assocv (merge cmp l m) a = optry (assocv l a) (assocv m a))`,
+ (assocv (merge cmp l m) a = optry (assocv l a) (assocv m a))
+Proof
 REPEAT GEN_TAC THEN DISCH_THEN (fn conj =>
                                 ASSUME_TAC (MATCH_MP merge_ORL conj) THEN
                                 MP_TAC (MATCH_MP merge_MEM_thm conj) THEN
@@ -380,14 +405,17 @@ REWRITE_TAC [optry_case] THENL
   BETA_TAC THEN REFL_TAC
  ,IMP_RES_TAC assocv_NOT_MEM THEN
   IMP_RES_TAC assocv_MEM_thm THEN ASM_REWRITE_TAC [option_CLAUSES]
- ]]);
+ ]]
+QED
 
-val merge_fun = maybe_thm ("merge_fun",
-``!cmp:'a toto l:('a#'b)list m. ORL cmp l /\ ORL cmp m ==>
-(assocv (merge cmp l m) = OPTION_UPDATE (assocv l) (assocv m))``,
+Theorem merge_fun[local]:
+  !cmp:'a toto l:('a#'b)list m. ORL cmp l /\ ORL cmp m ==>
+(assocv (merge cmp l m) = OPTION_UPDATE (assocv l) (assocv m))
+Proof
 REPEAT STRIP_TAC THEN
 CONV_TAC FUN_EQ_CONV THEN REWRITE_TAC [OPTION_UPDATE] THEN
-MATCH_MP_TAC assocv_merge THEN AR);
+MATCH_MP_TAC assocv_merge THEN AR
+QED
 
 (* Continue development of sorting in same imitative style as for merge. *)
 
@@ -412,59 +440,72 @@ val ORL_sublists_ind = theorem"ORL_sublists_ind";
          (!cmp m lol. P cmp lol ==> P cmp (SOME m::lol)) ==>
          !v v1. P v v1 *)
 
-val ORL_OL_FST_sublists = maybe_thm ("ORL_OL_FST_sublists",
-``!cmp lol:('a#'b)list option list. ORL_sublists cmp lol =
-  OL_sublists cmp (MAP (OPTION_MAP (MAP FST)) lol)``,
+Theorem ORL_OL_FST_sublists[local]:
+  !cmp lol:('a#'b)list option list. ORL_sublists cmp lol =
+  OL_sublists cmp (MAP (OPTION_MAP (MAP FST)) lol)
+Proof
 GEN_TAC THEN Induct THENL
 [RW_TAC (srw_ss()) [ORL_sublists, OL_sublists, MAP]
 ,Cases THEN
  SRW_TAC [] [ORL_sublists, OL_sublists, MAP, OPTION_MAP_DEF] THEN
  ASM_REWRITE_TAC [ORL_OL_FST]
-]);
+]
+QED
 
-val incr_merge_FST_smerge = maybe_thm ("incr_merge_FST_smerge",
-``!cmp lol l:('a#'b)list. MAP (OPTION_MAP (MAP FST)) (incr_merge cmp l lol) =
-incr_smerge cmp (MAP FST l) (MAP (OPTION_MAP (MAP FST)) lol)``,
+Theorem incr_merge_FST_smerge[local]:
+  !cmp lol l:('a#'b)list. MAP (OPTION_MAP (MAP FST)) (incr_merge cmp l lol) =
+incr_smerge cmp (MAP FST l) (MAP (OPTION_MAP (MAP FST)) lol)
+Proof
 GEN_TAC THEN Induct THENL
 [RW_TAC (srw_ss()) [incr_merge, incr_smerge, MAP]
 ,Cases THEN
  SRW_TAC [] [incr_merge, incr_smerge, MAP, OPTION_MAP_DEF] THEN
  REWRITE_TAC [merge_FST_smerge]
-]);
+]
+QED
 
-val incr_merge_ORL = maybe_thm ("incr_merge_ORL",
-``!cmp:'a toto l:('a#'b)list lol. ORL cmp l /\
-         ORL_sublists cmp lol ==> ORL_sublists cmp (incr_merge cmp l lol)``,
+Theorem incr_merge_ORL[local]:
+  !cmp:'a toto l:('a#'b)list lol. ORL cmp l /\
+         ORL_sublists cmp lol ==> ORL_sublists cmp (incr_merge cmp l lol)
+Proof
 METIS_TAC [smerge_OL, incr_smerge_OL, merge_ORL, merge_FST_smerge,
-           incr_merge_FST_smerge, ORL_OL_FST, ORL_OL_FST_sublists]);
+           incr_merge_FST_smerge, ORL_OL_FST, ORL_OL_FST_sublists]
+QED
 
-val NOT_MEM_NIL = maybe_thm ("NOT_MEM_NIL",
-``(!x:'c. ~MEM x l) <=> (l = [])``,
+Theorem NOT_MEM_NIL[local]:
+  (!x:'c. ~MEM x l) <=> (l = [])
+Proof
 EQ_TAC THENL
 [CONV_TAC (CONTRAPOS_CONV THENC (RAND_CONV (NOT_FORALL_CONV))) THEN
  Cases_on `l` THEN SRW_TAC [] [] THEN
  Q.EXISTS_TAC `h` THEN REWRITE_TAC []
-,RW_TAC bool_ss [MEM]]);
+,RW_TAC bool_ss [MEM]]
+QED
 
-val SOME_MEM_NOT_NIL = maybe_thm ("SOME_MEM_NOT_NIL",
-``~(!ab:'a#'b. MEM ab ((x,y)::l) <=> MEM ab [])``,
-RW_TAC (srw_ss()) [MEM] THEN Q.EXISTS_TAC `x,y` THEN REWRITE_TAC []);
+Theorem SOME_MEM_NOT_NIL[local]:
+  ~(!ab:'a#'b. MEM ab ((x,y)::l) <=> MEM ab [])
+Proof
+RW_TAC (srw_ss()) [MEM] THEN Q.EXISTS_TAC `x,y` THEN REWRITE_TAC []
+QED
 
-val ORL_NOT_MEM = maybe_thm ("ORL_NOT_MEM", Term
-`(!cmp (b:'b) x y l. ORL cmp ((x:'a,y)::l) ==> ~MEM (x,b) l) /\
+Theorem ORL_NOT_MEM[local]:
+ (!cmp (b:'b) x y l. ORL cmp ((x:'a,y)::l) ==> ~MEM (x,b) l) /\
  (!cmp (a:'a) (b:'b) x y l. ORL cmp ((x,y)::l) /\ (apto cmp a x = LESS) ==>
-                                                ~MEM (a,b) ((x,y)::l))`,
+                                                ~MEM (a,b) ((x,y)::l))
+Proof
 CONJ_TAC THEN REPEAT GEN_TAC THEN REWRITE_TAC [ORL] THEN STRIP_TAC THENL
 [DISCH_TAC THEN RES_THEN MP_TAC
 ,REWRITE_TAC [MEM, DE_MORGAN_THM, PAIR_EQ] THEN
  IMP_RES_TAC toto_glneq THEN AR THEN
  STRIP_TAC THEN RES_TAC THEN IMP_RES_TAC totoLLtrans THEN
  UNDISCH_TAC (Term`apto cmp a (a:'a) = LESS`)] THEN
-REWRITE_TAC [toto_refl, all_cpn_distinct]);
+REWRITE_TAC [toto_refl, all_cpn_distinct]
+QED
 
-val ORL_MEM_FST = maybe_thm ("ORL_MEM_FST",
-``!cmp l:('a#'b)list. ORL cmp l ==>
-    !x y p q. MEM (x,y) l /\ MEM (p,q) l /\ (x = p) ==> (y = q)``,
+Theorem ORL_MEM_FST[local]:
+  !cmp l:('a#'b)list. ORL cmp l ==>
+    !x y p q. MEM (x,y) l /\ MEM (p,q) l /\ (x = p) ==> (y = q)
+Proof
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [MEM]
 ,P_PGEN_TAC ``g:'a,h:'b`` THEN SRW_TAC [] [] THENL
@@ -474,11 +515,13 @@ GEN_TAC THEN Induct THENL
 ,`~MEM (g,y) l` by (MATCH_MP_TAC (CONJUNCT1 ORL_NOT_MEM) THEN
                     Q.EXISTS_TAC `cmp` THEN Q.EXISTS_TAC `h` THEN AR)
 ,IMP_RES_TAC ORL_TL THEN `p = p` by REFL_TAC THEN RES_TAC
-]]);
+]]
+QED
 
-val ORL_MEM_EQ = maybe_thm ("ORL_MEM_EQ",
-``!cmp l m:('a#'b)list. ORL cmp l /\ ORL cmp m ==>
-   ((!ab. MEM ab l <=> MEM ab m) <=> (l = m))``,
+Theorem ORL_MEM_EQ[local]:
+  !cmp l m:('a#'b)list. ORL cmp l /\ ORL cmp m ==>
+   ((!ab. MEM ab l <=> MEM ab m) <=> (l = m))
+Proof
 GEN_TAC THEN Induct THENL
 [SRW_TAC [] [GSYM NOT_MEM_NIL]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN Induct THENL
@@ -513,11 +556,13 @@ GEN_TAC THEN Induct THENL
     `~MEM (p,q) ((x,y)::l)` by (RES_TAC THEN AR) THEN ASM_REWRITE_TAC [MEM]
    ]
   ,DISCH_TAC THEN AR
-]]]);
+]]]
+QED
 
-val merge_ASSOC = maybe_thm ("merge_ASSOC",
-``!cmp:'a toto k l m:('a#'b)list. ORL cmp k /\ ORL cmp l /\ ORL cmp m ==>
-   (merge cmp k (merge cmp l m) = merge cmp (merge cmp k l) m)``,
+Theorem merge_ASSOC[local]:
+  !cmp:'a toto k l m:('a#'b)list. ORL cmp k /\ ORL cmp l /\ ORL cmp m ==>
+   (merge cmp k (merge cmp l m) = merge cmp (merge cmp k l) m)
+Proof
 REPEAT STRIP_TAC THEN
 `ORL cmp (merge cmp l m) /\ ORL cmp (merge cmp k l)` by
   (CONJ_TAC THEN MATCH_MP_TAC merge_ORL THEN AR) THEN
@@ -535,28 +580,33 @@ REWRITE_TAC [MATCH_MP merge_MEM_thm (CONJ (Q.ASSUME `ORL cmp
                            (merge cmp k l)`) (Q.ASSUME `ORL cmp m`))] THEN
 REWRITE_TAC [MATCH_MP merge_MEM_thm (CONJ (Q.ASSUME `ORL cmp k`)
                                            (Q.ASSUME `ORL cmp l`))] THEN
-METIS_TAC []);
+METIS_TAC []
+QED
 
 (* Now to figure out how to use merge_ASSOC. Idea, I think, is to show
    that assocv o merge_out is preserved throughout. *)
 
-val OPTION_UPDATE_ASSOC = maybe_thm ("OPTION_UPDATE_ASSOC",
-``!f g h:'a -> 'b option. OPTION_UPDATE f (OPTION_UPDATE g h) =
-                          OPTION_UPDATE (OPTION_UPDATE f g) h``,
+Theorem OPTION_UPDATE_ASSOC[local]:
+  !f g h:'a -> 'b option. OPTION_UPDATE f (OPTION_UPDATE g h) =
+                          OPTION_UPDATE (OPTION_UPDATE f g) h
+Proof
 REPEAT GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN
-REWRITE_TAC [OPTION_UPDATE, optry_ASSOC]);
+REWRITE_TAC [OPTION_UPDATE, optry_ASSOC]
+QED
 
 Definition incr_build:  (incr_build cmp [] = [])
                      /\ (incr_build cmp (ab:('a#'b) :: l) =
                                 incr_merge cmp [ab] (incr_build cmp l))
 End
 
-val incr_build_ORL = maybe_thm ("incr_build_ORL",
-            ``!cmp l:('a#'b)list. ORL_sublists cmp (incr_build cmp l)``,
+Theorem incr_build_ORL[local]:
+              !cmp l:('a#'b)list. ORL_sublists cmp (incr_build cmp l)
+Proof
 GEN_TAC THEN Induct THEN REWRITE_TAC [incr_build] THENL
 [REWRITE_TAC [ORL_sublists]
 ,P_PGEN_TAC (Term`a:'a,b:'b`) THEN MATCH_MP_TAC incr_merge_ORL THEN
- ASM_REWRITE_TAC [ORL, MEM]]);
+ ASM_REWRITE_TAC [ORL, MEM]]
+QED
 
 Definition merge_out:
    (merge_out (cmp:'a toto) (l:('a#'b)list) ([]:('a#'b)list option list) = l)
@@ -565,15 +615,17 @@ Definition merge_out:
                                      merge_out cmp (merge cmp l m) lol)
 End
 
-val merge_out_ORL = maybe_thm ("merge_out_ORL",
-``!cmp lol:('a#'b)list option list l. ORL cmp l /\
-   ORL_sublists cmp lol ==> ORL cmp (merge_out cmp l lol)``,
+Theorem merge_out_ORL[local]:
+  !cmp lol:('a#'b)list option list l. ORL cmp l /\
+   ORL_sublists cmp lol ==> ORL cmp (merge_out cmp l lol)
+Proof
 HO_MATCH_MP_TAC ORL_sublists_ind THEN REPEAT STRIP_TAC THEN
 ASM_REWRITE_TAC [merge_out] THEN
 IMP_RES_TAC ORL_sublists THEN RES_TAC THEN
 SUBGOAL_THEN (Term`ORL cmp (merge cmp l m:('a#'b)list)`)
              (fn th => ASSUME_TAC th THEN RES_TAC) THEN
-IMP_RES_TAC merge_ORL);
+IMP_RES_TAC merge_ORL
+QED
 
 Definition incr_flat:  incr_flat
  (cmp:'a toto) (lol:('a#'b)list option list) = merge_out cmp [] lol
@@ -585,11 +637,13 @@ Definition incr_sort:  incr_sort (cmp:'a toto) (l:('a#'b)list) =
                        merge_out cmp [] (incr_build cmp l)
 End
 
-val incr_sort_ORL = maybe_thm ("incr_sort_ORL", Term
-`!cmp l:('a#'b)list. ORL cmp (incr_sort cmp l)`,
+Theorem incr_sort_ORL[local]:
+ !cmp l:('a#'b)list. ORL cmp (incr_sort cmp l)
+Proof
 REPEAT GEN_TAC THEN REWRITE_TAC [incr_sort, incr_flat] THEN
 MATCH_MP_TAC merge_out_ORL THEN
-REWRITE_TAC [ORL, incr_build_ORL]);
+REWRITE_TAC [ORL, incr_build_ORL]
+QED
 
 (* ************ work up to incr_sort_fun *********** *)
 
@@ -604,20 +658,25 @@ val OPTION_FLAT_ind = theorem "OPTION_FLAT_ind";
 (* OPTION_FLAT_ind = |- !P. P [] /\ (!l. P l ==> P (NONE::l)) /\
                             (!a l. P l ==> P (SOME a::l)) ==> !v. P v *)
 
-val assocv_optry_lem = maybe_thm ("assocv_optry_lem", Term
-`!x l:('a#'b)list m. assocv (l ++ m) x = optry (assocv l x) (assocv m x)`,
+Theorem assocv_optry_lem[local]:
+ !x l:('a#'b)list m. assocv (l ++ m) x = optry (assocv l x) (assocv m x)
+Proof
 GEN_TAC THEN Induct THEN REWRITE_TAC [APPEND, optry_ID, assocv] THEN
 P_PGEN_TAC (Term`p:'a,q:'b`) THEN
-REWRITE_TAC [assocv] THEN Cases_on `x = p` THEN AR THEN REWRITE_TAC [optry]);
+REWRITE_TAC [assocv] THEN Cases_on `x = p` THEN AR THEN REWRITE_TAC [optry]
+QED
 
-val assocv_APPEND = maybe_thm ("assocv_APPEND",
-``!l:('a#'b)list m. assocv (l ++ m) = OPTION_UPDATE (assocv l) (assocv m)``,
+Theorem assocv_APPEND[local]:
+  !l:('a#'b)list m. assocv (l ++ m) = OPTION_UPDATE (assocv l) (assocv m)
+Proof
 REPEAT GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN
-REWRITE_TAC [OPTION_UPDATE, assocv_optry_lem]);
+REWRITE_TAC [OPTION_UPDATE, assocv_optry_lem]
+QED
 
-val assocv_merge_out = maybe_thm ("assocv_merge_out",
-``!cmp lol:('a#'b)list option list l. ORL cmp l /\ ORL_sublists cmp lol ==>
-        (assocv (merge_out cmp l lol) = assocv (l ++ OPTION_FLAT lol))``,
+Theorem assocv_merge_out[local]:
+  !cmp lol:('a#'b)list option list l. ORL cmp l /\ ORL_sublists cmp lol ==>
+        (assocv (merge_out cmp l lol) = assocv (l ++ OPTION_FLAT lol))
+Proof
 GEN_TAC THEN
 HO_MATCH_MP_TAC OPTION_FLAT_ind THEN
 SRW_TAC [] [OPTION_FLAT, merge_out] THENL
@@ -628,20 +687,24 @@ SRW_TAC [] [OPTION_FLAT, merge_out] THENL
  `ORL cmp (merge cmp l a)` by
     (MATCH_MP_TAC merge_ORL THEN AR) THEN
   RES_TAC THEN IMP_RES_TAC merge_fun THEN ASM_REWRITE_TAC [assocv_APPEND]
-]);
+]
+QED
 
-val assocv_incr_flat = maybe_thm ("assocv_incr_flat",
-``!cmp lol:('a#'b)list option list. ORL_sublists cmp lol ==>
-  (assocv (incr_flat cmp lol) = assocv (OPTION_FLAT lol))``,
+Theorem assocv_incr_flat[local]:
+  !cmp lol:('a#'b)list option list. ORL_sublists cmp lol ==>
+  (assocv (incr_flat cmp lol) = assocv (OPTION_FLAT lol))
+Proof
 REPEAT STRIP_TAC THEN `ORL cmp []` by REWRITE_TAC [ORL] THEN
 IMP_RES_TAC assocv_merge_out THEN POP_ASSUM MP_TAC THEN
-REWRITE_TAC [incr_flat, APPEND]);
+REWRITE_TAC [incr_flat, APPEND]
+QED
 
-val assocv_incr_merge = maybe_thm ("assocv_incr_merge",
-``!cmp lol:('a#'b)list option list l m. ORL cmp l /\ ORL cmp m /\
+Theorem assocv_incr_merge[local]:
+  !cmp lol:('a#'b)list option list l m. ORL cmp l /\ ORL cmp m /\
   ORL_sublists cmp lol ==>
   (assocv (merge_out cmp l (incr_merge cmp m lol)) =
-   assocv (merge_out cmp (merge cmp l m) lol))``,
+   assocv (merge_out cmp (merge cmp l m) lol))
+Proof
 GEN_TAC THEN Induct THEN SRW_TAC []
  [assocv_merge_out, OPTION_FLAT, merge_out, incr_merge, assocv_APPEND] THEN
 Cases_on `h` THEN SRW_TAC [] [incr_merge, merge_out] THEN
@@ -651,25 +714,33 @@ SUBST1_TAC THEN1 (MATCH_MP_TAC (GSYM merge_ASSOC) THEN AR) THEN
 `ORL cmp (merge cmp m x)` by (MATCH_MP_TAC merge_ORL THEN AR) THEN
 `ORL_sublists cmp (incr_merge cmp (merge cmp m x) lol)` by
   (MATCH_MP_TAC incr_merge_ORL THEN AR) THEN
-METIS_TAC [assocv_merge_out]);
+METIS_TAC [assocv_merge_out]
+QED
 
-val assocv_NIL = maybe_thm ("assocv_NIL",
-``assocv ([]:('a#'b)list) = K NONE``,
-CONV_TAC FUN_EQ_CONV THEN SRW_TAC [] [assocv]);
+Theorem assocv_NIL[local]:
+  assocv ([]:('a#'b)list) = K NONE
+Proof
+CONV_TAC FUN_EQ_CONV THEN SRW_TAC [] [assocv]
+QED
 
-val OPTION_UPDATE_K_NONE = maybe_thm ("OPTION_UPDATE_K_NONE",
-``!f:'a->'b option. (OPTION_UPDATE f (K NONE) = f) /\
-                    (OPTION_UPDATE (K NONE) f = f)``,
+Theorem OPTION_UPDATE_K_NONE[local]:
+  !f:'a->'b option. (OPTION_UPDATE f (K NONE) = f) /\
+                    (OPTION_UPDATE (K NONE) f = f)
+Proof
 CONV_TAC (ONCE_DEPTH_CONV FUN_EQ_CONV) THEN
-SRW_TAC [] [OPTION_UPDATE, optry_ID]);
+SRW_TAC [] [OPTION_UPDATE, optry_ID]
+QED
 
-val ORL_SING = maybe_thm ("ORL_SING",
-``!cmp x:('a#'b). ORL cmp [x]``,
-GEN_TAC THEN P_PGEN_TAC ``a:'a,b:'b`` THEN REWRITE_TAC [ORL, MEM]);
+Theorem ORL_SING[local]:
+  !cmp x:('a#'b). ORL cmp [x]
+Proof
+GEN_TAC THEN P_PGEN_TAC ``a:'a,b:'b`` THEN REWRITE_TAC [ORL, MEM]
+QED
 
-val assocv_incr_build = maybe_thm ("assocv_incr_build",
-``!cmp:'a toto m l:('a#'b)list. ORL cmp l ==>
- (assocv (merge_out cmp l (incr_build cmp m)) = assocv (l ++ m))``,
+Theorem assocv_incr_build[local]:
+  !cmp:'a toto m l:('a#'b)list. ORL cmp l ==>
+ (assocv (merge_out cmp l (incr_build cmp m)) = assocv (l ++ m))
+Proof
 GEN_TAC THEN Induct THEN
 SRW_TAC [] [assocv_APPEND, incr_build, merge_out] THENL
 [REWRITE_TAC [OPTION_UPDATE_K_NONE, assocv_NIL, merge_thm]
@@ -687,18 +758,21 @@ SRW_TAC [] [assocv_APPEND, incr_build, merge_out] THENL
   `ORL cmp (merge cmp l [h])` by (MATCH_MP_TAC merge_ORL THEN AR) THEN
   RES_THEN SUBST1_TAC THEN
   METIS_TAC [merge_fun, assocv_APPEND]
-]]);
+]]
+QED
 
 (* at last: incr_sort not only sorts, but it is stable in the sense that
    the list coming out (with guaranteed only one entry for any key) has the
    same behavior under assocv as the (possibly duplicitous) list going in. *)
 
-val incr_sort_fun = maybe_thm ("incr_sort_fun",
-``!cmp: 'a toto l:('a#'b)list. assocv (incr_sort cmp l) = assocv l``,
+Theorem incr_sort_fun[local]:
+  !cmp: 'a toto l:('a#'b)list. assocv (incr_sort cmp l) = assocv l
+Proof
 REPEAT GEN_TAC THEN REWRITE_TAC [incr_sort, incr_flat] THEN
 Q.SUBGOAL_THEN `assocv l = assocv ([] ++ l)` SUBST1_TAC
 THEN1 REWRITE_TAC [APPEND] THEN
-MATCH_MP_TAC assocv_incr_build THEN REWRITE_TAC [ORL]);
+MATCH_MP_TAC assocv_incr_build THEN REWRITE_TAC [ORL]
+QED
 
 (* ********** Relating association lists to finite maps ************ *)
 (* Define "unlookup", sending an option-valued function to an fmap.  *)
@@ -720,8 +794,9 @@ REPEAT GEN_TAC THEN REWRITE_TAC [FUPDATE_LIST, combinTheory.C_DEF]
 THEN BETA_TAC THEN REWRITE_TAC [rich_listTheory.FOLDL_REVERSE]
 QED
 
-val IS_SOME_FDOM = maybe_thm ("IS_SOME_FDOM",
-``!f:'a |-> 'b. IS_SOME o FLOOKUP f = FDOM f``,
+Theorem IS_SOME_FDOM[local]:
+  !f:'a |-> 'b. IS_SOME o FLOOKUP f = FDOM f
+Proof
 Induct THEN CONJ_TAC THENL
 [REWRITE_TAC [EXTENSION, FDOM_FEMPTY, NOT_IN_EMPTY] THEN
  REWRITE_TAC [SPECIFICATION, combinTheory.o_THM, option_CLAUSES, FLOOKUP_EMPTY]
@@ -731,31 +806,40 @@ Induct THEN CONJ_TAC THENL
  ASM_REWRITE_TAC [FDOM_FUPDATE, EXTENSION, IN_INSERT] THEN GEN_TAC THEN
  REWRITE_TAC [SPECIFICATION, combinTheory.o_THM, FLOOKUP_UPDATE] THEN
  Cases_on `x = x'` THEN ASM_REWRITE_TAC [option_CLAUSES] THEN
- REWRITE_TAC [GSYM (ASSUME ``x:'a <> x'``)]]);
+ REWRITE_TAC [GSYM (ASSUME ``x:'a <> x'``)]]
+QED
 
-val FINITE_FLOOKUP = maybe_thm ("FINITE_FLOOKUP",
-``!f:'a |-> 'b. FINITE (IS_SOME o FLOOKUP f)``,
-REWRITE_TAC [IS_SOME_FDOM, FDOM_FINITE]);
+Theorem FINITE_FLOOKUP[local]:
+  !f:'a |-> 'b. FINITE (IS_SOME o FLOOKUP f)
+Proof
+REWRITE_TAC [IS_SOME_FDOM, FDOM_FINITE]
+QED
 
-val FLOOKUP_unlookup_FDOM = maybe_thm ("FLOOKUP_unlookup_FDOM",
-``!f:'a |-> 'b. FDOM (unlookup (FLOOKUP f)) = FDOM f``,
+Theorem FLOOKUP_unlookup_FDOM[local]:
+  !f:'a |-> 'b. FDOM (unlookup (FLOOKUP f)) = FDOM f
+Proof
 REWRITE_TAC [unlookup] THEN ASSUME_TAC (SPEC_ALL FINITE_FLOOKUP) THEN
 IMP_RES_TAC FUN_FMAP_DEF THEN ASM_REWRITE_TAC [IS_SOME_FDOM] THEN
 GEN_TAC THEN ASSUME_TAC (SPEC ``f':'a |-> 'b`` FDOM_FINITE) THEN
-IMP_RES_TAC FUN_FMAP_DEF THEN AR);
+IMP_RES_TAC FUN_FMAP_DEF THEN AR
+QED
 
-val FLOOKUP_unlookup_ID = maybe_thm ("FLOOKUP_unlookup_ID",
-``!f:'a |-> 'b. unlookup (FLOOKUP f) = f``,
+Theorem FLOOKUP_unlookup_ID[local]:
+  !f:'a |-> 'b. unlookup (FLOOKUP f) = f
+Proof
 GEN_TAC THEN REWRITE_TAC [fmap_EXT] THEN CONJ_TAC THEN
 REWRITE_TAC [FLOOKUP_unlookup_FDOM] THEN REPEAT STRIP_TAC THEN
 REWRITE_TAC [unlookup] THEN ASSUME_TAC (SPEC_ALL FINITE_FLOOKUP) THEN
 IMP_RES_THEN
  (STRIP_ASSUME_TAC o REWRITE_RULE [IS_SOME_FDOM]) FUN_FMAP_DEF THEN
 ASM_REWRITE_TAC [IS_SOME_FDOM] THEN RES_TAC THEN
-ASM_REWRITE_TAC [option_CLAUSES, FLOOKUP_DEF, combinTheory.o_THM]);
+ASM_REWRITE_TAC [option_CLAUSES, FLOOKUP_DEF, combinTheory.o_THM]
+QED
 
-val unlookup_FLOOKUP_ID = maybe_thm ("unlookup_FLOOKUP_ID",``!g:'a->'b option.
- FINITE (IS_SOME o g) ==> (FLOOKUP (unlookup g) = g)``,
+Theorem unlookup_FLOOKUP_ID[local]:
+   !g:'a->'b option.
+ FINITE (IS_SOME o g) ==> (FLOOKUP (unlookup g) = g)
+Proof
 GEN_TAC THEN REWRITE_TAC [unlookup] THEN DISCH_TAC THEN
 IMP_RES_TAC (REWRITE_RULE [SPECIFICATION] FUN_FMAP_DEF) THEN
 CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN
@@ -767,27 +851,34 @@ ASM_REWRITE_TAC [option_CLAUSES] THEN REWRITE_TAC [combinTheory.o_THM] THENL
  ASM_REWRITE_TAC [combinTheory.o_THM, option_CLAUSES]
 ,UNDISCH_TAC ``~(IS_SOME o (g:'a->'b option)) x`` THEN
  ASM_REWRITE_TAC [combinTheory.o_THM, option_CLAUSES] THEN
- DISCH_THEN SUBST1_TAC THEN REFL_TAC]);
+ DISCH_THEN SUBST1_TAC THEN REFL_TAC]
+QED
 
-val unlookup_FDOM = maybe_thm ("unlookup_FDOM", ``!g:'a->'b option.
- FINITE (IS_SOME o g) ==> (FDOM (unlookup g) = IS_SOME o g)``,
+Theorem unlookup_FDOM[local]:
+    !g:'a->'b option.
+ FINITE (IS_SOME o g) ==> (FDOM (unlookup g) = IS_SOME o g)
+Proof
 GEN_TAC THEN
 DISCH_THEN (SUBST1_TAC o SYM o MATCH_MP unlookup_FLOOKUP_ID) THEN
-REWRITE_TAC [IS_SOME_FDOM, FLOOKUP_unlookup_ID]);
+REWRITE_TAC [IS_SOME_FDOM, FLOOKUP_unlookup_ID]
+QED
 
-val unlookup_11 = maybe_thm ("unlookup_11",
-``!f g:'a ->'b option. FINITE (IS_SOME o f) /\ FINITE (IS_SOME o g) ==>
-                       (unlookup f = unlookup g) ==> (f = g)``,
+Theorem unlookup_11[local]:
+  !f g:'a ->'b option. FINITE (IS_SOME o f) /\ FINITE (IS_SOME o g) ==>
+                       (unlookup f = unlookup g) ==> (f = g)
+Proof
 REPEAT STRIP_TAC THEN
 IMP_RES_THEN
- (PURE_ONCE_REWRITE_TAC o ulist o SYM) unlookup_FLOOKUP_ID THEN AR);
+ (PURE_ONCE_REWRITE_TAC o ulist o SYM) unlookup_FLOOKUP_ID THEN AR
+QED
 
 (* ******* end of interlude as described above; still more ********* *)
 (* ******* lemmas to come, adjusting to finite_mapTheory.  ********* *)
 
-val unlookup_FUNION = maybe_thm ("unlookup_FUNION",
-``!u (v:'a -> 'b option). FINITE (IS_SOME o u) /\ FINITE (IS_SOME o v) ==>
-      (unlookup u FUNION unlookup v = unlookup (OPTION_UPDATE u v))``,
+Theorem unlookup_FUNION[local]:
+  !u (v:'a -> 'b option). FINITE (IS_SOME o u) /\ FINITE (IS_SOME o v) ==>
+      (unlookup u FUNION unlookup v = unlookup (OPTION_UPDATE u v))
+Proof
 REPEAT STRIP_TAC THEN
 SUBGOAL_THEN ``FINITE (IS_SOME o OPTION_UPDATE u (v:'a -> 'b option))``
              ASSUME_TAC
@@ -810,7 +901,8 @@ IMP_RES_TAC (fst (EQ_IMP_RULE (INST_TYPE [beta |-> ``:bool``]
 IMP_RES_THEN (REWRITE_TAC o ulist) IS_SOME_optry THEN
 UNDISCH_TAC ``x NOTIN IS_SOME o (u:'a -> 'b option)`` THEN
 REWRITE_TAC [SPECIFICATION, combinTheory.o_THM] THEN
-Cases_on `u x` THEN REWRITE_TAC [optry, option_CLAUSES]);
+Cases_on `u x` THEN REWRITE_TAC [optry, option_CLAUSES]
+QED
 
 (* ****** Get back to imitating enumeralTheory with a constant FMAPAL  ***** *)
 (* ****** of type ('a#'b)bt -> ('a |-> 'b) (but call the definition    ***** *)
@@ -831,36 +923,49 @@ End
 
 (* lemmas to help with FAPPLY_node, various _mut_rec's *)
 
-val FUNION_DRESTRICT = maybe_thm ("FUNION_DRESTRICT", (*cf. DRESTRICT_FUNION*)
-``!f:'a|->'b g s.
-   DRESTRICT (f FUNION g) s = DRESTRICT f s FUNION DRESTRICT g s``,
+(*cf. DRESTRICT_FUNION*)
+Theorem FUNION_DRESTRICT[local]:
+  !f:'a|->'b g s.
+   DRESTRICT (f FUNION g) s = DRESTRICT f s FUNION DRESTRICT g s
+Proof
 REPEAT GEN_TAC THEN REWRITE_TAC [fmap_EXT, FDOM_DRESTRICT, FDOM_FUNION] THEN
 CONJ_TAC THENL
 [ONCE_REWRITE_TAC [INTER_COMM] THEN MATCH_ACCEPT_TAC UNION_OVER_INTER
 ,GEN_TAC THEN Cases_on `x IN FDOM f` THEN ASM_REWRITE_TAC [DRESTRICT_DEF] THEN
  ASM_REWRITE_TAC [IN_UNION, IN_INTER] THEN
- SRW_TAC [] [FDOM_FUNION, FDOM_DRESTRICT, FUNION_DEF, DRESTRICT_DEF]]);
+ SRW_TAC [] [FDOM_FUNION, FDOM_DRESTRICT, FUNION_DEF, DRESTRICT_DEF]]
+QED
 
-val DRESTRICT_SING = maybe_thm ("DRESTRICT_SING",
-``!x:'a y:'b s. x IN s ==> (DRESTRICT (FEMPTY |+ (x,y)) s = FEMPTY |+ (x,y))``,
-SRW_TAC [] [DRESTRICT_DEF]);
+Theorem DRESTRICT_SING[local]:
+  !x:'a y:'b s. x IN s ==> (DRESTRICT (FEMPTY |+ (x,y)) s = FEMPTY |+ (x,y))
+Proof
+SRW_TAC [] [DRESTRICT_DEF]
+QED
 
-val DRESTRICT_SING_FEMPTY = maybe_thm ("DRESTRICT_SING_FEMPTY",
-``!x:'a y:'b s. x NOTIN s ==> (DRESTRICT (FEMPTY |+ (x,y)) s = FEMPTY)``,
-SRW_TAC [] [DRESTRICT_DEF]);
+Theorem DRESTRICT_SING_FEMPTY[local]:
+  !x:'a y:'b s. x NOTIN s ==> (DRESTRICT (FEMPTY |+ (x,y)) s = FEMPTY)
+Proof
+SRW_TAC [] [DRESTRICT_DEF]
+QED
 
-val DRESTRICT_IN = maybe_thm ("DRESTRICT_IN",
-``!s x f:'a|->'b. x IN s ==> (DRESTRICT f s ' x = f ' x)``,
+Theorem DRESTRICT_IN[local]:
+  !s x f:'a|->'b. x IN s ==> (DRESTRICT f s ' x = f ' x)
+Proof
 GEN_TAC THEN GEN_TAC THEN Induct THEN
-SRW_TAC [] [DRESTRICT_DEF, IN_INTER, FAPPLY_FUPDATE_THM]);
+SRW_TAC [] [DRESTRICT_DEF, IN_INTER, FAPPLY_FUPDATE_THM]
+QED
 
-val DRESTRICT_NOT_IN = maybe_thm ("DRESTRICT_NOT_IN",
-``!s x f:'a|->'b. x NOTIN s ==> (DRESTRICT f s ' x = FEMPTY ' x)``,
-SRW_TAC [] [DRESTRICT_DEF, IN_INTER]);
+Theorem DRESTRICT_NOT_IN[local]:
+  !s x f:'a|->'b. x NOTIN s ==> (DRESTRICT f s ' x = FEMPTY ' x)
+Proof
+SRW_TAC [] [DRESTRICT_DEF, IN_INTER]
+QED
 
-val IN_FDOM_DRESTRICT_IMP = maybe_thm ("IN_FDOM_DRESTRICT_IMP",
-``!f:'a|->'b s x. x IN FDOM (DRESTRICT f s) ==> x IN s``,
-METIS_TAC [FDOM_DRESTRICT, IN_INTER]);
+Theorem IN_FDOM_DRESTRICT_IMP[local]:
+  !f:'a|->'b s x. x IN FDOM (DRESTRICT f s) ==> x IN s
+Proof
+METIS_TAC [FDOM_DRESTRICT, IN_INTER]
+QED
 
 (* Following two theorems should be used by application conversion. *)
 
@@ -920,10 +1025,12 @@ Definition bt_to_fmap_ub:  bt_to_fmap_ub cmp (t:('a#'b)bt) ub =
                         DRESTRICT (FMAPAL cmp t) {x | apto cmp x ub = LESS}
 End
 
-val bt_to_fmap_mut_rec = maybe_thm ("bt_to_fmap_mut_rec",
-``!cmp:'a toto l x y r. FMAPAL cmp (node l (x:'a,y:'b) r) =
-   bt_to_fmap_ub cmp l x FUNION FEMPTY |+ (x,y) FUNION bt_to_fmap_lb cmp x r``,
- REWRITE_TAC [bt_to_fmap_lb, bt_to_fmap_ub, bt_to_fmap]);
+Theorem bt_to_fmap_mut_rec[local]:
+  !cmp:'a toto l x y r. FMAPAL cmp (node l (x:'a,y:'b) r) =
+   bt_to_fmap_ub cmp l x FUNION FEMPTY |+ (x,y) FUNION bt_to_fmap_lb cmp x r
+Proof
+ REWRITE_TAC [bt_to_fmap_lb, bt_to_fmap_ub, bt_to_fmap]
+QED
 
 Definition bt_to_fmap_lb_ub:  bt_to_fmap_lb_ub cmp lb (t:('a#'b)bt) ub =
 DRESTRICT (FMAPAL cmp t) {x | (apto cmp lb x = LESS) /\
@@ -949,38 +1056,52 @@ GEN_TAC THEN Induct THENL
  GEN_TAC THEN CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN REFL_TAC]
 QED
 
-val bt_fst_lb_FDOM = maybe_thm ("bt_fst_lb_FDOM", ``!cmp lb t:('a#'b)bt.
- FDOM (bt_to_fmap_lb cmp lb t) = bt_to_set_lb cmp lb (bt_map FST t)``,
+Theorem bt_fst_lb_FDOM[local]:
+    !cmp lb t:('a#'b)bt.
+ FDOM (bt_to_fmap_lb cmp lb t) = bt_to_set_lb cmp lb (bt_map FST t)
+Proof
 SRW_TAC [] [bt_to_set_lb,  bt_to_fmap_lb, bt_FST_FDOM, FDOM_DRESTRICT]
 THEN REWRITE_TAC [EXTENSION, IN_INTER] THEN GEN_TAC THEN
-CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN REFL_TAC);
+CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN REFL_TAC
+QED
 
-val bt_fst_ub_FDOM = maybe_thm ("bt_fst_ub_FDOM", ``!cmp t:('a#'b)bt ub.
- FDOM (bt_to_fmap_ub cmp t ub) = bt_to_set_ub cmp (bt_map FST t) ub``,
+Theorem bt_fst_ub_FDOM[local]:
+    !cmp t:('a#'b)bt ub.
+ FDOM (bt_to_fmap_ub cmp t ub) = bt_to_set_ub cmp (bt_map FST t) ub
+Proof
 SRW_TAC [] [bt_to_set_ub,  bt_to_fmap_ub, bt_FST_FDOM, FDOM_DRESTRICT]
 THEN REWRITE_TAC [EXTENSION, IN_INTER] THEN GEN_TAC THEN
-CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN REFL_TAC);
+CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN REFL_TAC
+QED
 
-val bt_fst_lb_ub_FDOM = maybe_thm ("bt_fst_lb_ub_FDOM",
-``!cmp lb t:('a#'b)bt ub. FDOM (bt_to_fmap_lb_ub cmp lb t ub) =
-                          bt_to_set_lb_ub cmp lb (bt_map FST t) ub``,
+Theorem bt_fst_lb_ub_FDOM[local]:
+  !cmp lb t:('a#'b)bt ub. FDOM (bt_to_fmap_lb_ub cmp lb t ub) =
+                          bt_to_set_lb_ub cmp lb (bt_map FST t) ub
+Proof
 SRW_TAC []
  [bt_to_set_lb_ub,  bt_to_fmap_lb_ub, bt_FST_FDOM, FDOM_DRESTRICT]
 THEN REWRITE_TAC [EXTENSION, IN_INTER] THEN GEN_TAC THEN
-CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN REFL_TAC);
+CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN REFL_TAC
+QED
 
-val IN_lb_ub_imp = maybe_thm ("IN_lb_ub_imp",
-``!cmp x lb t:'a bt ub. x IN bt_to_set_lb_ub cmp lb t ub ==>
-                      (apto cmp lb x = LESS) /\ (apto cmp x ub = LESS)``,
-SRW_TAC [] [bt_to_set_lb_ub]);
+Theorem IN_lb_ub_imp[local]:
+  !cmp x lb t:'a bt ub. x IN bt_to_set_lb_ub cmp lb t ub ==>
+                      (apto cmp lb x = LESS) /\ (apto cmp x ub = LESS)
+Proof
+SRW_TAC [] [bt_to_set_lb_ub]
+QED
 
-val IN_lb_imp = maybe_thm ("IN_lb_imp",
-``!cmp x lb t:'a bt. x IN bt_to_set_lb cmp lb t ==> (apto cmp lb x = LESS)``,
-SRW_TAC [] [bt_to_set_lb]);
+Theorem IN_lb_imp[local]:
+  !cmp x lb t:'a bt. x IN bt_to_set_lb cmp lb t ==> (apto cmp lb x = LESS)
+Proof
+SRW_TAC [] [bt_to_set_lb]
+QED
 
-val IN_ub_imp = maybe_thm ("IN_ub_imp",
-``!cmp x t:'a bt ub. x IN bt_to_set_ub cmp t ub ==> (apto cmp x ub = LESS)``,
-SRW_TAC [] [bt_to_set_ub]);
+Theorem IN_ub_imp[local]:
+  !cmp x t:'a bt ub. x IN bt_to_set_ub cmp t ub ==> (apto cmp x ub = LESS)
+Proof
+SRW_TAC [] [bt_to_set_ub]
+QED
 
 Theorem piecewise_FUNION[local]:
   !a b c x y z:'a|->'b.(a=x)/\(b=y)/\(c=z)==>
@@ -989,8 +1110,8 @@ Proof
 METIS_TAC []
 QED
 
-val bt_to_fmap_lb_ub_mut_rec = maybe_thm ("bt_to_fmap_lb_ub_mut_rec",
-``!cmp lb l x:'a y:'b r ub. bt_to_fmap_lb_ub cmp lb (node l (x,y) r) ub =
+Theorem bt_to_fmap_lb_ub_mut_rec[local]:
+  !cmp lb l x:'a y:'b r ub. bt_to_fmap_lb_ub cmp lb (node l (x,y) r) ub =
   if apto cmp lb x = LESS then
     if apto cmp x ub = LESS then
       bt_to_fmap_lb_ub cmp lb l x FUNION FEMPTY |+ (x,y) FUNION
@@ -998,7 +1119,8 @@ val bt_to_fmap_lb_ub_mut_rec = maybe_thm ("bt_to_fmap_lb_ub_mut_rec",
     else
       bt_to_fmap_lb_ub cmp lb l ub
   else
-    bt_to_fmap_lb_ub cmp lb r ub``,
+    bt_to_fmap_lb_ub cmp lb r ub
+Proof
 SRW_TAC [] [fmap_EXT, bt_fst_lb_ub_FDOM] THEN
 SRW_TAC [] [bt_to_fmap_lb_ub, bt_to_set_lb_ub, bt_map] THENL
 [REWRITE_TAC [EXTENSION, IN_UNION, bt_to_set] THEN GEN_TAC THEN
@@ -1060,15 +1182,17 @@ SRW_TAC [] [bt_to_fmap_lb_ub, bt_to_set_lb_ub, bt_map] THENL
     METIS_TAC [totoLLtrans, NOT_EQ_LESS_IMP]
    ,REFL_TAC
  ]]]
-]);
+]
+QED
 
-val bt_to_fmap_lb_mut_rec = maybe_thm ("bt_to_fmap_lb_mut_rec",
-``!cmp lb l x:'a y:'b r. bt_to_fmap_lb cmp lb (node l (x,y) r) =
+Theorem bt_to_fmap_lb_mut_rec[local]:
+  !cmp lb l x:'a y:'b r. bt_to_fmap_lb cmp lb (node l (x,y) r) =
   if apto cmp lb x = LESS then
       bt_to_fmap_lb_ub cmp lb l x FUNION FEMPTY |+ (x,y) FUNION
       bt_to_fmap_lb cmp x r
   else
-    bt_to_fmap_lb cmp lb r``,
+    bt_to_fmap_lb cmp lb r
+Proof
 SRW_TAC [] [fmap_EXT, bt_fst_lb_ub_FDOM, bt_fst_lb_FDOM] THEN
 SRW_TAC [] [bt_to_fmap_lb_ub, bt_to_set_lb_ub, bt_map,
                     bt_to_fmap_lb, bt_to_set_lb] THENL
@@ -1109,15 +1233,17 @@ SRW_TAC [] [bt_to_fmap_lb_ub, bt_to_set_lb_ub, bt_map,
     METIS_TAC [totoLLtrans, NOT_EQ_LESS_IMP]
    ,REFL_TAC
  ]]]
-]);
+]
+QED
 
-val bt_to_fmap_ub_mut_rec = maybe_thm ("bt_to_fmap_ub_mut_rec",
-``!cmp l x:'a y:'b r ub. bt_to_fmap_ub cmp (node l (x,y) r) ub =
+Theorem bt_to_fmap_ub_mut_rec[local]:
+  !cmp l x:'a y:'b r ub. bt_to_fmap_ub cmp (node l (x,y) r) ub =
   if apto cmp x ub = LESS then
       bt_to_fmap_ub cmp l x FUNION FEMPTY |+ (x,y) FUNION
       bt_to_fmap_lb_ub cmp x r ub
   else
-      bt_to_fmap_ub cmp l ub``,
+      bt_to_fmap_ub cmp l ub
+Proof
 SRW_TAC [] [fmap_EXT, bt_fst_lb_ub_FDOM, bt_fst_ub_FDOM] THEN
 SRW_TAC [] [bt_to_fmap_lb_ub, bt_to_set_lb_ub, bt_map,
                     bt_to_fmap_ub, bt_to_set_ub] THENL
@@ -1158,7 +1284,8 @@ SRW_TAC [] [bt_to_fmap_lb_ub, bt_to_set_lb_ub, bt_map,
     METIS_TAC [totoLLtrans, NOT_EQ_LESS_IMP]
    ,REFL_TAC
  ]]]
-]);
+]
+QED
 
 (* ******************************************************************* *)
 (* Continue to imitate enumeralTheory with conversion to ordered lists *)
@@ -1207,99 +1334,125 @@ Definition fmap:
  fmap (l:('a#'b)list) = FEMPTY |++ REVERSE l
 End
 
-val FUPDATE_LIST_FUNION = maybe_thm ("FUPDATE_LIST_FUNION",
-``!f l:('a#'b)list g. g |++ l FUNION f = (g FUNION f) |++ l``,
+Theorem FUPDATE_LIST_FUNION[local]:
+  !f l:('a#'b)list g. g |++ l FUNION f = (g FUNION f) |++ l
+Proof
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [FUPDATE_LIST_THM]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
  SRW_TAC [] [FUPDATE_LIST_THM, FUNION_FUPDATE_1]
-]);
+]
+QED
 
-val fmap_rec = maybe_thm ("fmap_rec",
-``(fmap ([]:('a#'b)list) = FEMPTY) /\
-  (!h:'a#'b l. fmap (h::l) = fmap l |+ h)``,
+Theorem fmap_rec[local]:
+  (fmap ([]:('a#'b)list) = FEMPTY) /\
+  (!h:'a#'b l. fmap (h::l) = fmap l |+ h)
+Proof
 CONJ_TAC THEN REWRITE_TAC [fmap, REVERSE_DEF, FUPDATE_LIST_THM] THEN
-REWRITE_TAC [FUPDATE_LIST_APPEND, FUPDATE_LIST_THM]);
+REWRITE_TAC [FUPDATE_LIST_APPEND, FUPDATE_LIST_THM]
+QED
 
-val fmap_NIL = maybe_thm ("fmap_NIL",
-``fmap ([]:('a#'b)list) = FEMPTY``,
-REWRITE_TAC [fmap_rec]);
+Theorem fmap_NIL[local]:
+  fmap ([]:('a#'b)list) = FEMPTY
+Proof
+REWRITE_TAC [fmap_rec]
+QED
 
-val fmap_UNIT = maybe_thm ("fmap_UNIT",
-``!h:'a#'b. fmap [h] = FEMPTY |+ h``,
-REWRITE_TAC [fmap_rec]);
+Theorem fmap_UNIT[local]:
+  !h:'a#'b. fmap [h] = FEMPTY |+ h
+Proof
+REWRITE_TAC [fmap_rec]
+QED
 
-val fmap_APPEND = maybe_thm ("fmap_APPEND",
-``!m n:('a#'b)list. fmap (m ++ n) = fmap m FUNION fmap n``,
+Theorem fmap_APPEND[local]:
+  !m n:('a#'b)list. fmap (m ++ n) = fmap m FUNION fmap n
+Proof
 SRW_TAC [] [fmap, FUPDATE_LIST_APPEND, REVERSE_APPEND] THEN
-REWRITE_TAC [FUPDATE_LIST_FUNION, FUNION_FEMPTY_1]);
+REWRITE_TAC [FUPDATE_LIST_FUNION, FUNION_FEMPTY_1]
+QED
 
 (* Show ordered lists represent the right finite maps. *)
 
-val orl_fmap_lb_ub = maybe_thm ("orl_fmap_lb_ub",``!cmp t:('a#'b)bt lb ub.
-   bt_to_fmap_lb_ub cmp lb t ub = fmap (bt_to_orl_lb_ub cmp lb t ub)``,
+Theorem orl_fmap_lb_ub[local]:
+   !cmp t:('a#'b)bt lb ub.
+   bt_to_fmap_lb_ub cmp lb t ub = fmap (bt_to_orl_lb_ub cmp lb t ub)
+Proof
 GEN_TAC THEN Induct THENL
 [SRW_TAC [] [bt_to_orl_lb_ub, fmap_NIL, bt_to_fmap_lb_ub,
                      bt_to_fmap, DRESTRICT_FEMPTY]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
  SRW_TAC [] [bt_to_fmap_lb_ub_mut_rec, bt_to_orl_lb_ub,
                      fmap_APPEND, fmap_UNIT]
-]);
+]
+QED
 
-val orl_fmap_lb = maybe_thm ("orl_fmap_lb",``!cmp t:('a#'b)bt lb.
-   bt_to_fmap_lb cmp lb t = fmap (bt_to_orl_lb cmp lb t)``,
+Theorem orl_fmap_lb[local]:
+   !cmp t:('a#'b)bt lb.
+   bt_to_fmap_lb cmp lb t = fmap (bt_to_orl_lb cmp lb t)
+Proof
 GEN_TAC THEN Induct THENL
 [SRW_TAC [] [bt_to_orl_lb, fmap_NIL, bt_to_fmap_lb,
                      bt_to_fmap, DRESTRICT_FEMPTY]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
  SRW_TAC [] [bt_to_fmap_lb_mut_rec, bt_to_orl_lb,
                      fmap_APPEND, fmap_UNIT, orl_fmap_lb_ub]
-]);
+]
+QED
 
-val orl_fmap_ub = maybe_thm ("orl_fmap_ub",``!cmp t:('a#'b)bt ub.
-   bt_to_fmap_ub cmp t ub = fmap (bt_to_orl_ub cmp t ub)``,
+Theorem orl_fmap_ub[local]:
+   !cmp t:('a#'b)bt ub.
+   bt_to_fmap_ub cmp t ub = fmap (bt_to_orl_ub cmp t ub)
+Proof
 GEN_TAC THEN Induct THENL
 [SRW_TAC [] [bt_to_orl_ub, fmap_NIL, bt_to_fmap_ub,
                      bt_to_fmap, DRESTRICT_FEMPTY]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
  SRW_TAC [] [bt_to_fmap_ub_mut_rec, bt_to_orl_ub,
                      fmap_APPEND, fmap_UNIT, orl_fmap_lb_ub]
-]);
+]
+QED
 
-val orl_fmap = maybe_thm ("orl_fmap",
-``!cmp t:('a#'b)bt. FMAPAL cmp t = fmap (bt_to_orl cmp t)``,
+Theorem orl_fmap[local]:
+  !cmp t:('a#'b)bt. FMAPAL cmp t = fmap (bt_to_orl cmp t)
+Proof
 GEN_TAC THEN Induct THENL
 [SRW_TAC [] [bt_to_orl, fmap_NIL, bt_to_fmap,
                      bt_to_fmap, DRESTRICT_FEMPTY]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
  SRW_TAC [] [bt_to_fmap_mut_rec, bt_to_orl, fmap_APPEND,
                      fmap_UNIT, orl_fmap_lb, orl_fmap_ub]
-]);
+]
+QED
 
 (* But we must prove that results from bt_to_orl etc. satisfy ORL cmp. *)
 
-val MEM_MAP_FST_LEM = maybe_thm ("MEM_MAP_FST_LEM",
-``!x l:('a#'b)list. MEM x (MAP FST l) <=> ?y. (MEM (x,y) l)``,
+Theorem MEM_MAP_FST_LEM[local]:
+  !x l:('a#'b)list. MEM x (MAP FST l) <=> ?y. (MEM (x,y) l)
+Proof
 GEN_TAC THEN Induct THEN REWRITE_TAC [MAP, MEM] THEN
 P_PGEN_TAC ``a:'a,b:'b`` THEN REWRITE_TAC [PAIR_EQ] THEN
 EQ_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN AR THENL
 [Q.EXISTS_TAC `b` THEN REWRITE_TAC []
 ,RES_TAC THEN Q.EXISTS_TAC `y` THEN AR
 ,DISJ2_TAC THEN Q.EXISTS_TAC `y` THEN AR
-]);
+]
+QED
 
-val ORL_ALT = maybe_thm ("ORL_ALT",
-``(!cmp. ORL cmp ([]:('a#'b)list) = T) /\
+Theorem ORL_ALT[local]:
+  (!cmp. ORL cmp ([]:('a#'b)list) = T) /\
   (!cmp b a l. ORL cmp ((a:'a,b:'b)::l) <=> ORL cmp l /\
-               !p. MEM p (MAP FST l) ==> (apto cmp a p = LESS))``,
+               !p. MEM p (MAP FST l) ==> (apto cmp a p = LESS))
+Proof
 REWRITE_TAC [ORL, MEM_MAP_FST_LEM] THEN
 CONV_TAC (ONCE_DEPTH_CONV LEFT_IMP_EXISTS_CONV) THEN
-REPEAT GEN_TAC THEN REFL_TAC);
+REPEAT GEN_TAC THEN REFL_TAC
+QED
 
-val ORL_split_lem = maybe_thm ("ORL_split_lem",
-``!cmp l x:'a y:'b r. ORL cmp (l ++ [(x,y)] ++ r) <=>
+Theorem ORL_split_lem[local]:
+  !cmp l x:'a y:'b r. ORL cmp (l ++ [(x,y)] ++ r) <=>
    ORL cmp l /\ (!a. a IN set (MAP FST l) ==> (apto cmp a x = LESS)) /\
-   ORL cmp r /\ (!z. z IN set (MAP FST r) ==> (apto cmp x z = LESS))``,
+   ORL cmp r /\ (!z. z IN set (MAP FST r) ==> (apto cmp x z = LESS))
+Proof
 GEN_TAC THEN Induct THENL
 [SRW_TAC [] [ORL_ALT]
 ,P_PGEN_TAC ``p:'a,q:'b`` THEN SRW_TAC [] [ORL_ALT] THEN EQ_TAC THEN
@@ -1313,59 +1466,76 @@ GEN_TAC THEN Induct THENL
   [Q.UNDISCH_THEN `!a. (a = p) \/ MEM a (MAP FST l) ==> (apto cmp a x = LESS)`
                  MATCH_MP_TAC THEN REWRITE_TAC []
   ,RES_TAC
-]]]);
+]]]
+QED
 
-val bt_orl_ol_lb_ub = maybe_thm ("bt_orl_ol_lb_ub",
-``!cmp t:('a#'b)bt lb ub. MAP FST (bt_to_orl_lb_ub cmp lb t ub) =
-                          bt_to_ol_lb_ub cmp lb (bt_map FST t) ub``,
+Theorem bt_orl_ol_lb_ub[local]:
+  !cmp t:('a#'b)bt lb ub. MAP FST (bt_to_orl_lb_ub cmp lb t ub) =
+                          bt_to_ol_lb_ub cmp lb (bt_map FST t) ub
+Proof
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [bt_to_ol_lb_ub, bt_to_orl_lb_ub, bt_map, MAP]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
  RW_TAC (srw_ss()) [bt_to_ol_lb_ub, bt_to_orl_lb_ub, bt_map, MAP]
-]);
+]
+QED
 
-val ORL_bt_to_orl_lb_ub = maybe_thm ("ORL_bt_to_orl_lb_ub",
-``!cmp t:('a#'b)bt lb ub. ORL cmp (bt_to_orl_lb_ub cmp lb t ub)``,
-REWRITE_TAC [ORL_OL_FST, bt_orl_ol_lb_ub, OL_bt_to_ol_lb_ub]);
+Theorem ORL_bt_to_orl_lb_ub[local]:
+  !cmp t:('a#'b)bt lb ub. ORL cmp (bt_to_orl_lb_ub cmp lb t ub)
+Proof
+REWRITE_TAC [ORL_OL_FST, bt_orl_ol_lb_ub, OL_bt_to_ol_lb_ub]
+QED
 
-val bt_orl_ol_lb = maybe_thm ("bt_orl_ol_lb",
-``!cmp t:('a#'b)bt lb. MAP FST (bt_to_orl_lb cmp lb t) =
-                          bt_to_ol_lb cmp lb (bt_map FST t)``,
+Theorem bt_orl_ol_lb[local]:
+  !cmp t:('a#'b)bt lb. MAP FST (bt_to_orl_lb cmp lb t) =
+                          bt_to_ol_lb cmp lb (bt_map FST t)
+Proof
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [bt_to_ol_lb, bt_to_orl_lb, bt_map, MAP]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN RW_TAC (srw_ss())
  [bt_to_ol_lb, bt_to_orl_lb, bt_orl_ol_lb_ub, bt_map, MAP]
-]);
+]
+QED
 
-val ORL_bt_to_orl_lb = maybe_thm ("ORL_bt_to_orl_lb",
-``!cmp t:('a#'b)bt lb. ORL cmp (bt_to_orl_lb cmp lb t)``,
-REWRITE_TAC [ORL_OL_FST, bt_orl_ol_lb, OL_bt_to_ol_lb]);
+Theorem ORL_bt_to_orl_lb[local]:
+  !cmp t:('a#'b)bt lb. ORL cmp (bt_to_orl_lb cmp lb t)
+Proof
+REWRITE_TAC [ORL_OL_FST, bt_orl_ol_lb, OL_bt_to_ol_lb]
+QED
 
-val bt_orl_ol_ub = maybe_thm ("bt_orl_ol_ub",
-``!cmp t:('a#'b)bt ub. MAP FST (bt_to_orl_ub cmp t ub) =
-                          bt_to_ol_ub cmp (bt_map FST t) ub``,
+Theorem bt_orl_ol_ub[local]:
+  !cmp t:('a#'b)bt ub. MAP FST (bt_to_orl_ub cmp t ub) =
+                          bt_to_ol_ub cmp (bt_map FST t) ub
+Proof
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [bt_to_ol_ub, bt_to_orl_ub, bt_map, MAP]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN RW_TAC (srw_ss())
  [bt_to_ol_ub, bt_to_orl_ub, bt_orl_ol_lb_ub, bt_map, MAP]
-]);
+]
+QED
 
-val ORL_bt_to_orl_ub = maybe_thm ("ORL_bt_to_orl_ub",
-``!cmp t:('a#'b)bt ub. ORL cmp (bt_to_orl_ub cmp t ub)``,
-REWRITE_TAC [ORL_OL_FST, bt_orl_ol_ub, OL_bt_to_ol_ub]);
+Theorem ORL_bt_to_orl_ub[local]:
+  !cmp t:('a#'b)bt ub. ORL cmp (bt_to_orl_ub cmp t ub)
+Proof
+REWRITE_TAC [ORL_OL_FST, bt_orl_ol_ub, OL_bt_to_ol_ub]
+QED
 
-val bt_orl_ol = maybe_thm ("bt_orl_ol",
-``!cmp t:('a#'b)bt. MAP FST (bt_to_orl cmp t) =
-                          bt_to_ol cmp (bt_map FST t)``,
+Theorem bt_orl_ol[local]:
+  !cmp t:('a#'b)bt. MAP FST (bt_to_orl cmp t) =
+                          bt_to_ol cmp (bt_map FST t)
+Proof
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [bt_to_ol, bt_to_orl, bt_map, MAP]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN RW_TAC (srw_ss())
  [bt_to_ol, bt_to_orl, bt_orl_ol_lb, bt_orl_ol_ub, bt_map, MAP]
-]);
+]
+QED
 
-val ORL_bt_to_orl = maybe_thm ("ORL_bt_to_orl",
-``!cmp t:('a#'b)bt. ORL cmp (bt_to_orl cmp t)``,
-REWRITE_TAC [ORL_OL_FST, bt_orl_ol, OL_bt_to_ol]);
+Theorem ORL_bt_to_orl[local]:
+  !cmp t:('a#'b)bt. ORL cmp (bt_to_orl cmp t)
+Proof
+REWRITE_TAC [ORL_OL_FST, bt_orl_ol, OL_bt_to_ol]
+QED
 
 (* Now, still imitating enumeralTheory, to remove the APPENDs. *)
 
@@ -1379,14 +1549,16 @@ Definition bt_to_orl_lb_ub_ac:
  else bt_to_orl_lb_ub_ac cmp lb r ub m)
 End
 
-val orl_lb_ub_ac_thm = maybe_thm ("orl_lb_ub_ac_thm",
-``!cmp t:('a#'b)bt lb ub m. bt_to_orl_lb_ub_ac cmp lb t ub m =
-                          bt_to_orl_lb_ub cmp lb t ub ++ m``,
+Theorem orl_lb_ub_ac_thm[local]:
+  !cmp t:('a#'b)bt lb ub m. bt_to_orl_lb_ub_ac cmp lb t ub m =
+                          bt_to_orl_lb_ub cmp lb t ub ++ m
+Proof
 GEN_TAC THEN Induct THENL
 [SRW_TAC [][bt_to_orl_lb_ub, bt_to_orl_lb_ub_ac]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
  SRW_TAC [][bt_to_orl_lb_ub, bt_to_orl_lb_ub_ac]
-]);
+]
+QED
 
 Definition bt_to_orl_lb_ac:
  (bt_to_orl_lb_ac cmp lb (nt:('a#'b)bt) m = m) /\
@@ -1396,14 +1568,16 @@ Definition bt_to_orl_lb_ac:
  else bt_to_orl_lb_ac cmp lb r m)
 End
 
-val orl_lb_ac_thm = maybe_thm ("orl_lb_ac_thm",
-``!cmp t:('a#'b)bt lb m. bt_to_orl_lb_ac cmp lb t m =
-                          bt_to_orl_lb cmp lb t ++ m``,
+Theorem orl_lb_ac_thm[local]:
+  !cmp t:('a#'b)bt lb m. bt_to_orl_lb_ac cmp lb t m =
+                          bt_to_orl_lb cmp lb t ++ m
+Proof
 GEN_TAC THEN Induct THENL
 [SRW_TAC [][bt_to_orl_lb, bt_to_orl_lb_ac]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
  SRW_TAC [][bt_to_orl_lb, bt_to_orl_lb_ac, orl_lb_ub_ac_thm]
-]);
+]
+QED
 
 Definition bt_to_orl_ub_ac:
  (bt_to_orl_ub_ac cmp (nt:('a#'b)bt) ub m = m) /\
@@ -1413,14 +1587,16 @@ Definition bt_to_orl_ub_ac:
  else bt_to_orl_ub_ac cmp l ub m)
 End
 
-val orl_ub_ac_thm = maybe_thm ("orl_ub_ac_thm",
-``!cmp t:('a#'b)bt ub m. bt_to_orl_ub_ac cmp t ub m =
-                         bt_to_orl_ub cmp t ub ++ m``,
+Theorem orl_ub_ac_thm[local]:
+  !cmp t:('a#'b)bt ub m. bt_to_orl_ub_ac cmp t ub m =
+                         bt_to_orl_ub cmp t ub ++ m
+Proof
 GEN_TAC THEN Induct THENL
 [SRW_TAC [][bt_to_orl_ub, bt_to_orl_ub_ac]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
  SRW_TAC [][bt_to_orl_ub, bt_to_orl_ub_ac, orl_lb_ub_ac_thm]
-]);
+]
+QED
 
 Definition bt_to_orl_ac:
  (bt_to_orl_ac cmp (nt:('a#'b)bt) m = m) /\
@@ -1428,22 +1604,25 @@ Definition bt_to_orl_ac:
       bt_to_orl_ub_ac cmp l x ((x,y) :: bt_to_orl_lb_ac cmp x r m))
 End
 
-val orl_ac_thm = maybe_thm ("orl_ac_thm",
-``!cmp t:('a#'b)bt m. bt_to_orl_ac cmp t m = bt_to_orl cmp t ++ m``,
+Theorem orl_ac_thm[local]:
+  !cmp t:('a#'b)bt m. bt_to_orl_ac cmp t m = bt_to_orl cmp t ++ m
+Proof
 GEN_TAC THEN Induct THENL
 [SRW_TAC [][bt_to_orl, bt_to_orl_ac]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
  SRW_TAC [][bt_to_orl, bt_to_orl_ac, orl_lb_ac_thm, orl_ub_ac_thm]
-]);
+]
+QED
 
 (* ********* "ORWL" for (fmap) ORdered With List ************ *)
 
 Definition ORWL:   ORWL cmp (f:'a|->'b) l = (f = fmap l) /\ ORL cmp l
 End
 
-val MEM_IN_DOM_fmap = maybe_thm ("MEM_IN_DOM_fmap",
-``!cmp l:('a#'b)list. ORL cmp l ==> (!a b. MEM (a,b) l <=>
-               a IN FDOM (fmap l) /\ (b = fmap l ' a))``,
+Theorem MEM_IN_DOM_fmap[local]:
+  !cmp l:('a#'b)list. ORL cmp l ==> (!a b. MEM (a,b) l <=>
+               a IN FDOM (fmap l) /\ (b = fmap l ' a))
+Proof
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [FDOM_FEMPTY, fmap_rec, NOT_IN_EMPTY, MEM]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
@@ -1452,17 +1631,21 @@ GEN_TAC THEN Induct THENL
   STRIP_ASSUME_TAC (REWRITE_RULE [ORL] orlc)) THEN
  SRW_TAC [] [fmap_rec, FAPPLY_FUPDATE_THM, FDOM_FUPDATE] THEN
  METIS_TAC []
-]);
+]
+QED
 
-val ORWL_unique = maybe_thm ("ORWL_unique",
-``!cmp f:'a|->'b l m. ORWL cmp f l /\ ORWL cmp f m ==> (l = m)``,
+Theorem ORWL_unique[local]:
+  !cmp f:'a|->'b l m. ORWL cmp f l /\ ORWL cmp f m ==> (l = m)
+Proof
 RW_TAC bool_ss [ORWL] THEN
 Q.SUBGOAL_THEN `ORL cmp l /\ ORL cmp m`
  (SUBST1_TAC o SYM o MATCH_MP ORL_MEM_EQ) THEN1 AR THEN
-P_PGEN_TAC ``a:'a,b:'b`` THEN METIS_TAC [MEM_IN_DOM_fmap]);
+P_PGEN_TAC ``a:'a,b:'b`` THEN METIS_TAC [MEM_IN_DOM_fmap]
+QED
 
-val assocv_fmap_thm = maybe_thm ("assocv_fmap_thm",
-``!l:('a#'b)list. assocv l = FLOOKUP (fmap l)``,
+Theorem assocv_fmap_thm[local]:
+  !l:('a#'b)list. assocv l = FLOOKUP (fmap l)
+Proof
 Induct THEN CONV_TAC (ONCE_DEPTH_CONV FUN_EQ_CONV) THENL
 [RW_TAC (srw_ss()) [assocv, FLOOKUP_DEF, fmap_rec, FDOM_FEMPTY]
 ,P_PGEN_TAC ``a:'a,b:'b`` THEN
@@ -1470,15 +1653,20 @@ Induct THEN CONV_TAC (ONCE_DEPTH_CONV FUN_EQ_CONV) THENL
  [METIS_TAC []
  ,METIS_TAC [FAPPLY_FUPDATE_THM]
  ,METIS_TAC []
-]]);
+]]
+QED
 
-val fmap_ALT = maybe_thm ("fmap_ALT",
-``!l:('a#'b)list. fmap l = unlookup (assocv l)``,
-SRW_TAC [] [assocv_fmap_thm, FLOOKUP_unlookup_ID]);
+Theorem fmap_ALT[local]:
+  !l:('a#'b)list. fmap l = unlookup (assocv l)
+Proof
+SRW_TAC [] [assocv_fmap_thm, FLOOKUP_unlookup_ID]
+QED
 
-val incr_sort_fmap = maybe_thm ("incr_sort_fmap",
-``!cmp l:('a#'b)list. fmap (incr_sort cmp l) = fmap l``,
-REWRITE_TAC [fmap_ALT, incr_sort_fun]);
+Theorem incr_sort_fmap[local]:
+  !cmp l:('a#'b)list. fmap (incr_sort cmp l) = fmap l
+Proof
+REWRITE_TAC [fmap_ALT, incr_sort_fun]
+QED
 
 Theorem ORWL_bt_to_orl:
   !cmp t:('a#'b)bt. ORWL cmp (FMAPAL cmp t) (bt_to_orl cmp t)
@@ -1490,40 +1678,48 @@ QED
    ORL_bt_to_orl = |- !cmp t. ORL cmp (bt_to_orl cmp t)
    orl_fmap = |- !cmp t. FMAPAL cmp t = fmap (bt_to_orl cmp t) *)
 
-val IS_SOME_assocv_rec = maybe_thm ("IS_SOME_assocv_rec",
-``(IS_SOME o assocv ([]:('a#'b)list) = {}) /\
-  (!a:'a b:'b l. IS_SOME o assocv ((a,b)::l) = a INSERT IS_SOME o assocv l)``,
+Theorem IS_SOME_assocv_rec[local]:
+  (IS_SOME o assocv ([]:('a#'b)list) = {}) /\
+  (!a:'a b:'b l. IS_SOME o assocv ((a,b)::l) = a INSERT IS_SOME o assocv l)
+Proof
 SRW_TAC [] [assocv, combinTheory.o_THM, EXTENSION, SPECIFICATION] THEN
-Cases_on `x = a` THEN SRW_TAC [] []);
+Cases_on `x = a` THEN SRW_TAC [] []
+QED
 
-val FINITE_assocv = maybe_thm ("FINITE_assocv",
-``!l:('a#'b)list. FINITE (IS_SOME o assocv l)``,
+Theorem FINITE_assocv[local]:
+  !l:('a#'b)list. FINITE (IS_SOME o assocv l)
+Proof
 Induct THENL
 [REWRITE_TAC [FINITE_EMPTY, IS_SOME_assocv_rec]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
  ASM_REWRITE_TAC [FINITE_INSERT, IS_SOME_assocv_rec]
-]);
+]
+QED
 
-val assocv_one_to_one  = maybe_thm ("assocv_one_to_one", Term
-`!cmp l m:('a#'b)list. ORL cmp l /\ ORL cmp m ==>
-                  (assocv l = assocv m) ==> (l = m)`,
+Theorem assocv_one_to_one[local]:
+ !cmp l m:('a#'b)list. ORL cmp l /\ ORL cmp m ==>
+                  (assocv l = assocv m) ==> (l = m)
+Proof
 REPEAT GEN_TAC THEN
 DISCH_THEN (fn cj => REWRITE_TAC [SYM (MATCH_MP ORL_MEM_EQ cj)]
             THEN STRIP_ASSUME_TAC cj) THEN
 REPEAT STRIP_TAC THEN
 Q.SPEC_TAC (`ab`,`ab`) THEN P_PGEN_TAC ``a:'a,b:'b`` THEN
-IMP_RES_THEN (REWRITE_TAC o ulist o GSYM) assocv_MEM_thm THEN AR);
+IMP_RES_THEN (REWRITE_TAC o ulist o GSYM) assocv_MEM_thm THEN AR
+QED
 
 (* Prove bt_to_orl inverts list_to_bt for ordered lists, using above lemmas. *)
 
-val ORL_fmap_EQ = maybe_thm ("ORL_fmap_EQ",
-``!cmp l m:('a#'b)list. ORL cmp l /\ ORL cmp m ==>
-                        ((fmap l = fmap m) <=> (l = m))``,
+Theorem ORL_fmap_EQ[local]:
+  !cmp l m:('a#'b)list. ORL cmp l /\ ORL cmp m ==>
+                        ((fmap l = fmap m) <=> (l = m))
+Proof
 REPEAT GEN_TAC THEN
 DISCH_THEN (ASSUME_TAC o MATCH_MP assocv_one_to_one) THEN EQ_TAC THENL
 [REWRITE_TAC [fmap_ALT] THEN METIS_TAC [FINITE_assocv, unlookup_11]
 ,STRIP_TAC THEN AR
-]);
+]
+QED
 
 (* OFU, UFO imitate OU, UO from enumeralTheory respectively *)
 
@@ -1535,59 +1731,77 @@ Definition UFO:  UFO cmp (f:'a|->'b) (g:'a|->'b) =
       f FUNION DRESTRICT g {y | !z. z IN FDOM f ==> (apto cmp z y = LESS)}
 End
 
-val FDOM_OFU = maybe_thm ("FDOM_OFU",
-``!cmp (f:'a|->'b) (g:'a|->'b). FDOM (OFU cmp f g) = OU cmp (FDOM f) (FDOM g)``,
+Theorem FDOM_OFU[local]:
+  !cmp (f:'a|->'b) (g:'a|->'b). FDOM (OFU cmp f g) = OU cmp (FDOM f) (FDOM g)
+Proof
 RW_TAC (srw_ss())
- [OFU, OU, LESS_ALL, FDOM_DRESTRICT, EXTENSION, IN_UNION, IN_INTER]);
+ [OFU, OU, LESS_ALL, FDOM_DRESTRICT, EXTENSION, IN_UNION, IN_INTER]
+QED
 
-val FDOM_UFO = maybe_thm ("FDOM_UFO",
-``!cmp (f:'a|->'b) (g:'a|->'b). FDOM (UFO cmp f g) = UO cmp (FDOM f) (FDOM g)``,
+Theorem FDOM_UFO[local]:
+  !cmp (f:'a|->'b) (g:'a|->'b). FDOM (UFO cmp f g) = UO cmp (FDOM f) (FDOM g)
+Proof
 RW_TAC (srw_ss())
- [UFO, UO, FDOM_DRESTRICT, EXTENSION, IN_UNION, IN_INTER]);
+ [UFO, UO, FDOM_DRESTRICT, EXTENSION, IN_UNION, IN_INTER]
+QED
 
-val sing_UFO = maybe_thm ("sing_UFO",
-``!cmp x:'a y:'b t:'a|->'b. UFO cmp (FEMPTY |+ (x,y)) t =
-  (FEMPTY |+ (x,y)) FUNION (DRESTRICT t {z | apto cmp x z = LESS})``,
-SRW_TAC [] [UFO]);
+Theorem sing_UFO[local]:
+  !cmp x:'a y:'b t:'a|->'b. UFO cmp (FEMPTY |+ (x,y)) t =
+  (FEMPTY |+ (x,y)) FUNION (DRESTRICT t {z | apto cmp x z = LESS})
+Proof
+SRW_TAC [] [UFO]
+QED
 
-val bt_to_fmap_OFU_UFO = maybe_thm ("bt_to_fmap_OFU_UFO",
-``!cmp l x:'a y:'b r. FMAPAL cmp (node l (x,y) r) =
-   OFU cmp (FMAPAL cmp l) (UFO cmp (FEMPTY |+ (x,y)) (FMAPAL cmp r))``,
+Theorem bt_to_fmap_OFU_UFO[local]:
+  !cmp l x:'a y:'b r. FMAPAL cmp (node l (x,y) r) =
+   OFU cmp (FMAPAL cmp l) (UFO cmp (FEMPTY |+ (x,y)) (FMAPAL cmp r))
+Proof
 SRW_TAC [] [OFU, bt_to_fmap, LESS_UO_LEM, FDOM_OFU, FDOM_UFO] THEN
 REWRITE_TAC [GSYM FUNION_ASSOC] THEN
 ONCE_REWRITE_TAC [GSYM sing_UFO] THEN AP_THM_TAC THEN AP_TERM_TAC THEN
 AP_TERM_TAC THEN SRW_TAC [] [UO, LESS_ALL, EXTENSION] THEN
-METIS_TAC [totoLLtrans]);
+METIS_TAC [totoLLtrans]
+QED
 
-val FAPPLY_OFU = maybe_thm ("FAPPLY_OFU",
-``!cmp x u:'a|->'b v:'a|->'b. OFU cmp u v ' x =
-   if LESS_ALL cmp x (FDOM v) then u ' x else v ' x``,
+Theorem FAPPLY_OFU[local]:
+  !cmp x u:'a|->'b v:'a|->'b. OFU cmp u v ' x =
+   if LESS_ALL cmp x (FDOM v) then u ' x else v ' x
+Proof
 SRW_TAC [] [OFU, FDOM_OFU, FUNION_DEF, DRESTRICT_DEF] THEN
 `x NOTIN FDOM u` by METIS_TAC [] THEN
 `x NOTIN FDOM v` by METIS_TAC [LESS_ALL, all_cpn_distinct, toto_equal_eq] THEN
-IMP_RES_THEN SUBST1_TAC NOT_FDOM_FAPPLY_FEMPTY THEN REFL_TAC);
+IMP_RES_THEN SUBST1_TAC NOT_FDOM_FAPPLY_FEMPTY THEN REFL_TAC
+QED
 
-val OFU_FEMPTY = maybe_thm ("OFU_FEMPTY",
-``!cmp t:'a|->'b. OFU cmp t FEMPTY = t``,
-SRW_TAC [] [fmap_EXT, OU_EMPTY, FDOM_OFU, FAPPLY_OFU, LESS_ALL]);
+Theorem OFU_FEMPTY[local]:
+  !cmp t:'a|->'b. OFU cmp t FEMPTY = t
+Proof
+SRW_TAC [] [fmap_EXT, OU_EMPTY, FDOM_OFU, FAPPLY_OFU, LESS_ALL]
+QED
 
-val FEMPTY_OFU = maybe_thm ("FEMPTY_OFU",
-``!cmp f:'a|->'b. OFU cmp FEMPTY f = f``,
+Theorem FEMPTY_OFU[local]:
+  !cmp f:'a|->'b. OFU cmp FEMPTY f = f
+Proof
 SRW_TAC [] [fmap_EXT, EMPTY_OU, FDOM_OFU, FAPPLY_OFU] THEN
 `~LESS_ALL cmp x (FDOM f)`
  by (SRW_TAC [] [LESS_ALL] THEN
      Q.EXISTS_TAC `x` THEN SRW_TAC [] [toto_refl]) THEN
-AR);
+AR
+QED
 
-val LESS_ALL_OFU = maybe_thm ("LESS_ALL_OFU",
-``!cmp x u:'a|->'b v:'a|->'b. LESS_ALL cmp x (FDOM (OFU cmp u v)) <=>
-                          LESS_ALL cmp x (FDOM u) /\ LESS_ALL cmp x (FDOM v)``,
-METIS_TAC  [FDOM_OFU, LESS_ALL_OU]);
+Theorem LESS_ALL_OFU[local]:
+  !cmp x u:'a|->'b v:'a|->'b. LESS_ALL cmp x (FDOM (OFU cmp u v)) <=>
+                          LESS_ALL cmp x (FDOM u) /\ LESS_ALL cmp x (FDOM v)
+Proof
+METIS_TAC  [FDOM_OFU, LESS_ALL_OU]
+QED
 
-val OFU_ASSOC = maybe_thm ("OFU_ASSOC",
-``!cmp f g h:'a|->'b. OFU cmp f (OFU cmp g h) = OFU cmp (OFU cmp f g) h``,
+Theorem OFU_ASSOC[local]:
+  !cmp f g h:'a|->'b. OFU cmp f (OFU cmp g h) = OFU cmp (OFU cmp f g) h
+Proof
 RW_TAC bool_ss [fmap_EXT, FDOM_OFU, OU_ASSOC] THEN
-RW_TAC bool_ss [FAPPLY_OFU, FUNION_DEF, OFU, LESS_ALL_OFU] THEN METIS_TAC []);
+RW_TAC bool_ss [FAPPLY_OFU, FUNION_DEF, OFU, LESS_ALL_OFU] THEN METIS_TAC []
+QED
 
 Definition bl_to_fmap:
  (bl_to_fmap cmp (nbl:('a#'b)bl) = FEMPTY) /\
@@ -1598,22 +1812,29 @@ Definition bl_to_fmap:
           (bl_to_fmap cmp b))
 End
 
-val bl_to_fmap_OFU_UFO = maybe_thm ("bl_to_fmap_OFU_UFO",
-``!cmp x:'a y:'b t b. bl_to_fmap cmp (onebl (x,y) t b) =
-  OFU cmp (UFO cmp (FEMPTY |+ (x,y)) (FMAPAL cmp t)) (bl_to_fmap cmp b)``,
-REWRITE_TAC [bl_to_fmap, sing_UFO]);
+Theorem bl_to_fmap_OFU_UFO[local]:
+  !cmp x:'a y:'b t b. bl_to_fmap cmp (onebl (x,y) t b) =
+  OFU cmp (UFO cmp (FEMPTY |+ (x,y)) (FMAPAL cmp t)) (bl_to_fmap cmp b)
+Proof
+REWRITE_TAC [bl_to_fmap, sing_UFO]
+QED
 
-val bl_rev_fmap_lem = maybe_thm ("bl_rev_fmap_lem", ``!cmp b t:('a#'b)bt.
- FMAPAL cmp (bl_rev t b) = OFU cmp (FMAPAL cmp t) (bl_to_fmap cmp b)``,
+Theorem bl_rev_fmap_lem[local]:
+    !cmp b t:('a#'b)bt.
+ FMAPAL cmp (bl_rev t b) = OFU cmp (FMAPAL cmp t) (bl_to_fmap cmp b)
+Proof
 GEN_TAC THEN Induct THEN TRY (GEN_TAC THEN P_PGEN_TAC ``x:'a,y:'b``) THEN
 SRW_TAC [] [bl_rev, bl_to_fmap_OFU_UFO] THEN
-REWRITE_TAC [bl_to_fmap, OFU_FEMPTY, bt_to_fmap_OFU_UFO, OFU_ASSOC]);
+REWRITE_TAC [bl_to_fmap, OFU_FEMPTY, bt_to_fmap_OFU_UFO, OFU_ASSOC]
+QED
 
 (* Converting a bl to a bt preserves the represented fmap. *)
 
-val bl_to_bt_fmap = maybe_thm ("bl_to_bt_fmap",
-``!cmp b:('a#'b)bl. FMAPAL cmp (bl_to_bt b) = bl_to_fmap cmp b``,
-REWRITE_TAC [bl_to_bt, bl_rev_fmap_lem, bt_to_fmap, FEMPTY_OFU]);
+Theorem bl_to_bt_fmap[local]:
+  !cmp b:('a#'b)bl. FMAPAL cmp (bl_to_bt b) = bl_to_fmap cmp b
+Proof
+REWRITE_TAC [bl_to_bt, bl_rev_fmap_lem, bt_to_fmap, FEMPTY_OFU]
+QED
 
 (* Imitating enumeralTheory as usual, we next aim to show that building a
    bl from a list does the same, and to begin with that
@@ -1628,39 +1849,48 @@ REWRITE_TAC [bl_to_bt, bl_rev_fmap_lem, bt_to_fmap, FEMPTY_OFU]);
        (bl_to_fmap cmp (BL_ACCUM (x,y) t b) =
        (OFU cmp (FMAPAL cmp t) (bl_to_fmap cmp b)) |+ (x,y) .  *)
 
-val LESS_ALL_UFO_LEM = maybe_thm ("LESS_ALL_UFO_LEM",
-``!cmp x:'a y:'b f. LESS_ALL cmp x (FDOM f) ==>
-                    (UFO cmp (FEMPTY |+ (x,y)) f = f |+ (x,y))``,
+Theorem LESS_ALL_UFO_LEM[local]:
+  !cmp x:'a y:'b f. LESS_ALL cmp x (FDOM f) ==>
+                    (UFO cmp (FEMPTY |+ (x,y)) f = f |+ (x,y))
+Proof
 SRW_TAC [] [LESS_ALL, UFO, fmap_EXT, FUNION_DEF, DRESTRICT_DEF,
                     EXTENSION, FAPPLY_FUPDATE_THM] THEN
-METIS_TAC []);
+METIS_TAC []
+QED
 
-val LESS_ALL_OFU_UFO_LEM = maybe_thm ("LESS_ALL_OFU_UFO_LEM",
-``!cmp x:'a y:'b f g. LESS_ALL cmp x (FDOM f) /\ LESS_ALL cmp x (FDOM g) ==>
-(OFU cmp (UFO cmp (FEMPTY |+ (x,y)) f) g = (OFU cmp f g) |+ (x,y))``,
+Theorem LESS_ALL_OFU_UFO_LEM[local]:
+  !cmp x:'a y:'b f g. LESS_ALL cmp x (FDOM f) /\ LESS_ALL cmp x (FDOM g) ==>
+(OFU cmp (UFO cmp (FEMPTY |+ (x,y)) f) g = (OFU cmp f g) |+ (x,y))
+Proof
 REPEAT STRIP_TAC THEN IMP_RES_THEN (REWRITE_TAC o ulist)  LESS_ALL_UFO_LEM THEN
 SRW_TAC [] [fmap_EXT] THENL
 [REWRITE_TAC [FDOM_OFU, FDOM_FUPDATE] THEN
  IMP_RES_THEN SUBST1_TAC (GSYM LESS_ALL_UO_LEM) THEN
  IMP_RES_TAC LESS_ALL_OU_UO_LEM
 ,SRW_TAC [] [FAPPLY_OFU, FAPPLY_FUPDATE_THM] THEN RES_TAC
-]);
+]
+QED
 
-val DRESTRICT_SUPERSET = maybe_thm ("DRESTRICT_SUPERSET",
-``!f:'a|->'b s. FDOM f SUBSET s ==> (DRESTRICT f s = f)``,
+Theorem DRESTRICT_SUPERSET[local]:
+  !f:'a|->'b s. FDOM f SUBSET s ==> (DRESTRICT f s = f)
+Proof
 SRW_TAC [] [DRESTRICT_DEF, SUBSET_DEF, fmap_EXT] THEN
-METIS_TAC [EXTENSION, IN_INTER]);
+METIS_TAC [EXTENSION, IN_INTER]
+QED
 
-val SING_FUNION = maybe_thm ("SING_FUNION",
-``!f x:'a y:'b. FEMPTY |+ (x,y) FUNION f = f |+ (x,y)``,
+Theorem SING_FUNION[local]:
+  !f x:'a y:'b. FEMPTY |+ (x,y) FUNION f = f |+ (x,y)
+Proof
 SRW_TAC []
- [fmap_EXT, FUNION_DEF, FAPPLY_FUPDATE_THM, GSYM INSERT_SING_UNION]);
+ [fmap_EXT, FUNION_DEF, FAPPLY_FUPDATE_THM, GSYM INSERT_SING_UNION]
+QED
 
-val BL_ACCUM_fmap = maybe_thm ("BL_ACCUM_fmap",
-``!cmp x:'a y:'b b t. LESS_ALL cmp x (FDOM (FMAPAL cmp t)) /\
+Theorem BL_ACCUM_fmap[local]:
+  !cmp x:'a y:'b b t. LESS_ALL cmp x (FDOM (FMAPAL cmp t)) /\
                       LESS_ALL cmp x (FDOM (bl_to_fmap cmp b)) ==>
    (bl_to_fmap cmp (BL_ACCUM (x,y) t b) =
-    OFU cmp (FMAPAL cmp t) (bl_to_fmap cmp b) |+ (x,y))``,
+    OFU cmp (FMAPAL cmp t) (bl_to_fmap cmp b) |+ (x,y))
+Proof
 GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN Induct THEN
 TRY (GEN_TAC THEN P_PGEN_TAC ``p:'a,q:'b``) THEN
 SRW_TAC [] [BL_ACCUM, bl_to_fmap_OFU_UFO, bt_to_fmap_OFU_UFO] THENL
@@ -1673,53 +1903,64 @@ SRW_TAC [] [BL_ACCUM, bl_to_fmap_OFU_UFO, bt_to_fmap_OFU_UFO] THENL
  `LESS_ALL cmp x (FDOM (FMAPAL cmp (node t (p,q) b0)))`
  by ASM_REWRITE_TAC [bt_to_fmap_OFU_UFO, LESS_ALL_OFU] THEN
  RES_TAC THEN ASM_REWRITE_TAC [bt_to_fmap_OFU_UFO, OFU_ASSOC]
-]);
+]
+QED
 
-val BL_CONS_fmap = maybe_thm ("BL_CONS_fmap",
-``!cmp x:'a y:'b b. LESS_ALL cmp x (FDOM (bl_to_fmap cmp b)) ==>
-      (bl_to_fmap cmp (BL_CONS (x,y) b) = bl_to_fmap cmp b |+ (x,y))``,
+Theorem BL_CONS_fmap[local]:
+  !cmp x:'a y:'b b. LESS_ALL cmp x (FDOM (bl_to_fmap cmp b)) ==>
+      (bl_to_fmap cmp (BL_CONS (x,y) b) = bl_to_fmap cmp b |+ (x,y))
+Proof
 REPEAT STRIP_TAC THEN REWRITE_TAC [BL_CONS] THEN
 Q.SUBGOAL_THEN `OFU cmp (FMAPAL cmp nt) (bl_to_fmap cmp b) = bl_to_fmap cmp b`
 (SUBST1_TAC o SYM)
 THEN1 REWRITE_TAC [bt_to_fmap, FEMPTY_OFU] THEN
 `LESS_ALL cmp x (FDOM (FMAPAL cmp nt))`
 by REWRITE_TAC [LESS_ALL, NOT_IN_EMPTY, bt_to_fmap, FDOM_FEMPTY] THEN
-IMP_RES_TAC BL_ACCUM_fmap THEN AR);
+IMP_RES_TAC BL_ACCUM_fmap THEN AR
+QED
 
-val list_to_bl_fmap = maybe_thm ("list_to_bl_fmap",
-``!cmp l:('a#'b)list. ORL cmp l ==>
-   (bl_to_fmap cmp (list_to_bl l) = fmap l)``,
+Theorem list_to_bl_fmap[local]:
+  !cmp l:('a#'b)list. ORL cmp l ==>
+   (bl_to_fmap cmp (list_to_bl l) = fmap l)
+Proof
 GEN_TAC THEN Induct THEN TRY (P_PGEN_TAC ``x:'a, y:'b``) THEN
 SRW_TAC [] [bl_to_fmap, list_to_bl, fmap_rec, ORL] THEN
 RES_THEN (SUBST1_TAC o SYM) THEN MATCH_MP_TAC BL_CONS_fmap THEN
-RES_THEN SUBST1_TAC THEN METIS_TAC [MEM_IN_DOM_fmap, LESS_ALL]);
+RES_THEN SUBST1_TAC THEN METIS_TAC [MEM_IN_DOM_fmap, LESS_ALL]
+QED
 
-val bt_to_orl_ID = maybe_thm ("bt_to_orl_ID",
-``!cmp. !l::ORL cmp. bt_to_orl cmp (list_to_bt l) = (l:('a#'b)list)``,
+Theorem bt_to_orl_ID[local]:
+  !cmp. !l::ORL cmp. bt_to_orl cmp (list_to_bt l) = (l:('a#'b)list)
+Proof
 GEN_TAC THEN CONV_TAC RES_FORALL_CONV THEN
 REWRITE_TAC [SPECIFICATION] THEN GEN_TAC THEN DISCH_TAC THEN
 Q.SUBGOAL_THEN `ORL cmp (bt_to_orl cmp (list_to_bt l)) /\ ORL cmp l`
 (REWRITE_TAC o ulist o GSYM o MATCH_MP ORL_fmap_EQ)
 THEN1 ASM_REWRITE_TAC [ORL_bt_to_orl] THEN
 IMP_RES_THEN (SUBST1_TAC o SYM) list_to_bl_fmap THEN
-REWRITE_TAC [GSYM bl_to_bt_fmap, list_to_bt, orl_fmap]);
+REWRITE_TAC [GSYM bl_to_bt_fmap, list_to_bt, orl_fmap]
+QED
 
 Theorem bt_to_orl_ID_IMP = REWRITE_RULE
  [SPECIFICATION] (CONV_RULE (ONCE_DEPTH_CONV RES_FORALL_CONV) bt_to_orl_ID);
 
 (* bt_to_orl_ID_IMP = !cmp l. ORL cmp l ==> (bt_to_orl cmp (list_to_bt l) = l)*)
 
-val orl_to_bt_ID = maybe_thm ("orl_to_bt_ID", ``!cmp t:('a#'b)bt.
-                 FMAPAL cmp (list_to_bt (bt_to_orl cmp t)) = FMAPAL cmp t``,
-METIS_TAC [bt_to_orl_ID_IMP, orl_fmap, ORL_bt_to_orl]);
+Theorem orl_to_bt_ID[local]:
+    !cmp t:('a#'b)bt.
+                 FMAPAL cmp (list_to_bt (bt_to_orl cmp t)) = FMAPAL cmp t
+Proof
+METIS_TAC [bt_to_orl_ID_IMP, orl_fmap, ORL_bt_to_orl]
+QED
 
 (* ************************************************************************* *)
 (* *********************** Now to prove merge_fmap ************************* *)
 (* ************************************************************************* *)
 
-val assocv_MEM_MAP_THE = maybe_thm ("assocv_MEM_MAP_THE",
-``!x f:'a->'b option l. MEM x l /\ ALL_DISTINCT l /\ IS_SOME (f x) ==>
-                       (assocv (MAP (\x. (x, THE (f x))) l) x = f x)``,
+Theorem assocv_MEM_MAP_THE[local]:
+  !x f:'a->'b option l. MEM x l /\ ALL_DISTINCT l /\ IS_SOME (f x) ==>
+                       (assocv (MAP (\x. (x, THE (f x))) l) x = f x)
+Proof
 GEN_TAC THEN GEN_TAC THEN Induct THEN
 REWRITE_TAC [MEM, ALL_DISTINCT, MAP] THEN BETA_TAC THEN
 REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [assocv] THENL
@@ -1727,20 +1968,25 @@ REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [assocv] THENL
  ASM_REWRITE_TAC [option_CLAUSES]
 ,COND_CASES_TAC THENL
  [UNDISCH_TAC (Term`MEM (x:'a) l`) THEN AR
- ,RES_TAC]]);
+ ,RES_TAC]]
+QED
 
 (* ********* merge_smerge not used, but seems hygienic *********** *)
 
-val merge_smerge = maybe_thm ("merge_smerge", ``!cmp l m:('a#'b)list.
-         MAP FST (merge cmp l m) = smerge cmp (MAP FST l) (MAP FST m)``,
+Theorem merge_smerge[local]:
+    !cmp l m:('a#'b)list.
+         MAP FST (merge cmp l m) = smerge cmp (MAP FST l) (MAP FST m)
+Proof
 GEN_TAC THEN Induct THEN TRY (P_PGEN_TAC ``a:'a,b:'b``) THEN
 SRW_TAC [] [merge_thm] THEN
 Induct_on `m` THEN TRY (P_PGEN_TAC ``c:'a,d:'b``) THEN
 Cases_on `apto cmp a c` THEN
-SRW_TAC [] [smerge, smerge_nil, merge_thm, MAP]);
+SRW_TAC [] [smerge, smerge_nil, merge_thm, MAP]
+QED
 
-val IS_SOME_assocv = maybe_thm ("IS_SOME_assocv",
-``!l:('a#'b)list. IS_SOME o (assocv l) = set (MAP FST l)``,
+Theorem IS_SOME_assocv[local]:
+  !l:('a#'b)list. IS_SOME o (assocv l) = set (MAP FST l)
+Proof
 CONV_TAC (QUANT_CONV FUN_EQ_CONV) THEN
 REWRITE_TAC [combinTheory.o_THM] THEN Induct THENL
 [SRW_TAC [] [assocv, LIST_TO_SET, combinTheory.C_THM]
@@ -1750,14 +1996,17 @@ REWRITE_TAC [combinTheory.o_THM] THEN Induct THENL
  REWRITE_TAC [IN_INSERT] THEN Cases_on `x = y` THEN AR THENL
  [REWRITE_TAC [option_CLAUSES]
  ,REWRITE_TAC [SPECIFICATION]
-]]);
+]]
+QED
 
-val FDOM_assocv = maybe_thm ("FDOM_assocv",
-``!l:('a#'b)list. FDOM (unlookup (assocv l)) = set (MAP FST l)``,
+Theorem FDOM_assocv[local]:
+  !l:('a#'b)list. FDOM (unlookup (assocv l)) = set (MAP FST l)
+Proof
 GEN_TAC THEN
 MP_TAC (ISPEC ``MAP FST (l:('a#'b)list)`` FINITE_LIST_TO_SET) THEN
 REWRITE_TAC [GSYM IS_SOME_assocv] THEN
-MATCH_ACCEPT_TAC unlookup_FDOM);
+MATCH_ACCEPT_TAC unlookup_FDOM
+QED
 
 Theorem fmap_FDOM:
   !l:('a#'b)list. FDOM (fmap l) = set (MAP FST l)
@@ -1767,16 +2016,21 @@ REWRITE_TAC [fmap, FDOM_FUPDATE_LIST,
               rich_listTheory.MAP_REVERSE]
 QED
 
-val FUPDATE_LIST_SNOC = maybe_thm ("FUPDATE_LIST_SNOC",
-``!l:('a#'b)list fm xy. fm |++ (l ++ [xy]) = (fm |++ l) |+ xy``,
-REWRITE_TAC [FUPDATE_LIST_APPEND, FUPDATE_LIST, FOLDL]);
+Theorem FUPDATE_LIST_SNOC[local]:
+  !l:('a#'b)list fm xy. fm |++ (l ++ [xy]) = (fm |++ l) |+ xy
+Proof
+REWRITE_TAC [FUPDATE_LIST_APPEND, FUPDATE_LIST, FOLDL]
+QED
 
-val FINITE_IS_SOME_assocv = maybe_thm ("FINITE_IS_SOME_assocv",
-``!l:('a#'b)list. FINITE (IS_SOME o assocv l)``,
-REWRITE_TAC [IS_SOME_assocv, FINITE_LIST_TO_SET]);
+Theorem FINITE_IS_SOME_assocv[local]:
+  !l:('a#'b)list. FINITE (IS_SOME o assocv l)
+Proof
+REWRITE_TAC [IS_SOME_assocv, FINITE_LIST_TO_SET]
+QED
 
-val fmap_ALT = maybe_thm ("fmap_ALT",
-``!l:('a#'b)list. fmap l = unlookup (assocv l)``,
+Theorem fmap_ALT[local]:
+  !l:('a#'b)list. fmap l = unlookup (assocv l)
+Proof
 REWRITE_TAC [FUPDATE_ALT, fmap_EXT] THEN GEN_TAC THEN CONJ_TAC THENL
 [REWRITE_TAC [fmap_FDOM, FDOM_assocv]
 ,GEN_TAC THEN
@@ -1801,23 +2055,28 @@ REWRITE_TAC [FUPDATE_ALT, fmap_EXT] THEN GEN_TAC THEN CONJ_TAC THENL
    ASM_REWRITE_TAC [unlookup, IS_SOME_assocv] THEN
    RES_THEN (REWRITE_TAC o ulist) THEN
    ASM_REWRITE_TAC [combinTheory.o_THM, assocv]
-]]]);
+]]]
+QED
 
-val merge_fmap = maybe_thm ("merge_fmap",
-``!cmp l m:('a#'b)list. ORL cmp l /\ ORL cmp m ==>
-   (fmap (merge cmp l m) = fmap l FUNION fmap m)``,
+Theorem merge_fmap[local]:
+  !cmp l m:('a#'b)list. ORL cmp l /\ ORL cmp m ==>
+   (fmap (merge cmp l m) = fmap l FUNION fmap m)
+Proof
 RW_TAC bool_ss [fmap_ALT] THEN
 SUBST1_TAC (MATCH_MP unlookup_FUNION (CONJ
  (Q.SPEC `l` FINITE_IS_SOME_assocv) (Q.SPEC `m` FINITE_IS_SOME_assocv))) THEN
-AP_TERM_TAC THEN IMP_RES_TAC merge_fun);
+AP_TERM_TAC THEN IMP_RES_TAC merge_fun
+QED
 
 (* *** Summary theorems, with and without restricted quantification: **** *)
 
-val ORL_FUNION = maybe_thm ("ORL_FUNION",
-``!cmp. !l:('a#'b)list m::ORL cmp. ORL cmp (merge cmp l m) /\
-            (fmap (merge cmp l m) = fmap l FUNION fmap m)``,
+Theorem ORL_FUNION[local]:
+  !cmp. !l:('a#'b)list m::ORL cmp. ORL cmp (merge cmp l m) /\
+            (fmap (merge cmp l m) = fmap l FUNION fmap m)
+Proof
 CONV_TAC (DEPTH_CONV RES_FORALL_CONV) THEN
-SRW_TAC [] [SPECIFICATION, merge_ORL, merge_fmap]);
+SRW_TAC [] [SPECIFICATION, merge_ORL, merge_fmap]
+QED
 
 Theorem ORL_FUNION_IMP = REWRITE_RULE [SPECIFICATION]
                        (CONV_RULE (DEPTH_CONV RES_FORALL_CONV) ORL_FUNION);
@@ -1825,17 +2084,19 @@ Theorem ORL_FUNION_IMP = REWRITE_RULE [SPECIFICATION]
 (* ORL_FUNION_IMP = |- !cmp l. ORL cmp l ==> !m. ORL cmp m ==>
    ORL cmp (merge cmp l m) /\ (fmap (merge cmp l m) = fmap l FUNION fmap m) *)
 
-val FMAPAL_FUNION = maybe_thm ("FMAPAL_FUNION",
-``!cmp f g:('a#'b)bt.
+Theorem FMAPAL_FUNION[local]:
+  !cmp f g:('a#'b)bt.
   FMAPAL cmp (list_to_bt (merge cmp (bt_to_orl cmp f) (bt_to_orl cmp g))) =
-  FMAPAL cmp f FUNION FMAPAL cmp g``,
+  FMAPAL cmp f FUNION FMAPAL cmp g
+Proof
 RW_TAC bool_ss [orl_fmap] THEN
 `ORL cmp (bt_to_orl cmp f) /\ ORL cmp (bt_to_orl cmp g)`
 by REWRITE_TAC [ORL_bt_to_orl] THEN
 `ORL cmp (merge cmp (bt_to_orl cmp f) (bt_to_orl cmp g))`
 by IMP_RES_TAC merge_ORL THEN
 IMP_RES_THEN SUBST1_TAC bt_to_orl_ID_IMP THEN
-IMP_RES_TAC merge_fmap);
+IMP_RES_TAC merge_fmap
+QED
 
 (* We really need a merge-like computation rule for DRESTRICT. It might
    be that and a logarithmic rule for IN FDOM wd. be enough for now.    *)
@@ -1882,9 +2143,10 @@ val inter_merge_ind = theorem "inter_merge_ind";
         P cmp ((a,b)::l) (y::m)) ==>
      !v v1 v2. P v v1 v2 *)
 
-val inter_merge_subset_inter = maybe_thm ("inter_merge_subset_inter",
-``!cmp:'a toto l:('a#'b)list m.
-  !x z. MEM (x,z) (inter_merge cmp l m) ==> MEM (x,z) l /\ MEM x m``,
+Theorem inter_merge_subset_inter[local]:
+  !cmp:'a toto l:('a#'b)list m.
+  !x z. MEM (x,z) (inter_merge cmp l m) ==> MEM (x,z) l /\ MEM x m
+Proof
 HO_MATCH_MP_TAC inter_merge_ind THEN
 REPEAT CONJ_TAC THEN REPEAT GEN_TAC THEN
 REWRITE_TAC [inter_merge, MEM] THEN
@@ -1895,10 +2157,12 @@ STRIP_TAC THEN REPEAT GEN_TAC THEN REWRITE_TAC [cpn_case_def] THENL
 ,`a = y` by IMP_RES_TAC toto_equal_eq THEN
  RW_TAC bool_ss [MEM] THEN DISJ2_TAC THEN RES_TAC
 ,METIS_TAC [MEM]
-]);
+]
+QED
 
-val LESS_NOT_MEM = maybe_thm ("LESS_NOT_MEM",
-``!cmp x m y:'a. (apto cmp x y = LESS) /\ OL cmp (y::m) ==> ~MEM x m``,
+Theorem LESS_NOT_MEM[local]:
+  !cmp x m y:'a. (apto cmp x y = LESS) /\ OL cmp (y::m) ==> ~MEM x m
+Proof
 GEN_TAC THEN GEN_TAC THEN Induct THEN SRW_TAC [] [MEM] THENL
 [METIS_TAC [OL, MEM, totoLLtrans, toto_glneq]
 ,IMP_RES_TAC OL THEN
@@ -1906,11 +2170,13 @@ GEN_TAC THEN GEN_TAC THEN Induct THEN SRW_TAC [] [MEM] THENL
                            Q.EXISTS_TAC `y` THEN AR THEN
                            METIS_TAC [OL, MEM]) THEN
  RES_TAC
-]);
+]
+QED
 
-val inter_subset_inter_merge = maybe_thm ("inter_subset_inter_merge",
-``!cmp:'a toto l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
-   !x z. MEM (x,z) l /\ MEM x m ==> MEM (x,z) (inter_merge cmp l m)``,
+Theorem inter_subset_inter_merge[local]:
+  !cmp:'a toto l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
+   !x z. MEM (x,z) l /\ MEM x m ==> MEM (x,z) (inter_merge cmp l m)
+Proof
 HO_MATCH_MP_TAC inter_merge_ind THEN
 REPEAT CONJ_TAC THEN REPEAT GEN_TAC THEN
 REWRITE_TAC [inter_merge, MEM] THEN
@@ -1934,40 +2200,50 @@ STRIP_TAC THEN REPEAT GEN_TAC THEN REWRITE_TAC [cpn_case_def] THENL
  ,METIS_TAC []
  ,METIS_TAC [MEM, ORL_NOT_MEM]
  ,METIS_TAC []
-]]);
+]]
+QED
 
-val inter_merge_MEM_thm = maybe_thm ("inter_merge_MEM_thm",
-``!cmp:'a toto l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
- (!x y. MEM (x,y) (inter_merge cmp l m) <=> MEM (x,y) l /\ MEM x m)``,
+Theorem inter_merge_MEM_thm[local]:
+  !cmp:'a toto l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
+ (!x y. MEM (x,y) (inter_merge cmp l m) <=> MEM (x,y) l /\ MEM x m)
+Proof
 REPEAT STRIP_TAC THEN EQ_TAC THENL
 [MATCH_ACCEPT_TAC inter_merge_subset_inter
 ,IMP_RES_TAC inter_subset_inter_merge THEN STRIP_TAC THEN RES_TAC
-]);
+]
+QED
 
-val FST_inter_merge = maybe_thm ("FST_inter_merge",
-``!cmp l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
- (set (MAP FST (inter_merge cmp l m)) = set (MAP FST l) INTER set m)``,
+Theorem FST_inter_merge[local]:
+  !cmp l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
+ (set (MAP FST (inter_merge cmp l m)) = set (MAP FST l) INTER set m)
+Proof
 SRW_TAC []
  [inter_merge_MEM_thm, EXTENSION, MEM_MAP_FST_LEM] THEN
-CONV_TAC (LAND_CONV EXISTS_AND_CONV) THEN REFL_TAC);
+CONV_TAC (LAND_CONV EXISTS_AND_CONV) THEN REFL_TAC
+QED
 
-val inter_merge_ORL = maybe_thm ("inter_merge_ORL",
-``!cmp l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
-                        ORL cmp (inter_merge cmp l m)``,
+Theorem inter_merge_ORL[local]:
+  !cmp l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
+                        ORL cmp (inter_merge cmp l m)
+Proof
 GEN_TAC THEN Induct THEN TRY (P_PGEN_TAC ``x:'a,y:'b``) THEN Induct THEN
 SRW_TAC [] [inter_merge] THEN REWRITE_TAC [ORL] THEN
 IMP_RES_TAC ORL THEN IMP_RES_TAC OL THEN
 Cases_on `apto cmp x h` THEN SRW_TAC [] [] THEN
-RW_TAC bool_ss [ORL] THEN IMP_RES_TAC inter_merge_subset_inter THEN RES_TAC);
+RW_TAC bool_ss [ORL] THEN IMP_RES_TAC inter_merge_subset_inter THEN RES_TAC
+QED
 
-val IN_IS_SOME_NOT_NONE = maybe_thm ("IN_IS_SOME_NOT_NONE",
-``!x f:'a->'b option. (f x = NONE) ==> ~(x IN IS_SOME o f)``,
+Theorem IN_IS_SOME_NOT_NONE[local]:
+  !x f:'a->'b option. (f x = NONE) ==> ~(x IN IS_SOME o f)
+Proof
 REWRITE_TAC [SPECIFICATION, combinTheory.o_THM] THEN
-METIS_TAC [option_CLAUSES]);
+METIS_TAC [option_CLAUSES]
+QED
 
-val inter_merge_fmap = maybe_thm ("inter_merge_fmap",
-``!cmp l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
-   (fmap (inter_merge cmp l m) = DRESTRICT (fmap l) (set m))``,
+Theorem inter_merge_fmap[local]:
+  !cmp l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
+   (fmap (inter_merge cmp l m) = DRESTRICT (fmap l) (set m))
+Proof
 RW_TAC bool_ss
  [fmap_ALT, fmap_EXT, FDOM_assocv, DRESTRICT_DEF, FST_inter_merge] THEN
 REWRITE_TAC [unlookup] THEN
@@ -1991,15 +2267,18 @@ STRIP_ASSUME_TAC (ISPEC ``assocv (l:('a#'b)list) x`` option_nchotomy) THENL
  CONJ_TAC THENL
  [METIS_TAC [assocv_MEM_thm]
  ,METIS_TAC [IN_INTER]
-]]);
+]]
+QED
 
 (* *** Summary theorems, with and without restricted quantification: **** *)
 
-val ORL_DRESTRICT = maybe_thm ("ORL_DRESTRICT",
-``!cmp. !l:('a#'b)list::ORL cmp. !m::OL cmp. ORL cmp (inter_merge cmp l m) /\
-            (fmap (inter_merge cmp l m) = DRESTRICT (fmap l) (set m))``,
+Theorem ORL_DRESTRICT[local]:
+  !cmp. !l:('a#'b)list::ORL cmp. !m::OL cmp. ORL cmp (inter_merge cmp l m) /\
+            (fmap (inter_merge cmp l m) = DRESTRICT (fmap l) (set m))
+Proof
 CONV_TAC (DEPTH_CONV RES_FORALL_CONV) THEN
-SRW_TAC [] [SPECIFICATION, inter_merge_ORL, inter_merge_fmap]);
+SRW_TAC [] [SPECIFICATION, inter_merge_ORL, inter_merge_fmap]
+QED
 
 Theorem ORL_DRESTRICT_IMP =
 REWRITE_RULE [SPECIFICATION]
@@ -2009,17 +2288,19 @@ REWRITE_RULE [SPECIFICATION]
        ORL cmp (inter_merge cmp l m) /\
        (fmap (inter_merge cmp l m) = DRESTRICT (fmap l) (set m)) *)
 
-val FMAPAL_DRESTRICT = maybe_thm ("FMAPAL_DRESTRICT",
-``!cmp f:('a#'b)bt s:'a bt.
+Theorem FMAPAL_DRESTRICT[local]:
+  !cmp f:('a#'b)bt s:'a bt.
  FMAPAL cmp (list_to_bt (inter_merge cmp (bt_to_orl cmp f) (bt_to_ol cmp s))) =
- DRESTRICT (FMAPAL cmp f) (ENUMERAL cmp s)``,
+ DRESTRICT (FMAPAL cmp f) (ENUMERAL cmp s)
+Proof
 RW_TAC bool_ss [orl_fmap, ol_set] THEN
 `ORL cmp (bt_to_orl cmp f) /\ OL cmp (bt_to_ol cmp s)`
 by REWRITE_TAC [ORL_bt_to_orl, OL_bt_to_ol] THEN
 `ORL cmp (inter_merge cmp (bt_to_orl cmp f) (bt_to_ol cmp s))`
 by IMP_RES_TAC inter_merge_ORL THEN
 IMP_RES_THEN SUBST1_TAC bt_to_orl_ID_IMP THEN
-IMP_RES_TAC inter_merge_fmap);
+IMP_RES_TAC inter_merge_fmap
+QED
 
 (* ********* Do the corresponding stuff for diff_merge ******* *)
 
@@ -2045,9 +2326,10 @@ val diff_merge_ind = theorem "diff_merge_ind";
         P cmp ((a,b)::l) (y::m)) ==>
      !v v1 v2. P v v1 v2 *)
 
-val inter_subset_diff_merge = maybe_thm ("inter_subset_diff_merge",
-``!cmp:'a toto l:('a#'b)list m.
- !x z. MEM (x,z) l /\ ~MEM x m ==> MEM (x,z) (diff_merge cmp l m)``,
+Theorem inter_subset_diff_merge[local]:
+  !cmp:'a toto l:('a#'b)list m.
+ !x z. MEM (x,z) l /\ ~MEM x m ==> MEM (x,z) (diff_merge cmp l m)
+Proof
 HO_MATCH_MP_TAC diff_merge_ind THEN
 REPEAT CONJ_TAC THEN REPEAT GEN_TAC THEN
 REWRITE_TAC [diff_merge, MEM] THEN
@@ -2058,11 +2340,13 @@ STRIP_TAC THEN REPEAT GEN_TAC THEN ASM_REWRITE_TAC [cpn_case_def] THENL
 ,`a = y` by IMP_RES_TAC toto_equal_eq THEN
  RW_TAC bool_ss [MEM] THEN RES_TAC
 ,METIS_TAC [MEM]
-]);
+]
+QED
 
-val diff_merge_subset_inter = maybe_thm ("diff_merge_subset_inter",
-``!cmp:'a toto l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
-   !x z. MEM (x,z) (diff_merge cmp l m) ==> MEM (x,z) l /\ ~MEM x m``,
+Theorem diff_merge_subset_inter[local]:
+  !cmp:'a toto l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
+   !x z. MEM (x,z) (diff_merge cmp l m) ==> MEM (x,z) l /\ ~MEM x m
+Proof
 HO_MATCH_MP_TAC diff_merge_ind THEN
 REPEAT CONJ_TAC THEN REPEAT GEN_TAC THEN
 REWRITE_TAC [diff_merge, MEM] THEN
@@ -2091,43 +2375,55 @@ STRIP_TAC THEN REPEAT GEN_TAC THEN REWRITE_TAC [cpn_case_def] THENL
  IMP_RES_TAC toto_antisym THEN IMP_RES_TAC LESS_NOT_MEM THEN
  `OL cmp m` by IMP_RES_TAC OL THEN
  METIS_TAC [MEM, PAIR_EQ, ORL_NOT_MEM]
-]);
+]
+QED
 
-val diff_merge_MEM_thm = maybe_thm ("diff_merge_MEM_thm",
-``!cmp:'a toto l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
- (!x y. MEM (x,y) (diff_merge cmp l m) <=> MEM (x,y) l /\ ~MEM x m)``,
+Theorem diff_merge_MEM_thm[local]:
+  !cmp:'a toto l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
+ (!x y. MEM (x,y) (diff_merge cmp l m) <=> MEM (x,y) l /\ ~MEM x m)
+Proof
 REPEAT STRIP_TAC THEN EQ_TAC THENL
 [STRIP_TAC THEN IMP_RES_TAC diff_merge_subset_inter THEN AR
 ,MATCH_ACCEPT_TAC inter_subset_diff_merge
-]);
+]
+QED
 
-val FST_diff_merge = maybe_thm ("FST_diff_merge",
-``!cmp l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
- (set (MAP FST (diff_merge cmp l m)) = set (MAP FST l) DIFF set m)``,
+Theorem FST_diff_merge[local]:
+  !cmp l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
+ (set (MAP FST (diff_merge cmp l m)) = set (MAP FST l) DIFF set m)
+Proof
 SRW_TAC []
  [diff_merge_MEM_thm, EXTENSION, MEM_MAP_FST_LEM] THEN
-CONV_TAC (LAND_CONV EXISTS_AND_CONV) THEN REFL_TAC);
+CONV_TAC (LAND_CONV EXISTS_AND_CONV) THEN REFL_TAC
+QED
 
-val diff_merge_ORL = maybe_thm ("diff_merge_ORL",
-``!cmp l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
-                        ORL cmp (diff_merge cmp l m)``,
+Theorem diff_merge_ORL[local]:
+  !cmp l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
+                        ORL cmp (diff_merge cmp l m)
+Proof
 GEN_TAC THEN Induct THEN TRY (P_PGEN_TAC ``x:'a,y:'b``) THEN Induct THEN
 SRW_TAC [] [diff_merge] THEN REWRITE_TAC [ORL] THEN
 IMP_RES_TAC ORL THEN IMP_RES_TAC OL THEN
 Cases_on `apto cmp x h` THEN SRW_TAC [] [] THEN
-RW_TAC bool_ss [ORL] THEN IMP_RES_TAC diff_merge_subset_inter THEN RES_TAC);
+RW_TAC bool_ss [ORL] THEN IMP_RES_TAC diff_merge_subset_inter THEN RES_TAC
+QED
 
-val INTER_OVER_DIFF = maybe_thm ("INTER_OVER_DIFF",
-``!a b c:'a set. a INTER (b DIFF c) = a INTER b DIFF a INTER c``,
-RW_TAC bool_ss [EXTENSION, IN_INTER, IN_DIFF] THEN tautLib.TAUT_TAC);
+Theorem INTER_OVER_DIFF[local]:
+  !a b c:'a set. a INTER (b DIFF c) = a INTER b DIFF a INTER c
+Proof
+RW_TAC bool_ss [EXTENSION, IN_INTER, IN_DIFF] THEN tautLib.TAUT_TAC
+QED
 
-val INTER_COMPL_DIFF = maybe_thm ("INTER_COMPL_DIFF",
-``!a b:'a set. a INTER (COMPL b) = a DIFF b``,
-RW_TAC bool_ss [EXTENSION, IN_INTER, IN_DIFF, IN_COMPL]);
+Theorem INTER_COMPL_DIFF[local]:
+  !a b:'a set. a INTER (COMPL b) = a DIFF b
+Proof
+RW_TAC bool_ss [EXTENSION, IN_INTER, IN_DIFF, IN_COMPL]
+QED
 
-val diff_merge_fmap = maybe_thm ("diff_merge_fmap",
-``!cmp l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
-   (fmap (diff_merge cmp l m) = DRESTRICT (fmap l) (COMPL (set m)))``,
+Theorem diff_merge_fmap[local]:
+  !cmp l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
+   (fmap (diff_merge cmp l m) = DRESTRICT (fmap l) (COMPL (set m)))
+Proof
 RW_TAC bool_ss [fmap_ALT, fmap_EXT, FDOM_assocv, DRESTRICT_DEF,
                 FST_diff_merge, INTER_COMPL_DIFF] THEN
 REWRITE_TAC [unlookup] THEN
@@ -2151,15 +2447,18 @@ STRIP_ASSUME_TAC (ISPEC ``assocv (l:('a#'b)list) x`` option_nchotomy) THENL
  CONJ_TAC THENL
  [METIS_TAC [assocv_MEM_thm]
  ,METIS_TAC [IN_DIFF]
-]]);
+]]
+QED
 
 (* *** Summary theorems, with and without restricted quantification: **** *)
 
-val ORL_DRESTRICT_COMPL = maybe_thm ("ORL_DRESTRICT_COMPL",
-``!cmp. !l:('a#'b)list::ORL cmp. !m::OL cmp. ORL cmp (diff_merge cmp l m) /\
-(fmap (diff_merge cmp l m) = DRESTRICT (fmap l) (COMPL (set m)))``,
+Theorem ORL_DRESTRICT_COMPL[local]:
+  !cmp. !l:('a#'b)list::ORL cmp. !m::OL cmp. ORL cmp (diff_merge cmp l m) /\
+(fmap (diff_merge cmp l m) = DRESTRICT (fmap l) (COMPL (set m)))
+Proof
 CONV_TAC (DEPTH_CONV RES_FORALL_CONV) THEN
-SRW_TAC [] [SPECIFICATION, diff_merge_ORL, diff_merge_fmap]);
+SRW_TAC [] [SPECIFICATION, diff_merge_ORL, diff_merge_fmap]
+QED
 
 Theorem ORL_DRESTRICT_COMPL_IMP =
 REWRITE_RULE [SPECIFICATION]
@@ -2169,17 +2468,19 @@ REWRITE_RULE [SPECIFICATION]
        ORL cmp (diff_merge cmp l m) /\
        (fmap (diff_merge cmp l m) = DRESTRICT (fmap l) (COMPL (set m))) *)
 
-val FMAPAL_DRESTRICT_COMPL = maybe_thm ("FMAPAL_DRESTRICT_COMPL",
-``!cmp f:('a#'b)bt s:'a bt.
+Theorem FMAPAL_DRESTRICT_COMPL[local]:
+  !cmp f:('a#'b)bt s:'a bt.
 FMAPAL cmp (list_to_bt (diff_merge cmp (bt_to_orl cmp f) (bt_to_ol cmp s))) =
-DRESTRICT (FMAPAL cmp f) (COMPL (ENUMERAL cmp s))``,
+DRESTRICT (FMAPAL cmp f) (COMPL (ENUMERAL cmp s))
+Proof
 RW_TAC bool_ss [orl_fmap, ol_set] THEN
 `ORL cmp (bt_to_orl cmp f) /\ OL cmp (bt_to_ol cmp s)`
 by REWRITE_TAC [ORL_bt_to_orl, OL_bt_to_ol] THEN
 `ORL cmp (diff_merge cmp (bt_to_orl cmp f) (bt_to_ol cmp s))`
 by IMP_RES_TAC diff_merge_ORL THEN
 IMP_RES_THEN SUBST1_TAC bt_to_orl_ID_IMP THEN
-IMP_RES_TAC diff_merge_fmap);
+IMP_RES_TAC diff_merge_fmap
+QED
 
 (* ********************************************************************* *)
 (*                  Theorems to assist conversions                       *)
@@ -2208,9 +2509,11 @@ Q.SUBGOAL_THEN
 ]
 QED
 
-val bt_to_orl_thm = maybe_thm ("bt_to_orl_thm",
-``!cmp t:('a#'b)bt. bt_to_orl cmp t = bt_to_orl_ac cmp t []``,
-SRW_TAC [] [orl_ac_thm]);
+Theorem bt_to_orl_thm[local]:
+  !cmp t:('a#'b)bt. bt_to_orl cmp t = bt_to_orl_ac cmp t []
+Proof
+SRW_TAC [] [orl_ac_thm]
+QED
 
 Theorem ORWL_FUNION_THM:   !cmp s:'a|->'b l t m.
     ORWL cmp s l /\ ORWL cmp t m ==> ORWL cmp (s FUNION t) (merge cmp l m)
@@ -2231,9 +2534,11 @@ Proof
 METIS_TAC [OWL, ORWL, ORL_DRESTRICT_COMPL_IMP]
 QED
 
-val bt_map_ACTION = maybe_thm ("bt_map_ACTION",
-``!f:'b->'c g:'a->'b t:'a bt. bt_map f (bt_map g t) = bt_map (f o g) t``,
-GEN_TAC THEN GEN_TAC THEN Induct THEN SRW_TAC [] [bt_map]);
+Theorem bt_map_ACTION[local]:
+  !f:'b->'c g:'a->'b t:'a bt. bt_map f (bt_map g t) = bt_map (f o g) t
+Proof
+GEN_TAC THEN GEN_TAC THEN Induct THEN SRW_TAC [] [bt_map]
+QED
 
 (* The following may be useful for o_f_CONV, and more so for tc_CONV. *)
 
@@ -2281,12 +2586,15 @@ Proof
 SRW_TAC [] [fmap, FUPDATE_LIST_SNOC, FAPPLY_FUPDATE_THM]
 QED
 
-val fmap_CONS = maybe_thm ("fmap_CONS",
-``!x:'a y:'b l. fmap ((x,y)::l) = fmap l |+ (x,y)``,
-SRW_TAC [] [fmap, FUPDATE_LIST_SNOC, FAPPLY_FUPDATE_THM]);
+Theorem fmap_CONS[local]:
+  !x:'a y:'b l. fmap ((x,y)::l) = fmap l |+ (x,y)
+Proof
+SRW_TAC [] [fmap, FUPDATE_LIST_SNOC, FAPPLY_FUPDATE_THM]
+QED
 
-val o_f_FUPDATE_ALT = maybe_thm ("o_f_FUPDATE_ALT",
-``!f:'b->'c fm:'a|->'b k v. f o_f (fm |+ (k,v)) = (f o_f fm) |+ (k,f v)``,
+Theorem o_f_FUPDATE_ALT[local]:
+  !f:'b->'c fm:'a|->'b k v. f o_f (fm |+ (k,v)) = (f o_f fm) |+ (k,f v)
+Proof
 REPEAT GEN_TAC THEN
 REWRITE_TAC [fmap_EXT, FDOM_o_f, FDOM_FUPDATE] THEN
 GEN_TAC THEN REWRITE_TAC [IN_INSERT, FAPPLY_FUPDATE_THM, o_f_FAPPLY] THEN
@@ -2294,7 +2602,8 @@ ASM_REWRITE_TAC [o_f_FUPDATE, FAPPLY_FUPDATE_THM] THEN
 Cases_on `x = k` THEN STRIP_TAC THEN ASM_REWRITE_TAC [] THEN
 `x IN FDOM (fm \\ k)` by METIS_TAC [FDOM_DOMSUB, IN_DELETE] THEN
 IMP_RES_TAC o_f_FAPPLY THEN ASM_REWRITE_TAC [DOMSUB_FAPPLY_THM] THEN
-`k <> x` by METIS_TAC [] THEN AR);
+`k <> x` by METIS_TAC [] THEN AR
+QED
 
 Theorem o_f_fmap:
   !f:'b->'c l:('a#'b)list. f o_f fmap l = fmap (MAP (AP_SND f) l)
@@ -2336,50 +2645,60 @@ Definition ORL_bt:
  (ORL_bt cmp (node l (x,y) r) = ORL_bt_ub cmp l x /\ ORL_bt_lb cmp x r)
 End
 
-val ORL_bt_lb_ub_lem = maybe_thm ("ORL_bt_lb_ub_lem",
-``!cmp t lb ub. ORL_bt_lb_ub cmp lb t ub ==> (apto cmp lb ub = LESS)``,
+Theorem ORL_bt_lb_ub_lem[local]:
+  !cmp t lb ub. ORL_bt_lb_ub cmp lb t ub ==> (apto cmp lb ub = LESS)
+Proof
 GEN_TAC THEN Induct THENL
 [SRW_TAC [] [ORL_bt_lb_ub]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
  SRW_TAC [] [ORL_bt_lb_ub] THEN METIS_TAC [totoLLtrans]
-]);
+]
+QED
 
-val ORL_bt_lb_ub_thm = maybe_thm ("ORL_bt_lb_ub_thm",
-``!cmp t:('a#'b) bt lb ub. ORL_bt_lb_ub cmp lb t ub ==>
-                      (bt_to_orl_lb_ub cmp lb t ub = bt_to_list t)``,
+Theorem ORL_bt_lb_ub_thm[local]:
+  !cmp t:('a#'b) bt lb ub. ORL_bt_lb_ub cmp lb t ub ==>
+                      (bt_to_orl_lb_ub cmp lb t ub = bt_to_list t)
+Proof
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [bt_to_orl_lb_ub, bt_to_list]
 ,P_PGEN_TAC ``a:'a,b:'b`` THEN
  SRW_TAC [] [ORL_bt_lb_ub, bt_to_orl_lb_ub, bt_to_list] THEN
  METIS_TAC [ORL_bt_lb_ub_lem]
-]);
+]
+QED
 
-val ORL_bt_lb_thm = maybe_thm ("ORL_bt_lb_thm",
-``!cmp t:('a#'b) bt lb. ORL_bt_lb cmp lb t ==>
-                   (bt_to_orl_lb cmp lb t = bt_to_list t)``,
+Theorem ORL_bt_lb_thm[local]:
+  !cmp t:('a#'b) bt lb. ORL_bt_lb cmp lb t ==>
+                   (bt_to_orl_lb cmp lb t = bt_to_list t)
+Proof
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [bt_to_orl_lb, bt_to_list]
 ,P_PGEN_TAC ``a:'a,b:'b`` THEN
  SRW_TAC [] [ORL_bt_lb, bt_to_orl_lb, ORL_bt_lb_ub_thm, bt_to_list] THEN
  METIS_TAC [ORL_bt_lb_ub_lem]
-]);
+]
+QED
 
-val ORL_bt_ub_thm = maybe_thm ("ORL_bt_ub_thm",
-``!cmp t:('a#'b) bt ub. ORL_bt_ub cmp t ub ==>
-                   (bt_to_orl_ub cmp t ub = bt_to_list t)``,
+Theorem ORL_bt_ub_thm[local]:
+  !cmp t:('a#'b) bt ub. ORL_bt_ub cmp t ub ==>
+                   (bt_to_orl_ub cmp t ub = bt_to_list t)
+Proof
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [bt_to_orl_ub, bt_to_list]
 ,P_PGEN_TAC ``a:'a,b:'b`` THEN
  SRW_TAC [] [ORL_bt_ub, bt_to_orl_ub, ORL_bt_lb_ub_thm, bt_to_list] THEN
  METIS_TAC [ORL_bt_lb_ub_lem]
-]);
+]
+QED
 
-val ORL_bt_thm = maybe_thm ("ORL_bt_thm",
-``!cmp t:('a#'b) bt. ORL_bt cmp t ==> (bt_to_orl cmp t = bt_to_list t)``,
+Theorem ORL_bt_thm[local]:
+  !cmp t:('a#'b) bt. ORL_bt cmp t ==> (bt_to_orl cmp t = bt_to_list t)
+Proof
 GEN_TAC THEN Induct THENL (* really Cases, but need !a to use P_PGEN_TAC *)
 [REWRITE_TAC [bt_to_orl, bt_to_list]
 ,P_PGEN_TAC ``a:'a,b:'b`` THEN SRW_TAC []
-       [ORL_bt, bt_to_orl, ORL_bt_lb_thm, ORL_bt_ub_thm, bt_to_list]]);
+       [ORL_bt, bt_to_orl, ORL_bt_lb_thm, ORL_bt_ub_thm, bt_to_list]]
+QED
 
 Theorem better_bt_to_orl:
   !cmp t:('a#'b) bt. bt_to_orl cmp t = if ORL_bt cmp t then bt_to_list_ac t []
@@ -2417,19 +2736,22 @@ Proof
 SRW_TAC [] [fmap_FDOM]
 QED
 
-val list_rplacv_NIL = maybe_thm ("list_rplacv_NIL",
-``!x:'a y:'b l cn. (!m. cn m <> []) ==>
- ((list_rplacv_cn (x,y) l cn = []) <=> x NOTIN FDOM (fmap l))``,
+Theorem list_rplacv_NIL[local]:
+  !x:'a y:'b l cn. (!m. cn m <> []) ==>
+ ((list_rplacv_cn (x,y) l cn = []) <=> x NOTIN FDOM (fmap l))
+Proof
 GEN_TAC THEN GEN_TAC THEN Induct THENL
 [RW_TAC (srw_ss()) [list_rplacv_cn, fmap_FDOM_rec]
 ,P_PGEN_TAC ``w:'a,z:'b`` THEN
  RW_TAC (srw_ss()) [list_rplacv_cn, fmap_FDOM_rec]
-]);
+]
+QED
 
-val list_rplacv_cont_lem = maybe_thm ("list_rplacv_cont_lem",
-``!x:'a y:'b l cn cn'. list_rplacv_cn (x,y) l cn <> [] ==>
+Theorem list_rplacv_cont_lem[local]:
+  !x:'a y:'b l cn cn'. list_rplacv_cn (x,y) l cn <> [] ==>
                   (list_rplacv_cn (x,y) l (cn' o cn) =
-                   cn' (list_rplacv_cn (x,y) l cn))``,
+                   cn' (list_rplacv_cn (x,y) l cn))
+Proof
 GEN_TAC THEN GEN_TAC THEN Induct THENL
 [SRW_TAC [] [list_rplacv_cn]
 ,P_PGEN_TAC ``w:'a,z:'b`` THEN
@@ -2437,7 +2759,8 @@ GEN_TAC THEN GEN_TAC THEN Induct THENL
  Q.SUBGOAL_THEN `(\m. cn' (cn ((w,z)::m))) = (cn' o (\m. cn ((w,z)::m)))`
  (ASM_REWRITE_TAC o ulist) THEN
  CONV_TAC FUN_EQ_CONV THEN SRW_TAC [] []
-]);
+]
+QED
 
 Theorem bool_lem[local]:
     !P Q.(if ~P then ~P else P /\ Q) <=> P ==> Q
@@ -2487,20 +2810,23 @@ End
 
 (* FMAPAL_FDOM_THM (corresp. to fmap_FDOM_rec) has already been proved. *)
 
-val bt_rplacv_nt = maybe_thm ("bt_rplacv_nt",
-``!cmp x:'a y:'b t cn. (!m. cn m <> nt) ==>
- ((bt_rplacv_cn cmp (x,y) t cn = nt) <=> x NOTIN FDOM (FMAPAL cmp t))``,
+Theorem bt_rplacv_nt[local]:
+  !cmp x:'a y:'b t cn. (!m. cn m <> nt) ==>
+ ((bt_rplacv_cn cmp (x,y) t cn = nt) <=> x NOTIN FDOM (FMAPAL cmp t))
+Proof
 GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN Induct THENL
 [RW_TAC (srw_ss()) [bt_rplacv_cn, FMAPAL_FDOM_THM]
 ,P_PGEN_TAC ``w:'a,z:'b`` THEN
  RW_TAC (srw_ss()) [bt_rplacv_cn, FMAPAL_FDOM_THM] THEN
  Cases_on `apto cmp x w` THEN SRW_TAC [] []
-]);
+]
+QED
 
-val bt_rplacv_cont_lem = maybe_thm ("bt_rplacv_cont_lem",
-``!cmp x:'a y:'b t cn cn'. bt_rplacv_cn cmp (x,y) t cn <> nt ==>
+Theorem bt_rplacv_cont_lem[local]:
+  !cmp x:'a y:'b t cn cn'. bt_rplacv_cn cmp (x,y) t cn <> nt ==>
                   (bt_rplacv_cn cmp (x,y) t (cn' o cn) =
-                   cn' (bt_rplacv_cn cmp (x,y) t cn))``,
+                   cn' (bt_rplacv_cn cmp (x,y) t cn))
+Proof
 GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN Induct THENL
 [SRW_TAC [] [bt_rplacv_cn]
 ,P_PGEN_TAC ``w:'a,z:'b`` THEN Cases_on `apto cmp x w` THEN
@@ -2513,7 +2839,8 @@ GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN Induct THENL
   (ASM_REWRITE_TAC o ulist)
  ] THEN
  CONV_TAC FUN_EQ_CONV THEN SRW_TAC [] []
-]);
+]
+QED
 
 (* FUNION_FUPDATE_1 =
      |- !f g x y. f |+ (x,y) FUNION g = (f FUNION g) |+ (x,y)
@@ -2521,10 +2848,12 @@ GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN Induct THENL
      (|- !f g x y. f FUNION g |+ (x,y) =
      if x IN FDOM f then f FUNION g else (f FUNION g) |+ (x,y) *)
 
-val FUNION_FUPDATE_HALF_2 = maybe_thm ("FUNION_FUPDATE_HALF_2",
-``!f:'a|->'b g x y. x NOTIN FDOM f ==>
-                    ((f FUNION g) |+ (x,y) = f FUNION g |+ (x,y))``,
-METIS_TAC [FUNION_FUPDATE_2]);
+Theorem FUNION_FUPDATE_HALF_2[local]:
+  !f:'a|->'b g x y. x NOTIN FDOM f ==>
+                    ((f FUNION g) |+ (x,y) = f FUNION g |+ (x,y))
+Proof
+METIS_TAC [FUNION_FUPDATE_2]
+QED
 
 Theorem bt_rplacv_thm:
   !cmp x:'a y:'b t.
