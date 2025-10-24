@@ -64,7 +64,7 @@ header-includes: |
   \DeclareUnicodeCharacter{29FA}{\ensuremath{{+}\!\!{+}}}
   \DeclareUnicodeCharacter{A673}{\ensuremath{\sp{*}}}
   \DeclareUnicodeCharacter{1D49F}{\ensuremath{{\cal D}}}
-  \DeclareUnicodeCharacter{1D49C}{\ensuremath{{\cal M}}}
+  \DeclareUnicodeCharacter{1D4A2}{\ensuremath{{\cal M}}}
   \DeclareUnicodeCharacter{1D4AF}{\ensuremath{{\cal T}}}
   \DeclareUnicodeCharacter{03B5}{\ensuremath{\varepsilon}}
   \DeclareUnicodeCharacter{2026}{\ensuremath{\ldots}}
@@ -104,7 +104,7 @@ header-includes: |
 In this section, HOL proofs and theorems are made concrete. The notion
 of *proof* is defined abstractly in the manual §LOGIC: a proof of a
 sequent $(\Gamma,t)$ from a set of sequents $\Delta$ (with respect to
-a deductive system ${\cal D}$) was defined to be a chain of sequents
+a deductive system $\mathcal{D}$) was defined to be a chain of sequents
 culminating in $(\Gamma,t)$, such that every element of the chain
 either belongs to $\Delta$ or else follows from $\Delta$ and earlier
 elements of the chain by deduction.  The notion of a *theorem* was
@@ -968,7 +968,7 @@ For readability, let $\mathcal{M} = \lambda{x_1\cdots x_n}.\; t'[x_1,\ldots,x_n]
    CCONTR : term -> thm -> thm
 
    Γ, ¬t |- F
-  --------------------------------------------
+  ------------
    Γ |- t
 ```
 
@@ -989,7 +989,7 @@ For readability, let $\mathcal{M} = \lambda{x_1\cdots x_n}.\; t'[x_1,\ldots,x_n]
 |11. $\vdash \mathsf{F} = \forall{b}.\;b$ | [Definition] |
 |12. $\Gamma,\ t=\mathsf{F}\vdash \forall{b}.\;b$ | [`SUBST` 11,10] |
 |13. $\Gamma,\ t=\mathsf{F}\vdash t$ | [`SPEC` 12] |
-|14. $\vdash \forall{b} (b = \mathsf{T})\lor(b = \mathsf{F})$ | [Axiom] |
+|14. $\vdash \forall{b}.\; (b = \mathsf{T})\lor(b = \mathsf{F})$ | [Axiom] |
 |15. $\vdash (t = \mathsf{T})\lor(t = \mathsf{F})$ | [`SPEC` 14] |
 |16. $t=\mathsf{T}\vdash t=\mathsf{T}$ | [`ASSUME`] |
 |17. $t=\mathsf{T}\vdash t$ | [`EQT_ELIM` 16] |
