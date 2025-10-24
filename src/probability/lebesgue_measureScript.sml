@@ -677,7 +677,7 @@ QED
 val lemma1 = lift_ieeeTheory.error_bound_lemma1 |> Q.SPEC ‘k’ |> GEN_ALL
 
 (* lemma1 also holds if “0 < k” is removed *)
-Triviality lemma1a :
+Theorem lemma1a[local] :
     !k x. 0 <= x /\ x < (1 :real) ==>
           ?n. n < 2 ** k /\ &n / 2 pow k <= x /\ x < &SUC n / 2 pow k
 Proof
@@ -686,7 +686,7 @@ Proof
  >> MATCH_MP_TAC lemma1 >> art []
 QED
 
-Triviality lemma1b :
+Theorem lemma1b[local] :
     !k x. 0 <= x /\ x <= (1 :real) ==>
           ?n. n < 2 ** k /\ &n / 2 pow k <= x /\ x <= &SUC n / 2 pow k
 Proof
@@ -719,7 +719,7 @@ val lemma2 = lift_ieeeTheory.error_bound_lemma2 |> Q.SPEC ‘k’ |> GEN_ALL
           |> SIMP_RULE real_ss [REAL_INV_1OVER, GSYM ADD1]
 
 (* remove “0 < k”, use “_ <= 1 / 2 pow k” instead of “_ <= 1 / 2 pow SUC k” *)
-Triviality lemma2a :
+Theorem lemma2a[local] :
     !k x. 0 <= x /\ x < (1 :real) ==>
           ?n. n <= 2 ** k /\ abs (x - &n / 2 pow k) <= 1 / 2 pow k
 Proof
@@ -740,7 +740,7 @@ QED
    NOTE: It turns out that lemma2 (and all variants) are not needed. Only
    lemma1a is used in [dyadic_covering_lemma_01] below.
  *)
-Triviality lemma2b :
+Theorem lemma2b[local] :
     !k x. 0 <= x /\ x < (1 :real) ==>
           ?n. n < 2 ** k /\ abs (x - &n / 2 pow k) <= 1 / 2 pow k
 Proof
@@ -788,7 +788,7 @@ val lemma3 = lift_ieeeTheory.error_bound_lemma3 |> Q.SPEC ‘k’ |> GEN_ALL
 val lemma4 = REAL_ARCH_POW_INV |> Q.SPEC ‘1 / 2’
           |> SIMP_RULE real_ss [pow_div, POW_ONE]
 
-Triviality lemma5 :
+Theorem lemma5[local] :
     !n k. &n / 2 pow k < (&SUC n / 2 pow k) :real
 Proof
     rpt GEN_TAC
@@ -799,7 +799,7 @@ Proof
  >> simp [Abbr ‘x’, Abbr ‘y’]
 QED
 
-Triviality lemma5a :
+Theorem lemma5a[local] :
     !n k c. c + &n / 2 pow k < (c + &SUC n / 2 pow k) :real
 Proof
     rpt STRIP_TAC
@@ -807,14 +807,14 @@ Proof
  >> REWRITE_TAC [lemma5]
 QED
 
-Triviality lemma6 :
+Theorem lemma6[local] :
     !n k. &SUC n / 2 pow k - &n / 2 pow k = (1 / 2 pow k) :real
 Proof
     RW_TAC real_ss [REAL_DIV_SUB]
  >> simp [GSYM REAL_OF_NUM_SUB]
 QED
 
-Triviality lemma6a :
+Theorem lemma6a[local] :
     !n k c. (c + &SUC n / 2 pow k) - (c + &n / 2 pow k) = (1 / 2 pow k) :real
 Proof
     rw [REAL_ARITH “c + a - (c + b) = a - (b :real)”, lemma6]

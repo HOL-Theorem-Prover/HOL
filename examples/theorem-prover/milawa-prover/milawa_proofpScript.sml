@@ -723,7 +723,7 @@ Definition HYPS_def:
   (HYPS (Appeal name concl (SOME(x,y))) = x)
 End
 
-Triviality logic_appeal3_size_lemma:
+Theorem logic_appeal3_size_lemma[local]:
   !q a. MEM a q ==> logic_appeal_size a < list_size logic_appeal_size q
 Proof
   bossLib.rw[MEM_SPLIT] >> bossLib.rw [list_size_append]

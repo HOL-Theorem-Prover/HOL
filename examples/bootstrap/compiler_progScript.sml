@@ -87,7 +87,7 @@ val res = to_deep codegenTheory.lookup_def
 val res = to_deep make_ret_def
 val res = to_deep c_exp_def
 
-Triviality FST_SND:
+Theorem FST_SND[local]:
   FST = (λ(x,y). x) ∧ SND = (λ(x,y). y)
 Proof
   fs [FUN_EQ_THM,FORALL_PROD]
@@ -163,7 +163,7 @@ Theorem name2str_ind = name2str_temp_ind
 
 val res = to_deep name2str_thm
 
-Triviality name2str_side:
+Theorem name2str_side[local]:
   ∀n acc. name2str_side n acc ⇔ T
 Proof
   completeInduct_on ‘n’ \\ fs []
@@ -393,7 +393,7 @@ val lexer_code_def = define_code ‘
   (defun lexer ()
      (lex '0 (read) '0))’
 
-Triviality LTL_fromList_lemma[simp]:
+Theorem LTL_fromList_lemma[local,simp]:
   (case LTL (fromList t) of NONE => fromList t | SOME t => t) = fromList (TL t)
 Proof
   Cases_on ‘t’ \\ fs []
@@ -677,7 +677,7 @@ Theorem num_ind = num_temp_ind
 
 val res = to_deep num_thm
 
-Triviality num_side:
+Theorem num_side[local]:
   ∀n s. num_side n s ⇔ T
 Proof
   completeInduct_on ‘n’ \\ fs []

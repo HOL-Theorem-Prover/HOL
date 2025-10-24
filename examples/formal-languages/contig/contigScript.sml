@@ -733,25 +733,25 @@ QED
 (* Prepare for matchFn soundness                                             *)
 (*---------------------------------------------------------------------------*)
 
-Triviality snd_indexFn :
+Theorem snd_indexFn[local] :
  !n q c. (SND o indexFn q c) n = c
 Proof
  rw[combinTheory.o_DEF, indexFn_def]
 QED
 
-Triviality map_snd_fieldFn :
+Theorem map_snd_fieldFn[local] :
 !plist x. MAP SND (MAP (fieldFn x) plist) = MAP SND plist
 Proof
   Induct >> fs [fieldFn_def,FORALL_PROD]
 QED
 
-Triviality map_snd_indexFn :
+Theorem map_snd_indexFn[local] :
 !n q c. MAP SND (MAP (indexFn q c) (COUNT_LIST n)) = REPLICATE n c
 Proof
   fs [MAP_MAP_o,MAP_COUNT_LIST,REPLICATE_GENLIST,GENLIST_FUN_EQ,snd_indexFn]
 QED
 
-Triviality map_snd_lem :
+Theorem map_snd_lem[local] :
   !list x. MAP SND (MAP (\c. (x,c)) list) = list
 Proof
   Induct >> fs []

@@ -329,7 +329,7 @@ Proof
       simp[Abbr‘jd’,RPOW_POS_LT])
 QED
 
-Triviality max_rs_lemma:
+Theorem max_rs_lemma[local]:
   !s. FINITE s ==> s<>{} ==> ?x:real. x IN s /\ !y. y IN s ==> y<=x
 Proof
   Induct_on‘FINITE’ >>rw[] >> Cases_on‘s={}’ >> fs[] >> qexists_tac‘max e x’ >>
@@ -337,7 +337,7 @@ Proof
   >- metis_tac[] >> Cases_on‘y=e’>> fsr[] >> RES_TAC >> fsr[]
 QED
 
-Triviality min_rs_lemma:
+Theorem min_rs_lemma[local]:
   !s. FINITE s ==> s<>{} ==> ?x:real. x IN s /\ !y. y IN s ==> x<=y
 Proof
   Induct_on‘FINITE’ >>rw[] >> Cases_on‘s={}’ >> fs[] >> qexists_tac‘min e x’ >>

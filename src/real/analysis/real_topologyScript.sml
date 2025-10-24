@@ -18521,7 +18521,7 @@ QED
 (* any dependence on the theories of analysis.                               *)
 (* ------------------------------------------------------------------------- *)
 
-Triviality lemma:
+Theorem lemma[local]:
   !s m n. sum (s INTER {m..n}) (\i. inv(&3 pow i)) < &3 / &2 / &3 pow m
 Proof
     REPEAT GEN_TAC THEN MATCH_MP_TAC REAL_LET_TRANS THEN

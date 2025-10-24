@@ -65,7 +65,7 @@ Theorem bnf_cDB[simp]: bnf (cDB t)
 Proof SRW_TAC [][cDB_def]
 QED
 
-Triviality NOT_IN_SUB:
+Theorem NOT_IN_SUB[local]:
   x ∉ FV M ∧ (x ≠ v ⇒ x ∉ FV N) ⇒ x ∉ FV ([M/v]N)
 Proof SRW_TAC [][termTheory.FV_SUB] THEN METIS_TAC []
 QED
@@ -397,7 +397,7 @@ Proof
   SRW_TAC [][termrec_def, EXTENSION, DISJ_IMP_EQ]
 QED
 
-Triviality eqn_elim:
+Theorem eqn_elim[local]:
   (!Y. (X:term == Y) = (Z == Y)) ==> X == Z
 Proof
   STRIP_TAC THEN POP_ASSUM (Q.SPEC_THEN `Z` MP_TAC) THEN

@@ -1360,7 +1360,7 @@ val _ = set_trace "Goalstack.print_goal_at_top" 0;
 val pbrsem_tac = simp[Once pb_sem_t_size_reln_cases]
 
 (* Connect pretty-big-step to relational semantics *)
-Triviality reln_to_pb_reln:
+Theorem reln_to_pb_reln[local]:
   ∀s t r.
     simple_sem_t_reln s t r ⇒
     ∃h. pb_sem_t_size_reln h s (Trm t) (Ter r)

@@ -3840,7 +3840,7 @@ Proof
   \\ fs [fmap_eq_flookup] \\ fs [FUN_EQ_THM]
 QED
 
-Triviality FLOOKUP_FDIFF:
+Theorem FLOOKUP_FDIFF[local]:
   FLOOKUP (FDIFF m d) k = if k IN d then NONE else FLOOKUP m k
 Proof
   fs [FDIFF_def,FLOOKUP_DRESTRICT] \\ rw [] \\ gvs []

@@ -93,7 +93,7 @@ End
 
 (* --- verification --- *)
 
-Triviality FDOM_update:
+Theorem FDOM_update[local]:
   ∀xs root n q.
     FDOM (update xs root n k q) =
     FDOM q ∪ (set (MAP FST xs) DIFF FDOM k)
@@ -156,7 +156,7 @@ Proof
   \\ BasicProvers.EVERY_CASE_TAC \\ gvs [FLOOKUP_update_neq]
 QED
 
-Triviality pull_if:
+Theorem pull_if[local]:
   (f (if b then x else y) = if b then f x else f y) ∧
   ((if b then g1 else g2) z = if b then g1 z else g2 z)
 Proof

@@ -23,24 +23,24 @@ fun TRY2_TAC t1 t2 state = let
  in if length a1 = 0 then (a1,f1) else t2 state end;
 
 
-Triviality lem1:
+Theorem lem1[local]:
   !(s:string) (n:num) (m:num).
     ((\s'. (if s' = s then n else 0)) = (\s'. (if s' = s then m else 0))) =
     (n = m)
 Proof METIS_TAC []
 QED
 
-Triviality lem2:
+Theorem lem2[local]:
   !(s:string) (n:num). ((\s'. (if s' = s then n else 0)) = (\s'. 0)) = (n = 0)
 Proof METIS_TAC []
 QED
 
-Triviality lem3:
+Theorem lem3[local]:
   !(s:string) (n:num). ((\s'. 0) = (\s'. (if s' = s then n else 0))) = (n = 0)
 Proof METIS_TAC []
 QED
 
-Triviality lem4:
+Theorem lem4[local]:
   !(n1:num)(n2:num)(m1:num)(m2:num).
     ((\s'. (if s' = "h2" then m1 else (if s' = "h1" then n1 else 0))) =
      (\s'. (if s' = "h2" then m2 else (if s' = "h1" then n2 else 0)))) =
@@ -63,7 +63,7 @@ Proof
   >> RW_TAC std_ss []
 QED
 
-Triviality lem5:
+Theorem lem5[local]:
   !(m1:num)(m2:num)(n2:num).
     ((\s'. (if s' = "h2" then m1 else 0)) =
      (\s'. (if s' = "h2" then m2 else (if s' = "h1" then n2 else 0)))) =
@@ -84,7 +84,7 @@ Proof
   >> RW_TAC std_ss []
 QED
 
-Triviality lem6:
+Theorem lem6[local]:
   !(n:num)(m:num).
     ((\s'. (if s' = "h2" then m else (if s' = "h1" then n else 0))) =
      (\s'. 0)) =
@@ -103,7 +103,7 @@ Proof
   >> RW_TAC std_ss []
 QED
 
-Triviality lem7:
+Theorem lem7[local]:
   !(s:string) (n:num) (m:num). ((\s'. (if s' = s then [n] else [])) =
                                 (\s'. (if s' = s then [m] else []))) =
                                (n = m)
@@ -114,7 +114,7 @@ Proof
   >> RW_TAC std_ss []
 QED
 
-Triviality lem8:
+Theorem lem8[local]:
   !(n1:num) (n2:num) (n3:num) (m1:num) (m2:num) (m3:num).
     ((\s'. (if (s' = "out") then [n1;n2] else
               (if (s' = "low") then [n3] else []))) =
