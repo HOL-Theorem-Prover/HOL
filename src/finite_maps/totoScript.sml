@@ -29,17 +29,6 @@ Type reln = “:'a -> 'a -> bool”
 val AR = ASM_REWRITE_TAC [];
 fun ulist x = [x];
 
-(* ***************************************************************** *)
-(* Following switch, BigSig, allows "maybe_thm" to act either as     *)
-(* store_thm or as prove, thus maximizing or minimizing the output   *)
-(* from print_theory and the stuff known to DB.match, DB.find        *)
-(* ***************************************************************** *)
-
-val BigSig = true;
-
-fun maybe_thm (s, tm, tac) = if BigSig then store_thm (s, tm, tac)
-                                       else prove (tm, tac);
-
 Theorem StrongLinearOrderExists:
   ?R:'a reln. StrongLinearOrder R
 Proof
@@ -82,23 +71,29 @@ End
 
 (* lemma to ease use of "trichotomous" and work with disjunctions *)
 
-val trichotomous_ALT = maybe_thm ("trichotomous_ALT", Term`!R:'a->'a->bool.
-   trichotomous R <=> !x y. ~R x y /\ ~R y x ==> (x = y)`,
-REWRITE_TAC [trichotomous, IMP_DISJ_THM, DE_MORGAN_THM, GSYM DISJ_ASSOC]);
+Theorem trichotomous_ALT: !R:'a->'a->bool.
+   trichotomous R <=> !x y. ~R x y /\ ~R y x ==> (x = y)
+Proof
+REWRITE_TAC [trichotomous, IMP_DISJ_THM, DE_MORGAN_THM, GSYM DISJ_ASSOC]
+QED
 
-val TotOrd_TO_of_LO = maybe_thm ("TotOrd_TO_of_LO",Term`!r:'a->'a->bool.
-                 LinearOrder r ==> TotOrd (TO_of_LinearOrder r)`,
+Theorem TotOrd_TO_of_LO:!r:'a->'a->bool.
+                 LinearOrder r ==> TotOrd (TO_of_LinearOrder r)
+Proof
 SRW_TAC [] [LinearOrder, Order, antisymmetric_def,
     transitive_def, TO_of_LinearOrder, TotOrd, trichotomous_ALT] THEN
-METIS_TAC [cpn_distinct]);
+METIS_TAC [cpn_distinct]
+QED
 
 (* Utility theorem for equality of pairs: *)
 
-val SPLIT_PAIRS = maybe_thm ("SPLIT_PAIRS",
- Term`!x y:'a#'b. (x = y) <=> (FST x = FST y) /\ (SND x = SND y)`,
+Theorem SPLIT_PAIRS:
+ !x y:'a#'b. (x = y) <=> (FST x = FST y) /\ (SND x = SND y)
+Proof
 REPEAT GEN_TAC THEN
 CONV_TAC (LAND_CONV (BINOP_CONV (REWR_CONV (GSYM PAIR)))) THEN
-REWRITE_TAC [PAIR_EQ]);
+REWRITE_TAC [PAIR_EQ]
+QED
 
 (* cpn_nchotomy = |- !a. (a = LESS) \/ (a = EQUAL) \/ (a = GREATER) *)
 
@@ -109,11 +104,13 @@ CONJ cpn_distinct (GSYM cpn_distinct);
 
 (* We now follow boilerplate from S-K Chin, aclFoundationScript *)
 
-val TO_exists = maybe_thm ("TO_exists", Term`?x:'a comp. TotOrd x`,
+Theorem TO_exists: ?x:'a comp. TotOrd x
+Proof
 STRIP_ASSUME_TAC StrongLinearOrderExists THEN
 Q.EXISTS_TAC `TO_of_LinearOrder R` THEN
 MATCH_MP_TAC TotOrd_TO_of_LO THEN
-METIS_TAC [StrongLinearOrder, LinearOrder, StrongOrd_Ord]);
+METIS_TAC [StrongLinearOrder, LinearOrder, StrongOrd_Ord]
+QED
 
 val toto_type_definition = new_type_definition ("toto", TO_exists);
 (* toto_type_definition =
@@ -161,15 +158,18 @@ GEN_ALL (fst (EQ_IMP_RULE (SPEC_ALL TO_apto_TO_ID)));
 
 (* TO_apto_TO_IMP = |- !r. TotOrd r ==> (apto (TO r) = r) *)
 
-val toto_thm = maybe_thm ("toto_thm", Term
-`!c:'a toto. (!x y. (apto c x y = EQUAL) <=> (x = y)) /\
+Theorem toto_thm: !c:'a toto. (!x y. (apto c x y = EQUAL) <=> (x = y)) /\
              (!x y. (apto c x y = GREATER) <=> (apto c y x = LESS)) /\
-(!x y z. (apto c x y = LESS) /\ (apto c y z = LESS) ==> (apto c x z = LESS))`,
-MATCH_ACCEPT_TAC (REWRITE_RULE [TotOrd] TotOrd_apto));
+(!x y z. (apto c x y = LESS) /\ (apto c y z = LESS) ==> (apto c x z = LESS))
+Proof
+MATCH_ACCEPT_TAC (REWRITE_RULE [TotOrd] TotOrd_apto)
+QED
 
-val TO_equal_eq = maybe_thm ("TO_equal_eq",
-Term`!c:'a comp. TotOrd c ==> (!x y. (c x y = EQUAL) <=> (x = y))`,
-REWRITE_TAC [TotOrd] THEN REPEAT STRIP_TAC THEN AR);
+Theorem TO_equal_eq:
+!c:'a comp. TotOrd c ==> (!x y. (c x y = EQUAL) <=> (x = y))
+Proof
+REWRITE_TAC [TotOrd] THEN REPEAT STRIP_TAC THEN AR
+QED
 
 Theorem toto_equal_eq:
 !c:'a toto x y. (apto c x y = EQUAL) <=> (x = y)
@@ -203,9 +203,11 @@ Proof
 REWRITE_TAC [toto_equal_eq] THEN MATCH_ACCEPT_TAC EQ_SYM_EQ
 QED
 
-val TO_antisym = maybe_thm ("TO_antisym",
-Term`!c:'a comp. TotOrd c ==> (!x y. (c x y = GREATER) <=> (c y x = LESS))`,
-REWRITE_TAC [TotOrd] THEN REPEAT STRIP_TAC THEN AR);
+Theorem TO_antisym:
+!c:'a comp. TotOrd c ==> (!x y. (c x y = GREATER) <=> (c y x = LESS))
+Proof
+REWRITE_TAC [TotOrd] THEN REPEAT STRIP_TAC THEN AR
+QED
 
 Theorem toto_antisym:
 !c:'a toto x y. (apto c x y = GREATER) <=> (apto c y x = LESS)
@@ -244,13 +246,14 @@ Theorem toto_cpn_eqn = CONJ toto_equal_imp_eq toto_glneq;
                      (!c x y. (apto c x y = LESS) ==> x <> y) /\
                       !c x y. (apto c x y = GREATER) ==> x <> y    *)
 
-val TO_cpn_eqn = maybe_thm ("TO_cpn_eqn", Term
-`!c. TotOrd c ==> (!x y:'a. (c x y = LESS) ==> x <> y) /\
+Theorem TO_cpn_eqn: !c. TotOrd c ==> (!x y:'a. (c x y = LESS) ==> x <> y) /\
                   (!x y:'a. (c x y = GREATER) ==> x <> y) /\
-                  (!x y:'a. (c x y = EQUAL) ==> (x = y))`,
+                  (!x y:'a. (c x y = EQUAL) ==> (x = y))
+Proof
 GEN_TAC THEN DISCH_TAC THEN REPEAT CONJ_TAC THEN REPEAT GEN_TAC THEN
 IMP_RES_THEN (SUBST1_TAC o SYM o SPEC_ALL) TO_equal_eq THEN
-DISCH_TAC THEN ASM_REWRITE_TAC [all_cpn_distinct]);
+DISCH_TAC THEN ASM_REWRITE_TAC [all_cpn_distinct]
+QED
 
 Theorem NOT_EQ_LESS_IMP:
   !cmp:'a toto x y. apto cmp x y <> LESS ==> (x = y) \/ (apto cmp y x = LESS)
@@ -324,8 +327,9 @@ Definition toto_of_LinearOrder:
  toto_of_LinearOrder (r:'a reln) = TO (TO_of_LinearOrder r)
 End
 
-val Weak_Weak_of = maybe_thm ("Weak_Weak_of",
-Term`!c:'a toto. WeakLinearOrder (WeakLinearOrder_of_TO (apto c))`,
+Theorem Weak_Weak_of:
+!c:'a toto. WeakLinearOrder (WeakLinearOrder_of_TO (apto c))
+Proof
 REPEAT STRIP_TAC THEN
 REWRITE_TAC [WeakLinearOrder, WeakOrder, reflexive_def, antisymmetric_def,
              transitive_def, trichotomous, WeakLinearOrder_of_TO] THEN
@@ -347,40 +351,51 @@ REPEAT CONJ_TAC THEN REPEAT GEN_TAC THENL
  ]]
 ,Cases_on `apto c a b` THEN IMP_RES_TAC toto_antisym THEN
  IMP_RES_TAC toto_equal_sym THEN ASM_REWRITE_TAC [cpn_case_def]
-]);
+]
+QED
 
-val STRORD_SLO = maybe_thm ("STRORD_SLO", Term`!R:'a reln.
-                      WeakLinearOrder R ==> StrongLinearOrder (STRORD R)`,
+Theorem STRORD_SLO: !R:'a reln.
+                      WeakLinearOrder R ==> StrongLinearOrder (STRORD R)
+Proof
 RW_TAC bool_ss [WeakLinearOrder, StrongLinearOrder, trichotomous_STRORD] THEN
-METIS_TAC [WeakOrd_Ord, STRORD_Strong]);
+METIS_TAC [WeakOrd_Ord, STRORD_Strong]
+QED
 
-val Strongof_toto_STRORD = maybe_thm ("Strongof_toto_STRORD", Term`!c:'a toto.
-StrongLinearOrder_of_TO (apto c) = STRORD (WeakLinearOrder_of_TO (apto c))`,
+Theorem Strongof_toto_STRORD: !c:'a toto.
+StrongLinearOrder_of_TO (apto c) = STRORD (WeakLinearOrder_of_TO (apto c))
+Proof
 REPEAT STRIP_TAC THEN REPEAT (CONV_TAC FUN_EQ_CONV THEN GEN_TAC) THEN
 REWRITE_TAC [StrongLinearOrder_of_TO, STRORD, WeakLinearOrder_of_TO] THEN
 Cases_on `apto c x x'` THEN ASM_REWRITE_TAC [cpn_case_def] THEN
-ONCE_REWRITE_TAC [GSYM toto_equal_eq] THEN ASM_REWRITE_TAC [cpn_distinct]);
+ONCE_REWRITE_TAC [GSYM toto_equal_eq] THEN ASM_REWRITE_TAC [cpn_distinct]
+QED
 
 (* Previous three theorems all to avoid duplicating the Weak_Weak_of
    proof for Strong_Strong_of *)
 
-val Strong_Strong_of = maybe_thm ("Strong_Strong_of", Term`!c:'a toto.
-         StrongLinearOrder (StrongLinearOrder_of_TO (apto c))`,
+Theorem Strong_Strong_of: !c:'a toto.
+         StrongLinearOrder (StrongLinearOrder_of_TO (apto c))
+Proof
 GEN_TAC THEN REWRITE_TAC [Strongof_toto_STRORD] THEN
-MATCH_MP_TAC STRORD_SLO THEN MATCH_ACCEPT_TAC Weak_Weak_of);
+MATCH_MP_TAC STRORD_SLO THEN MATCH_ACCEPT_TAC Weak_Weak_of
+QED
 
-val Strong_Strong_of_TO = maybe_thm ("Strong_Strong_of_TO", Term`!c:'a comp.
-        TotOrd c ==> StrongLinearOrder (StrongLinearOrder_of_TO c)`,
+Theorem Strong_Strong_of_TO: !c:'a comp.
+        TotOrd c ==> StrongLinearOrder (StrongLinearOrder_of_TO c)
+Proof
 REPEAT STRIP_TAC THEN
 IMP_RES_THEN (CONV_TAC o RAND_CONV o RAND_CONV o REWR_CONV o GSYM)
              TO_apto_TO_IMP THEN
-MATCH_ACCEPT_TAC Strong_Strong_of);
+MATCH_ACCEPT_TAC Strong_Strong_of
+QED
 
-val TotOrd_TO_of_Weak = maybe_thm("TotOrd_TO_of_Weak", Term`!r:'a reln.
-                 WeakLinearOrder r ==> TotOrd (TO_of_LinearOrder r)`,
+Theorem TotOrd_TO_of_Weak: !r:'a reln.
+                 WeakLinearOrder r ==> TotOrd (TO_of_LinearOrder r)
+Proof
 REPEAT STRIP_TAC THEN MATCH_MP_TAC TotOrd_TO_of_LO THEN
 IMP_RES_TAC WeakLinearOrder THEN ASM_REWRITE_TAC [LinearOrder] THEN
-IMP_RES_TAC WeakOrd_Ord);
+IMP_RES_TAC WeakOrd_Ord
+QED
 
 Theorem TotOrd_TO_of_Strong: !r:'a reln.
                  StrongLinearOrder r ==> TotOrd (TO_of_LinearOrder r)
@@ -390,8 +405,8 @@ IMP_RES_TAC StrongLinearOrder THEN ASM_REWRITE_TAC [LinearOrder] THEN
 IMP_RES_TAC StrongOrd_Ord
 QED
 
-val toto_Weak_thm = maybe_thm ("toto_Weak_thm", Term
-`!c:'a toto. toto_of_LinearOrder (WeakLinearOrder_of_TO (apto c)) = c`,
+Theorem toto_Weak_thm: !c:'a toto. toto_of_LinearOrder (WeakLinearOrder_of_TO (apto c)) = c
+Proof
 GEN_TAC THEN REWRITE_TAC [toto_of_LinearOrder] THEN
 CONV_TAC (RAND_CONV (REWR_CONV (GSYM TO_apto_ID))) THEN AP_TERM_TAC THEN
 REPEAT (CONV_TAC FUN_EQ_CONV THEN GEN_TAC) THEN
@@ -399,10 +414,11 @@ REWRITE_TAC [TO_of_LinearOrder, WeakLinearOrder_of_TO] THEN
 Cases_on `x:'a = x'` THEN AR THENL
 [ASM_REWRITE_TAC [toto_refl]
 ,Cases_on `apto c x x'` THEN ASM_REWRITE_TAC [cpn_case_def] THEN
- IMP_RES_TAC toto_equal_eq]);
+ IMP_RES_TAC toto_equal_eq]
+QED
 
-val toto_Strong_thm = maybe_thm ("toto_Strong_thm", Term
-`!c:'a toto. toto_of_LinearOrder (StrongLinearOrder_of_TO (apto c)) = c`,
+Theorem toto_Strong_thm: !c:'a toto. toto_of_LinearOrder (StrongLinearOrder_of_TO (apto c)) = c
+Proof
 GEN_TAC THEN REWRITE_TAC [toto_of_LinearOrder] THEN
 CONV_TAC (RAND_CONV (REWR_CONV (GSYM TO_apto_ID))) THEN AP_TERM_TAC THEN
 REPEAT (CONV_TAC FUN_EQ_CONV THEN GEN_TAC) THEN
@@ -410,11 +426,13 @@ REWRITE_TAC [TO_of_LinearOrder, StrongLinearOrder_of_TO] THEN
 Cases_on `x:'a = x'` THEN AR THENL
 [ASM_REWRITE_TAC [toto_refl]
 ,Cases_on `apto c x x'` THEN ASM_REWRITE_TAC [cpn_case_def] THEN
- IMP_RES_TAC toto_equal_eq]);
+ IMP_RES_TAC toto_equal_eq]
+QED
 
-val Weak_toto_thm = maybe_thm ("Weak_toto_thm",
-Term`!r:'a reln. WeakLinearOrder r ==>
- (WeakLinearOrder_of_TO (apto (toto_of_LinearOrder r)) = r)`,
+Theorem Weak_toto_thm:
+!r:'a reln. WeakLinearOrder r ==>
+ (WeakLinearOrder_of_TO (apto (toto_of_LinearOrder r)) = r)
+Proof
 REPEAT STRIP_TAC THEN IMP_RES_TAC TotOrd_TO_of_Weak THEN
 IMP_RES_TAC WeakLinearOrder THEN IMP_RES_TAC WeakOrder THEN
 REPEAT (CONV_TAC FUN_EQ_CONV THEN GEN_TAC) THEN
@@ -424,11 +442,13 @@ REWRITE_TAC [TO_of_LinearOrder] THEN
 Cases_on `x:'a = x'` THEN ASM_REWRITE_TAC [cpn_case_def] THENL
 [IMP_RES_TAC reflexive_def THEN AR
 ,Cases_on `(r:'a reln) x x'` THEN AR THEN
- REWRITE_TAC [cpn_case_def]]);
+ REWRITE_TAC [cpn_case_def]]
+QED
 
-val Strong_toto_thm = maybe_thm ("Strong_toto_thm",
-Term`!r:'a reln. StrongLinearOrder r ==>
- (StrongLinearOrder_of_TO (apto (toto_of_LinearOrder r)) = r)`,
+Theorem Strong_toto_thm:
+!r:'a reln. StrongLinearOrder r ==>
+ (StrongLinearOrder_of_TO (apto (toto_of_LinearOrder r)) = r)
+Proof
 REPEAT STRIP_TAC THEN IMP_RES_TAC TotOrd_TO_of_Strong THEN
 IMP_RES_TAC StrongLinearOrder THEN IMP_RES_TAC StrongOrder THEN
 REPEAT (CONV_TAC FUN_EQ_CONV THEN GEN_TAC) THEN
@@ -438,78 +458,92 @@ REWRITE_TAC [TO_of_LinearOrder] THEN
 Cases_on `x:'a = x'` THEN ASM_REWRITE_TAC [cpn_case_def] THENL
 [IMP_RES_TAC irreflexive_def THEN AR
 ,Cases_on `(r:'a reln) x x'` THEN AR THEN
- REWRITE_TAC [cpn_case_def]]);
+ REWRITE_TAC [cpn_case_def]]
+QED
 
 (* Converse of a total order; its correspondence to inv for relations. *)
 
 Definition TO_inv:  TO_inv (c:'a comp) x y = c y x
 End
 
-val TotOrd_inv = maybe_thm ("TotOrd_inv", Term
-`!c:'a comp. TotOrd c ==> TotOrd (TO_inv c)`,
+Theorem TotOrd_inv: !c:'a comp. TotOrd c ==> TotOrd (TO_inv c)
+Proof
 GEN_TAC THEN REWRITE_TAC [TotOrd, TO_inv] THEN
-REPEAT STRIP_TAC THEN AR THENL [MATCH_ACCEPT_TAC EQ_SYM_EQ, RES_TAC]);
+REPEAT STRIP_TAC THEN AR THENL [MATCH_ACCEPT_TAC EQ_SYM_EQ, RES_TAC]
+QED
 
 Definition toto_inv:  toto_inv (c:'a toto) = TO (TO_inv (apto c))
 End
 
-val inv_TO = maybe_thm ("inv_TO", Term
-`!r:'a comp. TotOrd r ==> (toto_inv (TO r) = TO (TO_inv r))`,
+Theorem inv_TO: !r:'a comp. TotOrd r ==> (toto_inv (TO r) = TO (TO_inv r))
+Proof
 REPEAT STRIP_TAC THEN IMP_RES_TAC TO_apto_TO_IMP THEN
-ASM_REWRITE_TAC [toto_inv]);
+ASM_REWRITE_TAC [toto_inv]
+QED
 
-val apto_inv = maybe_thm ("apto_inv", Term
-`!c:'a toto. apto (toto_inv c) = TO_inv (apto c)`,
-METIS_TAC [TotOrd_apto, TO_apto_ID, TotOrd_inv, inv_TO, TO_apto_TO_IMP]);
+Theorem apto_inv: !c:'a toto. apto (toto_inv c) = TO_inv (apto c)
+Proof
+METIS_TAC [TotOrd_apto, TO_apto_ID, TotOrd_inv, inv_TO, TO_apto_TO_IMP]
+QED
 
-val Weak_toto_inv = maybe_thm ("Weak_toto_inv", Term
-`!c:'a toto. WeakLinearOrder_of_TO (apto (toto_inv c)) =
-                                   inv (WeakLinearOrder_of_TO (apto c))`,
+Theorem Weak_toto_inv: !c:'a toto. WeakLinearOrder_of_TO (apto (toto_inv c)) =
+                                   inv (WeakLinearOrder_of_TO (apto c))
+Proof
 GEN_TAC THEN REPEAT (CONV_TAC FUN_EQ_CONV THEN GEN_TAC) THEN
 REWRITE_TAC [WeakLinearOrder_of_TO, toto_inv, inv_DEF] THEN
 ASSUME_TAC (SPEC_ALL TotOrd_apto) THEN IMP_RES_TAC TotOrd_inv THEN
-IMP_RES_TAC TO_apto_TO_IMP THEN ASM_REWRITE_TAC [TO_inv]);
+IMP_RES_TAC TO_apto_TO_IMP THEN ASM_REWRITE_TAC [TO_inv]
+QED
 
-val Strong_toto_inv = maybe_thm ("Strong_toto_inv", Term
-`!c:'a toto. StrongLinearOrder_of_TO (apto (toto_inv c)) =
-                           inv (StrongLinearOrder_of_TO (apto c))`,
+Theorem Strong_toto_inv: !c:'a toto. StrongLinearOrder_of_TO (apto (toto_inv c)) =
+                           inv (StrongLinearOrder_of_TO (apto c))
+Proof
 GEN_TAC THEN REPEAT (CONV_TAC FUN_EQ_CONV THEN GEN_TAC) THEN
 REWRITE_TAC [StrongLinearOrder_of_TO, toto_inv, inv_DEF] THEN
 ASSUME_TAC (SPEC_ALL TotOrd_apto) THEN IMP_RES_TAC TotOrd_inv THEN
-IMP_RES_TAC TO_apto_TO_IMP THEN ASM_REWRITE_TAC [TO_inv]);
+IMP_RES_TAC TO_apto_TO_IMP THEN ASM_REWRITE_TAC [TO_inv]
+QED
 
-val TO_inv_TO_inv = maybe_thm ("TO_inv_TO_inv",
-Term`!c:'a comp. TO_inv (TO_inv c) = c`,
+Theorem TO_inv_TO_inv:
+!c:'a comp. TO_inv (TO_inv c) = c
+Proof
 GEN_TAC THEN REPEAT (CONV_TAC FUN_EQ_CONV THEN GEN_TAC) THEN
-REWRITE_TAC [TO_inv]);
+REWRITE_TAC [TO_inv]
+QED
 
-val toto_inv_toto_inv = maybe_thm ("toto_inv_toto_inv",
-Term`!c:'a toto. toto_inv (toto_inv c) = c`,
-REWRITE_TAC [toto_inv, apto_inv, TO_inv_TO_inv, TO_apto_ID]);
+Theorem toto_inv_toto_inv:
+!c:'a toto. toto_inv (toto_inv c) = c
+Proof
+REWRITE_TAC [toto_inv, apto_inv, TO_inv_TO_inv, TO_apto_ID]
+QED
 
-val TO_inv_Ord = maybe_thm ("TO_inv_Ord", Term`!r:'a reln.
- (TO_of_LinearOrder (inv r) = TO_inv (TO_of_LinearOrder r))`,
+Theorem TO_inv_Ord: !r:'a reln.
+ (TO_of_LinearOrder (inv r) = TO_inv (TO_of_LinearOrder r))
+Proof
 GEN_TAC THEN REPEAT (CONV_TAC FUN_EQ_CONV THEN GEN_TAC) THEN
 REWRITE_TAC [TO_inv, inv_DEF, TO_of_LinearOrder] THEN
-CONV_TAC (RAND_CONV (ONCE_DEPTH_CONV (REWR_CONV EQ_SYM_EQ))) THEN REFL_TAC);
+CONV_TAC (RAND_CONV (ONCE_DEPTH_CONV (REWR_CONV EQ_SYM_EQ))) THEN REFL_TAC
+QED
 
 (* **** Translation of TotOrd cpn values back to relation truth values. **** *)
 
-val TO_of_less_rel = maybe_thm ("TO_of_less_rel", Term
-`!r:'a reln. StrongLinearOrder r ==>
- !x y. ((TO_of_LinearOrder r x y = LESS) <=> r x y)`,
+Theorem TO_of_less_rel: !r:'a reln. StrongLinearOrder r ==>
+ !x y. ((TO_of_LinearOrder r x y = LESS) <=> r x y)
+Proof
 REWRITE_TAC
  [StrongLinearOrder, StrongOrder, irreflexive_def, TO_of_LinearOrder] THEN
 REPEAT STRIP_TAC THEN
 Cases_on `x=y` THEN ASM_REWRITE_TAC [all_cpn_distinct] THEN
-Cases_on `r x y` THEN ASM_REWRITE_TAC [all_cpn_distinct]);
+Cases_on `r x y` THEN ASM_REWRITE_TAC [all_cpn_distinct]
+QED
 
-val TO_of_greater_ler = maybe_thm ("TO_of_greater_ler", Term
-`!r:'a reln. StrongLinearOrder r ==>
- !x y. ((TO_of_LinearOrder r x y = GREATER) <=> r y x)`,
+Theorem TO_of_greater_ler: !r:'a reln. StrongLinearOrder r ==>
+ !x y. ((TO_of_LinearOrder r x y = GREATER) <=> r y x)
+Proof
 REPEAT STRIP_TAC THEN IMP_RES_TAC TotOrd_TO_of_Strong THEN
 IMP_RES_THEN (REWRITE_TAC o ulist) TO_antisym THEN
-IMP_RES_THEN (REWRITE_TAC o ulist) TO_of_less_rel);
+IMP_RES_THEN (REWRITE_TAC o ulist) TO_of_less_rel
+QED
 
 (* Consequences of TO_of_LenearOrder, toto_of_LinearOrder definitions,
    tailor-made for use by toto_CONV. *)
@@ -560,17 +594,20 @@ QED
 val _ = set_fixity "lexTO" (Infixr 850);
 val _ = set_fixity "lextoto" (Infixr 850);
 
-val LEX_ALT = maybe_thm ("LEX_ALT", Term`!R:'a reln U:'b->'b->bool c d.
-(R LEX U) c d = R (FST c) (FST d) \/ (FST c = FST d) /\ U (SND c) (SND d)`,
+Theorem LEX_ALT: !R:'a reln U:'b->'b->bool c d.
+(R LEX U) c d = R (FST c) (FST d) \/ (FST c = FST d) /\ U (SND c) (SND d)
+Proof
 REPEAT GEN_TAC THEN REWRITE_TAC [LEX_DEF] THEN
 CONV_TAC (ONCE_DEPTH_CONV (PALPHA_CONV (Term`x:'a#'b`)) THENC
           LAND_CONV (RATOR_CONV BETA_CONV) THENC
           ONCE_DEPTH_CONV (PALPHA_CONV (Term`y:'a#'b`)) THENC
           LAND_CONV BETA_CONV)
-THEN REFL_TAC);
+THEN REFL_TAC
+QED
 
-val SLO_LEX = maybe_thm ("SLO_LEX", Term`!R:'a reln V:'b->'b->bool.
-StrongLinearOrder R /\ StrongLinearOrder V ==> StrongLinearOrder (R LEX V)`,
+Theorem SLO_LEX: !R:'a reln V:'b->'b->bool.
+StrongLinearOrder R /\ StrongLinearOrder V ==> StrongLinearOrder (R LEX V)
+Proof
 REWRITE_TAC [StrongLinearOrder] THEN REPEAT STRIP_TAC THEN
 IMP_RES_TAC StrongOrder_ALT THENL
 [REWRITE_TAC [StrongOrder_ALT, irreflexive_def, transitive_def, LEX_ALT] THEN
@@ -592,7 +629,8 @@ IMP_RES_TAC StrongOrder_ALT THENL
  RES_TAC THEN UNDISCH_TAC (Term`SND (b:'a#'b) = SND (a:'a#'b)`) THEN
               UNDISCH_TAC (Term`FST (b:'a#'b) = FST (a:'a#'b)`) THEN
  ASM_REWRITE_TAC [SPLIT_PAIRS]
-]);
+]
+QED
 
 Definition lexTO:  (R:'a comp) lexTO (V:'b comp) = TO_of_LinearOrder (
   StrongLinearOrder_of_TO R LEX StrongLinearOrder_of_TO V)
@@ -602,11 +640,12 @@ Definition lextoto:
            (c:'a toto) lextoto (v:'b toto) = TO (apto c lexTO apto v)
 End
 
-val lexTO_THM = maybe_thm ("lexTO_thm",
-Term`!R:'a comp V:'b comp. TotOrd R /\ TotOrd V ==> !x y.
+Theorem lexTO_thm:
+!R:'a comp V:'b comp. TotOrd R /\ TotOrd V ==> !x y.
      ((R lexTO V) x y = case R (FST x) (FST y) of LESS => LESS |
                                             EQUAL => V (SND x) (SND y) |
-                                            GREATER => GREATER)`,
+                                            GREATER => GREATER)
+Proof
 REWRITE_TAC [TO_of_LinearOrder, lexTO, StrongLinearOrder_of_TO,
              LEX_ALT] THEN REPEAT STRIP_TAC THEN
 REWRITE_TAC [SPLIT_PAIRS] THEN
@@ -620,34 +659,41 @@ Cases_on `FST (x:'a#'b) = FST (y:'a#'b)` THEN AR THENL
  ]
 ,Cases_on `R (FST (x:'a#'b)) (FST (y:'a#'b))` THEN
  REWRITE_TAC [cpn_case_def] THEN IMP_RES_TAC TO_equal_eq
-]);
+]
+QED
 
-val lexTO_ALT = maybe_thm ("lexTO_ALT", Term`!R:'a comp V:'b comp.
+Theorem lexTO_ALT: !R:'a comp V:'b comp.
 TotOrd R /\ TotOrd V ==> (!(r,u) (r',u'). (R lexTO V) (r,u) (r',u') =
-   case R r r' of LESS => LESS | EQUAL => V u u'| GREATER => GREATER)`,
+   case R r r' of LESS => LESS | EQUAL => V u u'| GREATER => GREATER)
+Proof
 REPEAT GEN_TAC THEN STRIP_TAC THEN
 CONV_TAC (GEN_PALPHA_CONV (Term`x:'a#'b`)) THEN GEN_TAC THEN
 CONV_TAC (GEN_PALPHA_CONV (Term`y:'a#'b`)) THEN GEN_TAC THEN
-MATCH_MP_TAC lexTO_THM THEN AR);
+MATCH_MP_TAC lexTO_thm THEN AR
+QED
 
-val TO_lexTO = maybe_thm ("TO_lexTO", Term`!R:'a comp V:'b comp.
-                          TotOrd R /\ TotOrd V ==> TotOrd (R lexTO V)`,
+Theorem TO_lexTO: !R:'a comp V:'b comp.
+                          TotOrd R /\ TotOrd V ==> TotOrd (R lexTO V)
+Proof
 REPEAT STRIP_TAC THEN REWRITE_TAC [lexTO] THEN
 MATCH_MP_TAC TotOrd_TO_of_Strong THEN
 MATCH_MP_TAC SLO_LEX THEN CONJ_TAC THEN
-IMP_RES_TAC Strong_Strong_of_TO);
+IMP_RES_TAC Strong_Strong_of_TO
+QED
 
-val pre_aplextoto = maybe_thm ("pre_aplextoto",
-Term`!c:'a toto v:'b toto x y.
+Theorem pre_aplextoto:
+!c:'a toto v:'b toto x y.
      (apto (c lextoto v) x y = case apto c (FST x) (FST y) of LESS => LESS |
                                             EQUAL => apto v (SND x) (SND y) |
-                                            GREATER => GREATER)`,
+                                            GREATER => GREATER)
+Proof
 REPEAT GEN_TAC THEN REWRITE_TAC [lextoto] THEN
 ASSUME_TAC (ISPEC (Term`c:'a toto`) TotOrd_apto) THEN
 ASSUME_TAC (ISPEC (Term`v:'b toto`) TotOrd_apto) THEN
-IMP_RES_TAC (GSYM lexTO_THM) THEN AR THEN REPEAT AP_THM_TAC THEN
+IMP_RES_TAC (GSYM lexTO_thm) THEN AR THEN REPEAT AP_THM_TAC THEN
 MATCH_MP_TAC TO_apto_TO_IMP THEN
-IMP_RES_TAC TO_lexTO);
+IMP_RES_TAC TO_lexTO
+QED
 
 Theorem aplextoto: !c:'a toto v:'b toto x1 x2 y1 y2. (apto (c lextoto v) (x1,x2) (y1,y2) =
  case apto c x1 y1 of LESS => LESS
@@ -664,12 +710,14 @@ QED
 
 (* Theory: numto defined from numTheory.LESS *)
 
-val StrongLinearOrder_LESS = maybe_thm ("StrongLinearOrder_LESS",
-``StrongLinearOrder ($< :num reln)``,
+Theorem StrongLinearOrder_LESS:
+  StrongLinearOrder ($< :num reln)
+Proof
 SRW_TAC [ARITH_ss] [StrongLinearOrder, StrongOrder_ALT,
-                    trichotomous, Order, irreflexive_def]);
+                    trichotomous, Order, irreflexive_def]
+QED
 (* ******
-val StrongWellOrder_LESS = maybe_thm ("StrongWellOrder_LESS",
+val StrongWellOrder_LESS = store_thm ("StrongWellOrder_LESS",
  Term`StrongWellOrder ($< :num reln)`,
 REWRITE_TAC [StrongWellOrder, prim_recTheory.WF_LESS, StrongLinearOrder,
  StrongOrder_ALT, trichotomous, Order, irreflexive_def, transitive_def]
@@ -931,11 +979,13 @@ End
 Definition charto:  charto = TO (charOrd)
 End
 
-val TO_charOrd = maybe_thm ("TO_charOrd", Term`TotOrd charOrd`,
+Theorem TO_charOrd: TotOrd charOrd
+Proof
 REWRITE_TAC [TotOrd, charOrd] THEN
 STRIP_ASSUME_TAC (REWRITE_RULE [TotOrd] TO_numOrd) THEN
 REPEAT STRIP_TAC THEN AR THENL
-[MATCH_ACCEPT_TAC ORD_11, RES_TAC]);
+[MATCH_ACCEPT_TAC ORD_11, RES_TAC]
+QED
 
 Theorem apcharto_thm: apto charto = charOrd
 Proof
@@ -974,11 +1024,12 @@ REPEAT GEN_TAC THEN
 REWRITE_TAC [charOrd, MATCH_MP TO_equal_eq TO_numOrd] THEN DISCH_TAC THEN AR
 QED
 
-val charOrd_thm = maybe_thm ("charOrd_thm", Term
-`charOrd = TO_of_LinearOrder $<`,
+Theorem charOrd_thm: charOrd = TO_of_LinearOrder $<
+Proof
 REPEAT (CONV_TAC FUN_EQ_CONV THEN GEN_TAC) THEN
 REWRITE_TAC [charOrd, numOrd, TO_of_LinearOrder] THEN
-REWRITE_TAC [char_lt_def, ORD_11]);
+REWRITE_TAC [char_lt_def, ORD_11]
+QED
 
 (* ********************************************************************** *)
 (* A similar exercise to the above for lists should be useful itself, and *)
@@ -991,8 +1042,9 @@ Definition listorder:  (listorder (V:'a reln) l [] = F) /\
                            V r s \/ (r = s) /\ listorder V l m)
 End
 
-val SLO_listorder = maybe_thm ("SLO_listorder", Term`!V:'a reln.
-              StrongLinearOrder V ==> StrongLinearOrder (listorder V)`,
+Theorem SLO_listorder: !V:'a reln.
+              StrongLinearOrder V ==> StrongLinearOrder (listorder V)
+Proof
 GEN_TAC THEN
 REWRITE_TAC [StrongLinearOrder, StrongOrder_ALT] THEN
 STRIP_TAC THEN
@@ -1014,28 +1066,32 @@ REPEAT CONJ_TAC THENL
   IMP_RES_TAC trichotomous_ALT THEN
   UNDISCH_TAC (Term`h:'a = h'`) THEN AR THEN
   STRIP_TAC THEN RES_TAC THEN ASM_REWRITE_TAC [CONS_11]
-]]);
+]]
+QED
 
 Definition ListOrd:  ListOrd (c:'a toto) =
          TO_of_LinearOrder (listorder (StrongLinearOrder_of_TO (apto c)))
 End
 
-val TO_ListOrd = maybe_thm ("TO_ListOrd",
-                         Term`!c:'a toto. TotOrd (ListOrd c)`,
+Theorem TO_ListOrd:
+                         !c:'a toto. TotOrd (ListOrd c)
+Proof
 GEN_TAC THEN REWRITE_TAC [ListOrd] THEN
 ASSUME_TAC (ISPEC (Term`c:'a toto`) TotOrd_apto) THEN
 IMP_RES_TAC Strong_Strong_of_TO THEN
 IMP_RES_TAC SLO_listorder THEN
-IMP_RES_TAC TotOrd_TO_of_Strong);
+IMP_RES_TAC TotOrd_TO_of_Strong
+QED
 
-val ListOrd_THM = maybe_thm ("ListOrd_THM",
-Term`(!c:'a toto. (ListOrd c ([]:'a list) [] = EQUAL) /\
+Theorem ListOrd_THM:
+(!c:'a toto. (ListOrd c ([]:'a list) [] = EQUAL) /\
      (!b:'a y. ListOrd c [] (b :: y) = LESS) /\
      (!a:'a x. ListOrd c (a :: x) [] = GREATER) /\
      (!a:'a x b y. ListOrd c (a :: x) (b :: y) =
          case apto c a b of LESS => LESS |
                            EQUAL => ListOrd c  x y |
-                           GREATER => GREATER))`,
+                           GREATER => GREATER))
+Proof
 GEN_TAC THEN ASSUME_TAC (SPEC_ALL TotOrd_apto) THEN
 REWRITE_TAC [ListOrd, TO_of_LinearOrder, list_distinct,
              GSYM list_distinct, list_11] THEN
@@ -1044,7 +1100,8 @@ REWRITE_TAC [listorder, StrongLinearOrder_of_TO] THEN
 REPEAT GEN_TAC THEN
 Cases_on `apto c a b` THEN
 ASM_REWRITE_TAC [cpn_case_def, all_cpn_distinct] THEN
-IMP_RES_TAC toto_cpn_eqn THEN ASM_REWRITE_TAC [all_cpn_distinct]);
+IMP_RES_TAC toto_cpn_eqn THEN ASM_REWRITE_TAC [all_cpn_distinct]
+QED
 
 Definition listoto:  listoto (c:'a toto) = TO (ListOrd c)
 End
@@ -1081,11 +1138,12 @@ End
 Definition imageOrd:  imageOrd (f:'a->'c) (cp:'c comp) a b = cp (f a) (f b)
 End
 
-val TO_injection = maybe_thm ("TO_injection", Term
-`!cp:'c comp. TotOrd cp ==> !f:'d->'c.
-           ONE_ONE f ==> TotOrd (imageOrd f cp)`,
+Theorem TO_injection: !cp:'c comp. TotOrd cp ==> !f:'d->'c.
+           ONE_ONE f ==> TotOrd (imageOrd f cp)
+Proof
 REWRITE_TAC [TotOrd, imageOrd, ONE_ONE_THM] THEN REPEAT STRIP_TAC THEN
-AR THEN RES_TAC THEN EQ_TAC THEN DISCH_TAC THEN RES_TAC THEN AR);
+AR THEN RES_TAC THEN EQ_TAC THEN DISCH_TAC THEN RES_TAC THEN AR
+QED
 
 (* **************************************************************** *)
 (* The following treatment of total order on type one is completely *)
@@ -1094,7 +1152,7 @@ AR THEN RES_TAC THEN EQ_TAC THEN DISCH_TAC THEN RES_TAC THEN AR);
 (* ************************
 val oneOrd = Define`oneOrd (x:one) (y:one) = EQUAL`;
 
-val TO_oneOrd = maybe_thm ("TO_oneOrd", Term`TotOrd oneOrd`,
+val TO_oneOrd = store_thm ("TO_oneOrd", Term`TotOrd oneOrd`,
 REWRITE_TAC [TotOrd, oneOrd, all_cpn_distinct] THEN
 ONCE_REWRITE_TAC [one] THEN REWRITE_TAC []);
 
