@@ -64,6 +64,7 @@ header-includes: |
   \DeclareUnicodeCharacter{29FA}{\ensuremath{{+}\!\!{+}}}
   \DeclareUnicodeCharacter{A673}{\ensuremath{\sp{*}}}
   \DeclareUnicodeCharacter{1D49F}{\ensuremath{{\cal D}}}
+  \DeclareUnicodeCharacter{1D49C}{\ensuremath{{\cal M}}}
   \DeclareUnicodeCharacter{1D4AF}{\ensuremath{{\cal T}}}
   \DeclareUnicodeCharacter{03B5}{\ensuremath{\varepsilon}}
   \DeclareUnicodeCharacter{2026}{\ensuremath{\ldots}}
@@ -315,9 +316,6 @@ which
 3. follows from preceding steps by a rule of inference (either primitive
 or previously derived).
 
-The abbreviation `conv` ("conversion") is used for the ML type
-`term -> thm`.
-
 ### Adding an assumption
 
 ```
@@ -454,7 +452,7 @@ The abbreviation `conv` ("conversion") is used for the ML type
 &nbsp;
 
 |                                      |                |
-| :---                                 | ---:           |
+| :-----                               | --:            |
 |1. $\Gamma\vdash t_1=t_2$             | [`Hypothesis`] |
 |2. $t_1\vdash t_1$                    | [`ASSUME`]     |
 |3. $\Gamma,\ t_1\vdash t_2$           | [`EQ_MP` 1,2]  |
@@ -495,7 +493,7 @@ The abbreviation `conv` ("conversion") is used for the ML type
 ```
 &nbsp;
 
-|  |  |
+|      |      |
 | :--- | ---: |
 | 1. $\Gamma\vdash t = \mathsf{T}$ | [`Hypothesis`] |
 | 2. $\Gamma\vdash \mathsf{T} = t$ | [`SYM` 1] |
@@ -516,11 +514,11 @@ The abbreviation `conv` ("conversion") is used for the ML type
 &nbsp;
 
 The notation $t[t'/x]$ denotes the result of replacing each free
-occurrence of $x$ in $t$ by $t'$. No free variables in a resulting
-occurrence of $t'$ become bound thereby.
+occurrence of $x$ in $t$ by $t'$. Renaming ensures that no free
+variables in a resulting occurrence of $t'$ will become bound.
 
 |  |  |
-| :--- | ---: |
+| :------ | --: |
 |1. $\vdash \forall = (\lambda P.\; P = (\lambda x. \mathsf{T}))$ | [`INST_TYPE` on definition of $\forall$] |
 |2. $\Gamma\vdash \forall(\lambda x.\;t)$ | [`Hypothesis`] |
 |3. $\Gamma\vdash (\lambda{P}.\; P = (\lambda{x}.\;\mathsf{T})) (\lambda{x}.\;t)$ | [`SUBST` 1,2] |
@@ -547,7 +545,7 @@ occurrence of $t'$ become bound thereby.
 &nbsp;
 
 |  |  |
-| :--- | ---: |
+| :------ | --: |
 |1. $\vdash\forall{b_1\ b_2}.\; (b_1\Rightarrow b_2) \Rightarrow (b_2\Rightarrow b_1) \Rightarrow(b_1=b_2)$ | [`Axiom`] |
 |2. $\vdash\forall{b_2}.\; (t\Rightarrow b_2)\Rightarrow(b_2\Rightarrow t)\Rightarrow(t=b_2)$ | [`SPEC` 1] |
 |3. $\vdash(t\Rightarrow\mathsf{T})\Rightarrow(\mathsf{T}\Rightarrow t)\Rightarrow(t=\mathsf{T})$ | [`SPEC` 2] |
@@ -570,14 +568,15 @@ occurrence of $t'$ become bound thereby.
 ```
 *Restriction*: variable $x$ can not occur free in $\Gamma$.
 
-*Remark*: The conventional notation $\forall x.\; t$ for universal
-quantification is, in HOL, surface syntax for the underlying term
-structure $\forall(\lambda{x}.\;t)$. Either may be used.
+*Remark*: The conventional notation for universal quantification,
+*i.e.* $\forall x.\; t$, is, in HOL, surface syntax for the underlying
+*term structure $\forall(\lambda{x}.\;t)$. This underlying structure
+is used to give clarity to some derivations in the following.
 
 &nbsp;
 
 |      |      |
-| :--- | ---: |
+| :------ | --: |
 |1. $\Gamma\vdash t$ | [`Hypothesis`] |
 |2. $\Gamma\vdash t = \mathsf{T}$ | [`EQT_INTRO` 1] |
 |3. $\Gamma\vdash(\lambda{x}.\;t)=(\lambda{x}.\;\mathsf{T})$ |  [`ABS` 2] |
@@ -608,7 +607,7 @@ a later derivation in this section.
 &nbsp;
 
 |      |      |
-| :--- | ---: |
+| :------ | --: |
 |1. $\vdash(\lambda{x_1}.\;t\ x_1)\ x = t\ x$ | [`BETA_CONV`] |
 |2. $\vdash(\lambda{x_2}.\;t\ x_2)\ x = t\ x$  | [`BETA_CONV`] |
 |3. $\vdash t\ x = (\lambda{x_2}.\;t\ x_2)\ x$  | [`SYM` 2] |
@@ -636,14 +635,14 @@ a later derivation in this section.
 *Remark*: we use $x'$ rather than just $x$ to motivate the use of `SIMPLE_ALPHA`
 in the derivation below.
 
-*Remark*: The ML type abbreviation `conv = term -> thm` is used to
-indicate that an ML function of type `conv`, when given a term $t_1$, returns a
+*Remark*: In the HOL system, the type abbreviation `conv = term ->
+thm` describes SML functions that, when given a term $t_1$, return a
 theorem $\vdash t_1 = t_2$.
 
 &nbsp;
 
-|      |      |
-| :--- | ---: |
+|        |      |
+| :----- | ---: |
 |1. $\vdash\forall{f}.\;(\lambda{x}.\;f\ x) = f$ | [Type-instantiate `ETA_AX`] |
 |2. $\vdash(\lambda{x}.\;t\ x) = t$ | [`SPEC` 1] |
 |3. $\vdash(\lambda{x'}.\;t\ x') = (\lambda{x}.\;t\ x)$ | [`SIMPLE_ALPHA`] |
@@ -664,8 +663,8 @@ theorem $\vdash t_1 = t_2$.
 
 &nbsp;
 
-|      |      |
-| :--- | ---: |
+|        |      |
+| :----- | ---: |
 |1. $\Gamma\vdash\forall{x}.\;t_1\ x=t_2\ x$ | [`Hypothesis`] |
 |2. $\Gamma\vdash t_1\ x'=t_2\ x'$ | [`SPEC` 1 ($x'$ is a fresh var)] |
 |3. $\Gamma\vdash(\lambda{x'}.\;t_1\ x') = (\lambda{x'}.\;t_2\ x')$ | [`ABS` 2] |
@@ -688,8 +687,8 @@ theorem $\vdash t_1 = t_2$.
 
 &nbsp;
 
-|      |      |
-| :--- | ---: |
+|        |      |
+| :----- | ---: |
 |1. $\vdash\forall{P\ x}.\;P\ x\Rightarrow P(\varepsilon\; P)$ | [Type-instantiate `SELECT_AX`] |
 |2. $\vdash t_1\ t_2 \Rightarrow t_1(\varepsilon\ t_1)$ | [`SPEC` 1 (twice)] |
 |3. $\Gamma\vdash t_1\ t_2$ | [`Hypothesis`] |
@@ -737,8 +736,8 @@ these occurrences of $t_1$ by $x$.
 
 &nbsp;
 
-|      |      |
-| :--- | ---: |
+|         |      |
+| :------ | --: |
 |1. $\vdash(\lambda{x}.\;t_1[x])t_2= t_1[t_2]$ | [`BETA_CONV`] |
 |2. $\vdash t_1[t_2] = (\lambda{x}.\;t_1[x])t_2$ | [`SYM` 1] |
 |3. $\Gamma\vdash t_1[t_2]$ | [`Hypothesis`] |
@@ -766,8 +765,8 @@ these occurrences of $t_1$ by $x$.
 
 &nbsp;
 
-|      |      |
-| :--- | ---: |
+|         |     |
+| :------ | --: |
 |1. $\vdash \exists = \lambda{P}.\; P(\varepsilon\ P)$ | [`INST_TYPE` on definition of $\exists$] |
 |2. $\vdash\exists(\lambda{x}.\;t[x]) = (\lambda{P}.\;P(\varepsilon\ P))(\lambda{x}.\;t[x])$ | [`AP_THM` 1] |
 |3. $\Gamma_1\vdash\exists(\lambda{x}t[x])$ | [`Hypothesis`] |
@@ -798,8 +797,8 @@ function to a specified argument.
 
 &nbsp;
 
-|      |      |
-| :--- | ---: |
+|        |      |
+| :----- | ---: |
 |1. $\Gamma\vdash t = (\lambda{x}.\; t_1) t_2$ | [`Hypothesis`] |
 |2. $\vdash (\lambda{x}.\; t_1) t_2 = t_1[t_2]$ | [`BETA_CONV`] |
 |3. $\Gamma\vdash t = t_1[t_2]$ | [`TRANS` 1,2] |
@@ -810,81 +809,82 @@ function to a specified argument.
 ```
    RIGHT_LIST_BETA : thm -> thm
 
-   Γ |- t = (λx₁ … xₙ. t'[x₁, …,xₙ]) t₁ … tₙ
+   Γ |- t = (λx₁…xₙ. t'[x₁,…,xₙ]) t₁ … tₙ
   -------------------------------------------------
-   Γ |- t = t'[t₁, …, tₙ]
+   Γ |- t = t'[t₁,…,tₙ]
 ```
 
 &nbsp;
 
-|      |      |
-| :--- | ---: |
-|1. $\Gamma\vdash t = \lambda{x_1\cdots x_n}.\; t'[x_1,\ldots,x_n]$ | [`Hypothesis`] |
-|2. $\Gamma\vdash t\ t_1\cdots t_n =(\lambda{x_1\cdots x_n}.\;t'[x_1,\ldots,x_n])\ t_1\cdots t_n$ | [`AP_THM` 1 ($n$ times)] |
-|3. $\vdash(\lambda{x_1\cdots x_n}.\;t'[x_1,\ldots,x_n])\ t_1\cdots t_n = t'[t_1,\ldots,t_n]$ | [`BETA_CONV` ($n$ times)] |
-|4. $\Gamma\vdash t = t'[t_1,\ldots,t_n]$ | [`TRANS` 2,3] |
+For readability, let $\mathcal{M} = \lambda{x_1\cdots x_n}.\; t'[x_1,\ldots,x_n]$ in the following:
 
-##skip
+|         |      |
+| :------ | --: |
+|1. $\Gamma\vdash t = \mathcal{M} \;t_1 \cdots t_n$ | [`Hypothesis`] |
+|2. $\vdash \mathcal{M} = \mathcal{M}$ | [`REFL`] |
+|3. $\vdash \mathcal{M}\;t_1 = \mathcal{M}\;t_1$ | [`AP_THM` 2] |
+|4. $\vdash \mathcal{M}\;t_1 = (\lambda{x_2\cdots x_n}.\;t'[t_1,x_2,\ldots,x_n])$ | [`RIGHT_BETA` 3] |
+|5. $\vdash \mathcal{M}\;t_1 \cdots t_n = t'[t_1,\ldots,t_n]$ | [repeat 3,4 for $t_2,...,t_n$] |
+|6. $\Gamma\vdash t = t'[t_1,\ldots,t_n]$ | [`TRANS` 1,5] |
+
 
 ### Conjunction introduction
 
 ```
    CONJ : thm -> thm -> thm
 
-$$\Gamma_1\vdash t_1\qquad\qquad\qquad\Gamma_2\vdash t_2\over
-\Gamma_1\cup\Gamma_2 \vdash t_1\conj t_2$$
+   Γ₁ |- t₁  ,  Γ₂ |- t₂
+  -----------------------
+   Γ₁ ∪ Γ₂ |- t₁ ∧ t₂
+```
 
 &nbsp;
 
-|      |      |
-| :--- | ---: |
-|1. $\vdash \conj = \lambda{b_1\ b_2}\forall{b}(b_1\Rightarrow(b_2\Rightarrow b))\Rightarrow b$
-\hfill [Definition of $\conj$]
-1. $\vdash t_1\conj t_2 = \forall{b}(t_1\Rightarrow(t_2\Rightarrow b))\Rightarrow b$
-[`RIGHT_LIST_BETA} 1]
-1. $t_1\Rightarrow(t_2\Rightarrow b)\vdash t_1\Rightarrow(t_2\Rightarrow b)$  [`ASSUME}]
-1. $\Gamma_1\vdash t_1$  [Hypothesis]
-1. $\Gamma_1,\ t_1\Rightarrow(t_2\Rightarrow b)\vdash t_2\Rightarrow b$  [`MP} 3,4]
-1. $\Gamma_2\vdash t_2$  [Hypothesis]
-1. $\Gamma_1\cup\Gamma_2,\ t_1\Rightarrow(t_2\Rightarrow b)\vdash b$  [`MP} 5,6]
-1. $\Gamma_1\cup \Gamma_2\vdash(t_1\Rightarrow(t_2\Rightarrow b))\Rightarrow b$
-[`DISCH} 7]
-1. $\Gamma_1\cup \Gamma_2\vdash \forall{b}(t_1\Rightarrow(t_2\Rightarrow b))\Rightarrow b$
-[`GEN} 8]
-1. $\Gamma_1\cup \Gamma_2\vdash t_1\conj t_2$
-[`EQ_MP} (`SYM} 2),9]
+|         |     |
+| :------ | --: |
+|0. $\vdash \land = \lambda{b_1\ b_2}.\;\forall{b}.\;(b_1\Rightarrow(b_2\Rightarrow b))\Rightarrow b$ | [Definition] |
+|1. $\vdash \land\;t_1\;t_2 = (\lambda{b_1\ b_2}.\;\forall{b}.\;(b_1\Rightarrow(b_2\Rightarrow b))\Rightarrow b)\;t_1\;t_2$ | [`AP_THM` 0 (twice)] |
+|2. $\vdash t_1\land t_2 = \forall{b}.\;(t_1\Rightarrow(t_2\Rightarrow b))\Rightarrow b$ | [`RIGHT_LIST_BETA` 1] |
+|3. $t_1\Rightarrow(t_2\Rightarrow b)\vdash t_1\Rightarrow(t_2\Rightarrow b)$ | [`ASSUME`] |
+|4. $\Gamma_1\vdash t_1$ | [`Hypothesis`] |
+|5. $\Gamma_1,\ t_1\Rightarrow(t_2\Rightarrow b)\vdash t_2\Rightarrow b$ | [`MP` 3,4] |
+|6. $\Gamma_2\vdash t_2$ | [`Hypothesis`] |
+|7. $\Gamma_1\cup\Gamma_2,\ t_1\Rightarrow(t_2\Rightarrow b)\vdash b$ | [`MP` 5,6] |
+|8. $\Gamma_1\cup \Gamma_2\vdash(t_1\Rightarrow(t_2\Rightarrow b))\Rightarrow b$ | [`DISCH` 7] |
+|9. $\Gamma_1\cup \Gamma_2\vdash \forall{b}.\;(t_1\Rightarrow(t_2\Rightarrow b))\Rightarrow b$ | [`GEN` 8] |
+|10. $\Gamma_1\cup \Gamma_2\vdash t_1 \land t_2$ | [`EQ_MP` (`SYM` 2),9] |
 
 
 ### Conjunction elimination
 
 ```
-   CONJUNCT1 : thm -> thm, CONJUNCT2 : thm -> thm
+   CONJUNCT1 : thm -> thm
+   CONJUNCT2 : thm -> thm
 
-$$\Gamma\vdash t_1\conj t_2\over
-\Gamma\vdash t_1\qquad\qquad\qquad \Gamma\vdash t_2$$
+   Γ |- t₁ ∧ t₂
+  -----------------------
+   Γ |- t₁  ,  Γ |- t₂
+```
 
 &nbsp;
 
-|      |      |
-| :--- | ---: |
-|1. $\vdash \conj = \lambda{b_1\ b_2}\forall{b}(b_1\Rightarrow(b_2\Rightarrow b))\Rightarrow b$
-\hfill [Definition of $\conj$]
-1. $\vdash t_1\conj t_2 = \forall{b}(t_1\Rightarrow(t_2\Rightarrow b))\Rightarrow b$
-[`RIGHT_LIST_BETA} 1]
-1. $\Gamma\vdash t_1\conj t_2$  [Hypothesis]
-1. $\Gamma\vdash \forall{b}(t_1\Rightarrow(t_2\Rightarrow b))\Rightarrow b$
-[`EQ_MP} 2,3]
-1. $\Gamma\vdash (t_1\Rightarrow(t_2\Rightarrow t_1))\Rightarrow t_1$  [`SPEC} 4]
-1. $t_1\vdash t_1$  [`ASSUME}]
-1. $t_1 \vdash t_2\Rightarrow t_1$  [`DISCH} 6]
-1. $\vdash t_1\Rightarrow(t_2\Rightarrow t_1)$  [`DISCH} 7]
-1. $\Gamma\vdash t_1$  [`MP} 5,8]
-1. $\Gamma\vdash (t_1\Rightarrow(t_2\Rightarrow t_2))\Rightarrow t_2$  [`SPEC} 4]
-1. $t_2\vdash t_2$  [`ASSUME}]
-1. $\vdash t_2\Rightarrow t_2$  [`DISCH} 11]
-1. $\vdash t_1\Rightarrow(t_2\Rightarrow t_2)$  [`DISCH} 12]
-1. $\Gamma\vdash t_2$  [`MP} 10,13]
-1. $\Gamma\vdash t_1$ and $\Gamma\vdash t_2$  [9,14]
+|        |      |
+| :----- | ---: |
+|1. $\vdash \land = \lambda{b_1\ b_2}.\;\forall{b}.\;(b_1\Rightarrow(b_2\Rightarrow b))\Rightarrow b$ | [Definition] |
+|2. $\vdash t_1\land t_2 = \forall{b}.\;(t_1\Rightarrow(t_2\Rightarrow b))\Rightarrow b$ | [`RIGHT_LIST_BETA` 1] |
+|3. $\Gamma\vdash t_1\land t_2$ | [`Hypothesis`] |
+|4. $\Gamma\vdash \forall{b}.\;(t_1\Rightarrow(t_2\Rightarrow b))\Rightarrow b$ | [`EQ_MP` 2,3] |
+|5. $\Gamma\vdash (t_1\Rightarrow(t_2\Rightarrow t_1))\Rightarrow t_1$ | [`SPEC` 4] |
+|6. $t_1\vdash t_1$ | [`ASSUME`] |
+|7. $t_1 \vdash t_2\Rightarrow t_1$ | [`DISCH` 6] |
+|8. $\vdash t_1\Rightarrow(t_2\Rightarrow t_1)$ | [`DISCH` 7] |
+|9. $\Gamma\vdash t_1$  | [`MP` 5,8] |
+|10. $\Gamma\vdash (t_1\Rightarrow(t_2\Rightarrow t_2))\Rightarrow t_2$ | [`SPEC` 4] |
+|11. $t_2\vdash t_2$ | [`ASSUME`] |
+|12. $\vdash t_2\Rightarrow t_2$  | [`DISCH` 11] |
+|13. $\vdash t_1\Rightarrow(t_2\Rightarrow t_2)$ | [`DISCH` 12] |
+|14. $\Gamma\vdash t_2$ | [`MP` 10,13] |
+|15. $\Gamma\vdash t_1$ and $\Gamma\vdash t_2$ | [9,14] |
 
 
 ### Right disjunction introduction
@@ -892,51 +892,48 @@ $$\Gamma\vdash t_1\conj t_2\over
 ```
    DISJ1 : thm -> conv
 
-$$\Gamma\vdash t_1\over \Gamma\vdash t_1\disj t_2$$
+   Γ |- t₁
+  --------------
+   Γ |- t₁ ∨ t₂
+```
 
 &nbsp;
 
-|      |      |
-| :--- | ---: |
-|1. $\vdash \disj =
-\lambda{b_1\ b_2}\forall{b}(b_1\Rightarrow b)\Rightarrow(b_2\Rightarrow b)\Rightarrow b$
-\hfill [Definition of $\disj$]
-1. $\vdash t_1\disj t_2 = \forall{b}(t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$
-\hfill [`RIGHT_LIST_BETA} 1]
-1. $\Gamma\vdash t_1$  [Hypothesis]
-1. $t_1\Rightarrow b\vdash t_1\Rightarrow b$  [`ASSUME}]
-1. $\Gamma,\ t_1\Rightarrow b\vdash b$  [`MP} 4,3]
-1. $\Gamma,\ t_1\Rightarrow b\vdash(t_2\Rightarrow b)\Rightarrow b$  [`DISCH} 5]
-1. $\Gamma\vdash (t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$  [`DISCH} 6]
-1. $\Gamma\vdash \forall{b}(t_1\Rightarrow b)
-\Rightarrow(t_2\Rightarrow b)\Rightarrow b$  [`GEN} 7]
-1. $\Gamma\vdash t_1\disj t_2$  [`EQ_MP} (`SYM} 2),8]
-
+|        |      |
+| :----- | ---: |
+|1. $\vdash \lor = \lambda{b_1\ b_2}.\;\forall{b}.\;(b_1\Rightarrow b)\Rightarrow(b_2\Rightarrow b)\Rightarrow b$ | [Definition of $\lor$] |
+|2. $\vdash t_1\lor t_2 = \forall{b}.\;(t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$ | [`RIGHT_LIST_BETA` 1] |
+|3. $\Gamma\vdash t_1$ | [Hypothesis] |
+|4. $t_1\Rightarrow b\vdash t_1\Rightarrow b$ | [`ASSUME`] |
+|5. $\Gamma,\ t_1\Rightarrow b\vdash b$ | [`MP` 4,3] |
+|6. $\Gamma,\ t_1\Rightarrow b\vdash(t_2\Rightarrow b)\Rightarrow b$ | [`DISCH` 5] |
+|7. $\Gamma\vdash (t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$ | [`DISCH` 6] |
+|8. $\Gamma\vdash \forall{b}.\;(t_1\Rightarrow b) \Rightarrow(t_2\Rightarrow b)\Rightarrow b$ | [`GEN` 7] |
+|9. $\Gamma\vdash t_1\lor t_2$ | [`EQ_MP` (`SYM` 2),8] |
 
 ### Left disjunction introduction
 
 ```
    DISJ2 : term -> thm -> thm
 
-$$\Gamma\vdash t_2\over \Gamma\vdash t_1\disj t_2$$
+   Γ |- t₂
+  --------------
+   Γ |- t₁ ∨ t₂
+```
 
 &nbsp;
 
-|      |      |
-| :--- | ---: |
-|1. $\vdash \disj =
-\lambda{b_1\ b_2}\forall{b}(b_1\Rightarrow b)\Rightarrow(b_2\Rightarrow b)\Rightarrow b$
-\hfill [Definition of $\disj$]
-1. $\vdash t_1\disj t_2 = \forall{b}(t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$
-\hfill [`RIGHT_LIST_BETA} 1]
-1. $\Gamma\vdash t_2$  [Hypothesis]
-1. $t_2\Rightarrow b\vdash t_2\Rightarrow b$  [`ASSUME}]
-1. $\Gamma,\ t_2\Rightarrow b\vdash b$  [`MP} 4,3]
-1. $\Gamma\vdash(t_2\Rightarrow b)\Rightarrow b$  [`DISCH} 5]
-1. $\Gamma\vdash (t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$  [`DISCH} 6]
-1. $\Gamma\vdash \forall{b}(t_1\Rightarrow b)
-\Rightarrow(t_2\Rightarrow b)\Rightarrow b$  [`GEN} 7]
-1. $\Gamma\vdash t_1\disj t_2$  [`EQ_MP} (`SYM} 2),8]
+|        |      |
+| :----- | ---: |
+|1. $\vdash \lor = \lambda{b_1\ b_2}.\;\forall{b}.\;(b_1\Rightarrow b)\Rightarrow(b_2\Rightarrow b)\Rightarrow b$ | [Definition] |
+|2. $\vdash t_1\lor t_2 = \forall{b}.\;(t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$ | [`RIGHT_LIST_BETA` 1] |
+|3. $\Gamma\vdash t_2$ | [`Hypothesis`] |
+|4. $t_2\Rightarrow b\vdash t_2\Rightarrow b$ | [`ASSUME`] |
+|5. $\Gamma,\ t_2\Rightarrow b\vdash b$ | [`MP` 4,3] |
+|6. $\Gamma\vdash(t_2\Rightarrow b)\Rightarrow b$ | [`DISCH` 5] |
+|7. $\Gamma\vdash (t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$ | [`DISCH` 6] |
+|8. $\Gamma\vdash \forall{b}.\;(t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$ | [`GEN` 7] |
+|9. $\Gamma\vdash t_1\lor t_2$ | [`EQ_MP` (`SYM` 2),8] |
 
 
 ### Disjunction elimination
@@ -944,71 +941,72 @@ $$\Gamma\vdash t_2\over \Gamma\vdash t_1\disj t_2$$
 ```
    DISJ_CASES : thm -> thm -> thm -> thm
 
-$$\Gamma\vdash t_1\disj t_2\qquad\qquad\qquad\Gamma_1,\ t_1\vdash t
-\qquad\qquad\qquad \Gamma_2,\ t_2\vdash t\over
-\Gamma\cup\Gamma_1\cup\Gamma_2\vdash t$$
+   Γ |- t₁ ∨ t₂  ,  Γ₁,t₁ |- t  ,  Γ₂,t₂ |- t
+  --------------------------------------------
+   Γ ∪ Γ₁ ∪ Γ₂ |- t
+```
 
 &nbsp;
 
-|      |      |
-| :--- | ---: |
-|1. $\vdash \disj =
-\lambda{b_1\ b_2}\forall{b}(b_1\Rightarrow b)\Rightarrow(b_2\Rightarrow b)\Rightarrow b$
-\hfill [Definition of $\disj$]
-1. $\vdash t_1\disj t_2 = \forall{b}(t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$
-\hfill [`RIGHT_LIST_BETA} 1]
-1. $\Gamma\vdash t_1\disj t_2$  [Hypothesis]
-1. $\Gamma\vdash\forall{b}(t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$
-[`EQ_MP} 2,3]
-1. $\Gamma\vdash(t_1\Rightarrow t)\Rightarrow(t_2\Rightarrow t)\Rightarrow t$  [`SPEC} 4]
-1. $\Gamma_1,\ t_1\vdash t$  [Hypothesis]
-1. $\Gamma_1\vdash t_1\Rightarrow t$  [`DISCH} 6]
-1. $\Gamma\cup \Gamma_1\vdash (t_2\Rightarrow t)\Rightarrow t$  [`MP} 5,7]
-1. $\Gamma_2,\ t_2\vdash t$  [Hypothesis]
-1. $\Gamma_2\vdash t_2\Rightarrow t$  [`DISCH} 9]
-1. $\Gamma\cup \Gamma_1\cup \Gamma_2\vdash t$  [`MP} 8,10]
+|        |      |
+| :----- | ---: |
+|1. $\vdash \lor =\lambda{b_1\ b_2}.\;\forall{b}.\;(b_1\Rightarrow b)\Rightarrow(b_2\Rightarrow b)\Rightarrow b$ | [Definition] |
+|2. $\vdash t_1\lor t_2 = \forall{b}.\;(t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$ | [`RIGHT_LIST_BETA` 1] |
+|3. $\Gamma\vdash t_1\lor t_2$ | [Hypothesis] |
+|3. $\Gamma\vdash\forall{b}.\;(t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$ | [`EQ_MP` 2,3] |
+|5. $\Gamma\vdash(t_1\Rightarrow t)\Rightarrow(t_2\Rightarrow t)\Rightarrow t$ | [`SPEC` 4] |
+|6. $\Gamma_1,\ t_1\vdash t$ | [Hypothesis] |
+|7. $\Gamma_1\vdash t_1\Rightarrow t$ | [`DISCH` 6] |
+|8. $\Gamma\cup \Gamma_1\vdash (t_2\Rightarrow t)\Rightarrow t$ | [`MP` 5,7] |
+|9. $\Gamma_2,\ t_2\vdash t$ | [Hypothesis] |
+|10. $\Gamma_2\vdash t_2\Rightarrow t$ | [`DISCH` 9] |
+|11. $\Gamma\cup \Gamma_1\cup \Gamma_2\vdash t$ | [`MP` 8,10] |
 
 ### Classical contradiction rule
 
 ```
    CCONTR : term -> thm -> thm
 
-$$\Gamma,\ \neg t\vdash \F\over \Gamma\vdash t$$
+   Γ, ¬t |- F
+  --------------------------------------------
+   Γ |- t
+```
 
 &nbsp;
 
-|      |      |
-| :--- | ---: |
-|1. $\vdash \neg = \lambda{b}b\Rightarrow\mathsf{F}$  [Definition of $\neg$]
-1. $\vdash \neg t = t\Rightarrow\mathsf{F}$  [`RIGHT_LIST_BETA} 1]
-1. $\Gamma,\ \neg t\vdash\mathsf{F}$  [Hypothesis]
-1. $\Gamma\vdash \neg t\Rightarrow\mathsf{F}$   [`DISCH} 3]
-1. $\Gamma\vdash (t\Rightarrow\mathsf{F})\Rightarrow\mathsf{F}$  [`SUBST} 2,4]
-1. $t = \mathsf{F}\vdash t = \mathsf{F}$  [`ASSUME}]
-1. $\Gamma,\ t=\mathsf{F}\vdash (\mathsf{F}\Rightarrow\mathsf{F})\Rightarrow\mathsf{F}$  [`SUBST} 6,5]
-1. $\mathsf{F}\vdash\mathsf{F}$  [`ASSUME}]
-1. $\vdash \mathsf{F}\Rightarrow\mathsf{F}$  [`DISCH} 8]
-1. $\Gamma,\ t=\mathsf{F}\vdash\mathsf{F}$  [`MP} 7,9]
-1. $\vdash \mathsf{F} = \forall{b}b$  [Definition of $\mathsf{F}$]
-1. $\Gamma,\ t=\mathsf{F}\vdash \forall{b}b$  [`SUBST} 11,10]
-1. $\Gamma,\ t=\mathsf{F}\vdash t$  [`SPEC} 12]
-1. $\vdash \forall{b} (b = \mathsf{T})\disj(b = \mathsf{F})$  [Axiom]
-1. $\vdash (t = \mathsf{T})\disj(t = \mathsf{F})$  [`SPEC} 14]
-1. $t=\mathsf{T}\vdash t=\mathsf{T}$  [`ASSUME}]
-1. $t=\mathsf{T}\vdash t$  [`EQT_ELIM} 16]
-1. $\Gamma\vdash t$  [`DISJ_CASES} 15,17,13]
+|        |      |
+| :----- | ---: |
+|1. $\vdash \neg = \lambda{b}.\;b\Rightarrow\mathsf{F}$ | [Definition] |
+|2. $\vdash \neg t = t\Rightarrow\mathsf{F}$ | [`RIGHT_LIST_BETA` 1] |
+|3. $\Gamma,\ \neg t\vdash\mathsf{F}$ | [Hypothesis] |
+|4. $\Gamma\vdash \neg t\Rightarrow\mathsf{F}$ |  [`DISCH` 3] |
+|5. $\Gamma\vdash (t\Rightarrow\mathsf{F})\Rightarrow\mathsf{F}$ |  [`SUBST` 2,4] |
+|6. $t = \mathsf{F}\vdash t = \mathsf{F}$ | [`ASSUME`] |
+|7. $\Gamma,\ t=\mathsf{F}\vdash (\mathsf{F}\Rightarrow\mathsf{F})\Rightarrow\mathsf{F}$ | [`SUBST` 6,5] |
+|8. $\mathsf{F}\vdash\mathsf{F}$ | [`ASSUME`] |
+|9. $\vdash \mathsf{F}\Rightarrow\mathsf{F}$ | [`DISCH` 8] |
+|10. $\Gamma,\ t=\mathsf{F}\vdash\mathsf{F}$ | [`MP` 7,9] |
+|11. $\vdash \mathsf{F} = \forall{b}.\;b$ | [Definition] |
+|12. $\Gamma,\ t=\mathsf{F}\vdash \forall{b}.\;b$ | [`SUBST` 11,10] |
+|13. $\Gamma,\ t=\mathsf{F}\vdash t$ | [`SPEC` 12] |
+|14. $\vdash \forall{b} (b = \mathsf{T})\lor(b = \mathsf{F})$ | [Axiom] |
+|15. $\vdash (t = \mathsf{T})\lor(t = \mathsf{F})$ | [`SPEC` 14] |
+|16. $t=\mathsf{T}\vdash t=\mathsf{T}$ | [`ASSUME`] |
+|17. $t=\mathsf{T}\vdash t$ | [`EQT_ELIM` 16] |
+|18. $\Gamma\vdash t$ | [`DISJ_CASES` 15,17,13] |
 
 ## Rewriting
 
-Included in the set of derived inferences that are pre-defined in HOL
-is a group of rules with complex definitions that do a limited amount
-of "automatic" theorem-proving in the form of rewriting.  The ideas
-and implementation were originally developed by Milner and Wadsworth
-for Edinburgh LCF, and were later implemented more flexibly and
-efficiently by Paulson and Huet for Cambridge LCF.  They appear in HOL
-in the Cambridge form. One basic rewriting rule is `REWRITE_RULE` is
-illustraated here, although there are more elaborate rewriters in HOL,
-such as `SIMP_RULE`, documented in [Section](??).
+Included in the set of derived inferences provided in HOL is a group
+of rules with complex definitions that do a limited amount of
+"automatic" theorem-proving in the form of rewriting.  The ideas and
+implementation were originally developed by Milner and Wadsworth for
+Edinburgh LCF, and were later implemented more flexibly and
+efficiently by Paulson and Huet for Cambridge LCF.  One basic
+rewriting rule, `REWRITE_RULE`, is illustrated here. Although HOL
+proofs typically feature more elaborate rewriters (such as
+`SIMP_RULE`, documented in [Section](??)), the underlying ideas are
+the same.
 
 `REWRITE_RULE` uses a list of equational theorems (theorems whose
 conclusions can be regarded as having the form $t_1 = t_2$) to replace
@@ -1021,8 +1019,7 @@ making the substitutions); `INST_TYPE` (for instantiating types); and
 the derived rules for generalization and specialization (see
 [Section](sec:gen) and [Section](sec:spec) for instantiating terms.
 The definition of `REWRITE_RULE` in ML also relies on a large number
-of general and HOL-oriented SML functions. The implementation is
-partly described in [Chapter](avra-conv).
+of general and HOL-oriented SML functions.
 
 In practice, derived rules like `REWRITE_RULE` can play a central role
 in proofs, because they can perform a very large number of inferences
@@ -1034,10 +1031,10 @@ other in the rewriting process to transform the original theorem.
 
 The application of `REWRITE_RULE`, in the session below, illustrates
 that replacements are made at all levels of the structure of a term.
-The example is numerical; the infixes `>` and `<` are the usual
-"greater than" and "less than" relations, respectively, and `SUC`
-names the usual successor function on natural numbers.  Use is made of
-the pre-existing definition of `>`, bound to
+The example is a formula of natural number arithmetic: the infixes `>`
+and `<` are the usual "greater than" and "less than" relations,
+respectively, and `SUC` names the usual successor function on natural
+numbers.  Use is made of the pre-existing definition of `>`, bound to
 `arithmeticTheory.GREATER_DEF` in SML (see §REFERENCE).  The inference
 counting facility is used again, and the printing of theorems is
 adjusted as above.
@@ -1053,8 +1050,3 @@ quantified theorems. To construct the proof step-wise, with all of the
 instantiations, substitutions, uses of transitivity, *etc*, would be a
 lengthy process. The rewriting rules make it easy, and do so whilst
 still generating the entire chain of inferences.
-
-%%% Local Variables:
-%%% mode: latex
-%%% TeX-master: "description"
-%%% End:
