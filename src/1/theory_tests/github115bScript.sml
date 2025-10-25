@@ -10,5 +10,5 @@ Libs
    corrupt Theory.sml file)
 *)
 
-val sample2 = save_thm("sample2", AND_CLAUSES)
+Theorem sample2 = AND_CLAUSES
 

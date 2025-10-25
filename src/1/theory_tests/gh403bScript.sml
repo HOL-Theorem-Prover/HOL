@@ -4,5 +4,5 @@ Ancestors
 Libs
   HolKernel boolLib
 
-val _ = save_thm("foo", TRUTH)
+Theorem foo = TRUTH
 
