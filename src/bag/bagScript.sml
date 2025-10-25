@@ -790,15 +790,16 @@ local
             BAG_DIFF b2 b3``
     end
 in
-  val BAG_DIFF_UNION_eliminate = store_thm(
-    "BAG_DIFF_UNION_eliminate",
-    ``!(b1:'a->num) (b2:'a->num) (b3:'a->num).
+Theorem BAG_DIFF_UNION_eliminate:
+      !(b1:'a->num) (b2:'a->num) (b3:'a->num).
           ^(bdf ("b1", "b2") ("b1", "b3")) /\
           ^(bdf ("b1", "b2") ("b3", "b1")) /\
           ^(bdf ("b2", "b1") ("b1", "b3")) /\
-          ^(bdf ("b2", "b1") ("b3", "b1"))``,
+          ^(bdf ("b2", "b1") ("b3", "b1"))
+Proof
     REPEAT STRIP_TAC THEN
-    SIMP_TAC std_ss [BAG_DIFF, BAG_UNION, FUN_EQ_THM])
+    SIMP_TAC std_ss [BAG_DIFF, BAG_UNION, FUN_EQ_THM]
+QED
   val _ = export_rewrites ["BAG_DIFF_UNION_eliminate"]
 end;
 
@@ -813,17 +814,18 @@ local
             SUB_BAG (b2:'a->num) b3``
     end
 in
-  val SUB_BAG_UNION_eliminate = store_thm(
-    "SUB_BAG_UNION_eliminate",
-    ``!(b1:'a->num) (b2:'a->num) (b3:'a->num).
+Theorem SUB_BAG_UNION_eliminate:
+      !(b1:'a->num) (b2:'a->num) (b3:'a->num).
           ^(bdf ("b1", "b2") ("b1", "b3")) /\
           ^(bdf ("b1", "b2") ("b3", "b1")) /\
           ^(bdf ("b2", "b1") ("b1", "b3")) /\
-          ^(bdf ("b2", "b1") ("b3", "b1"))``,
+          ^(bdf ("b2", "b1") ("b3", "b1"))
+Proof
     SIMP_TAC std_ss [SUB_BAG_LEQ, BAG_UNION, BAG_INN] THEN
     REPEAT STRIP_TAC THEN EQ_TAC THEN
     STRIP_TAC THEN
-    POP_ASSUM (fn th => SIMP_TAC std_ss [SPEC_ALL th]))
+    POP_ASSUM (fn th => SIMP_TAC std_ss [SPEC_ALL th])
+QED
   val _ = export_rewrites ["SUB_BAG_UNION_eliminate"]
 end;
 
