@@ -2126,21 +2126,23 @@ Proof
    REWRITE_TAC [SYM (SPEC_ALL LESS_EQ),NOT_LESS_0]
 QED
 
-val SUB_RIGHT_LESS =
-   let val BOOL_EQ_NOT_BOOL_EQ = prove(
-        “!x y. (x = y) = (~x = ~y)”,
-        REPEAT GEN_TAC THEN
-        BOOL_CASES_TAC (“x:bool”) THEN
-        REWRITE_TAC [])
-   in
-   store_thm ("SUB_RIGHT_LESS",
-   “!m n p. ((m - n) < p) = ((m < (n + p)) /\ (0 < p))”,
+Theorem BOOL_EQ_NOT_BOOL_EQ[local]:
+    !x y. (x = y) = (~x = ~y)
+Proof
+   REPEAT GEN_TAC THEN
+   BOOL_CASES_TAC (“x:bool”) THEN
+   REWRITE_TAC []
+QED
+
+Theorem SUB_RIGHT_LESS:
+    !m n p. ((m - n) < p) = ((m < (n + p)) /\ (0 < p))
+Proof
    REPEAT GEN_TAC THEN
    PURE_ONCE_REWRITE_TAC [BOOL_EQ_NOT_BOOL_EQ] THEN
    PURE_REWRITE_TAC [DE_MORGAN_THM,NOT_LESS] THEN
    SUBST1_TAC (SPECL [(“n:num”),(“p:num”)] ADD_SYM) THEN
-   REWRITE_TAC [SUB_LEFT_LESS_EQ])
-   end;
+   REWRITE_TAC [SUB_LEFT_LESS_EQ]
+QED
 
 Theorem SUB_LEFT_GREATER_EQ:
     !m n p. (m >= (n - p)) = ((m + p) >= n)
