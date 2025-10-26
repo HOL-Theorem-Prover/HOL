@@ -5839,10 +5839,11 @@ QED
 (* ========================================================================= *)
 
 (* convergence modes *)
-val _ = Datatype `convergence_mode = almost_everywhere   ('a p_space)
+Datatype:  convergence_mode = almost_everywhere   ('a p_space)
                                    | in_probability      ('a p_space)
                                    | in_lebesgue extreal ('a p_space)
-                                   | in_distribution     ('a p_space)`;
+                                   | in_distribution     ('a p_space)
+End
 
 (* convergence of extreal-valued random series [1, p.68,70], only works
    for real-valued random variables (cf. real_random_variable_def)

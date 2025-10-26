@@ -1,6 +1,7 @@
 Theory github416
 
-val _ = Datatype `exp = Const num num | Downcast num exp`;
+Datatype:  exp = Const num num | Downcast num exp
+End
 
 Definition test_def:
   test (e:exp) (map: exp -> num option) : bool =
