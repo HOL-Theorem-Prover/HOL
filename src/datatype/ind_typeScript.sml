@@ -327,11 +327,10 @@ QED
 (* The following is useful for coding up functions casewise.                 *)
 (* ------------------------------------------------------------------------- *)
 
-val FCONS = new_recursive_definition {
-  rec_axiom = num_Axiom,
-  name = "FCONS",
-  def = ``(!a f. FCONS (a:'a) f 0 = a) /\
-          (!a f n. FCONS (a:'a) f (SUC n) = f n)``};
+Definition FCONS:
+  (FCONS (a:'a) f 0 = a) /\
+  (FCONS (a:'a) f (SUC n) = f n)
+End
 
 Theorem FCONS_UNDO[local]:
     !f:num->'a. f = FCONS (f 0) (f o SUC)
@@ -409,4 +408,3 @@ local open OpenTheoryMap in
   val _ = c "FNIL"
   val _ = c "BOTTOM"
 end
-
