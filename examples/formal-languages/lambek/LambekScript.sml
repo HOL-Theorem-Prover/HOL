@@ -47,7 +47,8 @@ end;
 (*                                                                            *)
 (******************************************************************************)
 
-val _ = Datatype `Form = At 'a | Slash Form Form | Backslash Form Form | Dot Form Form`;
+Datatype:  Form = At 'a | Slash Form Form | Backslash Form Form | Dot Form Form
+End
 
 val _ = overload_on ("*", ``Dot``); (* \HOLTokenProd *)
 val _ = overload_on ("/", ``Slash``);
@@ -380,7 +381,8 @@ end;
 (*                                                                            *)
 (******************************************************************************)
 
-val _ = Datatype `Term = OneForm ('a Form) | Comma Term Term`;
+Datatype:  Term = OneForm ('a Form) | Comma Term Term
+End
 
 val Term_induction = TypeBase.induction_of ``:'a Term``;
 val Term_nchotomy  = TypeBase.nchotomy_of ``:'a Term``;

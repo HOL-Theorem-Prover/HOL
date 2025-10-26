@@ -1,6 +1,7 @@
 Theory hfb
 
-val _ = Datatype`hfb0 = HF_E | HF_I hfb0 hfb0`
+Datatype: hfb0 = HF_E | HF_I hfb0 hfb0
+End
 
 val (hfb0_equiv_rules, hfb0_equiv_ind, hfb0_equiv_cases) = Hol_reln`
   hfb0_equiv HF_E HF_E ∧

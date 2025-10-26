@@ -5,13 +5,14 @@ Ancestors
 
 val _ = ParseExtras.temp_loose_equality()
 
-val _ = Datatype
-  `GBA = <| states      : 's set;
+Datatype:
+   GBA = <| states      : 's set;
             initial     : 's set;
             trans       : 's -> (('a set # 's) set);
             accTrans    : (('s # ('a set) # 's) set) set;
             alphabet    : 'a set
-            |>`;
+            |>
+End
 
 Definition isValidGBA_def:
   isValidGBA (A: ('s,'a) GBA) =
@@ -22,7 +23,8 @@ Definition isValidGBA_def:
                ==> (q1 ∈ A.states ∧ (a,q2) ∈ A.trans q1))
 End
 
-val _ = Datatype` gba_run = GBA_RUN (num -> 's)`;
+Datatype:  gba_run = GBA_RUN (num -> 's)
+End
 
 Definition isValidGBARunFor_def:
   isValidGBARunFor aut (GBA_RUN r) word =

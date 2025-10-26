@@ -16,12 +16,13 @@ val _ = set_fixity "And" (Infixr 490);
 val _ = set_fixity "Or" (Infixr 490);
 val _ = set_fixity "Not" (Prefix 510);
 
-val _ = Datatype `formula =
+Datatype:  formula =
   Var 'a
   | Or formula formula
   | And formula formula
   | Imp formula formula
-  | Bot`;
+  | Bot
+End
 
 
 Definition Not_def:   Not A = A Imp Bot

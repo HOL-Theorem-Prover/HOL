@@ -13,11 +13,12 @@ val _ = ParseExtras.temp_tight_equality();
 
 (* ----------- Generic small-step --------- *)
 
-val _ = Datatype `
+Datatype:
   result =
     Terminate 'a
   | Diverge
-  | Crash`;
+  | Crash
+End
 
 (* A deterministic small-step semantics has
  * - a type of states, 'st,
@@ -27,11 +28,12 @@ val _ = Datatype `
  *   states to results
  * *)
 
-val _ = Datatype `
+Datatype:
   small = <| step : 'st -> 'st option;
              is_value : 'st -> bool;
              load : 'prog -> 'st;
-             unload : 'st -> 'res |>`;
+             unload : 'st -> 'res |>
+End
 
 (* Given a small-step semantics and program, get the result *)
 Definition small_sem_def:
@@ -49,11 +51,12 @@ End
 
 (* ----------- Generic functional big-step --------- *)
 
-val _ = Datatype `
+Datatype:
   fbs_res =
     Timeout
   | Error
-  | Val 'a`;
+  | Val 'a
+End
 
 (* A functional big-step semantics has
  * - a type of states, 'st, and environments 'env, and inital values for them
@@ -61,13 +64,14 @@ val _ = Datatype `
  * - an unload mapping from the evaluator's result to the actual result
  * - functions to get and set the clock from the state
  *)
-val _ = Datatype `
+Datatype:
   fbs = <| eval : 'st -> 'env -> 'prog -> 'st # 'v fbs_res;
            init_st : 'st;
            init_env : 'env;
            set_clock : num -> 'st -> 'st;
            get_clock : 'st -> num;
-           unload : 'v -> 'a |>`;
+           unload : 'v -> 'a |>
+End
 
 Definition eval_with_clock_def:
   eval_with_clock sem c p =

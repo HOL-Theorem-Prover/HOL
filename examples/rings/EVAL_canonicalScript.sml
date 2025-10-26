@@ -322,12 +322,13 @@ ARW_TAC [ canonical_sum_simplify_def,
 
 (* semi-ring normalization *)
 
-val _ = Datatype
- ` spolynom =
+Datatype:
+   spolynom =
      SPvar index
    | SPconst 'a
    | SPplus spolynom spolynom
-   | SPmult spolynom spolynom `;
+   | SPmult spolynom spolynom
+End
 
 val spolynom_normalize_def = Define `
    (spolynom_normalize (SPvar i) = (Cons_varlist [i] Nil_monom))

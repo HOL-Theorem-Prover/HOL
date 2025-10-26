@@ -10,12 +10,12 @@ val _ = hide "I";
 
 val _ = ParseExtras.temp_loose_equality();
 
-val _ = Datatype `
+Datatype:
     prop_logic = P_PROP 'a                       (* atomic proposition *)
                | P_TRUE                          (* true               *)
                | P_NOT  prop_logic               (* negation           *)
                | P_AND (prop_logic # prop_logic) (* conjunction        *)
-`;
+End
 
 val prop_logic_11 = DB.fetch "-" "prop_logic_11";
 

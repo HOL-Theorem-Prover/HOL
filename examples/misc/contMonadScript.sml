@@ -17,7 +17,8 @@ Libs
 
 val _ = temp_add_monadsyntax()
 
-val _ = Datatype`Cont = Cont ((α -> β) -> β)`
+Datatype: Cont = Cont ((α -> β) -> β)
+End
 
 Definition runCont_def:  runCont (Cont f) = f
 End

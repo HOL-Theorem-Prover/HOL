@@ -28,23 +28,25 @@ val ect = BasicProvers.EVERY_CASE_TAC;
      must be completely evaluated before the other.
    - Getchar returns -1 to signal the end of file. *)
 
-val _ = Datatype `
+Datatype:
 e = Var string
   | Num int
   | Add e e
   | Assign string e
   | Getchar
-  | Putchar e`;
+  | Putchar e
+End
 
 (* Statements: *)
-val _ = Datatype `
+Datatype:
 t =
   | Dec string t
   | Exp e
   | Break
   | Seq t t
   | If e t t
-  | For e e t`;
+  | For e e t
+End
 
 
 (* === Types used in semantics (given in for_nd_semScript.sml) === *)
@@ -56,11 +58,13 @@ t =
    can crash. We don't bother with the pre-crash IO because well-typed
    programs won't crash. *)
 
-val _ = Datatype `
-  io_tag = Itag int | Otag int`;
+Datatype:
+  io_tag = Itag int | Otag int
+End
 
-val _ = Datatype `
-  observation = Terminate ((io_tag + bool) list) | Diverge ((io_tag + bool) llist) | Crash`;
+Datatype:
+  observation = Terminate ((io_tag + bool) list) | Diverge ((io_tag + bool) llist) | Crash
+End
 
 Definition getchar_def:
 getchar stream =

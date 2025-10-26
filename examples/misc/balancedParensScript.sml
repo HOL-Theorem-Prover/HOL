@@ -2,7 +2,8 @@ Theory balancedParens
 Ancestors
   list rich_list arithmetic
 
-val _ = Datatype`alpha = a | b`; (* a = "(", b = ")"  *)
+Datatype: alpha = a | b  (* a = "(", b = ")"  *)
+End
 
 fun met h = metis_tac([APPEND,APPEND_ASSOC]@h)
 
@@ -80,4 +81,3 @@ val balanced_S = Q.store_thm("balanced_S",
 val balanced_iff_S = Q.store_thm("balanced_iff_S",
   `balanced w 0 ⇔ S w`,
   metis_tac[balanced_S,S_balanced,REPLICATE,APPEND])
-

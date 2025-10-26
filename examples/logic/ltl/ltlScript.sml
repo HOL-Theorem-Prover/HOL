@@ -4,7 +4,7 @@ Ancestors
 
 val _ = ParseExtras.temp_loose_equality()
 
-val _ = Datatype`
+Datatype:
   ltl_frml
   = VAR 'a
   | N_VAR 'a
@@ -12,7 +12,8 @@ val _ = Datatype`
   | CONJ ltl_frml ltl_frml
   | X ltl_frml
   | U ltl_frml ltl_frml
-  | R ltl_frml ltl_frml`;
+  | R ltl_frml ltl_frml
+End
 
 Definition MODELS_def:
      (MODELS w (VAR a) = (a IN (at w 0)))
@@ -401,13 +402,14 @@ val EX4 = store_thm
 
 (* Full LTL *)
 
-val _ = Datatype`
+Datatype:
   full_ltl_frml
   = F_VAR 'a
   | F_CONJ full_ltl_frml full_ltl_frml
   | F_NEG full_ltl_frml
   | F_X full_ltl_frml
-  | F_U full_ltl_frml full_ltl_frml`;
+  | F_U full_ltl_frml full_ltl_frml
+End
 
 Definition FLTL_MODELS_def:
        (FLTL_MODELS w (F_VAR a) = (a ∈ (at w 0)))

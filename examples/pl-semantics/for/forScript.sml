@@ -25,26 +25,29 @@ val ect = BasicProvers.EVERY_CASE_TAC;
 
 (* === Syntax === *)
 
-val _ = Datatype `
+Datatype:
 e = Var string
   | Num int
   | Add e e
-  | Assign string e`;
+  | Assign string e
+End
 
-val _ = Datatype `
+Datatype:
 t =
   | Dec string t
   | Exp e
   | Break
   | Seq t t
   | If e t t
-  | For e e t`;
+  | For e e t
+End
 
-val _ = Datatype `
+Datatype:
 r = Rval int
   | Rbreak
   | Rtimeout
-  | Rfail`;
+  | Rfail
+End
 
 val r_distinct = fetch "-" "r_distinct";
 val r_11 = fetch "-" "r_11";
@@ -52,8 +55,9 @@ val r_11 = fetch "-" "r_11";
 
 (* === Functional big-step semantics === *)
 
-val _ = Datatype `
-state = <| store : string |-> int; clock : num |>`;
+Datatype:
+state = <| store : string |-> int; clock : num |>
+End
 
 val state_component_equality = fetch "-" "state_component_equality";
 
@@ -279,8 +283,9 @@ val sem_t_store = Q.prove (
 
 (* The top-level semantics defines what is externally observable *)
 
-val _ = Datatype `
-  observation = Terminate | Diverge | Crash`;
+Datatype:
+  observation = Terminate | Diverge | Crash
+End
 
 Definition s_with_clock_def:
   s_with_clock c = <| store := FEMPTY; clock := c |>
@@ -1205,15 +1210,17 @@ val reln_type_soundness = Q.prove(
 (* Pretty big-step semantics, inductive interpretation only *)
 
 (* Wrapping the datatypes *)
-val _ = Datatype `
+Datatype:
 pbr =
   | Ter (r#state)
-  | Div`;
+  | Div
+End
 
-val _ = Datatype `
+Datatype:
 pbt =
   | Trm t
-  | Forn num pbr e e t`;
+  | Forn num pbr e e t
+End
 
 Definition abort_def:
   (abort flag Div ⇔ T) ∧
