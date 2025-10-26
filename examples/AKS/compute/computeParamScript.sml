@@ -1734,11 +1734,11 @@ val ZN_order_condition_property_3 = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Possible outcomes of search loop *)
-val _ = Datatype `param_search_result =
+Datatype:  param_search_result =
        nice num    (* found an nice of type :num telling prime or composite *)
      | good num    (* found a good of type :num good for AKS *)
      | bad         (* when search exceeds the upper bound *)
-`;
+End
 
 (* Note: pseudocode to search for parameter k.
 

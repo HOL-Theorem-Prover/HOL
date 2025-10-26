@@ -35,20 +35,21 @@ val list_case_eq = prove_case_eq_thm{
 };
 
 
-val _ = Datatype`tokrel = Reduce | Shift`
+Datatype: tokrel = Reduce | Shift
+End
 
 val tokrel_case_eq = prove_case_eq_thm {
   case_def = theorem "tokrel_case_def",
   nchotomy = theorem "tokrel_nchotomy"
 };
 
-val _ = Datatype`
+Datatype:
   pMachine = <| rules : 'tok # 'tok -> tokrel option ; (* stk tok , strm tok *)
                 reduce : 'trm -> 'tok -> 'trm -> 'trm option ;
                 lift : 'tok -> 'trm ;
                 isOp : 'tok -> bool ;
                 mkApp : 'trm -> 'trm -> 'trm option |>
-`;
+End
 
 
 (* stack is list of tokens + terms *)

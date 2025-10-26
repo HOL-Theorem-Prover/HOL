@@ -8,21 +8,24 @@ val _ = diminish_srw_ss ["ABBREV"]
 val _ = monadsyntax.temp_add_monadsyntax();
 val _ = overload_on("monad_bind",``OPTION_BIND``);
 
-val _ = Datatype`
+Datatype:
   edgeLabelGBA = <| pos_lab : (α list) ;
                     neg_lab : (α list) ;
                     acc_set : (α ltl_frml) list
-                  |>` ;
+                  |>
+End
 
-val _ = Datatype`
-  nodeLabelGBA = <| frmls : (α ltl_frml) list |>` ;
+Datatype:
+  nodeLabelGBA = <| frmls : (α ltl_frml) list |>
+End
 
-val _ = Datatype`
+Datatype:
   concrGBA = <| graph : (α nodeLabelGBA, α edgeLabelGBA) gfg ;
                 init : (num list) ;
                 all_acc_frmls : (α ltl_frml) list;
                 atomicProp : α list
-             |>`;
+             |>
+End
 
 Definition gba_trans_concr_def:
   gba_trans_concr ts_lists =

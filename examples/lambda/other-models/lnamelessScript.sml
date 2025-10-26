@@ -18,7 +18,8 @@ Libs
 
 fun Store_thm (p as (n,t,tac)) = store_thm p before export_rewrites [n]
 
-val _ = Datatype`lnt = var string | bnd num | app lnt lnt | abs lnt`;
+Datatype: lnt = var string | bnd num | app lnt lnt | abs lnt
+End
 
 Definition open_def:
   (open k u (bnd i) = if i = k then u else bnd i) /\
@@ -198,7 +199,8 @@ val lclosed_abs_cofin = store_thm(
     METIS_TAC [abs_lclosed_I]
   ]);
 
-val _ = Datatype `ltype = tyOne | tyFun ltype ltype`;
+Datatype:  ltype = tyOne | tyFun ltype ltype
+End
 
 val _ = set_fixity "-->" (Infixr 700)
 val _ = overload_on ("-->", ``tyFun``);

@@ -5,13 +5,14 @@ Ancestors
 
 val _ = ParseExtras.temp_loose_equality()
 
-val _ = Datatype
-  `ALTER_A = <| states      : 's set;
+Datatype:
+   ALTER_A = <| states      : 's set;
                alphabet     : 'a set;
                trans        : 's -> (('a set # 's set) set);
                initial      : ('s set) set;
                final        : 's set
-               |>`;
+               |>
+End
 
 Definition isValidAlterA_def:
      isValidAlterA (A: ('s,'a) ALTER_A) =

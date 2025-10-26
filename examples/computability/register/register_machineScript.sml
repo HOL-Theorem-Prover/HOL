@@ -3,9 +3,11 @@ Ancestors
   finite_map recursivefns prnlist primrecfns list arithmetic
   numpair pred_set
 
-val _ = Datatype `instruction = Inc num | Dec num | JZ num num bool`;
+Datatype:  instruction = Inc num | Dec num | JZ num num bool
+End
 
-val _ = Datatype `RegMachine = <| insts : instruction list; regs : num |-> num; pc : num |>`;
+Datatype:  RegMachine = <| insts : instruction list; regs : num |-> num; pc : num |>
+End
 
 Definition is_halted_def:  is_halted rm <=> LENGTH rm.insts <= rm.pc
 End

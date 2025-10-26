@@ -61,10 +61,11 @@ val FLOOKUP_f_o_f = store_thm("FLOOKUP_f_o_f",
 
 (* Syntax *)
 
-val _ = Datatype`lit =
-  Int int | Unit`
+Datatype: lit =
+  Int int | Unit
+End
 
-val _ = Datatype`exp =
+Datatype: exp =
   | Lit lit
   | Var string
   | App exp exp
@@ -76,7 +77,8 @@ val _ = Datatype`exp =
   | Assign exp exp
   | Letexn string exp
   | Raise exp exp
-  | Handle exp exp exp`
+  | Handle exp exp exp
+End
 
 (* Differences from W&F:
    - we have specific constants (ints and unit)
@@ -97,12 +99,13 @@ anyway).
 
 (* Values *)
 
-val _ = Datatype`v =
+Datatype: v =
   | Litv lit
   | Clos ((string,v) alist) string exp
   | Closrec ((string,v) alist) string string exp
   | Loc num
-  | Exn num`
+  | Exn num
+End
 
 val v_induction = theorem"v_induction"
 val v_ind =
@@ -125,8 +128,9 @@ intimately tied up with the mechanics of their small-step semantics, we simply
 generate a new exception value for every (dynamic) Letexn expression.
 *)
 
-val _ = Datatype`
-  state = <| clock : num; refs : v list; next_exn : num |>`
+Datatype:
+  state = <| clock : num; refs : v list; next_exn : num |>
+End
 
 val state_component_equality = theorem"state_component_equality"
 
@@ -162,11 +166,12 @@ val _ = export_rewrites["is_closure_def"]
 
 (* results *)
 
-val _ = Datatype`
+Datatype:
   r = Rval v
     | Rraise num v
     | Rfail
-    | Rtimeout`
+    | Rtimeout
+End
 
 (* big-step semantics as a function *)
 
@@ -549,16 +554,18 @@ val _ = export_rewrites["is_value_def"]
 
 (* syntax of types *)
 
-val _ = Datatype`tctor =
+Datatype: tctor =
   | TC_int
   | TC_fn
   | TC_ref
   | TC_unit
-  | TC_exn`
+  | TC_exn
+End
 
-val _ = Datatype`t =
+Datatype: t =
   | Tvar string
-  | Tapp (t list) tctor`
+  | Tapp (t list) tctor
+End
 
 val t_size_def = definition"t_size_def"
 val t_induction = theorem"t_induction"

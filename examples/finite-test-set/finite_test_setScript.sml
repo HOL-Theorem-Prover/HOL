@@ -46,12 +46,14 @@ val _ = temp_tight_equality();
 *)
 
 (* Function "symbols" carry their semantics to avoid pointless naming. *)
-val _ = Datatype`
-  term = Var num | Fun (num list -> num) (term list)`;
+Datatype:
+  term = Var num | Fun (num list -> num) (term list)
+End
 
 (* Similarly predicate symbols carry their semantics *)
-val _ = Datatype`
-  prop = Pred (num list -> bool) (term list) | Nand prop prop`;
+Datatype:
+  prop = Pred (num list -> bool) (term list) | Nand prop prop
+End
 
 (* Note: this makes the language rather more expressive than desired.
    We usually want f in (Fun f) and (Pred f) to be decidable.
@@ -75,8 +77,9 @@ val _ = export_rewrites["val_prop_def"];
 
 (* Now we add quantifiers *)
 
-val _ = Datatype`
-  quan = Forall | Exists`;
+Datatype:
+  quan = Forall | Exists
+End
 
 val _ = type_abbrev("form",``:quan list # prop``);
 

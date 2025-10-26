@@ -78,7 +78,8 @@ val _ = ParseExtras.tight_equality();
 (* ------------------------------------------------------------------------- *)
 
 (* Define Count type *)
-val _ = Datatype`counter = Count num`;
+Datatype: counter = Count num
+End
 
 (* value and counter of an elementary count monad *)
 val _ = temp_type_abbrev("ecm", ``:('a # counter)``);

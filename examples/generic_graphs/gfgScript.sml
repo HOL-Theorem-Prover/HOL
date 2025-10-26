@@ -6,12 +6,13 @@ val _ = ParseExtras.tight_equality()
 val _ = monadsyntax.temp_add_monadsyntax();
 val _ = overload_on("monad_bind",``OPTION_BIND``);
 
-val _ = Datatype‘
+Datatype:
   gfg = <| nodeInfo : α spt ;
            followers : (ε # num) list spt ;
            preds : (ε # num) list spt ;
            next : num
-        |>’;
+        |>
+End
 
 Definition empty_def:
   empty = <| nodeInfo := LN ; followers := LN ; preds := LN; next := 0|>

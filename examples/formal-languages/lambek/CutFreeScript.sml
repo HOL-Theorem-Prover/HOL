@@ -68,12 +68,14 @@ val degreeForm_0 = store_thm ("degreeForm_0", ``!F0. 1 <= (degreeFormula F0)``,
     Induct >> rw [degreeFormula_def]);
 
 (* Deep Embeddings for Lambek's Sequent Calculus *)
-val _ = Datatype `Sequent = Sequent ('a gentzen_extension) ('a Term) ('a Form)`;
+Datatype:  Sequent = Sequent ('a gentzen_extension) ('a Term) ('a Form)
+End
 
-val _ = Datatype `Rule = SeqAxiom
+Datatype:  Rule = SeqAxiom
                        | RightSlash | RightBackslash | RightDot
                        | LeftSlash  | LeftBackslash  | LeftDot
-                       | CutRule    | SeqExt`;
+                       | CutRule    | SeqExt
+End
 
 Definition all_rules_def:
     all_rules =
@@ -82,8 +84,9 @@ Definition all_rules_def:
 End
 
 (* Note: (Dertree list) never has more than 2 elements in Lambek's Sequent Calculus *)
-val _ = Datatype `Dertree = Der ('a Sequent) Rule (Dertree list)
-                          | Unf ('a Sequent)`;
+Datatype:  Dertree = Der ('a Sequent) Rule (Dertree list)
+                          | Unf ('a Sequent)
+End
 
 val Dertree_induction = TypeBase.induction_of ``:'a Dertree``;
 val Dertree_nchotomy  = TypeBase.nchotomy_of ``:'a Dertree``;
