@@ -1,3 +1,8 @@
+val _ = use "../../src/portableML/DString.sig";
+val _ = use "../../src/portableML/DString.sml";
+val _ = use "../../src/portableML/DArray.sig";
+val _ = use "../../src/portableML/DArray.sml";
+val _ = use "../../tools/Holmake/HOLAst.sml";
 structure HOLParser = struct
 open HOLAst
 
@@ -1068,10 +1073,10 @@ fun parseSML file body parseError: scope -> result = let
         fun parseHeaders acc =
           case token () of
             tk as (start, IdentTk) => (case identKind start of
-              ("Ancestors", HolKeyword) =>
-              parseHeaders (HOLAncestors {ancestors_ = start, elems = parseHeader []} :: acc)
-            | ("Libs", HolKeyword) =>
-              parseHeaders (HOLLibs {libs_ = start, elems = parseHeader []} :: acc)
+              ("Ancestors", HolKeyword) => parseHeaders (HOLAncestors
+              {ancestors_ = start, attrs = parseAttrs parseKVals, elems = parseHeader []} :: acc)
+            | ("Libs", HolKeyword) => parseHeaders (HOLLibs
+              {libs_ = start, attrs = parseAttrs parseKVals, elems = parseHeader []} :: acc)
             | _ => (unread tk; rev acc))
           | tk => (unread tk; rev acc)
         in HOLTheory {theory_ = start, id = id, attrs = attrs, elems = parseHeaders []} end)

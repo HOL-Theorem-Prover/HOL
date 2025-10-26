@@ -64,8 +64,8 @@ datatype maybe_quoted =
 type header_elem = {id: ident, attrs: kvals attrs}
 
 datatype header =
-  HOLAncestors of {ancestors_: int, elems: header_elem list}
-| HOLLibs of {libs_: int, elems: header_elem list}
+  HOLAncestors of {ancestors_: int, attrs: kvals attrs, elems: header_elem list}
+| HOLLibs of {libs_: int, attrs: kvals attrs, elems: header_elem list}
 
 datatype exp =
   Wild of int
@@ -462,9 +462,9 @@ fun sigexpStop (SigIdent id) = idStop id
 fun headerElemStop {id, attrs = NONE} = idStop id
   | headerElemStop {attrs = SOME {stop, ...}, ...} = stop
 
-fun headerStop (HOLAncestors {ancestors_, elems}) =
+fun headerStop (HOLAncestors {ancestors_, elems, ...}) =
     (headerElemStop (List.last elems) handle List.Empty => ancestors_ + 9)
-  | headerStop (HOLLibs {libs_, elems}) =
+  | headerStop (HOLLibs {libs_, elems, ...}) =
     (headerElemStop (List.last elems) handle List.Empty => libs_ + 4)
 
 fun maybeQuotedStop (UnquotedId id) = idStop id
