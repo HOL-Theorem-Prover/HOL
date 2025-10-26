@@ -27,7 +27,8 @@ Libs
      up order. By far the fastest to EVAL.
 *)
 
-val _ = Datatype`spt = LN | LS 'a | BN spt spt | BS spt 'a spt`
+Datatype: spt = LN | LS 'a | BN spt spt | BS spt 'a spt
+End
 (* Leaf-None, Leaf-Some, Branch-None, Branch-Some *)
 
 Type num_map[pp] = “:'a spt”

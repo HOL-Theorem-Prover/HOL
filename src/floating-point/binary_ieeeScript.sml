@@ -481,7 +481,7 @@ End
    NaNs
    ------------------------------------------------------------------------ *)
 
-val () = Datatype`
+Datatype:
    fp_op =
      FP_Sqrt rounding (('t, 'w) float)
    | FP_Add rounding (('t, 'w) float) (('t, 'w) float)
@@ -489,7 +489,8 @@ val () = Datatype`
    | FP_Mul rounding (('t, 'w) float) (('t, 'w) float)
    | FP_Div rounding (('t, 'w) float) (('t, 'w) float)
    | FP_MulAdd rounding (('t, 'w) float) (('t, 'w) float) (('t, 'w) float)
-   | FP_MulSub rounding (('t, 'w) float) (('t, 'w) float) (('t, 'w) float)`
+   | FP_MulSub rounding (('t, 'w) float) (('t, 'w) float) (('t, 'w) float)
+End
 
 Definition float_some_qnan_def[nocompute]:
    float_some_qnan (fp_op : ('t, 'w) fp_op) =
@@ -751,7 +752,8 @@ End
    Some comparison operations
    ------------------------------------------------------------------------ *)
 
-val () = Datatype `float_compare = LT | EQ | GT | UN`
+Datatype:  float_compare = LT | EQ | GT | UN
+End
 
 Definition float_compare_def[nocompute]:
    float_compare (x: ('t, 'w) float) (y: ('t, 'w) float) =
