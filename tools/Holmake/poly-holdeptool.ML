@@ -1,6 +1,10 @@
 val _ = PolyML.Compiler.prompt1:="";
 val _ = PolyML.Compiler.prompt2:="";
 val _ = PolyML.print_depth 0;
+use "../../src/portableML/DString.sig";
+use "../../src/portableML/DString.sml";
+use "../../src/portableML/DArray.sig";
+use "../../src/portableML/DArray.sml";
 use "../../tools-poly/poly/Binaryset.sig";
 use "../../tools-poly/poly/Binaryset.sml";
 use "../../tools-poly/poly/Binarymap.sig";

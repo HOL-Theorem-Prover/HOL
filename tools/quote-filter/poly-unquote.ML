@@ -2,6 +2,10 @@ val _ = PolyML.Compiler.prompt1:="";
 val _ = PolyML.Compiler.prompt2:="";
 val _ = PolyML.print_depth 0;
 
+use "../../src/portableML/DString.sig";
+use "../../src/portableML/DString.sml";
+use "../../src/portableML/DArray.sig";
+use "../../src/portableML/DArray.sml";
 use "../Holmake/Systeml.sig";
 use "../../tools-poly/Holmake/Systeml.sml";
 use "../Holmake/AttributeSyntax.sig";
@@ -47,7 +51,7 @@ fun main() = let
     quotefix.run read write
   else let
     open HolParser.ToSML
-    val read = mkPullTranslator {
+    val {read, ...} = mkPullTranslator {
       read = read,
       filename = infilename,
       parseError = fn (start, stop) => fn s =>

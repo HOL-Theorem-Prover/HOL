@@ -5,11 +5,9 @@ open HOLAst
 fun K a _ = a
 
 fun run read write = let
-  fun body acc = case read 1024 of "" => concat (rev acc) | s => body (s :: acc)
-  val s = body []
-  val {parseDec, ...} = HOLParser.parseSML "" s (K (K ())) HOLParser.initialScope
+  val {parseDec, body, ...} = HOLParser.parseSML "" read (K (K ())) HOLParser.initialScope
   val pos = ref 0
-  fun push p = (write (String.extract (s, !pos, SOME p)); pos := p)
+  fun push p = (write (DString.extract (body, !pos, SOME p)); pos := p)
   fun replace l (p, s) = if l = s then () else (push p; write l; pos := p + size s)
   fun doExp (Wild _) = ()
     | doExp (IntegerConstant _) = ()
@@ -94,7 +92,7 @@ fun run read write = let
   and doQDecl (QuoteAntiq {exp, ...}) = doExp exp
     | doQDecl _ = ()
   fun loop () = case parseDec () of
-    NONE => push (size s)
+    NONE => push (DString.size body)
   | SOME d => (doDec d; loop ())
   in loop () end
 

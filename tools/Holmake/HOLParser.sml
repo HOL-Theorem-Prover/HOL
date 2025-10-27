@@ -33,34 +33,29 @@ val initialScope: scope = let
     (Binarymap.mkDict String.compare) infixes
   in sc end
 
-type result = {getScope: unit -> scope, parseDec: unit -> dec option}
-fun parseSML file body parseError: scope -> result = let
+type result = {
+  getScope: unit -> scope,
+  parseDec: unit -> dec option,
+  body: DString.dstring,
+  events: events }
+
+fun parseSML file read parseError: scope -> result = let
   val pos = ref 0
-  val fileRef = ref file
-  fun cur () = String.sub (body, !pos) handle Subscript => #"\000"
-  fun ahead i = String.sub (body, !pos + i) handle Subscript => #"\000"
+  val body = DString.new 1024
+  val evts = DArray.new (1, LineEvent (0, 0))
+  val events = {initFile = file, evts = evts}
+  fun getch p = DString.sub (body, p) handle Subscript =>
+    case read 1024 of "" => #"\000" | s => (DString.appendStr (body, s); getch p)
+  fun ahead i = getch (!pos + i)
+  fun cur () = getch (!pos)
   fun next () = pos := !pos + 1
   fun nextn i = pos := !pos + i
   fun takeWhile f = if f (cur ()) then (next (); takeWhile f) else ()
   fun ws () = takeWhile Char.isSpace
   fun isIdRest c = Char.isAlphaNum c orelse c = #"_" orelse c = #"'"
   val isIdSym = Char.contains "!%&$#+-/:<=>?@\\~^|*"
-  fun colZero start = start = 0 orelse String.sub (body, start - 1) = #"\n"
+  fun colZero start = start = 0 orelse DString.sub (body, start - 1) = #"\n"
   val _ = ws ()
-
-  val posLineCol = ref (0, 0, 0)
-  fun updatePosLineCol p = let
-    val (pos, line, col) = !posLineCol
-    fun countLines i line last =
-      if i = p then posLineCol := (p, line, p - last) else
-      if String.sub (body, i) = #"\n" then countLines (i+1) (line+1) (i+1) else
-      countLines (i+1) line last
-    fun firstLine i =
-      if i = p then posLineCol := (p, line, col + p - pos) else
-      if String.sub (body, i) = #"\n" then countLines (i+1) (line+1) (i+1) else
-      firstLine (i+1)
-    in firstLine pos end
-  fun fileline p = (!fileRef, (updatePosLineCol p; !posLineCol))
 
   fun finishString p = case cur () of
     #"\000" => parseError (p, !pos) "unclosed string literal"
@@ -163,7 +158,7 @@ fun parseSML file body parseError: scope -> result = let
     (next (); ErrorTk))))
 
   (* TODO Rename to something more generic *)
-  fun ident start = String.substring (body, start, !pos - start)
+  fun ident start = DString.extract (body, start, SOME (!pos - start))
 
   datatype ident_kind = Regular | Keyword | HolKeyword
   fun identKind start = let
@@ -455,13 +450,13 @@ fun parseSML file body parseError: scope -> result = let
                 (fn comma_ => {comma_ = comma_, col = parseInt (SOME "expected a number")})
                 (parseSymbol #"," NONE)
               val (right, stop) = parseStop (parseSymbol #")") 1 "expected ')'"
-              val _ = updatePosLineCol start
-              val _ = case case line of (_, SOME n) => Int.fromString n | _ => NONE of
-                SOME n => posLineCol := (fn (a,_,c) => (a,n-1,c)) (!posLineCol)
-              | _ => ()
-              val col' = case col of SOME {col = (_, SOME n), ...} => Int.fromString n | _ => NONE
-              val _ = case col' of
-                SOME n => posLineCol := (fn (a,b,_) => (a,b,n-1)) (!posLineCol)
+              val line' = case line of (_, SOME n) => Int.fromString n | _ => NONE
+              val _ = case line' of SOME n => let
+                val col' = case col of SOME {col = (_, SOME n), ...} => Int.fromString n | _ => NONE
+                val e = case col' of
+                  SOME c => LineColEvent (start, n-1, c-1)
+                | NONE => LineEvent (start, n-1)
+                in DArray.push (evts, e) end
               | _ => ()
               in HOLLinePragmaWith {
                 hash_ = start, left = startParen, line_ = kw,
@@ -469,16 +464,16 @@ fun parseSML file body parseError: scope -> result = let
               end
             | NONE => let
               val (right, stop) = parseStop (parseSymbol #")") 1 "expected ')'"
-              val (_, line, _) = (updatePosLineCol start; !posLineCol)
               in HOLLinePragma {
-                hash_ = start, left = startParen, line_ = kw,
-                right = right, stop = stop, value = line+1}
+                hash_ = start, left = startParen, line_ = kw, right = right, stop = stop}
               end)
           | "FILE" => (case parseKeyword "=" NONE of
               SOME eq_ => let
               val file = parseIdent (SOME "expected an identifier")
               val (right, stop) = parseStop (parseSymbol #")") 1 "expected ')'"
-              val _ = case file of (_, SOME n) => fileRef := n | _ => ()
+              val _ = case file of (_, SOME n) =>
+                DArray.push (evts, FileEvent (start, n))
+              | _ => ()
               in HOLFilePragmaWith {
                 hash_ = start, left = startParen, file_ = kw,
                 eq_ = eq_, file = file, right = right, stop = stop }
@@ -487,7 +482,7 @@ fun parseSML file body parseError: scope -> result = let
               val (right, stop) = parseStop (parseSymbol #")") 1 "expected ')'"
               in HOLFilePragma {
                 hash_ = start, left = startParen, file_ = kw,
-                right = right, stop = stop, value = !fileRef}
+                right = right, stop = stop}
               end)
           | s => (
             parseError (kw, !pos) ("unknown pragma '"^s^"'");
@@ -758,10 +753,8 @@ fun parseSML file body parseError: scope -> result = let
 
     fun expected () = "expected [" ^ String.concatWith ", " s ^ "]"
 
-    fun push i p acc = if i = p andalso not (null acc) then acc else let
-      val (_, line, col) = (updatePosLineCol i; !posLineCol)
-      val value = Substring.substring (body, i, p - i)
-      in QuoteLiteral {line = line, col = col, value = value} :: acc end
+    fun push i p acc = if i = p andalso not (null acc) then acc else
+      QuoteLiteral (i, DString.extract (body, i, SOME (p - i))) :: acc
 
     fun go i acc =
       case qtoken 0 of
@@ -796,11 +789,11 @@ fun parseSML file body parseError: scope -> result = let
             SOME (HOLConjLabel (!pos, (nextn 3; ident (!pos - 3))))
           else if cur () = #"~" andalso isIdRest (ahead 1) then
             case !pos + 1 of start => SOME (HOLLabel {
-              fileline = fileline (!pos), tilde_ = SOME (!pos),
+              tilde_ = SOME (!pos),
               id = (start, (nextn 2; takeWhile isIdRest; ident start)) })
           else if Char.isAlpha (cur ()) then
             case !pos of start => SOME (HOLLabel {
-              fileline = fileline start, tilde_ = NONE,
+              tilde_ = NONE,
               id = (start, (nextn 2; takeWhile isIdRest; ident start)) })
           else NONE
         val attrs = case parseSymbol #"[" NONE of
@@ -882,7 +875,6 @@ fun parseSML file body parseError: scope -> result = let
 
     fun parseHolTheorem start triv = let
       val id = parseIdentifier true
-      val fileline = fileline (#1 id)
       val attrs = parseAttrs parseKVals
       val r = case parseKeyword ":" NONE of
         SOME colon => let
@@ -894,11 +886,11 @@ fun parseSML file body parseError: scope -> result = let
         val (qed_, stop) = parseStop (parseHolKeyword "QED") 3 "expected 'QED'"
         val _ = case qed_ of NONE => parseHolKeyword "End" NONE | _ => NONE
         in HOLTheoremDecl {
-          triv = triv, theorem_ = start, id = id, fileline = fileline, attrs = attrs, colon = colon,
+          triv = triv, theorem_ = start, id = id, attrs = attrs, colon = colon,
           quote = qbody, proof_ = proof_, tac = tac, qed_ = qed_, stop = stop }
         end
       | NONE => HOLSimpleThm {
-        triv = triv, theorem_ = start, id = id, fileline = fileline, attrs = attrs,
+        triv = triv, theorem_ = start, id = id, attrs = attrs,
         bind = Option.map (fn eq => {eq = eq, exp = parseExp sc false}) (parseKeyword "=" NONE) }
       in r end
 
@@ -1023,7 +1015,6 @@ fun parseSML file body parseError: scope -> result = let
           delim = isKeyword "and" } })
       | ("Definition", HolKeyword) => SOME (sc, let
         val id = parseIdentifier true
-        val fileline = fileline (#1 id)
         val attrs = parseAttrs parseKVals
         val (colon, qstart) = parseStop (parseKeyword ":") 1 "expected ':'"
         val (qbody, right) = parseQuoteBody sc qstart qstart false ["End", "Termination"]
@@ -1033,7 +1024,7 @@ fun parseSML file body parseError: scope -> result = let
         else (NONE, if ident right = "End" then (SOME right, right+3) else (NONE, right))
         val _ = case end_ of NONE => parseHolKeyword "QED" NONE | _ => NONE
         in HOLDefinition {
-          definition_ = start, id = id, fileline = fileline, attrs = attrs, colon = colon,
+          definition_ = start, id = id, attrs = attrs, colon = colon,
           quote = qbody, termination = term, end_ = end_, stop = stop }
         end)
       | ("Datatype", HolKeyword) => SOME (sc, let
@@ -1174,7 +1165,7 @@ fun parseSML file body parseError: scope -> result = let
     val parseDec = fn () => case parseDec false (!sc) of
         NONE => NONE
       | SOME (sc', d) => (sc := sc'; SOME d)
-    in {parseDec = parseDec, getScope = fn () => !sc} end
+    in {parseDec = parseDec, getScope = fn () => !sc, body = body, events = events} end
   in go end
 
 end;

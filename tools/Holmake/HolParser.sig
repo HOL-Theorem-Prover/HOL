@@ -1,6 +1,7 @@
 signature HolParser =
 sig
 
+type fileline = {file: string, line: int, col: int}
 
 structure ToSML: sig
 
@@ -11,11 +12,14 @@ structure ToSML: sig
     quietOpen: bool
   }
 
-  val mkPullTranslator: args -> unit -> string
+  type printer = {str: string -> unit, startSpan: int * int -> unit, stopSpan: unit -> unit}
+
+  val mkPushTranslator: args -> printer -> {fileline: int -> fileline, push: unit -> bool}
+  val mkPullTranslator: args -> {fileline: unit -> fileline, read: unit -> string}
 
 end
 
-type reader = {read : unit -> char option, eof : unit -> bool}
+type reader = {read: unit -> char option, fileline: unit -> fileline, eof: unit -> bool}
 type args = {quietOpen: bool}
 
 val inputFile : args -> string -> string

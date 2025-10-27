@@ -36,8 +36,8 @@ fun expandRecord f pat {left, elems = {args, delims, stop = stop1}, right, stop}
 fun mkLocPragma line col s =
   concat [" (*#loc ", Int.toString (line + 1), " ", Int.toString (col + 1), "*)", s]
 
-fun mkLocString (p, noloc, _) ("", _) = mkIdent (p, noloc)
-  | mkLocString (p, _, loc) (file, (_, line, _)) =
+fun mkLocString (p, noloc, _) {file = "", ...} = mkIdent (p, noloc)
+  | mkLocString (p, _, loc) {file, line, ...} =
     App (mkIdent (p, loc), App (mkIdent (p, "DB_dtype.mkloc"),
       mkTuple (p, [mkString (p, file), mkInt (p, line+1), mkIdent (p, "true")])))
 
@@ -115,7 +115,7 @@ fun withLocalAttrs _ false attrs = attrs
 exception HasOrPat
 fun mapDelim f {args, delims, stop} = {args = map f args, delims = delims, stop = stop}
 
-fun expandDec {parseError, quietOpen} = let
+fun expandDec {parseError, quietOpen, fileline} = let
 
 fun expandExp true (e as Wild _) = e
   | expandExp false (Wild p) = mkFail (p, "_")
@@ -175,8 +175,9 @@ fun expandExp true (e as Wild _) = e
     val id = (#1 head, case type_q of NONE => "Parse.Term" | SOME _ => "Parse.Type")
     in App (mkIdent id, expandQuote (#1 head) stop quote) end
   | expandExp _ (HOLQuote {head, quote, stop, ...}) = expandQuote (#1 head) stop quote
-  | expandExp _ (HOLLinePragma {hash_, value, ...}) = IntegerConstant (hash_, Int.toString value)
-  | expandExp _ (HOLFilePragma {hash_, value, ...}) = mkString (hash_, value)
+  | expandExp _ (HOLLinePragma {hash_, ...}) =
+    IntegerConstant (hash_, Int.toString (#line (fileline hash_) + 1))
+  | expandExp _ (HOLFilePragma {hash_, ...}) = mkString (hash_, #file (fileline hash_))
   | expandExp _ (HOLLinePragmaWith {hash_, ...}) = Unit {left = hash_, right = hash_}
   | expandExp _ (HOLFilePragmaWith {hash_, ...}) = Unit {left = hash_, right = hash_}
   | expandExp _ (EmptyExp p) = Unit {left = p, right = p}
@@ -204,8 +205,9 @@ and expandFunBranches p [] =
 
 and expandQuoteCore start toks = let
   fun go [] acc = rev acc
-    | go (QuoteLiteral {line, col, value} :: rest) acc = let
-      val s = mkLocPragma line col (Substring.string value)
+    | go (QuoteLiteral (pos, value) :: rest) acc = let
+      val {line, col, file = _} = fileline pos
+      val s = mkLocPragma line col value
       in go rest (App (mkIdent (start, "QUOTE"), mkString (start, s)) :: acc) end
     | go (QuoteAntiq {exp, ...} :: rest) acc =
       go rest (App (mkIdent (start, "ANTIQUOTE"), expandExp false exp) :: acc)
@@ -324,8 +326,7 @@ and expandDec _ (DecSemi _) acc = acc
         mkList (theory_, rev (!grammar)))) :: acc
     in acc end
   | expandDec _ (HOLDefinition {
-      definition_, id as (_, name), fileline,
-      attrs, colon = _, quote, termination, end_ = _, stop}) acc = let
+      definition_, id as (_, name), attrs, colon = _, quote, termination, end_ = _, stop}) acc = let
     val indThm = ref NONE
     val _ = app (fn
         {key = (p, s as "induction"), bind} =>
@@ -342,6 +343,7 @@ and expandDec _ (DecSemi _) acc = acc
       else if String.isSuffix "_DEF" name then
         String.extract (name, 0, SOME (size name - 4)) ^ "_IND"
       else name ^ "_ind")
+    val fileline = fileline (#1 id)
     val e = mkLocString (definition_, "TotalDefn.qDefine", "TotalDefn.located_qDefine") fileline
     val e = App (e, mkNameAttrs mkKval id attrs)
     val e = App (e, expandQuote definition_ stop quote)
@@ -367,7 +369,7 @@ and expandDec _ (DecSemi _) acc = acc
       | split olab l (DefinitionLabel lab :: r) (qs, labs) =
         if case olab of
             NONE => List.all
-            (fn QuoteLiteral {value,...} => isOnlyComments value | _ => false) l
+            (fn QuoteLiteral (_, value) => isOnlyComments (Substring.full value) | _ => false) l
           | _ => false
         then split (SOME lab) [] r (qs, labs)
         else split (SOME lab) [] r (mk l :: qs, olab :: labs)
@@ -379,13 +381,13 @@ and expandDec _ (DecSemi _) acc = acc
     val e = App (App (mkIdent (inductive_, entryPoint), mkString (id, stem)), quote)
     val acc = magicBind (mkStem "_strongind") (valPat inductive_ pat e :: acc)
     fun mkExtra _ [] acc = acc
-      | mkExtra i (SOME {label =
-          SOME (HOLLabel {fileline, tilde_, id}), attrs, ...} :: conjs) acc = let
+      | mkExtra i (SOME {label = SOME (HOLLabel {tilde_, id}), attrs, ...} :: conjs) acc = let
         val name = case tilde_ of NONE => id | SOME p => (p, stem ^ "_" ^ #2 id)
         val proof = mkHandleHolErr (inductive_,
           App (App (mkIdent (inductive_, "Drule.cj"), mkInt (inductive_, i)),
             mkIdent (mkStem "_rules")))
         val args = mkTuple (inductive_, [mkNameAttrs #2 name attrs, proof])
+        val fileline = fileline (#1 name)
         val e = mkLocString (inductive_, "boolLib.save_thm", "boolLib.save_thm_at") fileline
         in mkExtra (i+1) conjs (valPat inductive_ (mkIdent name) (App (e, args)) :: acc) end
       | mkExtra i (_ :: conjs) acc = mkExtra (i+1) conjs acc
@@ -413,7 +415,8 @@ and expandDec _ (DecSemi _) acc = acc
       NONE => mkFail (type_, "Type/Overload missing body")
     | SOME {exp, ...} => expandExp false exp
     in valWild type_ (App (mkIdent (type_, name), mkTuple (type_, [id, rhs]))) :: acc end
-  | expandDec _ (HOLSimpleThm {triv, theorem_, id, fileline, attrs, bind}) acc = let
+  | expandDec _ (HOLSimpleThm {triv, theorem_, id, attrs, bind}) acc = let
+    val fileline = fileline (#1 id)
     val e = mkLocString (theorem_, "boolLib.save_thm", "boolLib.save_thm_at") fileline
     val nameAttrs = mkNameAttrs mkKval id (withLocalAttrs theorem_ triv attrs)
     val rhs = case bind of
@@ -421,8 +424,9 @@ and expandDec _ (DecSemi _) acc = acc
     | SOME {exp, ...} => expandExp false exp
     in valPat theorem_ (mkIdent id) (App (e, mkTuple (theorem_, [nameAttrs, rhs]))) :: acc end
   | expandDec _ (HOLTheoremDecl {
-      triv, theorem_, id, fileline,
+      triv, theorem_, id,
       attrs, colon = _, quote, proof_, tac, qed_ = _, stop}) acc = let
+    val fileline = fileline (#1 id)
     val nameAttrs = mkNameAttrs mkKval id (withLocalAttrs theorem_ triv attrs)
     val quote = expandQuote theorem_ stop quote
     val tac = expandExp false tac

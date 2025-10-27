@@ -49,7 +49,7 @@ datatype constraint = Colon | ColonGt
 
 datatype defn_label_id =
   HOLConjLabel of int * string
-| HOLLabel of {fileline: fileline, tilde_: int option, id: int * string}
+| HOLLabel of {tilde_: int option, id: int * string}
 
 type 'a attrs = {
   left: int,
@@ -114,14 +114,12 @@ datatype exp =
     quote: qdecl list, end_tok: (int * string) option, stop: int}
 | HOLQuote of {head: int * string, quote: qdecl list, end_tok: (int * string) option, stop: int}
 | HOLLinePragma of {
-    hash_: int, left: int, line_: int, right: int option, stop: int,
-    value: int} (* #(LINE) *)
+    hash_: int, left: int, line_: int, right: int option, stop: int} (* #(LINE) *)
 | HOLLinePragmaWith of {
     hash_: int, left: int, line_: int, eq_: int,
     line: int * string option, col: {comma_: int, col: int * string option} option,
     right: int option, stop: int} (* #(LINE=3) this is BS *)
-| HOLFilePragma of {hash_: int, left: int, file_: int, right: int option, stop: int,
-    value: string} (* #(FILE) *)
+| HOLFilePragma of {hash_: int, left: int, file_: int, right: int option, stop: int} (* #(FILE) *)
 | HOLFilePragmaWith of {
     hash_: int, left: int, file_: int, eq_: int,
     file: int * string option, right: int option, stop: int} (* #(FILE=foo.sml) this is BS *)
@@ -190,7 +188,7 @@ and dec =
 | HOLTheory of {theory_: int, id: ident, attrs: kvals attrs, elems: header list}
   (** Theory foo[attrs] [elems ...] *)
 | HOLDefinition of {
-    definition_: int, id: ident, fileline: fileline, attrs: kvals attrs, colon: int option,
+    definition_: int, id: ident, attrs: kvals attrs, colon: int option,
     quote: qdecl list, termination: {termination_: int, tac: exp} option,
     end_: int option, stop: int}
   (** Definition foo[attrs]: ... [Termination tac] End *)
@@ -209,10 +207,10 @@ and dec =
     overload: bool, type_: int, id: maybe_quoted, attrs: ident attrs,
     bind: {eq: int, exp: exp} option} (** Type id[attrs] = exp *)
 | HOLSimpleThm of {
-    triv: bool, theorem_: int, id: ident, fileline: fileline, attrs: kvals attrs,
+    triv: bool, theorem_: int, id: ident, attrs: kvals attrs,
     bind: {eq: int, exp: exp} option} (** Theorem id[attrs] = exp *)
 | HOLTheoremDecl of {
-    triv: bool, theorem_: int, id: ident, fileline: fileline, attrs: kvals attrs, colon: int,
+    triv: bool, theorem_: int, id: ident, attrs: kvals attrs, colon: int,
     quote: qdecl list, proof_: {proof_: int, attrs: kvals attrs} option,
     tac: exp, qed_: int option, stop: int}
   (** Theorem foo[attrs]: ... [Proof[attrs] tac] QED *)
@@ -240,7 +238,7 @@ and strexp =
     let_: int, strdec: dec list, in_: int option, strexp: strexp, end_: int option, stop: int}
 
 and qdecl =
-  QuoteLiteral of {line: int, col: int, value: substring}
+  QuoteLiteral of int * string
 | QuoteAntiq of {caret_: int, exp: exp}
 | DefinitionLabel of {left: int, label: defn_label_id option, attrs: ident attrs,
     colon: int option, right: int option, stop: int}
@@ -528,5 +526,60 @@ fun isOnlyComments s = let
     | #"*" => cm > 0 andalso if cur (p+1) = #")" then go (cm - 1) (p+2) else go cm (p+1)
     | c => (cm > 0 orelse Char.isSpace c) andalso go cm (p+1)
   in go 0 start end
+
+datatype event =
+  FileEvent of int * string
+| LineEvent of int * int
+| LineColEvent of int * int * int
+
+type events = {
+  initFile: string,
+  evts: event DArray.darray }
+
+type cursor = {
+  body: DString.dstring, evts: events,
+  file: string, pos: int, line: int, col: int, idx: int }
+
+fun newCursor body evts: cursor =
+  {body = body, evts = evts, file = #initFile evts, pos = 0, line = 0, col = 0, idx = 0}
+
+fun eventPos (FileEvent (p, _)) = p
+  | eventPos (LineEvent (p, _)) = p
+  | eventPos (LineColEvent (p, _, _)) = p
+
+fun updateCursorSimple ({body, evts, file, pos, line, col, idx}: cursor, p) = let
+  fun countLines i line last =
+    if i = p then (line, p - last) else
+    if DString.sub (body, i) = #"\n" then countLines (i+1) (line+1) (i+1) else
+    countLines (i+1) line last
+  fun firstLine i =
+    if i = p then (line, col + p - pos) else
+    if DString.sub (body, i) = #"\n" then countLines (i+1) (line+1) (i+1) else
+    firstLine (i+1)
+  val (line, col) = firstLine pos
+  in {body = body, evts = evts, file = file, pos = p, line = line, col = col, idx = idx} end
+
+fun updateCursor (cur: cursor as {body, evts, pos, ...}, p): cursor =
+  if p < pos then updateCursor (newCursor body evts, p) (* TODO walk backwards *)
+  else let
+    fun readEvts (cur as {evts, idx, ...}) =
+      case SOME (DArray.sub (#evts evts, idx)) handle Subscript => NONE of
+        NONE => updateCursorSimple (cur, p)
+      | SOME e => if p < eventPos e then updateCursorSimple (cur, p) else let
+        val {body, evts, file, pos, line, col, idx} = updateCursorSimple (cur, eventPos e)
+        val cur = case e of
+          FileEvent (_, file) =>
+          {body = body, evts = evts, file = file, pos = pos, line = line, col = col, idx = idx+1}
+        | LineEvent (_, line) =>
+          {body = body, evts = evts, file = file, pos = pos, line = line, col = col, idx = idx+1}
+        | LineColEvent (_, line, col) =>
+          {body = body, evts = evts, file = file, pos = pos, line = line, col = col, idx = idx+1}
+        in readEvts cur end
+    in readEvts cur end
+
+fun mkFileline body evts =
+  case ref (newCursor body evts) of cur => fn p =>
+  case updateCursor (!cur, p) of cur' as {file, line, col, ...} =>
+  (cur := cur'; {file = file, line = line, col = col})
 
 end
