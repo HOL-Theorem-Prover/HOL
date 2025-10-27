@@ -260,6 +260,27 @@ val CHOOSE_THEN: thm_tactical =
       end
       handle HOL_ERR _ => raise ERR "CHOOSE_THEN" ""
 
+(* same as REPEAT_TCL CHOOSE_THEN but faster *)
+local
+   fun varyAcc v (V, l) = let val v' = gen_variant Parse.is_constname "" V v in (v'::V, v'::l) end
+in
+val CHOOSE_ALL_THEN: thm_tactical =
+   fn ttac => fn xth =>
+      let
+         val (hyp,conc) = dest_thm xth
+         val _ = if is_exists conc then () else raise ERR "CHOOSE_THEN" "not a exists"
+         val (vars,_) = strip_exists conc
+      in
+         fn (g as (asl,w)) =>
+         let
+            val fvs = (free_varsl ((conc::hyp)@(w::asl)))
+            val vars = List.rev (snd (rev_itlist varyAcc vars (fvs,[])))
+         in
+            EVERY_TCL (map X_CHOOSE_THEN vars) ttac xth g
+         end
+         handle HOL_ERR _ => raise ERR "CHOOSE_THEN" ""
+      end
+end
 (*----------  Cases tactics   -------------*)
 
 (*---------------------------------------------------------------------------
@@ -289,13 +310,16 @@ fun X_CASES_THEN varsl ttac =
  * Version that chooses the y's as variants of the x's.                      *
  *---------------------------------------------------------------------------*)
 
-fun CASES_THENL ttacl = DISJ_CASES_THENL (map (REPEAT_TCL CHOOSE_THEN) ttacl)
+fun CASES_THENL ttacl = DISJ_CASES_THENL (map (CHOOSE_ALL_THEN) ttacl)
 
 (*---------------------------------------------------------------------------*
  * Tactical to strip off ONE disjunction, conjunction, or existential.       *
  *---------------------------------------------------------------------------*)
 
 val STRIP_THM_THEN = FIRST_TCL [CONJUNCTS_THEN, DISJ_CASES_THEN, CHOOSE_THEN]
+
+(* Same as STRIP_ALL_THEN but slightly faster *)
+val STRIP_ALL_THEN = REPEAT_TCL (FIRST_TCL [CONJUNCTS_THEN, DISJ_CASES_THEN, CHOOSE_ALL_THEN])
 
 
 (* ---------------------------------------------------------------------*)
