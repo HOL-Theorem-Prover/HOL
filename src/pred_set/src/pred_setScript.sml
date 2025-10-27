@@ -41,45 +41,35 @@ fun rw thl = SRW_TAC[ARITH_ss]thl
 val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] \\
                    POP_ASSUM K_TAC;
 
-(* TODO Is there a better way than messing with store_thm_at and Q like this? *)
-fun store_thm_at loc (r as(n,t,tac)) = let
-  val th = boolLib.store_thm_at loc r
-  val {reserved, ...} = ThmAttribute.extract_attributes n
-in
-  if List.exists (fn (x,_) => x = "local") reserved then th else
-  if String.isPrefix "IN_" n then let
-      val stem0 = String.extract(n,3,NONE)
-      val stem = Substring.full stem0
-                    |> Substring.position "["
-                    |> #1 |> Substring.string
+(* Automatically generates simplification rules for theorems of the form
+
+   Theorem IN_foo:
+     (_ IN _) = _
+   ...
+
+   See IN_UNION for a concrete example. *)
+local
+  fun add_applied (TheoryDelta.NewBinding (n, (th, {loc, ...}))) = (
+    if not (String.isPrefix "IN_" n) then ()
+    (* {APP,ABS}_applied would be just ⊢ T, so not particularly useful. *)
+    else if List.exists (fn x => x = n) ["IN_APP", "IN_ABS"] then ()
+    else let
+      val stem = String.extract(n,3,NONE)
     in
-      if isSome (CharVector.find (equal #"_") stem) then th
+      if isSome (CharVector.find (equal #"_") stem) then ()
       else
         case Lib.total (#1 o strip_comb o lhs o #2 o strip_forall o concl) th of
-          NONE => th
-        | SOME t =>
-            if same_const t IN_tm then let
-                val applied_thm = SIMP_RULE bool_ss [SimpLHS, IN_DEF] th
-                val applied_name = stem ^ "_applied"
-                val loc' = DB_dtype.inexactify_locn loc
-              in
-                boolLib.save_thm_at loc' (applied_name, applied_thm)
-              ; export_rewrites [applied_name]
-              ; th
-              end
-            else th
-    end
-  else th
-end
-structure Q = struct
-  val foo = store_thm_at
-  open Q
-  fun store_thm_at loc (n,q,tac) =
-    let val t = Parse.typed_parse_in_context Type.bool [] q
-    in
-      foo loc (n,t,tac)
-    end
-end
+            NONE => ()
+          | SOME t =>
+            if not (same_const t IN_tm) then ()
+            else let
+              val applied_thm = SIMP_RULE bool_ss [SimpLHS, IN_DEF] th
+              val applied_name = stem ^ "_applied[simp]"
+              val loc' = DB_dtype.inexactify_locn loc
+            in boolLib.save_thm_at loc' (applied_name, applied_thm); () end
+    end)
+    | add_applied _ = ()
+in val _ = Theory.register_hook ("pred_set.add_applied", add_applied) end
 
 Type set = “:'a -> bool”;
 
@@ -104,16 +94,17 @@ Proof
   REWRITE_TAC [IN_DEF] THEN BETA_TAC THEN REWRITE_TAC []
 QED
 
-val IN_APP = Tactical.store_thm (
-  "IN_APP",
-  ``!x P. (x IN P) = P x``,
-  SIMP_TAC bool_ss [IN_DEF]);
+Theorem IN_APP:
+  !x P. (x IN P) = P x
+Proof
+  SIMP_TAC bool_ss [IN_DEF]
+QED
 
-val IN_ABS = Tactical.store_thm (
-  "IN_ABS",
-  ``!x P. (x IN \x. P x) = P x``,
-  SIMP_TAC bool_ss [IN_DEF]);
-val _ = export_rewrites ["IN_ABS"]
+Theorem IN_ABS[simp]:
+  !x P. (x IN \x. P x) = P x
+Proof
+  SIMP_TAC bool_ss [IN_DEF]
+QED
 
 (* ---------------------------------------------------------------------*)
 (* Axiom of extension: (s = t) iff !x. x IN s = x IN t                  *)
@@ -636,6 +627,9 @@ val _ = TeX_notation {hol = "UNION", TeX = ("\\HOLTokenUnion{}", 1)}
 val _ = TeX_notation {hol = UChar.union, TeX = ("\\HOLTokenUnion{}", 1)}
 val _ = ot0 "UNION" "union"
 
+(* The hook at the top of the file generates the theorem
+   [UNION_applied] ⊢ ∀s t x. (s ∪ t) x ⇔ x ∈ s ∨ x ∈ t
+   and adds it to the simpset, since IN_UNION matches the shape described above. *)
 Theorem IN_UNION[simp]:
    !s t (x:'a). x IN (s UNION t) <=> x IN s \/ x IN t
 Proof
