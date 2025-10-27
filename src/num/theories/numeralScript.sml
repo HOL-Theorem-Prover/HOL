@@ -387,7 +387,7 @@ Proof
     INDUCT_THEN (MATCH_MP relationTheory.WF_INDUCTION_THM WF_LESS)
                 STRIP_ASSUME_TAC THEN
     (* now do numeral cases on n *)
-    REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC (SPEC_ALL bit_cases) THENL [
+    STRIP_ALL_THEN SUBST_ALL_TAC (SPEC_ALL bit_cases) THENL [
       ASM_SIMP_TAC bool_ss [],
       ASM_SIMP_TAC bool_ss [] THEN AP_TAC THEN AP_TAC THEN
       FIRST_ASSUM MATCH_MP_TAC THEN SIMP_TAC bool_ss [BIT1] THEN
