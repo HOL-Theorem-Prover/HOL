@@ -9,26 +9,26 @@ Libs
   BasicProvers quotientLib
 
 
-fun Store_Thm(n,t,tac) = store_thm(n,t,tac) before
-                         export_rewrites [n]
-
 Definition leq_def:  leq x y = !e:'a. MEM e x = MEM e y
 End
 
-val leq_refl = Store_Thm(
-  "leq_refl",
-  ``!x :'a list. leq x x``,
-  SRW_TAC [] [leq_def]);
+Theorem leq_refl[simp]:
+  !x :'a list. leq x x
+Proof
+  SRW_TAC [] [leq_def]
+QED
 
-val leq_sym = Store_Thm(
-  "leq_sym",
-  ``!x y :'a list. leq x y ==> leq y x``,
-  SRW_TAC [] [leq_def]);
+Theorem leq_sym[simp]:
+  !x y :'a list. leq x y ==> leq y x
+Proof
+  SRW_TAC [] [leq_def]
+QED
 
-val leq_trans = Store_Thm(
-  "leq_trans",
-  ``!x y z :'a list. leq x y /\ leq y z ==> leq x z``,
-  SRW_TAC [] [leq_def]);
+Theorem leq_trans[simp]:
+  !x y z :'a list. leq x y /\ leq y z ==> leq x z
+Proof
+  SRW_TAC [] [leq_def]
+QED
 
 (* functions on representatives *)
 
@@ -58,10 +58,11 @@ Proof
   SRW_TAC [] [leq_def]
 QED
 
-val NO_MEM_NIL = Store_Thm(
-  "NO_MEM_NIL",
-  ``!A. (!a:'a. ~(MEM a A)) = (A = [])``,
-  Induct_on `A` THEN SRW_TAC [] [] THEN PROVE_TAC []);
+Theorem NO_MEM_NIL[simp]:
+  !A. (!a:'a. ~(MEM a A)) = (A = [])
+Proof
+  Induct_on `A` THEN SRW_TAC [] [] THEN PROVE_TAC []
+QED
 
 Theorem NONE_MEM_NIL:
     !A. (!a:'a. ~(MEM a A)) = (leq A [])
@@ -110,10 +111,11 @@ Proof
   Induct THEN SRW_TAC[][] THEN PROVE_TAC []
 QED
 
-val MEM_Delete1_IDENT = Store_Thm(
-  "MEM_Delete1_IDENT",
-  ``!A (a:'a). ~(MEM a (A Delete1 a))``,
-  Induct_on `A` THEN SRW_TAC [][]);
+Theorem MEM_Delete1_IDENT[simp]:
+  !A (a:'a). ~(MEM a (A Delete1 a))
+Proof
+  Induct_on `A` THEN SRW_TAC [][]
+QED
 
 Theorem NOT_MEM_Delete1_IDENT:
     !A (b:'a). ~MEM b A ==> (A Delete1 b = A)

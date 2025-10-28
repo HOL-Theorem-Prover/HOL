@@ -4154,10 +4154,11 @@ local val th =
       SIMP_RULE std_ss [GSYM lt_infty]
                        (ONCE_REWRITE_RULE [MONO_NOT_EQ] (Q.SPEC `f` ext_suminf_lt_infty))
 in
-val ext_suminf_posinf = store_thm
-  ("ext_suminf_posinf",
-  ``!f. (!n. 0 <= f n) /\ (?n. f n = PosInf) ==> (ext_suminf f = PosInf)``,
-    METIS_TAC [th])
+Theorem ext_suminf_posinf:
+    !f. (!n. 0 <= f n) /\ (?n. f n = PosInf) ==> (ext_suminf f = PosInf)
+Proof
+    METIS_TAC [th]
+QED
 end;
 
 Theorem ext_suminf_suminf :

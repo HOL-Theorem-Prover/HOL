@@ -1482,10 +1482,11 @@ val lemma = Q.prove (
 
 in
 
-val labels_plink = Q.store_thm
-("labels_plink",
- `!p1 p2. labels (plink p1 p2) = LAPPEND (labels p1) (labels p2)`,
- METIS_TAC [pairTheory.FST, pairTheory.SND, lemma]);
+Theorem labels_plink:
+  !p1 p2. labels (plink p1 p2) = LAPPEND (labels p1) (labels p2)
+Proof
+ METIS_TAC [pairTheory.FST, pairTheory.SND, lemma]
+QED
 
 end;
 
@@ -1606,12 +1607,12 @@ SRW_TAC [] []);
 
 in
 
-val trace_machine_thm = Q.store_thm
-("trace_machine_thm",
- `!P tr.
+Theorem trace_machine_thm:
+  !P tr.
     (!n l. (LTAKE n tr = SOME l) ==> P l)
     ==>
-    ?p. (tr = labels p) /\ okpath (trace_machine P) p /\ (first p = [])`,
+    ?p. (tr = labels p) /\ okpath (trace_machine P) p /\ (first p = [])
+Proof
  SRW_TAC [] [] THEN
  Q.EXISTS_TAC `unfold (λ(s,tr). s)
                       (λ(s,tr).
@@ -1651,7 +1652,8 @@ val trace_machine_thm = Q.store_thm
            SRW_TAC [] [] THEN
            FULL_SIMP_TAC (srw_ss()) [] THEN
            METIS_TAC [lemma1]],
-  SRW_TAC [] [Once unfold_thm]]);
+  SRW_TAC [] [Once unfold_thm]]
+QED
 
 end;
 

@@ -573,19 +573,23 @@ Proof
   THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [MAP, o_THM]
 QED
 
-val MAP_MAP_o = store_thm("MAP_MAP_o",
-    (“!(f:'b->'c) (g:'a->'b) l. MAP f (MAP g l) = MAP (f o g) l”),
+Theorem MAP_MAP_o:
+     !(f:'b->'c) (g:'a->'b) l. MAP f (MAP g l) = MAP (f o g) l
+Proof
     REPEAT GEN_TAC THEN REWRITE_TAC [MAP_o, o_DEF]
-    THEN BETA_TAC THEN REFL_TAC);
+    THEN BETA_TAC THEN REFL_TAC
+QED
 
 (* Theorem alias *)
 Theorem MAP_COMPOSE = MAP_MAP_o;
 (* val MAP_COMPOSE = |- !f g l. MAP f (MAP g l) = MAP (f o g) l: thm *)
 
-val EL_MAP = store_thm("EL_MAP",
-    (“!n l. n < (LENGTH l) ==> !f:'a->'b. EL n (MAP f l) = f (EL n l)”),
+Theorem EL_MAP:
+     !n l. n < (LENGTH l) ==> !f:'a->'b. EL n (MAP f l) = f (EL n l)
+Proof
     INDUCT_TAC THEN LIST_INDUCT_TAC
-    THEN ASM_REWRITE_TAC[LENGTH, EL, MAP, LESS_MONO_EQ, NOT_LESS_0, HD, TL]);
+    THEN ASM_REWRITE_TAC[LENGTH, EL, MAP, LESS_MONO_EQ, NOT_LESS_0, HD, TL]
+QED
 
 Theorem EL_APPEND_EQN:
    !l1 l2 n.
@@ -1784,17 +1788,21 @@ Proof
   LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [UNZIP, LENGTH]
 QED
 
-val ZIP_UNZIP = store_thm("ZIP_UNZIP",
-    (“!l:('a # 'b)list. ZIP(UNZIP l) = l”),
-    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[UNZIP, ZIP]);
+Theorem ZIP_UNZIP:
+     !l:('a # 'b)list. ZIP(UNZIP l) = l
+Proof
+    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[UNZIP, ZIP]
+QED
 
-val UNZIP_ZIP = store_thm("UNZIP_ZIP",
-    (“!l1:'a list. !l2:'b list.
-     (LENGTH l1 = LENGTH l2) ==> (UNZIP(ZIP(l1,l2)) = (l1,l2))”),
+Theorem UNZIP_ZIP:
+     !l1:'a list. !l2:'b list.
+     (LENGTH l1 = LENGTH l2) ==> (UNZIP(ZIP(l1,l2)) = (l1,l2))
+Proof
     LIST_INDUCT_TAC THEN REPEAT (FILTER_GEN_TAC (“l2:'b list”))
     THEN LIST_INDUCT_TAC
     THEN ASM_REWRITE_TAC[UNZIP, ZIP, LENGTH, NOT_SUC, SUC_NOT, INV_SUC_EQ]
-    THEN REPEAT STRIP_TAC THEN RES_THEN SUBST1_TAC THEN REWRITE_TAC[]);
+    THEN REPEAT STRIP_TAC THEN RES_THEN SUBST1_TAC THEN REWRITE_TAC[]
+QED
 
 
 Theorem ZIP_MAP:
@@ -1850,16 +1858,18 @@ Proof
 QED
 
 
-val MAP2_ZIP = store_thm("MAP2_ZIP",
-    (“!l1 l2. (LENGTH l1 = LENGTH l2) ==>
-     !f:'a->'b->'c. MAP2 f l1 l2 = MAP (UNCURRY f) (ZIP (l1,l2))”),
+Theorem MAP2_ZIP:
+     !l1 l2. (LENGTH l1 = LENGTH l2) ==>
+     !f:'a->'b->'c. MAP2 f l1 l2 = MAP (UNCURRY f) (ZIP (l1,l2))
+Proof
     let val UNCURRY_DEF = pairTheory.UNCURRY_DEF
     in
     LIST_INDUCT_TAC THEN REPEAT (FILTER_GEN_TAC (“l2:'b list”))
     THEN LIST_INDUCT_TAC
     THEN REWRITE_TAC[MAP, MAP2, ZIP, LENGTH, NOT_SUC, SUC_NOT]
     THEN ASM_REWRITE_TAC[CONS_11, UNCURRY_DEF, INV_SUC_EQ]
-    end);
+    end
+QED
 
 Theorem MAP2_MAP = MAP2_ZIP
 
@@ -2662,11 +2672,12 @@ Proof
 QED
 
 local open numLib in
-val CARD_LIST_TO_SET = Q.store_thm(
-"CARD_LIST_TO_SET",
-‘CARD (set ls) <= LENGTH ls’,
+Theorem CARD_LIST_TO_SET:
+ CARD (set ls) <= LENGTH ls
+Proof
 Induct_on ‘ls’ THEN SRW_TAC [] [] THEN
-DECIDE_TAC);
+DECIDE_TAC
+QED
 end
 
 Theorem ALL_DISTINCT_CARD_LIST_TO_SET:
@@ -2995,21 +3006,27 @@ Proof
     Induct_on ‘ls’ THEN SRW_TAC [] [INSERT_COMM]
 QED
 
-val MAP_SNOC  = store_thm("MAP_SNOC",
-    (“!(f:'a->'b) x (l:'a list). MAP f(SNOC x l) = SNOC(f x)(MAP f l)”),
-     (REWRITE_TAC [SNOC_APPEND, MAP_APPEND, MAP]));
+Theorem MAP_SNOC:
+     !(f:'a->'b) x (l:'a list). MAP f(SNOC x l) = SNOC(f x)(MAP f l)
+Proof
+     (REWRITE_TAC [SNOC_APPEND, MAP_APPEND, MAP])
+QED
 
-val EL_SNOC = store_thm("EL_SNOC",
-    (“!n (l:'a list). n < (LENGTH l) ==> (!x. EL n (SNOC x l) = EL n l)”),
+Theorem EL_SNOC:
+     !n (l:'a list). n < (LENGTH l) ==> (!x. EL n (SNOC x l) = EL n l)
+Proof
     INDUCT_TAC THEN LIST_INDUCT_TAC THEN REWRITE_TAC[LENGTH, NOT_LESS_0]
     THENL[
         REWRITE_TAC[SNOC, EL, HD],
         REWRITE_TAC[SNOC, EL, TL, LESS_MONO_EQ]
-        THEN FIRST_ASSUM MATCH_ACCEPT_TAC]);
+        THEN FIRST_ASSUM MATCH_ACCEPT_TAC]
+QED
 
-val EL_LENGTH_SNOC = store_thm("EL_LENGTH_SNOC",
-    (“!l:'a list. !x. EL (LENGTH l) (SNOC x l) = x”),
-    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[EL, SNOC, HD, TL, LENGTH]);
+Theorem EL_LENGTH_SNOC:
+     !l:'a list. !x. EL (LENGTH l) (SNOC x l) = x
+Proof
+    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[EL, SNOC, HD, TL, LENGTH]
+QED
 
 Theorem APPEND_SNOC[simp] :
     !l1 (x:'a) l2. APPEND l1 (SNOC x l2) = SNOC x (APPEND l1 l2)
@@ -3140,9 +3157,11 @@ QED
 
 local val REVERSE = REVERSE_SNOC_DEF
 in
-val MAP_REVERSE = Q.store_thm ("MAP_REVERSE",
-   `!f l. MAP f (REVERSE l) = REVERSE (MAP f l)`,
-   GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [REVERSE, MAP, MAP_SNOC]);
+Theorem MAP_REVERSE:
+    !f l. MAP f (REVERSE l) = REVERSE (MAP f l)
+Proof
+   GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [REVERSE, MAP, MAP_SNOC]
+QED
 end;
 
 (*--------------------------------------------------------------*)
@@ -3568,25 +3587,31 @@ QED
 
 (* ---------------------------------------------------------------------- *)
 
-val FOLDL_SNOC = store_thm("FOLDL_SNOC",
-    (“!(f:'b->'a->'b) e x l. FOLDL f e (SNOC x l) = f (FOLDL f e l) x”),
+Theorem FOLDL_SNOC:
+     !(f:'b->'a->'b) e x l. FOLDL f e (SNOC x l) = f (FOLDL f e l) x
+Proof
     let val lem = prove(
         (“!l (f:'b->'a->'b) e x. FOLDL f e (SNOC x l) = f (FOLDL f e l) x”),
         LIST_INDUCT_TAC THEN REWRITE_TAC[SNOC, FOLDL]
         THEN REPEAT GEN_TAC THEN ASM_REWRITE_TAC[])
    in
     MATCH_ACCEPT_TAC lem
-   end);
+   end
+QED
 
 local open arithmeticTheory in
-val SUM_SNOC = store_thm("SUM_SNOC",
-    (“!x l. SUM (SNOC x l) = (SUM l) + x”),
+Theorem SUM_SNOC:
+     !x l. SUM (SNOC x l) = (SUM l) + x
+Proof
     GEN_TAC THEN LIST_INDUCT_TAC THEN REWRITE_TAC[SUM, SNOC, ADD, ADD_0]
-    THEN GEN_TAC THEN ASM_REWRITE_TAC[ADD_ASSOC]);
+    THEN GEN_TAC THEN ASM_REWRITE_TAC[ADD_ASSOC]
+QED
 
-val SUM_APPEND = store_thm("SUM_APPEND",
-    (“!l1 l2. SUM (APPEND l1 l2) = SUM l1 + SUM l2”),
-    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[SUM, APPEND, ADD, ADD_0, ADD_ASSOC]);
+Theorem SUM_APPEND:
+     !l1 l2. SUM (APPEND l1 l2) = SUM l1 + SUM l2
+Proof
+    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[SUM, APPEND, ADD, ADD_0, ADD_ASSOC]
+QED
 end
 
 Theorem SUM_MAP_FOLDL:
@@ -3608,9 +3633,10 @@ QED
 val SNOC_INDUCT_TAC = INDUCT_THEN SNOC_INDUCT ASSUME_TAC;
 
 local open arithmeticTheory prim_recTheory in
-val EL_REVERSE = store_thm("EL_REVERSE",
-    “!n (l:'a list). n < (LENGTH l) ==>
-     (EL n (REVERSE l) = EL (PRE(LENGTH l - n)) l)”,
+Theorem EL_REVERSE:
+     !n (l:'a list). n < (LENGTH l) ==>
+     (EL n (REVERSE l) = EL (PRE(LENGTH l - n)) l)
+Proof
     INDUCT_TAC THEN SNOC_INDUCT_TAC
     THEN ASM_REWRITE_TAC[LENGTH, LENGTH_SNOC,
         EL, HD, TL, NOT_LESS_0, LESS_MONO_EQ, SUB_0] THENL[
@@ -3619,7 +3645,8 @@ val EL_REVERSE = store_thm("EL_REVERSE",
         THEN REPEAT STRIP_TAC THEN RES_THEN SUBST1_TAC
         THEN MATCH_MP_TAC (GSYM EL_SNOC)
         THEN REWRITE_TAC(PRE_SUB1 :: (map GSYM [SUB_PLUS, ADD1]))
-        THEN numLib.DECIDE_TAC]);
+        THEN numLib.DECIDE_TAC]
+QED
 end
 
 Theorem REVERSE_GENLIST:
@@ -5189,9 +5216,10 @@ local
   val fs = FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss)
   val rw = SRW_TAC [numSimps.ARITH_ss]
 in
-val EL_LENGTH_dropWhile_REVERSE = Q.store_thm("EL_LENGTH_dropWhile_REVERSE",
-   ‘!P ls k. LENGTH (dropWhile P (REVERSE ls)) <= k /\ k < LENGTH ls ==>
-             P (EL k ls)’,
+Theorem EL_LENGTH_dropWhile_REVERSE:
+    !P ls k. LENGTH (dropWhile P (REVERSE ls)) <= k /\ k < LENGTH ls ==>
+             P (EL k ls)
+Proof
    GEN_TAC
    >> Induct
    >> simp [LENGTH]
@@ -5202,7 +5230,8 @@ val EL_LENGTH_dropWhile_REVERSE = Q.store_thm("EL_LENGTH_dropWhile_REVERSE",
    >> simp []
    >> Cases_on ‘EVERY P (REVERSE ls)’
    THEN1 (fs [dropWhile_APPEND_EVERY, GSYM dropWhile_eq_nil])
-   >> fs [NOT_EVERY, dropWhile_APPEND_EXISTS, arithmeticTheory.ADD1])
+   >> fs [NOT_EVERY, dropWhile_APPEND_EXISTS, arithmeticTheory.ADD1]
+QED
 end
 
 Theorem dropWhile_id:
@@ -5270,8 +5299,8 @@ local
     val Rewr = DISCH_THEN (REWRITE_TAC o wrap); (* from util_prob *)
 in
 (* alternative definition of UNIQUE, by Chun Tian (binghe) *)
-val UNIQUE_FILTER = store_thm (
-   "UNIQUE_FILTER", “!e L. UNIQUE e L = (FILTER ($= e) L = [e])”,
+Theorem UNIQUE_FILTER:  !e L. UNIQUE e L = (FILTER ($= e) L = [e])
+Proof
     rpt GEN_TAC
  >> REWRITE_TAC [UNIQUE_DEF]
  >> EQ_TAC >> rpt STRIP_TAC (* 2 sub-goals here *)
@@ -5298,11 +5327,12 @@ val UNIQUE_FILTER = store_thm (
       REWRITE_TAC [APPEND_EQ_SING] \\
       rpt STRIP_TAC \\
       FULL_SIMP_TAC arith_ss [NOT_CONS_NIL, FILTER_APPEND_DISTRIB, FILTER,
-                              APPEND_eq_NIL, CONS_11] ]);
+                              APPEND_eq_NIL, CONS_11] ]
+QED
 
 (* alternative definition of UNIQUE, learnt from Scott Owens and Anthony Fox *)
-val UNIQUE_LENGTH_FILTER = store_thm (
-   "UNIQUE_LENGTH_FILTER", “!e L. UNIQUE e L = (LENGTH (FILTER ($= e) L) = 1)”,
+Theorem UNIQUE_LENGTH_FILTER:  !e L. UNIQUE e L = (LENGTH (FILTER ($= e) L) = 1)
+Proof
     rpt GEN_TAC
  >> REWRITE_TAC [UNIQUE_FILTER]
  >> EQ_TAC >> DISCH_TAC
@@ -5322,7 +5352,8 @@ val UNIQUE_LENGTH_FILTER = store_thm (
  >> KILL_TAC
  >> REWRITE_TAC [FILTER_NEQ_NIL]
  >> rpt STRIP_TAC
- >> ASM_REWRITE_TAC []);
+ >> ASM_REWRITE_TAC []
+QED
 end; (* local *)
 
 (* OPT_MMAP : ('a -> 'b option) -> 'a list -> 'b list option *)

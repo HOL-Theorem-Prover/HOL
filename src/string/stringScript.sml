@@ -340,11 +340,18 @@ Proof
   Induct_on `cs` THEN SRW_TAC [][]
 QED
 
-fun stac(n,t) = store_thm(n,t,METIS_TAC [EXPLODE_IMPLODE, IMPLODE_EXPLODE])
-val EXPLODE_ONTO = stac("EXPLODE_ONTO", ``!cs. ?s. cs = EXPLODE s``);
-val IMPLODE_ONTO = stac("IMPLODE_ONTO", ``!s. ?cs. s = IMPLODE cs``);
-val EXPLODE_11 = stac("EXPLODE_11", ``(EXPLODE s1 = EXPLODE s2) = (s1 = s2)``)
-val IMPLODE_11 = stac("IMPLODE_11", ``(IMPLODE cs1 = IMPLODE cs2) = (cs1 = cs2)``)
+Theorem EXPLODE_ONTO: !cs. ?s. cs = EXPLODE s
+Proof METIS_TAC [EXPLODE_IMPLODE, IMPLODE_EXPLODE]
+QED
+Theorem IMPLODE_ONTO: !s. ?cs. s = IMPLODE cs
+Proof METIS_TAC [EXPLODE_IMPLODE, IMPLODE_EXPLODE]
+QED
+Theorem EXPLODE_11: (EXPLODE s1 = EXPLODE s2) = (s1 = s2)
+Proof METIS_TAC [EXPLODE_IMPLODE, IMPLODE_EXPLODE]
+QED
+Theorem IMPLODE_11: (IMPLODE cs1 = IMPLODE cs2) = (cs1 = cs2)
+Proof METIS_TAC [EXPLODE_IMPLODE, IMPLODE_EXPLODE]
+QED
 
 val _ = export_rewrites ["EXPLODE_11", "IMPLODE_11", "IMPLODE_EXPLODE",
                          "EXPLODE_IMPLODE"]
