@@ -51,6 +51,8 @@ Incompatibilities
     the script file `examples/zipper/zipperScript.sml` has been moved to `examples/data-structures`;
     the script file `examples/balanced_bst/AVL_treeScript.sml` has been moved to a directory of its own at `examples/data-structures/AVL_tree`.
 
+-   The left-hand side of `LIST_REL_MAP2` has been changed from `LIST_REL (\a b. R a b) l1 (MAP f l2)` to
+    `LIST_REL R l1 (MAP f l2)`. We do not expect this to break proof scripts, but document this change here just in case.
 * * * * *
 
 <div class="footer">
