@@ -1464,7 +1464,7 @@ Proof
 QED
 
 Theorem LIST_REL_MAP2:
-   LIST_REL (\a b. R a b) l1 (MAP f l2) <=>
+   LIST_REL R l1 (MAP f l2) <=>
       LIST_REL (\a b. R a (f b)) l1 l2
 Proof
   SRW_TAC [CONJ_ss] [LIST_REL_EL_EQN, EL_MAP, LENGTH_MAP]
