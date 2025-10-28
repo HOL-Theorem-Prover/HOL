@@ -24,7 +24,7 @@ Proof
   \\ disj1_tac \\ qexists_tac ‘measure m’ \\ fs []
 QED
 
-Triviality NRC_lemma:
+Theorem NRC_lemma[local]:
   ∀k0 k1 m t0 t1.
     NRC (λs t. guard f s ∧ terminates s c t) k0 m t0 ∧
     NRC (λs t. guard f s ∧ terminates s c t) k1 m t1 ∧

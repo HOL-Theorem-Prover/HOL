@@ -33,7 +33,7 @@ val forget_tac = WEAKEN_TAC
 
 fun irule_with q = reverse $ subgoal q THENL [pop_assum irule,all_tac];
 
-Triviality APPEND_EQNS[simp] = LIST_CONJ [APPEND,APPEND_NIL,APPEND_eq_NIL];
+Theorem APPEND_EQNS[local,simp] = LIST_CONJ [APPEND,APPEND_NIL,APPEND_eq_NIL];
 
 (*---------------------------------------------------------------------------*)
 (*---------------------------------------------------------------------------*)
@@ -329,7 +329,7 @@ Proof
   rw[]
 QED
 
-Triviality sing_absorb:
+Theorem sing_absorb[local]:
   {x} ∪ t = {y} ⇔ x = y ∧ t ⊆ {x}
 Proof
   rw[EXTENSION,SUBSET_DEF] >> metis_tac[]
@@ -411,7 +411,7 @@ QED
 (* Weaker version is easier to apply right-to-left                           *)
 (*---------------------------------------------------------------------------*)
 
-Triviality flat_filter_not_null[simp]:
+Theorem flat_filter_not_null[local,simp]:
   FLAT (FILTER ($~ o NULL) lists) = FLAT lists
 Proof
   Induct_on ‘lists’ >> rw[NULL_EQ]
@@ -503,7 +503,7 @@ Proof
       metis_tac [APPEND_EQNS,EPSILON_IN_KSTAR])
 QED
 
-Triviality lemB_lem[local]:
+Theorem lemB_lem[local]:
   KSTAR A • B ⊆ KSTAR (A ∪ B)
 Proof
   rw [IN_dot,SUBSET_DEF] >>
@@ -924,7 +924,7 @@ Definition prefixes_def:
   prefixes w = {w1 | ∃w2. w = w1 ++ w2}
 End
 
-Triviality prefixes_snoc:
+Theorem prefixes_snoc[local]:
   prefixes (SNOC h t) = (SNOC h t) INSERT prefixes t
 Proof
   rw[prefixes_def,EXTENSION,EQ_IMP_THM, SNOC_APPEND]

@@ -1426,7 +1426,7 @@ val approx_the_fun1 = ONCE_REWRITE_RULE [GSYM the_fun_def] approx_SELECT1;
 val approx_the_fun2 = SUBS [Q.SPECL[`R`,`M`,`x`,`the_fun R M x`] approx_ext]
                            approx_the_fun1;
 
-Triviality the_fun_rw1:
+Theorem the_fun_rw1[local]:
  (?g:'a->'b. approx R M x g)
       ==>
   !w. R w x
@@ -1439,7 +1439,7 @@ Proof
  THEN ASM_REWRITE_TAC[]
 QED
 
-Triviality the_fun_rw2:
+Theorem the_fun_rw2[local]:
    (?g:'a->'b. approx R M x g)  ==> !w. ~R w x ==> (the_fun R M x w = ARB)
 Proof
  DISCH_THEN (MP_TAC o MP approx_the_fun2) THEN
@@ -1491,7 +1491,7 @@ REWRITE_TAC[approx_ext] THEN REPEAT GEN_TAC THEN STRIP_TAC
   THEN RES_TAC THEN ASM_REWRITE_TAC[]
 QED
 
-Triviality AGREE_BELOW =
+Theorem AGREE_BELOW[local] =
    REWRITE_RULE[TAUT`A==>B==>C==>D <=> B/\C/\A==>D`]
     (CONV_RULE (DEPTH_CONV RIGHT_IMP_FORALL_CONV) APPROX_EQUAL_BELOW);
 

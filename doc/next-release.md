@@ -16,6 +16,7 @@ Contents
 -   [New tools](#new-tools)
 -   [New examples](#new-examples)
 -   [Incompatibilities](#incompatibilities)
+-   [Deprecations](#deprecations)
 
 New features
 ------------
@@ -53,6 +54,14 @@ Incompatibilities
 
 -   The left-hand side of `LIST_REL_MAP2` has been changed from `LIST_REL (\a b. R a b) l1 (MAP f l2)` to
     `LIST_REL R l1 (MAP f l2)`. We do not expect this to break proof scripts, but document this change here just in case.
+
+Deprecations
+------------
+
+-   `Triviality` has been deprecated and may be removed in the future.
+    Please update theorems of the form `Triviality foo` and `Triviality foo[..]` to
+    `Theorem foo[local]` and `Theorem foo[local,..]` respectively to avoid future breakage.
+
 * * * * *
 
 <div class="footer">

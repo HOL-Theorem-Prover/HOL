@@ -3904,7 +3904,7 @@ QED
 (* Lemmas for intLib.                                                        *)
 (*---------------------------------------------------------------------------*)
 
-Triviality INT_POLY_CONV_sth:
+Theorem INT_POLY_CONV_sth[local]:
   (!x y z. x + (y + z) = (x + y) + z :int) /\
   (!x y. x + y = y + x :int) /\
   (!x. &0 + x = x :int) /\

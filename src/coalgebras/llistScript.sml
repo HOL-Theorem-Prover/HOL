@@ -3767,7 +3767,7 @@ Proof
   Induct \\ fs [] \\ Cases \\ fs []
 QED
 
-Triviality LDROP_WHILE_LEMMA:
+Theorem LDROP_WHILE_LEMMA[local]:
   !n k xs ys zs y z.
     LTAKE n xs = SOME ys /\
     LTAKE k xs = SOME zs /\

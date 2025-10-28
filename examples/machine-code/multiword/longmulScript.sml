@@ -45,7 +45,7 @@ Definition split64_def:
   split64 (w:word64) = [w2w w; w2w (w >>> 32)] : word32 list
 End
 
-Triviality mw_mul_expand:
+Theorem mw_mul_expand[local]:
   mw_mul [a1;a2] [b1;b2] [0w;0w:word32] =
     let (a1b1,k1) = single_mul_add a1 b1 0w 0w in
     let (a1b2,k1) = single_mul_add a1 b2 k1 0w in
@@ -57,13 +57,13 @@ Proof
   \\ rpt (pairarg_tac \\ gvs [])
 QED
 
-Triviality length_split64:
+Theorem length_split64[local]:
   LENGTH (split64 b) = 2
 Proof
   simp [split64_def]
 QED
 
-Triviality mw2n_split64:
+Theorem mw2n_split64[local]:
   mw2n (split64 a) = w2n a
 Proof
   simp [split64_def,mw2n_def,w2w_def,w2n_lsr]
@@ -75,13 +75,13 @@ Proof
   \\ simp []
 QED
 
-Triviality chop64_alt:
+Theorem chop64_alt[local]:
   chop64 (a:word64) = (w2w ((w2w a):word32), w2w ((w2w (a >>> 32)) :word32))
 Proof
   simp [chop64_def] \\ BBLAST_TAC
 QED
 
-Triviality single_mul_add_eq_chop64:
+Theorem single_mul_add_eq_chop64[local]:
   single_mul_add (a:word32) b k s = (r1,r2) ⇒
   chop64 (w2w a * w2w b + w2w k + w2w s) = (w2w r1, w2w r2)
 Proof
@@ -99,21 +99,21 @@ Proof
   \\ DEP_REWRITE_TAC [LESS_DIV_EQ_ZERO] \\ simp []
 QED
 
-Triviality w2w_glue64:
+Theorem w2w_glue64[local]:
   w2w (glue64 (w2w x) (w2w y)) = (x:word32) ∧
   w2w (glue64 (w2w x) (w2w y) >>> 32) = (y:word32)
 Proof
   simp [glue64_def] \\ BBLAST_TAC
 QED
 
-Triviality chop64_eq_w2w:
+Theorem chop64_eq_w2w[local]:
   chop64 w = (w2w (a:word32), w2w (b:word32)) ⇒
   a = w2w w ∧ b = w2w (w >>> 32)
 Proof
   simp [chop64_def] \\ BBLAST_TAC
 QED
 
-Triviality mw_mul_longmul64:
+Theorem mw_mul_longmul64[local]:
   mw_mul (split64 a) (split64 b) [0w; 0w] =
     let (w1,w2) = longmul64 a b in
       split64 w1 ++ split64 w2
@@ -131,7 +131,7 @@ Proof
   \\ dxrule chop64_eq_w2w \\ fs []
 QED
 
-Triviality longmul64_lemma =
+Theorem longmul64_lemma[local] =
   mw_mul_thm
   |> INST_TYPE [alpha |-> “:32”]
   |> Q.SPECL [‘split64 a’, ‘split64 b’, ‘[0w;0w]’]

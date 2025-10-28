@@ -1811,7 +1811,7 @@ Proof
   \\ simp[]
 QED
 
-Triviality BITWISE_AND_0_lemma:
+Theorem BITWISE_AND_0_lemma[local]:
   BITWISE w $/\ x 0 = 0
 Proof
   Q.ID_SPEC_TAC`x`

@@ -424,7 +424,7 @@ Termination
   WF_REL_TAC `measure I` \\ fs [DIV_LT_X] \\ REPEAT STRIP_TAC \\ DECIDE_TAC
 End
 
-Triviality silly:
+Theorem silly[local]:
   NUMERAL (SUC x) = SUC x /\
   ZERO + ZERO = 0 /\
   BIT2 n <> 0 /\
@@ -2261,7 +2261,7 @@ Proof
   metis_tac[]
 QED
 
-Triviality delete_mk_BN:
+Theorem delete_mk_BN[local]:
   (delete 0 (mk_BN t1 t2) = mk_BN t1 t2) /\
   (k <> 0 ==> delete k (mk_BN t1 t2) = delete k (BN t1 t2))
 Proof
@@ -2269,7 +2269,7 @@ Proof
   \\ fs [delete_def,mk_BN_def]
 QED
 
-Triviality delete_mk_BS:
+Theorem delete_mk_BS[local]:
   (delete 0 (mk_BS t1 s t2) = mk_BN t1 t2) /\
   (k <> 0 ==> delete k (mk_BS t1 s t2) = delete k (BS t1 s t2))
 Proof
@@ -2277,7 +2277,7 @@ Proof
   \\ fs [delete_def,mk_BS_def,mk_BN_def]
 QED
 
-Triviality DIV_2_lemma:
+Theorem DIV_2_lemma[local]:
   n DIV 2 = m DIV 2 /\ EVEN m = EVEN n ==> m = n
 Proof
   rw []
@@ -2377,7 +2377,7 @@ End
 
 Overload add_pause[local] = ``spts_to_alist_add_pause``
 
-Triviality SUM_add_pause:
+Theorem SUM_add_pause[local]:
   SUM (MAP FST (add_pause j q)) = j + SUM (MAP FST q)
 Proof
   simp [spts_to_alist_add_pause_def]
@@ -2470,7 +2470,7 @@ QED
 Overload inclist_stable[local] =
   `` \xs. FILTER ((~) o isEmpty o SND) (gather_inclist_offsets xs) ``
 
-Triviality gather_add_pause:
+Theorem gather_add_pause[local]:
   inclist_stable (REVERSE (add_pause j xs)) =
   inclist_stable (REVERSE xs)
 Proof
@@ -2522,10 +2522,10 @@ Proof
   )
 QED
 
-Triviality MEM_case = (TypeBase.case_pred_disj_of ``: 'z option``
+Theorem MEM_case[local] = (TypeBase.case_pred_disj_of ``: 'z option``
   |> Q.ISPEC `MEM (x : 'z)` |> SIMP_RULE std_ss [])
 
-Triviality gather_inclist_offsets_MAP_I:
+Theorem gather_inclist_offsets_MAP_I[local]:
   gather_inclist_offsets (MAP (I ## f) xs) =
   MAP (I ## f) (gather_inclist_offsets xs)
 Proof
@@ -2533,7 +2533,7 @@ Proof
   \\ simp [gather_inclist_offsets_def, pairTheory.FORALL_PROD, MAP_MAP_o, MAP_CONG]
 QED
 
-Triviality spts_to_alist_aux_MEM:
+Theorem spts_to_alist_aux_MEM[local]:
   ! i xs acc_cent repeat.
   ! j ys acc2 repeat2.
     spts_to_alist_aux i xs acc_cent [] [] repeat = (j, ys, acc2, repeat2) ==>
@@ -2580,7 +2580,7 @@ Proof
   )
 QED
 
-Triviality MEM_spts_to_alist:
+Theorem MEM_spts_to_alist[local]:
   ! i xs acc_cent.
   ! k v. (MEM (k, v) (spts_to_alist i xs acc_cent) <=>
     MEM (k, v) acc_cent \/
@@ -2598,7 +2598,7 @@ Proof
   \\ fs [NULL_EQ]
 QED
 
-Triviality spts_to_alist_aux_SORTED:
+Theorem spts_to_alist_aux_SORTED[local]:
   ! i xs acc_cent acc_right acc_left repeat.
   ! j ys acc2 repeat2.
     spts_to_alist_aux i xs acc_cent acc_right acc_left repeat = (j, ys, acc2, repeat2) ==>
@@ -2636,7 +2636,7 @@ Proof
   )
 QED
 
-Triviality SORTED_spts_to_alist:
+Theorem SORTED_spts_to_alist[local]:
   ! i xs acc_cent.
   SORTED (<) (REVERSE (i :: MAP FST acc_cent)) /\
   EVERY ((\i. 0 < i) o FST) xs

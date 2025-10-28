@@ -10,7 +10,7 @@ val _ = monadsyntax.temp_add_monadsyntax()
 val _ = monadsyntax.enable_monad "option";
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 }
 
-Triviality nvR_update:
+Theorem nvR_update[local]:
   v NOTIN FDOM s /\ x <> v ==> (nvR (s |+ (v,t)) y x <=> nvR s y x)
 Proof
   SRW_TAC [][nvR_def] THEN
@@ -18,7 +18,7 @@ Proof
   SRW_TAC [][FLOOKUP_DEF,FAPPLY_FUPDATE_THM]
 QED
 
-Triviality TC_nvR_update:
+Theorem TC_nvR_update[local]:
   !y x. (nvR (s |+ (v,t)))^+ y x ==> v NOTIN FDOM s ==>
         (nvR s)^+ y x \/ ?u. (nvR s)^* v x /\ u IN nvars t /\ (nvR s)^* y u
 Proof

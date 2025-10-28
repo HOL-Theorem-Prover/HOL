@@ -113,7 +113,7 @@ DISCH_TAC >> HO_MATCH_MP_TAC walkstar_ind >> SRW_TAC [][] >> Cases_on `t` >| [
   Q.PAT_X_ASSUM `wfs s` ASSUME_TAC >> FULL_SIMP_TAC (srw_ss()) [],
   FULL_SIMP_TAC (srw_ss()) [vars_def]]);
 
-Triviality vwalk_EQ_var_vR:
+Theorem vwalk_EQ_var_vR[local]:
   wfs s ==> !u v1 v2. (vwalk s u = Var v1) /\ (vR s)^+ v2 u /\
                         v2 NOTIN FDOM s ==> (v1 = v2)
 Proof
@@ -127,7 +127,7 @@ Proof
   POP_ASSUM MP_TAC >> SRW_TAC [][NOT_FDOM_vwalk]
 QED
 
-Triviality vwalk_EQ_const_vR:
+Theorem vwalk_EQ_const_vR[local]:
   !v u. (vR s)^+ v u ==> v NOTIN FDOM s /\ wfs s ==>
         !c. vwalk s u <> Const c
 Proof
@@ -143,7 +143,7 @@ Proof
   ]
 QED
 
-Triviality vwalk_EQ_pair_vR:
+Theorem vwalk_EQ_pair_vR[local]:
   !v u. (vR s)^+ v u ==>
         !t1 t2. v NOTIN FDOM s /\ wfs s /\ (vwalk s u = Pair t1 t2) ==>
                 ?u. (u IN vars t1 \/ u IN vars t2) /\ (vR s)^* v u

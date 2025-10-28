@@ -140,7 +140,7 @@ val isAligned = Q.store_thm("isAligned",
   \\ blastLib.BBLAST_TAC
   )
 
-Triviality aligned_pc:
+Theorem aligned_pc[local]:
   !pc : word64.  ((1 >< 0) pc = 0w : word2) = aligned 2 pc
 Proof
   simp [alignmentTheory.aligned_extract]
@@ -151,7 +151,7 @@ val word1_lem = utilsLib.mk_cond_exhaustive_thm 1
 val word2_lem = utilsLib.mk_cond_exhaustive_thm 2
 val word3_lem = utilsLib.mk_cond_exhaustive_thm 3
 
-Triviality write_data_lem0:
+Theorem write_data_lem0[local]:
   !d1 : word64 d2 : word64 d3 : word64 d4 : word64 mask : word64 data : word64.
      (63 >< 0) d4 && (63 >< 0) (~mask) ||
      (63 >< 0) data && (63 >< 0) mask || (63 >< 0) d1 << 192 ||
@@ -160,7 +160,7 @@ Triviality write_data_lem0:
 Proof blastLib.BBLAST_TAC
 QED
 
-Triviality write_data_lem1:
+Theorem write_data_lem1[local]:
   !d1 : word64 d2 : word64 d3 : word64 d4 : word64 mask : word64 data : word64.
      (63 >< 0) d3 << 64 && (63 >< 0) (~mask) << 64 ||
      (63 >< 0) data << 64 && (63 >< 0) mask << 64 ||
@@ -169,7 +169,7 @@ Triviality write_data_lem1:
 Proof blastLib.BBLAST_TAC
 QED
 
-Triviality write_data_lem2:
+Theorem write_data_lem2[local]:
   !d1 : word64 d2 : word64 d3 : word64 d4 : word64 mask : word64 data : word64.
      (63 >< 0) d2 << 128 && (63 >< 0) (~mask) << 128 ||
      (63 >< 0) data << 128 && (63 >< 0) mask << 128 ||
@@ -178,7 +178,7 @@ Triviality write_data_lem2:
 Proof blastLib.BBLAST_TAC
 QED
 
-Triviality write_data_lem3:
+Theorem write_data_lem3[local]:
   !d1 : word64 d2 : word64 d3 : word64 d4 : word64 mask : word64 data : word64.
      (63 >< 0) d1 << 192 && (63 >< 0) (~mask) << 192 ||
      (63 >< 0) data << 192 && (63 >< 0) mask << 192 ||
@@ -187,10 +187,10 @@ Triviality write_data_lem3:
 Proof blastLib.BBLAST_TAC
 QED
 
-Triviality write_data_lem =
+Theorem write_data_lem[local] =
   LIST_CONJ [write_data_lem0, write_data_lem1, write_data_lem2, write_data_lem3]
 
-Triviality B_ZALL_lem:
+Theorem B_ZALL_lem[local]:
   (if b then s with <| c_gpr := x; c_state := y |> else s) =
     s with <| c_gpr := if b then x else s.c_gpr;
               c_state := if b then y else s.c_state |>

@@ -8,12 +8,12 @@ Libs
 val ect = BasicProvers.EVERY_CASE_TAC;
 val fct = BasicProvers.FULL_CASE_TAC;
 
-Triviality some_no_choice:
+Theorem some_no_choice[local]:
   !f. (some x. f x) = NONE ⇔ ¬?x. f x
 Proof rw [some_def]
 QED
 
-Triviality some_SAT:
+Theorem some_SAT[local]:
   !P y. (some x. P x) = SOME y ⇒ P y
 Proof
   rw[some_def,SELECT_THM]>>
@@ -675,7 +675,7 @@ Theorem LAST_APPEND[local]: ls' ≠ [] ⇒ LAST (ls ++ ls') = LAST ls'
 Proof Cases_on‘ls'’>>fs[]
 QED
 
-Triviality sem_e_not_timeout:
+Theorem sem_e_not_timeout[local]:
   !st e r. sem_e st e ≠ (Rtimeout, r)
 Proof
   Induct_on ‘e’ >>
@@ -686,7 +686,7 @@ Proof
   metis_tac []
 QED
 
-Triviality sem_e_not_break:
+Theorem sem_e_not_break[local]:
   !st e r. sem_e st e ≠ (Rbreak,r)
 Proof
   Induct_on‘e’>>srw_tac[][sem_e_def]>>
@@ -699,7 +699,7 @@ Proof
   fs[]
 QED
 
-Triviality LAST_HD_eq:
+Theorem LAST_HD_eq[local]:
   ∀ls ls'.
     ls ≠ [] ∧ ls' ≠ [] ∧
     LAST ls = HD ls' ⇒
@@ -710,7 +710,7 @@ Proof
   Cases_on‘ls'’>>fs[FRONT_DEF]
 QED
 
-Triviality check_trace_append3:
+Theorem check_trace_append3[local]:
   check_trace f ls ∧
   f h = SOME (HD ls) ⇒
   check_trace f (h :: ls)
@@ -720,7 +720,7 @@ Proof
   rfs[check_trace_def]
 QED
 
-Triviality check_trace_tl:
+Theorem check_trace_tl[local]:
   check_trace f ls ∧ ls ≠ [] ⇒
   check_trace f (TL ls)
 Proof
@@ -942,7 +942,7 @@ Proof
 QED
 end
 
-Triviality sem_t_for_no_break:
+Theorem sem_t_for_no_break[local]:
   ∀s s'. sem_t s (For e1 e2 t) ≠ (Rbreak,s')
 Proof
  completeInduct_on‘s.clock’>>fs[sem_t_def_with_stop]>>
@@ -963,7 +963,7 @@ Proof
  fs[dec_clock_def]
 QED
 
-Triviality step_e_clock:
+Theorem step_e_clock[local]:
   ∀se l1 se'.
     step_e se l1 se' ⇒
     ∀s e s' e'.
@@ -976,7 +976,7 @@ Proof
   simp[Once step_e_cases]
 QED
 
-Triviality step_e_zero_clock:
+Theorem step_e_zero_clock[local]:
   (∀s e l. ¬step_e (r,e') l (s,e)) ⇒
   ∀s e l. ¬step_e (r with clock:=0,e') l (s,e)
 Proof
@@ -986,7 +986,7 @@ Proof
   metis_tac[]
 QED
 
-Triviality big_small_lem:
+Theorem big_small_lem[local]:
   !s t r.
     sem_t s t = r
     ⇒
@@ -1271,7 +1271,7 @@ Proof
     )
 QED
 
-Triviality big_timeout_0:
+Theorem big_timeout_0[local]:
   !st p r.
     sem_t st p = (Rtimeout,r)
     ⇒
@@ -1302,7 +1302,7 @@ Proof
 QED
 
 (* check traces are unique up to prefixing *)
-Triviality check_trace_determ:
+Theorem check_trace_determ[local]:
   ∀tr h f.
     check_trace f (h::tr) ⇒
     ∀tr'.
@@ -1315,7 +1315,7 @@ Proof
  metis_tac[]
 QED
 
-Triviality check_trace_prefixes:
+Theorem check_trace_prefixes[local]:
   ∀tr f.
     tr ≠ [] ∧
     check_trace f tr ⇒
@@ -1331,7 +1331,7 @@ Proof
   metis_tac[check_trace_determ]
 QED
 
-Triviality check_trace_TL:
+Theorem check_trace_TL[local]:
   ∀tr tr'.
     tr ≠ [] ∧
     check_trace (λst. some st'. ?l. step_t st l st') tr ∧
@@ -1349,20 +1349,20 @@ Proof
   res_tac>>fs[]
 QED
 
-Triviality prefix_append:
+Theorem prefix_append[local]:
   ∀ls ls'. ls ≼ ls' ⇒ ∃ls''. ls++ls'' = ls'
 Proof
   metis_tac[rich_listTheory.IS_PREFIX_APPEND]
 QED
 
-Triviality res_rel_t_io_trace:
+Theorem res_rel_t_io_trace[local]:
   res_rel_t (q,r) s ⇒ r.io_trace = (FST s).io_trace
 Proof
   simp[res_rel_t_cases]>>rw[]>>fs[]
 QED
 
 (*slow*)
-Triviality res_rel_t_clock:
+Theorem res_rel_t_clock[local]:
  res_rel_t (q,r) s ∧
   step_t s l t ⇒
   q = Rtimeout ∧ (FST s).clock = 0
@@ -1372,7 +1372,7 @@ Proof
   metis_tac[PAIR,FST]
 QED
 
-Triviality step_e_io_mono:
+Theorem step_e_io_mono[local]:
   ∀s l s'.
     step_e s l s' ⇒
     (FST s).io_trace ≼ (FST s').io_trace
@@ -1380,7 +1380,7 @@ Proof
   Induct_on ‘step_e’ >> simp[]
 QED
 
-Triviality step_t_io_mono:
+Theorem step_t_io_mono[local]:
   ∀s l s'.
     step_t s l s' ⇒
     (FST s).io_trace ≼ (FST s').io_trace
@@ -1389,7 +1389,7 @@ Proof
   metis_tac[step_e_io_mono,FORALL_PROD,FST]
 QED
 
-Triviality RTC_step_t_io_mono:
+Theorem RTC_step_t_io_mono[local]:
   ∀x y. (λs1 s2. (some st'. ∃l. step_t s1 l st') = SOME s2)^* x y ⇒
         (FST x).io_trace ≼ (FST y).io_trace
 Proof
@@ -1399,7 +1399,7 @@ Proof
   metis_tac[step_t_io_mono,IS_PREFIX_TRANS]
 QED
 
-Triviality check_trace_io_trace:
+Theorem check_trace_io_trace[local]:
   ∀tr ls.
     tr ≠ [] ∧ check_trace (λst. some st'. ∃l. step_t st l st') (tr ++ ls) ⇒
     (FST(LAST tr)).io_trace ≼ (FST(LAST (tr++ls))).io_trace
@@ -1422,7 +1422,7 @@ Proof
   REWRITE_TAC[arithmeticTheory.ONE,LASTN,LAST,SNOC]
 QED
 
-Triviality sem_e_ignores_clock:
+Theorem sem_e_ignores_clock[local]:
   ∀s e c r s'.
     sem_e s e = (r,s') ⇒
     sem_e (s with clock:=c) e = (r,s' with clock:=c)
@@ -1443,7 +1443,7 @@ Proof
     Cases_on‘q’>>fs[state_component_equality]
 QED
 
-Triviality sem_e_io_mono:
+Theorem sem_e_io_mono[local]:
   ∀s e c.
     (SND (sem_e s e)).io_trace ≼ (SND (sem_e (s with clock:= c) e)).io_trace
 Proof
@@ -1451,7 +1451,7 @@ Proof
   fs[]
 QED
 
-Triviality sem_e_clock_inc:
+Theorem sem_e_clock_inc[local]:
   ∀s e r.
     sem_e s e = r ⇒
     ∀k. sem_e (s with clock:= s.clock+k) e =
@@ -1460,7 +1460,7 @@ Proof
   metis_tac[sem_e_ignores_clock,sem_e_clock,FST,SND,PAIR]
 QED
 
-Triviality sem_t_clock_inc:
+Theorem sem_t_clock_inc[local]:
   ∀s t r.
     sem_t s t = r ∧ FST r ≠ Rtimeout ⇒
     ∀k. sem_t (s with clock:= s.clock+k) t =
@@ -1500,7 +1500,7 @@ Proof
     metis_tac[arithmeticTheory.LESS_EQ_ADD_SUB]
 QED
 
-Triviality check_trace_io_trace_simp:
+Theorem check_trace_io_trace_simp[local]:
   tr ≠ [] ∧
   check_trace (λst.some st'. ∃l. step_t st l st') tr ⇒
   (FST(HD tr)).io_trace ≼ (FST (LAST tr)).io_trace
@@ -1514,7 +1514,7 @@ Proof
   rw[]
 QED
 
-Triviality sem_t_sing_io_mono:
+Theorem sem_t_sing_io_mono[local]:
   ∀s t res s'. sem_t s t = (res,s') ⇒ s.io_trace ≼ s'.io_trace
 Proof
   rw[]>>imp_res_tac big_small_lem>>
@@ -1523,7 +1523,7 @@ Proof
   rfs[]
 QED
 
-Triviality sem_e_sing_io_mono:
+Theorem sem_e_sing_io_mono[local]:
   ∀s e res s'. sem_e s e = (res,s') ⇒ s.io_trace ≼ s'.io_trace
 Proof
   CCONTR_TAC>>fs[]>>
@@ -1533,7 +1533,7 @@ Proof
 QED
 
 (* Monotonicity of io_trace w.r.t. to clock *)
-Triviality sem_t_io_mono_lem:
+Theorem sem_t_io_mono_lem[local]:
   ∀s t k.
     (SND (sem_t s t)).io_trace ≼
     (SND (sem_t (s with clock:=s.clock+k) t)).io_trace
@@ -1598,7 +1598,7 @@ Proof
       metis_tac[IS_PREFIX_TRANS]
 QED
 
-Triviality sem_t_io_mono:
+Theorem sem_t_io_mono[local]:
   k1 ≤ k2 ⇒
   (SND (sem_t (init_st 0 nd input with clock := k1) p)).io_trace ≼
   (SND (sem_t (init_st 0 nd input with clock := k2) p)).io_trace
@@ -1657,11 +1657,11 @@ Proof
  >- metis_tac [PAIR]
 QED
 
-Triviality FST_SPLIT: FST x = y ⇒ ∃z. x = (y,z)
+Theorem FST_SPLIT[local]: FST x = y ⇒ ∃z. x = (y,z)
 Proof Cases_on‘x’>>fs[]
 QED
 
-Triviality big_val_no_errors:
+Theorem big_val_no_errors[local]:
   !st p v s.
     sem_t st p = (Rval v,s)
    ⇒
@@ -1693,7 +1693,7 @@ Definition over_all_def:
   over_all f = { f c | c | T }
 End
 
-Triviality init_st_with_clock:
+Theorem init_st_with_clock[local]:
   init_st a b c with clock := d = init_st d b c
 Proof EVAL_TAC
 QED
@@ -1706,7 +1706,7 @@ Proof
   imp_res_tac sem_t_io_mono >> fs[init_st_with_clock]
 QED
 
-Triviality image_intro:
+Theorem image_intro[local]:
   {fromList (FILTER P (Q c)) | c | T} =
   IMAGE fromList (IMAGE (FILTER P) (over_all Q))
 Proof

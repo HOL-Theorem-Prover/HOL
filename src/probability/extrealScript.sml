@@ -980,7 +980,7 @@ val tactics =
       ASM_SIMP_TAC std_ss [delete_non_element] \\
       METIS_TAC [add_assoc, add_comm, add_not_infty] ] ];
 
-Triviality lem:
+Theorem lem[local]:
   !li.
      li = PosInf ==>
      !f s. FINITE s ==>

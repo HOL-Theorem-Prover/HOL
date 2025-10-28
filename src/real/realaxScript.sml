@@ -919,7 +919,7 @@ Proof
 QED
 
 (* This actually shows that real numbers and (+,*,0,1) form a semi-ring *)
-Triviality REAL_POLY_CLAUSES :
+Theorem REAL_POLY_CLAUSES[local] :
    (!x y z. x + (y + z) = (x + y) + z) /\
    (!x y. x + y = y + x) /\
    (!x. 0r + x = x) /\
