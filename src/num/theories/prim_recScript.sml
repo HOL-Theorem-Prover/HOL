@@ -508,12 +508,11 @@ local
        THEN ASM_REWRITE_TAC [SIMP_REC_THM]
        THEN BETA_TAC THEN RES_TAC THEN IMP_RES_TAC DCkey)
 in
-val DC = store_thm("DC",
-Term
-  `!P R a.
+Theorem DC: !P R a.
       P a /\ (!x. P x ==> ?y. P y /\ R x y)
           ==>
-      ?f. (f 0 = a) /\ (!n. P (f n) /\ R (f n) (f (SUC n)))`,
+      ?f. (f 0 = a) /\ (!n. P (f n) /\ R (f n) (f (SUC n)))
+Proof
 REPEAT STRIP_TAC
   THEN EXISTS_TAC (Term`SIMP_REC a (\x. @y. P y /\ R x y)`)
   THEN REWRITE_TAC [SIMP_REC_THM] THEN BETA_TAC THEN GEN_TAC
@@ -521,7 +520,8 @@ REPEAT STRIP_TAC
        (Term`P (SIMP_REC a (\x. @y. P y /\ R x y) n)`) ASSUME_TAC THENL
   [MATCH_MP_TAC totalDClem THEN ASM_REWRITE_TAC[],
    ASM_REWRITE_TAC[] THEN RES_THEN MP_TAC THEN DISCH_THEN (K ALL_TAC)
-  THEN DISCH_THEN (CHOOSE_THEN (ACCEPT_TAC o CONJUNCT2 o MATCH_MP DCkey))])
+  THEN DISCH_THEN (CHOOSE_THEN (ACCEPT_TAC o CONJUNCT2 o MATCH_MP DCkey))]
+QED
 end;
 
 

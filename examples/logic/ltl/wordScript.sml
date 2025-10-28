@@ -2,7 +2,8 @@ Theory word
 Ancestors
   pred_set
 
-val _ = Datatype` word = WORD (num -> 'a set)`;
+Datatype:  word = WORD (num -> 'a set)
+End
 
 Definition suff_def:   suff (WORD f) n = WORD (\x. f (n+x))
 End

@@ -1774,50 +1774,62 @@ Proof
  metis_tac []
 QED
 
-val QSORT3_SORTED = Q.store_thm ("QSORT3_SORTED",
-‘!R L. transitive R /\ total R ==> SORTED R (QSORT3 R L)’,
+Theorem QSORT3_SORTED:
+ !R L. transitive R /\ total R ==> SORTED R (QSORT3 R L)
+Proof
  rw [] >>
  imp_res_tac QSORT3_SORTS >>
- fs [SORTS_DEF]);
+ fs [SORTS_DEF]
+QED
 
-val sorted_lt_count_list = Q.store_thm ("sorted_lt_count_list",
-‘!n. SORTED $< (COUNT_LIST n)’,
+Theorem sorted_lt_count_list:
+ !n. SORTED $< (COUNT_LIST n)
+Proof
  Induct_on ‘n’
  >- rw [COUNT_LIST_def] >>
  rw [COUNT_LIST_SNOC, SNOC_APPEND] >>
  match_mp_tac SORTED_APPEND_IMP >>
  FULL_SIMP_TAC (srw_ss()++ARITH_ss) [transitive_def, MEM_COUNT_LIST] >>
- decide_tac);
+ decide_tac
+QED
 
-val SORTED_weaken = store_thm("SORTED_weaken",
-  “!R R' ls. SORTED R ls /\ (!x y. MEM x ls /\ MEM y ls /\ R x y ==> R' x y)
-      ==> SORTED R' ls”,
+Theorem SORTED_weaken:
+   !R R' ls. SORTED R ls /\ (!x y. MEM x ls /\ MEM y ls /\ R x y ==> R' x y)
+      ==> SORTED R' ls
+Proof
   NTAC 2 GEN_TAC THEN
   Induct THEN SRW_TAC[][] THEN
   Cases_on‘ls’ THEN
   FULL_SIMP_TAC(srw_ss())[SORTED_DEF] THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN
-  METIS_TAC[])
+  METIS_TAC[]
+QED
 
-val sorted_count_list = Q.store_thm ("sorted_count_list",
-‘!n. SORTED $<= (COUNT_LIST n)’,
+Theorem sorted_count_list:
+ !n. SORTED $<= (COUNT_LIST n)
+Proof
  gen_tac \\ irule SORTED_weaken \\ qexists_tac‘$<’
- \\ simp[sorted_lt_count_list]);
+ \\ simp[sorted_lt_count_list]
+QED
 
-val sorted_map = Q.store_thm ("sorted_map",
-‘!R f l. (SORTED R (MAP f l) <=> SORTED (inv_image R f) l)’,
- Induct_on ‘l’ >> rw [SORTED_EL_SUC, EL_MAP]);
+Theorem sorted_map:
+ !R f l. (SORTED R (MAP f l) <=> SORTED (inv_image R f) l)
+Proof
+ Induct_on ‘l’ >> rw [SORTED_EL_SUC, EL_MAP]
+QED
 
-val sorted_perm_count_list = Q.store_thm ("sorted_perm_count_list",
-‘!y f l n.
+Theorem sorted_perm_count_list:
+ !y f l n.
   SORTED (inv_image $<= f) l /\
   PERM (MAP f l) (COUNT_LIST n)
   ==>
-  (MAP f l = COUNT_LIST n)’,
+  (MAP f l = COUNT_LIST n)
+Proof
  rw [] >>
  ‘transitive $<= /\ antisymmetric $<=’
           by srw_tac [ARITH_ss] [transitive_def,antisymmetric_def] >>
- metis_tac [sorted_map, SORTED_PERM_EQ, sorted_count_list]);
+ metis_tac [sorted_map, SORTED_PERM_EQ, sorted_count_list]
+QED
 
 Theorem greater_sorted_eq:
   SORTED $> (x::L) ⇔ SORTED $> L ∧ ∀y. MEM y L ⇒ y < x
@@ -1830,26 +1842,32 @@ QED
 Theorem less_sorted_eq =
   MATCH_MP SORTED_EQ arithmeticTheory.transitive_LESS
 
-val SORTED_GENLIST_PLUS = store_thm("SORTED_GENLIST_PLUS",
-  “!n k. SORTED $< (GENLIST ($+ k) n)”,
+Theorem SORTED_GENLIST_PLUS:
+   !n k. SORTED $< (GENLIST ($+ k) n)
+Proof
   Induct >> simp[GENLIST_CONS,less_sorted_eq,MEM_GENLIST] >> gen_tac >>
   ‘$+ k o SUC = $+ (k+1)’ by (
     simp[FUN_EQ_THM] ) >>
-  metis_tac[])
+  metis_tac[]
+QED
 
-val SORTED_ALL_DISTINCT = store_thm("SORTED_ALL_DISTINCT",
-  “irreflexive R /\ transitive R ==> !ls. SORTED R ls ==> ALL_DISTINCT ls”,
+Theorem SORTED_ALL_DISTINCT:
+   irreflexive R /\ transitive R ==> !ls. SORTED R ls ==> ALL_DISTINCT ls
+Proof
   STRIP_TAC THEN Induct THEN SRW_TAC[][] THEN
   IMP_RES_TAC SORTED_EQ THEN
   FULL_SIMP_TAC (srw_ss()) [SORTED_DEF] THEN
-  METIS_TAC[relationTheory.irreflexive_def])
+  METIS_TAC[relationTheory.irreflexive_def]
+QED
 
-val sorted_filter = Q.store_thm("sorted_filter",
-  ‘!R ls. transitive R ==> SORTED R ls ==> SORTED R (FILTER P ls)’,
+Theorem sorted_filter:
+   !R ls. transitive R ==> SORTED R ls ==> SORTED R (FILTER P ls)
+Proof
   HO_MATCH_MP_TAC SORTED_IND >>
   rw[SORTED_DEF] >> fs[] >>
   rfs[SORTED_EQ,MEM_FILTER] >>
-  rw[] >> metis_tac[transitive_def])
+  rw[] >> metis_tac[transitive_def]
+QED
 
 end
 

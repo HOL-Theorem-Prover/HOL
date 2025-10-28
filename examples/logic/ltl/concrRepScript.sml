@@ -7,23 +7,26 @@ val _ = monadsyntax.temp_add_monadsyntax();
 val _ = overload_on("monad_bind",``OPTION_BIND``);
 val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
-val _ = Datatype`
+Datatype:
   edgeLabelAA = <| edge_grp : num ;
                    pos_lab : (α list) ;
                    neg_lab : (α list)
-                 |>`;
+                 |>
+End
 
-val _ = Datatype`
+Datatype:
   nodeLabelAA = <| frml : α ltl_frml ;
                    is_final : bool ;
                    true_labels : (α edgeLabelAA) list
-               |>`;
+               |>
+End
 
-val _ = Datatype`
+Datatype:
   concrAA = <| graph : (α nodeLabelAA, α edgeLabelAA) gfg ;
                init : (num list) list ;
                atomicProp : α list
-            |>`;
+            |>
+End
 
 Definition concr2Abstr_states_def:
   concr2Abstr_states graph =
@@ -47,10 +50,11 @@ Definition concr2Abstr_final_def:
                ∧ x.is_final}
 End
 
-val _ = Datatype`
+Datatype:
   concrEdge = <| pos : (α list) ;
                  neg : (α list) ;
-                 sucs : (α ltl_frml) list |>`;
+                 sucs : (α ltl_frml) list |>
+End
 
 Definition cE_equiv_def:
   cE_equiv cE1 cE2 =

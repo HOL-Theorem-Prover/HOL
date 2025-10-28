@@ -5,7 +5,9 @@ Theory plotkin
    North Holland
 *)
 
-Ancestors cterm fmaptree nomset finite_map
+Ancestors
+  cterm fmaptree nomset finite_map nominalFmapTree
+  pred_set
 
 val _ = hide "S"
 
@@ -112,7 +114,7 @@ Proof
   simp[Real_def, fmtreerec_thm, wf_Closure_thm] >> strip_tac >>
   irule ssub_cong >> simp[] >>
   simp[FLOOKUP_SIMP, FLOOKUP_o_f, AllCaseEqs()] >>
-  metis_tac[flookup_thm, pred_setTheory.SUBSET_DEF]
+  metis_tac[flookup_thm, SUBSET_DEF]
 QED
 
 Datatype: controlstring = Ap | Tm icterm
@@ -184,7 +186,7 @@ Proof
   >- ASM_SET_TAC[] >~
   [‘closed t’, ‘constapply _ _ = SOME t’]
   >- (Cases_on ‘a’ >> Cases_on ‘b’ >> gvs[constapply_def, AllCaseEqs()] >>
-      simp[pred_setTheory.EXTENSION, EQ_IMP_THM])
+      simp[EXTENSION, EQ_IMP_THM])
 QED
 
 
@@ -278,3 +280,263 @@ Proof
   >- (Induct_on ‘eval’ >> metis_tac[timed_eval_rules]) >>
   Induct_on ‘timed_eval’ >> metis_tac[eval_rules]
 QED
+
+Definition is_abs_def:
+  is_abs M = ∃v M0. M = LAM v M0
+End
+
+Theorem is_abs_thm[simp]:
+  is_abs (VAR v) = F ∧
+  is_abs (APP M N) = F ∧
+  is_abs (CONST c) = F ∧
+  is_abs (LAM u M) = T
+Proof
+  simp[is_abs_def] >> metis_tac[]
+QED
+
+Definition is_const_def:
+  is_const M = ∃c. M = CONST c
+End
+
+Theorem is_const_thm[simp]:
+  is_const (VAR v) = F ∧
+  is_const (CONST c) = T ∧
+  is_const (APP M N) = F ∧
+  is_const (LAM u M) = F
+Proof
+  simp[is_const_def]
+QED
+
+Inductive isVClosure:
+[~clos:]
+  wf_Closure (mkClos M E) ∧ (is_abs M ∨ is_const M) ∧ isVEnv E ⇒
+  isVClosure (mkClos M E)
+[~env:]
+  (∀v. v ∈ FDOM E ⇒ isVClosure (E ' v)) ⇒
+  isVEnv E
+End
+
+Theorem isVClosure_thm[simp]:
+  (isVClosure (mkClos V e) ⇔
+     wf_Closure (mkClos V e) ∧ (is_abs V ∨ is_const V) ∧ isVEnv e) ∧
+  (isVEnv FEMPTY = T) ∧
+  (isVEnv (fm |+ (v,c)) ⇔ isVClosure c ∧ isVEnv (fm \\ v))
+Proof
+  rpt strip_tac >> simp[Once isVClosure_cases, SimpLHS] >> simp[]
+  >- metis_tac[] >>
+  simp[DISJ_IMP_THM, FORALL_AND_THM] >>
+  simp[cj 2 isVClosure_cases] >>
+  simp[FAPPLY_FUPDATE_THM, DOMSUB_FAPPLY_THM] >> metis_tac[]
+QED
+
+val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+                  fixity = Closefix, paren_style = OnlyIfNecessary,
+                  pp_elements = [TOK "⟨", TM, HardSpace 1, TOK "∶",
+                                 BreakSpace (1,1), TM, TOK "⟩"],
+                  term_name = "mkClos"}
+
+
+Theorem FINITE_supp_string_pmact:
+  FINITE (supp string_pmact s)
+Proof
+  simp[]
+QED
+
+Theorem Real_alt:
+  wf_Closure Cl ⇒
+  Real Cl =
+  FUN_FMAP (λx. Real (fmt_map Cl ' x)) (cFV $ fmt_item Cl) ' (fmt_item Cl)
+Proof
+  Cases_on ‘Cl’ using fmaptree_nchotomy >> simp[Real_thm]
+QED
+
+Overload fmFV = “λapm bpm. supp (fm_pmact apm bpm)”
+Overload clFV = “supp (fmt_pmact cterm_pmact string_pmact)”
+Overload eFV =
+  “supp (fm_pmact string_pmact (fmt_pmact cterm_pmact string_pmact))”
+
+Theorem FINITE_clFV[simp]:
+  FINITE (clFV cl)
+Proof
+  irule FINITE_supp_fmtpm >> simp[]
+QED
+
+Theorem FINITE_eFV[simp]:
+  FINITE (eFV E)
+Proof
+  simp[fmap_supp, supp_setpm, PULL_EXISTS]
+QED
+
+Theorem term_for_set_exists[local]:
+  ∀A. FINITE A ⇒ ∃ct. cFV ct = A
+Proof
+  Induct_on ‘FINITE’ >> rw[]
+  >- (qexists ‘CONST ARB’ >> simp[]) >>
+  rename [‘v ∉ cFV t’] >>
+  qexists ‘VAR v @@ t’ >> simp[] >> SET_TAC[]
+QED
+
+Theorem FORALL_cFV:
+  (∀t. P (cFV t)) ⇔ (∀A. FINITE A ⇒ P A)
+Proof
+  metis_tac[term_for_set_exists, FINITE_cFV]
+QED
+
+Theorem FUN_FMAP_ssub_restrict:
+  ∀(M:'a cterm) D.
+    FINITE D ⇒
+    FUN_FMAP f D ' M = FUN_FMAP f (D ∩ cFV M) ' M
+Proof
+  simp[GSYM FORALL_cFV] >> ONCE_REWRITE_TAC [EQ_SYM_EQ] >>
+  ho_match_mp_tac cterm_bvc_induction >>
+  qexists ‘λt. cFV t ∪ supp (set_pmact cterm_pmact) (IMAGE f (cFV t))’ >>
+  gvs[FORALL_cFV] >>
+  rw[ssub_thm] >> simp[supp_setpm, PULL_EXISTS] >> rw[] >~
+  [‘FUN_FMAP f _ ' (s:string) = FUN_FMAP f _ ' s’]
+  >- simp[FUN_FMAP_DEF] >~
+  [‘cFV M ∪ cFV N’, ‘_ ' M’]
+  >- (‘A ∩ (cFV M ∪ cFV N) ∩ cFV M = A ∩ cFV M’ by SET_TAC[] >>
+      ‘FINITE (A ∩ (cFV M ∪ cFV N))’ by simp[] >>
+      metis_tac[]) >~
+  [‘cFV M ∪ cFV N’, ‘_ ' N’]
+  >- (‘A ∩ (cFV M ∪ cFV N) ∩ cFV N = A ∩ cFV N’ by SET_TAC[] >>
+      ‘FINITE (A ∩ (cFV M ∪ cFV N))’ by simp[] >>
+      metis_tac[]) >~
+  [‘FUN_FMAP f (A ∩ _) ' (LAM v M0) = FUN_FMAP f A ' _’] >>
+  ‘∀y. y ∈ A ⇒ v ∉ cFV (f y)’
+    by (gvs[supp_setpm] >> metis_tac[]) >>
+  ‘∀y. y ∈ A ∩ (cFV M0 DELETE v) ⇒ v ∉ cFV (f y)’ by ASM_SET_TAC[] >>
+  simp[ssub_thm, FUN_FMAP_DEF] >>
+  ‘A ∩ (cFV M0 DELETE v) ∩ cFV M0 = A ∩ cFV M0’ by ASM_SET_TAC[] >>
+  ‘FINITE (A ∩ (cFV M0 DELETE v))’ by simp[] >>
+  metis_tac[]
+QED
+
+Theorem FUN_FMAP_ssub_subset:
+  ∀(M:'a cterm) D0 D.
+    cFV M ⊆ D0 ∧ D0 ⊆ D ∧ FINITE D ⇒
+    FUN_FMAP f D ' M = FUN_FMAP f D0 ' M
+Proof
+  rw[] >> simp[SimpLHS, Once FUN_FMAP_ssub_restrict] >>
+  ‘FINITE D0’ by metis_tac[SUBSET_FINITE_I] >>
+  simp[SimpRHS, Once FUN_FMAP_ssub_restrict] >>
+  cong_tac (SOME 2) >>
+  ASM_SET_TAC[]
+QED
+
+Theorem wf_Closure_Real_ground_lemma:
+  ∀t fm D.
+    (∀k. k ∈ FDOM fm ⇒ wf_Closure (fm ' k) ∧ closed (Real (fm ' k))) ∧
+    D ⊆ FDOM fm
+    ⇒
+    cFV (FUN_FMAP (λx. Real (fm ' x)) D ' t) = cFV t DIFF D
+Proof
+  ho_match_mp_tac cterm_bvc_induction >>
+  qexists ‘supp (fm_pmact string_pmact (fmt_pmact cterm_pmact string_pmact))’ >>
+  simp[fmap_supp, FINITE_supp_fmtpm, supp_setpm, PULL_EXISTS] >> rpt strip_tac >>
+  gvs[] >~
+  [‘VAR v’]
+  >- (‘FINITE D’ by metis_tac[FDOM_FINITE, SUBSET_FINITE_I] >>
+      simp[FUN_FMAP_DEF, AllCaseEqs(), SF CONJ_ss] >>
+      rename [‘v ∈ D ∧ _ ∨ v ∉ D’] >> Cases_on ‘v ∈ D’ >> simp[] >>
+      first_x_assum (irule o cj 2) >> gvs[SUBSET_DEF]) >~
+  [‘cFV M DIFF D ∪ (cFV N DIFF D)’]
+  >- SET_TAC[] >>
+  dep_rewrite.DEP_REWRITE_TAC[ssub_thm] >>
+  ‘FINITE D’ by metis_tac[FDOM_FINITE, SUBSET_FINITE_I] >>
+  simp[FUN_FMAP_DEF] >> rw[] >~
+  [‘v ∉ D (* g *)’, ‘v ∉ FDOM fm’, ‘D ⊆ FDOM fm’]
+  >- ASM_SET_TAC[] >~
+  [‘v ∉ cFV (Real (fm ' k))’, ‘k ∈ D’] >- metis_tac[SUBSET_DEF, NOT_IN_EMPTY] >>
+  ASM_SET_TAC[]
+QED
+
+Theorem wf_Closure_Real_ground:
+  ∀Cl.
+    wf_Closure Cl ⇒ cFV (Real Cl) = ∅
+Proof
+  Induct using ft_ind >> simp[] >> rpt strip_tac >> gvs[] >>
+  rename [‘cFV t ⊆ FDOM E’] >>
+  qspecl_then [‘t’, ‘E’, ‘cFV t’] mp_tac wf_Closure_Real_ground_lemma >>
+  simp[] >> simp[GSYM Real_thm]
+QED
+
+(*
+Theorem lemma1_0:
+  ∀M E x NCl.
+    wf_Closure NCl ∧ (∀k. k ∈ FDOM E ∧ k ≠ x ⇒ wf_Closure (E ' k)) ⇒
+    Real ⟨ M ∶ E |+ (x, NCl) ⟩ = [Real NCl/x] (Real ⟨ M ∶ E \\ x ⟩)
+Proof
+  ‘∀M exn E x NCl.
+     exn = (E,x,NCl) ∧
+     wf_Closure NCl ∧ (∀k. k ∈ FDOM E ∧ k ≠ x ⇒ wf_Closure (E ' k)) ⇒
+     Real ⟨ M ∶ E |+ (x, NCl) ⟩ = [Real NCl/x] (Real ⟨ M ∶ E \\ x ⟩)’
+    suffices_by simp[] >>
+  ho_match_mp_tac cterm_bvc_induction >>
+  qexists ‘λ(E,x,NCl). eFV E ∪ {x} ∪ clFV NCl’>>
+  simp[pairTheory.FORALL_PROD] >> rw[] >~
+  [‘⟨ VAR v ∶ E |+ (u,NCl)⟩ (* sg *)’]
+  >- (qabbrev_tac ‘rn = Real NCl’ >> simp[Real_def, fmtreerec_thm] >>
+      Cases_on ‘u = v’ >> simp[FAPPLY_FUPDATE_THM, DOMSUB_FAPPLY_THM]
+      >- simp[Abbr‘rn’, Real_def] >>
+      rw[] >> simp[GSYM Real_def] >>
+      simp[lemma14b, wf_Closure_Real_ground]) >~
+  [‘⟨ M @@ N ∶ E |+ (u,NCl)⟩ (* sg *)’]
+  >- (qabbrev_tac ‘rn = Real NCl’ >> simp[Real_def, fmtreerec_thm] >>
+      simp[GSYM Real_def] >>
+
+
+      simp[FUN_FMAP_DEF] >>
+      ‘Real ⟨ VAR u ∶ E \\ u⟩ = VAR u’ suffices_by simp[] >>
+      simp[Real_def, fmtreerec_thm]) >>
+
+Theorem lemma1:
+  isVClosure (mkClos (LAM y M) E) ∧ isVClosure (mkClos N E') ∧
+  Real (mkClos (LAM y M) E) = LAM x M' ∧ Real (mkClos N E') = N' ⇒
+  Real (mkClos M (E |+ (y,mkClos N E'))) = [N'/x] M'
+Proof
+
+
+
+(* p131 *)
+Theorem lemma1:
+  ∀M' rest x y E N N' E' M.
+    rest = (x,y,M,N,N',E,E') ∧
+    isVClosure (mkClos (LAM y M) E) ∧ isVClosure (mkClos N E') ∧
+    Real (mkClos (LAM y M) E) = LAM x M' ∧ Real (mkClos N E') = N' ⇒
+    Real (mkClos M (E |+ (y,mkClos N E'))) = [N'/x] M'
+Proof
+  simp[Real_thm, SF CONJ_ss] >> rpt strip_tac >>
+  ‘wf_Closure ⟨M ∶ E |+ (y,⟨N ∶ E'⟩)⟩’
+    by (simp[wf_Closure_thm] >> conj_tac
+        >- ASM_SET_TAC [] >>
+        simp[DISJ_IMP_THM, FORALL_AND_THM, FAPPLY_FUPDATE_THM] >>
+        rw[]) >>
+  simp[Real_thm]
+
+  rpt strip_tac >>
+  ‘wf_Closure (mkClos (LAM y M) E) ∧ wf_Closure (mkClos N E')’ by gvs[] >>
+  ‘wf_Closure (mkClos M (E |+ (y,mkClos N E')))’
+    by (gvs[DISJ_IMP_THM, FORALL_AND_THM] >>
+        (conj_tac >- ASM_SET_TAC[] >> rw[FAPPLY_FUPDATE_THM])) >>
+  rpt (qpat_x_assum ‘Real _ = _’ mp_tac) >>
+  simp[Real_thm]
+
+
+   >> Cases_on ‘is_const N’
+  >- (gvs[Real_thm] >>
+      ‘cFV N = {}’
+        by (Cases_on ‘N’ using cterm_CASES >> gvs[]) >>
+      simp[]
+  ‘wf_Closure (mkClos (LAM y M) E)’ by gvs[] >>
+  gnvs[Real_thm]
+
+
+  ho_match_mp_tac cterm_bvc_induction >>
+  qexists ‘λ(x,y,M,N,N',E,E'). {x;y} ∪ cFV M ∪ cFV N ∪ cFV N' ∪ supp (fm_pmact ’
+
+  CONV_TAC (QUANT_CONV (QUANT_CONV (UNBETA_CONV “rest : string # string # icterm # icterm # icterm # Environment # Environment”))) >>
+  CONV_TAC (QUANT_CONV (QUANT_CONV (RATOR_CONV (UNBETA_CONV “M' : icterm”)))) >>
+  irule (REWRITE_RULE[AND_IMP_INTRO, GSYM CONJ_ASSOC]) >>
+  qexists ‘cFV N ∪ cFV N' ∪ cFV M'’ >> simp[]
+*)

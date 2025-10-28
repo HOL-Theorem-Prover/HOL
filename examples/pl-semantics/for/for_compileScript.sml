@@ -466,18 +466,21 @@ val phase2_pres = store_thm("phase2_pres",
 
 (* We define the tagert assembly language *)
 
-val _ = Datatype `
-reg = Reg string`
+Datatype:
+reg = Reg string
+End
 
-val _ = Datatype `
+Datatype:
 instr =
     Add reg reg reg
   | Int reg int
   | Jmp num
-  | JmpIf reg num`;
+  | JmpIf reg num
+End
 
-val _ = Datatype `
-state_a = <| store : state; pc : num; instrs : instr list |>`;
+Datatype:
+state_a = <| store : state; pc : num; instrs : instr list |>
+End
 
 Definition do_jump_def:
 do_jump s n =

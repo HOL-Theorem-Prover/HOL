@@ -4,10 +4,10 @@ Ancestors
 
 val MAP_CONG' = REWRITE_RULE [GSYM AND_IMP_INTRO] MAP_CONG
 
-val _ = Datatype‘
+Datatype:
   model = <| Dom : α set ; Fun : num -> α list -> α ;
              Pred : num -> α list -> bool |>
-’;
+End
 
 Definition valuation_def:
   valuation M v ⇔ ∀n. v n ∈ M.Dom

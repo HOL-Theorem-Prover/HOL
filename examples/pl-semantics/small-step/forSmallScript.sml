@@ -19,7 +19,7 @@ val some_no_choice = Q.prove (
 (* A small step semantics for the deterministic FOR language *)
 
 (* Add a Handle statement that will stop breaks from propagating *)
-val _ = Datatype `
+Datatype:
 small_t =
   | Dec string small_t
   | Exp e
@@ -27,7 +27,8 @@ small_t =
   | Seq small_t small_t
   | If e small_t small_t
   | For e e small_t
-  | Handle small_t`;
+  | Handle small_t
+End
 
 Definition t_to_small_t_def:
 (t_to_small_t ((Dec string t):t) = ((Dec string (t_to_small_t t)) : small_t)) ∧

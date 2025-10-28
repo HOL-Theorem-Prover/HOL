@@ -25,7 +25,8 @@ val _ = set_fixity "|+"  (Infixl 600);
 val _ = set_fixity "|++" (Infixl 500);
 val _ = set_fixity "\\\\" (Infixl 600);
 
-val _ = Datatype `ptree = Empty | Leaf num 'a | Branch num num ptree ptree`;
+Datatype:  ptree = Empty | Leaf num 'a | Branch num num ptree ptree
+End
 
 Definition BRANCHING_BIT_def[nocompute]:
   BRANCHING_BIT p0 p1 =

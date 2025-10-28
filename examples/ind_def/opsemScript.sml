@@ -29,19 +29,19 @@ val _ = type_abbrev("state", ``:string |-> num``);
 (* neval and beval don't end up playing a role.                              *)
 (*---------------------------------------------------------------------------*)
 
-val _ =
- Datatype
-      `nexp = Var string
+Datatype:
+       nexp = Var string
             | Const num
             | Plus nexp nexp
             | Times nexp nexp
-            | Sub nexp nexp`;
+            | Sub nexp nexp
+End
 
-val _ =
- Datatype
-      `bexp = Equal nexp nexp
+Datatype:
+       bexp = Equal nexp nexp
             | Less nexp nexp
-            | Not bexp`;
+            | Not bexp
+End
 
 Definition neval_def:
    (neval (Var s) sigma = (sigma ' s)) /\
@@ -62,13 +62,13 @@ End
 (* Datatype of programs                                                      *)
 (*---------------------------------------------------------------------------*)
 
-val _ =
- Datatype
-  `program = Skip
+Datatype:
+   program = Skip
            | Assign string nexp
            | Seq    program program
            | Cond   bexp program program
-           | While  bexp program`;
+           | While  bexp program
+End
 
 
 (*---------------------------------------------------------------------------*)

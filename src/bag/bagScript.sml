@@ -790,15 +790,16 @@ local
             BAG_DIFF b2 b3``
     end
 in
-  val BAG_DIFF_UNION_eliminate = store_thm(
-    "BAG_DIFF_UNION_eliminate",
-    ``!(b1:'a->num) (b2:'a->num) (b3:'a->num).
+Theorem BAG_DIFF_UNION_eliminate:
+      !(b1:'a->num) (b2:'a->num) (b3:'a->num).
           ^(bdf ("b1", "b2") ("b1", "b3")) /\
           ^(bdf ("b1", "b2") ("b3", "b1")) /\
           ^(bdf ("b2", "b1") ("b1", "b3")) /\
-          ^(bdf ("b2", "b1") ("b3", "b1"))``,
+          ^(bdf ("b2", "b1") ("b3", "b1"))
+Proof
     REPEAT STRIP_TAC THEN
-    SIMP_TAC std_ss [BAG_DIFF, BAG_UNION, FUN_EQ_THM])
+    SIMP_TAC std_ss [BAG_DIFF, BAG_UNION, FUN_EQ_THM]
+QED
   val _ = export_rewrites ["BAG_DIFF_UNION_eliminate"]
 end;
 
@@ -813,17 +814,18 @@ local
             SUB_BAG (b2:'a->num) b3``
     end
 in
-  val SUB_BAG_UNION_eliminate = store_thm(
-    "SUB_BAG_UNION_eliminate",
-    ``!(b1:'a->num) (b2:'a->num) (b3:'a->num).
+Theorem SUB_BAG_UNION_eliminate:
+      !(b1:'a->num) (b2:'a->num) (b3:'a->num).
           ^(bdf ("b1", "b2") ("b1", "b3")) /\
           ^(bdf ("b1", "b2") ("b3", "b1")) /\
           ^(bdf ("b2", "b1") ("b1", "b3")) /\
-          ^(bdf ("b2", "b1") ("b3", "b1"))``,
+          ^(bdf ("b2", "b1") ("b3", "b1"))
+Proof
     SIMP_TAC std_ss [SUB_BAG_LEQ, BAG_UNION, BAG_INN] THEN
     REPEAT STRIP_TAC THEN EQ_TAC THEN
     STRIP_TAC THEN
-    POP_ASSUM (fn th => SIMP_TAC std_ss [SPEC_ALL th]))
+    POP_ASSUM (fn th => SIMP_TAC std_ss [SPEC_ALL th])
+QED
   val _ = export_rewrites ["SUB_BAG_UNION_eliminate"]
 end;
 
@@ -1167,15 +1169,14 @@ Theorem IN_SET_OF_BAG[simp]:
 Proof SIMP_TAC std_ss [SET_OF_BAG, SPECIFICATION]
 QED
 
-val SET_OF_BAG_EQ_EMPTY = store_thm(
-  "SET_OF_BAG_EQ_EMPTY",
-  ``!b. (({} = SET_OF_BAG b) = (b = {||})) /\
-        ((SET_OF_BAG b = {}) = (b = {||}))``,
+Theorem SET_OF_BAG_EQ_EMPTY[simp]:
+  !b. (({} = SET_OF_BAG b) = (b = {||})) /\
+      ((SET_OF_BAG b = {}) = (b = {||}))
+Proof
   GEN_TAC THEN
   Q.SPEC_THEN `b` STRIP_ASSUME_TAC BAG_cases THEN
-  SRW_TAC [][SET_OF_BAG_INSERT])
- before
- export_rewrites ["SET_OF_BAG_EQ_EMPTY"];
+  SRW_TAC [][SET_OF_BAG_INSERT]
+QED
 
 Theorem SET_OF_BAG_SING:
   !b e. SET_OF_BAG b = {e} <=> ?n. 0 < n /\ b = \x. if x = e then n else 0
@@ -1675,30 +1676,27 @@ Definition BAG_FILTER_DEF[nocompute]:
   BAG_FILTER P (b :'a bag) : 'a bag = \e. if P e then b e else 0
 End
 
-val BAG_FILTER_EMPTY = store_thm(
-  "BAG_FILTER_EMPTY",
-  ``BAG_FILTER P {||} = {||}``,
+Theorem BAG_FILTER_EMPTY[simp]:
+  BAG_FILTER P {||} = {||}
+Proof
   SRW_TAC [][BAG_FILTER_DEF, FUN_EQ_THM] THEN
-  SRW_TAC [][EMPTY_BAG])
-  before
-  export_rewrites ["BAG_FILTER_EMPTY"];
+  SRW_TAC [][EMPTY_BAG]
+QED
 
-val BAG_FILTER_BAG_INSERT = store_thm(
-  "BAG_FILTER_BAG_INSERT",
-  ``BAG_FILTER P (BAG_INSERT e b) = if P e then BAG_INSERT e (BAG_FILTER P b)
-                                    else BAG_FILTER P b``,
+Theorem BAG_FILTER_BAG_INSERT[simp]:
+  BAG_FILTER P (BAG_INSERT e b) = if P e then BAG_INSERT e (BAG_FILTER P b)
+                                  else BAG_FILTER P b
+Proof
   SRW_TAC [][BAG_FILTER_DEF, FUN_EQ_THM] THEN
-  SRW_TAC [][BAG_INSERT] THEN RES_TAC)
-  before
-  export_rewrites ["BAG_FILTER_BAG_INSERT"];
+  SRW_TAC [][BAG_INSERT] THEN RES_TAC
+QED
 
-val FINITE_BAG_FILTER = store_thm(
-  "FINITE_BAG_FILTER",
-  ``!b. FINITE_BAG b ==> FINITE_BAG (BAG_FILTER P b)``,
+Theorem FINITE_BAG_FILTER[simp]:
+  !b. FINITE_BAG b ==> FINITE_BAG (BAG_FILTER P b)
+Proof
   HO_MATCH_MP_TAC FINITE_BAG_INDUCT THEN SRW_TAC [][] THEN
-  SRW_TAC [][])
-  before
-  export_rewrites ["FINITE_BAG_FILTER"];
+  SRW_TAC [][]
+QED
 
 Theorem BAG_INN_BAG_FILTER:
     BAG_INN e n (BAG_FILTER P b) <=> (n = 0) \/ P e /\ BAG_INN e n b
@@ -1707,12 +1705,11 @@ Proof
 QED
 val _ = export_rewrites ["BAG_INN_BAG_FILTER"]
 
-val BAG_IN_BAG_FILTER = store_thm(
-  "BAG_IN_BAG_FILTER",
-  ``BAG_IN e (BAG_FILTER P b) <=> P e /\ BAG_IN e b``,
-  SRW_TAC [][BAG_IN])
- before
- export_rewrites ["BAG_IN_BAG_FILTER"];
+Theorem BAG_IN_BAG_FILTER[simp]:
+  BAG_IN e (BAG_FILTER P b) <=> P e /\ BAG_IN e b
+Proof
+  SRW_TAC [][BAG_IN]
+QED
 
 Theorem BAG_FILTER_FILTER:
     BAG_FILTER P (BAG_FILTER Q b) = BAG_FILTER (\a. P a /\ Q a) b
@@ -1780,9 +1777,9 @@ Proof
   ]
 QED
 
-val FINITE_SET_OF_BAG = store_thm(
-  "FINITE_SET_OF_BAG",
-  ``!b. FINITE (SET_OF_BAG b) = FINITE_BAG b``,
+Theorem FINITE_SET_OF_BAG[simp]:
+  !b. FINITE (SET_OF_BAG b) = FINITE_BAG b
+Proof
   Q_TAC SUFF_TAC
         `(!b:'a bag. FINITE_BAG b ==> FINITE (SET_OF_BAG b)) /\
          (!s:'a set. FINITE s ==>
@@ -1819,9 +1816,8 @@ val FINITE_SET_OF_BAG = store_thm(
         by FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) [BAG_INSERT] THEN
       PROVE_TAC []
     ]
-  ])
- before
- export_rewrites ["FINITE_SET_OF_BAG"];
+  ]
+QED
 
 Theorem FINITE_BAG_OF_SET[simp]:
   !s. FINITE_BAG (BAG_OF_SET s) <=> FINITE s
@@ -1928,46 +1924,43 @@ Definition BAG_IMAGE_DEF[nocompute]:
                             else 1
 End
 
-val BAG_IMAGE_EMPTY = store_thm(
-  "BAG_IMAGE_EMPTY",
-  ``!f. BAG_IMAGE f {||} = {||}``,
-  SRW_TAC [][BAG_IMAGE_DEF] THEN SRW_TAC [][EMPTY_BAG_alt])
- before
- export_rewrites ["BAG_IMAGE_EMPTY"];
+Theorem BAG_IMAGE_EMPTY[simp]:
+  !f. BAG_IMAGE f {||} = {||}
+Proof
+  SRW_TAC [][BAG_IMAGE_DEF] THEN SRW_TAC [][EMPTY_BAG_alt]
+QED
 
-val BAG_IMAGE_FINITE_INSERT = store_thm(
-  "BAG_IMAGE_FINITE_INSERT",
-  ``!b f e. FINITE_BAG b ==>
-            (BAG_IMAGE f (BAG_INSERT e b) = BAG_INSERT (f e) (BAG_IMAGE f b))``,
+Theorem BAG_IMAGE_FINITE_INSERT[simp]:
+  !b f e. FINITE_BAG b ==>
+            (BAG_IMAGE f (BAG_INSERT e b) = BAG_INSERT (f e) (BAG_IMAGE f b))
+Proof
   SRW_TAC [][BAG_IMAGE_DEF] THEN
   SRW_TAC [][FUN_EQ_THM] THEN
   REPEAT GEN_TAC THEN
   Cases_on `f e = e'` THENL [
     SRW_TAC [][BAG_CARD_THM] THEN SRW_TAC [][BAG_INSERT],
     SRW_TAC [][] THEN SRW_TAC [][BAG_INSERT]
-  ])
- before
- export_rewrites ["BAG_IMAGE_FINITE_INSERT"];
+  ]
+QED
 
-val BAG_IMAGE_FINITE_UNION = store_thm (
-  "BAG_IMAGE_FINITE_UNION",
-  ``!b1 b2 f. (FINITE_BAG b1 /\ FINITE_BAG b2)
+Theorem BAG_IMAGE_FINITE_UNION[simp]:
+  !b1 b2 f. (FINITE_BAG b1 /\ FINITE_BAG b2)
               ==> (BAG_IMAGE f (BAG_UNION b1 b2)
-                  = (BAG_UNION (BAG_IMAGE f b1) (BAG_IMAGE f b2)))``,
+                  = (BAG_UNION (BAG_IMAGE f b1) (BAG_IMAGE f b2)))
+Proof
   REPEAT STRIP_TAC THEN
   Q.PAT_X_ASSUM `FINITE_BAG b1` MP_TAC THEN
   Q.SPEC_TAC (`b1`, `b1`) THEN
   HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN
   ASM_SIMP_TAC std_ss [BAG_UNION_INSERT, BAG_UNION_EMPTY, BAG_IMAGE_EMPTY,
-     BAG_IMAGE_FINITE_INSERT, FINITE_BAG_UNION]) before
-  export_rewrites ["BAG_IMAGE_FINITE_UNION"];
+                       BAG_IMAGE_FINITE_INSERT, FINITE_BAG_UNION]
+QED
 
-val BAG_IMAGE_FINITE = store_thm(
-  "BAG_IMAGE_FINITE",
-  ``!b. FINITE_BAG b ==> FINITE_BAG (BAG_IMAGE f b)``,
-  HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN SRW_TAC [][])
- before
- export_rewrites ["BAG_IMAGE_FINITE"];
+Theorem BAG_IMAGE_FINITE[simp]:
+  !b. FINITE_BAG b ==> FINITE_BAG (BAG_IMAGE f b)
+Proof
+  HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN SRW_TAC [][]
+QED
 
 Theorem BAG_IMAGE_COMPOSE:
     !f g b. FINITE_BAG b ==>
@@ -1979,12 +1972,11 @@ Proof
      BAG_IMAGE_FINITE]
 QED
 
-val BAG_IMAGE_FINITE_I = store_thm(
-  "BAG_IMAGE_FINITE_I",
-  ``!b. FINITE_BAG b ==> (BAG_IMAGE I b = b)``,
-  HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN SRW_TAC [][])
- before
- export_rewrites ["BAG_IMAGE_FINITE_I"];
+Theorem BAG_IMAGE_FINITE_I[simp]:
+  !b. FINITE_BAG b ==> (BAG_IMAGE I b = b)
+Proof
+  HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN SRW_TAC [][]
+QED
 
 Theorem BAG_IMAGE_CONG:
   !f1 b1 f2 b2.
@@ -2108,17 +2100,17 @@ Proof
          EMPTY_BAG,combinTheory.K_DEF,FUN_EQ_THM]
 QED
 
-val BAG_CHOICE_SING = Q.store_thm
-("BAG_CHOICE_SING",
- `BAG_CHOICE {|x|} = x`,
-  Q.SPEC_THEN `{|x|}` MP_TAC BAG_CHOICE_DEF THEN SRW_TAC [][])
-before export_rewrites ["BAG_CHOICE_SING"];
+Theorem BAG_CHOICE_SING[simp]:
+ BAG_CHOICE {|x|} = x
+Proof
+  Q.SPEC_THEN `{|x|}` MP_TAC BAG_CHOICE_DEF THEN SRW_TAC [][]
+QED
 
-val BAG_REST_SING = Q.store_thm
-("BAG_REST_SING",
- `BAG_REST {|x|} = {||}`,
- SRW_TAC [][BAG_REST_DEF,EL_BAG])
-before export_rewrites ["BAG_REST_SING"];
+Theorem BAG_REST_SING[simp]:
+ BAG_REST {|x|} = {||}
+Proof
+  SRW_TAC [][BAG_REST_DEF,EL_BAG]
+QED
 
 Theorem SUB_BAG_REST:
   !b:'a bag. SUB_BAG (BAG_REST b) b

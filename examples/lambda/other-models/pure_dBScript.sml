@@ -15,7 +15,8 @@ Libs
 val _ = temp_set_fixity "=" (Infix(NONASSOC, 100))
 
 (* the type of pure de Bruijn terms *)
-val _ = Datatype`pdb = dV num | dAPP pdb pdb | dABS pdb`
+Datatype: pdb = dV num | dAPP pdb pdb | dABS pdb
+End
 
 (* Definitions of lift and substitution from Nipkow's "More Church-Rosser
    proofs". NOTE: ‘lift s 0’ will forcely lift everything.

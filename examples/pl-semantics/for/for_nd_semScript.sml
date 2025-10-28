@@ -21,11 +21,12 @@ val _ = temp_tight_equality ();
    loop with no clock left. Rfail indicates an undeclared variable
    access or a Break not in a For. *)
 
-val _ = Datatype `
+Datatype:
 r = Rval int
   | Rbreak
   | Rtimeout
-  | Rfail`;
+  | Rfail
+End
 
 val r_distinct = fetch "-" "r_distinct";
 val r_11 = fetch "-" "r_11";
@@ -40,9 +41,10 @@ End
    been done, input is the input stream, and non_det_o is an oracle
    used to decide which subexpression of Add to evaluate first. *)
 
-val _ = Datatype `
+Datatype:
 state = <| store : string |-> int; clock : num; io_trace : (io_tag + bool) list;
-           input : char llist; non_det_o : bool oracle |>`;
+           input : char llist; non_det_o : bool oracle |>
+End
 
 val state_component_equality = fetch "-" "state_component_equality";
 

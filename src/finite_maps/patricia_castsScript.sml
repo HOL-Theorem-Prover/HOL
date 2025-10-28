@@ -73,7 +73,8 @@ End
 
 (* ......................................................................... *)
 
-val _ = Datatype `word_ptree = Word_ptree ('a -> unit) ('b ptree)`;
+Datatype:  word_ptree = Word_ptree ('a -> unit) ('b ptree)
+End
 
 Type word_ptreeset = ``:('a, unit) word_ptree``
 

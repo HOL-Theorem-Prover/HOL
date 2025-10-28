@@ -17,24 +17,27 @@ fun term_rewrite tms = let
 
 (* Syntax *)
 
-val _ = Datatype `
+Datatype:
 lit =
-  Int int`;
+  Int int
+End
 
-val _ = Datatype `
+Datatype:
 exp =
   | Lit lit
   | Var num
   | App exp exp
   | Fun exp
-  | Tick exp`;
+  | Tick exp
+End
 
 (* Values *)
 
-val _ = Datatype `
+Datatype:
 v =
   | Litv lit
-  | Clos (v list) exp`;
+  | Clos (v list) exp
+End
 
 val v_induction = theorem "v_induction";
 
@@ -56,8 +59,9 @@ val _ = type_abbrev("env",``:v list``)
  * Even though we don't have any constructs that access the store, we want the
  * placeholder. *)
 
-val _ = Datatype `
-state = <| clock : num; store : v list|>`;
+Datatype:
+state = <| clock : num; store : v list|>
+End
 
 val state_component_equality = theorem "state_component_equality";
 
@@ -82,10 +86,11 @@ End
 
 (* results *)
 
-val _ = Datatype`
+Datatype:
   r = Rval v
     | Rfail
-    | Rtimeout`;
+    | Rtimeout
+End
 
 (* big-step semantics as a function *)
 
@@ -423,13 +428,14 @@ End
 
 (* Contexts *)
 
-val _ = Datatype `
+Datatype:
 ctxt =
   | Hole
   | FunC ctxt
   | App1C ctxt exp
   | App2C exp ctxt
-  | TickC ctxt`;
+  | TickC ctxt
+End
 
 (* Fill the hole in a context with an expression *)
 Definition ctxt_to_exp_def:

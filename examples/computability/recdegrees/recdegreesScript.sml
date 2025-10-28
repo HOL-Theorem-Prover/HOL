@@ -5,7 +5,8 @@ Ancestors
 Libs
   reductionEval
 
-val _ = Datatype`form = BASE num num | EXISTS num form | ALL num form`
+Datatype: form = BASE num num | EXISTS num form | ALL num form
+End
 
 Definition MKEA_0[simp]:
  (MKEA0 0 m R = BASE R (m+1)) ∧

@@ -450,21 +450,27 @@ Proof
   REPEAT GEN_TAC THEN REWRITE_TAC [complex_sub, COMPLEX_NEGNEG]
 QED
 
-val COMPLEX_SUB_ADD = store_thm ("COMPLEX_SUB_ADD",
-  (``!z:complex w:complex. (z - w) + w = z``),
+Theorem COMPLEX_SUB_ADD:
+    !z:complex w:complex. (z - w) + w = z
+Proof
   REWRITE_TAC [complex_sub, GSYM COMPLEX_ADD_ASSOC, COMPLEX_ADD_LINV,
-               COMPLEX_ADD_RID]);
+               COMPLEX_ADD_RID]
+QED
 
-val COMPLEX_SUB_ADD2 = store_thm("COMPLEX_SUB_ADD2",
-  (``!z:complex w:complex. w + (z - w) = z``),
+Theorem COMPLEX_SUB_ADD2:
+    !z:complex w:complex. w + (z - w) = z
+Proof
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[COMPLEX_ADD_COMM] THEN
-  MATCH_ACCEPT_TAC COMPLEX_SUB_ADD);
+  MATCH_ACCEPT_TAC COMPLEX_SUB_ADD
+QED
 
-val COMPLEX_ADD_SUB = store_thm ("COMPLEX_ADD_SUB",
-  (``!z:complex w:complex. (z + w) - z = w``),
+Theorem COMPLEX_ADD_SUB:
+    !z:complex w:complex. (z + w) - z = w
+Proof
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[COMPLEX_ADD_COMM] THEN
   REWRITE_TAC[complex_sub, GSYM COMPLEX_ADD_ASSOC, COMPLEX_ADD_RINV,
-              COMPLEX_ADD_RID]);
+              COMPLEX_ADD_RID]
+QED
 
 Theorem COMPLEX_SUB_SUB:
     !z:complex w:complex. (z - w) - z = -w

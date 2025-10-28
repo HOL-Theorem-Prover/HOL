@@ -13,14 +13,15 @@ val op by = BasicProvers.byA
 val RW1 = ONCE_REWRITE_RULE;
 val RW = REWRITE_RULE;
 
-val _ = Datatype `variable =
+Datatype:  variable =
     VarNone
   | VarNat num
   | VarWord8 word8
   | VarWord ('a word)
   | VarMem ('a word -> word8)
   | VarDom ('a word set)
-  | VarBool bool`;
+  | VarBool bool
+End
 
 (* States are a mapping from names to the variable type, which is
    a union of the available names. *)
@@ -68,12 +69,14 @@ val _ = zDefine `
 
 (* The type of nodes. *)
 
-val _ = Datatype `next_node = NextNode num | Ret | Err`;
+Datatype:  next_node = NextNode num | Ret | Err
+End
 
-val _ = Datatype `node =
+Datatype:  node =
     Basic next_node ((string # ('a state -> 'a variable)) list)
   | Cond next_node next_node ('a state -> bool)
-  | Call next_node string (('a state -> 'a variable) list) (string list)`;
+  | Call next_node string (('a state -> 'a variable) list) (string list)
+End
 
 val _ = zDefine `
   Skip nn = Cond nn nn (\x. T)`;
@@ -81,8 +84,9 @@ val _ = zDefine `
 (* The type for a total graph function, including list of inputs, list
    of outputs, graph, and entry point. *)
 
-val _ = Datatype `graph_function =
-  GraphFunction (string list) (string list) (num -> 'a node option) num`;
+Datatype:  graph_function =
+  GraphFunction (string list) (string list) (num -> 'a node option) num
+End
 
 (* The definition of execution of a single node. *)
 
@@ -173,19 +177,23 @@ End
 val _ = type_abbrev("update",``:(string # ('a state -> 'a variable)) list``)
 val _ = type_abbrev("assert",``:'a state->bool``)
 
-val _ = Datatype `
-  jump = Jump ('a word) | Return`
+Datatype:
+  jump = Jump ('a word) | Return
+End
 
-val _ = Datatype `
+Datatype:
   next = IF ('a assert) next next (* if ... then ... else ... *)
        | ASM ('a assert option) ('a update) ('a jump)
-       | CALL ('a assert option) ('a update) string ('a jump)`;
+       | CALL ('a assert option) ('a update) string ('a jump)
+End
 
-val _ = Datatype `
-  inst = Inst ('a word) ('a assert) ('a next) (* name, inv, what happens *)`
+Datatype:
+  inst = Inst ('a word) ('a assert) ('a next) (* name, inv, what happens *)
+End
 
-val _ = Datatype `
-  func = Func string ('a word) ('a inst list) (* name, entry point, insts *)`;
+Datatype:
+  func = Func string ('a word) ('a inst list) (* name, entry point, insts *)
+End
 
 (* execution *)
 

@@ -2126,21 +2126,23 @@ Proof
    REWRITE_TAC [SYM (SPEC_ALL LESS_EQ),NOT_LESS_0]
 QED
 
-val SUB_RIGHT_LESS =
-   let val BOOL_EQ_NOT_BOOL_EQ = prove(
-        “!x y. (x = y) = (~x = ~y)”,
-        REPEAT GEN_TAC THEN
-        BOOL_CASES_TAC (“x:bool”) THEN
-        REWRITE_TAC [])
-   in
-   store_thm ("SUB_RIGHT_LESS",
-   “!m n p. ((m - n) < p) = ((m < (n + p)) /\ (0 < p))”,
+Theorem BOOL_EQ_NOT_BOOL_EQ[local]:
+    !x y. (x = y) = (~x = ~y)
+Proof
+   REPEAT GEN_TAC THEN
+   BOOL_CASES_TAC (“x:bool”) THEN
+   REWRITE_TAC []
+QED
+
+Theorem SUB_RIGHT_LESS:
+    !m n p. ((m - n) < p) = ((m < (n + p)) /\ (0 < p))
+Proof
    REPEAT GEN_TAC THEN
    PURE_ONCE_REWRITE_TAC [BOOL_EQ_NOT_BOOL_EQ] THEN
    PURE_REWRITE_TAC [DE_MORGAN_THM,NOT_LESS] THEN
    SUBST1_TAC (SPECL [(“n:num”),(“p:num”)] ADD_SYM) THEN
-   REWRITE_TAC [SUB_LEFT_LESS_EQ])
-   end;
+   REWRITE_TAC [SUB_LEFT_LESS_EQ]
+QED
 
 Theorem SUB_LEFT_GREATER_EQ:
     !m n p. (m >= (n - p)) = ((m + p) >= n)
@@ -2409,8 +2411,9 @@ local val (eq,ls) =
    CONJ_PAIR (SPEC (“k:num”)
        (REWRITE_RULE [LESS_0] (SPEC (“SUC(r+p)”) DIVISION)))
 in
-val DIV_UNIQUE = store_thm ("DIV_UNIQUE",
- “!n k q. (?r. (k = q*n + r) /\ r<n) ==> (k DIV n = q)”,
+Theorem DIV_UNIQUE:
+  !n k q. (?r. (k = q*n + r) /\ r<n) ==> (k DIV n = q)
+Proof
 REPEAT GEN_TAC THEN
  DISCH_THEN (CHOOSE_THEN (CONJUNCTS_THEN2
    MP_TAC (STRIP_THM_THEN SUBST_ALL_TAC o MATCH_MP LESS_ADD_1))) THEN
@@ -2454,7 +2457,8 @@ REPEAT GEN_TAC THEN
              ONCE_REWRITE_RULE [ADD_SYM]LESS_EQ_MONO_ADD_EQ]
      THEN REWRITE_TAC[ZERO_LESS_EQ,
                REWRITE_RULE[ADD_CLAUSES]
-                 (SPECL [“1”,“0”,“p:num”]ADD_MONO_LESS_EQ)]])
+                 (SPECL [“1”,“0”,“p:num”]ADD_MONO_LESS_EQ)]]
+QED
 end;
 
 Theorem lemma[local]:
@@ -2801,10 +2805,12 @@ QED
 local
    open prim_recTheory
 in
-   val SUC_PRE = store_thm ("SUC_PRE",
-      “0 < m <=> (SUC (PRE m) = m)”,
+Theorem SUC_PRE:
+       0 < m <=> (SUC (PRE m) = m)
+Proof
       STRUCT_CASES_TAC (SPEC (“m:num”) num_CASES) THEN
-      REWRITE_TAC [PRE,NOT_LESS_0,LESS_0,NOT_SUC])
+      REWRITE_TAC [PRE,NOT_LESS_0,LESS_0,NOT_SUC]
+QED
 end
 
 val LESS_MONO_LEM =
@@ -3411,8 +3417,9 @@ QED
 
 Theorem num_case_cong = Prim_rec.case_cong_thm num_CASES num_case_def;
 
-val SUC_ELIM_THM = store_thm ("SUC_ELIM_THM",
-  (“!P. (!n. P (SUC n) n) = (!n. (0 < n ==> P n (n-1)))”),
+Theorem SUC_ELIM_THM:
+   !P. (!n. P (SUC n) n) = (!n. (0 < n ==> P n (n-1)))
+Proof
   GEN_TAC THEN EQ_TAC THENL [
       REPEAT STRIP_TAC THEN
       FIRST_ASSUM (MP_TAC o SPEC (“n-1”)) THEN
@@ -3429,7 +3436,8 @@ val SUC_ELIM_THM = store_thm ("SUC_ELIM_THM",
       REPEAT STRIP_TAC THEN
       FIRST_ASSUM (MP_TAC o SPEC (“n+1”)) THEN
       SIMP_TAC bool_ss [GSYM ADD1, SUC_SUB1, LESS_0]
-    ]);
+    ]
+QED
 
 Theorem SUC_ELIM_NUMERALS:
    !f g. (!n. g (SUC n) = f n (SUC n)) <=>
@@ -3825,13 +3833,16 @@ QED
 
 local fun Cases_on q = Q.SPEC_THEN q STRUCT_CASES_TAC num_CASES in
 
-val ZERO_EXP = Q.store_thm ("ZERO_EXP",
-   `0 ** x = if x = 0 then 1 else 0`,
+Theorem ZERO_EXP:
+    0 ** x = if x = 0 then 1 else 0
+Proof
    Cases_on `x` THEN
-   SIMP_TAC bool_ss [EXP,numTheory.NOT_SUC,MULT])
+   SIMP_TAC bool_ss [EXP,numTheory.NOT_SUC,MULT]
+QED
 
-val X_LT_EXP_X_IFF = Q.store_thm ("X_LT_EXP_X_IFF",
-   `x < b ** x <=> 1 < b \/ (x = 0)`,
+Theorem X_LT_EXP_X_IFF:
+    x < b ** x <=> 1 < b \/ (x = 0)
+Proof
    EQ_TAC THEN1 (
      Cases_on `b` THEN1 (
        Cases_on `x` THEN
@@ -3843,7 +3854,8 @@ val X_LT_EXP_X_IFF = Q.store_thm ("X_LT_EXP_X_IFF",
      SIMP_TAC bool_ss [LESS_MONO_EQ,ONE,LESS_0] ) THEN
    STRIP_TAC THEN1 (
      POP_ASSUM MP_TAC THEN ACCEPT_TAC X_LT_EXP_X) THEN
-   ASM_SIMP_TAC bool_ss [EXP,ONE,LESS_0])
+   ASM_SIMP_TAC bool_ss [EXP,ONE,LESS_0]
+QED
    end
 
 (* theorems about exponentiation where the exponent is held constant *)
