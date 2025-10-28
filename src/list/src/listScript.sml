@@ -5559,9 +5559,9 @@ Theorem lazy_list_case_compute[compute] =
 val _ = computeLib.add_persistent_funs [
       "APPEND", "APPEND_NIL", "FLAT", "HD", "TL", "LENGTH", "MAP", "MAP2",
       "NULL_DEF", "MEM", "EXISTS_DEF", "DROP_compute", "EVERY_DEF", "ZIP",
-      "UNZIP", "FILTER", "FOLDL", "FOLDR",
+      "FILTER", "FOLDL", "FOLDR",
       "TAKE_compute", "FOLDL", "REVERSE_REV", "SUM_SUM_ACC", "ALL_DISTINCT",
-      "GENLIST_AUX", "EL_restricted", "EL_simp_restricted", "SNOC",
+      "GENLIST_AUX", "EL_restricted", "EL_simp_restricted",
       "GENLIST_NUMERALS", "list_size_def", "FRONT_DEF",
       "LAST_compute", "isPREFIX"
     ]

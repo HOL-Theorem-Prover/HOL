@@ -327,7 +327,7 @@ QED
 (* The following is useful for coding up functions casewise.                 *)
 (* ------------------------------------------------------------------------- *)
 
-Definition FCONS:
+Definition FCONS[nocompute]:
   (FCONS (a:'a) f 0 = a) /\
   (FCONS (a:'a) f (SUC n) = f n)
 End

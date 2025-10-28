@@ -1858,7 +1858,7 @@ QED
 (* Note: For product of a number list, any zero element will make the product 0. *)
 
 (* Define PROD, similar to SUM *)
-Definition PROD[simp]:
+Definition PROD[simp,nocompute]:
   (PROD [] = 1) /\
   (PROD (h::t) = h * PROD t)
 End
