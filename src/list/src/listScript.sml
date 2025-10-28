@@ -1732,12 +1732,12 @@ Proof
   REWRITE_TAC [ZIP_def]
 QED
 
-val UNZIP = new_recursive_definition {
-  name = "UNZIP",   rec_axiom = list_Axiom,
-  def  = “(UNZIP [] = ([], [])) /\
-    (!x l. UNZIP (CONS (x:'a # 'b) l) =
+Definition UNZIP:
+    (UNZIP [] = ([], [])) /\
+    (UNZIP (CONS (x:'a # 'b) l) =
                (CONS (FST x) (FST (UNZIP l)),
-                CONS (SND x) (SND (UNZIP l))))”}
+                CONS (SND x) (SND (UNZIP l))))
+End
 
 Theorem UNZIP_THM:
   (UNZIP [] = ([]:'a list,[]:'b list)) /\
@@ -2939,15 +2939,10 @@ QED
     SNOC
    ---------------------------------------------------------------------- *)
 
-(* use new_recursive_definition to get quantification and variable names
-   exactly as they were in rich_listTheory *)
-val SNOC = new_recursive_definition {
-  def = “(!x:'a. SNOC x [] = [x]) /\
-          (!x:'a x' l. SNOC x (CONS x' l) = CONS x' (SNOC x l))”,
-  name = "SNOC",
-  rec_axiom = list_Axiom
-};
-val _ = BasicProvers.export_rewrites ["SNOC"]
+Definition SNOC[simp]:
+  (SNOC x [] = [x]) /\
+  (SNOC x (CONS x' l) = CONS x' (SNOC x l))
+End
 
 Theorem SNOC_NIL = SNOC |> CONJUNCT1;
 (* > val SNOC_NIL = |- !x. SNOC x [] = [x]: thm *)
@@ -5564,9 +5559,9 @@ Theorem lazy_list_case_compute[compute] =
 val _ = computeLib.add_persistent_funs [
       "APPEND", "APPEND_NIL", "FLAT", "HD", "TL", "LENGTH", "MAP", "MAP2",
       "NULL_DEF", "MEM", "EXISTS_DEF", "DROP_compute", "EVERY_DEF", "ZIP",
-      "UNZIP", "FILTER", "FOLDL", "FOLDR",
+      "FILTER", "FOLDL", "FOLDR",
       "TAKE_compute", "FOLDL", "REVERSE_REV", "SUM_SUM_ACC", "ALL_DISTINCT",
-      "GENLIST_AUX", "EL_restricted", "EL_simp_restricted", "SNOC",
+      "GENLIST_AUX", "EL_restricted", "EL_simp_restricted",
       "GENLIST_NUMERALS", "list_size_def", "FRONT_DEF",
       "LAST_compute", "isPREFIX"
     ]

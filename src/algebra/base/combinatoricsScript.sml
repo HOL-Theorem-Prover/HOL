@@ -1858,14 +1858,10 @@ QED
 (* Note: For product of a number list, any zero element will make the product 0. *)
 
 (* Define PROD, similar to SUM *)
-val PROD = new_recursive_definition
-      {name = "PROD",
-       rec_axiom = list_Axiom,
-       def = ``(PROD [] = 1) /\
-          (!h t. PROD (h::t) = h * PROD t)``};
-
-(* export simple definition *)
-val _ = export_rewrites["PROD"];
+Definition PROD[simp,nocompute]:
+  (PROD [] = 1) /\
+  (PROD (h::t) = h * PROD t)
+End
 
 (* Extract theorems from definition *)
 Theorem PROD_NIL = PROD |> CONJUNCT1;
