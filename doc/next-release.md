@@ -56,7 +56,7 @@ Deprecations
 ------------
 
 -   `Triviality` has been deprecated and may be removed in the future.
-    Please update theorems of the form `Triviality foo` and `Triviality foo[..] to
+    Please update theorems of the form `Triviality foo` and `Triviality foo[..]` to
     `Theorem foo[local]` and `Theorem foo[local,..]` respectively to avoid future breakage.
 * * * * *
 
