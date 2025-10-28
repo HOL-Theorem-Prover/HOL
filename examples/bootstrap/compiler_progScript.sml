@@ -769,7 +769,7 @@ Definition compiler_prog_def:
   compiler_prog = ^entire_program :prog
 End
 
-Triviality compiler_prog_thm = compiler_prog_def |> CONV_RULE (RAND_CONV EVAL);
+Theorem compiler_prog_thm[local] = compiler_prog_def |> CONV_RULE (RAND_CONV EVAL);
 
 Definition coms_def:
   coms = ^(get_comments ())

@@ -16,6 +16,7 @@ Contents
 -   [New tools](#new-tools)
 -   [New Examples](#new-examples)
 -   [Incompatibilities](#incompatibilities)
+-   [Deprecations](#deprecations)
 
 New features
 ------------
@@ -51,6 +52,12 @@ Incompatibilities
     the script file `examples/zipper/zipperScript.sml` has been moved to `examples/data-structures`;
     the script file `examples/balanced_bst/AVL_treeScript.sml` has been moved to a directory of its own at `examples/data-structures/AVL_tree`.
 
+Deprecations
+------------
+
+-   `Triviality` has been deprecated and may be removed in the future.
+    Please update theorems of the form `Triviality foo` and `Triviality foo[..] to
+    `Theorem foo[local]` and `Theorem foo[local,..]` respectively to avoid future breakage.
 * * * * *
 
 <div class="footer">

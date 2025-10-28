@@ -3927,7 +3927,7 @@ Proof
           ‘a ∈ N1.initial’ by metis_tac[] >>
 QED
 
-Triviality finite_initial_final[simp]:
+Theorem finite_initial_final[local,simp]:
   wf_nfa N ⇒ FINITE N.initial ∧ FINITE N.final
 Proof
   metis_tac [wf_nfa_def,SUBSET_FINITE]

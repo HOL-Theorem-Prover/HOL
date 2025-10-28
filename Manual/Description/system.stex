@@ -1830,10 +1830,11 @@ For example:
 Note further that the \ml{Proof} and \ml{QED} keywords must occur in the leftmost column of the script file so that the parser can know when the term and tactic arguments terminate.
 
 \index{special syntactic forms for scripts!Triviality@\ml{Triviality}}
-One last special form is available to abbreviate the \ml{Theorem}-\ml{local} combination (with either the \ml{=} or \ml{:} following).
+This form has been deprecated and may be removed in a future release.
+It was used to abbreviate the `Theorem`-`local` combination (with either the \ml{=} or \ml{:} following).
 Instead of writing \ml{Theorem~foo[local,\dots]}, one can write \ml{Triviality~foo[\dots]}.
 
-The choice to use \ml{Theorem} (or \ml{Triviality}) syntax, or to use \ml{store\_thm} or \ml{save\_thm} directly is a matter of users' aesthetic preference.
+The choice to use `Theorem` syntax, or to use `store_thm` or `save_thm` directly is a matter of users' aesthetic preference.
 But recall: if writing library code to prove and store theorems, the underlying \ml{store\_thm} must be used, as the special treatment of the \ml{Theorem} keyword is only available in script files.
 %
 \index{theorems, in HOL logic@theorems, in \HOL{} logic!saving of|)}%
