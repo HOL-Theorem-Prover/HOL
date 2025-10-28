@@ -1139,10 +1139,10 @@ Proof
 GEN_TAC THEN Induct THEN SRW_TAC[] [FOLDR, MAP]
 QED
 
-Theorem LENGTH_TL:
-   !l. 0 < LENGTH l ==> (LENGTH (TL l) = LENGTH l - 1)
+Theorem LENGTH_TL[simp]:
+   !l. LENGTH (TL l) = LENGTH l - 1
 Proof
-  Cases_on ‘l’ THEN SIMP_TAC arith_ss [LENGTH, TL]
+  Cases_on ‘l’ THEN SIMP_TAC arith_ss [LENGTH, TL_DEF]
 QED
 
 Theorem LENGTH_TL_LE:
@@ -3261,7 +3261,7 @@ Proof
   Induct >> simp[GENLIST_CONS, GENLIST, combinTheory.o_ABS_L]
 QED
 
-Theorem NULL_GENLIST:
+Theorem NULL_GENLIST[simp]:
    !n f. NULL (GENLIST f n) = (n = 0)
 Proof
   Cases THEN
