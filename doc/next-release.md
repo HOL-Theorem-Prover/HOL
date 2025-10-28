@@ -14,7 +14,7 @@ Contents
 -   [Bugs fixed](#bugs-fixed)
 -   [New theories](#new-theories)
 -   [New tools](#new-tools)
--   [New Examples](#new-examples)
+-   [New examples](#new-examples)
 -   [Incompatibilities](#incompatibilities)
 
 New features
