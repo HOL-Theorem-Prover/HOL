@@ -1171,7 +1171,7 @@ QED
 
 Theorem SET_OF_BAG_EQ_EMPTY[simp]:
   !b. (({} = SET_OF_BAG b) = (b = {||})) /\
-        ((SET_OF_BAG b = {}) = (b = {||}))
+      ((SET_OF_BAG b = {}) = (b = {||}))
 Proof
   GEN_TAC THEN
   Q.SPEC_THEN `b` STRIP_ASSUME_TAC BAG_cases THEN

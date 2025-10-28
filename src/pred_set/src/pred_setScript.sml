@@ -971,13 +971,12 @@ Proof
      REWRITE_TAC [NOT_IN_EMPTY,IN_DIFF,EXTENSION]
 QED
 
-Theorem EMPTY_DIFF:
+Theorem EMPTY_DIFF[simp]:
       !s:'a set. EMPTY DIFF s = EMPTY
 Proof
      GEN_TAC THEN
      REWRITE_TAC [NOT_IN_EMPTY,IN_DIFF,EXTENSION]
 QED
-val _ = export_rewrites ["EMPTY_DIFF"]
 
 Theorem DIFF_UNIV:
       !s:'a set. s DIFF UNIV = EMPTY
@@ -1187,7 +1186,9 @@ Proof
      REWRITE_TAC [EXTENSION,IN_INSERT,IN_UNIV]
 QED
 
-Theorem NOT_INSERT_EMPTY:
+(* [simp]: don't need both because simplifier's rewrite creator
+   automatically gives both senses to inequalities *)
+Theorem NOT_INSERT_EMPTY[simp]:
       !x:'a. !s. ~(x INSERT s = EMPTY)
 Proof
      REWRITE_TAC [EXTENSION,IN_INSERT,NOT_IN_EMPTY,IN_UNION] THEN
@@ -1204,10 +1205,6 @@ Proof
      REPEAT GEN_TAC THEN EXISTS_TAC (“x:'a”) THEN
      REWRITE_TAC []
 QED
-
-val _ = export_rewrites ["NOT_INSERT_EMPTY"];
-(* don't need both because simplifier's rewrite creator automatically gives
-   both senses to inequalities *)
 
 Theorem INSERT_UNION:
    !(x:'a) s t.
@@ -1372,13 +1369,11 @@ Proof
       ASM_REWRITE_TAC [IN_DELETE]]
 QED
 
-Theorem EMPTY_DELETE:
+Theorem EMPTY_DELETE[simp]:
       !x:'a. EMPTY DELETE x = EMPTY
 Proof
      REWRITE_TAC [EXTENSION,NOT_IN_EMPTY,IN_DELETE]
 QED
-
-val _ = export_rewrites ["EMPTY_DELETE"];
 
 Theorem ELT_IN_DELETE:
      !x s. ~(x IN (s DELETE x))
