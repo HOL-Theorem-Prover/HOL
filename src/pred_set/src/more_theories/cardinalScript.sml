@@ -169,7 +169,7 @@ Theorem EMPTY_CARDLEQ[simp]:
     {} <<= t
 Proof
   simp[cardleq_def, INJ_EMPTY]
-QED(* export_rewrites for pred_set *)
+QED
 
 Theorem FINITE_CLE_INFINITE:
     FINITE s /\ INFINITE t ==> s <<= t
@@ -3597,4 +3597,3 @@ Theorem INJECTIVE_ALT :
 Proof
   MESON_TAC[]
 QED
-

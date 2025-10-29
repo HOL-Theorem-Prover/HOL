@@ -1271,7 +1271,7 @@ QED
    = #0                     by ring_mult_lzero
    Hence -x * y = - (x*y)   by ring_add_eq_zero
 *)
-Theorem ring_mult_lneg:
+Theorem ring_mult_lneg[simp]:
     !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (- x * y = - (x * y))
 Proof
   rpt strip_tac >>
@@ -1282,17 +1282,15 @@ QED
 
 (* Theorem: x * - y = - (x * y) *)
 (* Proof: by ring_mult_lneg and ring_mult_comm. *)
-Theorem ring_mult_rneg:
+Theorem ring_mult_rneg[simp]:
     !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (x * - y = - (x * y))
 Proof
   metis_tac[ring_mult_lneg, ring_mult_comm, ring_neg_element]
 QED
 
-val _ = export_rewrites ["ring_mult_lneg", "ring_mult_rneg"];
-
 (* Theorem: -(x * y) = -x * y  and -(x * y) = x * -y *)
 (* Proof: by ring_mult_lneg and ring_mult_rneg. *)
-Theorem ring_neg_mult:
+Theorem ring_neg_mult[simp]:
     !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (- (x * y) = - x * y) /\ (- (x * y) = x * - y)
 Proof
   rw[]
@@ -1305,13 +1303,11 @@ QED
    = - (- (x * y))   by ring_mult_rneg
    = x * y           by ring_mult_neg_neg
 *)
-Theorem ring_mult_neg_neg:
+Theorem ring_mult_neg_neg[simp]:
     !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (- x * - y = x * y)
 Proof
   metis_tac[ring_mult_lneg, ring_mult_rneg, ring_neg_neg, ring_neg_element]
 QED
-
-val _ = export_rewrites ["ring_neg_mult", "ring_mult_neg_neg" ];
 
 (* ------------------------------------------------------------------------- *)
 (* More Ring Numeral Theorems (involving distribution eventually).           *)
@@ -1899,10 +1895,9 @@ QED
 (* ------------------------------------------------------------------------- *)
 (* Ring Subtraction Theorems.                                                *)
 (* ------------------------------------------------------------------------- *)
-Definition ring_sub_def:   ring_sub (r:'a ring) x y = x + (- y)
+Definition ring_sub_def[simp]:   ring_sub (r:'a ring) x y = x + (- y)
 End
 Overload "-" = ``ring_sub r``
-val _ = export_rewrites ["ring_sub_def"];
 
 (* Theorem: Ring r ==> x - #0 = x *)
 (* Proof:
@@ -4969,7 +4964,7 @@ val o_thm = combinTheory.o_THM;
 
 (* Theorem: s <= r ==> s.sum.id = #0 *)
 (* Proof: by subring_def, ring_homo_zero. *)
-Theorem subring_zero:
+Theorem subring_zero[simp]:
     !(r s):'a ring. s <= r ==> (s.sum.id = #0)
 Proof
   metis_tac[subring_def, ring_homo_zero, i_thm]
@@ -4977,14 +4972,11 @@ QED
 
 (* Theorem: s <= r ==> s.prod.id = #1 *)
 (* Proof: by subring_def, ring_homo_one. *)
-Theorem subring_one:
+Theorem subring_one[simp]:
     !(r s):'a ring. s <= r ==> (s.prod.id = #1)
 Proof
   metis_tac[subring_def, ring_homo_one, i_thm]
 QED
-
-(* export simple results *)
-val _ = export_rewrites["subring_zero", "subring_one"];
 
 (* Theorem: s <= r ==> s.sum.id = #0 /\ s.prod.id = #1 *)
 (* Proof: by subring_zero, subring_one. *)
@@ -6583,16 +6575,13 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define congruence by ideal in Ring *)
-Definition ideal_congruence_def:
+Definition ideal_congruence_def[simp]:
   ideal_congruence (r:'a ring) (i:'a ring) (x:'a) (y:'a) <=> x - y IN i.carrier
 End
 
 (* set overloading *)
 Overload "===" = ``ideal_congruence r i``
 val _ = set_fixity "===" (Infix(NONASSOC, 450));
-
-(* export definiton *)
-val _ = export_rewrites ["ideal_congruence_def"];
 
 (* Theorem: x === x *)
 (* Proof:
@@ -7974,14 +7963,11 @@ binomial_thm:
 (* ------------------------------------------------------------------------- *)
 
 (* Ring element list. *)
-Definition ring_list_def:
+Definition ring_list_def[simp]:
   (ring_list (r:'a ring) [] <=> T) /\
   (ring_list (r:'a ring) ((h:'a)::(t:'a list)) <=> h IN R /\ (ring_list r t))
 End
 Overload rlist = ``ring_list r``
-
-(* export simple definition. *)
-val _ = export_rewrites ["ring_list_def"];
 
 (* Theorem: rlist [] <=> T *)
 Theorem ring_list_nil = ring_list_def |> CONJUNCT1;
@@ -8047,14 +8033,11 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Summation in a Ring. *)
-Definition ring_sum_def:
+Definition ring_sum_def[simp]:
   (ring_sum (r:'a ring) [] = #0) /\
   (ring_sum (r:'a ring) ((h:'a)::(t:'a list)) = h + (ring_sum r t))
 End
 Overload rsum = ``ring_sum r``
-
-(* export simple definition. *)
-val _ = export_rewrites ["ring_sum_def"];
 
 (* Theorem: rsum [] = #0 *)
 Theorem ring_sum_nil = ring_sum_def |> CONJUNCT1;
@@ -8237,13 +8220,10 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Ring element function. *)
-Definition ring_fun_def:
+Definition ring_fun_def[simp]:
   ring_fun (r:'a ring) f <=> !x. f x IN R
 End
 Overload rfun = ``ring_fun r``
-
-(* export simple definition. *)
-val _ = export_rewrites ["ring_fun_def"];
 
 (* Theorem: rfun a /\ rfun b ==> rfun (\k. a k + b k) *)
 (* Proof: by ring_add_element. *)
@@ -10546,21 +10526,18 @@ Overload "R/I" = ``CosetPartition r.sum i.sum``
 Overload gen = ``cogen r.sum i.sum``
 
 (* Define addition of ideal cosets *)
-Definition ideal_coset_add_def:
+Definition ideal_coset_add_def[simp]:
   ideal_coset_add (r:'a ring) (i:'a ring) x y = (gen x + gen y) o I
 End
 
 (* Define multiplication of ideal cosets *)
-Definition ideal_coset_mult_def:
+Definition ideal_coset_mult_def[simp]:
   ideal_coset_mult (r:'a ring) (i:'a ring) x y = (gen x * gen y) o I
 End
 
 (* Overload operations *)
 Overload "+" = ``ideal_coset_add r i``
 Overload "*" = ``ideal_coset_mult r i``
-
-(* Export simple definitions *)
-val _ = export_rewrites ["ideal_coset_add_def", "ideal_coset_mult_def"];
 
 (*
 > in_coset |> ISPEC ``r.sum`` |> ISPEC ``i.sum.carrier`` |> ISPEC ``x``;

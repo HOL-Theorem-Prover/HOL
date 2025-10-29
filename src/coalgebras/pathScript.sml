@@ -103,7 +103,7 @@ Proof
   METIS_TAC []
 QED
 
-Theorem first_thm:
+Theorem first_thm[simp]:
     (!x. first (stopped_at x : ('a,'b) path) = x) /\
     (!x r p. first (pcons x r p : ('a,'b) path) = x)
 Proof
@@ -140,7 +140,7 @@ val last_thm =
         `?h t. SND (fromPath p) = LCONS h t` by PROVE_TAC [llist_CASES] THEN
         FULL_SIMP_TAC (srw_ss()) [toList_THM]));
 
-val _ = export_rewrites ["first_thm", "last_thm"]
+val _ = export_rewrites ["last_thm"]
 
 Theorem path_bisimulation:
     !p1 p2.
@@ -640,19 +640,18 @@ Theorem every_thm[simp]:
 Proof SRW_TAC [][every_def, exists_thm]
 QED
 
-Theorem not_every:
+Theorem not_every[simp]:
     !P p. ~every P p = exists ($~ o P) p
 Proof
   SRW_TAC [][every_def]
 QED
 
-Theorem not_exists:
+Theorem not_exists[simp]:
     !P p. ~exists P p = every ($~ o P) p
 Proof
   SRW_TAC [boolSimps.ETA_ss][every_def, combinTheory.o_DEF]
 QED
 
-val _ = export_rewrites ["not_exists", "not_every"]
 
 Theorem exists_el:
     !P p. exists P p = ?i. i IN PL p /\ P (el i p)
@@ -716,13 +715,12 @@ QED
        drops n elements from the front of p and returns what's left
    ---------------------------------------------------------------------- *)
 
-Definition drop_def:
+Definition drop_def[simp]:
   (drop 0 p = p) /\
   (drop (SUC n) p = drop n (tail p))
 End
-Theorem numeral_drop =
+Theorem numeral_drop[simp] =
   CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV (CONJUNCT2 drop_def);
-val _ = export_rewrites ["drop_def", "numeral_drop"]
 
 
 Theorem finite_drop[simp]:

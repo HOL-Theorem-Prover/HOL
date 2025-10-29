@@ -1341,19 +1341,18 @@ val f_o_f_DEF = new_specification
 
 val _ = set_fixity "f_o_f" (Infixr 800);
 
-Theorem f_o_f_FEMPTY_1:
+Theorem f_o_f_FEMPTY_1[simp]:
   !^fmap. (FEMPTY:('b,'c)fmap) f_o_f f = FEMPTY
 Proof
  SRW_TAC [][GSYM fmap_EQ_THM, f_o_f_DEF, FDOM_FEMPTY, EXTENSION]
 QED
 
-Theorem f_o_f_FEMPTY_2:
+Theorem f_o_f_FEMPTY_2[simp]:
    !f:'b|->'c. f f_o_f (FEMPTY:('a,'b)fmap) = FEMPTY
 Proof
   SRW_TAC [][GSYM fmap_EQ_THM, f_o_f_DEF, FDOM_FEMPTY]
 QED
 
-val _ = export_rewrites["f_o_f_FEMPTY_1","f_o_f_FEMPTY_2"];
 
 Theorem o_f_lemma[local]:
   !f:'b->'c.
@@ -1692,13 +1691,13 @@ End
 Overload "\\\\" = “fdomsub”
 (* this has been set up as an infix in relationTheory *)
 
-Theorem DOMSUB_FEMPTY:
+Theorem DOMSUB_FEMPTY[simp]:
     !k. FEMPTY \\ k = FEMPTY
 Proof
   SRW_TAC [][GSYM fmap_EQ_THM, fmap_domsub, FDOM_DRESTRICT]
 QED
 
-Theorem DOMSUB_FUPDATE:
+Theorem DOMSUB_FUPDATE[simp]:
     !fm k v. fm |+ (k,v) \\ k = fm \\ k
 Proof
   SRW_TAC [][GSYM fmap_EQ_THM, fmap_domsub,
@@ -1723,13 +1722,13 @@ Proof
              FAPPLY_FUPDATE_THM] THEN PROVE_TAC []
 QED
 
-Theorem FDOM_DOMSUB:
+Theorem FDOM_DOMSUB[simp]:
     !fm k. FDOM (fm \\ k) = FDOM fm DELETE k
 Proof
   SRW_TAC [][fmap_domsub, FDOM_DRESTRICT, pred_setTheory.EXTENSION]
 QED
 
-Theorem DOMSUB_FAPPLY:
+Theorem DOMSUB_FAPPLY[simp]:
     !fm k. (fm \\ k) ' k = FEMPTY ' k
 Proof
   SRW_TAC [][fmap_domsub, DRESTRICT_DEF]
@@ -1747,7 +1746,7 @@ Proof
   SRW_TAC [] [DOMSUB_FAPPLY, DOMSUB_FAPPLY_NEQ]
 QED
 
-Theorem DOMSUB_FLOOKUP:
+Theorem DOMSUB_FLOOKUP[simp]:
     !fm k. FLOOKUP (fm \\ k) k = NONE
 Proof
   SRW_TAC [][FLOOKUP_DEF, FDOM_DOMSUB]
@@ -1765,14 +1764,12 @@ Proof
   SRW_TAC [][DOMSUB_FLOOKUP, DOMSUB_FLOOKUP_NEQ]
 QED
 
-Theorem FRANGE_FUPDATE_DOMSUB:
+Theorem FRANGE_FUPDATE_DOMSUB[simp]:
     !fm k v. FRANGE (fm |+ (k,v)) = v INSERT FRANGE (fm \\ k)
 Proof
   SRW_TAC [][FRANGE_FUPDATE, fmap_domsub]
 QED
 
-val _ = export_rewrites ["DOMSUB_FEMPTY", "DOMSUB_FUPDATE", "FDOM_DOMSUB",
-                         "DOMSUB_FAPPLY", "DOMSUB_FLOOKUP", "FRANGE_FUPDATE_DOMSUB"]
 
 Theorem o_f_DOMSUB[simp]:
     (g o_f fm) \\ k = g o_f (fm \\ k)

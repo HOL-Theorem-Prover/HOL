@@ -29,25 +29,22 @@ Theorem REAL_10 = REAL_10';
 Theorem REAL_ADD_SYM = REAL_ADD_SYM;
 Theorem REAL_ADD_COMM = REAL_ADD_SYM;
 Theorem REAL_ADD_ASSOC = REAL_ADD_ASSOC;
-Theorem REAL_ADD_LID = REAL_ADD_LID';
-Theorem REAL_ADD_LINV = REAL_ADD_LINV';
+Theorem REAL_ADD_LID[simp] = REAL_ADD_LID';
+Theorem REAL_ADD_LINV[simp] = REAL_ADD_LINV';
 Theorem REAL_LDISTRIB = REAL_LDISTRIB;
 Theorem REAL_LT_TOTAL = REAL_LT_TOTAL;
-Theorem REAL_LT_REFL = REAL_LT_REFL;
+Theorem REAL_LT_REFL[simp] = REAL_LT_REFL;
 Theorem REAL_LT_TRANS = REAL_LT_TRANS;
 Theorem REAL_LT_IADD = REAL_LT_IADD;
 Theorem REAL_SUP_ALLPOS = REAL_SUP_ALLPOS';
 Theorem REAL_MUL_SYM = REAL_MUL_SYM;
 Theorem REAL_MUL_COMM = REAL_MUL_SYM;
 Theorem REAL_MUL_ASSOC = REAL_MUL_ASSOC;
-Theorem REAL_MUL_LID = REAL_MUL_LID';
+Theorem REAL_MUL_LID[simp] = REAL_MUL_LID';
 Theorem REAL_MUL_LINV = REAL_MUL_LINV';
 Theorem REAL_LT_MUL = REAL_LT_MUL';
-Theorem REAL_INV_0 = REAL_INV_0';
+Theorem REAL_INV_0[simp] = REAL_INV_0';
 
-val _ = export_rewrites
-        ["REAL_ADD_LID", "REAL_ADD_LINV", "REAL_LT_REFL", "REAL_MUL_LID",
-         "REAL_INV_0"]
 
 (*---------------------------------------------------------------------------*)
 (* Define subtraction, division and the other orderings (moved to realax)    *)

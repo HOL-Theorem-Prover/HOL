@@ -349,10 +349,10 @@ QED
 val MOD_2EXP_LT_COR =
   METIS_PROVE [MOD_2EXP_LT, MOD_2EXP_def] ``MOD_2EXP x n < 2 ** x``;
 
-Theorem EMPTY_IS_PTREE =
+Theorem EMPTY_IS_PTREE[simp] =
   EQT_ELIM (CONJUNCT1 IS_PTREE_def);
 
-Theorem ADD_IS_PTREE:
+Theorem ADD_IS_PTREE[simp]:
    !t x. IS_PTREE t ==> IS_PTREE (ADD t x)
 Proof
   Cases_on `x` \\ Induct
@@ -385,8 +385,6 @@ Proof
     \\ METIS_TAC [MONO_MOD_2EXP_EQ, DECIDE ``a < b ==> a <= b:num``,
                   MOD_2EXP_EQ_SYM, MOD_2EXP_EQ_TRANS, MOD_2EXP_EQ_BIT_EQ]
 QED
-
-val _ = export_rewrites ["EMPTY_IS_PTREE", "ADD_IS_PTREE"];
 
 Theorem EVERY_LEAF_BRANCH:
    !P p m l r. EVERY_LEAF P (BRANCH (p, m, l, r)) =
@@ -518,7 +516,7 @@ Proof
   Induct_on `t` \\ SRW_TAC [] [TRANSFORM_def, REMOVE_def, TRANSFORM_BRANCH]
 QED
 
-Theorem REMOVE_ADD_EQ:
+Theorem REMOVE_ADD_EQ[simp]:
    !t k d. REMOVE (ADD t (k,d)) k = REMOVE t k
 Proof
   Induct
@@ -527,14 +525,12 @@ Proof
           REMOVE_def, ADD_def, JOIN_def, BRANCH_def]
 QED
 
-Theorem ADD_ADD:
+Theorem ADD_ADD[simp]:
    !t k d e. ADD (ADD t (k,d)) (k,e) = ADD t (k,e)
 Proof
   Induct \\ SRW_TAC [boolSimps.LET_ss]
     [MOD_2EXP_EQ_MOD_2EXP, MOD_2EXP_EQ_REFL, ADD_def, JOIN_def]
 QED
-
-val _ = export_rewrites ["REMOVE_ADD_EQ", "ADD_ADD"];
 
 Theorem EVERY_LEAF_PEEK:
    !P t k. EVERY_LEAF P t /\ IS_SOME (PEEK t k) ==> P k (THE (PEEK t k))
@@ -704,7 +700,7 @@ Proof
   Induct_on `l` \\ SRW_TAC [] []
 QED
 
-Theorem ADD_LIST_IS_PTREE:
+Theorem ADD_LIST_IS_PTREE[simp]:
    !t l. IS_PTREE t ==> IS_PTREE (ADD_LIST t l)
 Proof
   SRW_TAC [] [ADD_LIST_def]
@@ -720,7 +716,7 @@ Proof
    METIS_TAC [ADD_LIST_IS_PTREE, EMPTY_IS_PTREE]
 QED
 
-Theorem PTREE_OF_NUMSET_IS_PTREE:
+Theorem PTREE_OF_NUMSET_IS_PTREE[simp]:
    !t s. IS_PTREE t ==> IS_PTREE (PTREE_OF_NUMSET t s)
 Proof
   SRW_TAC [] [PTREE_OF_NUMSET_def]
@@ -728,11 +724,9 @@ Proof
     \\ SRW_TAC [] [INSERT_PTREE_def]
 QED
 
-Theorem PTREE_OF_NUMSET_IS_PTREE_EMPTY =
+Theorem PTREE_OF_NUMSET_IS_PTREE_EMPTY[simp] =
   (SIMP_RULE (srw_ss()) [] o SPEC `Empty`) PTREE_OF_NUMSET_IS_PTREE;
 
-val _ = export_rewrites ["ADD_LIST_IS_PTREE", "PTREE_OF_NUMSET_IS_PTREE",
-                         "PTREE_OF_NUMSET_IS_PTREE_EMPTY"];
 
 val EVERY_LEAF_PEEK_LEFT = (SIMP_RULE (srw_ss()) [] o
   SPEC `\k d. MOD_2EXP_EQ m k p /\ BIT m k`) EVERY_LEAF_PEEK;
@@ -775,24 +769,22 @@ Proof
   SRW_TAC [] [IN_NUMSET_OF_PTREE, IN_PTREE_def, MEM_TRAVERSE_PEEK]
 QED
 
-Theorem INSERT_PTREE_IS_PTREE:
+Theorem INSERT_PTREE_IS_PTREE[simp]:
    !t x. IS_PTREE t ==> IS_PTREE (x INSERT_PTREE t)
 Proof
   SRW_TAC [] [INSERT_PTREE_def]
 QED
 
-Theorem FINITE_NUMSET_OF_PTREE:
+Theorem FINITE_NUMSET_OF_PTREE[simp]:
    !t. FINITE (NUMSET_OF_PTREE t)
 Proof
   SRW_TAC [] [NUMSET_OF_PTREE_def, FINITE_LIST_TO_SET]
 QED
 
-Theorem ADD_INSERT =
+Theorem ADD_INSERT[simp] =
   (GEN_ALL o SIMP_CONV (srw_ss()) [GSYM INSERT_PTREE_def, oneTheory.one])
   ``ADD t (n,v:unit)``;
 
-val _ = export_rewrites ["INSERT_PTREE_IS_PTREE", "FINITE_NUMSET_OF_PTREE",
-                         "ADD_INSERT"];
 
 Theorem IS_PTREE_FOLDR_INSERT_PTREE[local]:
    !l t. IS_PTREE t ==> IS_PTREE (FOLDR (\x y. x INSERT_PTREE y) t l)
@@ -896,19 +888,18 @@ Proof
     [pred_setTheory.EXTENSION, IN_NUMSET_OF_PTREE, IN_PTREE_OF_NUMSET]
 QED
 
-Theorem NUMSET_OF_PTREE_EMPTY:
+Theorem NUMSET_OF_PTREE_EMPTY[simp]:
    NUMSET_OF_PTREE Empty = {}
 Proof
   SRW_TAC [] [NUMSET_OF_PTREE_def, TRAVERSE_def, LIST_TO_SET_THM]
 QED
 
-Theorem PTREE_OF_NUMSET_EMPTY:
+Theorem PTREE_OF_NUMSET_EMPTY[simp]:
    !t. PTREE_OF_NUMSET t {} = t
 Proof
   SRW_TAC [] [PTREE_OF_NUMSET_def, SET_TO_LIST_THM]
 QED
 
-val _ = export_rewrites ["NUMSET_OF_PTREE_EMPTY", "PTREE_OF_NUMSET_EMPTY"];
 
 Theorem NUMSET_OF_PTREE_PTREE_OF_NUMSET_EMPTY =
   (SIMP_RULE (srw_ss()) [] o SPEC `Empty`) NUMSET_OF_PTREE_PTREE_OF_NUMSET;

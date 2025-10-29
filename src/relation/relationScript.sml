@@ -1126,8 +1126,7 @@ QED
 
 val EMPTY_REL_DEF =
 Q.new_definition
-        ("EMPTY_REL_DEF", `EMPTY_REL (x:'a) (y:'a) = F`);
-val _ = export_rewrites ["EMPTY_REL_DEF"]
+        ("EMPTY_REL_DEF[simp]", `EMPTY_REL (x:'a) (y:'a) = F`);
 Overload REMPTY = ``EMPTY_REL``
 val _ = Unicode.unicode_version {u = UnicodeChars.emptyset ^ UnicodeChars.sub_r,
                                  tmnm = "EMPTY_REL"}
@@ -1799,9 +1798,8 @@ end;
    ---------------------------------------------------------------------- *)
 
 val inv_DEF = new_definition(
-  "inv_DEF",
+  "inv_DEF[simp]",
   ``inv (R:'a->'b->bool) x y = R y x``);
-val _ = export_rewrites ["inv_DEF"]
 (* superscript suffix T, for "transpose" *)
 val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                    fixity = Suffix 2100,
@@ -2399,9 +2397,8 @@ QED
 
 (* top and bottom elements of RSUBSET lattice *)
 val RUNIV = new_definition(
-  "RUNIV",
+  "RUNIV[simp]",
   ``RUNIV x y = T``);
-val _ = export_rewrites ["RUNIV"]
 val _ = OpenTheoryMap.OpenTheory_const_name
           {const={Thy="relation",Name="RUNIV"},name=(["Relation"],"universe")}
 val _ = Unicode.unicode_version {
@@ -2441,9 +2438,8 @@ QED
    ---------------------------------------------------------------------- *)
 
 val RRESTRICT_DEF = new_definition(
-  "RRESTRICT_DEF",
+  "RRESTRICT_DEF[simp]",
   ``RRESTRICT R s (x:'a) (y:'b) <=> R x y /\ x IN s``);
-val _ = export_rewrites ["RRESTRICT_DEF"]
 
 Theorem IN_RDOM_RRESTRICT[simp]:
     x IN RDOM (RRESTRICT (R:'a -> 'b -> bool) s) <=> x IN RDOM R /\ x IN s
@@ -2453,9 +2449,8 @@ Proof
 QED
 
 val RDOM_DELETE_DEF = new_definition(
-  "RDOM_DELETE_DEF",
+  "RDOM_DELETE_DEF[simp]",
   ``RDOM_DELETE R x u v <=> R u v /\ u <> x``);
-val _ = export_rewrites ["RDOM_DELETE_DEF"]
 
 (* this syntax is compatible (easily confused) with that for finite maps *)
 val _ = set_fixity "\\\\" (Infixl 600)

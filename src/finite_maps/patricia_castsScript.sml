@@ -78,7 +78,7 @@ End
 
 Type word_ptreeset = ``:('a, unit) word_ptree``
 
-Definition THE_PTREE_def:    THE_PTREE (Word_ptree a t) = t
+Definition THE_PTREE_def[simp]:    THE_PTREE (Word_ptree a t) = t
 End
 
 Definition SOME_PTREE_def[nocompute]:   SOME_PTREE t = Word_ptree (K ()) t
@@ -87,7 +87,6 @@ End
 Definition WordEmpty_def:    WordEmpty = SOME_PTREE Empty
 End
 
-val _ = export_rewrites ["THE_PTREE_def"];
 
 Definition PEEKw_def:
   PEEKw (t:('a,'b) word_ptree) (w:'a word) = PEEK (THE_PTREE t) (w2n w)
@@ -394,4 +393,3 @@ val _ = computeLib.add_persistent_funs
    "THE_PTREE_SOME_PTREE"];
 
 (* ------------------------------------------------------------------------- *)
-

@@ -6553,16 +6553,13 @@ End
 
 (* Theorem: MAX_LIST [] = 0 *)
 (* Proof: by MAX_LIST_def *)
-Theorem MAX_LIST_NIL = MAX_LIST_def |> CONJUNCT1;
+Theorem MAX_LIST_NIL[simp] = MAX_LIST_def |> CONJUNCT1;
 (* val MAX_LIST_NIL = |- MAX_LIST [] = 0: thm *)
 
 (* Theorem: MAX_LIST (h::t) = MAX h (MAX_LIST t) *)
 (* Proof: by MAX_LIST_def *)
-Theorem MAX_LIST_CONS = MAX_LIST_def |> CONJUNCT2;
+Theorem MAX_LIST_CONS[simp] = MAX_LIST_def |> CONJUNCT2;
 (* val MAX_LIST_CONS = |- !h t. MAX_LIST (h::t) = MAX h (MAX_LIST t): thm *)
-
-(* export simple results *)
-val _ = export_rewrites["MAX_LIST_NIL", "MAX_LIST_CONS"];
 
 (* Theorem: MAX_LIST [x] = x *)
 (* Proof:
@@ -6712,7 +6709,7 @@ End
 
 (* Theorem: MIN_LIST [x] = x *)
 (* Proof: by MIN_LIST_def *)
-Theorem MIN_LIST_SING:
+Theorem MIN_LIST_SING[simp]:
     !x. MIN_LIST [x] = x
 Proof
   rw[MIN_LIST_def]
@@ -6720,14 +6717,11 @@ QED
 
 (* Theorem: t <> [] ==> (MIN_LIST (h::t) = MIN h (MIN_LIST t)) *)
 (* Proof: by MIN_LIST_def *)
-Theorem MIN_LIST_CONS:
+Theorem MIN_LIST_CONS[simp]:
     !h t. t <> [] ==> (MIN_LIST (h::t) = MIN h (MIN_LIST t))
 Proof
   rw[MIN_LIST_def]
 QED
-
-(* export simple results *)
-val _ = export_rewrites["MIN_LIST_SING", "MIN_LIST_CONS"];
 
 (* Theorem: l <> [] ==> MEM (MIN_LIST l) l *)
 (* Proof:

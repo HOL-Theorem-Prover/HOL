@@ -1420,15 +1420,13 @@ QED
 
 Type algebra[pp] = ``:('a set) # ('a set set)``
 
-Definition space_def:
+Definition space_def[simp]:
     space   (x :'a set, y :('a set) set) = x
 End
 
-Definition subsets_def:
+Definition subsets_def[simp]:
     subsets (x :'a set, y :('a set) set) = y
 End
-
-val _ = export_rewrites ["space_def", "subsets_def"];
 
 Definition subset_class_def:
     subset_class sp sts = !x. x IN sts ==> x SUBSET sp

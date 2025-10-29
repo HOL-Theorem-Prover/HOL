@@ -206,8 +206,7 @@ QED
 (* CURRY and UNCURRY. UNCURRY is needed for terms of the form `\(x,y).t`     *)
 (*---------------------------------------------------------------------------*)
 
-val CURRY_DEF = Q.new_definition ("CURRY_DEF", `CURRY f x y :'c = f (x,y)`);
-val _ = BasicProvers.export_rewrites ["CURRY_DEF"]
+val CURRY_DEF = Q.new_definition ("CURRY_DEF[simp]", `CURRY f x y :'c = f (x,y)`);
 
 val UNCURRY = Q.new_definition
   ("UNCURRY",

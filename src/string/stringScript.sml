@@ -325,13 +325,13 @@ Proof
   Induct_on `s` THEN SRW_TAC [][]
 QED
 
-Theorem IMPLODE_EXPLODE:
+Theorem IMPLODE_EXPLODE[simp]:
     IMPLODE (EXPLODE s) = s
 Proof
   Induct_on `s` THEN SRW_TAC [][]
 QED
 
-Theorem EXPLODE_IMPLODE:
+Theorem EXPLODE_IMPLODE[simp]:
     EXPLODE (IMPLODE cs) = cs
 Proof
   Induct_on `cs` THEN SRW_TAC [][]
@@ -343,15 +343,13 @@ QED
 Theorem IMPLODE_ONTO: !s. ?cs. s = IMPLODE cs
 Proof METIS_TAC [EXPLODE_IMPLODE, IMPLODE_EXPLODE]
 QED
-Theorem EXPLODE_11: (EXPLODE s1 = EXPLODE s2) = (s1 = s2)
+Theorem EXPLODE_11[simp]: (EXPLODE s1 = EXPLODE s2) = (s1 = s2)
 Proof METIS_TAC [EXPLODE_IMPLODE, IMPLODE_EXPLODE]
 QED
-Theorem IMPLODE_11: (IMPLODE cs1 = IMPLODE cs2) = (cs1 = cs2)
+Theorem IMPLODE_11[simp]: (IMPLODE cs1 = IMPLODE cs2) = (cs1 = cs2)
 Proof METIS_TAC [EXPLODE_IMPLODE, IMPLODE_EXPLODE]
 QED
 
-val _ = export_rewrites ["EXPLODE_11", "IMPLODE_11", "IMPLODE_EXPLODE",
-                         "EXPLODE_IMPLODE"]
 
 Theorem TOKENS_APPEND:
   !P l1 x l2.

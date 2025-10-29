@@ -223,7 +223,7 @@ val monoid_clauses = Monoid_def |> SPEC_ALL |> #1 o EQ_IMP_RULE;
 (* No need to export as definition is already exported. *)
 
 (* Theorem: [Closure] x * y in carrier. *)
-Theorem monoid_op_element =
+Theorem monoid_op_element[simp] =
   monoid_clauses |> UNDISCH_ALL |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val monoid_op_element = |- !g. Monoid g ==> !x y. x IN G /\ y IN G ==> x * y IN G : thm*)
 
@@ -233,7 +233,7 @@ Theorem monoid_assoc =
 (* > val monoid_assoc = |- !g. Monoid g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> (x * y * z = x * (y * z)) : thm *)
 
 (* Theorem: [Identity exists] #e in carrier. *)
-Theorem monoid_id_element =
+Theorem monoid_id_element[simp] =
   monoid_clauses |> UNDISCH_ALL |> CONJUNCT2|> CONJUNCT2 |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val monoid_id_element = |- !g. Monoid g ==> #e IN G : thm *)
 
@@ -244,24 +244,17 @@ Theorem monoid_id =
 
 (* Theorem: [Left identity] #e * x = x *)
 (* Proof: from monoid_id. *)
-Theorem monoid_lid =
+Theorem monoid_lid[simp] =
   monoid_id |> SPEC_ALL |> UNDISCH_ALL |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT1
             |> DISCH ``x IN G`` |> GEN_ALL |> DISCH_ALL |> GEN_ALL;
 (* > val monoid_lid = |- !g. Monoid g ==> !x. x IN G ==> (#e * x = x) : thm *)
 
 (* Theorem: [Right identity] x * #e = x *)
 (* Proof: from monoid_id. *)
-Theorem monoid_rid =
+Theorem monoid_rid[simp] =
   monoid_id |> SPEC_ALL |> UNDISCH_ALL |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT2
             |> DISCH ``x IN G`` |> GEN_ALL |> DISCH_ALL |> GEN_ALL;
 (* > val monoid_rid = |- !g. Monoid g ==> !x. x IN G ==> (x * #e = x) : thm *)
-
-(* export simple statements (no complicated and's) *)
-val _ = export_rewrites ["monoid_op_element"];
-(* val _ = export_rewrites ["monoid_assoc"]; -- no associativity *)
-val _ = export_rewrites ["monoid_id_element"];
-val _ = export_rewrites ["monoid_lid"];
-val _ = export_rewrites ["monoid_rid"];
 
 (* Theorem: #e * #e = #e *)
 (* Proof:

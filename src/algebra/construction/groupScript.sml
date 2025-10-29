@@ -490,13 +490,10 @@ Theorem group_linv[simp] =
 
 (* Theorem: [Group right inverse] x * |/ x = #e *)
 (* Proof: by Group_def and monoid_inv_def. *)
-Theorem group_rinv =
+Theorem group_rinv[simp] =
   monoid_inv_def |> SPEC_ALL |> REWRITE_RULE [gim, ginv] |> SPEC_ALL |> UNDISCH_ALL
                  |> CONJUNCT2 |> CONJUNCT1 |> DISCH ``x IN G`` |> GEN ``x`` |> DISCH ``Group g`` |> GEN_ALL;
 (* > val group_rinv = |- !g. Group g ==> !x. x IN G ==> (x * |/ x = #e) : thm *)
-
-(* Maybe good to export ? *)
-val _ = export_rewrites ["group_inv_element", "group_linv", "group_rinv"];
 
 (* Theorem: [Group inverses] x * |/ x = #e /\ |/x * x = #e *)
 Theorem group_inv_thm =
@@ -3120,8 +3117,6 @@ Definition coset_def:
   coset (g:'a group) a X = IMAGE (\z. a * z) X
 End
 
-(* val _ = export_rewrites ["coset_def"]; *)
-
 (* Define left coset of subgroup with an element a. *)
 Definition left_coset_def:
   left_coset (g:'a group) X a = coset g a X
@@ -4408,16 +4403,13 @@ QED
 (* Group element division.                                                   *)
 (* ------------------------------------------------------------------------- *)
 (* Define group division *)
-Definition group_div_def:
+Definition group_div_def[simp]:
   group_div (g:'a group) (x:'a) (y:'a)  = x * |/ y
 End
 
 (* set overloading *)
 Overload "/" = ``group_div g``
 val _ = set_fixity "/" (Infixl 600); (* same as "*" in arithmeticScript.sml *)
-
-(* export simple defintion *)
-val _ = export_rewrites ["group_div_def"];
 
 (* Theorem: x / y IN G *)
 (* Proof:
@@ -9159,7 +9151,7 @@ We define Zadd_eval and Zadd_inv below, and put them into computeLib.
 
 (* Theorem: Evaluation of Zadd for each record field. *)
 (* Proof: by Zadd_def. *)
-Theorem Zadd_eval:
+Theorem Zadd_eval[simp]:
     !n. ((Z n).carrier = count n) /\
        (!x y. (Z n).op x y = (x + y) MOD n) /\
        ((Z n).id = 0)
@@ -9298,7 +9290,7 @@ QED
 
 (* Theorem: (Z n).inv x = (n - x) MOD n *)
 (* Proof: by MOD_ADD_INV and group_linv_unique. *)
-Theorem Zadd_inv:
+Theorem Zadd_inv[simp]:
     !n x. 0 < n /\ x < n ==> ((Z n).inv x = (n - x) MOD n)
 Proof
   rpt strip_tac >>
@@ -9307,10 +9299,6 @@ Proof
   metis_tac[Zadd_group, group_linv_unique, Zadd_property]
 QED
 
-(* Due to zDefine before, now export the Define to computeLib. *)
-
-(* export simple result *)
-val _ = export_rewrites ["Zadd_eval", "Zadd_inv"];
 (*
 - SIMP_CONV (srw_ss()) [] ``(Z 5).op 3 4``;
 > val it = |- (Z 5).op 3 4 = 2 : thm
@@ -9375,7 +9363,7 @@ Overload "Z*"[local] = ``Zstar``
 
 (* Theorem: Evaluation of Zstar for each record field. *)
 (* Proof: by Zstar_def. *)
-Theorem Zstar_eval:
+Theorem Zstar_eval[simp]:
     !p. ((Z* p).carrier = residue p) /\
        (!x y. (Z* p).op x y = (x * y) MOD p) /\
        ((Z* p).id = 1)
@@ -9531,7 +9519,7 @@ QED
 
 (* Theorem: (Z* p).inv x = x ** (order (Z* p) x - 1) *)
 (* Proof: by group_order_property and group_rinv_unique. *)
-Theorem Zstar_inv:
+Theorem Zstar_inv[simp]:
     !p. prime p ==> !x. 0 < x /\ x < p ==> ((Z* p).inv x = (Z* p).exp x (order (Z* p) x - 1))
 Proof
   rpt strip_tac >>
@@ -9570,9 +9558,6 @@ val _ = computeLib.set_skip (computeLib.the_compset) ``combin$FAIL`` (SOME 0);
 - EVAL ``prime 5``;
 > val it = |- prime 5 <=> prime 5 : thm
 *)
-
-(* Export these for SIMP_CONV *)
-val _ = export_rewrites ["Zstar_eval", "Zstar_inv"];
 
 (*
 - SIMP_CONV (srw_ss()) [] ``(Z* 5).op 3 2``;
@@ -10237,7 +10222,7 @@ End
 
 (* Theorem: add_mod evaluation. *)
 (* Proof: by add_mod_def. *)
-Theorem add_mod_eval:
+Theorem add_mod_eval[simp]:
     !n. ((add_mod n).carrier = {i | i < n}) /\
        (!x y. (add_mod n).op x y = (x + y) MOD n) /\
        ((add_mod n).id = 0)
@@ -10399,7 +10384,7 @@ QED
 
 (* Theorem: (add_mod n).inv x = (n - x) MOD n *)
 (* Proof: by MOD_ADD_INV and group_linv_unique. *)
-Theorem add_mod_inv:
+Theorem add_mod_inv[simp]:
     !n x. 0 < n /\ x < n ==> ((add_mod n).inv x = (n - x) MOD n)
 Proof
   rpt strip_tac >>
@@ -10429,7 +10414,6 @@ val _ = computeLib.add_persistent_funs ["add_mod_inv_compute"];
 > val it = |- (add_mod 5).inv 7 = FAIL ((add_mod 5).inv 7) bad_element : thm
 *)
 
-val _ = export_rewrites ["add_mod_eval", "add_mod_inv"];
 (*
 - SIMP_CONV (srw_ss()) [] ``(add_mod 5).op 3 4``;
 > val it = |- (add_mod 5).op 3 4 = 2 : thm
@@ -10632,7 +10616,7 @@ QED
 
 (* Theorem: due to zDefine before, now export the Define to computeLib. *)
 (* Proof: by mult_mod_def. *)
-Theorem mult_mod_eval:
+Theorem mult_mod_eval[simp]:
     !p. ((mult_mod p).carrier = { i | i <> 0 /\ i < p }) /\
        (!x y. (mult_mod p).op x y = (x * y) MOD p) /\
        ((mult_mod p).id = 1)
@@ -10656,7 +10640,7 @@ QED
 
 (* Theorem: (mult_mod p).inv x = x ** (order (mult_mod p) x - 1) *)
 (* Proof: by group_order_property and group_rinv_unique. *)
-Theorem mult_mod_inv:
+Theorem mult_mod_inv[simp]:
     !p. prime p ==> !x. 0 < x /\ x < p ==> ((mult_mod p).inv x = (mult_mod p).exp x (order (mult_mod p) x - 1))
 Proof
   rpt strip_tac >>
@@ -10701,9 +10685,6 @@ val _ = computeLib.add_persistent_funs ["mult_mod_inv_compute"];
 - EVAL ``(Z* 5).inv 2``;
 > val it = |- (mult_mod 5).inv 2 = 3 : thm
 *)
-
-(* Export these for SIMP_CONV *)
-val _ = export_rewrites ["mult_mod_eval", "mult_mod_inv"];
 
 (*
 - SIMP_CONV (srw_ss()) [] ``(mult_mod 5).id``;
