@@ -8,6 +8,7 @@ Theory plotkin
 Ancestors
   cterm fmaptree nomset finite_map nominalFmapTree
   pred_set
+Libs NEWLib
 
 val _ = hide "S"
 
@@ -316,7 +317,7 @@ Inductive isVClosure:
   isVEnv E
 End
 
-Theorem isVClosure_thm[simp]:
+Theorem isVClosure_thm:
   (isVClosure (mkClos V e) ⇔
      wf_Closure (mkClos V e) ∧ (is_abs V ∨ is_const V) ∧ isVEnv e) ∧
   (isVEnv FEMPTY = T) ∧
@@ -327,6 +328,12 @@ Proof
   simp[DISJ_IMP_THM, FORALL_AND_THM] >>
   simp[cj 2 isVClosure_cases] >>
   simp[FAPPLY_FUPDATE_THM, DOMSUB_FAPPLY_THM] >> metis_tac[]
+QED
+
+Theorem isVClosure_wf_Closure:
+  isVClosure Cl ⇒ wf_Closure Cl
+Proof
+  simp[Once isVClosure_cases, PULL_EXISTS]
 QED
 
 val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
@@ -354,6 +361,8 @@ Overload fmFV = “λapm bpm. supp (fm_pmact apm bpm)”
 Overload clFV = “supp (fmt_pmact cterm_pmact string_pmact)”
 Overload eFV =
   “supp (fm_pmact string_pmact (fmt_pmact cterm_pmact string_pmact))”
+Overload subpm = “fmpm string_pmact cterm_pmact”
+Overload subFV = “supp (fm_pmact string_pmact cterm_pmact)”
 
 Theorem FINITE_clFV[simp]:
   FINITE (clFV cl)
@@ -461,7 +470,22 @@ Proof
   simp[] >> simp[GSYM Real_thm]
 QED
 
-(*
+Theorem ssub_update:
+  ∀M.
+    (∀k. k ∈ FDOM fm ∧ k ≠ v ⇒ cFV (fm ' k) = ∅) ⇒
+    ssub (fm |+ (v,N)) M = [N/v] (ssub (fm \\ v) M)
+Proof
+  ho_match_mp_tac cterm_induction >>
+  qexists ‘fmFV string_pmact cterm_pmact fm ∪ {v} ∪ cFV N’ >> simp[] >> rw[] >>
+  simp[FAPPLY_FUPDATE_THM, DOMSUB_FAPPLY_THM, lemma14b] >> gvs[] >>
+  rename [‘ssub (fm |+ (v,N)) (LAM u M) = _’] >>
+  dep_rewrite.DEP_REWRITE_TAC[ssub_thm] >> simp[DISJ_IMP_THM, FORALL_AND_THM] >>
+  rw[FAPPLY_FUPDATE_THM]
+QED
+
+Theorem RIGHT_FORALL_DISJ_THM[local] =
+  METIS_PROVE[] “(∀x. P ∨ Q x) ⇔ P ∨ ∀x. Q x”
+
 Theorem lemma1_0:
   ∀M E x NCl.
     wf_Closure NCl ∧ (∀k. k ∈ FDOM E ∧ k ≠ x ⇒ wf_Closure (E ' k)) ⇒
@@ -481,62 +505,81 @@ Proof
       >- simp[Abbr‘rn’, Real_def] >>
       rw[] >> simp[GSYM Real_def] >>
       simp[lemma14b, wf_Closure_Real_ground]) >~
+  [‘⟨ CONST c ∶ E |+ (u,NCl)⟩ (* sg *)’]
+  >- simp[Real_def, fmtreerec_thm] >~
   [‘⟨ M @@ N ∶ E |+ (u,NCl)⟩ (* sg *)’]
   >- (qabbrev_tac ‘rn = Real NCl’ >> simp[Real_def, fmtreerec_thm] >>
-      simp[GSYM Real_def] >>
+      simp[GSYM Real_def] >> dep_rewrite.DEP_REWRITE_TAC[ssub_update] >>
+      simp[wf_Closure_Real_ground]) >~
+  [‘⟨ LAM v M ∶ E |+ (u,NCl)⟩ (* sg *)’] >>
+  qabbrev_tac ‘rn = Real NCl’ >> simp[Real_def, fmtreerec_thm] >>
+  simp[GSYM Real_def] >> dep_rewrite.DEP_REWRITE_TAC[ssub_thm] >> simp[] >>
+  gvs[fmap_supp, supp_setpm, GSYM RIGHT_FORALL_DISJ_THM] >>
+  simp[FAPPLY_FUPDATE_THM, DOMSUB_FAPPLY_THM] >> rw[] >>
+  simp[wf_Closure_Real_ground, Abbr‘rn’] >>
+  dep_rewrite.DEP_REWRITE_TAC[ssub_update] >>
+  simp[wf_Closure_Real_ground]
+QED
 
-
-      simp[FUN_FMAP_DEF] >>
-      ‘Real ⟨ VAR u ∶ E \\ u⟩ = VAR u’ suffices_by simp[] >>
-      simp[Real_def, fmtreerec_thm]) >>
-
-Theorem lemma1:
-  isVClosure (mkClos (LAM y M) E) ∧ isVClosure (mkClos N E') ∧
-  Real (mkClos (LAM y M) E) = LAM x M' ∧ Real (mkClos N E') = N' ⇒
-  Real (mkClos M (E |+ (y,mkClos N E'))) = [N'/x] M'
+Theorem sub_ssub_thm:
+  ∀M.
+    v ∉ FDOM fm ∧ (∀k. k ∈ FDOM fm ⇒ v ∉ cFV (fm ' k)) ∧
+    FDOM fm ∩ cFV N = ∅ ⇒
+    [N/v] (fm ' M) = fm ' ([N/v]M)
 Proof
+  ho_match_mp_tac cterm_induction >>
+  qexists ‘{v} ∪ cFV N ∪ subFV fm’ >> simp[] >> rw[SUB_VAR] >>
+  gvs[lemma14b] >> metis_tac[ssub_14b, INTER_COMM]
+QED
 
+Theorem ssub_domsub:
+  ∀ct. v ∉ cFV ct ⇒ ssub (fm \\ v) ct = ssub fm ct
+Proof
+  ho_match_mp_tac cterm_induction >>
+  qexists ‘subFV fm ∪ {v}’ >> simp[ssub_def, DOMSUB_FAPPLY_THM]
+QED
 
 
 (* p131 *)
+(* Plotkin has isVClosure for both terms rather than wf_Closure, but
+   the "value" nature of these don't contribute *)
 Theorem lemma1:
-  ∀M' rest x y E N N' E' M.
-    rest = (x,y,M,N,N',E,E') ∧
-    isVClosure (mkClos (LAM y M) E) ∧ isVClosure (mkClos N E') ∧
-    Real (mkClos (LAM y M) E) = LAM x M' ∧ Real (mkClos N E') = N' ⇒
-    Real (mkClos M (E |+ (y,mkClos N E'))) = [N'/x] M'
+  wf_Closure (mkClos (LAM y M) E) ∧ wf_Closure (mkClos N E') ∧
+  Real (mkClos (LAM y M) E) = LAM x M' ∧ Real (mkClos N E') = N' ⇒
+  Real (mkClos M (E |+ (y,mkClos N E'))) = [N'/x] M'
 Proof
-  simp[Real_thm, SF CONJ_ss] >> rpt strip_tac >>
-  ‘wf_Closure ⟨M ∶ E |+ (y,⟨N ∶ E'⟩)⟩’
-    by (simp[wf_Closure_thm] >> conj_tac
-        >- ASM_SET_TAC [] >>
-        simp[DISJ_IMP_THM, FORALL_AND_THM, FAPPLY_FUPDATE_THM] >>
-        rw[]) >>
-  simp[Real_thm]
-
-  rpt strip_tac >>
-  ‘wf_Closure (mkClos (LAM y M) E) ∧ wf_Closure (mkClos N E')’ by gvs[] >>
-  ‘wf_Closure (mkClos M (E |+ (y,mkClos N E')))’
-    by (gvs[DISJ_IMP_THM, FORALL_AND_THM] >>
-        (conj_tac >- ASM_SET_TAC[] >> rw[FAPPLY_FUPDATE_THM])) >>
-  rpt (qpat_x_assum ‘Real _ = _’ mp_tac) >>
-  simp[Real_thm]
-
-
-   >> Cases_on ‘is_const N’
-  >- (gvs[Real_thm] >>
-      ‘cFV N = {}’
-        by (Cases_on ‘N’ using cterm_CASES >> gvs[]) >>
-      simp[]
-  ‘wf_Closure (mkClos (LAM y M) E)’ by gvs[] >>
-  gnvs[Real_thm]
-
-
-  ho_match_mp_tac cterm_bvc_induction >>
-  qexists ‘λ(x,y,M,N,N',E,E'). {x;y} ∪ cFV M ∪ cFV N ∪ cFV N' ∪ supp (fm_pmact ’
-
-  CONV_TAC (QUANT_CONV (QUANT_CONV (UNBETA_CONV “rest : string # string # icterm # icterm # icterm # Environment # Environment”))) >>
-  CONV_TAC (QUANT_CONV (QUANT_CONV (RATOR_CONV (UNBETA_CONV “M' : icterm”)))) >>
-  irule (REWRITE_RULE[AND_IMP_INTRO, GSYM CONJ_ASSOC]) >>
-  qexists ‘cFV N ∪ cFV N' ∪ cFV M'’ >> simp[]
-*)
+  rpt strip_tac >> dep_rewrite.DEP_REWRITE_TAC[lemma1_0] >>
+  gvs[] >>
+  qabbrev_tac ‘rn = Real ⟨N ∶ E'⟩’ >>
+  ‘cFV rn = ∅’ by simp[Abbr‘rn’, wf_Closure_Real_ground] >>
+  qpat_x_assum ‘Real (mkClos (LAM y M) E) = _’ mp_tac >>
+  simp[Real_def, fmtreerec_thm] >>
+  Q_TAC (NEW_TAC "z") ‘cFV M ∪ cFV M' ∪ {x;y} ∪ eFV E’ >>
+  gvs[fmap_supp, GSYM RIGHT_FORALL_DISJ_THM, supp_setpm] >>
+  simp[GSYM Real_def] >>
+  ‘LAM y M = LAM z (ctpm [(z,y)] M)’ by simp[ctpm_ALPHA] >>
+  simp[] >>
+  dep_rewrite.DEP_REWRITE_TAC[ssub_thm] >> simp[wf_Closure_Real_ground] >>
+  ‘LAM x M' = LAM z (ctpm [(z,x)] M')’ by simp[ctpm_ALPHA] >>
+  simp[ctpm_eqr, ctpm_ssub] >>
+  disch_then (SUBST_ALL_TAC o SYM) >>
+  dep_rewrite.DEP_REWRITE_TAC[sub_ssub_thm] >> simp[] >> rw[] >>
+  simp[wf_Closure_Real_ground, DOMSUB_FAPPLY_THM, fmpm_FDOM] >~
+  [‘x ∉ cFV (subpm [(z,x)] (Real o_f E) ' k) (* g *)’]
+  >- gvs[fmpm_applied, fmpm_FDOM, wf_Closure_Real_ground] >~
+  [‘(Real o_f (E \\ y)) ' ([rn/y] M) = _’] >>
+  simp[ctpm_subst_out, supp_fresh] >>
+  simp[GSYM ssub_def] >>
+  ‘ctpm [(z,y)] ([rn/y] M) = [rn/y]M’
+    by (irule supp_fresh >> simp[cFV_SUB] >> rw[]) >>
+  simp[] >> gvs[ssub_def] >>
+  ‘ctpm [(z,x)] ((Real o_f E) ' ([rn/y]M)) = (Real o_f E) ' ([rn/y]M)’
+    by (irule supp_fresh >> simp[cFV_ssub, wf_Closure_Real_ground] >>
+        rw[cFV_SUB] >>
+        qpat_x_assum ‘LAM x _ = LAM z _’ mp_tac >>
+        simp[LAM_eq_thm, cFV_ssub, wf_Closure_Real_ground] >>
+        Cases_on ‘x = y’ >> simp[]) >>
+  simp[GSYM ssub_def] >>
+  simp[GSYM o_f_DOMSUB, Excl "o_f_DOMSUB"] >>
+  irule ssub_domsub >> rw[cFV_SUB]
+QED
