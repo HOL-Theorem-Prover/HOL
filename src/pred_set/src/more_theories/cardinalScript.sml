@@ -90,12 +90,11 @@ End
 
 Overload "<<=" = ``cardleq``
 
-Theorem cardleq_REFL:
+Theorem cardleq_REFL[simp]:
     !s:'a set. s <<= s
 Proof
   rw[cardleq_def] >> qexists_tac `\x. x` >> rw[INJ_ID]
 QED
-val _ = export_rewrites ["cardleq_REFL"]
 
 Theorem cardleq_TRANS:
     !s:'a set t:'b set u:'c set. s <<= t /\ t <<= u ==> s <<= u
@@ -166,12 +165,11 @@ Theorem CARDEQ_INSERT_RWT =
                           |> EQ_MP (SYM cardeq_INSERT) |> DISCH_ALL
                           |> Q.GEN `s`
 
-Theorem EMPTY_CARDLEQ:
+Theorem EMPTY_CARDLEQ[simp]:
     {} <<= t
 Proof
   simp[cardleq_def, INJ_EMPTY]
 QED(* export_rewrites for pred_set *)
-val _ = export_rewrites ["EMPTY_CARDLEQ"]
 
 Theorem FINITE_CLE_INFINITE:
     FINITE s /\ INFINITE t ==> s <<= t
@@ -231,20 +229,18 @@ QED
 
 Type inf = ``:num + 'a``
 
-Theorem INFINITE_UNIV_INF:
+Theorem INFINITE_UNIV_INF[simp]:
     INFINITE univ(:'a inf)
 Proof
   simp[INFINITE_UNIV] >> qexists_tac `SUM_MAP SUC I` >>
   simp[sumTheory.FORALL_SUM] >> qexists_tac `INL 0` >> simp[]
 QED
-val _ = export_rewrites ["INFINITE_UNIV_INF"]
 
-Theorem IMAGE_cardleq:
+Theorem IMAGE_cardleq[simp]:
     !f s. IMAGE f s <<= s
 Proof
   simp[cardleq_def] >> metis_tac [SURJ_IMAGE, SURJ_INJ_INV]
 QED
-val _ = export_rewrites ["IMAGE_cardleq"]
 
 Theorem CARDLEQ_CROSS_CONG:
     !x1 x2 y1 y2. x1 <<= x2 /\ y1 <<= y2 ==> x1 CROSS y1 <<= x2 CROSS y2

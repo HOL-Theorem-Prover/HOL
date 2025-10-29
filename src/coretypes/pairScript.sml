@@ -865,37 +865,33 @@ REPEAT STRIP_TAC THEN MATCH_MP_TAC relationTheory.WF_SUBSET
 QED
 
 (* more relational properties of LEX *)
-Theorem total_LEX:
+Theorem total_LEX[simp]:
     total R1 /\ total R2 ==> total (R1 LEX R2)
 Proof
   ASM_SIMP_TAC (srw_ss()) [total_def, FORALL_PROD, LEX_DEF, UNCURRY_DEF] THEN
   METIS_TAC[]
 QED
-val _ = export_rewrites ["total_LEX"]
 
-Theorem transitive_LEX:
+Theorem transitive_LEX[simp]:
     transitive R1 /\ transitive R2 ==> transitive (R1 LEX R2)
 Proof
   SIMP_TAC (srw_ss()) [transitive_def, FORALL_PROD, LEX_DEF, UNCURRY_DEF] THEN
   METIS_TAC[]
 QED
-val _ = export_rewrites ["transitive_LEX"]
 
-Theorem reflexive_LEX:
+Theorem reflexive_LEX[simp]:
     reflexive (R1 LEX R2) <=> reflexive R1 \/ reflexive R2
 Proof
   SIMP_TAC (srw_ss()) [reflexive_def, LEX_DEF, FORALL_PROD, UNCURRY_DEF] THEN
   METIS_TAC[]
 QED
-val _ = export_rewrites ["reflexive_LEX"]
 
-Theorem symmetric_LEX:
+Theorem symmetric_LEX[simp]:
     symmetric R1 /\ symmetric R2 ==> symmetric (R1 LEX R2)
 Proof
   SIMP_TAC (srw_ss()) [symmetric_def, LEX_DEF, FORALL_PROD, UNCURRY_DEF] THEN
   METIS_TAC[]
 QED
-val _ = export_rewrites ["symmetric_LEX"]
 
 Theorem LEX_CONG:
   !R1 R2 v1 v2 R1' R2' v1' v2'.

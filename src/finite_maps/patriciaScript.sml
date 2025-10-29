@@ -412,14 +412,13 @@ Proof
     \\ SRW_TAC [] [BRANCH_def, IS_PTREE_def, EVERY_LEAF_def]
 QED
 
-Theorem REMOVE_IS_PTREE:
+Theorem REMOVE_IS_PTREE[simp]:
    !t k. IS_PTREE t ==> IS_PTREE (REMOVE t k)
 Proof
   Induct \\ SRW_TAC [] [REMOVE_def, IS_PTREE_def]
     \\ METIS_TAC [IS_PTREE_BRANCH, EVERY_LEAF_REMOVE]
 QED
 
-val _ = export_rewrites ["REMOVE_IS_PTREE"];
 
 Theorem PEEK_NONE:
    !P t k. (!d. ~P k d) /\ EVERY_LEAF P t ==> (PEEK t k = NONE)
@@ -482,14 +481,13 @@ Proof
   Cases_on `t` \\ SRW_TAC [] [TRANSFORM_def]
 QED
 
-Theorem TRANSFORM_IS_PTREE:
+Theorem TRANSFORM_IS_PTREE[simp]:
    !f t. IS_PTREE t ==> IS_PTREE (TRANSFORM f t)
 Proof
   Induct_on `t` \\ SRW_TAC [] [TRANSFORM_def, IS_PTREE_def, TRANSFORM_EMPTY]
     \\ METIS_TAC [EVERY_LEAF_TRANSFORM_LEFT, EVERY_LEAF_TRANSFORM_RIGHT]
 QED
 
-val _ = export_rewrites ["TRANSFORM_IS_PTREE"];
 
 Theorem PEEK_TRANSFORM:
    !f t k. PEEK (TRANSFORM f t) k =
@@ -643,13 +641,12 @@ Proof
         \\ METIS_TAC [PEEK_NONE_LEFT, PEEK_NONE_RIGHT]]
 QED
 
-Theorem REMOVE_REMOVE:
+Theorem REMOVE_REMOVE[simp]:
    !t k. IS_PTREE t ==> (REMOVE (REMOVE t k) k = REMOVE t k)
 Proof
   SRW_TAC [] [GSYM PTREE_EQ, PEEK_REMOVE]
 QED
 
-val _ = export_rewrites ["REMOVE_REMOVE"];
 
 Theorem REMOVE_ADD:
    !t k d j. IS_PTREE t ==>
@@ -752,7 +749,7 @@ Proof
     \\ METIS_TAC [EVERY_LEAF_PEEK_LEFT, EVERY_LEAF_PEEK_RIGHT]
 QED
 
-Theorem ALL_DISTINCT_TRAVERSE:
+Theorem ALL_DISTINCT_TRAVERSE[simp]:
    !t. IS_PTREE t ==> ALL_DISTINCT (TRAVERSE t)
 Proof
   Induct \\ SRW_TAC [] [ALL_DISTINCT, TRAVERSE_def, ALL_DISTINCT_APPEND]
@@ -760,7 +757,6 @@ Proof
     \\ METIS_TAC [MEM_TRAVERSE_PEEK, NOT_KEY_LEFT_AND_RIGHT]
 QED
 
-val _ = export_rewrites ["ALL_DISTINCT_TRAVERSE"];
 
 Theorem MEM_ALL_DISTINCT_IMP_PERM:
    !l1 l2. ALL_DISTINCT l1 /\ ALL_DISTINCT l2 /\ (!x. MEM x l1 = MEM x l2) ==>
@@ -862,10 +858,9 @@ Proof
     \\ SRW_TAC [] [PTREE_OF_NUMSET_def, PERM_INSERT_PTREE]
 QED
 
-Theorem IN_PTREE_EMPTY = (GEN_ALL o EQF_ELIM o
+Theorem IN_PTREE_EMPTY[simp] = (GEN_ALL o EQF_ELIM o
   SIMP_CONV (srw_ss()) [IN_PTREE_def, PEEK_def]) ``n IN_PTREE <{}>``;
 
-val _ = export_rewrites ["IN_PTREE_EMPTY"];
 
 Theorem IN_PTREE_OF_NUMSET_EMPTY =
   (GSYM o SIMP_RULE (srw_ss()) [] o SPEC `Empty`) IN_PTREE_OF_NUMSET;
@@ -940,14 +935,13 @@ Proof
     \\ SRW_TAC [] [IN_NUMSET_OF_PTREE]
 QED
 
-Theorem UNION_PTREE_IS_PTREE:
+Theorem UNION_PTREE_IS_PTREE[simp]:
    !t1 t2. IS_PTREE t1 /\ IS_PTREE t2 ==>
            IS_PTREE (t1 UNION_PTREE t2)
 Proof
   SRW_TAC [] [UNION_PTREE_def]
 QED
 
-val _ = export_rewrites ["UNION_PTREE_IS_PTREE"];
 
 Theorem UNION_PTREE_COMM:
    !t1 t2. IS_PTREE t1 /\ IS_PTREE t2 ==>

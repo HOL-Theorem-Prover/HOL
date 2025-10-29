@@ -118,11 +118,10 @@ Definition n2nsum_def:
   n2nsum n = if ODD n then INL (n DIV 2) else INR (n DIV 2)
 End
 
-Definition nsum2n_def:
+Definition nsum2n_def[simp]:
   (nsum2n (INL n) = 2 * n + 1) /\
   (nsum2n (INR n) = 2 * n)
 End
-val _ = export_rewrites ["nsum2n_def"]
 
 Theorem div_lemma[local]:
     (2 * x DIV 2 = x) /\ ((2 * x + 1) DIV 2 = x)

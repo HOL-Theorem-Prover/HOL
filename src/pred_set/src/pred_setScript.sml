@@ -483,12 +483,11 @@ Proof
      REWRITE_TAC [EXTENSION,NOT_IN_EMPTY]
 QED
 
-Theorem SUBSET_UNIV:
+Theorem SUBSET_UNIV[simp]:
       !s:'a set. s SUBSET UNIV
 Proof
      REWRITE_TAC [SUBSET_DEF,IN_UNIV]
 QED
-val  _ = export_rewrites ["SUBSET_UNIV"]
 
 Theorem UNIV_SUBSET[simp]:
   !s:'a set. UNIV SUBSET s <=> (s = UNIV)
@@ -680,31 +679,28 @@ Proof
      [RES_TAC,ASM_REWRITE_TAC[],RES_TAC]
 QED
 
-Theorem UNION_EMPTY:
+Theorem UNION_EMPTY[simp]:
       (!s:'a set. EMPTY UNION s = s) /\
       (!s:'a set. s UNION EMPTY = s)
 Proof
      REWRITE_TAC [IN_UNION,EXTENSION,NOT_IN_EMPTY]
 QED
 
-val _ = export_rewrites ["UNION_EMPTY"]
 
-Theorem UNION_UNIV:
+Theorem UNION_UNIV[simp]:
       (!s:'a set. UNIV UNION s = UNIV) /\
       (!s:'a set. s UNION UNIV = UNIV)
 Proof
      REWRITE_TAC [IN_UNION,EXTENSION,IN_UNIV]
 QED
 
-val _ = export_rewrites ["UNION_UNIV"]
 
-Theorem EMPTY_UNION:
+Theorem EMPTY_UNION[simp]:
  !s:'a set. !t. (s UNION t = EMPTY) = ((s = EMPTY) /\ (t = EMPTY))
 Proof
      REWRITE_TAC [EXTENSION,NOT_IN_EMPTY,IN_UNION,DE_MORGAN_THM] THEN
      REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN RES_TAC
 QED
-val _ = export_rewrites ["EMPTY_UNION"]
 
 (* from probability/iterateTheory *)
 Theorem FORALL_IN_UNION:
@@ -789,14 +785,13 @@ Proof
    >> PROVE_TAC []
 QED
 
-Theorem INTER_EMPTY:
+Theorem INTER_EMPTY[simp]:
       (!s:'a set. EMPTY INTER s = EMPTY) /\
       (!s:'a set. s INTER EMPTY = EMPTY)
 Proof
      REWRITE_TAC [IN_INTER,EXTENSION,NOT_IN_EMPTY]
 QED
 
-val _ = export_rewrites ["INTER_EMPTY"]
 
 Theorem INTER_UNIV:
       (!s:'a set. UNIV INTER s = s) /\
@@ -1303,12 +1298,11 @@ Proof
   rw[EQ_IMP_THM, EXTENSION] >> METIS_TAC[MEMBER_NOT_EMPTY]
 QED
 
-Theorem UNIV_BOOL:
+Theorem UNIV_BOOL[simp]:
     univ(:bool) = {T; F}
 Proof
   SRW_TAC [][EXTENSION]
 QED
-val _ = export_rewrites ["UNIV_BOOL"]
 
 (* from probability/iterateTheory *)
 Theorem FORALL_IN_INSERT:
@@ -1603,20 +1597,18 @@ val SING_DEF =
     ("SING_DEF", (“SING s = ?x:'a. s = {x}”));
 val _ = ot0 "SING" "singleton"
 
-Theorem SING:
+Theorem SING[simp]:
       !x:'a. SING {x}
 Proof
      PURE_ONCE_REWRITE_TAC [SING_DEF] THEN
      GEN_TAC THEN EXISTS_TAC (“x:'a”) THEN REFL_TAC
 QED
-val _ = export_rewrites ["SING"]
 
-Theorem SING_EMPTY:
+Theorem SING_EMPTY[simp]:
     SING {} = F
 Proof
   SRW_TAC [][SING_DEF]
 QED
-val _ = export_rewrites ["SING_EMPTY"]
 
 Theorem SING_INSERT[simp]:
   SING (x INSERT s) <=> (s = {}) \/ (s = {x})
@@ -1655,7 +1647,7 @@ Proof
      GEN_TAC THEN EXISTS_TAC (“x:'a”) THEN REWRITE_TAC[]
 QED
 
-Theorem EQUAL_SING:
+Theorem EQUAL_SING[simp]:
       !x:'a. !y. ({x} = {y}) = (x = y)
 Proof
      REWRITE_TAC [EXTENSION,IN_SING] THEN
@@ -1663,7 +1655,6 @@ Proof
      [DISCH_THEN (fn th => REWRITE_TAC [SYM(SPEC_ALL th)]),
       DISCH_THEN SUBST1_TAC THEN GEN_TAC THEN REFL_TAC]
 QED
-val _ = export_rewrites ["EQUAL_SING"]
 
 Theorem DISJOINT_SING_EMPTY:
       !x:'a. DISJOINT {x} EMPTY
@@ -1677,14 +1668,13 @@ Proof
      REWRITE_TAC [EXTENSION,IN_INSERT,IN_UNION,NOT_IN_EMPTY]
 QED
 
-Theorem SING_DELETE:
+Theorem SING_DELETE[simp]:
      !x:'a. {x} DELETE x = EMPTY
 Proof
     REWRITE_TAC [EXTENSION,NOT_IN_EMPTY,IN_DELETE,IN_INSERT] THEN
     PURE_ONCE_REWRITE_TAC [CONJ_SYM] THEN
     REWRITE_TAC [DE_MORGAN_THM,EXCLUDED_MIDDLE]
 QED
-val _ = export_rewrites ["SING_DELETE"]
 
 Theorem DELETE_EQ_SING:
       !s. !x:'a. (x IN s) ==> ((s DELETE x = EMPTY) = (s = {x}))
@@ -1700,21 +1690,19 @@ Proof
       end]
 QED
 
-Theorem CHOICE_SING:
+Theorem CHOICE_SING[simp]:
       !x:'a. CHOICE {x} = x
 Proof
      GEN_TAC THEN
      MP_TAC (MATCH_MP CHOICE_DEF (SPEC (“x:'a”) NOT_SING_EMPTY)) THEN
      REWRITE_TAC [IN_SING]
 QED
-val _ = export_rewrites ["CHOICE_SING"]
 
-Theorem REST_SING:
+Theorem REST_SING[simp]:
       !x:'a. REST {x} = EMPTY
 Proof
      REWRITE_TAC [CHOICE_SING,REST_DEF,SING_DELETE]
 QED
-val _ = export_rewrites ["REST_SING"]
 
 Theorem SING_IFF_EMPTY_REST:
   !s:'a set. SING s <=> s <> EMPTY /\ REST s = EMPTY
@@ -1831,12 +1819,11 @@ Proof
      CONJ_TAC THENL [REFL_TAC, FIRST_ASSUM ACCEPT_TAC]
 QED
 
-Theorem IMAGE_EMPTY:
+Theorem IMAGE_EMPTY[simp]:
        !f:'a->'b. IMAGE f EMPTY = EMPTY
 Proof
       REWRITE_TAC[EXTENSION,IN_IMAGE,NOT_IN_EMPTY]
 QED
-val _ = export_rewrites ["IMAGE_EMPTY"]
 
 Theorem IMAGE_ID:
       !s:'a set. IMAGE (\x:'a.x) s = s
@@ -1878,7 +1865,7 @@ Proof
       EXISTS_TAC (“x'':'a”) THEN ASM_REWRITE_TAC[]]
 QED
 
-Theorem IMAGE_INSERT:
+Theorem IMAGE_INSERT[simp]:
       !(f:'a->'b) x s. IMAGE f (x INSERT s) = f x INSERT (IMAGE f s)
 Proof
      PURE_REWRITE_TAC [EXTENSION,IN_INSERT,IN_IMAGE] THEN
@@ -1887,7 +1874,6 @@ Proof
       EXISTS_TAC (“x:'a”),EXISTS_TAC (“x'':'a”)] THEN
      ASM_REWRITE_TAC[]
 QED
-val _ = export_rewrites ["IMAGE_INSERT"]
 
 (* |- (!f. IMAGE f {} = {}) /\
        !f x s. IMAGE f (x INSERT s) = f x INSERT IMAGE f s
@@ -1992,11 +1978,10 @@ Proof
     REWRITE_TAC [IN_IMAGE] THEN PROVE_TAC []
 QED
 
-Theorem IMAGE_SING:   !f x. IMAGE f {x} = {f x}
+Theorem IMAGE_SING[simp]:   !f x. IMAGE f {x} = {f x}
 Proof
     RW_TAC std_ss [EXTENSION,IN_SING,IN_IMAGE] >> METIS_TAC []
 QED
-val _ = export_rewrites ["IMAGE_SING"];
 
 Theorem SUBSET_IMAGE : (* from topologyTheory *)
     !f:'a->'b s t. s SUBSET (IMAGE f t) <=> ?u. u SUBSET t /\ (s = IMAGE f u)
@@ -2166,12 +2151,11 @@ Proof
        EXISTS_TAC (“x':'a”) THEN ASM_REWRITE_TAC []]]
 QED
 
-Theorem SURJ_IMAGE:
+Theorem SURJ_IMAGE[simp]:
     SURJ f s (IMAGE f s)
 Proof
   REWRITE_TAC[IMAGE_SURJ]
 QED
-val _ = export_rewrites ["SURJ_IMAGE"]
 
 Theorem SURJ_IMP_INJ:
      !s t. (?f. SURJ f s t) ==> (?g. INJ g t s)
@@ -2205,12 +2189,11 @@ Proof
   FULL_SIMP_TAC (srw_ss())[BIJ_DEF,INJ_DEF] \\ METIS_TAC []
 QED
 
-Theorem BIJ_EMPTY:
+Theorem BIJ_EMPTY[simp]:
  !f:'a->'b. (!s. BIJ f {} s = (s = {})) /\ (!s. BIJ f s {} = (s = {}))
 Proof
      REWRITE_TAC [BIJ_DEF,INJ_EMPTY,SURJ_EMPTY]
 QED
-val _ = export_rewrites ["BIJ_EMPTY"]
 
 Theorem BIJ_COMPOSE:
       !f:'a->'b. !g:'b->'c.
@@ -3140,7 +3123,7 @@ Proof
      REPEAT STRIP_TAC THEN IMP_RES_TAC SUBSET_FINITE
 QED
 
-Theorem FINITE_DIFF:
+Theorem FINITE_DIFF[simp]:
       !s:'a set. FINITE s ==> !t. FINITE(s DIFF t)
 Proof
      SET_INDUCT_TAC THENL
@@ -3151,7 +3134,6 @@ Proof
        FIRST_ASSUM (fn th => fn g => ASSUME_TAC (SPEC (“t:'a set”)th) g)
        THEN IMP_RES_THEN MATCH_ACCEPT_TAC FINITE_INSERT]]
 QED
-val _ = export_rewrites ["FINITE_DIFF"]
 
 Theorem FINITE_DIFF_down:
   !P Q. FINITE (P DIFF Q) /\ FINITE Q ==> FINITE P
@@ -3161,14 +3143,13 @@ Proof
   PROVE_TAC [DIFF_INSERT, FINITE_DELETE]
 QED
 
-Theorem FINITE_SING:
+Theorem FINITE_SING[simp]:
       !x:'a. FINITE {x}
 Proof
      GEN_TAC THEN MP_TAC FINITE_EMPTY THEN
      SUBST1_TAC (SYM (SPEC (“x:'a”) SING_DELETE)) THEN
      DISCH_TAC THEN IMP_RES_THEN MATCH_ACCEPT_TAC FINITE_INSERT
 QED
-val _ = export_rewrites ["FINITE_SING"]
 
 Theorem SING_FINITE:
       !s:'a set. SING s ==> FINITE s
@@ -3283,12 +3264,11 @@ Definition REL_RESTRICT_DEF[nocompute]:
   REL_RESTRICT R s x y <=> x IN s /\ y IN s /\ R x y
 End
 
-Theorem REL_RESTRICT_EMPTY:
+Theorem REL_RESTRICT_EMPTY[simp]:
     REL_RESTRICT R {} = REMPTY
 Proof
   SRW_TAC [][REL_RESTRICT_DEF, FUN_EQ_THM]
 QED
-val _ = export_rewrites ["REL_RESTRICT_EMPTY"]
 
 Theorem REL_RESTRICT_SUBSET:
     s1 SUBSET s2 ==> REL_RESTRICT R s1 RSUBSET REL_RESTRICT R s2
@@ -3441,11 +3421,9 @@ val CARD_DEF = new_specification ("CARD_DEF", ["CARD"], CARD_EXISTS);
 (* Various cardinality results.                                         *)
 (* ---------------------------------------------------------------------*)
 
-Theorem CARD_EMPTY = CONJUNCT1 CARD_DEF;
-val _ = export_rewrites ["CARD_EMPTY"]
+Theorem CARD_EMPTY[simp] = CONJUNCT1 CARD_DEF;
 
-Theorem CARD_INSERT = CONJUNCT2 CARD_DEF;
-val _ = export_rewrites ["CARD_INSERT"]
+Theorem CARD_INSERT[simp] = CONJUNCT2 CARD_DEF;
 
 (* |- CARD {} = 0 /\
       !s. FINITE s ==> !x. CARD (x INSERT s) =
@@ -4247,16 +4225,15 @@ Proof
     RW_TAC bool_ss [ONE, COUNT_SUC, COUNT_ZERO]
 QED
 
-Theorem FINITE_COUNT:
+Theorem FINITE_COUNT[simp]:
      !n. FINITE (count n)
 Proof
    Induct THENL
    [RW_TAC bool_ss [COUNT_ZERO, FINITE_EMPTY],
     RW_TAC bool_ss [COUNT_SUC, FINITE_INSERT]]
 QED
-val _ = export_rewrites ["FINITE_COUNT"]
 
-Theorem CARD_COUNT:
+Theorem CARD_COUNT[simp]:
      !n. CARD (count n) = n
 Proof
    Induct THENL
@@ -4265,21 +4242,18 @@ Proof
     THEN POP_ASSUM MP_TAC
     THEN CONV_TAC Arith.ARITH_CONV]
 QED
-val _ = export_rewrites ["CARD_COUNT"]
 
-Theorem COUNT_11:   !n1 n2. (count n1 = count n2) <=> (n1 = n2)
+Theorem COUNT_11[simp]:   !n1 n2. (count n1 = count n2) <=> (n1 = n2)
 Proof
     SRW_TAC [] [EQ_IMP_THM, EXTENSION]
  >> METIS_TAC [numLib.ARITH_PROVE ``x:num < y <=> ~(y <= x)``,
                LESS_EQ_REFL, LESS_EQUAL_ANTISYM]
 QED
-val _ = export_rewrites ["COUNT_11"];
 
-Theorem COUNT_DELETE:   !n. count n DELETE n = count n
+Theorem COUNT_DELETE[simp]:   !n. count n DELETE n = count n
 Proof
     SRW_TAC [] [EQ_IMP_THM, EXTENSION]
 QED
-val _ = export_rewrites ["COUNT_DELETE"];
 
 Theorem COUNT_MONO:   !m n. m <= n ==> (count m) SUBSET (count n)
 Proof
@@ -4812,12 +4786,11 @@ Proof
   simp[Once EXTENSION, PULL_EXISTS] >> METIS_TAC[]
 QED
 
-Theorem BIGUNION_EMPTY:
+Theorem BIGUNION_EMPTY[simp]:
   BIGUNION EMPTY = EMPTY
 Proof
   SIMP_TAC bool_ss [EXTENSION, IN_BIGUNION, NOT_IN_EMPTY]
 QED
-val _ = export_rewrites ["BIGUNION_EMPTY"]
 
 Theorem BIGUNION_EQ_EMPTY[simp]:
   !P. (BIGUNION P = {} <=> P = {} \/ P = {{}}) /\
@@ -4861,13 +4834,12 @@ Theorem DISJOINT_BIGUNION =
   CONJ DISJOINT_BIGUNION_lemma
        (ONCE_REWRITE_RULE [DISJOINT_SYM] DISJOINT_BIGUNION_lemma);
 
-Theorem BIGUNION_INSERT:
+Theorem BIGUNION_INSERT[simp]:
   !s P. BIGUNION (s INSERT P) = s UNION (BIGUNION P)
 Proof
   SIMP_TAC bool_ss [EXTENSION, IN_BIGUNION, IN_UNION, IN_INSERT] THEN
   MESON_TAC []
 QED
-val _ = export_rewrites ["BIGUNION_INSERT"]
 
 Theorem BIGUNION_SUBSET:
   !X P. BIGUNION P SUBSET X <=> (!Y. Y IN P ==> Y SUBSET X)
@@ -5170,12 +5142,11 @@ Proof
   SIMP_TAC bool_ss [GSPECIFICATION, CROSS_DEF, PAIR_EQ]
 QED
 
-Theorem CROSS_EMPTY:
+Theorem CROSS_EMPTY[simp]:
     !P. (P CROSS {} = {}) /\ ({} CROSS P = {})
 Proof
   SIMP_TAC bool_ss [EXTENSION, IN_CROSS, NOT_IN_EMPTY]
 QED
-val _ = export_rewrites ["CROSS_EMPTY"]
 
 Theorem CROSS_EMPTY_EQN:
     (s CROSS t = {}) <=> (s = {}) \/ (t = {})
@@ -5218,13 +5189,12 @@ Proof
   SIMP_TAC bool_ss [PAIR_EQ, FST, SND] THEN MESON_TAC []
 QED
 
-Theorem CROSS_SINGS:
+Theorem CROSS_SINGS[simp]:
     !x y. {x} CROSS {y} = {(x,y)}
 Proof
   SIMP_TAC bool_ss [EXTENSION, IN_INSERT, IN_CROSS, NOT_IN_EMPTY] THEN
   MESON_TAC [PAIR, FST, SND]
 QED
-val _ = export_rewrites ["CROSS_SINGS"]
 
 Theorem CARD_SING_CROSS:
     !x P. FINITE P ==> (CARD ({x} CROSS P) = CARD P)
@@ -5504,12 +5474,11 @@ Proof
    SIMP_TAC bool_ss [EXTENSION, IN_COMPL, NOT_IN_EMPTY, IN_UNIV]
 QED
 
-Theorem COMPL_INTER:
+Theorem COMPL_INTER[simp]:
     (x INTER COMPL x = {}) /\ (COMPL x INTER x = {})
 Proof
   SRW_TAC [][EXTENSION]
 QED
-val _ = export_rewrites ["COMPL_INTER"]
 
 Theorem COMPL_UNION:
  COMPL (s UNION t) = COMPL s INTER COMPL t
@@ -6840,12 +6809,11 @@ QED
 
 Theorem X_LE_MAX_SET = in_max_set
 
-Theorem MAX_SET_REWRITES:
+Theorem MAX_SET_REWRITES[simp]:
     (MAX_SET {} = 0) /\ (MAX_SET {e} = e)
 Proof
   SRW_TAC[][MAX_SET_THM]
 QED
-val _ = export_rewrites ["MAX_SET_REWRITES"]
 
 Theorem MAX_SET_ELIM:
     !P Q. FINITE P /\ ((P = {}) ==> Q 0) /\ (!x. (!y. y IN P ==> y <= x) /\ x IN P ==> Q x) ==>
@@ -7234,19 +7202,17 @@ Proof
  RW_TAC set_ss [SUBSET_DEF,SUBSET_DELETE,IN_DELETE]
 QED
 
-Theorem POW_EMPTY:
+Theorem POW_EMPTY[simp]:
     !s. POW s <> {}
 Proof
   SRW_TAC[][EXTENSION,IN_POW] THEN
   METIS_TAC[EMPTY_SUBSET]
 QED
-val _ = export_rewrites["POW_EMPTY"]
 
-Theorem EMPTY_IN_POW:   !s. {} IN POW s
+Theorem EMPTY_IN_POW[simp]:   !s. {} IN POW s
 Proof
     RW_TAC std_ss [IN_POW, EMPTY_SUBSET]
 QED
-val _ = export_rewrites["EMPTY_IN_POW"];
 
 (*---------------------------------------------------------------------------*)
 (* Recursion equations for POW                                               *)
@@ -8359,12 +8325,11 @@ End
 (* for HOL-Light compatibility, moved here from cardinalTheory *)
 Overload COUNTABLE[inferior] = “countable”
 
-Theorem countable_image_nats:
+Theorem countable_image_nats[simp]:
     countable (IMAGE f univ(:num))
 Proof SIMP_TAC
   (srw_ss())[countable_def] THEN METIS_TAC[SURJ_IMAGE, SURJ_INJ_INV]
 QED
-  val _ = export_rewrites ["countable_image_nats"]
 
 Theorem countable_surj:
   !s. countable s <=> (s = {}) \/ ?f. SURJ f (UNIV:num set) s
@@ -8584,12 +8549,11 @@ RWTAC [] THEN
 METIS_TAC [bigunion_countable, finite_countable]
 QED
 
-Theorem union_countable_IFF:
+Theorem union_countable_IFF[simp]:
     countable (s UNION t) <=> countable s /\ countable t
 Proof
   METIS_TAC [union_countable, SUBSET_UNION, subset_countable]
 QED
-val _ = export_rewrites ["union_countable_IFF"]
 
 Theorem inj_image_countable_IFF:
     INJ f s (IMAGE f s) ==> (countable (IMAGE f s) <=> countable s)
@@ -8616,22 +8580,20 @@ FSTAC [UNIV_NOT_EMPTY] THEN
 METIS_TAC [pow_no_surj, SURJ_COMPOSE]
 QED
 
-Theorem countable_Usum:
+Theorem countable_Usum[simp]:
     countable univ(:'a + 'b) <=>
       countable univ(:'a) /\ countable univ(:'b)
 Proof
   SRW_TAC [][SUM_UNIV, inj_image_countable_IFF, INJ_INL, INJ_INR]
 QED
-val _ = export_rewrites ["countable_Usum"]
 
-Theorem countable_EMPTY:
+Theorem countable_EMPTY[simp]:
     countable {}
 Proof
   SIMP_TAC (srw_ss()) [countable_def, INJ_EMPTY]
 QED
-val _ = export_rewrites ["countable_EMPTY"]
 
-Theorem countable_INSERT:
+Theorem countable_INSERT[simp]:
     countable (x INSERT s) <=> countable s
 Proof
   Cases_on `x IN s` THEN1 ASM_SIMP_TAC (srw_ss()) [ABSORPTION_RWT] THEN
@@ -8643,7 +8605,6 @@ Proof
     FULL_SIMP_TAC (srw_ss() ++ DNF_ss) [INJ_DEF]
   ]
 QED
-val _ = export_rewrites ["countable_INSERT"]
 
 Theorem cross_countable_IFF:
     countable (s CROSS t) <=>

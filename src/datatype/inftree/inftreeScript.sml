@@ -87,7 +87,7 @@ Proof
   ]
 QED
 
-Theorem inftree_distinct:
+Theorem inftree_distinct[simp]:
     ~(iLf a = iNd b f)
 Proof
   SRW_TAC [][iLf_def, iNd_def] THEN
@@ -95,7 +95,6 @@ Proof
   SRW_TAC [][fromto_id, iNd_is_tree, is_tree_rules, FUN_EQ_THM] THEN
   Q.EXISTS_TAC `[]` THEN SRW_TAC [][]
 QED
-val _ = export_rewrites ["inftree_distinct"]
 
 val strong_ind =
     SIMP_RULE bool_ss [is_tree_rules]

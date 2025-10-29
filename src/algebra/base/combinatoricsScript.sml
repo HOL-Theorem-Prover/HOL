@@ -2539,11 +2539,10 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define MAP3 similar to MAP2 in listTheory. *)
-Definition MAP3_DEF:
+Definition MAP3_DEF[simp]:
   (MAP3 f (h1::t1) (h2::t2) (h3::t3) = f h1 h2 h3::MAP3 f t1 t2 t3) /\
   (MAP3 f x y z = [])
 End
-val _ = export_rewrites["MAP3_DEF"];
 Theorem MAP3:
   (!f. MAP3 f [] [] [] = []) /\
   (!f h1 t1 h2 t2 h3 t3. MAP3 f (h1::t1) (h2::t2) (h3::t3) = f h1 h2 h3::MAP3 f t1 t2 t3)
@@ -3528,25 +3527,21 @@ val it = |- MDILATE #0 3 [a; b; #1] = [a; #0; #0; b; #0; #0; #1]: thm
 
 (* Theorem: MDILATE e n [] = [] *)
 (* Proof: by MDILATE_def *)
-Theorem MDILATE_NIL:
+Theorem MDILATE_NIL[simp]:
     !e n. MDILATE e n [] = []
 Proof
   rw[MDILATE_def]
 QED
 
-(* export simple result *)
-val _ = export_rewrites["MDILATE_NIL"];
 
 (* Theorem: MDILATE e n [x] = [x] *)
 (* Proof: by MDILATE_def *)
-Theorem MDILATE_SING:
+Theorem MDILATE_SING[simp]:
     !e n x. MDILATE e n [x] = [x]
 Proof
   rw[MDILATE_def]
 QED
 
-(* export simple result *)
-val _ = export_rewrites["MDILATE_SING"];
 
 (* Theorem: MDILATE e n (h::t) =
             if t = [] then [h] else (h:: GENLIST (K e) (PRE n)) ++ (MDILATE e n t) *)
@@ -3966,19 +3961,15 @@ val it = |- DILATE 1 1 3 [1; 2; 3] = [1; 2; 1; 1; 1; 3]: thm
 
 (* Theorem: DILATE e n m [] = [] *)
 (* Proof: by DILATE_def *)
-Theorem DILATE_NIL = DILATE_def |> CONJUNCT1;
+Theorem DILATE_NIL[simp] = DILATE_def |> CONJUNCT1;
 (* val DILATE_NIL = |- !n m e. DILATE e n m [] = []: thm *)
 
-(* export simple result *)
-val _ = export_rewrites["DILATE_NIL"];
 
 (* Theorem: DILATE e n m [h] = [h] *)
 (* Proof: by DILATE_def *)
-Theorem DILATE_SING = DILATE_def |> CONJUNCT2 |> CONJUNCT1;
+Theorem DILATE_SING[simp] = DILATE_def |> CONJUNCT2 |> CONJUNCT1;
 (* val DILATE_SING = |- !n m h e. DILATE e n m [h] = [h]: thm *)
 
-(* export simple result *)
-val _ = export_rewrites["DILATE_SING"];
 
 (* Theorem: DILATE e n m (h::t) =
             if t = [] then [h] else h:: (TAKE n t ++ (GENLIST (K e) m) ++ DILATE e n m (DROP n t)) *)
@@ -6822,12 +6813,10 @@ Note: to make 30, need 12, 20
 (* ------------------------------------------------------------------------- *)
 
 (* Define Leibniz Triangle *)
-Definition leibniz_def:
+Definition leibniz_def[simp]:
   leibniz n k = (n + 1) * binomial n k
 End
 
-(* export simple definition *)
-val _ = export_rewrites["leibniz_def"];
 
 (* Theorem: leibniz 0 n = if n = 0 then 1 else 0 *)
 (* Proof:
@@ -7435,13 +7424,11 @@ LCM a c
 (* ------------------------------------------------------------------------- *)
 
 (* Define LCM of a list of numbers *)
-Definition list_lcm_def:
+Definition list_lcm_def[simp]:
   (list_lcm [] = 1) /\
   (list_lcm (h::t) = lcm h (list_lcm t))
 End
 
-(* export simple definition *)
-val _ = export_rewrites["list_lcm_def"];
 
 (* Theorem: list_lcm [] = 1 *)
 (* Proof: by list_lcm_def. *)

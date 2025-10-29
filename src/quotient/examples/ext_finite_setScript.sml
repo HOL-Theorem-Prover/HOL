@@ -96,12 +96,11 @@ Proof
 QED
 
 (* Delete1 *)
-Definition Delete1_def:
+Definition Delete1_def[simp]:
     ($Delete1 [] x = [])  /\
     ($Delete1 ((a:'a) :: A) x = if a = x then $Delete1 A x
                                      else a :: ($Delete1 A x))
 End
-val _ = export_rewrites ["Delete1_def"]
 
 val _ = add_infix ("Delete1", 500, HOLgrammars.LEFT);
 
@@ -156,11 +155,10 @@ QED
 
 (* Card1 *)
 
-Definition Card1_def:
+Definition Card1_def[simp]:
     (Card1 ([]) = 0)  /\
     (Card1 ((a:'a) :: A) = if MEM a A then Card1 A else SUC (Card1 A))
 End
-val _ = export_rewrites ["Card1_def"]
 
 Theorem NOT_MEM_Card1:
       !A:'a list a. ~(MEM a A) ==>

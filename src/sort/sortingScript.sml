@@ -1074,13 +1074,12 @@ Proof
   SIMP_TAC list_ss [PERM_alt, FILTER_REVERSE]
 QED
 
-Theorem PERM_REVERSE_EQ:
+Theorem PERM_REVERSE_EQ[simp]:
    (PERM (REVERSE l1) l2 = PERM l1 l2) /\
     (PERM l1 (REVERSE l2) = PERM l1 l2)
 Proof
   METIS_TAC [PERM_TRANS, PERM_SYM, PERM_REVERSE]
 QED
-val _ = export_rewrites ["PERM_REVERSE_EQ"]
 
 Theorem FOLDR_PERM:
  !f l1 l2 e.

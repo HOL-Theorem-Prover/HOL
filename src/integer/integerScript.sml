@@ -596,20 +596,18 @@ QED
 val _ = print "Prove \"lots of boring ring theorems\"\n";
 
 (* already defined, but using the wrong term for 0 *)
-Theorem INT_ADD_LID:
+Theorem INT_ADD_LID[simp]:
               !x:int. 0 + x = x
 Proof
               SIMP_TAC int_ss [GSYM INT_0, INT_ADD_LID]
 QED
-val _ = export_rewrites ["INT_ADD_LID"]
 
 
-Theorem INT_ADD_RID:
+Theorem INT_ADD_RID[simp]:
               !x:int. x + 0 = x
 Proof
               PROVE_TAC [INT_ADD_COMM,INT_ADD_LID]
 QED
-val _ = export_rewrites ["INT_ADD_RID"]
 
 
 (* already defined, but using the wrong term for 0 *)
@@ -697,22 +695,20 @@ Proof
               REWRITE_TAC[INT_ADD_LINV, INT_ADD_RID,INT_0]
 QED
 
-Theorem INT_MUL_LZERO:
+Theorem INT_MUL_LZERO[simp]:
               !x:int. 0 * x = 0
 Proof
               GEN_TAC THEN SUBST1_TAC
               (SYM(Q.SPECL [`0 * x`, `0 * x`] INT_ADD_LID_UNIQ))
               THEN REWRITE_TAC[GSYM INT_RDISTRIB, INT_ADD_RID]
 QED
-val _ = export_rewrites ["INT_MUL_LZERO"]
 
-Theorem INT_MUL_RZERO:
+Theorem INT_MUL_RZERO[simp]:
                 !x. x * 0i = 0
 Proof
                 GEN_TAC THEN ONCE_REWRITE_TAC[INT_MUL_SYM] THEN
                 SIMP_TAC int_ss [INT_MUL_LZERO]
 QED
-val _ = export_rewrites ["INT_MUL_RZERO"]
 
 Theorem INT_NEG_LMUL:
               !x y. ~(x * y) = ~x * y
@@ -2461,13 +2457,12 @@ Proof
   SRW_TAC [][INT_MOD_ADD_MULTIPLES]
 QED
 
-Theorem INT_MOD_MOD:
+Theorem INT_MOD_MOD[simp]:
     ~(k = 0) ==> (j % k % k = j % k)
 Proof
   STRIP_TAC THEN MATCH_MP_TAC INT_MOD_UNIQUE THEN Q.EXISTS_TAC `0` THEN
   SRW_TAC [][] THEN METIS_TAC [INT_DIVISION]
 QED
-val _ = export_rewrites ["INT_MOD_MOD"]
 
 Theorem INT_DIV_P:
     !P x c. ~(c = 0) ==>
@@ -3488,7 +3483,7 @@ Proof
   PROVE_TAC [INT_ENTIRE, INT_LT_REFL]
 QED
 
-Theorem INFINITE_INT_UNIV:
+Theorem INFINITE_INT_UNIV[simp]:
     INFINITE univ(:int)
 Proof
   REWRITE_TAC [] THEN STRIP_TAC THEN
@@ -3497,7 +3492,6 @@ Proof
         THEN1 (STRIP_TAC THEN FULL_SIMP_TAC (srw_ss()) []) THEN
   SRW_TAC [][EXTENSION] THEN Q.EXISTS_TAC `&x` THEN SRW_TAC [][NUM_OF_INT]
 QED
-val _ = export_rewrites ["INFINITE_INT_UNIV"]
 
 Theorem INT_ABS_SUB:
   ABS (i - j) = ABS (j - i)

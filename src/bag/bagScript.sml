@@ -93,12 +93,11 @@ Definition BAG_MERGE[nocompute]:
   BAG_MERGE b1 b2 = (\x. if (b1 x < b2 x) then b2 x else b1 x)
 End
 
-Theorem BAG_MERGE_IDEM:
+Theorem BAG_MERGE_IDEM[simp]:
     !b. BAG_MERGE b b = b
 Proof
   SIMP_TAC std_ss [BAG_MERGE, FUN_EQ_THM]
 QED
-val _ = export_rewrites ["BAG_MERGE_IDEM"]
 
 Theorem BAG_MERGE_SUB_BAG_UNION:
   !s t. (SUB_BAG (BAG_MERGE s t) (s + t))
@@ -165,12 +164,11 @@ Proof
 QED
 
 val _ = print "Properties relating BAG_IN(N) to other functions\n"
-Theorem BAG_INN_0:
+Theorem BAG_INN_0[simp]:
     !b e:'a. BAG_INN e 0 b
 Proof
   SIMP_TAC arith_ss [BAG_INN]
 QED
-val _ = export_rewrites ["BAG_INN_0"]
 
 Theorem BAG_INN_LESS:
    !b e n m. BAG_INN e n b /\ m < n ==> BAG_INN e m b
@@ -276,22 +274,20 @@ Proof
   SRW_TAC [ARITH_ss][]
 QED
 
-Theorem BAG_INSERT_DIFF:
+Theorem BAG_INSERT_DIFF[simp]:
     !x b. ~(BAG_INSERT x b = b)
 Proof
   SRW_TAC [COND_elim_ss][FUN_EQ_THM, BAG_INSERT]
 QED
-val _ = export_rewrites ["BAG_INSERT_DIFF"]
 
-Theorem BAG_INSERT_NOT_EMPTY:
+Theorem BAG_INSERT_NOT_EMPTY[simp]:
     !x b. ~(BAG_INSERT x b = EMPTY_BAG)
 Proof
   SRW_TAC [COND_elim_ss][FUN_EQ_THM, BAG_INSERT, EMPTY_BAG, EXISTS_OR_THM]
 QED
-val _ = export_rewrites ["BAG_INSERT_NOT_EMPTY"]
 
 val or_cong = REWRITE_RULE [GSYM AND_IMP_INTRO] OR_CONG
-Theorem BAG_INSERT_ONE_ONE:
+Theorem BAG_INSERT_ONE_ONE[simp]:
     !b1 b2 x:'a.
       (BAG_INSERT x b1 = BAG_INSERT x b2) = (b1 = b2)
 Proof
@@ -299,16 +295,14 @@ Proof
                                        Cong or_cong, FORALL_AND_THM] THEN
   METIS_TAC []
 QED
-val _ = export_rewrites ["BAG_INSERT_ONE_ONE"]
 
-Theorem C_BAG_INSERT_ONE_ONE:
+Theorem C_BAG_INSERT_ONE_ONE[simp]:
     !x y b. (BAG_INSERT x b = BAG_INSERT y b) = (x = y)
 Proof
   SIMP_TAC (srw_ss() ++ COND_elim_ss ++ ARITH_ss)
            [BAG_INSERT, FUN_EQ_THM, Cong or_cong] THEN
   METIS_TAC []
 QED
-val _ = export_rewrites ["C_BAG_INSERT_ONE_ONE"]
 
 Theorem BAG_INSERT_commutes:
     !b e1 e2. BAG_INSERT e1 (BAG_INSERT e2 b) =
@@ -331,12 +325,11 @@ QED
 
 val _ = print "Properties of BAG_UNION\n";
 
-Theorem BAG_UNION_LEFT_CANCEL:
+Theorem BAG_UNION_LEFT_CANCEL[simp]:
     !b b1 b2:'a -> num. (BAG_UNION b b1 = BAG_UNION b b2) = (b1 = b2)
 Proof
   SIMP_TAC arith_ss [BAG_UNION,FUN_EQ_THM]
 QED
-val _ = export_rewrites ["BAG_UNION_LEFT_CANCEL"]
 
 Theorem COMM_BAG_UNION:
     !b1 b2. BAG_UNION b1 b2 = BAG_UNION b2 b1
@@ -345,12 +338,11 @@ Proof
 QED
 val bu_comm = COMM_BAG_UNION;
 
-Theorem BAG_UNION_RIGHT_CANCEL:
+Theorem BAG_UNION_RIGHT_CANCEL[simp]:
     !b b1 b2:'a bag. (BAG_UNION b1 b = BAG_UNION b2 b) = (b1 = b2)
 Proof
   METIS_TAC [bu_comm, BAG_UNION_LEFT_CANCEL]
 QED
-val _ = export_rewrites ["BAG_UNION_RIGHT_CANCEL"]
 
 Theorem ASSOC_BAG_UNION:
     !b1 b2 b3. BAG_UNION b1 (BAG_UNION b2 b3)
@@ -490,13 +482,12 @@ Proof
   SRW_TAC [][] THEN DECIDE_TAC
 QED
 
-Theorem BAG_UNION_DIFF_eliminate:
+Theorem BAG_UNION_DIFF_eliminate[simp]:
     (BAG_DIFF (BAG_UNION b c) c = b) /\
     (BAG_DIFF (BAG_UNION c b) c = b)
 Proof
   SRW_TAC [][BAG_DIFF, BAG_UNION, FUN_EQ_THM]
 QED
-val _ = export_rewrites ["BAG_UNION_DIFF_eliminate"]
 
 Theorem add_eq_conv_ex[local]:
    (M + {|a|} = N + {|b|}) <=>
@@ -585,19 +576,17 @@ Proof
   MESON_TAC [SING_BAG, BAG_DELETE]
 QED
 
-Theorem NOT_IN_EMPTY_BAG:
+Theorem NOT_IN_EMPTY_BAG[simp]:
     !x:'a. ~(BAG_IN x EMPTY_BAG)
 Proof
   SIMP_TAC std_ss [BAG_IN, BAG_INN, EMPTY_BAG]
 QED
-val _ = export_rewrites ["NOT_IN_EMPTY_BAG"];
 
-Theorem BAG_INN_EMPTY_BAG:
+Theorem BAG_INN_EMPTY_BAG[simp]:
    !e n. BAG_INN e n EMPTY_BAG = (n = 0)
 Proof
   SIMP_TAC arith_ss [BAG_INN, EMPTY_BAG, EQ_IMP_THM]
 QED
-val _ = export_rewrites ["BAG_INN_EMPTY_BAG"];
 
 Theorem BAG_MEMBER_NOT_EMPTY:
   !b. (?x. BAG_IN x b) <=> b <> EMPTY_BAG
@@ -691,9 +680,8 @@ Proof
   SRW_TAC [][SUB_BAG_LEQ, BAG_DIFF, EMPTY_BAG, FUN_EQ_THM]
 QED
 
-Theorem BAG_DIFF_EMPTY_simple =
+Theorem BAG_DIFF_EMPTY_simple[simp] =
   LIST_CONJ (List.take(CONJUNCTS BAG_DIFF_EMPTY, 3))
-val _ = export_rewrites ["BAG_DIFF_EMPTY_simple"];
 
 Theorem BAG_DIFF_EQ_EMPTY[simp]:
     (b - c = {||}) <=> b <= c
@@ -701,13 +689,12 @@ Proof
   simp[BAG_DIFF, FUN_EQ_THM, SUB_BAG_LEQ, EMPTY_BAG]
 QED
 
-Theorem BAG_DIFF_INSERT_same:
+Theorem BAG_DIFF_INSERT_same[simp]:
     !x b1 b2. BAG_DIFF (BAG_INSERT x b1) (BAG_INSERT x b2) =
              BAG_DIFF b1 b2
 Proof
   SRW_TAC [COND_elim_ss, ARITH_ss][BAG_DIFF, FUN_EQ_THM, BAG_INSERT]
 QED
-val _ = export_rewrites ["BAG_DIFF_INSERT_same"];
 
 Theorem BAG_DIFF_INSERT:
    !x b1 b2.
@@ -1095,20 +1082,18 @@ Theorem BAG_IN_BAG_OF_SET[simp]:
 Proof SIMP_TAC std_ss [BAG_OF_SET, BAG_IN, BAG_INN, COND_RAND, COND_RATOR]
 QED
 
-Theorem BAG_OF_EMPTY:
+Theorem BAG_OF_EMPTY[simp]:
     SET_OF_BAG (EMPTY_BAG:'a->num) = EMPTY
 Proof
   SIMP_TAC std_ss [FUN_EQ_THM, SET_OF_BAG, NOT_IN_EMPTY_BAG, EMPTY_DEF]
 QED
-val _ = export_rewrites ["BAG_OF_EMPTY"]
 
-Theorem SET_BAG_I:
+Theorem SET_BAG_I[simp]:
     !s:'a->bool. SET_OF_BAG (BAG_OF_SET s) = s
 Proof
   SRW_TAC [][SET_OF_BAG, BAG_OF_SET, FUN_EQ_THM, BAG_IN, BAG_INN, IN_DEF] THEN
   SRW_TAC [][]
 QED
-val _ = export_rewrites ["SET_BAG_I"]
 
 Theorem SUB_BAG_SET:
     !b1 b2:'a->num.
@@ -1528,8 +1513,7 @@ val BAG_CARD_EMPTY =
            |> SIMP_RULE std_ss [FINITE_EMPTY_BAG]
            |> ONCE_REWRITE_RULE [BCARD_rwts]
            |> SIMP_RULE std_ss [BAG_INSERT_NOT_EMPTY]
-Theorem BAG_CARD_EMPTY = BAG_CARD_EMPTY;
-val _ = export_rewrites ["BAG_CARD_EMPTY"];
+Theorem BAG_CARD_EMPTY[simp] = BAG_CARD_EMPTY;
 
 Theorem BCARD_0:
    !b. FINITE_BAG b ==> ((BAG_CARD b = 0) = (b = EMPTY_BAG))
@@ -1564,7 +1548,7 @@ QED
 Theorem BAG_CARD_THM =
   CONJ BAG_CARD_EMPTY BAG_CARD_INSERT;
 
-Theorem BAG_CARD_UNION:
+Theorem BAG_CARD_UNION[simp]:
   !b1 b2. FINITE_BAG b1 /\ FINITE_BAG b2 ==>
                 (BAG_CARD (BAG_UNION b1 b2) =
                  (BAG_CARD b1) + (BAG_CARD b2))
@@ -1574,7 +1558,6 @@ Proof
   SIMP_TAC arith_ss [BAG_UNION_INSERT, BAG_UNION_EMPTY,
      BAG_CARD_THM, FINITE_BAG_UNION]
 QED
-val _ = export_rewrites ["BAG_CARD_UNION"]
 
 
 Theorem BCARD_SUC:
@@ -1698,12 +1681,11 @@ Proof
   SRW_TAC [][]
 QED
 
-Theorem BAG_INN_BAG_FILTER:
+Theorem BAG_INN_BAG_FILTER[simp]:
     BAG_INN e n (BAG_FILTER P b) <=> (n = 0) \/ P e /\ BAG_INN e n b
 Proof
   SRW_TAC [numSimps.ARITH_ss][BAG_FILTER_DEF, BAG_INN]
 QED
-val _ = export_rewrites ["BAG_INN_BAG_FILTER"]
 
 Theorem BAG_IN_BAG_FILTER[simp]:
   BAG_IN e (BAG_FILTER P b) <=> P e /\ BAG_IN e b
@@ -2039,13 +2021,12 @@ Proof
   \\ metis_tac[BAG_IN_BAG_INSERT]
 QED
 
-Theorem BAG_IMAGE_EQ_EMPTY:
+Theorem BAG_IMAGE_EQ_EMPTY[simp]:
     FINITE_BAG b ==> ((BAG_IMAGE f b = {||}) <=> (b = {||}))
 Proof
   qid_spec_tac `b` >> ho_match_mp_tac STRONG_FINITE_BAG_INDUCT >>
   simp[]
 QED
-val _ = export_rewrites ["BAG_IMAGE_EQ_EMPTY"]
 
 Theorem ITSET_BAG_INSERT_BAG_UNION_BAG_IMAGE_BAG_OF_SET:
   !f s. FINITE s ==> !a.
@@ -2145,10 +2126,9 @@ Theorem SUB_BAG_UNION_MONO_0[local]:
 Proof
   RW_TAC arith_ss [SUB_BAG,BAG_UNION,BAG_INN]
 QED
-Theorem SUB_BAG_UNION_MONO =
+Theorem SUB_BAG_UNION_MONO[simp] =
   CONJ SUB_BAG_UNION_MONO_0
        (ONCE_REWRITE_RULE [COMM_BAG_UNION] SUB_BAG_UNION_MONO_0)
-val _ = export_rewrites ["SUB_BAG_UNION_MONO"]
 
 Theorem PSUB_BAG_CARD:
  !b1 b2:'a bag. FINITE_BAG b2 /\ PSUB_BAG b1 b2 ==> BAG_CARD b1 < BAG_CARD b2
@@ -2393,27 +2373,24 @@ Definition BAG_EVERY[nocompute]:
     BAG_EVERY P b = !e. BAG_IN e b ==> P e
 End
 
-Theorem BAG_EVERY_THM:
+Theorem BAG_EVERY_THM[simp]:
   (!P. BAG_EVERY P EMPTY_BAG) /\
   (!P e b. BAG_EVERY P (BAG_INSERT e b) <=> P e /\ BAG_EVERY P b)
 Proof
 SIMP_TAC (srw_ss()) [BAG_EVERY] THEN METIS_TAC []
 QED
-val _ = export_rewrites ["BAG_EVERY_THM"]
 
-Theorem BAG_EVERY_UNION:
+Theorem BAG_EVERY_UNION[simp]:
  BAG_EVERY P (b1 + b2) <=> BAG_EVERY P b1 /\ BAG_EVERY P b2
 Proof
 SRW_TAC [][BAG_EVERY] THEN METIS_TAC []
 QED
-val _ = export_rewrites["BAG_EVERY_UNION"];
 
-Theorem BAG_EVERY_MERGE:
+Theorem BAG_EVERY_MERGE[simp]:
  BAG_EVERY P (BAG_MERGE b1 b2) <=> BAG_EVERY P b1 /\ BAG_EVERY P b2
 Proof
 SRW_TAC [][BAG_EVERY, DISJ_IMP_THM, FORALL_AND_THM]
 QED
-val _ = export_rewrites ["BAG_EVERY_MERGE"]
 
 Theorem BAG_EVERY_SET:
  BAG_EVERY P b <=> SET_OF_BAG b SUBSET {x | P x}
@@ -2466,7 +2443,7 @@ Definition BAG_ALL_DISTINCT[nocompute]:
   BAG_ALL_DISTINCT b = (!e. b e <= 1:num)
 End
 
-Theorem BAG_ALL_DISTINCT_THM:
+Theorem BAG_ALL_DISTINCT_THM[simp]:
     BAG_ALL_DISTINCT EMPTY_BAG /\
     !e b. BAG_ALL_DISTINCT (BAG_INSERT e b) <=>
            ~BAG_IN e b /\ BAG_ALL_DISTINCT b
@@ -2477,7 +2454,6 @@ Proof
           [BAG_ALL_DISTINCT, EMPTY_BAG, BAG_INSERT, BAG_IN, BAG_INN,
            EQ_IMP_THM] THEN METIS_TAC []
 QED
-val _ = export_rewrites ["BAG_ALL_DISTINCT_THM"]
 
 Theorem forall_eq_thm[local]:
     (!s:'a. (P s = Q s)) ==> ((!s. P s) = (!s. Q s))
@@ -2543,12 +2519,11 @@ Proof
   POP_ASSUM (Q.SPEC_THEN `e` MP_TAC) THEN DECIDE_TAC
 QED
 
-Theorem BAG_ALL_DISTINCT_BAG_OF_SET:
+Theorem BAG_ALL_DISTINCT_BAG_OF_SET[simp]:
     BAG_ALL_DISTINCT (BAG_OF_SET s)
 Proof
   SRW_TAC [][BAG_ALL_DISTINCT_SET]
 QED
-val _ = export_rewrites ["BAG_ALL_DISTINCT_BAG_OF_SET"]
 
 
 Theorem BAG_IN_BAG_DIFF_ALL_DISTINCT:
@@ -2703,12 +2678,11 @@ Definition BIG_BAG_UNION_def:
  BIG_BAG_UNION sob = \x. SIGMA (\b. b x) sob
 End
 
-Theorem BIG_BAG_UNION_EMPTY:
+Theorem BIG_BAG_UNION_EMPTY[simp]:
  BIG_BAG_UNION {} = {||}
 Proof
 SRW_TAC [][BIG_BAG_UNION_def,SUM_IMAGE_THM,EMPTY_BAG,FUN_EQ_THM]
 QED
-val _ = export_rewrites ["BIG_BAG_UNION_EMPTY"];
 
 Theorem BIG_BAG_UNION_INSERT:
  FINITE sob ==>
@@ -2750,7 +2724,7 @@ SIMP_TAC bool_ss [GSYM AND_IMP_INTRO] THEN
       FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT]
 QED
 
-Theorem BAG_IN_BIG_BAG_UNION:
+Theorem BAG_IN_BIG_BAG_UNION[simp]:
  FINITE P ==> (e <: BIG_BAG_UNION P <=> ?b. e <: b /\ b IN P)
 Proof
 SRW_TAC [][BIG_BAG_UNION_def,BAG_IN,BAG_INN,EQ_IMP_THM] THEN1 (
@@ -2771,7 +2745,6 @@ SRW_TAC [][] THEN
 MATCH_MP_TAC SUM_IMAGE_SUBSET_LE THEN
 SRW_TAC [][]
 QED
-val _ = export_rewrites ["BAG_IN_BIG_BAG_UNION"];
 
 Theorem BIG_BAG_UNION_EQ_EMPTY_BAG:
  !sob. FINITE sob ==>
@@ -2827,19 +2800,17 @@ End
 
 Overload mlt = ``\R. TC (mlt1 R)``
 
-Theorem BAG_NOT_LESS_EMPTY:
+Theorem BAG_NOT_LESS_EMPTY[simp]:
     ~mlt1 r b {||}
 Proof
   SRW_TAC [][mlt1_def]
 QED
-val _ = export_rewrites ["BAG_NOT_LESS_EMPTY"]
 
-Theorem NOT_mlt_EMPTY:
+Theorem NOT_mlt_EMPTY[simp]:
     ~mlt R b {||}
 Proof
   simp[Once relationTheory.TC_CASES2]
 QED
-val _ = export_rewrites ["NOT_mlt_EMPTY"]
 
 Theorem BAG_LESS_ADD:
     mlt1 r N (M0 + {|a|}) ==>

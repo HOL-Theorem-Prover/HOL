@@ -12,30 +12,27 @@ Definition fmap_to_alist_def:
   fmap_to_alist s = MAP (\k.(k,s ' k)) (SET_TO_LIST (FDOM s))
 End
 
-Theorem fmap_to_alist_FEMPTY:
+Theorem fmap_to_alist_FEMPTY[simp]:
     (fmap_to_alist FEMPTY = [])
 Proof
   SRW_TAC [][fmap_to_alist_def]
 QED
-val _ = export_rewrites ["fmap_to_alist_FEMPTY"]
 
 Definition alist_to_fmap_def:
   alist_to_fmap s = FOLDR (\(k,v) f.f|+(k,v)) FEMPTY s
 End
 
-Theorem alist_to_fmap_thm:
+Theorem alist_to_fmap_thm[simp]:
     (alist_to_fmap [] = FEMPTY) /\
     (alist_to_fmap ((k,v)::t) = alist_to_fmap t |+ (k,v))
 Proof
   SRW_TAC [][alist_to_fmap_def]
 QED
-val _ = export_rewrites ["alist_to_fmap_thm"]
 
-Definition ALOOKUP_def:
+Definition ALOOKUP_def[simp]:
   (ALOOKUP [] q = NONE) /\
   (ALOOKUP ((x,y)::t) q = if x = q then SOME y else ALOOKUP t q)
 End
-val _ = export_rewrites["ALOOKUP_def"];
 val ALOOKUP_ind = theorem"ALOOKUP_ind";
 
 Theorem lemma[local]:
@@ -66,7 +63,7 @@ Proof
   Induct_on `l` THEN SRW_TAC [][]
 QED
 
-Theorem ALOOKUP_EQ_FLOOKUP:
+Theorem ALOOKUP_EQ_FLOOKUP[simp]:
  (FLOOKUP (alist_to_fmap al) = ALOOKUP al) /\
  (ALOOKUP (fmap_to_alist fm) = FLOOKUP fm)
 Proof
@@ -82,7 +79,6 @@ SRW_TAC [][FUN_EQ_THM] THEN Q.ID_SPEC_TAC `x` THENL [
   ]
 ]
 QED
-val _ = export_rewrites ["ALOOKUP_EQ_FLOOKUP"]
 
 Theorem MEM_fmap_to_alist:
     MEM (x,y) (fmap_to_alist fm) <=> x IN FDOM fm /\ (fm ' x = y)
@@ -96,26 +92,23 @@ Proof
 Cases >> rw[MEM_fmap_to_alist,FLOOKUP_DEF]
 QED
 
-Theorem MEM_pair_fmap_to_alist_FLOOKUP:
+Theorem MEM_pair_fmap_to_alist_FLOOKUP[simp]:
   !x y fm. MEM (x,y) (fmap_to_alist fm) = (FLOOKUP fm x = SOME y)
 Proof
 rw[MEM_fmap_to_alist_FLOOKUP]
 QED
-val _ = export_rewrites ["MEM_pair_fmap_to_alist_FLOOKUP"]
 
-Theorem LENGTH_fmap_to_alist:
+Theorem LENGTH_fmap_to_alist[simp]:
   !fm. LENGTH (fmap_to_alist fm) = CARD (FDOM fm)
 Proof
 rw[fmap_to_alist_def,SET_TO_LIST_CARD]
 QED
-val _ = export_rewrites["LENGTH_fmap_to_alist"]
 
-Theorem fmap_to_alist_to_fmap:
+Theorem fmap_to_alist_to_fmap[simp]:
     alist_to_fmap (fmap_to_alist fm) = fm
 Proof
   SRW_TAC [][FLOOKUP_EXT]
 QED
-val _ = export_rewrites ["fmap_to_alist_to_fmap"]
 
 Theorem ALOOKUP_MEM:
  !al k v.(ALOOKUP al k = SOME v) ==> MEM (k,v) al
@@ -125,7 +118,7 @@ Cases_on `h` THEN POP_ASSUM MP_TAC THEN
 SRW_TAC [][]
 QED
 
-Theorem ALOOKUP_SOME_FAPPLY_alist_to_fmap:
+Theorem ALOOKUP_SOME_FAPPLY_alist_to_fmap[simp]:
   !al k v. (ALOOKUP al k = SOME v) ==> (alist_to_fmap al ' k = v)
 Proof
 REPEAT STRIP_TAC THEN
@@ -133,7 +126,6 @@ Q_TAC SUFF_TAC `FLOOKUP (alist_to_fmap al) k = SOME v` THEN1
   SRW_TAC[][FLOOKUP_DEF,MEM_MAP] THEN
 SRW_TAC[][]
 QED
-val _ = export_rewrites["ALOOKUP_SOME_FAPPLY_alist_to_fmap"]
 
 Theorem alist_to_fmap_FAPPLY_MEM:
   !al z. z IN FDOM (alist_to_fmap al) ==> MEM (z, (alist_to_fmap al) ' z) al
@@ -158,13 +150,12 @@ Proof
   gen_tac >> Induct >> simp[] >> Cases >> simp[] >> srw_tac[][]
 QED
 
-Theorem FDOM_alist_to_fmap:
+Theorem FDOM_alist_to_fmap[simp]:
  !al.FDOM (alist_to_fmap al) = set (MAP FST al)
 Proof
 Induct THEN SRW_TAC [][alist_to_fmap_def] THEN
 Cases_on `h` THEN FULL_SIMP_TAC (srw_ss()) [alist_to_fmap_def]
 QED
-val _ = export_rewrites["FDOM_alist_to_fmap"];
 
 Theorem alist_to_fmap_prefix:
  !ls l1 l2.
@@ -175,13 +166,12 @@ Induct THEN SRW_TAC [][] THEN
 Cases_on `h` THEN SRW_TAC [][] THEN METIS_TAC []
 QED
 
-Theorem alist_to_fmap_APPEND:
+Theorem alist_to_fmap_APPEND[simp]:
   !l1 l2. alist_to_fmap (l1 ++ l2) = FUNION (alist_to_fmap l1) (alist_to_fmap l2)
 Proof
 Induct >- rw[FUNION_FEMPTY_1] >>
 Cases >> rw[FUNION_FUPDATE_1]
 QED
-val _ = export_rewrites["alist_to_fmap_APPEND"]
 
 Theorem ALOOKUP_prefix:
  !ls k ls2.
@@ -355,7 +345,7 @@ unabbrev_all_tac >> fs[] >>
 fs[EL_MAP]
 QED
 
-Theorem ALL_DISTINCT_fmap_to_alist_keys:
+Theorem ALL_DISTINCT_fmap_to_alist_keys[simp]:
   !fm. ALL_DISTINCT (MAP FST (fmap_to_alist fm))
 Proof
 qsuff_tac `!s fm. (s = FDOM fm) ==> ALL_DISTINCT (MAP FST (fmap_to_alist fm))`
@@ -372,7 +362,6 @@ qmatch_abbrev_tac `ALL_DISTINCT (MAP f2 ls)` >>
 qsuff_tac `MAP f2 ls = MAP f1 ls` >- rw[] >>
 rw[MAP_EQ_f,Abbr`f1`,Abbr`f2`,Abbr`ls`,DOMSUB_FAPPLY_THM]
 QED
-val _ = export_rewrites["ALL_DISTINCT_fmap_to_alist_keys"]
 
 Theorem fmap_to_alist_inj:
   !f1 f2. (fmap_to_alist f1 = fmap_to_alist f2) ==> (f1 = f2)

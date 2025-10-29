@@ -251,19 +251,17 @@ val group_clauses = Group_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> GEN_ALL;
 
 (* Theorem: A Group is a Monoid. *)
 (* Proof: by definition. *)
-Theorem group_is_monoid =
+Theorem group_is_monoid[simp] =
   Group_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val group_is_monoid = |- !g. Group g ==> Monoid g : thm *)
 
-val _ = export_rewrites ["group_is_monoid"];
 
 (* Theorem: Group Invertibles is the whole carrier set. *)
 (* Proof: by definition. *)
-Theorem group_all_invertible =
+Theorem group_all_invertible[simp] =
   Group_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH |> CONJUNCT2 |> DISCH_ALL |> GEN_ALL;
 (* > val group_all_invertible = |- !g. Group g ==> (G* = G) : thm *)
 
-val _ = export_rewrites ["group_all_invertible"];
 
 (* ------------------------------------------------------------------------ *)
 (* Simple Theorems                                                          *)
@@ -719,13 +717,12 @@ QED
        x * |/x = #e      by group_rinv
    <=> x = |/x ( |/x)    by group_linv_unique
 *)
-Theorem group_inv_inv:
+Theorem group_inv_inv[simp]:
     !g:'a group. Group g ==> !x. x IN G ==> ( |/( |/x) = x)
 Proof
   metis_tac[group_rinv, group_linv_unique, group_inv_element]
 QED
 
-val _ = export_rewrites ["group_inv_inv"];
 
 (* Theorem: [Inverse equal] |/x = |/y <=> x = y *)
 (* Proof:
@@ -735,13 +732,12 @@ val _ = export_rewrites ["group_inv_inv"];
    ==> |/( |/x) = |/( |/y)
    ==>        x = y         by group_inv_inv
 *)
-Theorem group_inv_eq:
+Theorem group_inv_eq[simp]:
     !g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> (( |/x = |/y) = (x = y))
 Proof
   metis_tac[group_inv_inv]
 QED
 
-val _ = export_rewrites ["group_inv_eq"];
 
 (* Theorem: [Inverse equality swap]: |/x = y <=> x = |/y *)
 (* Proof:
@@ -749,26 +745,24 @@ val _ = export_rewrites ["group_inv_eq"];
    <=> |/( |/x) = |/y
    <=>        x = |/y    by group_inv_inv
 *)
-Theorem group_inv_eq_swap:
+Theorem group_inv_eq_swap[simp]:
     !g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> (( |/x = y) = (x = |/y))
 Proof
   metis_tac[group_inv_inv]
 QED
 
-val _ = export_rewrites ["group_inv_eq_swap"];
 
 (* Theorem: [Inverse of identity] |/#e = #e *)
 (* Proof:
        #e * #e = #e    by group_id_id
    <=>      #e = |/#e  by group_linv_unique
 *)
-Theorem group_inv_id:
+Theorem group_inv_id[simp]:
     !g:'a group. Group g ==> ( |/ #e = #e)
 Proof
   metis_tac[group_lid, group_linv_unique, group_id_element]
 QED
 
-val _ = export_rewrites ["group_inv_id"];
 
 (* Theorem: [Inverse equal identity] |/x = #e <=> x = #e *)
 (* Proof:
@@ -1172,13 +1166,12 @@ QED
 
 (* Theorem: (g excluding z).op = g.op *)
 (* Proof: by definition. *)
-Theorem group_excluding_op:
+Theorem group_excluding_op[simp]:
     !g:'a group. !z:'a. (g excluding z).op = g.op
 Proof
   rw_tac std_ss[excluding_def]
 QED
 
-val _ = export_rewrites ["group_excluding_op"];
 val _ = computeLib.add_persistent_funs ["group_excluding_op"];
 
 (* Theorem: (g excluding z).exp x n = x ** n *)
@@ -4432,26 +4425,24 @@ val _ = export_rewrites ["group_div_def"];
    and |/y IN G     by group_inv_element
    hence true       by group_op_element
 *)
-Theorem group_div_element:
+Theorem group_div_element[simp]:
     !g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> x / y IN G
 Proof
   rw[group_div_def]
 QED
 
-val _ = export_rewrites ["group_div_element"];
 
 (* Theorem: x / x = #e *)
 (* Proof:
    x / x = x * |/x   by group_div_def
          = #e        by group_rinv
 *)
-Theorem group_div_cancel:
+Theorem group_div_cancel[simp]:
     !g:'a group. Group g ==> !x. x IN G ==> (x / x = #e)
 Proof
   rw[group_div_def]
 QED
 
-val _ = export_rewrites ["group_div_cancel"];
 
 (* Theorem: (x1 * y1) / (x2 * y2) = x1 * (y1 / y2) / x1 * (x1 / x2) *)
 (* Proof:
@@ -5190,15 +5181,13 @@ End
 
 (* Theorem: !x. x IN kernel f g h <=> x IN G /\ f x = h.id *)
 (* Proof: by definition. *)
-Theorem kernel_property:
+Theorem kernel_property[simp]:
     !(g:'a group) (h:'b group). !f x. x IN kernel f g h <=> x IN G /\ (f x = h.id)
 Proof
   simp_tac std_ss [kernel_def, preimage_def] >>
   rw[]
 QED
 
-(* export trivial truth. *)
-val _ = export_rewrites ["kernel_property"];
 
 (* Theorem alias *)
 Theorem kernel_element = kernel_property;
@@ -10796,7 +10785,7 @@ val it = |- symdiff_set.op {1; 2; 3; 4} {1; 4; 5; 6} = {2; 3; 5; 6}: thm
 
 (* Theorem: symdiff_set is a Group. *)
 (* Proof: check definitions. *)
-Theorem symdiff_set_group:
+Theorem symdiff_set_group[simp]:
     Group symdiff_set
 Proof
   rw[group_def_alt, symdiff_set_def] >| [
@@ -10806,11 +10795,10 @@ Proof
   ]
 QED
 
-val _ = export_rewrites ["symdiff_set_group"];
 
 (* Theorem: symdiff_set is an abelian Group. *)
 (* Proof: check definitions. *)
-Theorem symdiff_set_abelian_group:
+Theorem symdiff_set_abelian_group[simp]:
     AbelianGroup symdiff_set
 Proof
   rw[AbelianGroup_def, symdiff_set_def] >>
@@ -10818,7 +10806,6 @@ Proof
   metis_tac[]
 QED
 
-val _ = export_rewrites ["symdiff_set_abelian_group"];
 
 (* ------------------------------------------------------------------------- *)
 (* Cyclic Group Documentation                                                *)
@@ -10974,14 +10961,12 @@ val cyclic_gen_def = new_specification(
 
 (* Theorem: cyclic g ==> Group g *)
 (* Proof: by cyclic_def *)
-Theorem cyclic_group:
+Theorem cyclic_group[simp]:
     !g:'a group. cyclic g ==> Group g
 Proof
   rw[cyclic_def]
 QED
 
-(* export simple result *)
-val _ = export_rewrites ["cyclic_group"];
 
 (* Theorem: cyclic g ==> !x. x IN G ==> ?n. x = (cyclic_gen g) ** n *)
 (* Proof: by cyclic_gen_def. *)

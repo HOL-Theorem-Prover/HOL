@@ -381,14 +381,12 @@ End
 
 (* Theorem: Ring r ==> (r.sum.carrier = R) /\ (r.prod.carrier = R) *)
 (* Proof: by Ring_def. *)
-Theorem ring_carriers:
+Theorem ring_carriers[simp]:
     !r:'a ring. Ring r ==> (r.sum.carrier = R) /\ (r.prod.carrier = R)
 Proof
   rw_tac std_ss[Ring_def]
 QED
 
-(* export simple result *)
-val _ = export_rewrites ["ring_carriers"];
 
 (* Theorem: Ring additions form an Abelian group. *)
 (* Proof: by definition. *)
@@ -402,21 +400,19 @@ QED
 (* val _ = export_rewrites ["ring_add_group"]; *)
 
 (* Use Michael's version for export_rewrites, stripping commutativity. *)
-Theorem ring_add_group_rwt =
+Theorem ring_add_group_rwt[simp] =
   ring_add_group |> SPEC_ALL |> UNDISCH |> CONJUNCTS
                  |> (fn l => LIST_CONJ (List.take(l,2)))
                  |> DISCH_ALL |> GEN_ALL;
 (* > val ring_add_group_rwt = |- !r. Ring r ==> Group r.sum /\ (r.sum.carrier = R) : thm *)
-val _ = export_rewrites ["ring_add_group_rwt"];
 
 (* Theorem: Ring r ==> AbelianGroup r.sum *)
 (* Proof: By AbelianGroup_def, ring_add_group. *)
-Theorem ring_add_abelian_group:
+Theorem ring_add_abelian_group[simp]:
     !r:'a ring. Ring r ==> AbelianGroup r.sum
 Proof
   rw[AbelianGroup_def, ring_add_group]
 QED
-val _ = export_rewrites ["ring_add_abelian_group"];
 
 (* Theorem: Ring multiplications form an Abelian monoid. *)
 (* Proof: by definition. *)
@@ -430,12 +426,11 @@ QED
 (* val _ = export_rewrites ["ring_mult_monoid"]; *)
 
 (* Copy Michael's version for export_rewrites, stripping commutativity. *)
-Theorem ring_mult_monoid_rwt =
+Theorem ring_mult_monoid_rwt[simp] =
   ring_mult_monoid |> SPEC_ALL |> UNDISCH |> CONJUNCTS
                    |> (fn l => LIST_CONJ (List.take(l,2)))
                    |> DISCH_ALL |> GEN_ALL;
 (* > val ring_mult_monoid_rwt = |- !r. Ring r ==> Monoid r.prod /\ (r.prod.carrier = R) : thm *)
-val _ = export_rewrites ["ring_mult_monoid_rwt"];
 
 (* Theorem: Ring r ==> AbelianMonoid r.prod *)
 (* Proof: By AbelianMonoid_def, ring_mult_monoid. *)
@@ -688,7 +683,7 @@ QED
    = x * #0 + x * #0     by distribution in Ring_def
    hence x * #0 = #0     by group_id_fix
 *)
-Theorem ring_mult_rzero:
+Theorem ring_mult_rzero[simp]:
     !r:'a ring. Ring r ==> !x. x IN R ==> (x * #0 = #0)
 Proof
   rpt strip_tac >>
@@ -696,29 +691,26 @@ Proof
   metis_tac[ring_add_zero_zero, ring_add_group, group_id_fix, Ring_def]
 QED
 
-val _ = export_rewrites ["ring_mult_rzero"];
 
 (* Theorem: #0 * x = #0 *)
 (* Proof: by ring_mult_rzero and Ring_def implicit x * y = y * x.
    or by ring_mult_lzero and ring_mult_comm.
 *)
-Theorem ring_mult_lzero:
+Theorem ring_mult_lzero[simp]:
     !r:'a ring. Ring r ==> !x. x IN R ==> (#0 * x = #0)
 Proof
   rw[ring_mult_comm]
 QED
 
-val _ = export_rewrites ["ring_mult_lzero"];
 
 (* Theorem: #0 * #0 = #0 *)
 (* Proof: by ring_mult_lzero, ring_zero_element. *)
-Theorem ring_mult_zero_zero:
+Theorem ring_mult_zero_zero[simp]:
     !r:'a ring. Ring r ==> (#0 * #0 = #0)
 Proof
   rw[]
 QED
 
-val _ = export_rewrites ["ring_mult_zero_zero"];
 
 (* Theorem: #1 * #1 = #1 *)
 (* Proof: by monoid_id_id. *)
@@ -893,13 +885,12 @@ val _ = export_rewrites ["ring_num_element"];
 
 (* Theorem: ##n * x IN R *)
 (* Proof: by ring_num_element and ring_mult_element. *)
-Theorem ring_num_mult_element:
+Theorem ring_num_mult_element[simp]:
     !r:'a ring. Ring r ==> !x. x IN R ==> !n. ##n * x IN R
 Proof
   rw[]
 QED
 
-val _ = export_rewrites ["ring_num_mult_element"];
 
 (* Theorem: ##(SUC n) = #1 + ##n *)
 (* Proof: by group_exp_SUC. *)
@@ -1057,13 +1048,12 @@ val ring_exp_comm = lift_monoid_thm "exp_comm" "exp_comm";
 
 (* Theorem: (x * y) ** n = x ** n * y ** n *)
 (* Proof: by monoid_comm_op_exp. *)
-Theorem ring_mult_exp:
+Theorem ring_mult_exp[simp]:
     !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> !n. (x * y) ** n = x ** n * y ** n
 Proof
   rw_tac std_ss[monoid_comm_op_exp, ring_mult_monoid]
 QED
 
-val _ = export_rewrites ["ring_mult_exp"];
 
 (* Theorem: computation of small values of ring_exp *)
 (* Proof: apply ring_exp_SUC. *)
@@ -1092,21 +1082,19 @@ QED
 
 (* Theorem: x * (y + z) = x * y + x * z *)
 (* Proof: by definition. *)
-Theorem ring_mult_radd =
+Theorem ring_mult_radd[simp] =
   Ring_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCTS |> last |> DISCH_ALL |> GEN_ALL;
 (* > val ring_mult_radd = |- !r. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> (x * (y + z) = x * y + x * z) : thm *)
 
-val _ = export_rewrites ["ring_mult_radd"];
 
 (* Theorem: (y + z) * x = y * x + z * x *)
 (* Proof: by ring_mult_radd and ring_mult_comm. *)
-Theorem ring_mult_ladd:
+Theorem ring_mult_ladd[simp]:
     !r:'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((y + z) * x = y * x + z * x)
 Proof
   rw[ring_mult_comm]
 QED
 
-val _ = export_rewrites ["ring_mult_ladd"];
 
 (*
 - ring_mult_radd |> SPEC_ALL |> UNDISCH |> SPEC_ALL |> UNDISCH;
@@ -1264,13 +1252,12 @@ val ring_neg_add_comm = lift_group_thm "inv_op" "neg_add_comm";
 
 (* Theorem: For ring, - (x + y) = -x + -y *)
 (* Proof: by ring_neg_add_comm and ring_add_comm. *)
-Theorem ring_neg_add:
+Theorem ring_neg_add[simp]:
     !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (- (x + y) = -x + -y)
 Proof
   rw[ring_neg_add_comm, ring_add_comm]
 QED
 
-val _ = export_rewrites ["ring_neg_add"];
 
 (* ------------------------------------------------------------------------- *)
 (* Ring Distribution Theorems with Negation.                                 *)
@@ -1953,13 +1940,12 @@ QED
 
 (* Theorem: x - y IN R *)
 (* Proof: by definition, and ring_add_element, ring_neg_element. *)
-Theorem ring_sub_element:
+Theorem ring_sub_element[simp]:
     !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> x - y IN R
 Proof
   rw[]
 QED
 
-val _ = export_rewrites ["ring_sub_element"];
 
 (* Theorem: Ring r ==> !x. x IN R ==> (#0 - x = -x) *)
 (* Proof:
@@ -3188,14 +3174,12 @@ Overload unit = ``\x. x IN R*``
 
 (* Theorem: #1 IN R* *)
 (* Proof: by monoid_id_invertible. *)
-Theorem ring_unit_one:
+Theorem ring_unit_one[simp]:
     !r:'a ring. Ring r ==> unit #1
 Proof
   rw[ring_mult_monoid, Invertibles_def]
 QED
 
-(* export simple result *)
-val _ = export_rewrites ["ring_unit_one"];
 
 (* Theorem: #0 IN R* ==> #1 = #0 *)
 (* Proof:
@@ -3272,11 +3256,9 @@ val ring_unit_rinv = lift_group_inv_thm "rinv" "unit_rinv";
 (* val ring_unit_rinv = |- !r. Ring r ==> !x. unit x ==> (x * |/ x = #1) : thm *)
 
 (* Theorem: x IN R* ==> x IN R *)
-Theorem ring_unit_element = ring_units_element;
+Theorem ring_unit_element[simp] = ring_units_element;
 (* > val ring_unit_element = |- !r. Ring r ==> !x. unit x ==> x IN R : thm *)
 
-(* export simple result *)
-val _ = export_rewrites ["ring_unit_element"];
 
 (* Theorem: x IN R* ==> |/ x IN R *)
 (* Proof: by ring_unit_has_inv, ring_unit_element. *)
@@ -3483,7 +3465,7 @@ QED
    Thus r*.inv r*.id = r*.id    by group_inv_id
      or        |/ #1 = #1       by notation
 *)
-Theorem ring_inv_one:
+Theorem ring_inv_one[simp]:
     !r:'a ring. Ring r ==> ( |/ #1 = #1)
 Proof
   rpt strip_tac >>
@@ -3492,8 +3474,6 @@ Proof
   metis_tac[group_inv_id]
 QED
 
-(* export simple theorem *)
-val _ = export_rewrites ["ring_inv_one"];
 
 (* ------------------------------------------------------------------------- *)
 (* Ring Unit Equivalence                                                     *)
@@ -3880,14 +3860,12 @@ QED
 
 (* Theorem: (r ~r~ r_) f ==> (f #0 = #0_) /\ (f #1 = #1_) *)
 (* Proof: by ring_homo_zero, ring_homo_one *)
-Theorem ring_homo_ids:
+Theorem ring_homo_ids[simp]:
     !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> (f #0 = #0_) /\ (f #1 = #1_)
 Proof
   rw_tac std_ss[ring_homo_zero, ring_homo_one]
 QED
 
-(* export simple result *)
-val _ = export_rewrites ["ring_homo_ids"];
 
 (* Theorem: RingHomo f r r_ ==> !x. x IN R ==> f x IN R_ *)
 (* Proof: by RingHomo_def *)
@@ -4388,14 +4366,12 @@ QED
 
 (* Theorem: (r =r= r_) f ==> (f #0 = #0_) /\ (f #1 = #1_) *)
 (* Proof: by ring_iso_zero, ring_iso_one. *)
-Theorem ring_iso_ids:
+Theorem ring_iso_ids[simp]:
     !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> (f #0 = #0_) /\ (f #1 = #1_)
 Proof
   rw_tac std_ss[ring_iso_zero, ring_iso_one]
 QED
 
-(* export simple result *)
-val _ = export_rewrites ["ring_iso_ids"];
 
 (* Theorem: RingIso f r r_ ==> !x. x IN R ==> f x IN R_ *)
 (* Proof: by RingIso_def, ring_homo_element *)
@@ -8098,7 +8074,7 @@ Theorem ring_sum_cons = ring_sum_def |> CONJUNCT2;
       with h IN R and rlist s ==> rsum s IN R by induction hypothesis
       true by ring_add_element
 *)
-Theorem ring_sum_element:
+Theorem ring_sum_element[simp]:
     !r:'a ring. Ring r ==> !s. rlist s ==> rsum s IN R
 Proof
   rpt strip_tac >>
@@ -8106,7 +8082,6 @@ Proof
   rw[]
 QED
 
-val _ = export_rewrites ["ring_sum_element"];
 
 (* Theorem: rsum [x] = x *)
 (* Proof:
@@ -15115,11 +15090,10 @@ Theorem integral_domain_is_ring =
 
 (* Theorem: Integral Domain has #1 <> #0 *)
 (* Proof: by definition *)
-Theorem integral_domain_one_ne_zero =
+Theorem integral_domain_one_ne_zero[simp] =
   IntegralDomain_def |> SPEC_ALL |> EQ_IMP_RULE |> #1 |> UNDISCH |> CONJUNCT2 |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val integral_domain_one_ne_zero = |- !r. IntegralDomain r ==> #1 <> #0 : thm *)
 
-val _ = export_rewrites ["integral_domain_one_ne_zero"];
 
 (* Theorem: No zero divisor in integral domain. *)
 (* Proof: by definition. *)

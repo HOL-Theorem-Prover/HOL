@@ -887,12 +887,11 @@ Proof
    THEN metisLib.METIS_TAC [APPEND, APPEND_ASSOC]
 QED
 
-Theorem IS_SUFFIX_REFL:
+Theorem IS_SUFFIX_REFL[simp]:
     !l. IS_SUFFIX l l
 Proof
    SRW_TAC [][IS_SUFFIX_APPEND] THEN metisLib.METIS_TAC [APPEND]
 QED
-val () = export_rewrites ["IS_SUFFIX_REFL"]
 
 Theorem IS_SUBLIST_REVERSE:
     !l1 l2. IS_SUBLIST (REVERSE l1) (REVERSE l2) = IS_SUBLIST l1 l2
@@ -3109,11 +3108,10 @@ Proof
 QED
 
 (* |- !a c. a <<= a ++ c *)
-Theorem IS_PREFIX_APPEND3 =
+Theorem IS_PREFIX_APPEND3[simp] =
   IS_PREFIX_APPENDS |> SPEC_ALL |> Q.INST [`b` |-> `[]`]
                     |> REWRITE_RULE [IS_PREFIX, APPEND_NIL]
                     |> Q.GENL [`c`, `a`]
-val _ = export_rewrites ["IS_PREFIX_APPEND3"]
 
 Theorem prefixes_is_prefix_total:
    !l l1 l2.

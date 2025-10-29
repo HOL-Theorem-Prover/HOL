@@ -2504,7 +2504,7 @@ Proof
       Q.EXISTS_TAC ‘q’ >> ASM_REWRITE_TAC [] ]
 QED
 
-Theorem DIV2_DOUBLE:  !n. DIV2 (2 * n) = n
+Theorem DIV2_DOUBLE[simp]:  !n. DIV2 (2 * n) = n
 Proof
     GEN_TAC >> REWRITE_TAC [DIV2_def]
  >> MATCH_MP_TAC DIV_UNIQUE
@@ -2512,7 +2512,6 @@ Proof
  >> `0:num < 2` by METIS_TAC [TWO, ONE, LESS_0]
  >> ASM_REWRITE_TAC [Once MULT_COMM, ADD_0]
 QED
-val _ = export_rewrites ["DIV2_DOUBLE"];
 
 (* ---------------------------------------------------------------------*)
 (* Properties of MOD and DIV proved using uniqueness.                   *)
@@ -3926,7 +3925,7 @@ Proof
    METIS_TAC [SUB_ADD]
 QED
 
-Theorem EXP_SUB_NUMERAL:
+Theorem EXP_SUB_NUMERAL[simp]:
    0 < n ==>
      (n ** (NUMERAL (BIT1 x)) DIV n = n ** (NUMERAL (BIT1 x) - 1)) /\
      (n ** (NUMERAL (BIT2 x)) DIV n = n ** (NUMERAL (BIT1 x)))
@@ -3947,7 +3946,6 @@ Proof
                      LESS_EQ_MONO, ZERO_LESS_EQ]
   ]
 QED
-val _ = export_rewrites ["EXP_SUB_NUMERAL"]
 
 Theorem EXP_BASE_MULT:
    !z x y. (x * y) ** z = (x ** z) * (y ** z)
@@ -4352,12 +4350,11 @@ QED
 
 Theorem ABS_DIFF_COMM = ABS_DIFF_SYM
 
-Theorem ABS_DIFF_EQS:
+Theorem ABS_DIFF_EQS[simp]:
     !n. ABS_DIFF n n = 0
 Proof
    SRW_TAC [][ABS_DIFF_def,SUB_EQUAL_0]
 QED
-val _ = export_rewrites ["ABS_DIFF_EQS"]
 
 Theorem ABS_DIFF_EQ_0:
     !n m. (ABS_DIFF n m = 0) <=> (n = m)
@@ -4366,13 +4363,12 @@ Proof
    METIS_TAC [LESS_ANTISYM]
 QED
 
-Theorem ABS_DIFF_ZERO:
+Theorem ABS_DIFF_ZERO[simp]:
     !n. (ABS_DIFF n 0 = n) /\ (ABS_DIFF 0 n = n)
 Proof
    SRW_TAC [][ABS_DIFF_def,SUB_0] THEN
    METIS_TAC [NOT_LESS_0,NOT_ZERO_LT_ZERO]
 QED
-val _ = export_rewrites ["ABS_DIFF_ZERO"]
 
 Theorem ABS_DIFF_SUC:
     !n m. (ABS_DIFF (SUC n) (SUC m)) = (ABS_DIFF n m)
@@ -4512,12 +4508,11 @@ Proof
           THEN ASM_REWRITE_TAC []]
 QED
 
-Theorem FUNPOW_0:
+Theorem FUNPOW_0[simp]:
    FUNPOW f 0 x = x
 Proof
   REWRITE_TAC [FUNPOW]
 QED
-val _ = export_rewrites ["FUNPOW_0"]
 
 Theorem FUNPOW_ADD:
    !m n. FUNPOW f (m + n) x = FUNPOW f m (FUNPOW f n x)
@@ -4528,12 +4523,11 @@ Proof
   ]
 QED
 
-Theorem FUNPOW_1:
+Theorem FUNPOW_1[simp]:
    FUNPOW f 1 x = f x
 Proof
   REWRITE_TAC [FUNPOW, ONE]
 QED
-val _ = export_rewrites ["FUNPOW_1"]
 
 (* Theorem: FUNPOW f 2 x = f (f x) *)
 (* Proof: by definition. *)
@@ -4608,15 +4602,13 @@ Proof
   metis_tac[FUNPOW_ADD, ADD_COMM]
 QED
 
-Theorem NRC_0 = CONJUNCT1 NRC;
-val _ = export_rewrites ["NRC_0"]
+Theorem NRC_0[simp] = CONJUNCT1 NRC;
 
-Theorem NRC_1:
+Theorem NRC_1[simp]:
    NRC R 1 x y = R x y
 Proof
   SRW_TAC [][ONE, NRC]
 QED
-val _ = export_rewrites ["NRC_1"]
 
 Theorem NRC_ADD_I:
    !m n x y z. NRC R m x y /\ NRC R n y z ==> NRC R (m + n) x z
