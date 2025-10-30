@@ -6513,19 +6513,37 @@ Proof
   >> `FINITE (count (4 ** n))` by RW_TAC std_ss [FINITE_COUNT]
   >> `0:real < 2 pow n` by RW_TAC real_ss [REAL_POW_LT]
   >> `0:real <> 2 pow n` by RW_TAC real_ss [REAL_LT_IMP_NE]
-  >> Suff `SIGMA (\k. &k / 2 pow n *  if &k / 2 pow n <= f x /\ f x < (&k + 1) / 2 pow n then 1 else 0) (count (4 ** n)) = 0`
+  >> Suff `SIGMA (\k. &k / 2 pow n *
+                      if &k / 2 pow n <= f x /\ f x < (&k + 1) / 2 pow n
+                      then 1 else 0)
+                 (count (4 ** n)) = 0`
   >- RW_TAC real_ss [add_lzero]
-  >> (MP_TAC o Q.SPEC `(\k. &k / 2 pow n * if &k / 2 pow n <= f x /\ f x < (&k + 1) / 2 pow n then 1 else 0)` o UNDISCH o Q.SPEC `count (4 ** n)` o INST_TYPE [alpha |-> ``:num``]) EXTREAL_SUM_IMAGE_IN_IF
-  >> `!x'. (\k. &k / 2 pow n * if &k / 2 pow n <= f x /\ f x < (&k + 1) / 2 pow n then 1 else 0) x' <> NegInf`
-      by (RW_TAC std_ss [mul_rone,mul_rzero]
-          >> RW_TAC std_ss [extreal_of_num_def,extreal_pow_def,extreal_mul_def,extreal_div_eq,extreal_not_infty])
-  >> Suff `(\x'. if x' IN count (4 ** n) then &x' / 2 pow n * if &x' / 2 pow n <= f x /\ f x < (&x' + 1) / 2 pow n then 1 else 0 else 0) = (\x. 0)`
+  >> (MP_TAC o
+      Q.SPEC `(\k. &k / 2 pow n *
+                   if &k / 2 pow n <= f x /\ f x < (&k + 1) / 2 pow n
+                   then 1 else 0)` o
+      UNDISCH o Q.SPEC `count (4 ** n)` o
+      INST_TYPE [alpha |-> ``:num``]) EXTREAL_SUM_IMAGE_IN_IF
+  >> `!x'. (\k. &k / 2 pow n *
+                if &k / 2 pow n <= f x /\ f x < (&k + 1) / 2 pow n
+                then 1 else 0) x' <> NegInf`
+      by (RW_TAC std_ss [mul_rone, mul_rzero] \\
+          RW_TAC std_ss [extreal_of_num_def, extreal_pow_def, extreal_mul_def,
+                         extreal_div_eq, extreal_not_infty])
+  >> Suff `(\x'. if x' IN count (4 ** n) then
+                    &x' / 2 pow n *
+                   (if &x' / 2 pow n <= f x /\ f x < (&x' + 1) / 2 pow n
+                    then 1 else 0)
+                 else 0) = (\x. 0)`
   >- RW_TAC std_ss [EXTREAL_SUM_IMAGE_ZERO]
   >> RW_TAC real_ss [FUN_EQ_THM,IN_COUNT]
   >> RW_TAC real_ss [COND_EXPAND,mul_rzero,mul_rone]
   >> `&(x' + 1):real <= 4 pow n` by RW_TAC real_ss [LESS_EQ,REAL_OF_NUM_POW]
-  >> `&(x' + 1):real / 2 pow n <= 4 pow n / 2 pow n` by RW_TAC real_ss [REAL_LE_LDIV_EQ,REAL_POS_NZ,REAL_DIV_RMUL]
-  >> `(&x' + 1) / 2 pow n <= 4 pow n / 2 pow n` by RW_TAC real_ss [extreal_div_eq,extreal_pow_def,extreal_add_def,extreal_of_num_def,extreal_le_def]
+  >> `&(x' + 1):real / 2 pow n <= 4 pow n / 2 pow n`
+        by RW_TAC real_ss [REAL_LE_LDIV_EQ, REAL_POS_NZ,REAL_DIV_RMUL]
+  >> `(&x' + 1) / 2 pow n <= 4 pow n / 2 pow n`
+        by RW_TAC real_ss [extreal_div_eq, extreal_pow_def, extreal_add_def,
+                           extreal_of_num_def, extreal_le_def]
   >> `f x < 4 pow n / 2 pow n` by METIS_TAC [lte_trans]
   >> `4 pow n / 2 pow n = 2 pow n`
         by RW_TAC std_ss [extreal_pow_def, extreal_div_eq, extreal_of_num_def,
@@ -6533,7 +6551,10 @@ Proof
   >> METIS_TAC [extreal_lt_def]
 QED
 
-(* f(x) is either larger than 2 pow n or is inside some k interval *)
+(* f(x) is either larger than 2 pow n or is inside some k interval
+
+   NOTE: &(2 ** n) / 2 pow n = 1, &(4 ** n) / 2 pow n = 2 pow n.
+ *)
 Theorem lemma_fn_3 :
     !m f n x. x IN m_space m /\ 0 <= f x ==>
              (2 pow n <= f x) \/
@@ -6544,12 +6565,16 @@ Proof
   >> Cases_on `2 pow n <= f x`
   >- RW_TAC std_ss []
   >> `f x < 2 pow n` by FULL_SIMP_TAC std_ss [extreal_lt_def]
-  >> `f x <> PosInf` by METIS_TAC [extreal_of_num_def,extreal_pow_def,extreal_not_infty,lt_infty,lt_trans]
-  >> `f x <> NegInf` by METIS_TAC [lt_infty,lte_trans,extreal_of_num_def,extreal_not_infty]
+  >> `f x <> PosInf`
+       by METIS_TAC [extreal_of_num_def, extreal_pow_def, extreal_not_infty,
+                     lt_infty, lt_trans]
+  >> `f x <> NegInf`
+       by METIS_TAC [lt_infty, lte_trans, extreal_of_num_def, extreal_not_infty]
   >> `?r. f x = Normal r` by METIS_TAC [extreal_cases]
   >> `0:real < 2 pow n` by RW_TAC real_ss [REAL_POW_LT]
   >> `0:real <> 2 pow n` by RW_TAC real_ss [REAL_LT_IMP_NE]
-  >> FULL_SIMP_TAC real_ss [extreal_of_num_def,extreal_pow_def,extreal_le_def,extreal_lt_eq,extreal_div_eq,extreal_add_def]
+  >> FULL_SIMP_TAC real_ss [extreal_of_num_def, extreal_pow_def, extreal_le_def,
+                            extreal_lt_eq, extreal_div_eq, extreal_add_def]
   >> Q.EXISTS_TAC `flr (2 pow n * r)`
   >> CONJ_TAC
   >- (`2 pow n * r < 2 pow n * 2 pow n` by RW_TAC real_ss [REAL_LT_LMUL]
@@ -6567,7 +6592,8 @@ Proof
         by RW_TAC real_ss [REAL_LE_LDIV_EQ,REAL_POS_NZ,REAL_DIV_RMUL]
      >> METIS_TAC [REAL_EQ_LDIV_EQ,REAL_MUL_COMM])
   >> `0 <= 2 pow n * r` by RW_TAC real_ss [REAL_LT_LE_MUL]
-  >> `2 pow n * r < &(flr (2 pow n * r) + 1)` by METIS_TAC [NUM_FLOOR_DIV_LOWERBOUND,REAL_LT_01,REAL_OVER1,REAL_MUL_RID]
+  >> `2 pow n * r < &(flr (2 pow n * r) + 1)`
+       by METIS_TAC [NUM_FLOOR_DIV_LOWERBOUND, REAL_LT_01, REAL_OVER1, REAL_MUL_RID]
   >> `2 pow n * r / 2 pow n < &(flr (2 pow n * r) + 1) / 2 pow n`
       by RW_TAC real_ss [REAL_LT_LDIV_EQ,REAL_POS_NZ,REAL_DIV_RMUL]
   >> METIS_TAC [REAL_EQ_LDIV_EQ,REAL_MUL_COMM]
@@ -6582,16 +6608,13 @@ Proof
 QED
 
 (* f_n(x) positive *)
-Theorem lemma_fn_seq_positive :
-    !m f n x. 0 <= f x ==> (0 <= fn_seq m f n x)
+Theorem lemma_fn_seq_positive' :
+    !m f n x. x IN m_space m /\ 0 <= f x ==> 0 <= fn_seq m f n x
 Proof
     RW_TAC real_ss []
  >> `0:real < 2 pow n` by RW_TAC real_ss [REAL_POW_LT]
  >> `0:real <> 2 pow n` by RW_TAC real_ss [REAL_LT_IMP_NE]
  >> `0 < 2 pow n` by METIS_TAC [extreal_of_num_def,extreal_pow_def,extreal_lt_eq]
- >> Cases_on `~(x IN m_space m)`
- >- RW_TAC std_ss [lemma_fn_4,le_refl]
- >> FULL_SIMP_TAC std_ss []
  >> (MP_TAC o Q.SPECL [`m`,`f`,`n`,`x`]) lemma_fn_3
  >> RW_TAC real_ss []
  >- RW_TAC real_ss [lt_imp_le,lemma_fn_2]
@@ -6600,6 +6623,16 @@ Proof
  >> RW_TAC std_ss [extreal_of_num_def,extreal_pow_def,extreal_div_eq,extreal_le_def]
  >> MATCH_MP_TAC REAL_LE_DIV
  >> RW_TAC real_ss [REAL_POW_LT,REAL_LT_IMP_LE]
+QED
+
+Theorem lemma_fn_seq_positive :
+    !m f n x. 0 <= f x ==> 0 <= fn_seq m f n x
+Proof
+    rpt STRIP_TAC
+ >> Cases_on `~(x IN m_space m)`
+ >- RW_TAC std_ss [lemma_fn_4,le_refl]
+ >> FULL_SIMP_TAC std_ss []
+ >> MATCH_MP_TAC lemma_fn_seq_positive' >> art []
 QED
 
 (* MONOTONICALLY INCREASING *)
@@ -6719,17 +6752,24 @@ Proof
 QED
 
 (* UPPER BOUNDED BY f *)
-Theorem lemma_fn_seq_upper_bounded :
-    !m f n x. 0 <= f x ==> (fn_seq m f n x <= f x)
+Theorem lemma_fn_seq_upper_bounded' :
+    !m f n x. x IN m_space m /\ 0 <= f x ==> fn_seq m f n x <= f x
 Proof
     RW_TAC std_ss []
- >> Cases_on `~(x IN m_space m)` >- RW_TAC real_ss [lemma_fn_4]
- >> FULL_SIMP_TAC std_ss []
  >> (MP_TAC o Q.SPECL [`m`,`f`,`n`,`x`]) lemma_fn_3
  >> RW_TAC real_ss []
  >- METIS_TAC [lemma_fn_2,le_refl]
  >> `fn_seq m f n x = &k / 2 pow n` by RW_TAC real_ss [lemma_fn_1]
  >> RW_TAC std_ss []
+QED
+
+Theorem lemma_fn_seq_upper_bounded :
+    !m f n x. 0 <= f x ==> fn_seq m f n x <= f x
+Proof
+    rpt STRIP_TAC
+ >> Cases_on `~(x IN m_space m)` >- RW_TAC real_ss [lemma_fn_4]
+ >> FULL_SIMP_TAC std_ss []
+ >> MATCH_MP_TAC lemma_fn_seq_upper_bounded' >> art []
 QED
 
 (* f Supremum of fn_seq *)

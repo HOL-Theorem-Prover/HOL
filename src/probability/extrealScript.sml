@@ -1194,44 +1194,54 @@ Proof
     PROVE_TAC [EXTREAL_SUM_IMAGE_THM]
 QED
 
+(* |- (!x. x IN s ==> f x <> NegInf) /\ FINITE s ==>
+      ITSET (\e acc. f e + acc) s 0 <> NegInf
+ *)
+Theorem EXTREAL_SUM_IMAGE_NOT_NEGINF_lemma[local] = lemma2'
+     |> SIMP_RULE bool_ss [GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO]
+     |> Q.SPECL [`f`, `s`, `0`]
+     |> SIMP_RULE std_ss [num_not_infty]
+
 Theorem EXTREAL_SUM_IMAGE_NOT_NEGINF:
-    !f s. FINITE s /\ (!x. x IN s ==> f x <> NegInf) ==> EXTREAL_SUM_IMAGE f s <> NegInf
+    !f s. FINITE s /\ (!x. x IN s ==> f x <> NegInf) ==>
+          EXTREAL_SUM_IMAGE f s <> NegInf
 Proof
-  let val thm = ((SIMP_RULE std_ss [num_not_infty])
-                 o (Q.SPECL [`f`, `s`, `0`])
-                 o (SIMP_RULE bool_ss [GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO])) lemma2';
-  in
-    rpt GEN_TAC >> STRIP_TAC \\
-    REWRITE_TAC [EXTREAL_SUM_IMAGE_DEF] \\
-    MATCH_MP_TAC thm >> ASM_REWRITE_TAC []
-  end
+    rpt GEN_TAC >> STRIP_TAC
+ >> REWRITE_TAC [EXTREAL_SUM_IMAGE_DEF]
+ >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF_lemma >> art []
 QED
 
+(* |- (!x. x IN s ==> f x <> PosInf) /\ FINITE s ==>
+      ITSET (\e acc. f e + acc) s 0 <> PosInf
+ *)
+Theorem EXTREAL_SUM_IMAGE_NOT_POSINF_lemma[local] = lemma2
+     |> SIMP_RULE bool_ss [GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO]
+     |> Q.SPECL [`f`, `s`, `0`]
+     |> SIMP_RULE std_ss [num_not_infty]
+
 Theorem EXTREAL_SUM_IMAGE_NOT_POSINF:
-    !f s. FINITE s /\ (!x. x IN s ==> f x <> PosInf) ==> EXTREAL_SUM_IMAGE f s <> PosInf
+    !f s. FINITE s /\ (!x. x IN s ==> f x <> PosInf) ==>
+          EXTREAL_SUM_IMAGE f s <> PosInf
 Proof
-  let val thm = ((SIMP_RULE std_ss [num_not_infty])
-                 o (Q.SPECL [`f`, `s`, `0`])
-                 o (SIMP_RULE bool_ss [GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO])) lemma2;
-  in
-    rpt GEN_TAC >> STRIP_TAC \\
-    REWRITE_TAC [EXTREAL_SUM_IMAGE_DEF] \\
-    MATCH_MP_TAC thm >> ASM_REWRITE_TAC []
-  end
+    rpt GEN_TAC >> STRIP_TAC
+ >> REWRITE_TAC [EXTREAL_SUM_IMAGE_DEF]
+ >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF_lemma >> art []
 QED
 
 Theorem EXTREAL_SUM_IMAGE_NOT_INFTY:
-    !f s. (FINITE s /\ (!x. x IN s ==> f x <> NegInf) ==> EXTREAL_SUM_IMAGE f s <> NegInf) /\
-          (FINITE s /\ (!x. x IN s ==> f x <> PosInf) ==> EXTREAL_SUM_IMAGE f s <> PosInf)
+    !f s. (FINITE s /\ (!x. x IN s ==> f x <> NegInf) ==>
+           EXTREAL_SUM_IMAGE f s <> NegInf) /\
+          (FINITE s /\ (!x. x IN s ==> f x <> PosInf) ==>
+           EXTREAL_SUM_IMAGE f s <> PosInf)
 Proof
-  RW_TAC std_ss [EXTREAL_SUM_IMAGE_NOT_NEGINF,
-                 EXTREAL_SUM_IMAGE_NOT_POSINF]
+    RW_TAC std_ss [EXTREAL_SUM_IMAGE_NOT_NEGINF, EXTREAL_SUM_IMAGE_NOT_POSINF]
 QED
 
 Theorem EXTREAL_SUM_IMAGE_PROPERTY_NEG:
     !f s. FINITE s ==>
           !e. (!x. x IN e INSERT s ==> f x <> NegInf) ==>
-              (EXTREAL_SUM_IMAGE f (e INSERT s) = f e + EXTREAL_SUM_IMAGE f (s DELETE e))
+              (EXTREAL_SUM_IMAGE f (e INSERT s) =
+               f e + EXTREAL_SUM_IMAGE f (s DELETE e))
 Proof
   RW_TAC std_ss [EXTREAL_SUM_IMAGE_THM]
 QED
@@ -1239,7 +1249,8 @@ QED
 Theorem EXTREAL_SUM_IMAGE_PROPERTY_POS:
     !f s. FINITE s ==>
           !e. (!x. x IN e INSERT s ==> f x <> PosInf) ==>
-              (EXTREAL_SUM_IMAGE f (e INSERT s) = f e + EXTREAL_SUM_IMAGE f (s DELETE e))
+              (EXTREAL_SUM_IMAGE f (e INSERT s) =
+               f e + EXTREAL_SUM_IMAGE f (s DELETE e))
 Proof
   RW_TAC std_ss [EXTREAL_SUM_IMAGE_THM]
 QED
@@ -1248,10 +1259,10 @@ Theorem EXTREAL_SUM_IMAGE_PROPERTY:
     !f s. FINITE s  ==>
           !e. (!x. x IN e INSERT s ==> f x <> NegInf) \/
               (!x. x IN e INSERT s ==> f x <> PosInf) ==>
-              (EXTREAL_SUM_IMAGE f (e INSERT s) = f e + EXTREAL_SUM_IMAGE f (s DELETE e))
+              (EXTREAL_SUM_IMAGE f (e INSERT s) =
+               f e + EXTREAL_SUM_IMAGE f (s DELETE e))
 Proof
-  PROVE_TAC [EXTREAL_SUM_IMAGE_PROPERTY_NEG,
-             EXTREAL_SUM_IMAGE_PROPERTY_POS]
+    PROVE_TAC [EXTREAL_SUM_IMAGE_PROPERTY_NEG, EXTREAL_SUM_IMAGE_PROPERTY_POS]
 QED
 
 Theorem EXTREAL_SUM_IMAGE_POS:
@@ -1318,7 +1329,6 @@ Proof
  >> METIS_TAC [lt_add_neg, IN_INSERT]
 QED
 
-(* more antecedents added *)
 Theorem EXTREAL_SUM_IMAGE_IF_ELIM:
     !s P f. FINITE s /\ (!x. x IN s ==> P x) /\
             ((!x. x IN s ==> f x <> NegInf) \/ !x. x IN s ==> f x <> PosInf)
@@ -1326,7 +1336,8 @@ Theorem EXTREAL_SUM_IMAGE_IF_ELIM:
 Proof
     Suff `!s. FINITE s ==>
              (\s. !P f. (!x. x IN s ==> P x) /\
-                        ((!x. x IN s ==> f x <> NegInf) \/ !x. x IN s ==> f x <> PosInf) ==>
+                        ((!x. x IN s ==> f x <> NegInf) \/
+                          !x. x IN s ==> f x <> PosInf) ==>
                         (EXTREAL_SUM_IMAGE (\x. if P x then f x else 0) s =
                          EXTREAL_SUM_IMAGE f s)) s`
  >- METIS_TAC []
@@ -1353,7 +1364,8 @@ Proof
  >- METIS_TAC []
  >> MATCH_MP_TAC FINITE_INDUCT
  >> RW_TAC real_ss [EXTREAL_SUM_IMAGE_EMPTY, CARD_EMPTY, mul_lzero, DELETE_NON_ELEMENT]
- >> Know ‘(!x. x IN e INSERT s ==> f x <> NegInf) \/ (!x. x IN e INSERT s ==> f x <> PosInf)’
+ >> Know ‘(!x. x IN e INSERT s ==> f x <> NegInf) \/
+          (!x. x IN e INSERT s ==> f x <> PosInf)’
  >- (Cases_on ‘f p = NegInf’
      >- (DISJ2_TAC >> GEN_TAC >> STRIP_TAC \\
         ‘f x = NegInf’ by METIS_TAC [IN_INSERT] >> POP_ORW \\
@@ -1367,7 +1379,8 @@ Proof
  >> FULL_SIMP_TAC std_ss [GSYM DELETE_NON_ELEMENT]
  >> RW_TAC std_ss [CARD_INSERT, ADD1, extreal_of_num_def, GSYM REAL_ADD, GSYM extreal_add_def]
  >> RW_TAC std_ss [Once add_comm_normal, GSYM extreal_of_num_def]
- >> `(&CARD s) <> NegInf /\ 1 <> NegInf /\ (&CARD s) <> PosInf /\ 1 <> PosInf /\ 0 <= (&CARD s) /\ 0 <= 1`
+ >> `(&CARD s) <> NegInf /\ 1 <> NegInf /\ (&CARD s) <> PosInf /\
+     1 <> PosInf /\ 0 <= (&CARD s) /\ 0 <= 1`
        by METIS_TAC [extreal_not_infty, extreal_of_num_def, le_num, le_01]
  >> RW_TAC std_ss [add_rdistrib, mul_lone]
  >> Suff `EXTREAL_SUM_IMAGE f s = &(CARD s) * f e` >- Rewr
@@ -1914,8 +1927,8 @@ Proof
 QED
 
 Theorem EXTREAL_SUM_IMAGE_POS_MEM_LE:
-     !f s. FINITE s  /\ (!x. x IN s ==> 0 <= f x) ==>
-            (!x. x IN s ==> f x <= EXTREAL_SUM_IMAGE f s)
+    !f s. FINITE s /\ (!x. x IN s ==> 0 <= f x) ==>
+         (!x. x IN s ==> f x <= EXTREAL_SUM_IMAGE f s)
 Proof
   Suff `!s. FINITE s ==>
         (\s. !f. (!x. x IN s ==> 0 <= f x) ==>
@@ -1929,6 +1942,15 @@ Proof
   >- METIS_TAC [EXTREAL_SUM_IMAGE_POS,le_add2,add_rzero,extreal_of_num_def,extreal_not_infty,le_refl]
   >> `f x <= EXTREAL_SUM_IMAGE f s` by FULL_SIMP_TAC std_ss [IN_INSERT]
   >> METIS_TAC [le_add2,add_lzero,extreal_of_num_def,extreal_not_infty]
+QED
+
+Theorem EXTREAL_SUM_IMAGE_EQ_POSINF :
+    !f s. FINITE s  /\ (!x. x IN s ==> 0 <= f x) /\
+         (?i. i IN s /\ f i = PosInf) ==> EXTREAL_SUM_IMAGE f s = PosInf
+Proof
+    rpt STRIP_TAC
+ >> ‘f i <= EXTREAL_SUM_IMAGE f s’ by PROVE_TAC [EXTREAL_SUM_IMAGE_POS_MEM_LE]
+ >> gs [le_infty]
 QED
 
 (* more antecedents added *)
@@ -2346,8 +2368,8 @@ Definition extreal_inf_def:
     extreal_inf p = -extreal_sup (IMAGE numeric_negate p)
 End
 
-Overload sup = Term `extreal_sup`
-Overload inf = Term `extreal_inf`
+Overload sup = ``extreal_sup``
+Overload inf = ``extreal_inf``
 
 Theorem le_sup_imp :
     !p x. p x ==> x <= sup p
@@ -4150,16 +4172,15 @@ Proof
  >> METIS_TAC [EXTREAL_SUM_IMAGE_POS_MEM_LE]
 QED
 
-local val th =
+Theorem lemma[local] =
       SIMP_RULE std_ss [GSYM lt_infty]
                        (ONCE_REWRITE_RULE [MONO_NOT_EQ] (Q.SPEC `f` ext_suminf_lt_infty))
-in
+
 Theorem ext_suminf_posinf:
     !f. (!n. 0 <= f n) /\ (?n. f n = PosInf) ==> (ext_suminf f = PosInf)
 Proof
-    METIS_TAC [th]
+    METIS_TAC [lemma]
 QED
-end;
 
 Theorem ext_suminf_suminf :
     !r. (!n. 0 <= r n) /\ ext_suminf (\n. Normal (r n)) <> PosInf ==>

@@ -388,8 +388,7 @@ Proof
   MP_TAC(SPEC ``t:real->bool`` SUP) THEN ASM_SET_TAC[]
 QED
 
-(* there's another REAL_LE_SUP in HOL's realTheory *)
-Theorem REAL_LE_SUP' :
+Theorem REAL_LE_SUP2 : (* was: REAL_LE_SUP' (conflicted with realTheory) *)
     !s a b y:real. y IN s /\ a <= y /\ (!x. x IN s ==> x <= b) ==> a <= sup s
 Proof
     MESON_TAC [SUP, MEMBER_NOT_EMPTY, REAL_LE_TRANS]
