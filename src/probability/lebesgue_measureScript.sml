@@ -10,6 +10,8 @@
 (*            Contact:  <m_qasi@ece.concordia.ca>                            *)
 (*                                                                           *)
 (* Note: This theory is inspired from isabelle                               *)
+(* ------------------------------------------------------------------------- *)
+(*  Equivalence of Lebesgue and Gauge (Henstock-Kurzweil) Integration        *)
 (* ========================================================================= *)
 
 Theory lebesgue_measure
@@ -501,7 +503,7 @@ Proof
  >> rw [Abbr ‘g’, INTEGRABLE_0]
 QED
 
-Theorem negligible_iff_lmeasure_eq_0 :
+Theorem negligible_iff_lmeasure_zero :
     !s. s IN measurable_sets lebesgue ==> (negligible s <=> lmeasure s = 0)
 Proof
     rpt STRIP_TAC
@@ -537,6 +539,13 @@ Proof
  >> rw [le_sup']
  >> POP_ASSUM MATCH_MP_TAC
  >> Q.EXISTS_TAC ‘n’ >> REFL_TAC
+QED
+
+Theorem negligible_alt_lebesgue_null_set :
+    !s. negligible s <=> s IN null_set lebesgue
+Proof
+    rw [IN_NULL_SET, null_set_def]
+ >> METIS_TAC [negligible_in_lebesgue, negligible_iff_lmeasure_zero]
 QED
 
 Theorem lebesgue_measure_iff_LIMSEQ[local] :
@@ -666,6 +675,22 @@ Proof
  >> ASM_SIMP_TAC std_ss [lebesgue_eq_lambda, lambda_open_interval]
 QED
 
+Theorem borel_null_set_subset_lebesgue :
+    null_set lborel SUBSET null_set lebesgue
+Proof
+    simp [SUBSET_DEF, IN_APP]
+ >> rw [null_set_def]
+ >- METIS_TAC [SUBSET_DEF, lborel_subset_lebesgue]
+ >> gs [lebesgue_eq_lambda, sets_lborel]
+QED
+
+Theorem borel_null_set_imp_negligible :
+    !s. s IN null_set lborel ==> negligible s
+Proof
+    rw [negligible_alt_lebesgue_null_set]
+ >> METIS_TAC [SUBSET_DEF, borel_null_set_subset_lebesgue]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (*  Equivalence of Lebesgue and Gauge (Henstock-Kurzweil) Integration        *)
 (* ------------------------------------------------------------------------- *)
@@ -674,7 +699,8 @@ QED
         0 <= x /\ x < 1 /\ 0 < k ==>
         ?n. n < 2 ** k /\ &n / 2 pow k <= x /\ x < &SUC n / 2 pow k
  *)
-val lemma1 = lift_ieeeTheory.error_bound_lemma1 |> Q.SPEC ‘k’ |> GEN_ALL
+Theorem lemma1[local] = lift_ieeeTheory.error_bound_lemma1
+                     |> Q.SPEC ‘k’ |> GEN_ALL
 
 (* lemma1 also holds if “0 < k” is removed *)
 Theorem lemma1a[local] :
@@ -715,8 +741,9 @@ QED
         0 <= x /\ x < 1 /\ 0 < k ==>
         ?n. n <= 2 ** k /\ abs (x - &n / 2 pow k) <= 1 / 2 pow SUC k
  *)
-val lemma2 = lift_ieeeTheory.error_bound_lemma2 |> Q.SPEC ‘k’ |> GEN_ALL
-          |> SIMP_RULE real_ss [REAL_INV_1OVER, GSYM ADD1]
+Theorem lemma2[local] = lift_ieeeTheory.error_bound_lemma2
+                     |> Q.SPEC ‘k’ |> GEN_ALL
+                     |> SIMP_RULE real_ss [REAL_INV_1OVER, GSYM ADD1]
 
 (* remove “0 < k”, use “_ <= 1 / 2 pow k” instead of “_ <= 1 / 2 pow SUC k” *)
 Theorem lemma2a[local] :
@@ -781,12 +808,13 @@ QED
         1 <= x /\ x < 2 /\ 0 < k ==>
         ?n. n <= 2 ** k /\ abs (1 + &n / 2 pow k - x) <= 1 / 2 pow SUC k
  *)
-val lemma3 = lift_ieeeTheory.error_bound_lemma3 |> Q.SPEC ‘k’ |> GEN_ALL
-          |> SIMP_RULE real_ss [REAL_INV_1OVER, GSYM ADD1]
+Theorem lemma3[local] = lift_ieeeTheory.error_bound_lemma3
+                     |> Q.SPEC ‘k’ |> GEN_ALL
+                     |> SIMP_RULE real_ss [REAL_INV_1OVER, GSYM ADD1]
 
 (* |- !y. 0 < y ==> ?n. 1 / 2 pow n < y *)
-val lemma4 = REAL_ARCH_POW_INV |> Q.SPEC ‘1 / 2’
-          |> SIMP_RULE real_ss [pow_div, POW_ONE]
+Theorem lemma4[local] = REAL_ARCH_POW_INV |> Q.SPEC ‘1 / 2’
+                     |> SIMP_RULE real_ss [pow_div, POW_ONE]
 
 Theorem lemma5[local] :
     !n k. &n / 2 pow k < (&SUC n / 2 pow k) :real
@@ -859,7 +887,7 @@ Proof
 QED
 
 (* cf. SUBSET_DISJOINT *)
-Theorem nonoverlapping_subset_imp :
+Theorem nonoverlapping_subset_inclusive :
     !s t u v. nonoverlapping s t /\ u SUBSET s /\ v SUBSET t ==>
               nonoverlapping u v
 Proof
@@ -1190,8 +1218,7 @@ Proof
      Q.PAT_X_ASSUM ‘countable J2’ K_TAC \\
      Q.PAT_X_ASSUM ‘K2 <> {}’     K_TAC \\
      rw [Abbr ‘J2’]
-     >- (rw [Abbr ‘J1’, Abbr ‘J0’]
-         >- (qexistsl_tac [‘n’, ‘l’] >> art []) \\
+     >- (rw [Abbr ‘J1’, Abbr ‘J0’] >- (qexistsl_tac [‘n’, ‘l’] >> art []) \\
          qexistsl_tac [‘y’, ‘l’, ‘n’] >> art []) \\
      STRONG_DISJ_TAC \\
      RW_TAC std_ss [PSUBSET_DEF, GSYM IMP_DISJ_THM] \\
@@ -1506,7 +1533,7 @@ Proof
      Q.PAT_X_ASSUM ‘f i m <> f j n’ K_TAC \\
     ‘f i m SUBSET interval [real_of_int i,real_of_int i + 1] /\
      f j n SUBSET interval [real_of_int j,real_of_int j + 1]’ by rw [] \\
-     MATCH_MP_TAC nonoverlapping_subset_imp \\
+     MATCH_MP_TAC nonoverlapping_subset_inclusive \\
      qexistsl_tac [‘interval [real_of_int i,real_of_int i + 1]’,
                    ‘interval [real_of_int j,real_of_int j + 1]’] \\
      simp [nonoverlapping_def, INTERIOR_INTERVAL] \\
@@ -2537,10 +2564,10 @@ Proof
      [ (* goal 1 (of 4) *)
        FIRST_X_ASSUM MATCH_MP_TAC >> fs [EVEN_EXISTS],
        (* goal 2 (of 4) *)
-       MATCH_MP_TAC nonoverlapping_subset_imp \\
+       MATCH_MP_TAC nonoverlapping_subset_inclusive \\
        qexistsl_tac [‘A’, ‘B’] >> art [],
        (* goal 3 (of 4) *)
-       MATCH_MP_TAC nonoverlapping_subset_imp \\
+       MATCH_MP_TAC nonoverlapping_subset_inclusive \\
        qexistsl_tac [‘B’, ‘A’] >> simp [Once nonoverlapping_comm],
        (* goal 4 (of 4) *)
        FIRST_X_ASSUM MATCH_MP_TAC >> fs [GSYM ODD_EVEN, ODD_EXISTS] ])
@@ -2946,7 +2973,7 @@ Proof
          A j            A i             B i           B j     *)
  >> Know ‘!i j. i < j ==> nonoverlapping (A i UNION B i) (A j UNION B j)’
  >- (rpt STRIP_TAC \\
-     MATCH_MP_TAC nonoverlapping_subset_imp \\
+     MATCH_MP_TAC nonoverlapping_subset_inclusive \\
      qexistsl_tac [‘interval [-&SUC i,&SUC i]’, ‘{x | x <= -&j \/ &j <= x}’] \\
      reverse CONJ_TAC
      >- (rw [Abbr ‘A’, Abbr ‘B’, SUBSET_DEF, IN_INTERVAL] >| (* 2 subgoals *)
@@ -2990,7 +3017,7 @@ Proof
          Q.PAT_X_ASSUM ‘BIJ h _ _’ MP_TAC \\
          rw [BIJ_DEF, INJ_DEF] >> DISJ1_TAC \\
          qexistsl_tac [‘i’, ‘j’] >> simp []) \\
-     MATCH_MP_TAC nonoverlapping_subset_imp \\
+     MATCH_MP_TAC nonoverlapping_subset_inclusive \\
      qexistsl_tac [‘A n1 UNION B n1’, ‘A n2 UNION B n2’] >> art [] \\
     ‘n1 < n2 \/ n2 < n1’ by simp [] >- simp [] \\
      simp [Once nonoverlapping_comm])
@@ -3034,9 +3061,10 @@ Proof
  >> simp [Abbr ‘l’, o_DEF]
 QED
 
-Theorem lebesgue_approximation :
+(* NOTE: “fsigma” is overload_on “fsigma_in euclidean” *)
+Theorem lebesgue_approximation_fsigma :
     !E e. E IN measurable_sets lebesgue /\ 0 < e ==>
-          ?s. s IN subsets borel /\ E SUBSET s /\
+          ?s. fsigma s /\ E SUBSET s /\
               lmeasure E <= lambda s /\
               lambda s <= lmeasure E + Normal e
 Proof
@@ -3046,19 +3074,30 @@ Proof
  >> Q.EXISTS_TAC ‘s’ >> art []
  >> CONJ_ASM1_TAC
  >- (qunabbrev_tac ‘s’ \\
-     MATCH_MP_TAC SIGMA_ALGEBRA_BIGUNION \\
-     rw [sigma_algebra_borel] \\
-     MATCH_MP_TAC borel_closed \\
+     MATCH_MP_TAC (ISPEC “euclidean” FSIGMA_IN_UNIONS) >> rw [] \\
+     MATCH_MP_TAC CLOSED_IMP_FSIGMA_IN \\
+     REWRITE_TAC [GSYM CLOSED_IN] \\
      MATCH_MP_TAC closed_interval_closed >> art [])
- >> ‘lambda s = lmeasure s’ by PROVE_TAC [lebesgue_eq_lambda]
- >> POP_ORW
+ >> ‘s IN subsets borel’ by PROVE_TAC [borel_fsigma]
+ >> ‘lambda s = lmeasure s’ by PROVE_TAC [lebesgue_eq_lambda] >> POP_ORW
  >> Suff ‘lmeasure s = suminf (lmeasure o J)’ >- simp []
- >> SYM_TAC
- >> MATCH_MP_TAC lebesgue_countably_additive
+ >> SYM_TAC >> MATCH_MP_TAC lebesgue_countably_additive
  >> rw [IN_FUNSET]
  >- (MATCH_MP_TAC closed_interval_imp_lebesgue >> art [])
  >> MATCH_MP_TAC closed_interval_nonoverlapping_imp_negligible
  >> simp []
+QED
+
+Theorem lebesgue_approximation :
+    !E e. E IN measurable_sets lebesgue /\ 0 < e ==>
+          ?s. s IN subsets borel /\ E SUBSET s /\
+              lmeasure E <= lambda s /\
+              lambda s <= lmeasure E + Normal e
+Proof
+    rpt STRIP_TAC
+ >> drule_all_then STRIP_ASSUME_TAC lebesgue_approximation_fsigma
+ >> Q.EXISTS_TAC ‘s’ >> art []
+ >> MATCH_MP_TAC borel_fsigma >> art []
 QED
 
 Theorem negligible_approximation_lemma[local] :
@@ -3081,7 +3120,7 @@ Proof
 QED
 
 Theorem negligible_approximation_null_set :
-    !E. negligible E ==> ?s. s IN null_set lborel /\ E SUBSET s
+    !E. negligible E ==> ?N. N IN null_set lborel /\ E SUBSET N
 Proof
     rpt STRIP_TAC
  >> Know ‘!n. (0 :real) < inv &SUC n’
@@ -3138,6 +3177,11 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC
  >> Q.EXISTS_TAC ‘n’ >> REFL_TAC
 QED
+
+(* |- !E. E IN null_set lebesgue ==> ?N. N IN null_set lborel /\ E SUBSET N *)
+Theorem negligible_approximation_null_set' =
+        negligible_approximation_null_set
+     |> REWRITE_RULE [negligible_alt_lebesgue_null_set]
 
 Theorem pos_fn_integral_fn_seq :
     !m f n. measure_space m /\ f IN Borel_measurable (measurable_space m) ==>
@@ -3273,6 +3317,1156 @@ Proof
  >> MATCH_MP_TAC pos_fn_integral_cmul_indicator >> art []
  >> MATCH_MP_TAC REAL_LE_DIV >> simp [POW_POS]
 QED
+
+(* cf. measureTheory.fn_seq_def. Here is the version for (f :'a -> real) *)
+Definition real_fn_seq_def :
+    real_fn_seq m (f :'a -> real) =
+       (\n x. SIGMA
+                (\k. &k / 2 pow n *
+                     indicator
+                       {x | x IN m_space m /\ &k / 2 pow n <= f x /\
+                            f x < (&k + 1) / 2 pow n} x) (count (4 ** n)) +
+              2 pow n * indicator {x | x IN m_space m /\ 2 pow n <= f x} x)
+End
+
+Theorem fn_seq_alt_real_fn_seq :
+    !m f n x. fn_seq m (Normal o f) n x = Normal (real_fn_seq m f n x)
+Proof
+    RW_TAC std_ss [fn_seq_def, real_fn_seq_def]
+ >> ASM_SIMP_TAC real_ss [extreal_of_num_def, extreal_pow_eq]
+ >> ‘2 pow n <> (0 :real)’ by simp []
+ >> ASM_SIMP_TAC real_ss
+      [extreal_div_eq, extreal_le_eq, extreal_lt_eq, extreal_add_eq]
+ >> qabbrev_tac ‘A = \k. {x | x IN m_space m /\ &k / 2 pow n <= f x /\
+                              f x < &(k + 1) / 2 pow n}’
+ >> qabbrev_tac ‘B = {x | x IN m_space m /\ 2 pow n <= f x}’
+ >> qabbrev_tac ‘N = count (4 ** n)’
+ >> qabbrev_tac ‘c = \k. (&k / 2 pow n) :real’
+ >> ASM_SIMP_TAC std_ss []
+ >> simp [indicator_fn, o_DEF, extreal_mul_eq]
+ >> qabbrev_tac ‘g = \k. c k * indicator (A k) x’ >> simp []
+ >> Know ‘SIGMA (\k. Normal (g k)) N = Normal (SIGMA g N)’
+ >- (MATCH_MP_TAC EXTREAL_SUM_IMAGE_NORMAL \\
+     simp [Abbr ‘N’])
+ >> Rewr'
+ >> simp [extreal_add_eq]
+QED
+
+Theorem real_fn_seq_alt_fn_seq :
+    !m f n x. real_fn_seq m f n x = real (fn_seq m (Normal o f) n x)
+Proof
+    rw [fn_seq_alt_real_fn_seq]
+QED
+
+(* cf. lemma_fn_seq_positive *)
+Theorem lemma_real_fn_seq_positive[local] :
+    !m f n x. 0 <= f x ==> 0 <= real_fn_seq m f n x
+Proof
+    rw [real_fn_seq_alt_fn_seq]
+ >> MATCH_MP_TAC real_positive
+ >> MATCH_MP_TAC lemma_fn_seq_positive
+ >> simp [extreal_of_num_def, o_DEF]
+QED
+
+(* cf. lemma_fn_seq_upper_bounded *)
+Theorem lemma_real_fn_seq_upper_bounded[local] :
+    !m f n x. 0 <= f x ==> real_fn_seq m f n x <= f x
+Proof
+    RW_TAC std_ss [real_fn_seq_alt_fn_seq]
+ >> qabbrev_tac ‘nf = Normal o f’
+ >> ‘0 <= nf x’ by rw [Abbr ‘nf’, o_DEF, extreal_of_num_def]
+ >> MP_TAC (Q.SPECL [‘m’, ‘nf’, ‘n’, ‘x’] lemma_fn_seq_upper_bounded)
+ >> MP_TAC (Q.SPECL [‘m’, ‘nf’, ‘n’, ‘x’] lemma_fn_seq_positive)
+ >> rw [o_DEF]
+ >> qabbrev_tac ‘y = fn_seq m nf n x’
+ >> ‘y <> NegInf’ by simp [pos_not_neginf]
+ >> Know ‘y <> PosInf’
+ >- (REWRITE_TAC [lt_infty] \\
+     Q_TAC (TRANS_TAC let_trans) ‘nf x’ \\
+     simp [GSYM lt_infty, Abbr ‘nf’, o_DEF])
+ >> DISCH_TAC
+ >> ‘?r. y = Normal r’ by METIS_TAC [extreal_cases]
+ >> gs [Abbr ‘nf’, o_DEF]
+QED
+
+(* cf. lemma_fn_seq_mono_increasing *)
+Theorem lemma_real_fn_seq_mono_increasing[local] :
+    !m f x. 0 <= f x ==> mono_increasing (\n. real_fn_seq m f n x)
+Proof
+    rpt GEN_TAC >> DISCH_TAC
+ >> simp [real_fn_seq_alt_fn_seq, mono_increasing_def]
+ >> qx_genl_tac [‘i’, ‘j’] >> DISCH_TAC
+ >> MATCH_MP_TAC le_real_imp
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC lemma_fn_seq_positive \\
+     simp [extreal_of_num_def, o_DEF])
+ >> CONJ_TAC
+ >- (irule (SRULE [ext_mono_increasing_def] lemma_fn_seq_mono_increasing) \\
+     simp [extreal_of_num_def, o_DEF])
+ >> REWRITE_TAC [lt_infty]
+ >> Q_TAC (TRANS_TAC let_trans) ‘(Normal o f) x’
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC lemma_fn_seq_upper_bounded \\
+     simp [extreal_of_num_def, o_DEF])
+ >> simp [GSYM lt_infty, o_DEF]
+QED
+
+(* cf. fn_seq_integral_def
+
+   NOTE: This definition requires all (k <> 0) “lambda _” must be finite, such
+   that “lambda' _” is meaningful. This may be derived from “integrable lborel f”
+   aka “pos_fn_integral lborel f <> PosInf”.
+ *)
+Overload lambda'[local] = “\s. real (lambda s)”
+
+Definition real_fn_seq_integral_def :
+    real_fn_seq_integral (f :real -> real) n =
+    SIGMA (\k. &k / 2 pow n *
+               lambda' {x | &k / 2 pow n <= f x /\
+                            f x < (&k + 1) / 2 pow n}) (count (4 ** n)) +
+    2 pow n * lambda' {x | 2 pow n <= f x}
+End
+
+Theorem real_fn_seq_lemma1[local] :
+    !f i n. f IN borel_measurable borel ==>
+           {x | &i / 2 pow n <= f x /\ f x < (&i + 1) / 2 pow n} IN subsets borel
+
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC
+      (SRULE [sigma_algebra_borel, space_borel]
+             (ISPEC “borel” in_borel_measurable_ge_lt_imp)) >> art []
+QED
+
+Theorem real_fn_seq_lemma2[local] :
+    !f n. f IN borel_measurable borel ==> {x | 2 pow n <= f x} IN subsets borel
+Proof
+    rpt STRIP_TAC
+ >> irule (SRULE [sigma_algebra_borel, space_borel]
+                  (ISPECL [“f :real -> real”,“borel”]
+                          (cj 2 (iffLR in_borel_measurable_ge)))) >> art []
+QED
+
+(* NOTE: “real PosInf = 0” has been used here to avoid more antecedents. *)
+Theorem real_fn_seq_integral_positive :
+    !f n. f IN borel_measurable borel ==> 0 <= real_fn_seq_integral f n
+Proof
+    RW_TAC std_ss [real_fn_seq_integral_def]
+ >> MATCH_MP_TAC REAL_LE_ADD
+ >> reverse CONJ_TAC
+ >- (MATCH_MP_TAC REAL_LE_MUL >> simp [] \\
+     MATCH_MP_TAC real_positive \\
+     MATCH_MP_TAC MEASURE_POSITIVE >> simp [lborel_def, sets_lborel] \\
+     MATCH_MP_TAC real_fn_seq_lemma2 >> art [])
+ >> HO_MATCH_MP_TAC REAL_SUM_IMAGE_POS
+ >> SIMP_TAC std_ss [FINITE_COUNT, IN_COUNT]
+ >> Q.X_GEN_TAC ‘i’ >> DISCH_TAC
+ >> MATCH_MP_TAC REAL_LE_MUL
+ >> CONJ_TAC >- simp []
+ >> MATCH_MP_TAC real_positive
+ >> MATCH_MP_TAC MEASURE_POSITIVE
+ >> SIMP_TAC std_ss [lborel_def, sets_lborel]
+ >> MATCH_MP_TAC real_fn_seq_lemma1 >> art []
+QED
+
+Theorem fn_seq_integral_positive :
+    !m f n. measure_space m /\ f IN Borel_measurable (measurable_space m) ==>
+            0 <= fn_seq_integral m f n
+Proof
+    RW_TAC std_ss [fn_seq_integral_def]
+ >> MATCH_MP_TAC le_add
+ >> reverse CONJ_TAC
+ >- (MATCH_MP_TAC le_mul >> simp [pow_pos_le] \\
+     MATCH_MP_TAC MEASURE_POSITIVE >> art [] \\
+    ‘{x | x IN m_space m /\ 2 pow n <= f x} =
+     {x | 2 pow n <= f x} INTER m_space m’ by SET_TAC [] >> POP_ORW \\
+     simp [IN_MEASURABLE_BOREL_ALL_MEASURE])
+ >> HO_MATCH_MP_TAC EXTREAL_SUM_IMAGE_POS
+ >> SIMP_TAC std_ss [FINITE_COUNT, IN_COUNT]
+ >> Q.X_GEN_TAC ‘i’ >> DISCH_TAC
+ >> MATCH_MP_TAC le_mul
+ >> CONJ_TAC
+ >- (‘2 pow n = Normal (2 pow n)’ by simp [extreal_of_num_def, extreal_pow_def] \\
+     ‘2 pow n <> (0 :real)’ by simp [] \\
+     simp [extreal_div_eq] \\
+     MATCH_MP_TAC le_div >> simp [])
+ >> MATCH_MP_TAC MEASURE_POSITIVE >> art []
+ >> ‘{x | x IN m_space m /\ &i / 2 pow n <= f x /\ f x < (&i + 1) / 2 pow n} =
+     {x | &i / 2 pow n <= f x /\ f x < (&i + 1) / 2 pow n} INTER m_space m’
+       by SET_TAC []
+ >> POP_ORW
+ >> simp [IN_MEASURABLE_BOREL_ALL_MEASURE]
+QED
+
+(* NOTE: If k = 0, then “&k / 2 pow n * lmeasure s = 0” even the measure is inf *)
+Theorem lemma_fn_seq_finite_measure1[local] :
+    !m f k n. measure_space m /\ f IN Borel_measurable (measurable_space m) /\
+             (!x. x IN m_space m ==> 0 <= f x) /\
+              pos_fn_integral m f <> PosInf /\ k < 4 ** n /\ k <> 0 ==>
+              measure m {x | x IN m_space m /\ &k / 2 pow n <= f x /\
+                             f x < (&k + 1) / 2 pow n} <> PosInf
+Proof
+    rpt STRIP_TAC
+ >> ASSUME_TAC (Q.SPECL [‘m’, ‘f’, ‘n’] lemma_fn_seq_positive')
+ >> ASSUME_TAC (Q.SPECL [‘m’, ‘f’, ‘n’] lemma_fn_seq_upper_bounded')
+ >> Know ‘pos_fn_integral m (fn_seq m f n) <> PosInf’
+ >- (REWRITE_TAC [lt_infty] \\
+     Q_TAC (TRANS_TAC let_trans) ‘pos_fn_integral m f’ \\
+     reverse CONJ_TAC >- art [GSYM lt_infty] \\
+     MATCH_MP_TAC pos_fn_integral_mono >> simp [])
+ >> Know ‘pos_fn_integral m (fn_seq m f n) = fn_seq_integral m f n’
+ >- (MATCH_MP_TAC pos_fn_integral_fn_seq >> art [])
+ >> simp [] >> DISCH_THEN K_TAC
+ >> simp [fn_seq_integral_def]
+ >> qmatch_abbrev_tac ‘a + b = PosInf’
+ >> ‘sigma_algebra (measurable_space m)’ by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA]
+ >> Know ‘0 <= b’
+ >- (qunabbrev_tac ‘b’ \\
+     MATCH_MP_TAC le_mul >> simp [pow_pos_le] \\
+     MATCH_MP_TAC MEASURE_POSITIVE >> art [] \\
+    ‘{x | x IN m_space m /\ 2 pow n <= f x} =
+     {x | 2 pow n <= f x} INTER m_space m’ by SET_TAC [] >> POP_ORW \\
+     METIS_TAC [IN_MEASURABLE_BOREL_ALL_MEASURE])
+ >> DISCH_TAC
+ >> qunabbrev_tac ‘a’
+ >> qmatch_abbrev_tac ‘SIGMA g _ + b = PosInf’
+ >> qmatch_abbrev_tac ‘a + b = PosInf’
+ >> Know ‘!i. 0 <= g i’
+ >- (rw [Abbr ‘g’] \\
+     MATCH_MP_TAC le_mul \\
+     CONJ_TAC
+     >- (‘2 pow n = Normal (2 pow n)’
+           by rw [extreal_of_num_def, extreal_pow_def] >> POP_ORW \\
+         MATCH_MP_TAC le_div >> simp []) \\
+     MATCH_MP_TAC MEASURE_POSITIVE >> art [] \\
+     qmatch_abbrev_tac ‘s IN measurable_sets m’ \\
+    ‘s = {x | &i / 2 pow n <= f x /\ f x < (&i + 1) / 2 pow n} INTER m_space m’
+       by (qunabbrev_tac ‘s’ >> SET_TAC []) >> POP_ORW \\
+     METIS_TAC [IN_MEASURABLE_BOREL_ALL_MEASURE])
+ >> DISCH_TAC
+ >> Know ‘0 <= a’
+ >- (qunabbrev_tac ‘a’ \\
+     MATCH_MP_TAC EXTREAL_SUM_IMAGE_POS >> simp [])
+ >> DISCH_TAC
+ >> Suff ‘a = PosInf’
+ >- (Rewr' \\
+     Suff ‘b <> NegInf’ >- METIS_TAC [add_infty] \\
+     MATCH_MP_TAC pos_not_neginf >> art [])
+ >> qunabbrev_tac ‘a’
+ >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_EQ_POSINF >> simp []
+ >> Q.EXISTS_TAC ‘k’
+ >> simp [Abbr ‘g’]
+ >> Suff ‘0 < &k / 2 pow n’ >- PROVE_TAC [mul_rposinf]
+ >> ‘2 pow n = Normal (2 pow n)’
+      by rw [extreal_of_num_def, extreal_pow_def] >> POP_ORW
+ >> MATCH_MP_TAC lt_div
+ >> simp [extreal_of_num_def]
+QED
+
+Theorem lemma_fn_seq_finite_measure1'[local] :
+    !f k n. f IN borel_measurable borel /\ (!x. 0 <= f x) /\
+            pos_fn_integral lborel (Normal o f) <> PosInf /\
+            k < 4 ** n /\ k <> 0 ==>
+            lambda {x | &k / 2 pow n <= f x /\ f x < (&k + 1) / 2 pow n} <> PosInf
+Proof
+    rpt STRIP_TAC
+ >> qabbrev_tac ‘nf = Normal o f’
+ >> ‘!x. 0 <= nf x’ by rw [Abbr ‘nf’, o_DEF]
+ >> Know ‘nf IN Borel_measurable borel’
+ >- (qunabbrev_tac ‘nf’ \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+     simp [sigma_algebra_borel])
+ >> DISCH_TAC
+ >> MP_TAC (Q.SPECL [‘nf’, ‘k’, ‘n’]
+                    (ISPEC “lborel” lemma_fn_seq_finite_measure1))
+ >> simp [lborel_def, space_lborel]
+ >> ‘2 pow n <> (0 :real)’ by simp []
+ >> ASM_SIMP_TAC std_ss
+       [Abbr ‘nf’, extreal_div_eq, extreal_of_num_def, extreal_pow_def,
+        extreal_add_eq, extreal_lt_eq, extreal_le_eq]
+QED
+
+Theorem lemma_fn_seq_finite_measure2[local] :
+    !m f n. measure_space m /\ f IN Borel_measurable (measurable_space m) /\
+           (!x. x IN m_space m ==> 0 <= f x) /\
+            pos_fn_integral m f <> PosInf ==>
+            measure m {x | x IN m_space m /\ 2 pow n <= f x} <> PosInf
+Proof
+    rpt STRIP_TAC
+ >> ASSUME_TAC (Q.SPECL [‘m’, ‘f’, ‘n’] lemma_fn_seq_positive')
+ >> ASSUME_TAC (Q.SPECL [‘m’, ‘f’, ‘n’] lemma_fn_seq_upper_bounded')
+ >> Know ‘pos_fn_integral m (fn_seq m f n) <> PosInf’
+ >- (REWRITE_TAC [lt_infty] \\
+     Q_TAC (TRANS_TAC let_trans) ‘pos_fn_integral m f’ \\
+     reverse CONJ_TAC >- art [GSYM lt_infty] \\
+     MATCH_MP_TAC pos_fn_integral_mono >> simp [])
+ >> Know ‘pos_fn_integral m (fn_seq m f n) = fn_seq_integral m f n’
+ >- (MATCH_MP_TAC pos_fn_integral_fn_seq >> art [])
+ >> simp [] >> DISCH_THEN K_TAC
+ >> simp [fn_seq_integral_def]
+ >> qmatch_abbrev_tac ‘a + b = PosInf’
+ >> ‘sigma_algebra (measurable_space m)’ by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA]
+ >> Know ‘0 <= b’
+ >- (qunabbrev_tac ‘b’ \\
+     MATCH_MP_TAC le_mul >> simp [pow_pos_le])
+ >> DISCH_TAC
+ >> qunabbrev_tac ‘a’
+ >> qmatch_abbrev_tac ‘SIGMA g _ + b = PosInf’
+ >> qmatch_abbrev_tac ‘a + b = PosInf’
+ >> Know ‘!i. 0 <= g i’
+ >- (rw [Abbr ‘g’] \\
+     MATCH_MP_TAC le_mul \\
+     CONJ_TAC
+     >- (‘2 pow n = Normal (2 pow n)’
+           by rw [extreal_of_num_def, extreal_pow_def] >> POP_ORW \\
+         MATCH_MP_TAC le_div >> simp []) \\
+     MATCH_MP_TAC MEASURE_POSITIVE >> art [] \\
+     qmatch_abbrev_tac ‘s IN measurable_sets m’ \\
+    ‘s = {x | &i / 2 pow n <= f x /\ f x < (&i + 1) / 2 pow n} INTER m_space m’
+       by (qunabbrev_tac ‘s’ >> SET_TAC []) >> POP_ORW \\
+     METIS_TAC [IN_MEASURABLE_BOREL_ALL_MEASURE])
+ >> DISCH_TAC
+ >> Know ‘0 <= a’
+ >- (qunabbrev_tac ‘a’ \\
+     MATCH_MP_TAC EXTREAL_SUM_IMAGE_POS >> simp [])
+ >> DISCH_TAC
+ >> Suff ‘b = PosInf’
+ >- (Rewr' \\
+     Suff ‘a <> NegInf’ >- METIS_TAC [add_infty] \\
+     MATCH_MP_TAC pos_not_neginf >> art [])
+ >> qunabbrev_tac ‘b’
+ >> Suff ‘0 < 2 pow n’ >- PROVE_TAC [mul_rposinf]
+ >> simp [pow_pos_lt]
+QED
+
+Theorem lemma_fn_seq_finite_measure2'[local] :
+    !f n. f IN borel_measurable borel /\ (!x. 0 <= f x) /\
+          pos_fn_integral lborel (Normal o f) <> PosInf ==>
+          lambda {x | 2 pow n <= f x} <> PosInf
+Proof
+    rpt STRIP_TAC
+ >> qabbrev_tac ‘nf = Normal o f’
+ >> ‘!x. 0 <= nf x’ by rw [Abbr ‘nf’, o_DEF]
+ >> Know ‘nf IN Borel_measurable borel’
+ >- (qunabbrev_tac ‘nf’ \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+     simp [sigma_algebra_borel])
+ >> DISCH_TAC
+ >> MP_TAC (Q.SPECL [‘nf’, ‘n’] (ISPEC “lborel” lemma_fn_seq_finite_measure2))
+ >> simp [lborel_def, space_lborel]
+ >> simp [Abbr ‘nf’, extreal_of_num_def, extreal_pow_def]
+QED
+
+Theorem finite_lmeasure_imp_integral_indicator :
+    !s y. s IN measurable_sets lebesgue /\ lmeasure s = Normal y ==>
+          indicator s integrable_on UNIV /\
+          integral UNIV (indicator s) = y
+Proof
+    rpt GEN_TAC
+ >> simp [lebesgue_def] >> STRIP_TAC
+ >> qabbrev_tac ‘f = \n. indicator (s INTER line n)’
+ >> ‘!n x. 0 <= f n x’ by rw [Abbr ‘f’, INDICATOR_POS]
+ >> Know ‘!m n x. m <= n ==> f m x <= f n x’
+ >- (rw [Abbr ‘f’] \\
+     MATCH_MP_TAC INDICATOR_MONO \\
+     Suff ‘line m SUBSET line n’ >- SET_TAC [] \\
+     MATCH_MP_TAC LINE_MONO >> art [])
+ >> DISCH_TAC
+ >> ‘!n. f n integrable_on univ(:real)’ by PROVE_TAC [integrable_indicator_UNIV]
+ >> Know ‘{Normal (integral (line n) (indicator s)) | n | T} =
+          IMAGE Normal {integral (line n) (indicator s) | n | T}’
+ >- (rw [Once EXTENSION] \\
+     EQ_TAC >> rw [] \\ (* 2 subgoals, same tactics *)
+     Q.EXISTS_TAC ‘n’ >> REFL_TAC)
+ >> DISCH_THEN (fs o wrap)
+ >> qabbrev_tac ‘t = {integral (line n) (indicator s) | n | T}’
+ >> Know ‘bounded t’
+ >- (rw [bounded_def] \\
+     Q.EXISTS_TAC ‘y’ >> rw [Abbr ‘t’] \\
+     Q.PAT_X_ASSUM ‘sup _ = Normal y’ MP_TAC >> rw [sup_eq'] \\
+     Q.PAT_X_ASSUM ‘!z. _ ==> z <= Normal y’
+       (MP_TAC o Q.SPEC ‘Normal (integral (line n) (indicator s))’) \\
+     impl_tac
+     >- (Q.EXISTS_TAC ‘integral (line n) (indicator s)’ >> simp [] \\
+         Q.EXISTS_TAC ‘n’ >> REFL_TAC) \\
+     rw [] \\
+     qmatch_abbrev_tac ‘abs x <= y’ \\
+     Suff ‘abs x = x’ >- (Rewr' >> art []) \\
+     rw [abs_refl, Abbr ‘x’] \\
+     MATCH_MP_TAC INTEGRAL_POS >> simp [INDICATOR_POS])
+ >> DISCH_TAC
+ (* applying sup_image_normal *)
+ >> Know ‘sup (IMAGE Normal t) = Normal (sup t)’
+ >- (MATCH_MP_TAC sup_image_normal >> art [] \\
+     rw [Abbr ‘t’, Once EXTENSION])
+ >> DISCH_THEN (fs o wrap)
+ >> MP_TAC (Q.SPECL [‘f’, ‘UNIV’]
+                    BEPPO_LEVI_MONOTONE_CONVERGENCE_INCREASING) >> simp []
+ >> impl_tac
+ >- (Q.PAT_X_ASSUM ‘bounded t’ MP_TAC \\
+     rw [Abbr ‘t’, bounded_def] \\
+     Q.EXISTS_TAC ‘a’ \\
+     simp [Abbr ‘f’, integral_indicator_UNIV])
+ >> STRIP_TAC (* this asserts ‘g’, and ‘k’ (negligible) *)
+ >> rename1 ‘negligible N’
+ (* stage work *)
+ >> qabbrev_tac ‘h = \n. integral UNIV (f n)’
+ >> qabbrev_tac ‘r = integral univ(:real) g’
+ (* applying mono_increasing_converges_to_sup *)
+ >> Know ‘r = sup (IMAGE h UNIV)’
+ >- (MATCH_MP_TAC mono_increasing_converges_to_sup \\
+     simp [GSYM LIM_SEQUENTIALLY_SEQ] \\
+     simp [mono_increasing_def, Abbr ‘h’] \\
+     qx_genl_tac [‘i’, ‘j’] >> DISCH_TAC \\
+     MATCH_MP_TAC INTEGRAL_MONO_LEMMA >> simp [])
+ >> Know ‘IMAGE h UNIV = t’
+ >- (rw [Abbr ‘t’, Once EXTENSION, Abbr ‘h’] \\
+     simp [integral_indicator_UNIV, Abbr ‘f’])
+ >> Rewr'
+ >> DISCH_TAC
+ >> Q.PAT_X_ASSUM ‘(h --> r) sequentially’ K_TAC
+ (* applying mono_increasing_converges_to_sup again *)
+ >> qabbrev_tac ‘f' = flip f’
+ >> ‘!x. (\k. f k x) = f' x’ by rw [FUN_EQ_THM, Abbr ‘f'’]
+ >> POP_ASSUM (fs o wrap)
+ >> Know ‘!x. x NOTIN N ==> g x = sup (IMAGE (f' x) UNIV)’
+ >- (rpt STRIP_TAC \\
+     MATCH_MP_TAC mono_increasing_converges_to_sup \\
+     simp [GSYM LIM_SEQUENTIALLY_SEQ] \\
+     simp [mono_increasing_def, Abbr ‘f'’])
+ >> DISCH_TAC
+ >> Know ‘!x. sup (IMAGE (f' x) univ(:num)) = indicator s x’
+ >- (rw [Abbr ‘f'’, GSYM REAL_LE_ANTISYM]
+     >- (MATCH_MP_TAC REAL_IMP_SUP_LE' >> simp [Abbr ‘f’] \\
+         RW_TAC std_ss [] \\
+         MATCH_MP_TAC INDICATOR_MONO >> SET_TAC []) \\
+     qmatch_abbrev_tac ‘(r :real) <= sup p’ \\
+  (* applying REAL_LE_SUP' *)
+     Know ‘r <= sup p <=> !y. (!z. z IN p ==> z <= y) ==> r <= y’
+     >- (MATCH_MP_TAC REAL_LE_SUP' \\
+         CONJ_TAC >- rw [Once EXTENSION, Abbr ‘p’] \\
+         Q.EXISTS_TAC ‘1’ \\
+         rw [Abbr ‘p’, Abbr ‘f’] \\
+         REWRITE_TAC [DROP_INDICATOR_LE_1]) >> Rewr' \\
+     rw [Abbr ‘p’, Abbr ‘r’, Abbr ‘f’] \\
+     Know ‘!n. indicator (s INTER line n) x <= y’
+     >- (Q.X_GEN_TAC ‘n’ \\
+         POP_ASSUM MATCH_MP_TAC \\
+         Q.EXISTS_TAC ‘n’ >> REFL_TAC) >> DISCH_TAC \\
+     STRIP_ASSUME_TAC (Q.SPEC ‘x’ REAL_IN_LINE) \\
+     Suff ‘indicator s x = indicator (s INTER line n) x’ >- rw [] \\
+     rw [indicator])
+ >> DISCH_THEN (fs o wrap)
+ >> Q.PAT_X_ASSUM ‘!x. x NOTIN N ==> (f' x --> indicator s x) sequentially’ K_TAC
+ >> qunabbrev_tac ‘f'’
+ (* stage work *)
+ >> Suff ‘(indicator s has_integral y) UNIV’
+ >- METIS_TAC [HAS_INTEGRAL_INTEGRABLE_INTEGRAL]
+ >> Know ‘(indicator s has_integral y) UNIV <=> (g has_integral y) UNIV’
+ >- (MATCH_MP_TAC HAS_INTEGRAL_SPIKE_EQ \\
+     Q.EXISTS_TAC ‘N’ >> rw [])
+ >> Rewr'
+ >> simp [HAS_INTEGRAL_INTEGRABLE_INTEGRAL]
+QED
+
+Theorem finite_lmeasure_has_integral_indicator :
+    !s y. s IN measurable_sets lebesgue /\ lmeasure s = Normal y ==>
+          (indicator s has_integral y) UNIV
+Proof
+    rpt STRIP_TAC
+ >> REWRITE_TAC [HAS_INTEGRAL_INTEGRABLE_INTEGRAL]
+ >> MATCH_MP_TAC finite_lmeasure_imp_integral_indicator >> art []
+QED
+
+Theorem integrable_sets_iff_finite_measure :
+    !s. s IN integrable_sets UNIV <=>
+        s IN measurable_sets lebesgue /\ lmeasure s <> PosInf
+Proof
+    Q.X_GEN_TAC ‘s’ >> EQ_TAC
+ >- (rpt STRIP_TAC >- METIS_TAC [integrable_sets_subset_lebesgue, SUBSET_DEF] \\
+    ‘lmeasure s = Normal (integral univ(:real) (indicator s))’
+       by PROVE_TAC [integrable_indicator_imp_lmeasure] >> fs [])
+ >> rpt STRIP_TAC
+ >> Know ‘lmeasure s <> NegInf’
+ >- (MATCH_MP_TAC pos_not_neginf \\
+     MATCH_MP_TAC MEASURE_POSITIVE \\
+     simp [measure_space_lebesgue])
+ >> DISCH_TAC
+ >> ‘?r. lmeasure s = Normal r’ by METIS_TAC [extreal_cases]
+ >> simp [integrable_sets_def]
+ >> MATCH_MP_TAC (cj 1 finite_lmeasure_imp_integral_indicator)
+ >> Q.EXISTS_TAC ‘r’ >> art []
+QED
+
+Theorem finite_lmeasure_has_integral_indicator_real :
+    !s. s IN measurable_sets lebesgue /\ lmeasure s <> PosInf ==>
+       (indicator s has_integral (real (lmeasure s))) UNIV
+Proof
+    rpt STRIP_TAC
+ >> Know ‘lmeasure s <> NegInf’
+ >- (MATCH_MP_TAC pos_not_neginf \\
+     MATCH_MP_TAC MEASURE_POSITIVE \\
+     simp [measure_space_lebesgue])
+ >> DISCH_TAC
+ >> ‘?r. lmeasure s = Normal r’ by METIS_TAC [extreal_cases]
+ >> MP_TAC (Q.SPECL [‘s’, ‘r’] finite_lmeasure_has_integral_indicator) >> rw []
+QED
+
+(* |- !s. s IN integrable_sets univ(:real) ==>
+          (indicator s has_integral real (lmeasure s)) univ(:real)
+ *)
+Theorem integrable_sets_has_integral_indicator_real =
+        finite_lmeasure_has_integral_indicator_real
+     |> REWRITE_RULE [GSYM integrable_sets_iff_finite_measure]
+
+(* cf. HAS_INTEGRAL_SUM *)
+Theorem HAS_INTEGRAL_SIGMA :
+    !f i s t. FINITE t /\ (!a. a IN t ==> (f a has_integral i a) s) ==>
+             ((\x. SIGMA (\a. f a x) t) has_integral SIGMA i t) s
+Proof
+    rpt STRIP_TAC
+ >> simp [REAL_SUM_IMAGE_sum]
+ >> MATCH_MP_TAC HAS_INTEGRAL_SUM >> art []
+QED
+
+Theorem real_fn_seq_has_integral :
+    !f n. f IN borel_measurable borel /\ (!x. 0 <= f x) /\
+          pos_fn_integral lborel (Normal o f) <> PosInf ==>
+         (real_fn_seq lborel f n has_integral real_fn_seq_integral f n) UNIV
+Proof
+    RW_TAC std_ss [real_fn_seq_def, real_fn_seq_integral_def, space_lborel, IN_UNIV]
+ >> HO_MATCH_MP_TAC HAS_INTEGRAL_ADD
+ >> reverse CONJ_TAC
+ >- (HO_MATCH_MP_TAC HAS_INTEGRAL_CMUL \\
+     MP_TAC (Q.SPECL [‘f’, ‘n’] lemma_fn_seq_finite_measure2') >> rw [] \\
+     qabbrev_tac ‘s = {x | 2 pow n <= f x}’ \\
+    ‘(\x. indicator s x) = indicator s’ by rw [FUN_EQ_THM] >> POP_ORW \\
+     Know ‘s IN subsets borel’
+     >- (qunabbrev_tac ‘s’ \\
+         MATCH_MP_TAC real_fn_seq_lemma2 >> art []) >> DISCH_TAC \\
+     gs [lambda_eq_lebesgue] \\
+     MATCH_MP_TAC finite_lmeasure_has_integral_indicator_real >> art [] \\
+     METIS_TAC [SUBSET_DEF, lborel_subset_lebesgue, sets_lborel])
+ (* stage work *)
+ >> HO_MATCH_MP_TAC HAS_INTEGRAL_SIGMA
+ >> SIMP_TAC std_ss [FINITE_COUNT, IN_COUNT]
+ >> Q.X_GEN_TAC ‘j’ >> DISCH_TAC
+ >> Cases_on ‘j = 0’ >- simp [HAS_INTEGRAL_0]
+ >> HO_MATCH_MP_TAC HAS_INTEGRAL_CMUL
+ >> qabbrev_tac ‘s = {x | &j / 2 pow n <= f x /\ f x < (&j + 1) / 2 pow n}’
+ >> ‘(\x. indicator s x) = indicator s’ by rw [FUN_EQ_THM] >> POP_ORW
+ >> Know ‘s IN subsets borel’
+ >- (qunabbrev_tac ‘s’ \\
+     MATCH_MP_TAC real_fn_seq_lemma1 >> art [])
+ >> DISCH_TAC
+ >> gs [lambda_eq_lebesgue]
+ >> MATCH_MP_TAC finite_lmeasure_has_integral_indicator_real
+ >> CONJ_TAC >- METIS_TAC [SUBSET_DEF, lborel_subset_lebesgue, sets_lborel]
+ >> MP_TAC (Q.SPECL [‘f’, ‘j’, ‘n’] lemma_fn_seq_finite_measure1')
+ >> simp [lambda_eq_lebesgue]
+QED
+
+Theorem real_fn_seq_integral_alt_fn_seq_integral :
+    !f n. f IN borel_measurable borel /\ (!x. 0 <= f x) /\
+          pos_fn_integral lborel (Normal o f) <> PosInf ==>
+          real_fn_seq_integral f n = real (fn_seq_integral lborel (Normal o f) n)
+Proof
+    RW_TAC std_ss [real_fn_seq_integral_def, fn_seq_integral_def, space_lborel,
+                   IN_UNIV]
+ >> qabbrev_tac ‘nf = Normal o f’
+ >> ‘!x. 0 <= nf x’ by rw [Abbr ‘nf’, o_DEF]
+ >> Know ‘nf IN Borel_measurable borel’
+ >- (qunabbrev_tac ‘nf’ \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+     simp [sigma_algebra_borel])
+ >> DISCH_TAC
+ >> ‘2 pow n = Normal (2 pow n)’
+      by rw [extreal_of_num_def, extreal_pow_def] >> POP_ORW
+ >> ‘2 pow n <> (0 :real)’ by simp []
+ >> ASM_SIMP_TAC std_ss [extreal_of_num_def, extreal_div_eq, extreal_le_eq,
+                         extreal_lt_eq, extreal_add_eq]
+ >> qabbrev_tac ‘c = \k. (&k / 2 pow n) :real’
+ >> ‘!k. 0 <= c k’ by rw [Abbr ‘c’]
+ >> qabbrev_tac ‘A = \k. {x | &k / 2 pow n <= f x /\ f x < (&k + 1) / 2 pow n}’
+ >> Know ‘!k. (A k) IN subsets borel’
+ >- (RW_TAC std_ss [Abbr ‘A’, Abbr ‘c’] \\
+     MATCH_MP_TAC real_fn_seq_lemma1 >> art [])
+ >> DISCH_TAC
+ >> qabbrev_tac ‘B = {x | 2 pow n <= f x}’
+ >> Know ‘B IN subsets borel’
+ >- (qunabbrev_tac ‘B’ \\
+     MATCH_MP_TAC real_fn_seq_lemma2 >> art [])
+ >> DISCH_TAC
+ >> qabbrev_tac ‘s = count (4 ** n)’
+ >> ‘FINITE s’ by simp [Abbr ‘s’]
+ >> ASM_SIMP_TAC std_ss []
+ >> Know ‘SIGMA (\k. Normal (c k) * lambda (A k)) s =
+          SIGMA (\k. Normal (c k) * Normal (lambda' (A k))) s’
+ >- (irule EXTREAL_SUM_IMAGE_EQ >> art [] \\
+     reverse CONJ_TAC
+     >- (DISJ1_TAC \\
+         Q.X_GEN_TAC ‘i’ >> simp [Abbr ‘s’] >> DISCH_TAC \\
+         CONJ_TAC >> MATCH_MP_TAC pos_not_neginf (* 2 subgoals, same tactics *)
+         >- (MATCH_MP_TAC le_mul \\
+             CONJ_TAC >- simp [extreal_of_num_def] \\
+             MATCH_MP_TAC MEASURE_POSITIVE \\
+             simp [lborel_def, sets_lborel]) \\
+         Cases_on ‘i = 0’ >- simp [Abbr ‘c’, extreal_mul_eq] \\
+         MATCH_MP_TAC le_mul \\
+         CONJ_TAC >- simp [extreal_of_num_def] \\
+         Know ‘0 <= lambda (A i)’
+         >- (MATCH_MP_TAC MEASURE_POSITIVE \\
+             simp [lborel_def, sets_lborel]) >> DISCH_TAC \\
+         Suff ‘Normal (real (lambda (A i))) = lambda (A i)’
+         >- (Rewr' >> art []) \\
+         MATCH_MP_TAC normal_real \\
+         CONJ_TAC >- simp [pos_not_neginf] \\
+         POP_ASSUM K_TAC \\
+         SIMP_TAC std_ss [Abbr ‘A’] \\
+         MATCH_MP_TAC lemma_fn_seq_finite_measure1' >> simp []) \\
+     Q.X_GEN_TAC ‘i’ >> simp [Abbr ‘s’] >> DISCH_TAC \\
+     Cases_on ‘i = 0’ >- simp [Abbr ‘c’, normal_0] \\
+     Suff ‘Normal (lambda' (A i)) = lambda (A i)’ >- simp [] \\
+     MATCH_MP_TAC normal_real \\
+     Know ‘0 <= lambda (A i)’
+     >- (MATCH_MP_TAC MEASURE_POSITIVE \\
+         simp [lborel_def, sets_lborel]) >> DISCH_TAC \\
+     CONJ_TAC >- simp [pos_not_neginf] \\
+     POP_ASSUM K_TAC \\
+     SIMP_TAC std_ss [Abbr ‘A’] \\
+     MATCH_MP_TAC lemma_fn_seq_finite_measure1' >> simp [])
+ >> Rewr'
+ >> Know ‘lambda B = Normal (lambda' B)’
+ >- (SYM_TAC >> MATCH_MP_TAC normal_real \\
+     Know ‘0 <= lambda B’
+     >- (MATCH_MP_TAC MEASURE_POSITIVE \\
+         simp [lborel_def, sets_lborel]) >> DISCH_TAC \\
+     CONJ_TAC >- simp [pos_not_neginf] \\
+     SIMP_TAC std_ss [Abbr ‘B’] \\
+     MATCH_MP_TAC lemma_fn_seq_finite_measure2' >> simp [])
+ >> Rewr'
+ >> simp [extreal_mul_eq]
+ >> Know ‘SIGMA (\k. Normal (c k * lambda' (A k))) s =
+          Normal (SIGMA (\k. c k * lambda' (A k)) s)’
+ >- (HO_MATCH_MP_TAC EXTREAL_SUM_IMAGE_NORMAL >> art [])
+ >> Rewr'
+ >> simp [extreal_add_eq]
+QED
+
+Theorem fn_seq_integral_alt_real_fn_seq_integral :
+    !f n. f IN borel_measurable borel /\ (!x. 0 <= f x) /\
+          pos_fn_integral lborel (Normal o f) <> PosInf ==>
+          fn_seq_integral lborel (Normal o f) n = Normal (real_fn_seq_integral f n)
+Proof
+    rw [real_fn_seq_integral_alt_fn_seq_integral]
+ >> SYM_TAC
+ >> MATCH_MP_TAC normal_real
+ >> qabbrev_tac ‘nf = Normal o f’
+ >> ‘!x. 0 <= nf x’ by rw [Abbr ‘nf’, o_DEF]
+ >> Know ‘nf IN Borel_measurable borel’
+ >- (qunabbrev_tac ‘nf’ \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+     simp [sigma_algebra_borel])
+ >> DISCH_TAC
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC pos_not_neginf \\
+     MATCH_MP_TAC fn_seq_integral_positive \\
+     simp [lborel_def, measure_space_lborel])
+ (* applying pos_fn_integral_fn_seq *)
+ >> Know ‘fn_seq_integral lborel nf n =
+          pos_fn_integral lborel (fn_seq lborel nf n)’
+ >- (SYM_TAC >> MATCH_MP_TAC pos_fn_integral_fn_seq \\
+     simp [lborel_def, measure_space_lborel])
+ >> Rewr'
+ >> REWRITE_TAC [lt_infty]
+ >> Q_TAC (TRANS_TAC let_trans) ‘pos_fn_integral lborel nf’
+ >> reverse CONJ_TAC >- art [GSYM lt_infty]
+ >> MATCH_MP_TAC pos_fn_integral_mono
+ >> simp [space_lborel, lemma_fn_seq_positive, lemma_fn_seq_upper_bounded]
+QED
+
+Theorem fn_seq_integral_mono_increasing :
+    !m f. measure_space m /\ f IN Borel_measurable (measurable_space m) /\
+         (!x. x IN m_space m ==> 0 <= f x) ==>
+          mono_increasing (fn_seq_integral m f)
+Proof
+    rpt STRIP_TAC
+ >> simp [ext_mono_increasing_def]
+ >> qx_genl_tac [‘i’, ‘j’] >> DISCH_TAC
+ >> Know ‘!n. fn_seq_integral m f n = pos_fn_integral m (fn_seq m f n)’
+ >- (Q.X_GEN_TAC ‘n’ \\
+     SYM_TAC >> MATCH_MP_TAC pos_fn_integral_fn_seq >> art [])
+ >> Rewr'
+ >> MATCH_MP_TAC pos_fn_integral_mono
+ >> simp [lemma_fn_seq_positive']
+ >> rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘m’, ‘f’, ‘x’] lemma_fn_seq_mono_increasing)
+ >> rw [ext_mono_increasing_def]
+QED
+
+Theorem real_fn_seq_integral_mono_increasing :
+    !f. f IN borel_measurable borel /\ (!x. 0 <= f x) /\
+        pos_fn_integral lborel (Normal o f) <> PosInf ==>
+        mono_increasing (real_fn_seq_integral f)
+Proof
+    rw [mono_increasing_def]
+ >> simp [real_fn_seq_integral_alt_fn_seq_integral]
+ >> MATCH_MP_TAC le_real_imp
+ >> qabbrev_tac ‘nf = Normal o f’
+ >> ‘!x. 0 <= nf x’ by rw [Abbr ‘nf’, o_DEF]
+ >> Know ‘nf IN Borel_measurable borel’
+ >- (qunabbrev_tac ‘nf’ \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+     simp [sigma_algebra_borel])
+ >> DISCH_TAC
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC fn_seq_integral_positive >> simp [lborel_def])
+ >> CONJ_TAC
+ >- (MP_TAC (ISPECL [“lborel”, “nf :real -> extreal”]
+                    fn_seq_integral_mono_increasing) \\
+     rw [lborel_def, ext_mono_increasing_def])
+ >> Know ‘fn_seq_integral lborel nf n =
+          pos_fn_integral lborel (fn_seq lborel nf n)’
+ >- (SYM_TAC >> MATCH_MP_TAC pos_fn_integral_fn_seq \\
+     simp [lborel_def])
+ >> Rewr'
+ >> REWRITE_TAC [lt_infty]
+ >> Q_TAC (TRANS_TAC let_trans) ‘pos_fn_integral lborel nf’
+ >> simp [GSYM lt_infty]
+ >> MATCH_MP_TAC pos_fn_integral_mono
+ >> simp [lemma_fn_seq_positive, lemma_fn_seq_upper_bounded, space_lborel]
+QED
+
+(* NOTE: first we prove the equivalence for bounded positive functions *)
+Theorem lebesgue_eq_gauge_integral_positive_bounded :
+    !f. f IN borel_measurable borel /\
+       (!x. 0 <= f x) /\ bounded (IMAGE f UNIV) /\
+        pos_fn_integral lborel (Normal o f) <> PosInf ==>
+        f integrable_on UNIV /\
+        pos_fn_integral lborel (Normal o f) = Normal (integral UNIV f)
+Proof
+    Q.X_GEN_TAC ‘f’
+ >> simp [bounded_alt] >> STRIP_TAC
+ >> qabbrev_tac ‘nf = Normal o f’
+ >> ‘!x. 0 <= nf x’ by rw [Abbr ‘nf’, o_DEF]
+ >> Know ‘nf IN Borel_measurable borel’
+ >- (qunabbrev_tac ‘nf’ \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+     simp [sigma_algebra_borel])
+ >> DISCH_TAC
+ (* applying integral_sequence *)
+ >> MP_TAC (ISPECL [“lborel”, “nf :real -> extreal”] integral_sequence)
+ >> impl_tac >- simp [lborel_def, space_lborel]
+ >> Rewr'
+ >> qabbrev_tac ‘fi = fn_seq lborel nf’
+ >> Know ‘f = \x. real (sup (IMAGE (\n. fi n x) UNIV))’
+ >- (rw [FUN_EQ_THM, Abbr ‘fi’] \\
+     MP_TAC (ISPECL [“lborel”, “nf :real -> extreal”] lemma_fn_seq_sup) \\
+     rw [lborel_def, space_lborel] \\
+     simp [Abbr ‘nf’, o_DEF, real_normal])
+ >> Rewr'
+ >> qunabbrev_tac ‘fi’
+ >> Know ‘!i. pos_fn_integral lborel (fn_seq lborel nf i) =
+              fn_seq_integral lborel nf i’
+ >- (Q.X_GEN_TAC ‘n’ \\
+     MATCH_MP_TAC pos_fn_integral_fn_seq >> rw [lborel_def])
+ >> DISCH_TAC
+ >> Know ‘!i. fn_seq_integral lborel nf i <= pos_fn_integral lborel nf’
+ >- (Q.X_GEN_TAC ‘i’ \\
+     POP_ASSUM (simp o wrap o GSYM) \\
+     MATCH_MP_TAC pos_fn_integral_mono \\
+     simp [space_lborel, lemma_fn_seq_positive] \\
+     Q.X_GEN_TAC ‘x’ \\
+     MATCH_MP_TAC lemma_fn_seq_upper_bounded \\
+     rw [Abbr ‘nf’, o_DEF])
+ >> DISCH_TAC
+ >> Q.PAT_X_ASSUM ‘!i. pos_fn_integral lborel (fn_seq lborel nf i) = _’
+      (REWRITE_TAC o wrap)
+ >> qabbrev_tac ‘fn = \n x. real (fn_seq lborel nf n x)’
+ (* applying sup_normal (NOTE: “bounded (IMAGE f UNIV)” is used here) *)
+ >> qabbrev_tac ‘s = \x. IMAGE (\n. fn_seq lborel nf n x) UNIV’ >> simp []
+ >> Know ‘!x. sup (s x) = Normal (sup (s x o Normal))’
+ >- (rw [Once EQ_SYM_EQ] \\
+     MATCH_MP_TAC sup_normal \\
+     Q.EXISTS_TAC ‘a’ >> rw [abs_bounds] (* 2 subgoals *)
+     >- (rw [Abbr ‘s’, le_sup'] \\
+         Q_TAC (TRANS_TAC le_trans) ‘0’ \\
+         CONJ_TAC >- simp [extreal_of_num_def, extreal_ainv_def] \\
+         Q_TAC (TRANS_TAC le_trans) ‘fn_seq lborel nf 0 x’ \\
+         reverse CONJ_TAC
+         >- (POP_ASSUM MATCH_MP_TAC \\
+             Q.EXISTS_TAC ‘0’ >> art []) \\
+         MATCH_MP_TAC lemma_fn_seq_positive >> art []) \\
+     rw [Abbr ‘s’, sup_le'] \\
+     Q_TAC (TRANS_TAC le_trans) ‘nf x’ \\
+     CONJ_TAC >- (MATCH_MP_TAC lemma_fn_seq_upper_bounded >> art []) \\
+     rw [Abbr ‘nf’, o_DEF] \\
+     Suff ‘abs (f x) <= a’ >- simp [ABS_BOUNDS] \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     Q.EXISTS_TAC ‘x’ >> art [])
+ >> Rewr'
+ >> simp [real_normal, Abbr ‘s’]
+ >> Know ‘!x. IMAGE (\n. fn_seq lborel nf n x) UNIV o Normal =
+              IMAGE (\n. fn n x) UNIV’
+ >- (Q.X_GEN_TAC ‘y’ >> rw [Once EXTENSION, o_DEF] \\
+     EQ_TAC >> rw [Abbr ‘fn’]
+     >- (Q.EXISTS_TAC ‘n’ \\
+         POP_ASSUM (simp o wrap o SYM)) \\
+     Q.EXISTS_TAC ‘n’ \\
+     MATCH_MP_TAC normal_real \\
+     CONJ_TAC
+     >- (MATCH_MP_TAC pos_not_neginf \\
+         MATCH_MP_TAC lemma_fn_seq_positive >> art []) \\
+     REWRITE_TAC [lt_infty] \\
+     Q_TAC (TRANS_TAC let_trans) ‘nf y’ \\
+     CONJ_TAC >- (MATCH_MP_TAC lemma_fn_seq_upper_bounded >> art []) \\
+     simp [Abbr ‘nf’, o_DEF])
+ >> Rewr'
+ >> MP_TAC (Q.SPECL [‘fn’, ‘UNIV’] BEPPO_LEVI_MONOTONE_CONVERGENCE_INCREASING)
+ >> simp []
+ >> ‘fn = (\n x. real_fn_seq lborel f n x)’
+       by rw [Abbr ‘fn’, Abbr ‘nf’, fn_seq_alt_real_fn_seq, FUN_EQ_THM]
+ >> POP_ORW
+ >> simp [Abbr ‘fn’]
+ >> ‘!k. (\x. real_fn_seq lborel f k x) = real_fn_seq lborel f k’
+      by rw [FUN_EQ_THM] >> POP_ORW
+ (* applying lemma_real_fn_seq_mono_increasing *)
+ >> Know ‘!k x. real_fn_seq lborel f k x <= real_fn_seq lborel f (SUC k) x’
+ >- (rpt GEN_TAC \\
+     MP_TAC (Q.SPECL [‘f’, ‘x’]
+                     (Q.ISPEC ‘lborel’ lemma_real_fn_seq_mono_increasing)) \\
+     rw [mono_increasing_def])
+ >> Rewr
+ (* applying real_fn_seq_has_integral *)
+ >> Know ‘!n. (real_fn_seq lborel f n has_integral real_fn_seq_integral f n)
+                univ(:real)’
+ >- (Q.X_GEN_TAC ‘n’ \\
+     MATCH_MP_TAC real_fn_seq_has_integral >> simp [])
+ >> simp [HAS_INTEGRAL_INTEGRABLE_INTEGRAL, FORALL_AND_THM]
+ >> STRIP_TAC
+ (* applying lemma_real_fn_seq_upper_bounded *)
+ >> impl_tac (* bounded *)
+ >- (rw [bounded_def] \\
+     Know ‘0 <= pos_fn_integral lborel nf’
+     >- (MATCH_MP_TAC pos_fn_integral_pos >> simp [lborel_def, space_lborel]) \\
+     DISCH_TAC \\
+    ‘pos_fn_integral lborel nf <> NegInf’ by simp [pos_not_neginf] \\
+    ‘?r. pos_fn_integral lborel nf = Normal r’ by METIS_TAC [extreal_cases] \\
+     Q.EXISTS_TAC ‘r’ >> rw [] \\
+     Know ‘abs (real_fn_seq_integral f k) = real_fn_seq_integral f k’
+     >- simp [ABS_REFL, real_fn_seq_integral_positive] >> Rewr' \\
+     Know ‘real_fn_seq_integral f k =
+           real (fn_seq_integral lborel (Normal o f) k)’
+     >- (MATCH_MP_TAC real_fn_seq_integral_alt_fn_seq_integral \\
+         simp []) >> Rewr' \\
+    ‘r = real (pos_fn_integral lborel nf)’ by simp [real_normal] >> POP_ORW \\
+     POP_ASSUM K_TAC >> simp [] \\
+     MATCH_MP_TAC le_real_imp >> simp [] \\
+     MATCH_MP_TAC fn_seq_integral_positive >> simp [lborel_def])
+ >> STRIP_TAC (* this asserts g and k (negligible) *)
+ >> rename1 ‘negligible E’
+ >> ‘(\k. real_fn_seq_integral f k) = real_fn_seq_integral f’ by rw [FUN_EQ_THM]
+ >> POP_ASSUM (fs o wrap)
+ >> qabbrev_tac ‘h = flip (real_fn_seq lborel f)’
+ >> ‘!x. (\k. real_fn_seq lborel f k x) = h x’ by rw [Abbr ‘h’, FUN_EQ_THM]
+ >> POP_ASSUM (fs o wrap)
+ (* applying mono_increasing_converges_to_sup *)
+ >> Know ‘!x. x NOTIN E ==> g x = sup (IMAGE (h x) UNIV)’
+ >- (rpt STRIP_TAC \\
+     MATCH_MP_TAC mono_increasing_converges_to_sup \\
+     simp [GSYM LIM_SEQUENTIALLY_SEQ] \\
+     simp [Abbr ‘h’, combinTheory.C_DEF, lemma_real_fn_seq_mono_increasing])
+ >> DISCH_TAC
+ >> Q.PAT_X_ASSUM ‘!x. x NOTIN E ==> (h x --> g x) sequentially’ K_TAC
+ >> Know ‘integral univ(:real) (\x. sup (IMAGE (h x) univ(:num))) =
+          integral univ(:real) g’
+ >- (MATCH_MP_TAC INTEGRAL_SPIKE \\
+     Q.EXISTS_TAC ‘E’ >> simp [])
+ >> Rewr'
+ >> CONJ_TAC
+ >- (irule INTEGRABLE_SPIKE \\
+     qexistsl_tac [‘g’, ‘E’] >> simp [])
+ >> Know ‘!n. fn_seq_integral lborel nf n = Normal (real_fn_seq_integral f n)’
+ >- (rw [Abbr ‘nf’] \\
+     MATCH_MP_TAC fn_seq_integral_alt_real_fn_seq_integral >> art [])
+ >> Rewr'
+ (* applying sup_image_normal, again *)
+ >> Know ‘IMAGE (\i. Normal (real_fn_seq_integral f i)) UNIV =
+          IMAGE Normal {real_fn_seq_integral f n | n | T}’
+ >- (rw [Once EXTENSION] \\
+     EQ_TAC >> rw [] >| (* 2 subgoals *)
+     [ Q.EXISTS_TAC ‘i’ >> REFL_TAC,
+       Q.EXISTS_TAC ‘n’ >> REFL_TAC ])
+ >> Rewr'
+ >> qmatch_abbrev_tac ‘sup (IMAGE Normal s) = Normal r’
+ >> Know ‘sup (IMAGE Normal s) = Normal (sup s)’
+ >- (MATCH_MP_TAC sup_image_normal \\
+     CONJ_TAC >- rw [Abbr ‘s’, Once EXTENSION] \\
+     rw [bounded_def, Abbr ‘s’] \\
+     Q.EXISTS_TAC ‘real (pos_fn_integral lborel nf)’ >> rw [] \\
+     Know ‘abs (real_fn_seq_integral f n) = real_fn_seq_integral f n’
+     >- rw [ABS_REFL, real_fn_seq_integral_positive] >> Rewr' \\
+     Know ‘real_fn_seq_integral f n = real (fn_seq_integral lborel nf n)’
+     >- (qunabbrev_tac ‘nf’ \\
+         MATCH_MP_TAC real_fn_seq_integral_alt_fn_seq_integral >> simp []) \\
+     Rewr' \\
+     MATCH_MP_TAC le_real_imp >> art [] \\
+     MATCH_MP_TAC fn_seq_integral_positive >> simp [lborel_def])
+ >> Rewr'
+ >> REWRITE_TAC [extreal_11]
+ (* applying mono_increasing_converges_to_sup, yet again *)
+ >> SYM_TAC >> simp [Abbr ‘s’]
+ >> ‘{real_fn_seq_integral f n | n | T} = IMAGE (real_fn_seq_integral f) UNIV’
+      by rw [Once EXTENSION] >> POP_ORW
+ >> MATCH_MP_TAC mono_increasing_converges_to_sup
+ >> simp [GSYM LIM_SEQUENTIALLY_SEQ, real_fn_seq_integral_mono_increasing]
+QED
+
+(* NOTE: removed “bounded (IMAGE f UNIV)” from the above result *)
+Theorem lebesgue_eq_gauge_integral_positive :
+    !f. f IN borel_measurable borel /\ (!x. 0 <= f x) /\
+        pos_fn_integral lborel (Normal o f) <> PosInf ==>
+        f integrable_on UNIV /\
+        pos_fn_integral lborel (Normal o f) = Normal (integral UNIV f)
+Proof
+    rpt GEN_TAC >> STRIP_TAC
+ >> qabbrev_tac ‘nf = Normal o f’
+ >> ‘!x. 0 <= nf x’ by rw [Abbr ‘nf’, o_DEF]
+ >> Know ‘nf IN Borel_measurable borel’
+ >- (qunabbrev_tac ‘nf’ \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+     simp [sigma_algebra_borel])
+ >> DISCH_TAC
+ >> qabbrev_tac ‘g = \n x. min (f x) &n’
+ >> ‘!n x. 0 <= g n x’ by rw [Abbr ‘g’, REAL_LE_MIN]
+ >> Know ‘!n. bounded (IMAGE (g n) UNIV)’
+ >- (rw [bounded_def] \\
+     Q.EXISTS_TAC ‘&n’ \\
+     Q.X_GEN_TAC ‘x’ \\
+     DISCH_THEN (Q.X_CHOOSE_THEN ‘y’ STRIP_ASSUME_TAC) >> POP_ORW \\
+     simp [ABS_REDUCE] \\
+     simp [Abbr ‘g’, REAL_MIN_LE])
+ >> DISCH_TAC
+ >> Know ‘!n. g n IN borel_measurable borel’
+ >- (rw [Abbr ‘g’] \\
+     HO_MATCH_MP_TAC in_borel_measurable_min >> simp [sigma_algebra_borel] \\
+     MATCH_MP_TAC in_borel_measurable_const \\
+     Q.EXISTS_TAC ‘&n’ >> simp [sigma_algebra_borel])
+ >> DISCH_TAC
+ >> ‘!n x. g n x <= f x’ by rw [Abbr ‘g’, REAL_MIN_LE]
+ >> qabbrev_tac ‘ng = \n. Normal o g n’
+ >> ‘!n x. 0 <= ng n x’ by rw [Abbr ‘ng’, o_DEF, extreal_of_num_def]
+ >> ‘!n x. ng n x <= nf x’ by rw [Abbr ‘ng’, Abbr ‘nf’, REAL_MIN_LE]
+ >> Know ‘!n. ng n IN Borel_measurable borel’
+ >- (rw [Abbr ‘ng’] \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+     simp [sigma_algebra_borel])
+ >> DISCH_TAC
+ >> Know ‘!x. mono_increasing (\i. ng i x)’
+ >- (Q.X_GEN_TAC ‘x’ \\
+     simp [ext_mono_increasing_def, Abbr ‘ng’, o_DEF] \\
+     qx_genl_tac [‘i’, ‘j’] >> rw [Abbr ‘g’] \\
+     MATCH_MP_TAC REAL_IMP_MIN_LE2 >> simp [])
+ >> DISCH_TAC
+ >> Know ‘!n. pos_fn_integral lborel (ng n) <> PosInf’
+ >- (rw [lt_infty] \\
+     Q_TAC (TRANS_TAC let_trans) ‘pos_fn_integral lborel nf’ \\
+     simp [GSYM lt_infty] \\
+     MATCH_MP_TAC pos_fn_integral_mono >> simp [])
+ >> DISCH_TAC
+ (* applying lebesgue_eq_gauge_integral_positive_bounded *)
+ >> Know ‘!n. g n integrable_on UNIV /\
+              pos_fn_integral lborel (ng n) = Normal (integral univ(:real) (g n))’
+ >- (Q.X_GEN_TAC ‘n’ >> fs [Abbr ‘ng’] \\
+     MATCH_MP_TAC lebesgue_eq_gauge_integral_positive_bounded >> simp [])
+ >> DISCH_THEN (STRIP_ASSUME_TAC o SRULE [FORALL_AND_THM])
+ (* applying lebesgue_monotone_convergence *)
+ >> Know ‘pos_fn_integral lborel nf =
+          sup (IMAGE (\i. pos_fn_integral lborel (ng i)) UNIV)’
+ >- (MATCH_MP_TAC lebesgue_monotone_convergence \\
+     simp [lborel_def, space_lborel] \\
+     NTAC 5 (POP_ASSUM K_TAC) (* irrelevant assumptions *) \\
+     Q.X_GEN_TAC ‘x’ >> rw [sup_eq'] >- art [] \\
+     Know ‘!n. ng n x <= y’
+     >- (Q.X_GEN_TAC ‘n’ >> POP_ASSUM MATCH_MP_TAC \\
+         Q.EXISTS_TAC ‘n’ >> REFL_TAC) \\
+     POP_ASSUM K_TAC \\
+     simp [Abbr ‘ng’, Abbr ‘nf’, o_DEF, Abbr ‘g’] \\
+     Cases_on ‘y = PosInf’ >- simp [] \\
+     Cases_on ‘y = NegInf’ >- simp [] \\
+    ‘?r. y = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+     simp [] \\
+     CCONTR_TAC >> fs [REAL_NOT_LE] \\
+     STRIP_ASSUME_TAC (Q.SPEC ‘r’ SIMP_REAL_ARCH) \\
+     Q.PAT_X_ASSUM ‘!n. min (f x) (&n) <= r’ (MP_TAC o Q.SPEC ‘SUC n’) \\
+     simp [REAL_LT_MIN, REAL_NOT_LE] \\
+     Q_TAC (TRANS_TAC REAL_LET_TRANS) ‘&n’ >> simp [])
+ >> Rewr'
+ (* applying MONOTONE_CONVERGENCE_INCREASING *)
+ >> MP_TAC (Q.SPECL [‘g’, ‘f’, ‘UNIV’] MONOTONE_CONVERGENCE_INCREASING) >> simp []
+ >> impl_tac
+ >- (CONJ_TAC
+     >- (qx_genl_tac [‘n’, ‘x’] \\
+         Q.PAT_X_ASSUM ‘!x. mono_increasing (\i. ng i x)’ (MP_TAC o Q.SPEC ‘x’) \\
+         rw [ext_mono_increasing_def, Abbr ‘ng’, o_DEF]) \\
+     reverse CONJ_TAC
+     >- (rw [bounded_def] \\
+         Q.EXISTS_TAC ‘real (pos_fn_integral lborel nf)’ >> rw [] \\
+         Know ‘abs (integral univ(:real) (g k)) = integral univ(:real) (g k)’
+         >- (REWRITE_TAC [ABS_REFL] \\
+             MATCH_MP_TAC INTEGRAL_POS >> rw []) >> Rewr' \\
+         ONCE_REWRITE_TAC [GSYM extreal_le_eq] \\
+         Know ‘Normal (real (pos_fn_integral lborel nf)) =
+               pos_fn_integral lborel nf’
+         >- (MATCH_MP_TAC normal_real >> art [] \\
+             MATCH_MP_TAC pos_not_neginf \\
+             MATCH_MP_TAC pos_fn_integral_pos \\
+             simp [measure_space_lborel]) >> Rewr' \\
+         POP_ASSUM (REWRITE_TAC o wrap o GSYM) \\
+         MATCH_MP_TAC pos_fn_integral_mono >> simp [space_lborel]) \\
+     rw [LIM_SEQUENTIALLY, dist, Abbr ‘g’] \\
+     STRIP_ASSUME_TAC (Q.SPEC ‘f (x :real)’ SIMP_REAL_ARCH) \\
+     Q.EXISTS_TAC ‘n’ >> rpt STRIP_TAC \\
+     Know ‘min (f x) (&k) = f x’
+     >- (MATCH_MP_TAC (cj 1 REAL_MIN_REDUCE) >> DISJ1_TAC \\
+         Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘&n’ >> simp []) >> Rewr' \\
+     simp [])
+ >> RW_TAC std_ss []
+ (* applying sup_image_normal *)
+ >> Know ‘IMAGE (\i. Normal (integral UNIV (g i))) UNIV =
+          IMAGE Normal {integral UNIV (g n) | n | T}’
+ >- (rw [Once EXTENSION] \\
+     EQ_TAC >> rw [] >| (* 2 subgoals *)
+     [ Q.EXISTS_TAC ‘i’ >> REFL_TAC,
+       Q.EXISTS_TAC ‘n’ >> REFL_TAC ])
+ >> Rewr'
+ (* applying sup_image_normal *)
+ >> qmatch_abbrev_tac ‘sup (IMAGE Normal s) = Normal r’
+ >> Know ‘sup (IMAGE Normal s) = Normal (sup s)’
+ >- (MATCH_MP_TAC sup_image_normal \\
+     CONJ_TAC >- rw [Abbr ‘s’, Once EXTENSION] \\
+     rw [bounded_def, Abbr ‘s’] \\
+     Q.EXISTS_TAC ‘integral UNIV f’ >> rw [] \\
+     Know ‘abs (integral UNIV (g n)) = integral UNIV (g n)’
+     >- (REWRITE_TAC [ABS_REFL] \\
+         MATCH_MP_TAC INTEGRAL_POS >> simp []) >> Rewr' \\
+     qunabbrev_tac ‘r’ \\
+     MATCH_MP_TAC INTEGRAL_MONO_LEMMA >> simp [])
+ >> Rewr'
+ >> REWRITE_TAC [extreal_11]
+ (* applying mono_increasing_converges_to_sup *)
+ >> SYM_TAC >> simp [Abbr ‘s’]
+ >> ‘{integral UNIV (g n) | n | T} = IMAGE (\n. integral UNIV (g n)) UNIV’
+      by rw [Once EXTENSION] >> POP_ORW
+ >> MATCH_MP_TAC mono_increasing_converges_to_sup
+ >> simp [GSYM LIM_SEQUENTIALLY_SEQ]
+ (* final goal (easy) *)
+ >> simp [mono_increasing_def]
+ >> qx_genl_tac [‘i’, ‘j’] >> DISCH_TAC
+ >> MATCH_MP_TAC INTEGRAL_MONO_LEMMA >> rw []
+ >> Q.PAT_X_ASSUM ‘!x. mono_increasing (\i. ng i x)’ (MP_TAC o Q.SPEC ‘x’)
+ >> rw [ext_mono_increasing_def, o_DEF, Abbr ‘ng’]
+QED
+
+Definition real_fn_plus_def :
+    real_fn_plus f x = max (0 :real) (f x)
+End
+
+Definition real_fn_minus_def :
+    real_fn_minus f x = -min (0 :real) (f x)
+End
+
+Overload TC                = “real_fn_plus”
+Overload fn_plus[inferior] = “real_fn_plus”
+Overload fn_minus          = “real_fn_minus”
+
+Theorem real_fn_plus_pos :
+    !f x. 0 <= real_fn_plus f x
+Proof
+    rw [real_fn_plus_def, REAL_LE_MAX]
+QED
+
+Theorem real_fn_minus_pos :
+    !f x. 0 <= real_fn_minus f x
+Proof
+    rw [real_fn_minus_def, REAL_MIN_LE]
+QED
+
+(* cf. extrealTheory.FN_DECOMP *)
+Theorem fn_decompose :
+    !(f :real -> real) x. f x = fn_plus f x - fn_minus f x
+Proof
+    RW_TAC real_ss [real_fn_plus_def, real_fn_minus_def]
+ >> Cases_on ‘0 <= f x’
+ >- simp [REAL_MAX_REDUCE, REAL_MIN_REDUCE]
+ >> fs [REAL_NOT_LE]
+ >> simp [REAL_MAX_REDUCE, REAL_MIN_REDUCE]
+QED
+
+Theorem fn_plus_normal :
+    !f. fn_plus (Normal o f) = Normal o fn_plus f
+Proof
+    rw [FUN_EQ_THM, fn_plus, o_DEF, real_fn_plus_def]
+ >> simp [extreal_of_num_def, extreal_max_eq]
+QED
+
+Theorem fn_minus_normal :
+    !f. fn_minus (Normal o f) = Normal o fn_minus f
+Proof
+    rw [FUN_EQ_THM, fn_minus, o_DEF, real_fn_minus_def]
+ >> simp [extreal_of_num_def, extreal_min_eq, extreal_ainv_def]
+QED
+
+Theorem lebesgue_eq_gauge_integral :
+    !f. f IN borel_measurable borel /\ integrable lborel (Normal o f) ==>
+        f absolutely_integrable_on UNIV /\
+        integral lborel (Normal o f) = Normal (integral UNIV f)
+Proof
+    Q.X_GEN_TAC ‘f’
+ >> simp [integrable_def, lebesgueTheory.integral_def,
+          fn_plus_normal, fn_minus_normal]
+ >> STRIP_TAC
+ >> Know ‘f absolutely_integrable_on UNIV <=>
+          (\x. fn_plus f x - fn_minus f x) absolutely_integrable_on UNIV’
+ >- (Suff ‘(\x. fn_plus f x - fn_minus f x) = f’ >- Rewr \\
+     rw [FUN_EQ_THM, GSYM fn_decompose])
+ >> Rewr'
+ >> Know ‘integral UNIV f = integral UNIV (\x. fn_plus f x - fn_minus f x)’
+ >- (Suff ‘(\x. fn_plus f x - fn_minus f x) = f’ >- Rewr \\
+     rw [FUN_EQ_THM, GSYM fn_decompose])
+ >> Rewr'
+ >> Know ‘fn_plus f IN borel_measurable borel’
+ >- (‘fn_plus f = \x. max 0 (f x)’ by rw [FUN_EQ_THM, real_fn_plus_def] \\
+     POP_ORW \\
+     HO_MATCH_MP_TAC in_borel_measurable_max >> simp [sigma_algebra_borel] \\
+     MATCH_MP_TAC in_borel_measurable_const \\
+     Q.EXISTS_TAC ‘0’ >> simp [sigma_algebra_borel])
+ >> DISCH_TAC
+ >> Know ‘fn_minus f IN borel_measurable borel’
+ >- (‘fn_minus f = \x. -min 0 (f x)’ by rw [FUN_EQ_THM, real_fn_minus_def] \\
+     POP_ORW \\
+     HO_MATCH_MP_TAC in_borel_measurable_ainv >> simp [sigma_algebra_borel] \\
+     HO_MATCH_MP_TAC in_borel_measurable_min >> simp [sigma_algebra_borel] \\
+     MATCH_MP_TAC in_borel_measurable_const \\
+     Q.EXISTS_TAC ‘0’ >> simp [sigma_algebra_borel])
+ >> DISCH_TAC
+ >> qabbrev_tac ‘f1 = fn_plus f’
+ >> qabbrev_tac ‘f2 = fn_minus f’
+ >> ‘!x. 0 <= f1 x’ by rw [Abbr ‘f1’, real_fn_plus_pos]
+ >> ‘!x. 0 <= f2 x’ by rw [Abbr ‘f2’, real_fn_minus_pos]
+ (* applying lebesgue_eq_gauge_integral_positive, twice *)
+ >> MP_TAC (Q.SPEC ‘f1’ lebesgue_eq_gauge_integral_positive)
+ >> simp [] >> STRIP_TAC
+ >> MP_TAC (Q.SPEC ‘f2’ lebesgue_eq_gauge_integral_positive)
+ >> simp [] >> STRIP_TAC
+ >> simp [extreal_sub_eq]
+ >> reverse CONJ_TAC >- (SYM_TAC >> MATCH_MP_TAC INTEGRAL_SUB >> art [])
+ >> MATCH_MP_TAC ABSOLUTELY_INTEGRABLE_SUB
+ >> CONJ_TAC (* 2 subgoals, same tactics *)
+ >> MATCH_MP_TAC NONNEGATIVE_ABSOLUTELY_INTEGRABLE >> simp []
+QED
+
+(* END *)
 
 (* References:
 

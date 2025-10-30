@@ -171,6 +171,25 @@ Proof
   ASM_SIMP_TAC std_ss [SET_RULE ``UNIV DIFF (UNIV DIFF A) = A``]
 QED
 
+Theorem borel_fsigma :
+    !s. fsigma s ==> s IN subsets borel
+Proof
+    rw [fsigma]
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_COUNTABLE_UNION
+ >> rw [SUBSET_DEF, sigma_algebra_borel]
+ >> MATCH_MP_TAC borel_closed >> simp []
+QED
+
+Theorem borel_gdelta :
+    !s. gdelta s ==> s IN subsets borel
+Proof
+    rw [gdelta]
+ >> Cases_on ‘g = {}’ >- simp [space_in_borel]
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_COUNTABLE_INTER
+ >> rw [SUBSET_DEF, sigma_algebra_borel]
+ >> MATCH_MP_TAC borel_open >> simp []
+QED
+
 Theorem borel_singleton:
     !A x. A IN subsets borel ==> x INSERT A IN subsets borel
 Proof
@@ -967,7 +986,8 @@ Proof
 QED
 
 Theorem sigma_gr_le:
-    !f A. sigma_algebra A /\ (!(a:real). {w | w IN space A /\ a < f w} IN subsets A) ==>
+    !f A. sigma_algebra A /\
+         (!(a:real). {w | w IN space A /\ a < f w} IN subsets A) ==>
           !a. {w | w IN space A /\ f w <= a} IN subsets A
 Proof
    rpt STRIP_TAC
@@ -981,7 +1001,7 @@ QED
 
 (* NOTE: moved ‘sigma_algebra m’ to antecedents due to changes of ‘measurable’ *)
 Theorem in_borel_measurable_gr :
-    !f m. sigma_algebra m  ==>
+    !f m. sigma_algebra m ==>
          (f IN borel_measurable m <=>
           f IN (space m -> UNIV) /\
           !a. {w | w IN space m /\ a < f w} IN subsets m)
@@ -1077,6 +1097,23 @@ Proof
        >> POP_ORW
        >> METIS_TAC [SIGMA_ALGEBRA, space_def, subsets_def])
    >> METIS_TAC [sigma_ge_gr, sigma_gr_le, sigma_le_less, SPACE, subsets_def, space_def]
+QED
+
+Theorem in_borel_measurable_ge_lt_imp :
+    !A f a b. sigma_algebra A /\ f IN borel_measurable A ==>
+              {x | x IN space A /\ a <= f x /\ f x < b} IN subsets A
+Proof
+    rpt STRIP_TAC
+ >> ‘{x | x IN space A /\ a <= f x /\ f x < b} =
+     {x | x IN space A /\ a <= f x} INTER {x | x IN space A /\ f x < b}’
+       by SET_TAC [] >> POP_ORW
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> rw [] (* 2 subgoals *)
+ >| [ (* goal 1 (of 2) *)
+      MP_TAC (Q.SPECL [‘f’, ‘A’] (iffLR in_borel_measurable_ge)) \\
+      rw [IN_FUNSET],
+      (* goal 2 (of 2) *)
+      MP_TAC (Q.SPECL [‘f’, ‘A’] (iffLR in_borel_measurable_less)) \\
+      rw [IN_FUNSET] ]
 QED
 
 Theorem borel_measurable_sets_le :
@@ -2353,6 +2390,12 @@ val _ = hide "line"; (* for satefy purposes only *)
 Definition line :
     line n = {x:real | -&n <= x /\ x <= &n}
 End
+
+Theorem IN_LINE :
+    !x n. x IN line n <=> -&n <= x /\ x <= &n
+Proof
+    rw [line]
+QED
 
 Theorem line_def :
     !n. line n = interval [-&n,&n]
