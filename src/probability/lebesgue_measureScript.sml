@@ -4418,14 +4418,19 @@ Proof
 QED
 
 Theorem lebesgue_eq_gauge_integral :
-    !f. f IN borel_measurable borel /\ integrable lborel (Normal o f) ==>
+    !f. integrable lborel (Normal o f) ==>
         f absolutely_integrable_on UNIV /\
         integral lborel (Normal o f) = Normal (integral UNIV f)
 Proof
     Q.X_GEN_TAC ‘f’
  >> simp [integrable_def, lebesgueTheory.integral_def,
-          fn_plus_normal, fn_minus_normal]
+          fn_plus_normal, fn_minus_normal, lborel_def]
  >> STRIP_TAC
+ >> Know ‘real o (Normal o f) IN borel_measurable borel’
+ >- (MATCH_MP_TAC in_borel_measurable_from_Borel \\
+     simp [sigma_algebra_borel])
+ >> ‘real o Normal o f = f’ by rw [FUN_EQ_THM, o_DEF, real_normal] >> POP_ORW
+ >> DISCH_TAC
  >> Know ‘f absolutely_integrable_on UNIV <=>
           (\x. fn_plus f x - fn_minus f x) absolutely_integrable_on UNIV’
  >- (Suff ‘(\x. fn_plus f x - fn_minus f x) = f’ >- Rewr \\
