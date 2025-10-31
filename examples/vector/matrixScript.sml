@@ -923,7 +923,6 @@ Proof
     ASM_SIMP_TAC bool_ss[GSYM MATRIX_COMPOSE, MATRIX_I]]
 QED
 
-(* NOTE: the following theorem(s) cannot be parsed in the modern syntax *)
 Theorem INVERTIBLE_LEFT_INVERSE:
     !A:real['N]['N]. invertible(A) <=> ?B:real['N]['N]. B ** A = mat 1
 Proof
